@@ -13,7 +13,6 @@ type WaitAsync = (
 // Bun implements Atomics.waitAsync; the repo's TS lib predates it.
 const waitAsync = (Atomics as unknown as { waitAsync: WaitAsync }).waitAsync;
 
-/** A new signal, or the reader's view of one another thread created (`sab`). */
 export const createRingSignal = ({
 	sab = new SharedArrayBuffer(16),
 }: {

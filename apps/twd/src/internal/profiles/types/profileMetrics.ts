@@ -1,4 +1,3 @@
-/** Smoothed with the mean alpha. */
 export const MEAN_METRICS = [
 	"stripeRequests",
 	"stripeTestRequests",
@@ -11,7 +10,6 @@ export const MEAN_METRICS = [
 	"testCpuSeconds",
 ] as const;
 
-/** Smoothed fast up, slow down, so headroom shrinks quickly and grows back slowly. */
 export const PEAK_METRICS = [
 	"stripePeakRps",
 	"stripePeakInFlight",

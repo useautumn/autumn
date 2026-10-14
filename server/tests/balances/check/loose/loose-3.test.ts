@@ -40,13 +40,11 @@ describe(`${chalk.yellowBright("check-loose3: mixed product + loose entitlement"
 			prefix: testCase,
 		});
 
-		// Attach product first (gives 100 messages)
 		await autumnV1.attach({
 			customer_id: customerId,
 			product_id: freeProd.id,
 		});
 
-		// Then add loose entitlement for same feature (adds 500 more)
 		await autumnV1.balances.create({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
@@ -64,11 +62,9 @@ describe(`${chalk.yellowBright("check-loose3: mixed product + loose entitlement"
 		expect(res.customer_id).toBe(customerId);
 		expect(res.balance).toBeDefined();
 
-		// Total should be 100 (product) + 500 (loose) = 600
 		expect(res.balance?.granted_balance).toBe(600);
 		expect(res.balance?.current_balance).toBe(600);
 
-		// When mixed sources, plan_id should be null and breakdown should exist
 		expect(
 			res.balance?.breakdown?.find((b) => b.plan_id === null),
 		).toBeDefined();
@@ -86,12 +82,10 @@ describe(`${chalk.yellowBright("check-loose3: mixed product + loose entitlement"
 		expect(breakdown).toBeDefined();
 		expect(breakdown).toHaveLength(2);
 
-		// Find the product entitlement (has plan_id)
 		const productEnt = breakdown?.find((b) => b.plan_id === freeProd.id);
 		expect(productEnt).toBeDefined();
 		expect(productEnt?.granted_balance).toBe(100);
 
-		// Find the loose entitlement (plan_id is null)
 		const looseEnt = breakdown?.find((b) => b.plan_id === null);
 		expect(looseEnt).toBeDefined();
 		expect(looseEnt?.granted_balance).toBe(500);
@@ -101,7 +95,7 @@ describe(`${chalk.yellowBright("check-loose3: mixed product + loose entitlement"
 		const res = (await autumnV2.check({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
-			required_balance: 550, // More than either source alone, but less than combined
+			required_balance: 550,
 		})) as unknown as CheckResponseV2;
 
 		expect(res.allowed).toBe(true);
@@ -112,7 +106,7 @@ describe(`${chalk.yellowBright("check-loose3: mixed product + loose entitlement"
 		const res = (await autumnV2.check({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
-			required_balance: 700, // More than combined 600
+			required_balance: 700,
 		})) as unknown as CheckResponseV2;
 
 		expect(res.allowed).toBe(false);

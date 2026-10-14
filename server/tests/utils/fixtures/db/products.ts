@@ -5,9 +5,6 @@ import {
 	type Price,
 } from "@autumn/shared";
 
-/**
- * Create a product fixture
- */
 const create = ({
 	id = "prod_test",
 	stripeProductId,
@@ -38,9 +35,6 @@ const create = ({
 	metadata: {},
 });
 
-/**
- * Create a full product fixture
- */
 const createFull = ({
 	id = "prod_test",
 	name = "Test Product",
@@ -82,10 +76,6 @@ const createFull = ({
 		entitlements,
 		free_trial: null,
 	}) as FullProduct;
-
-// ═══════════════════════════════════════════════════════════════════
-// EXPORT
-// ═══════════════════════════════════════════════════════════════════
 
 export const products = {
 	create,

@@ -6,13 +6,11 @@ import { topUpAccounts } from "../../keys/actions/topUpAccounts.ts";
 import { usableKey } from "../repos/cleanAccountsRepo.ts";
 import { ACCOUNTS_PER_KEY_CAP } from "./poolLimits.ts";
 
-/** At most one top-up at a time, and none sooner than this after the last one started. */
 const TOP_UP_COOLDOWN_MS = 60_000;
 
 let lastStartedAt = 0;
 let running: Promise<number> | undefined;
 
-/** Grow keys under the cap to ACCOUNTS_PER_KEY_CAP non-broken accounts; resolves to accounts created. */
 export const topUpPool = ({
 	ctx,
 }: {

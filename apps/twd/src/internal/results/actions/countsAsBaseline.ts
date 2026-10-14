@@ -4,7 +4,6 @@ import { resolveBranchSha } from "../../catalog/actions/gitRemote.ts";
 import { resolveTestSelection } from "../../catalog/actions/resolveTestSelection.ts";
 import { BASELINE_BRANCH } from "./refreshBaselines.ts";
 
-/** Candidate at creation: scheduled on dev, or every file at dev's GitHub HEAD; settleBaselineFlag drops it unless it completes. */
 export const countsAsBaseline = ({
 	purpose,
 	branch,
@@ -29,7 +28,6 @@ const sameFiles = ({ a, b }: { a: string[]; b: string[] }) => {
 	return a.length === b.length && b.every((file) => set.has(file));
 };
 
-/** Decided once at run creation; GitHub or catalog errors mean "not a baseline", never a failed run. */
 export const resolveRunIsBaseline = async ({
 	ctx,
 	branch,

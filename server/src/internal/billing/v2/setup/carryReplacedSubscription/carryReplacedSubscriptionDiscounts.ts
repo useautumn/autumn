@@ -19,7 +19,6 @@ type CarryInput = {
 	preview: boolean;
 };
 
-/** The coupon cut to the months the old discount had left. */
 const remainingCoupon = ({
 	coupon,
 	months,
@@ -32,7 +31,6 @@ const remainingCoupon = ({
 	duration_in_months: months,
 });
 
-/** One copy per replaced subscription and duration, so a retried recreate reuses it. */
 const copyCoupon = async ({
 	ctx,
 	coupon,
@@ -84,7 +82,6 @@ const copyCoupon = async ({
 	}
 };
 
-/** The promotion code the discount was redeemed with, when Stripe still accepts it for this customer. */
 const redeemablePromotionCodeId = async ({
 	ctx,
 	discount,
@@ -134,7 +131,6 @@ const redeemAgain = async ({
 	return copyCoupon({ ...input, coupon });
 };
 
-/** A repeating coupon restarts its full duration when redeemed again, so a part-used one moves as a copy for the months left. */
 const carryDiscount = async ({
 	discount,
 	...input
@@ -161,11 +157,6 @@ const carryDiscount = async ({
 const rewardIdOf = (discount: StripeDiscountWithCoupon) =>
 	stripeCouponToRewardId(discount.source.coupon);
 
-/**
- * On a recreate the replaced subscription's discounts carry as Stripe would have kept applying them (Stripe drops
- * a spent once discount and an ended repeating one itself), minus `remove_discounts`. As in billing setup, the
- * subscription's own discounts take priority over the customer's, and a requested coupon already carried isn't added twice.
- */
 export const carryReplacedSubscriptionDiscounts = async ({
 	stripeDiscounts = [],
 	removedRewardIds = [],

@@ -19,8 +19,6 @@ import {
 	type VerifyPrefetched,
 } from "./setup/setupVerifyContext";
 
-/** Warnings can be deliberate (e.g. an extra Stripe-only sub); everything
- * else defaults to error. */
 const WARNING_MISMATCH_TYPES = new Set<SubscriptionMismatch["type"]>([
 	"stripe_sub_not_in_autumn",
 	"shared_stripe_customer",
@@ -37,11 +35,6 @@ const stampMessages = (
 			(WARNING_MISMATCH_TYPES.has(mismatch.type) ? "warning" : "error"),
 	}));
 
-/**
- * Verifies that a customer's Stripe subscription(s) match the state Autumn expects from
- * their customer_products. Read-only: setup -> compute (expected state) -> evaluate (diff
- * against live Stripe) -> return. No execute stage, since verify never writes.
- */
 export const verify = async ({
 	ctx,
 	params,
@@ -51,8 +44,6 @@ export const verify = async ({
 	ctx: AutumnContext;
 	params: VerifyParamsV1;
 	prefetched?: VerifyPrefetched;
-	/** Serves Stripe reads from somewhere other than the live API — bulk audits
-	 * pass a mirror-backed reader so per-customer verification costs no calls. */
 	stripeCli?: Stripe;
 }): Promise<VerifyResponse> => {
 	const {
@@ -74,8 +65,6 @@ export const verify = async ({
 		stripeCli: stripeCliOverride,
 	});
 
-	// Seat-snapshot specs need the license billing rows; free (in-memory gated)
-	// for customers without licenses. TODO(licenses): fold into setupVerifyContext.
 	const customerLicenseBillingContext =
 		await setupCustomerLicenseBillingContext({ ctx, fullCustomer });
 
@@ -111,8 +100,6 @@ export const verify = async ({
 			mismatches.push({ type: "stale_subscription_link" });
 		}
 
-		// An unrenderable expected state (e.g. a price with no Stripe link) is a
-		// finding for THIS subscription, never a failure of the whole verify.
 		try {
 			const {
 				scenario,

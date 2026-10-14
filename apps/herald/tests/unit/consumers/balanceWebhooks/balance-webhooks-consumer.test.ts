@@ -29,7 +29,6 @@ const topUp: MutationEffect = {
 	reason: "balance_below_threshold",
 };
 
-/** A track as the worker logs it, with whatever effects it decided. */
 const trackWith = ({
 	effects,
 }: {

@@ -14,7 +14,6 @@ type StripeRouteErrorRule = {
 	statusCode: ContentfulStatusCode;
 };
 
-/** Stripe failures that are the merchant's only on one route; route-free rules live in @autumn/errors. */
 const stripeRouteErrorRules: StripeRouteErrorRule[] = [
 	{
 		matches: ({ err, c }) =>
@@ -36,7 +35,6 @@ const stripeRouteErrorRules: StripeRouteErrorRule[] = [
 	},
 ];
 
-/** A ZodError before routeHandler marks the request validated came from the caller's input, not our code. */
 const userInputZodErrorToRecaseError = ({
 	err,
 	c,
@@ -73,7 +71,6 @@ const stripeRouteErrorToRecaseError = ({
 	});
 };
 
-/** Caller mistakes that surface as third-party errors, answered as the RecaseError they really are. */
 export const callerErrorToRecaseError = ({
 	err,
 	c,

@@ -1,5 +1,3 @@
-/** Red: duplicate entities fail or consume capacity.
- * Green: duplicate-only and mixed batches skip assigned entities with 200. */
 import { expect, test } from "bun:test";
 import type { ApiCustomerV5 } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features";

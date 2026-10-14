@@ -1,9 +1,3 @@
-/**
- * atmn scenarios/versions — draft activated in the dashboard → pull moves it to plans and the old active row into planVersions
- *
- * One line of plans/atmn-v3/07_tests.md. [a, b] is a matrix looped INSIDE this file.
- */
-
 import { expect, test } from "bun:test";
 import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 import { paidMonthly } from "@tests/utils/atmnUtils/baseConfigs.js";
@@ -57,8 +51,6 @@ test.concurrent(
 			);
 			await scenario.push();
 
-			// "In the dashboard": flip the draft active directly through the API,
-			// never touching the CLI's config file.
 			await scenario.client.update({
 				plans: [{ plan_id: "pro", version_slug: "v2", active: true }],
 				migration: { draft: true },
@@ -66,8 +58,6 @@ test.concurrent(
 
 			await scenario.pull();
 
-			// Membership is state: the wire has one `plans` array, and `active`
-			// on each row is what says which version is live — not a separate key.
 			const wire = (await scenario.wireFromConfig()) as {
 				plans?: WirePlanRow[];
 			};
@@ -80,8 +70,6 @@ test.concurrent(
 				expect.objectContaining({ active: false }),
 			);
 
-			// The pull already caught up with the dashboard change, so a dry-run
-			// push against the refreshed config previews nothing further.
 			const dry = await scenario.push({ dryRun: true });
 			expect(dry.output).toContain("No changes");
 		} finally {

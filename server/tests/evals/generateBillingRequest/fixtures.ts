@@ -5,7 +5,6 @@ const NOW_MS = Date.UTC(2026, 7, 24, 12, 0, 0);
 
 const now = { epoch_ms: NOW_MS, iso: new Date(NOW_MS).toISOString() };
 
-/** Simple SaaS org: pro ($20/mo, prepaid messages) and premium ($50/mo). */
 export const saasContext = ({
 	onPro = false,
 }: {
@@ -282,8 +281,6 @@ export const complexScheduleContext = (): GenerationContext => {
 	} as unknown as GenerationContext;
 };
 
-/** Enterprise org with a volume-tiered prepaid credits ladder — the shape that
- * stresses same-shape customize patches. */
 export const creditLadderContext = (): GenerationContext =>
 	({
 		customer: {
@@ -318,8 +315,6 @@ export const creditLadderContext = (): GenerationContext =>
 		],
 	}) as unknown as GenerationContext;
 
-/** Org with sibling plan variants (scale / scale_yearly) plus a credits item —
- * the ambiguity the docs tell interactive agents to ask about. */
 export const variantLadderContext = (): GenerationContext =>
 	({
 		customer: {
@@ -459,8 +454,6 @@ export const rolloverCreditsBaseItems = (): ApiPlanV1["items"] =>
 		{ feature_id: "ADMIN_API_ACCESS", included: 0, price: null, reset: null },
 	] as unknown as ApiPlanV1["items"];
 
-/** Tiered prepaid credits on the customer's live plan — changing `included`
- * must shift tier boundaries, not drop or reprice tiers. */
 export const tieredScaleContext = (): GenerationContext =>
 	({
 		customer: {
@@ -550,8 +543,6 @@ export const tieredScaleBaseItems = (): ApiPlanV1["items"] =>
 		},
 	] as unknown as ApiPlanV1["items"];
 
-/** Two entities where only one holds the plan — the model must read
- * current_plans entity scoping to target the other. */
 export const entityScaleContext = (): GenerationContext =>
 	({
 		customer: {

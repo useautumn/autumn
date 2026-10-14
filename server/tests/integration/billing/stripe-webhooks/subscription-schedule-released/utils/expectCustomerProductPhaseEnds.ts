@@ -8,14 +8,9 @@ import { CusService } from "@/internal/customers/CusService";
 type ExpectedPhaseEnd = {
 	productId: string;
 	status: CusProductStatus;
-	/** Asserted only when given; null asserts the plan has no end date. */
 	endedAt?: number | null;
 };
 
-/**
- * Re-reads the customer's live rows until each expected plan carries the
- * given status and end date, and every `absent` plan has no live row.
- */
 export const expectCustomerProductPhaseEnds = async ({
 	ctx,
 	customerId,
@@ -28,7 +23,6 @@ export const expectCustomerProductPhaseEnds = async ({
 	customerId: string;
 	expected: ExpectedPhaseEnd[];
 	absent?: string[];
-	/** Plans that must have no live row in the given status. */
 	absentStatuses?: { productId: string; status: CusProductStatus }[];
 	settleTimeoutMs?: number;
 }) =>

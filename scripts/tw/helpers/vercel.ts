@@ -51,39 +51,24 @@ import type {
 	RunDetachedOptions,
 } from "./provider.ts";
 
-/** Tag keys stamped on every swarm-created sandbox (plan §9a ownership tagging). */
 export const TAG_OWNER = "owner";
 export const TAG_RUN = "run";
 export const TAG_KIND = "kind";
-/** Constant value for the `kind` tag — the tag-sweep fallback selector. */
 export const TAG_KIND_VALUE = "bun-tw";
 
-/** Options for the warm parent sandbox (the one we snapshot then fork from). */
 export type CreateWarmSandboxOptions = {
-	/** Sandbox name, e.g. `tw-<owner>-<runId>-warm`. */
 	name: string;
-	/** Ownership tags (plan §9a): `{ owner, run, kind }`. */
 	tags: Record<string, string>;
-	/** Env baked into the warm sandbox while building. */
 	env: Record<string, string>;
-	/**
-	 * Git source to clone into the warm parent at create (repo @ ref). Without
-	 * this the sandbox is empty and `build-base.sh`/`warmup.sh` can't run.
-	 * `username`/`password` are for a private repo (token as the password).
-	 */
 	source?: {
 		url: string;
 		revision: string;
 		username?: string;
 		password?: string;
 	};
-	/** Ports to expose; defaults to `[SERVER_PORT]` so `domain()` resolves. */
 	ports?: number[];
-	/** Sandbox lifetime in ms; defaults to {@link WORKER_TIMEOUT_MS}. */
 	timeout?: number;
-	/** vCPUs (→ 2048 MB each); defaults to {@link WORKER_VCPUS}. */
 	vcpus?: number;
-	/** Optional abort signal for cooperative cancellation. */
 	signal?: AbortSignal;
 };
 
@@ -99,8 +84,6 @@ export type CreateWarmSandboxOptions = {
 export const createWarmSandbox = async (
 	opts: CreateWarmSandboxOptions,
 ): Promise<Sandbox> => {
-	// No `depth` — a shallow clone is single-branch, so a non-default `revision`
-	// (e.g. feat/*) fails with git 128 (learned in the spike).
 	const gitSource = opts.source
 		? opts.source.username && opts.source.password
 			? {
@@ -131,14 +114,6 @@ export const createWarmSandbox = async (
 	return sandbox;
 };
 
-/**
- * Snapshot the warm sandbox and return its snapshot id (plan §4b step 6 /
- * §9 step 3 → `warmSnapshotId`). The SDK stops the sandbox as part of taking the
- * snapshot, so the caller must have clean-stopped the stateful services first
- * (plan §4b step 5 — snapshots are filesystem-only, process memory is NOT kept).
- *
- * @returns The new snapshot's id, to feed every worker fork.
- */
 export const snapshotAndStop = async (
 	sandbox: Sandbox,
 	opts?: { signal?: AbortSignal },
@@ -147,35 +122,17 @@ export const snapshotAndStop = async (
 	return snapshot.snapshotId;
 };
 
-/** Options for forking one ephemeral worker off the warm sandbox. */
 export type ForkWorkerOptions = {
-	/**
-	 * The NAME of the warm source sandbox to fork from (the SDK takes a name,
-	 * not a `Sandbox` instance).
-	 */
 	sourceSandbox: string;
-	/** This worker's sandbox name, e.g. `tw-<owner>-<runId>-<idx>`. */
 	name: string;
-	/** Per-worker env — `fork()` does NOT copy env, so it must be passed here. */
 	env: Record<string, string>;
-	/** Ownership tags (plan §9a). */
 	tags: Record<string, string>;
-	/** Ports to expose; defaults to `[SERVER_PORT]`. */
 	ports?: number[];
-	/** Sandbox lifetime in ms; defaults to {@link WORKER_TIMEOUT_MS}. */
 	timeout?: number;
-	/** vCPUs (→ 2048 MB each); defaults to {@link WORKER_VCPUS}. */
 	vcpus?: number;
-	/** Optional abort signal for cooperative cancellation. */
 	signal?: AbortSignal;
 };
 
-/**
- * Fork one ephemeral worker from the warm sandbox (plan §4c / §9 step 4).
- *
- * `persistent: false` so workers don't auto-snapshot on stop (avoids N
- * accumulated snapshots). Env is passed explicitly (fork doesn't copy it).
- */
 export const forkWorker = async (opts: ForkWorkerOptions): Promise<Sandbox> => {
 	const sandbox = await Sandbox.fork({
 		sourceSandbox: opts.sourceSandbox,
@@ -209,12 +166,6 @@ export const getPublicUrl = (
  */
 const SANDBOX_STREAM_CLOSED_CODE = "sandbox_stream_closed";
 
-/**
- * Detect the "sandbox stream was closed" error so log-streaming loops can treat
- * it as a benign end-of-stream during teardown instead of letting it escape as
- * an uncaught throw. Matches the typed `StreamError` first, then falls back to
- * the error `code` / message so it still trips if the SDK surfaces a plain error.
- */
 export const isSandboxStreamClosed = (error: unknown): boolean => {
 	if (error instanceof StreamError) {
 		return true;
@@ -224,9 +175,6 @@ export const isSandboxStreamClosed = (error: unknown): boolean => {
 		return true;
 	}
 	// Vercel's `cmd.logs()` paginator occasionally fails to decompress a log
-	// chunk (`BrotliDecompressionError`) — a transient hiccup on the LOG fetch,
-	// not the command itself. Treat it like a closed stream so the opted-in
-	// forward streams (boot/warmup/ingress) swallow it instead of spewing it.
 	if (code === "BrotliDecompressionError") {
 		return true;
 	}
@@ -240,45 +188,15 @@ export const isSandboxStreamClosed = (error: unknown): boolean => {
 		message.includes("Sandbox stream was closed") ||
 		message.includes("BrotliDecompressionError") ||
 		// Bun's generic wording when an in-flight SDK `fetch` (log stream, status
-		// poll) loses its socket because teardown deleted the sandbox underneath
-		// it — the same benign end-of-stream race, different message. Genuine
-		// mid-run drops never reach here (runStreaming catches them and raises a
-		// WorkerDeathError); only detached/teardown streams surface this.
 		message.includes("socket connection was closed unexpectedly")
 	);
 };
 
-/** Result of a streamed remote command. */
 export type RunStreamingResult = {
-	/** The exit code reported by the command on the worker (NOT the transport). */
 	exitCode: number;
-	/** Full stderr captured during the run. */
 	stderr: string;
 };
 
-/**
- * Run a command on a sandbox, streaming combined stdout/stderr to `onChunk` as
- * the bytes arrive (plan §8.2 seam: the byte source for the existing parser).
- *
- * Both streams are forwarded to `onChunk` so the live parser sees everything in
- * arrival order (Bun's test runner writes its `(pass)`/`(fail)` lines to
- * stdout); stderr is additionally accumulated and returned for crash diagnosis.
- *
- * The returned `exitCode` is the code the command reported on the worker. A
- * worker dying mid-command (transport closed, no exit code) surfaces as a
- * thrown/rejected error from the SDK here — the caller (RemoteExecutor) maps
- * that to a {@link WorkerDeathError} (plan §8.4); this wrapper does not mask it.
- *
- * `swallowStreamClose` is opt-in: when set, a `sandbox_stream_closed`
- * {@link StreamError} (the sandbox was torn down while its logs were streaming)
- * is treated as a benign end-of-stream and resolves with the bytes seen so far
- * (exit code `-1`). The TEST path (RemoteExecutor) MUST leave it OFF so a
- * mid-run worker death still throws and triggers a reschedule (plan §8.4); only
- * the build-base / warmup phases — which run while the orchestrator may be
- * tearing the warm parent down — turn it on to silence teardown spam.
- *
- * @param argv `[cmd, ...args]` — the first element is the executable.
- */
 export const runStreaming = async (
 	sandbox: Sandbox,
 	argv: string[],
@@ -320,9 +238,6 @@ export const runStreaming = async (
 
 		return { exitCode: finished.exitCode, stderr };
 	} catch (error) {
-		// Only swallow a stream-closed error for callers that opted in (boot/warmup
-		// teardown), AND never for the test path: RemoteExecutor relies on this
-		// throw to detect worker death mid-run. Treat the close as end-of-stream.
 		if (opts?.swallowStreamClose && isSandboxStreamClosed(error)) {
 			return { exitCode: -1, stderr };
 		}
@@ -330,23 +245,10 @@ export const runStreaming = async (
 	}
 };
 
-/**
- * Delete a sandbox by instance or by name (plan §9a teardown step 4).
- *
- * Idempotent-friendly: a "not found"/already-deleted error is swallowed so the
- * teardown sequence can be re-run safely. Other errors propagate.
- */
-/**
- * Look up a sandbox by name, returning `undefined` if it doesn't exist. Used to
- * detect a CACHED warm parent (named deterministically by ref-sha) so the swarm
- * can skip the build and fork straight from it.
- */
 export const getSandboxByName = async (
 	name: string,
 ): Promise<Sandbox | undefined> => {
 	try {
-		// `resume: false` — we only need to know it exists + fork from its snapshot;
-		// don't spend compute starting the cached parent.
 		return await Sandbox.get({ name, resume: false });
 	} catch (error) {
 		if (isAlreadyGone(error)) {
@@ -374,7 +276,6 @@ export const deleteSandbox = async (
 	}
 };
 
-/** A sandbox surfaced by an owner/tag listing (the cleanup-recovery shape). */
 export type ListedSandbox = {
 	name: string;
 	status:
@@ -389,15 +290,6 @@ export type ListedSandbox = {
 	tags?: Record<string, string>;
 };
 
-/**
- * List this swarm's sandboxes for an owner (plan §9a `list` / `kill --orphans`
- * tag-sweep fallback). The SDK DOES support listing — `Sandbox.list` accepts
- * `namePrefix` + `tags` and returns an async-iterable `Paginator`, which we page
- * fully. Requires `VERCEL_PROJECT_ID` in env (the SDK reads it for `projectId`).
- *
- * Filters by the `owner` tag AND the `tw-<owner>-` name prefix so SIGKILL'd runs
- * that only got as far as a name (no tags) are still caught.
- */
 export const listSandboxesByOwner = async (
 	owner: string,
 	opts?: { projectId?: string; signal?: AbortSignal },
@@ -411,10 +303,6 @@ export const listSandboxesByOwner = async (
 
 	const namePrefix = `${SANDBOX_NAME_PREFIX}-${owner}-`;
 
-	// `Sandbox.list` AND-filters `namePrefix` + `tags` server-side, but the sweep
-	// wants an OR: a SIGKILL'd run may have a matching name but no/partial tags,
-	// while a renamed/older sandbox may have the tags but not the name prefix.
-	// Run two passes (name-only, tags-only) and union by sandbox name.
 	const byName = new Map<string, ListedSandbox>();
 
 	const collect = async (
@@ -452,7 +340,6 @@ export const listSandboxesByOwner = async (
 	return Array.from(byName.values());
 };
 
-/** HTTP status codes that mean "this resource no longer exists". */
 const HTTP_NOT_FOUND = 404;
 const HTTP_GONE = 410;
 
@@ -478,13 +365,6 @@ const isAlreadyGone = (error: unknown): boolean => {
 	return typeof code === "string" && code.endsWith("not_found");
 };
 
-// ---------------------------------------------------------------------------
-// Provider adapter — conforms the wrappers above to the `ProviderImpl` seam
-// (helpers/provider.ts) so the orchestrator can swap Vercel ↔ Modal. The
-// `ProviderSandbox.handle` is the `@vercel/sandbox` `Sandbox`; this layer only
-// wraps/unwraps it and routes the two direct-SDK spots (ingress create, detached
-// boot) through the same surface.
-// ---------------------------------------------------------------------------
 const wrap = (s: Sandbox): ProviderSandbox => ({ name: s.name, handle: s });
 const unwrap = (s: ProviderSandbox): Sandbox => s.handle as Sandbox;
 
@@ -513,7 +393,6 @@ export const vercelProvider: ProviderImpl = {
 	createWarmSandbox: async (o) => wrap(await createWarmSandbox(o)),
 	forkWorker: async (o) => wrap(await forkWorker(o)),
 	snapshotAndStop: (s, o) => snapshotAndStop(unwrap(s), o),
-	// Async in the interface (Modal's tunnels() is async); Vercel's is sync.
 	getPublicUrl: (s, port) => Promise.resolve(getPublicUrl(unwrap(s), port)),
 	getSandboxByName: async (name) => {
 		const s = await getSandboxByName(name);
@@ -526,7 +405,6 @@ export const vercelProvider: ProviderImpl = {
 	listSandboxesByOwner,
 	isSandboxStreamClosed,
 
-	// The ingress sandbox: a fresh node24 sandbox (no build-base), persistent:false.
 	createIngressSandbox: async (o: CreateSandboxOptions) =>
 		wrap(
 			await Sandbox.create({
@@ -543,8 +421,6 @@ export const vercelProvider: ProviderImpl = {
 			}),
 		),
 
-	// Detached long-lived command (worker boot / ingress server): start it and
-	// return a handle whose wait() resolves on exit. Output streams to onChunk.
 	runDetached: async (
 		s: ProviderSandbox,
 		argv: string[],

@@ -1,11 +1,6 @@
 import type { BillingContext } from "@autumn/shared";
 import { getCurrentBillingCycleAnchorMs } from "@/internal/billing/v2/utils/billingContext/getCurrentBillingCycleAnchorMs";
 
-/**
- * Returns the billing cycle anchor to use for a particular direction.
- * - "charge": uses the (possibly updated) billingCycleAnchorMs from the context
- * - "refund": uses the original billing cycle anchor before update
- */
 export const getBillingCycleAnchorForDirection = ({
 	billingContext,
 	direction,

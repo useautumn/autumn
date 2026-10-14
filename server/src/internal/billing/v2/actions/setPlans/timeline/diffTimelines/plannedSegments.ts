@@ -8,7 +8,6 @@ import type {
 	SavedSegment,
 } from "../types/timelineSegment";
 
-/** A segment the timeline must hold, before deciding which saved rows carry it. */
 export type PlannedSegment = InstanceIdentity & {
 	configHash: string;
 	lifetime: boolean;
@@ -33,7 +32,6 @@ const desiredToPlanned = (desired: DesiredSegment): PlannedSegment => ({
 	desired,
 });
 
-/** The first time a declared plan claims the saved plan's group and scope. */
 const firstClaimStart = ({
 	savedSegment,
 	desired,
@@ -54,7 +52,6 @@ const firstClaimStart = ({
 	return claimStarts.length > 0 ? Math.min(...claimStarts) : null;
 };
 
-/** An undeclared live plan kept running until a declared plan claims its group, the schedule ends, or it cancels. */
 const retainedSegment = ({
 	savedSegment,
 	desired,
@@ -99,7 +96,6 @@ const isUndeclaredLiveSegment = ({
 	!declaredKeys.has(savedSegment.key) &&
 	isAliveAt({ segment: savedSegment, at: now });
 
-/** The declared segments, plus — when the policy retains them — the live plans the request leaves out. */
 export const plannedSegments = ({
 	saved,
 	desired,

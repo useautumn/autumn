@@ -1,4 +1,3 @@
-/** Cancel leftover probe backends, then refresh migration_item_runs stats. */
 import { sql } from "drizzle-orm";
 import { initDrizzle } from "@/db/initDrizzle.js";
 import { assertBenchDatabaseSafe } from "../utils/benchContext.js";

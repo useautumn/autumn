@@ -116,7 +116,6 @@ export const OAuthClientsView = () => {
 				return;
 			}
 			toast.success("Client secret rotated");
-			// Show the new secret in a toast since it can only be viewed once
 			if (rotateData?.client_secret) {
 				toast.info(`New secret: ${rotateData.client_secret}`, {
 					duration: 30000,
@@ -143,7 +142,6 @@ export const OAuthClientsView = () => {
 
 	return (
 		<div className="flex flex-col p-6 max-w-6xl mx-auto">
-			{/* Header */}
 			<div className="flex items-center justify-between mb-6">
 				<div className="flex items-center gap-3">
 					<IconButton
@@ -191,9 +189,7 @@ export const OAuthClientsView = () => {
 				</div>
 			</div>
 
-			{/* Clients Table */}
 			<div className="border border-border rounded-xl bg-card overflow-hidden">
-				{/* Table Header */}
 				<div className="grid grid-cols-[1fr_120px_120px_1fr_100px] gap-4 px-4 py-3 border-b border-border bg-muted/30 text-xs font-medium text-muted-foreground uppercase tracking-wide">
 					<div>Client</div>
 					<div>Type</div>
@@ -202,7 +198,6 @@ export const OAuthClientsView = () => {
 					<div className="text-right">Actions</div>
 				</div>
 
-				{/* Table Body */}
 				<div className="divide-y divide-border">
 					{isLoading ? (
 						<div className="px-4 py-12 text-center text-sm text-muted-foreground">
@@ -224,7 +219,6 @@ export const OAuthClientsView = () => {
 								key={client.client_id}
 								className="grid grid-cols-[1fr_120px_120px_1fr_100px] gap-4 px-4 py-3 items-center hover:bg-muted/20 transition-colors"
 							>
-								{/* Client Info */}
 								<div className="min-w-0 flex flex-col items-start">
 									<p className="text-sm font-medium text-foreground truncate">
 										{client.client_name || "Unnamed Client"}
@@ -239,7 +233,6 @@ export const OAuthClientsView = () => {
 									</CopyButton>
 								</div>
 
-								{/* Type */}
 								<div>
 									{client.public ? (
 										<StatusChip tone="blue" glyph="user">
@@ -252,7 +245,6 @@ export const OAuthClientsView = () => {
 									)}
 								</div>
 
-								{/* Status */}
 								<div className="flex flex-col gap-1">
 									{client.disabled ? (
 										<StatusChip tone="red" glyph="ban" className="w-fit">
@@ -270,7 +262,6 @@ export const OAuthClientsView = () => {
 									)}
 								</div>
 
-								{/* Redirect URIs */}
 								<div className="min-w-0">
 									<div className="flex flex-wrap gap-1">
 										{client.redirect_uris
@@ -297,7 +288,6 @@ export const OAuthClientsView = () => {
 									</div>
 								</div>
 
-								{/* Actions */}
 								<div className="flex justify-end gap-1">
 									<IconButton
 										variant="skeleton"
@@ -332,7 +322,6 @@ export const OAuthClientsView = () => {
 				</div>
 			</div>
 
-			{/* Create Dialog */}
 			<CreateOAuthClientDialog
 				open={createDialogOpen}
 				onOpenChange={setCreateDialogOpen}
@@ -342,7 +331,6 @@ export const OAuthClientsView = () => {
 				}}
 			/>
 
-			{/* Edit Dialog */}
 			<EditOAuthClientDialog
 				open={editDialogOpen}
 				onOpenChange={setEditDialogOpen}

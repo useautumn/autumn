@@ -46,12 +46,6 @@ const FIELDS_WITH_BILLING_CHANGES = [
 	"custom_line_items",
 ] as const satisfies (keyof UpdateSubscriptionV1Params)[];
 
-/**
- * Fetch the context for updating a subscription
- * @param ctx - The context
- * @param body - The body of the request
- * @returns The update subscription context
- */
 export const setupUpdateSubscriptionBillingContext = async ({
 	ctx,
 	params,
@@ -70,8 +64,6 @@ export const setupUpdateSubscriptionBillingContext = async ({
 			params,
 		}));
 
-	// Before product resolution: a seat-holding entity's plan is managed
-	// through its license, never updated directly.
 	handleEntityLicenseAssignmentErrors({ fullCustomer });
 
 	const {
@@ -111,8 +103,6 @@ export const setupUpdateSubscriptionBillingContext = async ({
 		),
 	);
 
-	// no_billing_changes suppresses writes but still reads an existing Stripe sub
-	// so anchors and subscription linkage survive replacement updates.
 	const skipBillingFetching =
 		orgDisableStripeWrites({ ctx }) ||
 		contextOverride.skipBillingFetching === true ||
@@ -162,7 +152,6 @@ export const setupUpdateSubscriptionBillingContext = async ({
 
 	const currentEpochMs = testClockFrozenTime ?? Date.now();
 
-	// 1. Setup trial context first
 	const trialContext = setupUpdateSubscriptionTrialContext({
 		stripeSubscription,
 		customerProduct,
@@ -181,7 +170,6 @@ export const setupUpdateSubscriptionBillingContext = async ({
 		isRevertTrialContext({ trialContext }) ||
 		Boolean(trialContext?.autumnManaged);
 
-	// 3. Determine final anchor based on product transitions
 	let billingCycleAnchorMs = setupBillingCycleAnchor({
 		stripeSubscription,
 		customerProduct,
@@ -191,7 +179,6 @@ export const setupUpdateSubscriptionBillingContext = async ({
 		requestedBillingCycleAnchor: params.billing_cycle_anchor,
 	});
 
-	// 4. Trial ends at overrides reset cycle anchor
 	if (trialContext?.trialEndsAt) {
 		billingCycleAnchorMs = trialContext.trialEndsAt;
 	}
@@ -225,8 +212,6 @@ export const setupUpdateSubscriptionBillingContext = async ({
 		customerProduct,
 	});
 
-	// A past_due immediate cancel (resolved from end-of-cycle OR requested directly) must not
-	// credit the unpaid cycle — the open invoice is voided instead.
 	const suppressUnpaidCycleCredit = shouldSuppressUnpaidCycleCredit({
 		cancelAction,
 		org: ctx.org,
@@ -243,7 +228,7 @@ export const setupUpdateSubscriptionBillingContext = async ({
 	});
 
 	checkoutMode =
-		params.redirect_mode === "always" && checkoutMode ? checkoutMode : null; // For update subscription, always use autumn_checkout for now
+		params.redirect_mode === "always" && checkoutMode ? checkoutMode : null;
 
 	const intent = setupUpdateSubscriptionIntent({
 		params,

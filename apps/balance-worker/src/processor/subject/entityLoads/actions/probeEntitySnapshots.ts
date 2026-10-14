@@ -5,13 +5,8 @@ import { snapshotStateOf } from "../../snapshotLoader/rules/snapshotStateOf.js";
 import type { SubjectScope } from "../../types/subject.js";
 import type { WaitingEntity } from "../types/entityLoads.js";
 
-/** The rows the probe answered, by the entity waiting for them; what to do with each is the caller's, as the probe says. */
 export type EntitySnapshotRows = Map<WaitingEntity, SubjectState>;
 
-/**
- * One statement for every entity in the batch that may take a row: those whose snapshot parses are returned; an
- * unreadable row is warned about and read whole like a miss. `none`, or every entity rows-only, probes nothing.
- */
 export const probeEntitySnapshots = async ({
 	scope,
 	batch,

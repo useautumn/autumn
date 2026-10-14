@@ -12,11 +12,6 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { CusService } from "@/internal/customers/CusService.js";
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// RACE CONDITION TESTS
-// Tests for concurrent customer creation with default products
-// ═══════════════════════════════════════════════════════════════════════════════
-
 test.concurrent(`${chalk.yellowBright("race: concurrent create same ID returns same customer")}`, async () => {
 	const customerId = "race-same-id-test";
 
@@ -27,7 +22,6 @@ test.concurrent(`${chalk.yellowBright("race: concurrent create same ID returns s
 		isDefault: true,
 	});
 
-	// Use customerId for product prefixing, but no customer is created
 	const { autumnV1 } = await initScenario({
 		setup: [
 			s.deleteCustomer({ customerId }),
@@ -36,7 +30,6 @@ test.concurrent(`${chalk.yellowBright("race: concurrent create same ID returns s
 		actions: [],
 	});
 
-	// Concurrent creates with same ID
 	const results = await Promise.all([
 		autumnV1.customers.create({
 			id: customerId,
@@ -67,11 +60,8 @@ test.concurrent(`${chalk.yellowBright("race: concurrent create same ID returns s
 		}),
 	]);
 
-	// All should return the same customer
 	const autumnIds = results.map((r) => r.autumn_id);
-	expect(new Set(autumnIds).size).toBe(1); // All same autumn_id
-
-	// All should have the same customer ID, free default product, and balance of 100
+	expect(new Set(autumnIds).size).toBe(1);
 	for (const result of results) {
 		expect(result.id).toBe(customerId);
 		await expectProductActive({ customer: result, productId: freeDefault.id });
@@ -82,7 +72,6 @@ test.concurrent(`${chalk.yellowBright("race: concurrent create same ID returns s
 		});
 	}
 
-	// Get the customer and verify default product
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	expectProductAttached({
 		customer,
@@ -91,13 +80,11 @@ test.concurrent(`${chalk.yellowBright("race: concurrent create same ID returns s
 	});
 	expect(customer.features[TestFeature.Messages as string]?.balance).toBe(100);
 
-	// Verify no duplicate customer_products in DB
 	const fullCustomer = await CusService.getFull({
 		ctx,
 		idOrInternalId: customerId,
 	});
 
-	// Count products with the same product_id
 	const productCounts = fullCustomer.customer_products.reduce(
 		(acc, cp) => {
 			acc[cp.product.id] = (acc[cp.product.id] || 0) + 1;
@@ -106,7 +93,6 @@ test.concurrent(`${chalk.yellowBright("race: concurrent create same ID returns s
 		{} as Record<string, number>,
 	);
 
-	// Should only have one of each product
 	for (const [_productId, count] of Object.entries(productCounts)) {
 		expect(count).toBe(1);
 	}
@@ -115,13 +101,11 @@ test.concurrent(`${chalk.yellowBright("race: concurrent create same ID returns s
 test.concurrent(`${chalk.yellowBright("race: concurrent null ID same email returns same customer")}`, async () => {
 	const email = "race-null-test@example.com";
 
-	// No products or customer needed - just need autumnV1 client
 	const { autumnV1 } = await initScenario({
 		setup: [s.deleteCustomer({ email })],
 		actions: [],
 	});
 
-	// Concurrent creates with null ID and same email
 	const results = await Promise.all([
 		autumnV1.customers.create({
 			id: null,
@@ -152,11 +136,9 @@ test.concurrent(`${chalk.yellowBright("race: concurrent null ID same email retur
 		}),
 	]);
 
-	// All should succeed and return the same customer (idempotent)
 	const autumnIds = results.map((r) => r.autumn_id);
 	expect(new Set(autumnIds).size).toBe(1);
 
-	// All should have the same email
 	for (const result of results) {
 		expect(result.email).toBe(email);
 		expect(result.id).toBeNull();
@@ -183,8 +165,6 @@ test.concurrent(`${chalk.yellowBright("race: concurrent create with default tria
 		actions: [],
 	});
 
-	// Concurrent creates with same ID and same params - should all return the same customer
-	// NOTE: All requests must have identical params for idempotency to work correctly with Stripe
 	const results = await Promise.all([
 		autumnV1.customers.create({
 			id: customerId,
@@ -218,7 +198,6 @@ test.concurrent(`${chalk.yellowBright("race: concurrent create with default tria
 		}),
 	]);
 
-	// 1. All responses should return the same customer (same autumn_id)
 	const autumnIds = results.map((r) => r.autumn_id);
 	const stripeCustomerIds = results
 		.map((r) => r.stripe_id)
@@ -226,7 +205,6 @@ test.concurrent(`${chalk.yellowBright("race: concurrent create with default tria
 	expect(new Set(autumnIds).size).toBe(1);
 	expect(new Set(stripeCustomerIds).size).toBe(1);
 
-	// Each response should have the correct customer ID, email, and trial product attached
 	for (const result of results) {
 		expect(result.id).toBe(customerId);
 		expect(result.email).toBe(email);
@@ -241,24 +219,20 @@ test.concurrent(`${chalk.yellowBright("race: concurrent create with default tria
 		});
 	}
 
-	// Get the full customer to verify Stripe data
 	const fullCustomer = await CusService.getFull({
 		ctx,
 		idOrInternalId: customerId,
 	});
 
-	// 2. Verify only 1 Stripe customer was created
 	const stripeCustomerId = fullCustomer.processor?.id;
 	expect(stripeCustomerId).toBeDefined();
 
-	// 3. The no-card default trial runs in Autumn, so no Stripe subscription exists
 	const subscriptions = await ctx.stripeCli.subscriptions.list({
 		customer: stripeCustomerId!,
 		status: "all",
 	});
 	expect(subscriptions.data.length).toBe(0);
 
-	// Verify no duplicate customer_products in DB
 	const productCounts = fullCustomer.customer_products.reduce(
 		(acc, cp) => {
 			acc[cp.product.id] = (acc[cp.product.id] || 0) + 1;
@@ -282,8 +256,6 @@ test.concurrent(`${chalk.yellowBright("race: concurrent create with name vs with
 		actions: [],
 	});
 
-	// Concurrent creates: first with name, second without name
-	// The name should be preserved regardless of which request wins the race
 	const results = await Promise.all([
 		autumnV1.customers.create({
 			id: customerId,
@@ -296,7 +268,6 @@ test.concurrent(`${chalk.yellowBright("race: concurrent create with name vs with
 		}),
 		autumnV1.customers.create({
 			id: customerId,
-			// No name provided
 
 			withAutumnId: true,
 			internalOptions: {
@@ -305,7 +276,6 @@ test.concurrent(`${chalk.yellowBright("race: concurrent create with name vs with
 		}),
 		autumnV1.customers.create({
 			id: customerId,
-			// No name provided
 
 			withAutumnId: true,
 			internalOptions: {
@@ -314,16 +284,13 @@ test.concurrent(`${chalk.yellowBright("race: concurrent create with name vs with
 		}),
 	]);
 
-	// All should return the same customer
 	const autumnIds = results.map((r) => r.autumn_id);
 	expect(new Set(autumnIds).size).toBe(1);
 
-	// Get the final customer state from DB
 	const finalCustomer = await CusService.getFull({
 		ctx,
 		idOrInternalId: customerId,
 	});
 
-	// Name should be preserved - not overwritten with empty string
 	expect(finalCustomer.name).toBe(customerName);
 });

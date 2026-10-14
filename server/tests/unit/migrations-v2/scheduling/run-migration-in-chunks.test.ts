@@ -1,8 +1,3 @@
-/**
- * Contract: a migration coordinator submits finite customer slices until the source is exhausted.
- * Total limits and cancellation apply across slices, and zero-progress slices cannot spin forever.
- */
-
 import { describe, expect, test } from "bun:test";
 import { AppEnv } from "@autumn/shared";
 import { iterateMigrationChunks } from "@/internal/migrations/v2/run/chunks/iterateMigrationChunks.js";

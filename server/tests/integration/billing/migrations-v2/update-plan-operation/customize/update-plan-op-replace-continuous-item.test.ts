@@ -1,5 +1,3 @@
-/** Red: replacing a monthly paid continuous-use item drops its grant.
- * Green: the replacement free item grants 100 units and keeps the $20 charge. */
 import { test } from "bun:test";
 import {
 	type ApiCustomerV3,

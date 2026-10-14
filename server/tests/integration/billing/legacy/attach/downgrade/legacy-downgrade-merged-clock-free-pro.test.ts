@@ -1,6 +1,3 @@
-// Legacy V1 attach downgrade behavior with test clock advancement (migrated from
-// server/tests/merged/downgrade).
-
 import { expect, test } from "bun:test";
 import { CusProductStatus } from "@autumn/shared";
 import { expectSubToBeCorrect } from "@tests/merged/mergeUtils/expectSubCorrect";
@@ -11,15 +8,6 @@ import { products } from "@tests/utils/fixtures/products";
 import ctx from "@tests/utils/testInitUtils/createTestContext";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 2: Downgrade to free + downgrade to pro, advance clock, then upgrade
-// (from mergedDowngrade2)
-//
-// Ops: Premium(ent1), Free(ent1→sched), Premium(ent2), Pro(ent2→sched)
-// Advance clock → ent1=Free(active), ent2=Pro(active)
-// Then upgrade ent1 back to Premium
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(
 	`${chalk.yellowBright("legacy-dg-clock 1: downgrade to free + pro, advance clock, upgrade")}`,
@@ -35,7 +23,6 @@ test.concurrent(
 		});
 		const pro = products.pro({ id: "pro", items: [wordsConsumable] });
 
-		// Setup: Premium(ent1), Free(ent1→sched), Premium(ent2), Pro(ent2→sched), advance clock
 		const { autumnV1, entities } = await initScenario({
 			customerId,
 			setup: [
@@ -52,7 +39,6 @@ test.concurrent(
 			],
 		});
 
-		// After advancement: entity 1 = Free (active), entity 2 = Pro (active)
 		let entity1 = await autumnV1.entities.get(customerId, entities[0].id);
 		expectProductAttached({
 			customer: entity1,
@@ -80,7 +66,6 @@ test.concurrent(
 			env: ctx.env,
 		});
 
-		// Upgrade entity 1 from Free back to Premium
 		await autumnV1.attach({
 			customer_id: customerId,
 			product_id: premium.id,

@@ -4,7 +4,6 @@ import { SlowLoadNotice } from "./SlowLoadNotice";
 
 const SLOW_AFTER_SECONDS = 5;
 
-/** Stubs that sweep while the load is young; past 5s the sweep stops and the slow-load card takes over. */
 export const ChartLoadingStubs = ({
 	binStarts,
 	interval,
@@ -25,7 +24,6 @@ export const ChartLoadingStubs = ({
 				isSweeping={!isSlow}
 				seriesCount={seriesCount}
 			/>
-			{/* No nested AnimatePresence: the notice exits with the stubs, under the page's presence. */}
 			{isSlow && <SlowLoadNotice seconds={seconds} />}
 		</div>
 	);

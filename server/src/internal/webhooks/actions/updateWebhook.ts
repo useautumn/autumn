@@ -4,8 +4,6 @@ import { toSvixFilterTypes } from "@/external/svix/endpoints/toSvixFilterTypes.j
 import { withSvixErrors } from "@/external/svix/endpoints/withSvixErrors.js";
 import { createSvixCli } from "@/external/svix/svixUtils.js";
 
-/** Patches only the stated fields; `events: []` widens to every event. The id
- * is the lookup key and never changes. */
 export const updateWebhook = async ({
 	appId,
 	params,

@@ -1,9 +1,3 @@
-/**
- * dfu.flash RevenueCat hydration — an expired mock RC subscription hydrates the
- * omitted status to expired, yielding an Expired cusProduct with NO feature
- * access (leak-safe). RC read client is served entirely from mock fixtures.
- */
-
 import { expect, test } from "bun:test";
 import { type ApiCustomerV5, AppEnv, CusProductStatus } from "@autumn/shared";
 import {
@@ -70,7 +64,6 @@ test.concurrent(
 					phases: [
 						{
 							starts_at: "now",
-							// status OMITTED — must be hydrated from the RC sub.
 							plans: [{ plan_id: pro.id }],
 						},
 					],
@@ -80,11 +73,9 @@ test.concurrent(
 
 		const flashRes = await callFlash(autumnV2_2 as FlashClient, payload, mock);
 
-		// Contract 1a: reported status hydrated to expired.
 		const flashed = flashRes.result?.flashed?.find((f) => f.plan_id === pro.id);
 		expect(flashed?.status).toBe("expired");
 
-		// Contract 1b: cusProduct is Expired.
 		const cusProduct = await getFlashedCustomerProduct({
 			ctx,
 			customerId,
@@ -92,7 +83,6 @@ test.concurrent(
 		});
 		expect(cusProduct?.status).toBe(CusProductStatus.Expired);
 
-		// Contract 1c: leak-safe — no feature access.
 		const customer = await autumnV2_3.customers.get<ApiCustomerV5>(customerId);
 		await expectCustomerProducts({ customer, notPresent: [pro.id] });
 		const messagesBalance = customer.balances?.[TestFeature.Messages];

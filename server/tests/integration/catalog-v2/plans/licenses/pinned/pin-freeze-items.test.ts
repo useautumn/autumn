@@ -1,8 +1,3 @@
-/**
- * catalogV2.update — pin must freeze the previous effective, not follow.
- * Adopt inherits Words; pin must not. A clone of `next` child would still
- * pass a messages-only 10→200 assert.
- */
 import { expect, test } from "bun:test";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";

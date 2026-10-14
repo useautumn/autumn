@@ -1,8 +1,3 @@
-/**
- * A first phase starting now with billing_cycle_anchor 'phase_start' resets the live cycle now:
- * Stripe bills the full new cycle less the old cycle's unused time, then renews one interval later.
- */
-
 import { expect, test } from "bun:test";
 import type { BillingBehavior, SetPlansParamsV0Input } from "@autumn/shared";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";

@@ -1,5 +1,3 @@
-/** set_plans with enable_plan_immediately through Stripe Checkout, from pending payment to checkout completion or expiry. */
-
 import { expect, test } from "bun:test";
 import {
 	type ApiCustomerV3,
@@ -26,10 +24,6 @@ const parseCheckoutSessionId = (url: string): string | null => {
 	return match?.[1] ?? null;
 };
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 1: Happy path
-// ═══════════════════════════════════════════════════════════════════════════════
-
 test.concurrent(
 	`${chalk.yellowBright("create-schedule enable_plan_immediately: pre-inserts both phases, webhook persists schedule")}`,
 	async () => {
@@ -47,7 +41,7 @@ test.concurrent(
 		const { autumnV1, ctx } = await initScenario({
 			customerId,
 			setup: [
-				s.customer({ testClock: true }), // No payment method → stripe_checkout
+				s.customer({ testClock: true }),
 				s.products({ list: [pro, growth] }),
 			],
 			actions: [],
@@ -85,7 +79,6 @@ test.concurrent(
 		const checkoutSessionId = parseCheckoutSessionId(response.payment_url!);
 		expect(checkoutSessionId).toBeTruthy();
 
-		// Pre-completion: both cusProducts exist, linked to the same checkout session.
 		const cusProductsBefore = await CusProductService.list({
 			db: ctx.db,
 			internalCustomerId,
@@ -113,18 +106,14 @@ test.concurrent(
 		expect(proBefore!.subscription_ids ?? []).toHaveLength(0);
 		expect(growthBefore!.subscription_ids ?? []).toHaveLength(0);
 
-		// Pre-completion: no schedule rows yet.
 		const schedulesBefore = await ctx.db
 			.select()
 			.from(schedules)
 			.where(eq(schedules.internal_customer_id, internalCustomerId));
 		expect(schedulesBefore).toHaveLength(0);
 
-		// Customer completes checkout.
 		await completeStripeCheckoutForm({ url: response.payment_url! });
 
-		// Post-completion: subscription_ids patched on the immediate row,
-		// schedule + phases rows now exist.
 		const cusProductsAfter = await CusProductService.list({
 			db: ctx.db,
 			internalCustomerId,
@@ -157,20 +146,14 @@ test.concurrent(
 			.where(eq(schedulePhases.schedule_id, schedulesAfter[0]!.id));
 		expect(phasesAfter).toHaveLength(2);
 
-		// scheduled_ids should be populated on paid+recurring rows once the Stripe
-		// subscription_schedule is created in the webhook.
 		expect(proAfter!.scheduled_ids ?? []).toHaveLength(1);
 		expect(growthAfter!.scheduled_ids ?? []).toHaveLength(1);
 		expect(proAfter!.scheduled_ids![0]).toBe(growthAfter!.scheduled_ids![0]);
 
-		// Cross-checks the Stripe subscription_schedule phases against the Autumn
-		// cusProduct timeline.
 		await expectStripeSubscriptionCorrect({ ctx, customerId });
 	},
 );
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 2: Abandoned session — both phases cleaned up; no schedule rows ever exist
 // ═══════════════════════════════════════════════════════════════════════════════
 
 // Skipped until the implementation lands — same reasoning as the attach Test 2.
@@ -218,8 +201,6 @@ test.skip(`${chalk.yellowBright("create-schedule enable_plan_immediately: expire
 	});
 	expect(before.length).toBeGreaterThanOrEqual(2);
 
-	// TODO: drive past Stripe session expiry (24h) once the test harness
-	// supports a clock-advance for checkout.session.expired.
 	void TestFeature;
 
 	const after = await CusProductService.list({

@@ -13,7 +13,6 @@ type MigrationClient = Parameters<
 	typeof runChunkedMigration
 >[0]["migrationClient"];
 
-/** Plans that mint versions must not collide with leftovers from prior runs. */
 export const uniqueStem = (label: string) =>
 	`${label}-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
 
@@ -31,8 +30,6 @@ export const versionOperations = ({
 	],
 });
 
-/** Items MUST be `itemsV2` shapes — the route's params schema silently strips
- * internal ProductItem fields, minting an empty definition. */
 export const mintPlanVersion = ({
 	autumnV2_3,
 	planId,
@@ -70,7 +67,6 @@ export const migrateVersionOnBatchLane = async ({
 	expectBatchLane({ result });
 };
 
-/** `limit` makes the run batch-ineligible, forcing the per-customer lane. */
 export const migrateVersionOnPerCustomerLane = async ({
 	ctx,
 	migrationClient,

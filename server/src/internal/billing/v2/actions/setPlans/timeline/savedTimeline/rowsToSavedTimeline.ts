@@ -24,7 +24,6 @@ export const instanceKey = ({
 const isRelevantRow = ({ row, now }: { row: TimelineRow; now: number }) =>
 	row.endsAt === null || row.endsAt > now;
 
-/** A row continues the slot it starts exactly where, preferring the same subscription id. */
 const findSlotIndex = ({
 	slots,
 	row,
@@ -95,7 +94,6 @@ const toSavedSegment = ({
 	};
 };
 
-/** Contiguous rows granting the same config are one segment, however many phases wrote them. */
 const slotToSegments = ({
 	key,
 	rows,
@@ -117,7 +115,6 @@ const slotToSegments = ({
 	return runs.map((run) => toSavedSegment({ key, rows: run }));
 };
 
-/** The saved timeline the rows run from now on: one key per plan instance, merged runs per key. */
 export const rowsToSavedTimeline = ({
 	rows,
 	now,

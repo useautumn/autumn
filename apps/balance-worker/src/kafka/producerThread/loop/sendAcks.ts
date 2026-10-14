@@ -1,9 +1,7 @@
-/** Every outcome goes back to the decide thread: sends as ack frames, control requests as messages. */
 import { ACK_FRAME, encodeAckFrame, type SendAck } from "../frames/ackFrame.js";
 import { producerErrorOf } from "../rules/producerErrorOf.js";
 import type { ProducerLoopScope } from "../types/producerLoopScope.js";
 
-/** Acks leave in the order their sends settled; a full ring waits for the decide thread to read. */
 async function pumpAcks({
 	scope,
 }: {

@@ -25,9 +25,6 @@ interface StatusRowProps {
 	action?: StatusRowAction;
 }
 
-/**
- * Generic status row component with icon indicator
- */
 export function StatusRow({ status, label, detail, action }: StatusRowProps) {
 	const renderIcon = () => {
 		switch (status) {

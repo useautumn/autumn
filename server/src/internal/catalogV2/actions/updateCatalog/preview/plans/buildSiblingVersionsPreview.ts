@@ -147,7 +147,6 @@ const withSiblingLicenseParents = ({
 	};
 };
 
-/** No-op upsert so variant preview can resolve anchors on an unselected row. */
 const existingRowUpsert = ({
 	product,
 	productStatesContext,
@@ -202,7 +201,6 @@ const withSiblingVariants = ({
 	};
 };
 
-/** Other existing versions of this direct entry's plan. Empty → omit the lane. */
 export const buildSiblingVersionsPreview = ({
 	directUpsert,
 	upsertProducts,

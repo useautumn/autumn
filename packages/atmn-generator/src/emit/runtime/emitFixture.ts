@@ -7,23 +7,15 @@ export type CollectionSpec = {
 	readonly idField: string;
 	readonly responseIdField: string;
 	readonly keys: readonly string[];
-	/** Fixture paths the type demands: written even when the row's value is null. */
 	readonly required?: readonly string[];
-	/** Every fixture path a config may state, collection-relative (no `entitlementId`, `versioning`, …). */
 	readonly paths: readonly string[];
-	/** The emission default at each fixture path; a pulled value equal to it is left out. */
 	readonly defaults?: Readonly<Record<string, unknown>>;
-	/** Rows sharing idField are versions; pull keys them by id and slug. */
 	readonly versioned?: boolean;
-	/** Whether pull can address entries by idField alone. */
 	readonly pull: boolean;
-	/** Wire-named, item-rooted paths kept for existing catalogs only. */
 	readonly deprecated?: readonly { path: string; reason: string }[];
-	/** Set when the item is a union: one builder per branch, keyed by its wrapper. */
 	readonly branches?: readonly BranchSpec[];
 };
 
-/** One branch of a union item: the fixture lives under `key`, not at the root. */
 export type BranchSpec = {
 	readonly builder: string;
 	readonly key: string;
@@ -34,7 +26,6 @@ export type BranchSpec = {
 	readonly defaults?: Readonly<Record<string, unknown>>;
 };
 
-/** The branch an entry or row states, or undefined when it states none. */
 export const branchOf = ({
 	spec,
 	row,
@@ -44,11 +35,6 @@ export const branchOf = ({
 }): BranchSpec | undefined =>
 	spec.branches?.find((branch) => row[branch.key] !== undefined);
 
-/**
- * A branched row read as if its branch were the whole collection: the builder,
- * keys and paths become the branch's and the body becomes the row, so
- * everything downstream stays union-blind.
- */
 export const resolveBranch = ({
 	spec,
 	row,
@@ -82,7 +68,6 @@ const branchSpecOf = ({
 	branches: undefined,
 });
 
-/** Every shape an entry of the collection can take; just itself when unbranched. */
 export const branchSpecs = ({
 	spec,
 }: {
@@ -90,18 +75,13 @@ export const branchSpecs = ({
 }): CollectionSpec[] =>
 	spec.branches?.map((branch) => branchSpecOf({ spec, branch })) ?? [spec];
 
-/** A list keyed by id outside the catalog: emitted like a collection item,
- * one entry per environment. */
 export type SyncedListSpec = CollectionSpec & {
 	readonly wireKey: string;
-	/** The fixture field naming the entry's environment. */
 	readonly envField: string;
 };
 
 export type SingletonSpec = {
-	/** The request-body field the object is sent as. */
 	readonly wireKey: string;
-	/** Fixture key, wire key and the server's default, in spec order. */
 	readonly fields: readonly {
 		readonly key: string;
 		readonly wireKey: string;
@@ -111,7 +91,6 @@ export type SingletonSpec = {
 
 export type EmitFixtureContext = {
 	readonly featureTypes?: Readonly<Record<string, string>>;
-	/** Fixture builders registered for nested array paths, such as `variants`. */
 	readonly nestedBuilders?: Readonly<Record<string, string>>;
 };
 
@@ -120,11 +99,6 @@ const PLAIN_IDENTIFIER = /^[A-Za-z_$][A-Za-z0-9_$]*$/;
 const keyText = (key: string): string =>
 	PLAIN_IDENTIFIER.test(key) ? key : JSON.stringify(key);
 
-/**
- * A path the schema never describes further (`metadata`, a usage-limit
- * filter's `properties` bag) is free-form: nothing declares its shape, so the
- * row's own data IS the fixture's data, copied through untouched.
- */
 const serializeVerbatim = ({
 	value,
 	indent,
@@ -159,9 +133,7 @@ const serializeVerbatim = ({
 
 type PathIndex = {
 	paths: ReadonlySet<string>;
-	/** Container paths whose values are a record: every key is the user's data, not the schema's. */
 	records: ReadonlySet<string>;
-	/** Container paths the schema declares at least one child under. */
 	parents: ReadonlySet<string>;
 };
 
@@ -180,13 +152,6 @@ const pathIndexOf = (specPaths: readonly string[]): PathIndex => {
 	return { paths, records, parents };
 };
 
-/**
- * Recurses with the value's elided fixture path so nested extras a server row
- * carries (`entitlementId`, an expanded `plan`, …) never leak into a fixture
- * the type does not declare. Array entries keep the parent's path; a record's
- * values keep every key, since the keys are the user's data; a path with no
- * declared children at all falls through to `serializeVerbatim`.
- */
 const serialize = ({
 	value,
 	path,
@@ -237,8 +202,6 @@ const serialize = ({
 
 	const childPathOf = (key: string): string =>
 		isRecord ? `${path}.*` : `${path}.${key}`;
-	// A null from the server means unset, and omission says the same on the wire
-	// — unless the fixture type demands the key, which omission would not compile.
 	const entries = Object.entries(value as Record<string, unknown>).filter(
 		([key, entry]) =>
 			entry !== undefined &&
@@ -254,12 +217,6 @@ const serialize = ({
 	return `{\n${items.join("\n")}\n${indent}}`;
 };
 
-/**
- * A value at its spec default reads the same when omitted, so it is not
- * written; a container whose every child was elided is not written either.
- * `items` and other arrays carry no default, so an empty one still states
- * "none". A path the type demands is kept whatever its value.
- */
 const pruneDefaults = ({
 	value,
 	path,
@@ -278,7 +235,6 @@ const pruneDefaults = ({
 	if (required.has(path)) return value;
 	if (path in defaults && valuesEqual(value, defaults[path])) return undefined;
 	if (value === null || typeof value !== "object") return value;
-	// An entry that is all defaults still says "one row here", so it stays as {}.
 	if (Array.isArray(value)) {
 		return value.map(
 			(entry) =>
@@ -313,14 +269,11 @@ const pruneDefaults = ({
 		});
 		if (child !== undefined) pruned[key] = child;
 	}
-	// An object the spec describes that ends up empty said nothing; a record
-	// (metadata) is the user's data and stays whatever it holds.
 	if (!isRecord && Object.keys(pruned).length === 0 && path !== "")
 		return undefined;
 	return pruned;
 };
 
-/** A half-nulled display would fail the config lint, so it must not be written. */
 const displayOf = (value: unknown): unknown => {
 	if (value === null || typeof value !== "object") return undefined;
 	const display = value as Record<string, unknown>;
@@ -350,13 +303,11 @@ const rowValueOf = ({
 	includeMappings: boolean;
 }): unknown => {
 	if (key === spec.idField) return row[spec.responseIdField];
-	// Pulled rows are never archived, so `archived` is not a pull's business.
 	if (key === "archived") return undefined;
 	if (key === "processors" && !includeMappings) return undefined;
 	const value = row[key];
 	if (key === "display") return displayOf(value);
 	if (key === "creditSchema") return creditSchemaOf(value);
-	// A deprecated field is kept only while it carries data.
 	if (
 		isDeprecatedKey({ spec, key }) &&
 		Array.isArray(value) &&
@@ -400,7 +351,6 @@ const isDeprecatedKey = ({
 const camelOf = (snake: string): string =>
 	snake.replace(/_([a-z])/g, (_, letter: string) => letter.toUpperCase());
 
-/** One top-level fixture property as `key: value` text, or null when the row omits it. */
 export const emitFixtureProperty = ({
 	spec: collectionSpec,
 	row: collectionRow,
@@ -443,7 +393,6 @@ export const emitFixtureProperty = ({
 	});
 };
 
-/** One element of a nested array path (`variants`) as fixture text, builder-wrapped. */
 export const emitNestedFixture = ({
 	spec,
 	path,
@@ -513,8 +462,6 @@ export const emitFixture = ({
 			context,
 		});
 		if (value === undefined) continue;
-		// A required key states null rather than vanishing: the fixture type
-		// demands it, so dropping it emits source that does not compile.
 		if (value === null && !required.has(key)) continue;
 		lines.push(
 			`${indent}\t${keyText(key)}: ${serialize({ includeMappings, required, value, path: key, index, indent: `${indent}\t`, context })},`,

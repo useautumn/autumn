@@ -210,8 +210,6 @@ export function PerFile({
 							</ul>
 						</div>
 					) : null}
-					{/* WTERM read-only surface — fills the remaining height, scrolls
-					    internally, renders ANSI colors instead of raw escapes. */}
 					<div className="min-h-0 flex-1 overflow-hidden rounded-lg border bg-card">
 						{showOutput ? (
 							<TerminalOutput text={socket.output} />

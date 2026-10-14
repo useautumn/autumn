@@ -7,11 +7,6 @@ import {
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import type { FeatureDeduction } from "../types/featureDeduction.js";
 
-/**
- * V2 (FullSubject) variant of deductionToBalancesResponse — returns ALL
- * balances related to the tracked features (main + linked credit systems),
- * with null entries for features the customer has no entitlement to.
- */
 export const deductionToBalancesResponseV2 = async ({
 	ctx,
 	fullSubject,

@@ -1,12 +1,3 @@
-/**
- * The client is generated so it cannot drift from the API the way v2's
- * hand-rolled fetchers did. These assert the parts that would drift: the paths,
- * the auth header, that a failure carries the server's message rather than a
- * bare status, and that responses come back in fixture casing.
- *
- * `fetch` is injected — none of this touches the network.
- */
-
 import { expect, test } from "bun:test";
 import { AutumnApiError, createClient } from "../src/generated/client";
 
@@ -44,8 +35,6 @@ test("posts to the path the spec declares, with bearer auth", async () => {
 });
 
 test("preview and update take the same body and differ only by path", async () => {
-	// preview ≡ update is the invariant the whole design rests on: if these ever
-	// took different params, a clean preview would stop meaning anything.
 	const { fetch, calls } = capturingFetch();
 	const client = createClient({ secretKey: "sk_test", fetch });
 	const body = { features: [], skip_deletions: false };
@@ -81,7 +70,6 @@ test("a failure surfaces the server's message, not just a status", async () => {
 
 	const failure = client.update({ features: [] });
 	await expect(failure).rejects.toThrow(AutumnApiError);
-	// The message is what a user acts on; a bare 400 tells them nothing.
 	await expect(failure).rejects.toThrow(/would remove all 3/);
 });
 

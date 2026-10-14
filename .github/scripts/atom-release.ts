@@ -2,7 +2,6 @@ import { appendFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { advanceBasePastPublishCommits, listCommitsAfter } from "./deploy-gate";
 
-/** CI cuts prod's releases; staging is allowed only for a local proof run. Nothing else is ever named. */
 const PROJECTS = ["autumn", "autumn-staging"] as const;
 type Project = (typeof PROJECTS)[number];
 
@@ -14,7 +13,6 @@ const ATOM_ENTRY = "apps/atom/src/main.ts";
 const RELEASES_PAGE = 100;
 const MAX_TITLE = 200;
 
-/** Files outside the bundle that still change what Alien builds or how it installs. */
 const ROOT_INPUTS = [
 	/^package\.json$/,
 	/^bun\.lock$/,
@@ -56,7 +54,6 @@ const alienGet = async <T>({
 	return (await response.json()) as T;
 };
 
-/** Alien must answer for exactly this project, and every channel it lists must be that project's. */
 export const assertProject = ({
 	project,
 	answered,
@@ -72,7 +69,6 @@ export const assertProject = ({
 		throw new Error(`Alien listed channels outside ${project}`);
 };
 
-/** Everything the Atom's build reads: the files its entry bundles, their workspaces' configs, and the install. */
 export const atomInputMatcher = ({
 	bundledFiles,
 	workspaceDirs,
@@ -96,7 +92,6 @@ export const atomInputMatcher = ({
 		ROOT_INPUTS.some((pattern) => pattern.test(file));
 };
 
-/** The files Bun bundles from the Atom's entry, which is what Alien's TypeScript toolchain compiles. */
 const bundleAtom = async ({ root }: { root: string }) => {
 	const result = await Bun.build({
 		entrypoints: [join(root, ATOM_ENTRY)],
@@ -132,7 +127,6 @@ export type Decision =
 	| { release: true; reason: string }
 	| { release: false; reason: string };
 
-/** Release when this commit has none yet and the Atom's inputs changed since the last commit that did. */
 export const decideRelease = ({
 	sha,
 	releases,
@@ -174,7 +168,6 @@ export const decideRelease = ({
 			};
 };
 
-/** "#123 PR title" when the commit came from a PR, else its subject; the tab looks the PR up again by sha. */
 export const releaseTitle = ({
 	pullRequest,
 	subject,
@@ -262,7 +255,6 @@ async function main() {
 				cwd: root,
 			}).exitCode === 0,
 		changedFilesSince: (baseSha) => {
-			// Publish-bot commits never build, so they never count as the base's changes.
 			const base = advanceBasePastPublishCommits({
 				commits: listCommitsAfter({ root, baseSha }),
 				baseSha,
@@ -343,7 +335,6 @@ async function main() {
 	if (!releaseId)
 		throw new Error(`alien release printed no release id: ${output}`);
 
-	// A promote here would restart every follower: fail loudly if Alien put the release on any channel.
 	const created = await alienGet<Release>({
 		apiKey,
 		project,

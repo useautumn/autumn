@@ -20,9 +20,6 @@ export const handlePlanHasCustomersV2 = createRoute({
 
 		const body = await c.req.json();
 
-		// REST route passes the plan via `/:product_id`; the RPC route
-		// (plans.has_customers) passes `plan_id` in the body. Strip the
-		// update-only keys so the rest is the proposed plan to compare.
 		const { plan_id, new_plan_id, disable_version, version, ...planParams } =
 			body ?? {};
 		const productId = c.req.param().product_id ?? plan_id;
@@ -50,8 +47,6 @@ export const handlePlanHasCustomersV2 = createRoute({
 				env,
 			});
 
-		// V2.0+ (CLI): body is CreatePlanParams, convert to ProductV2
-		// < V2.0 (Dashboard): body is already ProductV2
 		const productV2 = apiVersion.gte(ApiVersion.V2_0)
 			? (apiPlan.map.paramsV1ToProductV2({
 					ctx,

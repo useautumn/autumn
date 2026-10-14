@@ -21,9 +21,6 @@ import { Decimal } from "decimal.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { getTrialStateTransition } from "@/internal/billing/v2/utils/billingContext/getTrialStateTransition";
 
-/** Block non-ManualTopUp paths from mutating an existing one-off prepaid item's
- * quantity. First-time set-balance (no existing options entry) and carry-through
- * (quantity unchanged) are both allowed; only true quantity changes are rejected. */
 const blockOneOffQuantityChangeOutsideManualTopUp = ({
 	billingContext,
 	params,
@@ -36,8 +33,6 @@ const blockOneOffQuantityChangeOutsideManualTopUp = ({
 	if (featureQuantities.length === 0) return;
 
 	for (const fq of featureQuantities) {
-		// Tie-break aware: only guard features whose prepaid quantity actually
-		// resolves to a one-off price — a recurring prepaid sibling wins instead.
 		const targetPrice = findPrepaidQuantityTargetPrice({
 			prices: customerProduct.customer_prices.map((cp) => cp.price),
 			featureId: fq.feature_id,
@@ -95,21 +90,14 @@ export const handleOneOffErrors = ({
 }) => {
 	const { customerProduct } = billingContext;
 
-	// ManualTopUp is a legit one-off mutation; its own strict-shape gate
-	// (handleManualTopUpErrors) owns rejecting non-conforming requests.
 	if (billingContext.intent === UpdateSubscriptionIntent.ManualTopUp) return;
 
-	// UpdatePlan combined with a one-off feature_quantity change is allowed:
-	// the custom-plan flow creates a new cusProduct billed for the requested
-	// quantity, and the one-off carryover helper preserves the existing balance.
 	if (billingContext.intent !== UpdateSubscriptionIntent.UpdatePlan) {
 		blockOneOffQuantityChangeOutsideManualTopUp({ billingContext, params });
 	}
 
-	// Only apply these checks to one-off products
 	if (!isCustomerProductOneOff(customerProduct)) return;
 
-	// 1. Check that free trial param isn't passed in
 	const freeTrial = resolveFreeTrialParam(params);
 
 	if (freeTrial) {
@@ -145,7 +133,6 @@ export const handleOneOffErrors = ({
 	}
 };
 
-/** Don't allow removing a trial from a paid recurring product when adding one-off items */
 export const checkTrialRemovalWithOneOffItems = ({
 	billingContext,
 	autumnBillingPlan,

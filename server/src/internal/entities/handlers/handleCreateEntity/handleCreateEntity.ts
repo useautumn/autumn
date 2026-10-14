@@ -18,7 +18,6 @@ export const handleCreateEntity = createRoute({
 		const ctx = c.get("ctx");
 		const body = c.req.valid("json");
 
-		// Skip cache for entity creation
 		ctx.skipCache = true;
 
 		const { customer_id } = c.req.param();

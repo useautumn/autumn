@@ -11,10 +11,6 @@ import { z } from "zod/v4";
 import type { RequestContext } from "@/honoUtils/HonoEnv.js";
 import { getApiSubscriptions } from "../../../customers/cusUtils/apiCusUtils/getApiSubscription/getApiSubscriptions.js";
 
-/**
- * Get base ApiEntity without expand fields
- * This is the core entity object that can be cached
- */
 export const getApiEntityBase = async ({
 	ctx,
 	entity,
@@ -28,21 +24,18 @@ export const getApiEntityBase = async ({
 }): Promise<{ apiEntity: ApiEntityV2; legacyData: EntityLegacyData }> => {
 	const { org } = ctx;
 
-	// Filter customer products for this entity
 	const entityCusProducts = filterCusProductsByEntity({
 		cusProducts: fullCus.customer_products,
 		entity,
 		org,
 	});
 
-	// Create filtered fullCus with entity-specific products and entity set
 	const filteredFullCus = {
 		...fullCus,
 		customer_products: entityCusProducts,
-		entity, // Set entity for entity-specific balance calculations
+		entity,
 	};
 
-	// Reuse existing customer functions with filtered products
 	const { balances: apiBalances, flags: apiFlags } = await getApiBalances({
 		ctx,
 		fullCus: filteredFullCus,

@@ -1,16 +1,3 @@
-/**
- * Phase 1 — RevenueCat dual-key customer matching + self-migration + auto-create.
- *
- * Verifies the resolver matches a customer by `processors.revenuecat.id` OR by
- * `customer_id` (first wins), lazily backfills the processors key on legacy
- * customers (write app_user_id only, only-if-absent, never original), and
- * auto-creates an email-`app_user_id` customer with a non-email id.
- *
- * Additive-only: a customer with no `processors.revenuecat` must resolve exactly
- * as today (customer_id fallback), and the getCusProcessors response invariant
- * (presence gated on an ACTIVE RC product, never on the DB column) must hold.
- */
-
 import { expect, test } from "bun:test";
 import {
 	type ApiCustomerV5,
@@ -137,10 +124,6 @@ const pollUntil = async <T>(
 	return last;
 };
 
-// ═══════════════════════════════════════════════════════════════════
-// TEST 1: Dual-key — resolves by processors.revenuecat.id (id ≠ customer_id)
-// ═══════════════════════════════════════════════════════════════════
-
 test.concurrent(
 	`${chalk.yellowBright("rc dual-key: resolves customer by processors.revenuecat.id when it differs from customer_id")}`,
 	async () => {
@@ -185,16 +168,10 @@ test.concurrent(
 		);
 		expect(productIds).toContain(proMonthly.id);
 
-		// No new customer was created under the app_user_id.
 		const strayCustomer = await getCustomerByCustomerId(appUserId);
 		expect(strayCustomer).toBeUndefined();
 	},
 );
-
-// ═══════════════════════════════════════════════════════════════════
-// TEST 2: Backward-compat — app_user_id == customer_id, no processors key
-// (already GREEN — proves the change is additive)
-// ═══════════════════════════════════════════════════════════════════
 
 test.concurrent(
 	`${chalk.yellowBright("rc dual-key: falls back to customer_id when no processors key (backward compat)")}`,
@@ -238,10 +215,6 @@ test.concurrent(
 	},
 );
 
-// ═══════════════════════════════════════════════════════════════════
-// TEST 3: Anon→alias — match via original_app_user_id
-// ═══════════════════════════════════════════════════════════════════
-
 test.concurrent(
 	`${chalk.yellowBright("rc dual-key: matches seeded anon id via original_app_user_id after alias")}`,
 	async () => {
@@ -269,10 +242,8 @@ test.concurrent(
 			autumnProductId: proMonthly.id,
 			revenuecatProductId: RC_PRODUCT_ID,
 		});
-		// Customer was first seen anonymous; processors key holds the anon id.
 		await seedProcessorsRevenueCatId({ customerId, revenueCatId: anonId });
 
-		// Post-alias webhook: current id is real, original (stable) is anon.
 		expectWebhookSuccess(
 			await newRcClient().initialPurchase({
 				productId: RC_PRODUCT_ID,
@@ -290,7 +261,6 @@ test.concurrent(
 		);
 		expect(productIds).toContain(proMonthly.id);
 
-		// Primary id is NEVER updated; the aliased/current id is APPENDED to aliases.
 		const after = await pollUntil(
 			() => getCustomerByCustomerId(customerId),
 			(c) => Boolean(c?.processors?.revenuecat?.aliases?.includes(realId)),
@@ -299,11 +269,6 @@ test.concurrent(
 		expect(after?.processors?.revenuecat?.aliases).toContain(realId);
 	},
 );
-
-// ═══════════════════════════════════════════════════════════════════
-// TEST 4: Lazy backfill — seed processors key on legacy customer,
-// second webhook does NOT clobber, original id never written.
-// ═══════════════════════════════════════════════════════════════════
 
 test.concurrent(
 	`${chalk.yellowBright("rc dual-key: lazily backfills processors.revenuecat.id (only-if-absent, no clobber)")}`,
@@ -329,11 +294,9 @@ test.concurrent(
 			revenuecatProductId: RC_PRODUCT_ID,
 		});
 
-		// Legacy customer: no processors key at all.
 		const before = await getCustomerByCustomerId(customerId);
 		expect(before?.processors?.revenuecat).toBeUndefined();
 
-		// First webhook resolves via customer_id fallback and backfills app_user_id.
 		expectWebhookSuccess(
 			await newRcClient().initialPurchase({
 				productId: RC_PRODUCT_ID,
@@ -349,8 +312,6 @@ test.concurrent(
 		expect(afterFirst?.processors?.revenuecat?.id).toBe(customerId);
 		expect(afterFirst?.processors?.revenuecat?.aliases).toEqual([]);
 
-		// Second webhook: aliased so current id differs, original == seeded id.
-		// Primary id must NOT change; the new id is APPENDED to aliases.
 		expectWebhookSuccess(
 			await newRcClient().renewal({
 				productId: RC_PRODUCT_ID,
@@ -372,7 +333,6 @@ test.concurrent(
 			"rc-backfill-aliased",
 		);
 
-		// A repeat of the same webhook does NOT duplicate the alias.
 		expectWebhookSuccess(
 			await newRcClient().renewal({
 				productId: RC_PRODUCT_ID,
@@ -391,11 +351,6 @@ test.concurrent(
 		expect(aliasOccurrences).toHaveLength(1);
 	},
 );
-
-// ═══════════════════════════════════════════════════════════════════
-// TEST 5: Email-as-id auto-create — creates non-email id, email set,
-// processors.revenuecat.id = the email.
-// ═══════════════════════════════════════════════════════════════════
 
 test.concurrent(
 	`${chalk.yellowBright("rc dual-key: auto-creates email app_user_id with non-email customer id")}`,
@@ -440,7 +395,6 @@ test.concurrent(
 		);
 
 		expect(created).toBeTruthy();
-		// Email must NOT become the Autumn customer id.
 		expect(created?.id).not.toBe(email);
 		expect(created?.email).toBe(email);
 		expect(created?.processors?.revenuecat?.id).toBe(email);
@@ -449,11 +403,6 @@ test.concurrent(
 		expect(productIds).toContain(proMonthly.id);
 	},
 );
-
-// ═══════════════════════════════════════════════════════════════════
-// TEST 6: getCusProcessors invariant — DB column set but no ACTIVE RC
-// product ⇒ response omits processors.revenuecat.
-// ═══════════════════════════════════════════════════════════════════
 
 test.concurrent(
 	`${chalk.yellowBright("rc dual-key: getCusProcessors omits revenuecat when no active RC product (invariant)")}`,
@@ -473,7 +422,6 @@ test.concurrent(
 			actions: [],
 		});
 
-		// DB column is set, but the customer has no active RC customer_product.
 		await seedProcessorsRevenueCatId({
 			customerId,
 			revenueCatId: "rc-invariant-appuser",
@@ -483,11 +431,6 @@ test.concurrent(
 		expect(customer.processors?.revenuecat).toBeUndefined();
 	},
 );
-
-// ═══════════════════════════════════════════════════════════════════
-// TEST 7: Alias-set — resolves via an id in `aliases` (id ≠ app_user_id),
-// primary id is never touched.
-// ═══════════════════════════════════════════════════════════════════
 
 test.concurrent(
 	`${chalk.yellowBright("rc dual-key: resolves customer when app_user_id is in aliases (not the primary id)")}`,
@@ -516,7 +459,6 @@ test.concurrent(
 			autumnProductId: proMonthly.id,
 			revenuecatProductId: RC_PRODUCT_ID,
 		});
-		// Primary id is one value; the incoming webhook app_user_id lives in aliases.
 		await seedProcessorsRevenueCatId({
 			customerId,
 			revenueCatId: primaryId,
@@ -539,7 +481,6 @@ test.concurrent(
 		);
 		expect(productIds).toContain(proMonthly.id);
 
-		// No stray customer, primary id unchanged, alias set unchanged (no dup).
 		const strayCustomer = await getCustomerByCustomerId(aliasId);
 		expect(strayCustomer).toBeUndefined();
 		const after = await getCustomerByCustomerId(customerId);

@@ -1,14 +1,3 @@
-/**
- * Integration tests for entity-scoped usage alert webhooks.
- *
- * Verifies that `balances.usage_alert_triggered` webhooks fire correctly
- * when entity-level usage alerts are configured, including:
- * - Per-entity items (entityFeatureId scoping)
- * - Entity-level alerts on individual entities
- * - Multiple entities with different alert thresholds
- * - Customer-level alerts still fire alongside entity-level alerts
- */
-
 import { afterAll, beforeAll, expect, test } from "bun:test";
 import type { EntityBillingControls } from "@autumn/shared";
 import {
@@ -41,10 +30,6 @@ type BalancesUsageAlertTriggeredPayload = {
 	};
 };
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// SVIX PLAY SETUP
-// ═══════════════════════════════════════════════════════════════════════════════
-
 let webhook: WebhookTestSetup;
 let playToken: string;
 
@@ -60,10 +45,6 @@ beforeAll(async () => {
 afterAll(async () => {
 	await webhook?.cleanup();
 });
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 1: Per-entity item — entity-level usage alert triggers with entity_id
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test(`${chalk.yellowBright("entity-alert1: per-entity item triggers entity-scoped alert with entity_id")}`, async () => {
 	const perEntityMessages = items.monthlyMessages({
@@ -85,7 +66,6 @@ test(`${chalk.yellowBright("entity-alert1: per-entity item triggers entity-scope
 		actions: [s.attach({ productId: prod.id })],
 	});
 
-	// Set entity-level usage alert
 	await autumnV2_1.entities.update(customerId, entities[0].id, {
 		billing_controls: {
 			usage_alerts: [
@@ -99,7 +79,6 @@ test(`${chalk.yellowBright("entity-alert1: per-entity item triggers entity-scope
 		} as EntityBillingControls,
 	});
 
-	// Track 450 usage on entity — crosses threshold of 400
 	await autumnV2_1.track({
 		customer_id: customerId,
 		entity_id: entities[0].id,
@@ -128,10 +107,6 @@ test(`${chalk.yellowBright("entity-alert1: per-entity item triggers entity-scope
 	expect(data.usage_alert.threshold_type).toBe("usage");
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 2: Two entities with different thresholds — only the crossed one fires
-// ═══════════════════════════════════════════════════════════════════════════════
-
 test(`${chalk.yellowBright("entity-alert2: two entities, only entity crossing threshold fires alert")}`, async () => {
 	const perEntityMessages = items.monthlyMessages({
 		includedUsage: 1000,
@@ -152,7 +127,6 @@ test(`${chalk.yellowBright("entity-alert2: two entities, only entity crossing th
 		actions: [s.attach({ productId: prod.id })],
 	});
 
-	// Entity 1: alert at 300
 	await autumnV2_1.entities.update(customerId, entities[0].id, {
 		billing_controls: {
 			usage_alerts: [
@@ -166,7 +140,6 @@ test(`${chalk.yellowBright("entity-alert2: two entities, only entity crossing th
 		} as EntityBillingControls,
 	});
 
-	// Entity 2: alert at 700
 	await autumnV2_1.entities.update(customerId, entities[1].id, {
 		billing_controls: {
 			usage_alerts: [
@@ -180,7 +153,6 @@ test(`${chalk.yellowBright("entity-alert2: two entities, only entity crossing th
 		} as EntityBillingControls,
 	});
 
-	// Track 400 on entity 1 — crosses its 300 threshold
 	await autumnV2_1.track({
 		customer_id: customerId,
 		entity_id: entities[0].id,
@@ -202,7 +174,6 @@ test(`${chalk.yellowBright("entity-alert2: two entities, only entity crossing th
 	expect(entity1Result).not.toBeNull();
 	expect(entity1Result!.payload.data.entity_id).toBe(entities[0].id);
 
-	// Wait and verify entity 2's alert (700) has NOT fired
 	await timeout(5000);
 
 	let entity2Fired = false;
@@ -218,13 +189,10 @@ test(`${chalk.yellowBright("entity-alert2: two entities, only entity crossing th
 			) {
 				entity2Fired = true;
 			}
-		} catch {
-			// Skip
-		}
+		} catch {}
 	}
 	expect(entity2Fired).toBe(false);
 
-	// Now track 800 on entity 2 — crosses its 700 threshold
 	await autumnV2_1.track({
 		customer_id: customerId,
 		entity_id: entities[1].id,
@@ -247,10 +215,6 @@ test(`${chalk.yellowBright("entity-alert2: two entities, only entity crossing th
 	expect(entity2Result!.payload.data.entity_id).toBe(entities[1].id);
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 3: Customer-level alert still fires alongside entity-level alert
-// ═══════════════════════════════════════════════════════════════════════════════
-
 test(`${chalk.yellowBright("entity-alert3: customer-level and entity-level alerts both fire")}`, async () => {
 	const perEntityMessages = items.monthlyMessages({
 		includedUsage: 500,
@@ -271,7 +235,6 @@ test(`${chalk.yellowBright("entity-alert3: customer-level and entity-level alert
 		actions: [s.attach({ productId: prod.id })],
 	});
 
-	// Set customer-level alert at 200
 	await autumnV2_1.customers.update(customerId, {
 		billing_controls: {
 			usage_alerts: [
@@ -285,7 +248,6 @@ test(`${chalk.yellowBright("entity-alert3: customer-level and entity-level alert
 		},
 	});
 
-	// Set entity-level alert at 300
 	await autumnV2_1.entities.update(customerId, entities[0].id, {
 		billing_controls: {
 			usage_alerts: [
@@ -299,7 +261,6 @@ test(`${chalk.yellowBright("entity-alert3: customer-level and entity-level alert
 		} as EntityBillingControls,
 	});
 
-	// Track 350 on entity — crosses both 200 (customer) and 300 (entity)
 	await autumnV2_1.track({
 		customer_id: customerId,
 		entity_id: entities[0].id,
@@ -307,7 +268,6 @@ test(`${chalk.yellowBright("entity-alert3: customer-level and entity-level alert
 		value: 350,
 	});
 
-	// Customer-level alert (no entity_id in payload)
 	const customerResult =
 		await waitForWebhook<BalancesUsageAlertTriggeredPayload>({
 			token: playToken,
@@ -323,7 +283,6 @@ test(`${chalk.yellowBright("entity-alert3: customer-level and entity-level alert
 	expect(customerResult!.payload.data.entity_id).toBeUndefined();
 	expect(customerResult!.payload.data.usage_alert.threshold).toBe(200);
 
-	// Entity-level alert (has entity_id in payload)
 	const entityResult = await waitForWebhook<BalancesUsageAlertTriggeredPayload>(
 		{
 			token: playToken,
@@ -340,10 +299,6 @@ test(`${chalk.yellowBright("entity-alert3: customer-level and entity-level alert
 	expect(entityResult!.payload.data.entity_id).toBe(entities[0].id);
 	expect(entityResult!.payload.data.usage_alert.threshold).toBe(300);
 });
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 4: Entity percentage threshold alert
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test(`${chalk.yellowBright("entity-alert4: entity usage percentage threshold fires correctly")}`, async () => {
 	const perEntityMessages = items.monthlyMessages({
@@ -365,7 +320,6 @@ test(`${chalk.yellowBright("entity-alert4: entity usage percentage threshold fir
 		actions: [s.attach({ productId: prod.id })],
 	});
 
-	// Set entity-level percentage alert at 80%
 	await autumnV2_1.entities.update(customerId, entities[0].id, {
 		billing_controls: {
 			usage_alerts: [
@@ -379,7 +333,6 @@ test(`${chalk.yellowBright("entity-alert4: entity usage percentage threshold fir
 		} as EntityBillingControls,
 	});
 
-	// Track 170 usage on entity — 85% of 200, crosses 80% threshold
 	await autumnV2_1.track({
 		customer_id: customerId,
 		entity_id: entities[0].id,
@@ -404,10 +357,6 @@ test(`${chalk.yellowBright("entity-alert4: entity usage percentage threshold fir
 	expect(data.usage_alert.threshold_type).toBe("usage_percentage");
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 5: Entity alert does not fire when below threshold
-// ═══════════════════════════════════════════════════════════════════════════════
-
 test(`${chalk.yellowBright("entity-alert5: entity alert does not fire when below threshold")}`, async () => {
 	const perEntityMessages = items.monthlyMessages({
 		includedUsage: 1000,
@@ -428,7 +377,6 @@ test(`${chalk.yellowBright("entity-alert5: entity alert does not fire when below
 		actions: [s.attach({ productId: prod.id })],
 	});
 
-	// Set entity-level alert at 800
 	await autumnV2_1.entities.update(customerId, entities[0].id, {
 		billing_controls: {
 			usage_alerts: [
@@ -442,7 +390,6 @@ test(`${chalk.yellowBright("entity-alert5: entity alert does not fire when below
 		} as EntityBillingControls,
 	});
 
-	// Track only 500 — below threshold
 	await autumnV2_1.track({
 		customer_id: customerId,
 		entity_id: entities[0].id,
@@ -462,10 +409,6 @@ test(`${chalk.yellowBright("entity-alert5: entity alert does not fire when below
 
 	expect(result).toBeNull();
 });
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 6: Entity remaining threshold alert
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test(`${chalk.yellowBright("entity-alert6: entity remaining threshold fires correctly")}`, async () => {
 	const perEntityMessages = items.monthlyMessages({
@@ -487,7 +430,6 @@ test(`${chalk.yellowBright("entity-alert6: entity remaining threshold fires corr
 		actions: [s.attach({ productId: prod.id })],
 	});
 
-	// Set entity-level remaining alert at 100
 	await autumnV2_1.entities.update(customerId, entities[0].id, {
 		billing_controls: {
 			usage_alerts: [
@@ -501,7 +443,6 @@ test(`${chalk.yellowBright("entity-alert6: entity remaining threshold fires corr
 		} as EntityBillingControls,
 	});
 
-	// Track 450 usage on entity — remaining becomes 50, crosses below 100 threshold
 	await autumnV2_1.track({
 		customer_id: customerId,
 		entity_id: entities[0].id,
@@ -526,10 +467,6 @@ test(`${chalk.yellowBright("entity-alert6: entity remaining threshold fires corr
 	expect(data.usage_alert.threshold_type).toBe("remaining");
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 7: Entity remaining_percentage threshold alert
-// ═══════════════════════════════════════════════════════════════════════════════
-
 test(`${chalk.yellowBright("entity-alert7: entity remaining percentage threshold fires correctly")}`, async () => {
 	const perEntityMessages = items.monthlyMessages({
 		includedUsage: 200,
@@ -550,7 +487,6 @@ test(`${chalk.yellowBright("entity-alert7: entity remaining percentage threshold
 		actions: [s.attach({ productId: prod.id })],
 	});
 
-	// Set entity-level remaining_percentage alert at 25%
 	await autumnV2_1.entities.update(customerId, entities[0].id, {
 		billing_controls: {
 			usage_alerts: [
@@ -564,7 +500,6 @@ test(`${chalk.yellowBright("entity-alert7: entity remaining percentage threshold
 		} as EntityBillingControls,
 	});
 
-	// Track 160 usage on entity — remaining is 40 (20% of 200), crosses below 25%
 	await autumnV2_1.track({
 		customer_id: customerId,
 		entity_id: entities[0].id,

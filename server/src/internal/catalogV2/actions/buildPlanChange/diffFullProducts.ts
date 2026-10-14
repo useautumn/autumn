@@ -7,7 +7,6 @@ import {
 } from "@autumn/shared";
 import { fullProductToApiPlanV1Sync } from "./fullProductToApiPlanV1Sync";
 
-/** Diff two product rows in plan space — price, items, trial, and licenses. */
 export const diffFullProducts = ({
 	from,
 	to,

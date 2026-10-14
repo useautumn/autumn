@@ -1,15 +1,3 @@
-/**
- * catalogV2.update — child versioning × who has customers.
- * A version with no customers is never a target. new_version never drafts.
- *
- * Contract:
- *   E1 existing (latest): customers only on v1, link on latest → no child op;
- *      parent op if Team's link is latest
- *   E2 all_versions: customers on v1 only → child op pinned to v1 + parent op
- *   E3 all_versions: customers on v1+v2, identical delta → child op collapses
- *   E4 new_version without draft + Team propagates → no draft
- */
-
 import { test } from "bun:test";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";

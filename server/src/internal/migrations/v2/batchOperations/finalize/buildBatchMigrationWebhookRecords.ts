@@ -28,8 +28,6 @@ const groupEntriesByCustomerEntity = ({
 	return byCustomer;
 };
 
-/** Per-(customer, entity) delivery records. Entity-level products notify the
- * entity, matching the per-customer lane. Groups with no plan changes are dropped. */
 export const buildBatchMigrationWebhookRecords = ({
 	pageResult,
 	plan,

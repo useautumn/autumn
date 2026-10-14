@@ -9,9 +9,6 @@ import { getItemId } from "@/utils/product/productItemUtils";
 
 export interface DraftItemSession {
 	itemId: string;
-	// Resolved on session start so in-session patches write by index, not by
-	// recomputing getItemId(). Without this, editing an interval mid-session
-	// changes the item's id and subsequent updates silently no-op.
 	itemIndex: number;
 	initialItem: ProductItem;
 	draftItem: ProductItem;
@@ -88,9 +85,6 @@ const patchItemOnProduct = ({
 }: {
 	product: FrontendProduct;
 	itemId: string;
-	// When provided, write directly to this index instead of re-deriving it
-	// from getItemId(). Required for edits that mutate id-affecting fields
-	// (e.g. interval), since the recomputed id no longer matches itemId.
 	itemIndex?: number;
 	item: ProductItem;
 }): FrontendProduct => {
@@ -219,8 +213,6 @@ export const useItemDraftController = ({
 	);
 
 	const updateItemDraft = useCallback(
-		// `itemId` renames the session when an edit changes the item's derived id,
-		// keeping it addressable by callers that still resolve items by id.
 		({ item, itemId }: { item: ProductItem; itemId?: string }) => {
 			setDraftItemSession((prev) => {
 				if (!prev) return prev;

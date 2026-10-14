@@ -26,8 +26,6 @@ const fakeOrg = (id: string) => ({
 	},
 });
 
-// Capture the real modules before mocking so afterAll can restore them —
-// bun's mock.module leaks across test files otherwise.
 const realOrgService = {
 	...(await import("@/internal/orgs/OrgService.js")),
 };

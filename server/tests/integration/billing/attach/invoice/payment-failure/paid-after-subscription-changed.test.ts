@@ -1,12 +1,3 @@
-/**
- * A failed-card upgrade stays pending until its invoice is paid. If the subscription
- * changes in the meantime, paying the invoice must still promote the upgrade.
- *
- * Red (before):  invoice.paid replays the attach-time subscription update against rows
- *                and Stripe items that have since changed
- * Green (after): Premium active, Pro gone, Stripe subscription matches
- */
-
 import { expect, test } from "bun:test";
 import {
 	type AttachParamsV1Input,
@@ -25,7 +16,6 @@ import chalk from "chalk";
 import { MetadataService } from "@/internal/metadata/MetadataService";
 import { attachPaymentMethod } from "@/utils/scriptUtils/initCustomer";
 
-/** Applies the upgrade's planned prices out of band, retiring every current subscription item id. */
 const replaceSubscriptionItemsWithPlannedPrices = async ({
 	ctx,
 	invoiceId,

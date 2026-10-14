@@ -13,7 +13,6 @@ import { useAppForm } from "@/hooks/form/form";
 import { AtomMachineCard } from "./AtomMachineCard";
 import { ATOM_RESIZE_NOTE, atomMachineLabel } from "./atomMachineDisplay";
 
-/** Nothing resizes until the user ticks that Atom will be briefly unavailable. */
 export const ResizeAtomDialog = ({
 	open,
 	onOpenChange,
@@ -23,7 +22,6 @@ export const ResizeAtomDialog = ({
 }: {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
-	/** Null when Atom runs on a machine Autumn does not offer. */
 	current: ByocCacheMachine | null;
 	target: ByocCacheMachine;
 	onConfirm: () => Promise<void>;

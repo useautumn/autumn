@@ -131,7 +131,6 @@ const entityEnvelopeOf = ({
 	});
 };
 
-/** Residency exactly as the partition writer keeps it: one subject map, customer and entity slices merged on read. */
 const createMapWriter = ({
 	maxBytes,
 }: {
@@ -275,7 +274,6 @@ const checkCommandFor = ({
 		},
 	});
 
-/** One worker check as `processor.check` runs it: ensure (may load), then the synchronous read, decision and reply slimming. */
 const runCheck = async ({
 	hydrator,
 	writer,

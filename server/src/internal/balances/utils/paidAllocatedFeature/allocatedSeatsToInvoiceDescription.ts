@@ -10,8 +10,6 @@ import { volumeUsageToLineDescription } from "@shared/utils/billingUtils/invoici
 import { volumeUsageToTier } from "@shared/utils/billingUtils/invoicingUtils/lineItemUtils/volumeUsageToTier";
 import { roundUsage } from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
 
-/** A seat proration line's description from unrounded seats. Volume names the seats over included
- * at the tier they reach, as renewal lines do; other prices keep the total-seat wording. */
 export const allocatedSeatsToInvoiceDescription = ({
 	price,
 	product,
@@ -37,7 +35,6 @@ export const allocatedSeatsToInvoiceDescription = ({
 
 	const overage = Math.max(0, usage - allowance);
 	const billedTier = volumeUsageToTier({ price, overage, allowance, currency });
-	// At 0 over included the seats sit in the included tier, which still reads as a volume line.
 	if (!billedTier) return totalSeatDescription;
 
 	return volumeUsageToLineDescription({

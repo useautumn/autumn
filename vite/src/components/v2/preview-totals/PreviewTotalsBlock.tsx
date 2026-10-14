@@ -34,8 +34,6 @@ export function PreviewTotalsBlock({
 		previewData.tax?.status === "complete" && previewData.tax.total > 0;
 	const taxAmount = showTaxRow ? (previewData.tax?.total ?? 0) : 0;
 
-	// The server decides how much credit this invoice consumes and what is left
-	// to pay; this block only renders those numbers.
 	const creditBalance = previewData.invoice_credits?.balance ?? 0;
 	const creditApplied = previewData.invoice_credits?.applied ?? 0;
 	const amountDue = previewData.amount_due ?? previewData.total;

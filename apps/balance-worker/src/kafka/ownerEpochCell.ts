@@ -1,4 +1,3 @@
-/** The ownership epoch a partition's writer currently holds, readable by everything built before the claim happened. */
 export type OwnerEpochCell = {
 	read(): string | undefined;
 	write(epoch: string): void;

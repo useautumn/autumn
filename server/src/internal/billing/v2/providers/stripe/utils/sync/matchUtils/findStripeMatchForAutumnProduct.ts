@@ -6,10 +6,6 @@ import {
 } from "@autumn/shared";
 import type { ProductMatchCondition } from "./matchConditions";
 
-/**
- * A product is a candidate for a Stripe item when the item's Stripe product id
- * is on the product mapping or on any non-fixed price's config.stripe_product_id.
- */
 export const findStripeMatchForAutumnProduct = ({
 	product,
 	stripeProductIds,

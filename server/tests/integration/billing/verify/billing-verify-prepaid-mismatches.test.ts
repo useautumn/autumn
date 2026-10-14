@@ -1,16 +1,3 @@
-/**
- * Billing Verify: Prepaid Mismatches
- *
- * Contract under test (billingActions.verify):
- *   New behaviors:
- *     - A prepaid feature item's Stripe quantity drifted from Autumn's record ->
- *       mismatch { type: "prepaid_quantity_mismatch", feature_id, expected_quantity,
- *       actual_quantity }.
- *     - An entity-scoped (inline-priced) prepaid item's Stripe unit amount drifted ->
- *       mismatch { type: "prepaid_price_mismatch", feature_id, expected_unit_amount,
- *       actual_unit_amount }.
- */
-
 import { expect, test } from "bun:test";
 import { findPriceByFeatureId } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features";

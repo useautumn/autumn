@@ -13,7 +13,6 @@ type EntityEntries = NonNullable<
 	>["customerEntitlements"][number]["entities"]
 >;
 
-/** Each present `from` entry becomes the `to` entry (its `id` updated); a missing `from` moves nothing. */
 const moveEntries = ({
 	entries,
 	moves,
@@ -31,7 +30,6 @@ const moveEntries = ({
 	return moved;
 };
 
-/** Resolved in `decide` against the freshest map, so the log carries the concrete before → after. */
 export const moveEntriesOpToRowChanges = ({
 	op,
 	context,

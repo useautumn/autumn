@@ -11,7 +11,6 @@ export const usableKey = and(
 	eq(stripeKeys.present, true),
 );
 
-/** Round-robin `need` over keys one at a time, capped by each key's clean count. */
 const spreadAcrossKeys = ({
 	available,
 	need,
@@ -35,7 +34,6 @@ const spreadAcrossKeys = ({
 	return quota;
 };
 
-/** Row-lock up to `need` clean accounts on usable keys, spread across keys, never past the per-key in_use cap. */
 export const lockCleanAccounts = async ({
 	tx,
 	need,
@@ -66,7 +64,6 @@ export const lockCleanAccounts = async ({
 	);
 
 	const ids: string[] = [];
-	// Second pass refills what concurrent claims skip-locked away from the first.
 	for (let pass = 0; pass < 2 && ids.length < need; pass++) {
 		const quota = spreadAcrossKeys({ available, need: need - ids.length });
 		for (const [platformAccountId, want] of quota) {

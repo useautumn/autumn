@@ -29,7 +29,6 @@ const isRefusedFor = ({
 	cause.workerCode === "UNSUPPORTED_COMMAND" &&
 	cause.workerReason === reason;
 
-/** The worker's refusals as legacy words them; callers branch on these codes and messages. */
 const rethrowUpdateBalanceError = ({
 	params,
 	cause,
@@ -59,7 +58,6 @@ export const runBalanceWorkerUpdateBalance = async ({
 	targetBalance?: number;
 	client?: UpdateBalanceClient;
 }): Promise<void> => {
-	// The worker holds the write; the route's refresh would only evict its fresh copy.
 	ctx.testOptions = { ...ctx.testOptions, skipCacheDeletion: true };
 	try {
 		await withPaidAllocatedFallback<void>({
@@ -71,7 +69,6 @@ export const runBalanceWorkerUpdateBalance = async ({
 					command: updateBalanceParamsToCommand({ ctx, params, targetBalance }),
 				});
 			},
-			// Legacy defers paid allocated to Postgres itself, where it invoices.
 			postgres: () => updateBalanceOnCacheV2({ ctx, params, targetBalance }),
 		});
 	} catch (cause) {

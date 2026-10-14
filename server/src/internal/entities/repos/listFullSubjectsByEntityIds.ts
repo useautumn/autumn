@@ -11,8 +11,6 @@ import { resultToFullSubject } from "@/internal/customers/repos/getFullSubject/i
 import { unpackSubjectEnvelope } from "@/internal/customers/repos/getFullSubject/unpackSubjectEnvelope.js";
 import { hydrateEntityRowsWithCustomerData } from "./hydrateEntityRowsWithCustomerData.js";
 
-/** Entity subjects for a specific set of entity ids — the bounded per-entity
- * view of a customer, sized by the request instead of the whole customer. */
 export const listFullSubjectsByEntityIds = async ({
 	ctx,
 	customerId,

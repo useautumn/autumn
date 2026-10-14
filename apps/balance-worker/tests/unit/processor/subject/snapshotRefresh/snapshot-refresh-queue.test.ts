@@ -5,7 +5,6 @@ import type { SnapshotRefreshRead } from "../../../../../src/processor/subject/s
 import { createState } from "../../../../fixtures/mutations.js";
 import { createSubjectSnapshotsStore } from "../../../../fixtures/subjectSnapshotsStore.js";
 
-/** Two at a time and a ceiling of twelve: small enough to watch every read start and the ceiling bite. */
 const REFRESH_CONCURRENCY = 2;
 const REFRESH_MAX_PENDING = 12;
 
@@ -15,7 +14,6 @@ const customer = (customerId: string): MeteringIdentity => ({
 	customerId,
 	entityId: null,
 });
-/** What L10c's hook hands in after listing the customer's rows: its own subject and each entity's. */
 const evict = (
 	queue: ReturnType<typeof createSnapshotRefreshQueue>,
 	customerId: string,
@@ -33,7 +31,6 @@ const subjectOf = (identity: MeteringIdentity) =>
 		? `${identity.customerId}/${identity.entityId}`
 		: identity.customerId;
 
-/** Reads the queue asks for are held until the test releases them, one promise per subject, in the order asked. */
 const createScriptedReads = () => {
 	const started: string[] = [];
 	const written: string[] = [];
@@ -233,7 +230,6 @@ describe("snapshot refresh queue", () => {
 			"balance_worker.snapshot_refresh_capped",
 		);
 
-		// Two reads are in flight, so two more subjects fit under the ceiling; cus_2's third is dropped, with no second warning.
 		evict(queue, "cus_2", ["en_1", "en_2", "en_3"]);
 		expect(queue.counts().queued).toBe(REFRESH_MAX_PENDING + 2);
 		expect(queue.depth()).toBe(REFRESH_MAX_PENDING + REFRESH_CONCURRENCY);

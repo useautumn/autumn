@@ -10,7 +10,6 @@ import { ThemeProvider } from "./contexts/ThemeProvider";
 
 declare const __APP_ENV__: string;
 
-// Sazabi ingests Sentry envelopes, so its DSN is primary; a set VITE_SENTRY_DSN also gets a copy of every event.
 const errorReportingDsns = [
 	import.meta.env.VITE_SAZABI_DSN,
 	import.meta.env.VITE_SENTRY_DSN,
@@ -24,7 +23,6 @@ Sentry.init({
 			() => errorReportingDsns,
 		),
 	}),
-	// Vercel's prod build doesn't set VITE_APP_ENV, and only it carries the DSN.
 	environment: __APP_ENV__ || "production",
 	sendDefaultPii: true,
 });
@@ -60,7 +58,6 @@ createRoot(document.getElementById("root")!, {
 	<StrictMode>
 		<QueryClientProvider client={queryClient}>
 			<ThemeProvider>
-				{/* <App /> */}
 				{shouldInitializePostHog ? (
 					<PostHogProvider
 						apiKey={import.meta.env.VITE_PUBLIC_POSTHOG_KEY}
@@ -76,7 +73,6 @@ createRoot(document.getElementById("root")!, {
 				) : (
 					<App />
 				)}
-				{/* <ReactQueryDevtools initialIsOpen={false} /> */}
 			</ThemeProvider>
 		</QueryClientProvider>
 	</StrictMode>,

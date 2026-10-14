@@ -36,13 +36,9 @@ interface PlanGroupSectionProps {
 	items: PreviewLineItem[];
 	currency: string;
 	type: PlanChangeType;
-	/** For outgoing plans: when the plan ends/is cancelled (ms timestamp) */
 	cancelledAt?: number;
-	/** Whether the incoming plan has an active free trial */
 	hasActiveTrial?: boolean;
-	/** Free trial config (for displaying duration in header) */
 	freeTrial?: ApiFreeTrialV2 | null;
-	/** Next cycle line items to display for trial plans (shows what will be charged after trial) */
 	nextCycleItems?: PreviewLineItem[];
 }
 
@@ -56,14 +52,12 @@ export function PlanGroupSection({
 	freeTrial,
 	nextCycleItems,
 }: PlanGroupSectionProps) {
-	// Sort items so base price appears first
 	const sortedItems = [...items].sort((a, b) => {
 		if (!a.feature_id && b.feature_id) return -1;
 		if (a.feature_id && !b.feature_id) return 1;
 		return 0;
 	});
 
-	// Format line item label with quantity
 	const formatItemTitle = (item: PreviewLineItem): string => {
 		if (!item.feature_id) return "Base price";
 		const title = item.display_name;
@@ -73,7 +67,6 @@ export function PlanGroupSection({
 		return title;
 	};
 
-	// Check if all items share the same period
 	const itemsWithPeriod = sortedItems.filter((item) => item.period);
 	const allSamePeriod =
 		itemsWithPeriod.length > 0 &&
@@ -105,7 +98,6 @@ export function PlanGroupSection({
 
 	return (
 		<div className="flex flex-col gap-1">
-			{/* Plan name as section label with optional period or cancellation date */}
 			<div className="flex items-center justify-between gap-2">
 				<span className="text-sm font-medium text-foreground">{planName}</span>
 				{headerRightText && (
@@ -115,10 +107,8 @@ export function PlanGroupSection({
 				)}
 			</div>
 
-			{/* Line items */}
 			<div className="flex flex-col">
 			{sortedItems.length === 0 && hasActiveTrial && nextCycleItems && nextCycleItems.length > 0 ? (
-				// Show next cycle line items for trial plans (what they'll pay after trial)
 				[...nextCycleItems]
 					.sort((a, b) => {
 						if (!a.feature_id && b.feature_id) return -1;
@@ -167,7 +157,6 @@ export function PlanGroupSection({
 								</div>
 								<LineItemAmount item={item} currency={currency} />
 							</div>
-							{/* Only show per-item period if items don't share the same period */}
 							{!sharedPeriod && item.period && (
 								<span className="text-xs text-muted-foreground/60 pl-0">
 									{formatPeriodRange(item.period.start, item.period.end)}

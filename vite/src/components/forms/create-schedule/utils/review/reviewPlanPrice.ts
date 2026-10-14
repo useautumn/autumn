@@ -30,7 +30,6 @@ const unitLabel = ({
 	return billingUnits > 1 ? `${numberWithCommas(billingUnits)} ${name}` : name;
 };
 
-/** A plan with no base price shows its first feature's unit price, e.g. "From $10/seat +1"; a free allowance tier is skipped. */
 const featureUnitPrice = ({
 	featurePrices,
 	features,

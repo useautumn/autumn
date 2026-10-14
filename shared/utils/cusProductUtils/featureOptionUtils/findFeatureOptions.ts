@@ -2,12 +2,6 @@ import type { FeatureOptions } from "@models/cusProductModels/cusProductModels";
 import type { Feature } from "@models/featureModels/featureModels";
 import type { AutumnLogger } from "../../../types";
 
-/**
- * Find the feature options for a feature
- * @param featureOptions - The feature options to search through
- * @param feature - The feature to find the options for
- * @returns The feature options, or undefined if not found
- */
 export const findFeatureOptionsByFeature = ({
 	featureOptions,
 	feature,

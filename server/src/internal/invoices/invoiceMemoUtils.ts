@@ -93,7 +93,6 @@ export const buildInvoiceMemoFromEntitlements = async ({
 	features: Feature[];
 	logger: any;
 }) => {
-	// Get item from price and ent
 	const items = mapToProductItems({
 		entitlements,
 		prices,

@@ -1,13 +1,3 @@
-/**
- * collectProductStateRows — flatten listFull payload into the product-state list.
- *
- * Contract:
- *   top-level rows stay
- *   parent_plan_licenses[].product, licenses[].product, and variants[] are copied in
- *   same internal_id keeps the top-level row
- *   every variant version is kept
- */
-
 import { describe, expect, test } from "bun:test";
 import type { FullProduct, ParentPlanLicense } from "@autumn/shared";
 import { products } from "@tests/utils/fixtures/db/products";

@@ -1,10 +1,3 @@
-/**
- * An agent request that carries a trial must seed the "Edit details" sheet
- * with it. The server accepts the trial at the top level OR inside customize,
- * so the sheet has to read both — reading only one leaves the Free Trial
- * toggle off and silently drops the trial when the user edits and applies.
- */
-
 import { describe, expect, test } from "bun:test";
 import { attachFormOverridesFromRequestBody } from "../../src/components/forms/attach-v2/utils/attachFormOverridesFromRequestBody";
 import { updateSubscriptionFormOverridesFromRequestBody } from "../../src/components/forms/update-subscription-v2/utils/updateSubscriptionFormOverridesFromRequestBody";

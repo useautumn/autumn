@@ -1,7 +1,6 @@
 import type { CarryOverUsages } from "../../../api/billing/common/carryOverUsages.js";
 import { UpdateSubscriptionIntent } from "./updateSubscriptionBillingContext.js";
 
-/** Shared usage-reset policy for computation and preview. */
 export const billingContextResetsUsage = (billingContext: unknown): boolean => {
 	const context = billingContext as {
 		carryOverUsages?: CarryOverUsages;

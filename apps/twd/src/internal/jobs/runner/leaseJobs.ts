@@ -4,7 +4,6 @@ import { jobs } from "../../../db/schema/jobs.ts";
 import type { TwdDb } from "../../../lib/getDb.ts";
 import type { JobRow } from "../types/jobRow.ts";
 
-/** Claims the oldest runnable job of `kind`: queued (past any retry backoff) or running with an expired lease. */
 export const leaseNextJob = async ({
 	db,
 	kind,
@@ -46,7 +45,6 @@ export const leaseNextJob = async ({
 	return job;
 };
 
-/** Running jobs whose holder crashed on every attempt would otherwise be re-leased forever. */
 export const failExhaustedJobs = async ({
 	db,
 	maxAttempts,

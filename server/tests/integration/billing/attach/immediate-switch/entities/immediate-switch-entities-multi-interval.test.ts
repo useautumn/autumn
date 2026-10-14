@@ -1,14 +1,3 @@
-/**
- * Immediate Switch Entity Multi-Interval Tests (Attach V2)
- *
- * Tests for entity-level upgrades involving billing interval changes.
- * Same scope (entity → entity) with different intervals.
- *
- * Key behaviors:
- * - Monthly to annual on same entity = immediate switch with credit
- * - Proration calculated correctly across intervals
- */
-
 import { expect, test } from "bun:test";
 import type { ApiEntityV0 } from "@autumn/shared";
 import {
@@ -21,19 +10,6 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 1: Both entities pro monthly, upgrade one to pro annual
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Both entities have pro monthly
- * - Upgrade entity 2 to pro annual
- *
- * Expected Result:
- * - Entity 1 still monthly, entity 2 is annual
- * - Credit for monthly applied to annual charge
- */
 test.concurrent(`${chalk.yellowBright("immediate-switch-entities-multi-interval 1: both pro monthly, upgrade one to annual")}`, async () => {
 	const customerId = "imm-switch-ent-pro-monthly-annual";
 
@@ -62,16 +38,13 @@ test.concurrent(`${chalk.yellowBright("immediate-switch-entities-multi-interval 
 		],
 	});
 
-	// 1. Preview upgrade entity 2 to annual (same scope = immediate switch with credit)
 	const preview = await autumnV1.billing.previewAttach({
 		customer_id: customerId,
 		product_id: proAnnual.id,
 		entity_id: entities[1].id,
 	});
-	// Annual $200 - monthly credit $20 = $180
 	expect(preview.total).toBe(180);
 
-	// 2. Upgrade entity 2
 	await autumnV1.billing.attach({
 		customer_id: customerId,
 		product_id: proAnnual.id,
@@ -79,7 +52,6 @@ test.concurrent(`${chalk.yellowBright("immediate-switch-entities-multi-interval 
 		redirect_mode: "if_required",
 	});
 
-	// Get both entities
 	const entity1 = await autumnV1.entities.get<ApiEntityV0>(
 		customerId,
 		entities[0].id,
@@ -89,13 +61,11 @@ test.concurrent(`${chalk.yellowBright("immediate-switch-entities-multi-interval 
 		entities[1].id,
 	);
 
-	// Entity 1 still has monthly
 	await expectProductActive({
 		customer: entity1,
 		productId: proMonthly.id,
 	});
 
-	// Entity 2 has annual (monthly replaced)
 	await expectCustomerProducts({
 		customer: entity2,
 		active: [proAnnual.id],

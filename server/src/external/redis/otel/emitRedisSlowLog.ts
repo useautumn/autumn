@@ -4,10 +4,6 @@ import type { RedisKeyContext } from "./parseRedisKeyContext.js";
 import type { ResolvedThresholds } from "./redisSlowlogConfig.js";
 import { shouldEmitSlowLog } from "./slowLogRateLimit.js";
 
-/**
- * Emits a structured `redis_slow_command` log for commands that exceeded
- * their severe threshold. Rate-limited per-operation to avoid flooding.
- */
 export const emitRedisSlowLog = ({
 	operation,
 	durationMs,
@@ -49,7 +45,5 @@ export const emitRedisSlowLog = ({
 				entity_id: keyContext.entityId,
 			},
 		}).warn({ type: "redis_slow_command" }, "Redis slow command");
-	} catch {
-		// swallow — telemetry must never break app commands
-	}
+	} catch {}
 };

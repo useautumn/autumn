@@ -1,7 +1,3 @@
-/**
- * Contract: a customerless child update can version a selected parent with customers.
- * The child updates in place while the existing parent customer keeps its exact license definition.
- */
 import { expect, test } from "bun:test";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { items } from "@tests/utils/fixtures/items.js";

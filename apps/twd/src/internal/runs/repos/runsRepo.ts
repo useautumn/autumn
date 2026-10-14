@@ -42,14 +42,12 @@ export const isTerminalRunStatus = ({ status }: { status: RunStatus }) =>
 const holdsNoAccounts = (runId: AnyColumn) =>
 	sql`not exists (select 1 from ${stripeAccounts} where ${stripeAccounts.runId} = ${runId} and ${stripeAccounts.state} = 'in_use')`;
 
-/** 1-based FIFO place among queued runs holding no account; null otherwise. */
 export const queuePositionSql = sql<
 	number | null
 >`case when ${runs.status} = 'queued' and ${holdsNoAccounts(runs.id)} then (select count(*) from runs earlier where earlier.status = 'queued' and earlier.created_at <= ${runs.createdAt} and not exists (select 1 from stripe_accounts held where held.run_id = earlier.id and held.state = 'in_use')) end`.mapWith(
 	Number,
 );
 
-/** Most workers attached at once, from run_workers lifetimes; an end sorts before a start at the same instant. */
 export const peakWorkersSql =
 	sql<number>`(select coalesce(max(attached), 0) from (select sum(delta) over (order by at, delta) as attached from (select w.started_at as at, 1 as delta from run_workers w where w.run_id = ${runs.id} union all select coalesce(w.ended_at, ${runs.finishedAt}), -1 from run_workers w where w.run_id = ${runs.id} and coalesce(w.ended_at, ${runs.finishedAt}) is not null) lifetimes) running)`.mapWith(
 		Number,
@@ -62,7 +60,6 @@ const selectRuns = ({ ctx }: { ctx: TwdContext }) =>
 			email: users.email,
 			queuePosition: queuePositionSql,
 			peakWorkers: peakWorkersSql,
-			/** Full µs precision; a JS Date would truncate it and skip rows in keyset paging. */
 			createdAtRaw: sql<string>`${runs.createdAt}::text`,
 		})
 		.from(runs)
@@ -190,7 +187,6 @@ const runsFilterSql = ({
 		exactBranch ? eq(runs.branch, exactBranch) : undefined,
 	);
 
-/** Keyset page ordered newest first; ties on created_at break by id. */
 export const listRunsWithEmail = async ({
 	ctx,
 	filter,
@@ -231,10 +227,8 @@ export const countRuns = async ({
 			.where(runsFilterSql(filter))
 	)[0]?.n ?? 0;
 
-/** Only a passed or failed run can be a baseline; onRunFinished checks those ran every file. */
 const NEVER_BASELINE: RunStatus[] = ["cancelled", "errored"];
 
-/** Every run write goes through here, so a cancel or error on any path also drops the baseline flag. */
 export const updateRun = async ({
 	ctx,
 	runId,
@@ -253,7 +247,6 @@ export const updateRun = async ({
 
 export type BranchesCursor = { lastAt: string; branch: string };
 
-/** One page of branches by latest finished run, each with its last BRANCH_HISTORY_RUNS finished runs. */
 export const listBranchHistories = async ({
 	ctx,
 	branch,

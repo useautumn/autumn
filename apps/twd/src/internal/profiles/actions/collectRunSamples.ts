@@ -30,7 +30,6 @@ const workItemKey = ({
 	repetition: number | null;
 }) => `${file}#${repetition ?? 0}`;
 
-/** First attempt from its stats line; without one, only a final result that was itself attempt 1. */
 const toSample = ({
 	result,
 	stats,
@@ -58,7 +57,6 @@ const toSample = ({
 	};
 };
 
-/** Pure: one combined first-attempt sample per file. */
 export const buildRunSamples = ({
 	results,
 	statsRows,

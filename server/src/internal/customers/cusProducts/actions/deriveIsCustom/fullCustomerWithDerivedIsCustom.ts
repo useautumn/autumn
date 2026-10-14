@@ -6,7 +6,6 @@ import type { BaseProductCache } from "./loadBaseProduct.js";
 
 export type IsCustomCorrection = { stored: FullCusProduct; to: boolean };
 
-/** Guesses keep the stored flag, since they are never written either. */
 export const fullCustomerWithDerivedIsCustom = async ({
 	ctx,
 	fullCustomer,

@@ -79,7 +79,6 @@ const clearSharedStripeIds = async ({
 		),
 	});
 
-/** Existing subscriptions stay on the prices they were created with. */
 export const splitVariantStripeProduct = async ({
 	ctx,
 	variantPlanId,
@@ -113,8 +112,6 @@ export const splitVariantStripeProduct = async ({
 		return variant;
 	}
 
-	// Restore the inherited ids if Stripe fails, so a failed split never leaves
-	// the variant with no mapping at all.
 	const inherited = snapshotStripeIds({ variant });
 	await clearSharedStripeIds({ ctx, variant });
 	try {
@@ -124,7 +121,6 @@ export const splitVariantStripeProduct = async ({
 		throw error;
 	}
 
-	// listFull is cached, so the dashboard would keep serving the old mapping.
 	await invalidateProductsCache({ orgId: ctx.org.id, env: ctx.env });
 
 	return ProductService.getFull({

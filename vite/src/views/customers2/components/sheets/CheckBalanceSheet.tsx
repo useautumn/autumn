@@ -55,7 +55,6 @@ export function CheckBalanceSheet() {
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const requestSeq = useRef(0);
 
-	// A stale or in-flight response for different inputs reads as the result of the next check.
 	const discardResponse = () => {
 		requestSeq.current += 1;
 		setResponse(null);

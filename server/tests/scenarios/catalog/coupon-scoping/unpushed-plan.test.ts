@@ -29,7 +29,6 @@ test(`${chalk.yellowBright("coupon-qa: plan that does not exist in Stripe yet")}
 		],
 	});
 
-	// Drop the Stripe mapping so the plan looks like one that was never attached.
 	const plan = await ProductService.getFull({
 		db: ctx.db,
 		idOrInternalId: unpushedId,

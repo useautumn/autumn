@@ -1,8 +1,3 @@
-/**
- * Trips the real FullSubject gate (tiny limits + cold cache + concurrent
- * calls) and verifies check/track fail open instead of surfacing 429s.
- */
-
 import { afterAll, expect, mock, test } from "bun:test";
 import chalk from "chalk";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
@@ -16,7 +11,6 @@ mock.module("@/queue/queueUtils.js", () => ({
 
 process.env.TRACK_SQS_QUEUE_URL ??= "https://sqs.test/gate-failopen";
 
-// The FullSubject gate lives on the legacy lane; every call after setup runs in-process.
 const previousRollout = process.env.BALANCE_WORKER_ROLLOUT_ENABLED;
 process.env.BALANCE_WORKER_ROLLOUT_ENABLED = "false";
 
@@ -46,12 +40,10 @@ const { primeRedisV2Monitor } = await import(
 	"@/external/redis/availabilityMonitor/redisV2Availability.js"
 );
 
-// In-process runs skip server boot, which is what normally primes availability.
 await primeRedisV2Monitor();
 
 const CONCURRENCY = 8;
 
-// Held for the whole file so test.concurrent tests can't reset it mid-flight.
 _setFullSubjectGateConfigForTesting({
 	config: {
 		per_customer_limit: 1,
@@ -149,8 +141,6 @@ test.concurrent(
 			actions: [s.attach({ productId: freeProd.id })],
 		});
 
-		// One ctx per call: concurrent prod tracks carry distinct request IDs,
-		// and the Redis dedup treats a reused ID as a duplicate request.
 		const contexts = await Promise.all(
 			Array.from({ length: CONCURRENCY }, () => buildContext({ customerId })),
 		);

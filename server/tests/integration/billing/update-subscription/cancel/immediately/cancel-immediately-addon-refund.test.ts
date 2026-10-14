@@ -1,6 +1,3 @@
-// Cancel add-on immediately (`cancel: 'immediately'`): add-on removed, base product stays active.
-// Paid add-ons get a refund invoice for unused time; usage overage is NOT charged.
-
 import { test } from "bun:test";
 import type { ApiCustomerV3 } from "@autumn/shared";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
@@ -11,21 +8,6 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 1: Basic immediate cancel - refund issued
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Attach pro ($20/mo) + recurring add-on ($20/mo)
- * - Cancel add-on immediately
- *
- * Expected Result:
- * - Add-on is removed
- * - Pro remains active
- * - Refund invoice (-$20) created for add-on
- * - No additional invoices after timeout
- */
 test.concurrent(
 	`${chalk.yellowBright("cancel addon immediately: basic refund")}`,
 	async () => {
@@ -51,7 +33,6 @@ test.concurrent(
 			],
 		});
 
-		// Verify both products are active
 		const customerBefore =
 			await autumnV1.customers.get<ApiCustomerV3>(customerId);
 		await expectCustomerProducts({
@@ -59,23 +40,19 @@ test.concurrent(
 			active: [pro.id, recurringAddon.id],
 		});
 
-		// Should have 2 invoices (pro attach + addon attach)
 		expectCustomerInvoiceCorrect({
 			customer: customerBefore,
 			count: 2,
 		});
 
-		// Cancel add-on immediately
 		await autumnV1.subscriptions.update({
 			customer_id: customerId,
 			product_id: recurringAddon.id,
 			cancel_action: "cancel_immediately",
 		});
 
-		// Wait for async invoice processing
 		await new Promise((resolve) => setTimeout(resolve, 3000));
 
-		// Verify add-on removed, pro still active
 		const customerAfter =
 			await autumnV1.customers.get<ApiCustomerV3>(customerId);
 		await expectCustomerProducts({
@@ -84,30 +61,14 @@ test.concurrent(
 			notPresent: [recurringAddon.id],
 		});
 
-		// Verify refund invoice (-$20) and no extra invoices
 		expectCustomerInvoiceCorrect({
 			customer: customerAfter,
-			count: 3, // pro attach + addon attach + addon refund
+			count: 3,
 			latestTotal: -20,
 		});
 	},
 );
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 2: Cancel with usage overage - usage NOT charged
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Attach pro (free base) + usage add-on ($20/mo base + $0.10/msg overage)
- * - Track 1000 messages (all overage since includedUsage: 0)
- * - Cancel usage add-on immediately
- *
- * Expected Result:
- * - Add-on is removed
- * - Pro remains active
- * - Only refund invoice (-$20), usage is NOT charged
- */
 test.concurrent(
 	`${chalk.yellowBright("cancel addon immediately: usage overage not charged")}`,
 	async () => {
@@ -120,7 +81,6 @@ test.concurrent(
 			items: [messagesItem],
 		});
 
-		// Usage add-on: $20 base + consumable messages
 		const usageAddon = products.base({
 			id: "usage-addon",
 			isAddOn: true,
@@ -142,27 +102,22 @@ test.concurrent(
 			],
 		});
 
-		// Track 1000 messages (all overage)
 		await autumnV1.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
 			value: 1000,
 		});
 
-		// Wait for track to process
 		await new Promise((resolve) => setTimeout(resolve, 2000));
 
-		// Cancel usage add-on immediately
 		await autumnV1.subscriptions.update({
 			customer_id: customerId,
 			product_id: usageAddon.id,
 			cancel_action: "cancel_immediately",
 		});
 
-		// Wait for async invoice processing
 		await new Promise((resolve) => setTimeout(resolve, 3000));
 
-		// Verify add-on removed, pro still active
 		const customerAfter =
 			await autumnV1.customers.get<ApiCustomerV3>(customerId);
 		await expectCustomerProducts({
@@ -171,8 +126,6 @@ test.concurrent(
 			notPresent: [usageAddon.id],
 		});
 
-		// Verify only refund invoice (-$20), NO usage charge
-		// Invoices: addon attach ($20) + addon refund (-$20)
 		expectCustomerInvoiceCorrect({
 			customer: customerAfter,
 			count: 2,

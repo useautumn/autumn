@@ -1,10 +1,3 @@
-/**
- * A one-off fee deferred to a future activation phase must carry the explicit
- * `tax_rate_id`. One-off `add_invoice_items` don't inherit the subscription's
- * default_tax_rates, so without a per-item rate the deferred charge is billed
- * untaxed — the delayed twin of the immediate one-off bug.
- */
-
 import { expect, test } from "bun:test";
 import type { AttachParamsV1Input } from "@autumn/shared";
 import { stripeRefToId } from "@autumn/shared";

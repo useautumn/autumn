@@ -1,7 +1,6 @@
 import { Box, Text } from "ink";
 import { AppEnv } from "../../../../lib/env/index.js";
 
-// Frontend URL constant
 const FRONTEND_URL = "https://app.useautumn.com";
 
 interface CompletionMessageProps {
@@ -9,9 +8,6 @@ interface CompletionMessageProps {
 	environment?: AppEnv;
 }
 
-/**
- * Completion message with timing and dashboard link
- */
 export function CompletionMessage({
 	duration,
 	environment,

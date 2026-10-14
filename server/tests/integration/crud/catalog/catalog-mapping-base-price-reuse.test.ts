@@ -1,18 +1,3 @@
-/**
- * TDD test: linking a Stripe product to a plan family (scope: base_price) must
- * reuse matching existing Stripe prices for the base plan AND every variant,
- * even when the Stripe prices carry tax_behavior (e.g. "exclusive").
- *
- * Red-failure mode (current behavior):
- *  - stripePriceShapesEqual compares taxBehavior strictly; Autumn shapes never
- *    set it ("unspecified"), so Stripe prices with tax_behavior "exclusive"
- *    never match and config.stripe_price_id stays null on every fixed price.
- *
- * Green-success criteria (after fix):
- *  - Base plan's $20/mo price links to the $20/mo Stripe price; the variant's
- *    $35/mo price links to the $35/mo Stripe price.
- */
-
 import { test } from "bun:test";
 import {
 	type ApiPlanV1,
@@ -40,7 +25,6 @@ test.concurrent(
 	async () => {
 		const planId = "catalog_mappings_base_reuse_tax";
 		const variantPlanId = `${planId}_35`;
-		// products.pro already includes a $20/mo base price
 		const product = products.pro({ id: planId, items: [] });
 
 		const { autumnV2_2, ctx } = await initScenario({

@@ -34,8 +34,6 @@ export const handleCountCustomers = createRoute({
 				balance: filters.balance,
 				internalFeatureId: feature.internal_id,
 			});
-			// Null = lake unavailable: no affordable count exists, and the plain
-			// count would ignore the balance filter entirely — report none instead.
 			return c.json({
 				totalCount: counted?.totalCount ?? null,
 				approximate: counted?.approximate ?? false,

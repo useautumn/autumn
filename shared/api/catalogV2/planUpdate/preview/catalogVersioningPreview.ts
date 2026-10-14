@@ -1,7 +1,6 @@
 import { z } from "zod/v4";
 import { CatalogPlanVersioningStrategySchema } from "../versioning.js";
 
-/** Null on the parent preview when versioning doesn't apply (create / delete / skip). */
 export const CatalogPlanVersioningSchema = z.object({
 	current_version: z.number().int(),
 	new_version: z.number().int().nullable().meta({

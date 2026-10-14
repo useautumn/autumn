@@ -18,7 +18,6 @@ test("catalog config returns validation issues for malformed rewards", () => {
 	expect(parse().success).toBe(false);
 });
 
-/** Before: changed config resources conflicted; after: catalog push updates their definitions. */
 test("catalog config creates, updates, and deletes rewards and referral programs", async () => {
 	const suffix = Date.now();
 	const referrerId = `catalog-referrer-${suffix}`;
@@ -161,7 +160,6 @@ test("catalog config creates, updates, and deletes rewards and referral programs
 			?.max_redemptions,
 	).toBe(7);
 
-	/** Before: dangling programs failed during apply; after: preview rejects them with repair guidance. */
 	const danglingProgramConfig = structuredClone(changedConfig);
 	danglingProgramConfig.rewards = [changedConfig.rewards[0]!];
 	await expect(
@@ -257,7 +255,6 @@ test.each([CouponDurationType.OneOff, CouponDurationType.Forever])(
 	},
 );
 
-/** Before: replacing plan prices orphaned coupon plan IDs; after: scoped coupons keep stable plan IDs. */
 test("catalog config keeps plan-scoped coupons idempotent across plan updates", async () => {
 	const suffix = Date.now();
 	const planId = `catalog-coupon-plan-${suffix}`;

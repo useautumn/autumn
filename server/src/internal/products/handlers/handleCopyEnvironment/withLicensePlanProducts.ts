@@ -3,10 +3,6 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { planLicenseRepo } from "@/internal/licenses/repos/planLicenseRepo.js";
 import { withPulledInPlans } from "./withPulledInPlans.js";
 
-/**
- * Pulls the copy set's license plans into it unless the target already has a
- * plan with that id, so a copied parent never lands without its licenses.
- */
 export const withLicensePlanProducts = async ({
 	ctx,
 	fromProducts,

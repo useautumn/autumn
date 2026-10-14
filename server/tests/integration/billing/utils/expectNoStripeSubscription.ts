@@ -4,10 +4,6 @@ import type { DrizzleCli } from "@/db/initDrizzle";
 import { createStripeCli } from "@/external/connect/createStripeCli";
 import { CusService } from "@/internal/customers/CusService";
 
-/**
- * Verifies that a customer has no active Stripe subscriptions.
- * Use after cancel immediately or after advancing past cancel end of cycle.
- */
 export const expectNoStripeSubscription = async ({
 	db,
 	customerId,
@@ -29,7 +25,6 @@ export const expectNoStripeSubscription = async ({
 	});
 
 	if (!customer?.processor?.id) {
-		// No Stripe customer = no subscriptions, which is valid
 		return;
 	}
 

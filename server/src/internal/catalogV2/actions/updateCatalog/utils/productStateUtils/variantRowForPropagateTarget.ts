@@ -3,7 +3,6 @@ import type { ProductStatesContext } from "@/internal/catalogV2/actions/updateCa
 import { anchoredVariantRow } from "./anchoredVariantRow";
 import { fullProductForPlanParams } from "./fullProductForPlanParams";
 
-/** True when the target names a specific row rather than the whole plan. */
 export const propagateTargetIsPinned = ({
 	target,
 }: {
@@ -11,10 +10,6 @@ export const propagateTargetIsPinned = ({
 }): boolean =>
 	target.version !== undefined || target.version_slug !== undefined;
 
-/**
- * The variant row a propagate target addresses. Pinned → that exact row.
- * Plan-level → active row anchored to the edited base, else latest anchored.
- */
 export const variantRowForPropagateTarget = ({
 	target,
 	anchorInternalIds,

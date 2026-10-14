@@ -1,21 +1,3 @@
-/**
- * Preview race: a grant issued while a deduction is still un-synced.
- *
- * `balances.create` invalidates the subject. Without a flush, the blind HDEL in
- * `invalidateSharedBalanceFields` wipes the balance hash fields while the
- * deduction lives only in Redis — syncItemV4 then logs "Cache miss for feature"
- * and drops it, so the rebuilt cache reverts to the pre-deduction balance in
- * Postgres. The spend disappears while events.list still reports it.
- *
- * The deduction is applied through `executeRedisDeductionV2` WITHOUT queuing a
- * sync item, which is the deterministic stand-in for a /track whose batched
- * syncItemV4 has not landed yet (SyncBatchingManagerV3, ~1s window). No sleeps,
- * no real timing race.
- *
- * Pre-impl red: remaining reverts to the full 200 (grant + grant, spend lost).
- * Post-impl green: both reads show 195.
- */
-
 import { beforeAll, describe, expect, test } from "bun:test";
 import { type ApiCustomer, ApiVersion, ResetInterval } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
@@ -41,7 +23,6 @@ const getMessagesRemaining = (customer: ApiCustomer) => {
 	return balance.remaining ?? balance.current_balance;
 };
 
-// Exercises the legacy Redis balance path, which worker-routed customers never use.
 describe.skipIf(isBalanceWorkerRoute())(
 	`${chalk.yellowBright("balances.create must not lose unsynced deductions")}`,
 	() => {
@@ -54,14 +35,10 @@ describe.skipIf(isBalanceWorkerRoute())(
 		beforeAll(async () => {
 			await waitForRedisReady(ctx.redisV2, "customer-redis", 5000);
 
-			// Re-runnable: balance_id is unique per customer, so start from a clean one.
-			await autumn.customers.delete(customerId).catch(() => {
-				/* first run — nothing to delete */
-			});
+			await autumn.customers.delete(customerId).catch(() => {});
 
 			await autumn.customers.create({ id: customerId, name: testCase });
 
-			// A loose one-off grant — no plan, no attach, no Stripe.
 			await autumn.balances.create({
 				customer_id: customerId,
 				feature_id: TestFeature.Messages,
@@ -82,7 +59,6 @@ describe.skipIf(isBalanceWorkerRoute())(
 				(feature) => feature.id === TestFeature.Messages,
 			)!;
 
-			// Deduct in Redis WITHOUT queuing sync — the un-synced window.
 			await executeRedisDeductionV2({
 				ctx,
 				deductions: [{ feature: messagesFeature, deduction: SPEND }],
@@ -94,7 +70,6 @@ describe.skipIf(isBalanceWorkerRoute())(
 				await autumn.customers.get<ApiCustomer>(customerId);
 			expect(getMessagesRemaining(cachedBeforeGrant)).toBe(GRANT - SPEND);
 
-			// The invalidating call: a second grant, as a customer would issue it.
 			await autumn.balances.create({
 				customer_id: customerId,
 				feature_id: TestFeature.Messages,
@@ -103,7 +78,6 @@ describe.skipIf(isBalanceWorkerRoute())(
 				balance_id: "second",
 			});
 
-			// ── Contract: invalidation semantics preserved ───────────────────────
 			const balanceKey = buildSharedFullSubjectBalanceKey({
 				orgId: ctx.org.id,
 				env: ctx.env,
@@ -112,14 +86,11 @@ describe.skipIf(isBalanceWorkerRoute())(
 			});
 			expect(await ctx.redisV2.hlen(balanceKey)).toBe(0);
 
-			// ── Contract: the deduction reached Postgres ─────────────────────────
-			// Pre-fix: the HDEL wiped it, both reads show the full 2 x GRANT.
 			const dbCustomer = await autumn.customers.get<ApiCustomer>(customerId, {
 				skip_cache: "true",
 			});
 			expect(getMessagesRemaining(dbCustomer)).toBe(GRANT * 2 - SPEND);
 
-			// ── Contract: rebuilt cache agrees ───────────────────────────────────
 			const rebuiltCustomer =
 				await autumn.customers.get<ApiCustomer>(customerId);
 			expect(getMessagesRemaining(rebuiltCustomer)).toBe(GRANT * 2 - SPEND);

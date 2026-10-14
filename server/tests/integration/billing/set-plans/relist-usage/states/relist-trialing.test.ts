@@ -1,6 +1,3 @@
-/** set_plans re-lists Pro on a trialing sub: a reset-now is a 400, as Stripe rejects it; otherwise Stripe rates
- * trial usage at $0, so the trial end bills only the plan. */
-
 import { expect, test } from "bun:test";
 import { ErrCode } from "@autumn/shared";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils";

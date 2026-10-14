@@ -1,6 +1,3 @@
-/** Org-scoped V2 balance updates enqueue exact jobs while other orgs retain synchronous execution.
- * Enqueue delegates refresh to the worker; queue unavailability rejects before mutation. */
-
 import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
 import {
 	ApiVersionClass,
@@ -84,7 +81,6 @@ await mockModuleWithRestore(
 	() => ({ updateExpiresAtV2: async () => {} }),
 );
 
-// Off by default: the legacy lane is what most cases pin; the worker lane has its own suites.
 await mockModuleWithRestore(
 	"@/internal/misc/rollouts/isBalanceWorkerRolloutEnabled.js",
 	() => ({ isBalanceWorkerRolloutEnabled: () => state.workerRollout }),
@@ -145,8 +141,6 @@ const createInvoiceCreditCtx = () => {
 	return ctx;
 };
 
-/** A plain live balance for the feature the routing params name, so the
- *  routing assertions aren't answered by the "no such balance" guard. */
 const messagesProducts = () => [
 	{
 		status: "active",
@@ -163,7 +157,6 @@ const messagesProducts = () => [
 	},
 ];
 
-/** A subject whose credits balance was stamped as invoice credits at attach. */
 const stampedInvoiceCreditProducts = () => [
 	{
 		status: "active",

@@ -13,9 +13,6 @@ import {
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { CusService } from "@/internal/customers/CusService";
 
-/** The caller's customer may be a snapshot taken before a concurrent
- * customers.update committed; pushing its email to Stripe would echo the stale
- * value back through the customer.updated webhook and overwrite the new one. */
 const latestCustomerEmail = async ({
 	ctx,
 	customer,

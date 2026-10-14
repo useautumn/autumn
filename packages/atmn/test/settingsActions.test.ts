@@ -1,10 +1,3 @@
-/**
- * The settings lane through push and pull against a fake client. Push sends
- * the block to its own operation and applies it only when the preview shows a
- * stated flag moving; pull writes the server's non-default flags into the
- * block and removes any back at their default.
- */
-
 import { expect, test } from "bun:test";
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -30,7 +23,6 @@ const configWith = ({ body }: { body: string }): string =>
 
 type Call = { method: string; body: unknown };
 
-/** Every operation records its call; the settings preview answers as told. */
 const fakeClient = ({
 	settingsChanges,
 	catalogPreview = { features: [], plans: [] },
@@ -86,8 +78,6 @@ test("push sends only the settings body to organization.update, and only when a 
 		write: (t) => (output += t),
 	});
 
-	// Both previews run together; after the settings write the catalog is
-	// previewed again, since a flag like multi_currency changes what it accepts.
 	const settingsCalls = calls.filter((call) => call.method !== "get");
 	expect(settingsCalls.map((call) => call.method)).toEqual([
 		"previewUpdateOrganization",
@@ -95,7 +85,6 @@ test("push sends only the settings body to organization.update, and only when a 
 		"updateOrganization",
 		"previewUpdate",
 	]);
-	// The catalog body never carries settings; the settings body carries only the stated, renamed flags.
 	expect("settings" in (settingsCalls[3].body as object)).toBe(false);
 	expect(settingsCalls[2].body).toEqual({
 		config: { multi_currency: true, persist_free_overage: true },
@@ -160,14 +149,12 @@ test("pull writes non-default flags into settings and drops one back at its defa
 	);
 	const { client } = fakeClient({
 		settingsChanges: [
-			// The config says true; the server holds the default.
 			{
 				key: "cancel_on_past_due",
 				action: "update",
 				previous: false,
 				current: true,
 			},
-			// The config says nothing; the server holds a non-default, under its renamed key.
 			{
 				key: "persist_free_overage",
 				action: "unmanaged",
@@ -211,7 +198,6 @@ test("pull seeds a settings block when the server holds a non-default the config
 	// biome-ignore lint/suspicious/noExplicitAny: a fake client
 	await runPull({ client: client as any, cwd: dir, write: () => {} });
 
-	// Asked with an empty body: the config stated no settings.
 	expect(
 		calls.find((call) => call.method === "previewUpdateOrganization")?.body,
 	).toEqual({ config: {} });
@@ -231,7 +217,6 @@ test("pull drops a stated flag the server also holds at its default, though the 
 			body: "\tfeatures: [],\n\tsettings: { multiCurrency: true, cancelOnPastDue: false },",
 		}),
 	);
-	// Both stated flags match the server, so the preview names neither.
 	const { client } = fakeClient({ settingsChanges: [] });
 	let output = "";
 	// biome-ignore lint/suspicious/noExplicitAny: a fake client

@@ -1,19 +1,3 @@
-/**
- * Attach New Billing Subscription Tests (Legacy Migration)
- *
- * Tests for the `new_billing_subscription` flag on attach, which creates
- * a separate Stripe subscription instead of merging into the existing one.
- *
- * Migrated from:
- * - server/tests/integration/billing/new-billing-subscription/new-billing-subscription1.test.ts
- *
- * Key behaviors tested:
- * - Add-on with new_billing_subscription creates separate sub mid-cycle
- * - Attaching same add-on again creates a third sub
- * - Entities with new_billing_subscription get separate subs
- * - Upgrading main customer doesn't affect entity's separate sub
- */
-
 import { expect, test } from "bun:test";
 import { type ApiCustomerV3, CustomerExpand } from "@autumn/shared";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
@@ -29,21 +13,6 @@ import ctx from "@tests/utils/testInitUtils/createTestContext";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 1: Paid add-on with new_billing_subscription mid-cycle, then attach again
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Attach pro product to customer
- * - Advance clock 2 weeks (mid-cycle)
- * - Attach paid add-on with new_billing_subscription → creates 2nd sub
- * - Attach same add-on again with new_billing_subscription → creates 3rd sub
- *
- * Expected:
- * - After first add-on: 2 subs, 2 invoices, add-on product attached
- * - After second add-on: 3 subs, 3 invoices, add-on quantity = 2
- */
 test.concurrent(`${chalk.yellowBright("attach: paid add-on with new_billing_subscription mid-cycle")}`, async () => {
 	const customerId = "new-billing-sub-addon";
 
@@ -73,7 +42,6 @@ test.concurrent(`${chalk.yellowBright("attach: paid add-on with new_billing_subs
 		],
 	});
 
-	// After first add-on attach: 2 subs, both products active
 	await expectSubCount({ ctx, customerId, count: 2 });
 
 	const customer1 = await autumnV1.customers.get<ApiCustomerV3>(customerId);
@@ -84,10 +52,9 @@ test.concurrent(`${chalk.yellowBright("attach: paid add-on with new_billing_subs
 	expectCustomerInvoiceCorrect({
 		customer: customer1,
 		count: 2,
-		latestTotal: 20, // recurringAddOn uses type: "pro" → $20/month
+		latestTotal: 20,
 	});
 
-	// Attach same add-on again → 3 subs
 	await autumnV1.attach({
 		customer_id: customerId,
 		product_id: addOn.id,
@@ -106,22 +73,6 @@ test.concurrent(`${chalk.yellowBright("attach: paid add-on with new_billing_subs
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 2: Entities with new_billing_subscription (separate subs per entity)
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Customer with pro attached (customer-level)
- * - 2 entities
- * - Attach premium to entity 1 with new_billing_subscription → 2 subs
- * - Attach premium to entity 2 with new_billing_subscription → 3 subs
- *
- * Expected:
- * - Each entity premium is on a separate sub
- * - Customer pro + entity 1 premium + entity 2 premium = 3 subs
- * - All products active
- */
 test.concurrent(`${chalk.yellowBright("attach: entities with new_billing_subscription (separate subs)")}`, async () => {
 	const customerId = "new-billing-sub-entities";
 
@@ -152,13 +103,11 @@ test.concurrent(`${chalk.yellowBright("attach: entities with new_billing_subscri
 		],
 	});
 
-	// After entity 1 attach: 2 subs
 	await expectSubCount({ ctx, customerId, count: 2 });
 
 	const entity1 = await autumnV1.entities.get(customerId, entities[0].id);
 	await expectProductActive({ customer: entity1, productId: premium.id });
 
-	// Attach premium to entity 2 → 3 subs
 	await autumnV1.attach({
 		customer_id: customerId,
 		entity_id: entities[1].id,
@@ -171,7 +120,6 @@ test.concurrent(`${chalk.yellowBright("attach: entities with new_billing_subscri
 	const entity2 = await autumnV1.entities.get(customerId, entities[1].id);
 	await expectProductActive({ customer: entity2, productId: premium.id });
 
-	// Verify final state: customer pro active, both entity premiums active
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId, {
 		expand: [CustomerExpand.Invoices],
 	});
@@ -190,20 +138,6 @@ test.concurrent(`${chalk.yellowBright("attach: entities with new_billing_subscri
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 3: Customer upgrade doesn't affect entity's separate sub
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Customer with pro + entity 1 with premium (on separate sub)
- * - Upgrade customer from pro to premium
- *
- * Expected:
- * - Customer pro is replaced by premium
- * - Entity 1 premium remains on its separate sub
- * - Still 2 subs total (not 3)
- */
 test.concurrent(`${chalk.yellowBright("attach: customer upgrade doesn't affect entity separate sub")}`, async () => {
 	const customerId = "new-billing-sub-upgrade";
 
@@ -234,7 +168,6 @@ test.concurrent(`${chalk.yellowBright("attach: customer upgrade doesn't affect e
 		],
 	});
 
-	// Verify initial: customer pro + entity premium = 2 subs
 	await expectSubCount({ ctx, customerId, count: 2 });
 
 	const customerBefore =
@@ -247,13 +180,11 @@ test.concurrent(`${chalk.yellowBright("attach: customer upgrade doesn't affect e
 		productId: premium.id,
 	});
 
-	// Upgrade customer from pro → premium
 	await autumnV1.attach({
 		customer_id: customerId,
 		product_id: premium.id,
 	});
 
-	// Customer should have premium active, pro gone
 	const customerAfter = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	await expectCustomerProducts({
 		customer: customerAfter,
@@ -261,10 +192,8 @@ test.concurrent(`${chalk.yellowBright("attach: customer upgrade doesn't affect e
 		notPresent: [pro.id],
 	});
 
-	// Still 2 subs (customer premium + entity premium on separate sub)
 	await expectSubCount({ ctx, customerId, count: 2 });
 
-	// Entity should still have premium active on its separate sub
 	const entityAfter = await autumnV1.entities.get(customerId, entities[0].id);
 	await expectProductActive({
 		customer: entityAfter,

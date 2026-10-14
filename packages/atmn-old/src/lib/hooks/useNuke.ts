@@ -1,7 +1,3 @@
-/**
- * useNuke hook - Manages nuke operation with TanStack Query
- */
-
 import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
 import {
@@ -29,23 +25,14 @@ export interface UseNukeOptions {
 }
 
 export interface UseNukeReturn {
-	/** Start the nuke operation */
 	nuke: () => void;
-	/** Current phase statistics */
 	phases: NukePhaseStats[];
-	/** Currently active phase */
 	activePhase: "customers" | "plans" | "features" | null;
-	/** Total elapsed time in seconds */
 	totalElapsed: number;
-	/** Whether nuke is currently running */
 	isNuking: boolean;
-	/** Error if any */
 	error: Error | null;
 }
 
-/**
- * Hook to manage nuke operation with progress tracking
- */
 export function useNuke(options?: UseNukeOptions): UseNukeReturn {
 	const [phases, setPhases] = useState<NukePhaseStats[]>([
 		{ phase: "customers", current: 0, total: 0, rate: 0, completed: false },
@@ -58,7 +45,6 @@ export function useNuke(options?: UseNukeOptions): UseNukeReturn {
 	const [startTime, setStartTime] = useState<number>(0);
 	const [currentElapsed, setCurrentElapsed] = useState<number>(0);
 
-	// Update elapsed time periodically
 	const updateElapsed = () => {
 		if (startTime > 0) {
 			setCurrentElapsed((Date.now() - startTime) / 1000);
@@ -98,7 +84,6 @@ export function useNuke(options?: UseNukeOptions): UseNukeReturn {
 			const secretKey = getKey(AppEnv.Sandbox);
 			setStartTime(Date.now());
 
-			// Phase 1: Customers
 			const customersPhaseStart = Date.now();
 			setActivePhase("customers");
 
@@ -119,7 +104,6 @@ export function useNuke(options?: UseNukeOptions): UseNukeReturn {
 
 			completePhase("customers", (Date.now() - customersPhaseStart) / 1000);
 
-			// Phase 2: Plans
 			const plansPhaseStart = Date.now();
 			setActivePhase("plans");
 
@@ -140,11 +124,8 @@ export function useNuke(options?: UseNukeOptions): UseNukeReturn {
 
 			completePhase("plans", (Date.now() - plansPhaseStart) / 1000);
 
-			// Wait a bit for DB to propagate plan deletions
-			// This prevents race conditions where features are still referenced
 			await new Promise((resolve) => setTimeout(resolve, 1000));
 
-			// Phase 3: Features
 			const featuresPhaseStart = Date.now();
 			setActivePhase("features");
 
@@ -165,7 +146,6 @@ export function useNuke(options?: UseNukeOptions): UseNukeReturn {
 
 			completePhase("features", (Date.now() - featuresPhaseStart) / 1000);
 
-			// Done!
 			setActivePhase(null);
 		},
 		onSuccess: () => {

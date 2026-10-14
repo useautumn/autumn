@@ -18,8 +18,6 @@ export type BillingMutationParams = BillingStageParams & {
 	skipDefaultSuccess?: boolean;
 };
 
-/** onApplied fires on EVERY successful write — including invoice and checkout
- * stages that skip onSuccess — for side effects that must not miss a path. */
 export function useBillingMutation<
 	TRequest extends object,
 	TResponse extends BillingMutationResponse,
@@ -42,7 +40,6 @@ export function useBillingMutation<
 	onApplied?: () => void;
 	onCheckoutRedirect?: (checkoutUrl: string) => void;
 	onSuccess?: () => void;
-	/** Overrides the dashboard's default x-api-version for bodies in a newer shape. */
 	apiVersion?: ApiVersion;
 }) {
 	const axiosInstance = useAxiosInstance();

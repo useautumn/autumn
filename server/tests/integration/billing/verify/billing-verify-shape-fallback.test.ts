@@ -1,41 +1,3 @@
-/**
- * Billing Verify: Shape Fallback (non-strict)
- *
- * Contract under test (billingActions.verify):
- *   New behaviors (non-strict only — strict keeps exact-id semantics):
- *     - Fixed base price whose Stripe item id drifted (same amount/interval/
- *       currency, same Stripe product, no Autumn metadata) -> matched by
- *       shape -> status "correct".
- *     - Same drift under strict: true -> base_price_mismatch missing +
- *       item_mismatch unexpected (and the unexpected message reads
- *       "Unexpected Stripe item for an unrecognized item (...)").
- *     - Drifted base item with a DIFFERENT amount -> NOT swallowed ->
- *       base_price_mismatch missing survives non-strict.
- *     - Prepaid price with a drifted item id (same shape, quantity kept) ->
- *       matched by shape -> "correct"; a subsequent quantity drift on the
- *       same drifted item still reports prepaid_quantity_mismatch.
- *     - Prepaid restructured on Stripe (untagged flat item, different price
- *       structure, same total per interval) -> matched by totals ->
- *       "correct" non-strict; a different total stays mismatched; strict
- *       keeps identity semantics.
- *     - A consolidated fixed item (qty 2 across two cusProducts) billed as
- *       TWO Stripe items (stored id qty 1 + same-shape legacy id qty 1) ->
- *       shape-siblings aggregate to the expected quantity -> "correct"
- *       non-strict; an extra sibling (aggregate 3) stays mismatched.
- *     - Fixed drift onto a DIFFERENT Stripe product (e.g. a legacy
- *       enterprise product) at the same amount/interval -> still matched
- *       non-strict; strict keeps identity semantics.
- *     - Unexpected $0-billing licensed Stripe items ($0 unit price, ANY
- *       price at quantity 0, or a tiered price whose tier total resolves to
- *       $0 at its quantity) -> skipped non-strict -> "correct"; a tiered
- *       item whose tiers DO bill still reports; strict reports all.
- *   Side effects: none — verify stays read-only.
- *
- * Pre-impl red: the drifted/extra items fail id-based matching, so the
- * non-strict assertions see "mismatched". Post-impl green once evaluateItems
- * gains the shape fallback + $0-item skip.
- */
-
 import { expect, test } from "bun:test";
 import {
 	cusPriceToCusEntWithCusProduct,
@@ -98,9 +60,6 @@ const basePriceIdFor = async ({
 	throw new Error(`No base Stripe price id on product ${productId}`);
 };
 
-/** Clones a live sub item's price into a fresh Stripe price (optionally at a
- * different amount) — an id Autumn has never stored, like an imported org's
- * own catalog price. */
 const createDriftedClone = async ({
 	ctx,
 	item,
@@ -164,13 +123,11 @@ test.concurrent(
 			},
 		});
 
-		// ── Contract: same-shape drift matches non-strict ────────────────
 		const lenient = await verify({ ctx, params: { customer_id: customerId } });
 		expect(lenient.subscriptions.length).toBe(1);
 		expect(lenient.subscriptions[0].mismatches).toEqual([]);
 		expect(lenient.subscriptions[0].status).toBe("correct");
 
-		// ── Contract: strict keeps exact-id semantics ────────────────────
 		const strict = await verify({
 			ctx,
 			params: { customer_id: customerId, strict: true },
@@ -181,7 +138,6 @@ test.concurrent(
 			{ type: "item_mismatch", reason: "unexpected" },
 		]);
 
-		// ── Contract: standardized Stripe-side message with amount ────────
 		const unexpected = strict.subscriptions[0].mismatches.find(
 			(mismatch) => mismatch.type === "item_mismatch",
 		);
@@ -236,7 +192,6 @@ test.concurrent(
 			},
 		});
 
-		// ── Contract: different-amount drift is NOT swallowed ────────────
 		const result = await verify({ ctx, params: { customer_id: customerId } });
 		expect(result.subscriptions[0].status).toBe("mismatched");
 		const missing = result.subscriptions[0].mismatches.find(
@@ -246,7 +201,6 @@ test.concurrent(
 		);
 		expect(missing).toBeDefined();
 
-		// ── Contract: the message carries plan + price context ────────────
 		const fullProduct = await ProductService.getFull({
 			db: ctx.db,
 			idOrInternalId: pro.id,
@@ -265,8 +219,6 @@ test.concurrent(
 	async () => {
 		const customerId = "verify-shape-fallback-prepaid";
 
-		// includedUsage 0 keeps the V2 prepaid Stripe price per-unit — sub items
-		// never carry `tiers` unexpanded, so only per-unit shapes are comparable.
 		const prepaidItem = items.prepaidMessages({
 			includedUsage: 0,
 			billingUnits: 100,
@@ -330,13 +282,11 @@ test.concurrent(
 			},
 		});
 
-		// ── Contract: same-shape prepaid drift matches non-strict ────────
 		const lenient = await verify({ ctx, params: { customer_id: customerId } });
 		expect(lenient.subscriptions.length).toBe(1);
 		expect(lenient.subscriptions[0].mismatches).toEqual([]);
 		expect(lenient.subscriptions[0].status).toBe("correct");
 
-		// ── Contract: quantity checks still run after the shape match ────
 		await corruptStripeSubscription({
 			ctx,
 			subscriptionId: sub.id,
@@ -367,8 +317,6 @@ test.concurrent(
 	async () => {
 		const customerId = "verify-shape-fallback-totals";
 
-		// includedUsage > 0 makes the expected V2 price tiered — shape
-		// comparison can't see unexpanded tiers, so only totals can match.
 		const prepaidItem = items.prepaidMessages({
 			includedUsage: 100,
 			billingUnits: 100,
@@ -390,8 +338,6 @@ test.concurrent(
 			],
 		});
 
-		// The economically-expected monthly total, via the same tier math
-		// verify uses.
 		const fullCustomer = await CusService.getFull({
 			ctx,
 			idOrInternalId: customerId,
@@ -435,7 +381,6 @@ test.concurrent(
 		);
 		if (!prepaidSubItem) throw new Error("Expected a prepaid item on the sub");
 
-		// Restructure: one flat untagged item at the same monthly total.
 		const flat = await ctx.stripeCli.prices.create({
 			product: prepaidSubItem.price.product as string,
 			currency: prepaidSubItem.price.currency,
@@ -452,19 +397,16 @@ test.concurrent(
 			},
 		});
 
-		// ── Contract: same total + interval matches, structure ignored ────
 		const lenient = await verify({ ctx, params: { customer_id: customerId } });
 		expect(lenient.subscriptions[0].mismatches).toEqual([]);
 		expect(lenient.subscriptions[0].status).toBe("correct");
 
-		// ── Contract: strict keeps identity semantics ─────────────────────
 		const strict = await verify({
 			ctx,
 			params: { customer_id: customerId, strict: true },
 		});
 		expect(strict.subscriptions[0].status).toBe("mismatched");
 
-		// ── Contract: a different total stays mismatched non-strict ───────
 		await corruptStripeSubscription({
 			ctx,
 			subscriptionId: sub.id,
@@ -505,7 +447,6 @@ test.concurrent(
 		);
 		if (!baseItem) throw new Error("Expected the base item on the sub");
 
-		// 10k units inside a free first tier — bills $0 despite the quantity.
 		const zeroResolving = await ctx.stripeCli.prices.create({
 			product: baseItem.price.product as string,
 			currency: baseItem.price.currency,
@@ -518,7 +459,6 @@ test.concurrent(
 			recurring: { interval: "month", interval_count: 1 },
 			nickname: "stale-tiered-free",
 		});
-		// 200 units past the free tier — genuinely bills.
 		const billing = await ctx.stripeCli.prices.create({
 			product: baseItem.price.product as string,
 			currency: baseItem.price.currency,
@@ -542,7 +482,6 @@ test.concurrent(
 			},
 		});
 
-		// ── Contract: $0-resolving tiered skipped, billing tiered reported ─
 		const lenient = await verify({ ctx, params: { customer_id: customerId } });
 		expect(lenient.subscriptions[0].status).toBe("mismatched");
 		expect(lenient.subscriptions[0].mismatches).toMatchObject([
@@ -553,7 +492,6 @@ test.concurrent(
 			},
 		]);
 
-		// ── Contract: strict reports both ─────────────────────────────────
 		const strict = await verify({
 			ctx,
 			params: { customer_id: customerId, strict: true },
@@ -592,7 +530,6 @@ test.concurrent(
 		);
 		if (!baseItem) throw new Error("Expected the base item on the sub");
 
-		// Same amount + interval, but on a Stripe product Autumn never linked.
 		const foreign = await ctx.stripeCli.prices.create({
 			product_data: { name: "Legacy Enterprise" },
 			currency: baseItem.price.currency,
@@ -613,12 +550,10 @@ test.concurrent(
 			},
 		});
 
-		// ── Contract: amount + interval match across Stripe products ──────
 		const lenient = await verify({ ctx, params: { customer_id: customerId } });
 		expect(lenient.subscriptions[0].mismatches).toEqual([]);
 		expect(lenient.subscriptions[0].status).toBe("correct");
 
-		// ── Contract: strict keeps identity semantics ─────────────────────
 		const strict = await verify({
 			ctx,
 			params: { customer_id: customerId, strict: true },
@@ -664,8 +599,6 @@ test.concurrent(
 				`Expected a consolidated qty-2 base item, got ${baseItem?.quantity}`,
 			);
 
-		// Split: stored item drops to qty 1, the second unit bills on an
-		// untagged same-shape legacy price.
 		const legacy = await createDriftedClone({ ctx, item: baseItem });
 		await corruptStripeSubscription({
 			ctx,
@@ -676,12 +609,10 @@ test.concurrent(
 			},
 		});
 
-		// ── Contract: shape-siblings aggregate to the expected quantity ───
 		const lenient = await verify({ ctx, params: { customer_id: customerId } });
 		expect(lenient.subscriptions[0].mismatches).toEqual([]);
 		expect(lenient.subscriptions[0].status).toBe("correct");
 
-		// ── Contract: an extra sibling unit still reports ─────────────────
 		await corruptStripeSubscription({
 			ctx,
 			subscriptionId: sub.id,
@@ -735,8 +666,6 @@ test.concurrent(
 			item: baseItem,
 			unitAmountDecimal: "0",
 		});
-		// A tiered licensed price that WOULD bill at qty > 0 — at qty 0 it's
-		// inert regardless of tier structure.
 		const tieredPrice = await ctx.stripeCli.prices.create({
 			product: baseItem.price.product as string,
 			currency: baseItem.price.currency,
@@ -760,13 +689,11 @@ test.concurrent(
 			},
 		});
 
-		// ── Contract: $0-billing leftovers are billing-neutral non-strict ─
 		const lenient = await verify({ ctx, params: { customer_id: customerId } });
 		expect(lenient.subscriptions.length).toBe(1);
 		expect(lenient.subscriptions[0].mismatches).toEqual([]);
 		expect(lenient.subscriptions[0].status).toBe("correct");
 
-		// ── Contract: strict still reports both items ─────────────────────
 		const strict = await verify({
 			ctx,
 			params: { customer_id: customerId, strict: true },
@@ -802,8 +729,6 @@ test.concurrent(
 			],
 		});
 
-		// Both cusProducts' base prices resolve to the same stored Stripe id,
-		// so Autumn expects ONE item at quantity 2.
 		const fullCustomer = await CusService.getFull({
 			ctx,
 			idOrInternalId: customerId,
@@ -834,8 +759,6 @@ test.concurrent(
 				`Expected a consolidated qty-2 base item, got ${baseItem?.quantity}`,
 			);
 
-		// Split into two items — each tagged with a DIFFERENT valid cus price,
-		// one billing a legacy price id (the imported-then-attached shape).
 		const legacy = await createDriftedClone({ ctx, item: baseItem });
 		await corruptStripeSubscription({
 			ctx,
@@ -857,19 +780,16 @@ test.concurrent(
 			},
 		});
 
-		// ── Contract: identity siblings aggregate to the expected quantity ─
 		const lenient = await verify({ ctx, params: { customer_id: customerId } });
 		expect(lenient.subscriptions[0].mismatches).toEqual([]);
 		expect(lenient.subscriptions[0].status).toBe("correct");
 
-		// ── Contract: identity aggregation holds under strict too ─────────
 		const strict = await verify({
 			ctx,
 			params: { customer_id: customerId, strict: true },
 		});
 		expect(strict.subscriptions[0].mismatches).toEqual([]);
 
-		// ── Contract: a genuinely short aggregate still reports ───────────
 		await corruptStripeSubscription({
 			ctx,
 			subscriptionId: sub.id,

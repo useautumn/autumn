@@ -18,7 +18,6 @@ const PROPERTY_SEARCH_THRESHOLD = 5;
 
 const Separator = () => <span className={overlaySeparatorClassName} />;
 
-/** Summarises the grouping as "Plan · 3 of 4" when some groups are hidden. */
 const GroupByValue = ({ groupBy }: { groupBy: string }) => {
 	const { groupValues, shownCount, isFiltered } = useGroupVisibility({
 		groupBy,

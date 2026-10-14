@@ -11,10 +11,6 @@ type RawProduct = {
 	items?: { feature_id?: string | null }[];
 };
 
-// Lists a SPECIFIC sandbox's plans + features by overriding x-sandbox-org-id
-// per request (skipSandbox keeps the interceptor from forcing the active one),
-// so the copy dialog can show the source sandbox's catalog while you sit in a
-// different one.
 export const useSandboxCatalogQuery = (sandboxId: string | null) => {
 	const axiosInstance = useAxiosInstance({
 		skipSandbox: true,

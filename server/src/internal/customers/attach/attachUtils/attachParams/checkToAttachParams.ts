@@ -49,16 +49,12 @@ export const checkToAttachParams = async ({
 		freeTrial,
 		replaceables: [],
 
-		// Others
 		req: ctx,
 		org: ctx.org,
 		entities: customer.entities,
 		features: ctx.features,
 		internalEntityId: customer.entity?.internal_id,
 		cusProducts: customer.customer_products,
-
-		// Others
-		// apiVersion,
 	};
 
 	return attachParams;

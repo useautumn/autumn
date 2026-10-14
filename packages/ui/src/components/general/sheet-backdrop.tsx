@@ -9,10 +9,6 @@ interface SheetBackdropProps {
 	zIndex?: number;
 }
 
-/**
- * Full-viewport dimming backdrop for inline sheets, portaled to the document body
- * so it covers everything behind the floating sheet panel uniformly.
- */
 export function SheetBackdrop({
 	isOpen,
 	onClose,

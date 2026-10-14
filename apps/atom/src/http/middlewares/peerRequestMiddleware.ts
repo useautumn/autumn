@@ -7,10 +7,6 @@ import {
 } from "../../replication/transport/peerSignature.js";
 import type { AtomHttpContext, AtomHttpEnv } from "../types/atomHttp.js";
 
-/**
- * Every request on the peer port is from another replica, signed with the deployment's own secret over its method,
- * path, routed customer, folder and body. It is marked relayed, so what it carries is applied here and passed no further.
- */
 export function peerRequestMiddleware({
 	secret,
 }: {
@@ -38,7 +34,6 @@ export function peerRequestMiddleware({
 	return authorizePeer;
 }
 
-/** The folder the peer names, as this Atom holds it: a tenant's on a multi-tenant Atom, the one folder otherwise. */
 export function peerFolderMiddleware({
 	ctx,
 }: {

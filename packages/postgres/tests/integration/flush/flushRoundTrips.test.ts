@@ -8,7 +8,6 @@ import {
 import type { FlushRequest } from "../../../src/flush/types/flush.js";
 import type { PostgresClient } from "../../../src/types/postgresClient.js";
 
-/** A disposable Postgres (each run drops and recreates its own tables); skipped without one. */
 const databaseUrl = process.env.FLUSH_TEST_DATABASE_URL;
 
 const SCHEMA = `

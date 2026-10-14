@@ -16,7 +16,6 @@ import { getPendingPlanLongLivedCheckout } from "@/internal/billing/v2/execute/p
 import { updateCheckoutDbAndCache } from "@/internal/checkouts/actions/updateDbAndCache";
 import { MetadataService } from "@/internal/metadata/MetadataService";
 
-/** Open or paid invoices stay for findPendingInvoiceConflict to resume or wait on. */
 const hasLiveInvoice = async ({
 	ctx,
 	metadata,
@@ -39,8 +38,6 @@ const hasLiveInvoice = async ({
 	);
 };
 
-/** Re-attaching a plan replaces its pending copy and closes the long-lived link that sold it.
- * Returns the pending rows left afterwards. */
 export const discardReplacedPendingPlans = async ({
 	ctx,
 	fullCustomer,

@@ -7,17 +7,14 @@ import {
 } from "@autumn/sqs";
 import type { AtomPushQueue } from "./types/atomPushQueue.js";
 
-/** SendMessageBatch's limits; a push waits at most 10 ms for company. */
 const PUSH_BATCH: QueueBatchConfig = {
 	windowMs: 10,
 	maxEntries: 10,
 	maxBodyBytes: 256 * 1024,
 };
 
-/** After a whole batch fails, the queue is tried again in 1 s, doubling to 30 s; Alien is not asked in between. */
 const UNAVAILABLE_BACKOFF = { baseDelayMs: 1_000, maxDelayMs: 30_000 };
 
-/** A push refused without asking Alien, because the queue's last attempt failed; its warning already covers it. */
 export class AtomQueueBackoffError extends Error {
 	constructor({ retryInMs }: { retryInMs: number }) {
 		super(`The Atom's queue failed its last send; next try in ${retryInMs}ms`);
@@ -25,7 +22,6 @@ export class AtomQueueBackoffError extends Error {
 	}
 }
 
-/** `unknown` may have been delivered: the push still fails, and the Atom's newer-read guard makes a later copy harmless. */
 const resultsToFailures = ({
 	results,
 }: {
@@ -42,7 +38,6 @@ const resultsToFailures = ({
 				],
 	);
 
-/** An opened queue is kept for good, though alien still re-mints its credentials as they expire; a failed open or send waits out the backoff. */
 export const createAtomPushQueue = ({
 	openQueue,
 	logger,
@@ -64,7 +59,6 @@ export const createAtomPushQueue = ({
 	let failedFast = 0;
 
 	const recordFailure = ({ error }: { error: unknown }) => {
-		// Batches already in flight fail with the same cause; only the first one moves the backoff.
 		if (Date.now() < retryAtMs) return;
 		failures += 1;
 		const retryInMs = Math.min(

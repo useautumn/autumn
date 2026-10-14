@@ -7,21 +7,6 @@ import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 
-/**
- * Invoice Mode Tests for Price Updates
- *
- * These tests verify invoice mode configurations when updating subscription prices:
- * - Case 1: Increase price with draft invoice, immediate entitlements
- * - Case 2: Decrease price with draft invoice, immediate entitlements
- * - Case 2B: Free → paid with draft invoice, immediate entitlements
- * - Case 3: Trial removal with draft invoice, immediate entitlements
- * - Case 4: Increase price with finalized invoice, immediate entitlements
- */
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// CASE 1: INCREASE PRICE - DRAFT INVOICE, IMMEDIATE ENTITLEMENTS
-// ═══════════════════════════════════════════════════════════════════════════════
-
 test.concurrent(`${chalk.yellowBright("invoice-mode: increase price (draft, immediate)")}`, async () => {
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
 	const priceItem = items.monthlyPrice({ price: 20 });
@@ -39,7 +24,6 @@ test.concurrent(`${chalk.yellowBright("invoice-mode: increase price (draft, imme
 		actions: [s.attach({ productId: pro.id })],
 	});
 
-	// Increase price from $20 to $30
 	const newPriceItem = items.monthlyPrice({ price: 30 });
 
 	const updateParams = {
@@ -53,7 +37,6 @@ test.concurrent(`${chalk.yellowBright("invoice-mode: increase price (draft, imme
 
 	const preview = await autumnV1.subscriptions.previewUpdate(updateParams);
 
-	// Should charge $10 difference ($30 - $20)
 	expect(preview.total).toBe(10);
 
 	const result = await autumnV1.subscriptions.update(updateParams);
@@ -79,15 +62,11 @@ test.concurrent(`${chalk.yellowBright("invoice-mode: increase price (draft, imme
 
 	await expectCustomerInvoiceCorrect({
 		customer,
-		count: 2, // Initial attach + update
+		count: 2,
 		latestTotal: preview.total,
 		latestStatus: "draft",
 	});
 });
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// CASE 2: DECREASE PRICE - DRAFT INVOICE, IMMEDIATE ENTITLEMENTS
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(`${chalk.yellowBright("invoice-mode: decrease price (draft, immediate)")}`, async () => {
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
@@ -106,7 +85,6 @@ test.concurrent(`${chalk.yellowBright("invoice-mode: decrease price (draft, imme
 		actions: [s.attach({ productId: pro.id })],
 	});
 
-	// Decrease price from $30 to $20
 	const newPriceItem = items.monthlyPrice({ price: 20 });
 
 	const updateParams = {
@@ -120,7 +98,6 @@ test.concurrent(`${chalk.yellowBright("invoice-mode: decrease price (draft, imme
 
 	const preview = await autumnV1.subscriptions.previewUpdate(updateParams);
 
-	// Should be $0 or credit (price decrease)
 	expect(preview.total).toEqual(-10);
 
 	const result = await autumnV1.subscriptions.update(updateParams);
@@ -146,15 +123,11 @@ test.concurrent(`${chalk.yellowBright("invoice-mode: decrease price (draft, imme
 
 	await expectCustomerInvoiceCorrect({
 		customer,
-		count: 2, // Initial attach + update
+		count: 2,
 		latestTotal: preview.total,
 		latestStatus: "draft",
 	});
 });
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// CASE 2B: FREE → PAID - DRAFT INVOICE, IMMEDIATE ENTITLEMENTS
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(`${chalk.yellowBright("invoice-mode: free → paid (draft, immediate)")}`, async () => {
 	const dashboardItem = items.dashboard();
@@ -172,7 +145,6 @@ test.concurrent(`${chalk.yellowBright("invoice-mode: free → paid (draft, immed
 		actions: [s.attach({ productId: freeProduct.id })],
 	});
 
-	// Update from free to paid with monthly price
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
 	const priceItem = items.monthlyPrice({ price: 20 });
 
@@ -187,7 +159,6 @@ test.concurrent(`${chalk.yellowBright("invoice-mode: free → paid (draft, immed
 
 	const preview = await autumnV1.subscriptions.previewUpdate(updateParams);
 
-	// Should charge $20 (full price for new paid plan)
 	expect(preview.total).toBe(20);
 
 	const result = await autumnV1.subscriptions.update(updateParams);
@@ -213,15 +184,11 @@ test.concurrent(`${chalk.yellowBright("invoice-mode: free → paid (draft, immed
 
 	await expectCustomerInvoiceCorrect({
 		customer,
-		count: 1, // Only the update invoice (free attach has no invoice)
+		count: 1,
 		latestTotal: preview.total,
 		latestStatus: "draft",
 	});
 });
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// CASE 3: TRIAL REMOVAL - DRAFT INVOICE, IMMEDIATE ENTITLEMENTS
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(`${chalk.yellowBright("invoice-mode: remove trial (draft, immediate)")}`, async () => {
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
@@ -241,7 +208,6 @@ test.concurrent(`${chalk.yellowBright("invoice-mode: remove trial (draft, immedi
 		actions: [s.attach({ productId: proTrial.id })],
 	});
 
-	// Remove trial by passing free_trial: null
 	const updateParams = {
 		customer_id: customerId,
 		product_id: proTrial.id,
@@ -253,7 +219,6 @@ test.concurrent(`${chalk.yellowBright("invoice-mode: remove trial (draft, immedi
 
 	const preview = await autumnV1.subscriptions.previewUpdate(updateParams);
 
-	// Should charge full price ($20) since trial is being removed
 	expect(preview.total).toBe(20);
 
 	const result = await autumnV1.subscriptions.update(updateParams);
@@ -279,15 +244,11 @@ test.concurrent(`${chalk.yellowBright("invoice-mode: remove trial (draft, immedi
 
 	await expectCustomerInvoiceCorrect({
 		customer,
-		count: 2, // Initial trial attach ($0) + update
+		count: 2,
 		latestTotal: preview.total,
 		latestStatus: "draft",
 	});
 });
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// CASE 4: INCREASE PRICE - FINALIZED INVOICE, IMMEDIATE ENTITLEMENTS
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(`${chalk.yellowBright("invoice-mode: increase price (finalized, immediate)")}`, async () => {
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
@@ -306,7 +267,6 @@ test.concurrent(`${chalk.yellowBright("invoice-mode: increase price (finalized, 
 		actions: [s.attach({ productId: pro.id })],
 	});
 
-	// Increase price from $20 to $30
 	const newPriceItem = items.monthlyPrice({ price: 30 });
 
 	const updateParams = {
@@ -320,7 +280,6 @@ test.concurrent(`${chalk.yellowBright("invoice-mode: increase price (finalized, 
 
 	const preview = await autumnV1.subscriptions.previewUpdate(updateParams);
 
-	// Should charge $10 difference ($30 - $20)
 	expect(preview.total).toBe(10);
 
 	const result = await autumnV1.subscriptions.update(updateParams);
@@ -347,7 +306,7 @@ test.concurrent(`${chalk.yellowBright("invoice-mode: increase price (finalized, 
 
 	await expectCustomerInvoiceCorrect({
 		customer,
-		count: 2, // Initial attach + update
+		count: 2,
 		latestTotal: preview.total,
 		latestStatus: "open",
 	});

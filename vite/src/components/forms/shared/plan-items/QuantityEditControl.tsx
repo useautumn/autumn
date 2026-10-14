@@ -8,10 +8,6 @@ import { PencilSimpleIcon } from "@phosphor-icons/react";
 import { type ReactNode, useRef } from "react";
 import { cn } from "@/lib/utils";
 
-/**
- * Quantity display whose pencil opens the editable field in a popover, so the
- * stepper never has to share a row with the item label.
- */
 export function QuantityEditControl({
 	readOnly,
 	displayText,
@@ -27,9 +23,7 @@ export function QuantityEditControl({
 	showRing?: boolean;
 	isEditing: boolean;
 	onEditingChange: (editing: boolean) => void;
-	/** Heading inside the popover, e.g. the feature or license name. */
 	title?: string;
-	/** Helper line under the stepper, e.g. the billing-unit step. */
 	hint?: string;
 	children: ReactNode;
 }) {

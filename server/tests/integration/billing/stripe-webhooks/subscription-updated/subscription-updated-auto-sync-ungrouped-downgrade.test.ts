@@ -1,9 +1,3 @@
-/** TDD contract: subscription-updated auto-sync must not treat a single
- * ungrouped (no product.group configured) base plan as "ambiguous". Most
- * catalogs never set product.group, so a customer with exactly one
- * non-add-on product linked to a subscription must still auto-sync a
- * Stripe-portal downgrade to another ungrouped plan with a custom price. */
-
 import { test } from "bun:test";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";

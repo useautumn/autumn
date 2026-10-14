@@ -1,10 +1,3 @@
-/**
- * catalogV2.preview_update / update — all_versions sibling license_changes
- * replay the latest license DIFF, not a PUT of the latest overlay.
- *
- * Red (current):  all_versions copies latest licenses[] onto v1 (100→200)
- * Green (after):  v1 keeps 100 Messages and only gains Dashboard
- */
 import { test } from "bun:test";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";

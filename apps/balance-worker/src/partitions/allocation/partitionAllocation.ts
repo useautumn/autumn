@@ -93,8 +93,6 @@ function applyPartitionAllocation({
 	});
 }
 
-/** A partition assigned back to this worker never bounces: its handoff is cancelled and it keeps serving.
- *  One that already stopped serving must finish retiring before it can be started afresh. */
 function keepHandoffsForOwnPartitions({
 	ctx,
 	state,
@@ -132,9 +130,6 @@ function revokePartitionAllocation({
 	state.lifecycle = retireAllocation({ ctx, state, entriesToStop });
 }
 
-/** A crash kafkajs will restart from rejoins and is reassigned. One it will not is the worker's to
- *  judge: a broker refusing its identity is rejoined with backoff, since the verdict has cleared on
- *  its own before; anything else leaves nothing to wait for, and the service stops. */
 function crashPartitionAllocation({
 	ctx,
 	state,

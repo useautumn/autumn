@@ -10,7 +10,6 @@ export function PreviewPlanHeader({ product }: PreviewPlanHeaderProps) {
 
 	return (
 		<div className="flex flex-col gap-1.5">
-			{/* Name row with badges */}
 			<div className="flex items-center gap-1.5">
 				<span className="text-sm font-medium text-foreground truncate max-w-[160px]">
 					{product.name}
@@ -26,7 +25,6 @@ export function PreviewPlanHeader({ product }: PreviewPlanHeaderProps) {
 				/>
 			</div>
 
-			{/* Price */}
 			<div className="flex items-baseline gap-1">
 				<span className="text-lg font-semibold text-foreground">
 					{basePrice.formattedAmount ?? basePrice.displayText}

@@ -163,7 +163,6 @@ export const CustomizePlanV1Schema = refineCustomizePlanV1Schema(
 
 export type CustomizePlanV1 = z.infer<typeof CustomizePlanV1Schema>;
 
-/** Returns true if customize has custom items or price (not just free_trial) */
 export const hasCustomItems = (
 	customize?: CustomizePlanV1,
 ): customize is CustomizePlanV1 => {

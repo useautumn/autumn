@@ -58,7 +58,6 @@ const duplicateCommand = () =>
 		workerCode: "DUPLICATE_COMMAND",
 	});
 
-/** Answers each send in turn and records the command ids it was sent. */
 const scriptedClient = (answers: (() => ApplyBillingPlanReply)[]) => {
 	const commandIds: string[] = [];
 	return {

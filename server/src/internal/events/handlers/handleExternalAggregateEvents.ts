@@ -63,8 +63,6 @@ export const handleExternalAggregateEvents = createRoute({
 			});
 		}
 
-		// The deduction rollup carries no event properties, so it cannot honor
-		// property filters — reject rather than return mismatched sections.
 		if (aggregate_on && filter_by && Object.keys(filter_by).length > 0) {
 			throw new RecaseError({
 				message: "filter_by is not supported when aggregate_on is set",
@@ -94,8 +92,6 @@ export const handleExternalAggregateEvents = createRoute({
 		const featureIds = Array.isArray(feature_id) ? feature_id : [feature_id];
 		const binSize = bin_size ?? "day";
 
-		// Resolve standard ranges to one window so the timeseries and `total`
-		// cover identical, bin-aligned spans. Billing-cycle ranges resolve per customer.
 		const standardWindow = getStandardIntervalWindow({
 			interval: range,
 			binSize,
@@ -123,8 +119,6 @@ export const handleExternalAggregateEvents = createRoute({
 		const internalIdToPublicId: Record<string, string> = {};
 		let planMaxGroups: number | undefined;
 
-		// The pipe groups by internal plan id, so each version is its own group
-		// until collapsed onto the public id.
 		if (isPlanIdGrouping) {
 			const allPlanVersions = await ProductService.listCachedAllVersions({
 				db: ctx.db,

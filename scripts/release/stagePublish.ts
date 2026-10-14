@@ -18,7 +18,6 @@ const changedPaths = ({ root }: { root: string }) =>
 		.map((entry) => entry.slice(3))
 		.sort();
 
-// Stages listed and generator-owned changes; anything else makes the run stage nothing.
 export const stagePublish = ({ root }: { root: string }) => {
 	const patterns = loadGeneratedPaths({ root });
 	const isGeneratorOwned = loadGeneratorOwnership({ root });
@@ -31,7 +30,6 @@ export const stagePublish = ({ root }: { root: string }) => {
 	return { staged: changed, unlisted };
 };
 
-// Usage: bun stagePublish.ts [repo root]
 if (import.meta.main) {
 	const root = process.argv[2] ?? join(import.meta.dir, "../..");
 	const { staged, unlisted } = stagePublish({ root });

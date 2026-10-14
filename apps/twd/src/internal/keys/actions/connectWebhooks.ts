@@ -8,7 +8,6 @@ import type { TwdContext } from "../../../lib/types/twdContext.ts";
 import { withRateLimitRetry } from "../stripeErrors.ts";
 import { CONNECT_WEBHOOK_EVENTS, stripeForKey } from "../stripeForKey.ts";
 
-/** Every endpoint on the key goes, not just ours: stale ones from old `bun tw` runs pile up to Stripe's cap. */
 export const deleteAllWebhooks = async ({
 	ctx,
 	platformAccountId,
@@ -41,7 +40,6 @@ export const deleteAllWebhooks = async ({
 	return ids.length;
 };
 
-/** One Connect webhook → `<TWD_PUBLIC_URL>/ingress/connect/sandbox`; recorded on stripe_keys. */
 export const registerConnectWebhook = async ({
 	ctx,
 	platformAccountId,

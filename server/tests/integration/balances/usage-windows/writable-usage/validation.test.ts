@@ -1,16 +1,3 @@
-/**
- * Writable usage-limit counters — request validation and atomicity.
- *
- * Contract:
- *   Unknown feature_id -> feature_not_found, nothing written.
- *   usage > 0 with no cap configured for the feature -> 400.
- *   Negative usage -> invalid_inputs.
- *   Two entries for one (feature, filter) -> rejected as duplicates, even when
- *   one of them is counter-only.
- *   One bad entry rejects the whole list: valid entries in the same request
- *   are not applied.
- */
-
 import { test } from "bun:test";
 import { ApiVersion, ErrCode, ResetInterval } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";

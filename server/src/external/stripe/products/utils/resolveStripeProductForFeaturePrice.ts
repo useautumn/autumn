@@ -6,9 +6,6 @@ import type Stripe from "stripe";
 import { buildStripeFeatureProductIdempotencyKey } from "../../prices/utils/buildIdempotencyKey.js";
 import { retrieveLiveStripeProduct } from "./retrieveLiveStripeProduct.js";
 
-/** The Stripe Product the price's plan already bills this feature under, e.g. a
- * custom Enterprise price inherits "Enterprise - Emails". Same entity scope only;
- * same interval first, then newest. */
 const retrievePlanFeatureStripeProduct = async ({
 	db,
 	stripeCli,
@@ -66,7 +63,6 @@ export const resolveStripeProductForFeaturePrice = async ({
 	db: DrizzleCli;
 	stripeCli: Stripe;
 	feature: Feature;
-	/** Entity scope of the price's entitlement; only same-scope plan prices are inherited. */
 	entityFeatureId?: string | null;
 	price: Price;
 }): Promise<string> => {

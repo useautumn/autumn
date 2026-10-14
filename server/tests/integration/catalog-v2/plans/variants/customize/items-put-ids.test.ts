@@ -1,15 +1,3 @@
-/**
- * catalogV2.update — variants[].customize.items PUT threads price / Stripe ids.
- *
- * Contract:
- *   create PUT with price.stripe_price_id stamps the variant price config
- *   create PUT of the same prepaid as a striped base → full Stripe carry
- *   edit PUT of the same items → entitlement_id / price_id stay put
- *   edit PUT changing the amount → stripe_price_id NOT reused (product only)
- *   edit PUT round-tripping the old stripe_price_id with a new amount → old id
- *   cleared and a fresh Stripe price minted (Stripe prices are immutable)
- */
-
 import { expect, test } from "bun:test";
 import {
 	BillingInterval,
@@ -72,8 +60,6 @@ test.concurrent(
 		const stripePriceId = `price_stub_${variantId}`;
 		await deleteDbPlans({ ctx, planIds: [baseId, variantId] });
 		try {
-			// create_in_stripe: false — auto-init would replace a stub id that
-			// doesn't resolve in Stripe; this asserts params → row threading only.
 			await autumnV2_3.catalogV2.update({
 				plans: [
 					{

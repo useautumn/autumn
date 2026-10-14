@@ -10,20 +10,14 @@ import {
 	requestFieldsOf,
 } from "./requestLogLine.js";
 
-/** Answered for a load balancer's probe every second; nothing to learn from it. */
 const UNLOGGED_PATHS = new Set(["/health"]);
-/** A line per allowed check costs a saturated Atom about an eighth of its capacity, so 1 in 100 is kept; denies all are. */
 const ALLOWED_CHECK_SAMPLE_RATE = 0.01;
-/** Autumn's pushes run at a third of the checks and each is counted in /health, so a stored one is only sampled too. */
 const PUSH_PATHS = new Set(["/v1/subjects.set", "/v1/catalog.set"]);
-/** A thread's first allowed checks are all logged, so the dashboard can show an org its first checks arriving. */
 export const FIRST_ALLOWED_CHECKS_LOGGED = 10;
 
 const toError = (cause: unknown): Error =>
 	cause instanceof Error ? cause : new Error(String(cause));
 
-/** The outermost layer: one line per request, `[status] METHOD path Nms`, with who it was about, what came back and how it
- * failed. Allowed checks past a thread's first few and stored pushes, most of the traffic, are only sampled and say at what rate; denies and failures are all kept. */
 export function requestLogMiddleware({
 	ctx,
 	handleError,
@@ -80,7 +74,6 @@ export function requestLogMiddleware({
 		};
 		const message = `[${statusCode}] ${context.req.method} ${context.req.path} ${durationMs}ms${forwarded ? ` → Autumn API (${forwarded})` : ""}${failure ? ` — ${failure.code}: ${failure.error.message}` : ""}`;
 		if (isAtomsOwnFault({ statusCode })) ctx.logger.error(line, message);
-		// A public endpoint is scanned all day; a path Atom does not serve is not worth a warning.
 		else if (statusCode >= 400 && statusCode !== 404)
 			ctx.logger.warn(line, message);
 		else ctx.logger.info(line, message);

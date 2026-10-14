@@ -77,7 +77,7 @@ export const triggerFreePaidProduct = async ({
 
 	const stripeCli = createStripeCli({ org, env });
 
-	const applied = [false, false]; // [referrerApplied, redeemerApplied]
+	const applied = [false, false];
 	for (let i = 0; i < 2; i++) {
 		if (i === 0 && !receivedByReferrer(received_by)) {
 			applied[i] = true;
@@ -104,7 +104,6 @@ export const triggerFreePaidProduct = async ({
 			);
 			const curDiscounts = (sub.discounts as Stripe.Discount[]) || [];
 
-			// If coupon already applied, don't add it again
 			if (
 				!curDiscounts.some((d: any) => d.coupon?.id === rewardProgram.reward.id)
 			) {
@@ -126,7 +125,6 @@ export const triggerFreePaidProduct = async ({
 				applied[i] = true;
 			}
 		} else {
-			// Create stripe customer if not exists
 			await getOrCreateStripeCustomer({
 				ctx,
 				customer: fullCus,
@@ -147,8 +145,8 @@ export const triggerFreePaidProduct = async ({
 
 	const updates = {
 		triggered: true,
-		applied: applied?.[0] || false, // referrer applied
-		redeemer_applied: applied?.[1] || false, // redeemer applied
+		applied: applied?.[0] || false,
+		redeemer_applied: applied?.[1] || false,
 	};
 
 	await redemptionRepo.update({

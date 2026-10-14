@@ -1,11 +1,3 @@
-/**
- * atmn scenarios/customers — remove a variant with customers on it → assert what the server does
- *
- * real `billing.attach` first; the point is to hit the dependency errors
- *
- * One line of plans/atmn-v3/07_tests.md. [a, b] is a matrix looped INSIDE this file.
- */
-
 import { expect, test } from "bun:test";
 import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 import {
@@ -16,8 +8,6 @@ import { s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { ProductService } from "@/internal/products/ProductService.js";
 
-/** A base plan with one nested variant; `archiveVariant` flips the variant's
- * own `archived` overlay, the config-side way to remove one. */
 const catalogConfig = ({
 	basePlanId,
 	variantPlanId,
@@ -75,8 +65,6 @@ export default atmn(${catalogConfig({ basePlanId, variantPlanId, archiveVariant:
 `,
 			);
 
-			// Decision pending: archiving the variant overlay archives that row
-			// like any other plan, rather than being refused — asserting that.
 			await scenario.push();
 
 			const [variant] = await ProductService.listFull({
@@ -87,14 +75,12 @@ export default atmn(${catalogConfig({ basePlanId, variantPlanId, archiveVariant:
 				returnAll: true,
 				includeDeleted: true,
 			});
-			// The row must still exist (a customer holds it) and be archived.
 			expect(variant).toBeDefined();
 			expect(variant?.archived).toBe(true);
 
 			const customer = await scenario.autumnV2_3.customers.get(
 				scenario.customerId as unknown as string,
 			);
-			// The customer keeps the archived variant.
 			expect(
 				// @ts-expect-error the declared customer type predates this response shape
 				customer.subscriptions?.some(

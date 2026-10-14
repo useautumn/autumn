@@ -20,7 +20,6 @@ describe("trackTokenUsage client shapes", () => {
 	test("calls root-level trackTokens bound to the client (current @useautumn/sdk)", async () => {
 		const calls: TrackTokensParams[] = [];
 
-		// Class instance so an unbound invocation would lose `this` and throw.
 		class FakeSdk {
 			private readonly sink = calls;
 			async trackTokens(p: TrackTokensParams) {
@@ -119,7 +118,6 @@ describe("env fallback client", () => {
 	});
 
 	test("missing key is logged, never thrown", async () => {
-		// Assigning undefined would store the string "undefined"
 		Reflect.deleteProperty(process.env, "AUTUMN_API_KEY");
 		Reflect.deleteProperty(process.env, "AUTUMN_SECRET_KEY");
 

@@ -1,13 +1,6 @@
 import { z } from "zod/v4";
 import { ResetInterval } from "../../productModels/intervals/resetInterval.js";
 
-/**
- * A hard usage cap on one feature: at most `limit` units per `interval`.
- * Stored on the customer's `usage_limits` billing-control
- * column; an entry's presence arms the cap. Enforcement happens in the
- * deduction script against customer-scoped usage-window counters.
- */
-/** Intervals supported for a usage-limit cap; kept in sync with the UI dropdown. */
 export const USAGE_LIMIT_INTERVALS = [
 	ResetInterval.Day,
 	ResetInterval.Week,
@@ -23,8 +16,6 @@ export const USAGE_LIMIT_FILTER_MAX_KEYS = 4;
 export const USAGE_LIMIT_FILTER_MAX_KEY_LENGTH = 64;
 export const USAGE_LIMIT_FILTER_MAX_VALUE_LENGTH = 128;
 
-// Scalars only: values are canonicalized to strings so "29384" and 29384 are
-// the same condition (counters are keyed by these canonical values).
 const UsageLimitFilterValueSchema = z
 	.union([
 		z.string().min(1).max(USAGE_LIMIT_FILTER_MAX_VALUE_LENGTH),
@@ -32,7 +23,6 @@ const UsageLimitFilterValueSchema = z
 		z.boolean(),
 	])
 	.transform(String)
-	// Declares the post-transform type so OpenAPI output schemas can serialize it.
 	.pipe(z.string());
 
 export const UsageLimitFilterSchema = z.object({
@@ -88,10 +78,6 @@ export type DbUsageLimit = z.infer<typeof DbUsageLimitSchema>;
 export type DbUsageLimitParams = z.input<typeof DbUsageLimitSchema>;
 export type DbUsageLimitLike = DbUsageLimit | DbUsageLimitParams;
 
-/**
- * Canonical identity of a filter: sorted `key=value` pairs. Counters and
- * dedup checks key off this, so config edits can never orphan a live counter.
- */
 export const usageLimitFilterKey = (
 	filter: UsageLimitFilter | UsageLimitFilterParams | null | undefined,
 ): string => {
@@ -103,15 +89,8 @@ export const usageLimitFilterKey = (
 		.join("&");
 };
 
-/**
- * Whether an event's properties satisfy a limit's filter: every condition
- * must match (AND), scalar values compare string-normalized. No filter
- * matches everything; a filter never matches an event without properties.
- */
-/** The property bag carried on a tracked event, as filters and dimensions see it. */
 export type EventProperties = Record<string, unknown> | null | undefined;
 
-/** Property equality filter: every key must equal the tracked property, compared as strings. */
 export type PropertyFilter = Record<string, string> | null | undefined;
 
 export const usageLimitFilterMatchesProperties = ({
@@ -140,18 +119,13 @@ const USAGE_LIMIT_INTERVAL_DAYS: Record<
 	[ResetInterval.Year]: 365,
 };
 
-// limit per day — comparable across intervals (100/day = 100, 2000/month ≈ 66.7).
 const usageLimitPerDay = (usageLimit: DbUsageLimit) =>
 	usageLimit.limit / USAGE_LIMIT_INTERVAL_DAYS[usageLimit.interval];
 
-// Enabled beats disabled. Same interval: lower limit wins. Different intervals:
-// lower per-day rate wins (the resolver enforces a single window per feature).
-// Equal rates: utc beats billing_cycle, whose bounds a plan change can refill.
 export const pickStricterUsageLimit = (
 	left: DbUsageLimit,
 	right: DbUsageLimit,
 ): DbUsageLimit => {
-	// Legacy rows reach here as raw JSON without the schema's enabled:true default.
 	const leftEnabled = left.enabled ?? true;
 	const rightEnabled = right.enabled ?? true;
 	if (leftEnabled !== rightEnabled) return leftEnabled ? left : right;

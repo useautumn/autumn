@@ -1,9 +1,3 @@
-/**
- * Versioning a base plan without versioning its variant leaves one variant row
- * declared under two versions, and the last write silently wins. The server
- * refuses it; the lint says so first, before any request is built.
- */
-
 import { expect, test } from "bun:test";
 import { LINT_REGISTRY } from "../src/lint/rules/registry";
 import {
@@ -18,7 +12,6 @@ const rules: LintRules = { plans: LINT_REGISTRY.plans };
 
 type PlanFixture = Record<string, unknown>;
 
-/** One `plans` array: the live rows carry `active: true`, the rest `active: false`. */
 const stated = ({
 	live,
 	history,
@@ -119,8 +112,6 @@ test("a variant pinned by version number is named by that pin", () => {
 });
 
 test("a numeric pin and a slug pin are different rows, not one link twice", () => {
-	// A variant version with a custom slug makes `version: 1` and
-	// `versionSlug: "v1"` name different rows; conflating them invents an error.
 	expect(
 		issuesFor(
 			stated({

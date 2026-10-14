@@ -9,11 +9,9 @@ import type {
 } from "../timeline/types/timelineDiff";
 import type { SchedulePhasePlan } from "../types/schedulePhasePlan";
 
-/** Ongoing and retained plans belong to no phase: the schedule never ends them. */
 const isPhasePlanSegment = (segment: ResolvedSegment) =>
 	segment.origin === "declared" && segment.desired?.source.type === "phase";
 
-/** The row a segment runs on at a moment: the carried row covering it, or the inserted one. */
 const segmentCustomerProductIdAt = ({
 	segment,
 	at,
@@ -32,7 +30,6 @@ const segmentCustomerProductIdAt = ({
 	);
 };
 
-/** Each request phase lists the phase plans running when it starts; the rows themselves hold the timing. */
 export const diffToSchedule = ({
 	diff,
 	requestedPhases,

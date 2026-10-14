@@ -9,7 +9,6 @@ import {
 } from "../createSchedule/createScheduleParamsV0";
 import { RemoveDiscountsSchema } from "../updateSubscription/removeDiscount";
 
-/** A first phase starting within this of now starts now: further back it backdates, further ahead it starts later. */
 export const SET_PLANS_FIRST_PHASE_TOLERANCE_MS = ms.minutes(15);
 
 export const SetPlansParamsV0Schema = CreateScheduleParamsV0BaseSchema.omit({

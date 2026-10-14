@@ -13,10 +13,6 @@ const mergeStripeProducts = (...productLists: CatalogStripeProduct[][]) => {
 	return Array.from(productsById.values());
 };
 
-/**
- * Drives the Stripe product dropdowns: `knownStripeProducts` resolves currently
- * mapped values; `selectStripeProducts` are the searchable options.
- */
 export const useStripeProductSearch = ({
 	knownProducts,
 	enabled,

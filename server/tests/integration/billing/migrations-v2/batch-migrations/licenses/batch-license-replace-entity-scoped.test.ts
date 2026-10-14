@@ -1,7 +1,3 @@
-/**
- * Replacing an entity-scoped license item with an unscoped one must skip the batch
- * lane; the per-customer billing lane then repoints the seat rows itself.
- */
 import { expect, test } from "bun:test";
 import { BillingInterval, customerEntitlements } from "@autumn/shared";
 import { runChunkedMigration } from "@tests/integration/billing/migrations-v2/utils/runChunkedMigration";

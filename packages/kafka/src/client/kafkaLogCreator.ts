@@ -11,7 +11,6 @@ const NOT_COORDINATOR = "This is not the correct coordinator for this group";
 const COORDINATOR_LOADING =
 	"The coordinator is loading and hence can't process requests for this group";
 
-/** INFO so a coordinator move or election shows in prod logs; once a minute per client, as every refused request logs one. */
 const ONCE_A_MINUTE_REFUSALS: ReadonlySet<string> = new Set([
 	LEADERSHIP_ELECTION,
 	COORDINATOR_NOT_AVAILABLE,
@@ -56,7 +55,6 @@ function findRoutineRefusal({
 	const refusal = entry.log.error;
 	if (typeof refusal === "string" && ROUTINE_REFUSAL_LEVELS.has(refusal))
 		return refusal;
-	// The producer folds the refusal into its own message ("Failed to send messages: ...").
 	for (const message of ROUTINE_REFUSAL_LEVELS.keys()) {
 		if (entry.log.message.includes(message)) return message;
 	}
@@ -72,7 +70,6 @@ function isAuthorizationRefusal({ entry }: { entry: LogEntry }): boolean {
 	);
 }
 
-/** kafkajs's console format, unchanged, so the lines already read in Axiom keep their shape. */
 function formatKafkaLogLine({
 	entry,
 	level,
@@ -138,12 +135,6 @@ function writeDebug(line: string): void {
 	console.log(line);
 }
 
-/**
- * kafkajs's default logger with routine refusals lowered. kafkajs drops entries
- * above the configured level before they get here, so a lowered entry is held
- * to the same bar: at the default INFO, a concurrent-transaction refusal is not
- * written at all, and at DEBUG it is written as DEBUG.
- */
 export function createKafkaLogCreator({
 	sink = consoleSink(),
 	readToken = describeProcessKafkaToken,
@@ -155,7 +146,6 @@ export function createKafkaLogCreator({
 } = {}): logCreator {
 	const refusalWrittenAt = new Map<string, number>();
 
-	/** The level an entry deserves: kafkajs's own unless it reports a routine refusal; a repeat within the minute is DEBUG. */
 	function effectiveKafkaLogLevel({ entry }: { entry: LogEntry }): logLevel {
 		const refusal = findRoutineRefusal({ entry });
 		if (refusal === undefined) return entry.level;

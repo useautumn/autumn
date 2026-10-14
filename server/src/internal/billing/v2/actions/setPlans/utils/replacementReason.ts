@@ -20,10 +20,6 @@ const UNCOLLECTED_STATUSES: Stripe.Subscription.Status[] = [
 	"paused",
 ];
 
-/**
- * Why set_plans replaces the live subscription, decided once from what setup moved aside: Stripe ended it, never
- * collected it, or set_plans recreates a healthy one, from a backdated start or otherwise.
- */
 export const replacementReason = ({
 	billingContext,
 }: {
@@ -44,7 +40,6 @@ export const replacementReason = ({
 	return trialing ? "trialing" : "paid";
 };
 
-/** A backdate recreates the live subscription, whether it paid its period or was trialing. */
 export const isBackdateReplacement = ({
 	billingContext,
 }: {

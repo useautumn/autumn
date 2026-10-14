@@ -6,7 +6,6 @@ type CreditRate = {
 	credit_amount?: number;
 };
 
-/** Checks a flat or graduated rate and coerces its numbers in place; shared by rows and dimensions. */
 export const validateCreditRate = ({
 	rate,
 	invalidCreditSystem,
@@ -45,7 +44,6 @@ export const validateCreditRate = ({
 
 export const minimumCreditRateAmount = (rate: CreditRate): number => {
 	if (rate.tier_behavior !== "graduated") return rate.credit_amount ?? 0;
-	// Reduced rather than spread: a long ladder would exceed the argument limit.
 	return (rate.tiers ?? []).reduce(
 		(lowest, tier) => Math.min(lowest, tier.credit_amount),
 		Number.POSITIVE_INFINITY,

@@ -1,11 +1,3 @@
-/**
- * atmn crud/plans/rename — rename all versions of another plan [v1 and v2 in planVersions, v3 in plans, every row renamed by its internalId] → one plan renamed across every version, one alias, customers on every version follow, attach by the old id lands on the active version
- *
- * a rename is a changed planId on a row that carries internalId; aliases per catalog-v2/plans/aliases
- *
- * One line of plans/atmn-v3/07_tests.md. [a, b] is a matrix looped INSIDE this file.
- */
-
 import { expect, test } from "bun:test";
 import { expectCustomerProducts } from "@tests/integration/billing/utils/expectCustomerProductCorrect.js";
 import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
@@ -19,7 +11,6 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { listAliases } from "../../../../catalog-v2/plans/utils/planAliasTestUtils.js";
 
-/** Every live version row for a plan_id, oldest first. */
 const livePlanVersions = async ({
 	ctx,
 	planId,
@@ -65,7 +56,6 @@ test.concurrent(
 		try {
 			await scenario.push();
 
-			// v2 mints as active; v1 restates as history.
 			scenario.writeConfig(
 				atmnConfigSource({
 					body: `{
@@ -79,7 +69,6 @@ test.concurrent(
 			);
 			await scenario.push();
 
-			// v3 mints as active; v1 and v2 are both history.
 			scenario.writeConfig(
 				atmnConfigSource({
 					body: `{
@@ -105,10 +94,6 @@ test.concurrent(
 			]);
 			const [v1, v2, v3] = beforeRename;
 
-			// Every row renamed by its own internalId — the active row in `plans`,
-			// the history rows in `planVersions`. Each row keeps its own
-			// versionSlug so the server sees three pinned rows, not three
-			// unpinned rows racing for the same plan_id.
 			scenario.writeConfig(
 				atmnConfigSource({
 					body: `{
@@ -158,7 +143,6 @@ test.concurrent(
 				})),
 			).toEqual([{ aliasId: "pro", canonicalPlanId: "proRenamed" }]);
 
-			// Attach by the old id lands on the active version, now under the new id.
 			await scenario.attachCustomer({
 				planId: "pro",
 				customerId: "cus_on_old_id",

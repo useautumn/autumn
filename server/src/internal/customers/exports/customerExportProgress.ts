@@ -5,7 +5,6 @@ import {
 import { runs } from "@trigger.dev/sdk/v3";
 import type { Logger } from "@/external/logtail/logtailUtils.js";
 
-/** Failure to read optional progress must not fail export listing. */
 export const getCustomerExportProgress = async ({
 	triggerRunId,
 	logger,

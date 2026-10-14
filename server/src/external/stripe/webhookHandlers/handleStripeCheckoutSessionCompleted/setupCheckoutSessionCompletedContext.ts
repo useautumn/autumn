@@ -32,14 +32,12 @@ export const setupCheckoutSessionCompletedContext = async ({
 }): Promise<CheckoutSessionCompletedContext> => {
 	const { db, stripeCli } = ctx;
 
-	// Fetch checkout session fresh from Stripe with line_items expanded
 	const stripeCheckoutSession = await getStripeCheckoutSession({
 		ctx,
 		checkoutSessionId: event.data.object.id,
 		expand: ["line_items"],
 	});
 
-	// Get metadata from checkout session
 	const metadata = await getMetadataFromCheckoutSession(
 		stripeCheckoutSession,
 		db,
@@ -51,7 +49,6 @@ export const setupCheckoutSessionCompletedContext = async ({
 		});
 	}
 
-	// Extract subscription and invoice IDs
 	const subscriptionId =
 		await stripeCheckoutSessionUtils.convert.toSubscriptionId({
 			stripeCheckoutSession,
@@ -60,7 +57,6 @@ export const setupCheckoutSessionCompletedContext = async ({
 		stripeCheckoutSession,
 	});
 
-	// Fetch expanded subscription and invoice in parallel
 	const [stripeSubscription, stripeInvoice] = await Promise.all([
 		subscriptionId
 			? getExpandedStripeSubscription({ ctx, subscriptionId })

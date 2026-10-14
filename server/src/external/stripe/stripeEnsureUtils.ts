@@ -10,7 +10,6 @@ export async function ensureStripeProductsWithEnv({
 }) {
 	const { db, org, env, logger } = ctx;
 
-	// let existingStripeProducts = await stripe.products.list();
 	const fullProducts = await ProductService.listFull({
 		db,
 		orgId: org.id,
@@ -18,7 +17,6 @@ export async function ensureStripeProductsWithEnv({
 	});
 
 	const stripeCli = createStripeCli({ org, env });
-	// Fetch updated org data to ensure we have the latest Stripe configuration
 	const products = await stripeCli.products.list({ limit: 100 });
 
 	const batchInit: Promise<void>[] = [];

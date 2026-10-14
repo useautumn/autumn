@@ -5,7 +5,6 @@ import {
 	resolveSpendLimitOverageLimit,
 } from "@autumn/shared";
 
-// Resolve percentage spend limits to absolute caps for the check evaluation subject.
 export const resolveCheckSpendLimits = <
 	Subject extends ApiCustomerV5 | ApiEntityV2,
 >({

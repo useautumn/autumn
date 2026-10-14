@@ -48,7 +48,6 @@ export const cusEntToInlineStripePrice = ({
 		});
 	}
 
-	// 1. Get overage (purchased quantity in feature units
 	const overage = cusEntToPrepaidInvoiceOverage({
 		cusEnt,
 		useUpcomingQuantity: true,
@@ -56,7 +55,6 @@ export const cusEntToInlineStripePrice = ({
 
 	const allowance = cusEntsToAllowance({ cusEnts: [cusEnt] });
 
-	// 4. Calculate total dollar amount using tier logic
 	const totalAmount = priceToLineAmount({
 		price,
 		overage,

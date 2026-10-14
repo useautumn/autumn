@@ -1,10 +1,5 @@
 import { env } from "../env.js";
 
-/**
- * THE tenancy key is channel_id, not team_id (single-install model — every
- * event arrives in our workspace). Each channel maps to exactly one org.
- * Prototype source is an env JSON blob; swap for a DB table later.
- */
 let cache: Record<string, string> | null = null;
 
 const load = (): Record<string, string> => {
@@ -15,16 +10,10 @@ const load = (): Record<string, string> => {
 		if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
 			map = parsed;
 		}
-	} catch {
-		// fall through to empty map
-	}
+	} catch {}
 	cache = map;
 	return map;
 };
 
-/**
- * Resolve a channel to its org. Returns `null` for unmapped channels — the
- * caller MUST decline to render rather than guess a tenant.
- */
 export const resolveChannelToOrg = (channelId: string): string | null =>
 	load()[channelId] ?? null;

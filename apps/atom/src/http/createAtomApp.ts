@@ -14,12 +14,10 @@ import { requestBodyMiddleware } from "./middlewares/requestBodyMiddleware.js";
 import { requestLogMiddleware } from "./middlewares/requestLog/requestLogMiddleware.js";
 import type { AtomHttpContext, AtomHttpEnv } from "./types/atomHttp.js";
 
-/** What the public endpoint serves. Nothing here trusts another replica: peers talk on their own port (createPeerApp). */
 export function createAtomApp({ ctx }: { ctx: AtomHttpContext }) {
 	const app = new Hono<AtomHttpEnv>();
 	const handleError = createAtomErrorHandler({ ctx });
 	app.onError(handleError);
-	// Before the request line: under load, a line per refused check would cost what refusing saves.
 	app.use("/v1/balances.check", admissionMiddleware({ ctx }));
 	app.use(requestLogMiddleware({ ctx, handleError }), requestBodyMiddleware);
 	app.get("/health", receiveHealth({ ctx }));
@@ -29,7 +27,6 @@ export function createAtomApp({ ctx }: { ctx: AtomHttpContext }) {
 			ctx: { ...ctx.multiTenant, replication: ctx.replication },
 		});
 
-	// The customer's app checks with its secret key on an org's own Atom; Autumn's pushes carry the Atom token.
 	const pushAuth = atomTokenMiddleware({ ctx });
 	const authorized = new Hono<AtomHttpEnv>();
 	authorized.post(

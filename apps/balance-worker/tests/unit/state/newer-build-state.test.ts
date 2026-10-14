@@ -1,8 +1,3 @@
-/**
- * A state from a newer worker build: a field, a column and an enum value this build does not know are carried
- * through the store, a checkpoint and a snapshot as written. A rollback must never turn one new field into a
- * customer this build cannot read.
- */
 import { describe, expect, test } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -27,7 +22,6 @@ import {
 const topic = "metering-events-v1";
 const partition = 0;
 
-/** The state as a newer build serialises it: a new field on the state, a new column and a new API version on a row. */
 const fromNewerBuild = (state: SubjectState): SubjectState => {
 	const newer = JSON.parse(JSON.stringify(state));
 	newer.futureField = true;

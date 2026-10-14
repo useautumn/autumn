@@ -73,9 +73,6 @@ export const computeAttachTaxPreview = async ({
 	if (immediateLines.length === 0) return undefined;
 
 	// Stripe charges tax on the net invoice subtotal — positives plus
-	// negative proration credits — not on positive lines alone. Sum across
-	// ALL chargeImmediately lines so the preview matches what Stripe
-	// actually invoices.
 	const netSubtotal = immediateLines.reduce(
 		(sum, line) => sum + (line.amountAfterDiscounts ?? line.amount),
 		0,
@@ -88,7 +85,6 @@ export const computeAttachTaxPreview = async ({
 	});
 };
 
-/** Core Stripe Tax lookup for a net post-discount subtotal. */
 export const computeStripeTaxPreviewForNetSubtotal = async ({
 	ctx,
 	billingContext,

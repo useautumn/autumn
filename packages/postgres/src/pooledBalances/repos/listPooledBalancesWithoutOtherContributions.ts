@@ -5,11 +5,9 @@ import type { PostgresContext } from "../../types/postgresClient.js";
 
 const poolIdRowSchema = z.object({ id: z.string() }).strict();
 
-/** The list travels as one jsonb text parameter, so the statement's text never grows with it. */
 const idList = (ids: readonly string[]) =>
 	sql`(SELECT jsonb_array_elements_text(${JSON.stringify(ids)}::text::jsonb))`;
 
-/** The pools among `pooledBalanceIds` that keep no share once `removedContributionIds` go; license pools live by their seats and are never listed. */
 export const listPooledBalancesWithoutOtherContributions = async ({
 	ctx,
 	pooledBalanceIds,

@@ -1,8 +1,3 @@
-/**
- * Creation recovery jobs: the payload each carries, the queue both ride, and the FIFO ids
- * that keep one subject's replays in order while different subjects run in parallel.
- */
-
 import { describe, expect, test } from "bun:test";
 import { createSqsEnv } from "@autumn/env/sqs";
 import { ApiVersion, AppEnv } from "@autumn/shared";

@@ -1,7 +1,3 @@
-/**
- * Grader proofs for the pro/growth basics archetype: the shared golden passes
- * every catalog verdict of each case; an empty workspace fails them all.
- */
 import { expect, test } from "bun:test";
 import { clear } from "../../cases/basics/proGrowth/clear.eval.ts";
 import { lateFact } from "../../cases/basics/proGrowth/lateFact.eval.ts";

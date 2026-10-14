@@ -11,7 +11,6 @@ export const CreateVariantButton = () => {
 	const { products } = useProductsQuery();
 	const createVariant = useCreateVariant(product);
 
-	// base_id lives on the products-list entry, not the store product.
 	const { isVariant, hasVariants } = useMemo(() => {
 		const current = products.find((p) => p.id === product.id);
 		return {

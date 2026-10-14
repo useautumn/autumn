@@ -6,7 +6,6 @@ import type {
 	AutoTopUpSuppressionContext,
 } from "./types/autoTopUpSuppression.js";
 
-/** The pending key gates duplicate enqueues of one customer+feature; the webhook key dedupes failure webhooks. */
 export const AUTO_TOPUP_PENDING_TTL_SECONDS = 30;
 
 export const buildAutoTopupPendingKey = ({
@@ -56,7 +55,6 @@ export const clearAutoTopupPendingKey = async ({
 	});
 };
 
-/** Holds the gate closed past the job, so a retry storm cannot re-enqueue before the cause clears. */
 export const keepAutoTopupPendingKey = async ({
 	ctx,
 	ttlMs,
@@ -79,7 +77,6 @@ export const keepAutoTopupPendingKey = async ({
 	});
 };
 
-/** True = emit the webhook: the key was claimed, or Redis is down and we fail open. */
 export const claimAutoTopupWebhookSuppression = async ({
 	ctx,
 	suppressionKey,

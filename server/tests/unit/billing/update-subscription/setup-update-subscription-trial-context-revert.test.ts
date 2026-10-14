@@ -1,13 +1,3 @@
-/**
- * A revert trial's customer product rides the paused plan's Stripe subscription, so
- * its trial context must always carry onEnd "revert" — including after the trial
- * window lapses but before the expiry cron reverts it.
- *
- * Red (before):  a lapsed revert trial yields no trial context, so update writes to
- *                Stripe and the replacement customer product loses trial_ends_at.
- * Green (after): the lapsed revert trial keeps onEnd "revert" and its trial_ends_at.
- */
-
 import { expect, test } from "bun:test";
 import {
 	FreeTrialDuration,

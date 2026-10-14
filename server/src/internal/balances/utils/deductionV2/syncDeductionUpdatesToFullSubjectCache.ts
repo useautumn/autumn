@@ -33,12 +33,6 @@ interface SubjectBalanceUpdate {
 	deleted_replaceable_ids: string[] | null;
 }
 
-/**
- * Syncs deduction updates to the V2 FullSubject balance hashes.
- * Groups updates by featureId and pipelines one Lua call per feature.
- * Fire-and-forget — failures are logged but don't propagate.
- * Intentionally does not mutate cache_version; DB-side flows own version bumps.
- */
 export const syncDeductionUpdatesToFullSubjectCache = async ({
 	ctx,
 	customerId,
@@ -65,7 +59,6 @@ export const syncDeductionUpdatesToFullSubjectCache = async ({
 			);
 		}
 
-		// Build a lookup of cusEntId -> next_reset_at from the fullSubject
 		const cusEntNextResetAts: Record<string, number | null> = {};
 		for (const customerProduct of fullSubject.customer_products) {
 			for (const customerEntitlement of customerProduct.customer_entitlements) {
@@ -81,7 +74,6 @@ export const syncDeductionUpdatesToFullSubjectCache = async ({
 
 		const { org, env, redisV2 } = ctx;
 
-		// Group updates by featureId and build per-feature update arrays
 		const updatesByFeatureId: Record<string, SubjectBalanceUpdate[]> = {};
 
 		for (const [featureId, cusEntIds] of Object.entries(

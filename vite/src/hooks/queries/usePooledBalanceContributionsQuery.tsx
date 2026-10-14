@@ -16,8 +16,6 @@ type ContributionsPage =
 		total_filtered_count: number;
 	};
 
-/** One page of a pool's contributions, labelled by source entity and plan.
- * Search and paging happen server-side — pools can hold ~1M contributions. */
 export const usePooledBalanceContributionsQuery = ({
 	pooledBalanceId,
 	page,

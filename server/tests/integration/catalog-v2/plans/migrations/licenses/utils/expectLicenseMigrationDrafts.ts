@@ -23,7 +23,6 @@ import {
 } from "../../utils/expectMigrationDrafts.js";
 import type { CatalogV2Client } from "../../../licenses/utils/seedLicensePlans.js";
 
-/** Catalog draft generators stamp the from-item grant on remove. Default 10 matches `messagesItem(10)`. */
 export const messagesItemDelta = ({
 	included,
 	fromIncluded = 10,
@@ -59,7 +58,6 @@ export const dashboardRemoveCustomize = {
 	remove_items: [{ feature_id: TestFeature.Dashboard }],
 };
 
-/** Delete Messages and add Words — same replace across every child. */
 export const messagesToWordsDelta = ({
 	included = 100,
 	fromIncluded = 10,
@@ -106,7 +104,6 @@ export const collapsedPlanFilter = ({
 	custom: false,
 });
 
-/** CatalogV2 buckets multiple plans as $or of per-plan branches, sorted by plan_id. */
 export const orPlanFilter = ({
 	branches,
 }: {
@@ -218,7 +215,6 @@ const asUpdatePlanOp = (operation: DraftOp) => {
 	return operation as UpdatePlanOp;
 };
 
-/** Exact filter; ops matched by plan_filter (order-independent). Customize via toMatchObject. */
 export const expectLicenseMigrationDraftsCorrect = ({
 	expected,
 	migrations,

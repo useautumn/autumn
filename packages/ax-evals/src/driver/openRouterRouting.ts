@@ -1,12 +1,6 @@
-/** Routes the agent through OpenRouter's Anthropic-compatible endpoint when
- * the model is an OpenRouter ID ("openai/gpt-5.6-terra"). Bare Anthropic IDs
- * ("claude-haiku-4-5") keep subscription auth. */
-
 export const isOpenRouterModel = (model: string): boolean =>
 	model.includes("/");
 
-/** Header auth note: routed runs bill OpenRouter by design, so only flag an
- * API key as unexpected on non-routed runs. */
 export const describeAuthSource = ({
 	authSource,
 	model,
@@ -31,8 +25,6 @@ export const openRouterAgentEnv = (): Record<string, string> => {
 	return {
 		ANTHROPIC_BASE_URL: "https://openrouter.ai/api",
 		ANTHROPIC_AUTH_TOKEN: apiKey,
-		// Must be explicitly empty (not unset) or Claude Code can fall back to
-		// authenticating against Anthropic directly.
 		ANTHROPIC_API_KEY: "",
 	};
 };

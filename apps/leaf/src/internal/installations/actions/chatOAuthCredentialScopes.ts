@@ -13,11 +13,6 @@ export const scopeSetsEqual = (a: string[], b: string[]) => {
 	return [...bSet].every((scope) => aSet.has(scope));
 };
 
-/**
- * Bounds the requested scopes to the bot's ceiling. `undefined` grants the
- * default set; an empty or fully out-of-ceiling list throws instead of
- * failing open.
- */
 export const resolveAgentScopes = (agentScopes?: string[]) => {
 	if (agentScopes === undefined) {
 		return [...DEFAULT_OAUTH_RESOURCE_SCOPES];

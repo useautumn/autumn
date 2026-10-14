@@ -1,13 +1,8 @@
 import type { Context, MiddlewareHandler, Next } from "hono";
 import type { AtomHttpContext, AtomHttpEnv } from "../types/atomHttp.js";
 
-/** A check reaching a loop this far behind has waited at least as long; answering it would only push the next ones later. */
 export const MAX_LOOP_LAG_MS = 100;
 
-/**
- * Outermost on checks: while the thread's loop is behind, a check is refused at once, before its body is read or a line
- * logged. Its 503 carries no x-atom-forwarded, so the SDK and Autumn's shadow both ask the Autumn API instead.
- */
 export function admissionMiddleware({
 	ctx,
 }: {

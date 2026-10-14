@@ -24,18 +24,15 @@ const ItemMismatchReasonSchema = z.enum([
 	"price_mismatch",
 ]);
 
-/** Stamped onto every mismatch by the verify action — display it as-is. */
 const message = z.string().optional().meta({
 	description: "Human-readable one-line description of the mismatch.",
 });
 
-/** Stamped onto every mismatch by the verify action. */
 const severity = z.enum(["error", "warning"]).optional().meta({
 	description:
 		"How serious the mismatch is — warnings (e.g. a Stripe-only subscription) can be deliberate.",
 });
 
-/** A mismatch on a plain (non-prepaid, non-base) subscription item. */
 export const ItemMismatchSchema = z.object({
 	type: z.literal("item_mismatch"),
 	message,
@@ -47,7 +44,6 @@ export const ItemMismatchSchema = z.object({
 	feature_id: z.string().optional(),
 	expected_quantity: z.number().optional(),
 	actual_quantity: z.number().optional(),
-	/** Display context: plan name + major-unit price, when resolvable. */
 	plan_name: z.string().optional(),
 	plan_id: z.string().optional().meta({
 		description: "The Autumn plan this mismatch belongs to, when resolvable.",
@@ -62,7 +58,6 @@ export const ItemMismatchSchema = z.object({
 });
 export type ItemMismatch = z.infer<typeof ItemMismatchSchema>;
 
-/** A mismatch on the plan's base (fixed, non-feature) recurring price. */
 export const BasePriceMismatchSchema = z.object({
 	type: z.literal("base_price_mismatch"),
 	message,
@@ -72,7 +67,6 @@ export const BasePriceMismatchSchema = z.object({
 	actual_price_id: z.string().optional(),
 	expected_amount: z.string().optional(),
 	actual_amount: z.string().optional(),
-	/** Display context: plan name + major-unit price (e.g. Pro at 300/mo). */
 	plan_name: z.string().optional(),
 	plan_id: z.string().optional().meta({
 		description: "The Autumn plan this mismatch belongs to, when resolvable.",
@@ -85,7 +79,6 @@ export const BasePriceMismatchSchema = z.object({
 });
 export type BasePriceMismatch = z.infer<typeof BasePriceMismatchSchema>;
 
-/** A prepaid feature item whose purchased quantity drifted from Autumn's record. */
 export const PrepaidQuantityMismatchSchema = z.object({
 	type: z.literal("prepaid_quantity_mismatch"),
 	message,
@@ -105,7 +98,6 @@ export type PrepaidQuantityMismatch = z.infer<
 	typeof PrepaidQuantityMismatchSchema
 >;
 
-/** A prepaid feature item whose inline (customer-specific) unit price drifted. */
 export const PrepaidPriceMismatchSchema = z.object({
 	type: z.literal("prepaid_price_mismatch"),
 	message,
@@ -133,7 +125,6 @@ export const ScheduleMismatchSchema = z.object({
 	]),
 	expected_phase_count: z.number().optional(),
 	actual_phase_count: z.number().optional(),
-	/** Upcoming phase start times (unix seconds) on the unexpected schedule. */
 	actual_phase_starts_at: z.array(z.number()).optional(),
 	phase_starts_at: z.number().optional(),
 });
@@ -157,7 +148,6 @@ export const RewardMismatchSchema = z.object({
 });
 export type RewardMismatch = z.infer<typeof RewardMismatchSchema>;
 
-/** An active Stripe subscription with no Autumn customer products linked to it. */
 export const StripeSubNotInAutumnMismatchSchema = z.object({
 	type: z.literal("stripe_sub_not_in_autumn"),
 	message,
@@ -167,8 +157,6 @@ export type StripeSubNotInAutumnMismatch = z.infer<
 	typeof StripeSubNotInAutumnMismatchSchema
 >;
 
-/** This active Stripe subscription is unlinked while the customer's main plan
- * is linked to a different subscription that is ending. */
 export const PlanOnEndingSubscriptionMismatchSchema = z.object({
 	type: z.literal("plan_on_ending_subscription"),
 	message,
@@ -179,7 +167,6 @@ export type PlanOnEndingSubscriptionMismatch = z.infer<
 	typeof PlanOnEndingSubscriptionMismatchSchema
 >;
 
-/** Autumn products link to a Stripe subscription outside the customer's active set. */
 export const StaleSubscriptionLinkMismatchSchema = z.object({
 	type: z.literal("stale_subscription_link"),
 	message,
@@ -189,8 +176,6 @@ export type StaleSubscriptionLinkMismatch = z.infer<
 	typeof StaleSubscriptionLinkMismatchSchema
 >;
 
-/** Autumn's expected Stripe state couldn't be computed for this subscription
- * (e.g. a price with no Stripe link) — drift is unknown, not absent. */
 export const ExpectedStateErrorMismatchSchema = z.object({
 	type: z.literal("expected_state_error"),
 	message,
@@ -201,8 +186,6 @@ export type ExpectedStateErrorMismatch = z.infer<
 	typeof ExpectedStateErrorMismatchSchema
 >;
 
-/** More than one Autumn customer points at the same Stripe customer — invoices
- * and subscriptions from different Autumn customers collide on one Stripe account. */
 export const SharedStripeCustomerMismatchSchema = z.object({
 	type: z.literal("shared_stripe_customer"),
 	message,
@@ -250,7 +233,6 @@ export type SubscriptionVerifyResult = z.infer<
 
 export const VerifyResponseSchema = z.object({
 	customer_id: z.string(),
-	/** Account-level findings not tied to a single subscription. */
 	customer_mismatches: z.array(SubscriptionMismatchSchema),
 	subscriptions: z.array(SubscriptionVerifyResultSchema),
 });

@@ -6,7 +6,6 @@ import { CheckIcon } from "@phosphor-icons/react";
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
-/** Single-select row for hand-built popovers: label, optional hint, check when picked. */
 export const OptionRow = ({
 	children,
 	isSelected = false,

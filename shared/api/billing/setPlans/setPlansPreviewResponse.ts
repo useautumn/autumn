@@ -15,14 +15,12 @@ export const ProcessorChangeSchema = z.object({
 	action: z.enum(["created", "updated", "released", "canceled"]),
 });
 
-/** One Stripe price tier; `up_to` is null on the last tier. */
 export const ProcessorItemPriceTierSchema = z.object({
 	up_to: z.number().nullable(),
 	unit_amount: z.number(),
 	flat_amount: z.number(),
 });
 
-/** How Stripe bills one item. Amounts are in major currency units. */
 export const ProcessorItemPriceSchema = z.object({
 	currency: z.string(),
 	unit_amount: z.number().nullable(),
@@ -34,7 +32,6 @@ export const ProcessorItemPriceSchema = z.object({
 	units_per_quantity: z.number().nullable(),
 });
 
-/** One item Stripe will hold once a phase starts: the end state, not a diff. */
 export const ProcessorItemSchema = z.object({
 	price_id: z.string().nullable(),
 	plan_id: z.string().nullable(),
@@ -112,7 +109,6 @@ export const SetPlansPreviewPhaseSchema = z.object({
 	processor_items: z.array(ProcessorItemSchema),
 });
 
-/** A saved phase the request no longer has, with every plan it held ending. */
 export const SetPlansPreviewRemovedPhaseSchema = z.object({
 	starts_at: z.number(),
 	plans: z.array(SetPlansPreviewPlanSchema),

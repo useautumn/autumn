@@ -3,10 +3,6 @@ import type Stripe from "stripe";
 import { autumnStripeRequestOptions } from "@/external/stripe/common/autumnStripeIdempotency";
 import { handleInvoicePaymentFailure } from "./handleInvoicePaymentFailure";
 
-// ============================================
-// Types
-// ============================================
-
 export type PayInvoiceResult = {
 	paid: boolean;
 	invoice: Stripe.Invoice;
@@ -23,16 +19,11 @@ type PayStripeInvoiceParams = {
 	paymentMethod?: Stripe.PaymentMethod | null;
 };
 
-// ============================================
-// Pay Invoice
-// ============================================
-
 export const payStripeInvoice = async ({
 	stripeCli,
 	invoice,
 	paymentMethod,
 }: PayStripeInvoiceParams): Promise<PayInvoiceResult> => {
-	// 1. Already paid - return success
 	if (invoice.status === "paid") {
 		return {
 			paid: true,
@@ -40,7 +31,6 @@ export const payStripeInvoice = async ({
 		};
 	}
 
-	// 2. No payment method - return failure
 	if (!paymentMethod) {
 		return handleInvoicePaymentFailure({
 			invoice,
@@ -59,7 +49,6 @@ export const payStripeInvoice = async ({
 		};
 	}
 
-	// 4. Attempt payment
 	const { data: paidInvoice, error } = await tryCatch(
 		stripeCli.invoices.pay(
 			invoice.id,

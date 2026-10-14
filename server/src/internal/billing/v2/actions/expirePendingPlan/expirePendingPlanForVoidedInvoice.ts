@@ -9,11 +9,8 @@ import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCust
 import { MetadataService } from "@/internal/metadata/MetadataService";
 import { releaseExpiredPendingPlan } from "./execute/releaseExpiredPendingPlan";
 
-// Pending rows are inserted after the metadata row; a void that lands in between
-// must not delete the metadata, so the cron re-checks shortly instead.
 const RECHECK_DELAY_MINUTES = 10;
 
-/** A voided invoice with no payment can never be paid, so its pending plan expires now. */
 export const expirePendingPlanForVoidedInvoice = async ({
 	ctx,
 	stripeInvoice,
@@ -23,7 +20,6 @@ export const expirePendingPlanForVoidedInvoice = async ({
 	stripeInvoice: Stripe.Invoice;
 	customerId?: string;
 }): Promise<boolean> => {
-	// 1. Setup
 	const metadata = await MetadataService.getByStripeInvoiceId({
 		db: ctx.db,
 		stripeInvoiceId: stripeInvoice.id,
@@ -31,7 +27,6 @@ export const expirePendingPlanForVoidedInvoice = async ({
 	});
 	if (!metadata || hasStripeInvoicePayment(stripeInvoice)) return false;
 
-	// 2. Expire the plan
 	const expiredCount = await expirePendingCustomerProducts({
 		ctx,
 		metadataId: metadata.id,
@@ -47,7 +42,6 @@ export const expirePendingPlanForVoidedInvoice = async ({
 		return false;
 	}
 
-	// 3. Cancel the sub it created
 	await releaseExpiredPendingPlan({
 		ctx,
 		stripeCli: createStripeCli({ org: ctx.org, env: ctx.env }),

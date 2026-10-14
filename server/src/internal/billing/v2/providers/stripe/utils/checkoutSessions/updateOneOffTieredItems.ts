@@ -12,11 +12,6 @@ import {
 import type Stripe from "stripe";
 import { stripeItemSpecToCheckoutLineItem } from "../stripeItemSpec/stripeItemSpecToStripeParam";
 
-/**
- * Update one-off items to use inline price_data if they're tiered.
- * Stripe doesn't support one-off tiered prices, so we calculate the amount
- * and create an inline price instead.
- */
 export const updateOneOffTieredItems = ({
 	oneOffItemSpecs,
 	org,
@@ -31,7 +26,6 @@ export const updateOneOffTieredItems = ({
 	return oneOffItemSpecs.map((item) => {
 		const { autumnPrice, autumnProduct, autumnCusEnt } = item;
 
-		// If missing price/product or not tiered one-off, use the regular price ID
 		if (
 			!autumnPrice ||
 			!autumnProduct ||
@@ -46,7 +40,6 @@ export const updateOneOffTieredItems = ({
 			});
 		}
 
-		// Build context for line item
 		const context: LineItemContext = {
 			price: autumnPrice,
 			product: autumnProduct,
@@ -58,13 +51,11 @@ export const updateOneOffTieredItems = ({
 			customerProduct: autumnCusEnt.customer_product ?? undefined,
 		};
 
-		// Use usagePriceToLineItem to get amount and description
 		const lineItem = usagePriceToLineItem({
 			cusEnt: autumnCusEnt,
 			context,
 		});
 
-		// Get the stripe product ID from the price config
 		const config = autumnPrice.config as UsagePriceConfig;
 		const stripeProductId = config.stripe_product_id;
 

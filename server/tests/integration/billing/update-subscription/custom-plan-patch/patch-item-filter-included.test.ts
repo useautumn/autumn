@@ -1,14 +1,3 @@
-/**
- * Per-customer subscriptions.update honors included on remove_items.
- * The important case is a row that does NOT match the filter and must stay put.
- *
- * Contract:
- *   P1 custom 1k + filter included: 100 → 1k kept, one messages row
- *   P2 omitted included still rewrites 1k → 200 (wildcard)
- *   P3 paid overage at 200 + filter included: 50 → 200 kept
- *   unmatched 100→200 + leftover boolean/lifetime: 1k spared, leftovers land
- */
-
 import { test } from "bun:test";
 import {
 	ResetInterval,

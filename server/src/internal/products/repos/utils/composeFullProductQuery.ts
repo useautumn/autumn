@@ -50,8 +50,6 @@ export const composeProductWithLicensesQuery = () => ({
 export const composeFullProductQuery = () => ({
 	...composeProductItems(),
 	...composeLicenseSide(),
-	// Reverse links where this product IS the license. Keep every parent version —
-	// catalogV2 `deriveLicenseParentIntents` pins from this list (not latest-only).
 	parent_plan_licenses: {
 		where: eq(planLicenses.is_custom, false),
 		with: {
@@ -98,7 +96,6 @@ export type ProductWithLicenseRelations = FullProductWithoutLicenses & {
 	variants?: ProductWithLicenseRelations[];
 };
 
-/** Hydrated link row + its product, with free_trial resolved. */
 const normalizeLinkProduct = <T extends DbPlanLicense>(
 	link: T,
 	product: FullProductWithoutParentLicenses,

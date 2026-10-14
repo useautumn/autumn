@@ -4,7 +4,6 @@ import { and, eq } from "drizzle-orm";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 
-/** cusProduct rows for one customer on one plan, any version. */
 export const fetchAttachedPlanRows = async ({
 	ctx,
 	internalCustomerId,
@@ -24,7 +23,6 @@ export const fetchAttachedPlanRows = async ({
 			),
 		);
 
-/** Exactly one attached version unless `count` is passed; match version / entity only when set. */
 export const expectAttachedPlanVersionCorrect = async ({
 	ctx,
 	internalCustomerId,
@@ -38,7 +36,6 @@ export const expectAttachedPlanVersionCorrect = async ({
 	planId: string;
 	version?: number;
 	count?: number;
-	/** `true` = any entity_id; a string = that exact entity id. */
 	entityId?: string | true;
 }) => {
 	const rows = await fetchAttachedPlanRows({

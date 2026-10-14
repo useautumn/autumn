@@ -1,15 +1,9 @@
 import { type RefObject, useCallback, useRef } from "react";
 
 const BAR_SEGMENT_SELECTOR = ".recharts-bar-rectangle";
-// Read by AnalyticsGraph's `[&[data-segment-hover]_…]` class, which dims the other segments.
 const SEGMENT_HOVER_ATTR = "data-segment-hover";
-// Crossing the gap between two bars takes less than this, so the dim holds instead of flashing off.
 const UNDIM_DELAY_MS = 100;
 
-/**
- * Dims the other bar segments while one is hovered. A `:has(:hover)` rule restyled
- * every bar on each segment change, so this flips one attribute only when hover state changes.
- */
 export const useSegmentHoverDim = ({
 	containerRef,
 }: {
@@ -29,7 +23,6 @@ export const useSegmentHoverDim = ({
 		[containerRef],
 	);
 
-	// Every flip restyles every segment, so leaving a segment undims only once the cursor stays off bars.
 	const trackSegmentHover = useCallback(
 		(target: EventTarget) => {
 			const isOverSegment =

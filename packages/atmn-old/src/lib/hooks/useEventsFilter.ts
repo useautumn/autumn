@@ -1,17 +1,10 @@
 import { useCallback, useState } from "react";
 import type { TimeRangePreset } from "./useEvents.js";
 
-/**
- * Filter state for the events view
- */
 export interface EventsFilterState {
-	/** Customer ID filter */
 	customerId: string;
-	/** Selected feature IDs (multi-select) */
 	selectedFeatures: string[];
-	/** Time range preset */
 	timeRange: TimeRangePreset;
-	/** Group by property (must start with "properties." or empty for none) */
 	groupBy: string;
 }
 
@@ -24,38 +17,24 @@ const INITIAL_FILTER_STATE: EventsFilterState = {
 	groupBy: "",
 };
 
-/**
- * Number of time range options
- */
-export const TIME_RANGE_COUNT = 5; // 24h, 7d, 30d, 90d, all
-
-/**
- * Number of groupBy options (None + custom input)
- */
+export const TIME_RANGE_COUNT = 5;
 export const GROUP_BY_COUNT = 2;
 
-/**
- * Hook for managing events filter state and navigation
- */
 export function useEventsFilter(featuresCount: number) {
-	// Applied filters (what's actually being used for querying)
 	const [appliedFilters, setAppliedFilters] =
 		useState<EventsFilterState>(INITIAL_FILTER_STATE);
 
-	// Draft filters (what's being edited in the filter panel)
 	const [draftFilters, setDraftFilters] =
 		useState<EventsFilterState>(INITIAL_FILTER_STATE);
 
-	// Filter panel state
 	const [isFilterOpen, setIsFilterOpen] = useState(false);
 	const [activeField, setActiveField] = useState<FilterField>("timeRange");
 	const [activeIndex, setActiveIndex] = useState(0);
 	const [isEditingCustomer, setIsEditingCustomer] = useState(false);
 	const [isEditingGroupBy, setIsEditingGroupBy] = useState(false);
 
-	// Open filter panel
 	const openFilter = useCallback(() => {
-		setDraftFilters(appliedFilters); // Copy applied filters to draft
+		setDraftFilters(appliedFilters);
 		setIsFilterOpen(true);
 		setActiveField("timeRange");
 		setActiveIndex(
@@ -65,14 +44,12 @@ export function useEventsFilter(featuresCount: number) {
 		);
 	}, [appliedFilters]);
 
-	// Close filter panel (discard changes)
 	const closeFilter = useCallback(() => {
 		setIsFilterOpen(false);
 		setIsEditingCustomer(false);
 		setIsEditingGroupBy(false);
 	}, []);
 
-	// Apply filters
 	const applyFilters = useCallback(() => {
 		setAppliedFilters(draftFilters);
 		setIsFilterOpen(false);
@@ -80,13 +57,11 @@ export function useEventsFilter(featuresCount: number) {
 		setIsEditingGroupBy(false);
 	}, [draftFilters]);
 
-	// Clear all filters
 	const clearFilters = useCallback(() => {
 		setDraftFilters(INITIAL_FILTER_STATE);
 		setAppliedFilters(INITIAL_FILTER_STATE);
 	}, []);
 
-	// Navigate between fields (Tab)
 	const nextField = useCallback(() => {
 		if (isEditingCustomer) {
 			setIsEditingCustomer(false);
@@ -117,7 +92,6 @@ export function useEventsFilter(featuresCount: number) {
 		setActiveIndex(0);
 	}, [activeField, isEditingCustomer, isEditingGroupBy]);
 
-	// Navigate within field (up/down arrows)
 	const moveUp = useCallback(() => {
 		if (activeField === "customer") return;
 
@@ -148,7 +122,6 @@ export function useEventsFilter(featuresCount: number) {
 		setActiveIndex((prev) => Math.min(maxIndex, prev + 1));
 	}, [activeField, featuresCount]);
 
-	// Toggle selection (Space/Enter on features, time range, or groupBy)
 	const toggleSelection = useCallback(
 		(features: { id: string }[]) => {
 			if (activeField === "customer") {
@@ -167,13 +140,11 @@ export function useEventsFilter(featuresCount: number) {
 
 			if (activeField === "groupBy") {
 				if (activeIndex === 0) {
-					// None selected
 					setDraftFilters((prev) => ({
 						...prev,
 						groupBy: "",
 					}));
 				} else {
-					// Custom input
 					setIsEditingGroupBy(true);
 				}
 				return;
@@ -197,7 +168,6 @@ export function useEventsFilter(featuresCount: number) {
 		[activeField, activeIndex],
 	);
 
-	// Update customer ID (when editing)
 	const setCustomerId = useCallback((value: string) => {
 		setDraftFilters((prev) => ({
 			...prev,
@@ -205,14 +175,11 @@ export function useEventsFilter(featuresCount: number) {
 		}));
 	}, []);
 
-	// Finish editing customer ID
 	const finishEditingCustomer = useCallback(() => {
 		setIsEditingCustomer(false);
 	}, []);
 
-	// Update group by (when editing)
 	const setGroupBy = useCallback((value: string) => {
-		// Auto-prefix with "properties." if user doesn't include it
 		const prefixedValue =
 			value && !value.startsWith("properties.") ? `properties.${value}` : value;
 		setDraftFilters((prev) => ({
@@ -221,12 +188,10 @@ export function useEventsFilter(featuresCount: number) {
 		}));
 	}, []);
 
-	// Finish editing group by
 	const finishEditingGroupBy = useCallback(() => {
 		setIsEditingGroupBy(false);
 	}, []);
 
-	// Check if any filters are active
 	const hasActiveFilters =
 		appliedFilters.customerId !== "" ||
 		appliedFilters.selectedFeatures.length > 0 ||
@@ -234,13 +199,10 @@ export function useEventsFilter(featuresCount: number) {
 		appliedFilters.groupBy !== "";
 
 	return {
-		// Applied filters (for data fetching)
 		appliedFilters,
 
-		// Draft filters (for editing)
 		draftFilters,
 
-		// Panel state
 		isFilterOpen,
 		activeField,
 		activeIndex,
@@ -248,7 +210,6 @@ export function useEventsFilter(featuresCount: number) {
 		isEditingGroupBy,
 		hasActiveFilters,
 
-		// Actions
 		openFilter,
 		closeFilter,
 		applyFilters,

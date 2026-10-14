@@ -1,14 +1,3 @@
-/**
- * invoices.reissue adjustments: correcting an invoice while replacing it.
- *
- * Contract:
- *   invoice.tax_rate_id: null   -> replacement carries no tax
- *   invoice.custom_fields       -> PO number shown on the replacement only
- *   lines.update / add          -> the replacement bills different amounts
- *   customer.name / address / tax_ids -> persisted on the customer and snapshotted
- *   any adjustment              -> the totals-must-match guard no longer applies
- */
-
 import { expect, test } from "bun:test";
 import type {
 	ApiCustomerV5,
@@ -111,7 +100,6 @@ test.concurrent(
 			},
 		})) as ReissueResponse;
 
-		// $2 of tax is gone, so the guard demanding an identical total must have stood down.
 		expect(invoice.total).toBe(20);
 
 		const replacement = await ctx.stripeCli.invoices.retrieve(
@@ -123,7 +111,6 @@ test.concurrent(
 			{ name: "PO number", value: "PO-4417" },
 		]);
 
-		// The original now points at its replacement and cannot be reissued twice.
 		await expectAutumnError({
 			errCode: ErrCode.InvalidRequest,
 			errMessage: "already reissued",
@@ -206,7 +193,6 @@ test.concurrent(
 		});
 
 		await attachInvoiceMode({ autumnV2_4, customerId, planId: pro.id });
-		// Line items are stored by an async queue job after the invoice is created.
 		const created = await firstInvoice({ autumnV2_3, customerId });
 		await waitForInvoiceLineItems({ stripeInvoiceId: created.stripe_id });
 		const original = await firstInvoice({ autumnV2_3, customerId });
@@ -222,7 +208,6 @@ test.concurrent(
 		})) as ReissueResponse;
 
 		expect(invoice.total).toBe(115);
-		// The returned preview describes what was issued, not the original's $20.
 		expect(preview.total).toBe(115);
 		expect(
 			preview.lines.map((line) => line.amount).sort((a, b) => a - b),
@@ -236,7 +221,6 @@ test.concurrent(
 			replacement.lines.data.map((line) => line.amount).sort((a, b) => a - b),
 		).toEqual([1500, 10000]);
 
-		// The stored Autumn row must follow the edit, not the original's $20.
 		const storedRows = await invoiceLineItemRepo.getByInvoiceIds({
 			db: ctx.db,
 			invoiceIds: [invoice.id],
@@ -312,7 +296,6 @@ test.concurrent(
 		const taxIds = await ctx.stripeCli.customers.listTaxIds(stripeCustomerId);
 		expect(taxIds.data.map((taxId) => taxId.value)).toEqual(["FR12345678901"]);
 
-		// The replacement snapshots whatever the customer now says.
 		const replacement = await ctx.stripeCli.invoices.retrieve(
 			invoice.stripe_id,
 		);
@@ -320,14 +303,12 @@ test.concurrent(
 		expect(replacement.customer_address?.line2).toBe("Bâtiment B");
 		expect(replacement.customer_tax_ids?.[0]?.value).toBe("FR12345678901");
 
-		// The dashboard prefills from the live customer, which the endpoint expands.
 		const expanded = (await autumnV2_3.get(
 			`/invoices/${invoice.stripe_id}/stripe`,
 		)) as { customer: { name: string; address: { line2: string } } };
 		expect(expanded.customer.name).toBe("Acme SAS");
 		expect(expanded.customer.address.line2).toBe("Bâtiment B");
 
-		// A blank field and an empty tax_ids list clear rather than keep.
 		await autumnV2_3.post("/invoices.reissue", {
 			invoice_id: invoice.id,
 			customer: {
@@ -345,7 +326,6 @@ test.concurrent(
 		const cleared = await ctx.stripeCli.customers.retrieve(stripeCustomerId);
 		if (!cleared.deleted) {
 			expect(cleared.address?.line1).toBe("12 Rue de Rivoli");
-			// Stripe keeps a cleared sub-field as "" rather than dropping it.
 			expect(cleared.address?.line2 ?? "").toBe("");
 		}
 		const clearedTaxIds =
@@ -386,7 +366,6 @@ test.concurrent(
 			value: "FR12345678901",
 		});
 
-		// The second number is malformed, so Stripe rejects it.
 		await expectAutumnError({
 			func: () =>
 				autumnV2_3.post("/invoices.reissue", {
@@ -403,7 +382,6 @@ test.concurrent(
 		const taxIds = await ctx.stripeCli.customers.listTaxIds(stripeCustomerId);
 		expect(taxIds.data.map((taxId) => taxId.value)).toEqual(["FR12345678901"]);
 
-		// A set that keeps an existing id and adds one touches only the new one.
 		await autumnV2_3.post("/invoices.reissue", {
 			invoice_id: original.id,
 			customer: {
@@ -452,8 +430,6 @@ test.concurrent(
 		});
 		const stripeCustomerId = persisted?.processor?.id ?? "";
 
-		// An unknown line fails before any draft exists; an amount Stripe
-		// rejects fails after, and the preview draft is deleted on the way out.
 		await expectAutumnError({
 			errCode: ErrCode.InvalidRequest,
 			func: () =>
@@ -516,7 +492,6 @@ test.concurrent(
 			},
 		})) as ReissueResponse;
 
-		// $20 base plus the add-on at half of $40.
 		expect(invoice.total).toBe(40);
 
 		const storedRows = await invoiceLineItemRepo.getByInvoiceIds({

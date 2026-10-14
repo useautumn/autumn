@@ -1,6 +1,3 @@
-// Provider
-
-// Types
 export type {
 	ClientAggregateEventsParams,
 	ClientAttachParams,
@@ -18,10 +15,8 @@ export type {
 	ClientUpdateSubscriptionParams,
 	ProtectedFields,
 } from "../types/params";
-// Context
 export { useAutumnClient } from "./AutumnContext";
 export { AutumnProvider, type AutumnProviderProps } from "./AutumnProvider";
-// Client (for advanced usage)
 export {
 	type AutumnClientConfig,
 	AutumnClientError,
@@ -32,7 +27,6 @@ export {
 	type UseAggregateEventsParams,
 	useAggregateEvents,
 } from "./hooks/useAggregateEvents";
-// Hooks
 export {
 	type UseCustomerCheckParams,
 	type UseCustomerParams,

@@ -1,8 +1,3 @@
-/**
- * Pay-per-use volume on a trial plan: trial usage isn't billed at trial end, and since the
- * balance isn't reset there it counts toward the first paid cycle's overage.
- */
-
 import { expect, test } from "bun:test";
 import { ms } from "@autumn/shared";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
@@ -47,7 +42,6 @@ test.skip(`${chalk.yellowBright("trial-consumable-volume 1: in-trial preview mat
 	const { ctx, autumnV1, autumnV2_2, testClockId, advancedTo } =
 		await setupVolumeTrial({ customerId });
 
-	// Trial usage is not charged at trial end: $20 base, $0 messages
 	const { renewalInvoice } = await expectNextInvoiceMatchesPreview({
 		ctx,
 		autumnV1,
@@ -79,7 +73,6 @@ test.concurrent(
 			waitForSeconds: 15,
 		});
 
-		// $20 base only; the 150 trial messages are not charged at trial end
 		await expectCustomerInvoiceCorrect({
 			customerId,
 			count: 2,
@@ -93,7 +86,6 @@ test.concurrent(
 		});
 		await new Promise((resolve) => setTimeout(resolve, 3000));
 
-		// 150 trial + 500 paid = 650, 550 over included (net band 2): 550 × $0.05 = $27.50
 		const { renewalInvoice } = await expectNextInvoiceMatchesPreview({
 			ctx,
 			autumnV1,
@@ -104,7 +96,6 @@ test.concurrent(
 			featureId: TestFeature.Messages,
 			expectedFeatureAmount: 27.5,
 		});
-		// $20 base + $27.50 usage
 		expect(renewalInvoice.total).toBeCloseTo(47.5, 2);
 	},
 );

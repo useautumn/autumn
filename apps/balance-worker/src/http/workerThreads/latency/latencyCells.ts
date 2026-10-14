@@ -1,7 +1,3 @@
-/**
- * In-worker latency per route, kept by the HTTP threads in shared memory: a log histogram (four buckets per
- * doubling of µs, up to ~16 s) plus the max. The decide thread drains it once per report; it records nothing.
- */
 const BUCKETS = 96;
 const SLOTS = BUCKETS + 1;
 const MAX_SLOT = BUCKETS;
@@ -42,7 +38,6 @@ export function recordLatency({
 	}
 }
 
-/** The window's percentiles in ms, each the upper edge of its bucket (within ~19%); null when nothing was timed. */
 export function drainLatency({
 	cells,
 	route,

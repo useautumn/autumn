@@ -10,7 +10,6 @@ import {
 	getUpdateCustomerProducts,
 } from "@/internal/billing/v2/utils/billingPlan/customerProductPlanMutations.js";
 
-/** Every customer product the plan inserts, patches, updates or deletes. */
 export const billingPlanCustomerProducts = ({
 	autumnBillingPlan,
 }: {
@@ -26,7 +25,6 @@ export const billingPlanCustomerProducts = ({
 	...getDeleteCustomerProducts({ autumnBillingPlan }),
 ];
 
-/** Every grant the plan writes outside a product's own list: loose inserts, patch inserts and updates. */
 export const billingPlanCustomerEntitlements = ({
 	autumnBillingPlan,
 }: {

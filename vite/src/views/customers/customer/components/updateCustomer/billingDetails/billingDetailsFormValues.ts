@@ -32,7 +32,6 @@ export const billingDetailsToFormValues = (
 	custom_fields: billingDetails?.invoice_settings.custom_fields ?? [],
 });
 
-/** Trimmed rows with a value; blank rows the user added but never filled are dropped. */
 const filledRows = <T extends Row & { value: string }>(rows: T[]) =>
 	rows
 		.map((row) => mapValues(row, (value) => value.trim()) as T)
@@ -43,7 +42,6 @@ const addressChange = (address: BillingDetailsFormValues["address"]) => {
 	return Object.values(trimmed).some(notNullish) ? trimmed : null;
 };
 
-/** Compared trimmed so stray whitespace in Stripe never reads as an edit. */
 const trimmedTaxIdKey = (taxId: BillingDetailsTaxId) =>
 	taxIdKey(mapValues(taxId, (value) => value.trim()));
 
@@ -73,7 +71,6 @@ const taxIdChanges = ({
 	};
 };
 
-/** Only the fields the user edited, so untouched Stripe data is never rewritten. */
 export const billingDetailsChanges = ({
 	initial,
 	current,

@@ -1,10 +1,3 @@
-/**
- * catalogV2.update — plan renames sync to the owned Stripe Product.
- *
- * A base plan owns its Stripe Product, so renaming the plan renames it.
- * A variant shares the base's Stripe Product and must never rename it.
- */
-
 import { expect, test } from "bun:test";
 import { BillingInterval, BillingMethod } from "@autumn/shared";
 import { expectProductProcessorCorrect } from "@tests/integration/utils/expectStripePriceResources.js";

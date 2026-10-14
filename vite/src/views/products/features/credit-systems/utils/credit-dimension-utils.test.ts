@@ -188,15 +188,12 @@ test("filling keeps exact rows, inherits from covering rules, drafts the rest, a
 		},
 	]);
 
-	// Every row is independently addressable, even when two share a match.
 	expect(new Set(filled.map((r) => r.key)).size).toBe(filled.length);
 });
 
 test("dropping the last rate that used a value keeps the value in the merged set", () => {
 	const remaining = withRateRules({ item: row, rules: [] });
 
-	// The editor keeps the values it loaded, so removing every rate that matched
-	// on region must not remove region itself.
 	expect(dimensionValues(remaining).region).toBeUndefined();
 	expect(
 		mergeDimensionValues(dimensionValues(row), dimensionValues(remaining)),
@@ -232,7 +229,6 @@ test("two rows with the same match stay independently addressable", () => {
 	expect(rows).toHaveLength(2);
 	expect(rows[0].key).not.toBe(rows[1].key);
 
-	// Editing one leaves the other alone, which a match-derived id could not do.
 	const edited = [
 		withRateMatch({ row: rows[0], match: { size: "large" } }),
 		rows[1],
@@ -247,7 +243,6 @@ test("a draft keeps its key once it is saved as a rule", () => {
 	const draft = createRateDraft({ size: "large" });
 	const [row] = toRateRows({ rules: [], drafts: [draft] });
 
-	// Typing a cost turns the draft into a rule, which the item is rebuilt from.
 	const priced = withRateCredits({ row, credits: 5 });
 	const [named] = nameRateRows([priced]);
 	const keysByRuleName = new Map([[named.name, named.key]]);
@@ -268,8 +263,6 @@ test("pricing a lower row leaves it where it was in the table", () => {
 	const rows = toRateRows({ rules: [], drafts: [first, second] });
 	const order = rows.map((row) => row.key);
 
-	// The second row gains a cost, so it becomes a saved rule while the first
-	// stays a draft — the split that used to float it to the top.
 	const priced = withRateCredits({ row: rows[1], credits: 5 });
 	const [named] = nameRateRows([priced]);
 	const dimension = named.dimension ?? { match: {}, credit_amount: 0 };
@@ -298,13 +291,9 @@ test("renaming a dimension leaves its rate rows in place", () => {
 		},
 	};
 
-	// The table shows large first — the order a user dragged or built it into,
-	// which is not the order the rules are stored in.
 	const before = toRateRows({ rules: rateRules(item), drafts: [] });
 	const order = [...before.map((row) => row.key)].reverse();
 
-	// The rename rebuilds every rule name from the new match, so the keys the
-	// order was recorded under have to be carried across with it.
 	const renamed = withRenamedField({ item, from: "size", to: "tier" });
 	const after = toRateRows({
 		rules: rateRules(renamed),
@@ -312,7 +301,6 @@ test("renaming a dimension leaves its rate rows in place", () => {
 		order: renamedRowOrder({ order, item, from: "size", to: "tier" }),
 	});
 
-	// Renaming size -> tier must not disturb that: large stays first.
 	expect(after.map((row) => row.match)).toEqual([
 		{ tier: "large" },
 		{ tier: "small" },

@@ -14,16 +14,11 @@ import type Stripe from "stripe";
 
 export interface StripeSubscriptionForBilling {
 	stripeSubscription?: StripeSubscriptionWithDiscounts;
-	/** Set when the linked subscription exists in Stripe but is terminal (canceled or incomplete_expired). */
 	canceledStripeSubscriptionId?: string;
 	canceledStripeSubscription?: Stripe.Subscription;
-	/** Set when the linked subscription belongs to a different Stripe customer.
-	 *  Only surfaced for flows allowed to proceed past that fault. */
 	mismatchedStripeSubscriptionId?: string;
 }
 
-/** An immediate cancel only detaches Autumn-side state and no_billing_changes
- *  never writes to Stripe, so a subscription neither will touch must not block them. */
 const neverWritesToStripeSubscription = (
 	params?: AttachParamsV1 | MultiAttachParamsV0 | UpdateSubscriptionV1Params,
 ) => {
@@ -41,10 +36,6 @@ const isTerminalStripeSubscription = (subscription: Stripe.Subscription) =>
 	subscription.status === "canceled" ||
 	subscription.status === "incomplete_expired";
 
-/**
- * Fetches a Stripe subscription with expanded discounts for billing operations.
- * Returns the subscription with `discounts.source.coupon.applies_to` expanded.
- */
 export const fetchStripeSubscriptionForBilling = async ({
 	ctx,
 	fullCus,
@@ -95,8 +86,6 @@ export const fetchStripeSubscriptionForBilling = async ({
 		});
 	}
 
-	// Wrong-customer linkage is a data fault worth surfacing, except to a request
-	// that never touches the sub — blocking that would strand the plan with no way out.
 	if (sub.customer !== fullCus.processor?.id) {
 		if (neverWritesToStripeSubscription(params)) {
 			return { mismatchedStripeSubscriptionId: subId };
@@ -108,8 +97,6 @@ export const fetchStripeSubscriptionForBilling = async ({
 		});
 	}
 
-	// A terminal subscription carries no live billing state; each caller decides
-	// whether to abandon it or block writes.
 	if (isTerminalStripeSubscription(sub)) {
 		return {
 			canceledStripeSubscriptionId: subId,

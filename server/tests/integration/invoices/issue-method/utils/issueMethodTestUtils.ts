@@ -31,7 +31,6 @@ export const listInvoices = async ({
 		})) as { list: ApiListInvoiceV1[] }
 	).list;
 
-/** Attaches in invoice mode; `finalize: false` leaves the invoice as a draft. */
 export const attachInvoiceModePlan = async ({
 	autumnV2_3,
 	autumnV2_4,
@@ -68,7 +67,6 @@ const EXPECTED_STRIPE_STATE: Record<
 	send: { status: "open", autoAdvance: true },
 };
 
-/** Asserts the Stripe invoice and its Autumn row reflect the issue method. */
 export const expectIssuedAs = async ({
 	invoice,
 	issueMethod,

@@ -25,9 +25,6 @@ type AgentState =
 	| "complete"
 	| "error";
 
-/**
- * Agent setup step - allows user to configure agent files
- */
 export function AgentStep({ step, totalSteps, onComplete }: AgentStepProps) {
 	const [state, setState] = useState<AgentState>("selecting");
 	const [selectedOptions, setSelectedOptions] = useState<string[]>([]);
@@ -69,11 +66,9 @@ export function AgentStep({ step, totalSteps, onComplete }: AgentStepProps) {
 	const handleSubmit = (values: string[]) => {
 		setSelectedOptions(values);
 
-		// If MCP is selected, go to agent selection
 		if (values.includes("mcp")) {
 			setState("mcp-agents");
 		} else {
-			// Otherwise, create the other files
 			setState("creating");
 			const fileOptions = values.filter((v) => v !== "mcp") as FileOption[];
 			createAgentFiles.mutate(fileOptions);
@@ -84,14 +79,11 @@ export function AgentStep({ step, totalSteps, onComplete }: AgentStepProps) {
 		setSelectedAgents(agents);
 		setState("installing");
 
-		// Install MCP for selected agents
 		installMcp.mutate(agents as AgentIdentifier[]);
 	};
 
-	// Handle MCP installation completion
 	useEffect(() => {
 		if (installMcp.isSuccess && state === "installing") {
-			// Now create the other selected files
 			const nonMcpOptions = selectedOptions.filter(
 				(opt) => opt !== "mcp",
 			) as FileOption[];
@@ -113,7 +105,6 @@ export function AgentStep({ step, totalSteps, onComplete }: AgentStepProps) {
 		createAgentFiles,
 	]);
 
-	// Handle MCP installation error
 	useEffect(() => {
 		if (installMcp.isError) {
 			setError(
@@ -125,7 +116,6 @@ export function AgentStep({ step, totalSteps, onComplete }: AgentStepProps) {
 		}
 	}, [installMcp.isError, installMcp.error]);
 
-	// Handle file creation completion
 	useEffect(() => {
 		if (createAgentFiles.isSuccess && state === "creating") {
 			setState("complete");
@@ -135,7 +125,6 @@ export function AgentStep({ step, totalSteps, onComplete }: AgentStepProps) {
 		}
 	}, [createAgentFiles.isSuccess, state, onComplete]);
 
-	// Handle file creation error
 	useEffect(() => {
 		if (createAgentFiles.isError) {
 			setError(

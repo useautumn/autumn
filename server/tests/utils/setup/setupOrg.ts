@@ -12,7 +12,6 @@ import { clearOrgCache } from "@/internal/orgs/orgUtils/clearOrgCache.js";
 
 const featureConfigKey = (config: unknown) => JSON.stringify(config ?? null);
 
-/** Insert missing TestFeatures and refresh stale credit-system configs. */
 export const ensureV2Features = async ({
 	db,
 	orgId,
@@ -39,7 +38,6 @@ export const ensureV2Features = async ({
 				`ensureV2Features: insert failed for ${missing.map((feature) => feature.id).join(",")}`,
 			);
 		}
-		// The insert's own cache clear runs before this process's Redis is ready and no-ops; the server would serve the old feature list for an hour.
 		for (const target of getMiscRedisTargets()) {
 			await waitForRedisReady(target.redis, target.instanceName);
 		}
@@ -61,14 +59,11 @@ export const ensureV2Features = async ({
 		});
 	}
 
-	// Config no-ops still leave org/product caches holding the previous join.
 	await clearOrgCache({ db, orgId, env, logger: console });
 	await invalidateProductsCache({ orgId, env });
 };
 
 export const getAxiosInstance = (apiKey?: string) => {
-	// Priority: 1. Passed apiKey, 2. Org secret key from context, 3. TEST_ORG_SECRET_KEY fallback
-	// Import ctx here to avoid circular dependency issues
 	const ctx =
 		require("@tests/utils/testInitUtils/createTestContext.js").default;
 	const secretKey =
@@ -104,7 +99,6 @@ export const setupOrg = async ({
 		console.log("↷ Skipped v2 feature seed");
 	}
 
-	// Update org config
 	const org = await OrgService.get({ db, orgId });
 	await OrgService.update({
 		db,

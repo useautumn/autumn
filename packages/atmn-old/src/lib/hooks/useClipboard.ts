@@ -2,22 +2,15 @@ import clipboard from "clipboardy";
 import { useCallback, useState } from "react";
 
 export interface UseClipboardOptions {
-	/** Duration in ms to show feedback (default: 1500) */
 	feedbackDuration?: number;
 }
 
 export interface UseClipboardReturn {
-	/** Copy text to clipboard */
 	copy: (text: string) => Promise<boolean>;
-	/** Whether feedback is currently showing */
 	showingFeedback: boolean;
-	/** Last error if copy failed */
 	error: Error | null;
 }
 
-/**
- * Cross-platform clipboard hook with feedback state
- */
 export function useClipboard(
 	options: UseClipboardOptions = {},
 ): UseClipboardReturn {
@@ -32,7 +25,6 @@ export function useClipboard(
 				setError(null);
 				setShowingFeedback(true);
 
-				// Clear feedback after duration
 				setTimeout(() => {
 					setShowingFeedback(false);
 				}, feedbackDuration);

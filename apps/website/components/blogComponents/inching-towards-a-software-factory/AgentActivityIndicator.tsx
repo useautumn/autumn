@@ -1,6 +1,5 @@
 import { cn } from "@/lib/utils";
 
-// Adapted from prompt-kit's CircularLoader; scoped colors avoid requiring its global theme.
 export function AgentActivityIndicator({ running }: { running: boolean }) {
 	return (
 		<span

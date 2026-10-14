@@ -8,7 +8,6 @@ import { PreparedStateSchema } from "@/internal/migrations/v2/prepare/types/inde
 import { RETRYABLE_MIGRATION_ITEM_RUN_STATUSES } from "@/internal/migrations/v2/run/utils/retryItemStatuses.js";
 import { MAX_MIGRATION_WEBHOOK_CONCURRENCY } from "@/internal/migrations/v2/webhookDelivery/webhookDeliveryConstants.js";
 
-/** Operator's request; the run resolves it into MigrationWebhookControls. */
 export const WebhookRunParamsSchema = z.object({
 	sendWebhooks: z.boolean().optional(),
 	webhookConcurrency: z
@@ -68,8 +67,6 @@ export type RunMigrationChunkPayload = z.infer<
 	typeof RunMigrationChunkPayloadSchema
 >;
 
-/** Resolved once at run start, then carried per chunk so every task delivers
- * exactly what the run resolved. */
 export const WebhookControlsSchema = z.object({
 	sendWebhooks: z.boolean(),
 	webhookConcurrency: z.number().int().min(0),
@@ -85,7 +82,6 @@ export const RunBatchMigrationChunkPayloadSchema = z.object({
 	migration: PreparedMigrationSnapshotSchema,
 	plan: BatchMigrationExecutionPlanSchema,
 	webhooks: WebhookControlsSchema.optional(),
-	/** Claim-time controls (only / retryItemStatuses) — never lane selectors. */
 	controls: ControlsSchema,
 });
 
@@ -123,8 +119,6 @@ export const buildRunBatchMigrationChunkPayload = ({
 	controls,
 });
 
-/** Assembles one chunk payload; the iterator's remaining `limit` overrides
- * controls.limit so later chunks only process what's left of the budget. */
 export const buildRunMigrationChunkPayload = ({
 	ctx,
 	migrationId,

@@ -1,5 +1,3 @@
-/** Omitted license quantities rebalance paid seats against live assignments.
- * Red retained paid quantity; green computes assigned seats minus included seats. */
 import { test } from "bun:test";
 import type { ApiCustomerV5, AttachParamsV1Input } from "@autumn/shared";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";

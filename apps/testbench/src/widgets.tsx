@@ -1,7 +1,6 @@
 import { type ReactNode, useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 
-/** mm:ss-style live elapsed timer, re-rendering once a second from `since` (epoch ms). */
 export function Elapsed({ since }: { since: number }) {
 	const [, tick] = useState(0);
 	useEffect(() => {
@@ -17,7 +16,6 @@ export function Elapsed({ since }: { since: number }) {
 	);
 }
 
-/** A sweeping bar for work with no countable total (warm build / snapshot). */
 export function IndeterminateBar({ color = "bg-sandbox" }: { color?: string }) {
 	return (
 		<div className="relative h-2 w-full overflow-hidden rounded-full bg-muted">
@@ -26,7 +24,6 @@ export function IndeterminateBar({ color = "bg-sandbox" }: { color?: string }) {
 	);
 }
 
-/** Warm-up stages — labels MUST stay in step with WARM_STAGE_PATTERNS (store.ts). */
 const WARM_STAGES = [
 	"base image",
 	"checkout",
@@ -36,7 +33,6 @@ const WARM_STAGES = [
 	"snapshot",
 ];
 
-/** Horizontal stepper marking warm-up stages done / active / pending. */
 export function WarmStepper({ stage }: { stage: number }) {
 	return (
 		<div className="flex flex-wrap items-center gap-x-1.5 gap-y-1.5">
@@ -76,7 +72,6 @@ export function WarmStepper({ stage }: { stage: number }) {
 	);
 }
 
-/** Compact per-worker status grid (provisioning → booting → ready → dead/failed). */
 export function WorkerDots({
 	workers,
 }: {
@@ -101,11 +96,6 @@ export function WorkerDots({
 	);
 }
 
-/**
- * Subtle status/tally chip — the app's StatusPill convention: a 10%-tinted
- * background with same-hue text (no bright pastel fill, no hard border), so it
- * sits quietly on the dark surface instead of standing out.
- */
 export type PillTone = "green" | "red" | "blue" | "yellow" | "muted";
 
 const PILL_TONE: Record<PillTone, string> = {
@@ -174,7 +164,6 @@ const FILE_STATUS: Record<string, { tone: PillTone; label: string }> = {
 	skipped: { tone: "muted", label: "skipped" },
 };
 
-/** Triage order for file tables: active work first, then failures to look at. */
 const STATUS_RANK: Record<string, number> = {
 	running: 0,
 	retrying: 1,
@@ -184,7 +173,6 @@ const STATUS_RANK: Record<string, number> = {
 	passed: 5,
 };
 
-/** Stable sort: running → retrying → failed → queued → skipped → passed. */
 export const sortFilesForTriage = <T extends { status: string; name: string }>(
 	files: T[],
 ): T[] =>
@@ -227,11 +215,9 @@ export function WorkerStatusBadge({ status }: { status: string }) {
 	return <Pill tone={s.tone}>{s.label}</Pill>;
 }
 
-// Literal colors — theme chart vars proved unreliable in this standalone app.
 const LINE_COLOR = "#27a7ff";
 const GRID_COLOR = "#80808030";
 
-/** Live files-completed-per-second chart, binning completion timestamps into 2s buckets. */
 export function SpeedChart({ completions }: { completions: number[] }) {
 	if (completions.length < 2) {
 		return (
@@ -253,8 +239,6 @@ export function SpeedChart({ completions }: { completions: number[] }) {
 		data.push({ t: b * 2, rate: (buckets.get(b) ?? 0) / 2 });
 	}
 	const maxRate = Math.max(0.5, ...data.map((d) => d.rate));
-	// Fixed viewBox + preserveAspectRatio=none: renders at any CSS size with no
-	// runtime measurement (the failure mode of ResponsiveContainer-style charts).
 	const points = data
 		.map((d, index) => {
 			const x = data.length === 1 ? 0 : (index / (data.length - 1)) * 100;

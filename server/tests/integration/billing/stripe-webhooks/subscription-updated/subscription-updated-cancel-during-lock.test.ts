@@ -1,11 +1,3 @@
-/**
- * Portal / period-end cancel must register even while the Stripe subscription
- * lock from a just-finished Autumn attach or updateSubscription is still held.
- *
- * Red (current):  `if (lock) return` drops any cancel/delete webhook for 60s.
- * Green (after):  skip only Autumn-originated echoes; portal + clock cancels land.
- */
-
 import { test } from "bun:test";
 import type {
 	AttachParamsV1Input,

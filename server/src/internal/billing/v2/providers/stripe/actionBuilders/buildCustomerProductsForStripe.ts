@@ -5,9 +5,6 @@ import type {
 } from "@autumn/shared";
 import { CusProductStatus } from "@autumn/shared";
 
-/**
- * Builds the Stripe-facing product timeline when Autumn access starts before billing.
- */
 export const buildCustomerProductsForStripe = ({
 	billingContext,
 	autumnBillingPlan,

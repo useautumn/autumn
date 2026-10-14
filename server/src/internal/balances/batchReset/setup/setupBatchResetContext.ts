@@ -14,10 +14,6 @@ import type {
 const orgEnvKey = ({ orgId, env }: { orgId: string; env: string }) =>
 	`${orgId}:${env}`;
 
-/**
- * Builds one worker context per unique org+env in the batch (each context
- * loads the org + features once). Orgs deleted since queueing are skipped.
- */
 const fetchUniqueOrgContexts = async ({
 	db,
 	logger,
@@ -53,10 +49,6 @@ const fetchUniqueOrgContexts = async ({
 	return contexts;
 };
 
-/**
- * Setup for a batch reset: hydrates the requested customer entitlements, then
- * groups them per org+env with one worker context per group.
- */
 export const setupBatchResetContext = async ({
 	db,
 	logger,

@@ -26,7 +26,6 @@ export type DisplayedBillingControls = {
 	origins: Partial<Record<BillingControlKey, BillingControlOrigin[]>>;
 };
 
-/** Same inheritance identity the server uses in `mergeControlsByFeature`. */
 const identityOf = ({
 	key,
 	control,
@@ -44,7 +43,6 @@ const planOrigin = (customerProduct: FullCusProduct): BillingControlOrigin => ({
 	planName: customerProduct.product.name,
 });
 
-/** Mirrors `mergeControlsByFeature`: own entry wins, then customer, then the plan resolver. */
 const resolveByIdentity = ({
 	key,
 	ownItems,
@@ -104,7 +102,6 @@ const resolveByIdentity = ({
 	return entries;
 };
 
-/** Mirrors `mergePlanUsageAlerts`: own alerts for a feature shadow all of that feature's plan alerts. */
 const resolveUsageAlerts = ({
 	ownAlerts,
 	planProducts,
@@ -139,10 +136,6 @@ const resolveUsageAlerts = ({
 	return entries;
 };
 
-/**
- * Resolves what the server enforces for a customer or entity, tagging each
- * control with where it comes from. Entities inherit customer limits but not alerts.
- */
 export const resolveDisplayedBillingControls = ({
 	ownControls,
 	customerControls,
@@ -150,10 +143,8 @@ export const resolveDisplayedBillingControls = ({
 	normalizeSpendLimitForCompare,
 }: {
 	ownControls: CustomerBillingControls;
-	/** Set only for an entity: the customer's own controls it inherits. */
 	customerControls?: CustomerBillingControls;
 	customerProducts: FullCusProduct[];
-	/** Resolves percentage caps to units so plans compare like the server does. */
 	normalizeSpendLimitForCompare?: (control: DbSpendLimit) => DbSpendLimit;
 }): DisplayedBillingControls => {
 	const isEntity = !!customerControls;

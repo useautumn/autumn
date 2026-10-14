@@ -2,7 +2,6 @@ import type { Feature, FreeTrial, FullProduct, Product } from "@autumn/shared";
 import type { EntitlementPricesPlan } from "@/internal/products/actions/computeEntitlementPricesPlan";
 import { getEntsWithFeature } from "@/internal/products/entitlements/entitlementUtils.js";
 
-/** Join product stamp + projected prices/ents/trial into the next FullProduct. */
 export const assembleNextFullProduct = ({
 	product,
 	entitlementPricesPlan,

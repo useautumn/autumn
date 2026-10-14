@@ -1,9 +1,3 @@
-/**
- * Railway - Credit-based infrastructure pricing
- * Free (500 credits) / Hobby ($5/mo) / Pro ($20/mo)
- * 1 credit = $0.01
- */
-
 import type { Feature, Plan } from "../../../compose/models/index.js";
 
 export const features: Feature[] = [

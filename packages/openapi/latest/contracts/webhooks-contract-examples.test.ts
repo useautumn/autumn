@@ -1,8 +1,3 @@
-/**
- * Every webhooks.* example the docs and SDKs publish must satisfy the schema
- * it illustrates: an example missing a required field teaches the wrong shape.
- */
-
 import { expect, test } from "bun:test";
 import type { ZodType } from "zod/v4";
 import * as webhooks from "./webhooksContract";

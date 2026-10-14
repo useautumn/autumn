@@ -1,7 +1,3 @@
-/**
- * Before: customer rewards returned fixed discounts in Stripe minor units.
- * After: customer rewards return fixed discounts in Autumn major units.
- */
 import { afterAll, describe, expect, mock, test } from "bun:test";
 import {
 	AppEnv,

@@ -1,10 +1,3 @@
-/**
- * catalogV2.update — Team in plans[] (declared content) × child propagate.
- *
- * Team existing + child all_versions → latest is Team's content row; historical follows links-only.
- * Team all_versions + child all_versions → every version is Team's sibling write and follows.
- * Team new_version + child existing → one mint, that mint follows, old frozen.
- */
 import { expect, test } from "bun:test";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";

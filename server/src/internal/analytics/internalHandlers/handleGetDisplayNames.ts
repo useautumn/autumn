@@ -13,7 +13,6 @@ const GetDisplayNamesSchema = z.object({
 	include_plans: z.boolean().optional(),
 });
 
-/** Names for the customer, entity and plan ids a chart groups by. */
 export const handleGetDisplayNames = createRoute({
 	scopes: [Scopes.Analytics.Read],
 	body: GetDisplayNamesSchema,

@@ -8,12 +8,6 @@ import {
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
 
-/**
- * The period the first invoice of a backdated subscription covers: from the
- * backdated start to the upcoming cycle boundary (e.g. Apr 1 -> Jun 1 on May 29),
- * plus how many in-advance cycles that span charges. Like Stripe, a stub before
- * the anchor's first boundary counts as its prorated fraction of a cycle.
- */
 export const getBackdatedImmediatePeriod = ({
 	price,
 	billingContext,

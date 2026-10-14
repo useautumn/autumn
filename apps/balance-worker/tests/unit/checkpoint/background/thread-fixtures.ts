@@ -34,9 +34,7 @@ const seedState = createState({
 	],
 });
 
-/** A fresh thread loads most of @autumn/shared before its first line; a cold 2-vCPU CI runner has taken ~5s. */
 const THREAD_START_BUDGET_MS = 15_000;
-/** Per-test ceiling for files that spawn checkpoint threads: a start budget plus the export itself. */
 export const THREAD_TEST_TIMEOUT_MS = 30_000;
 
 export const waitForGate = async (

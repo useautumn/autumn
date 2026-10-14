@@ -10,12 +10,9 @@ import { AppEnv } from "../../models/genModels/genEnums.js";
 import { PlanLicenseParamsSchema } from "./crud/licenses/planLicenseParams.js";
 import { IncludedUsageParamsSchema } from "./items/crud/createPlanItemParamsV1.js";
 
-// Use the full ProductItemSchema but mark backend fields as internal
 export const CreateProductItemParamsSchema = ProductItemSchema.extend({
 	included_usage: IncludedUsageParamsSchema.or(z.literal(Infinite)).nullish(),
 });
-
-// Base product params
 
 const CREATE_PRODUCT_EXAMPLE = {
 	id: "Pro Product",
@@ -24,12 +21,10 @@ const CREATE_PRODUCT_EXAMPLE = {
 	is_default: false,
 	items: [
 		{
-			// Price
 			price: 20,
 			interval: "month",
 		},
 		{
-			// Priced Feature
 			feature_id: "messages",
 			included_usage: 1000,
 			price: 0.5,
@@ -61,7 +56,6 @@ const descriptions = {
 	metadata:
 		"Arbitrary key-value metadata for your own use (e.g. UI copy, feature highlights). Values can be any JSON-serializable value. Metadata is shared across all versions of a plan.",
 
-	// Update only
 	archived:
 		"Archive this product using this flag. Archived products are hidden on the dashboard.",
 };
@@ -101,7 +95,6 @@ export const CreateProductV2ParamsSchema = z
 			description: descriptions.items,
 		}),
 
-		// internal: dashboard-only license catalog surface, not part of the public product API yet.
 		licenses: z.array(PlanLicenseParamsSchema).optional().meta({
 			internal: true,
 			description:
@@ -173,9 +166,6 @@ export const UpdateProductV2ParamsSchema = z.object({
 	description: z.string().nullish().optional().meta({
 		description: descriptions.description,
 	}),
-	// version: z.number().optional().meta({
-	// 	internal: true,
-	// }),
 	group: z.string().nonempty().nullable().optional().meta({
 		description: descriptions.group,
 	}),
@@ -217,7 +207,6 @@ export type CreateProductV2ParamsInput = z.input<
 >;
 export type UpdateProductV2Params = z.infer<typeof UpdateProductV2ParamsSchema>;
 
-// Copy Product Schema
 export const CopyProductParamsSchema = z.object({
 	id: z.string().nonempty().regex(idRegex).meta({
 		description: "New product ID in the target environment",
@@ -232,7 +221,6 @@ export const CopyProductParamsSchema = z.object({
 
 export type CopyProductParams = z.infer<typeof CopyProductParamsSchema>;
 
-// Migrate Product Schema
 export const MigrateProductParamsSchema = z.object({
 	from_product_id: z.string().nonempty().meta({
 		description: "ID of the product to migrate from",

@@ -1,10 +1,3 @@
-/**
- * atmn crud/features — display is not the config's business.
- *
- * The server generates it from the name; a fixture cannot state it, a push
- * leaves it alone, and a pull never writes it.
- */
-
 import { expect, test } from "bun:test";
 import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 import { configBody } from "@tests/utils/atmnUtils/baseConfigs.js";
@@ -34,7 +27,6 @@ test.concurrent("display is neither pushed nor pulled", async () => {
 		const { freshFiles } = await expectRoundTrip({ scenario });
 		expect(freshFiles.get("features.ts")).not.toContain("display");
 
-		// A display set elsewhere survives a push and still stays out of a pull.
 		await scenario.client.update({
 			features: [
 				{

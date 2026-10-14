@@ -1,9 +1,3 @@
-/**
- * dfu.flash — RevenueCat one-off lifetime plan with a multi-line credits feature
- * (contract 4): cusProduct tagged revenuecat and each credits line (monthly +
- * one-off) receives its own filter-matched usage.
- */
-
 import { expect, test } from "bun:test";
 import { type ApiCustomerV5, ResetInterval } from "@autumn/shared";
 import {
@@ -58,7 +52,6 @@ test.concurrent(
 								{
 									plan_id: lifetimePlan.id,
 									status: "active",
-									// One-off with monthly-resetting credits needs an explicit anchor.
 									started_at: Date.now() - 1000 * 60 * 60 * 24 * 120,
 									balances: [
 										{
@@ -85,13 +78,11 @@ test.concurrent(
 
 		const flashRes = await callFlash(autumnV2_2 as FlashClient, payload);
 
-		// ── Contract 4a: cusProduct present and tagged revenuecat. ──
 		const flashed = flashRes.result?.flashed?.find(
 			(f) => f.plan_id === lifetimePlan.id,
 		);
 		expect(flashed?.processor).toBe("revenuecat");
 
-		// ── Contract 4b: each credits line gets its own usage (filter-matched). ──
 		const customer = await autumnV2_3.customers.get<ApiCustomerV5>(customerId);
 		await expectCustomerProducts({ customer, active: [lifetimePlan.id] });
 		expectBalanceCorrect({

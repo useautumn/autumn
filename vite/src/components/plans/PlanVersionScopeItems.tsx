@@ -7,10 +7,6 @@ import {
 	toggleWholePlan,
 } from "./planScopeSelection";
 
-/**
- * The "All versions" + per-version checkbox items for one plan. Renders items
- * only, so it drops into a DropdownMenuContent or a DropdownMenuSubContent.
- */
 export function PlanVersionScopeItems({
 	planId,
 	versions,

@@ -29,7 +29,6 @@ export type StripeWebhookClaimResult =
 	| "in_flight"
 	| "unavailable";
 
-/** Atomically claims an event for processing. "unavailable" = Redis down (fail open). */
 export const claimStripeWebhookEvent = async ({
 	eventKey,
 }: {
@@ -66,16 +65,6 @@ export const releaseStripeWebhookEvent = async ({
 	await tryCatch(getMiscRedis().del(eventKey));
 };
 
-/**
- * Two-state webhook idempotency: a processing lock is taken before handling,
- * but the event only counts as a duplicate once marked COMPLETED (via the
- * ctx.webhookIdempotency hooks). A failed run deletes the lock so Stripe's
- * retry of the same event id reprocesses instead of being dropped.
- *
- * If Redis is unavailable or errors, the request is allowed through (fail-open),
- * except for events that must never run twice concurrently (see
- * isStripeWebhookLockRequired), which are 500ed so Stripe retries later.
- */
 export const stripeIdempotencyMiddleware = async (
 	c: Context<StripeWebhookHonoEnv>,
 	next: Next,
@@ -100,7 +89,6 @@ export const stripeIdempotencyMiddleware = async (
 			);
 			return c.json({ received: false, lock_unavailable: true }, 500);
 		}
-		// Redis down or errored - fail open
 		ctx.logger.warn(
 			`[stripeIdempotencyMiddleware] Redis unavailable, allowing through: ${stripeEvent.id}`,
 		);
@@ -119,7 +107,6 @@ export const stripeIdempotencyMiddleware = async (
 	}
 
 	if (claim === "in_flight") {
-		// Sync event still in flight — 500 keeps Stripe retrying until completed.
 		ctx.logger.info(
 			`[stripeIdempotencyMiddleware] Sync webhook event in flight, asking Stripe to retry: ${stripeEvent.id}`,
 		);

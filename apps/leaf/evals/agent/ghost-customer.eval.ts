@@ -8,8 +8,6 @@ export default defineEval({
 			"update customer helloworld in stripe: set their name, email, and metadata to anakin skywalker from star wars, and change their id to anakin_skywalker",
 		);
 
-		// A ghost id means no write at all — the reply reports the miss instead
-		// of parking an approval.
 		t.calledTool("autumn__getCustomer");
 		t.notCalledTool("autumn__updateCustomer");
 		t.messageIncludes(

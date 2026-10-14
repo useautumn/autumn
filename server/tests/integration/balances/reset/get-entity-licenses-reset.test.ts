@@ -1,16 +1,3 @@
-/**
- * Lazy reset for license seat entitlements (entity subjects).
- *
- * Contract under test:
- *   - A seat cusEnt (free item under a license assignment) lazy-resets when
- *     the entity is fetched after next_reset_at passes; the new next_reset_at
- *     matches getNextResetAt exactly.
- *   - The planted next_reset_at sits on an edge date (day 30), so the reset
- *     walks getResetAtUpdate's Stripe-anchor branch using the PARENT's
- *     inherited subscription_ids (seats have none of their own).
- *   - A seat under an EXPIRED parent does NOT lazy-reset — the inherited
- *     status gates it out of the candidate set.
- */
 import { expect, test } from "bun:test";
 import {
 	type ApiEntityV2,
@@ -33,8 +20,6 @@ import { CusProductService } from "@/internal/customers/cusProducts/CusProductSe
 
 const INCLUDED_MESSAGES = 100;
 
-/** Past timestamp on the 30th (a month that has one), noon UTC — lands the
- * naive advance on an edge date so the Stripe-anchor branch runs. */
 const plantedEdgeResetAt = () => {
 	const date = new UTCDate();
 	for (let monthsBack = 2; monthsBack <= 5; monthsBack++) {
@@ -162,14 +147,11 @@ test.concurrent(
 			INCLUDED_MESSAGES - 30,
 		);
 
-		// Plant an overdue edge-date reset so getResetAtUpdate's Stripe branch
-		// runs against the parent's inherited subscription.
 		const planted = plantedEdgeResetAt();
 		await ctx.db
 			.update(customerEntitlements)
 			.set({ next_reset_at: planted })
 			.where(eq(customerEntitlements.id, seatCusEnt.id));
-		// Written behind the worker's back: it re-hydrates on the next command.
 		await evictBalanceWorkerCustomer({ ctx, customerId });
 
 		const after = await autumnV2_3.entities.get<ApiEntityV2>(
@@ -182,9 +164,6 @@ test.concurrent(
 		);
 		expect(after.balances[TestFeature.Messages].usage).toBe(0);
 
-		// next_reset_at advanced exactly per the naive calendar walk (the
-		// Stripe-anchor clamp only ever raises it, and the parent's anchor
-		// cannot exceed one interval from the planted value).
 		const [seatCusEntAfter] = await ctx.db
 			.select()
 			.from(customerEntitlements)
@@ -238,8 +217,6 @@ test.concurrent(
 			updates: { status: CusProductStatus.Expired },
 		});
 
-		// Entity fetch must NOT lazy-reset the seat: the inherited (expired)
-		// parent status gates it out of the candidate set.
 		await autumnV2_3.entities.get<ApiEntityV2>(customerId, entityId, {
 			skip_cache: "true",
 		});
@@ -249,7 +226,6 @@ test.concurrent(
 			.from(customerEntitlements)
 			.where(eq(customerEntitlements.id, seatCusEnt.id));
 		expect(seatCusEntAfter.next_reset_at).toBe(planted);
-		// Post-track balance survives untouched — no reset ran.
 		expect(seatCusEntAfter.balance).toBe(INCLUDED_MESSAGES - 30);
 	},
 );

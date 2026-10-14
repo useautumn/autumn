@@ -26,7 +26,6 @@ export const buildAutumnSubscriptionMetadata = ({
 	return meta;
 };
 
-/** Ownership, not recency: a schedule Autumn wrote stays Autumn's for its whole life. */
 export const isAutumnManagedStripeSchedule = ({
 	schedule,
 }: {
@@ -34,13 +33,6 @@ export const isAutumnManagedStripeSchedule = ({
 }): boolean =>
 	Boolean(schedule?.metadata?.[AUTUMN_STRIPE_METADATA_KEYS.managedAt]);
 
-/**
- * @param requireRecent — when true (default), `autumn_managed_at` only counts
- *   if it falls within `windowMs`. Used by sub.updated where a stale stamp
- *   shouldn't suppress a genuinely new change. Pass false from sub.created:
- *   once a sub has ever been Autumn-managed, auto-sync should never run on
- *   its creation event.
- */
 export const isAutumnManagedSubscriptionMetadata = ({
 	metadata,
 	windowMs = RECENT_AUTUMN_ACTION_WINDOW_MS,

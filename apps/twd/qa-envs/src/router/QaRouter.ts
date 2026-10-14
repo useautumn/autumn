@@ -1,6 +1,5 @@
 import { DurableObject } from "cloudflare:workers";
 
-/** Stripe connected-account id → QA envs whose database uses it. One instance, named "router". */
 export class QaRouter extends DurableObject {
 	constructor(ctx: DurableObjectState, env: unknown) {
 		super(ctx, env as never);

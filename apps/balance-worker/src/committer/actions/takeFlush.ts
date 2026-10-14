@@ -1,6 +1,5 @@
 import type { CommitterState, Flush } from "../types/committer.js";
 
-/** Drains queued calls, oldest first, until the row cap; a single oversized call still goes alone. */
 export const takeFlush = ({
 	state,
 	maxRows,

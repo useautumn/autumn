@@ -10,9 +10,6 @@ import { useCustomerLicenseBalances } from "../customer-licenses/useCustomerLice
 
 const ASSIGNMENTS_PAGE_SIZE = 10;
 
-/** The entities holding a seat on a license, with search, paging, and
- * unassign. `excludeEntityId` drops the viewing entity (and the section
- * entirely when no one else holds a seat). */
 export function LicenseAssignedEntities({
 	licensePlanId,
 	excludeEntityId,
@@ -56,7 +53,6 @@ export function LicenseAssignedEntities({
 	const pageCount = Math.ceil(
 		filteredAssignments.length / ASSIGNMENTS_PAGE_SIZE,
 	);
-	// Clamp instead of resetting so unassigning off the last page stays sane.
 	const safePage = Math.min(page, Math.max(pageCount - 1, 0));
 	const pageStart = safePage * ASSIGNMENTS_PAGE_SIZE;
 	const pagedAssignments = filteredAssignments.slice(

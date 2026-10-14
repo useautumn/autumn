@@ -4,7 +4,6 @@ import { handleWebhookErrorSkip } from "@/utils/routerUtils/webhookErrorSkip.js"
 
 export const STRIPE_WEBHOOK_REPLAY_MAX_ATTEMPTS = 30;
 
-/** True when the HTTP webhook path would 500 Stripe (so it retries). */
 export const stripeWebhookErrorWouldRedeliver = ({
 	error,
 }: {

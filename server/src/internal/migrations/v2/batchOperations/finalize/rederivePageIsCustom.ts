@@ -23,7 +23,6 @@ const planInternalProductIds = ({
 	),
 ];
 
-/** A retry reports a customer an interrupted attempt changed as converged. */
 const customersToRederive = ({
 	pageResult,
 }: {
@@ -37,7 +36,6 @@ const customersToRederive = ({
 	),
 ];
 
-/** Batch ops bypass the billing-plan hook; this runs before the page's cache drop so one drop covers both. */
 export const rederivePageIsCustom = async ({
 	ctx,
 	migrationRunId,
@@ -55,7 +53,6 @@ export const rederivePageIsCustom = async ({
 	if (customers.length === 0) return [];
 
 	try {
-		// Awaited in full: a write landing after the page's cache drop would leave a stale cache.
 		const { changedCustomers } = await rederiveIsCustomForCustomers({
 			ctx,
 			internalCustomerIds: customers.map(({ internalId }) => internalId),
@@ -71,7 +68,6 @@ export const rederivePageIsCustom = async ({
 			error,
 			data: { migrationRunId, customers: customers.length },
 		});
-		// Some flags may have been written before the failure, so every cache is treated as stale.
 		return customers;
 	}
 };

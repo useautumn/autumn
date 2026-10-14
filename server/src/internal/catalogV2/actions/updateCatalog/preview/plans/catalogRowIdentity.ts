@@ -13,7 +13,6 @@ type PreviousActiveProduct = {
 	version_slug?: string | null;
 };
 
-/** Object presence means this row is taking the active pointer. */
 export const promotionDetailsForPlan = ({
 	previousActive,
 }: {
@@ -27,7 +26,6 @@ export const promotionDetailsForPlan = ({
 	};
 };
 
-/** Identity trio for a preview row — `new_*` only when that field actually changes. */
 export const catalogRowIdentity = ({
 	planId,
 	version,
@@ -54,7 +52,6 @@ export const catalogRowIdentity = ({
 
 	return {
 		plan_id: planId,
-		// A minted row's id is per computation; only an existing row's is stable.
 		internal_id: current?.internal_id ?? null,
 		version,
 		version_slug: versionSlug,

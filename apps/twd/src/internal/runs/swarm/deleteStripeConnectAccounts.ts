@@ -17,7 +17,6 @@ type AccountsApi = {
 	};
 };
 
-/** Every shard sub-account this run created, reported or not (a create can outlive the child's teardown). */
 const runShardAccountIds = async ({
 	stripe,
 	runId,
@@ -50,7 +49,6 @@ const runShardAccountIds = async ({
 	}
 };
 
-/** Deletes a run's dedicated sub-accounts; returns the ids still alive after retries. */
 export const deleteStripeConnectAccounts = async ({
 	runId,
 	accountIds,

@@ -5,7 +5,6 @@ import {
 	pricesAreSame,
 } from "@autumn/shared";
 
-/** Feature id of a usage price on the overlay that is not an unchanged stock usage price. */
 export const findCustomizedPaidFeatureIdOnLicense = ({
 	stockProduct,
 	effectiveProduct,

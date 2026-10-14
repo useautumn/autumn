@@ -9,7 +9,6 @@ import chalk from "chalk";
 import { eq } from "drizzle-orm";
 import { TEST_ORG_CONFIG } from "./createTestOrg.js";
 
-/** Ensures a usable shared test-org key without clearing products or features. */
 export async function ensureTestOrgSecretKey({
 	db,
 }: {

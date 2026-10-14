@@ -13,9 +13,6 @@ const SaveViewSchema = z.object({
 	filters: z.any(),
 });
 
-/**
- * Save a new view for the organization
- */
 export const handleSaveView = createRoute({
 	scopes: [Scopes.Public],
 	body: SaveViewSchema,

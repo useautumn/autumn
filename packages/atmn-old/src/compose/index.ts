@@ -78,8 +78,6 @@ const feature = (params: Feature): Feature => {
 
 export type Infinity = "infinity";
 
-// CLI types
-
 export type AutumnConfig = {
 	plans: Plan[];
 	features: Feature[];

@@ -9,10 +9,6 @@ import {
 import { getAutoTopupRateLimitConfigs } from "./autoTopupRateLimitConfigs.js";
 import { paymentMethodToFingerprint } from "./paymentMethodFingerprint.js";
 
-/**
- * Consecutive failed top-ups before auto top-ups are suspended for the
- * customer + feature. Suspension is durable — see preflightAutoTopupLimits.
- */
 export const MAX_CONSECUTIVE_AUTO_TOPUP_FAILURES = 3;
 
 export const recordAutoTopupAttempt = async ({
@@ -24,7 +20,6 @@ export const recordAutoTopupAttempt = async ({
 	ctx: AutumnContext;
 	autoTopupContext: AutoTopupContext;
 	billingResult?: BillingResult;
-	/** Records a failure when execution threw before producing a result. */
 	forceFailure?: boolean;
 }) => {
 	const now = Date.now();

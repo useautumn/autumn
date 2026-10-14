@@ -11,7 +11,6 @@ import type {
 
 const HEADERS = ["Limit", "Per customer", "Per org", "Overrides", ""];
 
-/** Every limit in the server's policy table, request-specific rows nested under the row they narrow. */
 export const RateLimitPolicyTable = ({
 	view,
 	onOverride,

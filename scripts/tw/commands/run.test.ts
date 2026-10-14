@@ -8,7 +8,6 @@ import {
 } from "bun:test";
 import type { WorkerHandle } from "../types.ts";
 
-// run.ts sizes its Stripe budget at import time and throws without any key.
 const originalStripeKey = process.env.STRIPE_SANDBOX_SECRET_KEY;
 process.env.STRIPE_SANDBOX_SECRET_KEY ||= "sk_test_tw_unit_placeholder";
 const { buildWorkerEnv, cullExcessIdle } = await import("./run.ts");

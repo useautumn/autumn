@@ -1,14 +1,3 @@
-/**
- * TDD coverage for update_plan preview state-preservation scenarios.
- *
- * Contract under test:
- *   New behaviors:
- *     - Same-feature delete/add previews preserve carried usage in the post
- *       balance snapshot.
- *     - previous_attributes contains old grant/remaining values and omits
- *       usage when usage itself did not change.
- */
-
 import { test } from "bun:test";
 import { ResetInterval } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features";

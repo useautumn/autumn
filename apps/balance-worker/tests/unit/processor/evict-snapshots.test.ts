@@ -53,7 +53,6 @@ const evictOf = ({
 	...(refreshSnapshots !== undefined && { refreshSnapshots }),
 });
 
-/** The production processor over the committer's store with evict deletes; DELETEs wait on `deleteGate`, record applies on `applyGates`. */
 const createProcessor = async ({
 	logsEvicts,
 	mode = "write",
@@ -63,14 +62,11 @@ const createProcessor = async ({
 	logsEvicts: boolean;
 	mode?: SubjectSnapshotMode;
 	db?: WorkerDb;
-	/** The snapshot rows Postgres holds for a customer, by entity id (null for its own): what its DELETE returns. */
 	rowsOf?: (customerId: string) => (string | null)[];
 }) => {
 	const deleted: string[][] = [];
-	/** Subject keys of the rows each refresh statement wrote. */
 	const refreshed: string[][] = [];
 	const deleteGate = { held: Promise.resolve() as Promise<void> };
-	/** Each record apply waits on the next gate, if any. */
 	const applyGates: Promise<void>[] = [];
 	const subjectSnapshotsConfig = createSubjectSnapshotsStore({ mode });
 	const committer: Committer = {
@@ -194,7 +190,6 @@ describe("evict snapshot deletes", () => {
 					},
 				}),
 			});
-			// The DELETE lane is still held, so this await only returns if the check never waits on it.
 			expect((await checked).result.allowed).toBe(true);
 		} finally {
 			held.resolve();
@@ -266,7 +261,6 @@ describe("evict snapshot deletes", () => {
 			first.resolve();
 			for (let attempt = 0; !answered && attempt < 50; attempt++)
 				await Bun.sleep(2);
-			// t2 is appended but not stored: only the store of t1, which preceded the evict, is waited on.
 			expect(answered).toBe(true);
 			await evicted;
 		} finally {
@@ -284,7 +278,6 @@ describe("evict snapshot deletes", () => {
 	});
 
 	test("queued evicts never wait on the lane, and the ones behind an in-flight DELETE share the next", async () => {
-		// The stream is serial and answers nobody, so consumeEvict asks for no wait.
 		const { processor, deleted, deleteGate } = await createProcessor({
 			logsEvicts: true,
 		});
@@ -309,7 +302,6 @@ describe("evict snapshot deletes", () => {
 		held.resolve();
 		await Promise.all(deferredLogs);
 		await Bun.sleep(5);
-		// The first DELETE was already in flight; the two queued behind it went together.
 		expect(deleted.map((batch) => batch.map(customerIdOf))).toEqual([
 			["cus_1"],
 			["cus_2", "cus_3"],
@@ -369,7 +361,6 @@ describe("evict snapshot refreshes", () => {
 			: null,
 	});
 
-	/** A Postgres whose full reads answer the subject's own empty rows, counting each read. */
 	const createReadingDb = () => {
 		const fullReads: string[] = [];
 		const db: WorkerDb = {

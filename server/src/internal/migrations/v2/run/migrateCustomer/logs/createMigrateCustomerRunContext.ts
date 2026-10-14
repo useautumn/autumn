@@ -27,8 +27,6 @@ export const createMigrateCustomerRunContext = ({
 		timestamp: Date.now(),
 		extraLogs: {},
 		state: {},
-		// Migration setup should read source-of-truth customer state from DB.
-		// Execute still invalidates cache after writes.
 		skipCache: true,
 	};
 

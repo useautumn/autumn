@@ -1,10 +1,3 @@
-/**
- * The follow-up turn after a decided card must run for the internal admin
- * install acting as another org: the approval carries the org acted on, the
- * installation row carries the installer's org, and matching the two found
- * nothing, so the model was never told the outcome.
- */
-
 import { beforeEach, describe, expect, mock, test } from "bun:test";
 import type { ChatApproval } from "@autumn/shared";
 import { mockModuleWithRestore } from "../utils/mockModuleWithRestore.js";
@@ -95,7 +88,6 @@ const { closeRun, registerRun, runKeyForThread } = await import(
 	"../../../src/internal/runs/runRegistry.js"
 );
 
-// The org acted on (resend) is not the installation's org (autumn).
 const approval = {
 	channel_id: "slack:C1",
 	id: "chat_app_1",
@@ -144,9 +136,6 @@ describe("continueAfterApproval", () => {
 	});
 
 	test("merges the notice into a run already live on the thread", async () => {
-		// Tony's "it's good!" was mid-turn when Marco clicked Approve (prod
-		// 2026-09-16): a second reader on the same session left both turns
-		// empty. The notice now rides the live run, and nothing else opens.
 		const posted: string[] = [];
 		const run = registerRun({
 			key: runKeyForThread({

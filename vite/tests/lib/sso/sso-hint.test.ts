@@ -35,7 +35,6 @@ test("normalizes a missing or empty logo to null", () => {
 	).toEqual({ providerId: "sso_acme", organizationName: "Acme", logo: null });
 });
 
-// A half-written hint must not render a "Continue with  SSO" button.
 test("rejects absent, malformed, and incomplete hints", () => {
 	expect(parseSsoHint(null)).toBeNull();
 	expect(parseSsoHint("")).toBeNull();

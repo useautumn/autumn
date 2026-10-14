@@ -1,10 +1,3 @@
-/**
- * set_plans enable_plan_immediately with a future phases[0].starts_at: the plan is Active now with
- * its balance granted, nothing is invoiced until the start, and the subscription Stripe creates at
- * the start invoices it once and links the row without re-granting or resetting the balance (it resets
- * a cycle after the start).
- */
-
 import { expect, test } from "bun:test";
 import {
 	CusProductStatus,

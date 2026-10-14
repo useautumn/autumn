@@ -25,8 +25,6 @@ const knownColumnsOf = <Value>({
 
 const isEmpty = (fields: object): boolean => Object.keys(fields).length === 0;
 
-/** A newer build's column is dropped before the SQL is built: this build's table does not have it, so the row lands
- *  without it. Null for an update left with nothing to set: that row has nothing this build can land. */
 export const keepKnownColumns = ({
 	change,
 }: {

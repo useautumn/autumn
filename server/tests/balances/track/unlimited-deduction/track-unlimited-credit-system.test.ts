@@ -1,21 +1,3 @@
-/**
- * Unlimited CREDIT-SYSTEM cusEnts become an infinite sink that really deducts.
- *
- * Contract (same feature as track-unlimited-standalone, credit-system paths):
- *   - Resident feature: the customer's ONLY entitlement is an unlimited
- *     credits cusEnt. Tracking a metered feature resident in that credit
- *     system deducts `value × credit_cost` from the credits cusEnt's raw
- *     `customer_entitlements.balance` (test fixture: action1 costs 0.2
- *     credits per unit, so track 5 → raw balance -1).
- *   - Top-level: tracking the credit feature itself deducts 1:1
- *     (track 5 credits → raw balance -5).
- *   - The track request always succeeds; API responses stay masked.
- *
- * Red (current): the `unlimitedFeatureIds` skip in executeRedisDeductionV2.ts
- *   means no deduction happens — raw balance stays 0, so the assertions fail
- *   with `Expected: -1 (resp. -5), Received: 0`.
- */
-
 import { expect, test } from "bun:test";
 import type { TrackResponseV3 } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
@@ -42,7 +24,6 @@ const getInternalCustomerId = async ({
 	return customer.autumn_id as string;
 };
 
-// ── Resident feature: track 5 action1 → credits raw balance -(5 × credit_cost) ──
 test.concurrent(
 	`${chalk.yellowBright("track-unlimited-credits: resident feature deducts credit_cost from unlimited credits cusEnt")}`,
 	async () => {
@@ -85,7 +66,6 @@ test.concurrent(
 		expect(trackRes.customer_id).toBe(customerId);
 		expect(trackRes.value).toBe(trackValue);
 
-		// Raw DB balance on the CREDITS cusEnt: 0 - (5 × 0.2) = -1
 		const row = await pollRawCusEntBalance({
 			internalCustomerId,
 			featureId: TestFeature.Credits,
@@ -97,7 +77,6 @@ test.concurrent(
 	{ timeout: 90_000 },
 );
 
-// ── Top-level: track 5 credits → credits raw balance -5 (cost 1:1) ──
 test.concurrent(
 	`${chalk.yellowBright("track-unlimited-credits: tracking the credit feature itself deducts 1:1 from unlimited credits cusEnt")}`,
 	async () => {
@@ -131,7 +110,6 @@ test.concurrent(
 		expect(trackRes.customer_id).toBe(customerId);
 		expect(trackRes.value).toBe(trackValue);
 
-		// Raw DB balance on the credits cusEnt: 0 - 5 = -5
 		const row = await pollRawCusEntBalance({
 			internalCustomerId,
 			featureId: TestFeature.Credits,

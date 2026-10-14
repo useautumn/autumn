@@ -1,8 +1,3 @@
-/**
- * Commands from a newer server: a field this build does not know, or an optional one left out, is still decided,
- * over HTTP and off the command topic. A strict parse used to answer the first with a 400 or skip it as unreadable.
- */
-
 import { describe, expect, test } from "bun:test";
 import type { CommandOrg, EvictCommand } from "@autumn/balance-engine";
 import type { CommandRecord } from "@autumn/kafka";
@@ -19,7 +14,6 @@ import {
 	updateBalanceOf,
 } from "../../fixtures/queuedCommands.js";
 
-/** `identity` is left alone: it is the record's own key, which the worker writes and keeps strict. */
 const fromNewerServer = <Command extends CommandRecord>(command: Command) => {
 	const org = "org" in command ? (command.org as CommandOrg) : undefined;
 	return {
@@ -31,7 +25,6 @@ const fromNewerServer = <Command extends CommandRecord>(command: Command) => {
 	} as Command;
 };
 
-/** No `refreshSnapshots`: the optional flag is absent, as an older server sends it. */
 const evictOf = ({ customerId }: { customerId: string }): EvictCommand => ({
 	schemaVersion: 1,
 	type: "evict",
@@ -40,7 +33,6 @@ const evictOf = ({ customerId }: { customerId: string }): EvictCommand => ({
 	occurredAt: testOccurredAt,
 });
 
-/** Each command twice: as an older server sends it, then with a newer server's fields. */
 const asBothServersSend = (commands: CommandRecord[]) =>
 	commands.flatMap((command) => [
 		command,

@@ -2,7 +2,6 @@ import { type AppEnv, type Reward, rewards } from "@autumn/shared";
 import { and, eq, inArray, or, sql } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 
-/** Fetch rewards matching an array of IDs or promo code strings */
 export const getRewardsByIdOrCode = async ({
 	db,
 	codes,

@@ -1,18 +1,3 @@
-/**
- * Canonical fixture + contract for expired-balance visibility (dashboard-only):
- *   - Expired PLAN balances: an expired (canceled) product's cusEnts still
- *     hydrate under ALL_STATUSES and are classified display-expired via the
- *     product status (their own expires_at is null).
- *   - Expired LOOSE balances: hydrate only with includeExpiredLooseEntitlements
- *     and are classified display-expired via their own expires_at.
- *   - Public selection (fullCustomerToCustomerEntitlements + default statuses)
- *     never sees either.
- *
- * Leaves customer "expired-balances-visibility" behind for manual dashboard QA:
- * one live plan (Messages 80), one expired plan (Messages 50), one live loose
- * (Messages 100), one expired loose (Messages 200).
- */
-
 import { expect, test } from "bun:test";
 import {
 	ALL_STATUSES,
@@ -52,8 +37,6 @@ test.concurrent(
 			items: [items.monthlyMessages({ includedUsage: 80 })],
 		});
 
-		// Attaching liveProd second replaces churnedProd (same main group), so
-		// churnedProd's cusEnts become expired-plan balances.
 		const { ctx } = await initScenario({
 			customerId,
 			setup: [
@@ -85,7 +68,6 @@ test.concurrent(
 		});
 		await sleepUntil(expiresAt + 1000);
 
-		// Internal hydration (dashboard): everything present.
 		const internalFullCustomer = await CusService.getFull({
 			ctx,
 			idOrInternalId: customerId,
@@ -101,7 +83,6 @@ test.concurrent(
 		expect(expiredProduct?.customer_entitlements).toHaveLength(1);
 		const expiredPlanEnt = expiredProduct?.customer_entitlements[0];
 		expect(expiredPlanEnt?.balance).toBe(50);
-		// Plan cusEnts carry no expires_at — display-expiry comes from the product.
 		expect(
 			isCusEntDisplayExpired({
 				cusEnt: { ...expiredPlanEnt!, customer_product: expiredProduct! },
@@ -129,8 +110,6 @@ test.concurrent(
 			}),
 		).toBe(false);
 
-		// Public-shaped read: default statuses + no flag — expired plan and
-		// expired loose are both invisible.
 		const publicFullCustomer = await CusService.getFull({
 			ctx,
 			idOrInternalId: customerId,
@@ -145,7 +124,6 @@ test.concurrent(
 			1,
 		);
 
-		// Selection layer over the internal hydration still excludes both.
 		const selected = fullCustomerToCustomerEntitlements({
 			fullCustomer: internalFullCustomer,
 			featureIds: [TestFeature.Messages],

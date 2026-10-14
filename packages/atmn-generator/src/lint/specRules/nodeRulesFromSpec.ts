@@ -13,13 +13,6 @@ import type {
 	ShapeRules,
 } from "../runtime/lintDocument";
 
-/**
- * Every constraint zod emitted into the spec, keyed by fixture path with array
- * indices elided. `allOf` branches are AND, so they merge; `anyOf`/`oneOf`
- * branches are alternatives, so they become variants chosen by a discriminating
- * const, or intersect when there is none — never a false positive either way.
- */
-
 export type SpecNodeRules = Pick<
 	NodeRules,
 	"required" | "fields" | "keys" | "values" | "variants" | "hidden"
@@ -39,13 +32,11 @@ const CONSTRAINT_KEYS = [
 
 type Shape = {
 	required: Set<string>;
-	/** Overlay-hidden fields: a config stating one is refused. */
 	hidden: Set<string>;
 	fields: Record<string, FieldConstraints>;
 	keys?: FieldConstraints;
 	values?: FieldConstraints;
 	variants?: NodeRules["variants"];
-	/** Segments to descend into: a property name, or `*` for a record's values. */
 	children: [string, JsonSchema][];
 };
 
@@ -85,11 +76,6 @@ const ownConstraints = (schema: JsonSchema): FieldConstraints | undefined => {
 const sameValue = (a: unknown, b: unknown): boolean =>
 	JSON.stringify(a) === JSON.stringify(b);
 
-/**
- * Across alternatives, a bound is kept only when every branch of that TYPE
- * agrees on it — the runtime guards on type, so a number's minimum cannot
- * misfire on the string branch. `enum` is kept only when every branch has one.
- */
 const mergeAlternativeConstraints = (
 	branches: { type: string; constraints: FieldConstraints | undefined }[],
 ): FieldConstraints | undefined => {
@@ -167,7 +153,6 @@ const hasContent = (shape: Shape): boolean =>
 	shape.values !== undefined ||
 	shape.variants !== undefined;
 
-/** Fields present in every branch, with the constraints they all agree on. */
 const intersectShapes = (shapes: Shape[]): Shape => {
 	const [first, ...rest] = shapes;
 	if (!first) return emptyShape();
@@ -186,7 +171,6 @@ const intersectShapes = (shapes: Shape[]): Shape => {
 	return out;
 };
 
-/** A field that exactly one value pins per branch — `tierBehavior: "graduated"`. */
 const discriminatorOf = (shapes: Shape[]): string | undefined => {
 	const candidates = new Set(
 		shapes.flatMap((shape) => Object.keys(shape.fields)),
@@ -225,7 +209,6 @@ const variantsOf = (
 	return { variants: { on, byValue, ...(fallback ? { fallback } : {}) } };
 };
 
-/** Overlay `hidden` is keyed by collection then wire path below it. */
 const hiddenAt = ({
 	overlay,
 	wirePath,
@@ -256,7 +239,6 @@ const shapeOf = ({
 	schema: JsonSchema | undefined;
 	root: JsonSchema;
 	overlay: Overlay;
-	/** Wire path from the collection root; hidden entries are keyed by it. */
 	wirePath: string;
 }): Shape => {
 	const resolved = resolveRef({ schema, root });
@@ -308,7 +290,6 @@ const shapeOf = ({
 	);
 	for (const alternative of alternatives) {
 		shape.children.push(...alternative.children);
-		// Hidden is a refusal, so any branch naming it keeps it out of the config.
 		for (const field of alternative.hidden) shape.hidden.add(field);
 	}
 
@@ -337,7 +318,6 @@ const specRulesOf = (shape: Shape): SpecNodeRules | undefined => {
 	return nonEmpty(out) as SpecNodeRules | undefined;
 };
 
-/** Two branches naming the same path with different rules keep only what agrees. */
 const intersectSpecRules = (
 	a: SpecNodeRules,
 	b: SpecNodeRules,

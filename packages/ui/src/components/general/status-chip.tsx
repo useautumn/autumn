@@ -1,7 +1,6 @@
 import { cn } from "@autumn/ui/lib/utils";
 import { type ComponentProps, useId } from "react";
 
-/** Light glyphs on the fill in light mode; dark glyphs in dark mode and on light fills. */
 export const STATUS_TONES = {
 	green: "text-[#30A46C] [--glyph:#fff] dark:[--glyph:#0E1C15]",
 	blue: "text-[#3E8BD9] [--glyph:#fff] dark:[--glyph:#0C1726]",
@@ -17,7 +16,6 @@ export const STATUS_TONES = {
 
 const CIRCLE = "M8 4.8a3.2 3.2 0 1 1 0 6.4a3.2 3.2 0 1 1 0-6.4";
 
-/** 16×16 viewBox stroke paths drawn inside the rounded status square. */
 const STATUS_GLYPHS = {
 	check: "M4.8 8.2l2.1 2.1 4.3-4.4",
 	clock: "M8 4.8V8l2.1 1.4",
@@ -39,7 +37,6 @@ const STATUS_GLYPHS = {
 
 const ICON_GLYPH_SCALE = 11 / 256;
 
-/** Phosphor fill icons (256×256) knocked out of a solid tile; stroke glyphs blur at this size. */
 const ICON_GLYPHS = {
 	toggle:
 		"M176,56H80a72,72,0,0,0,0,144h96a72,72,0,0,0,0-144Zm0,112a40,40,0,1,1,40-40A40,40,0,0,1,176,168Z",
@@ -84,7 +81,6 @@ const GLYPH_DASHES: Partial<Record<keyof typeof STATUS_GLYPHS, string>> = {
 export type StatusTone = keyof typeof STATUS_TONES;
 export type StatusGlyph = keyof typeof STATUS_GLYPHS | keyof typeof ICON_GLYPHS;
 
-/** The glyph is masked out of the tile, so the chip background shows through it. */
 function IconGlyphTile({
 	tone,
 	glyph,
@@ -165,7 +161,6 @@ export function StatusChipIcon({
 const RING_RADIUS = 6;
 const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
 
-/** Progress ring sized to replace the status square; `fraction` runs 0 to 1. */
 export function StatusRing({
 	tone,
 	fraction,
@@ -206,7 +201,6 @@ export function StatusRing({
 	);
 }
 
-/** Neutral chip: only the status square carries colour, never the label. */
 export function StatusChip({
 	tone,
 	glyph,

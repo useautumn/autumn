@@ -1,4 +1,3 @@
-/** Separate char budgets per stream, so 2,600 workers' boot output can't crowd out run-level or file logs. */
 export const createLogBudget = ({
 	perWorker,
 	perFile,

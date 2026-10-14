@@ -15,7 +15,6 @@ import {
 	type ListedCustomerEntitlementRow,
 } from "./customerEntitlementToListRow.js";
 
-/** A page of balance rows for balances.list, plan-backed and loose. */
 export const listBalances = async ({
 	ctx,
 	params,

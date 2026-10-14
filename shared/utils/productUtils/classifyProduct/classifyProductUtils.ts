@@ -6,8 +6,6 @@ import { PriceType } from "../../../models/productModels/priceModels/priceEnums.
 import type { Price } from "../../../models/productModels/priceModels/priceModels.js";
 import { productToEffectivePrices } from "../convertProduct/productToEffectivePrices";
 
-// TODO: Write unit tests for these functions (?)
-
 type ProductPriceSource = { prices: Price[] } | { product: FullProduct };
 
 const sourceToPrices = (source: ProductPriceSource) =>

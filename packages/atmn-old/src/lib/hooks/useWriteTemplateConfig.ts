@@ -15,10 +15,6 @@ interface WriteTemplateConfigResult {
 	template: string;
 }
 
-/**
- * Hook to write a template config file to autumn.config.ts
- * Uses useMutation for the one-time write operation
- */
 export function useWriteTemplateConfig() {
 	return useMutation({
 		mutationFn: async (
@@ -31,11 +27,8 @@ export function useWriteTemplateConfig() {
 				throw new Error(`Unknown template: ${template}`);
 			}
 
-			// Generate the config file content
 			const configContent = buildConfigFile(config.features, config.plans);
 
-			// Write to config file
-			// If cwd is provided, use it directly; otherwise respect --config flag via resolveConfigPath
 			const configPath = cwd
 				? path.resolve(cwd, "autumn.config.ts")
 				: resolveConfigPath();

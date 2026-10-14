@@ -9,7 +9,6 @@ const PrepareMigrationBody = z.object({
 	dry_run: z.boolean(),
 });
 
-/** POST /migrations.prepare — run prep modules for a migration. */
 export const handlePrepareMigration = createRoute({
 	scopes: [Scopes.Migrations.Write],
 	body: PrepareMigrationBody,

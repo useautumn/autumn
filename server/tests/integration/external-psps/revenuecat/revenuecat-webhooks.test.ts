@@ -1,22 +1,3 @@
-/**
- * RevenueCat Webhook Integration Tests
- *
- * Tests that RevenueCat webhook events trigger the correct Autumn
- * customer.products.updated webhooks via Svix Play.
- *
- * Each test sends a RevenueCat webhook event and verifies that the
- * corresponding outgoing webhook contains the correct scenario:
- * - Initial purchase → new
- * - Renewal → renew
- * - Upgrade (monthly → yearly) → upgrade
- * - Downgrade (yearly → monthly) → downgrade
- * - Cancellation → cancel
- * - Uncancellation → renew
- * - Billing issue → past_due
- * - Expiration → expire
- * - Non-renewing purchase → new
- */
-
 import { afterAll, beforeAll, expect, test } from "bun:test";
 import type { ApiCustomerV3, ApiProduct } from "@autumn/shared";
 import { AppEnv } from "@autumn/shared";
@@ -37,8 +18,6 @@ import { RCMappingService } from "@/external/revenueCat/misc/RCMappingService";
 import { OrgService } from "@/internal/orgs/OrgService";
 import { encryptData } from "@/utils/encryptUtils";
 import { RevenueCatWebhookClient } from "./utils/revenue-cat-webhook-client";
-
-// ─── Types ───────────────────────────────────────────────────────────────────
 
 type RevenueCatScenario =
 	| "new"
@@ -80,8 +59,6 @@ const rcProYearly = ({ id = "pro-yearly" }: { id?: string } = {}) =>
 		],
 	});
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
-
 const setupRevenueCatOrg = async () => {
 	if (
 		ctx.org.processor_configs?.revenuecat?.sandbox_webhook_secret !==
@@ -107,8 +84,6 @@ const setupRevenueCatOrg = async () => {
 	}
 };
 
-// ─── Svix Play Setup ─────────────────────────────────────────────────────────
-
 let webhook: WebhookTestSetup;
 let playToken: string;
 
@@ -126,10 +101,6 @@ beforeAll(async () => {
 afterAll(async () => {
 	await webhook?.cleanup();
 });
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 1: Initial Purchase → scenario: new
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(`${chalk.yellowBright("rc-webhook: initial purchase → scenario: new")}`, async () => {
 	const customerId = "rc-webhook-initial-purchase";
@@ -184,10 +155,6 @@ test.concurrent(`${chalk.yellowBright("rc-webhook: initial purchase → scenario
 	expect(data.customer.id).toBe(customerId);
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 2: Renewal → scenario: renew
-// ═══════════════════════════════════════════════════════════════════════════════
-
 test.concurrent(`${chalk.yellowBright("rc-webhook: renewal → scenario: renew")}`, async () => {
 	const customerId = "rc-webhook-renewal";
 	const RC_PRO_MONTHLY_ID = "com.app.rcwh2_pro_monthly";
@@ -219,14 +186,12 @@ test.concurrent(`${chalk.yellowBright("rc-webhook: renewal → scenario: renew")
 		webhookSecret: RC_WEBHOOK_SECRET,
 	});
 
-	// First: initial purchase to create the subscription
 	await rcClient.initialPurchase({
 		productId: RC_PRO_MONTHLY_ID,
 		appUserId: customerId,
 		originalTransactionId: "rcwh2_tx_001",
 	});
 
-	// Wait for the initial purchase webhook to arrive before triggering renewal
 	await waitForWebhook<CustomerProductsUpdatedPayload>({
 		token: playToken,
 		predicate: (payload) =>
@@ -236,7 +201,6 @@ test.concurrent(`${chalk.yellowBright("rc-webhook: renewal → scenario: renew")
 		timeoutMs: 15000,
 	});
 
-	// Then: renewal
 	await rcClient.renewal({
 		productId: RC_PRO_MONTHLY_ID,
 		appUserId: customerId,
@@ -258,10 +222,6 @@ test.concurrent(`${chalk.yellowBright("rc-webhook: renewal → scenario: renew")
 	expect(data.updated_product.id).toBe(proMonthly.id);
 	expect(data.customer.id).toBe(customerId);
 });
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 3: Upgrade → scenario: upgrade
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(`${chalk.yellowBright("rc-webhook: upgrade (monthly → yearly) → scenario: upgrade")}`, async () => {
 	const customerId = "rc-webhook-upgrade";
@@ -307,7 +267,6 @@ test.concurrent(`${chalk.yellowBright("rc-webhook: upgrade (monthly → yearly) 
 		webhookSecret: RC_WEBHOOK_SECRET,
 	});
 
-	// First: initial purchase on monthly
 	await rcClient.initialPurchase({
 		productId: RC_PRO_MONTHLY_ID,
 		appUserId: customerId,
@@ -323,7 +282,6 @@ test.concurrent(`${chalk.yellowBright("rc-webhook: upgrade (monthly → yearly) 
 		timeoutMs: 15000,
 	});
 
-	// Then: renewal to yearly (upgrade)
 	await rcClient.renewal({
 		productId: RC_PRO_YEARLY_ID,
 		appUserId: customerId,
@@ -345,14 +303,6 @@ test.concurrent(`${chalk.yellowBright("rc-webhook: upgrade (monthly → yearly) 
 	expect(data.updated_product.id).toBe(proYearly.id);
 	expect(data.customer.id).toBe(customerId);
 });
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 4: Downgrade (yearly → monthly) applies immediately for RevenueCat.
-// RC is the payment source-of-truth, so the transition is forced immediate
-// (plan_schedule: "immediate"): yearly is expired now and monthly is inserted
-// active. The inserted product is cheaper than the expired one, so the insert
-// scenario is "new" (not "upgrade"), and updated_product is the new monthly.
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(`${chalk.yellowBright("rc-webhook: downgrade (yearly → monthly) applies immediately → scenario: new")}`, async () => {
 	const customerId = "rc-webhook-downgrade";
@@ -398,7 +348,6 @@ test.concurrent(`${chalk.yellowBright("rc-webhook: downgrade (yearly → monthly
 		webhookSecret: RC_WEBHOOK_SECRET,
 	});
 
-	// First: initial purchase on yearly ($1000/yr)
 	await rcClient.initialPurchase({
 		productId: RC_PRO_YEARLY_ID,
 		appUserId: customerId,
@@ -414,8 +363,6 @@ test.concurrent(`${chalk.yellowBright("rc-webhook: downgrade (yearly → monthly
 		timeoutMs: 15000,
 	});
 
-	// Then: switch to monthly ($10/mo). For RC this applies immediately rather
-	// than scheduling a downgrade, so the inserted monthly product is active.
 	await rcClient.renewal({
 		productId: RC_PRO_MONTHLY_ID,
 		appUserId: customerId,
@@ -438,10 +385,6 @@ test.concurrent(`${chalk.yellowBright("rc-webhook: downgrade (yearly → monthly
 	expect(data.updated_product.id).toBe(proMonthly.id);
 	expect(data.customer.id).toBe(customerId);
 });
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 5: Cancellation → scenario: cancel
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(`${chalk.yellowBright("rc-webhook: cancellation → scenario: cancel")}`, async () => {
 	const customerId = "rc-webhook-cancel";
@@ -474,7 +417,6 @@ test.concurrent(`${chalk.yellowBright("rc-webhook: cancellation → scenario: ca
 		webhookSecret: RC_WEBHOOK_SECRET,
 	});
 
-	// First: initial purchase
 	await rcClient.initialPurchase({
 		productId: RC_PRO_MONTHLY_ID,
 		appUserId: customerId,
@@ -490,7 +432,6 @@ test.concurrent(`${chalk.yellowBright("rc-webhook: cancellation → scenario: ca
 		timeoutMs: 15000,
 	});
 
-	// Then: cancellation
 	await rcClient.cancellation({
 		productId: RC_PRO_MONTHLY_ID,
 		appUserId: customerId,
@@ -513,10 +454,6 @@ test.concurrent(`${chalk.yellowBright("rc-webhook: cancellation → scenario: ca
 	expect(data.updated_product.id).toBe(proMonthly.id);
 	expect(data.customer.id).toBe(customerId);
 });
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 6: Uncancellation → scenario: renew
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(`${chalk.yellowBright("rc-webhook: uncancellation → scenario: renew")}`, async () => {
 	const customerId = "rc-webhook-uncancel";
@@ -549,7 +486,6 @@ test.concurrent(`${chalk.yellowBright("rc-webhook: uncancellation → scenario: 
 		webhookSecret: RC_WEBHOOK_SECRET,
 	});
 
-	// Step 1: initial purchase
 	await rcClient.initialPurchase({
 		productId: RC_PRO_MONTHLY_ID,
 		appUserId: customerId,
@@ -565,7 +501,6 @@ test.concurrent(`${chalk.yellowBright("rc-webhook: uncancellation → scenario: 
 		timeoutMs: 15000,
 	});
 
-	// Step 2: cancellation
 	await rcClient.cancellation({
 		productId: RC_PRO_MONTHLY_ID,
 		appUserId: customerId,
@@ -582,7 +517,6 @@ test.concurrent(`${chalk.yellowBright("rc-webhook: uncancellation → scenario: 
 		timeoutMs: 15000,
 	});
 
-	// Step 3: uncancellation
 	await rcClient.uncancellation({
 		productId: RC_PRO_MONTHLY_ID,
 		appUserId: customerId,
@@ -603,10 +537,6 @@ test.concurrent(`${chalk.yellowBright("rc-webhook: uncancellation → scenario: 
 	expect(data.updated_product.id).toBe(proMonthly.id);
 	expect(data.customer.id).toBe(customerId);
 });
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 7: Billing Issue → scenario: past_due
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(`${chalk.yellowBright("rc-webhook: billing issue → scenario: past_due")}`, async () => {
 	const customerId = "rc-webhook-billing-issue";
@@ -639,7 +569,6 @@ test.concurrent(`${chalk.yellowBright("rc-webhook: billing issue → scenario: p
 		webhookSecret: RC_WEBHOOK_SECRET,
 	});
 
-	// First: initial purchase
 	await rcClient.initialPurchase({
 		productId: RC_PRO_MONTHLY_ID,
 		appUserId: customerId,
@@ -655,7 +584,6 @@ test.concurrent(`${chalk.yellowBright("rc-webhook: billing issue → scenario: p
 		timeoutMs: 15000,
 	});
 
-	// Then: billing issue
 	await rcClient.billingIssue({
 		productId: RC_PRO_MONTHLY_ID,
 		appUserId: customerId,
@@ -677,10 +605,6 @@ test.concurrent(`${chalk.yellowBright("rc-webhook: billing issue → scenario: p
 	expect(data.updated_product.id).toBe(proMonthly.id);
 	expect(data.customer.id).toBe(customerId);
 });
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 8: Expiration → scenario: expire
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(`${chalk.yellowBright("rc-webhook: expiration → scenario: expired")}`, async () => {
 	const customerId = "rc-webhook-expire";
@@ -713,7 +637,6 @@ test.concurrent(`${chalk.yellowBright("rc-webhook: expiration → scenario: expi
 		webhookSecret: RC_WEBHOOK_SECRET,
 	});
 
-	// First: initial purchase
 	await rcClient.initialPurchase({
 		productId: RC_PRO_MONTHLY_ID,
 		appUserId: customerId,
@@ -729,7 +652,6 @@ test.concurrent(`${chalk.yellowBright("rc-webhook: expiration → scenario: expi
 		timeoutMs: 15000,
 	});
 
-	// Then: expiration
 	await rcClient.expiration({
 		productId: RC_PRO_MONTHLY_ID,
 		appUserId: customerId,
@@ -751,10 +673,6 @@ test.concurrent(`${chalk.yellowBright("rc-webhook: expiration → scenario: expi
 	expect(data.updated_product.id).toBe(proMonthly.id);
 	expect(data.customer.id).toBe(customerId);
 });
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 9: Non-Renewing Purchase → scenario: new
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(`${chalk.yellowBright("rc-webhook: non-renewing purchase (add-on) → scenario: new")}`, async () => {
 	const customerId = "rc-webhook-non-renewing";

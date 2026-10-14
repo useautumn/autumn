@@ -14,11 +14,6 @@ import { previewToCheckoutRes } from "./previewToCheckoutRes";
 import { checkoutToAttachContext } from "./utils/checkoutToAttachContext";
 import { getCheckoutOptions } from "./utils/getCheckoutOptions";
 
-/**
- * Core checkout flow, shared by the public `/v1/checkout` route and internal
- * callers that run checkout against a context they build themselves (e.g. the
- * pricing agent's preview sandbox org).
- */
 export const runCheckout = async ({
 	ctx,
 	checkoutParams,

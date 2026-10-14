@@ -3,8 +3,6 @@ import { useMemo } from "react";
 import { useOrg } from "@/hooks/common/useOrg";
 import { itemCurrencyCodes } from "@/views/products/plan/utils/currencyUtils";
 
-// Options must survive the backend's every-charging-price-offers-currency
-// guard, so only currencies present on all charging items are selectable.
 const itemCharges = (item: ProductItem): boolean => {
 	if (item.tiers?.length) {
 		return item.tiers.some(

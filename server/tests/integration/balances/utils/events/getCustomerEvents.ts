@@ -4,8 +4,6 @@ import { AutumnInt } from "@server/external/autumn/autumnCli.js";
 import { EventService } from "@server/internal/api/events/EventService.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 
-/** Events land in the split Neon events DB when configured; mirror the
- * writer's resolution so asserts read where the server wrote. */
 export const eventsDb = () => neonEventsDb ?? ctx.db;
 
 export const getCustomerEvents = async ({

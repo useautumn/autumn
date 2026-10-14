@@ -1,13 +1,3 @@
-/**
- * Benchmark: sanitizeCachedFullSubject + sanitizeCachedSubjectBalance
- *
- * Simulates a customer with 1000 customer products, each with 3 customer
- * entitlements (3000 SubjectBalance blobs total), and measures how long
- * sanitization takes.
- *
- * Run with: bun run experiments/sanitizeBenchmark.ts
- */
-
 import { AppEnv } from "@autumn/shared";
 import { CollectionMethod, CusProductStatus } from "@shared/models/cusProductModels/cusProductEnums.js";
 import { FeatureType } from "@shared/models/featureModels/featureEnums.js";
@@ -255,7 +245,6 @@ console.log(`Warmup iterations: ${WARMUP_ITERATIONS}`);
 console.log(`Benchmark iterations: ${BENCHMARK_ITERATIONS}`);
 console.log();
 
-// --- Benchmark: sanitizeCachedSubjectBalance (single) ---
 for (let i = 0; i < WARMUP_ITERATIONS; i++) {
 	sanitizeCachedSubjectBalance({ subjectBalance: subjectBalances[0] as any });
 }
@@ -273,7 +262,6 @@ console.log(`  avg: ${formatNs(singleAvg)}`);
 console.log(`  total for ${BENCHMARK_ITERATIONS} calls: ${formatNs(singleTotal)}`);
 console.log();
 
-// --- Benchmark: sanitizeCachedSubjectBalance (all 3000) ---
 for (let i = 0; i < WARMUP_ITERATIONS; i++) {
 	for (const balance of subjectBalances) {
 		sanitizeCachedSubjectBalance({ subjectBalance: balance as any });
@@ -294,7 +282,6 @@ console.log(`  avg per full batch: ${formatNs(batchAvg)}`);
 console.log(`  avg per balance: ${formatNs(batchAvg / BigInt(TOTAL_CUS_ENTS))}`);
 console.log();
 
-// --- Benchmark: sanitizeCachedFullSubject ---
 for (let i = 0; i < WARMUP_ITERATIONS; i++) {
 	sanitizeCachedFullSubject({ cachedFullSubject: cachedFullSubject });
 }
@@ -311,7 +298,6 @@ console.log(`  avg: ${formatNs(shellAvg)}`);
 console.log(`  total for ${BENCHMARK_ITERATIONS} calls: ${formatNs(shellTotal)}`);
 console.log();
 
-// --- Combined: full cache read sanitization ---
 for (let i = 0; i < WARMUP_ITERATIONS; i++) {
 	sanitizeCachedFullSubject({ cachedFullSubject: cachedFullSubject });
 	for (const balance of subjectBalances) {
@@ -333,7 +319,6 @@ console.log(`Combined (shell + all ${TOTAL_CUS_ENTS} balances):`);
 console.log(`  avg: ${formatNs(combinedAvg)}`);
 console.log();
 
-// --- JSON.parse baseline for comparison ---
 const serializedBalances = subjectBalances.map((balance) => JSON.stringify(balance));
 const serializedShell = JSON.stringify(cachedFullSubject);
 

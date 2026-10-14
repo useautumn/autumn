@@ -1,22 +1,3 @@
-/**
- * atmn pull — the catalog becomes the config file.
- *
- * Pull is push played backwards: the server's diff over a config drives the
- * edit, the file is the only thing that changes, and the CLI decides nothing
- * along the way.
- *
- * Assertions are config-in / catalog-out: a re-imported config must execute to
- * the server's rows, and surgery must leave no trace in the file. Nothing about
- * rendering, because the rendering is a report rather than a decision.
- *
- * Contract:
- *   L1  pulling after the server moved ahead makes the config match the
- *       catalog, and a follow-up push has nothing to apply
- *   L2  a fixture the server never had is deleted from the file, and the
- *       re-imported config still matches the server
- *   L3  pulling an up-to-date config leaves the file byte-identical
- */
-
 import { expect, test } from "bun:test";
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -28,8 +9,6 @@ import {
 import { s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-// Relative rather than a package import, for the same reason initAtmnScenario
-// imports runPush that way: the package publishes only its bin.
 import { runPull } from "../../../../packages/atmn/src/actions/pull";
 import { runPush } from "../../../../packages/atmn/src/actions/push";
 import {
@@ -38,10 +17,6 @@ import {
 } from "../../../../packages/atmn/src/generated/client";
 import { uniqueTestId } from "../catalog-v2/utils/uniqueTestId.js";
 
-/**
- * A second config dir for the same org — initAtmnScenario mints one org per
- * call, so a second scenario would be a different catalog, not a second dir.
- */
 const TMP_ROOT = join(
 	import.meta.dir,
 	"../../../../packages/atmn/test/.tmp",
@@ -108,7 +83,6 @@ const wireFeatures = async ({
 	});
 };
 
-/** The catalog rows, recased to the wire shape a config executes to. */
 type CatalogFeatureRow = {
 	id: string;
 	internalId?: string | null;
@@ -130,7 +104,6 @@ const wireRowOf = ({
 	row: CatalogFeatureRow;
 }): Record<string, unknown> => ({
 	feature_id: row.id,
-	// Features round-trip their stable id now, so the wire carries it too.
 	...(typeof row.internalId === "string"
 		? { internal_id: row.internalId }
 		: {}),
@@ -193,7 +166,6 @@ test.concurrent(
 			config: configABody({ seats, messages }),
 		});
 
-		// Same org, second dir: this is how one catalog gets two configs.
 		const server = openConfigDir();
 		const client = createClient({
 			secretKey: scenario.ctx.orgSecretKey,
@@ -201,8 +173,6 @@ test.concurrent(
 		});
 
 		try {
-			// The server moves ahead of A: the metered feature gets a new name and
-			// a credit system joins, referencing it.
 			server.writeConfig(
 				atmnConfigSource({
 					body: `{
@@ -221,7 +191,6 @@ test.concurrent(
 			);
 			await runPush({ client, cwd: server.cwd, write: () => {} });
 
-			// L1: pulling brings the rename and the new fixture into A.
 			const pulled = await pullIn({ client, cwd: scenario.cwd });
 			expect(pulled.appended).toEqual([credits]);
 			expect(pulled.replaced).toEqual([messages]);
@@ -231,7 +200,6 @@ test.concurrent(
 				await serverWireRows({ client }),
 			);
 
-			// What the config says is now what the server has, so push idles.
 			const dry = await scenario.push({ dryRun: true });
 			expect(dry.output).toContain("No changes");
 		} finally {
@@ -262,8 +230,6 @@ test.concurrent(
 		try {
 			await scenario.push();
 
-			// The extra fixture exists only in the file and is never pushed, so
-			// the server is right and the file is wrong.
 			scenario.writeConfig(
 				atmnConfigSource({
 					body: `{

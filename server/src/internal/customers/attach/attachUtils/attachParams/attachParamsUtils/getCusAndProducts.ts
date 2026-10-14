@@ -22,12 +22,7 @@ const getProductsForAttach = async ({
 	ctx: AutumnContext;
 	attachBody: AttachBodyV0;
 }) => {
-	const {
-		product_id,
-		product_ids,
-		version,
-		// products: inputProducts,
-	} = attachBody;
+	const { product_id, product_ids, version } = attachBody;
 
 	const products = await ProductService.listFull({
 		db: ctx.db,
@@ -98,10 +93,8 @@ export const getCustomerAndProducts = async ({
 		getProductsForAttach({ ctx, attachBody }),
 	]);
 
-	// if customer is on product v3, products[0] should just be the customer's product if version isn't explicitly passed in.
 	if (nullish(attachBody.version)) {
 		for (let i = 0; i < products.length; i++) {
-			// Check if customer has active product
 			if (isOneOff(products[i].prices)) continue;
 			const { curSameProduct } = getExistingCusProducts({
 				product: products[i],

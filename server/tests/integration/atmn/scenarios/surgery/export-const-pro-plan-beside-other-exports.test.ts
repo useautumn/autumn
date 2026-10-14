@@ -1,9 +1,3 @@
-/**
- * atmn scenarios/surgery — `export const pro = plan({ active: true,})` beside other exports → only that declaration goes, unused imports pruned
- *
- * One line of plans/atmn-v3/07_tests.md. [a, b] is a matrix looped INSIDE this file.
- */
-
 import { expect, test } from "bun:test";
 import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 import {
@@ -47,9 +41,6 @@ export const free = plan({
 		});
 
 		try {
-			// Seed `free` directly, bypassing the CLI: it must already match the
-			// server so its preview action is "none", leaving `pro` — never pushed
-			// — as the only "create" pull has to reverse.
 			await scenario.client.update({
 				plans: [{ plan_id: freeId, name: "Free" }],
 				skip_deletions: false,

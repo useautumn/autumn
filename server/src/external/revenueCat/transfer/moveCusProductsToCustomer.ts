@@ -7,7 +7,6 @@ import {
 import { inArray } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle";
 
-/** Re-owns the products and everything keyed to them in one transaction; row ids stay, so rollovers stay linked. */
 export const moveCusProductsToCustomer = async ({
 	db,
 	cusProductIds,

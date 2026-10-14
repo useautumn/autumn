@@ -1,5 +1,3 @@
-/** set_plans cancels a replaced subscription only while it is still open in Stripe. */
-
 import { describe, expect, test } from "bun:test";
 import type Stripe from "stripe";
 import { buildReplacedSubscriptionAction } from "@/internal/billing/v2/actions/setPlans/utils/buildReplacedSubscriptionAction";

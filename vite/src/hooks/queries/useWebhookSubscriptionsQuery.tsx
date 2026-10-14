@@ -2,7 +2,6 @@ import { useQuery } from "@tanstack/react-query";
 import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 
-/** Which of `eventTypes` the org has a webhook endpoint listening for. */
 export const useWebhookSubscriptionsQuery = ({
 	eventTypes,
 }: {

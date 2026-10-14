@@ -123,8 +123,6 @@ export function BillingSpendLimitSheet() {
 		const parsedOverageLimit =
 			overageLimit.trim() === "" ? undefined : Number.parseFloat(overageLimit);
 
-		// A spend limit only applies to a specific feature; without one it is
-		// silently ignored server-side.
 		if (!featureId) {
 			toast.error("Feature is required for a spend limit");
 			return;
@@ -224,7 +222,6 @@ export function BillingSpendLimitSheet() {
 							<Select
 								value={limitType}
 								onValueChange={(value: string) => {
-									// Clear the amount: units and percent aren't interchangeable.
 									setLimitType(value as SpendLimitType);
 									setOverageLimit("");
 								}}

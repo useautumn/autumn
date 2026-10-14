@@ -2,7 +2,6 @@ import { isInvoiceCreditCustomerEntitlement } from "@autumn/shared";
 import { UnsupportedCommandError } from "../../errors.js";
 import type { WorkerFullCustomerEntitlementWithProduct } from "../../models/subject/workerFullSubject.js";
 
-/** A balance edit that names no grant is a typo or an unassigned feature. */
 export const assertBalanceRowsFound = ({
 	customerEntitlements,
 }: {
@@ -12,7 +11,6 @@ export const assertBalanceRowsFound = ({
 		throw new UnsupportedCommandError({ reason: "balance_not_found" });
 };
 
-/** An invoice credit's balance mirrors an invoice, so only the invoice may move it. */
 export const assertBalanceRowsMutable = ({
 	customerEntitlements,
 }: {

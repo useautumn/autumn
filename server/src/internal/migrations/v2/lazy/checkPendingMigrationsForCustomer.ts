@@ -9,17 +9,6 @@ import {
 	runMigrationCustomerTask,
 } from "@/trigger/migrations/runMigrationCustomerTask/runMigrationCustomerTask.js";
 
-/**
- * For each pending lazy migration on `ctx.org`, decide whether this customer
- * needs migrating and enqueue a per-customer Trigger.dev task if so.
- *
- * Reads `migration_item_runs` from the already-loaded `fullCustomer` (embedded
- * by the FullSubject / FullCustomer query) — no extra DB roundtrip.
- *
- * Fire-and-forget: the helper doesn't wait for the migration to complete.
- * `executeMigrateCustomerPlan` inside the task busts the customer cache,
- * so subsequent requests read post-migration state.
- */
 export const checkPendingMigrationsForCustomer = async ({
 	ctx,
 	fullCustomer,
@@ -32,10 +21,6 @@ export const checkPendingMigrationsForCustomer = async ({
 }): Promise<void> => {
 	if (LAZY_MIGRATION_RUNS_DISABLED) return;
 
-	// Short-circuit when we're already inside a Trigger.dev task. A migration
-	// worker loading the customer via `CusService.getFull` would otherwise
-	// re-enter this helper and enqueue another task. Flag is set by
-	// `createTriggerContext`.
 	if (ctx.insideTriggerTask) return;
 
 	const pending = ctx.org.pendingMigrations ?? [];

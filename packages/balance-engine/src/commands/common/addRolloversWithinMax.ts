@@ -2,10 +2,6 @@ import { clearRolloversOverMax, type Rollover } from "@autumn/shared";
 import type { RowChange } from "../../models/mutation/rowChange.js";
 import type { WorkerFullCustomerEntitlementWithProduct } from "../../models/subject/workerFullSubject.js";
 
-/**
- * New rollovers for a held row, then the cap trims the oldest first; each outcome is its own change.
- * The reset adds what a cycle end left on the row; a billing plan adds rows the server computed.
- */
 export const addRolloversWithinMax = ({
 	row,
 	newRollovers,

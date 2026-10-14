@@ -12,11 +12,6 @@ const escapeHtml = (value: string): string =>
 const JSON_TOKEN =
 	/("(?:\\.|[^"\\])*")(\s*:)?|\b(true|false|null)\b|(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)/g;
 
-/**
- * Highlight a single line of pretty-printed JSON. Strings never span lines in
- * 2-space-indented JSON, so each line tokenizes independently — letting callers
- * virtualize and highlight only the visible lines.
- */
 export function highlightJsonLine(line: string): string {
 	let result = "";
 	let lastIndex = 0;
@@ -50,8 +45,6 @@ export function highlightJsonLine(line: string): string {
 	return result;
 }
 
-/** Highlight a full JSON document. Prefer the virtualized viewer for rendering;
- * use this only for non-DOM consumers (e.g. copy-to-clipboard fallbacks). */
 export function highlightJson(json: string): string {
 	return json.split("\n").map(highlightJsonLine).join("\n");
 }

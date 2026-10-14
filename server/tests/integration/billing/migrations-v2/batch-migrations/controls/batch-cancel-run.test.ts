@@ -1,18 +1,3 @@
-/**
- * Canceling a batch run mid-migration must stop at a PAGE boundary: the
- * in-flight page completes, no further page is claimed.
- *
- * Contract under test:
- *   - cancel requested after page 1 → the run reports canceled with exactly
- *     page 1's customers processed;
- *   - processed customers keep their migrated item (a canceled run never
- *     rolls back committed pages);
- *   - unprocessed customers are untouched AND unclaimed (no item runs), so a
- *     later run picks them up cleanly.
- *
- * Page size is mocked to 2 so four customers span two pages.
- */
-
 import { afterAll, expect, mock, test } from "bun:test";
 import { type ApiCustomerV5, migrationItemRuns } from "@autumn/shared";
 import { products } from "@tests/utils/fixtures/products";
@@ -75,7 +60,6 @@ test.concurrent(
 			],
 		});
 
-		// Unique per execution: item-run history blocks re-deleting a fixed id.
 		const migration = await autumnV2_2.migrationsV2.deleteAndCreate({
 			id: `batch-cancel-mig-${Date.now().toString(36)}`,
 			filter: { customer: { plan: { plan_id: plan.id } } },
@@ -89,8 +73,6 @@ test.concurrent(
 			migration,
 			migrationRunId,
 			dryRun: false,
-			// One page per chunk; cancel lands after the first chunk completes —
-			// the same signal /migrations.cancel_run sets.
 			runBatchChunk: async (payload) => {
 				const chunkResult = await runBatchMigrationChunk({
 					ctx,
@@ -110,12 +92,10 @@ test.concurrent(
 			},
 		});
 
-		// ── Contract: canceled at the page boundary, page 1 only ──
 		expect(result.lane).toBe("batch");
 		expect(result.canceled).toBe(true);
 		expect(result.processed).toBe(2);
 
-		// ── Contract: committed page kept, remainder untouched ──
 		const customers = await Promise.all(
 			customerIds.map((customerId) =>
 				autumnV2_2.customers.get<ApiCustomerV5>(customerId),
@@ -126,7 +106,6 @@ test.concurrent(
 		);
 		expect(migrated).toHaveLength(2);
 
-		// ── Contract: unprocessed customers were never claimed ──
 		const itemRuns = await ctx.db
 			.select()
 			.from(migrationItemRuns)

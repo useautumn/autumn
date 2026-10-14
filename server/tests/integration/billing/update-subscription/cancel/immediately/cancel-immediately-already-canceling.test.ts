@@ -1,17 +1,3 @@
-/**
- * Cancel Immediately — Already-Canceling Subscription
- *
- * Mirrors the dashboard "Manage Cancellation → Cancel immediately" flow for a
- * sub that is already scheduled to cancel at end of cycle. The UI now exposes
- * the full refund options here (invoice credits / refund to payment method /
- * no refund), with the refund-to-card variant constrained to prorated.
- *
- * These tests verify each option works end-to-end on an already-canceling sub:
- *  - credits  → cancel_immediately + billing_behavior "prorate_immediately"
- *  - refund   → cancel_immediately + refund_last_payment "prorated"
- *  - none     → cancel_immediately + billing_behavior "none"
- */
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3 } from "@autumn/shared";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
@@ -50,10 +36,6 @@ const getAutumnInvoiceByStripeId = async ({
 	return invoice;
 };
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 1: Already-canceling → cancel immediately with invoice credits (prorated)
-// ═══════════════════════════════════════════════════════════════════════════════
-
 test.concurrent(
 	`${chalk.yellowBright("already-canceling cancel immediately: invoice credits (prorated)")}`,
 	async () => {
@@ -89,7 +71,6 @@ test.concurrent(
 		};
 
 		const preview = await autumnV0.subscriptions.previewUpdate(cancelParams);
-		// Prorated mid-cycle credit for the unused portion of $20 base.
 		expect(preview.total).toBeLessThan(0);
 
 		await autumnV0.subscriptions.update(cancelParams);
@@ -101,7 +82,6 @@ test.concurrent(
 			productId: pro.id,
 		});
 
-		// Credit lands as a new invoice line item; latest invoice matches preview.
 		expectCustomerInvoiceCorrect({
 			customer: customerAfterCancel,
 			count: 2,
@@ -116,10 +96,6 @@ test.concurrent(
 		});
 	},
 );
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 2: Already-canceling → cancel immediately with prorated refund to card
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(
 	`${chalk.yellowBright("already-canceling cancel immediately: prorated refund to payment method")}`,
@@ -165,7 +141,6 @@ test.concurrent(
 
 		const preview = await autumnV0.subscriptions.previewUpdate(cancelParams);
 		expect(preview.total).toBe(0);
-		// Start of cycle → prorated refund is effectively the full $20.
 		expect(preview.refund).toEqual({
 			amount: 20,
 			invoice: {
@@ -199,10 +174,6 @@ test.concurrent(
 		});
 	},
 );
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 3: Already-canceling → cancel immediately with no refund
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(
 	`${chalk.yellowBright("already-canceling cancel immediately: no refund")}`,
@@ -243,7 +214,6 @@ test.concurrent(
 		};
 
 		const preview = await autumnV0.subscriptions.previewUpdate(cancelParams);
-		// No charges or credits issued.
 		expect(preview.total).toBe(0);
 		expect(preview.refund).toBeUndefined();
 
@@ -256,7 +226,6 @@ test.concurrent(
 			productId: pro.id,
 		});
 
-		// No new invoice, no refund against the original.
 		expectCustomerInvoiceCorrect({
 			customer: customerAfterCancel,
 			count: 1,

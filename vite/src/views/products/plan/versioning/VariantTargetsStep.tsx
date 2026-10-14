@@ -22,7 +22,6 @@ export function VariantTargetsStep({
 	slugSelection?: MintSlugSelection;
 	onChange: (next: string[]) => void;
 	onSlugChange?: (args: { planId: string; slug: string }) => void;
-	/** Base mint: the server resolves each variant's row, so no version picker. */
 	baseMintsNewVersion?: boolean;
 }) {
 	return (

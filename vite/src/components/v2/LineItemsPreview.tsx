@@ -10,32 +10,24 @@ import { Decimal } from "decimal.js";
 import { SheetSection } from "@/components/v2/sheets/SharedSheetComponents";
 import { cn } from "@/lib/utils";
 
-/** Line item type from BillingPreviewResponse */
 export type BillingLineItem = BillingPreviewResponse["line_items"][number];
 
 export interface LineItemsContentProps<T extends BillingLineItem> {
-	/** Line items to display */
 	lineItems?: T[];
-	/** Currency code for formatting amounts */
 	currency?: string;
-	/** Filter zero-amount items */
 	filterZeroAmounts?: boolean;
-	/** Optional totals to display below line items */
 	totals?: {
 		label: string;
 		amount: number;
 		variant?: "primary" | "secondary";
 		badge?: string;
 	}[];
-	/** Accordion title for line items */
 	accordionTitle?: string;
 }
 
 export interface LineItemsPreviewProps<T extends BillingLineItem>
 	extends LineItemsContentProps<T> {
-	/** Section title */
 	title?: string;
-	/** Whether to show separator above section */
 	withSeparator?: boolean;
 }
 
@@ -67,7 +59,6 @@ const amountLabel = ({
 		amountFormatOptions: { currencyDisplay: "narrowSymbol" },
 	});
 
-/** Line items accordion plus totals rows, with no section chrome of its own. */
 export function LineItemsContent<T extends BillingLineItem>({
 	lineItems,
 	currency = "usd",

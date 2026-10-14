@@ -84,7 +84,6 @@ export const setUsageLimits = async ({
 	await autumnV2_3.customers.update(customerId, {
 		billing_controls: { usage_limits: usageLimits },
 	});
-	// Wait until the read path that track uses serves the new caps.
 	await pollUntilAsserted({
 		fetch: () => autumnV2_3.customers.get<ApiCustomerV5>(customerId),
 		assert: (customer) =>
@@ -95,7 +94,6 @@ export const setUsageLimits = async ({
 	});
 };
 
-/** Waits for the tracked usage to land in Postgres, which expireUsageWindowForReset backdates. */
 export const waitForUsageWindowSynced = ({
 	customerId,
 	usage,

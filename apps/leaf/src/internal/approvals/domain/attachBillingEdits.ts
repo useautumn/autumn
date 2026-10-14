@@ -1,8 +1,6 @@
 import { AttachParamsV1Schema } from "@autumn/shared/publicApiSchemas";
 import { z } from "zod";
 
-/** The two operator decisions on an attach: how the customer pays (one
- * billing mode) and whether access starts before payment settles. */
 export const attachBillingEditsSchema = z.strictObject({
 	access: z.enum(["immediate", "after_payment"]),
 	billing: z.enum(["checkout", "draft_invoice", "finalized_invoice"]),
@@ -32,8 +30,6 @@ export const attachBillingEditsFromRequest = (
 				? "draft_invoice"
 				: "finalized_invoice"
 			: "checkout",
-		// An omitted proration resolves server-side from
-		// org.config.bill_upgrade_immediately, which defaults to immediate.
 		proration:
 			request.proration_behavior === "none" ? "next_cycle" : "immediate",
 	};
@@ -54,9 +50,6 @@ export const applyAttachBillingEdits = ({
 		...unchanged
 	} = request;
 	const enablePlanImmediately = edits.access === "immediate";
-	// Only an explicit choice writes the field: a request that never carried
-	// proration_behavior keeps the org default (and stays valid for brand-new
-	// subscriptions, which reject "none").
 	const writeProration =
 		"proration_behavior" in request ||
 		edits.proration !== attachBillingEditsFromRequest(request).proration;

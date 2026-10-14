@@ -1,8 +1,3 @@
-/**
- * Unit tests for callRcMcpTool — JSON-RPC tools/call against RC's MCP server,
- * parsing the SSE (`data:`) response and surfacing tool errors. fetch is injected.
- */
-
 import { expect, mock, test } from "bun:test";
 import chalk from "chalk";
 import { callRcMcpTool } from "@/external/revenueCat/misc/revenuecatMcp.js";

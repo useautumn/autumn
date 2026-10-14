@@ -2,7 +2,6 @@ import { expect, test } from "bun:test";
 import type { EntitlementWithFeature, Feature, Price } from "../../index.js";
 import { mapToProductItems } from "./mapToProductV2.js";
 
-// Legacy/customized products may omit relational arrays; mapping must remain total.
 test("mapToProductItems normalizes missing product relations", () => {
 	expect(
 		mapToProductItems({
@@ -19,8 +18,6 @@ const creditsFeature = {
 	config: { usage_type: "single_use" },
 } as unknown as Feature;
 
-// An entitlement grandfathered from an older version, paired with a custom price
-// the customer product re-stamped with its own internal_product_id.
 const crossVersionPair = () => {
 	const entitlement = {
 		id: "ent_credits",

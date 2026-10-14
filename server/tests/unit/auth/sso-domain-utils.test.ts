@@ -1,14 +1,3 @@
-/**
- * TDD contract for self-serve OIDC SSO domain handling.
- *
- * Contract under test:
- * - company domains are normalized to a bare lower-case hostname
- * - malformed domains, URLs, IP addresses, and public suffixes are rejected
- * - verification records use Autumn's branded DNS label
- * - split TXT chunks are flattened before exact token comparison
- * - OIDC issuer origins must be HTTPS in production; localhost HTTP is dev-only
- */
-
 import { describe, expect, test } from "bun:test";
 import {
 	buildSsoVerificationHost,

@@ -10,7 +10,6 @@ import {
 
 const BILLING_CYCLE_RANGES = new Set<RangeEnum>(["1bc", "3bc", "last_cycle"]);
 
-/** Lookback for a billing-cycle range whose customer has no resolvable cycle. */
 const FALLBACK_LOOKBACK_DAYS = 24;
 
 const fallbackWindow = () => {
@@ -21,8 +20,6 @@ const fallbackWindow = () => {
 	};
 };
 
-/** Resolves a range preset to an epoch-ms window. Billing-cycle ranges anchor on
- * the customer's cycle and fall back to a fixed lookback when it has none. */
 export const resolveRangeToCustomRange = async ({
 	ctx,
 	range,

@@ -31,7 +31,6 @@ export const processExpiredTrialRow = async ({
 	customer: InferSelectModel<typeof customers>;
 	defaultProducts: FullProduct[];
 }) => {
-	// Revert path owns its own webhook emission.
 	const reverted = await tryProcessRevertExpiry({
 		ctx,
 		customerProduct,
@@ -39,10 +38,6 @@ export const processExpiredTrialRow = async ({
 	});
 	if (reverted) return;
 
-	// Standard path: snapshot fullCustomer BEFORE mutations so the webhook
-	// payload reflects pre-expiry state in `previous_attributes`. Default
-	// RELEVANT_STATUSES is sufficient — the trial cusProduct is Active
-	// (with a past trial_ends_at) at this point.
 	const fullCustomer = await CusService.getFull({
 		ctx,
 		idOrInternalId: customer.internal_id,
@@ -98,8 +93,6 @@ export const processExpiredTrialRow = async ({
 		activatedDefault = activation.insertedCustomerProduct;
 		defaultAdjusted = activation.allocationsAdjusted;
 	}
-	// Executing through the shared plan runs the license lifecycle when the
-	// expiring trial carried license state.
 	const { allocationsAdjusted: expiryAdjusted = false } =
 		await executeAutumnBillingPlan({
 			emitsBillingUpdated: true,
@@ -116,7 +109,6 @@ export const processExpiredTrialRow = async ({
 			},
 		});
 
-	// Default activation already executes the outgoing and incoming transition together.
 	let transitionAdjusted = false;
 	if (!activatedDefault) {
 		await applyPooledBalanceCustomerProductTransitions({
@@ -126,7 +118,6 @@ export const processExpiredTrialRow = async ({
 			incomingCustomerProducts: [],
 			now: Date.now(),
 		});
-		// Pools moved after the plan re-fit, so shares re-fit against the final pot.
 		({ adjusted: transitionAdjusted } = await refreshAllocationScaleAfterWrite({
 			ctx,
 			customerId: fullCustomer.id || fullCustomer.internal_id,

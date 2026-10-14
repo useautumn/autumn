@@ -1,18 +1,3 @@
-/**
- * One catalogV2.update payload may name several rows of the same plan lineage.
- * `computeUpsertProductsPlan` seeds `claimedProductKeys` from every direct
- * intent before the fold, so the `processor_sync` / `variant_propagation`
- * intents that carry a stated Stripe mapping onto the rest of the lineage are
- * dropped as already-claimed.
- *
- * Red (pre-fix):  a sibling version / variant named in the same payload keeps
- *                 its OLD stripe product id, so one plan bills under two.
- * Green (after):  declared processors merge into the pending direct intents of
- *                 the same lineage before the fold; rows that state their own
- *                 mapping keep it, and two entries stating different mappings
- *                 for one plan are a 400.
- */
-
 import { describe, expect, test } from "bun:test";
 import { AppEnv, type UpdateCatalogParams } from "@autumn/shared";
 import { products } from "@tests/utils/fixtures/db/products";
@@ -70,7 +55,6 @@ const statesFor = ({ rows }: { rows: ReturnType<typeof row>[] }) => {
 			customerUsage: emptyVersioningFlags(),
 		};
 	}
-	// versionsByPlanId is documented newest-first.
 	for (const planId of Object.keys(versionsByPlanId)) {
 		versionsByPlanId[planId]?.sort((a, b) => b.version - a.version);
 	}

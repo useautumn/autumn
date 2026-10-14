@@ -1,9 +1,3 @@
-/**
- * OpenAI - API-style pricing with credit system
- * Free (2000 credits) / Credits Top-Up (prepaid add-on)
- * 1 credit = $0.001
- */
-
 import type { Feature, Plan } from "../../../compose/models/index.js";
 
 export const features: Feature[] = [

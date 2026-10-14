@@ -5,7 +5,6 @@ import type { SubjectRowChange } from "../../subjects/types/subjectRowChange.js"
 import type { SubjectSnapshotWrites } from "../../subjects/types/subjectSnapshot.js";
 import type { FlushBookmark } from "../types/flush.js";
 
-/** The CTEs every flush shape shares: one per folded change, the bookmarks as `b`, then the snapshot writes. */
 const flushParts = ({
 	changes,
 	bookmarks,
@@ -26,7 +25,6 @@ const flushParts = ({
 		(bookmark) =>
 			sql`(${bookmark.topic}, ${bookmark.partition}, ${bookmark.expectedOffset}, ${bookmark.nextOffset}, ${bookmark.commandNextOffset ?? null}, ${bookmark.ownerFence?.epoch ?? null}, ${bookmark.ownerFence?.offset ?? null}, ${bookmark.claimToken ?? null})`,
 	);
-	// A fence only replaces a lower epoch's, and its offset travels with it: the pair is one fact.
 	const bookmarkCte = sql`b AS (
 		UPDATE partition_progress p
 		SET next_offset = v.next_offset::bigint,
@@ -43,9 +41,7 @@ const flushParts = ({
 	const applied =
 		appliedCounts.length === 0
 			? sql`'[]'::json`
-			: // An array constructor, not json_build_array: a function call is capped at 100 arguments.
-				sql`to_json(ARRAY[${sql.join(appliedCounts, sql`, `)}])`;
-	// Snapshot deletes travel alone when an evict has no record to carry them, and VALUES cannot be empty.
+			: sql`to_json(ARRAY[${sql.join(appliedCounts, sql`, `)}])`;
 	const bookmarkParts =
 		bookmarks.length > 0
 			? { ctes: [bookmarkCte], count: sql`(SELECT count(*) FROM b)` }
@@ -67,7 +63,6 @@ const flushParts = ({
 	};
 };
 
-/** Every folded change as its own CTE, the bookmarks as one, and a row of counts to read the outcome from. */
 export const flushSql = ({
 	changes,
 	bookmarks,
@@ -88,13 +83,8 @@ export const flushSql = ({
 	`;
 };
 
-/** Prefixes the counts a single-statement flush carries out in the error that rolls it back. */
 export const FLUSH_ROLLBACK_MARKER = "flush_rolled_back:";
 
-/**
- * The same flush as one autocommit statement: when a bookmark or a guarded row did not move, a
- * failing cast aborts it, so nothing lands, and the error text carries `<nonce>:<bookmarks>:<counts>`.
- */
 export const singleStatementFlushSql = ({
 	changes,
 	bookmarks,
@@ -104,7 +94,6 @@ export const singleStatementFlushSql = ({
 	changes: readonly SubjectRowChange[];
 	bookmarks: readonly FlushBookmark[];
 	snapshots?: SubjectSnapshotWrites;
-	/** Per flush, so a value Postgres echoes in a cast error can never pass for this flush's rollback. */
 	nonce: string;
 }): SQL => {
 	const { ctes, appliedCounts, applied, bookmarkCount, snapshotColumns } =
@@ -120,7 +109,6 @@ export const singleStatementFlushSql = ({
 		appliedCounts.length === 0
 			? sql`''`
 			: sql`array_to_string(ARRAY[${sql.join(appliedCounts, sql`, `)}], ',')`;
-	// CASE, not OR: only CASE guarantees the cast is never evaluated when everything landed.
 	return sql`
 		WITH ${sql.join(ctes, sql`, `)}
 		SELECT ${applied} AS applied, ${bookmarkCount} AS bookmarks${snapshotColumns}

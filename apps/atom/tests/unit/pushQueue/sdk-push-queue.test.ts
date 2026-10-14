@@ -7,7 +7,6 @@ import { createSdkPushQueue } from "../../../src/pushQueue/sdk/createSdkPushQueu
 
 const QUEUE_URL = "https://sqs.us-east-1.amazonaws.com/123456789012/pushes";
 
-/** Records each command and answers receives with the given messages. */
 const fakeSqs = ({ messages }: { messages: object[] }) => {
 	const sent: unknown[] = [];
 	const options: unknown[] = [];

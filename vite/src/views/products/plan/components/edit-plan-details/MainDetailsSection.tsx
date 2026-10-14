@@ -20,16 +20,6 @@ export const MainDetailsSection = () => {
 					</div>
 					<PlanIdField />
 				</div>
-				{/* <div>
-					<div className="text-form-label block mb-1">Description</div>
-					<Input
-						placeholder="eg. This plan includes 100 credits"
-						value={product.description}
-						onChange={(e) =>
-							setProduct({ ...product, description: e.target.value })
-						}
-					/>
-				</div> */}
 			</div>
 		</SheetSection>
 	);

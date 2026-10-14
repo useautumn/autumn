@@ -36,7 +36,6 @@ export const executeStripeSubscriptionOperation = async ({
 		stripeSubscriptionAction: subscriptionAction,
 	});
 
-	// Pass resolved PM explicitly when customer has no default PM set.
 	const customerHasDefaultPm =
 		billingContext.stripeCustomer?.invoice_settings?.default_payment_method;
 
@@ -101,8 +100,6 @@ export const executeStripeSubscriptionOperation = async ({
 				);
 			}
 
-			// Strip `automatic_tax` from the action params so we can re-apply
-			// it here conditioned on `wantsAutoTax` (invoice-mode skip).
 			const {
 				automatic_tax: _builtAutoTax,
 				trial_end: builtTrialEnd,

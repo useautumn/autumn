@@ -59,9 +59,6 @@ export const handleStripeTestClockReady = async ({
 			now: nowMs,
 		});
 
-		// Entitlement-only / revert trials have no Stripe subscription to react
-		// to the clock advance, so productCron's real-time NOW() never catches
-		// them here — use the test clock's frozen_time as "now" instead.
 		await expireTrialProductsForCustomer({
 			ctx: routedCtx,
 			internalCustomerId: customer.internal_id,

@@ -75,8 +75,6 @@ export const useCusProductQuery = () => {
 
 	const finalData = data || cachedCusProduct;
 	const isLoadingWithCache = cachedCusProduct ? false : isLoading;
-	// const finalData = data;
-	// const isLoadingWithCache = isLoading;
 
 	return {
 		cusProduct: finalData?.cusProduct,

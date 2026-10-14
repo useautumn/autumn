@@ -1,9 +1,3 @@
-/**
- * Plan items for credit systems accept any price shape. Whether a customer's
- * credits are itemized is decided per entitlement from that shape, so nothing
- * about a feature's invoice_credit flag can make an item invalid.
- */
-
 import { describe, expect, test } from "bun:test";
 import {
 	AppEnv,

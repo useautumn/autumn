@@ -20,7 +20,6 @@ import {
 import { notNullish } from "../utils.js";
 
 export const getBillingType = (config: FixedPriceConfig | UsagePriceConfig) => {
-	// 1. Fixed cycle / one off
 	if (
 		config.type === PriceType.Fixed &&
 		config.interval === BillingInterval.OneOff
@@ -29,8 +28,6 @@ export const getBillingType = (config: FixedPriceConfig | UsagePriceConfig) => {
 	} else if (config.type === PriceType.Fixed) {
 		return BillingType.FixedCycle;
 	}
-
-	// 2. Prepaid
 
 	const usageConfig = config as UsagePriceConfig;
 	if (
@@ -78,7 +75,6 @@ export const isV4Usage = ({
 	);
 };
 
-// export const
 export const onIncreaseToStripeProration = ({
 	onIncrease,
 }: {

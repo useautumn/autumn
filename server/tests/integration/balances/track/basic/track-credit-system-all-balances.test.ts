@@ -7,11 +7,6 @@ import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 
-// ═══════════════════════════════════════════════════════════════════
-// Scenario A: track feature_id linked to 3 credit systems
-// Action1 → Credits (entitled) + InvoiceCredits and Credits3 (not entitled).
-// ═══════════════════════════════════════════════════════════════════
-
 test.concurrent(
 	`${chalk.yellowBright("track-all-balances-A: track feature_id returns every linked credit-system balance")}`,
 	async () => {
@@ -43,10 +38,8 @@ test.concurrent(
 			value: 10,
 		});
 
-		// `balance` keeps backwards-compat single-feature heuristic
 		expect(trackRes.balance).not.toBeNull();
 		expect(trackRes.balance?.feature_id).toBe(TestFeature.Action1);
-		// `balances` exposes the feature plus every linked credit system
 		expect(trackRes.balances).toBeDefined();
 		expect(Object.keys(trackRes.balances ?? {}).sort()).toEqual(
 			[
@@ -62,12 +55,6 @@ test.concurrent(
 		expect(trackRes.balances?.[TestFeature.Credits3]).toBeNull();
 	},
 );
-
-// ═══════════════════════════════════════════════════════════════════
-// Scenario B: event_name → 2 features with their credit systems
-// "action-event" matches Action1 (→ Credits, InvoiceCredits, Credits3) and Action3
-// (→ Credits2). Credits3 is unentitled → null entry.
-// ═══════════════════════════════════════════════════════════════════
 
 test.concurrent(
 	`${chalk.yellowBright("track-all-balances-B: event_name across two features returns four balances")}`,
@@ -133,11 +120,6 @@ test.concurrent(
 	},
 );
 
-// ═══════════════════════════════════════════════════════════════════
-// Scenario C: feature_id with no linked credit systems
-// Messages has no credit system referencing it. Expect single balance.
-// ═══════════════════════════════════════════════════════════════════
-
 test.concurrent(
 	`${chalk.yellowBright("track-all-balances-C: feature_id with no credit systems returns single balance")}`,
 	async () => {
@@ -170,11 +152,6 @@ test.concurrent(
 		expect(trackRes.balances).toBeUndefined();
 	},
 );
-
-// ═══════════════════════════════════════════════════════════════════
-// Scenario D: tracking a credit system directly does NOT return its
-// metered features (no walking backwards).
-// ═══════════════════════════════════════════════════════════════════
 
 test.concurrent(
 	`${chalk.yellowBright("track-all-balances-D: tracking credit system directly returns only that balance")}`,
@@ -213,12 +190,6 @@ test.concurrent(
 	},
 );
 
-// ═══════════════════════════════════════════════════════════════════
-// Scenario E: relevant credit system feature exists in the org but
-// the customer has no entitlement to it. Response key is present
-// with value null.
-// ═══════════════════════════════════════════════════════════════════
-
 test.concurrent(
 	`${chalk.yellowBright("track-all-balances-E: missing entitlement on related feature returns null entry")}`,
 	async () => {
@@ -246,10 +217,8 @@ test.concurrent(
 			value: 5,
 		});
 
-		// `balance` falls back to Action1 (Credits is not entitled)
 		expect(trackRes.balance).not.toBeNull();
 		expect(trackRes.balance?.feature_id).toBe(TestFeature.Action1);
-		// `balances` includes null entries for the missing entitlements
 		expect(trackRes.balances).toBeDefined();
 		expect(Object.keys(trackRes.balances ?? {}).sort()).toEqual(
 			[

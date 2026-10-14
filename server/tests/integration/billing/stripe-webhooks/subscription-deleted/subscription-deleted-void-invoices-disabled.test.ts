@@ -17,26 +17,6 @@ import { CusService } from "@/internal/customers/CusService";
 import { OrgService } from "@/internal/orgs/OrgService";
 import { timeout } from "@/utils/genUtils";
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 6: Verify invoices are NOT voided when config is disabled
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Init pro ($20/mo) and free (default) products
- * - Attach pro to customer with successful payment
- * - Switch to a failing payment method
- * - Advance test clock to next billing cycle (payment fails, invoice goes to 'open')
- * - Cancel subscription via Stripe
- * - Config void_invoices_on_subscription_deletion is FALSE (default)
- *
- * Expected Result:
- * - Open invoice remains 'open' (NOT voided)
- * - Pro is removed
- * - Free default becomes active
- *
- * This is a negative test to verify the feature is correctly gated by the config flag.
- */
 test(`${chalk.yellowBright("sub.deleted: open invoices NOT voided when config disabled")}`, async () => {
 	const customerId = "sub-deleted-void-disabled";
 
@@ -53,8 +33,6 @@ test(`${chalk.yellowBright("sub.deleted: open invoices NOT voided when config di
 		items: [messagesItem],
 	});
 
-	// Initialize scenario with test clock enabled
-	// NOTE: We do NOT enable void_invoices_on_subscription_deletion (default is false)
 	const { ctx, testClockId } = await initScenario({
 		customerId,
 		setup: [
@@ -80,7 +58,6 @@ test(`${chalk.yellowBright("sub.deleted: open invoices NOT voided when config di
 		secretKey: ctx.orgSecretKey,
 	});
 
-	// Verify pro is active after initial attach
 	const customerAfterAttach =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	await expectProductActive({
@@ -88,14 +65,12 @@ test(`${chalk.yellowBright("sub.deleted: open invoices NOT voided when config di
 		productId: pro.id,
 	});
 
-	// Get subscription ID
 	const subscriptionId = await getSubscriptionId({
 		ctx,
 		customerId,
 		productId: pro.id,
 	});
 
-	// Get the customer record to access Stripe customer ID
 	const customer = await CusService.get({
 		db: ctx.db,
 		idOrInternalId: customerId,
@@ -103,13 +78,11 @@ test(`${chalk.yellowBright("sub.deleted: open invoices NOT voided when config di
 		env: ctx.env,
 	});
 
-	// Switch to a failing payment method
 	await attachFailedPaymentMethod({
 		stripeCli: ctx.stripeCli,
 		customer: customer!,
 	});
 
-	// Get the failing payment method and set it on the subscription
 	const paymentMethods = await ctx.stripeCli.paymentMethods.list({
 		customer: customer!.processor?.id,
 	});
@@ -124,10 +97,8 @@ test(`${chalk.yellowBright("sub.deleted: open invoices NOT voided when config di
 		testClockId: testClockId!,
 	});
 
-	// Wait for Stripe to process the billing and payment attempt
 	await timeout(4000);
 
-	// Verify that an open invoice exists (payment failed)
 	const invoicesBeforeCancel = await ctx.stripeCli.invoices.list({
 		customer: customer!.processor?.id,
 		subscription: subscriptionId,
@@ -138,13 +109,10 @@ test(`${chalk.yellowBright("sub.deleted: open invoices NOT voided when config di
 	);
 	expect(openInvoicesBeforeCancel.length).toBeGreaterThan(0);
 
-	// Cancel subscription via Stripe
 	await ctx.stripeCli.subscriptions.cancel(subscriptionId);
 
-	// Wait for webhook to process
 	await timeout(12000);
 
-	// Verify that open invoices are still open (NOT voided, because config is disabled)
 	const invoicesAfterCancel = await ctx.stripeCli.invoices.list({
 		customer: customer!.processor?.id,
 		subscription: subscriptionId,
@@ -155,13 +123,11 @@ test(`${chalk.yellowBright("sub.deleted: open invoices NOT voided when config di
 	);
 	expect(openInvoicesAfterCancel.length).toBeGreaterThan(0);
 
-	// Verify NO voided invoices (feature is disabled)
 	const voidedInvoices = invoicesAfterCancel.data.filter(
 		(inv) => inv.status === "void",
 	);
 	expect(voidedInvoices.length).toBe(0);
 
-	// Verify pro is gone and free is active
 	const customerAfterCancel =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
@@ -171,7 +137,6 @@ test(`${chalk.yellowBright("sub.deleted: open invoices NOT voided when config di
 		active: [free.id],
 	});
 
-	// Verify no Stripe subscription exists
 	await expectNoStripeSubscription({
 		db: ctx.db,
 		customerId,

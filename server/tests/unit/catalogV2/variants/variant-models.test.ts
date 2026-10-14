@@ -1,15 +1,3 @@
-/**
- * CatalogV2 variant data model — pointer, declare copy, preview, customize.
- *
- * Contract:
- *   Product.base_internal_product_id is null | string | omitted
- *   pointer-only change is a details write
- *   ProductUpsertIntent.baseInternalProductId is derive-owned
- *   declaredVariants copies on direct only
- *   preview variants[] accepts variant_action
- *   variants[].customize accepts items and upsert_licenses
- */
-
 import { describe, expect, test } from "bun:test";
 import {
 	CatalogPlanUpdatePreviewSchema,

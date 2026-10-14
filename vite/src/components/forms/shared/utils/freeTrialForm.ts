@@ -3,7 +3,6 @@ import type { UseCustomerStateForm } from "@/components/forms/customer-state/use
 import type { UseUpdateSubscriptionForm } from "@/components/forms/update-subscription-v2/hooks/useUpdateSubscriptionForm";
 import type { FreeTrialFormValues } from "./freeTrialFormValues";
 
-/** Every billing form that renders the shared free trial row. */
 export type FreeTrialForm =
 	| UseAttachForm
 	| UseUpdateSubscriptionForm
@@ -11,7 +10,6 @@ export type FreeTrialForm =
 
 const PROGRAMMATIC_WRITE = { dontRunListeners: true };
 
-/** Programmatic writes skip field listeners, so only user input counts as an edit. */
 export const applyFreeTrialFormValues = ({
 	form,
 	values,

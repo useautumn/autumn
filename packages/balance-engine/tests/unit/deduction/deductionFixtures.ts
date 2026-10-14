@@ -80,7 +80,6 @@ export const deductFrom = ({
 		}),
 	});
 
-/** A request from flat inputs: the selection's org settings and the draw's terms both derived here, as the commands do. */
 export const createDeductionRequest = ({
 	featureId = "messages",
 	internalFeatureId = `feat_${featureId}`,
@@ -146,7 +145,6 @@ const rowBeforeOf = ({
 	return row;
 };
 
-/** Each moved row as `[id, columns as the change leaves them]`: an increment read through the row it moved, an update's `after`; inserts and deletes pass through. */
 export const balancesAfter = (outcome: DeductionOutcome) =>
 	outcome.changes.map((change) => {
 		if (change.op === "update") return [change.id, change.after];
@@ -168,7 +166,6 @@ export const balancesAfter = (outcome: DeductionOutcome) =>
 		];
 	});
 
-/** The customer row with the given billing controls on it. */
 export const customerWith = (
 	controls: Partial<
 		Pick<WorkerCustomer, "spend_limits" | "overage_allowed" | "usage_limits">

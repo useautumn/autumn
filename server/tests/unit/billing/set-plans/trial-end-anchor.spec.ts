@@ -1,13 +1,3 @@
-/**
- * Turning a live trial off anchors the new cycle on the old trial end, but only for a first phase starting now or
- * backdated, and never as the requested anchor: request guards judge only what the caller sent.
- *
- * Red (before):  a future first phase with free_trial null wrote the old trial end into the requested anchor,
- *                so set_plans rejected it with future_start_conflict billing_cycle_anchor, and an ends_at before
- *                the trial end failed date_order.
- * Green (after): the trial end is its own field, set only when the phase starts now or was backdated.
- */
-
 import { describe, expect, test } from "bun:test";
 import {
 	type CreateScheduleBillingContext,

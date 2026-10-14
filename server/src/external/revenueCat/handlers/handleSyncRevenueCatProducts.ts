@@ -3,7 +3,6 @@ import { z } from "zod/v4";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { syncProductsToRevenueCat } from "../sync/syncRevenueCatProducts.js";
 
-/** POST /v1/organization/revenuecat/sync — push selected Autumn plans into RevenueCat. */
 export const handleSyncRevenueCatProducts = createRoute({
 	scopes: [Scopes.Organisation.Write],
 	body: z.object({ product_ids: z.array(z.string()).min(1) }),

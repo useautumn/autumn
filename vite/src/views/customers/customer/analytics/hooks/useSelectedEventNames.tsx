@@ -4,9 +4,6 @@ import { useAnalyticsFilterState } from "./useAnalyticsFilterState";
 import { useAnalyticsQueryState } from "./useAnalyticsQueryState";
 import { type EventNameWithCount, useEventNames } from "./useEventNames";
 
-/** Resolves the event names the analytics views filter by: explicit URL
- * selection (event_names / feature_ids) or the top events by count in the
- * active window by default. Shared by the chart and the events table. */
 export const useSelectedEventNames = () => {
 	const { filterStates } = useAnalyticsFilterState();
 	const {
@@ -23,7 +20,6 @@ export const useSelectedEventNames = () => {
 		binSize: queryStates.bin_size,
 	});
 
-	// The last window's names stay up while a new one loads, so labels never flash empty.
 	const {
 		eventNames: cachedEventNames,
 		isLoading,

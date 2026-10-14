@@ -1,6 +1,5 @@
 import type { WorkerBoot } from "../../../../api/contract.ts";
 
-/** `[tw-boot] +Nms <message>` prefixes (worker/boot.ts), in boot order, naming the step each starts. */
 const SANDBOX_MARKERS = [
 	{ prefix: "starting native services", step: "services up" },
 	{ prefix: "native services healthy", step: "balance queue prep" },
@@ -18,14 +17,12 @@ const ANSI = /\u001B\[[0-9;]*m/g;
 
 type Trace = {
 	marks: Map<string, number>;
-	/** Wall-clock time boot.ts started, inferred from the first marker's arrival minus its offset. */
 	bootStartedAt?: number;
 	sandboxMarkers: { step: string; atMs: number }[];
 	pending: string;
 	done: boolean;
 };
 
-/** Per-worker boot timeline: orchestrator phases by wall clock, sandbox phases from `[tw-boot]` offsets. */
 export const createBootTimeline = () => {
 	const traces = new Map<string, Trace>();
 	const traceOf = (worker: string) => {
@@ -63,7 +60,6 @@ export const createBootTimeline = () => {
 		}
 	};
 
-	/** Steps in order; call once the worker is mapped and serving. */
 	const finish = (worker: string): WorkerBoot | null => {
 		const trace = traces.get(worker);
 		if (!trace) return null;

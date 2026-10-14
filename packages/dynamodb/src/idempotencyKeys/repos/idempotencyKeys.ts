@@ -20,7 +20,6 @@ const nowSeconds = (): number => Math.floor(Date.now() / 1000);
 const isConditionFailed = (error: unknown): boolean =>
 	error instanceof ConditionalCheckFailedException;
 
-/** A fresh claim: nothing there, or something there that has expired (TTL sweeps lazily, days late). */
 const putFresh = async ({
 	ctx,
 	claim,
@@ -44,7 +43,6 @@ const putFresh = async ({
 	);
 };
 
-/** The same owner again: touches nothing, so the original expiry stands. */
 const resumeOwn = async ({
 	ctx,
 	claim,
@@ -96,7 +94,6 @@ export const claimIdempotencyKey = async ({
 	}
 };
 
-/** Frees the key so the client can retry; with an owner, only that owner's claim goes. Never throws. */
 export const releaseIdempotencyKey = async ({
 	ctx,
 	storageKey,
@@ -118,9 +115,7 @@ export const releaseIdempotencyKey = async ({
 				}),
 			}),
 		);
-	} catch {
-		// A failed release only costs the caller a retry window, never the request.
-	}
+	} catch {}
 };
 
 const unavailable = ({

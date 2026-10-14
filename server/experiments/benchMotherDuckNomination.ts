@@ -1,30 +1,20 @@
 import { sql } from "drizzle-orm";
-// Import initDrizzle directly — avoid `experimentEnv` because its
-// `loadLocalEnv()` reads `server/.env` and clobbers env vars injected by
-// `infisical run --env=prod` (e.g. DATABASE_URL, MOTHERDUCK_TOKEN).
 import { initDrizzle } from "../src/db/initDrizzle";
 import {
 	initMotherDuck,
 	type MotherDuckDb,
 } from "../src/external/motherduck/initMotherDuck";
 
-// Run with:
-//   PROD_TEST_ORG_ID=... infisical run --env=prod --recursive -- bun run server/experiments/benchMotherDuckNomination.ts
-// Requires MOTHERDUCK_TOKEN (read-only). Numbers from a laptop include the
-// London<->us-east RTT; in-region prod will be lower.
-
-// ─── Configuration ──────────────────────────────────────────────────
 const FEATURE_INTERNAL_ID =
-	process.env.PROD_TEST_FEATURE_INTERNAL_ID ?? "fe_3AqPX5NFZfG2LF7U1k0TQb0TPg2"; // CREDITS on the whale org
+	process.env.PROD_TEST_FEATURE_INTERNAL_ID ?? "fe_3AqPX5NFZfG2LF7U1k0TQb0TPg2";
 const SMALL_FEATURE_INTERNAL_ID =
 	process.env.PROD_TEST_SMALL_FEATURE_INTERNAL_ID ??
-	"fe_3ErCQiGdoMoHsa4ty9DCBiptxbW"; // SEARCH_CREDITS
+	"fe_3ErCQiGdoMoHsa4ty9DCBiptxbW";
 const NOMINATION_LIMIT = 1000;
 const VERIFY_PAGE_SIZE = 250;
 const REPEATS = 10;
 const BURST_SIZE = 8;
 const POOL_SIZE = 4;
-// ═════════════════════════════════════════════════════════════════════
 
 const p50 = (xs: number[]): number =>
 	[...xs].sort((a, b) => a - b)[Math.floor(xs.length / 2)];
@@ -80,7 +70,6 @@ const main = async () => {
 		),
 	);
 
-	// ── A: cold start — instance + auth + first trivial query ──
 	const tColdStart = performance.now();
 	const md = await initMotherDuck({
 		token: process.env.MOTHERDUCK_TOKEN,
@@ -93,7 +82,6 @@ const main = async () => {
 		`\nA: cold start — init=${(tInitDone - tColdStart).toFixed(0)}ms firstQuery=${(tFirstQuery - tInitDone).toFixed(0)}ms total=${(tFirstQuery - tColdStart).toFixed(0)}ms`,
 	);
 
-	// ── B: warm nomination p50 (whale feature) ──
 	{
 		await runNomination({ db: md, featureInternalId: FEATURE_INTERNAL_ID });
 		const samples: number[] = [];
@@ -114,7 +102,6 @@ const main = async () => {
 		);
 	}
 
-	// ── B2: pre-aggregated totals table (built by the refresh) ──
 	const totalsSql = (featureInternalId: string) => sql`
 		SELECT internal_customer_id, is_unlimited, total
 		FROM main.ce_balance_totals
@@ -147,9 +134,6 @@ const main = async () => {
 		);
 	}
 
-	// ── C: burst — BURST_SIZE concurrent nominations on a pool of POOL_SIZE ──
-	// Shed errors (pool acquire timeout) are a RESULT here, not a crash: they
-	// show where MD compute contention pushes waiters past acquireTimeout.
 	{
 		const burstQuery = totalsTableExists
 			? () => md.execute(totalsSql(FEATURE_INTERNAL_ID))
@@ -173,7 +157,6 @@ const main = async () => {
 		);
 	}
 
-	// ── D: small feature floor ──
 	{
 		await runNomination({
 			db: md,
@@ -193,7 +176,6 @@ const main = async () => {
 		);
 	}
 
-	// ── E: end-to-end resolve — MD nomination + PG exact verify of a page ──
 	{
 		const usingReplica = Boolean(process.env.DATABASE_REPLICA_URL);
 		const { db: pg, client } = initDrizzle({ replica: usingReplica });

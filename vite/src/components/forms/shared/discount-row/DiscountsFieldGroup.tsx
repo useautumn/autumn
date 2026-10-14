@@ -21,7 +21,6 @@ const discountsProps: {
 	appliedDiscounts: [],
 };
 
-/** New discounts plus remove toggles for the ones already on the subscription. */
 export const DiscountsFieldGroup = withFieldGroup({
 	defaultValues: EMPTY_DISCOUNTS_FORM_VALUES,
 	props: discountsProps,

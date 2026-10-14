@@ -16,10 +16,6 @@ import { MetadataService } from "@/internal/metadata/MetadataService";
 import type { StripeWebhookContext } from "../../../webhookMiddlewares/stripeWebhookContext";
 import type { CheckoutSessionCompletedContext } from "../setupCheckoutSessionCompletedContext";
 
-/**
- * Handles setup checkout sessions with metadata (plan attachment after setup).
- * Updates the customer's payment method, then attaches the plan if specified.
- */
 export const handleSetupPaymentMetadata = async ({
 	ctx,
 	checkoutContext,
@@ -47,7 +43,6 @@ export const handleSetupPaymentMetadata = async ({
 		return;
 	}
 
-	// 1. Update customer's default payment method
 	const stripeCli = createStripeCli({ org, env });
 	const paymentMethod = await updateDefaultPaymentMethod({
 		stripeCli,
@@ -62,7 +57,6 @@ export const handleSetupPaymentMetadata = async ({
 		logger.warn("Setup payment metadata: no payment method found after setup");
 	}
 
-	// 2. Attach plan if plan_id was specified
 	if (deferredData.params.plan_id) {
 		logger.info(
 			`Setup payment metadata: attaching plan ${deferredData.params.plan_id}`,
@@ -72,7 +66,6 @@ export const handleSetupPaymentMetadata = async ({
 			params: deferredData.params,
 		});
 
-		// Webhook-driven direct bill — serialize with API attaches like the V2 flow.
 		const { billingResult } = await withBillingLock({
 			lockKeys: [
 				ctx.fullCustomer?.id,
@@ -92,7 +85,6 @@ export const handleSetupPaymentMetadata = async ({
 				}),
 		});
 
-		// Rethrow keeps the metadata for Stripe's retry instead of claiming success.
 		if (billingResult?.stripe.resumedPendingInvoice) {
 			throw new RecaseError({
 				code: ErrCode.PendingPlanConflict,
@@ -106,6 +98,5 @@ export const handleSetupPaymentMetadata = async ({
 		);
 	}
 
-	// 3. Cleanup metadata
 	await MetadataService.delete({ db: ctx.db, id: metadata.id });
 };

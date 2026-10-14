@@ -49,7 +49,6 @@ export const normalizeDbExecute = <
 	});
 };
 
-/** Opens one pool from its row in the @autumn/postgres pool table. */
 export const initDrizzle = ({
 	pool = getPostgresPools().adHoc,
 	maxConnections = pool.maxConnections,
@@ -59,17 +58,12 @@ export const initDrizzle = ({
 	poolConfig,
 	name,
 }: {
-	/** The pool's row. Long-lived pools pass theirs; scripts, benches and tests take the ad hoc one. */
 	pool?: PostgresPoolProfile;
-	/** Per-run sizing for scripts and benches, on top of the row. */
 	maxConnections?: number;
-	/** Seconds; per-run override on top of the row. */
 	connectTimeout?: number;
 	replica?: boolean;
 	databaseUrl?: string;
-	/** pg options the table has no column for, such as a read-only session. */
 	poolConfig?: PoolConfig;
-	/** Pool name for monitor/error logs. Omit to skip registration. */
 	name?: string;
 } = {}) => {
 	const databaseEnv = createDatabaseEnv(process.env);
@@ -101,13 +95,10 @@ export const initDrizzle = ({
 		});
 		registerPool({ pool: client, name, max: maxConnections });
 	}
-	// After registerPool so a retry passes through timeAcquires as its own acquire attempt.
 	applyConnectRefusedRetry({ pool: client, name: name ?? "unnamed" });
 
 	const drizzleDb = drizzle(client, { schema });
 	const db = normalizeDbExecute(drizzleDb) as unknown as AutumnDb;
-	// runInTransaction, not drizzle's pool transaction: a client whose read timed out leaves the pool
-	// instead of going back still hung.
 	const normalizedTransaction: typeof drizzleDb.transaction = ((fn, config) =>
 		runInTransaction({
 			ctx: { db: drizzleDb },
@@ -125,28 +116,19 @@ export const initDrizzle = ({
 
 const pools = getPostgresPools();
 
-/** Frontend ceiling the app's primary pools actually compete for: PgBouncer
- *  max_client_conn (2,000) x 6 pods. */
 const PGBOUNCER_MAX_CLIENT_CONN = 12_000;
 
-/** The replica pool connects through its own dedicated bouncer (single
- *  instance), so it has its own client-slot budget separate from the primary's. */
 const REPLICA_PGBOUNCER_MAX_CLIENT_CONN = 1_000;
 
 /** Bouncer->Postgres slots. NOT a client limit — transaction pooling multiplexes
  *  many clients onto far fewer of these. Kept for sizing, not for this guard. */
 const POSTGRES_MAX_SERVER_CONNECTIONS = 7_600;
 
-/** 20 pinned tasks x forks. Recycles transiently add +1 fork/task — headroom
- *  absorbs that at <=4 forks; at 5+ also lower REPLICA_DB_POOL_MAX. */
 const BUDGETED_FLEET_PROCESSES = 20 * getServerForkCount();
 
-/** Dedicated worker/cron pools that exist outside the three exported ones. */
 const BUDGETED_NON_SERVER_CONNECTIONS = 362;
 const POOL_BUDGET_HEADROOM = 0.85;
 
-/** Fleet budget guards. Primary pools count against the primary bouncer's
- *  max_client_conn; the replica pool counts against the replica bouncer's. */
 export const computePoolBudgetWarnings = ({
 	criticalPoolMax: critical,
 	generalPoolMax: general,
@@ -213,7 +195,6 @@ export const { db: dbList, client: clientList } = initDrizzle({
 	pool: pools.list,
 });
 
-// Replica pools exist only when DATABASE_REPLICA_URL is configured.
 const replicaResult = process.env.DATABASE_REPLICA_URL
 	? initDrizzle({ name: "replica", replica: true, pool: pools.replica })
 	: null;
@@ -230,8 +211,6 @@ const replicaSlowResult = process.env.DATABASE_REPLICA_URL
 export const dbReplicaSlow = replicaSlowResult?.db ?? null;
 export const clientReplicaSlow = replicaSlowResult?.client ?? null;
 
-// Backward-compatible exports — existing code that imports `db` or `client`
-// gets the general pool automatically.
 export const client = clientGeneral;
 export const db = dbGeneral;
 

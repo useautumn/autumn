@@ -4,7 +4,6 @@ import { refreshAtomRecord } from "./refreshAtomRecord.js";
 import type { AtomContext } from "./types/atomContext.js";
 import type { AtomRecord } from "./types/atomRecord.js";
 
-/** Resumes a failed deploy from the step that failed; the caller watches it again. */
 export const retryAtomRecord = async <T extends AtomRecord>({
 	ctx,
 	record,

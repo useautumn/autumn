@@ -14,7 +14,6 @@ import {
 import { createSimCluster, type SimCluster } from "./harness/simCluster.js";
 import type { NetworkProfile } from "./harness/simNetwork.js";
 
-/** How many seeds each scenario runs; raise it locally (ATOM_SIM_SEEDS=500) for a long sweep. */
 const SEEDS = Number(process.env.ATOM_SIM_SEEDS ?? 25);
 const FIRST_SEED = Number(process.env.ATOM_SIM_FIRST_SEED ?? 1);
 const ONLY = process.env.ATOM_SIM_SEED
@@ -24,20 +23,14 @@ const seeds = ONLY ?? Array.from({ length: SEEDS }, (_, i) => FIRST_SEED + i);
 const LOG = process.env.ATOM_SIM_SEED !== undefined;
 
 const ADDRESSES = ["10.244.1.10", "10.244.2.10", "10.244.3.10"];
-/** Long enough for the balancer to register every address, so the first checks are not all answered by one replica. */
 const WARM_MS = 20_000;
-/** After the chaos: one anti-entropy period past the relay hold, so what any replica alone held has reached the others. */
 const QUIET_MS = HOLD_MS + 2 * ANTI_ENTROPY_EVERY_MS;
 
-/** An hour of one new customer a second, at the ~9 KB a fixture customer takes on disk: ~32 MB unbounded, against a 16 MB share. */
 const CHURN_MS = 3_600_000;
 const CHURN_DISK_SHARE_BYTES = 16 * 1024 * 1024;
-/** 15 min of churn (the evictor's minimum age, ~8 MB) fits the share, so the share never has to drop recent rows. */
 const CHURN_CONVERGED_WITHIN_MS = 5 * 60_000;
 const CHURN_ROW_TEXT_BYTES = 4_000;
-/** A tick is 10 s apart, and a pass stops at 95% of the share: between two, a replica may be ahead by 15 s of pushes (3 a second, ~9 KB each). */
 const CHURN_PUSH_SLACK_BYTES = 15 * 3 * 9_000;
-/** About 60 held subjects: the eight checked customers fit, the churn does not. */
 const CHURN_HELD_BUDGET_BYTES = 256 * 1024;
 
 const CHAOTIC_NETWORK: Partial<NetworkProfile> = {
@@ -46,7 +39,6 @@ const CHAOTIC_NETWORK: Partial<NetworkProfile> = {
 	dupRate: 0.1,
 };
 
-/** A check Atom leaves to the Autumn API never leaves the simulation: the API is down for the whole run. */
 beforeAll(() => {
 	spyOn(globalThis, "fetch").mockRejectedValue(
 		new TypeError("connect ECONNREFUSED api.autumn.example"),
@@ -56,31 +48,22 @@ afterAll(() => spyOn(globalThis, "fetch").mockRestore());
 
 type Scenario = {
 	name: string;
-	/** Runs on this many of the seeds; a long scenario runs on fewer. */
 	seeds?: number;
 	profile?: Partial<NetworkProfile>;
-	/** Entities per customer, pushed as views beside the customer's own. */
 	entities?: number;
 	planEndRate?: number;
 	skews?: number[];
-	/** The chaos, run with traffic for `ms`; `onStep` fires every 100 ms of simulated time. */
 	chaos: (cluster: SimCluster) => {
 		ms: number;
 		onStep?: (step: { at: number }) => void;
 		after?: () => void;
 	};
-	/** Once the replica is ready, no answer is staler than this. Omitted where the chaos itself makes it meaningless. */
 	freshnessBoundMs?: number;
-	/** Whether every check must get an answer. */
 	noErrors?: boolean;
-	/** Whether checks may be answered 504 while a replica starts (a proxied check whose peer timed out). */
 	allowPeerTimeouts?: boolean;
-	/** Each replica's held budget and disk share, for a scenario about eviction. */
 	heldBudgetBytes?: number;
 	diskShareBytes?: number;
-	/** Only customers pushed this recently must be held everywhere at the end: the rest may have been dropped for the share. */
 	convergedWithinMs?: number;
-	/** The chaos's own traffic, over `runFor`'s defaults. */
 	traffic?: {
 		pushesPerSecond?: number;
 		checksPerSecond?: number;
@@ -108,7 +91,6 @@ const boot = async (cluster: SimCluster, skews: number[] = []) => {
 	await cluster.seedCustomers();
 };
 
-/** Brings every address back up and ready, then lets the replicas settle with nothing else going on. */
 const recover = async (cluster: SimCluster) => {
 	for (const address of cluster.addresses())
 		if (!cluster.replicas.get(address)?.alive()) cluster.start({ address });
@@ -172,7 +154,6 @@ const runScenario = async ({
 	}
 };
 
-/** Kills or stops a random replica now and brings it back after a while, on its volume or a fresh one. */
 const restartOne = ({
 	cluster,
 	fresh,
@@ -204,7 +185,6 @@ const scenarios: Scenario[] = [
 		name: "delay, reorder, duplication and loss on every relay and catch-up",
 		profile: CHAOTIC_NETWORK,
 		chaos: () => ({ ms: 60_000 }),
-		// Retries wait a second each; past a few of them a copy is at most this late.
 		freshnessBoundMs: 15_000,
 	},
 	{
@@ -212,7 +192,6 @@ const scenarios: Scenario[] = [
 		chaos: (cluster) => ({
 			ms: 90_000,
 			onStep: () => {
-				// Hits a replica at any point: a few per minute, and more often while one is starting or flushing.
 				const starting = [...cluster.replicas.values()].find(
 					(r) => r.state() === "starting" || r.state() === "stopping",
 				);
@@ -221,7 +200,6 @@ const scenarios: Scenario[] = [
 					restartOne({ cluster, fresh: true });
 			},
 		}),
-		// A write that died with its relay comes back with the replica: restart delay, boot and the resend.
 		freshnessBoundMs: 15_000,
 	},
 	{
@@ -256,7 +234,6 @@ const scenarios: Scenario[] = [
 					else if (roll < 0.006 && cluster.addresses().length > 2)
 						cluster.remove(cluster.rng.pick(cluster.addresses()));
 					else if (roll < 0.008) {
-						// An address given up comes back with a fresh volume behind it.
 						const gone = ADDRESSES.find(
 							(address) => !cluster.replicas.has(address),
 						);
@@ -363,7 +340,6 @@ const scenarios: Scenario[] = [
 			ms: CHURN_MS,
 			onStep: () => {
 				for (const replica of cluster.alive()) {
-					// A tick is 10 s apart, so between two a replica may be ahead by what Autumn pushed since.
 					if (
 						replica.diskBytes() >
 						CHURN_DISK_SHARE_BYTES + CHURN_PUSH_SLACK_BYTES

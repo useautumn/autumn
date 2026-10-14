@@ -5,21 +5,9 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-/**
- * Plan Schedule: Entity Upgrade with Scheduled Override
- *
- * Demonstrates forcing a scheduled upgrade for an entity joining an existing subscription.
- * Entity 1 is on Pro. Entity 2 upgrades to Premium with plan_schedule: "end_of_cycle".
- * The upgrade is scheduled for end of cycle instead of happening immediately.
- *
- * This is useful when you want entities to upgrade together at cycle boundaries
- * rather than having prorated mid-cycle charges.
- */
-
 test(`${chalk.yellowBright("plan_schedule: entity upgrade with end_of_cycle override")}`, async () => {
 	const customerId = "plan-schedule-entity-upgrade";
 
-	// Pro plan ($20/mo)
 	const pro = products.pro({
 		id: "pro",
 		items: [
@@ -35,7 +23,6 @@ test(`${chalk.yellowBright("plan_schedule: entity upgrade with end_of_cycle over
 		],
 	});
 
-	// Premium plan ($50/mo)
 	const premium = products.premium({
 		id: "premium",
 		items: [
@@ -52,7 +39,6 @@ test(`${chalk.yellowBright("plan_schedule: entity upgrade with end_of_cycle over
 		],
 	});
 
-	// Setup: customer with payment method, 2 entities, entity 1 on pro
 	const { autumnV1, entities } = await initScenario({
 		customerId,
 		setup: [
@@ -63,7 +49,6 @@ test(`${chalk.yellowBright("plan_schedule: entity upgrade with end_of_cycle over
 		actions: [s.attach({ productId: "pro", entityIndex: 0 })],
 	});
 
-	// Get customer state with entity 1 on Pro
 	const customerBefore = await autumnV1.customers.get(customerId);
 	console.log("Customer before entity 2 scheduled upgrade:", {
 		products: customerBefore.products?.map(
@@ -75,7 +60,6 @@ test(`${chalk.yellowBright("plan_schedule: entity upgrade with end_of_cycle over
 		entities: entities.map((e) => ({ id: e.id, name: e.name })),
 	});
 
-	// 1. Preview entity 2 upgrade to premium with plan_schedule: "end_of_cycle"
 	const upgradePreview = await autumnV1.billing.previewAttach({
 		customer_id: customerId,
 		entity_id: entities[1].id,
@@ -88,7 +72,6 @@ test(`${chalk.yellowBright("plan_schedule: entity upgrade with end_of_cycle over
 		upgradePreview,
 	);
 
-	// 2. Perform entity 2 upgrade with plan_schedule: "end_of_cycle" and redirect_mode: "always" (Autumn checkout URL)
 	const upgradeResult = await autumnV1.billing.attach({
 		customer_id: customerId,
 		entity_id: entities[1].id,
@@ -98,7 +81,6 @@ test(`${chalk.yellowBright("plan_schedule: entity upgrade with end_of_cycle over
 	});
 	console.log("Entity 2 upgrade result:", upgradeResult);
 
-	// Get customer state after - entity 2's premium should be scheduled
 	const customerAfter = await autumnV1.customers.get(customerId);
 	console.log("Customer after entity 2 scheduled upgrade:", {
 		products: customerAfter.products?.map(

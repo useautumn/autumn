@@ -1,7 +1,5 @@
 import type { TrackParams } from "@autumn/shared";
 
-/** Namespaces track's body-level key away from raw header keys, so the same
- *  client value used in both places stays two independent claims. */
 export const getTrackBodyIdempotencyKey = ({
 	body,
 }: {

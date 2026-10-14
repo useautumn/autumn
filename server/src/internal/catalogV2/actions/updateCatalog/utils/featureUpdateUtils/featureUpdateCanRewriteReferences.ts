@@ -5,10 +5,6 @@ import {
 	type UpdateCatalogFeatureParams,
 } from "@autumn/shared";
 
-/**
- * Light setup peek — param fields vs current row only. Does not build `next`.
- * True when applying the entry may rewrite entitlements / prices / credit schemas.
- */
 export const featureUpdateCanRewriteReferences = ({
 	current,
 	entry,

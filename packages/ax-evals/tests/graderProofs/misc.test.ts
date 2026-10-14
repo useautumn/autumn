@@ -1,8 +1,3 @@
-/**
- * Grader proofs for the misc/display suite: the golden config passes every
- * catalog verdict; an empty workspace fails them all. (Judge checks are
- * prose-only and aren't provable without an agent.)
- */
 import { expect, test } from "bun:test";
 import { displayItemTypes } from "../../cases/misc/displayItemTypes.eval.ts";
 import { scoreConfigExpectations } from "../utils/scoreConfigExpectations.ts";

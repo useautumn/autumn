@@ -1,40 +1,3 @@
-/**
- * TDD test for AI billing-request generation: natural-language prompt ->
- * structured billing params for the dashboard sheets.
- *
- * Contract under test:
- *   New endpoints:
- *     - POST /v1/agent.generate_billing_request
- *       body: { tool: "attach" | "update_subscription" | "create_schedule",
- *               prompt: string, customer_id: string,
- *               customer_product_id?: string, current_request?: object }
- *       -> 200 { object: "billing_request_generation", tool,
- *                request: <V0 dashboard dialect>, unrepresentable: string[] }
- *   New behaviors:
- *     - attach prompt naming a plan + trial -> request.product_id +
- *       request.free_trial.{length,duration}
- *     - attach prompt with prepaid quantity + end-of-cycle wording ->
- *       request.options[{feature_id, quantity}] + plan_schedule "end_of_cycle"
- *     - customer_id is injected from the body param; a prompt naming a
- *       different customer cannot override it
- *     - update_subscription cancel wording -> request.cancel_action;
- *       customer_product_id passes through to the generated request
- *     - create_schedule future-phase wording -> non-empty phases containing
- *       the named plan with future timing
- *     - current_request edit mode: unmentioned fields preserved, mentioned
- *       fields changed
- *     - invalid tool / empty prompt -> 400 (zod validation)
- *   Side effects:
- *     - none (read + generate only; no DB writes)
- *
- * Pre-impl red: every assertion fails at endpoint resolution (404 — route not
- * registered). Post-impl green: handler + generation action + V1->V0
- * resolution produce the shapes above.
- *
- * Requires ANTHROPIC_API_KEY on the server under test — each test makes a
- * real model call, so keep this file out of keyless environments.
- */
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV5 } from "@autumn/shared";
 import { items } from "@tests/utils/fixtures/items.js";
@@ -57,7 +20,6 @@ test.concurrent(
 			actions: [],
 		});
 
-		// ── Contract: endpoint exists, response envelope ─────────────────────
 		const res = await autumnV2_2.post(GENERATE_PATH, {
 			tool: "attach",
 			prompt: "Attach the pro plan with a 14 day free trial",
@@ -69,12 +31,10 @@ test.concurrent(
 		expect(Array.isArray(res.unrepresentable)).toBe(true);
 		expect(res.unrepresentable).toEqual([]);
 
-		// ── Contract: plan + trial extraction into V0 dialect ────────────────
 		expect(res.request.product_id).toBe(`pro_${customerId}`);
 		expect(res.request.free_trial.length).toBe(14);
 		expect(res.request.free_trial.duration).toBe("day");
 
-		// ── Contract: customer_id injected from body param ───────────────────
 		expect(res.request.customer_id).toBe(customerId);
 	},
 	LLM_TEST_TIMEOUT,
@@ -102,12 +62,10 @@ test.concurrent(
 			customer_id: customerId,
 		});
 
-		// ── Contract: prepaid quantity -> options ────────────────────────────
 		expect(res.request.options).toEqual([
 			expect.objectContaining({ feature_id: "messages", quantity: 500 }),
 		]);
 
-		// ── Contract: end-of-cycle wording -> plan_schedule ──────────────────
 		expect(res.request.plan_schedule).toBe("end_of_cycle");
 	},
 	LLM_TEST_TIMEOUT,
@@ -135,19 +93,16 @@ test.concurrent(
 			customer_id: customerId,
 		});
 
-		// ── Contract: customize resolves to concrete V0 items ────────────────
 		const requestItems = res.request.items as
 			| { feature_id?: string; included_usage?: number; price?: number }[]
 			| undefined;
 		expect(Array.isArray(requestItems)).toBe(true);
 
-		// ── Contract: included usage changed on the messages item ────────────
 		const messagesItem = requestItems?.find(
 			(item) => item.feature_id === "messages",
 		);
 		expect(messagesItem?.included_usage).toBe(500);
 
-		// ── Contract: base price override survives alongside the item patch ──
 		const basePriceItem = requestItems?.find(
 			(item) => !item.feature_id && item.price !== undefined,
 		);
@@ -182,7 +137,6 @@ test.concurrent(
 		expect(res.tool).toBe("attach");
 		expect(res.request.customer_id).toBe(customerId);
 
-		// ── Contract: multi-plan prompt -> plans[] with both plans ───────────
 		const plans = res.request.plans as { plan_id: string }[];
 		expect(Array.isArray(plans)).toBe(true);
 		const planIds = plans.map((plan) => plan.plan_id).sort();
@@ -209,7 +163,6 @@ test.concurrent(
 			customer_id: customerId,
 		});
 
-		// ── Contract: customer_id from body param wins over prompt ───────────
 		expect(res.request.customer_id).toBe(customerId);
 		expect(res.request.product_id).toBe(`pro_${customerId}`);
 	},
@@ -246,10 +199,8 @@ test.concurrent(
 		expect(res.object).toBe("billing_request_generation");
 		expect(res.tool).toBe("update_subscription");
 
-		// ── Contract: cancel wording -> cancel_action ────────────────────────
 		expect(res.request.cancel_action).toBe("cancel_end_of_cycle");
 
-		// ── Contract: customer_product_id passthrough ────────────────────────
 		if (customerProductId) {
 			expect(res.request.customer_product_id).toBe(customerProductId);
 		}
@@ -287,7 +238,6 @@ test.concurrent(
 		expect(res.tool).toBe("create_schedule");
 		expect(res.request.customer_id).toBe(customerId);
 
-		// ── Contract: non-empty phases containing the named plan ─────────────
 		const phases = res.request.phases;
 		expect(Array.isArray(phases)).toBe(true);
 		expect(phases.length).toBeGreaterThan(0);
@@ -300,7 +250,6 @@ test.concurrent(
 			),
 		).toBe(true);
 
-		// ── Contract: the premium phase starts in the future ─────────────────
 		const premiumPhase = phases.find(
 			(phase: { plans: { plan_id: string }[] }) =>
 				phase.plans.some(
@@ -346,7 +295,6 @@ test.concurrent(
 			},
 		});
 
-		// ── Contract: unmentioned fields preserved, mentioned fields changed ─
 		expect(res.request.product_id).toBe(`pro_${customerId}`);
 		expect(res.request.free_trial.length).toBe(30);
 		expect(res.request.free_trial.duration).toBe("day");
@@ -366,7 +314,6 @@ test.concurrent(
 			actions: [],
 		});
 
-		// ── Contract: unknown tool -> 400 ────────────────────────────────────
 		await expect(
 			autumnV2_2.post(GENERATE_PATH, {
 				tool: "delete_everything",
@@ -375,7 +322,6 @@ test.concurrent(
 			}),
 		).rejects.toThrow();
 
-		// ── Contract: empty prompt -> 400 ────────────────────────────────────
 		await expect(
 			autumnV2_2.post(GENERATE_PATH, {
 				tool: "attach",

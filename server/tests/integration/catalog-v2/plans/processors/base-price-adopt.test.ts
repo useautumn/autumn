@@ -1,23 +1,3 @@
-/**
- * catalogV2.update — a supplied Stripe price id on the BASE price is adopted.
- *
- * A base price is fixed, so its id belongs in `stripe_price_id`, not the
- * prepaid v2 slot that item prices use. The schema carried `processors` here
- * already; nothing read it, so the id was accepted and dropped.
- *
- * Contract:
- *   C1  `plan.price.processors.stripe.price_id` lands in stripe_price_id and
- *       no new price is minted
- *   C2  the adopted price's own Stripe product is recorded on the config
- *   C3  re-stating a different id re-points the price and its product — the
- *       definition is unchanged, so the claim layer would otherwise drop it
- *   C4  an id Stripe does not know is a hard error, not a silent mint
- *
- * Red (current): basePriceToProductItem ignores `processors`, so the id never
- *   reaches the slot and Autumn mints its own price.
- * Green (after): the slot holds the supplied id; a missing id 400s.
- */
-
 import { expect, test } from "bun:test";
 import { BillingInterval, type FullProduct } from "@autumn/shared";
 import {
@@ -62,7 +42,6 @@ const baseSlots = ({ product }: { product: FullProduct }) => {
 	};
 };
 
-/** A price Autumn did not make — the shape a real import starts from. */
 const createExternalPrice = async ({
 	stripeCli,
 	label,
@@ -108,9 +87,7 @@ test.concurrent(
 				});
 
 				const slots = baseSlots({ product: await getFull({ ctx, planId }) });
-				// C1: the stated id landed — no freshly minted price.
 				expect(slots.priceId, "adopted base price id").toBe(external.priceId);
-				// C2: the product comes from the adopted price.
 				expect(slots.productId, "adopted price's own product").toBe(
 					external.productId,
 				);
@@ -152,8 +129,6 @@ test.concurrent(
 					"first mapping",
 				).toBe(first.priceId);
 
-				// Same amount and interval, so the price definition is unchanged and
-				// the claim layer keeps the current row unless the mapping is noticed.
 				await autumnV2_3.catalogV2.update({
 					plans: [
 						{ plan_id: planId, price: basePrice({ priceId: second.priceId }) },
@@ -161,7 +136,6 @@ test.concurrent(
 				});
 
 				const slots = baseSlots({ product: await getFull({ ctx, planId }) });
-				// C3: both the price and its product follow the restated id.
 				expect(slots.priceId, "re-mapped base price id").toBe(second.priceId);
 				expect(slots.productId, "product re-pointed").toBe(second.productId);
 			},
@@ -179,7 +153,6 @@ test.concurrent(
 			ctx,
 			planIds: [planId],
 			run: async () => {
-				// C4: a plausible but non-existent id must fail loudly.
 				const update = autumnV2_3.catalogV2.update({
 					plans: [
 						{

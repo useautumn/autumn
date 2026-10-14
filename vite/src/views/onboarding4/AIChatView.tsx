@@ -48,11 +48,9 @@ export function AIChatView({ onBack }: AIChatViewProps) {
 	return (
 		<SidebarContext.Provider value={{ expanded: true, setExpanded: () => {} }}>
 			<div className="w-full h-full flex flex-col bg-background">
-				{/* Main content */}
 				<div className="flex-1 flex min-h-0 relative">
 					<AnimatePresence mode="wait">
 						{!hasStartedChat ? (
-							/* Welcome State - Centered */
 							<motion.div
 								key="welcome"
 								initial={{ opacity: 1 }}
@@ -60,7 +58,6 @@ export function AIChatView({ onBack }: AIChatViewProps) {
 								transition={{ duration: 0.3 }}
 								className="absolute inset-0 flex flex-col items-center justify-center px-6"
 							>
-								{/* Glow layer behind leaf */}
 								<motion.div
 									initial={{ opacity: 0 }}
 									animate={{ opacity: [0, 0.6, 0] }}
@@ -78,7 +75,6 @@ export function AIChatView({ onBack }: AIChatViewProps) {
 										filter: "blur(50px) brightness(1)",
 									}}
 								/>
-								{/* Main leaf */}
 								<motion.div
 									initial={{ opacity: 0 }}
 									animate={{ opacity: 0.45 }}
@@ -96,7 +92,6 @@ export function AIChatView({ onBack }: AIChatViewProps) {
 									}}
 								/>
 
-								{/* Org dropdown in top left */}
 								<div className="absolute top-4 left-4">
 									<OrgDropdown />
 								</div>
@@ -143,7 +138,6 @@ export function AIChatView({ onBack }: AIChatViewProps) {
 								</motion.div>
 							</motion.div>
 						) : (
-							/* Chat State - Split View */
 							<motion.div
 								key="chat"
 								initial={{ opacity: 0 }}
@@ -151,12 +145,10 @@ export function AIChatView({ onBack }: AIChatViewProps) {
 								transition={{ duration: 0.3, delay: 0.2 }}
 								className="flex w-full h-full relative"
 							>
-								{/* Org dropdown in top left */}
 								<div className="absolute top-4 left-4 z-10">
 									<OrgDropdown />
 								</div>
 
-								{/* Left: Chat */}
 								<motion.div
 									initial={{ x: -50, opacity: 0 }}
 									animate={{ x: 0, opacity: 1 }}
@@ -175,7 +167,6 @@ export function AIChatView({ onBack }: AIChatViewProps) {
 									/>
 								</motion.div>
 
-								{/* Right: Pricing Preview */}
 								<motion.div
 									initial={{ x: 100, opacity: 0 }}
 									animate={{ x: 0, opacity: 1 }}

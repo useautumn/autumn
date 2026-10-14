@@ -1,15 +1,3 @@
-/**
- * TDD test for the OAuth-SIDE account-match guard in handleOAuthCallback: adding
- * OAuth when a secret key already exists must reject if the OAuth account differs
- * from the secret-key account — BEFORE persisting (updateStripeConnect must not run).
- *
- * Contract under test:
- *   handleOAuthCallback:
- *     - secret key present + OAuth account differs -> redirect error=account_mismatch,
- *       updateStripeConnect NOT called
- *     - secret key present + OAuth account matches -> updateStripeConnect called, success redirect
- */
-
 import { describe, expect, test } from "bun:test";
 import { Hono } from "hono";
 
@@ -21,8 +9,6 @@ const state = {
 	updateStripeConnectCalls: 0,
 };
 
-// Spread the real module so every export stays defined — a partial factory
-// poisons later files in the same process with missing-export link errors.
 const realInitDrizzle = await import("@/db/initDrizzle.js");
 await mockModuleWithRestore("@/db/initDrizzle.js", () => ({
 	...realInitDrizzle,

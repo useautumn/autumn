@@ -31,7 +31,6 @@ const recordAt = ({
 		},
 	}) as unknown as StreamRecord;
 
-/** Each subject's key as `cus_1` or `cus_1/ent_1`, with its offset and version. */
 const summaryOf = (records: StreamRecord[]) =>
 	recordsToCacheSubjects({ records }).map(
 		({ identity, logOffset, customerVersion }) => ({

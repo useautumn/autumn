@@ -1,12 +1,3 @@
-/**
- * Autumn-only cancel of an RC-managed subscription.
- *
- * Red (current):  billing.update with cancel_action + no_billing_changes on an
- *                 RC-managed cusProduct throws 409 "managed by RevenueCat".
- * Green (after):  the cancel goes through in Autumn only (no Stripe writes);
- *                 a cancel WITHOUT no_billing_changes stays blocked.
- */
-
 import { expect, test } from "bun:test";
 import { type ApiCustomerV3, AppEnv } from "@autumn/shared";
 import { items } from "@tests/utils/fixtures/items";
@@ -101,7 +92,6 @@ test.concurrent(
 		expect(customer.products).toHaveLength(1);
 		expect(customer.products[0].id).toBe(proMonthly.id);
 
-		// Guard still holds: a cancel WITHOUT no_billing_changes is blocked
 		await expect(
 			autumnV1.subscriptions.update({
 				customer_id: customerId,
@@ -110,7 +100,6 @@ test.concurrent(
 			}),
 		).rejects.toThrow(/managed by RevenueCat/i);
 
-		// Autumn-only cancel goes through
 		await autumnV1.subscriptions.update({
 			customer_id: customerId,
 			product_id: proMonthly.id,

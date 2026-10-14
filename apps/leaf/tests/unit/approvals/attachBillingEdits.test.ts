@@ -100,8 +100,6 @@ describe("attach billing edits", () => {
 		expect(parsed.data.long_lived_checkout).toBeUndefined();
 	});
 
-	// The provisioning choice must land on both fields the API reads, or the
-	// rebuilt request and the card disagree about when access starts.
 	test("provisioning is written to the top-level and invoice flags together", () => {
 		for (const access of ["immediate", "after_payment"] as const) {
 			const parsed = applyAttachBillingEdits({
@@ -119,8 +117,6 @@ describe("attach billing edits", () => {
 	});
 });
 
-// Proration is the third operator decision: whether an existing subscription
-// is trued up now, at the next cycle, or per the plan default.
 describe("proration edits", () => {
 	test("reads proration off the request, org default when omitted", () => {
 		expect(

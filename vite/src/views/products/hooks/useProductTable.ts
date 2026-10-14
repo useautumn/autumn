@@ -8,10 +8,6 @@ import {
 	useReactTable,
 } from "@tanstack/react-table";
 
-/**
- * Custom hook for product tables with standardized configuration.
- * Provides consistent table setup across all product-related tables.
- */
 export function useProductTable<TData>({
 	data,
 	columns,

@@ -23,7 +23,6 @@ describe(`${chalk.yellowBright(`${testCase}: multiple entities with isolated bal
 			withTestClock: false,
 		});
 
-		// Create two entities
 		await autumnV1.entities.create(customerId, [
 			{
 				id: entity1Id,
@@ -37,7 +36,6 @@ describe(`${chalk.yellowBright(`${testCase}: multiple entities with isolated bal
 			},
 		]);
 
-		// Give entity 1 a balance of 100
 		await autumnV1.balances.create({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
@@ -45,7 +43,6 @@ describe(`${chalk.yellowBright(`${testCase}: multiple entities with isolated bal
 			granted_balance: 100,
 		});
 
-		// Give entity 2 a balance of 500
 		await autumnV1.balances.create({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
@@ -81,7 +78,6 @@ describe(`${chalk.yellowBright(`${testCase}: multiple entities with isolated bal
 	});
 
 	test("v2: entity balances should be isolated (entity1 can't use entity2's balance)", async () => {
-		// Entity 1 asking for 200 should fail (only has 100)
 		const res = (await autumnV2.check({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
@@ -93,17 +89,14 @@ describe(`${chalk.yellowBright(`${testCase}: multiple entities with isolated bal
 		expect(res.balance?.current_balance).toBe(100);
 	});
 
-	// The balance worker doesn't aggregate entity data onto the customer.
 	test.skipIf(isBalanceWorkerRoute())(
 		"v2: customer level should see merged entity balances",
 		async () => {
 			const res = (await autumnV2.check({
 				customer_id: customerId,
 				feature_id: TestFeature.Messages,
-				// No entity_id
 			})) as unknown as CheckResponseV2;
 
-			// Customer should see merged entity balances: 100 + 500 = 600
 			expect(res.balance?.current_balance).toBe(600);
 		},
 	);

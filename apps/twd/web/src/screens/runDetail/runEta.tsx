@@ -8,7 +8,6 @@ import { TERMINAL } from "./runFiles.ts";
 
 const ESTIMATING = new Set(["provisioning", "running", "tearing_down"]);
 
-/** The stats-row timing chip: live ETA (or wall time once finished); opens the Timing sheet. */
 export const RunEtaButton = ({
 	run,
 	now,

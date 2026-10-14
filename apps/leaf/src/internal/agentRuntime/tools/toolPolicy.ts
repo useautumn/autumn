@@ -26,7 +26,6 @@ const labels: Record<string, string> = {
 	voidInvoice: "Void invoice",
 };
 
-// Plumbing the user should never see in a status line.
 const silentTools = new Set([
 	"dateToEpochMilliseconds",
 	"epochMillisecondsToDate",
@@ -52,8 +51,6 @@ export const toolLabel = (toolName: string) => {
 	);
 };
 
-// Present-progressive phrasing for live status lines ("Looking up the
-// customer…"). Falls back to the noun label for anything unmapped.
 const gerunds: Record<string, string> = {
 	getAgentRules: "Reading your billing setup",
 	listPlans: "Looking through your plans",
@@ -106,8 +103,6 @@ const gerunds: Record<string, string> = {
 export const toolGerund = (toolName: string) =>
 	gerunds[normalizeToolName(toolName)] ?? toolLabel(toolName);
 
-/** Label for a sandbox builtin tool (e.g. `read` loading a skill). A skill is
- * read as `<skill-name>/SKILL.md`, so name it by the skill, not "SKILL.md". */
 export const sandboxToolLabel = (
 	name: string,
 	input: Record<string, unknown>,

@@ -19,7 +19,6 @@ export type PrepaidQuantityDetails = {
 	updatePoolContributions: DbPooledBalanceContribution[];
 };
 
-/** Converges every recurring prepaid option onto the requested quantity. */
 export const computePrepaidQuantityDetails = ({
 	ctx,
 	billingContext,
@@ -35,7 +34,6 @@ export const computePrepaidQuantityDetails = ({
 		params.feature_quantities?.map((quantity) => quantity.feature_id),
 	);
 
-	// Recurring prepaid wins over a one-off sibling; one-off mutations belong to ManualTopUp.
 	const customerPrices = customerProduct.customer_prices.map(
 		(customerPrice) => customerPrice.price,
 	);

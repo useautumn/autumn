@@ -4,11 +4,6 @@ import { ApiVersionClass } from "./ApiVersionClass.js";
 import { VERSION_REGISTRY } from "./versionRegistry.js";
 import { CALVER_TO_SEMVER_MAP } from "./versionRegistryUtils.js";
 
-/**
- * CalVer → SemVer (supports .clover suffix for future non-breaking changes)
- * @example calVerToSemVer({ calver: "2025-04-17" }) // ApiVersion.V1_1
- * @example calVerToSemVer({ calver: "2025-04-17.clover" }) // ApiVersion.V1_1
- */
 export function calVerToSemVer({
 	calver,
 }: {
@@ -17,10 +12,6 @@ export function calVerToSemVer({
 	return CALVER_TO_SEMVER_MAP[calver] || null;
 }
 
-/**
- * SemVer → CalVer
- * @example semVerToCalVer({ semver: ApiVersion.V1_1 }) // "2025-04-17"
- */
 export function semVerToCalVer({ semver }: { semver: ApiVersion }): string {
 	const meta = VERSION_REGISTRY[semver];
 	if (!meta) {
@@ -29,10 +20,6 @@ export function semVerToCalVer({ semver }: { semver: ApiVersion }): string {
 	return meta.calver;
 }
 
-/**
- * Legacy float → SemVer
- * @example legacyToSemVer({ legacyVersion: 1.1 }) // ApiVersion.V1_1
- */
 export function legacyToSemVer({
 	legacyVersion,
 }: {
@@ -58,10 +45,6 @@ export function legacyToSemVer({
 	}
 }
 
-/**
- * SemVer → Legacy float
- * @example semVerToLegacy({ semver: ApiVersion.V1_1 }) // 1.1
- */
 export function semVerToLegacy({
 	semver,
 }: {
@@ -83,26 +66,15 @@ export function semVerToLegacy({
 	}
 }
 
-/**
- * Parse version string (CalVer, SemVer, or legacy)
- * Supports .clover suffix: "2025-04-17.clover"
- * Supports partial SemVer: "2" → "2.0.0", "2.0" → "2.0.0"
- * @example parseVersion({ versionStr: "2025-04-17" }) // ApiVersion.V1_1
- * @example parseVersion({ versionStr: "2" }) // ApiVersion.V2_0
- * @example parseVersion({ versionStr: "2.0" }) // ApiVersion.V2_0
- */
 export function parseVersion({
 	versionStr,
 }: {
 	versionStr: string;
 }): ApiVersion | null {
-	// CalVer with optional .clover suffix
 	if (/^\d{4}-\d{2}-\d{2}(\.clover)?$/.test(versionStr)) {
 		return calVerToSemVer({ calver: versionStr });
 	}
 
-	// SemVer (X.Y.Z) - normalize partial versions
-	// Supports "2" → "2.0.0", "2.0" → "2.0.0", "2.0.0" → "2.0.0"
 	if (/^\d+(\.\d+)*$/.test(versionStr)) {
 		const parts = versionStr.split(".");
 		const normalizedVersion = `${parts[0] || "0"}.${parts[1] || "0"}.${parts[2] || "0"}`;
@@ -112,12 +84,10 @@ export function parseVersion({
 		}
 	}
 
-	// Check for exact match (for special versions like "beta")
 	if (Object.values(ApiVersion).includes(versionStr as ApiVersion)) {
 		return versionStr as ApiVersion;
 	}
 
-	// Legacy float
 	const floatVersion = Number.parseFloat(versionStr);
 	if (!Number.isNaN(floatVersion)) {
 		return legacyToSemVer({ legacyVersion: floatVersion });
@@ -126,13 +96,6 @@ export function parseVersion({
 	return null;
 }
 
-/**
- * Convert Unix timestamp (milliseconds since epoch) to ApiVersionClass
- * Based on organization creation date - returns ApiVersionClass with comparison methods
- * @example createdAtToVersion({ createdAt: 1706572800000 }) // ApiVersionClass(V0_2)
- * @example createdAtToVersion({ createdAt: Date.now() }).gte(ApiVersion.V1_1) // true
- * @example createdAtToVersion({ createdAt: Date.now() }).value // Get raw ApiVersion enum
- */
 export function createdAtToVersion({
 	createdAt,
 }: {
@@ -169,5 +132,3 @@ export function createdAtToVersion({
 
 	return new ApiVersionClass(version);
 }
-
-// Convert org creation date

@@ -30,7 +30,6 @@ export type BillingPlanInsertTable = keyof typeof insertRowSchemas;
 export type BillingPlanUpdateTable = BillingPlanUpdateOp["table"];
 export type BillingPlanDeleteTable = BillingPlanDeleteOp["table"];
 
-/** An insert of the row cut to the columns the worker stores; the server's rows carry joined fields too. */
 export const toBillingPlanInsertOp = ({
 	table,
 	row,
@@ -49,7 +48,6 @@ const definedColumns = (record: object): Record<string, unknown> =>
 		Object.entries(record).filter(([, value]) => value !== undefined),
 	);
 
-/** An update of the columns `set` names; an undefined value names nothing. */
 export const toBillingPlanUpdateOp = ({
 	table,
 	id,
@@ -59,7 +57,6 @@ export const toBillingPlanUpdateOp = ({
 	table: BillingPlanUpdateTable;
 	id: string;
 	set: object;
-	/** Customer only: set the columns only where the row still holds null. */
 	whereUnset?: true;
 }): BillingPlanOp =>
 	billingPlanOpSchema.parse({
@@ -77,12 +74,10 @@ export const toBillingPlanDeleteOp = ({
 }: {
 	table: BillingPlanDeleteTable;
 	id: string;
-	/** A share's pool and source: the source is released when the share goes. */
 	share?: { pooledBalanceId: string; sourceCustomerEntitlementId: string };
 }): BillingPlanOp =>
 	billingPlanOpSchema.parse({ op: "delete", table, id, ...share });
 
-/** New rollovers for a held grant, cut to the columns the worker stores; none names nothing. */
 export const toBillingPlanAddRolloversOp = ({
 	id,
 	rows,
@@ -103,7 +98,6 @@ export const toBillingPlanAddRolloversOp = ({
 				}),
 			];
 
-/** A grant's per-entity entries re-keyed; an empty map names nothing. */
 export const toBillingPlanMoveEntriesOp = ({
 	id,
 	moves,
@@ -118,7 +112,6 @@ export const toBillingPlanMoveEntriesOp = ({
 		moves,
 	});
 
-/** A row's counters moved by `add`; zero deltas name nothing. */
 export const toBillingPlanIncrementOp = ({
 	table = "customerEntitlements",
 	id,
@@ -138,7 +131,6 @@ export const toBillingPlanIncrementOp = ({
 		...(addEntries ? { addEntries } : {}),
 	});
 
-/** A purchase the worker sizes against the rows the plan leaves: pay rows in overage down to 0, credit the rest. */
 export const toBillingPlanRebalanceOp = ({
 	id,
 	featureId,

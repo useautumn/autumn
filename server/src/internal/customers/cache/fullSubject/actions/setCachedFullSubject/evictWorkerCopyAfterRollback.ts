@@ -10,10 +10,6 @@ import { FULL_SUBJECT_CACHE_TTL_SECONDS } from "../../config/fullSubjectCacheCon
 
 const LOOKBACK_MS = FULL_SUBJECT_CACHE_TTL_SECONDS * 1000;
 
-/**
- * A customer back on Redis is about to move balances the worker's copy will not see, so the worker drops that copy.
- * Fire-and-forget: the view write never waits on it, and a failure is only logged.
- */
 export const evictWorkerCopyAfterRollback = ({
 	ctx,
 	customerId,
@@ -25,7 +21,6 @@ export const evictWorkerCopyAfterRollback = ({
 }): void => {
 	if (isBalanceWorkerRolloutEnabled({ ctx, customerId })) return;
 
-	// Asks "did this customer come back from the worker within the lookback?" of the stale-view check.
 	const now = Date.now();
 	const cameBackFromWorker = isRolloutCacheStale({
 		rolloutId: ACTIVE_ROLLOUT_ID,

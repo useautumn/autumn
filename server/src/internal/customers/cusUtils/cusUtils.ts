@@ -49,7 +49,6 @@ export const updateCustomerDetails = async ({
 			updates.email = customerData.email;
 		}
 	}
-	// Update send_email_receipts if explicitly provided
 	if (
 		customerData?.send_email_receipts !== undefined &&
 		fullCustomer.send_email_receipts !== customerData.send_email_receipts
@@ -114,7 +113,6 @@ const getCusInvoices = async ({
 	return processedInvoices;
 };
 
-// IMPORTANT FUNCTION
 const getCusEntsInFeatures = async ({
 	customer,
 	internalFeatureIds,
@@ -128,7 +126,6 @@ const getCusEntsInFeatures = async ({
 }) => {
 	const cusProducts = customer.customer_products;
 
-	// This is important, attaching customer_product to cus ent is used elsewhere, don't delete.
 	let cusEnts = cusProducts.flatMap((cusProduct) => {
 		return cusProduct.customer_entitlements.map((cusEnt) => ({
 			...cusEnt,

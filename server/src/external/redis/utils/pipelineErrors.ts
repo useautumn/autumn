@@ -2,8 +2,6 @@ import { isConnectionLevelRedisError } from "./isTransientRedisError.js";
 
 type PipelineResults = [Error | null, unknown][] | null;
 
-/** A resolved `exec()` still reports a dead socket through its command tuples,
- *  so settling is not on its own proof the connection worked. */
 export const firstPipelineConnectionError = (
 	results: unknown,
 ): Error | undefined => {
@@ -15,9 +13,6 @@ export const firstPipelineConnectionError = (
 	return undefined;
 };
 
-/** Raises a socket-level pipeline failure so the caller can fail over.
- *  Per-command errors (WRONGTYPE, OOM) stay in the results, keeping the
- *  reader's invalidate-and-rebuild path as the thing that repairs the key. */
 export const throwOnPipelineConnectionError = <T extends PipelineResults>(
 	results: T,
 ): T => {

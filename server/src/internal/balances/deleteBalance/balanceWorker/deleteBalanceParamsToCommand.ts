@@ -7,7 +7,6 @@ import type { BalanceWorkerRequestContext } from "../../balanceWorker/balanceWor
 import { requestContextToCommandBase } from "../../balanceWorker/requestContextToCommandBase.js";
 import { buildCustomerEntitlementFilters } from "../../utils/buildCustomerEntitlementFilters.js";
 
-/** The API's fields one to one; keyed by request, so a retried request dedups. */
 export const deleteBalanceParamsToCommand = ({
 	ctx,
 	params,

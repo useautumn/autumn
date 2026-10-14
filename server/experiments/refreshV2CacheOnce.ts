@@ -1,14 +1,6 @@
-// One-off manual refresh of the TRANSIENT lake_cache_v2 balance tables.
-// Requires MOTHERDUCK_RW_TOKEN and AWS creds with glue:GetTable.
-//   infisical run --env=prod --recursive -- bun run server/experiments/refreshV2CacheOnce.ts
-//
-// --shadow writes ce_balance_totals__shadow instead of the live table, so a
-// query change can be diffed against production before it ships.
 import type { Logger } from "../src/external/logtail/logtailUtils";
 import { refreshCeBalancesCache } from "../src/external/motherduck/refreshCeBalancesCache";
 
-// Console-backed logger: the pino/logtail logger buffers asynchronously and
-// process.exit() drops its output, which made failures here silent.
 const consoleLogger = {
 	info: (...args: unknown[]) => console.log("[info]", ...args),
 	warn: (...args: unknown[]) => console.warn("[warn]", ...args),

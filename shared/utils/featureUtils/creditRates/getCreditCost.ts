@@ -7,7 +7,6 @@ import type { EventProperties } from "../creditDimensions/matchesEventProperties
 import { creditRateToCost } from "./creditRateToCost.js";
 import { findCreditSchemaItemByFeatureId } from "./findCreditSchemaItemByFeatureId.js";
 
-/** Credits `amount` units of `featureId` cost in `creditSystem`; the feature's own units when it is not a member. */
 export const featureToCreditSystem = ({
 	featureId,
 	creditSystem,
@@ -38,7 +37,6 @@ export const featureToCreditSystem = ({
 	return amount;
 };
 
-/** Sync credit-schema math; token pricing (models.dev I/O) lives in getModelCreditCost. */
 export const getCreditCost = ({
 	featureId,
 	creditSystem,
@@ -55,7 +53,6 @@ export const getCreditCost = ({
 	if (!isAnyCreditSystem(creditSystem.type)) {
 		return amount;
 	}
-	// Own balance is in the system's native unit (USD for AI), so values map 1:1.
 	if (featureId === creditSystem.id) {
 		return amount;
 	}

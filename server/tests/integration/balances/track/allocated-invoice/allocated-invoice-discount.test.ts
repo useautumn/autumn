@@ -15,18 +15,6 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { constructArrearProratedItem } from "@/utils/scriptUtils/constructItem.js";
 
-// ═══════════════════════════════════════════════════════════════════
-// Allocated Invoice — Discount Applied to Overage
-//
-// Product: pro ($20/mo base) + 1 included user seat, $50/seat overage
-// on_increase: BillImmediately
-// on_decrease: None
-//
-// A 20% percent-off discount is applied to the subscription.
-// When tracking users past the included boundary, the overage invoice
-// should reflect the discount.
-// ═══════════════════════════════════════════════════════════════════
-
 const PRICE_PER_SEAT = 50;
 const INCLUDED_USAGE = 1;
 
@@ -39,20 +27,6 @@ const userItem = constructArrearProratedItem({
 		on_decrease: OnDecrease.None,
 	},
 });
-
-// ═══════════════════════════════════════════════════════════════════
-// alloc-disc1: 20% discount applied to overage invoice
-//
-// Scenario:
-// - Attach pro with 1 included seat
-// - Apply 20% discount to the subscription
-// - Track 3 users (2 overage seats)
-//
-// Expected:
-// - Overage = 2 seats * $50 = $100
-// - Discount = 20% off → $80
-// - Invoice total = $80
-// ═══════════════════════════════════════════════════════════════════
 
 test(`${chalk.yellowBright("alloc-disc1: 20% discount applied to allocated overage invoice")}`, async () => {
 	const pro = products.pro({ id: "pro", items: [userItem] });

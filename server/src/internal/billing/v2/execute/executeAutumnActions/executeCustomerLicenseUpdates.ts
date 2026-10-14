@@ -6,10 +6,6 @@ import {
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { customerLicenseRepo } from "@/internal/licenses/repos/customerLicenseRepo.js";
 
-/** Applies each pool move atomically: an absolute paidQuantity converges
- * counters in place; a negative remainingChange consumes from the pool row
- * (guarded at zero — a rejected take aborts the plan before anything is
- * written); a positive one releases via the seat's link anchor. */
 export const executeCustomerLicenseUpdates = async ({
 	ctx,
 	customerLicenseUpdates,

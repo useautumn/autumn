@@ -24,8 +24,6 @@ export const envJson = ({
 }) => {
 	const isMaster = isMainSandboxKey({ info });
 	const notes: string[] = [];
-	// A pinned sandbox is meant to answer as itself; only the org's own key
-	// answering as a sandbox is the mistake worth flagging.
 	if (!isMaster && target.secretKeyName === "AUTUMN_SECRET_KEY")
 		notes.push(
 			`AUTUMN_SECRET_KEY belongs to sandbox "${info.name}" (${info.id}), not your main sandbox. Sandbox commands need the main key: run atmn login.`,
@@ -81,7 +79,6 @@ export const runEnv = async ({
 		`${renderEnv({
 			info,
 			secretKeyName: target.secretKeyName,
-			// The default is noise; a local or staging server is the surprise worth showing.
 			...(target.baseUrl === undefined || target.baseUrl === DEFAULT_BASE_URL
 				? {}
 				: { baseUrl: target.baseUrl }),

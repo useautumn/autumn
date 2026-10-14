@@ -1,4 +1,3 @@
-// import { endpoint } from "@/utils/constants/constants";
 import { AppEnv, type ApiVersion } from "@autumn/shared";
 import axios from "axios";
 import { useMemo } from "react";
@@ -35,11 +34,9 @@ export function useAxiosInstance(params?: {
 				if (sandboxOrgId && envToUse === AppEnv.Sandbox) {
 					config.headers["x-sandbox-org-id"] = sandboxOrgId;
 				}
-				// Only set x-api-version if not already set by the request
 				if (!config.headers["x-api-version"]) {
 					config.headers["x-api-version"] = version;
 				}
-				// config.headers["Autumn-Version"] = "0.2.0";
 				config.headers["x-client-type"] = "dashboard";
 
 				return config;
@@ -49,7 +46,6 @@ export function useAxiosInstance(params?: {
 			},
 		);
 
-		// response interceptor to handle organization removal errors
 		instance.interceptors.response.use(
 			(response) => response,
 			async (error) => {
@@ -58,12 +54,10 @@ export function useAxiosInstance(params?: {
 					error.response?.data?.code === "USER_REMOVED_FROM_ORG"
 				) {
 					try {
-						// Get user's organizations
 						const { data: organizations } =
 							await authClient.organization.list();
 
 						if (organizations && organizations.length > 0) {
-							// User has other organizations, switch to the first available one
 							const nextOrg = organizations.find(
 								(org) => org.id !== error.response.data.orgId,
 							);
@@ -75,7 +69,6 @@ export function useAxiosInstance(params?: {
 								);
 							}
 						} else {
-							// User has no organizations left, redirect to safe fallback
 							window.location.href = "/sign-in";
 							return Promise.reject(
 								new Error("No organizations available, redirecting to sign-in"),
@@ -86,7 +79,6 @@ export function useAxiosInstance(params?: {
 							"Failed to handle organization removal redirect:",
 							redirectError,
 						);
-						// Fallback to sign-in if redirect fails
 						window.location.href = "/sign-in";
 					}
 				}

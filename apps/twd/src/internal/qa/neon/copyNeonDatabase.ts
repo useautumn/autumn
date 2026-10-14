@@ -1,12 +1,10 @@
 import { TwdError } from "../../../http/apiError.ts";
 
-// Drops every user schema first, so the copy holds exactly the source's objects.
 const RESET_SQL = `DO $$ DECLARE s text; BEGIN
 FOR s IN SELECT nspname FROM pg_namespace WHERE nspname NOT LIKE 'pg\\_%' AND nspname <> 'information_schema' LOOP
 EXECUTE format('DROP SCHEMA %I CASCADE', s); END LOOP;
 CREATE SCHEMA public; END $$;`;
 
-/** Replaces the `to` database with a pg_dump of `from`; URLs travel by env so they never reach logs. */
 const COPY_TIMEOUT_SECONDS = 600;
 
 export const copyNeonDatabase = async ({
@@ -19,7 +17,6 @@ export const copyNeonDatabase = async ({
 	signal?: AbortSignal;
 }) => {
 	signal?.throwIfAborted();
-	// timeout runs the pipeline in its own process group and forwards SIGTERM to all of it.
 	const proc = Bun.spawn(
 		[
 			"timeout",

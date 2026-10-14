@@ -34,11 +34,8 @@ const getExistingCusEntAndUsage = async ({
 		return { cusEnt: null, usage: null };
 	}
 
-	// 1. If there is only one cus ent, return it and usage
 	const similarCusEnts = curCusProduct.customer_entitlements.filter(
 		(ce) => ce.internal_feature_id === entitlement.internal_feature_id,
-		// &&
-		//   ce.entitlement.interval === entitlement.interval
 	);
 
 	console.log("Entitlement:", entitlement.feature_id, entitlement.interval);
@@ -78,7 +75,6 @@ const getExistingUsages = ({
 
 	const cusPrices = curCusProduct?.customer_prices || [];
 
-	// Get entityUsage
 	for (const entity of entities) {
 		const feature = features.find(
 			(f) => f.internal_id === entity.internal_feature_id,
@@ -127,7 +123,6 @@ const getExistingUsages = ({
 			continue;
 		}
 
-		// 1. To check, does ent options work with multiple features?
 		const relatedCusPrice = getRelatedCusPrice(cusEnt, cusPrices);
 		const options = getEntOptions(curCusProduct.options, ent);
 
@@ -135,7 +130,6 @@ const getExistingUsages = ({
 			entitlement: ent,
 			options: options || undefined,
 			relatedPrice: relatedCusPrice?.price,
-			// productQuantity: curCusProduct.quantity,
 		});
 
 		usages[key].usage += resetBalance! - cusEnt.balance!;
@@ -193,7 +187,6 @@ export const addExistingUsagesToCusEnts = ({
 		return { ...ce, entitlement, customer_product: curCusProduct };
 	}) as FullCusEntWithFullCusProduct[];
 
-	// Sort cusEnts
 	sortCusEntsForDeduction({ cusEnts: fullCusEnts });
 
 	printLogs = false;
@@ -219,7 +212,6 @@ export const addExistingUsagesToCusEnts = ({
 			const ent = cusEnt.entitlement;
 			const fromEntities = existingUsages[key].fromEntities;
 
-			// if (cusEntKey !== key) continue;
 			const isSameFeature = cusEnt.feature_id === feature_id;
 
 			if (!isSameFeature) continue;

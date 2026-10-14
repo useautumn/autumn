@@ -16,11 +16,6 @@ import { getBackendErr, isSafeLocalPath } from "@/utils/genUtils";
 import { AuthBackground } from "./components/AuthBackground";
 import { AutumnWordmark } from "./components/AutumnWordmark";
 
-/**
- * Landing route for a successful OIDC callback. The server verifies the session
- * and (for an owner/admin test login) flips the connection to active; we only
- * persist the presentation hint it hands back.
- */
 export const SsoCallback = () => {
 	const { search } = useLocation();
 	const searchParams = parseSsoCallbackQuery(search);
@@ -30,8 +25,6 @@ export const SsoCallback = () => {
 	const startedRef = useRef(false);
 	const [error, setError] = useState<string | null>(null);
 
-	// The provider round trip reports failure as a redirect param, not an
-	// exception, so this is the only place the real reason surfaces.
 	const providerError = searchParams.get("error");
 	const providerErrorDescription = searchParams.get("error_description");
 	const queryProviderId = searchParams.get("providerId");

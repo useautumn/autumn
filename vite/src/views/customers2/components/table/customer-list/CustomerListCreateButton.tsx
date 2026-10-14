@@ -73,7 +73,6 @@ export function CustomerListCreateButton() {
 		(event) => {
 			event.preventDefault();
 			setOpen(true);
-			// Focus name input after dialog open (after next tick)
 			setTimeout(() => {
 				nameInputRef.current?.focus();
 			}, 0);
@@ -87,7 +86,6 @@ export function CustomerListCreateButton() {
 			onOpenChange={(val) => {
 				setOpen(val);
 				if (val) {
-					// Focus name input when dialog is opened with the button as well
 					setTimeout(() => {
 						nameInputRef.current?.focus();
 					}, 0);

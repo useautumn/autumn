@@ -16,7 +16,6 @@ import type { MutationResult } from "../../../writer/types/mutation.js";
 import { readEntityParts } from "./readEntityParts.js";
 import { readPlanCatalog } from "./readPlanCatalog.js";
 
-/** Runs inside the writer's critical section: no await, no I/O. */
 const decideApplyBillingPlan = ({
 	scope,
 	state,
@@ -72,7 +71,6 @@ const decideApplyBillingPlan = ({
 	};
 };
 
-/** An update of a row the worker does not hold means its copy is behind Postgres: drop it, the caller retries. */
 export const decidePlan = async ({
 	scope,
 	command,

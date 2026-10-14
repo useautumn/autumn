@@ -5,8 +5,6 @@ import {
 } from "@autumn/shared";
 import { shouldCarryOverUsage } from "@/internal/billing/v2/utils/handleCarryOvers/shouldCarryOverUsage";
 
-/** A plan change that alters this pooled item resets its usage, unless
- * carry-over applies. Quantity-only changes keep the same item, so keep usage. */
 export const shouldResetLicensePooledUsage = ({
 	transition,
 	entitlement,

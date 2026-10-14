@@ -1,8 +1,3 @@
-/**
- * TDD test for duplicate organizations in the OAuth consent selector.
- * Red returns one organization per membership; green returns each organization once.
- */
-
 import { expect, test } from "bun:test";
 import { member } from "@autumn/shared";
 import defaultCtx from "@tests/utils/testInitUtils/createTestContext.js";

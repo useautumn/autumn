@@ -50,7 +50,6 @@ const getMessagesRemaining = (customer: ApiCustomer) => {
 	return balance.remaining ?? balance.current_balance;
 };
 
-// Exercises the legacy Redis balance path, which worker-routed customers never use.
 describe.skipIf(isBalanceWorkerRoute())(
 	`${chalk.yellowBright("track-race-condition1: sync should not wipe out attached credits")}`,
 	() => {
@@ -131,7 +130,6 @@ describe.skipIf(isBalanceWorkerRoute())(
 				Object.keys(deductionResult.updates),
 			);
 
-			// Get the customer from Redis to see current balance
 			const customerAfterTrack =
 				await autumnV2.customers.get<ApiCustomer>(customerId);
 
@@ -141,7 +139,6 @@ describe.skipIf(isBalanceWorkerRoute())(
 				),
 			);
 
-			// STEP 3: Attach 250 credits (this updates DB directly)
 			console.log(
 				chalk.yellow("\nStep 3: Attaching 250 one-off credits (updates DB)..."),
 			);
@@ -178,11 +175,9 @@ describe.skipIf(isBalanceWorkerRoute())(
 				source: "test-setup",
 			});
 
-			// 1. Check that credits weren't wiped out
 			const cachedCustomer =
 				await autumnV2.customers.get<ApiCustomer>(customerId);
 
-			// Expected: 100 (pro) - 5 (tracked) + 250 (one-off credits) = 345
 			const currentBalance = getMessagesRemaining(cachedCustomer);
 			expect(currentBalance).toBeGreaterThanOrEqual(345);
 			expect(currentBalance).toBeLessThanOrEqual(350);

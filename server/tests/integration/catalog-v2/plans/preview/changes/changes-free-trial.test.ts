@@ -1,10 +1,3 @@
-/**
- * catalogV2.preview_update — customize.free_trial lane.
- *
- * Spec asserts freeTrialsEqual normalization (card_required false / on_end
- * "bill" / duration_type month ≡ omitted). V1 defaults card_required to false.
- */
-
 import { test } from "bun:test";
 import {
 	BillingInterval,
@@ -49,7 +42,6 @@ test.concurrent(
 				}),
 			);
 			PreviewUpdateCatalogResponseSchema.parse(preview);
-			// Trial not in upsert op today → action may stay `none`; still require customize.
 			expectPlanPreviewRowCorrect({
 				preview,
 				expected: {
@@ -63,7 +55,6 @@ test.concurrent(
 	},
 );
 
-// duration_length / duration_type change
 test.concurrent(
 	`${chalk.yellowBright("catalogV2 changes-free-trial: duration_length / duration_type change")}`,
 	async () => {
@@ -71,8 +62,6 @@ test.concurrent(
 		const planId = uniqueTestId("cv2_cft_dur");
 		await deleteDbPlans({ ctx, planIds: [planId] });
 		try {
-			// Seed via params even if persistence is broken — preview compare
-			// still needs a desired→desired diff once wiring lands; until then RED.
 			await autumnV2_3.catalogV2.update({
 				plans: [{ ...paidSeed(planId), free_trial: trial14 }],
 			});
@@ -109,7 +98,6 @@ test.concurrent(
 	},
 );
 
-// card_required flip diffs; V1 omit defaults false → explicit false ≡ no trial diff
 test.concurrent(
 	`${chalk.yellowBright("catalogV2 changes-free-trial: card_required flip vs explicit false ≡ omit")}`,
 	async () => {
@@ -183,7 +171,6 @@ test.concurrent(
 	},
 );
 
-// on_end change; explicit "bill" ≡ omitted
 test.concurrent(
 	`${chalk.yellowBright("catalogV2 changes-free-trial: on_end change vs explicit bill ≡ omit")}`,
 	async () => {

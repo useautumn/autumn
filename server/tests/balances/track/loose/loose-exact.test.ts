@@ -18,7 +18,6 @@ describe(`${chalk.yellowBright("loose-exact: track exact balance amount")}`, () 
 			withTestClock: false,
 		});
 
-		// Create loose entitlement with 50 messages
 		await autumnV1.balances.create({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
@@ -27,7 +26,6 @@ describe(`${chalk.yellowBright("loose-exact: track exact balance amount")}`, () 
 	});
 
 	test("should deduct exact balance amount leaving 0", async () => {
-		// Track exactly 50 (all balance)
 		await autumnV1.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
@@ -41,7 +39,7 @@ describe(`${chalk.yellowBright("loose-exact: track exact balance amount")}`, () 
 			feature_id: TestFeature.Messages,
 		})) as unknown as CheckResponseV2;
 
-		expect(res.allowed).toBe(false); // No balance left
+		expect(res.allowed).toBe(false);
 		expect(res.balance?.granted_balance).toBe(50);
 		expect(res.balance?.current_balance).toBe(0);
 		expect(res.balance?.usage).toBe(50);

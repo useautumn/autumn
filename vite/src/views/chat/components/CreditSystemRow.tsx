@@ -9,7 +9,6 @@ export const isCreditSystem = (feature: ApiFeatureV1): boolean =>
 		feature.type === FeatureType.AiCreditSystem) &&
 	(feature.credit_schema?.length ?? 0) > 0;
 
-/** A credit-system feature row — click to open its schema in a sheet. */
 export function CreditSystemRow({
 	feature,
 	resolveFeature,

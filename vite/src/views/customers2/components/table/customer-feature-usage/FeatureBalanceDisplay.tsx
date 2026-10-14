@@ -13,9 +13,6 @@ export interface FeatureBalanceDisplayProps {
 	compact?: boolean;
 }
 
-/**
- * Shared display component for feature balance/usage numbers
- */
 export function FeatureBalanceDisplay({
 	allowance,
 	balance,

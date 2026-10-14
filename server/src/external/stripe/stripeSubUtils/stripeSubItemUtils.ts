@@ -46,7 +46,6 @@ export const findStripeItemForPrice = ({
 
 		if (stripeItem) return stripeItem;
 
-		// Fallback to fixed price
 		if (isFixedPrice(price)) {
 			return stripeItems.find(
 				(si: Stripe.SubscriptionItem | Stripe.LineItem) => {

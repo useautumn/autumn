@@ -18,8 +18,6 @@ import {
 	occurredAt,
 } from "../../engineFixtures.js";
 
-// Mirrors server/tests/integration/balances/recalculate/recalculate-balance.test.ts.
-
 const row = ({
 	id,
 	balance,
@@ -107,7 +105,6 @@ describe("recalculateBalance", () => {
 		expect(before.reduce((a, b) => a + b, 0)).toBe(170);
 		expect(afterRemaining.reduce((a, b) => a + b, 0)).toBe(170);
 		expect(afterRemaining.every((remaining) => remaining >= 0)).toBe(true);
-		// Draw order takes a grant without usage_allowed first: the surplus absorbs all 130.
 		expect(balanceOf({ state: after, id: "overdrawn" })).toBe(100);
 		expect(balanceOf({ state: after, id: "surplus" })).toBe(70);
 	});

@@ -1,6 +1,3 @@
-// Deep imports, not the "@autumn/shared" barrel: the barrel re-exports
-// updatePlanParamsV1, which reaches back here via variants/updateVariantParams,
-// and the resulting cycle throws a TDZ ReferenceError depending on load order.
 import {
 	CustomizePlanV1BaseSchema,
 	refineCustomizePlanV1Schema,
@@ -41,13 +38,6 @@ export {
 } from "./comparePlanLicenses.js";
 export { diffPlanLicenses } from "./diffPlanLicenses.js";
 
-/**
- * The content lane of a plan diff. Not `.strict()`: diffs travel with the
- * license patch attached (see `DiffedCustomizePlanV1` below), and every schema
- * built on this one — plan changes, variant params — has to accept that patch.
- * Strictness would reject `upsert_licenses` even where it is re-declared,
- * because a strict schema keeps rejecting the keys it omitted after `.extend()`.
- */
 export const DiffedCustomizePlanV1Schema = refineCustomizePlanV1Schema(
 	CustomizePlanV1BaseSchema.omit({ items: true }),
 	{ includeItems: false, includeLicenses: true },
@@ -60,7 +50,6 @@ export type DiffedCustomizePlanV1 = z.infer<
 	remove_licenses?: RemovePlanLicense[];
 };
 
-/** ApiPlanV1 plus optional licenses[] — omitted means no license lane. */
 export type DiffablePlanV1 = ApiPlanV1 & {
 	licenses?: ApiPlanLicenseV1[];
 };
@@ -103,8 +92,6 @@ export const toCreatePlanItemParams = (
 	const out: CreatePlanItemParamsV1 = { feature_id: item.feature_id };
 	if (item.entity_feature_id !== undefined)
 		out.entity_feature_id = item.entity_feature_id;
-	// Only when true: false is the schema default, so emitting it would leak a
-	// no-op field into every migration diff.
 	if (item.pooled) out.pooled = item.pooled;
 	if (includeInternalIds && item.entitlement_id !== undefined)
 		out.entitlement_id = item.entitlement_id;
@@ -138,8 +125,6 @@ export const toCreatePlanItemParams = (
 	return out;
 };
 
-/** Structural minimum for keying an item — satisfied by both ApiPlanItemV1
- * (resolved plan) and CreatePlanItemParamsV1 (diff add_items). */
 type MatchKeyItem = {
 	feature_id: string;
 	price?: {
@@ -174,12 +159,9 @@ export const buildPlanItemKey = ({
 	return components.join("|");
 };
 
-/** The identity used across plan diffs: feature, billing method, and cadence. */
 export const composeMatchKey = (item: MatchKeyItem): string =>
 	buildPlanItemKey({ item });
 
-/** Match key for a remove_items filter, in the same format as composeMatchKey
- * (buildRemoveFilter already flattens the matched item's fields onto it). */
 export const planItemFilterMatchKey = (filter: PlanItemFilter): string =>
 	`${filter.feature_id}|${filter.billing_method ?? ""}|${filter.interval ?? ""}|${normalizeIntervalCount(
 		{
@@ -267,7 +249,6 @@ export const customizePlanV1DiffsEqual = ({
 	);
 };
 
-// Modify-in-place is expressed as remove + add ("out with the old, in with the new").
 export const diffPlanV1 = ({
 	from,
 	to,

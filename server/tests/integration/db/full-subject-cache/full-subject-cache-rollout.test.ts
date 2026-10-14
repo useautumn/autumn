@@ -65,8 +65,6 @@ describe(`${chalk.yellowBright("fullSubject cache rollout staleness")}`, () => {
 				});
 				expect(result).toBe("OK");
 
-				// A rollback from 50 to 20 that settles only after the view above was written,
-				// so this bucket's return to legacy postdates the view and it must go.
 				await Bun.sleep(10);
 				const rolledBackAt = Date.now() - ROLLOUT_SETTLE_MS;
 				_setRolloutConfigForTesting({

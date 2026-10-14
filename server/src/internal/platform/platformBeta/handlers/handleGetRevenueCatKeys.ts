@@ -8,13 +8,8 @@ import { initRevenuecatCli } from "@/external/revenueCat/misc/initRevenuecatCli.
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { validatePlatformOrg } from "../utils/validatePlatformOrg.js";
 
-// The stores a managed org's mobile apps actually ship against.
 const KEY_APP_TYPES = new Set(["test_store", "app_store", "play_store"]);
 
-/**
- * POST /platform.get_revenuecat_keys — return a managed org's RevenueCat public
- * (SDK) API keys per app, for the test store / App Store / Play Store.
- */
 export const handleGetRevenueCatKeys = createRoute({
 	scopes: [Scopes.Platform.Write],
 	body: GetRevenueCatKeysSchema,
@@ -34,14 +29,11 @@ export const handleGetRevenueCatKeys = createRoute({
 		if (!revenueCatConfig) return c.json({ apps: [], oauth_access_token: null });
 
 		const projectId = getRevenuecatProjectId({ revenueCatConfig, env: appEnv });
-		// Force-refresh the OAuth token so the master gets a fresh, full-lifetime access token.
-		// We keep the rotated refresh token; only the access token is ever handed out.
 		const oauthAccessToken = await refreshRevenuecatOAuthAccessToken({
 			db,
 			org,
 			env: appEnv,
 		});
-		// api-key orgs have no OAuth token — fall back to the api key for the CLI only.
 		const accessToken =
 			oauthAccessToken ??
 			(await getRevenuecatAccessToken({ db, org, env: appEnv }));

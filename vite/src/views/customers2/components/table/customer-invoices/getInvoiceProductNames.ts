@@ -12,7 +12,6 @@ type ProductGroup = {
 	featureNames: Set<string>;
 };
 
-/** Build the product-id based label used as a fallback while line items load. */
 const getFallbackNames = ({
 	invoice,
 	products,
@@ -25,7 +24,6 @@ const getFallbackNames = ({
 		.filter(Boolean)
 		.join(", ");
 
-/** Resolve a product id to its display name, falling back to the id itself. */
 export const productIdsToNames = ({
 	productIds,
 	products,
@@ -37,7 +35,6 @@ export const productIdsToNames = ({
 		.map((id) => products.find((p) => p.id === id)?.name ?? id)
 		.join(", ");
 
-/** Resolve a line item's product display name, falling back to its id. */
 const resolveProductName = ({
 	productId,
 	products,
@@ -51,11 +48,6 @@ const resolveProductName = ({
 	return products.find((p) => p.id === productId)?.name ?? productId;
 };
 
-/**
- * Build a Stripe-style "Product - Feature" label for an invoice from its line
- * items, so base-plan and usage invoices for the same product are
- * distinguishable (e.g. "Basic Monthly" vs "Basic Monthly - References").
- */
 export const getInvoiceProductNames = ({
 	invoice,
 	lineItems,

@@ -7,10 +7,6 @@ type EventContext =
 	| StripeSubscriptionUpdatedContext
 	| StripeSubscriptionDeletedContext;
 
-/**
- * Logs all customer product updates, deletions, and insertions in a structured format for easy querying in Axiom.
- * Called at the end of subscription handlers to provide a summary.
- */
 export const logCustomerProductUpdates = ({
 	ctx,
 	eventContext,

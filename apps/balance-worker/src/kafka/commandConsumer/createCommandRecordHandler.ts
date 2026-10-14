@@ -34,10 +34,8 @@ const isCommittedMutation = (
 	committed !== null &&
 	"mutation" in committed;
 
-/** Where a record sits on the command topic, as its log lines report it. */
 type RecordPosition = { topic: string; partition: number; offset: string };
 
-/** The command stream's transport: a record in, its partition's runtime found, the `consume/` layer called. No business logic here. */
 export function createCommandRecordHandler({
 	ctx,
 }: {
@@ -82,7 +80,6 @@ export function createCommandRecordHandler({
 		}
 	}
 
-	/** Postgres says how far the commands are decided; a batch starting below that is skipped forward, never re-decided. */
 	function readResumeOffset({
 		partition,
 		firstOffset,
@@ -92,7 +89,6 @@ export function createCommandRecordHandler({
 		return bookmark;
 	}
 
-	/** A record holds the stream only until its command is decided; its commit joins the batch, which settles before its offset. */
 	async function applyRecord({
 		topic,
 		partition,
@@ -121,7 +117,6 @@ export function createCommandRecordHandler({
 		}
 	}
 
-	/** Decides the record's command in arrival order. A refused or already applied decide is consumed here. */
 	async function decideRecord({
 		processor,
 		message,
@@ -135,7 +130,6 @@ export function createCommandRecordHandler({
 		try {
 			command = parseCommandRecord({ key: message.key, value: message.value });
 		} catch (cause) {
-			// A record nobody can read must not take the partition down with it.
 			ctx.logger?.warn("Queued command skipped: unreadable", {
 				...position,
 				error: cause,
@@ -178,8 +172,6 @@ export function createCommandRecordHandler({
 		return queued && { command, queued };
 	}
 
-	/** Everything after the decide: the balance's verdict once committed, or the failure settled as a failed decide is.
-	 *  Only a transient failure reaches the batch, so Kafka redelivers the record. */
 	async function settleCommit({
 		command,
 		queued,
@@ -197,7 +189,6 @@ export function createCommandRecordHandler({
 		}
 	}
 
-	/** A deduction the balance could not fund committed as rejected: nothing moved, and nobody is waiting to hear it. */
 	function logRejection({
 		command,
 		committed,

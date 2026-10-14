@@ -5,7 +5,6 @@ import { useOrgTimeseriesEvents } from "../hooks/useOrgTimeseriesEvents";
 import { PanelSection } from "./PanelSection";
 
 const CHART_HEIGHT = 176;
-/** The chart stacks a bar per event name; more than a handful is unreadable. */
 const MAX_SERIES = 5;
 
 export function EventsPanel({
@@ -24,8 +23,6 @@ export function EventsPanel({
 		[events],
 	);
 
-	// The same pre-aggregated series the analytics page charts, across every
-	// customer — only fetched once some usage has actually landed.
 	const {
 		timeseriesEvents,
 		totals,

@@ -39,7 +39,6 @@ export const promotePendingCustomerProducts = async ({
 			);
 		if (!plannedCustomerProduct) continue;
 
-		// Checkout can change quantities after the pending rows were inserted.
 		for (const customerEntitlement of plannedCustomerProduct.customer_entitlements) {
 			await CusEntService.update({
 				ctx,

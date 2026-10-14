@@ -38,7 +38,6 @@ type CouponUpdate = NonNullable<UpdateRewardParams["coupon"]> &
 	>;
 type FeatureGrantUpdate = NonNullable<UpdateRewardParams["feature_grant"]>;
 
-/** Entitlements here are reward-entitlement inputs, not full Entitlement rows */
 type RewardUpdate = Partial<Omit<Reward, "entitlements">> & {
 	entitlements?: RewardEntitlement[];
 };
@@ -178,7 +177,6 @@ const buildFeatureGrantUpdate = ({
 	return update;
 };
 
-/** The body must describe the same kind of reward that is stored */
 const assertBodyMatchesRewardType = ({
 	reward,
 	params,
@@ -216,8 +214,6 @@ const recreateStripeCoupon = async ({
 
 	await initRewardStripePrices({ ctx, prices });
 
-	// Preflight before deleting, so a plan missing in Stripe fails the update
-	// while the existing coupon is still intact.
 	await validateCouponStripeProductScope({ ctx, prices });
 	resolveCouponStripeProductIds({ reward: updated, prices });
 
@@ -239,13 +235,11 @@ export const updateApiReward = async ({
 }): Promise<UpdateRewardResponse> => {
 	const { db, org, env, features } = ctx;
 
-	// 1. Load and validate the body against the stored reward
 	const reward = await requireApiReward({ ctx, rewardId: params.reward_id });
 	assertBodyMatchesRewardType({ reward, params });
 
 	const isFeatureGrant = reward.type === RewardType.FeatureGrant;
 
-	// 2. Build the patch
 	const update = isFeatureGrant
 		? buildFeatureGrantUpdate({ features, featureGrant: params.feature_grant! })
 		: await buildCouponUpdate({ ctx, reward, coupon: params.coupon! });
@@ -260,7 +254,6 @@ export const updateApiReward = async ({
 		excludeInternalId: reward.internal_id,
 	});
 
-	// 3. Feature grants have no Stripe coupon; discounts must be recreated
 	if (!isFeatureGrant) {
 		await recreateStripeCoupon({
 			ctx,
@@ -269,8 +262,6 @@ export const updateApiReward = async ({
 		});
 	}
 
-	// 4. Persist. The repo strips entitlements before its SET, so a grants-only
-	// patch would leave no columns to write — keep name in that case.
 	const { entitlements, ...rewardColumns } = update;
 	await rewardRepo.update({
 		db,
@@ -284,7 +275,6 @@ export const updateApiReward = async ({
 		features,
 	});
 
-	// Re-read: the update only returns joined entitlements when it rewrote them
 	const saved = await requireApiReward({ ctx, rewardId: reward.internal_id });
 
 	return toApiRewardResponse({ ctx, reward: saved });

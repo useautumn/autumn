@@ -11,7 +11,6 @@ import {
 } from "@/internal/misc/shadowAtom/shadowAtomConfigStore.js";
 import { shadowAtomConfigToAdminView } from "./shadowAtom/shadowAtomConfigToAdminView.js";
 
-/** Staff-only: where the shadow Atom answers. Orgs and their percents have their own routes. */
 export const handleUpsertAdminShadowAtomConfig = createRoute({
 	scopes: [Scopes.Superuser],
 	body: ShadowAtomSettingsSchema,

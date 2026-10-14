@@ -14,7 +14,6 @@ export function absoluteUrl(path: string) {
 	return path.startsWith("http") ? path : `${SITE_URL}${path}`;
 }
 
-// Strip markdown artifacts so schema text is plain prose for crawlers/LLMs.
 function toPlainText(value: string) {
 	return value
 		.replace(/`/g, "")

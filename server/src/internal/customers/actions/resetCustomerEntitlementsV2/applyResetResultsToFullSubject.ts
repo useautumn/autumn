@@ -8,8 +8,6 @@ import { RolloverService } from "@/internal/customers/cusProducts/cusEnts/cusRol
 import type { RolloverClearingInfo } from "../resetCustomerEntitlements/applyResetResults.js";
 import type { ProcessResetResult } from "../resetCustomerEntitlements/processReset.js";
 
-/** Find a customer entitlement on the FullSubject by ID. Uses Object.assign to
- *  preserve the original reference so in-place mutations propagate back. */
 const findCustomerEntitlement = ({
 	fullSubject,
 	customerEntitlementId,
@@ -38,12 +36,6 @@ const findCustomerEntitlement = ({
 	return null;
 };
 
-/**
- * Applies computed reset values to in-memory FullSubject for all customer entitlements,
- * and runs rollover max-clearing only for DB-applied (non-skipped) ones.
- * For skipped entries (another request won the race), re-reads rollovers from DB.
- * Returns per-cusEnt clearing info so the cache update can propagate deletes/overwrites.
- */
 export const applyResetResultsToFullSubject = async ({
 	ctx,
 	fullSubject,
@@ -104,7 +96,6 @@ export const applyResetResultsToFullSubject = async ({
 	return clearingMap;
 };
 
-/** Applies the same reset field updates to normalized.customer_entitlements (SubjectBalance entries). */
 export const applyResetResultsToNormalized = ({
 	normalized,
 	computed,

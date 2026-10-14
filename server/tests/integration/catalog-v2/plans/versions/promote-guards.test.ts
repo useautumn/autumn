@@ -1,12 +1,3 @@
-/**
- * catalogV2 promote — same-call pointer guards.
- *
- * Contract:
- *   Two `active: true` entries for the same plan_id → 400
- *   Two different plans both promoting in one call → both succeed
- *   `versioning: "all_versions"` + `active: true` → 400 (unique_active)
- */
-
 import { test } from "bun:test";
 import { ErrCode, ResetInterval } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";

@@ -27,7 +27,6 @@ const createFailureReporter =
 		} catch {}
 	};
 
-/** Deadlines every statement on the migration pool and reports checkout and query failures. */
 export const applyMigrationQueryDeadline = ({
 	pool,
 	queryTimeoutMs,

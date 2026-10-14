@@ -2,8 +2,6 @@ import { type AppEnv, type ChatProvider, chatApprovals } from "@autumn/shared";
 import { and, asc, eq } from "drizzle-orm";
 import type { ChatDb } from "../../../lib/db.js";
 
-/** All approvals (any status) for a channel in an env, oldest first — used to
- * replay historical approval cards into the dashboard thread on refresh. */
 export const listChatApprovalsForChannel = async ({
 	channelId,
 	db,

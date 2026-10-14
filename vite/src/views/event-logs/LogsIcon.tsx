@@ -1,6 +1,5 @@
 import type { SVGProps } from "react";
 
-/** Three log lines, the last shorter; matches the Paper sidebar design. Mirrors lucide's props. */
 export const LogsIcon = ({
 	size = 24,
 	strokeWidth = 2,

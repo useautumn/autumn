@@ -1,23 +1,3 @@
-/**
- * TDD: free trials must be deduplicated per-entity, not per-customer.
- *
- * Catalog (anonymised from a real sandbox customer): a no-price "trial" plan
- * with a 30-day free trial (card_required: false, unique_fingerprint: false)
- * and two metered items. "users" is the entity feature (seats).
- *
- * Red-failure mode (current behavior):
- *  - getByFingerprint dedups on (customer, product) ignoring internal_entity_id.
- *  - Only the FIRST entity to attach the trial gets free_trial_id / trial_ends_at.
- *    Every later entity resolves "not trialing -> no trial".
- *  - A customer-level trial also burns the first entity's trial.
- *
- * Green-success criteria (after fix):
- *  - Each entity gets exactly one trial of its own.
- *  - A customer-level trial does NOT burn an entity's trial.
- *  - Once an entity has trialed, re-attaching the trial plan to that same
- *    entity does NOT re-grant (historical per-entity dedup).
- */
-
 import { expect, test } from "bun:test";
 import {
 	ALL_STATUSES,
@@ -123,9 +103,7 @@ test.concurrent(
 				s.entities({ count: 1, featureId: TestFeature.Users }),
 			],
 			actions: [
-				// Customer-level (no entity) trial first...
 				s.billing.attach({ productId: trial.id }),
-				// ...then an entity attaches the same trial.
 				s.billing.attach({ productId: trial.id, entityIndex: 0 }),
 			],
 		});
@@ -171,7 +149,6 @@ test.concurrent(
 		expect(firstTrial?.free_trial_id, "First attach should trial").not.toBeNull();
 		const productId = firstTrial!.product.id;
 
-		// Free trial off, then back: cancel immediately and re-attach the same plan.
 		await autumnV1.cancel({
 			customer_id: customerId,
 			product_id: productId,
@@ -234,8 +211,6 @@ test.concurrent(
 		});
 
 		expect(first?.free_trial_id, "First entity should trial").not.toBeNull();
-		// unique_fingerprint is device-level abuse prevention, so it must keep
-		// deduping across entities even though entity scoping is now applied.
 		expect(
 			second?.free_trial_id,
 			"unique_fingerprint must still dedup across entities",

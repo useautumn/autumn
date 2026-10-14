@@ -33,7 +33,6 @@ export const DashboardIconPixel = forwardRef<
 			const pixelEls = el.querySelectorAll<SVGGraphicsElement>(".icon-pixel-path");
 			if (!pixelEls.length) return;
 
-			// Sort pixels by visual position: bottom-left → top-right diagonal
 			const pixels = Array.from(pixelEls).sort((a, b) => {
 				const aBox = a.getBBox();
 				const bBox = b.getBBox();

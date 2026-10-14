@@ -1,9 +1,3 @@
-/**
- * atmn crud/variants — two variants on one base
- *
- * One line of plans/atmn-v3/07_tests.md. [a, b] is a matrix looped INSIDE this file.
- */
-
 import { expect, test } from "bun:test";
 import type { ApiPlanV1 } from "@autumn/shared";
 import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
@@ -72,7 +66,6 @@ test.concurrent(
 			expect(variantA.price).toEqual(expect.objectContaining({ amount: 59 }));
 			expect(variantB.price).toEqual(expect.objectContaining({ amount: 99 }));
 
-			// Re-pushing the unchanged config previews nothing to apply.
 			const wire = await scenario.wireFromConfig();
 			const preview = (await scenario.client.previewUpdate(wire)) as {
 				plans?: Array<{ action?: string }>;

@@ -14,7 +14,6 @@ import { runBalanceWorkerUpdateBalance } from "../updateBalance/balanceWorker/ru
 import { updateUsageV2 } from "../updateBalance/v2/updateUsageV2.js";
 import { validateInvoiceCreditBalanceMutationForFeature } from "../utils/validateInvoiceCreditBalanceMutation.js";
 
-// `/usage` on a feature the customer holds no balance for has always been a no-op success; a 404 makes clients retry.
 const isNoBalanceForFeature = ({ error }: { error: unknown }): boolean =>
 	error instanceof RecaseError &&
 	error.code === ErrCode.CustomerEntitlementNotFound;
@@ -27,7 +26,6 @@ export const handleSetUsage = createRoute({
 		const body = c.req.valid("json");
 		const ctx = c.get("ctx");
 
-		// Legacy `/usage` creates a missing customer, so the worker path does too.
 		if (isBalanceWorkerRolloutEnabled({ ctx, customerId: body.customer_id })) {
 			try {
 				await withCreateIfMissing({

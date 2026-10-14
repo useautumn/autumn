@@ -1,11 +1,3 @@
-/**
- * sub.updated status sync must only track and notify rows it actually wrote. A row another
- * request expired after the webhook loaded its customer view is skipped by the status guard.
- *
- * Red (before):  the skipped row is still tracked and sent a past_due webhook
- * Green (after): nothing is tracked or sent for a write that changed no row
- */
-
 import { expect, test } from "bun:test";
 import { CusProductStatus } from "@autumn/shared";
 import { makeFullCusProduct } from "../../billing/billing-change-response/helpers/makeFullCusProduct.js";

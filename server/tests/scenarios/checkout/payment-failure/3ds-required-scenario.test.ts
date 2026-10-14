@@ -4,13 +4,6 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-/**
- * 3DS Required Checkout Scenario
- *
- * Generates an Autumn Checkout URL for a paid product where invoice payment
- * will require additional authentication when the checkout is confirmed.
- */
-
 test(`${chalk.yellowBright("autumn-checkout: payment failure - 3ds required")}`, async () => {
 	const customerId = "checkout-3ds-required";
 
@@ -43,12 +36,4 @@ test(`${chalk.yellowBright("autumn-checkout: payment failure - 3ds required")}`,
 		redirect_mode: "always",
 	});
 	console.log("3ds required checkout result:", attachResult);
-
-	// const checkoutUrl = attachResult.checkout_url;
-	// expect(checkoutUrl).toBeDefined();
-	// expect(checkoutUrl).toContain("/c/");
-
-	// const checkoutId = checkoutUrl!.split("/c/")[1];
-	// console.log("3ds required checkout ID:", checkoutId);
-	// console.log("open checkout URL and confirm to reproduce 3ds_required");
 });

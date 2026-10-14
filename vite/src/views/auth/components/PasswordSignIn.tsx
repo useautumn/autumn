@@ -54,7 +54,6 @@ export const PasswordSignIn = () => {
 		<div className="w-screen h-screen bg-background flex items-center justify-center p-4">
 			<CustomToaster />
 			<div className="w-full max-w-[350px] space-y-4">
-				{/* Logo */}
 				<div className="flex justify-center">
 					<svg
 						width="48"
@@ -79,7 +78,6 @@ export const PasswordSignIn = () => {
 					</svg>
 				</div>
 
-				{/* Title */}
 				<div className="text-center">
 					<h1 className="text-lg font-semibold text-foreground">
 						Sign in to Autumn
@@ -108,7 +106,6 @@ export const PasswordSignIn = () => {
 						/>
 					</div>
 
-					{/* Sign In Button */}
 					<Button
 						type="submit"
 						variant="secondary"
@@ -119,13 +116,6 @@ export const PasswordSignIn = () => {
 						Sign in
 					</Button>
 				</div>
-
-				{/* Footer */}
-				{/* <div className="text-center space-y-2">
-              <Link to="/sign-up" className="hover:underline text-tertiary-foreground text-sm">
-                Create an account here
-              </Link>
-            </div> */}
 			</div>
 		</div>
 	);

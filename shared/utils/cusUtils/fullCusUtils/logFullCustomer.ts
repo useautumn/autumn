@@ -9,7 +9,6 @@ type FullCustomerWithAggregations = FullCustomer & {
 	aggregated_customer_prices?: CustomerPrice[];
 };
 
-/** Logs a compact summary of a FullCustomer without flooding the terminal. */
 export const logFullCustomer = ({
 	fullCustomer,
 }: {

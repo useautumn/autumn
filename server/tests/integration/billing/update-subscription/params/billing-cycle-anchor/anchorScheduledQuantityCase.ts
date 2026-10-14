@@ -25,8 +25,6 @@ export type ScheduledAnchorQuantityVariant = {
 	deferred: boolean;
 };
 
-// Contract: future anchors preserve ordinary current-period quantity policy and schedule one reset.
-// Carried usage survives until the scheduled reset, which replenishes the final active grant.
 export const expectScheduledAnchorQuantities = async (
 	variant: ScheduledAnchorQuantityVariant,
 ) => {
@@ -130,7 +128,6 @@ export const expectScheduledAnchorQuantities = async (
 	});
 	await expectStripeSubscriptionCorrect({ ctx, customerId });
 	if (!variant.deferred) {
-		// Stripe rounds each proration line to minor units, so the preview must match the real invoice exactly.
 		const { latest_invoice } = await ctx.stripeCli.subscriptions.retrieve(
 			scenario.subscription.id,
 		);
@@ -187,7 +184,6 @@ export const expectScheduledAnchorQuantities = async (
 		).getTime();
 		const ratio =
 			(nextPeriodEnd - originalPeriodEnd) / (nextPeriodEnd - resetAt);
-		// Stripe charges each item for the extension beyond the already-paid period.
 		const resetInvoiceTotal = [20, nextQuantity / 10].reduce(
 			(total, amount) => total + Math.round(amount * ratio * 100) / 100,
 			0,

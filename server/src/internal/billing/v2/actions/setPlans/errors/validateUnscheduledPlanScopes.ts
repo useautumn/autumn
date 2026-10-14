@@ -6,7 +6,6 @@ import type {
 import { isOneOffProduct, productToReplacementKey } from "@autumn/shared";
 import { setPlansError } from "./setPlansError";
 
-/** Identifies the group a plan replaces within one entity scope; an add-on is its own group. */
 const groupAndScopeKey = ({
 	fullProduct,
 	internalEntityId,
@@ -19,10 +18,6 @@ const groupAndScopeKey = ({
 		internalEntityId ?? null,
 	]);
 
-/**
- * An unscheduled plan runs for the whole schedule, so a phase listing a plan in
- * its group and scope — or the same add-on — would overlap or replace it.
- */
 export const validateUnscheduledPlanScopes = ({
 	unscheduledProductContexts,
 	openingPhaseProductContexts,

@@ -21,8 +21,6 @@ type ApprovalSheet = (typeof APPROVAL_SHEETS)[number];
 const isApprovalSheet = (value: string | null): value is ApprovalSheet =>
 	APPROVAL_SHEETS.includes((value ?? "") as ApprovalSheet);
 
-/** Opens a billing sheet from a Slack approval deep link: resolves the stored
- * V1 request to V0 server-side, seeds the form overrides, strips the params. */
 export const useApprovalSheetFromUrl = ({
 	resolveSubscriptionItemId,
 }: {
@@ -43,8 +41,6 @@ export const useApprovalSheetFromUrl = ({
 	const { data: organizations, isPending: organizationsPending } =
 		useListOrganizations();
 	const activeOrgId = session?.session.activeOrganizationId;
-	// Internal admin cards carry org_id: the link targets another org, so the
-	// session must switch before any org-scoped fetch can resolve.
 	const orgMismatch = Boolean(
 		params.org_id && activeOrgId && params.org_id !== activeOrgId,
 	);
@@ -80,8 +76,6 @@ export const useApprovalSheetFromUrl = ({
 					return;
 				}
 				toast.info(`Switched to ${target.name} for this approval.`);
-				// Reload with the deep-link params intact — the flow resumes
-				// under the right org.
 				window.location.reload();
 			});
 			return;
@@ -121,8 +115,6 @@ export const useApprovalSheetFromUrl = ({
 			);
 			if (!itemId) return;
 			openedRef.current = true;
-			// A cancel request is a different decision than a plan edit — route it
-			// to the dashboard's native cancel flow.
 			const type =
 				cancelAction === "cancel_immediately" ||
 				cancelAction === "cancel_end_of_cycle"

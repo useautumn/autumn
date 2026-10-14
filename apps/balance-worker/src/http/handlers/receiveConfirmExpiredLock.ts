@@ -8,7 +8,6 @@ export async function receiveConfirmExpiredLock(
 	context: Context<BalanceWorkerHttpEnv>,
 ) {
 	const { runtime } = context.get("ctx");
-	// Cast, not parsed: our server validated it, and a field from a newer server must not fail it.
 	const command = context.get("request").command as ConfirmExpiredLockCommand;
 	const requestLog = context.get("requestLog");
 	requestLog.command = command;

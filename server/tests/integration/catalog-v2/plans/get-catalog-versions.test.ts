@@ -1,14 +1,3 @@
-/**
- * catalogV2.get — `include_versions` returns every non-archived version row,
- * not only the active one.
- *
- * Contract:
- *   create v1 (version_slug "v1") -> response echoes a string internal_id
- *   mint v2 via an unmatched version_slug -> new internal_id, becomes active
- *   catalogV2.get({}) -> one row: v2, active
- *   catalogV2.get({ include_versions: true }) -> two rows: v2 active, v1 not
- */
-
 import { expect, test } from "bun:test";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";

@@ -1,15 +1,3 @@
-/**
- * Billing Verify Baseline
- *
- * Contract under test (billingActions.verify / POST /billing.verify):
- *   New behavior:
- *     - A customer whose Stripe subscription matches Autumn's customer_products
- *       returns { customer_id, subscriptions: [{ stripe_subscription_id, status:
- *       "correct", mismatches: [] }] } with zero mismatches.
- *
- * This is the control case every drift test in this folder is compared against.
- */
-
 import { expect, test } from "bun:test";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";

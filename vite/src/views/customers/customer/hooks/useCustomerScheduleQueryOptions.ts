@@ -10,8 +10,6 @@ type CustomerScheduleResponse = {
 	entity_schedules: Record<string, FullCustomerSchedule>;
 };
 
-/** The customer's persisted schedules, keyed by the page's customer id so a
- * prefetch and the Set Plans sheet share one cache entry. */
 export const useCustomerScheduleQueryOptions = () => {
 	const { customer_id } = useParams();
 	const axiosInstance = useAxiosInstance();

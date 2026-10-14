@@ -7,7 +7,6 @@ import {
 } from "@autumn/shared";
 import { matchCustomerLicensesToPlanLicenses } from "../compute/customerLicenseTransitions/matchCustomerLicenseSuccessors.js";
 
-/** Explicit quantities win; omitted successors cover their live assignments. */
 export const setupCustomerLicenseQuantityContext = ({
 	params,
 	fullProduct,

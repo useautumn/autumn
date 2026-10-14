@@ -9,7 +9,6 @@ const GetMigrationBody = z.object({
 	id: z.string(),
 });
 
-/** POST /migrations.get — one migration by user `id`, without the list's per-migration customer counts. */
 export const handleGetMigration = createRoute({
 	scopes: [Scopes.Migrations.Read],
 	body: GetMigrationBody,

@@ -19,11 +19,6 @@ import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 
-/**
- * A lock takes usage the way a track does, and a finalize settles it: the alert fires on whichever
- * of the two crosses the threshold, and never on the one that does not.
- */
-
 let webhook: WebhookTestSetup;
 let playToken: string;
 
@@ -114,7 +109,6 @@ test(`${chalk.yellowBright("finalize-alert2: the lock crosses the threshold and 
 		lock_id: customerId,
 		action: "confirm",
 	});
-	// Long enough for a second delivery to have shown up; the count must still be one.
 	await timeout(6000);
 	await waitForUsageAlertCount({
 		token: playToken,

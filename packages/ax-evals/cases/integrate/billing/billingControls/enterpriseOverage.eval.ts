@@ -7,18 +7,6 @@ import type { AxRunOutput } from "../../../../src/types/axRunOutput.ts";
 import { crawlCreditsCatalog } from "../../catalogs/crawlCreditsCatalog.ts";
 import { fixtureUser, integrateScenario } from "../../integrateShared.ts";
 
-/**
- * BILLING CONTROLS flow: enterprise overage grants. The scale plan's credit
- * item is a pure grant (no usage price) — zero balance is a hard stop by
- * default, so overage capability doesn't exist on the plan; it must be
- * granted PER CUSTOMER via the overage_allowed billing control, capped by a
- * spend_limits.overage_limit (~20% of the allowance) so the run-over isn't
- * unlimited. Because no usage price exists, that overage is permitted, not
- * billed — the agent should flag that, not fake it. The graded traps:
- * pattern-matching the priced-overage shape and reaching for
- * skip_overage_billing (wrong direction — that DISABLES billing), or adding
- * a usage price to the catalog (a catalog change, forbidden here).
- */
 const overageGrantRouteStub = `		// Account management: grant a customer overage on their crawl credits. TODO: wire to billing provider.
 		"/api/billing/overage-grant": {
 			POST: async (req) => {
@@ -29,8 +17,6 @@ const overageGrantRouteStub = `		// Account management: grant a customer overage
 		},
 `;
 
-/** ~20% headroom over the 100k-credit grant, in either legitimate encoding:
- * usage_percentage 20, or absolute 20,000 units. */
 const overageCapConfigured = (): Expectation => {
 	const name = "20% overage cap configured";
 	return {
@@ -64,8 +50,6 @@ const overageCapConfigured = (): Expectation => {
 	};
 };
 
-/** the catalog was never edited or re-pushed — overage capability must come
- * from billing controls, not a usage price added to the item */
 const catalogUntouched = (): Expectation => {
 	const name = "did not change the catalog";
 	return {

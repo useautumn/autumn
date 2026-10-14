@@ -1,10 +1,3 @@
-/**
- * A refund (negative track) gives credits back to the entity's own share (PRD §8.3 step 5).
- *
- * Red (before):  A's counter keeps its usage, so the refund lands in unallocated.
- * Green (after): A's share shows the refund; unallocated is unchanged.
- */
-
 import { test } from "bun:test";
 import { ApiVersion, ResetInterval } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";

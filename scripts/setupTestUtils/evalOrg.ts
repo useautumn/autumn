@@ -1,19 +1,4 @@
 #!/usr/bin/env bun
-/**
- * Throwaway orgs for ax-evals: each eval run gets its own org + sandbox key so
- * concurrent runs never share state and a real `atmn push` lands somewhere
- * disposable.
- *
- *   bun scripts/setupTestUtils/evalOrg.ts create <runId> [--stripe]  → prints {orgId, secretKey}
- *   bun scripts/setupTestUtils/evalOrg.ts delete <runId>
- *   bun scripts/setupTestUtils/evalOrg.ts sweep            → deletes eval orgs older than a day
- *
- * --stripe mints a sandbox Stripe connect sub-account and binds it, so paid
- * attach/checkout flows work. No webhook endpoint — evals only read
- * synchronous API responses.
- *
- * Worktree .env.local (DATABASE_URL) loads via scripts/preload-env.ts.
- */
 import { AppEnv, organizations } from "@autumn/shared";
 import type { DrizzleCli } from "@server/db/initDrizzle.js";
 import {
@@ -23,7 +8,6 @@ import {
 import { clearOrgDbOnly } from "@tests/utils/setup/clearOrg.js";
 import { and, eq, like, lt } from "drizzle-orm";
 
-// clearOrg's allowlist only touches test-* slugs; keep eval orgs inside it.
 const SLUG_PREFIX = "test-ax-eval-";
 const SWEEP_AGE_MS = 24 * 60 * 60 * 1000;
 
@@ -95,7 +79,6 @@ const deleteEvalOrg = async ({
 	if (!orgId.startsWith(SLUG_PREFIX))
 		throw new Error(`refusing to delete non-eval org "${orgId}"`);
 	await clearOrgDbOnly({ db, orgId, env: AppEnv.Sandbox });
-	// api_keys and memberships cascade from the org row.
 	await db.delete(organizations).where(eq(organizations.id, orgId));
 };
 
@@ -113,10 +96,6 @@ const sweepEvalOrgs = async ({ db }: { db: DrizzleCli }): Promise<number> => {
 	return stale.length;
 };
 
-/** Eval orgs only ever belong on a dev database: localhost, or this
- * worktree's own registered dw Neon branch. A prod/staging DATABASE_URL
- * (e.g. inherited from `bun p` / prod Infisical) must hard-fail before any
- * write. */
 const assertDevDatabase = async () => {
 	const url = process.env.DATABASE_URL ?? "";
 	let host = "";
@@ -127,9 +106,6 @@ const assertDevDatabase = async () => {
 	}
 	if (host === "localhost" || host === "127.0.0.1") return;
 
-	// Worktree case: the dw registry records the branch DB minted for each
-	// worktree (branch names are allowlisted as dw-wt-*/capy-*). Only that
-	// exact host may be written to.
 	const { homedir } = await import("node:os");
 	const { join } = await import("node:path");
 	const registryPath = join(homedir(), ".autumn-worktrees.json");
@@ -148,9 +124,7 @@ const assertDevDatabase = async () => {
 			})
 			.filter(Boolean);
 		if (registeredHosts.includes(host)) return;
-	} catch {
-		// no registry → fall through to refusal
-	}
+	} catch {}
 	throw new Error(
 		`DATABASE_URL host is "${host}" — not localhost and not a registered dw worktree branch; refusing to create eval orgs`,
 	);
@@ -164,8 +138,6 @@ const main = async () => {
 	const { db, client } = (
 		await import("@server/db/initDrizzle.js")
 	).initDrizzle({
-		// Pin to the URL we were given after preload — don't let
-		// initDrizzle's dotenv.config() swap in a different DATABASE_URL.
 		databaseUrl: process.env.DATABASE_URL,
 	});
 	try {

@@ -7,7 +7,6 @@ import { requiredBalanceInFundingUnits } from "./requiredBalanceInFundingUnits.j
 import type { CheckCommand } from "./types/checkCommand.js";
 import type { CheckResult } from "./types/checkResult.js";
 
-/** What a check's dry-run deduction says: allowed iff it was not refused, denominated in the row that funded it. */
 export const outcomeToCheckResult = ({
 	fullSubject,
 	command,
@@ -17,12 +16,10 @@ export const outcomeToCheckResult = ({
 	fullSubject: WorkerFullSubject;
 	command: CheckCommand;
 	outcome: DeductionOutcome;
-	/** Deltas already on the rows before the check's own draw, such as the track a check follows. */
 	precedingDeltas?: DeductionDelta[];
 }): CheckResult => {
 	const [firstEntitlement] = outcome.context.customerEntitlements;
 	if (!firstEntitlement && !outcome.context.overdueBlocked) {
-		// Nothing funds the feature, so only a requirement of nothing can be met.
 		const allowed = command.requiredBalance <= 0;
 		return {
 			allowed,
@@ -34,7 +31,6 @@ export const outcomeToCheckResult = ({
 		};
 	}
 
-	// An overdue block empties the selection, so the feature is read from everything the subject holds.
 	const feature =
 		firstEntitlement?.entitlement.feature ??
 		fullSubjectToCustomerEntitlements({

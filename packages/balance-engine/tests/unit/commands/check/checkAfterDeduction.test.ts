@@ -27,8 +27,6 @@ import {
 	org,
 } from "../../engineFixtures.js";
 
-/** A check after a track, drawn from the track's outcome, says what a check on the applied state says. */
-
 const A_HAIR = 0.0000001;
 
 const stateWith = ({
@@ -47,7 +45,6 @@ const stateWith = ({
 		customerEntitlements: [createCustomerEntitlement({ balance })],
 	});
 
-/** Runs the track, then the check both ways: on the outcome, and on the subject rebuilt after the mutation. */
 const trackThenCheck = ({
 	state,
 	catalog = createCatalogFor({ state }),

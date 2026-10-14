@@ -94,44 +94,4 @@ describe(`${chalk.yellowBright(`${testCase}: Testing attach new version for tria
 			env: ctx.env,
 		});
 	});
-
-	// it("should have correct invoice total on next cycle", async function () {
-	//   const invoiceTotal = await getExpectedInvoiceTotal({
-	//     org,
-	//     env,
-	//     customerId,
-	//     productId: pro.id,
-	//     stripeCli,
-	//     db,
-	//     usage: [
-	//       {
-	//         featureId: TestFeature.Words,
-	//         value: usage,
-	//       },
-	//     ],
-	//     onlyIncludeMonthly: true,
-	//   });
-
-	//   let curUnix = Date.now();
-	//   curUnix = await advanceTestClock({
-	//     stripeCli,
-	//     testClockId,
-	//     advanceTo: addMonths(curUnix, 1).getTime(),
-	//     waitForSeconds: 30,
-	//   });
-
-	//   await advanceTestClock({
-	//     stripeCli,
-	//     testClockId,
-	//     advanceTo: addHours(curUnix, hoursToFinalizeInvoice).getTime(),
-	//     waitForSeconds: 10,
-	//   });
-
-	//   const customer = await autumn.customers.get(customerId);
-	//   const invoice = customer.invoices[0];
-	//   expect(invoice.total).to.equal(
-	//     invoiceTotal,
-	//     "invoice total after 1 cycle should be correct"
-	//   );
-	// });
 });

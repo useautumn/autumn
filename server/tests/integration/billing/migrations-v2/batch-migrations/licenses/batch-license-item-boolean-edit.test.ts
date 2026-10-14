@@ -1,10 +1,3 @@
-/**
- * Editing a boolean license item must not touch the assignments' balances.
- * Both sides are non-tracking, so computeBalancePatch specifies no write at all.
- *
- * Red: the held balance is overwritten with 0.
- * Green: the balance survives and the rows still move onto the new definition.
- */
 import { expect, test } from "bun:test";
 import { customerEntitlements } from "@autumn/shared";
 import { runChunkedMigration } from "@tests/integration/billing/migrations-v2/utils/runChunkedMigration";
@@ -53,7 +46,6 @@ test(`${chalk.yellowBright("batch-license-customize: editing a boolean item leav
 			),
 		);
 
-	// One match key across the add and remove, so this is a modify-in-place.
 	const { result } = await runChunkedMigration({
 		ctx,
 		migrationClient: autumnV2_2,

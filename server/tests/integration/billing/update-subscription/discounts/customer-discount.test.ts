@@ -24,9 +24,6 @@ import { CusService } from "@/internal/customers/CusService.js";
 const billingUnits = 12;
 const pricePerUnit = 10;
 
-/**
- * Helper to get Stripe subscription and customer info for a customer.
- */
 const getStripeInfo = async ({ customerId }: { customerId: string }) => {
 	const stripeCli = createStripeCli({ org: ctx.org, env: ctx.env });
 
@@ -82,10 +79,6 @@ const applyCustomerCoupon = async ({
 	);
 };
 
-// =============================================================================
-// CUSTOMER-LEVEL DISCOUNT TESTS
-// =============================================================================
-
 test.concurrent(`${chalk.yellowBright("discount: customer-level 20% discount applied to subscription update")}`, async () => {
 	const customerId = "discount-customer-level-20pct";
 
@@ -118,20 +111,17 @@ test.concurrent(`${chalk.yellowBright("discount: customer-level 20% discount app
 
 	const { stripeCli, stripeCustomerId } = await getStripeInfo({ customerId });
 
-	// Create a 20% off coupon
 	const coupon = await stripeCli.coupons.create({
 		percent_off: 20,
 		duration: "forever",
 	});
 
-	// Apply coupon to CUSTOMER (not subscription) using rawRequest
 	await applyCustomerCoupon({
 		stripeCli,
 		stripeCustomerId,
 		couponId: coupon.id,
 	});
 
-	// Verify the customer discount was applied in Stripe
 	const stripeCustomer = await stripeCli.customers.retrieve(stripeCustomerId, {
 		expand: ["discount.source.coupon.applies_to"],
 	});
@@ -140,13 +130,11 @@ test.concurrent(`${chalk.yellowBright("discount: customer-level 20% discount app
 		throw new Error("Stripe customer was deleted");
 	}
 
-	// Customer discount uses source.coupon structure (API version 2025-09-30.clover+)
 	const customerDiscount = stripeCustomer.discount as {
 		source?: { coupon?: { id: string } };
 	} | null;
 	expect(customerDiscount?.source?.coupon?.id).toBe(coupon.id);
 
-	// Preview upgrade from 5 to 10 units (adding 5 units)
 	const preview = await autumnV1.subscriptions.previewUpdate({
 		customer_id: customerId,
 		product_id: product.id,
@@ -155,10 +143,6 @@ test.concurrent(`${chalk.yellowBright("discount: customer-level 20% discount app
 		],
 	});
 
-	// Upgrade generates: refund (-$50) + charge ($100)
-	// Discounts only apply to charges, not refunds
-	// Charge with 20% off: $100 * 0.8 = $80
-	// Total: -$50 + $80 = $30
 	const refundAmount = -50;
 	const discountedCharge = Math.round(100 * 0.8);
 	const expectedAmount = refundAmount + discountedCharge;
@@ -173,7 +157,6 @@ test.concurrent(`${chalk.yellowBright("discount: customer-level 20% discount app
 		],
 	});
 
-	// Verify invoice total matches preview
 	expect(result.invoice?.total).toBe(expectedAmount);
 });
 
@@ -211,7 +194,6 @@ test.concurrent(`${chalk.yellowBright("discount: customer discount ignored when 
 		customerId,
 	});
 
-	// Create two coupons: 50% for customer, 10% for subscription
 	const customerCoupon = await stripeCli.coupons.create({
 		percent_off: 50,
 		duration: "forever",
@@ -222,19 +204,16 @@ test.concurrent(`${chalk.yellowBright("discount: customer discount ignored when 
 		duration: "forever",
 	});
 
-	// Apply 50% coupon to CUSTOMER
 	await applyCustomerCoupon({
 		stripeCli,
 		stripeCustomerId,
 		couponId: customerCoupon.id,
 	});
 
-	// Apply 10% coupon to SUBSCRIPTION
 	await stripeCli.subscriptions.update(subscription.id, {
 		discounts: [{ coupon: subscriptionCoupon.id }],
 	});
 
-	// Preview upgrade - should use SUBSCRIPTION discount (10%), not customer (50%)
 	const preview = await autumnV1.subscriptions.previewUpdate({
 		customer_id: customerId,
 		product_id: product.id,
@@ -243,11 +222,6 @@ test.concurrent(`${chalk.yellowBright("discount: customer discount ignored when 
 		],
 	});
 
-	// Upgrade generates: refund (-$50) + charge ($100)
-	// Subscription discount takes priority: 10% off
-	// Charge with 10% off: $100 * 0.9 = $90
-	// Total: -$50 + $90 = $40
-	// (NOT -$50 + $50 = $0 which would be with customer's 50% discount)
 	const refundAmount = -50;
 	const discountedCharge = Math.round(100 * 0.9);
 	const expectedAmount = refundAmount + discountedCharge;
@@ -287,7 +261,6 @@ test.concurrent(`${chalk.yellowBright("discount: customer-level $10 amount-off d
 
 	const { stripeCli, stripeCustomerId } = await getStripeInfo({ customerId });
 
-	// Create a $10 off coupon (1000 cents) - amount_off requires repeating duration
 	const coupon = await stripeCli.coupons.create({
 		amount_off: 1000,
 		currency: "usd",
@@ -295,14 +268,12 @@ test.concurrent(`${chalk.yellowBright("discount: customer-level $10 amount-off d
 		duration_in_months: 12,
 	});
 
-	// Apply coupon to CUSTOMER using rawRequest
 	await applyCustomerCoupon({
 		stripeCli,
 		stripeCustomerId,
 		couponId: coupon.id,
 	});
 
-	// Preview upgrade from 5 to 10 units
 	const preview = await autumnV1.subscriptions.previewUpdate({
 		customer_id: customerId,
 		product_id: product.id,
@@ -311,10 +282,6 @@ test.concurrent(`${chalk.yellowBright("discount: customer-level $10 amount-off d
 		],
 	});
 
-	// Upgrade generates: refund (-$50) + charge ($100)
-	// Discounts only apply to charges, not refunds
-	// Charge with $10 off: $100 - $10 = $90
-	// Total: -$50 + $90 = $40
 	const refundAmount = -50;
 	const discountedCharge = 100 - 10;
 	const expectedAmount = refundAmount + discountedCharge;
@@ -356,25 +323,21 @@ test.concurrent(`${chalk.yellowBright("discount: customer discount used when sub
 		customerId,
 	});
 
-	// Create a 30% off coupon for customer
 	const coupon = await stripeCli.coupons.create({
 		percent_off: 30,
 		duration: "forever",
 	});
 
-	// Apply coupon to CUSTOMER
 	await applyCustomerCoupon({
 		stripeCli,
 		stripeCustomerId,
 		couponId: coupon.id,
 	});
 
-	// Ensure subscription has NO discounts
 	await stripeCli.subscriptions.update(subscription.id, {
 		discounts: [],
 	});
 
-	// Preview upgrade - should use customer discount (30%)
 	const preview = await autumnV1.subscriptions.previewUpdate({
 		customer_id: customerId,
 		product_id: product.id,
@@ -383,10 +346,6 @@ test.concurrent(`${chalk.yellowBright("discount: customer discount used when sub
 		],
 	});
 
-	// Upgrade generates: refund (-$50) + charge ($100)
-	// Customer discount applies: 30% off
-	// Charge with 30% off: $100 * 0.7 = $70
-	// Total: -$50 + $70 = $20
 	const refundAmount = -50;
 	const discountedCharge = Math.round(100 * 0.7);
 	const expectedAmount = refundAmount + discountedCharge;

@@ -29,7 +29,6 @@ export const customerProductToGrantedLicenses = (
 			: [],
 	);
 
-/** Whether the row's start is a future billing cycle reset; a past reset no longer matters. */
 const resetsBillingCycleAtStart = ({
 	customerProduct,
 	now,
@@ -63,7 +62,6 @@ export const customerProductToInstanceConfig = ({
 	resetsBillingCycle: resetsBillingCycleAtStart({ customerProduct, now }),
 });
 
-/** An omitted license list keeps what the instance already holds, or grants the included seats. */
 export const requestedPlanToInstanceConfig = ({
 	fullProduct,
 	featureQuantities,

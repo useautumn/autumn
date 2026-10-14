@@ -9,7 +9,6 @@ import type {
 	SnapshotRefreshQueueContext,
 } from "./types/snapshotRefreshQueue.js";
 
-/** One read in flight; `superseded` once the customer was evicted again behind it. */
 type Refresh = {
 	identity: MeteringIdentity;
 	customerKey: string;
@@ -18,7 +17,6 @@ type Refresh = {
 
 type Queue = {
 	ctx: SnapshotRefreshQueueContext;
-	/** Insertion order is FIFO; the subject key dedupes. */
 	waiting: Map<string, MeteringIdentity>;
 	reading: Set<Refresh>;
 	counts: SnapshotRefreshCounts;
@@ -53,7 +51,6 @@ const count = ({
 	queue.ctx.recordCounts?.({ [field]: 1 });
 };
 
-/** A read the evict overtook may predate the write behind it; it will write nothing and wait again. */
 const supersedeReadsOf = ({
 	queue,
 	identity,
@@ -98,7 +95,6 @@ const warnCapped = ({ queue }: { queue: Queue }): void => {
 	);
 };
 
-/** Takes waiting subjects into reads until `refreshConcurrency` are in flight or nothing waits. */
 const startReads = ({ queue }: { queue: Queue }): void => {
 	const { refreshConcurrency } = queue.ctx.subjectSnapshotsConfig.get();
 	while (queue.reading.size < refreshConcurrency && queue.waiting.size > 0) {
@@ -119,7 +115,6 @@ const startReads = ({ queue }: { queue: Queue }): void => {
 	if (queue.waiting.size === 0) queue.warned = false;
 };
 
-/** Never rejects: a read that throws is counted and logged, and the queue carries on. */
 const refreshOne = async ({
 	queue,
 	refresh,

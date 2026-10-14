@@ -1,10 +1,3 @@
-/**
- * Regression: RC's `create-product-prices` MCP tool requires `prices` nested
- * under `body`. A top-level `prices` is rejected (additionalProperties:false)
- * and surfaces as a generic HTTP 500, silently leaving the test-store product
- * with no price. This locks the request shape.
- */
-
 import { expect, test } from "bun:test";
 import { initRevenuecatCli } from "@/external/revenueCat/misc/initRevenuecatCli";
 
@@ -38,6 +31,5 @@ test("setTestStoreProductPrice nests prices under body for create-product-prices
 	expect(params.arguments.body).toEqual({
 		prices: [{ amount_micros: 10_000_000, currency: "USD" }],
 	});
-	// The stray top-level `prices` (the bug) must not be present.
 	expect(params.arguments.prices).toBeUndefined();
 });

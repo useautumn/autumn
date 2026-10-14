@@ -1,5 +1,3 @@
-/** A retried backdate recreate reuses the repeating coupon copy its failed attempt made, rather than leaving it orphaned. */
-
 import { afterAll, describe, expect, mock, test } from "bun:test";
 import { msToSeconds, type StripeDiscountWithCoupon } from "@autumn/shared";
 import { addMonths } from "date-fns";

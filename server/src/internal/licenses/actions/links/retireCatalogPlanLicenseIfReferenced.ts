@@ -25,7 +25,6 @@ const planLicenseWillChange = ({
 	itemCustomizationMode === "replace" ||
 	(itemCustomizationMode === "clear" && current.customized);
 
-/** Retires a changed catalog link when a customer still references its definition. */
 export const retireCatalogPlanLicenseIfReferenced = async ({
 	db,
 	current,

@@ -1,11 +1,7 @@
-// events_property_mv's insert-time gate drops high-entropy values (UUIDs, long
-// hex, 32+ char opaque ids) so per-event-unique keys can't explode the rollup.
 import type { AggregateGroupablePipeRow } from "@/external/tinybird/pipes/aggregateGroupablePipe.js";
 
 export type EventTotals = Record<string, { count: number; sum: number }>;
 
-// Sums are Float64 through two different aggregation paths, so exact equality
-// would report phantom shortfalls on large values.
 const RELATIVE_TOLERANCE = 1e-9;
 const ABSOLUTE_TOLERANCE = 1e-6;
 
@@ -37,8 +33,6 @@ export const sumAllRows = ({
 	rows: AggregateGroupablePipeRow[];
 }): number => rows.reduce((sum, row) => sum + row.total_value, 0);
 
-// Event counts can't cancel the way signed values can, but older deployments of
-// the pipe don't return them, so every count check stays opt-in.
 const countRowsByEventName = ({
 	rows,
 }: {
@@ -52,16 +46,9 @@ const countRowsByEventName = ({
 	return counts;
 };
 
-// The gated rollup carries small historical seams (backfill boundaries) that
-// exact coverage exposes. Recovering them means a raw-events scan over the whole
-// window, which times out on long windows. A shortfall a reader could notice
-// retries outright; a smaller one is judged by the value-aware totals check,
-// which shares the rollup's seams and only fires on real loss.
 const RETRY_SHORTFALL_RATIO = 0.005;
 const RETRY_SHORTFALL_FLOOR = 10_000;
 
-// Events ingested between the grouped and coverage queries can put a few more
-// events in the groups than in coverage; that is lag, not an empty coverage rollup.
 const INGESTION_LAG_RATIO = 0.0001;
 
 const isWithinIngestionLag = ({
@@ -99,10 +86,6 @@ export const propertyRollupCoverageShortfall = ({
 	return worst;
 };
 
-/**
- * Value-only judgement for a minor count shortfall. When some events lack the key,
- * the all-events value gap is theirs too and can't attribute loss to the gate.
- */
 export const groupedValueIsMateriallyShort = ({
 	rows,
 	totals,
@@ -129,11 +112,6 @@ export const propertyRollupCoverageIsIncomplete = ({
 	coverage: Record<string, number>;
 }): boolean => propertyRollupCoverageShortfall({ rows, coverage }) === "major";
 
-/**
- * Every grouped event carries the key, so populated coverage can never report
- * fewer events than the grouped result. Seeing that means the coverage rollup
- * is empty or mid-backfill, and trusting it would hide real gate loss.
- */
 export const propertyRollupCoverageUnderReports = ({
 	rows,
 	coverage,
@@ -167,10 +145,6 @@ const totalEventCount = ({
 	return total;
 };
 
-/**
- * Whether the retry recovered anything. Prefers event counts, since a recovered
- * group whose values cancel to zero moves the count but not the sum.
- */
 export const reportsMoreThan = ({
 	candidate,
 	current,
@@ -186,11 +160,6 @@ export const reportsMoreThan = ({
 	return sumAllRows({ rows: candidate }) > sumAllRows({ rows: current });
 };
 
-/**
- * Whether the gated property rollup under-reports against the ungated totals.
- * A key with both gate-surviving and gate-dropped values comes back non-empty
- * yet short, so emptiness alone never detects it.
- */
 export const groupedResultIsIncomplete = ({
 	rows,
 	totals,
@@ -204,8 +173,6 @@ export const groupedResultIsIncomplete = ({
 	return Object.entries(totals).some(([eventName, total]) => {
 		if (total.count <= 0) return false;
 
-		// Signed values can cancel, so a matching sum does not prove the groups are
-		// all present; the count catches what the sum hides.
 		if (groupedCounts && (groupedCounts[eventName] ?? 0) < total.count) {
 			return true;
 		}

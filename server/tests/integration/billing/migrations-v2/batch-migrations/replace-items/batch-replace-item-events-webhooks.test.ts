@@ -1,15 +1,3 @@
-/**
- * Filter-mode batch replace stamps each customer's live from-definition onto
- * item_changes and webhooks — not catalog ids[0].
- *
- * Contract:
- *   customerA 10/mo vs customerB 5/mo → minted 30
- *   each customer's deleted+created item_changes / billing.updated / events
- *   carry THAT customer's from allowance, to=30, remaining = 30 - consumed
- *
- * Red (catalog from-ent): B item_changes.included = 10, remaining delta uses 10
- * Green: 10 vs 5 from, remaining 27 vs 28
- */
 import { afterAll, beforeAll, test } from "bun:test";
 import { ResetInterval } from "@autumn/shared";
 import { waitForBillingUpdatedWebhook } from "@tests/integration/billing/autumn-webhooks/utils/expectBillingUpdatedWebhook";

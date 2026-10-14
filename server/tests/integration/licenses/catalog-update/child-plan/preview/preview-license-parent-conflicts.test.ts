@@ -1,7 +1,3 @@
-/**
- * Regression: previews expose override conflicts and unselected parents retain their effective plan.
- * A stray early return previously skipped both assertions.
- */
 import { expect, test } from "bun:test";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { items } from "@tests/utils/fixtures/items.js";

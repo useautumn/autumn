@@ -1,17 +1,3 @@
-/**
- * catalogV2.preview_update — child's license_parents[] lane.
- *
- * Each reverse-link parent nests under the child with license_action
- * (unchanged | propagated | explicit) and the FINAL license edit:
- * propagate first, then declared licenses[] customize.
- *
- * Contract:
- *   - parent licenses[] item override → explicit; customize is declared
- *     (not the child's propagated items); child-only additions still flow
- *   - propagate-only parent → propagated
- *   - pin (no propagate, no licenses[]) → unchanged
- */
-
 import { test } from "bun:test";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";

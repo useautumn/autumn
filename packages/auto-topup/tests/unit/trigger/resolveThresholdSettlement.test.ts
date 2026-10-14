@@ -28,7 +28,6 @@ const settlementOf = (fullSubject: AutoTopupSubject, featureId = FEATURE) => {
 	return next;
 };
 
-/** A pay-per-use plan billed every `threshold` units, `usage` units into overage. */
 const thresholdPlan = ({
 	id = "cp",
 	usage = 140,
@@ -38,7 +37,6 @@ const thresholdPlan = ({
 }: {
 	id?: string;
 	usage?: number;
-	/** null: a pay-per-use price with no threshold block at all. */
 	threshold?: number | null;
 	billWhen?: BillWhen;
 	entities?: Record<

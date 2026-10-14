@@ -37,7 +37,6 @@ const attachToCheckPreview = async ({
 	db: DrizzleCli;
 	fullCus: FullCustomer;
 }) => {
-	// 1. If check
 	const attachFunc = preview.func;
 
 	if (
@@ -106,11 +105,8 @@ const attachToCheckPreview = async ({
 	}
 
 	const checkPreview: CheckProductPreview = {
-		// title: "Check",
-		// message: "Check",
 		scenario,
 
-		// Meta
 		product_id: product.id,
 		product_name: product.name,
 		recurring: !isOneOff(product.prices),
@@ -118,7 +114,6 @@ const attachToCheckPreview = async ({
 		next_cycle_at: preview.due_next_cycle?.due_at,
 		current_product_name: preview.current_product?.name,
 
-		// Otehrs
 		options: options?.length > 0 ? options : undefined,
 		items: items?.length > 0 ? items : undefined,
 		due_today,
@@ -145,7 +140,6 @@ export const getProductCheckPreview = async ({
 }) => {
 	const { org, features, db } = ctx;
 
-	// Build attach params
 	const attachParams = await checkToAttachParams({
 		ctx,
 		customer,

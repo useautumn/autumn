@@ -34,7 +34,6 @@ const command: EvictCommand = {
 	occurredAt: 0,
 };
 
-/** The API's direct client over fakes: a worker that answers `workerResponse`, a command log, a catalog publisher. */
 function createApi({
 	workerResponse = { status: 200, body: { evicted: true } },
 }: {
@@ -80,7 +79,6 @@ function createApi({
 	return { receiver, workerRequests, appends, invalidations };
 }
 
-/** Delivers the proxy client's POST to the receiver, through JSON as the wire would. */
 function httpThroughReceiver({
 	receiver,
 }: {
@@ -180,7 +178,6 @@ test("a call signed with an unknown secret is rejected before the API's client r
 	expect(api.workerRequests).toHaveLength(0);
 });
 
-/** Hands the receiver a body signed with the right secret, bypassing the proxy client's own checks. */
 function receiveSigned({
 	api,
 	body,

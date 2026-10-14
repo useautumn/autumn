@@ -82,11 +82,9 @@ export const createLogger = (
 				...(params.context ?? {}),
 			},
 			mixin: params.mixin,
-			// pino breaks on an explicit `hooks: undefined`.
 			...(params.hooks && { hooks: params.hooks }),
 			formatters: {
 				level: (label: string) => ({ level: label.toUpperCase() }),
-				// Errors stay raw until here so hooks can read them; this is where they become JSON.
 				log: (object: Record<string, unknown>) =>
 					normalizeErrorValues(object) as Record<string, unknown>,
 			},
@@ -95,7 +93,6 @@ export const createLogger = (
 	);
 
 	// Ending the transport is the only reliable flush: the Axiom target only
-	// drains its buffer in its close hook, not on pino's in-process flush.
 	let flushed: Promise<void> | undefined;
 	const flushTransports = () => {
 		flushed ??= Promise.all([

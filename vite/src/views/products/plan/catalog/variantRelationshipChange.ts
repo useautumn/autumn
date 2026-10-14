@@ -2,11 +2,6 @@ import type { UpdateCatalogPlanParamsInput } from "@autumn/shared";
 
 type VariantVersionRow = { version: number };
 
-/**
- * What the base-plan picker asked for, resolved against every version the
- * variant plan has. The server treats a variant plan as one family, so a
- * link, reparent or unlink must name every version or it is rejected.
- */
 export type VariantRelationshipChange =
 	| { kind: "unchanged" }
 	| {
@@ -23,11 +18,9 @@ export const resolveVariantRelationshipChange = ({
 	selectedBaseVersion,
 	variantVersions,
 }: {
-	/** Undefined until the picker moves; null means detach. */
 	editedBasePlanId: string | null | undefined;
 	persistedBasePlanId: string | null;
 	selectedBaseVersion: number | undefined;
-	/** Every existing version of the edited plan; undefined while still loading. */
 	variantVersions: VariantVersionRow[] | undefined;
 }): VariantRelationshipChange => {
 	const nextBasePlanId =
@@ -48,7 +41,6 @@ export const resolveVariantRelationshipChange = ({
 	};
 };
 
-/** The catalog rows that carry a relationship change; none when unchanged. */
 export const variantRelationshipPlanParams = ({
 	variantPlanId,
 	change,

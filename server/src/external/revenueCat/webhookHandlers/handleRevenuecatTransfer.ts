@@ -22,7 +22,6 @@ import { reconcileLicenseStateForCustomer } from "@/internal/licenses/actions/re
 const publicId = (customer: FullCustomer) =>
 	customer.id ?? customer.internal_id;
 
-/** Routes Redis for this customer and tags its logs, so source and destination work never share one customer's context. */
 const ctxForCustomer = ({
 	ctx,
 	customer,
@@ -81,7 +80,6 @@ const refreshCustomer = async ({
 	);
 };
 
-/** Moves the products RevenueCat now reports on the destination; always acknowledges anything not worth a retry. */
 export const handleTransfer = async ({
 	event,
 	ctx,

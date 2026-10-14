@@ -1,8 +1,5 @@
 import { codeToHtml } from "shiki";
 
-/**
- * Highlights code using Shiki with theme support
- */
 export async function highlightCode({
 	code,
 	language,
@@ -21,14 +18,10 @@ export async function highlightCode({
 		return html;
 	} catch (error) {
 		console.error("Shiki highlighting error:", error);
-		// Fallback: return plain code wrapped in pre/code tags
 		return `<pre><code>${escapeHtml(code)}</code></pre>`;
 	}
 }
 
-/**
- * Escape HTML to prevent XSS in fallback case
- */
 function escapeHtml(unsafe: string): string {
 	return unsafe
 		.replace(/&/g, "&amp;")

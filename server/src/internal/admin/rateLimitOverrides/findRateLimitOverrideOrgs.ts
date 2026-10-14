@@ -4,7 +4,6 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 
 export type RateLimitOverrideOrg = { id: string; name: string; slug: string };
 
-/** Overrides are stored under an org id or slug; resolves each key to its org. */
 export const findRateLimitOverrideOrgs = async ({
 	ctx,
 	orgKeys,

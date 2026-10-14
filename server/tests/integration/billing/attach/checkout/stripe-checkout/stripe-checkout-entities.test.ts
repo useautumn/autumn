@@ -1,15 +1,3 @@
-/**
- * Stripe Checkout Entity Tests (Attach V2)
- *
- * Tests for Stripe Checkout flow with entity-level billing.
- * When customer has NO payment method and attaches to an entity,
- * it triggers stripe_checkout mode for that entity.
- *
- * Key behaviors:
- * - Entity-level attach without PM → checkout flow
- * - Each entity can have its own checkout session
- */
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3, ApiEntityV0 } from "@autumn/shared";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
@@ -23,19 +11,6 @@ import { timeout } from "@tests/utils/genUtils";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 1: Entity attach via checkout (no payment method)
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Customer with NO payment method
- * - Attach pro to entity-1
- *
- * Expected Result:
- * - Returns payment_url
- * - After checkout: entity-1 has product attached
- */
 test.concurrent(`${chalk.yellowBright("stripe-checkout: entity attach")}`, async () => {
 	const customerId = "stripe-checkout-entity-attach";
 
@@ -48,9 +23,9 @@ test.concurrent(`${chalk.yellowBright("stripe-checkout: entity attach")}`, async
 	const { autumnV1, entities } = await initScenario({
 		customerId,
 		setup: [
-			s.customer({ testClock: true }), // No payment method!
+			s.customer({ testClock: true }),
 			s.products({ list: [pro] }),
-			s.entities({ count: 2, featureId: TestFeature.Users }), // Create 2 entities to verify isolation
+			s.entities({ count: 2, featureId: TestFeature.Users }),
 		],
 		actions: [],
 	});
@@ -58,7 +33,6 @@ test.concurrent(`${chalk.yellowBright("stripe-checkout: entity attach")}`, async
 	const entity1Id = entities[0].id;
 	const entity2Id = entities[1].id;
 
-	// 1. Preview attach to entity-1 - should show $20
 	const preview = await autumnV1.billing.previewAttach({
 		customer_id: customerId,
 		product_id: pro.id,
@@ -66,7 +40,6 @@ test.concurrent(`${chalk.yellowBright("stripe-checkout: entity attach")}`, async
 	});
 	expect(preview.total).toBe(20);
 
-	// 2. Attempt attach to entity-1 - should return payment_url
 	const result = await autumnV1.billing.attach({
 		customer_id: customerId,
 		product_id: pro.id,
@@ -76,11 +49,9 @@ test.concurrent(`${chalk.yellowBright("stripe-checkout: entity attach")}`, async
 	expect(result.payment_url).toBeDefined();
 	expect(result.payment_url).toContain("checkout.stripe.com");
 
-	// 3. Complete checkout
 	await completeStripeCheckoutForm({ url: result.payment_url });
 	await timeout(12000);
 
-	// 4. Verify entity-1 has product attached
 	const entity1 = await autumnV1.entities.get<ApiEntityV0>(
 		customerId,
 		entity1Id,
@@ -91,7 +62,6 @@ test.concurrent(`${chalk.yellowBright("stripe-checkout: entity attach")}`, async
 		productId: pro.id,
 	});
 
-	// Verify messages feature on entity-1
 	expectCustomerFeatureCorrect({
 		customer: entity1,
 		featureId: TestFeature.Messages,
@@ -100,14 +70,12 @@ test.concurrent(`${chalk.yellowBright("stripe-checkout: entity attach")}`, async
 		usage: 0,
 	});
 
-	// 5. Verify entity-2 does NOT have the product (isolation check)
 	const entity2 = await autumnV1.entities.get<ApiEntityV0>(
 		customerId,
 		entity2Id,
 	);
 	expect(entity2.products?.length ?? 0).toBe(0);
 
-	// Verify invoice on customer
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	await expectCustomerInvoiceCorrect({
 		customer,
@@ -116,20 +84,6 @@ test.concurrent(`${chalk.yellowBright("stripe-checkout: entity attach")}`, async
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 3: Entity attach with consumable messages via checkout
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Customer with NO payment method
- * - Attach pro with consumable messages to entity-1
- *
- * Expected Result:
- * - Returns payment_url
- * - After checkout: entity-1 has product with consumable messages feature
- * - Consumable messages configured correctly (100 included, $0.10/unit overage)
- */
 test.concurrent(`${chalk.yellowBright("stripe-checkout: entity attach with consumable messages")}`, async () => {
 	const customerId = "stripe-checkout-entity-consumable";
 
@@ -144,9 +98,9 @@ test.concurrent(`${chalk.yellowBright("stripe-checkout: entity attach with consu
 	const { autumnV1, entities } = await initScenario({
 		customerId,
 		setup: [
-			s.customer({ testClock: true }), // No payment method!
+			s.customer({ testClock: true }),
 			s.products({ list: [pro] }),
-			s.entities({ count: 2, featureId: TestFeature.Users }), // Create 2 entities to verify isolation
+			s.entities({ count: 2, featureId: TestFeature.Users }),
 		],
 		actions: [],
 	});
@@ -154,7 +108,6 @@ test.concurrent(`${chalk.yellowBright("stripe-checkout: entity attach with consu
 	const entity1Id = entities[0].id;
 	const entity2Id = entities[1].id;
 
-	// 1. Preview attach to entity-1 - should show $20 (base price only, consumable billed in arrears)
 	const preview = await autumnV1.billing.previewAttach({
 		customer_id: customerId,
 		product_id: pro.id,
@@ -162,7 +115,6 @@ test.concurrent(`${chalk.yellowBright("stripe-checkout: entity attach with consu
 	});
 	expect(preview.total).toBe(20);
 
-	// 2. Attempt attach to entity-1 - should return payment_url
 	const result = await autumnV1.billing.attach({
 		customer_id: customerId,
 		product_id: pro.id,
@@ -172,11 +124,9 @@ test.concurrent(`${chalk.yellowBright("stripe-checkout: entity attach with consu
 	expect(result.payment_url).toBeDefined();
 	expect(result.payment_url).toContain("checkout.stripe.com");
 
-	// 3. Complete checkout
 	await completeStripeCheckoutForm({ url: result.payment_url });
 	await timeout(12000);
 
-	// 4. Verify entity-1 has product attached
 	const entity1 = await autumnV1.entities.get<ApiEntityV0>(
 		customerId,
 		entity1Id,
@@ -187,7 +137,6 @@ test.concurrent(`${chalk.yellowBright("stripe-checkout: entity attach with consu
 		productId: pro.id,
 	});
 
-	// 5. Verify consumable messages feature on entity-1
 	expectCustomerFeatureCorrect({
 		customer: entity1,
 		featureId: TestFeature.Messages,
@@ -196,14 +145,12 @@ test.concurrent(`${chalk.yellowBright("stripe-checkout: entity attach with consu
 		usage: 0,
 	});
 
-	// 6. Verify entity-2 does NOT have the product (isolation check)
 	const entity2 = await autumnV1.entities.get<ApiEntityV0>(
 		customerId,
 		entity2Id,
 	);
 	expect(entity2.products?.length ?? 0).toBe(0);
 
-	// 7. Verify invoice on customer (base price only)
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	await expectCustomerInvoiceCorrect({
 		customer,

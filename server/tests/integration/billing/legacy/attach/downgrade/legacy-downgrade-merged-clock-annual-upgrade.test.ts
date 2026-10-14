@@ -1,6 +1,3 @@
-// Legacy V1 attach downgrade behavior with test clock advancement (migrated from
-// server/tests/merged/downgrade).
-
 import { expect, test } from "bun:test";
 import { CusProductStatus } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features";
@@ -9,15 +6,6 @@ import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 8: Mixed annual + monthly downgrade, advance clock, then upgrade
-// (from mergedDowngrade9)
-//
-// Ops: PremiumAnnual(ent1), Premium(ent2), Pro(ent1→sched), Pro(ent2→sched)
-// Advance clock → ent1=PremiumAnnual+Pro(sched), ent2=Pro(active)
-// Then upgrade ent2 back to Premium
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(
 	`${chalk.yellowBright("legacy-dg-clock 3: annual + monthly downgrade, advance clock, upgrade")}`,
@@ -33,7 +21,6 @@ test.concurrent(
 		const premium = products.premium({ id: "premium", items: [wordsItem] });
 		const pro = products.pro({ id: "pro", items: [wordsItem] });
 
-		// Setup: PremiumAnnual(ent1), Premium(ent2), Pro(ent1→sched), Pro(ent2→sched), advance clock
 		const { autumnV1, entities } = await initScenario({
 			customerId,
 			setup: [
@@ -50,7 +37,6 @@ test.concurrent(
 			],
 		});
 
-		// Entity 1: PremiumAnnual still active + Pro still scheduled (annual hasn't ended)
 		const entity1 = await autumnV1.entities.get(customerId, entities[0].id);
 		expectProductAttached({
 			customer: entity1,
@@ -66,7 +52,6 @@ test.concurrent(
 			entity1.products.filter((p: any) => p.group === premium.group).length,
 		).toBe(2);
 
-		// Entity 2: Pro active (monthly schedule activated)
 		let entity2 = await autumnV1.entities.get(customerId, entities[1].id);
 		expectProductAttached({
 			customer: entity2,
@@ -77,7 +62,6 @@ test.concurrent(
 			entity2.products.filter((p: any) => p.group === premium.group).length,
 		).toBe(1);
 
-		// Upgrade entity 2 back to Premium
 		await autumnV1.attach({
 			customer_id: customerId,
 			product_id: premium.id,

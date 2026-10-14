@@ -8,7 +8,6 @@ import { setPlansResultToResponse } from "@/internal/billing/v2/actions/setPlans
 import { buildBillingLockKey } from "@/internal/billing/v2/utils/billingLock/buildBillingLockKey";
 import { createRoute } from "../../../../honoMiddlewares/routeHandler";
 
-/** Handle the internal set-plans RPC route. */
 export const handleSetPlans = createRoute({
 	scopes: [Scopes.Billing.Write],
 	body: SetPlansParamsV0Schema,

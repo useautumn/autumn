@@ -13,8 +13,6 @@ type BillingParamsV1Common = Pick<
 	plan_id?: string;
 } & Record<string, unknown>;
 
-/** Resolves `customize` into concrete V0 items against the plan's catalog (or
- * current subscription); keys with no V0 form land in `unrepresentable`, never silently dropped. */
 export const billingParamsV1ToV0 = ({
 	ctx,
 	fullProduct,

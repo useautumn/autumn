@@ -9,7 +9,6 @@ import { SheetSection } from "@/components/v2/sheets/InlineSheet";
 import { useCustomerDisplayCurrency } from "@/hooks/common/useCustomerDisplayCurrency";
 import { ReadOnlyPlanItems } from "./ReadOnlyPlanItems";
 
-/** A nulled planLicense means the catalog link was removed; nothing to show. */
 export const cusProductLicenses = (cusProduct: FullCusProduct) =>
 	(cusProduct.customer_licenses ?? []).flatMap((customerLicense) =>
 		customerLicense.planLicense
@@ -17,9 +16,6 @@ export const cusProductLicenses = (cusProduct: FullCusProduct) =>
 			: [],
 	);
 
-/** One section per license with the license's own feature rows — the sheet
- * twin of the plan page's license card. The license's price and included count
- * render as an item row in the parent plan's section (SubscriptionLicenseRow). */
 export function SubscriptionDetailLicenses({
 	cusProduct,
 }: {

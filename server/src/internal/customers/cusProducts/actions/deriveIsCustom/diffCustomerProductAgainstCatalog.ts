@@ -21,7 +21,6 @@ import type {
 	CustomizedPlanLicense,
 } from "./types/customerProductCustomDiff";
 
-/** User-controlled fields only, so ids and Stripe processor refs never read as a difference. */
 const toComparablePlanItem = (item: ApiPlanItemV1): CreatePlanItemParamsV1 => {
 	const params = toCreatePlanItemParams(item);
 	if (!params.price) return params;
@@ -81,7 +80,6 @@ const pairCustomizedPlanItems = ({
 	return [...itemsByKey.values()].flatMap(pairSameKeyItems);
 };
 
-/** Every customer on a version shares the catalog side, so it converts once per loaded product. */
 const catalogPlans = new WeakMap<FullProduct, ApiPlanV1>();
 
 const catalogPlanFor = ({
@@ -119,7 +117,6 @@ const pairCustomizedPlanLicenses = ({
 			) ?? null,
 	}));
 
-/** Free trials and product-level details never count. */
 export const diffCustomerProductAgainstCatalog = ({
 	customerProduct,
 	baseProduct,

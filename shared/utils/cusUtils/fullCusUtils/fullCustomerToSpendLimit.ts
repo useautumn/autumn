@@ -8,12 +8,6 @@ import {
 } from "../../fullSubjectUtils/planBillingControlUtils.js";
 import { fullCustomerToCustomerEntitlements } from "./fullCustomerToCustomerEntitlements";
 
-/**
- * Extract enabled spend limits for the requested features from a FullCustomer.
- *
- * Entity inherits from the customer per feature_id: entity's entry wins when
- * present, customer's entry fills any gaps.
- */
 export const fullCustomerToSpendLimitByFeatureId = ({
 	fullCustomer,
 	featureIds,
@@ -73,7 +67,6 @@ export const fullCustomerToSpendLimitByFeatureId = ({
 				entityId: entityIdForResolve,
 			});
 
-			// Resolve to absolute so Lua deduction reads overage_limit as absolute units.
 			if (resolved !== undefined) {
 				spendLimitByFeatureId[featureId] = {
 					...spendLimit,
@@ -107,8 +100,6 @@ export const fullCustomerToUsageBasedCusEntsByFeatureId = ({
 		featureIds,
 		entity,
 	});
-	// Every ent for the feature counts toward the overage limit: control-based
-	// (overage_allowed) overage has no price, so it isn't pay-per-use.
 	const overageCusEntsByFeatureId: Record<string, string[]> = {};
 
 	for (const cusEnt of cusEnts) {

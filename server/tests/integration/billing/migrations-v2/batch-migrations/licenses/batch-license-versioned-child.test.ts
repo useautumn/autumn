@@ -1,14 +1,3 @@
-/**
- * Versioning a license plan must not strand the seats already assigned from it.
- *
- * A pool snapshots the license product's INTERNAL id at attach, and that id is
- * per-version. Prepare resolves the parent's catalog link, which versioning
- * rebases, so the batch statements join a v2 id against pools still carrying v1
- * and match nothing while reporting success.
- *
- * Red: the run reports lane batch and touches no assignment.
- * Green: every live assignment gains the item.
- */
 import { expect, test } from "bun:test";
 import { customerEntitlements } from "@autumn/shared";
 import { runChunkedMigration } from "@tests/integration/billing/migrations-v2/utils/runChunkedMigration";

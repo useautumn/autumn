@@ -1,8 +1,3 @@
-/**
- * TDD contract: a prepaid rollover survives a move onto a POOLED item whose rollover signature does
- * not match the one that minted it (carried amount is capped by the pooled cusEnt's rollover rules).
- */
-
 import { test } from "bun:test";
 import type { UpdateSubscriptionV1ParamsInput } from "@autumn/shared";
 import chalk from "chalk";

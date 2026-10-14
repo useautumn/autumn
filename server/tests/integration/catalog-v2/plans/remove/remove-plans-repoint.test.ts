@@ -1,16 +1,3 @@
-/**
- * catalogV2.update — pin-deleting a base version is blocked when any
- * variant still points at that row. Unused sibling versions can go.
- *
- * Contract:
- *   Pin-delete Team v2 while EU points at v2 → 400 (no silent repoint)
- *   Pin-delete Team v1 while EU points at v2 → v1 gone, pointer stays on v2
- *   Pin-delete last remaining Team version while EU survives → 400
- *
- * Red (current): pin-delete of a referenced version repoints the variant.
- * Green (after): that delete is 400; the pointer is unchanged.
- */
-
 import { test } from "bun:test";
 import { ErrCode } from "@autumn/shared";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils.js";

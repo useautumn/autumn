@@ -1,9 +1,3 @@
-/**
- * Contract: per-dimension usage survives a plan transition. Attribution is keyed
- * `<feature>::<dimension>`, so an upgrade that carries consumable usage must
- * carry every dimension's position — not merge them, and not lose one.
- */
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV5, FeatureConfigOverride } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
@@ -59,7 +53,6 @@ test.concurrent(
 			],
 			actions: [
 				s.billing.attach({ productId: starter.id }),
-				// Two dimensions, so the carry has more than one attribution key.
 				s.track({
 					featureId: TestFeature.Action1,
 					value: 2,
@@ -75,7 +68,6 @@ test.concurrent(
 			],
 		});
 
-		// 2 x 16 + 1 x 20 = 52 consumed before the upgrade.
 		const before = await autumnV2_3.customers.get<ApiCustomerV5>(customerId, {
 			skip_cache: "true",
 		});
@@ -92,7 +84,6 @@ test.concurrent(
 			},
 		});
 
-		// carry_over_usages moves both dimension positions onto the new plan.
 		const after = await autumnV2_3.customers.get<ApiCustomerV5>(customerId, {
 			skip_cache: "true",
 		});
@@ -101,7 +92,6 @@ test.concurrent(
 			remaining: GRANT * 2 - 52,
 		});
 
-		// Pricing still resolves per dimension on the new plan.
 		await autumnV2_3.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Action1,

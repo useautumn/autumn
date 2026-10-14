@@ -1,15 +1,3 @@
-/**
- * Entity-scoped unlimited cusEnts can store entities[id].balance = null
- * (legacy unlimited slot). Track Lua write path uses (balance or 0);
- * cjson.null is truthy so the add crashes and track fail-opens to SQS.
- *
- * Red (current):  track against a seeded null entity slot returns a queued
- *                 response (no unlimited mask) and the raw entity balance
- *                 never becomes -1.
- * Green (after):  track succeeds (unlimited: true) and the raw entity
- *                 balance becomes -1.
- */
-
 import { expect, test } from "bun:test";
 import {
 	customerEntitlements,

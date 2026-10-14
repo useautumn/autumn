@@ -1,26 +1,11 @@
-/**
- * Registers the Autumn MCP server with local AI CLIs (Claude Code + Codex).
- *
- * Usage:
- *   bun add-mcp                       # autumn-dev -> http://localhost:3099/mcp
- *   bun add-mcp <name> <url>          # custom name / url
- *
- * Only CLIs that are actually installed are touched; the rest are skipped.
- * The server uses OAuth, so you authenticate on first connect (Claude prompts
- * automatically; for Codex run `codex mcp login <name>`).
- */
-
 const DEFAULT_NAME = "autumn-dev";
 const DEFAULT_URL = "http://localhost:3099/mcp";
 
 type Client = {
 	label: string;
 	bin: string;
-	/** Args to remove an existing server of this name (best-effort, ignored). */
 	removeArgs: (name: string) => string[];
-	/** Args to add the streamable-HTTP server. */
 	addArgs: (name: string, url: string) => string[];
-	/** Follow-up the user must run/do (e.g. OAuth login). */
 	next: (name: string) => string;
 };
 
@@ -57,7 +42,6 @@ const addToClient = (client: Client, name: string, url: string) => {
 		return;
 	}
 
-	// Remove any existing entry first so re-running converges cleanly.
 	run(client.bin, client.removeArgs(name));
 
 	const { ok, output } = run(client.bin, client.addArgs(name, url));

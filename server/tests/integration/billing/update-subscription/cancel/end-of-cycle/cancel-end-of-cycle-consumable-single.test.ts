@@ -1,8 +1,3 @@
-/**
- * Cancel End of Cycle Consumable Tests: canceling products with consumable/arrear items at end of
- * cycle; overage usage is billed in the final invoice when the cycle ends naturally.
- */
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3 } from "@autumn/shared";
 import { calculateExpectedInvoiceAmount } from "@tests/integration/billing/utils/calculateExpectedInvoiceAmount";
@@ -19,22 +14,6 @@ import { advanceToNextInvoice } from "@tests/utils/testAttachUtils/testAttachUti
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 1: Track → cancel end of cycle → advance (customer-level)
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Customer has Pro with consumable messages (100 included, $0.10/unit overage)
- * - Track 500 messages (400 overage)
- * - Cancel end of cycle
- * - Advance to next invoice
- *
- * Expected Result:
- * - Initial invoice: $20 (pro base price)
- * - Final invoice: $40 (400 overage * $0.10)
- * - Product removed after cycle ends
- */
 test.concurrent(
 	`${chalk.yellowBright("cancel end of cycle consumable: customer - track overage → cancel → advance")}`,
 	async () => {
@@ -55,7 +34,6 @@ test.concurrent(
 			actions: [s.attach({ productId: pro.id })],
 		});
 
-		// Verify pro is active
 		const customerAfterAttach =
 			await autumnV1Beta.customers.get<ApiCustomerV3>(customerId);
 		await expectProductActive({
@@ -63,28 +41,24 @@ test.concurrent(
 			productId: pro.id,
 		});
 
-		// Initial attach invoice: $20 base price
 		expectCustomerInvoiceCorrect({
 			customer: customerAfterAttach,
 			count: 1,
 			latestTotal: 20,
 		});
 
-		// Track 500 messages (100 included, 400 overage)
 		await autumnV1Beta.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
 			value: 500,
 		});
 
-		// Cancel end of cycle
 		await autumnV1Beta.subscriptions.update({
 			customer_id: customerId,
 			product_id: pro.id,
 			cancel_action: "cancel_end_of_cycle",
 		});
 
-		// Verify pro is canceling
 		const customerAfterCancel =
 			await autumnV1Beta.customers.get<ApiCustomerV3>(customerId);
 		await expectProductCanceling({
@@ -92,7 +66,6 @@ test.concurrent(
 			productId: pro.id,
 		});
 
-		// Advance to next invoice
 		await advanceToNextInvoice({
 			stripeCli: ctx.stripeCli,
 			testClockId: testClockId!,
@@ -105,8 +78,6 @@ test.concurrent(
 				}),
 		});
 
-		// Calculate expected overage amount
-		// 500 total usage - 100 included = 400 overage * $0.10 = $40
 		const expectedOverage = calculateExpectedInvoiceAmount({
 			items: pro.items,
 			usage: [{ featureId: TestFeature.Messages, value: 500 }],
@@ -115,17 +86,14 @@ test.concurrent(
 
 		expect(expectedOverage).toBe(40);
 
-		// Verify final state
 		const customerAfterAdvance =
 			await autumnV1Beta.customers.get<ApiCustomerV3>(customerId);
 
-		// Product should be removed
 		await expectProductNotPresent({
 			customer: customerAfterAdvance,
 			productId: pro.id,
 		});
 
-		// Should have 2 invoices: initial ($20) + final overage ($40)
 		expectCustomerInvoiceCorrect({
 			customer: customerAfterAdvance,
 			count: 2,
@@ -135,22 +103,6 @@ test.concurrent(
 	},
 );
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 2: Track → cancel end of cycle → advance (entity)
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Entity has Pro with consumable messages (100 included, $0.10/unit overage)
- * - Track 500 messages on entity (400 overage)
- * - Cancel entity's product end of cycle
- * - Advance to next invoice
- *
- * Expected Result:
- * - Initial invoice: $20 (pro base price)
- * - Final invoice: $40 (400 overage * $0.10)
- * - Entity product removed after cycle ends
- */
 test.concurrent(
 	`${chalk.yellowBright("cancel end of cycle consumable: entity - track overage → cancel → advance")}`,
 	async () => {
@@ -174,14 +126,12 @@ test.concurrent(
 
 		const entityId = entities[0].id;
 
-		// Verify pro is active on entity
 		const entity = await autumnV1.entities.get(customerId, entityId);
 		await expectProductActive({
 			customer: entity,
 			productId: pro.id,
 		});
 
-		// Track 500 messages on entity (100 included, 400 overage)
 		await autumnV1.track({
 			customer_id: customerId,
 			entity_id: entityId,
@@ -189,7 +139,6 @@ test.concurrent(
 			value: 500,
 		});
 
-		// Cancel entity's product end of cycle
 		await autumnV1.subscriptions.update({
 			customer_id: customerId,
 			entity_id: entityId,
@@ -197,14 +146,12 @@ test.concurrent(
 			cancel_action: "cancel_end_of_cycle",
 		});
 
-		// Verify pro is canceling on entity
 		const entityAfterCancel = await autumnV1.entities.get(customerId, entityId);
 		await expectProductCanceling({
 			customer: entityAfterCancel,
 			productId: pro.id,
 		});
 
-		// Advance to next invoice
 		await advanceToNextInvoice({
 			stripeCli: ctx.stripeCli,
 			testClockId: testClockId!,
@@ -217,26 +164,21 @@ test.concurrent(
 				}),
 		});
 
-		// Verify final state
 		const entityAfterAdvance = await autumnV1.entities.get(
 			customerId,
 			entityId,
 		);
 
-		// Product should be removed from entity
 		await expectProductNotPresent({
 			customer: entityAfterAdvance,
 			productId: pro.id,
 		});
 
-		// Check customer invoices (invoices are at customer level)
 		const customerAfterAdvance =
 			await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-		// Should have 2 invoices: initial ($20) + final overage ($40)
 		expect(customerAfterAdvance.invoices?.length).toBe(2);
 
-		// Final invoice should be overage: 400 * $0.10 = $40
 		expect(customerAfterAdvance.invoices?.[0].total).toBe(40);
 	},
 );

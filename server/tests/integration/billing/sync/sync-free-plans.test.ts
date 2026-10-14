@@ -1,9 +1,3 @@
-/**
- * Sync treats free plans as customer-wide, the way the dashboard now seeds them:
- *   A. a free add-on repeated unchanged is kept: same row, still unlinked
- *   B. a free add-on left out of a full-list sync (expire_unlisted_plans) expires
- *   C. an edited free add-on is replaced by a row that stays off the subscription
- */
 import { expect, test } from "bun:test";
 import {
 	CusProductStatus,

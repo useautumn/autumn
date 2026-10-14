@@ -2,7 +2,6 @@ import { expect } from "bun:test";
 import { type ProductV2, secondsToMs } from "@autumn/shared";
 import { getStripeSubscription } from "@tests/integration/billing/utils/stripeSubscriptionUtils";
 
-/** Next 1st of the month at 00:00 UTC, computed independently of the server helper. */
 export const nextMonthStartMs = ({ fromMs }: { fromMs: number }) => {
 	const from = new Date(fromMs);
 	return Date.UTC(from.getUTCFullYear(), from.getUTCMonth() + 1, 1);

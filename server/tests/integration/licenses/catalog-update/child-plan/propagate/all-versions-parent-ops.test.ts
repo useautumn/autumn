@@ -1,11 +1,3 @@
-/**
- * Contract: in all_versions mode, license-parent ops stay version-scoped.
- *
- * The base plan's own targets drop `version` so every version is swept, but a
- * license link pins a version, and two versions of one parent can carry
- * different customizes. A bare plan_id would let each op match the other
- * version's customers, applying the wrong delta and then resetting it.
- */
 import { expect, test } from "bun:test";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { items } from "@tests/utils/fixtures/items.js";
@@ -19,8 +11,6 @@ test(`${chalk.yellowBright("plans.update: all_versions keeps parent ops version-
 	const proCustomerId = "lic-allver-pro-cus";
 	const scaleCustomerId = "lic-allver-scale-cus";
 
-	// Free seat plan: price is outside this contract, and keeping it out avoids
-	// the child edit having to restate it.
 	const devSeat = products.base({
 		id: "dev-seat",
 		items: [items.monthlyMessages({ includedUsage: 500 })],
@@ -73,7 +63,6 @@ test(`${chalk.yellowBright("plans.update: all_versions keeps parent ops version-
 		migration: { draft: true },
 	});
 
-	// ── Side effect: a draft exists ────────────────────────────────────
 	expect(response.migration?.id).toBeDefined();
 
 	const [migration] = await migrationRepo.get({
@@ -82,9 +71,6 @@ test(`${chalk.yellowBright("plans.update: all_versions keeps parent ops version-
 	});
 	const customerOps = migration?.operations?.customer ?? [];
 
-	// ── Behavior: one op, since the child itself has no customers ──────
-	// The child is only ever held via parent seat assignments here, so there is
-	// no child population to migrate — just the collapsed parent op.
 	expect(customerOps).toHaveLength(1);
 
 	const planIdsOf = (filter: unknown): string[] => {
@@ -103,15 +89,12 @@ test(`${chalk.yellowBright("plans.update: all_versions keeps parent ops version-
 		throw new Error("expected an update_plan op");
 	}
 
-	// ── Both parents collapse into ONE op via $in ──────────────────────
 	expect(planIdsOf(parentOp.plan_filter).sort()).toEqual(
 		[pro.id, scale.id].sort(),
 	);
 
-	// ── The parent op keeps its version, unlike the base plan's targets ─
 	expect((parentOp.plan_filter as { version?: number }).version).toBe(1);
 
-	// ── The change rides on upsert_licenses only ───────────────────────
 	const upserts = parentOp.customize?.upsert_licenses ?? [];
 	expect(upserts).toHaveLength(1);
 	expect(upserts[0]).toMatchObject({ license_plan_id: devSeat.id });
@@ -119,8 +102,6 @@ test(`${chalk.yellowBright("plans.update: all_versions keeps parent ops version-
 		TestFeature.Messages,
 	);
 
-	// The parent's own plan items are untouched — applying the child's diff
-	// to the parent would edit the wrong plan.
 	expect(parentOp.customize?.add_items).toBeUndefined();
 	expect(parentOp.customize?.remove_items).toBeUndefined();
 	expect(parentOp.customize?.price).toBeUndefined();

@@ -41,7 +41,6 @@ await mockModuleWithRestore(
 	}),
 );
 
-// Refresh scheduling only exists on the legacy (non-worker) sync path.
 const previousRollout = process.env.BALANCE_WORKER_ROLLOUT_ENABLED;
 process.env.BALANCE_WORKER_ROLLOUT_ENABLED = "false";
 
@@ -75,7 +74,6 @@ const createCtx = () => ({
 	},
 });
 
-/** Enqueues sync-v4 jobs the way the track path does, one per tumbling window. */
 const enqueueTrackSyncJobs = async ({
 	trackCount,
 	windowCount,
@@ -102,7 +100,6 @@ const enqueueTrackSyncJobs = async ({
 				modifiedCusEntIdsByFeatureId: { messages: [CUS_ENT_ID] },
 			});
 		}
-		// Ends the window, as its 1s timer would.
 		await syncManager.flush();
 	}
 
@@ -117,7 +114,6 @@ describe("syncItemV4 refresh dedup", () => {
 				refreshCalls.push(structuredClone(args) as QueueCall);
 			},
 		});
-		// syncItemV4 schedules on the global manager; route it to a manager whose enqueues we capture.
 		const scheduleSpy = spyOn(
 			globalRefreshEntityAggregateBatchingManager,
 			"schedule",
@@ -141,7 +137,6 @@ describe("syncItemV4 refresh dedup", () => {
 			expect(ctx.db.execute).toHaveBeenCalledTimes(4);
 			expect(scheduleSpy).toHaveBeenCalledTimes(4);
 
-			// Drains the trailing-edge timer instead of waiting for the bucket to end.
 			await refreshManager.flush();
 
 			expect(refreshCalls).toHaveLength(1);

@@ -51,7 +51,6 @@ describe("PricedFeatureSettings with volume tiers", () => {
 			} as ProductItem,
 		});
 
-		// A disabled option dims its label.
 		expect(markup).toContain(
 			'<span class="text-checkbox-label">Usage-based</span>',
 		);

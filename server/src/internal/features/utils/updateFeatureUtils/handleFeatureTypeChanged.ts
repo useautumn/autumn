@@ -9,10 +9,6 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { EntitlementService } from "@/internal/products/entitlements/EntitlementService.js";
 import type { ObjectsUsingFeature } from "./getObjectsUsingFeature.js";
 
-/**
- * Apply the allowed boolean<->metered entitlement conversions for a type change.
- * Blocking conditions are validated upstream by detectFeatureUpdateBlockers.
- */
 export const handleFeatureTypeChanged = async ({
 	objectsUsingFeature,
 	feature,

@@ -18,14 +18,12 @@ describe(`${chalk.yellowBright("loose-mixed: multiple loose ents for same featur
 			withTestClock: false,
 		});
 
-		// Create first loose entitlement
 		await autumnV1.balances.create({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
 			granted_balance: 100,
 		});
 
-		// Create second loose entitlement for same feature
 		await autumnV1.balances.create({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
@@ -40,12 +38,11 @@ describe(`${chalk.yellowBright("loose-mixed: multiple loose ents for same featur
 		})) as unknown as CheckResponseV2;
 
 		expect(res.allowed).toBe(true);
-		expect(res.balance?.granted_balance).toBe(150); // 100 + 50
+		expect(res.balance?.granted_balance).toBe(150);
 		expect(res.balance?.current_balance).toBe(150);
 	});
 
 	test("should deduct across multiple loose ents", async () => {
-		// Track 120 (needs both ents)
 		await autumnV1.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
@@ -59,7 +56,7 @@ describe(`${chalk.yellowBright("loose-mixed: multiple loose ents for same featur
 			feature_id: TestFeature.Messages,
 		})) as unknown as CheckResponseV2;
 
-		expect(res.balance?.current_balance).toBe(30); // 150 - 120
+		expect(res.balance?.current_balance).toBe(30);
 		expect(res.balance?.usage).toBe(120);
 	});
 });

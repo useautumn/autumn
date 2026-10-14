@@ -1,12 +1,3 @@
-/**
- * TDD test for backdated starts_at when a future schedule already exists.
- *
- * Contract under test:
- *   New behaviors:
- *     - A customer with an existing future Stripe subscription schedule cannot replace it with a past starts_at
- *     - This keeps backdating scoped to fresh Stripe subscription creation instead of rewriting scheduled subscription history
- */
-
 import { test } from "bun:test";
 import { type AttachParamsV1Input, ErrCode, ms } from "@autumn/shared";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils";

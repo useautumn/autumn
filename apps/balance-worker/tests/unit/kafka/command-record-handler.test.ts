@@ -40,10 +40,8 @@ function createFixture({
 	outcome?: "applied" | "rejected" | Error;
 	owned?: boolean;
 	commandNextOffset?: bigint | null;
-	/** Gives the handler somewhere to park a partition, as the worker wiring does. */
 	canPark?: boolean;
 	evictLog?: Promise<void>;
-	/** Each track's commit fails with the next of these, in order; once used up, commits land. */
 	commitFailures?: Error[];
 } = {}) {
 	const tracked: TrackCommand[] = [];

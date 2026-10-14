@@ -19,16 +19,6 @@ import { CusService } from "@/internal/customers/CusService";
 import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer";
 import { reconcileLicenseStateForCustomer } from "@/internal/licenses/actions/reconcile/reconcileLicenseState";
 
-/**
- * Handles revert trial expiry inside a transaction: expire the trial
- * cusProduct and unpause the previous one atomically so we never leave a
- * customer without an active plan.
- *
- * Emits `customer.products.updated` for the expired trial and restored
- * previous plan, plus `billing.updated` (tag: `trial_ended`).
- *
- * Returns true if handled, false to fall through to standard expiry.
- */
 export const tryProcessRevertExpiry = async ({
 	ctx,
 	customerProduct,
@@ -48,9 +38,6 @@ export const tryProcessRevertExpiry = async ({
 		return false;
 	}
 
-	// Snapshot fullCustomer BEFORE the transaction so the webhook payload
-	// reflects pre-revert state in `previous_attributes`; the previous
-	// (paused) cusProduct must be visible.
 	const fullCustomer = await CusService.getFull({
 		ctx,
 		idOrInternalId: customerId,
@@ -111,8 +98,6 @@ export const tryProcessRevertExpiry = async ({
 		});
 	}
 
-	// Seats move back onto the restored parent's license outside any billing
-	// action — recount its remaining now, or capacity checks read a stale value.
 	if (restoredPreviousCustomerProduct) {
 		await reconcileLicenseStateForCustomer({
 			ctx,
@@ -136,9 +121,6 @@ export const tryProcessRevertExpiry = async ({
 			notify: !emitsBillingUpdated,
 		});
 
-	// Emit billing.updated webhook (fire-and-forget) describing both the
-	// trial expiry and the restored previous plan. Skipped silently if we
-	// couldn't resolve either snapshot.
 	if (emitsBillingUpdated && trialFullCusProduct && previousFullCusProduct) {
 		const autumnBillingPlan: AutumnBillingPlan = {
 			customerId: fullCustomer.id ?? fullCustomer.internal_id,

@@ -9,14 +9,6 @@ import { initIntegrationEval } from "../../../../src/initIntegrationEval.ts";
 import { supportAddOnCatalog } from "../../catalogs/supportAddOnCatalog.ts";
 import { fixtureUser, integrateScenario } from "../../integrateShared.ts";
 
-/**
- * MULTI-UPDATE flow: the subscriber is on Pro AND the support add-on. When
- * they cancel from the billing page, everything must stop — the blessed call
- * is ONE billing.multiUpdate canceling both plans together. The graded trap:
- * an agent that only cancels the base plan leaves the customer paying $50/mo
- * for an add-on they forgot about. The prompt never names the add-on; the
- * agent must discover it (seeded customer / catalog) or ask.
- */
 const cancelRouteStub = `		// Billing page calls this when the user hits "cancel subscription".
 		// TODO: hook up to our billing provider.
 		"/api/billing/cancel": {

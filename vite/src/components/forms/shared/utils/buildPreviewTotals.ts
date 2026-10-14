@@ -1,6 +1,5 @@
 import { addMinutes, format, isAfter } from "date-fns";
 
-/** Structural shape shared by the attach and update preview responses. */
 export type PreviewTotalsInput = {
 	total: number;
 	next_cycle?: { total: number; starts_at?: number | null } | null;
@@ -28,10 +27,6 @@ export const isFutureStartDate = (
 	startDate !== null &&
 	isAfter(startDate, addMinutes(now, FUTURE_START_TOLERANCE_MINUTES));
 
-/**
- * Builds the pricing-preview rows for every billing sheet. Amounts come from the
- * backend; this only decides labels, order and emphasis.
- */
 export function buildPreviewTotals({
 	previewData,
 	startDate = null,
@@ -43,7 +38,6 @@ export function buildPreviewTotals({
 }: {
 	previewData: PreviewTotalsInput | undefined;
 	startDate?: number | null;
-	/** Set by cancel; makes a negative total read as a refund rather than clamping it. */
 	refundBehavior?: string | null;
 	includeTotalDue?: boolean;
 	includeNextCycle?: boolean;
@@ -90,7 +84,6 @@ export function buildPreviewTotals({
 		}
 		rows.push({
 			label,
-			// Only cancel surfaces negatives; elsewhere a negative total reads as $0.
 			amount:
 				refundBehavior === null
 					? Math.max(previewData.total, 0)

@@ -8,10 +8,6 @@ import { fullProductForPlanParams } from "@/internal/catalogV2/actions/updateCat
 import { maxVersionForPlan } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/maxVersionForPlan";
 import { rowHasVersionableCustomers } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/rowHasVersionableCustomers";
 
-/**
- * Child mint + pinned active parent row with customers → mint the parent
- * max+1. Without customers the pin lane repoints the row in place instead.
- */
 export const deriveLicenseParentMintIntents = ({
 	intent,
 	upsert,

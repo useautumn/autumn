@@ -1,14 +1,3 @@
-/**
- * Run the hourly meters by hand.
- *
- *   bun scripts/pushHourlyMeters.ts --hour 2026-09-27T11            dry run: prints what would be sent
- *   bun scripts/pushHourlyMeters.ts --hour 2026-09-27T11 --push     sends it
- *
- * Reads AXIOM_ADMIN_TOKEN / AXIOM_ORG_ID (prod log, read-only),
- * DATABASE_REPLICA_URL (paid invoices, read-only), OPEN_EXCHANGE_RATES_APP_ID,
- * and AUTUMN_METERING_SECRET_KEY (must be a sandbox key; live keys are refused).
- */
-
 import { createAxiomClient } from "@autumn/axiom";
 import { createFxClient } from "@autumn/fx";
 import { SQL } from "bun";
@@ -53,7 +42,6 @@ const fx = createFxClient({
 	config: { appId: requireEnv("OPEN_EXCHANGE_RATES_APP_ID") },
 });
 
-/** Prints instead of sending; same shape as the real client so the run is otherwise identical. */
 const recordingAutumn = (): MeteringContext["autumn"] => ({
 	batchTrack: async ({ items }: { items: TrackItem[] }) => {
 		console.log(`\n[dry run] batch_track ${items.length} items:`);

@@ -75,7 +75,6 @@ import {
 	WORKER_KAFKA_PRODUCER_LIMITS,
 } from "./workerResources.js";
 
-/** Acks are small; the ring only needs room for a burst of them while the decide thread is busy. */
 const PRODUCER_ACK_RING_BYTES = 1 << 20;
 
 export async function createBalanceWorker({
@@ -94,7 +93,6 @@ export async function createBalanceWorker({
 		ctx: { logger: dependencies.logger },
 		env,
 	});
-	// Both Flightcontrol fleets boot with the same env; the service ARN is what tells their groups apart.
 	const fleetId = identity.serviceArn
 		? fleetIdOf({ serviceArn: identity.serviceArn })
 		: null;
@@ -121,7 +119,6 @@ export async function createBalanceWorker({
 		},
 	});
 	try {
-		// A prepared partition announces `ready` only once the slot record names this fleet; off ECS it never waits.
 		const slotGate = resources.edgeConfigs
 			? createSlotGate({
 					ctx: {
@@ -135,7 +132,6 @@ export async function createBalanceWorker({
 			dependencies.logger.info(
 				`Blue-green fleet ${fleetId}: service ${identity.serviceArn}, group ${groupId}, build ${identity.imageSha ?? "unknown"}`,
 			);
-		// Every partition runtime records what it commits here; the consumer group reports it when it rejoins.
 		const partitionLoad = createPartitionLoad({ now: Date.now });
 		const consumer = resources.kafka.consumer(
 			createWorkerConsumerConfig({
@@ -144,7 +140,6 @@ export async function createBalanceWorker({
 				partitionLoad,
 			}),
 		);
-		// A command that leaves no record has no transaction to carry its offset, so the group commits it itself.
 		async function commitCommandOffsets(
 			offsets: KafkaOffsetCommit,
 		): Promise<void> {
@@ -162,7 +157,6 @@ export async function createBalanceWorker({
 				producerLimits: runtimeConfig.producerLimits,
 			},
 		});
-		// The producer thread starts with the listener, before any partition runtime asks for a producer.
 		let producers: ThreadedProducers | null = null;
 		let drainThreadSignals:
 			| (() => {
@@ -275,7 +269,6 @@ export async function createBalanceWorker({
 			},
 		});
 
-		/** A thread that died leaves the worker unable to serve or commit; the task is replaced. */
 		function stopForThreads({
 			cause,
 			scope,
@@ -368,7 +361,6 @@ export async function createBalanceWorker({
 					},
 				})
 			: undefined;
-		// Only a task with an ECS identity is part of a fleet the dashboard can swap.
 		const slotHeartbeat =
 			slotGate && resources.edgeConfigs && fleetId
 				? createSlotHeartbeat({
@@ -406,7 +398,6 @@ export async function createBalanceWorker({
 			if (!resources.postgres.client) throw new Error("No Postgres pool");
 			await resources.postgres.client.query("select 1");
 		}
-		/** Closes the window: its per-partition commit lines go out, and its signals join the summary line. */
 		function windowSignals() {
 			logCommitWindows({
 				ctx: { logger: dependencies.logger, summaries: commitSummaries },
@@ -474,7 +465,6 @@ export async function createBalanceWorker({
 		const ctx: WorkerLifecycleContext = {
 			partitions,
 			edgeConfigs: resources.edgeConfigs,
-			// The stall monitor rides the health reporter's lifecycle: both are telemetry the worker never waits on.
 			healthReporter: { start: startTelemetry, stop: stopTelemetry },
 			catalogInvalidations: resources.catalogInvalidations,
 			coldStart,

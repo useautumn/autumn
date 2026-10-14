@@ -32,7 +32,6 @@ export const applyAutumnBillingPlanToFullCustomer = ({
 
 	const finalFullCustomer = structuredClone(fullCustomer);
 
-	// 1. Combine existing customer products with new ones
 	const combinedCustomerProducts = [
 		...finalFullCustomer.customer_products,
 		...insertCustomerProducts,
@@ -65,7 +64,6 @@ export const applyAutumnBillingPlanToFullCustomer = ({
 		return result;
 	});
 
-	// 3. Remove deleted customer product if applicable
 	if (deleteCustomerProducts.length > 0) {
 		const deletedIds = new Set(
 			deleteCustomerProducts.map((customerProduct) => customerProduct.id),
@@ -75,7 +73,6 @@ export const applyAutumnBillingPlanToFullCustomer = ({
 		);
 	}
 
-	// 4. Apply entitlement balance updates
 	if (updateCustomerEntitlements) {
 		const entitlementById = new Map(
 			customerProducts
@@ -130,8 +127,6 @@ export const applyAutumnBillingPlanToFullCustomer = ({
 		}
 	}
 
-	// 5. Converge pool counters for absolute paid-quantity moves so downstream
-	// projections (Stripe item quantities, line items) see the after state.
 	customerProducts = applyCustomerLicensePlanOps({
 		customerProducts,
 		autumnBillingPlan,
@@ -142,8 +137,6 @@ export const applyAutumnBillingPlanToFullCustomer = ({
 		pooledBalancePlan: autumnBillingPlan.pooledBalancePlan,
 	});
 
-	// 6. Return final full customer. Customer licenses otherwise need no merge
-	// — they ride each customer product (hydration-stitched or init-planned).
 	return finalFullCustomer;
 };
 

@@ -6,21 +6,17 @@ import type {
 	SubjectMap,
 } from "./types/subjectMap.js";
 
-/** The bound a map falls back to when no worker budget is handed in: the fixed per-partition size prod ran before the budget existed. */
 export const SUBJECT_MAP_MAX_BYTES = 32 * 1024 * 1024;
 
 export const SUBJECT_MAP_IDLE_SCAN_PER_WRITE = 32;
 
 type Entry = {
 	state: SubjectState;
-	/** Set once the entry holds state; a pin-only placeholder has none. */
 	customerKey: string | null;
 	bytes: number;
 	pins: number;
-	/** Evicted while a write was unapplied: unreadable at once, the entry goes as soon as the last pin is released. */
 	evictOnUnpin: boolean;
 	baselineAt: number | null;
-	/** Last read or write, on the map's clock. */
 	touchedAt: number;
 };
 
@@ -42,12 +38,6 @@ const sameKeys = ({
 	);
 };
 
-/**
- * The serialised size of `next`, from the size `previous` was known to have
- * and only the parts that changed. A state is replaced, never edited, so a row
- * the mutation left alone is the same object in both, and the serialised text
- * differs by exactly the rows and fields that were replaced.
- */
 export const reweighSubjectState = ({
 	previous,
 	previousBytes,
@@ -98,9 +88,7 @@ export const createSubjectMap = ({
 		throw new RangeError("maxBytes must be positive");
 	const boundBytes = () =>
 		typeof maxBytes === "number" ? maxBytes : maxBytes();
-	// Insertion order is recency: a read re-inserts, eviction walks from the front.
 	const entries = new Map<string, Entry>();
-	// A customer's subject keys (its own and its entities'), so an evict never walks the partition.
 	const subjectKeysByCustomer = new Map<string, Set<string>>();
 	let totalBytes = 0;
 
@@ -132,7 +120,6 @@ export const createSubjectMap = ({
 		return created;
 	};
 
-	/** Best effort: pinned subjects and the one just written stay even if the bound is exceeded. */
 	const evictUntilWithinBound = ({ except }: { except: string }) => {
 		const bound = boundBytes();
 		for (const [subjectKey, entry] of entries) {
@@ -243,7 +230,6 @@ export const createSubjectMap = ({
 		entry.pins -= 1;
 		if (entry.pins === 0 && entry.evictOnUnpin) {
 			dropState({ subjectKey, entry });
-			// Once per pinned subject, so the DELETE follows the last record that read it; the batcher dedupes.
 			if (entry.customerKey !== null)
 				onEvicted?.({ customerKey: entry.customerKey });
 		}
@@ -255,7 +241,6 @@ export const createSubjectMap = ({
 	const readBytes = ({ subjectKey }: { subjectKey: string }) =>
 		entries.get(subjectKey)?.bytes ?? 0;
 
-	// Only an evict's drops reach `onEvicted`: a drop for space leaves rows Postgres still holds true.
 	const evictCustomer = ({ customerKey }: { customerKey: string }) => {
 		let pinned = 0;
 		for (const subjectKey of [
@@ -274,7 +259,6 @@ export const createSubjectMap = ({
 		if (pinned === 0) onEvicted?.({ customerKey });
 	};
 
-	/** Unreadable at once; the entry stays indexed until an unpin or `evictCustomer` drops it. */
 	const hide = ({ entry }: { entry: Entry }) => {
 		totalBytes -= entry.bytes;
 		entry.state = null as unknown as SubjectState;
@@ -289,13 +273,11 @@ export const createSubjectMap = ({
 		}
 	};
 
-	// Only a hidden entry is indexed with nothing resident: a pin-only placeholder is never indexed.
 	const isEvicting = ({ customerKey }: { customerKey: string }) =>
 		[...(subjectKeysByCustomer.get(customerKey) ?? [])].some(
 			(subjectKey) => entries.get(subjectKey)?.bytes === 0,
 		);
 
-	/** As a restart would: each resident subject `drops` picks goes unless a pin holds an unapplied write; hidden ones stay with their writes. */
 	const dropResident: SubjectMap["dropResident"] = ({ drops }) => {
 		const result: ResidentDrop = { evicted: 0, kept: 0, resident: 0 };
 		const nowMs = now();

@@ -61,11 +61,6 @@ const withPlanLicenseRowPlans = ({
 	};
 };
 
-/**
- * planLicenses for every plan in the batch. Runs after all plan content is
- * folded. Declared licenses[] is exclusive; otherwise pin + adopt, then a
- * new_version row clones leftover outgoing links from its source.
- */
 export const computePlanLicensesPlan = ({
 	ctx,
 	upsertProducts,
@@ -80,9 +75,6 @@ export const computePlanLicensesPlan = ({
 	upsertProducts.map((upsert) => {
 		const declaredLicenses = computeFinalDeclaredLicenses({ upsert });
 		if (declaredLicenses !== undefined) {
-			// Stamp onto the returned plan so migration drafts take the
-			// declaredLicenseDraftUpserts path (current→effective product
-			// delta) instead of own-lane license snapshots that remint overlays.
 			const withDeclared = { ...upsert, declaredLicenses };
 			return withPlanLicenseRowPlans({
 				upsert: withDeclared,

@@ -1,6 +1,5 @@
 import type { FullPlanLicense, LicenseBillingPriceRow } from "@autumn/shared";
 
-/** Selects projected rows for this definition, otherwise persisted rows. */
 export const resolveLicenseBillingRowsThroughDefinition = ({
 	licenseBillingRows,
 	planLicense,

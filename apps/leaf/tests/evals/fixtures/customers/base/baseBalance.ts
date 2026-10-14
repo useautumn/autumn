@@ -3,7 +3,6 @@ import { ResetInterval } from "@models/productModels/intervals/resetInterval.js"
 
 const dateToEpochMs = (date: Date | null) => date?.getTime() ?? null;
 
-/** Base balance fixture with matching top-level values and one simple breakdown row. */
 export const baseBalance = ({
 	featureId = "credits",
 	granted = 0,

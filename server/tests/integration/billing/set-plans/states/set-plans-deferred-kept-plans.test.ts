@@ -1,13 +1,3 @@
-/**
- * A set_plans that keeps existing plans and adds one, deferred behind a payment,
- * finishes once the invoice is paid: the added plan is billed once and the schedule persists.
- *
- * Red (before): resuming rebuilt the schedule phases from the inserted rows only, so the kept
- *   plans made it throw after Stripe and Autumn had changed; webhook retries then re-billed the
- *   added plan (quantity 2 in prod) and the schedule never persisted.
- * Green (after): resuming persists the phases set_plans computed, so the first delivery completes.
- */
-
 import { expect, test } from "bun:test";
 import {
 	customerProducts,
@@ -45,7 +35,6 @@ const payInvoice = async ({
 	});
 };
 
-/** Each persisted phase's product ids, in phase order. */
 const persistedPhaseProductIds = async ({
 	ctx,
 	customerId,

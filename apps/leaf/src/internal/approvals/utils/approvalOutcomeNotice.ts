@@ -35,8 +35,6 @@ const writeLine = (write: WriteRow, index: number) => {
 			return `${head}FAILED: ${errorMessageOf(write.result)}`;
 		case "unknown":
 			return `${head}OUTCOME UNKNOWN (the call may or may not have reached the server; never re-run it blindly): ${errorMessageOf(write.result)}`;
-		// A write still marked running when the run is being narrated was
-		// interrupted mid-call: the request may have reached the server.
 		case "running":
 			return `${head}OUTCOME UNKNOWN (the call was interrupted and may have reached the server; never re-run it blindly)`;
 		case "skipped":
@@ -48,12 +46,6 @@ const writeLine = (write: WriteRow, index: number) => {
 	}
 };
 
-/**
- * What the model is told once the user has decided a card. Every write on the
- * card is listed with its own outcome — the model previously saw only the
- * primary write's response, so it reported a grouped sibling as still pending
- * — and a failed execution is named as such, never as "applied".
- */
 export const approvalOutcomeNotice = ({
 	outcome,
 	writes,

@@ -13,11 +13,9 @@ import {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 
-/** Consumable + allocated v2 (arrear). Prepaid and allocated v1 stay out. */
 export const isReusableUsagePrice = (price: Price) =>
 	isConsumablePrice(price) || isAllocatedV2Price(price);
 
-/** Recurring prepaid only — one-off uses inline price_data, not a V2 slot. */
 export const isReusablePrepaidPrice = (price: Price) =>
 	isPrepaidPrice(price) && price.config.interval !== BillingInterval.OneOff;
 

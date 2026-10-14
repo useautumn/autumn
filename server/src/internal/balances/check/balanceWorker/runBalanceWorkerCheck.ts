@@ -21,7 +21,6 @@ import {
 import { runPostgresDeductingCheck } from "./runPostgresDeductingCheck.js";
 import { triggerAutoTopupFromCheckAnswer } from "./triggerAutoTopupFromCheckAnswer.js";
 
-/** One worker call per check: a read when it only asks, a track when it also deducts. */
 export async function runBalanceWorkerCheck({
 	ctx,
 	body: rawBody,
@@ -31,7 +30,6 @@ export async function runBalanceWorkerCheck({
 	body: CheckParams;
 	client?: Pick<BalanceWorkerClient, "check" | "track">;
 }): Promise<CheckResponseWithPreview> {
-	// Validates the lock, gives it an id when the caller sent none, and drops a disabled one.
 	const body = parseCheckParamsForLock({ params: rawBody });
 	const command = checkParamsToCheckCommand({ ctx, body });
 	const isDeductingCheck = body.send_event === true || body.lock !== undefined;
@@ -47,7 +45,6 @@ export async function runBalanceWorkerCheck({
 		}),
 		customer: answer.state?.customer ?? null,
 	});
-	// Only a plain check tops up here: a deducting check is a track whose record reaches herald, which dispatches.
 	const plainCheck = async (): Promise<
 		RunWithCustomer<CheckResponseWithPreview>
 	> => {
@@ -55,7 +52,6 @@ export async function runBalanceWorkerCheck({
 		triggerAutoTopupFromCheckAnswer({ ctx, command, answer });
 		return answerToResult(answer);
 	};
-	// Deducts on the same engine a track would: Postgres when the worker refuses a v1 paid allocated grant.
 	const deductingCheck = (): Promise<
 		RunWithCustomer<CheckResponseWithPreview>
 	> =>

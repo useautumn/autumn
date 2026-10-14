@@ -34,7 +34,6 @@ export type SubscriptionPickerRow = {
 	stripeObjectId: string;
 	mainPlanName: string | null;
 	planNames: string[];
-	/** Null until Stripe has loaded; the row is pickable before then. */
 	stripe: SubscriptionPickerStripeDetails | null;
 };
 
@@ -106,7 +105,6 @@ const linkedRow = ({
 	};
 };
 
-/** Rows straight from the customer's plans, so the picker renders before Stripe answers. */
 const customerProductsToRows = ({
 	customerProducts,
 	entities,
@@ -187,7 +185,6 @@ const proposalToStripeDetails = (
 	};
 };
 
-/** Stripe's view of each row once loaded; rows Stripe has ended drop out. */
 const withStripeDetails = ({
 	rows,
 	proposals,
@@ -208,8 +205,6 @@ const withStripeDetails = ({
 		];
 	});
 
-/** One row per Autumn-linked Stripe subscription or not-yet-started schedule,
- * enriched with Stripe's status once `proposals` have loaded. */
 export const buildSubscriptionPickerRows = ({
 	proposals,
 	customerProducts,
@@ -223,7 +218,6 @@ export const buildSubscriptionPickerRows = ({
 	return proposals ? withStripeDetails({ rows, proposals }) : rows;
 };
 
-/** "Monthly · renews Nov 1, 2026", once Stripe has loaded. */
 export const subscriptionPickerRowDetails = ({
 	row,
 }: {

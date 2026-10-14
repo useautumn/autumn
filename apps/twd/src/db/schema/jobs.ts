@@ -29,14 +29,12 @@ export const jobs = pgTable(
 	{
 		id: text("id").primaryKey(),
 		kind: text("kind").$type<JobKind>().notNull(),
-		/** e.g. warm:<sha>, swarm:<runId>, nuke:<acct>, reinit_keys. */
 		singletonKey: text("singleton_key").notNull(),
 		status: text("status").$type<JobStatus>().notNull().default("queued"),
 		payload: jsonb("payload")
 			.$type<Record<string, unknown>>()
 			.notNull()
 			.default({}),
-		/** Handler-owned resumable progress (checkpoint). */
 		state: jsonb("state")
 			.$type<Record<string, unknown>>()
 			.notNull()
@@ -45,7 +43,6 @@ export const jobs = pgTable(
 		attempts: integer("attempts").notNull().default(0),
 		leaseOwner: text("lease_owner"),
 		leaseExpiresAt: timestamp("lease_expires_at", { withTimezone: true }),
-		/** Incremented on every lease grant; writes from a stale holder are rejected. */
 		fencingToken: bigint("fencing_token", { mode: "number" })
 			.notNull()
 			.default(0),
@@ -59,7 +56,6 @@ export const jobs = pgTable(
 		finishedAt: timestamp("finished_at", { withTimezone: true }),
 	},
 	(t) => [
-		// At most ONE live job per singleton key; finished jobs don't block a rerun.
 		uniqueIndex("jobs_live_singleton_idx")
 			.on(t.singletonKey)
 			.where(sql`status in ('queued', 'running')`),

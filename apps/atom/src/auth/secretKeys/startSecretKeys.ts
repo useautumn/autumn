@@ -1,9 +1,7 @@
 import type { FindInvalidKeys, SecretKeys } from "./types/secretKeys.js";
 
-/** A revoked key stops opening the Atom within about this long. */
 const SECRET_KEYS_SYNC_MS = 5 * 60_000;
 
-/** A key opens the Atom only once Autumn confirms it is the org's; only Autumn naming a key invalid removes it. */
 export const startSecretKeys = ({
 	findInvalid,
 	everyMs = SECRET_KEYS_SYNC_MS,
@@ -17,7 +15,6 @@ export const startSecretKeys = ({
 	let inFlight: Promise<void> | null = null;
 	let hasNewKeys = false;
 
-	/** One call to Autumn at a time; keys learned meanwhile go in one more call once it settles. */
 	function sync(): Promise<void> {
 		if (inFlight) {
 			hasNewKeys = true;

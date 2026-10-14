@@ -1,11 +1,3 @@
-/**
- * atmn crud/mappings — pull without the flag drops `processors` at every depth; with it, every mapping round-trips
- *
- * `--include-mappings`
- *
- * One line of plans/atmn-v3/07_tests.md. [a, b] is a matrix looped INSIDE this file.
- */
-
 import { expect, test } from "bun:test";
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
@@ -19,9 +11,6 @@ import { s } from "@tests/utils/testInitUtils/initScenario.js";
 import { runPull } from "../../../../../../packages/atmn/src/actions/pull";
 import type { AutumnClient } from "../../../../../../packages/atmn/src/generated/client";
 
-// One plan carrying processors at every depth the CLI can emit them: plan-level
-// (stripe product), base-price-level (stripe price), item-price-level (stripe
-// price), plus a feature-level mapping.
 const proPlan = `
 		plan({
 			active: true,

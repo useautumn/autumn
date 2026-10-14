@@ -61,11 +61,9 @@ export function SubscriptionDetailSheet() {
 	const { displayCurrency, itemsForDisplay } = useCustomerDisplayCurrency();
 	const itemId = useSheetStore((s) => s.itemId);
 	const setSheet = useSheetStore((s) => s.setSheet);
-	// Get customer product and productV2 by itemId
 	const { cusProduct, productV2 } = useSubscriptionById({ itemId });
 	const { getDiscountsForSubscription } = useCusRewardsQuery();
 
-	// Prefetch product version data so the update sheet has it cached immediately
 	useProductVersionQuery({ productId: productV2?.id });
 
 	const nowMs = testClockFrozenTimeMs ?? Date.now();
@@ -73,7 +71,6 @@ export function SubscriptionDetailSheet() {
 	const isCanceled = cusProduct?.canceled;
 	const isOneOff = cp(cusProduct).oneOff().valid;
 
-	// Check for prepaid items in the product (must be called before any returns)
 	const { prepaidItems } = usePrepaidItems({ product: productV2 ?? undefined });
 	const featureNameById = useMemo(
 		() => new Map(features.map((feature) => [feature.id, feature.name])),

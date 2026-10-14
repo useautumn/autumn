@@ -5,13 +5,10 @@ import { findFullProductByInternalId } from "@/internal/catalogV2/actions/update
 import { fullProductForPlanParams } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/fullProductForPlanParams";
 
 export type DeclaredVariantsMap = {
-	/** Declaring base row → variant plan ids listed on that row's variants[]. */
 	rowToVariantPlanIds: Map<string, Set<string>>;
-	/** Variant plan id → declaring base row (last writer). */
 	variantPlanIdToRow: Map<string, string>;
 };
 
-/** Which base row listed each variant plan in variants[] this call. */
 export const indexDeclaredVariants = ({
 	plans,
 	productStatesContext,
@@ -43,7 +40,6 @@ export const indexDeclaredVariants = ({
 	return { rowToVariantPlanIds, variantPlanIdToRow };
 };
 
-/** Direct variant whose current parent row restated variants[] without this plan. */
 export const shouldUnlinkDirectVariant = ({
 	source,
 	planId,
@@ -72,7 +68,6 @@ export const shouldUnlinkDirectVariant = ({
 	return !listed.has(planId);
 };
 
-/** The base row that listed this plan in variants[] this call, if any. */
 export const declaredParentInternalIdForPlan = ({
 	planId,
 	declaredVariants,

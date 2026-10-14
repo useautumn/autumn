@@ -18,7 +18,6 @@ import {
 import { getBillingType } from "@utils/productUtils/priceUtils";
 import { priceToEnt } from "@utils/productUtils/convertProductUtils";
 
-// Overload: errorOnNotFound = true → guaranteed Feature
 export function priceToFeature(params: {
 	price: Price;
 	ents?: EntitlementWithFeature[];
@@ -26,7 +25,6 @@ export function priceToFeature(params: {
 	errorOnNotFound: true;
 }): Feature;
 
-// Overload: errorOnNotFound = false/undefined → Feature | undefined
 export function priceToFeature(params: {
 	price: Price;
 	ents?: EntitlementWithFeature[];
@@ -34,7 +32,6 @@ export function priceToFeature(params: {
 	errorOnNotFound?: false;
 }): Feature | undefined;
 
-// Implementation
 export function priceToFeature({
 	price,
 	ents,

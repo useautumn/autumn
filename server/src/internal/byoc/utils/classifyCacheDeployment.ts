@@ -8,7 +8,6 @@ import {
 
 const ATOM_ROUTE_KEYS = Object.keys(atomRouteColumns) as (keyof AtomRoute)[];
 
-/** Running, and Autumn reaches it; a removal marks `connected` done too, as it is no removal step. */
 export const isCacheConnected = ({
 	cacheDeployment,
 }: {
@@ -17,7 +16,6 @@ export const isCacheConnected = ({
 	cacheDeployment.status === ByocCacheStatus.Ready &&
 	cacheDeployment.stages.connected === ByocCacheStageStatus.Done;
 
-/** A delete was asked for; the record stays until the org's stack is gone too. */
 export const isCacheBeingRemoved = ({
 	cacheDeployment,
 }: {
@@ -26,7 +24,6 @@ export const isCacheBeingRemoved = ({
 	cacheDeployment.status === ByocCacheStatus.Removing ||
 	cacheDeployment.status === ByocCacheStatus.TeardownRequired;
 
-/** Nothing moves on its own from here: it is connected, failed, or waits on the org to delete its stack. */
 export const isCacheSettled = ({
 	cacheDeployment,
 }: {
@@ -36,7 +33,6 @@ export const isCacheSettled = ({
 	cacheDeployment.status === ByocCacheStatus.Failed ||
 	cacheDeployment.status === ByocCacheStatus.TeardownRequired;
 
-/** What the cached org holds of an Atom changed, so herald must re-read it. */
 export const changesAtomRoute = ({
 	from,
 	to,

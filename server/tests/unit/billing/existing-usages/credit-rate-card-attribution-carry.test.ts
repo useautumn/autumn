@@ -1,5 +1,3 @@
-/** Carry-over moves balance usage with its complete per-source tier position. */
-
 import { describe, expect, test } from "bun:test";
 import {
 	type ExistingUsages,

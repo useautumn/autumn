@@ -1,15 +1,3 @@
-/**
- * isUsableStripePrice
- *
- * Contract:
- *   retrieves the candidate's Stripe Price, then:
- *   live + same shape + currency → true
- *   missing / inactive / drift / wrong currency → false
- *   consumable matches the feature Stripe product (metered)
- *   prepaid retrieves V2 with expand tiers; included 100 vs 0 → miss
- *   usage without a paired entitlement → false after retrieve
- */
-
 import { afterAll, beforeEach, describe, expect, mock, test } from "bun:test";
 import {
 	AppEnv,

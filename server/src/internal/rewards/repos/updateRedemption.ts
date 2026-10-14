@@ -7,7 +7,6 @@ import {
 import { eq } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 
-/** Update a reward redemption. Throws if not found. */
 export const updateRedemption = async ({
 	db,
 	id,

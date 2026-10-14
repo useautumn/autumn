@@ -1,19 +1,3 @@
-/**
- * Worker replay and Stripe HTTP share the Redis claim. First success wins:
- * the other path must not run the handler again.
- *
- * Contract:
- *   - Worker completes → Stripe redelivery 200 {duplicate:true}, handler once
- *   - Stripe completes → worker no-ops, handler once
- *   - Stripe in-flight → worker throws InFlightError (no handler); after
- *     Stripe succeeds, both a worker retry and a Stripe retry skip
- *   - Worker in-flight → Stripe HTTP 500 in_flight (no handler); after
- *     worker succeeds, Stripe retry 200 {duplicate:true}
- *
- * Lives in integration because it uses the real Redis claim the route and
- * runStripeWebhookReplay both call.
- */
-
 import { afterAll, expect, test } from "bun:test";
 import { randomUUID } from "node:crypto";
 import { AppEnv } from "@autumn/shared";

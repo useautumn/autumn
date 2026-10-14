@@ -1,8 +1,3 @@
-/** Verbatim port of the hot flight's rollup. Authored here, EXECUTED on
- * MotherDuck: the string is sent over the ingest session's connection because
- * its inputs (fx_rates + the just-swapped mirrors) only exist in MotherDuck —
- * unlike the scan SQL, which runs on the local embedded engine. `sourceName`
- * maps mirror names through the shadow suffix; fx_rates is always real. */
 import { MD_DATABASE } from "./motherduckIngest.js";
 
 export const headlineTotalsSql = ({

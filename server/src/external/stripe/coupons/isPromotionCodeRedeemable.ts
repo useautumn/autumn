@@ -1,7 +1,6 @@
 import { secondsToMs, stripeRefToId } from "@autumn/shared";
 import type Stripe from "stripe";
 
-/** Whether Stripe would accept the promotion code again for this customer; restricted codes count as not, since a reuse could be rejected. */
 export const isPromotionCodeRedeemable = ({
 	promotionCode,
 	stripeCustomerId,

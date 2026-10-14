@@ -1,29 +1,3 @@
-/**
- * Plan-default usage alert at customer scope when the customer has no own alert.
- *
- * checkUsageAlerts runs two passes:
- *   1. customer scope — resolveCustomerScopeAlerts returns the customer's own
- *      alerts, or FALLS BACK to the plan-level alerts (on the product) when the
- *      customer has none for the feature. Measured against the pooled balance, no entity_id.
- *   2. entity scope — only runs when the track is entity-scoped (`if (entityId)`).
- *
- * Setup: pooled messages 100 + per-entity messages 50, one entity.
- *   - plan default alert: remaining 10 (seeded as plan-level billing_controls on
- *     the product = the plan-default the runtime resolver reads).
- *   - customer: no alert.
- *   - entity alert: remaining 20.
- *
- * The customer-scope alert measures the AGGREGATE balance (pooled + every
- * entity pool): granted 150 here. So to cross a remaining=10 alert we must drop
- * the aggregate to 10, i.e. track 140 (not 90 — 90 leaves the aggregate at 60).
- *
- * Track 140 at the CUSTOMER level (aggregate 150 → 10):
- *   - plan default (10) FIRES at customer scope (no entity_id) — customer is
- *     silent so the plan fallback is the active customer-scope alert.
- *   - entity alert (20) does NOT fire — the entity pass is skipped for a
- *     customer-level track (`if (entityId)`), regardless of balance.
- */
-
 import { afterAll, beforeAll, expect, test } from "bun:test";
 import type { EntityBillingControls } from "@autumn/shared";
 import {
@@ -139,14 +113,12 @@ test(`${chalk.yellowBright("plan-default-cus-track: customer-level track uses th
 		} as EntityBillingControls,
 	});
 
-	// Track 140 at the CUSTOMER level (no entity_id): aggregate 150 → 10.
 	await autumnV2_1.track({
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
 		value: 140,
 	});
 
-	// Plan-default alert (10) fires at customer scope — no entity_id.
 	const planDefaultFired =
 		await waitForWebhook<BalancesUsageAlertTriggeredPayload>({
 			token: playToken,
@@ -160,8 +132,6 @@ test(`${chalk.yellowBright("plan-default-cus-track: customer-level track uses th
 		});
 	expect(planDefaultFired).not.toBeNull();
 
-	// Entity alert (20) must NOT fire — the entity pass is skipped on a
-	// customer-level track.
 	await timeout(4000);
 	expect(
 		await firedFor({

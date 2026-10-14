@@ -1,18 +1,12 @@
 import { useMemo } from "react";
 import type { ApiEventsListItem } from "./useEvents.js";
 
-/**
- * Aggregated data point for charts
- */
 export interface AggregateDataPoint {
 	key: string;
 	value: number;
 	style?: string;
 }
 
-/**
- * Time bucket for time-series aggregation
- */
 export interface TimeBucket {
 	label: string;
 	start: number;
@@ -21,9 +15,6 @@ export interface TimeBucket {
 	totalValue: number;
 }
 
-/**
- * Feature aggregate data
- */
 export interface FeatureAggregate {
 	featureId: string;
 	count: number;
@@ -31,14 +22,8 @@ export interface FeatureAggregate {
 	avgValue: number;
 }
 
-/**
- * Time grouping options
- */
 export type TimeGrouping = "hour" | "day" | "week";
 
-/**
- * Get time bucket label based on grouping
- */
 function getTimeBucketLabel(timestamp: number, grouping: TimeGrouping): string {
 	const date = new Date(timestamp);
 
@@ -48,7 +33,6 @@ function getTimeBucketLabel(timestamp: number, grouping: TimeGrouping): string {
 		case "day":
 			return `${date.getMonth() + 1}/${date.getDate()}`;
 		case "week": {
-			// Get start of week (Sunday)
 			const weekStart = new Date(date);
 			weekStart.setDate(date.getDate() - date.getDay());
 			return `W ${weekStart.getMonth() + 1}/${weekStart.getDate()}`;
@@ -56,9 +40,6 @@ function getTimeBucketLabel(timestamp: number, grouping: TimeGrouping): string {
 	}
 }
 
-/**
- * Get bucket key for grouping
- */
 function getTimeBucketKey(timestamp: number, grouping: TimeGrouping): number {
 	const date = new Date(timestamp);
 
@@ -77,9 +58,6 @@ function getTimeBucketKey(timestamp: number, grouping: TimeGrouping): number {
 	}
 }
 
-/**
- * Colors for different features in charts
- */
 const FEATURE_COLORS = [
 	"cyan",
 	"green",
@@ -90,14 +68,10 @@ const FEATURE_COLORS = [
 	"white",
 ];
 
-/**
- * Hook to aggregate events data for visualization
- */
 export function useEventsAggregate(
 	events: ApiEventsListItem[],
 	timeGrouping: TimeGrouping = "day",
 ) {
-	// Aggregate by feature
 	const byFeature = useMemo((): FeatureAggregate[] => {
 		const featureMap = new Map<
 			string,
@@ -125,7 +99,6 @@ export function useEventsAggregate(
 			.sort((a, b) => b.count - a.count);
 	}, [events]);
 
-	// Aggregate by time
 	const byTime = useMemo((): TimeBucket[] => {
 		const bucketMap = new Map<
 			number,
@@ -158,7 +131,6 @@ export function useEventsAggregate(
 			.sort((a, b) => a.start - b.start);
 	}, [events, timeGrouping]);
 
-	// Chart data for bar chart (by feature)
 	const featureBarData = useMemo((): AggregateDataPoint[] => {
 		return byFeature.slice(0, 10).map((f, idx) => ({
 			key: f.featureId.length > 12 ? `${f.featureId.slice(0, 10)}..` : f.featureId,
@@ -167,9 +139,7 @@ export function useEventsAggregate(
 		}));
 	}, [byFeature]);
 
-	// Chart data for scatter/line chart (by time)
 	const timeScatterData = useMemo((): AggregateDataPoint[] => {
-		// Take last N buckets that fit in terminal
 		const buckets = byTime.slice(-20);
 		return buckets.map((b) => ({
 			key: b.label,
@@ -178,7 +148,6 @@ export function useEventsAggregate(
 		}));
 	}, [byTime]);
 
-	// Summary stats
 	const summary = useMemo(() => {
 		const totalEvents = events.length;
 		const totalValue = events.reduce((sum, e) => sum + e.value, 0);

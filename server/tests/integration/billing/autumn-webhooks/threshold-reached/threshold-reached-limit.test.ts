@@ -1,17 +1,3 @@
-/**
- * `customer.threshold_reached` (limit_reached) for tracks decided by the balance worker.
- *
- * Contract:
- *   - Callers below API 2.1 get one event when a track takes the feature from allowed to refused:
- *     threshold_type "limit_reached", the feature, and the whole customer at the caller's version,
- *     without autumn_id or invoices.
- *   - Callers on 2.1+ get none, though the same crossing sends `balances.limit_reached`.
- *   - Tracks that stay under the limit, and tracks refused after it, send nothing.
- *
- * Red (before): the worker path never sent the event.
- * Green (after): the server sends it from the track reply's effects.
- */
-
 import { afterAll, beforeAll, expect, test } from "bun:test";
 import {
 	getTestSvixAppId,
@@ -75,7 +61,6 @@ test.concurrent(
 		expect(data).not.toBeNull();
 		expect(data?.threshold_type).toBe("limit_reached");
 		expect(data?.feature.id).toBe(TestFeature.Messages);
-		// Rendered at 1.2: the `features` map, as the customer looked after the track.
 		expect(data?.customer.features?.[TestFeature.Messages]?.balance).toBe(0);
 		expect(data?.customer.autumn_id).toBeUndefined();
 		expect(data?.customer.invoices).toBeUndefined();
@@ -117,7 +102,6 @@ test.concurrent(
 		const v20 = await waitForThresholdReachedWebhook({ playToken, customerId });
 		expect(v20?.threshold_type).toBe("limit_reached");
 
-		// The 2.1 customer did cross: its balances.limit_reached proves it.
 		const limitReached = await waitForWebhook<{
 			type: string;
 			data: { customer_id: string };

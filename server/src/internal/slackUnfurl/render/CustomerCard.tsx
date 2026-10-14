@@ -9,12 +9,6 @@ import type {
 import { statusColor, theme } from "./theme.js";
 import { usageChartSvgDataUri } from "./usageChartSvg.js";
 
-/**
- * Pure presentational component for the unfurl card. takumi paints a flex/grid
- * tree (no DOM, no hooks, no recharts) — bespoke static JSX styled with the
- * shared brand tokens. Width is fixed; height grows with content.
- */
-
 export const CARD_WIDTH = 1100;
 const CHART_HEIGHT = 90;
 const MAX_FLAGS = 40;
@@ -107,7 +101,6 @@ function PlanRow({ plan }: { plan: GroupedPlan }) {
 }
 
 function BalanceRow({ balance }: { balance: BalanceBar }) {
-	// Over-limit: fill the whole bar in the danger colour to signal maxed + over.
 	const fillPct = balance.over
 		? 100
 		: balance.unlimited
@@ -310,7 +303,6 @@ export function CustomerCard({ data }: { data: CustomerCardData }) {
 				color: theme.foreground,
 			})}
 		>
-			{/* Header */}
 			<div style={row({ justifyContent: "space-between", alignItems: "flex-start" })}>
 				<div style={col({ gap: 6 })}>
 					<span style={{ fontSize: 46, fontWeight: 800 }}>{data.name}</span>
@@ -331,7 +323,6 @@ export function CustomerCard({ data }: { data: CustomerCardData }) {
 				</div>
 			</div>
 
-			{/* Plans */}
 			{data.plans.length > 0 ? (
 				<div style={col({ gap: 12 })}>
 					<SectionLabel text="Plans" />
@@ -341,7 +332,6 @@ export function CustomerCard({ data }: { data: CustomerCardData }) {
 				</div>
 			) : null}
 
-			{/* Balances */}
 			{data.balances.length > 0 ? (
 				<div style={col({ gap: 16 })}>
 					<SectionLabel text="Balances" />
@@ -351,17 +341,14 @@ export function CustomerCard({ data }: { data: CustomerCardData }) {
 				</div>
 			) : null}
 
-			{/* Usage */}
 			{data.usage && data.usage.points.length > 0 ? (
 				<UsageChart usage={data.usage} />
 			) : null}
 
-			{/* Flags */}
 			{data.featureFlags.length > 0 ? (
 				<FlagChips flags={data.featureFlags} />
 			) : null}
 
-			{/* Invoices */}
 			{data.invoices.length > 0 ? (
 				<div style={col({ gap: 4 })}>
 					<SectionLabel text="Invoices" />
@@ -372,7 +359,6 @@ export function CustomerCard({ data }: { data: CustomerCardData }) {
 				</div>
 			) : null}
 
-			{/* Footer */}
 			<span style={{ color: theme.subtle, fontSize: 15 }}>
 				{data.orgId} · {data.customerId}
 			</span>

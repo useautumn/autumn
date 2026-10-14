@@ -10,7 +10,6 @@ const expectedStripeApplicationId = ({ ctx }: { ctx: AutumnContext }) =>
 		: process.env.STRIPE_SANDBOX_CLIENT_ID;
 
 // Only real OAuth-connected accounts can hold foreign subscriptions; the
-// default managed account is Autumn's own, so its subs need no ownership gate.
 const shouldValidateStripeApplicationOwnership = ({
 	ctx,
 }: {

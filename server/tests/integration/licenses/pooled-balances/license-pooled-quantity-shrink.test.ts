@@ -1,15 +1,3 @@
-/**
- * Seat reductions must shrink the credit pool. Release keeps spare
- * contributions (rebind stays free); license_quantities must drop the
- * surplus so reset cannot re-sum them.
- *
- * Red (current):  billing.update license_quantities only writes
- *   paid_quantity — contribution count and pool granted stay at the old
- *   seat count after 5 → 3.
- * Green (after):  surplus unused seats expire and leave the pool; granted
- *   becomes paid + included immediately; reset stays at the new size.
- */
-
 import { test } from "bun:test";
 import type {
 	ApiCustomerV5,

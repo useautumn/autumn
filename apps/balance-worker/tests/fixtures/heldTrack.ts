@@ -94,7 +94,6 @@ export function checkCommand({
 	});
 }
 
-/** An appender whose appends the test releases, one per call to `release`. */
 export function gatedAppender(): CommittedOutcomeAppender & {
 	batches: number[];
 	release(params?: { fail?: Error }): void;
@@ -214,7 +213,6 @@ export function openStore({
 	};
 }
 
-/** A processor whose customer is resident: one ordinary track has loaded and committed it. */
 export async function residentFixture({
 	maxBatchSize = 100,
 	maxBatchBytes,
@@ -252,7 +250,6 @@ export async function waitForAppend(): Promise<void> {
 		await new Promise<void>((resolve) => setImmediate(resolve));
 }
 
-/** The decision of an inline decide that must not have been refused. */
 export function decided<Decision extends { kind: string }>(
 	decision: Decision,
 ): Extract<Decision, { kind: "decided" }> {

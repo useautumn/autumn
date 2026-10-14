@@ -1,8 +1,3 @@
-/**
- * Runs `run` over `items` with at most `concurrency` in flight. Results keep
- * input order. On failure no new items start, in-flight items run to
- * completion (so no writes are left mid-air), and the first error rethrows.
- */
 export const mapWithConcurrency = async <T, R>({
 	items,
 	concurrency,

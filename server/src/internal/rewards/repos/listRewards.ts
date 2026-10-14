@@ -7,7 +7,6 @@ import {
 import { and, desc, eq, inArray } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 
-/** List rewards for an org/env, optionally filtered by type */
 export const listRewards = async ({
 	db,
 	orgId,

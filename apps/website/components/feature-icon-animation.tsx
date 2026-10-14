@@ -20,7 +20,6 @@ export const FeatureIconAnimation = forwardRef<
 			iconRef.current?.querySelectorAll<SVGGraphicsElement>("path");
 		if (!pixelEls?.length) return;
 
-		// Sort pixels by distance from center — center pixels animate first, outer ones last
 		const centers = Array.from(pixelEls).map((el) => {
 			const b = el.getBBox();
 			return { el, cx: b.x + b.width / 2, cy: b.y + b.height / 2 };

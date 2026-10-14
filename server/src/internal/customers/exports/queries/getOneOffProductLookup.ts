@@ -7,10 +7,6 @@ import {
 	type ProductWithLicenseRelations,
 } from "@/internal/products/repos/utils/composeFullProductQuery.js";
 
-/**
- * Caches one-off classification for the lifetime of an export so repeated
- * pages do not re-read the same catalog products.
- */
 export const createOneOffProductLookup = ({ db }: { db: DrizzleCli }) => {
 	const isOneOffByInternalProductId = new Map<string, boolean>();
 
@@ -24,8 +20,6 @@ export const createOneOffProductLookup = ({ db }: { db: DrizzleCli }) => {
 		);
 		if (missing.length === 0) return;
 
-		// Full products (catalog prices + license products) so classification
-		// matches isOneOffProduct({ product }) everywhere else.
 		const rows = (await db.query.products.findMany({
 			where: inArray(products.internal_id, missing),
 			with: composeFullProductQuery(),

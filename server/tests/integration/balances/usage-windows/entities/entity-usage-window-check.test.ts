@@ -12,18 +12,6 @@ import {
 	setEntityUsageLimit,
 } from "../../utils/usage-limit-utils/entityUsageLimitUtils.js";
 
-/**
- * TDD tests for CHECK against entity-level usage limits.
- *
- * Contract under test:
- *  - an entity's own cap gates that entity's checks: required_balance within
- *    the entity window's headroom -> allowed true; beyond -> allowed false,
- *    even with ample balance; pure checks never consume window headroom
- *  - a sibling entity with no cap anywhere is unconstrained
- *  - carve-out checks: an entity with its own cap checks against IT, while a
- *    capless entity checks against the customer's aggregate window
- */
-
 const autumnV2_3 = new AutumnInt({ version: ApiVersion.V2_3 });
 
 test.concurrent(
@@ -65,7 +53,6 @@ test.concurrent(
 			value: 3,
 		});
 
-		// ── Headroom is 2: within allowed, beyond rejected despite 97 balance ──
 		const within = await autumnV2_3.check({
 			customer_id: customerId,
 			entity_id: entities[0].id,
@@ -82,7 +69,6 @@ test.concurrent(
 		});
 		expect(beyond.allowed).toBe(false);
 
-		// ── Pure checks never consume: window usage still 3 ──
 		await expectEntityUsageLimit({
 			autumn: autumnV2_3,
 			customerId,
@@ -92,7 +78,6 @@ test.concurrent(
 			limit: 5,
 		});
 
-		// ── The capless sibling entity is unconstrained (full balance) ──
 		const sibling = await autumnV2_3.check({
 			customer_id: customerId,
 			entity_id: entities[1].id,
@@ -141,12 +126,11 @@ test.concurrent(
 			limit: 2,
 		});
 
-		await autumnV2_3.customers.get(customerId); // initialize cache.
+		await autumnV2_3.customers.get(customerId);
 		for (const entity of entities) {
-			await autumnV2_3.entities.get(customerId, entity.id); // initialize cache.
+			await autumnV2_3.entities.get(customerId, entity.id);
 		}
 
-		// ── e1 (own cap 2): check 3 rejected even though the aggregate has 5 ──
 		const carvedBeyond = await autumnV2_3.check({
 			customer_id: customerId,
 			entity_id: entities[1].id,
@@ -163,7 +147,6 @@ test.concurrent(
 		});
 		expect(carvedWithin.allowed).toBe(true);
 
-		// ── e0 (capless) checks the aggregate: 5 fits, 6 does not ──
 		const aggregateWithin = await autumnV2_3.check({
 			customer_id: customerId,
 			entity_id: entities[0].id,
@@ -180,7 +163,6 @@ test.concurrent(
 		});
 		expect(aggregateBeyond.allowed).toBe(false);
 
-		// ── e0's tracks fill the aggregate; e1's own cap is untouched by them ──
 		await autumnV2_3.track({
 			customer_id: customerId,
 			entity_id: entities[0].id,

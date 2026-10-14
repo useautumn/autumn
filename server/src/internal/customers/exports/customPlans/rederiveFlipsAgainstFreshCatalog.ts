@@ -5,7 +5,6 @@ import {
 	isApplicableFlip,
 } from "./applyIsCustomFlips.js";
 
-// The run caches catalog versions, so a flip is re-checked against a fresh catalog read before it is written.
 export const rederiveFlipsAgainstFreshCatalog = ({
 	ctx,
 	derived,

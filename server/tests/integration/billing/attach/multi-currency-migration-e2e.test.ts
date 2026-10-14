@@ -15,13 +15,6 @@ import { AutumnRpcCli } from "@/external/autumn/autumnRpcCli.js";
 const autumnRpc = new AutumnRpcCli({ version: ApiVersion.V2_1 });
 const getSuffix = () => Math.random().toString(36).slice(2, 9);
 
-// Migrating a locked-eur customer to a new plan version must keep the
-// subscription in eur and re-point it at the v2 eur price (migrations create no
-// new charge, so this verifies the currency-aware v2 price is used).
-//
-// Uses migrations V2 (`/v1/migrations.*`) — legacy `POST /v1/migrations` was
-// removed, and unmatched `/v1` paths fall through to the session-authed root
-// router ("Unauthorized - no session found").
 test.concurrent(
 	`${chalk.yellowBright("multi-currency e2e: migration keeps the subscription in eur on the v2 price")}`,
 	async () => {
@@ -51,7 +44,6 @@ test.concurrent(
 			redirect_mode: "if_required",
 		});
 
-		// New version with a different eur amount.
 		await autumnRpc.plans.update<ApiPlanV1, CreatePlanParamsV2Input>(planId, {
 			plan_id: planId,
 			name: "MC Migrate Plan",
@@ -89,7 +81,6 @@ test.concurrent(
 		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 		await expectProductActive({ customer, productId: planId });
 
-		// Subscription stays eur and re-points at the v2 eur price (2700), no usd.
 		const subs = await ctx.stripeCli.subscriptions.list({
 			customer: customer.stripe_id as string,
 		});

@@ -6,11 +6,6 @@ import { Decimal } from "decimal.js";
 import type Stripe from "stripe";
 import { priceToStripeUnitTiers } from "./priceToStripeUnitTiers";
 
-/**
- * Builds the Stripe tier array for a V2 prepaid price: the per-unit tiers
- * (see priceToStripeUnitTiers) converted to packs of billing units, since
- * Stripe receives total packs (purchased + allowance) as the quantity.
- */
 export const priceToStripePrepaidV2Tiers = ({
 	price,
 	entitlement,

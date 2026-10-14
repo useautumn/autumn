@@ -1,4 +1,3 @@
-// Re-export everything from the sdkGeneration folder
 export {
 	exec,
 	execAsyncQuiet,

@@ -1,18 +1,3 @@
-/**
- * Benchmark the two hot cache flows end-to-end, broken down per call.
- *
- * Flows measured:
- *   - `/check`            (cache hit + cache miss)
- *   - `/customers` V2     (cache hit + cache miss)
- *
- * Each iteration runs the prod path ONCE, timing each step inline. The sum of
- * per-phase timings = the total request latency — no separate "E2E vs sub-phase"
- * dance. Output is a waterfall-style bar chart like Axiom traces.
- *
- * Run with:
- *     bun exp benchmarkV2CacheFlows.ts
- */
-
 import { AppEnv, normalizedToFullSubject } from "@autumn/shared";
 import type { Redis } from "ioredis";
 import {
@@ -78,11 +63,6 @@ const { rehydrateWithLiveBalances } = await import(
 	"../src/internal/customers/cache/fullSubject/actions/rehydrateWithLiveBalances"
 );
 
-// ---------------------------------------------------------------------------
-// Sample collection — every timed phase is recorded with (flow, iter, phase).
-// Phases are ordered per-flow by first-seen so the waterfall reads top-down.
-// ---------------------------------------------------------------------------
-
 type Sample = { flow: string; iter: number; phase: string; ms: number };
 const samples: Sample[] = [];
 const phaseOrderByFlow = new Map<string, string[]>();
@@ -127,13 +107,6 @@ const makeCtx = ({ redisV2, db }: { redisV2: Redis; db: unknown }) =>
 		logger: quietLogger,
 	}) as unknown as Parameters<typeof getCachedFullSubject>[0]["ctx"];
 
-// ---------------------------------------------------------------------------
-// Flow: /check — HIT path
-//
-// Inlined to mirror exactly what getOrSetCachedFullSubject → getCachedFullSubject
-// does in prod, so each sub-phase is a real slice of the request.
-// ---------------------------------------------------------------------------
-
 const runCheckHit = async ({
 	ctx,
 	redisV2,
@@ -155,7 +128,6 @@ const runCheckHit = async ({
 		customerId: CONFIG.customerId,
 	});
 
-	// 1) Pipelined subject + epoch (1 RTT — the new prod shape)
 	const pipelineResults = await time("pipeline: subject + epoch", () =>
 		redisV2
 			.pipeline()
@@ -167,12 +139,10 @@ const runCheckHit = async ({
 	const subjectRaw = pipelineResults?.[0]?.[1] as string | null | undefined;
 	if (!subjectRaw) return;
 
-	// 2) Parse + sanitize (pure CPU)
 	const cached = await time("parse + sanitize", async () =>
 		sanitizeCachedFullSubject({ cachedFullSubject: JSON.parse(subjectRaw) }),
 	);
 
-	// 3) Balance hmget batch (1 RTT — pipelined hmgets)
 	const includeAggregated = !CONFIG.entityId;
 	const balances = await time("hmget balances (pipelined)", () =>
 		getCachedFeatureBalancesBatch({
@@ -185,7 +155,6 @@ const runCheckHit = async ({
 	);
 	if (balances.kind !== "ok") return;
 
-	// 4) Hydrate (pure CPU)
 	await time("hydrate (normalize + apply)", async () => {
 		const normalized = cachedFullSubjectToNormalized({
 			cached,
@@ -199,10 +168,6 @@ const runCheckHit = async ({
 		return normalizedToFullSubject({ normalized });
 	});
 };
-
-// ---------------------------------------------------------------------------
-// Flow: /check — MISS path
-// ---------------------------------------------------------------------------
 
 const runCheckMiss = async ({
 	ctx,
@@ -219,10 +184,8 @@ const runCheckMiss = async ({
 		entityId: CONFIG.entityId,
 	});
 
-	// Force the miss (not timed — just setup)
 	await redisV2.del(subjectKey);
 
-	// 1) Pipeline read + epoch (1 RTT). Epoch is reused for the Lua write below.
 	const missResult = await time(
 		"getCachedFullSubject (miss — returns epoch)",
 		() =>
@@ -235,7 +198,6 @@ const runCheckMiss = async ({
 	);
 	const epoch = missResult.subjectViewEpoch;
 
-	// 2) DB rebuild
 	const result = await time("getFullSubjectNormalized (DB)", () =>
 		getFullSubjectNormalized({
 			ctx,
@@ -245,7 +207,6 @@ const runCheckMiss = async ({
 	);
 	if (!result) return;
 
-	// 3) Lua write
 	await time("setCachedFullSubject (lua)", () =>
 		setCachedFullSubject({
 			ctx,
@@ -254,21 +215,10 @@ const runCheckMiss = async ({
 		}),
 	);
 
-	// 4) Post-set balance rehydrate (1 RTT — balance-only re-read to pick up
-	//    any HSETNX-skipped concurrent Lua deduction patches)
 	await time("rehydrateWithLiveBalances (post-set)", () =>
 		rehydrateWithLiveBalances({ ctx, normalized: result.normalized }),
 	);
 };
-
-// ---------------------------------------------------------------------------
-// Flow: POST /customers V2 — HIT and MISS
-//
-// getOrCreateCachedFullSubject delegates to getCachedFullSubject on hit, so the
-// hit waterfall is the same as /check. On miss it additionally calls
-// updateCustomerData and (sometimes) autoCreateEntity — we time it as E2E
-// since those branches are customer-data dependent.
-// ---------------------------------------------------------------------------
 
 const { getOrCreateCachedFullSubject } = await import(
 	"../src/internal/customers/cache/fullSubject/actions/getOrCreateCachedFullSubject"
@@ -324,10 +274,6 @@ const runCreateCustomerMiss = async ({
 	);
 };
 
-// ---------------------------------------------------------------------------
-// Reporting — waterfall per flow
-// ---------------------------------------------------------------------------
-
 const pct = (sorted: number[], p: number) =>
 	sorted.length === 0
 		? 0
@@ -347,7 +293,6 @@ const printFlowWaterfall = ({ flow }: { flow: string }) => {
 	const order = phaseOrderByFlow.get(flow);
 	if (!order?.length) return;
 
-	// Aggregate: per-phase sorted timings, and per-iteration totals.
 	const phaseTimings = new Map<string, number[]>();
 	const iterTotals = new Map<number, number>();
 	for (const s of samples) {
@@ -364,7 +309,6 @@ const printFlowWaterfall = ({ flow }: { flow: string }) => {
 	const totalP99 = pct(totals, 99);
 	const totalMax = totals[totals.length - 1] ?? 0;
 
-	// Find max p50 across phases to scale the bars
 	const scale =
 		Math.max(...order.map((p) => pct([...(phaseTimings.get(p) ?? [])].sort((a, b) => a - b), 50))) || 1;
 
@@ -409,10 +353,6 @@ const printFlowWaterfall = ({ flow }: { flow: string }) => {
 	);
 };
 
-// ---------------------------------------------------------------------------
-// Main
-// ---------------------------------------------------------------------------
-
 const main = async () => {
 	console.log("=== V2 cache flows benchmark ===");
 	console.log("config:", {
@@ -429,7 +369,6 @@ const main = async () => {
 	await warmupRedisV2();
 	const ctx = makeCtx({ redisV2, db });
 
-	// Prime the cache once so HIT iterations don't measure a cold path.
 	const subjectKey = buildFullSubjectKey({
 		orgId: CONFIG.orgId,
 		env: CONFIG.env,
@@ -458,7 +397,6 @@ const main = async () => {
 		console.log(`\ncache already warm (${existing.length}b)`);
 	}
 
-	// Blob anatomy (once, for context — not timed)
 	const raw = await redisV2.get(subjectKey);
 	if (raw) {
 		const parsed = JSON.parse(raw) as Record<string, unknown>;

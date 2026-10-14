@@ -95,7 +95,6 @@ const validateProductItem = ({
 		});
 	}
 
-	// 1. Check if amount and tiers are not null
 	if (notNullish(item.price) && notNullish(item.tiers)) {
 		throw new RecaseError({
 			message: `Either 'price' or 'tiers' should be set, not both`,
@@ -141,9 +140,7 @@ const validateProductItem = ({
 		}
 	}
 
-	// 4. One off prices / fixed prices can have at most 2 decimal places
 	if (isPriceItem(item)) {
-		// One off price..., can't have more than 2 DP
 		if (item.price && item.price.toString().split(".")[1]?.length > 2) {
 			throw new RecaseError({
 				message: `One off prices can have at most 2 decimal places`,
@@ -153,7 +150,6 @@ const validateProductItem = ({
 		}
 	}
 
-	// 4. If it's a feature item, it should have included usage as number or inf
 	if (isFeaturePriceItem(item) || isFeatureItem(item)) {
 		if (
 			typeof item.included_usage !== "number" &&
@@ -171,7 +167,6 @@ const validateProductItem = ({
 			item.included_usage = 0;
 		}
 
-		// 4a. Check if included usage is negative
 		if (typeof item.included_usage === "number" && item.included_usage < 0) {
 			throw new RecaseError({
 				message: `Included usage must be 0 or greater`,
@@ -181,7 +176,6 @@ const validateProductItem = ({
 		}
 	}
 
-	// 5. If it's a price, can't have day, minute or hour interval
 	if (isFeaturePriceItem(item) || isPriceItem(item)) {
 		const billingInterval = itemToBillingInterval({ item });
 		if (
@@ -205,7 +199,6 @@ const validateProductItem = ({
 		});
 	}
 
-	// Persisted single-tier volume rows predate that rule and must keep billing.
 	if (validateAuthoringRules) handleSingleTierVolumeErrors({ item });
 	handleAllocatedVolumeFlatFeeErrors({ item, feature });
 
@@ -226,7 +219,6 @@ const validateProductItem = ({
 			});
 		}
 
-		// flat_amount validations
 		const hasFlatAmount = item.tiers.some(
 			(t) => t.flat_amount != null && t.flat_amount > 0,
 		);
@@ -271,8 +263,6 @@ const validateProductItem = ({
 		});
 	}
 
-	// The schema can only see the item's shape; a purchase can only expire if
-	// the feature actually holds a consumable balance.
 	if (
 		item.config?.expiry &&
 		feature &&
@@ -288,13 +278,10 @@ const validateProductItem = ({
 	if (!item.config?.rollover) return;
 	const rollover = item.config.rollover as RolloverConfig;
 
-	// Set length to 0 for forever duration
 	if (rollover.duration === RolloverExpiryDurationType.Forever) {
 		rollover.length = 0;
 	}
 
-	// Authoring-time checks only: billing paths revalidate items round-tripped
-	// from persisted entitlements, which no longer answer for their own shape.
 	if (!validateAuthoringRules) return;
 
 	if (item.included_usage === Infinite) {
@@ -314,7 +301,6 @@ const validateProductItem = ({
 		});
 	}
 
-	// Validate rollover length for monthly durations
 	if (rollover.duration === RolloverExpiryDurationType.Month) {
 		if (typeof rollover.length !== "number" || rollover.length < 0) {
 			throw new RecaseError({
@@ -348,7 +334,6 @@ export const validateProductItems = ({
 	orgId: string;
 	env: AppEnv;
 	multiCurrencyEnabled: boolean;
-	/** Off for billing paths, whose items come from already-persisted plans. */
 	validateAuthoringRules?: boolean;
 }) => {
 	const { allFeatures, newFeatures } = createFeaturesFromItems({
@@ -360,7 +345,6 @@ export const validateProductItems = ({
 
 	features = allFeatures;
 
-	// 1. Check values
 	for (let index = 0; index < newItems.length; index++) {
 		validateProductItem({
 			item: newItems[index],
@@ -380,7 +364,6 @@ export const validateProductItems = ({
 		const entInterval = itemToEntInterval({ item });
 		const intervalCount = itemToEntIntervalCount({ item });
 
-		// Boolean duplicate
 		if (isBooleanFeatureItem(item)) {
 			const otherItem = newItems.find((i: any, index2: any) => {
 				return (
@@ -450,7 +433,6 @@ export const validateProductItems = ({
 		}
 	}
 
-	// 6. Can't have both weekly and monthly price items in the same product
 	const hasWeeklyPrice = newItems.some(
 		(item) =>
 			(isPriceItem(item) || isFeaturePriceItem(item)) &&

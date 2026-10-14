@@ -57,8 +57,6 @@ describe(`${chalk.yellowBright("track-async: async=true returns 202")}`, () => {
 		});
 
 		expect(response.status).toBe(202);
-		// A queued track echoes the versioned track response (no balance is
-		// resolved yet), not a bare ack.
 		expect(await response.json()).toEqual({
 			id: "placeholder",
 			code: "event_received",

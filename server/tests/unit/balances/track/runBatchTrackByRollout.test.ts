@@ -55,7 +55,6 @@ describe("runBatchTrackByRollout", () => {
 	beforeEach(() => {
 		calls.worker = [];
 		calls.legacy = [];
-		// Unset override: the config decides, half the buckets on the worker.
 		overrideSpy = spyOn(
 			rolloutAccess,
 			"getBalanceWorkerRolloutOverride",

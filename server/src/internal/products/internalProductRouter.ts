@@ -23,7 +23,6 @@ import { handleGetProductInternal } from "./internalHandlers/handleGetProductInt
 import { handleGetRewards } from "./internalHandlers/handleGetRewards.js";
 import { handleGetStripeCoupons } from "./internalHandlers/handleGetStripeCoupons.js";
 
-// Hono router for internal/dashboard product routes
 export const internalProductRouter = new Hono<HonoEnv>();
 
 internalProductRouter.get("/products", ...handleGetProducts);
@@ -38,7 +37,6 @@ internalProductRouter.get("/rewards", ...handleGetRewards);
 internalProductRouter.get("/stripe_coupons", ...handleGetStripeCoupons);
 internalProductRouter.get("/migrations", ...handleGetMigrations);
 
-// SINGLE PRODUCT ENDPOINTS
 internalProductRouter.get("/:productId/count", ...handleGetProductCount);
 internalProductRouter.get("/:productId/data", ...handleGetProductInternal);
 internalProductRouter.get("/:productId/variants", ...handleListPlanVariants);

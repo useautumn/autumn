@@ -9,7 +9,6 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-// 1.3 Add second metered feature
 test.concurrent(
 	`${chalk.yellowBright("p2p: add second metered feature")}`,
 	async () => {
@@ -26,7 +25,6 @@ test.concurrent(
 			actions: [s.attach({ productId: "pro" })],
 		});
 
-		// Track some usage before update
 		const messagesUsage = 45;
 		await autumnV1.track(
 			{
@@ -37,7 +35,6 @@ test.concurrent(
 			{ timeout: 2000 },
 		);
 
-		// Add words feature
 		const wordsItem = items.monthlyWords({ includedUsage: 200 });
 
 		const updateParams = {
@@ -48,14 +45,12 @@ test.concurrent(
 
 		const preview = await autumnV1.subscriptions.previewUpdate(updateParams);
 
-		// Adding included feature has no price impact
 		expect(preview.total).toBe(0);
 
 		await autumnV1.subscriptions.update(updateParams);
 
 		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-		// Messages usage should stay the same
 		await expectCustomerFeatureCorrect({
 			autumn: autumnV1,
 			customerId,
@@ -65,7 +60,6 @@ test.concurrent(
 			usage: messagesUsage,
 		});
 
-		// Words should have full balance
 		await expectCustomerFeatureCorrect({
 			autumn: autumnV1,
 			customerId,
@@ -75,7 +69,6 @@ test.concurrent(
 			usage: 0,
 		});
 
-		// Verify invoice matches preview
 		await expectCustomerInvoiceCorrect({
 			customer,
 			count: 2,
@@ -91,7 +84,6 @@ test.concurrent(
 	},
 );
 
-// 1.4 Remove one metered feature
 test.concurrent(
 	`${chalk.yellowBright("p2p: remove one metered feature")}`,
 	async () => {
@@ -112,7 +104,6 @@ test.concurrent(
 			actions: [s.attach({ productId: "pro" })],
 		});
 
-		// Track usage on both features
 		const messagesUsage = 30;
 		const wordsUsage = 80;
 		await autumnV1.track(
@@ -133,7 +124,6 @@ test.concurrent(
 		);
 		return;
 
-		// Remove words feature
 		const updateParams = {
 			customer_id: customerId,
 			product_id: pro.id,
@@ -142,14 +132,12 @@ test.concurrent(
 
 		const preview = await autumnV1.subscriptions.previewUpdate(updateParams);
 
-		// Removing included feature has no price impact
 		expect(preview.total).toBe(0);
 
 		await autumnV1.subscriptions.update(updateParams);
 
 		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-		// Messages usage should stay the same
 		await expectCustomerFeatureCorrect({
 			autumn: autumnV1,
 			customerId,
@@ -159,10 +147,8 @@ test.concurrent(
 			usage: messagesUsage,
 		});
 
-		// Words should no longer exist
 		expect(customer.features[TestFeature.Words]).toBeUndefined();
 
-		// Verify invoice matches preview
 		await expectCustomerInvoiceCorrect({
 			customer,
 			count: 2,

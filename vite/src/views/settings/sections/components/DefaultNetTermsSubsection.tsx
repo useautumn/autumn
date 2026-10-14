@@ -24,7 +24,6 @@ export const DefaultNetTermsSubsection = () => {
 		onError: () => toast.error("Failed to update default net payment terms"),
 	});
 
-	// While a save is in flight, reflect the value being saved.
 	const savedDays =
 		(isPending ? variables : org?.config?.default_invoice_net_terms_days) ??
 		null;

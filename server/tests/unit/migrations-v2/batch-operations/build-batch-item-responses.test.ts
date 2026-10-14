@@ -204,7 +204,6 @@ describe("buildBatchMigrationItemResponses", () => {
 		const response = responses.get("cus_1");
 		expect(response?.customer_id).toBe("customer-1");
 
-		// Metered add → balance change with the empty pre-state as previous.
 		expect(response?.balance_changes).toEqual([
 			{
 				feature_id: "words",
@@ -223,7 +222,6 @@ describe("buildBatchMigrationItemResponses", () => {
 			},
 		]);
 
-		// Boolean add → flag change, never a balance change.
 		expect(response?.flag_changes).toEqual([
 			{ action: "created", feature_id: "dashboard" },
 		]);
@@ -310,7 +308,6 @@ describe("buildBatchMigrationItemResponses", () => {
 					unlimited: false,
 					next_reset_at: 1_800_000_000_000,
 				},
-				// usage is 40 on both sides, so the diff drops it.
 				previous_attributes: {
 					granted: 100,
 					remaining: 60,
@@ -445,8 +442,6 @@ describe("buildBatchMigrationItemResponses", () => {
 			}),
 		});
 
-		// One snapshot-bearing plan change PER customer product, each with its
-		// own single plan_change.item_change; the balance stays aggregated per feature.
 		const response = responses.get("cus_1");
 		expect(response?.plan_changes).toHaveLength(2);
 		expect(response?.plan_changes[0].item_changes).toEqual([]);
@@ -474,8 +469,6 @@ describe("buildBatchMigrationItemResponses", () => {
 			remaining: 0,
 			nextResetAt: null,
 		};
-		// The deleted row carries the OLD definition — different content from
-		// the minted add, so the replace surfaces instead of cancelling out.
 		const removedWord = {
 			internalCustomerId: "cus_1",
 			customerProductId: "cp_1",

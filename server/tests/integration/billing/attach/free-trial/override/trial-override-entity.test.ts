@@ -1,14 +1,3 @@
-/**
- * Free Trial Override Entity Tests (Attach V2)
- *
- * Tests for free_trial parameter override in multi-entity scenarios.
- *
- * Key behaviors:
- * - Entity attach with free_trial affects shared subscription (all entities)
- * - Entity attach with free_trial: null ends trial for all entities
- * - Upgrade with free_trial override affects all entities on subscription
- */
-
 import { expect, test } from "bun:test";
 import {
 	type ApiCustomerV3,
@@ -30,18 +19,6 @@ import { timeout } from "@tests/utils/genUtils";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 1: Entity attach with free_trial to active subscription
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Entity-1 has Pro (active, not trialing)
- * - Entity-2 attaches Pro with free_trial: { length: 14 }
- *
- * Expected Result:
- * - Both entities move to trial (shared subscription)
- */
 test.concurrent(`${chalk.yellowBright("trial-override-entity 1: entity attach with free_trial to active sub")}`, async () => {
 	const customerId = "trial-override-entity-active";
 
@@ -64,7 +41,6 @@ test.concurrent(`${chalk.yellowBright("trial-override-entity 1: entity attach wi
 	const entity1Id = entities[0].id;
 	const entity2Id = entities[1].id;
 
-	// Verify initial state - entity-1 has pro, not trialing
 	const entity1Before = await autumnV1.entities.get<ApiEntityV0>(
 		customerId,
 		entity1Id,
@@ -75,7 +51,6 @@ test.concurrent(`${chalk.yellowBright("trial-override-entity 1: entity attach wi
 		nowMs: advancedTo,
 	});
 
-	// 1. Preview entity-2 attach with free_trial override
 	const preview = await autumnV1.billing.previewAttach({
 		customer_id: customerId,
 		product_id: pro.id,
@@ -85,15 +60,13 @@ test.concurrent(`${chalk.yellowBright("trial-override-entity 1: entity attach wi
 			duration: FreeTrialDuration.Day,
 		},
 	});
-	// Entity-1's pro refunded (-$20), entity-2's pro free during trial = -$20
 	expect(preview.total).toBe(-20);
 	expectPreviewNextCycleCorrect({
 		preview,
 		startsAt: advancedTo + ms.days(14),
-		total: 40, // Entity-1 pro ($20) + entity-2 pro ($20) after trial
+		total: 40,
 	});
 
-	// 2. Attach with free_trial override
 	await autumnV1.billing.attach({
 		customer_id: customerId,
 		product_id: pro.id,
@@ -105,10 +78,8 @@ test.concurrent(`${chalk.yellowBright("trial-override-entity 1: entity attach wi
 		redirect_mode: "if_required",
 	});
 
-	// Wait for webhook to sync trial status
 	await timeout(4000);
 
-	// Verify entity-2 is trialing
 	const entity2 = await autumnV1.entities.get<ApiEntityV0>(
 		customerId,
 		entity2Id,
@@ -119,7 +90,6 @@ test.concurrent(`${chalk.yellowBright("trial-override-entity 1: entity attach wi
 		trialEndsAt: advancedTo + ms.days(14),
 	});
 
-	// Verify entity-1 is also trialing (shared subscription)
 	const entity1 = await autumnV1.entities.get<ApiEntityV0>(
 		customerId,
 		entity1Id,
@@ -130,7 +100,6 @@ test.concurrent(`${chalk.yellowBright("trial-override-entity 1: entity attach wi
 		trialEndsAt: advancedTo + ms.days(14),
 	});
 
-	// Verify invoices: pro ($20) + refund (-$20)
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	await expectCustomerInvoiceCorrect({
 		customer,
@@ -140,7 +109,6 @@ test.concurrent(`${chalk.yellowBright("trial-override-entity 1: entity attach wi
 
 	expect(customer.invoices?.[1]?.total).toBe(-20);
 
-	// Verify Stripe subscription state
 	await expectSubToBeCorrect({
 		db: ctx.db,
 		customerId,
@@ -150,18 +118,6 @@ test.concurrent(`${chalk.yellowBright("trial-override-entity 1: entity attach wi
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 2: Entity attach with free_trial: null to trialing subscription
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Entity-1 has Pro (trialing)
- * - Entity-2 attaches Pro with free_trial: null
- *
- * Expected Result:
- * - Trial ends for both entities, both charged
- */
 test.concurrent(`${chalk.yellowBright("trial-override-entity 2: entity attach with free_trial: null to trialing sub")}`, async () => {
 	const customerId = "trial-override-entity-null";
 
@@ -186,7 +142,6 @@ test.concurrent(`${chalk.yellowBright("trial-override-entity 2: entity attach wi
 	const entity1Id = entities[0].id;
 	const entity2Id = entities[1].id;
 
-	// Verify initial state - entity-1 is trialing
 	const entity1Before = await autumnV1.entities.get<ApiEntityV0>(
 		customerId,
 		entity1Id,
@@ -197,17 +152,14 @@ test.concurrent(`${chalk.yellowBright("trial-override-entity 2: entity attach wi
 		trialEndsAt: advancedTo + ms.days(14),
 	});
 
-	// 1. Preview entity-2 attach with free_trial: null
 	const preview = await autumnV1.billing.previewAttach({
 		customer_id: customerId,
 		product_id: proTrial.id,
 		entity_id: entity2Id,
 		free_trial: null,
 	});
-	// Entity-1's pro ($20) + entity-2's pro ($20) = $40
 	expect(preview.total).toBe(40);
 
-	// 2. Attach with free_trial: null
 	await autumnV1.billing.attach({
 		customer_id: customerId,
 		product_id: proTrial.id,
@@ -216,10 +168,8 @@ test.concurrent(`${chalk.yellowBright("trial-override-entity 2: entity attach wi
 		redirect_mode: "if_required",
 	});
 
-	// Wait for webhook to sync trial status
 	await timeout(4000);
 
-	// Verify entity-2 is NOT trialing
 	const entity2 = await autumnV1.entities.get<ApiEntityV0>(
 		customerId,
 		entity2Id,
@@ -230,7 +180,6 @@ test.concurrent(`${chalk.yellowBright("trial-override-entity 2: entity attach wi
 		nowMs: advancedTo,
 	});
 
-	// Verify entity-1 is also NOT trialing (shared subscription)
 	const entity1 = await autumnV1.entities.get<ApiEntityV0>(
 		customerId,
 		entity1Id,
@@ -241,7 +190,6 @@ test.concurrent(`${chalk.yellowBright("trial-override-entity 2: entity attach wi
 		nowMs: advancedTo,
 	});
 
-	// Verify invoices: $40 charge
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	await expectCustomerInvoiceCorrect({
 		customer,
@@ -249,7 +197,6 @@ test.concurrent(`${chalk.yellowBright("trial-override-entity 2: entity attach wi
 		latestTotal: 40,
 	});
 
-	// Verify Stripe subscription state
 	await expectSubToBeCorrect({
 		db: ctx.db,
 		customerId,
@@ -259,18 +206,6 @@ test.concurrent(`${chalk.yellowBright("trial-override-entity 2: entity attach wi
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 3: Entity upgrade with free_trial override
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Entity-1 & 2 both on Pro (active, not trialing)
- * - Entity-1 upgrades to Premium with free_trial: { length: 14 }
- *
- * Expected Result:
- * - Both entities get 14-day trial (shared subscription)
- */
 test.concurrent(`${chalk.yellowBright("trial-override-entity 3: entity upgrade with free_trial override")}`, async () => {
 	const customerId = "trial-override-entity-upgrade";
 
@@ -302,7 +237,6 @@ test.concurrent(`${chalk.yellowBright("trial-override-entity 3: entity upgrade w
 	const entity1Id = entities[0].id;
 	const entity2Id = entities[1].id;
 
-	// Verify initial state - both entities on pro, not trialing
 	const entity1Before = await autumnV1.entities.get<ApiEntityV0>(
 		customerId,
 		entity1Id,
@@ -313,7 +247,6 @@ test.concurrent(`${chalk.yellowBright("trial-override-entity 3: entity upgrade w
 		nowMs: advancedTo,
 	});
 
-	// 1. Preview entity-1 upgrade to premium with free_trial override
 	const preview = await autumnV1.billing.previewAttach({
 		customer_id: customerId,
 		product_id: premium.id,
@@ -323,15 +256,13 @@ test.concurrent(`${chalk.yellowBright("trial-override-entity 3: entity upgrade w
 			duration: FreeTrialDuration.Day,
 		},
 	});
-	// Refund: entity-1 pro ($20) + entity-2 pro ($20) = -$40
 	expect(preview.total).toBe(-40);
 	expectPreviewNextCycleCorrect({
 		preview,
 		startsAt: advancedTo + ms.days(14),
-		total: 70, // Premium ($50) + entity-2 pro ($20) after trial
+		total: 70,
 	});
 
-	// 2. Upgrade with free_trial override
 	await autumnV1.billing.attach({
 		customer_id: customerId,
 		product_id: premium.id,
@@ -343,10 +274,8 @@ test.concurrent(`${chalk.yellowBright("trial-override-entity 3: entity upgrade w
 		redirect_mode: "if_required",
 	});
 
-	// Wait for webhook to sync trial status
 	await timeout(4000);
 
-	// Verify entity-1 has premium and is trialing
 	const entity1 = await autumnV1.entities.get<ApiEntityV0>(
 		customerId,
 		entity1Id,
@@ -357,7 +286,6 @@ test.concurrent(`${chalk.yellowBright("trial-override-entity 3: entity upgrade w
 		trialEndsAt: advancedTo + ms.days(14),
 	});
 
-	// Verify entity-2 still has pro and is also trialing (shared subscription)
 	const entity2 = await autumnV1.entities.get<ApiEntityV0>(
 		customerId,
 		entity2Id,
@@ -368,7 +296,6 @@ test.concurrent(`${chalk.yellowBright("trial-override-entity 3: entity upgrade w
 		trialEndsAt: advancedTo + ms.days(14),
 	});
 
-	// Verify invoices: 2x pro ($40) + refund (-$40)
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	await expectCustomerInvoiceCorrect({
 		customer,
@@ -378,7 +305,6 @@ test.concurrent(`${chalk.yellowBright("trial-override-entity 3: entity upgrade w
 
 	expect(customer.invoices?.[1]?.total).toBe(-40);
 
-	// Verify Stripe subscription state
 	await expectSubToBeCorrect({
 		db: ctx.db,
 		customerId,

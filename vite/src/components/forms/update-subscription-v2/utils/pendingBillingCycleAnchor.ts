@@ -41,7 +41,6 @@ export function pendingBillingCycleAnchorFormDefaults({
 	};
 }
 
-// The API cannot cancel a scheduled reset, so toggling off leaves it in place.
 export function billingCycleAnchorChanged({
 	formValues,
 	pendingResetsAt,

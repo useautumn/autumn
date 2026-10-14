@@ -1,8 +1,3 @@
-/**
- * Rebuilding a customer product in update subscription keeps its collection
- * method, so a mid-trial edit doesn't drop a no-card trial's invoice intent.
- */
-
 import { expect, test } from "bun:test";
 import {
 	BillingVersion,

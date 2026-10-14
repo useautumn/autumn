@@ -27,7 +27,6 @@ afterAll(async () => {
 	await webhook?.cleanup();
 });
 
-// ── B4: plan-supplied limit + customer alert ────────────────────────────────
 test(`${chalk.yellowBright("ul-alert3: customer alert resolves a plan-level cap")}`, async () => {
 	const customerId = "ul-alert-plan-limit-1";
 	const plan = products.base({

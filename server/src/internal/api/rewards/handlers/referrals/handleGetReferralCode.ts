@@ -51,7 +51,6 @@ export const handleGetReferralCode = createRoute({
 			});
 		}
 
-		// Get referral code by customer and reward trigger
 		let referralCode = await referralCodeRepo.getByCustomerAndProgram({
 			db,
 			orgId: org.id,

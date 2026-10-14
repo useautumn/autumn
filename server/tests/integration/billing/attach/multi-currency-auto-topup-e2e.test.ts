@@ -20,8 +20,6 @@ const autumnRpc = new AutumnRpcCli({ version: ApiVersion.V2_1 });
 const getSuffix = () => Math.random().toString(36).slice(2, 9);
 const AUTO_TOPUP_WAIT_MS = 20000;
 
-// An auto top-up (computeAutoTopupPlan, processed async via SQS) must charge the
-// eur pack price for an eur-locked customer.
 test.concurrent(
 	`${chalk.yellowBright("multi-currency e2e: eur auto top-up bills the eur pack price")}`,
 	async () => {
@@ -75,7 +73,6 @@ test.concurrent(
 			billing_controls: controls,
 		});
 
-		// Drop below threshold → auto top-up fires via SQS.
 		await autumnV2_1.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
@@ -90,7 +87,6 @@ test.concurrent(
 			remaining: 115,
 		});
 
-		// The auto top-up charge must be in eur at the eur pack price (9), not usd (10).
 		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 		const stripeInvoices = await ctx.stripeCli.invoices.list({
 			customer: customer.stripe_id as string,

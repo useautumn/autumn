@@ -1,15 +1,3 @@
-/**
- * Combined license_quantities + parent prepaid feature_quantities on billing.update.
- *
- * Prepaid lives on the root plan, not the license plan, so both params may be
- * sent together. Per-seat included grants of the same feature stay on seats.
- *
- * Red (current): 400 "license_quantities cannot be combined with feature_quantities"
- * Green (after): seats and parent prepaid both apply; one invoice with both
- * deltas; shrinking below assignments still 400; one-off prepaid + seats
- * stays "Cannot update a one-off prepaid quantity alongside other subscription changes".
- */
-
 import { expect, test } from "bun:test";
 import {
 	type ApiCustomerV3,
@@ -119,8 +107,6 @@ test.concurrent(
 			expectLineItemCount: 4,
 		});
 
-		// In-place quantity updates report the same plan as outgoing (pre-update
-		// picture) and incoming (post-update picture).
 		expect(preview.outgoing).toEqual([
 			expect.objectContaining({
 				plan_id: parent.id,

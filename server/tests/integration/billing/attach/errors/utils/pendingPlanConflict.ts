@@ -4,7 +4,6 @@ import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 
-/** Pro → premium upgrade whose first invoice fails on a declining card. */
 export const initFailedUpgrade = async ({
 	customerId,
 	extraProducts = [],

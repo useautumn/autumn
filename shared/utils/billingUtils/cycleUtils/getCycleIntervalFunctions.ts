@@ -20,22 +20,16 @@ type IntervalFns = {
 	difference: (later: Date, earlier: Date) => number;
 };
 
-/**
- * Maps an interval type to its corresponding date-fns add/difference functions.
- * Returns null for non-recurring intervals (OneOff, Lifetime).
- */
 export const getCycleIntervalFunctions = ({
 	interval,
 }: {
 	interval: BillingInterval | EntInterval;
 }): IntervalFns | null => {
 	switch (interval) {
-		// Non-recurring intervals
 		case BillingInterval.OneOff:
 		case EntInterval.Lifetime:
 			return null;
 
-		// Fine-grained intervals (EntInterval only) [minute is deprecated]
 		case EntInterval.Minute:
 			return { add: addMinutes, difference: differenceInMinutes };
 
@@ -45,7 +39,6 @@ export const getCycleIntervalFunctions = ({
 		case EntInterval.Day:
 			return { add: addDays, difference: differenceInDays };
 
-		// Shared intervals
 		case BillingInterval.Week:
 		case EntInterval.Week:
 			return { add: addWeeks, difference: differenceInWeeks };

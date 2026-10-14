@@ -49,9 +49,7 @@ async function abortTransaction({
  * not commit.
  */
 export type TransactionRetry = {
-	/** How long refusals are waited out before the batch counts as not committed. */
 	deadlineMs: number;
-	/** Fixed, not doubling: a refusal clears in milliseconds, and a longer wait only adds latency. */
 	backoffMs: number;
 	sleep(ms: number): Promise<void>;
 	now(): number;
@@ -74,7 +72,6 @@ const DEFAULT_TRANSACTION_RETRY: TransactionRetry = {
 	now: monotonicNow,
 };
 
-/** The default retry with a shorter deadline, for a publish whose reader would not wait the full one. */
 export function transactionRetryWithin({
 	deadlineMs,
 }: {
@@ -120,8 +117,6 @@ export async function sendTransactionalBatch({
 	if (messages.length === 0) {
 		throw new RangeError("Kafka batch cannot be empty");
 	}
-	// An idempotent session has no transactions: the same batch goes out as one plain produce.
-	// Offsets cannot ride along; a caller that commits them branches before reaching here.
 	if (producer.mode === "idempotent") {
 		if (offsets) {
 			throw new Error(
@@ -162,7 +157,6 @@ export async function sendTransactionalBatch({
 	return runTransactionWithRetry({ producer, send, retry });
 }
 
-/** An offset-only transaction still uses the partition's fenced producer session. */
 export async function sendTransactionalOffsets({
 	producer,
 	offsets,
@@ -183,7 +177,6 @@ export async function sendTransactionalOffsets({
 	return runTransactionWithRetry({ producer, send, retry });
 }
 
-/** Waits out any refusal the broker asks to be retried; every other verdict stands. */
 async function runTransactionWithRetry<Result>({
 	producer,
 	send,

@@ -1,16 +1,3 @@
-/**
- * Removing a discount that was applied at attach time must not bill anything now.
- * Sent in the dashboard's request shape, which always includes `upsert_licenses: []`.
- *
- * Contract:
- *   7. Preview: nothing due today; the next cycle is billed at full price.
- *   8. Execute: no new invoice is created, and the coupon is gone from Stripe.
- *
- * Red (before):  the empty license list routed to a plan update, crediting the
- *                discounted payment and re-billing the rest of the cycle at full price.
- * Green (after): an empty `upsert_licenses` is a no-op, so only the discount changes.
- */
-
 import { expect, test } from "bun:test";
 import type {
 	ApiCustomerV3,

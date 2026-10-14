@@ -1,9 +1,3 @@
-/**
- * atmn crud/licenses — license plan is itself versioned [links v1, links v2] — version_slug is overlay-hidden, so the link follows the active version; assert that
- *
- * One line of plans/atmn-v3/07_tests.md. [a, b] is a matrix looped INSIDE this file.
- */
-
 import { expect, test } from "bun:test";
 import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 import {
@@ -26,8 +20,6 @@ type CatalogPlanRow = {
 	licenses?: Array<{ licensePlanId: string; included: number }>;
 };
 
-/** The license link has no version_slug field on the wire — it can only ever
- * point at the license plan_id, never a specific version. */
 const seatVersion = ({
 	versionSlug = "v1",
 	amount,
@@ -71,8 +63,6 @@ test.concurrent(
 				expect.objectContaining({ licensePlanId: "seat", included: 25 }),
 			]);
 
-			// Mint seat v2 — enterprise's config is untouched, so the link's
-			// resolution has to move on its own once v2 becomes active.
 			scenario.writeConfig(
 				atmnConfigSource({
 					body: configBody({
@@ -98,8 +88,6 @@ test.concurrent(
 				expect.objectContaining({ licensePlanId: "seat", included: 25 }),
 			]);
 
-			// enterprise's own config never changed, so re-pushing it previews none —
-			// the link didn't need to be restated to follow seat's new active version.
 			await expectPreviewNone({
 				client: scenario.client,
 				wire: await scenario.wireFromConfig(),

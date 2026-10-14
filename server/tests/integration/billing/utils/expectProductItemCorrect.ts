@@ -20,16 +20,6 @@ const getUpcomingQuantityValue = ({
 	return productItem.next_cycle_quantity ?? undefined;
 };
 
-/**
- * Verify a product item (feature) on a customer/entity has the expected quantity values.
- * Useful for checking prepaid/seat quantities after attach or cycle renewal.
- *
- * @param customer - Customer or entity data (can also fetch by customerId)
- * @param productId - The product ID to check (will match products starting with this ID)
- * @param featureId - The feature ID of the item to check
- * @param quantity - Expected current quantity
- * @param upcomingQuantity - Expected upcoming_quantity (undefined means should not exist)
- */
 export const expectProductItemCorrect = async ({
 	customerId,
 	customer: providedCustomer,
@@ -50,7 +40,6 @@ export const expectProductItemCorrect = async ({
 		: await defaultAutumn.customers.get(customerId!);
 
 	const products = customer.products ?? [];
-	// Match products that start with the productId (handles prefixed IDs like "pro_customerId")
 	const product = products.find(
 		(customerProduct) =>
 			customerProduct.id === productId ||
@@ -99,10 +88,6 @@ export const expectProductItemCorrect = async ({
 	}
 };
 
-/**
- * Shorthand for checking quantity and that upcoming_quantity is not set.
- * Common case after cycle renewal when quantity changes take effect.
- */
 export const expectProductItemQuantity = async (params: {
 	customerId?: string;
 	customer?: CustomerOrEntity;

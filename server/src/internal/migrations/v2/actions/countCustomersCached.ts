@@ -11,8 +11,6 @@ import type {
 } from "../filters/customers/buildCustomerSelect.js";
 import { countCustomers } from "../filters/customers/filterCustomers.js";
 
-/** Raw request params, not derived state: `includeProcessed` embeds the active
- * run's internal id, which would churn the key mid-run for no behavior change. */
 export type CustomerCountCacheScope = {
 	migrationId?: string;
 	source?: "filter" | "item_runs";
@@ -21,11 +19,6 @@ export type CustomerCountCacheScope = {
 	migrationRunDryRun?: boolean;
 };
 
-/**
- * `countCustomers` behind a short Redis TTL — exact counts cost seconds of DB
- * CPU on large orgs and every open tab polls them, so identical requests
- * share one execution per TTL window.
- */
 export const countCustomersCached = async ({
 	ctx,
 	filter,

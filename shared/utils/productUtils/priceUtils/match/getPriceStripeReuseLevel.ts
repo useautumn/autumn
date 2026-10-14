@@ -45,15 +45,6 @@ const findPairedEntitlement = ({
 
 const normalizeOptionalId = (value?: string | null) => value || null;
 
-/**
- * Classify how much of the Stripe resource set on `candidatePrice` can be
- * carried forward onto `newPrice` when the two represent the same logical
- * Autumn price across a plan-update or version transition.
- *
- * - "full"               — config + paired entitlement are identical; reuse all stripe_*_id + stripe_event_name fields.
- * - "stripeProductOnly"  — same (feature_id, entity_feature_id) usage scope; reuse stripe_product_id + stripe_meter_id so a new price is created under the existing plan-feature Stripe product/meter.
- * - "none"               — no reuse, or candidate is preview-only.
- */
 export const getPriceStripeReuseLevel = ({
 	newPrice,
 	candidatePrice,
@@ -80,7 +71,6 @@ export const getPriceStripeReuseLevel = ({
 			entitlements: candidateEntitlements,
 		});
 
-		// Both null = same (null) entity scope; both have ents = compare them.
 		if (!newEnt && !candidateEnt) return "full";
 		if (!newEnt || !candidateEnt) return "none";
 		if (entsAreSame(candidateEnt, newEnt)) return "full";

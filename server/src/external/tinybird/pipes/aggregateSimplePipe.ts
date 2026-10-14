@@ -1,12 +1,10 @@
 import type { Tinybird } from "@chronark/zod-bird";
 import { z } from "../tinybirdZod.js";
 
-/** Response schema for the aggregate_simple pipe */
 export const aggregateSimplePipeResponseSchema = z.object({
 	period: z.string(),
 	event_name: z.string(),
 	total_value: z.number(),
-	// Optional so sum queries keep parsing against a deployment predating the column.
 	event_count: z.number().optional(),
 });
 
@@ -14,7 +12,6 @@ export type AggregateSimplePipeRow = z.infer<
 	typeof aggregateSimplePipeResponseSchema
 >;
 
-/** Parameters schema for the aggregate_simple pipe */
 export const aggregateSimplePipeParamsSchema = z.object({
 	org_id: z.string(),
 	env: z.string(),
@@ -35,8 +32,6 @@ export const aggregateSimplePipeParamsSchema = z.object({
 	filter_value_3: z.string().optional(),
 	filter_key_4: z.string().optional(),
 	filter_value_4: z.string().optional(),
-	// UTC month bins over a window with at least one complete calendar month:
-	// complete months come from events_customer_monthly_mv, the edges stay hourly.
 	use_monthly_rollup: z.enum(["0", "1"]).optional(),
 });
 
@@ -44,7 +39,6 @@ export type AggregateSimplePipeParams = z.infer<
 	typeof aggregateSimplePipeParamsSchema
 >;
 
-/** Creates the aggregate_simple pipe caller */
 export const createAggregateSimplePipe = (tb: Tinybird) =>
 	tb.buildPipe({
 		pipe: "aggregate_simple",

@@ -72,8 +72,6 @@ export const approve = ({
 	type: "approve",
 });
 
-/** `Eval()` rejects as a whole when the evaluator times out; the CI gate
- * must see that as a failure rather than a clean exit. */
 const runEval: typeof Eval = async (...args) => {
 	try {
 		return await Eval(...args);
@@ -97,8 +95,6 @@ export const initEval = async <Metadata extends EvalCaseMetadata>({
 	trace,
 }: InitEvalOptions<Metadata>) => {
 	const resolvedDriver = driver ?? createLeafAgentDriver();
-	// Default panel: one named scorer per expectation type the cases declare,
-	// so Braintrust only shows columns a case can actually fail.
 	const resolvedScores =
 		scores ?? scoresFromExpectations(cases.map((testCase) => testCase.expect));
 	const evaluation = await runEval<
@@ -121,18 +117,10 @@ export const initEval = async <Metadata extends EvalCaseMetadata>({
 					setup: setup.tag,
 				},
 			})),
-			// A scorer that throws would otherwise vanish from the results; score
-			// it 0 so the dashboard and the CI gate both see it.
 			errorScoreHandler: defaultErrorScoreHandler,
-			// The Autumn API mock intercepts global fetch per eval context, so
-			// concurrent cases corrupt each other's routing (one case's cleanup
-			// restores fetch mid-flight for the other). Run cases sequentially.
 			maxConcurrency: 1,
 			scores: resolvedScores,
 			task: async (input) => {
-				// The mock API mutates setup state (attach adds a subscription,
-				// updateCustomer rewrites the email), so each case starts from a
-				// fresh copy or earlier cases leak into later ones.
 				const context = await createEvalContext({
 					auth,
 					autumnApiOverrides,

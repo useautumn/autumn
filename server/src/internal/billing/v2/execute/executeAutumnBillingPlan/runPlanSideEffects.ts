@@ -11,7 +11,6 @@ import { reconcileLicenseStateForCustomer } from "@/internal/licenses/actions/re
 import { SubService } from "@/internal/subscriptions/SubService";
 import { workflows } from "@/queue/workflows";
 
-/** Customer-only plans (links, profile fields, subscription upserts) leave the shared credits allocations divide alone. */
 const planMayMoveSharedCredits = (plan: AutumnBillingPlan): boolean =>
 	plan.insertCustomerProducts.length > 0 ||
 	Boolean(plan.updateCustomerProduct) ||
@@ -26,7 +25,6 @@ const planMayMoveSharedCredits = (plan: AutumnBillingPlan): boolean =>
 	Boolean(plan.autoTopupRebalance) ||
 	Boolean(plan.oneOffPurchaseRebalance);
 
-/** After the plan's rows commit: what reads them back or reaches past them (seat convergence, ledgers, workflows, reconcile). */
 export const runPlanSideEffects = async ({
 	ctx,
 	autumnBillingPlan,
@@ -61,7 +59,6 @@ export const runPlanSideEffects = async ({
 		});
 	}
 
-	// Store invoice line items (async via SQS)
 	if (invoice && stripeInvoice) {
 		await workflows.triggerStoreInvoiceLineItems({
 			orgId: ctx.org.id,
@@ -72,8 +69,6 @@ export const runPlanSideEffects = async ({
 		});
 	}
 
-	// Store deferred line items (ProrateNextCycle pending items)
-	// These are invoice items created without an invoice — stored with invoice_id = null
 	if (
 		stripeInvoiceItems &&
 		stripeInvoiceItems.length > 0 &&

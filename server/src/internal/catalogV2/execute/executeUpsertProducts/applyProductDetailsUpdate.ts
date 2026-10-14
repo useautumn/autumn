@@ -4,7 +4,6 @@ import { ProductService } from "@/internal/products/ProductService.js";
 import { deactivateOtherActiveProducts } from "@/internal/products/repos/activateHighestRemainingProduct";
 import { updateStripeProductNames } from "@/internal/products/stripeResourceUtils/updateStripeProductNames.js";
 
-/** Rename syncs to Stripe only for bases — variants share the base's Stripe Product. */
 const renamesOwnedStripeProduct = ({
 	upsert,
 }: {

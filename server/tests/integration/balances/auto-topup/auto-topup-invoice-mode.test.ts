@@ -170,7 +170,6 @@ test.concurrent(`${chalk.yellowBright("auto-topup invoice-mode: multiple sequent
 		}),
 	});
 
-	// Round 1: Track 85 → balance = 15 → top-up fires → balance = 115
 	await autumnV2_1.track({
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
@@ -195,7 +194,6 @@ test.concurrent(`${chalk.yellowBright("auto-topup invoice-mode: multiple sequent
 		latestInvoiceProductId: oneOffProd.id,
 	});
 
-	// Round 2: Track 100 → balance = 15 → second top-up fires → balance = 115
 	await autumnV2_1.track({
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
@@ -220,7 +218,6 @@ test.concurrent(`${chalk.yellowBright("auto-topup invoice-mode: multiple sequent
 		latestInvoiceProductId: oneOffProd.id,
 	});
 
-	// Verify limit state recorded both as successes, not failures
 	expect(Boolean(customer?.internal_id)).toBe(true);
 	const limitState = await autoTopupLimitRepo.findByScope({
 		ctx,

@@ -1,14 +1,3 @@
-/**
- * TDD contract for invitation-only SSO membership.
- *
- * Contract under test:
- * - a verified SSO callback accepts only an unexpired invitation for the exact email
- * - the invitation's role is copied unchanged to the new membership
- * - the SSO organization becomes active before the session is created
- * - an uninvited SSO account is removed and session creation is rejected
- * - once SSO is active, non-SSO session creation for the domain is rejected
- */
-
 import { expect, test } from "bun:test";
 import {
 	account,

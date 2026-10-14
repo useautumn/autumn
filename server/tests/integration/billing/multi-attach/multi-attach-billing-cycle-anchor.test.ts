@@ -51,7 +51,6 @@ test(`${chalk.yellowBright("multi-attach billing-cycle-anchor: 'now' resets the 
 		active: [pro.id, addOn.id],
 	});
 
-	// The anchor reset moves the pre-existing plan's cycle too, not just the new one.
 	const resetAt = addMonths(advancedTo, 1).getTime();
 
 	await expectBalanceCorrect({

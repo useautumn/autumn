@@ -1,8 +1,3 @@
-/**
- * catalogV2.update — item/price omit-semantics and per-facet shape changes
- * (no customers). Assert via catalogV2.get.
- */
-
 import { test } from "bun:test";
 import {
 	BillingInterval,

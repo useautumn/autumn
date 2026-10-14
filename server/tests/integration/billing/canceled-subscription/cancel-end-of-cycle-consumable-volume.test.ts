@@ -1,8 +1,3 @@
-/**
- * Cancelling a pay-per-use volume plan at end of cycle still bills the period's overage past included
- * in a final invoice, on its net tier. Each case checks the upcoming-invoice preview equals that invoice.
- */
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3 } from "@autumn/shared";
 import { expectProductNotPresent } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
@@ -56,7 +51,6 @@ const runVolumeCancelEndOfCycle = async ({
 		expectedFeatureAmount: expectedUsageAmount,
 	});
 
-	// Nothing recurs past the cancel, so the final invoice is the usage alone.
 	expect(preview.total).toBeCloseTo(expectedUsageAmount, 2);
 	expect(renewalInvoice.total).toBeCloseTo(expectedUsageAmount, 2);
 
@@ -68,7 +62,6 @@ const runVolumeCancelEndOfCycle = async ({
 test.concurrent(
 	`${chalk.yellowBright("cancel-end-of-cycle-consumable-volume 1: 100 included, 700 used → 600 over in net band 2: 600 × $0.05 = $30 final invoice")}`,
 	async () => {
-		// Net tiers 0-500/501+ are total-usage bands 0-600/601+ once 100 are included.
 		await runVolumeCancelEndOfCycle({
 			customerId: "cancel-eoc-cons-volume-band2",
 			includedUsage: 100,
@@ -81,7 +74,6 @@ test.concurrent(
 test.concurrent(
 	`${chalk.yellowBright("cancel-end-of-cycle-consumable-volume 2: no included, 300 used → band 1: 300 × $0.10 = $30 final invoice")}`,
 	async () => {
-		// 300 × $0.10 = $30.
 		await runVolumeCancelEndOfCycle({
 			customerId: "cancel-eoc-cons-volume-band1",
 			includedUsage: 0,

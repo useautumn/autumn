@@ -9,10 +9,6 @@ import {
 	type UsagePriceConfig,
 } from "@autumn/shared";
 
-/**
- * Converts a usage-in-arrear (consumable) price to a StripeItemSpec.
- * For entity-scoped / beta API / Vercel, uses the empty price with quantity 0.
- */
 export const consumableToStripeItemSpec = ({
 	cusEntWithCusProduct,
 	currency,

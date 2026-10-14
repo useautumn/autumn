@@ -56,12 +56,6 @@ export const resolveAttachExistingUsagesConfig = ({
 	};
 };
 
-/**
- * Creates the new FullCusProduct to insert when attaching a product.
- *
- * For upgrades (planTiming === "immediate"): creates an active product
- * For downgrades (planTiming === "end_of_cycle"): creates a scheduled product that starts at endOfCycleMs
- */
 type ComputeAttachNewCustomerProductParams = {
 	ctx: AutumnContext;
 	attachBillingContext: AttachBillingContext;
@@ -101,8 +95,6 @@ const computeAttachNewCustomerProductResult = ({
 		invoiceMode,
 	} = attachBillingContext;
 
-	// multiAttach / scheduled-activation contexts don't set the carry-over source;
-	// fall back to the same-group product so their carry-over is preserved.
 	const carryOverSource =
 		carryOverSourceCustomerProduct ?? currentCustomerProduct;
 
@@ -128,7 +120,6 @@ const computeAttachNewCustomerProductResult = ({
 
 	const isRevertTrial =
 		isRevertTrialContext({ trialContext }) && planTiming === "immediate";
-	// on_trial_end "bill" tells the product cron it owns this trial's end; legacy trials stay null.
 	const isAutumnManagedBillTrial =
 		isAutumnManagedBillTrialContext({ trialContext }) &&
 		planTiming === "immediate";
@@ -173,7 +164,6 @@ const computeAttachNewCustomerProductResult = ({
 			externalId,
 			processorType: processorTypeOverride,
 			...(processorOverride ? { processor: processorOverride } : {}),
-			// A new subscription is created on the anchor; an existing one resets to it later.
 			billingCycleAnchorResetsAt: stripeSubscription
 				? getRequestedBillingCycleAnchorResetAt({
 						requestedBillingCycleAnchor:

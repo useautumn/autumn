@@ -1,12 +1,3 @@
-/**
- * A thread's pulls, driven step by step: each call to Autumn is a deferred the test settles, and the clock is the test's.
- *
- *  5.1 one miss, one pull; 5.2 (R10) misses of a subject already pulled never pull it again;
- *  5.3 past the in-flight cap a miss is dropped, not held; any answer holds the subject 30 s from its miss;
- *  only a stored body is a fill; an unknown token (the shadow's) holds the whole folder, unlogged;
- *  failures are logged at most once per hold; 5.14 once stopped nothing is pulled or stored.
- */
-
 import { describe, expect, test } from "bun:test";
 import { AutumnClientError } from "../../../src/autumnClient/autumnClientError.js";
 import {
@@ -19,7 +10,6 @@ import type { ThreadStatField } from "../../../src/threads/stats/threadStats.js"
 
 const MINUTE_MS = 60_000;
 
-/** Every promise continuation already queued runs before a macrotask: a settled pull is fully applied after this. */
 const drainMicrotasks = () =>
 	new Promise<void>((resolve) => setImmediate(resolve));
 
@@ -31,7 +21,6 @@ const NOT_HELD = refusal({ status: 409, code: "subject_not_held" });
 const ATOM_UNKNOWN = refusal({ status: 401, code: "atom_unknown" });
 const WORKER_DOWN = refusal({ status: 503, code: "worker_unavailable" });
 
-/** A thread's pulls whose every call to Autumn waits for the test to answer it: a body, or the error it rejects with. */
 const createHarness = ({
 	applyPulled = async () => true,
 }: {

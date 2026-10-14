@@ -1,5 +1,3 @@
-/** A pooled allowance across entities with saved future phases, for hand QA of the Set Plans review. */
-
 import { test } from "bun:test";
 import { ms } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features";

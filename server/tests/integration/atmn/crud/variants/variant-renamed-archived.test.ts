@@ -1,9 +1,3 @@
-/**
- * atmn crud/variants — variant archived
- *
- * Renaming is not covered: atmn configs never send `newPlanId`.
- */
-
 import { expect, test } from "bun:test";
 import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 import {

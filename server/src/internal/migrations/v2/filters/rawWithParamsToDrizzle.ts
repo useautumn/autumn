@@ -1,7 +1,6 @@
 import { type SQL, sql } from "drizzle-orm";
 import { PgDialect } from "drizzle-orm/pg-core";
 
-/** Convert a Drizzle SQL chunk to the compiler's `{ sql, params }` shape. */
 export const drizzleToRawWithParams = (query: SQL) => {
 	const compiled = new PgDialect().sqlToQuery(query);
 	return {
@@ -10,7 +9,6 @@ export const drizzleToRawWithParams = (query: SQL) => {
 	};
 };
 
-/** Convert the compiler's `{ sql, params }` output to a Drizzle SQL chunk. */
 export const rawWithParamsToDrizzle = ({
 	sql: raw,
 	params,

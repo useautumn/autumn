@@ -19,7 +19,7 @@ import { useCustomerFilters } from "../../hooks/useCustomerFilters";
 interface SavedView {
 	id: string;
 	name: string;
-	filters: string; // base64 encoded
+	filters: string;
 	created_at: string;
 }
 
@@ -38,11 +38,9 @@ export const SavedViews = ({
 
 	const applyView = async (view: SavedView) => {
 		try {
-			// Decode base64 filters
 			const decodedParams = atob(view.filters);
 			const params = new URLSearchParams(decodedParams);
 
-			// Apply all parameters using setFilters (this will reset pagination automatically)
 			const statusParam = params.get("status") || "";
 			const versionParam = params.get("version") || "";
 			const noneParam = params.get("none");

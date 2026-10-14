@@ -8,14 +8,6 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { stripeItemSpecToPhaseAddInvoiceItem } from "@/internal/billing/v2/providers/stripe/utils/stripeItemSpec/stripeItemSpecToStripeParam";
 import { customerProductToStripeItemSpecs } from "@/internal/billing/v2/providers/stripe/utils/subscriptionItems/customerProductToStripeItemSpecs";
 
-/**
- * One-off prices (e.g. onboarding fees) for products that START within this
- * phase window, as `add_invoice_items`. Restricting to the starting phase
- * stops a product spanning multiple phases being charged its fee repeatedly.
- *
- * One-off fees on a future-dated attach are always billed when the plan
- * activates (never up front), so they live on the activating phase here.
- */
 export const customerProductsToPhaseInvoiceItems = ({
 	ctx,
 	billingContext,
@@ -32,15 +24,12 @@ export const customerProductsToPhaseInvoiceItems = ({
 	const addInvoiceItems: Stripe.SubscriptionScheduleUpdateParams.Phase.AddInvoiceItem[] =
 		[];
 
-	// One-off items don't inherit the subscription's default_tax_rates, so a manual
-	// rate must be set per item or the deferred charge is billed untaxed.
 	const taxRates = billingContext.taxRateId
 		? [billingContext.taxRateId]
 		: undefined;
 
 	for (const customerProduct of customerProducts) {
 		const productStartsAt = customerProduct.starts_at;
-		// Avoid re-billing an active plan's one-off fees when a schedule is rebuilt in the same second it started.
 		if (
 			customerProduct.status === CusProductStatus.Active &&
 			productStartsAt <= billingContext.currentEpochMs

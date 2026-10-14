@@ -1,10 +1,3 @@
-/**
- * catalogV2.update — free_trial on versioning: "new_version", active: true mint.
- *
- * Omitted trial is copied onto v2 with a new free_trials row id; null removes
- * it from v2 only; a changed shape lands on v2. v1's trial row is never touched.
- */
-
 import { expect, test } from "bun:test";
 import {
 	BillingInterval,

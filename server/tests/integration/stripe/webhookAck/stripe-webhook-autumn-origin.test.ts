@@ -1,23 +1,3 @@
-/**
- * TDD test for phase 2: Autumn-originated Stripe writes carry an
- * "autumn:"-prefixed idempotency key, observable on the resulting Stripe
- * events via event.request.idempotency_key. This is what lets the webhook
- * ack classifier recognize "we caused this" with no per-type heuristics.
- *
- * Contract under test:
- *   New behaviors:
- *     - v2 billing.attach creates the Stripe subscription through
- *       executeStripeSubscriptionOperation with an idempotencyKey of the form
- *       autumn:<source>:<uuid>.
- *   Side effects (observable via the Stripe Events API):
- *     - customer.subscription.created events produced by attach have
- *       event.request.idempotency_key starting with "autumn:".
- *
- * Pre-impl red: no billing write passes an idempotency key, so
- * event.request.idempotency_key is a Stripe-generated value (no prefix).
- * Post-impl green: subscription events from attach carry the autumn prefix.
- */
-
 import { expect, test } from "bun:test";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
@@ -44,8 +24,6 @@ test.concurrent(
 			actions: [s.billing.attach({ productId: pro.id })],
 		});
 
-		// ── Contract assertion: sub.created events from this attach are
-		// stamped with an autumn:-prefixed request idempotency key ─────
 		const events = await ctx.stripeCli.events.list({
 			type: "customer.subscription.created",
 			created: { gte: testStartSeconds },

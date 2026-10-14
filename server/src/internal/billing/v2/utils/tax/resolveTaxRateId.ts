@@ -1,6 +1,5 @@
 import { ErrCode, RecaseError, type TaxParams } from "@autumn/shared";
 
-/** `tax.rate_id` wins over the legacy top-level `tax_rate_id`; a rate can't be combined with automatic tax. */
 export const resolveTaxRateId = ({
 	tax,
 	taxRateId,

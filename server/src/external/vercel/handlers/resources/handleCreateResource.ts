@@ -222,8 +222,6 @@ export const handleCreateResource = createRoute({
 					},
 				});
 			} catch (error) {
-				// Lost the create race against a concurrent request for the same
-				// (installation_id, name). Re-read and return the winner idempotently.
 				if (!isUniqueConstraintError(error)) throw error;
 				const winner =
 					await VercelResourceService.getByInstallationAndName({

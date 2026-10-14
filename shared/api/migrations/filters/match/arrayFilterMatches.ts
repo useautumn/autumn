@@ -1,12 +1,3 @@
-/**
- * Generic in-memory evaluator for the `arrayFilter` quantifier shape.
- *
- * `filter` is either a bare element filter (implicit `$some`) or a
- * `{ $some?, $every?, $none? }` wrapper. Multiple quantifiers in the
- * same wrapper are AND'd.
- *
- * Reusable across any nav — pass the element matcher as `matchesElement`.
- */
 export type ArrayQuantifierFilter<ElementFilter> =
 	| ElementFilter
 	| {

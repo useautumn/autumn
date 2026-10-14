@@ -7,7 +7,6 @@ import { planRowKey } from "../utils/planRowKey";
 import { PlanTraySectionTitle } from "./tray/PlanTraySectionTitle";
 import { UnscheduledPlanRow } from "./UnscheduledPlanRow";
 
-/** Ongoing plans: billed with the first phase and never ended by the schedule. */
 export function CustomerStateUnscheduledPlans({
 	withSeparator = false,
 }: {

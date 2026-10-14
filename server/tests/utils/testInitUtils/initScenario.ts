@@ -36,10 +36,6 @@ import {
 } from "./createSubOrgTestContext.js";
 import defaultCtx, { type TestContext } from "./createTestContext.js";
 
-// ═══════════════════════════════════════════════════════════════════
-// TYPES
-// ═══════════════════════════════════════════════════════════════════
-
 type FeatureOption = {
 	feature_id: string;
 	quantity: number;
@@ -80,7 +76,6 @@ type OtherCustomerConfig = {
 		| "us_bank_account"
 		| "us_bank_account_processing";
 	data?: CustomerData;
-	/** Create a separate Stripe test clock for this customer instead of sharing the primary customer's clock */
 	distinctTestClock?: boolean;
 };
 
@@ -96,7 +91,6 @@ type RewardConfig = {
 
 type FeatureGrantEntitlement = {
 	feature_id: string;
-	// Optional: boolean features grant on/off access with no allowance
 	allowance?: number;
 	expiry?: { duration: EntitlementDuration; length: number };
 };
@@ -112,11 +106,10 @@ type FeatureGrantConfig = {
 	}[];
 };
 
-// Discriminated union for all action types
 type AttachAction = {
 	type: "attach";
 	productId: string;
-	customerId?: string; // Override: use this customer instead of primary
+	customerId?: string;
 	entityIndex?: number;
 	options?: FeatureOption[];
 	newBillingSubscription?: boolean;
@@ -179,14 +172,14 @@ type AdvanceToNextInvoiceAction = {
 type BillingAttachAction = {
 	type: "billingAttach";
 	productId: string;
-	customerId?: string; // Override: use this customer instead of primary
+	customerId?: string;
 	entityIndex?: number;
 	options?: FeatureOption[];
 	licenseQuantities?: LicenseQuantityOption[];
 	newBillingSubscription?: boolean;
 	planSchedule?: PlanTiming;
 	timeout?: number;
-	items?: ProductItem[]; // Custom product items (creates is_custom product)
+	items?: ProductItem[];
 	subscriptionId?: string;
 	invoice?: boolean;
 	enableProductImmediately?: boolean;
@@ -325,11 +318,6 @@ type ScenarioConfig = {
 
 type ConfigFn = (config: ScenarioConfig) => ScenarioConfig;
 
-// ═══════════════════════════════════════════════════════════════════
-// HELPER FUNCTIONS
-// ═══════════════════════════════════════════════════════════════════
-
-/** Builds entities with ids "ent-1", "ent-2", etc. */
 const generateEntities = (config: EntityConfig): GeneratedEntity[] => {
 	return Array.from({ length: config.count }, (_, i) => ({
 		id: `ent-${i + 1}`,
@@ -338,16 +326,6 @@ const generateEntities = (config: EntityConfig): GeneratedEntity[] => {
 	}));
 };
 
-// ═══════════════════════════════════════════════════════════════════
-// SCENARIO CONFIG FUNCTIONS (s.*)
-// ═══════════════════════════════════════════════════════════════════
-
-/**
- * Configure customer options: test clock, payment method, data, default product.
- * Pass `name: null` / `email: null` for a nameless / emailless customer.
- * @example s.customer({ paymentMethod: "success" })
- * @example s.customer({ withDefault: true, defaultGroup: "enterprise" })
- */
 const customer = ({
 	testClock = true,
 	paymentMethod,
@@ -393,11 +371,6 @@ const customer = ({
 	});
 };
 
-/**
- * Products for this scenario. Auto-prefixed with customerId for isolation.
- * @example s.products({ list: [pro, free] })
- * @example s.products({ list: [freeDefault], prefix: "my-prefix" })
- */
 const products = ({
 	list,
 	prefix,
@@ -418,10 +391,6 @@ const products = ({
 	});
 };
 
-/**
- * Auto-generates entities with ids "ent-1", "ent-2", etc.
- * @example s.entities({ count: 2, featureId: TestFeature.Users })
- */
 const entities = ({
 	count,
 	featureId,
@@ -437,23 +406,10 @@ const entities = ({
 	});
 };
 
-/**
- * Define additional customers for this test scenario.
- * Useful for referral tests where you need a referrer and redeemer.
- * By default, other customers share the primary customer's test clock.
- * Use `distinctTestClock: true` to give a customer its own clock (avoids Stripe's 3-customer-per-clock limit).
- * All test clock IDs are returned in the `testClockIds` dict keyed by customer ID.
- * @example s.otherCustomers([{ id: "redeemer", paymentMethod: "success" }])
- * @example s.otherCustomers([{ id: "redeemer", paymentMethod: "success", distinctTestClock: true }])
- */
 const otherCustomers = (customers: OtherCustomerConfig[]): ConfigFn => {
 	return (config) => ({ ...config, otherCustomers: customers });
 };
 
-/**
- * Referral program. IDs auto-suffixed with productPrefix for isolation.
- * @example s.referralProgram({ reward: rewards.monthOff(), program: referralPrograms.onCheckoutReferrer({...}) })
- */
 const referralProgramSetup = ({
 	reward,
 	program,
@@ -464,10 +420,6 @@ const referralProgramSetup = ({
 	return (config) => ({ ...config, referralProgram: { reward, program } });
 };
 
-/**
- * Reward/coupon. Reward ID auto-suffixed with productPrefix.
- * @example s.reward({ reward: constructCoupon({ id: "50-off", discountValue: 50, ... }), productId: "pro" })
- */
 const rewardSetup = ({
 	reward,
 	productId,
@@ -481,12 +433,6 @@ const rewardSetup = ({
 	});
 };
 
-/**
- * Attach a product to the customer or an entity. Product ID auto-prefixed.
- * @example s.attach({ productId: "pro" })
- * @example s.attach({ productId: "pro", entityIndex: 0 })
- * @example s.attach({ productId: "pro", options: [{ feature_id: "messages", quantity: 100 }] })
- */
 const attach = ({
 	productId,
 	customerId,
@@ -521,11 +467,6 @@ const attach = ({
 	});
 };
 
-/**
- * Cancel a product subscription for the customer or an entity.
- * @example s.cancel({ productId: "pro" })
- * @example s.cancel({ productId: "pro", entityIndex: 0 })
- */
 const cancel = ({
 	productId,
 	entityIndex,
@@ -542,12 +483,6 @@ const cancel = ({
 	});
 };
 
-/**
- * Advance the Stripe test clock. Successive calls chain from the previous endpoint.
- * @example s.advanceTestClock({ days: 15 })
- * @example s.advanceTestClock({ toNextInvoice: true })
- * @example s.advanceTestClock({ days: 8, waitForSeconds: 30 })
- */
 const advanceTestClock = ({
 	days,
 	weeks,
@@ -580,10 +515,6 @@ const advanceTestClock = ({
 	});
 };
 
-/**
- * Attach/replace the customer's payment method. Useful for mid-scenario PM swaps.
- * @example s.attachPaymentMethod({ type: "authenticate" })
- */
 const attachPaymentMethod = ({
 	type,
 }: {
@@ -607,7 +538,6 @@ const attachPaymentMethod = ({
 	});
 };
 
-/** Remove all of the customer's payment methods. */
 const removePaymentMethod = (): ConfigFn => {
 	return (config) => ({
 		...config,
@@ -625,11 +555,6 @@ const warmEntityCaches = (): ConfigFn => (config) => ({
 	actions: [...config.actions, { type: "warmEntityCaches" }],
 });
 
-/**
- * Track feature usage for the customer or an entity.
- * @example s.track({ featureId: TestFeature.Messages, value: 300 })
- * @example s.track({ featureId: TestFeature.Messages, value: 250, entityIndex: 0 })
- */
 const track = ({
 	featureId,
 	value,
@@ -659,11 +584,6 @@ const track = ({
 	});
 };
 
-/**
- * Update a subscription (cancel end-of-cycle, add items, etc.).
- * @example s.updateSubscription({ productId: "pro", cancelAction: "cancel_end_of_cycle" })
- * @example s.updateSubscription({ productId: "pro", items: [consumableItem] })
- */
 const updateSubscription = ({
 	productId,
 	entityIndex,
@@ -690,10 +610,6 @@ const updateSubscription = ({
 	});
 };
 
-/**
- * Advance the test clock to the next invoice cycle. `withPause` advances in
- * two steps (month boundary, then finalize).
- */
 const advanceToNextInvoice = ({
 	withPause,
 }: {
@@ -711,11 +627,6 @@ const advanceToNextInvoice = ({
 	});
 };
 
-/**
- * Reset a feature's usage cycle. Use for FREE products (no Stripe sub);
- * use s.advanceToNextInvoice() for PAID products.
- * @example s.resetFeature({ featureId: TestFeature.Messages })
- */
 const resetFeature = ({
 	featureId,
 	timeout,
@@ -736,11 +647,6 @@ const resetFeature = ({
 	});
 };
 
-/**
- * Delete a customer before the test runs (silent if missing). Clears cache via API.
- * @example s.deleteCustomer({ customerId: "test-customer" })
- * @example s.deleteCustomer({ email: "test@example.com" })
- */
 const deleteCustomer = (
 	params: { customerId: string } | { email: string },
 ): ConfigFn => {
@@ -767,13 +673,6 @@ const deleteCustomer = (
 	};
 };
 
-/**
- * Attach a product via /v1/billing.attach (V2). Product ID auto-prefixed.
- * Add-on lives on the product (`products.recurringAddOn()`), not here.
- * @example s.billing.attach({ productId: "pro" })
- * @example s.billing.attach({ productId: "pro", planSchedule: "end_of_cycle" })
- * @example s.billing.attach({ productId: "pro", items: [items.monthlyMessages({ includedUsage: 750 })] })
- */
 const billingAttach = ({
 	productId,
 	customerId,
@@ -832,10 +731,6 @@ const billingAttach = ({
 	});
 };
 
-/**
- * Multi-attach via /billing.multi_attach.
- * @example s.billing.multiAttach({ plans: [{ productId: "pro" }, { productId: "addon" }] })
- */
 const billingMultiAttach = ({
 	plans,
 	entityIndex,
@@ -864,7 +759,6 @@ const billingMultiAttach = ({
 	});
 };
 
-/** Top-level alias for billing multi-attach. */
 const multiAttach = billingMultiAttach;
 
 const linkLicense =
@@ -925,7 +819,6 @@ const assignLicense =
 		],
 	});
 
-/** Run independent scenario actions concurrently. */
 const parallel = (...actions: ConfigFn[]): ConfigFn => {
 	return (config) => {
 		const parallelConfig = actions.reduce((c, fn) => fn(c), {
@@ -943,12 +836,6 @@ const parallel = (...actions: ConfigFn[]): ConfigFn => {
 	};
 };
 
-/**
- * Define a feature grant reward for this test scenario.
- * Inserts a reward of type `feature_grant` with entitlements and promo codes.
- * Feature IDs are external (e.g., TestFeature.Messages) and resolved to internal IDs during setup.
- * @param config - Feature grant configuration
- */
 const featureGrant = (config: FeatureGrantConfig): ConfigFn => {
 	return (scenarioConfig) => ({
 		...scenarioConfig,
@@ -956,11 +843,6 @@ const featureGrant = (config: FeatureGrantConfig): ConfigFn => {
 	});
 };
 
-/**
- * Redeem a reward promo code for a customer.
- * @param code - The promo code to redeem
- * @param customerId - Optional: use this customer instead of primary
- */
 const redeemReward = ({
 	code,
 	customerId,
@@ -977,11 +859,6 @@ const redeemReward = ({
 	});
 };
 
-// ═══════════════════════════════════════════════════════════════════
-// REFERRAL ACTIONS
-// ═══════════════════════════════════════════════════════════════════
-
-/** Create a referral code (requires s.referralProgram()). */
 const createReferralCode = (): ConfigFn => {
 	return (config) => ({
 		...config,
@@ -989,7 +866,6 @@ const createReferralCode = (): ConfigFn => {
 	});
 };
 
-/** Redeem the referral code for `customerId` (requires s.referral.createCode() first). */
 const redeemReferralCode = ({
 	customerId,
 }: {
@@ -1004,7 +880,6 @@ const redeemReferralCode = ({
 	});
 };
 
-/** Create code on primary, redeem for `customerId` in one step. */
 const createAndRedeemReferralCode = ({
 	customerId,
 }: {
@@ -1019,23 +894,6 @@ const createAndRedeemReferralCode = ({
 	});
 };
 
-/**
- * Provision a fresh platform sub-org via `POST /platform/organizations` and
- * rebind ctx to it for the rest of the scenario. Use to isolate tests that
- * mutate org-level config.
- *
- * Sub-orgs are NOT auto-cleaned; `bun cm` runs `clearMasterOrg` to delete
- * them. Slugs are randomized by default to avoid collisions.
- *
- * @param slug - Sub-org slug; defaults to randomized "tax-XXXXXX".
- * @param name - Display name; defaults to slug.
- * @param userEmail - Owner email; defaults to a hex-encoded slug address (unique per sub-org).
- * @param configOverrides - Merged into the sub-org's config jsonb.
- * @param taxRegistrations - Countries to register Stripe Tax for.
- * @param setupDefaultFeatures - Inserts standard test features on the sub-org.
- *
- * @example s.platform.create({ configOverrides: { automatic_tax: true }, taxRegistrations: ["AU"] })
- */
 const platformCreate = (cfg: PlatformCreateConfig = {}): ConfigFn => {
 	return (config) => ({
 		...config,
@@ -1043,7 +901,6 @@ const platformCreate = (cfg: PlatformCreateConfig = {}): ConfigFn => {
 	});
 };
 
-/** Scenario configuration functions for use with `initScenario`. */
 export const s = {
 	customer,
 	otherCustomers,
@@ -1086,10 +943,6 @@ export const s = {
 	},
 } as const;
 
-// ═══════════════════════════════════════════════════════════════════
-// INIT SCENARIO
-// ═══════════════════════════════════════════════════════════════════
-
 const defaultConfig: ScenarioConfig = {
 	testClock: false,
 	withDefault: false,
@@ -1107,20 +960,6 @@ const defaultConfig: ScenarioConfig = {
 	featureGrants: [],
 };
 
-/**
- * Build a test scenario from setup/actions config functions. Customer
- * creation is skipped when `customerId` is omitted (useful for null-id tests).
- * Actions execute in array order.
- *
- * @example
- * ```typescript
- * const { autumnV1, ctx } = await initScenario({
- *   customerId: "simple-test",
- *   setup: [s.customer({ paymentMethod: "success" }), s.products({ list: [free] })],
- *   actions: [s.attach({ productId: "base" })],
- * });
- * ```
- */
 type OtherCustomerResult = {
 	id: string;
 	customer: Awaited<ReturnType<typeof initCustomerV3>>["customer"];
@@ -1151,7 +990,6 @@ type InitScenarioImplementationResult = {
 	redemption: RewardRedemption | null;
 };
 
-// customerId provided -> customerId: string in return.
 export async function initScenario(params: {
 	customerId: string;
 	setup: ConfigFn[];
@@ -1182,7 +1020,6 @@ export async function initScenario(params: {
 	redemption: RewardRedemption | null;
 }>;
 
-// customerId omitted -> customerId: undefined in return.
 export async function initScenario(params: {
 	customerId?: undefined;
 	setup: ConfigFn[];
@@ -1224,19 +1061,15 @@ export async function initScenario({
 	actions: ConfigFn[];
 	ctx?: TestContext;
 }): Promise<InitScenarioImplementationResult> {
-	// Use override or default ctx; may be rebound below if s.platform.create.
 	let ctx = ctxOverride ?? defaultCtx;
 	const config = [...setup, ...actions].reduce((c, fn) => fn(c), defaultConfig);
 
-	// Sub-org provisioning runs first so subsequent setup hits the sub-org.
 	if (config.platformConfig) {
 		const masterAutumn = new AutumnInt({ secretKey: ctx.orgSecretKey });
 
 		const slug =
 			config.platformConfig.slug ??
 			`tax-${Math.random().toString(36).slice(2, 8)}`;
-		// Hex-encoded slug keeps the address valid for any z.string() slug,
-		// unique per sub-org, and stable so same-slug re-provisioning reuses the user.
 		const userEmail =
 			config.platformConfig.userEmail ??
 			`platform-${Buffer.from(slug).toString("hex")}@autumn.test`;
@@ -1269,18 +1102,15 @@ export async function initScenario({
 		);
 	}
 
-	// Generate entities from config
 	const generatedEntities = config.entityConfig
 		? generateEntities(config.entityConfig)
 		: [];
 
-	// Create a cleanup autumn client
 	const cleanupAutumn = new AutumnInt({
 		version: ApiVersion.V1_2,
 		secretKey: ctx.orgSecretKey,
 	});
 
-	// 0. Run cleanup - delete customers by ID and email before test
 	for (const customerIdToDelete of config.cleanup.customerIdsToDelete) {
 		try {
 			await cleanupAutumn.customers.delete(customerIdToDelete);
@@ -1302,8 +1132,6 @@ export async function initScenario({
 		}
 	}
 
-	// 1. Products + previous-customer cleanup. Prefix priority:
-	// productPrefix > customerId > "shared".
 	const productPrefix = config.productPrefix ?? customerId ?? "shared";
 
 	const otherCustomerIds = config.otherCustomers.map((c) => c.id);
@@ -1322,11 +1150,9 @@ export async function initScenario({
 		});
 	}
 
-	// 1.5. Referral program. Suffix IDs with productPrefix for isolation.
 	if (config.referralProgram) {
 		const { reward, program } = config.referralProgram;
 
-		// Suffix reward ID and free_product_id (if set)
 		reward.id = `${reward.id}_${productPrefix}`;
 		if (reward.free_product_id) {
 			reward.free_product_id = `${reward.free_product_id}_${productPrefix}`;
@@ -1351,7 +1177,6 @@ export async function initScenario({
 		});
 	}
 
-	// 1.6. Standalone rewards. Suffix IDs with productPrefix.
 	for (const rewardConfig of config.rewards) {
 		const { reward, productId } = rewardConfig;
 
@@ -1368,11 +1193,9 @@ export async function initScenario({
 		});
 	}
 
-	// 1.7. Insert feature grant rewards (if configured)
 	for (const fg of config.featureGrants) {
 		const rewardId = fg.id ?? `feature-grant-${Date.now()}`;
 
-		// Resolve external feature_ids to internal_feature_ids
 		const resolvedEntitlements: RewardEntitlement[] = fg.entitlements.map(
 			(ent) => {
 				const feature = ctx.features.find((f) => f.id === ent.feature_id);
@@ -1409,7 +1232,6 @@ export async function initScenario({
 		});
 	}
 
-	// 2. Initialize customer (only if customerId is provided)
 	let testClockId: string | undefined;
 	let customer: Awaited<ReturnType<typeof initCustomerV3>>["customer"] | null =
 		null;
@@ -1422,7 +1244,6 @@ export async function initScenario({
 			attachPm: config.attachPm,
 			withTestClock: config.testClock,
 			withDefault: config.withDefault ?? false,
-			// Default group matches the product prefix used in initProductsV0.
 			defaultGroup: config.defaultGroup ?? customerId,
 			skipWebhooks: config.skipWebhooks,
 			sendEmailReceipts: config.sendEmailReceipts,
@@ -1434,7 +1255,6 @@ export async function initScenario({
 		customer = result.customer;
 	}
 
-	// 2.5. Initialize other customers (share test clock with primary customer unless distinctTestClock is set)
 	const otherCustomersMap = new Map<string, OtherCustomerResult>();
 	const testClockIds: Record<string, string> = {};
 	if (testClockId && customerId) {
@@ -1464,7 +1284,6 @@ export async function initScenario({
 		}
 	}
 
-	// 3. Create autumn clients
 	const autumnV0 = new AutumnInt({
 		version: ApiVersion.V0_2,
 		secretKey: ctx.orgSecretKey,
@@ -1506,7 +1325,6 @@ export async function initScenario({
 		secretKey: ctx.orgSecretKey,
 	});
 
-	// 4. Entities (requires customerId).
 	if (generatedEntities.length > 0) {
 		if (!customerId) {
 			throw new Error(
@@ -1529,11 +1347,8 @@ export async function initScenario({
 		await autumnV1.entities.create(customerId, entityDefs);
 	}
 
-	// 5. Run actions in order.
 	let advancedTo: number = Date.now();
 	const licenseAssignments: GeneratedLicenseAssignment[] = [];
-	// plans.update takes the complete link set, so sequential link actions on
-	// the same parent accumulate here instead of clobbering earlier links.
 	const catalogLinksByParent = new Map<string, Record<string, unknown>[]>();
 	let referralCode: ReferralCode | null = null;
 	let redemption: RewardRedemption | null = null;
@@ -1542,7 +1357,6 @@ export async function initScenario({
 		if (action.type === "parallel") {
 			await Promise.all(action.actions.map((child) => runAction(child)));
 		} else if (action.type === "attach") {
-			// Override or fall back to primary customerId.
 			const targetCustomerId = action.customerId ?? customerId;
 			if (!targetCustomerId) {
 				throw new Error(
@@ -1606,7 +1420,6 @@ export async function initScenario({
 			const startingFrom = new Date(advancedTo);
 
 			if (action.toNextInvoice) {
-				// Advance to next month + hours to finalize invoice
 				const baseDate = startingFrom ?? new Date();
 				advancedTo = await advanceTestClockFn({
 					stripeCli: ctx.stripeCli,
@@ -1748,7 +1561,6 @@ export async function initScenario({
 				});
 			}
 		} else if (action.type === "billingAttach") {
-			// Override or fall back to primary customerId.
 			const targetCustomerId = action.customerId ?? customerId;
 			if (!targetCustomerId) {
 				throw new Error(
@@ -1807,7 +1619,6 @@ export async function initScenario({
 				entityId = generatedEntities[action.entityIndex].id;
 			}
 
-			// Build plans with prefixed product IDs
 			const plans = action.plans.map((plan) => ({
 				plan_id: `${plan.productId}_${productPrefix}`,
 				feature_quantities: plan.featureQuantities?.map((fq) => ({
@@ -1915,13 +1726,11 @@ export async function initScenario({
 					"Cannot create referral code: s.referralProgram() must be configured in setup",
 				);
 			}
-			// Create code for primary customer
 			const createdCode = await autumnV1.referrals.createCode({
 				customerId,
 				referralId: config.referralProgram.program.id,
 			});
 			referralCode = createdCode;
-			// Redeem for specified customer
 			redemption = await autumnV1.referrals.redeem({
 				customerId: action.customerId,
 				code: createdCode.code,
@@ -1938,7 +1747,6 @@ export async function initScenario({
 				);
 			}
 
-			// Product group is always productPrefix; productId param is unused.
 			const productGroup = productPrefix;
 
 			await resetAndGetCusEnt({
@@ -1948,7 +1756,6 @@ export async function initScenario({
 				featureId: action.featureId,
 			});
 
-			// Wait for cache to clear.
 			const waitTime = action.timeout ?? 2000;
 			await new Promise((resolve) => setTimeout(resolve, waitTime));
 		} else if (action.type === "redeemReward") {

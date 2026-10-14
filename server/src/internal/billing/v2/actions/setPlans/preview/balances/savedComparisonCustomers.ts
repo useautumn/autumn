@@ -4,7 +4,6 @@ import type { SchedulePhasePlan } from "@/internal/billing/v2/actions/setPlans/t
 import type { ReviewPhaseMatches } from "../review/types/reviewPhase";
 import { buildSavedPhaseCustomers } from "./buildSavedPhaseCustomers";
 
-/** Per request phase, the saved customer it is matched with; undefined compares with the phase before. */
 export const savedComparisonCustomers = ({
 	ctx,
 	fullCustomer,

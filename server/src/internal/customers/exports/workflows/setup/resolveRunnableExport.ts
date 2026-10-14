@@ -5,7 +5,6 @@ import type { RunCustomerExportPayload } from "@/trigger/exports/customerExportT
 import { CustomerExportService } from "../../CustomerExportService.js";
 import { reconcileUploadedExport } from "./reconcileUploadedExport.js";
 
-/** Null means this attempt has nothing to run: reconciled or already resolved. */
 export const resolveRunnableExport = async ({
 	ctx,
 	logger,
@@ -31,7 +30,6 @@ export const resolveRunnableExport = async ({
 		throw new Error(`Customer export ${exportId} not found`);
 	}
 
-	// Idempotency means only this export's retry sees Running: reconcile or restart.
 	if (customerExport.status === CustomerExportStatus.Running) {
 		const reconciled = await reconcileUploadedExport({
 			ctx,

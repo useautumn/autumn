@@ -1,25 +1,3 @@
-/**
- * Sharded unit-test runner — splits tests/unit across a few `bun test`
- * processes so the suite finishes in seconds on CI hardware.
- *
- * Why not `bun test --isolate`: a process per file re-pays the server import
- * graph ~365 times (minutes of wall clock). Why not one plain `bun test`:
- * a single process is CPU-bound on one core; a handful of shards cuts wall
- * time roughly by the shard count while keeping per-process import cost low.
- *
- * Shards are whole top-level directories under tests/unit (files directly at
- * the root form one extra group), greedily bin-packed by test-file count.
- * Keeping a directory's files in one process preserves their relative
- * execution order, which matters for mock.module hygiene.
- *
- * More shards than cores is deliberate: several suites hold real timers
- * (TTL expiries, lane-isolation holds), so extra shards overlap that sleep
- * time instead of serializing it. Override with UNIT_SHARDS.
- *
- * UNIT_RESULTS_FILE=<path> also writes per-file results (from bun's junit
- * reporter) as JSON there; CI uploads it to twd on dev pushes.
- */
-
 import { mkdtempSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -28,8 +6,6 @@ import { filesWithoutCases, junitFileResults } from "./junitFileResults";
 const SERVER_ROOT = path.resolve(import.meta.dir, "../..");
 const UNIT_ROOT = path.join(SERVER_ROOT, "tests/unit");
 
-// 8 measured best locally (4.1s vs 5.3s at 16 shards on an M-series Mac) —
-// past one shard per core, extra shards just duplicate the import graph.
 const SHARD_COUNT = Math.max(
 	2,
 	Math.min(Number(process.env.UNIT_SHARDS) || 8, 16),
@@ -50,13 +26,6 @@ const listTestFiles = (dir: string): string[] => {
 
 type Group = { paths: string[]; weight: number };
 
-// Explicit file lists, never directory filters — `bun test` treats positional
-// args as substring filters, so `tests/unit/redis` would also (re-)run
-// everything under tests/unit/redis-otel.
-//
-// Groups are cut two directory levels deep (tests/unit/<dir>/<subdir>) so
-// big dirs like balances don't pin all their weight — and their slow files —
-// onto one shard. Files sharing a group keep their relative order.
 const collectGroups = (): Group[] => {
 	const groups: Group[] = [];
 	const pushGroup = (files: string[]) => {
@@ -116,7 +85,6 @@ const runShard = async (paths: string[], index: number) => {
 		env: {
 			...process.env,
 			UNIT_TESTS: "1",
-			// Lets the preload seed only the modules this shard's files mock.
 			UNIT_TEST_FILES: paths.join("\n"),
 		},
 		stdout: "pipe",
@@ -143,7 +111,6 @@ const startedAt = performance.now();
 const shards = packShards(collectGroups());
 const results = await Promise.all(shards.map(runShard));
 
-/** A case-less file in a failed shard is either empty or broke at import; running it alone tells which. */
 const crashesAlone = async (file: string) => {
 	const proc = Bun.spawn(["bun", "test", file], {
 		cwd: SERVER_ROOT,

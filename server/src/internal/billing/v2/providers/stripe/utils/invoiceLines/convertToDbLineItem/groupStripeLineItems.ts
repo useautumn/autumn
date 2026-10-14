@@ -1,15 +1,11 @@
 import type { ExpandedStripeInvoiceLineItem } from "@/external/stripe/invoices/lineItems/operations/getStripeInvoiceLineItems";
 
 export type StripeLineItemGroup = {
-	groupKey: string; // subscription_item_id or invoice_item_id or line_item_id
+	groupKey: string;
 	groupType: "subscription_item" | "invoice_item" | "ungrouped";
 	lineItems: ExpandedStripeInvoiceLineItem[];
 };
 
-/**
- * Groups Stripe line items by their parent subscription_item or invoice_item.
- * Tiered pricing creates multiple line items that share the same parent.
- */
 export const groupStripeLineItems = ({
 	stripeLineItems,
 }: {
@@ -30,7 +26,6 @@ export const groupStripeLineItems = ({
 			groupKey = parent.invoice_item_details.invoice_item;
 			groupType = "invoice_item";
 		} else {
-			// Ungrouped - use line item ID as unique key
 			groupKey = lineItem.id;
 			groupType = "ungrouped";
 		}

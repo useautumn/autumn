@@ -1,4 +1,3 @@
-// Contract: finite customer tasks share one queue; coordinators do not sleep while holding its only slot.
 import { describe, expect, test } from "bun:test";
 import { getPostgresPools } from "@autumn/postgres";
 import {

@@ -1,5 +1,3 @@
-/** TDD: pending payments must retain continuation metadata for the eventual Stripe webhook. */
-
 import { expect, test } from "bun:test";
 import { AppEnv, type Metadata, MetadataType } from "@autumn/shared";
 

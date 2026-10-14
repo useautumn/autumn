@@ -11,7 +11,6 @@ import type {
 	CustomerCreationRecoveryStage,
 } from "./customerCreationRecoveryTypes.js";
 
-/** False, never a throw, when the queue is missing or unreachable: the request's own failure is the answer. */
 export const queueFailedCustomerCreation = async ({
 	ctx,
 	params,

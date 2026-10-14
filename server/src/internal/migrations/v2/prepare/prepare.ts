@@ -21,7 +21,6 @@ const scopeIdFor = ({
 	})}`;
 };
 
-/** Runs implicit prep modules and persists state only for stored migrations. */
 export const prepare = async ({
 	ctx,
 	migration,

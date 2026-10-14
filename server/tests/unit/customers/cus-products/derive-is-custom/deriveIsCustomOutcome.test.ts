@@ -10,10 +10,6 @@ import {
 	prepaidItem,
 } from "./isCustomFixtures";
 
-/**
- * The flag is biased towards custom: a false positive only skips a customer in
- * version migrations, a false negative lets one overwrite real customizations.
- */
 describe("deriveCustomerProductIsCustom outcome", () => {
 	test("matches the catalog plan → not custom", () => {
 		const plan = { items: [includedItem()], prices: [basePrice()] };

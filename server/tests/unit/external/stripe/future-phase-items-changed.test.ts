@@ -1,10 +1,3 @@
-/**
- * futurePhaseItemsChanged
- *
- * Only a phase that has not started yet counts. A quantity or price edit on
- * it is a change; a date move, or an edit to the running phase, is not.
- */
-
 import { describe, expect, test } from "bun:test";
 import type Stripe from "stripe";
 import { futurePhaseItemsChanged } from "@/external/stripe/webhookHandlers/handleStripeSubscriptionScheduleUpdated/futurePhaseItemsChanged.js";

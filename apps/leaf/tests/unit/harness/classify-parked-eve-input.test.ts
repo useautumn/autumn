@@ -48,8 +48,6 @@ const questionRequest = ({
 	...(options ? { options: [...options] } : {}),
 });
 
-// Every park blocks the run until it is answered, so the only wrong answer is
-// `undefined` — each case pins one park shape to the surface that can answer it.
 describe("classifyParkedEveInput", () => {
 	test("an option-less ask_question is a question, not a gated write", () => {
 		const parked = classifyParkedEveInput({
@@ -132,8 +130,6 @@ describe("classifyParkedEveInput", () => {
 		).toBeUndefined();
 	});
 
-	// Eve holds every delivery until the whole parked batch is answered, so the
-	// requests nobody gets a card for still have to be answerable.
 	test("carries the rest of the batch as siblings of the picked write", () => {
 		const parked = classifyParkedEveInput({
 			requests: [
@@ -156,8 +152,6 @@ describe("classifyParkedEveInput", () => {
 		});
 	});
 
-	// An approve/deny option id sent to an ask_question corrupts its answer, and
-	// an unanswered question never blocks the batch anyway.
 	test("leaves questions out of the siblings", () => {
 		const parked = classifyParkedEveInput({
 			requests: [
@@ -202,7 +196,6 @@ describe("siblingRequestIdsFromToolArgs", () => {
 		).toEqual(["req_2", "req_3"]);
 	});
 
-	// Rows written before the key existed must not throw or invent siblings.
 	test("has no siblings when the key is absent or not an array", () => {
 		expect(siblingRequestIdsFromToolArgs({ plan_id: "pro" })).toEqual([]);
 		expect(
@@ -221,8 +214,6 @@ describe("siblingRequestIdsFromToolArgs", () => {
 	});
 });
 
-// A withheld write whose tool name and input are dropped is unrecoverable: if
-// the model never re-issues it, nothing knows the user asked for it.
 describe("withheld sibling writes stay recoverable", () => {
 	test("keeps the tool name and input of every withheld write", () => {
 		const parked = classifyParkedEveInput({

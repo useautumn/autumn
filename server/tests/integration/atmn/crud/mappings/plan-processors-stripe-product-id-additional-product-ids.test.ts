@@ -1,11 +1,3 @@
-/**
- * atmn crud/mappings — plan processors [stripe product_id, additional_product_ids]
- *
- * `--include-mappings`
- *
- * One line of plans/atmn-v3/07_tests.md. [a, b] is a matrix looped INSIDE this file.
- */
-
 import { expect, test } from "bun:test";
 import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 import { configBody } from "@tests/utils/atmnUtils/baseConfigs.js";
@@ -20,8 +12,6 @@ type CatalogPlanRow = {
 	};
 };
 
-// `applyPlanProcessorsToProduct` stamps this straight onto the product row with
-// no Stripe existence check, so a made-up id is fine for a round-trip test.
 const acmePlan = `
 		plan({
 			active: true,

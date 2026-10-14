@@ -11,9 +11,6 @@ import {
 } from "@autumn/shared";
 import { products } from "./products";
 
-/**
- * Create a customer product fixture
- */
 const create = ({
 	id = "cus_prod_test",
 	productId = "prod_test",
@@ -50,7 +47,6 @@ const create = ({
 	customer_id: "cus_test",
 	internal_entity_id: internalEntityId ?? null,
 	entity_id: entityId ?? null,
-	// Null like a stored row: the engine reads undefined as a seat with no parent and drops it.
 	customer_license_link_id: null,
 	created_at: Date.now(),
 	updated_at: Date.now(),
@@ -78,10 +74,6 @@ const create = ({
 	billing_version: BillingVersion.V2,
 	external_id: null,
 });
-
-// ═══════════════════════════════════════════════════════════════════
-// EXPORT
-// ═══════════════════════════════════════════════════════════════════
 
 export const customerProducts = {
 	create,

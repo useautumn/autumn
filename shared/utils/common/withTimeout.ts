@@ -1,5 +1,3 @@
-/** `timeoutError` lets a caller distinguish a stall from the wrapped
- * function's own failures. */
 export const withTimeout = async <T>({
 	fn,
 	onTimeout,

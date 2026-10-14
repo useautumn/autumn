@@ -4,15 +4,11 @@ import {
 } from "@autumn/shared";
 import type { CustomerLicenseState } from "../../reconcile/types.js";
 
-/** Serializes a customer's license state to the API shape — each customer
- * license row is the source of truth for what the customer has. */
 export const getApiCustomerLicense = ({
 	state,
 }: {
 	state: CustomerLicenseState;
 }): ApiCustomerLicenseV0[] => {
-	// Scheduled parents' rows exist from insert but aren't inventory until
-	// activation makes the parent live.
 	const liveParentById = new Map(
 		state.parentCustomerProducts.map((parent) => [parent.id, parent]),
 	);

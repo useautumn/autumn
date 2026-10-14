@@ -1,4 +1,3 @@
-/** One invoice a live customer paid, as stored: `amount` is major units of `currency`. */
 export type PaidInvoice = {
 	id: string;
 	stripeId: string;

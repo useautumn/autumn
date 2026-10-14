@@ -90,7 +90,6 @@ export const CatalogMappingsTable = ({
 							)}
 						</TableCell>
 						<TableCell>
-							{/* Keyboard access for the row; its click bubbles to the row handler. */}
 							<button
 								aria-label={`Open ${group.base.name} mapping`}
 								className="flex rounded-sm"

@@ -41,7 +41,6 @@ describe(`${chalk.yellowBright(`track-allocated1: Tracking allocated feature `)}
 			prefix: testCase,
 		});
 
-		// Attach product to customer
 		await autumnV1.attach({
 			customer_id: customerId,
 			product_id: pro.id,
@@ -86,13 +85,11 @@ describe(`${chalk.yellowBright(`track-allocated1: Tracking allocated feature `)}
 
 		await Promise.all(promises);
 
-		// Check final balance
 		const customer = await autumnV1.customers.get(customerId);
 
 		const finalBalance = customer.features[TestFeature.Users].balance;
 		expect(finalBalance).toBe(-4);
 
-		// Get non-cached customer
 		await timeout(2000);
 		const nonCachedCustomer = await autumnV1.customers.get(customerId, {
 			skip_cache: "true",

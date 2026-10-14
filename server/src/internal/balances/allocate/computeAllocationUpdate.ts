@@ -113,13 +113,11 @@ export const computeAllocationUpdate = async ({
 		internalCustomerId: customer.internal_id,
 		entityIds: params.allocations.map((entry) => entry.entity_id),
 	});
-	// Prepaid packs (a credits add-on) hold their credits as quantity, not allowance.
 	const sharedGranted = new Decimal(
 		cusEntsToGrantedBalance({ cusEnts: sharedRows }),
 	)
 		.plus(
 			cusEntsToPrepaidQuantity({
-				// Expiring purchases already sit on loose grant rows; their quantity only sizes the charge.
 				cusEnts: sharedRows.filter((row) => !row.entitlement.expiry_duration),
 				sumAcrossEntities: true,
 			}),

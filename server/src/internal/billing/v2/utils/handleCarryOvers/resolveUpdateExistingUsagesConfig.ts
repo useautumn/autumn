@@ -6,11 +6,6 @@ import type {
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { carryOverUsagesToExistingUsagesConfig } from "./carryOverUtils";
 
-/**
- * Resolves the existing-usages carry config for an updateSubscription new product.
- * Unlike attach, update DEFAULTS to carrying all usage when the param is absent,
- * and is the only flow that carries usage recorded on unlimited grants.
- */
 export const resolveUpdateExistingUsagesConfig = ({
 	ctx,
 	skipExistingUsageCarry,

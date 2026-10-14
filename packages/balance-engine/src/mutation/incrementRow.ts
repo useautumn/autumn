@@ -17,7 +17,6 @@ const plus = ({
 }): number =>
 	new Decimal(typeof current === "number" ? current : 0).plus(delta).toNumber();
 
-/** One map entry with its counters moved; null when the column prunes and every counter reached zero. */
 const incrementEntry = ({
 	table,
 	column,
@@ -46,7 +45,6 @@ const incrementEntry = ({
 	return zeroed ? null : next;
 };
 
-/** The row with the increment's counters added (or, reverting, taken back). Adds never need the row's current values, so they compose with any writer. */
 export const incrementRow = <Row extends object>({
 	row,
 	change,

@@ -5,7 +5,6 @@ import revisiondojoDump from "./revisiondojo-plans.json" with { type: "json" };
 
 const items = revisiondojoDump.items as ApiPlanV1[];
 
-// Group 1 — Pro (base = pro_1m)
 export const proBase = findById(items, "pro_1m");
 export const proVariants: ApiPlanV1[] = [
 	findById(items, "pro_free_grant"),
@@ -37,7 +36,6 @@ export const proVariants: ApiPlanV1[] = [
 	findById(items, "pro_m28"),
 ];
 
-// Group 2 — Plus (base = plus_1m)
 export const plusBase = findById(items, "plus_1m");
 export const plusVariants: ApiPlanV1[] = [
 	findById(items, "plus_free_grant"),
@@ -62,7 +60,6 @@ export const plusVariants: ApiPlanV1[] = [
 	findById(items, "plus_20m_n27"),
 ];
 
-// Group 3 — Teacher Pro (base = pro_teacher_1m)
 export const teacherProBase = findById(items, "pro_teacher_1m");
 export const teacherProVariants: ApiPlanV1[] = [
 	findById(items, "pro_teacher"),

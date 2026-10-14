@@ -12,10 +12,6 @@ import {
 } from "@/internal/catalogV2/actions/buildPlanChange";
 import { hasCustomizeFields } from "../licensePlanUtils";
 
-/**
- * Express the current overlay as a customize off the new child. Empty
- * means the child now matches — collapse to stock.
- */
 export const rebaseAdoptedLicenseCustomize = ({
 	ctx,
 	oldChildProduct,

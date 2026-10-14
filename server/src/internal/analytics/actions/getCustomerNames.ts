@@ -2,7 +2,6 @@ import { type CustomerDisplayInfo, customers } from "@autumn/shared";
 import { and, eq, inArray } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle";
 
-/** Looks up customer display fields by public id. Customer ids with no row are omitted. */
 export const getCustomerNames = async ({
 	db,
 	customerIds,

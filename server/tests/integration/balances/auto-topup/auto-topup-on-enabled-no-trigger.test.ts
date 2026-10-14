@@ -41,14 +41,12 @@ test.concurrent(
 			],
 		});
 
-		// Deplete balance to 50 (above threshold of 20)
 		await autumnV2_1.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
 			value: 50,
 		});
 
-		// Wait for Redis → Postgres sync
 		await timeout(DB_SYNC_WAIT_MS);
 
 		const before = await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
@@ -58,7 +56,6 @@ test.concurrent(
 			remaining: 50,
 		});
 
-		// Enable auto-topup: balance (50) is above threshold (20) → should NOT trigger
 		await autumnV2_1.customers.update(customerId, {
 			billing_controls: makeAutoTopupConfig({
 				threshold: 20,
@@ -69,7 +66,6 @@ test.concurrent(
 
 		await timeout(AUTO_TOPUP_WAIT_MS);
 
-		// Balance should remain at 50 — no top-up fired
 		const after = await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
 		expectBalanceCorrect({
 			customer: after,
@@ -77,7 +73,6 @@ test.concurrent(
 			remaining: 50,
 		});
 
-		// Only 1 invoice: initial attach only
 		await expectCustomerInvoiceCorrect({
 			customerId,
 			count: 1,
@@ -115,17 +110,14 @@ test.concurrent(
 			],
 		});
 
-		// Deplete balance to 15 (below threshold)
 		await autumnV2_1.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
 			value: 85,
 		});
 
-		// Wait for Redis → Postgres sync
 		await timeout(DB_SYNC_WAIT_MS);
 
-		// Enable auto-topup → triggers first top-up (balance 15 → 115)
 		await autumnV2_1.customers.update(customerId, {
 			billing_controls: makeAutoTopupConfig({
 				threshold: 20,
@@ -151,7 +143,6 @@ test.concurrent(
 			latestInvoiceProductId: prod.id,
 		});
 
-		// Update the same config — change threshold/quantity but keep enabled=true (no transition)
 		await autumnV2_1.customers.update(customerId, {
 			billing_controls: makeAutoTopupConfig({
 				threshold: 30,
@@ -162,7 +153,6 @@ test.concurrent(
 
 		await timeout(AUTO_TOPUP_WAIT_MS);
 
-		// Balance should still be 115 — no additional top-up
 		const after = await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
 		expectBalanceCorrect({
 			customer: after,
@@ -170,7 +160,6 @@ test.concurrent(
 			remaining: 115,
 		});
 
-		// Still only 2 invoices — no re-trigger
 		await expectCustomerInvoiceCorrect({
 			customerId,
 			count: 2,

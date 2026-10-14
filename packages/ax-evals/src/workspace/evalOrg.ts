@@ -13,9 +13,6 @@ const EVAL_CUSTOMER_SCRIPT = join(
 	"scripts/setupTestUtils/evalCustomer.ts",
 );
 
-/** The DATABASE_URL `bun dw` wrote for this worktree — the same DB the
- * running server is on. Infisical's DATABASE_URL is a different Neon branch,
- * so evalOrg must not inherit it. */
 const worktreeDatabaseUrl = (): string | undefined => {
 	try {
 		const envLocal = readFileSync(join(REPO_ROOT, "server/.env.local"), "utf8");
@@ -35,16 +32,11 @@ const scriptEnv = (): NodeJS.ProcessEnv => {
 
 export type EvalOrg = { orgId: string; secretKey: string };
 
-/**
- * One throwaway org per eval run, provisioned via the server-side script
- * (which owns the DB deps and the prod-DB guard).
- */
 export const createEvalOrg = async ({
 	runId,
 	withStripe = false,
 }: {
 	runId: string;
-	/** mint + bind a sandbox Stripe sub-account (needed for paid attach/checkout) */
 	withStripe?: boolean;
 }): Promise<EvalOrg> => {
 	const { stdout } = await run(
@@ -61,18 +53,12 @@ export const createEvalOrg = async ({
 
 export type SeedCustomerSpec = {
 	customer: { id: string; name?: string; email?: string };
-	/** attach a Stripe test payment method (needed before seeding paid plans) */
 	paymentMethod?: boolean;
-	/** billing.attach bodies (customer_id is filled in) */
 	attach?: Record<string, unknown>[];
-	/** licenses.attach entities (customer_id is filled in) */
 	licenseAssignments?: Record<string, unknown>[];
-	/** /track bodies run after attaches (customer_id is filled in) */
 	track?: Record<string, unknown>[];
 };
 
-/** Seed an "existing subscriber" state into the run org before the agent
- * starts — create customer, add test payment method, run attach calls. */
 export const seedEvalCustomer = async ({
 	org,
 	backendUrl,

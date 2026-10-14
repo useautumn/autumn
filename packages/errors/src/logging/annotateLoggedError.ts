@@ -5,7 +5,6 @@ import type { LoggedError } from "./findLoggedError.js";
 const errorDataOf = (error: Error): unknown =>
 	"data" in error ? error.data : undefined;
 
-/** Replaces the raw Error with what Axiom indexes: kind and code inside the existing `error` field. */
 export const annotateLoggedError = ({
 	args,
 	loggedError,

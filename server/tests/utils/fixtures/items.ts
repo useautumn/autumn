@@ -16,39 +16,18 @@ import {
 	constructPrepaidItem,
 } from "@/utils/scriptUtils/constructItem";
 
-// ═══════════════════════════════════════════════════════════════════
-// BOOLEAN FEATURES
-// ═══════════════════════════════════════════════════════════════════
-
-/**
- * Boolean feature - on/off access (no usage tracking)
- * @returns Dashboard feature item
- */
 const dashboard = () =>
 	constructFeatureItem({
 		featureId: TestFeature.Dashboard,
 		isBoolean: true,
 	});
 
-/**
- * Boolean feature - admin rights access
- * @returns AdminRights feature item
- */
 const adminRights = () =>
 	constructFeatureItem({
 		featureId: TestFeature.AdminRights,
 		isBoolean: true,
 	});
 
-// ═══════════════════════════════════════════════════════════════════
-// FREE METERED (included usage, resets monthly)
-// ═══════════════════════════════════════════════════════════════════
-
-/**
- * Generic free metered feature - resets each billing cycle
- * @param featureId - Feature ID
- * @param includedUsage - Free usage allowance (default: 100)
- */
 const free = ({
 	featureId,
 	includedUsage = 100,
@@ -67,12 +46,6 @@ const free = ({
 		rolloverConfig,
 	}) as LimitedItem;
 
-/**
- * Monthly messages - resets each billing cycle
- * @param includedUsage - Free usage allowance (default: 100)
- * @param entityFeatureId - Entity feature ID for per-entity balances
- * @param resetUsageWhenEnabled - Whether to reset usage when enabled (default: undefined, uses server default)
- */
 const monthlyMessages = ({
 	includedUsage = 100,
 	entityFeatureId,
@@ -95,12 +68,6 @@ const monthlyMessages = ({
 	return item;
 };
 
-/**
- * Hourly messages - resets each hour
- * @param includedUsage - Free usage allowance (default: 100)
- * @param entityFeatureId - Entity feature ID for per-entity balances
- * @param resetUsageWhenEnabled - Whether to reset usage when enabled (default: undefined, uses server default)
- */
 const hourlyMessages = ({
 	includedUsage = 100,
 	entityFeatureId,
@@ -124,12 +91,6 @@ const hourlyMessages = ({
 	return item;
 };
 
-/**
- * Monthly words - resets each billing cycle
- * @param includedUsage - Free usage allowance (default: 100)
- * @param entityFeatureId - Entity feature ID for per-entity balances
- * @param resetUsageWhenEnabled - Whether to reset usage when enabled (default: undefined, uses server default)
- */
 const monthlyWords = ({
 	includedUsage = 100,
 	entityFeatureId,
@@ -152,11 +113,6 @@ const monthlyWords = ({
 	return item;
 };
 
-/**
- * Monthly credits - resets each billing cycle
- * @param includedUsage - Free usage allowance (default: 100)
- * @param rolloverConfig - Optional rollover configuration
- */
 const monthlyCredits = ({
 	includedUsage = 100,
 	rolloverConfig,
@@ -170,10 +126,6 @@ const monthlyCredits = ({
 		rolloverConfig,
 	}) as LimitedItem;
 
-/**
- * Generic unlimited feature - no usage cap
- * @param featureId - Feature ID
- */
 const unlimited = ({
 	featureId,
 	entityFeatureId,
@@ -193,20 +145,12 @@ const unlimited = ({
 		unlimited: true,
 	});
 
-/**
- * Unlimited messages - no usage cap
- * @returns Unlimited messages feature item
- */
 const unlimitedMessages = () =>
 	constructFeatureItem({
 		featureId: TestFeature.Messages,
 		unlimited: true,
 	});
 
-/**
- * Monthly users - resets each billing cycle
- * @param includedUsage - Free usage allowance (default: 5)
- */
 const monthlyUsers = ({
 	includedUsage = 5,
 }: {
@@ -217,10 +161,6 @@ const monthlyUsers = ({
 		includedUsage,
 	}) as LimitedItem;
 
-/**
- * Free users - allocated seats with no price (free tier)
- * @param includedUsage - Free seats included (default: 5)
- */
 const freeUsers = ({
 	includedUsage = 5,
 }: {
@@ -231,11 +171,6 @@ const freeUsers = ({
 		includedUsage,
 	}) as LimitedItem;
 
-/**
- * Free allocated users - allocated seats with no price, usage carries over on product switch
- * @param includedUsage - Free seats included (default: 5)
- * @param entityFeatureId - Entity feature ID for per-entity balances
- */
 const freeAllocatedUsers = ({
 	includedUsage = 5,
 	entityFeatureId,
@@ -249,11 +184,6 @@ const freeAllocatedUsers = ({
 		entityFeatureId,
 	}) as LimitedItem;
 
-/**
- * Free allocated workflows - allocated workflows with no price, usage carries over on product switch
- * @param includedUsage - Free workflows included (default: 5)
- * @param entityFeatureId - Entity feature ID for per-entity balances
- */
 const freeAllocatedWorkflows = ({
 	includedUsage = 5,
 	entityFeatureId,
@@ -267,11 +197,6 @@ const freeAllocatedWorkflows = ({
 		entityFeatureId,
 	}) as LimitedItem;
 
-/**
- * Weekly messages - resets each week
- * @param includedUsage - Free usage allowance (default: 100)
- * @param entityFeatureId - Entity feature ID for per-entity balances
- */
 const weeklyMessages = ({
 	includedUsage = 100,
 	entityFeatureId,
@@ -286,11 +211,6 @@ const weeklyMessages = ({
 		entityFeatureId,
 	}) as LimitedItem;
 
-/**
- * Lifetime messages - never resets (interval: null)
- * @param includedUsage - One-time usage allowance (default: 100)
- * @param entityFeatureId - Entity feature ID for per-entity balances
- */
 const lifetimeMessages = ({
 	includedUsage = 100,
 	entityFeatureId,
@@ -305,11 +225,6 @@ const lifetimeMessages = ({
 		entityFeatureId,
 	}) as LimitedItem;
 
-/**
- * Monthly messages with rollover - unused balance rolls over to next cycle
- * @param includedUsage - Free usage allowance (default: 100)
- * @param rolloverConfig - Rollover configuration (max, length, duration)
- */
 const monthlyMessagesWithRollover = ({
 	includedUsage = 100,
 	rolloverConfig,
@@ -323,13 +238,6 @@ const monthlyMessagesWithRollover = ({
 		rolloverConfig,
 	}) as LimitedItem;
 
-// ═══════════════════════════════════════════════════════════════════
-// PREPAID (purchase units upfront)
-// ═══════════════════════════════════════════════════════════════════
-
-/**
- * Generic prepaid item - purchase units upfront for any feature
- */
 const prepaid = ({
 	featureId,
 	price = 10,
@@ -385,11 +293,6 @@ const prepaid = ({
 	}) as LimitedItem;
 };
 
-/**
- * Prepaid messages - purchase units upfront ($10/unit)
- * @param includedUsage - Free units before purchase required (default: 0), billing units are 100
- * @param entityFeatureId - Entity feature ID for per-entity balances
- */
 const prepaidMessages = ({
 	includedUsage = 0,
 	billingUnits = 100,
@@ -430,10 +333,6 @@ const prepaidMessages = ({
 		priceIntervalCount,
 	});
 
-/**
- * Prepaid users/seats - purchase seats upfront ($10/seat)
- * @param includedUsage - Free seats before purchase required (default: 0)
- */
 const prepaidUsers = ({
 	includedUsage = 0,
 	billingUnits = 1,
@@ -508,16 +407,6 @@ const volumePrepaidMessages = ({
 		config,
 	}) as LimitedItem;
 
-// ═══════════════════════════════════════════════════════════════════
-// ONE-OFF (interval: null, no recurring charges)
-// ═══════════════════════════════════════════════════════════════════
-
-/**
- * One-off messages - purchase units once (no recurring charges)
- * @param includedUsage - Free units included (default: 0)
- * @param billingUnits - Units per pack (default: 100)
- * @param price - Price per pack (default: 10)
- */
 const oneOffMessages = ({
 	includedUsage = 0,
 	billingUnits = 100,
@@ -535,12 +424,6 @@ const oneOffMessages = ({
 		isOneOff: true,
 	}) as LimitedItem;
 
-/**
- * One-off words - purchase units once (no recurring charges)
- * @param includedUsage - Free units included (default: 0)
- * @param billingUnits - Units per pack (default: 100)
- * @param price - Price per pack (default: 10)
- */
 const oneOffWords = ({
 	includedUsage = 0,
 	billingUnits = 100,
@@ -558,12 +441,6 @@ const oneOffWords = ({
 		isOneOff: true,
 	}) as LimitedItem;
 
-/**
- * One-off storage - purchase units once (no recurring charges)
- * @param includedUsage - Free units included (default: 0)
- * @param billingUnits - Units per pack (default: 100)
- * @param price - Price per pack (default: 10)
- */
 const oneOffStorage = ({
 	includedUsage = 0,
 	billingUnits = 100,
@@ -639,21 +516,6 @@ const volumeOneOffMessages = ({
 		isOneOff: true,
 	}) as LimitedItem;
 
-// ═══════════════════════════════════════════════════════════════════
-// CONSUMABLE / PAY-PER-USE (overage pricing)
-// ═══════════════════════════════════════════════════════════════════
-
-/**
- * Generic consumable item - pay-per-use overage for any feature
- * @param featureId - Feature ID
- * @param includedUsage - Free units before overage kicks in (default: 0)
- * @param price - Price per billing unit (default: 0.1)
- * @param billingUnits - Units per price (default: 1)
- * @param entityFeatureId - Entity feature ID for per-entity balances
- * @param interval - Billing interval (default: month)
- * @param maxPurchase - Maximum overage allowed (usage_limit = maxPurchase + includedUsage)
- * @param rolloverConfig - Optional balance rollover configuration
- */
 const consumable = ({
 	featureId,
 	includedUsage = 0,
@@ -685,14 +547,6 @@ const consumable = ({
 			maxPurchase !== undefined ? maxPurchase + includedUsage : undefined,
 	}) as LimitedItem;
 
-/**
- * Consumable messages - pay-per-use overage ($0.10/unit)
- * @param includedUsage - Free units before overage kicks in (default: 0)
- * @param entityFeatureId - Entity feature ID for per-entity balances
- * @param interval - Billing interval (default: month)
- * @param maxPurchase - Maximum overage allowed (usage_limit = maxPurchase + includedUsage)
- * @param price - Price per unit (default: 0.1)
- */
 const consumableMessages = ({
 	includedUsage = 0,
 	entityFeatureId,
@@ -716,12 +570,6 @@ const consumableMessages = ({
 		maxPurchase,
 	});
 
-/**
- * Consumable words - pay-per-use overage ($0.05/unit)
- * @param includedUsage - Free units before overage kicks in (default: 0)
- * @param entityFeatureId - Entity feature ID for per-entity balances
- * @param interval - Billing interval (default: month)
- */
 const consumableWords = ({
 	includedUsage = 0,
 	entityFeatureId,
@@ -767,11 +615,6 @@ const tieredConsumableMessages = ({
 
 type VolumeTier = { to: number | "inf"; amount: number; flat_amount?: number };
 
-/**
- * Volume consumable - pay-per-use with volume tiers: usage past the included amount
- * is charged at the rate of the tier total usage lands in, plus that tier's flat fee.
- * Default tiers: 0-500 units at $0.10/unit, 501+ at $0.05/unit.
- */
 const volumeConsumable = ({
 	featureId,
 	includedUsage = 0,
@@ -808,14 +651,6 @@ const volumeConsumableMessages = (
 ): LimitedItem =>
 	volumeConsumable({ featureId: TestFeature.Messages, ...params });
 
-// ═══════════════════════════════════════════════════════════════════
-// ALLOCATED / SEATS (prorated billing)
-// ═══════════════════════════════════════════════════════════════════
-
-/**
- * Allocated users/seats - prorated billing on change ($10/seat)
- * @param includedUsage - Free seats included (default: 0)
- */
 const allocatedUsers = ({
 	includedUsage = 0,
 }: {
@@ -827,10 +662,6 @@ const allocatedUsers = ({
 		includedUsage,
 	}) as LimitedItem;
 
-/**
- * Allocated workflows - prorated billing on change ($10/workflow)
- * @param includedUsage - Free workflows included (default: 0)
- */
 const allocatedWorkflows = ({
 	includedUsage = 0,
 }: {
@@ -842,10 +673,6 @@ const allocatedWorkflows = ({
 		includedUsage,
 	}) as LimitedItem;
 
-/**
- * Allocated messages - prorated billing on change ($10/unit)
- * @param includedUsage - Free messages included (default: 0)
- */
 const allocatedMessages = ({
 	includedUsage = 0,
 }: {
@@ -857,7 +684,6 @@ const allocatedMessages = ({
 		includedUsage,
 	}) as LimitedItem;
 
-// Allocated v2 bills current holdings at each cycle end and never resets.
 const allocatedV2Users = ({
 	includedUsage = 0,
 	pricePerUnit = 10,
@@ -906,11 +732,6 @@ const allocatedV2Workflows = ({
 		entity_feature_id: entityFeatureId,
 	}) as LimitedItem;
 
-/**
- * Volume allocated users - seats priced with volume tiers.
- * Default tiers: 0-10 seats at $10/seat, 11+ at $8/seat.
- * @param allocatedBillingBehavior - Arrear for allocated v2, omitted for v1 prorated
- */
 const volumeAllocated = ({
 	featureId,
 	includedUsage = 0,
@@ -945,50 +766,28 @@ const volumeAllocatedUsers = (
 	params: Omit<Parameters<typeof volumeAllocated>[0], "featureId"> = {},
 ): LimitedItem => volumeAllocated({ featureId: TestFeature.Users, ...params });
 
-// ═══════════════════════════════════════════════════════════════════
-// BASE PRICES
-// ═══════════════════════════════════════════════════════════════════
-
-/**
- * Monthly base price item
- * @param price - Monthly price (default: 20)
- */
 const monthlyPrice = ({ price = 20 }: { price?: number } = {}) =>
 	constructPriceItem({
 		price,
 		interval: BillingInterval.Month,
 	});
 
-/**
- * Annual base price item
- * @param price - Annual price (default: 200)
- */
 const annualPrice = ({ price = 200 }: { price?: number } = {}) =>
 	constructPriceItem({
 		price,
 		interval: BillingInterval.Year,
 	});
 
-/**
- * One-off base price item (no recurring charges)
- * @param price - One-time price (default: 50)
- */
 const oneOffPrice = ({ price = 50 }: { price?: number } = {}) =>
 	constructPriceItem({
 		price,
 		interval: null,
 	});
 
-// ═══════════════════════════════════════════════════════════════════
-// EXPORT
-// ═══════════════════════════════════════════════════════════════════
-
 export const items = {
-	// Boolean
 	dashboard,
 	adminRights,
 
-	// Free metered
 	free,
 	hourlyMessages,
 	monthlyMessages,
@@ -1004,21 +803,18 @@ export const items = {
 	lifetimeMessages,
 	monthlyMessagesWithRollover,
 
-	// Prepaid
 	prepaid,
 	prepaidMessages,
 	prepaidUsers,
 	tieredPrepaidMessages,
 	volumePrepaidMessages,
 
-	// One-off
 	oneOffMessages,
 	oneOffWords,
 	oneOffStorage,
 	tieredOneOffMessages,
 	volumeOneOffMessages,
 
-	// Consumable
 	consumable,
 	consumableMessages,
 	consumableWords,
@@ -1028,14 +824,12 @@ export const items = {
 	volumeAllocated,
 	volumeAllocatedUsers,
 
-	// Allocated
 	allocatedUsers,
 	allocatedWorkflows,
 	allocatedMessages,
 	allocatedV2Users,
 	allocatedV2Workflows,
 
-	// Base prices
 	monthlyPrice,
 	annualPrice,
 	oneOffPrice,

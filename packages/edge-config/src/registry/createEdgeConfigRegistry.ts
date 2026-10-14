@@ -15,7 +15,6 @@ type EdgeConfigLifecycle = {
 	refresh: (options?: { logger?: EdgeConfigLogger }) => Promise<void>;
 };
 
-/** One per process: every store joins it, one timestamp poll drives them all, a backstop refresh self-heals. */
 export const createEdgeConfigRegistry = ({
 	ctx,
 	readTimestamp = () => readEdgeConfigTimestamp({ ctx }),
@@ -41,8 +40,6 @@ export const createEdgeConfigRegistry = ({
 	let backstopPromise: Promise<void> | null = null;
 	let pollLogger: EdgeConfigLogger | undefined;
 
-	// A store registered after polling began missed the startup load and would
-	// serve its default until the next timestamp change or backstop.
 	const register = ({ store }: { store: EdgeConfigLifecycle }) => {
 		stores.push(store);
 		if (pollTimer) void store.refresh({ logger: pollLogger });
@@ -66,8 +63,6 @@ export const createEdgeConfigRegistry = ({
 		lastTimestampError = message;
 	};
 
-	/** One create attempt per missing-key stretch: every process polls, so
-	 *  retrying each tick would hammer S3 fleet-wide while the key stays absent. */
 	const ensureTimestamp = async (): Promise<string | null> => {
 		if (timestampWriteAttempted) return null;
 		timestampWriteAttempted = true;
@@ -113,8 +108,6 @@ export const createEdgeConfigRegistry = ({
 				pollPromise = null;
 			});
 		}, pollIntervalMs);
-		// Self-heals a config whose timestamp never advanced (write lost after the
-		// config landed), which the timestamp poll alone cannot detect.
 		backstopTimer = setInterval(() => {
 			if (backstopPromise) return;
 			backstopPromise = refreshAll({ logger }).finally(() => {

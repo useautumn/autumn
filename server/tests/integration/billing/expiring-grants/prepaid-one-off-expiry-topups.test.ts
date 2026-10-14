@@ -1,6 +1,3 @@
-// Expiring prepaid one-off plan items: each purchase lands in a loose, expiring grant beside a
-// 0-balance keystone row; grants outlive plan changes and churn.
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV5 } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
@@ -41,12 +38,10 @@ test.concurrent(
 			planId,
 		});
 
-		// keystone: the plan's own row, pristine and never expiring
 		expect(keystones.length).toBe(1);
 		expect(keystones[0].balance).toBe(0);
 		expect(keystones[0].expires_at).toBeNull();
 
-		// grant: loose, holds the purchase, stamped
 		expect(grants.length).toBe(1);
 		const grant = grants[0];
 		expect(grant.customer_product_id).toBeNull();
@@ -60,7 +55,6 @@ test.concurrent(
 		});
 		expect(grant.entitlement_id).not.toBe(keystones[0].entitlement_id);
 
-		// reporting: purchase counted exactly once
 		const customer = await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
 		expect(customer.balances[TestFeature.Messages].granted).toBe(100);
 		expect(customer.balances[TestFeature.Messages].remaining).toBe(100);
@@ -108,7 +102,6 @@ test.concurrent(
 			planId,
 		});
 
-		// attach + three top-ups = four grants, none merged
 		expect(grants.length).toBe(4);
 		expect(
 			grants
@@ -124,7 +117,6 @@ test.concurrent(
 				.length,
 		).toBe(3);
 
-		// keystone untouched, product not custom
 		expect(keystones.length).toBe(1);
 		expect(keystones[0].balance).toBe(0);
 		expect(customerProduct?.is_custom).toBe(false);

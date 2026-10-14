@@ -288,7 +288,6 @@ test("OAuth callback returns expired and reused links to the platform's return U
 		error: "state_already_used",
 	});
 
-	// Redis drops the stored state at its TTL; the signed copy is all that is left.
 	const expiredState = await stateFor({ org });
 	await consumeOAuthState({ stateKey: expiredState });
 	const clock = spyOn(Date, "now").mockReturnValue(

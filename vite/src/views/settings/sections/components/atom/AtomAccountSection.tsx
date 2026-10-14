@@ -12,7 +12,6 @@ import { ATOM_NETWORK_FIELDS, AtomNetworkFields } from "./AtomNetworkFields";
 import { AtomSetupSection } from "./AtomSetupSection";
 import type { AtomSetupForm } from "./useAtomSetupForm";
 
-/** Step 2: the network Atom joins, then the AWS stack that creates it. */
 export const AtomAccountSection = ({
 	form,
 	stackNameSuffix,
@@ -23,7 +22,6 @@ export const AtomAccountSection = ({
 }: {
 	form: AtomSetupForm;
 	stackNameSuffix: string;
-	/** A link was already handed out, so submitting replaces it and cancelling removes it. */
 	hasSetupLink: boolean;
 	onBack: () => void;
 	onCancel: () => void;

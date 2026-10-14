@@ -1,19 +1,3 @@
-/**
- * Measures how long each balance-worker partition has no owner while workers
- * join, leave gracefully (SIGTERM -> worker.stop()) or die (SIGKILL), against a
- * real local Kafka. Workers run as subprocesses of benchWorker.ts and report
- * their lifecycle as JSON lines; this process watches the ownership topic,
- * hammers the client at 20 req/s per partition and joins the three clocks
- * (same machine, so Date.now() is comparable everywhere).
- *
- *   cd apps/balance-worker
- *   KAFKA_BROKERS=127.0.0.1:19092 NODE_ENV=test bun tests/benchmarks/ownership-handoff/run.ts [--runs 3] [--backend sqlite] [--snapshots write]
- *
- * --slots runs the blue-green scenario instead: two fleets told apart only by a fake
- * ECS service ARN (BENCH_SERVICE_ARN, which names their consumer groups), a slot
- * record in a temp directory the workers poll like S3, and the six steps of
- * plans/balance-worker-blue-green/overview.md. One pass per invocation.
- */
 import {
 	mkdirSync,
 	mkdtempSync,
@@ -61,8 +45,6 @@ const { values: args } = parseArgs({
 	options: {
 		runs: { type: "string", default: "3" },
 		backend: { type: "string", default: "postgres" },
-		// Back-to-back requests per partition to catch requests in flight at the withdraw. Off by default: it multiplies
-		// the metering log volume, and replay re-reads the last ten minutes of it, so it inflates the very window being measured.
 		probe: { type: "boolean", default: false },
 		slots: { type: "boolean", default: false },
 		snapshots: { type: "string", default: "off" },
@@ -114,7 +96,6 @@ type RawHttp = {
 
 const workerEvents: WorkerEvent[] = [];
 
-/** When the record's author wrote it, whichever kind it is. */
 function recordTimestamp({
 	record,
 }: {
@@ -177,7 +158,6 @@ await admin.createTopics({
 	],
 });
 
-// One customer per partition, seeded the way the postgres integration tests do it.
 const postgres = openFixturePostgres({ databaseUrl });
 const customers = new Map<number, SeededCustomer>();
 const extraCustomers: SeededCustomer[] = [];
@@ -191,7 +171,6 @@ while (customers.size < PARTITION_COUNT) {
 	else customers.set(partition, customer);
 }
 
-// Raw view of the ownership log: every record with its payload timestamp and when we saw it.
 const watcher = kafka.consumer({
 	groupId: `${deployment}-watch`,
 	sessionTimeout: 60_000,
@@ -215,7 +194,6 @@ await watcher.run({
 	},
 });
 
-// The same client a server uses, with production budgets, plus a tap on the raw HTTP layer.
 const routing = createOwnershipConsumer({
 	ctx: { kafka },
 	config: { topic: topics.ownership },
@@ -227,7 +205,6 @@ const client = createBalanceWorkerClient({
 		http: {
 			async postJson({ url, body, signal }) {
 				const sentAt = Date.now();
-				// Tracks travel batched per partition now; the lane is the batch's, and every batch here is one lane.
 				const { route, command, commands } = body as {
 					route: { partition: number };
 					command?: { requestId: string };
@@ -361,7 +338,6 @@ function startHammer(): void {
 	}
 }
 
-// Workers as subprocesses so a hard kill is a real SIGKILL.
 type Worker = {
 	name: string;
 	endpoint: string;
@@ -373,7 +349,6 @@ const workersByEndpoint = new Map<string, string>();
 const nameOf = (endpoint: string | undefined) =>
 	(endpoint && workersByEndpoint.get(endpoint)) ?? "?";
 
-// Two fleets told apart by synthetic ECS service ARNs alone, as on Flightcontrol; the slot record names one of them.
 type Fleet = { name: "blue" | "green"; serviceArn: string; fleetId: string };
 function fleetOfArn(name: Fleet["name"]): Fleet {
 	const serviceArn = `arn:aws:ecs:local:0:service/${deployment}/balance-workers-${name}`;
@@ -383,7 +358,6 @@ const fleets: Record<Fleet["name"], Fleet> = {
 	blue: fleetOfArn("blue"),
 	green: fleetOfArn("green"),
 };
-/** The snapshot settings every spawned worker serves from memory; a fleet member reads the same object from the directory. */
 const subjectSnapshotsConfig = {
 	...defaultSubjectSnapshotsEdgeConfig(),
 	mode: args.snapshots,
@@ -440,7 +414,6 @@ async function reservePort(): Promise<number> {
 	if (port === undefined) throw new Error("No port");
 	return port;
 }
-/** What the dashboard would read: every heartbeat object a fleet's tasks have written. */
 function readHeartbeats({ fleet }: { fleet: Fleet }): SlotHeartbeat[] {
 	if (!edgeConfigDir) return [];
 	const dir = join(edgeConfigDir, SLOT_HEARTBEAT_KEY_PREFIX, fleet.fleetId);
@@ -454,7 +427,6 @@ function readHeartbeats({ fleet }: { fleet: Fleet }): SlotHeartbeat[] {
 	}
 	return heartbeats;
 }
-/** Summed over the fleet's live tasks, the way the swap preflight will read it: a dead task's last object goes stale. */
 const HEARTBEAT_FRESH_MS = 10_000;
 function fleetHeartbeat({ fleet }: { fleet: Fleet }) {
 	let heartbeats: SlotHeartbeat[];
@@ -498,7 +470,6 @@ async function spawnWorker(name: string, fleet?: Fleet): Promise<Worker> {
 			BENCH_EDGE_CONFIG_DIR: edgeConfigDir,
 		}),
 	};
-	// The override serves edge configs from memory and never polls, so a fleet member reads the directory instead.
 	const { AUTUMN_EDGE_CONFIG_OVERRIDE_B64: _, ...inherited } = process.env;
 	const child = Bun.spawn(
 		["bun", new URL("./benchWorker.ts", import.meta.url).pathname],
@@ -582,9 +553,6 @@ function claimsAfter(t0: number): Map<number, OwnershipEvent> {
 			byPartition.set(event.partition, event);
 	return byPartition;
 }
-// A partition the roster hands back to its owner writes nothing on the ownership log, so the
-// transition is settled once the roster has moved, the log has been quiet, and every partition
-// has served a 200 since whichever of those came last.
 function settled(t0: number): boolean {
 	const joins = workerEvents.filter(
 		(e) => e.event === "consumer.group_join" && e.t >= t0,
@@ -682,13 +650,9 @@ type Sample = {
 	slots?: SlotStepAnalysis;
 };
 type SlotStepAnalysis = {
-	/** Every record the ownership topic carried during the step, by type. */
 	ownershipRecords: Record<string, number>;
-	/** `claimed` records by the fleet they name. */
 	claimsByFleet: Record<string, number>;
-	/** Slowest hammer 200 that took the 409 → refresh → resend detour past the old owner. */
 	longestDetourMs: number | null;
-	/** Record write → each green task observing the flip, min / max over partitions. */
 	flipObservedMs: { min: number; max: number } | null;
 	greenPreparedPartitions: number;
 	heartbeats: Record<string, ReturnType<typeof fleetHeartbeat>>;
@@ -931,7 +895,6 @@ function analyzeSlotStep({
 			claimsByFleet[fleet] = (claimsByFleet[fleet] ?? 0) + 1;
 		}
 	}
-	// A detour is a 200 whose partition saw a 409 while it was in flight: it was resent to the new owner.
 	let longestDetourMs: number | null = null;
 	const notOwner = rawHttp.filter(
 		(r) => r.lane === "hammer" && r.status === 409 && r.sentAt >= t0,
@@ -980,7 +943,6 @@ function analyzeSlotStep({
 		},
 	};
 }
-/** Quiet on the ownership log for a while and every partition served a 200 since the last record. */
 function slotSettled({
 	t0,
 	claimsExpected,
@@ -1028,13 +990,10 @@ async function runScenario({
 	const t0 = await trigger();
 	await waitFor(() => isSettled(t0), 120_000, `${scenario} to settle`);
 	stopProbe();
-	// Let the tail of the traffic land before slicing.
 	await Bun.sleep(1_500);
 	const tEnd = Date.now();
 	const sample = analyze({ scenario, run, t0, tEnd });
 	if (SLOTS) sample.slots = analyzeSlotStep({ t0, tEnd });
-	// Rows land asynchronously through the committer; give the last flush a moment, then compare what Postgres
-	// holds against every 200 the client has seen so far, so a discrepancy can be pinned to a scenario.
 	await Bun.sleep(1_000);
 	sample.reconciliation = await reconcile();
 	samples.push(sample);
@@ -1112,7 +1071,6 @@ async function runRollingScenarios(): Promise<Worker[]> {
 	return [A];
 }
 
-/** The six steps of the blue-green plan; asserts are checked once the numbers are in, so a failed step still leaves data. */
 async function runSlotScenario(): Promise<Worker[]> {
 	const started = Date.now();
 	await writeSlotRecord({ fleet: fleets.blue, reason: "blue is live" });
@@ -1120,7 +1078,6 @@ async function runSlotScenario(): Promise<Worker[]> {
 		await spawnWorker("blue-1", fleets.blue),
 		await spawnWorker("blue-2", fleets.blue),
 	];
-	// Two members join back to back: wait for the roster to settle between them, not just for four claims.
 	await waitFor(
 		() =>
 			claimsAfter(started).size === PARTITION_COUNT &&
@@ -1176,7 +1133,6 @@ async function runSlotScenario(): Promise<Worker[]> {
 		isSettled: (t0) => slotSettled({ t0, claimsExpected: PARTITION_COUNT }),
 	});
 
-	// Rollback with blue still running: blue's re-prepared partitions announce and green hands them back.
 	await runScenario({
 		scenario: "S3B_ROLLBACK_TO_BLUE",
 		run: 1,
@@ -1217,7 +1173,6 @@ async function runSlotScenario(): Promise<Worker[]> {
 			}),
 		isSettled: (t0) => heldFor({ t0, holdMs: 5_000 }),
 	});
-	// Back to green before the kill: a survivor whose record names the gone fleet would hold at the gate forever.
 	await writeSlotRecord({ fleet: fleets.green, reason: "green is live" });
 	await Bun.sleep(3_000);
 

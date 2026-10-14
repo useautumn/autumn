@@ -41,15 +41,12 @@ describe("catch-up races (review of #4605)", () => {
 		});
 		connect({ replicas: [a, b] });
 
-		// b held `kept` before it went down; while it was down (> 60 s), a stored `missed` and its relay to b was dropped.
 		await storeOnly({ replica: b, customerId: kept, readAt: 1_000 });
 		await storeOnly({ replica: a, customerId: kept, readAt: 1_000 });
 		now = 50_000;
 		await storeOnly({ replica: a, customerId: missed, readAt: 50_000 });
 		now = 200_000;
-		// b's boot: the point it fell behind at is fixed before it listens.
 		const sync = b.sync();
-		// b listens before it catches up, so a fresh push relayed by a lands first.
 		const liveBody = bodyFor({ customerId: live, readAt: 200_000 });
 		const relayed = await b.peerApp.request("/v1/subjects.set", {
 			method: "POST",
@@ -76,7 +73,6 @@ describe("catch-up races (review of #4605)", () => {
 		const a = createReplica({ address: "10.0.0.1", peers: [], now: () => now });
 		const b = createReplica({ address: "10.0.0.2", peers: ["10.0.0.1"] });
 		connect({ replicas: [a, b] });
-		// 499 distinct writes, then two customers written in the same ms: rows 500 and 501 tie on applied_at.
 		for (const [i, customerId] of ids.entries()) {
 			now = i < 499 ? 1_000 + i : 9_000;
 			await storeOnly({ replica: a, customerId, readAt: now });

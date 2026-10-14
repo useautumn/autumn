@@ -5,8 +5,6 @@ const isUsageFeature = (feature: Feature) =>
 	feature.type === FeatureType.Metered ||
 	feature.type === FeatureType.CreditSystem;
 
-/** Metered features and credit systems an event feeds: by `event_names`
- * first, falling back to an event named after the feature id. */
 export const findFeaturesForEvent = ({
 	eventName,
 	features,
@@ -35,7 +33,6 @@ export const describeLinkedFeatures = ({
 	return `${linkedFeatures[0].name} + ${linkedFeatures.length - 1} more`;
 };
 
-/** The feature name an event feeds, falling back to the raw event name. */
 export const eventDisplayName = ({
 	eventName,
 	features,

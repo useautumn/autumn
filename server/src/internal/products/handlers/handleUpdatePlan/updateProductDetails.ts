@@ -88,7 +88,6 @@ const willBeDefaultTrial = ({
 	newFreeTrial?: FreeTrial | CreateFreeTrial | null;
 	newItems: ProductItem[];
 }) => {
-	// 1. Get final default
 	const finalDefault = notNullish(newProduct.is_default)
 		? newProduct.is_default
 		: curProduct.is_default;
@@ -130,13 +129,6 @@ export const handleUpdateProductDetails = async ({
 		env: curProduct.env as AppEnv,
 	});
 
-	// Should error if:
-	// - New product is a default product
-	// - Org is not allowed to have paid default products
-	// - Current product is not a default trial
-
-	// Final prices are curProduct.prices or newProduct.prices
-
 	if (
 		newProduct.is_default &&
 		!org.config.allow_paid_default &&
@@ -147,7 +139,6 @@ export const handleUpdateProductDetails = async ({
 			newItems: items,
 		})
 	) {
-		// 1. Check if there are items
 		if (items) {
 			if (items.some((item) => isFeaturePriceItem(item) || isPriceItem(item))) {
 				throw new RecaseError({
@@ -186,8 +177,6 @@ export const handleUpdateProductDetails = async ({
 		}
 	}
 
-	// 2. Update product
-
 	const mergedConfig = notNullish(newProduct.config)
 		? { ...curProduct.config, ...newProduct.config }
 		: undefined;
@@ -211,7 +200,6 @@ export const handleUpdateProductDetails = async ({
 		},
 	});
 
-	// Update product-owned Stripe names.
 	if (
 		!curProduct.base_internal_product_id &&
 		curProduct.name !== newProduct.name &&

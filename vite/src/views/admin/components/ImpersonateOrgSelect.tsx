@@ -3,7 +3,6 @@ import { ShieldCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useImpersonateOrg } from "../hooks/useImpersonateOrg";
 
-/** Admin-only org picker: choosing an org impersonates a member and reloads in place. */
 export const ImpersonateOrgSelect = ({
 	currentOrg,
 	className,

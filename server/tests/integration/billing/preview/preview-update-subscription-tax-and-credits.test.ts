@@ -1,25 +1,3 @@
-/**
- * Integration tests for the new `tax` and `invoice_credits` fields on
- * `previewUpdateSubscription`. Mirrors the attach preview suite — same
- * helpers fire for both flows now via the shared
- * `computeAttachPreviewBillingPlan` orchestrator.
- *
- * Architecture (per fetch–build–execute):
- *   Symptom surfaces in: server/src/internal/billing/v2/utils/billingPlan/toUpdateSubscriptionPreview/billingPlanToUpdateSubscriptionPreview.ts
- *   Root cause lives in: server/src/internal/billing/v2/utils/billingPlan/preview/computeAttachPreviewBillingPlan.ts
- *     (orchestrator widened to BillingContext, runs for update-sub too)
- *   Fix layer: same — preview enrichment is genuinely owned at this layer.
- *
- * NEW-FEATURE assertions: each case validates every new field, not just
- * one. Locking the contract on first introduction.
- *
- * Two flow shapes (prepaid quantity vs. base-price custom plan) because
- * platform.create sub-orgs (needed for AU tax registrations) don't carry
- * the v2 TestFeature catalog. Credits cases use prepaid+Messages on the
- * default org; tax cases use a feature-less monthly price item on a
- * sub-org that has Stripe Tax registered for AU.
- */
-
 import { expect, test } from "bun:test";
 import type {
 	ApiCustomerV3,
@@ -41,12 +19,11 @@ const auAddress = {
 	state: "NSW",
 };
 
-// Credits flow: prepaid Messages, default org.
 const billingUnits = 12;
 const pricePerUnit = 8;
 const baseUnits = 10;
 const targetUnits = 20;
-const expectedSubtotal = (targetUnits - baseUnits) * pricePerUnit; // $80
+const expectedSubtotal = (targetUnits - baseUnits) * pricePerUnit;
 
 const buildPrepaidProduct = () =>
 	products.base({
@@ -85,9 +62,6 @@ test.concurrent(
 			],
 		});
 
-		// Set credit balance AFTER initial attach so Stripe doesn't consume
-		// it on the first invoice. We want the credit on file at the moment
-		// the previewUpdate runs.
 		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 		const stripeCustomerId = customer.stripe_id;
 		expect(stripeCustomerId).toBeDefined();
@@ -111,8 +85,6 @@ test.concurrent(
 		expect(preview.invoice_credits?.balance).toBe(20);
 		expect(preview.invoice_credits?.currency).toBe(preview.currency);
 		expect(preview.tax).toBeUndefined();
-		// Contract: total = subtotal + tax(0) - cappedCredit. Cap at
-		// (subtotal + tax) so the result never goes negative.
 		const expectedCappedCredit = Math.min(20, expectedSubtotal);
 		expect(preview.total).toBe(expectedSubtotal - expectedCappedCredit);
 	},
@@ -165,10 +137,6 @@ test.concurrent(
 	300_000,
 );
 
-// Tax flow: pro plan ($20/mo) with custom-plan upgrade to $50/mo via
-// `items` override on previewUpdate. Sub-org with AU tax registration.
-// Default org doesn't have AU tax registered, so we need the sub-org.
-// Pro/premium fixtures with empty items don't need TestFeature catalog.
 test.concurrent(
 	`${chalk.yellowBright("preview-update-subscription-tax (auto_tax on, AU customer): tax.status=complete, total = subtotal + tax")}`,
 	async () => {
@@ -192,8 +160,6 @@ test.concurrent(
 			actions: [s.billing.attach({ productId: "pro" })],
 		});
 
-		// Custom-plan update: bump base price from $20 → $50 to force a
-		// positive prorated immediate charge that Stripe Tax can compute on.
 		const preview = (await autumnV1.subscriptions.previewUpdate({
 			customer_id: customerId,
 			product_id: `pro_${customerId}`,
@@ -226,8 +192,6 @@ test.concurrent(
 		const { autumnV1 } = await initScenario({
 			customerId,
 			setup: [
-				// auto_tax defaults to false. Use a sub-org for parity with
-				// the auto_tax-on case (same code path through platform.create).
 				s.platform.create({ taxRegistrations: ["AU"] }),
 				s.customer({
 					testClock: false,

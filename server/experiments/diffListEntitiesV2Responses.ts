@@ -1,4 +1,3 @@
-// Run with `CHECK_ORG_ID=... CHECK_CUSTOMER_ID=... CHECK_LIMIT=200 bun run experiments/diffListEntitiesV2Responses.ts`
 import { AppEnv, type CusProductStatus, type SubjectQueryRow } from "@autumn/shared";
 import { sql } from "drizzle-orm";
 import { initDrizzle } from "../src/db/initDrizzle.js";
@@ -55,7 +54,6 @@ const stableStringify = (value: unknown): string => {
 const sortByKey = (rows: Record<string, unknown>[], key: string) =>
 	[...rows].sort((a, b) => (String(a[key]) < String(b[key]) ? -1 : 1));
 
-// order-insensitive fields: combined query has no deterministic ORDER BY here
 const UNORDERED_FIELDS: Record<string, string> = {
 	customer_entitlements: "id",
 	customer_prices: "id",

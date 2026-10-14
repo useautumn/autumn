@@ -7,7 +7,6 @@ import {
 	wasDeletedByPlan,
 } from "./planRowChangeContext.js";
 
-/** The columns the update sets, as the row holds them now: what it replaced, for the log's readers. */
 const columnsBefore = ({
 	row,
 	set,
@@ -47,7 +46,6 @@ const customerUpdate = ({
 	];
 };
 
-/** A plan updates rows it found; an update of a row it already deleted changes nothing, as an UPDATE of a gone row does. */
 export const updateOpToRowChanges = ({
 	op,
 	context,

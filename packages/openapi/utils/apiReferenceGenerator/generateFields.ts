@@ -4,9 +4,6 @@ import type {
 	SchemaField,
 } from "./parseOpenApi.js";
 
-/**
- * Generate the MDX content for request body and response fields.
- */
 export function generateFields({
 	operation,
 }: {
@@ -14,7 +11,6 @@ export function generateFields({
 }): string {
 	const sections: string[] = [];
 
-	// Generate request body parameters
 	if (operation.requestBody && operation.requestBody.length > 0) {
 		sections.push("### Body Parameters\n");
 		sections.push(
@@ -22,7 +18,6 @@ export function generateFields({
 		);
 	}
 
-	// Generate response fields (use 200 or 201 response)
 	const responseStatusCode = operation.responses?.["200"]
 		? "200"
 		: operation.responses?.["201"]
@@ -39,8 +34,6 @@ export function generateFields({
 		);
 	}
 
-	// Generate DynamicResponseExample with the actual example from OpenAPI spec
-	// This example is already in snake_case - the component will convert to camelCase when needed
 	const responseExample = responseStatusCode
 		? operation.responseExamples?.[responseStatusCode]
 		: null;
@@ -57,10 +50,6 @@ export function generateFields({
 	return sections.join("\n");
 }
 
-/**
- * Generate a ResponseExample with markdown code block.
- * Uses Mintlify's ResponseExample component which pins content to the sidebar.
- */
 function generateResponseExampleMarkdown({
 	json,
 	statusCode,
@@ -68,11 +57,8 @@ function generateResponseExampleMarkdown({
 	json: unknown;
 	statusCode: string;
 }): string {
-	// Format the JSON with proper indentation
 	const jsonString = JSON.stringify(json, null, 2);
 
-	// Generate markdown ResponseExample block
-	// The triple backticks create a code block inside ResponseExample
 	return `
 <ResponseExample>
 \`\`\`json ${statusCode}
@@ -82,9 +68,6 @@ ${jsonString}
 `;
 }
 
-/**
- * Generate DynamicParamField components for request body fields.
- */
 function generateParamFields({
 	fields,
 	indent,
@@ -107,7 +90,6 @@ function generateParamFields({
 		const hasChildren = field.children && field.children.length > 0;
 
 		if (hasChildren) {
-			// Field with nested children
 			lines.push(`${indentStr}<DynamicParamField ${props}>`);
 			if (description) {
 				lines.push(`${indentStr}  ${description}`);
@@ -119,7 +101,6 @@ function generateParamFields({
 			lines.push(`${indentStr}  </Expandable>`);
 			lines.push(`${indentStr}</DynamicParamField>\n`);
 		} else {
-			// Simple field
 			if (description) {
 				lines.push(`${indentStr}<DynamicParamField ${props}>`);
 				lines.push(`${indentStr}  ${description}`);
@@ -133,9 +114,6 @@ function generateParamFields({
 	return lines.join("\n");
 }
 
-/**
- * Generate DynamicResponseField components for response fields.
- */
 function generateResponseFields({
 	fields,
 	indent,
@@ -157,7 +135,6 @@ function generateResponseFields({
 		const hasChildren = field.children && field.children.length > 0;
 
 		if (hasChildren) {
-			// Field with nested children
 			lines.push(`${indentStr}<DynamicResponseField ${props}>`);
 			if (description) {
 				lines.push(`${indentStr}  ${description}`);
@@ -169,7 +146,6 @@ function generateResponseFields({
 			lines.push(`${indentStr}  </Expandable>`);
 			lines.push(`${indentStr}</DynamicResponseField>\n`);
 		} else {
-			// Simple field
 			if (description) {
 				lines.push(`${indentStr}<DynamicResponseField ${props}>`);
 				lines.push(`${indentStr}  ${description}`);
@@ -183,9 +159,6 @@ function generateResponseFields({
 	return lines.join("\n");
 }
 
-/**
- * Build the props string for a DynamicParamField component.
- */
 function buildFieldProps({
 	name,
 	type,
@@ -209,9 +182,6 @@ function buildFieldProps({
 	return props.join(" ");
 }
 
-/**
- * Build the props string for a DynamicResponseField component.
- */
 function buildResponseFieldProps({
 	name,
 	type,
@@ -224,10 +194,6 @@ function buildResponseFieldProps({
 	return `name="${name}" type="${formatType(type, enumValues)}"`;
 }
 
-/**
- * Format the type string, including enum values if present.
- * Shows all enum values inline for better documentation clarity.
- */
 function formatType(type: string, enumValues?: string[]): string {
 	if (enumValues && enumValues.length > 0) {
 		const isArray = type.endsWith("[]");
@@ -237,11 +203,6 @@ function formatType(type: string, enumValues?: string[]): string {
 	return type;
 }
 
-/**
- * Generate MDX content for a webhook event.
- * Uses plain `ParamField` with snake_case names since webhook payloads
- * are raw JSON (not SDK-transformed).
- */
 export function generateWebhookFields({
 	webhook,
 }: {
@@ -259,9 +220,6 @@ export function generateWebhookFields({
 	return sections.join("\n");
 }
 
-/**
- * Generate ParamField components with static snake_case names.
- */
 function generateStaticParamFields({
 	fields,
 	indent,
@@ -310,21 +268,13 @@ function generateStaticParamFields({
 	return lines.join("\n");
 }
 
-/**
- * Escape special characters in description for MDX.
- */
 function escapeDescription(description?: string): string {
 	if (!description) return "";
 
-	return (
-		description
-			// Escape curly braces for JSX
-			.replace(/\{/g, "\\{")
-			.replace(/\}/g, "\\}")
-			// Remove markdown code blocks that might cause issues
-			.replace(/```[\s\S]*?```/g, "")
-			// Normalize whitespace
-			.replace(/\s+/g, " ")
-			.trim()
-	);
+	return description
+		.replace(/\{/g, "\\{")
+		.replace(/\}/g, "\\}")
+		.replace(/```[\s\S]*?```/g, "")
+		.replace(/\s+/g, " ")
+		.trim();
 }

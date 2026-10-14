@@ -1,6 +1,3 @@
-/** set_plans and overage accrued on a plan it changes, mirroring Stripe flexible billing.
- * Pro: $20/mo, 100 messages included, $0.10 over; 150 tracked = $5. */
-
 import { expect, test } from "bun:test";
 import {
 	type ApiCustomerV3,
@@ -124,8 +121,6 @@ const expectMessagesUsage = async ({
 	});
 };
 
-// Stripe: a swapped metered price bills pre-swap usage at the old price, invoiced now
-// under always_invoice; the new price starts from zero usage.
 test.concurrent(
 	`${chalk.yellowBright("set-plans overage 1: switching plans bills the overage now at the old price, and the new plan starts at zero usage")}`,
 	async () => {
@@ -157,7 +152,6 @@ test.concurrent(
 	},
 );
 
-// Stripe: proration_behavior none drops the pre-swap usage entirely.
 test.concurrent(
 	`${chalk.yellowBright("set-plans overage 2: switching plans with proration none never bills the overage")}`,
 	async () => {
@@ -190,7 +184,6 @@ test.concurrent(
 	},
 );
 
-// Stripe: removing a metered item bills its usage, invoiced now under always_invoice.
 test.concurrent(
 	`${chalk.yellowBright("set-plans overage 3: a plan the request drops bills its overage now")}`,
 	async () => {
@@ -213,7 +206,6 @@ test.concurrent(
 	},
 );
 
-// The replaced plan's usage is billed at the switch and reset, unless carry_over_usages asks to carry it.
 test.concurrent(
 	`${chalk.yellowBright("set-plans overage 4: re-configuring a plan bills its overage now and resets usage")}`,
 	async () => {
@@ -250,7 +242,6 @@ test.concurrent(
 	},
 );
 
-// carry_over_usages moves the usage onto the replacing plan, so nothing is billed now.
 test.concurrent(
 	`${chalk.yellowBright("set-plans overage 4b: re-configuring a plan with carry_over_usages carries the overage instead of billing it")}`,
 	async () => {
@@ -319,8 +310,6 @@ test.concurrent(
 	},
 );
 
-// Stripe: ending a subscription now with a credit (prorate + invoice_now) also invoices its usage,
-// so the preview must show the charge execute makes rather than warn it goes unbilled.
 test.concurrent(
 	`${chalk.yellowBright("set-plans overage 6: a later first phase that replaces the live subscription bills the overage now, and the preview says so")}`,
 	async () => {

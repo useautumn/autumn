@@ -29,10 +29,8 @@ type CustomerStateContextValue = CustomerStateHandlers & {
 	nowMs: number;
 	products: ProductV2[];
 	features: Feature[];
-	/** The customer's active plans, offered as a starting point for phase one. */
 	existingPlans: CustomerStatePlan[];
 	canMakeUnscheduled: boolean;
-	/** Why a plan has no Stripe item after the sync; empty when it does. */
 	planNotFoundReasons: (location: PlanLocation) => string[];
 	findSubscriptionConflict: FindSubscriptionConflict;
 	subscriptionLinks: SubscriptionLinks | null;
@@ -50,11 +48,6 @@ const NO_NOT_FOUND_REASONS: string[] = [];
 const NEVER_NOT_FOUND = () => NO_NOT_FOUND_REASONS;
 const NEVER_CONFLICTS: FindSubscriptionConflict = () => null;
 
-/**
- * The customer's plans across phases, plus the row handlers that edit them.
- * Set plans and sync both render this state; they differ only in how it's
- * seeded and where it's submitted.
- */
 export function CustomerStateProvider({
 	form,
 	nowMs,
@@ -70,7 +63,6 @@ export function CustomerStateProvider({
 	existingPlans?: CustomerStatePlan[];
 	canMakeUnscheduled: boolean;
 	planNotFoundReasons?: (location: PlanLocation) => string[];
-	/** Set when the form edits one of several subscriptions. */
 	findSubscriptionConflict?: FindSubscriptionConflict;
 	subscriptionLinks?: SubscriptionLinks | null;
 	children: ReactNode;
@@ -82,7 +74,6 @@ export function CustomerStateProvider({
 		null,
 	);
 	const { setIsInlineEditorOpen } = useCustomerContext();
-	// Same commit as the editor mount, so the sheet fades out with it rather than after.
 	const setEditingPlan = useCallback(
 		(editing: PlanLocation | null) => {
 			setEditingPlanState(editing);

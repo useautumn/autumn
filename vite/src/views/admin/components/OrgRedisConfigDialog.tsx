@@ -55,10 +55,6 @@ export function OrgRedisConfigDialog({
 
 	const [connectionString, setConnectionString] = useState("");
 	const [publicConnectionString, setPublicConnectionString] = useState("");
-	// `null` = "show the current server value". A string means the admin has
-	// typed something; that draft takes precedence until a successful update
-	// or a dialog reopen clears it. Deriving `migrationInput` during render
-	// (below) lets us avoid a useEffect that watches `data` to sync state.
 	const [migrationInputDraft, setMigrationInputDraft] = useState<string | null>(
 		null,
 	);
@@ -85,18 +81,10 @@ export function OrgRedisConfigDialog({
 	const migrationInput =
 		migrationInputDraft ?? (cfg ? String(cfg.migrationPercent) : "");
 
-	// Surface load failures as a toast — only when there's no data to fall
-	// back on. After a successful mutation triggers a refetch, transient GET
-	// failures shouldn't surface as "Failed to load" since the dialog can
-	// keep displaying the previous data.
 	useEffect(() => {
 		if (isError && !data) toast.error("Failed to load Redis config");
 	}, [isError, data]);
 
-	// Reset transient inputs whenever the dialog opens (or switches org).
-	// `migrationInputDraft = null` falls back to the server value during
-	// render, so a previously typed but unsaved value can't carry over into
-	// the next session.
 	useEffect(() => {
 		if (open && orgId) {
 			setConnectionString("");
@@ -106,23 +94,13 @@ export function OrgRedisConfigDialog({
 		}
 	}, [open, orgId]);
 
-	// Best-effort post-mutation refetch + parent notification. Failures here
-	// must not surface as errors because the mutation has already persisted —
-	// a transient GET failure should not be reported as
-	// "Failed to connect/update/remove". Each step is independent so a failure
-	// in `refetch()` (local dialog state) doesn't skip `onSaved()` (parent
-	// table refetch), and vice versa.
 	const refreshAfterMutation = async () => {
 		try {
 			await refetch();
-		} catch {
-			// non-fatal: dialog will display stale state until reopened
-		}
+		} catch {}
 		try {
 			await onSaved();
-		} catch {
-			// non-fatal: parent table will refetch on its next render cycle
-		}
+		} catch {}
 	};
 
 	const handleConnect = async () => {
@@ -175,7 +153,6 @@ export function OrgRedisConfigDialog({
 				migrationPercent: percent,
 			});
 			toast.success(`Migration updated to ${percent}%`);
-			// Drop the draft so the input re-derives from the new server value.
 			setMigrationInputDraft(null);
 			await refreshAfterMutation();
 		} catch (error) {

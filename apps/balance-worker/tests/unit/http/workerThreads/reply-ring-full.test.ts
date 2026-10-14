@@ -12,7 +12,6 @@ import { createRingSignal } from "../../../../src/threads/ring/ringSignal.js";
 
 const REPLY_RING_BYTES = 4096;
 
-/** The decide thread's end of one lane, with the thread's reader in the test's hands. */
 function laneWithStalledReader() {
 	const ring = createRing({ capacity: REPLY_RING_BYTES });
 	const signal = createRingSignal();

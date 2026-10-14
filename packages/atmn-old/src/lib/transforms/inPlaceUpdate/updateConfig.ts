@@ -1,9 +1,3 @@
-/**
- * Update autumn.config.ts in place while preserving comments and order
- *
- * Uses line-based parsing for reliability
- */
-
 import { existsSync, writeFileSync } from "node:fs";
 import type { ReferralProgram, Reward } from "../../../compose/index.js";
 import type { Feature } from "../../../compose/models/index.js";
@@ -36,23 +30,14 @@ import {
 } from "./parseConfig.js";
 
 export interface UpdateResult {
-	/** Number of features updated in place */
 	featuresUpdated: number;
-	/** Number of features added */
 	featuresAdded: number;
-	/** Number of features deleted (not in API) */
 	featuresDeleted: number;
-	/** Number of plans updated in place */
 	plansUpdated: number;
-	/** Number of plans added */
 	plansAdded: number;
-	/** Number of plans deleted (not in API) */
 	plansDeleted: number;
 }
 
-/**
- * Generate code for a feature, using the existing variable name if provided
- */
 function generateFeatureCode(
 	feature: Feature,
 	existingVarName?: string,
@@ -60,11 +45,6 @@ function generateFeatureCode(
 	return buildFeatureCode(feature, existingVarName);
 }
 
-/**
- * Generate code for a plan, using the existing variable name if provided
- *
- * @param featureVarMap Map of feature ID -> variable name for preserving local feature references
- */
 function generatePlanCode(
 	plan: Plan,
 	features: Feature[],
@@ -121,7 +101,6 @@ const versionedIds = (resources: ParsedIdentity[]) =>
 		resources.flatMap(({ id, version }) => (version === undefined ? [] : [id])),
 	);
 
-/** Updates managed entities in place while preserving custom source. */
 export async function updateConfigInPlace({
 	features,
 	plans,
@@ -196,7 +175,6 @@ export async function updateConfigInPlace({
 		plansDeleted: 0,
 	};
 
-	// Build lookup maps
 	const apiFeatureMap = new Map(features.map((f) => [f.id, f]));
 	const apiPlanMap = new Map(plans.map((p) => [versionedCodegenId(p), p]));
 	const apiRewardMap = new Map(
@@ -213,8 +191,6 @@ export async function updateConfigInPlace({
 		),
 	);
 
-	// Build feature ID -> variable name map from parsed entities
-	// This allows us to preserve local variable names when generating plan code
 	const featureVarMap = new Map<string, string>();
 	const existingVariantVarMap = new Map<string, string>();
 	for (const entity of parsed.entities) {
@@ -225,9 +201,6 @@ export async function updateConfigInPlace({
 		}
 	}
 
-	// For new features/plans (not yet in the file), resolve var names with
-	// collision detection. Seed "used names" with all existing var names so
-	// newly generated names never clash with anything already in the file.
 	const existingVarNames = new Set(
 		[...parsed.source.matchAll(/export\s+const\s+([\w$]+)\s*=/g)].flatMap(
 			([, varName]) => (varName ? [varName] : []),
@@ -238,7 +211,6 @@ export async function updateConfigInPlace({
 		.filter((f) => !featureVarMap.has(f.id))
 		.map((f) => f.id);
 
-	// Resolve new feature var names first (they take the clean name on collision)
 	const newFeatureVarMap = new Map<string, string>();
 	for (const id of newFeatureIds) {
 		const varName = claimVarName({
@@ -247,12 +219,9 @@ export async function updateConfigInPlace({
 			usedNames: existingVarNames,
 		});
 		newFeatureVarMap.set(id, varName);
-		// Also add to featureVarMap so plan items can reference these new features
 		featureVarMap.set(id, varName);
 	}
 
-	// Resolve new plan var names, avoiding all names already in use.
-	// "New" means the plan ID is not present in any parsed entity.
 	const existingPlanIds = new Set(
 		parsed.entities.filter((e) => e.type === "plan").map(versionedCodegenId),
 	);
@@ -321,29 +290,24 @@ export async function updateConfigInPlace({
 		);
 	}
 
-	// Track which API entities have been matched
 	const matchedFeatureIds = new Set<string>();
 	const matchedPlanIds = new Set<string>();
 	const matchedRewardIds = new Set<string>();
 	const matchedReferralProgramIds = new Set<string>();
 
-	// Build new file content block by block
 	const outputBlocks: string[] = [];
 
-	// Track if we've seen features/plans sections for inserting new ones
 	let lastFeatureBlockIndex = -1;
 	let lastPlanBlockIndex = -1;
 	let sawFeaturesComment = false;
 	let sawPlansComment = false;
 
-	// Check if the atmn import already exists
 	let hasAtmnImport = false;
 	let lastImportBlockIndex = -1;
 
 	for (let i = 0; i < parsed.blocks.length; i++) {
 		const block = parsed.blocks[i]!;
 
-		// Track section comments
 		if (block.type === "comment") {
 			const commentText = block.lines.join("\n").toLowerCase();
 			if (commentText.includes("feature")) {
@@ -356,10 +320,8 @@ export async function updateConfigInPlace({
 			continue;
 		}
 
-		// Keep imports and other blocks as-is
 		if (block.type === "import") {
 			const importText = block.lines.join("\n");
-			// Check if this is the atmn import
 			if (/from\s+['"]atmn['"]/.test(importText)) {
 				hasAtmnImport = true;
 				outputBlocks.push(ensureAtmnImports(importText, requiredImports));
@@ -376,28 +338,24 @@ export async function updateConfigInPlace({
 			continue;
 		}
 
-		// Handle managed config exports
 		if (block.type === "export" && block.entity) {
 			const entity = block.entity;
 
 			if (entity.type === "feature") {
 				const apiFeature = apiFeatureMap.get(entity.id);
 				if (apiFeature) {
-					// Update existing feature
 					const newCode = generateFeatureCode(apiFeature, entity.varName);
 					outputBlocks.push(newCode);
 					matchedFeatureIds.add(entity.id);
 					lastFeatureBlockIndex = outputBlocks.length - 1;
 					result.featuresUpdated++;
 				} else {
-					// Feature not in API - delete it (don't add to output)
 					result.featuresDeleted++;
 				}
 			} else if (entity.type === "plan") {
 				const planKey = versionedCodegenId(entity);
 				const apiPlan = apiPlanMap.get(planKey);
 				if (apiPlan) {
-					// Update existing plan
 					const newCode = generatePlanWithVariantsCode({
 						featureVarMap,
 						features,
@@ -410,7 +368,6 @@ export async function updateConfigInPlace({
 					lastPlanBlockIndex = outputBlocks.length - 1;
 					result.plansUpdated++;
 				} else {
-					// Plan not in API - delete it (don't add to output)
 					result.plansDeleted++;
 				}
 			} else if (entity.type === "variant") {
@@ -441,11 +398,9 @@ export async function updateConfigInPlace({
 			continue;
 		}
 
-		// Fallback - keep block as-is
 		outputBlocks.push(block.lines.join("\n"));
 	}
 
-	// Add atmn import if missing
 	if (!hasAtmnImport) {
 		const atmnImport = buildImports({
 			includeBillingControls: requiredImports.includes("billingControls"),
@@ -453,9 +408,7 @@ export async function updateConfigInPlace({
 			includeReferralPrograms: Boolean(referralPrograms?.length),
 		});
 		if (lastImportBlockIndex >= 0) {
-			// Insert after the last import
 			outputBlocks.splice(lastImportBlockIndex + 1, 0, atmnImport);
-			// Adjust indices since we inserted
 			if (lastFeatureBlockIndex > lastImportBlockIndex) {
 				lastFeatureBlockIndex++;
 			}
@@ -463,9 +416,7 @@ export async function updateConfigInPlace({
 				lastPlanBlockIndex++;
 			}
 		} else {
-			// No imports found, add at the beginning
 			outputBlocks.unshift(atmnImport);
-			// Adjust all indices since we inserted at the beginning
 			if (lastFeatureBlockIndex >= 0) {
 				lastFeatureBlockIndex++;
 			}
@@ -475,7 +426,6 @@ export async function updateConfigInPlace({
 		}
 	}
 
-	// Add new features (in API but not in local config)
 	const newFeatures = features.filter((f) => !matchedFeatureIds.has(f.id));
 	if (newFeatures.length > 0) {
 		const newFeatureCode = newFeatures
@@ -483,14 +433,12 @@ export async function updateConfigInPlace({
 			.join("\n\n");
 
 		if (lastFeatureBlockIndex >= 0) {
-			// Insert after last feature
 			outputBlocks.splice(lastFeatureBlockIndex + 1, 0, newFeatureCode);
 			lastFeatureBlockIndex++;
 			if (lastPlanBlockIndex >= 0) {
 				lastPlanBlockIndex++;
 			}
 		} else if (sawFeaturesComment) {
-			// Find features comment and insert after
 			for (let i = 0; i < outputBlocks.length; i++) {
 				const blk = outputBlocks[i]!;
 				if (
@@ -506,7 +454,6 @@ export async function updateConfigInPlace({
 				}
 			}
 		} else {
-			// Insert after imports
 			let insertIdx = 0;
 			for (let i = 0; i < outputBlocks.length; i++) {
 				if (outputBlocks[i]!.trim().startsWith("import ")) {
@@ -522,7 +469,6 @@ export async function updateConfigInPlace({
 		result.featuresAdded = newFeatures.length;
 	}
 
-	// Add new plans (in API but not in local config)
 	const newPlans = plans.filter(
 		(p) => !matchedPlanIds.has(versionedCodegenId(p)),
 	);
@@ -540,10 +486,8 @@ export async function updateConfigInPlace({
 			.join("\n\n");
 
 		if (lastPlanBlockIndex >= 0) {
-			// Insert after last plan
 			outputBlocks.splice(lastPlanBlockIndex + 1, 0, newPlanCode);
 		} else if (sawPlansComment) {
-			// Find plans comment and insert after
 			for (let i = 0; i < outputBlocks.length; i++) {
 				const blk = outputBlocks[i]!;
 				if (
@@ -555,14 +499,12 @@ export async function updateConfigInPlace({
 				}
 			}
 		} else if (lastFeatureBlockIndex >= 0) {
-			// No plan section yet — insert after the last feature block
 			outputBlocks.splice(
 				lastFeatureBlockIndex + 1,
 				0,
 				`\n// Plans\n${newPlanCode}`,
 			);
 		} else {
-			// Append at end with section comment
 			outputBlocks.push(`\n// Plans\n${newPlanCode}`);
 		}
 		result.plansAdded = newPlans.length;
@@ -597,8 +539,6 @@ export async function updateConfigInPlace({
 		);
 	}
 
-	// Join blocks with proper spacing
-	// Comments directly before exports should not have extra blank line between them
 	const filteredBlocks = outputBlocks.filter((b) => b.trim() !== "");
 	const outputLines: string[] = [];
 
@@ -608,8 +548,6 @@ export async function updateConfigInPlace({
 
 		outputLines.push(block);
 
-		// Add blank line UNLESS this is a comment and next is an export
-		// (comments directly above exports should have no gap)
 		const isComment =
 			block.trim().startsWith("//") || block.trim().startsWith("/*");
 		const nextIsExport = nextBlock?.trim().startsWith("export ");
@@ -621,7 +559,6 @@ export async function updateConfigInPlace({
 
 	const output = `${outputLines.join("\n")}\n`;
 
-	// Write the updated file
 	writeFileSync(configPath, output, "utf-8");
 
 	return result;

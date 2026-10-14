@@ -78,7 +78,6 @@ export function MigrationOperationsCell({ view }: { view: MigrationRowView }) {
 										{planLabel}
 									</span>
 								)}
-							{/* Rates sit in the label column; an invisible copy of the parent's icon sizes the column before it. */}
 							<div className="grid grid-cols-[auto_auto_minmax(0,1fr)] items-center gap-1.5">
 								<span
 									className={`w-2.5 shrink-0 text-center font-semibold ${SIGNS[modification.sign].className}`}

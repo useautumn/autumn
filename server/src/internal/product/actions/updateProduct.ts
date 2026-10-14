@@ -420,7 +420,6 @@ export const updateProduct = async ({
 		fullProduct.metadata = productUpdates.metadata;
 	}
 
-	// Check if versioning is needed (customers exist AND items or free trial changed)
 	if (force_version) {
 		return createVersion();
 	}
@@ -493,14 +492,6 @@ export const updateProduct = async ({
 		products: [newFullProduct],
 		candidateProducts: [fullProduct],
 	});
-
-	// logger.info("Adding task to queue to detect base variant");
-	// await addTaskToQueue({
-	// 	jobName: JobName.DetectBaseVariant,
-	// 	payload: {
-	// 		curProduct: newFullProduct,
-	// 	},
-	// });
 
 	await addTaskToQueue({
 		jobName: JobName.RewardMigration,

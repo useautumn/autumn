@@ -6,7 +6,6 @@ import type { PushQueue } from "./types/pushQueue.js";
 
 let pushQueue: PushQueue | undefined;
 
-/** One per receiving thread: module state is the thread's own. */
 export const getPushQueue = ({ env }: { env: AtomEnv }): PushQueue => {
 	pushQueue ??= createPushQueue({ queueUrl: env.ATOM_SDK_PUSH_QUEUE_URL });
 	return pushQueue;

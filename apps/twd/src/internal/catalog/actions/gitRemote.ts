@@ -1,7 +1,6 @@
 import { TwdError } from "../../../http/apiError.ts";
 import { REPO_ROOT } from "../repoPaths.ts";
 
-/** Runs git in `cwd` (default: twd's checkout); TwdError `git_remote_unreachable` on failure. */
 export const runGit = async ({
 	args,
 	cwd = REPO_ROOT,
@@ -33,7 +32,6 @@ export const runGit = async ({
 	return stdout;
 };
 
-/** https GitHub URL of the repo under test (`TW_GIT_URL` overrides origin). */
 export const getRepoUrl = async () => {
 	const raw =
 		process.env.TW_GIT_URL ||
@@ -44,11 +42,9 @@ export const getRepoUrl = async () => {
 	return https.replace(/\.git$/, "");
 };
 
-/** `owner/repo` for the GitHub API. */
 export const getRepoSlug = async () =>
 	(await getRepoUrl()).replace(/^https:\/\/(.*@)?github\.com\//, "");
 
-/** branch → head sha for every branch on the remote (one ls-remote round trip). */
 export const listRemoteHeads = async (): Promise<Map<string, string>> => {
 	const output = await runGit({
 		args: ["ls-remote", "--heads", await getRepoUrl()],
@@ -63,7 +59,6 @@ export const listRemoteHeads = async (): Promise<Map<string, string>> => {
 	return heads;
 };
 
-/** Head sha of a pushed branch; TwdError `branch_not_pushed` otherwise. */
 export const resolveBranchSha = async ({ branch }: { branch: string }) => {
 	const output = await runGit({
 		args: ["ls-remote", "--heads", await getRepoUrl(), `refs/heads/${branch}`],

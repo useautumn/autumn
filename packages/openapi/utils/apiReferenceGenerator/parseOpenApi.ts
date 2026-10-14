@@ -21,15 +21,12 @@ export interface ParsedOperation {
 	responses?: {
 		[statusCode: string]: SchemaField[];
 	};
-	/** Raw response schema for generating sample JSON */
 	responseSchemas?: {
 		[statusCode: string]: Record<string, unknown>;
 	};
-	/** Response examples extracted from the OpenAPI spec (already in snake_case) */
 	responseExamples?: {
 		[statusCode: string]: unknown;
 	};
-	/** Reference to all schemas for sample JSON generation */
 	allSchemas?: Record<string, unknown>;
 }
 
@@ -39,7 +36,6 @@ export interface ParsedWebhook {
 	group: string;
 	summary?: string;
 	description?: string;
-	/** Fields inside the `data` envelope (excludes the outer `type` field) */
 	dataFields?: SchemaField[];
 }
 
@@ -51,9 +47,6 @@ interface OpenApiDocument {
 	webhooks?: Record<string, Record<string, unknown>>;
 }
 
-/**
- * Parse an OpenAPI YAML file and extract operation details.
- */
 export function parseOpenApi({
 	openApiPath,
 }: {
@@ -85,7 +78,6 @@ export function parseOpenApi({
 				description: operation.description as string | undefined,
 			};
 
-			// Parse request body
 			const requestBody = operation.requestBody as
 				| Record<string, unknown>
 				| undefined;
@@ -109,7 +101,6 @@ export function parseOpenApi({
 				}
 			}
 
-			// Parse responses
 			const responses = operation.responses as
 				| Record<string, unknown>
 				| undefined;
@@ -136,11 +127,9 @@ export function parseOpenApi({
 							schemas,
 							requiredFields: (schema.required as string[]) ?? [],
 						});
-						// Store raw schema for sample JSON generation
 						parsed.responseSchemas[statusCode] = schema;
 					}
 
-					// Extract response example (could be at content level or schema level)
 					const examples = jsonContent?.examples as unknown[] | undefined;
 					const example =
 						jsonContent?.example ??
@@ -152,7 +141,6 @@ export function parseOpenApi({
 				}
 			}
 
-			// Store reference to all schemas for sample JSON generation
 			parsed.allSchemas = schemas;
 
 			operations.push(parsed);
@@ -162,13 +150,6 @@ export function parseOpenApi({
 	return operations;
 }
 
-/**
- * Parse webhook definitions from the OpenAPI `webhooks` section.
- * Extracts the `data` sub-schema from the `{ type, data }` envelope
- * so we can generate field docs for just the meaningful payload.
- *
- * @param groupMap - Maps operationId -> group name (from the webhook registry).
- */
 export function parseWebhooks({
 	openApiPath,
 	groupMap = {},
@@ -230,9 +211,6 @@ export function parseWebhooks({
 	return webhooks;
 }
 
-/**
- * Resolves an example from a schema, following $ref if needed.
- */
 function resolveSchemaExample({
 	schema,
 	schemas,
@@ -240,7 +218,6 @@ function resolveSchemaExample({
 	schema: Record<string, unknown>;
 	schemas: Record<string, unknown>;
 }): unknown {
-	// Check for examples array
 	if (
 		schema.examples &&
 		Array.isArray(schema.examples) &&
@@ -249,12 +226,10 @@ function resolveSchemaExample({
 		return schema.examples[0];
 	}
 
-	// Check for single example
 	if (schema.example !== undefined) {
 		return schema.example;
 	}
 
-	// Follow $ref
 	if (schema.$ref && typeof schema.$ref === "string") {
 		const refName = schema.$ref.replace("#/components/schemas/", "");
 		const refSchema = schemas[refName] as Record<string, unknown> | undefined;
@@ -266,9 +241,6 @@ function resolveSchemaExample({
 	return undefined;
 }
 
-/**
- * Parse a schema and return a list of fields.
- */
 function parseSchema({
 	schema,
 	schemas,
@@ -280,12 +252,10 @@ function parseSchema({
 	requiredFields: string[];
 	visited?: Set<string>;
 }): SchemaField[] {
-	// Handle $ref
 	if (schema.$ref) {
 		const refPath = schema.$ref as string;
 		const refName = refPath.replace("#/components/schemas/", "");
 
-		// Prevent infinite recursion
 		if (visited.has(refName)) {
 			return [];
 		}
@@ -303,13 +273,11 @@ function parseSchema({
 		return [];
 	}
 
-	// Handle anyOf/oneOf (common for nullable types)
 	if (schema.anyOf || schema.oneOf) {
 		const variants = (schema.anyOf ?? schema.oneOf) as Record<
 			string,
 			unknown
 		>[];
-		// Find the non-null variant
 		const nonNullVariant = variants.find(
 			(v) => v.type !== "null" && !v.$ref?.toString().includes("null"),
 		);
@@ -324,7 +292,6 @@ function parseSchema({
 		return [];
 	}
 
-	// Handle object type
 	if (schema.type === "object") {
 		return parseObjectFields({
 			schema,
@@ -334,7 +301,6 @@ function parseSchema({
 		});
 	}
 
-	// Handle array type - return the items as a single field
 	if (schema.type === "array" && schema.items) {
 		const items = schema.items as Record<string, unknown>;
 		const itemFields = parseSchema({
@@ -344,7 +310,6 @@ function parseSchema({
 			visited,
 		});
 
-		// Return array items as children of a virtual "items" field
 		if (itemFields.length > 0) {
 			return [
 				{
@@ -361,9 +326,6 @@ function parseSchema({
 	return [];
 }
 
-/**
- * Parse a single field from a schema property.
- */
 function parseField({
 	name,
 	schema,
@@ -383,7 +345,6 @@ function parseField({
 	let children: SchemaField[] | undefined;
 	let enumValues: string[] | undefined;
 
-	// Handle $ref
 	if (schema.$ref) {
 		const refPath = schema.$ref as string;
 		const refName = refPath.replace("#/components/schemas/", "");
@@ -399,12 +360,10 @@ function parseField({
 			description =
 				description ?? (refSchema.description as string | undefined);
 
-			// Check for enum
 			if (refSchema.enum) {
 				enumValues = refSchema.enum as string[];
 			}
 
-			// Check for nested object
 			if (refSchema.type === "object" && refSchema.properties) {
 				children = parseSchema({
 					schema: refSchema,
@@ -416,7 +375,6 @@ function parseField({
 		}
 	}
 
-	// Handle anyOf/oneOf (nullable types)
 	if (schema.anyOf || schema.oneOf) {
 		const variants = (schema.anyOf ?? schema.oneOf) as Record<
 			string,
@@ -435,11 +393,9 @@ function parseField({
 			});
 
 			if (innerField) {
-				// Append "| null" if nullable
 				if (hasNull) {
 					innerField.type = `${innerField.type} | null`;
 				}
-				// Preserve description from parent schema if inner doesn't have one
 				if (!innerField.description && description) {
 					innerField.description = description;
 				}
@@ -455,12 +411,10 @@ function parseField({
 		};
 	}
 
-	// Handle enum
 	if (schema.enum) {
 		enumValues = schema.enum as string[];
 	}
 
-	// Handle nested object
 	if (schema.type === "object") {
 		children = parseObjectFields({
 			schema,
@@ -469,10 +423,6 @@ function parseField({
 			visited,
 		});
 
-		// Flatten pure record objects from:
-		// field -> {key} -> value fields
-		// into:
-		// field.{key} -> value fields
 		const hasInlineProperties =
 			!!schema.properties &&
 			typeof schema.properties === "object" &&
@@ -489,13 +439,11 @@ function parseField({
 		}
 	}
 
-	// Handle array
 	if (schema.type === "array" && schema.items) {
 		const items = schema.items as Record<string, unknown>;
 		const itemType = resolveType(items, schemas);
 		type = `${itemType}[]`;
 
-		// Check if array items are an enum (directly or via $ref)
 		if (items.enum) {
 			enumValues = items.enum as string[];
 		} else if (items.$ref) {
@@ -504,14 +452,12 @@ function parseField({
 			const refSchema = schemas[refName] as Record<string, unknown> | undefined;
 
 			if (refSchema?.enum) {
-				// Array items reference an enum schema
 				enumValues = refSchema.enum as string[];
 			} else if (
 				refSchema &&
 				refSchema.type === "object" &&
 				refSchema.properties
 			) {
-				// Array items reference an object schema
 				children = parseSchema({
 					schema: refSchema,
 					schemas,
@@ -618,7 +564,6 @@ function getArrayItemChildren({
 	schemas: Record<string, unknown>;
 	visited: Set<string>;
 }): SchemaField[] | undefined {
-	// Direct object items
 	if (items.type === "object") {
 		const objectChildren = parseObjectFields({
 			schema: items,
@@ -631,7 +576,6 @@ function getArrayItemChildren({
 		}
 	}
 
-	// Referenced object items
 	if (items.$ref) {
 		const refPath = items.$ref as string;
 		const refName = refPath.replace("#/components/schemas/", "");
@@ -649,7 +593,6 @@ function getArrayItemChildren({
 		}
 	}
 
-	// Union object items (e.g. anyOf reward_id | promotion_code)
 	const variantsRaw = items.anyOf ?? items.oneOf;
 	if (Array.isArray(variantsRaw) && variantsRaw.length > 0) {
 		const mergedByName = new Map<string, SchemaField>();
@@ -727,9 +670,6 @@ function mergeFieldTypes({
 	return [...typeSet].join(" | ");
 }
 
-/**
- * Resolve the type string for a schema.
- */
 function resolveType(
 	schema: Record<string, unknown>,
 	schemas: Record<string, unknown>,
@@ -742,11 +682,9 @@ function resolveType(
 		const refSchema = schemas[refName] as Record<string, unknown> | undefined;
 
 		if (refSchema) {
-			// If it's an enum, return "enum"
 			if (refSchema.enum) {
 				return "enum";
 			}
-			// Otherwise return the underlying type
 			return resolveType(refSchema, schemas);
 		}
 		return refName;
@@ -782,10 +720,6 @@ function resolveType(
 	return (schema.type as string) ?? "any";
 }
 
-/**
- * Generate a sample JSON object from a schema for documentation examples.
- * Returns a simplified sample that shows the structure without excessive nesting.
- */
 export function generateSampleJson({
 	schema,
 	schemas,
@@ -797,13 +731,10 @@ export function generateSampleJson({
 	visited?: Set<string>;
 	depth?: number;
 }): unknown {
-	// Prevent infinite recursion and excessive depth
-	// For deep nesting, return placeholder to keep output manageable
 	if (depth > 3) {
 		return "...";
 	}
 
-	// Check for examples defined on the schema (use first example if available)
 	if (
 		schema.examples &&
 		Array.isArray(schema.examples) &&
@@ -812,18 +743,16 @@ export function generateSampleJson({
 		return schema.examples[0];
 	}
 
-	// Check for single example
 	if (schema.example !== undefined) {
 		return schema.example;
 	}
 
-	// Handle $ref
 	if (schema.$ref) {
 		const refPath = schema.$ref as string;
 		const refName = refPath.replace("#/components/schemas/", "");
 
 		if (visited.has(refName)) {
-			return "..."; // Circular reference placeholder
+			return "...";
 		}
 		const newVisited = new Set(visited);
 		newVisited.add(refName);
@@ -840,7 +769,6 @@ export function generateSampleJson({
 		return null;
 	}
 
-	// Handle anyOf/oneOf (pick non-null variant)
 	if (schema.anyOf || schema.oneOf) {
 		const variants = (schema.anyOf ?? schema.oneOf) as Record<
 			string,
@@ -860,18 +788,15 @@ export function generateSampleJson({
 		return null;
 	}
 
-	// Handle enum - return first value
 	if (schema.enum) {
 		const enumValues = schema.enum as unknown[];
 		return enumValues[0] ?? null;
 	}
 
-	// Handle const
 	if ("const" in schema) {
 		return schema.const;
 	}
 
-	// Handle object type
 	if (schema.type === "object") {
 		const properties = schema.properties as Record<string, unknown> | undefined;
 		if (!properties) {
@@ -883,14 +808,13 @@ export function generateSampleJson({
 			result[propName] = generateSampleJson({
 				schema: propSchema as Record<string, unknown>,
 				schemas,
-				visited: new Set(visited), // Fresh set for each property to avoid false positives
+				visited: new Set(visited),
 				depth: depth + 1,
 			});
 		}
 		return result;
 	}
 
-	// Handle array type
 	if (schema.type === "array") {
 		const items = schema.items as Record<string, unknown> | undefined;
 		if (items) {
@@ -906,7 +830,6 @@ export function generateSampleJson({
 		return [];
 	}
 
-	// Handle primitive types with example values
 	switch (schema.type) {
 		case "string":
 			return "<string>";

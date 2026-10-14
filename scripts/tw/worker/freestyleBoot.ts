@@ -1,22 +1,5 @@
 #!/usr/bin/env bun
 
-/**
- * Freestyle pre-booted worker bring-up. The memory snapshot this worker was
- * restored from already runs PG + Dragonfly + goaws AND the Autumn server +
- * SQS workers + cron — so unlike boot.ts, nothing is started here. Only the
- * per-worker identity binds happen, then READY:
- *
- *   1. Verify the snapshot-resumed server answers on SERVER_PORT (fail loud —
- *      a dead resume is a broken worker the orchestrator should replace).
- *   2. (if NEEDS_SVIX) bind the orchestrator-created Svix app into svix_config.
- *   3. Bind the Stripe sub-account into the localhost DB (same as boot.ts).
- *   4. Write this worker's pool key to the tw key file — the running server
- *      resolves it per-request via the initMasterStripe seam, since its
- *      snapshotted process env still carries the warm placeholder key.
- *   5. Print TW_WORKER_READY, then stay alive polling server health so the
- *      orchestrator's boot-process-death detection keeps working.
- */
-
 import { chmodSync, mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { TW_STRIPE_IDEMPOTENCY_NAMESPACE_FILE } from "@server/external/connect/clientCache/getTwStripeRequestHeaders.js";
@@ -80,10 +63,6 @@ const main = async (): Promise<void> => {
 		throw new Error("[tw-fsboot] TW_STRIPE_IDEMPOTENCY_NAMESPACE is required");
 	}
 
-	// Stale snapshot → fast-forward in place: the orchestrator already checked
-	// out the target sha (so THIS script is current); re-run warmup (install
-	// delta + migrate + seed, services stay up) and restart the app procs on the
-	// new code. All workers do this in parallel — wall cost is one worker's ff.
 	if (isTruthyEnv(process.env.TW_SNAPSHOT_STALE)) {
 		const repoRoot = process.cwd();
 		log("stale snapshot — fast-forwarding worker to the target sha");
@@ -119,7 +98,6 @@ const main = async (): Promise<void> => {
 		}
 		await prepareBalanceSyncQueue();
 		if (balanceWorkerEnabled()) startBalanceWorker(repoRoot);
-		// Restarted beside the server: both take this boot's Atom admin token.
 		startAtom(repoRoot);
 		const serverProc = startServer(repoRoot, serverPort);
 		void serverProc.exited.then((code) => {
@@ -132,7 +110,6 @@ const main = async (): Promise<void> => {
 		startBackgroundProcs(repoRoot);
 	}
 
-	// 1. The snapshot carries a running server (or the ff just restarted it).
 	await waitForServerHealth(
 		serverPort,
 		isTruthyEnv(process.env.TW_SNAPSHOT_STALE)
@@ -140,7 +117,6 @@ const main = async (): Promise<void> => {
 			: RESUME_HEALTH_TIMEOUT_MS,
 	);
 	log(`server healthy on :${serverPort}`);
-	// The snapshot carries a running balance worker too (or the ff just restarted it).
 	if (balanceWorkerEnabled()) {
 		await waitForBalanceWorkerHealth(
 			isTruthyEnv(process.env.TW_SNAPSHOT_STALE)
@@ -150,22 +126,18 @@ const main = async (): Promise<void> => {
 		log("balance worker healthy");
 	}
 
-	// 2 + 3. Per-worker DB binds.
 	if (isTruthyEnv(process.env.NEEDS_SVIX)) {
 		await provisionSvixApp(orgId);
 	}
 	const { bindStripeAccount } = await import("./bindStripeAccount.js");
 	await bindStripeAccount({ orgId, stripeAccountId });
 
-	// 4. The running server picks this up per-request (initMasterStripe seam).
 	mkdirSync(dirname(TW_WORKER_STRIPE_KEY_FILE), { recursive: true });
 	writeFileSync(TW_STRIPE_IDEMPOTENCY_NAMESPACE_FILE, stripeNamespace);
 	writeFileSync(TW_WORKER_STRIPE_KEY_FILE, stripeKey);
 	chmodSync(TW_WORKER_STRIPE_KEY_FILE, 0o600);
 	log("per-worker Stripe pool key written");
 
-	// 5. READY, then liveness watch: exiting non-zero is how the orchestrator
-	//    learns this worker died (its wait() rejects → evict + reschedule).
 	log(`worker ready (env=${TW_ENV}, server :${serverPort}, prebooted)`);
 	console.log(READY_SENTINEL);
 

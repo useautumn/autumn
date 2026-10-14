@@ -41,14 +41,9 @@ const InternalAggregateEventsSchema = z.object({
 	bin_size: z.enum(["day", "hour", "week", "month"]).optional(),
 	timezone: z.string().optional(),
 	max_groups: z.number().int().min(1).max(250).optional(),
-	// Presence adds the per-balance `deductions` breakdown. Requires a customer:
-	// the rollup is keyed (org, env, customer_id, ...) so it cannot be org-wide.
 	aggregate_on: z.literal("deducted").optional(),
 });
 
-/**
- * Query events by customer ID
- */
 export const handleInternalAggregateEvents = createRoute({
 	scopes: [Scopes.Analytics.Read],
 	body: InternalAggregateEventsSchema,
@@ -82,10 +77,8 @@ export const handleInternalAggregateEvents = createRoute({
 		}
 
 		if (!customer_id) {
-			// No customer ID provided, set aggregateAll to true
 			aggregateAll = true;
 		} else {
-			// Customer ID provided, fetch customer data
 			customer = await CusService.getFull({
 				ctx,
 				idOrInternalId: customer_id,
@@ -106,10 +99,8 @@ export const handleInternalAggregateEvents = createRoute({
 			}).every(({ product }) => product.is_default);
 		}
 
-		// Filter out empty strings
 		event_names = event_names.filter((name: string) => name !== "");
 
-		// Use provided bin_size, or the range's default.
 		const binSize =
 			bin_size || defaultBinSizeForRange({ interval: interval ?? undefined });
 
@@ -124,11 +115,6 @@ export const handleInternalAggregateEvents = createRoute({
 			});
 		}
 
-		// For standard ranges, compute the window once here and pass it as
-		// `custom_range` to both actions. This guarantees the chart (aggregate)
-		// and totals (getCountAndSum) use an identical window so their numbers
-		// stay aligned. Billing-cycle ranges fall through to each action's own
-		// resolution (both use the same `getBillingCycleStartDate`).
 		const now = new UTCDate();
 		const standardWindow = getStandardIntervalWindow({
 			interval: interval ?? undefined,
@@ -153,9 +139,6 @@ export const handleInternalAggregateEvents = createRoute({
 			group_by === "source_feature_id" ||
 			group_by === "$source_feature_id"
 		) {
-			// Only meaningful for the deductions breakdown — the events rollups
-			// have no such column, so grouping them by it returns nothing.
-			// aggregateDeductions still receives the raw group_by below.
 			resolvedGroupBy = undefined;
 		}
 
@@ -219,7 +202,6 @@ export const handleInternalAggregateEvents = createRoute({
 			collapsePlanIdGroups({ events, internalIdToPublicId });
 		}
 
-		// When grouping by entity_id, resolve entity names from ClickHouse
 		let entityNames: Record<string, EntityDisplayInfo> | undefined;
 		if (resolvedGroupBy === "entity_id" && events?.data) {
 			const entityIds = [
@@ -274,8 +256,6 @@ export const handleInternalAggregateEvents = createRoute({
 							entityId: entity_id,
 							featureIds: event_names,
 							groupBy: group_by,
-							// Same normalized window and bin as the event aggregation above,
-							// so both series cover identical, aligned buckets.
 							interval: customRange ? undefined : (interval as RangeEnum),
 							customRange,
 							binSize,

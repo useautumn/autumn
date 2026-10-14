@@ -128,10 +128,6 @@ export function SubscriptionCancelSheet() {
 		[customer, cusProduct, productV2, prepaidItems, currentVersion],
 	);
 
-	// Free products and one-time plans (no subscription) must use "cancel_immediately"
-	// Products with subscriptions default to "cancel_end_of_cycle" to allow end-of-cycle cancellation
-	// const hasSubscription =
-	// 	cusProduct?.subscription_ids && cusProduct.subscription_ids.length > 0;
 	const { valid: isFreeOrOneOff } = cp(cusProduct).free().or.oneOff();
 	const defaultCancelAction = isFreeOrOneOff
 		? "cancel_immediately"

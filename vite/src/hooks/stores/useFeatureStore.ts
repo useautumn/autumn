@@ -23,10 +23,8 @@ export const useFeatureStore = create<FeatureState>((set) => ({
 	...initialState,
 	setFeature: (feature) => {
 		if (typeof feature === "function") {
-			// Handle updater function pattern: setFeature(prev => newFeature)
 			set((state) => ({ feature: feature(state.feature) }));
 		} else {
-			// Handle direct value: setFeature(newFeature)
 			set({ feature });
 		}
 	},

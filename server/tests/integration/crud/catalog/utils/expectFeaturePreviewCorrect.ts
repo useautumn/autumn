@@ -12,11 +12,6 @@ type FeatureChangeReason =
 	| "unsupported_dependency"
 	| null;
 
-/**
- * Assert the per-feature slice of a catalog.preview_update response. Only the
- * fields you pass are checked. `blockerCodes` is a contains-check (extra
- * blockers from shared-org usage are tolerated); `noBlockers` is exact-empty.
- */
 export const expectFeaturePreviewCorrect = ({
 	preview,
 	featureId,

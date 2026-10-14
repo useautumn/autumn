@@ -1,10 +1,3 @@
-/**
- * An entity a check creates from `entity_data` keeps the billing controls it was sent, on both balance routes.
- *
- * Red (before): legacy's auto-create dropped `entity_data.billing_controls`; the balance worker route saved them.
- * Green (after): both save them.
- */
-
 import { expect, test } from "bun:test";
 import type { ApiEntityV2, EntityBillingControls } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
@@ -33,7 +26,6 @@ test.concurrent(
 			actions: [s.billing.attach({ productId: plan.id })],
 		});
 
-		// API versions below 2.1 create a missing entity from `entity_data`.
 		await autumnV1.check({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,

@@ -79,7 +79,6 @@ async function joinGroup({
 		try {
 			await ctx.consumer.disconnect();
 		} catch {
-			// Preserve the startup failure if disconnect also fails.
 		} finally {
 			removeConsumerListeners({ state });
 		}
@@ -108,7 +107,6 @@ function observeBatchProgress({
 		highWatermark: parseKafkaOffset({ offset: payload.highWatermark }),
 	});
 	if (payload.batchSize !== 0) return;
-	// Filtered records and transaction markers also count toward catch-up.
 	ctx.progress.advance({
 		topic: payload.topic,
 		partition: payload.partition,

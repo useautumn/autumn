@@ -1,15 +1,3 @@
-/**
- * catalogV2 version identity — projected version_slug collisions (unit 4).
- *
- * Contract:
- *   rename to a sibling's current slug → DuplicateVersionSlug
- *   two entries of the same plan both take "summer" → DuplicateVersionSlug
- *   in-place keeps v1 while another entry takes v1 → DuplicateVersionSlug
- *   mint stamp "summer" + sibling rename to "summer" → DuplicateVersionSlug
- *   two different plan_ids both "summer" → allowed
- *   swap slugs in one call → allowed (final projected set)
- */
-
 import { test } from "bun:test";
 import { ErrCode } from "@autumn/shared";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils.js";

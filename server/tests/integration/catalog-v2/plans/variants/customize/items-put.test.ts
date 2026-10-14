@@ -1,19 +1,3 @@
-/**
- * catalogV2.update — variants[].customize.items is PUT-style (replace all items).
- *
- * Contract:
- *   create PUT lists only the desired items (unlisted base items are dropped)
- *   create PUT keeps extras that are listed
- *   edit PUT, no propagate → replaces the variant; base stays put
- *   follow then PUT → the PUT list is the final item set (followed extras
- *     survive only if they are in the list)
- *   items + add_items / remove_items → 400
- *
- * Red (current): customize.items is dropped, so PUT create/edit keeps the clone
- *   / current items (Dashboard still present when not listed).
- * Green (after): variant entitlements match the PUT list exactly.
- */
-
 import { test } from "bun:test";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils.js";

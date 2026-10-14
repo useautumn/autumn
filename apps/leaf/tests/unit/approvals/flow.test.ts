@@ -251,8 +251,6 @@ describe("approval flow", () => {
 			},
 		});
 
-		// Claim wins first, then authorization denies and releases it back to
-		// pending; the write never runs and no card edit happens.
 		expect(calls).toEqual(["claim", "release"]);
 		expect(replies).toEqual(["Missing plans:write."]);
 	});
@@ -407,9 +405,6 @@ describe("approval flow", () => {
 });
 
 describe("dismissing an approval", () => {
-	// A double-click (or a retried Slack interaction) lands the second click
-	// while the first is still denying in Eve. Only the first may discard and
-	// reply; the second must find the row already decided and do nothing.
 	test("a second dismiss click cancels only once", async () => {
 		setLeafTestEnv();
 		const { handleApprovalActionWithDeps } = await import(

@@ -14,8 +14,6 @@ import {
 	readRepointableCustomerPlanRow,
 } from "./versionRepointTestUtils.js";
 
-/** cusEnt rows for one feature joined with the definition each row claims —
- * the shape same-feature pairing assertions (interval, carry, allowance) need. */
 export const readFeatureRowsWithDefinition = async ({
 	ctx,
 	customerId,
@@ -95,8 +93,6 @@ export const expectVersionRepointedOnce = async ({
 	);
 };
 
-/** Mints the next plan version via the RPC route (v2 item shapes only —
- * internal ProductItem fixtures get stripped by the params schema). */
 export const mintPlanVersion = async ({
 	client,
 	planId,

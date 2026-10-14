@@ -1,10 +1,3 @@
-/**
- * disable_stripe_writes org config
- *
- * The setting only applies in live: orgDisableStripeWrites returns false in
- * sandbox, so sandbox attaches keep creating Stripe customers.
- */
-
 import { expect, test } from "bun:test";
 import {
 	AppEnv,

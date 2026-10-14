@@ -55,7 +55,6 @@ export const getApiKeyWithOwner = async ({
 	return row;
 };
 
-/** Unrevoked key by hash, joined with its owner. */
 export const findActiveApiKeyByHash = async ({
 	ctx,
 	keyHash,
@@ -84,7 +83,6 @@ export const revokeApiKeyRow = async ({
 		.where(and(eq(apiKeys.id, id), isNull(apiKeys.revokedAt)));
 };
 
-/** Bumps last_used_at at most once per `throttleMs`. */
 export const touchApiKey = async ({
 	ctx,
 	id,

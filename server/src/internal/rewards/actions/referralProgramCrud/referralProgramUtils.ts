@@ -53,7 +53,6 @@ export const requireLinkableReward = async ({
 	return reward;
 };
 
-/** Programs reference rewards by internal id, but the API speaks public ids */
 export const rewardIdByInternalId = async ({
 	ctx,
 	programs,
@@ -103,8 +102,6 @@ export const toApiProgram = async ({
 	});
 };
 
-/** An omitted field keeps its stored value; an explicit null reaches the column
- * as null, which is what clears it — undefined would be dropped by the update. */
 const patchField = <T>({
 	patch,
 	existing,

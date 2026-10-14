@@ -92,8 +92,6 @@ test.concurrent(
 			license_internal_product_id: licenseFull.internal_id,
 		});
 
-		// New base price is custom; the untouched messages entitlement keeps its
-		// stock row id.
 		const spec = resolved.insertPlanLicenses[0];
 		expect(spec.customPrices).toHaveLength(1);
 		expect(spec.customEntitlements).toHaveLength(0);
@@ -231,7 +229,6 @@ test.concurrent(
 			idPrefix: "lic-resolver-overflow",
 		});
 
-		// In-process call: the server throws RecaseError, not the client's AutumnError.
 		await expect(
 			setupCustomPlanLicenses({
 				ctx,

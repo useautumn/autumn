@@ -8,7 +8,6 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { Decimal } from "decimal.js";
 
-/** SQS auto top-up wait + sync settle time */
 const AUTO_TOPUP_WAIT_MS = 20000;
 const SYNC_SETTLE_MS = 5000;
 
@@ -54,7 +53,6 @@ test.concurrent(`${chalk.yellowBright("auto-topup race: concurrent track during 
 		],
 	});
 
-	// Configure auto top-up: threshold=20, quantity=100
 	await autumnV2_1.customers.update(customerId, {
 		billing_controls: makeAutoTopupConfig({
 			threshold: 20,
@@ -62,38 +60,28 @@ test.concurrent(`${chalk.yellowBright("auto-topup race: concurrent track during 
 		}),
 	});
 
-	// Verify starting balance
 	const before = await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
 	expect(before.balances[TestFeature.Messages].remaining).toBe(100);
 
-	// Track 85 → balance = 15 (triggers auto top-up via SQS)
 	await autumnV2_1.track({
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
 		value: 85,
 	});
 
-	// Immediately track 5 more — concurrent with the in-flight auto top-up
-	// This exercises the race between:
-	//   1. Deduction sync (Redis → Postgres, 1s delay)
-	//   2. Auto top-up (CusEntService.increment + Redis increment with cache_version bump)
 	await autumnV2_1.track({
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
 		value: 5,
 	});
 
-	// Wait for auto top-up processing + sync settlement
 	await timeout(AUTO_TOPUP_WAIT_MS);
 
-	// Expected balance: 100 - 85 - 5 + 100 = 110
 	const expectedBalance = new Decimal(100).sub(85).sub(5).add(100).toNumber();
 
-	// 1. Check cached balance (Redis-backed)
 	const cached = await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
 	expect(cached.balances[TestFeature.Messages].remaining).toBe(expectedBalance);
 
-	// 2. Wait for sync to fully settle, then check DB balance
 	await timeout(SYNC_SETTLE_MS);
 
 	const fromDb = await autumnV2_1.customers.get<ApiCustomerV5>(customerId, {
@@ -101,7 +89,6 @@ test.concurrent(`${chalk.yellowBright("auto-topup race: concurrent track during 
 	});
 	expect(fromDb.balances[TestFeature.Messages].remaining).toBe(expectedBalance);
 
-	// 3. Verify billing_controls survived
 	expect(cached.billing_controls?.auto_topups).toBeDefined();
 	expect(cached.billing_controls?.auto_topups?.[0]?.feature_id).toBe(
 		TestFeature.Messages,
@@ -134,7 +121,6 @@ test.concurrent(`${chalk.yellowBright("auto-topup race: rapid sequential tracks 
 		],
 	});
 
-	// Configure auto top-up: threshold=30, quantity=100
 	await autumnV2_1.customers.update(customerId, {
 		billing_controls: makeAutoTopupConfig({
 			threshold: 30,
@@ -142,16 +128,12 @@ test.concurrent(`${chalk.yellowBright("auto-topup race: rapid sequential tracks 
 		}),
 	});
 
-	// Starting balance: 200
-	// Track 175 → balance = 25 (triggers auto top-up)
 	await autumnV2_1.track({
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
 		value: 175,
 	});
 
-	// Fire 3 more small tracks while auto top-up is in-flight
-	// Each deduction hits Redis immediately, but sync to Postgres is delayed
 	await Promise.all([
 		autumnV2_1.track({
 			customer_id: customerId,
@@ -170,8 +152,6 @@ test.concurrent(`${chalk.yellowBright("auto-topup race: rapid sequential tracks 
 		}),
 	]);
 
-	// Total deducted: 175 + 3 + 3 + 4 = 185
-	// After top-up: 200 - 185 + 100 = 115
 	await timeout(AUTO_TOPUP_WAIT_MS);
 
 	const expectedBalance = new Decimal(200).sub(185).add(100).toNumber();
@@ -179,7 +159,6 @@ test.concurrent(`${chalk.yellowBright("auto-topup race: rapid sequential tracks 
 	const cached = await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
 	expect(cached.balances[TestFeature.Messages].remaining).toBe(expectedBalance);
 
-	// Verify DB matches after sync settles
 	await timeout(SYNC_SETTLE_MS);
 
 	const fromDb = await autumnV2_1.customers.get<ApiCustomerV5>(customerId, {
@@ -213,7 +192,6 @@ test.concurrent(`${chalk.yellowBright("auto-topup race: top-up then immediate re
 		],
 	});
 
-	// Configure auto top-up: threshold=20, quantity=100
 	await autumnV2_1.customers.update(customerId, {
 		billing_controls: makeAutoTopupConfig({
 			threshold: 20,
@@ -221,7 +199,6 @@ test.concurrent(`${chalk.yellowBright("auto-topup race: top-up then immediate re
 		}),
 	});
 
-	// Round 1: Track 85 → balance = 15 → top-up fires → balance = 115
 	await autumnV2_1.track({
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
@@ -234,8 +211,6 @@ test.concurrent(`${chalk.yellowBright("auto-topup race: top-up then immediate re
 	const expectedMid = new Decimal(100).sub(85).add(100).toNumber();
 	expect(mid.balances[TestFeature.Messages].remaining).toBe(expectedMid);
 
-	// Round 2: Track 100 → balance = 15 → second top-up fires
-	// Then immediately track 5 more (concurrent with second top-up)
 	await autumnV2_1.track({
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
@@ -250,7 +225,6 @@ test.concurrent(`${chalk.yellowBright("auto-topup race: top-up then immediate re
 
 	await timeout(AUTO_TOPUP_WAIT_MS);
 
-	// Expected: 115 - 100 - 5 + 100 = 110
 	const expectedFinal = new Decimal(expectedMid)
 		.sub(100)
 		.sub(5)
@@ -260,7 +234,6 @@ test.concurrent(`${chalk.yellowBright("auto-topup race: top-up then immediate re
 	const after = await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
 	expect(after.balances[TestFeature.Messages].remaining).toBe(expectedFinal);
 
-	// Verify DB after sync
 	await timeout(SYNC_SETTLE_MS);
 
 	const fromDb = await autumnV2_1.customers.get<ApiCustomerV5>(customerId, {

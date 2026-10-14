@@ -100,8 +100,6 @@ describe("deriveCustomerProductIsCustom pricing", () => {
 		]);
 	});
 
-	// Other currencies are a purchase-time option, so only an amount that moved in
-	// a currency both sides price in counts.
 	describe("multi-currency", () => {
 		runCases([
 			{

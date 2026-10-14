@@ -30,9 +30,6 @@ export const basePriceToProductItem = ({
 			: undefined;
 	const priceId =
 		"price_id" in basePrice ? (basePrice.price_id ?? undefined) : undefined;
-	// A base price is fixed, so an adopted id belongs in the v1 slot it bills
-	// from. The internal field stays as the sync flows' way in. Presence is the
-	// signal: an omitted `stripe` states nothing, an explicit null unlinks.
 	const statedStripe =
 		"processors" in basePrice ? basePrice.processors?.stripe : undefined;
 	const internalStripePriceId =

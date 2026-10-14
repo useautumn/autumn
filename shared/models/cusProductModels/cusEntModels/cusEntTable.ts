@@ -36,8 +36,6 @@ export const customerEntitlements = pgTable(
 			.$type<UsageAttribution>()
 			.notNull()
 			.default({}),
-		// Stamped at creation from the plan item's price shape; invoice lines,
-		// attribution and mutation guards read this, never the feature config.
 		invoice_credit: boolean("invoice_credit").notNull().default(false),
 		created_at: numeric({ mode: "number" }).notNull(),
 		reset_cycle_anchor: numeric({ mode: "number" }),
@@ -45,12 +43,9 @@ export const customerEntitlements = pgTable(
 		usage_allowed: boolean("usage_allowed").default(false),
 		separate_interval: boolean("separate_interval").notNull().default(false),
 		is_pooled_balance: boolean("is_pooled_balance").notNull().default(false),
-		/** Denormalized reverse link; pooled_balances.customer_entitlement_id is canonical. */
 		pooled_balance_id: text("pooled_balance_id"),
-		/** Denormalized reverse link; source_customer_entitlement_id is canonical. */
 		pooled_contribution_id: text("pooled_contribution_id"),
 
-		// Adjustment is how much balance changes. Eg. balance goes from 100 -> 200, adjustment is +100 (will deprecate soon)
 		adjustment: numeric({ mode: "number" }),
 
 		/** @deprecated Legacy free-balance field. */
@@ -60,26 +55,18 @@ export const customerEntitlements = pgTable(
 		 * New features should not read or write this field. */
 		entities: jsonb("entities").$type<Record<string, EntityBalance>>(),
 
-		// Expiry for loose entitlements (entitlements without reset intervals)
 		expires_at: numeric({ mode: "number" }),
 		cache_version: integer("cache_version").default(0),
 
-		// Optional...
 		customer_id: text("customer_id"),
 		feature_id: text("feature_id"),
 
 		external_id: text("external_id"),
 
-		/** Provenance for loose rows that outlive their plan (expiring top-ups). */
 		metadata: jsonb("metadata").$type<CustomerEntitlementMetadata>(),
 
-		// Denormalized parent-product expiry; nullable tri-state so a manual `false`
-		// stays sticky and the backfill cron only flips NULL -> true.
 		expired: boolean("expired"),
 
-		// Denormalized "invoice.created owns this reset" (price-backed on a live
-		// subscription). Written lazily by the batch reset worker's verdicts;
-		// filters these rows out of the reset scan so they stop re-entering it.
 		reset_by_invoice: boolean("reset_by_invoice"),
 	},
 	(table) => [
@@ -129,8 +116,6 @@ export const customerEntitlements = pgTable(
 		index("idx_customer_entitlements_loose_customer_expires")
 			.on(table.internal_customer_id, table.expires_at)
 			.where(sql`${table.customer_product_id} IS NULL`),
-		// Expiry-first for the unscoped purchase-grant sweep; the partial
-		// predicate keeps it to grant rows only.
 		index("idx_customer_entitlements_expiring_grants")
 			.on(table.expires_at)
 			.where(
@@ -151,8 +136,6 @@ export const customerEntitlements = pgTable(
 			.on(table.pooled_contribution_id)
 			.where(sql`${table.pooled_contribution_id} IS NOT NULL`)
 			.concurrently(),
-		// Every reset predicate leg except expiry, which stays a heap filter. Legs
-		// live here so the planner drops them instead of costing their selectivity.
 		index("idx_customer_entitlements_reset_scan")
 			.on(table.next_reset_at, sql`${table.id} COLLATE "C"`)
 			.where(

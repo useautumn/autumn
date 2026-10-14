@@ -1,4 +1,3 @@
-/** Lease first, so concurrent runs never race the lazy webhook; every created account is reported so twd can delete it. */
 export const setUpStripeConnectAccount = async ({
 	waitForLease,
 	isCancelled,

@@ -69,33 +69,28 @@ export function buildCreateScheduleRequestBody({
 	endDate?: number | null;
 	allowFirstPhaseBackdate?: boolean;
 	enablePlanImmediately?: boolean;
-	/** Pass true only while the carry-over row is visible. */
 	carryOverUsages?: boolean;
 	carryOverUsageFeatureIds?: string[];
 	stripeSubscriptionId?: string | null;
 	freeTrial?: FreeTrialFormValues;
 	currentTrial?: CurrentScheduleTrial | null;
 	catalogFreeTrial?: FreeTrial | null;
-	/** What the Proration row shows when untouched, sent so the request bills what the sheet displays. */
 	defaultFirstPhaseProration?: BillingBehavior;
 	omitFirstPhaseProration?: boolean;
 	discounts?: FormDiscount[];
 	removedRewardIds?: string[];
-	/** Marked discounts outside this list, like customer-level coupons, are never sent. */
 	removableRewardIds?: string[];
 }): SetPlansParamsV0 | null {
 	const now = nowMs ?? Date.now();
 	if (!customerId || phases.length === 0) return null;
 	if (getCreateSchedulePhaseTimingError({ phases, nowMs: now })) return null;
 	const startsLater = firstPhaseStartsLater({ phases, nowMs: now });
-	// A first phase starting later anchors on its own start, so only one starting now takes a date.
 	const usesCustomAnchor = billingCycleAnchorMode === "custom" && !startsLater;
 	const customAnchor = usesCustomAnchor
 		? (billingCycleAnchorDate ?? null)
 		: null;
 	const resetsFirstPhaseCycle =
 		!!resetBillingCycle && (!usesCustomAnchor || customAnchor !== null);
-	// On a saved start, phase_start is the current anchor and resets nothing; a started later phase resets itself.
 	const nextPhaseStartsAt = phases[1]?.startsAt;
 	const resetsCycleNow =
 		resetsFirstPhaseCycle &&
@@ -146,14 +141,12 @@ export function buildCreateScheduleRequestBody({
 	);
 	if (validPhases.length === 0) return null;
 
-	// The form's first phase owns the request's first-phase billing, even when it has no plans.
 	const requestPhases = validPhases.map(
 		(
 			{ keepsCycleAnchor, prorationBehavior: ownProration, ...apiPhase },
 			index,
 		) => {
 			const isFirstPhase = index === 0;
-			// Where proration can't change what's billed, the server applies its own rule.
 			const firstPhaseProration = omitFirstPhaseProration
 				? undefined
 				: (phases[0]?.prorationBehavior ?? defaultFirstPhaseProration);
@@ -218,7 +211,6 @@ export function buildCreateScheduleRequestBody({
 	return body as SetPlansParamsV0;
 }
 
-/** A submit body: the form's request plus what its billing stage chose, never a stale form-only flag. */
 export function buildCreateScheduleStageRequestBody({
 	stageParams = {},
 	...params

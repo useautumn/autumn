@@ -39,7 +39,6 @@ const getTargetSubscriptionIds = ({
 	return targetCustomerProduct?.subscription_ids ?? [];
 };
 
-/** Discounts on the subscription the plan joins. */
 export const getAttachAppliedDiscounts = ({
 	customer,
 	entityId,

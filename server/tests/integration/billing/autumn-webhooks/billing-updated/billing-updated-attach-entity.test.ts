@@ -1,6 +1,3 @@
-// `billing.updated` webhook via the attach V2 endpoint: plan_changes report activated / scheduled /
-// updated / expired actions per plan.
-
 import { afterAll, beforeAll, expect, test } from "bun:test";
 import {
 	getTestSvixAppId,
@@ -34,10 +31,6 @@ beforeAll(async () => {
 afterAll(async () => {
 	await webhook?.cleanup();
 });
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// E1: ENTITY-LEVEL NEW ATTACH
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(
 	`${chalk.yellowBright("billing.updated: E1 entity new attach → entity_id + activated")}`,
@@ -88,10 +81,6 @@ test.concurrent(
 		expect(activated).toBeDefined();
 	},
 );
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// E2: ENTITY-LEVEL UPGRADE
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(
 	`${chalk.yellowBright("billing.updated: E2 entity upgrade → entity_id + activated + expired")}`,

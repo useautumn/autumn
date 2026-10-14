@@ -45,21 +45,17 @@ import {
 	type WorkerActivityTracker,
 } from "./workerActivityTracker.js";
 
-// ============ Shared State ============
 let isRunning = true;
 const abortControllers = new Set<AbortController>();
 export const getAbortControllerCountForTesting = () => abortControllers.size;
 
-// Process recycling — exit after processing this many messages to prevent memory leaks
 const MAX_MESSAGES_BEFORE_RECYCLE = 50_000;
 
 const IDLE_SELF_KILL_MS = ms.minutes(5);
 const shouldIdleSelfKill = process.env.NODE_ENV !== "development";
 
-// Per-message processing timeout — must be under VisibilityTimeout (30s)
 const MESSAGE_TIMEOUT_MS = 25_000;
 // Batch resets legitimately outrun the default bound (up to 1k rows plus Stripe
-// anchor checks), so they get a longer one — never an unbounded one.
 const BATCH_RESET_MESSAGE_TIMEOUT_MS = ms.minutes(1);
 const SQS_RECEIVE_BATCH_LIMIT = 10;
 const SQS_RECEIVE_TIMEOUT_MS = ms.seconds(30);
@@ -69,35 +65,21 @@ const DELETE_RETRY_DELAYS_MS = [100, 250, 500] as const;
 type JobOverride = {
 	ack?: "upfront" | "always-after-processing";
 	dispatch?: "inline" | "background";
-	/** Per-message bound. Omit for MESSAGE_TIMEOUT_MS; `null` runs unbounded,
-	 * which is only safe when the message is ACKed upfront. */
 	timeoutMs?: number | null;
-	/** Extend this message's SQS visibility after receive. Queue default is 30s. */
 	visibilityTimeoutSeconds?: number;
 };
 
-// Jobs with nonstandard acknowledgement or dispatch behavior. Inline dispatch
-// preserves backpressure; background dispatch is only safe for rare,
-// low-volume work that does not use a shared concurrency limit.
 const JOB_OVERRIDES: Partial<Record<JobName, JobOverride>> = {
-	// Can exceed VisibilityTimeout on large orgs; redelivery causes a
-	// self-amplifying Redis UNLINK storm. Inline so one worker's concurrency
-	// stays capped at the receive batch size.
 	[JobName.ClearCreditSystemCustomerCache]: {
 		ack: "upfront",
 		dispatch: "inline",
 		timeoutMs: null,
 	},
-	// A failed reset remains overdue and will be rediscovered by the next scan.
-	// Keep it in flight until processing finishes so queue depth and concurrency
-	// remain accurate, then ACK failures too so SQS cannot retry indefinitely.
 	[JobName.BatchResetCustomerEntitlementsV2]: {
 		ack: "always-after-processing",
 		dispatch: "inline",
 		timeoutMs: BATCH_RESET_MESSAGE_TIMEOUT_MS,
 	},
-	// Longer than a typical billing call, short enough that lock-miss retries
-	// redeliver in minutes (not hours) so oldest-message age stays bounded.
 	[JobName.AutoTopUp]: {
 		visibilityTimeoutSeconds: seconds.minutes(2),
 	},
@@ -109,14 +91,10 @@ const JOB_OVERRIDES: Partial<Record<JobName, JobOverride>> = {
 const getJobOverride = (jobName: string): JobOverride | undefined =>
 	JOB_OVERRIDES[jobName as JobName];
 
-// Stale connection detection
-const EMPTY_POLL_THRESHOLD = 9; // ~3 min of empty polls (9 * 20s wait)
+const EMPTY_POLL_THRESHOLD = 9;
 const HEARTBEAT_INTERVAL_MS = ms.minutes(5);
 
-// Zero-message alert tracking
-const ZERO_MESSAGE_ALERT_THRESHOLD = 20; // ~20 min of 0 messages
-
-// ============ Helper Functions ============
+const ZERO_MESSAGE_ALERT_THRESHOLD = 20;
 
 const logPrefix = ({ queueUrl }: { queueUrl: string }) =>
 	`[SQS Worker ${process.pid}][${queueUrl.split("/").pop()}]`;
@@ -168,8 +146,6 @@ const receiveMessagesWithTimeout = async ({
 	}
 };
 
-// ============ Polling Loop (per-queue, per-loop state) ============
-
 export const startPollingLoop = async ({
 	db,
 	queueId,
@@ -192,15 +168,11 @@ export const startPollingLoop = async ({
 	getSqsClientFn: () => SQSClient;
 	recreateSqsClientFn: () => SQSClient;
 	shouldPoll?: () => boolean;
-	/** Raise for queues whose jobs legitimately run long (e.g. batch resets) —
-	 * a message redelivered mid-processing means two workers mutating the same
-	 * rows concurrently. */
 	visibilityTimeoutSeconds?: number;
 	receiveTimeoutMs?: number;
 	maxMessagesBeforeRecycle?: number;
 	workerActivity?: WorkerActivityTracker;
 }) => {
-	// Per-loop state
 	let messagesProcessed = 0;
 	let totalMessagesProcessed = 0;
 	let lastStatsTime = Date.now();
@@ -210,7 +182,6 @@ export const startPollingLoop = async ({
 	let consecutiveZeroMessageIntervals = 0;
 
 	const prefix = logPrefix({ queueUrl });
-	// Never awaited per message: until the read lands (or if it fails) every failure is reported.
 	let retryBudget: RetryBudget = { kind: "unknown" };
 	void getQueueRetryBudget({ sqs: getSqsClientFn(), queueUrl }).then(
 		(budget) => {
@@ -352,8 +323,6 @@ export const startPollingLoop = async ({
 			await ackMessageUpfront({ sqs, message, job });
 		}
 
-		// Unbounded only when a job opts in explicitly — being in JOB_OVERRIDES
-		// at all used to be enough, which let one hung handler wedge the loop.
 		const timeoutMs =
 			override?.timeoutMs === undefined
 				? MESSAGE_TIMEOUT_MS
@@ -367,7 +336,6 @@ export const startPollingLoop = async ({
 					timeoutMs,
 					timeoutMessage: `Processing timed out after ${timeoutMs}ms`,
 					fn: () => processMessage({ message, db, retryBudget }),
-					// A scan-retried job's catch below already logs the failed attempt.
 					onTimeout: () => {
 						if (override?.ack === "always-after-processing") return;
 						reportJobTimeout({ job, message, timeoutMs, retryBudget });
@@ -377,7 +345,6 @@ export const startPollingLoop = async ({
 		} catch (error) {
 			if (override?.ack !== "always-after-processing") throw error;
 
-			// The next scan rediscovers the work, so this attempt's failure is absorbed.
 			logger.warn(
 				`${prefix} ${job.name} failed; ACKing after processing so the next scan can retry it`,
 				{ error },
@@ -616,10 +583,6 @@ export const startPollingLoop = async ({
 	console.log(`${prefix} Stopped`);
 };
 
-/**
- * Initialize SQS pollers for this process.
- * cluster.fork() in workers.ts handles multi-process parallelism.
- */
 export const initWorkers = async ({
 	startupStartedAt,
 	queueImplementation,
@@ -682,7 +645,6 @@ export const initWorkers = async ({
 			queueUrl: QUEUE_URL,
 			defaultEnabled: true,
 		},
-		// TW-only: a separate poller keeps sync moving while primary jobs wait for Stripe.
 		{
 			queueId: "balanceSync",
 			queueUrl: process.env.BALANCE_SYNC_SQS_QUEUE_URL,
@@ -712,10 +674,6 @@ export const initWorkers = async ({
 			queueId: JOB_QUEUE_IDS.batchReset,
 			queueUrl: process.env.BATCH_RESET_SQS_QUEUE_URL,
 			defaultEnabled: true,
-			// Comfortably above BATCH_RESET_MESSAGE_TIMEOUT_MS so a redelivery can
-			// never overlap live processing, and low enough that a wedged handler
-			// frees its message in minutes — the scan gates block on in-flight
-			// depth, so a long window stalls the whole sweep.
 			visibilityTimeoutSeconds: 900,
 		},
 	];
@@ -749,8 +707,5 @@ export const initWorkers = async ({
 };
 
 export const initHatchetWorker = async () => {
-	// verifyCacheConsistency (the only Hatchet workflow) was deleted with the
-	// legacy fullCustomer cache, so there is nothing to register. Remove the
-	// Hatchet plumbing entirely if no new workflows appear.
 	console.log("⏭️  No hatchet workflows registered, skipping worker startup");
 };

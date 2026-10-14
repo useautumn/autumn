@@ -16,7 +16,6 @@ const toApiPlanV1 = (product: FullProductWithoutLicenses): ApiPlanV1 => {
 	});
 };
 
-/** The overlay a license's product carries over its own base version; undefined when the two plans are the same. */
 export const fullProductsToLicenseCustomize = ({
 	product,
 	baseProduct,

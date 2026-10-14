@@ -8,7 +8,6 @@ const POLL_INTERVAL_MS = 3000;
 const hasChecks = (data: ListAtomChecksResponse | undefined) =>
 	(data?.checks.length ?? 0) > 0;
 
-/** The Atom's latest checks, polled until the first arrive, then held as they first came in. */
 export const useAtomChecksQuery = ({ enabled }: { enabled: boolean }) => {
 	const axiosInstance = useAxiosInstance();
 	const buildKey = useQueryKeyFactory();

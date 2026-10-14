@@ -1,6 +1,3 @@
-/** Pre-fix, a checkout completion racing a same-params direct attach created two paid
- * subscriptions. Green requires one active product, one subscription, one paid invoice. */
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3 } from "@autumn/shared";
 import {
@@ -102,8 +99,6 @@ test(`${chalk.yellowBright("checkout race: completion overlapping a fresh attach
 	expect(secondAttach.payment_url).toContain("checkout.stripe.com");
 	expect(secondAttach.payment_url).not.toBe(firstAttach.payment_url);
 
-	// Outlives the pre-fix 2-minute reservation TTL; the fixed reservation
-	// (session-lifetime TTL) must survive this and still fence the third attach.
 	await timeout(121_000);
 	const customerBeforeCheckout = await CusService.getFull({
 		ctx,
@@ -124,8 +119,6 @@ test(`${chalk.yellowBright("checkout race: completion overlapping a fresh attach
 			postal_code: "10001",
 		},
 	});
-	// Mark handled so an early browser failure doesn't unhandled-reject; the
-	// original promise is still awaited below.
 	checkoutCompletion.catch(() => {});
 	await waitForCheckoutPaymentMethod({
 		stripeCli: ctx.stripeCli,
@@ -154,7 +147,6 @@ test(`${chalk.yellowBright("checkout race: completion overlapping a fresh attach
 	const activeProProducts = fullCustomer.customer_products.filter(
 		(product) => product.product.id === pro.id && product.status === "active",
 	);
-	// $25 base price minus the $24 coupon → the paid initial invoice totals $1.
 	const paidInitialInvoices = (customer.invoices ?? []).filter(
 		(invoice) => invoice.status === "paid" && invoice.total === 1,
 	);

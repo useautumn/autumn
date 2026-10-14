@@ -258,7 +258,6 @@ test.concurrent(
 			Object.values(entitySchedules).map((schedule) => schedule.id),
 		).toEqual([entityScheduleId]);
 
-		// An entity request leaves customer-level plans out of scope, so they fold into the one schedule.
 		const customerPlanIds = customerSchedule.phases.flatMap(
 			(phase) => phase.customer_product_ids,
 		);
@@ -267,7 +266,6 @@ test.concurrent(
 		);
 		expect(mergedPlanIds).toEqual(expect.arrayContaining(customerPlanIds));
 
-		// A plan repeated in the next phase continues on its live row instead of queuing a new one.
 		const customerProductRows = await ctx.db
 			.select()
 			.from(customerProducts)

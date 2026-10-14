@@ -1,9 +1,5 @@
 import type { ReactNode } from "react";
 
-/**
- * Shared page header: leading icon + title on the left, optional actions on
- * the right. Matches Table.Toolbar + Table.Heading styles.
- */
 export function PageHeader({
 	icon,
 	title,

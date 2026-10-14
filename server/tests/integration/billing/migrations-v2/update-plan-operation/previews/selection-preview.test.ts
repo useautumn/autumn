@@ -1,10 +1,3 @@
-/**
- * Preview coverage for update_plan selection metadata.
- *
- * Contract under test:
- *   - Entity-scoped customer products still surface webhook-style plan changes.
- */
-
 import { test } from "bun:test";
 import { TestFeature } from "@tests/setup/v2Features";
 import { itemsV2 } from "@tests/utils/fixtures/itemsV2";

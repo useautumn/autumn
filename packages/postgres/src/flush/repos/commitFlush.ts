@@ -24,7 +24,6 @@ import {
 	singleStatementFlushSql,
 } from "./flushSql.js";
 
-/** A bookmark that no longer holds the offset the caller saw: another writer moved the partition. */
 export class FlushBookmarkConflictError extends Error {
 	constructor({ expected, advanced }: { expected: number; advanced: number }) {
 		super(`Flush advanced ${advanced} of ${expected} bookmarks`);
@@ -64,7 +63,6 @@ const outcomeSchema = z.object({
 	snapshot_deletes: deletedSubjects.optional(),
 });
 
-/** Carries the outcome out of a transaction that must not commit: a stale row means nothing of the flush lands. */
 class FlushRolledBack extends Error {
 	readonly outcome: z.infer<typeof outcomeSchema>;
 
@@ -75,13 +73,8 @@ class FlushRolledBack extends Error {
 	}
 }
 
-/** How a flush reaches Postgres: four round trips in an explicit transaction, or one simple query. */
 export type FlushRoundTrips = "transaction" | "single";
 
-/**
- * BEGIN · SET LOCAL statement_timeout · one statement · COMMIT, or ROLLBACK when a bookmark or a guarded row did not move.
- * `single` sends `SET LOCAL statement_timeout; statement` as one simple query: one round trip, one implicit transaction.
- */
 export const commitFlush = async ({
 	ctx,
 	request,
@@ -90,9 +83,7 @@ export const commitFlush = async ({
 }: {
 	ctx: {
 		db: Pick<PostgresDb, "$client" | "_" | "execute">;
-		/** Times the synchronous parts (folding the changes, building the statement) so a stall can be attributed to them. */
 		timing?: <Value>(label: string, run: () => Value) => Value;
-		/** Hears how many row changes the flush carried and how many rows they folded into. */
 		recordFold?: (params: { changes: number; folded: number }) => void;
 	};
 	request: FlushRequest;
@@ -128,7 +119,6 @@ export const commitFlush = async ({
 		subjectRowChangeLanded({ change, touched: outcome.applied[index] ?? 0 }),
 	);
 
-	// A change folded away (inserted then deleted in this flush) applied by definition.
 	const applied = foldedIndexOf.map(
 		(index) => index === null || landed[index] === true,
 	);
@@ -223,10 +213,6 @@ const lastResultRows = ({
 }): unknown[] =>
 	(Array.isArray(results) ? results.at(-1) : results)?.rows ?? [];
 
-/**
- * One round trip: `SET LOCAL statement_timeout` and the statement share a simple query's implicit transaction, so a stale
- * bookmark or guarded row aborts it whole in Postgres and the same errors as the transaction come out.
- */
 const runFlushStatement = async ({
 	ctx,
 	request,
@@ -252,7 +238,6 @@ const runFlushStatement = async ({
 			}),
 		}),
 	);
-	// A value with no faithful literal keeps the bound statement, in the four-round-trip transaction.
 	if (statement === null)
 		return runFlushTransaction({ ctx, request, folded, statementTimeoutMs });
 	let results: StatementResult | StatementResult[];
@@ -271,7 +256,6 @@ const runFlushStatement = async ({
 	return parseOutcome({ row: lastResultRows({ results })[0] });
 };
 
-/** The whole flush is one decision: a row whose guard no longer matches rolls back every row and the bookmarks with it. */
 const runFlushTransaction = async ({
 	ctx,
 	request,
@@ -309,7 +293,6 @@ const runFlushTransaction = async ({
 			},
 		});
 	} catch (cause) {
-		// Nothing of a rolled-back flush landed, its snapshot writes included.
 		if (cause instanceof FlushRolledBack)
 			return { ...cause.outcome, snapshot_upserts: 0, snapshot_deletes: [] };
 		throw cause;

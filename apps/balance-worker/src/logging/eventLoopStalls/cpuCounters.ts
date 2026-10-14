@@ -4,7 +4,6 @@ export type CpuCounters = {
 	processMicros: number;
 	host: { stealTicks: number; iowaitTicks: number; totalTicks: number } | null;
 	throttledMicros: number | null;
-	/** The decide thread alone (Linux), apart from GC helpers and worker threads. */
 	mainThreadMicros: number | null;
 };
 
@@ -23,7 +22,6 @@ const CGROUP_V1_CPU_STAT = "/sys/fs/cgroup/cpu/cpu.stat";
 const HOST_TICK_FIELDS = 8;
 const STEAL_FIELD = 7;
 const IOWAIT_FIELD = 4;
-/** `utime` and `stime` in /proc/<pid>/task/<tid>/stat, counted after the `(comm)` field; USER_HZ is 100. */
 const THREAD_UTIME_FIELD = 11;
 const MICROS_PER_TICK = 10_000;
 

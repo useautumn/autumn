@@ -31,11 +31,6 @@ type AssignMutation = ReturnType<typeof useLicenseBalancesQuery>["assign"];
 const PLACEHOLDER = "PENDING";
 const EMPTY_ENTITY = { id: "", name: "", feature_id: "" };
 
-/**
- * Customer-level license assignment: pick an existing entity or create one
- * inline, then attach a seat via licenses.attach (its upsert path creates
- * unknown entities). Rendered from the customer's license pools section.
- */
 export function AssignLicenseToEntityDialog({
 	pool,
 	customerId,
@@ -45,7 +40,6 @@ export function AssignLicenseToEntityDialog({
 }: {
 	pool: ApiCustomerLicenseV0 | null;
 	customerId: string;
-	/** When the customer has no entities, skip the toggle and force create. */
 	hasEntities: boolean;
 	assign: AssignMutation;
 	onClose: () => void;

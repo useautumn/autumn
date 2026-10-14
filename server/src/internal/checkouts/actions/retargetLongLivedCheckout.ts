@@ -9,10 +9,6 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { billingResultToResponse } from "@/internal/billing/v2/utils/billingResult/billingResultToResponse";
 import { updateCheckoutDbAndCache } from "./updateDbAndCache";
 
-/**
- * Points a long-lived link at a re-attached plan so the same URL sells the edit.
- * Closes the link instead when the edited plan was attached without a checkout.
- */
 export const retargetLongLivedCheckout = async ({
 	ctx,
 	checkout,

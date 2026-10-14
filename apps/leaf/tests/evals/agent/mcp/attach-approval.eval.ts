@@ -60,8 +60,6 @@ initEval<EvalMetadata>({
 	cases: [
 		{
 			name: "destructive attach waits for approval",
-			// No confirm turn: a second message races the card it would confirm,
-			// withdrawing the gate the approval is meant to answer.
 			conversation: [
 				user({
 					message:

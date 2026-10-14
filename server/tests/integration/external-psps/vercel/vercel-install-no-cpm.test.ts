@@ -1,27 +1,3 @@
-/**
- * Regression: `handleUpsertInstallation` must NOT attach a Stripe Custom
- * Payment Method to the Vercel-owned customer.
- *
- * Background:
- *   Vercel customers settle through `marketplace.invoice.paid` +
- *   `invoices.pay({ paid_out_of_band: true })`. Stripe rejects that call
- *   ("Custom payment methods are not supported on invoices.pay") if the
- *   customer's `invoice_settings.default_payment_method` is a CPM, leaving
- *   the Stripe invoice stuck in `open` while Vercel keeps retrying.
- *
- * Red-failure mode (pre-fix):
- *   The install handler called `createCustomStripeCard({ defaultPaymentMethod
- *   : true })`, so every new Vercel customer was created with a CPM as their
- *   Stripe customer default + an attached `type: "custom"` PaymentMethod +
- *   `processors.vercel.custom_payment_method_id` set on the Autumn row.
- *
- * Green-success criteria (post-fix):
- *   1. The Stripe customer has NO `invoice_settings.default_payment_method`.
- *   2. The Stripe customer has NO attached `type: "custom"` PaymentMethod.
- *   3. The Autumn customer's `processors.vercel.custom_payment_method_id`
- *      is undefined.
- */
-
 import { expect, test } from "bun:test";
 import ctx from "@tests/utils/testInitUtils/createTestContext";
 import chalk from "chalk";
@@ -94,8 +70,6 @@ test.concurrent(
 
 		await setupVercelOrg(ctx);
 
-		// Best-effort cleanup so the test is re-runnable. The handler creates
-		// the customer keyed by integrationConfigurationId.
 		try {
 			const existing = await CusService.getByVercelId({
 				ctx,
@@ -109,9 +83,7 @@ test.concurrent(
 					env: ctx.env,
 				});
 			}
-		} catch {
-			// ignore
-		}
+		} catch {}
 
 		const { response } = await upsertInstallationViaHttp({
 			installationId,
@@ -125,14 +97,11 @@ test.concurrent(
 		});
 		expect(created).toBeDefined();
 
-		// The Autumn customer row must not carry a CPM id.
 		const vercelProcessor = (created as any)?.processors?.vercel as
 			| { custom_payment_method_id?: string }
 			| undefined;
 		expect(vercelProcessor?.custom_payment_method_id).toBeUndefined();
 
-		// The Stripe customer must have no default payment method and no
-		// CPM attached.
 		const stripeCustomerId = (created as any)?.processor?.id as string;
 		expect(typeof stripeCustomerId).toBe("string");
 

@@ -24,7 +24,6 @@ type TrialingScenario = {
 	stripeCustomerId: string;
 };
 
-/** A trialing Pro whose subscription is given settings and discounts, then its trial ended onto a future anchor. */
 export const recreateTrialOnAnchor = async ({
 	customerId,
 	trialDays = 14,
@@ -108,7 +107,6 @@ export const recreateTrialOnAnchor = async ({
 	return { ctx, before, recreated, preview, firstInvoice };
 };
 
-/** The preview bills exactly what Stripe invoiced when the new subscription was created. */
 export const expectPreviewMatchesInvoice = ({
 	preview,
 	firstInvoice,
@@ -140,7 +138,6 @@ export const discountPromotionCodeIds = (
 			: stripeRefToId(discount.promotion_code),
 	);
 
-/** Stripe folds a new subscription's discount into its prorated line, so the invoice only references it. */
 export const expectInvoiceDiscounted = (invoice: Stripe.Invoice) => {
 	expect(invoice.total_discount_amounts?.length ?? 0).toBeGreaterThan(0);
 };

@@ -1,5 +1,3 @@
-/** Multi-attach previews include automatic tax and available invoice credits. */
-
 import { expect, test } from "bun:test";
 import type {
 	AttachPreviewResponse,

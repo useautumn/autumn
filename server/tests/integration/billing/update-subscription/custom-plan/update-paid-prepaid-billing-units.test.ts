@@ -9,11 +9,6 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// BILLING UNITS CHANGES
-// ═══════════════════════════════════════════════════════════════════════════════
-
-// Decrease billing units (same quantity = more packs)
 test.concurrent(
 	`${chalk.yellowBright("prepaid: decrease billing units (more packs)")}`,
 	async () => {
@@ -31,7 +26,7 @@ test.concurrent(
 			items: [prepaidItem, priceItem],
 		});
 
-		const quantity = 300; // 3 packs of 100
+		const quantity = 300;
 
 		const { customerId, autumnV1, ctx } = await initScenario({
 			customerId: "prepaid-billing-units-down",
@@ -57,7 +52,6 @@ test.concurrent(
 			{ timeout: 2000 },
 		);
 
-		// Decrease billing units from 100 to 50 (300 units = 6 packs now)
 		const newBillingUnits = 50;
 		const newPrepaidItem = items.prepaidMessages({
 			includedUsage: 0,
@@ -74,9 +68,6 @@ test.concurrent(
 
 		const preview = await autumnV1.subscriptions.previewUpdate(updateParams);
 
-		// Old: 300 / 100 = 3 packs * $10 = $30
-		// New: 300 / 50 = 6 packs * $10 = $60
-		// Total: $60 - $30 = $30
 		const oldPacks = Math.ceil(quantity / oldBillingUnits);
 		const newPacks = Math.ceil(quantity / newBillingUnits);
 		expect(preview.total).toBe(
@@ -90,7 +81,7 @@ test.concurrent(
 		expectCustomerFeatureCorrect({
 			customer,
 			featureId: TestFeature.Messages,
-			includedUsage: quantity, // 0 + 300 = 300
+			includedUsage: quantity,
 			balance: quantity - messagesUsed,
 			usage: messagesUsed,
 		});
@@ -110,7 +101,6 @@ test.concurrent(
 	},
 );
 
-// Increase billing units (same quantity = fewer packs)
 test.concurrent(
 	`${chalk.yellowBright("prepaid: increase billing units (fewer packs)")}`,
 	async () => {
@@ -128,7 +118,7 @@ test.concurrent(
 			items: [prepaidItem, priceItem],
 		});
 
-		const quantity = 300; // 6 packs of 50
+		const quantity = 300;
 
 		const { customerId, autumnV1, ctx } = await initScenario({
 			customerId: "prepaid-billing-units-up",
@@ -154,7 +144,6 @@ test.concurrent(
 			{ timeout: 2000 },
 		);
 
-		// Increase billing units from 50 to 100 (300 units = 3 packs now)
 		const newBillingUnits = 100;
 		const newPrepaidItem = items.prepaidMessages({
 			includedUsage: 0,
@@ -171,9 +160,6 @@ test.concurrent(
 
 		const preview = await autumnV1.subscriptions.previewUpdate(updateParams);
 
-		// Old: 300 / 50 = 6 packs * $10 = $60
-		// New: 300 / 100 = 3 packs * $10 = $30
-		// Total: $30 - $60 = -$30 (credit)
 		const oldPacks = Math.ceil(quantity / oldBillingUnits);
 		const newPacks = Math.ceil(quantity / newBillingUnits);
 		expect(preview.total).toBe(
@@ -187,7 +173,7 @@ test.concurrent(
 		expectCustomerFeatureCorrect({
 			customer,
 			featureId: TestFeature.Messages,
-			includedUsage: quantity, // 0 + 300 = 300
+			includedUsage: quantity,
 			balance: quantity - messagesUsed,
 			usage: messagesUsed,
 		});

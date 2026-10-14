@@ -15,7 +15,6 @@ export function TableContent({
 }: {
 	children: React.ReactNode;
 	className?: string;
-	/** Sits on the tray below the rows. */
 	footer?: React.ReactNode;
 }) {
 	const {

@@ -13,7 +13,6 @@ import { ApiFeatureOverrideSchema } from "../../../../features/apiFeatureOverrid
 import { CreatePlanItemParamsV1Schema } from "../../../../products/items/crud/createPlanItemParamsV1.js";
 import { PlanFilterSchema } from "../../../filters/planFilter.js";
 
-/** A remove filter plus the matched item's old override, for display only; execution never reads it. */
 export const MigrationRemoveItemSchema = z
 	.object({
 		...PlanItemFilterSchema.shape,
@@ -79,10 +78,6 @@ export const MigrationFeatureQuantityStrategyParamsSchema = z.object({
 	strategy: FeatureQuantityStrategySchema,
 });
 
-/**
- * Ordered customer operation: update every customer product matched by
- * `plan_filter` using update-subscription plan-update semantics.
- */
 export const UpdatePlanOpSchema = z
 	.object({
 		type: z.literal("update_plan"),

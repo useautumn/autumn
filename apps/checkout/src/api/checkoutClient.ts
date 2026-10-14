@@ -11,7 +11,3 @@ const link = new OpenAPILink(checkoutContract, {
 export const checkoutApi: JsonifiedClient<
 	ContractRouterClient<typeof checkoutContract>
 > = createORPCClient(link);
-
-// Usage:
-// const { preview } = await checkoutApi.getCheckout({ checkout_id: "co_xxx" });
-// const result = await checkoutApi.confirmCheckout({ checkout_id: "co_xxx" });

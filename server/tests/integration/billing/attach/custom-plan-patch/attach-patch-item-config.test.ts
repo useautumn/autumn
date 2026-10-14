@@ -1,12 +1,3 @@
-/**
- * Regression: attach PATCH-style customize (remove + add) can reshape an item's
- * full config — included amount, price/tiers, and billing behavior (billing_method).
- *
- * Green-success criteria (post-fix):
- *  - remove_items + add_items replaces a plan item, applying the new included usage,
- *    the new price/tiers (reflected in the invoice total), and the new billing_method.
- */
-
 import { expect, test } from "bun:test";
 import {
 	type ApiCustomerV5,
@@ -63,7 +54,6 @@ test.concurrent(`${chalk.yellowBright("attach patch config: customize included c
 		},
 	};
 
-	// Included amount change only — base price unchanged.
 	const preview =
 		await autumnV2_2.billing.previewAttach<AttachParamsV1Input>(attachParams);
 	expect(preview.total).toBe(20);
@@ -101,7 +91,6 @@ test.concurrent(`${chalk.yellowBright("attach patch config: customize price/tier
 		actions: [],
 	});
 
-	// Replace the flat $10/100 prepaid with a graduated tiered price.
 	const attachParams: AttachParamsV1Input = {
 		customer_id: customerId,
 		plan_id: scale.id,
@@ -121,7 +110,6 @@ test.concurrent(`${chalk.yellowBright("attach patch config: customize price/tier
 		feature_quantities: [{ feature_id: TestFeature.Messages, quantity: 500 }],
 	};
 
-	// 5 packs of 100: 3 packs @ $6 ($18) + 2 packs @ $3 ($6) = $24, + $20 base = $44.
 	const preview =
 		await autumnV2_2.billing.previewAttach<AttachParamsV1Input>(attachParams);
 	expect(preview.total).toBe(44);
@@ -142,7 +130,6 @@ test.concurrent(`${chalk.yellowBright("attach patch config: customize price/tier
 test.concurrent(`${chalk.yellowBright("attach patch config: customize billing behavior via remove/add")}`, async () => {
 	const customerId = "attach-patch-config-billing-behavior";
 
-	// Original item is prepaid (must buy packs upfront).
 	const scale = products.base({
 		id: "scale",
 		items: [
@@ -160,7 +147,6 @@ test.concurrent(`${chalk.yellowBright("attach patch config: customize billing be
 		actions: [],
 	});
 
-	// Swap prepaid -> usage-based with included: no upfront pack charge.
 	const attachParams: AttachParamsV1Input = {
 		customer_id: customerId,
 		plan_id: scale.id,
@@ -181,7 +167,6 @@ test.concurrent(`${chalk.yellowBright("attach patch config: customize billing be
 		},
 	};
 
-	// Usage-based -> only the base price is charged now (billing behavior changed).
 	const preview =
 		await autumnV2_2.billing.previewAttach<AttachParamsV1Input>(attachParams);
 	expect(preview.total).toBe(20);

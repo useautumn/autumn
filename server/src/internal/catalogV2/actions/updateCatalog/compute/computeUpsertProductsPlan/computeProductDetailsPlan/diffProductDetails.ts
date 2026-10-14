@@ -5,7 +5,6 @@ import {
 } from "@autumn/shared";
 import type { ProductDetailsPlan } from "@/internal/catalogV2/actions/updateCatalog/types/upsertProductPlan";
 
-/** Changed detail columns → their previous values. */
 export const diffProductDetails = ({
 	current,
 	next,

@@ -1,13 +1,3 @@
-/**
- * The billing-verify export ran one mapWithConcurrency per page, so a page
- * could not finish until its slowest customer did and the next page could not
- * start at all. One straggler idled every other slot for up to the customer
- * timeout, and pages whose candidates were sparse left most slots unused.
- *
- * mapStreamWithConcurrency keeps a single pool fed by the page walk: a slow
- * item occupies one slot, never the whole page.
- */
-
 import { describe, expect, it } from "bun:test";
 import { mapStreamWithConcurrency } from "@/internal/customers/exports/workflows/upload/mapStreamWithConcurrency.js";
 

@@ -1,10 +1,6 @@
 import { z } from "zod/v4";
 import { ProcessorType } from "./genEnums";
 
-/**
- * Customer-level Vercel processor
- * Stores installation-specific data for a customer's Vercel integration
- */
 export const VercelProcessorSchema = z.object({
 	installation_id: z.string(),
 	access_token: z.string(),
@@ -12,23 +8,13 @@ export const VercelProcessorSchema = z.object({
 	custom_payment_method_id: z.string().optional(),
 });
 
-/**
- * Container for all external (non-Stripe) processors at customer level
- */
 export const ExternalProcessorsSchema = z.object({
 	vercel: VercelProcessorSchema.optional(),
-	// Internal-only RC identity alias set: `id` is the primary app_user_id (set once,
-	// never updated); `aliases` holds every other RC id ever seen (append-only). Match
-	// if any equals a webhook id. Never gates the API response.
 	revenuecat: z
 		.object({ id: z.string(), aliases: z.array(z.string()).default([]) })
 		.optional(),
 });
 
-/**
- * CustomerProduct-level Vercel processor
- * Stores installation-specific data for a customer product's Vercel integration
- */
 export const VercelCusProductProcessorSchema = z.object({
 	installation_id: z.string(),
 	billing_plan_id: z.string(),
@@ -48,10 +34,6 @@ export enum VercelMarketplaceMode {
 	Installation = "installation",
 }
 
-/**
- * Organization-level Vercel processor configuration
- * Stores OAuth app credentials and webhook URL
- */
 export const VercelProcessorConfigSchema = z.object({
 	client_integration_id: z.string(),
 	client_secret: z.string(),
@@ -106,10 +88,6 @@ export const RevenueCatOAuthConfigSchema = z.object({
 	connected_at: z.number().optional(),
 });
 
-/**
- * Organization-level RevenueCat processor configuration
- * Stores API key, project ID, and webhook secret
- */
 export const RevenueCatProcessorConfigSchema = z.object({
 	api_key: z.string().optional(),
 	sandbox_api_key: z.string().optional(),
@@ -128,9 +106,6 @@ export const UpsertRevenueCatProcessorConfigSchema = z.object({
 	sandbox_project_id: z.string().min(1).optional(),
 });
 
-/**
- * Container for all processor configurations at organization level
- */
 export const ProcessorConfigsSchema = z.object({
 	vercel: VercelProcessorConfigSchema.optional(),
 	revenuecat: RevenueCatProcessorConfigSchema.optional(),
@@ -142,7 +117,6 @@ export const ExternalSubIDSchema = z.object({
 });
 
 export type ExternalSubID = z.infer<typeof ExternalSubIDSchema>;
-// Export inferred types for backward compatibility
 export type VercelProcessor = z.infer<typeof VercelProcessorSchema>;
 export type ExternalProcessors = z.infer<typeof ExternalProcessorsSchema>;
 export type VercelProcessorConfig = z.infer<typeof VercelProcessorConfigSchema>;

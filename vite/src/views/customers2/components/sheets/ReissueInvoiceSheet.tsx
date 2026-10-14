@@ -97,7 +97,6 @@ export function ReissueInvoiceSheet() {
 	const sheetData = useSheetStore((s) => s.data);
 	const invoice = sheetData?.invoice as Invoice | undefined;
 	const axiosInstance = useAxiosInstance();
-	// The reissue request targets the active sandbox, so its defaults must too.
 	const { org } = useOrg({ skipSandbox: false });
 
 	const { data: stripeInvoice, isLoading } = useQuery({

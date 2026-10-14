@@ -1,16 +1,3 @@
-/**
- * A RevenueCat mapping owned by a VARIANT plan is never exposed by catalog GET.
- *
- * `revenuecat_mappings` is keyed by the public plan id and has no version
- * dimension, so a variant — which is its own product with its own plan id —
- * legitimately owns its own row. getCatalogV2 loads every row into a
- * plan-id map but only ever hands the base product's row to getPlanResponse,
- * so the nested buildApiPlanVariant render gets nothing.
- *
- * Red (current):  variants[0].plan.processors is undefined even though the row exists
- * Green (after):  each rendered plan looks its own product.id up in the map
- */
-
 import { describe, expect, test } from "bun:test";
 import {
 	AppEnv,
@@ -65,7 +52,6 @@ const baseProduct = {
 	variants: [variantProduct],
 } as unknown as FullProduct;
 
-/** One Autumn plan holds N RevenueCat ids — quantity is the axis. */
 const variantMapping: RevenueCatPlanMapping = {
 	revenuecat_product_ids: ["rc_credits_eu_100", "rc_credits_eu_500"],
 	feature_quantities: {
@@ -146,7 +132,6 @@ describe("getPlanResponse revenuecat mappings across variants", () => {
 		expect(response.processors?.revenuecat?.products?.[0]?.product_id).toBe(
 			"rc_credits_100",
 		);
-		// Guard the optional chain below: the variant plan really was rendered.
 		expect(response.variants?.[0]?.plan).toBeDefined();
 		expect(response.variants?.[0]?.plan?.processors).toBeUndefined();
 	});

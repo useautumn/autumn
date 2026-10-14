@@ -2,7 +2,6 @@ import { Badge } from "@autumn/ui";
 import { X } from "lucide-react";
 import type { RolloutCustomerOption } from "./rolloutTypes";
 
-/** The customers picked so far, each removable. */
 export const SelectedCustomers = ({
 	customers,
 	onRemove,

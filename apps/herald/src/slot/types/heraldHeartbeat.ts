@@ -1,7 +1,6 @@
 import { SlotProbeResultSchema } from "@autumn/blue-green";
 import { z } from "zod/v4";
 
-/** What one job's consumer is doing in its group; `joined` is what a swap counts. */
 export const JobMembershipSchema = z.enum([
 	"idle",
 	"joining",
@@ -19,7 +18,6 @@ export const JobHealthSchema = z.object({
 });
 export type JobHealth = z.infer<typeof JobHealthSchema>;
 
-/** One object per task, in both slot states; the dashboard reads `ok` before a flip and `jobs.joined` after. */
 export const HeraldHeartbeatSchema = z.object({
 	serviceName: z.literal("herald"),
 	fleetId: z.string(),

@@ -11,7 +11,6 @@ export type PartitionRuntimeStatus =
 	| "created"
 	| "preparing"
 	| "prepared"
-	/** Named owner and fencing, bootstrapping, catching up; a command waits briefly rather than failing. */
 	| "activating"
 	| "fencing"
 	| "bootstrapping"

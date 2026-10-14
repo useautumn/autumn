@@ -11,7 +11,6 @@ type PendingEntry = {
 };
 
 export type BatchAccumulator = {
-	/** Resolves when this entry's batch reports it sent; rejects with the entry's own failure. */
 	enqueue(entry: QueueEntry): Promise<void>;
 	flush(): Promise<void>;
 	shutdown(): Promise<void>;
@@ -91,7 +90,6 @@ const enqueue = ({
 }): Promise<void> => {
 	const { state, config } = scope;
 	if (!state.accepting) {
-		// A send from a request that outlived teardown: dropped, but counted.
 		state.rejectedDuringShutdown += 1;
 		scope.onRejectedDuringShutdown(state.rejectedDuringShutdown);
 		return Promise.reject(new Error("SQS batch accumulator is shutting down"));
@@ -118,7 +116,6 @@ const flush = async ({ scope }: { scope: AccumulatorScope }): Promise<void> => {
 	}
 };
 
-/** Holds sends for a short window and ships them as one SendMessageBatch; each caller still learns its own fate. */
 export const createBatchAccumulator = ({
 	config,
 	sendBatch,

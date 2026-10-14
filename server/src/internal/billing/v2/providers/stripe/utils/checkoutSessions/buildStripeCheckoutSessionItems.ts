@@ -86,10 +86,6 @@ const filterRecurringStripeItemSpecsForCheckout = ({
 	});
 };
 
-/**
- * Adds `adjustable_quantity` to a prepaid line item if the feature is marked adjustable.
- * Skips tiered one-off items whose total is pre-computed into a single lump-sum line item.
- */
 const applyAdjustableQuantityToPrepaidLineItem = ({
 	lineItem,
 	spec,
@@ -105,8 +101,6 @@ const applyAdjustableQuantityToPrepaidLineItem = ({
 		return lineItem;
 	}
 
-	// Tiered one-off items have their total pre-computed into a lump-sum price_data
-	// with quantity: 1 — adjustable quantity doesn't apply to them.
 	if (
 		autumnProduct &&
 		priceUtils.isTieredOneOff({ price: autumnPrice, product: autumnProduct })
@@ -148,26 +142,22 @@ export const buildStripeCheckoutSessionItems = ({
 	recurringLineItems: Stripe.Checkout.SessionCreateParams.LineItem[];
 	oneOffLineItems: Stripe.Checkout.SessionCreateParams.LineItem[];
 } => {
-	// 1. Filter customer products by active statuses
 	const activeCustomerProducts = filterCustomerProductsByActiveStatuses({
 		customerProducts: newCustomerProducts,
 	});
 
-	// 2. Get recurring item specs (accumulated by price ID)
 	let recurringStripeItemSpecs = customerProductsToRecurringStripeItemSpecs({
 		ctx,
 		billingContext,
 		customerProducts: activeCustomerProducts,
 	});
 
-	// 3. Get one-off item specs
 	const oneOffItemSpecs = customerProductsToOneOffStripeItemSpecs({
 		ctx,
 		billingContext,
 		customerProducts: activeCustomerProducts,
 	});
 
-	// 4. Filter recurring items by largest interval (for Stripe Checkout)
 	recurringStripeItemSpecs = filterStripeItemSpecsByLargestInterval({
 		stripeItemSpecs: recurringStripeItemSpecs,
 	});
@@ -175,7 +165,6 @@ export const buildStripeCheckoutSessionItems = ({
 		stripeItemSpecs: recurringStripeItemSpecs,
 	});
 
-	// 5. Convert recurring item specs to line items
 	const recurringLineItems = recurringStripeItemSpecs.map((item) => {
 		const lineItem = stripeItemSpecToCheckoutLineItem({ spec: item });
 		return applyAdjustableQuantityToPrepaidLineItem({
@@ -185,7 +174,6 @@ export const buildStripeCheckoutSessionItems = ({
 		});
 	});
 
-	// 6. Convert one-off item specs to line items (handles tiered one-off prices)
 	const oneOffLineItems = updateOneOffTieredItems({
 		oneOffItemSpecs,
 		org: ctx.org,

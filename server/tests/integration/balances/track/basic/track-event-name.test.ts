@@ -10,10 +10,6 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { Decimal } from "decimal.js";
 
-// ═══════════════════════════════════════════════════════════════════
-// TRACK-EVENT-NAME1: Track using event_name instead of feature_id (single feature)
-// ═══════════════════════════════════════════════════════════════════
-
 test.concurrent(`${chalk.yellowBright("track-event-name1: track with event_name instead of feature_id")}`, async () => {
 	const action1Item = items.free({
 		featureId: TestFeature.Action1,
@@ -69,10 +65,6 @@ test.concurrent(`${chalk.yellowBright("track-event-name1: track with event_name 
 		usage: deductValue,
 	});
 });
-
-// ═══════════════════════════════════════════════════════════════════
-// TRACK-EVENT-NAME2: Track with event_name deducts from multiple features
-// ═══════════════════════════════════════════════════════════════════
 
 test.concurrent(`${chalk.yellowBright("track-event-name2: track with event_name deducts from multiple features")}`, async () => {
 	const action1Item = items.free({

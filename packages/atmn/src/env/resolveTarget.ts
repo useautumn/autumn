@@ -69,10 +69,6 @@ export const resolveTarget = ({
 	if (prod === true && sandbox !== undefined) {
 		throw new Error("Pick one of --prod and --sandbox.");
 	}
-	// `--prod` overrides a pinned sandbox rather than combining with it: keeping
-	// the pin would make the flag silently address the sandbox anyway.
-	// An empty pin is "no pin": how a parent process addresses the main
-	// sandbox for a child without editing the .env the child will read.
 	const pinned = process.env[SANDBOX_PIN_NAME];
 	const sandboxId =
 		prod === true
@@ -90,7 +86,6 @@ export const resolveTarget = ({
 	};
 
 	if (baseUrl) return { baseUrl, ...identity };
-	// A port implies the host: `--port 3001` alone is a local target.
 	if (local || port) {
 		return {
 			baseUrl: `${LOCAL_HOST}:${port ?? DEFAULT_LOCAL_PORT}`,

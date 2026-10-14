@@ -37,7 +37,6 @@ const makePlan = ({
 		},
 	});
 
-// A scheduled downgrade must keep the customer + subscription in eur.
 test.concurrent(
 	`${chalk.yellowBright("multi-currency e2e: eur scheduled downgrade stays in eur")}`,
 	async () => {
@@ -61,7 +60,6 @@ test.concurrent(
 			redirect_mode: "if_required",
 		});
 
-		// Downgrade to the cheaper plan → scheduled switch at cycle end.
 		await autumnV1.billing.attach({
 			customer_id: customerId,
 			product_id: basicId,
@@ -72,7 +70,6 @@ test.concurrent(
 		await expectProductCanceling({ customer, productId: premiumId });
 		await expectProductScheduled({ customer, productId: basicId });
 
-		// The active subscription remains eur through the scheduled downgrade.
 		const subs = await ctx.stripeCli.subscriptions.list({
 			customer: customer.stripe_id as string,
 		});

@@ -6,15 +6,6 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-/**
- * Prepaid Quantities Scenario
- *
- * Tests attaching a product with prepaid quantity options.
- * Customer purchases upfront units for prepaid features.
- * Both features are marked `adjustable: true` so the customer can change
- * quantities at the Autumn-hosted checkout.
- */
-
 test(`${chalk.yellowBright("attach: prepaid quantities - with adjustable prepaid options")}`, async () => {
 	const customerId = "prepaid-quantities";
 
@@ -27,14 +18,11 @@ test(`${chalk.yellowBright("attach: prepaid quantities - with adjustable prepaid
 		id: "pro",
 		items: [
 			items.dashboard(),
-			items.prepaidMessages({ includedUsage: 100, billingUnits: 100 }), // $10 per 100 messages
-			items.prepaidUsers({ includedUsage: 2, billingUnits: 1 }), // $10 per user seat
+			items.prepaidMessages({ includedUsage: 100, billingUnits: 100 }),
+			items.prepaidUsers({ includedUsage: 2, billingUnits: 1 }),
 		],
 	});
 
-	// Customer starts on a paid starter so they have an existing Stripe
-	// subscription. setupAttachCheckoutMode then routes the upgrade through
-	// autumn_checkout instead of stripe_checkout.
 	const { autumnV2_2 } = await initScenario({
 		customerId,
 		setup: [

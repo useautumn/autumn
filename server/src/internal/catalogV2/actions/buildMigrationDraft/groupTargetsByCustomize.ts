@@ -16,7 +16,6 @@ const customizeBucketKey = ({
 }): string =>
 	`${customizeToKey({ customize })}|includeCustom:${includeCustom}`;
 
-/** Bucket targets that share migratable customize and includeCustom. */
 export const groupTargetsByCustomize = ({
 	targets,
 }: {

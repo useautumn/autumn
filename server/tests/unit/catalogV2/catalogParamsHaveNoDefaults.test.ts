@@ -1,40 +1,7 @@
-/**
- * A catalog request field must not carry a schema default.
- *
- * A default is applied before any `!== undefined` gate can run, so it erases
- * the difference between "the caller omitted this" and "the caller set this
- * explicitly". Everywhere in the upsert path that difference IS the semantics:
- * `planParamsToProductRowPatch` only writes fields that are defined, and
- * `computeCatalogEntitlementPricesPlan` produces no writes at all when `items`
- * is absent. Under `skip_deletions: false` it is the difference between "I
- * have no opinion about features" and "delete every feature".
- *
- * That was a live bug: `features` and `plans` carried `.optional().default([])`,
- * so a client that had never heard of a collection was indistinguishable from
- * one demanding it be emptied.
- *
- * Anything on ALLOWED_DEFAULTS is a field whose default IS its meaning and
- * which nothing needs to detect the absence of. Adding to it should be a
- * deliberate act with a reason, which is the point of the list being here.
- */
-
 import { expect, test } from "bun:test";
 import { UpdateCatalogParamsSchema } from "@autumn/shared";
 import chalk from "chalk";
 
-/**
- * field path → why a default is safe here.
- *
- * Two shapes qualify. Top-level fields whose default IS their meaning, with no
- * third state to detect. And fields nested inside an object that is itself
- * presence-gated — you only reach `auto_topups.enabled` by stating
- * `auto_topups`, and stating the parent is the command. A top-level collection
- * has no such parent, which is exactly why `features` and `plans` were wrong.
- *
- * The gated ones still carry a smaller version of the same risk: add a field
- * under `auto_topups` with a default and a client that states `auto_topups`
- * without it loses that field. Worth knowing before adding one.
- */
 const ALLOWED_DEFAULTS: Record<string, string> = {
 	skip_deletions: "absent means patch mode; there is no third state",
 	skip_version_deletions:
@@ -44,7 +11,6 @@ const ALLOWED_DEFAULTS: Record<string, string> = {
 	remove_plans: "imperative removals; absent and empty both mean 'none'",
 	remove_features: "imperative removals; absent and empty both mean 'none'",
 
-	// Gated by their parent's presence.
 	"plans.migration.draft": "gated by `migration`",
 	"plans.free_trial.card_required": "gated by `free_trial`",
 	"plans.free_trial.duration_type": "gated by `free_trial`",
@@ -72,7 +38,6 @@ const definitionOf = (node: unknown): Record<string, unknown> | undefined => {
 	return candidate?._zod?.def ?? candidate?.def;
 };
 
-/** Field paths under `schema` whose definition chain includes a default. */
 const defaultedPaths = ({
 	schema,
 	path = "",
@@ -94,7 +59,6 @@ const defaultedPaths = ({
 		if (path) found.push(path);
 	}
 
-	// Unwrap optional/nullable/default/array/etc. by walking known child slots.
 	for (const key of ["innerType", "element", "in", "out"]) {
 		const child = def[key];
 		if (child) found.push(...defaultedPaths({ schema: child, path, seen }));
@@ -137,7 +101,6 @@ test(`${chalk.yellowBright("catalogV2 params: no field carries a schema default"
 });
 
 test(`${chalk.yellowBright("catalogV2 params: the walker actually finds defaults")}`, () => {
-	// Without this the test above passes just as happily on a broken walker.
 	const paths = defaultedPaths({ schema: UpdateCatalogParamsSchema });
 	expect(paths, "walker found the known-allowed defaults").toContain(
 		"skip_deletions",

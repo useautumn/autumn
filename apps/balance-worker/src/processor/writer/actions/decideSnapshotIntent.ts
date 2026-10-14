@@ -14,10 +14,6 @@ import type {
 	PendingMutation,
 } from "../types/partitionWriter.js";
 
-/**
- * Per customer the batch touches: the rows every subject of it leaves, with the full read they descend from,
- * unless something makes them unprovable, in which case the customer's rows are deleted instead.
- */
 export function decideSnapshotIntent({
 	scope,
 	batch,
@@ -43,7 +39,6 @@ export function decideSnapshotIntent({
 	return intent;
 }
 
-/** The entry with this mutation's projected rows folded in; "delete" the moment one of them cannot be vouched for. */
 function extend({
 	scope,
 	sofar,
@@ -57,7 +52,6 @@ function extend({
 }): SnapshotIntentEntry {
 	const { state } = scope;
 	const { mutation } = pending;
-	// Rows inserted by this very statement are not rows the statement's snapshot can see.
 	if (insertsSubjectRows({ mutation })) return "delete";
 	const bySubject = new Map<string, SubjectState>();
 	let baselineAt = sofar?.baselineAt ?? Number.POSITIVE_INFINITY;
@@ -66,12 +60,10 @@ function extend({
 			meteringIdentityToSubjectKey({ identity: projected.identity }),
 			projected,
 		);
-	// Still pinned by this very batch, so the map holds each subject as the batch leaves it.
 	for (const subjectKey of pending.projectedSubjectKeys) {
 		const projected = state.subjects.readState({ subjectKey });
 		const readAt = state.subjects.readBaselineAt({ subjectKey });
 		if (!projected || readAt === null) return "delete";
-		// Decided from the map's weight, so a state over the cap is never serialised for a row it will not get.
 		if (state.subjects.readBytes({ subjectKey }) > maxBytes) return "delete";
 		baselineAt = Math.min(baselineAt, readAt);
 		bySubject.set(subjectKey, projected);

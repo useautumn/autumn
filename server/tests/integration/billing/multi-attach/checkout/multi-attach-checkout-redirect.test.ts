@@ -7,9 +7,6 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-// ═══════════════════════════════════════════════════════════════════
-// Test 1: PM on file + redirect_mode "always" → returns checkout URL
-// ═══════════════════════════════════════════════════════════════════
 test.concurrent(`${chalk.yellowBright("multi-attach checkout redirect: PM on file + redirect always → checkout URL")}`, async () => {
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
 	const usersItem = items.monthlyUsers({ includedUsage: 5 });
@@ -27,13 +24,12 @@ test.concurrent(`${chalk.yellowBright("multi-attach checkout redirect: PM on fil
 	const { customerId, autumnV1 } = await initScenario({
 		customerId: "ma-co-redirect-always",
 		setup: [
-			s.customer({ paymentMethod: "success" }), // Has payment method
+			s.customer({ paymentMethod: "success" }),
 			s.products({ list: [planA, planB] }),
 		],
 		actions: [],
 	});
 
-	// Multi-attach with redirect_mode: "always"
 	const result = await autumnV1.billing.multiAttach(
 		{
 			customer_id: customerId,
@@ -43,14 +39,10 @@ test.concurrent(`${chalk.yellowBright("multi-attach checkout redirect: PM on fil
 		{ timeout: 0 },
 	);
 
-	// Should return a checkout URL even though PM is on file
 	expect(result.payment_url).toBeDefined();
 	expect(result.payment_url).toContain("checkout.stripe.com");
 });
 
-// ═══════════════════════════════════════════════════════════════════
-// Test 2: PM on file + redirect_mode "if_required" → no checkout URL
-// ═══════════════════════════════════════════════════════════════════
 test.concurrent(`${chalk.yellowBright("multi-attach checkout redirect: PM on file + redirect if_required → no URL")}`, async () => {
 	const messagesItem = items.monthlyMessages({ includedUsage: 200 });
 
@@ -62,23 +54,19 @@ test.concurrent(`${chalk.yellowBright("multi-attach checkout redirect: PM on fil
 	const { customerId, autumnV1 } = await initScenario({
 		customerId: "ma-co-redirect-if-required",
 		setup: [
-			s.customer({ paymentMethod: "success" }), // Has payment method
+			s.customer({ paymentMethod: "success" }),
 			s.products({ list: [plan] }),
 		],
 		actions: [],
 	});
 
-	// Multi-attach with default redirect_mode (if_required)
-	// Payment method on file → should charge directly, no URL
 	const result = await autumnV1.billing.multiAttach({
 		customer_id: customerId,
 		plans: [{ plan_id: plan.id }],
 	});
 
-	// Should NOT return a checkout URL since PM is on file and redirect_mode is if_required
 	expect(result.payment_url).toBeNull();
 
-	// Verify product was attached directly
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
 	await expectCustomerProducts({
@@ -86,7 +74,6 @@ test.concurrent(`${chalk.yellowBright("multi-attach checkout redirect: PM on fil
 		active: [plan.id],
 	});
 
-	// Invoice: $20 charged directly
 	await expectCustomerInvoiceCorrect({
 		customer,
 		count: 1,

@@ -245,7 +245,6 @@ export const OrgDropdown = () => {
 	);
 };
 
-/** Switches the active org via client-side state update (no page reload). */
 export const useOrgSwitch = () => {
 	const navigate = useNavigate();
 	const switchActiveOrg = useSwitchActiveOrg();

@@ -2,28 +2,19 @@ type RecycleCycle = {
 	oldWorkerId: string;
 	replacementId: string;
 	drainSent: boolean;
-	/** Replacement is listening but the drain waits for crash respawns to
-	 *  finish booting, so capacity never dips below N mid-recycle. */
 	drainDeferred: boolean;
-	/** Old worker crashed before drain; the booting replacement is adopted as
-	 *  its respawn, so the cycle completes on `listening` without a drain. */
 	oldExited: boolean;
 };
 
 export type RecycleCoordinator = {
 	handleRecycleRequest: (args: { workerId: string }) => void;
 	handleWorkerListening: (args: { workerId: string }) => void;
-	/** Returns true when the exit was an expected recycle completion (caller
-	 *  must not treat it as a crash); the coordinator owns all respawns. */
 	handleWorkerExit: (args: { workerId: string }) => boolean;
 };
 
 export const DEFAULT_REPLACEMENT_BOOT_TIMEOUT_MS = 120_000;
-// Above the drainer's own max-drain (10min) + graceful-shutdown backstop.
 export const DEFAULT_DRAIN_COMPLETION_TIMEOUT_MS = 12 * 60_000;
 
-/** One recycle in flight at a time, and an invariant every path must hold:
- *  the serving fork count returns to N — no surplus, no deficit. */
 export const createRecycleCoordinator = ({
 	forkReplacement,
 	sendDrain,
@@ -36,13 +27,8 @@ export const createRecycleCoordinator = ({
 }: {
 	forkReplacement: () => string;
 	sendDrain: (workerId: string) => void;
-	/** Tells a still-serving worker its cycle was aborted so it may request
-	 *  again later (clears the worker-side request latch). */
 	sendAbort: (workerId: string) => void;
-	/** Force-kills a replacement that never reached `listening`. */
 	killWorker: (workerId: string) => void;
-	/** Forks a crash replacement; returns its worker id (undefined when the
-	 *  caller is shutting down and skipped the fork). */
 	respawn: (workerId: string) => string | undefined;
 	replacementBootTimeoutMs?: number;
 	drainCompletionTimeoutMs?: number;
@@ -53,10 +39,7 @@ export const createRecycleCoordinator = ({
 	const pendingWorkerIds: string[] = [];
 	const requestedWorkerIds = new Set<string>();
 	const expectedExitWorkerIds = new Set<string>();
-	// Replacements killed for hanging: their eventual exit needs no respawn.
 	const discardedWorkerIds = new Set<string>();
-	// Crash respawns still booting: drains wait for these so a recycle never
-	// stacks on top of reduced capacity.
 	const bootingRespawnIds = new Set<string>();
 
 	const respawnBootDeadlines = new Map<string, ReturnType<typeof setTimeout>>();
@@ -72,7 +55,6 @@ export const createRecycleCoordinator = ({
 		const newWorkerId = respawn(workerId);
 		if (newWorkerId === undefined) return;
 		bootingRespawnIds.add(newWorkerId);
-		// A respawn that hangs before `listening` would defer drains forever.
 		const deadline = setTimeout(() => {
 			if (!untrackBootingRespawn(newWorkerId)) return;
 			log(
@@ -87,8 +69,6 @@ export const createRecycleCoordinator = ({
 		respawnBootDeadlines.set(newWorkerId, deadline);
 	};
 
-	// Keyed by drained worker, not by cycle: a cycle can be replaced while its
-	// old fork is still draining, and that fork still needs its deadline.
 	const drainCompletionDeadlines = new Map<
 		string,
 		ReturnType<typeof setTimeout>
@@ -108,9 +88,6 @@ export const createRecycleCoordinator = ({
 			`[ForkRecycle] Replacement ${cycle.replacementId} listening; draining ${cycle.oldWorkerId}`,
 		);
 		sendDrain(cycle.oldWorkerId);
-		// A lost drain message (or wedged drainer) must not hold the queue
-		// forever. The replacement is already serving, so past the worker's own
-		// drain bounds the old fork is killed and its exit completes the cycle.
 		const deadline = setTimeout(() => {
 			drainCompletionDeadlines.delete(cycle.oldWorkerId);
 			log(
@@ -149,8 +126,6 @@ export const createRecycleCoordinator = ({
 		bootDeadline = setTimeout(() => {
 			if (!activeCycle || activeCycle.replacementId !== replacementId) return;
 			if (activeCycle.drainSent) return;
-			// Alive but never listening (hung init): without this deadline the
-			// cycle would hold the recycle queue forever.
 			log(
 				`[ForkRecycle] Replacement ${replacementId} not listening after ${replacementBootTimeoutMs}ms; killing and aborting recycle of ${oldWorkerId}`,
 			);
@@ -197,8 +172,6 @@ export const createRecycleCoordinator = ({
 			if (activeCycle.drainSent) return;
 
 			if (activeCycle.oldExited) {
-				// The worker this replacement was for already crashed; the
-				// replacement simply takes its slot.
 				log(
 					`[ForkRecycle] Replacement ${workerId} listening; adopted for crashed worker ${activeCycle.oldWorkerId}`,
 				);
@@ -208,7 +181,6 @@ export const createRecycleCoordinator = ({
 
 			clearBootDeadline();
 			if (bootingRespawnIds.size > 0) {
-				// A crash respawn is still booting; draining now would dip below N.
 				activeCycle.drainDeferred = true;
 				log(
 					`[ForkRecycle] Replacement ${workerId} listening; deferring drain of ${activeCycle.oldWorkerId} until ${bootingRespawnIds.size} crash respawn(s) boot`,
@@ -220,19 +192,12 @@ export const createRecycleCoordinator = ({
 
 		handleWorkerExit: ({ workerId }) => {
 			clearDrainCompletionDeadline(workerId);
-			// Every branch below must see a dead worker gone from the queue and its
-			// latch, or a later cycle forks a replacement for a fork that no longer
-			// exists. Branches still clear OTHER workers' latches themselves.
 			const pendingIndex = pendingWorkerIds.indexOf(workerId);
 			if (pendingIndex !== -1) pendingWorkerIds.splice(pendingIndex, 1);
 			requestedWorkerIds.delete(workerId);
-			// A crash respawn dying while booting falls through to the plain-crash
-			// branch below (which respawns again); the deferred-drain release runs
-			// only after that branch has tracked the new respawn.
 			const wasBootingRespawn = untrackBootingRespawn(workerId);
 			const wasExpected = (() => {
 				if (discardedWorkerIds.has(workerId)) {
-					// A hung replacement we already killed and accounted for.
 					discardedWorkerIds.delete(workerId);
 					return true;
 				}
@@ -246,17 +211,12 @@ export const createRecycleCoordinator = ({
 
 				if (activeCycle?.oldWorkerId === workerId) {
 					if (activeCycle.drainDeferred) {
-						// Replacement is already listening (drain deferred): the crash
-						// completes the cycle outright — a deferred drain to a dead
-						// worker would wait forever on an exit that already happened.
 						log(
 							`[ForkRecycle] Worker ${workerId} died with drain deferred; replacement ${activeCycle.replacementId} adopts its slot`,
 						);
 						startNextPendingCycle();
 						return false;
 					}
-					// Crashed before its drain: the already-booting replacement is its
-					// respawn, so forking again here would leave a surplus worker.
 					activeCycle.oldExited = true;
 					log(
 						`[ForkRecycle] Worker ${workerId} died mid-recycle; replacement ${activeCycle.replacementId} adopts its slot`,
@@ -267,8 +227,6 @@ export const createRecycleCoordinator = ({
 				if (activeCycle?.replacementId === workerId) {
 					const { oldWorkerId, drainSent } = activeCycle;
 					if (drainSent) {
-						// Old worker is already draining and stays an expected exit; the
-						// dead replacement's slot is the one that needs refilling.
 						log(
 							`[ForkRecycle] Replacement ${workerId} died after listening; respawning while ${oldWorkerId} finishes draining`,
 						);
@@ -276,9 +234,6 @@ export const createRecycleCoordinator = ({
 						respawnTracked(workerId);
 						return false;
 					}
-					// Died while booting. If the old worker still serves, no capacity was
-					// lost — abort and let it ask again later. If the old worker had
-					// crashed too, this replacement WAS its slot: refill it.
 					log(
 						`[ForkRecycle] Replacement ${workerId} died before listening; aborting recycle of ${oldWorkerId}`,
 					);

@@ -36,9 +36,6 @@ import {
 	TIME_RANGE_OPTIONS,
 } from "./components/index.js";
 
-/**
- * Error boundary fallback component for EventsView
- */
 function EventsViewError({ error, onRetry }: { error: Error; onRetry?: () => void }) {
 	return (
 		<Box flexDirection="column" padding={1}>
@@ -53,24 +50,16 @@ function EventsViewError({ error, onRetry }: { error: Error; onRetry?: () => voi
 
 const PAGE_SIZE = 50;
 
-/**
- * View mode for the events display
- */
 export type ViewMode = "list" | "aggregate";
 
 import type { AggregateBinSize } from "../../../lib/api/endpoints/events.js";
 
-/**
- * Bin size options for aggregate view
- */
 const BIN_SIZE_OPTIONS: { value: AggregateBinSize; label: string }[] = [
 	{ value: "hour", label: "Hourly" },
 	{ value: "day", label: "Daily" },
 	{ value: "month", label: "Monthly" },
 ];
 
-// Column definitions for the DataTable (with defensive null checks)
-// Note: Don't pre-truncate in render - let DataTable handle truncation dynamically based on available width
 const columns: Column<ApiEventsListItem>[] = [
 	{
 		key: "id",
@@ -104,7 +93,6 @@ const columns: Column<ApiEventsListItem>[] = [
 	},
 ];
 
-// Generate keyboard hints based on current state
 const getHints = (
 	viewMode: ViewMode,
 	focusTarget: "table" | "sheet" | "search",
@@ -114,7 +102,6 @@ const getHints = (
 	canGoNext: boolean,
 	hasActiveFilters: boolean,
 ): KeybindHint[] => {
-	// Filter panel is open
 	if (filterOpen) {
 		return [
 			{ key: "↑/↓", label: "navigate" },
@@ -126,7 +113,6 @@ const getHints = (
 		];
 	}
 
-	// Aggregate view
 	if (viewMode === "aggregate") {
 		return [
 			{ key: "v", label: "list view" },
@@ -137,7 +123,6 @@ const getHints = (
 		];
 	}
 
-	// Detail sheet is focused
 	if (focusTarget === "sheet" && sheetOpen) {
 		return [
 			{ key: "Tab", label: "focus table" },
@@ -149,7 +134,6 @@ const getHints = (
 		];
 	}
 
-	// Table is focused (list view)
 	return [
 		{ key: "↑/↓", label: "navigate" },
 		{ key: "n", label: "next page", visible: canGoNext },
@@ -162,24 +146,17 @@ const getHints = (
 	];
 };
 
-// Get display label for time range
 const getTimeRangeLabel = (preset: TimeRangePreset): string => {
 	return TIME_RANGE_OPTIONS.find((o) => o.value === preset)?.label ?? preset;
 };
 
 export interface EventsViewProps {
 	environment?: AppEnv;
-	/** Filter by customer ID (passed from CLI --customer option) */
 	customerId?: string;
-	/** Filter by feature ID (passed from CLI --feature option) */
 	featureId?: string;
-	/** Called when user exits (q or ctrl+c) - use to clear terminal */
 	onExit?: () => void;
 }
 
-/**
- * Main events view orchestrator with filter panel and aggregate view support
- */
 export function EventsView({
 	environment = AppEnv.Sandbox,
 	customerId: cliCustomerId,
@@ -189,18 +166,14 @@ export function EventsView({
 	const { exit } = useApp();
 	const { copy, showingFeedback } = useClipboard();
 	
-	// Component-level error state
 	const [componentError, setComponentError] = useState<Error | null>(null);
 
-	// View mode state
 	const [viewMode, setViewMode] = useState<ViewMode>("list");
 	const [binSize, setBinSize] = useState<AggregateBinSize>("day");
 
-	// Fetch features for filter dropdown
 	const { data: featuresData } = useFeatures({ environment });
 	const features: ApiFeature[] = featuresData ?? [];
 
-	// Filter state management
 	const {
 		appliedFilters,
 		draftFilters,
@@ -224,7 +197,6 @@ export function EventsView({
 		finishEditingGroupBy,
 	} = useEventsFilter(features.length);
 
-	// List navigation state
 	const {
 		state,
 		moveUp,
@@ -238,14 +210,12 @@ export function EventsView({
 		resetPage,
 	} = useListNavigation<ApiEventsListItem>();
 
-	// Combine CLI filters with UI filters
 	const effectiveCustomerId = appliedFilters.customerId || cliCustomerId;
 	const effectiveFeatureId =
 		appliedFilters.selectedFeatures.length > 0
 			? appliedFilters.selectedFeatures
 			: cliFeatureId;
 
-	// Fetch events for list view
 	const { data, isLoading, isError, error, refetch, isFetching } = useEvents({
 		page: state.page,
 		pageSize: PAGE_SIZE,
@@ -264,17 +234,14 @@ export function EventsView({
 		hasMore,
 	);
 
-	// Map time range for aggregate API (it doesn't support "all", use "90d" instead)
 	const aggregateTimeRange: UITimeRange = appliedFilters.timeRange === "all" 
 		? "90d" 
 		: (appliedFilters.timeRange as UITimeRange);
 
-	// Get feature IDs for aggregate - use selected features or all available features
 	const aggregateFeatureIds: string[] = effectiveFeatureId
 		? (Array.isArray(effectiveFeatureId) ? effectiveFeatureId : [effectiveFeatureId])
 		: (features ?? []).map((f) => f.id);
 
-	// Aggregate data from external API (REQUIRES customer_id and feature_id)
 	const aggregateResult = useEventsAggregateApi({
 		environment,
 		customerId: effectiveCustomerId,
@@ -285,16 +252,12 @@ export function EventsView({
 		enabled: viewMode === "aggregate" && !!effectiveCustomerId && aggregateFeatureIds.length > 0,
 	});
 
-	// Check if aggregate view needs customer ID
 	const aggregateRequiresCustomer = viewMode === "aggregate" && !effectiveCustomerId;
-	// Check if aggregate view needs features but doesn't have any
 	const aggregateNeedsFeatures = viewMode === "aggregate" && !aggregateRequiresCustomer && aggregateFeatureIds.length === 0;
 
-	// Track previous filter state to detect changes
 	const prevFilterRef = useRef<string | null>(null);
 	const filterKey = `${appliedFilters.customerId}|${appliedFilters.selectedFeatures.join(",")}|${appliedFilters.timeRange}`;
 
-	// Reset to page 1 when filters change
 	useEffect(() => {
 		if (prevFilterRef.current !== null && prevFilterRef.current !== filterKey) {
 			resetPage();
@@ -302,7 +265,6 @@ export function EventsView({
 		prevFilterRef.current = filterKey;
 	}, [filterKey, resetPage]);
 
-	// Toggle view mode
 	const toggleViewMode = useCallback(() => {
 		try {
 			setViewMode((prev) => (prev === "list" ? "aggregate" : "list"));
@@ -312,7 +274,6 @@ export function EventsView({
 		}
 	}, []);
 
-	// Cycle bin size for aggregate view
 	const cycleBinSize = useCallback(() => {
 		try {
 			setBinSize((prev) => {
@@ -326,14 +287,11 @@ export function EventsView({
 		}
 	}, []);
 
-	// Handle keyboard input
 	useInput(
 		useCallback(
 			(input, key) => {
 				try {
-					// === FILTER PANEL CONTROLS ===
 					if (isFilterOpen) {
-						// Handle customer ID text input
 						if (isEditingCustomer) {
 							if (key.escape) {
 								finishEditingCustomer();
@@ -343,11 +301,9 @@ export function EventsView({
 								finishEditingCustomer();
 								return;
 							}
-							// Let TextInput handle other keys
 							return;
 						}
 
-						// Handle group by text input
 						if (isEditingGroupBy) {
 							if (key.escape) {
 								finishEditingGroupBy();
@@ -357,35 +313,29 @@ export function EventsView({
 								finishEditingGroupBy();
 								return;
 							}
-							// Let TextInput handle other keys
 							return;
 						}
 
-						// Close filter panel
 						if (key.escape) {
 							closeFilter();
 							return;
 						}
 
-						// Apply filters
 						if (key.return) {
 							applyFilters();
 							return;
 						}
 
-						// Clear all filters
 						if (input === "x") {
 							clearFilters();
 							return;
 						}
 
-						// Navigate between fields
 						if (key.tab) {
 							nextField();
 							return;
 						}
 
-						// Navigate within field
 						if (key.upArrow || input === "k") {
 							filterMoveUp();
 							return;
@@ -395,7 +345,6 @@ export function EventsView({
 							return;
 						}
 
-						// Toggle selection
 						if (input === " ") {
 							toggleSelection(features ?? []);
 							return;
@@ -404,9 +353,6 @@ export function EventsView({
 						return;
 					}
 
-					// === GLOBAL CONTROLS ===
-
-					// Quit
 					if (input === "q") {
 						if (onExit) {
 							onExit();
@@ -416,27 +362,22 @@ export function EventsView({
 						return;
 					}
 
-					// Toggle view mode
 					if (input === "v") {
 						toggleViewMode();
 						return;
 					}
 
-					// Open filter panel
 					if (input === "f") {
 						openFilter();
 						return;
 					}
 
-					// Refresh
 					if (input === "r") {
 						refetch();
 						return;
 					}
 
-					// === AGGREGATE VIEW CONTROLS ===
 					if (viewMode === "aggregate") {
-						// Cycle bin size
 						if (input === "g") {
 							cycleBinSize();
 							return;
@@ -444,21 +385,17 @@ export function EventsView({
 						return;
 					}
 
-					// === DETAIL SHEET CONTROLS ===
 					if (state?.focusTarget === "sheet" && state?.sheetOpen) {
-						// Copy ID
 						if (input === "c" && state?.selectedItem?.id) {
 							copy(state.selectedItem.id);
 							return;
 						}
 
-						// Close sheet
 						if (key.escape) {
 							closeSheet();
 							return;
 						}
 
-						// Toggle focus to table
 						if (key.tab) {
 							toggleFocus();
 							return;
@@ -467,34 +404,28 @@ export function EventsView({
 						return;
 					}
 
-					// === TABLE CONTROLS (LIST VIEW) ===
 					if (state?.focusTarget === "table") {
-						// Navigate up
 						if (key.upArrow || input === "k") {
 							moveUp();
 							return;
 						}
 
-						// Navigate down
 						if (key.downArrow || input === "j") {
 							const maxIndex = (events?.length ?? 1) - 1;
 							moveDown(maxIndex >= 0 ? maxIndex : 0);
 							return;
 						}
 
-						// Previous page (p or left arrow)
 						if ((input === "p" || key.leftArrow) && pagination?.canGoPrev) {
 							prevPage();
 							return;
 						}
 
-						// Next page (n or right arrow)
 						if ((input === "n" || key.rightArrow) && pagination?.canGoNext) {
 							nextPage(pagination.canGoNext);
 							return;
 						}
 
-						// Open sheet
 						if (key.return) {
 							const event = events?.[state?.selectedIndex ?? 0];
 							if (event) {
@@ -503,7 +434,6 @@ export function EventsView({
 							return;
 						}
 
-						// Toggle focus to sheet (if open)
 						if (key.tab && state?.sheetOpen) {
 							toggleFocus();
 							return;
@@ -550,7 +480,6 @@ export function EventsView({
 		),
 	);
 
-	// Sync selected event when events load
 	useEffect(() => {
 		if (events.length > 0 && state.selectedIndex < events.length) {
 			const event = events[state.selectedIndex];
@@ -560,7 +489,6 @@ export function EventsView({
 		}
 	}, [events, state.selectedIndex, selectItem]);
 
-	// Determine view state for ListViewLayout
 	const getViewState = (): ListViewState => {
 		try {
 			if (isLoading && !data) return "loading";
@@ -573,7 +501,6 @@ export function EventsView({
 		}
 	};
 
-	// Build filter description for empty state and title bar
 	const getFilterDescription = () => {
 		try {
 			const filters: string[] = [];
@@ -596,17 +523,14 @@ export function EventsView({
 		}
 	};
 
-	// Build title bar items showing view mode and filters
 	const titleBarItems: TitleBarItem[] = [];
 
-	// Show view mode
 	titleBarItems.push({
 		label: "View",
 		value: viewMode === "aggregate" ? "Aggregate" : "List",
 		color: viewMode === "aggregate" ? "yellow" : "white",
 	});
 
-	// Show bin size in aggregate mode
 	if (viewMode === "aggregate") {
 		const binSizeLabel =
 			BIN_SIZE_OPTIONS.find((t) => t.value === binSize)?.label ?? binSize;
@@ -617,7 +541,6 @@ export function EventsView({
 		});
 	}
 
-	// Show filter indicator
 	if (hasActiveFilters || cliCustomerId || cliFeatureId) {
 		titleBarItems.push({
 			label: "Filter",
@@ -626,13 +549,11 @@ export function EventsView({
 		});
 	}
 
-	// Determine if side panel should show filter or detail sheet
 	const showFilterPanel = isFilterOpen;
 	const showDetailSheet =
 		state.sheetOpen && !!state.selectedItem && !isFilterOpen && viewMode === "list";
 	const sideOpen = showFilterPanel || showDetailSheet;
 
-	// Pagination text for aggregate mode
 	const getAggregatePaginationText = () => {
 		try {
 			if (viewMode !== "aggregate") return pagination?.text ?? "";
@@ -653,7 +574,6 @@ export function EventsView({
 		}
 	};
 
-	// Show error state if component has caught an error
 	if (componentError) {
 		return (
 			<EventsViewError 
@@ -666,7 +586,6 @@ export function EventsView({
 		);
 	}
 
-	// Wrap render in try-catch for safety
 	try {
 		return (
 			<ListViewLayout
@@ -741,7 +660,6 @@ export function EventsView({
 									onApply={applyFilters}
 									onClear={clearFilters}
 								/>
-								{/* Customer ID text input when editing */}
 								{isEditingCustomer && (
 									<Box
 										marginTop={1}
@@ -757,7 +675,6 @@ export function EventsView({
 										/>
 									</Box>
 								)}
-								{/* Group By text input when editing */}
 								{isEditingGroupBy && (
 									<Box
 										marginTop={1}

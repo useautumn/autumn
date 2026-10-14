@@ -1,4 +1,3 @@
-/** A stretch of synchronous work on the worker's one thread, long enough to delay everything queued behind it. */
 export type SyncSection = {
 	label: string;
 	endedAt: number;
@@ -11,15 +10,11 @@ export type SyncSectionTotals = Record<
 >;
 
 export type SyncSectionRecorder = {
-	/** Runs `run` and records how long it held the thread. `run` must not await. */
 	time<Value>({ label }: { label: string }, run: () => Value): Value;
-	/** Recorded sections that finished at or after `since`, longest first. */
 	endedSince({ since }: { since: number }): SyncSection[];
-	/** Per-label totals since the last drain. */
 	drainTotals(): SyncSectionTotals;
 };
 
-// Anything shorter cannot explain a stall worth reporting, so it is only counted.
 const MIN_RECORDED_MS = 2;
 const RECENT_CAPACITY = 256;
 
@@ -74,7 +69,6 @@ export function createSyncSectionRecorder({
 	return { time, endedSince, drainTotals };
 }
 
-/** The process's recorder: the worker has one thread, so one record of what held it. */
 export const syncSections = createSyncSectionRecorder();
 
 export function timeSync<Value>(

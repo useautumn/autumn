@@ -60,7 +60,6 @@ export const pinDependency = ({
 	return manifestText.replace(pin, `$1${version}$2`);
 };
 
-// Usage: bun pinAutumnJs.ts <repo root>; writes `version=` to GITHUB_OUTPUT when it bumps.
 if (import.meta.main) {
 	const [root] = process.argv.slice(2);
 	if (!root) throw new Error("Usage: pinAutumnJs.ts <root>");

@@ -62,7 +62,6 @@ export class AutumnRpcCli {
 		});
 
 		if (response.status !== 200) {
-			// Handle rate limit errors
 			if (response.status === 429) {
 				throw new AutumnError({
 					message: "request failed, rate limit exceeded",

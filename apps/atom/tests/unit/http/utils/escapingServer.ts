@@ -1,7 +1,6 @@
 import { isMainThread } from "node:worker_threads";
 import { serveAtomApp } from "../../../../src/http/serveAtomApp.js";
 
-/** Started as a thread: a listener whose app, and logger, fail every request; it answers "alive" to any message. */
 export const ESCAPING_SERVER = import.meta.path;
 
 if (!isMainThread) {

@@ -11,17 +11,6 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { constructArrearProratedItem } from "@/utils/scriptUtils/constructItem.js";
 
-// ═══════════════════════════════════════════════════════════════════
-// Allocated Invoice — BillImmediately / OnDecrease.None (Charging)
-//
-// Product: 1 included seat, $50/seat
-// on_increase: BillImmediately (full amount, no proration)
-// on_decrease: None (creates replaceables, no refund)
-//
-// These tests focus on CHARGING behavior — invoices created, amounts
-// correct. See create-replaceables.test.ts for replaceable lifecycle.
-// ═══════════════════════════════════════════════════════════════════
-
 const PRICE_PER_SEAT = 50;
 const INCLUDED_USAGE = 1;
 
@@ -34,10 +23,6 @@ const userItem = constructArrearProratedItem({
 		on_decrease: OnDecrease.None,
 	},
 });
-
-// ═══════════════════════════════════════════════════════════════════
-// bill-imm1: Track within included usage — no invoice created
-// ═══════════════════════════════════════════════════════════════════
 
 test(`${chalk.yellowBright("bill-imm1: track within included usage creates no invoice")}`, async () => {
 	const pro = products.pro({ id: "pro", items: [userItem] });
@@ -102,10 +87,6 @@ test(`${chalk.yellowBright("bill-imm1: track within included usage creates no in
 	await expectStripeSubscriptionCorrect({ ctx, customerId });
 });
 
-// ═══════════════════════════════════════════════════════════════════
-// bill-imm2: Track past included boundary — invoice for overage only
-// ═══════════════════════════════════════════════════════════════════
-
 test(`${chalk.yellowBright("bill-imm2: track past included boundary creates invoice for overage")}`, async () => {
 	const pro = products.pro({ id: "pro", items: [userItem] });
 
@@ -149,10 +130,6 @@ test(`${chalk.yellowBright("bill-imm2: track past included boundary creates invo
 	await expectStripeSubscriptionCorrect({ ctx, customerId });
 });
 
-// ═══════════════════════════════════════════════════════════════════
-// bill-imm3: Track additional overage — invoice for each increment
-// ═══════════════════════════════════════════════════════════════════
-
 test(`${chalk.yellowBright("bill-imm3: additional overage creates correct invoice")}`, async () => {
 	const pro = products.pro({ id: "pro", items: [userItem] });
 
@@ -168,7 +145,6 @@ test(`${chalk.yellowBright("bill-imm3: additional overage creates correct invoic
 		],
 	});
 
-	// Step 1: Track +1 (1 more overage)
 	const trackRes1: TrackResponseV2 = await autumnV2.track({
 		customer_id: customerId,
 		feature_id: TestFeature.Users,
@@ -199,10 +175,6 @@ test(`${chalk.yellowBright("bill-imm3: additional overage creates correct invoic
 
 	await expectStripeSubscriptionCorrect({ ctx, customerId });
 });
-
-// ═══════════════════════════════════════════════════════════════════
-// bill-imm4: Mid-cycle track charges FULL amount (no proration)
-// ═══════════════════════════════════════════════════════════════════
 
 test(`${chalk.yellowBright("bill-imm4: mid-cycle track charges full amount (no proration)")}`, async () => {
 	const pro = products.pro({ id: "pro", items: [userItem] });

@@ -8,7 +8,6 @@ import { isStripeConnected } from "@/internal/orgs/orgUtils";
 import { productsMissingStripeProduct } from "../utils/ensureFreePhaseStripeProducts";
 import { setPlansError } from "./setPlansError";
 
-/** A free phase that ends later needs a $0 Stripe placeholder, so Stripe must be connected. */
 export const handleFreePhaseStripeConnectionErrors = ({
 	ctx,
 	billingContext,

@@ -9,7 +9,6 @@ import {
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { createFakeMiscCache } from "../../utils/fakeMiscCache.js";
 
-// These cover the legacy replay; the worker case turns the rollout on itself.
 const previousRollout = process.env.BALANCE_WORKER_ROLLOUT_ENABLED;
 process.env.BALANCE_WORKER_ROLLOUT_ENABLED = "false";
 
@@ -51,8 +50,6 @@ await mockModuleWithRestore(
 	}),
 );
 
-// Local Dynamo may already hold sticky keys from prior runs — claim must not
-// 409 and skip the replay body under test.
 await mockModuleWithRestore(
 	"@/external/aws/dynamodb/idempotencyKeys/operations/claimDynamoIdempotencyKey.js",
 	() => ({
@@ -60,7 +57,6 @@ await mockModuleWithRestore(
 	}),
 );
 
-// CI has no misc cache env — the idempotency claim's getMiscRedis() would throw.
 const fakeMiscRedis = {
 	status: "ready",
 	get: async () => null,
@@ -86,8 +82,6 @@ const ctx = {
 	apiVersion: new ApiVersionClass(ApiVersion.V2_1),
 	logger: {
 		info: mock(() => {}),
-		// warn included: the idempotency path hands this logger to fire-and-forget
-		// Dynamo-mirror work that logs failures after the test completes.
 		warn: mock(() => {}),
 	},
 } as unknown as AutumnContext;

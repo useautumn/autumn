@@ -2,13 +2,11 @@ import { Decimal } from "decimal.js";
 
 export type AllocationUsage = { requested: number; usage: number };
 
-/** Relative float noise in a stored scale; without it, 12000 × ⅔ floors to 7999. Lua uses the same value. */
 export const ALLOCATION_FLOAT_TOLERANCE = 1e-9;
 
 const claimedOf = ({ requested, usage }: AllocationUsage) =>
 	Decimal.min(usage, requested);
 
-/** Largest scale ≤ 1 at which every entity's unused share still fits in what's left of the pot. */
 export const solveAllocationScale = ({
 	sharedRemaining,
 	entries,
@@ -25,7 +23,6 @@ export const solveAllocationScale = ({
 	);
 	if (unusedAtFullScale.lte(remaining)) return 1;
 
-	// Each entity starts holding unused credits once scale passes claimed / requested.
 	const byThreshold = live
 		.map((entry) => ({
 			requested: new Decimal(entry.requested),
@@ -47,7 +44,6 @@ export const solveAllocationScale = ({
 	return 1;
 };
 
-/** The share an entity holds right now: its request scaled down, rounded to whole credits, never below usage. */
 export const allocationGranted = ({
 	requested,
 	usage,
@@ -61,7 +57,6 @@ export const allocationGranted = ({
 	return Decimal.max(claimedOf({ requested, usage }), scaled).toNumber();
 };
 
-/** What a deduction may take from shared rows: the entity's own unused share, then credits nobody holds. */
 export const allocationGate = ({
 	own,
 	scale: storedScale,
@@ -73,7 +68,6 @@ export const allocationGate = ({
 	heldUnused: number;
 	sharedRemaining: number;
 }): { ownUnused: number; unallocated: number } => {
-	// A cut solved before the pot grew stops binding once every unused promise fits again.
 	const scale = heldUnused <= sharedRemaining ? 1 : storedScale;
 	const ownUnused = own
 		? Decimal.max(
@@ -92,7 +86,6 @@ export const allocationGate = ({
 	};
 };
 
-/** First-call usage nobody was counting: absorbed from the end of the list so the first entries stay whole. */
 export const packAllocationGap = ({
 	gap,
 	entries,
@@ -112,7 +105,6 @@ export const packAllocationGap = ({
 	);
 };
 
-/** The shared row whose cycle allocations follow: the pinned row while it exists, else the pool, else the soonest to reset. */
 export const pickAllocationParent = <
 	T extends {
 		id: string;

@@ -24,7 +24,6 @@ const fixtureRowOf = ({
 	id: webhook.id,
 	[SPEC.envField]: envKey,
 	url: webhook.url,
-	// No list is every event; `events` is left out rather than written as `[]`.
 	...(webhook.events.length > 0 ? { events: webhook.events } : {}),
 	...(webhook.description ? { description: webhook.description } : {}),
 	...(webhook.disabled ? { disabled: true } : {}),
@@ -48,7 +47,6 @@ export const appendWebhook = ({
 	});
 	if (withKey === null)
 		return "append to `webhooks` by hand: no atmn({...}) call";
-	// A spread may already hold `webhooks`; a second key after it would override it.
 	const spreads = rootSpreadNames({ source: configSource });
 	if (withKey !== configSource && spreads.length > 0)
 		return `append to \`webhooks\` by hand: atmn() spreads \`${spreads.join("`, `")}\`, which may already hold it`;

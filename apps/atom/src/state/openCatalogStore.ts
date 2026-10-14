@@ -20,7 +20,6 @@ const createCatalogSchema = ({ database }: { database: Database }) => {
 			PRIMARY KEY (table_name, id)
 		) WITHOUT ROWID
 	`);
-	// One row at most: when Autumn read the catalog the rows came from.
 	database.run(`
 		CREATE TABLE IF NOT EXISTS catalog_info (
 			id INTEGER PRIMARY KEY CHECK (id = 1),
@@ -29,7 +28,6 @@ const createCatalogSchema = ({ database }: { database: Database }) => {
 	`);
 };
 
-/** One catalog file per data folder, written by one thread. The file is the truth; each thread holds it parsed. */
 export const openCatalogStore = ({
 	databasePath,
 }: {
@@ -51,7 +49,6 @@ export const openCatalogStore = ({
 
 	let sharedCatalog = readFromFile();
 
-	/** Every thread holds the catalog; only its owner thread writes the file, and hands the rows to the rest. */
 	function install({
 		rows,
 		readAt,
@@ -62,7 +59,6 @@ export const openCatalogStore = ({
 	}
 
 	function set(params: Parameters<CatalogStore["set"]>[0]): boolean {
-		// A push can arrive late or after a retry: the file decides, under its write lock.
 		if (!replaceCatalog({ ctx, ...params })) return false;
 		return install(params);
 	}

@@ -53,11 +53,8 @@ export type EdgeConfigCardDef<Id extends string = EdgeConfigCardId> = {
 	title: string;
 	description: string;
 	icon: LucideIcon;
-	/** Admin GET endpoint used to derive the live status line. */
 	endpoint: string;
-	/** Collapses a config payload into the one-line state shown on the card. */
 	deriveStatus: (data: unknown) => EdgeConfigStatus;
-	/** Adds a health chip for configs whose GET reports whether the stored object parses. */
 	deriveHealthy?: (data: unknown) => boolean;
 };
 

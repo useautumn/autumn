@@ -1,18 +1,3 @@
-/**
- * A license customize resolves a reset cycle off the anchor ladder: a
- * same-interval sibling on the assignment, then the parent's billing anchor,
- * then the parent's Stripe subscription, then the parent's starts_at.
- *
- * Contract under test:
- *   New behaviors:
- *     - a sibling at the same interval wins: the minted row shares its anchor
- *     - with no sibling, a paid parent's rows anchor to the parent's cycle,
- *       never the seat's own
- *     - a free parent with no anchors falls back to the parent's starts_at
- *   Side effects:
- *     - every rung stays on the batch lane
- */
-
 import { expect, test } from "bun:test";
 import { customerEntitlements } from "@autumn/shared";
 import { runChunkedMigration } from "@tests/integration/billing/migrations-v2/utils/runChunkedMigration";

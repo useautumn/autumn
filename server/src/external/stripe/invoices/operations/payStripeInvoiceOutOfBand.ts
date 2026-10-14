@@ -1,9 +1,5 @@
 import type Stripe from "stripe";
 
-/**
- * Settles a finalized invoice without charging: the money moved elsewhere
- * (a marketplace, a bank transfer). Already-paid invoices are returned as is.
- */
 export const payStripeInvoiceOutOfBand = async ({
 	stripeCli,
 	stripeInvoice,

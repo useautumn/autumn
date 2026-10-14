@@ -1,14 +1,11 @@
 export const ErrCode = {
-	// Billing
 	PlanAlreadyAttached: "plan_already_attached",
 	PendingPlanConflict: "pending_plan_conflict",
 
-	// Idempotency
 	IdempotencyKeyAlreadyExists: "idempotency_key_already_exists",
 	IdempotencyKeyNotFound: "idempotency_key_not_found",
 	DuplicateIdempotencyKey: "duplicate_idempotency_key",
 
-	// Auth
 	InvalidApiVersion: "invalid_api_version",
 	NoSecretKey: "no_secret_key",
 	InvalidSecretKey: "invalid_secret_key",
@@ -25,7 +22,6 @@ export const ErrCode = {
 	EndpointNotPublic: "endpoint_not_public",
 	FailedToVerifyPublishableKey: "failed_to_verify_publishable_key",
 
-	// General
 	InvalidInputs: "invalid_inputs",
 	InvalidRequest: "invalid_request",
 	InvalidExpand: "invalid_expand",
@@ -34,37 +30,30 @@ export const ErrCode = {
 	RequestTemporarilyDisabled: "request_temporarily_disabled",
 	RequestTimeout: "request_timeout",
 
-	// Org
 	OrgNotFound: "org_not_found",
 	OrgHasCustomers: "org_has_customers",
 
-	// Migrations (v2)
 	MigrationNotFound: "migration_not_found",
 
-	// Feature
 	FeatureNotFound: "feature_not_found",
 	InvalidFeature: "invalid_feature",
 	DuplicateFeatureId: "duplicate_feature_id",
 	InvalidEventName: "invalid_event_name",
 	FeatureLimitReached: "feature_limit_reached",
 
-	// Webhooks
 	WebhookNotFound: "webhook_not_found",
 	DuplicateWebhookId: "duplicate_webhook_id",
 	AmbiguousWebhookUrl: "ambiguous_webhook_url",
 	WebhooksUnavailable: "webhooks_unavailable",
 
-	// BYOC
 	ByocUnavailable: "byoc_unavailable",
 	ByocCacheNotReady: "byoc_cache_not_ready",
 
-	// Internal
 	InternalError: "internal_error",
 	DuplicateCustomerId: "duplicate_customer_id",
 	StripeKeyNotFound: "stripe_key_not_found",
 	DuplicateCustomerEmail: "duplicate_customer_email",
 
-	// Stripe
 	StripeError: "stripe_error",
 	StripeKeyInvalid: "stripe_key_invalid",
 	StripeAccountMismatch: "stripe_account_mismatch",
@@ -81,7 +70,6 @@ export const ErrCode = {
 
 	StripeCreateSubscriptionFailed: "stripe_create_subscription_failed",
 
-	// Price
 	PriceNotFound: "price_not_found",
 	CreatePriceFailed: "create_price_failed",
 	InvalidPrice: "invalid_price",
@@ -91,7 +79,6 @@ export const ErrCode = {
 	CusPriceNotFound: "cus_price_not_found",
 	StripePriceNotLinked: "stripe_price_not_linked",
 
-	// Customer
 	InvalidCustomer: "invalid_customer",
 	CreateCustomerFailed: "create_customer_failed",
 	CustomerNotFound: "customer_not_found",
@@ -105,40 +92,31 @@ export const ErrCode = {
 	InvalidUpdateCustomerParams: "invalid_update_customer_params",
 	CurrencyMismatch: "currency_mismatch",
 
-	// Stripe errors...?
 	CreateStripeProductFailed: "create_stripe_product_failed",
 	DeleteStripeProductFailed: "delete_stripe_product_failed",
 	CreateStripeSubscriptionFailed: "create_stripe_subscription_failed",
 
-	// Cus Product
 	CusProductNotFound: "cus_product_not_found",
 	DuplicateSubscriptionId: "duplicate_subscription_id",
 
-	// Entitlements
 	InvalidEntitlement: "invalid_entitlement",
 	CreateEntitlementFailed: "create_entitlement_failed",
 	DeleteEntitlementFailed: "delete_entitlement_failed",
 	InsufficientBalance: "insufficient_balance",
 
-	// Invoice
 	CreateInvoiceFailed: "create_invoice_failed",
 
-	// Event
 	InvalidEvent: "invalid_event",
 	CreateEventFailed: "create_event_failed",
 	DuplicateEvent: "duplicate_event",
 
-	// Cus Product
 	NoActiveCusProducts: "no_active_cus_products",
 	GetCusProductsFailed: "get_cus_products_failed",
 
-	// Cus Price
 	GetCusPriceFailed: "get_cus_price_failed",
 
-	// Pay for invoice
 	PayInvoiceFailed: "invoice_payment_failed",
 
-	// Rewards
 	InvalidReward: "invalid_reward",
 	ProductNotInStripe: "product_not_in_stripe",
 	DuplicateRewardId: "duplicate_reward_id",
@@ -146,31 +124,24 @@ export const ErrCode = {
 	PromoCodeAlreadyExistsInStripe: "promo_code_already_exists_in_stripe",
 	PromoCodeFirstTimeOnly: "promo_code_first_time_only",
 
-	// Entity
 	EntityNotFound: "entity_not_found",
 	EntityAlreadyDeleted: "entity_already_deleted",
 
-	// Referral codes
 	ReferralCodeMaxRedemptionsReached: "referral_code_max_redemptions_reached",
 	ReferralNotFound: "referral_not_found",
 	CustomerAlreadyRedeemedReferralCode:
 		"customer_already_redeemed_referral_code",
 	CustomerCannotRedeemOwnCode: "customer_cannot_redeem_own_code",
 
-	// Product items
 	InvalidProductItem: "invalid_product_item",
 
-	// Entity
 	EntityIdRequired: "entity_id_required",
 
-	// Lock
 	LockAlreadyExists: "lock_already_exists",
 
-	// Subscription
 	InsertSubscriptionFailed: "insert_subscription_failed",
 	UpdateSubscriptionFailed: "update_subscription_failed",
 
-	// Rewards
 	RewardNotFound: "reward_not_found",
 	RewardProgramNotFound: "reward_program_not_found",
 	InsertRewardProgramFailed: "insert_reward_program_failed",
@@ -180,37 +151,28 @@ export const ErrCode = {
 	RewardRedemptionNotFound: "reward_redemption_not_found",
 	InsertRewardRedemptionFailed: "insert_reward_redemption_failed",
 
-	// Migration
 	InsertMigrationJobFailed: "insert_migration_job_failed",
 	InsertMigrationErrorFailed: "insert_migration_error_failed",
 	MigrationJobNotFound: "migration_job_not_found",
 	MigrationAlreadyInProgress: "migration_already_in_progress",
 
-	// Exports
 	CustomerExportInProgress: "customer_export_in_progress",
 
-	// Supabase
 	SupabaseNotFound: "supabase_not_found",
-	// Entities
 	EntityBalanceNotFound: "entity_balance_not_found",
 
-	// Tinybird
 	TinybirdDisabled: "tinybird_disabled",
 	/** @deprecated Use TinybirdDisabled instead — kept for frontend compat */
 	ClickHouseDisabled: "tinybird_disabled",
 
-	// Payment method
 	PaymentMethodNotFound: "payment_method_not_found",
 
-	// Vercel
 	VercelSubscriptionAlreadyExists: "vercel_subscription_already_exists",
 	VercelSubscriptionNotFound: "vercel_subscription_not_found",
 	VercelResourceNotFound: "vercel_resource_not_found",
 
-	// Products
 	ProductNotFound: "product_not_found",
 
-	// Variants
 	NestedVariantNotAllowed: "nested_variant_not_allowed",
 	CannotForkArchivedBase: "cannot_fork_archived_base",
 	ProductIdAlreadyExists: "product_id_already_exists",
@@ -225,6 +187,5 @@ export const ErrCode = {
 	HistoricalPlanVersionCannotBeDefault:
 		"historical_plan_version_cannot_be_default",
 
-	// Maintenance
 	UnderMaintenance: "under_maintenance",
 };

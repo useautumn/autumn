@@ -10,10 +10,6 @@ type RecurringInlinePriceParam = {
 	price_data: Stripe.SubscriptionCreateParams.Item["price_data"];
 };
 
-/**
- * Returns the price param for a StripeItemSpec — either a stored price ID or inline price_data.
- * For inline prices, asserts that `recurring` is present (one-off items should not reach this path).
- */
 const toRecurringPriceParam = ({
 	spec,
 }: {
@@ -37,8 +33,6 @@ const toRecurringPriceParam = ({
 	return { price: spec.stripePriceId! };
 };
 
-/** Converts a StripeItemSpec to a Stripe subscription item param (create or update).
- *  Only call with recurring specs — one-off items use a separate invoice path. */
 export const stripeItemSpecToSubscriptionItem = ({
 	spec,
 }: {
@@ -51,7 +45,6 @@ export const stripeItemSpecToSubscriptionItem = ({
 	};
 };
 
-/** Returns a price param without recurring validation — for checkout line items. */
 const toPriceParam = ({
 	spec,
 }: {
@@ -63,7 +56,6 @@ const toPriceParam = ({
 	return { price: spec.stripePriceId! };
 };
 
-/** Converts a StripeItemSpec to a Stripe checkout session line item. */
 export const stripeItemSpecToCheckoutLineItem = ({
 	spec,
 }: {
@@ -76,7 +68,6 @@ export const stripeItemSpecToCheckoutLineItem = ({
 	};
 };
 
-/** Converts a StripeItemSpec to a Stripe subscription schedule phase item. */
 export const stripeItemSpecToPhaseItem = ({
 	spec,
 }: {
@@ -89,7 +80,6 @@ export const stripeItemSpecToPhaseItem = ({
 	} as Stripe.SubscriptionScheduleUpdateParams.Phase.Item;
 };
 
-/** Converts a one-off StripeItemSpec to a Stripe schedule phase add_invoice_item (invoiced once when the phase activates). */
 export const stripeItemSpecToPhaseAddInvoiceItem = ({
 	spec,
 }: {

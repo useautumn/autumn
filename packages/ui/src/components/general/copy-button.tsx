@@ -12,7 +12,6 @@ import { cn } from "@autumn/ui/lib/utils";
 import { CheckIcon, CopyIcon } from "@phosphor-icons/react";
 import { useCallback, useEffect, useState } from "react";
 
-/** Hook for copy-to-clipboard with auto-reset state */
 const useCopyAnimation = ({
 	text,
 	timeout = 1500,
@@ -42,7 +41,6 @@ const useCopyAnimation = ({
 	return { copied, handleCopy };
 };
 
-/** Animated icon that transitions between copy and check */
 const AnimatedCopyIcon = ({
 	copied,
 	size = "size-3.5",
@@ -76,12 +74,10 @@ interface CopyButtonProps extends IconButtonProps {
 	text: string;
 	iconOrientation?: "left" | "right";
 	innerClassName?: string;
-	/** Classes applied to the copy icon button (MiniCopyButton only). Overrides the default hover-reveal. */
 	iconClassName?: string;
 }
 
 interface MiniCopyButtonProps extends CopyButtonProps {
-	/** Shown instead of `text`; the full `text` is still copied. */
 	displayText?: string;
 }
 
@@ -132,7 +128,6 @@ type CopyIconButtonProps = Omit<IconButtonProps, "icon" | "onClick"> & {
 	side?: "top" | "bottom" | "left" | "right";
 };
 
-/** Icon-only copy affordance with the "Copied!" tooltip. */
 export const CopyIconButton = ({
 	text,
 	side = "right",

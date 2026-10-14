@@ -4,7 +4,6 @@ import { classifyDependencyError } from "./dependency/classifyDependencyError.js
 import { classifyRecaseError } from "./recase/classifyRecaseError.js";
 import { classifyStripeError } from "./stripe/classifyStripeError.js";
 
-/** Ordered: the first classifier that recognises the error decides its kind. */
 const builtInClassifiers: ErrorClassifier[] = [
 	classifyRecaseError,
 	classifyStripeError,
@@ -17,7 +16,6 @@ const errorCodeOf = (error: unknown): string | undefined => {
 		return String(error.code);
 };
 
-/** Type-based only: whoever threw the error decided its kind; unrecognised errors are bugs. App classifiers run first. */
 export const classifyError = ({
 	error,
 	classifiers = [],

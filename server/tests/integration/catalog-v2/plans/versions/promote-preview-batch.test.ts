@@ -1,12 +1,3 @@
-/**
- * catalogV2 preview — promotion_details across batch, custom slug, paid promote.
- *
- * Contract:
- *   two plans promoting in one call → each row has its own promotion_details
- *   previous_active_version_slug is the current pointer's slug (not v{n} fallback)
- *   paid-over-free promote still includes promotion_details (pointer moves)
- */
-
 import { test } from "bun:test";
 import { BillingInterval, ResetInterval } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";

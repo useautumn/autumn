@@ -91,7 +91,6 @@ const replacedSubscriptionWarning = ({
 	return undefined;
 };
 
-/** Whether the time before the replaced subscription started is billed, and for how much. */
 const backdateGapParts = ({
 	billingContext,
 	lineItems,
@@ -130,7 +129,6 @@ const backdateGapParts = ({
 	];
 };
 
-/** A backdate recreates a healthy subscription from its new start, continuing the paid cycle or restarting it. */
 const backdateRecreateWarning = ({
 	billingContext,
 	lineItems,
@@ -271,7 +269,6 @@ const trialEndedWarning = ({
 	};
 };
 
-/** Warnings for what set_plans does to the customer's current Stripe subscription. */
 export const subscriptionStateToWarnings = ({
 	billingContext,
 	stripeBillingPlan,

@@ -21,64 +21,48 @@ import type {
 } from "./durableMutation.js";
 import type { SnapshotIntent } from "./snapshotIntent.js";
 
-/** Where a fetched baseline goes: onto the log as an initialize mutation, or straight into the writer's map. */
 export type SubjectBaseline = "log" | "map";
 
-/** The latest ownership fence a partition's log carried: records above `offset` from an epoch below `epoch` are a stale owner's. */
 export type OwnerFence = { epoch: bigint; offset: bigint };
 
-/** How long the batches one apply carries waited for it; telemetry only, every store ignores it. */
 export type ApplyWaits = {
-	/** From the oldest batch's commit to the apply taking it. */
 	unappliedMs: number;
 };
 
-/** One partition's resident state: subject states, mutation receipts, Kafka progress. */
 export type StateStore = {
-	/** "log" when the store is private and must learn baselines from the log; "map" when Postgres already holds them. */
 	baseline: SubjectBaseline;
-	/** Sync for a resident store, a Promise for one whose bookmark lives elsewhere. */
 	initializePartition(params: {
 		topic: string;
 		partition: number;
 		nextOffset: bigint;
 	}): void | Promise<void>;
-	/** What the identity computes against: the customer's state, merged with the named entity's own. */
 	readState(params: { identity: MeteringIdentity }): SubjectState | null;
-	/** Only the identity's own rows: the customer's when it names no entity, otherwise that entity's. */
 	readOwnState(params: { identity: MeteringIdentity }): SubjectState | null;
 	readReceipt(params: {
 		identity: MeteringIdentity;
 		mutationId: string;
 	}): MutationRecord | null;
 	readNextOffset(params: { topic: string; partition: number }): bigint | null;
-	/** How far the partition's queued commands are decided; null for a store that keeps no such bookmark. */
 	readCommandNextOffset(params: {
 		topic: string;
 		partition: number;
 	}): bigint | null;
-	/** Completes a consumed command without changing any balance rows. */
 	advanceCommandNextOffset(params: {
 		topic: string;
 		partition: number;
 		commandNextOffset: bigint;
 	}): void | Promise<void>;
 	claimPartition?(params: { topic: string; partition: number }): Promise<void>;
-	/** Null for a store that keeps no fence, or a partition whose log has carried none. */
 	readOwnerFence?(params: {
 		topic: string;
 		partition: number;
 	}): OwnerFence | null;
-	/** Keeps a fence only when its epoch is higher than the stored one; lower or equal is a no-op. */
 	advanceOwnerFence?(params: {
 		topic: string;
 		partition: number;
 		fence: OwnerFence;
 	}): void | Promise<void>;
-	/** Present on a store that holds subject snapshots: an evict's DELETE and an evict's refresh land through it. */
 	snapshotQueues?: SnapshotQueues;
-	/** Sync for a resident store, a Promise for one that commits elsewhere; callers await either.
-	 *  `snapshotIntent` is the writer's word on the customers these records touch; a store that keeps no snapshots ignores it. */
 	applyDurableMutations(params: {
 		records: readonly DurableMutationRecord[];
 		snapshotIntent?: SnapshotIntent;
@@ -87,7 +71,6 @@ export type StateStore = {
 	close(): void;
 };
 
-/** A store whose resident state is private to the process, so it must be checkpointed to survive it. */
 export type CheckpointStateStore = StateStore & {
 	restorePartitionCheckpoint(params: {
 		checkpoint: PartitionCheckpointV1;
@@ -110,7 +93,6 @@ export type CheckpointStateStore = StateStore & {
 	}): { deletedCount: number };
 };
 
-/** The SQLite store applies synchronously; tests and checkpoints rely on that. */
 export type SqliteStateStore = Omit<
 	CheckpointStateStore,
 	"applyDurableMutations" | "initializePartition"
@@ -120,7 +102,6 @@ export type SqliteStateStore = Omit<
 		partition: number;
 		nextOffset: bigint;
 	}): void;
-	/** Resident: the intent is accepted and ignored, there is no snapshot table behind it. */
 	applyDurableMutations(params: {
 		records: readonly DurableMutationRecord[];
 		snapshotIntent?: SnapshotIntent;

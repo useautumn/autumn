@@ -13,10 +13,6 @@ interface CreateFeatureParams {
 	skipGenerateDisplay?: boolean;
 }
 
-/**
- * Creates a new feature in the database
- * Used by both the API handler and internal operations like product copying
- */
 export const createFeature = async ({
 	ctx,
 	data,

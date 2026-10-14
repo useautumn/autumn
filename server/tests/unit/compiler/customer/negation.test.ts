@@ -24,9 +24,6 @@ const ITEM_FROM = [
 const normalize = (sql: string) =>
 	sql.replace(/\s+/g, " ").replace(/\(\s+/g, "(").replace(/\s+\)/g, ")").trim();
 
-// `$none` is how the dashboard's "is not" / "not in" operators compile. It must
-// emit NOT EXISTS so a Free+Pro customer is excluded from "plan is not free" —
-// the per-plan `p.id <> free` (EXISTS) form would leak them in via Pro.
 describe("compileFilter — customer / negation ($none)", () => {
 	test("plan_id $none → NOT EXISTS over plans", () => {
 		const result = compileFilter({

@@ -6,10 +6,6 @@ import {
 	findActiveCustomerProductById,
 } from "@autumn/shared";
 
-/** The plan whose license pools the attached plan inherits. Same-group swaps
- * inherit from the replaced plan. Cross-group swaps inherit from the one plan
- * removed via remove_plan_ids that carries license pools. Two or more such
- * plans would be ambiguous, so none is picked. */
 export const setupAttachLicenseTransitionSource = ({
 	fullCustomer,
 	params,

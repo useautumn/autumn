@@ -16,7 +16,6 @@ import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js"
 import { getCreditCost } from "../../../../src/internal/features/creditSystemUtils";
 import { timeout } from "../../../utils/genUtils";
 
-// UNCOMMENT FROM HERE
 const pro = constructProduct({
 	type: "free",
 	isDefault: false,
@@ -132,7 +131,6 @@ describe(`${chalk.yellowBright("send-event3: Testing check with track, credit sy
 	});
 
 	test("should check with track and deduct from action1 first, then credits, v1.2 response", async () => {
-		// Refund 5 action 1, 1 credit
 		await autumnV2.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Action1,
@@ -188,7 +186,6 @@ describe(`${chalk.yellowBright("send-event3: Testing check with track, credit sy
 			balance: 99 - creditCost,
 		});
 
-		// Get non-cached customer
 		await timeout(2000);
 		const nonCachedCustomer = await autumnV2.customers.get<ApiCustomer>(
 			customerId,

@@ -5,7 +5,6 @@ import type { UpdateCatalogPlan } from "@/internal/catalogV2/actions/updateCatal
 import { ProductService } from "@/internal/products/ProductService.js";
 import { deleteProductRowAndHandoffActive } from "@/internal/products/repos/activateHighestRemainingProduct";
 
-/** Archive leaves `active` in place. Hard-delete of the active row promotes a survivor. */
 export const executeRemovePlans = async ({
 	ctx,
 	updateCatalogPlan,
@@ -37,8 +36,6 @@ export const executeRemovePlans = async ({
 				continue;
 			}
 
-			// Junction rows RESTRICT the row's items; dropping its links first
-			// makes removal order between a parent and its license irrelevant.
 			await tx
 				.delete(planLicenses)
 				.where(

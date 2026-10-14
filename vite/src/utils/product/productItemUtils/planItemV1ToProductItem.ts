@@ -8,12 +8,6 @@ import {
 	type SharedContext,
 } from "@autumn/shared";
 
-/**
- * Convert a V1 plan item (API or create-params shape) to the editor's V2
- * ProductItem. Returns null if conversion fails (e.g. a malformed item), so
- * callers can drop it. Shared by the plan-update preview rows and the license
- * customize editor.
- */
 export const planItemV1ToProductItem = ({
 	item,
 	features,

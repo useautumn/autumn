@@ -4,13 +4,6 @@ import { catalog } from "../../../src/grading/expectations/catalogExpectations.t
 import { conduct } from "../../../src/grading/expectations/conductExpectations.ts";
 import { initAxEval } from "../../../src/initAxEval.ts";
 
-/**
- * FILL / controls, daily cap stated: a windowed cap alongside a monthly
- * allowance ("3,000 a month but never more than 200 a day"). Passing = a
- * `usage_limits` entry on the plan's billing controls — NOT a second item,
- * a smaller allowance, or a daily reset on the monthly item. The allowance
- * item must stay monthly/3,000 (its verdict is the negative anchor).
- */
 export const dailyCapStated = defineCase({
 	name: "fill-controls-daily-cap-stated",
 	prompt: [

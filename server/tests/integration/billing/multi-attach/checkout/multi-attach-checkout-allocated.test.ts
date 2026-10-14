@@ -12,20 +12,15 @@ import { timeout } from "@tests/utils/genUtils";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-// ═══════════════════════════════════════════════════════════════════
-// Test 1: Allocated seats via checkout — multi-attach with allocated users
-// ═══════════════════════════════════════════════════════════════════
 test.concurrent(`${chalk.yellowBright("multi-attach checkout allocated: plan with allocated seats")}`, async () => {
 	const allocUsers = items.allocatedUsers({ includedUsage: 2 });
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
 
-	// Plan A: $20/mo + allocated users (2 included, $10/extra seat)
 	const planA = products.pro({
 		id: "plan-a",
 		items: [allocUsers],
 	});
 
-	// Plan B: separate group with messages
 	const planB = products.base({
 		id: "plan-b",
 		items: [messagesItem, items.monthlyPrice({ price: 15 })],
@@ -35,7 +30,7 @@ test.concurrent(`${chalk.yellowBright("multi-attach checkout allocated: plan wit
 	const { customerId, autumnV1, ctx } = await initScenario({
 		customerId: "ma-co-allocated",
 		setup: [
-			s.customer({ testClock: true }), // No payment method
+			s.customer({ testClock: true }),
 			s.products({ list: [planA, planB] }),
 		],
 		actions: [],
@@ -62,21 +57,18 @@ test.concurrent(`${chalk.yellowBright("multi-attach checkout allocated: plan wit
 		active: [planA.id, planB.id],
 	});
 
-	// 2 included allocated seats
 	expectCustomerFeatureCorrect({
 		customer,
 		featureId: TestFeature.Users,
 		balance: 2,
 	});
 
-	// 100 included messages
 	expectCustomerFeatureCorrect({
 		customer,
 		featureId: TestFeature.Messages,
 		balance: 100,
 	});
 
-	// Invoice: $20 (planA base) + $15 (planB base) = $35 (no seat overage)
 	await expectCustomerInvoiceCorrect({
 		customer,
 		count: 1,
@@ -91,9 +83,6 @@ test.concurrent(`${chalk.yellowBright("multi-attach checkout allocated: plan wit
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════
-// Test 2: Entity-level multi-attach via checkout with allocated features
-// ═══════════════════════════════════════════════════════════════════
 test.concurrent(`${chalk.yellowBright("multi-attach checkout allocated: entity-level with allocated workflows")}`, async () => {
 	const freePlan = products.base({
 		items: [items.freeAllocatedWorkflows({ includedUsage: 3 })],
@@ -106,7 +95,7 @@ test.concurrent(`${chalk.yellowBright("multi-attach checkout allocated: entity-l
 	const { customerId, autumnV1, ctx, entities } = await initScenario({
 		customerId: "ma-co-ent-allocated",
 		setup: [
-			s.customer({ testClock: true }), // No payment method
+			s.customer({ testClock: true }),
 			s.products({ list: [freePlan, plan] }),
 			s.entities({ count: 1, featureId: TestFeature.Users }),
 		],
@@ -137,7 +126,6 @@ test.concurrent(`${chalk.yellowBright("multi-attach checkout allocated: entity-l
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Invoice: $20 base (no seat overage with 3 included)
 	await expectCustomerInvoiceCorrect({
 		customer,
 		count: 1,

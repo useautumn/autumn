@@ -70,15 +70,6 @@ const getContUseNewItems = async ({
 			feature_id: ent.feature_id,
 		} as LegacyPreviewLineItem;
 	} else {
-		/* 
-			For example, free plan comes with 3 users, and usage is 3
-			- Pro plan is 0 free, $10 per user
-			- We need to calculate usage for the pro plan, and then charge for that
-			---
-			- When allowance increases though, how do we handle it? Don't allow negative overage.
-		*/
-
-		// let overage = new Decimal(usage).sub(ent.allowance!).toNumber();
 		let overage = Math.max(
 			new Decimal(usage).sub(ent.allowance!).toNumber(),
 			0,
@@ -163,8 +154,6 @@ export const getContUseInvoiceItems = async ({
 			(item) => item.price_id === prevCusPrice?.price.id,
 		);
 
-		// TO DELETE
-
 		if (!prevCusEnt || !sub || !curItem) {
 			const newItem = await getContUseNewItems({
 				price,
@@ -172,10 +161,6 @@ export const getContUseInvoiceItems = async ({
 				attachParams,
 				prevCusEnt,
 			});
-
-			// const prevItem = curItems.find(
-			// 	(item) => item.price_id === prevCusPrice?.price.id,
-			// );
 
 			newItems.push(newItem);
 
@@ -207,8 +192,6 @@ export const getContUseInvoiceItems = async ({
 		newItems.push(...newItems_.filter((item) => item.amount !== 0));
 		replaceables.push(...replaceables_);
 	}
-
-	// console.log("Replaceables:", replaceables);
 
 	return {
 		oldItems,

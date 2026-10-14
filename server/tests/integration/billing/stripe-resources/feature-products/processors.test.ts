@@ -1,9 +1,3 @@
-/**
- * catalogV2.update processors.stripe — stamp, GET echo, omit keeps, attach uses it.
- *
- * Standalone features.update / features.create do not accept processors.
- */
-
 import { expect, test } from "bun:test";
 import {
 	type ApiFeatureV1,

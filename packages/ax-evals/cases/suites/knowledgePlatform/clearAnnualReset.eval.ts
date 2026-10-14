@@ -10,11 +10,6 @@ import {
 	proMonthlyNoPoolSpec,
 } from "./knowledgePlatformPricing.ts";
 
-/**
- * KIND B negative control (undeleted twin of askAnnualReset): the annual
- * reset behavior is stated up front, so asking about it again is a failure —
- * an agent that always asks passes the ask twin and fails this one.
- */
 export const clearAnnualReset = defineCase({
 	name: "knowledge-platform-clear-annual-reset",
 	prompt: [

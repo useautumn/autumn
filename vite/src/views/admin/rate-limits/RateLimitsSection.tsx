@@ -37,7 +37,6 @@ import { useRateLimitOverrides } from "./useRateLimitOverrides";
 
 const SAVED_SUFFIX = "live in ~10 s";
 
-/** Edit opens on the scope the org already overrides; otherwise per org when the row has one. */
 const pickInitialScope = ({
 	policy,
 	orgKey,
@@ -56,7 +55,6 @@ const listLayerNames = ({ policy }: { policy: RateLimitPolicySummary }) =>
 		(name): name is string => name !== undefined,
 	);
 
-/** Every rate limit from the server's policy table, with per-org overrides read and written in place. */
 export const RateLimitsSection = () => {
 	const { view, isLoading, isError, retry, saveOrgs, isSaving } =
 		useRateLimitOverrides();

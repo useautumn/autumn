@@ -1,9 +1,3 @@
-/**
- * set_plans treats a phases[0].starts_at within SET_PLANS_FIRST_PHASE_TOLERANCE_MS (15 min) of now as now:
- * - 10 min ahead starts the plan immediately and bills it, with no schedule; 20 min ahead is a future start;
- * - 10 min back over a live subscription changes nothing; 20 min back recreates it from that start.
- */
-
 import { expect, test } from "bun:test";
 import {
 	CusProductStatus,

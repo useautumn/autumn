@@ -12,8 +12,6 @@ import { generateId } from "@/utils/genUtils.js";
 
 const LOOPBACK_HOSTS = ["127.0.0.1", "localhost"];
 
-/** A loopback PgBouncer (transaction mode) in front of a migrated Autumn
- * schema; never the app's DATABASE_URL. */
 const bouncerDatabaseUrl = (): string | undefined => {
 	const url = process.env.MIGRATION_TEST_BOUNCER_DATABASE_URL;
 	if (!url) return undefined;

@@ -1,8 +1,3 @@
-/**
- * Contract: only billing request and Stripe webhook lines reach Maple, mapped
- * to OTLP records with shallow attributes; with no key the tap does not exist.
- */
-
 import { describe, expect, spyOn, test } from "bun:test";
 import { OTLPLogExporter } from "@opentelemetry/exporter-logs-otlp-http";
 import {

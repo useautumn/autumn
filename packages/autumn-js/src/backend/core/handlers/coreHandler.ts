@@ -22,11 +22,9 @@ export const createCoreHandler = (options: CoreHandlerOptions) => {
 		routes = routeConfigs,
 	} = options;
 
-	// Build router from route definitions
 	const router = buildRouter({ pathPrefix, routes });
 
 	return async (request: UnifiedRequest): Promise<UnifiedResponse> => {
-		// 1. Secret key check
 		const keyCheck = secretKeyCheck(secretKey);
 		if (!keyCheck.found) {
 			return {
@@ -35,13 +33,11 @@ export const createCoreHandler = (options: CoreHandlerOptions) => {
 			};
 		}
 
-		// 2. Create SDK instance
 		const autumn = new Autumn({
 			secretKey: secretKey || process.env.AUTUMN_SECRET_KEY,
 			...(autumnURL && { serverURL: autumnURL }),
 		});
 
-		// 3. Match route
 		const match = findRoute(router, request.method, request.path);
 
 		if (!match) {
@@ -55,7 +51,6 @@ export const createCoreHandler = (options: CoreHandlerOptions) => {
 			};
 		}
 
-		// 4. Execute route
 		const { route } = match.data;
 		const result = await executeRoute({
 			autumn,
@@ -64,7 +59,6 @@ export const createCoreHandler = (options: CoreHandlerOptions) => {
 			getCustomer: () => identify(request.raw),
 		});
 
-		// 5. Return unified response
 		return {
 			status: result.statusCode,
 			body: result.body,

@@ -1,6 +1,3 @@
-// Contract: Redis/Postgres track deduct the synthetic pool once and share updates across subjects.
-// Exact exhaustion rejects overflow, while multiple pools deduct in shortest-reset-first order.
-
 import { expect, test } from "bun:test";
 import {
 	type ApiCustomerV5,

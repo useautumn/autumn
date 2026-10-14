@@ -133,8 +133,6 @@ function MobileCard<T>({
 		</>
 	);
 
-	// Nested action controls stopPropagation, so wrapping the whole card in a link
-	// is safe and keeps the table router-agnostic via the injected linkComponent.
 	if (rowHref && LinkComponent) {
 		return (
 			<LinkComponent className={cardClassName} to={rowHref}>

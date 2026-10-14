@@ -1,23 +1,3 @@
-/**
- * Vercel invoice.finalized → processVercelInvoice
- *
- * When Stripe finalizes a Vercel-tagged subscription's invoice it fires
- * `invoice.finalized` → `setupInvoiceFinalizedContext` → `processVercelInvoice`.
- * The handler submits the finalized invoice to Vercel via the SDK
- * (`submitBillingDataToVercel` + `submitInvoiceToVercel`).
- *
- * This test sets `ctx.testOptions.mockVercelApi`, so the SDK hits our dev
- * server's `/__test/vercel/api` mock and records each call to Redis.
- *
- * We invoke `processVercelInvoice` directly from the test process with a
- * constructed `StripeWebhookContext` rather than waiting for Stripe to
- * deliver the real `invoice.finalized` webhook. The webhook delivery path
- * is ngrok-bound to a different dev server in this dev environment, but the
- * handler itself is what we care about — and calling it directly still
- * goes through `getVercelSdkServerURL()`, which points at our mock only for
- * this explicitly-marked test context.
- */
-
 import { expect, test } from "bun:test";
 import chalk from "chalk";
 import { items } from "@tests/utils/fixtures/items";
@@ -41,10 +21,6 @@ import {
 
 const TEST_CASE = "vfin";
 
-// ─────────────────────────────────────────────────────────────────────────────
-// TEST 1: processVercelInvoice submits billing data + invoice to Vercel SDK
-// ─────────────────────────────────────────────────────────────────────────────
-
 test(
 	`${chalk.yellowBright(
 		"vercel-invoice-finalized: processVercelInvoice submits billing data + invoice to Vercel SDK (no CPM required)",
@@ -66,7 +42,6 @@ test(
 			prefix: `${TEST_CASE}-main`,
 		});
 
-		// Clear any leftover captures for this installation from previous runs.
 		await clearVercelCaptures(installationId);
 
 		const { customer, stripeCustomer } = await seedVercelCustomer({
@@ -100,9 +75,6 @@ test(
 				: subscription!.latest_invoice?.id;
 		expect(invoiceId).toBeDefined();
 
-		// Build the same expanded invoice + subscription that the Stripe
-		// finalize webhook handler would see, then drive
-		// `processVercelInvoice` directly with a constructed context.
 		const stripeInvoice = await getStripeInvoice({
 			stripeClient: ctx.stripeCli,
 			invoiceId: invoiceId!,
@@ -133,7 +105,6 @@ test(
 			stripeSubscription,
 		});
 
-		// SDK calls should land on the test mock virtually immediately.
 		const billingCall = await waitForVercelCapture({
 			installationId,
 			predicate: (call) =>
@@ -153,7 +124,6 @@ test(
 		});
 		expect(invoiceCall).not.toBeNull();
 
-		// Shape sanity
 		expect(billingCall!.body.billing.items).toBeInstanceOf(Array);
 		expect(billingCall!.body.period.start).toBeDefined();
 		expect(billingCall!.body.period.end).toBeDefined();
@@ -162,7 +132,6 @@ test(
 		expect(invoiceCall!.body.items.length).toBeGreaterThan(0);
 		expect(invoiceCall!.body.items[0].billingPlanId).toBe(proRaw.id);
 
-		// Snapshot the raw captures for debugging if anything regresses.
 		const allCaptures = await readVercelCaptures(installationId);
 		expect(allCaptures.length).toBeGreaterThanOrEqual(2);
 	},

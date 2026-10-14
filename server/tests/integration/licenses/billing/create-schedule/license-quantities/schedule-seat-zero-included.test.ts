@@ -1,14 +1,3 @@
-/**
- * Contract: a schedule phase whose plan includes no seats still owns a seat
- * pool when it pays for none, so assigned seats have somewhere to stay.
- *
- *  - Later phase, count omitted (0 paid, 0 included): when it starts, every
- *    assigned seat stays on the new pool and remaining goes negative.
- *  - Opening phase, explicit 0 while seats are assigned: rejected.
- *
- * Red (before): a 0-seat phase created no pool, so the opening phase silently
- * dropped the assigned seats' pool and a later phase stranded them.
- */
 import { test } from "bun:test";
 import {
 	type ApiCustomerV5,

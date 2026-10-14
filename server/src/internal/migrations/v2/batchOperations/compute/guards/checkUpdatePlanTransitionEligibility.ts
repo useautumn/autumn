@@ -96,8 +96,6 @@ const catalogEntitlementPricesMatching = ({
 			}),
 	);
 
-/** Guards the computed transitions of one patch: anything beyond uniform,
- * free adds/removes/replaces rejects the patch to the per-customer lane. */
 export const checkUpdatePlanTransitionEligibility = ({
 	opIndex,
 	fromProduct,

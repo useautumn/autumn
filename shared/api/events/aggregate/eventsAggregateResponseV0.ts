@@ -25,7 +25,6 @@ export const EVENTS_AGGREGATE_EXAMPLE_V0 = {
 	},
 };
 
-// Response without group_by: { period: number, [featureName]: number }
 const EventAggregateResponseFlatV0Schema = z.object({
 	list: z.array(
 		z
@@ -36,7 +35,6 @@ const EventAggregateResponseFlatV0Schema = z.object({
 	),
 });
 
-// Response with group_by: { period: number, [featureName]: { [groupValue]: number } }
 const EventAggregateResponseGroupedV0Schema = z.object({
 	list: z.array(
 		z

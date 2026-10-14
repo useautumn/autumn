@@ -40,12 +40,6 @@ const endpointToTool = {
 const getString = (body: Record<string, unknown>, key: string) =>
 	typeof body[key] === "string" ? body[key] : "";
 
-// Cursor pagination mirroring the real list endpoints: opaque base64url
-// cursor, `{ list, next_cursor }` response with next_cursor null on the last
-// page. The real API serves up to 1000 rows per page; the mock caps pages at
-// 50 regardless of the requested limit so multi-page cursor behavior is
-// exercisable with small fixtures — the contract the agent must honor (follow
-// next_cursor until null) is the same.
 const DEFAULT_PAGE_LIMIT = 50;
 const MAX_PAGE_LIMIT = 50;
 
@@ -112,7 +106,6 @@ const SCHEDULE_TOOL_NAMES = new Set<string>([
 	"setPlans",
 ]);
 
-// The real API rejects entity ids the customer does not have.
 const findAttachEntityError = ({
 	body,
 	customerId,
@@ -130,7 +123,6 @@ const findAttachEntityError = ({
 	return entity ? null : { error: `entity ${entityId} not found for customer` };
 };
 
-// createSchedule and setPlans share one engine, so they mock the same way.
 const scheduleWrite: AutumnApiMockHandler = ({ body, setup }) => {
 	const customerId = getString(body, "customer_id");
 	const customer = setup.customers.find(
@@ -186,7 +178,6 @@ const defaultHandlers = {
 			status: "active" as const,
 			trial_ends_at: null,
 		};
-		// An entity-scoped attach lands on the entity, as the real API reports it.
 		const entity = setup.entities.find(
 			(candidate) =>
 				candidate.customer_id === customer.id &&
@@ -342,8 +333,6 @@ const defaultHandlers = {
 		);
 		const plan = setup.plans.find((plan) => plan.id === planId);
 		if (!customer || !plan) return { error: "missing customer or plan" };
-		// Cancellations change what the customer is left on — the point of
-		// evals that assert the final state rather than the calls.
 		const entityId = getString(body, "entity_id");
 		const owner = entityId
 			? setup.entities.find(

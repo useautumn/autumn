@@ -11,8 +11,6 @@ import {
 const group = (...rules: FilterRule[]): FilterGroupData[] => [{ rules }];
 const planOf = (filter: MigrationFilter) => filter.customer?.plan;
 
-// A specific version is bound to its plan in one quantifier — "pro:2" means
-// "has Pro at version 2", never "has Pro AND has something at version 2".
 test("a version-pinned plan key encodes to plan_id + version", () => {
 	const filter = groupsToMigrationFilter(
 		group({ field: "plan_id", operator: "is", values: ["pro:2"] }),
@@ -76,16 +74,12 @@ test("a non-selection plan filter is not treated as plan keys", () => {
 	expect(planFilterToPlanKeys({ paid: true })).toBeNull();
 });
 
-// `version: { $eq: N }` is the object form of a single pinned version and must
-// fold into the key — dropping it would broaden the migration's scope on save.
 test("an $eq version matcher decodes to a pinned key", () => {
 	expect(planFilterToPlanKeys({ plan_id: "pro", version: { $eq: 2 } })).toEqual(
 		["pro:2"],
 	);
 });
 
-// A version range/set can't be carried by a plan key; it must not masquerade as
-// a clean "any version" selection.
 test("a non-foldable version matcher is not treated as plan keys", () => {
 	expect(
 		planFilterToPlanKeys({ plan_id: "pro", version: { $gte: 2 } }),

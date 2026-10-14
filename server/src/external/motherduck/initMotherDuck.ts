@@ -14,13 +14,7 @@ const mdSchema = { ceBalancesCache };
 export type MotherDuckDb = DuckDBDatabase<typeof mdSchema>;
 
 const DEFAULT_POOL_SIZE = 4;
-// v2 is a TRANSIENT database (no historical snapshots, 1-day failsafe):
-// CREATE OR REPLACE churn on the old lake_cache parked every prior version in
-// a 7-day failsafe window and billed it. This is a cache rebuilt from Iceberg;
-// nothing in it ever needs recovery.
 const DEFAULT_DATABASE = "lake_cache_v2";
-/** Shed to the caller's unavailable-path instead of queueing behind a
- * saturated pool — a lesson from the PgBouncer era. */
 const ACQUIRE_TIMEOUT_MS = 2_000;
 const MAX_WAITING_REQUESTS = 50;
 /** Also the backstop that reaps connections whose query outlived the
@@ -65,10 +59,6 @@ export const initMotherDuck = async ({
 	poolSize?: number;
 	database?: string;
 }): Promise<MotherDuckDb> => {
-	// attach_mode=single skips attaching the rest of the workspace (cuts cold
-	// start); the TTL keeps the cached instance reusable across idle gaps.
-	// No session_name on purpose: unnamed connections spread across read
-	// replicas; a shared name would pin the whole pool to one duckling.
 	return await drizzle({
 		connection: {
 			path: `md:${database}?attach_mode=single&dbinstance_inactivity_ttl=1h`,
@@ -85,8 +75,6 @@ export const initMotherDuck = async ({
 	});
 };
 
-/** Lake-backed sorts/filters (feature_balance, balance > x) are unavailable
- * without a token — dev/staging without MotherDuck keeps every PG-only sort. */
 export const isMotherDuckConfigured = (): boolean =>
 	Boolean(process.env.MOTHERDUCK_TOKEN);
 
@@ -94,8 +82,6 @@ let resolverDbPromise: Promise<MotherDuckDb> | null = null;
 let resolverDbState: "uninitialized" | "initializing" | "ready" =
 	"uninitialized";
 
-/** A timed-out init can't be interrupted — close its connection when it
- * eventually lands so the retry's pool is the only one standing. */
 const raceInitTimeout = async ({
 	init,
 }: {
@@ -119,8 +105,6 @@ const raceInitTimeout = async ({
 	}
 };
 
-/** Boot-time warm-up: pay the MD handshake before the first dashboard request
- * instead of inside it. Fire-and-forget — failure just means lazy init later. */
 export const prewarmMotherDuckResolver = (): void => {
 	if (!isMotherDuckConfigured()) return;
 	getMotherDuckResolverDb().catch((error) => {
@@ -128,8 +112,6 @@ export const prewarmMotherDuckResolver = (): void => {
 	});
 };
 
-/** Lazy pooled singleton on the read-only token: only processes that actually
- * serve balance sorts open MotherDuck connections. */
 export const getMotherDuckResolverDb = (): Promise<MotherDuckDb> => {
 	const token = process.env.MOTHERDUCK_TOKEN;
 	if (!token) {
@@ -200,8 +182,6 @@ export const closeMotherDuckResolverDb = async (): Promise<void> => {
 	resolverDbState = "uninitialized";
 };
 
-/** One-shot RW session for the cache refresh cron: single connection,
- * created per run and always closed — the writer holds no standing pool. */
 export const withMotherDuckRw = async <T>({
 	run,
 	database = DEFAULT_DATABASE,

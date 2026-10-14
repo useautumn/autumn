@@ -13,7 +13,6 @@ const ContextTierSchema = z.strictObject({
 	tier: z.strictObject({ type: z.literal("context"), size: rate }),
 });
 
-// Strict on purpose: an unknown pricing field would otherwise be ignored and mis-bill silently.
 const BillableModelCostSchema = z.strictObject({
 	input: rate,
 	output: rate,
@@ -33,6 +32,5 @@ const BillableModelCostSchema = z.strictObject({
 		.optional(),
 });
 
-/** Whether a models.dev `cost` only uses per-token rates that `computeCost` bills exactly. */
 export const isBillableModelCost = (cost: unknown): cost is ModelsDevCost =>
 	BillableModelCostSchema.safeParse(cost).success;

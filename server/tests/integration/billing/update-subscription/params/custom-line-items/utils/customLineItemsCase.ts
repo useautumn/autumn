@@ -22,8 +22,6 @@ export type CustomLineItemsMode =
 	| "none"
 	| "legacy";
 
-// Custom lines replace immediate invoice amounts, while the requested subscription changes still apply.
-// Preview, discounts, zero totals, suppressed proration, legacy requests, and anchor resets share this contract.
 export const expectCustomLineItemsUpdate = async (
 	mode: CustomLineItemsMode,
 ) => {

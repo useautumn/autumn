@@ -8,11 +8,9 @@ export interface ShownChart {
 	chartConfig: ChartSeriesConfig[];
 	chartTicks: number[] | undefined;
 	geometry: ChartGeometry;
-	// Kept with the data so a dimmed chart keeps its own unit while the next measure loads.
 	unit?: string;
 }
 
-/** The most recent chart that rendered, held through later loads so they can dim it instead of blanking. */
 export const useLastShownChart = ({
 	chart,
 	isLoading,
@@ -25,7 +23,6 @@ export const useLastShownChart = ({
 	if (chart) {
 		lastShownRef.current = chart;
 	} else if (!isLoading) {
-		// A settled empty result must not resurrect an old chart on the next load.
 		lastShownRef.current = null;
 	}
 

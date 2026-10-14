@@ -4,7 +4,6 @@ import { ApiFeatureGrantV0Schema } from "@api/rewards/featureGrants/apiFeatureGr
 import { RewardType } from "@models/rewardModels/rewardModels/rewardEnums.js";
 import { z } from "zod/v4";
 
-/** invoice_credits rewards are not statable, so the catalog never returns one. */
 const CatalogCouponV1Schema = ApiCouponV0Schema.extend({
 	type: z
 		.enum([RewardType.PercentageDiscount, RewardType.FixedDiscount])
@@ -20,10 +19,6 @@ const internalId = z.string().meta({
 	internal: true,
 });
 
-/**
- * A reward as the catalog returns it: the same one-branch shape the config
- * states, so a pulled row is fixture source without reshaping.
- */
 export const CatalogRewardV1Schema = z.union([
 	z
 		.object({

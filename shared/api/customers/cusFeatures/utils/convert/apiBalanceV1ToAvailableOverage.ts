@@ -9,12 +9,6 @@ import { apiBalanceV1ToOverage } from "./apiBalanceV1ToOverage";
 
 const NOT_USAGE_BASED = -1;
 
-/**
- * Returns the max overage for a single breakdown item.
- * - Usage-based: returns `max_purchase` (number) or `undefined` if uncapped.
- * - Non-usage-based (free/prepaid/lifetime): returns `NOT_USAGE_BASED` sentinel
- *   so the caller can distinguish "not relevant" from "capped at 0" (`max_purchase: 0`).
- */
 export const apiBalanceBreakdownV1ToMaxOverage = ({
 	apiBalanceBreakdown,
 }: {
@@ -27,12 +21,6 @@ export const apiBalanceBreakdownV1ToMaxOverage = ({
 	return NOT_USAGE_BASED;
 };
 
-/**
- * Aggregates max overage across all breakdowns for a balance.
- * Only usage-based breakdowns contribute; non-usage breakdowns are ignored.
- * Returns `undefined` when there are no usage-based breakdowns or any
- * usage-based breakdown has no `max_purchase` (meaning overage is uncapped).
- */
 export const apiBalanceV1ToMaxOverage = ({
 	apiBalance,
 }: {

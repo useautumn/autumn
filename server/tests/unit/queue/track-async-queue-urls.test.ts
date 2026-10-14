@@ -1,19 +1,3 @@
-/**
- * TDD contract for routing async Track and UpdateBalance jobs.
- *
- * Contract under test:
- *   - Producers prefer TRACK_ASYNC_STANDARD_SQS_QUEUE_URL.
- *   - Producers fall back to TRACK_ASYNC_SQS_QUEUE_URL during rollout.
- *   - UpdateBalance prefers its explicit queue URL and falls back to the legacy
- *     TRACK_ASYNC_SQS_QUEUE_URL.
- *   - Workers consume all configured URLs without duplicate pollers.
- *   - Standard-queue sends omit FIFO-only message identifiers.
- *
- * Pre-implementation red: the queue URL resolver does not exist and producers
- * ignore TRACK_ASYNC_STANDARD_SQS_QUEUE_URL.
- * Post-implementation green: producer and worker routing support the migration.
- */
-
 import { afterEach, expect, test } from "bun:test";
 import { ApiVersion, ApiVersionClass, AppEnv } from "@autumn/shared";
 import type { SQSClient } from "@aws-sdk/client-sqs";

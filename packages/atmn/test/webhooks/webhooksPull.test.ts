@@ -1,12 +1,3 @@
-/**
- * Pull writes one env's webhooks back into the config, one entry per remote
- * endpoint. An entry is found by `(env, id)`; every other env's entries,
- * comments, trailing commas and order stay. Append an unknown endpoint; set a
- * string url and the other fields; leave code alone (warning when it differs);
- * delete an entry the server no longer has in this env. A dashboard endpoint
- * is written under its own `ep_` id.
- */
-
 import { expect, test } from "bun:test";
 import { applyWebhooksPull } from "../../src/actions/pull/webhooks/applyWebhooksPull";
 import type {

@@ -6,7 +6,6 @@ import type { SubjectScope } from "../../../../src/processor/subject/types/subje
 import { createTestCatalogCache } from "../../../fixtures/catalog.js";
 import { createState, testIdentity } from "../../../fixtures/mutations.js";
 
-/** The real cache, counting how often the ensure path reads it. */
 function createScope() {
 	const inner = createTestCatalogCache();
 	let reads = 0;
@@ -47,7 +46,6 @@ test("a state already joined while the catalog stood still is not ensured again"
 	});
 	expect(second).toBe(first);
 	expect(reads()).toBe(afterFirst);
-	// The hydrator's own catalog read for this state is the same object: no join is built twice.
 	expect(scope.state.joinCache.peekCatalog({ state })).toBe(first);
 });
 
@@ -82,7 +80,6 @@ test("a replaced state, or a moved catalog, is ensured afresh", async () => {
 
 test("a feature row that expires while ensure waits on Postgres is still in the catalog it saves", async () => {
 	const inner = createTestCatalogCache();
-	// Rows expire during the load's await: from then on a strict read skips feature rows, as ttl expiry does.
 	let expired = false;
 	const catalogCache: CatalogCache = {
 		...inner,

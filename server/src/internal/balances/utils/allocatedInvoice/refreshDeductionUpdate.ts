@@ -1,11 +1,6 @@
 import type { AutumnBillingPlan } from "@autumn/shared";
 import type { DeductionUpdate } from "../types/deductionUpdate";
 
-/**
- * Mutates the deduction update in-place to reflect changes made by the
- * allocated invoice billing plan (inserted/deleted replaceables + balance adjustment).
- * This ensures `applyDeductionUpdateToFullCustomer` sees the correct state.
- */
 export const refreshDeductionUpdate = ({
 	update,
 	plan,

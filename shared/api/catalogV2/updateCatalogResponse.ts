@@ -17,7 +17,6 @@ const CatalogAppliedResultSchema = z.object({
 
 export type CatalogAppliedResult = z.infer<typeof CatalogAppliedResultSchema>;
 
-/** Resolved post-update state plus what was actually done per requested entry. */
 export const UpdateCatalogResponseSchema = z.object({
 	plans: z.array(ApiPlanV1Schema),
 	features: z.array(ApiFeatureV1Schema),

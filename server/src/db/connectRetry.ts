@@ -7,7 +7,6 @@ const JITTER_RANGE_MS = 200;
 export const connectRefusedRetryJitterMs = (): number =>
 	JITTER_MIN_MS + Math.random() * JITTER_RANGE_MS;
 
-/** Instance-local bouncer refusal — a fresh TCP flow likely hashes to another instance. */
 const isConnectRefusalError = (error: Error & { code?: string }): boolean =>
 	/no more connections allowed/i.test(error.message ?? "") ||
 	error.code === "ECONNREFUSED";
@@ -20,8 +19,6 @@ type ConnectCallback = (
 
 const noopDone = (): void => {};
 
-/** Retries refusal-class establishment failures once; checkout timeouts are
- *  demand (retrying amplifies) and never match, so they propagate untouched. */
 export const applyConnectRefusedRetry = ({
 	pool,
 	name,

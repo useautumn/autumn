@@ -23,7 +23,6 @@ const configHash = ({
 	return hash;
 };
 
-/** Gives equal configs one hash, so the diff compares strings rather than plans. */
 export const createConfigInterner = ({ features }: { features: Feature[] }) => {
 	const interned: InternedConfig[] = [];
 	return {

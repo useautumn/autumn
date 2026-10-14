@@ -5,7 +5,6 @@ import {
 	type InvoiceExistingPlan,
 } from "./customerStatePlanToInvoicePlan";
 
-/** Invoice rows in the shape the shared copy-scope rules read. */
 export const invoicePlansToScopedPlans = ({
 	plans,
 }: {
@@ -13,7 +12,6 @@ export const invoicePlansToScopedPlans = ({
 }) =>
 	plans.map((plan) => ({ productId: plan.planId, entityId: plan.entityId }));
 
-/** Swaps the picker row for the customer's plans at the chosen scope, or null when none are left. */
 export function copyExistingPlansIntoInvoice({
 	plans,
 	planIndex,

@@ -4,7 +4,6 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { invalidateCachedFullSubject } from "@/internal/customers/cache/fullSubject/index.js";
 
-/** Moves one of the customer's plans to a DB status (e.g. past_due) and drops the cached customer. */
 export const setPlanStatus = async ({
 	ctx,
 	customerId,

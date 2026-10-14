@@ -1,11 +1,3 @@
-/**
- * atmn scenarios/customers — remove a license plan while seats are assigned → refused, error names the parent
- *
- * real `billing.attach` first; the point is to hit the dependency errors
- *
- * One line of plans/atmn-v3/07_tests.md. [a, b] is a matrix looped INSIDE this file.
- */
-
 import { expect, test } from "bun:test";
 import type { AttachParamsV1Input } from "@autumn/shared";
 import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
@@ -16,8 +8,6 @@ import {
 import { s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 
-/** A seat license plan and an enterprise plan that licenses it; omitting the
- * seat plan from `plans` is how a config drops it. */
 const catalogConfig = ({
 	seatPlanId,
 	enterprisePlanId,

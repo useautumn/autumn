@@ -17,17 +17,10 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { addDays, addMonths } from "date-fns";
 
-/**
- * Update Trial Edge Cases Tests
- *
- * Tests for edge case scenarios involving products with prepaid/paid features and trial transitions.
- */
-
-// 1. Start with users -> add trial -> update quantity -> remove trial
 test.concurrent(`${chalk.yellowBright("trial-edge-cases: start with users, add trial, update quantity, remove trial")}`, async () => {
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
 	const priceItem = items.monthlyPrice({ price: 20 });
-	const prepaidUsersItem = items.prepaidUsers({ includedUsage: 0 }); // $10/seat
+	const prepaidUsersItem = items.prepaidUsers({ includedUsage: 0 });
 
 	const pro = products.base({
 		id: "pro",
@@ -35,7 +28,7 @@ test.concurrent(`${chalk.yellowBright("trial-edge-cases: start with users, add t
 	});
 
 	const initialSeats = 3;
-	const seatPrice = 10; // $10/seat
+	const seatPrice = 10;
 
 	const { customerId, autumnV1, ctx, advancedTo } = await initScenario({
 		customerId: "trial-edge-start-users",
@@ -51,7 +44,6 @@ test.concurrent(`${chalk.yellowBright("trial-edge-cases: start with users, add t
 		],
 	});
 
-	// Step 1: Verify initial state - NOT trialing, has 3 users
 	const customerBefore =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	await expectProductNotTrialing({
@@ -67,7 +59,6 @@ test.concurrent(`${chalk.yellowBright("trial-edge-cases: start with users, add t
 		usage: 0,
 	});
 
-	// Initial invoice: $20 base + $30 (3 seats * $10) = $50
 	const initialTotal = priceItem.price! + initialSeats * seatPrice;
 	expectCustomerInvoiceCorrect({
 		customer: customerBefore,
@@ -75,7 +66,6 @@ test.concurrent(`${chalk.yellowBright("trial-edge-cases: start with users, add t
 		latestTotal: initialTotal,
 	});
 
-	// Step 2: Update plan to start a free trial
 	const addTrialParams = {
 		customer_id: customerId,
 		product_id: pro.id,
@@ -90,10 +80,8 @@ test.concurrent(`${chalk.yellowBright("trial-edge-cases: start with users, add t
 	const addTrialPreview =
 		await autumnV1.subscriptions.previewUpdate(addTrialParams);
 
-	// Should refund previous payment since entering trial (base price + 3 seats)
 	expect(addTrialPreview.total).toEqual(-initialTotal);
 
-	// next_cycle should show when trial ends (base price + 3 seats)
 	expectPreviewNextCycleCorrect({
 		preview: addTrialPreview,
 		startsAt: advancedTo + ms.days(14),
@@ -105,14 +93,12 @@ test.concurrent(`${chalk.yellowBright("trial-edge-cases: start with users, add t
 	const customerWithTrial =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Product should now be trialing
 	await expectProductTrialing({
 		customer: customerWithTrial,
 		productId: pro.id,
 		trialEndsAt: advancedTo + ms.days(14),
 	});
 
-	// Users should still have 3 seats
 	expectCustomerFeatureCorrect({
 		customer: customerWithTrial,
 		featureId: TestFeature.Users,
@@ -121,9 +107,8 @@ test.concurrent(`${chalk.yellowBright("trial-edge-cases: start with users, add t
 		usage: 0,
 	});
 
-	// Step 3: Update quantity to 5 seats while trialing
 	const updatedSeats = 5;
-	const updatedSeatsPrice = updatedSeats * seatPrice; // $50
+	const updatedSeatsPrice = updatedSeats * seatPrice;
 
 	const updateQuantityParams = {
 		customer_id: customerId,
@@ -134,10 +119,8 @@ test.concurrent(`${chalk.yellowBright("trial-edge-cases: start with users, add t
 	const updateQuantityPreview =
 		await autumnV1.subscriptions.previewUpdate(updateQuantityParams);
 
-	// Should be $0 during trial (seats are free during trial)
 	expect(updateQuantityPreview.total).toEqual(0);
 
-	// next_cycle should show when trial ends (base price + 5 seats)
 	expectPreviewNextCycleCorrect({
 		preview: updateQuantityPreview,
 		startsAt: advancedTo + ms.days(14),
@@ -149,14 +132,12 @@ test.concurrent(`${chalk.yellowBright("trial-edge-cases: start with users, add t
 	const customerAfterQuantityUpdate =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Product should still be trialing
 	await expectProductTrialing({
 		customer: customerAfterQuantityUpdate,
 		productId: pro.id,
 		trialEndsAt: advancedTo + ms.days(14),
 	});
 
-	// Users should now have 5 seats
 	expectCustomerFeatureCorrect({
 		customer: customerAfterQuantityUpdate,
 		featureId: TestFeature.Users,
@@ -165,7 +146,6 @@ test.concurrent(`${chalk.yellowBright("trial-edge-cases: start with users, add t
 		usage: 0,
 	});
 
-	// Step 4: Update plan to remove the trial
 	const removeTrialParams = {
 		customer_id: customerId,
 		product_id: pro.id,
@@ -175,11 +155,9 @@ test.concurrent(`${chalk.yellowBright("trial-edge-cases: start with users, add t
 	const removeTrialPreview =
 		await autumnV1.subscriptions.previewUpdate(removeTrialParams);
 
-	// The preview total reflects the existing credit balance from entering trial.
 	const finalTotal = priceItem.price! + updatedSeatsPrice;
 	expect(removeTrialPreview.total).toEqual(finalTotal - initialTotal);
 
-	// When trial is removed, billing starts now, so the next cycle is one month out
 	expectPreviewNextCycleCorrect({
 		preview: removeTrialPreview,
 		startsAt: addMonths(advancedTo, 1).getTime(),
@@ -191,19 +169,16 @@ test.concurrent(`${chalk.yellowBright("trial-edge-cases: start with users, add t
 	const customerAfterRemove =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Product should no longer be trialing
 	await expectProductNotTrialing({
 		customer: customerAfterRemove,
 		productId: pro.id,
 	});
 
-	// Should now be active (not trialing)
 	await expectProductActive({
 		customer: customerAfterRemove,
 		productId: pro.id,
 	});
 
-	// Users should still have 5 seats
 	expectCustomerFeatureCorrect({
 		customer: customerAfterRemove,
 		featureId: TestFeature.Users,
@@ -212,7 +187,6 @@ test.concurrent(`${chalk.yellowBright("trial-edge-cases: start with users, add t
 		usage: 0,
 	});
 
-	// Messages should still be accessible
 	expectCustomerFeatureCorrect({
 		customer: customerAfterRemove,
 		featureId: TestFeature.Messages,
@@ -221,8 +195,6 @@ test.concurrent(`${chalk.yellowBright("trial-edge-cases: start with users, add t
 		usage: 0,
 	});
 
-	// Invoice count: 1 (initial $50) + 1 (refund -$50) + 1 (charge $70) = 3 invoices
-	// Latest invoice should be $70 (base $20 + 5 seats * $10)
 	expectCustomerInvoiceCorrect({
 		customer: customerAfterRemove,
 		count: 5,
@@ -240,7 +212,6 @@ test.concurrent(`${chalk.yellowBright("trial-edge-cases: start with users, add t
 	});
 });
 
-// 2. Start with trial -> extend trial with longer duration
 test.concurrent(`${chalk.yellowBright("trial-edge-cases: extend trial with longer duration")}`, async () => {
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
 	const priceItem = items.monthlyPrice({ price: 20 });
@@ -259,7 +230,6 @@ test.concurrent(`${chalk.yellowBright("trial-edge-cases: extend trial with longe
 		actions: [s.attach({ productId: pro.id })],
 	});
 
-	// Step 1: Verify initial state - trialing for 20 days
 	const customerBefore =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	await expectProductTrialing({
@@ -268,14 +238,12 @@ test.concurrent(`${chalk.yellowBright("trial-edge-cases: extend trial with longe
 		trialEndsAt: advancedTo + ms.days(20),
 	});
 
-	// No invoice yet (trial)
 	expectCustomerInvoiceCorrect({
 		customer: customerBefore,
 		count: 1,
 		latestTotal: 0,
 	});
 
-	// Step 2: Update to extend trial to 200 days
 	const extendTrialParams = {
 		customer_id: customerId,
 		product_id: pro.id,
@@ -290,10 +258,8 @@ test.concurrent(`${chalk.yellowBright("trial-edge-cases: extend trial with longe
 	const extendTrialPreview =
 		await autumnV1.subscriptions.previewUpdate(extendTrialParams);
 
-	// Should be $0 since still in trial
 	expect(extendTrialPreview.total).toEqual(0);
 
-	// next_cycle should show when the extended trial ends (in 200 days)
 	expectPreviewNextCycleCorrect({
 		preview: extendTrialPreview,
 		startsAt: advancedTo + ms.days(200),
@@ -305,7 +271,6 @@ test.concurrent(`${chalk.yellowBright("trial-edge-cases: extend trial with longe
 	const customerAfterExtend =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Product should now be trialing with 200 day trial
 	await expectProductTrialing({
 		customer: customerAfterExtend,
 		productId: pro.id,
@@ -313,7 +278,6 @@ test.concurrent(`${chalk.yellowBright("trial-edge-cases: extend trial with longe
 		toleranceMs: ms.hours(2),
 	});
 
-	// Features should still work
 	expectCustomerFeatureCorrect({
 		customer: customerAfterExtend,
 		featureId: TestFeature.Messages,
@@ -322,7 +286,6 @@ test.concurrent(`${chalk.yellowBright("trial-edge-cases: extend trial with longe
 		usage: 0,
 	});
 
-	// $0 invoice from moving trial_end arrives by Stripe webhook only
 	await expectCustomerInvoiceCorrect({
 		customerId,
 		autumn: autumnV1,

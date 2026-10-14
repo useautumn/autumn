@@ -1,7 +1,3 @@
-/**
- * Contract: a selected customerless parent inherits an in-place child update without versioning.
- * The catalog link stays uncustomized while the child customer's existing snapshot is unchanged.
- */
 import { expect, test } from "bun:test";
 import { type ApiCustomerV5, CustomerExpand } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";

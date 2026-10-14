@@ -18,7 +18,6 @@ import { subjectSnapshotsStore } from "@/internal/misc/subjectSnapshots/subjectS
 
 const CONFIG_KEY = subjectSnapshotsEdgeConfig.key;
 
-/** An in-memory bucket: every put lands in `objects`, in order in `puts`. */
 const objects = new Map<string, string>();
 const puts: string[] = [];
 const fakeS3: EdgeConfigS3Client = {

@@ -1,11 +1,3 @@
-/**
- * atmn scenarios/archive — restore the parent while its license plan stays archived → clean error naming the license plan, nothing else changed
- *
- * one push carries the whole batch, so restore order must not matter
- *
- * One line of plans/atmn-v3/07_tests.md. [a, b] is a matrix looped INSIDE this file.
- */
-
 import { expect, test } from "bun:test";
 import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 import {
@@ -47,10 +39,6 @@ test.concurrent(
 		try {
 			await scenario.push();
 
-			// The parent also clears its licenses[] in the same push: the
-			// anchor-lifecycle guard reads the still-declared link regardless of
-			// the parent's own archived state, so archiving both together needs
-			// the unlink to be same-call.
 			scenario.writeConfig(
 				atmnConfigSource({
 					body: `{
@@ -63,8 +51,6 @@ test.concurrent(
 			);
 			await scenario.push();
 
-			// Restate the license link so the restore re-validates it — the seat
-			// plan is left archived, untouched by this push.
 			scenario.writeConfig(
 				atmnConfigSource({
 					body: `{

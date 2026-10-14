@@ -14,21 +14,6 @@ import {
 } from "../../utils/usage-limit-utils/entityUsageLimitUtils.js";
 import { fetchUsageWindowRows } from "../../utils/usage-limit-utils/usageWindowDbTestUtils.js";
 
-/**
- * TDD tests for entity usage-limit PERSISTENCE + API exposure.
- *
- * Contract under test:
- *  - the entity window counter syncs to Postgres (internal_entity_id set) and
- *    a skip_cache read serves the synced count (persist1)
- *  - entities.get exposes billing_controls.usage_limits: the entity's OWN
- *    entries, each decorated with the current window's `usage` (persist2)
- *  - entities.update rejects duplicate feature_id usage_limits entries
- *    (persist3)
- *
- * Pre-impl red: entity usage_limits don't exist on the schema, so the arm is
- * dropped, nothing syncs, nothing is exposed, and dupes aren't validated.
- */
-
 const autumnV2_3 = new AutumnInt({ version: ApiVersion.V2_3 });
 
 test.concurrent(
@@ -71,7 +56,6 @@ test.concurrent(
 		});
 		await timeout(4000);
 
-		// ── PG row: entity-scoped, counted ──
 		const rows = await fetchUsageWindowRows({
 			ctx,
 			customerId,
@@ -82,7 +66,6 @@ test.concurrent(
 		expect(Number(rows[0].usage)).toBe(3);
 		expect(Number(rows[0].window_end_at)).toBeGreaterThan(Date.now());
 
-		// ── skip_cache read serves the synced counter ──
 		await expectEntityUsageLimit({
 			autumn: autumnV2_3,
 			customerId,
@@ -127,7 +110,6 @@ test.concurrent(
 			limit: 5,
 		});
 
-		// Before any usage: entry echoed with usage 0.
 		await expectEntityUsageLimit({
 			autumn: autumnV2_3,
 			customerId,
@@ -154,7 +136,6 @@ test.concurrent(
 			limit: 5,
 		});
 
-		// The OTHER entity has no entries: nothing echoed for it.
 		const otherEntity = await autumnV2_3.entities.get<ApiEntityV2>(
 			customerId,
 			entities[1].id,

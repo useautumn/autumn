@@ -125,7 +125,6 @@ export const seedLinkedChildParent = async ({
 	});
 };
 
-/** Mint the parent and declare the same child link on the new row. */
 export const seedParentVersionWithLicense = async ({
 	autumn,
 	parentId,
@@ -148,7 +147,6 @@ export const seedParentVersionWithLicense = async ({
 	});
 };
 
-/** Parent v1 + v2, both offering the same child license. */
 export const seedTwoParentVersions = async ({
 	autumn,
 	parentId,
@@ -189,7 +187,6 @@ export const seedTwoParents = async ({
 	});
 };
 
-/** Two parents, each with v1 + v2, all four rows offering the same child. */
 export const seedTwoParentsWithTwoVersions = async ({
 	autumn,
 	childId,
@@ -212,7 +209,6 @@ export const seedTwoParentsWithTwoVersions = async ({
 	}
 };
 
-/** Each parent v1 stays on child v1; each parent v2 is minted onto child v2. */
 export const seedDistributedParentVersionAnchors = async ({
 	autumn,
 	childId,
@@ -285,7 +281,6 @@ export const bumpChild = async ({
 	});
 };
 
-/** Two parents, each offering the same two license children. */
 export const seedTwoParentsWithTwoChildren = async ({
 	autumn,
 	childIds,
@@ -321,7 +316,6 @@ export const seedTwoParentsWithTwoChildren = async ({
 	});
 };
 
-/** One parent offering two license children. */
 export const seedParentWithTwoChildren = async ({
 	autumn,
 	parentId,
@@ -357,7 +351,6 @@ export const seedParentWithTwoChildren = async ({
 	});
 };
 
-/** Customer on the parent plan with a customer_licenses row pinned to the catalog link. */
 export const seedAssignedLicenseCustomer = async ({
 	ctx,
 	parentId,
@@ -398,7 +391,6 @@ export const seedAssignedLicenseCustomer = async ({
 	};
 };
 
-/** Seat assignment CP on the child — must not count as a child draft population. */
 export const seedSeatAssignmentOnChild = async ({
 	ctx,
 	parentId,

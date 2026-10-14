@@ -1,9 +1,3 @@
-/**
- * ensure() creates the env's Svix app only when the org has none, and clears
- * the org cache after storing it, so the next request's org already carries
- * the id and reuses the app instead of creating another.
- */
-
 import { beforeEach, expect, test } from "bun:test";
 import { AppEnv, type Organization } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";

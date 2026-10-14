@@ -1,8 +1,3 @@
-/**
- * The batch lane's uniformity contract: prepare mints ONE entitlement row per
- * add item, and every migrated customer's replaced row repoints to that same
- * shared row — never a per-customer mint.
- */
 import { expect, test } from "bun:test";
 import { migrations } from "@autumn/shared";
 import { runChunkedMigration } from "@tests/integration/billing/migrations-v2/utils/runChunkedMigration";
@@ -109,7 +104,6 @@ test(`${chalk.yellowBright("batch replace_item: every migrated row repoints to t
 		),
 	}).toEqual({ lane: "batch", rejections: [] });
 
-	// Prepare minted exactly one shared entitlement for the one add item.
 	const preparedEntitlementIds = await readPreparedAddEntitlementIds({
 		ctx,
 		migrationInternalId: migration.internal_id,

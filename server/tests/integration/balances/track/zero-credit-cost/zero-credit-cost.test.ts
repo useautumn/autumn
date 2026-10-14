@@ -1,10 +1,3 @@
-/**
- * Contract: a metered feature its credit system prices at 0 credits is free.
- * Tracking it, checking it, and locking + finalizing it never moves the credit
- * balance — on the Redis path and on the Postgres path (skip_cache) alike —
- * and an empty credit balance never blocks it.
- */
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3, FeatureConfigOverride } from "@autumn/shared";
 import { deleteLock } from "@tests/integration/balances/utils/lockUtils/deleteLock.js";

@@ -20,11 +20,6 @@ import { prices } from "@tests/utils/fixtures/db/prices";
 import { products } from "@tests/utils/fixtures/db/products";
 import { getPlanResponse } from "@/internal/products/productUtils/productResponseUtils/getPlanResponse.js";
 
-/**
- * What a plan response is made of, field by field. Every case goes through
- * getPlanResponse, the entry every caller uses, with no ctx: the pure path.
- */
-
 const onProduct = <Row extends { internal_product_id?: string | null }>({
 	product,
 	row,
@@ -43,7 +38,6 @@ const messagesEntitlement = (): EntitlementWithFeature =>
 		featureConfig: { usage_type: FeatureUsageType.Single },
 	}) as EntitlementWithFeature;
 
-/** A product whose prices and entitlements all sit on it, the way a stored plan's do. */
 const planOf = ({
 	id = "pro",
 	name = "Pro",

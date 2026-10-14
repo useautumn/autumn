@@ -14,7 +14,6 @@ export const assertSandboxTarget = ({ target }: { target: Target }): void => {
 		throw new Error(SANDBOX_ONLY_REFUSAL);
 
 	const key = process.env[target.secretKeyName];
-	// A key that is not set at all is requireSecretKey's error to give.
 	if (key !== undefined && !key.startsWith(TEST_KEY_PREFIX))
 		throw new Error(SANDBOX_ONLY_REFUSAL);
 };

@@ -11,7 +11,6 @@ import type { AtomPushQueue } from "./types/atomPushQueue.js";
 
 type QueueAtomClientContext = {
 	pushQueue: AtomPushQueue;
-	/** Takes a push too big for one queue message; null where pushes go over the queue only, so such a push fails. */
 	http: AtomClient | null;
 	logger: Pick<AutumnLogger, "warn">;
 };
@@ -42,7 +41,6 @@ const push = async ({
 	return sendOverHttp(ctx.http);
 };
 
-/** The same pushes as the HTTP client, through the Atom's own queue: nothing has to reach the Atom from outside. */
 export const createQueueAtomClient = ({
 	ctx,
 	atomId,

@@ -1,7 +1,3 @@
-/** Aborts the upstream when no item arrives within the idle window; the
- * caller distinguishes the timeout from a real abort via `timedOut`. A window
- * given as a function is read again each time the timer is armed, so a caller
- * can keep every gap inside a deadline rather than only the first. */
 export async function* idleGuardedStream<Item>({
 	idleTimeoutMs,
 	onIdleTimeout,
@@ -34,8 +30,6 @@ export async function* idleGuardedStream<Item>({
 			idleTimer = armIdleTimer();
 			yield item;
 		}
-		// eve's client reads its own abort as a clean disconnect and returns, so
-		// a silent stream ends the loop rather than throwing.
 		if (timedOut) throw onIdleTimeout();
 	} catch (error) {
 		if (timedOut) throw onIdleTimeout();

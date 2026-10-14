@@ -45,7 +45,6 @@ export const getEmptyPriceItem = ({
 	};
 };
 
-// GET STRIPE LINE / SUB ITEM
 export const priceToStripeItem = ({
 	price,
 	relatedEnt,
@@ -68,17 +67,11 @@ export const priceToStripeItem = ({
 	withEntity: boolean;
 	isCheckout: boolean;
 	apiVersion?: ApiVersion;
-	// productOptions?: ProductOptions | undefined;
 	fromVercel?: boolean;
 	isPrepaidPriceV2?: boolean;
 }) => {
-	// TODO: Implement this
 	const billingType = getBillingType(price.config!);
 	const stripeProductId = product.processor?.id;
-
-	// const quantityMultiplier = notNullish(productOptions?.quantity)
-	// 	? productOptions?.quantity
-	// 	: 1;
 
 	const quantityMultiplier = 1;
 
@@ -90,7 +83,6 @@ export const priceToStripeItem = ({
 
 	let lineItem = null;
 
-	// 1. FIXED PRICE
 	if (
 		billingType === BillingType.FixedCycle ||
 		billingType === BillingType.OneOff
@@ -109,7 +101,6 @@ export const priceToStripeItem = ({
 		return null;
 	}
 
-	// 2. PREPAID, TIERED, ONE OFF
 	if (
 		billingType === BillingType.UsageInAdvance &&
 		priceUtils.isTieredOneOff({ price, product })
@@ -122,10 +113,7 @@ export const priceToStripeItem = ({
 			stripeProductId,
 			isCheckout,
 		});
-	}
-
-	// 3. PREPAID
-	else if (billingType === BillingType.UsageInAdvance) {
+	} else if (billingType === BillingType.UsageInAdvance) {
 		lineItem = priceToUsageInAdvance({
 			price,
 			entitlement: relatedEnt,
@@ -133,10 +121,7 @@ export const priceToStripeItem = ({
 			isCheckout,
 			isPrepaidPriceV2,
 		});
-	}
-
-	// 4. USAGE IN ARREAR
-	else if (billingType === BillingType.UsageInArrear) {
+	} else if (billingType === BillingType.UsageInArrear) {
 		lineItem = consumablePriceToStripeItem({
 			price,
 			isCheckout,
@@ -144,10 +129,7 @@ export const priceToStripeItem = ({
 			apiVersion,
 			fromVercel,
 		});
-	}
-
-	// 5. USAGE ARREAR PRORATED
-	else if (billingType === BillingType.InArrearProrated) {
+	} else if (billingType === BillingType.InArrearProrated) {
 		lineItem = priceToInArrearProrated({
 			price,
 			isCheckout,

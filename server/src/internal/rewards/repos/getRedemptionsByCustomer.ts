@@ -12,7 +12,6 @@ type RedemptionWithRelations = RewardRedemption & {
 	referral_code: ReferralCode;
 };
 
-/** Fetch redemptions for a customer with reward program + referral code relations */
 export const getRedemptionsByCustomer = async ({
 	db,
 	internalCustomerId,

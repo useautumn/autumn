@@ -1,23 +1,3 @@
-/**
- * Preview billing actions must not create Stripe resources.
- *
- * Contract under test:
- *   - A plan created with create_in_stripe=false stays Stripe-less after
- *     these preview endpoints run:
- *       * POST /billing.preview_attach
- *       * POST /billing.preview_create_schedule (multi-phase)
- *       * POST /billing.preview_update (with customize)
- *   - No is_custom prices with Stripe IDs are persisted by customize
- *     previews.
- *   - Item coverage: monthlyMessages (metered), prepaidUsers,
- *     consumableWords, allocatedWorkflows.
- *
- * Implementation surface:
- *   server/src/internal/billing/v2/providers/stripe/utils/common/
- *     initStripeResourcesForProducts.ts — early returns via
- *     applyPreviewStripeResourcesToBillingPlan when dryRunStripe=true.
- */
-
 import { expect, test } from "bun:test";
 import type {
 	AttachPreviewResponse,
@@ -42,10 +22,6 @@ const buildItems = () => [
 	items.allocatedWorkflows({ includedUsage: 0 }),
 ];
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 1: previewAttach against a plan created with create_in_stripe=false
-// ═══════════════════════════════════════════════════════════════════════════════
-
 test.concurrent(`${chalk.yellowBright(
 	"previewAttach on no-stripe plan: preview totals correct, no Stripe IDs created",
 )}`, async () => {
@@ -65,7 +41,6 @@ test.concurrent(`${chalk.yellowBright(
 		actions: [],
 	});
 
-	// s.products mutates proPlan.id to include the `_${customerId}` prefix.
 	const preview = (await autumnV2_2.billing.previewAttach({
 		customer_id: customerId,
 		plan_id: proPlan.id,
@@ -82,10 +57,6 @@ test.concurrent(`${chalk.yellowBright(
 		productId: proPlan.id,
 	});
 });
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 2: preview_create_schedule with multiple phases on no-stripe plans
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(`${chalk.yellowBright(
 	"preview_create_schedule multi-phase on no-stripe plans: preview works, no Stripe IDs created",
@@ -152,18 +123,6 @@ test.concurrent(`${chalk.yellowBright(
 		productId: premiumPlan.id,
 	});
 });
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 3: previewUpdate with customize on an active no-stripe sub. The customer
-// is already on a no-stripe plan attached via /billing.preview_attach +
-// /billing.preview_update is impossible — instead we attach the no-stripe plan
-// via attach which would normally create Stripe resources. To avoid that, we
-// rely on the contract that any sub created via real attach on a no-stripe
-// plan still preview-cleanly. We attach a stripe-backed plan A so the customer
-// has an active sub, then previewUpdate with customize.items shapes drawn from
-// every payable category; the assertion is that no is_custom prices got
-// persisted with Stripe IDs by the preview.
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(`${chalk.yellowBright(
 	"previewUpdate customize on active sub: no is_custom prices with Stripe IDs created",

@@ -7,8 +7,6 @@ import type { TestContext } from "@tests/utils/testInitUtils/createTestContext";
 import { eq } from "drizzle-orm";
 import { ProductService } from "@/internal/products/ProductService";
 
-/** Nulls the given Stripe id slots on a product's price config — simulates a
- * price that was never materialized in Stripe. Returns the old Stripe ids. */
 export const clearPriceStripeIds = async ({
 	ctx,
 	productId,

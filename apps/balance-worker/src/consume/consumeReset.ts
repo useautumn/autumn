@@ -2,7 +2,6 @@ import type { ResetCommand } from "@autumn/balance-engine";
 import type { ConsumeContext } from "./types/consume.js";
 import type { QueuedCommand } from "./types/queuedCommand.js";
 
-/** A queued reset: decide it in arrival order. Null when nothing was due, so there is no record to commit. */
 export async function consumeReset({
 	ctx,
 	command,

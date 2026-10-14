@@ -8,7 +8,6 @@ import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { oauthClientRepo } from "../repos/index.js";
 
-/** Classification is a property of the registered client, never of request input. */
 export const isMcpOAuthClient = async ({
 	clientId,
 	db,

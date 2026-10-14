@@ -34,7 +34,6 @@ import { nextFreeAtomId } from "../../utils/nextFreeAtomId.js";
 import { refreshCacheDeployment } from "./refreshCacheDeployment.js";
 import { startCacheDeploymentWatch } from "./startCacheDeploymentWatch.js";
 
-/** What a setup asks the org's cloud for. */
 type CacheSetupSettings = {
 	machine: ByocCacheMachine;
 	region: string;
@@ -42,7 +41,6 @@ type CacheSetupSettings = {
 	stackName: string;
 };
 
-/** A named setting wins; a fresh link for a waiting setup keeps what it asked for; otherwise the default. */
 const setupSettings = ({
 	ctx: { org, env },
 	params: { cpu, memory, region, network, stack_name },
@@ -75,7 +73,6 @@ const setupSettings = ({
 	};
 };
 
-/** Holds the env's slot for this deployment group, or returns whoever claimed it first. */
 const claimCacheDeployment = async ({
 	ctx,
 	atomId,
@@ -115,7 +112,6 @@ const claimCacheDeployment = async ({
 	return (await cacheDeploymentRepo.find({ ctx })) ?? cacheDeployment;
 };
 
-/** A fresh link moves the record to the group it landed in (the org's external id changed) and the settings it asks for; token kept. */
 const followSetup = async ({
 	ctx,
 	existing,
@@ -151,7 +147,6 @@ const followSetup = async ({
 	return moved;
 };
 
-/** Starts the env's cache setup, or hands back a fresh setup link while it still waits on the org. */
 export const createCache = ({
 	ctx,
 	params,
@@ -159,7 +154,6 @@ export const createCache = ({
 	ctx: AutumnContext;
 	params: CreateByocCacheParams;
 }): Promise<CreateByocCacheResponse> =>
-	// Each setup revokes the env's earlier links, so a concurrent one would kill this caller's link.
 	withLock({
 		lockKey: cacheLockKey({ ctx }),
 		ttlMs: CACHE_LOCK_TTL_MS,
@@ -184,7 +178,6 @@ const startCacheSetup = async ({
 			org,
 			setupUrl: null,
 		});
-	// Atoms still being removed, and groups that outlived theirs, keep their stacks; a new one is named apart.
 	const atomId =
 		existing?.id ??
 		(await nextFreeAtomId({
@@ -195,7 +188,6 @@ const startCacheSetup = async ({
 			deployer: getAtomDeployer(),
 		}));
 
-	// A setup that is still waiting keeps its token, so a fresh link starts the same Atom.
 	const token = existing
 		? cacheDeploymentToAtomToken({ cacheDeployment: existing })
 		: generateAtomToken();

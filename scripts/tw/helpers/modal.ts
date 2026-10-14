@@ -1,36 +1,3 @@
-/**
- * Modal backend for the provider seam (helpers/provider.ts).
- *
- * Implements `ProviderImpl` over the `modal` SDK (v0.8.0). Exports TWO providers
- * from one factory (`makeModalProvider`):
- *   - `modalProvider` (`--provider=modal`): classic V1 backend — tags, list,
- *     fromName, but capped at 5 creates/s + 100 concurrent (so fan-out is paced).
- *   - `modalV2Provider` (`--provider=modalv2`): experimental V2 backend —
- *     `experimentalCreate`, 10k concurrent + 20+/s (NO pacing), unpinned by default, but
- *     NO tags/list/fromName (teardown reattaches by sandboxId via `fromId`, tracked
- *     in the run registry; orphans rely on each sandbox's `timeoutMs` auto-expiry).
- *
- * ## Lifecycle mapping (vs Vercel)
- *   - **base image** — the published Debian services image (helpers/modalImage.ts),
- *     NOT build-base.sh (which is dnf/AL2023-only). run.ts skips build-base.sh
- *     when provider=modal; services are baked into this image.
- *   - **createWarmSandbox** — `sandboxes.create(app, baseImage, {command:["sleep",
- *     "infinity"]})` then `git clone @ ref` into /repo (Modal's create does NOT
- *     clone a git source the way Vercel's SDK does).
- *   - **snapshotAndStop** — `sb.snapshotFilesystem()` → an `Image`, PUBLISHED as
- *     `tw-warm:<sha12>`, plus `tw-warm:latest` for dev builds (account-wide warm
- *     cache). Exact-sha lookups skip the whole warm build; a stale `:latest` hit
- *     serves immediately (workers fast-forward checkout at fork) while a detached
- *     refresh converges the cache. The warm parent is terminated after snapshot.
- *   - **forkWorker** — create from the stored warm snapshot, `encryptedPorts:
- *     [SERVER_PORT]` for the tunnel. V1 paces creates (120 burst + ~4.5/s, ≤100
- *     concurrent cap); V2 has no pacing.
- *   - **boot** — run.ts execs `bun boot.ts` detached (same as Vercel); Modal exec
- *     returns a process handle immediately and does NOT block on long-lived procs.
- *   - **getPublicUrl** — `sb.tunnels()[port].url`. **deleteSandbox** — `sb.terminate()`.
- *
- * Validated end-to-end (1400+ tests passing; ~41s 100-wide fan-out on us-east-1).
- */
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -70,42 +37,15 @@ import type {
 	SnapshotAndStopOptions,
 } from "./provider.ts";
 
-/** Where the repo is cloned inside every Modal sandbox (cf. /vercel/sandbox). */
 const MODAL_REPO_ROOT = "/repo";
-/**
- * node_modules is BAKED into the base image at /repo/node_modules (see
- * modalImage.ts) rather than snapshotted or mounted from a Volume: a base layer
- * is both local-fast to read (fast boot) AND excluded from the snapshot diff
- * (fast snapshot). The warm clone preserves it; warmup.sh reconciles the delta.
- */
-/** The Modal App all swarm sandboxes live under (one per Modal workspace). */
 const APP_NAME = "autumn-tw";
-/**
- * Worker size. Each worker runs the server + PG + Dragonfly + goaws AND up to
- * `--per-worker` (default 4) concurrent test files. 2 vCPU + 4 GiB is validated
- * at scale (full suite, 1422 passing) and ~halves the per-worker cost vs the
- * earlier 4/8 default. Env-overridable (`TW_MODAL_WORKER_CPU` / `_MEM_MIB`) so a
- * heavier shard can be dialed up — or a resource-quota kill ruled out — without
- * a rebuild.
- */
 const WORKER_CPU = Number(process.env.TW_MODAL_WORKER_CPU ?? 2);
 const WORKER_MEMORY_MIB = Number(process.env.TW_MODAL_WORKER_MEM_MIB ?? 4096);
 const INGRESS_MEMORY_MIB = 1024;
-/**
- * Snapshot budget — the warm filesystem (node_modules + migrated PGDATA, tens of
- * thousands of files) far exceeds Modal's 55s default, so give it 10 min.
- */
 const SNAPSHOT_TIMEOUT_MS = 10 * 60 * 1000;
 
 const secs = (ms: number): string => (ms / 1000).toFixed(1);
 
-/**
- * Timed stage breadcrumb, ALWAYS visible on the terminal (via `narrate`, which
- * ignores quiet mode). Logs `▸ label` immediately, an optional heartbeat every
- * `heartbeatMs` for long opaque ops (image build, snapshot — so the terminal is
- * never silent for minutes), and `✓ label (+Xs)` on completion. Returns the
- * done-callback.
- */
 const stage = (label: string, heartbeatMs?: number): (() => void) => {
 	const startedAt = Date.now();
 	narrate(chalk.magenta(`[modal] ▸ ${label}`));
@@ -129,9 +69,7 @@ const stage = (label: string, heartbeatMs?: number): (() => void) => {
 	};
 };
 
-/** Forward the Modal SDK's own logs (notably image-build progress) to the sink. */
 const sdkLogger: Logger = {
-	// debug is gRPC-level chatter → file only (sink respects quiet mode).
 	debug: (message: string) => sink(chalk.dim(`[modal-sdk] ${message}\n`)),
 	info: (message: string) => narrate(chalk.dim(`[modal-sdk] ${message}`)),
 	warn: (message: string) => narrate(chalk.yellow(`[modal-sdk] ${message}`)),
@@ -146,8 +84,6 @@ const getApp = (): Promise<App> => {
 	return appPromise;
 };
 
-/** Clone URL. The repo is public → anonymous (no token); a token is embedded only
- * if `TW_GIT_TOKEN` is explicitly set (private fork). */
 const cloneUrl = (source: GitSource): string =>
 	source.username && source.password
 		? source.url.replace(
@@ -156,15 +92,12 @@ const cloneUrl = (source: GitSource): string =>
 			)
 		: source.url;
 
-/** Hash of the local lockfile — cache-busts the image's node_modules bake. */
 const lockHash = (): string => {
 	for (const name of ["bun.lock", "bun.lockb", "package-lock.json"]) {
 		try {
 			const buf = readFileSync(join(PROJECT_ROOT, name));
 			return createHash("sha256").update(buf).digest("hex").slice(0, 16);
-		} catch {
-			// try the next candidate
-		}
+		} catch {}
 	}
 	return "nolock";
 };
@@ -203,23 +136,12 @@ const getIngressImage = (): Promise<Image> => {
 	return ingressImagePromise;
 };
 
-/** Warm snapshot images keyed by warm sandbox name (forkWorker restores these). */
 const warmImageByName = new Map<string, Image>();
-/**
- * Published-image repo for the CROSS-RUN warm cache. snapshotAndStop publishes
- * the warm filesystem image as `tw-warm:<sha12>` (+ `:latest` for dev); lookups by
- * warm name resolve via `images.fromName` — the Modal analogue of freestyle's
- * account-wide named snapshots (cross-process AND cross-teammate).
- */
 const WARM_IMAGE_REPO = "tw-warm";
-/** Warm image retention — long enough for a week of stale fast-forwards. */
 const WARM_IMAGE_TTL_MS = 14 * 24 * 60 * 60 * 1000;
-/** Warm names served from the STALE `:latest` image — their workers fast-forward. */
 const staleWarmNames = new Set<string>();
-/** Opt-out: force exact-sha warm builds (no stale `:latest` serving). */
 const STALE_WARM_DISABLED = process.env.TW_MODAL_NO_STALE === "1";
 
-/** `tw-warm-<sha12>` → `<sha12>`, or undefined for non-warm sandbox names. */
 const warmShaFromName = (name: string): string | undefined =>
 	name.startsWith(`${WARM_SANDBOX_PREFIX}-`)
 		? name.slice(WARM_SANDBOX_PREFIX.length + 1)
@@ -235,7 +157,6 @@ const lookupPublishedWarmImage = async (
 	}
 };
 
-/** Publish the warm image under its sha tag, and as the rolling `:latest` only when asked. */
 const publishWarmImage = async ({
 	image,
 	sha12,
@@ -264,11 +185,6 @@ const publishWarmImage = async ({
 		);
 	}
 };
-/**
- * Live sandboxes created this process, keyed by BOTH our name AND the Modal
- * sandboxId, so teardown resolves an in-run name (fast path) or a cross-process
- * id (V2 has no `fromName` — only `fromId`).
- */
 const liveSandboxes = new Map<string, Sandbox>();
 
 const wrap = (name: string, handle: Sandbox): ProviderSandbox => ({
@@ -278,19 +194,13 @@ const wrap = (name: string, handle: Sandbox): ProviderSandbox => ({
 });
 const unwrap = (sandbox: ProviderSandbox): Sandbox => sandbox.handle as Sandbox;
 
-/**
- * Unpinned costs 1x vs 1.75x for the old us-east-1 pin, at the same create-to-exec time (Oct 2026 probe).
- * Pin with `TW_MODAL_REGION` (e.g. `us`); twd's cost rates follow the same setting.
- */
 const MODAL_REGIONS = modalRegions();
 
-/** Stamp the name into tags so `list({tags})` can recover it (Sandbox has no name). */
 const tagsWithName = (
 	name: string,
 	tags: Record<string, string>,
 ): Record<string, string> => ({ ...tags, name });
 
-// ---- create pacing (stay under the 5/s create limit, 150 burst allowance) ----
 const CREATE_BURST = 120;
 const CREATE_MIN_INTERVAL_MS = 220;
 let createCount = 0;
@@ -298,7 +208,6 @@ let paceChain: Promise<void> = Promise.resolve();
 const sleep = (msDelay: number): Promise<void> =>
 	new Promise((resolve) => setTimeout(resolve, msDelay));
 
-/** Resolve when it's safe to issue the next `create` (no-op within the burst). */
 const pace = (): Promise<void> => {
 	if (createCount++ < CREATE_BURST) {
 		return Promise.resolve();
@@ -307,7 +216,6 @@ const pace = (): Promise<void> => {
 	return paceChain;
 };
 
-/** Drain a Modal stdout/stderr stream chunk-by-chunk into a text callback. */
 const pumpStream = async <T extends string | Uint8Array>(
 	stream: ReadableStream<T>,
 	onText: (text: string) => void,
@@ -329,13 +237,11 @@ const pumpStream = async <T extends string | Uint8Array>(
 	}
 };
 
-/** Transient gRPC/transport faults reaching a sandbox's exec endpoint — retryable
- * (DNS not yet propagated, momentary UNAVAILABLE), vs a real command error. */
 const isTransientExecError = (error: unknown): boolean => {
 	const message = error instanceof Error ? error.message : String(error);
 	const code = (error as { code?: number })?.code;
 	return (
-		code === 14 /* gRPC UNAVAILABLE */ ||
+		code === 14 ||
 		/UNAVAILABLE|Name resolution failed|ECONNREFUSED|ECONNRESET|connection (closed|reset|refused)|deadline exceeded|temporarily unavailable|no healthy upstream/i.test(
 			message,
 		)
@@ -344,13 +250,6 @@ const isTransientExecError = (error: unknown): boolean => {
 
 const EXEC_RETRIES = 5;
 
-/**
- * Wrap a `sb.exec(...)` START in retry-with-backoff for transient transport
- * faults. One flaky `TaskExecStart` (e.g. "Name resolution failed for target
- * …w.modal.host") shouldn't kill the warm-up or a worker boot — at N=200 a few
- * are expected. Only the START is retried; once a process is returned, streaming
- * faults are handled by swallowStreamClose / WorkerDeathError.
- */
 const withExecRetry = async <T>(
 	label: string,
 	start: () => Promise<T>,
@@ -374,17 +273,11 @@ const withExecRetry = async <T>(
 	}
 };
 
-/** Clone the repo into /repo at the ref (Modal create doesn't clone git). */
 const cloneRepo = async (
 	sandbox: Sandbox,
 	source: GitSource,
 ): Promise<void> => {
 	const url = cloneUrl(source);
-	// /repo already exists and is non-empty (node_modules is baked into the base
-	// image there) → `git clone /repo` would fail. Clone to a temp dir and move
-	// the source into /repo, PRESERVING the baked node_modules. Full clone (not
-	// shallow) so a non-default revision (e.g. feat/*) resolves + warmup.sh's own
-	// `git checkout <ref>` is a no-op.
 	const script = [
 		"set -e",
 		"shopt -s dotglob nullglob",
@@ -400,9 +293,6 @@ const cloneRepo = async (
 		"done",
 		"rm -rf /tmp/twclone",
 	].join("\n");
-	// Run from `/` (always exists): the sandbox's default workdir is /repo, which
-	// doesn't exist until THIS clone creates it — execing there fails with
-	// "Unable to read current working directory".
 	const done = stage(`clone repo @ ${source.revision}`);
 	const proc = await withExecRetry("clone", () =>
 		sandbox.exec(["bash", "-lc", script], {
@@ -428,10 +318,6 @@ const cloneRepo = async (
 	}
 };
 
-/**
- * Fetch + force-checkout `rev` in /repo. Used by the warm fast-forward and the
- * stale-worker checkout (a 12-char sha can't be fetched directly → fetch --all).
- */
 const fastForwardCheckout = async (
 	sandbox: Sandbox,
 	rev: string,
@@ -439,9 +325,6 @@ const fastForwardCheckout = async (
 ): Promise<void> => {
 	const script = [
 		`cd ${MODAL_REPO_ROOT}`,
-		// Prune first in the fallback: stale remote-tracking refs (e.g. a
-		// deleted branch reborn as a directory of branches) hard-fail
-		// `fetch --all` with "cannot lock ref".
 		`(git fetch --quiet origin ${rev} && git checkout --quiet --force FETCH_HEAD) || ` +
 			`(git remote prune origin; git fetch --quiet --all --prune && git checkout --quiet --force ${rev})`,
 	].join(" && ");
@@ -468,7 +351,6 @@ const fastForwardCheckout = async (
 	}
 };
 
-/** Binaries the current base image bakes; a `:latest` published from an older base lacks them. */
 const REQUIRED_WARM_BINARIES = [
 	"/opt/kafka/kafka.Kafka",
 	"/opt/autumn-tw/bin/fakecloud",
@@ -492,7 +374,6 @@ const assertWarmServicesBaked = async (sandbox: Sandbox): Promise<void> => {
 	}
 };
 
-/** Shared stream-closed classifier (used by runStreaming + the provider method). */
 const isSandboxStreamClosed = (error: unknown): boolean => {
 	const message = error instanceof Error ? error.message : String(error);
 	return /terminated|already (completed|finished)|stream (closed|error)|connection (closed|reset)|ECONNRESET|UNAVAILABLE|task .* (exited|gone)/i.test(
@@ -500,12 +381,6 @@ const isSandboxStreamClosed = (error: unknown): boolean => {
 	);
 };
 
-/**
- * Create a sandbox. `v2=true` uses Modal's experimental V2 backend (10k
- * concurrent, 20+/s) — NO pacing, NO tags/name (unsupported). V1
- * uses the classic `create` (tags + name + 5/s pacing). Both tracked in
- * {@link liveSandboxes} by name AND sandboxId for teardown.
- */
 const createFromImage = async (
 	image: Image,
 	opts: {
@@ -521,7 +396,6 @@ const createFromImage = async (
 ): Promise<Sandbox> => {
 	const app = await getApp();
 	if (!v2) {
-		// V1 only: stay under the 5/s create + 100-concurrent caps. V2 doesn't need it.
 		await pace();
 	}
 	const done = stage(`create sandbox ${opts.name}`);
@@ -537,7 +411,6 @@ const createFromImage = async (
 	const sandbox = v2
 		? await modal.sandboxes.experimentalCreate(app, image, {
 				...base,
-				// V2 supports neither tags nor name lookups.
 				regions: MODAL_REGIONS,
 			})
 		: await modal.sandboxes.create(app, image, {
@@ -552,7 +425,6 @@ const createFromImage = async (
 };
 
 const makeModalProvider = (v2: boolean): ProviderImpl => {
-	/** Minimal env warmup.sh needs beyond what it sets itself (seed secrets). */
 	const warmupExecEnv = (): Record<string, string> => {
 		const env: Record<string, string> = { NODE_ENV: "development" };
 		for (const name of [
@@ -571,10 +443,6 @@ const makeModalProvider = (v2: boolean): ProviderImpl => {
 		return env;
 	};
 
-	/**
-	 * One refresh at a time; detached so no run ever waits on it. Converges the
-	 * published warm cache to the target sha after a stale `:latest` hit.
-	 */
 	let refreshInFlight = false;
 	const refreshWarmImageInBackground = (
 		warmName: string,
@@ -598,7 +466,6 @@ const makeModalProvider = (v2: boolean): ProviderImpl => {
 						name: `${warmName}-refresh`,
 						env: {},
 						tags: { kind: "bun-tw-warm-refresh" },
-						// Fat CPU: the refresh is install+migrate+seed bound and short-lived.
 						cpu: 4,
 						memoryMiB: 8192,
 						timeout: 30 * 60 * 1000,
@@ -630,8 +497,6 @@ const makeModalProvider = (v2: boolean): ProviderImpl => {
 					ttlMs: WARM_IMAGE_TTL_MS,
 				});
 				await publishWarmImage({ image, sha12: targetSha12 });
-				// Keep warmName in staleWarmNames: forks in this run still hold the stale
-				// :latest image, so dropping it here would silently skip their fast-forward.
 			} catch (error) {
 				narrate(
 					chalk.yellow(
@@ -639,9 +504,7 @@ const makeModalProvider = (v2: boolean): ProviderImpl => {
 					),
 				);
 			} finally {
-				await sandbox?.terminate().catch(() => {
-					/* best-effort */
-				});
+				await sandbox?.terminate().catch(() => {});
 				refreshInFlight = false;
 				done();
 			}
@@ -655,9 +518,6 @@ const makeModalProvider = (v2: boolean): ProviderImpl => {
 			if (!opts.source) {
 				throw new Error("modal: createWarmSandbox requires a git source");
 			}
-			// Fast-forward: build the new warm ON TOP of the newest published warm
-			// image (fetch + checkout delta) instead of a fresh clone on the base
-			// image — warmup.sh then only pays the install/migrate/seed delta.
 			{
 				const latest = await lookupPublishedWarmImage("latest");
 				if (latest) {
@@ -689,10 +549,7 @@ const makeModalProvider = (v2: boolean): ProviderImpl => {
 						return wrap(opts.name, sandbox);
 					} catch (error) {
 						ffDone();
-						// Frees the warm name for the full build below.
-						await sandbox?.terminate().catch(() => {
-							/* best-effort */
-						});
+						await sandbox?.terminate().catch(() => {});
 						narrate(
 							chalk.yellow(
 								`[modal] warm fast-forward failed (${(error as Error).message?.slice(0, 120)}) — falling back to full build`,
@@ -701,8 +558,6 @@ const makeModalProvider = (v2: boolean): ProviderImpl => {
 					}
 				}
 			}
-			// The base image bakes node_modules for THIS ref (cache-keyed on the
-			// lockfile), so the warm clone + workers read deps from a fast local layer.
 			const image = await getBaseImage({
 				gitUrl: cloneUrl(opts.source),
 				gitRef: opts.source.revision,
@@ -728,8 +583,6 @@ const makeModalProvider = (v2: boolean): ProviderImpl => {
 		async createIngressSandbox(
 			opts: CreateSandboxOptions,
 		): Promise<ProviderSandbox> {
-			// Ingress runs only a built-ins-only http server shipped inline — a tiny
-			// debian+bun image with no repo clone, NOT the full services base.
 			const image = await getIngressImage();
 			const sandbox = await createFromImage(
 				image,
@@ -754,8 +607,6 @@ const makeModalProvider = (v2: boolean): ProviderImpl => {
 					`modal: no warm snapshot for "${opts.sourceSandbox}" — snapshotAndStop must run first`,
 				);
 			}
-			// node_modules is in the base image layer (fast local reads); the worker
-			// forks from the warm snapshot for the source + migrated PGDATA.
 			const sandbox = await createFromImage(
 				image,
 				{
@@ -769,8 +620,6 @@ const makeModalProvider = (v2: boolean): ProviderImpl => {
 				},
 				v2,
 			);
-			// Stale warm image: the source is `tw-warm:latest`, not the exact sha —
-			// check the exact commit out before boot so tests run the code under test.
 			if (staleWarmNames.has(opts.sourceSandbox)) {
 				const targetSha = opts.env.TW_TARGET_SHA;
 				if (!targetSha) {
@@ -791,10 +640,6 @@ const makeModalProvider = (v2: boolean): ProviderImpl => {
 			opts?: SnapshotAndStopOptions,
 		): Promise<string> {
 			const sb = unwrap(sandbox);
-			// Services were clean-stopped by warmup.sh; capture the filesystem (/repo
-			// source + migrated PGDATA + any node_modules delta — the bulk of
-			// node_modules is in the base image layer, NOT this diff). Workers fork from
-			// this Image. Generous budget + heartbeat so the terminal isn't silent.
 			const done = stage("snapshot warm filesystem (source + pgdata)", 15_000);
 			try {
 				const image = await sb.snapshotFilesystem({
@@ -811,10 +656,7 @@ const makeModalProvider = (v2: boolean): ProviderImpl => {
 					});
 					staleWarmNames.delete(sandbox.name);
 				}
-				// The warm parent is no longer needed (forks use the Image) — free it.
-				await sb.terminate().catch(() => {
-					/* best-effort */
-				});
+				await sb.terminate().catch(() => {});
 				liveSandboxes.delete(sandbox.name);
 				liveSandboxes.delete(sb.sandboxId);
 				return image.imageId;
@@ -842,8 +684,6 @@ const makeModalProvider = (v2: boolean): ProviderImpl => {
 			if (local) {
 				return wrap(name, local);
 			}
-			// Cross-run warm cache: a published warm image counts as "the warm parent
-			// exists" (run.ts only needs truthiness; forkWorker resolves the same name).
 			const sha12 = warmShaFromName(name);
 			if (sha12) {
 				const exact = await lookupPublishedWarmImage(sha12);
@@ -872,7 +712,6 @@ const makeModalProvider = (v2: boolean): ProviderImpl => {
 					}
 				}
 			}
-			// V2 has no fromName at all → undefined makes run.ts build fresh.
 			if (v2) {
 				return undefined;
 			}
@@ -887,9 +726,6 @@ const makeModalProvider = (v2: boolean): ProviderImpl => {
 		async deleteSandbox(
 			sandboxOrName: ProviderSandbox | string,
 		): Promise<void> {
-			// Callers pass the sandboxId (preferred) or our name. In-run: hit the live
-			// map (keyed by both). Cross-process (`bun tw kill`): reattach via fromId
-			// (V2 has no fromName; V1 falls back to it).
 			const key =
 				typeof sandboxOrName === "string"
 					? sandboxOrName
@@ -907,9 +743,7 @@ const makeModalProvider = (v2: boolean): ProviderImpl => {
 				}
 			}
 			if (target) {
-				await target.terminate().catch(() => {
-					/* already gone */
-				});
+				await target.terminate().catch(() => {});
 			}
 			liveSandboxes.delete(key);
 			warmImageByName.delete(key);
@@ -964,23 +798,14 @@ const makeModalProvider = (v2: boolean): ProviderImpl => {
 					env: opts.env,
 				}),
 			);
-			// Long-lived (boot/server): drain output in the background; resolve `wait`
-			// only if/when the process exits. Modal exec returns immediately.
-			void pumpStream(proc.stdout, opts.onChunk).catch(() => {
-				/* stream closed on teardown */
-			});
-			void pumpStream(proc.stderr, opts.onChunk).catch(() => {
-				/* stream closed on teardown */
-			});
+			void pumpStream(proc.stdout, opts.onChunk).catch(() => {});
+			void pumpStream(proc.stderr, opts.onChunk).catch(() => {});
 			return {
 				wait: async () => ({ exitCode: await proc.wait() }),
 			};
 		},
 
 		async listSandboxesByOwner(owner: string): Promise<ListedSandbox[]> {
-			// V2 sandboxes aren't returned by list() and have no tags — cross-run
-			// enumeration relies on the run registry (sandboxIds) + each sandbox's
-			// timeoutMs auto-expiry instead.
 			if (v2) {
 				return [];
 			}
@@ -989,9 +814,7 @@ const makeModalProvider = (v2: boolean): ProviderImpl => {
 				let tags: Record<string, string> = {};
 				try {
 					tags = await sb.getTags();
-				} catch {
-					/* tags unavailable — fall back to the sandbox id as the name */
-				}
+				} catch {}
 				listed.push({
 					name: tags.name ?? sb.sandboxId,
 					status: "running",
@@ -1006,18 +829,11 @@ const makeModalProvider = (v2: boolean): ProviderImpl => {
 	};
 };
 
-/** Registry image for the detached teardown nuke — tiny, cached, boots in ~1s. */
 const NUKE_IMAGE = "oven/bun:1";
 const NUKE_SANDBOX_TIMEOUT_MS = 15 * 60 * 1000;
 const NUKE_CPU = 1;
 const NUKE_MEMORY_MIB = 512;
 
-/**
- * Fire-and-forget teardown sandbox: boots a bare bun registry image and runs
- * `script` via `bun -e` as the sandbox COMMAND (no exec, nothing to await —
- * the orchestrator returns as soon as the create call does). The sandbox exits
- * when the script does; `timeoutMs` is the hung-script backstop.
- */
 export const spawnDetachedNukeSandbox = async ({
 	name,
 	script,
@@ -1041,7 +857,5 @@ export const spawnDetachedNukeSandbox = async ({
 	return sandbox.sandboxId;
 };
 
-/** Classic V1 backend (tags, list, fromName, 5/s + 100-concurrent caps). */
 export const modalProvider = makeModalProvider(false);
-/** Experimental V2 backend (10k concurrent, 20+/s, no tags/list/fromName). */
 export const modalV2Provider = makeModalProvider(true);

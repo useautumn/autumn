@@ -1,21 +1,3 @@
-/**
- * Cross-migration per-customer mutual exclusion — the DB invariant behind
- * `migration_item_runs_live_item_exclusive`: a customer can be RUNNING in at
- * most one live migration, no matter which lane is executing.
- *
- * Contract under test:
- *   - repo claim: a customer running in migration A is not claimable by B
- *     (claimed: false), and the claim raises nothing.
- *   - per-customer lane: a busy customer is left untouched (no item run, no
- *     mutation); after the blocker settles, a rerun converges them.
- *   - batch lane: claiming a busy customer fails the run loudly (the unique
- *     index is the arbiter — no anti-join prefilter); nothing is applied, and
- *     a rerun after the blocker settles converges everyone.
- *   - batch × batch: two identically-defined migrations racing the same
- *     customers never double-apply — every customer ends with exactly one
- *     added cusEnt row, whichever run wins (the loser fails loudly).
- */
-
 import { expect, test } from "bun:test";
 import { MigrationItemKind } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features";
@@ -48,7 +30,6 @@ const addDashboard = (planId: string) => ({
 	},
 });
 
-/** A running claim under an unrelated migration id — "customer is busy". */
 const blockCustomer = async ({
 	ctx,
 	blockerId,
@@ -112,7 +93,6 @@ test.concurrent(
 			await settleBlocker({ ctx, blockerId, internalCustomerId });
 		}
 
-		// Once the blocker settles, the rival claim goes through.
 		const reclaim = await migrationItemRunRepo.claim({
 			ctx,
 			migrationInternalId: `conc-claim-rival-${suffix}`,
@@ -151,13 +131,10 @@ test.concurrent(
 				migrationId: `conc-percus-mig-${suffix}`,
 				...addDashboard(plan.id),
 				noBillingChanges: true,
-				// `limit` keeps the run on the per-customer lane; `only` narrows
-				// it to this customer.
 				controls: { only: [customerId], limit: 1 },
 			});
 			expect(result?.lane).toBe("per_customer");
 
-			// Busy customer: untouched, and no item run recorded for this migration.
 			await expectCustomerEntitlementRowCount({
 				ctx,
 				customerId,
@@ -177,7 +154,6 @@ test.concurrent(
 			await settleBlocker({ ctx, blockerId, internalCustomerId });
 		}
 
-		// Blocker settled → rerun converges the customer.
 		await runChunkedMigration({
 			ctx,
 			migrationClient: autumnV2_2,
@@ -223,8 +199,6 @@ test.concurrent(
 
 		await blockCustomer({ ctx, blockerId, internalCustomerId: busyInternalId });
 		try {
-			// The page claim hits the exclusivity index → the run fails loudly;
-			// the claim upsert is atomic, so nothing was applied to anyone.
 			await expect(
 				runChunkedMigration({
 					ctx,
@@ -252,7 +226,6 @@ test.concurrent(
 			});
 		}
 
-		// Blocker settled → rerun converges both customers.
 		const { result } = await runChunkedMigration({
 			ctx,
 			migrationClient: autumnV2_2,
@@ -295,10 +268,6 @@ test.concurrent(
 			],
 		});
 
-		// The org-level run queue normally serializes these; driving the chunk
-		// runner directly simulates that guard failing. If the runs genuinely
-		// overlap, the loser fails loudly on the exclusivity index — the only
-		// acceptable rejection.
 		const outcomes = await Promise.allSettled(
 			["a", "b"].map((tag) =>
 				runChunkedMigration({
@@ -320,7 +289,6 @@ test.concurrent(
 			);
 		}
 
-		// The invariant: no customer is double-applied, whichever run won them.
 		for (const customerId of customerIds) {
 			await expectCustomerEntitlementRowCount({
 				ctx,
@@ -346,8 +314,6 @@ test.concurrent(
 		});
 		const internalCustomerId = await getInternalCustomerId({ ctx, customerId });
 
-		// A real run row whose task "died": it claimed the customer and will
-		// never drain (the shape a crashed trigger task leaves behind).
 		const deadMigration = await autumnV2_2.migrationsV2.deleteAndCreate({
 			id: `conc-dead-mig-${suffix}`,
 			...addDashboard(plan.id),
@@ -376,7 +342,6 @@ test.concurrent(
 		expect(claim.claimed).toBe(true);
 
 		try {
-			// While the dead run's claim is live, other migrations are blocked.
 			const blocked = await migrationItemRunRepo.claim({
 				ctx,
 				migrationInternalId: `conc-dead-rival-${suffix}`,
@@ -386,11 +351,8 @@ test.concurrent(
 			});
 			expect(blocked).toMatchObject({ claimed: false, itemRun: null });
 
-			// The cancel handler's dead-task path: settle the run's claims
-			// (same call it makes once trigger confirms the task is terminal).
 			await settleLeftoverClaims({ ctx, migrationRunId: deadRun.internal_id });
 
-			// The dead run's item run is settled as failed…
 			expect(
 				await migrationItemRunRepo.get({
 					ctx,
@@ -400,7 +362,6 @@ test.concurrent(
 				}),
 			).toMatchObject({ status: "failed" });
 
-			// …and the customer is claimable by other migrations again.
 			const unblocked = await migrationItemRunRepo.claim({
 				ctx,
 				migrationInternalId: `conc-dead-rival-${suffix}`,

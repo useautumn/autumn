@@ -1,9 +1,3 @@
-/**
- * Switching an existing customer between graduated and volume tiers through an update_plan
- * migration. Usage carries over without an invoice, and the renewal prices it with the new
- * behaviour. 100 included, net tiers 0-500 @ $0.10 / 501+ @ $0.05, 800 used.
- */
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3, LimitedItem } from "@autumn/shared";
 import { runUpdatePlanMigration } from "@tests/integration/billing/migrations-v2/utils/runUpdatePlanMigration";
@@ -69,7 +63,6 @@ const runTierBehaviorMigration = async ({
 test.concurrent(
 	`${chalk.yellowBright("volume-migration 1: graduated → volume via update_plan: 800 used bills $35, not $60")}`,
 	async () => {
-		// Volume: 700 overage in band 601+: 700 × $0.05 = $35 (graduated: 500 × $0.10 + 200 × $0.05 = $60)
 		await runTierBehaviorMigration({
 			customerId: "vol-adv-mig-grad-to-vol",
 			fromItem: items.tieredConsumableMessages({ includedUsage: INCLUDED }),
@@ -82,7 +75,6 @@ test.concurrent(
 test.concurrent(
 	`${chalk.yellowBright("volume-migration 2: volume → graduated via update_plan: 800 used bills $60, not $35")}`,
 	async () => {
-		// Graduated on 700 overage: 500 × $0.10 + 200 × $0.05 = $60 (volume: 700 × $0.05 = $35)
 		await runTierBehaviorMigration({
 			customerId: "vol-adv-mig-vol-to-grad",
 			fromItem: items.volumeConsumableMessages({ includedUsage: INCLUDED }),

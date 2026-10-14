@@ -12,7 +12,6 @@ const genUrlSafeBase64 = (bytes) => {
 };
 
 async function main() {
-	// Step 1: Generate secrets
 	console.log(
 		chalk.magentaBright("\n================ Autumn Setup ================\n"),
 	);
@@ -29,15 +28,11 @@ async function main() {
 
 	const databaseUrl = process.env.DATABASE_URL;
 	const stripeWebhookVars = [];
-	// stripeWebhookVars = await handleLocalRunSetup();
-
-	// Step 11: Write to server/.env
 	console.log(
 		chalk.magentaBright("\n================ Writing .env ================\n"),
 	);
 	const envSections = [];
 
-	// Autumn Auth section
 	envSections.push(
 		"# Auth",
 		`BETTER_AUTH_SECRET=${secrets.BETTER_AUTH_SECRET}`,
@@ -47,7 +42,6 @@ async function main() {
 		"",
 	);
 
-	// Stripe required section
 	envSections.push(
 		"# Stripe",
 		`LOCALTUNNEL_RESERVED_KEY=${secrets.LOCALTUNNEL_RESERVED_KEY}`,
@@ -56,12 +50,10 @@ async function main() {
 		"",
 	);
 
-	// Database section
 	if (databaseUrl) {
 		envSections.push("# Database", `DATABASE_URL=${databaseUrl}`, "");
 	}
 
-	// Stripe Webhooks section
 	if (stripeWebhookVars.length > 0) {
 		envSections.push("# Stripe Webhooks");
 		envSections.push(...stripeWebhookVars);

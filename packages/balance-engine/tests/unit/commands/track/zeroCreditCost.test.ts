@@ -31,10 +31,6 @@ const messagesSchema = ({ creditAmount }: { creditAmount: number }) => [
 	},
 ];
 
-/**
- * The catalog prices messages at `creditAmount` credits (free by default); a
- * plan item's feature_override, when given, replaces that schema for the row.
- */
 const freeCreditSubject = ({
 	state,
 	creditAmount = 0,
@@ -208,7 +204,6 @@ describe("zero credit cost", () => {
 	);
 });
 
-/** Locks `value` units, finalizes at `finalValue`, and returns the credit balance after each step. */
 const lockThenFinalize = ({
 	initial,
 	subjectFor,

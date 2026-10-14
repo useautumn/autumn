@@ -41,7 +41,6 @@ export function MainLayout() {
 	const containerRef = useRef<HTMLDivElement>(null);
 	const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
-	// Global error handler for API errors
 	useEffect(() => {
 		const handleGlobalError = (event: ErrorEvent) => {
 			if (event.error?.response) {
@@ -56,7 +55,6 @@ export function MainLayout() {
 	return (
 		<AutumnProvider
 			backendUrl={import.meta.env.VITE_BACKEND_URL}
-			// backendUrl="http://localhost:8080"
 			includeCredentials={true}
 		>
 			<NuqsAdapter>
@@ -111,7 +109,6 @@ const DashboardShell = ({
 	);
 };
 
-/** Settings draws its own layout while the org loads, so a reload settles in place instead of flashing a spinner. */
 const ContentLoading = () => {
 	const { pathname } = useLocation();
 	if (pathname.endsWith("/settings")) return <SettingsViewSkeleton />;
@@ -151,7 +148,6 @@ const MainContent = ({
 			<main
 				className={cn(
 					"w-full h-screen flex flex-col justify-center overflow-hidden sm:py-3 sm:pr-3 relative",
-					// Default font
 					"font-normal",
 				)}
 			>
@@ -198,9 +194,6 @@ const MainContent = ({
 							"w-full h-full overflow-auto flex justify-center bg-background relative",
 						)}
 					>
-						{/* min-h-full, not h-full: content taller than the viewport (zoomed
-						    in, or a long page) must extend the scroll area rather than be
-						    clipped inside a fixed-height child. */}
 						<div className="w-full min-h-full justify-center">
 							{showLoading ? (
 								<ContentLoading />

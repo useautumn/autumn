@@ -1,8 +1,6 @@
 import { afterAll, beforeEach, describe, expect, mock, test } from "bun:test";
 import { ApiVersionClass, LATEST_VERSION, RecaseError } from "@autumn/shared";
 
-// Capture real modules BEFORE mocking — mock.module leaks across test files
-// (mock.restore does not undo it), so afterAll re-mocks with the real exports.
 const realRedisV2Availability = {
 	...(await import(
 		"@/external/redis/availabilityMonitor/redisV2Availability.js"
@@ -97,8 +95,6 @@ const { runTrackWithRollout } = await import(
 );
 const { ParsedCheckParamsSchema } = await import("@autumn/shared");
 
-// queueTrack prefers TRACK_ASYNC_STANDARD then TRACK_ASYNC — stub so a real
-// URL from local .env.local can't leak in and route the mocked enqueue at SQS.
 const originalTrackQueueUrl = process.env.TRACK_SQS_QUEUE_URL;
 const originalTrackAsyncQueueUrl = process.env.TRACK_ASYNC_SQS_QUEUE_URL;
 const originalTrackAsyncStandardQueueUrl =

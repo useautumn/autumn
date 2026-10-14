@@ -27,7 +27,6 @@ describe("buildUpdateSubscriptionOptions — included usage handling", () => {
 			initialBackendQuantities: { messages: 1000 },
 		});
 
-		// Must NOT be 5,000,000 (5000 * 1000) or 5 (5000 / 1000)
 		expect(result[0]?.quantity).toBe(5000);
 	});
 
@@ -164,7 +163,6 @@ describe("buildUpdateSubscriptionOptions — included usage handling", () => {
 			initialBackendQuantities: { messages: 1000 },
 		});
 
-		// typeof "inf" !== "number", so includedUsage defaults to 0
 		expect(result).toEqual([{ feature_id: "messages", quantity: 5000 }]);
 	});
 
@@ -197,8 +195,6 @@ describe("buildUpdateSubscriptionOptions — included usage handling", () => {
 	});
 
 	test("should NOT resubmit a one-off item when its quantity has not changed", () => {
-		// A one-off top-up is a fresh purchase the backend ADDS — resubmitting the
-		// unchanged total would re-buy the whole balance on every update.
 		const result = buildUpdateSubscriptionOptions({
 			prepaidItems: [
 				{ feature_id: "credits", included_usage: 0, interval: null },
@@ -225,7 +221,6 @@ describe("buildUpdateSubscriptionOptions — included usage handling", () => {
 	});
 
 	test("should NOT resubmit a one-off item when its quantity decreases", () => {
-		// One-off top-ups can't be negative — a lower total is not a purchase.
 		const result = buildUpdateSubscriptionOptions({
 			prepaidItems: [
 				{ feature_id: "credits", included_usage: 0, interval: null },
@@ -239,8 +234,6 @@ describe("buildUpdateSubscriptionOptions — included usage handling", () => {
 	});
 
 	test("should send the absolute total for a non-consumable item (interval null, continuous use)", () => {
-		// Non-consumables are continuous-use levels that happen to have interval null.
-		// They must send the selected total, never the delta.
 		const result = buildUpdateSubscriptionOptions({
 			prepaidItems: [
 				{

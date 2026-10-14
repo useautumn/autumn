@@ -7,7 +7,6 @@ import type { DrizzleCli } from "@/db/initDrizzle.js";
 export type VercelResourceRow = typeof vercelResources.$inferSelect;
 export type InsertVercelResource = typeof vercelResources.$inferInsert;
 
-/** Service for managing Vercel integration resources. */
 export class VercelResourceService {
 	static async create({
 		db,
@@ -24,9 +23,6 @@ export class VercelResourceService {
 		return created;
 	}
 
-	/**
-	 * Get resource by ID
-	 */
 	static async getById({
 		db,
 		resourceId,
@@ -52,10 +48,6 @@ export class VercelResourceService {
 		return resource;
 	}
 
-	/**
-	 * Get resource by installation ID
-	 * Returns the single resource for this installation (if exists)
-	 */
 	static async getByInstallation({
 		db,
 		installationId,
@@ -111,10 +103,6 @@ export class VercelResourceService {
 		return resource;
 	}
 
-	/**
-	 * Get resource by ID and validate it belongs to the installation
-	 * @throws RecaseError if not found or doesn't belong to installation
-	 */
 	static async getByIdAndInstallation({
 		db,
 		resourceId,
@@ -151,9 +139,6 @@ export class VercelResourceService {
 		return resource;
 	}
 
-	/**
-	 * Update resource
-	 */
 	static async update({
 		db,
 		resourceId,
@@ -169,7 +154,6 @@ export class VercelResourceService {
 		env: AppEnv;
 		updates: Partial<InsertVercelResource>;
 	}): Promise<VercelResourceRow> {
-		// First validate resource exists and belongs to installation
 		await VercelResourceService.getByIdAndInstallation({
 			db,
 			resourceId,
@@ -194,9 +178,6 @@ export class VercelResourceService {
 		return updated;
 	}
 
-	/**
-	 * Delete resource (mark as uninstalled)
-	 */
 	static async delete({
 		db,
 		resourceId,
@@ -210,7 +191,6 @@ export class VercelResourceService {
 		orgId: string;
 		env: AppEnv;
 	}): Promise<void> {
-		// Validate exists first
 		await VercelResourceService.getByIdAndInstallation({
 			db,
 			resourceId,
@@ -219,7 +199,6 @@ export class VercelResourceService {
 			env,
 		});
 
-		// Mark as uninstalled rather than hard delete
 		await db
 			.update(vercelResources)
 			.set({ status: "uninstalled" })
@@ -233,9 +212,6 @@ export class VercelResourceService {
 			);
 	}
 
-	/**
-	 * Hard delete resource (for cleanup)
-	 */
 	static async hardDelete({
 		db,
 		resourceId,
@@ -258,9 +234,6 @@ export class VercelResourceService {
 			);
 	}
 
-	/**
-	 * List all resources for installation
-	 */
 	static async listByInstallation({
 		db,
 		installationId,
@@ -284,10 +257,6 @@ export class VercelResourceService {
 			);
 	}
 
-	/**
-	 * Count resources for installation (should always be 0 or 1)
-	 * Uses proper Drizzle count aggregation
-	 */
 	static async countByInstallation({
 		db,
 		installationId,

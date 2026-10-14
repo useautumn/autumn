@@ -11,11 +11,6 @@ import type { SsoOrgHint } from "@/lib/sso/ssoTypes";
 const linkClassName =
 	"text-sm text-muted-foreground underline-offset-4 hover:underline hover:text-primary cursor-pointer";
 
-/**
- * Shown only when a previous successful SSO sign-in left a hint behind. Nothing
- * happens until the person clicks: the provider is resolved server-side by
- * providerId, and a hint the backend no longer recognises falls back to email.
- */
 export const RememberedSsoSignIn = ({
 	hint,
 	onUseAnotherEmail,
@@ -37,8 +32,6 @@ export const RememberedSsoSignIn = ({
 				window.location.assign(result.url);
 				return;
 			}
-			// Stale hint: the org no longer resolves to SSO, so drop it and hand
-			// the person back to the email flow.
 			clearSsoHint();
 			onForget();
 			toast.error(

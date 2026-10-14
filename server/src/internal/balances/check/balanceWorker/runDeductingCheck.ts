@@ -21,8 +21,6 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { scheduleLockExpiry } from "../../balanceWorker/lockExpirySchedule.js";
 import { trackParamsToTrackCommand } from "../../track/balanceWorker/balanceWorkerTrackRequest.js";
 
-/** What a check learned from the worker; `state` is null when nothing is attached, since there was nothing to read. */
-/** What a check answers from: the decision, and the rows and catalog it was decided against (absent when nothing is attached). */
 export type WorkerCheckAnswer = {
 	result: CheckResult;
 	state: SubjectState | null;
@@ -35,7 +33,6 @@ export const requiredBalanceOf = ({
 	body: ParsedCheckParams;
 }): number => body.required_balance ?? body.required_quantity ?? 1;
 
-/** The legacy path refuses these before deducting, so the worker path does too. */
 const assertCheckCanDeduct = ({
 	ctx,
 	body,
@@ -69,7 +66,6 @@ const assertCheckCanDeduct = ({
 		});
 };
 
-/** A track that applied is an allowed check; the required balance is reported in the funding feature's units. */
 const trackReplyToCheckAnswer = ({
 	reply,
 	body,
@@ -82,7 +78,6 @@ const trackReplyToCheckAnswer = ({
 		result: {
 			allowed,
 			reason: allowed ? null : "insufficient_balance",
-			// A refused track does not say which limit refused it; only a plain check does.
 			limitType: null,
 			requiredBalance: new Decimal(requiredBalanceOf({ body }))
 				.mul(reply.result.fundingCreditCost)
@@ -95,7 +90,6 @@ const trackReplyToCheckAnswer = ({
 	};
 };
 
-/** Nothing funds the feature: only a requirement of nothing is met, and there is no balance to report. */
 const nothingAttachedAnswer = ({
 	body,
 }: {
@@ -122,10 +116,6 @@ const isNothingAttached = ({ cause }: { cause: unknown }): boolean =>
 	cause.workerCode === "UNSUPPORTED_COMMAND" &&
 	cause.workerReason === "feature_not_found";
 
-/**
- * A check with `send_event` or a lock is one track: reject mode, or the lock's own overage behaviour.
- * Whether it applied is the answer, so deciding and deducting cannot be split by another request.
- */
 export async function runDeductingCheck({
 	ctx,
 	body,
@@ -147,13 +137,11 @@ export async function runDeductingCheck({
 			value: requiredBalanceOf({ body }),
 			properties: body.properties,
 			skip_event: body.skip_event,
-			// A lock keeps its overage behaviour for a later confirm above the lock.
 			overage_behavior: body.lock?.overage_behavior ?? "reject",
 		},
 	});
 	try {
 		const reply = await client.track({ command });
-		// A rejected track took nothing, so there is no lock to expire.
 		if (body.lock && reply.result.status === "applied")
 			await scheduleLockExpiry({
 				ctx,

@@ -9,9 +9,6 @@ import {
 } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
 
-/**
- * Validates new_billing_subscription behavior for attach operations.
- */
 export const handleNewBillingSubscriptionErrors = ({
 	billingContext,
 	params,
@@ -31,8 +28,6 @@ export const handleNewBillingSubscriptionErrors = ({
 	const isTransitionFromFree =
 		!!currentCustomerProduct && isCustomerProductFree(currentCustomerProduct);
 
-	// Only respect new_billing_subscription for non-transition scenarios
-	// (add-ons, entity products). Upgrades/downgrades ignore the flag.
 	const shouldForceNewSubscription =
 		(!currentCustomerProduct && params.new_billing_subscription) ||
 		(Boolean(params.new_billing_subscription) &&

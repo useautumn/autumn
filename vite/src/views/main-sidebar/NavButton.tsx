@@ -76,7 +76,6 @@ export const NavButton = ({
 			title={expanded ? undefined : title}
 			target={href ? "_blank" : undefined}
 			onClick={() => {
-				// Close mobile sidebar on navigation (skip external links)
 				if (!href) {
 					onNavigate?.();
 				}

@@ -24,8 +24,6 @@ export const isPersistedMigration = (
 ): migration is Migration =>
 	"internal_id" in migration && typeof migration.internal_id === "string";
 
-/** The id migration_item_runs / item events are keyed by: the persisted
- * internal_id, or the deterministic script id for ad-hoc migrations. */
 export const getMigrationEventInternalId = (
 	migration: MigrationRuntimeWithEventId,
 ): string =>

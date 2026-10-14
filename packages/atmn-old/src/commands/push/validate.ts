@@ -1,9 +1,6 @@
 import type { Feature, PlanItem } from "../../compose/models/index.js";
 import type { Plan } from "../../compose/models/variantModels.js";
 
-/**
- * Validation errors with user-friendly messages.
- */
 export interface ValidationError {
 	path: string;
 	message: string;
@@ -33,9 +30,6 @@ const hasPlanLicenseCycle = (plans: Plan[]): boolean => {
 	return plans.some(visit);
 };
 
-/**
- * Get the price.interval from a PlanItem (handling the discriminated union)
- */
 function getPriceInterval(
 	feature: PlanItem,
 ): { interval: string; intervalCount?: number } | undefined {
@@ -47,9 +41,6 @@ function getPriceInterval(
 	return undefined;
 }
 
-/**
- * Check if a feature is consumable (single_use style) based on its type
- */
 function isConsumableFeature(feature: Feature): boolean {
 	if (feature.type === "boolean") return false;
 	if (feature.type === "credit_system") return true;
@@ -59,9 +50,6 @@ function isConsumableFeature(feature: Feature): boolean {
 	return false;
 }
 
-/**
- * Check if a feature is continuous-use (like seats) based on its type
- */
 function _isContinuousUseFeature(feature: Feature): boolean {
 	if (feature.type === "metered") {
 		return (feature as { consumable?: boolean }).consumable === false;
@@ -69,9 +57,6 @@ function _isContinuousUseFeature(feature: Feature): boolean {
 	return false;
 }
 
-/**
- * Validate a plan item has all required fields.
- */
 function validatePlanFeature(
 	planFeature: PlanItem,
 	planId: string,
@@ -82,7 +67,6 @@ function validatePlanFeature(
 	const featureId = planFeature.featureId || `(no featureId)`;
 	const basePath = `plan "${planId}" → items[${featureIndex}] (${featureId})`;
 
-	// Look up the actual feature definition
 	const featureDefinition = features.find(
 		(f) => f.id === planFeature.featureId,
 	);
@@ -93,7 +77,6 @@ function validatePlanFeature(
 		});
 	}
 
-	// Get reset configuration from either top-level or price.interval
 	const topLevelReset = planFeature.reset;
 	const priceInterval = getPriceInterval(planFeature);
 	const hasTopLevelReset = topLevelReset !== undefined;
@@ -117,9 +100,7 @@ function validatePlanFeature(
 		});
 	}
 
-	// ========== FEATURE TYPE VALIDATIONS ==========
 	if (featureDefinition) {
-		// Boolean features cannot have reset
 		if (featureDefinition.type === "boolean" && hasAnyReset) {
 			errors.push({
 				path: basePath,
@@ -127,14 +108,11 @@ function validatePlanFeature(
 			});
 		}
 
-		// Consumable features require reset when they have usage limits (but not if unlimited)
 		if (isConsumableFeature(featureDefinition)) {
 			const hasFiniteUsageLimits =
 				planFeature.included !== undefined && planFeature.unlimited !== true;
 			const hasPricing = planFeature.price !== undefined;
 
-			// If the feature has finite usage limits or pricing, it needs a reset interval
-			// Unlimited features don't need a reset interval
 			if ((hasFiniteUsageLimits || hasPricing) && !hasAnyReset) {
 				errors.push({
 					path: basePath,
@@ -144,9 +122,7 @@ function validatePlanFeature(
 		}
 	}
 
-	// ========== PRICE VALIDATION ==========
 	if (planFeature.price) {
-		// billingMethod is required when price is defined
 		if (!(planFeature.price as { billingMethod?: string }).billingMethod) {
 			errors.push({
 				path: `${basePath} → price`,
@@ -154,7 +130,6 @@ function validatePlanFeature(
 			});
 		}
 
-		// If price has amount or tiers, must have either top-level reset OR price.interval
 		if (
 			(planFeature.price.amount !== undefined || planFeature.price.tiers) &&
 			!hasAnyReset
@@ -166,7 +141,6 @@ function validatePlanFeature(
 		}
 	}
 
-	// ========== RESET INTERVAL VALIDATION ==========
 	const validIntervals = [
 		"one_off",
 		"hour",
@@ -178,7 +152,6 @@ function validatePlanFeature(
 		"year",
 	];
 
-	// Validate top-level reset interval
 	if (hasTopLevelReset) {
 		if (
 			topLevelReset.interval === undefined ||
@@ -196,7 +169,6 @@ function validatePlanFeature(
 		}
 	}
 
-	// Validate price.interval
 	if (hasPriceInterval) {
 		if (!validIntervals.includes(priceInterval.interval)) {
 			errors.push({
@@ -230,14 +202,10 @@ function validateFeatureReference({
 	];
 }
 
-/**
- * Validate a plan has all required fields.
- */
 function validatePlan(plan: Plan, features: Feature[]): ValidationError[] {
 	const errors: ValidationError[] = [];
 	const planId = plan.id || "(no id)";
 
-	// id is required
 	if (!plan.id) {
 		errors.push({
 			path: "plan",
@@ -245,7 +213,6 @@ function validatePlan(plan: Plan, features: Feature[]): ValidationError[] {
 		});
 	}
 
-	// name is required
 	if (!plan.name) {
 		errors.push({
 			path: `plan "${planId}"`,
@@ -253,7 +220,6 @@ function validatePlan(plan: Plan, features: Feature[]): ValidationError[] {
 		});
 	}
 
-	// If price is defined, validate it
 	if (plan.price) {
 		if (plan.price.amount === undefined) {
 			errors.push({
@@ -269,8 +235,6 @@ function validatePlan(plan: Plan, features: Feature[]): ValidationError[] {
 		}
 	}
 
-	// If autoEnable is true and freeTrial.card_required is true, that's invalid
-	// Customers shouldn't be auto-enrolled in a trial that requires card input
 	if (plan.autoEnable === true && plan.freeTrial?.cardRequired === true) {
 		errors.push({
 			path: `plan "${planId}"`,
@@ -278,12 +242,10 @@ function validatePlan(plan: Plan, features: Feature[]): ValidationError[] {
 		});
 	}
 
-	// Validate each plan feature
 	if (plan.items && Array.isArray(plan.items)) {
 		for (let i = 0; i < plan.items.length; i++) {
 			const planFeature = plan.items[i];
 			if (planFeature) {
-				// featureId is required
 				if (!planFeature.featureId) {
 					errors.push({
 						path: `plan "${planId}" → items[${i}]`,
@@ -331,14 +293,10 @@ function validatePlan(plan: Plan, features: Feature[]): ValidationError[] {
 	return errors;
 }
 
-/**
- * Validate a feature has all required fields.
- */
 function validateFeature(feature: Feature): ValidationError[] {
 	const errors: ValidationError[] = [];
 	const featureId = feature.id || "(no id)";
 
-	// id is required
 	if (!feature.id) {
 		errors.push({
 			path: "feature",
@@ -346,7 +304,6 @@ function validateFeature(feature: Feature): ValidationError[] {
 		});
 	}
 
-	// name is required
 	if (!feature.name) {
 		errors.push({
 			path: `feature "${featureId}"`,
@@ -354,7 +311,6 @@ function validateFeature(feature: Feature): ValidationError[] {
 		});
 	}
 
-	// type is required
 	if (!feature.type) {
 		errors.push({
 			path: `feature "${featureId}"`,
@@ -362,7 +318,6 @@ function validateFeature(feature: Feature): ValidationError[] {
 		});
 	}
 
-	// If type is metered, consumable is required
 	if (feature.type === "metered") {
 		const meteredFeature = feature as { consumable?: boolean };
 		if (meteredFeature.consumable === undefined) {
@@ -373,7 +328,6 @@ function validateFeature(feature: Feature): ValidationError[] {
 		}
 	}
 
-	// If type is credit_system, creditSchema is required
 	if (feature.type === "credit_system") {
 		if (!feature.creditSchema || feature.creditSchema.length === 0) {
 			errors.push({
@@ -386,24 +340,16 @@ function validateFeature(feature: Feature): ValidationError[] {
 	return errors;
 }
 
-/**
- * Validate local config before pushing.
- *
- * This catches missing required fields and provides helpful error messages
- * before the API returns confusing Zod validation errors.
- */
 export function validateConfig(
 	features: Feature[],
 	plans: Plan[],
 ): ValidationResult {
 	const errors: ValidationError[] = [];
 
-	// Validate features
 	for (const feature of features) {
 		errors.push(...validateFeature(feature));
 	}
 
-	// Validate plans (passing features for feature type lookups)
 	for (const plan of plans) {
 		errors.push(...validatePlan(plan, features));
 	}
@@ -441,9 +387,6 @@ export function validateConfig(
 	};
 }
 
-/**
- * Format validation errors for console output.
- */
 export function formatValidationErrors(errors: ValidationError[]): string {
 	const lines: string[] = [];
 

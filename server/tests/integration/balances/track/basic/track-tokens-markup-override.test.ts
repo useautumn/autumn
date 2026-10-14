@@ -1,10 +1,3 @@
-/**
- * Contract: a plan item's feature_override.markups supersedes the AI credit
- * system's own markup chain for customers attached through that item. The
- * override replaces the whole chain, so a level it leaves unset means "no
- * markup" rather than inheriting the feature's value.
- */
-
 import { expect, test } from "bun:test";
 
 import type {
@@ -19,13 +12,9 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { Decimal } from "decimal.js";
 
-// AiCreditsTiered: defaultMarkup=10, providerMarkups.custom=30,
-// model_markups["custom/override-model"]=5. custom/* models price from their
-// own input_cost/output_cost, so no models.dev fetch is involved.
 const INPUT_TOKENS = 10_000;
 const OUTPUT_TOKENS = 5_000;
 
-// custom/provider-fallback-model: $10/M in, $20/M out.
 const baseCost = new Decimal(10)
 	.mul(INPUT_TOKENS)
 	.add(new Decimal(20).mul(OUTPUT_TOKENS))
@@ -68,8 +57,6 @@ test.concurrent(
 			actions: [s.attach({ productId: enterpriseProd.id })],
 		});
 
-		// Provider markup is overridden to 0, so cost is the base — not the
-		// feature's 30% provider markup.
 		const res: TrackResponseV2 = await autumnV2.post("/track_tokens", {
 			customer_id: customerId,
 			feature_id: TestFeature.AiCreditsTiered,
@@ -92,8 +79,6 @@ test.concurrent(
 test.concurrent(
 	`${chalk.yellowBright("track-tokens-markup-override: the override replaces the whole chain, not one level")}`,
 	async () => {
-		// Only default_markup is set. The feature's per-model 5% and provider 30%
-		// must NOT survive — an unset level means no markup at that level.
 		const aiCreditsItem = withMarkupsOverride(
 			items.free({
 				featureId: TestFeature.AiCreditsTiered,
@@ -109,9 +94,6 @@ test.concurrent(
 			actions: [s.attach({ productId: prod.id })],
 		});
 
-		// custom/override-model carries a 5% per-model markup on the feature and
-		// the same $10/M in, $20/M out cost basis, so base = 0.20. The cost basis
-		// survives the override (it defines the model); only the markup is replaced.
 		const overrideModelBase = baseCost;
 
 		const res: TrackResponseV2 = await autumnV2.post("/track_tokens", {
@@ -157,7 +139,6 @@ test.concurrent(
 			output_tokens: OUTPUT_TOKENS,
 		});
 
-		// Unchanged behaviour: the feature's own 30% provider markup applies.
 		expect(res.value).toBeCloseTo(baseCost.mul(1.3).toNumber(), 10);
 	},
 );

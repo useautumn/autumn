@@ -32,7 +32,6 @@ const checkoutTimeoutError = () =>
 const fakeClient = (): PoolClient =>
 	({ release: mock(() => {}) }) as unknown as PoolClient;
 
-/** Pool whose connect() consumes `outcomes` in order (Error = reject). */
 const buildFakePool = (outcomes: (Error | PoolClient)[]) => {
 	const connect = mock(() => {
 		const next = outcomes.shift();
@@ -64,7 +63,6 @@ describe("applyConnectRefusedRetry", () => {
 
 		expect(result).toBe(client);
 		expect(underlyingConnect).toHaveBeenCalledTimes(2);
-		// Math.random stubbed to 0 → jitter is exactly the 100ms floor.
 		expect(elapsedMs).toBeGreaterThanOrEqual(95);
 		expect(elapsedMs).toBeLessThan(300);
 		expect(warn).toHaveBeenCalledTimes(1);

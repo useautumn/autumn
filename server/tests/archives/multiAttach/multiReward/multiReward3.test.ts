@@ -138,9 +138,6 @@ describe(`${chalk.yellowBright("multiReward3: Testing multi attach with rewards 
 			db,
 			org,
 			env,
-			// sub: curSub,
-			// cusProduct: curMainProduct,
-			// results: productsList,
 		});
 
 		const customer = await autumn.customers.get(customerId);

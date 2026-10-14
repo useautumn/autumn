@@ -53,7 +53,6 @@ export const usePlanChangeCatalogPreview = ({
 	includeCustom: boolean;
 	isLatest: boolean;
 	namesByPlanId: Record<string, string>;
-	/** Resolved at save time so a still-loading version list fails the save, not the render. */
 	resolveRelationship?: () => VariantRelationshipChange;
 }) => {
 	const contentParams = tryBuildUpdateCatalogPlanParams({
@@ -148,7 +147,6 @@ export const usePlanChangeCatalogPreview = ({
 			})
 		: [];
 
-	/** Typed slugs are save-only — sending them to preview would surface collisions early. */
 	const buildSaveParams = ({
 		migrate,
 		slugSelection,

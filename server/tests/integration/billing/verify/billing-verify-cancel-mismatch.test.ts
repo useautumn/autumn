@@ -1,14 +1,3 @@
-/**
- * Billing Verify: Cancel State Mismatch
- *
- * Contract under test (billingActions.verify):
- *   New behavior:
- *     - Autumn expects the subscription to be canceling at period end (scheduled
- *       via `s.cancel`) but Stripe's `cancel_at` was cleared directly -> mismatch
- *       { type: "cancel_state_mismatch", expected_canceling: true,
- *       actual_canceling: false }.
- */
-
 import { expect, test } from "bun:test";
 import { products } from "@tests/utils/fixtures/products";
 import type { TestContext } from "@tests/utils/testInitUtils/createTestContext";
@@ -105,8 +94,6 @@ test.concurrent(
 		});
 		expect(sub.cancel_at).not.toBeNull();
 
-		// Same cancel, implemented as a schedule instead of a bare cancel_at —
-		// one phase ending at the cancel time, then the schedule cancels.
 		await ctx.stripeCli.subscriptions.update(sub.id, {
 			cancel_at_period_end: false,
 		});
@@ -131,8 +118,6 @@ test.concurrent(
 
 		const result = await verify({ ctx, params: { customer_id: customerId } });
 
-		// ── Contract: a schedule that cancels at the expected time IS the
-		// expected cancel — no mismatch. ──────────────────────────────────
 		expect(result.subscriptions.length).toBe(1);
 		expect(result.subscriptions[0].mismatches).toEqual([]);
 		expect(result.subscriptions[0].status).toBe("correct");

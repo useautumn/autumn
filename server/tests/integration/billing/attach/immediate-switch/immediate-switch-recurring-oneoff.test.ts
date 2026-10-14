@@ -1,14 +1,3 @@
-/**
- * Immediate Switch Recurring + One-Off Tests (Attach V2)
- *
- * Tests for immediate upgrades involving products with mixed recurring + one-off items.
- *
- * Key behaviors:
- * - Immediate switches TO mixed products are supported (upgrade path)
- * - One-off balance from previous product is LOST when switching to product without that one-off item
- * - Mixed products can be attached from any starting point (free, paid)
- */
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3 } from "@autumn/shared";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
@@ -22,20 +11,6 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { expectStripeSubscriptionCorrect } from "../../utils/expectStripeSubCorrect";
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 1: Free to Pro (with recurring + one-off)
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Customer on Free (no price, 50 messages)
- * - Upgrade to Pro (mixed: $20/mo + prepaid words + one-off messages)
- *
- * Expected Result:
- * - Immediate upgrade (free → paid)
- * - Invoice: $20 (base) + $15 (words) + $10 (one-off messages) = $45
- * - Features: 100 words (recurring), 100 messages (one-off)
- */
 test.concurrent(
 	`${chalk.yellowBright("immediate-switch-recurring-oneoff 1: free to pro")}`,
 	async () => {
@@ -45,11 +20,9 @@ test.concurrent(
 		const messagesPricePerPack = 10;
 		const billingUnits = 100;
 
-		// Free product
 		const freeMessagesItem = items.monthlyMessages({ includedUsage: 50 });
 		const free = products.base({ id: "free", items: [freeMessagesItem] });
 
-		// Pro with mixed recurring + one-off
 		const monthlyWordsItem = items.prepaid({
 			featureId: TestFeature.Words,
 			includedUsage: 0,
@@ -75,7 +48,6 @@ test.concurrent(
 			actions: [s.billing.attach({ productId: free.id })],
 		});
 
-		// Verify initial state: Free only
 		const customerBefore =
 			await autumnV1.customers.get<ApiCustomerV3>(customerId);
 		await expectCustomerProducts({
@@ -83,12 +55,9 @@ test.concurrent(
 			active: [free.id],
 		});
 
-		// Calculate expected total
 		const wordsQuantity = 100;
 		const messagesQuantity = 100;
-		const expectedTotal = basePrice + wordsPricePerPack + messagesPricePerPack; // $45
-
-		// Preview upgrade
+		const expectedTotal = basePrice + wordsPricePerPack + messagesPricePerPack;
 		const preview = await autumnV1.billing.previewAttach({
 			customer_id: customerId,
 			product_id: pro.id,
@@ -99,7 +68,6 @@ test.concurrent(
 		});
 		expect(preview.total).toBe(expectedTotal);
 
-		// Upgrade to Pro
 		await autumnV1.billing.attach({
 			customer_id: customerId,
 			product_id: pro.id,
@@ -111,14 +79,12 @@ test.concurrent(
 
 		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-		// Pro active, Free removed
 		await expectCustomerProducts({
 			customer,
 			active: [pro.id],
 			notPresent: [free.id],
 		});
 
-		// Words from Pro (recurring prepaid)
 		expectCustomerFeatureCorrect({
 			customer,
 			featureId: TestFeature.Words,
@@ -126,7 +92,6 @@ test.concurrent(
 			usage: 0,
 		});
 
-		// Messages from Pro (one-off)
 		expectCustomerFeatureCorrect({
 			customer,
 			featureId: TestFeature.Messages,
@@ -134,14 +99,12 @@ test.concurrent(
 			usage: 0,
 		});
 
-		// 1 invoice: Pro upgrade ($45)
 		await expectCustomerInvoiceCorrect({
 			customer,
 			count: 1,
 			latestTotal: expectedTotal,
 		});
 
-		// Verify subscription
 		await expectStripeSubscriptionCorrect({
 			ctx,
 			customerId,
@@ -149,20 +112,6 @@ test.concurrent(
 	},
 );
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 2: Pro (recurring only) to Premium (recurring + one-off)
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Customer on Pro ($20/mo) with recurring messages only
- * - Upgrade to Premium (mixed: $50/mo + prepaid words + one-off storage)
- *
- * Expected Result:
- * - Immediate upgrade (Pro → Premium)
- * - Prorated charge: $50 - $20 = $30 + words + storage
- * - Features: 100 words (recurring), 100 storage (one-off)
- */
 test.concurrent(
 	`${chalk.yellowBright("immediate-switch-recurring-oneoff 2: pro to premium")}`,
 	async () => {
@@ -173,11 +122,9 @@ test.concurrent(
 		const storagePricePerPack = 10;
 		const billingUnits = 100;
 
-		// Pro with recurring messages only
 		const proMessagesItem = items.monthlyMessages({ includedUsage: 100 });
 		const pro = products.pro({ id: "pro", items: [proMessagesItem] });
 
-		// Premium with mixed recurring + one-off
 		const monthlyWordsItem = items.prepaid({
 			featureId: TestFeature.Words,
 			includedUsage: 0,
@@ -203,7 +150,6 @@ test.concurrent(
 			actions: [s.billing.attach({ productId: pro.id })],
 		});
 
-		// Verify initial state: Pro only
 		const customerBefore =
 			await autumnV1.customers.get<ApiCustomerV3>(customerId);
 		await expectCustomerProducts({
@@ -211,14 +157,11 @@ test.concurrent(
 			active: [pro.id],
 		});
 
-		// Calculate expected total (prorated base + prepaid + one-off)
 		const wordsQuantity = 100;
 		const storageQuantity = 100;
-		const proratedBase = premiumPrice - proPrice; // $30
+		const proratedBase = premiumPrice - proPrice;
 		const expectedTotal =
-			proratedBase + wordsPricePerPack + storagePricePerPack; // $55
-
-		// Preview upgrade
+			proratedBase + wordsPricePerPack + storagePricePerPack;
 		const preview = await autumnV1.billing.previewAttach({
 			customer_id: customerId,
 			product_id: premium.id,
@@ -229,7 +172,6 @@ test.concurrent(
 		});
 		expect(preview.total).toBe(expectedTotal);
 
-		// Upgrade to Premium
 		await autumnV1.billing.attach({
 			customer_id: customerId,
 			product_id: premium.id,
@@ -241,14 +183,12 @@ test.concurrent(
 
 		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-		// Premium active, Pro removed
 		await expectCustomerProducts({
 			customer,
 			active: [premium.id],
 			notPresent: [pro.id],
 		});
 
-		// Words from Premium (recurring prepaid)
 		expectCustomerFeatureCorrect({
 			customer,
 			featureId: TestFeature.Words,
@@ -256,7 +196,6 @@ test.concurrent(
 			usage: 0,
 		});
 
-		// Storage from Premium (one-off)
 		expectCustomerFeatureCorrect({
 			customer,
 			featureId: TestFeature.Storage,
@@ -264,14 +203,12 @@ test.concurrent(
 			usage: 0,
 		});
 
-		// 2 invoices: Pro ($20) + Premium upgrade ($55)
 		await expectCustomerInvoiceCorrect({
 			customer,
 			count: 2,
 			latestTotal: expectedTotal,
 		});
 
-		// Verify subscription
 		await expectSubToBeCorrect({
 			db: ctx.db,
 			customerId,
@@ -281,23 +218,6 @@ test.concurrent(
 	},
 );
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 3: One-off balance survives upgrading to a product without that one-off
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Customer on Pro (mixed: $20/mo + one-off messages with 50 remaining balance)
- * - Upgrade to Premium ($50/mo, recurring only, NO one-off messages)
- *
- * Expected Result:
- * - Immediate upgrade
- * - One-off messages balance (50) is preserved as a lifetime grant
- * - Premium's 500 monthly messages plus 50 purchased credits remain available
- *
- * Why:
- * - cusProductToOneOffPrepaidCarryOvers preserves purchased credits independently of the old product
- */
 test.concurrent(
 	`${chalk.yellowBright("immediate-switch-recurring-oneoff 3: one-off balance preserved on upgrade")}`,
 	async () => {
@@ -307,7 +227,6 @@ test.concurrent(
 		const messagesPricePerPack = 10;
 		const billingUnits = 100;
 
-		// Pro with one-off messages
 		const oneOffMessagesItem = items.oneOffMessages({
 			includedUsage: 0,
 			billingUnits,
@@ -318,7 +237,6 @@ test.concurrent(
 			items: [oneOffMessagesItem],
 		});
 
-		// Premium with recurring messages only (NO one-off messages)
 		const premiumMessagesItem = items.monthlyMessages({ includedUsage: 500 });
 		const premium = products.premium({
 			id: "premium-recurring-only",
@@ -339,7 +257,6 @@ test.concurrent(
 			],
 		});
 
-		// Verify initial state: Pro with 100 one-off messages
 		const customerBefore =
 			await autumnV1.customers.get<ApiCustomerV3>(customerId);
 		await expectCustomerProducts({
@@ -353,14 +270,12 @@ test.concurrent(
 			usage: 0,
 		});
 
-		// Use 50 messages
 		await autumnV1.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
 			value: 50,
 		});
 
-		// Verify 50 remaining
 		const customerAfterUsage =
 			await autumnV1.customers.get<ApiCustomerV3>(customerId);
 		expectCustomerFeatureCorrect({
@@ -370,18 +285,15 @@ test.concurrent(
 			usage: 50,
 		});
 
-		// Calculate expected total (prorated base only, no one-off options needed)
-		const proratedBase = premiumPrice - proPrice; // $30
+		const proratedBase = premiumPrice - proPrice;
 		const expectedTotal = proratedBase;
 
-		// Preview upgrade
 		const preview = await autumnV1.billing.previewAttach({
 			customer_id: customerId,
 			product_id: premium.id,
 		});
 		expect(preview.total).toBe(expectedTotal);
 
-		// Upgrade to Premium
 		await autumnV1.billing.attach({
 			customer_id: customerId,
 			product_id: premium.id,
@@ -389,7 +301,6 @@ test.concurrent(
 
 		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-		// Premium active, Pro removed
 		await expectCustomerProducts({
 			customer,
 			active: [premium.id],
@@ -401,17 +312,15 @@ test.concurrent(
 			featureId: TestFeature.Messages,
 			includedUsage: 550,
 			balance: 550,
-			usage: 0, // Usage resets on new product
+			usage: 0,
 		});
 
-		// 2 invoices: Pro ($20 + $10 one-off) + Premium upgrade ($30)
 		await expectCustomerInvoiceCorrect({
 			customer,
 			count: 2,
 			latestTotal: expectedTotal,
 		});
 
-		// Verify subscription
 		await expectSubToBeCorrect({
 			db: ctx.db,
 			customerId,
@@ -421,21 +330,6 @@ test.concurrent(
 	},
 );
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 4: Upgrade to mixed product with NO options → one-off NOT charged
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Customer on Pro ($20/mo, recurring messages only)
- * - Upgrade to Premium (mixed: $50/mo + one-off messages) with NO options
- *
- * Expected Result:
- * - Immediate upgrade succeeds
- * - One-off prepaid defaults to quantity 0 (not carried over, not charged)
- * - Invoice only has prorated base price diff ($30), no one-off charge
- * - Messages balance is 0 (one-off with 0 quantity)
- */
 test.concurrent(
 	`${chalk.yellowBright("immediate-switch-recurring-oneoff 4: upgrade no options, one-off not charged")}`,
 	async () => {
@@ -444,11 +338,9 @@ test.concurrent(
 		const premiumPrice = 50;
 		const billingUnits = 100;
 
-		// Pro with recurring messages only
 		const proMessagesItem = items.monthlyMessages({ includedUsage: 100 });
 		const pro = products.pro({ id: "pro", items: [proMessagesItem] });
 
-		// Premium with mixed: $50/mo base + one-off messages
 		const oneOffMessagesItem = items.oneOffMessages({
 			includedUsage: 0,
 			billingUnits,
@@ -468,7 +360,6 @@ test.concurrent(
 			actions: [s.billing.attach({ productId: pro.id })],
 		});
 
-		// Verify initial state
 		const customerBefore =
 			await autumnV1.customers.get<ApiCustomerV3>(customerId);
 		await expectCustomerProducts({
@@ -476,16 +367,13 @@ test.concurrent(
 			active: [pro.id],
 		});
 
-		const proratedBase = premiumPrice - proPrice; // $30
-
-		// Preview upgrade with NO options
+		const proratedBase = premiumPrice - proPrice;
 		const preview = await autumnV1.billing.previewAttach({
 			customer_id: customerId,
 			product_id: premium.id,
 		});
 		expect(preview.total).toBe(proratedBase);
 
-		// Upgrade to Premium with NO options
 		await autumnV1.billing.attach({
 			customer_id: customerId,
 			product_id: premium.id,
@@ -494,14 +382,12 @@ test.concurrent(
 
 		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-		// Premium active, Pro removed
 		await expectCustomerProducts({
 			customer,
 			active: [premium.id],
 			notPresent: [pro.id],
 		});
 
-		// Messages balance should be 0 (one-off defaulted to quantity 0)
 		expectCustomerFeatureCorrect({
 			customer,
 			featureId: TestFeature.Messages,
@@ -509,14 +395,12 @@ test.concurrent(
 			usage: 0,
 		});
 
-		// 2 invoices: Pro ($20) + Premium upgrade ($30 prorated base only)
 		await expectCustomerInvoiceCorrect({
 			customer,
 			count: 2,
 			latestTotal: proratedBase,
 		});
 
-		// Verify subscription
 		await expectStripeSubscriptionCorrect({
 			ctx,
 			customerId,

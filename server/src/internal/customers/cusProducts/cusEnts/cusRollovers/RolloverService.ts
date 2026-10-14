@@ -52,35 +52,16 @@ export class RolloverService {
 			});
 
 		if (queryTag) {
-			// getSQL() splices verbatim — embedding the builder itself would
-			// parenthesize it, and `(INSERT ...)` is invalid SQL.
 			await db.execute(sql`${query.getSQL()} ${queryTag}`);
 		} else {
 			await query;
 		}
 	}
 
-	// static async bulkUpdate({ db, rows }: { db: DrizzleCli; rows: Rollover[] }) {
-	//   if (rows.length === 0) return [];
-
-	//   const results = [];
-	//   for (const row of rows) {
-	//     const result = await this.update({
-	//       db,
-	//       id: row.id,
-	//       updates: row,
-	//     });
-	//     results.push(...result);
-	//   }
-	//   return results;
-	// }
-
 	static async getCurrentRollovers({
-		// db,
 		ctx,
 		cusEntID,
 	}: {
-		// db: DrizzleCli;
 		ctx: CronContext;
 		cusEntID: string;
 	}) {
@@ -122,7 +103,6 @@ export class RolloverService {
 		return result;
 	}
 
-	/** Enforces the rollover max cap after new rollovers have been inserted into the DB. */
 	static async clearExcessRollovers({
 		ctx,
 		newRows,
@@ -137,9 +117,6 @@ export class RolloverService {
 		overwrites: Rollover[];
 	}> {
 		const { db } = ctx;
-		// Trust the caller's rollover set: the lazy/cached path carries live
-		// Redis balances that lead Postgres, so re-reading here would clear
-		// against stale rows. The cron path loads the set before calling insert.
 		const curRollovers = [...fullCusEnt.rollovers, ...newRows];
 
 		const { toDelete, toUpdate } = performMaximumClearing({
@@ -179,8 +156,6 @@ export class RolloverService {
 		const query = db.delete(rollovers).where(inArray(rollovers.id, ids));
 
 		if (queryTag) {
-			// getSQL() splices verbatim — embedding the builder itself would
-			// parenthesize it, and `(DELETE ...)` is invalid SQL.
 			await db.execute(sql`${query.getSQL()} ${queryTag}`);
 		} else {
 			await query;

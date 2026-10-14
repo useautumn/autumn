@@ -14,16 +14,13 @@ export const CloseScreen = () => {
 	const connectedOrgSlug = searchParams.get("connected_org_slug");
 
 	useEffect(() => {
-		// If there's an error, don't try to close the window
 		if (error) {
 			setShowContent(true);
 			return;
 		}
 
-		// Attempt to close immediately if no error
 		window.close();
 
-		// If still open after 1 second, it means close() was blocked
 		const timeout = setTimeout(() => {
 			setShowContent(true);
 		}, 1000);

@@ -12,9 +12,6 @@ import type { McpResource, Skill } from "../src/translate/formats/types.js";
 import { docsPageToMarkdown } from "../src/translate/ingest/docsPage.js";
 import { writePublicSkills } from "./publicSkills.js";
 
-// Build-time translation: read canonical docs,
-// emit self-contained TS artifacts so consumers need no runtime fs access, plus
-// readable rendered .md/SKILL.md for inspection.
 const here = dirname(fileURLToPath(import.meta.url));
 const docsRoot = resolve(here, "../../../apps/docs/mintlify");
 const contentRoot = resolve(here, "../content");
@@ -34,8 +31,6 @@ const headingAnchor = (heading: string): string =>
 		.trim()
 		.replace(/\s+/g, "-");
 
-// `#anchor` slices one section: its heading through to the next heading of the
-// same or higher level. Build fails on an anchor that matches no heading.
 const sliceSection = ({
 	markdown,
 	anchor,
@@ -63,7 +58,6 @@ const sliceSection = ({
 	return lines.slice(start, end === -1 ? undefined : end).join("\n");
 };
 
-// `<docs url="/documentation/..." />` → translated docs page (with its title).
 const resolveDocs = (url: string): string => {
 	const [path = "", anchor] = url.split("#");
 	const page = `${path.replace(/^\//, "")}.mdx`;
@@ -75,7 +69,6 @@ const resolveDocs = (url: string): string => {
 	return anchor ? sliceSection({ markdown, anchor, url }) : markdown;
 };
 
-// `<part file="…" />` → a sibling content file, resolved next to its document.
 const contentFileResolver =
 	(documentPath: string) =>
 	(file: string): string =>
@@ -148,9 +141,6 @@ const writeGenerated = ({
 	process.stdout.write(`Wrote ${outPath}\n`);
 };
 
-// Recursively inline `<part file="…" />` (relative to each file) so each
-// surface prompt + the MCP instructions compose the shared personality +
-// autumn-rules core DRY.
 const PROMPT_PART = /<part\s+file="([^"]+)"\s*\/>/g;
 const composePrompt = (relPath: string): string =>
 	readFileSync(resolve(contentRoot, relPath), "utf8")
@@ -231,12 +221,9 @@ writeGenerated({
 	file: "skills.generated.ts",
 	typeName: "skills: Skill[]",
 	typeImport: 'import type { Skill } from "../translate/formats/types.js";',
-	// requires ships via agent-prompts.generated.ts; omitting it here keeps this
-	// artifact byte-stable for consumers that only bundle skill files.
 	value: skills.map(({ requires, ...skill }) => skill),
 });
 
-// Readable rendered artifacts (human-inspectable; runtime imports the .ts above).
 const readableRoot = resolve(here, "../generated");
 
 const writeReadable = ({
@@ -269,8 +256,6 @@ for (const id of agentIds) {
 	});
 }
 
-// useautumn.com/SKILL.md — the one URL the dashboard's setup prompt points an
-// agent at. References inline because a single fetch can't follow them.
 const SETUP_SKILL_NAME = "autumn-setup";
 const setupSkill = skills.find((skill) => skill.name === SETUP_SKILL_NAME);
 if (!setupSkill) {

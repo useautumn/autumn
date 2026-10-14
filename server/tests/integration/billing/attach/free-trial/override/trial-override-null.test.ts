@@ -1,13 +1,3 @@
-/**
- * Free Trial Override Null Tests (Attach V2)
- *
- * Tests for free_trial: null parameter behavior.
- *
- * Key behaviors:
- * - free_trial: null prevents trial even if product has trial config
- * - free_trial: null on free product works (no subscription, no trial)
- */
-
 import { expect, test } from "bun:test";
 import { type ApiCustomerV3, type ApiEntityV0 } from "@autumn/shared";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
@@ -25,18 +15,6 @@ import chalk from "chalk";
 import { addMonths } from "date-fns";
 import { timeout } from "@/utils/genUtils";
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 1: Attach with free_trial: null (product has trial config)
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Product has 14-day trial configuration
- * - Attach with free_trial: null
- *
- * Expected Result:
- * - No trial, charged immediately
- */
 test.concurrent(`${chalk.yellowBright("trial-override-null 1: attach with free_trial: null (product has trial)")}`, async () => {
 	const customerId = "trial-override-null-has-trial";
 
@@ -57,15 +35,12 @@ test.concurrent(`${chalk.yellowBright("trial-override-null 1: attach with free_t
 		actions: [],
 	});
 
-	// 1. Preview attach with free_trial: null
 	const preview = await autumnV1.billing.previewAttach({
 		customer_id: customerId,
 		product_id: proTrial.id,
 		free_trial: null,
 	});
-	expect(preview.total).toBe(20); // Charged immediately
-
-	// 2. Attach with free_trial: null
+	expect(preview.total).toBe(20);
 	await autumnV1.billing.attach({
 		customer_id: customerId,
 		product_id: proTrial.id,
@@ -75,7 +50,6 @@ test.concurrent(`${chalk.yellowBright("trial-override-null 1: attach with free_t
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Verify product is active and NOT trialing
 	await expectProductActive({
 		customer,
 		productId: proTrial.id,
@@ -87,7 +61,6 @@ test.concurrent(`${chalk.yellowBright("trial-override-null 1: attach with free_t
 		nowMs: advancedTo,
 	});
 
-	// Verify features available with resetsAt at normal billing cycle (no trial)
 	expectCustomerFeatureCorrect({
 		customer,
 		featureId: TestFeature.Messages,
@@ -97,14 +70,12 @@ test.concurrent(`${chalk.yellowBright("trial-override-null 1: attach with free_t
 		resetsAt: addMonths(advancedTo, 1).getTime(),
 	});
 
-	// Verify invoice: $20 charge
 	await expectCustomerInvoiceCorrect({
 		customer,
 		count: 1,
 		latestTotal: 20,
 	});
 
-	// Verify Stripe subscription state
 	await expectSubToBeCorrect({
 		db: ctx.db,
 		customerId,
@@ -114,19 +85,6 @@ test.concurrent(`${chalk.yellowBright("trial-override-null 1: attach with free_t
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 2: Free product with free_trial: null (no Stripe sub)
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Free product (no price) has trial config
- * - Attach with free_trial: null
- *
- * Expected Result:
- * - No trial, product active immediately
- * - No Stripe subscription created
- */
 test.concurrent(`${chalk.yellowBright("trial-override-null 2: free product with free_trial: null")}`, async () => {
 	const customerId = "trial-override-null-free-product";
 
@@ -140,21 +98,18 @@ test.concurrent(`${chalk.yellowBright("trial-override-null 2: free product with 
 	const { autumnV1, ctx } = await initScenario({
 		customerId,
 		setup: [
-			s.customer({}), // No payment method needed for free product
+			s.customer({}),
 			s.products({ list: [freeWithTrial] }),
 		],
 		actions: [],
 	});
 
-	// 1. Preview attach with free_trial: null
 	const preview = await autumnV1.billing.previewAttach({
 		customer_id: customerId,
 		product_id: freeWithTrial.id,
 		free_trial: null,
 	});
-	expect(preview.total).toBe(0); // Free product
-
-	// 2. Attach with free_trial: null
+	expect(preview.total).toBe(0);
 	await autumnV1.billing.attach({
 		customer_id: customerId,
 		product_id: freeWithTrial.id,
@@ -164,7 +119,6 @@ test.concurrent(`${chalk.yellowBright("trial-override-null 2: free product with 
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Verify product is active and NOT trialing
 	await expectProductActive({
 		customer,
 		productId: freeWithTrial.id,
@@ -175,7 +129,6 @@ test.concurrent(`${chalk.yellowBright("trial-override-null 2: free product with 
 		productId: freeWithTrial.id,
 	});
 
-	// Verify features available
 	expectCustomerFeatureCorrect({
 		customer,
 		featureId: TestFeature.Messages,
@@ -184,13 +137,11 @@ test.concurrent(`${chalk.yellowBright("trial-override-null 2: free product with 
 		usage: 0,
 	});
 
-	// Verify no invoice (free product)
 	await expectCustomerInvoiceCorrect({
 		customer,
 		count: 0,
 	});
 
-	// Verify no Stripe subscription
 	await expectNoStripeSubscription({
 		db: ctx.db,
 		customerId,
@@ -199,32 +150,15 @@ test.concurrent(`${chalk.yellowBright("trial-override-null 2: free product with 
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 3: Entity pro isolated from customer-level attach with free_trial: null
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Entity-1 and Entity-2 both have Pro products (on Stripe subscription, NOT trialing)
- * - Advance test clock (entities have been subscribed for a billing cycle)
- * - Customer-level attaches a free product with free_trial: null
- *
- * Expected Result:
- * - Entity-1 and Entity-2's Pro products remain untouched (on subscription, not trialing)
- * - Free product is active immediately with no trial (due to free_trial: null)
- * - No interference between customer-level free product and entity-level subscriptions
- */
 test.concurrent(`${chalk.yellowBright("trial-override-null 3: entity pro isolated from customer-level attach with free_trial: null")}`, async () => {
 	const customerId = "trial-override-null-entity-isolated";
 
-	// Pro product for entities (paid, on subscription)
 	const proMessagesItem = items.monthlyMessages({ includedUsage: 500 });
 	const pro = products.pro({
 		id: "pro",
 		items: [proMessagesItem],
 	});
 
-	// Free product for customer level (with trial config, but we'll use free_trial: null)
 	const freeMessagesItem = items.monthlyMessages({ includedUsage: 100 });
 	const freeWithTrial = products.baseWithTrial({
 		id: "free-trial",
@@ -242,7 +176,6 @@ test.concurrent(`${chalk.yellowBright("trial-override-null 3: entity pro isolate
 				s.entities({ count: 2, featureId: TestFeature.Users }),
 			],
 			actions: [
-				// Attach pro to both entities (on Stripe subscription, NOT trialing)
 				s.billing.attach({ productId: pro.id, entityIndex: 0 }),
 				s.billing.attach({ productId: pro.id, entityIndex: 1 }),
 			],
@@ -251,7 +184,6 @@ test.concurrent(`${chalk.yellowBright("trial-override-null 3: entity pro isolate
 	const entity1Id = entities[0].id;
 	const entity2Id = entities[1].id;
 
-	// Verify initial state - both entities have Pro, NOT trialing
 	const entity1Before = await autumnV1.entities.get<ApiEntityV0>(
 		customerId,
 		entity1Id,
@@ -274,7 +206,6 @@ test.concurrent(`${chalk.yellowBright("trial-override-null 3: entity pro isolate
 		nowMs: advancedTo,
 	});
 
-	// Verify initial invoices - 2 Pro attaches
 	const customerBefore =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	await expectCustomerInvoiceCorrect({
@@ -283,13 +214,11 @@ test.concurrent(`${chalk.yellowBright("trial-override-null 3: entity pro isolate
 		latestTotal: 20,
 	});
 
-	// Advance test clock to next invoice (entities have been subscribed for a billing cycle)
 	const advancedToAfterCycle = await advanceToNextInvoice({
 		stripeCli: ctx.stripeCli,
 		testClockId: testClockId!,
 	});
 
-	// Verify entities are still active after billing cycle
 	const entity1AfterCycle = await autumnV1.entities.get<ApiEntityV0>(
 		customerId,
 		entity1Id,
@@ -312,7 +241,6 @@ test.concurrent(`${chalk.yellowBright("trial-override-null 3: entity pro isolate
 		nowMs: advancedToAfterCycle,
 	});
 
-	// Attach free product with free_trial: null at CUSTOMER level (not entity level)
 	await autumnV1.billing.attach({
 		customer_id: customerId,
 		product_id: freeWithTrial.id,
@@ -322,7 +250,6 @@ test.concurrent(`${chalk.yellowBright("trial-override-null 3: entity pro isolate
 
 	await timeout(2000);
 
-	// Verify customer-level free product is active and NOT trialing (due to free_trial: null)
 	const customerAfterAttach =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	await expectProductActive({
@@ -335,7 +262,6 @@ test.concurrent(`${chalk.yellowBright("trial-override-null 3: entity pro isolate
 		nowMs: advancedToAfterCycle,
 	});
 
-	// Verify entities' Pro products are still NOT trialing (unaffected by customer-level attach)
 	const entity1AfterAttach = await autumnV1.entities.get<ApiEntityV0>(
 		customerId,
 		entity1Id,
@@ -364,7 +290,6 @@ test.concurrent(`${chalk.yellowBright("trial-override-null 3: entity pro isolate
 		nowMs: advancedToAfterCycle,
 	});
 
-	// Verify Stripe subscription is correct (entity subs, not trialing)
 	await expectSubToBeCorrect({
 		db: ctx.db,
 		customerId,
@@ -375,11 +300,10 @@ test.concurrent(`${chalk.yellowBright("trial-override-null 3: entity pro isolate
 		},
 	});
 
-	// Verify invoices - should have renewal invoices for entity pro subscriptions
 	await expectCustomerInvoiceCorrect({
 		customer: customerAfterAttach,
-		count: 3, // 2 initial Pro attaches + 1 renewal
-		latestTotal: 40, // Renewal for both entities ($20 each)
+		count: 3,
+		latestTotal: 40,
 	});
 
 	await expectSubToBeCorrect({

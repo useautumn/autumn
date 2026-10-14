@@ -16,7 +16,6 @@ export interface FormCustomLineItem {
 	description: string;
 }
 
-/** An extra plan included with the primary in the immediate schedule phase. */
 const AttachAdditionalPlanSchema = z.object({
 	_id: z.string(),
 	productId: z.string(),

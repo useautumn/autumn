@@ -4,7 +4,6 @@ import { mergeEntityAndCustomerSubjectRows } from "@/internal/customers/repos/ge
 import { unpackSubjectEnvelope } from "@/internal/customers/repos/getFullSubject/unpackSubjectEnvelope.js";
 import { getCustomerLevelSubjectRowsQuery } from "./customerLevelSubjectsQuery.js";
 
-/** Fetches customer-level data once per distinct customer on the page and merges it into each entityScopedOnly row. */
 export const hydrateEntityRowsWithCustomerData = async ({
 	ctx,
 	entityRows,

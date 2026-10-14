@@ -5,20 +5,12 @@ import type { EventProperties } from "./matchesEventProperties.js";
 import { pickWinningDimension } from "./pickWinningDimension.js";
 import { scaleCreditAmount } from "./scaleCreditAmount.js";
 
-/**
- * A rate-card row with its dimension rules applied: the rules are spent, so the
- * result is a plain flat or graduated rate plus the name of the dimension that won.
- */
 type WithoutRules<T> = T extends unknown
 	? Omit<T, "dimensions" | "multipliers"> & { dimension_name?: string }
 	: never;
 
 export type ResolvedCreditSchemaItem = WithoutRules<CreditSchemaItem>;
 
-/**
- * The most specific matching dimension sets the rate (else the row's own);
- * every matching multiplier scales it, factors first, then adds.
- */
 export const resolveCreditDimensionRate = ({
 	schemaItem,
 	eventProperties,

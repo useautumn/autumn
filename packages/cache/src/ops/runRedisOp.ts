@@ -23,7 +23,6 @@ const classifyErrorReason = ({
 	return "other";
 };
 
-/** One warning per source and reason every 30s: an outage must not flood the log. */
 const warnRedisUnavailable = ({
 	redis,
 	source,
@@ -54,16 +53,10 @@ export type RunRedisOpParams<T> = {
 	operation: (redis: Redis) => Promise<T>;
 	source: string;
 	redisInstance: Redis;
-	/** Let the command wait out a reconnect in ioredis's offline queue instead of failing at once. */
 	queueIfNotReady?: boolean;
-	/** A budget tighter than the client's command timeout; the race abandons the promise, the command still runs. */
 	timeoutMs?: number;
 };
 
-/**
- * Runs one operation; throws `RedisUnavailableError` on not-ready, timeout or connection failure.
- * Not-ready throws at once rather than letting the command sit in the offline queue for the whole command timeout.
- */
 export const runRedisOp = async <T>({
 	operation,
 	source,
@@ -91,7 +84,6 @@ export const runRedisOp = async <T>({
 	}
 };
 
-/** Fail-open `runRedisOp`: on failure runs `onError` and returns undefined, so the cache goes stale, not the request. */
 export const tryRedisOp = async <T>({
 	onError,
 	...params

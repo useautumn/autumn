@@ -1,12 +1,3 @@
-/**
- * Vercel org config display
- *
- * Asserts that `getVercelConfigDisplay` no longer surfaces the legacy
- * `custom_payment_method` field. The frontend `ConfigureVercel.tsx` consumes
- * this object; the field has been removed from the UI but the schema is kept
- * for backwards compat with stored data.
- */
-
 import { describe, expect, test } from "bun:test";
 import {
 	AppEnv,
@@ -40,8 +31,6 @@ const baseOrg = (): Organization =>
 				allowed_product_ids_sandbox: ["prod_sandbox_a"],
 			},
 		},
-		// minimum required Organization shape — anything not relevant for the
-		// display function is filled in with sane stubs.
 		config: {} as Organization["config"],
 		createdAt: new Date(),
 	}) as unknown as Organization;
@@ -100,9 +89,6 @@ describe(chalk.yellowBright("vercel-config-display"), () => {
 			env: AppEnv.Sandbox,
 		});
 
-		// Even though org.processor_configs.vercel.custom_payment_method.sandbox
-		// has a value, the display payload deliberately strips it. Asserts the
-		// frontend has no opportunity to render it.
 		expect(display.custom_payment_method).toBeUndefined();
 		expect(
 			org.processor_configs!.vercel!.custom_payment_method!.sandbox,

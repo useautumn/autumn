@@ -8,7 +8,6 @@ import {
 import { nextFreeAtomId } from "@/internal/byoc/utils/nextFreeAtomId.js";
 import type { ShadowAtomRecord } from "./types/shadowAtomRecord.js";
 
-/** A shadow Atom's names, by its Atom id as an org's Atom is named; one set up before Atom ids keeps its fixed names. */
 export const shadowAtomRecordNames = ({
 	record,
 }: {
@@ -22,14 +21,12 @@ export const shadowAtomRecordNames = ({
 	});
 };
 
-/** What the admin routes call a shadow Atom by: its Atom id, or its fixed external id from before Atom ids. */
 export const shadowAtomRecordId = ({
 	record,
 }: {
 	record: Pick<ShadowAtomRecord, "atom_id" | "stack_name">;
 }) => record.atom_id ?? shadowAtomRecordNames({ record }).externalId;
 
-/** The next shadow Atom's id and names, apart from every earlier one still being removed. */
 export const nextShadowAtomNames = ({
 	previous,
 }: {
@@ -42,7 +39,6 @@ export const nextShadowAtomNames = ({
 	return { atomId, ...atomNames({ owner: SHADOW_ATOM_OWNER, atomId }) };
 };
 
-/** As `nextShadowAtomNames`, also apart from any earlier Atom whose deployment group outlived its record. */
 export const startableShadowAtomNames = async ({
 	previous,
 	deployer,

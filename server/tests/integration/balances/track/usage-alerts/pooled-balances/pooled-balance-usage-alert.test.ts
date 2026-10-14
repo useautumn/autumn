@@ -1,6 +1,3 @@
-// Customer usage-percentage alerts use the aggregate grant across pooled entities.
-// Tracking through one entity fires when total pooled usage reaches the threshold.
-
 import { afterAll, beforeAll, expect, test } from "bun:test";
 import {
 	type ApiCustomerV5,

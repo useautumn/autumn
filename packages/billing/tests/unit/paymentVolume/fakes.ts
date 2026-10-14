@@ -20,7 +20,6 @@ export const fakeDb = ({
 	},
 });
 
-/** Serves one USD table per day; records which days were asked for. */
 export const fakeFx = ({
 	ratesByDate,
 	fetchedDates,

@@ -6,14 +6,11 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-// version-only is per-customer until definition execute is restored
 import {
 	expectPerCustomerLaneWithRejections,
 	runVersionRepointMigration,
 } from "../utils/versionRepointTestUtils";
 
-// Plan versions accumulate across runs, so every test mints its own plan id to
-// keep `version: 2` deterministic.
 const uniqueStem = (name: string) =>
 	`${name}-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
 
@@ -24,8 +21,6 @@ type PricingCase = {
 		| "paid_entitlement_transition"
 		| "priced_remove_item";
 	fromItems: ProductV2["items"];
-	// The target version is minted via /plans.update, whose base price is a
-	// top-level field rather than an item.
 	toPrice?: ReturnType<typeof itemsV2.monthlyPrice> | null;
 	toItems: CreatePlanItemParamsV1Input[];
 };

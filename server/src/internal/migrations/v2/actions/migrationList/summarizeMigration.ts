@@ -50,7 +50,6 @@ const runOutcomeActivity = (
 	return { kind: "finished", at };
 };
 
-/** Runs recorded before `error_code` existed carry only the raw message. */
 const runErrorCode = (
 	run: MigrationRunWithKind,
 ): MigrationRunErrorCode | null => {
@@ -58,7 +57,6 @@ const runErrorCode = (
 	return run.error_message ? MigrationRunErrorCode.Unknown : null;
 };
 
-/** Live runs of other migrations that hold or precede this queued Run All. */
 const countRunsAhead = ({
 	run,
 	orgActiveRuns,

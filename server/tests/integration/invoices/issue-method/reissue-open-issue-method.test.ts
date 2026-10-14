@@ -1,12 +1,3 @@
-/**
- * invoices.reissue issue_method on an open original.
- *
- * Contract:
- *   open original + "draft"    -> original void now; replacement is a draft that inherits
- *                                 the pending plan; finalizing and paying it later promotes it
- *   open original + "finalize" -> original void; replacement open with auto_advance off
- */
-
 import { expect, test } from "bun:test";
 import { ALL_STATUSES, CusProductStatus } from "@autumn/shared";
 import { items } from "@tests/utils/fixtures/items";

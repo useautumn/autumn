@@ -1,7 +1,3 @@
-/**
- * Live init should carry existing Stripe resources, but never create new ones.
- */
-
 import { expect, test } from "bun:test";
 import {
 	AllowanceType,

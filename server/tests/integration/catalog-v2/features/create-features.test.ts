@@ -1,12 +1,3 @@
-/**
- * catalogV2.update / catalogV2.preview_update — creating features.
- *
- * Contract: net-new ids in params.features are inserted, one per type
- * (boolean, continuous metered, consumable metered, credit system, AI credit
- * system). Preview takes the exact same update params, reports action
- * "create" per feature, and writes nothing.
- */
-
 import { expect, test } from "bun:test";
 import { FeatureType, FeatureUsageType } from "@autumn/shared";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
@@ -66,7 +57,6 @@ test.concurrent(
 		};
 		const featureIds = params.features.map((feature) => feature.feature_id);
 
-		// Leftover rows from a previously failed run
 		await deleteDbFeatures({ ctx, featureIds });
 
 		try {
@@ -80,7 +70,6 @@ test.concurrent(
 			await expectDbFeaturesAbsent({ ctx, featureIds });
 
 			const updateResponse = await autumnV2_3.catalogV2.update(params);
-			// Results also carry the minted internal_id; identity and action are the contract here.
 			expect(
 				updateResponse.results.features.map(({ id, action }) => ({
 					id,

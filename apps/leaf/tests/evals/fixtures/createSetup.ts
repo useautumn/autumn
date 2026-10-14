@@ -78,10 +78,6 @@ const setupIds = <
 		Entities
 	>;
 
-/**
- * Compose a mock Autumn org for evals from keyed feature, plan, and customer refs.
- * The returned arrays feed the mock API; refs keep setup assertions readable.
- */
 export const createSetup = <
 	Features extends Record<string, ApiFeatureV1>,
 	Plans extends Record<string, PlanRef>,
@@ -222,7 +218,6 @@ export const createSetup = <
 	};
 };
 
-/** Extend an org setup with eval-specific customers while preserving typed refs. */
 export const withCustomers = <
 	Setup extends EvalSetup,
 	Customers extends Record<string, BaseApiCustomerV5 | BaseApiCustomerV5[]>,

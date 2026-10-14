@@ -29,7 +29,6 @@ const deleteChange = async ({
 	remote: SyncRemote;
 	id: string;
 }): Promise<ItemOutcome> => {
-	// One app failing must not leave the other app's copy live.
 	const results = await Promise.allSettled(
 		(remote.appIdsOf.get(id) ?? []).map((appId) =>
 			withSvixErrors({
@@ -79,8 +78,6 @@ const applyChange = async ({
 const errorMessage = ({ error }: { error: unknown }) =>
 	error instanceof RecaseError ? error.message : "Internal error";
 
-/** Every item fails alone: a created webhook's secret is only ever shown here,
- * so one failure must never hide another item's success. */
 const throwWhenNothingSucceeded = ({
 	failures,
 	planned,
@@ -108,8 +105,6 @@ const throwWhenNothingSucceeded = ({
 	});
 };
 
-/** Applies preview_sync's creates, adoptions, updates and deletes. Unmanaged
- * webhooks are left alone, and only newly created ones return a secret. */
 export const syncWebhooks = async ({
 	apps,
 	appIdForKind,
@@ -117,7 +112,6 @@ export const syncWebhooks = async ({
 	skipDeletions = true,
 }: {
 	apps: WebhookApp[];
-	/** The app a created webhook goes to, created on first use. */
 	appIdForKind: (kind: WebhookAppKind) => Promise<string>;
 	stated: WebhookParams[];
 	skipDeletions?: boolean;
@@ -153,7 +147,6 @@ export const syncWebhooks = async ({
 		throwWhenNothingSucceeded({ failures, planned });
 	}
 
-	// A dashboard webhook the request names by its own `ep_…` id is listed too.
 	const statedIds = new Set(stated.map((params) => params.id));
 	const resultById = new Map<string, Webhook>(
 		remote

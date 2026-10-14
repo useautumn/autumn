@@ -19,10 +19,6 @@ export const parseCtxForAction = ({
 	return {
 		id: ctx.id,
 		authType: ctx.authType,
-		// originalUrl: ctx.originalUrl,
-		// method: ctx.method,
-		// body: ctx.body,
-		// timestamp: Date.now(),
 	} as Partial<ExtendedRequest>;
 };
 
@@ -57,13 +53,11 @@ const constructAction = ({
 		type,
 		timestamp: timestampVal,
 
-		// Request info
 		request_id: req.id || "",
 		method: req.method || "",
 		path: (req.originalUrl || "").split("?")[0],
 		auth_type: req.authType || AuthType.Unknown,
 
-		// Properties
 		properties: properties || {},
 	};
 };

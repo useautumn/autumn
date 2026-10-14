@@ -1,11 +1,3 @@
-/**
- * atmn crud/plans/rename — pull after each rename → the config's fixture shows the new planId, internalId unchanged, nothing else rewritten
- *
- * a rename is a changed planId on a row that carries internalId; aliases per catalog-v2/plans/aliases
- *
- * One line of plans/atmn-v3/07_tests.md. [a, b] is a matrix looped INSIDE this file.
- */
-
 import { expect, test } from "bun:test";
 import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 import { initAtmnScenario } from "@tests/utils/atmnUtils/initAtmnScenario.js";
@@ -32,8 +24,6 @@ test.concurrent(
 
 		try {
 			await scenario.push();
-			// internalId is only backfilled into the fixture by a pull, not by
-			// the push that created the row.
 			await scenario.pull();
 			const before = scenario.files().get(CONFIG_PATH);
 			if (before === undefined)
@@ -42,7 +32,6 @@ test.concurrent(
 				before.indexOf('planId: "free"') - 20,
 				before.indexOf('planId: "pro"'),
 			);
-			// internalId is backfilled as the first property of the `pro` call.
 			const internalIdMatch = before.match(
 				/internalId: "([^"]+)",\s+active: true,\s+planId: "pro"/,
 			);
@@ -50,8 +39,6 @@ test.concurrent(
 				throw new Error("pro's backfilled internalId not found");
 			const [, proInternalId] = internalIdMatch;
 
-			// Renamed on the server directly (studio-style, no internalId needed
-			// for this mechanism) — this dir's config still says "pro".
 			await renamePlan({
 				autumn: scenario.autumnV2_3,
 				fromId: "pro",
@@ -68,7 +55,6 @@ test.concurrent(
 			expect(after).not.toContain('planId: "pro"');
 			expect(after).toContain(`internalId: "${proInternalId}"`);
 
-			// The untouched `free` fixture is byte-identical.
 			expect(after).toContain(freeFixture);
 		} finally {
 			scenario.cleanup();

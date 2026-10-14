@@ -1,8 +1,3 @@
-/**
- * dfu.flash hydration — a canceled sub with no future period resolves to Expired
- * (leak guard): status=Expired and no feature access.
- */
-
 import { expect, test } from "bun:test";
 import { type ApiCustomerV5, CusProductStatus } from "@autumn/shared";
 import { createStripeSubscriptionFromProduct } from "@tests/integration/billing/sync/utils/syncTestUtils.js";

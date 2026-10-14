@@ -27,11 +27,7 @@ export type BalanceWorkerDependencies = {
 	checkpointSource?: PartitionCheckpointSource;
 	logger: Pick<AutumnLogger, "debug" | "info" | "warn" | "error">;
 	onError(failure: { cause: unknown }): void;
-	/** Raised when the partition service shuts itself down and will not resume.
-	 *  The entrypoint uses it to end the process so the scheduler replaces the
-	 *  task; leaving it unset keeps the old behaviour of staying up and idle. */
 	onServiceStopped?(reason: PartitionServiceStopReason): void;
-	/** Which ECS service, fleet and build this task is, once known: the entrypoint puts it on every log line. */
 	onIdentityResolved?(identity: {
 		serviceArn: string | null;
 		imageSha: string | null;
@@ -41,7 +37,6 @@ export type BalanceWorkerDependencies = {
 
 export type BalanceWorkerConfig = {
 	env: BalanceWorkerEnv;
-	/** Overrides the STATE_BACKEND constant; tests exercise both backends. */
 	stateBackend?: StateBackend;
 };
 
@@ -55,12 +50,9 @@ export type WorkerListener = { stop(): Promise<void> | void };
 
 export type WorkerLifecycleContext = {
 	partitions: Pick<Partitions, "start" | "stop">;
-	/** Polled before partitions start, so the first flush already sees the live knobs. */
 	edgeConfigs?: Pick<WorkerEdgeConfigs, "start">;
 	healthReporter?: { start(): void; stop(): void };
-	/** Drops an org's cached catalog rows when the server says they changed. */
 	catalogInvalidations?: Pick<CatalogInvalidationConsumer, "start" | "stop">;
-	/** Staging only: started once partitions are, so a request already pending is handled against them. */
 	coldStart?: { start(): void; stop(): void };
 	listen(): Promise<WorkerListener>;
 	settleResources(): Promise<void>;
@@ -71,7 +63,6 @@ export type WorkerResourcesContext = {
 	kafka: Pick<Kafka, "producer" | "consumer" | "admin">;
 	admin: Pick<Admin, "disconnect" | "fetchTopicOffsets">;
 	stateStore: StateStore;
-	/** `client` is the raw pool, for the heartbeat's probe; a test's stand-in has none. */
 	postgres: Pick<PostgresClient, "close"> &
 		Partial<Pick<PostgresClient, "client">>;
 	db: WorkerDb;
@@ -81,7 +72,6 @@ export type WorkerResourcesContext = {
 	catalogInvalidations?: CatalogInvalidationConsumer;
 	partitionResolver: MeteringPartitionResolver;
 	bootstrapper: PartitionBootstrapper;
-	/** Only the sqlite backend checkpoints; the postgres backend's bookmark lives in Postgres. */
 	checkpoints?: WorkerCheckpointResources;
 	edgeConfigs?: WorkerEdgeConfigs;
 };

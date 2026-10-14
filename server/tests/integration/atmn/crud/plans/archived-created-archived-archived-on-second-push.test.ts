@@ -1,10 +1,3 @@
-/**
- * atmn crud/plans — archived [archived on second push]
- *
- * One line of plans/atmn-v3/07_tests.md. Creating a plan archived from
- * scratch is unsupported by decision, so only the second-push cell remains.
- */
-
 import { expect, test } from "bun:test";
 import { configBody, paidMonthly } from "@tests/utils/atmnUtils/baseConfigs.js";
 import { expectRoundTrip } from "@tests/utils/atmnUtils/expectRoundTrip.js";
@@ -19,8 +12,6 @@ const setup = () => [
 	s.platform.create({ userEmail: `${uniqueTestId("atmn")}@autumn.test` }),
 ];
 
-/** Pull excludes archived rows from the config (server history, not something
- * to write); the catalog get, not the pulled wire, is the source of truth. */
 type CatalogPlanRow = { id: string; archived?: boolean };
 
 test.concurrent("archived: archived on second push", async () => {

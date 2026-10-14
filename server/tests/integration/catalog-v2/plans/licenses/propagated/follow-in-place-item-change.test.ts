@@ -1,7 +1,3 @@
-/**
- * catalogV2.update — parent listed in the child's propagate.license_parents
- * follows an in-place child item change (uncustomized links share stock).
- */
 import { test } from "bun:test";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";

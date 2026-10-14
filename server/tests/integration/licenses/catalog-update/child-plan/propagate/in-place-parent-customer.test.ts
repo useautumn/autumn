@@ -1,7 +1,3 @@
-/**
- * Contract: in-place propagation through a parent with customers uses copy-on-write.
- * The parent stays on v1, its catalog gets a successor link, and its customer retains the old definition.
- */
 import { expect, test } from "bun:test";
 import { planLicenses } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";

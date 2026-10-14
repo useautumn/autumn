@@ -27,8 +27,6 @@ const makeFakeDb = (impl: () => Promise<unknown[]> = async () => []) => {
 	return { db: { execute } as unknown as DrizzleCli, execute };
 };
 
-// A pool-like caller handle ($client), the shape replicaDbMiddleware swaps in —
-// marks must never write through it.
 const makeFakeMarkDb = () => {
 	const execute = mock(async (): Promise<unknown[]> => {
 		throw new Error("caller handle must not receive the mark");
@@ -36,7 +34,6 @@ const makeFakeMarkDb = () => {
 	return { db: { $client: {}, execute } as unknown as DrizzleCli, execute };
 };
 
-// Marks always write through the primary pool; observe it without a real DB.
 const primaryExecute = spyOn(dbGeneral, "execute");
 
 afterAll(() => {
@@ -75,11 +72,6 @@ describe("isCustomerRecentlyUpdated negative cache", () => {
 
 		await isCustomerRecentlyUpdated({ db, ...params });
 
-		// Advance the monotonic clock lru-cache stamps TTLs with instead of
-		// sleeping out the real TTL — performance.now() is unaffected by fake
-		// timers, so spying on it is the only sleepless way across the boundary.
-		// One macrotask first: lru-cache's cachedNow ignores the spied clock
-		// until its 1ms-reset setTimeout has fired.
 		await new Promise((resolve) => setTimeout(resolve, 5));
 		const realPerfNow = performance.now.bind(performance);
 		const clock = spyOn(performance, "now").mockImplementation(
@@ -89,9 +81,6 @@ describe("isCustomerRecentlyUpdated negative cache", () => {
 			await isCustomerRecentlyUpdated({ db, ...params });
 		} finally {
 			clock.mockRestore();
-			// Let lru-cache's 1ms cachedNow-reset timer fire, or the future
-			// timestamp stamped during the advanced window leaks into the
-			// next test and makes fresh entries look expired.
 			await new Promise((resolve) => setTimeout(resolve, 5));
 		}
 
@@ -151,7 +140,6 @@ describe("isCustomerRecentlyUpdated negative cache", () => {
 
 		expect(await isCustomerRecentlyUpdated({ db, ...params })).toBe(false);
 
-		// Without invalidation the cached negative would mask the fresh row.
 		fresh = true;
 		expect(await isCustomerRecentlyUpdated({ db, ...params })).toBe(false);
 		expect(execute).toHaveBeenCalledTimes(1);
@@ -190,7 +178,6 @@ describe("isCustomerRecentlyUpdated negative cache", () => {
 		await isCustomerRecentlyUpdated({ db, ...params });
 		expect(execute).toHaveBeenCalledTimes(1);
 
-		// The pool-path mark resolves identities via RETURNING on the primary pool.
 		const resolvedRows = [
 			{
 				org_id: params.orgId,

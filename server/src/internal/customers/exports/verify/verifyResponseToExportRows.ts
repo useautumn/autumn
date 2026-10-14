@@ -26,7 +26,6 @@ const uniqueList = (values: (string | null | undefined)[]) =>
 		LIST_SEPARATOR,
 	) || null;
 
-/** One row holding every mismatch; a verified customer yields none. */
 export const verifyResponseToExportRow = ({
 	customer,
 	response,

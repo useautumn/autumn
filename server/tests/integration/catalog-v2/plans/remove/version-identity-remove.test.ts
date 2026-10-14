@@ -1,11 +1,3 @@
-/**
- * Hard-delete of the active version promotes the highest remaining live row.
- * Archive does not move `active` — it is all-or-nothing on the plan.
- *
- * Red (current):  omit-version getFull 404s after pin-delete of v2.
- * Green (after):  omit-version getFull returns the surviving tip with active=true.
- */
-
 import { expect, test } from "bun:test";
 import { ErrCode } from "@autumn/shared";
 import { forceActiveVersion } from "@tests/integration/utils/forceActiveVersion.js";

@@ -78,7 +78,6 @@ describeDb("advance_test_clock scopes", () => {
 		}
 	});
 
-	// A missing customer proves the scope gate passed; 403 would fire first.
 	test("customers:write passes the scope gate on both routes", async () => {
 		for (const path of [NEW_ROUTE, LEGACY_ROUTE]) {
 			const res = await post({ app, key: customersWriteKey, path });

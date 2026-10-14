@@ -8,8 +8,6 @@ import {
 } from "@autumn/shared";
 import type { LicenseRelease } from "../types.js";
 
-/** Exactly one live assignment per entity: zero has nothing to release, more
- * than one is ambiguous without (or even with) a license_plan_id filter. */
 export const resolveLicenseRelease = ({
 	subject,
 	licensePlanId,

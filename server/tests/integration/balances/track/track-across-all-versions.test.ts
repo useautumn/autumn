@@ -1,24 +1,3 @@
-/**
- * Track per version:
- *
- * - V1.2:
- * - Included Usage is the free usage and any prepaid quantity
- * - Overage is negative balance
- * - Usage is the total usage
- * - Balance is included_usage
- *
- * - V2.0:
- * - Granted Balance is only the free usage
- * - Purchased Balance is the prepaid quantity + the negative portion of balance
- * - Current Balance is the granted balance + the purchased balance - the usage EXCLUDING the overage
- * - Usage is the total usage EXCLUDING the overage
- *
- * - V2.1:
- * - Granted is only the free usage and any prepaid quantity
- * - Usage is the total usage
- * - Remaining is the current balance
- */
-
 import { expect, test } from "bun:test";
 import type {
 	ApiBalance,
@@ -102,7 +81,6 @@ test.concurrent(`${chalk.yellowBright("track-across-all-versions: track across a
 
 	let { v1_2balance, v2balance, v2_1balance } = await refreshCustomerBalances();
 
-	// Initial state: 5000 included + 5000 prepaid = 10000 total
 	expect(v1_2balance).toMatchObject({
 		included_usage: 10_000,
 		usage: 0,
@@ -125,7 +103,6 @@ test.concurrent(`${chalk.yellowBright("track-across-all-versions: track across a
 		overage_allowed: true,
 	} satisfies Partial<ApiBalanceV1>);
 
-	// Track 1000 usage
 	await autumnV1.track({
 		customer_id: customerId,
 		feature_id: TestFeature.Credits,
@@ -156,7 +133,6 @@ test.concurrent(`${chalk.yellowBright("track-across-all-versions: track across a
 		overage_allowed: true,
 	} satisfies Partial<ApiBalanceV1>);
 
-	// Track 5000 more usage (6000 total)
 	await autumnV2.track({
 		customer_id: customerId,
 		feature_id: TestFeature.Credits,
@@ -187,7 +163,6 @@ test.concurrent(`${chalk.yellowBright("track-across-all-versions: track across a
 		overage_allowed: true,
 	} satisfies Partial<ApiBalanceV1>);
 
-	// Track 5000 more (11000 total - goes into overage)
 	await autumnV1.track({
 		customer_id: customerId,
 		feature_id: TestFeature.Credits,
@@ -220,7 +195,6 @@ test.concurrent(`${chalk.yellowBright("track-across-all-versions: track across a
 		overage_allowed: true,
 	} satisfies Partial<ApiBalanceV1>);
 
-	// Verify breakdowns
 	expect(v1_2breakdown ?? []).toHaveLength(2);
 	expect(v2breakdown ?? []).toHaveLength(2);
 	expect(v2_1breakdown ?? []).toHaveLength(2);

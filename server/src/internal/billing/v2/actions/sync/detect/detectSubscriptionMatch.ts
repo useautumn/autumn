@@ -9,16 +9,6 @@ import { itemDiffsToMatchedPlans } from "./itemDiffsToMatchedPlans/itemDiffsToMa
 import { rematchFeaturesWithinAnchoredPlans } from "./rematchFeaturesWithinAnchoredPlans";
 import type { PhaseMatch, SubscriptionMatch } from "./types";
 
-/**
- * Detect how a Stripe subscription and/or schedule maps to Autumn plans.
- *
- *   - subscription only    → single open-ended phase from sub.items
- *   - schedule only        → one phase per schedule.phases (e.g. future-
- *                            dated schedule with no subscription yet)
- *   - subscription + schedule → schedule phases (subscription provides id)
- *
- * Pipeline: normalize → per-item match → rollup.
- */
 export const detectSubscriptionMatch = async ({
 	ctx,
 	subscription,
@@ -33,12 +23,7 @@ export const detectSubscriptionMatch = async ({
 	schedule?: Stripe.SubscriptionSchedule;
 	billingCurrency?: string | null;
 	nowSec?: number;
-	/** Optional pre-fetched catalog (callers matching many subscriptions pass
-	 * this to avoid a per-call fetch). */
 	fullProducts?: FullProduct[];
-	/** Products currently linked to the subscription — an item no plan claims
-	 * in the current phase stays on these instead of falling back to another
-	 * plan. */
 	linkedInternalProductIds?: ReadonlySet<string>;
 }): Promise<SubscriptionMatch> => {
 	if (!subscription && !schedule) {
@@ -53,13 +38,6 @@ export const detectSubscriptionMatch = async ({
 		billingCurrency,
 		nowSec,
 	});
-
-	// Disabled: the per-tiered-price Stripe fetch makes bulk detection slow.
-	// Cost: tiered prices can't shape-match (payloads omit price.tiers).
-	// await enrichSnapshotTiers({
-	// 	stripeCli: createStripeCli({ org: ctx.org, env: ctx.env }),
-	// 	phaseSnapshots,
-	// });
 
 	const fullProducts =
 		preloadedFullProducts ??
@@ -76,8 +54,6 @@ export const detectSubscriptionMatch = async ({
 					item,
 					fullProducts,
 					org: ctx.org,
-					// Linked products are current-phase state; future phases match
-					// on the catalog alone.
 					linkedInternalProductIds: snapshot.is_current
 						? linkedInternalProductIds
 						: undefined,

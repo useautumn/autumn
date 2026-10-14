@@ -47,7 +47,6 @@ const currentTrialFormValues = ({
 	};
 };
 
-/** The trial a live plan of the edited subscription is running now, if any. */
 export const findCurrentScheduleTrial = ({
 	customerProducts,
 	nowMs,
@@ -72,7 +71,6 @@ export const findCurrentScheduleTrial = ({
 	};
 };
 
-/** A first-phase plan's catalog trial, which set_plans starts when `free_trial` is omitted and the customer never had the plan. */
 export const findCatalogScheduleTrial = ({
 	phases,
 	products,
@@ -94,7 +92,6 @@ export const findCatalogScheduleTrial = ({
 	return null;
 };
 
-/** What the row shows before the user touches it: the running trial, else the catalog trial set_plans would start. */
 export const defaultScheduleTrialFormValues = ({
 	currentTrial,
 	catalogFreeTrial,
@@ -109,7 +106,6 @@ export const defaultScheduleTrialFormValues = ({
 	return DISABLED_FREE_TRIAL_FORM_VALUES;
 };
 
-/** set_plans rejects a trial when the first phase starts later, or backdates a subscription that isn't trialing. */
 export const canScheduleFreeTrial = ({
 	phases,
 	nowMs,
@@ -131,11 +127,9 @@ export const canScheduleFreeTrial = ({
 		nowMs,
 		SET_PLANS_FIRST_PHASE_TOLERANCE_MS,
 	);
-	// A backdate keeps or ends a running trial; a paid one continues the period it paid, with no trial.
 	return backdates && liveSubscriptionTrialing;
 };
 
-/** Switching a running trial off on a first phase starting now ends it now (set_plans' `free_trial: null`). */
 export const endsCurrentTrialNow = ({
 	phases,
 	nowMs,
@@ -151,10 +145,6 @@ export const endsCurrentTrialNow = ({
 	!formValues.trialEnabled &&
 	canScheduleFreeTrial({ phases, nowMs, liveSubscriptionTrialing: true });
 
-/**
- * Untouched, a running trial is omitted so set_plans carries it on. Switched off, null ends a running
- * trial or skips the catalog trial set_plans would start; with neither, `free_trial` is omitted.
- */
 export const scheduleFreeTrialParam = ({
 	formValues,
 	currentTrial,
@@ -177,7 +167,6 @@ export const scheduleFreeTrialParam = ({
 	return freeTrialFormValuesToParams(formValues);
 };
 
-/** A plan change re-seeds the row with its new default, unless the user has edited the row. */
 export const reseededScheduleTrialFormValues = ({
 	trialEdited,
 	previousDefaultFormValues,

@@ -5,21 +5,18 @@ import {
 	type UsagePriceConfig,
 } from "@autumn/shared";
 
-// Overload: errorOnNotFound = true → guaranteed FullCustomerEntitlement
 export function customerPriceToCustomerEntitlement(params: {
 	customerPrice: FullCustomerPrice;
 	customerEntitlements: FullCustomerEntitlement[];
 	errorOnNotFound: true;
 }): FullCustomerEntitlement;
 
-// Overload: errorOnNotFound = false/undefined → FullCustomerEntitlement | undefined
 export function customerPriceToCustomerEntitlement(params: {
 	customerPrice: FullCustomerPrice;
 	customerEntitlements: FullCustomerEntitlement[];
 	errorOnNotFound?: false;
 }): FullCustomerEntitlement | undefined;
 
-// Implementation
 export function customerPriceToCustomerEntitlement({
 	customerPrice,
 	customerEntitlements,

@@ -42,7 +42,6 @@ export const createCommand = ({
 	value?: number;
 } = {}) => createTrackCommand({ identity, commandId, value });
 
-/** The reply carries the result only; the record it came from is in the store. */
 const recordOf = ({
 	store,
 	identity,
@@ -104,7 +103,6 @@ export const createReceiptReplayFixture = async ({
 				db: createSyntheticWorkerDb(),
 				catalogCache: createTestCatalogCache(),
 				receiptPolicy: { retentionMs: 86_400_000, now: () => now },
-				// The same clock: an expired receipt's id must be reusable, so the window must lapse with it.
 				recentCommands: createRecentCommands({
 					windowMs: 600_000,
 					now: () => now,
@@ -166,7 +164,6 @@ export const createReceiptReplayFixture = async ({
 			expiresAtOrBefore: now,
 			limit: 2,
 		});
-		// Same request, recomputed after the owner pruned its receipt.
 		const reusedCommand = createCommand();
 		await liveProcessor.track({ command: reusedCommand });
 		const reusedMutation = recordOf({

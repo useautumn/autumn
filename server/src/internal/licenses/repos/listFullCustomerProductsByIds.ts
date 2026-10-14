@@ -2,8 +2,6 @@ import { customerProducts, type FullCusProduct } from "@autumn/shared";
 import { inArray } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 
-/** Hydrate specific customer_products by id — no status filter, so an
- * expire's RETURNING set can be loaded after the write. */
 export const listFullCustomerProductsByIds = async ({
 	db,
 	customerProductIds,

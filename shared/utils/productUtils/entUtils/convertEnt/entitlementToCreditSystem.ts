@@ -16,13 +16,11 @@ const mergeModelMarkups = ({
 	for (const [modelId, { markup: _perPlan, ...costBasis }] of Object.entries(
 		catalog,
 	)) {
-		// Cost basis last: a plan sets markup, never what the model itself costs.
 		merged[modelId] = { ...override?.[modelId], ...costBasis };
 	}
 	return merged;
 };
 
-/** The one place a plan item's feature_override is applied. */
 export const entitlementToCreditSystem = ({
 	entitlement,
 }: {
@@ -40,7 +38,6 @@ export const entitlementToCreditSystem = ({
 
 	return {
 		...creditSystem,
-		// model_markups is a column; its two siblings live in config.
 		model_markups: mergeModelMarkups({
 			catalog: creditSystem.model_markups,
 			override: markups.model_markups,

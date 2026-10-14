@@ -7,7 +7,6 @@ import {
 	ProrationBehavior,
 } from "@autumn/shared";
 import type { DrizzleCli } from "@server/db/initDrizzle.js";
-// import { ProrationBehavior } from "@/internal/customers/change-product/handleUpgrade.js";
 import { SubService } from "@server/internal/subscriptions/SubService.js";
 import { differenceInSeconds } from "date-fns";
 import type Stripe from "stripe";
@@ -61,7 +60,6 @@ export const getStripeSubs = async ({
 	let subs = await Promise.all(batchGet);
 	subs = subs.filter((sub) => sub !== null);
 
-	// Sort by current_period_end (latest first)
 	subs.sort((a, b) => {
 		if (!a || !b) {
 			return 0;
@@ -107,7 +105,6 @@ const deleteScheduledIds = async ({
 	}
 };
 
-// Get in advance sub
 const getUsageBasedSub = async ({
 	db,
 	stripeCli,
@@ -141,7 +138,6 @@ const getUsageBasedSub = async ({
 	for (const stripeSub of subs) {
 		let usageFeatures: string[] | null = null;
 
-		// 1. Check if there's autumn sub
 		const autumnSub = autumnSubs?.find((sub) => sub.stripe_id === stripeSub.id);
 		if (autumnSub) {
 			const containsFeature = autumnSub.usage_features.includes(
@@ -233,10 +229,6 @@ export const getStripeSchedules = async ({
 			}
 			const prices = await Promise.all(batchPricesGet);
 			const interval = prices[0].recurring?.interval;
-			// const billingInterval = stripeToAutumnInterval({
-			//   interval: prices[0].recurring?.interval as string,
-			//   intervalCount: prices[0].recurring?.interval_count || 1,
-			// });
 
 			return {
 				schedule,
@@ -264,7 +256,6 @@ export const getStripeSchedules = async ({
 	}[];
 };
 
-// OTHERS
 const subIsPrematurelyCanceled = (sub: Stripe.Subscription) => {
 	if (sub.cancel_at_period_end) {
 		return false;

@@ -6,10 +6,8 @@ import type {
 	EventsTinybirdConfig,
 } from "./types/eventsTinybird.js";
 
-// Retries included. A consumer heartbeats only after its batch, so this stays well under a 30s session.
 const REQUEST_BUDGET_MS = 10_000;
 
-/** One client on the events workspace, with the usage events repo bound to it. */
 export const createEventsTinybird = ({
 	ctx,
 	config,

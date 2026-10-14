@@ -5,8 +5,6 @@ const BASE =
 
 export const FLAG_PILL_GAP = 8;
 
-// Fixed width so swapping "+7 more" for "Show less" doesn't resize the pill,
-// which reads as drift while it fades.
 export const OVERFLOW_PILL_CLASSNAME = cn(
 	BASE,
 	"border-dashed text-tertiary-foreground w-28 justify-center",

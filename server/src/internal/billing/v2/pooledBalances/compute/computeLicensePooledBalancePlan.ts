@@ -9,8 +9,6 @@ import { applyLicensePooledBalances } from "./applyLicensePooledBalances/applyLi
 import { setupPooledBalanceComputeContext } from "./context/setupPooledBalanceComputeContext";
 import { finalizePooledBalanceTransitionPlan } from "./finalizePooledBalanceTransitionPlan";
 
-/** The license pools a parent's current licenses should hold — idempotent,
- * so re-running it against converged state yields no plan. */
 export const computeLicensePooledBalancePlan = ({
 	ctx,
 	fullCustomer,

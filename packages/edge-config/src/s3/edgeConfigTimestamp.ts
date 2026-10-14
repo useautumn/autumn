@@ -42,8 +42,6 @@ export const readEdgeConfigTimestamp = async ({
 const WRITE_ATTEMPTS = 3;
 const WRITE_RETRY_DELAY_MS = 50;
 
-/** Retries because the config object is already written by the time this runs:
- *  a lost timestamp leaves that config in S3 with nothing signalling it. */
 export const writeEdgeConfigTimestamp = async ({
 	ctx,
 }: {
@@ -53,8 +51,6 @@ export const writeEdgeConfigTimestamp = async ({
 	const client = clientOf({ ctx });
 	let lastError: unknown;
 	for (let attempt = 1; attempt <= WRITE_ATTEMPTS; attempt++) {
-		// Fresh marker per attempt: a retry reusing the first marker can overwrite a
-		// concurrent writer's signal with a value pollers already observed.
 		const updatedAt = new Date().toISOString();
 		const changeId = randomUUID();
 		try {

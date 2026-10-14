@@ -18,10 +18,6 @@ const defined = <T extends object>(value: T): T =>
 		Object.entries(value).filter(([, v]) => v !== null && v !== undefined),
 	) as T;
 
-/**
- * The plan editor works in catalog ProductItems, but customize accepts pricing
- * fields only and rejects anything else.
- */
 export function productItemsToInvoiceCustomize({
 	items,
 }: {

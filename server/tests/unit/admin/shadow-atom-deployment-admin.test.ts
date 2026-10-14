@@ -41,10 +41,8 @@ const calls = {
 	found: [] as Parameters<AlienClient["findDeployment"]>[0][],
 };
 let deployment: AlienDeployment | null = null;
-/** A group's own deployment where a test sets one; any other group finds `deployment`. */
 let deploymentsByGroup: Record<string, AlienDeployment | null> = {};
 let setupCount = 0;
-/** External ids alien still has a deployment group for, whether or not a record names it. */
 let liveGroups = new Set<string>();
 
 const alienClient: AlienClient = {
@@ -82,12 +80,10 @@ const configWith = (patch: Partial<ShadowAtomConfig>): ShadowAtomConfig => ({
 const previousPassword = process.env.ENCRYPTION_PASSWORD;
 process.env.ENCRYPTION_PASSWORD = "shadow-atom-test-password";
 
-/** The file as the server last wrote it; every read starts from it. */
 let stored = shadowAtomConfig.defaultValue();
 const getAlien = spyOn(alienClientModule, "getAlienClient").mockReturnValue(
 	alienClient,
 );
-// Locks are Redis's to prove; here they only run what they guard.
 const lock = spyOn(lockModule, "withLock").mockImplementation(({ fn }) => fn());
 const write = spyOn(shadowAtomConfigStore, "writeToSource").mockImplementation(
 	async ({ config }) => {
@@ -157,7 +153,6 @@ const call = ({
 
 const getAtom = async () => (await call({ route: "get_atom" })).json();
 
-/** A shadow Atom alien has started, as the file holds it once its first read landed. */
 const startedConfig = async () => {
 	await call({ route: "create_atom", body: { cpu: 4, memory: 8 } });
 	write.mockClear();
@@ -415,7 +410,6 @@ test("a new shadow Atom skips an earlier id whose alien group outlived its recor
 	await call({ route: "delete_atom" });
 	const [removing] = (await getAtom()).removing;
 	expect(removing.id).toBe("atom_b55ee51c6af650dd1aefc172");
-	// The id the next Atom took last time this alternated: its group is still in alien, its record gone.
 	liveGroups.add("autumn-internal-shadow-atom.atom_dd3d20bd53fb6cf8c54e4865");
 
 	deploymentsByGroup.dg_2 = null;

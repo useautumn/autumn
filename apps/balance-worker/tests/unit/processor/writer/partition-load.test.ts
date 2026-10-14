@@ -13,7 +13,6 @@ test("committed bytes accumulate and halve every half-life", () => {
 	expect(load.snapshot().get(3)).toBeCloseTo(500);
 	expect(load.snapshot().get(9)).toBeCloseTo(50);
 
-	// A new record is added to the decayed value, not the original.
 	load.record({ partition: 3, bytes: 100 });
 	expect(load.snapshot().get(3)).toBeCloseTo(600);
 	clock = 3_000;

@@ -11,7 +11,6 @@ import { customerByocCacheKey, entityByocCacheKey } from "./cacheKeys.js";
 import type { ByocCacheEntry } from "./types/byocCacheEntry.js";
 
 type CacheEntryStamp = {
-	/** A customer's records all land on one partition, so its offsets only rise. */
 	logOffset: bigint;
 	computedAt: number;
 };
@@ -24,7 +23,6 @@ const cacheEntryEnvelope = ({ logOffset, computedAt }: CacheEntryStamp) =>
 		computed_at: computedAt,
 	}) as const;
 
-/** Too big for the KV, an entry becomes a marker readers skip for the API. */
 const fitCacheEntry = ({
 	entry,
 }: {
@@ -42,7 +40,6 @@ const fitCacheEntry = ({
 	};
 };
 
-/** A customer as customers.get renders it; the id comes from the caller since the API allows a null one. */
 export const customerToCacheEntry = ({
 	customerId,
 	customer,
@@ -57,7 +54,6 @@ export const customerToCacheEntry = ({
 	}),
 });
 
-/** An entity as entities.get renders it, keyed under its customer. */
 export const entityToCacheEntry = ({
 	customerId,
 	entityId,

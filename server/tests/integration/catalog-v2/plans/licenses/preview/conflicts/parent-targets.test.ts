@@ -1,17 +1,3 @@
-/**
- * catalogV2.preview_update — license_parents[].conflicts across multiple
- * parents / parent versions. Only the relative that actually diverged lists.
- * One entry per parent plan; older linked versions nest under sibling_versions.
- *
- * Contract:
- *   - two parents, only A customized, propagate both
- *     → A value_divergence, B none; both propagated
- *   - two parent versions, v1 customized, propagate omit (latest)
- *     → v2 propagated no conflict; sibling v1 unchanged + conflict
- *   - same setup, propagate all_versions
- *     → both propagated; only sibling v1 has the conflict
- */
-
 import { test } from "bun:test";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";

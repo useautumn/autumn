@@ -35,10 +35,8 @@ type ChatTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 const ACCESS_TOKEN_TTL_MS = ms.hours(1);
 const REFRESH_TOKEN_TTL_MS = ms.days(365);
 const SLACK_OAUTH_REDIRECT_URI = "slack://autumn-chat";
-/** Programmatic provisioning never redirects, so this is only a stored value. */
 const WEB_OAUTH_REDIRECT_URI = "https://app.useautumn.com/chat";
 
-/** Scope-less tokens bypass route scope checks, so every sender acts as admin. */
 const UNRESTRICTED_TOKEN_SCOPES: readonly string[] = [];
 
 type ProviderOAuthConfig = {
@@ -48,7 +46,6 @@ type ProviderOAuthConfig = {
 	redirectUri: string;
 };
 
-/** MCP OAuth client config per chat provider (Slack scheme vs web origin). */
 const getProviderOAuthConfig = ({
 	installation,
 }: {
@@ -310,7 +307,6 @@ export const replaceInstallationOAuthCredentials = async ({
 	}
 	const effectiveAuthMode = authMode ?? installation.auth_mode ?? undefined;
 
-	// A resolved sender's role scopes always win over the install-wide grant.
 	const unrestricted =
 		effectiveAuthMode === ChatAuthMode.Unrestricted && !agentScopes?.length;
 	const credentialAuthMode = unrestricted ? effectiveAuthMode : undefined;

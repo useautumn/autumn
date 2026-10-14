@@ -1,9 +1,3 @@
-/**
- * atmn crud/versions — v2 in plans, v1 in planVersions → two versions, v2 active; assert the server's numbering (creation order, v1 = version 2)
- *
- * One line of plans/atmn-v3/07_tests.md. [a, b] is a matrix looped INSIDE this file.
- */
-
 import { expect, test } from "bun:test";
 import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 import {
@@ -25,9 +19,6 @@ type CatalogPlanRow = {
 test.concurrent(
 	"v2 in plans, v1 in planVersions creates v2 first (version 1), v1 second (version 2)",
 	async () => {
-		// Both rows are new for this org: nothing about "pro" exists before this
-		// single push, so version numbers come purely from request order — the
-		// active `plans` row is created before the `planVersions` history row.
 		const scenario = await initAtmnScenario({
 			setup: [
 				s.platform.create({ userEmail: `${uniqueTestId("atmn")}@autumn.test` }),

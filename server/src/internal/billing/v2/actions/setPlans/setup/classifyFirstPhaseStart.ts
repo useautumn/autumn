@@ -6,7 +6,6 @@ import {
 
 export type FirstPhaseStart = "now" | "past" | "future";
 
-/** Whether the first phase starts now, was backdated, or starts later, within set_plans' tolerance. */
 export const classifyFirstPhaseStart = ({
 	startsAt,
 	currentEpochMs,
@@ -35,7 +34,6 @@ export const classifyFirstPhaseStart = ({
 	return "now";
 };
 
-/** The context's first phase starts later than now. */
 export const firstPhaseStartsInFuture = ({
 	billingContext,
 }: {
@@ -49,7 +47,6 @@ export const firstPhaseStartsInFuture = ({
 		currentEpochMs: billingContext.currentEpochMs,
 	}) === "future";
 
-/** A first phase starting within the tolerance of now bills from now, so its plan starts active. */
 export const firstPhaseBillingStartsAt = ({
 	startsAt,
 	currentEpochMs,

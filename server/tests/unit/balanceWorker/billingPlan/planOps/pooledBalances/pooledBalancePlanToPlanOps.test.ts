@@ -43,7 +43,6 @@ const poolRow = ({
 	updated_at: 1,
 });
 
-/** POOL_CE as `initPooledBalanceGraph` mints it, with the pool row beside it. */
 const pooledCustomerEntitlement = ({
 	balance = 100,
 	pooledBalance = poolRow(),

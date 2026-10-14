@@ -56,11 +56,6 @@ export const getBlueGreenQueueUrls = ({
 } = {}) =>
 	Array.from(new Set([...getConfiguredQueueUrls(), ...knownQueueUrls]));
 
-// Build a per-queue-URL SQSClient using the region extracted from the URL,
-// so SigV4 signs against the queue's region. Reusing one singleton across
-// queues in different regions fails with "Credential should be scoped to a
-// valid region" because the client's region disagrees with the endpoint
-// the SDK falls back to (the queue URL's host).
 const sqsClientsByRegion = new Map<string, SQSClient>();
 const getSqsClientForQueue = (queueUrl: string): SQSClient => {
 	const region = extractRegionFromQueueUrl({ queueUrl }) ?? DEFAULT_AWS_REGION;

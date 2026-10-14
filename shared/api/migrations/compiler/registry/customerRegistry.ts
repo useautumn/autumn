@@ -1,17 +1,6 @@
 import { RELEVANT_STATUSES } from "../../../../utils/cusProductUtils/cusProductConstants.js";
 import type { NavScope, RootScope } from "./registryTypes.js";
 
-/**
- * Per-cp-row SQL for the derived plan filters, shared with the plan_id
- * access path so consumed extras render byte-identically to registry leaves.
- * All three correlate on `cp.id` — valid in any scope aliasing
- * `customer_products cp`.
- *
- * `price` is a scalar subquery evaluating to NULL when the cusproduct has no
- * base customer_price (the `exists` op compiles it via IS [NOT] NULL);
- * `paid`/`recurring` are boolean EXISTS expressions, so `paid: true`
- * compiles to `EXISTS(...) = true`. See SKILL.md "Derived boolean filters".
- */
 export const PLAN_BASE_PRICE_SQL = [
 	"(SELECT base_cpr.id FROM customer_prices base_cpr",
 	"JOIN prices base_pr ON base_pr.id = base_cpr.price_id",
@@ -29,41 +18,6 @@ export const PLAN_RECURRING_EXISTS_SQL = [
 	"AND pr.config->>'interval' <> 'one_off')",
 ].join(" ");
 
-/**
- * Phase 1 field registry, rooted at the `customers` table.
- *
- * Supported paths:
- *   plan.plan_id
- *   plan.item.feature_id, plan.item.price (existence only: null / $ne null)
- *   plan.item.rollover (existence only: null / $ne null)
- *
- * Aliases:
- *   c   customers
- *   cp  customer_products
- *   p   products
- *   ce  customer_entitlements
- *   e   entitlements
- *   pr  prices              (LEFT JOIN — only present for paid items)
- *   cpr customer_prices     (LEFT JOIN — only present for paid items)
- *
- * Item resolution: a plan item is identified by its entitlement.
- * `feature_id` ALWAYS resolves via `customer_entitlements → entitlements`.
- * The price side is reached by reversing the link: `prices.entitlement_id
- * = entitlements.id`. Customer prices are LEFT JOINed so existence checks
- * compile to `cpr.id IS NULL` / `IS NOT NULL`.
- *
- * Ambient predicates push `org_id` / `env` down into every scope whose
- * table has those columns. Without this, multi-tenant scans bloat 10x+.
- *
- * `cp.status IN RELEVANT_STATUSES` is also baked in — customer-rooted
- * filters operate on active and scheduled plan instances.
- */
-
-/**
- * Default item scope: entitlement spine. Handles both free and paid items.
- * `price` filtering is done by LEFT JOINing prices/customer_prices and
- * checking `cpr.id IS NULL / NOT NULL`.
- */
 const itemScope: NavScope = {
 	from: [
 		"customer_entitlements ce",
@@ -79,13 +33,6 @@ const itemScope: NavScope = {
 	},
 };
 
-/**
- * Paid-only optimization: when the filter requires a non-null price, walk
- * customer_prices forward instead of the entitlement spine. Skips every
- * free entitlement row entirely — typically ~10x fewer rows scanned.
- *
- * Selected by the parser when it sees `price: { $ne: null }`.
- */
 const itemPaidScope: NavScope = {
 	from: [
 		"customer_prices cpr",
@@ -95,9 +42,6 @@ const itemPaidScope: NavScope = {
 	correlation: "cpr.customer_product_id = cp.id",
 	fields: {
 		feature_id: { kind: "leaf", sql: "e.internal_feature_id" },
-		// `cpr.id` is the driving column — always non-null in this scope.
-		// Emitting `cpr.id IS NOT NULL` is redundant but harmless; Postgres
-		// elides it.
 		price: { kind: "leaf", sql: "cpr.id" },
 		rollover: { kind: "leaf", sql: "e.rollover" },
 	},

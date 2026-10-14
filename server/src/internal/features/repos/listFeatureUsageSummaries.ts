@@ -3,10 +3,8 @@ import { sql } from "drizzle-orm";
 import { z } from "zod/v4";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 
-/** Max exact count returned; anything past this → count_capped ("N+"). */
 export const FEATURE_USAGE_COUNT_CAP = 3;
 export const FEATURE_USAGE_SAMPLE_LIMIT = 2;
-/** Max index rows scanned per reference arm — bounds query cost per feature. */
 export const FEATURE_USAGE_SCAN_LIMIT = 200;
 
 const UsageSampleSchema = z.object({
@@ -29,15 +27,6 @@ export type FeatureUsageSummaryRow = z.infer<
 	typeof FeatureUsageSummaryRowSchema
 >;
 
-/**
- * One round-trip: capped distinct-plan + customer counts and name samples
- * for each candidate feature. Every subquery bounds the rows it SCANS (not
- * just returns), so cost stays flat regardless of org size: each reference
- * arm reads ≤ scanLimit index rows, plans dedupe to ≤ countCap+1 rows,
- * customer samples join ≤ sampleLimit rows off the already-bounded scan.
- * A count is capped when it exceeds countCap or a saturated scan window means
- * the true count is unknowable.
- */
 export const buildFeatureUsageSummariesQuery = ({
 	features,
 	orgId,

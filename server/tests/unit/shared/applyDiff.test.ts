@@ -184,10 +184,6 @@ describe("removeItems filter parity with the engine", () => {
 			],
 		});
 
-	// Incident repro (resend, 24 Aug): the Slack card removed the plan's priced
-	// emails item by feature_id and added a custom one. The engine matched and
-	// attached fine; this translator kept both items, so the dashboard preview
-	// failed with "same feature, same reset interval".
 	test("a feature_id-only filter removes a priced item, like the engine", () => {
 		const diff = {
 			remove_items: [{ feature_id: "emails" }],

@@ -17,7 +17,6 @@ type EvalMetadata = {
 const experimentName = "attach-included-credits";
 const customIncludedCredits = 100_000;
 
-// Scale has a base price, so the only customization is the included credit grant.
 const setup = withCustomers({
 	setup: orgSetups.knowledgePlatform(),
 	customers: ({ customers }) => ({

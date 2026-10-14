@@ -33,7 +33,6 @@ const watchedPools: WatchedPool[] = [];
 const readsByClient = new WeakMap<ObservedClient, SlowRead>();
 let checkInterval: ReturnType<typeof setInterval> | null = null;
 
-/** Queue sizes for the socket bound to `localPort`, from /proc/net/tcp{,6}; null off Linux. */
 export const parseTcpQueues = ({
 	procNetTcp,
 	localPort,
@@ -100,7 +99,6 @@ const logSlowRead = ({
 	read.logged = true;
 };
 
-/** Ends a logged slow read with one `done` line so its total transfer is on record. */
 const finishSlowRead = ({
 	pool,
 	client,
@@ -150,7 +148,6 @@ export const checkSlowReads = ({ now = performance.now() } = {}): void => {
 	}
 };
 
-/** Tracks checked-out clients so slow in-flight reads can be sampled; observes only. */
 export const watchSlowReads = ({
 	pool,
 	name,

@@ -8,8 +8,6 @@ import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 
-// ─── Test 1: Multi-attach same add-on twice with different subscription_ids ───
-
 test.concurrent(`${chalk.yellowBright("multi-attach subscription_id: same add-on twice with different subscription_ids")}`, async () => {
 	const customerId = "ma-sub-id-two-addons";
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
@@ -27,7 +25,6 @@ test.concurrent(`${chalk.yellowBright("multi-attach subscription_id: same add-on
 		actions: [],
 	});
 
-	// Multi-attach same add-on with different subscription_ids
 	await autumnV2_1.billing.multiAttach({
 		customer_id: customerId,
 		plans: [
@@ -36,7 +33,6 @@ test.concurrent(`${chalk.yellowBright("multi-attach subscription_id: same add-on
 		],
 	});
 
-	// V2.1 response should show two separate subscription entries (unmerged)
 	const customer = await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
 
 	expect(customer.subscriptions.length).toBe(2);
@@ -57,8 +53,6 @@ test.concurrent(`${chalk.yellowBright("multi-attach subscription_id: same add-on
 
 	await expectStripeSubscriptionCorrect({ ctx, customerId });
 });
-
-// ─── Test 3: Multi-attach with duplicate subscription_ids in same request → error ───
 
 test.concurrent(`${chalk.yellowBright("multi-attach subscription_id: duplicate subscription_ids in same request throws error")}`, async () => {
 	const customerId = "sub-id-multi-dup";
@@ -81,7 +75,6 @@ test.concurrent(`${chalk.yellowBright("multi-attach subscription_id: duplicate s
 		actions: [],
 	});
 
-	// Multi-attach with same subscription_id on both plans
 	await expectAutumnError({
 		errCode: ErrCode.DuplicateSubscriptionId,
 		func: async () => {
@@ -95,8 +88,6 @@ test.concurrent(`${chalk.yellowBright("multi-attach subscription_id: duplicate s
 		},
 	});
 });
-
-// ─── Test 3: Multi-attach different products with subscription_ids ───
 
 test.concurrent(`${chalk.yellowBright("multi-attach subscription_id: different products with subscription_ids")}`, async () => {
 	const customerId = "ma-sub-id-diff-products";

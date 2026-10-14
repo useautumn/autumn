@@ -1,11 +1,3 @@
-/**
- * atmn scenarios/customers — archive a plan with an active subscription → assert what the server does (refused or archived with customers kept)
- *
- * real `billing.attach` first; the point is to hit the dependency errors
- *
- * One line of plans/atmn-v3/07_tests.md. [a, b] is a matrix looped INSIDE this file.
- */
-
 import { expect, test } from "bun:test";
 import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 import {
@@ -18,7 +10,6 @@ import { ProductService } from "@/internal/products/ProductService.js";
 import { runPush } from "../../../../../../packages/atmn/src/actions/push";
 import { createClient } from "../../../../../../packages/atmn/src/generated/client";
 
-/** A single paid plan; omitting it from `plans` is how a config drops a plan. */
 const catalogConfig = ({
 	planId,
 	includePlan,
@@ -71,10 +62,6 @@ export default atmn(${catalogConfig({ planId, includePlan: false })});
 			});
 			const result = await runPush({ client, cwd: scenario.cwd });
 
-			// Decision pending: the server archives a customered plan on removal
-			// rather than refusing the push — this asserts that observed behavior.
-			// The generated client hands back preview rows camelCased, like every
-			// fixture-facing response — not the snake_case wire.
 			const planRow = (result.preview.plans ?? []).find(
 				(row) => (row as { planId?: string }).planId === planId,
 			);

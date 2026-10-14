@@ -1,27 +1,3 @@
-/**
- * Auto top-ups charge through a TIERED one-off prepaid price, pricing the
- * configured top-up quantity through the item's own tiers.
- *
- * Contract:
- *   - a volume-tiered one-off prepaid price is a valid top-up charge source:
- *     the whole quantity is billed at the single tier it lands in.
- *   - a graduated one-off prepaid price is a valid top-up charge source: the
- *     quantity is billed band by band.
- *   - manual top-ups (`subscriptions.update` + `feature_quantities`) price a
- *     volume one-off item the same way.
- *   - balance, invoice and `options.quantity` side effects match flat-price
- *     top-ups.
- *
- * Tiers (per credit): ≤75 @ $0.22, ≤125 @ $0.20, ≤250 @ $0.18, then $0.17.
- *   volume 250     = 250 × 0.18                       = $45
- *   graduated 250  = 75 × 0.22 + 50 × 0.20 + 125 × 0.18 = $49
- *   volume 125     = 125 × 0.20                       = $25
- *
- * Red (current):  the tiered one-off price is skipped as a charge source, so no
- *                 top-up fires and the manual top-up throws "cusEnt not found".
- * Green (after):  the top-up fires and the invoice carries the tiered amount.
- */
-
 import { test } from "bun:test";
 import type {
 	ApiCustomerV5,
@@ -85,7 +61,6 @@ test.concurrent(
 			billing_controls: makeAutoTopupConfig({ threshold: 20, quantity: 250 }),
 		});
 
-		// 250 - 240 = 10 (below threshold 20) -> top-up 250 at $0.18 -> 260.
 		await autumnV2_3.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
@@ -143,7 +118,6 @@ test.concurrent(
 			],
 		});
 
-		// Balance 0 is below threshold 20, so enabling fires the top-up at once.
 		await autumnV2_3.customers.update(customerId, {
 			billing_controls: makeAutoTopupConfig({ threshold: 20, quantity: 250 }),
 		});

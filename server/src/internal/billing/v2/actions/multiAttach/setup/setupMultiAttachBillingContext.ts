@@ -5,7 +5,6 @@ import type {
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { setupImmediateMultiProductBillingContext } from "../../common/immediateMultiProduct/setupImmediateMultiProductBillingContext";
 
-/** Assemble the multi-attach billing context. */
 export const setupMultiAttachBillingContext = async ({
 	ctx,
 	params,

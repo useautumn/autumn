@@ -1,15 +1,3 @@
-/**
- * Integration tests for the `balances.limit_reached` webhook at the customer level.
- *
- * Verifies that the webhook fires when a customer's balance transitions from
- * allowed → not allowed, with the correct `limit_type` for each scenario:
- *   - included: free allowance exhausted
- *   - max_purchase: consumable overage cap reached
- *   - spend_limit: customer-level spend limit reached
- *
- * Also verifies no-fire / no-refire behavior.
- */
-
 import { afterAll, beforeAll, expect, test } from "bun:test";
 import {
 	getPlayHistory,
@@ -37,10 +25,6 @@ type BalancesLimitReachedPayload = {
 	};
 };
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// SVIX PLAY SETUP
-// ═══════════════════════════════════════════════════════════════════════════════
-
 let webhook: WebhookTestSetup;
 let playToken: string;
 
@@ -56,10 +40,6 @@ beforeAll(async () => {
 afterAll(async () => {
 	await webhook?.cleanup();
 });
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 1: included — free allowance exhausted triggers webhook
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(`${chalk.yellowBright("limit-reached-cus1: included allowance exhausted fires webhook")}`, async () => {
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
@@ -98,10 +78,6 @@ test.concurrent(`${chalk.yellowBright("limit-reached-cus1: included allowance ex
 	expect(data.limit_type).toBe("included");
 	expect(data.entity_id).toBeUndefined();
 });
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 2: max_purchase — consumable overage cap reached triggers webhook
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(`${chalk.yellowBright("limit-reached-cus2: max_purchase cap reached fires webhook")}`, async () => {
 	const consumableMsg = items.consumableMessages({
@@ -143,10 +119,6 @@ test.concurrent(`${chalk.yellowBright("limit-reached-cus2: max_purchase cap reac
 	expect(data.feature_id).toBe(TestFeature.Messages);
 	expect(data.limit_type).toBe("max_purchase");
 });
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 3: spend_limit — customer-level spend limit reached triggers webhook
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(`${chalk.yellowBright("limit-reached-cus3: spend_limit reached fires webhook")}`, async () => {
 	const consumableMsg = items.consumableMessages({
@@ -196,10 +168,6 @@ test.concurrent(`${chalk.yellowBright("limit-reached-cus3: spend_limit reached f
 	expect(data.limit_type).toBe("spend_limit");
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 4: no-fire — usage below limit does not trigger webhook
-// ═══════════════════════════════════════════════════════════════════════════════
-
 test.concurrent(`${chalk.yellowBright("limit-reached-cus4: usage below limit does not fire webhook")}`, async () => {
 	const messagesItem = items.monthlyMessages({ includedUsage: 1000 });
 	const freeProd = products.base({
@@ -229,10 +197,6 @@ test.concurrent(`${chalk.yellowBright("limit-reached-cus4: usage below limit doe
 
 	expect(result).toBeNull();
 });
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 5: no-refire — second track after limit already reached does not refire
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(`${chalk.yellowBright("limit-reached-cus5: does not refire after limit already reached")}`, async () => {
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
@@ -289,16 +253,11 @@ test.concurrent(`${chalk.yellowBright("limit-reached-cus5: does not refire after
 				matchCount++;
 			}
 		} catch {
-			// Skip unparseable events
 		}
 	}
 
 	expect(matchCount).toBe(1);
 });
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 6: precision — fractional usage doesn't false-trigger limit reached
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(`${chalk.yellowBright("limit-reached-cus6: precision — 0.001 remaining does not trigger, 0 remaining does")}`, async () => {
 	const messagesItem = items.monthlyMessages({ includedUsage: 1 });
@@ -313,7 +272,6 @@ test.concurrent(`${chalk.yellowBright("limit-reached-cus6: precision — 0.001 r
 		actions: [s.attach({ productId: freeProd.id })],
 	});
 
-	// Track 0.999 — leaves 0.001 remaining, should NOT trigger
 	await autumnV2_1.track({
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
@@ -330,7 +288,6 @@ test.concurrent(`${chalk.yellowBright("limit-reached-cus6: precision — 0.001 r
 
 	expect(noFireResult).toBeNull();
 
-	// Track 0.001 more — now exactly 0 remaining, SHOULD trigger
 	await autumnV2_1.track({
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,

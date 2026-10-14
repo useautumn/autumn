@@ -12,12 +12,6 @@ import type {
 	StripeWebhookHonoEnv,
 } from "./stripeWebhookContext.js";
 
-/**
- * Seeder middleware for legacy Stripe webhooks (orgs that pasted their secret keys)
- * - Gets org from URL params (orgId)
- * - Verifies webhook signature using org's webhook secret
- * - Sets up StripeWebhookContext (org, env, features, stripeEvent)
- */
 export const stripeLegacySeederMiddleware = async (
 	c: Context<StripeWebhookHonoEnv>,
 	next: Next,
@@ -26,7 +20,6 @@ export const stripeLegacySeederMiddleware = async (
 	const { db, logger } = ctx;
 	const { orgId, env } = c.req.param() as { orgId: string; env: AppEnv };
 
-	// Step 1: Get org and features
 	const data = await OrgService.getWithFeatures({
 		db,
 		orgId,
@@ -40,7 +33,6 @@ export const stripeLegacySeederMiddleware = async (
 
 	const { org, features } = data;
 
-	// Step 2: Check if org is connected to Stripe
 	if (!isStripeConnected({ org, env })) {
 		logger.info(`Org ${orgId} and env ${env} is not connected to stripe`);
 		return c.json(
@@ -49,7 +41,6 @@ export const stripeLegacySeederMiddleware = async (
 		);
 	}
 
-	// Step 3: Verify webhook signature
 	const rawBody = await c.req.text();
 	const signature = c.req.header("stripe-signature") || "";
 
@@ -59,9 +50,6 @@ export const stripeLegacySeederMiddleware = async (
 
 	let event: Stripe.Event;
 	if (skipVerify) {
-		// logger.warn(
-		// 	"[Stripe] SKIPPING webhook signature verification — non-prod only",
-		// );
 		try {
 			event = JSON.parse(rawBody) as Stripe.Event;
 		} catch (err: unknown) {
@@ -88,7 +76,6 @@ export const stripeLegacySeederMiddleware = async (
 		}
 	}
 
-	// Step 4: Set up context
 	ctx.org = org;
 	ctx.features = features;
 	ctx.env = env;

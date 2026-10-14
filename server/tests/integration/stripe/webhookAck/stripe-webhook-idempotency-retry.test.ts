@@ -1,30 +1,3 @@
-/**
- * TDD test for the two-state Redis idempotency semantics behind Stripe webhook
- * sync-ack. This is the regression guard for the outage failure mode: a failed
- * webhook must stay replayable instead of being acked and lost.
- *
- * Contract under test:
- *   New behaviors:
- *     - First delivery acquires a processing lock and runs the handler.
- *     - Successful processing marks the event completed; a redelivery is acked
- *       200 {received:true, duplicate:true} WITHOUT re-running the handler.
- *     - Failed sync processing returns 500 AND releases the lock, so Stripe's
- *       retry of the same event id runs the handler again (and can succeed).
- *     - A duplicate delivery while a sync event is still in flight returns 500
- *       (Stripe retries later) instead of being swallowed as a duplicate.
- *     - Early-ack events still ack 200 immediately; after background success
- *       the Redis key holds "completed".
- *   Side effects:
- *     - Redis key stripe:webhook:{orgId}:{env}:{eventId} transitions
- *       (nil) -> "processing" -> "completed" | (deleted on failure).
- *
- * Pre-impl red: stripeWebhookAckMiddleware does not exist and the idempotency
- * middleware acks duplicates before processing succeeds.
- * Post-impl green: middlewares implement the two-state semantics above.
- *
- * Lives in integration (not unit) because it imports the real Redis client.
- */
-
 import { expect, test } from "bun:test";
 import { randomUUID } from "node:crypto";
 import chalk from "chalk";
@@ -134,16 +107,13 @@ test.concurrent(
 			},
 		});
 
-		// ── First delivery processes inline ───────────────────────
 		const first = await app.request("/webhook", { method: "POST" });
 		expect(first.status).toBe(200);
 		expect(handlerRuns).toBe(1);
 
-		// ── Side effect: key transitioned to completed ────────────
 		const stored = await getMiscRedis().get(redisKeyFor({ orgId, eventId }));
 		expect(stored).toBe("completed");
 
-		// ── Redelivery acked as duplicate, handler NOT re-run ─────
 		const second = await app.request("/webhook", { method: "POST" });
 		expect(second.status).toBe(200);
 		expect(await second.json()).toEqual({ received: true, duplicate: true });
@@ -171,18 +141,15 @@ test.concurrent(
 			},
 		});
 
-		// ── First delivery fails -> 500 so Stripe retries ─────────
 		const first = await app.request("/webhook", { method: "POST" });
 		expect(first.status).toBe(500);
 		expect(handlerRuns).toBe(1);
 
-		// ── Lock released: key must be gone, not "processing" ─────
 		const afterFailure = await getMiscRedis().get(
 			redisKeyFor({ orgId, eventId }),
 		);
 		expect(afterFailure).toBeNull();
 
-		// ── Stripe's retry of the SAME event id succeeds ──────────
 		const retry = await app.request("/webhook", { method: "POST" });
 		expect(retry.status).toBe(200);
 		expect(handlerRuns).toBe(2);
@@ -215,7 +182,6 @@ test.concurrent(
 		});
 
 		const firstDelivery = app.request("/webhook", { method: "POST" });
-		// Let the first delivery acquire the lock before the duplicate arrives.
 		await waitForCondition({
 			condition: async () =>
 				(await getMiscRedis().get(redisKeyFor({ orgId, eventId }))) ===
@@ -253,7 +219,6 @@ test.concurrent(
 		expect(first.status).toBe(200);
 		expect(await first.json()).toEqual({ received: true });
 
-		// Background processing marks completed asynchronously after the ack.
 		await waitForCondition({
 			condition: async () =>
 				(await getMiscRedis().get(redisKeyFor({ orgId, eventId }))) ===

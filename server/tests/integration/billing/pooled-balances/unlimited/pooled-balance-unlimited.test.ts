@@ -1,5 +1,3 @@
-/** Unlimited pooled sources share a zero-valued synthetic entitlement. */
-
 import { expect, test } from "bun:test";
 import {
 	type ApiCustomerV5,
@@ -95,14 +93,12 @@ test.concurrent(
 			usage: trackValue,
 		});
 
-		// Postgres trails the worker by its lingering apply: land the customer's writes before reading the rows.
 		if (isBalanceWorkerRoute())
 			await flushBalanceWorkerCustomer({ ctx, customerId });
 		const after = await expectPooledBalanceCorrect({
 			db: ctx.db,
 			customerId,
 			pool: {
-				// The worker counts an unlimited row's usage down on its balance.
 				balance: isBalanceWorkerRoute() ? -trackValue : 0,
 				adjustment: 0,
 				cacheVersion: 0,

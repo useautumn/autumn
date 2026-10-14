@@ -1,6 +1,3 @@
-// Contract: back-synced plan changes (sub.updated / sub.created auto-sync) carry consumed usage onto
-// the replacement plan with the same carry semantics as attach.
-
 import { test } from "bun:test";
 import {
 	trackCustomerUsage,
@@ -12,9 +9,6 @@ import { TestFeature } from "@tests/setup/v2Features";
 import chalk from "chalk";
 import { setupConsumableFamilyOnBase } from "./utils/autoSyncCarryUsage";
 
-// ═══════════════════════════════════════════════════════════════════════════
-// 1. Upgrade carries usage: 30k/50k -> 100k plan => balance 70k
-// ═══════════════════════════════════════════════════════════════════════════
 test(`${chalk.yellowBright("sub.updated auto-sync carry 1: upgrade carries consumable usage")}`, async () => {
 	const customerId = "sync-carry-upgrade-basic";
 	const baseId = "sync-carry-up-base";
@@ -66,9 +60,6 @@ test(`${chalk.yellowBright("sub.updated auto-sync carry 1: upgrade carries consu
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════════════
-// 2. Overage offset: 100k/50k (50k overage) -> 100k plan => balance 0
-// ═══════════════════════════════════════════════════════════════════════════
 test(`${chalk.yellowBright("sub.updated auto-sync carry 2: upgrade offsets existing overage")}`, async () => {
 	const customerId = "sync-carry-overage-offset";
 	const baseId = "sync-carry-off-base";
@@ -120,9 +111,6 @@ test(`${chalk.yellowBright("sub.updated auto-sync carry 2: upgrade offsets exist
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════════════
-// 3. Usage still above new allowance: 200k/50k -> 100k plan => balance -100k
-// ═══════════════════════════════════════════════════════════════════════════
 test(`${chalk.yellowBright("sub.updated auto-sync carry 3: remaining overage persists past upgrade")}`, async () => {
 	const customerId = "sync-carry-overage-beyond";
 	const baseId = "sync-carry-bey-base";

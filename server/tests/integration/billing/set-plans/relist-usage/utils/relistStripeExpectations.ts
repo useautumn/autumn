@@ -11,9 +11,6 @@ import {
 	relistBilling,
 } from "./relistTypes";
 
-/** Stripe's behaviour per re-list, from plain-Stripe test clocks; prorate_immediately maps to always_invoice.
- * bill_difference has no Stripe equivalent: it credits only the unused old period and charges the new item in full. */
-
 type LicensedItem = { key: string; amount: number };
 
 const PRO = { key: "pro", amount: RELIST.proPrice };
@@ -25,13 +22,11 @@ const ADD_ON = { key: "addon", amount: RELIST.addOnPrice };
 
 const BEFORE: LicensedItem[] = [PRO, WORDS_1];
 
-/** The licensed items after each change, and whether Pro's usage stays on its row for renewal. */
 const AFTER: Record<
 	RelistChange,
 	{ items: LicensedItem[]; meteredKept: boolean }
 > = {
 	unchanged: { items: [PRO, WORDS_1], meteredKept: true },
-	// set_plans replaces the row, so without carry_over_usages its usage is billed at the change (decision B).
 	base_price: { items: [PRO_30, WORDS_1], meteredKept: false },
 	usage_price: { items: [PRO, WORDS_1], meteredKept: false },
 	prepaid_quantity: { items: [PRO, WORDS_2], meteredKept: false },
@@ -74,7 +69,6 @@ type StripeTimeline = {
 	renewalUsage: boolean;
 	usageAfterChange: number;
 	periodEnd: RelistDate;
-	/** The next licensed charge: Autumn's next_cycle never includes usage. */
 	nextCycle: { startsAt: RelistDate; cents: number } | null;
 };
 
@@ -186,7 +180,6 @@ const liveTimeline = ({
 	};
 };
 
-/** No live sub: the old period closes, so its usage bills now at the old price under every proration. */
 const noSubTimeline = ({
 	change,
 	anchor,
@@ -287,7 +280,6 @@ export const expectedRelistBilling = ({
 	};
 };
 
-/** Stripe bills both runs identically when their timelines match: then Autumn must too, end to end. */
 export const stripeTreatsAlike = (
 	args: RelistExpectationOptions & {
 		state: RelistStripeState;
@@ -307,7 +299,6 @@ export const stripeTreatsAlike = (
 		expectedRelistBilling({ ...args, run: args.changed }),
 	);
 
-/** Autumn's own promise: the preview total is exactly what execute invoices. */
 export const expectPreviewMatchesExecution = ({ run }: { run: RelistRun }) => {
 	expect(run.observation.preview.total).toBe(
 		relistBilling(run.observation).executeTotal,
@@ -327,7 +318,6 @@ export const expectRelistMatchesStripe = (args: {
 	expectPreviewMatchesExecution({ run: args.run });
 };
 
-/** The pairing check: same Stripe outcome means the same Autumn outcome, compared field by field. */
 export const expectRelistPairConsistent = (
 	args: RelistExpectationOptions & {
 		state: RelistStripeState;

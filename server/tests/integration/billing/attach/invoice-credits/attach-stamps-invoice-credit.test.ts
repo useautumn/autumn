@@ -1,16 +1,3 @@
-/**
- * Whether a credit balance itemizes on the invoice is stamped on the customer
- * entitlement at attach, from the plan item's price, and drives track-time
- * attribution and the balance-mutation guards from then on.
- *
- * Contract:
- *   A1 pay-per-use $1/credit item      → customer_entitlements.invoice_credit = true
- *   A2 included-only item, flag true   → stamp false (attach succeeds)
- *   T1 track on the stamped balance    → usage_attribution written
- *   T2 track on the unstamped balance  → plain deduction, no attribution
- *   M4 manual mutations on the unstamped balance succeed
- */
-
 import { expect, test } from "bun:test";
 import { customerEntitlements } from "@autumn/shared";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
@@ -100,7 +87,6 @@ test.concurrent(
 			});
 		}
 
-		// The Redis deduction reaches Postgres on the lazy sync, like track-invoice-credit-attribution.
 		await timeout(3_000);
 		const stampedAttribution = (await creditsRow(pricedCustomerId))
 			.usage_attribution;

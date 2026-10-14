@@ -11,7 +11,6 @@ import type { OwnerFence } from "../../state/types/stateStore.js";
 import type { PartitionPosition } from "../types/committer.js";
 import type { CommitterStateStoreContext } from "../types/committerStateStoreContext.js";
 
-/** Fills the mirror from Postgres; nothing to fill means the partition has never been bookmarked. */
 export const loadProgress = async ({
 	ctx,
 	...position
@@ -28,7 +27,6 @@ export const loadProgress = async ({
 		ctx.progress.setOwnerFence({ ...position, fence: stored.ownerFence });
 };
 
-/** Creates the bookmark once; the same offset again is a no-op, a different one is a conflict. */
 export const initializePartition = async ({
 	ctx,
 	topic,
@@ -55,7 +53,6 @@ export const initializePartition = async ({
 	ctx.progress.setNextOffset({ topic, partition, nextOffset });
 };
 
-/** Lands the fence beside the bookmark without moving it; the record that follows the marker moves the bookmark past it. */
 export async function advanceOwnerFence({
 	ctx,
 	fence,

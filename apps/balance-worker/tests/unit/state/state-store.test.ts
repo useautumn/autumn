@@ -57,7 +57,6 @@ const closeStoreFixture = ({
 	rmSync(directory, { recursive: true, force: true });
 };
 
-/** Seeds the customer the way the log does: one initialize mutation at offset 0. */
 const seedCustomer = ({
 	store,
 	state = createState(),
@@ -411,7 +410,6 @@ describe("state store", () => {
 					}),
 				});
 
-				// The owner pruned cmd_1 and recomputed it against the newer revision.
 				const currentState = fixture.store.readState({ identity });
 				if (!currentState) throw new Error("Expected persisted state");
 				const replayedMutation = createTrackMutation({ state: currentState });
@@ -461,7 +459,6 @@ describe("state store", () => {
 				})?.balance;
 				if (afterFirst === undefined) throw new Error("row missing");
 
-				// Same revision as the store, but built from the pre-deduction balance.
 				const staleMutation = createTrackMutation({
 					state: { ...state, revision: 2 },
 					commandId: "cmd_stale",

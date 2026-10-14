@@ -6,13 +6,11 @@ const REQUEST_TRACING_INTEGRATIONS = new Set([
 	"RequestData",
 ]);
 
-// Each installs a process-level handler that can exit the process.
 const PROCESS_ERROR_INTEGRATIONS = new Set([
 	"OnUncaughtException",
 	"OnUnhandledRejection",
 ]);
 
-/** Sentry's defaults with `rejectionHandler` in place of its own; without one, the host keeps its process handlers. */
 export function errorReportingIntegrationsOf<
 	Integration extends { name: string },
 >({

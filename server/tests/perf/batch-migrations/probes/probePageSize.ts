@@ -1,5 +1,3 @@
-/** Times the claim select at increasing page sizes (5k → 50k). Read-only. */
-
 import { MigrationItemRunStatus } from "@autumn/shared";
 import { buildCustomerSelect } from "@/internal/migrations/v2/filters/customers/buildCustomerSelect.js";
 import {

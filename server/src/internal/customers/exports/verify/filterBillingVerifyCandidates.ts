@@ -9,8 +9,6 @@ import type { CustomerExportScalarRow } from "../queries/getCustomerExportScalar
 import { retryExportDbRead } from "./retryExportDbRead.js";
 import type { BillingVerifySweep } from "./setupBillingVerifySweep.js";
 
-/** A customer with no Stripe subscription, no Stripe-linked
- * plan and no shared Stripe id has nothing to verify, so it is never loaded. */
 export const filterBillingVerifyCandidates = async ({
 	ctx,
 	scalars,

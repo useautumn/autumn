@@ -1,23 +1,3 @@
-/**
- * TDD test for plan variants — reset-tier ladder.
- *
- * Contract under test:
- *   New endpoints:
- *     - POST /plans.create_variant -> ApiPlanV1
- *     - POST /plans.preview_update -> PlanUpdatePreview
- *   New behaviors:
- *     - create_variant copies BOTH same-feature_id items (day + month not collapsed)
- *     - preview_update diff disambiguates by reset.interval (day vs month)
- *     - update_variant_ids applies base→base diff to each variant
- *     - credit-pack tier ladder: 4 priced variants, Dashboard propagation
- *     - 21 variants → too_many_variants (400), 20 succeeds
- *     - day-reset survives versioning of both base and variant
- *     - hour-reset propagates with filter interval: "hour"
- *     - Stripe price_id retained on variant version-up
- *     - create_variant rejects archived base (400) and id collision (409)
- *     - preview_update rejects variant id (400)
- */
-
 import { expect, test } from "bun:test";
 import {
 	type ApiPlanV1,
@@ -114,10 +94,6 @@ const createBaseWithItems = async (
 	});
 };
 
-// ═══════════════════════════════════════════════════════════════════════════
-// 1. create_variant copies BOTH same-feature_id items — day + month preserved
-// ═══════════════════════════════════════════════════════════════════════════
-
 test.concurrent(
 	`${chalk.yellowBright("reset-tier: create_variant copies BOTH same-feature_id day+month items")}`,
 	async () => {
@@ -148,10 +124,6 @@ test.concurrent(
 		expect(dayItem!.included).toBe(50);
 	},
 );
-
-// ═══════════════════════════════════════════════════════════════════════════
-// 2. preview_update mutates only day-reset item — diff has ONE remove, ONE add
-// ═══════════════════════════════════════════════════════════════════════════
 
 test.concurrent(
 	`${chalk.yellowBright("reset-tier: preview_update diff targets only day-reset item, month sibling untouched")}`,
@@ -191,10 +163,6 @@ test.concurrent(
 		expect(removedMonth).toBe(false);
 	},
 );
-
-// ═══════════════════════════════════════════════════════════════════════════
-// 3. propagate day-only change — variant month byte-identical, day reflects new
-// ═══════════════════════════════════════════════════════════════════════════
 
 test.concurrent(
 	`${chalk.yellowBright("reset-tier: propagate day-only change, month sibling byte-identical")}`,
@@ -239,10 +207,6 @@ test.concurrent(
 	},
 );
 
-// ═══════════════════════════════════════════════════════════════════════════
-// 4. credit-pack tier ladder — 4 priced variants, Dashboard propagated to all
-// ═══════════════════════════════════════════════════════════════════════════
-
 test.concurrent(
 	`${chalk.yellowBright("reset-tier: tier ladder — 4 priced variants retain own price, Dashboard added")}`,
 	async () => {
@@ -282,10 +246,6 @@ test.concurrent(
 	},
 );
 
-// ═══════════════════════════════════════════════════════════════════════════
-// 5. 21 variants → too_many_variants (400)
-// ═══════════════════════════════════════════════════════════════════════════
-
 test.concurrent(
 	`${chalk.yellowBright("reset-tier: 21 variants in propagate → too_many_variants")}`,
 	async () => {
@@ -312,10 +272,6 @@ test.concurrent(
 		await cleanup(baseId, ...variantIds);
 	},
 );
-
-// ═══════════════════════════════════════════════════════════════════════════
-// 6. 20 variants succeeds — boundary case
-// ═══════════════════════════════════════════════════════════════════════════
 
 test.concurrent(
 	`${chalk.yellowBright("reset-tier: 20 variants in propagate succeeds (boundary)")}`,
@@ -346,10 +302,6 @@ test.concurrent(
 		await cleanup(baseId, ...variantIds);
 	},
 );
-
-// ═══════════════════════════════════════════════════════════════════════════
-// 7. day-reset survives versioning of both base and variant
-// ═══════════════════════════════════════════════════════════════════════════
 
 test.concurrent(
 	`${chalk.yellowBright("reset-tier: day-reset survives versioning of both base and variant")}`,
@@ -446,10 +398,6 @@ test.concurrent(
 	},
 );
 
-// ═══════════════════════════════════════════════════════════════════════════
-// 8. hour-reset propagates — filter uses interval: "hour"
-// ═══════════════════════════════════════════════════════════════════════════
-
 test.concurrent(
 	`${chalk.yellowBright("reset-tier: hour-reset propagates to variant")}`,
 	async () => {
@@ -487,10 +435,6 @@ test.concurrent(
 		await cleanup(baseId, variantId);
 	},
 );
-
-// ═══════════════════════════════════════════════════════════════════════════
-// 9. Stripe price reuse on tier-ladder version-up — variant v2 retains stripe_price_id
-// ═══════════════════════════════════════════════════════════════════════════
 
 test.concurrent(
 	`${chalk.yellowBright("reset-tier: Stripe price_id retained on variant version-up")}`,
@@ -543,10 +487,6 @@ test.concurrent(
 	},
 );
 
-// ═══════════════════════════════════════════════════════════════════════════
-// 10. create_variant rejects archived source — 400 cannot_fork_archived_base
-// ═══════════════════════════════════════════════════════════════════════════
-
 test.concurrent(
 	`${chalk.yellowBright("reset-tier: create_variant rejects archived base → cannot_fork_archived_base")}`,
 	async () => {
@@ -567,10 +507,6 @@ test.concurrent(
 	},
 );
 
-// ═══════════════════════════════════════════════════════════════════════════
-// 11. create_variant rejects id collision — 409 product_id_already_exists
-// ═══════════════════════════════════════════════════════════════════════════
-
 test.concurrent(
 	`${chalk.yellowBright("reset-tier: create_variant rejects id collision → product_id_already_exists")}`,
 	async () => {
@@ -588,12 +524,6 @@ test.concurrent(
 	},
 );
 
-// ═══════════════════════════════════════════════════════════════════════════
-// 12. preview_update supported on variant id
-// (the cannot_preview_on_variant guard was removed when variant previews
-// shipped — previews on a variant now resolve normally)
-// ═══════════════════════════════════════════════════════════════════════════
-
 test.concurrent(
 	`${chalk.yellowBright("reset-tier: preview_update on variant id previews its own changes")}`,
 	async () => {
@@ -602,7 +532,6 @@ test.concurrent(
 		await createBaseWithItems(baseId, [creditsItem(100, ResetInterval.Month)]);
 		await createVariantRpc(baseId, variantId, "Variant Preview");
 
-		// Customer-less variant patches in place.
 		const preview = await previewUpdateRpc(variantId, {
 			items: [creditsItem(200, ResetInterval.Month)],
 		});

@@ -37,7 +37,6 @@ import type {
 	UpdateBalanceParams,
 } from "./types/balanceWorkerClient.js";
 
-/** An append's default budget: a first append may include the producer connect, and no customer request waits on it. */
 const DEFAULT_APPEND_TIMEOUT_MS = 3_000;
 
 export function createBalanceWorkerClient({
@@ -68,7 +67,6 @@ export function createBalanceWorkerClient({
 		timeoutMs: appendTimeoutMs,
 	};
 
-	// Batching is the default; turning it off falls back to one `/v1/track` request per track.
 	const trackBatcher =
 		config.batchTracks === false
 			? undefined

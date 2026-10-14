@@ -8,9 +8,6 @@ import {
 } from "@autumn/ui/ai-elements";
 import { ImageIcon } from "lucide-react";
 
-/**
- * Type for the build_pricing tool part returned by the AI
- */
 export type BuildPricingToolPart = {
 	type: "tool-build_pricing";
 	toolCallId: string;
@@ -25,17 +22,11 @@ export type BuildPricingToolPart = {
 	errorText?: string;
 };
 
-/**
- * Preview org configuration for syncing pricing
- */
 export interface PreviewOrg {
 	orgId: string;
 	orgSlug: string;
 }
 
-/**
- * Button to open file dialog for image uploads in the chat input
- */
 export function ImageUploadButton({ disabled }: { disabled?: boolean }) {
 	const attachments = usePromptInputAttachments();
 
@@ -50,9 +41,6 @@ export function ImageUploadButton({ disabled }: { disabled?: boolean }) {
 	);
 }
 
-/**
- * Header showing attached files in the prompt input
- */
 export function AttachmentsHeader() {
 	const attachments = usePromptInputAttachments();
 

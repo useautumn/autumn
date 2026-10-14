@@ -2,7 +2,6 @@ import { ErrCode, RecaseError } from "@autumn/shared";
 import { detectOrphanedActivePointers } from "@/internal/catalogV2/actions/updateCatalog/errors/detectOrphanedActivePointers";
 import type { UpdateCatalogPlan } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogPlan";
 
-/** A plan keeping live versions must keep a live active one to attach to. */
 export const handleActivePointerErrors = ({
 	updateCatalogPlan,
 }: {

@@ -33,7 +33,6 @@ const upsert = (
 	...overrides,
 });
 
-/** The deleted subjects come back as one JSON array, so the lane knows which rows to rebuild. */
 const DELETED_SUBJECTS = `(SELECT coalesce(json_agg(json_build_object('org_id', org_id, 'env', env, 'customer_id', customer_id, 'entity_id', entity_id)), '[]'::json) FROM snapshot_deletes) AS snapshot_deletes`;
 
 describe("flushSql subject snapshots", () => {
@@ -80,11 +79,9 @@ describe("flushSql subject snapshots", () => {
 		expect(sql).toContain(
 			"ON CONFLICT (org_id, env, customer_id, entity_id) DO UPDATE SET",
 		);
-		// A row from an older log never replaces a newer one; a row of unknown lineage, either way, is replaced.
 		expect(sql).toContain(
 			"log_offset = EXCLUDED.log_offset WHERE s.log_offset IS NULL OR EXCLUDED.log_offset IS NULL OR EXCLUDED.log_offset >= s.log_offset OR s.partition <> EXCLUDED.partition OR s.partition_count <> EXCLUDED.partition_count RETURNING 1",
 		);
-		// A row whose customer or entity is gone is skipped, never an FK error that fails the flush.
 		expect(sql).toContain(
 			"WHERE EXISTS (SELECT 1 FROM customers c WHERE c.internal_id = v.internal_customer_id) AND (v.internal_entity_id IS NULL OR EXISTS (SELECT 1 FROM entities e WHERE e.internal_id = v.internal_entity_id))",
 		);
@@ -147,13 +144,11 @@ describe("flushSql subject snapshots", () => {
 	});
 });
 
-/** A transaction stand-in that answers the flush statement with the given row. */
 const fakeDb = ({ row }: { row: Record<string, unknown> }) => {
 	const statements: string[] = [];
 	const db = {
 		execute: async (query: Parameters<typeof dialect.sqlToQuery>[0]) => {
 			statements.push(flatten(dialect.sqlToQuery(query).sql));
-			// pg answers a multi-statement simple query with one result per statement.
 			return [{ rows: [] }, { rows: [row] }];
 		},
 		$client: {

@@ -1,5 +1,3 @@
-/** set_plans re-lists Pro on one of two Stripe subs (stripe_subscription_id); the add-on's sub renews untouched. */
-
 import { multiSubState } from "../utils/relistStates";
 import { defineRelistSuite } from "../utils/relistSuite";
 import { RELIST } from "../utils/relistTypes";

@@ -11,7 +11,6 @@ import {
 	wrapIdsWithCustomerColumns,
 } from "./composeCustomerPage.js";
 
-/** The already-processed side of a migration preview. */
 export type ProcessedScope = { migrationInternalId: string };
 
 type PreviewArgs = {
@@ -22,9 +21,6 @@ type PreviewArgs = {
 	predicates?: CustomerPagePredicate[];
 };
 
-/** Bounded walk of the migration's processed ids in customer order (the
- * live C-collation mir index). Same exactness rule as the filter walk:
- * every predicate applies inside, short page ⟹ exhausted. */
 const composeProcessedIdPage = ({
 	processed,
 	limit,
@@ -63,7 +59,6 @@ const composeProcessedIdPage = ({
 	return { sql: parts.join(" "), params };
 };
 
-/** Unbounded processed-id set (skinny, mir index only). */
 const composeProcessedIdSet = ({
 	processed,
 	predicates = [],
@@ -91,11 +86,6 @@ const composeProcessedIdSet = ({
 	return { sql: parts.join(" "), params };
 };
 
-/**
- * Preview page: filter-set ∪ processed-set (customers an in-flight migration
- * already ran for, even when the live filter no longer matches them). Both
- * branches are bounded walks, so the union page is exact and O(page).
- */
 export const composeCustomerPreviewPage = ({
 	filter,
 	ctx,
@@ -137,8 +127,6 @@ export const composeCustomerPreviewPage = ({
 	return wrapIdsWithCustomerColumns({ ids: union, ambient });
 };
 
-/** Preview count: distinct union of the two id sets — customers table is
- * never touched unless a predicate needs it. */
 export const composeCustomerPreviewCount = ({
 	filter,
 	ctx,

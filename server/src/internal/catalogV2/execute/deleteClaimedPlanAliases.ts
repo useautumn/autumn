@@ -2,7 +2,6 @@ import { productAliases } from "@autumn/shared";
 import { and, eq, inArray } from "drizzle-orm";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 
-/** Drop alias rows whose public id this catalog write is claiming. */
 export const deleteClaimedPlanAliases = async ({
 	ctx,
 	aliasIds,

@@ -1,9 +1,3 @@
-/**
- * Every `licenses[]` entry states versionSlug: a link is pinned to one child
- * version, so a config must name it. A missing slug is `versionSlug is
- * required`, never "follow the child's active version".
- */
-
 import { expect, test } from "bun:test";
 import { LINT_REGISTRY } from "../src/lint/rules/registry";
 import {

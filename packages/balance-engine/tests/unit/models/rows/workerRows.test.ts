@@ -49,7 +49,6 @@ const rollover = {
 	entities: {},
 };
 
-/** The columns commands decide on: all a customer row carried before the worker served `customers.get`. */
 const customerLoggedBeforeWidening = {
 	internal_id: "cus_internal_1",
 	id: "cus_1",

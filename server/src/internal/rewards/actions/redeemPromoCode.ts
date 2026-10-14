@@ -13,7 +13,6 @@ import { redemptionRepo, rewardRepo } from "@/internal/rewards/repos/index.js";
 import { generateId } from "@/utils/genUtils.js";
 import { grantRewardEntitlements } from "./grantRewardEntitlements.js";
 
-/** Redeem a promo code and grant loose entitlements to a customer */
 export const redeemPromoCode = async ({
 	ctx,
 	code,
@@ -27,7 +26,6 @@ export const redeemPromoCode = async ({
 }) => {
 	const { db, org, env } = ctx;
 
-	// 1. Find the reward matching this promo code
 	const reward = await rewardRepo.getByCode({
 		db,
 		code,
@@ -62,7 +60,6 @@ export const redeemPromoCode = async ({
 		});
 	}
 
-	// 2. Find the matching promo code and check its global redemption limit
 	const promoCode = reward.promo_codes?.flat().find((pc) => pc.code === code);
 	if (!promoCode) {
 		throw new RecaseError({
@@ -90,13 +87,11 @@ export const redeemPromoCode = async ({
 		}
 	}
 
-	// 3. Fetch customer
 	const fullCustomer = await CusService.getFull({
 		ctx,
 		idOrInternalId: customerId,
 	});
 
-	// 4. Check if customer already redeemed this reward
 	const existingRedemption = await redemptionRepo.getByCustomerAndReward({
 		db,
 		internalCustomerId: fullCustomer.internal_id,
@@ -111,7 +106,6 @@ export const redeemPromoCode = async ({
 		});
 	}
 
-	// 4.5. First-time restriction (no Stripe customer → necessarily first-time)
 	if (promoCode.first_time_transaction && fullCustomer.processor?.id) {
 		const stripeCli = createStripeCli({ org, env });
 		await assertFirstTimeStripeCustomer({
@@ -121,7 +115,6 @@ export const redeemPromoCode = async ({
 		});
 	}
 
-	// 5. Create entitlements for each reward entitlement config
 	await grantRewardEntitlements({
 		ctx,
 		fullCustomer,
@@ -129,7 +122,6 @@ export const redeemPromoCode = async ({
 		balanceIdPrefix: `reward_${code}`,
 	});
 
-	// 6. Record the redemption
 	await redemptionRepo.insert({
 		db,
 		rewardRedemption: {
@@ -147,7 +139,6 @@ export const redeemPromoCode = async ({
 		},
 	});
 
-	// 8. Return result
 	return {
 		reward_id: reward.id,
 		entitlements_granted: reward.entitlements.map((ent) => {

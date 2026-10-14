@@ -46,7 +46,6 @@ export const INVOICE_FINALIZED_EXAMPLE = {
 	],
 };
 
-/** Body is the `invoices.list` invoice object with `items` populated. */
 export const InvoiceFinalizedSchema = ApiListInvoiceV1Schema.meta({
 	examples: [INVOICE_FINALIZED_EXAMPLE],
 });

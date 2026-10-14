@@ -29,7 +29,6 @@ import {
 	refreshCommandRoute,
 } from "./workerRequestPolicy.js";
 
-/** The command picks the owner; `payload` rides beside it in the envelope. */
 export async function sendToOwner<Response>({
 	ctx,
 	path,
@@ -45,7 +44,6 @@ export async function sendToOwner<Response>({
 }): Promise<Response> {
 	const deadline = createRequestDeadline({ timeoutMs: ctx.timeoutMs, signal });
 	assertRequestDeadline({ deadline, outcome: "not_submitted" });
-	// Retries must not observe caller mutations after the first send.
 	const snapshot = structuredClone(command);
 	const payloadSnapshot =
 		payload === undefined ? undefined : structuredClone(payload);
@@ -59,12 +57,6 @@ export async function sendToOwner<Response>({
 		ownerlessWaits: 0,
 	};
 	try {
-		// A partition mid-handoff answers NOT_OWNER until its successor is named; the
-		// route is refreshed and tried again while the request's budget allows, so a
-		// move of a second or two costs the caller latency, not an error. A refresh
-		// that outruns its slice hands back too: the route is tried as it stands,
-		// and the next stale answer waits on the same refresh again. An answer that
-		// names the successor skips the refresh: the old owner wrote that claim itself.
 		let followingHint = false;
 		let ownershipCaughtUp = false;
 		let notReadyRetries = 0;

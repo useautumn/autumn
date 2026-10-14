@@ -1,7 +1,6 @@
 import { ErrCode, RecaseError } from "@autumn/shared";
 import type Stripe from "stripe";
 
-/** A reissued invoice is superseded; finalizing or paying it would bill the customer twice. */
 export const assertInvoiceNotReissued = ({
 	invoiceId,
 	stripeInvoice,

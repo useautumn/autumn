@@ -1,6 +1,3 @@
-// Allocated Invoice — ProrateNextCycle / ProrateNextCycle: 1 included seat, $50/seat; increases
-// and decreases are deferred to the next cycle (no immediate invoice or refund).
-
 import { expect, test } from "bun:test";
 
 import type { ApiCustomerV3, TrackResponseV2 } from "@autumn/shared";
@@ -19,10 +16,6 @@ import {
 	PRICE_PER_SEAT,
 	userItem,
 } from "./utils/prorateNextCycle.js";
-
-// ═══════════════════════════════════════════════════════════════════
-// prorate-nc1: Track into overage mid-cycle — no immediate invoice
-// ═══════════════════════════════════════════════════════════════════
 
 test(`${chalk.yellowBright("prorate-nc1: mid-cycle overage creates no immediate invoice")}`, async () => {
 	const pro = products.pro({ id: "pro", items: [userItem] });
@@ -61,12 +54,10 @@ test(`${chalk.yellowBright("prorate-nc1: mid-cycle overage creates no immediate 
 		usage: 3,
 	});
 
-	// Only the original subscription invoice — no immediate overage invoice
 	await expectCustomerInvoiceCorrect({ customerId, count: 1 });
 
 	await expectStripeSubscriptionCorrect({ ctx, customerId });
 
-	// Calculate prorated overage: 2 extra seats × $50, prorated for remaining period
 	const proratedOverage = await calculateProratedDiff({
 		customerId,
 		advancedTo,
@@ -74,13 +65,11 @@ test(`${chalk.yellowBright("prorate-nc1: mid-cycle overage creates no immediate 
 		newAmount: 2 * PRICE_PER_SEAT,
 	});
 
-	// Advance to next billing cycle
 	await advanceToNextInvoice({
 		stripeCli: ctx.stripeCli,
 		testClockId: testClockId!,
 	});
 
-	// Next cycle invoice: renewal (3 seats × $50) + prorated overage
 	const renewalAmount = 2 * PRICE_PER_SEAT + BASE_PRICE;
 	const expectedTotal = renewalAmount + proratedOverage;
 

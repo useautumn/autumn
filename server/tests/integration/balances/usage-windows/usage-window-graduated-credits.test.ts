@@ -1,12 +1,3 @@
-/**
- * A usage cap on a credit system counts the credits a draw actually cost, tier by tier.
- * TieredAction draws TieredCredits at 1 credit per 100 units up to 10,000 units, then 0.8.
- *
- * Red (before): the worker counted `units × row.creditCost`, a flat rate, so a draw across the tier
- *   boundary recorded the wrong usage and later draws could use headroom already spent.
- * Green (after): the counter moves by the credits drawn — 99.5, then 0.5 + 0.4 across the boundary.
- */
-
 import { test } from "bun:test";
 import { ApiVersion, ResetInterval } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
@@ -53,7 +44,6 @@ test.concurrent(
 			interval: ResetInterval.Day,
 		});
 
-		// Within the first tier: 9,950 units at 1 credit per 100.
 		await autumnV2_3.track({
 			customer_id: customerId,
 			feature_id: TestFeature.TieredAction,
@@ -67,7 +57,6 @@ test.concurrent(
 			limit: 500,
 		});
 
-		// Across the boundary: 50 units at 1 per 100, then 50 at 0.8 per 100.
 		await autumnV2_3.track({
 			customer_id: customerId,
 			feature_id: TestFeature.TieredAction,

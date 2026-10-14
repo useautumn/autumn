@@ -1,25 +1,3 @@
-/**
- * V1 Attach → V2 Update Quantity Compatibility Tests
- *
- * Tests that verify V2's subscriptions.update() works correctly to update quantity for
- * customers who were initially attached via V1 billing.
- *
- * V1 attach:
- * - Uses autumnV1.attach() or s.attach()
- * - quantity = packs * billingUnits (EXCLUDING allowance)
- *
- * V2 subscriptions.update:
- * - Uses autumnV1.subscriptions.update()
- * - quantity = total units INCLUDING allowance
- *
- * Test flow:
- * 1. Use s.attach() for initial V1 attach (quantity excluding allowance)
- * 2. Use autumnV1.subscriptions.update() for V2 quantity update (quantity including allowance)
- *
- * updateSubscription always runs as V2 (a73cd1c2a), so the update swaps the V1
- * stripe_price_id item for the V2 prepaid price; the row keeps billing_version=V1.
- */
-
 import { expect, test } from "bun:test";
 import {
 	type ApiCustomerV3,
@@ -74,15 +52,11 @@ const getProSubscriptionState = async ({
 	};
 };
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 1: INCREMENT QUANTITY - MULTI BILLING UNITS (Messages)
-// ═══════════════════════════════════════════════════════════════════════════════
-
 test.concurrent(`${chalk.yellowBright("v1→v2 compat: increment quantity (multi billing units)")}`, async () => {
 	const customerId = "v1-v2-compat-incr-multi";
 	const billingUnits = 100;
 	const pricePerPack = 10;
-	const includedUsage = 100; // Allowance
+	const includedUsage = 100;
 
 	const prepaidItem = items.prepaidMessages({
 		includedUsage,
@@ -100,11 +74,8 @@ test.concurrent(`${chalk.yellowBright("v1→v2 compat: increment quantity (multi
 		items: [prepaidItem, priceItem],
 	});
 
-	// Initial: 500 total units (including 100 allowance)
-	// = 400 prepaid units = 4 packs
-	// V1 attach quantity = 4 * 100 = 400 (excluding allowance)
 	const initialTotalUnits = 500;
-	const initialPacks = (initialTotalUnits - includedUsage) / billingUnits; // 4
+	const initialPacks = (initialTotalUnits - includedUsage) / billingUnits;
 
 	const { autumnV1 } = await initScenario({
 		customerId,
@@ -113,7 +84,6 @@ test.concurrent(`${chalk.yellowBright("v1→v2 compat: increment quantity (multi
 			s.products({ list: [pro] }),
 		],
 		actions: [
-			// V1 attach with quantity EXCLUDING allowance
 			s.attach({
 				productId: pro.id,
 				options: [
@@ -126,18 +96,16 @@ test.concurrent(`${chalk.yellowBright("v1→v2 compat: increment quantity (multi
 		],
 	});
 
-	// Verify initial state
 	const customerBefore =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	expectCustomerFeatureCorrect({
 		customer: customerBefore,
 		featureId: TestFeature.Messages,
-		includedUsage: initialTotalUnits, // allowance + prepaid
+		includedUsage: initialTotalUnits,
 		balance: initialTotalUnits,
 		usage: 0,
 	});
 
-	// V1 attach bills packs excluding allowance on stripe_price_id
 	expect(
 		await getProSubscriptionState({ customerId, productId: pro.id }),
 	).toEqual({
@@ -146,23 +114,19 @@ test.concurrent(`${chalk.yellowBright("v1→v2 compat: increment quantity (multi
 		itemCount: 2,
 	});
 
-	// Upgrade: 500 → 800 total units (including 100 allowance)
-	// = 700 prepaid units = 7 packs
 	const updatedTotalUnits = 800;
 
-	// V2 subscriptions.update with quantity INCLUDING allowance
 	await autumnV1.subscriptions.update({
 		customer_id: customerId,
 		product_id: pro.id,
 		options: [
 			{
 				feature_id: TestFeature.Messages,
-				quantity: updatedTotalUnits, // V2 expects total including allowance
+				quantity: updatedTotalUnits,
 			},
 		],
 	});
 
-	// Verify customer feature balance updated correctly
 	const customerAfter = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	expectCustomerFeatureCorrect({
 		customer: customerAfter,
@@ -172,7 +136,6 @@ test.concurrent(`${chalk.yellowBright("v1→v2 compat: increment quantity (multi
 		usage: 0,
 	});
 
-	// V2 prepaid price bills units including allowance: 800 / 100 = 8
 	expect(
 		await getProSubscriptionState({ customerId, productId: pro.id }),
 	).toEqual({
@@ -184,6 +147,6 @@ test.concurrent(`${chalk.yellowBright("v1→v2 compat: increment quantity (multi
 	await expectCustomerInvoiceCorrect({
 		customerId,
 		count: 2,
-		latestTotal: 3 * pricePerPack, // added 3 packs
+		latestTotal: 3 * pricePerPack,
 	});
 });

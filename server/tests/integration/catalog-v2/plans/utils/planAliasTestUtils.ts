@@ -59,7 +59,6 @@ export const renamePlan = async ({
 	});
 };
 
-/** Walk a preview/response and return every plan_id / plan_ids string. */
 export const collectResponsePlanIds = (value: unknown): string[] => {
 	if (value == null || typeof value !== "object") return [];
 	if (Array.isArray(value)) return value.flatMap(collectResponsePlanIds);

@@ -1,8 +1,6 @@
 import { useMutation } from "@tanstack/react-query";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 
-/** Resolve a plan-write approval (approve → applies + returns the agent's
- * continuation text; reject → discards). */
 export const useDecideApprovalMutation = () => {
 	const axiosInstance = useAxiosInstance();
 

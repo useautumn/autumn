@@ -4,13 +4,6 @@ import { catalog } from "../../../src/grading/expectations/catalogExpectations.t
 import { conduct } from "../../../src/grading/expectations/conductExpectations.ts";
 import { initAxEval } from "../../../src/initAxEval.ts";
 
-/**
- * The default-trial flow on the simplest catalog: everyone starts on a
- * no-card trial of Pro automatically. The optimal modeling is a SEPARATE
- * default plan — free base price, auto-enabled, carrying the no-card trial
- * with Pro's entitlements — next to the untouched paid Pro plan. The graded
- * wrong is hanging the trial off the paid plan itself.
- */
 export const defaultTrial = defineCase({
 	name: "basics-default-trial",
 	prompt: [

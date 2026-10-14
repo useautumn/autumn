@@ -3,9 +3,7 @@ import {
 	docLink,
 	example,
 } from "@api/utils/openApiHelpers";
-// import { TrackParamsSchema } from "../balances/trackModels";
 import { SetUsageParamsSchema } from "../balances/usageModels";
-// import { CheckParamsSchema } from "../core/checkModels";
 import {
 	BillingPortalParamsSchema,
 	CancelBodySchema,
@@ -13,10 +11,6 @@ import {
 } from "../core/coreOpModels";
 import { SetupPaymentParamsV1Schema } from "../billing/setupPayment/setupPaymentParamsV1";
 import { ExtAttachBodyV0Schema, ExtCheckoutParamsV0Schema } from "../models";
-/**
- * Centralized JSDoc declarations for all core API methods.
- * These are used by the OpenAPI spec generator and propagate to SDK documentation.
- */
 
 export const attachJsDoc = createJSDocDescription({
 	description:
@@ -65,47 +59,6 @@ export const checkoutJsDoc = createJSDocDescription({
 		}),
 	],
 });
-
-// export const checkJsDoc = createJSDocDescription({
-// 	description:
-// 		"Check whether a customer has access to a product, feature or remaining usage.",
-// 	body: CheckParamsSchema,
-// 	examples: [
-// 		example({
-// 			values: {
-// 				customer_id: "cus_123",
-// 				feature_id: "api_calls",
-// 			},
-// 			description: "Check feature access",
-// 		}),
-// 	],
-// 	methodName: "check",
-// });
-
-// export const trackJsDoc = createJSDocDescription({
-// 	description:
-// 		"Track usage events for metered features or record analytics events.",
-// 	whenToUse:
-// 		"Use this to increment usage counters for pay-as-you-go features or track customer activity.",
-// 	body: TrackParamsSchema,
-// 	examples: [
-// 		example({
-// 			values: {
-// 				customer_id: "cus_123",
-// 				feature_id: "api_calls",
-// 				value: 1,
-// 			},
-// 			description: "Track a usage event",
-// 		}),
-// 	],
-// 	methodName: "track",
-// 	docs: [
-// 		docLink({
-// 			url: "https://docs.useautumn.com/api-reference/core/track",
-// 			title: "Usage Tracking",
-// 		}),
-// 	],
-// });
 
 export const cancelJsDoc = createJSDocDescription({
 	description: "Cancel a customer's subscription to a product.",

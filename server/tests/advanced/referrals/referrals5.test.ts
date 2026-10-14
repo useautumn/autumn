@@ -8,14 +8,6 @@ import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-/**
- * Referrals5: Feature grant referrals — balances granted to both parties on redemption
- *
- * Flow:
- * 1. Create referral code, redeemer redeems
- * 2. Both referrer and redeemer receive the granted feature balance immediately
- */
-
 test(`${chalk.yellowBright("referrals5: feature grant referral grants balance to both parties")}`, async () => {
 	const mainCustomerId = "main-referral-5";
 	const redeemerId = "referral5-r1";

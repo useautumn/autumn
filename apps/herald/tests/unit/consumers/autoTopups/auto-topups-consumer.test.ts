@@ -19,7 +19,6 @@ import {
 import { createAutoTopupsConsumer } from "../../../../src/consumers/autoTopups/autoTopupsConsumer.js";
 import type { StreamRecord } from "../../../../src/stream/types/streamConsumer.js";
 
-/** A track as a newer worker logs it, with whatever effects it decided. */
 const trackWith = ({
 	offset,
 	effects,
@@ -57,7 +56,6 @@ const belowThreshold: MutationEffect = {
 
 const logger = { info() {}, warn() {}, error() {} };
 
-/** A misc cache whose Redis remembers NX sets, the way the pending key is claimed. */
 const miscCacheOf = () => {
 	const keys = new Set<string>();
 	const redis = {

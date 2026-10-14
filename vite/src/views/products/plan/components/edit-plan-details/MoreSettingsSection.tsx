@@ -43,9 +43,7 @@ export const MoreSettingsSection = () => {
 	} = useVariantLinkVisibility(product);
 
 	const hasGroup = notNullish(product.group);
-	// A version row only exists once the plan is saved; creating one always mints v1.
 	const isExistingVersion = !isCustomPlan && Boolean(product.internal_id);
-	// The linked base can be archived or a variant, so it stays selectable.
 	const visibleBasePlanOptions =
 		basePlan && !basePlanOptions.some((p) => p.id === basePlan.id)
 			? [basePlan, ...basePlanOptions]

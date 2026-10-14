@@ -22,9 +22,7 @@ import type {
 } from "./types/ownerCall.js";
 import type { CatalogCalls } from "./types/slotOwners.js";
 
-/** Calls waiting on one owner, per calling thread: above the push receiver's in-flight cap, so a burst of pushes queues here, never 503s. */
 const MAX_CALLS_IN_FLIGHT = 512;
-/** A call unanswered this long is failed: the owner is wedged, and a 503 lets the API answer instead. Swept once a second. */
 const CALL_DEADLINE_MS = 5_000;
 const SWEEP_EVERY_MS = 1_000;
 
@@ -32,11 +30,9 @@ type WaitingCall = ReturnType<typeof Promise.withResolvers<OwnerReply>> & {
 	sentAt: number;
 };
 
-/** This thread's line to one other thread: its calls, matched to replies by id. */
 export type OwnerLink = {
 	processorFor(params: { atomId: string | null }): SlotProcessor;
 	catalogFor(params: { atomId: string | null }): CatalogCalls;
-	/** The subjects of a slot the other thread owns, written at or after `after`. */
 	listSince(params: {
 		atomId: string | null;
 		slot: number;
@@ -57,7 +53,6 @@ export type OwnerLink = {
 		keys: { customerId: string; entityId: string }[];
 	}): Promise<AppliedSubject[]>;
 	connect(params: { port: MessagePort }): void;
-	/** The owner stopped: every call waiting on it fails, and new ones fail at once until it is back. */
 	disconnect(): void;
 };
 
@@ -85,7 +80,6 @@ export const createOwnerLink = ({ thread }: { thread: number }): OwnerLink => {
 	): Promise<
 		CheckAnswer | boolean | AppliedSubjectOnWire[] | SubjectDigestOnWire[]
 	> {
-		// Never shed a catalog install: a thread that missed one answers from the old catalog until the next push.
 		const shed =
 			body.type !== "installCatalog" && waiting.size >= MAX_CALLS_IN_FLIGHT;
 		if (!port || shed) throw new OwnerUnavailableError({ thread });

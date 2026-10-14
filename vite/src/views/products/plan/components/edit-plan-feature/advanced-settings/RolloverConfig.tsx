@@ -5,7 +5,6 @@ import {
 	RolloverConfigForm,
 } from "./RolloverConfigForm";
 
-/** Visibility is controlled by parent AdvancedSettings */
 export function RolloverConfig() {
 	const { item, setItem } = useProductItemContext();
 

@@ -39,7 +39,6 @@ export function createUsageEventsConsumer({
 			if (event) events.push(event);
 		}
 		const { refused } = await ctx.eventsDb.insertUsageEvents({ events });
-		// Set aside so the rest of the batch lands; loud, because a refused event is usage nobody will see.
 		for (const { event, cause } of refused) {
 			ctx.logger.error(
 				{
@@ -53,7 +52,6 @@ export function createUsageEventsConsumer({
 		await sendUnsentToTinybird({ events });
 	}
 
-	/** A request that failed after writing some rows marks those, so the retry does not send them twice. */
 	async function sendUnsentToTinybird({
 		events,
 	}: {

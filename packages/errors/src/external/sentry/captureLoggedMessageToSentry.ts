@@ -6,7 +6,6 @@ import { trimLoggerFrames } from "./trimLoggerFrames.js";
 
 const LOGGED_MESSAGE_CLASSIFICATION: ErrorClassification = { kind: "bug" };
 
-/** A text-only error line: titled by its message, located and grouped by the call site. */
 export const captureLoggedMessageToSentry = ({
 	message,
 	stack,

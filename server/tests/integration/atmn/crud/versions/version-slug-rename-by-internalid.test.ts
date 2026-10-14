@@ -1,14 +1,3 @@
-/**
- * atmn crud/versions — a changed versionSlug beside internalId is a slug
- * rename, the way a changed planId beside internalId is a plan rename. The
- * preview names the move on the row; the push applies it in place (same
- * internalId, no second row minted); the next push finds nothing.
- *
- * Red (current):  push says "No changes" — internalId pins the row and the
- *                 stated slug is discarded.
- * Green (after):  `~ Version slug: "v2" -> "legacy"`, applied, idempotent.
- */
-
 import { expect, test } from "bun:test";
 import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 import { expectRoundTrip } from "@tests/utils/atmnUtils/expectRoundTrip.js";

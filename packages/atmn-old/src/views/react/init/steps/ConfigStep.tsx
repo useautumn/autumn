@@ -38,14 +38,12 @@ export function ConfigStep({ step, totalSteps, onComplete, targetPath }: ConfigS
 		"pull" | "nuke" | "template" | "blank" | null
 	>(null);
 
-	// Fetch configuration counts using TanStack Query
 	const {
 		data: configCounts,
 		isLoading,
 		error: fetchError,
 	} = useConfigCounts();
 
-	// Mutation for writing template config
 	const writeTemplateConfig = useWriteTemplateConfig();
 
 	const plansCount = configCounts?.plansCount ?? 0;
@@ -70,7 +68,7 @@ export function ConfigStep({ step, totalSteps, onComplete, targetPath }: ConfigS
 			setCompletionAction("blank");
 			setConfigState("complete");
 			setTimeout(() => {
-				onComplete(false); // No pricing
+				onComplete(false);
 			}, 1000);
 		} catch (err) {
 			setError(err instanceof Error ? err.message : "Failed to write config");
@@ -87,7 +85,7 @@ export function ConfigStep({ step, totalSteps, onComplete, targetPath }: ConfigS
 						setCompletionAction("template");
 						setConfigState("complete");
 						setTimeout(() => {
-							onComplete(true); // Has pricing from template
+							onComplete(true);
 						}, 1000);
 					},
 					onError: (err) => {
@@ -103,7 +101,6 @@ export function ConfigStep({ step, totalSteps, onComplete, targetPath }: ConfigS
 	);
 
 	const handleTemplateCancel = useCallback(() => {
-		// If we came from post-nuke choice, go back there; otherwise go back to main choosing
 		if (completionAction === "nuke") {
 			setConfigState("post_nuke_choice");
 		} else {
@@ -129,7 +126,7 @@ export function ConfigStep({ step, totalSteps, onComplete, targetPath }: ConfigS
 	const handlePostNukeSelect = useCallback(
 		(item: SelectMenuItem<string>) => {
 			if (item.value === "template") {
-				setCompletionAction("nuke"); // Track that we came from nuke
+				setCompletionAction("nuke");
 				handleTemplate();
 			} else if (item.value === "blank") {
 				handleBlank();
@@ -138,7 +135,6 @@ export function ConfigStep({ step, totalSteps, onComplete, targetPath }: ConfigS
 		[handleTemplate, handleBlank],
 	);
 
-	// Menu items based on whether config exists
 	const menuItems: SelectMenuItem<string>[] = hasExistingConfig
 		? [
 				{
@@ -161,7 +157,6 @@ export function ConfigStep({ step, totalSteps, onComplete, targetPath }: ConfigS
 				},
 			];
 
-	// Post-nuke menu items
 	const postNukeMenuItems: SelectMenuItem<string>[] = [
 		{
 			label: "Use a template",
@@ -173,7 +168,6 @@ export function ConfigStep({ step, totalSteps, onComplete, targetPath }: ConfigS
 		},
 	];
 
-	// Handle loading state from query
 	if (isLoading) {
 		return (
 			<Box flexDirection="column" marginBottom={1}>
@@ -183,7 +177,6 @@ export function ConfigStep({ step, totalSteps, onComplete, targetPath }: ConfigS
 		);
 	}
 
-	// Handle error state from query
 	if (fetchError) {
 		return (
 			<Box flexDirection="column" marginBottom={1}>
@@ -222,7 +215,7 @@ export function ConfigStep({ step, totalSteps, onComplete, targetPath }: ConfigS
 						setCompletionAction("pull");
 						setConfigState("complete");
 						setTimeout(() => {
-							onComplete(true); // Has pricing from pull
+							onComplete(true);
 						}, 1000);
 					}}
 				/>

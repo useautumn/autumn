@@ -8,7 +8,7 @@ import { prices } from "@tests/utils/fixtures/db/prices";
 import { products } from "@tests/utils/fixtures/db/products";
 import { resolveInvoiceBasePrice } from "@/internal/invoices/actions/create/compute/resolveInvoiceBasePrice";
 
-const base = prices.createFixed({ id: "base" }); // $100 / month
+const base = prices.createFixed({ id: "base" });
 const withBase = products.createFull({ id: "pro", prices: [base] });
 const withoutBase = products.createFull({ id: "free", prices: [] });
 
@@ -48,7 +48,6 @@ describe("resolveInvoiceBasePrice", () => {
 		});
 		expect(resolved?.amount).toBe(80);
 		expect(resolved?.price.config.interval).toBe(BillingInterval.Month);
-		// catalog untouched
 		expect((base.config as FixedPriceConfig).amount).toBe(100);
 	});
 

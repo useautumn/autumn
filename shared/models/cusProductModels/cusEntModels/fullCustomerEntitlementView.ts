@@ -9,10 +9,6 @@ import type { CusProduct, FullCusProduct } from "../cusProductModels.js";
 import type { CustomerEntitlement } from "./cusEntModels.js";
 import type { Rollover } from "./rolloverModels/rolloverTable.js";
 
-/**
- * The columns balance selection and deduction read. FullCustomerEntitlement satisfies it,
- * and so does a leaner row joined with its catalog rows, so one helper serves both.
- */
 export type RolloverView = Pick<
 	Rollover,
 	"id" | "balance" | "usage" | "expires_at"
@@ -59,7 +55,6 @@ export type FullCusEntWithFullCusProductView<
 	CP extends FullCusProductView = FullCusProductView,
 > = CE & { customer_product: CP | null };
 
-/** What selection needs of a subject: its products' rows, loose rows, and which entity it views. */
 export type FullSubjectView<
 	CE extends FullCustomerEntitlementView = FullCustomerEntitlementView,
 	CP extends FullCusProductView = FullCusProductView,
@@ -71,31 +66,26 @@ export type FullSubjectView<
 	pooled_customer_entitlements?: CE[];
 };
 
-/** A product row with its prices: what classifying a plan and sizing a grant read. */
 export type CustomerProductWithPricesView = FullCusProductView &
 	Pick<CusProduct, "options" | "quantity"> & {
 		customer_prices: FullCustomerPrice[];
 		customer_licenses?: FullCusProduct["customer_licenses"];
 	};
 
-/** What a balance reads off the pool behind a pooled row: its grant. */
 export type PooledBalanceGrantView = Pick<
 	DbPooledBalance,
 	"granted" | "unlimited"
 >;
 
-/** A stored row before selection attaches its product. */
 export type CustomerEntitlementRowView = FullCustomerEntitlementView & {
 	pooled_balance?: PooledBalanceGrantView | null;
 	customer_product_id: string | null;
 };
 
-/** A row with the product that prices it: what starting balances, overage floors and plan allowances read. */
 export type CustomerEntitlementWithPricesView = CustomerEntitlementRowView & {
 	customer_product: CustomerProductWithPricesView | null;
 };
 
-/** What resolving billing controls and usage windows reads of a subject: its controls, its plans, and its rows. */
 export type BillingControlSubjectView<
 	CE extends FullCustomerEntitlementView = FullCustomerEntitlementView,
 	CP extends FullCusProductView = FullCusProductView,

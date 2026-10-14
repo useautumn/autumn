@@ -2,7 +2,6 @@ import type { FullProduct, Migration } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 
-/** Only migrations with operations need the catalog, to decide batch eligibility. */
 export const listMigrationProducts = async ({
 	ctx,
 	migrations,

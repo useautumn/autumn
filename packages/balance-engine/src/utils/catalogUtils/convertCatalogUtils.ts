@@ -12,7 +12,6 @@ import type { SubjectState } from "../../models/subject/subjectState.js";
 export const catalogKeyToString = ({ key }: { key: CatalogKey }): string =>
 	`${key.table}:${key.id}`;
 
-/** Entitlements, prices, plan licenses and free trials are addressed by id, products and features by internal_id. */
 export const catalogRowToCatalogKey = ({
 	row,
 }: {
@@ -25,7 +24,6 @@ export const catalogRowToCatalogKey = ({
 const compareCatalogKeys = (left: CatalogKey, right: CatalogKey): number =>
 	left.table.localeCompare(right.table) || left.id.localeCompare(right.id);
 
-/** Every catalog row the state references, distinct and in a stable order. */
 export const subjectStateToCatalogKeys = ({
 	state,
 }: {
@@ -50,7 +48,6 @@ export const subjectStateToCatalogKeys = ({
 	return [...keysByString.values()].sort(compareCatalogKeys);
 };
 
-/** The definitions of the state's license pools. Only a read renders them, so a link removed since hydration renders as none rather than failing. */
 export const subjectStateToPlanLicenseCatalogKeys = ({
 	state,
 }: {
@@ -66,7 +63,6 @@ export const subjectStateToPlanLicenseCatalogKeys = ({
 		.sort()
 		.map((id) => ({ table: "planLicenses", id }));
 
-/** The trials behind the state's products. Only a read renders them, so a trial removed since hydration renders as none rather than failing. */
 export const subjectStateToFreeTrialCatalogKeys = ({
 	state,
 }: {
@@ -82,7 +78,6 @@ export const subjectStateToFreeTrialCatalogKeys = ({
 		.sort()
 		.map((id) => ({ table: "freeTrials", id }));
 
-/** The rows the catalog's plan licenses are made of: each license's product and its effective items. */
 export const planLicensesToItemCatalogKeys = ({
 	catalog,
 }: {
@@ -104,7 +99,6 @@ export const planLicensesToItemCatalogKeys = ({
 	return [...keysByString.values()].sort(compareCatalogKeys);
 };
 
-/** Rows are parsed where they enter (Postgres, a request), so keying them is all that is left. */
 export const catalogRowsToCatalog = ({
 	rows,
 }: {
@@ -144,7 +138,6 @@ export const catalogRowsToCatalog = ({
 	return catalog;
 };
 
-/** One catalog holding every row of each; a row both hold is the same row. */
 export const mergeCatalogs = ({
 	catalogs,
 }: {
@@ -167,7 +160,6 @@ export const mergeCatalogs = ({
 	),
 });
 
-/** A product's trial from the worker's catalog; null when the row is gone. */
 export const catalogToFreeTrial = ({
 	catalog,
 	freeTrialId,
@@ -177,12 +169,10 @@ export const catalogToFreeTrial = ({
 }): FreeTrial | null => {
 	const freeTrial = freeTrialId ? catalog.freeTrials[freeTrialId] : undefined;
 	if (!freeTrial) return null;
-	// The scope columns are catalog plumbing, not free_trials columns.
 	const { org_id: _orgId, env: _env, ...row } = freeTrial;
 	return row;
 };
 
-/** Every row the ids name, or null when the catalog lacks any of them. */
 const allRowsOf = <Row>({
 	ids,
 	rowsById,
@@ -208,7 +198,6 @@ const withFeatures = ({
 	return withFeature.length === entitlements.length ? withFeature : null;
 };
 
-/** A pool's definition from the worker's catalog; null when the link is gone or any row it is made of is missing. */
 export const catalogToFullPlanLicense = ({
 	catalog,
 	planLicenseId,
@@ -218,7 +207,6 @@ export const catalogToFullPlanLicense = ({
 }): FullPlanLicense | null => {
 	const planLicense = catalog.planLicenses[planLicenseId];
 	if (!planLicense) return null;
-	// The id lists are catalog plumbing, not plan license columns.
 	const {
 		price_ids,
 		entitlement_ids,

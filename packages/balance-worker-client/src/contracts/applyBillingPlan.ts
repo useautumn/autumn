@@ -11,7 +11,6 @@ export type BalanceWorkerApplyBillingPlanRequest = {
 	payload: Pick<ApplyBillingPlanRequest, "catalogRows">;
 };
 
-/** `applied`: the plan landed in Postgres. `customer_exists` / `entity_exists`: it creates a row another request created first; nothing was written. */
 export type ApplyBillingPlanReply = {
 	result:
 		| { status: "applied" | "customer_exists" }

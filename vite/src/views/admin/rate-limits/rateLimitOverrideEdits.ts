@@ -3,7 +3,6 @@ import type {
 	RateLimitOverrideLimits,
 } from "./rateLimitTypes";
 
-/** The typed limit when it is a whole number ≥ 0, else null; "0.5" never saves as 0. */
 export const parseOverrideLimit = (text: string) => {
 	const limit = Number(text);
 	return text.trim() !== "" && Number.isInteger(limit) && limit >= 0
@@ -13,7 +12,6 @@ export const parseOverrideLimit = (text: string) => {
 
 type OrgOverrides = RateLimitOverrideLimits[string];
 
-/** Drops the org entirely once its last override is gone. */
 const withOrgOverrides = ({
 	orgs,
 	orgKey,

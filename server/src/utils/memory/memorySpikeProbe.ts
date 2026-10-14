@@ -4,7 +4,6 @@ import {
 	listInFlightRequests,
 } from "./inFlightRequests.js";
 
-/** arrayBuffers separates transport/buffer growth from ordinary object churn. */
 export type MemorySnapshotMB = {
 	rssMB: number;
 	heapUsedMB: number;
@@ -28,10 +27,6 @@ const MAX_REQUESTS_LOGGED = 20;
 const toMB = (bytes: number): number =>
 	Math.round((bytes / 1024 / 1024) * 10) / 10;
 
-/**
- * Fires on a rapid RISE above the recent baseline, not just an absolute size —
- * a process going 2GB to 4.4GB is the event; a steadily fat one is not.
- */
 export const createMemorySpikeProbe = ({
 	readMemoryMB,
 	listInFlightRequests: readInFlight,
@@ -65,7 +60,6 @@ export const createMemorySpikeProbe = ({
 		const spiking =
 			memory.rssMB - baselineMB >= riseMB || memory.rssMB >= ceilingMB;
 
-		// Re-arm as soon as the condition clears, so one event yields one report.
 		if (!spiking) armed = true;
 		if (!(spiking && armed) || reportsSent >= maxReports) return;
 
@@ -100,7 +94,6 @@ const readEnvNumber = ({
 	return Number.isFinite(parsed) ? parsed : fallback;
 };
 
-/** A non-positive interval would clamp to a ~1ms sampling loop. */
 const readIntervalMs = (): number => {
 	const parsed = readEnvNumber({
 		name: "MEMORY_SPIKE_PROBE_INTERVAL_MS",
@@ -111,7 +104,6 @@ const readIntervalMs = (): number => {
 
 let intervalHandle: ReturnType<typeof setInterval> | null = null;
 
-/** Set MEMORY_SPIKE_PROBE_MB to 0 to disable. */
 export const startMemorySpikeProbe = ({ label }: { label: string }) => {
 	const ceilingMB = readEnvNumber({
 		name: "MEMORY_SPIKE_PROBE_MB",

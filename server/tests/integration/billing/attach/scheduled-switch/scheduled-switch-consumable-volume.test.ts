@@ -1,8 +1,3 @@
-/**
- * A downgrade scheduled off a pay-per-use volume plan bills the ending period's overage at renewal on
- * its net tier, beside the incoming base price. Each case checks the preview equals that invoice.
- */
-
 import { expect, test } from "bun:test";
 import { type ApiCustomerV3, sumValues } from "@autumn/shared";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
@@ -83,7 +78,6 @@ const runVolumeDowngrade = async ({
 test.concurrent(
 	`${chalk.yellowBright("scheduled-switch-consumable-volume 1: premium 100 included, 700 used → 600 over in net band 2: 600 × $0.05 = $30 + pro $20")}`,
 	async () => {
-		// Net tiers 0-500/501+ are total-usage bands 0-600/601+ once 100 are included.
 		await runVolumeDowngrade({
 			customerId: "sched-switch-cons-volume-band2",
 			usage: 700,
@@ -95,7 +89,6 @@ test.concurrent(
 test.concurrent(
 	`${chalk.yellowBright("scheduled-switch-consumable-volume 2: premium 100 included, 150 used → only the 50 over: 50 × $0.10 = $5 + pro $20")}`,
 	async () => {
-		// Included units are never charged: 50 over × $0.10 = $5.
 		await runVolumeDowngrade({
 			customerId: "sched-switch-cons-volume-band1",
 			usage: 150,

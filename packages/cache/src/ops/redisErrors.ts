@@ -4,7 +4,6 @@ export type UnavailableReason =
 	| "connection"
 	| "other";
 
-/** Thrown by `runRedisOp` when Redis is unavailable; a caller that fails open catches it at its boundary. */
 export class RedisUnavailableError extends Error {
 	readonly reason: UnavailableReason;
 	readonly source: string;
@@ -33,7 +32,6 @@ const TRANSIENT_REDIS_ERROR_NAMES = new Set(["MaxRetriesPerRequestError"]);
 const CONNECTION_LEVEL_ERROR =
 	/ETIMEDOUT|timeout|timed out|ECONN|closed|writeable|max retries/i;
 
-/** Failed because of the socket, not the command; wider than transient, to catch a timeout wrapper's message. */
 export const isConnectionLevelRedisError = ({
 	error,
 }: {

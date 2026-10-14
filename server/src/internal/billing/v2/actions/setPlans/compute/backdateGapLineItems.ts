@@ -15,7 +15,6 @@ type PlanRun = {
 	endsAt?: number | null;
 };
 
-/** The plans the recreated subscription runs from the backdated start: new rows, and kept rows moved back to it. */
 const plansFromBackdatedStart = ({
 	customerProductChanges,
 	backdatedStartMs,
@@ -42,7 +41,6 @@ const plansFromBackdatedStart = ({
 		})),
 ];
 
-/** The part of the gap a plan ran, so a later phase's plan is never billed before it started. */
 const planRunInGap = ({
 	planRun,
 	gap,
@@ -55,7 +53,6 @@ const planRunInGap = ({
 	return start < end ? { start, end } : undefined;
 };
 
-/** Charges the backdated time before the replaced subscription started, per proration_behavior. */
 export const backdateGapLineItems = ({
 	ctx,
 	billingContext,

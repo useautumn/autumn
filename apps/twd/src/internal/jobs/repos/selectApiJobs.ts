@@ -30,7 +30,6 @@ export const toApiJob = ({
 	finishedAt: iso(job.finishedAt),
 });
 
-/** Jobs joined with their creator's email, newest first, in the contract `Job` shape. */
 export const selectApiJobs = async ({
 	db,
 	where,

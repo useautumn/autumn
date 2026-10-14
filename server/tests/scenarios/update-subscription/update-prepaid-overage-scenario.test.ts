@@ -11,15 +11,6 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-/**
- * Update Subscription - Prepaid Overage Scenario
- *
- * Baseline scenario for inspecting `recalculate_balances`.
- * Starts with a prepaid messages plan, tracks the customer into overage,
- * then updates prepaid quantity with balance recalculation enabled so we can inspect the
- * before/after customer feature shape.
- */
-
 test(`${chalk.yellowBright("update-subscription: prepaid overage recalculate balances")}`, async () => {
 	const customerId = "update-prepaid-overage";
 	const prepaidMessagesItem = items.prepaidMessages({

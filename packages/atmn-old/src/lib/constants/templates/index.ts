@@ -1,7 +1,3 @@
-/**
- * Template configurations index
- */
-
 import type { Feature, Plan } from "../../../compose/models/index.js";
 import * as linear from "./linear.config.js";
 import * as openai from "./openai.config.js";

@@ -42,8 +42,6 @@ const buildProjectedCreditSystemsBucket = ({
 	};
 };
 
-/** Composes buckets as post-batch surviving references.
- *  Plan upserts' overlay (persisted − batch-removed + batch-drafted) is a new input here — not setup/SQL. */
 export const buildFeatureUsage = ({
 	featureIds,
 	previewContext,

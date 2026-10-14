@@ -10,15 +10,6 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-/**
- * Update Subscription Checkout - Quantity Next Cycle Scenario
- *
- * Baseline scenario for frontend card exploration.
- * Starts with an attached prepaid plan, previews a quantity update on the same
- * product with `ProrateNextCycle`, then applies it so we can inspect the
- * before/preview/after shapes.
- */
-
 test(`${chalk.yellowBright("update-subscription-checkout: quantity update on same plan - prorate next cycle")}`, async () => {
 	const customerId = "update-sub-checkout-qty";
 

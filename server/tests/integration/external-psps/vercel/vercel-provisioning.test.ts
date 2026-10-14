@@ -1,6 +1,3 @@
-/** Drives Vercel resource provisioning through HTTP auth middleware.
- * Uses the explicit test OIDC allow header from the Vercel test helper. */
-
 import { expect, test } from "bun:test";
 import {
 	ApiVersion,
@@ -67,10 +64,6 @@ const createResourceViaHttp = async ({
 	return { response, data };
 };
 
-// ─────────────────────────────────────────────────────────────────────────────
-// TEST 1: Paid plan → invoice-mode Stripe subscription
-// ─────────────────────────────────────────────────────────────────────────────
-
 test.concurrent(
 	`${chalk.yellowBright(
 		"vercel-provisioning: paid plan creates a send_invoice subscription with vercel metadata + finalized first invoice",
@@ -89,7 +82,6 @@ test.concurrent(
 			products: [proRaw],
 			prefix: `${TEST_CASE}-paid`,
 		});
-		// Refresh the (post-prefix) product id.
 		const pro = proRaw;
 
 		const { stripeCustomer, internalCustomerId } = await seedVercelCustomer({
@@ -113,7 +105,6 @@ test.concurrent(
 		expect(created.id.startsWith("vre_")).toBe(true);
 		expect(created.productId).toBe(pro.id);
 
-		// Stripe subscription assertions
 		const stripeCustomerExpanded = await ctx.stripeCli.customers.retrieve(
 			stripeCustomer.id,
 			{ expand: ["subscriptions"] },
@@ -135,14 +126,11 @@ test.concurrent(
 		expect(subscription.metadata?.vercel_billing_plan_id).toBe(pro.id);
 		expect(subscription.metadata?.vercel_resource_id).toBe(created.id);
 
-		// First invoice should be finalized (not draft) because we set
-		// invoice_mode.finalize = true. send_invoice keeps it `open` (not paid).
 		const latestInvoiceId = stripeRefToId(subscription.latest_invoice);
 		expect(latestInvoiceId).toBeDefined();
 		const invoice = await ctx.stripeCli.invoices.retrieve(latestInvoiceId!);
 		expect(["open", "paid"]).toContain(invoice.status ?? "");
 
-		// Autumn cus_product should be active (top-level enable_plan_immediately).
 		const cusProducts = await CusProductService.list({
 			db: ctx.db,
 			internalCustomerId,
@@ -151,10 +139,6 @@ test.concurrent(
 		expect(cusProducts.length).toBeGreaterThan(0);
 	},
 );
-
-// ─────────────────────────────────────────────────────────────────────────────
-// TEST 2: Idempotent re-call short-circuits
-// ─────────────────────────────────────────────────────────────────────────────
 
 test.concurrent(
 	`${chalk.yellowBright(
@@ -182,7 +166,6 @@ test.concurrent(
 			installationId,
 		});
 
-		// First call.
 		const first = await createResourceViaHttp({
 			installationId,
 			body: {
@@ -203,9 +186,6 @@ test.concurrent(
 		expect(matchedAfterFirst.length).toBe(1);
 		const firstSubId = matchedAfterFirst[0]!.id;
 
-		// Second call. The handler short-circuits via the
-		// `existingResource + existingSub + existingCusProducts` branch in
-		// `handleCreateResource.ts` and never enters provisionVercelCusProduct.
 		const second = await createResourceViaHttp({
 			installationId,
 			body: {
@@ -227,10 +207,6 @@ test.concurrent(
 		expect(matchedAfterSecond[0]!.id).toBe(firstSubId);
 	},
 );
-
-// ─────────────────────────────────────────────────────────────────────────────
-// TEST 3: OIDC middleware rejects requests with no/bad bearer token
-// ─────────────────────────────────────────────────────────────────────────────
 
 test.concurrent(
 	`${chalk.yellowBright(
@@ -273,10 +249,6 @@ test.concurrent(
 	},
 );
 
-// Reference unused imports so linters/typecheck stay happy when the test
-// list shrinks during iteration. (`AutumnInt`/`ApiVersion`/`AppEnv` are
-// reserved for future test cases that exercise the full attach path; keeping
-// the imports prevents churn when adding them back.)
 void ApiVersion;
 void AppEnv;
 void AutumnInt;

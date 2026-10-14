@@ -1,6 +1,3 @@
-/** Leaves a Premium customer with -20 carried debt ready for dashboard recalculation.
- * Recalculation should absorb the debt and reduce displayed remaining from 500 to 480. */
-
 import { test } from "bun:test";
 import { findCustomerEntitlement } from "@tests/balances/utils/findCustomerEntitlement";
 import { waitForPostgresBalance } from "@tests/integration/cron/batch-reset-v2/batchResetV2TestUtils";

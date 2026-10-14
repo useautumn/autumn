@@ -13,18 +13,6 @@ import {
 	messagingApiConfig,
 } from "./messagingApiPricing.ts";
 
-/**
- * KIND C (step-seed): the five plans exist; the user adds "tiers" to BOTH
- * lines — Pro email tiers and Campaigns contact tiers. The word "tiers" is
- * the trap: customers PICK a tier at checkout, so the right conclusion is
- * sibling plans via `.variant()` of each base, not `price.tiers` on the
- * items. The double ladder checks the rule generalizes across groups
- * instead of being applied to one plan and abandoned on the next. The
- * phrasing is deliberately ambiguous and the user is simulated: probing
- * resolves it, guessing usage-tiers does not. Graded wrongs: usage tiers on
- * a base plan, prepaid packs, standalone plan() copies (variant check), or
- * touching the base plans.
- */
 export const seedTierVariants = defineCase({
 	name: "messaging-api-seed-tier-variants",
 	prompt: [

@@ -31,9 +31,7 @@ export function createBalanceShadowController({
 	function reportFailure({ error }: { error: unknown }): void {
 		try {
 			report(error);
-		} catch {
-			// Shadow configuration and logging failures must not affect live serving.
-		}
+		} catch {}
 	}
 
 	async function settle({ jobs }: { jobs: (Promise<void> | undefined)[] }) {

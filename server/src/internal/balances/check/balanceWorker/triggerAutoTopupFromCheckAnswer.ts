@@ -7,7 +7,6 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { triggerAutoTopUp } from "../../autoTopUp/triggerAutoTopUp.js";
 import type { WorkerCheckAnswer } from "./runDeductingCheck.js";
 
-/** A plain check writes no log record, so the server decides the top-up from the reply's rows, as the legacy check does. */
 export function triggerAutoTopupFromCheckAnswer({
 	ctx,
 	command,

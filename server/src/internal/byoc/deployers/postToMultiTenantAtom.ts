@@ -23,7 +23,6 @@ const multiTenantAtomUnavailable = ({
 		data: { route, detail },
 	});
 
-/** One call to a multi-tenant Atom's admin routes; anything but a 2xx is a 503 carrying what the Atom said. */
 export const postToMultiTenantAtom = async ({
 	atom,
 	route,
@@ -42,7 +41,6 @@ export const postToMultiTenantAtom = async ({
 				[ADMIN_TOKEN_HEADER]: atom.adminToken,
 			},
 			body: JSON.stringify(body),
-			// The admin token must never follow a redirect to another host.
 			redirect: "error",
 			signal: AbortSignal.timeout(MULTI_TENANT_ATOM_TIMEOUT_MS),
 		});

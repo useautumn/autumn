@@ -1,25 +1,3 @@
-/**
- * Regression test for drained standalone balances leaking into customers.list.
- *
- * A standalone balance is a customer_entitlement with customer_product_id = NULL
- * (created by balances.create, or minted as a carry-over on plan transitions).
- * It surfaces in the API as a breakdown item with plan_id: null.
- *
- * Once such a grant is fully consumed it is dead weight: it can't be spent, but
- * it still adds its grant to `granted` and its consumption to `usage`.
- * getFullSubject (customers.get) already filtered those rows out; the two
- * customers.list queries did not.
- *
- * Red-failure mode (reported):
- *  - customers.list reports granted 20,000 / usage 186,446
- *  - customers.get  reports granted 10,000 / usage 176,446
- *  Both deltas are exactly the drained standalone grant.
- *
- * Green-success criteria:
- *  - A standalone grant with balance remaining shows up on every read path.
- *  - A fully drained one shows up on none of them.
- */
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV5 } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
@@ -32,11 +10,6 @@ import type { AutumnInt } from "@/external/autumn/autumnCli.js";
 const PLAN_GRANT = 10_000;
 const STANDALONE_GRANT = 10_000;
 
-/**
- * Asserts customers.get and both customers.list paginations report the same
- * balance. `standaloneGrant: null` means the plan_id: null breakdown item must
- * be absent from every read path.
- */
 const expectBalanceParityAcrossReadPaths = async ({
 	autumnV2_2,
 	autumnV2_3,
@@ -55,8 +28,6 @@ const expectBalanceParityAcrossReadPaths = async ({
 	standaloneGrant: number | null;
 }) => {
 	const fetched = await autumnV2_2.customers.get<ApiCustomerV5>(customerId);
-	// Forces a FullSubject rebuild from Postgres rather than a cache read — a
-	// warm subject keeps rows the rebuild query would filter out.
 	const rebuilt = await autumnV2_2.customers.get<ApiCustomerV5>(customerId, {
 		skip_cache: "true",
 	});
@@ -156,8 +127,6 @@ test.concurrent(
 	},
 );
 
-// Mirrors the reported prod shape. Pre-fix, customers.list kept the drained
-// grant and reported granted/usage 10,000 higher than customers.get.
 test.concurrent(
 	`${chalk.yellowBright("list-customers standalone balances: fully drained standalone grant is excluded from every read path")}`,
 	async () => {
@@ -183,7 +152,6 @@ test.concurrent(
 			included_grant: STANDALONE_GRANT,
 		});
 
-		// Drains the plan grant and then the standalone grant to zero.
 		await autumnV2_2.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
@@ -191,7 +159,6 @@ test.concurrent(
 		});
 		await new Promise((resolve) => setTimeout(resolve, 3000));
 
-		// Only the plan cusEnt survives: it is drained too, but it is not loose.
 		await expectBalanceParityAcrossReadPaths({
 			autumnV2_2,
 			autumnV2_3,

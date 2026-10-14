@@ -9,9 +9,6 @@ import { removeLicenseEntitlementsForPage } from "./removeLicenseEntitlementsFor
 import { replaceLicenseEntitlementsForPage } from "./replaceLicenseEntitlementsForPage/replaceLicenseEntitlementsForPage.js";
 import { repointLicensePoolForPage } from "./repointLicensePoolForPage/repointLicensePoolForPage.js";
 
-/** Routes one license op to the action that owns its verb. Compute emits the
- * repoint first per link, and the page awaits in order, so a pool is on its
- * minted link before any candidate select reads it. */
 export const runLicenseEntitlementOp = async ({
 	db,
 	features,

@@ -146,7 +146,6 @@ const priceStripeIds = (items: ProcessorItem[]): ReviewStripeId[] =>
 			: [],
 	);
 
-/** What Stripe will hold in each phase: the end state, not a diff. */
 export const processorItemsToReviewSection = ({
 	preview,
 	nowMs,
@@ -154,7 +153,6 @@ export const processorItemsToReviewSection = ({
 }: {
 	preview: SetPlansPreviewResponse;
 	nowMs: number;
-	/** The request's end date, which the final phase runs until. */
 	endsAt?: number | null;
 }): ReviewChangeSection => {
 	const phases: ReviewChangePhase[] = preview.phases.map(

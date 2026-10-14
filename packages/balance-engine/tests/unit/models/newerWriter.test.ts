@@ -32,7 +32,6 @@ import {
 	org,
 } from "../engineFixtures.js";
 
-/** As JSON leaves a newer writer: the same value, plus one field this build does not know. */
 const fromNewerWriter = <T>(value: T): T & { futureField: true } => ({
 	...JSON.parse(JSON.stringify(value)),
 	futureField: true,
@@ -166,7 +165,6 @@ describe("a subject state from a newer worker", () => {
 		onUnknownInput((input) => sightings.push(input));
 	});
 
-	/** Each test picks its own values, so what counts as a first sighting does not depend on test order. */
 	const newerState = ({
 		apiSemver,
 		status,
@@ -195,7 +193,6 @@ describe("a subject state from a newer worker", () => {
 		parseSubjectState({ input: state });
 		parseSubjectState({ input: { ...state, revision: 7 } });
 
-		// api_semver is a plain string on the row, so a new API version is not a sighting at all.
 		expect(sightings).toEqual([
 			{
 				kind: "enum_value",

@@ -37,13 +37,10 @@ const IconCheckbox = React.forwardRef<HTMLButtonElement, IconCheckboxProps>(
 		const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
 			onCheckedChange?.(!checked);
 			onClick?.(event);
-			// Remove focus after click to prevent stuck active state
 			event.currentTarget.blur();
 		};
 
 		const handleKeyDown = (event: React.KeyboardEvent<HTMLButtonElement>) => {
-			// Suppress the native button click without toggling, so
-			// cmd/ctrl+enter only triggers sheet-level submit shortcuts
 			if (event.key === "Enter" && hasSubmitShortcutModifier(event)) {
 				event.preventDefault();
 			}

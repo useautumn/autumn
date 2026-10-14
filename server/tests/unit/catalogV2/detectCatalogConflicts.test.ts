@@ -124,7 +124,6 @@ const detect = ({
 
 describe("detectCatalogConflicts", () => {
 	test("relative tracking the edited plan's current value is not a conflict", () => {
-		// sibling that still has 100, or uncustomized license follow — same relative
 		expect(
 			detect({
 				currentPlan: plan([usage("messages", MONTH, 100)]),

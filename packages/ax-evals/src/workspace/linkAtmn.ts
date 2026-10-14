@@ -2,10 +2,6 @@ import { chmod, mkdir, symlink, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { ATMN_DIR } from "./workspacePaths.ts";
 
-/**
- * The workspace package lives at `node_modules/atmn` so configs resolve the
- * CLI under test. The wrapper pins the run's dev server with `--base-url`.
- */
 export const linkAtmn = async ({
 	dir,
 	backendUrl,

@@ -18,21 +18,12 @@ import { getCusReferrals } from "../cusResponseUtils/getCusReferrals.js";
 import { getCusRewards } from "../cusResponseUtils/getCusRewards.js";
 import { getCusTrialsUsed } from "../cusResponseUtils/getCusTrialsUsed.js";
 
-/**
- * Result of expand resolution. In addition to the standard `ApiCusExpand`
- * fields, this carries an optional override for `billing_controls.auto_topups`
- * which the caller merges into the base customer's `billing_controls` block.
- */
 export type ApiCustomerExpandResult = ApiCusExpand & {
 	billing_controls_override?: {
 		auto_topups: AutoTopupResponse[];
 	};
 };
 
-/**
- * Build expand fields directly from a FullSubject — no extra FullCustomer fetch.
- * For entities, queries the DB directly (capped at 1000).
- */
 export const getApiCustomerExpandV2 = async ({
 	ctx,
 	fullSubject,
@@ -40,7 +31,6 @@ export const getApiCustomerExpandV2 = async ({
 }: {
 	ctx: AutumnContext;
 	fullSubject: FullSubject;
-	/** Overrides the raw customer-level auto_topups (e.g. plan-merged list). */
 	autoTopupsConfig?: AutoTopupResponse[];
 }): Promise<ApiCustomerExpandResult> => {
 	const { expand } = ctx;

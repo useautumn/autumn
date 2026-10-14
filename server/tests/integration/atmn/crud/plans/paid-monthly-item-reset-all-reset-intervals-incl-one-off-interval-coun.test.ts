@@ -1,9 +1,3 @@
-/**
- * atmn crud/plans — paid [monthly] [item reset: all reset intervals incl one_off] [interval_count 1, 3]
- *
- * One line of plans/atmn-v3/07_tests.md. [a, b] is a matrix looped INSIDE this file.
- */
-
 import { expect, test } from "bun:test";
 import {
 	configBody,
@@ -28,7 +22,6 @@ const RESET_INTERVALS = [
 ] as const;
 const INTERVAL_COUNTS = [1, 3] as const;
 
-// client.get() returns fixture-shaped (camelCase) objects, not the wire.
 type CatalogPlanRow = {
 	id: string;
 	items: Array<{
@@ -39,7 +32,6 @@ type CatalogPlanRow = {
 
 for (const interval of RESET_INTERVALS) {
 	for (const intervalCount of INTERVAL_COUNTS) {
-		// A lifetime (one_off) entitlement has no interval count to round-trip.
 		if (interval === "one_off" && intervalCount !== 1) continue;
 		test.concurrent(
 			`paid [monthly] [item reset: ${interval}] [interval_count ${intervalCount}]`,
@@ -82,9 +74,6 @@ for (const interval of RESET_INTERVALS) {
 
 					expect(reset?.interval).toBe(interval);
 
-					// 1 is the implicit default: the server omits interval_count when
-					// it's 1, so it never round-trips as an explicit value, only n > 1
-					// does — checked on the wire, the catalog, and the fixture text.
 					if (intervalCount === 1) {
 						expect(reset?.interval_count).toBeUndefined();
 						expect(catalogReset?.intervalCount).toBeUndefined();

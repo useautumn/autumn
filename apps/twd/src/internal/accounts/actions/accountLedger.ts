@@ -8,20 +8,14 @@ import { getKeyGate } from "../../keys/repos/keyGateRepo.ts";
 import { lockCleanAccounts } from "../repos/cleanAccountsRepo.ts";
 import { enqueueNukeJobs } from "./enqueueNukeJobs.ts";
 
-/**
- * Frozen cross-task API for the account ledger.
- * Claims are atomic (FOR UPDATE SKIP LOCKED), spread across usable keys under the per-key cap.
- */
 export type ClaimedAccount = {
 	accountId: string;
 	platformAccountId: string;
-	/** Secret for this account's platform key, stored in twd. */
 	secretKey: string;
 };
 
 type ClaimedRow = { accountId: string; platformAccountId: string };
 
-/** One atomic claim of up to `need` clean accounts. */
 const claimRound = async ({
 	ctx,
 	runId,
@@ -46,7 +40,6 @@ const claimRound = async ({
 			});
 	});
 
-/** clean → in_use, up to `count` (fewer, even 0, when the pool is short). The ledger is trusted: reinit and nukes keep it true. */
 export const claimAccountsForRun = async ({
 	ctx,
 	runId,
@@ -99,7 +92,6 @@ export const claimAccountsForRun = async ({
 	}
 };
 
-/** in_use → clean for accounts no sandbox ever touched (failed claim, run already gone, surplus). */
 export const returnUnusedAccounts = async ({
 	ctx,
 	runId,
@@ -127,7 +119,6 @@ export const returnUnusedAccounts = async ({
 		);
 };
 
-/** in_use → nuking (all of the run's, or just `accountIds`); enqueues one nuke:<acct> job each. Idempotent. */
 export const releaseRunAccounts = async ({
 	ctx,
 	runId,

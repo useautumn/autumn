@@ -116,8 +116,6 @@ export const patchFixtureProperty = ({
 	property: string;
 	text: string | null;
 }): string | null => {
-	// A splice keeps every other byte, so a literal the pull rewriter refuses
-	// (it names another fixture) still takes the new value.
 	const call = findFixture({
 		source,
 		builder,

@@ -1,10 +1,3 @@
-/**
- * Contract: lifetime license pools stay keyed by link_id. Two lifetime
- * licenses granting the same feature must not merge.
- *
- * Cases: 6, 7
- */
-
 import { test } from "bun:test";
 import { expectPooledBalanceCorrect } from "@tests/integration/billing/pooled-balances/utils/expectPooledBalanceCorrect.js";
 import { TestFeature } from "@tests/setup/v2Features.js";

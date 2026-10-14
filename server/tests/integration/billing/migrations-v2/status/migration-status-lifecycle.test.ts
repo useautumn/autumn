@@ -1,6 +1,3 @@
-// Only unscoped live runs affect migration status; the latest started run's outcome wins.
-// A queued run waits while another migration is executing; both list endpoints agree.
-
 import { expect, test } from "bun:test";
 import {
 	isTerminalMigrationRunStatus,

@@ -1,9 +1,3 @@
-/**
- * dfu.flash — internal fields (contract 8): `entities` is marked
- * .meta({ internal: true }) so docs hide it, but the schema still accepts a
- * payload carrying it without a 400 (field is defined + optional).
- */
-
 import { expect, test } from "bun:test";
 import {
 	type FlashClient,
@@ -75,7 +69,6 @@ test.concurrent(
 
 		const flashRes = await callFlash(autumnV2_2 as FlashClient, payload);
 
-		// Payload with internal `entities` must not be rejected as a bad request.
 		expect(flashRes.errorCode).not.toBe("invalid_request");
 		expect(flashRes.errorCode).not.toBe("invalid_inputs");
 	},

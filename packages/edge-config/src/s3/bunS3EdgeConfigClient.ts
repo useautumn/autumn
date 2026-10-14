@@ -1,5 +1,3 @@
-// Bun-native S3 client shaped like the SDK's `send()` for edge-config use:
-// avoids the SDK middleware churn that dominated idle allocation.
 import type { GetObjectCommand, PutObjectCommand } from "@aws-sdk/client-s3";
 
 type EdgeConfigS3CommandInput = {
@@ -9,7 +7,6 @@ type EdgeConfigS3CommandInput = {
 	ContentType?: string;
 };
 
-// Command-union typing keeps real SDK clients injectable in tests and scripts.
 export type EdgeConfigS3Client = {
 	send: (command: GetObjectCommand | PutObjectCommand) => Promise<{
 		Body?: { transformToString: (encoding?: string) => Promise<string> };
@@ -29,7 +26,6 @@ let containerCredentials: ContainerCredentials | null = null;
 const bunClientCache = new Map<string, InstanceType<typeof Bun.S3Client>>();
 
 // Bun.S3Client only reads env/static credentials, so Fargate task-role
-// credentials must be fetched from the ECS container endpoint ourselves.
 const resolveContainerCredentials =
 	async (): Promise<ContainerCredentials | null> => {
 		const relativeUri = process.env.AWS_CONTAINER_CREDENTIALS_RELATIVE_URI;
@@ -49,7 +45,6 @@ const resolveContainerCredentials =
 		const authToken =
 			process.env.AWS_CONTAINER_AUTHORIZATION_TOKEN ??
 			(tokenFile ? (await Bun.file(tokenFile).text()).trim() : undefined);
-		// A stalled metadata endpoint must not hang boot: polling start is awaited.
 		const response = await fetch(url, {
 			signal: AbortSignal.timeout(5_000),
 			...(authToken ? { headers: { Authorization: authToken } } : {}),
@@ -141,7 +136,6 @@ export const createBunS3EdgeConfigClient = ({
 	},
 });
 
-/** The SDK hands back a stream, the Bun client a string; both read the same way. */
 export const getS3BodyAsString = async ({
 	body,
 }: {

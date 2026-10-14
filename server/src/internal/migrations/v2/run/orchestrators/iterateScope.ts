@@ -16,8 +16,6 @@ export type IterateScopeSummary<T> = {
 	cursor: string | null;
 };
 
-/** Iterates scope items up to `concurrency` in flight. A scheduler ends the
- * slice between items after the time budget. Errors continue or rethrow. */
 export const iterateScope = async <T>({
 	iterate,
 	perItem,
@@ -48,7 +46,6 @@ export const iterateScope = async <T>({
 		failed,
 		results,
 		completion,
-		// Last scheduled, not last finished: a finish-order cursor can re-expose handled items.
 		cursor: lastScheduledItem?.internal_id ?? null,
 	});
 

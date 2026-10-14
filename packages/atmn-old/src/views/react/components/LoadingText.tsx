@@ -5,9 +5,6 @@ interface LoadingTextProps {
 	text: string;
 }
 
-/**
- * Shows a spinner with text
- */
 export function LoadingText({ text }: LoadingTextProps) {
 	return (
 		<Text color="magenta">

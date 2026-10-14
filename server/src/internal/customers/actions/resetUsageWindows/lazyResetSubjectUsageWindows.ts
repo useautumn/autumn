@@ -11,17 +11,6 @@ import { usageWindowRepo } from "@/internal/customers/usageWindows/repos/index.j
 import { applyUsageWindowRollsToSubject } from "./applyUsageWindowRollsToSubject.js";
 import { rollUsageWindowsCache } from "./rollUsageWindowsCache.js";
 
-/**
- * Lazily ROLLS the subject's usage-window counters on every subject read:
- * zero counts whose stored window closed, and re-align bounds/anchor to the
- * current derivation (this is where a plan change lands in the DB). The
- * decision table lives in usageWindowsToRolls.
- *
- * Best-effort, like lazyResetSubjectEntitlements: reads and the deduction
- * script both derive a closed count as 0 and stamp fresh bounds on write, so
- * a failed roll only delays persistence. Rolls are idempotent (same target
- * state), so concurrent reads converge. Returns true if any rows rolled.
- */
 export const lazyResetSubjectUsageWindows = async ({
 	ctx,
 	fullSubject,

@@ -1,8 +1,3 @@
-/**
- * Pooled prepaid volume bands on total quantity including the allowance, every pack at that band.
- * Pooled pay-per-use volume is rejected by design.
- */
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3 } from "@autumn/shared";
 import { expectInvoiceLineItemsCorrect } from "@tests/integration/billing/utils/expectInvoiceLineItemsCorrect";
@@ -21,7 +16,6 @@ test.concurrent(
 	async () => {
 		const customerId = "pooled-prepaid-volume";
 		const quantity = 700;
-		// Net tiers 0-500/501+ are total bands 0-600/601+: 7 packs × $5 = $35
 		const expectedFeatureAmount = 35;
 
 		const pooledVolumeItem = {

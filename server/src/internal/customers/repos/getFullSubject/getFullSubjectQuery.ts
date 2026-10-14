@@ -172,13 +172,8 @@ export const getFullSubjectQuery = ({
 		offset?: number;
 	};
 	inStatuses?: CusProductStatus[];
-	// When true and both customerId + entityId are provided, return the
-	// customer-scoped row even if the entity does not exist. No-op when
-	// customerId is absent (entity-only lookup has no customer anchor).
 	allowMissingEntity?: boolean;
-	/** Entity aggregation scales with the customer's entity count; V2_4+ drops it. */
 	aggregateEntityData?: boolean;
-	/** Evaluate expiry predicates at a captured instant; omitted keeps DB-now semantics. */
 	asOfTimestampMs?: number;
 }) => {
 	const page = pagination.page ?? 50;

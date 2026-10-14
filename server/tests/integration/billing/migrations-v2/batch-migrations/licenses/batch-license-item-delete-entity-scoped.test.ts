@@ -1,15 +1,3 @@
-/**
- * Deleting an entity-scoped license item must not run on the charge-free batch
- * lane.
- *
- * Adding an entity-scoped entitlement is already rejected because it fans out
- * one row per entity. Deleting one is the same shape in reverse: the rows carry
- * per-entity sub-balances, so a set-based delete loses state that varies per
- * customer.
- *
- * Red: the removal batch-lowers (lane is `batch`).
- * Green: the op is rejected to the per-customer lane.
- */
 import { expect, test } from "bun:test";
 import { customerEntitlements } from "@autumn/shared";
 import { runChunkedMigration } from "@tests/integration/billing/migrations-v2/utils/runChunkedMigration";

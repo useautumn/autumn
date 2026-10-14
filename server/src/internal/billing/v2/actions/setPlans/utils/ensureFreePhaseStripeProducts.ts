@@ -30,7 +30,6 @@ export const productsMissingStripeProduct = ({
 	return [...productsByInternalId.values()];
 };
 
-/** Reuse an existing Stripe product (possibly created concurrently) before creating one. */
 const ensureStripeProduct = async ({
 	ctx,
 	product,
@@ -56,10 +55,6 @@ const ensureStripeProduct = async ({
 	});
 };
 
-/**
- * The only path that gives a free plan a Stripe product: one per plan, created when a
- * schedule first needs a $0 placeholder for it, then reused.
- */
 export const ensureFreePhaseStripeProducts = async ({
 	ctx,
 	billingContext,

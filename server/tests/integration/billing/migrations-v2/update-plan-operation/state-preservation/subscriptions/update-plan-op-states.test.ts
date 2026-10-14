@@ -1,13 +1,3 @@
-/**
- * TDD coverage for update_plan migrations preserving in-flight subscription
- * states.
- *
- * Contract under test:
- *   - Updating the active plan's base price does not clear a scheduled downgrade.
- *   - Updating a canceling plan's base price does not clear end-of-cycle cancel.
- *   - Entity-scoped and multi-product states survive a customer migration.
- */
-
 import { expect, test } from "bun:test";
 import {
 	type ApiCustomerV3,
@@ -145,8 +135,6 @@ const getCustomerProductPriceAmounts = async ({
 		.filter((amount): amount is number => typeof amount === "number")
 		.sort((a, b) => a - b);
 
-// Red: version update_plan replacement reset a past_due cusProduct to active.
-// Green: the replacement inherits past_due while the old row expires.
 test.concurrent(
 	`${chalk.yellowBright("migrations update_plan states: past_due survives version update")}`,
 	async () => {

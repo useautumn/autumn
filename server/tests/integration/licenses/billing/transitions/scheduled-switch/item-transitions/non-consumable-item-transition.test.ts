@@ -1,5 +1,3 @@
-/** Scheduled child-license downgrades preserve each assignment's non-consumable usage.
- * Assignments repoint only when the incoming parent activates. */
 import { expect, test } from "bun:test";
 import type {
 	ApiCustomerV5,

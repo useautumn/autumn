@@ -1,22 +1,3 @@
-/**
- * TDD tests for multiUpdate validation errors and atomicity.
- *
- * Contract under test:
- *   New behaviors:
- *     - Two updates resolving to the SAME cusProduct -> error, nothing executed
- *     - Any update failing target resolution (unknown plan_id) -> error, NO other
- *       update in the request is executed (all-or-nothing before Stripe writes)
- *     - Per-item validation preserved from single update-subscription:
- *       cancel_end_of_cycle on a free product -> error (atomically rejects the call)
- *       cancel_end_of_cycle on a one-off product -> error
- *     - Zod validation: empty updates array -> error; missing cancel_action -> error
- *     - Already-canceling plan CAN be canceled immediately alongside another plan
- *
- * Pre-impl red: fails at endpoint resolution (/billing.multi_update 404).
- * Post-impl green: cross-item validation in setup + per-item error handlers run
- * before any execution.
- */
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV5, MultiUpdateParamsV0Input } from "@autumn/shared";
 import {
@@ -32,17 +13,6 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 1: Duplicate targets rejected, nothing executed
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Pro active; ONE multiUpdate with two updates both targeting Pro
- *
- * Expected Result:
- * - Error; Pro remains active and NOT canceling
- */
 test.concurrent(
 	`${chalk.yellowBright("multi update errors: duplicate targets rejected")}`,
 	async () => {
@@ -74,7 +44,6 @@ test.concurrent(
 			},
 		});
 
-		// ── Contract: nothing executed ────────────────────────────────────────────
 		const customerAfterError =
 			await autumnV2_3.customers.get<ApiCustomerV5>(customerId);
 		await expectProductActive({
@@ -91,17 +60,6 @@ test.concurrent(
 	},
 );
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 2: Unknown plan in update 2 — update 1 must NOT execute (atomicity)
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Pro active; multiUpdate: [cancel Pro EOC, cancel nonexistent plan]
- *
- * Expected Result:
- * - Error (product not found); Pro remains active and NOT canceling
- */
 test.concurrent(
 	`${chalk.yellowBright("multi update errors: unknown plan rejects whole request")}`,
 	async () => {
@@ -136,7 +94,6 @@ test.concurrent(
 			},
 		});
 
-		// ── Contract: atomicity — update 1 was not applied ────────────────────────
 		const customerAfterError =
 			await autumnV2_3.customers.get<ApiCustomerV5>(customerId);
 		await expectProductActive({
@@ -153,18 +110,6 @@ test.concurrent(
 	},
 );
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 3: Per-item validation — EOC on free product rejects atomically
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Free B (non-default, no prices) + Pro A active
- * - multiUpdate: [cancel Pro A EOC (valid), cancel Free B EOC (invalid)]
- *
- * Expected Result:
- * - Error (free products cannot cancel end_of_cycle); Pro A NOT canceling
- */
 test.concurrent(
 	`${chalk.yellowBright("multi update errors: EOC on free product rejects whole request")}`,
 	async () => {
@@ -205,7 +150,6 @@ test.concurrent(
 			},
 		});
 
-		// ── Contract: atomicity — the valid update was not applied ────────────────
 		const customerAfterError =
 			await autumnV2_3.customers.get<ApiCustomerV5>(customerId);
 		await expectCustomerProducts({
@@ -222,18 +166,6 @@ test.concurrent(
 	},
 );
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 4: Per-item validation — EOC on one-off product rejects
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - One-off add-on + Pro active
- * - multiUpdate: [cancel one-off EOC (invalid), cancel Pro EOC (valid)]
- *
- * Expected Result:
- * - Error; neither update applied
- */
 test.concurrent(
 	`${chalk.yellowBright("multi update errors: EOC on one-off product rejects whole request")}`,
 	async () => {
@@ -287,7 +219,6 @@ test.concurrent(
 			customer: customerAfterError,
 			active: [pro.id],
 		});
-		// One-offs live in purchases[] on the V5 shape, not subscriptions[]
 		expect(
 			customerAfterError.purchases.some(
 				(purchase) => purchase.plan_id === oneOffAddOn.id,
@@ -296,18 +227,6 @@ test.concurrent(
 	},
 );
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 5: Zod validation — empty updates / missing cancel_action
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Pro active; multiUpdate with an empty updates array, then with an update
- *   missing cancel_action
- *
- * Expected Result:
- * - Both rejected at request validation
- */
 test.concurrent(
 	`${chalk.yellowBright("multi update errors: schema validation")}`,
 	async () => {
@@ -327,7 +246,6 @@ test.concurrent(
 			actions: [s.attach({ productId: pro.id })],
 		});
 
-		// ── Contract: empty updates array rejected ────────────────────────────────
 		await expectAutumnError({
 			func: async () => {
 				await autumnV2_3.billing.multiUpdate({
@@ -337,7 +255,6 @@ test.concurrent(
 			},
 		});
 
-		// ── Contract: missing cancel_action rejected ──────────────────────────────
 		await expectAutumnError({
 			func: async () => {
 				await autumnV2_3.billing.multiUpdate({
@@ -349,18 +266,6 @@ test.concurrent(
 	},
 );
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 6: Already-canceling plan can be canceled immediately alongside another
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Pro A canceling (prior EOC cancel), Pro B active
- * - ONE multiUpdate: cancel Pro A immediately + cancel Pro B immediately
- *
- * Expected Result:
- * - Both removed, subscription canceled (no error for already-canceling)
- */
 test.concurrent(
 	`${chalk.yellowBright("multi update errors: already-canceling plan cancels immediately")}`,
 	async () => {
@@ -386,7 +291,6 @@ test.concurrent(
 			actions: [
 				s.attach({ productId: proA.id }),
 				s.attach({ productId: proB.id }),
-				// Setup: Pro A already canceling
 				s.updateSubscription({
 					productId: proA.id,
 					cancelAction: "cancel_end_of_cycle",

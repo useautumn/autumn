@@ -50,8 +50,6 @@ export const AddCouponDialog = ({
 	const { stripeCoupons, isLoading: stripeCouponsLoading } =
 		useStripeCouponsQuery();
 
-	// Stripe coupons are merged in so coupons created outside Autumn are
-	// selectable here, matching the subscription-level discount picker.
 	const rewardOptions = rewards
 		.filter((reward: Reward) => reward.type !== RewardType.FreeProduct)
 		.map(rewardToOption);
@@ -61,7 +59,6 @@ export const AddCouponDialog = ({
 		.filter((coupon) => !rewardOptionIds.has(coupon.id))
 		.map(stripeCouponToOption);
 
-	// Codes the bulk listing didn't reach are looked up in Stripe on demand.
 	const {
 		options: discountOptions,
 		setSearch,

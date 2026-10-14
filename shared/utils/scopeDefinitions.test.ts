@@ -30,10 +30,6 @@ import {
 	validateScopes,
 } from "./scopeDefinitions";
 
-// ---------------------------------------------------------------------------
-// 1. Constants & invariants
-// ---------------------------------------------------------------------------
-
 describe("constants & invariants", () => {
 	test("RESOURCES has 11 entries in canonical order", () => {
 		expect(RESOURCES.length).toBe(11);
@@ -166,10 +162,6 @@ describe("constants & invariants", () => {
 		expect(LEGACY_SCOPE_ALIASES.apiKeys).toBe("apiKeys:write");
 	});
 });
-
-// ---------------------------------------------------------------------------
-// 2. Predicates
-// ---------------------------------------------------------------------------
 
 describe("isOpenIdScope", () => {
 	test("returns true for every OPENID_SCOPES entry", () => {
@@ -305,10 +297,6 @@ describe("isValidScope", () => {
 	});
 });
 
-// ---------------------------------------------------------------------------
-// 3. parseScope
-// ---------------------------------------------------------------------------
-
 describe("parseScope", () => {
 	test("parses every MODERN_SCOPES entry correctly", () => {
 		for (const s of MODERN_SCOPES) {
@@ -400,10 +388,6 @@ describe("parseScope", () => {
 	});
 });
 
-// ---------------------------------------------------------------------------
-// 4. expandScopes
-// ---------------------------------------------------------------------------
-
 describe("expandScopes", () => {
 	test("empty input → empty set", () => {
 		expect([...expandScopes([])]).toEqual([]);
@@ -468,7 +452,6 @@ describe("expandScopes", () => {
 		for (const scope of MODERN_SCOPES) {
 			expect(expanded.has(scope)).toBe(true);
 		}
-		// admin does NOT grant owner or superuser
 		expect(expanded.has("owner" as ScopeString)).toBe(false);
 		expect(expanded.has("superuser" as ScopeString)).toBe(false);
 	});
@@ -515,13 +498,10 @@ describe("expandScopes", () => {
 			"junk",
 			"plans:list",
 		]);
-		// admin grants every modern scope; individual write→read expansion
-		// is subsumed by the admin grant.
 		expect(result.has("admin")).toBe(true);
 		for (const scope of MODERN_SCOPES) {
 			expect(result.has(scope)).toBe(true);
 		}
-		// junk dropped.
 		expect(result.has("junk" as ScopeString)).toBe(false);
 	});
 
@@ -543,10 +523,6 @@ describe("expandScopes", () => {
 		]);
 	});
 });
-
-// ---------------------------------------------------------------------------
-// 5. ROLE_SCOPES
-// ---------------------------------------------------------------------------
 
 describe("ROLE_SCOPES", () => {
 	test("owner contains 'owner', 'admin', and every MODERN_SCOPES entry", () => {
@@ -611,10 +587,6 @@ describe("ROLE_SCOPES", () => {
 		expect(ROLE_SCOPES.member).not.toContain(Scopes.Migrations.Read);
 	});
 });
-
-// ---------------------------------------------------------------------------
-// 6. checkScopes
-// ---------------------------------------------------------------------------
 
 describe("checkScopes — shorthand array (ALL semantics)", () => {
 	test("empty required + empty granted → allowed", () => {
@@ -803,14 +775,6 @@ describe("checkScopes — public bypass", () => {
 });
 
 describe("checkScopes — meta-scope hierarchy", () => {
-	// Hierarchy: superuser > owner > admin > product-scopes
-	//
-	// Satisfaction semantics:
-	//   - superuser req → ONLY superuser
-	//   - owner req     → superuser OR owner
-	//   - admin req     → superuser OR owner OR admin
-	//   - product req   → admin / owner / superuser / exact product scope
-
 	test("admin grants every product scope", () => {
 		expect(checkScopes(["customers:write"], ["admin"])).toEqual({
 			allowed: true,
@@ -895,8 +859,6 @@ describe("checkScopes — meta-scope hierarchy", () => {
 	});
 
 	test("admin satisfies an ANY requirement alongside superuser (via product-scope alternative)", () => {
-		// admin grants `customers:read` via expansion, so the ANY condition
-		// is satisfied by the non-superuser alternative.
 		expect(
 			checkScopes({ ANY: ["superuser", "customers:read"] }, ["admin"]),
 		).toEqual({ allowed: true, missing: [] });
@@ -963,10 +925,6 @@ describe("checkScopes — legacy & isolation", () => {
 	});
 });
 
-// ---------------------------------------------------------------------------
-// 7. isScopeSubset
-// ---------------------------------------------------------------------------
-
 describe("isScopeSubset", () => {
 	test("empty requested + empty granted → true", () => {
 		expect(isScopeSubset([], [])).toBe(true);
@@ -1028,15 +986,9 @@ describe("isScopeSubset", () => {
 	});
 
 	test("requested contains unknown scope → dropped via expansion", () => {
-		// both requested and granted go through expandScopes; garbage is dropped
-		// so an all-garbage requested becomes empty set → subset trivially.
 		expect(isScopeSubset(["garbage"], [])).toBe(true);
 	});
 });
-
-// ---------------------------------------------------------------------------
-// 8. makeScopeChecker
-// ---------------------------------------------------------------------------
 
 describe("makeScopeChecker", () => {
 	test("empty grant — nothing passes", () => {
@@ -1080,7 +1032,6 @@ describe("makeScopeChecker", () => {
 		expect(c.has("admin")).toBe(true);
 		expect(c.has("owner")).toBe(true);
 		expect(c.isOwner).toBe(true);
-		// owner is a capability flag — isAdmin is semantic (can satisfy admin reqs)
 		expect(c.isAdmin).toBe(true);
 	});
 
@@ -1102,9 +1053,6 @@ describe("makeScopeChecker", () => {
 	});
 
 	test("role capability flags are SEMANTIC (what the caller can satisfy), not literal grant membership", () => {
-		// A superuser grant SEMANTICALLY makes the caller an admin and an
-		// owner (they can satisfy any admin or owner requirement). The
-		// isAdmin/isOwner booleans reflect capability, not literal grant.
 		const c = makeScopeChecker(["superuser"]);
 		expect(c.isAdmin).toBe(true);
 		expect(c.isOwner).toBe(true);
@@ -1195,10 +1143,6 @@ describe("makeScopeChecker", () => {
 	});
 });
 
-// ---------------------------------------------------------------------------
-// 9. Display helpers
-// ---------------------------------------------------------------------------
-
 describe("groupScopesByResource", () => {
 	test("groups scopes by resource with actions sorted read-before-write", () => {
 		const result = groupScopesByResource([
@@ -1221,16 +1165,9 @@ describe("groupScopesByResource", () => {
 	});
 
 	test("openid dropped; admin grant expands to all modern resources (via hierarchy)", () => {
-		// admin in input now expands to every modern product scope
-		// (superuser > owner > admin > products). Grouping reflects that:
-		// every resource has read+write except analytics (read-only).
 		const result = groupScopesByResource(["openid", "admin", "customers:read"]);
-		// 11 resources: organisation, customers, features, plans, rewards,
-		// balances, billing, migrations, analytics, apiKeys, platform
 		expect(result.size).toBe(11);
-		// customers ends up with both read and write (from admin expansion).
 		expect(result.get("customers")).toEqual(["read", "write"]);
-		// analytics is read-only.
 		expect(result.get("analytics")).toEqual(["read"]);
 	});
 
@@ -1260,12 +1197,6 @@ describe("formatActions", () => {
 	});
 
 	test("['read', 'write'] → 'read and write' (source returns lowercase for 2+)", () => {
-		// NOTE: despite the jsdoc claiming "Read and write", the actual
-		// implementation lowercases every verb when there are 2+ actions
-		// (see line 826: `sorted.map(a => ACTION_METADATA[a].verb.toLowerCase())`).
-		// formatResourcePermission then capitalises the first char. This test
-		// pins current behaviour; capitalisation is re-asserted at the
-		// formatResourcePermission level.
 		expect(formatActions(["read", "write"])).toBe("read and write");
 	});
 
@@ -1308,7 +1239,7 @@ describe("groupAndFormatScopes", () => {
 
 		const plans = result.find((e) => e.resource === "plans");
 		expect(plans).toBeDefined();
-		expect(plans?.actions).toEqual(["read", "write"]); // write expands to read
+		expect(plans?.actions).toEqual(["read", "write"]);
 		expect(plans?.formattedPermission).toBe("Read and write plans");
 	});
 

@@ -96,7 +96,6 @@ const checkMainKey = async ({
 			? { kind: "sub", info, secretKey }
 			: { kind: "main", info };
 	} catch (error) {
-		// A rejected key is a missing key; a server that cannot be reached is not.
 		if (
 			error instanceof AutumnApiError &&
 			(error.status === 401 || error.status === 403)
@@ -181,8 +180,6 @@ const authenticate = async ({
 		await runKeylessLogin({ repoRoot, envDirs, deps: deps.keyless, prompter });
 	} else {
 		await deps.login({ envDirs });
-		// A rejected key exported in the shell would otherwise shadow the one
-		// login just wrote, since env files never override the process.
 		delete process.env.AUTUMN_SECRET_KEY;
 		loadEnvFiles({ dirs: envDirs });
 	}
@@ -289,7 +286,6 @@ export const runInit = async ({
 
 	let configDir = cwd;
 	let packageName: string | undefined;
-	// A repo init already placed keeps its answer: the marker is the path.
 	const marker = readMarker({ repoRoot });
 	if (hasWorkspaces) {
 		prompter.write(`${done("Monorepo detected")}\n`);
@@ -320,8 +316,6 @@ export const runInit = async ({
 		});
 		prompter.write(`${done(`Name ${packageName}`)}\n`);
 	} else {
-		// A plain project gets its own folder too, unless a config already
-		// sits beside cwd or the marker names one.
 		const found = resolveProject({ cwd }).configPath;
 		configDir = resolve(
 			repoRoot,
@@ -366,8 +360,6 @@ export const runInit = async ({
 
 	const manager = packageManager({ repoRoot });
 	const runner = runnerFor(manager);
-	// The scaffolded config imports the CLI; a package written a moment ago
-	// cannot resolve it until its dependency is installed.
 	if (dependencyAdded) {
 		const installed = await deps.install({ manager, repoRoot });
 		if (!installed)

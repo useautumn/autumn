@@ -18,8 +18,6 @@ import {
 	occurredAt,
 } from "../../engineFixtures.js";
 
-// Mirrors server/tests/integration/balances/delete/delete-balance.test.ts.
-
 const GRANT = 100;
 
 const row = ({

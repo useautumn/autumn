@@ -9,13 +9,6 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-// Paid-to-paid: allocated/seat-based updates.
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// EDGE CASES
-// ═══════════════════════════════════════════════════════════════════════════════
-
-// Zero usage, increase allowance
 test.concurrent(
 	`${chalk.yellowBright("allocated: zero usage, increase allowance")}`,
 	async () => {
@@ -35,8 +28,6 @@ test.concurrent(
 			actions: [s.attach({ productId: "pro" })],
 		});
 
-		// No usage tracked - 0 seats used
-
 		const newAllocatedUsersItem = items.allocatedUsers({ includedUsage: 10 });
 
 		const updateParams = {
@@ -47,7 +38,6 @@ test.concurrent(
 
 		const preview = await autumnV1.subscriptions.previewUpdate(updateParams);
 
-		// No price change
 		expect(preview.total).toBe(0);
 
 		await autumnV1.subscriptions.update(updateParams);
@@ -58,7 +48,7 @@ test.concurrent(
 			customer,
 			featureId: TestFeature.Users,
 			includedUsage: newAllocatedUsersItem.included_usage,
-			balance: newAllocatedUsersItem.included_usage, // 10 - 0 = 10
+			balance: newAllocatedUsersItem.included_usage,
 			usage: 0,
 		});
 
@@ -77,7 +67,6 @@ test.concurrent(
 	},
 );
 
-// No included seats (all paid), increase to some included
 test.concurrent(
 	`${chalk.yellowBright("allocated: no included to some included")}`,
 	async () => {
@@ -97,7 +86,6 @@ test.concurrent(
 			actions: [s.attach({ productId: "pro" })],
 		});
 
-		// Use 5 seats (all paid since 0 included)
 		const seatsUsed = 5;
 		await autumnV1.track(
 			{
@@ -108,7 +96,6 @@ test.concurrent(
 			{ timeout: 2000 },
 		);
 
-		// Increase to 3 included seats (still 2 paid)
 		const newAllocatedUsersItem = items.allocatedUsers({ includedUsage: 3 });
 
 		const updateParams = {
@@ -119,9 +106,6 @@ test.concurrent(
 
 		const preview = await autumnV1.subscriptions.previewUpdate(updateParams);
 
-		// Was paying for 5 seats @ $10 = $50
-		// Now paying for 2 seats @ $10 = $20
-		// Credit of -$30
 		expect(preview.total).toBe(-30);
 
 		await autumnV1.subscriptions.update(updateParams);
@@ -132,7 +116,7 @@ test.concurrent(
 			customer,
 			featureId: TestFeature.Users,
 			includedUsage: newAllocatedUsersItem.included_usage,
-			balance: newAllocatedUsersItem.included_usage - seatsUsed, // 3 - 5 = -2
+			balance: newAllocatedUsersItem.included_usage - seatsUsed,
 			usage: seatsUsed,
 		});
 

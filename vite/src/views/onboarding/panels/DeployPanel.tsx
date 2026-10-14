@@ -35,7 +35,6 @@ function DeployRow({
 	);
 }
 
-/** One width for every action, so the right edge is a single line. */
 const ACTION_WIDTH = "w-[136px]";
 
 function DoneLabel({ children }: { children: ReactNode }) {
@@ -47,8 +46,6 @@ function DoneLabel({ children }: { children: ReactNode }) {
 	);
 }
 
-/** The production checklist in the page's row grammar, plus the final switch —
- * the same actions the deploy dialog runs, via shared hooks. */
 export function DeployPanel() {
 	const stripe = useConnectStripe({ isActive: true });
 	const plans = useCopyPlansToProd();
@@ -106,8 +103,6 @@ export function DeployPanel() {
 					description="Generate a live secret key for your production environment"
 					action={
 						apiKey.apiKey ? (
-							// Wider than a button — a key is shown once and is worth
-							// reading — but it ends on the same right edge.
 							<div className="group flex h-7 w-[228px] items-center gap-1 rounded-md border bg-card pl-2 pr-2.5">
 								<span className="min-w-0 flex-1 truncate font-mono text-tiny text-muted-foreground">
 									{apiKey.apiKey}

@@ -7,7 +7,6 @@ import * as openInvoice from "../../utils/stripeUtils/openStripeInvoiceId";
 import * as invoicePayment from "../../utils/stripeUtils/payOpenInvoice";
 import type { TestContext } from "../../utils/testInitUtils/createTestContext";
 
-// Stripe and Autumn both already record the invoice as paid; only the browser path varies per test.
 const paidInvoiceCtx = {
 	stripeCli: { invoices: { retrieve: async () => ({ status: "paid" }) } },
 } as unknown as TestContext;

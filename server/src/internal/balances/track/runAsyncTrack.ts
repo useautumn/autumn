@@ -33,10 +33,6 @@ export const runAsyncTrack = async ({
 }): Promise<void> => {
 	const messageDeduplicationId = ctx.id;
 
-	// The body key is claimed at accept time (duplicate → 409) and KEPT — the
-	// worker skips its own claim (queueTrack marks the message). The 503 below
-	// releases the claim via the wrapper's error policy, so a failed enqueue
-	// stays retryable.
 	await withIdempotencyKey({
 		ctx,
 		idempotencyKey: getTrackBodyIdempotencyKey({ body }),
@@ -47,8 +43,6 @@ export const runAsyncTrack = async ({
 				body,
 				tokens,
 				options: {
-					// Shards each customer across 8 FIFO groups — async trades
-					// strict per-customer ordering for parallel consumption.
 					messageGroupId: getAsyncTrackMessageGroupId({
 						orgId: ctx.org.id,
 						env: ctx.env,
@@ -57,7 +51,6 @@ export const runAsyncTrack = async ({
 						messageDeduplicationId,
 					}),
 					messageDeduplicationId,
-					// A 202 here is the async contract, not a degradation signal.
 					logFallback: false,
 					markQueuedForReplay: false,
 				},

@@ -24,7 +24,6 @@ const parseDate = ({ value, field }: { value: string; field: string }) => {
 	return date;
 };
 
-/** UTC bucket start, matching Postgres date_trunc (weeks start Monday). */
 const truncUtc = ({ ms, bucket }: { ms: number; bucket: "day" | "week" }) => {
 	const day = Math.floor(ms / DAY_MS) * DAY_MS;
 	return bucket === "day"
@@ -32,7 +31,6 @@ const truncUtc = ({ ms, bucket }: { ms: number; bucket: "day" | "week" }) => {
 		: day - ((new Date(day).getUTCDay() + 6) % 7) * DAY_MS;
 };
 
-/** Modal spend (runs + warm builds) over a window, per bucket and per user; `to` date-only is inclusive. */
 export const getCosts = async ({
 	ctx,
 	query,
@@ -94,7 +92,6 @@ export const getCosts = async ({
 			slot.usd += row.usd;
 			slot.warmUsd += row.warm_usd;
 			slot.runs += row.runs;
-			// Warm builds are their own chart series; byUser + warmUsd stacks to usd.
 			slot.byUser[email] = (slot.byUser[email] ?? 0) + row.usd - row.warm_usd;
 		}
 		const user = users.get(row.user_id) ?? {

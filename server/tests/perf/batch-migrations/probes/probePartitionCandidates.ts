@@ -1,11 +1,3 @@
-/**
- * Read-only phase probe for the batch page's partition query and candidate
- * select, per anchor-ladder rung. Pages are resolved via the real claim
- * select; cursors steer pages onto specific seeded shape ranges.
- *
- *   bun tests/perf/batch-migrations/probes/probePartitionCandidates.ts
- */
-
 import type { EntitlementWithFeature } from "@autumn/shared";
 import { EntInterval } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
@@ -82,8 +74,6 @@ const main = async () => {
 		cursor?: string;
 		entitlement: EntitlementWithFeature;
 		includeAnchorSources: boolean;
-		/** Scope constraint overrides — exercises the operationScopeSql EXISTS
-		 * probes on top of the same pages the unconstrained scenarios use. */
 		scope?: Partial<Omit<OperationScope, "internalProductId">>;
 	}[] = [
 		{

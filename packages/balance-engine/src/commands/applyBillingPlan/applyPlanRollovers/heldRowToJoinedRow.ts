@@ -6,7 +6,6 @@ import type { WorkerFullCustomerEntitlementWithProduct } from "../../../models/s
 import { fullSubjectToHeldRows } from "../../../utils/subjectUtils/convertSubjectUtils.js";
 import { heldRowToFullSubject } from "../../common/heldRowToFullSubject.js";
 
-/** A held grant joined to its catalog and product, as the rollover cap reads it. */
 export const heldRowToJoinedRow = ({
 	id,
 	state,

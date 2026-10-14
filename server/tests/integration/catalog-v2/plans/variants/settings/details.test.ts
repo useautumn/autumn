@@ -1,13 +1,3 @@
-/**
- * catalogV2.update — description / group / add_on / config / metadata
- * always fan out to latest variants. Name never copies.
- *
- * Contract:
- *   omit from propagate → settings still land; items stay drifted
- *   base rename → variant name unchanged
- *   settings + follow → both apply
- */
-
 import { test } from "bun:test";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";

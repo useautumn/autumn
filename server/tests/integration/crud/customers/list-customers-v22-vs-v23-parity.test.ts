@@ -1,18 +1,3 @@
-/**
- * Parity test: V2.3 cursor list must produce byte-equivalent results to V2.2 offset list
- * for the same params, modulo the envelope difference (cursor vs offset/total).
- *
- * Red-failure mode (pre-fix): variant 07 SQL output diverged from V2.2 on
- *   (1) subscriptions[].internal_customer_id (missing)
- *   (2) customer_products[] ordering (4-key instead of created_at DESC)
- *
- * Green-success criteria: full deep-equal of list[] payloads across:
- *  - no filters
- *  - subscription_status=active
- *  - search filter
- *  - plans filter
- */
-
 import { expect, test } from "bun:test";
 import {
 	type ApiCustomerV5,

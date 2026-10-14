@@ -3,10 +3,6 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { CLI_PACKAGE_DIR } from "./initAtmnScenario.js";
 
-/**
- * The CLI packed as a tarball, for `ATMN_INIT_DEPENDENCY`: a `file:` folder
- * dependency leaves atmn's `catalog:` devDependency unresolvable under bun.
- */
 export const packAtmnCli = (): string => {
 	const dir = mkdtempSync(join(tmpdir(), "atmn-pack-"));
 	const tarball = join(dir, "atmn.tgz");
@@ -23,8 +19,6 @@ export const packAtmnCli = (): string => {
 	return tarball;
 };
 
-/** An empty bun.lock, so init installs with bun: bun deletes the lockfile it
- * would write for a package.json with no dependencies. */
 export const writeBunLockfile = ({
 	root,
 	name,

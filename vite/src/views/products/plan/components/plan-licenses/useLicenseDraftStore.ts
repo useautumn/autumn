@@ -1,11 +1,5 @@
 import { create } from "zustand";
 
-/**
- * Draft plan-license fields (included quantity, staged removal) edited on the
- * license's card. They live on the plan-license row, not the license product,
- * so they're kept out of the item draft and saved with the plan. A key in
- * `drafts` means the license is being edited inside a plan (vs its own page).
- */
 export interface LicenseDraft {
 	included?: number;
 	removed?: boolean;

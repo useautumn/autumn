@@ -57,8 +57,6 @@ const waitForEveReady = async () => {
 	});
 };
 
-/** The chat database is eve's durable world only once NOTIFY delivery is
- * proven on it; otherwise eve runs on its local world and leaf logs why. */
 const durableWorldUrl = async () => {
 	const chatDatabaseUrl = process.env.CHAT_DATABASE_URL;
 	if (!chatDatabaseUrl) return undefined;
@@ -68,8 +66,6 @@ const durableWorldUrl = async () => {
 	return delivered ? chatDatabaseUrl : undefined;
 };
 
-/** eve derives its world from CHAT_DATABASE_URL, so an unproven URL is
- * withheld from it entirely; the world package reads WORKFLOW_POSTGRES_URL. */
 const eveProcessEnv = (worldUrl: string | undefined) => {
 	const { CHAT_DATABASE_URL: _chatDatabaseUrl, ...base } = process.env;
 	return worldUrl
@@ -83,8 +79,6 @@ const eveProcessEnv = (worldUrl: string | undefined) => {
 		: base;
 };
 
-/** Runs eve inside the leaf task over loopback, so prod needs no extra
- * service. Build and runtime get the same env: eve picks its world at build. */
 export const startEmbeddedEveServer = async () => {
 	setEmbeddedEveStatus("starting");
 	const leafRoot = new URL("../../../../", import.meta.url).pathname;

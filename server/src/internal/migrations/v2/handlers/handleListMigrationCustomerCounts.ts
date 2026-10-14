@@ -3,7 +3,6 @@ import { createRoute } from "@/honoMiddlewares/routeHandler";
 import { listMigrationCustomerCounts } from "@/internal/migrations/v2/actions/migrationList/listMigrationCustomerCounts.js";
 import { migrationRepo } from "@/internal/migrations/v2/repos/index.js";
 
-/** POST /migrations.customer_counts — each migration's `summary.customer_count`, apart from the list. */
 export const handleListMigrationCustomerCounts = createRoute({
 	scopes: [Scopes.Migrations.Read],
 	handler: async (c) => {

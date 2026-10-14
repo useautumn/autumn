@@ -1,11 +1,3 @@
-/**
- * atmn crud/migrations — update the existing version with customers on [v1 only, v1 and v2] → one migration per customered version touched
- *
- * the `versionedPro` base config: base price, prepaid seat item, usage item, trial, seat license; every line has customers attached
- *
- * One line of plans/atmn-v3/07_tests.md. [a, b] is a matrix looped INSIDE this file.
- */
-
 import { expect, test } from "bun:test";
 import { seedVersionableCustomer } from "@tests/integration/catalog-v2/plans/migrations/utils/seedVersionableCustomer.js";
 import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
@@ -28,7 +20,6 @@ type PreviewMigrations =
 	| Array<{ plans: Array<{ planId: string; versions: number[] }> }>
 	| undefined;
 
-/** Every version of `pro` a migration draft targets, flattened and sorted. */
 const targetedProVersions = (migrations: PreviewMigrations): number[] =>
 	(migrations ?? [])
 		.flatMap((migration) => migration.plans)
@@ -64,7 +55,6 @@ for (const { name, customeredVersions } of customeredVersionCases) {
 			try {
 				await scenario.push();
 
-				// Mint v2; v1 moves into planVersions as history.
 				scenario.writeConfig(
 					atmnConfigSource({
 						body: configBody({
@@ -82,7 +72,6 @@ for (const { name, customeredVersions } of customeredVersionCases) {
 					});
 				}
 
-				// Edit both versions in place, in one push.
 				scenario.writeConfig(
 					atmnConfigSource({
 						body: configBody({

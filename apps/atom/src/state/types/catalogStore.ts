@@ -1,16 +1,11 @@
 import type { Catalog, CatalogRow } from "@autumn/balance-engine";
 
-/** The org's shared catalog: every row that is not one customer's own, and when Autumn read them (epoch ms). */
 export type SharedCatalog = { catalog: Catalog; readAt: number };
 
 export type CatalogStore = {
-	/** Null until Autumn has sent one. Read from the file once, as the store opens. */
 	read(): SharedCatalog | null;
-	/** Replaces every row: what Autumn sends is the whole shared catalog. False when it was read before the one held, and so ignored. */
 	set(params: { rows: CatalogRow[]; readAt: number }): boolean;
-	/** Holds a catalog another thread has stored, without writing it again; false when a later one is held. */
 	install(params: { rows: CatalogRow[]; readAt: number }): boolean;
-	/** The rows as the file holds them, for a replica copying the catalog; null until Autumn has sent one. */
 	rows(): { rows: CatalogRow[]; readAt: number } | null;
 	close(): void;
 };

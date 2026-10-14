@@ -1,6 +1,3 @@
-// Cross-group plan switch: when attach removes the old plan via remove_plan_ids,
-// the shared seat pool and its assignments follow onto the new plan, exactly
-// as a same-group switch does.
 import { expect, test } from "bun:test";
 import {
 	type ApiCustomerV5,

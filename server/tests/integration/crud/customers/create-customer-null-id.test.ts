@@ -8,11 +8,6 @@ import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// NULL ID CONSTRAINT TESTS
-// Tests for the partial unique index: (org_id, env, lower(email)) WHERE id IS NULL
-// ═══════════════════════════════════════════════════════════════════════════════
-
 test.concurrent(`${chalk.yellowBright("null-id: duplicate null ID + same email returns existing with products")}`, async () => {
 	const defaultGroup = "null-dup-test";
 	const email = "null-dup-test@example.com";
@@ -24,7 +19,6 @@ test.concurrent(`${chalk.yellowBright("null-id: duplicate null ID + same email r
 		isDefault: true,
 	});
 
-	// Use prefix for product prefixing, no customer is created by initScenario
 	const { autumnV1 } = await initScenario({
 		setup: [
 			s.deleteCustomer({ email }),
@@ -33,7 +27,6 @@ test.concurrent(`${chalk.yellowBright("null-id: duplicate null ID + same email r
 		actions: [],
 	});
 
-	// First create with null ID - should get default product
 	const data1 = await autumnV1.customers.create({
 		id: null,
 		name: "First Customer",
@@ -45,14 +38,12 @@ test.concurrent(`${chalk.yellowBright("null-id: duplicate null ID + same email r
 	expect(data1.id).toBeNull();
 	expect(data1.email).toBe(email);
 
-	// Verify first create has default product
 	const customer1 = await autumnV1.customers.get<ApiCustomerV3>(
 		data1.autumn_id!,
 	);
 	await expectProductActive({ customer: customer1, productId: freeDefault.id });
 	expect(customer1.features[TestFeature.Messages].balance).toBe(100);
 
-	// Second create with null ID and same email - should return existing (idempotent)
 	const data2 = await autumnV1.customers.create({
 		id: null,
 		name: "Second Customer",
@@ -61,13 +52,10 @@ test.concurrent(`${chalk.yellowBright("null-id: duplicate null ID + same email r
 		internalOptions: { default_group: defaultGroup },
 	});
 
-	// Should return the same customer
 	expect(data2.autumn_id).toBe(data1.autumn_id);
 	expect(data2.email).toBe(email);
-	// Name should be updated (upsert behavior)
 	expect(data2.name).toBe("First Customer");
 
-	// Verify second create also returns customer with default product
 	const customer2 = await autumnV1.customers.get<ApiCustomerV3>(
 		data2.autumn_id!,
 	);
@@ -80,7 +68,6 @@ test.concurrent(`${chalk.yellowBright("null-id: multiple customers with differen
 	const emailB = "null-multi-b-test@example.com";
 	const emailC = "null-multi-c-test@example.com";
 
-	// No products or customer needed - just need autumnV1 client
 	const { autumnV1 } = await initScenario({
 		setup: [
 			s.deleteCustomer({ email: emailA }),
@@ -90,7 +77,6 @@ test.concurrent(`${chalk.yellowBright("null-id: multiple customers with differen
 		actions: [],
 	});
 
-	// Create multiple customers with null ID but different emails
 	const data1 = await autumnV1.customers.create({
 		id: null,
 		name: "Customer A",
@@ -115,7 +101,6 @@ test.concurrent(`${chalk.yellowBright("null-id: multiple customers with differen
 		internalOptions: { disable_defaults: true },
 	});
 
-	// All should be created with different autumn_ids
 	expect(data1.id).toBeNull();
 	expect(data2.id).toBeNull();
 	expect(data3.id).toBeNull();
@@ -135,7 +120,6 @@ test.concurrent(`${chalk.yellowBright("null-id: claim with ID returns existing c
 		isDefault: true,
 	});
 
-	// Use prefix for product prefixing, no customer is created by initScenario
 	const { autumnV1 } = await initScenario({
 		setup: [
 			s.deleteCustomer({ email }),
@@ -145,7 +129,6 @@ test.concurrent(`${chalk.yellowBright("null-id: claim with ID returns existing c
 		actions: [],
 	});
 
-	// First create with null ID - should get default product
 	const data1 = await autumnV1.customers.create({
 		id: null,
 		name: "Null ID Customer",
@@ -157,7 +140,6 @@ test.concurrent(`${chalk.yellowBright("null-id: claim with ID returns existing c
 	expect(data1.id).toBeNull();
 	expect(data1.autumn_id).toBeDefined();
 
-	// Verify default product was attached
 	const customer1 = await autumnV1.customers.get<ApiCustomerV3>(
 		data1.autumn_id!,
 	);
@@ -168,7 +150,6 @@ test.concurrent(`${chalk.yellowBright("null-id: claim with ID returns existing c
 		balance: 100,
 	});
 
-	// Second create with same email but now with an ID - should claim and return existing
 	const data2 = await autumnV1.customers.create({
 		id: newId,
 		name: "Now Has ID",
@@ -177,15 +158,12 @@ test.concurrent(`${chalk.yellowBright("null-id: claim with ID returns existing c
 		internalOptions: { default_group: defaultGroup },
 	});
 
-	// Should return the same customer with the new ID set
 	expect(data2.id).toBe(newId);
 	expect(data2.autumn_id).toBe(data1.autumn_id);
 
-	// Verify the customer can be fetched with the new ID
 	const claimedCustomer = await autumnV1.customers.get<ApiCustomerV3>(newId);
 	expect(claimedCustomer.id).toBe(newId);
 
-	// Should still have the default product
 	await expectProductActive({
 		customer: claimedCustomer,
 		productId: freeDefault.id,
@@ -201,7 +179,6 @@ test(`${chalk.yellowBright("null-id: claim existing email-null customer with ID"
 	const email = "same-email-test@example.com";
 	const newId = "with-id-test";
 
-	// No products or customer needed - just need autumnV1 client
 	const { autumnV1 } = await initScenario({
 		setup: [
 			s.deleteCustomer({ email }),
@@ -210,7 +187,6 @@ test(`${chalk.yellowBright("null-id: claim existing email-null customer with ID"
 		actions: [],
 	});
 
-	// Create customer with null ID
 	const data1 = await autumnV1.customers.create({
 		id: null,
 		name: "Null ID Customer",
@@ -221,8 +197,6 @@ test(`${chalk.yellowBright("null-id: claim existing email-null customer with ID"
 
 	expect(data1.id).toBeNull();
 
-	// Create another customer with same email but WITH an ID
-	// This should claim the null-id customer (upsert sets the ID)
 	const data2 = await autumnV1.customers.create({
 		id: newId,
 		name: "Has ID Customer",
@@ -231,7 +205,6 @@ test(`${chalk.yellowBright("null-id: claim existing email-null customer with ID"
 		internalOptions: { disable_defaults: true },
 	});
 
-	// Should be the same customer with the new ID
 	expect(data2.autumn_id).toBe(data1.autumn_id);
 	expect(data2.id).toBe(newId);
 });
@@ -240,13 +213,11 @@ test(`${chalk.yellowBright("null-id: case-insensitive email matching returns exi
 	const emailLower = "case-test@example.com";
 	const emailUpper = "CASE-TEST@EXAMPLE.COM";
 
-	// No products or customer needed - just need autumnV1 client
 	const { autumnV1 } = await initScenario({
 		setup: [s.deleteCustomer({ email: emailLower })],
 		actions: [],
 	});
 
-	// Create with lowercase email
 	const data1 = await autumnV1.customers.create({
 		id: null,
 		name: "Lowercase Email",
@@ -257,7 +228,6 @@ test(`${chalk.yellowBright("null-id: case-insensitive email matching returns exi
 
 	expect(data1.id).toBeNull();
 
-	// Try to create with uppercase email - should return existing (case-insensitive match)
 	const data2 = await autumnV1.customers.create({
 		id: null,
 		name: "Uppercase Email",
@@ -266,8 +236,6 @@ test(`${chalk.yellowBright("null-id: case-insensitive email matching returns exi
 		internalOptions: { disable_defaults: true },
 	});
 
-	// Should return the same customer
 	expect(data2.autumn_id).toBe(data1.autumn_id);
-	// Name should be updated (upsert behavior)
 	expect(data2.name).toBe("Lowercase Email");
 });

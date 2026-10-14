@@ -28,21 +28,14 @@ import {
 } from "@/internal/features/creditSystemUtils.js";
 import { calculateDateRange } from "./aggregate.js";
 
-/** The pipe buckets overflow groups here; the API surfaces the same label as the grouped list. */
 const RESERVED_GROUP = "AUTUMN_RESERVED";
 const OTHER_GROUP = "Other";
 
 type GroupColumn = "entity_id" | "source_feature_id" | "plan_id";
 
-/** isAnyCreditSystem narrows a required FeatureType; lookups here can miss. */
 const isCreditSystemFeature = (type?: FeatureType): boolean =>
 	type !== undefined && isAnyCreditSystem(type);
 
-/**
- * Maps group_by onto the pipe's group_column. The external API sends
- * `$`-prefixed names; the dashboard's internal endpoint sends them bare —
- * accept both so one action serves both callers.
- */
 const toGroupColumn = (groupBy?: string): GroupColumn | undefined => {
 	const bare = groupBy?.startsWith("$") ? groupBy.slice(1) : groupBy;
 	if (
@@ -55,16 +48,6 @@ const toGroupColumn = (groupBy?: string): GroupColumn | undefined => {
 	return undefined;
 };
 
-/**
- * Every customer_entitlement the customer owns, flattened across plans, loose
- * balances and pooled balances — the deduction's `balance_id` can point at any of them.
- *
- * Carries the OWNING PRODUCT's entity down with each row. Attaching a plan to an
- * entity stamps `internal_entity_id` on the customer_product, not on the
- * entitlements beneath it, so reading the entitlement's own column alone reports
- * null for every entity-scoped seat balance.
- */
-/** What pivotRows needs to know about a balance's owning entitlement. */
 type BalanceOwner = {
 	cusEnt: Pick<CustomerEntitlement, "id" | "next_reset_at"> & {
 		entitlement?: Pick<Entitlement, "feature_override">;
@@ -94,11 +77,6 @@ const collectCustomerEntitlements = ({
 	})),
 ];
 
-/**
- * Resolves the three fields Tinybird cannot supply, because they are not stored on
- * the deduction: the balance's owning entity, its next reset, and whether the
- * balance-owning feature is metered or a credit system.
- */
 const buildBalanceLookups = ({
 	ctx,
 	customer,
@@ -127,14 +105,6 @@ const buildBalanceLookups = ({
 	return { entityIdByInternalId, cusEntById, featureById };
 };
 
-/**
- * The rate applied converting the tracked feature into this balance.
- *
- * Only resolvable when the caller pinned a single source feature — with several
- * sources feeding one pool they each convert at a different rate, so a single
- * number would be a lie. Reflects the CURRENT credit schema, not the rate at
- * deduction time: credit systems are edited in place rather than versioned.
- */
 export const resolveCreditCost = ({
 	ctx,
 	sourceFeatureId,
@@ -154,9 +124,6 @@ export const resolveCreditCost = ({
 		errorOnNotFound: false,
 	});
 	if (!sourceFeature) return null;
-	// A plan item can override the schema with dimensions the catalog does not
-	// have, and this view has no entitlement to check, so any dimensioned rate on
-	// the feature makes every rate for it unreportable rather than wrong.
 	const schema: CreditSchemaItem[] = creditSystem.config?.schema ?? [];
 	if (schema.some(hasCreditDimensionRules)) return null;
 	const schemaItem = schema.find(
@@ -177,7 +144,6 @@ export const resolveCreditCost = ({
 			amount: 1,
 		});
 	} catch {
-		// Feature is not in the schema (schema edited since). Better null than wrong.
 		return null;
 	}
 };
@@ -214,8 +180,6 @@ export const aggregateDeductions = async ({
 	});
 
 	const groupColumn = toGroupColumn(params.groupBy);
-	// "properties.foo" (dashboard) / "$properties.foo" never map to a column —
-	// they route the pipe to its raw-events branch, which can read properties.
 	const bareGroupBy = params.groupBy?.startsWith("$")
 		? params.groupBy.slice(1)
 		: params.groupBy;
@@ -252,8 +216,6 @@ export const aggregateDeductions = async ({
 		},
 	);
 
-	// FullCustomer omits entity-attached (seat) products at the customer level,
-	// and expired products entirely — resolve those balances by id instead.
 	const unresolvedBalanceIds = [
 		...new Set(rows.map((row) => row.balance_id)),
 	].filter((balanceId) => !cusEntById.has(balanceId));
@@ -270,8 +232,6 @@ export const aggregateDeductions = async ({
 		});
 	}
 
-	// rollover_* ids share the balance_id namespace with cus_ent_* ids —
-	// resolve the leftovers through the rollover's owning entitlement.
 	const rolloverIds = unresolvedBalanceIds.filter(
 		(balanceId) => !cusEntById.has(balanceId),
 	);
@@ -288,7 +248,6 @@ export const aggregateDeductions = async ({
 		});
 	}
 
-	// Only a single non-credit-system source has an unambiguous conversion rate.
 	const pinnedSource =
 		params.featureIds.length === 1 &&
 		!isCreditSystemFeature(featureById.get(params.featureIds[0])?.type)
@@ -309,13 +268,6 @@ export const aggregateDeductions = async ({
 	});
 };
 
-/**
- * Flat pipe rows -> periods of values{} / balances[] / grouped_values{}.
- *
- * `values` sums across group values, `balances` sums per balance, and
- * `grouped_values` keeps the split — all three from the same rows, so they
- * reconcile by construction.
- */
 const pivotRows = ({
 	rows,
 	ctx,
@@ -340,7 +292,6 @@ const pivotRows = ({
 	featureById: Map<string, { id: string; type: FeatureType }>;
 }): DeductionPeriod[] => {
 	const byPeriod = new Map<number, DeductionPeriod>();
-	// Balance accumulators, keyed period -> feature -> balance_id.
 	const balanceAcc = new Map<string, DeductionBalance>();
 
 	for (const row of rows) {
@@ -411,8 +362,6 @@ const pivotRows = ({
 
 		if (!grouped) continue;
 
-		// Grouped split lives under the balance, because attributing a shared
-		// balance to whoever spent from it needs balance x group, not group alone.
 		periodEntry.grouped_values ??= {};
 		periodEntry.grouped_values[row.balance_id] ??= {};
 		const forBalance = periodEntry.grouped_values[row.balance_id];
@@ -427,8 +376,6 @@ const pivotRows = ({
 
 		forBalance[groupValue] = {
 			deducted: row.deducted,
-			// Grouping BY the source feature makes each group a real source x balance
-			// pair, so the rate is exact here even when the balance-level one is null.
 			...(groupColumn === "source_feature_id" && groupValue !== OTHER_GROUP
 				? {
 						credit_cost: rowCreditCost(groupValue),

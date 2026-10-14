@@ -18,15 +18,11 @@ import { workerStateToApiBalance } from "../balances/workerStateToApiBalance.js"
 import { workerSubjectsToApiBalances } from "../balances/workerSubjectsToApiBalances.js";
 
 export type CheckApiResponse = {
-	/** The check response at the caller's API version. */
 	response: CheckResponseV3;
-	/** The feature that answered: the checked one, or the credit system funding it. */
 	feature: Feature;
-	/** That feature's balance before any version change; null for a flag or when nothing is attached. */
 	balance: ApiBalanceV1 | null;
 };
 
-/** The one place the engine's check answer becomes the API's check response, whether it came from a check or a track. */
 export const checkResultToApiResponse = ({
 	ctx,
 	apiVersion,
@@ -39,12 +35,9 @@ export const checkResultToApiResponse = ({
 	apiVersion: ApiVersionClass;
 	command: CheckCommand;
 	result: CheckResult;
-	/** The subject the check was decided on; null when there were no rows to read. */
 	fullSubject: WorkerFullSubject | null;
-	/** The check deducts (`send_event` or a lock), so it also answers with the legacy track `balances` map. */
 	isDeductingCheck?: boolean;
 }): CheckApiResponse => {
-	// The engine names the feature that answers: the checked one, or the credit system funding it.
 	const feature = findFeatureById({
 		features: ctx.features,
 		featureId: result.fundingFeatureId ?? command.featureId,
@@ -64,7 +57,6 @@ export const checkResultToApiResponse = ({
 	const flag =
 		attachedSubject && result.isFlag
 			? getApiFlag({
-					// Same scoping as the legacy subject's flags, so `flag.feature` expands the flag's feature.
 					ctx: scopeExpandForCtx({ ctx, prefix: ["flags", "flag"] }),
 					cusEnts: fullSubjectToCustomerEntitlements({
 						fullSubject: attachedSubject,

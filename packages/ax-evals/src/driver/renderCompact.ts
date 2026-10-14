@@ -2,14 +2,12 @@ import chalk from "chalk";
 import { describeToolUse, isKeyToolUse } from "./describeToolUse.ts";
 import type { ToolUse } from "./types/toolUse.ts";
 
-/** Strip the shared experiment prefix so parallel lines stay short. */
 const shortArm = (arm: string): string =>
 	arm.replace(/^(basics|fill|misc|suites)-/, "").replace(/\/with$/, "");
 
 const armColor = (arm: string) =>
 	arm.endsWith("without") ? chalk.yellow : chalk.cyan;
 
-/** What happened this turn, in one phrase: key tool uses, else the reply. */
 const turnGist = ({
 	toolUses,
 	agentText,
@@ -35,10 +33,6 @@ const turnGist = ({
 		: flat || chalk.dim("(no reply)");
 };
 
-/**
- * One atomic line per completed turn, tagged by case — for parallel runs
- * where streaming chat or per-turn blocks would interleave unreadably.
- */
 export const renderCompactTurn = ({
 	arm,
 	turnIndex,

@@ -9,7 +9,6 @@ type ExistingScheduleContext = Pick<
 	"fullCustomer" | "stripeSubscription" | "stripeSubscriptionSchedule"
 > & { stripeSubscriptionScope?: StripeSubscriptionScope };
 
-/** Schedule ids on rows only count while their subscription is live. */
 export const isExistingScheduleUpdate = ({
 	billingContext,
 }: {

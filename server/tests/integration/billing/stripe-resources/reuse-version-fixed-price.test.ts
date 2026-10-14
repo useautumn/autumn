@@ -1,13 +1,3 @@
-/**
- * Customize attach of Pro v2 to v1's fixed amount should reuse v1's Stripe Price.
- *
- * Mintlify repro: Pro v1 $1000 exists; customize Pro v2 to $1000 minted
- * price_1Ty753 instead of v1's price_1Ty6wG.
- *
- * Red (current):  customer stripe_price_id !== v1 catalog stripe_price_id
- * Green (after):  customer stripe_price_id === v1 catalog stripe_price_id
- */
-
 import { expect, test } from "bun:test";
 import { type AttachParamsV1Input, BillingInterval } from "@autumn/shared";
 import { itemsV2 } from "@tests/utils/fixtures/itemsV2";

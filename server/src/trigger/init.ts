@@ -7,7 +7,6 @@ import {
 } from "@/utils/logging/addContextToLogs.js";
 import { flushTelemetry } from "@/utils/logging/initLogger.js";
 
-// Trigger loads this before any task; its worker keeps its own uncaught-error handling.
 initErrorReporting({ tracesRequests: false, ownsProcessErrors: false });
 
 tasks.onFailure(async ({ ctx, task, error }) => {

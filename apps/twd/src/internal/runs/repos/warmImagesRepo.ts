@@ -4,7 +4,6 @@ import type { TwdContext } from "../../../lib/types/twdContext.ts";
 
 export type WarmImageRow = typeof warmImages.$inferSelect;
 
-/** Modal deletes warm images 14 days after creation; stop using them 2 days early so live runs never lose one. */
 const WARM_IMAGE_USABLE_MS = 12 * 24 * 60 * 60 * 1000;
 
 export const isWarmImageFresh = ({ row }: { row: WarmImageRow | undefined }) =>

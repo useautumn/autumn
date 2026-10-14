@@ -10,9 +10,6 @@ import ctx from "@tests/utils/testInitUtils/createTestContext";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-// ═══════════════════════════════════════════════════════════════════
-// Test 1: Cannot multi-attach a product the customer already has
-// ═══════════════════════════════════════════════════════════════════
 test.concurrent(`${chalk.yellowBright("multi-attach error: cannot re-attach same product customer already has")}`, async () => {
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
 	const usersItem = items.monthlyUsers({ includedUsage: 5 });
@@ -36,7 +33,6 @@ test.concurrent(`${chalk.yellowBright("multi-attach error: cannot re-attach same
 		actions: [s.billing.attach({ productId: pro.id })],
 	});
 
-	// Multi-attach includes the same pro product customer already has
 	await expectAutumnError({
 		errMessage: "already has this product active",
 		func: async () => {
@@ -48,9 +44,6 @@ test.concurrent(`${chalk.yellowBright("multi-attach error: cannot re-attach same
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════
-// Test 2: Cannot multi-attach two main plans in one group and scope
-// ═══════════════════════════════════════════════════════════════════
 test.concurrent(`${chalk.yellowBright("multi-attach error: conflicting plans in one scope")}`, async () => {
 	const planA = products.base({
 		id: "plan-a",
@@ -78,9 +71,6 @@ test.concurrent(`${chalk.yellowBright("multi-attach error: conflicting plans in 
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════
-// Test 3: redirect_mode "always" with existing subscription → error
-// ═══════════════════════════════════════════════════════════════════
 test.concurrent(`${chalk.yellowBright("multi-attach error: redirect always with existing subscription")}`, async () => {
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
 	const usersItem = items.monthlyUsers({ includedUsage: 5 });
@@ -269,9 +259,6 @@ test.concurrent(
 	},
 );
 
-// ═══════════════════════════════════════════════════════════════════
-// Test 4: redirect_mode "always" on entity without new_billing_sub → error
-// ═══════════════════════════════════════════════════════════════════
 test.concurrent(`${chalk.yellowBright("multi-attach error: redirect always on entity without new_billing_sub")}`, async () => {
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
 	const usersItem = items.monthlyUsers({ includedUsage: 5 });

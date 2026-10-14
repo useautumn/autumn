@@ -26,7 +26,6 @@ const evictCommand: EvictCommand = {
 	occurredAt: 1_700_000_000_000,
 };
 
-/** The production shape: the Postgres committer's store, and an appender that keeps what Kafka was sent. */
 const createProcessor = async ({
 	logsEvicts,
 	storeHeld = Promise.resolve(),
@@ -35,9 +34,7 @@ const createProcessor = async ({
 }: {
 	logsEvicts: boolean;
 	deferredCommitMs?: number;
-	/** The store applies nothing until this resolves. */
 	storeHeld?: Promise<void>;
-	/** The first Kafka commit stays in flight until this resolves. */
 	appendHeld?: Promise<void>;
 }) => {
 	const appended: MeteringRecord[] = [];
@@ -123,7 +120,6 @@ const settlesWithin = async ({
 		new Promise<boolean>((resolve) => setTimeout(() => resolve(false), ms)),
 	]);
 
-/** The consumed batch the evict's held record joins, as the command consumer hands it over. */
 const sinkOf = ({ deferredLogs }: { deferredLogs: Promise<void>[] }) => ({
 	add: (log: Promise<void>) => {
 		deferredLogs.push(log);

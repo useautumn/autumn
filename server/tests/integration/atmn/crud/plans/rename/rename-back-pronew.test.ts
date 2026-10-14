@@ -1,11 +1,3 @@
-/**
- * atmn crud/plans/rename — rename back `proNew → pro` → the original id is reclaimed, proNew becomes the alias, the old alias dies (rename-plan-alias-reclaim)
- *
- * a rename is a changed planId on a row that carries internalId; aliases per catalog-v2/plans/aliases
- *
- * One line of plans/atmn-v3/07_tests.md. [a, b] is a matrix looped INSIDE this file.
- */
-
 import { expect, test } from "bun:test";
 import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 import {
@@ -75,7 +67,6 @@ test.concurrent(
 				})),
 			).toEqual([{ aliasId: "pro", canonicalPlanId: "proNew" }]);
 
-			// Rename back — same row, same internalId, the original id returns.
 			scenario.writeConfig(
 				atmnConfigSource({
 					body: `{
@@ -98,8 +89,6 @@ test.concurrent(
 				expect.objectContaining({ id: "pro", internal_id: internalId }),
 			);
 
-			// The old alias (pro → proNew) is gone; proNew is now the alias pointing
-			// back at the reclaimed pro.
 			const aliases = await listAliases({
 				ctx: scenario.ctx,
 				planIds: ["pro", "proNew"],

@@ -309,7 +309,6 @@ export const createCustomBasePriceForProduct = async ({
 		unitAmount: amount * 100,
 	});
 
-/** Same-group V1 attach can reuse one Stripe product; sync then treats both plans as ambiguous. */
 export const ensureDistinctStripeProcessor = async ({
 	ctx,
 	fullProduct,

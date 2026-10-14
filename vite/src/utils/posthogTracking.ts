@@ -1,14 +1,9 @@
 import posthog from "posthog-js";
 
-// Toggle this to enable/disable tracking in development
 const TRACK_IN_DEVELOPMENT = false;
 
-/**
- * Wrapper function to conditionally track events based on environment
- */
 function trackEvent(eventName: string, properties?: Record<string, unknown>) {
 	try {
-		// Skip tracking in development unless explicitly enabled
 		if (process.env.NODE_ENV === "development" && !TRACK_IN_DEVELOPMENT) {
 			console.log(`[DEV] Would track event: ${eventName}`, properties);
 			return;
@@ -20,25 +15,17 @@ function trackEvent(eventName: string, properties?: Record<string, unknown>) {
 	}
 }
 
-/**
- * Wrapper function to conditionally identify users based on environment
- */
 function identifyUserInPostHog(
 	distinctId: string,
 	properties?: Record<string, unknown>,
 ) {
-	// Skip tracking in development unless explicitly enabled
 	if (process.env.NODE_ENV === "development" && !TRACK_IN_DEVELOPMENT) {
-		// console.log(`[DEV] Would identify user: ${distinctId}`, properties);
 		return;
 	}
 
 	posthog.identify(distinctId, properties);
 }
 
-/**
- * Identify user in PostHog (call when user data is available)
- */
 export function identifyUser({
 	email,
 	name,
@@ -52,16 +39,10 @@ export function identifyUser({
 	});
 }
 
-/**
- * Track user sign-up
- */
 function trackSignUp() {
 	trackEvent("user_signed_up");
 }
 
-/**
- * Track onboarding product creation
- */
 function trackOnboardingProductCreation({
 	productType,
 }: {
@@ -72,9 +53,6 @@ function trackOnboardingProductCreation({
 	});
 }
 
-/**
- * Track onboarding feature creation
- */
 function trackOnboardingFeatureCreation({
 	featureType,
 }: {
@@ -85,23 +63,14 @@ function trackOnboardingFeatureCreation({
 	});
 }
 
-/**
- * Track onboarding feature configuration
- */
 function trackOnboardingFeatureConfigured() {
 	trackEvent("onboarding_feature_configured");
 }
 
-/**
- * Track onboarding playground completion
- */
 function trackOnboardingPlaygroundCompleted() {
 	trackEvent("onboarding_playground_completed");
 }
 
-/**
- * Track onboarding integration completion
- */
 function trackOnboardingIntegrationCompleted() {
 	trackEvent("onboarding_integration_completed");
 }

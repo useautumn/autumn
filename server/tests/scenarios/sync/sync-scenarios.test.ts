@@ -1,18 +1,3 @@
-/**
- * Sync Scenarios
- *
- * Sets up customers with Stripe subscriptions ready for manual sync testing.
- * Each scenario stops after Stripe subscription creation — no sync is executed.
- *
- * A: Pro subscription on empty customer
- * B: Pro subscription on customer with Free (expire previous)
- * C: Pro + add-on in a single Stripe subscription
- * D: Two separate Stripe subscriptions
- * E: Subscription created then test clock advanced 2 weeks
- * F: Trialing Stripe subscription (14-day trial, advanced 3 days)
- * G: Ad-hoc inline Stripe price (no Autumn match)
- */
-
 import { test } from "bun:test";
 import {
 	createStripeSubscriptionFromProduct,
@@ -28,10 +13,6 @@ import chalk from "chalk";
 import type Stripe from "stripe";
 import { CusService } from "@/internal/customers/CusService";
 import { ProductService } from "@/internal/products/ProductService";
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// A: Pro subscription on empty customer
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test(`${chalk.yellowBright("sync-scenario: pro on empty customer")}`, async () => {
 	const customerId = "sync-sc-empty";
@@ -54,10 +35,6 @@ test(`${chalk.yellowBright("sync-scenario: pro on empty customer")}`, async () =
 		productId: pro.id,
 	});
 });
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// B: Pro subscription on customer with Free
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test(`${chalk.yellowBright("sync-scenario: pro on customer with free")}`, async () => {
 	const customerId = "sync-sc-free-to-pro";
@@ -92,10 +69,6 @@ test(`${chalk.yellowBright("sync-scenario: pro on customer with free")}`, async 
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// C: Pro + add-on in a single Stripe subscription
-// ═══════════════════════════════════════════════════════════════════════════════
-
 test(`${chalk.yellowBright("sync-scenario: pro + add-on single sub")}`, async () => {
 	const customerId = "sync-sc-pro-addon";
 
@@ -123,10 +96,6 @@ test(`${chalk.yellowBright("sync-scenario: pro + add-on single sub")}`, async ()
 		productIds: [pro.id, addon.id],
 	});
 });
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// D: Two separate Stripe subscriptions
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test(`${chalk.yellowBright("sync-scenario: two separate subscriptions")}`, async () => {
 	const customerId = "sync-sc-two-subs";
@@ -167,10 +136,6 @@ test(`${chalk.yellowBright("sync-scenario: two separate subscriptions")}`, async
 	]);
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// E: Subscription + test clock advanced 2 weeks
-// ═══════════════════════════════════════════════════════════════════════════════
-
 test(`${chalk.yellowBright("sync-scenario: clock advanced 2 weeks")}`, async () => {
 	const customerId = "sync-sc-clock";
 
@@ -199,10 +164,6 @@ test(`${chalk.yellowBright("sync-scenario: clock advanced 2 weeks")}`, async () 
 		waitForSeconds: 15,
 	});
 });
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// F: Trialing Stripe subscription (14-day trial, advanced 3 days)
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test(`${chalk.yellowBright("sync-scenario: trialing subscription")}`, async () => {
 	const customerId = "sync-sc-trial";
@@ -247,10 +208,6 @@ test(`${chalk.yellowBright("sync-scenario: trialing subscription")}`, async () =
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// G: Ad-hoc inline Stripe price (no Autumn match)
-// ═══════════════════════════════════════════════════════════════════════════════
-
 test(`${chalk.yellowBright("sync-scenario: ad-hoc inline price")}`, async () => {
 	const customerId = "sync-sc-adhoc";
 
@@ -289,10 +246,6 @@ test(`${chalk.yellowBright("sync-scenario: ad-hoc inline price")}`, async () => 
 	};
 	await ctx.stripeCli.subscriptions.create(adHocParams);
 });
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// H: Ad-hoc tiered Stripe price (graduated + volume)
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test(`${chalk.yellowBright("sync-scenario: ad-hoc tiered price")}`, async () => {
 	const customerId = "sync-sc-tiered-adhoc";

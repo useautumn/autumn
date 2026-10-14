@@ -1,14 +1,3 @@
-/**
- * Scheduled Switch Entity Basic Tests (Attach V2)
- *
- * Tests for basic downgrade scenarios involving multiple entities (sub-accounts).
- *
- * Key behaviors:
- * - Each entity has independent product states
- * - Downgrades on one entity don't affect other entities
- * - Scheduled products can be replaced independently per entity
- */
-
 import { test } from "bun:test";
 import type { ApiEntityV0 } from "@autumn/shared";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
@@ -37,7 +26,6 @@ test.concurrent(
 			items: [freeMessages],
 		});
 
-		// Advance to next cycle
 		const {
 			autumnV1: autumnV1After,
 			entities: entitiesAfter,
@@ -52,12 +40,11 @@ test.concurrent(
 			actions: [
 				s.billing.attach({ productId: pro.id, entityIndex: 0 }),
 				s.billing.attach({ productId: pro.id, entityIndex: 1 }),
-				s.billing.attach({ productId: free.id, entityIndex: 0 }), // Downgrade entity 1
+				s.billing.attach({ productId: free.id, entityIndex: 0 }),
 				s.advanceToNextInvoice(),
 			],
 		});
 
-		// After cycle: entity 1 on free, entity 2 still on pro
 		const entity1After = await autumnV1After.entities.get<ApiEntityV0>(
 			customerId,
 			entitiesAfter[0].id,
@@ -78,7 +65,6 @@ test.concurrent(
 			notPresent: [free.id],
 		});
 
-		// Features at respective tiers
 		expectCustomerFeatureCorrect({
 			customer: entity1After,
 			featureId: TestFeature.Messages,
@@ -92,7 +78,6 @@ test.concurrent(
 			usage: 0,
 		});
 
-		// Verify Stripe subscription after cycle (entity 2 still has pro)
 		await expectSubToBeCorrect({
 			db: ctxAfter.db,
 			customerId,

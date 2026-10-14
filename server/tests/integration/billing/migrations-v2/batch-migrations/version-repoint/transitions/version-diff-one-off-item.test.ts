@@ -1,8 +1,3 @@
-/**
- * A free one-off (lifetime) item changing allowance across versions is
- * carried without reset scheduling: usage carries and next_reset_at stays
- * null.
- */
 import { expect, test } from "bun:test";
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
@@ -10,7 +5,6 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-// version-only is per-customer until definition execute is restored
 import { readScopedFeatureRow } from "../../paidRowTestUtils";
 import {
 	expectVersionRepointedOnce,
@@ -42,7 +36,6 @@ test.skip(
 				}),
 			],
 		});
-		// No reset config on the v2 item: still a lifetime grant.
 		await mintPlanVersion({
 			client: autumnV2_3,
 			planId: plan.id,
@@ -92,7 +85,6 @@ test.skip(
 		});
 		expect(rowAfter.id).toBe(rowBefore.id);
 		expect(rowAfter.entitlement_id).not.toBe(rowBefore.entitlement_id);
-		// 100 - 30 usage, then +150 allowance delta; still no reset scheduled.
 		expect(rowAfter.balance).toBe(220);
 		expect(rowAfter.next_reset_at).toBeNull();
 		expect(rowAfter.reset_cycle_anchor).toBeNull();

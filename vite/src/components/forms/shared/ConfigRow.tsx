@@ -35,7 +35,6 @@ const CONFIG_ROW_LAYOUT_CLASSES: Record<
 	},
 };
 
-/** Pass `expanded` to animate children in/out; omit it to render children statically. */
 export function ConfigRow({
 	title,
 	description,

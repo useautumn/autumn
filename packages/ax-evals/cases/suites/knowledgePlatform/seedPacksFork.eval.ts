@@ -12,13 +12,6 @@ import {
 	proMonthlySpec,
 } from "./knowledgePlatformPricing.ts";
 
-/**
- * KIND C (step-seed): the four base plans already exist in the workspace; the
- * user adds packs with the tempting "on any plan" phrasing. The right
- * conclusion is ONE separate attach-on-top add-on plan; the graded wrongs are
- * a prepaid item duplicated onto every base plan (negative anchor), a
- * replacement plan without addOn, or nuking the existing base plans.
- */
 export const seedPacksFork = defineCase({
 	name: "knowledge-platform-seed-packs-fork",
 	prompt: [

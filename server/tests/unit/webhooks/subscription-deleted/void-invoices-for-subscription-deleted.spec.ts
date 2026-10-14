@@ -1,10 +1,3 @@
-/**
- * Unit tests for voidInvoicesForSubscriptionDeleted function.
- *
- * Tests the logic that voids open invoices when a subscription is deleted,
- * based on the org's void_invoices_on_subscription_deletion config.
- */
-
 import { describe, expect, test } from "bun:test";
 import { stripeClients } from "@tests/utils/fixtures/stripe/clients";
 import chalk from "chalk";
@@ -12,8 +5,6 @@ import type Stripe from "stripe";
 import type { StripeSubscriptionDeletedContext } from "@/external/stripe/webhookHandlers/handleStripeSubscriptionDeleted/setupStripeSubscriptionDeletedContext";
 import { voidInvoicesForSubscriptionDeleted } from "@/external/stripe/webhookHandlers/handleStripeSubscriptionDeleted/tasks/voidInvoicesForSubscriptionDeleted";
 import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/stripeWebhookContext";
-
-// ============ MOCK HELPERS ============
 
 const createMockLogger = () => ({
 	debug: () => {},
@@ -42,8 +33,6 @@ const createMockEventContext = (
 			},
 		},
 	}) as unknown as StripeSubscriptionDeletedContext;
-
-// ============ TESTS ============
 
 describe(chalk.yellowBright("voidInvoicesForSubscriptionDeleted"), () => {
 	describe(chalk.cyan("Early returns - feature disabled"), () => {
@@ -235,7 +224,6 @@ describe(chalk.yellowBright("voidInvoicesForSubscriptionDeleted"), () => {
 				org: createMockOrg({ void_invoices_on_subscription_deletion: true }),
 			} as unknown as StripeWebhookContext;
 
-			// Should not throw
 			await voidInvoicesForSubscriptionDeleted({
 				ctx,
 				eventContext: createMockEventContext(),
@@ -265,7 +253,6 @@ describe(chalk.yellowBright("voidInvoicesForSubscriptionDeleted"), () => {
 				org: createMockOrg({ void_invoices_on_subscription_deletion: true }),
 			} as unknown as StripeWebhookContext;
 
-			// Should not throw due to Promise.allSettled
 			await voidInvoicesForSubscriptionDeleted({
 				ctx,
 				eventContext: createMockEventContext(),
@@ -312,13 +299,11 @@ describe(chalk.yellowBright("voidInvoicesForSubscriptionDeleted"), () => {
 				org: createMockOrg({ void_invoices_on_subscription_deletion: true }),
 			} as unknown as StripeWebhookContext;
 
-			// Should not throw due to Promise.allSettled
 			await voidInvoicesForSubscriptionDeleted({
 				ctx,
 				eventContext: createMockEventContext(),
 			});
 
-			// All three invoices should have been attempted
 			expect(voidInvoiceCalls).toHaveLength(3);
 			expect(voidInvoiceCalls).toContain("inv_open_1");
 			expect(voidInvoiceCalls).toContain("inv_open_2");

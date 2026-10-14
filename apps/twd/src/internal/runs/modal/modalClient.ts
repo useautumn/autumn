@@ -1,7 +1,6 @@
 import { ModalClient } from "modal";
 import pLimit from "p-limit";
 
-/** Same repo/tag scheme scripts/tw/helpers/modal.ts publishes warm images under. */
 export const warmImageTag = ({ sha }: { sha: string }) =>
 	`tw-warm:${sha.slice(0, 12)}`;
 
@@ -17,7 +16,6 @@ export const warmImageExists = async ({ sha }: { sha: string }) =>
 		.then(() => true)
 		.catch(() => false);
 
-/** Best-effort terminate by Modal sandbox id (crash recovery of a swarm's leftovers). */
 export const terminateSandboxes = async ({
 	sandboxIds,
 }: {

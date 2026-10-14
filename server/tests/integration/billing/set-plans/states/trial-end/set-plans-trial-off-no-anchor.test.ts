@@ -1,11 +1,3 @@
-/**
- * Ending a live trial with no anchor anchors the cycle on the old trial end, through the same recreate.
- *
- * Red (before):  the trial ended in place, billing $940 now, with next cycle on the old trial end.
- * Green (after): $0 now under none/unset, the stub under prorate/bill_difference, then $940 on the old trial end.
- * Balances refill when the trial ends unless carry_over_usages keeps its usage, then reset again on the anchor.
- */
-
 import { test } from "bun:test";
 import chalk from "chalk";
 import { endTrialOnAnchorAndExpect, proratedStub } from "./utils/trialEndUtils";

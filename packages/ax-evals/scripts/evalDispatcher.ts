@@ -1,13 +1,5 @@
 #!/usr/bin/env bun
 
-/**
- * `bun e <target>` — run ax-eval cases by folder or file, like `bun t` for
- * tests. A target resolves to a cases/ folder (suffix match: "basics",
- * "proGrowth", "suites/messagingApi"), a single eval file, or a case-name
- * fragment. Files are passed to braintrust explicitly because its own
- * directory scan misses our eval files.
- */
-
 import { existsSync } from "node:fs";
 import { readdir, stat } from "node:fs/promises";
 import { join, resolve } from "node:path";
@@ -48,7 +40,6 @@ const findFolderBySuffix = async (
 };
 
 const resolveTarget = async (target: string): Promise<string[]> => {
-	// Exact file or directory path (absolute, cwd-relative, or cases-relative).
 	for (const candidate of [
 		resolve(process.cwd(), target),
 		join(PACKAGE_ROOT, target),
@@ -60,11 +51,9 @@ const resolveTarget = async (target: string): Promise<string[]> => {
 		if (candidate.endsWith(".eval.ts")) return [candidate];
 	}
 
-	// Folder anywhere under cases/ whose path ends with the target.
 	const folder = await findFolderBySuffix(CASES_DIR, target);
 	if (folder) return collectEvalFiles(folder);
 
-	// Case-name fragment: cases/**/<something matching>.eval.ts
 	const all = await collectEvalFiles(CASES_DIR);
 	const lowered = target.toLowerCase();
 	return all.filter((file) => file.toLowerCase().includes(lowered));
@@ -125,7 +114,6 @@ const main = async () => {
 			stdin: "inherit",
 			env: {
 				AX_EVALS_ARM: "with",
-				// Parallel eval files interleave; collapse to one line per turn.
 				...(files.length > 1 && { AX_EVALS_COMPACT: "1" }),
 				...process.env,
 			},

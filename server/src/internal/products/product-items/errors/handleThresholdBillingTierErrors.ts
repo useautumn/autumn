@@ -1,7 +1,6 @@
 import { ErrCode, type ProductItem, RecaseError } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
 
-/** Each threshold charge prices its units from zero, so tiers would be mis-priced across charges. */
 export const handleThresholdBillingTierErrors = ({
 	item,
 }: {

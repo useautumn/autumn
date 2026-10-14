@@ -1,6 +1,5 @@
 import { useEventsTimeseries } from "@/views/customers/customer/analytics/hooks/useEventsTimeseries";
 
-/** Org-wide event timeseries for the chart: no customer filter. */
 export const useOrgTimeseriesEvents = ({
 	eventNames,
 	interval = "7d",

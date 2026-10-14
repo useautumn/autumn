@@ -1,11 +1,3 @@
-/**
- * catalogV2.preview_update — price_change + customize.price.
- *
- * Spec asserts BOTH price_change { previous, current } and customize.price
- * (toBasePriceParams shape). Additional currencies: amount change for shared
- * currency diffs; add/remove alone still updates price rows (no plan diff lane).
- */
-
 import { expect, test } from "bun:test";
 import {
 	BillingInterval,
@@ -147,7 +139,6 @@ test.concurrent(
 	},
 );
 
-// interval_count 1→3 diffs; explicit 1 ≡ omitted → no price diff
 test.concurrent(
 	`${chalk.yellowBright("catalogV2 changes-base-price: interval_count 1→3; explicit 1 → no diff")}`,
 	async () => {
@@ -241,7 +232,6 @@ test.concurrent(
 	},
 );
 
-// shared currency amount change diffs
 test.concurrent(
 	`${chalk.yellowBright("catalogV2 changes-base-price: additional currency amount change → diff")}`,
 	async () => {
@@ -293,7 +283,6 @@ test.concurrent(
 	},
 );
 
-// Currency add/remove remints price rows even when the plan diff lane is empty.
 test.concurrent(
 	`${chalk.yellowBright("catalogV2 changes-base-price: currency add/remove only → update, no plan diff")}`,
 	async () => {
@@ -337,7 +326,6 @@ test.concurrent(
 	},
 );
 
-// items-only update must not populate price_change / customize.price
 test.concurrent(
 	`${chalk.yellowBright("catalogV2 changes-base-price: items-only → no price_change")}`,
 	async () => {
@@ -377,7 +365,6 @@ test.concurrent(
 					],
 				}),
 			);
-			// Full contract: changes present with item diffs, but no price lane.
 			expectPlanPreviewRowCorrect({
 				preview,
 				expected: {

@@ -17,14 +17,12 @@ import {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 
-/** One worker track and the feature it was sent for; an event name yields one per feature it maps to. */
 export type FeatureTrackReply = {
 	engine: "worker";
 	featureId: string;
 	reply: TrackReply;
 };
 
-/** One feature the worker refused, tracked on Postgres instead: the legacy response, unversioned, and the customer row it read. */
 export type FeatureTrackPostgresResponse = {
 	engine: "postgres";
 	featureId: string;
@@ -36,7 +34,6 @@ export type FeatureTrackOutcome =
 	| FeatureTrackReply
 	| FeatureTrackPostgresResponse;
 
-/** The pieces a response is assembled from, whichever engine produced them. */
 type ResponseParts = {
 	fundingBalances: ApiBalanceV1[];
 	balances: Record<string, ApiBalanceV1 | null>;
@@ -61,7 +58,6 @@ const workerResponseParts = ({
 	replies: FeatureTrackReply[];
 }): ResponseParts => {
 	const value = body.value ?? 1;
-	// Each reply carries only the rows that fund its own feature, so every feature is read off the reply that tracked it.
 	const subjects = replies.map(({ featureId, reply }) => ({
 		featureId,
 		fullSubject: subjectStateToFullSubject({
@@ -70,8 +66,6 @@ const workerResponseParts = ({
 			entityId: body.entity_id,
 		}),
 	}));
-	// The worker names the feature each balance is reported in: the tracked one, or the credit system funding it.
-	// Replies land in order, so a balance two features share is read off the later one, after both deductions.
 	const fundingBalances = new Map<string, ApiBalanceV1>();
 	replies.forEach(({ reply }, index) => {
 		const featureId = reply.result.fundingFeatureId;
@@ -97,12 +91,10 @@ const workerResponseParts = ({
 	return {
 		fundingBalances: [...fundingBalances.values()],
 		balances: workerSubjectsToApiBalances({ ctx, subjects }),
-		// The worker reports the per-balance breakdown with its decision, the same one its usage event carries.
 		deductions: replies.flatMap(({ reply }) => reply.result.deductions),
 	};
 };
 
-/** Postgres already answered in the API shape; its balance is the tracked feature's funding balance. */
 const postgresResponseParts = ({
 	responses,
 }: {
@@ -121,7 +113,6 @@ const postgresResponseParts = ({
 	deductions: responses.flatMap(({ response }) => response.deductions ?? []),
 });
 
-/** The one place track outcomes, from either engine, become the API's track response. */
 export function trackOutcomesToApiResponse({
 	ctx,
 	body,

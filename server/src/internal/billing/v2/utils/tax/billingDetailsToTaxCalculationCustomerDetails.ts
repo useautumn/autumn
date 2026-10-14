@@ -7,7 +7,6 @@ const TAXABILITY_OVERRIDES = {
 	reverse: "reverse_charge",
 } as const;
 
-/** Unsaved request billing details as Stripe Tax customer_details, so a preview taxes what the user typed. */
 export const billingDetailsToTaxCalculationCustomerDetails = ({
 	billingContext,
 }: {

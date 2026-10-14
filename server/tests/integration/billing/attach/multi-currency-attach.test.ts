@@ -8,7 +8,6 @@ import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 
-// Regression: a normal single-currency (org-default) attach must NOT be blocked.
 test.concurrent(
 	`${chalk.yellowBright("multi-currency: single-currency attach is not blocked")}`,
 	async () => {
@@ -31,7 +30,6 @@ test.concurrent(
 	},
 );
 
-// Guard: a customer locked to EUR cannot attach a USD-only plan (no Stripe call).
 test.concurrent(
 	`${chalk.yellowBright("multi-currency: attach blocked when plan lacks the customer's currency")}`,
 	async () => {
@@ -60,7 +58,6 @@ test.concurrent(
 	},
 );
 
-// Lock: a null-currency customer's first paid attach locks customer.currency.
 test.concurrent(
 	`${chalk.yellowBright("multi-currency: first paid attach locks the customer currency")}`,
 	async () => {

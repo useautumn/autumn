@@ -1,20 +1,3 @@
-/**
- * License equality — every field, every falsey/default pair.
- *
- * Overlay content (`licenseCustomizesAreSame`):
- *   undefined / null / {} are empty. `{ price: null }` is not empty.
- *   add_items/remove_items omitted === []. interval_count unset === 1.
- *
- * Link (`planLicensesAreSame`):
- *   included / prepaid_only are required — 0 and false are real values.
- *   version and expanded plan are ignored.
- *
- * Patch (`customizePlanLicensesAreSame`):
- *   omitted included !== 0. omitted prepaid_only !== false.
- *   customize null is "clear"; omitted / {} are "no overlay payload".
- *   metadata omitted / null / {} are empty.
- */
-
 import { describe, expect, test } from "bun:test";
 import {
 	type ApiPlanLicenseV1,

@@ -1,21 +1,3 @@
-/**
- * TDD contract: carried usage is NOT floored at zero when it exceeds the new
- * plan's included allowance — the balance goes negative instead (e.g. Marketing
- * Pro 25k with 25k used downgraded to Pro 5k lands at -20k/5k). Consistent
- * across attach and sync; usage never changes on a plan transition.
- *
- * Contract under test:
- *   New behaviors:
- *     - allocated (continuous) feature carried by attach's DEFAULT config goes
- *       negative when prior usage exceeds the new allowance
- *     - consumable feature carried via carry_over_usages { enabled: true }
- *       goes negative the same way (no clamp)
- *
- * Pre-impl red: deductFromCusEntsTypescript floors non-usage_allowed balances
- * at 0, so both assertions see balance 0 instead of the negative carry.
- * Post-impl green: the existing-usages carry path allows negative balances.
- */
-
 import { test } from "bun:test";
 import type { ApiCustomerV3 } from "@autumn/shared";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
@@ -27,13 +9,6 @@ import chalk from "chalk";
 
 const REDIS_SYNC_MS = 2000;
 
-// ═══════════════════════════════════════════════════════════════════════════
-// Assertion 1 — allocated feature (default carry): downgrade goes negative
-//
-// Pro: 25 users (allocated, no price), 25 used. Attach Premium (5 users), no
-// carry param — allocated features always carry. Expected: balance -20,
-// usage 25. Pre-fix: balance clamped to 0 (usage shown as 5).
-// ═══════════════════════════════════════════════════════════════════════════
 test.concurrent(
 	`${chalk.yellowBright("carry no-floor 1: allocated usage above new allowance goes negative")}`,
 	async () => {
@@ -79,13 +54,6 @@ test.concurrent(
 	},
 );
 
-// ═══════════════════════════════════════════════════════════════════════════
-// Assertion 2 — consumable feature with carry enabled: no clamp on downgrade
-//
-// Pro: 50 messages, 50 used. Attach Premium (30 messages) with
-// carry_over_usages { enabled: true }. Expected: balance -20, usage 50.
-// Pre-fix: balance clamped to 0.
-// ═══════════════════════════════════════════════════════════════════════════
 test.concurrent(
 	`${chalk.yellowBright("carry no-floor 2: consumable usage above new allowance goes negative")}`,
 	async () => {

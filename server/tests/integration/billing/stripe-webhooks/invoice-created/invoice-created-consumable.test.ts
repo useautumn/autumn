@@ -1,13 +1,3 @@
-/**
- * Invoice Created Webhook Tests - Consumable Prices (Basic)
- *
- * Tests for handling the `invoice.created` Stripe webhook event for consumable
- * (usage-in-arrear) prices. These tests verify that:
- * 1. Usage is correctly submitted to Stripe as invoice line items
- * 2. Entitlement balances are reset after the invoice is created
- * 3. Overage pricing is calculated correctly
- */
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3 } from "@autumn/shared";
 import { calculateExpectedInvoiceAmount } from "@tests/integration/billing/utils/calculateExpectedInvoiceAmount";
@@ -19,29 +9,11 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 1: Attach pro with consumable → track into overage (decimal) → advance cycle
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Customer has Pro with consumable messages (100 included, $0.10/unit overage)
- * - Pro has a $20/month base price
- * - Track 250.5 messages (150.5 overage)
- * - Advance to next billing cycle
- *
- * Expected Result:
- * - Initial invoice: $20 (pro base price)
- * - After cycle: invoice should include base price ($20) + overage (150.5 * $0.10 = $15.05)
- * - Total second invoice: $20 + $15.05 = $35.05
- * - Balance should be reset to 100 (included usage)
- */
 test.concurrent(
 	`${chalk.yellowBright("invoice.created consumable: attach → track decimal overage → advance cycle")}`,
 	async () => {
 		const customerId = "inv-created-cons-decimal";
 
-		// Create consumable messages with 100 included
 		const consumableItem = items.consumableMessages({ includedUsage: 100 });
 
 		const pro = products.pro({
@@ -66,55 +38,33 @@ test.concurrent(
 			],
 		});
 
-		// Calculate expected overage: 150.5 units * $0.10 = $15.05
 		const expectedOverage = calculateExpectedInvoiceAmount({
 			items: pro.items,
 			usage: [{ featureId: TestFeature.Messages, value: 250.5 }],
 			options: { includeFixed: false, onlyArrear: true },
 		});
 
-		// Verify overage calculation: (251 - 100) * $0.10 = $15.1
 		expect(expectedOverage).toBe(15.1);
 
-		// The renewal invoice arrives by webhook, so settle on it first and assert
-		// the rest against that same state.
-		// Should have 2 invoices: initial ($20) + renewal ($20 base + $15.05 overage = $35.05)
 		const customerAfterAdvance = await expectCustomerInvoiceCorrect({
 			autumn: autumnV1,
 			customerId,
 			count: 2,
-			latestTotal: 20 + expectedOverage, // $20 base + $15.05 overage
+			latestTotal: 20 + expectedOverage,
 			latestInvoiceProductId: pro.id,
 		});
 
-		// Product should still be active
 		await expectProductActive({
 			customer: customerAfterAdvance,
 			productId: pro.id,
 		});
 
-		// Balance should be reset to 100 (included usage) after cycle
 		expect(customerAfterAdvance.features[TestFeature.Messages].balance).toBe(
 			100,
 		);
 	},
 );
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 2: No overage - track within included usage → advance cycle
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Customer has Pro with consumable messages (100 included, $0.10/unit overage)
- * - Track 50 messages (within included usage, no overage)
- * - Advance to next billing cycle
- *
- * Expected Result:
- * - Initial invoice: $20 (pro base price)
- * - After cycle: invoice should only include base price ($20), no overage
- * - Balance should be reset to 100 (included usage)
- */
 test.concurrent(
 	`${chalk.yellowBright("invoice.created consumable: no overage - track within included → advance cycle")}`,
 	async () => {
@@ -140,39 +90,22 @@ test.concurrent(
 			],
 		});
 
-		// Verify final state
 		const customerAfterAdvance =
 			await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-		// Should have 2 invoices: initial ($20) + renewal ($20 base only, no overage)
 		expectCustomerInvoiceCorrect({
 			customer: customerAfterAdvance,
 			count: 2,
-			latestTotal: 20, // Only base price, no overage
+			latestTotal: 20,
 			latestInvoiceProductId: pro.id,
 		});
 
-		// Balance should be reset to 100 after cycle
 		expect(customerAfterAdvance.features[TestFeature.Messages].balance).toBe(
 			100,
 		);
 	},
 );
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 3: Large overage with exact calculation
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Customer has Pro with consumable messages (100 included, $0.10/unit overage)
- * - Track 1000 messages (900 overage)
- * - Advance to next billing cycle
- *
- * Expected Result:
- * - Initial invoice: $20 (pro base price)
- * - After cycle: $20 base + $90 overage (900 * $0.10) = $110
- */
 test.concurrent(
 	`${chalk.yellowBright("invoice.created consumable: large overage → advance cycle")}`,
 	async () => {
@@ -198,7 +131,6 @@ test.concurrent(
 			],
 		});
 
-		// Calculate expected: 900 * $0.10 = $90
 		const expectedOverage = calculateExpectedInvoiceAmount({
 			items: pro.items,
 			usage: [{ featureId: TestFeature.Messages, value: 1000 }],
@@ -206,50 +138,31 @@ test.concurrent(
 		});
 		expect(expectedOverage).toBe(90);
 
-		// Verify final state
 		const customerAfterAdvance =
 			await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-		// Should have 2 invoices: initial ($20) + renewal ($20 + $90 = $110)
 		expectCustomerInvoiceCorrect({
 			customer: customerAfterAdvance,
 			count: 2,
-			latestTotal: 20 + expectedOverage, // $110
+			latestTotal: 20 + expectedOverage,
 			latestInvoiceProductId: pro.id,
 		});
 
-		// Balance should be reset to 100
 		expect(customerAfterAdvance.features[TestFeature.Messages].balance).toBe(
 			100,
 		);
 	},
 );
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 4: Billing units > 1 with rounding up
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Customer has Pro with consumable messages (100 included, $1/10 units, billingUnits=10)
- * - Track 155 messages → 55 overage → rounds UP to 60 (6 billing units)
- * - Advance to next billing cycle
- *
- * Expected Result:
- * - Overage: 55 units → rounds up to 60 (since billingUnits=10)
- * - Price: 6 billing units * $1 = $6 overage
- * - Total second invoice: $20 base + $6 overage = $26
- */
 test.concurrent(
 	`${chalk.yellowBright("invoice.created consumable: billing units rounding up → advance cycle")}`,
 	async () => {
 		const customerId = "inv-created-cons-billing-units";
 
-		// Create consumable with billingUnits=10, $1 per 10 units
 		const consumableItem = items.consumable({
 			featureId: TestFeature.Messages,
 			includedUsage: 100,
-			price: 1, // $1 per 10 units
+			price: 1,
 			billingUnits: 10,
 		});
 
@@ -271,29 +184,24 @@ test.concurrent(
 			],
 		});
 
-		// Calculate expected overage: 55 units → ceil(55/10)*10 = 60 → 60/10 * $1 = $6
 		const expectedOverage = calculateExpectedInvoiceAmount({
 			items: pro.items,
 			usage: [{ featureId: TestFeature.Messages, value: 155 }],
 			options: { includeFixed: false, onlyArrear: true },
 		});
 
-		// Verify: 55 overage rounds up to 60, which is 6 billing units * $1 = $6
 		expect(expectedOverage).toBe(6);
 
-		// Verify final state
 		const customerAfterAdvance =
 			await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-		// Should have 2 invoices: initial ($20) + renewal ($20 + $6 = $26)
 		expectCustomerInvoiceCorrect({
 			customer: customerAfterAdvance,
 			count: 2,
-			latestTotal: 20 + expectedOverage, // $26
+			latestTotal: 20 + expectedOverage,
 			latestInvoiceProductId: pro.id,
 		});
 
-		// Balance should be reset to 100
 		expect(customerAfterAdvance.features[TestFeature.Messages].balance).toBe(
 			100,
 		);

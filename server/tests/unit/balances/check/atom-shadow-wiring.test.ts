@@ -8,10 +8,8 @@ import * as balanceWorkerCheck from "@/internal/balances/check/balanceWorker/run
 import { _setShadowAtomConfigForTesting } from "@/internal/misc/shadowAtom/shadowAtomConfigStore.js";
 import { encryptData } from "@/utils/encryptUtils.js";
 
-// The worker lane answers the real check here; the shadow runs the same after either lane.
 const previousRollout = process.env.BALANCE_WORKER_ROLLOUT_ENABLED;
 const previousPassword = process.env.ENCRYPTION_PASSWORD;
-/** Puts an env var back as it was, unset included. */
 const restoreEnv = ({
 	key,
 	value,
@@ -28,7 +26,6 @@ beforeAll(() => {
 	process.env.ENCRYPTION_PASSWORD = "atom-shadow-test-password";
 });
 
-/** Our shadow Atom at `endpointUrl`, holding half of the test org's customers once the org is registered on it. */
 const useShadowAtom = ({
 	endpointUrl,
 	registered = true,
@@ -67,7 +64,6 @@ const balanceWorkerCheckSpy = spyOn(
 	"runBalanceWorkerCheck",
 ).mockImplementation(async () => checkResponse);
 
-/** A fake Atom that answers with the API's own response once `gate` resolves. */
 const atom = { gate: Promise.resolve(), calls: 0 };
 const server = Bun.serve({
 	port: 0,
@@ -99,7 +95,6 @@ const outside = customerIds.find((customerId) => bucketOf(customerId) >= 50);
 if (!inside || !outside)
 	throw new Error("The sample ids must fall on both sides of a 50% rollout");
 
-/** A request from an org with no Atom of its own: the shadow check needs none. */
 const createCtx = () => {
 	const shadowLogs: Record<string, unknown>[] = [];
 	const ignore = () => {};

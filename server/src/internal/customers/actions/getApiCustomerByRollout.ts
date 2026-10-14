@@ -42,7 +42,6 @@ export const getApiCustomerByRollout = async ({
 
 		const fetch = () =>
 			getOrSetCachedFullSubject({
-				// Sole replica grant; writers opt out via disableReplicaRead.
 				readFrom,
 				ctx: effectiveSkipCache ? { ...ctx, skipCache: true } : ctx,
 				customerId,
@@ -68,7 +67,6 @@ export const getApiCustomerByRollout = async ({
 				return fetch();
 			},
 		});
-		// Joined singleflights never enter fetch — the shared flight serves them.
 		if (!servedByFetch && ctx.subjectReadTrace) {
 			ctx.subjectReadTrace.source = "cache";
 		}
@@ -79,7 +77,6 @@ export const getApiCustomerByRollout = async ({
 		ctx,
 		source: "get_customer",
 		run: () => lookup({ skipCache: false }),
-		// Bounded by the 15s pool clocks and query_timeout, not an extra budget.
 		fallbackOnRedisUnavailable: isRedisFallbackToDbEnabled()
 			? () => lookup({ skipCache: true })
 			: undefined,

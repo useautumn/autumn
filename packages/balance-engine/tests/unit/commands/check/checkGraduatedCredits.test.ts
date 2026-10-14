@@ -18,7 +18,6 @@ import {
 	identity,
 } from "../../engineFixtures.js";
 
-/** Messages are paid in credits: the first 2 units cost 1 credit each, every unit after costs 3. */
 const graduatedSubject = ({
 	customerEntitlements,
 }: {
@@ -81,7 +80,6 @@ test.concurrent(
 			command: createCheckCommand({ requiredBalance: 3 }),
 		});
 
-		// Unit 2 at 1 credit, units 3-4 at 3 each.
 		expect(result).toMatchObject({
 			allowed: true,
 			requiredBalance: 7,
@@ -100,7 +98,6 @@ test.concurrent(
 			command: createCheckCommand({ requiredBalance: 3 }),
 		});
 
-		// The 2 credits cover units 1-2; unit 3 still costs 3.
 		expect(result).toMatchObject({ allowed: false, requiredBalance: 5 });
 	},
 );
@@ -124,7 +121,6 @@ test.concurrent(
 			command: createCheckCommand({ requiredBalance: 1 }),
 		});
 
-		// The add-on has charged nothing yet, so its first unit costs the first tier's 1 credit.
 		expect(result).toMatchObject({ allowed: true, requiredBalance: 1 });
 	},
 );

@@ -114,7 +114,6 @@ export const newCusToAttachParams = ({
 		newCus.entities = [];
 	}
 
-	// isDefaultTrial
 	const isDefaultTrial = freeTrial && !freeTrial.card_required;
 	const attachParams: AttachParams = {
 		stripeCli,

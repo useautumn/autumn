@@ -9,7 +9,6 @@ import { useAtomApi } from "@/contexts/AtomApiContext";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 
 const POLL_INTERVAL_MS = 2000;
-/** The org deletes its stack in AWS on its own time, so that wait is polled gently. */
 const TEARDOWN_POLL_INTERVAL_MS = 10_000;
 
 const SETTLING_STATUSES: ByocCacheStatus[] = [
@@ -29,7 +28,6 @@ const pollIntervalFor = (cache: ApiByocCache | null | undefined) => {
 	return isSettling ? POLL_INTERVAL_MS : false;
 };
 
-/** The env's Atom and earlier ones still coming down, polled until each is connected, failed, or gone. */
 export const useAtomQuery = ({ enabled = true } = {}) => {
 	const axiosInstance = useAxiosInstance();
 	const { basePath, queryKey } = useAtomApi();
@@ -59,7 +57,6 @@ export const useAtomQuery = ({ enabled = true } = {}) => {
 		removing: data?.removing ?? [],
 		stackName: data?.stack_name ?? "",
 		stackNameSuffix: data?.stack_name_suffix ?? "",
-		/** When the Atom's status was last read, ms since epoch. */
 		checkedAt: dataUpdatedAt,
 		isLoading,
 		error,

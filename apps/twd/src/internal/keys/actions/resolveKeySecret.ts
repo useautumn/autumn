@@ -6,7 +6,6 @@ import type { TwdContext } from "../../../lib/types/twdContext.ts";
 import { peekKeySecret, rememberKeySecret } from "../keySecrets.ts";
 import { syncKeys } from "./syncKeys.ts";
 
-/** Local decrypt of the stored key; no Stripe calls, so a cold cache after a deploy costs one query. */
 const loadStoredSecret = async ({
 	ctx,
 	platformAccountId,
@@ -24,7 +23,6 @@ const loadStoredSecret = async ({
 	return secret;
 };
 
-/** Decrypts every stored key into memory; run at boot so the first claim after a deploy never waits. */
 export const preloadKeySecrets = async ({ ctx }: { ctx: TwdContext }) => {
 	const rows = await ctx.db
 		.select({
@@ -39,7 +37,6 @@ export const preloadKeySecrets = async ({ ctx }: { ctx: TwdContext }) => {
 	return rows.length;
 };
 
-/** Secret for a platform account: memory, then the encrypted DB copy, then (last resort) a full key re-probe. */
 export const resolveKeySecret = async ({
 	ctx,
 	platformAccountId,

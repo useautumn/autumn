@@ -15,13 +15,6 @@ import {
 } from "../overlay/overlay";
 import { OPEN_ENUM_MARKER } from "../spec/syncedListSchema";
 
-/**
- * Emits TypeScript source for a fixture type. Formatting is deliberately not a
- * concern here — the output is run through the repo's Biome afterwards, which
- * owns indentation, trailing commas and line breaks. That removes the hard half
- * of the problem and keeps this function about shape only.
- */
-
 export type EmitContext = {
 	overlay: Overlay;
 	collection: string;
@@ -38,7 +31,6 @@ const branchesOf = (schema: JsonSchema): JsonSchema[] => [
 	...(schema.oneOf ?? []),
 ];
 
-/** JSON Schema → a TypeScript type expression. */
 export const typeExpression = ({
 	schema,
 	path,
@@ -72,7 +64,6 @@ export const typeExpression = ({
 		const item = schema.items
 			? typeExpression({ schema: schema.items, path, context })
 			: "unknown";
-		// A newer server may send names this CLI doesn't list yet.
 		return schema[OPEN_ENUM_MARKER] === true
 			? `Array<${item} | (string & {})>`
 			: `Array<${item}>`;
@@ -85,7 +76,6 @@ export const typeExpression = ({
 				path,
 				context,
 			});
-			// Keys here are the user's data, so they stay a free string index.
 			return `Record<string, ${value}>`;
 		}
 		return objectTypeExpression({ schema, path, context });
@@ -98,20 +88,15 @@ export const typeExpression = ({
 	return "unknown";
 };
 
-/** One object-schema property that survives the skip rules, in spec order. */
 export type ObjectMember = {
 	name: string;
 	optional: boolean;
 	description: string | undefined;
-	/** The overlay's reason when the field is kept for existing catalogs only. */
 	deprecated: string | undefined;
 	fieldPath: string;
 	schema: JsonSchema;
 };
 
-/** The spec's description, tidied, with the overlay's note appended. A
- * default is spelled out only where the description leaves it unsaid: an
- * omitted flag reads as its default, and a reader should not have to guess. */
 const describedMember = ({
 	description,
 	defaultValue,
@@ -251,7 +236,6 @@ const objectTypeExpression = ({
 	return `{\n${members.join("\n")}\n}`;
 };
 
-/** A named exported type for one collection item, e.g. `Feature`. */
 export const emitFixtureType = ({
 	name,
 	schema,
@@ -263,7 +247,6 @@ export const emitFixtureType = ({
 	schema: JsonSchema;
 	collection: string;
 	overlay: Overlay;
-	/** Item-rooted path of a nested fixture, so overlay entries under it apply. */
 	path?: string;
 }): string =>
 	`export type ${name} = ${typeExpression({

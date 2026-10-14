@@ -105,7 +105,6 @@ interface AttachFormContextValue {
 	attachCurrency: UseAttachCurrencyReturn;
 
 	previewQuery: UseAttachPreviewReturn;
-	/** Preview with invoice mode on, so tax reflects the send_invoice path. */
 	invoicePreview: {
 		path: string;
 		requestBody: AttachParamsV0 | MultiAttachParamsV0 | null;
@@ -225,7 +224,6 @@ export function AttachFormProvider({
 	const numVersions =
 		productVersionQuery.data?.numVersions ?? product?.version ?? 1;
 
-	// Fetch the target version's product data when version differs from latest
 	const isVersionChanged =
 		version !== undefined && version !== (product?.version ?? numVersions);
 	const versionProductQuery = useProductVersionQuery({
@@ -241,7 +239,6 @@ export function AttachFormProvider({
 				: product;
 		if (!resolved) return resolved;
 
-		// Normalize mirrored intervals so editing does not split price and reset.
 		return {
 			...resolved,
 			items: (resolved.items as ProductItem[]).map(normalizeResetInterval),
@@ -325,15 +322,11 @@ export function AttachFormProvider({
 			enabled: !isMultiPlan && !noBillingChanges,
 		});
 
-	// Reverting needs an existing subscription to fall back to, and multi-plan
-	// attaches don't support it — everywhere else the trial must bill on end.
 	const supportsTrialRevert = hasActiveSubscription && !isMultiPlan;
 	const effectiveTrialOnEnd: TrialOnEnd = supportsTrialRevert
 		? trialOnEnd
 		: "bill";
 
-	// The currency must be offered by every plan being attached, so feed the
-	// hook all selected plans' items — it intersects across charging items.
 	const currencyItems = useMemo(() => {
 		if (grantFree) return [];
 		const primaryItems =
@@ -363,11 +356,8 @@ export function AttachFormProvider({
 		selectedCurrency: currency,
 	});
 
-	// Track product changes and initialize prepaid options
 	const previousProductIdRef = useRef<string | undefined>(undefined);
-	// Seeded defaults must survive this effect's first pass — the plan's own trial/prepaid init would stomp them.
 	const seededRef = useRef(Boolean(defaultOverrides));
-	// AI generation applies whole configs, including productId — the reset/init pass below would stomp them.
 	const programmaticProductChangeRef = useRef(false);
 	const markProgrammaticProductChange = useCallback(
 		(nextProductId: string | undefined) => {
@@ -382,7 +372,6 @@ export function AttachFormProvider({
 	);
 	useEffect(() => {
 		if (!product) return;
-		// Only trigger when productId actually changes (not on initial mount with same value)
 		if (previousProductIdRef.current === productId) {
 			return;
 		}
@@ -414,10 +403,6 @@ export function AttachFormProvider({
 			form.setFieldValue("currency", null);
 		}
 
-		// Initialize prepaid options for the selected product.
-		// Values start as undefined (not 0) so that unset quantities are omitted
-		// from the request — the backend carries over existing prepaid balances
-		// when no option is provided for a feature.
 		const currentPrepaidOptions = form.store.state.values.prepaidOptions;
 		const resolvedPrepaidOptions =
 			isProductChange || Object.keys(currentPrepaidOptions).length === 0

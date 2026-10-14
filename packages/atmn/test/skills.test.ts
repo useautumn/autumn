@@ -1,16 +1,3 @@
-/**
- * `atmn skills`: the CLI carries its own skills, frozen at its version.
- *
- * Contract:
- *   - skills                 lists name, description, reference count, and the subcommands
- *   - skills <name>          prints the raw SKILL.md, nothing else
- *   - skills <name> --ref p  prints one reference file
- *   - skills <name> --json   { name, description, version, markdown, references[] }
- *   - skills install         writes <dir>/<name>/SKILL.md + references, prints the npx hint
- *   - skills update          rewrites folders whose frontmatter version is older; `=` for current
- *   - skillsStatus           reports installed vs bundled version (the stale hint push/pull print)
- */
-
 import { afterEach, expect, test } from "bun:test";
 import {
 	existsSync,
@@ -172,7 +159,6 @@ test("a newer install is never downgraded, and the stale hint stays quiet for it
 	expect(readFileSync(path, "utf8")).toBe(newer);
 	expect(lines.join("")).toContain("newer than this CLI, kept");
 
-	// Prerelease identifiers order like semver: rc beats nightly, a release beats both.
 	for (const version of [
 		"3.0.0-rc.1",
 		"3.0.0-rc-2.1",

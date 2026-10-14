@@ -1,7 +1,3 @@
-/**
- * Contract: org-wide dimensions use their dedicated rollup, eligible UTC property groups use
- * daily states, and reconciliation keeps exact hourly range edges.
- */
 import { expect, test } from "bun:test";
 import {
 	buildCountAndSumQuery,
@@ -70,10 +66,6 @@ test("org property rollup: routes only unfiltered aggregate-all property groups"
 	).toBe(false);
 });
 
-// A customer-scoped `apiKeyId` 90d query: one event without the
-// property made the all-events total exceed the grouped count, which read as gate
-// loss and reran the query ungated over 19.5M rows. Scoped queries must reconcile
-// against property presence in the same scope, exactly like org-wide ones.
 test("property coverage check: covers scoped and org-wide top-level property groups", () => {
 	const base = {
 		groupColumn: "property" as const,

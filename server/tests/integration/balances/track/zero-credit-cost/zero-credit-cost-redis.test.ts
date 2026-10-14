@@ -1,15 +1,3 @@
-/**
- * Contract: a metered feature a credit system prices at 0 credits is free.
- * Tracking or locking it through the Redis deduction script leaves the credit
- * balance untouched — whatever that balance is, whether the row is unlimited,
- * and whatever rollovers it carries — while the feature's own balances are
- * still drawn first. A plan item's feature_override decides the price: it can
- * make a priced feature free, or price a catalog-free one.
- *
- * Runs the real `deductFromSubjectBalances` Lua script, with params prepared by
- * `prepareFeatureDeductionV2`, against a local Redis.
- */
-
 import { afterAll, describe, expect, test } from "bun:test";
 import type { FullSubject, LockParams } from "@autumn/shared";
 import { rollovers } from "@tests/utils/fixtures/db/rollovers.js";
@@ -50,7 +38,6 @@ const deduct = async ({
 	value: number;
 	overageBehaviour?: "cap" | "reject";
 	lock?: LockParams;
-	/** Finalize an open lock: give back `unwindValue` of it, then deduct `value` more. */
 	finalize?: { lockReceiptKey: string; unwindValue: number };
 }): Promise<LuaDeductionResult & { lockReceiptKey: string | null }> => {
 	const prepared = prepareFeatureDeductionV2({

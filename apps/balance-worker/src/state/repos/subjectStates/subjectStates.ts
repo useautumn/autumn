@@ -42,7 +42,6 @@ export const readStoredState = ({
 	return storedSubjectStateFromRow({ row });
 };
 
-/** Null until the customer has state; an entity state without its customer is corruption. */
 export const readStoredStates = ({
 	ctx,
 	identity,
@@ -105,7 +104,6 @@ export const readPartitionStates = ({
 			...storedSubjectStateFromRow({ row }),
 		}));
 
-/** Keys derive from the state's identity, so a state can never be filed under another subject. */
 export const insertState = ({
 	ctx,
 	topic,
@@ -151,7 +149,6 @@ export const insertState = ({
 		});
 };
 
-/** The customer's state carries the revision guard; entity states ride along under it, so they update unguarded. */
 export const updateState = ({
 	ctx,
 	state,

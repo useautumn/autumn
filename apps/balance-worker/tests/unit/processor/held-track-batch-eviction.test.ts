@@ -50,7 +50,6 @@ test("a batch member cleared by the pre-check is not evicted by an earlier membe
 		ctx: {
 			stateStore: {
 				...store,
-				// The Postgres store answers a map miss with null: the ordinary path hydrates.
 				readOwnState: (params) =>
 					postgresLike ? null : store.readOwnState(params),
 			},
@@ -96,7 +95,6 @@ test("a batch member cleared by the pre-check is not evicted by an earlier membe
 		}
 		await processor.drain();
 		postgresLike = true;
-		// The worker's share shrinks (e.g. another partition joins the budget).
 		bound = 1;
 		const outcome = processor.trackBatchInline({
 			commands: [

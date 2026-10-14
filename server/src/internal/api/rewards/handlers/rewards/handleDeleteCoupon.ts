@@ -47,8 +47,6 @@ export const handleDeleteCoupon = createRoute({
 			);
 		}
 
-		// Delete the DB row first: if it fails, the create-side duplicate guard must
-		// still see the reward as alive, so we keep its promo codes active too.
 		await rewardRepo.delete({
 			db,
 			internalId: reward.internal_id,
@@ -56,8 +54,6 @@ export const handleDeleteCoupon = createRoute({
 			orgId: org.id,
 		});
 
-		// Deactivate this reward's promo codes so the code is free to reuse, even if
-		// the coupon deletion above failed (a stale active promo blocks recreation).
 		for (const promoCode of reward.promo_codes ?? []) {
 			try {
 				for await (const promo of stripeCli.promotionCodes.list({
@@ -66,8 +62,6 @@ export const handleDeleteCoupon = createRoute({
 					active: true,
 					limit: 100,
 				})) {
-					// Isolate each update so one failure doesn't skip the remaining
-					// promos for this code (a stale active one blocks recreation).
 					try {
 						await stripeCli.promotionCodes.update(promo.id, { active: false });
 					} catch (error) {

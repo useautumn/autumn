@@ -19,12 +19,6 @@ import type {
 	StripeWebhookHonoEnv,
 } from "./stripeWebhookContext.js";
 
-/**
- * Seeder middleware for Stripe Connect webhooks
- * - Verifies webhook signature using master stripe
- * - Gets org from event.account (accountId)
- * - Sets up StripeWebhookContext (org, env, features, stripeEvent)
- */
 export const stripeConnectSeederMiddleware = async (
 	c: Context<StripeWebhookHonoEnv>,
 	next: Next,
@@ -33,7 +27,6 @@ export const stripeConnectSeederMiddleware = async (
 	const { db, logger } = ctx;
 	const { env } = c.req.param() as { env: AppEnv };
 
-	// Step 1: Initialize master stripe client
 	let masterStripe: Stripe;
 	try {
 		masterStripe = initMasterStripe({ env });
@@ -42,7 +35,6 @@ export const stripeConnectSeederMiddleware = async (
 		return c.json({ error: "Failed to initialize stripe client" }, 500);
 	}
 
-	// Step 2: Verify webhook signature
 	const rawBody = await c.req.text();
 	const signature = c.req.header("stripe-signature") || "";
 
@@ -52,9 +44,6 @@ export const stripeConnectSeederMiddleware = async (
 
 	let event: Stripe.Event;
 	if (skipVerify) {
-		// logger.warn(
-		// 	"[Stripe] SKIPPING webhook signature verification — non-prod only",
-		// );
 		try {
 			event = JSON.parse(rawBody) as Stripe.Event;
 		} catch (err: unknown) {
@@ -82,9 +71,6 @@ export const stripeConnectSeederMiddleware = async (
 			return c.json({ error: message }, 400);
 		}
 	}
-	// const event = (await c.req.json()) as Stripe.Event;
-
-	// Step 4: Get org from account ID
 	const accountId = event.account;
 	if (!accountId) {
 		logger.error(`Account ID not found in webhook event`);
@@ -103,8 +89,6 @@ export const stripeConnectSeederMiddleware = async (
 		org = data.org;
 		features = data.features;
 	} catch (error) {
-		// Only ack accounts genuinely not linked to an org; any other failure
-		// (e.g. DB outage) must 500 so Stripe retries instead of dropping the event.
 		const isOrgNotFound =
 			error instanceof RecaseError && error.code === ErrCode.OrgNotFound;
 		if (!isOrgNotFound) {
@@ -126,7 +110,6 @@ export const stripeConnectSeederMiddleware = async (
 		);
 	}
 
-	// Step 5: Set up context
 	ctx.org = org;
 	ctx.features = features;
 	ctx.env = env;

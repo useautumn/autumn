@@ -18,7 +18,6 @@ import {
 	receivedByReferrer,
 } from "@/internal/rewards/rewardUtils.js";
 
-/** Apply a Stripe coupon discount to referrer/redeemer */
 export const triggerDiscount = async ({
 	ctx,
 	referralCode,

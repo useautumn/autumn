@@ -12,9 +12,6 @@ interface AggregateOptions {
 	limit: number;
 }
 
-/**
- * Headless test command to inspect aggregate data and test ervy charts
- */
 export async function eventsAggregateTestCommand(options: AggregateOptions) {
 	const environment = options.prod ? AppEnv.Live : AppEnv.Sandbox;
 	const secretKey = getKey(environment);
@@ -23,7 +20,6 @@ export async function eventsAggregateTestCommand(options: AggregateOptions) {
 	console.log(chalk.gray(`Environment: ${environment}`));
 	console.log(chalk.gray(`Limit: ${options.limit}`));
 
-	// Fetch events
 	console.log(chalk.yellow(`\nFetching events...`));
 	const response = await fetchEvents({
 		secretKey,
@@ -33,7 +29,6 @@ export async function eventsAggregateTestCommand(options: AggregateOptions) {
 	const events = response.list;
 	console.log(chalk.green(`Fetched ${events.length} events`));
 
-	// === RAW DATA ===
 	console.log(chalk.cyan(`\n=== Raw Events Sample (first 5) ===`));
 	for (const event of events.slice(0, 5)) {
 		console.log(
@@ -51,7 +46,6 @@ export async function eventsAggregateTestCommand(options: AggregateOptions) {
 		);
 	}
 
-	// === AGGREGATE BY FEATURE ===
 	console.log(chalk.cyan(`\n=== Aggregate by Feature ===`));
 	const featureMap = new Map<string, { count: number; totalValue: number }>();
 	for (const event of events) {
@@ -80,7 +74,6 @@ export async function eventsAggregateTestCommand(options: AggregateOptions) {
 		);
 	}
 
-	// === AGGREGATE BY TIME (day) ===
 	console.log(chalk.cyan(`\n=== Aggregate by Day ===`));
 	const dayMap = new Map<string, number>();
 	for (const event of events) {
@@ -98,10 +91,8 @@ export async function eventsAggregateTestCommand(options: AggregateOptions) {
 		console.log(`  ${d.day.padEnd(10)} count=${d.count}`);
 	}
 
-	// === ERVY BAR CHART DATA FORMAT ===
 	console.log(chalk.cyan(`\n=== ervy Bar Chart Data Format ===`));
 
-	// Prepare data for ervy - CORRECT format with bg() function
 	const colors = ["cyan", "green", "yellow", "magenta", "blue", "red", "white"];
 	const chartData = byFeature.slice(0, 6).map((f, idx) => ({
 		key: f.featureId.length > 10 ? f.featureId.slice(0, 8) + ".." : f.featureId,
@@ -112,7 +103,6 @@ export async function eventsAggregateTestCommand(options: AggregateOptions) {
 	console.log(chalk.gray("Chart data:"));
 	console.log(JSON.stringify(chartData, null, 2));
 
-	// === RENDER ERVY BAR CHART ===
 	console.log(chalk.cyan(`\n=== ervy Bar Chart Output ===`));
 	try {
 		const chartOutput = bar(chartData, {
@@ -125,7 +115,6 @@ export async function eventsAggregateTestCommand(options: AggregateOptions) {
 		console.log(chalk.red(`Bar chart error: ${err}`));
 	}
 
-	// === SIMPLE ASCII BAR (fallback) ===
 	console.log(chalk.cyan(`\n=== Simple ASCII Bar Chart ===`));
 	const maxCount = Math.max(...byFeature.map((f) => f.count));
 	const barWidth = 40;
@@ -137,7 +126,6 @@ export async function eventsAggregateTestCommand(options: AggregateOptions) {
 		console.log(`${label} ${chalk.cyan(barStr)} ${f.count}`);
 	}
 
-	// === SUMMARY ===
 	console.log(chalk.cyan(`\n=== Summary ===`));
 	console.log(`Total events: ${events.length}`);
 	console.log(`Total value: ${events.reduce((sum, e) => sum + e.value, 0)}`);

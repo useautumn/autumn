@@ -7,9 +7,6 @@ import {
 } from "@autumn/shared";
 import { handleStripeCheckoutLicenseErrors } from "./handleLicenseErrors/handleStripeCheckoutLicenseErrors";
 
-/**
- * Gets unique recurring intervals from line items (excludes one-off prices).
- */
 const getRecurringIntervalsFromPaidLineItems = ({
 	autumnBillingPlan,
 }: {
@@ -21,11 +18,9 @@ const getRecurringIntervalsFromPaidLineItems = ({
 		const price = lineItem.context.price;
 		const interval = price.config.interval;
 
-		// Skip one-off prices
 		if (interval === BillingInterval.OneOff) continue;
 		if (lineItem.amountAfterDiscounts <= 0) continue;
 
-		// Create a unique key for interval + interval_count
 		const intervalCount = price.config.interval_count ?? 1;
 		const key = `${interval}_${intervalCount}`;
 		intervals.add(key);
@@ -48,7 +43,6 @@ export const handleStripeCheckoutErrors = ({
 	billingContext: AttachBillingContext;
 	autumnBillingPlan: AutumnBillingPlan;
 }) => {
-	// Only check for stripe_checkout mode
 	if (billingContext.checkoutMode !== "stripe_checkout") return;
 
 	handleStripeCheckoutLicenseErrors({ billingContext, autumnBillingPlan });
@@ -57,7 +51,6 @@ export const handleStripeCheckoutErrors = ({
 		autumnBillingPlan,
 	});
 
-	// If we have more than one unique recurring interval, throw an error
 	if (recurringIntervals.size > 1) {
 		throw new RecaseError({
 			message:
@@ -67,10 +60,6 @@ export const handleStripeCheckoutErrors = ({
 		});
 	}
 
-	// enable_plan_immediately pre-inserts the cusProduct (with its feature
-	// quantities) at attach time. If the customer can change quantities on the
-	// Stripe checkout page, those changes won't propagate back to the row,
-	// leaving Autumn out of sync with Stripe. Block the combination explicitly.
 	if (
 		billingContext.enablePlanImmediately &&
 		(billingContext.adjustableFeatureQuantities?.length ?? 0) > 0

@@ -1,12 +1,3 @@
-/**
- * Replicas of an org's Atom restarting while Autumn keeps pushing: what one replica acknowledged survives on every replica.
- *
- * Contract:
- *  1. a replica restarted mid-traffic answers, the moment it is ready, off every push it missed while down;
- *  2. both replicas restarting together lose no push either acknowledged, just before stopping or while starting:
- *     every replica converges on each one.
- */
-
 import { expect, test } from "bun:test";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { items } from "@tests/utils/fixtures/items.js";
@@ -22,7 +13,6 @@ import {
 import { startTraffic } from "../utils/startTraffic.js";
 
 const replicaSet = useReplicaSet({ size: 2 });
-/** Two replicas restarting together each give up on the other after a few seconds, then copy from it at +10 s and +30 s. */
 const CONVERGE_TIMEOUT_MS = 90_000;
 
 const freeMessages = () =>
@@ -131,7 +121,6 @@ test.skipIf(!replicaSetRunsHere)(
 		for (const id of whileBooting) await track(id);
 		await restarting;
 
-		// A push the balancer could hand to no replica never reached the Atom; Autumn's next change for that customer carries it.
 		const acknowledged = customerIds.filter(isAcknowledgedAfterTrack);
 		expect(
 			acknowledged.filter((id) => whileBooting.includes(id)),
@@ -158,7 +147,6 @@ test.skipIf(!replicaSetRunsHere)(
 	CONVERGE_TIMEOUT_MS + 120_000,
 );
 
-/** Some replica listens but has not caught up: what lands now lands while its peer is not ready either. */
 const waitUntilAnyReplicaStarting = async (): Promise<void> => {
 	for (;;) {
 		const health = await Promise.all(

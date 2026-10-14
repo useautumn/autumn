@@ -27,12 +27,10 @@ export const handlePreviewAttach = createRoute({
 			preview: true,
 		});
 
-		// billingPlan is always present when preview: true
 		if (!billingPlan) {
 			throw new Error("Billing plan not found for preview");
 		}
 
-		// 7. Format response
 		const previewResponse = await billingPlanToAttachPreview({
 			ctx,
 			billingContext,

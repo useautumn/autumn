@@ -3,11 +3,6 @@ import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 
-/**
- * Two entities on Premium ($50/mo each, one shared subscription). With
- * `withEntity1Downgrade`, entity 1 also downgrades Premium -> Pro ($20/mo):
- * Premium@e1 canceling with Pro@e1 scheduled (subscription schedule in play).
- */
 export const initTwoEntityPremiumScenario = async ({
 	customerId,
 	withEntity1Downgrade = false,

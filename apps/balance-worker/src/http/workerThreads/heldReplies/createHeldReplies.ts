@@ -1,7 +1,3 @@
-/**
- * An HTTP worker's replies waiting on their partition's commit position, released in sequence order once the
- * shared cell reaches them. Nothing is released on a partition while a published failure has not arrived yet.
- */
 import type { FailFrame } from "../frames/failFrame.js";
 
 type Held = { seq: number; answer(): void };
@@ -14,10 +10,8 @@ export type HeldReplies = {
 		answer(): void;
 		fail: FailedAnswer;
 	}): void;
-	/** Answers every reply whose position has been reached; true if any are still held. */
 	release(): boolean;
 	fail(fail: FailFrame): void;
-	/** Whether some held reply could go out now: the signal's sleep re-checks it. */
 	releasable(): boolean;
 };
 
@@ -30,7 +24,6 @@ export function createHeldReplies({
 }): HeldReplies {
 	const positions = new BigInt64Array(commitCells);
 	const failures = new Int32Array(failureCounts);
-	// Failures published before this thread started concern nothing it holds.
 	const failuresSeen = Int32Array.from(failures, (_, partition) =>
 		Atomics.load(failures, partition),
 	);
@@ -55,8 +48,6 @@ export function createHeldReplies({
 	}
 
 	function positionOf({ partition }: { partition: number }): number | null {
-		// Position first: the writer counts a failure before moving past its gap, so a count read
-		// after the position covers every failure that position may have skipped.
 		const position = Number(Atomics.load(positions, partition));
 		if (Atomics.load(failures, partition) !== failuresSeen[partition])
 			return null;

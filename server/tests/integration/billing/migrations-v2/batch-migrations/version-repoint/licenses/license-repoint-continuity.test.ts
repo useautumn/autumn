@@ -14,7 +14,6 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-// version-only is per-customer until definition execute is restored
 import { and, eq, inArray } from "drizzle-orm";
 import { ProductService } from "@/internal/products/ProductService.js";
 import {
@@ -278,8 +277,6 @@ test.skip(
 			(assignment) => assignment.internal_entity_id,
 		);
 
-		// Versioning the child and propagating it mints parent v2 on the new seat
-		// definition while the pool stays on the retired link's child version.
 		await scenario.autumnV2_3.post("/plans.update", {
 			plan_id: scenario.devSeat.id,
 			items: [itemsV2.monthlyMessages({ included: 150 })],
@@ -348,8 +345,6 @@ test.skip(
 			liveBefore.map(({ id }) => id).sort(),
 		);
 
-		// THE GAP: seats still name the source child product, so the pool claims
-		// the v2 link while its assignments sit on v1.
 		expect(
 			liveAfter.every(
 				(assignment) =>
@@ -532,8 +527,6 @@ test.skip(
 		const poolsAfter = new Map(
 			after.pools.map((pool) => [pool.plan_license_id, pool]),
 		);
-		// Every link on the versioned parent gets its own v2 plan_license row, so
-		// both pools follow their own link and neither adopts the other's.
 		for (const [poolBefore, planLicenseAfter] of [
 			[poolsBefore.get(targetV1.planLicense.id), targetV2.planLicense],
 			[poolsBefore.get(siblingV1.planLicense.id), siblingV2.planLicense],

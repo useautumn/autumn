@@ -18,8 +18,6 @@ export const revenuecatMappings = pgTable(
 			.array()
 			.notNull()
 			.default([]),
-		// Per-RC-id prepaid grants, keyed by revenuecat_product_id. Quantity is in
-		// feature units; attach divides by billing_units. Absent = plain attach.
 		feature_quantities: jsonb("feature_quantities").$type<
 			Record<string, Array<{ feature_id: string; quantity?: number }>>
 		>(),

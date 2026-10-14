@@ -5,11 +5,6 @@ import type { CustomerProductVersioningFlags } from "@/internal/customers/cusPro
 import { buildProductStatesContext } from "./buildProductStatesContext";
 import { activeFullProductForPlan } from "./activeFullProductForPlan";
 
-/**
- * Pure projection: product state after `upsertProducts` apply (projectCatalog
- * analogue). Rows group by their PROJECTED id, so an id patch re-keys the plan
- * and subsequent intents/derives see the rename.
- */
 export const projectProductStatesContext = ({
 	original,
 	upsertProducts,
@@ -44,7 +39,6 @@ export const projectProductStatesContext = ({
 	for (const rows of versionsByPlanId.values()) {
 		rows.sort((a, b) => b.version - a.version);
 	}
-	// Keep original keys alive even when renamed/absent — lookups expect them.
 	for (const planId of Object.keys(original.versionsByPlanId)) {
 		if (!versionsByPlanId.has(planId)) versionsByPlanId.set(planId, []);
 	}
@@ -56,7 +50,6 @@ export const projectProductStatesContext = ({
 		]),
 	);
 
-	// Reward programs follow the plan's projected id.
 	const rewardProgramsByPlanId = new Map<string, RewardProgram[]>();
 	for (const [planId, programs] of Object.entries(
 		original.rewardProgramsByPlanId,

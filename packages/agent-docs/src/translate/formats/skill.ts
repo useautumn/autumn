@@ -1,7 +1,6 @@
 import type { ComposedSkill } from "../composeSkill.js";
 import type { Skill } from "./types.js";
 
-/** Render a composed skill into its SKILL.md (frontmatter + body) + references. */
 export const toSkill = ({ skill }: { skill: ComposedSkill }): Skill => {
 	const frontmatter = [
 		"---",

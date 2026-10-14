@@ -39,8 +39,6 @@ export function MetadataEditor() {
 	const [text, setText] = useState(externalJson);
 	const [syncedJson, setSyncedJson] = useState(externalJson);
 
-	// Re-seed when metadata changes outside the editor (version switch, discard);
-	// our own edits advance `syncedJson` first so they don't clobber typing.
 	if (externalJson !== syncedJson) {
 		setSyncedJson(externalJson);
 		setText(externalJson);
@@ -98,9 +96,6 @@ export function MetadataEditor() {
 
 	return (
 		<div>
-			{/* Keep bare keys in the editor: the base-ui accordion and global
-			    hotkeys would otherwise hijack arrows/letters. Modifier combos pass
-			    through (e.g. ⌘/Ctrl save). */}
 			<div
 				className="relative border border-border rounded overflow-hidden bg-input-background"
 				onKeyDown={(event) => {

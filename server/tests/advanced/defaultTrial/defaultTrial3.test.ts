@@ -1,4 +1,3 @@
-// Manual customer creation - not using initCustomer to control test clock properly
 import { beforeAll, describe, expect, it } from "bun:test";
 import {
 	FreeTrialDuration,
@@ -21,10 +20,6 @@ import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
 import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
-
-// 2.3:
-// -> Creating a new customer with a fake payment method should attach the pro product with default trial
-// --> Advancing the test clock should end the trial without creating a Stripe subscription
 
 const defaultTrialPro = constructProduct({
 	items: [
@@ -56,7 +51,6 @@ describe(`${chalk.yellowBright(`advanced/${testCase}: ensure trials cancel with 
 	let stripeCustomerId: string;
 
 	beforeAll(async () => {
-		// Products must be initialized BEFORE customer creation for default products
 		await initProductsV0({
 			ctx,
 			products: [defaultTrialPro],
@@ -100,28 +94,11 @@ describe(`${chalk.yellowBright(`advanced/${testCase}: ensure trials cancel with 
 
 		const customer = await autumn.customers.get(customerId);
 
-		// The declined card can't bill the Autumn-only trial, so it expires with no Stripe sub left behind
 		expectProductNotAttached({ customer, product: defaultTrialPro });
 		const { data: subscriptions } = await stripeCli.subscriptions.list({
 			customer: stripeCustomerId,
 			status: "all",
 		});
 		expect(subscriptions).toHaveLength(0);
-
-		// await advanceTestClock({
-		//   stripeCli,
-		//   testClockId: testClockID,
-		//   // should be massive so the stripe smart retry works in all settings
-		//   numberOfDays: 31,
-		//   waitForSeconds: 30,
-		// });
-
-		// customer = await autumn.customers.get(customerId);
-
-		// expectProductAttached({
-		//   customer,
-		//   product: defaultTrialFree,
-		//   status: CusProductStatus.Active,
-		// });
 	});
 });

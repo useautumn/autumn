@@ -1,8 +1,3 @@
-/**
- * One version diff carrying add + remove + replace: both lanes must land the
- * replaced allowance with usage carried, mint the added feature fresh, and
- * drop the removed feature entirely.
- */
 import { expect, test } from "bun:test";
 import type { ApiCustomerV5 } from "@autumn/shared";
 import { expectBalanceCorrect } from "@tests/integration/utils/expectBalanceCorrect";
@@ -14,7 +9,6 @@ import { pollUntil } from "@tests/utils/genUtils";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-// version-only is per-customer until definition execute is restored
 import { expectCustomerEntitlementRowCount } from "../../batchTestUtils";
 import { readScopedFeatureRow } from "../../paidRowTestUtils";
 import {
@@ -29,7 +23,6 @@ const v1Items = () => [
 	items.monthlyMessages({ includedUsage: 100 }),
 	items.monthlyWords({ includedUsage: 50 }),
 ];
-// Messages replaced (100→200), Words removed, Credits added.
 const v2Items = () => [
 	itemsV2.monthlyMessages({ included: 200 }),
 	itemsV2.monthlyCredits({ included: 75 }),

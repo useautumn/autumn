@@ -1,11 +1,3 @@
-/**
- * Which `url` key a command reads, and where a new webhook's secret lands.
- * `-p` is `live` and the default sandbox is `sandbox`, with no lookup; a named
- * sandbox is its slug, from one `/organization/me`. Prod secrets go to
- * `.env.prod`; sandbox secrets carry the org's first four id characters and
- * follow atmn's `.env.local` → `.env` precedence.
- */
-
 import { expect, test } from "bun:test";
 import {
 	existsSync,

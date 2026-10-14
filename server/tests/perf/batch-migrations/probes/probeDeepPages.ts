@@ -1,6 +1,3 @@
-/** Verifies page cost is flat across page depth: times pages 1, 2, 100,
- * 6000, 11999 of the dashboard preview (pageSize 50) via real cursors. */
-
 import { sql } from "drizzle-orm";
 import { getCustomerPage } from "@/internal/migrations/v2/filters/customers/filterCustomers.js";
 import {
@@ -18,8 +15,6 @@ const main = async () => {
 	let page = 0;
 	const started = Date.now();
 	for (const target of CHECKPOINTS) {
-		// Advance to the target page by walking cursors (cheap: each hop is one
-		// paged query — this loop itself demonstrates flat per-page cost).
 		let ms = 0;
 		let rows: { internal_id: string }[] = [];
 		while (page < target) {

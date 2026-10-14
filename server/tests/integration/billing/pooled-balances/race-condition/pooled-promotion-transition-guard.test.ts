@@ -1,20 +1,3 @@
-/**
- * TDD contract for the promotion-vs-transition guard.
- *
- * Contract under test:
- *   - promoteDuePooledContributions must NOT apply when a concurrent
- *     transaction (attach/updateSubscription writing the pool row) commits
- *     mid-statement: the pool UPDATE's row-version check (updated_at latest
- *     vs statement snapshot) fails, and the WHOLE statement no-ops —
- *     granted keeps the transition's value, the due contribution stays
- *     pending, and the helper returns null (so no cache patch is emitted);
- *   - a follow-up promotion with no concurrency applies normally and
- *     converges granted to the contribution sum.
- *
- * Pre-impl red: the pool write has no row-version guard, so the unblocked
- * statement stomps the transition's granted with its stale snapshot sum.
- */
-
 import { expect, test } from "bun:test";
 import { pooledBalanceContributions, pooledBalances } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
@@ -57,7 +40,6 @@ test(`${chalk.yellowBright("pooled promotion: concurrent pool-row write makes th
 		],
 	});
 
-	// Pending deferred downgrade on one contribution, already due.
 	const state = await getPooledBalanceDbState({ db: ctx.db, customerId });
 	const pool = state.pools[0];
 	const pendingContribution = state.contributions[0];
@@ -82,8 +64,6 @@ test(`${chalk.yellowBright("pooled promotion: concurrent pool-row write makes th
 		throw new Error("Expected the synthetic pooled customer entitlement");
 	}
 
-	// ── Hold a pool-row lock from a "transition" transaction, run the
-	// promotion into it, then commit the transition mid-statement. ──
 	let releaseTransition!: () => void;
 	const transitionHold = new Promise<void>((resolve) => {
 		releaseTransition = resolve;
@@ -108,17 +88,13 @@ test(`${chalk.yellowBright("pooled promotion: concurrent pool-row write makes th
 		customerEntitlement: poolCustomerEntitlement,
 		now: Date.now(),
 	});
-	// Let the promotion statement reach (and block on) the locked pool row.
 	await sleep(500);
 	releaseTransition();
 	await transitionTransaction;
 	const promotionResult = await promotionPromise;
 
-	// ── Contract: guard trips → whole statement no-ops, helper returns null ──
 	expect(promotionResult).toBeNull();
 
-	// ── Contract: in-memory granted is refreshed to the winner's value, so a
-	// CAS-winning caller cannot refill the balance from its stale snapshot ──
 	expect(poolCustomerEntitlement.pooled_balance.granted).toBe(
 		TRANSITION_GRANTED,
 	);
@@ -137,7 +113,6 @@ test(`${chalk.yellowBright("pooled promotion: concurrent pool-row write makes th
 	);
 	expect(guardedContribution?.effective_at).not.toBeNull();
 
-	// ── Contract: uncontended re-run converges to the contribution sum ──
 	const retryResult = await promoteDuePooledContributions({
 		ctx,
 		customerEntitlement: poolCustomerEntitlement,

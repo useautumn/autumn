@@ -59,9 +59,6 @@ describe("deriveDirectIntents version_slug targeting", () => {
 			internalIdRefs: new Map(),
 		});
 
-		// A config states the history it wants, so a slug naming no row creates
-		// one. The original guarantee still holds: it must never land on the
-		// active row (v2 here), which would silently rewrite live pricing.
 		expect(intent?.productKey).toEqual({ planId: "pro", version: 3 });
 		expect(intent?.planParams.new_version_slug).toBe("missing");
 		expect(intent?.planParams.version_slug).toBeUndefined();

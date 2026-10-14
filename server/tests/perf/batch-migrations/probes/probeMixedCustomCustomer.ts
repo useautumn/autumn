@@ -1,10 +1,3 @@
-/**
- * Proves row-level custom scoping: a customer holding TWO cusProducts on the
- * filtered plan (one custom, one not) must have ONLY the non-custom row
- * become a candidate, while partition still marks them matched (succeeded).
- * Creates one temp cp row on the bench org; removes it afterwards.
- */
-
 import type { EntitlementWithFeature } from "@autumn/shared";
 import { CusProductStatus, EntInterval } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
@@ -13,7 +6,7 @@ import { selectAddCandidateRows } from "@/internal/migrations/v2/batchOperations
 import { buildOperationScope } from "@/internal/migrations/v2/batchOperations/scope/operationScope.js";
 import { getBenchContext } from "../utils/benchContext.js";
 
-const CUSTOMER = "cus_bench_2300001"; // free-bare shape: single non-custom cp
+const CUSTOMER = "cus_bench_2300001";
 const NORMAL_CP = "cp_bench_2300001";
 const MIXED_CP = "cp_bench_mixed_probe";
 
@@ -45,8 +38,6 @@ const main = async () => {
 			ON CONFLICT DO NOTHING
 		`);
 
-		// custom: false scope — the probe verifies customized rows never leak
-		// into a plain-scoped candidate set.
 		const candidates = await selectAddCandidateRows({
 			db,
 			internalCustomerIds: [CUSTOMER],

@@ -9,7 +9,6 @@ import { planLicenseRepo } from "@/internal/licenses/repos/planLicenseRepo.js";
 import { EntitlementService } from "@/internal/products/entitlements/EntitlementService.js";
 import { PriceService } from "@/internal/products/prices/PriceService.js";
 
-/** Replays one link's pre-decided writes: retire → row → junction → delete. */
 const executePlanLicenseRowPlan = async ({
 	db,
 	planLicense,
@@ -20,7 +19,6 @@ const executePlanLicenseRowPlan = async ({
 	const rowPlan = planLicense.rowPlan;
 	if (!rowPlan) return;
 
-	// Overlay is_custom rows must exist before junctions reference them.
 	const overlay = planLicense.entitlementPricesPlan;
 	if (overlay) {
 		if (overlay.entitlements.new.length > 0) {
@@ -54,7 +52,6 @@ const executePlanLicenseRowPlan = async ({
 	}
 };
 
-/** Persist the planned plan_license set — pure replay of compute's row plans. */
 export const executePlanLicensesPlan = async ({
 	ctx,
 	upsert,
@@ -65,7 +62,6 @@ export const executePlanLicensesPlan = async ({
 	const planLicenses = upsert.planLicenses;
 	if (!planLicenses || planLicenses.length === 0) return;
 
-	// Removes free their (parent, license) slot in unique_plan_license before any insert claims it.
 	const removesFirst = [
 		...planLicenses.filter((planLicense) => planLicense.op === "remove"),
 		...planLicenses.filter((planLicense) => planLicense.op !== "remove"),

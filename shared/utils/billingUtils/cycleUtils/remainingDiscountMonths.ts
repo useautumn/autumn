@@ -26,7 +26,6 @@ const renewalAt = ({
 		[INTERVAL_DURATION_KEYS[renewal.interval]]: renewal.intervalCount * count,
 	}).getTime();
 
-/** The last renewal, from the period end on, inside the discount; each steps from the anchor so month ends don't drift. */
 const lastDiscountedRenewal = ({
 	billingCycleAnchorMs,
 	periodEndMs,
@@ -46,10 +45,6 @@ const lastDiscountedRenewal = ({
 	}
 };
 
-/**
- * Months a discount starting now must run to reach exactly the renewals the old one would have.
- * Zero when the old discount ends before the next renewal.
- */
 export const remainingDiscountMonths = ({
 	currentEpochMs,
 	billingCycleAnchorMs,
@@ -69,7 +64,6 @@ export const remainingDiscountMonths = ({
 		renewal,
 		discountEndMs,
 	});
-	// A long-cancelled subscription's discount may have run out already; its past renewals were never billed.
 	if (lastRenewal === undefined || lastRenewal <= currentEpochMs) return 0;
 
 	let months = 1;

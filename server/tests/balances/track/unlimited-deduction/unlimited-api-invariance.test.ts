@@ -11,31 +11,6 @@ import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
 import { findCustomerEntitlement } from "../../utils/findCustomerEntitlement.js";
 
-/**
- * Unlimited-deduction feature: tracking on an unlimited cusEnt really
- * deducts — raw `customer_entitlements.balance` drifts negative as a usage
- * counter — and the LATEST API version (V2_3) surfaces that counter as real
- * usage: `usage = -(raw balance)` while `granted`/`remaining` stay 0 and
- * `unlimited: true`. GET /balances/list stays clamped to 0, and older API
- * versions stay fully masked.
- *
- * Red (current):  the raw-DB test — track on unlimited short-circuits, so
- *                 `customer_entitlements.balance` stays 0 instead of -5 —
- *                 and guards 2/3 — V2_3 still masks usage to 0 instead of 5.
- * Green (after):  raw balance is -5 AND all three guards pass.
- *
- * The three API guards:
- *   1. GET /balances/list returns balance 0 for an unlimited loose cusEnt.
- *      NOTE: this spreads the raw DB row today, so it goes RED
- *      mid-implementation (leaking -5) until the hard-coded clamp lands in
- *      handleListBalances — that red is the signal to add the clamp, not to
- *      touch this assertion.
- *   2. V2_3 check returns allowed + unlimited with usage = tracked total (5)
- *      and granted/remaining 0.
- *   3. the V2_3 customer object's feature block reports unlimited with
- *      usage 5 and granted/remaining 0.
- */
-
 const customerId = "unlim-api-invariance";
 const TRACKED = 5;
 
@@ -50,7 +25,6 @@ describe(`${chalk.yellowBright("unlimited-api-invariance: track on unlimited —
 			withTestClock: false,
 		});
 
-		// Loose unlimited balance (infinite included usage)
 		await autumnV1.balances.create({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
@@ -63,7 +37,6 @@ describe(`${chalk.yellowBright("unlimited-api-invariance: track on unlimited —
 			value: TRACKED,
 		});
 
-		// Wait for the Redis -> Postgres flush to settle
 		await new Promise((resolve) => setTimeout(resolve, 3000));
 	});
 
@@ -118,7 +91,6 @@ describe(`${chalk.yellowBright("unlimited-api-invariance: track on unlimited —
 		});
 
 		expect(cusEnt).toBeDefined();
-		// RED today: track on unlimited short-circuits and balance stays 0.
 		expect(cusEnt?.balance).toBe(-TRACKED);
 	});
 });

@@ -26,13 +26,11 @@ export type ModificationView = {
 	sign: "add" | "change" | "remove";
 	chip: ChipView;
 	isVersion?: boolean;
-	/** Changed rates, each with its metered feature's tile. */
 	children?: {
 		key: string;
 		tile: NonNullable<ChipView["tile"]>;
 		change: RateChange;
 	}[];
-	/** Set when the card covers several update ops, so the cell can group rows by plan. */
 	planLabel?: string;
 };
 
@@ -126,7 +124,6 @@ const priceDetail = ({
 	return `${catalog.formatAmount(price.amount)}${per}${perInterval(price.interval)}`;
 };
 
-/** Booleans grant access, not an amount; an item adds its included amount and price, never "+ 0". */
 const addItemDetail = ({
 	item,
 	isBoolean,

@@ -20,12 +20,10 @@ describe("fork recycling in a real bun cluster", () => {
 				env: {
 					...process.env,
 					FIXTURE_PORT: String(PORT),
-					// Any RSS qualifies; forks recycle as soon as they're old enough.
 					FORK_RECYCLE_RSS_MB: "1",
 					FORK_RECYCLE_MIN_AGE_MS: "500",
 					FORK_RECYCLE_CHECK_INTERVAL_MS: "150",
 					FORK_RECYCLE_DRAIN_TIMEOUT_MS: "5000",
-					// The 5s production grace would allow barely one recycle in the traffic window.
 					FORK_RECYCLE_DRAIN_GRACE_MS: "200",
 					FORK_RECYCLE_MAX_DELAY_MS: "0",
 					FORK_RECYCLE_BLACKOUT_BEFORE_MS: "0",
@@ -36,7 +34,6 @@ describe("fork recycling in a real bun cluster", () => {
 				stderr: "pipe",
 			});
 
-			// stdout is a stream because the spawn above pipes it.
 			const stdout = fixture.stdout as ReadableStream<Uint8Array>;
 			const reader = stdout.getReader();
 			const decoder = new TextDecoder();
@@ -67,7 +64,6 @@ describe("fork recycling in a real bun cluster", () => {
 
 				expect(await waitFor(() => workerUpCount() >= 2, 15_000)).toBe(true);
 
-				// Drive sequential traffic through several recycle generations.
 				const servedByPid = new Set<string>();
 				let failures = 0;
 				const trafficDeadline = Date.now() + 8_000;
@@ -87,9 +83,7 @@ describe("fork recycling in a real bun cluster", () => {
 				}
 
 				expect(failures).toBe(0);
-				// Two boot forks plus at least two recycled replacements served.
 				expect(servedByPid.size).toBeGreaterThanOrEqual(4);
-				// Every exit was a coordinated recycle, never a crash respawn.
 				expect(
 					stdoutLines.filter((line) => line.startsWith("WORKER_DIED")),
 				).toHaveLength(0);

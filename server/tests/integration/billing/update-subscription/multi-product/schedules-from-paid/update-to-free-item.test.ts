@@ -8,7 +8,6 @@ import { advanceToNextInvoice } from "@tests/utils/testAttachUtils/testAttachUti
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 
-// Entity 2 updates Pro's item to be free (should be removed from subscription + schedule)
 test.concurrent(`${chalk.yellowBright("schedules-p2p: update to free item removes from sub + schedule")}`, async () => {
 	const customerId = "sched-p2p-update-to-free";
 
@@ -32,7 +31,6 @@ test.concurrent(`${chalk.yellowBright("schedules-p2p: update to free item remove
 		],
 	});
 
-	// Verify both entities have pro
 	const entity1Before = await autumnV1.entities.get(customerId, entities[0].id);
 	const entity2Before = await autumnV1.entities.get(customerId, entities[1].id);
 	await expectProductActive({
@@ -44,22 +42,19 @@ test.concurrent(`${chalk.yellowBright("schedules-p2p: update to free item remove
 		productId: pro.id,
 	});
 
-	// Entity 2 updates Pro's items to be free (no price items, only feature)
 	await autumnV1.subscriptions.update({
 		customer_id: customerId,
 		entity_id: entities[1].id,
 		product_id: pro.id,
-		items: [messagesItem], // Only messages, no price - makes it free
+		items: [messagesItem],
 	});
 
-	// Entity 2's subscription should now be free (removed from paid sub)
 	const entity2Data = await autumnV1.entities.get(customerId, entities[1].id);
 	await expectProductActive({
 		customer: entity2Data,
 		productId: pro.id,
 	});
 
-	// Should only have 1 subscription (entity 1's pro)
 	await expectSubToBeCorrect({
 		db: ctx.db,
 		customerId,
@@ -69,13 +64,11 @@ test.concurrent(`${chalk.yellowBright("schedules-p2p: update to free item remove
 		entityId: entities[0].id,
 	});
 
-	// Advance to next billing cycle
 	await advanceToNextInvoice({
 		stripeCli: ctx.stripeCli,
 		testClockId: testClockId!,
 	});
 
-	// Both entities should still have pro product
 	const entity1AfterCycle = await autumnV1.entities.get(
 		customerId,
 		entities[0].id,

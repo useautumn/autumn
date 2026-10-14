@@ -23,11 +23,9 @@ function ErrorScreen({
 	const handleOrgRemovalError = async () => {
 		if (errorCode === "USER_REMOVED_FROM_ORG" && errorData) {
 			try {
-				// Get user's organizations
 				const { data: organizations } = await authClient.organization.list();
 
 				if (organizations && organizations.length > 0) {
-					// User has other organizations, switch to the first available one
 					const nextOrg = organizations.find(
 						(org) => org.id !== errorData.orgId,
 					);
@@ -38,7 +36,6 @@ function ErrorScreen({
 					}
 				}
 
-				// User has no organizations left, redirect to sign-in
 				navigate("/sign-in");
 			} catch (error) {
 				console.error("Failed to handle organization removal:", error);
@@ -53,7 +50,6 @@ function ErrorScreen({
 		}
 	}, [errorCode, errorData]);
 
-	// Show specific message for organization removal
 	if (errorCode === "USER_REMOVED_FROM_ORG") {
 		return (
 			<div className="flex h-full w-full items-center justify-center flex-col gap-4">

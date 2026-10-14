@@ -39,17 +39,6 @@ import { generatePublishableKey } from "@/utils/encryptUtils.js";
 import { generateId } from "@/utils/genUtils.js";
 import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
 
-// Drives copySandboxForOrg directly (the route is dashboard-only, so a
-// secret-key HTTP call is rejected by assertDashboardActor). Seeds the source
-// sandbox via the same createFeature/createProduct actions the copy engine
-// uses, then asserts the target sub-org receives the plans + features. No dev
-// server required — pure DB + action layer.
-//
-// Sandbox sub-orgs are inserted directly (is_sandbox=true, created_by=master)
-// instead of via createSandboxForOrg: real sandbox creation provisions a Stripe
-// connect account, which the copy feature is independent of. The inserted rows
-// carry the exact ownership shape getOwnedSandbox/assertSandboxAccess check.
-
 const { db } = initDrizzle();
 
 const MSG_FEATURE = "copy_messages";
@@ -127,8 +116,6 @@ const seedSourceSandbox = async (sourceOrg: Organization) => {
 		skipGenerateDisplay: true,
 	});
 
-	// Credit system references the metered feature; created after it so the
-	// schema reference resolves (mirrors handleCopyFeatures' batching).
 	const afterMetered = await FeatureService.list({
 		db,
 		orgId: sourceOrg.id,
@@ -237,7 +224,6 @@ describe("sandboxes.copy: copy plans + features between two sandbox sub-orgs", (
 	test("copies the source sandbox's features + product into the target sandbox", async () => {
 		if (!source || !target) throw new Error("sandboxes not provisioned");
 
-		// Sanity: target starts empty.
 		const targetFeaturesBefore = await FeatureService.list({
 			db,
 			orgId: target.id,
@@ -269,12 +255,10 @@ describe("sandboxes.copy: copy plans + features between two sandbox sub-orgs", (
 			env: AppEnv.Sandbox,
 		});
 
-		// All three feature types copied across the org boundary.
 		expect(targetFeatures.map((f) => f.id).sort()).toEqual(
 			[AI_CREDIT_FEATURE, CREDIT_FEATURE, DASH_FEATURE, MSG_FEATURE].sort(),
 		);
 
-		// The product copied, and its items still reference the copied features.
 		const copied = targetProducts.find((p) => p.id === PRODUCT_ID);
 		expect(copied).toBeDefined();
 
@@ -289,7 +273,6 @@ describe("sandboxes.copy: copy plans + features between two sandbox sub-orgs", (
 
 		const links = copied!.licenses ?? [];
 		expect(links).toHaveLength(1);
-		// DB plan licenses carry internal ids; the public id is on the product.
 		expect(links[0]).toMatchObject({
 			included: 3,
 			product: expect.objectContaining({ id: LICENSE_ID }),
@@ -345,9 +328,6 @@ describe("sandboxes.copy: copy plans + features between two sandbox sub-orgs", (
 	test("never targets the master org's live catalog (master id reads as 404)", async () => {
 		if (!source) throw new Error("sandbox not provisioned");
 
-		// The master org is a real org but is not a sandbox sub-org, so the
-		// ownership check folds it into the same uniform 404 — proving the copy
-		// can't be aimed at any org's live catalog.
 		let caught: unknown;
 		try {
 			await copySandboxForOrg({
@@ -419,8 +399,6 @@ describe("sandboxes.copy: selective copy via productIds / featureIds", () => {
 			env: AppEnv.Sandbox,
 		});
 
-		// The product plus its license plan; their referenced features
-		// auto-included; the unrelated credit system is NOT pulled in.
 		expect(dstProducts.map((p) => p.id).sort()).toEqual(
 			[PRODUCT_ID, LICENSE_ID].sort(),
 		);
@@ -491,8 +469,6 @@ describe("sandboxes.copy: selective copy via productIds / featureIds", () => {
 		if (!source) throw new Error("source not provisioned");
 		const dst = await freshTarget("variant-base");
 
-		// Base carries a credit-system item the variant does not; pre-fix the
-		// pulled-in base recreated it in the target as a generic metered feature.
 		const seedCtx = ctxForOrgEnv({ org: source, env: AppEnv.Sandbox });
 		const variantBase = await seedCopyTestPlan({
 			ctx: seedCtx,
@@ -532,13 +508,11 @@ describe("sandboxes.copy: selective copy via productIds / featureIds", () => {
 		expect(dstProducts.map((p) => p.id).sort()).toEqual(
 			[VARIANT_BASE_ID, VARIANT_ID].sort(),
 		);
-		// The copied variant links to the target env's base, not the source's.
 		const dstBase = dstProducts.find((p) => p.id === VARIANT_BASE_ID);
 		const dstVariant = dstProducts.find((p) => p.id === VARIANT_ID);
 		expect(dstVariant?.base_internal_product_id).toBe(
 			dstBase?.internal_id as string,
 		);
-		// The credit system copied intact plus the metered feature it references.
 		expect(features.map((f) => f.id).sort()).toEqual(
 			[CREDIT_FEATURE, MSG_FEATURE].sort(),
 		);
@@ -565,7 +539,6 @@ describe("sandboxes.copy: selective copy via productIds / featureIds", () => {
 			env: AppEnv.Sandbox,
 		});
 
-		// Credit system + the metered feature its schema references, nothing else.
 		expect(features.map((f) => f.id).sort()).toEqual(
 			[CREDIT_FEATURE, MSG_FEATURE].sort(),
 		);

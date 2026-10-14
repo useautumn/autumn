@@ -1,4 +1,3 @@
-/** Pro $20 + 100 messages included, $0.10 over. */
 export const RELIST = {
 	proPrice: 20,
 	changedProPrice: 30,
@@ -37,7 +36,6 @@ export const RELIST_PRORATIONS: RelistProration[] = [
 	"bill_difference",
 ];
 
-/** Clock-relative labels so two runs on different clocks compare equal. */
 export type RelistDate =
 	| "period_start"
 	| "change"
@@ -69,7 +67,6 @@ export type RelistObservation = {
 	renewal: InvoiceSummary[];
 };
 
-/** Totals and usage lines across the timeline: what Stripe ground truth pins. */
 export const relistBilling = (observation: RelistObservation) => {
 	const sum = (invoices: InvoiceSummary[]) =>
 		Math.round(

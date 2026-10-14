@@ -4,9 +4,6 @@ import { insertCustomItems } from "@/internal/customers/attach/attachUtils/inser
 import { licenseItemRepo } from "@/internal/licenses/repos/licenseItemRepo";
 import { planLicenseRepo } from "@/internal/licenses/repos/planLicenseRepo";
 
-/** All DB writes for custom plan_license definitions, batched across specs:
- * custom prices/entitlements, plan_license rows, then junction refs. Runs
- * before pools (plan_license_id FK). */
 export const executeInsertPlanLicenses = async ({
 	ctx,
 	insertPlanLicenses,

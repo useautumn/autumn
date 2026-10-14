@@ -140,7 +140,6 @@ describe(`${chalk.yellowBright(`contUse/update/${testCase}: Testing update cont 
 		expect(invoices.length).toBe(2);
 		expect(invoices[0].total).toBe(preview.due_today.total);
 
-		// Usage stays the same...
 		await expectSubQuantityCorrect({
 			stripeCli: ctx.stripeCli,
 			productId: pro.id,

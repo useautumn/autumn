@@ -1,11 +1,3 @@
-/**
- * Cancel End-of-Cycle Edge Cases
- *
- * Tests for edge case scenarios when canceling subscriptions at end of cycle.
- * Focuses on multi-subscription scenarios (new_billing_subscription) and
- * verifying correct Stripe subscription handling.
- */
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3 } from "@autumn/shared";
 import {
@@ -23,25 +15,6 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { isStripeSubscriptionCanceling } from "@/external/stripe/subscriptions/utils/classifyStripeSubscriptionUtils";
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 1: Cancel both pro and addon EOC (separate subscriptions) - verify correct subs canceled
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Pro product ($20/mo)
- * - Recurring add-on product ($20/mo) attached with new_billing_subscription: true
- * - User cancels Pro at end of cycle
- * - User cancels Add-on at end of cycle
- *
- * Expected Result:
- * - Two separate Stripe subscriptions exist initially
- * - After canceling Pro EOC, only Pro's subscription should be marked as canceling
- * - After canceling Add-on EOC, Add-on's subscription should also be marked as canceling
- * - After advancing to next invoice:
- *   - Both products are removed
- *   - No Stripe subscriptions remain
- */
 test.concurrent(`${chalk.yellowBright("cancel EOC edge: cancel both pro and addon (separate subs) - correct subs canceled")}`, async () => {
 	const customerId = "cancel-eoc-both-separate-subs";
 
@@ -69,7 +42,6 @@ test.concurrent(`${chalk.yellowBright("cancel EOC edge: cancel both pro and addo
 		],
 	});
 
-	// Get both subscription IDs
 	const proSubId = await getSubscriptionId({
 		ctx,
 		customerId,
@@ -82,24 +54,20 @@ test.concurrent(`${chalk.yellowBright("cancel EOC edge: cancel both pro and addo
 		productId: addon.id,
 	});
 
-	// Verify they are different subscriptions
 	expect(proSubId).not.toBe(addonSubId);
 
-	// Verify both subscriptions are active initially
 	const proSubBefore = await ctx.stripeCli.subscriptions.retrieve(proSubId);
 	const addonSubBefore = await ctx.stripeCli.subscriptions.retrieve(addonSubId);
 
 	expect(isStripeSubscriptionCanceling(proSubBefore)).toBe(false);
 	expect(isStripeSubscriptionCanceling(addonSubBefore)).toBe(false);
 
-	// Cancel pro at end of cycle
 	await autumnV1.subscriptions.update({
 		customer_id: customerId,
 		product_id: pro.id,
 		cancel_action: "cancel_end_of_cycle",
 	});
 
-	// Verify only Pro subscription is canceling, Add-on is NOT
 	const proSubAfterProCancel =
 		await ctx.stripeCli.subscriptions.retrieve(proSubId);
 	const addonSubAfterProCancel =
@@ -108,7 +76,6 @@ test.concurrent(`${chalk.yellowBright("cancel EOC edge: cancel both pro and addo
 	expect(isStripeSubscriptionCanceling(proSubAfterProCancel)).toBe(true);
 	expect(isStripeSubscriptionCanceling(addonSubAfterProCancel)).toBe(false);
 
-	// Verify customer product states after pro cancel
 	const customerAfterProCancel =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
@@ -121,14 +88,12 @@ test.concurrent(`${chalk.yellowBright("cancel EOC edge: cancel both pro and addo
 		productId: addon.id,
 	});
 
-	// Now cancel add-on at end of cycle
 	await autumnV1.subscriptions.update({
 		customer_id: customerId,
 		product_id: addon.id,
 		cancel_action: "cancel_end_of_cycle",
 	});
 
-	// Verify BOTH subscriptions are now canceling
 	const proSubAfterBothCancel =
 		await ctx.stripeCli.subscriptions.retrieve(proSubId);
 	const addonSubAfterBothCancel =
@@ -137,7 +102,6 @@ test.concurrent(`${chalk.yellowBright("cancel EOC edge: cancel both pro and addo
 	expect(isStripeSubscriptionCanceling(proSubAfterBothCancel)).toBe(true);
 	expect(isStripeSubscriptionCanceling(addonSubAfterBothCancel)).toBe(true);
 
-	// Verify customer product states after both cancels
 	const customerAfterBothCancel =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
@@ -146,13 +110,11 @@ test.concurrent(`${chalk.yellowBright("cancel EOC edge: cancel both pro and addo
 		canceling: [pro.id, addon.id],
 	});
 
-	// Advance to next billing cycle
 	await advanceToNextInvoice({
 		stripeCli: ctx.stripeCli,
 		testClockId: testClockId!,
 	});
 
-	// Verify state after cycle - both products should be removed
 	const customerAfterAdvance =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
@@ -165,10 +127,8 @@ test.concurrent(`${chalk.yellowBright("cancel EOC edge: cancel both pro and addo
 		productId: addon.id,
 	});
 
-	// No products should remain
 	expect(customerAfterAdvance.products.length).toBe(0);
 
-	// Verify no Stripe subscriptions exist
 	await expectNoStripeSubscription({
 		db: ctx.db,
 		customerId,
@@ -177,22 +137,6 @@ test.concurrent(`${chalk.yellowBright("cancel EOC edge: cancel both pro and addo
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 2: Entity cancel EOC -> uncancel -> cancel EOC again
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Pro product ($20/mo) attached to entity 1 and entity 2
- * - Cancel entity 1 at end of cycle
- * - Uncancel entity 1
- * - Cancel entity 1 at end of cycle AGAIN
- *
- * Expected Result:
- * - After first cancel: entity 1 is canceling, entity 2 is active
- * - After uncancel: entity 1 is active again, entity 2 is active
- * - After second cancel: entity 1 is canceling again, entity 2 is still active
- */
 test.concurrent(`${chalk.yellowBright("cancel EOC edge: entity cancel -> uncancel -> cancel again")}`, async () => {
 	const customerId = "cancel-eoc-uncancel-cancel-again";
 
@@ -219,14 +163,12 @@ test.concurrent(`${chalk.yellowBright("cancel EOC edge: entity cancel -> uncance
 	const entity1Id = entities[0].id;
 	const entity2Id = entities[1].id;
 
-	// Verify both entities have pro active
 	const entity1Initial = await autumnV1.entities.get(customerId, entity1Id);
 	const entity2Initial = await autumnV1.entities.get(customerId, entity2Id);
 
 	await expectProductActive({ customer: entity1Initial, productId: pro.id });
 	await expectProductActive({ customer: entity2Initial, productId: pro.id });
 
-	// Step 1: Cancel entity 1 at end of cycle
 	await autumnV1.subscriptions.update({
 		customer_id: customerId,
 		entity_id: entity1Id,
@@ -234,7 +176,6 @@ test.concurrent(`${chalk.yellowBright("cancel EOC edge: entity cancel -> uncance
 		cancel_action: "cancel_end_of_cycle",
 	});
 
-	// Verify entity 1 is canceling, entity 2 is still active
 	const entity1AfterCancel = await autumnV1.entities.get(customerId, entity1Id);
 	const entity2AfterCancel = await autumnV1.entities.get(customerId, entity2Id);
 
@@ -247,7 +188,6 @@ test.concurrent(`${chalk.yellowBright("cancel EOC edge: entity cancel -> uncance
 		productId: pro.id,
 	});
 
-	// Step 2: Uncancel entity 1
 	await autumnV1.subscriptions.update({
 		customer_id: customerId,
 		entity_id: entity1Id,
@@ -255,7 +195,6 @@ test.concurrent(`${chalk.yellowBright("cancel EOC edge: entity cancel -> uncance
 		cancel_action: "uncancel",
 	});
 
-	// Verify entity 1 is active again, entity 2 is still active
 	const entity1AfterUncancel = await autumnV1.entities.get(
 		customerId,
 		entity1Id,
@@ -274,7 +213,6 @@ test.concurrent(`${chalk.yellowBright("cancel EOC edge: entity cancel -> uncance
 		productId: pro.id,
 	});
 
-	// Step 3: Cancel entity 1 at end of cycle AGAIN
 	await autumnV1.subscriptions.update({
 		customer_id: customerId,
 		entity_id: entity1Id,
@@ -282,7 +220,6 @@ test.concurrent(`${chalk.yellowBright("cancel EOC edge: entity cancel -> uncance
 		cancel_action: "cancel_end_of_cycle",
 	});
 
-	// Verify entity 1 is canceling again, entity 2 is still active
 	const entity1AfterSecondCancel = await autumnV1.entities.get(
 		customerId,
 		entity1Id,
@@ -302,41 +239,21 @@ test.concurrent(`${chalk.yellowBright("cancel EOC edge: entity cancel -> uncance
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 3: Cancel pro EOC with empty group - free default NOT scheduled
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Free default product with prefixed group (standard behavior)
- * - Pro product with group: "" (explicitly empty - no group)
- * - User cancels Pro at end of cycle
- *
- * Expected Result:
- * - Pro should be canceling
- * - Free default should NOT be scheduled (different groups: "" vs prefixed)
- * - After advancing to next cycle:
- *   - Pro is removed
- *   - Free is NOT present (wasn't scheduled because groups don't match)
- */
 test.concurrent(`${chalk.yellowBright("cancel EOC edge: pro with empty group - free default NOT scheduled")}`, async () => {
 	const customerId = "cancel-eoc-empty-group-no-default";
 
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
 
-	// Free is the default product - will get prefixed group from initScenario
 	const free = products.base({
 		id: "free",
 		items: [messagesItem],
 		isDefault: true,
 	});
 
-	// Pro with explicit empty group - should NOT match free's prefixed group
 	const pro = products.pro({
 		id: "pro",
 		items: [messagesItem],
 	});
-	// Explicitly set empty group (will be preserved due to our fix)
 	pro.group = "";
 
 	const { autumnV1, ctx, testClockId } = await initScenario({
@@ -348,7 +265,6 @@ test.concurrent(`${chalk.yellowBright("cancel EOC edge: pro with empty group - f
 		actions: [s.attach({ productId: pro.id })],
 	});
 
-	// Verify pro is active
 	const customerAfterAttach =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	await expectProductActive({
@@ -356,30 +272,26 @@ test.concurrent(`${chalk.yellowBright("cancel EOC edge: pro with empty group - f
 		productId: pro.id,
 	});
 
-	// Cancel pro at end of cycle
 	await autumnV1.subscriptions.update({
 		customer_id: customerId,
 		product_id: pro.id,
 		cancel_action: "cancel_end_of_cycle",
 	});
 
-	// Verify pro is canceling and free is NOT scheduled (groups don't match)
 	const customerAfterCancel =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
 	await expectCustomerProducts({
 		customer: customerAfterCancel,
 		canceling: [pro.id],
-		notPresent: [free.id], // Free should NOT be scheduled because groups don't match
+		notPresent: [free.id],
 	});
 
-	// Advance to next billing cycle
 	await advanceToNextInvoice({
 		stripeCli: ctx.stripeCli,
 		testClockId: testClockId!,
 	});
 
-	// After advancing, pro should be gone and free should NOT be present
 	const customerAfterAdvance =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
@@ -388,16 +300,13 @@ test.concurrent(`${chalk.yellowBright("cancel EOC edge: pro with empty group - f
 		productId: pro.id,
 	});
 
-	// Free should also not be present (wasn't scheduled)
 	await expectProductNotPresent({
 		customer: customerAfterAdvance,
 		productId: free.id,
 	});
 
-	// No products should remain
 	expect(customerAfterAdvance.products.length).toBe(0);
 
-	// Verify no Stripe subscription exists
 	await expectNoStripeSubscription({
 		db: ctx.db,
 		customerId,

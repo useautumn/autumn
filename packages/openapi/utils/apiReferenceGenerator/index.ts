@@ -16,19 +16,6 @@ export interface GeneratedWebhookPage {
 	pagePath: string;
 }
 
-/**
- * Generate API reference MDX files from an OpenAPI spec.
- *
- * For each operation in the OpenAPI spec:
- * 1. Parse request body and response schemas
- * 2. Generate DynamicParamField/DynamicResponseField components
- * 3. Merge with manual MDX content (if exists)
- * 4. Write to output directory: {outputDir}/{tag}/{operationId}.mdx
- *
- * Also generates webhook MDX files from the `webhooks` section
- * and returns group metadata so callers can update navigation.
- * Schemaless registry entries are absent from the spec, so they get no page.
- */
 export async function generateApiReference({
 	openApiPath,
 	manualMdxDir,
@@ -67,7 +54,6 @@ export async function generateApiReference({
 		console.log(`  Generated: ${tag}/${operationId}.mdx`);
 	}
 
-	// Build operationId -> group mapping from the shared registry
 	const groupMap: Record<string, string> = {};
 	for (const definition of webhookRegistry) {
 		groupMap[definition.operationId] = definition.group;
@@ -125,5 +111,4 @@ function formatEventTypeAsTitle(eventType: string): string {
 		.join(" — ");
 }
 
-// Re-export types for consumers
 export type { ParsedOperation, SchemaField } from "./parseOpenApi.js";

@@ -3,8 +3,6 @@ import type { TwdContext } from "../../../lib/types/twdContext.ts";
 import type { QaEnvRow } from "../repos/qaEnvsRepo.ts";
 import { qaWorker, type WorkerEnvStatus } from "../worker/qaWorkerClient.ts";
 
-/** Row state, with live awake/build progress from the Worker when it answers. */
-/** The Worker serves an env's Tinybird at `<name>--tb.<domain>`. */
 const tinybirdUrlOf = ({ url }: { url: string }) =>
 	url.replace(/^(https:\/\/[^.]+)\./, "$1--tb.");
 

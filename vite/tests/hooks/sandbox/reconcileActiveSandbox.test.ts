@@ -9,9 +9,6 @@ const summary = (id: string, name: string, color?: string, icon?: string) => ({
 	icon,
 });
 
-// A disabled or in-flight sandboxes query reports an empty list. Dropping the
-// selection then wipes the sandbox useActiveSandbox just restored from
-// localStorage on a cold reload, before the authoritative list can arrive.
 test("keeps the restored selection while the list has not loaded", () => {
 	const active = sandbox("sb_restored");
 	expect(
@@ -81,8 +78,6 @@ test("is a no-op when there is no active sandbox", () => {
 	).toBeNull();
 });
 
-// The exact state sequence a hard reload drives the sandboxes query through:
-// disabled (canSwitch false) -> in-flight -> loaded. The restore must survive.
 test("cold reload survives disabled then in-flight then loaded-present", () => {
 	const active = sandbox("sb_staging");
 	const list = [summary("sb_staging", "sb_staging", "blue", "rocket")];

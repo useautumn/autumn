@@ -23,7 +23,6 @@ const FORWARDED: AtomMetricsSeries = {
 	color: "var(--chart-series-other)",
 };
 
-/** Shown beside the checks for context, but kept out of the plot and the % answered. */
 const PUSHES: AtomMetricsSeries = {
 	key: "pushes",
 	label: "Subject pushes",
@@ -32,7 +31,6 @@ const PUSHES: AtomMetricsSeries = {
 
 const SERIES = [ANSWERED, FORWARDED, PUSHES];
 
-/** The req/s over the last minute and how much of it Atom answered without Autumn, or how long it has been idle. */
 const RequestsSummary = ({
 	chartData,
 	isLoading,
@@ -84,7 +82,6 @@ const RequestsSummary = ({
 	);
 };
 
-/** Requests per second, stacked into those Atom answered and those it forwarded to Autumn. */
 export const AtomRequestsChart = ({
 	chartData,
 	isLoading,

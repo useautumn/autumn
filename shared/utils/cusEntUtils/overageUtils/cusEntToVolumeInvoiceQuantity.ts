@@ -9,7 +9,6 @@ import {
 } from "../classifyCusEntUtils";
 import { cusEntToCusPrice } from "../convertCusEntUtils/cusEntToCusPrice";
 
-/** Included units that entities under their own allowance left unused. */
 const cusEntToUnusedEntityAllowance = ({
 	cusEnt,
 }: {
@@ -35,8 +34,6 @@ export const cusEntToVolumeInvoiceQuantity = ({
 	const allowance = cusEntsToAllowance({ cusEnts: [cusEnt] });
 	const total = new Decimal(paidQuantity).add(allowance);
 
-	// Pay-per-use bills the customer's actual usage across entities, so allowance an
-	// under-limit entity didn't use is not counted (prepaid bills what was bought).
 	const price = cusEntToCusPrice({ cusEnt })?.price;
 	const isPayPerUseEntityScoped =
 		price !== undefined &&

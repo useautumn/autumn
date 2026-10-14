@@ -1,14 +1,6 @@
 import { type SQL, sql } from "drizzle-orm";
 import { getEntityOptionsAggregateFragments } from "./getEntityOptionsAggregateFragments.js";
 
-/**
- * Rollover CTEs:
- *   - entity_rollover_keys: per-entity rollover balances, built ONLY from
- *     jsonb_each(r.entities). Keys only exist in the map when a rollover row
- *     explicitly carries a per-entity breakdown.
- *   - entity_rollover_feature: feature-level rollover totals, summed directly
- *     off r.balance / r.usage (one add per active rollover).
- */
 const buildEntityRolloverCtes = ({
 	expiryTimestampSql,
 }: {
@@ -53,8 +45,6 @@ export const getEntityAggregateFragments = ({
 	internalFeatureIds?: string[];
 	expiryTimestampSql?: SQL;
 }) => {
-	// Single array parameter, not one placeholder per id — keeps the SQL text
-	// stable across callers so the statement stays preparable.
 	const featureFilter =
 		internalFeatureIds && internalFeatureIds.length > 0
 			? sql`AND ce.internal_feature_id = ANY(${sql.param(internalFeatureIds)}::text[])`

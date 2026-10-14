@@ -1,8 +1,6 @@
-/** Fan-out overhead before the first file starts (DESIGN.md budget). */
 const FANOUT_MS = 2 * 60_000;
 const UNSEEN_MS = 60_000;
 
-/** Longest-first makespan of baseline p90s over `workers` sandboxes. */
 export const estimateWallMs = ({
 	p90s,
 	workers,
@@ -36,7 +34,6 @@ export const estimateWallMs = ({
 
 const BOOT_S = 90;
 
-/** Worker-seconds a run bills: every file's p90 plus one boot per worker. */
 export const estimateWorkerSeconds = ({
 	p90s,
 	workers,
@@ -47,7 +44,6 @@ export const estimateWorkerSeconds = ({
 	p90s.reduce<number>((sum, d) => sum + (d ?? UNSEEN_MS) / 1000, 0) +
 	BOOT_S * workers;
 
-/** Subsequence fuzzy match; returns matched indexes or null. Word-boundary hits score higher. */
 export const fuzzyMatch = (query: string, target: string) => {
 	const q = query.toLowerCase().replace(/\s+/g, "");
 	if (!q) return { score: 0, indexes: [] as number[] };

@@ -7,10 +7,6 @@ import { computePooledBalanceTransitionPlan } from "@/internal/billing/v2/pooled
 import { initFullCustomerProductFromProduct } from "@/internal/billing/v2/utils/initFullCustomerProduct/initFullCustomerProductFromProduct.js";
 import type { CreateCustomerContext } from "../createCustomerContext.js";
 
-/**
- * Compute the Autumn billing plan for customer creation.
- * Builds customer products from default products.
- */
 export const computeCreateCustomerPlan = ({
 	ctx,
 	context,
@@ -38,8 +34,6 @@ export const computeCreateCustomerPlan = ({
 		}),
 	);
 
-	// A default plan mints pools like any other attach. Runs before the products
-	// are handed to the customer, since it fills their pooled balances in place.
 	const { pooledBalancePlan } = computePooledBalanceTransitionPlan({
 		ctx,
 		fullCustomer,

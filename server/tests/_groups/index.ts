@@ -86,7 +86,6 @@ export const getAllSuites = (): TestSuite[] => suites;
 export const getSuite = ({ name }: { name: string }): TestSuite | undefined =>
 	suites.find((s) => s.name === name);
 
-/** Resolve a suite to its constituent test groups. */
 export const resolveSuite = ({
 	name,
 }: {
@@ -100,7 +99,6 @@ export const resolveSuite = ({
 		.filter((g): g is TestGroup => g !== undefined);
 };
 
-/** Resolve a name to test paths -- checks groups first, then suites. */
 export const resolveTestPaths = ({
 	name,
 }: {
@@ -118,7 +116,6 @@ export const resolveTestPaths = ({
 	return undefined;
 };
 
-/** Recursively discover all *.test.ts files under a directory. */
 export const discoverAllTestFiles = async ({
 	testsDir,
 }: {

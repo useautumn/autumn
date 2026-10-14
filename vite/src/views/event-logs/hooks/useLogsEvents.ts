@@ -12,7 +12,6 @@ import { toFilterBy, useLogsFilters } from "./useLogsFilters";
 const PAGE_SIZE = 100;
 const LIVE_REFRESH_MS = 5_000;
 
-/** Newest-first events for the current Logs filters, a page at a time. */
 export const useLogsEvents = () => {
 	const axiosInstance = useAxiosInstance({ version: LATEST_VERSION });
 	const buildKey = useQueryKeyFactory();

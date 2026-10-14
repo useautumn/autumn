@@ -4,7 +4,6 @@ import {
 	isCustomerProductOnStripeSubscription,
 } from "@autumn/shared";
 
-/** The row rides the subscription set_plans replaces, so the replacement subscription carries it. */
 export const isOnReplacedStripeSubscription = ({
 	billingContext,
 	customerProduct,

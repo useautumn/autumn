@@ -3,7 +3,6 @@ import { type AppEnv, type Feature, withTimeout } from "@autumn/shared";
 import type { Redis } from "ioredis";
 import { BATCH_MIGRATION_DEFERRED_OPERATION_TIMEOUT_MS } from "@/internal/migrations/v2/batchOperations/execute/utils/batchMigrationExecutionConstants.js";
 
-// The freshness mark is a real Postgres write; keep this suite hermetic.
 const marksModulePath =
 	"@/internal/customers/customerLsns/markCustomerUpdatedAt.js";
 const realMarks = { ...(await import(marksModulePath)) };
@@ -11,7 +10,6 @@ mock.module(marksModulePath, () => ({
 	...realMarks,
 	markCustomersUpdatedAt: async () => {},
 }));
-// The worker evict is a Kafka append; capture it instead.
 const evictsModulePath =
 	"@/internal/balances/balanceWorker/queueBalanceWorkerEvicts.js";
 const realEvicts = { ...(await import(evictsModulePath)) };
@@ -55,11 +53,8 @@ const createFakeRedis = ({
 }: {
 	status?: string;
 	readFails?: boolean;
-	/** Number of leading write-pipeline execs that reject before one succeeds. */
 	failWrites?: number;
-	/** Number of write execs after that which resolve with a dead-socket tuple. */
 	errorTupleWrites?: number;
-	/** Number of write execs after that which resolve with a command error tuple. */
 	commandErrorWrites?: number;
 	pipelineDelayMs?: number;
 } = {}): { redis: Redis; calls: RedisCalls & { writeAttempts: number } } => {
@@ -92,8 +87,6 @@ const createFakeRedis = ({
 					writeOps.push(`expire:${key}:${ttlSeconds}`);
 					return pipeline;
 				},
-				// Retries mean writes aren't a fixed nth pipeline — discriminate on
-				// the commands actually queued.
 				exec: async () => {
 					if (pipelineDelayMs) await Bun.sleep(pipelineDelayMs);
 					if (writeOps.length === 0) {
@@ -172,7 +165,6 @@ describe("batchInvalidateCachedFullSubjects", () => {
 			} else {
 				expect(await bounded).toBe(5_000);
 			}
-			// A Promise.race timeout doesn't cancel the remaining Redis batches.
 			expect(await invalidation).toBe(5_000);
 			expect(primary.calls.readBatchSizes).toEqual(Array(20).fill(250));
 			expect(primary.calls.writeBatchSizes).toEqual(Array(20).fill(1_000));
@@ -290,12 +282,6 @@ describe("batchInvalidateCachedFullSubjects", () => {
 		).toBe(true);
 	});
 
-	/**
-	 * A dedicated org Redis is created lazily on first use, so inside a fresh
-	 * trigger.dev batch-migration runner it is still "connecting" when finalize
-	 * invalidates. Dropping the invalidation there leaves every migrated
-	 * customer on that org reading a stale FullSubject until the 3-day TTL.
-	 */
 	test("still invalidates when the target Redis is not ready yet", async () => {
 		const connecting = createFakeRedis({ status: "connecting" });
 		const customer = {

@@ -23,7 +23,6 @@ export const setupFullCustomerContext = async ({
 }) => {
 	const { customer_id: customerId } = params;
 
-	// The plan is computed from Postgres; a track the worker just accepted must be there first.
 	await flushBalanceWorkerCustomer({ ctx, customerId });
 
 	const fullCustomer = await CusService.getFull({

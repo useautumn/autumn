@@ -10,7 +10,6 @@ import {
 	INTERVAL_LABELS,
 } from "../../utils/intervals";
 
-/** Range presets, custom range and bin size, shared by every time control. */
 export const useTimeRange = () => {
 	const { customer, bcExclusionFlag } = useAnalyticsContext();
 	const { queryStates, setQueryStates } = useAnalyticsQueryState();
@@ -21,7 +20,6 @@ export const useTimeRange = () => {
 			? { from: new Date(start), to: new Date(end) }
 			: undefined;
 
-	// Billing-cycle ranges need a customer's cycle to anchor on.
 	const showsBillingCycles = Boolean(customer) && !bcExclusionFlag;
 	const presetIntervals = Object.keys(INTERVAL_LABELS).filter(
 		(preset) => showsBillingCycles || !BILLING_CYCLE_INTERVALS.has(preset),

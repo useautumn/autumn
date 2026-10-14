@@ -22,35 +22,18 @@ import { stripeScheduleMatchesPhases } from "@/internal/billing/v2/providers/str
 import { getPatchCustomerProducts } from "@/internal/billing/v2/utils/billingPlan/customerProductPlanMutations";
 import type { SchedulePhaseProration } from "../setup/resolveSchedulePhaseProrations";
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TYPES
-// ═══════════════════════════════════════════════════════════════════════════════
-
 type StripeSubscriptionScheduleResult = {
 	scheduleAction?: StripeSubscriptionScheduleAction;
-	/** number = set cancel_at, null = clear cancel_at, undefined = don't touch */
 	subscriptionCancelAt?: number | null;
 	subscriptionStartsAt?: number | "now";
 };
 
-/**
- * The 4 possible scenarios for subscription schedule actions:
- * - no_phases: No phases with items, nothing to do
- * - single_indefinite: 1 phase with no end_date (e.g., uncancel)
- * - simple_cancel: 1 phase + trailing empty (cancel at end of cycle)
- * - future_standalone: A standalone schedule that starts in the future
- * - multi_phase: Multiple phases requiring a schedule
- */
 type ScheduleScenario =
 	| "no_phases"
 	| "single_indefinite"
 	| "simple_cancel"
 	| "future_standalone"
 	| "multi_phase";
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// HELPER FUNCTIONS
-// ═══════════════════════════════════════════════════════════════════════════════
 
 const phaseHasItems = (
 	phase: Stripe.SubscriptionScheduleUpdateParams.Phase,
@@ -81,9 +64,6 @@ const filterEmptyPhases = (
 	return phases.slice(firstNonEmptyIndex, lastNonEmptyIndex + 1);
 };
 
-/**
- * Determines which scenario we're in based on phases.
- */
 const getScheduleScenario = ({
 	scheduledPhases,
 	endsWithEmptyPhase,
@@ -101,7 +81,6 @@ const getScheduleScenario = ({
 	if (shouldCreateFutureSchedule) return "future_standalone";
 
 	if (scheduledPhases.length === 1) {
-		// A lone $0 placeholder has no subscription items to create a subscription from.
 		const needsStandaloneSchedule =
 			isCreateSchedule &&
 			!hasSubscription &&
@@ -113,7 +92,6 @@ const getScheduleScenario = ({
 	return "multi_phase";
 };
 
-/** An existing schedule is released onto its subscription, or cancelled when it has none. */
 const buildEndScheduleAction = ({
 	hasSubscription,
 	scheduleId,
@@ -141,9 +119,6 @@ const buildEndScheduleAction = ({
 	};
 };
 
-/**
- * Builds the appropriate action for each scenario.
- */
 const buildActionForScenario = ({
 	scenario,
 	existingSchedule,
@@ -175,14 +150,12 @@ const buildActionForScenario = ({
 			});
 
 		case "single_indefinite":
-			// Product continues indefinitely: end schedule if exists, clear any cancel_at
 			return {
 				subscriptionCancelAt: null,
 				...buildEndScheduleAction({ hasSubscription, scheduleId }),
 			};
 
 		case "simple_cancel":
-			// Cancel at end of cycle: use cancel_at on subscription, not schedule
 			return {
 				scheduleAction: hasSchedule
 					? {
@@ -195,7 +168,6 @@ const buildActionForScenario = ({
 
 		case "future_standalone":
 		case "multi_phase": {
-			// Multiple transitions: need a schedule
 			const endBehavior = endsWithEmptyPhase ? "cancel" : "release";
 			const scheduleUnchanged =
 				existingSchedule &&
@@ -233,7 +205,6 @@ const buildActionForScenario = ({
 	}
 };
 
-/** A recreate unlinks its rows from the old subscription and schedule before relinking them. */
 const isUnlinkedFromStripe = (customerProduct: FullCusProduct) =>
 	(customerProduct.subscription_ids ?? []).length === 0 &&
 	(customerProduct.scheduled_ids ?? []).length === 0;
@@ -255,17 +226,6 @@ const shouldCreateFutureSchedule = ({
 	);
 };
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// MAIN FUNCTION
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Builds the subscription schedule action based on customer products.
- *
- * Returns:
- * - scheduleAction: The schedule action to execute (create, update, or release)
- * - subscriptionCancelAt: number = set cancel_at, null = clear cancel_at, undefined = don't touch
- */
 export const buildStripeSubscriptionScheduleAction = ({
 	ctx,
 	billingContext,
@@ -291,7 +251,6 @@ export const buildStripeSubscriptionScheduleAction = ({
 		),
 	);
 
-	// 1. Filter to relevant customer products
 	const relatedCustomerProducts = finalCustomerProducts.filter(
 		(customerProduct) => {
 			if (insertedCustomerProductIds.has(customerProduct.id)) return true;
@@ -335,8 +294,6 @@ export const buildStripeSubscriptionScheduleAction = ({
 			cp(customerProduct).recurring().hasRelevantStatus().valid,
 	);
 
-	// 2. Build phases
-	// Free-only schedule support is scoped to create_schedule; other actions keep prior behavior.
 	const isCreateSchedule = autumnBillingPlan.ownsSchedulePersistence === true;
 
 	const phases = buildStripePhasesUpdate({
@@ -355,7 +312,6 @@ export const buildStripeSubscriptionScheduleAction = ({
 		stripeSubscription,
 	});
 
-	// 3. Derive cancel info from trailing empty phase
 	const lastPhase = phases[phases.length - 1];
 	const endsWithEmptyPhase = !!lastPhase && !phaseHasItems(lastPhase);
 	const cancelAtSeconds =
@@ -363,7 +319,6 @@ export const buildStripeSubscriptionScheduleAction = ({
 			? lastPhase.start_date
 			: undefined;
 
-	// 4. Determine scenario and build action
 	const scenario = getScheduleScenario({
 		scheduledPhases,
 		endsWithEmptyPhase,

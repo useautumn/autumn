@@ -1,11 +1,3 @@
-/**
- * atmn crud/migrations — variant of the plan with customers on the variant [base updated in place, base new version] → assert what the server does
- *
- * the `versionedPro` base config: base price, prepaid seat item, usage item, trial, seat license; every line has customers attached
- *
- * One line of plans/atmn-v3/07_tests.md. [a, b] is a matrix looped INSIDE this file.
- */
-
 import { expect, test } from "bun:test";
 import { seedVersionableCustomer } from "@tests/integration/catalog-v2/plans/migrations/utils/seedVersionableCustomer.js";
 import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
@@ -19,8 +11,6 @@ import chalk from "chalk";
 import { runPush } from "../../../../../../packages/atmn/src/actions/push";
 import { createClient } from "../../../../../../packages/atmn/src/generated/client";
 
-/** `pro` v1 with a nested variant `pro_plus` that has no divergence of its
- * own, so it fully inherits price and items from the base. */
 const proWithVariant = ({ amount }: { amount: number }): string => `{
 	features: [${everyFeatureType}
 	],
@@ -65,8 +55,6 @@ test.concurrent(
 				version: 1,
 			});
 
-			// Mint pro v2 with its own pro_plus v2; v1 and pro_plus v1 become history.
-			// One variant row may hang off one base version, so each version pins its own.
 			scenario.writeConfig(
 				atmnConfigSource({
 					body: `{
@@ -100,8 +88,6 @@ test.concurrent(
 			);
 			const result = await runPush({ client, cwd: scenario.cwd });
 
-			// Decision pending: minting a version is not an in-place edit — same
-			// no-migration shape as a plain plan (see create-a-new-version.test.ts).
 			expect(result.preview.migrations ?? []).toEqual([]);
 			expect(result.migrationIds).toEqual([]);
 		} finally {

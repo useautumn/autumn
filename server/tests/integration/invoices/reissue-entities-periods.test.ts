@@ -1,11 +1,3 @@
-/**
- * invoices.reissue — line periods and entity attribution.
- *
- * Contract:
- *   - Copied lines keep their Stripe period and their entity attribution; an amount edit moves the entity's share too.
- *   - A catalog plan added on reissue resolves its period like invoices.create and is attributed to its entity.
- */
-
 import { expect, test } from "bun:test";
 import {
 	type ApiListInvoiceV1,

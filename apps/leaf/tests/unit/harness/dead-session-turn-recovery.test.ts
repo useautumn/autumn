@@ -1,9 +1,3 @@
-/**
- * When a turn's stream proves the session dead, runAgentTurn must delete the
- * session row and retry the message once on a fresh session — never leave a
- * poisoned session that fails every later message in the thread.
- */
-
 import { beforeEach, describe, expect, mock, test } from "bun:test";
 import { AppEnv } from "@autumn/shared";
 import type { EveSessionRef } from "../../../src/internal/agentRuntime/eve/types.js";

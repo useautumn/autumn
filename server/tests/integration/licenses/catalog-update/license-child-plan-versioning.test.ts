@@ -75,9 +75,6 @@ test.concurrent(
 				s.billing.attach({ productId: parent.id }),
 			],
 		});
-		// return;
-
-		// ── Contract: in-place edit, no new version ─────────────────────────
 		await autumnV2_2.post("/plans.update", {
 			plan_id: license.id,
 			items: [itemsV2.monthlyMessages({ included: 50 })],
@@ -86,7 +83,6 @@ test.concurrent(
 			await getPlanVersion({ autumn: autumnV2_2, planId: license.id }),
 		).toBe(1);
 
-		// ── Contract: the parent link is untouched ──────────────────────────
 		const links = await listLicenseLinks({
 			autumn: autumnV2_2,
 			parentPlanId: parent.id,
@@ -97,7 +93,6 @@ test.concurrent(
 			included: 2,
 		});
 
-		// The existing customer pool retains its original definition.
 		const { granted } = await assignedGrant({
 			autumn: autumnV2_2,
 			customerId,
@@ -139,7 +134,6 @@ test.concurrent(
 			],
 		});
 
-		// ── Contract: default update with active assignments -> new version ─
 		await autumnV2_2.post("/plans.update", {
 			plan_id: license.id,
 			items: [itemsV2.monthlyMessages({ included: 50 })],
@@ -148,7 +142,6 @@ test.concurrent(
 			await getPlanVersion({ autumn: autumnV2_2, planId: license.id }),
 		).toBe(2);
 
-		// The existing customer pool remains on its v1 definition.
 		const { granted } = await assignedGrant({
 			autumn: autumnV2_2,
 			customerId,
@@ -157,7 +150,6 @@ test.concurrent(
 		});
 		expect(granted).toBe(25);
 
-		// ── Contract: existing assignment keeps its grant ────────────────────
 		const existingCheck = await autumnV2_2.check<CheckResponseV3>({
 			customer_id: customerId,
 			entity_id: entities[0].id,
@@ -198,7 +190,6 @@ test.concurrent(
 			],
 		});
 
-		// ── Contract: disable_version -> in place, no new version ───────────
 		await autumnV2_2.post("/plans.update", {
 			plan_id: license.id,
 			items: [itemsV2.monthlyMessages({ included: 50 })],
@@ -208,7 +199,6 @@ test.concurrent(
 			await getPlanVersion({ autumn: autumnV2_2, planId: license.id }),
 		).toBe(1);
 
-		// ── Contract: existing assignment's grant is untouched ──────────────
 		const existingCheck = await autumnV2_2.check<CheckResponseV3>({
 			customer_id: customerId,
 			entity_id: entities[0].id,
@@ -216,7 +206,6 @@ test.concurrent(
 		});
 		expect(existingCheck.balance?.granted).toBe(25);
 
-		// The existing customer pool retains its original definition.
 		const { granted } = await assignedGrant({
 			autumn: autumnV2_2,
 			customerId,

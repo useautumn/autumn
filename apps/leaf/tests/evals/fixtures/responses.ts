@@ -79,8 +79,6 @@ export const responses = {
 		request?: unknown;
 	}) => ({
 		customer_id: customer.id,
-		// Mirrors the real billing response: a checkout URL comes back when the
-		// caller forces a redirect; otherwise the field is null.
 		payment_url:
 			asRecord(request).redirect_mode === "always"
 				? `https://checkout.example.com/cs_${customer.id}`
@@ -88,8 +86,6 @@ export const responses = {
 		plan_id: plan.id,
 		status: "created",
 	}),
-	// Mirrors the real BillingResponse when a charge is declined: no invoice,
-	// payment_url null, required_action carries the failure code and reason.
 	attachPaymentFailure: ({
 		reason,
 		request,

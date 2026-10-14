@@ -28,8 +28,6 @@ export type AnchorLicenseQuantityVariant = {
 	planChange?: boolean;
 };
 
-// Contract: license-only and combined resets converge quantities in place with one recurring
-// refund/charge set, unchanged assignments and refund suppression with stored or catalog credits.
 export const expectAnchorLicenseQuantity = async (
 	variant: AnchorLicenseQuantityVariant,
 ) => {

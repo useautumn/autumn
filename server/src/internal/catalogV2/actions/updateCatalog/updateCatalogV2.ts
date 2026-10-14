@@ -15,11 +15,9 @@ import { addToExtraLogs } from "@/utils/logging/addToExtraLogs";
 export type UpdateCatalogActionResult = {
 	catalogContext: UpdateCatalogContext;
 	updateCatalogPlan: UpdateCatalogPlan;
-	/** Absent on preview runs — nothing was written. */
 	catalogResult?: CatalogResult;
 };
 
-/** Rewards a referral program that outlives this push still points at. */
 const linkedInternalRewardIds = ({
 	catalogContext,
 	updateCatalogPlan,
@@ -53,7 +51,6 @@ export async function updateCatalogV2({
 
 	assertRewardScope({ ctx, params, preview });
 
-	// 1–2. Setup + compute
 	const { catalogContext, updateCatalogPlan } = await planCatalogUpdate({
 		ctx,
 		params,
@@ -61,7 +58,6 @@ export async function updateCatalogV2({
 		phases,
 	});
 
-	// 3. Errors
 	await handleUpdateCatalogErrors({
 		ctx,
 		catalogContext,
@@ -83,7 +79,6 @@ export async function updateCatalogV2({
 		return { catalogContext, updateCatalogPlan };
 	}
 
-	// 4. Execute
 	const catalogResult = await executeUpdateCatalogPlan({
 		ctx,
 		updateCatalogPlan,

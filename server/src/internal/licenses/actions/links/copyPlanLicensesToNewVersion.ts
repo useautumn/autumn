@@ -6,9 +6,6 @@ import { licenseItemRepo } from "../../repos/licenseItemRepo.js";
 import { planLicenseRepo } from "../../repos/planLicenseRepo.js";
 import { validateLicenseLink } from "./validateLicenseLink.js";
 
-/** Every license link the new parent version will carry forward must still
- * satisfy the link rules against `newParentProduct`, or versioning is rejected.
- * Pure check — no writes — so it can run before the version is persisted. */
 export const validateCopiedPlanLicenses = async ({
 	ctx,
 	fromInternalProductId,
@@ -42,8 +39,6 @@ export const validateCopiedPlanLicenses = async ({
 	});
 };
 
-/** Copies the previous version's catalog license links onto the new version.
- * Assumes validateCopiedPlanLicenses already passed. */
 export const copyPlanLicensesToNewVersion = async ({
 	ctx,
 	fromInternalProductId,

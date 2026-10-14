@@ -9,7 +9,6 @@ import {
 	performMaximumClearing,
 } from "@autumn/shared";
 
-/** The rollovers a new grant keeps once its cap is applied, as `RolloverService.insert` leaves them. */
 const cappedRollovers = ({
 	customerEntitlement,
 	customerProduct,
@@ -18,8 +17,6 @@ const cappedRollovers = ({
 	customerProduct?: FullCusProduct;
 }) => {
 	const { rollovers } = customerEntitlement;
-	// A new grant has no stored rollovers yet: only the carried ones count against its cap.
-	// A copy, since the clearing sorts its rows in place and these are the plan's.
 	const { toDelete, toUpdate } = performMaximumClearing({
 		rows: [...rollovers],
 		cusEnt: {
@@ -34,7 +31,6 @@ const cappedRollovers = ({
 		);
 };
 
-/** A new grant, and its carried rollovers when its product is live, as the Postgres lane inserts them. */
 export const customerEntitlementToPlanOps = ({
 	customerEntitlement,
 	customerProduct,

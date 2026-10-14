@@ -12,7 +12,6 @@ import type { ShadowAtomConfigView, ShadowAtomNames } from "./shadowAtomTypes";
 
 const HEADERS = ["Org", "Percent", "Status", ""];
 
-/** The orgs on the shadow Atom, each with the share of its customers pushed there and shadowed. */
 export const ShadowAtomOrgTable = ({
 	config,
 	names,
@@ -42,7 +41,6 @@ export const ShadowAtomOrgTable = ({
 	}) => void;
 	onRemove: ({ orgId }: { orgId: string }) => void;
 	isAdding: boolean;
-	/** Any add, percent change or remove in flight: every control waits for it. */
 	isBusy: boolean;
 }) => {
 	const orgs = Object.entries(config.orgs);

@@ -15,16 +15,6 @@ import {
 	constructPrepaidItem,
 } from "@/utils/scriptUtils/constructItem.js";
 
-// ─────────────────────────────────────────────────────────────────
-// Rollover max_percentage — PAID entitlements (prepaid + consumable)
-//
-// Paid entitlements are reset via Stripe invoice.created webhook.
-// We use s.advanceToNextInvoice() to trigger the billing cycle.
-//
-// For prepaid features, the starting balance includes prepaid grant:
-//   startingBalance = allowance + (prepaidQuantity * billingUnits)
-// ─────────────────────────────────────────────────────────────────
-
 const rolloverConfig: RolloverConfig = {
 	max_percentage: 50,
 	length: 1,
@@ -57,10 +47,6 @@ test.concurrent(`${chalk.yellowBright("paid rollover max_percentage (prepaid): c
 		],
 	});
 
-	// Starting balance = 200 total
-	// Unused = 200 - 50 = 150, cap = floor(200 * 50 / 100) = 100
-	// Rollover = 150 (capped)
-	// Fresh grant = 200, total = 300
 	const after = await autumnV2_2.customers.get<ApiCustomerV5>(customerId);
 	expectBalanceCorrect({
 		customer: after,
@@ -97,10 +83,6 @@ test.concurrent(`${chalk.yellowBright("paid rollover max_percentage (consumable)
 		],
 	});
 
-	// Starting balance = 200 (included only, no prepaid)
-	// Unused = 200 - 50 = 150, cap = floor(200 * 50 / 100) = 100
-	// Rollover = 100 (capped)
-	// Fresh grant = 200, total = 300
 	const after = await autumnV2_2.customers.get<ApiCustomerV5>(customerId);
 	expectBalanceCorrect({
 		customer: after,
@@ -140,9 +122,6 @@ test.concurrent(`${chalk.yellowBright("paid rollover max_percentage (prepaid): n
 		],
 	});
 
-	// Starting balance = 300, unused = 50, cap = 150
-	// 50 < 150 → no capping → rollover = 50
-	// Fresh grant = 300, total = 350
 	const after = await autumnV2_2.customers.get<ApiCustomerV5>(customerId);
 	expectBalanceCorrect({
 		customer: after,
@@ -187,10 +166,6 @@ test.concurrent(`${chalk.yellowBright("paid rollover max_percentage (volume prep
 		],
 	});
 
-	// Starting balance = 100 (included) + 300 (prepaid quantity * billingUnits=100 → 300) = 400
-	// Unused = 400 - 100 = 300, cap = floor(400 * 50 / 100) = 200
-	// Rollover = 200 (capped)
-	// Fresh grant = 400, total = 400 + 200 = 600
 	const after = await autumnV2_2.customers.get<ApiCustomerV5>(customerId);
 	expectBalanceCorrect({
 		customer: after,

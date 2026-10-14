@@ -13,12 +13,6 @@ const scopesEqual = (a: readonly ScopeString[], b: readonly ScopeString[]) => {
 	return b.every((scope) => set.has(scope));
 };
 
-/**
- * Quick-apply presets for the scope grid. The active segment is derived from
- * the current selection, so it reflects "Default"/"Read only" and lights up
- * nothing once the user hand-tweaks a row (a custom set). Class names mirror
- * the per-row `TriStatePicker` so the two controls read as one family.
- */
 export function ScopePresetBar({
 	presets,
 	value,

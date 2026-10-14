@@ -1,6 +1,5 @@
 import type { SavedRow } from "./timelineSegment";
 
-/** A saved customer product reduced to what the timeline compares. */
 export type TimelineRow = SavedRow & {
 	planId: string;
 	internalEntityId: string | null;

@@ -29,7 +29,6 @@ export const initCustomerEntitlementBalance = ({
 }): { balance: number; entities: Record<string, EntityBalance> | null } => {
 	const { fullCustomer, featureQuantities } = initContext;
 
-	// 1. If entitlement is boolean or unlimited, return 0
 	const isBoolean = isBooleanEntitlement({ entitlement });
 	const isUnlimited = isUnlimitedEntitlement({ entitlement });
 
@@ -37,8 +36,6 @@ export const initCustomerEntitlementBalance = ({
 		return { balance: 0, entities: null };
 	}
 
-	// Unlimited entity rows still need their entity map so per-entity usage
-	// counters sync back to the DB instead of tripping ENTITY_COUNT_MISMATCH.
 	if (isUnlimited) {
 		return {
 			balance: 0,
@@ -50,15 +47,11 @@ export const initCustomerEntitlementBalance = ({
 		};
 	}
 
-	// 2. Get starting balance
-
 	const price = entToPrice({
 		ent: entitlement,
 		prices: initContext.fullProduct?.prices ?? [],
 	});
 
-	// Tie-break: a losing prepaid price (e.g. one-off alongside a recurring
-	// prepaid of the same feature) must not read the feature-keyed quantity.
 	const priceLosesQuantity =
 		price &&
 		isLosingPrepaidQuantityPrice({
@@ -79,7 +72,6 @@ export const initCustomerEntitlementBalance = ({
 		relatedPrice: price,
 	});
 
-	// 3. Get entitlement entities if entity scoped
 	const entities = initCustomerEntitlementEntities({
 		entitlement,
 		customerEntities: fullCustomer.entities,

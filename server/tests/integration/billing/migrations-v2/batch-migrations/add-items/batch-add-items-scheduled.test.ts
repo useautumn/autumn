@@ -1,17 +1,3 @@
-/**
- * TDD coverage: the BATCH lane must migrate SCHEDULED customer products.
- *
- * Contract under test:
- *   New behaviors:
- *     - a premium → pro downgrade leaves pro as a scheduled row; an add_items
- *       migration targeting pro runs on the BATCH lane and adds the item to
- *       that scheduled row (MIGRATABLE_STATUSES includes `scheduled`);
- *     - the active premium row is untouched (targeting isolation), so no
- *       ACTIVE row carries the added feature.
- *   Side effects:
- *     - the customer's item run lands succeeded (a row was mutated).
- */
-
 import { expect, test } from "bun:test";
 import { type ApiCustomerV5, MigrationItemRunStatus } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features";
@@ -50,7 +36,6 @@ test.concurrent(
 				s.products({ list: [pro, premium] }),
 			],
 			actions: [
-				// Downgrade: premium stays active, pro becomes a scheduled row.
 				s.billing.attach({ productId: premium.id }),
 				s.billing.attach({ productId: pro.id }),
 			],
@@ -72,7 +57,6 @@ test.concurrent(
 		});
 		expect(result?.lane).toBe("batch");
 
-		// ── Contract: the scheduled row itself gained the item, in place ──
 		const scheduledAfter = await getScheduledCustomerProductRow({
 			ctx,
 			customerId,
@@ -86,7 +70,6 @@ test.concurrent(
 			}),
 		).toContain(TestFeature.Words);
 
-		// ── Contract: no ACTIVE row (premium) carries the feature ──
 		expectWordsOnPlans({
 			customer: await autumnV2_2.customers.get<ApiCustomerV5>(customerId),
 			planIds: [],

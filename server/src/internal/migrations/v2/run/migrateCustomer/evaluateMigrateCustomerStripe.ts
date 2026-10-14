@@ -37,16 +37,6 @@ const contextBySubscriptionId = ({
 	return result;
 };
 
-/**
- * Build the StripeBillingPlan from a computed AutumnBillingPlan and
- * enforce the no-charges guard:
- *  - throw on `invoiceAction` / `invoiceItemsAction` / `refundAction`
- *  - reject `subscriptionAction` params that would create proration
- *    invoice items
- *
- * Evaluates at most once per Stripe subscription because one migration can
- * patch multiple customer products on the same customer.
- */
 export const evaluateMigrateCustomerStripe = async ({
 	ctx,
 	context,
@@ -87,9 +77,6 @@ export const evaluateMigrateCustomerStripe = async ({
 				}),
 		});
 
-		// `contextBySubscriptionId` keeps the first billingContext per subscription;
-		// consistent as long as one migration doesn't mix proration-allowed and
-		// charge-free ops on the same subscription.
 		if (billingContext.allowCharges !== true) {
 			assertStripePlanNoCharges({
 				stripeBillingPlan,

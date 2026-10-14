@@ -15,7 +15,6 @@ export const conditionsFromFilter = (
 		value: String(value),
 	}));
 
-/** Trimmed, non-empty rows -> filter.properties; error on partial rows. */
 export const conditionsToFilter = (
 	conditions: UsageLimitCondition[],
 ): { filter?: DbUsageLimit["filter"]; error?: string } => {

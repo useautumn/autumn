@@ -1,11 +1,8 @@
 import { createServer, type Socket } from "node:net";
 
-/** Just enough of the wire protocol for pg to connect and run simple queries: every query answers with no rows. */
 export type FakePostgresServer = {
 	url: string;
-	/** Connections opened so far. */
 	connections(): number;
-	/** Every connection open now stops answering, the way a dead path to the bouncer looks; new ones answer. */
 	silenceOpenConnections(): void;
 	close(): Promise<void>;
 };

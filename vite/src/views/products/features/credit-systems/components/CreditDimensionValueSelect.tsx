@@ -6,8 +6,6 @@ import {
 	SelectValue,
 } from "@autumn/ui";
 
-// Values are non-empty (the editor rejects blanks), so the empty string is the
-// one sentinel a real dimension value can never collide with.
 const ANY_VALUE = "";
 
 interface CreditDimensionValueSelectProps {
@@ -17,7 +15,6 @@ interface CreditDimensionValueSelectProps {
 	ariaLabel: string;
 }
 
-/** A table-cell select over a field's values; unset reads as "any". */
 export function CreditDimensionValueSelect({
 	values,
 	value,

@@ -1,15 +1,3 @@
-/**
- * catalogV2.preview_update — license_parents[].conflicts for a customized
- * (or stock) reverse-link parent. Parent is absent from plans[] so atmn
- * sees the checkbox before propagate is filled.
- *
- * Contract:
- *   - customize messages=500, child 10→200, no propagate
- *     → unchanged + value_divergence (never 400)
- *   - same customize + propagate → propagated + same conflict
- *   - uncustomized + propagate → propagated, no conflicts
- */
-
 import { test } from "bun:test";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";

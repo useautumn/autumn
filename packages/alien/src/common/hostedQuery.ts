@@ -1,6 +1,5 @@
 import type { AlienApi } from "../types/alienApi.js";
 
-/** Hosted calls name the workspace (and project where asked); the local manager has only one of each. */
 export const hostedQuery = ({
 	api,
 	withProject = false,

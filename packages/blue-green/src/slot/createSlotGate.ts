@@ -8,9 +8,7 @@ import { describeSlotGate } from "./describeSlotGate.js";
 export type SlotGate = {
 	describe(): SlotGateDescription;
 	isActive(): boolean;
-	/** Resolves once this fleet is the active slot, at once when it already is; rejects with the signal's reason. */
 	awaitActive(params: { signal: AbortSignal }): Promise<void>;
-	/** Called with the gate's answer each time the record changes it; returns the unsubscribe. */
 	subscribe(listener: (gate: SlotGateDescription) => void): () => void;
 };
 
@@ -32,7 +30,6 @@ export function createSlotGate({ ctx }: { ctx: SlotGateContext }): SlotGate {
 		return describe().active;
 	}
 
-	/** Only a change of answer reaches the listener: a record rewritten with the same ARN is not a flip. */
 	function subscribe(
 		listener: (gate: SlotGateDescription) => void,
 	): () => void {

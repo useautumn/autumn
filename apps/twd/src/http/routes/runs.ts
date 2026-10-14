@@ -146,7 +146,6 @@ export const runsRoutes = new Hono<TwdHono>()
 		const ctx = c.get("ctx");
 		const runId = c.req.param("id");
 		await getRunWithEmail({ ctx, runId });
-		// Replays the current snapshot, then streams live events until a terminal status.
 		return streamSSE(c, async (stream) => {
 			let chain = Promise.resolve();
 			const send = (event: RunEvent) => {

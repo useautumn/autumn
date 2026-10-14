@@ -1,21 +1,3 @@
-/**
- * Default flag follows the active pointer on a free auto_enable plan.
- *
- * Contract:
- *   Promote existing draft (`version_slug` + `active: true`) → that row is
- *   active + is_default; the previous pointer loses both.
- *   Same for a custom slug (e.g. "summer"): pointer and default move together.
- *   Paid draft: pointer moves; is_default stays on the free v1
- *   (`handleDefaultFlagErrors` rejects default on a paid row — do not 400).
- *   Cardless-trial paid draft: eligible, so default follows the promote.
- *   Explicit `auto_enable: true` on a historical promote → 400.
- *
- * Draft-mint identity (omit `active` → v2 inactive, v1 keeps default) lives in
- * version-identity-mint.test.ts — asserted here only as the pre-promote state.
- *
- * Unit 5 / slug targeting may be unwired; these tests document the contract.
- */
-
 import { test } from "bun:test";
 import {
 	BillingInterval,

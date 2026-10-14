@@ -36,7 +36,6 @@ describe("createWorkerDb", () => {
 		expect(gated).toEqual(["subject_rows"]);
 		const drained = timings.drain();
 		expect(drained.queries.subject_rows).toMatchObject({ count: 1 });
-		// Not a probe, so nothing to count as a hit or a miss.
 		expect(drained).not.toHaveProperty("subjectSnapshots");
 	});
 

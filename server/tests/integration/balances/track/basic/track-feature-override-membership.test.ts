@@ -1,11 +1,3 @@
-/**
- * Contract: a plan item's feature_override fully replaces its credit system's
- * schema — including MEMBERSHIP. An override can add a metered feature the
- * catalog schema lacks (its balance funds tracks/checks of that feature) or
- * remove one it has (its balance stays untouched and the track still succeeds
- * against the feature's own balance).
- */
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3, FeatureConfigOverride } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
@@ -26,8 +18,6 @@ const withFeatureOverride = (
 test.concurrent(
 	`${chalk.yellowBright("feature-override membership: override adds a feature the catalog schema lacks")}`,
 	async () => {
-		// Catalog: Credits2 contains only Action3. Override adds Action2 at 2
-		// credits/unit — Action2 is NOT in Credits2's catalog schema.
 		const creditsItem = withFeatureOverride(
 			items.free({ featureId: TestFeature.Credits2, includedUsage: 100 }),
 			{
@@ -51,8 +41,6 @@ test.concurrent(
 			actions: [s.attach({ productId: freeProd.id })],
 		});
 
-		// Check: Action2 has no balance of its own; the override makes Credits2
-		// fund it at 2 credits/unit.
 		const check = await autumnV2_3.check({
 			customer_id: customerId,
 			feature_id: TestFeature.Action2,
@@ -61,7 +49,6 @@ test.concurrent(
 		expect(check.allowed).toBe(true);
 		expect(check.required_balance).toBe(20);
 
-		// Track: 10 units * 2 = 20 credits deducted from Credits2.
 		await autumnV1.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Action2,
@@ -74,7 +61,6 @@ test.concurrent(
 			usage: 20,
 		});
 
-		// Persisted path agrees.
 		await timeout(2000);
 		const customerNonCached = await autumnV1.customers.get<ApiCustomerV3>(
 			customerId,
@@ -91,8 +77,6 @@ test.concurrent(
 test.concurrent(
 	`${chalk.yellowBright("feature-override membership: override removes a feature the catalog schema has")}`,
 	async () => {
-		// Catalog: Credits contains Action1 (0.2) and Action2 (0.6). Override
-		// keeps only Action2 — Action1 must NOT touch this Credits balance.
 		const action1Item = items.free({
 			featureId: TestFeature.Action1,
 			includedUsage: 50,
@@ -119,8 +103,6 @@ test.concurrent(
 			actions: [s.attach({ productId: freeProd.id })],
 		});
 
-		// Track past Action1's own balance: without the override the overflow
-		// would drain Credits (and pre-fix, computeCreditCosts would throw).
 		await autumnV1.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Action1,
@@ -132,13 +114,11 @@ test.concurrent(
 			balance: 0,
 			usage: 50,
 		});
-		// Credits untouched: the override removed Action1 from its schema.
 		expect(customer.features[TestFeature.Credits]).toMatchObject({
 			balance: 100,
 			usage: 0,
 		});
 
-		// Action2 still funds from Credits at its override rate.
 		await autumnV1.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Action2,

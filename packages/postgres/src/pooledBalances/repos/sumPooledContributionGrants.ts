@@ -7,14 +7,9 @@ const grantRowSchema = z
 	.object({ pooled_balance_id: z.string(), granted: z.number() })
 	.strict();
 
-/** The list travels as one jsonb text parameter, so the statement's text never grows with it. */
 const idList = (ids: readonly string[]) =>
 	sql`(SELECT jsonb_array_elements_text(${JSON.stringify(ids)}::text::jsonb))`;
 
-/**
- * Each pool's grant once its shares due by `dueBy` take their next value: the sum over every share.
- * A pool with no shares is absent, so its grant stays what it is.
- */
 export const sumPooledContributionGrants = async ({
 	ctx,
 	pooledBalanceIds,

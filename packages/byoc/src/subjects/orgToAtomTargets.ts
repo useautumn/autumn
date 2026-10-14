@@ -8,7 +8,6 @@ import type { AppEnv, Organization } from "@autumn/shared";
 import { atomDeploymentToConnection } from "./atomDeploymentToConnection.js";
 import type { AtomConnection } from "./types/atomConnection.js";
 
-/** Our shadow Atom's folder for this env, or null unless it has an address, the org is registered on it and, for a subject, it holds the customer. */
 const shadowAtomConnection = ({
 	shadowAtomConfig,
 	org,
@@ -42,10 +41,6 @@ const shadowAtomConnection = ({
 	};
 };
 
-/**
- * Every Atom a push goes to: the org's own whenever they are ready, and our shadow Atom when it holds the customer.
- * A catalog push names no customer, so the shadow Atom takes every registered org's catalog.
- */
 export const orgToAtomTargets = ({
 	shadowAtomConfig,
 	org,
@@ -57,7 +52,6 @@ export const orgToAtomTargets = ({
 	org: Organization;
 	env: AppEnv;
 	customerId?: string | null;
-	/** Production herald pushes to org Atoms through their queues; elsewhere they take HTTP. */
 	orgAtomsOverQueue?: boolean;
 }): AtomConnection[] =>
 	[

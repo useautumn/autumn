@@ -4,7 +4,6 @@ import { useOrgSearch } from "../edge-config/OrgSearchResults";
 import { matchesOrgSearch, toRateLimitOrg } from "./rateLimitOrgs";
 import type { RateLimitOrg } from "./rateLimitTypes";
 
-/** Orgs with overrides first (with their count), then every org the admin search finds by name, slug or id. */
 export const RateLimitOrgCombobox = ({
 	value,
 	overrideOrgs,

@@ -17,7 +17,6 @@ const fakeRedis = {
 	},
 } as unknown as ReturnType<NonNullable<MiscCacheContext["createClient"]>>;
 
-/** The same package action the server runs, over herald's own misc-cache wiring. */
 test("herald claims the auto top-up pending key through its misc cache", async () => {
 	const edgeConfigs = createHeraldEdgeConfigs({
 		ctx: {},

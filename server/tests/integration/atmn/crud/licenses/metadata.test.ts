@@ -1,9 +1,3 @@
-/**
- * atmn crud/licenses — [metadata]
- *
- * One line of plans/atmn-v3/07_tests.md. [a, b] is a matrix looped INSIDE this file.
- */
-
 import { expect, test } from "bun:test";
 import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 import {
@@ -23,8 +17,6 @@ type CatalogPlanRow = {
 	}>;
 };
 
-// `plans.licenses.metadata` is a frozen wire path, so this object's keys and
-// values pass straight through untouched — no camel/snake recasing.
 const METADATA = { tier: "gold", region: "us" };
 
 const enterpriseLicensingSeat = `

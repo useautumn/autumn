@@ -4,13 +4,6 @@ import type {
 	ApiEntityV2,
 	AttachParamsV1Input,
 } from "@autumn/shared";
-/**
- * Billing Cycle Anchor + Prepaid Entity Tests
- *
- * These tests exercise `billing_cycle_anchor: "now"` on entity-scoped prepaid
- * upgrades, where recurring Stripe items are inline-priced and subscription item
- * metadata is currently stripped for the pending-update-compatible request.
- */
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
 import {
 	expectProductActive,

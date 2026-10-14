@@ -9,8 +9,6 @@ import { db } from "../../../lib/db.js";
 import { isInternalAutumnSlackProvider } from "../../slackAdmin/provider.js";
 import { getInstallationOAuthAccessToken } from "./getInstallationOAuthAccessToken.js";
 
-/** Resolve an org's chat installation and a fresh Autumn OAuth access token for
- * the given env. */
 export const getOrgInstallationToken = async ({
 	env,
 	orgId,
@@ -22,7 +20,6 @@ export const getOrgInstallationToken = async ({
 	orgId: string;
 	provider: string;
 	workspaceId: string;
-	// Web chat resolves a per-user OAuth credential; Slack omits it.
 	userId?: string;
 }): Promise<{ accessToken: string; installation: ChatInstallation }> => {
 	const installation = await db.query.chatInstallations.findFirst({

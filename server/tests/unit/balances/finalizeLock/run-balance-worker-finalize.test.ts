@@ -31,7 +31,6 @@ const createCtx = (): AutumnContext => ({
 	extraLogs: {},
 });
 
-/** A worker that fails every finalize with `failure`, and records what was queued instead. */
 const createClient = ({ failure }: { failure: BalanceWorkerClientError }) => {
 	const queued: FinalizeCommand[] = [];
 	const client = {

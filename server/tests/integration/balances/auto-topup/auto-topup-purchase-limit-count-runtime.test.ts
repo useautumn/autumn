@@ -1,18 +1,3 @@
-/**
- * Integration coverage: writable purchase_limit.count mid-flow with real ATU.
- *
- * Flow under test:
- *   1. ATU fires once under purchase_limit.limit = 2
- *   2. customers.update sets purchase_limit.count = 1
- *   3. Next drain triggers one more ATU (allowed)
- *   4. Third drain is blocked by the purchase limit
- *
- * Green-success criteria:
- *   - After step 2, expanded purchase_limit.count is 1
- *   - After step 3, balance reflects a second top-up and invoice count grows
- *   - After step 4, balance only drops (no top-up) and invoice count is unchanged
- */
-
 import { expect, test } from "bun:test";
 import {
 	type ApiCustomerV5,
@@ -92,7 +77,6 @@ test.concurrent(
 			}),
 		});
 
-		// Round 1: 300 - 260 = 40 → ATU → 140 (purchase 1 / limit 2)
 		await autumnV2_1.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
@@ -118,7 +102,6 @@ test.concurrent(
 			count: 1,
 		});
 
-		// Mid-flow: write purchase_limit.count = 1 (runtime state, not JSONB)
 		await autumnV2_1.customers.update(customerId, {
 			billing_controls: {
 				auto_topups: [
@@ -148,7 +131,6 @@ test.concurrent(
 		});
 		expect(limitAfterSet?.next_reset_at).toBe(limitAfterFirst?.next_reset_at);
 
-		// Round 2: 140 - 100 = 40 → ATU → 140 (purchase 2 / limit 2)
 		await autumnV2_1.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
@@ -183,7 +165,6 @@ test.concurrent(
 			latestInvoiceProductId: oneOffProd.id,
 		});
 
-		// Round 3: 140 - 100 = 40 → blocked (already at limit)
 		await autumnV2_1.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,

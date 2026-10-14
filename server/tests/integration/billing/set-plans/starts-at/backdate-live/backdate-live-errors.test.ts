@@ -1,10 +1,3 @@
-/**
- * A backdate over a live subscription is rejected, before anything is written, when recreating
- * it would lose or rebill something: a trial added to a paid one, Stripe Checkout, a start past
- * Stripe's 250-line backdate limit, or another entity's plan on it the request doesn't cover.
- * Backdating a trialing subscription is allowed (backdate-trialing/).
- */
-
 import { expect, test } from "bun:test";
 import {
 	addInterval,

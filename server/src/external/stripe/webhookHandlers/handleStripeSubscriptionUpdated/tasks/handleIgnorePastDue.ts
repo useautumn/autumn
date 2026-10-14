@@ -4,14 +4,8 @@ import { stripeSubscriptionToLatestInvoice } from "@/external/stripe/subscriptio
 import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/stripeWebhookContext";
 import type { StripeSubscriptionUpdatedContext } from "../stripeSubscriptionUpdatedContext";
 
-// Long window so the now-manual invoice doesn't immediately read as overdue.
 const SEND_INVOICE_DAYS_UNTIL_DUE = 365;
 
-/**
- * Keeps an `ignore_past_due` plan's subscription alive when it goes past_due:
- * removes the open invoice from Stripe's auto-dunning and switches the sub to
- * send_invoice so Stripe's retry/cancel flow never tears it down.
- */
 export const handleIgnorePastDue = async ({
 	ctx,
 	subscriptionUpdatedContext,

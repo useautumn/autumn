@@ -25,7 +25,6 @@ const chargedPlanLabel = (lineItem: LineItem) => {
 		: product.name;
 };
 
-/** "A", "A and B", "A, B and C", with each label bold. */
 const listedLabels = (labels: string[]): SetPlansTextPart[] =>
 	labels.flatMap((label, index) => {
 		if (index === 0) return [boldText(label)];
@@ -46,11 +45,8 @@ export const cycleResetRebillWarnings = ({
 	liveCustomerProducts,
 }: {
 	resetsCycleNow: boolean;
-	/** Ending a trial with the reset bills the full period instead of prorating it. */
 	prorationOverride?: ProrationBehaviorOverride;
-	/** The line items the immediate invoice bills. */
 	lineItems: LineItem[];
-	/** Plans live on the subscription before the request. */
 	liveCustomerProducts: FullCusProduct[];
 }): Omit<SetPlansPreviewWarning, "severity">[] => {
 	if (!resetsCycleNow) return [];

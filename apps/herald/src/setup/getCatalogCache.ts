@@ -8,7 +8,6 @@ import { getPostgres } from "./getPostgres.js";
 
 let catalogCache: CatalogCache | undefined;
 
-/** The plan rows a record's subject references, cached the way the worker caches them. */
 export function getCatalogCache(): CatalogCache {
 	const postgres = getPostgres();
 	catalogCache ??= createCatalogCache({

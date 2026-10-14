@@ -9,7 +9,6 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-// Zero usage, change item config
 test.concurrent(
 	`${chalk.yellowBright("prepaid: zero usage, change item config")}`,
 	async () => {
@@ -43,9 +42,6 @@ test.concurrent(
 			],
 		});
 
-		// No usage tracked
-
-		// Double the price
 		const newPrice = 20;
 		const newPrepaidItem = items.prepaidMessages({
 			includedUsage: 0,
@@ -62,9 +58,6 @@ test.concurrent(
 
 		const preview = await autumnV1.subscriptions.previewUpdate(updateParams);
 
-		// Old: 2 packs * $10 = $20
-		// New: 2 packs * $20 = $40
-		// Total: $40 - $20 = $20
 		const packs = Math.ceil(quantity / oldBillingUnits);
 		expect(preview.total).toBe(packs * newPrice - packs * oldPrice);
 
@@ -75,7 +68,7 @@ test.concurrent(
 		expectCustomerFeatureCorrect({
 			customer,
 			featureId: TestFeature.Messages,
-			includedUsage: quantity, // 0 + 200 = 200
+			includedUsage: quantity,
 			balance: quantity,
 			usage: 0,
 		});
@@ -95,11 +88,6 @@ test.concurrent(
 	},
 );
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// FREE TO PAID: PREPAID ITEM WITH ZERO QUANTITY
-// ═══════════════════════════════════════════════════════════════════════════════
-
-// Update from free product to paid with prepaid item, passing 0 quantity
 test.concurrent(
 	`${chalk.yellowBright("prepaid: free to paid with zero quantity")}`,
 	async () => {
@@ -115,7 +103,6 @@ test.concurrent(
 			actions: [s.attach({ productId: free.id })],
 		});
 
-		// Track some usage on the free product
 		const messagesUsed = 30;
 		await autumnV1.track(
 			{
@@ -126,7 +113,6 @@ test.concurrent(
 			{ timeout: 2000 },
 		);
 
-		// Update to add prepaid messages item with 0 quantity
 		const billingUnits = 100;
 		const pricePerPack = 10;
 		const prepaidItem = items.prepaidMessages({
@@ -145,27 +131,23 @@ test.concurrent(
 
 		const preview = await autumnV1.subscriptions.previewUpdate(updateParams);
 
-		// With 0 quantity, no packs are purchased
-		// Total = base price only = $20
 		expect(preview.total).toBe(priceItem.price);
 
 		await autumnV1.subscriptions.update(updateParams);
 
 		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-		// With 0 quantity: includedUsage = 0, balance = 0 - messagesUsed (goes negative)
 		expectCustomerFeatureCorrect({
 			customer,
 			featureId: TestFeature.Messages,
-			includedUsage: 0, // 0 + 0 = 0
-			// Usage carries over with no floor, so the balance goes negative.
+			includedUsage: 0,
 			balance: 0 - messagesUsed,
 			usage: messagesUsed,
 		});
 
 		await expectCustomerInvoiceCorrect({
 			customer,
-			count: 1, // Initial free invoice + update invoice
+			count: 1,
 			latestTotal: preview.total,
 		});
 

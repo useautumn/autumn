@@ -82,7 +82,6 @@ describe("pickAnchorCustomerEntitlementId", () => {
 	});
 
 	test("prefers lower status_rank, then non-add-on, then oldest, then id", () => {
-		// All customer-scope candidates; tie-break ladder.
 		expect(
 			pickAnchorCustomerEntitlementId({
 				candidates: [

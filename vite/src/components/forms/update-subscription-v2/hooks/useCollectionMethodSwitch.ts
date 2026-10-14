@@ -17,7 +17,6 @@ import type { UpdateSubscriptionFormContext } from "../context/UpdateSubscriptio
 const sameTypes = (a: InvoicePaymentMethod[], b: InvoicePaymentMethod[]) =>
 	a.length === b.length && a.every((type) => b.includes(type));
 
-/** Collection method edits, sent as a V1 billing.update whose only change is invoice_mode. */
 export function useCollectionMethodSwitch({
 	formContext,
 	hasOtherChanges,
@@ -47,7 +46,6 @@ export function useCollectionMethodSwitch({
 			customerId,
 			scopeEntityId: null,
 			enabled: Boolean(stripeSubscription),
-			// A card added via the setup link (in another tab) must unblock the switch without a reload.
 			staleTime: 0,
 			refetchOnWindowFocus: true,
 		});

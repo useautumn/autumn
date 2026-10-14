@@ -1,12 +1,3 @@
-/**
- * An event that fans out to two features paid by one credit system answers with the credit system's balance after
- * both deductions, on both balance routes.
- *
- * Red (before): the balance worker route answered `balance` from the first feature's reply (99), before the
- *   second feature's deduction, while its own `balances` said 97.
- * Green (after): `balance` and `balances` both read 97.
- */
-
 import { expect, test } from "bun:test";
 import { ApiVersion, type TrackResponseV3 } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
@@ -37,7 +28,6 @@ test.concurrent(
 			actions: [s.billing.attach({ productId: plan.id })],
 		});
 
-		// SharedAction1 costs 1 credit, SharedAction2 costs 2: 100 → 97.
 		const response: TrackResponseV3 = await autumnV2_3.track({
 			customer_id: customerId,
 			event_name: "shared-credit-event",

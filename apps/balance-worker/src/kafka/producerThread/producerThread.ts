@@ -1,8 +1,3 @@
-/**
- * The producer thread: builds the same kafkajs client the decide thread would (brokers, MSK IAM signing,
- * limits) and runs the partition producers, so encoding, compression and the broker sockets never take
- * time on the decide thread.
- */
 import { createKafkaClient, createKafkaTransport } from "@autumn/kafka";
 import { Kafka } from "kafkajs";
 import { type ProducerLoop, startProducerLoop } from "./startProducerLoop.js";
@@ -32,7 +27,6 @@ function reportToken(info: unknown): void {
 	post({ kind: "token", info });
 }
 
-/** Null when the client could not be built; the decide thread has been told why. */
 function startThread(init: ProducerThreadInit): ProducerLoop | null {
 	let started: ProducerLoop;
 	try {

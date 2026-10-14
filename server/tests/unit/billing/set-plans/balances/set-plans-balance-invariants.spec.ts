@@ -1,7 +1,3 @@
-/**
- * Generated balance-preview cases (kind × prior usage × operation × timing × who scheduled it × scope),
- * each checked against the invariants in the balances audit rather than a hand-written answer.
- */
 import { describe, expect, test } from "bun:test";
 import { getApiBalances } from "@api/customers/cusFeatures";
 import {
@@ -98,7 +94,6 @@ const balanceFor = ({
 	return included({ featureId, allowance: quantity, usage });
 };
 
-/** One-off credits can't go below zero; pay-per-use "overage" is simply more billable usage. */
 const isMeaningful = ({
 	kind,
 	prior,
@@ -226,7 +221,6 @@ const balanceBefore = (
 const grantsAccess = (balance: SetPlansPreviewBalance) =>
 	balance.unlimited || balance.granted > 0 || balance.overage_allowed;
 
-/** B2 + B3: the row is a faithful, consistently classified transition. */
 const expectRowConsistent = (change: SetPlansPreviewBalanceChange) => {
 	const before = balanceBefore(change);
 	const after = change.balance;
@@ -249,7 +243,6 @@ const expectRowConsistent = (change: SetPlansPreviewBalanceChange) => {
 	}
 };
 
-/** B5: what the projection keeps across a switch mirrors activation. */
 const expectConservation = ({
 	balanceCase,
 	change,
@@ -349,7 +342,6 @@ describe(chalk.yellowBright("set_plans balance preview invariants"), () => {
 	}
 });
 
-/** B4: scoped balances partition the customer's aggregate balance. */
 const grantedByFeature = (balances: Record<string, { granted: number }>[]) => {
 	const totals = new Map<string, number>();
 	for (const scopeBalances of balances) {
@@ -409,7 +401,6 @@ describe(chalk.yellowBright("set_plans balance scopes"), () => {
 	});
 });
 
-/** A contributor's pooled allowance over the dates its plan is live on one side. */
 type ContributionWindow = {
 	entity: Entity;
 	amount: number;
@@ -431,7 +422,6 @@ const SECOND_RENEWAL = RENEWAL + ms.days(365);
 const POOLED_ALLOWANCE = 10_000;
 const RAISED_POOLED_ALLOWANCE = 30_000;
 
-/** Terms of one plan share its pooled entitlement; a different allowance is its own custom entitlement. */
 const pooledPlanTerm = ({
 	term,
 	pooledAllowance = POOLED_ALLOWANCE,
@@ -464,7 +454,6 @@ const contributionAt = ({
 		)
 		.reduce((total, contribution) => total + contribution.amount, 0);
 
-/** Each contributor's attributed grant is exactly its own live contribution, and the pool is their sum. */
 const expectPoolAttributedByContribution = async ({
 	fullCustomer,
 	windows,
@@ -511,7 +500,6 @@ const contributionWindow = ({
 	until,
 });
 
-/** Entity A renews through two saved scheduled plans; entity B pools alongside it throughout. */
 const renewingRows = () => {
 	const [first, second, third] = ["first", "second", "third"].map((term) =>
 		pooledPlanTerm({ term }),
@@ -707,7 +695,6 @@ describe(
 	() => {
 		for (const [caseIndex, { name }] of pooledAttributionCases().entries()) {
 			test(name, async () => {
-				// Projections mutate the rows they are given, so every case builds its own.
 				const attributionCase = pooledAttributionCases()[caseIndex];
 				if (!attributionCase) throw new Error(`No pooled case ${caseIndex}`);
 				const { savedRows, phases, saved, desired, expectedChanges } =

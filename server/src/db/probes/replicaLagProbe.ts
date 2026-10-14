@@ -2,11 +2,8 @@ import { logger } from "../../external/logtail/logtailUtils.js";
 import { lagToMs, queryReplicaLag } from "./replicaLagQuery.js";
 import type { DbProbe } from "./types.js";
 
-/** Serving replicas streaming from the primary. Bump when adding replicas. */
 export const EXPECTED_REPLICA_COUNT = 2;
 
-/** Matches the customer_lsns ledger window: replica reads are only safe while
- *  lag stays under it, so breaching this is a route-to-primary signal. */
 export const REPLICA_LAG_MAX_MS = 60_000;
 
 export const replicaLagProbe: DbProbe = {

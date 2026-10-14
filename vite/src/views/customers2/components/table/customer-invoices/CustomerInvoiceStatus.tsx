@@ -57,7 +57,6 @@ const getRefundStatus = ({
 	};
 };
 
-/** An invoice preview has no InvoiceStatus — it isn't an invoice yet. */
 export const UPCOMING_INVOICE_STATUS: InvoiceStatusDisplay = {
 	label: "Upcoming",
 	tone: "orange",
@@ -79,7 +78,6 @@ export function CustomerInvoiceStatus({
 }) {
 	if (!(override || status)) return null;
 
-	// Check for refund status first (only for paid invoices)
 	const refundStatus =
 		status === InvoiceStatus.Paid &&
 		total !== undefined &&

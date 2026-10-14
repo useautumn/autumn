@@ -3,7 +3,6 @@ import { RateLimitType } from "./rateLimitConfigs.js";
 
 const RateLimitTypeSchema = z.enum(RateLimitType);
 
-/** `METHOD /v1/path`, path params as `:name`, the same shape as a route group pattern. */
 const RateLimitEndpointSchema = z
 	.string()
 	.regex(
@@ -17,8 +16,6 @@ const EndpointRateLimitOverrideSchema = z.object({
 });
 
 // String-keyed at the schema level (Zod's enum-keyed record demands every key
-// be present, which defeats the "partial override" intent). The handler trusts
-// the writer to send valid RateLimitType keys.
 const OrgRateLimitOverrideSchema = z.object({
 	limits: z.record(z.string(), z.number().int().min(0)).default({}),
 	endpoints: z
@@ -35,7 +32,6 @@ export type EndpointRateLimitOverride = z.infer<
 >;
 export type OrgRateLimitOverride = {
 	limits: Record<string, number>;
-	/** Extra caps on single endpoints, keyed `METHOD /v1/path`; a limit of 0 blocks. */
 	endpoints?: Record<string, EndpointRateLimitOverride>;
 };
 export type RateLimitOverridesConfig = {

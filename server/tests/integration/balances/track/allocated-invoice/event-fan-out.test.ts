@@ -9,15 +9,6 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { constructArrearProratedItem } from "@/utils/scriptUtils/constructItem.js";
 
-// ═══════════════════════════════════════════════════════════════════
-// Allocated Invoice — event_name fan-out
-//
-// One event ("seat-event") maps to a metered feature and a v1 paid
-// allocated one. On the balance worker path each feature is tracked on
-// its own engine: the metered one on the worker, the allocated one on
-// Postgres (which invoices). Each must be deducted exactly once.
-// ═══════════════════════════════════════════════════════════════════
-
 const PRICE_PER_SEAT = 50;
 const INCLUDED_SEATS = 1;
 const INCLUDED_ACTIONS = 100;
@@ -47,7 +38,6 @@ test(`${chalk.yellowBright("fan-out1: one event deducts the metered feature on t
 		actions: [s.attach({ productId: pro.id })],
 	});
 
-	// Within the included seat: both features move, no invoice beyond the attach.
 	const first: TrackResponseV2 = await autumnV2.track({
 		customer_id: customerId,
 		event_name: "seat-event",
@@ -77,7 +67,6 @@ test(`${chalk.yellowBright("fan-out1: one event deducts the metered feature on t
 	});
 	await expectCustomerInvoiceCorrect({ customerId, count: 1 });
 
-	// Past the included seat: the allocated feature invoices, the metered one just moves.
 	const second: TrackResponseV2 = await autumnV2.track({
 		customer_id: customerId,
 		event_name: "seat-event",

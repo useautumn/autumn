@@ -8,7 +8,6 @@ import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { catalogV2Actions } from "@/internal/catalogV2/actions/index.js";
 import { buildUpdateCatalogPreview } from "@/internal/catalogV2/actions/updateCatalog/preview/buildUpdateCatalogPreview";
 
-/** Compute a catalog delta without mutation validation or persistence. */
 export const handleDiffCatalogV2 = createRoute({
 	scopes: { ALL: [Scopes.Plans.Read, Scopes.Features.Read] },
 	body: PreviewUpdateCatalogParamsSchema,

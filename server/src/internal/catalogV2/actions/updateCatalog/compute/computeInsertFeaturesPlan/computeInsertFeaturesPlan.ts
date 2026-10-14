@@ -14,7 +14,6 @@ import { validateFeature } from "@/internal/features/utils/validateFeature.js";
 import { generateId } from "@/utils/genUtils.js";
 import { resolveCurrentFeature } from "../../utils/featureUpdateUtils/resolveCurrentFeature";
 
-/** Credit systems last so schema refs see metered/boolean rows from this batch. */
 const sortFeaturesForInsert = <T extends { type: string }>(
 	features: T[],
 ): T[] =>
@@ -25,10 +24,6 @@ const sortFeaturesForInsert = <T extends { type: string }>(
 		return leftCredit ? 1 : -1;
 	});
 
-/**
- * Features in the batch that don't exist yet. Validates against the projected
- * catalog (post-update) so a new CS can reference a feature this call updates.
- */
 export const computeInsertFeaturesPlan = ({
 	ctx,
 	params,
@@ -38,8 +33,6 @@ export const computeInsertFeaturesPlan = ({
 	params: UpdateCatalogParams;
 	projected: ProjectedCatalog;
 }): CatalogComputeStep => {
-	// An entry no current row answers to is a create; an unknown internal_id
-	// falls back to feature_id and inserts too.
 	const entries = sortFeaturesForInsert(
 		(params.features ?? []).filter(
 			(featureParams) =>

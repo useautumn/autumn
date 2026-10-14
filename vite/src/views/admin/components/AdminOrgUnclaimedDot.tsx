@@ -1,6 +1,5 @@
 import { Tooltip, TooltipContent, TooltipTrigger } from "@autumn/ui";
 
-/** Dot rather than a badge so an unclaimed org costs ~8px, not a column. */
 export const AdminOrgUnclaimedDot = () => (
 	<Tooltip>
 		<TooltipTrigger asChild>

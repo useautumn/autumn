@@ -10,12 +10,6 @@ const orderStripeDiscounts = (
 		return Number(bIsPercent) - Number(aIsPercent);
 	});
 
-/**
- * Maps internal discount objects to Stripe API `discounts` param format for subscription updates.
- * Uses { discount: id } for existing discounts (preserving original start/end),
- * { promotion_code: id } for promo-code-based new discounts,
- * and { coupon: id } for new coupon-based discounts.
- */
 export const stripeDiscountsToParams = ({
 	stripeDiscounts,
 }: {
@@ -46,7 +40,6 @@ export const stripeDiscountsToSubscriptionUpdateParam = ({
 	if (stripeDiscounts?.length)
 		return stripeDiscountsToParams({ stripeDiscounts });
 
-	// Unexpanded discount ids never reached stripeDiscounts, so they can't signal a removal.
 	const hadExpandedDiscounts = (stripeSubscription.discounts ?? []).some(
 		(discount) => typeof discount !== "string",
 	);

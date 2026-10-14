@@ -24,7 +24,6 @@ import type {
 	RateLimitPolicySummary,
 } from "./rateLimitTypes";
 
-/** A row sharing a counter names the row that owns it instead of repeating its version limits. */
 const PolicyTags = ({
 	policy,
 	isNested,
@@ -70,7 +69,6 @@ const PolicyName = ({
 	</span>
 );
 
-/** One limit: what it allows per customer and per org, who overrides it, and its details on expand. */
 export const RateLimitPolicyRow = ({
 	policy,
 	view,

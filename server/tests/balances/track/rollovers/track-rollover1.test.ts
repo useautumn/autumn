@@ -36,7 +36,6 @@ export const free = constructProduct({
 });
 
 const testCase = "track-rollover1";
-// , per entity and regular
 
 describe(`${chalk.yellowBright(`${testCase}: Testing rollovers for feature item`)}`, () => {
 	const customerId = testCase;
@@ -104,7 +103,6 @@ describe(`${chalk.yellowBright(`${testCase}: Testing rollovers for feature item`
 		expect(msgesFeature?.rollovers[0].balance).toBe(expectedRollover);
 		curBalance = expectedBalance;
 
-		// Verify non-cached customer balance
 		await timeout(2000);
 		const nonCachedCustomer = await autumn.customers.get(customerId, {
 			skip_cache: "true",
@@ -118,7 +116,6 @@ describe(`${chalk.yellowBright(`${testCase}: Testing rollovers for feature item`
 
 	return;
 
-	// let usage2 = 50;
 	test("should reset again and have correct rollover", async () => {
 		await resetAndGetCusEnt({
 			ctx,
@@ -141,7 +138,6 @@ describe(`${chalk.yellowBright(`${testCase}: Testing rollovers for feature item`
 		// @ts-expect-error (newest rollover should be 400 (msges.included_usage))
 		expect(msgesFeature?.rollovers[1].balance).toBe(400);
 
-		// Verify non-cached customer balance
 		await timeout(2000);
 		const nonCachedCustomer = await autumn.customers.get(customerId, {
 			skip_cache: "true",
@@ -175,7 +171,6 @@ describe(`${chalk.yellowBright(`${testCase}: Testing rollovers for feature item`
 		expect(rollover1.balance).toBe(0);
 		expect(rollover2.balance).toBe(350);
 
-		// Verify non-cached customer balance
 		await timeout(2000);
 		const nonCachedCustomer = await autumn.customers.get(customerId, {
 			skip_cache: "true",
@@ -207,7 +202,6 @@ describe(`${chalk.yellowBright(`${testCase}: Testing rollovers for feature item`
 		expect(rollovers![1].balance).toBe(0);
 		expect(msgesFeature.balance).toBe(messagesItem.included_usage - 50);
 
-		// Verify non-cached customer balance
 		await timeout(2000);
 		const nonCachedCustomer = await autumn.customers.get(customerId, {
 			skip_cache: "true",

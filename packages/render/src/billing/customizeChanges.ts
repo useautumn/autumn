@@ -4,9 +4,6 @@ import { itemMatchesFilter } from "./itemMatchesFilter.js";
 
 type Shape = Record<string, unknown>;
 
-/** One customer-specific change to a plan. Every change is an add or a
- * remove: the verb is a property of the diff against the current plan, never
- * a label chosen by a surface. Removes carry what is actually being removed. */
 export type CustomizeChange =
 	| { kind: "add" | "remove"; subject: "price"; price: Shape }
 	| { kind: "add" | "remove"; subject: "free_trial"; trial: Shape }
@@ -23,9 +20,6 @@ const records = (value: unknown): Shape[] =>
 const currentItems = (currentPlan: unknown): Shape[] =>
 	records(asRecord(currentPlan)?.items);
 
-/** A single-valued override (price, free trial): present in the request means
- * "set to this", null means "remove". Diffed against the current plan's value
- * so a change reads as a remove of the old and an add of the new. */
 const overrideChanges = ({
 	currentPlan,
 	customize,
@@ -46,9 +40,6 @@ const overrideChanges = ({
 	];
 };
 
-/** `remove_items` entries are filters; each resolves to the current items it
- * matches so the row shows the quantity being removed. An unmatched filter
- * still names its feature rather than vanishing. */
 const removedItems = ({
 	currentPlan,
 	filters,
@@ -72,7 +63,6 @@ const itemChanges = ({
 	currentPlan: unknown;
 	customize: Shape;
 }): CustomizeChange[] => {
-	// `items` is PUT-style: the new list replaces every current item.
 	const replacing = Array.isArray(customize.items);
 	const removed = replacing
 		? currentItems(currentPlan)
@@ -92,10 +82,6 @@ const itemChanges = ({
 	];
 };
 
-/** The customer-specific terms of a billing action as adds and removes
- * against the current plan. Removes precede adds so a table reads old → new. */
-/** The trial is documented at the top level of a billing request and defined
- * inside `customize`; the server honours both, so previews must too. */
 export const customizeWithFreeTrial = (request: unknown): unknown => {
 	const record = asRecord(request);
 	if (!record) return undefined;
@@ -107,8 +93,6 @@ export const customizeWithFreeTrial = (request: unknown): unknown => {
 	};
 };
 
-/** Whether diffing this customize needs the current plan as its baseline.
- * Kept beside buildCustomizeChanges so the two can't drift apart. */
 export const customizeNeedsCurrentPlan = (customize: unknown): boolean => {
 	const patch = asRecord(customize);
 	if (!patch) return false;
@@ -120,8 +104,6 @@ export const customizeNeedsCurrentPlan = (customize: unknown): boolean => {
 	);
 };
 
-/** The plan a customize is diffed against: the preview's outgoing plan holds
- * the customer's live terms, which differ from the catalog once customized. */
 export const currentPlanFromPreview = <Plan>({
 	outgoing,
 	planId,
@@ -129,7 +111,6 @@ export const currentPlanFromPreview = <Plan>({
 	outgoing:
 		| readonly { plan?: Plan | undefined; plan_id?: unknown }[]
 		| undefined;
-	/** The plan being customized, when the write names one. */
 	planId?: string | null;
 }): Plan | null => {
 	const changes = (outgoing ?? []).filter(
@@ -145,8 +126,6 @@ export const buildCustomizeChanges = ({
 	currentPlan,
 	customize,
 }: {
-	/** The plan being changed (`currentPlanFromPreview`), or null for a fresh
-	 * attach where nothing is current. */
 	currentPlan: unknown;
 	customize: unknown;
 }): CustomizeChange[] => {
@@ -177,7 +156,6 @@ export const buildCustomizeChanges = ({
 	];
 };
 
-/** "$80.00 per month" for a base-price shape, or null when there is no amount. */
 export const customPriceText = (value: unknown): string | null => {
 	const price = asRecord(value);
 	const amount = getNumber(price?.amount);
@@ -190,7 +168,6 @@ export const customPriceText = (value: unknown): string | null => {
 	return `${formatMoney({ amount, currency: getString(price.currency) })}${cadence}`;
 };
 
-/** "14-day free trial" for a trial shape, or null when there is no length. */
 export const freeTrialText = (value: unknown): string | null => {
 	const trial = asRecord(value);
 	const length = getNumber(trial?.duration_length);

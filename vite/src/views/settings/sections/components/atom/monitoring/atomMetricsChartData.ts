@@ -32,7 +32,6 @@ const TICK_STEPS_MS = [
 ];
 const MAX_TICKS = 6;
 
-/** The finest round step that labels the span in at most six ticks. */
 const tickStepFor = (spanMs: number) =>
 	TICK_STEPS_MS.find((stepMs) => spanMs / stepMs <= MAX_TICKS) ?? DAY_MS;
 
@@ -42,22 +41,18 @@ type AtomTrafficValues = {
 	pushes: number | null;
 };
 
-/** CPU and memory are averages under either statistic. */
 export type AtomMetricsValues = AtomTrafficValues & {
 	cpu: number | null;
 	memory: number | null;
 };
 
-/** One period from `at` to `endAt`, plotted at its midpoint `x` so a bar spans exactly its period. */
 export type AtomMetricsRow = AtomMetricsValues & {
 	at: number;
 	endAt: number;
 	x: number;
-	/** Both statistics' values for the hover; the row's own are the chosen statistic's. */
 	statistics: Record<AtomMetricsStatistic, AtomMetricsValues>;
 };
 
-/** The last minute's traffic. */
 export type AtomMetricsReading = AtomTrafficValues & { at: number };
 
 export type AtomMetricsSeries = {
@@ -68,23 +63,19 @@ export type AtomMetricsSeries = {
 
 export type AtomMetricsChartData = {
 	rows: AtomMetricsRow[];
-	/** The latest period. */
 	latest: AtomMetricsRow;
-	/** The last minute, whichever statistic is chosen. */
 	now: AtomMetricsReading | null;
 	timeAxis: {
 		domain: [number, number];
 		ticks: number[];
 		formatTick: (x: number) => string;
 	};
-	/** When the last period with any requests ended; null when none in the plotted span. */
 	lastTrafficAt: number | null;
 };
 
 const localOffsetMs = (at: number) =>
 	-new Date(at).getTimezoneOffset() * MINUTE_MS;
 
-/** Ticks on round local times, e.g. every 3 hours from midnight. */
 const roundLocalTicks = ({
 	from,
 	to,
@@ -114,7 +105,6 @@ export const requestsOf = (
 
 const hasRequests = (row: AtomMetricsRow) => requestsOf(row) > 0;
 
-/** Every period from the range's start, or the Atom's first period if later; one it logged nothing in stays null, so lines break. */
 export const toAtomMetricsChartData = ({
 	points,
 	latest,

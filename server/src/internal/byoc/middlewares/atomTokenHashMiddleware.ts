@@ -3,7 +3,6 @@ import type { MiddlewareHandler } from "hono";
 import { cacheDeploymentRepo } from "../repos/cacheDeploymentRepo.js";
 import type { AtomHonoEnv } from "../types/atomHonoEnv.js";
 
-/** An org's Atom proves itself by its token hash rather than a key or session; its org and env come from that alone. */
 export const atomTokenHashMiddleware: MiddlewareHandler<AtomHonoEnv> = async (
 	c,
 	next,

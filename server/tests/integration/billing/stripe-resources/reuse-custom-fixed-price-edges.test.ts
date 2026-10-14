@@ -1,16 +1,3 @@
-/**
- * Attach-level miss cases for custom fixed Stripe reuse.
- *
- * Query-level EUR / interval / other product.id coverage lives in
- * find-newest-reusable-fixed-price.test.ts (#5). These prove the
- * attach path also misses when Stripe is dead or the shape diverges.
- *
- * Contract:
- *   borrowed Stripe inactive → B mints a new id
- *   monthly $40 vs yearly $40 → different ids
- *   Pro $40 must not take Premium $40
- */
-
 import { test } from "bun:test";
 import type { AttachParamsV1Input } from "@autumn/shared";
 import { itemsV2 } from "@tests/utils/fixtures/itemsV2";

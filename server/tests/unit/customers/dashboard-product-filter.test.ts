@@ -38,8 +38,6 @@ describe("dashboard product filters", () => {
 			}),
 		);
 
-		// Without org scope the plan id resolves through the products join,
-		// never the denormalized customer_products.product_id snapshot.
 		expect(normalize(query)).toContain("p_dash.id = $3");
 		expect(normalize(query)).toContain("cp_dash.is_custom = true");
 		expect(normalize(query)).toContain("JOIN products p_dash");

@@ -1,28 +1,3 @@
-/**
- * Benchmarks a FULL chunked migration run — the layer above benchRunMigration,
- * which drives single pages. Covers the chunk loop (cursor handoff, budget
- * accounting, cancel checks) that nothing else measures.
- *
- * Two modes share one code path, one seed and one report so numbers compare:
- *
- *   --mode inline   (default) chunks run in-process. Fast, low-noise; use this
- *                   to iterate on chunk/page performance.
- *   --mode trigger  chunks run as real runMigrationChunkTask invocations on
- *                   your local `trigger.dev dev` worker, via runMigrationTask.
- *                   Validates the end-to-end path; slower and noisier.
- *
- *   bun tests/perf/batch-migrations/benchChunkedRun.ts
- *   bun tests/perf/batch-migrations/benchChunkedRun.ts --migration bench-mig-bench-paid-words
- *   bun tests/perf/batch-migrations/benchChunkedRun.ts --mode trigger --migration bench-mig-bench-paid-words
- *   bun tests/perf/batch-migrations/benchChunkedRun.ts --pages-per-chunk 5
- *
- * --pages-per-chunk overrides BATCH_MIGRATION_PAGES_PER_CHUNK for the run so
- * the chunk boundary can be swept without editing source (inline mode only —
- * trigger mode's chunk size lives in the task's own process).
- *
- * Reverts with revertBenchMigrations.ts. Requires seedBatchBench.ts first.
- */
-
 import type { Migration } from "@autumn/shared";
 import { sql } from "drizzle-orm";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
@@ -43,7 +18,6 @@ import {
 
 const DEFAULT_MIGRATION_ID = "bench-mig-bench-free-words";
 
-/** How long to wait for a dev worker to pick the run up before giving up. */
 const PICKUP_TIMEOUT_MS = 90_000;
 
 const parseArgs = () => {
@@ -82,7 +56,6 @@ type ChunkTiming = {
 	completion: string;
 };
 
-/** Bench-added rows only; seeded ce_bench_* rows are never touched. */
 const resetBenchRows = async ({ ctx }: { ctx: AutumnContext }) => {
 	const startedAt = Date.now();
 	await ctx.db.execute(sql`
@@ -110,8 +83,6 @@ const aggregatePhases = ({
 	}
 };
 
-/** In-process chunk runner: same function runMigrationChunkTask calls, minus
- * the queue — so chunk-loop cost is measured without scheduling noise. */
 const runInlineMode = async ({
 	ctx,
 	migration,
@@ -157,8 +128,6 @@ const runInlineMode = async ({
 			);
 			return chunk;
 		},
-		// Per-customer lane should never engage for a batch-eligible migration;
-		// fail loudly rather than silently benchmarking the wrong lane.
 		runChunk: async (payload: RunMigrationChunkPayload) => {
 			throw new Error(
 				`bench: per-customer lane engaged at chunk ${payload.chunkIndex} — this ` +
@@ -172,10 +141,6 @@ const runInlineMode = async ({
 	return { result, chunkTimings, phases };
 };
 
-/** Real trigger path: claims the run row then triggers runMigrationTask
- * exactly as handleRunMigration does, and polls migration_runs to completion.
- * The claim is what creates the row the task later updates — triggering
- * without it leaves the task updating a row that does not exist. */
 const runTriggerMode = async ({
 	ctx,
 	migration,
@@ -273,8 +238,6 @@ const runTriggerMode = async ({
 			);
 		}
 
-		// `queued` is pre-pickup, not terminal — keep polling until the worker
-		// takes it, otherwise a slow dev worker reads as an instant finish.
 		if (run && run.status !== "running" && run.status !== "queued") {
 			return {
 				status: run.status,
@@ -359,7 +322,6 @@ const main = async () => {
 			totalMs > 0 ? (((totalMs - chunkMs) / totalMs) * 100).toFixed(1) : 0
 		}% — prepare + lane decision + cursor handoff)`,
 	);
-	// finalize is a PARENT of finalize_caches/finalize_events — do not sum.
 	if (phaseBreakdown) console.log(`bench: phases: ${phaseBreakdown}`);
 	process.exit(0);
 };

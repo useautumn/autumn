@@ -7,7 +7,6 @@ import { updateBalanceParamsToCommand } from "./updateBalanceParamsToCommand.js"
 
 type QueueClient = Pick<BalanceWorkerClient, "queue">;
 
-/** The async contract on the worker path, as track's: the command is appended to the command log and nobody waits. */
 export const runBalanceWorkerAsyncUpdateBalance = async ({
 	ctx,
 	params,
@@ -19,7 +18,6 @@ export const runBalanceWorkerAsyncUpdateBalance = async ({
 	targetBalance?: number;
 	client?: QueueClient;
 }): Promise<void> => {
-	// The worker holds the write once it consumes the command; the route's refresh would evict ahead of it.
 	ctx.testOptions = { ...ctx.testOptions, skipCacheDeletion: true };
 	try {
 		await client.queue.updateBalance({

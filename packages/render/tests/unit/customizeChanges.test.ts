@@ -4,10 +4,6 @@ import {
 	customizeNeedsCurrentPlan,
 } from "../../src/billing/customizeChanges.js";
 
-// Every change is an add or a remove — the verb is a property of the diff
-// against the customer's current plan, never a hardcoded label. That is the
-// model the dashboard renders, and Slack must render the same one.
-
 const currentPlan = {
 	id: "enterprise",
 	items: [
@@ -100,8 +96,6 @@ describe("buildCustomizeChanges — items", () => {
 		]);
 	});
 
-	// A remove_items entry is a filter. The quantity being removed is whatever
-	// the customer currently holds, resolved from the current plan.
 	test("remove_items resolve the removed quantity from the current plan", () => {
 		expect(
 			buildCustomizeChanges({
@@ -195,8 +189,6 @@ describe("buildCustomizeChanges — ordering", () => {
 });
 
 describe("buildCustomizeChanges — remove filter matching", () => {
-	// An item that omits interval_count means 1; a filter that says 1 explicitly
-	// must still match it, or the remove row loses the quantity being removed.
 	test("a filter with interval_count 1 matches an item that omits it", () => {
 		expect(
 			buildCustomizeChanges({
@@ -302,8 +294,6 @@ describe("buildCustomizeChanges — free trial", () => {
 	});
 });
 
-// Callers use this to decide whether to fetch the current plan at all; a miss
-// here silently degrades every remove row above into an add-only diff.
 describe("customizeNeedsCurrentPlan", () => {
 	test("true for every customize shape that diffs against the current plan", () => {
 		expect(customizeNeedsCurrentPlan({ price: { amount: 40 } })).toBe(true);

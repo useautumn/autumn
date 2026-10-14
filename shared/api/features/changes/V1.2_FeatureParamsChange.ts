@@ -9,28 +9,6 @@ import { featureV0ToV1Type } from "../../../utils/featureUtils/convertFeatureUti
 import { CreateFeatureV1ParamsSchema } from "../crud/createFeatureParams.js";
 import { CreateFeatureV0ParamsSchema } from "../prevVersions/featureV0OpModels.js";
 
-/**
- * V1_2_FeatureParamsChange: Transforms feature params between V0 and V1
- *
- * Applied when: targetVersion <= V1_Beta
- *
- * Breaking changes introduced in V1_2:
- *
- * 1. Type enum changes:
- *    - V0: Uses ApiFeatureType (static, boolean, single_use, continuous_use, credit_system)
- *    - V1: Uses FeatureType (boolean, metered, credit_system)
- *
- * 2. New fields in V1:
- *    - `consumable`: Required for metered features
- *    - `event_names`: Optional array of event names
- *
- * 3. Type mapping:
- *    - V0 single_use → V1 metered (consumable: true)
- *    - V0 continuous_use → V1 metered (consumable: false)
- *    - V0 static (legacy) → V1 boolean
- */
-
-// Create Feature Change
 export const V1_2_CreateFeatureChange = defineVersionChange({
 	name: "V1_2 Create Feature Change",
 	newVersion: ApiVersion.V2_0,
@@ -45,7 +23,6 @@ export const V1_2_CreateFeatureChange = defineVersionChange({
 	affectsRequest: true,
 	affectsResponse: false,
 
-	// Request: V0 → V1 (old format to new)
 	transformRequest: ({
 		ctx: _ctx,
 		input,

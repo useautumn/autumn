@@ -16,8 +16,6 @@ import { buildCatalogUpdatePlans } from "@/views/products/plan/catalog/buildUpda
 import { applySheetItemEdit } from "@/views/products/plan/utils/applySheetItemEdit";
 import { addTier } from "@/views/products/plan/utils/tierUtils";
 
-// ProductSheets' feature-sheet setter: adding a second tier must drop threshold billing before save.
-
 const features: Feature[] = [
 	{
 		internal_id: "fe_messages",

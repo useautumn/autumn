@@ -12,16 +12,12 @@ import type { PartitionProcessorScope } from "../types/partitionProcessor.js";
 import type { HeldBlocker } from "../writer/types/partitionWriter.js";
 import { type DecidedAgainst, mutateTrack, toTrackReply } from "./track.js";
 
-/** A track answered inline: its reply bytes, released once the partition's commit position reaches `seq`. */
 export type InlineTrackOutcome = {
 	body: string;
-	/** The reply `body` serializes, for the request log; absent for a retry of a write in flight. */
 	reply?: TrackReply;
-	/** 0 when the reply may go out at once. */
 	seq: number;
 };
 
-/** Why a track needs the ordinary path: a lock waits for the store, and the rest need the asynchronous ensure. */
 export type InlineTrackRefusal = "lock" | ResidentViewRefusal;
 
 export function inlineTrackRefusalOf({
@@ -39,12 +35,10 @@ export function inlineTrackRefusalOf({
 	});
 }
 
-/** Decided now, reply held by commit position; refused hands it to `track`, saying why. */
 export type InlineTrackDecision =
 	| ({ kind: "decided" } & InlineTrackOutcome)
 	| { kind: "refused"; reason: InlineTrackRefusal | HeldBlocker };
 
-/** A track decided synchronously against a resident, current subject; errors are the ones `track` raises. */
 export function trackInline({
 	scope,
 	command,
@@ -59,7 +53,6 @@ export function trackInline({
 	return { kind: "decided", ...outcome };
 }
 
-/** The held decide itself, for a command `inlineTrackRefusalOf` already cleared. */
 export function decideTrackHeld({
 	scope,
 	command,

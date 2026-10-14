@@ -10,7 +10,6 @@ import {
 export const checkParamsSchema = z.object({
 	org: commandOrgSchema,
 	featureId: nonEmptyStringSchema,
-	/** The feature's catalog internal id; credit usage is attributed under it. */
 	internalFeatureId: nonEmptyStringSchema,
 	requiredBalance: finiteNumberSchema,
 	properties: propertiesSchema,

@@ -2,7 +2,6 @@ import { topicName } from "./primitives.js";
 
 const LOCAL_DEPLOYMENT = "local";
 
-/** The one name a server and its workers share; every Kafka name derives from it. */
 export function getBalanceWorkerDeployment({
 	runtimeEnv,
 }: {
@@ -25,7 +24,6 @@ export function balanceWorkerDeploymentToKafkaNames({
 	ownershipTopic: string;
 	commandTopic: string;
 	catalogInvalidationTopic: string;
-	/** The base group name; a worker on ECS suffixes it with its fleet id so the two Flightcontrol fleets never share a group. */
 	consumerGroup: string;
 } {
 	return {

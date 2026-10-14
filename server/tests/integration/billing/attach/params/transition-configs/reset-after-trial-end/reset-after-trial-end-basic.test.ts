@@ -1,15 +1,3 @@
-/**
- * reset_after_trial_end Basic Tests (Attach V2)
- *
- * Tests for the reset_after_trial_end transition config parameter.
- *
- * Key behaviors:
- * - reset_after_trial_end: true → billing cycle starts AFTER trial ends (next_reset_at = trial_end + 30 days)
- * - reset_after_trial_end: false (default) → reset happens at trial end (next_reset_at = trial_end)
- * - Config is per-feature, applied at attach time only
- * - If no trial, the config has no effect (billing cycle starts from now)
- */
-
 import { test } from "bun:test";
 import { type ApiCustomerV3, ms } from "@autumn/shared";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
@@ -22,19 +10,6 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { addMonths } from "date-fns";
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 1: reset_after_trial_end: true - billing cycle starts after trial
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Product has 7-day trial + monthly messages
- * - Attach with reset_after_trial_end: true for messages
- *
- * Expected Result:
- * - next_reset_at = advancedTo + 7 days + 30 days (billing cycle starts AFTER trial)
- * - NOT advancedTo + 7 days (trial end)
- */
 test.concurrent(`${chalk.yellowBright("reset-after-trial-end 1: true - billing cycle starts after trial")}`, async () => {
 	const customerId = "reset-trial-end-true";
 
@@ -55,7 +30,6 @@ test.concurrent(`${chalk.yellowBright("reset-after-trial-end 1: true - billing c
 		actions: [],
 	});
 
-	// Attach with reset_after_trial_end: true
 	await autumnV1.billing.attach({
 		customer_id: customerId,
 		product_id: proTrial.id,
@@ -67,7 +41,6 @@ test.concurrent(`${chalk.yellowBright("reset-after-trial-end 1: true - billing c
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Verify product is active and trialing
 	await expectProductActive({ customer, productId: proTrial.id });
 	await expectProductTrialing({
 		customer,
@@ -75,7 +48,6 @@ test.concurrent(`${chalk.yellowBright("reset-after-trial-end 1: true - billing c
 		trialEndsAt: advancedTo + ms.days(7),
 	});
 
-	// Verify next_reset_at is trial end + 1 month (billing cycle starts AFTER trial)
 	expectCustomerFeatureCorrect({
 		customer,
 		featureId: TestFeature.Messages,
@@ -86,19 +58,6 @@ test.concurrent(`${chalk.yellowBright("reset-after-trial-end 1: true - billing c
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 2: No transition_rules - reset at trial end (default behavior)
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Product has 7-day trial + monthly messages
- * - Attach WITHOUT transition_rules (default behavior)
- *
- * Expected Result:
- * - next_reset_at = advancedTo + 7 days (trial end)
- * - Default: feature NOT in reset_after_trial_end array
- */
 test.concurrent(`${chalk.yellowBright("reset-after-trial-end 2: no transition_rules - reset at trial end")}`, async () => {
 	const customerId = "reset-trial-end-false";
 
@@ -119,17 +78,14 @@ test.concurrent(`${chalk.yellowBright("reset-after-trial-end 2: no transition_ru
 		actions: [],
 	});
 
-	// Attach with reset_after_trial_end: false (omit from transition_rules)
 	await autumnV1.billing.attach({
 		customer_id: customerId,
 		product_id: proTrial.id,
 		redirect_mode: "if_required",
-		// No transition_rules = default behavior (reset at trial end)
 	});
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Verify product is active and trialing
 	await expectProductActive({ customer, productId: proTrial.id });
 	await expectProductTrialing({
 		customer,
@@ -137,30 +93,16 @@ test.concurrent(`${chalk.yellowBright("reset-after-trial-end 2: no transition_ru
 		trialEndsAt: advancedTo + ms.days(7),
 	});
 
-	// Verify next_reset_at at trial end (default behavior)
 	expectCustomerFeatureCorrect({
 		customer,
 		featureId: TestFeature.Messages,
 		includedUsage: 500,
 		balance: 500,
 		usage: 0,
-		resetsAt: advancedTo + ms.days(7), // Trial end
+		resetsAt: advancedTo + ms.days(7),
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 3: Empty options array - reset at trial end (default behavior)
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Product has 7-day trial + monthly messages
- * - Attach WITHOUT any options array
- *
- * Expected Result:
- * - Default behavior (reset at trial end)
- * - next_reset_at = advancedTo + 7 days (trial end)
- */
 test.concurrent(`${chalk.yellowBright("reset-after-trial-end 3: no options - reset at trial end")}`, async () => {
 	const customerId = "reset-trial-end-default";
 
@@ -181,17 +123,14 @@ test.concurrent(`${chalk.yellowBright("reset-after-trial-end 3: no options - res
 		actions: [],
 	});
 
-	// Attach WITHOUT reset_after_trial_end config
 	await autumnV1.billing.attach({
 		customer_id: customerId,
 		product_id: proTrial.id,
 		redirect_mode: "if_required",
-		// No options array - default behavior
 	});
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Verify product is active and trialing
 	await expectProductActive({ customer, productId: proTrial.id });
 	await expectProductTrialing({
 		customer,
@@ -199,30 +138,16 @@ test.concurrent(`${chalk.yellowBright("reset-after-trial-end 3: no options - res
 		trialEndsAt: advancedTo + ms.days(7),
 	});
 
-	// Verify next_reset_at at trial end (default = false)
 	expectCustomerFeatureCorrect({
 		customer,
 		featureId: TestFeature.Messages,
 		includedUsage: 500,
 		balance: 500,
 		usage: 0,
-		resetsAt: advancedTo + ms.days(7), // Default: trial end
+		resetsAt: advancedTo + ms.days(7),
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 4: reset_after_trial_end: true but no trial - no effect
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Product has NO trial + monthly messages
- * - Attach with reset_after_trial_end: true for messages
- *
- * Expected Result:
- * - Since there's no trial, the config has no effect
- * - next_reset_at = advancedTo + 30 days (normal billing cycle)
- */
 test.concurrent(`${chalk.yellowBright("reset-after-trial-end 4: true but no trial - no effect")}`, async () => {
 	const customerId = "reset-trial-end-no-trial";
 
@@ -241,7 +166,6 @@ test.concurrent(`${chalk.yellowBright("reset-after-trial-end 4: true but no tria
 		actions: [],
 	});
 
-	// Attach with reset_after_trial_end: true (but product has no trial)
 	await autumnV1.billing.attach({
 		customer_id: customerId,
 		product_id: pro.id,
@@ -253,33 +177,18 @@ test.concurrent(`${chalk.yellowBright("reset-after-trial-end 4: true but no tria
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Verify product is active (no trial)
 	await expectProductActive({ customer, productId: pro.id });
 
-	// Verify next_reset_at at billing cycle (no trial, config has no effect)
 	expectCustomerFeatureCorrect({
 		customer,
 		featureId: TestFeature.Messages,
 		includedUsage: 500,
 		balance: 500,
 		usage: 0,
-		resetsAt: addMonths(advancedTo, 1).getTime(), // Billing cycle (no trial)
+		resetsAt: addMonths(advancedTo, 1).getTime(),
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 5: reset_after_trial_end: per-feature config
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Product has 7-day trial + monthly messages + monthly words
- * - Attach with reset_after_trial_end: [messages] (only messages, not words)
- *
- * Expected Result:
- * - messages next_reset_at = advancedTo + 7 days + 30 days (trial end + cycle)
- * - words next_reset_at = advancedTo + 7 days (trial end) - not in array, uses default
- */
 test.concurrent(`${chalk.yellowBright("reset-after-trial-end 5: per-feature config")}`, async () => {
 	const customerId = "reset-trial-end-per-feature";
 
@@ -301,19 +210,17 @@ test.concurrent(`${chalk.yellowBright("reset-after-trial-end 5: per-feature conf
 		actions: [],
 	});
 
-	// Attach with reset_after_trial_end only for messages (not words)
 	await autumnV1.billing.attach({
 		customer_id: customerId,
 		product_id: proTrial.id,
 		redirect_mode: "if_required",
 		transition_rules: {
-			reset_after_trial_end: [TestFeature.Messages], // Only messages, not words
+			reset_after_trial_end: [TestFeature.Messages],
 		},
 	});
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Verify product is active and trialing
 	await expectProductActive({ customer, productId: proTrial.id });
 	await expectProductTrialing({
 		customer,
@@ -321,7 +228,6 @@ test.concurrent(`${chalk.yellowBright("reset-after-trial-end 5: per-feature conf
 		trialEndsAt: advancedTo + ms.days(7),
 	});
 
-	// Verify messages resets at trial end + 1 month (billing cycle after trial)
 	expectCustomerFeatureCorrect({
 		customer,
 		featureId: TestFeature.Messages,
@@ -331,31 +237,16 @@ test.concurrent(`${chalk.yellowBright("reset-after-trial-end 5: per-feature conf
 		resetsAt: addMonths(advancedTo + ms.days(7), 1).getTime(),
 	});
 
-	// Verify words resets at trial end
 	expectCustomerFeatureCorrect({
 		customer,
 		featureId: TestFeature.Words,
 		includedUsage: 1000,
 		balance: 1000,
 		usage: 0,
-		resetsAt: advancedTo + ms.days(7), // Trial end
+		resetsAt: advancedTo + ms.days(7),
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 6: reset_after_trial_end on upgrade with trial
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Customer has free product
- * - Upgrade to proWithTrial (7-day trial)
- * - Pass reset_after_trial_end: true
- *
- * Expected Result:
- * - Config is applied at upgrade time
- * - next_reset_at = advancedTo + 7 days + 30 days (trial end + billing cycle)
- */
 test.concurrent(`${chalk.yellowBright("reset-after-trial-end 6: upgrade with trial + config")}`, async () => {
 	const customerId = "reset-trial-end-upgrade";
 
@@ -382,12 +273,10 @@ test.concurrent(`${chalk.yellowBright("reset-after-trial-end 6: upgrade with tri
 		actions: [s.billing.attach({ productId: free.id })],
 	});
 
-	// Verify initial state on free product
 	const customerBefore =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	await expectProductActive({ customer: customerBefore, productId: free.id });
 
-	// Upgrade to pro with trial and reset_after_trial_end: true
 	await autumnV1.billing.attach({
 		customer_id: customerId,
 		product_id: proTrial.id,
@@ -399,7 +288,6 @@ test.concurrent(`${chalk.yellowBright("reset-after-trial-end 6: upgrade with tri
 
 	const customerAfter = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Verify upgraded to pro with trial
 	await expectProductActive({
 		customer: customerAfter,
 		productId: proTrial.id,
@@ -410,7 +298,6 @@ test.concurrent(`${chalk.yellowBright("reset-after-trial-end 6: upgrade with tri
 		trialEndsAt: advancedTo + ms.days(7),
 	});
 
-	// Verify next_reset_at is trial end + 1 month (config applied at upgrade)
 	expectCustomerFeatureCorrect({
 		customer: customerAfter,
 		featureId: TestFeature.Messages,
@@ -421,19 +308,6 @@ test.concurrent(`${chalk.yellowBright("reset-after-trial-end 6: upgrade with tri
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 7: reset_after_trial_end: true with long trial (60 days > 1 month cycle)
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Product has 60-day trial (longer than monthly billing cycle)
- * - Attach with reset_after_trial_end: true
- *
- * Expected Result:
- * - next_reset_at = trial_end + 1 month (60 days + ~30 days)
- * - The billing cycle starts AFTER the long trial ends
- */
 test.concurrent(`${chalk.yellowBright("reset-after-trial-end 7: true with long trial (60 days)")}`, async () => {
 	const customerId = "reset-trial-end-long-trial";
 
@@ -441,7 +315,7 @@ test.concurrent(`${chalk.yellowBright("reset-after-trial-end 7: true with long t
 	const proLongTrial = products.proWithTrial({
 		id: "pro-long-trial",
 		items: [messagesItem],
-		trialDays: 60, // 60-day trial (longer than 1 month cycle)
+		trialDays: 60,
 		cardRequired: true,
 	});
 
@@ -454,7 +328,6 @@ test.concurrent(`${chalk.yellowBright("reset-after-trial-end 7: true with long t
 		actions: [],
 	});
 
-	// Attach with reset_after_trial_end: true
 	await autumnV1.billing.attach({
 		customer_id: customerId,
 		product_id: proLongTrial.id,
@@ -466,7 +339,6 @@ test.concurrent(`${chalk.yellowBright("reset-after-trial-end 7: true with long t
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Verify product is active and trialing
 	await expectProductActive({ customer, productId: proLongTrial.id });
 	await expectProductTrialing({
 		customer,
@@ -475,7 +347,6 @@ test.concurrent(`${chalk.yellowBright("reset-after-trial-end 7: true with long t
 		toleranceMs: ms.hours(3),
 	});
 
-	// Verify next_reset_at is trial end (60 days) + 1 month
 	expectCustomerFeatureCorrect({
 		customer,
 		featureId: TestFeature.Messages,

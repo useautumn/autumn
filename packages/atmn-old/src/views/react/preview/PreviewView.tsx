@@ -12,22 +12,17 @@ interface PreviewViewProps {
 	currency?: string;
 }
 
-/**
- * Preview view displaying all plans in titled cards with matching widths
- */
 export function PreviewView({
 	plans,
 	features,
 	currency = "USD",
 }: PreviewViewProps) {
-	// Generate previews for all plans
 	const previews: PlanPreview[] = useMemo(() => {
 		return plans.map((plan) =>
 			getPlanPreview({ plan, features, currency })
 		);
 	}, [plans, features, currency]);
 
-	// Calculate the maximum width needed across all cards
 	const sharedWidth = useMemo(() => {
 		let maxWidth = MIN_CARD_WIDTH;
 		for (const preview of previews) {

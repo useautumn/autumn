@@ -1,6 +1,3 @@
-/** Deferred update-balance jobs execute through the V2 core without invalidating its cached subject.
- * Transient database and Redis failures keep the SQS message available for retry. */
-
 import { beforeEach, describe, expect, mock, test } from "bun:test";
 import { AppEnv } from "@autumn/shared";
 import type { Message } from "@aws-sdk/client-sqs";
@@ -39,8 +36,6 @@ await mockModuleWithRestore(
 		getOrSetCachedFullSubject: async (args: Record<string, unknown>) => {
 			state.getFullSubjectCalls.push(args);
 			return {
-				// Carries a live `messages` balance so the update core reaches
-				// updateRemainingV2 instead of the "no such balance" guard.
 				customer_products: [
 					{
 						status: "active",
@@ -105,7 +100,6 @@ await mockModuleWithRestore(
 	() => ({ updateExpiresAtV2: async () => {} }),
 );
 
-// The legacy lane is what these cases pin; the worker lane has its own suites.
 await mockModuleWithRestore(
 	"@/internal/misc/rollouts/isBalanceWorkerRolloutEnabled.js",
 	() => ({ isBalanceWorkerRolloutEnabled: () => false }),

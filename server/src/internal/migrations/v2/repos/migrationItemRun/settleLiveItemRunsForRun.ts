@@ -2,9 +2,6 @@ import { MigrationItemRunStatus, migrationItemRuns } from "@autumn/shared";
 import { and, eq } from "drizzle-orm";
 import type { RepoContext } from "@/db/repoContext.js";
 
-/** Flip a run's leftover `running` claims to `failed` when the run settles.
- * Without this, a dead run's claims hold the live-item mutex forever and
- * block every other migration on those items. */
 export const settleLiveItemRunsForRun = async ({
 	ctx,
 	migrationRunId,

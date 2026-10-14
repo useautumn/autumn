@@ -5,7 +5,6 @@ import { useAxiosInstance } from "@/services/useAxiosInstance";
 
 export type ApiKeysLastUsed = {
 	isLoading: boolean;
-	/** False when usage data couldn't be read, so absence can't mean "unused". */
 	isAvailable: boolean;
 	lastUsed: Record<string, number>;
 };

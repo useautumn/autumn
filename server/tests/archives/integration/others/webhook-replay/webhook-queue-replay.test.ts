@@ -1,23 +1,3 @@
-/**
- * End-to-end test for the Stripe webhook SQS replay path.
- *
- * Uses an EARLY-ACKED event (invoice.updated) on purpose: the failed
- * delivery was acked 200, so Stripe never redelivers — the queued replay job
- * is provably the ONLY recovery path (unlike sync-acked events, where
- * Stripe-side redelivery would race the queue).
- *
- * Contract under test:
- *   - Invoice-mode attach leaves an open Autumn invoice mirroring Stripe.
- *   - The invoice is voided externally in Stripe while carrying the
- *     `test_webhook_fail` marker: the invoice.updated webhook fails in the
- *     background after its early 200, so Autumn's invoice stays "open" —
- *     deterministic drift, held open until replayed.
- *   - A JobName.StripeWebhookReplay job — the same payload the server
- *     enqueues on early-ack failure — is consumed by the REAL worker process
- *     off SQS (primary dev queue; processMessage dispatches the job
- *     regardless of queue) and syncs the invoice to "void".
- */
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3 } from "@autumn/shared";
 import { stripeRefToId } from "@autumn/shared";
@@ -32,7 +12,6 @@ import { JobName } from "@/queue/JobName";
 import { addTaskToQueue } from "@/queue/queueUtils";
 
 const POLL_INTERVAL_MS = 500;
-// Generous: Stripe's events API is eventually consistent and can lag.
 const POLL_TIMEOUT_MS = 60_000;
 
 const waitFor = async <T>({
@@ -53,7 +32,6 @@ const waitFor = async <T>({
 	}
 };
 
-// Early-acked failures return 200 — all deliveries settle well within this.
 const FAILED_DELIVERY_SETTLE_MS = 8_000;
 
 test.concurrent(
@@ -79,7 +57,6 @@ test.concurrent(
 			],
 		});
 
-		// ── 1. Invoice-mode attach → active product + open invoice ────
 		const customerAfterAttach =
 			await autumnV1.customers.get<ApiCustomerV3>(customerId);
 		const openInvoice = customerAfterAttach.invoices?.[0];
@@ -88,11 +65,6 @@ test.concurrent(
 		}
 		expect(openInvoice.status).toBe("open");
 
-		// ── 2. Arm the injection, then void the invoice in Stripe. The
-		// resulting invoice.updated is early-acked (200) and its background
-		// processing fails — Stripe will never redeliver. The outage SWITCH
-		// lives on the customer's metadata (marker value "customer"), so
-		// flipping it later emits no self-healing invoice events. ──────
 		const stripeInvoice = await ctx.stripeCli.invoices.retrieve(
 			openInvoice.stripe_id,
 		);
@@ -109,16 +81,12 @@ test.concurrent(
 		});
 		await ctx.stripeCli.invoices.voidInvoice(openInvoice.stripe_id);
 
-		// ── 3. Deterministic drift: Stripe says void, Autumn still open ──
 		await timeout(FAILED_DELIVERY_SETTLE_MS);
 
 		const customerDuringOutage =
 			await autumnV1.customers.get<ApiCustomerV3>(customerId);
 		expect(customerDuringOutage.invoices?.[0]?.status).toBe("open");
 
-		// ── 4. End the outage via the customer switch (emits only a benign
-		// customer.updated — no invoice event that could heal the drift),
-		// then grab the failed event from Stripe ──────────────────────
 		await ctx.stripeCli.customers.update(stripeCustomerId, {
 			metadata: { test_webhook_fail: "" },
 		});
@@ -139,8 +107,6 @@ test.concurrent(
 			},
 		});
 
-		// ── 5. Recover via the QUEUE: same job the server enqueues on
-		// early-ack failure; the dev worker process consumes it. ──────
 		await addTaskToQueue({
 			jobName: JobName.StripeWebhookReplay,
 			payload: {
@@ -152,7 +118,6 @@ test.concurrent(
 			},
 		});
 
-		// ── 6. Worker replay synced the invoice to void ───────────────
 		await waitFor({
 			description: "Autumn invoice syncing to void via worker replay job",
 			fetch: async () => {
@@ -165,7 +130,6 @@ test.concurrent(
 			},
 		});
 
-		// Product untouched — the replay only synced invoice state.
 		const customerAfterReplay =
 			await autumnV1.customers.get<ApiCustomerV3>(customerId);
 		await expectProductActive({

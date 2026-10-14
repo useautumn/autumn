@@ -21,13 +21,6 @@ const isQuantifierObject = (
 	value !== null &&
 	("$some" in value || "$every" in value || "$none" in value);
 
-/**
- * Filter-level guard. Pushes `custom: false` down into the customer-scope
- * plan filter whenever any update_plan op bumps `version`, so the SQL
- * query that pulls candidate customers never even fetches admin-customized
- * cusProducts. Same opt-out as the op-level hook: if the caller already
- * specified a `custom` predicate, leave it alone.
- */
 export const preProcessMigrationFilter = ({
 	operations,
 	filter,

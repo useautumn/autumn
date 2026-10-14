@@ -1,17 +1,3 @@
-/**
- * Immediate Switch Prepaid Tests (Attach V2)
- *
- * Tests for upgrades involving prepaid features.
- *
- * IMPORTANT: Immediate switch always involves a DIFFERENT product.
- * You cannot update quantity on the same product via attach.
- *
- * Key behaviors:
- * - Prepaid items require options with quantity
- * - Quantity represents actual units, not packs
- * - Upgrading calculates price difference (refund old + charge new)
- */
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3 } from "@autumn/shared";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
@@ -23,19 +9,6 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 1: Free to Pro with prepaid (quantity 0)
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Free product
- * - Upgrade to pro with prepaid, quantity 0
- *
- * Expected Result:
- * - Only base price charged ($20)
- * - Balance = 0
- */
 test.concurrent(
 	`${chalk.yellowBright("immediate-switch-prepaid 1: free to pro with prepaid, quantity 0")}`,
 	async () => {
@@ -66,7 +39,6 @@ test.concurrent(
 			actions: [s.billing.attach({ productId: free.id })],
 		});
 
-		// 1. Preview upgrade
 		const preview = await autumnV1.billing.previewAttach({
 			customer_id: customerId,
 			product_id: pro.id,
@@ -74,7 +46,6 @@ test.concurrent(
 		});
 		expect(preview.total).toBe(20);
 
-		// 2. Attach pro
 		await autumnV1.billing.attach({
 			customer_id: customerId,
 			product_id: pro.id,

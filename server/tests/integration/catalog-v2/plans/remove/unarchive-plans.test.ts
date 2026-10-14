@@ -1,11 +1,3 @@
-/**
- * catalogV2.update — unarchive width.
- *
- * Archiving goes through `remove_plans` and hits every version, so an unarchive
- * must say `versioning: "all_versions"` to come back symmetric. Default width
- * stays latest-only.
- */
-
 import { test } from "bun:test";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
@@ -17,7 +9,6 @@ import {
 	expectDbPlansCorrect,
 } from "../utils/expectCatalogPlans.js";
 
-/** Two versions, both archived — a customer ref forces archive over delete. */
 const seedArchivedTwoVersionPlan = async ({
 	autumn,
 	ctx,

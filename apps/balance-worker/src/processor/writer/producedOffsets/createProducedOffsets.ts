@@ -1,14 +1,3 @@
-/**
- * The log offsets this process's writer produced for one partition. The
- * partition's consumer reads its own writes back off the topic; an offset
- * remembered here was projected and queued for the store by the writer that
- * produced it, so the consumer can pass it without parsing the record again.
- *
- * Offsets arrive at the consumer in order, so ranges below the offset it just
- * asked about are dropped as it goes; the structure stays a handful of ranges.
- * A fresh runtime starts empty, so after recovery or a handover every record is
- * read the ordinary way.
- */
 export type ProducedOffsets = {
 	remember(range: { from: bigint; to: bigint }): void;
 	has(position: { offset: bigint }): boolean;

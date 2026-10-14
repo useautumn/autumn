@@ -1,16 +1,4 @@
 import { performMaximumClearing } from "@autumn/shared";
-/**
- * Unit test for performMaximumClearing entity-mode cap enforcement.
- *
- * Red-failure mode (current behavior):
- *  - When the excess is spread across multiple rollover rows for one entity,
- *    entityIdToTotal is overwritten with (toDeduct - curBalance) instead of the
- *    remaining running total, so the next row computes a negative toDeduct and
- *    is skipped. Only the oldest row is trimmed and the cap is left exceeded.
- *
- * Green-success criteria (after fix):
- *  - Total entity balance across all rows is capped at `max`.
- */
 
 import { expect, test } from "bun:test";
 import type { FullCusEntWithProduct, Rollover } from "@autumn/shared";
@@ -73,9 +61,6 @@ test("performMaximumClearing caps over-cap entity without touching an under-cap 
 	const UNDER_ENTITY_ID = "e2";
 	const UNDER_PER_ROW = 40;
 
-	// Each row carries both entities; e1 totals 1500 (over cap), e2 totals 200
-	// (under cap). Draining e1 to 0 on the oldest row must NOT delete the row,
-	// since e2 still has balance there.
 	const rows = Array.from({ length: ROW_COUNT }, (_, index) =>
 		makeRow(index, { [ENTITY_ID]: PER_ROW, [UNDER_ENTITY_ID]: UNDER_PER_ROW }),
 	);
@@ -83,6 +68,5 @@ test("performMaximumClearing caps over-cap entity without touching an under-cap 
 	const remaining = applyClearing(rows);
 
 	expect(sumEntity(remaining, ENTITY_ID)).toBeLessThanOrEqual(MAX);
-	// Under-cap entity is left fully intact.
 	expect(sumEntity(remaining, UNDER_ENTITY_ID)).toBe(UNDER_PER_ROW * ROW_COUNT);
 });

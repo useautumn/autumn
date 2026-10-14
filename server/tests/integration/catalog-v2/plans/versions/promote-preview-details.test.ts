@@ -1,13 +1,3 @@
-/**
- * catalogV2 preview — promotion_details present vs omitted.
- *
- * Contract:
- *   already-active + active:true no-op → promotion_details omitted
- *   draft mint without active, and first create → omitted
- *   mint + active that takes an existing pointer → present
- *   rename + promote returns both rename fields and promotion_details
- */
-
 import { test } from "bun:test";
 import { ResetInterval } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";

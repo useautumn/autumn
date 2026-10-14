@@ -8,9 +8,6 @@ import { buildPlanCode } from "./plan.js";
 import { buildReferralProgramCode, buildRewardCode } from "./reward.js";
 import { buildVariantCode } from "./variant.js";
 
-/**
- * Generate complete autumn.config.ts file content
- */
 export function buildConfigFile(
 	features: Feature[],
 	plans: Plan[],
@@ -19,8 +16,6 @@ export function buildConfigFile(
 ): string {
 	const sections: string[] = [];
 
-	// Resolve var names up front so collisions (e.g. a feature and plan both
-	// named "free") are disambiguated before any code is emitted.
 	const {
 		featureVarMap,
 		planVarMap,
@@ -39,7 +34,6 @@ export function buildConfigFile(
 		},
 	);
 
-	// Add imports
 	sections.push(
 		buildImports({
 			includeBillingControls: plans.some((plan) => plan.billingControls),
@@ -49,7 +43,6 @@ export function buildConfigFile(
 	);
 	sections.push("");
 
-	// Add features
 	if (features.length > 0) {
 		sections.push("// Features");
 		for (const feature of features) {
@@ -58,7 +51,6 @@ export function buildConfigFile(
 		}
 	}
 
-	// Add plans
 	if (plans.length > 0) {
 		sections.push("// Plans");
 		for (const plan of plans) {

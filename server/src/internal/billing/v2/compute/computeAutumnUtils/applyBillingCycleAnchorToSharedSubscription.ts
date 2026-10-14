@@ -29,7 +29,6 @@ export const applyBillingCycleAnchorToSharedSubscription = ({
 	billingContext: BillingContext;
 	stripeSubscriptionId?: string;
 	targetCustomerProduct?: FullCusProduct;
-	/** set_plans only: a reset now also bills the subscription's plans the request leaves unchanged. */
 	rebillsUnchangedPlansAtReset?: boolean;
 }): AutumnBillingPlan => {
 	if (billingContext.requestedBillingCycleAnchor === undefined) return plan;
@@ -90,7 +89,6 @@ export const applyBillingCycleAnchorToSharedSubscription = ({
 		customerProductHasActiveStatus(
 			finalCustomerProductById.get(customerProduct.id),
 		);
-	// Before the anchor updates below, which must win on next_reset_at.
 	const resetLineItems: LineItem[] = [];
 	for (const customerProduct of relatedCustomerProducts.filter(
 		isRebilledByReset,

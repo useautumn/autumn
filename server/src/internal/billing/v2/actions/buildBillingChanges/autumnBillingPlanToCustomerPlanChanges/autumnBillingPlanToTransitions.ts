@@ -13,7 +13,6 @@ import {
 
 type PatchCustomerProduct = z.infer<typeof PatchCustomerProductSchema>;
 
-/** Materializes the post-update product for the lifecycle fields the kernel reads. */
 const applyCustomerProductUpdate = ({
 	customerProduct,
 	updates,
@@ -30,8 +29,6 @@ const applyCustomerProductUpdate = ({
 	...(updates.processor !== undefined ? { processor: updates.processor } : {}),
 });
 
-/** Patch snapshots may not include the rows being deleted; `before` restores
- * them so the kernel's entitlement diff sees the true pre-patch state. */
 const patchToTransition = (
 	patch: PatchCustomerProduct,
 ): CustomerProductTransition => {
@@ -90,8 +87,6 @@ const patchToTransition = (
 	return { before, after };
 };
 
-/** License-quantity updates surface as an `updated` change on the parent
- * product even though no lifecycle or item field visibly changes. */
 const customerLicenseUpdatesToTransitions = ({
 	autumnBillingPlan,
 	originalFullCustomer,
@@ -115,12 +110,6 @@ const customerLicenseUpdatesToTransitions = ({
 	});
 };
 
-/**
- * When a billing action updates a plan in-place, Autumn often inserts a new
- * customer product and expires the old one — both sharing the same plan_id.
- * Pair those so the kernel sees one old-product → new-product transition
- * instead of an expiry plus an activation.
- */
 const pairSamePlanIdReplacements = (
 	transitions: CustomerProductTransition[],
 ): CustomerProductTransition[] => {
@@ -166,7 +155,6 @@ const pairSamePlanIdReplacements = (
 		const activated = action === "activated" ? transition : pair;
 		const expired = action === "expired" ? transition : pair;
 
-		// An "expired" transition always has a before (inserts can't expire).
 		result.push({
 			before: expired.before ?? expired.after,
 			after: activated.after,

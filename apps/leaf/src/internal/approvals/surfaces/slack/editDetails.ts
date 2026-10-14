@@ -74,8 +74,6 @@ export const handleEditApprovalDetailsSubmit = async (
 		};
 	}
 
-	// One card can carry a whole batch; the edited settings apply to every
-	// attach write so the rebuilt card keeps the full group.
 	const writes: Array<{ request: Record<string, unknown>; toolName: string }> =
 		[];
 	const writeRows = await chatApprovalWritesRepo.list({
@@ -107,8 +105,6 @@ export const handleEditApprovalDetailsSubmit = async (
 		}
 		writes.push({ request: updated.data, toolName: "attach" });
 	}
-	// Hand-chosen settings override the skill's defaults, which would otherwise
-	// re-enable immediate provisioning or invoice mode on the rebuilt request.
 	const text = [
 		writes.length > 1
 			? `Preview these exact ${writes.length} requests and request approval again, issuing ALL writes together in ONE tool batch so they stay on one approval card.`

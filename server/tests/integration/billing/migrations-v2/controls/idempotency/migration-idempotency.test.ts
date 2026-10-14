@@ -1,6 +1,3 @@
-// Contract: migrations-v2 run API must be idempotent per migration/customer.
-// It must also serialize migration task execution per org.
-
 import { expect, test } from "bun:test";
 import {
 	type ApiCustomerV5,
@@ -53,8 +50,6 @@ const buildDashboardMigration = ({
 	},
 });
 
-/** The shared test org accumulates live runs whenever trigger-dispatched
- * runs have no local runner; settle them so claim tests start clean. */
 const settleActiveOrgRuns = async ({
 	ctx,
 }: {
@@ -561,9 +556,6 @@ test(`${chalk.yellowBright("migrations idempotency: a second migration in the sa
 
 	let otherRunId: string | undefined;
 	try {
-		// Org-level ordering is trigger's job (migrationRunQueue +
-		// per-(org, env) concurrencyKey), so the API ACCEPTS a different
-		// migration while one is live — no 409, no unique-index conflict.
 		const response = await autumnV2_2.migrationsV2.run({
 			id: otherMigration.id,
 			dry_run: false,
@@ -571,8 +563,6 @@ test(`${chalk.yellowBright("migrations idempotency: a second migration in the sa
 		otherRunId = response.run_id;
 		expect(otherRunId).toBeTruthy();
 
-		// Both live rows coexist for the org — the DB no longer forbids it
-		// (trigger's per-(org, env) concurrencyKey does the actual ordering).
 		const liveRuns = await ctx.db
 			.select({ internal_id: migrationRuns.internal_id })
 			.from(migrationRuns)

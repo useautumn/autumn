@@ -1,20 +1,3 @@
-/**
- * Base-plan fallback for unclaimed items under a shared Stripe product.
- *
- * Scenario: a base plan and its variant (base_variant_id) are both mapped to
- * ONE Stripe product (processor.id). A sub carries a custom price under that
- * product which shape-matches neither plan — the Resend marketing_pro
- * "one-off custom price" shape.
- *
- * Contract under test:
- *   - case 1: custom base item alone -> ONE MatchedPlan: the BASE plan (not
- *     the variant), base "custom", customize.price = the actual amount, and
- *     canAutoSync eligible.
- *   - case 2: custom base item + a metered price shared with a SEPARATE plan
- *     -> the metered item groups under the fallback-anchored base plan (via
- *     rematchFeaturesWithinAnchoredPlans); no phantom second plan.
- */
-
 import { expect, test } from "bun:test";
 import {
 	isUsagePrice,
@@ -39,10 +22,6 @@ import {
 	getStripeCustomerId,
 } from "../utils/syncProductHelpers";
 
-/**
- * Creates a base plan ($20/mo) + variant ($50/mo) mapped to one shared Stripe
- * product, with the variant pointing at the base via base_variant_id.
- */
 const initBaseVariantScenario = async ({
 	customerId,
 	baseId,
@@ -72,7 +51,6 @@ const initBaseVariantScenario = async ({
 		name: `Base Fallback ${baseId}`,
 	});
 
-	// initScenario suffixes product ids with the customer id — use mutated ids.
 	const baseFull = await fetchFullProduct({ ctx, productId: basePlan.id });
 	const variantFull = await fetchFullProduct({
 		ctx,
@@ -94,7 +72,6 @@ const initBaseVariantScenario = async ({
 	});
 	await invalidateProductsCache({ orgId: ctx.org.id, env: ctx.env });
 
-	// $75/mo shape-matches neither the $20 base nor the $50 variant.
 	const customStripePrice = await createStripeFixedPriceUnderProduct({
 		ctx,
 		stripeProductId: sharedStripeProduct.id,
@@ -103,10 +80,6 @@ const initBaseVariantScenario = async ({
 
 	return { basePlan, variantPlan, customStripePrice };
 };
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// CASE 1: custom price under shared product → base plan wins with custom base
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(
 	`${chalk.yellowBright("base-fallback: case 1 — unclaimed custom price attaches to the base plan")}`,
@@ -130,7 +103,6 @@ test.concurrent(
 			subscription,
 		});
 
-		// ── Contract: one plan — the BASE plan, custom base, no variant ──
 		expectSubscriptionMatchCorrect({
 			match,
 			currentPhase: {
@@ -139,11 +111,9 @@ test.concurrent(
 			},
 		});
 
-		// ── Contract: customize.price carries the actual amount ──
 		const currentPhase = match.phaseMatches.find((phase) => phase.is_current);
 		expect(currentPhase?.plans[0]?.customize?.price?.amount).toBe(75);
 
-		// ── Contract: auto-sync eligible; sync params carry the custom price ──
 		expect(canAutoSync({ match }).eligible).toBe(true);
 		expectSyncParamsCorrect({
 			params,
@@ -165,17 +135,11 @@ test.concurrent(
 	},
 );
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// CASE 2: custom base + metered price shared with a separate plan → one plan
-// ═══════════════════════════════════════════════════════════════════════════════
-
 test.concurrent(
 	`${chalk.yellowBright("base-fallback: case 2 — shared metered item groups under the fallback-anchored plan")}`,
 	async () => {
 		const customerId = "base-fallback-2";
 
-		// A separate plan billing the same feature through the SAME Stripe
-		// metered price — the shared-price shape that used to leak phantoms.
 		const otherPlan = products.growth({
 			id: "base-fallback-2-other",
 			items: [items.consumableMessages({ price: 0.1 })],
@@ -219,8 +183,6 @@ test.concurrent(
 				},
 			});
 		}
-		// updateConfig writes straight to the DB — invalidate the org's cached
-		// product list so detectSubscriptionMatch doesn't read a stale mapping.
 		await invalidateProductsCache({ orgId: ctx.org.id, env: ctx.env });
 
 		const stripeCustomerId = await getStripeCustomerId({ ctx, customerId });
@@ -238,8 +200,6 @@ test.concurrent(
 			subscription,
 		});
 
-		// ── Contract: ONE plan — the base plan with the metered feature; no
-		// phantom plan for the shared metered price's other owner ──
 		expectSubscriptionMatchCorrect({
 			match,
 			currentPhase: {

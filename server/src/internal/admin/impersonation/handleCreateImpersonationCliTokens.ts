@@ -4,11 +4,6 @@ import { auth } from "@/utils/auth.js";
 import { createImpersonationCliTokens } from "./createImpersonationCliTokens.js";
 import { ensureAdminOAuthClient } from "./ensureAdminOAuthClient.js";
 
-/**
- * POST /admin/impersonation/cli-tokens — behind adminAuthMiddleware, and
- * additionally requires the session to be an active impersonation so the
- * tokens are always bound to the customer org being impersonated.
- */
 export const handleCreateImpersonationCliTokens = createRoute({
 	scopes: [Scopes.Superuser],
 	handler: async (c) => {

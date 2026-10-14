@@ -13,10 +13,6 @@ const literalOf = (value: unknown): string | null => {
 	return `E'${text.replaceAll("\\", "\\\\").replaceAll("'", "''")}'`;
 };
 
-/**
- * The statement with every `$n` replaced by its literal, so it can share one simple query with a `SET LOCAL`.
- * Null when a parameter has no faithful literal; the caller then binds it as usual.
- */
 export const inlineSqlParams = ({
 	statement,
 }: {

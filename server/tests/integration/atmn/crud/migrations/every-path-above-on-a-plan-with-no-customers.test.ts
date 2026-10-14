@@ -1,11 +1,3 @@
-/**
- * atmn crud/migrations — every path above on a plan with no customers → no migration
- *
- * the `versionedPro` base config: base price, prepaid seat item, usage item, trial, seat license; every line has customers attached
- *
- * One line of plans/atmn-v3/07_tests.md. [a, b] is a matrix looped INSIDE this file.
- */
-
 import { expect, test } from "bun:test";
 import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 import {
@@ -71,8 +63,6 @@ for (const { name, nextBody } of paths) {
 
 			try {
 				await scenario.push();
-				// No seeded customers on this plan at all — every path below should
-				// be a quiet, migration-free push.
 
 				scenario.writeConfig(atmnConfigSource({ body: nextBody() }));
 				const result = await runPush({ client, cwd: scenario.cwd });

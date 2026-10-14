@@ -12,7 +12,6 @@ import { getBackendErr } from "@/utils/genUtils";
 import { atomMachineLabel, cacheToMachine } from "./atomMachineDisplay";
 import type { useAtomActions } from "./useAtomActions";
 
-/** The picked machine is a form value; submitting only opens the confirm, which does the resize. */
 export const useAtomMachineForm = ({
 	cache,
 	resize,

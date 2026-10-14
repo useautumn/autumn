@@ -1,6 +1,3 @@
-/** One place for eval-infra LLM calls (user simulator, transcript judge) —
- * OpenRouter, cheap pinned models, never the agent under test. */
-
 export type ChatMessage = {
 	role: "system" | "user" | "assistant";
 	content: string;
@@ -13,7 +10,6 @@ export const completeChat = async ({
 }: {
 	model: string;
 	messages: ChatMessage[];
-	/** when set, forces a JSON response matching the schema */
 	jsonSchema?: { name: string; schema: Record<string, unknown> };
 }): Promise<string> => {
 	const apiKey = process.env.OPENROUTER_API_KEY;
@@ -30,8 +26,6 @@ export const completeChat = async ({
 			body: JSON.stringify({
 				model,
 				messages,
-				// Measurement apparatus (user sim, judge), not the agent under
-				// test — greedy decoding removes one source of run variance.
 				temperature: 0,
 				...(jsonSchema && {
 					response_format: {

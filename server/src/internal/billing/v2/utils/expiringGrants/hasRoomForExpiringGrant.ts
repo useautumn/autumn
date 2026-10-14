@@ -2,12 +2,6 @@ import { ErrCode, type FullCustomer, RecaseError } from "@autumn/shared";
 import { entitlementToExpiry } from "@/internal/billing/v2/utils/expiringGrants/entitlementExpiry";
 import { EXTRA_CUSTOMER_ENTITLEMENT_LIMIT } from "@/internal/customers/repos/getFullSubject/getFullSubjectRowsQuery";
 
-/**
- * Loose rows hydrate under a hard cap, newest first. Past it, the oldest —
- * soonest-expiring — grants silently drop out of the subject. Refuse the
- * purchase instead of charging for credits the customer could never see.
- * Reads the rows already in memory; never counts the database.
- */
 export const hasRoomForExpiringGrant = ({
 	fullCustomer,
 	now,
@@ -15,7 +9,6 @@ export const hasRoomForExpiringGrant = ({
 }: {
 	fullCustomer: FullCustomer;
 	now: number;
-	/** Rows this operation would add; attach can add several at once. */
 	incoming?: number;
 }): boolean => {
 	if (incoming <= 0) return true;
@@ -25,7 +18,6 @@ export const hasRoomForExpiringGrant = ({
 	return liveLooseRows.length + incoming <= EXTRA_CUSTOMER_ENTITLEMENT_LIMIT;
 };
 
-/** Synchronous request variant: a 400 the caller sees, instead of a webhook. */
 export const assertRoomForExpiringGrants = ({
 	fullCustomer,
 	incoming,

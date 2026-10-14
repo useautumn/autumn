@@ -1,12 +1,3 @@
-/**
- * Version identity — legacy plans.update omit-version vs force_version (r6).
- *
- * Contract under test:
- *   r6a  v1+v2, v2 active → omit plans.update patches v2
- *   r6b  v1 forced active → omit plans.update patches v1
- *   r6c  v1 forced active, v2 exists → force_version clones v1 into max+1 (v3)
- */
-
 import { expect, test } from "bun:test";
 import {
 	type ApiPlanV1,

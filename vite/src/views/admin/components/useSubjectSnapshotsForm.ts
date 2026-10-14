@@ -18,7 +18,6 @@ import {
 	toSubjectSnapshotsFormValues,
 } from "./subjectSnapshotsConfig";
 
-/** Edit, then review the old → new diff (with the server's writtenAfter stamp previewed) before anything is saved. */
 export const useSubjectSnapshotsForm = ({
 	config,
 	onClose,

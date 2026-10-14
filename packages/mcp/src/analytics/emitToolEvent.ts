@@ -4,11 +4,6 @@ import { getAnalyticsSink } from "./analyticsSink.js";
 import type { McpAnalyticsSurface } from "./analyticsTypes.js";
 import { deriveSessionId } from "./sessionId.js";
 
-/**
- * Builds and dispatches a single tool-call analytics event. Org resolution and
- * the actual sink write run off the hot path so the tool response is never
- * delayed by analytics.
- */
 export const emitMcpToolEvent = ({
 	surface,
 	toolId,
@@ -36,7 +31,6 @@ export const emitMcpToolEvent = ({
 }) => {
 	const sink = getAnalyticsSink();
 
-	// Resolve org off the hot path; resolveAutumnOrg is cached (~5min).
 	void (async () => {
 		let orgId = auth.orgId;
 		let orgSlug: string | undefined;
@@ -44,9 +38,7 @@ export const emitMcpToolEvent = ({
 			const org = await resolveAutumnOrg(auth);
 			orgId = org.id;
 			orgSlug = org.slug;
-		} catch {
-			// Best-effort: emit without org context rather than dropping the event.
-		}
+		} catch {}
 		const now = Date.now();
 		sink.emit({
 			event: "mcp.tool_call",

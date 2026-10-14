@@ -76,7 +76,6 @@ export const PasskeysManager = () => {
 			setAddOpen(false);
 			setPasskeyName("");
 		} catch (err) {
-			// User-cancelled WebAuthn prompts surface as DOMExceptions
 			const message = getAddPasskeyErrorMessage({
 				error: err instanceof Error ? err : {},
 			});

@@ -68,13 +68,8 @@ const logTurnToBraintrust = (turn: CompletedTurn) => {
 	);
 };
 
-// Random base so concurrent eval processes don't probe each other's apps.
 let nextProbePort = 4310 + Math.floor(Math.random() * 2000);
 
-/**
- * Integration eval: the agent edits a copied fixture app; grading boots the
- * result, replays probes against it, and reads the run org as the oracle.
- */
 export const initIntegrationEval = ({
 	integrationCase,
 	kit = integrateKit(),
@@ -115,8 +110,6 @@ export const initIntegrationEval = ({
 		await assertBackendReachable(backendUrl);
 		await sweepStaleWorkspaces();
 		const orgRunId = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
-		// Integration orgs always get a Stripe sub-account: billing flows
-		// (paid attach, checkout) are the whole point. Catalog orgs never do.
 		const org = await createEvalOrg({ runId: orgRunId, withStripe: true });
 		const workspace = await createFixtureWorkspace({
 			label: `${integrationCase.name}-${arm}`,
@@ -163,14 +156,10 @@ export const initIntegrationEval = ({
 				timeoutMs,
 				renderMode,
 				systemPromptAppend: integrationCase.scenario?.primer,
-				// The SDK reads AUTUMN_SECRET_KEY from env; the local server URL
-				// must be passed as serverURL — the primer explains that.
 				extraEnv: { AUTUMN_SECRET_KEY: org.secretKey },
 				onTurn: logTurnToBraintrust,
 			});
 
-			// What did the agent write? Save the workspace diff so a run is
-			// understandable without opening Braintrust.
 			const { diff, path: diffPath } = await saveFixtureDiff({
 				caseName: integrationCase.name,
 				arm,
@@ -219,7 +208,6 @@ export const initIntegrationEval = ({
 				...agentRun,
 			};
 		} catch (error) {
-			// Braintrust's progress UI swallows task errors — surface them.
 			process.stderr.write(
 				`\n[ax-evals] ${integrationCase.name}/${arm} failed:\n${error instanceof Error ? (error.stack ?? error.message) : String(error)}\n`,
 			);

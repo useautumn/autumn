@@ -1,13 +1,9 @@
-// Types
-
-// Handlers
 export { createCoreHandler, handleRouteByName } from "./handlers";
 export type {
 	HandleRouteByNameOptions,
 	HandleRouteByNameResult,
 } from "./handlers/handleRouteByName";
 
-// Route helpers
 export { buildRouter, routeConfigs } from "./routes";
 export type {
 	AuthResult,
@@ -24,7 +20,6 @@ export type {
 	UnifiedResponse,
 } from "./types";
 
-// Utils
 export {
 	backendError,
 	backendSuccess,

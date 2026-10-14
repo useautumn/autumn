@@ -3,7 +3,6 @@ import { invalidateProductsCache } from "@/external/redis/actions/productsCache/
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 
-/** DB identity columns for one plan version — assert only fields passed. */
 export const expectVersionIdentityCorrect = async ({
 	ctx,
 	planId,
@@ -39,7 +38,6 @@ export const expectVersionIdentityCorrect = async ({
 	}
 };
 
-/** Exactly one row of this plan holds `active`. Returns that row. */
 export const expectExactlyOneActiveVersion = async ({
 	ctx,
 	planId,
@@ -60,7 +58,6 @@ export const expectExactlyOneActiveVersion = async ({
 	return actives[0];
 };
 
-/** Flip the active pointer in DB (test-only — not a catalogV2 promote). */
 export const forceActiveVersion = async ({
 	ctx,
 	planId,

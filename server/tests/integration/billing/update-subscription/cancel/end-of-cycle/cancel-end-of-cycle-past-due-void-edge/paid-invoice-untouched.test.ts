@@ -1,6 +1,3 @@
-// tw:solo: withVoidFlag mutates the shared org.config, so this file can't share a worker.
-// Void-correctness: the paid invoice is untouched; only the open one is voided.
-
 import { expect, test } from "bun:test";
 import { driveProductPastDue } from "@tests/integration/billing/utils/driveProductPastDue";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
@@ -27,7 +24,6 @@ test(`${chalk.yellowBright("edge: paid invoice untouched, only the open invoice 
 		ctx,
 		enabled: true,
 		fn: async () => {
-			// Initial attach invoice is paid (success card); driveProductPastDue then fails the renewal.
 			const { subscriptionId, stripeCustomerId } = await driveProductPastDue({
 				ctx,
 				testClockId: testClockId!,

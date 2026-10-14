@@ -12,7 +12,6 @@ export type PairedRemovedAndAddedPlanItems = {
 const FEATURE_BILLING_METHOD = "feature_billing_method";
 const FEATURE = "feature";
 
-/** Strongest first. Last two rungs are weaker than PlanItemMatchPrecision. */
 const MATCH_PRECISION_RANK = {
 	[PlanItemMatchPrecision.FeatureBillingMethodCadence]: 4,
 	[PlanItemMatchPrecision.FeatureCadence]: 3,
@@ -66,7 +65,6 @@ const findBestUnclaimedAddIndex = ({
 	return bestAddIndex;
 };
 
-/** Greedy per-remove pairing: best unclaimed matching add, claimed by index. */
 export const pairRemovedAndAddedPlanItems = ({
 	removeItems,
 	addEntitlementPrices,

@@ -34,7 +34,6 @@ export const getUsageFromBalance = ({
 	const config = price.config as UsagePriceConfig;
 	const billingUnits = config.billing_units || 1;
 
-	// Should get overage...
 	const overage = -Math.min(0, balance);
 	const roundedOverage = new Decimal(overage)
 		.div(billingUnits)
@@ -79,8 +78,6 @@ export const adjustAllowance = async ({
 	const cusPrice = getRelatedCusPrice(cusEnt, cusPrices);
 	const billingType = cusPrice ? getBillingType(cusPrice.price.config!) : null;
 	const cusProduct = cusEnt.customer_product;
-
-	// TODO: TRACK
 
 	if (
 		!cusProduct ||

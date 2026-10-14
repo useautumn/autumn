@@ -8,7 +8,6 @@ import type Stripe from "stripe";
 const sum = (amounts: number[]) =>
 	amounts.reduce((total, amount) => total + amount, 0);
 
-/** The split is the one we sent: the whole post-payment amount on the chosen destination. */
 export const stripeCreditNoteToApi = ({
 	creditNote,
 	lines,

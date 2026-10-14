@@ -1,8 +1,3 @@
-/**
- * Seeds a plain repoint whose point is the SECOND run: rerun the same migration
- * and nothing should move again, no balance should be credited twice, and the
- * already-on-target customers should read as skipped both times.
- */
 import { test } from "bun:test";
 import { TestFeature } from "@tests/setup/v2Features";
 import { itemsV2 } from "@tests/utils/fixtures/itemsV2";

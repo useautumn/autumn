@@ -1,19 +1,14 @@
 import { withoutApprovalDescription } from "./approvalDescription.js";
 import { isSameToolRequest, toolRequestFromArgs } from "./toolRequest.js";
 
-/** A request the agent ran through a preview tool, kept so the write that
- * follows can be held to it. */
 export type PreviewedRequest = Readonly<{
 	previewTool: string;
 	request: Record<string, unknown>;
 }>;
 
 const MAX_DRIFT_KEYS = 6;
-/** Long enough for a full customize block, so the model can copy it back. */
 const MAX_VALUE_CHARS = 400;
 
-/** The write's request body as the preview tool would have seen it: the
- * walkthrough field rides beside the request on the write call only. */
 export const comparableToolRequest = (
 	args?: Record<string, unknown>,
 ): Record<string, unknown> | undefined =>
@@ -41,8 +36,6 @@ const compact = (value: unknown) => {
 		: json;
 };
 
-/** Field-level differences between the write and the closest preview, so the
- * model can see exactly what it dropped or changed rather than re-guess. */
 export const describeRequestDrift = ({
 	previewed,
 	request,
@@ -72,8 +65,6 @@ export const describeRequestDrift = ({
 	return lines.join("; ");
 };
 
-/** Why a write cannot be accepted against what the agent previewed —
- * undefined when one previewed request matches it verbatim. */
 export const unpreviewedWriteReason = ({
 	previewTool,
 	previewed,

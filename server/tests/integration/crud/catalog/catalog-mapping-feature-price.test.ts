@@ -131,7 +131,6 @@ test.concurrent(
 			],
 		});
 
-		// Plan B picks its own product, so a later default change must skip it.
 		const planBPrice = findFeaturePrice({
 			product: await getPlan({ ctx, planId: planB }),
 			featureId,

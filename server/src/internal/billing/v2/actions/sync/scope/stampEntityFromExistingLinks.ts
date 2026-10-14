@@ -18,7 +18,6 @@ const findCopiesOnPhase = ({
 	customerProducts: FullCusProduct[];
 	startsAt: SyncPhase["starts_at"];
 }): FullCusProduct[] => {
-	// Past-due plans are still live, so they belong to the current phase too.
 	if (startsAt === "now")
 		return customerProducts.filter((customerProduct) =>
 			ACTIVE_STATUSES.includes(customerProduct.status),
@@ -39,11 +38,6 @@ const findCopiesOnPhase = ({
 			);
 };
 
-/**
- * The entity every existing copy of this plan agrees on for this phase, or
- * undefined when they disagree — a customer-level copy must never be dragged
- * onto the entity of a differently scoped copy of the same plan.
- */
 const findAgreedEntityId = ({
 	customerProducts,
 	planId,
@@ -69,16 +63,6 @@ const findAgreedEntityId = ({
 		: undefined;
 };
 
-/**
- * Detection is scope-blind: it matches Stripe prices to catalog products with
- * no knowledge of the customer's existing customer products. When a product is
- * already linked to this Stripe subscription via an entity-scoped customer
- * product, re-syncing it without that binding would insert a duplicate at the
- * customer level (and `expire_previous` would miss the entity-scoped original).
- *
- * Stamp the existing entity binding onto each matched plan so the sync
- * re-attaches the product on the same entity and matches/expires the original.
- */
 export const stampEntityFromExistingLinks = ({
 	phases,
 	subscription,
@@ -100,8 +84,6 @@ export const stampEntityFromExistingLinks = ({
 		...phase,
 		plans: phase.plans.map((plan) => {
 			if (plan.entity_id != null) return plan;
-			// `entity_id` accepts either the public or internal entity id, so the
-			// internal id stored on the customer product is sufficient.
 			const entityId = findAgreedEntityId({
 				customerProducts: linkedCustomerProducts,
 				planId: plan.plan_id,

@@ -40,7 +40,6 @@ export const sync = async ({
 }) => {
 	const { org, env } = ctx;
 
-	// 1. Load full customer
 	let fullCustomer = await CusService.getFull({
 		ctx,
 		idOrInternalId: params.customer_id,
@@ -62,10 +61,8 @@ export const sync = async ({
 	const results: Array<{ plan_id: string; success: boolean; error?: string }> =
 		[];
 
-	// 2. Process each mapping
 	for (const mapping of params.mappings) {
 		try {
-			// Refresh full customer after each mapping so subsequent mappings see updates
 			fullCustomer = await CusService.getFull({
 				ctx,
 				idOrInternalId: params.customer_id,
@@ -94,7 +91,6 @@ export const sync = async ({
 		}
 	}
 
-	// 3. Clear customer cache
 	await deleteCachedFullCustomer({
 		ctx,
 		customerId: params.customer_id,
@@ -117,13 +113,11 @@ const processSyncMapping = async ({
 }) => {
 	const { db, org, env } = ctx;
 
-	// 1. Retrieve the Stripe subscription
 	const stripeSubscription = await stripeCli.subscriptions.retrieve(
 		mapping.stripe_subscription_id,
 		{ expand: ["items.data"] },
 	);
 
-	// 2. Load the target Autumn product
 	const fullProduct = await ProductService.getFull({
 		db,
 		idOrInternalId: mapping.plan_id,
@@ -131,7 +125,6 @@ const processSyncMapping = async ({
 		env,
 	});
 
-	// 3. Apply custom items if provided
 	let customizePlan: CustomizePlanV1 | undefined;
 	if (mapping.items && mapping.items.length > 0) {
 		customizePlan = productItemsToCustomizePlanV1({
@@ -150,10 +143,6 @@ const processSyncMapping = async ({
 		customizePlan,
 	});
 
-	// 3.5 Skip if this subscription is already linked to an active instance of
-	// this product — avoids double-attaching when auto-sync got there first.
-	// expire_previous: true means the caller intends to expire-and-replace it
-	// (the V0 repair flow), so only the no-op dedup case skips here.
 	const alreadyLinked = filterCustomerProductsByStripeSubscriptionId({
 		customerProducts: fullCustomer.customer_products,
 		stripeSubscriptionId: mapping.stripe_subscription_id,
@@ -164,13 +153,11 @@ const processSyncMapping = async ({
 	);
 	if (alreadyLinked && !mapping.expire_previous) return;
 
-	// 4. Find transition context (current cusProduct to expire)
 	const { currentCustomerProduct } = setupAttachTransitionContext({
 		fullCustomer,
 		attachProduct: finalProduct,
 	});
 
-	// 5. Build init context from Stripe subscription state
 	const currentEpochMs = Date.now();
 
 	const trialEndsAt = getTrialEndsAtFromStripe({ stripeSubscription });
@@ -183,7 +170,6 @@ const processSyncMapping = async ({
 		stripeSubscription.billing_cycle_anchor,
 	);
 
-	// Init prepaid feature quantities
 	const featureQuantities: FeatureOptions[] = [];
 	for (const price of finalProduct.prices) {
 		if (!isPrepaidPrice(price)) continue;
@@ -209,7 +195,6 @@ const processSyncMapping = async ({
 		});
 	}
 
-	// 6. Init the new customer product
 	const newCusProduct = initFullCustomerProduct({
 		ctx,
 		initContext: {
@@ -235,14 +220,12 @@ const processSyncMapping = async ({
 		},
 	});
 
-	// 7. Build the Autumn billing plan
 	const autumnBillingPlan: AutumnBillingPlan = {
 		customerId: fullCustomer.id!,
 		insertCustomerProducts: [newCusProduct],
 		customPrices: customPrices.length > 0 ? customPrices : undefined,
 		customEntitlements: customEnts.length > 0 ? customEnts : undefined,
 
-		// Expire the current customer product if requested
 		updateCustomerProduct:
 			mapping.expire_previous && currentCustomerProduct
 				? {
@@ -261,7 +244,6 @@ const processSyncMapping = async ({
 		],
 	};
 
-	// 8. Execute (DB only — no Stripe changes)
 	await executeAutumnBillingPlan({
 		ctx,
 		autumnBillingPlan,

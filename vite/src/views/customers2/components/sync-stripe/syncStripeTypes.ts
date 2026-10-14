@@ -45,7 +45,6 @@ export type SyncProposalsResponse = {
 	proposals: SyncProposal[];
 };
 
-/** A confirmed mapping ready to send to billing.sync */
 export type SyncMapping = {
 	stripe_subscription_id: string;
 	plan_id: string;

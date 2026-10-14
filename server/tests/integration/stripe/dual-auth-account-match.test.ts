@@ -1,18 +1,3 @@
-/**
- * TDD test for Stripe dual-auth account-match guard: both channels MUST point at
- * the same Stripe account. Adding a secret key whose account differs from the
- * already-connected OAuth account must be rejected (no corrupt cross-account state).
- *
- * Contract under test:
- *   handleStripeSecretKey:
- *     - OAuth account_id set AND differs from the secret key's account -> throws (rejected)
- *     - OAuth account_id set AND matches the secret key's account -> succeeds
- *     - no OAuth connected -> succeeds (nothing to match against)
- *
- * Pre-impl red: no account comparison existed; a mismatched key would be stored.
- * Post-impl green: the mismatch throws before any persistence.
- */
-
 import { beforeEach, describe, expect, mock, test } from "bun:test";
 import { AppEnv, type Organization } from "@autumn/shared";
 

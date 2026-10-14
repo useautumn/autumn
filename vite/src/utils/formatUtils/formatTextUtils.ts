@@ -13,9 +13,7 @@ export const keyToTitle = (
 };
 
 const keyToTitleFirstCaps = (key: string) => {
-	// Capitalize first char
 	const res = key.replace(/^\w/, (char) => char.toUpperCase());
-	// Replace underscores with spaces
 	return res.replace(/_/g, " ");
 };
 
@@ -59,7 +57,6 @@ export const formatIntervalText = ({
 		: `per ${finalInterval}`;
 };
 
-/** Keeps both ends of an ID readable, e.g. "6ab71b3b…6277be7e". */
 export const truncateMiddle = ({
 	text,
 	headLength = 8,

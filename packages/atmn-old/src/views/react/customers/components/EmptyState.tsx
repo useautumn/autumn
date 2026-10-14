@@ -2,13 +2,9 @@ import { Box, Text } from "ink";
 import { AppEnv } from "../../../../lib/env/detect.js";
 import type { EmptyStateProps } from "../types.js";
 
-/**
- * Empty state when no customers exist
- */
 export function EmptyState({ environment, searchQuery }: EmptyStateProps) {
 	const envLabel = environment === AppEnv.Sandbox ? "sandbox" : "live";
 
-	// Different message when search has no results
 	if (searchQuery) {
 		return (
 			<Box

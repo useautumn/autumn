@@ -1,20 +1,3 @@
-/**
- * catalogV2 — child `all_versions` when the same parent plan has versions
- * anchored to different child rows (Team/EU v1 → Seat v1, v2 → Seat v2).
- *
- * Contract:
- *   Preview nests each parent version under the child sibling it points at
- *   (v2 on license_parents, v1 on sibling_versions[v1].license_parents).
- *   Propagate `{ version_slug: "v1" }` follows only that parent row.
- *   Parent `all_versions` follows every linked parent version from its
- *   anchored child sibling; anchors stay put.
- *
- * Red (current): sibling parent actions resolved against the edited child
- *   row (unchanged); version_slug on propagate was stripped.
- * Green (after): sibling parents resolve against that sibling's upsert;
- *   version_slug pins the named parent version.
- */
-
 import { expect, test } from "bun:test";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
@@ -37,7 +20,6 @@ import {
 
 const editedItems = [messagesItem(200), wordsItem(50)];
 
-/** Child v1 keeps 100 Messages; v2 is 50 Messages + Words. Team v1→v1, v2→v2. */
 const seedDivergedChildAnchors = async ({
 	autumn,
 	childId,

@@ -7,7 +7,6 @@ const BYTES_PER_MB = 1024 * 1024;
 
 const toMb = (bytes: number) => Math.round(bytes / BYTES_PER_MB);
 
-/** VmRSS of another process; undefined once it has exited or off Linux. */
 const readRssMb = async (pid: number) => {
 	try {
 		const status = await readFile(`/proc/${pid}/status`, "utf8");
@@ -18,8 +17,6 @@ const readRssMb = async (pid: number) => {
 	}
 };
 
-/** The task's memory metric sums leaf and eve, so each is logged on its own
- * to show which process grows. */
 export const logProcessMemory = ({ evePid }: { evePid: number }) => {
 	const timer = setInterval(async () => {
 		const { heapUsed, rss } = process.memoryUsage();

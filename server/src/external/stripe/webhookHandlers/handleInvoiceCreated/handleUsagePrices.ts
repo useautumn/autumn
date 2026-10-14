@@ -72,7 +72,6 @@ export const handleUsagePrices = async ({
 
 	const config = price.config as UsagePriceConfig;
 
-	// If relatedCusEnt's balance > 0 and next_reset_at is null, skip...
 	if (relatedCusEnt.balance! > 0 && !relatedCusEnt.next_reset_at) {
 		logger.info("Balance > 0 and next_reset_at is null, skipping");
 		return false;
@@ -80,8 +79,6 @@ export const handleUsagePrices = async ({
 
 	if (submitUsage) {
 		// Use new invoice items method (not Stripe Meters) for:
-		// - Entity-based customers
-		// - Beta API customers
 		// - Vercel custom payment method subscriptions (meter timing issue with invoice.created)
 		const isVercelSubscription = !!usageSub.metadata?.vercel_installation_id;
 		const isNewUsageMethod =

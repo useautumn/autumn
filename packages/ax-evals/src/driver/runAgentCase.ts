@@ -16,8 +16,6 @@ import { shortText, trace } from "./trace.ts";
 import type { AgentRunResult } from "./types/agentRunResult.ts";
 import type { ToolUse } from "./types/toolUse.ts";
 
-// SDK auth failures arrive as instant agent "replies"; without this the
-// simulator chats with a dead session for the whole run.
 const AUTH_FAILURE_REPLY =
 	/failed to authenticate|oauth.+(expired|revoked)|could not be refreshed/i;
 
@@ -30,18 +28,6 @@ export type CompletedTurn = {
 	workspaceDir: string;
 };
 
-/**
- * Runs one conversation against a real Claude Code session in the workspace.
- * User turns come from a TurnSource (fixed script or deterministic simulator);
- * the next turn is computed only when the previous turn's result message
- * arrives — never on timers. Subscription login is used: the inherited
- * ANTHROPIC_API_KEY is dropped unless AX_EVALS_USE_API_KEY=1.
- *
- * Progress rendering: `chat` (default for a single arm) streams each user
- * turn, tool call, and agent reply the moment it happens; `blocks` (default
- * for concurrent arms) writes one atomic block per completed turn so arms
- * never interleave. AX_EVALS_TRACE=live streams raw events; =0 silences.
- */
 export const runAgentCase = async ({
 	label,
 	cwd,
@@ -63,9 +49,7 @@ export const runAgentCase = async ({
 	maxTurns?: number;
 	timeoutMs?: number;
 	renderMode?: "chat" | "blocks" | "compact";
-	/** extra system-prompt context, e.g. a scenario primer */
 	systemPromptAppend?: string;
-	/** run-scoped env for the agent, e.g. ATMN_BACKEND_URL */
 	extraEnv?: Record<string, string>;
 	onTurn?: (turn: CompletedTurn) => void;
 }): Promise<AgentRunResult> => {
@@ -98,8 +82,6 @@ export const runAgentCase = async ({
 	const renderBlocks = rendering === "blocks";
 	const renderCompact = rendering === "compact";
 
-	// The generator drains this queue; the message loop decides when to
-	// enqueue the next turn (on each result) and breaks when the source is dry.
 	const queuedTurns: string[] = [];
 	const sentTexts: string[] = [];
 	let notifyQueued: (() => void) | undefined;
@@ -243,8 +225,6 @@ export const runAgentCase = async ({
 			}
 		}
 		if (message.type === "result") {
-			// collectAgentEvent already pushed the turn's text and cleared the
-			// accumulator, so read the completed turn from turnTexts.
 			const turnText = result.turnTexts[result.turns - 1] ?? "";
 			chat?.agentText(turnText);
 			chat?.turnDone({

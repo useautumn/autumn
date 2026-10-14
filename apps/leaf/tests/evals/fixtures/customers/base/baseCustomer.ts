@@ -5,7 +5,6 @@ import { AppEnv } from "@models/genModels/genEnums.js";
 
 const defaultCreatedAt = new Date("2026-01-01T00:00:00.000Z");
 
-/** Base customer API fixture; prefer presets unless you need direct shape control. */
 export const baseCustomer = ({
 	balances = {},
 	createdAt = defaultCreatedAt,

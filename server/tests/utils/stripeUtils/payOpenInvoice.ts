@@ -4,13 +4,6 @@ import type { TestContext } from "@tests/utils/testInitUtils/createTestContext";
 
 const TEST_PAYMENT_METHOD = "pm_card_visa";
 
-/**
- * Pays the customer's open invoice through the Stripe API.
- *
- * Used as a fallback when the hosted invoice page fails to confirm — the
- * behaviour under test is "invoice paid → product attached", and this drives
- * the same `invoice.paid` webhook without depending on Stripe's page markup.
- */
 export const payOpenInvoice = async ({
 	ctx,
 	customerId,

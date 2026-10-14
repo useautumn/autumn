@@ -32,7 +32,6 @@ const isUpgradeFrom = ({ from, to }: { from: FullProduct; to: FullProduct }) =>
 		usageAlwaysUpgrade: false,
 	});
 
-/** isProductUpgrade also passes an equal-price plan on the same interval; the preview only suggests a pricier one. */
 const isPricierPlan = ({
 	current,
 	candidate,
@@ -66,7 +65,6 @@ export const getCheckPreview = async ({
 }: {
 	ctx: AutumnContext;
 	allowed: boolean;
-	/** The checked feature's balance; none means the preview is for a feature the plan lacks. */
 	apiBalance: ApiBalanceV1 | null | undefined;
 	feature: Feature;
 	customerId: string;
@@ -100,7 +98,6 @@ export const getCheckPreview = async ({
 
 	sortFullProducts({ products });
 
-	// 1. Get add ons
 	const addOns = [];
 	for (const addOn of products) {
 		if (addOn.is_add_on) {
@@ -191,9 +188,7 @@ export const getCheckPreview = async ({
 			const prodString = `Please purchase the ${addOns[0].name} add on to continue using this feature.`;
 			msg = `${msg} ${prodString}`;
 		}
-	}
-	// If it will be a new feature...
-	else {
+	} else {
 		msg = `Your current plan does not include the ${feature.name} feature.`;
 
 		if (mainProds.length > 0) {
@@ -218,14 +213,10 @@ export const getCheckPreview = async ({
 		feature_id: feature.id,
 		feature_name: feature.name,
 		products: v2Prods,
-		// next_tier: nextTierResponse,
-
-		// Will depracate
 		upgrade_product_id: nextTier?.id || null,
 	};
 };
 
-/** A check response as sent: the preview also names `upgrade_product_id`, and is null when the check was allowed. */
 export type CheckResponseWithPreview = Omit<CheckResponseV3, "preview"> & {
 	preview?:
 		| (NonNullable<CheckResponseV3["preview"]> & {

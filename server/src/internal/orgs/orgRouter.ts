@@ -80,8 +80,6 @@ internalOrgRouter.get(
 	"/stripe/payment_method_types",
 	...handleGetStripePaymentMethodTypes,
 );
-// Mounted under /organization, so this resolves to
-// POST /organization/onboardingStatus.
 internalOrgRouter.post("/onboardingStatus", ...handleGetOnboardingStatus);
 internalOrgRouter.route("/sso", organizationSsoRouter);
 
@@ -102,14 +100,9 @@ honoOrgRouter.get("/me", async (c) => {
 		name: org.name,
 		slug: org.slug,
 		env,
-		// A sandbox's key answers as the sandbox; the CLI needs to tell that
-		// apart from the main organization's key.
 		is_sandbox: org.is_sandbox === true,
 		created_by: org.created_by ?? null,
-		// A keyless org is pending until someone claims it; the CLI offers the
-		// link while the window is open.
 		claim_state: org.claim_state ?? null,
-		// A cached org carries the timestamp as a string, a fresh row as a Date.
 		claim_expires_at: org.claim_expires_at
 			? new Date(org.claim_expires_at).toISOString()
 			: null,

@@ -1,13 +1,3 @@
-/**
- * `automatic_tax` + `customer_update.address: "auto"` on Stripe Checkout.
- * Asserts both v1 (`/v1/attach` → handleCreateCheckout) and v2
- * (`/v1/billing.attach` → executeStripeCheckoutSessionAction) inject
- * auto_tax + address-collection when `org.config.automatic_tax` is on.
- *
- * `customer_update` is create-only and not echoed in the Session response;
- * the test asserts only the observable `session.automatic_tax.enabled`.
- */
-
 import { expect, test } from "bun:test";
 import chalk from "chalk";
 import { products } from "@tests/utils/fixtures/products.js";
@@ -50,7 +40,6 @@ test.concurrent(
 					configOverrides: { automatic_tax: true },
 					taxRegistrations: ["AU"],
 				}),
-				// No PM forces the checkout-URL branch.
 				s.customer({
 					testClock: false,
 					stripeCustomerOverrides: { address: auAddress },
@@ -98,7 +87,6 @@ test.concurrent(
 			plan_id: `pro_${customerId}`,
 		})) as { payment_url?: string };
 
-		// V2 uses `payment_url`, not `checkout_url`.
 		expect(result.payment_url).toBeDefined();
 		expect(typeof result.payment_url).toBe("string");
 		await assertCheckoutSessionTaxed({

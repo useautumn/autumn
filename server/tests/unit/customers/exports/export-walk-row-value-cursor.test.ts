@@ -1,23 +1,3 @@
-/**
- * A Mobbin export kept stalling as it neared the end. Two cursor shapes each
- * fail, at opposite ends of the walk:
- *
- *   internal_id alone -> seeks, but on the last pages the planner switches to
- *     customers_pkey and filters 7.1M other orgs' rows (5,960ms, timeout).
- *   ROW(org_id, env, internal_id) < ROW(...) alone -> holds the org index, but
- *     a row value cannot seek, so each page rescans the prefix already walked.
- *
- * Carrying both keeps the org index AND the seek. Prod replica, 3.08M rows:
- *
- *   cursor depth   row value only      both terms
- *   100k            19ms   3,952       ~2ms    ~700
- *   1M             126ms  18,394       ~2ms    ~700
- *   2M             236ms  33,487       ~2ms    ~700
- *   3.078M (end)   383ms  50,032       1.4ms    694
- *
- * internal_id alone at that end cursor: 5,960ms / 6,428,415 buffers.
- */
-
 import { describe, expect, it } from "bun:test";
 import { AppEnv } from "@autumn/shared";
 import { drizzle } from "drizzle-orm/node-postgres";

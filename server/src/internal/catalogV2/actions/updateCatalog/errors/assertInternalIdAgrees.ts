@@ -3,12 +3,6 @@ import type { InternalIdRefs } from "@/internal/catalogV2/actions/updateCatalog/
 import type { ProductStatesContext } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext";
 import { versionForSlug } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/versionForSlug";
 
-/**
- * A stated `internal_id` and a stated version pin must name the same row.
- * Silently preferring one would apply the write somewhere the caller did not
- * ask for — and a config file that disagrees with itself is a bug worth
- * surfacing, not resolving.
- */
 export const assertInternalIdAgrees = ({
 	params,
 	productStatesContext,

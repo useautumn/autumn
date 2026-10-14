@@ -4,10 +4,6 @@ import { AGGREGATED_BALANCE_FIELD } from "@/internal/customers/cache/fullSubject
 import { getEntityAggregateForSync } from "@/internal/customers/repos/getFullSubject/getEntityAggregateForSync.js";
 import { tryRedisWrite } from "@/utils/cacheUtils/cacheUtils.js";
 
-/**
- * After DB sync, recompute entity aggregation from the now-authoritative DB
- * and HSET `_aggregated` on the affected balance hashes.
- */
 export const refreshEntityAggregateCache = async ({
 	ctx,
 	customerId,
@@ -29,9 +25,6 @@ export const refreshEntityAggregateCache = async ({
 
 		const { redisV2 } = ctx;
 
-		// Only refresh features whose balance hash already has `_aggregated`.
-		// If none of the hashes have it cached, there is nothing to refresh —
-		// avoid the expensive CTE entirely.
 		const existsPipeline = redisV2.pipeline();
 		for (const featureId of featureIds) {
 			const balanceKey = buildSharedFullSubjectBalanceKey({

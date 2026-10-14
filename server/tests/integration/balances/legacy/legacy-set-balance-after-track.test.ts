@@ -1,8 +1,3 @@
-/**
- * The legacy setBalance turns each target into a delta against a Postgres read. On a routed customer a
- * track is answered at Kafka ack, so the worker must land it before that read or the target lands off by it.
- */
-
 import { expect, test } from "bun:test";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { items } from "@tests/utils/fixtures/items.js";

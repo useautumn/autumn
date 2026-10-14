@@ -10,11 +10,6 @@ import type { KafkaProducerSessionConfig } from "./types/producer.js";
 
 const maximumKafkaProducerRetryCount = 10;
 
-/**
- * Partition producers always name their partition, but kafkajs still ran its
- * default partitioner over the topic's metadata for every message: about 3% of a
- * busy worker's CPU. Honour the named partition and only fall back when absent.
- */
 export function explicitPartitioner(): ReturnType<ICustomPartitioner> {
 	const fallback = Partitioners.DefaultPartitioner();
 	function partitionOf(args: PartitionerArgs): number {
@@ -56,7 +51,6 @@ export function createProducerConfig({
 	limits,
 	mode = "transactional",
 }: KafkaProducerSessionConfig): ProducerConfig {
-	// One round trip per commit: no transactional id, so no broker-side fence; the owner's epoch travels in the record instead.
 	if (mode === "idempotent") {
 		return {
 			...createIdempotentProducerConfig({ limits }),
@@ -84,7 +78,6 @@ export function createProducerConfig({
 	};
 }
 
-/** No transactional id, so no fence: the broker still drops a retried send it already has. */
 export function createIdempotentProducerConfig({
 	limits,
 }: {

@@ -1,6 +1,3 @@
-/** After subscription renewal creates a capped pooled rollover, increasing the pooled grant preserves that rollover.
- * The transition applies only the contribution delta and leaves the customer-level prepaid add-on unchanged. */
-
 import { test } from "bun:test";
 import type { UpdateSubscriptionV1ParamsInput } from "@autumn/shared";
 import { expectStripeSubscriptionCorrect } from "@tests/integration/billing/utils/expectStripeSubCorrect/index.js";

@@ -1,11 +1,3 @@
-/**
- * atmn crud/versions — draft on a brand-new plan → refused before anything is sent
- *
- * A plan whose only row is `active: false` has no version anyone can buy. The
- * config lint says so and the push never reaches the server; the raw-wire
- * path gets the server's own version of that guard (scenarios/lint).
- */
-
 import { expect, test } from "bun:test";
 import { configBody } from "@tests/utils/atmnUtils/baseConfigs.js";
 import { initAtmnScenario } from "@tests/utils/atmnUtils/initAtmnScenario.js";

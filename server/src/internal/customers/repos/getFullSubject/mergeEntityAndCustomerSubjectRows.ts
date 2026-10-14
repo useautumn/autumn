@@ -12,7 +12,6 @@ const dedupeBy = <T>(rows: T[], getKey: (row: T) => string): T[] => {
 	return [...seen.values()];
 };
 
-/** Dedupe, keep only referenced rows, and sort by key to mirror the SQL's DISTINCT ON ... ORDER BY output. */
 const mergeCatalog = <T>(
 	rows: T[],
 	getKey: (row: T) => string,
@@ -22,14 +21,6 @@ const mergeCatalog = <T>(
 		.filter((row) => keptKeys.has(getKey(row)))
 		.sort((left, right) => (getKey(left) < getKey(right) ? -1 : 1));
 
-/**
- * Recombines an entityScopedOnly subject row with its customer's
- * customer-level row into the SubjectQueryRow the combined query would
- * produce. Entity rows concat before customer rows (subject_entity_priority
- * leads the SQL ranking), the caps apply to the combined arrays, and since
- * the SQL derives every other array AFTER the caps, rows referencing
- * capped-out customer products are dropped here too.
- */
 export const mergeEntityAndCustomerSubjectRows = ({
 	entityRow,
 	customerRow,
@@ -39,9 +30,6 @@ export const mergeEntityAndCustomerSubjectRows = ({
 }): SubjectQueryRow => {
 	if (!customerRow) return entityRow;
 
-	// The entityScopedOnly query matches on internal_entity_id alone (adding the
-	// customer predicate degrades its plan), so enforce the customer match here.
-	// Dependent rows of any dropped product are filtered transitively below.
 	const customerProducts = [
 		...entityRow.customer_products.filter(
 			(product) =>
@@ -92,15 +80,12 @@ export const mergeEntityAndCustomerSubjectRows = ({
 		),
 	};
 
-	// Explicit keys only (no spreads): a new required SubjectQueryRow field must
-	// fail compilation here until this merge handles it.
 	return {
 		customer: entityRow.customer,
 		entity: entityRow.entity,
 		customer_products: customerProducts,
 		customer_entitlements: customerEntitlements,
 		customer_prices: customerPrices,
-		// Customer licenses are customer-subject-only; entity flows never carry them.
 		customer_licenses: [],
 		extra_customer_entitlements: extraCustomerEntitlements,
 		rollovers: [...entityRow.rollovers, ...customerRow.rollovers].filter(

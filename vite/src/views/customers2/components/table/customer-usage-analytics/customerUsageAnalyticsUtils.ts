@@ -14,7 +14,6 @@ export type TimeseriesData = {
 	data: TimeseriesRow[];
 };
 
-/** Prepares chart data from pre-aggregated timeseries data */
 export function prepareTimeseriesChartData({
 	timeseriesEvents,
 }: {
@@ -25,12 +24,10 @@ export function prepareTimeseriesChartData({
 	eventNames: string[];
 	maxValue: number;
 } {
-	// Extract event names from meta (excluding 'period')
 	const eventNames = timeseriesEvents.meta
 		.filter((m) => m.name !== "period")
 		.map((m) => m.name.replace("_count", ""));
 
-	// Build chart config
 	const config: ChartConfig = {};
 	eventNames.forEach((name: string, index: number) => {
 		config[name] = {
@@ -39,12 +36,8 @@ export function prepareTimeseriesChartData({
 		};
 	});
 
-	// Transform timeseries data to chart format
-	// Period comes as a date string (e.g., "2025-02-09") representing a calendar day bucket
-	// Parse it directly to avoid timezone conversion issues
 	const chartData = timeseriesEvents.data.map((row) => {
 		const periodStr = String(row.period);
-		// Extract date parts directly from the string to avoid timezone shifts
 		const [year, month, day] = periodStr.slice(0, 10).split("-").map(Number);
 		const date = new Date(year, month - 1, day);
 		const dayKey = date.toLocaleDateString("en-US", {
@@ -54,7 +47,6 @@ export function prepareTimeseriesChartData({
 
 		const dataPoint: Record<string, string | number> = { date: dayKey };
 
-		// Add counts for each event (remove _count suffix for consistency)
 		eventNames.forEach((eventName: string) => {
 			const countKey = `${eventName}_count`;
 			dataPoint[eventName] = row[countKey] || 0;
@@ -63,7 +55,6 @@ export function prepareTimeseriesChartData({
 		return dataPoint;
 	});
 
-	// Calculate max value for Y-axis
 	const max = Math.max(
 		...chartData.map((day) =>
 			eventNames.reduce((sum, eventName) => {
@@ -82,17 +73,11 @@ export function prepareTimeseriesChartData({
 	};
 }
 
-/**
- * Extracts unique event names from events
- */
 function getAvailableFeatures({ events }: { events: Event[] }): string[] {
 	if (!events || events.length === 0) return [];
 	return Array.from(new Set(events.map((e) => e.event_name)));
 }
 
-/**
- * Filters events by time range and selected features
- */
 function filterEventsByTimeAndFeatures({
 	events,
 	selectedDays,
@@ -123,9 +108,6 @@ function filterEventsByTimeAndFeatures({
 	return filtered;
 }
 
-/**
- * Prepares chart data including config, dates, aggregation, and max value
- */
 export function prepareChartData({
 	events,
 	daysToShow,
@@ -162,26 +144,6 @@ export function prepareChartData({
 		});
 		allDates[dayKey] = {};
 	}
-
-	// if (events && events.length > 0) {
-	// 	events.forEach((event) => {
-	// 		const date =
-	// 			typeof event.timestamp === "number"
-	// 				? new Date(event.timestamp * 1000)
-	// 				: // type is Date but actually comes as a string
-	// 					new Date(event.timestamp as unknown as string);
-
-	// 		const dayKey = date.toLocaleDateString("en-US", {
-	// 			month: "short",
-	// 			day: "numeric",
-	// 		});
-
-	// 		if (allDates[dayKey] !== undefined) {
-	// 			const eventName = event.event_name;
-	// 			allDates[dayKey][eventName] = (allDates[dayKey][eventName] || 0) + 1;
-	// 		}
-	// 	});
-	// }
 
 	const data = Object.entries(allDates).map(([day, counts]) => ({
 		date: day,

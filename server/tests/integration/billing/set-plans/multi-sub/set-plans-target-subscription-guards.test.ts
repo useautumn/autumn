@@ -1,8 +1,3 @@
-/**
- * set_plans with stripe_subscription_id rejects requests that would cross
- * subscriptions; without it, the multi-subscription 400 is unchanged.
- */
-
 import { expect, test } from "bun:test";
 import { ErrCode } from "@autumn/shared";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils";

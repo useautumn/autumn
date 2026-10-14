@@ -18,20 +18,14 @@ import { LeafChatPanel } from "./components/LeafChatPanel";
 import { LeafThreadHistory } from "./components/LeafThreadHistory";
 import { useLeafChat } from "./hooks/useLeafChat";
 
-// Geometry animates via reflow (right/bottom-anchored in both modes) instead of
-// a motion layout FLIP, which scale-warps children mid-transition.
 const GEOMETRY_TRANSITION = ["width", "height", "right", "bottom"]
 	.map((property) => `${property} 300ms cubic-bezier(0.32, 0.72, 0, 1)`)
 	.join(", ");
-// Show/hide is a corner-origin scale — no translate, so closing never reads as
 // a layout shift. Exit is faster than enter. Tailwind v4 scale-* sets the CSS
-// `scale` property (not `transform`), so that's what must be transitioned.
 const EASE_OUT = "cubic-bezier(0.23, 1, 0.32, 1)";
 const SHOW_TRANSITION = `${GEOMETRY_TRANSITION}, opacity 160ms ${EASE_OUT}, scale 160ms ${EASE_OUT}`;
 const HIDE_TRANSITION = `${GEOMETRY_TRANSITION}, opacity 110ms ${EASE_OUT}, scale 110ms ${EASE_OUT}`;
 
-/** Linear-style chat panel portaled into the main content container: docked
- * card bottom-right, expandable to overlay the content area (not the sidebar). */
 export const LeafPanel = () => {
 	const { isAdmin } = useAdmin();
 	const isMobile = useIsMobile();
@@ -45,23 +39,17 @@ export const LeafPanel = () => {
 	const newThread = useLeafPanelStore((s) => s.newThread);
 	const commandBarOpen = useCommandBarStore((s) => s.open);
 
-	// Lazy keep-alive: nothing mounts until first open; afterwards the panel stays
-	// mounted while hidden so the conversation and in-flight streams survive.
 	const [hasOpened, setHasOpened] = useState(false);
 	const panelRef = useRef<HTMLDivElement>(null);
 	useEffect(() => {
 		if (open) setHasOpened(true);
 	}, [open]);
-	// hasOpened in deps: on the very first open the panel mounts a render after
-	// `open` flips, so the composer only exists once hasOpened commits. threadId
-	// in deps: new thread / resumed thread remounts the composer unfocused.
 	useEffect(() => {
 		if (open && hasOpened) {
 			panelRef.current?.querySelector("textarea")?.focus();
 		}
 	}, [open, hasOpened, threadId]);
 
-	// meta+i is impersonate while the command bar is open — yield to it there.
 	useHotkeys(["meta+i", "ctrl+i"], togglePanel, {
 		enableOnFormTags: true,
 		enabled: isAdmin && !isMobile && !commandBarOpen,
@@ -177,8 +165,6 @@ const LeafChatContainer = ({
 	threadId: string;
 }) => {
 	const markThreadStarted = useLeafPanelStore((s) => s.markThreadStarted);
-	// Captured at mount (remounts via key on thread change): hydrate only
-	// threads that already have server history, and never mid-conversation.
 	const [shouldHydrate] = useState(
 		() => useLeafPanelStore.getState().threadStarted,
 	);

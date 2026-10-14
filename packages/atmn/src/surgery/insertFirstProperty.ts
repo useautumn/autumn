@@ -22,8 +22,6 @@ export const insertFirstProperty = ({
 	where?: FixtureConstraint[];
 	property: string;
 }): string | null => {
-	// A splice keeps every other byte, so a literal the pull rewriter refuses
-	// (it names another fixture) still takes one new property.
 	const call = findFixture({
 		source,
 		builder,
@@ -35,8 +33,6 @@ export const insertFirstProperty = ({
 	if (call === null) return null;
 	const object = fixtureObjectOf(call);
 	if (object === null) return null;
-	// A spread later in the literal overrides an earlier key, so a literal built
-	// from one takes the property at the end instead — where it still applies.
 	if (holdsSpread({ object })) {
 		return call
 			.getRoot()
@@ -46,8 +42,6 @@ export const insertFirstProperty = ({
 	const first = object.namedChildren()[0];
 	if (first === undefined) return null;
 	const insertAt = first.range().start.index;
-	// The object spans lines: the existing whitespace before the first property
-	// already indents it, so the new property takes that indent on its own line.
 	const spansLines = source
 		.slice(object.range().start.index, insertAt)
 		.includes("\n");

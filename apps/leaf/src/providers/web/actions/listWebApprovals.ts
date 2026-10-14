@@ -36,7 +36,6 @@ export const listWebApprovals = async ({
 		id: approval.id,
 		tool_name: approval.tool_name,
 		tool_args: approval.tool_args,
-		// Stored raw as the MCP tool envelope; unwrap to the inner { plans, features }.
 		preview: parsePreviewPayload(approval.preview),
 		created_at: approval.created_at,
 	}));

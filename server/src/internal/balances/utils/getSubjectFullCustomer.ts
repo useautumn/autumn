@@ -12,13 +12,11 @@ import { CusService } from "@/internal/customers/CusService.js";
 import { getOrSetCachedFullSubject } from "@/internal/customers/cache/fullSubject/actions/getOrSetCachedFullSubject.js";
 import { isBalanceWorkerRolloutEnabled } from "@/internal/misc/rollouts/isBalanceWorkerRolloutEnabled.js";
 
-/** A missing customer or entity is the answer, not a failed read: Postgres would say the same. */
 export const isSubjectNotFound = (error: unknown): boolean =>
 	error instanceof RecaseError &&
 	(error.code === ErrCode.CustomerNotFound ||
 		error.code === EntityErrorCode.EntityNotFound);
 
-/** The subject as a balance write should see it: the worker's live rows when it holds them, else the FullSubject cache. Postgres only if that read fails. */
 export const getSubjectFullCustomer = async ({
 	ctx,
 	customerId,

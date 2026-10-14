@@ -30,7 +30,6 @@ export function RelationalDbSimulator() {
 
 	return (
 		<div className="not-prose my-8 overflow-hidden rounded-xl border border-[#292929] bg-[#0F0F0F]">
-			{/* Toolbar: db name + reset on the left, change toggles pinned right */}
 			<div className="flex flex-wrap items-center gap-2 border-b border-[#292929] px-4 py-2.5 text-[13px]">
 				<span className="font-mono text-[12px] text-[#FFFFFF4d]">postgres</span>
 				<AnimatePresence>
@@ -61,10 +60,7 @@ export function RelationalDbSimulator() {
 				</div>
 			</div>
 
-			{/* Tables flush to the card edges; height reserved for the fullest
-			    state so toggling never resizes the card (no scrollbars). */}
 			<div className="min-h-[420px] overflow-hidden">
-				{/* PLANS */}
 				<div className={cn("border-b border-[#292929]", sectionLabel)}>
 					plans
 				</div>
@@ -112,7 +108,6 @@ export function RelationalDbSimulator() {
 					</tbody>
 				</table>
 
-				{/* CUSTOMERS + the single join query */}
 				<div className={cn("border-y border-[#292929]", sectionLabel)}>
 					customers
 				</div>

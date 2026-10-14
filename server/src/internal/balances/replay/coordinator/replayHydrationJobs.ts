@@ -61,10 +61,6 @@ export function abortAllJobs({
 		abortJob({ scope, job, cause });
 }
 
-/**
- * A registered job answers every joiner for its identity, including the already
- * terminal one an abort left behind while its physical load is still running.
- */
 function jobForSelection({
 	scope,
 	selection,

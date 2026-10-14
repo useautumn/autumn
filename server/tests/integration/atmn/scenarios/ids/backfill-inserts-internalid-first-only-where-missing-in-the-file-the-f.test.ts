@@ -1,9 +1,3 @@
-/**
- * atmn scenarios/ids — backfill inserts `internalId` first, only where missing, in the file the fixture lives in [root, imported file, nested folder]
- *
- * One line of plans/atmn-v3/07_tests.md. [a, b] is a matrix looped INSIDE this file.
- */
-
 import { expect, test } from "bun:test";
 import {
 	atmnImports,
@@ -16,8 +10,6 @@ import { uniqueTestId } from "../../../catalog-v2/utils/uniqueTestId.js";
 const LOCATIONS = ["root", "imported file", "nested folder"] as const;
 type Location = (typeof LOCATIONS)[number];
 
-/** Where the fixture literal lives for each location kind, and the raw root
- * config that reaches it. */
 const layoutFor = ({
 	location,
 	featureId,

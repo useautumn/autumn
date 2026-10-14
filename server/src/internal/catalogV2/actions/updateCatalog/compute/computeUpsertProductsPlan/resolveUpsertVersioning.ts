@@ -4,7 +4,6 @@ import type {
 } from "@autumn/shared";
 import type { UpsertProductSource } from "@/internal/catalogV2/actions/updateCatalog/types/upsertProductPlan";
 
-/** Sibling expansion always resolves to all_versions; otherwise params (default existing). */
 export const resolveUpsertVersioning = ({
 	planParams,
 	source,

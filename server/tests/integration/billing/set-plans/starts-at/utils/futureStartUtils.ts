@@ -15,7 +15,6 @@ import type Stripe from "stripe";
 import { scheduleSubscriptionId } from "@/internal/billing/v2/actions/setPlans/setup/splitReplacedStripeSubscription";
 import { CusService } from "@/internal/customers/CusService";
 
-/** The plans the starts_at tests move between: a main plan, its upgrade, and an add-on. */
 export const startsAtProducts = () => ({
 	pro: products.pro({ items: [items.monthlyMessages({ includedUsage: 100 })] }),
 	premium: products.premium({
@@ -26,7 +25,6 @@ export const startsAtProducts = () => ({
 	}),
 });
 
-/** The customer's row for a plan in a scope, skipping the expired rows a set_plans call leaves behind. */
 export const findLiveCustomerProduct = async ({
 	ctx,
 	customerId,
@@ -54,7 +52,6 @@ export const findLiveCustomerProduct = async ({
 	return customerProduct;
 };
 
-/** The Stripe customer behind an Autumn customer. */
 export const findStripeCustomerId = async ({
 	ctx,
 	customerId,
@@ -73,7 +70,6 @@ export const findStripeCustomerId = async ({
 	return stripeCustomerId;
 };
 
-/** The test clock's current time, which is the now set_plans measures starts_at against. */
 export const testClockNowMs = async ({
 	ctx,
 	testClockId,
@@ -86,7 +82,6 @@ export const testClockNowMs = async ({
 	return secondsToMs(testClock.frozen_time);
 };
 
-/** The customer's not-yet-finished Stripe schedules are exactly these, so a replaced one can't still fire. */
 export const expectPendingSchedules = async ({
 	ctx,
 	customerId,
@@ -105,7 +100,6 @@ export const expectPendingSchedules = async ({
 	expect(pendingIds.sort()).toEqual([...scheduleIds].sort());
 };
 
-/** The row rides a Stripe schedule whose first phase starts on the future start, to the second. */
 export const expectFutureStartScheduleCorrect = async ({
 	ctx,
 	customerProduct,
@@ -134,7 +128,6 @@ export const expectFutureStartScheduleCorrect = async ({
 	return schedule;
 };
 
-/** Moves the test clock past the start, then delivers the subscription Stripe created to the subscription.created handler. */
 export const activateFutureStart = async ({
 	ctx,
 	customerId,

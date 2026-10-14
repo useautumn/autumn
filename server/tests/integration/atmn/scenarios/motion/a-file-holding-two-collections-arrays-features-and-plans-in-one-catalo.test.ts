@@ -1,11 +1,3 @@
-/**
- * atmn scenarios/motion — a file holding two collections' arrays (features and plans in one `catalog.ts`) → each append goes to its own array
- *
- * code in motion: the config's shape is the user's; pull edits the AST, never rewrites a file
- *
- * One line of plans/atmn-v3/07_tests.md. [a, b] is a matrix looped INSIDE this file.
- */
-
 import { expect, test } from "bun:test";
 import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 import {
@@ -75,8 +67,6 @@ export const plans = [
 			expect(after).toContain(`featureId: "${remoteFeatureId}"`);
 			expect(after).toContain(`planId: "${remotePlanId}"`);
 
-			// Each insertion lands in its own array: the new feature sits before
-			// the `plans` array starts, the new plan sits after it.
 			const plansArrayStart = after.indexOf("export const plans");
 			expect(after.indexOf(`featureId: "${remoteFeatureId}"`)).toBeLessThan(
 				plansArrayStart,

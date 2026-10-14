@@ -2,10 +2,6 @@ import type { Subprocess } from "bun";
 
 const RESTART_DELAY_MS = 2_000;
 
-/**
- * Local stand-in for the orchestrator that replaces a production task: the worker ends its own process
- * when a partition cannot go on, and nothing else brings it back under `concurrently`.
- */
 let isStopping = false;
 let worker: Subprocess | undefined;
 

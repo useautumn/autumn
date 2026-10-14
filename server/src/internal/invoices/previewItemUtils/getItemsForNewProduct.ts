@@ -85,7 +85,7 @@ export const getProration = ({
 		start: number;
 		end: number;
 	}>;
-	anchor?: number; // used to indicate a future date to anchor the next period end to...
+	anchor?: number;
 	intervalConfig: IntervalConfig;
 	now?: number;
 	floor?: number;
@@ -127,16 +127,12 @@ export const getProration = ({
 
 	let start = proration?.start;
 	if (!start && end && anchor) {
-		// Find the period start by iterating from the anchor until we reach the period that contains 'now'
-		// This ensures we get the correct period even when the anchor day doesn't exist in some months
-		// e.g., anchor=31 Oct, now=14 Nov, end=30 Nov -> start should be 31 Oct, not 30 Oct
 		start = getPeriodStartForEnd({
 			anchor,
 			intervalConfig,
 			targetEnd: end,
 		});
 	} else if (!start && end) {
-		// Fallback to old behavior if no anchor is provided
 		start = subtractIntervalForProration({
 			unixTimestamp: end!,
 			interval,

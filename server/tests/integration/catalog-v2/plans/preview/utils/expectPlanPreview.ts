@@ -22,32 +22,23 @@ type ExpectedLicenseChange = Partial<
 	Omit<NonNullable<PlanPreviewChange["license_changes"]>[number], "plan_change">
 > & {
 	plan_change?: Record<string, unknown> | null;
-	/** Containment over per-link conflicts; pass `null` to assert absent/empty. */
 	conflicts?: CatalogConflictPreview[] | null;
 };
 
 type ExpectedSiblingVersion = {
 	version: number;
 	versionSlug?: string;
-	/** Pass `null` to assert `new_version_slug` is omitted. */
 	newVersionSlug?: string | null;
 	selected?: boolean;
 	active?: boolean;
 	hasCustomers?: boolean;
-	/** true = plan_change present; false/null = absent. */
 	hasPlanChange?: boolean;
-	/** Containment over plan_change.previous_attributes. */
 	previousAttributes?: Record<string, unknown> | null;
 	licenseChanges?: ExpectedLicenseChange[] | null;
-	/** Containment over conflicts; pass `null` to assert absent/empty. */
 	conflicts?: CatalogConflictPreview[] | null;
-	/** Variant lanes only — each variant version resolves the base edit itself. */
 	variantAction?: CatalogVariantAction;
-	/** Parent lanes only — each parent version resolves the child edit itself. */
 	licenseAction?: CatalogLicenseAction;
-	/** Parents whose link points at this sibling version. */
 	licenseParents?: ExpectedLicenseParent[] | null;
-	/** Variant rows anchored to this sibling version. */
 	variants?: ExpectedVariant[] | null;
 };
 
@@ -55,7 +46,6 @@ type ExpectedLicenseParent = {
 	planId: string;
 	version?: number;
 	versionSlug?: string;
-	/** Pass `null` to assert `new_version_slug` is omitted. */
 	newVersionSlug?: string | null;
 	licenseAction?: CatalogLicenseAction;
 	versioning?: PlanPreviewVersioning;
@@ -64,55 +54,37 @@ type ExpectedLicenseParent = {
 	hasPlanChange?: boolean;
 	customize?: PlanPreviewChange["customize"] | null;
 	licenseChanges?: ExpectedLicenseChange[] | null;
-	/** Containment over the first license_change's nested item_changes. */
 	nestedItemChanges?: Array<Record<string, unknown>>;
-	/** Containment over conflicts; pass `null` to assert absent/empty. */
 	conflicts?: CatalogConflictPreview[] | null;
-	/** Containment over sibling_versions; pass `null` to assert the lane is omitted. */
 	siblingVersions?: ExpectedSiblingVersion[] | null;
 };
 
 type ExpectedPlanPreviewRow = {
 	planId: string;
-	/** Disambiguate when multiple direct entries share a plan_id. */
 	currentVersion?: number;
 	action?: PlanPreviewRow["action"];
 	name?: string;
 	versionSlug?: string;
-	/** Pass `null` to assert `new_version_slug` is omitted. */
 	newVersionSlug?: string | null;
-	/** Pass `null` to assert `new_plan_id` is omitted. */
 	newPlanId?: string | null;
 	active?: boolean;
-	/** Object = promoting. Explicit `undefined` asserts the field is omitted. */
 	promotionDetails?: { previous_active_version_slug: string };
 	hasCustomers?: boolean;
 	customerCount?: number;
 	willArchive?: boolean;
-	/** Exact match; pass `null` to assert stubbed/absent versioning. */
 	versioning?: PlanPreviewVersioning | null;
-	/** Containment over versioning.options (order-insensitive). */
 	versioningOptions?: CatalogPlanVersioningStrategy[];
-	/** Exact match; pass `null` to assert plan_change is absent (undefined or null). */
 	planChange?: PlanPreviewChange | null;
-	/** Containment over plan_change.previous_attributes keys/values. */
 	previousAttributes?: Record<string, unknown> | null;
-	/** Containment over customize lanes; pass `null` to assert absent. */
 	customize?: PlanPreviewChange["customize"] | null;
 	priceChange?: PlanPreviewChange["price_change"] | null;
 	freeTrialChange?: PlanPreviewChange["free_trial_change"] | null;
 	itemChanges?: PlanPreviewChange["item_changes"];
-	/** Containment over license_changes; pass `null` to assert absent. */
 	licenseChanges?: ExpectedLicenseChange[] | null;
-	/** Containment over sibling_versions; pass `null` to assert the lane is omitted. */
 	siblingVersions?: ExpectedSiblingVersion[] | null;
-	/** Containment over licenses; pass `null` to assert the lane is omitted. */
 	licenses?: ApiPlanLicenseV1[] | null;
-	/** Containment over license_parents; pass `null` to assert the lane is omitted. */
 	licenseParents?: ExpectedLicenseParent[] | null;
-	/** Containment over variants; pass `null` to assert the lane is omitted. */
 	variants?: ExpectedVariant[] | null;
-	/** Exact match; pass `null` to assert absent. */
 	aliasReplacement?: PlanPreviewRow["alias_replacement"] | null;
 };
 
@@ -120,13 +92,11 @@ type ExpectedVariant = {
 	planId: string;
 	version?: number;
 	versionSlug?: string;
-	/** Pass `null` to assert `new_version_slug` is omitted. */
 	newVersionSlug?: string | null;
 	variantAction?: CatalogVariantAction;
 	versioning?: PlanPreviewVersioning;
 	hasCustomers?: boolean;
 	hasPlanChange?: boolean;
-	/** Containment over plan_change.previous_attributes. */
 	previousAttributes?: Record<string, unknown> | null;
 	conflicts?: CatalogConflictPreview[] | null;
 	customize?: PlanPreviewChange["customize"] | null;
@@ -135,7 +105,6 @@ type ExpectedVariant = {
 	licenseChanges?: ExpectedLicenseChange[] | null;
 	nestedItemChanges?: Array<Record<string, unknown>>;
 	siblingVersions?: ExpectedSiblingVersion[] | null;
-	/** Exact match; pass `null` to assert absent. */
 	aliasReplacement?: CatalogVariantPreview["alias_replacement"] | null;
 };
 
@@ -147,7 +116,6 @@ const expectPresent = (value: unknown) => {
 	expect(value != null).toBe(true);
 };
 
-/** Exact key set, containment on values; `null` asserts no scalar changed. */
 const expectPreviousAttributesMatch = ({
 	actual,
 	expected,
@@ -169,7 +137,6 @@ const expectPreviousAttributesMatch = ({
 	}
 };
 
-/** Slug identity of one preview row — direct, variant, or license parent. */
 const expectVersionSlugMatch = ({
 	actual,
 	versionSlug,
@@ -447,7 +414,6 @@ const expectSiblingVersionsMatch = ({
 	}
 };
 
-/** Parse + schema-validate the preview response; throws on shape drift. */
 export const parsePlanPreview = (raw: unknown): PreviewUpdateCatalogResponse =>
 	PreviewUpdateCatalogResponseSchema.parse(raw);
 
@@ -486,7 +452,6 @@ export const findPlanPreviewRow = ({
 	return row;
 };
 
-/** Containment asserts for one plan preview row — only fields passed are checked. */
 export const expectPlanPreviewRowCorrect = ({
 	preview,
 	expected,

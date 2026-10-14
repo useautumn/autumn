@@ -70,8 +70,6 @@ const parentIsPending = (db: ChatDb, approvalId: string) =>
 			),
 	);
 
-/** Pending-guarded on step AND parent: a resolved card keeps exactly what it
- * was approved with. */
 const setStepPreview = async ({
 	approvalId,
 	db,
@@ -114,7 +112,6 @@ const setStepStatus = async ({
 		.where(eq(chatApprovalWrites.id, writeId));
 };
 
-/** Settled writes parked by the given eve session (root or child), newest first. */
 const listSettledForSession = async ({
 	db,
 	sessionId,

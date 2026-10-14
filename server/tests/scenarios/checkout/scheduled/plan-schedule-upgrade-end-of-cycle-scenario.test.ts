@@ -4,21 +4,9 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-/**
- * Plan Schedule: Upgrade with End of Cycle Override
- *
- * Demonstrates forcing an upgrade to be scheduled instead of immediate.
- * By default, upgrades happen immediately with prorated charges.
- * Using plan_schedule: "end_of_cycle" forces the upgrade to be scheduled
- * for the end of the current billing cycle instead.
- *
- * Customer on Pro ($20/mo) → Premium ($50/mo) with plan_schedule: "end_of_cycle"
- */
-
 test(`${chalk.yellowBright("plan_schedule: upgrade with end_of_cycle override")}`, async () => {
 	const customerId = "plan-schedule-upgrade-eoc";
 
-	// Pro plan ($20/mo)
 	const pro = products.pro({
 		id: "pro",
 		items: [
@@ -28,7 +16,6 @@ test(`${chalk.yellowBright("plan_schedule: upgrade with end_of_cycle override")}
 		],
 	});
 
-	// Premium plan ($50/mo)
 	const premium = products.premium({
 		id: "premium",
 		items: [
@@ -40,7 +27,6 @@ test(`${chalk.yellowBright("plan_schedule: upgrade with end_of_cycle override")}
 		],
 	});
 
-	// Setup: customer with payment method and pro plan attached
 	const { autumnV1 } = await initScenario({
 		customerId,
 		setup: [
@@ -50,7 +36,6 @@ test(`${chalk.yellowBright("plan_schedule: upgrade with end_of_cycle override")}
 		actions: [s.attach({ productId: "pro" })],
 	});
 
-	// Get customer state before upgrade
 	const customerBefore = await autumnV1.customers.get(customerId);
 	console.log("Customer before scheduled upgrade:", {
 		products: customerBefore.products?.map(
@@ -61,8 +46,6 @@ test(`${chalk.yellowBright("plan_schedule: upgrade with end_of_cycle override")}
 		),
 	});
 
-	// 1. Preview the upgrade with plan_schedule: "end_of_cycle"
-	// This forces the upgrade to be scheduled instead of immediate
 	const upgradePreview = await autumnV1.billing.previewAttach({
 		customer_id: customerId,
 		product_id: `premium_${customerId}`,
@@ -71,7 +54,6 @@ test(`${chalk.yellowBright("plan_schedule: upgrade with end_of_cycle override")}
 	});
 	console.log("Upgrade preview (with end_of_cycle override):", upgradePreview);
 
-	// 2. Perform the upgrade with plan_schedule: "end_of_cycle" and redirect_mode: "always" (Autumn checkout URL)
 	const upgradeResult = await autumnV1.billing.attach({
 		customer_id: customerId,
 		product_id: `premium_${customerId}`,
@@ -80,7 +62,6 @@ test(`${chalk.yellowBright("plan_schedule: upgrade with end_of_cycle override")}
 	});
 	console.log("Upgrade result (scheduled for end of cycle):", upgradeResult);
 
-	// Get customer state after - should still have Pro (Premium is scheduled)
 	const customerAfter = await autumnV1.customers.get(customerId);
 	console.log("Customer after scheduled upgrade:", {
 		products: customerAfter.products?.map(

@@ -1,9 +1,5 @@
 import type { PartitionProcessorScope } from "../types/partitionProcessor.js";
 
-/**
- * Every record of the partition at or below it is in what this owner reads now: the last record it appended, or before
- * its first append, the log its store held at activation. Only ever low, never high, so a reader can trust it.
- */
 export const readLogOffset = ({
 	scope,
 }: {

@@ -2,11 +2,6 @@ import { Scopes } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { RCMappingService } from "../misc/RCMappingService.js";
 
-/**
- * POST /v1/plans.revenuecat_mappings — returns each Autumn plan's RevenueCat store
- * product identifier(s) for the calling org/env, so SDK implementers can map a plan
- * to the product to purchase without reconstructing the identifier themselves.
- */
 export const handleListRevenueCatMappings = createRoute({
 	scopes: [Scopes.Plans.Read],
 	handler: async (c) => {

@@ -17,17 +17,14 @@ export type BillingOptionId =
 export type BillingOptionRule = {
 	visible: boolean;
 	disabled: boolean;
-	/** Shown as a tooltip when present; a rule can be disabled without one. */
 	disabledReason: string | null;
 };
 
 export type BillingOptionRules = Record<BillingOptionId, BillingOptionRule>;
 
-/** Everything any flow needs to decide visibility. Each flow fills its own subset. */
 export type BillingOptionState = {
 	hasActiveSubscription?: boolean;
 	isMultiPlan?: boolean;
-	// attach
 	showProrationRow?: boolean;
 	showProrationBehavior?: boolean;
 	isNoChargesAllowed?: boolean;
@@ -35,7 +32,6 @@ export type BillingOptionState = {
 	canChooseBillingCycle?: boolean;
 	showStartDate?: boolean;
 	showEndDate?: boolean;
-	// schedule
 	hasPaidRecurringPlan?: boolean;
 	carriesUsageNow?: boolean;
 };
@@ -55,13 +51,11 @@ const show = (
 	disabledReason,
 });
 
-/** Disabled with no explanatory tooltip. */
 const showDisabledSilently = (
 	visible: boolean,
 	disabled: boolean,
 ): BillingOptionRule => ({ visible, disabled, disabledReason: null });
 
-// A multi-plan attach hides the options its request body doesn't send.
 function attachRules(state: BillingOptionState): BillingOptionRules {
 	const singlePlanOnly = !state.isMultiPlan;
 	return {
@@ -112,14 +106,12 @@ function scheduleRules(state: BillingOptionState): BillingOptionRules {
 		startDate: HIDDEN,
 		endDate: show(!!state.hasPaidRecurringPlan),
 		carryOverBalances: HIDDEN,
-		// set_plans rejects carry-over unless the first phase replaces a plan or resets the cycle now.
 		carryOverUsages: show(!!state.carriesUsageNow),
 		overrideLineItems: HIDDEN,
 		newBillingSubscription: HIDDEN,
 	};
 }
 
-/** Single source of truth for which billing options a sheet exposes. */
 export function getBillingOptionRules({
 	flow,
 	state,

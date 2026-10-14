@@ -11,24 +11,6 @@ type StripeOwnedFieldUpdates = Pick<
 	"trial_ends_at" | "collection_method"
 >;
 
-/**
- * Stripe's `subscription.updated` carries the whole subscription, but only
- * `previous_attributes` says what actually changed. A Stripe subscription can
- * hold Autumn products whose trial or collection method Stripe never knew
- * about (a trial product merged onto a shared paid subscription, a trial that
- * lives in a schedule phase), so copying `trial_end` / `collection_method`
- * from the subscription on every event silently erases them. Only mirror those
- * fields when Stripe itself changed them; status is always Stripe's to own.
- *
- * Even when Stripe did change `trial_end`, a shared subscription can carry
- * both its own trial and an Autumn-only one, so `trial_ends_at` moves only on
- * products whose trial was Stripe's — i.e. matched Stripe's previous value.
- * Autumn keeps ms and Stripe keeps seconds, so the match is at second
- * precision, as in `normalizeCustomerProductTimestamps`.
- *
- * Pass `current` to skip no-op writes. Omit it for a blind bulk write, where
- * every field Stripe changed is written.
- */
 const trialWasStripes = ({
 	currentTrialEndsAt,
 	previousStripeTrialEnd,

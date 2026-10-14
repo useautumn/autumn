@@ -1,12 +1,3 @@
-/**
- * Contract: same-feature pooledness or pool-identity changes are remove+add
- * (fresh grants, usage dropped). link_id is stable. Sources stay 0 when pooled.
- *
- *   immediate private→pooled → new pool, usage forgiven
- *   scheduled pooled→private → pool lives until activation, then fresh seats
- *   immediate monthly→lifetime → new lifetime pool, usage forgiven
- */
-
 import { test } from "bun:test";
 import type { ApiCustomerV5, AttachParamsV1Input } from "@autumn/shared";
 import { expectCustomerProducts } from "@tests/integration/billing/utils/expectCustomerProductCorrect.js";

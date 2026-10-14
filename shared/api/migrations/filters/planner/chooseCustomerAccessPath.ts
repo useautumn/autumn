@@ -7,16 +7,9 @@ import type {
 export type ChosenCustomerAccessPath = {
 	id: "plan.plan_id";
 	constraint: PlanIdConstraint;
-	/** Set when the source proves the ENTIRE plan quantifier, so the caller
-	 * may drop this nav from the fallback WHERE. */
 	consumedNav?: IRNav;
 };
 
-/**
- * Consumption is all-or-nothing per quantifier: every predicate shares one
- * `$some` (one cp row must satisfy all of them), so dropping only some from
- * the WHERE would let different cp rows satisfy different predicates.
- */
 export const chooseCustomerAccessPath = (
 	ir: IRNode,
 ): ChosenCustomerAccessPath | undefined => {

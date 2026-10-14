@@ -32,7 +32,6 @@ const findAutumnStripePrice = ({
 
 const FALLBACK_DISPLAY_NAME = "Stripe item";
 
-/** Names an item after the Autumn plan it bills for and describes how Stripe charges it. */
 export const toProcessorItem = ({
 	stripePriceId,
 	inlinePriceData,
@@ -82,7 +81,6 @@ export const toProcessorItem = ({
 	};
 };
 
-/** Subscription, schedule and checkout item params share these price fields. */
 export const itemParamsToProcessorItem = ({
 	item,
 	context,

@@ -463,8 +463,6 @@ test.concurrent(
 	},
 );
 
-// Red: renaming a sibling variant mutates the shared Stripe Product name.
-// Green: shared Stripe Product names stay stable for existing subscriptions.
 test.concurrent(
 	`${chalk.yellowBright("variants stripe resources: renaming sibling does not rename shared Stripe product")}`,
 	async () => {

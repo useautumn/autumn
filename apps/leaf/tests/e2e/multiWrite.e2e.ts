@@ -1,11 +1,3 @@
-/**
- * Reproduces the multi-write approval case end to end against the local dev
- * stack (eve :3999, server :8080, local postgres). Everything is real except
- * the Slack transport.
- *
- * Run from apps/leaf:
- *   bun tests/e2e/multiWrite.e2e.ts
- */
 import { AppEnv, type ChatApproval } from "@autumn/shared";
 import { chatApprovalRepo } from "../../src/internal/approvals/repos/chatApprovalRepo.js";
 import { db } from "../../src/lib/db.js";
@@ -32,7 +24,6 @@ const makeTarget = () => {
 			};
 			if (postable?.kind === "stream" && postable.getPostData) {
 				for await (const _chunk of postable.getPostData().stream) {
-					// drain
 				}
 				posted.push({ kind: "stream" });
 				return { id: `msg-${posted.length}` };
@@ -84,7 +75,6 @@ const pending = (await chatApprovalRepo.listPendingForRun({
 	workspaceId: installation.workspace_id,
 })) as ChatApproval[];
 
-// Render the card exactly as Slack would, from the turn's own approval.
 const approvalRequest = (
 	output as {
 		approval?: { toolArgs: Record<string, unknown>; toolName: string };
@@ -93,8 +83,6 @@ const approvalRequest = (
 if (approvalRequest) {
 	const { approvalCard } = await import("../../src/ui/blocks.js");
 	const { cardToBlockKit } = await import("@chat-adapter/slack");
-	// Go through createApproval, which is where Slack gets its card args from —
-	// building them any other way skips the preview backfill and the strip.
 	const { createApproval } = await import(
 		"../../src/internal/approvals/actions/createApproval.js"
 	);
@@ -133,8 +121,6 @@ if (approvalRequest) {
 	console.log(`CARD has attach heading: ${rendered.includes("Attach plan")}`);
 	const money = rendered.match(/\$[\d,]+\.\d\d/g) ?? [];
 	console.log(`CARD money cells: ${money.join(" ")}`);
-	// A grouped card must never show $0.00 for a priced plan — that was the
-	// symptom of the unparsed step preview.
 	const groupedCount = (
 		(created.toolArgs._eveWithheldWrites ?? []) as unknown[]
 	).length;

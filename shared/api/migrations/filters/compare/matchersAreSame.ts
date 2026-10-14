@@ -1,6 +1,5 @@
 import type { NumberMatcher, StringMatcher } from "../matcher.js";
 
-/** Omitted `$in` is not `[]` — a missing op is not an empty set. */
 const stringSetsAreSame = (left?: string[], right?: string[]): boolean => {
 	if (left === undefined && right === undefined) return true;
 	if (left === undefined || right === undefined) return false;
@@ -27,7 +26,6 @@ const numberSetsAreSame = (left?: number[], right?: number[]): boolean => {
 	});
 };
 
-/** Bare `"x"` and `{ $eq: "x" }` are the same matcher. Other ops are listed. */
 export const stringMatchersAreSame = (
 	left?: StringMatcher,
 	right?: StringMatcher,

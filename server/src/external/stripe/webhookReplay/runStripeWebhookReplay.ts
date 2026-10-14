@@ -26,7 +26,6 @@ export type StripeWebhookReplayPayload = {
 	failureReason: string;
 };
 
-/** Thrown when the event lock is held elsewhere or unavailable but required; retryable via SQS. */
 export class StripeWebhookReplayInFlightError extends Error {
 	constructor(eventId: string) {
 		super(`Stripe webhook replay in flight for event ${eventId}`);
@@ -34,11 +33,6 @@ export class StripeWebhookReplayInFlightError extends Error {
 	}
 }
 
-/**
- * Worker entry: replays a failed early-acked Stripe webhook through the same
- * pipeline the route runs (customer resolution -> handlers -> cache refresh
- * -> sync mirror), guarded by the same Redis idempotency claim.
- */
 export const runStripeWebhookReplay = async ({
 	ctx,
 	payload,
@@ -77,7 +71,6 @@ export const runStripeWebhookReplay = async ({
 		return;
 	}
 
-	// Lock-required events must never run unlocked next to a Stripe redelivery.
 	const lockUnavailable =
 		claim === "unavailable" &&
 		isStripeWebhookLockRequired({ event: stripeEvent });
@@ -100,7 +93,6 @@ export const runStripeWebhookReplay = async ({
 
 	if (claim === "claimed") await completeStripeWebhookEvent({ eventKey });
 
-	// Post-processing mirrors the route's refresh + sync middlewares (best-effort).
 	if (
 		routedCtx.fullCustomer?.id &&
 		shouldRefreshAfterWebhookHandler({ ctx: routedCtx })

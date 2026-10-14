@@ -1,19 +1,3 @@
-/**
- * Autumn Checkout Basic Tests (Attach V2)
- *
- * Tests for Autumn Checkout flow when customer HAS a payment method
- * but redirect_mode is set to "always".
- *
- * When checkoutMode = "autumn_checkout", attach returns an autumn confirmation
- * page URL instead of charging directly, giving the customer a chance to
- * review before payment.
- *
- * Key behaviors:
- * - Has payment method + redirect_mode: "always" → autumn_checkout mode
- * - Returns confirmation page URL
- * - Product is attached after user confirms
- */
-
 import { expect, test } from "bun:test";
 import {
 	confirmAutumnCheckoutAndGetCustomer,
@@ -41,21 +25,6 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { createStripeCli } from "@/external/connect/createStripeCli";
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 1: Paid upgrade with mixed feature types → fetch preview + confirm
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Customer has a payment method and starter already attached
- * - Upgrade to a paid product with monthly price + prepaid + consumable + allocated items
- * - redirect_mode: "always" returns an Autumn checkout URL
- *
- * Expected Result:
- * - GET /checkouts/:id returns the preview the checkout page would render
- * - Incoming feature_quantities match the requested selector values
- * - POST /checkouts/:id/confirm attaches the upgraded product
- */
 test.concurrent(`${chalk.yellowBright("autumn-checkout: upgrade confirm via fetch")}`, async () => {
 	const customerId = "autumn-checkout-upgrade-fetch";
 
@@ -173,19 +142,6 @@ test.concurrent(`${chalk.yellowBright("autumn-checkout: upgrade confirm via fetc
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 2: No payment method + free product + redirect_mode: "always" → autumn_checkout
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Customer has NO payment method
- * - Attach FREE product with redirect_mode: "always"
- *
- * Expected Result:
- * - Returns autumn checkout URL (contains "/c/co")
- * - No Stripe checkout needed since product is free
- */
 test.concurrent(`${chalk.yellowBright("autumn-checkout: no PM + free product + redirect_mode always")}`, async () => {
 	const customerId = "autumn-checkout-no-pm-free";
 
@@ -198,14 +154,12 @@ test.concurrent(`${chalk.yellowBright("autumn-checkout: no PM + free product + r
 	const { autumnV1 } = await initScenario({
 		customerId,
 		setup: [
-			s.customer({}), // NO payment method
+			s.customer({}),
 			s.products({ list: [free] }),
 		],
 		actions: [],
 	});
 
-	// Attach free product with redirect_mode: "always"
-	// Should return autumn checkout URL
 	const result = await autumnV1.billing.attach({
 		customer_id: customerId,
 		product_id: free.id,
@@ -324,11 +278,3 @@ test.concurrent(`${chalk.yellowBright("autumn-checkout: invalid promo preview le
 		productId: pro.id,
 	});
 });
-
-// Future tests to implement once autumn checkout is built:
-// ═══════════════════════════════════════════════════════════════════════════════
-//
-// TEST 3: autumn-checkout: complete flow and verify product attached
-// TEST 4: autumn-checkout: cancel flow (user doesn't confirm)
-// TEST 5: autumn-checkout: with prepaid options
-// TEST 6: autumn-checkout: entity-level attach

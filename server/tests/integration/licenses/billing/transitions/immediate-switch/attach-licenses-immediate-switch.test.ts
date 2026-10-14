@@ -1,5 +1,3 @@
-// Cross-plan license transitions: seats follow the license plan's GROUP when
-// parent plans switch. Same id pairs first; groups pair 1:1; ambiguity blocks.
 import { expect, test } from "bun:test";
 import {
 	type ApiCustomerV5,
@@ -350,7 +348,6 @@ test.concurrent(
 			],
 		});
 
-		// Seats followed their group; nothing remains on plan A's licenses.
 		const devAssignments = await listLicenseAssignments({
 			autumn: autumnV2_3,
 			customerId,
@@ -376,7 +373,6 @@ test.concurrent(
 			expect(oldAssignments).toHaveLength(0);
 		}
 
-		// Entity grants now come from plan B's seat definitions.
 		const devCheck = await autumnV2_3.check<CheckResponseV3>({
 			customer_id: customerId,
 			entity_id: entities[1].id,
@@ -544,7 +540,6 @@ test.concurrent(
 			],
 		});
 
-		// Paid but unassigned: usage is 0, so the ambiguous group cannot block.
 		await autumnV2_3.billing.attach<AttachParamsV1Input>({
 			customer_id: customerId,
 			plan_id: planA.id,

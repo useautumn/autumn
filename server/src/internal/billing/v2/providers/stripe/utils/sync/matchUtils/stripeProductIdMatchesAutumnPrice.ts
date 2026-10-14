@@ -8,7 +8,6 @@ import {
 } from "@autumn/shared";
 import type { NormalizedStripeSyncCandidate } from "../normalizeStripeObject.js";
 
-/** A fixed price is keyed to its plan's Stripe products (primary + aliases). */
 const getStripeProductIdsForAutumnPrice = ({
 	price,
 	product,

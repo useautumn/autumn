@@ -4,7 +4,6 @@ import { eq } from "drizzle-orm";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { CusService } from "@/internal/customers/CusService.js";
 
-/** Features on the customer's license-pool product — only ids passed are checked. */
 export const expectCustomerLicenseEntitlementsCorrect = async ({
 	ctx,
 	customerId,
@@ -47,7 +46,6 @@ export const expectCustomerLicenseEntitlementsCorrect = async ({
 	}
 };
 
-/** Child update_plan must not remint this seat as a standalone child attach. */
 export const expectAssignmentCustomerProductNotChildMatched = async ({
 	ctx,
 	assignmentCustomerProductId,

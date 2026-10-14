@@ -9,24 +9,6 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-/**
- * Billing Behavior: next_cycle_only Tests
- *
- * Tests for billing_behavior: 'next_cycle_only' which defers all charges
- * to the next billing cycle instead of charging immediately.
- *
- * Key behaviors:
- * - No proration invoice is created
- * - Subscription is still updated in Stripe
- * - Entitlements ARE updated immediately
- * - Only billing is deferred to next cycle
- * - Preview with next_cycle_only returns 0 (nothing charged now)
- */
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// QUANTITY UPDATES WITH next_cycle_only
-// ═══════════════════════════════════════════════════════════════════════════════
-
 test.concurrent(`${chalk.yellowBright("next_cycle_only: increase quantity - no immediate charge")}`, async () => {
 	const billingUnits = 1;
 	const pricePerUnit = 10;
@@ -52,7 +34,6 @@ test.concurrent(`${chalk.yellowBright("next_cycle_only: increase quantity - no i
 		],
 	});
 
-	// Verify initial state: 5 units @ $10 = $50
 	const customerBefore =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	expect(customerBefore.features?.[TestFeature.Messages]?.balance).toBe(5);
@@ -63,19 +44,14 @@ test.concurrent(`${chalk.yellowBright("next_cycle_only: increase quantity - no i
 		options: [{ feature_id: TestFeature.Messages, quantity: 10 }],
 	};
 
-	// Preview WITHOUT billing_behavior shows what would normally be charged
 	const normalPreview =
 		await autumnV1.subscriptions.previewUpdate(baseUpdateParams);
-	expect(normalPreview.total).toBeGreaterThan(0); // Would charge for 5 more units
-
-	// Preview WITH next_cycle_only shows 0 (nothing charged now)
+	expect(normalPreview.total).toBeGreaterThan(0);
 	const deferredPreview = await autumnV1.subscriptions.previewUpdate({
 		...baseUpdateParams,
 		billing_behavior: "none",
 	});
-	expect(deferredPreview.total).toBe(0); // Nothing charged immediately
-
-	// Execute update with next_cycle_only
+	expect(deferredPreview.total).toBe(0);
 	await autumnV1.subscriptions.update({
 		...baseUpdateParams,
 		billing_behavior: "none",
@@ -83,13 +59,11 @@ test.concurrent(`${chalk.yellowBright("next_cycle_only: increase quantity - no i
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Entitlements should be updated immediately to 10
 	expect(customer.features?.[TestFeature.Messages]?.balance).toBe(10);
 
-	// NO new invoice should be created (only initial attach invoice)
 	await expectCustomerInvoiceCorrect({
 		customer,
-		count: 1, // Only initial attach, no proration invoice
+		count: 1,
 	});
 
 	await expectStripeSubscriptionCorrect({ ctx, customerId });
@@ -126,19 +100,14 @@ test.concurrent(`${chalk.yellowBright("next_cycle_only: decrease quantity - no i
 		options: [{ feature_id: TestFeature.Messages, quantity: 5 }],
 	};
 
-	// Preview WITHOUT billing_behavior shows what would normally be credited
 	const normalPreview =
 		await autumnV1.subscriptions.previewUpdate(baseUpdateParams);
-	expect(normalPreview.total).toBeLessThan(0); // Would credit for 5 units
-
-	// Preview WITH next_cycle_only shows 0 (nothing credited now)
+	expect(normalPreview.total).toBeLessThan(0);
 	const deferredPreview = await autumnV1.subscriptions.previewUpdate({
 		...baseUpdateParams,
 		billing_behavior: "none",
 	});
-	expect(deferredPreview.total).toBe(0); // Nothing credited immediately
-
-	// Execute update with next_cycle_only
+	expect(deferredPreview.total).toBe(0);
 	await autumnV1.subscriptions.update({
 		...baseUpdateParams,
 		billing_behavior: "none",
@@ -146,10 +115,8 @@ test.concurrent(`${chalk.yellowBright("next_cycle_only: decrease quantity - no i
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Entitlements should be updated immediately to 5
 	expect(customer.features?.[TestFeature.Messages]?.balance).toBe(5);
 
-	// NO new invoice should be created (only initial attach invoice)
 	await expectCustomerInvoiceCorrect({
 		customer,
 		count: 1,
@@ -157,10 +124,6 @@ test.concurrent(`${chalk.yellowBright("next_cycle_only: decrease quantity - no i
 
 	await expectStripeSubscriptionCorrect({ ctx, customerId });
 });
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// PLAN CHANGES WITH next_cycle_only
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(`${chalk.yellowBright("next_cycle_only: paid-to-paid price increase - no immediate charge")}`, async () => {
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
@@ -176,7 +139,6 @@ test.concurrent(`${chalk.yellowBright("next_cycle_only: paid-to-paid price incre
 		actions: [s.attach({ productId: "pro" })],
 	});
 
-	// Increase price from $20 to $30
 	const newPriceItem = items.monthlyPrice({ price: 30 });
 	const baseUpdateParams = {
 		customer_id: customerId,
@@ -184,19 +146,14 @@ test.concurrent(`${chalk.yellowBright("next_cycle_only: paid-to-paid price incre
 		items: [messagesItem, newPriceItem],
 	};
 
-	// Preview WITHOUT billing_behavior shows proration charge
 	const normalPreview =
 		await autumnV1.subscriptions.previewUpdate(baseUpdateParams);
-	expect(normalPreview.total).toBe(10); // $30 - $20 = $10 difference
-
-	// Preview WITH next_cycle_only shows 0
+	expect(normalPreview.total).toBe(10);
 	const deferredPreview = await autumnV1.subscriptions.previewUpdate({
 		...baseUpdateParams,
 		billing_behavior: "none",
 	});
-	expect(deferredPreview.total).toBe(0); // Nothing charged now
-
-	// Execute update with next_cycle_only
+	expect(deferredPreview.total).toBe(0);
 	await autumnV1.subscriptions.update({
 		...baseUpdateParams,
 		billing_behavior: "none",
@@ -204,7 +161,6 @@ test.concurrent(`${chalk.yellowBright("next_cycle_only: paid-to-paid price incre
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Features should remain unchanged
 	expectCustomerFeatureCorrect({
 		customer,
 		featureId: TestFeature.Messages,
@@ -213,7 +169,6 @@ test.concurrent(`${chalk.yellowBright("next_cycle_only: paid-to-paid price incre
 		usage: 0,
 	});
 
-	// NO new invoice (only initial attach invoice)
 	await expectCustomerInvoiceCorrect({
 		customer,
 		count: 1,
@@ -236,7 +191,6 @@ test.concurrent(`${chalk.yellowBright("next_cycle_only: paid-to-paid price decre
 		actions: [s.attach({ productId: "pro" })],
 	});
 
-	// Decrease price from $30 to $20
 	const newPriceItem = items.monthlyPrice({ price: 20 });
 	const baseUpdateParams = {
 		customer_id: customerId,
@@ -244,19 +198,14 @@ test.concurrent(`${chalk.yellowBright("next_cycle_only: paid-to-paid price decre
 		items: [messagesItem, newPriceItem],
 	};
 
-	// Preview WITHOUT billing_behavior shows proration credit
 	const normalPreview =
 		await autumnV1.subscriptions.previewUpdate(baseUpdateParams);
-	expect(normalPreview.total).toBe(-10); // $20 - $30 = -$10
-
-	// Preview WITH next_cycle_only shows 0
+	expect(normalPreview.total).toBe(-10);
 	const deferredPreview = await autumnV1.subscriptions.previewUpdate({
 		...baseUpdateParams,
 		billing_behavior: "none",
 	});
-	expect(deferredPreview.total).toBe(0); // Nothing credited now
-
-	// Execute update with next_cycle_only
+	expect(deferredPreview.total).toBe(0);
 	await autumnV1.subscriptions.update({
 		...baseUpdateParams,
 		billing_behavior: "none",
@@ -264,7 +213,6 @@ test.concurrent(`${chalk.yellowBright("next_cycle_only: paid-to-paid price decre
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// NO new invoice (only initial attach invoice)
 	await expectCustomerInvoiceCorrect({
 		customer,
 		count: 1,
@@ -272,10 +220,6 @@ test.concurrent(`${chalk.yellowBright("next_cycle_only: paid-to-paid price decre
 
 	await expectStripeSubscriptionCorrect({ ctx, customerId });
 });
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// COMPARISON: prorate_immediately (default) vs next_cycle_only
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(`${chalk.yellowBright("comparison: prorate_immediately creates invoice, next_cycle_only does not")}`, async () => {
 	const billingUnits = 1;
@@ -331,7 +275,6 @@ test.concurrent(`${chalk.yellowBright("comparison: prorate_immediately creates i
 			],
 		});
 
-	// Preview for immediate - should show charge
 	const immediatePreview = await autumnImmediate.subscriptions.previewUpdate({
 		customer_id: customerImmediate,
 		product_id: proImmediate.id,
@@ -340,7 +283,6 @@ test.concurrent(`${chalk.yellowBright("comparison: prorate_immediately creates i
 	});
 	expect(immediatePreview.total).toBeGreaterThan(0);
 
-	// Preview for deferred - should show 0
 	const deferredPreview = await autumnDeferred.subscriptions.previewUpdate({
 		customer_id: customerDeferred,
 		product_id: proDeferred.id,
@@ -349,7 +291,6 @@ test.concurrent(`${chalk.yellowBright("comparison: prorate_immediately creates i
 	});
 	expect(deferredPreview.total).toBe(0);
 
-	// Update both to 10 units - one with immediate, one with deferred
 	await autumnImmediate.subscriptions.update({
 		customer_id: customerImmediate,
 		product_id: proImmediate.id,
@@ -369,7 +310,6 @@ test.concurrent(`${chalk.yellowBright("comparison: prorate_immediately creates i
 	const customerDeferredAfter =
 		await autumnDeferred.customers.get<ApiCustomerV3>(customerDeferred);
 
-	// Both should have 10 entitlements
 	expect(customerImmediateAfter.features?.[TestFeature.Messages]?.balance).toBe(
 		10,
 	);
@@ -377,22 +317,16 @@ test.concurrent(`${chalk.yellowBright("comparison: prorate_immediately creates i
 		10,
 	);
 
-	// Immediate should have 2 invoices (attach + proration)
 	await expectCustomerInvoiceCorrect({
 		customer: customerImmediateAfter,
 		count: 2,
 	});
 
-	// Deferred should have 1 invoice (only attach)
 	await expectCustomerInvoiceCorrect({
 		customer: customerDeferredAfter,
 		count: 1,
 	});
 });
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// DEFAULT BEHAVIOR (no billing_behavior specified)
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(`${chalk.yellowBright("default behavior: prorate_immediately when no billing_behavior specified")}`, async () => {
 	const billingUnits = 1;
@@ -419,7 +353,6 @@ test.concurrent(`${chalk.yellowBright("default behavior: prorate_immediately whe
 		],
 	});
 
-	// Update WITHOUT specifying billing_behavior (should default to prorate_immediately)
 	const updateParams = {
 		customer_id: customerId,
 		product_id: pro.id,
@@ -427,16 +360,14 @@ test.concurrent(`${chalk.yellowBright("default behavior: prorate_immediately whe
 	};
 
 	const preview = await autumnV1.subscriptions.previewUpdate(updateParams);
-	expect(preview.total).toBeGreaterThan(0); // Should show proration charge
+	expect(preview.total).toBeGreaterThan(0);
 
 	await autumnV1.subscriptions.update(updateParams);
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Entitlements updated
 	expect(customer.features?.[TestFeature.Messages]?.balance).toBe(10);
 
-	// Should have 2 invoices (attach + proration) - default is prorate_immediately
 	await expectCustomerInvoiceCorrect({
 		customer,
 		count: 2,

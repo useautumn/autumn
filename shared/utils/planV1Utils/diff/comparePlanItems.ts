@@ -23,8 +23,6 @@ export type BasePriceInput = {
 	additional_currencies?: AdditionalCurrencyInput[] | null;
 };
 
-/** Add/remove of a catalog currency is compatible; only shared-currency
- * amount mismatches differ. */
 export const additionalCurrenciesCompatible = (
 	from: AdditionalCurrencyInput[] | null | undefined,
 	to: AdditionalCurrencyInput[] | null | undefined,
@@ -40,7 +38,6 @@ export const additionalCurrenciesCompatible = (
 		);
 	});
 
-/** Unset `interval_count` is 1 when an interval is set; meaningless otherwise. */
 export const normalizeIntervalCount = ({
 	interval,
 	intervalCount,
@@ -144,8 +141,6 @@ const rolloversEqual = (
 	);
 };
 
-/** User-controlled item fields only. `included` 0 / `unlimited` false /
- * `pooled` false / `interval_count` 1 are the unset defaults. */
 export const itemsEqual = (a: PlanItemInput, b: PlanItemInput): boolean => {
 	return (
 		a.feature_id === b.feature_id &&
@@ -179,7 +174,6 @@ export const planItemFiltersEqual = (
 		}) &&
 	(a.included ?? null) === (b.included ?? null);
 
-/** Omitted and `[]` are the same empty list. Order does not matter. */
 export const arraysEqual = <T>({
 	left,
 	right,

@@ -1,6 +1,3 @@
-// Cluster fixture for drain-safety under concurrency: real in-flight tracking
-// so the drain extends instead of cutting requests, plus a slow endpoint whose
-// response spans a whole recycle.
 import cluster from "node:cluster";
 import http from "node:http";
 import type { Logger } from "@/external/logtail/logtailUtils.js";
@@ -50,14 +47,10 @@ if (cluster.isPrimary) {
 		const delayMs = Number(url.searchParams.get("ms") ?? 20);
 		setTimeout(() => {
 			res.setHeader("connection", drainState.draining ? "close" : "keep-alive");
-			// Body is length-checked by the test, so a mid-response kill shows up
-			// as a truncated read rather than a silent pass.
 			res.end(`ok:${process.pid}:${"x".repeat(512)}`);
 		}, delayMs);
 	});
 
-	// Same signal as init.ts: streamed/unflushed responses outlive the handler,
-	// so drain must wait on sockets or process.exit cuts the last byte.
 	server.on("connection", (socket) => {
 		openSockets.add(socket);
 		socket.on("close", () => openSockets.delete(socket));
@@ -70,8 +63,6 @@ if (cluster.isPrimary) {
 			onDrainStart: () => {
 				drainState.draining = true;
 			},
-			// Harsher than init.ts, which awaits an async shutdown behind a timer:
-			// exiting instantly puts the drainer's "safe to exit" call under test.
 			exitGracefully: () => process.exit(0),
 			logger: fixtureLogger,
 		});

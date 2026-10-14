@@ -10,7 +10,6 @@ type SubscriptionState =
 	| "past_due"
 	| "undefined";
 
-/** Find a subscription by plan_id. */
 const findSubscription = ({
 	customer,
 	productId,
@@ -19,7 +18,6 @@ const findSubscription = ({
 	productId: string;
 }) => customer.subscriptions.find((sub) => sub.plan_id === productId);
 
-/** Find a purchase by plan_id. */
 const findPurchase = ({
 	customer,
 	productId,
@@ -28,7 +26,6 @@ const findPurchase = ({
 	productId: string;
 }) => customer.purchases.find((p) => p.plan_id === productId);
 
-/** Verify a V5 customer/entity has the expected subscription in the expected state. */
 export const expectSubscriptionCorrect = async ({
 	customer,
 	productId,
@@ -88,19 +85,16 @@ export const expectSubscriptionCorrect = async ({
 	}
 };
 
-/** Verify subscription is active. */
 export const expectSubscriptionActive = async (params: {
 	customer: V5CustomerOrEntity;
 	productId: string;
 }) => expectSubscriptionCorrect({ ...params, state: "active" });
 
-/** Verify subscription is canceling (active with canceled_at set). */
 export const expectSubscriptionCanceling = async (params: {
 	customer: V5CustomerOrEntity;
 	productId: string;
 }) => expectSubscriptionCorrect({ ...params, state: "canceling" });
 
-/** Verify subscription is scheduled. Optionally check started_at. */
 export const expectSubscriptionScheduled = async ({
 	customer,
 	productId,
@@ -130,19 +124,16 @@ export const expectSubscriptionScheduled = async ({
 	}
 };
 
-/** Verify subscription is past_due. */
 export const expectSubscriptionPastDue = async (params: {
 	customer: V5CustomerOrEntity;
 	productId: string;
 }) => expectSubscriptionCorrect({ ...params, state: "past_due" });
 
-/** Verify subscription/purchase does not exist. */
 export const expectSubscriptionNotPresent = async (params: {
 	customer: V5CustomerOrEntity;
 	productId: string;
 }) => expectSubscriptionCorrect({ ...params, state: "undefined" });
 
-/** Verify multiple subscription states in a single call. */
 export const expectSubscriptions = async ({
 	customer,
 	active = [],

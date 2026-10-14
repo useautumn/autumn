@@ -14,7 +14,6 @@ export const approvalSets: Record<LeafAgentConnection, ReadonlySet<string>> = {
 };
 
 for (const write of GATED_WRITES) {
-	// A gated write no agent exposes would silently lose its approval gate.
 	if (write.agents.length === 0) {
 		throw new Error(`Approval gate lost in the agent split: ${write.toolName}`);
 	}

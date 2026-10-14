@@ -22,16 +22,6 @@ type PriceMapping = Partial<Record<StripePriceMappingSlot, string | null>>;
 const mappingOf = ({ price }: { price?: Price }): PriceMapping =>
 	(price?.config ?? {}) as PriceMapping;
 
-/**
- * A claim matches on price definition, which deliberately ignores Stripe ids —
- * billing depends on that. So a re-stated mapping arrives as a claimed pair and
- * would be dropped; carry it onto the row we keep instead. Desired only carries
- * a slot the request stated, so a plain edit produces nothing here.
- *
- * A stated `null` is an unlink rather than a restate, and it cannot be read off
- * the desired row — an untouched slot is nullish there too — so it arrives as
- * `unlinkedSlots`. Only a slot that currently holds an id is worth writing.
- */
 const restatedMapping = ({
 	desired,
 	current,
@@ -75,10 +65,6 @@ const withMapping = ({
 	config: { ...price.config, ...mapping } as Price["config"],
 });
 
-/**
- * Claims → same; unclaimed desired → new; unclaimed current → leave bucket by mode.
- * Version/custom ignore leaving; custom stamps is_custom on inserts.
- */
 export const buildEntitlementPricesPlan = ({
 	mode,
 	claims,
@@ -86,7 +72,6 @@ export const buildEntitlementPricesPlan = ({
 }: {
 	mode: EntitlementPricesPlanMode;
 	claims: ClaimResult;
-	/** Stripe mapping slots the request stated as `null`, by current price id. */
 	unlinks?: StripeMappingUnlinks;
 }): EntitlementPricesPlan => {
 	const plan = emptyEntitlementPricesPlan();

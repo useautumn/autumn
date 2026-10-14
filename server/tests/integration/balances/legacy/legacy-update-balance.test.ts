@@ -5,14 +5,6 @@ import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 
-/**
- * Tests for legacy V1 API balance updates.
- * These test the deprecated customers.setBalance API for backwards compatibility.
- */
-
-// =============================================================================
-// Test: legacy-update-balance1 - V1 API setBalance for entity
-// =============================================================================
 test.concurrent(`${chalk.yellowBright("legacy-update-balance1: V1 API setBalance for entity")}`, async () => {
 	const creditsItem = items.monthlyCredits({ includedUsage: 500 });
 	const pro = products.pro({ id: "pro", items: [creditsItem] });
@@ -29,7 +21,6 @@ test.concurrent(`${chalk.yellowBright("legacy-update-balance1: V1 API setBalance
 
 	const entityId = entities[0].id;
 
-	// Use legacy V1 API to set balance
 	await autumnV1.customers.setBalance({
 		customerId: customerId,
 		entityId: entityId,
@@ -41,7 +32,6 @@ test.concurrent(`${chalk.yellowBright("legacy-update-balance1: V1 API setBalance
 		],
 	});
 
-	// Verify via V1 API
 	const entity = await autumnV1.entities.get(customerId, entityId);
 	expect(entity.features.credits.balance).toBe(100);
 });

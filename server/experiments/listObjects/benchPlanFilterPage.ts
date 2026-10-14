@@ -4,13 +4,6 @@ import { initDrizzle } from "../../src/db/initDrizzle.js";
 import { RELEVANT_STATUSES } from "../../src/internal/customers/cusProducts/CusProductService.js";
 import { getPaginatedEntitySubjectsQuery } from "../../src/internal/entities/repos/listEntitiesQuery.js";
 
-/**
- * The plan-filtered page query, which as a correlated EXISTS took 176s and
- * 197.6M buffer reads to return 20 rows on mintlify.
- *
- * Run with:
- *   infisical run --env=prod --recursive -- bun run server/experiments/listObjects/benchPlanFilterPage.ts
- */
 const requireEnv = ({ name }: { name: string }) => {
 	const value = process.env[name];
 	if (!value) {

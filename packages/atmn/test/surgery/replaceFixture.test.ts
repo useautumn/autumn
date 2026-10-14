@@ -47,7 +47,6 @@ test("replaceFixture swaps exactly the call node's bytes", () => {
 		text,
 	});
 	expect(output).not.toBeNull();
-	// Byte-identical outside the replaced range.
 	expect(output?.startsWith(configSource.slice(0, start.index))).toBe(true);
 	expect(output?.endsWith(configSource.slice(end.index))).toBe(true);
 	expect(output?.slice(start.index, start.index + text.length)).toBe(text);
@@ -99,7 +98,6 @@ test("two fixtures in one file: only the named one is touched", () => {
 		id: "seats",
 		text: `feature({ featureId: "seats", name: "Seats", type: "metered", consumable: false })`,
 	});
-	// The untouched fixture keeps its exact bytes.
 	expect(output).toContain(
 		`feature({\n\t\t\tfeatureId: "messages",\n\t\t\tname: "Messages",\n\t\t\ttype: "metered",\n\t\t\tconsumable: true,\n\t\t}),`,
 	);

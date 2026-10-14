@@ -1,9 +1,3 @@
-/**
- * Invoice-mode attach with automatic tax: a customer with no billing address is
- * blocked instead of silently invoiced without tax, and billing_details on the
- * same call previews and then saves the address so the invoice is taxed.
- */
-
 import { expect, test } from "bun:test";
 import {
 	type AttachParamsV1Input,

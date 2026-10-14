@@ -23,14 +23,9 @@ export type FeatureBalanceResult = {
 	featureId: string;
 	balances: SubjectBalance[];
 	aggregated?: AggregatedFeatureBalance;
-	/** Customer-scoped windowed-cap counters for this feature; only present for
-	 *  features in the requested usageWindowFeatureIds set. */
 	usageWindows?: UsageWindow[];
 };
 
-// Fail open: a missing/unparseable `_usage_windows` field reads as an empty
-// counter set (the window restarts). cjson also encodes an empty Lua table as
-// `{}`, so a non-array blob is an empty set, not corruption.
 const parseUsageWindowsField = (
 	usageWindowsJson: string | null,
 ): UsageWindow[] => {
@@ -107,8 +102,6 @@ export const getCachedFeatureBalance = async ({
 				: redis.hmget(balanceKey, ...customerEntitlementIds),
 		source: "getCachedFeatureBalance",
 		redisInstance: redisV2,
-		// readMaster demands same-socket ordering: a standby retry could land
-		// before an in-flight write on the dying primary socket.
 		retryOnStandby: !readMaster,
 		useReadPool: !readMaster,
 		timeoutMs: REDIS_OP_TIMEOUT_MS.featureBalances,
@@ -157,8 +150,6 @@ export const getCachedFeatureBalancesBatch = async ({
 	featureIds: string[];
 	customerEntitlementIdsByFeatureId: Record<string, string[]>;
 	includeAggregated?: boolean;
-	/** Features with an armed windowed cap: their `_usage_windows` field is
-	 *  read too. A missing field fails open (reads as an empty counter set). */
 	usageWindowFeatureIds?: Set<string>;
 }): Promise<FeatureBalancesBatchOutcome> => {
 	if (featureIds.length === 0) return { kind: "ok", value: [] };
@@ -211,7 +202,6 @@ export const getCachedFeatureBalancesBatch = async ({
 		let aggregated: AggregatedFeatureBalance | undefined;
 		let usageWindows: UsageWindow[] | undefined;
 
-		// Pop reserved fields in reverse push order: [_aggregated?, _usage_windows?].
 		if (usageWindowFeatureIds?.has(featureIds[i])) {
 			usageWindows = parseUsageWindowsField(allValues.pop() ?? null);
 		}
@@ -224,9 +214,7 @@ export const getCachedFeatureBalancesBatch = async ({
 					aggregated = sanitizeCachedAggregatedFeatureBalance({
 						aggregated: parsed,
 					});
-				} catch {
-					// Malformed _aggregated is non-fatal; fall back to subject string value
-				}
+				} catch {}
 			}
 		}
 

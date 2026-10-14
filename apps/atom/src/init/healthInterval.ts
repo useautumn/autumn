@@ -1,6 +1,5 @@
 import type { AtomHealth } from "./atomHealth.js";
 
-/** Counters a chart turns into rates; each health line reports how much they grew since the line before. */
 type IntervalCounter =
 	| "requests"
 	| "forwarded"
@@ -14,13 +13,11 @@ type IntervalCounter =
 	| "diskEvicted"
 	| "diskExpired";
 
-/** Totals since boot at one read, summed over every thread. */
 export type HealthTotals = Record<IntervalCounter, number> & {
 	at: number;
 	cpuSeconds: number | null;
 };
 
-/** What happened between two reads, so a dashboard only ever sums: requests over seconds is RPS, CPU seconds over seconds × cores is CPU. */
 export type HealthInterval = Record<IntervalCounter, number> & {
 	seconds: number;
 	cpuSeconds: number | null;

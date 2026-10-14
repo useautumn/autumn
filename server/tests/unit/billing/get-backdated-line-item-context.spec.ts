@@ -1,5 +1,3 @@
-/** A new backdated subscription bills its catch-up periods; one recreated over a paid-up live subscription never does. */
-
 import { describe, expect, test } from "bun:test";
 import {
 	applyBackdatedLineItemAmount,

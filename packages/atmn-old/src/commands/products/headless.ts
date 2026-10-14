@@ -1,8 +1,3 @@
-/**
- * Headless mode for the products command.
- * Provides structured output (text/json/csv) for AI/programmatic interaction.
- */
-
 import { AppEnv } from "../../lib/env/detect.js";
 import { getKey } from "../../lib/env/keys.js";
 import { fetchPlans } from "../../lib/api/endpoints/plans.js";
@@ -10,25 +5,15 @@ import type { ApiPlan } from "../../lib/api/types/index.js";
 import { formatError } from "../../lib/api/client.js";
 
 export interface HeadlessProductsOptions {
-	/** Environment (sandbox/live) */
 	prod?: boolean;
-	/** Page number */
 	page?: number;
-	/** Search query */
 	search?: string;
-	/** Get specific product by ID */
 	id?: string;
-	/** Items per page */
 	limit?: number;
-	/** Output format */
 	format?: "text" | "json" | "csv";
-	/** Include archived products */
 	includeArchived?: boolean;
 }
 
-/**
- * Execute a headless products command
- */
 export async function headlessProductsCommand(
 	options: HeadlessProductsOptions,
 ): Promise<void> {
@@ -41,13 +26,11 @@ export async function headlessProductsCommand(
 	try {
 		const secretKey = getKey(environment);
 
-		// Fetch all products
 		const allProducts = await fetchPlans({
 			secretKey,
 			includeArchived,
 		});
 
-		// Apply search filter if provided
 		let filteredProducts = allProducts;
 		if (options.search) {
 			const searchLower = options.search.toLowerCase();
@@ -59,7 +42,6 @@ export async function headlessProductsCommand(
 			);
 		}
 
-		// If --id is specified, fetch and output that specific product
 		if (options.id) {
 			const product = filteredProducts.find((p) => p.id === options.id);
 			if (!product) {
@@ -69,13 +51,11 @@ export async function headlessProductsCommand(
 			return;
 		}
 
-		// Apply pagination
 		const startIndex = (page - 1) * limit;
 		const endIndex = startIndex + limit;
 		const paginatedProducts = filteredProducts.slice(startIndex, endIndex);
 		const hasMore = endIndex < filteredProducts.length;
 
-		// Output the list
 		outputProductList(
 			paginatedProducts,
 			{
@@ -111,9 +91,6 @@ export async function headlessProductsCommand(
 	}
 }
 
-/**
- * Output a list of products
- */
 function outputProductList(
 	products: ApiPlan[],
 	pagination: { page: number; pageSize: number; total: number; hasMore: boolean },
@@ -141,9 +118,7 @@ function outputProductList(
 	}
 
 	if (format === "csv") {
-		// CSV header
 		console.log("id,name,version,type,price,items_count,created_at");
-		// CSV rows
 		for (const p of products) {
 			const name = escapeCsv(p.name);
 			const version = p.version;
@@ -156,7 +131,6 @@ function outputProductList(
 		return;
 	}
 
-	// Text format
 	const startItem = (pagination.page - 1) * pagination.pageSize + 1;
 	const endItem = Math.min(startItem + products.length - 1, pagination.total);
 	console.log(`Products (Page ${pagination.page}, showing ${startItem}-${endItem} of ${pagination.total})`);
@@ -175,17 +149,14 @@ function outputProductList(
 		return;
 	}
 
-	// Calculate column widths
 	const idWidth = Math.max(2, ...products.map((p) => p.id.length));
 	const nameWidth = Math.max(4, ...products.map((p) => p.name.length));
 
-	// Header
 	console.log(
 		`${"ID".padEnd(idWidth)}  ${"Name".padEnd(nameWidth)}  ${"Ver".padEnd(4)}  ${"Type".padEnd(7)}  ${"Price".padEnd(14)}  Items`,
 	);
 	console.log("-".repeat(idWidth + nameWidth + 50));
 
-	// Rows
 	for (const p of products) {
 		const name = p.name.padEnd(nameWidth);
 		const version = `v${p.version}`.padEnd(4);
@@ -205,9 +176,6 @@ function outputProductList(
 	console.log(`Actions: ${actions.join(", ")}`);
 }
 
-/**
- * Output a single product with detailed information
- */
 function outputSingleProduct(
 	product: ApiPlan,
 	format: "text" | "json" | "csv",
@@ -218,7 +186,6 @@ function outputSingleProduct(
 	}
 
 	if (format === "csv") {
-		// For single product, just output basic fields as CSV
 		console.log("id,name,version,type,items_count,price,created_at");
 		const name = escapeCsv(product.name);
 		const version = product.version;
@@ -230,7 +197,6 @@ function outputSingleProduct(
 		return;
 	}
 
-	// Text format - detailed view
 	console.log(`Product: ${product.id}`);
 	console.log("=".repeat(50));
 	console.log("");
@@ -248,7 +214,6 @@ function outputSingleProduct(
 	console.log(`  Environment: ${product.env}`);
 	console.log(`  Created:     ${formatDate(product.created_at)}`);
 
-	// Price
 	if (product.price) {
 		console.log("");
 		console.log("Pricing:");
@@ -259,7 +224,6 @@ function outputSingleProduct(
 		}
 	}
 
-	// Free trial
 	if (product.free_trial) {
 		console.log("");
 		console.log("Free Trial:");
@@ -267,7 +231,6 @@ function outputSingleProduct(
 		console.log(`  Card Required: ${product.free_trial.card_required ? "Yes" : "No"}`);
 	}
 
-	// Items
 	if (product.items && product.items.length > 0) {
 		console.log("");
 		console.log(`Items (${product.items.length}):`);
@@ -294,9 +257,6 @@ function outputSingleProduct(
 	}
 }
 
-/**
- * Format a price amount and interval for display
- */
 function formatPrice(amount: number, interval?: string): string {
 	const dollars = (amount / 100).toFixed(2);
 	if (interval) {
@@ -305,18 +265,10 @@ function formatPrice(amount: number, interval?: string): string {
 	return `$${dollars}`;
 }
 
-/**
- * Normalize a timestamp to milliseconds.
- * Handles both Unix timestamps (seconds) and JS timestamps (milliseconds).
- */
 function normalizeTimestamp(timestamp: number): number {
-	// If timestamp is less than ~10 billion, it's in seconds, convert to ms
 	return timestamp < 10_000_000_000 ? timestamp * 1000 : timestamp;
 }
 
-/**
- * Format a Unix timestamp as a readable date
- */
 function formatDate(timestamp: number): string {
 	const ms = normalizeTimestamp(timestamp);
 	return new Date(ms).toLocaleDateString("en-US", {
@@ -326,9 +278,6 @@ function formatDate(timestamp: number): string {
 	});
 }
 
-/**
- * Escape a value for CSV output
- */
 function escapeCsv(value: string): string {
 	if (value.includes(",") || value.includes('"') || value.includes("\n")) {
 		return `"${value.replace(/"/g, '""')}"`;

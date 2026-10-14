@@ -1,13 +1,3 @@
-/**
- * Regression for multi-attach transitions with minimum-amount promo codes.
- *
- * Red-failure mode: multi-attach accepts the promo, invoices the customer, then
- * Stripe rejects the subscription update.
- *
- * Green-success criteria: preview and multi-attach reject before any new invoice
- * or plan transition side effect.
- */
-
 import {
 	type ApiCustomerV3,
 	type MultiAttachParamsV0Input,

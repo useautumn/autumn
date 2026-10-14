@@ -59,7 +59,6 @@ export const limitStripeBrowserRequests = async ({
 		);
 	});
 
-	// The secret identifies the shared Redis budget; it is never sent to Chromium or Stripe here.
 	await context.route(/^https:\/\/api\.stripe\.com\/v[12]\//, (route) =>
 		track(
 			(async () => {

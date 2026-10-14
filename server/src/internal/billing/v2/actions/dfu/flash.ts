@@ -7,11 +7,6 @@ import { computeFlashPlan } from "./compute/computeFlashPlan";
 import { handleFlashErrors } from "./errors/handleFlashErrors";
 import { setupFlashContext } from "./setup/setupFlashContext";
 
-/**
- * Image a customer INTO Autumn for live migration. Mirrors syncV2's tiers
- * (setup → errors → compute → execute) but is read-only against processors:
- * the DB-only executor never writes to Stripe / RevenueCat.
- */
 export const flash = async ({
 	ctx,
 	params,
@@ -38,7 +33,6 @@ export const flash = async ({
 
 	await executeAutumnBillingPlan({ ctx, autumnBillingPlan });
 
-	// Drop the pre-flash cache so the returned customer reflects the just-imaged state.
 	const customerId = flashContext.customer_id;
 	await deleteCachedFullCustomer({
 		ctx,

@@ -6,10 +6,6 @@ import {
 import { sql } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 
-/**
- * Moves allocation counters to `usage`, given the `readUsage` the caller computed from: a live counter gets the
- * difference added, so a deduction that landed since the read is kept; a counter from a past cycle is replaced.
- */
 export const setAllocationCounters = async ({
 	db,
 	counters,

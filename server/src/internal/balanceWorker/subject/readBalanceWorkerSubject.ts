@@ -20,8 +20,6 @@ import { addToExtraLogs } from "@/utils/logging/addToExtraLogs.js";
 
 type SubjectClient = Pick<BalanceWorkerClient, "readSubjectState">;
 
-/** Postgres holds every routed customer's rows behind the worker's log by at most its unflushed batches; the Redis view is skipped for them.
- *  A read must not reset them in SQL: resets are the worker's to land. */
 const readSubjectFromPostgres = ({
 	ctx,
 	customerId,
@@ -40,7 +38,6 @@ const readSubjectFromPostgres = ({
 		runLazyResets: false,
 	});
 
-/** Only an expanded customer response renders them; an entity view takes its invoices from its own expand. */
 const readInvoices = async ({
 	ctx,
 	internalCustomerId,
@@ -54,15 +51,6 @@ const readInvoices = async ({
 	return readCachedCustomerInvoices({ ctx, internalCustomerId });
 };
 
-/**
- * A subject's full view from the worker (the customer's rows, plus the named
- * entity's own), with the ledgers it never holds read from Postgres beside it.
- * A read the worker never answered, because it was unreachable, overloaded or
- * past its deadline, is answered from Postgres instead: a read writes nothing,
- * so the fallback cannot double-apply, and the rows there trail the worker by
- * at most its unflushed batches. A verdict from the worker, a missing customer
- * above all, propagates, since Postgres would say the same.
- */
 export const readBalanceWorkerSubject = async ({
 	ctx,
 	customerId,

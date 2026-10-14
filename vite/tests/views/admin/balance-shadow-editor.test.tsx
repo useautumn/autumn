@@ -187,7 +187,6 @@ test.concurrent(
 			await verifyEditor();
 			return;
 		}
-		// Keep hook mocks isolated from other UI tests in the Bun module registry.
 		const child = Bun.spawn({
 			cmd: [process.execPath, "test", import.meta.filename],
 			cwd: new URL("../../../", import.meta.url).pathname,

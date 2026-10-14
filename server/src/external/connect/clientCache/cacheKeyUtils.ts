@@ -6,7 +6,6 @@ const getSecretFingerprint = ({ secret }: { secret: string }) => {
 	return createHash("sha256").update(secret).digest("hex").slice(0, 16);
 };
 
-/** Builds cache key for Stripe clients created via org secret key. */
 export const buildSecretKeyCacheKey = ({
 	orgId,
 	env,
@@ -21,7 +20,6 @@ export const buildSecretKeyCacheKey = ({
 	return `sk:${orgId}:${env}:${legacyVersion ? 1 : 0}:${encryptedKey}`;
 };
 
-/** Builds cache key for Stripe clients created via Autumn's master Stripe keys (env vars). */
 export const buildMasterCacheKey = ({
 	env,
 	accountId,
@@ -36,7 +34,6 @@ export const buildMasterCacheKey = ({
 	return `master:${env || "sandbox"}:${accountId || "none"}:${legacyVersion ? 1 : 0}:${getSecretFingerprint({ secret: secretKey })}`;
 };
 
-/** Builds cache key for Stripe clients created via platform (master org) flow. */
 export const buildPlatformCacheKey = ({
 	masterOrgId,
 	env,

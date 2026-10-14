@@ -20,14 +20,6 @@ const INTERVAL_RANK: Record<string, number> = {
 	[EntInterval.Lifetime]: 8,
 };
 
-/**
- * Determines anchor-reset refund config when `billing_cycle_anchor: "now"` + `proration_behavior: "none"`.
- *
- * - Without carry_over_balances: strip all refund line items (no credit for outgoing plan).
- * - With carry_over_balances: refund full entitlement-reset periods only.
- *   The rounding granularity is the longest entitlement reset interval
- *   among the carried-over features.
- */
 export const setupAnchorResetRefund = ({
 	billingCycleAnchor,
 	prorationBehavior,

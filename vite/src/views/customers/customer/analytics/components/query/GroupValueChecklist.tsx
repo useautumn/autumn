@@ -65,7 +65,6 @@ export const GroupValueChecklist = ({ groupBy }: { groupBy: string }) => {
 							label={labelFor(value)}
 							color={groupColors[value]}
 							isMonospace={!isBuiltInGroupBy({ groupBy })}
-							// The chart needs at least one group left to draw.
 							isLocked={isShown && shownCount === 1}
 							onToggle={() => toggleValue(value)}
 						/>

@@ -41,7 +41,6 @@ export async function updateSubscription({
 		`=============== RUNNING UPDATE SUBSCRIPTION FOR ${params.customer_id} ===============`,
 	);
 
-	// 1. Setup
 	const billingContext = await setupUpdateSubscriptionBillingContext({
 		ctx,
 		params,
@@ -51,7 +50,6 @@ export async function updateSubscription({
 
 	logUpdateSubscriptionContext({ ctx, billingContext });
 
-	// 2. Compute
 	const autumnBillingPlan = await computeUpdateSubscriptionPlan({
 		ctx,
 		billingContext,
@@ -63,7 +61,6 @@ export async function updateSubscription({
 		autumnBillingPlan,
 	});
 
-	// 3. Evaluate Stripe billing plan
 	const stripeBillingPlan = await evaluateStripeBillingPlan({
 		ctx,
 		billingContext,
@@ -76,7 +73,6 @@ export async function updateSubscription({
 		stripe: stripeBillingPlan,
 	};
 
-	// 4. Errors
 	await handleUpdateSubscriptionErrors({
 		ctx,
 		billingContext,
@@ -113,7 +109,6 @@ export async function updateSubscription({
 		return autumnCheckoutResult;
 	}
 
-	// 5. Execute billing plan
 	const billingResult = await executeBillingPlan({
 		ctx,
 		billingContext,

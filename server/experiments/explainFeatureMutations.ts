@@ -2,9 +2,6 @@ import { AppEnv, RELEVANT_STATUSES } from "@autumn/shared";
 import { sql } from "drizzle-orm";
 import { initDrizzle, prodTestOrgId } from "./experimentEnv";
 
-// Safe planner-only probe for feature update/delete latency suspects.
-// Run from server with: bun run experiments/explainFeatureMutations.ts
-
 type ExplainRow = { "QUERY PLAN": string };
 
 const envArg = process.env.FEATURE_MUTATION_ENV;

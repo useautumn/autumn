@@ -45,7 +45,6 @@ export const testIdentity: MeteringIdentity = {
 export const testOccurredAt = 1_700_000_000_000;
 export const testDeduplicationExpiresAt = 1_700_086_400_000;
 
-/** Deterministic catalog ids so a state's rows and the catalog rows they reference agree by construction. */
 const internalFeatureIdOf = (featureId: string) => `feat_${featureId}`;
 
 export const testOrg: CommandOrg = {
@@ -197,7 +196,6 @@ const productRowOf = ({
 	},
 });
 
-/** Every catalog row `state` references, so a command computed against them never misses. */
 export const createCatalogRowsFor = ({
 	state,
 }: {
@@ -221,7 +219,6 @@ export const createCatalogRowsFor = ({
 export const createCatalogFor = ({ state }: { state: SubjectState }): Catalog =>
 	catalogRowsToCatalog({ rows: createCatalogRowsFor({ state }) });
 
-/** The view a command computes against: state joined with the catalog it references. */
 export const createSubjectFor = ({
 	state,
 	entityId = null,
@@ -298,7 +295,6 @@ export const createInitializeRequest = ({
 		},
 	});
 
-/** Stamps a receipt the way the writer does, so fixtures produce what the log and store hold. */
 export const stampReceipt = ({
 	mutation,
 	command,
@@ -398,7 +394,6 @@ export const applyDurableMutation = ({
 	return result;
 };
 
-/** Seeds a customer the way the log does: one initialize mutation at `offset`. */
 export const seedSubjectState = ({
 	store,
 	topic,
@@ -425,7 +420,6 @@ export const seedSubjectState = ({
 	return applyMutation({ state: null, mutation });
 };
 
-/** Seeds state without consuming a log offset, the way a checkpoint restore does. */
 export const restoreSubjectStates = ({
 	store,
 	topic,

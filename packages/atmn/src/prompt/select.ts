@@ -131,7 +131,6 @@ const interactiveSelect = async ({
 				filter = filter.slice(0, -1);
 				cursor = 0;
 			} else if (!key.startsWith(ESC) && [...key].every((c) => c >= " ")) {
-				// A paste arrives as one chunk; typing as one char at a time.
 				filter += key;
 				cursor = 0;
 			}

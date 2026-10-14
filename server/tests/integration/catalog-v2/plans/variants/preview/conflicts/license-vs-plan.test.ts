@@ -1,12 +1,3 @@
-/**
- * catalogV2.preview_update — plan-body conflicts and license-slot
- * conflicts must not be confused.
- *
- * Plan-only items edit: variant.conflicts fires (no license_plan_id), Seat stays 200.
- * License-only edit: Seat overlay moves, conflict stamps license_plan_id.
- * Both lanes: two objects — plan body, then the Seat link.
- */
-
 import { test } from "bun:test";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";

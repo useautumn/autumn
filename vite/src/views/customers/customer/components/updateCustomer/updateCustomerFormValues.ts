@@ -29,7 +29,6 @@ export const customerToFormValues = ({
 	billingDetails: billingDetailsToFormValues(billingDetails),
 });
 
-/** The customer fields this form owns, shaped like the cached page customer. */
 export const formValuesToCustomerPatch = (
 	values: UpdateCustomerFormValues,
 ) => ({
@@ -39,7 +38,6 @@ export const formValuesToCustomerPatch = (
 	...(values.id && { id: values.id }),
 });
 
-/** Billing details are skipped when the Stripe link itself changes, since they belong to the old customer. */
 export const formValuesToUpdateCustomerBody = ({
 	initial,
 	values,

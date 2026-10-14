@@ -6,10 +6,6 @@ type UseControllableStateParams<T> = {
 	onChange?: (value: T) => void;
 };
 
-/**
- * Manages state that can be either controlled or uncontrolled.
- * Replacement for @radix-ui/react-use-controllable-state.
- */
 function useControllableState<T>({
 	prop,
 	defaultProp,

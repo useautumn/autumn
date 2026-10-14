@@ -13,7 +13,6 @@ const emptyRewritePlan = (): FeatureRewritePlan => ({
 	updateCreditSystemSchemas: [],
 });
 
-/** Only boolean ↔ metered reshapes entitlements; other type pairs are no-ops here. */
 const booleanMeteredTypeChange = ({
 	current,
 	next,
@@ -36,7 +35,6 @@ const booleanMeteredTypeChange = ({
 	return null;
 };
 
-/** Rewrite metered_feature_id in each credit system that references this feature. */
 const renameFeatureIdInCreditSystemSchemas = ({
 	fromId,
 	toId,
@@ -65,7 +63,6 @@ const renameFeatureIdInCreditSystemSchemas = ({
 		return { id: creditSystem.id, config };
 	});
 
-/** Declare reference-rewrite intents for one current → next feature update. */
 export const computeUpdateFeatureRewrites = ({
 	current,
 	next,

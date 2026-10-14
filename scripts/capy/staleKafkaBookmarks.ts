@@ -5,7 +5,6 @@ export type PartitionBookmark = {
 	commandNextOffset: bigint | null;
 };
 
-/** Parses `kafka-get-offsets.sh` output (`topic:partition:offset` per line) into log end offsets. */
 export function parseLogEndOffsets({
 	output,
 }: {
@@ -22,7 +21,6 @@ export function parseLogEndOffsets({
 const commandsTopicFor = ({ topic }: { topic: string }) =>
 	topic.replace(/-events$/, "-commands");
 
-// A missing local partition will be recreated empty; other topics aren't this broker's to judge.
 const logEndFor = ({
 	logEnds,
 	topic,
@@ -38,7 +36,6 @@ const logEndFor = ({
 const isAheadOf = ({ offset, end }: { offset: bigint | null; end?: bigint }) =>
 	offset !== null && end !== undefined && offset > end;
 
-/** Bookmarks past their topic's log end: the broker lost records the bookmark already passed. */
 export function findStaleBookmarks({
 	bookmarks,
 	logEnds,

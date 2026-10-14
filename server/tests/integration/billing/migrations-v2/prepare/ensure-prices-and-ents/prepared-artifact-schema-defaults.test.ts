@@ -1,6 +1,3 @@
-/** Regression: preparation and Trigger serialization must hash omitted plan-item defaults identically.
- * Red missed the artifact after `pooled: false` appeared; green applies the boolean entitlement. */
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV5 } from "@autumn/shared";
 import type { Operations } from "@autumn/shared/api/migrations/operations/operations.js";

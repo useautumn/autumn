@@ -7,12 +7,6 @@ import {
 import { LicenseIcon } from "@/components/v2/icons/LicenseIcon";
 import { useLinkableLicenses } from "./useLinkableLicenses";
 
-/**
- * "Link license" entry for the plan toolbar (ellipsis) dropdown: a sub-menu of
- * license subplans that aren't already linked to this plan. Linking only stages
- * a pending card — the link persists when the plan save bar is saved. Hidden
- * when the product itself is a license.
- */
 export const LinkLicenseMenuItem = () => {
 	const { isLicense, availableLicenses, linkLicense } = useLinkableLicenses();
 

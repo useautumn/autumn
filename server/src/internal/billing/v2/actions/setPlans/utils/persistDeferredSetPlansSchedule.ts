@@ -14,7 +14,6 @@ export const isSetPlansBillingContext = (
 	"immediatePhase" in billingContext &&
 	"scheduledPhaseContexts" in billingContext;
 
-/** Plans deferred before `schedulePhases` existed: every phase plan was a fresh row. */
 const legacyDeferredSchedulePhases = ({
 	billingContext,
 	billingPlan,
@@ -38,8 +37,6 @@ const legacyDeferredSchedulePhases = ({
 		})),
 	];
 
-	// Unscheduled plans are attached last within the immediate phase and belong to
-	// no phase, so they are dropped from the opening phase's products.
 	const unscheduledCount = resolveUnscheduledProductContexts({
 		productContexts: billingContext.productContexts,
 	}).length;

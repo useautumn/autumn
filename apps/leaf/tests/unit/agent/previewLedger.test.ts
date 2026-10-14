@@ -10,7 +10,6 @@ const request = {
 };
 const okResult = { content: [{ text: "{}", type: "text" }] };
 
-/** The durable slot, as one session sees it. */
 const sessionState = (): StateHandle<ReadonlyArray<PreviewedRequest>> => {
 	let value: ReadonlyArray<PreviewedRequest> = [];
 	return {
@@ -41,7 +40,6 @@ describe("preview ledger", () => {
 		).toBeUndefined();
 	});
 
-	// The Resend incident: previewed with `customize`, attached without it.
 	test("refuses a write that differs from what the session previewed", () => {
 		const { customize: _dropped, ...bare } = request;
 		const rejection = ledgerAfterPreview().rejectionFor({

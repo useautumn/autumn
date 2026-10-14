@@ -13,7 +13,6 @@ type EventRow = {
 	entity_id: string | null;
 };
 
-/** Gets a single event by ID. Throws if not found. */
 export const getEventById = async ({
 	orgId,
 	env,

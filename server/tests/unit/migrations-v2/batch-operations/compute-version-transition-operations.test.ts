@@ -1,8 +1,3 @@
-/**
- * A catalog-version change lowers the full product transition: entitlement
- * definitions move to the target version, then the customer product repoints.
- */
-
 import { describe, expect, test } from "bun:test";
 import {
 	AllowanceType,

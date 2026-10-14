@@ -1,14 +1,3 @@
-/**
- * Eviction end to end, against real slot files: what a check sees after a copy or a row is gone, and what the other
- * replicas see of it (nothing).
- *
- *  1  a row dropped from disk: the check is forwarded, the subject pulled once, the next check answers from the pull;
- *  2  a copy dropped from memory: the row answers at once, nothing is forwarded or pulled;
- *  3  two replicas: a drop on one relays nothing, deletes nothing on the other, and no pass copies the row back;
- *  4  a fresh replica copies what its peer still holds, then its own share drops it again;
- *  5  a multi-tenant Atom: one thread's share spans its tenants, so one tenant's churn drops another's oldest.
- */
-
 import { afterEach, describe, expect, test } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -93,7 +82,6 @@ const customerAt = ({
 	};
 };
 
-/** A thread's counters, read back as /health shows them. */
 const threadCounters = () => {
 	const buffer = createThreadStatsBuffer({ threads: 1 });
 	return {
@@ -102,7 +90,6 @@ const threadCounters = () => {
 	};
 };
 
-/** The evictor over a volume whose 80% share is `shareBytes`, the folders' files standing in for what the volume sees. */
 const evictorOver = ({
 	folders: replicaFolders,
 	counters,
@@ -136,7 +123,6 @@ const evictorOver = ({
 		threads: 1,
 	});
 
-/** One folder on one thread whose misses pull through an Autumn the test answers, with a held budget the test sets. */
 const openFolder = ({ heldBudgetBytes = 64 * 1024 * 1024 } = {}) => {
 	let at = 1_000_000;
 	const { counters, stats } = threadCounters();
@@ -224,7 +210,6 @@ describe("a subject dropped from disk", () => {
 		expect(atom.stats()).toMatchObject({ diskExpired: 1 });
 		expect(await atom.forwardOf("cus_1")).toBe("customer_not_stored");
 		expect(atom.pulls.map((pull) => pull.customerId)).toEqual(["cus_1"]);
-		// Autumn answers with the balance as it stands now, not as the dropped row had it.
 		await atom.pulls[0]?.answer(
 			atom.bodyOf(customerAt({ id: "cus_1", balance: 7, readAt: 200 })),
 		);
@@ -237,7 +222,6 @@ describe("a subject dropped from disk", () => {
 			subjectFills: 1,
 		});
 
-		// Written again just now, the row is not idle: the next tick leaves it.
 		await atom.evictor.tick();
 		expect(atom.stats()).toMatchObject({ diskExpired: 1 });
 		expect(await atom.forwardOf("cus_1")).toBeNull();
@@ -359,11 +343,9 @@ describe("two replicas, one of which drops a row", () => {
 		expect(await heldEverywhere(a)).toEqual([]);
 		expect(await heldEverywhere(b)).toEqual(["cus_1"]);
 		expect(a.stats().relayed).toBe(relayedBefore);
-		// A's checks go to the API now; B still answers.
 		expect(await remainingOn({ replica: a, id: "cus_1" })).toBe("forwarded");
 		expect(await remainingOn({ replica: b, id: "cus_1" })).toBe(10);
 
-		// The row B holds was written long before any pass's window, so neither pass brings it back to A.
 		await a.sync().pass();
 		await b.sync().pass();
 		expect(await heldEverywhere(a)).toEqual([]);
@@ -389,7 +371,6 @@ describe("two replicas, one of which drops a row", () => {
 
 		await b.sync().catchUp();
 		expect((await heldEverywhere(b)).length).toBe(20);
-		// Copied just now, the rows are inside the relay window; a share only drops them once they are past it.
 		now += HOUR;
 
 		const { counters, stats } = threadCounters();

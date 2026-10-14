@@ -1,16 +1,3 @@
-/**
- * Default plans × versioning — attach exactly ONE version: the active pointer.
- *
- * Contract:
- *   Lockstep mint → new customer gets v2; earlier customer stays on v1.
- *   Both rows is_default → customers.create (createWithDefaults) attaches active.
- *   Both rows is_default, v1 forced active → customers.create attaches v1.
- *   Both rows is_default → entities.create (handleCreateEntity) attaches active.
- *
- * Draft mint / promote / slug-promote (default follows the pointer) live in
- * default-follows-active.test.ts.
- */
-
 import { expect, test } from "bun:test";
 import { customerProducts, products, ResetInterval } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
@@ -95,7 +82,6 @@ const mintV2 = async ({
 	});
 };
 
-/** cusProduct rows for one customer on one plan, any version. */
 const fetchAttachedPlanRows = async ({
 	ctx,
 	internalCustomerId,
@@ -115,7 +101,6 @@ const fetchAttachedPlanRows = async ({
 			),
 		);
 
-/** Entity defaults only attach when this org flag is on; restore after — it is org-wide. */
 const setDefaultAppliesToEntities = async ({
 	ctx,
 	enabled,
@@ -133,7 +118,6 @@ const setDefaultAppliesToEntities = async ({
 	});
 	await clearOrgCache({ db: ctx.db, orgId: ctx.org.id, env: ctx.env });
 	if (enabled) {
-		// Server L1 org cache is 5s and only the request process can drop it.
 		await timeout(5500);
 	}
 };
@@ -204,7 +188,6 @@ test.concurrent(
 			await seedDefaultFreeV1({ autumn: autumnV2_3, planId });
 			await mintV2({ autumn: autumnV2_3, planId });
 
-			// Force the bad state: mint moved the flag to v2, re-flag v1 too.
 			const v1 = await getFull({ ctx, planId, version: 1 });
 			const v2 = await getFull({ ctx, planId, version: 2 });
 			await ctx.db

@@ -43,7 +43,6 @@ export const processInvoice = ({
 	const isStripe = processorType === ProcessorType.Stripe;
 
 	return {
-		// Current ids from the hydration query; snapshot if nothing resolved.
 		plan_ids: invoice.resolved_product_ids?.length
 			? invoice.resolved_product_ids
 			: (invoice.product_ids ?? []),
@@ -56,22 +55,6 @@ export const processInvoice = ({
 		hosted_invoice_url: isStripe
 			? `${getAutumnEnv().AUTUMN_API_URL}/invoices/hosted_invoice_url/${invoice.id}`
 			: null,
-		// hosted_invoice_url: invoice.hosted_invoice_url,
-		// items: withItems
-		// 	? (invoice.items || []).map((i) => {
-		// 			const feature = features?.find(
-		// 				(f) => f.internal_id === i.internal_feature_id,
-		// 			);
-
-		// 			return ApiInvoiceItemSchema.parse({
-		// 				description: i.description,
-		// 				period_start: i.period_start,
-		// 				period_end: i.period_end,
-		// 				feature_id: feature?.id,
-		// 				feature_name: feature?.name,
-		// 			});
-		// 		})
-		// 	: undefined,
 	};
 };
 
@@ -112,7 +95,6 @@ const toListRow = (
 	entity_id: row.entity_id,
 });
 
-/** Every write ends here: the written rows name their customer's list, so no caller has to remember. */
 const invalidateWrittenRows = async ({
 	rows,
 }: {
@@ -217,7 +199,6 @@ export class InvoiceService {
 			conditions.push(inArray(invoices.status, query.status));
 		}
 		if (query.processor_types?.length) {
-			// Rows predating processor tracking have NULL processor_type and are Stripe.
 			const processorCondition = query.processor_types.includes(
 				ProcessorType.Stripe,
 			)
@@ -383,7 +364,6 @@ export class InvoiceService {
 		env: AppEnv;
 		items?: InvoiceItem[];
 	}) {
-		// Convert product ids to unique product ids
 		const uniqueProductIds = [...new Set(productIds)];
 		const uniqueInternalProductIds = [...new Set(internalProductIds)];
 
@@ -412,7 +392,6 @@ export class InvoiceService {
 			internal_product_ids: uniqueInternalProductIds,
 			internal_entity_id: internalEntityId || null,
 
-			// Stripe stuff
 			total: atmnTotal,
 			amount_paid: atmnAmountPaid,
 			paid_at: stripeInvoiceToPaidAt({ stripeInvoice }),
@@ -475,7 +454,6 @@ export class InvoiceService {
 		return results[0] as Invoice;
 	}
 
-	/** The Stripe refund already happened; the row is the ledger, so a missing row is warned, never thrown. */
 	static async addRefundedAmount({
 		db,
 		stripeId,
@@ -523,7 +501,6 @@ export class InvoiceService {
 			.onConflictDoUpdate({
 				target: invoices.stripe_id,
 				set: {
-					// Only the row's own customer may fill missing stamps; ownership never moves here.
 					org_id: sql`CASE WHEN ${invoices.internal_customer_id} = excluded.internal_customer_id THEN COALESCE(${invoices.org_id}, excluded.org_id) ELSE ${invoices.org_id} END`,
 					env: sql`CASE WHEN ${invoices.internal_customer_id} = excluded.internal_customer_id THEN COALESCE(${invoices.env}, excluded.env) ELSE ${invoices.env} END`,
 					status: invoice.status,
@@ -558,7 +535,6 @@ export class InvoiceService {
 		return result[0] as Invoice;
 	}
 
-	/** A conflicting row may move to another customer, so both the old and the new owner's lists are dropped. */
 	static async upsertMany({
 		db,
 		invoices: rows,

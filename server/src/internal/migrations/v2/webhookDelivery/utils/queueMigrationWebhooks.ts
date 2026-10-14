@@ -6,7 +6,6 @@ import { sendMigrationWebhooks } from "../sendMigrationWebhooks.js";
 import type { MigrationWebhookRecord } from "../types/migrationWebhookRecord.js";
 import { MIGRATION_WEBHOOK_RECORDS_PER_MESSAGE } from "./migrationWebhookDeliveryQueue.js";
 
-/** Splits a page's records into queue-message-sized batches. */
 export const chunkWebhookRecords = ({
 	records,
 	size = MIGRATION_WEBHOOK_RECORDS_PER_MESSAGE,
@@ -53,7 +52,6 @@ export const queueMigrationWebhooks = async ({
 	}));
 
 	if (isTriggerConfigured()) {
-		// Submit the page together so queue latency isn't paid once per delivery task.
 		await sendMigrationWebhooksTask.batchTrigger(submissions);
 	} else {
 		for (const { payload } of submissions) {

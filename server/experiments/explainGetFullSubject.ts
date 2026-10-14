@@ -16,11 +16,6 @@ const { RELEVANT_STATUSES } = await import(
 	"../src/internal/customers/cusProducts/CusProductService"
 );
 
-// Run with:
-//   bun run experiments/explainGetFullSubject.ts
-// Or scoped to an entity:
-//   PROD_TEST_ENTITY_ID=... bun run experiments/explainGetFullSubject.ts
-
 const main = async () => {
 	const orgId = prodTestOrgId;
 	const env = AppEnv.Live;
@@ -46,13 +41,11 @@ const main = async () => {
 	console.log(`Rows returned: ${result.length}`);
 	console.log(`Wall-clock time: ${elapsed.toFixed(2)}ms`);
 
-	// The full row payload is enormous — dump it to a file and print a summary.
 	const outDir = resolve(import.meta.dir, "out");
 	try {
 		const { mkdirSync } = await import("node:fs");
 		mkdirSync(outDir, { recursive: true });
 	} catch {
-		// ignore
 	}
 	const resultPath = resolve(outDir, "getFullSubject-result.json");
 	writeFileSync(resultPath, JSON.stringify(result, null, 2));
@@ -99,7 +92,6 @@ const main = async () => {
 	writeFileSync(explainPath, explainLines.join("\n"));
 	console.log(`EXPLAIN written to: ${explainPath}`);
 
-	// Print just the top of the plan (total time, first ~20 lines) inline
 	const head = explainLines.slice(0, 20);
 	for (const line of head) console.log(line);
 	const execLine = explainLines.find((line) => /Execution Time:/.test(line));

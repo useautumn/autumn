@@ -1,7 +1,6 @@
 import type { UpdateCatalogPlan } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogPlan";
 import { rewritePlanIdAliasValues } from "@/internal/catalogV2/productAliases/rewritePlanIdAliasValues";
 
-/** After identity moves, remaining execute consumers must see toId. */
 export const rewritePublicPlanIdsAfterRename = ({
 	updateCatalogPlan,
 }: {

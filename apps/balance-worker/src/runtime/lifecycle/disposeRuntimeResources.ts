@@ -81,7 +81,6 @@ export async function stopPreparationInBackground({
 	try {
 		await stopRuntimePreparation({ state });
 	} catch {
-		// The retained stop promise carries cleanup failure to disposal and quiescence.
 	}
 }
 
@@ -92,7 +91,6 @@ async function stopFollowerInBackground({
 	try {
 		await stopRuntimeFollower({ ctx, state });
 	} catch {
-		// The retained stop promise carries cleanup failure to disposal and quiescence.
 	}
 }
 
@@ -104,6 +102,5 @@ export async function settleRuntimeStartup({
 	try {
 		await state.startPromise;
 	} catch {
-		// Startup reports its failure separately; shutdown still has to settle accepted work.
 	}
 }

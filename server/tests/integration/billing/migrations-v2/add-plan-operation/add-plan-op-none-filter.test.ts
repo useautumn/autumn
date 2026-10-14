@@ -1,12 +1,3 @@
-/**
- * Integration tests for $none filter quantifier with add_plan.
- *
- * Contract under test:
- *   - $none with empty filter matches customers with no active plans.
- *   - $none with plan_id matches customers who don't have that specific plan.
- *   - Combining $none filter + add_plan attaches a plan to customers who lack it.
- */
-
 import { expect, test } from "bun:test";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";

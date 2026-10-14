@@ -9,7 +9,6 @@ import {
 import type { WorkerFullSubject } from "../../models/subject/workerFullSubject.js";
 import { workerStateToApiBalance } from "./workerStateToApiBalance.js";
 
-/** A boolean feature is a flag, never a balance, as on the legacy subject. */
 export const isFlagFeatureId = ({
 	ctx,
 	featureId,
@@ -21,7 +20,6 @@ export const isFlagFeatureId = ({
 	return feature ? isBooleanFeature({ feature }) : false;
 };
 
-/** The subject holds a grant for the feature; legacy reports no balance, not an error, when it does not. */
 export const isFeatureHeld = ({
 	fullSubject,
 	featureId,
@@ -32,7 +30,6 @@ export const isFeatureHeld = ({
 	fullSubjectToCustomerEntitlements({ fullSubject, featureIds: [featureId] })
 		.length > 0;
 
-/** The legacy `balances` map: each tracked feature and the credit systems that can fund it, null where the customer holds none. */
 export const workerSubjectsToApiBalances = ({
 	ctx,
 	subjects,

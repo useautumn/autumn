@@ -20,13 +20,11 @@ export const appendElementToArray = ({
 	text: AppendText;
 	after?: (element: SgNode) => boolean;
 }): string => {
-	// A comment is a named child too, but never an element.
 	const elements = array
 		.namedChildren()
 		.filter((child) => child.kind() !== "comment");
 	if (elements.length === 0) {
 		const indent = leadingIndentOfLine(source, array.range().start.index);
-		// The seeded element's first line lands one tab deeper than the array.
 		const resolved = resolveText({ text, elementIndent: `${indent}\t` });
 		return root.commitEdits([
 			rebuildArrayEdit({
@@ -52,7 +50,6 @@ export const appendElementToArray = ({
 		array,
 		anchor,
 	});
-	// A missing comma goes straight after the anchor, ahead of any comment.
 	const commaEdits = hasTrailingComma
 		? []
 		: [
@@ -66,7 +63,6 @@ export const appendElementToArray = ({
 		.slice(array.range().start.index, last.range().start.index)
 		.includes("\n");
 	if (spansLines) {
-		// Sibling indent: the whitespace opening the anchor element's line.
 		const indent = leadingIndentOfLine(source, anchor.range().start.index);
 		const resolved = resolveText({ text, elementIndent: indent });
 		return root.commitEdits([
@@ -91,8 +87,6 @@ export const appendElementToArray = ({
 			},
 		]);
 	}
-	// A one-line array cannot hold a multi-line element inline: reflow it,
-	// one line per element, with comments kept in place on their own lines.
 	const children = array.namedChildren();
 	const lines = children.map((child) =>
 		child.kind() === "comment" ? child.text() : `${child.text()},`,

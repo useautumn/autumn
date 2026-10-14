@@ -5,7 +5,6 @@ import type {
 	CatalogInvalidations,
 } from "./types/catalogInvalidations.js";
 
-/** The typed door; a client built without a publisher refuses rather than silently dropping the signal. */
 export function createCatalogInvalidations({
 	ctx,
 }: {
@@ -23,7 +22,6 @@ export function createCatalogInvalidations({
 				message: "This client has no catalog invalidation log to publish on",
 			});
 		}
-		// Narrowed above; a function declaration does not carry the narrowing.
 		const publishOn: CatalogInvalidations = publisher;
 		function publish(): Promise<void> {
 			return publishOn.invalidateOrgCatalog(params);

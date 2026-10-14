@@ -121,12 +121,10 @@ async function catchUpPartition({
 		? storedNextOffset
 		: await readReplayFloor({ ctx, state, bookmark: storedNextOffset });
 	if (signal.aborted) throw signal.reason;
-	// A new replay must rebuild recent commands even if an earlier runtime reached the target.
 	ctx.positionTracker.reset({ topic, partition, nextOffset: floor });
 	if (floor < storedNextOffset)
 		ctx.replayFloorByPartition.set(partition, floor);
 	try {
-		// Resume, seek and fetch back to back: nothing may be fetched from the old group offset in between.
 		ctx.consumption.resumePartition({ partition });
 		ctx.consumption.seekPartition({ partition, nextOffset: floor });
 		ctx.consumption.resumeFetching({ partition });
@@ -143,9 +141,6 @@ async function catchUpPartition({
 	state.status = "following";
 }
 
-/** The state was hydrated from a bookmark the owner wrote after the log end was read, so the
- *  owner's latest record is usually one high-watermark update away. The log end is re-read
- *  until it reaches the stored offset; state that stays ahead is a real divergence. */
 async function settleLogEnd({
 	ctx,
 	state,

@@ -1,9 +1,3 @@
-/**
- * Pins what an org over its track/check cap gets, by lowering the caps to 0
- * for a throwaway sub-org: track and check still run (queued / fail open),
- * customer reads and creates get the 429 the SDK retries.
- */
-
 import { afterEach, expect, test } from "bun:test";
 import { ApiVersion } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
@@ -61,7 +55,6 @@ test(`${chalk.yellowBright(`${testCase}: track and check degrade, customer reads
 	});
 	expect(tracked).toMatchObject({ customer_id: customerId });
 
-	// No product grants messages, so only the fail-open path answers allowed.
 	const checked = await client.post("/check", {
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,

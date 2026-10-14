@@ -23,7 +23,6 @@ import {
 } from "./atomDisplay";
 import { cacheToMachine } from "./atomMachineDisplay";
 
-/** A stack that dies in AWS before it registers never reaches alien, so a long wait is the only sign. */
 const STALE_SETUP_MS = 24 * 60 * 60 * 1000;
 
 const deployCaption = ({
@@ -43,7 +42,6 @@ const deployCaption = ({
 	return "You can leave this page.";
 };
 
-/** Step 3: alien stands Atom up in the org's cloud, one step at a time. */
 export const AtomDeploySection = ({
 	cache,
 	stackName,

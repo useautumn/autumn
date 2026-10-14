@@ -1,8 +1,3 @@
-/**
- * Dashboard in-place catalog rewrite: messages 100/mo → 200, then the
- * auto-drafted migration. Seed stays on the old catalog; the customize op is
- * the same replace the dashboard draft would run.
- */
 import { test } from "bun:test";
 import { ResetInterval } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features";

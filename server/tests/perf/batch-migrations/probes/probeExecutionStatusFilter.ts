@@ -1,9 +1,3 @@
-/**
- * Probes the execution-status filter (dashboard "filter by succeeded/failed")
- * against the DEV bench org: correctness of returned rows + EXPLAIN shape.
- *
- * Run: infisical run --env=dev --recursive -- bun server/tests/perf/batch-migrations/probes/probeExecutionStatusFilter.ts
- */
 import { sql } from "drizzle-orm";
 import {
 	buildProcessedPreviewCount,
@@ -70,7 +64,6 @@ const main = async () => {
 			`count(succeeded): ${count} in ${Date.now() - countStarted}ms`,
 		);
 
-		// Proposed shape: drive from the mir index, join customers only for the page.
 		const proposedSelect = sql`
 			SELECT c.internal_id, c.id, c.name, c.email
 			FROM (

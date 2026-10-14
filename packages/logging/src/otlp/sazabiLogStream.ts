@@ -19,7 +19,6 @@ const SEVERITY_NUMBERS: Record<string, number> = {
 	FATAL: 21,
 };
 
-/** The intake URL with no trailing slash, or undefined when Sazabi is off or misconfigured; dev/test need SAZABI_DEV_LOGS=1. */
 export const sazabiIntakeUrlOf = ({
 	env,
 }: {
@@ -39,7 +38,6 @@ type PinoLogLine = {
 	[key: string]: unknown;
 };
 
-/** Nested objects become JSON strings: OTLP attributes are flat, and one stringify beats an attribute walk. */
 export const pinoLineToOtlpLogRecord = (record: PinoLogLine) => {
 	const { msg, level, time, ...attributes } = record;
 	for (const key in attributes) {
@@ -61,7 +59,6 @@ export type SazabiLogStream = {
 	flush: () => Promise<void>;
 };
 
-/** Pino tap shipping warn+ lines, minus routine ones, to Sazabi over OTLP; undefined when Sazabi is off. */
 export const createSazabiLogStream = ({
 	service,
 	env = process.env,
@@ -101,9 +98,7 @@ export const createSazabiLogStream = ({
 						const record: PinoLogLine = JSON.parse(line);
 						if (isRoutineWarning(record)) return;
 						sazabiLogger.emit(pinoLineToOtlpLogRecord(record));
-					} catch {
-						// Sazabi is best effort: a bad line is dropped, never thrown into the caller.
-					}
+					} catch {}
 				},
 			},
 		},

@@ -66,7 +66,6 @@ test.concurrent(
 		expect(preview.plan_ids).toContain(pro.id);
 		expect(preview.currency).toBe("usd");
 
-		// The upcoming invoice lands on the next cycle boundary.
 		expect(preview.invoice_at).toBeCloseTo(
 			addMonths(advancedTo, 1).getTime(),
 			-6,
@@ -82,7 +81,6 @@ test.concurrent(
 		);
 		expect(prepaidLine?.subtotal).toBe(PREPAID_PACKS * PREPAID_PACK_PRICE);
 
-		// Usage accrued this cycle is billed in arrear on the same invoice.
 		const overage = MESSAGES_TRACKED - MESSAGES_INCLUDED;
 		const usageLine = preview.line_items.find(
 			(lineItem) => lineItem.feature_id === TestFeature.Messages,
@@ -144,7 +142,6 @@ test.concurrent(
 			expand: [CustomerExpand.InvoicePreviews],
 		});
 
-		// Nothing recurs past the boundary, but the accrued overage is still billed.
 		expect(customer.invoice_previews).toHaveLength(1);
 
 		const [preview] = customer.invoice_previews!;

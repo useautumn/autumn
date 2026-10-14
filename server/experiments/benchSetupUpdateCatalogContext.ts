@@ -1,16 +1,8 @@
 import { AppEnv } from "@autumn/shared";
 import { sql } from "drizzle-orm";
-// Import initDrizzle directly — experimentEnv's loadLocalEnv() clobbers vars
-// injected by `infisical run --env=staging`.
 import { initDrizzle } from "../src/db/initDrizzle";
 import { buildFeatureStatesQuery } from "../src/internal/features/repos/listFeatureStates";
 import { buildFeatureUsageSummariesQuery } from "../src/internal/features/repos/listFeatureUsageSummaries";
-
-// Worst-case wall-time bench for catalogV2 setupUpdateCatalogContext with
-// preview: true — every org feature touched, all with rewrite COUNTs, both
-// setup queries raced in Promise.all exactly as the action does. Run from server:
-//   EXPLAIN_ORG_ID=... infisical run --env=staging --recursive -- sh -c \
-//     'EXPLAIN_DATABASE_URL="$DATABASE_V2_URL" bun run experiments/benchSetupUpdateCatalogContext.ts'
 
 const STATEMENT_TIMEOUT_MS = 30_000;
 const BENCH_RUNS = 5;
@@ -96,7 +88,7 @@ const main = async () => {
 	const stateRefs = [...features].map((feature) => ({
 		internalId: feature.internal_id,
 		id: feature.id,
-		countRows: true, // worst case: every entry may rewrite references
+		countRows: true,
 	}));
 	const usageRefs = [...features].map((feature) => ({
 		internalId: feature.internal_id,
@@ -127,13 +119,11 @@ const main = async () => {
 	const usageSamples: number[] = [];
 	const combinedSamples: number[] = [];
 
-	// Warm the caches once so runs measure steady state, not cold buffers.
 	await Promise.all([statesQuery(), usageQuery()]);
 
 	for (let run = 0; run < BENCH_RUNS; run++) {
 		statesSamples.push(await timed(statesQuery));
 		usageSamples.push(await timed(usageQuery));
-		// As the action runs it: both queries raced in Promise.all.
 		combinedSamples.push(
 			await timed(() => Promise.all([statesQuery(), usageQuery()])),
 		);

@@ -1,5 +1,3 @@
-/** Contract: paid parent and license scopes stay isolated; inline custom prices are immediately discountable. */
-/** Quantity boundaries and mixed percent/fixed stacking bill only eligible paid license quantities. */
 import { expect, test } from "bun:test";
 import type {
 	ApiCustomerV3,
@@ -368,7 +366,6 @@ test.concurrent(
 		});
 
 		if (!attached.invoice) throw new Error("Expected an attach invoice");
-		// Historical refunds depend on the asynchronously stored, discounted charge.
 		await waitForInvoiceLineItems({
 			stripeInvoiceId: attached.invoice.stripe_id,
 			timeoutMs: 30_000,

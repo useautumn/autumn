@@ -4,7 +4,6 @@ import type {
 	UpdateCatalogPlan,
 } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogPlan";
 
-/** Names the blocker and the two ways out: retire this version, or the whole plan. */
 const partialArchiveMessage = ({
 	removePlan,
 }: {
@@ -18,7 +17,6 @@ const partialArchiveMessage = ({
 	return `${planId} v${version} ${blocker}. Either ${clearIt} and delete the version, or archive all versions of ${planId} to retire the plan.`;
 };
 
-/** Archival is plan-wide; version omission may only hard-delete or tombstone. */
 export const handlePartialPlanArchiveErrors = ({
 	updateCatalogPlan,
 }: {

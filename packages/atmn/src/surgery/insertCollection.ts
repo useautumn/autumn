@@ -27,8 +27,6 @@ export const insertCollection = ({
 	const object = call.getMatch("ARG");
 	if (object === null || object.kind() !== "object") return null;
 
-	// A shorthand `plans` is a member as much as `plans: [...]`; counting only
-	// pairs read `atmn({ features, plans })` as empty and replaced it wholesale.
 	const members = object
 		.children()
 		.filter(
@@ -60,8 +58,6 @@ export const insertCollection = ({
 
 	const last = members[members.length - 1];
 	const lastEnd = last.range().end.index;
-	// The comma is an object child in the AST, so a comment between the member
-	// and its comma is skipped rather than mistaken for "no trailing comma".
 	const trailingComma = object
 		.children()
 		.find(
@@ -69,7 +65,6 @@ export const insertCollection = ({
 		);
 	const insertAt = trailingComma ? trailingComma.range().end.index : lastEnd;
 	const missingComma = trailingComma ? "" : ",";
-	// A one-line object keeps its shape: the key goes inline after the last pair.
 	const spansLines = object.text().includes("\n");
 	if (!spansLines) {
 		return root.commitEdits([

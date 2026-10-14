@@ -1,5 +1,4 @@
 export const SESSION_DURATION_MS = 24000;
-// Keep event timestamps in simulation time; playback gives each result time to register.
 export const SESSION_PLAYBACK_RATE = 0.55;
 
 export const SESSION_STAGES = [

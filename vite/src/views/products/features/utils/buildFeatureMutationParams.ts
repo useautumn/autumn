@@ -27,11 +27,6 @@ interface FeatureMarkupParams {
 	credit_schema?: ApiCreditSchemaItem[];
 }
 
-/**
- * Centralizes the AI-vs-classic credit system field selection shared by the
- * feature mutation sheets. AI credit systems carry markup fields and omit the
- * rate card; classic credit systems do the inverse.
- */
 export const buildFeatureMarkupParams = ({
 	type,
 	modelMarkups,
@@ -40,9 +35,6 @@ export const buildFeatureMarkupParams = ({
 	schema,
 }: BuildFeatureMarkupParamsArgs): FeatureMarkupParams => {
 	const ai = isAiCreditSystem(type);
-	// Only a classic credit system has a rate card. A metered or boolean draft
-	// can still carry a schema left over from a type switch, and sending that
-	// fails API validation on rows the user never filled in.
 	const classicCreditSystem = isAnyCreditSystem(type) && !ai;
 	return {
 		model_markups: ai ? modelMarkups : undefined,
@@ -53,7 +45,6 @@ export const buildFeatureMarkupParams = ({
 	};
 };
 
-/** Maps a feature draft/row to a catalogV2 features[] entry (create or update). */
 export const featureToCatalogFeatureParams = ({
 	feature,
 	featureId = feature.id,

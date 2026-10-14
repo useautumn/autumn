@@ -4,7 +4,6 @@ import { users } from "../../../db/schema/auth.ts";
 import type { TwdContext } from "../../../lib/types/twdContext.ts";
 import type { JobRow } from "../../jobs/types/jobRow.ts";
 
-/** JobRow → contract EnqueueResponse. Integrator: swap for the jobs task's mapper if it exports one. */
 export const toEnqueueResponses = async ({
 	ctx,
 	results,

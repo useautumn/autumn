@@ -23,7 +23,6 @@ type FakeRedis = {
 	hangGetForMs?: number;
 	waitForGet?: Promise<void>;
 	pipelineError?: Error;
-	/** Resolve exec() with a per-command error tuple, as real ioredis does. */
 	pipelineCommandError?: Error;
 	emit: (event: string, ...args: unknown[]) => void;
 	on: (event: string, handler: Listener) => void;
@@ -77,8 +76,6 @@ const createFakeRedis = ({
 				onceWrappers.delete(handler);
 				handler(...args);
 			};
-			// Per-instance, as ioredis does: the same handler may be registered
-			// on both connections and each needs its own wrapper.
 			onceWrappers.set(handler, wrapped);
 			listeners.get(event)?.add(wrapped);
 		},
@@ -246,7 +243,6 @@ describe("standby Redis routing", () => {
 			readyCount += 1;
 		});
 
-		// Standby first: a primary-only registration would never fire here.
 		standby.emit("ready");
 		expect(readyCount).toBe(1);
 
@@ -519,9 +515,6 @@ describe("runRedisOp standby failover", () => {
 		}
 	});
 
-	// The reserve has to fit inside the headroom each deadline was sized with,
-	// not eat into the tail it was sized to cover. Feature balances measure a
-	// p99.9 of 297ms, so the preferred attempt must stay clear of that.
 	test("leaves the feature-balance read its measured tail", () => {
 		expect(
 			getPreferredAttemptBudgetMs({
@@ -535,8 +528,6 @@ describe("runRedisOp standby failover", () => {
 			primaryStatus: "reconnecting",
 		});
 
-		// Fail the standby out of rotation while it is the only usable connection,
-		// then restore the primary: the pair ends up ready but distrusted.
 		standby.failGetWith = connectionError();
 		for (let attempt = 0; attempt < 3; attempt++) {
 			await runRedisOp({
@@ -566,7 +557,6 @@ describe("runRedisOp standby failover", () => {
 
 	test("shares one timeout budget across both attempts", async () => {
 		const { primary, standby, redis } = createPair();
-		// Primary burns most of the budget, then fails; standby never answers.
 		primary.hangGetForMs = 200;
 		primary.failGetWith = connectionError();
 		standby.hangGetForMs = 5_000;
@@ -583,7 +573,6 @@ describe("runRedisOp standby failover", () => {
 		).rejects.toBeInstanceOf(RedisUnavailableError);
 
 		expect(standby.calls).toEqual(["get:subject"]);
-		// A per-attempt budget would give the retry a fresh 300ms, landing at ~500ms.
 		expect(Date.now() - startedAt).toBeLessThan(420);
 	});
 
@@ -934,7 +923,6 @@ describe("standby Redis breaker", () => {
 			await runFailingRead(redis);
 		}
 
-		// Still `ready` — only the failure record can demote it.
 		expect(primary.status).toBe("ready");
 		expect(getStandbyRedisRouter(redis)?.ordered()[0]).toBe(asRedis(standby));
 	});
@@ -953,7 +941,6 @@ describe("standby Redis breaker", () => {
 	test("a deterministic reply clears the streak between timeouts", async () => {
 		const { primary, redis } = createPair();
 
-		// A WRONGTYPE between timeouts proves the socket round-tripped.
 		for (let round = 0; round < 3; round++) {
 			primary.failGetWith = connectionError();
 			await runFailingRead(redis);
@@ -968,7 +955,6 @@ describe("standby Redis breaker", () => {
 		const { primary, standby, redis } = createPair();
 		primary.pipelineCommandError = connectionError();
 
-		// exec() resolves; only the tuples say the socket died.
 		for (let attempt = 0; attempt < 3; attempt++) {
 			await redis.pipeline().get("subject").exec();
 		}

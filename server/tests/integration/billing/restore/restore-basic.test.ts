@@ -1,14 +1,3 @@
-/**
- * Restore Basic Tests
- *
- * The `restore` billing action takes Autumn's customer_products as the source
- * of truth and reshapes Stripe to match. Tests here drift Stripe out of sync
- * deliberately, then verify restore brings it back.
- *
- * Test 1: Two entities (pro + premium). Corrupt entity 1's sub items, restore.
- * Test 2: Schedule scenario — release schedule manually, restore recreates it.
- */
-
 import { expect, test } from "bun:test";
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
@@ -63,10 +52,6 @@ const firstStripePriceIdFor = async ({
 	throw new Error(`No Stripe price id on product ${productId}`);
 };
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 1: Two entities, corrupt one sub, restore
-// ═══════════════════════════════════════════════════════════════════════════════
-
 test.concurrent(`${chalk.yellowBright("restore-basic 1: two entities pro+premium, corrupt one, restore")}`, async () => {
 	const customerId = "restore-basic-two-entities";
 
@@ -94,10 +79,6 @@ test.concurrent(`${chalk.yellowBright("restore-basic 1: two entities pro+premium
 	});
 	expect(entities.length).toBe(2);
 
-	// Corrupt the pro sub item by setting its quantity to a wrong value. Each
-	// entity may share a single Stripe subscription (entity-scoped items), so we
-	// avoid mutations that depend on the sub topology — a per-item quantity bump
-	// is a clean diff restore should reverse.
 	const stripeCustomerId = await stripeCustomerIdFor({ ctx, customerId });
 	const subs = await listActiveStripeSubscriptions({ ctx, stripeCustomerId });
 	const proStripePriceId = await firstStripePriceIdFor({
@@ -118,15 +99,10 @@ test.concurrent(`${chalk.yellowBright("restore-basic 1: two entities pro+premium
 		},
 	});
 
-	// Restore — should remove the junk item.
 	await autumnV2_2.billing.restore({ customer_id: customerId });
 
 	await expectStripeSubscriptionCorrect({ ctx, customerId });
 });
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 2: With schedule — release schedule manually, restore recreates it
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(`${chalk.yellowBright("restore-basic 2: scheduled downgrade, schedule released externally, restore recreates")}`, async () => {
 	const customerId = "restore-basic-released-schedule";
@@ -147,7 +123,6 @@ test.concurrent(`${chalk.yellowBright("restore-basic 2: scheduled downgrade, sch
 		actions: [
 			s.billing.attach({ productId: pro.id, entityIndex: 0 }),
 			s.billing.attach({ productId: premium.id, entityIndex: 1 }),
-			// Schedule downgrade premium → pro on entity 1
 			s.billing.attach({
 				productId: pro.id,
 				entityIndex: 1,
@@ -157,7 +132,6 @@ test.concurrent(`${chalk.yellowBright("restore-basic 2: scheduled downgrade, sch
 	});
 	expect(entities.length).toBe(2);
 
-	// Locate the entity-1 (premium) Stripe subscription which now has a schedule
 	const stripeCustomerId = await stripeCustomerIdFor({ ctx, customerId });
 	const subs = await listActiveStripeSubscriptions({ ctx, stripeCustomerId });
 
@@ -170,14 +144,12 @@ test.concurrent(`${chalk.yellowBright("restore-basic 2: scheduled downgrade, sch
 	);
 	if (!premiumSub) throw new Error("Premium sub not found");
 
-	// Release the schedule directly via Stripe (corrupts state)
 	await corruptStripeSubscription({
 		ctx,
 		subscriptionId: premiumSub.id,
 		mutations: { releaseSchedule: true },
 	});
 
-	// Restore — should re-create the schedule
 	await autumnV2_2.billing.restore({ customer_id: customerId });
 
 	await expectStripeSubscriptionCorrect({ ctx, customerId });

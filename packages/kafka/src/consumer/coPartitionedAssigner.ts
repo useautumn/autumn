@@ -3,10 +3,6 @@ import { AssignerProtocol, type PartitionAssigner } from "kafkajs";
 const ASSIGNER_NAME = "CoPartitionedAssigner";
 const ASSIGNER_VERSION = 0;
 
-/**
- * Partition n of every subscribed topic goes to the same member. Round robin
- * flattens topics first, so with two topics the same n can land on two workers.
- */
 export function coPartitionedAssigner({
 	cluster,
 }: Parameters<PartitionAssigner>[0]): ReturnType<PartitionAssigner> {

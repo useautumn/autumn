@@ -8,10 +8,8 @@ import type {
 import type { ReplayHydrationResult } from "../replayHydrationContracts.js";
 import { describeReplayOperatorError } from "./replayOperatorErrors.js";
 
-/** A customer whose baseline could not be proven fresh is never replayed. */
 export const REPLAY_UNVERIFIED_BASELINE_REASON = "unverified_baseline";
 
-/** A cohort with no concrete feature has nothing to hydrate. */
 export const REPLAY_NO_FEATURE_REASON = "no_feature_selected";
 
 export const REPLAY_CANCELLED_REASON = "cancelled";
@@ -33,8 +31,6 @@ export type ReplayArchiveClock = Readonly<{
 	}) => Promise<void>;
 }>;
 
-/** `setup` covers every request that never reached the worker, `execution` the
- *  ones the worker answered with a failure. */
 export type ReplayRequestFailureStage = "setup" | "execution";
 
 export type ReplayRequestOutcome =
@@ -51,8 +47,6 @@ export type ReplayRequestOutcome =
 			stage: ReplayRequestFailureStage;
 	  }>;
 
-/** Reports carry identity and provenance only; archived bodies and worker
- *  replies never leave the operator. */
 export type ReplayRequestIdentity = Readonly<{
 	id: string;
 	orgId: string;

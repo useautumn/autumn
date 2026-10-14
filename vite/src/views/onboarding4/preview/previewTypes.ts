@@ -16,9 +16,6 @@ import {
 	getBasePriceDisplay,
 } from "@/utils/product/basePriceDisplayUtils";
 
-/**
- * Preview-friendly product format derived from AgentPricingConfig
- */
 export interface PreviewProduct {
 	id: string;
 	name: string;
@@ -49,9 +46,6 @@ export interface PreviewProductItem {
 	};
 }
 
-/**
- * Transform AgentPricingConfig products into preview-ready format
- */
 export function transformToPreviewProducts({
 	products,
 	features,
@@ -61,25 +55,19 @@ export function transformToPreviewProducts({
 	features: AgentFeature[];
 	currency?: string;
 }): PreviewProduct[] {
-	// Convert agent features to shared Feature type for display function
 	const sharedFeatures = features.map(agentFeatureToFeature);
 
 	return products.map((product) => {
-		// Convert to ProductV2 → FrontendProduct to use existing getBasePriceDisplay
 		const productV2 = agentProductToProductV2(product);
 		const frontendProduct = productV2ToFrontendProduct({ product: productV2 });
 		const basePrice = getBasePriceDisplay({ product: frontendProduct, currency });
 
-		// Normalize items for isOneOffProductV2 check (undefined → null for interval)
-		// This is needed because agentItemToProductItem may leave interval as undefined,
-		// but isOneOffProductV2 checks for interval === null
 		const normalizedItems = productV2.items.map((item) => ({
 			...item,
 			interval: item.interval ?? null,
 		}));
 		const isOneOff = isOneOffProductV2({ items: normalizedItems });
 
-		// Transform feature items
 		const featureItems = (product.items ?? [])
 			.filter((item) => item.feature_id)
 			.map((item) =>
@@ -123,7 +111,6 @@ function transformToPreviewItem({
 		"Feature";
 	const featureType = agentFeature?.type ?? "single_use";
 
-	// Use shared getProductItemDisplay function
 	const productItem = agentItemToProductItem(item);
 	const displayResult = getProductItemDisplay({
 		item: productItem,
@@ -149,19 +136,14 @@ function transformToPreviewItem({
 	};
 }
 
-// ============ CHANGE DETECTION ============
-
-/** Normalize falsy values for comparison (undefined, null, false all become false) */
 function normalizeBool(val: boolean | undefined | null): boolean {
 	return val === true;
 }
 
-/** Normalize optional strings (undefined, null, and empty string all become null) */
 function normalizeStr(val: string | undefined | null): string | null {
 	return val || null;
 }
 
-/** Normalize optional numbers */
 function normalizeNum(
 	val: number | "inf" | undefined | null,
 ): number | "inf" | null {
@@ -203,7 +185,6 @@ function areProductsEqual(
 		return false;
 	}
 
-	// Compare free trial (both falsy = equal)
 	const ft1 = product1.free_trial;
 	const ft2 = product2.free_trial;
 	const hasFt1 = ft1 != null;
@@ -215,13 +196,11 @@ function areProductsEqual(
 		}
 	}
 
-	// Compare items
 	const items1 = product1.items ?? [];
 	const items2 = product2.items ?? [];
 	return areItemsEqual(items1, items2);
 }
 
-/** Returns a Set of product IDs that have changed from the initial config */
 export function getChangedProductIds({
 	initialConfig,
 	currentConfig,
@@ -242,13 +221,11 @@ export function getChangedProductIds({
 	for (const currentProduct of currentConfig.products) {
 		const initialProduct = initialProductMap.get(currentProduct.id);
 
-		// New product (wasn't in initial config)
 		if (!initialProduct) {
 			changedIds.add(currentProduct.id);
 			continue;
 		}
 
-		// Existing product - check if changed
 		if (!areProductsEqual(initialProduct, currentProduct)) {
 			changedIds.add(currentProduct.id);
 		}
@@ -266,7 +243,6 @@ function areFreeTrialsEqual(
 	return ft1.length === ft2.length && ft1.duration === ft2.duration;
 }
 
-/** Returns product IDs that will create new versions (existing + customers + billing changes) */
 export function getVersionedProductIds({
 	initialConfig,
 	currentConfig,
@@ -304,7 +280,6 @@ export function getVersionedProductIds({
 		.map((product) => product.id);
 }
 
-/** Check if two credit system features are equal */
 function areFeaturesEqual(
 	feature1: AgentFeature,
 	feature2: AgentFeature,
@@ -313,9 +288,6 @@ function areFeaturesEqual(
 		return false;
 	}
 
-	// Compare display - only if BOTH features have display defined
-	// The display field is cosmetic (UI labels) and doesn't affect billing.
-	// If one has display and the other doesn't, it's not a meaningful change.
 	const d1 = feature1.display;
 	const d2 = feature2.display;
 	if (d1 && d2) {
@@ -324,7 +296,6 @@ function areFeaturesEqual(
 		}
 	}
 
-	// Compare credit schema
 	const cs1 = feature1.credit_schema ?? [];
 	const cs2 = feature2.credit_schema ?? [];
 	if (cs1.length !== cs2.length) return false;
@@ -337,7 +308,6 @@ function areFeaturesEqual(
 	});
 }
 
-/** Returns a Set of feature IDs that have changed from the initial config */
 export function getChangedFeatureIds({
 	initialConfig,
 	currentConfig,
@@ -358,13 +328,11 @@ export function getChangedFeatureIds({
 	for (const currentFeature of currentConfig.features) {
 		const initialFeature = initialFeatureMap.get(currentFeature.id);
 
-		// New feature (wasn't in initial config)
 		if (!initialFeature) {
 			changedIds.add(currentFeature.id);
 			continue;
 		}
 
-		// Existing feature - check if changed
 		if (!areFeaturesEqual(initialFeature, currentFeature)) {
 			changedIds.add(currentFeature.id);
 		}
@@ -373,15 +341,12 @@ export function getChangedFeatureIds({
 	return changedIds;
 }
 
-// ============ PRODUCT GROUPING ============
-
 export interface GroupedPreviewProducts {
 	subscriptions: PreviewProduct[];
 	addOnSubscriptions: PreviewProduct[];
 	oneTimePlans: PreviewProduct[];
 }
 
-/** Groups products into subscriptions, add-on subscriptions, and one-time plans (mirrors ProductListTable logic) */
 export function groupPreviewProducts(
 	products: PreviewProduct[],
 ): GroupedPreviewProducts {

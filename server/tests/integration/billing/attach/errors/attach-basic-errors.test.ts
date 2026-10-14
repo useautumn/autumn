@@ -1,9 +1,3 @@
-/**
- * Attach Basic Error Tests
- *
- * Tests for basic validation errors during attach operations.
- */
-
 import { test } from "bun:test";
 import { ErrCode } from "@autumn/shared";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils";
@@ -12,20 +6,6 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// DUPLICATE PRODUCT ERRORS
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Test 1: Cannot attach the same product that customer already has
- *
- * Scenario:
- * - Customer has pro ($20/mo)
- * - Try to attach pro again
- *
- * Expected:
- * - Error: Cannot attach same product
- */
 test.concurrent(`${chalk.yellowBright("error: cannot attach same product already active")}`, async () => {
 	const customerId = "err-attach-same-product";
 
@@ -44,7 +24,6 @@ test.concurrent(`${chalk.yellowBright("error: cannot attach same product already
 		actions: [s.billing.attach({ productId: pro.id })],
 	});
 
-	// Try to attach the same product again - should fail
 	await expectAutumnError({
 		func: async () => {
 			await autumnV1.billing.attach({
@@ -56,17 +35,6 @@ test.concurrent(`${chalk.yellowBright("error: cannot attach same product already
 	});
 });
 
-/**
- * Test 2: Cannot re-attach product that is canceling (pro -> free -> pro)
- *
- * Scenario:
- * - Customer has pro ($20/mo)
- * - Downgrade to free (pro becomes canceling)
- * - Try to attach pro again
- *
- * Expected:
- * - Error: Cannot attach same product (pro is still the current product, just canceling)
- */
 test.concurrent(`${chalk.yellowBright("error: cannot re-attach canceling product (pro -> free -> pro)")}`, async () => {
 	const customerId = "err-reattach-canceling-pro-free";
 
@@ -92,11 +60,10 @@ test.concurrent(`${chalk.yellowBright("error: cannot re-attach canceling product
 		],
 		actions: [
 			s.billing.attach({ productId: pro.id }),
-			s.billing.attach({ productId: free.id }), // Downgrade: pro becomes canceling
+			s.billing.attach({ productId: free.id }),
 		],
 	});
 
-	// Try to attach pro again while it's canceling - should fail
 	await expectAutumnError({
 		func: async () => {
 			await autumnV1.billing.attach({
@@ -108,17 +75,6 @@ test.concurrent(`${chalk.yellowBright("error: cannot re-attach canceling product
 	});
 });
 
-/**
- * Test 3: Cannot re-attach product that is canceling (premium -> pro -> premium)
- *
- * Scenario:
- * - Customer has premium ($50/mo)
- * - Downgrade to pro ($20/mo) - premium becomes canceling
- * - Try to attach premium again
- *
- * Expected:
- * - Error: Cannot attach same product (premium is still the current product, just canceling)
- */
 test.concurrent(`${chalk.yellowBright("error: cannot re-attach canceling product (premium -> pro -> premium)")}`, async () => {
 	const customerId = "err-reattach-canceling-premium-pro";
 
@@ -142,11 +98,10 @@ test.concurrent(`${chalk.yellowBright("error: cannot re-attach canceling product
 		],
 		actions: [
 			s.billing.attach({ productId: premium.id }),
-			s.billing.attach({ productId: pro.id }), // Downgrade: premium becomes canceling
+			s.billing.attach({ productId: pro.id }),
 		],
 	});
 
-	// Try to attach premium again while it's canceling - should fail
 	await expectAutumnError({
 		func: async () => {
 			await autumnV1.billing.attach({
@@ -158,16 +113,6 @@ test.concurrent(`${chalk.yellowBright("error: cannot re-attach canceling product
 	});
 });
 
-/**
- * Test 4: Explicit merge is rejected when no paid recurring subscription exists
- *
- * Scenario:
- * - Customer has free main product only
- * - Attach paid recurring add-on with new_billing_subscription: false
- *
- * Expected:
- * - InvalidRequest error (no eligible paid recurring cycle to merge into)
- */
 test.concurrent(`${chalk.yellowBright("error: explicit merge requires existing paid recurring cycle")}`, async () => {
 	const customerId = "err-explicit-merge-no-paid-cycle";
 

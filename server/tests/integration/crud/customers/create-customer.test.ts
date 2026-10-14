@@ -4,10 +4,6 @@ import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// BASIC CREATION TESTS
-// ═══════════════════════════════════════════════════════════════════════════════
-
 test.concurrent(`${chalk.yellowBright("create: basic with ID")}`, async () => {
 	const customerId = "create-basic-id";
 	const { autumnV1 } = await initScenario({
@@ -16,7 +12,6 @@ test.concurrent(`${chalk.yellowBright("create: basic with ID")}`, async () => {
 		actions: [],
 	});
 
-	// Delete to test fresh create
 	try {
 		await autumnV1.customers.delete(customerId);
 	} catch {}
@@ -42,12 +37,10 @@ test.concurrent(`${chalk.yellowBright("create: idempotent with same ID")}`, asyn
 		actions: [],
 	});
 
-	// Delete first
 	try {
 		await autumnV1.customers.delete(customerId);
 	} catch {}
 
-	// First create
 	const data1 = await autumnV1.customers.create({
 		id: customerId,
 		name: "Test Customer",
@@ -55,7 +48,6 @@ test.concurrent(`${chalk.yellowBright("create: idempotent with same ID")}`, asyn
 		withAutumnId: true,
 	});
 
-	// Second create - should return existing
 	const data2 = await autumnV1.customers.create({
 		id: customerId,
 		name: "Test Customer",
@@ -111,14 +103,9 @@ test.concurrent(`${chalk.yellowBright("create: null ID no email (error)")}`, asy
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// SEND EMAIL RECEIPTS TESTS
-// ═══════════════════════════════════════════════════════════════════════════════
-
 test.concurrent(`${chalk.yellowBright("create: with send_email_receipts true")}`, async () => {
 	const customerId = "create-send-email-receipts-true";
 	const { autumnV1 } = await initScenario({
-		// customerId,
 		setup: [s.deleteCustomer({ customerId })],
 		actions: [],
 	});

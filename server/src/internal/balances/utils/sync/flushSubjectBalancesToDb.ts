@@ -66,7 +66,6 @@ const subjectBalancesToRolloverEntries = ({
 	subjectBalances: SubjectBalance[];
 }): RolloverSyncEntry[] =>
 	subjectBalances.flatMap((subjectBalance) =>
-		// cjson-written values can carry {} for empty arrays; never trust shape.
 		(Array.isArray(subjectBalance.rollovers)
 			? subjectBalance.rollovers
 			: []
@@ -78,11 +77,6 @@ const subjectBalancesToRolloverEntries = ({
 		})),
 	);
 
-/**
- * Best-effort flush of cached subject balances to Postgres. Never throws:
- * conflicts mean Postgres is ahead (the rebuild wins), other failures are
- * logged — the caller is invalidating and must proceed either way.
- */
 export const flushSubjectBalancesToDb = async ({
 	ctx,
 	customerId,

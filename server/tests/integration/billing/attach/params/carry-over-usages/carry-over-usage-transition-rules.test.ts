@@ -1,24 +1,3 @@
-/**
- * TDD contract: org transition rules are inherited by attach / updateSubscription
- * when the request does not pass carry_over_usages explicitly.
- *
- * Contract under test:
- *   New behaviors:
- *     - org rule { enabled: true } + attach WITHOUT param -> usage carried
- *       (attach's own default does NOT carry consumables)
- *     - org rule { enabled: true, feature_ids: [words] } -> messages NOT carried
- *     - explicit carry_over_usages param overrides the org rule
- *     - updateSubscription (trial→paid) honors a restrictive org rule when the
- *       param is absent (its own default is carry-all)
- *
- * Pre-impl red: the PATCH /organization/transition_rules route 404s and attach
- * ignores org rules, so carried-balance assertions fail at the VALUE layer.
- * Post-impl green: rules persist and resolve into attach/update as defaults.
- *
- * NOTE: these tests mutate org-level state (the transition rule), so they are
- * intentionally sequential (plain `test`) and always clear the rule in finally.
- */
-
 import { test } from "bun:test";
 import type { ApiCustomerV3 } from "@autumn/shared";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
@@ -51,13 +30,6 @@ const clearTransitionRule = async ({ secretKey }: { secretKey: string }) => {
 		.catch(() => undefined);
 };
 
-// ═══════════════════════════════════════════════════════════════════════════
-// Assertion 1 — org rule { enabled: true }: attach without param carries usage
-//
-// Pro: 50 messages, 40 used. Org rule enabled. Attach Premium (200) WITHOUT
-// carry_over_usages. Expected: balance 160, usage 40.
-// Pre-fix: attach default does not carry consumables -> balance 200, usage 0.
-// ═══════════════════════════════════════════════════════════════════════════
 test(`${chalk.yellowBright("transition-rules 1: org rule enabled -> attach inherits carry_over_usages")}`, async () => {
 	const pro = products.pro({
 		id: "tr-inherit-pro",
@@ -90,7 +62,6 @@ test(`${chalk.yellowBright("transition-rules 1: org rule enabled -> attach inher
 			carryOverUsages: { enabled: true },
 		});
 
-		// No carry_over_usages param — must come from the org rule.
 		await autumnV2_1.billing.attach({
 			customer_id: customerId,
 			plan_id: premium.id,
@@ -109,11 +80,6 @@ test(`${chalk.yellowBright("transition-rules 1: org rule enabled -> attach inher
 	}
 });
 
-// ═══════════════════════════════════════════════════════════════════════════
-// Assertion 2 — org rule feature_ids scoping: unlisted consumables reset
-//
-// Same shape, but the rule only lists words. Messages must NOT carry.
-// ═══════════════════════════════════════════════════════════════════════════
 test(`${chalk.yellowBright("transition-rules 2: rule feature_ids excludes messages -> no carry")}`, async () => {
 	const pro = products.pro({
 		id: "tr-scope-pro",
@@ -164,11 +130,6 @@ test(`${chalk.yellowBright("transition-rules 2: rule feature_ids excludes messag
 	}
 });
 
-// ═══════════════════════════════════════════════════════════════════════════
-// Assertion 3 — explicit param wins over the org rule
-//
-// Org rule enabled, but attach passes { enabled: false } -> no carry.
-// ═══════════════════════════════════════════════════════════════════════════
 test(`${chalk.yellowBright("transition-rules 3: explicit carry_over_usages param overrides org rule")}`, async () => {
 	const pro = products.pro({
 		id: "tr-override-pro",
@@ -220,13 +181,6 @@ test(`${chalk.yellowBright("transition-rules 3: explicit carry_over_usages param
 	}
 });
 
-// ═══════════════════════════════════════════════════════════════════════════
-// Assertion 4 — updateSubscription inherits a restrictive rule
-//
-// Trial→paid conversion (update's default is carry-all). Org rule only lists
-// words, so messages must reset on conversion.
-// Pre-fix: update ignores org rules -> usage carried (balance 60).
-// ═══════════════════════════════════════════════════════════════════════════
 test(`${chalk.yellowBright("transition-rules 4: updateSubscription inherits restrictive org rule")}`, async () => {
 	const proTrial = products.proWithTrial({
 		id: "tr-update-pro-trial",

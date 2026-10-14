@@ -1,17 +1,3 @@
-/**
- * Long-lived checkout + enable_plan_immediately
- *
- * Contract:
- * - Creating the link grants the plan immediately (active, no subscription yet).
- * - An expired Stripe session from the link leaves the plan in place; reopening
- *   the link creates a new session for the SAME customer product row.
- * - Paying through the link links the subscription onto that row; reopening the
- *   link afterwards no longer offers payment.
- * - Unpaid plans are expired by the cron once the link's 90 days pass.
- * - A paid session whose webhook is still in flight is neither renewed nor expired.
- * - Renewal drops absolute times (e.g. trial_end) that elapsed since link creation.
- */
-
 import { expect, test } from "bun:test";
 import {
 	type ApiCustomerV3,
@@ -105,7 +91,6 @@ test.concurrent(
 		const { autumnV1, ctx, pro, internalCustomerId, checkoutId } =
 			await setupLongLivedScenario({ customerId });
 
-		// 1. Plan is active before the link is ever opened.
 		const rowAtCreation = await getActiveProRow({
 			ctx,
 			internalCustomerId,
@@ -118,8 +103,6 @@ test.concurrent(
 			productId: pro.id,
 		});
 
-		// 2. Expiring the Stripe session must not remove the plan. The replay forces
-		// delivery, so a timeout with "still no effect" proves the webhook was a no-op.
 		const firstSessionId = getStripeSessionId(
 			await startLongLivedCheckout(checkoutId),
 		);
@@ -142,7 +125,6 @@ test.concurrent(
 			}),
 		).rejects.toThrow("still no effect");
 
-		// 3. Reopening creates a new session against the same row.
 		const secondSessionId = getStripeSessionId(
 			await startLongLivedCheckout(checkoutId),
 		);
@@ -217,13 +199,11 @@ test.concurrent(
 		});
 		expect(pendingMetadata).toBeDefined();
 
-		// 1. Before the link expires, the cron leaves the plan alone.
 		await runLongLivedCheckoutExpiry({ ctx });
 		expect(
 			await getActiveProRow({ ctx, internalCustomerId, productId: pro.id }),
 		).toBeDefined();
 
-		// 2. Once expired, the cron removes the unpaid plan.
 		await ctx.db
 			.update(metadata)
 			.set({ expires_at: Date.now() - 1000 })
@@ -270,7 +250,6 @@ test.concurrent(
 			},
 		});
 
-		// Rewind Autumn to "paid in Stripe, completion webhook not yet processed", past the deadline.
 		const paidRow = await getActiveProRow({
 			ctx,
 			internalCustomerId,
@@ -284,7 +263,6 @@ test.concurrent(
 			.set({ subscription_ids: [] })
 			.where(eq(customerProducts.id, paidRow!.id));
 
-		// 1. The cron leaves the paid plan for the webhook and rechecks later.
 		await runLongLivedCheckoutExpiry({ ctx });
 		expect(
 			(await getActiveProRow({ ctx, internalCustomerId, productId: pro.id }))
@@ -295,7 +273,6 @@ test.concurrent(
 		});
 		expect(Number(postponedMetadata?.expires_at)).toBeGreaterThan(Date.now());
 
-		// 2. Reopening does not offer payment again.
 		const reopen = await requestLongLivedCheckoutStart(checkoutId);
 		expect(reopen.status).toBe(409);
 		expect((await reopen.json()).code).toBe("checkout_completed");
@@ -322,7 +299,6 @@ test.concurrent(
 			data.billingPlan.stripe.checkoutSessionAction!.params.subscription_data!;
 		expect(subscriptionData.trial_end).toBeDefined();
 
-		// Simulate opening the link after the quoted trial would have ended.
 		subscriptionData.trial_end = Math.floor(Date.now() / 1000) - 3600;
 		await ctx.db
 			.update(metadata)

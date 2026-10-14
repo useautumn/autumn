@@ -1,15 +1,3 @@
-/**
- * entities.create on the balance worker path: a worker outage during the create is replayed
- * from the customer creation recovery queue.
- *
- * Contract under test:
- * - With `x-balance-worker-outage`, the entity's worker write fails as unreachable: the
- *   request answers the worker's own 503 and no entity exists.
- * - The failed request itself enqueues the EntityCreationRecovery job; the REAL worker process
- *   consumes it off SQS and creates the entity, readable through entities.get.
- * - A second replay of the same request finds the entity and succeeds without creating another.
- */
-
 import { expect, test } from "bun:test";
 import { type ApiEntityV2, ApiVersion } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
@@ -58,9 +46,7 @@ test.concurrent(
 	async () => {
 		const customerId = "worker-entity-create-replay";
 		const entityId = "replayed-seat";
-		// Per run: the FIFO dedupe id is derived from the request, and a repeat inside the dedupe window would be dropped.
 		const entityName = `Replayed Seat ${Date.now()}`;
-		// A free seat grant: the create deducts a seat on the worker and never invoices.
 		const seats = products.base({
 			id: "seats",
 			items: [items.freeUsers({ includedUsage: 5 })],
@@ -78,7 +64,6 @@ test.concurrent(
 				entity_id: entityId,
 			}) as Promise<ApiEntityV2>;
 
-		// ── 1. Outage held open for this request: the worker write never lands ──
 		const code = await rejectedCode(
 			autumnV2_3.post(
 				"/entities.create",
@@ -94,7 +79,6 @@ test.concurrent(
 		expect(code).toBe("balance_worker_unavailable");
 		expect(await rejectedCode(getEntity())).toBe("entity_not_found");
 
-		// ── 2. The failed request enqueued its own recovery; the dev worker consumes it ──
 		const replayed = await waitFor<ApiEntityV2>({
 			description: "entity created by the recovery replay",
 			fetch: async () => {
@@ -109,8 +93,6 @@ test.concurrent(
 		expect(replayed.feature_id).toBe(TestFeature.Users);
 		expect(replayed.name).toBe(entityName);
 
-		// ── 3. Replaying again finds the entity and succeeds. The entity is readable
-		// before the queue consumer releases the create lock, so a conflict is retried. ──
 		const payload: EntityCreationRecoveryPayload = {
 			orgId: ctx.org.id,
 			env: ctx.env,

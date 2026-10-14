@@ -38,7 +38,6 @@ function runBuild() {
 		},
 	);
 
-	// Run tsc in parallel
 	const tsc = spawn("tsc", ["--emitDeclarationOnly", "--outDir", "dist"], {
 		cwd: __dirname,
 		stdio: "inherit",
@@ -59,7 +58,6 @@ function runBuild() {
 	});
 }
 
-// Watch for changes (excluding dist directory)
 const watcher = watch(__dirname, { recursive: true }, (eventType, filename) => {
 	if (
 		!filename ||

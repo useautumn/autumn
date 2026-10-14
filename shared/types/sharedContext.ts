@@ -4,33 +4,10 @@ import type { Organization } from "@models/orgModels/orgTable";
 import type { AutumnLogger } from "./logger";
 
 export type SharedContext = {
-	// Variables
-	/** Only what shared code reads off the org, so a caller that never holds the org row can still supply it. */
 	org: Pick<Organization, "config" | "default_currency">;
 	env: AppEnv;
 	features: Feature[];
 
-	// Objects
 	logger: AutumnLogger;
 	expand: string[];
-	// db: DrizzleCli;
-
-	// // Info
-	// id: string;
-	// isPublic: boolean;
-	// authType: AuthType;
-	// apiVersion: ApiVersionClass;
-	// timestamp: number;
-
-	// // Query params
-	// expand: string[];
-	// skipCache: boolean;
-
-	// extraLogs: Record<string, unknown>;
-
-	// testOptions?: {
-	// 	skipCacheDeletion?: boolean;
-	// 	skipWebhooks?: boolean;
-	// 	eventId?: string;
-	// };
 };

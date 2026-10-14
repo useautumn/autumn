@@ -8,8 +8,6 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import type { CreateAutumnCheckoutResult } from "@/internal/billing/v2/common/createAutumnCheckout";
 import { hashJson } from "@/utils/hash/hashJson";
 
-/** Same params → reuse the pending session. Different params → expire it via Stripe
- * and proceed, or 423 when the session already won the race (paid/completing). */
 export const checkCheckoutSessionLock = async <T extends BillingContext>({
 	ctx,
 	params,
@@ -26,8 +24,6 @@ export const checkCheckoutSessionLock = async <T extends BillingContext>({
 	const customerId =
 		billingContext.fullCustomer.id ?? billingContext.fullCustomer.internal_id;
 	const paramsHash = hashJson({ value: params });
-	// Entry-time snapshot wins when present; a null snapshot (e.g. caller passed
-	// internal_id, reservation keyed on public id) falls back to the canonical key.
 	const lock =
 		existingLock ?? (await checkoutSessionLock.get({ ctx, customerId }));
 	if (!lock) return null;

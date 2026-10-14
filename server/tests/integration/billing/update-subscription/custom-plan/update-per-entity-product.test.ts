@@ -8,15 +8,6 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// PER-ENTITY PRODUCT UPDATE TESTS
-// Tests for updating products that have per-entity feature balances (entity_feature_id)
-// ═══════════════════════════════════════════════════════════════════════════════
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 1: Update free product to add per-entity feature
-// ═══════════════════════════════════════════════════════════════════════════════
-
 test.concurrent(`${chalk.yellowBright("per-entity: add per-entity feature to free product")}`, async () => {
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
 	const free = products.base({ items: [messagesItem] });
@@ -31,7 +22,6 @@ test.concurrent(`${chalk.yellowBright("per-entity: add per-entity feature to fre
 		actions: [s.attach({ productId: free.id })],
 	});
 
-	// Update to add per-entity messages feature
 	const perEntityMessages = items.monthlyMessages({
 		includedUsage: 500,
 		entityFeatureId: TestFeature.Users,
@@ -43,17 +33,15 @@ test.concurrent(`${chalk.yellowBright("per-entity: add per-entity feature to fre
 		items: [perEntityMessages],
 	});
 
-	// Verify customer balance is sum of all entity balances
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	expectCustomerFeatureCorrect({
 		customer,
 		featureId: TestFeature.Messages,
-		includedUsage: perEntityMessages.included_usage * 2, // 500 * 2 entities
+		includedUsage: perEntityMessages.included_usage * 2,
 		balance: perEntityMessages.included_usage * 2,
 		usage: 0,
 	});
 
-	// Verify each entity has its own balance
 	for (const entity of entities) {
 		const entityData = await autumnV1.entities.get<ApiEntityV0>(
 			customerId,
@@ -67,10 +55,6 @@ test.concurrent(`${chalk.yellowBright("per-entity: add per-entity feature to fre
 		});
 	}
 });
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 2: Update free product to consumable per-entity, track into overage
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(`${chalk.yellowBright("per-entity: add consumable per-entity feature and track overage")}`, async () => {
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
@@ -86,7 +70,6 @@ test.concurrent(`${chalk.yellowBright("per-entity: add consumable per-entity fea
 		actions: [s.attach({ productId: free.id })],
 	});
 
-	// Update to consumable per-entity messages ($0.10/message overage)
 	const consumablePerEntity = items.consumableMessages({
 		includedUsage: 1000,
 		entityFeatureId: TestFeature.Users,
@@ -98,7 +81,6 @@ test.concurrent(`${chalk.yellowBright("per-entity: add consumable per-entity fea
 		items: [consumablePerEntity],
 	});
 
-	// Verify initial entity balances
 	for (const entity of entities) {
 		const entityData = await autumnV1.entities.get<ApiEntityV0>(
 			customerId,
@@ -112,9 +94,8 @@ test.concurrent(`${chalk.yellowBright("per-entity: add consumable per-entity fea
 		});
 	}
 
-	// Track each entity into overage
-	const entity1Usage = 1200; // 200 over
-	const entity2Usage = 1500; // 500 over
+	const entity1Usage = 1200;
+	const entity2Usage = 1500;
 
 	await autumnV1.track(
 		{
@@ -136,7 +117,6 @@ test.concurrent(`${chalk.yellowBright("per-entity: add consumable per-entity fea
 		{ timeout: 2000 },
 	);
 
-	// Verify entity balances are negative (in overage)
 	const entity1 = await autumnV1.entities.get<ApiEntityV0>(
 		customerId,
 		entities[0].id,
@@ -144,7 +124,7 @@ test.concurrent(`${chalk.yellowBright("per-entity: add consumable per-entity fea
 	expectCustomerFeatureCorrect({
 		customer: entity1,
 		featureId: TestFeature.Messages,
-		balance: consumablePerEntity.included_usage - entity1Usage, // -200
+		balance: consumablePerEntity.included_usage - entity1Usage,
 	});
 
 	const entity2 = await autumnV1.entities.get<ApiEntityV0>(
@@ -154,17 +134,16 @@ test.concurrent(`${chalk.yellowBright("per-entity: add consumable per-entity fea
 	expectCustomerFeatureCorrect({
 		customer: entity2,
 		featureId: TestFeature.Messages,
-		balance: consumablePerEntity.included_usage - entity2Usage, // -500
+		balance: consumablePerEntity.included_usage - entity2Usage,
 	});
 
-	// Verify customer total balance
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	const expectedBalance =
 		consumablePerEntity.included_usage * 2 - entity1Usage - entity2Usage;
 	expectCustomerFeatureCorrect({
 		customer,
 		featureId: TestFeature.Messages,
-		balance: expectedBalance, // 2000 - 2700 = -700
+		balance: expectedBalance,
 	});
 
 	await expectSubToBeCorrect({
@@ -175,12 +154,7 @@ test.concurrent(`${chalk.yellowBright("per-entity: add consumable per-entity fea
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 3: Update per-entity feature with increased included usage
-// ═══════════════════════════════════════════════════════════════════════════════
-
 test.concurrent(`${chalk.yellowBright("per-entity: increase included usage preserves entity usage")}`, async () => {
-	// Start with per-entity feature
 	const perEntityMessages = items.monthlyMessages({
 		includedUsage: 500,
 		entityFeatureId: TestFeature.Users,
@@ -197,7 +171,6 @@ test.concurrent(`${chalk.yellowBright("per-entity: increase included usage prese
 		actions: [s.attach({ productId: free.id, timeout: 2000 })],
 	});
 
-	// Track some usage on each entity
 	const entity1Usage = 200;
 	const entity2Usage = 300;
 
@@ -221,7 +194,6 @@ test.concurrent(`${chalk.yellowBright("per-entity: increase included usage prese
 		{ timeout: 2000 },
 	);
 
-	// Verify usage before update
 	const entity1Before = await autumnV1.entities.get<ApiEntityV0>(
 		customerId,
 		entities[0].id,
@@ -230,9 +202,8 @@ test.concurrent(`${chalk.yellowBright("per-entity: increase included usage prese
 		500 - entity1Usage,
 	);
 
-	// Update to increase included usage
 	const updatedPerEntityMessages = items.monthlyMessages({
-		includedUsage: 1000, // Increased from 500
+		includedUsage: 1000,
 		entityFeatureId: TestFeature.Users,
 	});
 
@@ -242,7 +213,6 @@ test.concurrent(`${chalk.yellowBright("per-entity: increase included usage prese
 		items: [updatedPerEntityMessages],
 	});
 
-	// Verify entity usage is preserved, balance reflects new included usage
 	const entity1After = await autumnV1.entities.get<ApiEntityV0>(
 		customerId,
 		entities[0].id,
@@ -251,7 +221,7 @@ test.concurrent(`${chalk.yellowBright("per-entity: increase included usage prese
 		customer: entity1After,
 		featureId: TestFeature.Messages,
 		includedUsage: updatedPerEntityMessages.included_usage,
-		balance: updatedPerEntityMessages.included_usage - entity1Usage, // 1000 - 200 = 800
+		balance: updatedPerEntityMessages.included_usage - entity1Usage,
 		usage: entity1Usage,
 	});
 
@@ -263,11 +233,10 @@ test.concurrent(`${chalk.yellowBright("per-entity: increase included usage prese
 		customer: entity2After,
 		featureId: TestFeature.Messages,
 		includedUsage: updatedPerEntityMessages.included_usage,
-		balance: updatedPerEntityMessages.included_usage - entity2Usage, // 1000 - 300 = 700
+		balance: updatedPerEntityMessages.included_usage - entity2Usage,
 		usage: entity2Usage,
 	});
 
-	// Verify customer total
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	expectCustomerFeatureCorrect({
 		customer,
@@ -279,12 +248,7 @@ test.concurrent(`${chalk.yellowBright("per-entity: increase included usage prese
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 4: Update billing model (consumable to prepaid) for per-entity features
-// ═══════════════════════════════════════════════════════════════════════════════
-
 test.concurrent(`${chalk.yellowBright("per-entity: change from consumable to prepaid billing")}`, async () => {
-	// Start with consumable per-entity feature
 	const consumablePerEntity = items.consumableMessages({
 		includedUsage: 500,
 		entityFeatureId: TestFeature.Users,
@@ -301,7 +265,6 @@ test.concurrent(`${chalk.yellowBright("per-entity: change from consumable to pre
 		actions: [s.attach({ productId: free.id })],
 	});
 
-	// Track some usage on entity 1
 	const entity1Usage = 200;
 	await autumnV1.track(
 		{
@@ -313,7 +276,6 @@ test.concurrent(`${chalk.yellowBright("per-entity: change from consumable to pre
 		{ timeout: 2000 },
 	);
 
-	// Update to prepaid per-entity ($10 per 100 units)
 	const prepaidPerEntity = items.prepaidMessages({
 		includedUsage: 500,
 		price: 10,
@@ -330,14 +292,10 @@ test.concurrent(`${chalk.yellowBright("per-entity: change from consumable to pre
 
 	const preview = await autumnV1.subscriptions.previewUpdate(updateParams);
 
-	// Should charge for prepaid units: 500 units / 100 billing_units * $10 = $50
-	// (options.quantity is per-customer, not per-entity)
 	expect(preview.total).toEqual(50);
 
 	await autumnV1.subscriptions.update(updateParams);
 
-	// Verify entity balances - usage should be preserved
-	// Each entity gets: included (500) + purchased share (500/2 = 250)
 	const entity1 = await autumnV1.entities.get<ApiEntityV0>(
 		customerId,
 		entities[0].id,
@@ -345,7 +303,6 @@ test.concurrent(`${chalk.yellowBright("per-entity: change from consumable to pre
 	expectCustomerFeatureCorrect({
 		customer: entity1,
 		featureId: TestFeature.Messages,
-		// included (500) + purchased (500) - usage (200) = 550
 		balance: 500 + 500 - entity1Usage,
 		usage: entity1Usage,
 	});
@@ -357,17 +314,14 @@ test.concurrent(`${chalk.yellowBright("per-entity: change from consumable to pre
 	expectCustomerFeatureCorrect({
 		customer: entity2,
 		featureId: TestFeature.Messages,
-		// included (500) + purchased (500) - usage (0) = 1000
 		balance: 500 + 500,
 		usage: 0,
 	});
 
-	// Verify customer total
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	expectCustomerFeatureCorrect({
 		customer,
 		featureId: TestFeature.Messages,
-		// (500 + 250) * 2 entities - 200 usage = 1300
 		balance: (500 + 500) * 2 - entity1Usage,
 	});
 
@@ -379,12 +333,7 @@ test.concurrent(`${chalk.yellowBright("per-entity: change from consumable to pre
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 5: Update from free to pay-per-use per-entity features
-// ═══════════════════════════════════════════════════════════════════════════════
-
 test.concurrent(`${chalk.yellowBright("per-entity: upgrade free to pay-per-use per-entity")}`, async () => {
-	// Start with free per-entity feature
 	const freePerEntity = items.monthlyMessages({
 		includedUsage: 100,
 		entityFeatureId: TestFeature.Users,
@@ -401,7 +350,6 @@ test.concurrent(`${chalk.yellowBright("per-entity: upgrade free to pay-per-use p
 		actions: [s.attach({ productId: free.id })],
 	});
 
-	// Track some usage before upgrade
 	const entity1Usage = 50;
 	const entity2Usage = 75;
 
@@ -425,9 +373,8 @@ test.concurrent(`${chalk.yellowBright("per-entity: upgrade free to pay-per-use p
 		{ timeout: 2000 },
 	);
 
-	// Upgrade to pay-per-use per-entity ($0.10/message overage)
 	const payPerUsePerEntity = items.consumableMessages({
-		includedUsage: 100, // Same included usage
+		includedUsage: 100,
 		entityFeatureId: TestFeature.Users,
 	});
 
@@ -439,12 +386,10 @@ test.concurrent(`${chalk.yellowBright("per-entity: upgrade free to pay-per-use p
 
 	const preview = await autumnV1.subscriptions.previewUpdate(updateParams);
 
-	// No immediate charge - consumable bills in arrears
 	expect(preview.total).toEqual(0);
 
 	await autumnV1.subscriptions.update(updateParams);
 
-	// Verify entity balances preserved usage
 	const entity1 = await autumnV1.entities.get<ApiEntityV0>(
 		customerId,
 		entities[0].id,
@@ -469,7 +414,6 @@ test.concurrent(`${chalk.yellowBright("per-entity: upgrade free to pay-per-use p
 		usage: entity2Usage,
 	});
 
-	// Verify customer total
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	expectCustomerFeatureCorrect({
 		customer,

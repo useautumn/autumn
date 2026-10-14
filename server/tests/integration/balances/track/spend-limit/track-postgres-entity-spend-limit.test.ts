@@ -179,7 +179,6 @@ test.concurrent(
 			breakdownLength: 1,
 		});
 
-		// The balance worker doesn't aggregate entity data onto the customer.
 		if (!isBalanceWorkerRoute()) {
 			await expectCustomerFeatureCachedAndDb({
 				autumn: autumnV2_1,
@@ -189,7 +188,6 @@ test.concurrent(
 				remaining: 0,
 				usage: 125,
 				maxPurchase: 300,
-				// breakdownLength: 1,
 			});
 		}
 	},
@@ -500,7 +498,6 @@ test.concurrent(
 			breakdownLength: 1,
 		});
 
-		// The balance worker doesn't aggregate entity data onto the customer.
 		if (!isBalanceWorkerRoute()) {
 			await expectCustomerFeatureCachedAndDb({
 				autumn: autumnV2_1,
@@ -509,7 +506,6 @@ test.concurrent(
 				granted: 5,
 				remaining: 0,
 				usage: 9,
-				// breakdownLength: 1,
 			});
 		}
 	},

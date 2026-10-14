@@ -16,12 +16,6 @@ import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
 import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
 
-/**
- * Test: Two products with different monthly message balances
- * Both have same interval (monthly), so deduction order depends on which breakdown is processed first.
- * Deductions should be distributed across breakdowns with the same interval.
- */
-
 const monthlyMessages1 = constructFeatureItem({
 	featureId: TestFeature.Messages,
 	includedUsage: 1000,
@@ -68,7 +62,6 @@ describe(`${chalk.yellowBright("track-breakdown4: two monthly products deduction
 			prefix: testCase,
 		});
 
-		// Attach both products
 		await autumnV2.attach({
 			customer_id: customerId,
 			product_id: prod1.id,
@@ -90,7 +83,7 @@ describe(`${chalk.yellowBright("track-breakdown4: two monthly products deduction
 			granted_balance: 1500,
 			current_balance: 1500,
 			usage: 0,
-			plan_id: null, // null when multiple products
+			plan_id: null,
 		});
 
 		expect(res.balance?.breakdown).toHaveLength(2);
@@ -105,7 +98,6 @@ describe(`${chalk.yellowBright("track-breakdown4: two monthly products deduction
 			value: deductValue,
 		});
 
-		// Parent balance
 		expect(trackRes.balance).toMatchObject({
 			granted_balance: 1500,
 			current_balance: 1000,
@@ -113,7 +105,6 @@ describe(`${chalk.yellowBright("track-breakdown4: two monthly products deduction
 			purchased_balance: 0,
 		});
 
-		// Check breakdowns - total usage across breakdowns should be 500
 		const breakdown = trackRes.balance?.breakdown;
 		expect(breakdown).toHaveLength(2);
 
@@ -136,9 +127,6 @@ describe(`${chalk.yellowBright("track-breakdown4: two monthly products deduction
 			value: deductValue,
 		});
 
-		// Total deducted: 500 + 800 = 1300
-		// Remaining: 1500 - 1300 = 200
-
 		expect(trackRes.balance).toMatchObject({
 			granted_balance: 1500,
 			current_balance: 200,
@@ -146,7 +134,6 @@ describe(`${chalk.yellowBright("track-breakdown4: two monthly products deduction
 			purchased_balance: 0,
 		});
 
-		// Check breakdowns
 		const breakdown = trackRes.balance?.breakdown;
 		expect(breakdown).toHaveLength(2);
 
@@ -169,9 +156,6 @@ describe(`${chalk.yellowBright("track-breakdown4: two monthly products deduction
 			value: deductValue,
 		});
 
-		// Total deducted: 1300 + 200 = 1500
-		// All balances exhausted
-
 		expect(trackRes.balance).toMatchObject({
 			granted_balance: 1500,
 			current_balance: 0,
@@ -185,7 +169,6 @@ describe(`${chalk.yellowBright("track-breakdown4: two monthly products deduction
 		const breakdown1 = breakdown?.find((b) => b.granted_balance === 1000);
 		const breakdown2 = breakdown?.find((b) => b.granted_balance === 500);
 
-		// Both should be exhausted
 		expect(breakdown1).toMatchObject({
 			granted_balance: 1000,
 			current_balance: 0,
@@ -208,7 +191,6 @@ describe(`${chalk.yellowBright("track-breakdown4: two monthly products deduction
 
 		const balance = customer.balances[TestFeature.Messages];
 
-		// Should match cached values
 		expect(balance).toMatchObject({
 			granted_balance: 1500,
 			current_balance: 0,
@@ -216,7 +198,6 @@ describe(`${chalk.yellowBright("track-breakdown4: two monthly products deduction
 			purchased_balance: 0,
 		});
 
-		// Check breakdowns
 		const breakdown = balance.breakdown;
 		expect(breakdown).toHaveLength(2);
 

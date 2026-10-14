@@ -1,12 +1,3 @@
-/**
- * catalogV2.update — migration drafts across versioning strategies.
- *
- * Contract:
- *   all_versions identical diffs → one op, unversioned filter
- *   all_versions differing diffs → two version-pinned ops
- *   mixed A new_version + B existing → one draft covering only B
- */
-
 import { expect, test } from "bun:test";
 import { ResetInterval } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";

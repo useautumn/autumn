@@ -94,7 +94,6 @@ export function isPartitionInvariantCause(cause: unknown): cause is Error {
 	);
 }
 
-/** The partition's log cannot be read past this point: the partition parks, the rest of the group carries on. */
 export function isPartitionLogUnreadableCause({
 	cause,
 }: {

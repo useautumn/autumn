@@ -4,10 +4,6 @@ import type Stripe from "stripe";
 import { CusService } from "@/internal/customers/CusService";
 import { ProductService } from "@/internal/products/ProductService";
 
-/**
- * Creates a Stripe subscription for a customer using an inline price
- * derived from the Autumn product's Stripe processor ID.
- */
 export const createCustomStripeSubscription = async ({
 	ctx,
 	customerId,

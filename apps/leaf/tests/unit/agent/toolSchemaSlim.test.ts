@@ -1,10 +1,3 @@
-/**
- * The model-facing tool schema hides `customize.items` (PUT-style, replaces
- * every plan item) and keeps the PATCH-style `add_items` / `remove_items`.
- * A Slack attach on 2026-09-14 used `items` to "override emails" and dropped
- * every other Enterprise entitlement; the model never needs the PUT form.
- */
-
 import { describe, expect, test } from "bun:test";
 import { z } from "zod/v4";
 
@@ -32,7 +25,6 @@ const propertyNamesAt = (schema: Schema, path: string[]): string[] => {
 	return Object.keys(((target as Schema)?.properties as Schema) ?? {});
 };
 
-/** Every `customize`-shaped object reachable in the schema, however nested. */
 const customizeShapes = (node: unknown, found: Schema[] = []): Schema[] => {
 	if (Array.isArray(node)) {
 		for (const entry of node) customizeShapes(entry, found);

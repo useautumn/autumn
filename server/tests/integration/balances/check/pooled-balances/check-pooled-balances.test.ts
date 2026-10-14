@@ -1,6 +1,3 @@
-// Contract: customer/get-or-create/entity/check expose one shared pool using pooled_balances.granted.
-// Source entitlements stay private; the exact balance is allowed and one unit above is rejected.
-
 import { expect, test } from "bun:test";
 import type {
 	ApiCustomerV5,

@@ -20,11 +20,6 @@ const holdsMainPlan = ({ target }: { target: VerifySubscriptionTarget }) =>
 		(customerProduct) => cp(customerProduct).main().valid,
 	);
 
-/**
- * An active Stripe subscription Autumn has no products for. Harmless beside a
- * healthy paid plan; an error when it is the subscription the customer is
- * actually paying on.
- */
 export const evaluateUnlinkedSubscription = ({
 	fullCustomer,
 	targets,

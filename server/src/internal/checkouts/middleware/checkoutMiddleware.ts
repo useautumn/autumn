@@ -19,30 +19,19 @@ import { checkoutActions } from "@/internal/checkouts/actions";
 import { OrgService } from "@/internal/orgs/OrgService";
 import { checkoutRepo } from "../repos/checkoutRepo";
 
-/**
- * Rate limiter: 10 requests per minute per checkout ID.
- * Prevents enumeration attacks on checkout URLs.
- */
 export const checkoutRateLimiter = rateLimiter<HonoEnv>({
-	windowMs: 60 * 1000, // 1 minute
+	windowMs: 60 * 1000,
 	limit: 10,
 	standardHeaders: "draft-6",
 	keyGenerator: (c) => c.req.param("checkout_id") ?? "unknown",
 });
 
-// Extend HonoEnv to include checkout in context
 declare module "hono" {
 	interface ContextVariableMap {
 		checkout: Checkout;
 	}
 }
 
-/**
- * Middleware to fetch checkout from cache and set up context.
- * - Fetches checkout from cache
- * - Loads org and features for the checkout's org_id
- * - Sets up ctx with org/env/features for handlers
- */
 export const checkoutMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 	const checkoutId = c.req.param("checkout_id");
 	const ctx = c.get("ctx");
@@ -127,10 +116,8 @@ export const checkoutMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 	};
 	const { ctx: routedCtx } = getCtxWithCustomerRedis({ ctx: nextCtx });
 
-	// Set up context with org/env/features for handlers
 	c.set("ctx", routedCtx);
 
-	// Attach checkout to context for handlers
 	c.set("checkout", validCheckout);
 
 	await next();

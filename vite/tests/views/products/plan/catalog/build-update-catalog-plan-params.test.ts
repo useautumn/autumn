@@ -337,7 +337,6 @@ describe("buildUpdateCatalogPlanParams", () => {
 		}
 	});
 
-	/** Red: legacy max 0 is rejected on save. Green: serialize it as uncapped rollover. */
 	test("normalizes a legacy zero rollover cap", () => {
 		const params = buildUpdateCatalogPlanParams({
 			baseProduct,

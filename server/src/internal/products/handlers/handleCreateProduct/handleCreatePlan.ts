@@ -32,12 +32,8 @@ import { handleNewProductItems } from "../../product-items/productItemUtils/hand
 import { getPlanResponse } from "../../productUtils/productResponseUtils/getPlanResponse.js";
 import { constructProduct, initProductInStripe } from "../../productUtils.js";
 
-/**
- * Route: POST /products - Create a product
- */
 export const handleCreatePlan = createRoute({
 	scopes: [Scopes.Plans.Write],
-	// body: CreateProductV2ParamsSchema,
 	versionedBody: {
 		latest: CreatePlanParamsV1Schema,
 		[ApiVersion.V1_Beta]: CreateProductV2ParamsSchema,
@@ -64,7 +60,6 @@ export const handleCreatePlan = createRoute({
 			id: body.id,
 		});
 
-		// 1. If existing product, throw error
 		if (existing) throw new ProductAlreadyExistsError({ productId: body.id });
 
 		await validateDefaultFlag({
@@ -154,7 +149,6 @@ export const handleCreatePlan = createRoute({
 			features: updatedFeatures,
 		});
 
-		// Apply version transformations for client
 		const versionedResponse = applyResponseVersionChanges<ApiPlanV1>({
 			input: planResponse,
 			targetVersion: ctx.apiVersion,

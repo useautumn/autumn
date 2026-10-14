@@ -1,9 +1,3 @@
-/**
- * catalogV2.update — base new_version inherits per variant:
- *   customers on latest → mint
- *   no customers → in-place
- */
-
 import { test } from "bun:test";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";

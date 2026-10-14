@@ -12,11 +12,6 @@ const PUSH_PATHS = new Set([
 	"/v1/catalog.set",
 ]);
 
-/**
- * Every replica up at the end holds, for every customer, the newest version applied anywhere, and the newest catalog.
- * With `pushedWithinMs`, only customers pushed that recently must be held everywhere: the others may have been dropped
- * for a replica's share, which is a cache miss, not a lost update. A copy older than the newest applied is never allowed.
- */
 export const assertConverged = async ({
 	cluster,
 	pushedWithinMs,
@@ -40,7 +35,6 @@ export const assertConverged = async ({
 		const known = into.get(key);
 		if (!known || cluster.newer(version, known)) into.set(key, version);
 	};
-	// The newest copy any replica holds, and the newest version anywhere: that, or applied on a volume that still exists.
 	const heldNewest = new Map<string, Version>();
 	for (const { held: byCustomer } of held)
 		for (const [customerId, { version }] of byCustomer)
@@ -76,7 +70,6 @@ export const assertConverged = async ({
 					`${replica.address}#${replica.id} holds ${customerId} at ${mine ? `${mine.version.readAt}/${mine.version.logOffset}` : "nothing"}, newest is ${version.readAt}/${version.logOffset}`,
 				);
 		}
-	// The same version means the same rows: a part written empty at a version it already held would pass the version check alone.
 	for (const [key, version] of truth) {
 		const balances = new Set(
 			held
@@ -84,7 +77,6 @@ export const assertConverged = async ({
 				.filter((mine) => mine && !cluster.newer(version, mine.version))
 				.map((mine) => mine?.balance),
 		);
-		// A customer dropped everywhere for the shares has no copy to compare; one that must be held was checked above.
 		if (balances.size === 0) continue;
 		if (balances.size !== 1 || balances.has(Number.NaN))
 			throw new Error(
@@ -93,14 +85,12 @@ export const assertConverged = async ({
 	}
 	const catalogReadAt = cluster.catalogReadAt();
 	if (catalogReadAt > 0)
-		// False only when a catalog read at or after this one is held.
 		for (const replica of replicas)
 			expect(
 				replica.slots.installCatalog({ rows: [], readAt: catalogReadAt - 1 }),
 			).toBe(false);
 };
 
-/** Every replica up at the end holds each customer whose deletion any replica stored, and every entity of it it holds, as deleted. */
 export const assertDeletionsHeld = async ({
 	cluster,
 }: {
@@ -136,7 +126,6 @@ export const assertDeletionsHeld = async ({
 	}
 };
 
-/** A check a ready replica answered never shows a balance older than what any replica had applied `boundMs` before. */
 export const assertFreshness = ({
 	cluster,
 	boundMs,
@@ -163,8 +152,6 @@ export const assertFreshness = ({
 			)
 				newest = entry;
 		if (!newest) continue;
-		// The answer must come from that write or a later one, whatever balance those carried. A push whose reply timed
-		// out was stored unseen: a balance no entry carries counts when it is newer than the newest known (or a plan end's 0).
 		const known = own.filter((entry) => entry.balance === check.balance);
 		const current =
 			known.length > 0
@@ -177,7 +164,6 @@ export const assertFreshness = ({
 	}
 };
 
-/** A relay only ever carries what its sender took from Autumn, and a proxied check is answered where it lands. */
 export const assertNoLoops = ({ cluster }: { cluster: SimCluster }) => {
 	const fromAutumn = new Map<number, Set<string>>();
 	for (const record of cluster.network.observed) {
@@ -193,7 +179,6 @@ export const assertNoLoops = ({ cluster }: { cluster: SimCluster }) => {
 	}
 	for (const record of cluster.network.observed) {
 		if (record.path.startsWith("/v1/_peer/")) continue;
-		// A row sent again after a restart is what the sender's own file holds, whoever first relayed it; bounded by the resend window.
 		if (
 			record.relayed &&
 			!record.resend &&

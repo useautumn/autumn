@@ -1,20 +1,3 @@
-/**
- * RevenueCat subscription + Stripe-billed auto top-up.
- *
- * A customer with a Stripe customer + card on file purchases a subscription
- * (monthly base price + one-off prepaid messages item) through RevenueCat.
- * When the prepaid balance drops below the auto top-up threshold, the top-up
- * should bill through Stripe even though the cus_product is RC-provisioned.
- *
- * Probes:
- * - RC attach (no_billing_changes) creates the cusPrice for the one-off
- *   prepaid item, so fullCustomerToAutoTopupObjects can find it.
- * - Auto top-up executes a paid Stripe invoice for an RC cus_product whose
- *   prices were never provisioned in Stripe.
- * - The options.quantity bump lands on the RC cus_product.
- * - A subsequent RC RENEWAL does not clobber the topped-up state.
- */
-
 import { expect, test } from "bun:test";
 import {
 	type ApiCustomerV5,
@@ -45,7 +28,6 @@ import {
 
 const RC_WEBHOOK_SECRET = "test_rc_webhook_secret_auto_topup";
 
-/** Wait time for SQS auto top-up processing */
 const AUTO_TOPUP_WAIT_MS = 20000;
 
 const setupRevenueCatOrg = async () => {
@@ -79,7 +61,6 @@ test.concurrent(
 		const customerId = "rc-auto-topup-stripe-1";
 		const RC_SUB_SKU = "com.app.rc_auto_topup_sub_monthly";
 
-		// $20/month subscription carrying a one-off prepaid item ($10 / 100 messages)
 		const sub = products.pro({
 			id: "rc-topup-sub",
 			items: [
@@ -93,8 +74,6 @@ test.concurrent(
 
 		await setupRevenueCatOrg();
 
-		// Stripe customer + card on file, but NO Stripe products attached — the
-		// cross-processor guard only rejects non-RC cus_products with subscriptions.
 		const { autumnV2_1, ctx: scenarioCtx } = await initScenario({
 			customerId,
 			setup: [
@@ -105,7 +84,6 @@ test.concurrent(
 			actions: [],
 		});
 
-		// Map the RC SKU to the sub, granting 500 messages (5 packs) on purchase.
 		await RCMappingService.upsert({
 			db: ctx.db,
 			data: {
@@ -136,7 +114,6 @@ test.concurrent(
 			}),
 		);
 
-		// ── 1. RC cus_product is active with the mapped prepaid grant ──────────
 		const dbCustomer = await ctx.db.query.customers.findFirst({
 			where: eq(customers.id, customerId),
 		});
@@ -156,7 +133,6 @@ test.concurrent(
 			remaining: 500,
 		});
 
-		// ── 2. Enable auto top-up (threshold 20, quantity 100 = 1 pack) ────────
 		await autumnV2_1.customers.update(customerId, {
 			billing_controls: {
 				auto_topups: [
@@ -170,7 +146,6 @@ test.concurrent(
 			},
 		});
 
-		// ── 3. Track below threshold → auto top-up should bill via Stripe ─────
 		await autumnV2_1.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
@@ -179,7 +154,6 @@ test.concurrent(
 
 		await timeout(AUTO_TOPUP_WAIT_MS);
 
-		// Balance: 500 - 490 + 100 = 110
 		const after = await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
 		expectBalanceCorrect({
 			customer: after,
@@ -187,8 +161,6 @@ test.concurrent(
 			remaining: 110,
 		});
 
-		// Latest invoice is the Stripe top-up: 1 pack × $10, paid.
-		// Count 2 = RC-recorded purchase invoice + Stripe top-up invoice.
 		await expectCustomerInvoiceCorrect({
 			customerId,
 			count: 2,
@@ -197,7 +169,6 @@ test.concurrent(
 			latestInvoiceProductId: sub.id,
 		});
 
-		// Options: 5 initial packs + 1 topped-up pack = 6.
 		await expectCustomerProductOptions({
 			ctx: scenarioCtx,
 			customerId,
@@ -206,7 +177,6 @@ test.concurrent(
 			quantity: 6,
 		});
 
-		// ── 4. RC renewal must not clobber the topped-up state ─────────────────
 		expectWebhookSuccess(
 			await rcClient.renewal({
 				productId: RC_SUB_SKU,

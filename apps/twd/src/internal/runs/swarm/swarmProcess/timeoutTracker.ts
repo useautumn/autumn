@@ -3,7 +3,6 @@ const ANSI = /\u001B\[[0-9;]*m/g;
 /** bun's own per-test and hook timeout lines, never a test's "timed out waiting for …" message. */
 const BUN_TIMEOUT =
 	/this test timed out after (\d+)ms|(a \w+\/\w+ hook) timed out for this test/;
-/** Enough to rejoin a marker split across output chunks. */
 const TAIL_CHARS = 160;
 
 type FileTimeouts = {
@@ -12,7 +11,6 @@ type FileTimeouts = {
 	byAttempt: Map<number, string>;
 };
 
-/** Which attempts of each file hit bun's per-test timeout, read from the streamed test output. */
 export const createTimeoutTracker = () => {
 	const files = new Map<string, FileTimeouts>();
 
@@ -31,7 +29,6 @@ export const createTimeoutTracker = () => {
 			byAttempt: new Map(),
 		};
 		files.set(file, entry);
-		// A new attempt's output must not complete a marker the previous attempt started.
 		if (entry.attempt !== attempt) entry.tail = "";
 		entry.attempt = attempt;
 		const text = `${entry.tail}${chunk}`.replace(ANSI, "");
@@ -52,10 +49,6 @@ export const createTimeoutTracker = () => {
 	};
 };
 
-/**
- * A finished, failed file is timed_out when its final attempt hit bun's timeout, or printed no
- * verdicts at all after an earlier attempt timed out (the retry of a 300s test often dies silently).
- */
 export const classifyFailedFile = ({
 	attempt,
 	verdicts,

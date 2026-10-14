@@ -31,7 +31,6 @@ import type { PartitionRuntimeStatus } from "./partitionRuntimeState.js";
 export type OwnedPartitionProducer = {
 	connect(): Promise<void>;
 	fence(): Promise<void>;
-	/** Writes the owner's fence marker once the epoch is known; null when there is nothing to write. */
 	fenceOwnership?(): Promise<{ offset: bigint } | null>;
 	disconnect(): Promise<void>;
 };
@@ -47,14 +46,12 @@ export type PartitionOutcomeFollowerPort = {
 		partition: number;
 		targetNextOffset: bigint;
 		onUnavailable: RuntimeUnavailableListener;
-		/** Skip the dedup window below the bookmark; a preparation follower already rebuilt it. */
 		fromBookmark?: boolean;
 	}): Promise<void>;
 	readProgress(params: {
 		topic: string;
 		partition: number;
 	}): OwnedPartitionFollowerProgress;
-	/** Resolves once everything below `nextOffset` has been applied. */
 	awaitNextOffset?(params: {
 		topic: string;
 		partition: number;
@@ -81,7 +78,6 @@ export type PartitionRuntimeDependencies = {
 	producer: OwnedPartitionProducer;
 	appender: CommittedOutcomeAppender;
 	follower: PartitionOutcomeFollowerPort;
-	/** Read-only: feeds the dedup window before this worker owns the partition. Without one the runtime cannot prepare. */
 	preparationFollower?: PartitionOutcomeFollowerPort;
 	bootstrapper: PartitionBootstrapper;
 	partitionResolver: MeteringPartitionResolver;
@@ -89,9 +85,7 @@ export type PartitionRuntimeDependencies = {
 	catalogCache: CatalogCache;
 	logger?: Partial<Pick<AutumnLogger, "warn" | "info">>;
 	receiptPolicy: ReceiptPolicy;
-	/** Per partition, shared with `follower`: what the writer applied and what the log replayed. */
 	recentCommands: RecentCommands;
-	/** Where the partition's writer publishes its commit position. */
 	commitPositions?: CommitPositionSink;
 	subjectSnapshotsConfig?: EdgeConfigStore<SubjectSnapshotsEdgeConfig>;
 	dbControl?: EdgeConfigStore<DbControlEdgeConfig>;
@@ -103,7 +97,6 @@ export type PartitionRuntimeConfig = {
 	partition: number;
 	writerLimits: PartitionWriterLimits;
 	recoveryDrainTimeoutMs: number;
-	/** How long a command waits for an activating runtime before it is refused. */
 	activationWaitMs?: number;
 };
 
@@ -116,10 +109,8 @@ export type RuntimeFailure = { cause: unknown };
 export type RuntimeUnavailableListener = (failure: RuntimeFailure) => void;
 
 export type PartitionRuntime = {
-	/** Read-only, on the preparation follower: its stop settles before activation starts the real one. */
 	prepare(): Promise<void>;
 	activate(): Promise<void>;
-	/** After the claim: writes the owner's fence marker and reads up to it, so nothing a stale owner appends can slip in. */
 	fence(): Promise<void>;
 	drain(): Promise<void>;
 	waitForQuiescence(): Promise<void>;
@@ -128,14 +119,10 @@ export type PartitionRuntime = {
 	getStatus(): PartitionRuntimeStatus;
 	getHealth(): OwnedPartitionHealth;
 	subscribeUnavailable(listener: RuntimeUnavailableListener): () => void;
-	/** Runs one processor command behind the readiness gate and recovery mapping.
-	 *  `budgetMs` is how long the caller will still wait: an activating runtime holds
-	 *  the command for that long (less a margin) before answering not ready. */
 	process<Decision>(
 		run: (processor: PartitionProcessor) => Promise<Decision>,
 		options?: ProcessOptions,
 	): Promise<Decision>;
-	/** One synchronous processor command on a ready runtime, same recovery mapping; null when not ready. */
 	processInline<Decision>(
 		run: (processor: PartitionProcessor) => Decision | null,
 	): Decision | null;

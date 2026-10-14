@@ -8,8 +8,6 @@ import {
 	prodTestOrgId,
 } from "./experimentEnv";
 
-// Run with: bun run experiments/getFullSubjectExperiment.ts
-
 const ORG_ID = prodTestOrgId;
 const ENV = AppEnv.Live;
 const CUSTOMER_ID = prodTestCustomerId;

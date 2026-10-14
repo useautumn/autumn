@@ -1,7 +1,3 @@
-/**
- * `decide` without a settlement: dedup, capacity, projection, the record and the commit loop are the writer's
- * own, but the reply is built here and held until the commit position reaches its write's sequence number.
- */
 import {
 	type MeteringIdentity,
 	meteringIdentityToPartitionKey,
@@ -32,7 +28,6 @@ import {
 	readFreshestState,
 } from "./decide.js";
 
-/** Synchronous, like `decide`. Null when a settled write of the customer is in flight: its callers own the order. */
 export function decideHeld<Reply>({
 	scope,
 	submission,
@@ -120,7 +115,6 @@ export function decideHeld<Reply>({
 	return { kind: "write", seq: pending.seq, body };
 }
 
-/** Why `decideHeld` would hand this command back: a settled write owns the customer's order, or the retry's reply is another write's. */
 export function heldBlockerOf({
 	scope,
 	identity,
@@ -138,8 +132,6 @@ export function heldBlockerOf({
 	return null;
 }
 
-/** Whether the group fits one append: past the byte budget its writes split, as the ordinary route's do.
- *  Every member's subjects stay pinned while it runs, so one member's write cannot evict another's rows. */
 export function decideHeldGroup<Result>({
 	scope,
 	identities,
@@ -172,7 +164,6 @@ export function decideHeldGroup<Result>({
 	}
 }
 
-/** A group past the byte budget takes the ordinary batch cut, so its writes span appends. */
 function releaseHeldGroup({
 	queue,
 	group,
@@ -184,7 +175,6 @@ function releaseHeldGroup({
 		delete (queue[index] as PendingMutation).heldGroup;
 }
 
-/** Resolves once the log has this held write; rejects with its failure. Only for a write still in flight. */
 export function waitForHeldCommit({
 	scope,
 	identity,

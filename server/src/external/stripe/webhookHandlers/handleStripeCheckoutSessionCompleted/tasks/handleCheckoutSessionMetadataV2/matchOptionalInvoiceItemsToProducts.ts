@@ -20,14 +20,6 @@ const EMPTY_MATCH: OptionalInvoiceItemMatch = {
 	customerProducts: [],
 };
 
-/**
- * Stripe Checkout's `optional_items` upsell lands on the invoice as a plain
- * one-time line item — Autumn never requested it via `plan_id`, so it's
- * absent from `insertCustomerProducts`. Match any such leftover line item's
- * price against the org's product catalog and return both the matched
- * catalog product (so the caller can fold it into invoice construction) and
- * the provisioned customer product, scaled to the quantity purchased.
- */
 export const matchOptionalInvoiceItemsToProducts = async ({
 	ctx,
 	checkoutContext,
@@ -103,9 +95,6 @@ export const matchOptionalInvoiceItemsToProducts = async ({
 			},
 		});
 
-		// initFullCustomerProductFromProduct always grants quantity 1 — scale to
-		// what Checkout actually charged. Boolean/unlimited entitlements start
-		// at balance 0 regardless, so this is a no-op for them.
 		customerProduct.quantity = quantity;
 		for (const cusEnt of customerProduct.customer_entitlements) {
 			cusEnt.balance = (cusEnt.balance ?? 0) * quantity;

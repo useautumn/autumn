@@ -31,10 +31,6 @@ const missingPreparedState = ({
 	details,
 });
 
-/** The customize half of resolvePlanLicenseTransitions: resolves
- * customize.upsert_licenses into one diff per link, without judging whether any
- * of it can be batch-lowered -- that is the guard's call. Only an unresolvable
- * artifact rejects here, because prepare must run again. */
 export const resolveLicenseCustomizeTransitions = ({
 	migration,
 	op,

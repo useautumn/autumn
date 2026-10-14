@@ -7,13 +7,8 @@ import { forwardToAutumn } from "../../forward/forwardToAutumn.js";
 import type { AtomHttpContext, AtomHttpEnv } from "../../types/atomHttp.js";
 import { atomErrorOf } from "./atomErrorOf.js";
 
-/** Forwards waiting on the API, per app; past this a check is refused, so a slow API cannot pile up a backlog the loop-lag gate never sees. */
 export const MAX_FORWARDS_IN_FLIGHT = 256;
 
-/**
- * Where every request Atom did not answer ends up. One it cannot answer is answered by the Autumn API;
- * the rest are answered here, and what failed is left for the request line.
- */
 export const createAtomErrorHandler = ({
 	ctx,
 }: {
@@ -21,7 +16,6 @@ export const createAtomErrorHandler = ({
 }): ErrorHandler<AtomHttpEnv> => {
 	let forwarding = 0;
 
-	/** Past the cap: a 503 without x-atom-forwarded, which the SDK takes to the API itself. */
 	async function forwardWithinCap(
 		context: Context<AtomHttpEnv>,
 		reason: ForwardReason,

@@ -1,4 +1,3 @@
-// commands
 export {
 	applyBillingPlanToSubjects,
 	type BillingPlanEntityPart,
@@ -92,7 +91,6 @@ export type {
 	RebalanceOutcome,
 } from "./common/rebalance/types/rebalanceOutcome.js";
 export type { RebalanceRequest } from "./common/rebalance/types/rebalanceRequest.js";
-// deduction
 export { deduct } from "./deduction/deduct.js";
 export type { DeductionContext } from "./deduction/types/deductionContext.js";
 export type { DeductionDecision } from "./deduction/types/deductionDecision.js";
@@ -101,7 +99,6 @@ export type { DeductionOutcome } from "./deduction/types/deductionOutcome.js";
 export type { DeductionRow } from "./deduction/types/deductionRow.js";
 export { usageWindowFeaturesOf } from "./deduction/utils/limits/usageWindowFeaturesOf.js";
 export type { UnsupportedCommandReason } from "./errors.js";
-// boundary
 export {
 	CatalogRowMissingError,
 	LockAlreadyExistsError,
@@ -125,7 +122,6 @@ export type { CommandDurability } from "./models/command/commandDurability.js";
 export type { CommandOrg } from "./models/command/commandOrg.js";
 export type { MutatingCommand } from "./models/command/mutatingCommand.js";
 export { orgToCommandOrg } from "./models/command/orgToCommandOrg.js";
-// models
 export type { JsonValue } from "./models/common/json.js";
 export { canonicalizeJsonValue } from "./models/common/json.js";
 export { logUnknownInput } from "./models/common/logUnknownInput.js";
@@ -184,7 +180,6 @@ export type {
 	WorkerFullCustomerProduct,
 	WorkerFullSubject,
 } from "./models/subject/workerFullSubject.js";
-// mutation
 export { applyChanges } from "./mutation/applyChanges.js";
 export { applyMutation } from "./mutation/applyMutation.js";
 export { incrementRow } from "./mutation/incrementRow.js";
@@ -235,7 +230,6 @@ export {
 	partitionKeyToMeteringIdentity,
 	planCommandToEntityIdentities,
 } from "./utils/identityUtils/convertIdentityUtils.js";
-// utils
 export {
 	customerRowsToSubjectState,
 	mergeCustomerAndEntities,

@@ -20,14 +20,6 @@ export type SyncMatchResult = {
 	price: (Price & { product: Product }) | null;
 };
 
-/**
- * Matches a Stripe subscription item to an Autumn price/product using a
- * priority-based fallback chain (mirrors LineItemMatchPriority pattern).
- *
- * Priority 1: stripe_price_id on price config
- * Priority 2: stripe_product_id on price config (usage/prepaid)
- * Priority 3: product.processor.id on the main product
- */
 export const matchSubscriptionItemToAutumn = ({
 	stripeItem,
 	priceByStripePriceId,
@@ -45,7 +37,6 @@ export const matchSubscriptionItemToAutumn = ({
 			? stripeItem.price.product
 			: ((stripeItem.price?.product as Stripe.Product | undefined)?.id ?? null);
 
-	// Priority 1: Match by Stripe price ID
 	if (stripePriceId) {
 		const matched = priceByStripePriceId[stripePriceId];
 		if (matched) {
@@ -58,7 +49,6 @@ export const matchSubscriptionItemToAutumn = ({
 		}
 	}
 
-	// Priority 2: Match by Stripe product ID on price config (usage/prepaid)
 	if (stripeProductId) {
 		const matched = priceByStripeProductId[stripeProductId];
 		if (matched) {
@@ -71,7 +61,6 @@ export const matchSubscriptionItemToAutumn = ({
 		}
 	}
 
-	// Priority 3: Match by product.processor.id
 	if (stripeProductId) {
 		const matched = productByStripeProductId[stripeProductId];
 		if (matched) {

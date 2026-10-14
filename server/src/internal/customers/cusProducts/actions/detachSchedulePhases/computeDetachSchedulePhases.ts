@@ -8,7 +8,6 @@ import type Stripe from "stripe";
 import { endsOnSchedulePhase } from "./endsOnSchedulePhase";
 import type { SchedulePhaseRows } from "./types/schedulePhaseRows";
 
-/** A released schedule hands its subscription back under released_subscription. */
 const scheduleSubscriptionId = (schedule: Stripe.SubscriptionSchedule) =>
 	schedule.released_subscription ?? stripeRefToId(schedule.subscription);
 

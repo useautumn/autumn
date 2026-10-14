@@ -54,7 +54,6 @@ export const getCurrentOptions = ({
 	return currentOptions;
 };
 
-// 1. Calculate total
 export const getAttachTotal = ({
 	preview,
 	options,
@@ -66,7 +65,6 @@ export const getAttachTotal = ({
 
 	let dueTodayTotal =
 		dueToday?.line_items.reduce((acc: any, item: any) => {
-			// Skip prepaid items that are already in the options
 			if (
 				item.usage_model === UsageModel.Prepaid &&
 				options.some((o: any) => o.feature_id === item.feature_id)
@@ -116,27 +114,11 @@ export const getAttachTotal = ({
 		const differenceAmount = new Decimal(previewOption.price).times(difference);
 		dueTodayTotal = dueTodayTotal.plus(differenceAmount);
 
-		// Prorated difference
 		if (previewOption.proration_amount) {
 			dueTodayTotal = dueTodayTotal.plus(
 				new Decimal(previewOption.proration_amount),
 			);
 		}
-
-		// let previewOption = preview?.options.find(
-		//   (o: any) =>
-		//     o.feature_id === option.feature_id || o.feature_id === option.featureId,
-		// );
-
-		// if (!previewOption) {
-		//   continue;
-		// }
-
-		// const prepaidAmt = new Decimal(previewOption.price)
-		//   .times(option.quantity)
-		//   .dividedBy(previewOption.billing_units);
-
-		// dueTodayTotal = dueTodayTotal.plus(prepaidAmt);
 	}
 
 	return dueTodayTotal.toDecimalPlaces(2).toNumber();
@@ -157,7 +139,6 @@ export const advanceToNextInvoice = async ({
 	currentEpochMs?: number;
 	withPause?: boolean;
 	beforeFinalize?: () => Promise<unknown>;
-	/** Pass 0 only when the caller polls for the webhook effects it needs. */
 	finalizeMinimumWaitMs?: number;
 	timeoutMs?: number;
 	signal?: AbortSignal;
@@ -168,7 +149,6 @@ export const advanceToNextInvoice = async ({
 		invoiceTime,
 		hoursToFinalizeInvoice,
 	).getTime();
-	// Clock readiness does not guarantee Autumn's webhook work has finished.
 	const stages = [
 		...(withPause || beforeFinalize
 			? [{ targetMs: invoiceTime, minimumWaitMs: withPause ? 50_000 : 0 }]

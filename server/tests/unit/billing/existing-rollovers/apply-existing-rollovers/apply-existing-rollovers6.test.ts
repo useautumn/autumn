@@ -37,7 +37,7 @@ describe(
 				{
 					id: "rollover_1",
 					cus_ent_id: "old_cus_ent_id",
-					balance: 0, // Top-level balance is 0
+					balance: 0,
 					usage: 0,
 					expires_at: null,
 					entities: {
@@ -48,13 +48,11 @@ describe(
 				},
 			];
 
-			// Act
 			applyExistingRollovers({
 				customerProduct: newCusProduct,
 				existingRollovers,
 			});
 
-			// Assert: rollover SHOULD be applied because entity has balance > 0
 			const updatedCusEnt = newCusProduct.customer_entitlements[0];
 			expect(updatedCusEnt.rollovers.length).toBe(1);
 			expect(updatedCusEnt.rollovers[0].balance).toBe(0);

@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from "react";
 
 type SetValue<T> = (value: T | ((prev: T) => T)) => void;
 
-// The native "storage" event only fires in other tabs, so same-tab hooks listen for this.
 const SAME_TAB_STORAGE_EVENT = "autumn:local-storage";
 
 export function useLocalStorage<T>(
@@ -18,14 +17,12 @@ export function useLocalStorage<T>(
 			const item = window.localStorage.getItem(key);
 			return item == null ? initialValue : (JSON.parse(item) as T);
 		} catch (error) {
-			// Ignore parsing/storage errors and fall back to initial value
 			return initialValue;
 		}
 	};
 
 	const [storedValue, setStoredValue] = useState<T>(readValue);
 
-	// Persist to localStorage whenever storedValue changes
 	useEffect(() => {
 		if (typeof window === "undefined") return;
 		try {
@@ -36,12 +33,9 @@ export function useLocalStorage<T>(
 					new CustomEvent(SAME_TAB_STORAGE_EVENT, { detail: key }),
 				);
 			}
-		} catch (error) {
-			// Ignore write errors (e.g., private mode / quota exceeded)
-		}
+		} catch (error) {}
 	}, [key, storedValue]);
 
-	// Sync value across tabs/windows
 	useEffect(() => {
 		if (typeof window === "undefined") return;
 		const onStorage = (e: StorageEvent) => {
@@ -50,9 +44,7 @@ export function useLocalStorage<T>(
 				const newValue =
 					e.newValue == null ? initialValue : (JSON.parse(e.newValue) as T);
 				setStoredValue(newValue);
-			} catch (error) {
-				// Ignore parsing errors
-			}
+			} catch (error) {}
 		};
 		const onSameTabStorage = (e: Event) => {
 			if ((e as CustomEvent<string>).detail !== key) return;
@@ -66,7 +58,6 @@ export function useLocalStorage<T>(
 		};
 	}, [key]);
 
-	// Ensure first render uses latest localStorage value (in case it changed before mount)
 	useEffect(() => {
 		if (isMounted.current) return;
 		isMounted.current = true;

@@ -10,7 +10,6 @@ import { resolveAlertScopes } from "./resolveAlertScopes.js";
 import { usageAlertToWebhook } from "./usageAlertToWebhook.js";
 import { wasThresholdCrossed } from "./wasThresholdCrossed.js";
 
-/** Every usage alert this mutation crossed, at each scope that carries one: what prod's checkUsageAlerts sends, decided from the log alone. */
 export const checkUsageAlerts = ({
 	command,
 	before,

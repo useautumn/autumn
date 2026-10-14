@@ -1,8 +1,3 @@
-/**
- * A transferred plan carries its license pool. Seats held by the source's entities
- * are released and expired, so the destination gets an unassigned pool.
- */
-
 import { expect, test } from "bun:test";
 import { CusProductStatus } from "@autumn/shared";
 import { getLicenseDbState } from "@tests/integration/licenses/licenseTestUtils";

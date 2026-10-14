@@ -5,7 +5,6 @@ import {
 } from "@autumn/shared";
 import { nullish } from "@/utils/genUtils.js";
 
-/** Without an explicit id, the active row wins over scheduled ones of the same plan. */
 export const findTransferCustomerProduct = ({
 	fullCustomer,
 	fromEntity,

@@ -60,7 +60,6 @@ type ReissueInvoiceResult = {
 	preview: CreateInvoicePreview;
 };
 
-/** An explicit null clears the field rather than falling back to the original. */
 const overrideOrInherit = ({
 	override,
 	inherited,
@@ -134,11 +133,6 @@ const loadReissuableStripeInvoice = async ({
 	return { stripeCli, stripeInvoice };
 };
 
-/**
- * Keeps the original deadline unless it has passed, in which case new terms are
- * required. A card invoice has no deadline unless terms are given, which turns
- * the replacement into a send-invoice one.
- */
 const resolveCollection = ({
 	stripeInvoice,
 	netTermsDays,
@@ -245,8 +239,6 @@ const createReplacementDraft = async ({
 			override: overrides?.memo,
 			inherited: template?.memo ?? stripeInvoice.description,
 		}),
-		// The org's invoice methods (e.g. customer_balance) are for send-invoice
-		// only; a card replacement uses the customer's payment method as before.
 		paymentMethodTypes:
 			collectionMethod === "send_invoice"
 				? (paymentMethodTypes as never)
@@ -275,7 +267,6 @@ const createReplacementDraft = async ({
 			? { account_tax_ids: overrides.account_tax_ids }
 			: {}),
 	};
-	// The draft exists from here on, so anything that fails must take it with it.
 	try {
 		const pendingLines = await getStripeInvoiceLineItems({
 			stripeClient: stripeCli,
@@ -311,11 +302,6 @@ const createReplacementDraft = async ({
 	}
 };
 
-/**
- * Creates and finalizes the replacement, then retires the original: an open
- * invoice is voided and its deferred pointers move across, while a paid one
- * keeps its money and gets a credit note instead.
- */
 const issueReplacement = async ({
 	ctx,
 	stripeCli,
@@ -344,7 +330,6 @@ const issueReplacement = async ({
 	lineEdits?: ReissueLineEdits;
 	lines: Stripe.InvoiceAddLinesParams.Line[];
 	creditOriginal: boolean;
-	/** A corrected address or tax id legitimately moves the tax. */
 	customerAdjusted: boolean;
 	issueMethod?: InvoiceIssueMethod;
 }): Promise<{ issued: Stripe.Invoice; creditNoteId: string | null }> => {
@@ -365,7 +350,6 @@ const issueReplacement = async ({
 		dropDeferredPointer: creditOriginal,
 	});
 
-	// The total is only guaranteed to match when nothing was adjusted.
 	const adjusted = Boolean(overrides || lineEdits || customerAdjusted);
 	if (!adjusted && draft.total !== stripeInvoice.total) {
 		await deleteDraft({ ctx, stripeCli, draftId: draft.id });
@@ -387,7 +371,6 @@ const issueReplacement = async ({
 	}
 
 	// Automatic collection is what makes Stripe treat the replacement as the
-	// subscription's receivable (overdue → past_due, paid → active).
 	// Parked before the replacement is issued so Stripe's scheduled finalization can't race it;
 	// a draft Stripe finalized meanwhile comes back open and is voided like any other.
 	const originalIsDraft =
@@ -415,7 +398,6 @@ const issueReplacement = async ({
 		});
 		if (!originalIsDraft) await voidInvoice({ ctx, invoiceId });
 	} catch (error) {
-		// The original keeps standing; retire the replacement instead.
 		await repointDeferredReferences({
 			ctx,
 			fromStripeInvoiceId: issued.id,
@@ -438,7 +420,6 @@ const issueReplacement = async ({
 		throw error;
 	}
 
-	// The original is retired, so a card replacement can be charged now.
 	return {
 		issued: await collectRemainderNow({ ctx, stripeCli, finalized: issued }),
 		creditNoteId: null,
@@ -471,7 +452,6 @@ const parkDraftOriginal = async ({
 	}
 };
 
-/** Puts a draft original back the way the failed reissue found it. */
 const unparkDraftOriginal = ({
 	stripeCli,
 	stripeInvoice,
@@ -593,8 +573,6 @@ const collectRemainderNow = async ({
 	) {
 		return finalized;
 	}
-	// The reissue is already complete here, so a collection hiccup must not
-	// report it as failed; the replacement simply stays open.
 	try {
 		const fallback = await fallbackPaymentMethodId({ stripeCli, finalized });
 		return await stripeCli.invoices.pay(
@@ -671,7 +649,6 @@ const reverseCredit = async ({
 	}
 };
 
-/** A paid original keeps its own deferred pointer, so the replacement must not carry one. */
 const inheritedMetadata = ({
 	stripeInvoice,
 	dropDeferredPointer,
@@ -684,7 +661,6 @@ const inheritedMetadata = ({
 	return metadata;
 };
 
-/** Moves the deferred plan's pointers so paying the replacement fulfils it. */
 const repointDeferredReferences = async ({
 	ctx,
 	fromStripeInvoiceId,
@@ -728,7 +704,6 @@ const repointDeferredReferences = async ({
 	}
 };
 
-/** Carries the original's Autumn associations (products, entitlements, periods) onto the copied lines. */
 const copyLineItemRows = async ({
 	ctx,
 	original,
@@ -741,9 +716,7 @@ const copyLineItemRows = async ({
 	original: InvoiceListRow;
 	replacement: Stripe.Invoice;
 	autumnInvoiceId: string;
-	/** Autumn lines behind catalog plans the reissue added. */
 	addedLineItems: LineItem[];
-	/** Autumn line item ids whose amount the request edited. */
 	editedAmountLineIds: Set<string>;
 }) => {
 	const originalRows = await invoiceLineItemRepo.getByInvoiceIds({
@@ -766,7 +739,6 @@ const copyLineItemRows = async ({
 			? replacementLineBySource.get(row.stripe_id)
 			: undefined;
 		if (!line) return [];
-		// Adjusted lines bill a different amount, so the stored row follows Stripe.
 		const amount = stripeToAtmnAmount({
 			amount: line.amount,
 			currency: replacement.currency,
@@ -778,7 +750,6 @@ const copyLineItemRows = async ({
 				created_at: Date.now(),
 				amount,
 				amount_after_discounts: amount,
-				// One entity owns the whole line, so its share follows an amount edit.
 				entities:
 					editedAmountLineIds.has(row.id) && row.entities?.length === 1
 						? [{ ...row.entities[0], amount }]
@@ -793,7 +764,6 @@ const copyLineItemRows = async ({
 		];
 	});
 
-	// Lines the reissue added have no original row behind them.
 	const copiedStripeIds = new Set(copied.map((row) => row.stripe_id));
 	const addedLines = replacementLines.filter(
 		(line) => !copiedStripeIds.has(line.id),
@@ -856,15 +826,6 @@ const storeReplacementInAutumn = async ({
 	return autumnInvoice;
 };
 
-/**
- * Retires the original (void, a credit note when paid, or parked when a draft) and replaces it with a
- * copy issued per issue_method. The replacement stays linked to the same subscription
- * and inherits the original's deferred-plan pointers, so paying it has the same
- * effect the original payment would have had.
- *
- * A sent or finalized replacement is issued before the original is voided, so a
- * failure never leaves the customer without a payable invoice.
- */
 export const reissueInvoice = async ({
 	ctx,
 	invoiceId,
@@ -906,7 +867,6 @@ export const reissueInvoice = async ({
 		row,
 	});
 
-	// A paid invoice keeps its money and gets a credit note; an open one is voided.
 	const creditOriginal = stripeInvoice.status === "paid";
 
 	const template = invoiceTemplateId
@@ -921,7 +881,6 @@ export const reissueInvoice = async ({
 	}
 
 	// Stripe only lets a customer choose e.g. bank transfer on a sent invoice,
-	// so asking for one on a card invoice sends the replacement on default terms.
 	const wantsNonCardMethod = Boolean(
 		invoiceOverrides?.payment_method_types?.some((type) => type !== "card"),
 	);
@@ -990,7 +949,6 @@ export const reissueInvoice = async ({
 	}
 
 	// Stripe snapshots the customer's email, name, address and tax ids at
-	// finalization, so these must precede the draft.
 	if (updateCustomerEmail || customerOverrides) {
 		await applyReissueCustomerOverrides({
 			ctx,
@@ -1006,7 +964,6 @@ export const reissueInvoice = async ({
 		ctx,
 		creditOriginal,
 		issueMethod,
-		// Only a location or tax registration can move what Stripe charges.
 		customerAdjusted: Boolean(
 			customerOverrides?.address || customerOverrides?.tax_ids,
 		),
@@ -1049,7 +1006,6 @@ export const reissueInvoice = async ({
 		source: "reissueInvoice",
 	});
 
-	// The response describes what was issued, adjustments included.
 	const issuedPreview = previewReissuedInvoice({
 		stripeInvoice: issued,
 		lines: await getStripeInvoiceLineItems({
@@ -1058,7 +1014,6 @@ export const reissueInvoice = async ({
 		}),
 		storedLines,
 		addedLineItems,
-		// A credit note issued during the reissue moved the balance a draft will draw on.
 		credits: creditNoteId
 			? stripeCustomerToInvoiceCredits({
 					stripeCustomer: await getExpandedStripeCustomer({

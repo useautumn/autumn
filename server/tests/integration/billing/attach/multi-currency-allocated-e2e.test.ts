@@ -17,9 +17,6 @@ import { AutumnRpcCli } from "@/external/autumn/autumnRpcCli.js";
 const autumnRpc = new AutumnRpcCli({ version: ApiVersion.V2_1 });
 const getSuffix = () => Math.random().toString(36).slice(2, 9);
 
-// An allocated (arrear-prorated, bill-immediately) overage seat must be billed
-// at the eur per-seat price, exercising computeAllocatedInvoiceLineItems'
-// currency resolution.
 test.concurrent(
 	`${chalk.yellowBright("multi-currency e2e: eur allocated overage bills the eur per-seat price")}`,
 	async () => {
@@ -64,7 +61,6 @@ test.concurrent(
 			actions: [],
 		});
 
-		// Attach with 2 prepaid seats; the seat charge is prorated + billed in eur.
 		await autumnV1.billing.attach({
 			customer_id: customerId,
 			product_id: planId,
@@ -74,7 +70,6 @@ test.concurrent(
 
 		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-		// The allocated/prorated seat invoice must be denominated in eur.
 		const stripeInvoices = await ctx.stripeCli.invoices.list({
 			customer: customer.stripe_id as string,
 		});

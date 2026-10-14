@@ -95,7 +95,6 @@ export const applyDurableMutations = async ({
 		});
 	if (outcome.ownerFence !== undefined)
 		ctx.progress.setOwnerFence({ topic, partition, fence: outcome.ownerFence });
-	// Everything before the failed record is in Postgres and the bookmark says so; the rest waits for recovery.
 	const failedId = outcome.failure?.record.mutation.id ?? null;
 	const rejectionById = new Map(
 		(outcome.rejections ?? []).map((rejection) => [

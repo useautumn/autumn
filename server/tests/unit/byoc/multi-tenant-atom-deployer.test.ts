@@ -23,7 +23,6 @@ process.env.ENCRYPTION_PASSWORD = "multi-tenant-atom-deployer-test-password";
 
 type Received = { route: string; adminToken: string | null; body: unknown };
 
-/** A multi-tenant Atom's admin routes: only the admin token gets past them, as in apps/atom. */
 const received: Received[] = [];
 const multiTenantAtom = Bun.serve({
 	port: 0,
@@ -67,7 +66,6 @@ const getOrg = spyOn(OrgService, "get").mockImplementation(
 	},
 );
 
-/** Redis's SET NX lock, held in-process: a second holder of a held key gets the same 423 the real lock throws. */
 const lockedKeys: string[] = [];
 const heldKeys = new Set<string>();
 const withLock = spyOn(lockModule, "withLock").mockImplementation(

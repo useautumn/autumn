@@ -10,7 +10,6 @@ import {
 	updateRun,
 } from "../repos/runsRepo.ts";
 
-/** Idempotent. A live swarm SIGTERMs its child (which tears down); a queued run just flips. */
 export const cancelRun = async ({
 	ctx,
 	runId,

@@ -1,7 +1,6 @@
 import type { FullCusProduct } from "@autumn/shared";
 import { sql } from "drizzle-orm";
 
-// Equal fingerprints share a flag; isCustomFingerprintOf must build the same string.
 // Columns are spelled out: Drizzle renders them unqualified, which rebinds them inside the subqueries.
 export const isCustomFingerprintSql = sql<string>`concat_ws(
 	'|',
@@ -15,7 +14,6 @@ export const isCustomFingerprintSql = sql<string>`concat_ws(
 		FROM customer_licenses cl WHERE cl.parent_customer_product_id = customer_products.id)
 )`;
 
-// Matches string_agg: nulls skipped, null for no rows, ids sorted in "C" order.
 const joinSorted = (ids: (string | null)[]) => {
 	const present = ids.filter((id): id is string => id !== null);
 	return present.length > 0 ? present.sort().join(",") : null;

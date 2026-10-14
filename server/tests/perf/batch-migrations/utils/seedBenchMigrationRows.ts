@@ -6,7 +6,6 @@ import { generateId } from "@/utils/genUtils.js";
 import type { BenchContext } from "./benchContext.js";
 import { BENCH_MIGRATIONS } from "./benchMigrationDefs.js";
 
-/** Refreshes every dashboard-runnable bench migration to a clean definition. */
 export const seedBenchMigrationRows = async ({
 	bench,
 }: {

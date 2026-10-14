@@ -2,7 +2,6 @@
 import { render } from "ink";
 import { AgentStep } from "./init/steps/AgentStep.js";
 
-// Test the AgentStep component standalone
 function TestAgentStep() {
 	return (
 		<AgentStep

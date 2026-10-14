@@ -1,16 +1,3 @@
-/**
- * Customize A then B: same diverging fixed price shares one Stripe Price.
- *
- * Catalog / variant reuse already ran. This path only fires when the
- * attach-currency slot is still empty (Pro $20 → customize $25).
- *
- * Contract:
- *   A $25 then B $25 → same stripe_price_id, not the catalog $20 id
- *   A $25 then B catalog $20 → B uses the catalog id
- *   A $25 then B $30 → different stripe_price_ids
- *   A attach $25 then C updateSubscription → $25 → same Stripe as A
- */
-
 import { expect, test } from "bun:test";
 import type {
 	ApiCustomerV5,

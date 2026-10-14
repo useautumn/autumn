@@ -17,7 +17,6 @@ const planMetadataChanged = ({
 	});
 };
 
-/** Metadata is plan-level; every version row must agree (legacy updateMetadataByExternalId parity). */
 export const syncPlanMetadataAcrossVersions = async ({
 	ctx,
 	upsert,

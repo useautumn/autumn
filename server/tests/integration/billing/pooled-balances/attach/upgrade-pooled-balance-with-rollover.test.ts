@@ -1,6 +1,3 @@
-/** After subscription renewal creates a capped pooled rollover, Pro → Enterprise preserves that rollover.
- * The upgrade applies only the contribution delta and leaves the customer-level prepaid add-on unchanged. */
-
 import { test } from "bun:test";
 import type { AttachParamsV1Input } from "@autumn/shared";
 import { expectStripeSubscriptionCorrect } from "@tests/integration/billing/utils/expectStripeSubCorrect/index.js";

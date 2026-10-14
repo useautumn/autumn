@@ -4,10 +4,6 @@ import { calculateProrationFromPeriod } from "./calculateProration";
 
 const floorToSecond = (ms: number) => Math.floor(ms / 1000) * 1000;
 
-/**
- * Upgrade inside the short first period of a subscription created on a future anchor.
- * New plan: prorated over the full interval. Old plan: unused share of its stub charge is credited.
- */
 export const calculateAnchorStubUpgradeTotal = ({
 	attachedAt,
 	upgradedAt,

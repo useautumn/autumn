@@ -1,9 +1,3 @@
-/**
- * dfu.flash — cross-processor same add-on (contract 5): the same plan flashed on
- * both Stripe and RevenueCat with NON-ZERO prepaid balances yields two
- * cusProducts, each with the correct (non-zero) balance.
- */
-
 import { expect, test } from "bun:test";
 import { type ApiCustomerV5 } from "@autumn/shared";
 import {
@@ -69,7 +63,6 @@ test.concurrent(
 								{
 									plan_id: seatPack.id,
 									status: "active",
-									// RC billable has no linked sub to hydrate an anchor from.
 									started_at: Date.now() - 1000 * 60 * 60 * 24 * 120,
 									feature_quantities: [
 										{ feature_id: TestFeature.Messages, quantity: 300 },
@@ -85,7 +78,6 @@ test.concurrent(
 
 		const flashRes = await callFlash(autumnV2_2 as FlashClient, payload);
 
-		// ── Contract 5: two cusProducts flashed, both non-zero balances. ──
 		const stripeFlashed = flashRes.result?.flashed?.find(
 			(f) => f.processor === "stripe" && f.plan_id === seatPack.id,
 		);
@@ -96,7 +88,6 @@ test.concurrent(
 		expect(rcFlashed?.customer_product_id).toBeTruthy();
 
 		const customer = await autumnV2_3.customers.get<ApiCustomerV5>(customerId);
-		// Combined remaining: (200-50) + (300-100) = 350; regression = must not be 0.
 		expectBalanceCorrect({
 			customer,
 			featureId: TestFeature.Messages,

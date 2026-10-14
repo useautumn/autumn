@@ -36,7 +36,6 @@ export const entities = pgTable(
 		usage_alerts: jsonb().$type<DbUsageAlert[]>(),
 		overage_allowed: jsonb().$type<DbOverageAllowed[]>(),
 
-		// Optional...
 		feature_id: text("feature_id"),
 	},
 	(table) => [

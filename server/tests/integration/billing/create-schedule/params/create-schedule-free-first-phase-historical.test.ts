@@ -1,6 +1,3 @@
-// Regression: active subscriptions can be corrected with a prepaid/free first
-// phase, then resume paid billing on a future phase.
-
 import { expect, test } from "bun:test";
 import { customerProducts, ms } from "@autumn/shared";
 import { items } from "@tests/utils/fixtures/items";

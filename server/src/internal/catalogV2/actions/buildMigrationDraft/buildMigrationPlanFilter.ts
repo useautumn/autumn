@@ -20,8 +20,6 @@ const coversAllCustomerVersions = ({
 	versionsWithCustomersByPlanId: Record<string, number[]>;
 }): boolean => {
 	const targeted = [...new Set(versions)];
-	// A single-version existing update must stay pinned — collapsing would
-	// match later-created sibling versions the caller never targeted.
 	if (targeted.length <= 1) return false;
 	const customerVersions = versionsWithCustomersByPlanId[planId] ?? [];
 	if (customerVersions.length === 0) return false;
@@ -58,7 +56,6 @@ const withCustomGuard = ({
 	planFilter: PlanFilter;
 }): PlanFilter => (includeCustom ? planFilter : { ...planFilter, custom: false });
 
-/** Targets → PlanFilter: one branch per plan, version `$in` within a plan, `$or` across plans. */
 export const buildMigrationPlanFilter = ({
 	targets,
 	includeCustom,

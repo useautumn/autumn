@@ -9,8 +9,6 @@ import {
 	isOneOffPrice,
 } from "@utils/productUtils/priceUtils/classifyPriceUtils";
 
-/** Describes a volume line by the one tier total usage lands in,
- * e.g. "Pro - Messages: 750 @ $0.08 + $10.00 flat (volume tier 501–2,000)". */
 export const volumeUsageToLineDescription = ({
 	billedUsage,
 	billedTier,

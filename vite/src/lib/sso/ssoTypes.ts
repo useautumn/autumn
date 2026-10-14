@@ -25,11 +25,6 @@ export interface SsoSetup {
 
 export interface SsoConnectionResponse {
 	connection: SsoConnection | null;
-	/**
-	 * Returned on every authenticated SSO response, including before a
-	 * connection exists, so the callback URL can be registered with the identity
-	 * provider before its client credentials are issued.
-	 */
 	setup: SsoSetup;
 }
 
@@ -40,7 +35,6 @@ export interface CreateSsoConnectionParams {
 	clientSecret: string;
 }
 
-/** Presentation-only hint persisted after a successful SSO callback. */
 export interface SsoOrgHint {
 	providerId: string;
 	organizationName: string;

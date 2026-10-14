@@ -16,7 +16,6 @@ const resolveNoBillingChanges = ({
 		immediatePhaseProrationBehavior({ params }) === "none" &&
 		params.redirect_mode === "never");
 
-/** The multi-attach params that bill one phase's plans now. */
 export const phaseToImmediateParams = ({
 	ctx,
 	params,
@@ -29,8 +28,6 @@ export const phaseToImmediateParams = ({
 	customer_id: params.customer_id,
 	entity_id: params.entity_id,
 	no_billing_changes: resolveNoBillingChanges({ ctx, params }),
-	// Unscheduled plans bill with the immediate phase, so they attach alongside
-	// it — always last, which is how the contexts are told apart afterwards.
 	plans: [...phase.plans, ...(params.unscheduled_plans ?? [])].map((plan) => ({
 		plan_id: plan.plan_id,
 		entity_id: plan.entity_id,

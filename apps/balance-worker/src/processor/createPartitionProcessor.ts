@@ -229,9 +229,6 @@ function createProcessor({
 		});
 	}
 
-	/** Commands settle when Kafka has them, but the store applies behind the log:
-	 *  a "log" reply lands before its store apply, so a drained partition waits for
-	 *  the current store completion and for every batch handed to the store before it lets go. */
 	function updateBalance({ command }: { command: UpdateBalanceCommand }) {
 		return acceptCommand({
 			accepted: scope.accepted,
@@ -267,15 +264,11 @@ function createProcessor({
 	async function drain() {
 		await settleAcceptedCommands({ accepted: scope.accepted });
 		await scope.ctx.writer.flushDeferredLogs();
-		// A "log" reply lands before its store apply; a successor must find every apply
-		// finished, and a store that refused one must fail the drain, not be swallowed.
 		await scope.ctx.writer.waitForApplies();
 		await scope.ctx.writer.waitForStore();
 		await landCommandOffsets();
 	}
 
-	/** Best effort: the successor resumes from the Postgres bookmark, so an offset
-	 *  that did not land costs it a skip forward, never a second decision. */
 	async function landCommandOffsets(): Promise<void> {
 		try {
 			await scope.ctx.appender.flushCommandOffsets?.();

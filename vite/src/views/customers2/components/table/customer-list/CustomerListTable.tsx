@@ -131,8 +131,6 @@ export function CustomerListTable({
 		[queryStates.sort, queryStates.sortBy],
 	);
 
-	// setFilters resets the cursor stack, so a sort toggle lands back on page 1.
-	// A header click always sorts by created_at, replacing any popover sort.
 	const onSortingChange = useCallback<OnChangeFn<SortingState>>(
 		(updater) => {
 			const next = typeof updater === "function" ? updater(sorting) : updater;
@@ -172,8 +170,6 @@ export function CustomerListTable({
 	const hasRows = table.getRowModel().rows.length > 0;
 	const hasSearchQuery = Boolean(queryStates.q?.trim());
 	const hasFilters = hasActiveCustomerFilters(queryStates);
-	// A non-default sort must not fall through to the onboarding empty state
-	// (e.g. balance sort erroring/empty in an env without MotherDuck).
 	const hasNonDefaultSort = queryStates.sortBy !== "created_at";
 	const hasActiveFiltersOrSearch =
 		hasSearchQuery || hasFilters || hasNonDefaultSort;
@@ -222,8 +218,6 @@ export function CustomerListTable({
 				onColumnVisibilitySave: saveColumnVisibility,
 				columnVisibilityInToolbar: true,
 				flexibleTableColumns: true,
-				// No fixed height: the table fills the space left below the toolbar
-				// (see the flex chain below) so only the table body scrolls.
 				virtualization: {},
 			}}
 		>
@@ -258,12 +252,9 @@ export function CustomerListTable({
 							type="no-customers-found"
 							actionButton={<CustomerListCreateButton />}
 						/>
-						{/* Keeps back-navigation reachable when a later page comes back empty. */}
 						{currentPage > 1 && <CustomerListPaginationFooter />}
 					</>
 				) : (
-					// min-h floor (table + pinned footer): on very short viewports the page
-					// scrolls instead of squeezing the table.
 					<Table.Container className="flex-1 min-h-[460px]">
 						<Table.VirtualizedContent
 							className="flex flex-col min-h-0"

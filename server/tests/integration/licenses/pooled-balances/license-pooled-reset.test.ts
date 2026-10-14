@@ -1,10 +1,3 @@
-/**
- * Contract: license pools run the same runtime reset machinery as regular
- * pools. Overdue lazy license pools reset to seatCount × grant through reads;
- * rollover caps size off the pool grant; the reset cron selects the synthetic
- * row (never the seat sources). A dead parent hides the pool from reset.
- */
-
 import { expect, test } from "bun:test";
 import {
 	customerEntitlements,
@@ -157,8 +150,6 @@ test.concurrent(
 			resetMode: PooledBalanceResetMode.Lazy,
 		});
 
-		// Pool grant = 600, cap = 300; unused 550 trims to 300. A per-seat cap
-		// would wrongly stop at 100.
 		const granted = LICENSE_POOLED_LOW_GRANT * SEAT_COUNT;
 		const rolledOver = granted / 2;
 		await expectBalanceCorrect({
@@ -264,7 +255,6 @@ test.concurrent(
 		expect(hydrated.missingIds).toContain(pooledCustomerEntitlement.id);
 		expect(hydrated.customerEntitlements).toHaveLength(0);
 
-		// Nothing to hydrate means nothing to reset: the row is left as it was.
 		const before = await ctx.db.query.customerEntitlements.findFirst({
 			where: eq(customerEntitlements.id, pooledCustomerEntitlement.id),
 		});

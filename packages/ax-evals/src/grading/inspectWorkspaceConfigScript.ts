@@ -75,10 +75,6 @@ const materializeVariants = (
 	return { plans: materialized, variantPlanIds };
 };
 
-/**
- * Bun entrypoint: `bun inspectWorkspaceConfigScript.ts <workspaceDir>`.
- * Runs out-of-process so atmn internals never enter the braintrust CJS bundle.
- */
 const inspect = async (workspaceDir: string): Promise<InspectedConfig> => {
 	try {
 		const { wire } = await loadConfig({
@@ -88,8 +84,6 @@ const inspect = async (workspaceDir: string): Promise<InspectedConfig> => {
 			? (wire.features as { feature_id?: string; type?: string }[])
 			: [];
 		const rows = Array.isArray(wire.plans) ? (wire.plans as WirePlan[]) : [];
-		// Graders count what the catalog sells; history rows (active: false) are
-		// kept apart for the version graders.
 		const plans = rows.filter((plan) => plan.active !== false);
 		const inactivePlans = rows
 			.filter((plan) => plan.active === false)

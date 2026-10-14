@@ -1,21 +1,3 @@
-/**
- * Attach One-Off Prepaid with Tiered Pricing (Attach V2)
- *
- * Tests for attaching one-off products with included usage and tiered pricing
- * via the direct attach flow (customer already has payment method).
- *
- * Test 1: Customer-level attach with tiered one-off
- *   - Included usage: 100 units (1 free pack)
- *   - Tiered pricing: 0-500 @ $10/pack, 501+ @ $5/pack
- *   - Request 800 units → 1 free + 5×$10 + 2×$5 = $60 prepaid
- *   - Total: $10 base + $60 prepaid = $70
- *
- * Test 2: Entity-level attach with tiered one-off
- *   - Same tiered pricing, attached to two entities with different quantities
- *   - Entity 1: 300 units → 1 free + 2×$10 = $20 prepaid
- *   - Entity 2: 800 units → 1 free + 5×$10 + 2×$5 = $60 prepaid
- */
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3, ApiEntityV0 } from "@autumn/shared";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
@@ -35,18 +17,10 @@ const TIERS = [
 	{ to: "inf" as const, amount: 5 },
 ];
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 1: Customer-level one-off with tiered pricing
-// ═══════════════════════════════════════════════════════════════════════════════
-
 test.concurrent(`${chalk.yellowBright("oneoff-prepaid-tiers: customer-level tiered one-off")}`, async () => {
 	const customerId = "oneoff-tiers-customer";
 	const quantity = 800;
 
-	// 800 total = 8 packs: 1 free (includedUsage) + 7 paid
-	// Tier 1 (0-500): 5 paid packs × $10 = $50
-	// Tier 2 (501+): 2 paid packs × $5 = $10
-	// Prepaid total: $60
 	const expectedPrepaidCost = 5 * 10 + 2 * 5;
 	const expectedTotal = BASE_PRICE + expectedPrepaidCost;
 
@@ -102,23 +76,14 @@ test.concurrent(`${chalk.yellowBright("oneoff-prepaid-tiers: customer-level tier
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 2: Entity-level one-off with tiered pricing
-// ═══════════════════════════════════════════════════════════════════════════════
-
 test.concurrent(`${chalk.yellowBright("oneoff-prepaid-tiers: entity-level tiered one-off")}`, async () => {
 	const customerId = "oneoff-tiers-entity";
 	const quantity1 = 300;
 	const quantity2 = 800;
 
-	// Entity 1: 300 total = 3 packs: 1 free + 2 paid
-	// All 2 paid packs in tier 1 (0-500): 2 × $10 = $20
 	const expectedPrepaidCost1 = 2 * 10;
 	const expectedTotal1 = BASE_PRICE + expectedPrepaidCost1;
 
-	// Entity 2: 800 total = 8 packs: 1 free + 7 paid
-	// Tier 1 (0-500): 5 paid packs × $10 = $50
-	// Tier 2 (501+): 2 paid packs × $5 = $10
 	const expectedPrepaidCost2 = 5 * 10 + 2 * 5;
 	const expectedTotal2 = BASE_PRICE + expectedPrepaidCost2;
 
@@ -143,7 +108,6 @@ test.concurrent(`${chalk.yellowBright("oneoff-prepaid-tiers: entity-level tiered
 		actions: [],
 	});
 
-	// Attach to entity 1
 	const preview1 = await autumnV1.billing.previewAttach({
 		customer_id: customerId,
 		product_id: oneOff.id,
@@ -160,7 +124,6 @@ test.concurrent(`${chalk.yellowBright("oneoff-prepaid-tiers: entity-level tiered
 		redirect_mode: "if_required",
 	});
 
-	// Attach to entity 2
 	const preview2 = await autumnV1.billing.previewAttach({
 		customer_id: customerId,
 		product_id: oneOff.id,
@@ -177,7 +140,6 @@ test.concurrent(`${chalk.yellowBright("oneoff-prepaid-tiers: entity-level tiered
 		redirect_mode: "if_required",
 	});
 
-	// Verify entity 1 balance
 	const entity1 = await autumnV1.entities.get<ApiEntityV0>(
 		customerId,
 		entities[0].id,
@@ -190,7 +152,6 @@ test.concurrent(`${chalk.yellowBright("oneoff-prepaid-tiers: entity-level tiered
 		usage: 0,
 	});
 
-	// Verify entity 2 balance
 	const entity2 = await autumnV1.entities.get<ApiEntityV0>(
 		customerId,
 		entities[1].id,
@@ -203,7 +164,6 @@ test.concurrent(`${chalk.yellowBright("oneoff-prepaid-tiers: entity-level tiered
 		usage: 0,
 	});
 
-	// Verify invoices: 2 total (one per entity attach)
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	await expectCustomerInvoiceCorrect({
 		customer,

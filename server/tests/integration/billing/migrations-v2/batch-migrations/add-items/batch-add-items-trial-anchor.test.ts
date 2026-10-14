@@ -1,17 +1,3 @@
-/**
- * TDD coverage: batch add_items must anchor reset cycles to the TRIAL END for
- * trialing customers — the per-customer lane forces the billing anchor to
- * trial_ends_at while trialing.
- *
- * Contract under test:
- *   New behaviors:
- *     - pro with a 7-day trial + migrated `100 messages / month` → the new
- *       balance's next_reset_at is ~now + 7 days (the trial end), NOT
- *       now + 1 month.
- *   Side effects:
- *     - the run stays on the batch lane; the item run lands succeeded.
- */
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV5 } from "@autumn/shared";
 import { expectBalanceCorrect } from "@tests/integration/utils/expectBalanceCorrect";
@@ -29,8 +15,6 @@ test.concurrent(`${chalk.yellowBright("batch migration: add_items on a trialing 
 	const customerId = "batch-trial-anchor";
 	const pro = products.proWithTrial({
 		id: "batch-trial-anchor-pro",
-		// Base price only — no sibling resetting entitlement, so the anchor must
-		// come from the billing-anchor rungs, not sibling inheritance.
 		items: [],
 		trialDays: TRIAL_DAYS,
 	});
@@ -67,7 +51,6 @@ test.concurrent(`${chalk.yellowBright("batch migration: add_items on a trialing 
 	});
 	expect(result?.lane).toBe("batch");
 
-	// The migrated balance resets at the trial end — not a month from now.
 	expectBalanceCorrect({
 		customer: await autumnV2_2.customers.get<ApiCustomerV5>(customerId),
 		featureId: TestFeature.Messages,

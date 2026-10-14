@@ -8,7 +8,6 @@ import { logger } from "@/external/logtail/logtailUtils.js";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import { callerErrorToRecaseError } from "./callerErrorToRecaseError.js";
 
-/** The API's error contract; bodies are unchanged from before @autumn/errors. */
 export const errorToResponse = ({
 	c,
 	error,
@@ -59,10 +58,8 @@ export const errorToResponse = ({
 	);
 };
 
-/** Hono's error boundary: report through @autumn/errors, then answer with the API's error contract. */
 export const errorMiddleware = (err: Error, c: Context<HonoEnv>) => {
 	const ctx = c.get("ctx");
-	// A handler that lost a deadline race still fails later; its response already went out.
 	if (c.finalized) {
 		ctx?.logger?.warn(
 			`${c.req.method} ${c.req.routePath} failed after its response was sent: ${err.message}`,

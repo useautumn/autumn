@@ -1,7 +1,3 @@
-/**
- * Contract: child versioning advances every active parent-version link to the latest child.
- * Preserved parents remain discoverable for later preview/propagation and customer snapshots never move.
- */
 import { expect, test } from "bun:test";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { items } from "@tests/utils/fixtures/items.js";

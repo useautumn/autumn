@@ -1,9 +1,3 @@
-/**
- * The lint runs over the whole fixture tree, before anything is sent. These
- * tests run the GENERATED module against real fixtures, so they prove what a
- * user's config is refused for — not what the emitter meant to emit.
- */
-
 import { expect, test } from "bun:test";
 import { feature } from "../src/generated/features";
 import { ConfigError } from "../src/generated/lintRuntime";
@@ -46,8 +40,6 @@ test("a nested fixture is linted and named by its breadcrumb", () => {
 					name: "Credits",
 					type: "credit_system",
 					creditSchema: [
-						// Graduated, but no tiers: the anyOf branch that `tierBehavior`
-						// selects requires them.
 						{
 							meteredFeatureId: "messages",
 							tierBehavior: "graduated",
@@ -67,8 +59,6 @@ test("a nested fixture is linted and named by its breadcrumb", () => {
 });
 
 test("a flat credit line is not asked for the graduated branch's fields", () => {
-	// Unioning `required` across anyOf branches would demand tiers AND creditCost
-	// on every line. Branches are alternatives.
 	expect(() =>
 		atmn({
 			features: [

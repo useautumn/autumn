@@ -4,7 +4,6 @@ import type { Attachment } from "chat";
 import { logger as rootLogger } from "../../../lib/logger.js";
 
 export const MAX_ATTACHMENTS = 4;
-// Files from earlier in the thread ride along on top of the message's own.
 export const MAX_THREAD_ATTACHMENTS = 4;
 const MAX_ATTACHMENT_BYTES = 20 * 1024 * 1024;
 const SUPPORTED_MIME_TYPES = new Set([
@@ -84,7 +83,6 @@ export const prepareAttachmentMessage = async ({
 	fetchFallback?: AttachmentFetchFallback;
 	logger?: AutumnLogger;
 	text: string;
-	/** Files shared earlier in the thread, newest first. */
 	threadAttachments?: ReadonlyArray<EarlierAttachment>;
 }) => {
 	const notes: string[] = [];
@@ -97,7 +95,6 @@ export const prepareAttachmentMessage = async ({
 
 	const inlineBlocks: string[] = [];
 	const earlierLabels: string[] = [];
-	/** The attachments the turn will read, as passed in. */
 	const delivered: Attachment[] = [];
 	const skip = ({
 		attachment,

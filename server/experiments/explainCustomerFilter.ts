@@ -6,9 +6,6 @@ import {
 import type { CustomerFilter } from "@autumn/shared/api/migrations/filters/customerFilter.js";
 import { sql, type SQL } from "drizzle-orm";
 import { PgDialect } from "drizzle-orm/pg-core";
-// Import initDrizzle directly — avoid `experimentEnv` because its
-// `loadLocalEnv()` reads `server/.env` and clobbers env vars injected by
-// `infisical run --env=staging` (e.g. DATABASE_URL).
 import { initDrizzle } from "../src/db/initDrizzle";
 import { FeatureService } from "../src/internal/features/FeatureService.js";
 
@@ -18,17 +15,12 @@ const prodTestOrgId = (() => {
 	return v;
 })();
 
-// Mask password but show host so we can verify which DB we're hitting.
 const dbUrl = process.env.DATABASE_URL ?? "";
 console.log(
 	"DATABASE URL host:",
 	dbUrl.replace(/:\/\/[^@]+@/, "://***:***@") || "(empty)",
 );
 
-// To run against a remote env (e.g. staging) via infisical:
-//   infisical run --env=staging --recursive -- bun run server/experiments/explainCustomerFilter.ts
-
-// ─── Configuration ──────────────────────────────────────────────────
 const ORG_ID = prodTestOrgId;
 const ENV = AppEnv.Live;
 const SAMPLE_LIMIT = 1_000;
@@ -37,8 +29,6 @@ const EXPLAIN_MAX_LINES = 20;
 
 
 const FILTER: CustomerFilter = {
-	// plan: { plan_id: "free" },
-	// plan: { item: { feature_id: "CREDITS", price: { $ne: null } } }
 	plan: { plan_id: "free", recurring: true }
 };
 
@@ -49,8 +39,6 @@ const MIGRATION_PLAN = {
 		}
 	}
 };
-
-// ═════════════════════════════════════════════════════════════════════
 
 const truncateExplainText = (text: string, maxLines: number): string => {
 	const lines = text.split("\n");

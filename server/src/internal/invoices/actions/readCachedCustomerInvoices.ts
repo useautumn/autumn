@@ -7,10 +7,8 @@ import { getMiscCacheContext } from "@/external/redis/miscCache/getMiscCacheCont
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { InvoiceService } from "../InvoiceService.js";
 
-/** The same ten the Postgres subject read carries: what a customers.get renders. */
 const CUSTOMER_INVOICE_LIMIT = 10;
 
-/** A customer's latest invoices, from the misc cache first; a miss reads Postgres and is written back. */
 export const readCachedCustomerInvoices = async ({
 	ctx,
 	internalCustomerId,

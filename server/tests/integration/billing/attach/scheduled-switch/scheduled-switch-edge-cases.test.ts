@@ -1,13 +1,3 @@
-/**
- * Scheduled Switch Edge Cases Tests (Attach V2)
- *
- * Tests for edge cases and complex scheduling scenarios.
- *
- * Key behaviors:
- * - Multiple scheduled changes replace each other
- * - Only the final scheduled product takes effect at cycle end
- */
-
 import { test } from "bun:test";
 import type { ApiCustomerV3 } from "@autumn/shared";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
@@ -24,22 +14,6 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 1: Multiple scheduled changes on same entity
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Customer has Growth ($100/mo)
- * - Downgrade to Free (scheduled)
- * - Change to Pro (replaces scheduled)
- * - Change to Premium (replaces scheduled)
- * - Change to Free (replaces scheduled)
- *
- * Expected Result:
- * - Each change replaces the previous scheduled product
- * - Final state: Growth canceling, Free scheduled
- */
 test.concurrent(`${chalk.yellowBright("scheduled-switch-edge-cases 1: multiple scheduled changes on same entity")}`, async () => {
 	const customerId = "sched-switch-multi-changes";
 
@@ -76,7 +50,6 @@ test.concurrent(`${chalk.yellowBright("scheduled-switch-edge-cases 1: multiple s
 		actions: [s.billing.attach({ productId: growth.id })],
 	});
 
-	// Verify Stripe subscription after initial attach
 	await expectSubToBeCorrect({
 		db: ctx.db,
 		customerId,
@@ -84,7 +57,6 @@ test.concurrent(`${chalk.yellowBright("scheduled-switch-edge-cases 1: multiple s
 		env: ctx.env,
 	});
 
-	// Step 1: Downgrade to Free (scheduled)
 	await autumnV1.billing.attach({
 		customer_id: customerId,
 		product_id: free.id,
@@ -101,7 +73,6 @@ test.concurrent(`${chalk.yellowBright("scheduled-switch-edge-cases 1: multiple s
 		productId: free.id,
 	});
 
-	// Verify Stripe subscription
 	await expectSubToBeCorrect({
 		db: ctx.db,
 		customerId,
@@ -109,7 +80,6 @@ test.concurrent(`${chalk.yellowBright("scheduled-switch-edge-cases 1: multiple s
 		env: ctx.env,
 	});
 
-	// Step 2: Change scheduled to Pro (replaces Free)
 	await autumnV1.billing.attach({
 		customer_id: customerId,
 		product_id: pro.id,
@@ -130,7 +100,6 @@ test.concurrent(`${chalk.yellowBright("scheduled-switch-edge-cases 1: multiple s
 		productId: free.id,
 	});
 
-	// Verify Stripe subscription
 	await expectSubToBeCorrect({
 		db: ctx.db,
 		customerId,
@@ -138,7 +107,6 @@ test.concurrent(`${chalk.yellowBright("scheduled-switch-edge-cases 1: multiple s
 		env: ctx.env,
 	});
 
-	// Step 3: Change scheduled to Premium (replaces Pro)
 	await autumnV1.billing.attach({
 		customer_id: customerId,
 		product_id: premium.id,
@@ -159,7 +127,6 @@ test.concurrent(`${chalk.yellowBright("scheduled-switch-edge-cases 1: multiple s
 		productId: pro.id,
 	});
 
-	// Verify Stripe subscription
 	await expectSubToBeCorrect({
 		db: ctx.db,
 		customerId,
@@ -167,7 +134,6 @@ test.concurrent(`${chalk.yellowBright("scheduled-switch-edge-cases 1: multiple s
 		env: ctx.env,
 	});
 
-	// Step 4: Change scheduled back to Free (replaces Premium)
 	await autumnV1.billing.attach({
 		customer_id: customerId,
 		product_id: free.id,
@@ -188,7 +154,6 @@ test.concurrent(`${chalk.yellowBright("scheduled-switch-edge-cases 1: multiple s
 		productId: premium.id,
 	});
 
-	// Verify Stripe subscription
 	await expectSubToBeCorrect({
 		db: ctx.db,
 		customerId,
@@ -196,7 +161,6 @@ test.concurrent(`${chalk.yellowBright("scheduled-switch-edge-cases 1: multiple s
 		env: ctx.env,
 	});
 
-	// Features still at growth tier until cycle end
 	expectCustomerFeatureCorrect({
 		customer,
 		featureId: TestFeature.Messages,
@@ -205,7 +169,6 @@ test.concurrent(`${chalk.yellowBright("scheduled-switch-edge-cases 1: multiple s
 		usage: 0,
 	});
 
-	// Only 1 invoice (initial growth attach)
 	await expectCustomerInvoiceCorrect({
 		customer,
 		count: 1,

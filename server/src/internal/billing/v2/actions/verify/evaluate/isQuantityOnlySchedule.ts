@@ -1,9 +1,6 @@
 import { stripeRefToId } from "@autumn/shared";
 import type Stripe from "stripe";
 
-// The running phase trialing to its own boundary says nothing about what the
-// next phase bills, and can never equal its trial_end. A FUTURE phase doing so
-// is free for its whole duration, which is real drift and must still report.
 const billingShapeOf = ({
 	phase,
 	isCurrentPhase = false,
@@ -27,9 +24,6 @@ const billingShapeOf = ({
 		currency: phase.currency,
 	});
 
-/** A schedule whose future phases differ from the one running now only by
- * quantity is a step the subscription webhook applies, so Autumn holds no
- * phase for it and verify has nothing to compare against. */
 export const isQuantityOnlySchedule = ({
 	schedule,
 }: {

@@ -1,4 +1,3 @@
-/** Headless warm child: builds + publishes tw-warm:<sha12> via scripts/tw's warm path. */
 import { setLogSubscriber } from "@tw/helpers/logSink.ts";
 import { warmImageExists, warmImageTag } from "../../modal/modalClient.ts";
 import { loadTwModules } from "../../swarm/swarmProcess/twModules.ts";
@@ -17,7 +16,6 @@ const finish = async ({
 };
 
 const main = async ({ sha, branch }: WarmInit) => {
-	// run.ts sizes a Stripe budget at import; the warm build never talks to Stripe.
 	process.env.STRIPE_TEST_KEY_POOL ||= "sk_test_twd_warm_unused";
 	setLogSubscriber((line) => {
 		if (line.trim()) process.send?.({ type: "log", text: line });
@@ -33,7 +31,6 @@ const main = async ({ sha, branch }: WarmInit) => {
 		signal: abort.signal,
 	});
 
-	// scripts/tw swallows publish failures (the local run still works); twd needs the tag.
 	if (!(await warmImageExists({ sha }))) {
 		throw new Error(
 			`warm build finished but ${warmImageTag({ sha })} was not published`,

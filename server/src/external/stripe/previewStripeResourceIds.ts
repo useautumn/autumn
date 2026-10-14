@@ -115,8 +115,6 @@ export const applyPreviewStripeResourcesToProduct = ({
 	for (const price of product.prices) {
 		const config = price.config as Partial<UsagePriceConfig>;
 
-		// Stub the id for the resolved currency's slot (base or currencies[ccy]),
-		// so preview of a not-yet-created A-prime price doesn't fail item-spec build.
 		if (
 			!getPriceCurrencyStripeId({
 				config: price.config,
@@ -191,7 +189,6 @@ const applyPreviewStripeResourcesToCustomerProduct = ({
 	customerProduct.product.processor = product.processor ?? null;
 };
 
-/** Stamp preview Stripe IDs onto every customer product touched by a dry-run billing plan. */
 export const applyPreviewStripeResourcesToBillingPlan = ({
 	autumnBillingPlan,
 	billingContext,

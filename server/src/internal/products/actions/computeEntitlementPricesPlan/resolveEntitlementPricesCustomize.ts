@@ -16,7 +16,6 @@ import type {
 } from "./types/computeEntitlementPricesPlanParams";
 
 export type ResolvedEntitlementPricesDesired = {
-	/** undefined = no base price in desired. */
 	basePrice?: BasePriceParams | null;
 	planItems: CreatePlanItemParamsV1[];
 };
@@ -48,10 +47,6 @@ const hasCustomizeField = ({
 	customize.add_items !== undefined ||
 	customize.remove_items !== undefined;
 
-/**
- * Expand PUT/PATCH customize into a full desired basePrice + planItems set.
- * Omitted lanes are carried forward from currentRows so claim keeps them `same`.
- */
 export const resolveEntitlementPricesCustomize = ({
 	ctx,
 	params,
@@ -61,7 +56,6 @@ export const resolveEntitlementPricesCustomize = ({
 }): ResolvedEntitlementPricesDesired => {
 	const { customize, currentRows } = params;
 
-	// Version mint with empty customize = full copy from currentRows.
 	if (!hasCustomizeField({ customize }) && params.mode.type !== "version") {
 		throw new RecaseError({
 			message:
@@ -83,8 +77,6 @@ export const resolveEntitlementPricesCustomize = ({
 		});
 	}
 
-	// ctx.features may be projected (removed or renamed this call). Current
-	// rows still reference the old public ids, so union those in by id.
 	const currentRowFeatures = withCurrentRowFeatures({
 		features: ctx.features,
 		currentRows,

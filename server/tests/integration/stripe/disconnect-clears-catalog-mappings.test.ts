@@ -21,9 +21,6 @@ import { ProductService } from "@/internal/products/ProductService.js";
 import { createSandboxForOrg } from "@/internal/sandboxes/createSandbox.js";
 import { encryptData } from "@/utils/encryptUtils.js";
 
-// Disconnecting the last Stripe channel clears every catalog mapping in that org/environment.
-// Active, archived, versioned, variant, auxiliary, and currency-specific mappings are covered.
-
 const { db } = initDrizzle();
 const apiBase = `${(process.env.AUTUMN_TEST_BASE_URL ?? "http://localhost:8080").replace(/\/$/, "")}/v1`;
 const createdOrgs: Organization[] = [];

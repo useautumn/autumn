@@ -13,14 +13,10 @@ import {
 export type AllocationEntry = { internalEntityId: string; amount: number };
 
 export type AllocationPlan = {
-	/** Requested amounts after the patch; zero entries removed. */
 	amounts: Record<string, number>;
 	scale: number;
-	/** Shared usage per entity this cycle, after any first-call gap packing. */
 	entityUsage: Record<string, number>;
-	/** Σ min(usage, requested) over allocated entities. */
 	claimed: number;
-	/** Entities whose counter must be written: seeded on the first call. */
 	seededEntityIds: string[];
 };
 
@@ -37,7 +33,6 @@ const unusedOf = ({
 		new Decimal(0),
 	);
 
-/** The first call fits against the cycle's grant and absorbs untracked usage; later calls fit against what's left. */
 export const computeAllocationPlan = ({
 	featureId,
 	isFirstCall,
@@ -60,7 +55,6 @@ export const computeAllocationPlan = ({
 		if (amount === 0) delete amounts[internalEntityId];
 		else amounts[internalEntityId] = amount;
 	}
-	// Releases and changes to existing shares stay allowed even when the stored set is already over the cap.
 	const addsEntity = entries.some(
 		(entry) =>
 			entry.amount > 0 && currentAmounts[entry.internalEntityId] === undefined,
@@ -116,7 +110,6 @@ export const computeAllocationPlan = ({
 	};
 };
 
-/** One entity's numbers as the API shows them. */
 export const allocationPlanToEntityNumbers = ({
 	plan,
 	internalEntityId,

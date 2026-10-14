@@ -1,8 +1,3 @@
-/**
- * A line added directly in Stripe has no Autumn price behind it:
- * plan_id / feature_id / quantity null, entities [].
- */
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3, ApiListInvoiceV1 } from "@autumn/shared";
 import { waitForInvoiceLineItems } from "@tests/integration/billing/utils/expectInvoiceLineItemsCorrect";

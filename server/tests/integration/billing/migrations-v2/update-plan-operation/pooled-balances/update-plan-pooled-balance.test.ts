@@ -1,11 +1,3 @@
-/** Migration update_plan inherits pooled transitions from updateSubscription. */
-
-/** Contract: unrelated item updates preserve the pool and its contribution identity. */
-
-/** Contract: 100 -> 200 pooled messages adds only the grant delta while retaining usage. */
-
-/** Contract: non-pooled -> pooled messages creates one contribution with carried usage. */
-
 import { test } from "bun:test";
 import { runUpdatePlanMigration } from "@tests/integration/billing/migrations-v2/utils/runUpdatePlanMigration.js";
 import {

@@ -8,10 +8,6 @@ import type { Payloads } from "@/queue/queueUtils.js";
 
 type InsertEventBatchPayload = Payloads[typeof JobName.InsertEventBatch];
 
-/**
- * Worker function to batch insert track events into the database
- * Events are already fully constructed with internal IDs from Redis cache
- */
 export const runInsertEventBatch = async ({
 	db,
 	payload,
@@ -25,7 +21,6 @@ export const runInsertEventBatch = async ({
 
 	if (!eventInserts || eventInserts.length === 0) return;
 
-	// Normalize timestamps
 	eventInserts.forEach((event) => {
 		try {
 			if (event.timestamp && typeof event.timestamp === "string") {
@@ -38,12 +33,10 @@ export const runInsertEventBatch = async ({
 
 	logger.debug(`Inserting ${eventInserts.length} events`);
 
-	// prod without NEON_EVENTS_DATABASE_URL -> same no-op as today
 	const eventsDb =
 		neonEventsDb ?? (process.env.NODE_ENV === "development" ? db : null);
 	if (!eventsDb) return;
 
-	// Group events by internal_customer_id
 	const eventsByCustomer = new Map<string, typeof eventInserts>();
 	for (const event of eventInserts) {
 		const customerId = event.internal_customer_id;
@@ -59,7 +52,6 @@ export const runInsertEventBatch = async ({
 		eventsByCustomer.get(customerId)?.push(event);
 	}
 
-	// Insert events for each customer in parallel
 	const insertPromises = Array.from(eventsByCustomer.entries()).map(
 		async ([customerId, customerEvents]) => {
 			const { error } = await tryCatch(

@@ -5,13 +5,11 @@ const LOCKED = 1;
 
 let openLock: SharedArrayBuffer | null = null;
 
-/** The one lock every thread of the process opens SQLite connections under; the main thread hands it to each thread. */
 export const getSqliteOpenLock = (): SharedArrayBuffer => {
 	openLock ??= new SharedArrayBuffer(Int32Array.BYTES_PER_ELEMENT);
 	return openLock;
 };
 
-/** Called by a thread before it opens anything, with the lock its parent made. */
 export const shareSqliteOpenLock = ({
 	lock,
 }: {

@@ -10,9 +10,6 @@ type EvalMetadata = {
 
 const experimentName = "rsd-typed-approve-keeps-shape";
 
-// Replays the incident's worst step: "please approve" re-delegated the request
-// and the rebuilt write switched product and dropped prorations. A typed
-// confirmation must execute the previewed write's shape, never a re-model.
 const setup = incidentSetup();
 
 const customer = setup.refs.customers.sender;
@@ -29,10 +26,6 @@ initEval<EvalMetadata>({
 	cases: [
 		{
 			name: "a typed approve executes the previewed write, not a rebuilt one",
-			// A typed "please approve" is a text turn, not a card click, so
-			// execution is not gated; the incident's rebuild — re-modelled onto
-			// the enterprise subscription with prorations dropped — is what
-			// these counts catch.
 			conversation: [
 				user({
 					message: `Attach ${marketing.id} customized to $1900/month with 700K contacts for customer ${customer.id}, prorated with a finalized invoice.`,

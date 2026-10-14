@@ -168,7 +168,6 @@ export const issueCreditNote = async ({
 	});
 };
 
-/** A full credit can flip an open invoice to paid; refunds are tracked on our row. */
 const syncCreditedInvoice = async ({
 	ctx,
 	stripeCli,

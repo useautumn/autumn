@@ -1,8 +1,3 @@
-/**
- * Plan-tier auto_topups resolution and scope. auto_topups process async via SQS,
- * so each test waits then asserts the topped up balance + the extra paid invoice.
- */
-
 import { test } from "bun:test";
 import type { ApiCustomerV5 } from "@autumn/shared";
 import { makeAutoTopupConfig } from "@tests/integration/balances/auto-topup/utils/makeAutoTopupConfig";
@@ -37,7 +32,6 @@ test(`${chalk.yellowBright("auto-topup-plan1: a PLAN-DEFAULT config fires a top-
 		],
 	});
 
-	// 100 - 85 = 15 (below threshold 20) -> plan top-up of 100 -> 115.
 	await autumnV2_1.track({
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,

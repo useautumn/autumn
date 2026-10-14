@@ -1,11 +1,3 @@
-/**
- * A session that is alive at the transport level but never emits again is
- * dead, not flaky: exhausting the reconnect budget with ZERO events must
- * classify as EveSessionDeadError, and runAgentTurn must recover by deleting
- * the session row and retrying the message once on a fresh session — instead
- * of poisoning every later message in the thread.
- */
-
 import { beforeEach, describe, expect, mock, test } from "bun:test";
 import { AppEnv } from "@autumn/shared";
 import type { EveSessionRef } from "../../../src/internal/agentRuntime/eve/types.js";

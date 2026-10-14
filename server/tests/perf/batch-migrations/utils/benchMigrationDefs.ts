@@ -5,8 +5,6 @@ import {
 	BENCH_PAID_PRODUCT_ID,
 } from "./benchContext.js";
 
-/** add_items payloads by kind: consumable metered / boolean / non-consumable
- * metered (continuous use — no reset interval). */
 export const BENCH_ITEMS: Record<string, Record<string, unknown>> = {
 	words: {
 		feature_id: TestFeature.Words,
@@ -28,8 +26,6 @@ export type BenchMigrationDef = {
 	items: Record<string, unknown>[];
 };
 
-/** Dashboard-runnable bench migrations; ids match benchRunMigration's
- * `bench-mig-<plan>-<item>` convention so both paths share rows. */
 export const BENCH_MIGRATIONS: BenchMigrationDef[] = [
 	{
 		id: "bench-mig-bench-paid-words",

@@ -1,16 +1,3 @@
-/**
- * Which features setup loads state for. Pure function, so the regression —
- * a feature removed by omission must still be touched, or its preview row
- * reads has_customers/will_archive as false — is proven without a DB.
- *
- * Contract:
- *   B1  a feature explicitly listed in features[] is touched
- *   B2  a feature named in remove_features is touched
- *   B3  a feature dropped by omission under full state is touched
- *   B4  a feature nobody mentions when the payload has no opinion on features is not touched
- *   B5  a feature renamed through internal_id is touched under its current id
- */
-
 import { expect, test } from "bun:test";
 import type { Feature, UpdateCatalogParams } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";

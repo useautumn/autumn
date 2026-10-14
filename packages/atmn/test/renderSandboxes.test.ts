@@ -1,6 +1,3 @@
-/** A sandbox name comes from the server and reaches the terminal verbatim, so
- * an escape sequence in one could repaint the table around it. */
-
 import { expect, test } from "bun:test";
 import chalk from "chalk";
 import {
@@ -29,7 +26,6 @@ test("an OSC sequence in a name never reaches the terminal", () => {
 
 	expect(out).not.toContain("\u001b");
 	expect(out).not.toContain("\u0007");
-	// The payload goes with the sequence: only the real name is left.
 	expect(out).toContain("staging");
 	expect(out).not.toContain("pwned");
 });

@@ -6,7 +6,6 @@ import {
 } from "@/external/redis/actions/autumnCheckoutCache/autumnCheckoutCache.js";
 import { checkoutRepo } from "../repos/checkoutRepo";
 
-/** Gets a checkout from cache, falling back to the database. */
 export const getCheckoutFromCacheOrDb = async ({
 	checkoutId,
 	db,

@@ -1,10 +1,3 @@
-/**
- * Repoint right at a reset boundary: after migrating to v2 the overdue reset
- * fires exactly once and grants the NEW allowance — never twice, never the old
- * amount. Boundary crossing is driven the same way the reset-cron integration
- * tests do it (backdate next_reset_at, run resetCustomerEntitlement) — a
- * Stripe test clock is unnecessary since these plans are free and DB-only.
- */
 import { expect, test } from "bun:test";
 import { customerEntitlements } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features";
@@ -18,7 +11,6 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-// version-only is per-customer until definition execute is restored
 import { eq } from "drizzle-orm";
 import { readScopedFeatureRow } from "../../paidRowTestUtils";
 import { uniqueStem } from "../parity/versionParityTestUtils";
@@ -95,8 +87,6 @@ test.skip(`${chalk.yellowBright("batch version repoint anchors: reset at the bou
 		customerId,
 		featureId: TestFeature.Messages,
 	});
-	// Exactly 250 = one grant of the v2 allowance; a double reset or a
-	// stale v1 definition would land elsewhere.
 	expect(after.balance).toBe(250);
 	expect(after.next_reset_at).toBeGreaterThan(now);
 

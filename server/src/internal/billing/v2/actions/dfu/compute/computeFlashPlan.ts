@@ -51,7 +51,6 @@ const buildCustomerProduct = ({
 		revenueCatHydration,
 	} = planContext;
 
-	// Exactly one processor hydration applies per billable; both share the shape.
 	const hydration = stripeHydration ?? revenueCatHydration;
 	const resolvedStartsAt = plan.started_at ?? hydration?.startsAt;
 
@@ -61,15 +60,12 @@ const buildCustomerProduct = ({
 		hydration,
 	});
 
-	// Payload wins; hydrated period-end, else the plan start, anchors the cycle.
 	const resolvedAnchor =
 		billingCycleAnchor ??
 		hydration?.periodEndMs ??
 		resolvedStartsAt ??
 		currentEpochMs;
 
-	// Flags (don't block) surfaced to the caller as `mismatch` — the plan images
-	// anyway, but its billing state is likely wrong and needs attention.
 	const anchorResolved =
 		billingCycleAnchor != null ||
 		hydration?.periodEndMs != null ||
@@ -79,8 +75,6 @@ const buildCustomerProduct = ({
 		fullProduct.entitlements.some((entitlement) =>
 			isResettingEntitlement({ entitlement }),
 		);
-	// A paid recurring plan with no linked subscription can't be billed/managed —
-	// Autumn has no processor object to run renewals against.
 	const paidPlanUnlinked =
 		isProductPaidAndRecurring(fullProduct) && subscriptionIds.length === 0;
 
@@ -115,13 +109,10 @@ const buildCustomerProduct = ({
 		},
 	});
 
-	// Back-date the record to the plan's real start so a migrated plan's created_at
-	// (like starts_at) reflects the source, not the import time.
 	if (resolvedStartsAt !== undefined) {
 		customerProduct.created_at = resolvedStartsAt;
 	}
 
-	// Stamp the resolved RC sub/purchase id on the cusProduct processor.
 	if (revenueCatHydration?.processorId) {
 		customerProduct.processor = {
 			...customerProduct.processor,
@@ -151,7 +142,6 @@ export const computeFlashPlan = ({
 	const updateCustomerProducts: CustomerProductUpdate[] = [];
 	const flashed: DfuFlashedPlan[] = [];
 
-	// Desired state per addressed scope, keyed by the scope's product internal ids.
 	const customerDesiredProductIds = new Set<string>();
 	const entityDesiredProductIds = new Map<string, Set<string>>();
 	for (const planContext of flashContext.planContexts) {
@@ -167,8 +157,6 @@ export const computeFlashPlan = ({
 		}
 	}
 
-	// A scope is only reconciled when the payload addresses it: customer-level iff
-	// top-level billables exist; an entity iff it appears in `params.entities`.
 	const customerLevelAddressed = params.billables.length > 0;
 	const addressedEntityInternalIds = new Set<string>();
 	for (const entity of params.entities ?? []) {
@@ -210,9 +198,6 @@ export const computeFlashPlan = ({
 		});
 	}
 
-	// Reconcile each addressed scope independently: expire active in-scope
-	// products absent from that scope's desired set. Non-addressed scopes and
-	// products in other scopes are never touched.
 	for (const customerProduct of fullCustomer.customer_products) {
 		if (!ACTIVE_STATUSES.includes(customerProduct.status)) continue;
 

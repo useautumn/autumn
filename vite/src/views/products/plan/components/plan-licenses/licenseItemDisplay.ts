@@ -8,9 +8,6 @@ import {
 	UsageModel,
 } from "@autumn/shared";
 
-// A license has no backing feature, so render it as a non-consumable feature
-// whose "feature" is the license plan itself — included seats + per-seat base
-// price — so the same display logic as normal plan item rows formats it.
 export function licenseToFeature(license: ProductV2): Feature {
 	return {
 		internal_id: license.internal_id ?? license.id,

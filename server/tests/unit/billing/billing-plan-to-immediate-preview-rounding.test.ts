@@ -30,7 +30,6 @@ const charges = (amounts: number[]) =>
 
 describe("billingPlanToImmediatePreview rounding", () => {
 	test("USD: rounds each line to cents before summing", () => {
-		// 100.006 + 125.646 = 225.652 -> 225.65 if rounded once, but Stripe bills 100.01 + 125.65
 		const result = preview({
 			lines: charges([100.006, 125.646]),
 			currency: "usd",

@@ -22,7 +22,6 @@ const state = createState({ balance: 10 });
 const customerCatalog = createCatalogFor({ state });
 const sharedRows = createCatalogRowsFor({ state });
 
-/** The same row as the customer's copy, edited since: its allowance is the only difference. */
 const withAllowance = ({
 	row,
 	allowance,
@@ -38,7 +37,6 @@ const closers: (() => void)[] = [];
 const createContext = ({
 	shared,
 }: {
-	/** Null leaves the Atom without a shared catalog; rows are read after the customer. */
 	shared: CatalogRow[] | null;
 }): SlotProcessorContext => {
 	const sqliteStore = openSqliteStore({
@@ -165,7 +163,6 @@ describe("the subject a check runs on", () => {
 });
 
 describe("an entity read before its customer's latest evict", () => {
-	/** cus_1 stored at offset 1, with no version yet, and its entity ent_42 at `entityOffset`. */
 	const contextWithEntity = ({ entityOffset }: { entityOffset: bigint }) => {
 		const ctx = createContext({ shared: null });
 		pushEntity({ ctx, logOffset: entityOffset, readAt: 1100 });

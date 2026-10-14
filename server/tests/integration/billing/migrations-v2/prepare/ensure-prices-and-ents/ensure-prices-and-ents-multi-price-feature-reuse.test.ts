@@ -1,23 +1,3 @@
-/**
- * TDD test for Stripe resource reuse when a feature has MORE THAN ONE price
- * on the base plan (e.g. AI_CREDITS carries both a prepaid tiered price and a
- * separate metered pay-as-you-go price, sharing the same `feature_id`).
- *
- * Red-failure mode (before this fix): `inheritStripeResourcesFromLatestVersion`
- * used `findPriceByFeatureId`, which does a plain `.find()` and returns
- * whichever same-feature price comes first — with no fallback if that's the
- * wrong one. When the base plan's latest version has two prices for the same
- * feature (prepaid + metered), reuse could grab the metered price as the sole
- * candidate, fail to match content against the migration's new PREPAID price,
- * and mint a brand-new Stripe price instead of reusing the real prepaid one
- * that already exists.
- *
- * Green-success criteria (after fix): all same-feature prices on the base
- * plan's latest version are passed as reuse candidates, and
- * `copyStripeResourcesToMatchingPrice`'s own content matching picks the
- * correct (prepaid) one regardless of array order.
- */
-
 import { expect, test } from "bun:test";
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
@@ -40,9 +20,6 @@ type PriceStripeConfig = {
 test.concurrent(`${chalk.yellowBright("migrations prepare runtime: reuse picks the right price when a feature has more than one")}`, async () => {
 	const customerId = "prep-multi-price-feature-reuse";
 
-	// Pre-seed the base plan with BOTH a metered price AND a prepaid tiered
-	// price for the same feature — mirrors AI_CREDITS' real shape (prepaid
-	// tiers + a separate metered overage price).
 	const pro = products.pro({
 		id: "pro",
 		items: [
@@ -84,10 +61,6 @@ test.concurrent(`${chalk.yellowBright("migrations prepare runtime: reuse picks t
 		throw new Error("Expected pre-seeded prepaid price to have real Stripe ids");
 	}
 
-	// Migration replaces the prepaid item with the SAME shape (add_items uses
-	// an identical ladder) — matched product still carries the pre-existing
-	// metered price for the same feature alongside it, so the reuse candidate
-	// set is genuinely ambiguous by feature_id alone.
 	const operations = buildUpdatePlanOperations({
 		planId: pro.id,
 		customize: {
@@ -122,7 +95,6 @@ test.concurrent(`${chalk.yellowBright("migrations prepare runtime: reuse picks t
 	const migratedConfig = run.result.prices.find((p) => p.id === priceId)
 		?.config as PriceStripeConfig | undefined;
 
-	// ── The actual fix: reuse finds the PREPAID price, not the metered one ──
 	expect(migratedConfig?.stripe_product_id).toBe(preSeededConfig.stripe_product_id);
 	expect(migratedConfig?.stripe_prepaid_price_v2_id).toBe(
 		preSeededConfig.stripe_prepaid_price_v2_id,

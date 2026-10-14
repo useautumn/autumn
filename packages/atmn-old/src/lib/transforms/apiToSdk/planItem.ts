@@ -2,21 +2,16 @@ import type { PlanItem } from "../../../compose/models/planModels.js";
 import type { ApiPlanItem } from "../../api/types/index.js";
 import { createTransformer } from "./Transformer.js";
 
-/** Maps API plan items to SDK config while omitting redundant reset cycles. */
 export const planItemTransformer = createTransformer<ApiPlanItem, PlanItem>({
-	// rename: maps api snake_case field -> sdk camelCase field (shallow copy)
 	rename: {
 		feature_id: "featureId",
 		entity_feature_id: "entityFeatureId",
 	},
 
-	// Only persist unlimited/pooled when true (false is implicit default)
 	copy: ["unlimited", "pooled"],
 	swapFalse: ["unlimited", "pooled"],
 
-	// Computed fields
 	compute: {
-		// Only include included if not unlimited
 		included: (api) => (api.unlimited ? undefined : api.included),
 
 		reset: (api) => {
@@ -33,7 +28,6 @@ export const planItemTransformer = createTransformer<ApiPlanItem, PlanItem>({
 			};
 		},
 
-		// Transform price object with camelCase fields
 		price: (api) => {
 			if (!api.price) return undefined;
 
@@ -72,7 +66,6 @@ export const planItemTransformer = createTransformer<ApiPlanItem, PlanItem>({
 				maxPurchase: api.price.max_purchase ?? undefined,
 				billingMethod: api.price.billing_method,
 				tierBehavior: api.price.tier_behavior,
-				// Map API price.interval directly to SDK price.interval
 				interval: api.price.interval,
 				...(api.price.interval_count !== undefined && {
 					intervalCount: api.price.interval_count,
@@ -80,7 +73,6 @@ export const planItemTransformer = createTransformer<ApiPlanItem, PlanItem>({
 			};
 		},
 
-		// Transform proration object to camelCase
 		proration: (api) =>
 			api.proration
 				? {
@@ -89,7 +81,6 @@ export const planItemTransformer = createTransformer<ApiPlanItem, PlanItem>({
 					}
 				: undefined,
 
-		// Transform rollover object to camelCase
 		rollover: (api) =>
 			api.rollover
 				? {

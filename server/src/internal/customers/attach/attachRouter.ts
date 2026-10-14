@@ -37,16 +37,13 @@ export const handlePrepaidErrors = async ({
 }) => {
 	const { prices, entitlements, optionsList } = attachParams;
 
-	// 2. Check if options are valid
 	for (const price of prices) {
 		const billingType = getBillingType(price.config!);
 
 		if (billingType === BillingType.UsageInAdvance) {
-			// Get options for price
 			const priceEnt = getPriceEntitlement(price, entitlements);
 			const options = getEntOptions(optionsList, priceEnt);
 
-			// 1. If not checkout, quantity should be defined
 			const regularCheckout = useCheckout && !config.invoiceCheckout;
 			if (!regularCheckout && nullOrUndefined(options?.quantity)) {
 				throw new RecaseError({
@@ -68,7 +65,6 @@ export const handlePrepaidErrors = async ({
 				});
 			}
 
-			// 3. Quantity cannot be negative
 			if (notNullish(options?.quantity) && options?.quantity < 0) {
 				throw new RecaseError({
 					message: `Quantity cannot be negative`,
@@ -77,7 +73,6 @@ export const handlePrepaidErrors = async ({
 				});
 			}
 
-			// 4. If there's only one price, quantity must be greater than 0
 			if (options?.quantity === 0 && prices.length === 1) {
 				throw new RecaseError({
 					message: `When attaching a single prepaid price, quantity must be greater than 0`,
@@ -104,9 +99,8 @@ const handlePublicAttachErrors = async ({
 		return;
 	}
 
-	// 1. If on paid plan, not allowed to switch product
 	const curProductFree = isFreeProduct(
-		curCusProduct?.customer_prices.map((cp: any) => cp.price) || [], // if no current product...
+		curCusProduct?.customer_prices.map((cp: any) => cp.price) || [],
 	);
 
 	if (!curProductFree) {
@@ -133,7 +127,6 @@ export const checkStripeConnections = async ({
 	const { logger, db } = ctx;
 	const env = customer.env;
 
-	// 2. If invoice only and no email, save email
 	if (attachParams.invoiceOnly && !customer.email) {
 		customer.email = `${customer.id}-${org.id}@invoices.useautumn.com`;
 		await Promise.all([
@@ -218,7 +211,6 @@ const customerHasPm = async ({
 }: {
 	attachParams: AttachParams;
 }) => {
-	// SCENARIO 3: No payment method, checkout required
 	const paymentMethod = await getCusPaymentMethod({
 		stripeCli: createStripeCli({
 			org: attachParams.org,

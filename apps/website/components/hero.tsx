@@ -8,9 +8,6 @@ import { useEffect, useRef, useState } from "react";
 import { CTALines, IconCTADocs, IconCTAStart } from "@/app/constant";
 import { getGsap } from "@/lib/lazyGsap";
 
-// `AutumnConfig` pulls in `react-syntax-highlighter` + `highlight.js` (~100KB
-// gzipped + meaningful parse cost on mobile). It only renders on `xl+`
-// viewports, so keep it out of the critical path for mobile users entirely.
 const AutumnConfig = dynamic(() => import("./autumn-config"), { ssr: false });
 
 const BADGE_TEXT = "how to build a credit ledger";
@@ -28,13 +25,8 @@ const getLoggedInHintCookie = () => {
 export default function Hero() {
 	const containerRef = useRef<HTMLDivElement | null>(null);
 	const [isLoggedIn, setIsLoggedIn] = useState(false);
-	// Gate the xl-only hero visual (background video + AutumnConfig syntax
-	// highlighter) behind an actual viewport check so mobile never downloads
-	// ~100KB of react-syntax-highlighter or 640KB of video that `hidden
-	// xl:block` would otherwise still fetch.
 	const [isXl, setIsXl] = useState(false);
 
-	// Read the hint cookie after mount to avoid SSR/CSR hydration mismatch.
 	useEffect(() => {
 		setIsLoggedIn(getLoggedInHintCookie() === true);
 	}, []);
@@ -54,8 +46,6 @@ export default function Hero() {
 		let ctx: { revert: () => void } | null = null;
 		let cancelled = false;
 
-		// Mobile: CSS animations in globals.css handle the hero reveal.
-		// Guard here so mobile never initiates the ~60KB GSAP dynamic import.
 		if (window.innerWidth < 1024) return;
 
 		getGsap().then((gsap) => {
@@ -71,8 +61,6 @@ export default function Hero() {
 
 				const tl = gsap.timeline({ defaults: { overwrite: "auto" } });
 
-				// hero-bg is intentionally NOT hidden — it is the LCP element and
-				// must be visible from first paint. The brightness flash still runs.
 				tl.to(".hero-bg", {
 					filter: "brightness(1.6)",
 					duration: 0.125,
@@ -162,14 +150,6 @@ export default function Hero() {
 							</p>
 						</div>
 					</div>
-					{/*
-					  Keep the wrapper itself in the SSR HTML with `hidden xl:block`
-					  so desktop gets the correct half-width hero layout from the
-					  first paint (no post-hydration layout shift). Only the heavy
-					  children (video + AutumnConfig) are client-gated on `isXl`
-					  so mobile never downloads them, and desktop fills the
-					  already-reserved space once it hydrates.
-					*/}
 					<div className="hero-reveal lg:opacity-0 relative w-[50vw] max-w-[720px] min-h-[525px] p-16 py-0 mx-auto hidden xl:flex flex-col justify-center">
 						{isXl && (
 							<>
@@ -192,7 +172,6 @@ export default function Hero() {
 				</div>
 				<div className="border-t border-[#292929]" />
 				<div className="flex flex-nowrap items-center xl:px-22.75 px-4 bg-[#0F0F0F] w-full overflow-hidden">
-					{/* Primary CTA */}
 					<div className="hero-cta lg:opacity-0 w-full md:w-fit md:flex-shrink-0">
 						<Link
 							href={
@@ -207,7 +186,6 @@ export default function Hero() {
 								whileTap="hover"
 								className="relative"
 							>
-								{/* Adjusted px-3 for mobile, md:px-4 for desktop */}
 								<div className="relative overflow-hidden flex items-center gap-1.5 md:gap-2.5 cursor-pointer justify-between py-2 px-3 md:px-4 md:py-3.5 md:w-50 font-sans bg-[#9564ff] hover:bg-[#7D46F4] transition-colors duration-300">
 									<CTALines />
 									<span className="relative z-10 tracking-[-2%] uppercase md:normal-case text-white font-medium text-[12px] md:text-base whitespace-nowrap">
@@ -221,7 +199,6 @@ export default function Hero() {
 						</Link>
 					</div>
 
-					{/* Secondary CTA */}
 					<div className="hero-cta lg:opacity-0 w-full md:w-fit md:flex-shrink-0">
 						<Link href={"https://cal.com/ayrod"}>
 							<motion.div
@@ -257,10 +234,8 @@ export default function Hero() {
 					</div>
 				</div>
 				<div className="border-b border-[#292929]" />
-				{/* MOBILE VIEW*/}
 				<div className="relative block xl:hidden w-full overflow-hidden  bg-[#0F0F0F] mt-12">
 					<div className="relative overflow-hidden w-full p-7 flex items-center justify-center">
-						{/* Still frame of the desktop webm; the looping video is too heavy for mobile radios. */}
 						<Image
 							src="/images/pricing-models/pricingbg-mobile.webp"
 							alt=""

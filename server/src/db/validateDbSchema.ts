@@ -4,7 +4,6 @@ import { PgTable } from "drizzle-orm/pg-core";
 import { logger } from "../external/logtail/logtailUtils";
 import type { DrizzleCli } from "./initDrizzle";
 
-// eventsNeon lives on the Neon DB; the balance caches live in DuckDB.
 const SKIP_TABLES = [
 	"migrationErrors",
 	"eventsNeon",
@@ -80,14 +79,11 @@ export const validateDbSchema = async ({
 	schemaExports?: Record<string, unknown>;
 	label?: string;
 }) => {
-	// Dynamically get all tables from schema (exclude relations)
 	const logPrefix = label ? `[${label}] ` : "";
 
 	const tableEntries = Object.entries(schemaExports)
 		.filter(([name, table]) => {
-			// Filter out relations and non-table exports
 			if (name.includes("Relations")) return false;
-			// Skip migrationErrors table (known issue)
 			if (SKIP_TABLES.includes(name)) return false;
 			return is(table, PgTable);
 		})
@@ -103,7 +99,6 @@ export const validateDbSchema = async ({
 	});
 	const elapsed = Date.now() - start;
 
-	// Check for any failures
 	const failures = results.filter(
 		(v): v is { name: string; success: false; error: string } => !v.success,
 	);

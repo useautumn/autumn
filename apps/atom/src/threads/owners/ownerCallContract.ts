@@ -17,7 +17,6 @@ import type {
 	SubjectDigestOnWire,
 } from "./types/ownerCall.js";
 
-/** One instance per version on the owner: building one sorts the version registry. */
 const apiVersions = new Map<ApiVersion, ApiVersionClass>();
 
 const apiVersionOf = (version: ApiVersion): ApiVersionClass => {
@@ -61,7 +60,6 @@ export const errorToReply = ({
 	message: error instanceof Error ? error.message : String(error),
 });
 
-/** The owner's failure, thrown again on the caller's thread: a check it cannot answer is still forwarded, a bad push still refused. */
 export const replyToError = ({
 	cannotAnswer,
 	invalid,

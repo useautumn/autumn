@@ -14,20 +14,11 @@ import {
 } from "../utils/pagePhaseTimings.js";
 
 export type ClaimedBatchMigrationPage = {
-	/** Rows the filter select returned — drives the cursor and loop end. */
 	selectedCount: number;
-	/** Keyset cursor for the next call (last selected internal_id). */
 	cursor: string | undefined;
-	/** The subset of selected customers this run now owns. */
 	customers: BatchMigrationPageCustomer[];
 };
 
-/**
- * Selects and claims the next unprocessed filter-matched customers (keyset
- * cursor + checkpoint anti-join) in a single statement. The claim also takes
- * over rows already `running` — crash recovery: a crashed run's orphans are
- * re-claimed and re-executed (mutations are replay-idempotent).
- */
 export const claimNextBatchMigrationPage = async ({
 	ctx,
 	migration,
@@ -55,7 +46,6 @@ export const claimNextBatchMigrationPage = async ({
 	const select = buildCustomerSelect({
 		orgId: ctx.org.id,
 		env: ctx.env,
-		// Same narrowing the per-customer lane applies for `only`.
 		filter: narrowCustomerFilter({
 			filter: migration.filter?.customer,
 			controls,
@@ -65,9 +55,6 @@ export const claimNextBatchMigrationPage = async ({
 			migrationInternalId,
 			migrationRunId,
 			dryRun: false,
-			// `running` stays selectable so orphaned claims from a crashed run
-			// are re-encountered and taken over below; retried statuses become
-			// selectable again.
 			excludedStatuses: [
 				MigrationItemRunStatus.Succeeded,
 				...(retryItemStatuses.has(MigrationItemRunStatus.Skipped)
@@ -87,9 +74,6 @@ export const claimNextBatchMigrationPage = async ({
 		...retryItemStatuses,
 	];
 
-	// Select and claim in one statement so the page's rows never leave Postgres.
-	// The conflict branch resets status to `running` because the page's marks
-	// only flip running rows — that is what lets a re-claimed retry settle.
 	const rows = (await timePhase({
 		phases,
 		phase: "claim_select",

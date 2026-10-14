@@ -1,11 +1,3 @@
-/**
- * listFull variants[] — every version pointing at that base row.
- *
- * Contract:
- *   pro v1 and pro v2 both with base_internal_product_id = baseV1
- *   → listFull(base) includes both on baseV1.variants
- */
-
 import { expect, test } from "bun:test";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";

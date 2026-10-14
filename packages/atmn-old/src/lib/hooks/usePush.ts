@@ -303,14 +303,12 @@ export function usePush(options?: UsePushOptions) {
 	const [analysis, setAnalysis] = useState<PushAnalysis | null>(null);
 	const [error, setError] = useState<string | null>(null);
 
-	// Prompt queue management
 	const [promptQueue, setPromptQueue] = useState<PushPrompt[]>([]);
 	const [currentPromptIndex, setCurrentPromptIndex] = useState(0);
 	const [promptResponses, setPromptResponses] = useState<Map<string, string>>(
 		new Map(),
 	);
 
-	// Progress tracking
 	const [featureProgress, setFeatureProgress] = useState<
 		Map<string, FeatureStatus>
 	>(new Map());
@@ -318,24 +316,19 @@ export function usePush(options?: UsePushOptions) {
 		new Map(),
 	);
 
-	// Results
 	const [result, setResult] = useState<PushResult | null>(null);
 
-	// Get org info
 	const orgQuery = useOrganization(effectiveCwd, environment);
 
-	// Current prompt
 	const currentPrompt =
 		currentPromptIndex < promptQueue.length
 			? promptQueue[currentPromptIndex]
 			: null;
 
-	// Load local config
 	const loadConfigMutation = useMutation({
 		mutationFn: async () => {
 			const config = await loadLocalConfig(effectiveCwd);
 
-			// Validate config for missing required fields
 			const { validateConfig, formatValidationErrors } = await import(
 				"../../commands/push/validate.js"
 			);
@@ -358,7 +351,6 @@ export function usePush(options?: UsePushOptions) {
 		},
 	});
 
-	// Analyze push
 	const analyzeMutation = useMutation({
 		mutationFn: async (config: LocalConfig) => {
 			const [{ preview }, remoteData] = await Promise.all([
@@ -378,15 +370,12 @@ export function usePush(options?: UsePushOptions) {
 		},
 		onSuccess: ({ analysis: analysisResult, preview }) => {
 			setAnalysis(analysisResult);
-			// Check if there are any meaningful changes to push
-			// Check if there are any changes to push
 			const hasChanges =
 				catalogPreviewHasChanges(preview) ||
 				analysisResult.archivedFeatures.length > 0 ||
 				analysisResult.archivedPlans.length > 0;
 
 			if (!hasChanges) {
-				// No changes to push - show "already in sync" state
 				setPhase("no_changes");
 				if (onComplete) {
 					setTimeout(onComplete, 1000);
@@ -394,25 +383,20 @@ export function usePush(options?: UsePushOptions) {
 				return;
 			}
 
-			// Build prompt queue
 			const prompts: PushPrompt[] = [];
 
-			// Production confirmation
 			if (environment === AppEnv.Live) {
 				prompts.push(createProdConfirmationPrompt());
 			}
 
-			// Archived features
 			for (const feature of analysisResult.archivedFeatures) {
 				prompts.push(createFeatureArchivedPrompt(feature));
 			}
 
-			// Archived plans
 			for (const plan of analysisResult.archivedPlans) {
 				prompts.push(createPlanArchivedPrompt(plan));
 			}
 
-			// Plans with versioning or all-version update choices
 			for (const planInfo of analysisResult.plansToUpdate) {
 				if (planInfo.willVersion || planInfo.hasHistoricalVersions) {
 					prompts.push(createPlanVersioningPrompt(planInfo, environment));
@@ -439,12 +423,10 @@ export function usePush(options?: UsePushOptions) {
 				}
 			}
 
-			// Feature deletions
 			for (const info of analysisResult.featuresToDelete) {
 				prompts.push(createFeatureDeletePrompt(info));
 			}
 
-			// Plan deletions
 			for (const info of analysisResult.plansToDelete) {
 				prompts.push(createPlanDeletePrompt(info));
 			}
@@ -464,18 +446,14 @@ export function usePush(options?: UsePushOptions) {
 				return;
 			}
 
-			// If yes flag or no prompts, proceed directly
 			if (yes || prompts.length === 0) {
-				// Auto-respond to all prompts with appropriate defaults
 				if (yes) {
 					const responses = new Map<string, string>();
 					for (const prompt of prompts) {
-						// Special case: prod confirmation should auto-confirm with --yes
 						if (prompt.type === "prod_confirmation") {
 							responses.set(prompt.id, "confirm");
 							continue;
 						}
-						// For all other prompts, use the default option
 						const defaultOption = prompt.options.find((o) => o.isDefault);
 						responses.set(
 							prompt.id,
@@ -871,12 +849,10 @@ export function usePush(options?: UsePushOptions) {
 		[promptQueue],
 	);
 
-	// Respond to prompt
 	const respondToPrompt = useCallback(
 		(value: string) => {
 			if (!currentPrompt) return;
 
-			// Check for cancel on prod confirmation
 			if (value === "cancel") {
 				setError("Push cancelled by user");
 				setPhase("error");
@@ -900,7 +876,6 @@ export function usePush(options?: UsePushOptions) {
 				nextIndex++;
 			}
 
-			// Move to next prompt or next phase
 			if (nextIndex >= promptQueue.length) {
 				setCurrentPromptIndex(nextIndex);
 				setPhase("pushing_features");
@@ -939,14 +914,12 @@ export function usePush(options?: UsePushOptions) {
 		shouldShowPrompt,
 	]);
 
-	// Auto-start config loading
 	useEffect(() => {
 		if (phase === "loading_config" && !loadConfigMutation.isPending) {
 			loadConfigMutation.mutate();
 		}
 	}, [phase, loadConfigMutation]);
 
-	// Start analysis when org is ready
 	useEffect(() => {
 		if (
 			phase === "loading_org" &&
@@ -959,7 +932,6 @@ export function usePush(options?: UsePushOptions) {
 		}
 	}, [phase, orgQuery.isSuccess, localConfig, analyzeMutation]);
 
-	// Start pushing features
 	useEffect(() => {
 		if (
 			phase === "pushing_features" &&
@@ -971,7 +943,6 @@ export function usePush(options?: UsePushOptions) {
 		}
 	}, [phase, localConfig, pushFeaturesMutation]);
 
-	// Start pushing plans
 	useEffect(() => {
 		if (
 			phase === "pushing_plans" &&
@@ -983,7 +954,6 @@ export function usePush(options?: UsePushOptions) {
 		}
 	}, [phase, localConfig, pushPlansMutation]);
 
-	// Combine errors
 	const combinedError =
 		error || orgQuery.error ? error || formatError(orgQuery.error) : null;
 

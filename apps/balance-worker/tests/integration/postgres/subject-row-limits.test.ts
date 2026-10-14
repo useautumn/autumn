@@ -40,7 +40,6 @@ describe.skipIf(!databaseUrl)("subject row limits", () => {
 		const seeded = await seedCustomer({ postgres });
 		const cap = SUBJECT_ROW_LIMITS.customerProducts;
 		const prefix = `cp_cap_${crypto.randomUUID().slice(0, 8)}`;
-		// One more than the cap, each newer than the seeded product and one another; ids zero-padded so id order is age order.
 		await postgres.db.execute(sql`INSERT INTO customer_products
 			(id, internal_customer_id, internal_product_id, product_id, created_at, starts_at, status, options, billing_version)
 			SELECT ${prefix} || '_' || lpad(n::text, 4, '0'), ${seeded.internalCustomerId}, ${seeded.internalProductId}, 'pro',
@@ -51,7 +50,6 @@ describe.skipIf(!databaseUrl)("subject row limits", () => {
 			const kept = envelope.customer_products.map(({ id }) => id);
 
 			expect(kept).toHaveLength(cap);
-			// The seeded product and the oldest inserted one are the two that fall off.
 			expect(kept).not.toContain(seeded.customerProductId);
 			expect(kept).not.toContain(`${prefix}_0001`);
 			expect(kept[0]).toBe(`${prefix}_${String(cap + 1).padStart(4, "0")}`);
@@ -84,7 +82,6 @@ describe.skipIf(!databaseUrl)("subject row limits", () => {
 			expect(loose).toHaveLength(cap);
 			expect(loose).not.toContain(`${prefix}_0001`);
 			expect(loose).toContain(`${prefix}_${String(cap + 1).padStart(4, "0")}`);
-			// The product's own grant is never counted against the loose cap.
 			expect(envelope.customer_entitlements.map(({ id }) => id)).toContain(
 				seeded.customerEntitlementId,
 			);

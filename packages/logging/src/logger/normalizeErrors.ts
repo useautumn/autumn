@@ -5,10 +5,6 @@ const UNCHANGED = Symbol("unchanged");
 const rewriteAppPath = (value: string): string =>
 	value.replace("file:///app/", "./").replace(/\/app\//g, "./");
 
-/** `cause` is where the useful half of a wrapped error lives, and it is not
- *  enumerable either, so dropping it leaves a log line naming the wrapper
- *  ("Partition writer requires recovery") with no sign of what actually went
- *  wrong. Depth is bounded the same way the value walk is. */
 export const errorToObject = (
 	error: Error,
 	depth = 0,
@@ -32,8 +28,6 @@ const isPlainObject = (value: object) => {
 	return proto === Object.prototype || proto === null;
 };
 
-/** Class instances without enumerable keys or toJSON stringify to `{}` —
- * String(value) at least preserves "[object Response]"-style identity. */
 const opaqueInstanceToString = (value: object) => {
 	if (typeof (value as { toJSON?: unknown }).toJSON === "function") return;
 	return Object.keys(value).length === 0 ? String(value) : undefined;
@@ -70,8 +64,6 @@ const normalize = (
 	return changed ? next : UNCHANGED;
 };
 
-/** Errors nested in payload objects JSON-serialize to `{}` (their props are
- * non-enumerable), so rewrite them to plain objects before pino sees them. */
 export const normalizeErrorValues = (value: unknown): unknown => {
 	const result = normalize(value, 0);
 	return result === UNCHANGED ? value : result;

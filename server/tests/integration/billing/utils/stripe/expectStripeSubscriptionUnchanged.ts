@@ -1,10 +1,6 @@
 import { expect } from "bun:test";
 import type Stripe from "stripe";
 
-/**
- * Asserts that two Stripe subscriptions are equivalent --
- * same items (price IDs + quantities) and billing_cycle_anchor.
- */
 export const expectStripeSubscriptionUnchanged = ({
 	before,
 	after,

@@ -81,7 +81,6 @@ describe("a plan's new rollovers", () => {
 			catalog: catalogWithCap({ state, max: 50 }),
 		});
 		const after = applyMutation({ state, mutation });
-		// 40 + 30 = 70 against a cap of 50: the oldest gives up 20, the new row keeps its 30.
 		expect(after.rollovers.map(({ id, balance }) => ({ id, balance }))).toEqual(
 			[
 				{ id: "roll_old", balance: 20 },

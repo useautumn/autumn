@@ -5,7 +5,6 @@ import { TwdError } from "../apiError.ts";
 import type { TwdHono } from "../types/twdHono.ts";
 
 const PUBLIC_PREFIXES = ["/auth/", "/webhooks/", "/ingress/"];
-/** Root paths outside /api that still need an actor; the rest of the root is OAuth, webhooks, ingress and the SPA. */
 const AUTHED_ROOT_PATHS = new Set(["/ws", "/mcp"]);
 
 const stripApiPrefix = ({ path }: { path: string }) =>
@@ -39,7 +38,6 @@ const withQueryToken = ({ request }: { request: Request }): Request => {
 	return new Request(request, { headers });
 };
 
-/** Sets `ctx` on every request; non-public routes need a session cookie or API key. */
 export const authMiddleware: MiddlewareHandler<TwdHono> = async (c, next) => {
 	if (isPublicPath({ path: c.req.path })) {
 		c.set("ctx", createContext({ actor: SYSTEM_ACTOR }));

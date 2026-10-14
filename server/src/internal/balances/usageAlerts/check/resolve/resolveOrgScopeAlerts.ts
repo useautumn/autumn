@@ -5,7 +5,6 @@ import {
 import { AppEnv, type Feature } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 
-// Org alerts measure the tracked subject, entity included.
 export const resolveOrgScopeAlerts = ({
 	ctx,
 	feature,

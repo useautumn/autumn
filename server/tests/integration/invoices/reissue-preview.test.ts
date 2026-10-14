@@ -1,15 +1,3 @@
-/**
- * invoices.reissue preview: what the replacement would look like, without
- * voiding the original or issuing anything.
- *
- * Contract:
- *   preview: true -> { invoice: null, voided_invoice_id: null, preview }
- *   preview lines mirror the original's lines and total
- *   the original stays open and no replacement is created
- *   a customer's Stripe credit balance shows as applied against the total
- *   the preview draft never reaches the subscription's invoice.created handlers
- */
-
 import { expect, test } from "bun:test";
 import {
 	type ApiListInvoiceV1,
@@ -81,7 +69,6 @@ test(`${chalk.yellowBright("invoices.reissue preview: returns the replacement's 
 	expect(response.preview.lines.map((line) => line.amount)).toEqual([PRO_BASE]);
 	expect(response.preview.lines[0].plan_id).toBe(pro.id);
 
-	// Nothing was issued and nothing was voided.
 	const { list } = (await autumnV2_3.post("/invoices.list", {
 		customer_id: customerId,
 	})) as { list: ApiListInvoiceV1[] };
@@ -135,7 +122,6 @@ test(`${chalk.yellowBright("invoices.reissue preview: credit on the customer sho
 		preview: true,
 	})) as ReissueInvoiceResponse;
 
-	// $8 of credit against pro's $20 invoice leaves $12 to pay.
 	expect(response.preview.invoice_credits).toMatchObject({
 		balance: 8,
 		applied: 8,
@@ -192,7 +178,6 @@ test.concurrent(
 			preview.lines.map((line) => line.amount).sort((a, b) => a - b),
 		).toEqual([15, 100]);
 
-		// Nothing was issued: the original is still the only invoice and still open.
 		const { list: after } = (await autumnV2_3.post("/invoices.list", {
 			customer_id: customerId,
 		})) as { list: ApiListInvoiceV1[] };
@@ -241,8 +226,6 @@ test.concurrent(
 			throw new Error("customer product is not on a Stripe subscription");
 		}
 
-		// A reset pending for the subscription's current anchor is exactly what
-		// invoice.created consumes when a linked invoice appears.
 		const stripeSubscription =
 			await ctx.stripeCli.subscriptions.retrieve(stripeSubId);
 		const resetsAt = stripeSubscription.billing_cycle_anchor * 1000;

@@ -10,8 +10,6 @@ import {
 } from "../../productUtils/entUtils/compareEnt/entsAreSame.js";
 import { rolloverConfigToSignature } from "./rolloverConfigToSignature.js";
 
-/** The entitlement-derived facets; lifecycle facets (anchor, reset mode,
- * subscription, link) complete a full PooledBalanceIdentity. */
 export type EntPooledBalanceIdentity = Pick<
 	PooledBalanceIdentity,
 	| "internalFeatureId"

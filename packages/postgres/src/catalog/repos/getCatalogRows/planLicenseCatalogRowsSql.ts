@@ -1,6 +1,5 @@
 import { type SQL, sql } from "drizzle-orm";
 
-/** Each plan license with the ids of its effective items: the customized overlay's, else the license product's base items. */
 export const planLicenseCatalogRowsSql = ({
 	orgId,
 	env,

@@ -6,11 +6,6 @@ import {
 import { eq, sql } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle";
 
-/**
- * Rolls counter rows in place: advances bounds/anchor to the current
- * derivation; zeroes the count only when its stored window closed (a
- * bounds-only re-alignment, e.g. after a plan change, keeps the count).
- */
 export const rollUsageWindows = async ({
 	db,
 	rolls,

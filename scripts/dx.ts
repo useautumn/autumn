@@ -25,7 +25,6 @@ async function findFreeWorktree(): Promise<number> {
 	process.exit(1);
 }
 
-// Allow explicit override: `bun dx 3`, otherwise auto-detect
 const explicitArg = Number.parseInt(process.argv[2] || "", 10);
 const worktreeNum =
 	!Number.isNaN(explicitArg) && explicitArg >= 2

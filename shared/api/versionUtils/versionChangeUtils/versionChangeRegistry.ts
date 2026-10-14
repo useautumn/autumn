@@ -1,28 +1,18 @@
-// Import customer feature changes
 import { V0_1_CustomerChange } from "@api/customers/changes/V0.1_CustomerChange";
-// Import customer changes
 import { V0_2_CustomerChange } from "@api/customers/changes/V0.2_CustomerChange";
 import { V0_2_InvoicesAlwaysExpanded } from "@api/customers/changes/V0.2_InvoicesAlwaysExpanded";
 import { V1_1_FeaturesArrayToObject } from "@api/customers/changes/V1.1_FeaturesArrayToObject";
-// Import trials used changes
 import { V1_2_TrialsUsedChange } from "@api/customers/components/apiTrialsUsed/changes/V1.2_TrialsUsedChange";
-
-// Import customer product changes
 
 import { V1_2_CustomerChange } from "@api/customers/changes/V1.2_CustomerChange";
 import { V1_2_CustomerQueryChange } from "@api/customers/requestChanges/V1.2_CustomerQueryChange";
 import { V2_0_CustomerQueryChange } from "@api/customers/requestChanges/V2.0_CustomerQueryChange";
-// Import entity changes
 import { V1_2_EntityChange } from "@api/entities/changes/V1.2_EntityChange";
 import { V2_0_EntityChange } from "@api/entities/changes/V2.0_EntityChange";
 import { V1_2_EntityQueryChange } from "@api/entities/requestChanges/V1.2_EntityQueryChange";
-// Import feature changes
 import { V1_2_FeatureChange } from "@api/features/changes/V1.2_FeatureChange";
 import { V1_2_CreateFeatureChange } from "@api/features/changes/V1.2_FeatureParamsChange";
-// Import invoice changes
 import { V1_2_InvoiceChange } from "@api/others/apiInvoice/changes/V1.2_InvoiceChange";
-
-// Import product changes
 
 import { V2_0_CustomerChange } from "@api/customers/changes/V2.0_CustomerChange";
 import { V2_2_PlanInheritedBillingControls } from "@api/customers/changes/V2.2_PlanInheritedBillingControls";
@@ -41,82 +31,74 @@ import { V2_4_BatchTrackParamsChange } from "../../balances/track/requestChanges
 import { V2_4_BatchTrackTokensParamsChange } from "../../balances/track/requestChanges/V2.4_BatchTrackTokensParamsChange";
 import { V2_4_TrackParamsChange } from "../../balances/track/requestChanges/V2.4_TrackParamsChange";
 import { V2_4_TrackTokensParamsChange } from "../../balances/track/requestChanges/V2.4_TrackTokensParamsChange";
-// Import attach changes
 import { V0_2_AttachChange } from "../../billing/attach/changes/V0.2_AttachChange";
 import { V1_2_AttachParamsChange } from "../../billing/attachV2/requestChanges/V1.2_AttachParamsChange";
 import { V1_2_UpdateSubscriptionParamsChange } from "../../billing/updateSubscription/requestChanges/V1.2_UpdateSubscriptionParamsChange";
-// Import events aggregate changes
 import { V2_0_AggregateEventsChange } from "../../events/aggregate/changes/V2.0_AggregateEventsChange";
 import { ApiVersion } from "../ApiVersion";
 import type { VersionChangeConstructor } from "./VersionChange";
 import { VersionChangeRegistryClass } from "./VersionChangeRegistryClass";
 
 export const V2_5_CHANGES: VersionChangeConstructor[] = [
-	V2_4_TrackParamsChange, // Track params TO V2.5: an omitted async means false (sync)
-	V2_4_TrackTokensParamsChange, // Track tokens params TO V2.5: same async default
-	V2_4_BatchTrackParamsChange, // Batch track params TO V2.5: drops the ignored item async
-	V2_4_BatchTrackTokensParamsChange, // Batch track tokens params TO V2.5: same
+	V2_4_TrackParamsChange,
+	V2_4_TrackTokensParamsChange,
+	V2_4_BatchTrackParamsChange,
+	V2_4_BatchTrackTokensParamsChange,
 ];
 
 export const V2_4_CHANGES: VersionChangeConstructor[] = [
-	V2_3_CustomerEntityData, // Side effect: <= V2.3 aggregates entity-level data onto the Customer
+	V2_3_CustomerEntityData,
 ];
 
 export const V2_3_CHANGES: VersionChangeConstructor[] = [
-	V2_2_PlanInheritedBillingControls, // Strips plan-inherited billing controls + source tags for <= V2.2
+	V2_2_PlanInheritedBillingControls,
 ];
 
-export const V2_2_CHANGES: VersionChangeConstructor[] = [
-	V2_1_PlanChanges, // Transforms Plan TO V2.1 format from V2.2 format
-];
+export const V2_2_CHANGES: VersionChangeConstructor[] = [V2_1_PlanChanges];
 
 export const V2_1_CHANGES: VersionChangeConstructor[] = [
-	V2_0_PlanChanges, // Transforms Plan TO V2.0 format from V2.1 format
-	V2_0_CustomerChange, // Transforms Customer TO V2.0 format from V2.1 format
-	V2_0_CustomerQueryChange, // Transforms Customer Query TO V2.1 format (adds flags.feature)
-	V2_0_EntityChange, // Transforms Entity TO V2.0 format from V2.1 format
-	V2_0_CheckChange, // Transforms Check TO V2.0 format from V2.1 format
-	V2_0_TrackChange, // Transforms Track TO V2.0 format from V2.1 format
-	V2_0_AggregateEventsChange, // Transforms EventsAggregate TO V2.0 format from V2.1 format
+	V2_0_PlanChanges,
+	V2_0_CustomerChange,
+	V2_0_CustomerQueryChange,
+	V2_0_EntityChange,
+	V2_0_CheckChange,
+	V2_0_TrackChange,
+	V2_0_AggregateEventsChange,
 ];
 
 export const V2_CHANGES: VersionChangeConstructor[] = [
-	V1_2_CustomerChange, // Transforms Customer TO V1.2 format from V2 format
-	V1_2_CustomerQueryChange, // Transforms Customer Query TO V2.0 format (adds expand options)
-	V1_2_EntityChange, // Transforms Entity TO V0 format from V1 format
-	V1_2_EntityQueryChange, // Transforms Entity Query TO V2.0 format (adds expand options)
-	V1_2_ProductChanges, // Transforms Product TO V1.2 format from V2 Plan format
-	V1_2_InvoiceChange, // Transforms Invoice TO V1.2 format from V2 format (plan_ids → product_ids)
-	V1_2_TrialsUsedChange, // Transforms TrialsUsed TO V1.2 format from V2 format (plan_id → product_id)
-	V1_2_CheckChange, // Transforms Check TO V1.2 format from V0.2 format
-	V1_2_CheckQueryChange, // Transforms Check Query TO V2.0 format (adds expand options)
-	V1_2_TrackChange, // Transforms Track TO V1.2 format from V0.2 format
-	V1_2_TrackParamsChange, // Transforms Track params TO V2.0 (maps properties.value → value)
-	V1_2_AttachParamsChange, // Transforms attach params TO V2.0 (free_trial/items -> free_trial/customize)
-	V1_2_UpdateSubscriptionParamsChange, // Transforms update params TO V2.0 (free_trial/items -> free_trial/customize)
+	V1_2_CustomerChange,
+	V1_2_CustomerQueryChange,
+	V1_2_EntityChange,
+	V1_2_EntityQueryChange,
+	V1_2_ProductChanges,
+	V1_2_InvoiceChange,
+	V1_2_TrialsUsedChange,
+	V1_2_CheckChange,
+	V1_2_CheckQueryChange,
+	V1_2_TrackChange,
+	V1_2_TrackParamsChange,
+	V1_2_AttachParamsChange,
+	V1_2_UpdateSubscriptionParamsChange,
 
-	V1_2_FeatureChange, // Transforms Feature TO V1_Beta format (V0) from V2 format (V1)
-	V1_2_CreateFeatureChange, // Transforms Create Feature params TO V1_Beta
+	V1_2_FeatureChange,
+	V1_2_CreateFeatureChange,
 ];
 
-export const V1_4_CHANGES: VersionChangeConstructor[] = [
-	// Add beta changes here when needed
-];
+export const V1_4_CHANGES: VersionChangeConstructor[] = [];
 
 export const V1_2_CHANGES: VersionChangeConstructor[] = [
-	V1_1_FeaturesArrayToObject, // Transforms TO V1_1
+	V1_1_FeaturesArrayToObject,
 ];
 
 export const V1_1_CHANGES: VersionChangeConstructor[] = [
-	V0_2_CustomerChange, // Transforms TO V0_2: splits structure + transforms features
-	V0_2_InvoicesAlwaysExpanded, // Side effect: invoices always expanded for V0_2 and older
-	V0_2_CheckChange, // Transforms TO V0_2: check response to balances array format
-	V0_2_AttachChange, // Transforms TO V0_2: minimal attach response format
+	V0_2_CustomerChange,
+	V0_2_InvoicesAlwaysExpanded,
+	V0_2_CheckChange,
+	V0_2_AttachChange,
 ];
 
-export const V0_2_CHANGES: VersionChangeConstructor[] = [
-	V0_1_CustomerChange, // Transforms TO V0_1: removes next_reset_at, allowance, usage_limit
-];
+export const V0_2_CHANGES: VersionChangeConstructor[] = [V0_1_CustomerChange];
 
 export const V0_1_CHANGES: VersionChangeConstructor[] = [];
 
@@ -168,7 +150,6 @@ export function registerAllVersionChanges() {
 	});
 }
 
-// Auto-register on import
 registerAllVersionChanges();
 
 export {

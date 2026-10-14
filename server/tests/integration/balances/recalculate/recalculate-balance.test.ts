@@ -12,16 +12,11 @@ import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 
-// Preview returns the projected remaining per entitlement; these helpers sum
-// the before/after sides so tests can assert conservation without depending on
-// per-balance ordering.
 const sumBefore = (preview: RecalculateBalancePreview) =>
 	preview.entitlements.reduce((sum, entry) => sum + entry.before_remaining, 0);
 const sumAfter = (preview: RecalculateBalancePreview) =>
 	preview.entitlements.reduce((sum, entry) => sum + entry.after_remaining, 0);
 
-// Map a check response's breakdown to { balanceId: current_balance } so tests
-// can compare distribution without depending on breakdown ordering.
 const breakdownById = (check: CheckResponseV2) =>
 	Object.fromEntries(
 		(check.balance?.breakdown ?? []).map((entry) => [
@@ -29,11 +24,6 @@ const breakdownById = (check: CheckResponseV2) =>
 			entry.current_balance,
 		]),
 	);
-
-// ═══════════════════════════════════════════════════════════════════
-// RECALCULATE-1: An overdrawn balance is healed by redistributing its
-// usage onto a sibling balance that still has remaining.
-// ═══════════════════════════════════════════════════════════════════
 
 test.concurrent(
 	`${chalk.yellowBright("recalculate-1: overage is redistributed onto a positive balance")}`,
@@ -57,7 +47,6 @@ test.concurrent(
 			balance_id: "balance-b",
 		});
 
-		// Drive balance-a into overage (usage 130 on a grant of 100 -> -30).
 		await autumnV2.balances.update({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
@@ -65,8 +54,6 @@ test.concurrent(
 			balance_id: "balance-a",
 		});
 
-		// Preview: total usage 130, aggregate remaining conserved at 170, and the
-		// overdrawn balance recovers while no balance is left negative.
 		const preview = await autumnV2.balances.previewRecalculate({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
@@ -89,7 +76,6 @@ test.concurrent(
 			feature_id: TestFeature.Messages,
 		});
 
-		// Aggregate remaining is unchanged and nothing is in overage anymore.
 		const check = await autumnV2.check<CheckResponseV2>({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
@@ -101,12 +87,6 @@ test.concurrent(
 		}
 	},
 );
-
-// ═══════════════════════════════════════════════════════════════════
-// RECALCULATE-2: Recalculation nets a sibling's overage into the
-// displayed remaining, so the aggregate reflects the true
-// (granted - usage) remaining afterwards.
-// ═══════════════════════════════════════════════════════════════════
 
 test.concurrent(
 	`${chalk.yellowBright("recalculate-2: nets overage into the displayed remaining")}`,
@@ -136,8 +116,6 @@ test.concurrent(
 			balance_id: "balance-a",
 		});
 
-		// Before: balance-a's overage is not netted against balance-b, so the
-		// displayed remaining is inflated (200 rather than the true 170).
 		const before = await autumnV2.check<CheckResponseV2>({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
@@ -160,18 +138,12 @@ test.concurrent(
 			skip_cache: true,
 		});
 
-		// Recalculation reduces the inflated remaining to the true remaining.
 		expect(after.balance?.current_balance).toBeLessThan(
 			before.balance?.current_balance ?? 0,
 		);
 		expect(after.balance?.current_balance).toBe(sumAfter(preview));
 	},
 );
-
-// ═══════════════════════════════════════════════════════════════════
-// RECALCULATE-3: The preview endpoint returns the projected diff and
-// does NOT persist any changes.
-// ═══════════════════════════════════════════════════════════════════
 
 test.concurrent(
 	`${chalk.yellowBright("recalculate-3: preview returns the diff without persisting")}`,
@@ -220,7 +192,6 @@ test.concurrent(
 			),
 		).toBe(true);
 
-		// Nothing was written: the on-disk distribution is identical.
 		const after = await autumnV2.check<CheckResponseV2>({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
@@ -229,11 +200,6 @@ test.concurrent(
 		expect(breakdownById(after)).toEqual(breakdownById(before));
 	},
 );
-
-// ═══════════════════════════════════════════════════════════════════
-// RECALCULATE-4: When balances are already distributed (no overage),
-// recalculation is a no-op and the preview reports no changes.
-// ═══════════════════════════════════════════════════════════════════
 
 test.concurrent(
 	`${chalk.yellowBright("recalculate-4: no overage is a no-op")}`,
@@ -286,10 +252,6 @@ test.concurrent(
 	},
 );
 
-// ═══════════════════════════════════════════════════════════════════
-// RECALCULATE-5: Recalculating a feature with no balances errors.
-// ═══════════════════════════════════════════════════════════════════
-
 test.concurrent(
 	`${chalk.yellowBright("recalculate-5: missing balance returns an error")}`,
 	async () => {
@@ -309,12 +271,6 @@ test.concurrent(
 		});
 	},
 );
-
-// ═══════════════════════════════════════════════════════════════════
-// RECALCULATE-6: When total usage exceeds total grant, the residual
-// overage is consolidated onto a single balance and the aggregate is
-// still conserved.
-// ═══════════════════════════════════════════════════════════════════
 
 test.concurrent(
 	`${chalk.yellowBright("recalculate-6: residual overage is consolidated when usage exceeds grant")}`,
@@ -337,7 +293,6 @@ test.concurrent(
 			included_grant: 50,
 			balance_id: "balance-b",
 		});
-		// Total grant 150, total usage 170 -> aggregate remaining -20.
 		await autumnV2.balances.update({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
@@ -359,7 +314,6 @@ test.concurrent(
 		expect(preview.entitlements).toHaveLength(2);
 		expect(sumAfter(preview)).toBe(-20);
 		expect(sumBefore(preview)).toBe(-20);
-		// The overage is consolidated onto exactly one balance.
 		expect(
 			preview.entitlements.filter((entry) => entry.after_remaining < 0),
 		).toHaveLength(1);
@@ -369,7 +323,6 @@ test.concurrent(
 			feature_id: TestFeature.Messages,
 		});
 
-		// Re-previewing the now-recalculated state shows nothing left to do.
 		const rerun = await autumnV2.balances.previewRecalculate({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
@@ -379,10 +332,6 @@ test.concurrent(
 		}
 	},
 );
-
-// ═══════════════════════════════════════════════════════════════════
-// RECALCULATE-7: Redistribution works across three balances.
-// ═══════════════════════════════════════════════════════════════════
 
 test.concurrent(
 	`${chalk.yellowBright("recalculate-7: redistributes across three balances")}`,
@@ -402,7 +351,6 @@ test.concurrent(
 			});
 		}
 
-		// balance-a overdrawn to -30.
 		await autumnV2.balances.update({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
@@ -438,11 +386,6 @@ test.concurrent(
 		}
 	},
 );
-
-// ═══════════════════════════════════════════════════════════════════
-// RECALCULATE-8: Recalculation is idempotent - running it again does
-// not change an already-balanced feature.
-// ═══════════════════════════════════════════════════════════════════
 
 test.concurrent(
 	`${chalk.yellowBright("recalculate-8: recalculation is idempotent")}`,
@@ -496,11 +439,6 @@ test.concurrent(
 	},
 );
 
-// ═══════════════════════════════════════════════════════════════════
-// RECALCULATE-9: Redistribution stays within scope - a customer-level
-// overage is NOT absorbed by an entity-scoped balance.
-// ═══════════════════════════════════════════════════════════════════
-
 test.concurrent(
 	`${chalk.yellowBright("recalculate-9: redistribution stays within entity scope")}`,
 	async () => {
@@ -514,7 +452,6 @@ test.concurrent(
 		});
 		const entityId = entities[0].id;
 
-		// Customer-level: one overdrawn (-30), one with remaining (200).
 		await autumnV2.balances.create({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
@@ -534,7 +471,6 @@ test.concurrent(
 			balance_id: "cust-a",
 		});
 
-		// Entity-scoped: partially used and positive (no overage in this scope).
 		await autumnV2.balances.create({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
@@ -562,9 +498,6 @@ test.concurrent(
 			feature_id: TestFeature.Messages,
 		});
 
-		// The entity-owned balance itself is untouched - the customer-level
-		// overage was not absorbed by it. (The entity-level aggregate also
-		// reflects shared customer balances, so we target ent-a specifically.)
 		const entityAfter = await autumnV2.check<CheckResponseV2>({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
@@ -577,12 +510,6 @@ test.concurrent(
 		expect(breakdownById(entityAfter)["ent-a"]).toBe(60);
 	},
 );
-
-// ═══════════════════════════════════════════════════════════════════
-// RECALCULATE-10: A fully-used balance (remaining 0, not overdrawn)
-// next to positive balances is NOT recalculable - there is no overage to
-// absorb, so the preview reports no changes ("already up to date").
-// ═══════════════════════════════════════════════════════════════════
 
 test.concurrent(
 	`${chalk.yellowBright("recalculate-10: a fully-used balance alongside positives is a no-op")}`,
@@ -612,8 +539,6 @@ test.concurrent(
 			balance_id: "balance-c",
 		});
 
-		// balance-a is fully used (remaining 0) but NOT overdrawn; balance-c is
-		// partially used but still positive.
 		await autumnV2.balances.update({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
@@ -633,7 +558,6 @@ test.concurrent(
 			skip_cache: true,
 		});
 
-		// No scope has an overage, so the preview reports no changes.
 		const preview = await autumnV2.balances.previewRecalculate({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
@@ -656,8 +580,6 @@ test.concurrent(
 	},
 );
 
-// RECALCULATE-11: Negative carry-over debt must be reapplied to the new grant;
-// previously it was counted as a negative grant, making recalculation a no-op.
 test.concurrent(
 	`${chalk.yellowBright("recalculate-11: absorbs negative carry-over into the new plan")}`,
 	async () => {

@@ -6,7 +6,6 @@ import { collectRunSamples } from "./collectRunSamples.ts";
 import { foldFileProfile } from "./foldFileProfile.ts";
 import { getWorkerClass } from "./getWorkerClass.ts";
 
-/** Completed runs only; a grep run executes a subset of each file, so its timings mislead. */
 export const feedsFileProfiles = ({
 	status,
 	grep,
@@ -15,7 +14,6 @@ export const feedsFileProfiles = ({
 	grep: string | undefined;
 }) => (status === "passed" || status === "failed") && !grep;
 
-/** Folds a finished run's first attempts into file_profiles (baselines and normal runs alike). */
 export const updateFileProfiles = async ({
 	ctx,
 	runId,
@@ -36,7 +34,6 @@ export const updateFileProfiles = async ({
 	const samples = await collectRunSamples({ ctx, runId });
 	if (samples.size === 0) return { files: 0 };
 	const workerClass = getWorkerClass();
-	// Serialised so two runs finishing together can't both fold from the same previous row.
 	const profiles = await ctx.db.transaction(async (tx) => {
 		await tx.execute(
 			sql`select pg_advisory_xact_lock(hashtext('twd:file_profiles'))`,

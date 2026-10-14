@@ -21,8 +21,6 @@ export const handleCreateSecretKey = createRoute({
 		const { db, env, org } = ctx;
 		const { name, scopes: requestedScopes } = c.req.valid("json");
 
-		// Privilege-escalation guard: a caller may only mint a key with
-		// scopes that are a subset of their own.
 		if (requestedScopes && requestedScopes.length > 0) {
 			if (!isScopeSubset(requestedScopes, ctx.scopes)) {
 				throw new RecaseError({
@@ -33,24 +31,20 @@ export const handleCreateSecretKey = createRoute({
 			}
 		}
 
-		// 1. Create API key
 		let prefix = ApiKeyPrefix.Sandbox;
 		if (env === AppEnv.Live) {
 			prefix = ApiKeyPrefix.Live;
 		}
 
-		// Get session to check for impersonation and author
 		const session = await auth.api.getSession({
 			headers: c.req.raw.headers,
 		});
 
 		const meta: Record<string, string> = {};
 
-		// Check if this is an impersonation session (Autumn Support)
 		if (session?.session?.impersonatedBy) {
 			meta.created_via = "autumn_support";
 		} else if (session?.user?.name) {
-			// Regular user creation
 			meta.author = session.user.name;
 		}
 

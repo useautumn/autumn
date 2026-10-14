@@ -31,7 +31,6 @@ const instancesAt = ({
 			.map(({ key, configHash }) => `${key}:${configHash}`),
 	);
 
-/** The instances that start and end at a date, ignoring those running straight through it. */
 const transitionAt = ({
 	segments,
 	at,
@@ -46,7 +45,6 @@ const transitionAt = ({
 	return JSON.stringify([started.sort(), ended.sort()]);
 };
 
-/** The resulting timeline changes exactly what the saved one changes here, so no phase is touched. */
 const isPreservedBoundary = ({
 	saved,
 	timeline,
@@ -59,7 +57,6 @@ const isPreservedBoundary = ({
 	transitionAt({ segments: saved.segments, at }) ===
 	transitionAt({ segments: timeline, at });
 
-/** Future dates where the saved timeline's set of plans changes. */
 const savedPhaseStarts = ({
 	saved,
 	now,
@@ -93,7 +90,6 @@ const groupByGap = ({
 	return groups;
 };
 
-/** Within a gap, the n-th unmatched request phase is the n-th unmatched saved phase moved. */
 const pairMovedPhases = ({
 	requestByGap,
 	savedByGap,
@@ -111,10 +107,6 @@ const pairMovedPhases = ({
 	return movedFrom;
 };
 
-/**
- * The one place request phases meet saved phases: now with now, equal dates with each other,
- * then leftovers between two anchors pair up in order as moved phases.
- */
 export const matchReviewPhases = ({
 	saved,
 	timeline,

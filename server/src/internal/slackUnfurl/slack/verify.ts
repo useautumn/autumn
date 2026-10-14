@@ -3,11 +3,6 @@ import { env } from "../env.js";
 
 const FIVE_MINUTES_SECONDS = 60 * 5;
 
-/**
- * Slack request signing: v0 HMAC-SHA256 over `v0:{timestamp}:{rawBody}`,
- * with a 5-minute replay window. MUST run over the raw, unparsed body — so
- * callers pass the exact string they read off the request.
- */
 export function verifySlackSignature({
 	rawBody,
 	timestamp,
@@ -24,7 +19,6 @@ export function verifySlackSignature({
 		return false;
 	}
 
-	// Fail closed: an empty secret would make the HMAC publicly computable.
 	if (!env.SLACK_SIGNING_SECRET) {
 		console.warn("[slack-unfurl] verify: ALU_SLACK_SIGNING_SECRET unset");
 		return false;

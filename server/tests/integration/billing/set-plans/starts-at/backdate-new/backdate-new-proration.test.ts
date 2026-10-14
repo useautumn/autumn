@@ -1,12 +1,3 @@
-/**
- * Backdating a plan onto a customer with no subscription bills what Stripe bills for backdate_start_date:
- * - prorate_immediately / bill_difference: every elapsed cycle plus the one running now (2 months back on $20/mo = $60);
- * - none: nothing now, the cycle running now is first billed at renewal.
- *
- * Red (before):  none bills the same $60 as the other behaviors.
- * Green (after):  none bills $0 and creates no invoice.
- */
-
 import { test } from "bun:test";
 import chalk from "chalk";
 import { subHours, subMonths } from "date-fns";

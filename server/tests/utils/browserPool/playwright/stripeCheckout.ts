@@ -1,11 +1,5 @@
 import type { Page } from "playwright-core";
 
-/**
- * Billing address override (defaults to US / 10001). Supply when the
- * session uses auto_tax + `customer_update: { address: "auto" }`, which
- * makes Stripe present a full address form. Field names mirror
- * Stripe.AddressParam.
- */
 export type StripeCheckoutBillingAddress = {
 	country?: string;
 	line1?: string;
@@ -14,14 +8,6 @@ export type StripeCheckoutBillingAddress = {
 	postal_code?: string;
 };
 
-/**
- * Self-contained Playwright function for completing a Stripe Checkout page.
- * NO runtime imports — must be serializable via `fn.toString()` for Kernel
- * Playwright Execution (type imports are fine; Bun strips them).
- *
- * Handles card fields, optional quantity selector, promo code, optional
- * full billing address (when `customer_update.address: "auto"`), and submit.
- */
 export const stripeCheckout = async ({
 	page,
 	url,
@@ -35,14 +21,11 @@ export const stripeCheckout = async ({
 	overrideQuantity?: number;
 	promoCode?: string;
 	billingAddress?: StripeCheckoutBillingAddress;
-	/** Click "Add" on the first Stripe Checkout optional item (session's `optional_items`). */
 	addOptionalItem?: boolean;
 }) => {
 	await page.goto(url, { waitUntil: "domcontentloaded", timeout: 60000 });
 	console.log("[stripeCheckout] Page loaded");
 
-	// The form renders only after the page's own Stripe API calls clear tw's rate-limit
-	// permits (up to 60s each), so a fixed sleep can run ahead of it.
 	const cardAccordion = page.locator(
 		'[data-testid="card-accordion-item-button"]',
 	);
@@ -61,15 +44,11 @@ export const stripeCheckout = async ({
 		await page.waitForTimeout(1000);
 	}
 
-	// Card-only sessions render the form without an accordion; otherwise expand Card
-	// via its zero-size overlay button (re-clicking keeps Card selected).
 	if (!(await cardNumber.isVisible()) && (await cardAccordion.count()) > 0) {
 		await cardAccordion.evaluate((el) => (el as HTMLElement).click());
 		console.log("[stripeCheckout] Card selected via accordion button");
 	}
 
-	// Card fields require real key events — `.fill()` skips keydown/up so
-	// Stripe never registers the input. Use `.pressSequentially()`.
 	await cardNumber.waitFor({ timeout: 60_000 });
 	await cardNumber.pressSequentially("4242424242424242");
 	console.log("[stripeCheckout] Card number filled");
@@ -95,11 +74,8 @@ export const stripeCheckout = async ({
 			await emailField.pressSequentially("test@example.com");
 			console.log("[stripeCheckout] Email filled");
 		}
-	} catch {
-		// Email field absent.
-	}
+	} catch {}
 
-	// Address fields. Defaults: US / 10001.
 	const country = billingAddress?.country ?? "US";
 	const postalCode = billingAddress?.postal_code ?? "10001";
 	const line1 = billingAddress?.line1;
@@ -113,12 +89,8 @@ export const stripeCheckout = async ({
 			console.log(`[stripeCheckout] Country set to ${country}`);
 			await page.waitForTimeout(500);
 		}
-	} catch {
-		// Country selector absent.
-	}
+	} catch {}
 
-	// Full address form (line1/city/state) appears only when the session
-	// uses `customer_update: { address: "auto" }`. Feature-detect each.
 	if (line1) {
 		try {
 			const line1Field = page.locator("#billingAddressLine1");
@@ -143,7 +115,6 @@ export const stripeCheckout = async ({
 		try {
 			const stateField = page.locator("#billingAdministrativeArea");
 			if ((await stateField.count()) > 0) {
-				// State is a select on US/CA/AU; fall back to typing.
 				try {
 					await stateField.selectOption(state);
 				} catch {
@@ -183,7 +154,6 @@ export const stripeCheckout = async ({
 			throw new Error(".AdjustQuantityFooter-btn not found");
 		}
 		await updateBtn.click();
-		// Submit ignores Enter while the quantity overlay is still saving.
 		await quantityInput.waitFor({ state: "hidden", timeout: 60_000 });
 		console.log(`[stripeCheckout] Quantity set to ${overrideQuantity}`);
 	}
@@ -198,14 +168,11 @@ export const stripeCheckout = async ({
 		await page.waitForTimeout(5000);
 	}
 
-	// Optional Link enrollment can default on and require a phone number.
 	const saveWithLink = page.locator("#enableStripePass");
 	if (await saveWithLink.isVisible()) {
 		await saveWithLink.uncheck();
 	}
 
-	// A click can land in a Stripe iframe while the page scrolls to Submit; Enter goes
-	// to the focused button wherever it is on screen.
 	const submit = page
 		.locator("button.SubmitButton, button[type=submit]")
 		.first();
@@ -216,12 +183,6 @@ export const stripeCheckout = async ({
 	await submit.press("Enter");
 	console.log("[stripeCheckout] Submit pressed");
 
-	// Stripe redirects off checkout.stripe.com once the session completes, so
-	// prefer that over a fixed sleep — a slow box would otherwise carry on
-	// mid-payment and fail later as a confusing "product not found". The
-	// redirect can't be required though: sessions built with an unreachable
-	// success_url never leave the page, so only a visible decline fails here
-	// and everything else is left to the caller's own polling.
 	const leftCheckout = await page
 		.waitForURL((url) => !url.host.includes("checkout.stripe.com"), {
 			timeout: 60_000,
@@ -250,7 +211,5 @@ export const stripeCheckout = async ({
 
 	console.log("[stripeCheckout] No redirect seen; leaving the check to caller");
 
-	// Returned so a caller whose own assertion then fails can say what the page
-	// was showing; µVM stdout never reaches the orchestrator.
 	return { url: page.url(), text: pageText.replace(/\s+/g, " ").slice(0, 400) };
 };

@@ -5,10 +5,6 @@ import { fixedPriceToDescription } from "../descriptionUtils/fixedPriceToLineDes
 import { priceToLineAmount } from "../lineItemUtils/priceToLineAmount";
 import { buildLineItem } from "./buildLineItem";
 
-/**
- * Creates a line item for a fixed price.
- * Returns positive amount - caller uses lineItemToCredit() for refunds.
- */
 export const fixedPriceToLineItem = ({
 	currency,
 	quantity = 1,
@@ -18,7 +14,6 @@ export const fixedPriceToLineItem = ({
 	currency?: string;
 	quantity?: number;
 	context: LineItemContext;
-	/** License lines show the quantity like feature-usage lines do. */
 	includeQuantityInDescription?: boolean;
 }): LineItem => {
 	const { price, product } = context;
@@ -47,8 +42,6 @@ export const fixedPriceToLineItem = ({
 	const stripeProductId =
 		price.config.stripe_product_id || product.processor?.id || undefined;
 
-	// Default discountable to false so Autumn pre-calculates discounts
-	// and they are properly stored in the DB (not baked into the amount)
 	const updatedContext: LineItemContext = {
 		...context,
 		discountable: context.discountable,

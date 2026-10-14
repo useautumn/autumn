@@ -52,7 +52,7 @@ describe(`${chalk.yellowBright(`${testCase}: Tracking allocated feature with con
 			product_id: free.id,
 		});
 
-		await autumn.customers.get(customerId); // set cache
+		await autumn.customers.get(customerId);
 
 		const promises = [];
 		let totalUsage = 0;
@@ -65,7 +65,6 @@ describe(`${chalk.yellowBright(`${testCase}: Tracking allocated feature with con
 			const values = [];
 			for (let i = 0; i < 10; i++) {
 				const randomVal = Math.floor(Math.random() * 5);
-				// * (Math.random() < 0.3 ? -1 : 1);
 				promises.push(
 					autumn.track({
 						customer_id: customerId,
@@ -74,8 +73,6 @@ describe(`${chalk.yellowBright(`${testCase}: Tracking allocated feature with con
 					}),
 				);
 
-				// Calculate expected balance with constraint: balance can never exceed includedUsage
-				// (i.e., usage can never go below 0)
 				const potentialBalance = startingBalance - randomVal;
 				const cappedBalance = Math.min(
 					potentialBalance,
@@ -102,7 +99,6 @@ describe(`${chalk.yellowBright(`${testCase}: Tracking allocated feature with con
 			}
 			expect(userFeature.balance).toBe(startingBalance);
 
-			// Settle so a late extra event is caught, then poll: herald lands worker events seconds late under load.
 			await timeout(2000);
 			const expectedEventCount = numberOfTracks;
 			await pollUntilAsserted({

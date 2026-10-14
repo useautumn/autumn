@@ -7,14 +7,6 @@ import { useCallback, useMemo, useState } from "react";
 import { useItemDraftController } from "@/hooks/inline-editor/useItemDraftController";
 import type { ProductContextValue } from "./PlanEditorContext";
 
-/**
- * Local editor state for an inline plan/license card: a draft product (via the
- * item-draft controller) plus sheet state, shaped as the value for
- * ProductProvider. Both InlineEditorProvider and LicenseEditorProvider build on
- * this; the license variant passes `onSheetOpenChange` to mirror its sheet
- * open/close to the page (so it can shift content), reported synchronously in
- * the sheet handlers — no effect.
- */
 export function useInlineProductEditor({
 	initialProduct: initialProductProp,
 	onSheetOpenChange,

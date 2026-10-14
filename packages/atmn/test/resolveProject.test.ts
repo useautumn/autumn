@@ -1,9 +1,3 @@
-/**
- * Where a command's config and .env come from. The rule is flag → cwd → root
- * marker, and .env is read from the root first so one file serves every
- * package of a monorepo.
- */
-
 import { afterEach, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";

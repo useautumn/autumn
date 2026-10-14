@@ -1,8 +1,3 @@
-/**
- * Grader proofs for the fill family: each case's golden config passes every
- * catalog verdict; an empty workspace fails them all. The rollover assertions
- * are the point — a golden missing any rollover field must not pass.
- */
 import { expect, test } from "bun:test";
 import { addOnFlatStated } from "../../cases/fill/addOn/addOnFlatStated.eval.ts";
 import { addOnPerUnitSwept } from "../../cases/fill/addOn/addOnPerUnitSwept.eval.ts";

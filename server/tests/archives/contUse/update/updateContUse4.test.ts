@@ -138,7 +138,6 @@ describe(`${chalk.yellowBright(`contUse/${testCase}: Testing update contUse incl
 			numReplaceables: 0,
 		});
 
-		// Do own calculation too..
 		const sub = stripeSubs[0];
 		const amount = -userItem.price!;
 		const { start, end } = subToPeriodStartEnd({ sub });
@@ -198,7 +197,6 @@ describe(`${chalk.yellowBright(`contUse/${testCase}: Testing update contUse incl
 			numReplaceables: 0,
 		});
 
-		// Do own calculation too..
 		const sub = stripeSubs[0];
 		const amount = Math.min(reducedUsage, usage) * userItem.price!;
 		const { start, end } = subToPeriodStartEnd({ sub });

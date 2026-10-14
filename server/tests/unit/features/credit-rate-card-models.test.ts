@@ -1,12 +1,3 @@
-/**
- * Contract for the enterprise credit rate-card data model:
- * - existing flat credit-schema entries remain valid;
- * - flat entries preserve their optional per-X-unit `feature_amount`;
- * - graduated entries contain tiers instead of a flat `credit_amount`;
- * - `invoice_credit` lives on the credit feature config;
- * - customer-entitlement attribution is keyed by source internal feature ID.
- */
-
 import { describe, expect, test } from "bun:test";
 import {
 	CreditSchemaItemSchema,

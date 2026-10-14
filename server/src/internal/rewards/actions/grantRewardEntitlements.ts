@@ -19,7 +19,6 @@ import { generateId } from "@/utils/genUtils.js";
 
 type RewardEntitlement = NonNullable<Reward["entitlements"]>[number];
 
-/** Reward entitlements are stored as nested `expiry` or legacy flat `expiry_*` fields */
 const resolveExpiresAt = (rewardEnt: RewardEntitlement) => {
 	const nested =
 		"expiry" in rewardEnt
@@ -56,10 +55,6 @@ const resolveExpiresAt = (rewardEnt: RewardEntitlement) => {
 	return undefined;
 };
 
-/**
- * Grant a feature-grant reward's entitlements to a customer as loose balances.
- * Callers own redemption records and any redemption-eligibility checks.
- */
 export const grantRewardEntitlements = async ({
 	ctx,
 	fullCustomer,

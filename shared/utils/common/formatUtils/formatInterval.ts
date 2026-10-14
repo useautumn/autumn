@@ -15,19 +15,16 @@ export const formatInterval = ({
 }): string => {
 	if (!interval) return "";
 
-	// Handle one_off (show "one time")
 	if (interval === BillingInterval.OneOff) {
 		return "one-off";
 	}
 
-	// Handle lifetime (no interval string)
 	if (interval === EntInterval.Lifetime) {
 		return "";
 	}
 
 	let intervalStr: string = interval;
 
-	// Handle special case for semi_annual
 	if (
 		interval === BillingInterval.SemiAnnual ||
 		interval === EntInterval.SemiAnnual ||

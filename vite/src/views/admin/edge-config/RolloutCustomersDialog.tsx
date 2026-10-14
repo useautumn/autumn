@@ -180,7 +180,6 @@ const RolloutCustomersForm = ({
 	);
 };
 
-/** Pick an org, then search its customers to put on the worker; the form resets by remounting on open. */
 export const RolloutCustomersDialog = ({
 	open,
 	onOpenChange,

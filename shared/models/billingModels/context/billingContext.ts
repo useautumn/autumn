@@ -49,7 +49,6 @@ export interface TrialContext {
 	appliesToBilling: boolean;
 	cardRequired: boolean;
 	onEnd?: TrialOnEnd;
-	/** Autumn, not Stripe, settles this trial's end (revert, or a no-card trial run without a subscription). */
 	autumnManaged?: boolean;
 }
 
@@ -71,7 +70,6 @@ export interface BillingContext {
 	transitionConfig?: TransitionConfig;
 	invoiceMode?: InvoiceMode;
 
-	// Timestamps...
 	currentEpochMs: number;
 	billingCycleAnchorMs: number | "now";
 	resetCycleAnchorMs: number | "now";
@@ -79,26 +77,17 @@ export interface BillingContext {
 	subscriptionBackdateStartMs?: number;
 	requestedBillingCycleAnchor?: number | "now";
 	requestedProrationBehavior?: BillingBehavior;
-	/** Where proration can't change what's billed, set by set_plans' setup. */
 	prorationOverride?: ProrationBehaviorOverride;
 
-	// Stripe context
 	stripeCustomer?: Stripe.Customer;
 	stripeSubscription?: Stripe.Subscription;
-	/** The subscription linked to the target customer product exists but is
-	 * canceled, so `stripeSubscription` is absent. Each action decides what that
-	 * means: updateSubscription blocks billing changes, attach buys fresh. */
 	canceledStripeSubscriptionId?: string;
-	/** The linked Stripe subscription belongs to a different Stripe customer, so
-	 * this context must not write to Stripe. Only set for flows allowed to
-	 * proceed past that fault (immediate cancel). */
 	mismatchedStripeSubscriptionId?: string;
 	replacedStripeSubscription?: Stripe.Subscription;
 	stripeSubscriptionSchedule?: Stripe.SubscriptionSchedule;
 	stripeDiscounts?: StripeDiscountWithCoupon[];
 	stripeTaxRate?: Stripe.TaxRate;
 	paymentMethod?: Stripe.PaymentMethod;
-	/** Settings a replaced subscription hands its successor, applied when it is created. */
 	carriedSubscriptionParams?: Pick<
 		Stripe.SubscriptionCreateParams,
 		| "default_payment_method"
@@ -110,20 +99,14 @@ export interface BillingContext {
 		| "payment_settings"
 	>;
 
-	// Unforunately, need to add custom prices, custom entitlements and free trial here, because it's determined in the setup step.
-	// Optional - only needed for custom plan flows
 	customPrices?: Price[];
 	customEnts?: Entitlement[];
 
-	// License billing state loaded at setup; absent when the customer
-	// touches no licenses.
 	customerLicenseBillingContext?: CustomerLicenseBillingContext;
 
-	// Trial context
 	trialContext?: TrialContext;
 	isCustom?: boolean;
 
-	// Cancel action (used by update subscription for uncancel)
 	cancelAction?: CancelAction;
 
 	billingVersion: BillingVersion;
@@ -131,7 +114,6 @@ export interface BillingContext {
 	checkoutSessionParams?: Record<string, unknown>;
 	userMetadata?: Record<string, string>;
 	taxRateId?: string;
-	/** Per-request automatic tax override; undefined follows the org setting. */
 	automaticTaxEnabled?: boolean;
 	billingDetails?: BillingDetailsBillingParams;
 
@@ -140,21 +122,10 @@ export interface BillingContext {
 
 	checkoutMode?: CheckoutMode;
 
-	// When true, the cusProduct is activated immediately even if a Stripe checkout
-	// session is required. Mirrors invoice-mode enable_plan_immediately for the
-	// stripe_checkout flow.
 	enablePlanImmediately?: boolean;
-	// Set when enable_plan_immediately rides a long-lived checkout link; the grant
-	// lives until the link expires rather than the Stripe session.
 	longLivedCheckout?: { id: string; expiresAt: number };
-	// When set, Autumn access starts at this time while billing may start later.
 	accessStartsAt?: number;
-	/** Identifies the Autumn action driving this billing context. Stamped onto Stripe
-	 * subscription metadata so downstream webhook handlers can recognise Autumn-driven
-	 * subscription mutations and skip auto-sync. */
 	actionSource?: string;
-	/** Names the customer product an action settles, so a paid invoice resolves
-	 * back to the one product it covers. */
 	actionCustomerProductId?: string;
 
 	anchorResetRefund?: AnchorResetRefund;
@@ -166,17 +137,13 @@ export interface BillingContext {
 	subscriptionParams?: Record<string, unknown>;
 
 	paymentBehaviorIntent?: PaymentBehaviorIntent;
-	/** Extra tags on the billing.updated webhook this action emits. */
 	billingUpdatedTags?: string[];
 	shouldFinalizeFirstInvoice?: boolean;
 	skipCustomPaymentMethodGuard?: boolean;
 
-	/** See `BillingContextOverride.skipExternalPSPGuard`. */
 	skipExternalPSPGuard?: boolean;
 
-	/** See `BillingContextOverride.processorTypeOverride`. */
 	processorTypeOverride?: ProcessorType;
 
-	/** See `BillingContextOverride.processorOverride`. */
 	processorOverride?: NonNullable<CusProduct["processor"]>;
 }

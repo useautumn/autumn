@@ -34,9 +34,6 @@ export const classifyResetCandidate = ({
 	const customerProduct = customerEntitlement.customer_product;
 	if (!customerProduct) return null;
 
-	// Price-backed entitlements on a live subscription reset from
-	// invoice.created, not here — except split prepaid reset intervals.
-	// Without a subscription there is no invoice, so the reset stays ours.
 	const customerPrice = cusEntToCusPrice({ cusEnt: customerEntitlement });
 	const hasSubscription = (customerProduct.subscription_ids?.length ?? 0) > 0;
 	if (

@@ -1,9 +1,6 @@
 import { AppEnv, BillingInterval, RELEVANT_STATUSES } from "@autumn/shared";
 import { sql, type SQL } from "drizzle-orm";
 import { PgDialect } from "drizzle-orm/pg-core";
-// Import initDrizzle directly — avoid `experimentEnv` because its
-// `loadLocalEnv()` reads `server/.env` and clobbers env vars injected by
-// `infisical run --env=staging` (e.g. DATABASE_URL).
 import { initDrizzle } from "../src/db/initDrizzle";
 import { getCursorPaginatedFullCusQuery } from "../src/internal/customers/cursorPaginatedFullCusQuery";
 
@@ -13,17 +10,12 @@ const prodTestOrgId = (() => {
 	return v;
 })();
 
-// Mask password but show host so we can verify which DB we're hitting.
 const dbUrl = process.env.DATABASE_URL ?? "";
 console.log(
 	"DATABASE URL host:",
 	dbUrl.replace(/:\/\/[^@]+@/, "://***:***@") || "(empty)",
 );
 
-// To run against a remote env (e.g. staging) via infisical:
-//   infisical run --env=staging --recursive -- bun run server/experiments/explainSortByPrice.ts
-
-// ─── Configuration ──────────────────────────────────────────────────
 const ORG_ID = prodTestOrgId;
 const ENV = AppEnv.Live;
 const PAGE_LIMIT = 50;
@@ -32,8 +24,7 @@ const DEEP_OFFSET_PCT = 45;
 const STATEMENT_TIMEOUT_MS = 30_000;
 const TRUNCATE_EXPLAIN = true;
 const EXPLAIN_MAX_LINES = 30;
-const CUS_PRODUCT_LIMIT = 3; // matches DASHBOARD_LIST_PRODUCT_PREVIEW_LIMIT
-// ═════════════════════════════════════════════════════════════════════
+const CUS_PRODUCT_LIMIT = 3;
 
 type DB = ReturnType<typeof initDrizzle>["db"];
 
@@ -136,7 +127,6 @@ const measure = async ({
 	console.log(`\n=== ${label} ===`);
 	if (printSql) printSqlQuery({ query, label });
 
-	// Warmup
 	await runReadOnly({ db, query });
 
 	const samples: number[] = [];
@@ -155,8 +145,6 @@ const measure = async ({
 	if (explain) await printExplainPlan({ db, query, label });
 	return rows;
 };
-
-// ─── Price prefetch (the "TS-side normalization" leg) ───────────────
 
 type PriceMapEntry = { priceId: string; monthlyAmount: number };
 
@@ -186,7 +174,6 @@ const prefetchPriceMap = async ({
 			interval_count?: number;
 		} | null;
 		const factor = MONTHLY_FACTORS[config?.interval as BillingInterval];
-		// Usage/tiered prices have no flat `amount`; one_off has no recurring factor.
 		if (typeof config?.amount !== "number" || factor === undefined) {
 			skipped++;
 			continue;
@@ -204,8 +191,6 @@ const prefetchPriceMap = async ({
 	return { entries, totalPrices: rows.length, skipped };
 };
 
-// Inlined as raw literals: a torture org can have one custom price per
-// customer, and parameterizing each VALUES row hits the 65534-param cap.
 const buildPriceMapValuesSql = (entries: PriceMapEntry[]): SQL => {
 	const rows = entries.map(
 		(e) =>
@@ -213,8 +198,6 @@ const buildPriceMapValuesSql = (entries: PriceMapEntry[]): SQL => {
 	);
 	return sql.raw(rows.join(", "));
 };
-
-// ─── Resolver variants ───────────────────────────────────────────────
 
 const orgProductsSubquery = () => sql`
 	SELECT prod.internal_id FROM products prod
@@ -227,7 +210,6 @@ const activeStatusList = () =>
 		sql`, `,
 	);
 
-/** Cell A: amounts pre-resolved in TS, inlined as a VALUES map. */
 const buildValuesMapResolveQuery = ({
 	entries,
 	cursor,
@@ -283,7 +265,6 @@ const pageClause = (cursor?: { total: number; internalId: string }): SQL => sql`
 	LIMIT ${PAGE_LIMIT + 1}
 `;
 
-/** Cell B: cusProduct-driven — org products → customer_products → prices. */
 const buildSqlSideResolveQuery = ({
 	cursor,
 }: {
@@ -303,8 +284,6 @@ const buildSqlSideResolveQuery = ({
 	${pageClause(cursor)}
 `;
 
-/** Cell B2: price-driven — prices (org+env-scoped via products, since prices
- * has no env column) → customer_prices → status probe on customer_products. */
 const buildPriceDrivenResolveQuery = ({
 	cursor,
 }: {
@@ -325,8 +304,6 @@ const buildPriceDrivenResolveQuery = ({
 	${pageClause(cursor)}
 `;
 
-/** Cell C: no customer_products hop at all — includes churned customers.
- * Wrong results, but bounds what the status filter costs. */
 const buildNoStatusResolveQuery = (): SQL => sql`
 	WITH totals AS (
 		SELECT cpr.internal_customer_id,
@@ -340,8 +317,6 @@ const buildNoStatusResolveQuery = (): SQL => sql`
 	${pageClause()}
 `;
 
-/** Unlimited totals for deep-cursor manufacture — the page queries are
- * LIMITed, so offsetting into them would find nothing past one page. */
 const buildTotalsForDeepCursor = (): SQL => sql`
 	SELECT cp.internal_customer_id, SUM(${monthlyAmountExpr()}) AS total
 	FROM prices p
@@ -376,8 +351,6 @@ const resolveDeepCursor = async ({
 	return { total: Number(row.total), internalId: row.internal_customer_id };
 };
 
-// ─── Main ────────────────────────────────────────────────────────────
-
 const main = async () => {
 	const replicaUrl = process.env.DATABASE_REPLICA_URL;
 	const usingReplica = Boolean(replicaUrl);
@@ -400,7 +373,6 @@ const main = async () => {
 			),
 		);
 
-		// Context stats
 		const stats = await runReadOnly({
 			db,
 			query: sql`
@@ -414,7 +386,6 @@ const main = async () => {
 		});
 		console.log(`\nOrg stats: ${JSON.stringify(stats[0])}`);
 
-		// ── Cell A: VALUES map (TS-side amounts) ──
 		const { entries } = await prefetchPriceMap({ db });
 		if (entries.length === 0) {
 			console.error("No usable fixed recurring prices for this org — aborting.");
@@ -426,11 +397,9 @@ const main = async () => {
 			db,
 			label: `A: VALUES map resolve, first page (${entries.length} price entries inlined)`,
 			query: valuesQuery,
-			// A 100k-row VALUES list makes the printed SQL useless — skip it.
 			printSql: entries.length <= 50,
 		});
 
-		// ── Cell B: SQL-side amounts (join prices, jsonb extraction) ──
 		const sqlSideQuery = buildSqlSideResolveQuery({});
 		const pageB = await measure({
 			db,
@@ -438,7 +407,6 @@ const main = async () => {
 			query: sqlSideQuery,
 		});
 
-		// ── Cell B2: price-driven join order ──
 		const priceDrivenQuery = buildPriceDrivenResolveQuery({});
 		const pageB2 = await measure({
 			db,
@@ -447,7 +415,6 @@ const main = async () => {
 			query: priceDrivenQuery,
 		});
 
-		// Sanity: all variants should agree on the top page.
 		const idsA = pageA.map((r) => r.internal_customer_id).join(",");
 		const idsB = pageB.map((r) => r.internal_customer_id).join(",");
 		const idsB2 = pageB2.map((r) => r.internal_customer_id).join(",");
@@ -455,14 +422,12 @@ const main = async () => {
 			`\nVariant agreement (first page ids): A vs B ${idsA === idsB ? "MATCH ✅" : "MISMATCH ❌"} | B vs B2 ${idsB === idsB2 ? "MATCH ✅" : "MISMATCH ❌"}`,
 		);
 
-		// ── Cell C: no-status-join variant (what does the churn filter cost?) ──
 		await measure({
 			db,
 			label: "C: SQL-side resolve WITHOUT customer_products status join (includes churned)",
 			query: buildNoStatusResolveQuery(),
 		});
 
-		// ── Cell D: deep cursor page on the price-driven variant ──
 		const fullCount = await runReadOnly({
 			db,
 			query: sql`
@@ -494,12 +459,10 @@ const main = async () => {
 			console.log("\nD: skipped — could not resolve a deep cursor.");
 		}
 
-		// ── Cell E: end-to-end — resolve page then hydrate via fetchset ──
 		console.log(
 			"\n=== E: end-to-end (resolve + getCursorPaginatedFullCusQuery hydration) ===",
 		);
 		{
-			// Warmup
 			const warmIds = pageB2
 				.slice(0, PAGE_LIMIT)
 				.map((r) => String(r.internal_customer_id));

@@ -1,6 +1,3 @@
-/** One imported file holding two collections' arrays: each server-only row
- * is appended into its own array. */
-
 import { expect, test } from "bun:test";
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { runPull } from "../src/actions/pull";

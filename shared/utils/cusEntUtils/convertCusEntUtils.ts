@@ -19,7 +19,6 @@ export const cusEntsToPlanId = ({
 }: {
 	cusEnts: FullCusEntWithFullCusProductView[];
 }) => {
-	// Get number of keys
 	const uniquePlanIds = new Set<string>();
 
 	for (const cusEnt of cusEnts) {

@@ -1,15 +1,3 @@
-/**
- * The V2 reset hydration: seat cusEnts (license assignments) inherit the pool
- * parent's lifecycle.
- *
- * Contract under test:
- *   - Seat cusEnt under an ACTIVE parent hydrates with the parent's
- *     status + subscription_ids overlaid on customer_product (so
- *     resetsViaInvoice / Stripe-anchor logic behaves like the parent's).
- *   - After the parent expires, the seat cusEnt hydrates as expired —
- *     no reliance on the seat row's own (stale) status.
- *   - Non-seat cusEnts are untouched by the inheritance path.
- */
 import { expect, test } from "bun:test";
 import {
 	CusProductStatus,
@@ -78,7 +66,6 @@ test.concurrent(
 		expect(parentCusProduct).toBeDefined();
 		expect(parentCusProduct?.subscription_ids?.length).toBeGreaterThan(0);
 
-		// Seats are excluded from FullCustomer — fetch the seat row directly.
 		const [seatCusProduct] = await ctx.db
 			.select()
 			.from(customerProducts)
@@ -103,7 +90,6 @@ test.concurrent(
 			);
 		expect(seatCusEnt).toBeDefined();
 
-		// ── Active parent: seat hydrates with the parent lifecycle overlaid ──
 		const activeHydration = await getResetContextByIds({
 			db: ctx.db,
 			customerEntitlementIds: [seatCusEnt.id],
@@ -122,7 +108,6 @@ test.concurrent(
 			parentCusProduct?.subscription_ids ?? [],
 		);
 
-		// ── Expired parent: seat drops out, seat row itself untouched ────
 		await CusProductService.update({
 			ctx,
 			cusProductId: parentCusProduct?.id ?? "",
@@ -136,13 +121,10 @@ test.concurrent(
 		const expiredSeat = expiredHydration.customerEntitlements.find(
 			(row) => row.id === seatCusEnt.id,
 		);
-		// Either the hydration drops it with its dead parent, or it carries the parent's expiry; never the seat's own status.
 		expect(
 			expiredSeat?.customer_product?.status ?? CusProductStatus.Expired,
 		).toBe(CusProductStatus.Expired);
 
-		// Seat row status is still active in the DB — exclusion came from the
-		// parent join, not a write.
 		const [seatAfter] = await ctx.db
 			.select()
 			.from(customerProducts)

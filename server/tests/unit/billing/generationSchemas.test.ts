@@ -1,22 +1,3 @@
-/**
- * TDD unit test for the billing-request generation schema registry.
- *
- * Contract under test:
- *   - Generation schemas are server-owned subsets of the V1/V0 billing params.
- *   - Keys the dashboard sheets cannot represent are NOT generatable and are
- *     rejected (strict parse), never silently stripped:
- *       attach:   customize.billing_controls, customize.update_items,
- *                 customize.remove_licenses, invoice_mode, redirect_mode,
- *                 long_lived_checkout, checkout_session_params
- *       update:   status, processor_subscription_id, redirect_mode
- *       schedule: invoice_mode, redirect_mode, checkout_session_params,
- *                 enable_plan_immediately
- *   - Seedable fields parse cleanly.
- *
- * Pre-impl red: the module does not exist. Post-impl green: the registry
- * exports attach/update/schedule generation schemas with the exclusions above.
- */
-
 import { describe, expect, test } from "bun:test";
 import {
 	normalizeGeneratedValue,

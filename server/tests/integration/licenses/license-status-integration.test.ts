@@ -88,7 +88,6 @@ test.concurrent(
 			skip_cache: true,
 		});
 		expect(existing.allowed).toBe(true);
-		// Past-due parents stay assignable (ACTIVE_STATUSES includes PastDue).
 		await autumnV2_2.post("/licenses.attach", {
 			customer_id: customerId,
 			plan_id: license.id,

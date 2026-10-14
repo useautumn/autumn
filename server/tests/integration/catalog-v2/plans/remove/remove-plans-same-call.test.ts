@@ -1,7 +1,3 @@
-/**
- * catalogV2.update — remove_plans same-call license pair verdicts.
- */
-
 import { test } from "bun:test";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils.js";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";

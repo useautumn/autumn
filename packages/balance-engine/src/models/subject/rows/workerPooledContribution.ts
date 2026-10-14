@@ -4,7 +4,6 @@ import {
 	nonEmptyStringSchema,
 } from "../../common/primitives.js";
 
-/** A pooled_balance_contributions row as a plan carries it: written by the committer, never held in state. Keep in sync with pooledBalanceTable. */
 export const workerPooledContributionSchema = z
 	.object({
 		id: nonEmptyStringSchema,

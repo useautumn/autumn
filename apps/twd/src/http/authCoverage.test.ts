@@ -5,7 +5,6 @@ process.env.TWD_PUBLIC_URL = "http://localhost:4100";
 
 const { createApp } = await import("./createApp.ts");
 
-/** Routes a caller may reach with no session or API key; each checks its own credential. */
 const PUBLIC_ROUTES = new Set([
 	"GET /health",
 	"GET /auth/google",

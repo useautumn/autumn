@@ -153,7 +153,6 @@ const planRow = ({
 		endedAt,
 		options,
 		internalEntityId,
-		// A running paid plan is billed on a Stripe subscription.
 		subscriptionIds: status === CusProductStatus.Scheduled ? [] : ["sub_live"],
 		customerEntitlements: balances(rowId),
 		customerPrices: product.prices.map((price) =>
@@ -165,7 +164,6 @@ const planRow = ({
 const scheduledRow = (params: Parameters<typeof planRow>[0]) =>
 	planRow({ status: CusProductStatus.Scheduled, ...params });
 
-/** Projects the request's phases from saved rows plus the rows and updates it plans, then diffs balances. */
 const previewBalanceChanges = async ({
 	current,
 	inserts = [],
@@ -225,7 +223,6 @@ const describeChange = ({
 const describePhases = (phaseChanges: SetPlansPreviewBalanceChange[][]) =>
 	phaseChanges.map((changes) => changes.map(describeChange));
 
-/** A customer on Pro whose next phase moves to a plan given by its product context, run through the real set_plans compute. */
 const computeSetPlansBalanceChanges = async ({
 	currentRow,
 	currentProduct,

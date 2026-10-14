@@ -9,12 +9,6 @@ import { advanceTestClock } from "@tests/utils/stripeUtils.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 
-/**
- * Tests for standalone setupPayment endpoint.
- * These tests verify that when a customer adds a payment method via setupPayment(),
- * their existing subscriptions are properly updated to use the new payment method.
- */
-
 test.concurrent(`${chalk.yellowBright("setup-payment: invoices are paid after adding payment method during trial")}`, async () => {
 	const messagesItem = items.monthlyMessages({
 		includedUsage: 0,
@@ -45,14 +39,12 @@ test.concurrent(`${chalk.yellowBright("setup-payment: invoices are paid after ad
 		],
 	});
 
-	// Get setup payment URL and complete the form
 	const res = await autumnV1.billing.setupPayment({
 		customer_id: customerId,
 	});
 
 	await completeSetupPaymentForm({ url: res.url! });
 
-	// Advance clock past trial (7 days) + buffer to trigger invoice
 	await advanceTestClock({
 		stripeCli: ctx.stripeCli,
 		testClockId: testClockId!,
@@ -60,7 +52,6 @@ test.concurrent(`${chalk.yellowBright("setup-payment: invoices are paid after ad
 		waitForSeconds: 30,
 	});
 
-	// Verify all invoices are paid
 	const customer = await autumnV1.customers.get(customerId);
 
 	const allInvoicesPaid = customer.invoices?.every(

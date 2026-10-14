@@ -1,8 +1,3 @@
-/**
- * Regression: syncing a subscription re-inserts its plan and expires the old
- * row, so seat pools and their assignments must move onto the new row.
- */
-
 import { expect, test } from "bun:test";
 import {
 	BillingInterval,

@@ -13,7 +13,6 @@ import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { useCustomerContext } from "../customer/CustomerContext";
 import { decoratePlanUsageLimits } from "./decoratePlanUsageLimits";
 
-/** Billing controls that apply to the customer or selected entity, tagged by origin. */
 export const useDisplayedBillingControls = () => {
 	const { customer, features, isLoading, refetch } = useCusQuery();
 	const { entityId } = useCustomerContext();
@@ -43,7 +42,6 @@ export const useDisplayedBillingControls = () => {
 			customerControls: selectedEntity
 				? billingControlsFromColumns(fullCustomer)
 				: undefined,
-			// Match the server: a subject's plans are customer-level plus its own entity plans.
 			customerProducts: (fullCustomer?.customer_products ?? []).filter(
 				(customerProduct) =>
 					!customerProduct.internal_entity_id ||

@@ -1,10 +1,3 @@
-/**
- * atmn scenarios/lint — two rows of one plan where one lacks versionSlug
- *
- * Once a plan has versions, a slug-less row stops meaning "the v1"; lint
- * refuses with the exact message and file:line, and nothing is sent.
- */
-
 import { expect, test } from "bun:test";
 import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 import { paidMonthly } from "@tests/utils/atmnUtils/baseConfigs.js";

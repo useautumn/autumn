@@ -9,20 +9,6 @@ import chalk from "chalk";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { CusService } from "@/internal/customers/CusService.js";
 
-/**
- * Subscription Item Quantity Difference Tests
- *
- * These tests verify that when updating a subscription, the Stripe subscription
- * item quantity is updated by applying the DIFFERENCE between old and new values,
- * not by setting an absolute value.
- *
- * This is critical because:
- * 1. A customer can have multiple customer products contributing to the same
- *    Stripe subscription item (e.g., same product attached multiple times)
- * 2. The subscription item quantity represents the SUM of all contributing products
- * 3. When updating one product, we must preserve the quantity from other products
- */
-
 const billingUnits = 12;
 
 test.concurrent(`${chalk.yellowBright("update-quantity: stripe sync upgrade quantity difference")}`, async () => {
@@ -42,7 +28,6 @@ test.concurrent(`${chalk.yellowBright("update-quantity: stripe sync upgrade quan
 		],
 	});
 
-	// Initial: 5 units (60 messages)
 	const initialUnits = 5;
 	const initialQuantity = initialUnits * billingUnits;
 
@@ -64,7 +49,6 @@ test.concurrent(`${chalk.yellowBright("update-quantity: stripe sync upgrade quan
 
 	const stripeCli = createStripeCli({ org: ctx.org, env: ctx.env });
 
-	// Get Stripe subscription item quantity before update
 	const fullCustomer = await CusService.getFull({
 		ctx,
 		idOrInternalId: customerId,
@@ -88,10 +72,9 @@ test.concurrent(`${chalk.yellowBright("update-quantity: stripe sync upgrade quan
 	expect(subscriptionItemBefore).toBeDefined();
 	expect(subscriptionItemBefore!.quantity).toBe(initialUnits);
 
-	// Update: 5 -> 8 units (difference = +3 units)
 	const updatedUnits = 8;
 	const updatedQuantity = updatedUnits * billingUnits;
-	const unitsDifference = updatedUnits - initialUnits; // +3
+	const unitsDifference = updatedUnits - initialUnits;
 
 	await autumnV1.subscriptions.update({
 		customer_id: customerId,
@@ -99,7 +82,6 @@ test.concurrent(`${chalk.yellowBright("update-quantity: stripe sync upgrade quan
 		options: [{ feature_id: TestFeature.Messages, quantity: updatedQuantity }],
 	});
 
-	// Verify Stripe subscription item is updated correctly
 	const subscriptionsAfter = await stripeCli.subscriptions.list({
 		customer: stripeCustomerId as string,
 		status: "all",
@@ -112,14 +94,8 @@ test.concurrent(`${chalk.yellowBright("update-quantity: stripe sync upgrade quan
 
 	expect(subscriptionItemAfter).toBeDefined();
 
-	// In the simple case (one product), both approaches give the same result:
-	// Absolute: quantity = 8
-	// Difference: quantity = 5 + 3 = 8
-	// This test verifies the mechanism works, but the bug manifests with multiple products
 	expect(subscriptionItemAfter!.quantity).toBe(updatedUnits);
 
-	// Verify the stripeSubscriptionItemQuantityDifference is being calculated correctly
-	// by checking that the final quantity matches initialUnits + unitsDifference
 	expect(subscriptionItemAfter!.quantity).toBe(initialUnits + unitsDifference);
 });
 
@@ -140,7 +116,6 @@ test.concurrent(`${chalk.yellowBright("update-quantity: stripe sync downgrade qu
 		],
 	});
 
-	// Start with 8 units (96 messages)
 	const initialUnits = 8;
 	const initialQuantity = initialUnits * billingUnits;
 
@@ -162,7 +137,6 @@ test.concurrent(`${chalk.yellowBright("update-quantity: stripe sync downgrade qu
 
 	const stripeCli = createStripeCli({ org: ctx.org, env: ctx.env });
 
-	// Get Stripe subscription before downgrade
 	const fullCustomer = await CusService.getFull({
 		ctx,
 		idOrInternalId: customerId,
@@ -183,10 +157,9 @@ test.concurrent(`${chalk.yellowBright("update-quantity: stripe sync downgrade qu
 	expect(subscriptionItemBefore).toBeDefined();
 	expect(subscriptionItemBefore!.quantity).toBe(initialUnits);
 
-	// Downgrade: 8 -> 3 units (difference = -5 units)
 	const downgradedUnits = 3;
 	const downgradedQuantity = downgradedUnits * billingUnits;
-	const unitsDifference = downgradedUnits - initialUnits; // -5
+	const unitsDifference = downgradedUnits - initialUnits;
 
 	await autumnV1.subscriptions.update({
 		customer_id: customerId,

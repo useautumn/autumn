@@ -126,7 +126,6 @@ describe("performMaximumClearing: ordering", () => {
 
 		performMaximumClearing({ rows, cusEnt: makeCustomerEntitlement() });
 
-		// NOTE: current behavior; possible bug: callers passing a live array (e.g. cusEnt.rollovers) see it reordered.
 		expect(ids(callerView)).toEqual(["feb", "forever"]);
 	});
 
@@ -175,7 +174,6 @@ describe("performMaximumClearing: non-entity trimming", () => {
 			cusEnt: makeCustomerEntitlement({ max: 100 }),
 		});
 
-		// NOTE: current behavior; possible bug: excess 0 still enters the loop and emits a no-op update.
 		expect(result).toEqual({ toDelete: [], toUpdate: [row("a", 60, FEB)] });
 	});
 
@@ -302,7 +300,6 @@ describe("performMaximumClearing: decimals", () => {
 			cusEnt: makeCustomerEntitlement({ max: 0.3 }),
 		});
 
-		// NOTE: current behavior; possible bug: total is summed with floats (0.30000000000000004), not Decimal.
 		expect(result).toEqual({
 			toDelete: [],
 			toUpdate: [row("feb", 0.09999999999999996, FEB)],
@@ -315,7 +312,6 @@ describe("performMaximumClearing: decimals", () => {
 			cusEnt: makeCustomerEntitlement({ max: 0.1 }),
 		});
 
-		// NOTE: current behavior; possible bug: survivor lands at 0.09999999999999996, not 0.1.
 		expect(result).toEqual({
 			toDelete: ["feb"],
 			toUpdate: [row("mar", 0.09999999999999996, MAR)],
@@ -451,7 +447,6 @@ describe("performMaximumClearing: entity mode", () => {
 			cusEnt: entityCusEnt(50),
 		});
 
-		// NOTE: current behavior; possible bug: entity usage is zeroed on trim while non-entity mode keeps row usage.
 		expect(result.toUpdate[0].entities.e1).toEqual({
 			id: "e1",
 			balance: 50,
@@ -490,7 +485,6 @@ describe("performMaximumClearing: entity mode", () => {
 			cusEnt: entityCusEnt(50),
 		});
 
-		// NOTE: current behavior; possible bug: every() over no entities is true, so an empty row is deleted.
 		expect(result).toEqual({ toDelete: ["feb"], toUpdate: [] });
 	});
 
@@ -503,7 +497,6 @@ describe("performMaximumClearing: entity mode", () => {
 			cusEnt: entityCusEnt(0.25),
 		});
 
-		// NOTE: current behavior; possible bug: float-summed entity total leaves 0.04999999999999996, not 0.05.
 		expect(result).toEqual({
 			toDelete: [],
 			toUpdate: [entityRow("feb", { e1: 0.04999999999999996 }, FEB)],

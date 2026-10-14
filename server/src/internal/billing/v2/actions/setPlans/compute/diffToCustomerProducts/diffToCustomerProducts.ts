@@ -33,12 +33,10 @@ export type SetPlansCustomerProductChanges = {
 	scheduledInsertCustomerProducts: FullCusProduct[];
 	updateCustomerProducts: CustomerProductUpdate[];
 	patchCustomerProducts: CustomerProductPatch[];
-	/** Kept rows a requested trial starts on, as they were and as they run on. */
 	trialStartedCustomerProducts: TrialStartedCustomerProduct[];
 	deleteCustomerProducts: FullCusProduct[];
 	outgoingCustomerProducts: FullCusProduct[];
 	keptCustomerProducts: FullCusProduct[];
-	/** The row each resolved segment runs on once the plan executes. */
 	customerProductIdBySegmentId: Map<string, string>;
 };
 
@@ -137,7 +135,6 @@ const isOnReplacedSchedule = ({
 const isLiveRow = (customerProduct: FullCusProduct) =>
 	customerProduct.status !== CusProductStatus.Scheduled;
 
-/** A live row the request declares now starts its explicit trial in place, keeping its balances. */
 const keptRowTrialStart = ({
 	billingContext,
 	customerProduct,
@@ -168,7 +165,6 @@ const keptRowTrialStart = ({
 	};
 };
 
-/** The links a kept row drops to leave a replaced subscription; a backdate recreate also moves its scheduled rows and schedule. */
 const replacedLinkResets = ({
 	billingContext,
 	customerProduct,
@@ -197,7 +193,6 @@ const replacedLinkResets = ({
 	};
 };
 
-/** A kept row takes its new end and trial, and moves off a replaced subscription onto the new one, from its backdated start if any. */
 const keptRowUpdate = ({
 	billingContext,
 	customerProduct,
@@ -237,9 +232,7 @@ const keptRowUpdate = ({
 	}
 
 	const linkResets = replacedLinkResets({ billingContext, customerProduct });
-	// Unlinked and paired with an empty patch, execution stamps the new subscription and schedule ids on it.
 	if (linkResets) Object.assign(update.updates, linkResets);
-	// A row leaving a trialing subscription the request ends lands on a new one without a trial.
 	if (linkResets && endsLiveTrial({ billingContext })) {
 		Object.assign(
 			update.updates,
@@ -264,7 +257,6 @@ const keptRowUpdate = ({
 	};
 };
 
-/** Projects the diff's row writes onto the customer's rows and the plans it inserts. */
 export const diffToCustomerProducts = ({
 	ctx,
 	billingContext,

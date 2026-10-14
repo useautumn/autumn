@@ -1,14 +1,3 @@
-/**
- * catalogV2.update draft generators stamp included on remove_items when the
- * from-item is a numbered grant (filterPrecision IdentityAndIncluded).
- *
- * Contract (C1): in-place 100→500 writes remove_items[0].included === 100.
- *
- * Red (current): draft remove filter is feature+interval only.
- * Green (after): the same draft also carries included: 100 so a 1k custom
- * row is not a candidate.
- */
-
 import { expect, test } from "bun:test";
 import { ResetInterval } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";

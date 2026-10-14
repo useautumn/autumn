@@ -7,7 +7,6 @@ export type CachePushTiming = {
 };
 
 const STATS_EVERY_MS = 10_000;
-/** A change requested further back than this was backdated by its caller, not delayed by the pipeline. */
 const MAX_PLAUSIBLE_AGE_MS = 60_000;
 
 const percentile = ({ sorted, p }: { sorted: number[]; p: number }) =>
@@ -38,7 +37,6 @@ const emptyWindow = () => ({
 	failed: 0,
 });
 
-/** Where a push's time goes (the worker read vs the Atom write), logged every few seconds rather than per push. */
 export function createCachePushStats({
 	logger,
 	queueDepth,
@@ -78,7 +76,6 @@ export function createCachePushStats({
 	timer.unref?.();
 
 	return {
-		/** totalMs is from the subject leaving the queue to its push settling; ageMs is from the change's request to that settle. */
 		recordPush: ({
 			targetsMs,
 			readMs,
@@ -93,7 +90,6 @@ export function createCachePushStats({
 			if (ageMs > MAX_PLAUSIBLE_AGE_MS) window.backdated++;
 			else window.recordAgeMs.push(ageMs);
 		},
-		/** From the change's request to herald queueing it: the balance worker's commit plus herald's fetch. */
 		recordEnqueue: ({ ageMs }: { ageMs: number }) => {
 			if (ageMs <= MAX_PLAUSIBLE_AGE_MS) window.enqueueAgeMs.push(ageMs);
 		},

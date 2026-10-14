@@ -3,17 +3,14 @@ import type { ReadThroughCacheContext } from "../misc/types/readThroughCacheCont
 import { REDIS_OP_TIMEOUT_MS } from "../ops/redisOpTimeouts.js";
 import { runRedisOp, tryRedisOp } from "../ops/runRedisOp.js";
 
-/** Bounds the miss-then-stale-set race and any staleness that slips past a repo's DEL. */
 export const SUBSCRIPTION_CACHE_TTL_SECONDS = 3600;
 
-/** One key per Stripe subscription: the row's own name, so its repo can drop it without knowing the customer. */
 export const buildSubscriptionCacheKey = ({
 	stripeId,
 }: {
 	stripeId: string;
 }): string => `subscription:${stripeId}`;
 
-/** Anything short of a clean reply is a miss: the id goes to Postgres, never to the caller as an error. */
 const cachedSubscriptionOf = ({
 	ctx,
 	stripeId,
@@ -43,7 +40,6 @@ const cachedSubscriptionOf = ({
 	}
 };
 
-/** One pipeline, one round trip; the misc client is a single node, so single-key commands need no slot. */
 export const getCachedSubscriptions = async ({
 	ctx,
 	stripeIds,
@@ -78,7 +74,6 @@ export const getCachedSubscriptions = async ({
 	return { found, missingStripeIds };
 };
 
-/** A row without a Stripe id has no key; the read never asks for one. */
 export const setCachedSubscriptions = async ({
 	ctx,
 	subscriptions,
@@ -108,7 +103,6 @@ export const setCachedSubscriptions = async ({
 	});
 };
 
-/** Drops the keys on every live target, so a ramped reader never serves the row a repo just rewrote. */
 export const invalidateSubscriptionCache = async ({
 	ctx,
 	stripeIds,

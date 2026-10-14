@@ -71,7 +71,6 @@ const timedFetch = async ({
 };
 
 test(`${chalk.yellowBright("pool isolation: critical endpoints work while general pool is under CPU load")}`, async () => {
-	// ---- Setup: delete then create customer ----
 	console.log("\n--- Setup ---");
 	console.log(`Deleting customer: ${CUSTOMER_ID}`);
 	await fetch(`${BASE_URL}/v1/customers/${CUSTOMER_ID}`, {
@@ -92,7 +91,6 @@ test(`${chalk.yellowBright("pool isolation: critical endpoints work while genera
 	});
 	console.log(`  Customer create: ${createRes.status}`);
 
-	// ---- Flood general pool with CPU-heavy queries ----
 	console.log(
 		`\n--- Flooding general pool (${FLOOD_COUNT} x CPU-burn queries, ${CPU_ROWS.toLocaleString()} rows each) ---`,
 	);
@@ -107,10 +105,8 @@ test(`${chalk.yellowBright("pool isolation: critical endpoints work while genera
 		);
 	}
 
-	// Wait for queries to start and saturate connections + CPU
 	await new Promise((resolve) => setTimeout(resolve, 2000));
 
-	// ---- Test critical endpoints under load (multiple rounds) ----
 	console.log(
 		`\n--- Testing critical endpoints (${CRITICAL_ROUNDS} rounds) while general pool is under CPU load ---`,
 	);
@@ -153,7 +149,6 @@ test(`${chalk.yellowBright("pool isolation: critical endpoints work while genera
 		);
 	}
 
-	// General pool ping (should be blocked)
 	const generalPing = await Promise.race([
 		poolTest({ action: "ping", pool: "general" }).then((r) => ({
 			label: "General pool ping",
@@ -175,7 +170,6 @@ test(`${chalk.yellowBright("pool isolation: critical endpoints work while genera
 		),
 	]);
 
-	// ---- Report results ----
 	const criticalAvg = Math.round(
 		allResults.reduce((sum, r) => sum + r.durationMs, 0) / allResults.length,
 	);
@@ -193,18 +187,15 @@ test(`${chalk.yellowBright("pool isolation: critical endpoints work while genera
 		`  Isolation factor: ${(generalPing.durationMs / Math.max(criticalAvg, 1)).toFixed(1)}x`,
 	);
 
-	// ---- Assertions ----
 	for (const result of allResults) {
 		expect(result.durationMs).toBeLessThan(2000);
 		expect(result.ok).toBe(true);
 	}
 
-	// General pool should be blocked
 	expect(generalPing.durationMs).toBeGreaterThan(criticalAvg);
 
 	console.log("\nPool isolation is working — critical endpoints unaffected.");
 
-	// Clean up
 	console.log("\nWaiting for CPU-burn queries to finish...");
 	await Promise.allSettled(floodPromises);
 	console.log("Done.");

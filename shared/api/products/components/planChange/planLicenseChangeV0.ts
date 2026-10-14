@@ -2,7 +2,6 @@ import { z } from "zod/v4";
 import { ApiPlanLicenseV1Schema } from "../../apiPlanLicenseV1.js";
 import { PlanChangeCoreV0Schema } from "./planChangeCoreV0.js";
 
-/** Sparse planLicense-row scalars that changed, holding their previous values. */
 export const PlanLicensePreviousAttributesV0Schema = ApiPlanLicenseV1Schema.pick(
 	{
 		version: true,
@@ -12,11 +11,6 @@ export const PlanLicensePreviousAttributesV0Schema = ApiPlanLicenseV1Schema.pick
 	},
 ).partial();
 
-/**
- * One planLicense on this plan that was created, updated, or removed.
- * Nested `plan_change` is the effective child plan (null when created or removed,
- * or when only row scalars changed).
- */
 export const PlanLicenseChangeV0Schema = ApiPlanLicenseV1Schema.extend({
 	action: z.enum(["created", "updated", "removed"]).meta({
 		description:

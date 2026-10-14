@@ -1,8 +1,3 @@
-/**
- * Auto-topup price scoping across plans: a PLAN-level config charges the control
- * plan's price; a CUSTOMER-level config charges the most recently attached plan's.
- */
-
 import { test } from "bun:test";
 import type { ApiCustomerV5 } from "@autumn/shared";
 import { makeAutoTopupConfig } from "@tests/integration/balances/auto-topup/utils/makeAutoTopupConfig";
@@ -21,7 +16,6 @@ import {
 } from "./utils/autoTopupPlanPriceScope.js";
 
 test(`${chalk.yellowBright("topup-price-scope: control on the CHEAPER plan charges that plan's price, not the pricier plan's")}`, async () => {
-	// Cheaper plan ($5/pack) HAS control. Pricier add-on ($10/pack), NO control.
 	const cheapPlanWithControl = products.oneOffAddOn({
 		id: "topup-price-cheap-with-control",
 		items: [oneOffItem(5)],
@@ -66,7 +60,6 @@ test(`${chalk.yellowBright("topup-price-scope: control on the CHEAPER plan charg
 		remaining: new Decimal(100).sub(85).add(100).toNumber(),
 	});
 
-	// MUST be billed against the control plan's $5 price (not the $10 plan).
 	await expectCustomerInvoiceCorrect({
 		customerId,
 		count: 3,

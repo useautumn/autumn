@@ -5,16 +5,9 @@ import { ProductService } from "@/internal/products/ProductService";
 import { mapToProductV2 } from "@/internal/products/productV2Utils";
 
 const GetProductsByPriceIdsQuerySchema = z.object({
-	// qs (with comma:true) parses `?ids=a,b` as ["a","b"] and `?ids=a` as "a".
 	ids: z.union([z.string(), z.array(z.string())]),
 });
 
-/**
- * GET /products/products/by-price-ids?ids=p1,p2
- * Returns the (possibly historical) product versions that own the given
- * price IDs. Used by the reward update sheet to resolve price IDs whose
- * owning product version isn't in the latest-versions list.
- */
 export const handleGetProductsByPriceIds = createRoute({
 	scopes: [Scopes.Plans.Read],
 	query: GetProductsByPriceIdsQuerySchema,

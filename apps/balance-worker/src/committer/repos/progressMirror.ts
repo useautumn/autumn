@@ -1,7 +1,6 @@
 import type { OwnerFence } from "../../state/types/stateStore.js";
 import type { PartitionPosition } from "../types/committer.js";
 
-/** Postgres holds both bookmarks; this mirror makes them readable inside synchronous code. */
 export type ProgressMirror = {
 	readNextOffset(position: PartitionPosition): bigint | null;
 	setNextOffset(position: PartitionPosition & { nextOffset: bigint }): void;
@@ -10,7 +9,6 @@ export type ProgressMirror = {
 		position: PartitionPosition & { commandNextOffset: bigint },
 	): void;
 	readOwnerFence(position: PartitionPosition): OwnerFence | null;
-	/** Only a higher epoch replaces the fence; its offset moves with it. */
 	setOwnerFence(position: PartitionPosition & { fence: OwnerFence }): void;
 };
 

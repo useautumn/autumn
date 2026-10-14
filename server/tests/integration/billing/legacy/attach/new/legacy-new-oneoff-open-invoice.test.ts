@@ -1,8 +1,3 @@
-/**
- * Regression: ACH invoice.pay can resolve while the invoice is still open.
- * Autumn must not grant prepaid one-off balance then.
- */
-
 /** biome-ignore-all lint/suspicious/noExplicitAny: legacy response shape */
 
 import { expect, test } from "bun:test";

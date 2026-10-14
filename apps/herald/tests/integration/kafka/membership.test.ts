@@ -1,14 +1,3 @@
-/**
- * Herald over a real broker while its group changes members: what a rolling deploy and a swap do.
- *
- * Contract under test:
- *   - A graceful stop (SIGTERM) and a dead member (no heartbeats past the session timeout) both hand
- *     their partitions on; every record lands at least once and, deduped by position, exactly once.
- *   - A dead member that wakes up cannot commit past what the group has: its late commit is refused.
- *   - What repeats is bounded by one slice per partition per membership change.
- *   - A record produced to a partition that had none while a member was down is delivered after.
- *   - A brand-new job starts at the end of the log, never from the beginning.
- */
 import { expect, test } from "bun:test";
 import {
 	computeTrack,
@@ -42,7 +31,6 @@ const brokers = process.env.KAFKA_BROKERS.split(",").map((b) => b.trim());
 
 const PARTITIONS = 4;
 const RECORDS_PER_SLICE = 20;
-/** The broker's floor is 6s; short so an evicted member is seen inside the test budget. */
 const TIMINGS: KafkaConsumerGroupTimings = {
 	fetchMaxWaitTimeMs: 100,
 	heartbeatIntervalMs: 1_000,
@@ -113,7 +101,6 @@ const waitFor = async ({
 const positionKey = ({ position }: StreamRecord) =>
 	`${position.partition}:${position.offset}`;
 
-/** Every herald in the test shares this ledger, the way every task shares the sinks. */
 type Ledger = { applied: Map<string, number> };
 
 const createTopic = async ({
@@ -192,7 +179,6 @@ const committedOffsets = async ({
 	}
 };
 
-/** One herald task: its own client, the shared ledger, and a hook to stage a member that stops answering. */
 const createHeraldTask = ({
 	name,
 	topic,
@@ -230,7 +216,6 @@ const createHeraldTask = ({
 					const key = positionKey(record);
 					ledger.applied.set(key, (ledger.applied.get(key) ?? 0) + 1);
 				}
-				// A member that stops answering mid-slice, after it wrote: the zombie the fence exists for.
 				if (hold) await hold;
 			},
 		},
@@ -240,7 +225,6 @@ const createHeraldTask = ({
 		name,
 		consumer,
 		crashes,
-		/** The next slice writes, then hangs: no heartbeat, the broker evicts this member. */
 		holdNextSlice: () => {
 			hold = new Promise<void>((resolve) => {
 				release = resolve;
@@ -270,7 +254,6 @@ test("members leave gracefully and die mid-slice; every record lands, deduped ex
 	await a.consumer.start();
 	await b.consumer.start();
 
-	// The log fills while the group changes members, the way it does under a deploy.
 	const producing = (async () => {
 		for (let round = 0; round < perPartition / 10; round++) {
 			for (let partition = 0; partition < PARTITIONS; partition++)
@@ -285,7 +268,6 @@ test("members leave gracefully and die mid-slice; every record lands, deduped ex
 		what: "the first records to land",
 	});
 
-	// A rolling deploy: one task stops on SIGTERM, a replacement joins.
 	const appliedBeforeLeave = ledger.applied.size;
 	await a.consumer.stop();
 	const c = task("c");
@@ -296,7 +278,6 @@ test("members leave gracefully and die mid-slice; every record lands, deduped ex
 		what: "records to land after the graceful leave",
 	});
 
-	// A hard death: b writes one slice, then stops answering until the broker has evicted it.
 	b.holdNextSlice();
 	await Bun.sleep(TIMINGS.sessionTimeoutMs + TIMINGS.rebalanceTimeoutMs);
 	b.releaseHeld();
@@ -307,7 +288,6 @@ test("members leave gracefully and die mid-slice; every record lands, deduped ex
 		timeoutMs: 60_000,
 		what: `all ${total} records (have ${ledger.applied.size})`,
 	});
-	// Let the last commits land before reading the group's places.
 	await Bun.sleep(1_000);
 
 	const repeated = [...ledger.applied.entries()].filter(
@@ -321,13 +301,11 @@ test("members leave gracefully and die mid-slice; every record lands, deduped ex
 			(repeatedByPartition.get(partition) ?? 0) + 1,
 		);
 	}
-	// Two membership changes with a slice in flight on each: never more than one slice per partition per change.
 	for (const [partition, count] of repeatedByPartition)
 		expect(
 			count,
 			`partition ${partition} repeated ${count}`,
 		).toBeLessThanOrEqual(2 * RECORDS_PER_SLICE);
-	// The held slice was written by b and never committed, so its new owner wrote it again: the bounded repeat.
 	expect(repeated.length).toBeGreaterThan(0);
 	console.info(
 		`membership: ${total} records, ${repeated.length} repeated across ${repeatedByPartition.size} partition(s)`,
@@ -335,7 +313,6 @@ test("members leave gracefully and die mid-slice; every record lands, deduped ex
 
 	const { committed, ends } = await committedOffsets({ kafka, groupId, topic });
 	expect(committed).toEqual(ends);
-	// b's late commit was refused by the broker; a refused commit is not a crash.
 	for (const member of [a, b, c]) expect(member.crashes).toEqual([]);
 
 	await b.consumer.stop();
@@ -362,7 +339,6 @@ test("a record produced to a partition that had none while herald was down is de
 	});
 	await first.consumer.stop();
 
-	// Partition 1 has never had a record: with `fromBeginning: false` this one would be lost.
 	await produce({ producer, topic, partition: 1, count: 1 });
 
 	const second = task();

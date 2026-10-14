@@ -4,7 +4,6 @@ import { ApiInvoiceV1Schema } from "@api/others/apiInvoice/apiInvoiceV1.js";
 import { z } from "zod/v4";
 import { ApiBaseEntitySchema } from "./apiBaseEntity.js";
 
-// Re-export for backward compatibility
 export { ApiBaseEntitySchema } from "./apiBaseEntity.js";
 
 export const ApiEntityV1Schema = ApiBaseEntitySchema.extend({
@@ -22,7 +21,6 @@ export const ApiEntityV1Schema = ApiBaseEntitySchema.extend({
 	}),
 });
 
-// Alias for backward compatibility
 export const ApiEntitySchema = ApiEntityV1Schema;
 
 export type ApiEntityV1 = z.infer<typeof ApiEntityV1Schema>;

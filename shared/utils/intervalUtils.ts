@@ -59,7 +59,6 @@ export const entIntervalToValue = (
 	return new Decimal(baseValue).mul(intervalCount ?? 1);
 };
 
-/** Convert a BillingInterval to its approximate duration in seconds. */
 export const billingIntervalToSeconds = ({
 	interval,
 }: {

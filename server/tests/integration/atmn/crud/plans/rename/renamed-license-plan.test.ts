@@ -1,11 +1,3 @@
-/**
- * atmn crud/plans/rename — renamed license plan → the parent's link follows (by internal id), attach with license quantities still resolves
- *
- * a rename is a changed planId on a row that carries internalId; aliases per catalog-v2/plans/aliases
- *
- * One line of plans/atmn-v3/07_tests.md. [a, b] is a matrix looped INSIDE this file.
- */
-
 import { expect, test } from "bun:test";
 import type { ApiPlanV1 } from "@autumn/shared";
 import { expectCustomerProducts } from "@tests/integration/billing/utils/expectCustomerProductCorrect.js";
@@ -50,9 +42,6 @@ test(`${chalk.yellowBright("renamed license plan → the parent's link follows (
 			idOrInternalId: "seat",
 		});
 
-		// The license plan is renamed by its internalId. A push is the whole
-		// desired catalog (skip_deletions: false), so `enterprise` has to be
-		// restated too — otherwise its omission reads as a removal.
 		scenario.writeConfig(
 			atmnConfigSource({
 				body: `{

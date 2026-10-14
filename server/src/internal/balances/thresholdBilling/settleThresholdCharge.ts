@@ -9,11 +9,6 @@ import { computeThresholdBillingPlan } from "./compute/computeThresholdBillingPl
 import { markThresholdPastDue } from "./markThresholdPastDue.js";
 import { setupThresholdBillingContext } from "./setup/setupThresholdBillingContext.js";
 
-/**
- * Bills overage the customer has already consumed. Unlike an auto top-up grant
- * this never declines to charge: spend limits and suspensions cap future
- * purchases, they do not forgive debt.
- */
 export const settleThresholdCharge = async ({
 	ctx,
 	customerId,

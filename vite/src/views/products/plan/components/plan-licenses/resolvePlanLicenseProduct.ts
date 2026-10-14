@@ -13,7 +13,6 @@ export const resolvePlanLicenseProduct = ({
 		(product) => product.id === planId && product.version === version,
 	);
 
-/** Exact-version match with latest-version fallback for unpinned rows. */
 export const resolveLicenseProductWithFallback = ({
 	products,
 	planId,

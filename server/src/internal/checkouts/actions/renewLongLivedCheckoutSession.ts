@@ -23,10 +23,6 @@ import { updateCheckoutDbAndCache } from "./updateDbAndCache";
 
 const STRIPE_SESSION_ID_REGEX = /cs_(test|live)_[A-Za-z0-9]+/;
 
-/**
- * Opens a fresh Stripe session for a plan the link already granted, without re-running attach.
- * Returns null for links whose plan was not granted at creation.
- */
 export const renewLongLivedCheckoutSession = async ({
 	ctx,
 	checkout,
@@ -51,7 +47,6 @@ export const renewLongLivedCheckoutSession = async ({
 		? await MetadataService.get({ db: ctx.db, id: metadataId })
 		: null;
 
-	// A complete session may still have metadata while its webhook is in flight.
 	if (
 		previousSession.status === "complete" ||
 		!metadataId ||
@@ -65,7 +60,6 @@ export const renewLongLivedCheckoutSession = async ({
 		throw new CheckoutCompletedError();
 	}
 
-	// The metadata's session owns the granted rows; a stale checkout read must not split them.
 	if (pendingMetadata.stripe_checkout_session_id !== previousSessionId) {
 		throw new RecaseError({
 			message:

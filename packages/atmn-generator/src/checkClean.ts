@@ -1,13 +1,5 @@
 import { generate } from "./generate";
 
-/**
- * Regenerating must leave the working tree clean. A diff here means the spec
- * moved and the committed CLI did not — exactly the drift that made v2's
- * hand-rolled client wrong, found in CI rather than in production.
- *
- * Checked against git, not against a second run: idempotency is necessary but
- * says nothing about whether what is COMMITTED is current.
- */
 const main = async (): Promise<void> => {
 	const paths = await generate();
 

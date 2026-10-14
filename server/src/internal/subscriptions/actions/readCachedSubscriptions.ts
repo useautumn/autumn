@@ -4,7 +4,6 @@ import { getMiscCacheContext } from "@/external/redis/miscCache/getMiscCacheCont
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { SubService } from "../SubService.js";
 
-/** The rows for these Stripe ids, from the misc cache first; only the misses reach Postgres and are written back. */
 export const readCachedSubscriptions = async ({
 	ctx,
 	stripeIds,

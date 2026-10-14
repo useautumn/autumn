@@ -43,7 +43,6 @@ export const unmatchedReplaceLeftoverCustomize = ({
 	],
 });
 
-/** 1k monthly spared; leftover boolean + lifetime still land. */
 export const expectUnmatchedReplaceLeftoversCorrect = async ({
 	ctx,
 	autumn,

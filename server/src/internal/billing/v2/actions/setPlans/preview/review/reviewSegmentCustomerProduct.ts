@@ -2,7 +2,6 @@ import type { FullCusProduct, FullCustomer } from "@autumn/shared";
 import type { SavedSegment } from "../../timeline/types/timelineSegment";
 import type { ReviewSegment } from "./types/reviewPhase";
 
-/** Saved segments live on the customer's rows; resolved ones on the rows after the plan runs. */
 export type ReviewRowLookup = {
 	originalFullCustomer: FullCustomer;
 	finalFullCustomer: FullCustomer;
@@ -30,7 +29,6 @@ export const savedRowAt = ({
 	[...segment.rows].reverse().find((row) => row.startsAt <= at) ??
 	segment.rows[0];
 
-/** The row a review segment runs on, carrying the end the timeline gives it. */
 export const reviewSegmentCustomerProduct = ({
 	reviewSegment,
 	lookup,

@@ -3,11 +3,6 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getTargetBaseInternalIds } from "./resolveVariantBaseLinks.js";
 import { upsertCopiedPlan } from "./upsertCopiedPlan.js";
 
-/**
- * Copies the set's variants into the target env, each linked to its base
- * resolved there. A variant whose base can't resolve copies unlinked with a
- * warning rather than failing the whole copy.
- */
 export const copyEnvVariantPlans = async ({
 	toContext,
 	variantProductsV2,

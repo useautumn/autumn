@@ -8,16 +8,10 @@ export interface StoreEnvResult {
 }
 
 export interface StoreEnvOptions {
-	/** Force overwrite existing keys without prompting */
 	forceOverwrite?: boolean;
-	/** Working directory (defaults to process.cwd()) */
 	cwd?: string;
 }
 
-/**
- * Store API keys to .env file
- * Non-interactive version for use in React/Ink components
- */
 export async function storeEnvKeys(
 	keys: { prodKey: string; sandboxKey: string },
 	options?: StoreEnvOptions,
@@ -36,9 +30,7 @@ export async function storeEnvKeys(
 		AUTUMN_SECRET_KEY: keys.sandboxKey,
 	};
 
-	// Check if .env exists
 	if (fs.existsSync(envPath)) {
-		// Read and update existing file
 		const content = fs.readFileSync(envPath, "utf-8");
 		const lines = content.split("\n");
 
@@ -52,9 +44,7 @@ export async function storeEnvKeys(
 					lines[existingIndex] = `${varName}=${value}`;
 					keysWritten.push(varName);
 				}
-				// If not forceOverwrite, skip this key
 			} else {
-				// Key doesn't exist, add it
 				lines.push(`${varName}=${value}`);
 				keysWritten.push(varName);
 			}
@@ -62,7 +52,6 @@ export async function storeEnvKeys(
 
 		fs.writeFileSync(envPath, lines.join("\n"));
 	} else {
-		// Create new .env file
 		created = true;
 		const envContent = Object.entries(keyMap)
 			.map(([key, value]) => `${key}=${value}`)

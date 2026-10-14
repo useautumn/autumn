@@ -1,8 +1,3 @@
-/**
- * Integration tests for `billing.updated` webhooks emitted from Stripe's
- * `customer.subscription.updated` flow — `handleStripeSubscriptionUpdated`.
- */
-
 import { afterAll, beforeAll, expect, test } from "bun:test";
 import {
 	getTestSvixAppId,
@@ -35,10 +30,6 @@ beforeAll(async () => {
 afterAll(async () => {
 	await webhook?.cleanup();
 });
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// PAST DUE
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test(`${chalk.yellowBright("billing.updated: customer enters past_due → updated with past_due flip")}`, async () => {
 	const customerId = "billing-updated-past-due";

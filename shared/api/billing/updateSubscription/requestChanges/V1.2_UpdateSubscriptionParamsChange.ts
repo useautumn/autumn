@@ -41,8 +41,6 @@ export const V1_2_UpdateSubscriptionParamsChange = defineVersionChange({
 
 		const invoiceMode = billingParamsV0ToInvoiceModeParams({ input });
 
-		// free_trial is already folded into customize by the mapper above, and
-		// the V0 shape ({length, duration}) is not the V1 one.
 		const { free_trial: _freeTrialV0, ...rest } = input;
 
 		return {

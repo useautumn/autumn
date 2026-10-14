@@ -23,13 +23,10 @@ export function QuantityField({
 	min?: number;
 	max?: number;
 	step?: number;
-	/** Ascending quantities the buttons snap to instead of stepping by `step`,
-	 * e.g. volume-tier bounds. Beyond the last stop the buttons are disabled. */
 	stops?: number[];
 	className?: string;
 	hideFieldInfo?: boolean;
 	compact?: boolean;
-	/** Stretches the stepper to its container instead of sizing to its content. */
 	fullWidth?: boolean;
 }) {
 	const field = useFieldContext<number>();

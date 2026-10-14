@@ -1,12 +1,3 @@
-/**
- * Restore Advanced Tests
- *
- * Test 3: Pro + recurring add-on. Remove the add-on item from Stripe, restore
- *         should put it back.
- * Test 4: Pro + prepaid messages. Set the prepaid quantity to a wrong value,
- *         restore should set it back to Autumn's expected quantity.
- */
-
 import { expect, test } from "bun:test";
 import { OnDecrease, OnIncrease } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features";
@@ -63,10 +54,6 @@ const allStripePriceIdsFor = async ({
 	return ids;
 };
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 3: Pro + recurring add-on, remove add-on item from Stripe, restore
-// ═══════════════════════════════════════════════════════════════════════════════
-
 test.concurrent(`${chalk.yellowBright("restore-advanced 3: pro + recurring add-on, remove add-on item, restore")}`, async () => {
 	const customerId = "restore-advanced-addon";
 
@@ -96,7 +83,6 @@ test.concurrent(`${chalk.yellowBright("restore-advanced 3: pro + recurring add-o
 	expect(subs.length).toBe(1);
 	const sub = subs[0];
 
-	// Remove the add-on's Stripe item from the subscription.
 	const addonPriceIds = await allStripePriceIdsFor({
 		ctx,
 		productId: addOn.id,
@@ -111,10 +97,6 @@ test.concurrent(`${chalk.yellowBright("restore-advanced 3: pro + recurring add-o
 
 	await expectStripeSubscriptionCorrect({ ctx, customerId });
 });
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 4: Pro with prepaid messages — corrupt the prepaid quantity, restore
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(`${chalk.yellowBright("restore-advanced 4: pro + prepaid messages, wrong quantity, restore")}`, async () => {
 	const customerId = "restore-advanced-prepaid";
@@ -158,9 +140,6 @@ test.concurrent(`${chalk.yellowBright("restore-advanced 4: pro + prepaid message
 
 	const proPriceIds = await allStripePriceIdsFor({ ctx, productId: pro.id });
 
-	// Find the prepaid item on Stripe (one of the price ids will be on the sub
-	// with quantity > 0 and not equal to the fixed-base price item). The
-	// simplest corruption: set every Stripe item quantity to a wrong value.
 	const wrongQuantityUpdates = sub.items.data
 		.filter((item) => proPriceIds.includes(item.price.id))
 		.filter((item) => item.quantity !== undefined)

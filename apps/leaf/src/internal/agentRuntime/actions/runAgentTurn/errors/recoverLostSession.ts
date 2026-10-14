@@ -6,9 +6,6 @@ import {
 } from "../../../eve/client.js";
 import type { EveSessionRef } from "../../../eve/types.js";
 
-/** Decides whether a failed existing-session turn restarts fresh: a gone
- * session already lost its row at the post; a dead one is abandoned here.
- * Anything else, or a failure on a brand-new session, propagates. */
 export const recoverLostSession = async ({
 	ctx,
 	error,

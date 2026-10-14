@@ -10,15 +10,11 @@ import type {
 	StripeWebhookHonoEnv,
 } from "./stripeWebhookContext.js";
 
-// sub.created included: auto-sync can insert customer products on first delivery.
 const updateProductEvents = [
 	"customer.subscription.created",
 	"customer.subscription.updated",
 ];
 
-// checkout.session.expired included: the handler expires cusProducts that were
-// pre-inserted for enable_plan_immediately / pending checkouts, which must also
-// drop the cached subject or the API keeps serving the plan as active.
 const coreEvents = [
 	"customer.subscription.deleted",
 	"subscription_schedule.canceled",
@@ -85,9 +81,6 @@ export const shouldSkipWebhookRefresh = ({
 	const { stripeEvent } = ctx;
 	if (!stripeEvent) return false;
 
-	// Skip cache refresh for manual invoices — these are always Autumn-initiated
-	// (e.g. auto top-up, allocated invoices). The originating code path manages
-	// the cache directly, so a webhook-driven nuke would discard fresh data.
 	switch (stripeEvent.type) {
 		case "invoice.created":
 		case "invoice.finalized":
@@ -102,18 +95,12 @@ export const shouldSkipWebhookRefresh = ({
 	}
 };
 
-/**
- * Middleware that refreshes customer cache after webhook handlers complete
- * Runs after the main handler (post-processing)
- */
 export const stripeWebhookRefreshMiddleware = async (
 	c: Context<StripeWebhookHonoEnv>,
 	next: Next,
 ) => {
-	// Run the main handler first
 	await next();
 
-	// Post-processing: refresh cache
 	const ctx = c.get("ctx");
 	const { logger, stripeEvent } = ctx;
 
@@ -153,12 +140,9 @@ export const stripeWebhookRefreshMiddleware = async (
 			}
 
 			await deleteCachedFullCustomer({
-				// An id-less customer is read, and cached, by its internal id.
 				customerId: customer.id ?? customer.internal_id,
 				ctx,
 				source: `stripeWebhookRefreshMiddleware: ${eventType}`,
-				// Attach-echo invoices are balance-neutral. Cycle handlers bump
-				// cache_version or already invalidate, so a conflict is a no-op.
 				flushBalances: true,
 			});
 		}

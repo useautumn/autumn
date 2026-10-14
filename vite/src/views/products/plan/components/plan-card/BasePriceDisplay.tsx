@@ -28,10 +28,8 @@ export const BasePriceDisplay = ({
 	isOnboarding?: boolean;
 	product: FrontendProduct;
 	readOnly?: boolean;
-	/** Compact sizing for the slim license card header. */
 	slim?: boolean;
 	adminIds?: AdminPlanIds;
-	/** Display currency for amounts; defaults to the org default. */
 	currency?: string;
 }) => {
 	const { sheetType, setSheet } = useSheet();
@@ -113,9 +111,6 @@ export const BasePriceDisplay = ({
 		}
 	};
 
-	// readOnly: render a plain span so hover events reach the admin tooltip
-	// (the editable Button uses `pointer-events-none` on readOnly which would
-	// suppress hover detection).
 	if (readOnly) {
 		const content = (
 			<span

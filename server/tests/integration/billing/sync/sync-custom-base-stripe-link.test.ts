@@ -1,17 +1,3 @@
-/**
- * TDD test: syncV2 of a sub with a CUSTOM base price must link the created
- * custom Autumn price back to its source Stripe price.
- *
- * Red-failure mode (current behavior):
- *  - Detection captures customize.price.stripe_price_id, but the
- *    BasePriceParams -> ProductItem -> Price mapping drops it, so the custom
- *    price row lands with config.stripe_price_id = null — making the customer
- *    unrenderable by verify and future billing ops.
- *
- * Green-success criteria (after fix):
- *  - The custom fixed price's config.stripe_price_id equals the Stripe price
- *    the subscription actually carries.
- */
 import { expect, test } from "bun:test";
 import type { SyncProposalsV2Response } from "@autumn/shared";
 import { isFixedPrice } from "@autumn/shared";
@@ -43,8 +29,6 @@ test.concurrent(
 			actions: [],
 		});
 
-		// 1. A Stripe price on pro's Stripe product with a NON-catalog amount —
-		// detection will product-match it and propose a custom base price.
 		const fullProduct = await ProductService.getFull({
 			db: ctx.db,
 			idOrInternalId: pro.id,
@@ -70,7 +54,6 @@ test.concurrent(
 			items: [{ price: customStripePrice.id }],
 		});
 
-		// 2. Sync through the real V2 pipeline.
 		const proposalsResponse: SyncProposalsV2Response = await autumnV1.post(
 			"/billing.sync_proposals_v2",
 			{ customer_id: customerId },
@@ -87,7 +70,6 @@ test.concurrent(
 			phases: proposal!.phases,
 		});
 
-		// 3. The created custom base price must link back to the Stripe price.
 		const synced = await CusService.getFull({
 			ctx,
 			idOrInternalId: customerId,
@@ -102,12 +84,10 @@ test.concurrent(
 				isFixedPrice(customerPrice.price) && customerPrice.price.is_custom,
 		);
 		expect(customBasePrice).toBeDefined();
-		// Pre-fix: null — the mappers drop the link. Post-fix: the Stripe price id.
 		expect(customBasePrice!.price.config.stripe_price_id).toBe(
 			customStripePrice.id,
 		);
 
-		// 4. Clean up the directly-created Stripe subscription.
 		await ctx.stripeCli.subscriptions.cancel(stripeSubscription.id);
 	},
 );

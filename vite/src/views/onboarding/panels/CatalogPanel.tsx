@@ -10,7 +10,6 @@ import { FeatureChip } from "./FeatureChip";
 import { PanelSection } from "./PanelSection";
 import { PlanTrack } from "./PlanTrack";
 
-/** Three rows of the 4-column grid. */
 const MAX_FEATURES = 12;
 
 export function CatalogPanel({
@@ -51,8 +50,6 @@ export function CatalogPanel({
 			{creditSystems.length > 0 && (
 				<div className="flex min-w-0 flex-col">
 					<SectionTag>Credits</SectionTag>
-					{/* Same column count as the features below, so the two strips line
-					    up rather than each cell finding its own width. */}
 					<div className={catalogGridClassName}>
 						{creditSystems.map((creditSystem) => (
 							<CreditSystemCard
@@ -68,8 +65,6 @@ export function CatalogPanel({
 			{plainFeatures.length > 0 && (
 				<div className="flex min-w-0 flex-col">
 					<SectionTag>Features</SectionTag>
-					{/* A fixed grid rather than wrapped chips: uniform columns line the
-					    features up with the plan track above instead of ragging. */}
 					<div className={catalogGridClassName}>
 						{plainFeatures.slice(0, MAX_FEATURES).map((feature) => (
 							<FeatureChip key={feature.id} feature={feature} />

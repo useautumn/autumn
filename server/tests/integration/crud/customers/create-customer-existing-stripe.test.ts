@@ -8,7 +8,6 @@ import { CusService } from "@/internal/customers/CusService.js";
 
 const uniqueSuffix = () => Math.random().toString(36).slice(2, 10);
 
-// Contract: create_in_stripe on an existing Autumn customer ensures one Stripe processor.
 test.concurrent(
 	`${chalk.yellowBright("customers: existing customer create_in_stripe creates Stripe customer")}`,
 	async () => {

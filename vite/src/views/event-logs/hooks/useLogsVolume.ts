@@ -13,7 +13,6 @@ import { toFilterBy, useLogsFilters } from "./useLogsFilters";
 
 export type VolumeBin = { period: number; total: number };
 
-/** Event totals per bin under the same filters as the list, summed across features. */
 export const useLogsVolume = () => {
 	const axiosInstance = useAxiosInstance({ version: LATEST_VERSION });
 	const buildKey = useQueryKeyFactory();

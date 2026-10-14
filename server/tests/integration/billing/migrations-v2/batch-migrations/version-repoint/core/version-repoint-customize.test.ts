@@ -15,8 +15,6 @@ import {
 	runVersionRepointMigration,
 } from "../utils/versionRepointTestUtils";
 
-// Plan versions accumulate across runs, so every test mints its own plan id to
-// keep `version: 2` deterministic.
 const uniqueStem = (name: string) =>
 	`${name}-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
 
@@ -52,9 +50,6 @@ const expectRepointedOnce = async ({
 	);
 };
 
-// version + customize: the version is a pure repoint; customize acts on the
-// customer's current items. Untouched items keep their from-version
-// definitions (grandfathered claims), mirroring per-customer setupPatchContext.
 test.concurrent(
 	`${chalk.yellowBright("batch version repoint customize: customize acts on the customer's items; version is a pure repoint")}`,
 	async () => {
@@ -119,7 +114,6 @@ test.concurrent(
 			planId: plan.id,
 			before,
 			result,
-			// Words keeps v1's 25 and Dashboard stays absent, so the row no longer matches v2.
 			isCustom: true,
 		});
 		expect(
@@ -136,8 +130,6 @@ test.concurrent(
 			customerId,
 			featureId: TestFeature.Credits,
 		});
-		// The divergence pin: Words is untouched by customize, so it keeps the
-		// customer's v1 allowance (25) — NOT the target version's 50.
 		expect(
 			(
 				await readScopedFeatureRow({
@@ -147,8 +139,6 @@ test.concurrent(
 				})
 			).balance,
 		).toBe(25);
-		// Dashboard exists only on the target catalog; a pure repoint never
-		// grants it, and the unmatched remove filter is a no-op.
 		await expect(
 			readScopedFeatureRow({
 				ctx,
@@ -213,8 +203,6 @@ test.concurrent(
 			before,
 			result,
 		});
-		// The customer lacks Credits, so the add applies once; the target
-		// catalog's own Credits row is never materialized (pure repoint).
 		await expectCustomerEntitlementRowCount({
 			ctx,
 			customerId,
@@ -275,7 +263,6 @@ test.concurrent(
 			planId: plan.id,
 			before,
 			result,
-			// The customer lacks v2's Dashboard, so the row no longer matches v2.
 			isCustom: true,
 		});
 		await expect(

@@ -1,8 +1,3 @@
-/**
- * Entity-attached customer products (non-entity-scoped ITEMS — entity_feature_id
- * items reject): every per-entity row repoints on the batch lane and the
- * projected per-entity state matches the per-customer lane.
- */
 import { expect, test } from "bun:test";
 import type { ApiEntityV2 } from "@autumn/shared";
 import { expectBalanceCorrect } from "@tests/integration/utils/expectBalanceCorrect";
@@ -13,7 +8,6 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-// version-only is per-customer until definition execute is restored
 import {
 	REPOINTABLE_STATUSES,
 	readCustomerPlanRows,
@@ -100,8 +94,6 @@ test.skip(
 			[batchCustomerId, batchPlan.id, entities.map(({ id }) => id)],
 			[perCustomerId, perCustomerPlan.id, twinEntityIds],
 		] as const) {
-			// Live rows only — the per-customer lane leaves expired v1 rows behind,
-			// so row identity/count is never compared across lanes beyond this.
 			const liveRows = (
 				await readCustomerPlanRows({ ctx, customerId, planId })
 			).filter(

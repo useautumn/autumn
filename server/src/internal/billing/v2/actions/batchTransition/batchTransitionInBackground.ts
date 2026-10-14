@@ -5,7 +5,6 @@ import { invalidateCachedFullSubject } from "@/internal/customers/cache/fullSubj
 import { batchTransition } from "./batchTransition";
 import type { BatchTransitionExecutionScope } from "./types/types";
 
-/** A batch transition that outlives its request: the route's cache eviction already ran, so it evicts once its seats are written. */
 export const batchTransitionInBackground = async ({
 	ctx,
 	transition,

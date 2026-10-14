@@ -11,7 +11,6 @@ export async function DELETE(request: NextRequest) {
   }
 
   try {
-    // Delete related records first (sessions, accounts), then user
     await sql`DELETE FROM session WHERE "userId" = ${id}`.execute(db);
     await sql`DELETE FROM account WHERE "userId" = ${id}`.execute(db);
     await sql`DELETE FROM "user" WHERE id = ${id}`.execute(db);

@@ -53,7 +53,6 @@ const update = ({
 	});
 };
 
-/** Each row's balance once the mutation's increments land. */
 const balanceChangesOf = (mutation: ReturnType<typeof computeUpdateBalance>) =>
 	(mutation?.changes ?? []).map((change) =>
 		change.op === "increment" ? [change.id, change.add] : change,

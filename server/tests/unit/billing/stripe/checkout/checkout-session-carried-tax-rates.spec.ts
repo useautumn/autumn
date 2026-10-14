@@ -1,5 +1,3 @@
-/** A Checkout recreate keeps the old subscription's manual tax rates, so Stripe's automatic tax stays off. */
-
 import { afterAll, describe, expect, mock, test } from "bun:test";
 import type { AutumnBillingPlan, BillingContext } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";

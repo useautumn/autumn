@@ -4,10 +4,6 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { computeStripeTaxPreviewForNetSubtotal } from "./computeAttachTaxPreview";
 import { computeTaxRateIdPreviewFromTaxableMinorUnits } from "./computeAttachTaxRateIdPreview";
 
-/**
- * Tax preview for the next cycle, computed on its net post-discount total.
- * Same precedence as the immediate preview: tax_rate_id overrides Stripe Tax.
- */
 export const computeNextCycleTaxPreview = async ({
 	ctx,
 	billingContext,

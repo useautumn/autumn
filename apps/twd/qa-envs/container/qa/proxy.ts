@@ -1,9 +1,7 @@
-// One public port: the built dashboard plus the API paths the Capy Vite proxy forwards.
 import { readFileSync } from "node:fs";
 
 const DIST = "/app/vite/dist";
 const API = "http://127.0.0.1:8080";
-// Every fetch reports how long the user has been idle, so a forgotten tab's polling can't keep the env awake.
 const IDLE_SCRIPT = `<script>(()=>{let t=Date.now();const a=()=>{t=Date.now()};
 for(const e of["pointerdown","keydown","wheel","touchstart"])addEventListener(e,a,{passive:true,capture:true});
 document.addEventListener("visibilitychange",()=>{if(!document.hidden)a()});
@@ -37,9 +35,7 @@ const isServerUp = () =>
 const ROUTING_WAIT_MS = 90_000;
 const bootedAt = Date.now();
 
-/** boot.sh marks when the balance worker has claimed every partition; before that commands fail with NO_OWNER. */
 const isBalanceWorkerRouting = async () =>
-	// Never strand the env behind the waking page if the marker never lands.
 	Date.now() - bootedAt > ROUTING_WAIT_MS ||
 	(await Bun.file("/var/qa/balance-owned").exists());
 

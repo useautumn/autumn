@@ -4,7 +4,6 @@ import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 
-/** Parent plan linked to a dev-seat license, attached with paid seats. */
 export const setupLicenseUpdateScenario = async ({
 	customerId,
 	idPrefix,
@@ -20,11 +19,9 @@ export const setupLicenseUpdateScenario = async ({
 	customerId: string;
 	idPrefix: string;
 	parentItems?: ProductItem[];
-	/** `products.pro` ($20/mo base) instead of a free parent. */
 	pricedParent?: boolean;
 	attachOptions?: { feature_id: string; quantity: number }[];
 	seatPrice?: number;
-	/** Extra seat items beyond the monthly base price (e.g. a usage grant). */
 	seatItems?: ProductItem[];
 	includedSeats: number;
 	attachedSeats: number;

@@ -15,18 +15,13 @@ import type {
 } from "../models/subject/workerFullSubject.js";
 import { pickAllocationParent } from "./allocationMath.js";
 
-/** Everything the draw needs to hold an entity to its share of the customer's shared credits. */
 export type AllocationGate = {
 	sharedRowIds: Set<string>;
 	scale: number;
-	/** The subject entity's requested share; null for customer-level tracks and entities without one. */
 	ownRequested: number | null;
 	requestedTotal: number;
-	/** What the shared rows held before this deduction. */
 	sharedRemaining: number;
-	/** Shared credits the subject entity used this cycle; null for customer-level tracks. */
 	entityCounter: UsageWindowLimit | null;
-	/** Σ min(usage, requested) across allocated entities this cycle. */
 	claimedCounter: UsageWindowLimit;
 };
 
@@ -81,7 +76,6 @@ const allocationCounter = ({
 	anchor_mode: "billing_cycle",
 });
 
-/** One gate per allocated feature the selection draws, keyed by each of its shared row ids; empty when nothing selected is allocated. */
 export const resolveAllocationGates = ({
 	fullSubject,
 	selection,

@@ -12,7 +12,6 @@ export const CatalogVariantActionSchema = z
 			"How this variant resolved against the base edit: frozen (`unchanged`), followed the base (`propagated`), or the base sent `variants[]` (`explicit`).",
 	});
 
-/** Another existing version of this variant that could receive the base edit. */
 export const CatalogVariantVersionPreviewSchema =
 	CatalogSiblingVersionPreviewSchema.extend({
 		variant_action: CatalogVariantActionSchema.optional().meta({
@@ -25,10 +24,6 @@ export const CatalogVariantVersionPreviewSchema =
 		}),
 	});
 
-/**
- * One variant plan a base edit could fan out to. Reports the latest/current
- * target, with every other existing version under `sibling_versions`.
- */
 export const CatalogVariantPreviewSchema = CatalogCorePreviewSchema.extend({
 	versioning: CatalogPlanVersioningSchema.optional().meta({
 		description:

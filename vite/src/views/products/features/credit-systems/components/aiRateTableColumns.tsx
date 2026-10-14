@@ -110,7 +110,6 @@ const CostHeader = ({
 	return <>{isCustom ? custom : standard}</>;
 };
 
-// Cells read context, not props, so this never rebuilds and inputs keep focus.
 export const AI_RATE_TABLE_COLUMNS: ColumnDef<ModelRow, unknown>[] = [
 	{ header: "Model", accessorKey: "modelKey", size: 200, cell: ModelCell },
 	{

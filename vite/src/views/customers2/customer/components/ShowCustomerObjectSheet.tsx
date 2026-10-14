@@ -40,7 +40,6 @@ export function ShowCustomerObjectSheet({
 		staleTime: 0,
 	});
 
-	// entities.get has no invoice_previews expand, so only fetch at customer scope.
 	const { invoicePreviews } = useCusInvoicePreviewsQuery({
 		customerId: customer_id,
 		enabled: open && !scopeEntityId,

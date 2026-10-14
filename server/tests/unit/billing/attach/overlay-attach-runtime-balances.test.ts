@@ -8,7 +8,6 @@ import { products } from "@tests/utils/fixtures/db/products.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { applyExistingStatesToCustomerProduct } from "@/internal/billing/v2/utils/initFullCustomerProduct/applyExisting/applyExistingStatesToCustomerProduct.js";
 
-// These cover the legacy Redis lane; the worker lane never overlays.
 const previousRollout = process.env.BALANCE_WORKER_ROLLOUT_ENABLED;
 process.env.BALANCE_WORKER_ROLLOUT_ENABLED = "false";
 
@@ -36,7 +35,6 @@ import {
 } from "@/internal/billing/v2/actions/attach/setup/overlayAttachRuntimeBalances.js";
 import { mockModuleWithRestore } from "../../utils/mockModuleWithRestore.js";
 
-// Routing reads ctx.org, so the context needs a real org.
 const attachContext = (): AutumnContext => ({
 	...contexts.create({}),
 	skipCache: false,

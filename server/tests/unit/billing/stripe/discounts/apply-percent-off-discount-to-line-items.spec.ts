@@ -1,22 +1,9 @@
-/**
- * Unit tests for applyPercentOffDiscountToLineItems function.
- *
- * Tests percent-off discount application including:
- * - Various percent values (10%, 50%, 100%)
- * - Charge vs refund direction handling
- * - applies_to product restrictions
- * - Multiple line items
- * - Existing discount accumulation
- */
-
 import { describe, expect, test } from "bun:test";
 import type { LineItem } from "@autumn/shared";
 import { lineItems as lineItemFixtures } from "@tests/utils/fixtures/billing/lineItems";
 import { discounts } from "@tests/utils/fixtures/db/discounts";
 import chalk from "chalk";
 import { applyPercentOffDiscountToLineItems } from "@/internal/billing/v2/providers/stripe/utils/discounts/applyPercentOffDiscountToLineItems";
-
-// ============ TESTS ============
 
 describe(chalk.yellowBright("applyPercentOffDiscountToLineItems"), () => {
 	describe(chalk.cyan("Basic percent-off calculations"), () => {
@@ -30,7 +17,7 @@ describe(chalk.yellowBright("applyPercentOffDiscountToLineItems"), () => {
 			});
 
 			expect(result).toHaveLength(1);
-			expect(result[0].amountAfterDiscounts).toBe(90); // 100 - 10
+			expect(result[0].amountAfterDiscounts).toBe(90);
 			expect(result[0].discounts).toHaveLength(1);
 			expect(result[0].discounts[0].amountOff).toBe(10);
 			expect(result[0].discounts[0].percentOff).toBe(10);
@@ -46,7 +33,7 @@ describe(chalk.yellowBright("applyPercentOffDiscountToLineItems"), () => {
 			});
 
 			expect(result).toHaveLength(1);
-			expect(result[0].amountAfterDiscounts).toBe(100); // 200 - 100
+			expect(result[0].amountAfterDiscounts).toBe(100);
 			expect(result[0].discounts[0].amountOff).toBe(100);
 			expect(result[0].discounts[0].percentOff).toBe(50);
 		});
@@ -90,7 +77,6 @@ describe(chalk.yellowBright("applyPercentOffDiscountToLineItems"), () => {
 				discount,
 			});
 
-			// Charge: amountAfterDiscounts = amount - discount = 100 - 20 = 80
 			expect(result[0].amountAfterDiscounts).toBe(80);
 		});
 
@@ -103,8 +89,6 @@ describe(chalk.yellowBright("applyPercentOffDiscountToLineItems"), () => {
 				discount,
 			});
 
-			// Refunds are skipped by discountAppliesToLineItem
-			// amountAfterDiscounts stays at -100, no discounts applied
 			expect(result[0].amountAfterDiscounts).toBe(-100);
 			expect(result[0].discounts).toHaveLength(0);
 		});
@@ -131,9 +115,9 @@ describe(chalk.yellowBright("applyPercentOffDiscountToLineItems"), () => {
 				discount,
 			});
 
-			expect(result[0].amountAfterDiscounts).toBe(50); // Discounted
+			expect(result[0].amountAfterDiscounts).toBe(50);
 			expect(result[0].discounts).toHaveLength(1);
-			expect(result[1].amountAfterDiscounts).toBe(100); // Not discounted
+			expect(result[1].amountAfterDiscounts).toBe(100);
 			expect(result[1].discounts).toHaveLength(0);
 		});
 
@@ -167,9 +151,9 @@ describe(chalk.yellowBright("applyPercentOffDiscountToLineItems"), () => {
 				discount,
 			});
 
-			expect(result[0].amountAfterDiscounts).toBe(90); // 100 - 10
-			expect(result[1].amountAfterDiscounts).toBe(180); // 200 - 20
-			expect(result[2].amountAfterDiscounts).toBe(45); // 50 - 5
+			expect(result[0].amountAfterDiscounts).toBe(90);
+			expect(result[1].amountAfterDiscounts).toBe(180);
+			expect(result[2].amountAfterDiscounts).toBe(45);
 		});
 	});
 
@@ -188,9 +172,6 @@ describe(chalk.yellowBright("applyPercentOffDiscountToLineItems"), () => {
 				discount,
 			});
 
-			// Existing discount already reduced amountAfterDiscounts from 100 to 90
-			// New discount: 90 * 20% = 18 (multiplicative stacking)
-			// amountAfterDiscounts: 90 - 18 = 72
 			expect(result[0].amountAfterDiscounts).toBe(72);
 			expect(result[0].discounts).toHaveLength(2);
 			expect(result[0].discounts[0].amountOff).toBe(10);
@@ -233,7 +214,6 @@ describe(chalk.yellowBright("applyPercentOffDiscountToLineItems"), () => {
 				discount,
 			});
 
-			// 0 * 50% = 0, so itemDiscount is 0 and item is returned unchanged
 			expect(result[0].amountAfterDiscounts).toBe(0);
 			expect(result[0].discounts).toHaveLength(0);
 		});

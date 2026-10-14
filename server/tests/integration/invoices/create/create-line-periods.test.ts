@@ -1,12 +1,3 @@
-/**
- * invoices.create — per-line periods.
- *
- * Contract:
- *   - A line's period is its own, else its parent's (license, plan), else the envelope.
- *   - Without an envelope, the envelope spans the earliest line start to the latest line end.
- *   - Each line prorates over, and prints, its own period; a line outside a given envelope is a 400.
- */
-
 import { expect, test } from "bun:test";
 import {
 	BillingMethod,
@@ -93,7 +84,6 @@ test.concurrent(
 			},
 		});
 
-		// Base: $100 × 15/31. Users: a whole month, so $20. Messages: usage, not prorated.
 		const { stripeInvoice } = await expectCreatedInvoiceCorrect({
 			ctx,
 			response,
@@ -238,7 +228,6 @@ test.concurrent(
 			},
 		});
 
-		// Seats: 2 × $15 × 15/31. Messages: 10 × $0.20, printed over the license period.
 		expect(
 			preview.lines.map((line) => ({
 				amount: line.amount,
@@ -275,7 +264,6 @@ test.concurrent(
 			},
 		});
 
-		// The plan bills one month, unprorated and with no period, exactly as without the custom line.
 		expect(
 			preview.lines.map((line) => ({
 				amount: line.amount,

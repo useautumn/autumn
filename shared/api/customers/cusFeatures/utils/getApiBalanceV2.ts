@@ -66,8 +66,6 @@ export const getApiBalanceBreakdownItemV2 = ({
 		entityId,
 	});
 	const includedGrant = new Decimal(allowance).add(adjustment).toNumber();
-	// An expiring item's purchases live on loose grant rows; its option
-	// quantity only sizes the charge, so counting it here would double up.
 	const prepaidGrant = customerEntitlement.entitlement.expiry_duration
 		? 0
 		: cusEntsToPrepaidQuantity({
@@ -111,7 +109,6 @@ export const getApiBalanceBreakdownItemV2 = ({
 	};
 };
 
-/** The balance the rows add up to, with the feature object attached only when the caller expanded it. Pure: no request context. */
 export const customerEntitlementsToApiBalance = ({
 	fullSubject,
 	customerEntitlements,
@@ -128,9 +125,6 @@ export const customerEntitlementsToApiBalance = ({
 	allocationView?: AllocationView;
 }): { data: ApiBalanceWithAllocationCheck } => {
 	const entityId = fullSubject.entity?.id ?? fullSubject.entity?.internal_id;
-
-	// console.log("customerEntitlements", customerEntitlements);
-	// console.log("aggregatedFeatureBalance", aggregatedFeatureBalance);
 
 	if (customerEntitlements.length === 0) {
 		return {

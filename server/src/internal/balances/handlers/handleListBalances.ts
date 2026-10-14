@@ -34,7 +34,6 @@ export const handleListBalances = createRoute({
 			throw new CustomerNotFoundError({ customerId: customer_id });
 		}
 
-		// Get customer entitlements where the entitlement has no internal_product_id
 		const rawBalances = await ctx.db
 			.select({
 				customer_entitlement: customerEntitlements,
@@ -63,8 +62,6 @@ export const handleListBalances = createRoute({
 			);
 
 		const formattedBalances = rawBalances.map((row) => {
-			// Unlimited rows carry a raw usage counter in `balance` internally;
-			// the API contract masks it to 0.
 			const isUnlimited =
 				row.customer_entitlement.unlimited === true ||
 				row.entitlement.allowance_type === AllowanceType.Unlimited;

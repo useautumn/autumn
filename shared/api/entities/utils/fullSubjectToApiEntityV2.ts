@@ -6,7 +6,6 @@ import {
 	type SharedContext,
 } from "@autumn/shared";
 
-/** entities.get's body before expands and version changes: internal fields stripped. */
 export const fullSubjectToApiEntityV2 = async ({
 	ctx,
 	fullSubject,

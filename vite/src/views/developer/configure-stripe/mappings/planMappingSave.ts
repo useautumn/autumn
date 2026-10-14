@@ -4,11 +4,9 @@ import type { CatalogPlanMapping } from "./catalogMappingsForm";
 import type { PriceMappingRow } from "./priceMappingRows";
 import { CREATE_STRIPE_PRODUCT } from "./StripeProductSelect";
 
-/** `null` on a variant means it shares the base plan's product. */
 export type PlanSheetValues = {
 	stripe_product_id: string | null;
 	variant_product_ids: Record<string, string | null>;
-	/** Only prices the user touched; others keep whatever they bill under. */
 	price_ids: Record<string, string | null>;
 };
 
@@ -45,7 +43,6 @@ export const buildPlanSheetValues = ({
 const isRealProductId = (value: string | null): value is string =>
 	Boolean(value) && value !== CREATE_STRIPE_PRODUCT;
 
-/** The product a plan's prices bill under once this sheet saves. */
 export const effectivePlanProductId = ({
 	values,
 	basePlanId,
@@ -59,7 +56,6 @@ export const effectivePlanProductId = ({
 		? values.stripe_product_id
 		: (values.variant_product_ids[planId] ?? values.stripe_product_id);
 
-/** A price keeps showing its Stripe price until the user moves its plan to another product. */
 export const displayedStripePriceId = ({
 	row,
 	values,
@@ -91,7 +87,6 @@ const variantProcessorEntries = ({
 		([variantPlanId, productId]) => {
 			if (productId === CREATE_STRIPE_PRODUCT) return [];
 			const changed = productId !== initial.variant_product_ids[variantPlanId];
-			// A variant with its own product is restated on a base change so it is not fanned over.
 			const shieldFromBase = baseChanged && productId !== null;
 			if (!changed && !shieldFromBase) return [];
 
@@ -123,7 +118,6 @@ const buildCatalogUpdate = ({
 	const variants = variantProcessorEntries({ values, initial, baseChanged });
 	if (!baseChanged && variants.length === 0) return undefined;
 
-	// Aliases are carried back unchanged: an omitted list would clear them.
 	const additionalProductIds = planMapping.additional_mappings
 		.map((mapping) => mapping.stripe_product_id)
 		.filter((id): id is string => Boolean(id));
@@ -205,7 +199,6 @@ export const buildPlanSheetSave = ({
 	};
 };
 
-/** Prices whose Stripe resources change: plans moving product, plus any the user picked. */
 export const affectedPlanPriceIds = ({
 	values,
 	initial,

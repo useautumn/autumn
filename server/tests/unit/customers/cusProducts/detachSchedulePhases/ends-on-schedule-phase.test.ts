@@ -1,11 +1,3 @@
-/**
- * endsOnSchedulePhase
- *
- * Only an end date that sits on one of the released schedule's phase
- * boundaries is stale. A canceling plan, a scheduled row, or an add-on whose
- * ends_at was set for its own reasons keeps its date.
- */
-
 import { describe, expect, test } from "bun:test";
 import { CusProductStatus, type FullCusProduct } from "@autumn/shared";
 import type Stripe from "stripe";

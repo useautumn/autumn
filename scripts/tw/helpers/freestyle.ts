@@ -1,36 +1,3 @@
-/**
- * Freestyle backend for the provider seam (helpers/provider.ts) — `--provider=freestyle`.
- *
- * The differentiator vs Modal/Vercel is MEMORY snapshots: `snapshotAndStop`
- * captures the warm parent with PG + Dragonfly + goaws AND the Autumn server +
- * SQS workers + cron all RUNNING. Every worker restores already serving; boot is
- * swapped for freestyleBoot.ts (bind-only: svix/stripe DB binds + the pool-key
- * file the initMasterStripe seam reads) — seconds to READY, no process startup.
- *
- * ## Lifecycle mapping
- *   - **createWarmSandbox** — `vms.create()` (fresh Debian) → clone repo @ ref →
- *     run `image/freestyle-base.sh` (apt PG18/Dragonfly/goaws/bun into the same
- *     /opt/autumn-tw layout as build-base.sh, so warmup/start/stop/boot run
- *     unchanged). run.ts then streams warmup.sh as usual.
- *   - **snapshotAndStop** — restart services (warmup clean-stopped them), wait for
- *     their ports, then `vm.snapshot({name})` (memory+disk, account-wide named →
- *     cross-run + cross-teammate warm cache), then delete the parent VM.
- *   - **getSandboxByName** — live map, else NAMED SNAPSHOT lookup (the warm cache
- *     hit path: run.ts only needs truthiness + the name).
- *   - **forkWorker** — `vms.create({snapshotId})` through a proactive global
- *     pacer (50 creates / 10s account limit, spread inside the window) with 429
- *     backoff kept as a safety net. Ephemeral persistence + idle timeout
- *     self-clean leaked workers.
- *   - **exec** — freestyle's REST exec-await is BUFFERED and has a server-side
- *     ceiling (~324s) that kills long commands and loses their output, so
- *     runStreaming launches via nohup + log/exit files and polls the log by byte
- *     offset (live chunks, survives arbitrarily long runs); env rides an on-VM
- *     env file every exec sources.
- *   - **runDetached** — nohup + pid/exit files + a polling log pump that feeds
- *     onChunk until the READY sentinel, then slows to a liveness poll.
- *   - **getPublicUrl** — `domains.mappings.create` on `<name>.style.dev` (auto
- *     HTTPS; the inbound Stripe webhook target).
- */
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import chalk from "chalk";
 import { BALANCE_SYNC_SQS_QUEUE_URL } from "../worker/prepareBalanceSyncQueue.js";
@@ -72,18 +39,13 @@ type Vm = ReturnType<Freestyle["vms"]["ref"]>;
 
 const REPO_ROOT = "/repo";
 const TW_PREFIX = "/opt/autumn-tw";
-/** Per-VM env file every exec sources (freestyle exec has no env param). */
 const VM_ENV_FILE = "/root/tw-vm.env";
 const BASE_SCRIPT = `${REPO_ROOT}/scripts/tw/image/freestyle-base.sh`;
 const START_SERVICES = `${REPO_ROOT}/scripts/tw/image/start-services.sh`;
-/** boot.ts is swapped for this in runDetached: forks resume a RUNNING server,
- * so only per-worker binds run (see worker/freestyleBoot.ts). */
 const FREESTYLE_BOOT_SCRIPT = "scripts/tw/worker/freestyleBoot.ts";
 const STRIPE_KEY_FILE = "/opt/autumn-tw/worker-stripe-key";
 const WARM_SERVER_HEALTH_TIMEOUT_S = 180;
-/** Long enough for apt + initdb on the cold path; execs are buffered. */
 const EXEC_TIMEOUT_MS = 15 * 60 * 1000;
-/** Patience for a paced create (a 199-fleet drains in ~40s at 50/10s). */
 const CREATE_DEADLINE_MS = 5 * 60 * 1000;
 const INGRESS_IDLE_TIMEOUT_S = 3600;
 
@@ -97,8 +59,6 @@ const freestyleApiKey = (): string => {
 	return key;
 };
 
-/** Snapshots of a fat VM (chromium + running server) exceed the SDK fetch's
- * default budget — give every API call a 15-min ceiling instead. */
 const API_FETCH_TIMEOUT_MS = 15 * 60 * 1000;
 
 let clientInstance: Freestyle | undefined;
@@ -119,7 +79,6 @@ const secs = (ms: number): string => (ms / 1000).toFixed(1);
 const sleep = (ms: number): Promise<void> =>
 	new Promise((resolve) => setTimeout(resolve, ms));
 
-// ---- stage-timing history (the "~Xs typical" ETA in heartbeats) ------------
 const TIMINGS_FILE = `${process.env.HOME}/.autumn-tw/freestyle-stage-times.json`;
 const readTimings = (): Record<string, number[]> => {
 	try {
@@ -141,13 +100,9 @@ const recordTiming = (key: string, ms: number): void => {
 		all[key] = [...(all[key] ?? []), ms].slice(-5);
 		mkdirSync(`${process.env.HOME}/.autumn-tw`, { recursive: true });
 		writeFileSync(TIMINGS_FILE, JSON.stringify(all));
-	} catch {
-		/* best-effort */
-	}
+	} catch {}
 };
 
-/** Timed stage breadcrumb with optional heartbeat (same UX as modal.ts).
- * `timingKey` persists durations across runs → "~Xs typical" ETAs. */
 const stage = (
 	label: string,
 	heartbeatMs?: number,
@@ -182,16 +137,11 @@ const stage = (
 	};
 };
 
-// ---- in-process state ------------------------------------------------------
 const liveVms = new Map<string, { vm: Vm; vmId: string }>();
 const snapshotIdByName = new Map<string, string>();
-/** Domains we mapped, keyed by sandbox name/id — deleted with the sandbox. */
 const domainsBySandbox = new Map<string, string>();
-/** Warm VMs fast-forwarded from an older snapshot → that source snapshot id,
- * so a failed warmup on it poisons (deletes) the source instead of wedging. */
 const ffSourceByWarmName = new Map<string, string>();
 const WARM_NAME_PREFIX = "tw-warm-";
-/** Rolling GC keeps this many newest warm snapshots (current + one fallback). */
 const WARM_SNAPSHOTS_TO_KEEP = 2;
 
 const wrap = (name: string, vm: Vm, vmId: string): ProviderSandbox => ({
@@ -205,7 +155,6 @@ const shellQuote = (part: string): string => `'${part.replace(/'/g, `'\\''`)}'`;
 const argvToCommand = (argv: string[]): string =>
 	argv.map(shellQuote).join(" ");
 
-/** Every exec: restore HOME (freestyle exec omits it) + source the VM env file. */
 const withVmEnv = (command: string): string =>
 	`export HOME="\${HOME:-/root}"; set -a; [ -f ${VM_ENV_FILE} ] && . ${VM_ENV_FILE}; set +a; ${command}`;
 
@@ -232,20 +181,15 @@ const is429 = (error: unknown): boolean =>
 		error instanceof Error ? error.message : String(error),
 	);
 
-// ---- proactive create pacer --------------------------------------------------
-/** Freestyle account limit: 50 VM creates per rolling 10s window. */
 const CREATES_PER_WINDOW = 50;
 const CREATE_WINDOW_MS = 10_000;
-/** Spread admissions across the window instead of thundering 50 at once. */
 const CREATE_SPACING_MS = CREATE_WINDOW_MS / CREATES_PER_WINDOW;
 
 const createAdmissions: number[] = [];
 let lastAdmissionAt = 0;
-/** Set on a real 429 (safety net) — pauses all admissions for a full window. */
 let createPenaltyUntil = 0;
 let admissionQueue: Promise<void> = Promise.resolve();
 
-/** Serialize callers, admitting one create per spacing slot within the window. */
 const admitCreate = (signal?: AbortSignal): Promise<void> => {
 	const turn = admissionQueue.then(async () => {
 		for (;;) {
@@ -272,9 +216,7 @@ const admitCreate = (signal?: AbortSignal): Promise<void> => {
 			await sleep(waitMs);
 		}
 	});
-	admissionQueue = turn.catch(() => {
-		/* an aborted waiter must not wedge the queue */
-	});
+	admissionQueue = turn.catch(() => {});
 	return turn;
 };
 
@@ -282,7 +224,6 @@ const penalizeCreateWindow = (): void => {
 	createPenaltyUntil = Date.now() + CREATE_WINDOW_MS;
 };
 
-/** Paced `vms.create` (proactive rate limiter) with 429 backoff as safety net. */
 const createVmWithBackoff = async (options: {
 	snapshotId?: string;
 	name: string;
@@ -316,8 +257,6 @@ const createVmWithBackoff = async (options: {
 	}
 };
 
-/** The env the SNAPSHOTTED server runs with. Per-worker identity (pool key,
- * sub-account, svix) arrives later via the key-file seam + DB binds. */
 const warmServerEnv = (): Record<string, string> => {
 	const requireSecret = (name: string): string => {
 		const value = process.env[name];
@@ -394,7 +333,6 @@ const cloneRepo = async (vm: Vm, source: GitSource): Promise<void> => {
 	}
 };
 
-/** Newest READY warm snapshot (any ref) — the rolling fast-forward base. */
 const latestWarmSnapshot = async (): Promise<
 	{ snapshotId: string; name: string } | undefined
 > => {
@@ -412,13 +350,10 @@ const latestWarmSnapshot = async (): Promise<
 		: undefined;
 };
 
-/** Best-effort snapshot delete (the SDK exposes list/get only). */
 const deleteSnapshot = async (snapshotId: string): Promise<void> => {
 	await client()
 		.fetch(`/v1/vms/snapshots/${snapshotId}`, { method: "DELETE" })
-		.catch(() => {
-			/* best-effort */
-		});
+		.catch(() => {});
 	for (const [name, id] of snapshotIdByName) {
 		if (id === snapshotId) {
 			snapshotIdByName.delete(name);
@@ -426,7 +361,6 @@ const deleteSnapshot = async (snapshotId: string): Promise<void> => {
 	}
 };
 
-/** Rolling GC: keep the newest N warm snapshots, delete the rest. */
 const gcWarmSnapshots = async (): Promise<void> => {
 	const { snapshots } = await client().vms.snapshots.list({
 		includeBuilding: true,
@@ -435,8 +369,6 @@ const gcWarmSnapshots = async (): Promise<void> => {
 	const warm = snapshots
 		.filter((snap) => snap.name?.startsWith(WARM_NAME_PREFIX) && !snap.deleted)
 		.sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
-	// Keep the newest N READY generations; failed and stuck-building (>2h, e.g.
-	// a refresh whose orchestrator exited mid-snapshot) get swept.
 	let readyKept = 0;
 	for (const snap of warm) {
 		const ageMs = Date.now() - new Date(snap.createdAt).getTime();
@@ -459,7 +391,6 @@ const gcWarmSnapshots = async (): Promise<void> => {
 	}
 };
 
-/** Resolve a warm name to its snapshot id (in-process map, else named lookup). */
 const findSnapshotByName = async (
 	name: string,
 ): Promise<string | undefined> => {
@@ -468,8 +399,6 @@ const findSnapshotByName = async (
 		return local;
 	}
 	const { snapshots } = await client().vms.snapshots.list();
-	// READY only: a mid-build refresh snapshot must be a MISS (restoring from it
-	// fails with SOURCE_SNAPSHOT_BUILDING) — the stale path serves instead.
 	const match = snapshots
 		.filter(
 			(snap) => snap.name === name && !snap.deleted && snap.state === "ready",
@@ -481,22 +410,16 @@ const findSnapshotByName = async (
 	return match?.snapshotId;
 };
 
-/** Sandbox names are valid *.style.dev labels apart from case/underscores. */
 const domainForName = (name: string): string =>
 	`${name
 		.toLowerCase()
 		.replace(/[^a-z0-9-]/g, "-")
 		.slice(0, 60)}.style.dev`;
 
-/** Per-poll read cap; an exact-cap read means more bytes are pending. */
 const POLL_READ_CAP = 200_000;
 const POLL_INTERVAL_MS = 2_500;
-/** Transient poll faults tolerated before giving up on a run. */
 const MAX_POLL_FAULTS = 10;
 
-/** Tail a detached command's log by byte offset until its exit file appears.
- * Chunks feed `onChunk` live; a dead VM throws (stream-closed) instead of
- * fabricating an exit code. */
 const pollDetachedLog = async (opts: {
 	vm: Vm;
 	logFile: string;
@@ -517,9 +440,7 @@ const pollDetachedLog = async (opts: {
 					command: `kill "$(cat ${opts.pidFile} 2>/dev/null)" 2>/dev/null || true`,
 					timeoutMs: 15_000,
 				})
-				.catch(() => {
-					/* best-effort */
-				});
+				.catch(() => {});
 			throw new Error(
 				`freestyle: detached run exceeded ${Math.round(opts.deadlineMs / 60_000)}min deadline`,
 			);
@@ -543,7 +464,6 @@ const pollDetachedLog = async (opts: {
 				opts.onChunk(body);
 			}
 			const exitMatch = marker.match(/EXIT=(\d+)/);
-			// Finish only once the log is fully drained (an exact-cap read means more).
 			if (exitMatch && bodyBytes < POLL_READ_CAP) {
 				return { exitCode: Number(exitMatch[1]) };
 			}
@@ -556,7 +476,6 @@ const pollDetachedLog = async (opts: {
 				throw error;
 			}
 		}
-		// Drain a capped read immediately; otherwise poll on the normal cadence.
 		if (bodyBytes < POLL_READ_CAP) {
 			await sleep(POLL_INTERVAL_MS + Math.random() * 500);
 		}
@@ -568,7 +487,6 @@ const isSandboxStreamClosed = (error: unknown): boolean =>
 		error instanceof Error ? error.message : String(error),
 	);
 
-/** One refresh at a time; runs detached so no run ever waits on it. */
 let refreshInFlight = false;
 const refreshWarmSnapshotInBackground = (warmName: string): void => {
 	if (refreshInFlight) {
@@ -619,9 +537,7 @@ const refreshWarmSnapshotInBackground = (warmName: string): void => {
 			} catch (error) {
 				await client()
 					.vms.delete({ vmId })
-					.catch(() => {
-						/* best-effort */
-					});
+					.catch(() => {});
 				throw error;
 			}
 		} finally {
@@ -645,10 +561,6 @@ export const freestyleProvider: ProviderImpl = {
 			throw new Error("freestyle: createWarmSandbox requires a git source");
 		}
 
-		// Rolling fast-forward: restore the newest warm snapshot (any ref) and let
-		// run.ts's normal warmup.sh fast-forward it — checkout + delta install +
-		// migrate (self-repairing) + seed. New-commit warm cost drops from a full
-		// cold build (~8 min) to roughly checkout + restart + re-snapshot (~2-3 min).
 		const rollingBase = await latestWarmSnapshot().catch(() => undefined);
 		if (rollingBase) {
 			const ffDone = stage(
@@ -661,15 +573,11 @@ export const freestyleProvider: ProviderImpl = {
 					idleTimeoutSeconds: 3600,
 					signal: opts.signal,
 				});
-				// The resumed app procs hold ports + run OLD code; warmup restarts state.
 				await execOnVm(
 					vm,
 					"pkill -f 'bun src/index.ts' || true; pkill -f 'bun src/workers.ts' || true; pkill -f 'bun src/cron.ts' || true; pkill -f 'bunfig.toml src/main.ts' || true",
 					30_000,
 				);
-				// Check out the TARGET ref before run.ts invokes warmup.sh — otherwise
-				// the OLD commit's warmup runs (and gets swapped mid-execution by its
-				// own checkout step).
 				const checkout = await execOnVm(
 					vm,
 					`cd ${REPO_ROOT} && git fetch --quiet ${cloneUrl(opts.source)} ${shellQuote(opts.source.revision)} && git checkout --quiet --force FETCH_HEAD`,
@@ -699,7 +607,6 @@ export const freestyleProvider: ProviderImpl = {
 		const done = stage(`create warm VM ${opts.name} (cold build)`);
 		const { vm, vmId } = await createVmWithBackoff({
 			name: opts.name,
-			// The warm build takes minutes of quiet exec time — don't let it suspend.
 			idleTimeoutSeconds: 3600,
 			signal: opts.signal,
 		});
@@ -728,9 +635,6 @@ export const freestyleProvider: ProviderImpl = {
 	async createIngressSandbox(
 		opts: CreateSandboxOptions,
 	): Promise<ProviderSandbox> {
-		// The ingress restores from the newest READY warm snapshot (bun + repo +
-		// services all present) — a fresh Debian VM would need its own provisioning
-		// pass. API lookup, NOT the in-process map (empty on stale warm hits).
 		const newestWarm = await latestWarmSnapshot().catch(() => undefined);
 		const snapshotEntry = newestWarm
 			? ([newestWarm.name, newestWarm.snapshotId] as const)
@@ -745,7 +649,6 @@ export const freestyleProvider: ProviderImpl = {
 				ephemeral: true,
 				signal: opts.signal,
 			});
-			// The snapshot's resumed Autumn app holds :8080 — the ingress needs it.
 			await execOnVm(
 				vmRef.vm,
 				"pkill -f 'bun src/index.ts' || true; pkill -f 'bun src/workers.ts' || true; pkill -f 'bun src/cron.ts' || true; pkill -f 'bunfig.toml src/main.ts' || true",
@@ -773,10 +676,6 @@ export const freestyleProvider: ProviderImpl = {
 	},
 
 	async forkWorker(opts: ForkWorkerOptions): Promise<ProviderSandbox> {
-		// Exact-sha snapshot → fresh restore (8s boots). Otherwise restore the
-		// NEWEST generation and mark the worker stale: the orchestrator checks the
-		// target sha out below (so boot scripts are current) and freestyleBoot
-		// fast-forwards in place — all workers in parallel, no snapshot wait.
 		let snapshotId = await findSnapshotByName(opts.sourceSandbox);
 		let stale = false;
 		if (!snapshotId) {
@@ -798,8 +697,6 @@ export const freestyleProvider: ProviderImpl = {
 		});
 		liveVms.set(opts.name, { vm, vmId });
 		liveVms.set(vmId, { vm, vmId });
-		// Per-worker env (its pool Stripe key, sub-account, svix flags) replaces the
-		// warm parent's env file baked into the snapshot.
 		const env = stale ? { ...opts.env, TW_SNAPSHOT_STALE: "1" } : opts.env;
 		await vm.fs.writeTextFile(VM_ENV_FILE, envFileContent(env));
 		if (stale) {
@@ -807,8 +704,6 @@ export const freestyleProvider: ProviderImpl = {
 			if (!targetSha) {
 				throw new Error("freestyle: stale worker needs TW_TARGET_SHA in env");
 			}
-			// Current-code checkout BEFORE boot launches — the snapshot's own boot
-			// scripts are stale and must not run.
 			const checkout = await execOnVm(
 				vm,
 				`cd ${REPO_ROOT} && (git fetch --quiet origin ${shellQuote(targetSha)} || git fetch --quiet --all) && git checkout --quiet --force ${shellQuote(targetSha)}`,
@@ -825,8 +720,6 @@ export const freestyleProvider: ProviderImpl = {
 
 	async snapshotAndStop(sandbox: ProviderSandbox): Promise<string> {
 		const vm = unwrap(sandbox);
-		// warmup.sh clean-stopped the services for filesystem-snapshot providers;
-		// for a MEMORY snapshot we want them RUNNING so forks skip service boot.
 		const startDone = stage("restart services for the live snapshot");
 		const start = await execOnVm(vm, `bash ${START_SERVICES}`);
 		startDone();
@@ -836,10 +729,7 @@ export const freestyleProvider: ProviderImpl = {
 			);
 		}
 
-		// Playwright Chromium for the browser-driven groups (same bake as Modal's
-		// image step 9; needs the repo's node_modules, so it runs post-warmup).
 		// executablePath embeds the resolved playwright-core version's browser
-		// revision, so a version bump between commits misses and re-bakes.
 		const chromiumProbe = await execOnVm(
 			vm,
 			`cd ${REPO_ROOT}/server && CHROME=$(bun -p "require('playwright-core').chromium.executablePath()" 2>/dev/null) && [ -n "$CHROME" ] && [ -x "$CHROME" ]`,
@@ -866,10 +756,6 @@ export const freestyleProvider: ProviderImpl = {
 			}
 		}
 
-		// Bake the RUNNING app into the snapshot: balance worker + server + SQS
-		// workers + cron start here once, so forks resume them instead of paying
-		// ~30s of bun startup each. The worker is always baked; a run with the
-		// rollout off simply never routes to it.
 		const serverEnv = warmServerEnv();
 		await vm.fs.writeTextFile(VM_ENV_FILE, envFileContent(serverEnv));
 		const appDone = stage(
@@ -877,8 +763,6 @@ export const freestyleProvider: ProviderImpl = {
 			20_000,
 			"app-start",
 		);
-		// Canonically clean cache slate for every fork (clearMasterOrg tail, local-only
-		// dragonfly) happens after health, right before the snapshot.
 		const appStart = await execOnVm(
 			vm,
 			[
@@ -900,8 +784,6 @@ export const freestyleProvider: ProviderImpl = {
 				`for i in $(seq 1 ${WARM_SERVER_HEALTH_TIMEOUT_S * 2}); do code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 2 http://localhost:${SERVER_PORT}/ || true); [ "$code" = 200 ] && break; sleep 0.5; done`,
 				`[ "$code" = 200 ] || { echo "server never became healthy (last=$code)"; tail -40 ${TW_PREFIX}/logs/server.log; exit 1; }`,
 				"redis-cli -p 6379 flushall",
-				// Shrink the memory capture: drop the page cache (GBs of install/bake
-				// file reads forks never need — they re-read from the captured disk).
 				"sync",
 				"echo 3 > /proc/sys/vm/drop_caches || true",
 			].join("\n"),
@@ -919,8 +801,6 @@ export const freestyleProvider: ProviderImpl = {
 			"snapshot",
 		);
 		try {
-			// Slow-capture tolerance: if the snapshot CALL times out, the build may
-			// still be running server-side — poll by name before declaring failure.
 			let snapshotId: string | undefined;
 			try {
 				snapshotId = (await vm.snapshot({ name: sandbox.name })).snapshotId;
@@ -955,8 +835,6 @@ export const freestyleProvider: ProviderImpl = {
 					throw new Error("freestyle: snapshot never became ready");
 				}
 			}
-			// The API can return before the build finishes — confirm READY before
-			// anything forks from it.
 			const readyDeadline = Date.now() + 12 * 60 * 1000;
 			for (;;) {
 				const info = await client().vms.snapshots.get({ snapshotId });
@@ -973,17 +851,12 @@ export const freestyleProvider: ProviderImpl = {
 			}
 			snapshotIdByName.set(sandbox.name, snapshotId);
 			ffSourceByWarmName.delete(sandbox.name);
-			await vm.delete().catch(() => {
-				/* best-effort */
-			});
+			await vm.delete().catch(() => {});
 			liveVms.delete(sandbox.name);
 			if (sandbox.id) {
 				liveVms.delete(sandbox.id);
 			}
-			// The new snapshot is live — retire old generations (keep a fallback).
-			await gcWarmSnapshots().catch(() => {
-				/* best-effort */
-			});
+			await gcWarmSnapshots().catch(() => {});
 			return snapshotId;
 		} finally {
 			done();
@@ -1020,14 +893,10 @@ export const freestyleProvider: ProviderImpl = {
 		if (local) {
 			return wrap(name, local.vm, local.vmId);
 		}
-		// Warm cache hit: a READY named snapshot counts as "the warm parent exists"
-		// (run.ts only needs truthiness; forkWorker resolves the same name).
 		const snapshotId = await findSnapshotByName(name);
 		if (snapshotId) {
 			return { name, handle: undefined, id: undefined };
 		}
-		// STALE hit: any recent generation serves — workers restore it and
-		// fast-forward at boot; a detached refresh converges the cache to HEAD.
 		if (name.startsWith(WARM_NAME_PREFIX)) {
 			const newest = await latestWarmSnapshot();
 			if (newest) {
@@ -1057,9 +926,7 @@ export const freestyleProvider: ProviderImpl = {
 			if (domain) {
 				await client()
 					.domains.mappings.delete({ domain })
-					.catch(() => {
-						/* already gone */
-					});
+					.catch(() => {});
 				domainsBySandbox.delete(name);
 			}
 		}
@@ -1067,9 +934,7 @@ export const freestyleProvider: ProviderImpl = {
 		const vmId = local?.vmId ?? key;
 		await client()
 			.vms.delete({ vmId })
-			.catch(() => {
-				/* already gone / a name that never mapped to a vm */
-			});
+			.catch(() => {});
 		for (const name of names) {
 			liveVms.delete(name);
 		}
@@ -1088,9 +953,6 @@ export const freestyleProvider: ProviderImpl = {
 					.map(([key, value]) => `export ${key}=${shellQuote(value)};`)
 					.join(" ")} `
 			: "";
-		// Detached launch + log polling: exec-await's server-side ceiling (~324s)
-		// kills long buffered execs and loses their output, so every run — test
-		// files included — goes through nohup + exit-file + a live log tail.
 		const isScriptRun = argv[0] === "bash";
 		const done = isScriptRun
 			? stage(
@@ -1125,8 +987,6 @@ export const freestyleProvider: ProviderImpl = {
 				signal: opts?.signal,
 				deadlineMs: EXEC_TIMEOUT_MS,
 			});
-			// A failed warmup on a fast-forwarded base poisons its SOURCE snapshot —
-			// otherwise every future run repeats the same broken fast-forward.
 			const ffSource = ffSourceByWarmName.get(sandbox.name);
 			if (
 				exitCode !== 0 &&
@@ -1141,7 +1001,6 @@ export const freestyleProvider: ProviderImpl = {
 				await deleteSnapshot(ffSource);
 				ffSourceByWarmName.delete(sandbox.name);
 			}
-			// stderr rides the merged log through onChunk — parsers read the stream.
 			return { exitCode, stderr: "" };
 		} catch (error) {
 			if (opts?.swallowStreamClose && isSandboxStreamClosed(error)) {
@@ -1159,8 +1018,6 @@ export const freestyleProvider: ProviderImpl = {
 		opts: RunDetachedOptions,
 	): Promise<DetachedCommand> {
 		const vm = unwrap(sandbox);
-		// The snapshot resumes a RUNNING server — boot.ts would EADDRINUSE on 8080.
-		// Swap in the prebooted bind-only boot (all divergence lives freestyle-side).
 		if (argv[1]?.endsWith("worker/boot.ts")) {
 			argv = [argv[0], FREESTYLE_BOOT_SCRIPT, ...argv.slice(2)];
 		}
@@ -1182,9 +1039,6 @@ export const freestyleProvider: ProviderImpl = {
 			);
 		}
 
-		// Polling log pump: buffered exec can't stream, so tail the log by byte
-		// offset. Fast (1.5s) until the process exits or the caller stops caring
-		// (run.ts stops consuming after READY); the pump itself never rejects.
 		let offset = 0;
 		let exited: { exitCode: number } | undefined;
 		let readySeen = false;
@@ -1224,10 +1078,7 @@ export const freestyleProvider: ProviderImpl = {
 						}
 						return;
 					}
-					// transient exec fault — keep polling
 				}
-				// Fast until READY (run.ts is watching for the sentinel); slow liveness
-				// poll after — 200 workers × 1.5s for a whole run would hammer the API.
 				await sleep(
 					readySeen
 						? 20_000 + Math.random() * 5_000
@@ -1256,9 +1107,6 @@ export const freestyleProvider: ProviderImpl = {
 	},
 
 	async listSandboxesByOwner(): Promise<ListedSandbox[]> {
-		// The list API carries no tags/names — cross-run enumeration relies on the
-		// run registry (vmIds) + ephemeral persistence / idle-timeout self-cleanup,
-		// same trade-off as modalv2.
 		return [];
 	},
 

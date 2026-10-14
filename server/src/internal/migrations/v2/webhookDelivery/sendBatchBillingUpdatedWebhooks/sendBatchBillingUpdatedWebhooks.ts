@@ -21,7 +21,6 @@ const sendBillingUpdated = async ({
 			object: "billing.updated",
 			customer_id: record.customerId,
 			...(record.entityId ? { entity_id: record.entityId } : {}),
-			// Records are already grouped per (customer, entity).
 			plan_changes: record.planChanges.map((planChange) => ({
 				...planChange,
 				entity_id: record.entityId,
@@ -35,12 +34,6 @@ const sendBillingUpdated = async ({
 	});
 };
 
-/**
- * The `billing.updated` leg for one batch of records: the payload rides the
- * record (no reads), so this is pure Svix fan-out `concurrency` at a time.
- * Per-record failures are logged and skipped — the run's audit trail lives in
- * the item events.
- */
 export const sendBatchBillingUpdatedWebhooks = async ({
 	ctx,
 	migrationRunId,

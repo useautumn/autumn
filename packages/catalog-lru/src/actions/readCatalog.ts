@@ -12,9 +12,6 @@ import type {
 } from "../types/catalogCacheContext.js";
 import { isCatalogRowCurrent } from "./catalogVersions.js";
 
-/** Every check and track reads the catalog, so a stored row is validated once and
- *  the result reused while that row stays cached; a replaced row is parsed afresh.
- *  Shared across decisions, so it is frozen: a mutation throws instead of leaking. */
 const parsedRows = new WeakMap<CatalogRow, CatalogRow>();
 
 const deepFreeze = <Value>(value: Value): Value => {
@@ -40,8 +37,6 @@ export const readCatalog = ({
 }: {
 	scope: CatalogCacheScope;
 	keys: CatalogKey[];
-	/** Accept a row whose ttl has passed. Only the decision itself should, and
-	 *  only because it runs after `ensure` has already refreshed what was due. */
 	allowStale?: boolean;
 }): Catalog => {
 	const rows: CatalogRow[] = [];

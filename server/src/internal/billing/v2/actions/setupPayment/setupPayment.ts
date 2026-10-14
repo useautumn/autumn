@@ -12,10 +12,6 @@ export interface SetupPaymentResult {
 	url: string;
 }
 
-/**
- * Creates a Stripe checkout session in setup mode.
- * If plan_id is specified, validates the plan via preview and attaches it after setup completes.
- */
 export const setupPayment = async ({
 	ctx,
 	params,
@@ -25,7 +21,6 @@ export const setupPayment = async ({
 }): Promise<SetupPaymentResult> => {
 	const { logger } = ctx;
 
-	// 1. Get or create customer (+ Stripe customer)
 	const fullCustomer = await getOrCreateCustomer({
 		ctx,
 		customerId: params.customer_id,
@@ -39,7 +34,6 @@ export const setupPayment = async ({
 		customer: fullCustomer,
 	});
 
-	// 2. If plan_id specified, run attach in preview mode to validate
 	if (params.plan_id) {
 		logger.info(`Setup payment: validating plan ${params.plan_id} via preview`);
 
@@ -54,7 +48,6 @@ export const setupPayment = async ({
 		logger.info(`Setup payment: plan ${params.plan_id} validated successfully`);
 	}
 
-	// 3. Create Stripe setup checkout session
 	const { url } = await createSetupCheckoutSession({
 		ctx,
 		customer: fullCustomer,

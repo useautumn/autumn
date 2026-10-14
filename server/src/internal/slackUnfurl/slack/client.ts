@@ -5,13 +5,6 @@ export const slack = new WebClient(env.SLACK_BOT_TOKEN);
 
 export type UnfurlCard = { url: string; imageUrl: string; altText: string };
 
-/**
- * Post one or more rendered cards as link unfurls in a single call — works
- * WITHOUT the bot being a member of the channel (unlike chat.postMessage /
- * files.uploadV2). Uses the membership-free `unfurl_id` + `source` from the
- * link_shared event. Each image block points at our own server-served PNG, since
- * unfurl image blocks need a public image_url.
- */
 export async function unfurlCards({
 	unfurlId,
 	source,

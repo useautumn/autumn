@@ -1,22 +1,9 @@
-/**
- * Unit tests for applyAmountOffDiscountToLineItems function.
- *
- * Tests amount-off discount application including:
- * - Single and multiple line items
- * - Proportional distribution across items
- * - Separate distribution for refund vs charge groups
- * - Currency conversion from Stripe cents
- * - applies_to product restrictions
- */
-
 import { describe, expect, test } from "bun:test";
 import type { LineItem } from "@autumn/shared";
 import { lineItems as lineItemFixtures } from "@tests/utils/fixtures/billing/lineItems";
 import { discounts } from "@tests/utils/fixtures/db/discounts";
 import chalk from "chalk";
 import { applyAmountOffDiscountToLineItems } from "@/internal/billing/v2/providers/stripe/utils/discounts/applyAmountOffDiscountToLineItems";
-
-// ============ TESTS ============
 
 describe(chalk.yellowBright("applyAmountOffDiscountToLineItems"), () => {
 	describe(chalk.cyan("Single line item"), () => {
@@ -30,21 +17,20 @@ describe(chalk.yellowBright("applyAmountOffDiscountToLineItems"), () => {
 			});
 
 			expect(result).toHaveLength(1);
-			expect(result[0].amountAfterDiscounts).toBe(40); // 50 - 10
+			expect(result[0].amountAfterDiscounts).toBe(40);
 			expect(result[0].discounts).toHaveLength(1);
 			expect(result[0].discounts[0].amountOff).toBe(10);
 		});
 
 		test("amount larger than total caps at zero (no negative)", () => {
 			const lineItems = [lineItemFixtures.charge({ amount: 20 })];
-			const discount = discounts.fiftyDollarsOff(); // $50
+			const discount = discounts.fiftyDollarsOff();
 
 			const result = applyAmountOffDiscountToLineItems({
 				lineItems,
 				discount,
 			});
 
-			// The discount amount is still recorded as $50, but amountAfterDiscounts caps at 0
 			expect(result[0].discounts[0].amountOff).toBe(50);
 			expect(result[0].amountAfterDiscounts).toBe(0);
 		});
@@ -78,7 +64,6 @@ describe(chalk.yellowBright("applyAmountOffDiscountToLineItems"), () => {
 					discount,
 				});
 
-				// Each item is 50% of total, so each gets $5
 				expect(result[0].discounts[0].amountOff).toBe(5);
 				expect(result[0].amountAfterDiscounts).toBe(45);
 				expect(result[1].discounts[0].amountOff).toBe(5);
@@ -87,18 +72,16 @@ describe(chalk.yellowBright("applyAmountOffDiscountToLineItems"), () => {
 
 			test("distributes $30 proportionally across unequal items", () => {
 				const lineItems = [
-					lineItemFixtures.charge({ amount: 75 }), // 75%
-					lineItemFixtures.charge({ amount: 25 }), // 25%
+					lineItemFixtures.charge({ amount: 75 }),
+					lineItemFixtures.charge({ amount: 25 }),
 				];
-				const discount = discounts.amountOff({ amountOffCents: 3000 }); // $30
+				const discount = discounts.amountOff({ amountOffCents: 3000 });
 
 				const result = applyAmountOffDiscountToLineItems({
 					lineItems,
 					discount,
 				});
 
-				// First item: 75/100 * 30 = 22.5
-				// Second item: 25/100 * 30 = 7.5
 				expect(result[0].discounts[0].amountOff).toBe(22.5);
 				expect(result[0].amountAfterDiscounts).toBe(52.5);
 				expect(result[1].discounts[0].amountOff).toBe(7.5);
@@ -120,11 +103,8 @@ describe(chalk.yellowBright("applyAmountOffDiscountToLineItems"), () => {
 				discount,
 			});
 
-			// Charge item gets full $20 (only applicable item)
 			expect(result[0].discounts[0].amountOff).toBe(20);
-			expect(result[0].amountAfterDiscounts).toBe(80); // 100 - 20
-
-			// Refund item is skipped - discounts don't apply to refunds
+			expect(result[0].amountAfterDiscounts).toBe(80);
 			expect(result[1].discounts).toHaveLength(0);
 			expect(result[1].amountAfterDiscounts).toBe(-50);
 		});
@@ -141,10 +121,8 @@ describe(chalk.yellowBright("applyAmountOffDiscountToLineItems"), () => {
 				discount,
 			});
 
-			// First item: 60/100 * 10 = 6
 			expect(result[0].discounts[0].amountOff).toBe(6);
 			expect(result[0].amountAfterDiscounts).toBe(54);
-			// Second item: 40/100 * 10 = 4
 			expect(result[1].discounts[0].amountOff).toBe(4);
 			expect(result[1].amountAfterDiscounts).toBe(36);
 		});
@@ -171,12 +149,10 @@ describe(chalk.yellowBright("applyAmountOffDiscountToLineItems"), () => {
 				discount,
 			});
 
-			// Only prod_a gets the discount
 			expect(result[0].discounts).toHaveLength(1);
 			expect(result[0].discounts[0].amountOff).toBe(20);
 			expect(result[0].amountAfterDiscounts).toBe(80);
 
-			// prod_b unchanged
 			expect(result[1].discounts).toHaveLength(0);
 			expect(result[1].amountAfterDiscounts).toBe(100);
 		});
@@ -201,7 +177,7 @@ describe(chalk.yellowBright("applyAmountOffDiscountToLineItems"), () => {
 		test("converts from Stripe cents to dollars (USD)", () => {
 			const lineItems = [lineItemFixtures.charge({ amount: 100 })];
 			const discount = discounts.amountOff({
-				amountOffCents: 2500, // 2500 cents = $25
+				amountOffCents: 2500,
 				currency: "usd",
 			});
 
@@ -223,15 +199,13 @@ describe(chalk.yellowBright("applyAmountOffDiscountToLineItems"), () => {
 					existingDiscountAmount: 10,
 				}),
 			];
-			const discount = discounts.amountOff({ amountOffCents: 1500 }); // $15
+			const discount = discounts.amountOff({ amountOffCents: 1500 });
 
 			const result = applyAmountOffDiscountToLineItems({
 				lineItems,
 				discount,
 			});
 
-			// Total discount: 10 + 15 = 25
-			// amountAfterDiscounts: 100 - 25 = 75
 			expect(result[0].discounts).toHaveLength(2);
 			expect(result[0].discounts[0].amountOff).toBe(10);
 			expect(result[0].discounts[1].amountOff).toBe(15);
@@ -260,7 +234,7 @@ describe(chalk.yellowBright("applyAmountOffDiscountToLineItems"), () => {
 				}),
 			];
 			const discount = discounts.tenDollarsOff({
-				appliesToProducts: ["prod_y"], // Different product
+				appliesToProducts: ["prod_y"],
 			});
 
 			const result = applyAmountOffDiscountToLineItems({
@@ -284,9 +258,7 @@ describe(chalk.yellowBright("applyAmountOffDiscountToLineItems"), () => {
 				discount,
 			});
 
-			// First item has 0 proportion, gets no discount
 			expect(result[0].discounts).toHaveLength(0);
-			// Second item gets full $10
 			expect(result[1].discounts[0].amountOff).toBe(10);
 			expect(result[1].amountAfterDiscounts).toBe(90);
 		});

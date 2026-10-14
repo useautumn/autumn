@@ -152,7 +152,6 @@ export const previewToCheckoutRes = async ({
 		};
 	}
 
-	// Options
 	const options = attachParams.optionsList
 		.map((o) => {
 			const price = allPrices.find((p) => {

@@ -1,4 +1,3 @@
-/** A later phase drops a change the phase before it already shows: that change carries over, it isn't new. */
 export const withoutRepeatsOfPreviousPhase = <Change>({
 	phases,
 	signature,

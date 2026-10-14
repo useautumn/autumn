@@ -159,7 +159,6 @@ const toStripePhasePrice = (price: Stripe.Price): StripePhasePrice => ({
 	active: price.active,
 });
 
-/** Every phase item price of the customer's Stripe subscription schedules. */
 export const getStripeSchedulePhasePrices = async ({
 	ctx,
 	customerId,

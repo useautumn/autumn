@@ -11,8 +11,6 @@ const quietLedgerDb = {
 	execute: () => Promise.resolve([]),
 } as unknown as DrizzleCli;
 
-// Records which pool each hydration ran on — the whole no-primary-retry
-// contract for gate sheds lives in that sequence.
 const hydrationPools: string[] = [];
 const backupReadTimeouts: number[] = [];
 let executePreparedImpl: (args: { db: DrizzleCli }) => Promise<unknown[]> =
@@ -201,7 +199,6 @@ describe("replica fallback vs gate shed", () => {
 				(error: unknown) => ({ status: "shed" as const, error }),
 			),
 		);
-		// Let the replica lane saturate (1 running + 1 queued), then drain it.
 		await new Promise((resolve) => setTimeout(resolve, 50));
 		release();
 		const results = await Promise.all(tasks);
@@ -215,7 +212,6 @@ describe("replica fallback vs gate shed", () => {
 			});
 		}
 		expect(results.some((result) => result.status === "ok")).toBe(true);
-		// Shed requests must never get a second admission on the primary pool.
 		expect(hydrationPools.every((pool) => pool === "replica")).toBe(true);
 	});
 

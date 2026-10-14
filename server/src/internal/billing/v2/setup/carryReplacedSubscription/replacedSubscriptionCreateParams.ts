@@ -7,7 +7,6 @@ type CarriedSubscriptionParams = NonNullable<
 	BillingContext["carriedSubscriptionParams"]
 >;
 
-/** The payment, collection and tax settings the replaced subscription was created with. */
 export const replacedSubscriptionCreateParams = ({
 	replacedStripeSubscription,
 }: {
@@ -44,7 +43,6 @@ export const replacedSubscriptionCreateParams = ({
 	};
 };
 
-/** The replaced subscription's own metadata; Autumn writes its `autumn_` keys afresh. */
 export const replacedSubscriptionUserMetadata = ({
 	replacedStripeSubscription,
 }: {

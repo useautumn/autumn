@@ -1,17 +1,3 @@
-/**
- * Vercel attach guard
- *
- * Proves that `handleCustomPaymentMethodErrorsV2` blocks normal Autumn API
- * attach attempts against Vercel-managed customers, independent of whether a
- * legacy Stripe Custom Payment Method is configured.
- *
- * The previous implementation had two branches: a (broken) CPM-shape match
- * AND an `installation_id` fallback. The CPM match never fired in practice
- * because `custom_payment_method_id` is a PM instance id (`pm_*`) and
- * `paymentMethod.custom.type` is a CPM type id (`cpmt_*`). The refactor drops
- * the CPM branch — the guard now fires purely on `processors.vercel.installation_id`.
- */
-
 import { expect, test } from "bun:test";
 import chalk from "chalk";
 import { items } from "@tests/utils/fixtures/items";
@@ -24,10 +10,6 @@ import {
 } from "./utils/vercel-test-helpers";
 
 const TEST_CASE = "vac";
-
-// ─────────────────────────────────────────────────────────────────────────────
-// TEST 1: New Vercel onboarder (no CPM stored) — attach blocked
-// ─────────────────────────────────────────────────────────────────────────────
 
 test.concurrent(
 	`${chalk.yellowBright(
@@ -42,16 +24,12 @@ test.concurrent(
 			ctx,
 			customerId,
 			installationId,
-			// No customPaymentMethodId — this represents a NEW onboarder under
-			// the refactored flow.
 		});
 
 		const pro = products.pro({
 			id: `${TEST_CASE}-no-cpm-pro`,
 			items: [items.monthlyMessages({ includedUsage: 1000 })],
 		});
-		// Ensure the product exists in the test org. initScenario without
-		// `s.customer` would create one; instead we seed products only.
 		const { autumnV1 } = await initScenario({
 			customerId: `${customerId}-helper`,
 			setup: [
@@ -69,10 +47,6 @@ test.concurrent(
 		).rejects.toThrow(/billed outside of Stripe|origin platform/i);
 	},
 );
-
-// ─────────────────────────────────────────────────────────────────────────────
-// TEST 2: Legacy Vercel customer (has CPM stored) — still blocked
-// ─────────────────────────────────────────────────────────────────────────────
 
 test.concurrent(
 	`${chalk.yellowBright(
@@ -112,10 +86,6 @@ test.concurrent(
 	},
 );
 
-// ─────────────────────────────────────────────────────────────────────────────
-// TEST 3: Non-Vercel customer — attach proceeds normally
-// ─────────────────────────────────────────────────────────────────────────────
-
 test.concurrent(
 	`${chalk.yellowBright(
 		"vercel-attach-guard: non-Vercel customer is unaffected and attach succeeds",
@@ -136,7 +106,6 @@ test.concurrent(
 			actions: [],
 		});
 
-		// Should not throw.
 		await autumnV1.billing.attach({
 			customer_id: customerId,
 			product_id: pro.id,

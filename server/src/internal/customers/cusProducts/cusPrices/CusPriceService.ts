@@ -8,7 +8,6 @@ import { eq, inArray } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 
 export class CusPriceService {
-	/** Whether any customer price references one of these catalog rows. */
 	static async hasAnyPriceReferences({
 		db,
 		priceIds,
@@ -25,7 +24,6 @@ export class CusPriceService {
 		return row.length > 0;
 	}
 
-	/** Which of these catalog prices are referenced by any customer_prices row. */
 	static async getReferencedPriceIds({
 		db,
 		priceIds,
@@ -126,7 +124,6 @@ export class CusPriceService {
 			.where(eq(customerPrices.id, id))
 			.returning();
 
-		// Ensure exactly one record was updated
 		if (updated.length !== 1) {
 			throw new Error(
 				`Expected to update exactly 1 record, but updated ${updated.length} records`,

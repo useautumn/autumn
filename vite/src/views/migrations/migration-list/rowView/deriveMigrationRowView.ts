@@ -57,7 +57,6 @@ export const createMigrationCatalog = ({
 	};
 };
 
-/** The one place a list row's filter, operations and run state become display data. */
 const deriveMigrationRowView = ({
 	migration,
 	catalog,

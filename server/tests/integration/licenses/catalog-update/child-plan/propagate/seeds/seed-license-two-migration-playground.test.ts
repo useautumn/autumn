@@ -1,20 +1,3 @@
-/**
- * Seeds a license plan held BOTH ways and LEAVES IT IN THE DB for manual
- * testing. Runs no migration and asserts nothing.
- *
- * Run:
- *   cd server
- *   ./run.sh <abs path to this file>
- *
- * Editing the license plan here must produce TWO migrations, because two
- * distinct populations hold it:
- *   - seat assignments under the parent, reached via upsert_licenses
- *   - a customer holding the license plan directly, reached by plan id
- *
- * The seat-only playground produces one migration on purpose: a license-scoped
- * op cannot reach a seat assignment, so drafting one would only ever report
- * "no changes".
- */
 import { test } from "bun:test";
 import { customerEntitlements } from "@autumn/shared";
 import { setupLicenseUpdateScenario } from "@tests/integration/licenses/billing/update/setupLicenseUpdateScenario";
@@ -51,8 +34,6 @@ test(`${chalk.yellowBright("SEED: license held by seats AND directly (two migrat
 
 	const { ctx, autumnV2_3, parent, devSeat } = scenario;
 
-	// The second population: a customer holding the license plan in its own
-	// right, which only a plan-scoped migration can reach.
 	await autumnV2_3.post("/customers", {
 		id: DIRECT_CUSTOMER_ID,
 		name: "Two Mig Direct",
@@ -70,7 +51,6 @@ test(`${chalk.yellowBright("SEED: license held by seats AND directly (two migrat
 		(assignment) => assignment.internal_entity_id,
 	);
 
-	// Spend one seat's messages down so an edit must credit the delta.
 	if (live[0]) {
 		await ctx.db
 			.update(customerEntitlements)

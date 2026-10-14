@@ -4,7 +4,6 @@ const DANGEROUS_REDIRECT_SCHEMES = new Set([
 	"vbscript:",
 ]);
 
-// `URL.hostname` keeps IPv6 literals bracketed, so `::1` alone never matches.
 const LOOPBACK_REDIRECT_HOSTNAMES = new Set([
 	"localhost",
 	"127.0.0.1",

@@ -3,7 +3,6 @@ import { CustomerBillingControlsParamsSchema } from "../../models/cusModels/bill
 import { ExternalProcessorsSchema } from "../../models/genModels/processorSchemas";
 import { isValidCurrencyCode } from "../../utils/currencyUtils/stripeCurrencies";
 
-// for internal use only
 export const CreateCustomerInternalOptionsSchema = z.object({
 	default_group: z.string().optional().meta({
 		description: "The group of products to attach to the customer",
@@ -13,14 +12,11 @@ export const CreateCustomerInternalOptionsSchema = z.object({
 	}),
 });
 
-// Canonical customer email validation — reuse anywhere an email is accepted.
 export const CustomerEmailSchema = z.email({
 	pattern: z.regexes.unicodeEmail,
 	message: "not a valid email address",
 });
 
-// Base schema without top-level .meta() to avoid side effects during imports
-// Individual field descriptions are kept as they don't cause registry conflicts
 export const CustomerDataSchema = z
 	.object({
 		name: z.string().nullish().meta({

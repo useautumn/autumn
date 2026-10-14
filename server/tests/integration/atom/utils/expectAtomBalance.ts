@@ -3,7 +3,6 @@ import defaultCtx from "@tests/utils/testInitUtils/createTestContext.js";
 import type { TestAtom } from "./ensureAtomDeployment.js";
 import { expectAtomCheckCorrect } from "./expectAtomCheckCorrect.js";
 
-/** The Atom answers itself that exactly `remaining` messages are left: a check for that many passes and one more fails. */
 export const expectAtomBalance = async ({
 	atom,
 	customerId,

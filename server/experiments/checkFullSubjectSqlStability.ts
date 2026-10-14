@@ -1,6 +1,3 @@
-// Verifies getFullSubject emits identical SQL text regardless of how many
-// statuses / feature ids a caller passes — the precondition for reusing it as a
-// named prepared statement. Run: bun run experiments/checkFullSubjectSqlStability.ts
 import { AppEnv, CusProductStatus } from "@autumn/shared";
 import { PgDialect } from "drizzle-orm/pg-core";
 import { getFullSubjectQuery } from "../src/internal/customers/repos/getFullSubject/getFullSubjectQuery.js";

@@ -1,7 +1,6 @@
 import { useAnalyticsFilterState } from "./useAnalyticsFilterState";
 import { useAnalyticsQueryState } from "./useAnalyticsQueryState";
 
-/** Clears every analytics filter back to the page defaults. */
 export const useResetQuery = () => {
 	const { setFilterStates } = useAnalyticsFilterState();
 	const { setQueryStates } = useAnalyticsQueryState();

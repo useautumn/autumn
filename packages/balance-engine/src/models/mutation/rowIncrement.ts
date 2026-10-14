@@ -4,7 +4,6 @@ import {
 	nonEmptyStringSchema,
 } from "../common/primitives.js";
 
-/** A change that adds to a row's counters instead of replacing them, so it composes with every other writer of the row. `guard` names shape columns the row must still hold, such as a window's bounds. */
 export type RowIncrement<Table extends string, Row, Add, Entries> = {
 	table: Table;
 	op: "increment";
@@ -14,7 +13,6 @@ export type RowIncrement<Table extends string, Row, Add, Entries> = {
 	guard?: Partial<Row>;
 };
 
-/** The loosest increment an applier handles: any counters, any map entries. */
 export type AnyRowIncrement<Row> = RowIncrement<
 	string,
 	Row,
@@ -22,7 +20,6 @@ export type AnyRowIncrement<Row> = RowIncrement<
 	Record<string, Record<string, Record<string, number | undefined>> | undefined>
 >;
 
-// A counter or map column this build does not know still adds: the applier is generic over both.
 const anyCounters = finiteNumberSchema.optional();
 const anyEntries = z
 	.record(z.string(), z.record(z.string(), anyCounters))
@@ -47,7 +44,6 @@ const rolloverCounters = z
 	.partial()
 	.catchall(anyCounters);
 
-/** Which columns each balance table adds to, and which map columns hold counter entries. */
 export const customerEntitlementIncrementParts = {
 	add: balanceCounters,
 	entries: z
@@ -105,7 +101,6 @@ export const rowIncrementSchema = <
 		})
 		.loose();
 
-/** What a map entry looks like before anything was added to it: its counters at zero, and for an entity its key as `id`. */
 export const entrySeedOf = ({
 	table,
 	column,
@@ -122,6 +117,5 @@ export const entrySeedOf = ({
 		: { id: key, balance: 0, adjustment: 0 };
 };
 
-/** Attribution entries that net to zero leave the map, as the Lua path drops them; an entity at zero still exists. */
 export const prunesAtZero = ({ column }: { column: string }): boolean =>
 	column === "usage_attribution";

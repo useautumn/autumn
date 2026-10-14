@@ -4,11 +4,6 @@ import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { resolveChargeFromInvoice } from "@/internal/customers/handlers/handleRefundInvoice/invoiceRefundUtils.js";
 
-/**
- * Build a Stripe refund action from the computed refund plan.
- * Retrieves the invoice/charge, validates refundability, and computes the
- * final cents amount so execute only needs to issue the refund.
- */
 export const buildStripeRefundAction = async ({
 	ctx,
 	autumnBillingPlan,

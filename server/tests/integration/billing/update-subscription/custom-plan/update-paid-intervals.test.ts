@@ -15,11 +15,6 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { constructFeatureItem } from "@/utils/scriptUtils/constructItem";
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// PAID-TO-PAID: INTERVAL CHANGES
-// ═══════════════════════════════════════════════════════════════════════════════
-
-// 6.1 Monthly to annual
 test.concurrent(`${chalk.yellowBright("p2p: monthly to annual")}`, async () => {
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
 	const monthlyPriceItem = items.monthlyPrice({ price: 20 });
@@ -37,7 +32,6 @@ test.concurrent(`${chalk.yellowBright("p2p: monthly to annual")}`, async () => {
 		actions: [s.attach({ productId: "pro" })],
 	});
 
-	// Track some usage
 	const messagesUsage = 50;
 	await autumnV1.track(
 		{
@@ -48,7 +42,6 @@ test.concurrent(`${chalk.yellowBright("p2p: monthly to annual")}`, async () => {
 		{ timeout: 2000 },
 	);
 
-	// Change to annual pricing
 	const annualPriceItem = items.annualPrice({ price: 200 });
 
 	const updateParams = {
@@ -59,14 +52,12 @@ test.concurrent(`${chalk.yellowBright("p2p: monthly to annual")}`, async () => {
 
 	const preview = await autumnV1.subscriptions.previewUpdate(updateParams);
 
-	// Should charge $180 ($200 annual - $20 monthly credit)
 	expect(preview.total).toBe(180);
 
 	await autumnV1.subscriptions.update(updateParams);
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Usage should be preserved
 	expectCustomerFeatureCorrect({
 		customer,
 		featureId: TestFeature.Messages,
@@ -75,7 +66,6 @@ test.concurrent(`${chalk.yellowBright("p2p: monthly to annual")}`, async () => {
 		usage: messagesUsage,
 	});
 
-	// Verify invoice matches preview
 	await expectCustomerInvoiceCorrect({
 		customer,
 		count: 2,
@@ -90,7 +80,6 @@ test.concurrent(`${chalk.yellowBright("p2p: monthly to annual")}`, async () => {
 	});
 });
 
-// 6.2 Annual to monthly
 test.concurrent(`${chalk.yellowBright("p2p: annual to monthly")}`, async () => {
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
 	const annualPriceItem = items.annualPrice({ price: 200 });
@@ -108,7 +97,6 @@ test.concurrent(`${chalk.yellowBright("p2p: annual to monthly")}`, async () => {
 		actions: [s.attach({ productId: "pro" })],
 	});
 
-	// Track some usage
 	const messagesUsage = 30;
 	await autumnV1.track(
 		{
@@ -119,7 +107,6 @@ test.concurrent(`${chalk.yellowBright("p2p: annual to monthly")}`, async () => {
 		{ timeout: 2000 },
 	);
 
-	// Change to monthly pricing
 	const monthlyPriceItem = items.monthlyPrice({ price: 20 });
 
 	const updateParams = {
@@ -130,14 +117,12 @@ test.concurrent(`${chalk.yellowBright("p2p: annual to monthly")}`, async () => {
 
 	const preview = await autumnV1.subscriptions.previewUpdate(updateParams);
 
-	// Should credit $180 ($20 monthly - $200 annual credit)
 	expect(preview.total).toBe(-180);
 
 	await autumnV1.subscriptions.update(updateParams);
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Usage should be preserved
 	expectCustomerFeatureCorrect({
 		customer,
 		featureId: TestFeature.Messages,
@@ -146,7 +131,6 @@ test.concurrent(`${chalk.yellowBright("p2p: annual to monthly")}`, async () => {
 		usage: messagesUsage,
 	});
 
-	// Verify invoice matches preview
 	await expectCustomerInvoiceCorrect({
 		customer,
 		count: 2,
@@ -161,7 +145,6 @@ test.concurrent(`${chalk.yellowBright("p2p: annual to monthly")}`, async () => {
 	});
 });
 
-// 6.3 Change feature reset interval (month to week)
 test.concurrent(
 	`${chalk.yellowBright("p2p: change feature reset interval")}`,
 	async () => {
@@ -178,7 +161,6 @@ test.concurrent(
 			actions: [s.attach({ productId: "pro" })],
 		});
 
-		// Track some usage
 		const messagesUsage = 40;
 		await autumnV1.track(
 			{
@@ -189,7 +171,6 @@ test.concurrent(
 			{ timeout: 2000 },
 		);
 
-		// Change to weekly reset
 		const weeklyMessagesItem = constructFeatureItem({
 			featureId: TestFeature.Messages,
 			includedUsage: 100,
@@ -204,14 +185,12 @@ test.concurrent(
 
 		const preview = await autumnV1.subscriptions.previewUpdate(updateParams);
 
-		// No price change, just interval change
 		expect(preview.total).toBe(0);
 
 		await autumnV1.subscriptions.update(updateParams);
 
 		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-		// Usage should stay
 		expectCustomerFeatureCorrect({
 			customer,
 			featureId: TestFeature.Messages,
@@ -220,12 +199,10 @@ test.concurrent(
 			usage: messagesUsage,
 		});
 
-		// Verify interval changed
 		expect(customer.features[TestFeature.Messages].interval).toEqual(
 			EntInterval.Week,
 		);
 
-		// Verify invoice matches preview
 		await expectCustomerInvoiceCorrect({
 			customer,
 			count: 2,
@@ -241,11 +218,6 @@ test.concurrent(
 	},
 );
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// PAID-TO-PAID: TIME-ADVANCED UPDATES (TEST CLOCK)
-// ═══════════════════════════════════════════════════════════════════════════════
-
-// 7.4 Reset cycle anchor preserved after 5 days
 test.concurrent(
 	`${chalk.yellowBright("p2p: reset anchor preserved after 5 days")}`,
 	async () => {
@@ -262,7 +234,6 @@ test.concurrent(
 			actions: [s.attach({ productId: "pro" })],
 		});
 
-		// Track some usage
 		const messagesUsage = 25;
 		await autumnV1.track(
 			{
@@ -273,21 +244,18 @@ test.concurrent(
 			{ timeout: 2000 },
 		);
 
-		// Get the original reset time
 		const customerBefore =
 			await autumnV1.customers.get<ApiCustomerV3>(customerId);
 		const originalResetAt =
 			customerBefore.features[TestFeature.Messages].next_reset_at;
 		expect(originalResetAt).toBeDefined();
 
-		// Advance test clock by 5 days
 		await advanceTestClock({
 			stripeCli: ctx.stripeCli,
 			testClockId: testClockId!,
 			numberOfDays: 5,
 		});
 
-		// Update with more included usage (keep same price)
 		const updatedMessagesItem = items.monthlyMessages({ includedUsage: 150 });
 
 		const updateParams = {
@@ -298,14 +266,12 @@ test.concurrent(
 
 		const preview = await autumnV1.subscriptions.previewUpdate(updateParams);
 
-		// No price change, just included usage change
 		expect(preview.total).toBe(0);
 
 		await autumnV1.subscriptions.update(updateParams);
 
 		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-		// Usage should stay the same, reset anchor should stay approximately the same
 		expectCustomerFeatureCorrect({
 			customer,
 			featureId: TestFeature.Messages,
@@ -315,7 +281,6 @@ test.concurrent(
 			resetsAt: originalResetAt!,
 		});
 
-		// Verify invoice matches preview
 		await expectCustomerInvoiceCorrect({
 			customer,
 			count: 2,
@@ -331,11 +296,6 @@ test.concurrent(
 	},
 );
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// PAID-TO-PAID: COMBINATION UPDATES
-// ═══════════════════════════════════════════════════════════════════════════════
-
-// 9.3 Change interval + add feature + change usage
 test.concurrent(
 	`${chalk.yellowBright("p2p: interval + feature + usage change")}`,
 	async () => {
@@ -355,7 +315,6 @@ test.concurrent(
 			actions: [s.attach({ productId: "pro" })],
 		});
 
-		// Track some usage
 		const messagesUsage = 50;
 		await autumnV1.track(
 			{
@@ -366,7 +325,6 @@ test.concurrent(
 			{ timeout: 2000 },
 		);
 
-		// Complex update: monthly -> annual + add words + increase messages to 200
 		const updatedMessagesItem = items.monthlyMessages({ includedUsage: 200 });
 		const annualPriceItem = items.annualPrice({ price: 200 });
 		const wordsItem = items.monthlyWords({ includedUsage: 500 });
@@ -379,14 +337,12 @@ test.concurrent(
 
 		const preview = await autumnV1.subscriptions.previewUpdate(updateParams);
 
-		// Should charge $180 ($200 annual - $20 monthly credit)
 		expect(preview.total).toBe(180);
 
 		await autumnV1.subscriptions.update(updateParams);
 
 		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-		// Messages usage preserved, higher limit
 		expectCustomerFeatureCorrect({
 			customer,
 			featureId: TestFeature.Messages,
@@ -395,7 +351,6 @@ test.concurrent(
 			usage: messagesUsage,
 		});
 
-		// Words added
 		expectCustomerFeatureCorrect({
 			customer,
 			featureId: TestFeature.Words,
@@ -404,7 +359,6 @@ test.concurrent(
 			usage: 0,
 		});
 
-		// Verify invoice matches preview
 		await expectCustomerInvoiceCorrect({
 			customer,
 			count: 2,

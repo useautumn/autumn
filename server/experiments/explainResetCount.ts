@@ -10,17 +10,11 @@ const { buildCountResetEligibleQuery, countResetEligibleCustomerEntitlements } =
 		"../src/internal/customers/cusProducts/cusEnts/repos/countResetEligibleCustomerEntitlements"
 	);
 
-// Benchmarks the diagnostic capped count; the runtime reset gauge does not use it.
-// Run with `bun run experiments/explainResetCount.ts`; RESET_COUNT_CAP defaults to 10k.
-
 const main = async () => {
 	const cap = Number(process.env.RESET_COUNT_CAP ?? 10_000);
 	const dueBefore = Date.now();
 	const { db } = initDrizzle();
 
-	// The bunfig preload overlays server/.env.local (worktree Neon branch) on
-	// top of Infisical — run with PW_MODE=1 to skip the overlay and hit the
-	// Infisical-provided DB (e.g. prod).
 	const dbHost = new URL(process.env.DATABASE_URL ?? "").host;
 	console.log(`DB target: ${dbHost}\n`);
 

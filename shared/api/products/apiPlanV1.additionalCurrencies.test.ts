@@ -1,9 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { ApiPlanV1Schema } from "./apiPlanV1.js";
 
-// The in-file API_PLAN_V1_EXAMPLE uses camelCase keys for docs and does not
-// necessarily parse; build minimal valid snake_case fixtures here instead.
-
 const flatFeatureItem = {
 	feature_id: "seats",
 	included: 0,
@@ -140,7 +137,6 @@ describe("ApiPlanV1 additional_currencies", () => {
 						amount: 0.5,
 						additional_currencies: [{ currency: "eur", amount: 0.4 }],
 					},
-					// second tier is missing the eur currency
 					{ to: "inf", amount: 0.3 },
 				],
 			},

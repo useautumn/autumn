@@ -7,7 +7,6 @@ import {
 import { toMigratableCustomize } from "@/internal/catalogV2/actions/buildMigrationDraft/toMigratableCustomize";
 import { fullProductToApiPlanV1Sync } from "@/internal/catalogV2/actions/buildPlanChange";
 
-/** Effective content delta of one license link, or null when the overlay is unchanged. */
 export const licenseEffectiveMigratableCustomize = ({
 	fromProduct,
 	toProduct,

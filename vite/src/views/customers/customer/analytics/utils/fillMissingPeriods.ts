@@ -1,6 +1,5 @@
 import type { EventRow, EventsData } from "../components/analytics-types";
 
-/** The last bucket starting at or before `period`, or the first bucket. */
 const bucketFor = ({
 	period,
 	buckets,
@@ -16,12 +15,6 @@ const bucketFor = ({
 	return match;
 };
 
-/**
- * Lays `events` onto exactly the given `periods`: every bucket gets a row
- * (zero-filled when idle), and a row stamped between buckets — e.g. a period
- * string in another zone — folds into the bucket it falls in rather than adding
- * a slot, which would squeeze every bar.
- */
 export function fillMissingPeriods({
 	events,
 	periods,
@@ -29,7 +22,6 @@ export function fillMissingPeriods({
 	events: EventsData;
 	periods: string[];
 }): EventsData {
-	// Period strings are "yyyy-MM-dd HH:mm:ss", so lexical order is chronological.
 	const buckets = [...new Set(periods)].sort();
 	if (buckets.length === 0) return events;
 

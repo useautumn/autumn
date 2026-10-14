@@ -39,8 +39,6 @@ export type CustomerPlanSnapshotFields = {
 	nowMs?: number;
 };
 
-/** Snapshot core over plain fields — for senders that never load a
- * FullCusProduct (set-based migrations); `toCustomerPlanSnapshot` delegates here. */
 export const toCustomerPlanSnapshotFromFields = ({
 	planId,
 	status,
@@ -63,7 +61,6 @@ export const toCustomerPlanSnapshotFromFields = ({
 		};
 	}
 
-	// trial_ends_at is only populated while actively trialing (mirrors getApiSubscription).
 	const trialing = trialEndsAt !== null && trialEndsAt > (nowMs ?? Date.now());
 
 	return {
@@ -86,7 +83,6 @@ export const toCustomerPlanSnapshot = ({
 }: {
 	cusProduct: FullCusProduct;
 }): CustomerPlanSnapshotForChange => {
-	// Stripe periods aren't on the customer product, so only store-owned periods are surfaced here.
 	const revenueCatPeriod = customerProductToRevenueCatPeriod({
 		customerProduct: cusProduct,
 	});

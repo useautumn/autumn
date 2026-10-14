@@ -91,7 +91,6 @@ describe("track queue fallback", () => {
 		mockState.checkCalls = [];
 		mockState.releaseCalls = [];
 		mockState.v3Error = null;
-		// queueTrack resolves the shared track queue from the async URL first.
 		restoreQueueEnv = pinTrackProducerQueueToFifo({
 			fifoQueueUrl: trackQueueUrl,
 		}).restore;
@@ -134,8 +133,6 @@ describe("track queue fallback", () => {
 				idempotencyKey: "track:idem_123",
 			}),
 		]);
-		// The accept-time claim is KEPT on the queued path — the worker skips
-		// its own claim via the message's validateTrackBodyIdempotencyKey flag.
 		expect(mockState.releaseCalls).toHaveLength(0);
 		const batchEntries = mockState.queueCommands[0].Entries as Array<{
 			MessageBody: string;

@@ -3,15 +3,8 @@ import createMDX from "@next/mdx";
 
 const isProd = process.env.NODE_ENV === "production";
 
-// Stray ~/package.json + ~/pnpm-lock.yaml make Next infer $HOME as the
-// workspace root, so its watcher/file-tracing crawls the entire home dir
-// (tens of GB of RAM). Pin to the monorepo root (apps/website -> ../..),
-// which holds the hoisted node_modules the app symlinks into.
 const monorepoRoot = join(import.meta.dirname, "..", "..");
 
-// RB2B's loader fans out to several identity/data providers (and LiveIntent
-// loads a second script of its own), so every host is allowed on each
-// directive the chain touches rather than mapped one-by-one.
 const RB2B_HOSTS = [
   "https://ddwl4m2hdecbv.cloudfront.net",
   "https://app.rb2b.com",
@@ -20,11 +13,8 @@ const RB2B_HOSTS = [
   "https://a.usbrowserspeed.com",
   "https://alocdn.com",
   "https://pro.ip-api.com",
-  // *.liadm.com does not match the apex, which RB2B also calls.
   "https://liadm.com",
   "https://*.liadm.com",
-  // Subdomain comes from the account's apiGateway config and is concatenated
-  // at runtime, so it never appears as a literal in the bundle.
   "https://9xgnrndqve.execute-api.us-west-2.amazonaws.com",
 ];
 
@@ -46,8 +36,6 @@ const nextConfig = {
     optimizeCss: isProd,
   },
   images: {
-    // Serve AVIF to supporting browsers (better compression than WebP),
-    // falling back to WebP. Next.js negotiates via Accept header automatically.
     formats: ["image/avif", "image/webp"],
   },
   async rewrites() {
@@ -132,7 +120,6 @@ const nextConfig = {
               "style-src 'self' 'unsafe-inline'",
               [
                 "img-src 'self' data: blob:",
-                // Blog posts embed images hosted on Framer.
                 "https://framerusercontent.com",
                 ...RB2B_HOSTS,
               ].join(" "),

@@ -94,8 +94,6 @@ const runResetV2 = async ({
 	let shuttingDown = false;
 
 	// Everything under `data`: the express dataset is at its Axiom column
-	// limit, so new top-level (flattened) field names get the whole ingest
-	// batch rejected.
 	logger.info("[reset-cus-ents-v2] dedicated scanner started", {
 		jobName: "reset-cus-ents-v2",
 		data: {
@@ -106,8 +104,6 @@ const runResetV2 = async ({
 	});
 
 	// The scanner must never die because telemetry hiccuped (e.g. an Axiom
-	// ingest rejection inside the pino transport becomes an unhandled
-	// rejection, which kills the process by default).
 	process.on("unhandledRejection", (reason) => {
 		console.error("[reset-cus-ents-v2] unhandled rejection (ignored):", reason);
 	});

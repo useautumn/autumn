@@ -1,16 +1,3 @@
-/**
- * Deferred invoice mode (enable_plan_immediately: false): a finalized invoice that is
- * never paid gives up the pending plan once it is due or voided.
- *
- * Contract:
- *   due, unpaid, new sub     → invoice voided, pending plan expired, new sub canceled, metadata deleted
- *   due, unpaid, upgrade     → invoice voided, pending plan expired, existing sub + plan untouched
- *   voided in Stripe, unpaid → pending plan expired, new sub canceled, metadata deleted
- *
- * Red (before):  the new Stripe sub stays active after the pending plan expires
- * Green (after): the sub created for the pending plan is canceled with it
- */
-
 import { test } from "bun:test";
 import { CusProductStatus } from "@autumn/shared";
 import { items } from "@tests/utils/fixtures/items";

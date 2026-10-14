@@ -1,20 +1,3 @@
-/**
- * Legacy Attach V1 Entity Tests
- *
- * Migrated from:
- * - server/tests/attach/entities/entity1.test.ts (attach to entity via checkout)
- * - server/tests/attach/entities/entity2.test.ts (attach pro annual, track usage, invoice after cycle)
- * - server/tests/attach/entities/entity3.test.ts (attach pro annual, cancel with usage invoice)
- * - server/tests/attach/entities/entity4.test.ts (attach to multiple entities, track usage separately)
- * - server/tests/attach/entities/entity5.test.ts (downgrade entity product, advance clock)
- *
- * Tests V1 attach behavior for entity-level subscriptions:
- * - Attaching products to entities
- * - Tracking usage per entity
- * - Entity-level invoices
- * - Entity-level downgrades
- */
-
 import { expect, test } from "bun:test";
 import type { ApiEntityV0 } from "@autumn/shared";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
@@ -34,18 +17,6 @@ import ctx from "@tests/utils/testInitUtils/createTestContext";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { timeout } from "@/utils/genUtils";
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 1: Attach to entity via checkout
-// (from entity1)
-//
-// Scenario:
-// - Pro ($20/month) with Words (1500 included, arrear)
-// - Create entity, attach Pro to entity
-//
-// Expected:
-// - Entity has Pro product attached
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(
 	`${chalk.yellowBright("legacy-entities 1: attach to entity via checkout")}`,
@@ -67,7 +38,6 @@ test.concurrent(
 
 		const entityId = entities[0].id;
 
-		// Verify entity has Pro attached
 		const entity = await autumnV1.entities.get<ApiEntityV0>(
 			customerId,
 			entityId,
@@ -78,8 +48,6 @@ test.concurrent(
 			productId: pro.id,
 		});
 
-		// Also verify customer has product attached to entity
-		// The balance worker doesn't aggregate entity data onto the customer.
 		if (!isBalanceWorkerRoute()) {
 			const customer = await autumnV1.customers.get(customerId);
 			await expectProductActive({
@@ -89,21 +57,6 @@ test.concurrent(
 		}
 	},
 );
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 2: Attach pro annual to entity, track usage, invoice after cycle
-// (from entity2)
-//
-// Scenario:
-// - Pro Annual ($200/year) with Words (1500 included, arrear)
-// - Create entity, attach Pro Annual
-// - Track large usage (1,250,130 words)
-// - Advance clock to next invoice
-//
-// Expected:
-// - Entity has correct usage tracked
-// - Invoice generated with overage charges
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(
 	`${chalk.yellowBright("legacy-entities 2: attach pro annual, track usage, invoice after cycle")}`,
@@ -128,7 +81,6 @@ test.concurrent(
 
 		const entityId = entities[0].id;
 
-		// Track large usage
 		const usage = 1250130;
 		await autumnV1.track({
 			customer_id: customerId,
@@ -137,7 +89,6 @@ test.concurrent(
 			value: usage,
 		});
 
-		// Verify entity has correct usage (cached)
 		const entity = await autumnV1.entities.get<ApiEntityV0>(
 			customerId,
 			entityId,
@@ -149,7 +100,6 @@ test.concurrent(
 			usage,
 		});
 
-		// Also verify non-cached
 		await timeout(2000);
 		const nonCachedEntity = await autumnV1.entities.get<ApiEntityV0>(
 			customerId,
@@ -163,14 +113,12 @@ test.concurrent(
 			usage,
 		});
 
-		// Advance clock to next invoice (uses advanceToNextInvoice with withPause)
 		await advanceToNextInvoice({
 			stripeCli: ctx.stripeCli,
 			testClockId: testClockId!,
 			withPause: true,
 		});
 
-		// Verify invoice has correct usage charges
 		await expectInvoiceAfterUsage({
 			autumn: autumnV1,
 			customerId,
@@ -186,22 +134,6 @@ test.concurrent(
 		});
 	},
 );
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 3: Attach pro annual to entity and cancel
-// (from entity3)
-//
-// Scenario:
-// - Pro ($20/month) with Words (1500 included, arrear)
-// - Create entity, attach Pro
-// - Track usage (1,032,100 words)
-// - Cancel subscription
-// - Advance clock
-//
-// Expected:
-// - Final invoice generated with usage
-// - Entity product is expired after clock advance
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(
 	`${chalk.yellowBright("legacy-entities 3: attach pro, cancel with usage invoice")}`,
@@ -223,7 +155,6 @@ test.concurrent(
 
 		const entityId = entities[0].id;
 
-		// Track usage before cancel
 		const usage = 1032100;
 		await autumnV1.track({
 			customer_id: customerId,
@@ -232,7 +163,6 @@ test.concurrent(
 			value: usage,
 		});
 
-		// Cancel subscription
 		await autumnV1.cancel({
 			customer_id: customerId,
 			product_id: pro.id,
@@ -241,14 +171,12 @@ test.concurrent(
 
 		await timeout(5000);
 
-		// Advance clock to finalize invoice (advance past month + finalize hours)
 		await advanceToNextInvoice({
 			stripeCli: ctx.stripeCli,
 			testClockId: testClockId!,
 			withPause: true,
 		});
 
-		// Verify invoice has correct usage charges and product is expired
 		await expectInvoiceAfterUsage({
 			autumn: autumnV1,
 			customerId,
@@ -265,21 +193,6 @@ test.concurrent(
 		});
 	},
 );
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 4: Attach pro to multiple entities, track usage separately
-// (from entity4)
-//
-// Scenario:
-// - Pro ($20/month) with Words (1500 included, arrear)
-// - Create 2 entities
-// - Attach Pro to entity 1, then Pro to entity 2
-// - Track different usage on each entity
-//
-// Expected:
-// - Each entity has separate usage tracking
-// - Usage on one entity doesn't affect the other
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(
 	`${chalk.yellowBright("legacy-entities 4: attach to multiple entities, track usage separately")}`,
@@ -305,7 +218,6 @@ test.concurrent(
 		const entity1Id = entities[0].id;
 		const entity2Id = entities[1].id;
 
-		// Track usage on entity 1
 		const entity1Usage = Math.floor(Math.random() * 1000000);
 		await autumnV1.track({
 			customer_id: customerId,
@@ -314,7 +226,6 @@ test.concurrent(
 			value: entity1Usage,
 		});
 
-		// Verify entity 1 has usage, entity 2 has none (cached)
 		const entity1 = await autumnV1.entities.get<ApiEntityV0>(
 			customerId,
 			entity1Id,
@@ -336,7 +247,6 @@ test.concurrent(
 			usage: 0,
 		});
 
-		// Verify non-cached results
 		await timeout(2000);
 		const entity1Uncached = await autumnV1.entities.get<ApiEntityV0>(
 			customerId,
@@ -361,7 +271,6 @@ test.concurrent(
 			usage: 0,
 		});
 
-		// Track usage on entity 2
 		const entity2Usage = Math.floor(Math.random() * 1000000);
 		await autumnV1.track({
 			customer_id: customerId,
@@ -370,7 +279,6 @@ test.concurrent(
 			value: entity2Usage,
 		});
 
-		// Verify both entities have correct independent usage
 		const entity1After = await autumnV1.entities.get<ApiEntityV0>(
 			customerId,
 			entity1Id,
@@ -393,22 +301,6 @@ test.concurrent(
 		});
 	},
 );
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 5: Downgrade entity product
-// (from entity5)
-//
-// Scenario:
-// - Premium ($50/month) and Pro ($20/month) with Words (1500 included, arrear)
-// - Create 2 entities
-// - Attach Premium to both entities
-// - Downgrade entity 1 to Pro (scheduled)
-// - Advance clock
-//
-// Expected:
-// - Entity 1 has Pro scheduled, then active after clock advance
-// - Entity 2 still has Premium active
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(
 	`${chalk.yellowBright("legacy-entities 5: downgrade entity product")}`,
@@ -435,14 +327,12 @@ test.concurrent(
 		const entity1Id = entities[0].id;
 		const entity2Id = entities[1].id;
 
-		// Downgrade entity 1 to Pro
 		await autumnV1.attach({
 			customer_id: customerId,
 			entity_id: entity1Id,
 			product_id: pro.id,
 		});
 
-		// Verify Pro is scheduled on entity 1
 		const entity1Before = await autumnV1.entities.get<ApiEntityV0>(
 			customerId,
 			entity1Id,
@@ -452,14 +342,12 @@ test.concurrent(
 			productId: pro.id,
 		});
 
-		// Also verify scheduled subscription via API
 		await expectScheduledApiSub({
 			customerId,
 			entityId: entity1Id,
 			productId: pro.id,
 		});
 
-		// Advance clock to activate scheduled product
 		await advanceTestClock({
 			stripeCli: ctx.stripeCli,
 			testClockId: testClockId!,
@@ -467,7 +355,6 @@ test.concurrent(
 			minimumWaitForSeconds: 30,
 		});
 
-		// Verify entity 1 has Pro active
 		const entity1After = await autumnV1.entities.get<ApiEntityV0>(
 			customerId,
 			entity1Id,
@@ -478,7 +365,6 @@ test.concurrent(
 		});
 		expect(entity1After.products?.length).toBe(1);
 
-		// Verify entity 2 still has Premium active
 		const entity2After = await autumnV1.entities.get<ApiEntityV0>(
 			customerId,
 			entity2Id,

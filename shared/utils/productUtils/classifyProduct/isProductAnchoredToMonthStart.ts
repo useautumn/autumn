@@ -11,10 +11,6 @@ const MONTHLY_OR_LONGER_RESET_INTERVALS: ReadonlySet<EntInterval> = new Set([
 	EntInterval.Year,
 ]);
 
-/**
- * The flag needs a monthly-or-longer cycle to anchor: the billing interval when the
- * plan is paid, otherwise a reset interval. Weekly cycles keep their own day.
- */
 export const isProductAnchoredToMonthStart = ({
 	product,
 }: {

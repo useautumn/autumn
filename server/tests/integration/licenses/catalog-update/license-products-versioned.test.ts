@@ -1,6 +1,3 @@
-/**
- * A parent pinned to an older license version must still expose the latest license in the catalog.
- */
 import { expect, test } from "bun:test";
 import type { ProductV2 } from "@autumn/shared";
 import { items } from "@tests/utils/fixtures/items.js";

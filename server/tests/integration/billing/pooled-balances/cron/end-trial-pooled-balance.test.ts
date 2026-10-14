@@ -1,6 +1,3 @@
-/** Regression: standard trial expiry removes its pooled source, expires empty pools,
- * preserves other sources, and transitions onto an activated default product. */
-
 import { expect, test } from "bun:test";
 import {
 	CusProductStatus,

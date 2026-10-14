@@ -26,7 +26,6 @@ import { recordToUsageEvent } from "../../../../src/consumers/usageEvents/action
 
 const position = { topic: "local-events", partition: 3, offset: 44n };
 
-/** A real track through the engine, stamped the way the writer stamps it; `balance: null` holds no grant. */
 const trackRecord = ({
 	balance,
 	value,
@@ -63,7 +62,6 @@ const stamp = (mutation: SubjectStateMutation): MutationRecord => ({
 const subjectOf = ({ state }: { state: SubjectState }) =>
 	subjectStateToFullSubject({ state, catalog: createCatalogFor({ state }) });
 
-/** A lock of 8 taken with its own properties, then settled at `finalValue`: the two records a lock leaves on the log. */
 const lockThenFinalize = ({
 	finalValue,
 	finalizeProperties = null,
@@ -249,7 +247,6 @@ describe("recordToUsageEvent", () => {
 			idempotency_key: "key_1",
 			event_name: "messages",
 		});
-		// Without a caller id the event is named by its place in the log, and a key-less track stores null.
 		expect(
 			recordToUsageEvent({
 				position,
@@ -277,7 +274,6 @@ describe("recordToUsageEvent", () => {
 				},
 			});
 			if (record.result.type !== "track") throw new Error("Expected a track");
-			// The tracked feature's own draw is not a credit cost; a parent pool's is.
 			const [ownDraw] = record.result.deductions;
 			return {
 				...record,
@@ -329,7 +325,6 @@ describe("recordToUsageEvent", () => {
 		expect(
 			eventValueOf(lockThenFinalize({ finalValue: 5 }).finalizeRecord),
 		).toBe(-3);
-		// A release, and an expiry, settle at zero.
 		expect(
 			eventValueOf(lockThenFinalize({ finalValue: 0 }).finalizeRecord),
 		).toBe(-8);

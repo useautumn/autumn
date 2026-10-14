@@ -184,7 +184,7 @@ describe("RefreshEntityAggregateBatchingManager", () => {
 			const { fn, calls } = createMockQueue();
 			const manager = new RefreshEntityAggregateBatchingManager({
 				addTaskToQueueFn: fn,
-				bucketMs: 10_000, // Will never fire naturally
+				bucketMs: 10_000,
 				settleBufferMs: 1000,
 			});
 

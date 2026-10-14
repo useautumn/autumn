@@ -1,19 +1,15 @@
 import type { CreditDimension } from "@models/featureModels/featureConfig/creditConfig";
 
-/** Two dimensions that can't be told apart, and one event that would match both. */
 export type AmbiguousCreditDimensions = {
 	names: [string, string];
 	example: CreditDimension["match"];
 };
 
-/** True when no key disagrees, so one event could satisfy both matches at once. */
 export const matchesCanCoexist = (
 	left: CreditDimension["match"],
 	right: CreditDimension["match"],
 ): boolean =>
 	Object.entries(left).every(([key, value]) => {
-		// Compare the parsed record's own entries: an inherited name like
-		// `toString` would otherwise read as a value and hide a real overlap.
 		const rightValue = Object.entries(right).find(([k]) => k === key)?.[1];
 		return rightValue === undefined || rightValue === value;
 	});
@@ -25,10 +21,6 @@ const sameSpecificity = (
 	Object.keys(left.match).length === Object.keys(right.match).length &&
 	(left.priority ?? null) === (right.priority ?? null);
 
-/**
- * Pairs of dimensions that could both match one event with nothing to break the
- * tie: same number of match keys, same priority, and no key that disagrees.
- */
 export const findAmbiguousCreditDimensions = (
 	dimensions: Record<string, CreditDimension>,
 ): AmbiguousCreditDimensions[] => {

@@ -5,7 +5,6 @@ import {
 } from "@autumn/shared";
 import { isBackdateRecreate } from "./isBackdateRecreate";
 
-/** The backdated time before the replaced subscription started, which it never paid for. */
 export const backdateGap = ({
 	billingContext,
 }: {
@@ -26,7 +25,6 @@ export const backdateGap = ({
 	return { start: subscriptionBackdateStartMs, end: replacedStartMs };
 };
 
-/** Unset or "none" leaves backdated or moved-anchor time unbilled, as set_plans always has; the other behaviors bill it. */
 export const billsProratedTime = ({
 	billingContext,
 }: {

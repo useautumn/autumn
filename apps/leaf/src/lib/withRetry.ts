@@ -1,9 +1,6 @@
 const wait = (delayMs: number) =>
 	new Promise((resolve) => setTimeout(resolve, delayMs));
 
-/** Runs the operation with exponential backoff: attempt n waits
- * baseDelayMs * 2^(n-1) before retrying. `shouldRetry` decides per error —
- * anything it declines is rethrown immediately. */
 export const withRetry = async <T>({
 	attempts,
 	baseDelayMs,

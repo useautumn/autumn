@@ -1,12 +1,3 @@
-/**
- * Attach Metadata Tests
- *
- * Tests for the first-class `metadata` field on attach params.
- * Verifies that user-provided metadata is correctly passed through to
- * Stripe subscriptions, invoices, and checkout sessions, while ensuring
- * Autumn's reserved `autumn_*` keys are never overridden.
- */
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3, AttachParamsV1Input } from "@autumn/shared";
 import { expectProductActive } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
@@ -17,10 +8,6 @@ import { timeout } from "@tests/utils/genUtils";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { CusService } from "@/internal/customers/CusService";
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 1: metadata passthrough on subscription (non-checkout flow)
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(`${chalk.yellowBright("metadata: passthrough to subscription")}`, async () => {
 	const customerId = "attach-metadata-sub-invoice";
@@ -56,7 +43,6 @@ test.concurrent(`${chalk.yellowBright("metadata: passthrough to subscription")}`
 		productId: pro.id,
 	});
 
-	// Verify Stripe subscription has user-provided metadata
 	const fullCustomer = await CusService.getFull({
 		ctx,
 		idOrInternalId: customerId,
@@ -77,10 +63,6 @@ test.concurrent(`${chalk.yellowBright("metadata: passthrough to subscription")}`
 	expect(subscription!.metadata.user_id).toBe("u-123");
 	expect(subscription!.metadata.campaign).toBe("summer");
 });
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 2: autumn_* prefixed keys are stripped from user metadata
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(`${chalk.yellowBright("metadata: autumn_* keys are stripped")}`, async () => {
 	const customerId = "attach-metadata-strip-autumn";
@@ -135,22 +117,15 @@ test.concurrent(`${chalk.yellowBright("metadata: autumn_* keys are stripped")}`,
 	);
 	expect(subscription).toBeDefined();
 
-	// User's safe key should be present
 	expect(subscription!.metadata.user_id).toBe("u-456");
 
-	// Autumn-prefixed keys should NOT be on the subscription
 	expect(subscription!.metadata.autumn_evil).toBeUndefined();
 	expect(subscription!.metadata.autumn_billing_update).toBeUndefined();
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 3: metadata passthrough on proration invoice (immediate upgrade)
-// ═══════════════════════════════════════════════════════════════════════════════
-
 test.concurrent(`${chalk.yellowBright("metadata: passthrough to proration invoice on upgrade")}`, async () => {
 	const customerId = "attach-metadata-upgrade-invoice";
 
-	// Paid -> paid, so the proration lands on Autumn's manual invoice (a new subscription's first invoice is Stripe's).
 	const pro = products.pro({
 		id: "pro-metadata-inv",
 		items: [items.monthlyMessages({ includedUsage: 100 })],
@@ -190,10 +165,6 @@ test.concurrent(`${chalk.yellowBright("metadata: passthrough to proration invoic
 	expect(stripeInvoice.metadata?.campaign).toBe("upgrade-promo");
 	expect(stripeInvoice.metadata?.autumn_billing_update).toBe("true");
 });
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 4: metadata passthrough via Stripe checkout flow
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(`${chalk.yellowBright("metadata: passthrough via Stripe checkout")}`, async () => {
 	const customerId = "attach-metadata-checkout";
@@ -242,7 +213,6 @@ test.concurrent(`${chalk.yellowBright("metadata: passthrough via Stripe checkout
 		productId: pro.id,
 	});
 
-	// Verify Stripe subscription has user-provided metadata
 	const fullCustomer = await CusService.getFull({
 		ctx,
 		idOrInternalId: customerId,

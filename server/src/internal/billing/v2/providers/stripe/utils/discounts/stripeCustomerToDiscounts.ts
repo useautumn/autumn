@@ -30,8 +30,6 @@ export const stripeCustomerToDiscounts = async ({
 		return [customerDiscount as StripeDiscountWithCoupon];
 	}
 
-	// Coupon is deleted — re-fetch the customer via the legacy API which
-	// exposes the discount under `discount.coupon` with all original fields intact.
 	const legacyStripeCli = createStripeCli({
 		org: ctx.org,
 		env: ctx.env,

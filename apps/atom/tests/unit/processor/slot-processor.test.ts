@@ -129,7 +129,6 @@ describe("slot processor check", () => {
 			request: checkRequestFor({ apiVersion: oldestApiVersion }),
 		});
 
-		// The oldest version's shape, not the latest the reply is typed as.
 		expect<unknown>(reply).toEqual({
 			allowed: true,
 			balances: [{ feature_id: "messages", required: 1, balance: 10 }],
@@ -245,7 +244,6 @@ describe("slot processor check on an entity", () => {
 			}),
 		);
 
-		// 2 left on the customer and 5 on the entity.
 		expect(
 			(await processor.check({ request: checkEntity({ requiredBalance: 7 }) }))
 				.allowed,
@@ -271,7 +269,6 @@ describe("slot processor check on an entity", () => {
 });
 
 describe("each customer's own catalog slice", () => {
-	/** The fixture customer under another id, its plan's entitlements granting `allowance`. */
 	const customerWith = ({
 		customerId = "cus_1",
 		allowance,
@@ -367,7 +364,6 @@ describe("each customer's own catalog slice", () => {
 			subjectPushOf({ subject: customerWith({ allowance: 1000 }) }),
 		);
 
-		// The retired rows are the customer's own now, so the org's newer catalog no longer carries them.
 		processor.setCatalog({
 			rows: rowsWithout({ table: "entitlements" }),
 			readAt: 2000,

@@ -2,15 +2,9 @@ import { CE_LAKE_TABLES } from "./ceLakeTables.js";
 import { getLakeMetadataLocation } from "./lakeMetadata.js";
 import type { DuckDbConnection } from "./localDuckDb.js";
 
-/** Scratch lives INSIDE internal/ so MotherDuck's `lake_s3` secret (scoped to
- * internal/*) can read_parquet it back out. Lifecycle rule expires it daily. */
 export const SCRATCH_BASE =
 	"s3://autumn-lake-prod-us-east-2/internal/lake-cache-scratch";
 
-/** Semantics are a verbatim port of the server cron's totals CTAS
- * (refreshCeBalancesCache.ts) which this job replaces: finite-only
- * remaining/granted, all-rows usage incl. entity-held unlimited deductions,
- * finite_rows guard column, zone-map-friendly ordering. */
 export const ceBalanceTotalsSql = ({
 	ceMetas,
 	entMeta,
@@ -77,8 +71,6 @@ export const ceBalanceTotalsSql = ({
 	ORDER BY b.internal_feature_id, is_unlimited DESC, total DESC
 `;
 
-/** Scans the lake in-region and writes the totals parquet to scratch.
- * Returns the parquet URL the MotherDuck ingest should read. */
 export const buildCeBalanceTotalsParquet = async ({
 	connection,
 	runId,

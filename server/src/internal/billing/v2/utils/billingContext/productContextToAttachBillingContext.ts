@@ -4,7 +4,6 @@ import type {
 	MultiAttachProductContext,
 } from "@autumn/shared";
 
-/** Build an AttachBillingContext from a multi-product billing context and a single product context. */
 export const productContextToAttachBillingContext = ({
 	billingContext,
 	productContext,

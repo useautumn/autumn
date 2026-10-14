@@ -8,7 +8,6 @@ import type {
 	AutoTopupJobPayload,
 } from "./types/autoTopupDispatch.js";
 
-/** Runs the job at most once per pending window: claim the customer+feature key, then send. */
 export const dispatchAutoTopup = async ({
 	ctx,
 	payload,
@@ -34,7 +33,6 @@ export const dispatchAutoTopup = async ({
 
 	const sent = await ctx.sqsJobs.autoTopup.trySend(payload);
 	if (!sent.sent) {
-		// The claim must not outlive a job that never left: the next deduction retries.
 		await clearAutoTopupPendingKey({ ctx, ...payload });
 		return { enqueued: false, reason: "send_failed" };
 	}

@@ -27,8 +27,6 @@ export const useAgentClaim = ({ token }: { token: string }) => {
 		refetchOnWindowFocus: false,
 	});
 
-	// Frozen on first resolve: the session refetch after claiming flips the
-	// active org, which would otherwise re-derive the mode mid-transition.
 	const modeRef = useRef<ClaimMode | null>(null);
 	const activeOrgId = session?.session.activeOrganizationId;
 	const claimedOrgId = details.data?.organization.id;

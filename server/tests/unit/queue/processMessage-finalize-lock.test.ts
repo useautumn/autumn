@@ -1,21 +1,3 @@
-/**
- * TDD test for the finalize-lock queued replay worker wiring.
- *
- * Contract under test:
- *   New behaviors:
- *     - processMessage builds a Redis-capable worker ctx (skipCache: false)
- *       for JobName.FinalizeLock messages
- *     - shouldRetrySqsJobError keeps FinalizeLock messages in SQS on
- *       transient Redis/DB errors and claim-contested 409s; app errors
- *       (Lock not found, generic) are not retried
- *   (End-to-end dispatch to runQueuedFinalizeLock is covered by
- *   tests/integration/balances/lock/finalize-lock-queued-replay.test.ts —
- *   module mocks can't intercept alias imports under a cache-busted parent.)
- *
- * Pre-impl red: JobName.FinalizeLock and the processMessage case do not exist.
- * Post-impl green: ctx construction + retry policy match the contract.
- */
-
 import { afterAll, beforeEach, describe, expect, mock, test } from "bun:test";
 import { AppEnv, ErrCode, RecaseError } from "@autumn/shared";
 import type { Message } from "@aws-sdk/client-sqs";
@@ -61,7 +43,6 @@ describe("processMessage finalize-lock jobs", () => {
 		mockState.createWorkerContextCalls = [];
 	});
 
-	// ── Contract: FinalizeLock jobs get a Redis-capable worker context ──────
 	test("builds a worker context with skipCache false for FinalizeLock", async () => {
 		const message = {
 			MessageId: "msg_fin_123",
@@ -92,7 +73,6 @@ describe("processMessage finalize-lock jobs", () => {
 });
 
 describe("shouldRetrySqsJobError finalize-lock policy", () => {
-	// ── Contract: transient infra errors stay in SQS for redelivery ─────────
 	test("retries transient Redis and DB errors", () => {
 		expect(
 			shouldRetrySqsJobError({
@@ -108,7 +88,6 @@ describe("shouldRetrySqsJobError finalize-lock policy", () => {
 		).toBe(true);
 	});
 
-	// ── Contract: claim-contested replays redeliver until the claim clears ──
 	test("retries claim-contested finalize replays", () => {
 		expect(
 			shouldRetrySqsJobError({
@@ -123,7 +102,6 @@ describe("shouldRetrySqsJobError finalize-lock policy", () => {
 		).toBe(true);
 	});
 
-	// ── Contract: application errors are not retried ────────────────────────
 	test("does not retry application errors", () => {
 		expect(
 			shouldRetrySqsJobError({

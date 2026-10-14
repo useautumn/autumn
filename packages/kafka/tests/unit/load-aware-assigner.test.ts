@@ -40,7 +40,6 @@ function createAssigner(weights: ReadonlyMap<number, number>) {
 	});
 }
 
-/** A member's join metadata as another worker would send it, carrying the weights it knows. */
 function memberWith(memberId: string, weights: ReadonlyMap<number, number>) {
 	return {
 		memberId,
@@ -48,7 +47,6 @@ function memberWith(memberId: string, weights: ReadonlyMap<number, number>) {
 	};
 }
 
-/** A member that also says which partitions it serves right now. */
 function memberOwning(
 	memberId: string,
 	owned: readonly number[],
@@ -60,7 +58,6 @@ function memberOwning(
 	return { memberId, memberMetadata: assigner.protocol({ topics }).metadata };
 }
 
-/** A member the group has assigned partitions to, saying what it was given and what it still serves. */
 function memberAssigned(
 	memberId: string,
 	{
@@ -108,7 +105,6 @@ async function assignmentsOf(
 }
 
 test("two heavy partitions that round robin would colocate land on different members", async () => {
-	// Partitions 1 and 4 are both 1 mod 3, so p mod N puts them on the same worker.
 	const owner = new Map([
 		[1, 1_000_000],
 		[4, 1_000_000],
@@ -183,7 +179,6 @@ test("a member's join metadata carries its rounded, positive weights and what it
 		],
 	});
 
-	// An owned partition is reported even before anything was committed on it, at 0.
 	const owning = memberOwning("m", [9, 3], weights);
 	const decodedOwning = AssignerProtocol.MemberMetadata.decode(
 		owning.memberMetadata,
@@ -201,7 +196,6 @@ test("a member's join metadata carries its rounded, positive weights and what it
 
 test("a joining member takes only what balance needs; everything else stays put", async () => {
 	const byMember = await assignmentsOf(createAssigner(new Map()), [
-		// a carries a hot pair; b one hot partition and a light one.
 		memberOwning(
 			"a",
 			[0, 1],
@@ -237,7 +231,6 @@ test("a joining member takes only what balance needs; everything else stays put"
 		{ memberId: "e", memberMetadata: Buffer.alloc(0) },
 	]);
 	const events = (memberId: string) => byMember.get(memberId)?.events;
-	// Half of the hot pair moves to the newcomer. b's light partition would only shave a tenth off b, so it stays.
 	expect(events("e")).toEqual([0]);
 	expect(events("a")).toEqual([1]);
 	expect(events("b")).toEqual([2, 3]);
@@ -272,7 +265,6 @@ test("balancing deals heaviest first to whoever carries least, within an even co
 	expect(dealt.get("a")).toEqual([0, 3]);
 	expect(dealt.get("b")).toEqual([1, 2]);
 
-	// One very heavy partition keeps its member to that alone while the others can absorb the rest.
 	const skewed = balancePartitions({
 		partitions: [
 			{ partition: 0, weight: 100 },

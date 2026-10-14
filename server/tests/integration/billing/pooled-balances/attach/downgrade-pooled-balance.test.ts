@@ -1,5 +1,3 @@
-/** Scheduled attach downgrades replace pooled contributions without replaying usage. */
-
 import { expect, test } from "bun:test";
 import {
 	type ApiCustomerV5,

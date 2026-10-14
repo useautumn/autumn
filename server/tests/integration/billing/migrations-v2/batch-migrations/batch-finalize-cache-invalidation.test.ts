@@ -1,17 +1,3 @@
-/**
- * Batch finalize: cache invalidation contract.
- *
- * The check/balance path serves from cached FullSubject state, so this test
- * PRIMES the caches before the migration (pre-migration reads) — without
- * priming, the first read lands after the migration and a broken finalize
- * would go undetected. Contract:
- *   - pre-migration checks: features absent (and now cached);
- *   - after an add_items batch migration, the SAME reads reflect the new
- *     boolean flag and metered balance — proving the page finalize
- *     invalidated fullCustomer + FullSubject caches;
- *   - item runs are marked succeeded.
- */
-
 import { expect, test } from "bun:test";
 import {
 	type ApiCustomerV5,
@@ -44,7 +30,6 @@ test.concurrent(
 			actions: [s.billing.attach({ productId: freePlan.id })],
 		});
 
-		// PRIME: these reads cache the pre-migration state.
 		const flagBefore = await autumnV2_1.check<CheckResponseV3>({
 			customer_id: customerId,
 			feature_id: TestFeature.Dashboard,
@@ -79,7 +64,6 @@ test.concurrent(
 			noBillingChanges: true,
 		});
 
-		// The SAME cached reads must now serve the migrated state.
 		const flagAfter = await autumnV2_1.check<CheckResponseV3>({
 			customer_id: customerId,
 			feature_id: TestFeature.Dashboard,

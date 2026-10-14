@@ -10,7 +10,6 @@ const jsonResponse = (body: unknown) =>
 		headers: { "Content-Type": "application/json" },
 	});
 
-// Two-page fixture: page 1 points to page 2 via next_page, page 2 terminates.
 const twoPageFetch = (firstPageItems: unknown[], secondPageItems: unknown[]) => {
 	let call = 0;
 	const calls: string[] = [];

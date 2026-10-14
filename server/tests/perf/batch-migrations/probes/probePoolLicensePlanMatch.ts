@@ -1,10 +1,3 @@
-/**
- * Compares how many bench pools each license-plan predicate matches, to isolate
- * why the pool repoint stopped matching rows.
- *
- *   infisical run --env=dev --recursive -- bun tests/perf/batch-migrations/probes/probePoolLicensePlanMatch.ts
- */
-
 import { sql } from "drizzle-orm";
 import { getBenchContext } from "../utils/benchContext.js";
 import { ensureBenchVersionSetCatalog } from "../utils/benchVersionSetCatalog.js";

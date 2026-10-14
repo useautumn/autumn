@@ -3,7 +3,6 @@ import { ORG_ROW_COLUMNS, RolloutOrgRow } from "./RolloutOrgRow";
 import { LIST_EMPTY, LIST_FRAME, ROW_HEADER_LAYOUT } from "./rolloutRowStyles";
 import type { RolloutOrg, RolloutPercent } from "./rolloutTypes";
 
-/** Every org override, or the note that there are none. */
 export const RolloutOrgList = ({
 	orgOverrides,
 	orgsById,

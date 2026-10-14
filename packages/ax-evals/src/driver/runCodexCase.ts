@@ -15,9 +15,6 @@ import type { CompletedTurn } from "./runAgentCase.ts";
 import { shortText, trace } from "./trace.ts";
 import type { AgentRunResult } from "./types/agentRunResult.ts";
 
-/** One `codex exec` process = one user turn; the thread id from turn 1 is
- * resumed for every later turn so the conversation continues. */
-// The spawn cwd is the workspace, so no -C (which `resume` doesn't accept).
 const codexArgs = ({
 	threadId,
 	prompt,
@@ -29,22 +26,13 @@ const codexArgs = ({
 	...(threadId ? ["resume", threadId] : []),
 	"--json",
 	"--skip-git-repo-check",
-	// Pinned, not inherited from the host's ~/.codex/config.toml.
 	"-c",
 	'service_tier="fast"',
-	// Workspaces are throwaway temp dirs and atmn needs network access; this
-	// mirrors the claude harness's acceptEdits + unrestricted Bash.
 	"--dangerously-bypass-approvals-and-sandbox",
 	...(AGENT_MODEL ? ["-m", AGENT_MODEL] : []),
 	prompt,
 ];
 
-/**
- * Runs one conversation against the Codex CLI (`codex exec --json`), on the
- * user's ChatGPT subscription. Mirrors runAgentCase: user turns come from a
- * TurnSource, tool events stream to the same renderers, and the result is the
- * same AgentRunResult shape. Cost is always $0 (subscription-billed).
- */
 export const runCodexCase = async ({
 	label,
 	cwd,
@@ -99,7 +87,6 @@ export const runCodexCase = async ({
 	const sentTexts: string[] = [];
 	let threadId: string | undefined;
 
-	// Codex discovers .codex/skills at startup; equipped means available.
 	const skillLoaded = skillIds && skillIds.length > 0 ? true : undefined;
 	chat?.header({ skillLoaded, authSource: "none", model: result.model });
 
@@ -109,7 +96,6 @@ export const runCodexCase = async ({
 		sentTexts.push(userText);
 		const turnStartedAt = Date.now();
 		const turnStartToolIndex = result.toolUses.length;
-		// Codex has no system-prompt flag; the primer rides in the first turn.
 		const prompt =
 			sentTexts.length === 1 && systemPromptAppend
 				? `<context>\n${systemPromptAppend}\n</context>\n\n${userText}`

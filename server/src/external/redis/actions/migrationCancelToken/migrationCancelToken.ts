@@ -2,10 +2,6 @@ import { getMiscRedis } from "@/external/redis/initRedis.js";
 import { tryRedisOp } from "@/external/redis/utils/runRedisOp.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 
-/** "Cancellation requested" signal for a migration run. Set by the cancel
- *  handler; read by the batch per-item gate and the lazy enqueue/task gates so
- *  in-flight work finishes while no new items start. Best-effort: a degraded
- *  cache makes the gate a no-op. Pinned: cross-request coordination signal. */
 const TOKEN_TTL_SECONDS = 3600;
 
 export const buildMigrationCancelTokenKey = (migrationRunId: string) =>
@@ -34,7 +30,6 @@ export const setMigrationCancelRequested = async ({
 	});
 };
 
-/** Deliberately ctx-free: gates run at task boot, before any ctx exists. */
 export const isMigrationCancelRequested = async ({
 	migrationRunId,
 }: {

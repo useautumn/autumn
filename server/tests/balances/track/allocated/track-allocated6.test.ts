@@ -40,7 +40,6 @@ describe(`${chalk.yellowBright(`${testCase}: Tracking allocated feature with ove
 			prefix: testCase,
 		});
 
-		// Attach product to customer
 		await autumnV1.attach({
 			customer_id: customerId,
 			product_id: pro.id,

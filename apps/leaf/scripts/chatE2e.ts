@@ -1,12 +1,3 @@
-/** Dead-simple e2e driver for the dashboard chat stream, no browser needed.
- *
- *   bun scripts/chatE2e.ts "update pro plan to $45/mo"      # new thread
- *   bun scripts/chatE2e.ts --follow "yes do it"             # same thread
- *   bun scripts/chatE2e.ts --answer <requestId> <optionId>  # answer a question chip
- *
- * Reads the dashboard session cookie from LEAF_COOKIE or LEAF_COOKIE_FILE.
- * Prints every stream part as one line; thread id persists in /tmp.
- */
 const LEAF_URL = process.env.LEAF_URL ?? "http://localhost:3099";
 const THREAD_FILE = "/tmp/leaf-e2e-thread.txt";
 
@@ -20,7 +11,6 @@ if (!cookie) throw new Error("Set LEAF_COOKIE or LEAF_COOKIE_FILE");
 const args = process.argv.slice(2);
 const follow = args[0] === "--follow";
 const answer = args[0] === "--answer";
-// --catalog <planId> <versioning> <migrate> <variantCsv|-> : submit a decision
 const catalog = args[0] === "--catalog";
 const text = answer
 	? (args[3] ?? args[2])

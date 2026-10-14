@@ -1,6 +1,3 @@
-/** Scheduled Switch Add-on Tests (Attach V2): add-ons persist through main product
- * downgrades, keeping their features and subscription items across the cycle boundary. */
-
 import { test } from "bun:test";
 import type { ApiCustomerV3 } from "@autumn/shared";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
@@ -12,20 +9,6 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 2: Premium + add-on → Pro (add-on persists after cycle)
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Customer on Premium ($50/mo) with recurring add-on ($20/mo)
- * - Downgrade to Pro ($20/mo) (scheduled)
- * - Advance to next cycle
- *
- * Expected:
- * - After cycle: Pro active, add-on still active
- * - Renewal: Pro ($20) + add-on ($20) = $40
- */
 test.concurrent(
 	`${chalk.yellowBright("scheduled-switch-addon 2a: premium+addon to pro (mid-cycle)")}`,
 	async () => {
@@ -58,7 +41,6 @@ test.concurrent(
 			],
 		});
 
-		// Verify initial state: Premium + add-on
 		const customerBefore =
 			await autumnV1.customers.get<ApiCustomerV3>(customerId);
 		await expectCustomerProducts({
@@ -66,14 +48,12 @@ test.concurrent(
 			active: [premium.id, recurringAddon.id],
 		});
 
-		// Schedule downgrade to Pro
 		await autumnV1.billing.attach({
 			customer_id: customerId,
 			product_id: pro.id,
 			redirect_mode: "if_required",
 		});
 
-		// Verify mid-cycle state
 		const customerMidCycle =
 			await autumnV1.customers.get<ApiCustomerV3>(customerId);
 		await expectCustomerProducts({
@@ -83,7 +63,6 @@ test.concurrent(
 			scheduled: [pro.id],
 		});
 
-		// Verify subscription with scheduled downgrade
 		await expectSubToBeCorrect({
 			db: ctx.db,
 			customerId,
@@ -113,7 +92,6 @@ test.concurrent(
 			items: [wordsItem],
 		});
 
-		// Advance to next cycle
 		const { autumnV1: autumnV1After, ctx: ctxAfter } = await initScenario({
 			customerId,
 			setup: [
@@ -123,7 +101,7 @@ test.concurrent(
 			actions: [
 				s.billing.attach({ productId: premium.id }),
 				s.billing.attach({ productId: recurringAddon.id }),
-				s.billing.attach({ productId: pro.id }), // Schedule downgrade
+				s.billing.attach({ productId: pro.id }),
 				s.advanceToNextInvoice({ withPause: true }),
 			],
 		});
@@ -131,14 +109,12 @@ test.concurrent(
 		const customerAfterCycle =
 			await autumnV1After.customers.get<ApiCustomerV3>(customerId);
 
-		// After cycle: Pro active, Premium removed, ADD-ON STILL ACTIVE
 		await expectCustomerProducts({
 			customer: customerAfterCycle,
 			active: [pro.id, recurringAddon.id],
 			notPresent: [premium.id],
 		});
 
-		// Messages from Pro (200)
 		expectCustomerFeatureCorrect({
 			customer: customerAfterCycle,
 			featureId: TestFeature.Messages,
@@ -147,7 +123,6 @@ test.concurrent(
 			usage: 0,
 		});
 
-		// Words from add-on STILL AVAILABLE
 		expectCustomerFeatureCorrect({
 			customer: customerAfterCycle,
 			featureId: TestFeature.Words,
@@ -156,7 +131,6 @@ test.concurrent(
 			usage: 0,
 		});
 
-		// Verify subscription still has Pro + add-on
 		await expectSubToBeCorrect({
 			db: ctxAfter.db,
 			customerId,

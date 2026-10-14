@@ -468,7 +468,6 @@ test.concurrent(
 		await ctx.stripeCli.invoices.pay(stripeInvoices.data[0].id);
 		await timeout(12000);
 
-		// The row is Active now; a discard racing in afterwards must not undo it.
 		await discardPendingCustomerProduct({
 			ctx,
 			customerProduct: pendingCustomerProduct!,
@@ -691,8 +690,6 @@ test.concurrent(
 			items: [items.prepaidMessages({ billingUnits: 1, price: 0.2 })],
 		});
 
-		// A default plan is what makes the gap dangerous: while the original is
-		// discarded the customer has no plan, and the default machinery reacts.
 		const { ctx, autumnV2_2, customer } = await initScenario({
 			customerId,
 			setup: [

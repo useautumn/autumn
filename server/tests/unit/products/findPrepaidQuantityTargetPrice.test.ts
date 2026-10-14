@@ -9,12 +9,6 @@ import {
 	PriceType,
 } from "@autumn/shared";
 
-/**
- * Tie-break rules for resolving a feature-keyed prepaid quantity to a single
- * price when a product carries several prepaid prices for the same feature:
- * recurring beats one-off, and among recurring the shortest interval wins.
- */
-
 const prepaidPrice = ({
 	id,
 	interval,
@@ -173,7 +167,6 @@ test("losing prepaid price reads a zeroed options copy, not undefined", () => {
 			options,
 		}),
 	});
-	// Zeroed copy: renewal resets still run, but the winner's quantity never leaks.
 	expect(losingOptions).toEqual({
 		feature_id: "messages",
 		quantity: 0,

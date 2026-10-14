@@ -4,7 +4,6 @@ import { deleteNeonBranch } from "../neon/neonBranches.ts";
 import { getQaEnvRow, updateQaEnvRow } from "../repos/qaEnvsRepo.ts";
 import { qaWorker } from "../worker/qaWorkerClient.ts";
 
-/** Marks the env deleted first so a running qa job stops writing, then removes everything it owns. */
 export const deleteQaEnv = async ({
 	ctx,
 	name,

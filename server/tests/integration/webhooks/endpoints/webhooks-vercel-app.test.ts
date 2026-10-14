@@ -1,13 +1,3 @@
-/**
- * Vercel events are published to the org's Vercel Svix app, so a webhook whose
- * events are all `vercel.*` lives there:
- * - create ensures that app (stored in processor_configs.vercel.svix) without
- *   touching any other processor_configs field;
- * - list/get/update/delete and sync reach webhooks in both apps;
- * - ids are unique across both apps;
- * - a webhook can't switch between vercel and non-vercel events.
- */
-
 import { afterAll, beforeAll, expect, test } from "bun:test";
 import { AppEnv, apiKeys, organizations } from "@autumn/shared";
 import { eq } from "drizzle-orm";

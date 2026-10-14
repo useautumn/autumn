@@ -1,10 +1,3 @@
-/**
- * Contract: assigning a pooled license seat mints one lazy pool keyed by
- * customer_licenses.link_id. N seats under that link are N contributions.
- *
- * Cases: 1, 8, 9, 17
- */
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV5, CheckResponseV3 } from "@autumn/shared";
 import { expectPooledBalanceCorrect } from "@tests/integration/billing/pooled-balances/utils/expectPooledBalanceCorrect.js";

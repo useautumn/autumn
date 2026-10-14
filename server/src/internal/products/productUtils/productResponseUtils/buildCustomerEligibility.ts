@@ -25,14 +25,12 @@ const getAttachAction = ({
 	fullCus: FullCustomer;
 	fullProduct: FullProduct;
 }): AttachAction => {
-	// 1. One-off products are always a purchase
 	if (isOneOff(fullProduct.prices)) {
 		return AttachAction.Purchase;
 	}
 
 	const internalEntityId = fullCus.entity?.internal_id;
 
-	// 2. If this exact product is already active or scheduled -> none
 	const activeCusProduct = findActiveCustomerProductById({
 		fullCus,
 		productId: fullProduct.id,
@@ -49,7 +47,6 @@ const getAttachAction = ({
 		return AttachAction.None;
 	}
 
-	// 3. Add-ons without an active instance -> activate
 	if (fullProduct.is_add_on) {
 		return AttachAction.Activate;
 	}
@@ -64,7 +61,6 @@ const getAttachAction = ({
 		return AttachAction.Activate;
 	}
 
-	// 5. Include license prices so eligibility matches attach previews.
 	const isUpgrade = isProductUpgrade({
 		prices1: customerProductToEffectivePrices({
 			customerProduct: curMainCusProduct,
@@ -75,7 +71,6 @@ const getAttachAction = ({
 	return isUpgrade ? AttachAction.Upgrade : AttachAction.Downgrade;
 };
 
-/** Builds the customer_eligibility object for a plan response. */
 export const buildCustomerEligibility = async ({
 	ctx,
 	fullCus,
@@ -105,7 +100,6 @@ export const buildCustomerEligibility = async ({
 
 	const scenario = getAttachScenario({ fullCus, fullProduct });
 
-	// Trial availability
 	let trialAvailable: boolean | undefined;
 	if (!fullProduct.free_trial) {
 		trialAvailable = undefined;

@@ -5,10 +5,6 @@ import { stripeSubscriptionToLatestInvoice } from "@/external/stripe/subscriptio
 import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/stripeWebhookContext";
 import type { StripeSubscriptionUpdatedContext } from "../stripeSubscriptionUpdatedContext";
 
-/**
- * Handles the cancel_on_past_due org setting.
- * When enabled and subscription goes past_due, cancels the subscription immediately.
- */
 export const handleCancelOnPastDue = async ({
 	ctx,
 	subscriptionUpdatedContext,
@@ -20,10 +16,8 @@ export const handleCancelOnPastDue = async ({
 	const { stripeSubscription, previousAttributes, customerProducts } =
 		subscriptionUpdatedContext;
 
-	// Only proceed if org has cancel_on_past_due enabled
 	if (!org.config.cancel_on_past_due) return;
 
-	// Only proceed if subscription just transitioned to past_due
 	if (
 		!isStripeSubscriptionPastDueTransition({
 			stripeSubscription,
@@ -32,7 +26,6 @@ export const handleCancelOnPastDue = async ({
 	)
 		return;
 
-	// ignore_past_due preserves the subscription, so it wins over cancellation.
 	const ignorePastDue = customerProducts.some(
 		(customerProduct) =>
 			isCustomerProductOnStripeSubscription({
@@ -49,7 +42,6 @@ export const handleCancelOnPastDue = async ({
 
 	const stripeCli = createStripeCli({ org, env });
 
-	// Get latest invoice
 	const latestInvoice = await stripeSubscriptionToLatestInvoice({
 		stripeSubscription,
 		stripeCli,
@@ -62,7 +54,6 @@ export const handleCancelOnPastDue = async ({
 
 	logger.info(`Latest invoice billing reason: ${latestInvoice.billing_reason}`);
 
-	// Only cancel for subscription_cycle or subscription_create invoices
 	const validBillingReasons = ["subscription_cycle", "subscription_create"];
 	if (!validBillingReasons.includes(latestInvoice.billing_reason ?? "")) {
 		logger.info(
@@ -71,7 +62,6 @@ export const handleCancelOnPastDue = async ({
 		return;
 	}
 
-	// Cancel subscription and void invoice
 	try {
 		logger.info(
 			`subscription.updated (past_due), cancelling subscription: ${stripeSubscription.id}`,

@@ -18,7 +18,6 @@ import type { CreateInvoiceContext } from "../setup/setupCreateInvoiceContext";
 
 const ADD_LINES_BATCH_SIZE = 100;
 
-/** The entity every plan line bills to, if they all share one; mixed or customer-level invoices stay untagged. */
 const invoiceEntityTag = ({ lines }: { lines: InvoiceLine[] }) => {
 	const planLineEntityIds = new Set(
 		lines
@@ -29,7 +28,6 @@ const invoiceEntityTag = ({ lines }: { lines: InvoiceLine[] }) => {
 	return planLineEntityIds.size === 1 ? only : undefined;
 };
 
-/** Creates and populates the Stripe invoice, issues it per issue_method, then mirrors it into Autumn. */
 export const executeStripeInvoicePlan = async ({
 	ctx,
 	invoiceContext,
@@ -102,7 +100,6 @@ export const executeStripeInvoicePlan = async ({
 		issueMethod: invoiceContext.params.issue_method,
 	});
 
-	// License lines carry their own product, so derive products from the lines.
 	const fullProducts = [
 		...new Map(
 			lines
@@ -119,7 +116,6 @@ export const executeStripeInvoicePlan = async ({
 		internalEntityId: invoiceEntityTag({ lines }),
 	});
 	if (!autumnInvoice) {
-		// Nothing here voids or deletes the Stripe invoice.
 		throw new RecaseError({
 			message: `Stripe invoice ${issued.id} was created but could not be stored in Autumn; it is in Stripe and must be reconciled or voided manually`,
 			code: ErrCode.InternalError,
@@ -127,7 +123,6 @@ export const executeStripeInvoicePlan = async ({
 		});
 	}
 
-	// Stored inline, not queued: the response reports the invoice's line items.
 	await storeLineItems({
 		ctx,
 		stripeInvoiceId: issued.id,

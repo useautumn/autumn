@@ -80,7 +80,6 @@ describe("usageEntriesToCredits", () => {
 	});
 
 	test("multipliers stack: factors first, then adds", () => {
-		// base 2 × factor 2 + add 1 = 5 per unit
 		expect(
 			usageEntriesToCredits({
 				creditSystem,
@@ -92,7 +91,6 @@ describe("usageEntriesToCredits", () => {
 	});
 
 	test("graduated credit tiers start from zero", () => {
-		// 150 requests: 100 × 1 + 50 × 0.5 = 125
 		expect(
 			usageEntriesToCredits({
 				creditSystem,
@@ -102,7 +100,6 @@ describe("usageEntriesToCredits", () => {
 	});
 
 	test("entries for the same feature and properties are summed before tiering", () => {
-		// Two entries of 75 must price as one batch of 150, not two batches of 75 (= 150).
 		expect(
 			usageEntriesToCredits({
 				creditSystem,

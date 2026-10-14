@@ -1,10 +1,3 @@
-/**
- * `bun tw doctor` — fast, read-only health check of everything a run depends
- * on: git state, the Modal warm-image cache, the Stripe sub-account pool
- * (including an in-flight teardown from a prior run), global locks, env, and
- * the provider defaults. Prints ✓/⚠/✗ lines; exits 1 if anything is ✗.
- */
-
 import chalk from "chalk";
 import { ModalClient } from "modal";
 import {
@@ -22,7 +15,6 @@ const warnLine = (line: string): void =>
 const info = (line: string): void => console.log(`  ${chalk.dim("·")} ${line}`);
 const section = (title: string): void => console.log(`\n${chalk.bold(title)}`);
 
-/** Race a check against a deadline so one slow backend can't stall doctor. */
 const timeBoxed = <T>(
 	ms: number,
 	fn: () => Promise<T>,
@@ -47,7 +39,6 @@ const fmtAge = (ms: number): string => {
 	return s >= 120 ? `${Math.round(s / 60)}m` : `${s}s`;
 };
 
-/** How many commits HEAD is ahead of the sha `:latest` was built from. */
 const REV_WALK_LIMIT = 30;
 
 type WarmCacheStatus =
@@ -71,7 +62,6 @@ const checkWarmCache = async (sha12: string): Promise<WarmCacheStatus> => {
 		if (!latest) {
 			return { kind: "cold" };
 		}
-		// Which commit is `:latest` from? Walk recent history comparing imageIds.
 		const revs = git("rev-list", `-n${REV_WALK_LIMIT}`, "HEAD")
 			.split("\n")
 			.filter(Boolean)
@@ -246,7 +236,6 @@ export const doctor = async (): Promise<number> => {
 
 	const { sha12 } = printGitSection();
 
-	// Remote checks run concurrently, each time-boxed, then print in order.
 	const [warmStatus, censusResult, locks] = await Promise.all([
 		timeBoxed(8000, () => checkWarmCache(sha12)),
 		timeBoxed(20_000, () =>
@@ -256,8 +245,6 @@ export const doctor = async (): Promise<number> => {
 				} catch (error) {
 					return { error: (error as Error).message };
 				}
-				// Pool accounts are recent — 3 newest-first pages per key is plenty
-				// for a health check and keeps doctor fast on huge platform accounts.
 				return await poolCensus(3);
 			})(),
 		),

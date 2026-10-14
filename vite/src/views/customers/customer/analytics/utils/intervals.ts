@@ -4,7 +4,6 @@ export type Granularity = "hour" | "day" | "week" | "month";
 
 export const CUSTOM_INTERVAL = "custom";
 
-// Time ranges shown in the dropdown, in display order.
 export const INTERVAL_LABELS: Record<string, string> = {
 	"24h": "Last 24 hours",
 	"7d": "Last 7 days",
@@ -16,13 +15,8 @@ export const INTERVAL_LABELS: Record<string, string> = {
 	"12m": "Last 12 months",
 };
 
-// Billing-cycle ranges, hidden when the customer has no billing cycle.
 export const BILLING_CYCLE_INTERVALS = new Set(["1bc", "3bc"]);
 
-// Selectable granularities per range, in display order; the first is the
-// default. A single entry means the range has no choice, so the granularity
-// section is hidden for it. Month ranges omit "day" — hundreds of daily bars
-// are unreadable and miss the monthly rollups that make those ranges fast.
 export const INTERVAL_GRANULARITIES: Record<string, Granularity[]> = {
 	"24h": ["hour"],
 	"7d": ["day"],
@@ -47,8 +41,6 @@ const DEFAULT_GRANULARITIES: Granularity[] = ["day"];
 export const granularitiesFor = (interval: string): Granularity[] =>
 	INTERVAL_GRANULARITIES[interval] ?? DEFAULT_GRANULARITIES;
 
-/** The bin size in effect for a range: the viewer's choice when it's valid for
- * the range, otherwise the range's default (first) granularity. */
 export const getEffectiveBinSize = ({
 	interval,
 	binSize,
@@ -62,7 +54,6 @@ export const getEffectiveBinSize = ({
 		: granularities[0];
 };
 
-// Compact labels for the preset chips in the query rail.
 export const INTERVAL_SHORT_LABELS: Record<string, string> = {
 	"24h": "24h",
 	"7d": "7d",

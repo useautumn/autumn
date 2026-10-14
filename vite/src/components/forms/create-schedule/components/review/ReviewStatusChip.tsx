@@ -74,7 +74,6 @@ const CHANGE_LINE_ICONS: Record<
 	removed: { tone: "red", glyph: "x" },
 };
 
-/** Old values sit muted beside the foreground new value; a removed feature is struck through. */
 function ReviewChangeLineRow({ change }: { change: ReviewChangeLine }) {
 	const isRemoved = change.state === "removed";
 	return (

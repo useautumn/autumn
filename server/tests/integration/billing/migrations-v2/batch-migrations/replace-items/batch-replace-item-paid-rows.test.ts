@@ -1,18 +1,3 @@
-/**
- * An allowance edit (100 → 200 messages, expressed as remove + add) must
- * spare rows the customer actually pays for, in both shapes a free→paid
- * customization leaves behind:
- *  - a custom price hung off the SHARED catalog entitlement id, and
- *  - a custom price hung off a field-identical custom entitlement copy.
- *
- * Repointing a paid row to the new free definition would strand the
- * customer_price against a definition the row no longer holds, and credit a
- * delta the customer never bought.
- *
- * Red: both paid rows are repointed to the new definition.
- * Green: both keep their original definition and price; only the plain
- * catalog row is replaced.
- */
 import { expect, test } from "bun:test";
 import { runChunkedMigration } from "@tests/integration/billing/migrations-v2/utils/runChunkedMigration";
 import { TestFeature } from "@tests/setup/v2Features";
@@ -62,7 +47,6 @@ test(`${chalk.yellowBright("batch migration: a replace spares rows the customer 
 			itemsV2.monthlyMessages({ included: MESSAGES_INCLUDED }),
 		],
 	});
-	// Attached to nobody — exists only so a valid usage price can be cloned.
 	const paidTemplate = products.base({
 		id: "batch-replace-paid-template",
 		items: [items.consumableMessages()],
@@ -94,7 +78,6 @@ test(`${chalk.yellowBright("batch migration: a replace spares rows the customer 
 	});
 	const planId = plan.id;
 
-	// Shape 1: paid price on the shared catalog entitlement id.
 	const sharedPaid = await attachCustomerPaidPrice({
 		ctx,
 		customerId: sharedPaidCustomerId,
@@ -102,7 +85,6 @@ test(`${chalk.yellowBright("batch migration: a replace spares rows the customer 
 		templatePlanId: paidTemplate.id,
 	});
 
-	// Shape 2: field-identical custom copy, paid price on the copy.
 	await repointToCustomEntitlement({
 		ctx,
 		customerId: customPaidCustomerId,
@@ -157,8 +139,6 @@ test(`${chalk.yellowBright("batch migration: a replace spares rows the customer 
 		),
 	}).toEqual({ lane: "batch", rejections: [] });
 
-	// ── The plain catalog row is replaced in place ───────────────────────
-	// Balance-delta semantics live in batch-plan-item-replace.test.ts.
 	const catalogAfter = await readMessagesRow({
 		ctx,
 		customerId: catalogCustomerId,
@@ -166,7 +146,6 @@ test(`${chalk.yellowBright("batch migration: a replace spares rows the customer 
 	expect(catalogAfter.id).toBe(catalogBefore.id);
 	expect(catalogAfter.entitlementId).not.toBe(catalogBefore.entitlementId);
 
-	// ── Both paid rows keep their definition and price ───────────────────
 	const sharedPaidAfter = await readMessagesRow({
 		ctx,
 		customerId: sharedPaidCustomerId,

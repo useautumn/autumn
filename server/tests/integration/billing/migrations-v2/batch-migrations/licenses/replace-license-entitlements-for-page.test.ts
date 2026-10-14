@@ -1,13 +1,3 @@
-/**
- * replaceLicenseEntitlementsForPage expands live ids via entsAreSame, credits
- * the allowance delta, and always writes cycle fields (enrich ladder or null).
- *
- * Contract:
- *   - monthly 100 → 200 credits the delta; a cloned same-definition id also moves
- *   - lifetime → monthly sets reset_cycle_anchor / next_reset_at from the parent
- *   - monthly → lifetime nulls cycle fields; a replay matches zero rows
- */
-
 import { expect, test } from "bun:test";
 import {
 	AllowanceType,
@@ -150,7 +140,6 @@ test.concurrent(
 				.sort((a, b) => (a ?? 0) - (b ?? 0)),
 		).toEqual([NEW_SEAT_MESSAGES - CONSUMED, NEW_SEAT_MESSAGES]);
 
-		// The from-half of each operation: the outgoing definition + pre-write balance.
 		expect(result.removedItems).toHaveLength(ASSIGNED_SEATS);
 		expect(
 			result.removedItems.every(

@@ -64,9 +64,6 @@ type PlanChangeLite = {
 	customize?: Record<string, unknown> | null;
 };
 
-// Fixture casing, not wire: the client recases every response on the way in,
-// so this renders `featureId`, never `feature_id`. One exception: a feature's
-// `previousAttributes` is a frozen record and keeps its snake_case keys.
 type FeatureChange = PreviewChange & {
 	featureId?: string;
 	previousAttributes?: Record<string, unknown> | null;
@@ -234,7 +231,6 @@ const renderPreviousAttributes = ({
 			const label = labelFor(key);
 			const now = current[key];
 			if (fresh) {
-				// A default the empty "before" carried is not something the row set.
 				if (now === undefined) return [];
 				const { symbol, paint } = marker("create");
 				return [`${indent}${paint(`${symbol} ${label}: ${formatValue(now)}`)}`];
@@ -600,8 +596,6 @@ const renderVariantRow = ({
 				itemChanges: planChange?.itemChanges ?? [],
 				indent: detailIndent,
 			}),
-			// The row's label carries the name and the price, and the items are
-			// already out; everything else the server sent still belongs here.
 			...(planChange
 				? renderPlanChangeDetail({
 						planChange,
@@ -957,8 +951,6 @@ export const renderPreview = ({
 	if (productionHint !== null) sections.push(productionHint);
 
 	if (migrations.length > 0) {
-		// The server saying customers would need moving. Nothing is drafted by a
-		// preview; the applied block after --yes carries the ids and links.
 		sections.push(renderPlannedMigrations({ migrations, plans }));
 	}
 

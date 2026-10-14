@@ -4,11 +4,6 @@ import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/
 import { computeScheduledPooledAnchorResetPlan } from "@/internal/billing/v2/pooledBalances/compute/computeScheduledPooledAnchorResetPlan.js";
 import type { AutumnBillingPlanBuilder } from "@/internal/billing/v2/utils/billingPlanBuilder/createAutumnBillingPlanBuilder";
 
-/**
- * A completed anchor move re-anchors the pools its products feed: shares move to the new cycle and the
- * pool row's cycle ends now, so the next read's lazy reset refills it. A plain cycle invoice plans
- * nothing for pools: the lazy reset (and the worker's own) refills subscription-mode pools.
- */
 export const planScheduledPooledAnchorReset = ({
 	ctx,
 	eventContext,

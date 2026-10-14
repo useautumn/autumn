@@ -1,12 +1,3 @@
-/**
- * invoices.reissue issue_method on a paid original.
- *
- * Contract:
- *   paid original + "draft" -> credit note as today, original stays paid,
- *                              replacement is a draft and the credit waits on the customer's balance;
- *                              the response's amount_due already counts that credit
- */
-
 import { expect, test } from "bun:test";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";

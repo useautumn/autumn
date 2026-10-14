@@ -1,7 +1,6 @@
 import { ErrCode, findDuplicate, RecaseError } from "@autumn/shared";
 import type { AttachLicenseContext } from "../types.js";
 
-/** Validates the assignment request before the plan is computed. */
 export const handleAttachLicenseErrors = ({
 	context,
 }: {

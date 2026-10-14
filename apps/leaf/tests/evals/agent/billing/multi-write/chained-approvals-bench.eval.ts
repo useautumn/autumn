@@ -16,9 +16,6 @@ type EvalMetadata = {
 
 const experimentName = "billing-multi-write-chained-approvals-bench";
 
-// Two customers already on Launch so a plan change is an update, and two more
-// with no plan so an attach is the only sensible write. Customer-level billing:
-// entity rules would rightly make the agent stop and ask which workspace.
 const setup = withCustomers({
 	setup: { ...orgSetups.knowledgePlatform(), agentRules: agentRules.base() },
 	customers: ({ customers, plans }) => ({
@@ -58,8 +55,6 @@ initEval<EvalMetadata>({
 	timeout: 600_000,
 	cases: [
 		{
-			// The customer write must land before the billing preview, or the user
-			// approves a preview computed against the stale email.
 			name: "change email then attach a plan",
 			conversation: [
 				user({
@@ -97,7 +92,6 @@ initEval<EvalMetadata>({
 			],
 		},
 		{
-			// Homogeneous fan-out: same plan, two customers, one gate per write.
 			name: "attach one plan to several customers",
 			conversation: [
 				user({
@@ -125,8 +119,6 @@ initEval<EvalMetadata>({
 			],
 		},
 		{
-			// Heterogeneous writes on one customer: an add-on attach and an update
-			// to the base subscription cannot collapse into one call.
 			name: "attach a plan and update another on the same customer",
 			conversation: [
 				user({

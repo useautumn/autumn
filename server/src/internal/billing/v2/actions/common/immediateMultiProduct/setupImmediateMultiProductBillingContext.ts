@@ -53,7 +53,6 @@ export type ImmediateMultiProductParams = Omit<MultiAttachParamsV0, "plans"> & {
 	})[];
 	no_billing_changes?: boolean;
 	remove_discounts?: RemoveDiscount[];
-	/** Pins billing to this subscription instead of resolving one from the plans. */
 	processor_subscription_id?: string;
 };
 
@@ -93,7 +92,6 @@ const getSubscriptionTarget = ({
 	});
 };
 
-/** A pinned subscription wins; otherwise the plans being changed must share one. */
 const resolveSubscriptionTarget = ({
 	params,
 	fullCustomer,
@@ -147,7 +145,6 @@ const resolveSubscriptionTarget = ({
 	return { forceNewSubscription, targetCustomerProduct };
 };
 
-/** Resolve checkout mode for immediate multi-product billing. */
 const setupImmediateMultiProductCheckoutMode = ({
 	paymentMethod,
 	redirectMode,
@@ -197,7 +194,6 @@ const canInheritSubscriptionTrial = ({
 	);
 };
 
-/** Resolve trial behavior for immediate multi-product billing. */
 const setupImmediateMultiProductTrialContext = async ({
 	ctx,
 	freeTrialParam,
@@ -263,7 +259,6 @@ const setupImmediateMultiProductTrialContext = async ({
 	});
 };
 
-/** Build billing context for immediate multi-product billing. */
 export const setupImmediateMultiProductBillingContext = async ({
 	ctx,
 	params,
@@ -456,8 +451,6 @@ export const setupImmediateMultiProductBillingContext = async ({
 			? billingStartsAt
 			: undefined;
 
-	// Reset anchor derives from billingCycleAnchorMs, which setupBillingCycleAnchor
-	// already aligns to a backdated start.
 	const resetCycleAnchorMs = setupResetCycleAnchor({
 		billingCycleAnchorMs,
 		customerProduct: undefined,
@@ -513,8 +506,6 @@ export const setupImmediateMultiProductBillingContext = async ({
 		subscriptionBackdateStartMs,
 		requestedProrationBehavior: params.billing_behavior,
 		requestedBillingCycleAnchor,
-		// Multi-attach has no carry_over_balances param, so there is no reset
-		// cycle to round the refund to — only the no-partial-refund flag applies.
 		anchorResetRefund: setupAnchorResetRefund({
 			billingCycleAnchor: params.billing_cycle_anchor,
 			prorationBehavior: params.billing_behavior,

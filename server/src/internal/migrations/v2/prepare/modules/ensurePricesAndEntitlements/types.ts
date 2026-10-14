@@ -13,11 +13,6 @@ export const PreparedArtifactRefSchema = z.object({
 
 export type PreparedArtifactRef = z.infer<typeof PreparedArtifactRefSchema>;
 
-/**
- * Strict typed payload for this module. Stored under the module key in
- * `migrations.prepared_state` and surfaced as `result` in the prepare
- * response envelope.
- */
 export const EnsurePricesAndEntitlementsResultSchema = z.object({
 	entitlements: z.array(EntitlementSchema),
 	prices: z.array(PriceSchema),
@@ -28,11 +23,6 @@ export type EnsurePricesAndEntitlementsResult = z.infer<
 	typeof EnsurePricesAndEntitlementsResultSchema
 >;
 
-/**
- * Strict module-level envelope — same shape as the orchestrator's
- * `PrepareModuleResult` but with a literal `kind` and the typed
- * `result`. Used at the module's call site for type safety.
- */
 export const EnsurePricesAndEntitlementsModuleResultSchema = z.object({
 	key: z.string(),
 	kind: z.literal("ensure_prices_and_entitlements"),

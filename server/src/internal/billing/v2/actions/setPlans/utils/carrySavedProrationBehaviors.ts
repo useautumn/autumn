@@ -1,6 +1,5 @@
 import type { SchedulePhasePlan } from "../types/schedulePhasePlan";
 
-/** A phase that names no proration keeps the one its saved phase at the same start holds. */
 export const carrySavedProrationBehaviors = ({
 	phases,
 	savedPhases,

@@ -17,7 +17,6 @@ const Dot = ({ pending }: { pending: boolean }) => (
 	</span>
 );
 
-/** Where the last percent change stands: never set, landing in N seconds, or live since. */
 export const RolloutFlipStatus = ({
 	rollout,
 	settleMs,

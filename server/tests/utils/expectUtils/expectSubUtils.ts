@@ -163,7 +163,6 @@ export const expectSubItemsCorrect = async ({
 			price,
 		}) as Stripe.SubscriptionItem;
 
-		// 1. If usage + v4 + internalEntityId
 		if (isV4Usage({ price, cusProduct })) {
 			if (nullish(subItem)) {
 				missingUsageCount++;
@@ -185,7 +184,6 @@ export const expectSubItemsCorrect = async ({
 			).to.exist;
 		}
 
-		// 2. If prepaid...
 		const billingType = getBillingType(price.config);
 		if (billingType === BillingType.UsageInAdvance) {
 			const featureId = (price.config as any).feature_id;
@@ -210,19 +208,6 @@ export const expectSubItemsCorrect = async ({
 		prices.length - missingUsageCount,
 		"number of sub items equivalent to number of prices",
 	).to.equal(subItems.length);
-
-	// Expect sub anchors to be the same
-	// let periodEnd = subs[0].current_period_end * 1000;
-	// let firstDate = getDate(periodEnd);
-
-	// for (const sub of subs.slice(1)) {
-	//   let dateOfAnchor = getDate(sub.current_period_end * 1000);
-	//   expect(dateOfAnchor).to.approximately(
-	//     firstDate,
-	//     5000,
-	//     `subscription anchors are the same, +/- 5s`
-	//   );
-	// }
 
 	return {
 		fullCus,

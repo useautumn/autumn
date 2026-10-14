@@ -16,7 +16,6 @@ import { getOrSetCachedFullSubject } from "@/internal/customers/cache/fullSubjec
 import { readAllocationCounters } from "../repos/allocationStore.js";
 import { allocationCycleOf, sharedRowsOf } from "../utils/allocationRows.js";
 
-/** Counter usage by internal entity id ("" = the claimed total) from the cached subject's live windows. */
 const liveCounters = ({
 	usageWindows,
 	internalFeatureId,
@@ -43,7 +42,6 @@ const liveCounters = ({
 			.map((window) => [window.internal_entity_id ?? "", Number(window.usage)]),
 	) as Record<string, number>;
 
-/** Every allocated feature's counters (cache and Postgres) and each entity's gate, for admin QA. */
 export const getAllocationState = async ({
 	ctx,
 	customerId,
@@ -108,7 +106,6 @@ export const getAllocationState = async ({
 			requestedTotal: requestedTotal.toNumber(),
 		});
 		const heldUnused = requestedTotal.minus(claimed).toNumber();
-		// The same rule the engines apply: a cut stops binding once every unused promise fits.
 		const bindingScale = heldUnused <= sharedRemaining ? 1 : scale;
 		const gateFor = (requested: number | null, usage: number) =>
 			allocationGate({

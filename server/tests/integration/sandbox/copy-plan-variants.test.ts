@@ -23,9 +23,6 @@ import { PriceService } from "@/internal/products/prices/PriceService.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { constructFixedPrice } from "@/utils/scriptUtils/constructItem.js";
 
-// Copying a single base plan (the "Copy Plan to Production" dialog) must carry
-// the base's variants and license links along, remapped to the target env.
-
 const { db } = initDrizzle();
 const suffix = crypto.randomUUID().slice(0, 8);
 
@@ -157,7 +154,6 @@ describe("copying a single base plan carries its variants", () => {
 		);
 		expect(livePlans.some((p) => p.id === RENAME_BASE_PLAN)).toBe(false);
 
-		// The variant's own entitlement feature must come along too.
 		const liveFeatures = await FeatureService.list({
 			db,
 			orgId: org?.id as string,
@@ -200,7 +196,6 @@ describe("copying a single base plan carries its variants", () => {
 		expect(liveFreeVariant?.base_internal_product_id).toBe(
 			liveBase?.internal_id as string,
 		);
-		// The pre-existing target plan is neither duplicated nor relinked.
 		expect(liveTaken.length).toBe(1);
 		expect(liveTaken[0]?.internal_id).toBe(taken.internal_id);
 		expect(liveTaken[0]?.base_internal_product_id).toBeNull();
@@ -252,8 +247,6 @@ describe("copying a single base plan carries its variants", () => {
 			parentInternalProductIds: [liveBase?.internal_id as string],
 		});
 
-		// The reused link resolves to the pre-existing target license; the pulled
-		// license is copied in and linked.
 		expect(liveLinks).toHaveLength(2);
 		expect(
 			liveLinks.find((link) => link.licensePlanId === REUSED_LICENSE_PLAN)

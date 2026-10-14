@@ -9,7 +9,6 @@ import {
 	emptyVersioningFlags,
 } from "@/internal/customers/cusProducts/repos/getVersioningUsage.js";
 
-/** One ProductState per existing productKey, plus plan-scoped indexes. */
 export const buildProductStatesContext = ({
 	planIds,
 	versionsByPlanId,

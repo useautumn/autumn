@@ -6,7 +6,6 @@ import type { TwdContext } from "../../../lib/types/twdContext.ts";
 import { enqueueNukeJobs } from "./enqueueNukeJobs.ts";
 import { toEnqueueResponses } from "./toEnqueueResponses.ts";
 
-/** Manual nuke of clean/nuking/broken accounts; in_use accounts are refused. */
 export const nukeAccounts = async ({
 	ctx,
 	accountIds,

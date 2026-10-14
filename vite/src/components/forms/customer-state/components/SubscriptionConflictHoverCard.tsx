@@ -12,7 +12,6 @@ import { StripeIcon } from "@/components/v2/icons/AutumnIcons";
 import { useCustomerStateContext } from "../CustomerStateProvider";
 import type { SubscriptionConflict } from "../utils/findSubscriptionConflict";
 
-/** The same sentence the server's cross-subscription error uses. */
 const conflictReasonParts = ({
 	productName,
 	conflict,
@@ -29,7 +28,6 @@ const conflictReasonParts = ({
 		subscription_plan_name: conflict.subscriptionPlanName,
 	}).line;
 
-/** The other subscription a plan clashes with, and a way over to it. */
 export function SubscriptionConflictHoverCard({
 	productName,
 	conflict,

@@ -5,15 +5,6 @@ import {
 import type { z } from "zod/v4";
 import { globalRegistry } from "zod/v4/core";
 
-/**
- * Recursively walks a Zod schema and registers any schemas marked with
- * `.meta({ internal: true })` in both JSON_SCHEMA_INPUT_REGISTRY and
- * JSON_SCHEMA_OUTPUT_REGISTRY with `x-internal: true`. This allows
- * `removeInternalFields()` to strip them from the generated OpenAPI spec.
- *
- * Both registries are needed because ORPC uses the input registry for
- * request body schemas and the output registry for response schemas.
- */
 export function registerInternalSchemas(
 	schema: z.ZodType,
 	{ mappingOnly = false }: { mappingOnly?: boolean } = {},
@@ -30,7 +21,6 @@ function walkSchema(
 	if (visited.has(schema)) return;
 	visited.add(schema);
 
-	// Check if this schema has internal: true in its metadata
 	const meta = globalRegistry.get(schema);
 	const extensions = Object.fromEntries(
 		Object.entries(meta ?? {}).filter(([key]) => key.startsWith("x-atmn-")),
@@ -60,12 +50,10 @@ function walkSchema(
 		});
 	}
 
-	// Get the internal Zod definition to traverse nested schemas
 	// biome-ignore lint/suspicious/noExplicitAny: accessing Zod internals
 	const def = (schema as any)._zod?.def ?? (schema as any)._def;
 	if (!def) return;
 
-	// Handle different Zod schema types
 	switch (def.type ?? def.typeName) {
 		case "object":
 		case "ZodObject": {
@@ -165,7 +153,6 @@ function walkSchema(
 
 		case "lazy":
 		case "ZodLazy": {
-			// For lazy schemas, we need to get the actual schema
 			const getter = def.getter;
 			if (typeof getter === "function") {
 				try {
@@ -173,9 +160,7 @@ function walkSchema(
 					if (isZodType(lazySchema)) {
 						walkSchema(lazySchema, visited, mappingOnly);
 					}
-				} catch {
-					// Ignore errors from lazy evaluation
-				}
+				} catch {}
 			}
 			break;
 		}
@@ -223,7 +208,6 @@ function walkSchema(
 
 function isZodType(value: unknown): value is z.ZodType {
 	if (!value || typeof value !== "object") return false;
-	// Check for Zod v4 structure
 	// biome-ignore lint/suspicious/noExplicitAny: checking Zod internals
 	const v = value as any;
 	return (

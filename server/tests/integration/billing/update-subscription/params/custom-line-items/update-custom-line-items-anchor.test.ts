@@ -73,7 +73,6 @@ test.concurrent(
 	},
 );
 
-// A scheduled anchor defers the cycle reset, so the custom lines bill on their own now.
 test.concurrent(
 	"update custom line items: scheduled anchor bills now and defers the reset",
 	async () => {

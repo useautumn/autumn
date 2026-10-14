@@ -33,7 +33,6 @@ const deleteOAuthAccessTokensByConsentId = async ({
 		.delete(oauthAccessToken)
 		.where(eq(oauthAccessToken.oauthConsentId, consentId));
 
-/** Null consent/resource leave the stored value alone; a grant is never blanked. */
 const updateOAuthAccessTokenGrant = async ({
 	db,
 	id,

@@ -6,11 +6,6 @@ import {
 	findActiveCustomerProductById,
 } from "@autumn/shared";
 
-/** The plan whose Stripe subscription the attach bills on. Same-group swaps use
- * the replaced plan. Cross-group swaps use the first paid plan removed via
- * remove_plan_ids, so the attached plan takes over that plan's subscription
- * instead of merging into an unrelated one. Otherwise undefined, and the
- * subscription lookup falls back to its usual ranking. */
 export const setupAttachSubscriptionTarget = ({
 	fullCustomer,
 	params,

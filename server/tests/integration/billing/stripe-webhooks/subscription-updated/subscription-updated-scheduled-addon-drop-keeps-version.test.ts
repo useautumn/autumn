@@ -1,13 +1,3 @@
-/**
- * Regression: an add-on canceled at end of cycle drops off via an Autumn-built
- * Stripe schedule. When that phase advances, sub.updated back-sync must not
- * re-match the surviving base price and swap the customer's plan version.
- *
- * Setup: pro v1 + add-on on one sub → pro v2 published → add-on canceled EOC.
- * Red (pre-fix): after the cycle turns, pro is replaced by v2.
- * Green: add-on gone, pro still v1, and the schedule carries Autumn's stamp.
- */
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3 } from "@autumn/shared";
 import { BillingInterval, ResetInterval } from "@autumn/shared";
@@ -64,7 +54,6 @@ const setupAddonDropWithNewerVersion = async ({
 		],
 	});
 
-	// A newer pro version sharing the same base price — the bait for back-sync.
 	await autumnV2_3.catalogV2.update({
 		plans: [
 			{
@@ -100,7 +89,6 @@ const setupAddonDropWithNewerVersion = async ({
 	);
 	const schedule = subscription.schedule as Stripe.SubscriptionSchedule;
 
-	// Cycle turns weeks later — the subscription recency window is already stale.
 	await ctx.stripeCli.subscriptions.update(subscriptionId, {
 		metadata: { [AUTUMN_STRIPE_METADATA_KEYS.managedAt]: "1" },
 	});

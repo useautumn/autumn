@@ -6,9 +6,6 @@ interface ProductsPageHeaderProps {
 	children?: ReactNode;
 }
 
-/**
- * Shared header for the Products/Plans page.
- */
 export function ProductsPageHeader({ children }: ProductsPageHeaderProps) {
 	return (
 		<PageHeader

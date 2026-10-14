@@ -6,7 +6,6 @@ import { isNotFinalTier } from "@utils/productUtils/priceUtils/classifyPriceUtil
 import { findTierByQuantity } from "@utils/productUtils/priceUtils/findTier/findTierByQuantity";
 import { addAllowanceToTiers } from "@utils/productV2Utils/productItemUtils/tierUtils";
 
-/** The tier a volume price bills its overage at: the one total usage lands in, in total-usage positions. */
 export const volumeUsageToTier = ({
 	price,
 	overage,

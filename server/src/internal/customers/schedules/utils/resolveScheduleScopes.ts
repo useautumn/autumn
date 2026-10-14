@@ -36,10 +36,6 @@ const firstPhaseProductIds = (schedule: ScheduleWithPhases): string[] =>
 	[...schedule.phases].sort((a, b) => a.starts_at - b.starts_at)[0]
 		?.customer_product_ids ?? [];
 
-/**
- * A schedule takes the scope of the first entity-owned plan in its opening
- * phase. Plans in later phases don't affect it.
- */
 const findOwningProduct = ({
 	customerProductIds,
 	products,
@@ -51,10 +47,6 @@ const findOwningProduct = ({
 		.map((productId) => products.find((product) => product.id === productId))
 		.find((product) => product?.internal_entity_id);
 
-/**
- * Maps each schedule to the entity owning its opening phase, falling back to the
- * stored column only when that phase owns no readable products.
- */
 export const resolveScheduleScopes = async ({
 	ctx,
 	schedules,

@@ -3,7 +3,6 @@ import type { EntitlementPrice } from "@utils/productUtils/entitlementPriceUtils
 import { priceToBillingMethod } from "@utils/productUtils/priceUtils/convertPriceUtils.js";
 import { entIntvToResetIntv } from "@utils/productV2Utils/productItemUtils/convertProductItem/planItemIntervals.js";
 
-/** Specified filter fields must all match. Omitted fields are wildcards. */
 export const planItemFilterMatchesEntitlementPrice = ({
 	filter,
 	entitlementPrice,

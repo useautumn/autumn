@@ -4,8 +4,6 @@ import type { ItemDiff, PlanExtra, PlanWarning } from "../../types";
 
 export type PlanDiffGroup = { product: FullProduct; diffs: ItemDiff[] };
 
-/** License hits belong to the PARENT plan offering the license; unmatched
- * items belong to no plan. */
 const planForDiff = ({ diff }: { diff: ItemDiff }): FullProduct | null => {
 	const { match } = diff;
 	if (match.kind === "none") return null;
@@ -13,7 +11,6 @@ const planForDiff = ({ diff }: { diff: ItemDiff }): FullProduct | null => {
 	return match.product;
 };
 
-/** Step ① — bucket the flat diffs by the plan each one belongs to. */
 export const groupItemDiffsByPlan = ({
 	itemDiffs,
 }: {
@@ -33,8 +30,6 @@ export const groupItemDiffsByPlan = ({
 	return [...groupsByInternalId.values()];
 };
 
-/** Step ③d — the plan's structural oddities. canAutoSync rejects any plan
- * that carries one, so these are the reasons auto-sync will refuse it. */
 export const derivePlanWarnings = ({
 	baseDecision,
 	extras,

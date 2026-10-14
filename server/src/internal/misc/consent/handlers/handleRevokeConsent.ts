@@ -9,7 +9,6 @@ import {
 	oauthRefreshTokenRepo,
 } from "@/internal/auth/repos/index.js";
 
-/** Only the consent owner may revoke it and its linked credentials. */
 export const handleRevokeConsent = createRoute({
 	scopes: [Scopes.Organisation.Write],
 	params: z.object({
@@ -57,7 +56,6 @@ export const handleRevokeConsent = createRoute({
 
 		const deletedKeyPrefixes = linkedKeys.map((k) => k.prefix).filter(Boolean);
 
-		// 3. Delete API keys and invalidate their cache
 		for (const key of linkedKeys) {
 			await oauthApiKeyRepo.deleteById({ db, apiKeyId: key.id });
 
@@ -66,7 +64,6 @@ export const handleRevokeConsent = createRoute({
 			}
 		}
 
-		// Delete legacy main-org tokens and sandbox-bound consent tokens.
 		await oauthAccessTokenRepo.deleteByClientAndReference({
 			db,
 			clientId,
@@ -74,14 +71,12 @@ export const handleRevokeConsent = createRoute({
 		});
 		await oauthAccessTokenRepo.deleteByConsentId({ db, consentId: consent_id });
 
-		// 5. Delete refresh tokens for this client + org
 		await oauthRefreshTokenRepo.deleteByClientAndReference({
 			db,
 			clientId,
 			referenceId,
 		});
 
-		// 6. Delete the consent
 		await oauthConsentRepo.deleteById({ db, consentId: consent_id });
 
 		return c.json({

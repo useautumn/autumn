@@ -18,7 +18,6 @@ export const viewHasEntity = ({
 }): boolean =>
 	identity.entityId === null || state.entity?.id === identity.entityId;
 
-/** One read per customer; concurrent commands for the same customer join it, and each makes it resident. */
 const hydrateCustomer = ({
 	scope,
 	identity,
@@ -37,7 +36,6 @@ const hydrateCustomer = ({
 			}),
 	});
 
-/** An entity's rows come with its customer's other cold entities, one statement; each caller makes its own resident. */
 const hydrateEntity = ({
 	scope,
 	identity,
@@ -52,7 +50,6 @@ const hydrateEntity = ({
 			scope.state.entityLoads.load({ identity, rowsOnly }),
 	});
 
-/** The freshest view for the identity, pending baseline included; a missing customer hydrates first, then a missing entity. */
 export const ensureSubjectState = async ({
 	scope,
 	identity,
@@ -75,6 +72,5 @@ export const ensureSubjectState = async ({
 		identity,
 		load: hydrateEntity({ scope, identity }),
 	});
-	// The decision reads the freshest merged view, so the catalog must be ensured for that view, not the entity slice alone.
 	return scope.ctx.writer.readFreshestState({ identity }) ?? hydrated;
 };

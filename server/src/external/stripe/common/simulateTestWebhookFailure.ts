@@ -11,7 +11,6 @@ type EventObjectWithMetadata = {
 	customer?: string | { id: string } | null;
 };
 
-/** Event payloads are frozen snapshots — the live object decides recovery. */
 const retrieveLiveMetadata = async ({
 	stripeCli,
 	object,
@@ -53,16 +52,6 @@ const retrieveLiveCustomerMetadata = async ({
 	return customer.deleted ? undefined : customer.metadata;
 };
 
-/**
- * Non-prod failure injection: an event whose Stripe object carries
- * `test_webhook_fail` (pass it via the billing API's `metadata` param) fails
- * EVERY delivery until the marker is removed from the live decision object —
- * remove it and the next delivery succeeds. Deterministic outage simulation.
- *
- * Marker value picks the live decision object: "customer" → the Stripe
- * customer's metadata (toggling it emits no self-healing events for the
- * marked object); anything else → the marked object itself.
- */
 export const throwOnSimulatedWebhookFailure = async ({
 	ctx,
 }: {
@@ -75,7 +64,6 @@ export const throwOnSimulatedWebhookFailure = async ({
 	const markerValue = object?.metadata?.[TEST_WEBHOOK_FAIL_METADATA_KEY];
 	if (!markerValue) return;
 
-	// Re-fetch failing open: a broken test helper must never wedge processing.
 	const { data: liveMetadata, error } = await tryCatch(
 		markerValue === "customer"
 			? retrieveLiveCustomerMetadata({ stripeCli: ctx.stripeCli, object })

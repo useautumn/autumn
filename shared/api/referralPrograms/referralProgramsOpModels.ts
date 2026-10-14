@@ -38,7 +38,6 @@ export const GetReferralProgramResponseSchema = ApiReferralProgramV0Schema.meta(
 	},
 );
 
-/** Omitted fields keep their current value; null clears one. Checkout rules are re-checked on the merged program */
 export const UpdateReferralProgramParamsSchema = z
 	.object({
 		referral_program_id: referralProgramId,

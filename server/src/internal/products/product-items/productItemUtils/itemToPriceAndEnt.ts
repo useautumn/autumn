@@ -69,11 +69,6 @@ const currencyCodes = (price: Price): string =>
 		.sort()
 		.join(",");
 
-/**
- * pricesAreSame treats adding/removing a currency as compatible so catalog
- * edits don't force a new version. A custom price must own its currency set,
- * though — reusing the catalog row would drop currencies added for this customer.
- */
 const itemPriceIsSame = ({
 	curPrice,
 	price,
@@ -88,7 +83,6 @@ const itemPriceIsSame = ({
 	pricesAreSame(curPrice, price, logDifferences) &&
 	(!isCustom || currencyCodes(curPrice) === currencyCodes(price));
 
-// ITEM TO PRICE AND ENTITLEMENT
 const toPrice = ({
 	item,
 	orgId,
@@ -274,7 +268,6 @@ const toFeatureAndPrice = ({
 		feature_override: item.config?.feature_override,
 	};
 
-	// Will only create new ent id if
 	const newEnt = !curEnt || (isCustom && !entsAreSame(curEnt, ent));
 	if (newEnt || newVersion) {
 		ent = {
@@ -485,10 +478,7 @@ export const itemToPriceAndEnt = ({
 
 		if (!curEnt || newVersion) {
 			newEnt = ent;
-		}
-
-		// Boolean features can't be updated
-		else if (!entsAreSame(curEnt, ent)) {
+		} else if (!entsAreSame(curEnt, ent)) {
 			updatedEnt = ent;
 		} else {
 			sameEnt = curEnt;
@@ -515,36 +505,22 @@ export const itemToPriceAndEnt = ({
 
 		const entSame = curEnt && entsAreSame(curEnt, ent);
 
-		// 1. If no curPrice, price is new
 		if (!curPrice || newVersion) {
 			newPrice = price;
-		}
-
-		// 2. If ent or price aren't same, price is updated
-		else if (
+		} else if (
 			!entSame ||
 			!itemPriceIsSame({ curPrice, price, isCustom, logDifferences: false })
 		) {
 			updatedPrice = price;
-		}
-
-		// 3. price is same
-		else {
+		} else {
 			samePrice = curPrice;
 		}
 
-		// 1. If no curEnt, ent is new
 		if (!curEnt || newVersion) {
 			newEnt = ent;
-		}
-
-		// 2. If ent is different, ent is updated
-		else if (!entSame) {
+		} else if (!entSame) {
 			updatedEnt = ent;
-		}
-
-		// 3. ent is same
-		else {
+		} else {
 			sameEnt = curEnt;
 		}
 	}

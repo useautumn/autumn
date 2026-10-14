@@ -7,7 +7,6 @@ import { hasPendingPreviewParams } from "../hasPendingPreviewParams";
 
 const PREVIEW_DEBOUNCE_MS = 400;
 
-/** What verify would report once `params` synced, re-asked as the draft settles. */
 export const usePreviewSyncV2 = ({
 	params,
 }: {
@@ -29,7 +28,6 @@ export const usePreviewSyncV2 = ({
 			);
 			return data;
 		},
-		// Verify only checks live subscriptions.
 		enabled: Boolean(debouncedParams?.stripe_subscription_id),
 		placeholderData: keepPreviousData,
 	});

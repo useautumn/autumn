@@ -1,16 +1,6 @@
 import { ErrCode, RecaseError, type SyncBillingContext } from "@autumn/shared";
 import { assertSyncCurrencyMatchesCustomer } from "./assertSyncCurrencyMatchesCustomer";
 
-/**
- * Validate sync inputs against the detection result. Throws RecaseError on
- * any unrecoverable problem; otherwise no-op.
- *
- * STUB — checks to add later:
- *   - Mapping plan_ids exist in the catalog
- *   - Each mapping points at a stripe sub/schedule we actually fetched
- *   - Detection PlanWarnings are all in `acknowledgedWarnings`
- *   - Customer has a Stripe id
- */
 export const handleSyncErrors = ({
 	syncContext,
 }: {

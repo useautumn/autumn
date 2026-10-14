@@ -20,10 +20,6 @@ export type CusEntBillingObjects = {
 	options: FeatureOptions | undefined;
 };
 
-/**
- * Extracts the core billing objects from a FullCusEntWithFullCusProduct.
- * Returns null if cusProduct or cusPrice can't be resolved.
- */
 export const cusEntToBillingObjects = ({
 	cusEnt,
 }: {

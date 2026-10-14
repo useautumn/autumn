@@ -1,20 +1,3 @@
-/**
- * TDD coverage for update_items lifecycle behaviors:
- * - Cycle anchor preservation across a mid-cycle update (test-clock advance).
- * - Newly-tracked usage applies to the updated entitlement.
- * - Idempotency: running the same update_items twice is a no-op on the
- *   second pass.
- *
- * Contract under test:
- *   New behaviors:
- *     - Mid-cycle update_items does NOT shift the billing/reset anchor; at
- *       next reset the balance resets to the NEW included value (not the
- *       old one).
- *     - The new entitlement participates in normal track/deduct flows.
- *     - Running an identical update_items migration twice yields the same
- *       end state as running it once.
- */
-
 import { expect, test } from "bun:test";
 import { type ApiCustomerV5 } from "@autumn/shared";
 import { expectBalanceCorrect } from "@tests/integration/utils/expectBalanceCorrect";
@@ -81,8 +64,6 @@ test(`${chalk.yellowBright("migrations update_items: cycle anchor survives mid-c
 		planId: pro.id,
 	});
 
-	// Advance past the original anchor — the entitlement should reset to the
-	// NEW included value (300), not the old (100).
 	await advanceTestClock({
 		stripeCli: ctx.stripeCli,
 		testClockId: testClockId!,
@@ -134,7 +115,6 @@ test.concurrent(`${chalk.yellowBright("migrations update_items: tracking new usa
 		},
 	});
 
-	// Track 75 against the (now patched) entitlement.
 	await autumnV1.track(
 		{
 			customer_id: customerId,

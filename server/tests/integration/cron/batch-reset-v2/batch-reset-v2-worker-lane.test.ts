@@ -1,12 +1,3 @@
-/**
- * The reset sweep's worker lane: due rows reach the balance worker as one `reset` per customer.
- *
- *   - a due row is refilled and its next_reset_at advanced by the worker, not by the SQL lane
- *   - the same page enqueued twice in one sweep is a duplicate: nothing refills twice
- *   - a track racing the cron's reset on the same due row refills it exactly once
- *   - an entity's own due rows are addressed to the entity's subject: one reset per entity, each refilled once
- */
-
 import { expect, test } from "bun:test";
 import { findCustomerEntitlement } from "@tests/balances/utils/findCustomerEntitlement.js";
 import { TestFeature } from "@tests/setup/v2Features.js";
@@ -31,7 +22,6 @@ const INCLUDED_USAGE = 100;
 const POLL_ATTEMPTS = 200;
 const POLL_INTERVAL_MS = 50;
 
-/** Legacy resets due rows through the SQL lane; this lane only exists on the worker route. */
 const workerLaneTest = test.concurrent.skipIf(!isBalanceWorkerRoute());
 
 const initWorkerLaneScenario = async ({
@@ -72,7 +62,6 @@ type ScannedRow = {
 	customer_product_id?: string | null;
 };
 
-/** The rows as the cron scanned them, and what the sweep would send. */
 const sweepPageFor = ({
 	rows,
 	dueBefore,
@@ -133,7 +122,6 @@ workerLaneTest(
 			featureId: TestFeature.Messages,
 			pastTimeMs: pastTime,
 		});
-		// The expiry was written behind the worker's back; it re-hydrates on the next command.
 		await evictBalanceWorkerCustomer({ ctx, customerId });
 
 		const dueBefore = Date.now();
@@ -150,7 +138,6 @@ workerLaneTest(
 		expect(refilled.balance).toBe(INCLUDED_USAGE);
 		expect(refilled.next_reset_at).toBeGreaterThan(Date.now());
 
-		// Re-enqueued page, same sweep: the worker sees a duplicate command and writes nothing.
 		await enqueueWorkerResets({ ctx: { db: ctx.db, logger }, ...sweep });
 		await Bun.sleep(1_000);
 		const again = await fetchCustomerEntitlementRow({
@@ -194,7 +181,6 @@ workerLaneTest(
 			}),
 		]);
 
-		// Whichever went first refilled to 100; the track then took 7. A second refill would show 100.
 		await waitForPostgresBalance({
 			db: ctx.db,
 			customerEntitlementId: customerEntitlement.id,
@@ -266,7 +252,6 @@ workerLaneTest(
 				}),
 			),
 		);
-		// Two entity rows, two subjects, two resets; a customer-level reset would see neither.
 		expect(
 			await enqueueWorkerResets({
 				ctx: { db: ctx.db, logger },

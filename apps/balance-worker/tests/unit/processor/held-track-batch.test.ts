@@ -198,7 +198,6 @@ describe("inline track batches", () => {
 			});
 			await settled;
 			await f.processor.drain();
-			// The ordinary route's retry: every command again, each on its own.
 			const retried = Promise.allSettled(
 				commands.map((command) => f.processor.track({ command })),
 			);
@@ -208,7 +207,6 @@ describe("inline track batches", () => {
 					f.appender.release();
 				} catch {}
 			}
-			// Landed commands answer from their receipt; only the refused one writes.
 			expect((await retried).map(({ status }) => status)).toEqual([
 				"fulfilled",
 				"fulfilled",
@@ -220,7 +218,6 @@ describe("inline track batches", () => {
 				?.customerEntitlements.find(
 					(row) => row.id === "messages_monthly",
 				)?.balance;
-			// Warm-up 1, then 5 each for q1, q2 and q3, once.
 			expect(balance).toBe(100 - 1 - 15);
 		} finally {
 			f.close();

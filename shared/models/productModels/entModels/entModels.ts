@@ -20,7 +20,6 @@ export {
 };
 
 export const EntitlementSchema = z.object({
-	// Required fields - no .optional()
 	id: z.string(),
 	created_at: z.number(),
 	internal_feature_id: z.string(),
@@ -37,7 +36,6 @@ export const EntitlementSchema = z.object({
 	entity_feature_id: z.string().nullish(),
 	pooled: z.boolean().default(false).optional(),
 
-	// Part of create entitlement
 	org_id: z.string().optional(),
 	feature_id: z.string().optional(),
 	usage_limit: z.number().nullable().optional().default(null),

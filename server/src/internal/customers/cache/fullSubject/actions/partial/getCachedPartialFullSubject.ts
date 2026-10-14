@@ -68,10 +68,6 @@ export const getCachedPartialFullSubject = async ({
 	});
 	const subjectLabel = buildSubjectLabel({ customerId, entityId });
 
-	// Subject + epoch keys share the `{customerId}` hash tag and live on the
-	// same Redis slot, so a single pipeline fetches both in one round trip.
-	// Read-only GETs — epoch TTL is refreshed on writes (setCachedFullSubject
-	// Lua) and on invalidations, not on reads, to avoid write amplification.
 	const pipelineResults = await runRedisOp({
 		operation: async (redis) =>
 			throwOnPipelineConnectionError(
@@ -92,8 +88,6 @@ export const getCachedPartialFullSubject = async ({
 	const cachedRaw = (subjectEntry?.[1] ?? null) as string | null;
 	const epochRaw = (epochEntry?.[1] ?? null) as string | null;
 
-	// Missing epoch key is treated as 0; the next invalidation will INCR it
-	// from missing to 1, which mismatches any cached subject written at 0.
 	const parsedEpoch =
 		epochRaw !== null ? Number.parseInt(epochRaw, 10) : Number.NaN;
 	const currentSubjectViewEpoch = Number.isNaN(parsedEpoch) ? 0 : parsedEpoch;
@@ -224,9 +218,6 @@ export const getCachedPartialFullSubject = async ({
 		};
 	}
 
-	// Capped features carry the '_usage_windows' counter field and may have no
-	// entitlements at all, so they must be part of the batch even when absent
-	// from meteredFeatures.
 	const usageWindowFeatureIds = new Set(
 		(cached.usageWindowFeatureIds ?? []).filter((featureId) =>
 			featureIds.includes(featureId),

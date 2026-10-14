@@ -14,8 +14,6 @@ export const appendToCollection = ({
 	after?: (element: SgNode) => boolean;
 }): string | null => {
 	const root = parse(Lang.TypeScript, source).root();
-	// A bare `collection: [$$$]` parses as a type annotation, so the anchor must
-	// be the enclosing atmn call; the leading/trailing $$$ allow sibling keys.
 	const anchor =
 		root.find(`atmn({ $$$, ${collection}: [$$$ITEMS], $$$ })`) ??
 		root.find(`atmn({ ${collection}: [$$$ITEMS] })`);

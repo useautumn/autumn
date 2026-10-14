@@ -3,10 +3,6 @@ import { z } from "zod/v4";
 import { ApiBalanceV1Schema } from "../../customers/cusFeatures/apiBalanceV1.js";
 import { CheckFeaturePreviewSchema } from "./checkFeaturePreview.js";
 
-/**
- * Check response V3 - uses ApiBalanceV1 (V2.1 format)
- * This is the server's internal response format
- */
 export const CheckResponseV3Schema = z.object({
 	allowed: z.boolean().meta({
 		description:
@@ -37,11 +33,6 @@ export const CheckResponseV3Schema = z.object({
 	flag: ApiFlagV0Schema.nullable().meta({
 		description: "The flag associated with this check, if any.",
 	}),
-
-	// lock_id: z.string().optional().meta({
-	// 	description:
-	// 		"The lock ID associated with this check when lock mode is enabled.",
-	// }),
 
 	preview: CheckFeaturePreviewSchema.optional().meta({
 		description:

@@ -30,12 +30,6 @@ const SyncPreviewPricingSchema = z.object({
 	),
 });
 
-/**
- * Syncs pricing configuration to the preview sandbox organization.
- * Uses session auth (betterAuthMiddleware) to identify the user's preview org.
- * - Nukes existing config (customers, products, features)
- * - Pushes new config from the request body
- */
 export const handleSyncPreviewPricing = createRoute({
 	scopes: {
 		ALL: [Scopes.Plans.Write, Scopes.Features.Write, Scopes.Customers.Write],
@@ -46,14 +40,12 @@ export const handleSyncPreviewPricing = createRoute({
 		const { db } = ctx;
 		const body = c.req.valid("json");
 
-		// Find the preview org using session auth
 		const previewOrg = await getSessionPreviewOrg({ ctx });
 
 		ctx.logger.debug(
 			`[Preview Sync] Starting sync for preview org: ${previewOrg.id}, features: ${body.features.length}, products: ${body.products.length}`,
 		);
 
-		// Step 1: Nuke existing config
 		ctx.logger.debug("[Preview Sync] Step 1: Nuking existing configuration...");
 
 		const deleted = await CusService.deleteByOrgId({
@@ -81,18 +73,14 @@ export const handleSyncPreviewPricing = createRoute({
 			env: AppEnv.Sandbox,
 		});
 
-		// Workers read features through the org cache; drop it so they don't
-		// serve the nuked feature list for the rest of the TTL.
 		await clearOrgWithFeaturesCache({
 			ctx: getMiscCacheContext(),
 			orgId: previewOrg.id,
 			env: AppEnv.Sandbox,
 		});
 
-		// Step 2: Push new config
 		ctx.logger.debug("[Preview Sync] Step 2: Pushing new configuration...");
 
-		// Build a context for the preview org
 		const previewCtx = {
 			...ctx,
 			org: previewOrg,
@@ -100,7 +88,6 @@ export const handleSyncPreviewPricing = createRoute({
 			features: [] as Awaited<ReturnType<typeof FeatureService.list>>,
 		};
 
-		// Deduplicate features by ID (keep first occurrence)
 		const seenFeatureIds = new Set<string>();
 		const uniqueFeatures = body.features.filter((f) => {
 			if (seenFeatureIds.has(f.id)) {
@@ -113,7 +100,6 @@ export const handleSyncPreviewPricing = createRoute({
 			return true;
 		});
 
-		// Create features sequentially to avoid race conditions
 		for (const apiFeature of uniqueFeatures) {
 			const dbFeature = agentFeatureToFeature(apiFeature);
 			await createFeature({
@@ -130,14 +116,12 @@ export const handleSyncPreviewPricing = createRoute({
 			});
 		}
 
-		// Get updated features for product creation
 		const updatedFeatures = await FeatureService.list({
 			db,
 			orgId: previewOrg.id,
 			env: AppEnv.Sandbox,
 		});
 
-		// Create products
 		await Promise.all(
 			body.products.map((apiProduct) =>
 				createProduct({

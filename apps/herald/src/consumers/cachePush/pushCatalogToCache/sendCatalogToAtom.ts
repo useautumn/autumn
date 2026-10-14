@@ -4,7 +4,6 @@ import { AtomQueueBackoffError } from "../../../atom/queue/createAtomPushQueue.j
 import type { AtomConnection } from "../../../atom/types/atomClient.js";
 import type { CatalogPushContext } from "../types/catalogPushContext.js";
 
-/** An Atom that does not take the catalog is logged and left behind: each customer's push still carries its own rows. */
 export const sendCatalogToAtom = async ({
 	ctx,
 	atomConnection,

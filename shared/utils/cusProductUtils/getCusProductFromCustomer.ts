@@ -6,10 +6,6 @@ import {
 } from "./classifyCustomerProduct/classifyCustomerProduct";
 import { cp } from "./classifyCustomerProduct/cpBuilder";
 
-/**
- * Finds the active customer product by id for a customer.
- * Filters by product id, entity, active status.
- */
 export const getOngoingCusProductById = ({
 	fullCus,
 	productId,
@@ -21,16 +17,13 @@ export const getOngoingCusProductById = ({
 	const cusProducts = fullCus.customer_products;
 
 	const activeCusProduct = cusProducts.find((customerProduct) => {
-		// 1. Product matches
 		const productMatches = customerProduct.product.id === productId;
 
-		// 2. Entity matches
 		const entityMatches = isCusProductOnEntity({
 			cusProduct: customerProduct,
 			internalEntityId,
 		});
 
-		// 3. Status is active and recurring
 		const { valid } = cp(customerProduct)
 			.recurring()
 			.hasActiveStatus()
@@ -56,14 +49,12 @@ const sortCustomerProductsForBilling = ({
 	internalEntityId?: string;
 }) => {
 	return customerProducts.sort((a, b) => {
-		// 0. Cus product ID match
 		const aCusProductIdMatch = a.id === cusProductId;
 		const bCusProductIdMatch = b.id === cusProductId;
 
 		if (aCusProductIdMatch && !bCusProductIdMatch) return -1;
 		if (!aCusProductIdMatch && bCusProductIdMatch) return 1;
 
-		// 1. Entity match (highest priority)
 		const aEntityMatch = isCusProductOnEntity({
 			cusProduct: a,
 			internalEntityId,
@@ -76,21 +67,18 @@ const sortCustomerProductsForBilling = ({
 		if (aEntityMatch && !bEntityMatch) return -1;
 		if (!aEntityMatch && bEntityMatch) return 1;
 
-		// 2. Main product (add-ons lowest priority)
 		const aIsMain = !a.product.is_add_on;
 		const bIsMain = !b.product.is_add_on;
 
 		if (aIsMain && !bIsMain) return -1;
 		if (!aIsMain && bIsMain) return 1;
 
-		// 3. Product ID match
 		const aProductIdMatch = a.product.id === productId;
 		const bProductIdMatch = b.product.id === productId;
 
 		if (aProductIdMatch && !bProductIdMatch) return -1;
 		if (!aProductIdMatch && bProductIdMatch) return 1;
 
-		// 4. Product group match
 		const aGroupMatch = a.product.group === productGroup;
 		const bGroupMatch = b.product.group === productGroup;
 
@@ -101,10 +89,6 @@ const sortCustomerProductsForBilling = ({
 	});
 };
 
-/**
- * Finds the best cus product to merge subscriptions with for an incoming product.
- * Priority: 1. Entity match, 2. Product ID match, 3. Product group match
- */
 export const getTargetSubscriptionCusProduct = ({
 	fullCus,
 	productId,
@@ -127,11 +111,6 @@ export const getTargetSubscriptionCusProduct = ({
 		return valid;
 	});
 
-	// Sort by merge order:
-	// 1. Entity match (highest priority)
-	// 2. Main product (add-ons lowest priority)
-	// 3. Product ID match
-	// 4. Product group match
 	sortCustomerProductsForBilling({
 		customerProducts: cusProducts,
 		productId,
@@ -143,10 +122,6 @@ export const getTargetSubscriptionCusProduct = ({
 	return cusProducts[0];
 };
 
-/**
- * Finds the best cus product to merge subscriptions with for an incoming product.
- * Priority: 1. Entity match, 2. Product ID match, 3. Product group match
- */
 export const getTargetSubscriptionScheduleCusProduct = ({
 	fullCus,
 	productId,
@@ -175,11 +150,6 @@ export const getTargetSubscriptionScheduleCusProduct = ({
 		if (targetExists && !targetCusProduct) return undefined;
 	}
 
-	// Sort by merge order:
-	// 1. Entity match (highest priority)
-	// 2. Main product (add-ons lowest priority)
-	// 3. Product ID match
-	// 4. Product group match
 	sortCustomerProductsForBilling({
 		customerProducts: cusProducts,
 		productId,

@@ -16,7 +16,6 @@ export const INCLUDED_SEATS = 1;
 
 export type AutumnV2_3 = Awaited<ReturnType<typeof initScenario>>["autumnV2_3"];
 
-/** Polls until the customer's single pool matches the expected counters. */
 export const waitForPoolCounters = async ({
 	autumnV2_3,
 	customerId,
@@ -71,8 +70,6 @@ export const setupLicenseSubscription = async ({
 	customerId: string;
 	idPrefix: string;
 	quantity: number;
-	/** Subscribe via an ad-hoc price on the seat's Stripe product instead of
-	 * the catalog base price — back-syncs as a customized license. */
 	customSeatPrice?: { amount: number; interval: "month" | "year" };
 }) => {
 	const parent = products.base({
@@ -138,7 +135,6 @@ export const setupLicenseSubscription = async ({
 	);
 	if (!seatItem) throw new Error("License subscription item not found");
 
-	// Baseline: sub.created back-sync provisions the pool at `quantity`.
 	await waitForPoolCounters({
 		autumnV2_3,
 		customerId,

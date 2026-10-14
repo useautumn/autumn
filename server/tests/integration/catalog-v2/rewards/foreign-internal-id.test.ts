@@ -1,20 +1,3 @@
-/**
- * catalogV2 rewards — a pulled config pushed to another environment carries
- * that environment's reward internal_ids, which the target has never seen.
- *
- * Contract:
- *   R1  preview and update accept an unknown internal_id on a new reward and
- *       program, and create them
- *   R2  an unknown internal_id on a reward and program that already exist by id
- *       updates them in place rather than failing or duplicating
- *   R3  a known internal_id stated under a different id is still a refused rename
- *   R4  an internal_id held by a reward or program the catalog hides is refused,
- *       not mistaken for a foreign one
- *
- * Red (current):  any unknown internal_id is rejected with a 404.
- * Green (after):  an unknown internal_id falls back to matching by id, as plans do.
- */
-
 import { expect, test } from "bun:test";
 import {
 	type ApiRewardsListV0,
@@ -139,7 +122,6 @@ test.concurrent(
 			actions: [],
 		});
 
-		// R1: every stated internal_id is foreign, and nothing exists yet.
 		const createConfig = foreignConfig({
 			value: 20,
 			included: 300,
@@ -169,7 +151,6 @@ test.concurrent(
 			expect(createdInternalIds.get(id)).not.toContain("sandbox");
 		}
 
-		// R2: the same ids pushed again under different foreign internal_ids.
 		const updateConfig = foreignConfig({
 			value: 25,
 			included: 999,
@@ -222,7 +203,6 @@ test.concurrent(
 		const summerInternalId = created.results.rewards[0]?.internal_id;
 		expect(summerInternalId).toBeString();
 
-		// R3
 		await expectAutumnError({
 			errCode: ErrCode.InvalidRequest,
 			errMessage: "cannot be renamed",
@@ -234,7 +214,6 @@ test.concurrent(
 				}),
 		});
 
-		// R4: a free-product reward and its program, both hidden from the catalog.
 		const [legacyReward] = await rewardRepo.insert({
 			db: ctx.db,
 			data: constructReward({

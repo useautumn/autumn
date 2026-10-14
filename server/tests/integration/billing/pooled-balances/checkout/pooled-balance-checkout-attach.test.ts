@@ -1,31 +1,3 @@
-/**
- * TDD contract for pooled balances created through a Stripe checkout session,
- * then incremented by subsequent direct (immediate-charge) entity attaches.
- *
- * Contract under test:
- *   New behaviors:
- *     - An entity-scoped attach that routes through checkout creates the pooled
- *       balance graph when `checkout.session.completed` replays the deferred
- *       billing plan — not only on the direct attach path.
- *     - The pool created by checkout is keyed to the real Stripe subscription
- *       (not the placeholder used before the subscription exists).
- *     - A second entity attaching the same plan with a card on file joins the
- *       SAME pool and increments `granted` / balance by its own grant.
- *     - A third entity increments again — contributions stay one-per-source.
- *     - Usage tracked on any entity draws down the shared pool.
- *   Side effects:
- *     - 1 `pooled_balances` row + 1 synthetic `customer_entitlements` row
- *       (`is_pooled_balance = true`, `customer_product_id = null`).
- *     - 1 `pooled_balance_contributions` row per source customer entitlement.
- *     - Each source customer entitlement normalized to balance 0.
- *
- * Pre-impl red: the checkout-completed replay leaves the pooled source
- * entitlement un-pooled, so no pool row exists and the feature disappears from
- * the customer's balances entirely (pooled sources are hidden from the public
- * balance list).
- * Post-impl green: pool exists after checkout and increments per entity.
- */
-
 import { expect, test } from "bun:test";
 import {
 	type ApiCustomerV5,
@@ -72,8 +44,6 @@ test(
 			],
 		});
 
-		// No payment method on the customer — the first attach must route
-		// through a Stripe checkout session.
 		const { autumnV2_2, ctx, entities } = await initScenario({
 			customerId,
 			setup: [
@@ -84,10 +54,6 @@ test(
 			actions: [],
 		});
 
-		// ── Contract 1: entity 1 attaches via checkout ──────────────────────
-		// Pre-fix: checkout completes, cusProduct is Active, but no pooled_balances
-		// row exists and Messages vanishes from the customer's balances.
-		// Post-fix: one pool at granted = POOLED_GRANT, keyed to the real sub.
 		const checkoutResult = await autumnV2_2.billing.attach<AttachParamsV1Input>(
 			{
 				customer_id: customerId,
@@ -136,8 +102,6 @@ test(
 			breakdownId: pooledCustomerEntitlement.id,
 		});
 
-		// ── Contract 2: entity 2 attaches with the card saved by checkout ───
-		// Immediate charge, no redirect — must join the SAME pool.
 		const secondAttach = await autumnV2_2.billing.attach<AttachParamsV1Input>({
 			customer_id: customerId,
 			entity_id: entities[1].id,
@@ -162,7 +126,6 @@ test(
 			sources: { count: 2, balance: 0, adjustment: 0 },
 		});
 
-		// ── Contract 3: entity 3 increments again ───────────────────────────
 		await autumnV2_2.billing.attach<AttachParamsV1Input>({
 			customer_id: customerId,
 			entity_id: entities[2].id,
@@ -201,7 +164,6 @@ test(
 			breakdownId: pooledCustomerEntitlement.id,
 		});
 
-		// ── Contract 4: usage on the checkout-created entity draws the pool ──
 		await autumnV2_2.track({
 			customer_id: customerId,
 			entity_id: entities[0].id,

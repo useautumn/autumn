@@ -7,7 +7,6 @@ import type {
 	InsertCustomerEntitlement,
 } from "@autumn/shared";
 
-/** An insert row may leave columns to their Postgres defaults; the worker stores them filled in. */
 const withTableDefaults = (row: InsertCustomerEntitlement) => ({
 	...row,
 	customer_product_id: row.customer_product_id ?? null,
@@ -22,7 +21,6 @@ const withTableDefaults = (row: InsertCustomerEntitlement) => ({
 	external_id: row.external_id ?? null,
 });
 
-/** Loose grants the plan adds beside any product. A top-up's expiring grant starts at 0: the worker credits it the live remainder. */
 export const insertCustomerEntitlementsToPlanOps = ({
 	autumnBillingPlan,
 }: {

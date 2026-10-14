@@ -10,7 +10,6 @@ import { toTestId } from "./toTestId.ts";
 
 const INSERT_CHUNK = 1_000;
 
-/** Stores a CI run's per-file results as source=ci rows; re-posting the same ciRunId replaces them. */
 export const ingestResults = async ({
 	ctx,
 	body,

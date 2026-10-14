@@ -29,7 +29,6 @@ const scheduleCapacity = ({ ctx }: { ctx: TwdContext }) => {
 const SIGNAL_DEBOUNCE_MS = 250;
 const signalTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
-/** keys/accounts events carry no payload, so one per burst is enough. */
 const publishSignal = ({
 	topic,
 	event,
@@ -68,7 +67,6 @@ const publishRun = async ({
 	publishLiveIfChanged({ key: runTopic, topic: runTopic, event });
 };
 
-/** A run leaving the queue shifts everyone behind it; unchanged positions are deduped. */
 const publishQueuedRuns = async ({
 	ctx,
 	exceptRunId,
@@ -118,7 +116,6 @@ const publishWarm = async ({ ctx, sha }: { ctx: TwdContext; sha: string }) => {
 		});
 };
 
-/** Maps one changed row (from the NOTIFY triggers) to the live events it implies. */
 export const publishTableChange = async ({
 	ctx,
 	table,

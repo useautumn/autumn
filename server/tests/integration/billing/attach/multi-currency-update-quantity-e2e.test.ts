@@ -15,9 +15,6 @@ import { AutumnRpcCli } from "@/external/autumn/autumnRpcCli.js";
 const autumnRpc = new AutumnRpcCli({ version: ApiVersion.V2_1 });
 const getSuffix = () => Math.random().toString(36).slice(2, 9);
 
-// A prepaid quantity increase must prorate at the customer's locked currency
-// (eur), not the usd base amount — this exercises computeUpdateQuantityLineItems'
-// currency resolution end to end.
 test.concurrent(
 	`${chalk.yellowBright("multi-currency e2e: eur prepaid quantity increase prorates in eur")}`,
 	async () => {
@@ -67,7 +64,6 @@ test.concurrent(
 			],
 		});
 
-		// +10 packs at the eur pack price (7), NOT the usd price (8).
 		const preview = await autumnV1.subscriptions.previewUpdate({
 			customer_id: customerId,
 			product_id: planId,

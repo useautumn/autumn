@@ -9,12 +9,6 @@ import {
 } from "../utils/creditSchemaList";
 import { createSchemaItem } from "../utils/creditSchemaUtils";
 
-/**
- * Controlled credit-schema array mechanics shared by the feature-level editor
- * (TanStack-form backed) and the plan-item feature_override editor (item
- * config backed): stable row keys, candidate features, the expanded accordion
- * row, and add/remove/update against whatever store the caller writes to.
- */
 export function useCreditSchemaList({
 	schema,
 	onChange,
@@ -22,7 +16,6 @@ export function useCreditSchemaList({
 }: {
 	schema: CreditSchemaItem[];
 	onChange: (schema: CreditSchemaItem[]) => void;
-	/** Called instead of onChange when removing the only remaining item. */
 	onRemoveLast?: () => void;
 }) {
 	const { features } = useFeaturesQuery();

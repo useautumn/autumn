@@ -17,12 +17,10 @@ import { nullish } from "@/utils/genUtils";
 import { useProductItemContext } from "@/views/products/product/product-item/ProductItemContext";
 import { CustomiseIntervalPopover } from "../../CustomiseIntervalPopover";
 
-// Reset interval is an entitlement interval, so one-off/lifetime aren't options.
 const resetIntervalOptions = Object.values(EntInterval).filter(
 	(interval) => interval !== EntInterval.Lifetime,
 );
 
-/** Visibility is controlled by parent AdvancedSettings */
 export function ResetIntervalConfig() {
 	const { item, setItem } = useProductItemContext();
 
@@ -30,8 +28,6 @@ export function ResetIntervalConfig() {
 
 	const resetInterval = itemToEntInterval({ item });
 
-	// A non-null price_interval pins billing to its own cycle, freeing `interval`
-	// to be the (possibly different) reset cycle.
 	const isSeparateResetActive = !nullish(item.price_interval);
 
 	const setSeparateReset = (enabled: boolean) => {

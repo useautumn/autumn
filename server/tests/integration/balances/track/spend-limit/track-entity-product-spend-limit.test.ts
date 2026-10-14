@@ -79,7 +79,6 @@ test.concurrent(
 			breakdownLength: 2,
 		});
 
-		// The balance worker doesn't aggregate entity data onto the customer.
 		if (!isBalanceWorkerRoute()) {
 			await expectCustomerFeatureBalance({
 				autumn: autumnV2_1,
@@ -106,7 +105,6 @@ test.concurrent(
 		});
 		await expectSendEventBlocked({
 			autumn: autumnV2_1,
-			// The balance worker doesn't aggregate entity data onto the customer.
 			checkCustomer: !isBalanceWorkerRoute(),
 			customerId,
 			entityId: entities[0].id,
@@ -196,7 +194,6 @@ test.concurrent(
 			breakdownLength: 2,
 		});
 
-		// The balance worker doesn't aggregate entity data onto the customer.
 		if (!isBalanceWorkerRoute()) {
 			await expectCustomerFeatureBalance({
 				autumn: autumnV2_1,
@@ -205,12 +202,10 @@ test.concurrent(
 				granted: 800,
 				remaining: 0,
 				usage: 825,
-				// breakdownLength: 2,
 			});
 		}
 		await expectSendEventBlocked({
 			autumn: autumnV2_1,
-			// The balance worker doesn't aggregate entity data onto the customer.
 			checkCustomer: !isBalanceWorkerRoute(),
 			customerId,
 			entityId: entities[0].id,
@@ -337,7 +332,6 @@ test.concurrent(
 			breakdownLength: 2,
 		});
 
-		// The balance worker doesn't aggregate entity data onto the customer.
 		if (!isBalanceWorkerRoute()) {
 			await expectCustomerFeatureBalance({
 				autumn: autumnV2_1,
@@ -346,12 +340,10 @@ test.concurrent(
 				granted: 1600,
 				remaining: 0,
 				usage: 1665,
-				// breakdownLength: 4,
 			});
 		}
 		await expectSendEventBlocked({
 			autumn: autumnV2_1,
-			// The balance worker doesn't aggregate entity data onto the customer.
 			checkCustomer: !isBalanceWorkerRoute(),
 			customerId,
 			entityId: entities[0].id,
@@ -372,7 +364,6 @@ test.concurrent(
 		});
 		await expectSendEventBlocked({
 			autumn: autumnV2_1,
-			// The balance worker doesn't aggregate entity data onto the customer.
 			checkCustomer: !isBalanceWorkerRoute(),
 			customerId,
 			entityId: entities[1].id,
@@ -447,7 +438,6 @@ test.concurrent(
 		});
 		await expectSendEventBlocked({
 			autumn: autumnV2_1,
-			// The balance worker doesn't aggregate entity data onto the customer.
 			checkCustomer: !isBalanceWorkerRoute(),
 			customerId,
 			entityId: entities[0].id,
@@ -544,7 +534,6 @@ test.concurrent(
 			breakdownLength: 1,
 		});
 
-		// The balance worker doesn't aggregate entity data onto the customer.
 		if (!isBalanceWorkerRoute()) {
 			await expectCustomerFeatureBalance({
 				autumn: autumnV2_1,
@@ -571,7 +560,6 @@ test.concurrent(
 		});
 		await expectSendEventBlocked({
 			autumn: autumnV2_1,
-			// The balance worker doesn't aggregate entity data onto the customer.
 			checkCustomer: !isBalanceWorkerRoute(),
 			customerId,
 			entityId: entities[0].id,
@@ -667,7 +655,6 @@ test.concurrent(
 			skipCache: true,
 		});
 
-		// The balance worker doesn't aggregate entity data onto the customer.
 		if (!isBalanceWorkerRoute()) {
 			await expectCustomerFeatureBalance({
 				autumn: autumnV2_1,
@@ -771,7 +758,6 @@ test.concurrent(
 			skipCache: true,
 		});
 
-		// The balance worker doesn't aggregate entity data onto the customer.
 		if (!isBalanceWorkerRoute()) {
 			await expectCustomerFeatureBalance({
 				autumn: autumnV2_1,

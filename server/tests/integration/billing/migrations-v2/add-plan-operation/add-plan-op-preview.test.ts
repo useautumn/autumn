@@ -1,5 +1,3 @@
-/** add_plan previews use the shared customer plan-change contract. */
-
 import { expect, test } from "bun:test";
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";

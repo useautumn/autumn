@@ -2,7 +2,6 @@ const DEFAULT_BATCH_WINDOW_MS = 10;
 const DEFAULT_MAX_BATCH_ENTRIES = 10;
 const DEFAULT_MAX_BATCH_BODY_BYTES = 1024 * 1024;
 
-/** A send refused because the process is shutting down; expected on every deploy. */
 export class SqsBatchShuttingDownError extends Error {
 	constructor() {
 		super("SQS batch accumulator is shutting down");
@@ -66,8 +65,6 @@ export class SqsBatchAccumulator<TEntry extends SqsBatchAccumulatorEntry> {
 
 	enqueue(entry: TEntry): Promise<void> {
 		if (!this.acceptingEntries) {
-			// Every rejection here is a dropped send from a request that outlived
-			// teardown — must stay visible and countable.
 			this.rejectedDuringShutdown++;
 			console.warn(
 				`[SqsBatch] enqueue rejected during shutdown (#${this.rejectedDuringShutdown}, queue=${entry.queueUrl.split("/").pop()})`,

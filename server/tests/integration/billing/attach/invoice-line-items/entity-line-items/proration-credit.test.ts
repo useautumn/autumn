@@ -1,7 +1,3 @@
-/**
- * A mid-cycle upgrade issues a proration credit for the old plan: negative amount, same entity as the line it prorates.
- */
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3 } from "@autumn/shared";
 import { waitForInvoiceLineItems } from "@tests/integration/billing/utils/expectInvoiceLineItemsCorrect";

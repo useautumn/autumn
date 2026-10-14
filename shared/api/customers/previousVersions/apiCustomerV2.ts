@@ -10,19 +10,7 @@ import { AppEnv } from "@models/genModels/genEnums";
 import { z } from "zod/v4";
 import { ApiCusRewardsSchema } from "../../others/apiDiscount";
 
-/**
- * ApiCustomerV2Schema - Customer response format for API V1.1+ (merged format)
- *
- *
- * Key differences from V1:
- * - Merged structure (everything in one object)
- * - Uses "features" instead of "entitlements"
- * - Features are ApiCusFeatureV2 (with usage/included_usage fields)
- * - Products are ApiCusProductV2 (with items field)
- * - Invoices require explicit expand parameter
- */
 export const ApiCustomerV2Schema = z.object({
-	// Internal fields
 	autumn_id: z.string().nullish(),
 
 	id: z.string().nullable().meta({

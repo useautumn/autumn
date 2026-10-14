@@ -4,7 +4,6 @@ import { getHeraldLogger } from "./getHeraldLogger.js";
 
 let eventsTinybird: EventsTinybird | null | undefined;
 
-/** Null where Tinybird is not set up. */
 export function getEventsTinybird(): EventsTinybird | null {
 	if (eventsTinybird !== undefined) return eventsTinybird;
 	const { HERALD_TINYBIRD } = getHeraldEnv();

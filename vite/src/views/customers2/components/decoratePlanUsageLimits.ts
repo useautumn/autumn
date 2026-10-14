@@ -4,8 +4,6 @@ import {
 	usageLimitIdentity,
 } from "@autumn/shared";
 
-/** Overlay the dashboard's live plan usage onto inherited limits so rows and
- * sheets show the current window without a customer-level override. */
 export const decoratePlanUsageLimits = ({
 	planUsageLimits,
 	decoratedPlanUsageLimits,

@@ -10,15 +10,6 @@ import {
 	EventsAggregateResponseV1Schema,
 } from "../eventsAggregateResponseV1.js";
 
-/**
- * V2_0_AggregateEventsChange: Transforms events aggregate response from V1 (V2.1) to V0 (V2.0) format
- *
- * Applied when: targetVersion <= V2.0
- *
- * Changes:
- * - For flat: Flattens list items from { period, values } to { period, ...values }
- * - For grouped: Uses grouped_values instead of values for the V0 format
- */
 export const V2_0_AggregateEventsChange = defineVersionChange({
 	name: "V2_0 Aggregate Events Change",
 	newVersion: ApiVersion.V2_1,

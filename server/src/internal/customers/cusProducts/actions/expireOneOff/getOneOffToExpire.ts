@@ -2,9 +2,6 @@ import { BillingInterval, CusProductStatus } from "@autumn/shared";
 import type { CronContext } from "@/cron/utils/CronContext.js";
 import type { OneOffCustomerProductResult } from "../oneOffCustomerProductResult.js";
 
-/**
- * Fetches active one-off customer products whose explicit access window has ended.
- */
 export const getOneOffCustomerProductsToExpire = async ({
 	ctx,
 	nowMs = Date.now(),

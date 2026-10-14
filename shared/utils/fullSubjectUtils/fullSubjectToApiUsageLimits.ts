@@ -6,12 +6,6 @@ import type { Feature } from "../../models/featureModels/featureModels.js";
 import { getCurrentUsageWindowUsage } from "../usageWindowUtils/getCurrentUsageWindowUsage.js";
 import { fullSubjectToUsageWindowLimits } from "./fullSubjectToUsageWindowLimits.js";
 
-/**
- * Response decorator for one arm's stored usage limits: each entry plus
- * `usage` -- the amount already consumed in the active window, read from the
- * subject's usage-window counters. `source` is explicit (not inferred from
- * subjectType) because check builds the CUSTOMER arm from an entity subject.
- */
 export const fullSubjectToApiUsageLimits = ({
 	fullSubject,
 	features,

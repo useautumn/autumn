@@ -8,7 +8,6 @@ import { buildVariantEditDiff } from "../editDiff/buildVariantEditDiff";
 import type { VariantEditTarget } from "../targets/variantEditTarget";
 import { baseRowMinted } from "../variantPlanUtils";
 
-/** Where this target's pointer moves. `undefined` leaves it untouched. */
 const resolveTargetPointer = ({
 	target,
 	upsert,
@@ -20,8 +19,6 @@ const resolveTargetPointer = ({
 }): string | null | undefined => {
 	if (target.unlink) return null;
 	if (target.declared) return upsert.row.nextFullProduct.internal_id;
-	// existing/all_versions: pinned historical rows keep their anchor.
-	// new_version: the one resolved row always re-anchors.
 	if (target.follow) {
 		if (upsert.row.versioning === "new_version") return newBasePointer;
 		return target.row.active ? newBasePointer : undefined;
@@ -29,7 +26,6 @@ const resolveTargetPointer = ({
 	return undefined;
 };
 
-/** One target row → one intent, or undefined when nothing would change. */
 const buildVariantEditIntent = ({
 	target,
 	upsert,
@@ -95,7 +91,6 @@ const buildVariantEditIntent = ({
 	};
 };
 
-/** In-place writes on targeted variant rows: content, settings, pointer, archive. */
 export const deriveVariantEdits = ({
 	upsert,
 	targets,

@@ -1,14 +1,3 @@
-/**
- * Create-claim must delete the reserved alias and insert the product
- * in one transaction. Separate commits leave both products.id and
- * product_aliases.alias_id equal to the claimed id.
- *
- * Red (current): insert's transaction commits, then delete throws —
- * the insert stays committed.
- * Green (after): delete-then-insert share one tx; a delete failure
- * does not commit the insert.
- */
-
 import { expect, test } from "bun:test";
 import { AppEnv, type Product } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";

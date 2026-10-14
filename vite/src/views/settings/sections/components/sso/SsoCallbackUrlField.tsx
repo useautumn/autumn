@@ -1,10 +1,5 @@
 import { CopyButton, FormLabel } from "@autumn/ui";
 
-/**
- * The callback URL is available before a connection exists, so admins can
- * register it with their identity provider first and only then come back with
- * the client credentials it issues.
- */
 export const SsoCallbackUrlField = ({
 	callbackUrl,
 	description = "Your provider won't issue client credentials until this is registered as the redirect URL.",

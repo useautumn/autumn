@@ -155,7 +155,6 @@ const readRolloverBalances = async ({
 	}, new Map<string, number>());
 };
 
-/** Everything a migration can touch for one customer, in one object. */
 export const snapshotCustomerState = async ({
 	ctx,
 	customerId,

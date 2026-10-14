@@ -48,7 +48,6 @@ export const executeDeferredBillingPlan = async ({
 		},
 	});
 
-	// Execute stripe billing plan (resume from where we left off)
 	const stripeBillingResult = await executeStripeBillingPlan({
 		ctx,
 		billingPlan,

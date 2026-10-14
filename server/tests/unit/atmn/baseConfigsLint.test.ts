@@ -1,8 +1,3 @@
-/**
- * The shared atmn fixtures are CLI source; they must pass atmn's own config
- * lint, or every integration test built on them fails at `atmn push`.
- */
-
 import { expect, test } from "bun:test";
 import {
 	configBody,

@@ -1,7 +1,6 @@
 import { expect } from "bun:test";
 import { callStripeRpc } from "./platformStripeFixture.js";
 
-/** Calls a Platform Stripe RPC and asserts its status and, optionally, its body. */
 export const expectStripeRpcCorrect = async ({
 	operation,
 	slug,

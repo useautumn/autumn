@@ -15,7 +15,6 @@ import { handleTrackTokens } from "./handlers/handleTrackTokens.js";
 import { handleUpdateBalance } from "./handlers/handleUpdateBalance.js";
 import { handleListBalancesV2 } from "./list/handlers/handleListBalancesV2.js";
 
-// Create a Hono app for products
 export const balancesRouter = new Hono<HonoEnv>();
 
 balancesRouter.post("/balances/create", ...handleCreateBalance);
@@ -27,16 +26,13 @@ balancesRouter.post(
 	...handleRecalculateBalancePreview,
 );
 
-// Track
 balancesRouter.post("/events", ...handleTrack);
 balancesRouter.post("/track", ...handleTrack);
 balancesRouter.post("/track_tokens", ...handleTrackTokens);
 
-// Check
 balancesRouter.post("/entitled", ...handleCheck);
 balancesRouter.post("/check", ...handleCheck);
 
-// Legacy
 balancesRouter.post("/usage", ...handleSetUsage);
 
 export const balancesRpcRouter = new Hono<HonoEnv>();

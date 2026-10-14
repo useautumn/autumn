@@ -5,19 +5,6 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-/**
- * Customer "license-create-schedule" for dashboard testing of Create Schedule
- * against a license-backed plan:
- *
- *   starter    attached now, cheap monthly base price
- *   enterprise $250/mo parent plan, linked to team-seat (included: 2)
- *   3 entities available to assign seats to
- *
- * In the dashboard: open the customer, Attach Plan ▸ Create Schedule, and put
- * enterprise in a future phase. Before the fix this 400s with "billing.create_schedule
- * does not support license-backed plans yet"; after it, the phase schedules and
- * the scheduled product owns a 2-seat pool.
- */
 test(`${chalk.yellowBright("scenario: create schedule with a license-backed plan")}`, async () => {
 	const starter = products.base({
 		id: "schedule-starter",

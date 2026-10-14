@@ -2,11 +2,6 @@ import { customerLicenses, customers, type FullCustomer } from "@autumn/shared";
 import { and, eq, or, sql } from "drizzle-orm";
 import type { RepoContext } from "@/db/repoContext.js";
 
-/**
- * Does this customer have any customer licenses? They are the source of
- * truth for license involvement — no rows means nothing to assign, list, or
- * reconcile. In-memory when a fullCustomer is at hand, else one indexed read.
- */
 export const customerTouchesLicenses = async ({
 	ctx,
 	idOrInternalId,

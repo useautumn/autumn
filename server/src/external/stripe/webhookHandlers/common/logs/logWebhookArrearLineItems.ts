@@ -20,7 +20,6 @@ export const logWebhookArrearLineItems = ({
 }: {
 	ctx: StripeWebhookContext;
 	lineItems: LineItem[];
-	/** Excluded from billing by a skip_overage_billing spend limit. */
 	skippedLineItems?: LineItem[];
 	updateCustomerEntitlements: UpdateCustomerEntitlement[];
 }) => {

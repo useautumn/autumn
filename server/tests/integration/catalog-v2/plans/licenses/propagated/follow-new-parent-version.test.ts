@@ -1,11 +1,3 @@
-/**
- * catalogV2.update — child new_version + pinned active parent.
- * Parent absent from plans[]. Write semantics come from the child mint.
- *
- * pin active + customers → parent mints onto child v2; the pinned live
- * row also follows in place. Off-anchor pin → 400.
- * Historical parent versions stay on child v1, customized false.
- */
 import { expect, test } from "bun:test";
 import { ErrCode } from "@autumn/shared";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils.js";

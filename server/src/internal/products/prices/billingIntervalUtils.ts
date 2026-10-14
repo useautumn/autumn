@@ -106,7 +106,6 @@ export const getNextStartOfMonthUnix = ({
 		},
 	});
 
-	// Subtract till it hits first
 	const date = new UTCDate(nextBillingCycle);
 	const firstDayOfMonth = startOfMonth(date);
 	const twelveOClock = setHours(firstDayOfMonth, 12);
@@ -127,8 +126,6 @@ const getAlignedIntervalUnix = ({
 	now?: number;
 	alwaysReturn?: boolean;
 }) => {
-	// alignWithUnix = addSeconds(alignWithUnix, 20).getTime();
-
 	let nextCycleAnchorUnix = alignWithUnix;
 
 	now = now || Date.now();
@@ -195,7 +192,6 @@ const getAlignedIntervalUnix = ({
 		nextCycleAnchorUnix,
 	);
 
-	// For insurance, also means you can't set billing cycle anchor to a minute in the future...
 	const anchorAndNowDiff = Math.abs(
 		differenceInSeconds(now, nextCycleAnchorUnix),
 	);
@@ -221,29 +217,24 @@ const subtractFromUnixTillAligned = ({
 	const targetDate = new UTCDate(targetUnix);
 	const originalDate = new UTCDate(originalUnix);
 
-	// Get target date components
 	const targetDay = getDate(targetDate);
 	const targetHours = getHours(targetDate);
 	const targetMinutes = getMinutes(targetDate);
 	const targetSeconds = getSeconds(targetDate);
 	const originalDay = getDate(originalDate);
 
-	// Create aligned date using date-fns functions
 	let alignedDate = originalDate;
 
-	// If target day is greater than original day, subtract a month
 	if (targetDay > originalDay) {
 		alignedDate = subMonths(alignedDate, 1);
 	}
 
-	// Calculate last day of the month to handle month length differences
 	const lastDayOfMonth = new UTCDate(
 		alignedDate.getFullYear(),
 		alignedDate.getMonth() + 1,
 		0,
 	).getDate();
 
-	// Apply target day (capped to last day of month) and time components
 	alignedDate = setDate(alignedDate, Math.min(targetDay, lastDayOfMonth));
 	alignedDate = setHours(alignedDate, targetHours);
 	alignedDate = setMinutes(alignedDate, targetMinutes);
@@ -252,8 +243,6 @@ const subtractFromUnixTillAligned = ({
 	return getTime(alignedDate);
 };
 
-// Subtracts an interval from a period end, preserving anchor-based end-of-month behavior
-// Uses the anchor date (unixTimestamp) to determine if end-of-month logic should apply
 // e.g. Sep 30 anchor -> Aug 30, Jul 30, Feb 28/29 (follows Stripe behavior)
 export const subtractIntervalForProration = ({
 	unixTimestamp,
@@ -288,7 +277,6 @@ export const subtractIntervalForProration = ({
 			0,
 		).getDate();
 
-		// If the anchor day doesn't exist in the target month, go to the last day of that month
 		// This follows Stripe's behavior: Sep 30 -> Feb 28, Jul 31 -> Feb 28, etc.
 		const targetDay = Math.min(anchorDay, lastDayOfTargetMonth);
 		return new UTCDate(setDate(d, targetDay).getTime());
@@ -330,8 +318,6 @@ export const subtractIntervalForProration = ({
 	}
 };
 
-// Adds an interval to a period start, preserving anchor-based end-of-month behavior
-// Uses the anchor date (unixTimestamp) to determine if end-of-month logic should apply
 // e.g. Sep 30 anchor -> Oct 30, Nov 30, Feb 28/29 (follows Stripe behavior)
 export const addIntervalForProration = ({
 	unixTimestamp,
@@ -367,7 +353,6 @@ export const addIntervalForProration = ({
 			0,
 		).getDate();
 
-		// If the anchor day doesn't exist in the target month, go to the last day of that month
 		// This follows Stripe's behavior: Sep 30 -> Feb 28, Jul 31 -> Feb 28, etc.
 		const targetDay = Math.min(anchorDay, lastDayOfTargetMonth);
 		return new UTCDate(setDate(d, targetDay).getTime());

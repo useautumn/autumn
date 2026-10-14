@@ -3,10 +3,6 @@ import { balanceLocks } from "@autumn/shared";
 import { and, eq } from "drizzle-orm";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 
-/**
- * A finalize names only its lock, so this one row is how the server finds the customer to route to.
- * Read on the primary: the lock's caller was answered after the commit, and a replica may not have it yet.
- */
 export async function getBalanceLock({
 	ctx,
 	lockId,

@@ -9,7 +9,6 @@ export const SHEET_ANIMATION = {
 
 const EXPAND_TRANSITION = { duration: 0.2, ease: SHEET_EASE } as const;
 
-/** Height + crossfade for expanding content; pass `custom={reduceMotion}` to snap the height. */
 export const COLLAPSE_VARIANTS = {
 	open: (reduceMotion?: boolean) => ({
 		height: "auto",

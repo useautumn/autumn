@@ -3,10 +3,6 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import type { UpsertCachedInvoiceV2Result } from "@/internal/customers/cache/fullSubject/actions/upsertCachedInvoiceV2.js";
 import { upsertCachedInvoiceV2 } from "@/internal/customers/cache/fullSubject/index.js";
 
-/**
- * Upsert an invoice in the customer's cached invoices array.
- * Matches by stripe_id — replaces if found, appends if not.
- */
 export const upsertInvoiceInCache = async ({
 	ctx,
 	customerId,

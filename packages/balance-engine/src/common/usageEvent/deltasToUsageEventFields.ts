@@ -11,7 +11,6 @@ import type {
 } from "../../models/subject/workerFullSubject.js";
 import { fullSubjectToHeldRows } from "../../utils/subjectUtils/convertSubjectUtils.js";
 
-/** The row a delta moved: a customer entitlement directly, or the one that owns the rollover. */
 const rowOf = ({
 	delta,
 	rows,
@@ -25,7 +24,6 @@ const rowOf = ({
 				row.rollovers.some((rollover) => rollover.id === delta.id),
 			);
 
-/** The row's reset without undefined keys: a record has to survive a JSON round trip unchanged. */
 const resetOf = ({
 	row,
 }: {
@@ -39,11 +37,8 @@ const resetOf = ({
 		: { ...rest, interval_count: intervalCount };
 };
 
-/** What a usage event says about the balances behind it; read here because only the decision has the rows. */
 export type UsageEventFields = {
-	/** One entry per balance drawn from, consumed amounts positive. */
 	deductions: TrackDeduction[];
-	/** The plan that paid the most, by absolute balance moved; null when nothing moved or the rows are loose grants. */
 	internalProductId: string | null;
 };
 

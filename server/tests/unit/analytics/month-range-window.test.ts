@@ -1,7 +1,3 @@
-// Month ranges ("6m" / "12m") count monthly bins rather than days, so a
-// month-binned window must open on the 1st — otherwise the chart leads with a
-// partial bar the totals also under-count. Finer bins keep the full period.
-
 import { expect, test } from "bun:test";
 import { UTCDate } from "@date-fns/utc";
 import chalk from "chalk";
@@ -83,8 +79,6 @@ test(`${chalk.yellowBright(
 		getStandardIntervalWindow({ interval: "1bc", now: NOW }),
 	).toBeUndefined();
 
-	// The internal endpoint accepts any interval string, so an inherited
-	// Object.prototype name must not be mistaken for a month range.
 	expect(
 		getStandardIntervalWindow({ interval: "toString", now: NOW }),
 	).toBeUndefined();

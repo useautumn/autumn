@@ -31,11 +31,7 @@ type RoutePattern = {
 
 type RateLimitRouteGroup = {
 	type: Exclude<RateLimitType, RateLimitType.General>;
-	/** Admin page row name when this group's type also has another route group. */
 	name?: string;
-	/** At the bucket's org cap: "degrade" runs the handler with
-	 *  `ctx.orgRateLimitDegraded` set, "reject" answers the API's JSON 429, and
-	 *  unset leaves hono's text 429 with Retry-After. */
 	overLimit?: "degrade" | "reject";
 	patterns: RoutePattern[];
 };
@@ -49,13 +45,6 @@ export const RATE_LIMIT_ROUTE_GROUPS: RateLimitRouteGroup[] = [
 	{
 		type: RateLimitType.Attach,
 		patterns: [
-			// These endpoints shldn't be rate limited
-			// route({ method: "POST", url: "/v1/checkout" }),
-			// route({ method: "POST", url: "/v1/attach/preview" }),
-			// route({ method: "POST", url: "/v1/billing.preview_update" }),
-			// route({ method: "POST", url: "/v1/billing.preview_multi_attach" }),
-			// route({ method: "POST", url: "/v1/billing.preview_attach" }),
-
 			route({ method: "POST", url: "/v1/cancel" }),
 			route({ method: "POST", url: "/v1/setup_payment" }),
 			route({ method: "POST", url: "/v1/attach" }),
@@ -64,7 +53,6 @@ export const RATE_LIMIT_ROUTE_GROUPS: RateLimitRouteGroup[] = [
 			route({ method: "POST", url: "/v1/billing.update" }),
 
 			route({ method: "POST", url: "/v1/billing.setup_payment" }),
-			// route({ method: "POST", url: "/v1/billing.open_customer_portal" }),
 			route({ method: "POST", url: "/v1/billing.sync_proposals" }),
 			route({ method: "POST", url: "/v1/billing.sync_proposals_v2" }),
 			route({ method: "POST", url: "/v1/billing.sync" }),
@@ -131,7 +119,6 @@ export const RATE_LIMIT_ROUTE_GROUPS: RateLimitRouteGroup[] = [
 		type: RateLimitType.EntitiesCreateOrg,
 		patterns: [route({ method: "POST", url: "/v1/entities.create" })],
 	},
-	// Reads have no DB-free answer, so they share check's counters but reject.
 	{
 		type: RateLimitType.CheckCustomerGet,
 		name: "customer_reads",
@@ -186,19 +173,10 @@ export enum RateLimitScope {
 
 export type RateLimitConfig = {
 	limit: number;
-	/**
-	 * Per-version overrides resolved by GTE bounds — each key is the floor
-	 * of its range, and a request maps to the smallest defined key ≥ its
-	 * own version. Buckets are scoped by resolved key so two ranges never
-	 * share a counter. Base `limit` only applies when no key matches.
-	 */
 	versionedLimit?: Partial<Record<ApiVersion, number>>;
 	windowMs: number;
 	scope: RateLimitScope;
-	/** "memory" counts per pod, so the real ceiling is limit × pods. */
 	store: "memory" | "redis";
-	/** Org-wide cap checked before this one; per-customer limits never bind
-	 *  for many-customer storms (2026-06-08 incident). */
 	orgLimit?: RateLimitType;
 };
 
@@ -247,8 +225,6 @@ export const RATE_LIMIT_CONFIGS: Record<RateLimitType, RateLimitConfig> = {
 		store: "memory",
 		orgLimit: RateLimitType.TrackOrg,
 	},
-	// Org windows are 60s, sized ~1.5-2x the highest legit per-org peak over 7d
-	// of prod traffic (check 157k/min, track 60k/min, entities.get 53k/min).
 	[RateLimitType.TrackOrg]: {
 		limit: 120_000,
 		windowMs: 60_000,
@@ -274,7 +250,6 @@ export const RATE_LIMIT_CONFIGS: Record<RateLimitType, RateLimitConfig> = {
 		scope: RateLimitScope.Org,
 		store: "redis",
 	},
-	// Tracks the handler applies synchronously, and checks with a lock or send_event, share these.
 	[RateLimitType.SyncBalanceWrite]: {
 		limit: 1000,
 		windowMs: 1000,
@@ -330,7 +305,6 @@ export const RATE_LIMIT_CONFIGS: Record<RateLimitType, RateLimitConfig> = {
 		scope: RateLimitScope.Org,
 		store: "redis",
 	},
-	// Counted only when a lookup misses and a customer is created (assertCustomerCreateWithinOrgLimit).
 	[RateLimitType.CustomerCreateOrg]: {
 		limit: 200,
 		windowMs: 1000,

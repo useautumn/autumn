@@ -3,7 +3,6 @@ import { ErrCode } from "@autumn/shared";
 import { discounts } from "@tests/utils/fixtures/db/discounts";
 import { assignInvoiceDiscounts } from "@/internal/invoices/actions/create/evaluate/assignInvoiceDiscounts";
 
-// Two lines under plan "pro", one under plan "support".
 const lines = [
 	{ lineId: "li_pro_base", planKey: "pro" },
 	{ lineId: "li_pro_usage", planKey: "pro" },

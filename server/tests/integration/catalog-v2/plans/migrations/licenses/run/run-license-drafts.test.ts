@@ -1,13 +1,3 @@
-/**
- * catalogV2.update drafts are runnable: confirm applies upsert_licenses and
- * skips seat-assignment CPs.
- *
- * Contract:
- *   upsert_licenses-only parent op updates the attached parent's license pool
- *   combined child + parent draft applies both ops
- *   assignment CPs (customer_license_link_id set) are not child matches
- */
-
 import { test } from "bun:test";
 import type {
 	ApiCustomerV5,

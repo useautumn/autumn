@@ -11,10 +11,6 @@ import {
 } from "@autumn/shared";
 import { isCustomerProductAutumnManagedTrial } from "@/internal/billing/v2/setup/trialContext/isCustomerProductAutumnManagedTrial";
 
-/**
- * Sets up the transition context for attaching a product.
- * Determines if there's an existing product to transition from (upgrade/downgrade).
- */
 export const setupAttachTransitionContext = ({
 	fullCustomer,
 	attachProduct,
@@ -24,13 +20,8 @@ export const setupAttachTransitionContext = ({
 	fullCustomer: FullCustomer;
 	attachProduct: FullProduct;
 	planScheduleOverride?: PlanTiming;
-	/** Scope the transition lookup to a specific entity. When omitted, the
-	 * finders fall back to the customer's current entity context (customer
-	 * level for a customer-scoped attach). Required so an entity-scoped attach
-	 * transitions from the existing product on that same entity. */
 	internalEntityId?: string;
 }) => {
-	// Only main recurring products can trigger transitions
 	const isMainRecurring =
 		!attachProduct.is_add_on && !isOneOffProduct({ product: attachProduct });
 
@@ -54,7 +45,6 @@ export const setupAttachTransitionContext = ({
 		internalEntityId,
 	});
 
-	// Compute planTiming (upgrade = immediate, downgrade = end_of_cycle)
 	let planTiming: PlanTiming = "immediate";
 
 	if (currentCustomerProduct) {
@@ -70,12 +60,10 @@ export const setupAttachTransitionContext = ({
 		planTiming = isUpgrade ? "immediate" : "end_of_cycle";
 	}
 
-	// Override if plan_schedule param is provided
 	if (planScheduleOverride) {
 		planTiming = planScheduleOverride;
 	}
 
-	// An Autumn-run trial has no paid period or Stripe schedule to finish, so switching away is immediate.
 	if (isCustomerProductAutumnManagedTrial(currentCustomerProduct)) {
 		planTiming = "immediate";
 	}

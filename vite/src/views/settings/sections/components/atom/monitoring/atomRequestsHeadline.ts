@@ -3,23 +3,19 @@ import { type AtomMetricsChartData, requestsOf } from "./atomMetricsChartData";
 const MINUTE_MS = 60_000;
 const HOUR_MS = 60 * MINUTE_MS;
 const DAY_MS = 24 * HOUR_MS;
-/** The newest reading's window; it covers this long after its `at`. */
 const WINDOW_MS = 10_000;
 
-/** The last minute's req/s, how long Atom has had none, or nothing when it reported nothing at all. */
 export type AtomRequestsHeadline =
 	| { kind: "rate"; requests: number; answeredShare: number }
 	| { kind: "idle"; idleFor: string }
 	| { kind: "silent" };
 
-/** e.g. "3 min", "5h", "2d" */
 const formatIdleFor = (ms: number) => {
 	if (ms < HOUR_MS) return `${Math.max(1, Math.floor(ms / MINUTE_MS))} min`;
 	if (ms < 2 * DAY_MS) return `${Math.floor(ms / HOUR_MS)}h`;
 	return `${Math.floor(ms / DAY_MS)}d`;
 };
 
-/** Read from the last minute, so one quiet or still-filling period never shows as a bare 0 beside a busy chart. */
 export const atomRequestsHeadline = (
 	chartData: AtomMetricsChartData | null,
 ): AtomRequestsHeadline => {

@@ -1,18 +1,3 @@
-/**
- * atmn reset — emptying a sandbox and building it back from the config.
- *
- * Runs through the real CLI, because the point of the command is that it acts
- * on whatever the resolved key belongs to: the pin `sandbox create --use`
- * writes is what decides which catalog is wiped, and nothing in the request
- * body says so.
- *
- * Contract:
- *   R1  a plain `reset` is the gate: it prints what would go and sends nothing
- *   R2  `reset --yes` leaves the sandbox with no plans and no features
- *   R3  the org's own catalog is untouched — reset follows the key, not the org
- *   R4  pushing the same config again rebuilds what the reset took
- */
-
 import { expect, test } from "bun:test";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -92,8 +77,6 @@ test(`${chalk.yellowBright("atmn reset: wipe a sandbox, then push it back")}`, a
 			] }`,
 	});
 	const { cwd, secretKey, baseUrl } = scenario;
-	// The CLI writes to the first .env on its search path; without one here that
-	// could be a file outside the scenario.
 	scenario.writeFile(".env", "");
 
 	const atmn = (args: string[]): Promise<string> =>
@@ -117,14 +100,12 @@ test(`${chalk.yellowBright("atmn reset: wipe a sandbox, then push it back")}`, a
 		await scenario.push();
 		expect(await liveCatalog({ client: sandboxClient })).toEqual(populated);
 
-		// R1 — nothing is sent without --yes.
 		const gated = await atmn(["reset"]);
 		expect(gated).toContain(
 			`This wipes sandbox ${sandboxName} (${sandboxId}): every customer, plan, feature and migration draft. Keys and settings stay. Re-run with --yes to wipe.`,
 		);
 		expect(await liveCatalog({ client: sandboxClient })).toEqual(populated);
 
-		// R2 — the wipe takes the whole catalog.
 		const wiped = await atmn(["reset", "--yes"]);
 		expect(wiped).toContain(
 			`Wiped sandbox ${sandboxName} (${sandboxId}). Run atmn push to rebuild it from your config.`,
@@ -134,13 +115,11 @@ test(`${chalk.yellowBright("atmn reset: wipe a sandbox, then push it back")}`, a
 			plans: [],
 		});
 
-		// R3 — the reset followed the key, not the org behind it.
 		expect(await liveCatalog({ client: scenario.client })).toEqual({
 			features: [],
 			plans: [],
 		});
 
-		// R4 — the config is the source of truth; pushing it puts everything back.
 		await scenario.push();
 		expect(await liveCatalog({ client: sandboxClient })).toEqual(populated);
 	} finally {

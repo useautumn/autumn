@@ -1,8 +1,6 @@
-// Schemas
 import * as schemas from "./db/schema";
 
 export * from "./api/apiUtils";
-// Billing common schemas
 export * from "./api/billing/common/attachPreviewResponse";
 export * from "./api/billing/common/billingBehavior";
 export * from "./api/billing/common/billingPreviewChange";
@@ -19,11 +17,9 @@ export * from "./api/billing/openBillingPortal/openBillingPortalParamsV1";
 export * from "./api/billing/openBillingPortal/openBillingPortalResponse";
 export * from "./api/billing/updateSubscription/previewUpdateSubscriptionResponse";
 export * from "./api/billingControls/index";
-// BYOC (infra in the org's own cloud)
 export * from "./api/byoc/atomTelemetryModels";
 export * from "./api/byoc/byocCacheModels";
 export * from "./api/catalogV2/planUpdate/params/catalogPlanItemIdentity";
-// Cursor pagination utilities
 export * from "./api/common/cursorPaginationSchemas";
 export * from "./api/common/paginationConfigs";
 export * from "./api/common/responseFilter/stripInternalFields";
@@ -32,38 +28,26 @@ export * from "./api/customers/components/customerExpand/customerExpand";
 export * from "./api/entities/crud/createEntityParams";
 export * from "./api/entities/crud/getEntityParams";
 export * from "./api/entities/crud/listEntitiesParamsV2_3";
-// Customer keys (per-customer JWTs)
 export * from "./api/keys/keysModels";
-// Migrations v2 (operations + entity schemas)
 export * from "./api/migrations/filters/index";
 export * from "./api/migrations/list/migrationListSummary";
 export * from "./api/migrations/operations/index";
 export * from "./api/migrations/webhooks/migrationWebhookEvents";
-// API MODELS
 export * from "./api/models";
 export * from "./api/orgs/onboardingStatusModels";
-// Sandboxes (isolated sub-orgs)
 export * from "./api/sandboxes/sandboxesModels";
-// API VERSIONING SYSTEM
 export * from "./api/versionUtils/versionUtils";
-// Webhook Schemas + WebhookEventType enum
 export * from "./api/webhooks/index";
-// Auth Models
 export * from "./db/auth-schema";
-// DuckDB / MotherDuck cache schemas
 export * from "./duckdb/ceBalancesCacheTable";
 export * from "./enums/APIVersion";
 export * from "./enums/AttachErrCode";
 export * from "./enums/ErrCode";
 export * from "./enums/LoggerAction";
-// ENUMS
 export * from "./enums/SuccessCode";
-// Internal API (checkout app, dashboard)
 export * from "./internal/index";
-// ANALYTICS MODELS
 export * from "./models/analyticsModels/actionEnums";
 export * from "./models/analyticsModels/actionTable";
-// Attach Models
 export * from "./models/attachModels/attachEnums/AttachBranch";
 export * from "./models/attachModels/attachEnums/AttachConfig";
 export * from "./models/attachModels/attachEnums/AttachFunction";
@@ -75,11 +59,9 @@ export * from "./models/chatModels/chatTable";
 export * from "./models/chatModels/chatTrustedBots";
 export * from "./models/chatResultModels/chatResultFeature";
 export * from "./models/chatResultModels/chatResultFeature";
-// 4. Chat Result Models
 export * from "./models/chatResultModels/chatResultTable";
 export * from "./models/checkModels/checkPreviewModels";
 export * from "./models/cusModels/billingControls/autoTopupLimitTable";
-// 8. Customer Models
 export * from "./models/cusModels/billingControls/customerBillingControls";
 export * from "./models/cusModels/billingControls/purchaseLimitInterval";
 export * from "./models/cusModels/billingControls/usageLimit";
@@ -97,12 +79,9 @@ export * from "./models/licenseModels/licenseTable";
 export * from "./models/pooledBalanceModels/pooledBalanceIdentity";
 export * from "./models/pooledBalanceModels/pooledBalanceModels";
 export * from "./models/pooledBalanceModels/pooledBalanceTable";
-// Processor Models
 export * from "./models/processorModels/processorModels";
 export * from "./utils/chatState";
 export { schemas };
-
-// Cus response
 
 export * from "./models/balanceLockModels/balanceLockTable";
 export * from "./models/cusModels/cusTable";
@@ -130,13 +109,11 @@ export * from "./models/cusProductModels/cusEntModels/usageWindowTable";
 export * from "./models/cusProductModels/cusPriceModels/cusPriceModels";
 export * from "./models/cusProductModels/cusPriceModels/cusPriceTable";
 export * from "./models/cusProductModels/cusProductEnums";
-// 7. Cus Product Models
 export * from "./models/cusProductModels/cusProductModels";
 export * from "./models/cusProductModels/cusProductTable";
 export * from "./models/devModels/apiKeyModels";
 export * from "./models/devModels/apiKeyTable";
 export * from "./models/devModels/customerJwtFamilyTable";
-// 5. Others: events, apiKeys
 export * from "./models/eventModels/eventModels";
 export * from "./models/eventModels/eventTable";
 export * from "./models/eventModels/eventTableNeon";
@@ -148,8 +125,6 @@ export * from "./models/featureModels/featureModels";
 export * from "./models/meteringLogModels/partitionProgressTable";
 export * from "./models/meteringLogModels/subjectSnapshotTable";
 
-// export * from "./models/featureModels/featureResModels";
-
 export * from "./api/features/previewUpdateFeature/previewUpdateFeatureResponse";
 export * from "./api/products/components/billingMethod";
 export type { CreatePlanParamsV2Input } from "./api/products/crud/createPlanParamsV1";
@@ -157,20 +132,13 @@ export type { CreatePlanItemParamsV1Input } from "./api/products/items/crud/crea
 export * from "./api/products/items/previousVersions/apiPlanItemV0";
 export * from "./api/products/items/utils/display";
 export * from "./api/products/utils/display";
-// AI Models
 export * from "./models/aiModels/modelsDevTypes";
-// Attach Function Response
 export * from "./models/attachModels/attachFunctionResponse";
-// Billing Models (all from single index)
 export * from "./models/billingModels/index";
-// Checkout Models
 export * from "./models/checkouts/index";
-// Billing Controls
 export * from "./models/cusModels/index";
 export * from "./models/cusProductModels/cusPriceModels/customerPriceWithCustomerProduct";
-// 2. Feature Models
 export * from "./models/featureModels/featureTable";
-// Gen Models
 export * from "./models/genModels/genEnums";
 export * from "./models/genModels/processorSchemas";
 export * from "./models/genModels/routeGroups";
@@ -191,7 +159,6 @@ export * from "./models/orgModels/atomDeploymentTable";
 export * from "./models/orgModels/byocCacheMachines";
 export * from "./models/orgModels/byocCacheRegions";
 export * from "./models/orgModels/byocConfig";
-// 1. Org Models
 export * from "./models/orgModels/customButton";
 export * from "./models/orgModels/frontendOrg";
 export * from "./models/orgModels/frontendOrg";
@@ -204,18 +171,13 @@ export * from "./models/orgModels/sandboxName";
 export * from "./models/orgModels/transitionRules/transitionRules";
 export * from "./models/orgModels/transitionRules/transitionRulesTable";
 export * from "./models/otherModels/metadataTable";
-// Duration Types
 export * from "./models/productModels/durationTypes/rolloverExpiryDurationType";
 export * from "./models/productModels/entModels/entModels";
-// 3. Entitlement Models
 export * from "./models/productModels/entModels/entTable";
-// 4. Free Trial Models
 export * from "./models/productModels/freeTrialModels/freeTrialEnums";
 export * from "./models/productModels/freeTrialModels/freeTrialModels";
 export * from "./models/productModels/freeTrialModels/freeTrialTable";
-// Interval Models
 export * from "./models/productModels/intervals/billingInterval";
-// Intervals
 export * from "./models/productModels/intervals/billingInterval";
 export * from "./models/productModels/intervals/entitlementInterval";
 export * from "./models/productModels/intervals/entitlementInterval";
@@ -225,12 +187,10 @@ export * from "./models/productModels/intervals/resetInterval";
 export * from "./models/productModels/intervals/resetInterval";
 export * from "./models/productModels/priceModels/priceConfig/buildPriceCurrencies";
 export * from "./models/productModels/priceModels/priceConfig/fixedPriceConfig";
-// Price Models
 export * from "./models/productModels/priceModels/priceConfig/fixedPriceConfig";
 export * from "./models/productModels/priceModels/priceConfig/priceCurrencyView";
 export * from "./models/productModels/priceModels/priceConfig/usagePriceConfig";
 export * from "./models/productModels/priceModels/priceConfig/usagePriceConfig";
-// 4. Price Models
 export * from "./models/productModels/priceModels/priceEnums";
 export * from "./models/productModels/priceModels/priceEnums";
 export * from "./models/productModels/priceModels/priceModels";
@@ -239,7 +199,6 @@ export * from "./models/productModels/priceModels/priceTable";
 export * from "./models/productModels/priceModels/priceTable";
 export * from "./models/productModels/productAliasRelations";
 export * from "./models/productModels/productAliasTable";
-// 5. Product Models
 export * from "./models/productModels/productConfig/productConfig";
 export * from "./models/productModels/productEnums";
 export * from "./models/productModels/productMetadata";
@@ -251,15 +210,12 @@ export * from "./models/productV2Models/productItemModels/featurePriceItem";
 export * from "./models/productV2Models/productItemModels/priceItem";
 export * from "./models/productV2Models/productItemModels/productItemEnums";
 export * from "./models/productV2Models/productItemModels/productItemModels";
-// 6. Product V2 Models
 export * from "./models/productV2Models/productV2Models";
-// 7. Product V3 Models
 export * from "./models/productV3Models/productV3Response";
 export * from "./models/rewardModels/referralModels/referralCodeTable";
 export * from "./models/rewardModels/referralModels/referralModels";
 export * from "./models/rewardModels/referralModels/rewardRedemptionTable";
 export * from "./models/rewardModels/rewardModels/rewardEnums";
-// Reward Models
 export * from "./models/rewardModels/rewardModels/rewardModels";
 export * from "./models/rewardModels/rewardModels/rewardRelations";
 export * from "./models/rewardModels/rewardModels/rewardResponseModels";
@@ -271,7 +227,6 @@ export * from "./models/scheduleModels/scheduleTable";
 export * from "./models/subModels/subModels";
 export * from "./models/subModels/subTable";
 export * from "./types";
-// Agent Types (for pricing agent AI)
 export * from "./utils/agentTypes";
 export * from "./utils/auth/autumnOAuthScopes";
 export * from "./utils/auth/oauthScopeUtils";
@@ -279,7 +234,6 @@ export * from "./utils/authAccessControl";
 export * from "./utils/balanceAllocationUtils/allocationMath";
 export * from "./utils/billingControlUtils/index";
 export * from "./utils/billingUtils/index";
-// Checkout Utils
 export * from "./utils/checkoutUtils/index";
 export * from "./utils/common/formatUtils/formatAmount";
 export * from "./utils/common/index";
@@ -320,7 +274,6 @@ export * from "./utils/rewardUtils/promoCodeUtils";
 export * from "./utils/rewardUtils/rewardFilterUtils";
 export * from "./utils/rewardUtils/rewardMigrationUtils";
 export * from "./utils/scopeDefinitions";
-// Utils
 export * from "./utils/usageWindowUtils/buildUsageWindowKey";
 export * from "./utils/usageWindowUtils/classifyUsageWindow/isSameUsageWindow";
 export * from "./utils/usageWindowUtils/classifyUsageWindow/usageWindowMatchesLimit";

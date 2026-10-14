@@ -23,10 +23,6 @@ interface UpdateCreditSystemSheetProps {
 	onSuccess?: (oldId: string, newId: string) => void;
 }
 
-/**
- * The form is keyed on the credit system being edited, so every open starts
- * from that system's saved values rather than a form another one touched.
- */
 function UpdateCreditSystemForm({
 	creditSystem,
 	setOpen,

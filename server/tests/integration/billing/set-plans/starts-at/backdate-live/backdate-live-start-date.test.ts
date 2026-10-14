@@ -1,15 +1,3 @@
-/**
- * set_plans with a past phases[0].starts_at over a healthy live subscription, only moving the start:
- * - the live subscription is cancelled with no final invoice and recreated from the backdated date,
- *   anchored on its period end, so the renewal date and price don't move;
- * - nothing is charged now, the time before the old start is never billed, and the period the
- *   old subscription paid is billed exactly once;
- * - the plan stays Active on the recreated subscription while the old one's webhooks land;
- * - usage tracked before the backdate is kept, included usage isn't granted again, and the
- *   balance still resets on the old renewal date;
- * - the preview warns about the recreate and lists both the cancel and the create.
- */
-
 import { expect, test } from "bun:test";
 import {
 	CusProductStatus,

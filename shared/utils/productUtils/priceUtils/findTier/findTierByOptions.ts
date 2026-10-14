@@ -6,19 +6,6 @@ import type {
 import type { Price } from "@models/productModels/priceModels/priceModels";
 import { findTierByQuantity } from "./findTierByQuantity";
 
-/**
- * Find the volume-tier the customer is currently on, given a prepaid `Price`
- * and the matching `FeatureOptions` entry from `cusProduct.options`.
- *
- * Convention (Autumn prepaid):
- *  - `options.quantity` is in PACKS and EXCLUDES the entitlement allowance.
- *  - Tier `to` boundaries on the price are paid-only — they also EXCLUDE the
- *    allowance.
- *  - Lookup quantity = `options.quantity * billing_units` (paid credits).
- *
- * Returns the matching tier (or undefined when no tier covers the quantity —
- * shouldn't happen if the tier list ends with `Infinite`).
- */
 export const findTierByOptions = ({
 	price,
 	options,

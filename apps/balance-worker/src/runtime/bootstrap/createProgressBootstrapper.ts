@@ -7,10 +7,6 @@ import type {
 	PartitionBootstrapResult,
 } from "./types/partitionBootstrap.js";
 
-/**
- * Postgres holds the bookmark, so there is nothing to restore: read it, or start at the log end
- * when there is none (earlier records belong to another backend).
- */
 export function createProgressBootstrapper({
 	stateStore,
 }: {

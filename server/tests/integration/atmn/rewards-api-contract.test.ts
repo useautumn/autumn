@@ -1,41 +1,3 @@
-/**
- * The reward lane as the API contract, not as atmn drives it.
- *
- * atmn always sends a complete, self-consistent, fully-scoped document, so the
- * push-rewards e2e can never reach these paths. Each case here is a shape only
- * a raw API caller (or a legacy org) produces.
- *
- * Red (before the fix):
- *  - S1  catalogV2.get returns rewards to a key without rewards:read
- *  - S2  a reward removal linked by an unstated program fails inside execute,
- *        after features and plans have already written
- *  - S3  repointing a program to a new reward deletes the old one first and 4xx's
- *  - S4  a coupon naming a plan the catalog lacks fails inside execute
- *  - S5  a created reward reports no stable id, so push cannot pin its fixture
- *  - S6  a rewards-only payload rejects a coupon naming a plan the org holds
- *  - S7  a coupon naming a missing plan is rejected only in the reward phase,
- *        after the plan rename in the same payload has committed
- *  - S8  a coupon naming a plan the same payload renames or removes passes the
- *        errors phase, because the lookup behind it reads pre-change state
- *  - S9  a payload may claim the id of a hidden legacy referral program
- *  - S10 replacing a reward while keeping its promo code fails, because the
- *        replacement is created before the row that still owns the code goes
- *
- * Green (after):
- *  - S1  403 before any reward row is read
- *  - S2  400 in the errors phase, nothing written
- *  - S3  the program is repointed, then the old reward removed
- *  - S4  400 in the errors phase, nothing written
- *  - S5  the applied result carries the id the row received
- *  - S6  a plan the payload leaves untouched still counts as present
- *  - S7  refused in the errors phase, so the rename does not land
- *  - S8  an id this payload vacates is refused before the plan phase, so
- *        neither the rename nor the removal lands; the id a rename lands on
- *        still resolves
- *  - S9  409, the same answer a hidden reward's id gets
- *  - S10 the unlinked removal frees the code before the create needs it
- */
-
 import { expect, test } from "bun:test";
 import {
 	AppEnv,
@@ -56,7 +18,6 @@ import { generateId } from "@/utils/genUtils.js";
 import { createClient } from "../../../../packages/atmn/src/generated/client";
 import { uniqueTestId } from "../catalog-v2/utils/uniqueTestId.js";
 
-/** A key carrying exactly the scopes named, so the gate can be observed. */
 const seedScopedKey = async ({
 	ctx,
 	scopes,
@@ -135,7 +96,6 @@ test.concurrent(
 				baseUrl: scenario.baseUrl,
 			});
 
-			// S1: rewards are reward-scoped data, wherever they are served from.
 			await expect(narrowed.get({})).rejects.toThrow(/scope/i);
 		} finally {
 			scenario.cleanup();
@@ -170,8 +130,6 @@ test.concurrent(
 			};
 			await scenario.client.update(base as never);
 
-			// S2: the payload speaks for rewards but not programs, so the omission
-			// sweep would delete a reward the untouched program still links.
 			await expect(
 				scenario.client.update({
 					plans: base.plans,
@@ -180,8 +138,6 @@ test.concurrent(
 				} as never),
 			).rejects.toThrow(refer);
 
-			// The refusal came before any write: the plan rename in the same
-			// payload did not land.
 			await expect(
 				scenario.client.update({
 					plans: [{ plan_id: pro, new_plan_id: renamedPlan, name: "Pro" }],
@@ -192,8 +148,6 @@ test.concurrent(
 			const afterFailure = await scenario.client.get({});
 			expect(afterFailure.plans.map((plan) => plan.id)).toContain(pro);
 
-			// S4: a coupon naming a plan the catalog does not have is refused in
-			// the errors phase, not inside the reward write.
 			await expect(
 				scenario.client.update({
 					...base,
@@ -201,8 +155,6 @@ test.concurrent(
 				} as never),
 			).rejects.toThrow(ghostPlan);
 
-			// S6: a payload that never mentions plans leaves them untouched, so a
-			// coupon may still name one the org holds.
 			const partial = await scenario.client.update({
 				rewards: [
 					couponParams({ id: sale, planIds: [pro] }),
@@ -211,8 +163,6 @@ test.concurrent(
 				referral_programs: base.referral_programs,
 			} as never);
 
-			// S5: a created row reports the stable id it received, which is what
-			// pins the fixture on the next push.
 			const created = (partial.results.rewards ?? []).find(
 				(applied) => applied.id === freshSale,
 			);
@@ -220,9 +170,6 @@ test.concurrent(
 			expect(typeof created?.internalId).toBe("string");
 			expect(created?.internalId?.length ?? 0).toBeGreaterThan(0);
 
-			// S7: a bad plan reference is caught before the rest of the payload
-			// runs. The reward writer rejects it too, but only after the rename
-			// beside it has already committed.
 			const ghostCoupon = uniqueTestId("atmn_ghost_coupon");
 			await expect(
 				scenario.client.update({
@@ -233,9 +180,6 @@ test.concurrent(
 			const afterGhost = await scenario.client.get({});
 			expect(afterGhost.plans.map((plan) => plan.id)).toContain(pro);
 
-			// S8: the plan the coupon names is the one this payload renames away.
-			// The database still holds the old id while the errors phase runs, so
-			// only the payload itself can say the reference is about to dangle.
 			await expect(
 				scenario.client.update({
 					plans: [{ plan_id: pro, new_plan_id: renamedPlan, name: "Pro" }],
@@ -245,8 +189,6 @@ test.concurrent(
 			const afterVacated = await scenario.client.get({});
 			expect(afterVacated.plans.map((plan) => plan.id)).toContain(pro);
 
-			// The id the rename lands on is the one that will exist, so the same
-			// payload pointed at it goes through.
 			await scenario.client.update({
 				plans: [{ plan_id: pro, new_plan_id: renamedPlan, name: "Pro" }],
 				rewards: [
@@ -256,9 +198,6 @@ test.concurrent(
 			const afterRename = await scenario.client.get({});
 			expect(afterRename.plans.map((plan) => plan.id)).toContain(renamedPlan);
 
-			// The same question for a removal: the row is still in the database
-			// while the errors phase runs, and the plan phase deletes it before
-			// the reward writer would ever look.
 			await expect(
 				scenario.client.update({
 					remove_plans: [{ plan_id: renamedPlan }],
@@ -304,8 +243,6 @@ test.concurrent(
 				skip_deletions: false,
 			} as never);
 
-			// S10: a promo code belongs to exactly one reward, so the row that
-			// owns it has to go before the replacement claims it.
 			await scenario.client.update({
 				rewards: [withCode({ id: second })],
 				skip_deletions: false,
@@ -345,9 +282,6 @@ test.concurrent(
 				skip_deletions: false,
 			} as never);
 
-			// S3: the program moves to a reward this same push creates, and the
-			// one it leaves behind is dropped. The old reward can only be deleted
-			// after the program stops pointing at it.
 			await scenario.client.update({
 				rewards: [couponParams({ id: newReward, planIds: null })],
 				referral_programs: [programParams({ id: refer, rewardId: newReward })],

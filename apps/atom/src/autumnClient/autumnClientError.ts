@@ -1,4 +1,3 @@
-/** Autumn answered, but not with success: its status, and the error code in its body when it gave one. */
 export class AutumnClientError extends Error {
 	readonly status: number;
 	readonly code: string | null;

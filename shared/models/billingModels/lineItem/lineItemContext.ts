@@ -23,15 +23,14 @@ export const LineItemContextSchema = z.object({
 	feature: FeatureSchema.optional(),
 
 	currency: z.string(),
-	billingPeriod: BillingPeriodSchema.optional(), // Full cycle period (for proration calculation)
-	effectivePeriod: BillingPeriodSchema.optional(), // Actual period being charged/refunded (for descriptions and Stripe)
+	billingPeriod: BillingPeriodSchema.optional(),
+	effectivePeriod: BillingPeriodSchema.optional(),
 	direction: z.enum(["charge", "refund"]),
 	now: z.number(),
 	billingTiming: z.enum(["in_arrear", "in_advance"]),
-	discountable: z.boolean().optional(), // If true, let Stripe auto-apply discounts to this line item
+	discountable: z.boolean().optional(),
 	backdate: LineItemBackdateSchema.optional(),
 
-	// Entity references (optional - not all line items have these)
 	entity: EntitySchema.optional(),
 	customerProduct: FullCusProductSchema.optional(),
 	customerPrice: FullCustomerPriceSchema.optional(),

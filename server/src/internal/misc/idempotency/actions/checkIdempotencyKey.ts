@@ -3,8 +3,6 @@ import { claimDynamoIdempotencyKey } from "@/external/aws/dynamodb/idempotencyKe
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { buildIdempotencyStorageKey } from "../idempotencyKeyUtils.js";
 
-/** Claims the key in DynamoDB: a duplicate 409s, an unavailable store fails
- *  open so an outage can't reject live traffic. */
 export const checkIdempotencyKey = async ({
 	ctx,
 	idempotencyKey,
@@ -12,7 +10,6 @@ export const checkIdempotencyKey = async ({
 }: {
 	ctx: AutumnContext;
 	idempotencyKey: string;
-	/** Org-configurable per route group — defaults to 24h in the store. */
 	ttlMs?: number;
 }): Promise<void> => {
 	const { logger } = ctx;

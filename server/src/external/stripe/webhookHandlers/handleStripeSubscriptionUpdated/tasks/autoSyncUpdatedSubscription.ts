@@ -42,7 +42,6 @@ const priceOrProductChanged = ({
 			currentItem.price.id !== previousItem.price.id ||
 			stripeProductId(currentItem.price.product) !==
 				stripeProductId(previousItem.price.product) ||
-			// Quantity-only changes matter too (e.g. prepaid add-on packs).
 			(currentItem.quantity ?? 1) !== (previousItem.quantity ?? 1)
 		);
 	});
@@ -98,7 +97,6 @@ export const autoSyncUpdatedSubscription = async ({
 		return;
 	}
 
-	// Pre-stamp schedules: Autumn already applied this phase (ended_at / activate).
 	if (subscriptionUpdatedContext.billingChangeTags.has("phase_changed")) {
 		logger.info(
 			`sub.updated auto-sync skipping ${stripeSubscription.id}: schedule phase already applied`,

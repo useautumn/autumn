@@ -70,9 +70,7 @@ export const API_PLAN_V1_EXAMPLE = {
 	metadata: {},
 };
 
-/** Core plan — no license/variant graph. Nested `license.plan` / `variant.plan` use this. */
 export const ApiPlanV1Schema = z.object({
-	// Identity
 	id: z.string().meta({
 		description: "Unique identifier for the plan.",
 	}),
@@ -92,7 +90,6 @@ export const ApiPlanV1Schema = z.object({
 			"Group identifier for organizing related plans. Plans in the same group are mutually exclusive.",
 	}),
 
-	// Flags
 	version: z.number().meta({
 		description:
 			"Version number of the plan. Incremented when plan configuration changes.",
@@ -114,7 +111,6 @@ export const ApiPlanV1Schema = z.object({
 			"If true, this plan is automatically attached when a customer is created. Used for free plans.",
 	}),
 
-	// Pricing
 	price: z
 		.object({
 			amount: z.number().meta({
@@ -165,7 +161,6 @@ export const ApiPlanV1Schema = z.object({
 			"Free trial configuration. If set, new customers can try this plan before being charged.",
 	}),
 
-	// Meta
 	created_at: z.number().meta({
 		description: "Unix timestamp (ms) when the plan was created.",
 	}),
@@ -188,7 +183,6 @@ export const ApiPlanV1Schema = z.object({
 	}),
 	customer_eligibility: CustomerEligibilitySchema.optional(),
 
-	// Variant identity — this plan as a variant of a base
 	base_variant_id: z.string().nullable().meta({
 		description:
 			"Deprecated. Use variant_details.base_plan_id instead. If this is a variant, the ID of the base plan it was created from.",
@@ -227,7 +221,6 @@ export const ApiPlanV1WithMeta = ApiPlanV1Schema.extend({
 	example: API_PLAN_V1_EXAMPLE,
 });
 
-/** ApiPlanV1 plus its license and variant edges. */
 export const ApiPlanExpandedV1Schema = ApiPlanV1Schema.extend({
 	licenses: planLicensesField,
 	variants: z.array(ApiPlanVariantV1Schema).optional().meta({

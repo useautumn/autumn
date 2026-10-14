@@ -12,12 +12,10 @@ const GATE_LOG_WAIT_MS_THRESHOLD = 50;
 const LIMITER_CACHE_MAX = 5000;
 const LIMITER_CACHE_TTL_MS = 30 * 60 * 1000;
 
-// Seed keeps cold processes from over-rejecting before real samples arrive.
 const SERVICE_TIME_EWMA_SEED_MS = 100;
 const SERVICE_TIME_EWMA_ALPHA = 0.2;
 let globalEwmaServiceMs = SERVICE_TIME_EWMA_SEED_MS;
 
-// Per-org-limiter EWMAs so one tenant's slow hydrations don't shed other tenants.
 const perOrgEwmaServiceMs = new LRUCache<string, { valueMs: number }>({
 	max: LIMITER_CACHE_MAX,
 	ttl: LIMITER_CACHE_TTL_MS,
@@ -185,8 +183,6 @@ export const isFullSubjectGateRejection = (error: unknown): boolean => {
 	);
 };
 
-// Configured caps are cluster-wide; each process enforces an even share.
-// Floor (not round) so cluster-wide capacity never EXCEEDS the configured target.
 export const toPerProcessLimit = (
 	clusterWideTarget: number,
 	fleetProcessCount: number,
@@ -254,8 +250,6 @@ export const runWithFullSubjectGate = async <T>({
 		rejectOverloaded({ reason: "per_org_queue_full", labels });
 	}
 
-	// Fast-shed: a queue predicted (via EWMA service time) not to drain within
-	// max_wait_ms would only hold the request until the dequeue-time 429.
 	const orgGateKey = buildOrgGateKey({ lane, orgId, env });
 	const gateEwmaMs =
 		perOrgEwmaServiceMs.get(orgGateKey)?.valueMs ?? globalEwmaServiceMs;
@@ -291,7 +285,6 @@ export const runWithFullSubjectGate = async <T>({
 			throw error;
 		} finally {
 			const serviceMs = Date.now() - serviceStartedAt;
-			// Cold orgs seed from the global EWMA, then diverge on their own samples.
 			const orgEwma = perOrgEwmaServiceMs.get(orgGateKey) ?? {
 				valueMs: globalEwmaServiceMs,
 			};

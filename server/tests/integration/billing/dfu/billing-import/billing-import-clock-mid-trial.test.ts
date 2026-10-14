@@ -1,9 +1,3 @@
-/**
- * dfu.flash (test clock) — a sub sits mid-trial at real now. The imported plan
- * must hydrate trial_ends_at from the sub's real (future) trial_end and anchor
- * its cycle to that trial end.
- */
-
 import { expect, test } from "bun:test";
 import { CusProductStatus } from "@autumn/shared";
 import {
@@ -35,8 +29,6 @@ test.concurrent(
 			actions: [],
 		});
 
-		// Freeze 7 days back, 14-day trial → trial_end ≈ 7 days future. Advance to
-		// real now so the sub is genuinely mid-trial at import time.
 		const frozenTime = Date.now() - (THIRTY_DAYS_MS / 30) * 7;
 		const { customerId: stripeCustomerId, testClockId } =
 			await createRealStripeCustomerOnClock(ctx, {
@@ -81,8 +73,6 @@ test.concurrent(
 			productId: pro.id,
 		});
 
-		// Autumn has no distinct "trialing" cusProduct status; a Stripe trialing sub
-		// maps to Active, and the trial is carried by a future trial_ends_at.
 		expect(cusProduct?.status).toBe(CusProductStatus.Active);
 		expect(cusProduct?.trial_ends_at).toBe(trialEndMs);
 		expect(cusProduct?.trial_ends_at).toBeGreaterThan(Date.now());

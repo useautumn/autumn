@@ -36,11 +36,6 @@ const speech = (label: string, text: string, labelColor: typeof chalk.blue) => {
 	return block;
 };
 
-/**
- * One self-contained block per completed turn, written atomically so
- * concurrent arms never interleave mid-block. Conversation-shaped: user →
- * tools → agent → verdict, with color as the visual cue.
- */
 export const renderTurnBlock = ({
 	arm,
 	authSource,
@@ -108,7 +103,6 @@ export const renderTurnBlock = ({
 	return block;
 };
 
-/** Closing line for an arm's block, colored like its header. */
 export const renderRunFooter = ({
 	arm,
 	turns,

@@ -19,7 +19,6 @@ import { runsRoutes } from "./routes/runs.ts";
 import { webhooksRoutes } from "./routes/webhooks.ts";
 import type { TwdHono } from "./types/twdHono.ts";
 
-/** The one API, mounted under /api for the dashboard and every client. */
 const createApi = () =>
 	new Hono<TwdHono>()
 		.get("/health", (c) => c.json({ ok: true }))
@@ -39,10 +38,6 @@ const createApi = () =>
 		.route("/", qaRoutes)
 		.route("/", liveRoutes);
 
-/**
- * /api/* is the API. Fixed external URLs (OAuth callback, Stripe/GitHub webhooks, MCP, /ws)
- * also live at the root; every other GET serves the dashboard SPA.
- */
 export const createApp = () =>
 	new Hono<TwdHono>()
 		.use("*", corsMiddleware())

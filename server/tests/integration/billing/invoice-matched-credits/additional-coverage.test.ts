@@ -1,11 +1,3 @@
-/**
- * Invoice-Matched Proration Credits — Additional Coverage
- *
- * 1. amount-off coupon cancel: refund based on discounted invoice
- * 2. cancel after partial refund (upgrade then cancel): second refund nets the first
- * 3. create-schedule with discount: immediate phase credit from stored charge
- */
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3, AttachPreviewResponse } from "@autumn/shared";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
@@ -22,10 +14,6 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { createStripeCli } from "@/external/connect/createStripeCli";
 import { createAmountCoupon } from "../utils/discounts/discountTestUtils";
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 1: Amount-off coupon cancel — refund based on discounted invoice ($15)
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(
 	`${chalk.yellowBright("invoice-matched-credits additional 1: amount-off coupon cancel — refund based on discounted invoice")}`,
@@ -99,7 +87,6 @@ test.concurrent(
 
 		expect(preview.total).toBeLessThan(0);
 		expect(Math.abs(preview.total)).toBeLessThan(10);
-		// Stored $15 renewal charge, with 4d invoice finalization + 15d elapsed.
 		expect(Math.abs(preview.total)).toBeGreaterThan(4.5);
 
 		await autumnV1.subscriptions.update(cancelParams);
@@ -119,10 +106,6 @@ test.concurrent(
 	},
 	300_000,
 );
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 2: Cancel after partial refund (upgrade then cancel) — second refund nets the first
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(
 	`${chalk.yellowBright("invoice-matched-credits additional 2: cancel after upgrade — second refund nets the first")}`,
@@ -190,10 +173,6 @@ test.concurrent(
 	},
 	300_000,
 );
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 3: Scheduled upgrade with discount — immediate phase credit from stored charge
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(
 	`${chalk.yellowBright("invoice-matched-credits additional 3: scheduled upgrade with discount — credit reflects discounted charge")}`,
@@ -277,7 +256,6 @@ test.concurrent(
 
 		for (const creditLine of creditLines) {
 			const discounts = creditLine.discounts ?? [];
-			// Stored coupon is metadata; it is not applied again to the net credit.
 			expect(discounts.length).toBe(1);
 		}
 

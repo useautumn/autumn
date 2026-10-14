@@ -1,15 +1,3 @@
-/**
- * Attach Entity-Level Product Tests (Attach V2)
- *
- * Tests for attaching products to entities (sub-accounts) rather than customers.
- * Entities have their own subscriptions and balances.
- *
- * Key behaviors:
- * - Products attached to entities are independent from customer-level products
- * - Each entity can have its own subscription
- * - Mid-cycle attaches are prorated
- */
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3, ApiEntityV0 } from "@autumn/shared";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
@@ -21,17 +9,6 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 4: Attach pro annual to entity
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Attach annual product to entity
- *
- * Expected Result:
- * - Correct billing interval (annual)
- */
 test.concurrent(
 	`${chalk.yellowBright("new-plan: attach pro annual to entity")}`,
 	async () => {
@@ -53,7 +30,6 @@ test.concurrent(
 			actions: [],
 		});
 
-		// 1. Preview attach to entity - $200 (annual)
 		const preview = await autumnV1.billing.previewAttach({
 			customer_id: customerId,
 			product_id: proAnnual.id,
@@ -61,7 +37,6 @@ test.concurrent(
 		});
 		expect(preview.total).toBe(200);
 
-		// 2. Attach to entity
 		await autumnV1.billing.attach({
 			customer_id: customerId,
 			product_id: proAnnual.id,
@@ -69,7 +44,6 @@ test.concurrent(
 			redirect_mode: "if_required",
 		});
 
-		// Get entity and verify product
 		const entity = await autumnV1.entities.get<ApiEntityV0>(
 			customerId,
 			entities[0].id,
@@ -80,7 +54,6 @@ test.concurrent(
 			productId: proAnnual.id,
 		});
 
-		// Verify messages feature
 		expectCustomerFeatureCorrect({
 			customer: entity,
 			featureId: TestFeature.Messages,
@@ -89,7 +62,6 @@ test.concurrent(
 			usage: 0,
 		});
 
-		// Get customer and verify invoice matches preview total: $200
 		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
 		await expectCustomerInvoiceCorrect({

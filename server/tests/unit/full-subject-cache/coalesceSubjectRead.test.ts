@@ -130,8 +130,6 @@ describe("coalescedSubjectRead", () => {
 		const p1 = coalescedSubjectRead({ key: "k1", singleflight: true, fetch });
 		const p2 = coalescedSubjectRead({ key: "k1", singleflight: true, fetch });
 
-		// allSettled attaches handlers before the reject, avoiding both the
-		// unhandled-rejection window and bun's expect().rejects pending-drain.
 		const results = Promise.allSettled([p1, p2]);
 		flight.reject(new Error("redis down"));
 		const [r1, r2] = await results;

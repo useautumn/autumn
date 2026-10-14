@@ -25,7 +25,6 @@ afterAll(async () => {
 	await webhook?.cleanup();
 });
 
-// ── B5: limit removed after the alert exists → dormant ──────────────────────
 test(`${chalk.yellowBright("ul-alert4: removing the cap leaves the alert dormant")}`, async () => {
 	const customerId = "ul-alert-removed-1";
 	await setupCustomer({ customerId, planId: "ul-alert-removed" });

@@ -23,7 +23,6 @@ export const applyPooledBalanceTransitions = async ({
 		(eventContext.fullCustomer.pooled_customer_entitlements?.length ?? 0) > 0;
 	const hasTransitions =
 		outgoingCustomerProducts.length > 0 || incomingCustomerProducts.length > 0;
-	// Nothing to reset or move; running anyway would flush balances a deduction may still be writing.
 	if (!hasPools && !hasTransitions) return;
 
 	eventContext.results.pooledBalances =
@@ -36,7 +35,6 @@ export const applyPooledBalanceTransitions = async ({
 		});
 
 	if (!eventContext.fullCustomer.balance_allocations) return;
-	// Pools moved after the plans re-fit, so shares re-fit against the final pot; the batch event carries the tag.
 	const { adjusted } = await refreshAllocationScaleAfterWrite({
 		ctx,
 		customerId:

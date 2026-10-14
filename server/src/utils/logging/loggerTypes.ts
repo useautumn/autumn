@@ -1,6 +1,5 @@
 import type { AppEnv, AuthType } from "@autumn/shared";
 
-/** Request-level metadata - emits as req.* fields. */
 export type LogRequestContext = {
 	id: string;
 	method: string;
@@ -14,18 +13,15 @@ export type LogRequestContext = {
 
 	region?: string;
 
-	// New fields
 	query: Record<string, string>;
 	body: unknown;
 
 	name: string;
-	/** `name` with the matched route template, so per-id paths group as one operation. */
 	route?: string;
 };
 
 export type InternalLogRequestContext = Omit<LogRequestContext, "body">;
 
-/** App context - emits as context.* fields. */
 export type LogAppContext = {
 	org_id: string;
 	org_slug: string;
@@ -44,14 +40,12 @@ export type LogAppContext = {
 	balance_worker_rollout_enabled?: boolean;
 };
 
-/** Stripe webhook event context */
 export type LogStripeEventContext = {
 	id: string;
 	type: string;
 	object_id: string;
 };
 
-/** RevenueCat webhook event context */
 export type LogRevenueCatEventContext = {
 	id?: string;
 	type?: string;
@@ -62,7 +56,6 @@ export type LogRevenueCatEventContext = {
 	transferred_to?: string[];
 };
 
-/** Vercel webhook event context */
 export type LogVercelEventContext = {
 	id?: string;
 	type?: string;
@@ -72,21 +65,18 @@ export type LogVercelEventContext = {
 	resource_id?: string;
 };
 
-/** Background worker context */
 export type LogWorkflowContext = {
 	id: string;
 	payload: unknown;
-	name: string; // workflow / job name
+	name: string;
 };
 
-/** trigger.dev run context — goes under context.trigger */
 export type LogTriggerContext = {
 	run_id: string;
 	task_id: string;
 	attempt_number?: number;
 };
 
-/** Redis slow-command context - goes under context.redis.data (map field) */
 export type LogRedisData = {
 	operation: string;
 	duration_ms: number;

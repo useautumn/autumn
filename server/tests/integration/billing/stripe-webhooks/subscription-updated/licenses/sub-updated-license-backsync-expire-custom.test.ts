@@ -1,6 +1,3 @@
-// customer.subscription.updated back-sync for license seat quantities: Stripe quantity
-// changes converge the single pool in place; entity seat usage survives every sync.
-
 import { test } from "bun:test";
 import {
 	type ApiEntityV2,
@@ -18,10 +15,6 @@ import {
 	updateSeatQuantity,
 	waitForPoolCounters,
 } from "./utils/subUpdatedLicenseBacksync";
-
-// ═══════════════════════════════════════════════════════════════════════════
-// CASE 3b: decrement to exactly usage after release → remaining 0, spare expired
-// ═══════════════════════════════════════════════════════════════════════════
 
 test(`${chalk.yellowBright("sub.updated license back-sync: decrement to usage expires leftover unused seats")}`, async () => {
 	const customerId = "sub-updated-license-backsync-surplus";
@@ -61,7 +54,6 @@ test(`${chalk.yellowBright("sub.updated license back-sync: decrement to usage ex
 
 	await updateSeatQuantity({ subscription, seatItem, quantity: 2 });
 
-	// paid 3 -> 2: granted 3 = 3 bound seats -> remaining 0, unused still 1.
 	await waitForPoolCounters({
 		autumnV2_3,
 		customerId,
@@ -79,11 +71,6 @@ test(`${chalk.yellowBright("sub.updated license back-sync: decrement to usage ex
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════════════
-// CASE 4: customized ($120/yr) license base price — quantity syncs converge
-// the pool, keep the custom definition, preserve usage, expire spares
-// ═══════════════════════════════════════════════════════════════════════════
-
 const CUSTOM_SEAT_PRICE = 120;
 
 test(`${chalk.yellowBright("sub.updated license back-sync: quantity syncs on a customized license price keep definition and usage")}`, async () => {
@@ -96,7 +83,6 @@ test(`${chalk.yellowBright("sub.updated license back-sync: quantity syncs on a c
 			customSeatPrice: { amount: CUSTOM_SEAT_PRICE, interval: "year" },
 		});
 
-	// Baseline: pool anchored to the is_custom $120/yr definition.
 	await expectLicenseDefinitionCorrect({
 		ctx,
 		customerId,
@@ -106,7 +92,6 @@ test(`${chalk.yellowBright("sub.updated license back-sync: quantity syncs on a c
 		basePrice: { amount: CUSTOM_SEAT_PRICE, interval: BillingInterval.Year },
 	});
 
-	// 4 bound seats, usage tracked on one, one released back as a spare.
 	await autumnV2_3.licenses.attach({
 		customer_id: customerId,
 		plan_id: devSeat.id,
@@ -131,7 +116,6 @@ test(`${chalk.yellowBright("sub.updated license back-sync: quantity syncs on a c
 		entity_ids: ["cstm-seat-4"],
 	});
 
-	// ── Increment 3 -> 5: pool converges, custom definition untouched ────
 	await updateSeatQuantity({ subscription, seatItem, quantity: 5 });
 	await waitForPoolCounters({
 		autumnV2_3,
@@ -149,7 +133,6 @@ test(`${chalk.yellowBright("sub.updated license back-sync: quantity syncs on a c
 		basePrice: { amount: CUSTOM_SEAT_PRICE, interval: BillingInterval.Year },
 	});
 
-	// ── Overflow decrement 5 -> 1: remaining -1, spare expired ───────────
 	await updateSeatQuantity({ subscription, seatItem, quantity: 1 });
 	await waitForPoolCounters({
 		autumnV2_3,
@@ -166,7 +149,6 @@ test(`${chalk.yellowBright("sub.updated license back-sync: quantity syncs on a c
 		status: CusProductStatus.Expired,
 	});
 
-	// ── Usage on bound seats survived both syncs ─────────────────────────
 	const seatEntity = await autumnV2_3.entities.get<ApiEntityV2>(
 		customerId,
 		"cstm-seat-1",

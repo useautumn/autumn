@@ -1,9 +1,5 @@
 #!/usr/bin/env bun
 
-/**
- * Local atmn runs from a gitignored workspace using the workspace CLI.
- */
-
 import { existsSync, readFileSync } from "node:fs";
 import { mkdir, readlink, symlink, unlink } from "node:fs/promises";
 import { join, resolve } from "node:path";
@@ -43,9 +39,7 @@ const worktreeServerUrl = (): string => {
 			"utf8",
 		).match(/^AUTUMN_TEST_BASE_URL=(.+)$/m);
 		if (match?.[1]?.trim()) return match[1].trim();
-	} catch {
-		// fall through
-	}
+	} catch {}
 	return "http://localhost:8080";
 };
 

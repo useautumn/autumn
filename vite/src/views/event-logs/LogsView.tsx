@@ -9,7 +9,6 @@ import { LogsVolumeStrip } from "./components/LogsVolumeStrip";
 import { useLogsEvents } from "./hooks/useLogsEvents";
 import { useLogsFilters } from "./hooks/useLogsFilters";
 
-/** Logs tab of the Usage page: every tracked event, newest first. */
 export const LogsView = () => {
 	const {
 		events,
@@ -21,7 +20,6 @@ export const LogsView = () => {
 	} = useLogsEvents();
 	const [selected, setSelected] = useState<ApiEventsListItem | null>(null);
 
-	// Drop the open event once the list it came from is filtered away.
 	const { filters } = useLogsFilters();
 	const filterKey = JSON.stringify([
 		filters.feature_id,

@@ -30,7 +30,6 @@ const postRpc = async ({
 	return { status: res.status, body: (await res.json()) as any };
 };
 
-/** Raw POST so tests see status codes, not AutumnInt's thrown errors. */
 export const postWebhooks = ({
 	route,
 	...rest
@@ -49,7 +48,6 @@ export const postSandboxes = ({
 	key?: string;
 }) => postRpc({ path: `sandboxes.${route}`, ...rest });
 
-/** Real Svix endpoints outlive the test run, so tests delete what they made. */
 export const deleteSvixEndpoints = async ({
 	appId,
 	ids,

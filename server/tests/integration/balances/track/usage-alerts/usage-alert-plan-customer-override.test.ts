@@ -1,30 +1,3 @@
-/**
- * Plan ↔ customer override (same scope) + customer ↔ entity additive.
- *
- * checkUsageAlerts:
- *   1. customer-scope pass — resolveCustomerScopeAlerts returns the customer's
- *      own alerts if it has ANY for the feature, otherwise falls back to the
- *      plan's alerts (resolved from the product). So a customer alert SHADOWS every plan alert
- *      for that feature. Measured against the customer-scope AGGREGATE balance
- *      (pooled + every per-entity pool), no entity_id.
- *   2. entity-scope pass — the entity's own alerts, measured against the
- *      entity's combined balance, with entity_id. Runs additionally.
- *
- * Setup: pooled messages 100 + per-entity messages 50, one entity.
- *   - customer-scope aggregate granted = 150 (100 pooled + 50 entity)
- *   - entity-scope combined granted     = 150 (50 own + 100 shared)
- *   - plan alert:     remaining 60 (seeded on the product fixture)
- *   - customer alert: remaining 50
- *   - entity alert:   remaining 40
- *
- * Track 110 on the ENTITY (entity own 50 drained, 60 spills to pooled):
- *   - aggregate 150 → 40, entity combined 150 → 40.
- *   - entity (40) FIRES (entity pass)        — combined crosses 40.
- *   - customer (50) FIRES (customer pass)    — aggregate crosses 50 → additive.
- *   - plan (60) does NOT fire                — shadowed by the customer alert,
- *     never evaluated, even though 40 would have crossed 60.
- */
-
 import { afterAll, beforeAll, expect, test } from "bun:test";
 import type { EntityBillingControls } from "@autumn/shared";
 import {
@@ -152,8 +125,6 @@ test(`${chalk.yellowBright("plan-cus-override: customer alert shadows plan alert
 		} as EntityBillingControls,
 	});
 
-	// Track 110 on the entity: entity own 50 drained, 60 spills to pooled.
-	// aggregate 150 → 40, entity combined 150 → 40.
 	await autumnV2_1.track({
 		customer_id: customerId,
 		entity_id: entityId,
@@ -161,7 +132,6 @@ test(`${chalk.yellowBright("plan-cus-override: customer alert shadows plan alert
 		value: 110,
 	});
 
-	// Entity alert (40) fires — entity pass, has entity_id.
 	const entityFired = await waitForWebhook<BalancesUsageAlertTriggeredPayload>({
 		token: playToken,
 		predicate: (payload) =>
@@ -173,7 +143,6 @@ test(`${chalk.yellowBright("plan-cus-override: customer alert shadows plan alert
 	});
 	expect(entityFired).not.toBeNull();
 
-	// Customer alert (50) fires — customer pass, no entity_id. Additive.
 	const customerFired =
 		await waitForWebhook<BalancesUsageAlertTriggeredPayload>({
 			token: playToken,
@@ -186,7 +155,6 @@ test(`${chalk.yellowBright("plan-cus-override: customer alert shadows plan alert
 		});
 	expect(customerFired).not.toBeNull();
 
-	// Plan alert (60) must NOT fire — shadowed by the customer alert.
 	await timeout(4000);
 	expect(
 		await firedFor({

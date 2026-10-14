@@ -8,7 +8,6 @@ import {
 } from "../licensePoolSql.js";
 import { pageCustomerIdsCte } from "../utils/pageCustomerIdsSql.js";
 
-/** Granted stays derived: included moves, paid_quantity is billing-owned. */
 export const repointLicensePoolRows = async ({
 	db,
 	internalCustomerIds,

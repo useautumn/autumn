@@ -24,7 +24,6 @@ export function createKafkaTransport({
 	region?: string;
 	sasl?: KafkaSaslCredentials;
 	generateToken?: typeof generateAuthToken;
-	/** Told about every token signed, so a refusal can be read against the key and lifetime the client presented. */
 	onToken?(info: KafkaTokenInfo): void;
 	tokens?: KafkaTokenRecord;
 	now?: () => number;
@@ -48,9 +47,7 @@ export function createKafkaTransport({
 			const info = describeMskToken({ token, expiryTime });
 			tokens.record({ info, at: now() });
 			onToken(info);
-		} catch {
-			// Telemetry must never fail an authentication.
-		}
+		} catch {}
 		return { value: token };
 	}
 

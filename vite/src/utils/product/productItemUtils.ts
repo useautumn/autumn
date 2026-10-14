@@ -66,22 +66,11 @@ const shouldShowProrationConfig = ({
 }) => {
 	if (!isFeaturePriceItem(item)) return false;
 
-	// If pay per use single use
 	const usageType = itemToUsageType({ item, features });
 
 	if (item.usage_model === UsageModel.Prepaid) return true;
 
-	// if (
-	//   usageType == ProductItemFeatureType.SingleUse &&
-	//   item.usage_model == UsageModel.Prepaid
-	// ) {
-	//   return true;
-	// } else
-
-	if (
-		usageType === ProductItemFeatureType.ContinuousUse
-		// &&item.usage_model !== UsageModel.Prepaid
-	) {
+	if (usageType === ProductItemFeatureType.ContinuousUse) {
 		return true;
 	}
 	return false;
@@ -100,18 +89,7 @@ const itemsHaveSameInterval = ({
 	);
 };
 
-/**
- * Builds an interval discriminator suffix so two items sharing the same
- * feature/entitlement/price-id but differing in billing cadence (e.g. a
- * monthly entitlement and a one-off price for the same feature) hash to
- * distinct ids. Without this, the plan editor sheet retargets whichever
- * item happens to come first in the list and the second item becomes
- * uneditable. `null`/`undefined` interval is one-off; `interval_count` of
- * `1`/missing is treated the same as omitted.
- */
 const intervalSuffix = (item: ProductItem): string => {
-	// Identity follows the billing cycle for priced items; a prepaid feature's
-	// reset interval can differ and must not change the item's identity.
 	const interval = item.price_interval ?? item.interval;
 	if (!interval) return "-oneoff";
 	const intervalCount = item.price_interval
@@ -128,7 +106,6 @@ export const getItemId = ({
 	item: ProductItem;
 	itemIndex: number;
 }) => {
-	// Assigned at creation, so it survives edits that rewrite every other field.
 	if (item._uid) return `uid-${item._uid}`;
 
 	const interval = intervalSuffix(item);
@@ -143,7 +120,6 @@ export const getItemId = ({
 	return `item-${itemIndex}`;
 };
 
-/** Editor-only fields must not reach the API; strip before building a request. */
 export const stripEditorFields = ({
 	items,
 }: {

@@ -12,9 +12,6 @@ import { cte } from "@/db/cteUtils/buildCte.js";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { toPlatformOrg } from "./platformOrgUtils.js";
 
-/**
- * Route: GET /platform/users - List users created by master org
- */
 export const listPlatformUsers = createRoute({
 	scopes: [Scopes.Platform.Read],
 	query: ListPlatformUsersQuerySchema,
@@ -26,7 +23,6 @@ export const listPlatformUsers = createRoute({
 
 		const shouldExpandOrgs = query.expand?.includes("organizations");
 
-		// Build CTE for users with optional organizations
 		const usersCTE = cte({
 			name: "platform_users",
 			from: userTable,
@@ -47,12 +43,9 @@ export const listPlatformUsers = createRoute({
 			},
 		});
 
-		// Execute the CTE
 		const { data: results, count } = await usersCTE.execute({ db });
 
-		// Map results to API format
 		const users: ApiPlatformUser[] = results.map((user) => ({
-			// name: user.name,
 			email: user.email,
 			created_at: new Date(user.created_at).getTime(),
 			...(shouldExpandOrgs &&

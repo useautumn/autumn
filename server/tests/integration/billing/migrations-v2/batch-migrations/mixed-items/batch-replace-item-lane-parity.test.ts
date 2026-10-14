@@ -1,8 +1,3 @@
-/**
- * Batch and per-customer replace use different write paths but must preserve
- * the same consumed usage. The batch lane keeps the row non-custom; the
- * per-customer lane derives is_custom from the diverged items (see batch-lane-parity).
- */
 import { expect, test } from "bun:test";
 import {
 	type ApiCustomerV5,

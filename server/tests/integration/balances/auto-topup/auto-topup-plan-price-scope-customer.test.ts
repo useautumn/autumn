@@ -1,8 +1,3 @@
-/**
- * Auto-topup price scoping across plans: a PLAN-level config charges the control
- * plan's price; a CUSTOMER-level config charges the most recently attached plan's.
- */
-
 import { test } from "bun:test";
 import type { ApiCustomerV5 } from "@autumn/shared";
 import { makeAutoTopupConfig } from "@tests/integration/balances/auto-topup/utils/makeAutoTopupConfig";
@@ -21,8 +16,6 @@ import {
 } from "./utils/autoTopupPlanPriceScope.js";
 
 test(`${chalk.yellowBright("topup-price-scope: a CUSTOMER-level config charges the most recently attached plan's price")}`, async () => {
-	// Neither plan has a control; the config is set at the CUSTOMER level. The
-	// pricier plan ($10) is attached LAST -> its price must be used.
 	const cheapPlan = products.oneOffAddOn({
 		id: "topup-price-cus-cheap",
 		items: [oneOffItem(5)],
@@ -43,7 +36,6 @@ test(`${chalk.yellowBright("topup-price-scope: a CUSTOMER-level config charges t
 				productId: cheapPlan.id,
 				options: [{ feature_id: TestFeature.Messages, quantity: 100 }],
 			}),
-			// Pricier plan attached LAST -> most recent.
 			s.billing.attach({
 				productId: pricyPlanRecent.id,
 				options: [{ feature_id: TestFeature.Messages, quantity: 0 }],
@@ -70,7 +62,6 @@ test(`${chalk.yellowBright("topup-price-scope: a CUSTOMER-level config charges t
 		remaining: new Decimal(100).sub(85).add(100).toNumber(),
 	});
 
-	// Most recently attached plan is the $10 one -> charge $10.
 	await expectCustomerInvoiceCorrect({
 		customerId,
 		count: 3,

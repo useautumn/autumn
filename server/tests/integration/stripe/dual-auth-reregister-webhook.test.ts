@@ -1,17 +1,3 @@
-/**
- * TDD test for the OAuth-disconnect webhook gap: when OAuth is removed from an
- * org that still has a secret key, the key's direct webhook (skipped while OAuth
- * covered the org) must be registered so the org keeps receiving events.
- *
- * Contract under test:
- *   reRegisterDirectWebhook({ org, env }):
- *     - secret key present for env -> registers a direct webhook, returns encrypted secret
- *     - no secret key for env -> returns null (nothing to register)
- *
- * Pre-impl red: helper did not exist; disconnecting OAuth left a key with no webhook.
- * Post-impl green: the remaining key gets a fresh direct webhook secret.
- */
-
 import { describe, expect, mock, test } from "bun:test";
 import { AppEnv, type Organization } from "@autumn/shared";
 

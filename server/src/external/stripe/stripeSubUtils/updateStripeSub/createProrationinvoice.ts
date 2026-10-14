@@ -16,7 +16,6 @@ const undoSubUpdate = async ({
 	curSub: Stripe.Subscription;
 	updatedSub: Stripe.Subscription;
 }) => {
-	// Revert each updated item to the old quantity, or delete if missing from old sub.
 	const itemsToUpdate = updatedSub.items.data.map((updatedItem) => {
 		const oldItem = curSub.items.data.find(
 			(item) => item.price.id === updatedItem.price.id,
@@ -35,7 +34,6 @@ const undoSubUpdate = async ({
 		};
 	});
 
-	// Re-add prices that were removed in the update.
 	const itemsToAdd = curSub.items.data
 		.filter(
 			(oldItem) =>
@@ -73,7 +71,6 @@ export const createProrationInvoice = async ({
 }) => {
 	const { stripeCli, customer, paymentMethod } = attachParams;
 
-	// How to retrieve upcoming invoice items?
 	const items = await stripeCli.invoiceItems.list({
 		customer: customer.processor.id,
 		pending: true,
@@ -87,9 +84,6 @@ export const createProrationInvoice = async ({
 		};
 	}
 
-	// Proration invoice always uses charge_automatically (parent's
-	// `invoiceOnly` only affects whether we return the invoice for manual
-	// payment, not this invoice's collection_method), so auto_tax is safe.
 	const wantsAutoTax = !!ctx.org.config.automatic_tax;
 	const invoice = await stripeCli.invoices.create({
 		customer: customer.processor.id,

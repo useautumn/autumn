@@ -1,6 +1,3 @@
-/** A recoverable eve stream disconnect is invisible; exhausted reconnects and
- * idle timeouts return write-evidence results instead of throwing. */
-
 import { beforeEach, describe, expect, mock, test } from "bun:test";
 import { AppEnv } from "@autumn/shared";
 import type { EveEvent } from "../../../src/internal/agentRuntime/eve/eveEventSchemas.js";

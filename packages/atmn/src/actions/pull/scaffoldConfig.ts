@@ -107,7 +107,6 @@ export const scaffoldConfig = ({
 }): string => {
 	mkdirSync(directory, { recursive: true });
 	writeFileSync(configPath, rootSource({ imports }), "utf8");
-	// Collection files sit beside the config, wherever `-c` put it.
 	const configDir = dirname(configPath);
 	for (const [file, collections] of Object.entries(COLLECTION_FILES)) {
 		const path = join(configDir, file);

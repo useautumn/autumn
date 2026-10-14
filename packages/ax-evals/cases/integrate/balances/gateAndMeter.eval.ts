@@ -5,12 +5,6 @@ import { initIntegrationEval } from "../../../src/initIntegrationEval.ts";
 import { freeTierCatalog } from "../catalogs/freeTierCatalog.ts";
 import { fixtureUser, integrateScenario } from "../integrateShared.ts";
 
-/**
- * GATING flow, bring-up case: the canonical gate-and-meter loop. Free plan
- * allows 3 summaries a month; the endpoint must create the customer, check
- * before summarizing, track after. Probes exhaust the limit as the fixture's
- * fixed user; the oracle confirms customer + usage in the run org.
- */
 export const gateAndMeter: IntegrationCase = {
 	name: "integrate-gate-and-meter",
 	fixture: "notes-api",

@@ -7,7 +7,6 @@ export type RemovePlanTarget = Omit<
 	"willArchive" | "willTombstone" | "hasCustomers"
 >;
 
-/** Expand each remove_plans entry to one target per version (or the pinned row). */
 export const resolveRemoveProductTargets = ({
 	params,
 	catalogContext,

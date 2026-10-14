@@ -1,11 +1,3 @@
-/**
- * atmn crud/migrations — update all versions [the item added to the v1 and v2 rows in planVersions and the v3 row in plans] → three in-place updates, one migration per customered version, no new version; nothing is asked at push time, the diff says it all
- *
- * the `versionedPro` base config: base price, prepaid seat item, usage item, trial, seat license; every line has customers attached
- *
- * One line of plans/atmn-v3/07_tests.md. [a, b] is a matrix looped INSIDE this file.
- */
-
 import { expect, test } from "bun:test";
 import { seedVersionableCustomer } from "@tests/integration/catalog-v2/plans/migrations/utils/seedVersionableCustomer.js";
 import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
@@ -27,7 +19,6 @@ import { createClient } from "../../../../../../packages/atmn/src/generated/clie
 
 const EXTRA_ITEM = '\n\t\t\t\t\t{ featureId: "audit_log" },';
 
-/** Every live `pro` version row, oldest first. */
 const liveProVersions = async ({
 	ctx,
 }: {
@@ -78,7 +69,6 @@ test.concurrent(
 		try {
 			await scenario.push();
 
-			// Mint v2 (v1 -> planVersions), then v3 (v2 -> planVersions too).
 			scenario.writeConfig(
 				atmnConfigSource({
 					body: configBody({
@@ -105,8 +95,6 @@ test.concurrent(
 				});
 			}
 
-			// One push, the same item added to all three rows — an in-place edit
-			// per row, decided purely from the diff (no extra push-time input).
 			scenario.writeConfig(
 				atmnConfigSource({
 					body: configBody({
@@ -123,7 +111,6 @@ test.concurrent(
 			).toEqual([1, 2, 3]);
 			expect(result.migrationIds.length).toBeGreaterThan(0);
 
-			// No new version was minted by an all-versions edit.
 			expect(await liveProVersions({ ctx: scenario.ctx })).toEqual([
 				{ version: 1, active: false },
 				{ version: 2, active: false },

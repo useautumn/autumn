@@ -44,9 +44,6 @@ export const ensureInvitedSsoMembership = async ({
 		eq(member.userId, userId),
 	);
 
-	// `member` has no uniqueness on (organization_id, user_id), so eligibility and
-	// the write share a transaction guarded by an advisory lock on that pair.
-	// Racing callbacks queue instead of each inserting their own membership.
 	return db.transaction(async (tx) => {
 		await tx.execute(
 			sql`SELECT pg_advisory_xact_lock(hashtextextended(${`sso-membership:${organizationId}:${userId}`}, 0))`,

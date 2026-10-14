@@ -1,6 +1,5 @@
 import type { ThreadedProducersScope } from "../types/threadedProducersScope.js";
 
-/** Requests the thread will never answer fail as an unknown outcome, which is what they are. */
 export function failPendingAsUnknown({
 	scope,
 	message,

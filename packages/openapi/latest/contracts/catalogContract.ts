@@ -8,16 +8,6 @@ import {
 } from "@autumn/shared";
 import { oc } from "@orpc/contract";
 
-/**
- * catalogV2 — INTERNAL ONLY. These contracts are registered on
- * `v2_3InternalContractRouter`, never the public one, so they reach
- * `openapi-internal.yml` (which the atmn generator reads) and stay out of the
- * published spec, the SDKs and the docs.
- *
- * catalogV2 is slated to replace the legacy catalog endpoint in place, so
- * publishing it now would widen the blast radius of that swap.
- */
-
 export const catalogV2GetContract = oc
 	.route({
 		method: "POST",

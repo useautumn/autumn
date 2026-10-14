@@ -17,7 +17,6 @@ import { startsAtProducts, testClockNowMs } from "../../utils/futureStartUtils";
 
 export const PRO_MONTHLY_PRICE = 20;
 
-/** A customer with a card and no subscription, plus the test clock's now. */
 export const initNewCustomerScenario = async ({
 	customerId,
 }: {
@@ -72,11 +71,6 @@ export const backdateParams = ({
 	],
 });
 
-/**
- * What Stripe bills when it creates a monthly subscription backdated to startMs: nothing with
- * proration none, otherwise a stub prorated up to the anchor's first boundary plus every cycle
- * starting at or before now in full, including the one running now.
- */
 export const expectedNewBackdateCharge = ({
 	startMs,
 	nowMs,
@@ -116,7 +110,6 @@ export const expectedNewBackdateCharge = ({
 
 const toDollars = (cents: number) => new Decimal(cents).div(100).toNumber();
 
-/** Preview, Stripe's invoices and Stripe's subscription period all match what Stripe bills for the backdate, then Autumn records the same invoices. */
 export const expectNewBackdateBilledCorrect = async ({
 	ctx,
 	autumnV1,
@@ -173,7 +166,6 @@ export const expectNewBackdateBilledCorrect = async ({
 	});
 };
 
-/** The total Stripe will invoice at the subscription's next renewal, including any pending invoice items. */
 export const expectRenewalInvoiceTotal = async ({
 	ctx,
 	customerId,

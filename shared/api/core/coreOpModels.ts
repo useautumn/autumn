@@ -1,6 +1,5 @@
 import { z } from "zod/v4";
 
-// Cancel Schemas
 export const CancelBodySchema = z.object({
 	customer_id: z.string().meta({
 		description: "The ID of the customer",
@@ -40,7 +39,6 @@ export const CancelResultSchema = z.object({
 	}),
 });
 
-// Query Schemas
 export const QueryParamsSchema = z.object({
 	customer_id: z.string().meta({
 		description: "The ID of the customer to query analytics for",

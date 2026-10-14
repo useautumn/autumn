@@ -23,7 +23,6 @@ const toSeconds = (epochMs: number | null | undefined) =>
 		? null
 		: truncateMsToSecondPrecision(epochMs);
 
-/** A live row runs now whatever its stored start; only a scheduled row starts later. */
 const savedStartsAt = ({
 	customerProduct,
 	now,
@@ -74,7 +73,6 @@ export const customerProductToTimelineRow = ({
 	externalId: customerProduct.external_id ?? null,
 });
 
-/** The in-scope live and scheduled rows the timeline reads; everything else is left alone. */
 export const customerProductsToTimelineRows = ({
 	customerProducts,
 	interner,

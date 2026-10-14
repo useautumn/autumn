@@ -43,11 +43,9 @@ export const rewardRedemptions = pgTable(
 			name: "reward_redemptions_referral_code_id_fkey",
 		}).onDelete("cascade"),
 		index("idx_reward_redemptions_referral_code_id").on(table.referral_code_id),
-		// For counting promo code redemptions per reward (limit enforcement)
 		index("idx_reward_redemptions_reward_internal_id").on(
 			table.reward_internal_id,
 		),
-		// For checking if a customer already redeemed a specific reward
 		index("idx_reward_redemptions_customer_reward").on(
 			table.internal_customer_id,
 			table.reward_internal_id,

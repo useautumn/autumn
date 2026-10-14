@@ -7,8 +7,6 @@ import { startShadowAtomWatch } from "../startShadowAtomWatch.js";
 import { withShadowAtomLock } from "../withShadowAtomLock.js";
 import { patchShadowAtomConfig } from "./patchShadowAtomConfig.js";
 
-/** Tears the shadow Atom down, or with `atomId` retries an earlier one's stopped removal, as `deleteCache` does for an org's.
- * Deleting the current one forgets its registered orgs at once, as their folders go with it. */
 export const deleteShadowAtom = ({
 	ctx,
 	atomId,

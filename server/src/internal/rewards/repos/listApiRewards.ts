@@ -19,10 +19,8 @@ const COUPON_TYPES = new Set<RewardType>([
 	RewardType.InvoiceCredits,
 ]);
 
-/** rewards.list row cap; base rewardRepo.list stays unbounded for other consumers. */
 const MAX_API_REWARDS = 500;
 
-/** Fetches an org's rewards (capped) and maps them to the V0 list shape: discount types → coupons, feature_grant → grants (free_product dropped). */
 export const listApiRewards = async ({
 	db,
 	orgId,

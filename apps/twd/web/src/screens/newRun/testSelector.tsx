@@ -39,7 +39,6 @@ const Highlight = ({ text, indexes }: { text: string; indexes: number[] }) => {
 	);
 };
 
-/** Drag-to-select: press on a row sets the target state, entering other rows applies it. */
 let paintTarget: boolean | null = null;
 if (typeof window !== "undefined")
 	window.addEventListener("pointerup", () => {

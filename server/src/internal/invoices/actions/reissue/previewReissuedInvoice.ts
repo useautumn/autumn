@@ -56,11 +56,6 @@ const settledCredits = ({
 	};
 };
 
-/**
- * What a reissued invoice looks like, read off a Stripe invoice and its lines.
- * Called with the original before anything is created, and with the finalized
- * replacement afterwards so the response describes what was actually issued.
- */
 export const previewReissuedInvoice = ({
 	stripeInvoice,
 	lines,
@@ -72,13 +67,10 @@ export const previewReissuedInvoice = ({
 }: {
 	stripeInvoice: Stripe.Invoice;
 	lines: Stripe.InvoiceLineItem[];
-	/** Autumn's rows for the original, which carry the plan and feature. */
 	storedLines: DbInvoiceLineItem[];
-	/** Autumn lines behind catalog plans the reissue added, matched on autumn_line_item_id. */
 	addedLineItems?: LineItem[];
 	credits?: PreviewInvoiceCredits;
 	dueDateMs: number | null;
-	/** The invoice is finalized, so its own balance figures are the truth. */
 	settled?: boolean;
 }): CreateInvoicePreview => {
 	const currency = stripeInvoice.currency;
@@ -94,7 +86,6 @@ export const previewReissuedInvoice = ({
 
 	const previewLines: CreateInvoicePreviewLine[] = lines.map((line) => {
 		const amount = lineAmountAfterDiscounts({ line, currency });
-		// A replacement line carries the id of the original line it came from.
 		const sourceLineId =
 			(line.metadata?.autumn_reissued_from_line as string | undefined) ??
 			line.id;

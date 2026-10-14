@@ -14,13 +14,11 @@ export const useCachedProduct = ({
 	const getCachedProduct = (): ProductV2 | null => {
 		if (!productId) return null;
 
-		// Check all cached full customers queries
 		const queryCache = queryClient.getQueryCache();
 		const productsQueries = queryCache.findAll({
 			queryKey: ["products"],
 		});
 
-		// Sort by most recently updated first to get the freshest data
 		const sortedQueries = productsQueries.sort((a, b) => {
 			const aTime = a.state.dataUpdatedAt || 0;
 			const bTime = b.state.dataUpdatedAt || 0;
@@ -28,7 +26,6 @@ export const useCachedProduct = ({
 		});
 
 		for (const query of sortedQueries) {
-			// Only use data that's not stale and has been successfully fetched
 			if (query.state.status === "success" && query.state.data) {
 				const cachedData = query.state.data as
 					| { products: ProductV2[] }

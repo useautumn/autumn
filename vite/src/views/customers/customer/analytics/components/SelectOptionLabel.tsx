@@ -1,6 +1,5 @@
 import { CheckIcon } from "@phosphor-icons/react";
 
-/** A SearchableSelect row for the Usage filters: name, optional ID, check when picked. */
 export const SelectOptionLabel = ({
 	name,
 	secondary,

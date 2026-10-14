@@ -33,7 +33,6 @@ type AtomRemovalStep = {
 	key: string;
 	title: string;
 	detail?: string;
-	/** Null until the step is reached, which shows its number. */
 	chip: AtomChipDisplay | null;
 };
 
@@ -54,7 +53,6 @@ const REMOVED_STEPS: AtomRemovalStep[] = [
 	{ key: "removed", title: "Removed", chip: DONE_CHIP },
 ];
 
-/** Autumn takes down what runs, the org deletes the stack in AWS, then the Atom is removed. */
 const atomRemovalSteps = (cache: ApiByocCache): AtomRemovalStep[] => {
 	const removedStep = { key: "removed", title: "Removed", chip: null };
 	if (cache.status === ByocCacheStatus.TeardownRequired)
@@ -89,7 +87,6 @@ const atomRemovalSteps = (cache: ApiByocCache): AtomRemovalStep[] => {
 	];
 };
 
-/** One earlier Atom: its stack, the delete's steps, and what to do next on the shared right edge. */
 const AtomRemovalCard = ({
 	cache,
 	steps,
@@ -192,13 +189,11 @@ const AwsStackLink = ({
 	</Button>
 );
 
-/** An Atom being deleted: Autumn takes it down, the org deletes its stack in AWS, then it is removed. */
 export const AtomRemoval = ({
 	cache,
 	className,
 }: {
 	cache: ApiByocCache;
-	/** e.g. to hang into the gutter when it sits on a page rather than in the sheet. */
 	className?: string;
 }) => {
 	const { remove } = useAtomActions();
@@ -267,7 +262,6 @@ export const AtomRemoval = ({
 	);
 };
 
-/** An Atom whose delete finished while the page was open, until dismissed. */
 export const AtomRemoved = ({
 	cache,
 	onDismiss,

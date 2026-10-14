@@ -2,10 +2,6 @@ import { resolve } from "node:path";
 import type { FileStats } from "@tw/worker/runTestFileWithStats.ts";
 import { REPO_ROOT } from "../../../catalog/repoPaths.ts";
 
-/**
- * Runtime-loaded scripts/tw modules. Static imports would drag the server + shared
- * graphs into twd's typecheck, so these are the structural types we rely on.
- */
 export type ProviderSandbox = { name: string; handle: unknown; id?: string };
 
 export type WorkerHandle = {
@@ -131,7 +127,6 @@ export type TwModules = {
 const TW_ROOT = resolve(REPO_ROOT, "scripts/tw");
 const load = <T>(path: string): Promise<T> => import(resolve(TW_ROOT, path));
 
-/** Must run after STRIPE_TEST_KEY_POOL is set: run.ts sizes a budget at import. */
 export const loadTwModules = async (): Promise<TwModules> => ({
 	provider: await load("helpers/provider.ts"),
 	run: await load("commands/run.ts"),

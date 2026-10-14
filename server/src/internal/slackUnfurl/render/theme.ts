@@ -13,7 +13,6 @@ export const theme = {
 	border: "#e7e5e4",
 	track: "#ececea",
 	accent: "#1a1a1a",
-	// Autumn brand purple — used for usage bars and balance progress fills.
 	purple: "#7c5cff",
 	purpleSoft: "#efeaff",
 	positive: "#15803d",

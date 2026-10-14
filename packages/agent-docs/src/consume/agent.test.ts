@@ -35,8 +35,6 @@ describe("leafAgentPrompt", () => {
 		});
 	}
 
-	// The agent's billing and investigation duties live in its skills now, not
-	// in the instructions — this guards the split, not the prose.
 	test("nothing is routed or handed off any more", () => {
 		const prompt = leafAgentPrompt("leaf");
 		for (const phrase of [

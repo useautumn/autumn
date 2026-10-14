@@ -5,13 +5,6 @@ import { conduct } from "../../src/grading/expectations/conductExpectations.ts";
 import { judge } from "../../src/grading/expectations/judgeExpectations.ts";
 import { initAxEval } from "../../src/initAxEval.ts";
 
-/**
- * DISPLAY: a catalog rich enough to exercise most item-line shapes from the
- * skill's "Showing the catalog" grammar — plain allowance, allowance+overage,
- * included+per-unit seats, unlimited, boolean, one-off prepaid add-on, and an
- * annual variant. Graded mostly by judge: did the proposal and the final
- * message use the plain-text catalog format, correctly phrased?
- */
 export const displayItemTypes = defineCase({
 	name: "misc-display-item-types",
 	prompt: [

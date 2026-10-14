@@ -120,9 +120,6 @@ export const setupUpdatePlanProductContext = async ({
 		...(strategyFeatureQuantities.length > 0
 			? { feature_quantities: strategyFeatureQuantities }
 			: {}),
-		// Explicitly "none" unless proration is true (internal-only op field,
-		// never settable from the frontend) — default migration behavior stays
-		// charge-free for every op that doesn't opt in.
 		proration_behavior: allowCharges ? undefined : "none",
 		no_billing_changes:
 			context.migration.no_billing_changes === true ? true : undefined,
@@ -152,8 +149,6 @@ export const setupUpdatePlanProductContext = async ({
 		fullProduct,
 	});
 
-	// A customer billed in a currency the target plan no longer offers stays
-	// grandfathered on their current prices instead of failing at Stripe.
 	const targetPrices = customPrices?.length ? customPrices : fullProduct.prices;
 	const customerCurrency = resolveCustomerCurrency({
 		customer: productFullCustomer,
@@ -226,8 +221,6 @@ export const setupUpdatePlanProductContext = async ({
 		actionSource: "migration",
 		skipBillingChanges,
 		allowCharges,
-		// Preview never creates real Stripe resources — seed placeholder ids
-		// instead, same mechanism attach/updateSubscription previews use.
 		dryRunStripe: context.preview,
 		checkoutMode: null,
 		anchorResetRefund: setupAnchorResetRefund({

@@ -5,10 +5,6 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-/**
- * One planless customer with dozens of entities of every shape the picker has
- * to lay out: short and very long names, uuid-style ids, and nameless rows.
- */
 const CUSTOMER_ID = "seed-many-entities";
 
 const FIRST_NAMES = [

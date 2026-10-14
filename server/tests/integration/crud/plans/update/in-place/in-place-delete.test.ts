@@ -1,15 +1,3 @@
-/**
- * In-place plan update (disable_version) — DELETE an existing entitlement on a
- * plan with existing customers. The old catalog ent is retired (is_custom:true)
- * because customers reference it (NOT cascade-deleted); the catalog no longer
- * exposes it, so future customers don't get it; existing customers keep it.
- *
- * Contract:
- *   - Catalog: deleted feature absent from getFull.
- *   - Existing customer: snapshot byte-identical (cusEnt NOT cascade-deleted).
- *   - New customer attaching after does NOT get the feature.
- */
-
 import { expect, test } from "bun:test";
 import {
 	type ApiCustomerV5,
@@ -73,7 +61,6 @@ test(`${chalk.yellowBright("plans.update disable_version: DELETE retires the ent
 		version: ApiVersion.V2_1,
 	});
 
-	// Pre: existing customer has the flag; catalog has the ent.
 	expect(
 		await catalogEnt({
 			ctx,
@@ -91,7 +78,6 @@ test(`${chalk.yellowBright("plans.update disable_version: DELETE retires the ent
 		present: true,
 	});
 
-	// DELETE the AdminRights feature in place (keep Messages).
 	await autumnRpc.plans.update<
 		ApiPlanV1,
 		Omit<UpdatePlanParamsV2Input, "plan_id">
@@ -107,7 +93,6 @@ test(`${chalk.yellowBright("plans.update disable_version: DELETE retires the ent
 		],
 	});
 
-	// Catalog: feature retired, gone from getFull.
 	expect(
 		await catalogEnt({
 			ctx,
@@ -116,7 +101,6 @@ test(`${chalk.yellowBright("plans.update disable_version: DELETE retires the ent
 		}),
 	).toBeUndefined();
 
-	// Existing customer: byte-identical — cusEnt NOT cascade-deleted.
 	const after = await snapshotCustomerState({ ctx, customerId });
 	expect(after).toBe(before);
 	const existingAfter =
@@ -128,7 +112,6 @@ test(`${chalk.yellowBright("plans.update disable_version: DELETE retires the ent
 		present: true,
 	});
 
-	// New customer does NOT get the deleted feature.
 	await autumnV2_2.billing.attach({
 		customer_id: newCustomerId,
 		plan_id: pro.id,

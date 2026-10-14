@@ -1,16 +1,3 @@
-/**
- * atmn scenarios/lint — one failing config per rule kind [requiredWhen, forbiddenWhen, mutex, exactlyOne, unique, exists, compare, valueWhen, targetHas] → all collected, nothing sent
- *
- * One line of plans/atmn-v3/07_tests.md. [a, b] is a matrix looped INSIDE this file.
- *
- * forbiddenWhen, mutex, exactlyOne, and compare have no field wired to them in
- * packages/atmn-generator/src/lint/rules/{features,plans}.ts today, so no real
- * config can trip them through the CLI yet (the runtime itself is covered
- * directly, with synthetic rules, by packages/atmn-generator/test/lintRuntime.test.ts).
- * Those four are left as `test.todo` below, naming that gap, rather than
- * faking a violation the registry cannot produce.
- */
-
 import { expect, test } from "bun:test";
 import { join } from "node:path";
 import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
@@ -30,8 +17,6 @@ import { atmn } from "${CLI_PACKAGE_DIR}/src/generated/wire";
 export default atmn(${body});
 `;
 
-/** One config per wired kind, its single violation, and the `because` text
- * that names it — pulled verbatim from the rule definition it trips. */
 const WIRED_CASES: Record<
 	string,
 	{ body: (id: string) => string; because: string }

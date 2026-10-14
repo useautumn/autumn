@@ -3,7 +3,6 @@ import type { LockRowChange } from "../../models/mutation/rowChange.js";
 import type { WorkerFullSubject } from "../../models/subject/workerFullSubject.js";
 import type { TrackCommand, TrackLock } from "./types/trackCommand.js";
 
-/** The lock row a locked track inserts: what it deducted, row by row, so a finalize can undo exactly that. */
 export const trackLockToRowChange = ({
 	lock,
 	command,

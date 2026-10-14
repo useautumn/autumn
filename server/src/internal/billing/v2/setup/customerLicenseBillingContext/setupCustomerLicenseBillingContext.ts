@@ -7,7 +7,6 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { customerLicenseRepo } from "@/internal/licenses/repos/customerLicenseRepo";
 import { countActiveByCustomerLicenseLinkIds } from "@/internal/licenses/repos/customerLicenseRepo/countActiveByCustomerLicenseLinkIds";
 
-/** Loads assigned-seat billing snapshots once for pure downstream computes. */
 export const setupCustomerLicenseBillingContext = async ({
 	ctx,
 	fullCustomer,

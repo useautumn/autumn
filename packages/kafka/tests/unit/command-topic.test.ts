@@ -78,7 +78,6 @@ const updateBalance: UpdateBalanceCommand = {
 	occurredAt: 1_700_000_000_000,
 };
 
-/** The command as a newer server sends it: with a field this build does not know. */
 const fromNewerServer = <Command extends CommandRecord>(command: Command) =>
 	({ ...command, futureField: true }) as Command;
 
@@ -181,7 +180,6 @@ describe("command topic", () => {
 	});
 
 	describe("appends that arrive while a send is in flight", () => {
-		/** A producer whose sends wait until the test releases them. */
 		const createGatedProducer = () => {
 			const sent: ProducerRecord[] = [];
 			const gates: { release: () => void; fail: (error: Error) => void }[] = [];

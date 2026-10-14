@@ -1,6 +1,3 @@
-/** customer.subscription.updated webhook - past_due: failed payments flip the customer
- * product to past_due while its features stay available. */
-
 import { test } from "bun:test";
 import type { ApiCustomerV3 } from "@autumn/shared";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
@@ -13,21 +10,6 @@ import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 1: Subscription enters past_due after failed payment at renewal
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Init pro product ($20/mo) with messages feature
- * - Attach pro to customer with successful payment method
- * - Switch to a failing payment method
- * - Advance to next billing cycle (invoice will fail)
- *
- * Expected Result:
- * - Pro product status becomes past_due
- * - Renewal invoice is open (unpaid)
- */
 test.concurrent(
 	`${chalk.yellowBright("sub.updated: product enters past_due after failed renewal payment")}`,
 	async () => {
@@ -56,8 +38,6 @@ test.concurrent(
 			],
 		});
 
-		// Both the past_due flip and the renewal invoice going draft → open arrive
-		// via webhook after the clock advance, so poll instead of snapshotting.
 		await expectCustomerProducts({
 			autumn: autumnV1,
 			customerId,
@@ -75,10 +55,6 @@ test.concurrent(
 		});
 	},
 );
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 3: Upgrade while past_due keeps product in past_due
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(
 	`${chalk.yellowBright("sub.updated 3: upgrade from premium to ultra while past_due, product stays past_due")}`,

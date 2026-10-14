@@ -17,8 +17,6 @@ type ReplyModeInstallation = {
 	reply_mode: string;
 };
 
-/** The installation a thread is locked to, the same lookup the admin path
- * uses to pick the thread's org. */
 const findThreadInstallation = async ({
 	thread,
 	workspaceId,
@@ -39,9 +37,6 @@ const findThreadInstallation = async ({
 	});
 };
 
-/** An Autumn teammate's reply in a customer's shared channel arrives on the
- * internal admin installation, but the thread belongs to the customer
- * installation it is locked to, so that one's reply mode applies. */
 const resolveGoverningInstallation = async ({
 	authorInstallation,
 	findLockedInstallation,
@@ -65,8 +60,6 @@ const resolveGoverningInstallation = async ({
 	);
 };
 
-/** The author's own run is still live, so an untagged correction ("actually
- * make it $20") reaches it instead of being dropped. */
 const authorOwnsLiveRun = ({
 	message,
 	thread,
@@ -84,16 +77,10 @@ const authorOwnsLiveRun = ({
 			workspaceId,
 		}),
 	);
-	// A settling run still counts: the coordinator queues the correction as
-	// the next run instead of injecting it.
 	if (!active || active.closed || active.stop) return false;
 	return active.ownerProviderUserId === message.author.userId;
 };
 
-/** In a mentions-only workspace, a reply in a joined thread that does not
- * @-mention the agent is left alone. Control commands ("stop") and the run
- * owner's mid-run follow-ups always get through. Any doubt (no workspace id,
- * lookup failure) falls back to replying, the default behaviour. */
 export const shouldSkipUntaggedReply = async ({
 	findInstallation = findSlackInstallationForWorkspace,
 	findLockedInstallation = findThreadInstallation,
@@ -116,8 +103,6 @@ export const shouldSkipUntaggedReply = async ({
 			workspaceId,
 		});
 		if (installation?.reply_mode !== ChatReplyMode.MentionsOnly) return false;
-		// The agent may show up under either installation's bot user. With no
-		// bot id to check against, assume it was tagged.
 		const botUserIds = [
 			installation.bot_user_id,
 			authorInstallation?.bot_user_id,

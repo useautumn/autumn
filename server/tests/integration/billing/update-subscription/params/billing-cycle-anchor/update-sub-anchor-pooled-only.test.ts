@@ -9,7 +9,6 @@ import {
 	setupAnchorQuantityScenario,
 } from "./setupAnchorQuantityScenario.js";
 
-// Contract: an anchor-only reset re-anchors the pool without touching its grant or usage.
 test.concurrent("anchor pooled: anchor only", async () => {
 	const customerId = "anchor-pooled-anchor-only";
 	const scenario = await setupAnchorQuantityScenario({
@@ -44,7 +43,6 @@ test.concurrent("anchor pooled: anchor only", async () => {
 	await expectStripeSubscriptionCorrect({ ctx, customerId });
 });
 
-// Contract: a future anchor pulls the pool's next reset to that date, like the plan's own balances.
 test.concurrent("anchor pooled: scheduled anchor only", async () => {
 	const customerId = "anchor-pooled-scheduled-only";
 	const scenario = await setupAnchorQuantityScenario({

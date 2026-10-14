@@ -101,7 +101,6 @@ export const claimMigrationItemRun = async ({
 					.onConflictDoNothing({ target, where: targetWhere })
 					.returning();
 	} catch (error) {
-		// Busy in another live migration — not claimable, not an error.
 		if (isLiveItemExclusiveViolation(error))
 			return { claimed: false, itemRun: null };
 		throw error;

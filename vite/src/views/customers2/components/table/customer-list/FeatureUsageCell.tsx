@@ -9,9 +9,6 @@ interface FeatureUsageCellProps {
 	isLoading?: boolean;
 }
 
-/**
- * Displays feature usage balance and bar stacked vertically for use in the customer list table
- */
 export function FeatureUsageCell({
 	fullCustomer,
 	featureId,

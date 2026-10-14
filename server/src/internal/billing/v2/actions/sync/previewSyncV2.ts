@@ -5,11 +5,6 @@ import { applyAutumnBillingPlanToFullCustomer } from "@/internal/billing/v2/util
 import { computeSyncPlan } from "./compute/computeSyncPlan";
 import { setupSyncContext } from "./setup/setupSyncContext";
 
-/**
- * What verify would report for the Stripe subscription once `params` synced:
- * runs sync's setup and compute without writing, applies the plan to the
- * customer in memory, then verifies that projected customer.
- */
 export const previewSyncV2 = async ({
 	ctx,
 	params,
@@ -18,7 +13,6 @@ export const previewSyncV2 = async ({
 	params: SyncParamsV1;
 }): Promise<PreviewSyncV2Response> => {
 	const subscriptionId = params.stripe_subscription_id;
-	// Verify checks live subscriptions; a schedule that hasn't started has none.
 	if (!subscriptionId) return { mismatches: [] };
 
 	const syncContext = await setupSyncContext({ ctx, params });

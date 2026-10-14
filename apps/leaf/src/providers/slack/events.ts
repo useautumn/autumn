@@ -33,7 +33,6 @@ const mentionsSlackUser = ({
 
 const SLACK_MENTION_PATTERN = /<@([UW][A-Z0-9]+)(?:\|[^>]+)?>/g;
 
-/** Every user id the raw Slack message @-mentions, in order, deduplicated. */
 export const slackMentionedUserIds = ({ raw }: { raw: unknown }): string[] => {
 	if (!isSlackEvent(raw) || typeof raw.text !== "string") return [];
 	const ids = [...raw.text.matchAll(SLACK_MENTION_PATTERN)].flatMap((match) =>
@@ -65,8 +64,6 @@ export const getSlackEventWorkspaceId = (body: string) => {
 	return typeof parsed.team_id === "string" ? parsed.team_id : null;
 };
 
-/** Legacy bot posts carry the `bot_message` subtype; they only count as
- * ordinary messages when a trusted bot sent them. */
 const isPlainMessage = ({
 	event,
 	trustedBots,

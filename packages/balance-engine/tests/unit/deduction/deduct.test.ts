@@ -306,7 +306,6 @@ describe("deduct", () => {
 				}),
 			});
 
-			// grant 1000 + 3 × 100 prepaid = 1300 ceiling
 			expect(outcome).toMatchObject({ appliedValue: -10, remaining: -10 });
 			expect(balancesAfter(outcome)).toEqual([
 				["messages_monthly", { balance: 1300 }],
@@ -460,7 +459,6 @@ describe("deduct", () => {
 				request: createDeductionRequest({ org, value: -20 }),
 			});
 
-			// up to zero first, then to grant 0 + adjustment 2
 			expect(outcome).toMatchObject({ appliedValue: -7, remaining: -13 });
 			expect(balancesAfter(outcome)).toEqual([
 				["messages_monthly", { balance: 2 }],

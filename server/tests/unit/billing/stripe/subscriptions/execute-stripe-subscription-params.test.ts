@@ -1,13 +1,3 @@
-/**
- * executeStripeSubscriptionOperation merges subscription_params on update
- * and cancel. Reserved keys stay Autumn-owned.
- *
- * Contract:
- *   New behaviors:
- *     update: user extras reach subscriptions.update; items/expand do not
- *     cancel: user extras reach subscriptions.cancel; expand stays Autumn's
- */
-
 import { afterAll, beforeEach, describe, expect, mock, test } from "bun:test";
 import type { BillingContext, StripeSubscriptionAction } from "@autumn/shared";
 import chalk from "chalk";

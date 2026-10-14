@@ -1,12 +1,3 @@
-/**
- * catalogV2.update — variant license links ride the same derive fold.
- *
- * Contract:
- *   Team updates the child-v1 license + propagate.variants → EU's link
- *   follows that write (same fold, no parallel path); both stay on v1.
- *   Child v2 propagate while both parents still anchor v1 → no row reached.
- */
-
 import { test } from "bun:test";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";

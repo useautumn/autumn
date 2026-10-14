@@ -1,11 +1,3 @@
-/**
- * atmn scenarios/archive — restore a plan whose feature is still archived → clean error naming the feature
- *
- * one push carries the whole batch, so restore order must not matter
- *
- * One line of plans/atmn-v3/07_tests.md. [a, b] is a matrix looped INSIDE this file.
- */
-
 import { expect, test } from "bun:test";
 import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 import {
@@ -42,10 +34,6 @@ test.concurrent(
 		try {
 			await scenario.push();
 
-			// Archive both the plan and the feature it items on together. A
-			// feature restatement is the whole desired row, not a patch, so
-			// archiving still needs its other required fields (name, type) —
-			// unlike a plan, which the server merges by id.
 			scenario.writeConfig(
 				atmnConfigSource({
 					body: `{
@@ -58,10 +46,6 @@ test.concurrent(
 			);
 			await scenario.push();
 
-			// Decision pending: no dedicated guard for this was found in the
-			// server source at review time — this documents the intended
-			// behavior (restore blocked while a referenced feature is archived,
-			// error naming it) rather than a confirmed current one.
 			scenario.writeConfig(
 				atmnConfigSource({
 					body: `{ plans: [plan({ active: true, planId: "pro", versionSlug: "v1", archived: false })] }`,

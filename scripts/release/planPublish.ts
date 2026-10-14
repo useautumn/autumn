@@ -60,7 +60,6 @@ const latestTag = ({ root, tagPrefix }: { root: string; tagPrefix: string }) =>
 		)
 		.at(-1);
 
-// Compares the last published tag with the working tree, so freshly regenerated output counts.
 const sourceChangedSinceTag = ({
 	root,
 	pkg,

@@ -2,8 +2,6 @@ import type { FullCustomer, SubscriptionMismatch } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { CusService } from "@/internal/customers/CusService";
 
-/** Flags a Stripe customer that more than one Autumn customer points at, and
- * lists the other customers so the collision can be untangled. */
 export const evaluateSharedStripeCustomer = async ({
 	ctx,
 	fullCustomer,

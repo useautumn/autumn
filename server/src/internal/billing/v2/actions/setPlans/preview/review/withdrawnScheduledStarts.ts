@@ -3,7 +3,6 @@ import type { SavedTimeline } from "../../timeline/types/timeline";
 import type { TimelineDiff } from "../../timeline/types/timelineDiff";
 import type { SavedSegment } from "../../timeline/types/timelineSegment";
 
-/** The instance still runs from its saved start on, even if updated or postponed. */
 const isStillScheduled = ({
 	savedSegment,
 	diff,
@@ -17,7 +16,6 @@ const isStillScheduled = ({
 			(segment.endsAt === null || segment.endsAt > savedSegment.startsAt),
 	);
 
-/** Saved scheduled plans the request drops before they ever start. */
 export const withdrawnScheduledStarts = ({
 	saved,
 	diff,

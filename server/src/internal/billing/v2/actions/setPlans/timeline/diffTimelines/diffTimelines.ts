@@ -5,7 +5,6 @@ import { plannedSegments } from "./plannedSegments";
 import { resolveTimeline } from "./resolveTimeline";
 import { timelineToOperations } from "./timelineToOperations";
 
-/** The one place set_plans decides what happens: saved vs desired, under the request's policies. */
 export const diffTimelines = ({
 	saved,
 	desired,

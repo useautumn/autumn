@@ -16,11 +16,6 @@ import {
 	filterCustomers,
 } from "./customers/filterCustomers.js";
 
-/**
- * Migration-fed shim. Dispatches by scope kind, unwraps the relevant
- * filter from `migration.filter`, and delegates to the pure inner fns
- * (`countCustomers` / `filterCustomers`). Empty filter ⇒ whole org+env.
- */
 export const runFilter = async ({
 	ctx,
 	migration,

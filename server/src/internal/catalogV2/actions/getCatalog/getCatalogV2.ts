@@ -32,7 +32,6 @@ const withItemMappingIdentities = <T extends Pick<ApiPlanV1, "items">>({
 	})),
 });
 
-/** Read the entire catalog — features plus latest top-level plans with variant/license edges. */
 export const getCatalogV2 = async ({
 	ctx,
 	params,
@@ -50,7 +49,6 @@ export const getCatalogV2 = async ({
 		returnAll: include_versions,
 	});
 
-	// Variants surface only nested under their base plan, never top-level.
 	const baseProducts = products.filter(
 		(product) => !product.base_internal_product_id,
 	);
@@ -61,10 +59,6 @@ export const getCatalogV2 = async ({
 		),
 	});
 
-	// One read for the whole catalog: RC mappings live in their own table, keyed
-	// by plan id with no version dimension. Variants are their own products with
-	// their own plan ids, so their rows are in here too — hand the whole map down
-	// rather than a single row, or a variant's mapping can never be read back.
 	const revenuecatMappings = await RCMappingService.getAll({
 		db: ctx.db,
 		orgId: ctx.org.id,

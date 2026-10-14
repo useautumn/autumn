@@ -53,7 +53,6 @@ import { WorkersCard } from "./runDetail/workersCard.tsx";
 
 const baseFile = (id: string) => splitRepetitionId({ id }).file;
 
-/** Copies text produced on click (fetched lazily), with brief "Copied" feedback. */
 const CopyTextButton = ({
 	label,
 	getText,
@@ -194,7 +193,6 @@ const Header = ({ run, now }: { run: RunDetail; now: number }) => {
 	);
 };
 
-/** Memoised so opening the timing sheet doesn't re-render every worker and file tooltip. */
 const RunCards = memo(
 	({
 		run,

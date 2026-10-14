@@ -161,7 +161,6 @@ const runTrackedItem = async <T extends MigrationItemTrackingResult>({
 		return result;
 	} catch (error) {
 		if (isTransientDbError({ error })) {
-			// executeAutumnBillingPlan is not atomic — don't replay Stripe after a drop.
 			ctx.logger.warn(
 				"run-migration: skipping customer after connection drop",
 				{
@@ -173,7 +172,6 @@ const runTrackedItem = async <T extends MigrationItemTrackingResult>({
 				},
 			);
 
-			// The drop often starves the pool for this write too; a failed write would strand the `running` claim.
 			await runWithTransientDbRetry({
 				maxAttempts: MIGRATION_ITEM_SETTLE_DB_ATTEMPTS,
 				delayMs: MIGRATION_ITEM_SETTLE_DB_RETRY_DELAY_MS,

@@ -5,7 +5,6 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-// version-only is per-customer until definition execute is restored
 import {
 	expectBatchLane,
 	expectCustomerPlanRepointedInPlace,
@@ -57,7 +56,6 @@ const setupVariantFamily = async ({ prefix }: { prefix: string }) => {
 	});
 	const variantId = `${prefix}-variant`;
 	const siblingId = `${prefix}-sibling`;
-	// Variant plans outlive initScenario's product reset; drop leftovers first.
 	for (const planId of [variantId, siblingId]) {
 		await autumnV2_3
 			.post("/plans.delete", { plan_id: planId, all_versions: true })

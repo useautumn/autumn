@@ -46,7 +46,6 @@ const mergeRevenueCatOAuth = ({
 	org: Organization;
 	env: AppEnv;
 	oauthConfig: RevenueCatOAuthConfig;
-	// Migration: drop the env's legacy api_key + project_id once OAuth is connected.
 	stripLegacy?: boolean;
 }): RevenueCatProcessorConfig => {
 	const existing = org.processor_configs?.revenuecat || {};
@@ -192,8 +191,6 @@ export const handleRevenueCatOAuthCallback = async (c: Context<HonoEnv>) => {
 			});
 			projectId = project.id;
 		} else if (isMigration) {
-			// Migrate api-key → OAuth: the OAuth account must contain the org's existing
-			// project, and that project's products must cover the existing mappings.
 			const revenueCatConfig = org.processor_configs?.revenuecat;
 			const existingProjectId =
 				env === AppEnv.Live
@@ -238,8 +235,6 @@ export const handleRevenueCatOAuthCallback = async (c: Context<HonoEnv>) => {
 
 		const oauthConfig = buildOAuthConfig({ tokens, projectId });
 
-		// Ensure the env's webhook secret exists (the dashboard generates it lazily, which a
-		// platform-managed org never triggers) so we can register the webhook below.
 		const existingRc = org.processor_configs?.revenuecat;
 		const webhookSecret =
 			(env === AppEnv.Live
@@ -270,7 +265,6 @@ export const handleRevenueCatOAuthCallback = async (c: Context<HonoEnv>) => {
 
 		await clearOrgCache({ db, orgId: org.id });
 
-		// Best-effort: register the inbound webhook with RevenueCat (idempotent). Needs a project.
 		if (projectId) {
 			try {
 				const webhookCli = initRevenuecatCli({

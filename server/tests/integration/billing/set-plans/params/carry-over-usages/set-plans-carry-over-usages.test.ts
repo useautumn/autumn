@@ -1,6 +1,3 @@
-/** set_plans carry_over_usages, mirroring attach: carried usage moves onto the replacing plan unbilled.
- * Pro: 100 messages included, $0.10 over; words $0.05 each. 150 messages + 100 words tracked = $5 + $5. */
-
 import { expect, test } from "bun:test";
 import {
 	type ApiCustomerV3,
@@ -204,7 +201,6 @@ test.concurrent(
 	},
 );
 
-// Opt-in exception to billing usage at a reset: carried usage moves onto the new cycle, as on attach.
 test.concurrent(
 	`${chalk.yellowBright("set-plans carry-over-usages 4: a cycle reset now still carries the requested usage")}`,
 	async () => {

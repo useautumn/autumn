@@ -11,7 +11,6 @@ import { generateId } from "@/utils/genUtils";
 import { initPooledBalanceGraph } from "../applyIncomingPooledBalanceSources/initPooledBalanceGraph";
 import type { MutablePooledCustomerEntitlement } from "../types/pooledBalanceComputeTypes";
 
-/** Catalog entitlement as a synthetic source so we can mint without a seat CP. */
 export const initLicensePooledBalanceGraph = ({
 	ctx,
 	customerLicense,

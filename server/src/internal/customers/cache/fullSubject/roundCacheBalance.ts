@@ -1,9 +1,5 @@
 import { roundCacheBalance, type SubjectBalance } from "@autumn/shared";
 
-/**
- * Round all balance-related numeric fields on a SubjectBalance in-place.
- * Handles top-level fields, entity-scoped balances, and rollover balances.
- */
 export const roundSubjectBalance = ({
 	subjectBalance,
 }: {

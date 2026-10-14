@@ -1,9 +1,3 @@
-/**
- * The org+features cache and its in-process L1: a hit fills L1, a write goes
- * through it, a clear empties it, a failing Redis never poisons it, it is
- * bounded by TTL and size, and a read-through burst shares one lookup.
- */
-
 import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
 import { AppEnv } from "@autumn/shared";
 import {
@@ -32,7 +26,6 @@ const orgData = (orgId: string): CachedOrg => ({
 const redisGets = () =>
 	cache.main.calls.filter((call) => call.startsWith("get:"));
 
-/** lru-cache stamps TTLs with performance.now(), so crossing one means moving that clock. */
 const withAdvancedClock = async (deltaMs: number, fn: () => Promise<void>) => {
 	const yieldMacrotask = () => new Promise((resolve) => setTimeout(resolve, 5));
 	await yieldMacrotask();

@@ -1,12 +1,3 @@
-/**
- * RevenueCat TRANSFER: a restore moves a purchase from rc user A to rc user B.
- * Autumn must move the existing customer product (same id, balances, period) to B,
- * leave both RC identity mappings alone, and never re-grant credits.
- *
- * The RC read client is served from mock fixtures describing the DESTINATION's
- * current subscriptions/purchases, so these tests never touch api.revenuecat.com.
- */
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV5 } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features";

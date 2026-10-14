@@ -4,7 +4,6 @@ import {
 } from "@autumn/shared";
 import { isTrialBackdateRecreate } from "./isTrialBackdateRecreate";
 
-/** The shared kept-trial anchor rule, read from the request; Set Plans' sheet applies the same rule. */
 export const anchorFollowsKeptTrial = ({
 	billingContext,
 }: {

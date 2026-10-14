@@ -8,9 +8,6 @@ import { tryRedisOp } from "@/external/redis/utils/runRedisOp.js";
 
 export const CUSTOMER_JWT_AUTH_CACHE_TTL_SECONDS = 3600;
 
-/** Org + features + the revocation epoch, in ONE entry keyed by the immutable
- *  internal_customer_id. Pure read-through cache — Postgres is the source of
- *  truth, so reads are ramp-routable by requestId. */
 export type CachedCustomerJwtAuth = {
 	org: Organization;
 	features: Feature[];
@@ -67,8 +64,6 @@ export const setCachedCustomerJwtAuth = async ({
 	});
 };
 
-/** Drop the cached entry after any family write — on every live instance, so
- *  ramped readers never see a stale epoch. */
 export const invalidateCustomerJwtAuth = async ({
 	internalCustomerId,
 }: {

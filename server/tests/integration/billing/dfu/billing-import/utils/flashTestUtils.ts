@@ -82,7 +82,6 @@ export const getFlashedCustomerProduct = async ({
 	);
 };
 
-// Standalone test-mode Stripe customer (real cus_...) so flashed processor ids resolve.
 export const createRealStripeCustomer = async (
 	ctx: TestContext,
 	{ email }: { email: string },
@@ -95,7 +94,6 @@ export const createRealStripeCustomer = async (
 	return customer.id;
 };
 
-// Real test-mode Stripe customer + subscription (real cus_.../sub_...) for flashed billables.
 export const createRealStripeSub = async (
 	ctx: TestContext,
 	{
@@ -125,9 +123,6 @@ export const createRealStripeSub = async (
 	return { customerId: stripeCustomerId, subscriptionId: sub.id };
 };
 
-// Real test-mode Stripe customer bound to a test clock frozen at `frozenTime`
-// (a past instant). Advancing the clock to ≈ real now makes the sub's period
-// bracket Date.now(), which the flash uses as its import "now".
 export const createRealStripeCustomerOnClock = async (
 	ctx: TestContext,
 	{ email, frozenTime }: { email: string; frozenTime: number },
@@ -144,9 +139,6 @@ export const createRealStripeCustomerOnClock = async (
 	return { customerId: customer.id, testClockId: testClock.id };
 };
 
-// Subscription on a clock-bound customer (auto-binds to that clock). Its
-// start_date and period follow the clock, so the sub can be genuinely
-// mid-cycle / mid-trial relative to real now after advancing.
 export const createRealStripeSubOnClock = async (
 	ctx: TestContext,
 	{
@@ -177,7 +169,6 @@ export const createRealStripeSubOnClock = async (
 	return { subscriptionId: sub.id, priceId: price.id };
 };
 
-// Thin wrapper over advanceTestClock (advances the clock + waits for Stripe).
 export const advanceClock = async (
 	ctx: TestContext,
 	{

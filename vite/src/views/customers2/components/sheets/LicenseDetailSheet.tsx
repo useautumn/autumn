@@ -19,8 +19,6 @@ import { SubscriptionDetailItems } from "./SubscriptionDetailItems";
 
 const ID_CHIP_INNER_CLASS = "max-w-40 text-tiny-id truncate !font-normal";
 
-/** Detail preview for a license assignment row — the license's items plus its
- * pool inventory and assignment info, mirroring the subscription detail sheet. */
 export function LicenseDetailSheet() {
 	const itemId = useSheetStore((s) => s.itemId);
 	const closeSheet = useSheetStore((s) => s.closeSheet);

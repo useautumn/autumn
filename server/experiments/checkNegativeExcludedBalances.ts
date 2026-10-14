@@ -1,8 +1,5 @@
 import { AppEnv } from "@autumn/shared";
 import { sql } from "drizzle-orm";
-// Import initDrizzle directly — avoid `experimentEnv` because its
-// `loadLocalEnv()` reads `server/.env` and clobbers env vars injected by
-// `infisical run --env=prod` (e.g. DATABASE_URL).
 import { initDrizzle } from "../src/db/initDrizzle";
 
 const prodTestOrgId = (() => {
@@ -16,12 +13,6 @@ console.log(
 	"DATABASE URL host:",
 	dbUrl.replace(/:\/\/[^@]+@/, "://***:***@") || "(empty)",
 );
-
-// Counts cusEnt rows the PG filters exclude but the lake schema cannot
-// (expired = true, pooled contributions) that carry a NEGATIVE balance.
-// These are the only rows that can DEFLATE a lake-side sum and cause a
-// customer to be under-ranked out of the candidate window. ~0 means the
-// lake's error is one-sided (inflation only) and verify-and-rerank is safe.
 
 const ORG_ID = prodTestOrgId;
 const ENV = AppEnv.Live;

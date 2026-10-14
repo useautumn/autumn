@@ -1,11 +1,3 @@
-/**
- * Same-item remove+add (production draft shape: interval + interval_count)
- * must update the grant, carry usage, and leave sibling intervals alone.
- *
- * Red (current):  grant resets / usage drops / sibling bucket is rewritten
- * Green (after):  remaining = newGrant - carriedUsage; other intervals unchanged
- */
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV5 } from "@autumn/shared";
 import { ResetInterval } from "@autumn/shared";

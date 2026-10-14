@@ -62,7 +62,6 @@ export const catalogItemActionToChange = (value: unknown) =>
 export const changeTableRow = ({
 	change,
 	details,
-	// A row with no price is granted by the plan, not missing information.
 	pricing = "Included",
 }: {
 	change: Change;
@@ -94,8 +93,6 @@ export const planItemChangeTableRow = ({
 	});
 };
 
-/** Rows render in the order given — ordering is the caller's concern, since
- * a catalog listing and a before/after diff want different orders. */
 export const changeTable = ({
 	caption,
 	rows,
@@ -114,7 +111,6 @@ export const changeTable = ({
 		]),
 	});
 
-/** Catalog listings group by operation: adds, then updates, then removes. */
 export const sortByChangeKind = (rows: ReturnType<typeof changeTableRow>[]) =>
 	[...rows].sort(
 		(left, right) => changes[left.change].order - changes[right.change].order,
@@ -128,8 +124,6 @@ const writeStatusLabels = {
 	unknown: "🟠 Unverified",
 } as const;
 
-/** Which writes on a grouped card actually landed. Only worth rendering when
- * the group was partly applied — a clean run says so in one line. */
 export const writeOutcomeTable = ({
 	writes,
 }: {
@@ -148,8 +142,6 @@ export const writeOutcomeTable = ({
 		]),
 	});
 
-/** One operation applied to several targets — collapses the repeated sections
- * a fan-out would otherwise produce into a single scannable table. */
 export const fanOutTable = ({
 	caption,
 	headers,

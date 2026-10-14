@@ -27,7 +27,6 @@ export const handleGetOAuthUrl = createRoute({
 			});
 		}
 
-		// Generate OAuth state and store in Redis
 		const frontendUrl = process.env.CLIENT_URL || "http://localhost:5173";
 		const envPath = env === AppEnv.Sandbox ? "/sandbox" : "";
 
@@ -38,14 +37,13 @@ export const handleGetOAuthUrl = createRoute({
 			organizationSlug: org.slug,
 			env,
 			redirectUri,
-			masterOrgId: null, // null for standard flow
+			masterOrgId: null,
 		});
 
 		const baseUrl = new URL(
 			`https://connect.stripe.com/oauth/v2/authorize?response_type=code&client_id=${clientId}&scope=read_write`,
 		);
 
-		// Add state + redirect_uri
 		baseUrl.searchParams.set("state", stateKey);
 		baseUrl.searchParams.set(
 			"redirect_uri",

@@ -10,23 +10,8 @@ import {
 	buildProcessedPreviewSelect,
 } from "@/internal/migrations/v2/filters/customers/buildCustomerSelect.js";
 import { rawWithParamsToDrizzle } from "@/internal/migrations/v2/filters/rawWithParamsToDrizzle.js";
-// Import initDrizzle directly — avoid `experimentEnv` because its
-// `loadLocalEnv()` reads `server/.env` and clobbers env vars injected by
-// `infisical run --env=staging` (e.g. DATABASE_URL).
 import { initDrizzle } from "../src/db/initDrizzle";
 import { FeatureService } from "../src/internal/features/FeatureService.js";
-
-// Why this experiment exists: the "include processed customers" preview
-// (handlePreviewMigrationFilter + buildCustomerSelect) ORs the org/env-scoped
-// compiled filter with `c.internal_id IN (<processed subquery>)`. The OR strips
-// org/env scoping from the second branch, so the planner can't use
-// idx_customers_org_env_internal_id and may seq-scan ALL customers. This script
-// EXPLAINs the current OR query against an equivalent UNION rewrite to confirm
-// the bottleneck and decide whether a new index is needed.
-//
-// Run against a remote env (e.g. staging) via infisical:
-//   infisical run --env=staging --recursive -- \
-//     bun run server/experiments/explainIncludeProcessedFilter.ts
 
 const prodTestOrgId = (() => {
 	const v = process.env.PROD_TEST_ORG_ID;
@@ -40,28 +25,19 @@ console.log(
 	dbUrl.replace(/:\/\/[^@]+@/, "://***:***@") || "(empty)",
 );
 
-// ─── Configuration ──────────────────────────────────────────────────
 const ORG_ID = prodTestOrgId;
 const ENV = AppEnv.Live;
-const SAMPLE_LIMIT = 10; // matches the default preview page size
+const SAMPLE_LIMIT = 10;
 const TRUNCATE_EXPLAIN = true;
 const EXPLAIN_MAX_LINES = 40;
 
-// Optional override. When unset, the script auto-discovers the migration in
-// this org/env with the most live (dry_run = false) customer item runs.
 const MIGRATION_INTERNAL_ID = process.env.MIGRATION_INTERNAL_ID || undefined;
 
-// User-facing migration id (the `id` column, resolved to internal_id like the
-// production handler does). Takes precedence over auto-discovery.
 const MIGRATION_ID = process.env.MIGRATION_ID || "plan_pro-update";
 
-// Filter the live preview applies. Keep it representative of a real migration
-// selection. An empty `{}` matches all customers in the org/env.
 const FILTER: CustomerFilter = {
 	plan: { plan_id: "free" },
 };
-
-// ═════════════════════════════════════════════════════════════════════
 
 const truncateExplainText = (text: string, maxLines: number): string => {
 	const lines = text.split("\n");
@@ -146,7 +122,6 @@ const compiledWhere = ({
 		}),
 	);
 
-// The processed-customers subquery, identical to buildIncludeProcessedOr.
 const processedSubquery = (migrationInternalId: string): SQL => sql`
 	SELECT mir.item_id FROM migration_item_runs mir
 	WHERE mir.migration_internal_id = ${migrationInternalId}
@@ -154,8 +129,6 @@ const processedSubquery = (migrationInternalId: string): SQL => sql`
 		AND mir.dry_run = false
 `;
 
-// Proposed UNION rewrite: each branch keeps its own scoping so the planner can
-// use an index per branch instead of seq-scanning all customers.
 const buildUnionSelect = ({
 	where,
 	migrationInternalId,
@@ -198,8 +171,6 @@ const buildUnionCount = ({
 	) u
 `;
 
-// Resolve a user-facing migration `id` to its `internal_id`, scoped to org/env
-// — mirrors migrationRepo.find used by handlePreviewMigrationFilter.
 const resolveMigrationInternalId = async (
 	db: ReturnType<typeof initDrizzle>["db"],
 	id: string,
@@ -276,7 +247,6 @@ const main = async () => {
 
 	const includeProcessed = { migrationInternalId };
 
-	// 1. Isolated processed subquery — confirms migration_item_runs index coverage.
 	await runMeasured({
 		db,
 		query: sql`SELECT mir.item_id FROM migration_item_runs mir
@@ -286,9 +256,6 @@ const main = async () => {
 		label: "SUBQUERY (processed item_ids only)",
 	});
 
-	// 2. Pure filter — exactly what the FILTER STEP (no migrationId) runs.
-	//    Baseline to prove the customer filter alone is fast; only the live
-	//    view's includeProcessed OR is slow.
 	await runMeasured({
 		db,
 		query: buildCustomerCount({ orgId: ORG_ID, env: ENV, filter: FILTER, ctx }),
@@ -306,7 +273,6 @@ const main = async () => {
 		label: `SELECT [filter only — filter step] (limit ${SAMPLE_LIMIT})`,
 	});
 
-	// 3. Live-view path: the dedicated preview builders (filter ∪ processed).
 	await runMeasured({
 		db,
 		query: buildProcessedPreviewCount({
@@ -331,7 +297,6 @@ const main = async () => {
 		label: `SELECT [preview builder] (limit ${SAMPLE_LIMIT})`,
 	});
 
-	// 4. Hand-written UNION reference (sanity check the builder matches this).
 	await runMeasured({
 		db,
 		query: buildUnionCount({ where, migrationInternalId }),

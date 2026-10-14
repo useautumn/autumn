@@ -20,7 +20,6 @@ import type { AutumnContext, HonoEnv } from "@/honoUtils/HonoEnv.js";
 import { getSqsClient } from "@/queue/initSqs.js";
 import { createFakeMiscCache } from "../../utils/fakeMiscCache.js";
 
-// The legacy lane is what most cases here cover; the worker case turns the rollout on itself.
 const previousRollout = process.env.BALANCE_WORKER_ROLLOUT_ENABLED;
 process.env.BALANCE_WORKER_ROLLOUT_ENABLED = "false";
 
@@ -80,7 +79,6 @@ const featureDeductions = [
 	},
 ];
 
-// CI has no misc cache env — the idempotency claim's getMiscRedis() would throw.
 const fakeMiscRedis = {
 	status: "ready",
 	get: async () => null,
@@ -95,7 +93,6 @@ await mockModuleWithRestore(
 	}),
 );
 
-// Sticky Dynamo keys from prior local runs must not 409 the async path.
 await mockModuleWithRestore(
 	"@/external/aws/dynamodb/idempotencyKeys/operations/claimDynamoIdempotencyKey.js",
 	() => ({
@@ -185,7 +182,6 @@ const createApp = ({ ctx }: { ctx: AutumnContext }) => {
 	return app;
 };
 
-// Defaults to 2.4, where an omitted async is sync.
 const createCtx = ({
 	apiVersion = ApiVersion.V2_4,
 }: {

@@ -111,7 +111,6 @@ describe("customerEntitlementToNextResetAt", () => {
 	});
 
 	test("on an edge date the anchor's cycle end wins when stepping drifted early", () => {
-		// A month-end subscription drifted to the 30th; stepping stays on the 30th, the anchor bills on the 31st.
 		const cycleEndedAt = utc(2027, 4, 30);
 		const row = rowOf({ cycleEndedAt });
 		const anchor = utc(2027, 1, 31);

@@ -1,22 +1,3 @@
-/**
- * TDD test for scheduling a license-backed plan via billing.create_schedule.
- *
- * Reported as: the dashboard's Create Schedule sheet never shows a plan's
- * licences, while the Attach Plan sheet does. The UI gate is downstream of a
- * backend that rejected licence-backed plans on this action outright.
- *
- * Red-failure mode (before fix):
- *  - handleUnsupportedLicenseActionErrors threw 400 "billing.create_schedule
- *    does not support license-backed plans yet." for any phase plan with licences
- *  - createScheduleParamsV0 additionally .strict()-omitted customize.upsert_licenses,
- *    so a per-phase licence customization failed schema validation
- *
- * Green-success criteria (after fix):
- *  - a future phase can schedule a licence-backed plan, and the scheduled
- *    product owns a licence pool granting the catalog seat allowance
- *  - customize.upsert_licenses is accepted per phase and the scheduled pool
- *    is anchored to the customized licence definition, not the catalog one
- */
 import { test } from "bun:test";
 import { BillingInterval, ms } from "@autumn/shared";
 import { expectLicenseDefinitionCorrect } from "@tests/integration/licenses/utils/expectLicenseDefinitionCorrect";

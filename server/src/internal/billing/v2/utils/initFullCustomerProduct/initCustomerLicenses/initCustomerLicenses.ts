@@ -7,11 +7,6 @@ import {
 } from "@autumn/shared";
 import { generateId, nullish } from "@/utils/genUtils";
 
-/**
- * Customer licenses born with a new parent customer product — one per catalog
- * link, scheduled parents and 0-seat pools included, so assigned seats always
- * have a successor to move onto. Assignments and entity-scoped products get none.
- */
 export const initCustomerLicenses = ({
 	customerProduct,
 	fullProduct,
@@ -38,7 +33,6 @@ export const initCustomerLicenses = ({
 
 		return {
 			id: generateId("cus_lic"),
-			// Fresh identity; transitions overwrite it with the predecessor's.
 			link_id: generateId("cus_lic_link"),
 			internal_customer_id: customerProduct.internal_customer_id,
 			parent_customer_product_id: customerProduct.id,

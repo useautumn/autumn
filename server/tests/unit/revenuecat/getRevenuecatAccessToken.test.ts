@@ -27,7 +27,6 @@ const mockOrgUpdate = mock(
 
 const mockOrgGet = mock(async () => storedOrg as Organization);
 
-// In-memory stand-in for the Redis lock so waiters really queue behind the holder.
 const heldLocks = new Set<string>();
 
 const mockAcquireLockWithWait = mock(

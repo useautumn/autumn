@@ -4,7 +4,6 @@ import { getHeraldLogger } from "./getHeraldLogger.js";
 
 let sqsJobs: SqsJobs | undefined;
 
-/** The server's job queues, as herald sends to them. */
 export function getSqsJobs(): SqsJobs {
 	sqsJobs ??= createSqsJobs({
 		ctx: { logger: getHeraldLogger() },

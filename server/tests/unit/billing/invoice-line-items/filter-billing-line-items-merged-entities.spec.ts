@@ -1,9 +1,3 @@
-/**
- * A metadata match names one entity's customer price, but Stripe merges every
- * entity on that price into one line. Siblings on the same Autumn price must be
- * kept so the merged line is attributed to all of them.
- */
-
 import { describe, expect, test } from "bun:test";
 import {
 	type FullCustomerPrice,

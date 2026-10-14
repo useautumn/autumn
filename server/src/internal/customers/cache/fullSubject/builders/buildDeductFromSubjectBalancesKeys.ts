@@ -3,12 +3,6 @@ import { buildFullSubjectViewEpochKey } from "./buildFullSubjectViewEpochKey.js"
 import { buildSharedFullSubjectBalanceKey } from "./buildSharedFullSubjectBalanceKey.js";
 
 // Upstash key-based locking requires every key the Lua script touches to be
-// declared via KEYS[]. Layout the deductFromSubjectBalances script expects:
-//   KEYS[1]  = routing key
-//   KEYS[2]  = lock receipt key ("" when no lock)
-//   KEYS[3]  = idempotency key ("" when request is not idempotent)
-//   KEYS[4]  = subject-view epoch key
-//   KEYS[5+] = per-feature balance hash keys
 const ROUTING_KEY_INDEX = 1;
 const LOCK_RECEIPT_KEY_INDEX = 2;
 const IDEMPOTENCY_KEY_INDEX = 3;
@@ -34,9 +28,6 @@ export const buildDeductFromSubjectBalancesKeys = ({
 	idempotencyKey?: string | null;
 	customerEntitlementDeductions: { feature_id?: string }[];
 	fallbackFeatureId: string;
-	// Capped features: their balance hashes carry the `_usage_windows` counter
-	// field, and a capped feature may have no entitlements (so no deduction
-	// entry references its hash). Declare those keys in KEYS[] too.
 	usageWindowFeatureIds?: string[];
 }) => {
 	const balanceKeysByFeatureId: Record<string, string> = {};

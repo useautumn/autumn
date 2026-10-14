@@ -1,9 +1,3 @@
-/**
- * Contract: dimensions price a track drawn from a pooled credit balance exactly
- * as they do a private one. Pooling decides WHOSE balance is deducted; the
- * dimension decides HOW MUCH — the two are orthogonal.
- */
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3, FeatureConfigOverride } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
@@ -56,7 +50,6 @@ test.concurrent(
 			],
 			actions: [
 				s.billing.attach({ productId: product.id, entityIndex: 0 }),
-				// Both entities draw from the same pool at different dimensioned rates.
 				s.track({
 					featureId: TestFeature.Action1,
 					value: 2,
@@ -74,7 +67,6 @@ test.concurrent(
 			],
 		});
 
-		// 2 x 16 = 32, then 4 x 16 x 0.5 = 32 — both off the shared pool.
 		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId, {
 			skip_cache: "true",
 		});

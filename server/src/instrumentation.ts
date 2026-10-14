@@ -20,8 +20,6 @@ import {
 } from "./utils/otel/otelResourceDefinition.js";
 import { TenantAttrSpanProcessor } from "./utils/otel/TenantAttrSpanProcessor.js";
 
-// Surface OTel internal warnings/errors (export failures, auth issues, etc.)
-// but not DEBUG-level span dumps.
 diag.setLogger(new DiagConsoleLogger(), DiagLogLevel.WARN);
 
 let sdk: NodeSDK | null = null;
@@ -40,10 +38,6 @@ if (process.env.AXIOM_TOKEN) {
 		},
 	});
 
-	// Passing `spanProcessors` replaces the default pipeline — NodeSDK does NOT
-	// auto-add a BatchSpanProcessor for `traceExporter` when `spanProcessors`
-	// is set. We must wire the exporter processor explicitly.
-	// Dev: short 1s flush for fast feedback. Prod: default 5s for throughput.
 	const isDev = process.env.NODE_ENV !== "production";
 	const exportProcessor = new BatchSpanProcessor(traceExporter, {
 		scheduledDelayMillis: isDev ? 1000 : 5000,
@@ -63,13 +57,10 @@ if (process.env.AXIOM_TOKEN) {
 		: undefined;
 
 	// No auto-instrumentations — Bun doesn't support require-in-the-middle.
-	// Stripe, Drizzle, and Redis are instrumented via manual patchers in utils/otel/.
 	sdk = new NodeSDK({
 		autoDetectResources: false,
 		resource,
 		spanProcessors: [new TenantAttrSpanProcessor(), filteredExportProcessor],
-		// Omitting this makes NodeSDK fall back to OTEL_METRICS_EXPORTER, which
-		// defaults to OTLP on localhost:4318 and floods logs with ECONNREFUSED.
 		metricReaders: metricReader ? [metricReader] : [],
 	});
 
@@ -95,8 +86,6 @@ if (process.env.AXIOM_TOKEN) {
 		resourceDefinitionSpan.end();
 	});
 
-	// Flush spans on SIGTERM/SIGINT so dev restarts (nodemon) and prod rollouts
-	// don't swallow in-flight batches.
 	const shutdown = async () => {
 		try {
 			await sdk?.shutdown();

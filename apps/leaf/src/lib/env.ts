@@ -25,9 +25,6 @@ const envSchema = z
 		SLACK_ADMIN_WORKSPACE_ID: optionalString,
 		SLACK_REDIRECT_URI: optionalString,
 		SLACK_SIGNING_SECRET: z.string().min(1),
-		/** Comma-separated Slack user ids of Autumn staff who may use the agent
-		 * in any customer's installation; their home team must be
-		 * SLACK_ADMIN_WORKSPACE_ID. */
 		SLACK_STAFF_USER_IDS: optionalString,
 		SLACK_STATE_SECRET: optionalString,
 	})
@@ -42,7 +39,6 @@ const envSchema = z
 				(process.env.NODE_ENV === "production"
 					? "https://mcp.useautumn.com/mcp"
 					: `http://localhost:${values.PORT}`),
-			// In-process MCP callers use loopback; MCP_SERVER_URL remains public.
 			LOCAL_MCP_URL: `http://localhost:${values.PORT}`,
 			CHAT_STATE_DATABASE_URL:
 				values.CHAT_STATE_DATABASE_URL ?? databaseUrl.toString(),

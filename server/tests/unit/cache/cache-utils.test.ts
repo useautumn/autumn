@@ -3,12 +3,8 @@ import { afterAll, beforeEach, describe, expect, mock, test } from "bun:test";
 const mockState = {
 	warnings: [] as Array<{ message: string; data?: Record<string, unknown> }>,
 };
-// Honor the ioredis surface consumers touch (initHono attaches `.once`
-// listeners at import time) — a bare `{ status }` fake crashes them.
 const defaultRedis = { status: "ready", once: () => undefined };
 
-// Real modules captured before mocking so afterAll can restore them for
-// later test files in the same process.
 const realRedisConfig = {
 	...(await import("@/external/redis/initUtils/redisConfig.js")),
 };
@@ -17,8 +13,6 @@ const realGetMiscRedis = {
 };
 const realInitRedis = { ...(await import("@/external/redis/initRedis.js")) };
 
-// Stub the full `Logger` shape — Bun's `mock.module` is process-wide, so
-// later unit tests inherit this stub. Missing methods crash unrelated code.
 const mockLogger = {
 	debug: () => undefined,
 	info: () => undefined,
@@ -153,9 +147,6 @@ describe("cache utils", () => {
 	});
 
 	test("Redis command errors do not mark Redis unavailable", async () => {
-		// Assert on the return value, not warning count — the warn rate-limit
-		// map is process-wide, so another file hitting the same source within
-		// 30s would swallow the warning in a shared-process run.
 		const result = await tryRedisWrite(
 			async () => {
 				throw new Error("ERR user_script:2: unexpected symbol near '#'");

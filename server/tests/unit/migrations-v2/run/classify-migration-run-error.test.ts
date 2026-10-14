@@ -11,8 +11,6 @@ import {
 
 const CHUNK_TASK_ID = "run-batch-migration-chunk";
 
-/** Trigger serializes a child task's error to `{ name, message }`, so the
- * parent sees a plain Error carrying only the original name. */
 const serializedAcrossTasks = (error: Error): Error => {
 	const deserialized = new Error(error.message);
 	deserialized.name = error.name;

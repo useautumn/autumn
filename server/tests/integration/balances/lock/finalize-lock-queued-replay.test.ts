@@ -1,19 +1,3 @@
-/**
- * TDD test for end-to-end finalize-lock queued replay.
- *
- * Contract under test:
- *   New behaviors:
- *     - a JobName.FinalizeLock message on the track queue (the payload
- *       runFinalizeLock's outage fallback enqueues) is processed by the
- *       worker: the lock is released, the reserved balance refunded, and
- *       the receipt + claim marker deleted
- *
- * Pre-impl red: JobName.FinalizeLock does not exist / the worker has no
- * dispatch case, so the queued message is dropped and the balance stays
- * reserved.
- * Post-impl green: the replay releases the lock within the poll window.
- */
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV5 } from "@autumn/shared";
 import { deleteLock } from "@tests/integration/balances/utils/lockUtils/deleteLock.js";
@@ -68,7 +52,6 @@ test.concurrent(
 			remaining: 7,
 		});
 
-		// The exact message runFinalizeLock's outage fallback enqueues.
 		await addTaskToQueue({
 			jobName: JobName.FinalizeLock,
 			queueUrl: process.env.TRACK_SQS_QUEUE_URL,

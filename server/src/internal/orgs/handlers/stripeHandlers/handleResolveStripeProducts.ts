@@ -50,7 +50,6 @@ export const handleResolveStripeProducts = createRoute({
 		const stripeCli = createStripeCli({ org, env });
 		const productsById = new Map<string, CatalogStripeProduct>();
 
-		// Sequential chunks keep us well within Stripe's rate limits (1 call / 100 ids).
 		for (const idsChunk of chunk(ids, STRIPE_IDS_PER_REQUEST)) {
 			try {
 				const listed = await stripeCli.products.list({

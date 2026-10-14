@@ -1,11 +1,3 @@
-/**
- * atmn scenarios/customers — move a customered version into planVersions and activate a new row → customers stay on the old version, new attaches get the new one
- *
- * real `billing.attach` first; the point is to hit the dependency errors
- *
- * One line of plans/atmn-v3/07_tests.md. [a, b] is a matrix looped INSIDE this file.
- */
-
 import { expect, test } from "bun:test";
 import { customerProducts } from "@autumn/shared";
 import { seedVersionableCustomer } from "@tests/integration/catalog-v2/plans/migrations/utils/seedVersionableCustomer.js";

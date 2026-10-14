@@ -72,7 +72,6 @@ describe(`${chalk.yellowBright("track-entity-balances4: customer balance with en
 
 		await autumnV1.entities.create(customerId, entities);
 
-		// Initialize cache
 		for (const entity of entities) {
 			await autumnV1.entities.get(customerId, entity.id);
 		}
@@ -114,17 +113,14 @@ describe(`${chalk.yellowBright("track-entity-balances4: customer balance with en
 	});
 
 	test("all entities should reflect customer-level deduction", async () => {
-		// When customer tracks, all entity caches should be synced to show the same balance
 		for (const entity of entities) {
 			const fetchedEntity = await autumnV1.entities.get(customerId, entity.id);
 			const balance = fetchedEntity.features[TestFeature.Messages].balance;
 
-			// All entities should see the customer's updated balance (90)
 			expect(balance).toBe(100);
 		}
 	});
 
-	// Should draw 50 from customer level monthly, then 10 from entity lifetime
 	test("track 60 messages at customer level -- draw from customer and entity simultaneously", async () => {
 		await autumnV1.track({
 			customer_id: customerId,
@@ -174,21 +170,17 @@ describe(`${chalk.yellowBright("track-entity-balances4: customer balance with en
 	});
 
 	test("verify database state matches cache after all tracking", async () => {
-		// Wait for database sync
 		await new Promise((resolve) => setTimeout(resolve, 2000));
 
-		// Read from database (skip cache)
 		const customerFromDb = await autumnV1.customers.get(customerId, {
 			skip_cache: "true",
 		});
 		const customerFromCache = await autumnV1.customers.get(customerId);
 
-		// Customer features should match
 		expect(customerFromDb.features[TestFeature.Messages]).toEqual(
 			customerFromCache.features[TestFeature.Messages],
 		);
 
-		// All entities should match
 		for (const entity of entities) {
 			const entityFromDb = await autumnV1.entities.get(customerId, entity.id, {
 				skip_cache: "true",

@@ -1,32 +1,3 @@
-/**
- * TDD test for expiring limited-time trial products from the
- * `test_clock.ready` Stripe webhook handler.
- *
- * Contract under test:
- *   New behavior:
- *     - handleStripeTestClockReady, for each customer under the advanced
- *       clock, expires that customer's active trial customerProducts whose
- *       trial_ends_at is before the test clock's frozen_time — mirroring
- *       productCron's fetchExpiredTrialProducts + processExpiredTrialRow
- *       matching rule (entitlement-only trial with no customerPrices, OR
- *       on_trial_end === "revert").
- *     - Uses frozen_time (not real wall-clock) as "now", since these trials
- *       are simulated forward by the test clock, not real time.
- *     - This happens WITHOUT a manual runProductCron call — driven purely by
- *       the webhook.
- *   Side effects (mirrors the cron exactly):
- *     - Standard trial past its frozen-time trial_ends_at -> Expired, free
- *       default activated (if org has one).
- *     - Revert trial past its frozen-time trial_ends_at -> Expired, previous
- *       paused plan restored to Active.
- *     - A trial NOT yet past frozen-time trial_ends_at is left untouched.
- *
- * Pre-impl red: every assertion below fails because handleStripeTestClockReady
- * only calls resetCustomerEntitlements — it never expires trial products.
- * Post-impl green: all assertions pass once expireTrialProductsForCustomer is
- * wired into the handler using frozen_time as "now".
- */
-
 import { expect, test } from "bun:test";
 import {
 	type ApiCustomerV3,

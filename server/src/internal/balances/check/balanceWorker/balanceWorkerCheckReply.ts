@@ -10,7 +10,6 @@ import {
 } from "@/internal/api/check/getCheckPreview.js";
 import type { WorkerCheckAnswer } from "./runDeductingCheck.js";
 
-/** A worker's answer as the API's check response; the preview is the one part that reads Postgres, so it is added here. */
 export async function checkAnswerToApiResponse({
 	ctx,
 	command,
@@ -21,12 +20,10 @@ export async function checkAnswerToApiResponse({
 	ctx: AutumnContext;
 	command: CheckCommand;
 	answer: WorkerCheckAnswer;
-	/** The check deducts (`send_event` or a lock), so it also answers with the legacy track `balances` map. */
 	isDeductingCheck?: boolean;
 	withPreview?: boolean;
 }): Promise<CheckResponseWithPreview> {
 	const { result, state, catalog } = answer;
-	// The worker's reply is the customer: its rows and the catalog they were decided against.
 	const fullSubject =
 		state && catalog
 			? subjectStateToFullSubject({

@@ -1,32 +1,3 @@
-/**
- * TDD contract for expiring a pooled balance once its last contributor goes away.
- *
- * Contract under test:
- *   New types/fields:
- *     - PooledBalancePlan.expirePoolBalanceCandidates: pools that lost a
- *       contribution; execution expires each only if none remain in the DB.
- *   New behaviors:
- *     - Expiring the ONLY contributing plan sets the pooled customer entitlement's
- *       expires_at rather than deleting the row.
- *     - An expired pooled customer entitlement is absent from FullCustomer
- *       (customer balances) and FullSubject (check) reads.
- *     - Expiring one of SEVERAL contributors leaves the pool live, with granted
- *       decremented by that contribution only.
- *     - A customer-scoped plan contributes to a pool, and expiring it expires the
- *       pool the same way an entity-scoped source does.
- *     - Re-attaching after expiry mints a FRESH pool on the same identity; the
- *       expired row is retained as history.
- *   Side effects:
- *     - customer_entitlements: pooled row survives with expires_at set (auditable)
- *     - pooled_balance_contributions: the outgoing source's row is deleted
- *     - pooled_balances: row survives with expires_at set, granted decremented
- *
- * Pre-impl red: expirePoolBalanceCandidates does not exist, the pooled CTEs
- * ignore expires_at, and customer-scoped sources bail out of the pooled compute.
- * Post-impl green: execution expires pools whose contributions are all gone, and
- * all pooled CTEs filter on expires_at.
- */
-
 import { expect, test } from "bun:test";
 import {
 	type ApiCustomerV5,
@@ -111,7 +82,6 @@ test(
 			actions: [s.billing.attach({ productId: plan.id, entityIndex: 0 })],
 		});
 
-		// ── Baseline: one pool fed by exactly one contribution ───────────
 		await expectPooledBalanceCorrect({
 			db: ctx.db,
 			customerId,
@@ -132,7 +102,6 @@ test(
 			cancel_action: "cancel_immediately",
 		});
 
-		// ── Contract: pooled row kept, expires_at set, contribution gone ──
 		const afterExpiry = await getPooledBalanceDbState({
 			db: ctx.db,
 			customerId,
@@ -147,7 +116,6 @@ test(
 			Date.now(),
 		);
 
-		// ── Contract: hidden from FullCustomer and FullSubject ───────────
 		await expectPooledFeatureHidden({ autumnV2_3, customerId });
 	},
 );
@@ -203,8 +171,6 @@ test(
 			cancel_action: "cancel_immediately",
 		});
 
-		// ── Contract: pool survives, granted drops by the outgoing share ──
-		// The outgoing source's cusEnt row stays (audit); only its contribution goes.
 		await expectPooledBalanceCorrect({
 			db: ctx.db,
 			customerId,
@@ -244,7 +210,6 @@ test(
 			actions: [s.billing.attach({ productId: plan.id })],
 		});
 
-		// ── Contract: a customer-scoped source builds the pool graph ──────
 		await expectPooledBalanceCorrect({
 			db: ctx.db,
 			customerId,
@@ -308,9 +273,6 @@ test(
 			cancel_action: "cancel_immediately",
 		});
 
-		// ── Contract: the same pool identity attaches again ──────────────
-		// Regression guard: expires_at joined the unique_pooled_balance tuple so
-		// the dead pool stops occupying the slot.
 		await autumnV2_3.billing.attach({
 			customer_id: customerId,
 			plan_id: plan.id,
@@ -333,12 +295,10 @@ test(
 			throw new Error("expected the expired pool alongside a fresh one");
 		}
 
-		// ── Contract: old row retained as history, new one live ──────────
 		expect(expiredPool.expires_at).not.toBeNull();
 		expect(freshPool.expires_at).toBeNull();
 		expect(freshPool.granted).toBe(SOLE_GRANT);
 
-		// ── Contract: the contribution feeds the fresh pool ──────────────
 		expect(afterReattach.contributions).toHaveLength(1);
 		expect(afterReattach.contributions[0].pooled_balance_id).toBe(freshPool.id);
 	},

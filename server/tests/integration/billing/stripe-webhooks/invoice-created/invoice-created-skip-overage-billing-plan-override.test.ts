@@ -1,6 +1,3 @@
-// Per-feature `skip_overage_billing` on spend_limit billing controls: skipped overage is not
-// posted on invoice.created renewals, balances still reset, entity > customer > plan precedence.
-
 import { expect, test } from "bun:test";
 import { type ApiCustomerV3, ErrCode } from "@autumn/shared";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
@@ -13,20 +10,6 @@ import { advanceToNextInvoice } from "@tests/utils/testAttachUtils/testAttachUti
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 2: Plan-level default (percent cap + skip) → customer override re-bills
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Pro ($20/mo) with consumable messages (100 included, $0.10/u); plan
- *   billing_controls: { usage_percentage, overage_limit: 20, skip: true }
- *   → usable up to 120% of included allowance, overage never posted to Stripe
- * - Track to the 120 cap; a further track is rejected (cap enforced)
- * - Advance cycle → renewal is base-only, balance resets
- * - Customer override: { usage_percentage, overage_limit: 400, skip: false }
- * - Track 150 (50 overage) → advance cycle → overage IS billed
- */
 test.concurrent(
 	`${chalk.yellowBright("invoice.created skip-overage-billing 2: plan-level default, customer override re-enables billing")}`,
 	async () => {
@@ -58,7 +41,6 @@ test.concurrent(
 				actions: [s.attach({ productId: pro.id, timeout: 2000 })],
 			});
 
-		// ── Contract: plan-level cap enforced at 120% of included ────────────
 		await autumnV2_1.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
@@ -87,20 +69,17 @@ test.concurrent(
 		const customerAfterFirstCycle =
 			await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-		// ── Contract: plan-level skip → renewal is base-only ─────────────────
 		await expectCustomerInvoiceCorrect({
 			customer: customerAfterFirstCycle,
 			count: 2,
-			latestTotal: 20, // 20 units of overage NOT billed
+			latestTotal: 20,
 			latestInvoiceProductId: pro.id,
 		});
 
-		// ── Contract: balance still resets for the skipped feature ───────────
 		expect(customerAfterFirstCycle.features[TestFeature.Messages].balance).toBe(
 			100,
 		);
 
-		// ── Contract: customer-level entry overrides the plan default ────────
 		await autumnV2_1.customers.update(customerId, {
 			billing_controls: {
 				spend_limits: [
@@ -133,11 +112,10 @@ test.concurrent(
 		const customerAfterSecondCycle =
 			await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-		// ── Contract: overage now posted to Stripe ───────────────────────────
 		await expectCustomerInvoiceCorrect({
 			customer: customerAfterSecondCycle,
 			count: 3,
-			latestTotal: 20 + 50 * 0.1, // $25 — 50 overage × $0.10
+			latestTotal: 20 + 50 * 0.1,
 			latestInvoiceProductId: pro.id,
 		});
 

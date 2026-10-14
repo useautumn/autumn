@@ -1,13 +1,6 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { AppEnv, member, organizations } from "@autumn/shared";
 
-// Sub-org / sandbox provisioning is non-transactional: it creates external
-// resources (a Stripe Connect account, two Svix apps) before the DB writes that
-// record their ids, then a sandbox key. A mid-way failure must roll everything
-// back and rethrow so nothing is orphaned. One file, one leaf-dep mock set, all
-// three layers (provisionOrgResources -> provisionSubOrg -> createSandboxForOrg)
-// exercised through their REAL implementations.
-
 const state = {
 	createdSvixApps: [] as string[],
 	deletedAccounts: [] as string[],
@@ -15,7 +8,6 @@ const state = {
 	rowDeletes: [] as string[],
 	getCalled: 0,
 	teardownOrg: null as null | Record<string, unknown>,
-	// failure injection
 	createConnectThrows: false,
 	failOnUpdateKey: null as string | null,
 	svixSandbox: "ok" as "ok" | "undef",
@@ -30,8 +22,6 @@ const reReadOrg = {
 	svix_config: { sandbox_app_id: "app_sandbox", live_app_id: "app_live" },
 };
 
-// Spread the real module so every export stays defined — a partial factory
-// poisons later files in the same process with missing-export link errors.
 const realInitDrizzle = await import("@/db/initDrizzle.js");
 await mockModuleWithRestore("@/db/initDrizzle.js", () => ({
 	...realInitDrizzle,
@@ -282,7 +272,6 @@ describe("createSandboxForOrg teardown (key-failure)", () => {
 		state.keyThrows = true;
 		await expect(call()).rejects.toThrow();
 		expect(state.teardownOrg?.id).toBe("org_sub");
-		// teardown must receive the re-read org so it can clean the external ids
 		expect(
 			(
 				state.teardownOrg as {

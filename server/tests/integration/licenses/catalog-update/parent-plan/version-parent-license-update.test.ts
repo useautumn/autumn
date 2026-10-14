@@ -1,5 +1,3 @@
-/** Contract: a customized license edit auto-versions a parent with customers without force_version.
- * V1 and its customer pool stay pinned; V2 gets an independent link and changed custom rows on the same child. */
 import { expect, test } from "bun:test";
 import {
 	type ApiCustomerV5,

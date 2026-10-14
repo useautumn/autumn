@@ -1,10 +1,3 @@
-/**
- * `catalogV2.update` reports one `results.plans[]` entry per upsert row, so a
- * variant the config declares but the catalog lacks has to come back as a
- * `create` — a client backfilling stable ids reads that entry, not the
- * top-level `plans`, which carries direct rows only.
- */
-
 import { describe, expect, test } from "bun:test";
 import { AppEnv, type UpdateCatalogParams } from "@autumn/shared";
 import { products } from "@tests/utils/fixtures/db/products";

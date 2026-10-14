@@ -5,16 +5,10 @@ import {
 	FullPlanLicenseSchema,
 } from "./fullPlanLicenseModel";
 
-/** Customer license row hydrated with its effective plan license (customer
- * override when one exists, else the catalog link) and that license's
- * product. planLicense is null when the link was removed — reconcile owns
- * those. */
 export type FullCustomerLicense = DbCustomerLicense & {
 	planLicense: FullPlanLicense | null;
 };
 
-/** Schema mirror of the drizzle row, used by the cache sanitize walker —
- * keep fields in sync with customerLicenseTable. */
 export const CustomerLicenseRowSchema = z.object({
 	id: z.string(),
 	link_id: z.string(),

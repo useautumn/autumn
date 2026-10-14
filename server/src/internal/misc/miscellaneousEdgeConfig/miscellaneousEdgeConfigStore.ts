@@ -53,32 +53,24 @@ export const _setMiscellaneousEdgeConfigForTesting = ({
 	store._setRuntimeConfigForTesting(config);
 };
 
-/** Gate for the expired purchase-grant sweep. */
 export const isExpiredGrantCleanupEnabled = (): boolean =>
 	store.get().expiredGrantCleanup;
 
-/** Global sync-coalescing gate (balance syncs via Redis dirty state). */
 export const isSyncCoalesceEnabled = (): boolean => store.get().syncCoalesce;
 
-/** Global gate: serve subject lookups from Postgres instead of the cache. */
 export const isSubjectLookupDbOnlyEnabled = (): boolean =>
 	store.get().subjectLookupDbOnly;
 
-/** Idempotency-key migration: DynamoDB is the conflict authority. */
 export const isIdempotencyDynamoReadEnabled = (): boolean =>
 	store.get().idempotencyDynamoRead;
-/** Global gate: fall back to Postgres on Redis outage instead of shedding. */
 export const isRedisFallbackToDbEnabled = (): boolean =>
 	store.get().redisFallbackToDb;
 
-/** Global gate: share one in-flight fetch across concurrent subject reads. */
 export const isSubjectReadSingleflightEnabled = (): boolean =>
 	store.get().subjectReadSingleflight;
 
-/** Kill switch for the MotherDuck balance-cache refresh cron. */
 export const isMotherduckCacheRefreshDisabled = (): boolean =>
 	store.get().disableMotherduckCacheRefresh;
 
-/** Global gate for Axiom response-body compaction and size caps. */
 export const isAxiomResponseBodyReductionEnabled = (): boolean =>
 	store.get().axiomResponseBodyReduction;

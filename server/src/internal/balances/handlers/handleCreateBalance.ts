@@ -44,16 +44,13 @@ export const handleCreateBalance = createRoute({
 				params: createBalanceParams,
 			});
 
-		// Through the plan executor, so the grant lands on the worker's log like every other balance write.
 		await executeAutumnBillingPlan({
 			ctx,
 			autumnBillingPlan: {
 				customerId: customer_id,
-				// A grant for an entity names it, so the plan reaches the worker with the entity's part.
 				existingEntities: fullCustomer.entity ? [fullCustomer.entity] : [],
 				insertCustomerProducts: [],
 				customEntitlements: [newEntitlement],
-				// The column is not null; the model types it nullable.
 				insertCustomerEntitlements: [
 					{
 						...newCustomerEntitlement,

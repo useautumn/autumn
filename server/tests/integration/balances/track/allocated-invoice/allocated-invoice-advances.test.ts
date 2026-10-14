@@ -12,15 +12,6 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { constructArrearProratedItem } from "@/utils/scriptUtils/constructItem.js";
 
-// ═══════════════════════════════════════════════════════════════════
-// Allocated Invoice — Stale Update Prevention Tests
-//
-// These tests verify that the allocated invoice flow does NOT corrupt
-// unrelated subscription state. When tracking into overage creates
-// an invoice, it must not accidentally undo cancellations, downgrades,
-// or schedule changes on other products/entities.
-// ═══════════════════════════════════════════════════════════════════
-
 const PRICE_PER_SEAT = 50;
 const INCLUDED_USAGE = 1;
 
@@ -33,15 +24,6 @@ const userItem = constructArrearProratedItem({
 		on_decrease: OnDecrease.None,
 	},
 });
-
-// ═══════════════════════════════════════════════════════════════════
-// adv1: Cancel add-on, then track allocated users into overage
-//
-// Setup: Attach pro (with allocated users) + recurring add-on.
-//        Cancel the add-on.
-// Action: Track users into overage (creates an invoice).
-// Assert: The add-on subscription is still canceling.
-// ═══════════════════════════════════════════════════════════════════
 
 test(`${chalk.yellowBright("allocated-invoice-adv1: tracking overage does not undo add-on cancellation")}`, async () => {
 	const pro = products.pro({ id: "pro", items: [userItem] });
@@ -60,13 +42,11 @@ test(`${chalk.yellowBright("allocated-invoice-adv1: tracking overage does not un
 		],
 	});
 
-	// Verify add-on is canceling before tracking
 	await expectStripeSubscriptionCorrect({
 		ctx,
 		customerId,
 	});
 
-	// Track into overage — creates a BillImmediately invoice
 	const trackRes: TrackResponseV2 = await autumnV2.track({
 		customer_id: customerId,
 		feature_id: TestFeature.Users,
@@ -103,21 +83,11 @@ test(`${chalk.yellowBright("allocated-invoice-adv1: tracking overage does not un
 		canceling: [addOn.id],
 	});
 
-	// The add-on subscription must still be canceling
 	await expectStripeSubscriptionCorrect({
 		ctx,
 		customerId,
 	});
 });
-
-// ═══════════════════════════════════════════════════════════════════
-// adv2: Downgrade entity 1, then track entity 2 into overage
-//
-// Setup: 2 entities, both attached to premium (with allocated workflows).
-//        Downgrade entity 1 from premium to pro (scheduled).
-// Action: Track entity 2 workflows into overage.
-// Assert: Entity 1's subscription is still scheduled to downgrade.
-// ═══════════════════════════════════════════════════════════════════
 
 test(`${chalk.yellowBright("allocated-invoice-adv2: tracking entity overage does not undo another entity's scheduled downgrade")}`, async () => {
 	const workflowItem = constructArrearProratedItem({
@@ -146,18 +116,15 @@ test(`${chalk.yellowBright("allocated-invoice-adv2: tracking entity overage does
 		actions: [
 			s.billing.attach({ productId: premium.id, entityIndex: 0 }),
 			s.billing.attach({ productId: premium.id, entityIndex: 1 }),
-			// Downgrade entity 1 from premium to pro (scheduled for end of cycle)
 			s.billing.attach({ productId: pro.id, entityIndex: 0 }),
 		],
 	});
 
-	// Verify entity 1 has a scheduled downgrade before tracking
 	await expectStripeSubscriptionCorrect({
 		ctx,
 		customerId,
 	});
 
-	// Track entity 2 workflows into overage
 	const trackRes: TrackResponseV2 = await autumnV2.track({
 		customer_id: customerId,
 		feature_id: TestFeature.Workflows,
@@ -180,7 +147,6 @@ test(`${chalk.yellowBright("allocated-invoice-adv2: tracking entity overage does
 		scheduled: [pro.id],
 	});
 
-	// Entity 1's scheduled downgrade must still be intact
 	await expectStripeSubscriptionCorrect({
 		ctx,
 		customerId,

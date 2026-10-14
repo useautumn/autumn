@@ -13,7 +13,6 @@ import type Stripe from "stripe";
 import { setPlansPreviewToWarnings } from "@/internal/billing/v2/actions/setPlans/preview/setPlansPreviewToWarnings";
 import { makeFullCusProduct } from "../billing-change-response/helpers/makeFullCusProduct";
 
-/** Wording is asserted on the message; the bold parts have their own test. */
 const withoutParts = <Warning extends { parts?: unknown }>({
 	parts: _parts,
 	...warning

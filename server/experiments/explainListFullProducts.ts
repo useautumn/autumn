@@ -8,7 +8,6 @@ const main = async () => {
 
 	const { db } = initDrizzle();
 
-	// Reproduce the latestVersionsSubquery from ProductService._listFullQuery
 	const latestVersionsSubquery = db
 		.select({
 			id: products.id,
@@ -19,7 +18,6 @@ const main = async () => {
 		.groupBy(products.id)
 		.as("latest_versions");
 
-	// 1. Run the Drizzle relational query for wall-clock time
 	console.log("--- Running ProductService.listFull query ---");
 	const start = performance.now();
 	const data = await db.query.products.findMany({
@@ -51,7 +49,6 @@ const main = async () => {
 	console.log(`Products returned: ${data.length}`);
 	console.log(`Wall-clock time: ${elapsed.toFixed(2)}ms\n`);
 
-	// 2. Build equivalent raw SQL so we can wrap with EXPLAIN ANALYZE
 	const rawQuery = sql`
 		SELECT
 			p.internal_id, p.id, p.name, p.description, p.org_id,
@@ -140,7 +137,6 @@ const main = async () => {
 			)
 	`;
 
-	// Run raw query for wall-clock time
 	console.log("--- Running raw SQL query ---");
 	const start2 = performance.now();
 	const rawResult = await db.execute(rawQuery);
@@ -148,7 +144,6 @@ const main = async () => {
 	console.log(`Rows returned: ${rawResult.length}`);
 	console.log(`Wall-clock time: ${elapsed2.toFixed(2)}ms\n`);
 
-	// Run EXPLAIN ANALYZE
 	console.log("--- EXPLAIN (ANALYZE, BUFFERS) ---\n");
 	const explainQuery = sql`EXPLAIN (ANALYZE, BUFFERS, FORMAT TEXT) ${rawQuery}`;
 	const explainResult = await db.execute(explainQuery);

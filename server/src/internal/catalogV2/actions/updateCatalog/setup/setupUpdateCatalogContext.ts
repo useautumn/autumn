@@ -24,8 +24,6 @@ export const setupUpdateCatalogContext = async ({
 	preview?: boolean;
 	phases: CatalogPhases;
 }): Promise<UpdateCatalogContext> => {
-	// Ahead of every load: a renamed row names a plan id that does not exist
-	// yet, so setup cannot scope to it until the stated ids are resolved.
 	const internalIdRefs = await timeCatalogPhase({
 		ctx,
 		phases,
@@ -62,7 +60,6 @@ export const setupUpdateCatalogContext = async ({
 		}),
 	]);
 
-	// License refs + plan-usage samples both need loaded product internal ids.
 	const [licenseStatesContext, planUsagePersisted] = await Promise.all([
 		timeCatalogPhase({
 			ctx,

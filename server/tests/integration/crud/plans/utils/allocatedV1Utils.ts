@@ -35,7 +35,6 @@ export const getUsersPrice = async ({
 	return price;
 };
 
-/** Rewrite the users price to the pre-v2 shape: prorated, no behaviour column. */
 export const forceOldAllocatedV1Config = async ({
 	ctx,
 	planId,

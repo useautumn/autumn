@@ -11,6 +11,5 @@ export type CachePushContext = ReadThroughCacheContext & {
 	balanceWorkerClient: Pick<BalanceWorkerClient, "readSubjectState">;
 	getAtomClient: GetAtomClient;
 	shadowAtomConfig: Pick<EdgeConfigStore<ShadowAtomConfig>, "get">;
-	/** Production: org Atoms are pushed to through their queues only. */
 	atomPushQueueOnly: boolean;
 };

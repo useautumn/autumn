@@ -61,7 +61,6 @@ export const executePostgresDeductionV2 = async ({
 	modifiedCusEntIdsByFeatureId: Record<string, string[]>;
 }> => {
 	const { db, org, env } = ctx;
-	// A worker-routed customer's balances never live in the Redis subject cache.
 	const mirrorsSubjectCache = !isBalanceWorkerRolloutEnabled({
 		ctx,
 		customerId,
@@ -134,9 +133,6 @@ export const executePostgresDeductionV2 = async ({
 				sql`SELECT * FROM deduct_from_cus_ents(
 			${JSON.stringify({
 				sorted_entitlements: customerEntitlementDeductions,
-				// No usage_window_limits here: the hard usage cap is enforced only on the
-				// Redis/Lua path, so this Postgres fallback intentionally fails open
-				// (availability over strict cap enforcement during a Redis outage).
 				spend_limit_by_feature_id: spendLimitByFeatureId ?? null,
 				usage_based_cus_ent_ids_by_feature_id:
 					usageBasedCusEntIdsByFeatureId ?? null,
@@ -270,7 +266,6 @@ export const executePostgresDeductionV2 = async ({
 					oldFullSubject,
 					updates,
 				});
-				// The cache already mirrors the rolled-back balances and Postgres is right again, so drop it unflushed.
 				if (mirrorsSubjectCache)
 					await invalidateCachedFullSubject({
 						ctx,

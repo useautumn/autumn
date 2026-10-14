@@ -44,7 +44,6 @@ export function useCreateScheduleMutation({
 		};
 	};
 
-	// The checkout stage owns the URL, so suppress the provider's copy-and-toast.
 	const handleCheckoutSubmit = async () => {
 		const result = await mutation.mutateAsync({
 			skipDefaultSuccess: true,

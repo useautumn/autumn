@@ -4,9 +4,6 @@ import type { TimeRangePreset } from "../../../../lib/hooks/useEvents.js";
 import type { FilterField } from "../../../../lib/hooks/useEventsFilter.js";
 import { DetailSheet, SheetSection } from "../../primitives/index.js";
 
-/**
- * Time range options for the filter
- */
 export const TIME_RANGE_OPTIONS: { value: TimeRangePreset; label: string }[] = [
 	{ value: "24h", label: "Last 24 hours" },
 	{ value: "7d", label: "Last 7 days" },
@@ -16,43 +13,26 @@ export const TIME_RANGE_OPTIONS: { value: TimeRangePreset; label: string }[] = [
 ];
 
 export interface EventsFilterState {
-	/** Customer ID filter (text input) */
 	customerId: string;
-	/** Selected feature IDs */
 	selectedFeatures: string[];
-	/** Time range preset */
 	timeRange: TimeRangePreset;
-	/** Group by property */
 	groupBy: string;
 }
 
 export { type FilterField } from "../../../../lib/hooks/useEventsFilter.js";
 
 export interface EventsFilterSheetProps {
-	/** Current filter state */
 	filters: EventsFilterState;
-	/** Available features for selection */
 	features: ApiFeature[];
-	/** Whether the sheet is focused */
 	isFocused: boolean;
-	/** Currently active field in the filter */
 	activeField: FilterField;
-	/** Index within the active field (for features list) */
 	activeIndex: number;
-	/** Whether customer input is being edited */
 	isEditingCustomer: boolean;
-	/** Whether group by input is being edited */
 	isEditingGroupBy: boolean;
-	/** Callback to apply filters */
 	onApply: () => void;
-	/** Callback to clear all filters */
 	onClear: () => void;
 }
 
-/**
- * Filter panel that replaces the detail sheet when filter mode is active.
- * Allows filtering by customer ID, features, time range, and group by.
- */
 export function EventsFilterSheet({
 	filters,
 	features,
@@ -71,14 +51,12 @@ export function EventsFilterSheet({
 		return TIME_RANGE_OPTIONS.find((o) => o.value === preset)?.label ?? preset;
 	};
 
-	// Display group by value without the "properties." prefix
 	const displayGroupBy = filters.groupBy
 		? filters.groupBy.replace(/^properties\./, "")
 		: "";
 
 	return (
 		<DetailSheet title="Filters" isFocused={isFocused} minWidth={40}>
-			{/* Customer ID Filter */}
 			<SheetSection title="Customer ID">
 				<Box>
 					<Text color={getFieldColor("customer")}>
@@ -97,7 +75,6 @@ export function EventsFilterSheet({
 				</Box>
 			</SheetSection>
 
-			{/* Time Range Filter */}
 			<SheetSection title="Time Range">
 				{TIME_RANGE_OPTIONS.map((option, idx) => {
 					const isSelected = filters.timeRange === option.value;
@@ -118,9 +95,7 @@ export function EventsFilterSheet({
 				})}
 			</SheetSection>
 
-			{/* Group By Filter */}
 			<SheetSection title="Group By">
-				{/* None option */}
 				<Box>
 					<Text color={activeField === "groupBy" && activeIndex === 0 && isFocused ? "magenta" : "gray"}>
 						{activeField === "groupBy" && activeIndex === 0 && isFocused ? "> " : "  "}
@@ -130,7 +105,6 @@ export function EventsFilterSheet({
 						None
 					</Text>
 				</Box>
-				{/* Custom input option */}
 				<Box>
 					<Text color={activeField === "groupBy" && activeIndex === 1 && isFocused ? "magenta" : "gray"}>
 						{activeField === "groupBy" && activeIndex === 1 && isFocused ? "> " : "  "}
@@ -152,7 +126,6 @@ export function EventsFilterSheet({
 				</Box>
 			</SheetSection>
 
-			{/* Features Filter (multi-select) */}
 			<SheetSection title="Features">
 				{features.length === 0 ? (
 					<Text color="gray">No features available</Text>
@@ -182,7 +155,6 @@ export function EventsFilterSheet({
 				)}
 			</SheetSection>
 
-			{/* Active Filters Summary */}
 			{(filters.customerId ||
 				filters.selectedFeatures.length > 0 ||
 				filters.timeRange !== "all" ||

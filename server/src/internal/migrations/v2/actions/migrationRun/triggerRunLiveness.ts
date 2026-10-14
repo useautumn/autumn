@@ -2,7 +2,6 @@ import { runs } from "@trigger.dev/sdk/v3";
 import "@/trigger/configureTrigger.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 
-/** Trigger statuses after which the task can never execute another page. */
 const TERMINAL_TRIGGER_STATUSES = new Set([
 	"COMPLETED",
 	"CANCELED",
@@ -13,8 +12,6 @@ const TERMINAL_TRIGGER_STATUSES = new Set([
 	"TIMED_OUT",
 ]);
 
-/** Asks trigger.dev whether the task is provably dead. Unreachable API or a
- * non-terminal status → false (conservative: assume alive). */
 export const isTriggerRunTerminal = async ({
 	ctx,
 	triggerRunId,

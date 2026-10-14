@@ -15,16 +15,6 @@ import {
 import type { StripeSubscriptionUpdatedContext } from "../../stripeSubscriptionUpdatedContext";
 import { isStripeSubscriptionRenewedEvent } from "./isStripeSubscriptionRenewedEvent";
 
-/**
- * Handles subscription renewals (un-cancellations) from Stripe.
- *
- * This task:
- * 1. Detects if subscription was renewed (un-canceled)
- * 2. Skips if Autumn initiated or has schedule
- * 3. Clears cancellation fields on active customer products
- * 4. Deletes scheduled products for recurring main products (since they're staying)
- * 5. Sends renewal webhooks
- */
 export const handleStripeSubscriptionRenewed = async ({
 	ctx,
 	subscriptionUpdatedContext,
@@ -40,7 +30,6 @@ export const handleStripeSubscriptionRenewed = async ({
 		fullCustomer,
 	} = subscriptionUpdatedContext;
 
-	// 1. Check if this is actually a renewal event
 	const { renewed } = isStripeSubscriptionRenewedEvent({
 		stripeSubscription,
 		previousAttributes,
@@ -60,15 +49,7 @@ export const handleStripeSubscriptionRenewed = async ({
 		return;
 	}
 
-	// PASS 1: Update customer products and handle scheduled products.
-	// Iterate over a snapshot: `trackCustomerProductDeletion` (called below when
-	// a scheduled default product is deleted alongside the main product's
-	// renewal) splices `customerProducts` in place, which would otherwise
-	// invalidate the for-of cursor and skip subsequent entries (e.g. an add-on
-	// that sits after the main product in the array).
 	for (const customerProduct of [...customerProducts]) {
-		// Skip if not active or not on this subscription
-
 		const { valid } = cp(customerProduct)
 			.recurring()
 			.hasActiveStatus()
@@ -76,10 +57,8 @@ export const handleStripeSubscriptionRenewed = async ({
 
 		if (!valid) continue;
 
-		// attach-set ends_at expiry, not a cancellation
 		if (!customerProduct.canceled && !customerProduct.canceled_at) continue;
 
-		// Clear cancellation fields
 		const updates = {
 			canceled_at: null,
 			canceled: false,
@@ -102,12 +81,11 @@ export const handleStripeSubscriptionRenewed = async ({
 			`[handleStripeSubscriptionRenewed] Cleared cancellation for ${customerProduct.product.name}`,
 		);
 
-		// For recurring main products, delete any scheduled product in the same group
 		const { valid: isRecurringAndMain } = cp(customerProduct)
 			.recurring()
 			.main();
 
-		if (!org.config.sync_status) continue; // legacy
+		if (!org.config.sync_status) continue;
 
 		let deletedScheduledProduct: FullCusProduct | undefined;
 		if (isRecurringAndMain) {
@@ -136,7 +114,6 @@ export const handleStripeSubscriptionRenewed = async ({
 			}
 		}
 
-		// Send webhook
 		await addProductsUpdatedWebhookTask({
 			ctx,
 			internalCustomerId: fullCustomer.internal_id,

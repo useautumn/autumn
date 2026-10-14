@@ -5,13 +5,8 @@ import type {
 	RolloutPercent,
 } from "./rolloutSchemas.js";
 
-/** The one rollout a request snapshot freezes; the store may hold others, nothing reads them. */
 export const ACTIVE_ROLLOUT_ID = "balance-worker";
 
-/**
- * A percent change takes effect this long after it was saved, so every pod flips at the same instant:
- * past the 10s config poll in production, past the 1s poll locally.
- */
 export const ROLLOUT_SETTLE_MS =
 	process.env.NODE_ENV === "production" ? 15_000 : 5_000;
 
@@ -21,7 +16,6 @@ export const rolloutEffectiveAt = ({
 	changedAt: number;
 }): number => changedAt + ROLLOUT_SETTLE_MS;
 
-/** The percent that routes at `now`: the previous one until the change has settled. */
 export const routingPercentAt = ({
 	rollout,
 	now,
@@ -45,14 +39,12 @@ const isEnabledAtPercent = ({
 	return customerBucket !== null && customerBucket < percent;
 };
 
-/** Deterministic bucket (0-99) for a customer ID. */
 export const getCustomerBucket = ({
 	customerId,
 }: {
 	customerId: string;
 }): number => Number(BigInt(Bun.hash(customerId)) % 100n);
 
-/** Resolves the effective percent config for a rollout (org override > global). */
 export const resolveRolloutPercent = ({
 	rolloutId,
 	orgId,
@@ -80,7 +72,6 @@ export const findRolloutCustomer = ({
 }): RolloutCustomer | undefined =>
 	config.rollouts[rolloutId]?.customers[orgId]?.[customerId];
 
-/** Pinned from its add until its removal, each landing one settle window after it was saved. */
 export const isCustomerPinnedAt = ({
 	customer,
 	now,
@@ -95,7 +86,6 @@ export const isCustomerPinnedAt = ({
 	return added && !removed;
 };
 
-/** Checks whether a rollout is enabled for a given customer: a pinned customer, else the org or global percent. */
 export const isRolloutEnabled = ({
 	rolloutId,
 	orgId,
@@ -157,10 +147,6 @@ const viewPredatesPercentDecrease = ({
 	});
 };
 
-/**
- * A legacy customer's Redis view is stale when a settled removal or decrease sent them back to legacy after
- * the view was built. A view with no timestamp counts as older than any of them.
- */
 export const isRolloutCacheStale = ({
 	rolloutId,
 	orgId,

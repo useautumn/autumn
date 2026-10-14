@@ -20,7 +20,6 @@ export const handleUpdateBalancesV2 = createRoute({
 		const { customer_id } = c.req.param();
 		const { balances, entity_id } = c.req.valid("json");
 
-		// Target balances become deltas against this read, so the worker's writes must be in Postgres first.
 		if (isBalanceWorkerRolloutEnabled({ ctx, customerId: customer_id }))
 			await flushBalanceWorkerCustomer({ ctx, customerId: customer_id });
 		const fullCus = await CusService.getFull({

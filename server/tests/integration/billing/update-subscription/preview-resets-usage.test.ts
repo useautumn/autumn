@@ -1,19 +1,3 @@
-/**
- * TDD test for "usage will reset" on approval cards.
- *
- * The executor clears usage balances when the update changes plan AND
- * carry-over is off (computeRetainedCustomerEntitlementUpdates). The preview
- * never said so, so an approver could not tell that approving would wipe the
- * customer's usage — the card only showed money.
- *
- * Red-failure mode (current behavior):
- *  - preview_update omits resets_usage entirely, so the card cannot show it.
- *
- * Green-success criteria (after fix):
- *  - resets_usage is true exactly when the executor would clear balances, and
- *    false for an update that carries usage over.
- */
-
 import { expect, test } from "bun:test";
 import type { UpdateSubscriptionV1Params } from "@autumn/shared";
 import { items } from "@tests/utils/fixtures/items";

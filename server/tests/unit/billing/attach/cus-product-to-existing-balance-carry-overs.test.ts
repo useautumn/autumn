@@ -24,7 +24,6 @@ const buildCarryOverSource = ({
 }: {
 	balance: number;
 	rollover: RolloverConfig | null;
-	/** Bill timing of the feature's usage price; omitted = no price (free). */
 	priceBillWhen?: BillWhen;
 }) =>
 	({

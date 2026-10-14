@@ -1,19 +1,3 @@
-/**
- * catalogV2.update — groupTargetsByCustomize collapses identical customize
- * across plans. Two children with the same item delta share one child op.
- * Two parents share one upsert_licenses op only when that payload is identical
- * (same license_plan_ids + nested customize). Different children on different
- * parents must not $or together — customizeToKey has to see upsert_licenses.
- *
- * Contract:
- *   H1 both children add Dashboard; Team+Scale each offer both
- *      → 1 child $or + 1 parent $or with two upserts
- *   H2 both children replace Messages with Words (same remove+add)
- *      → same collapse, richer customize
- *   H3 same Dashboard add; Team offers Seat only, Scale offers Pack only
- *      → child ops still collapse; parent ops stay split
- */
-
 import { test } from "bun:test";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";

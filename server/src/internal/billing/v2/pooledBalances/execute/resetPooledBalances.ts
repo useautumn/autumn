@@ -50,8 +50,6 @@ export const resetPooledBalances = async ({
 		skipped,
 	});
 
-	// Promotion changes granted even when the balance reset lost its CAS race,
-	// so a promoted-but-skipped pool still needs the cache dropped.
 	const anyPromoted = computed.some(
 		({ result }) => result.pooledContributionsPromoted,
 	);
@@ -63,7 +61,6 @@ export const resetPooledBalances = async ({
 			source,
 		});
 	}
-	// Granted can be reconciled even when another request won the balance reset.
 	const grantedUpdated = computed.some(
 		({ result }) => result.pooledGranted !== undefined,
 	);

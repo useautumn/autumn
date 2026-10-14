@@ -5,14 +5,12 @@ type Group = Catalog["groups"][number];
 export type GroupTree = {
 	roots: Group[];
 	children: Map<string, Group[]>;
-	/** Files of a group not covered by any of its child groups. */
 	looseFiles: Map<string, string[]>;
 };
 
 const isStrictSubset = (a: Set<string>, b: Set<string>) =>
 	a.size < b.size && [...a].every((f) => b.has(f));
 
-/** Nests each group under its smallest same-tier strict superset, so composed groups read as a tree. */
 export const buildGroupTree = (catalog: Catalog): GroupTree => {
 	const filesOf = new Map<string, Set<string>>(
 		catalog.groups.map((g) => [g.name, new Set()]),

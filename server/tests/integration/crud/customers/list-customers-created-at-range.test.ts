@@ -1,8 +1,3 @@
-/**
- * customers.list created_at_range (V2.3 cursor path): inclusive optional bounds,
- * start > end rejected, composes with sort_order and cursor pagination.
- */
-
 import { beforeAll, describe, expect, test } from "bun:test";
 import {
 	type ApiCustomerV5,
@@ -68,8 +63,6 @@ const sorted = (ids: string[]): string[] => [...ids].sort();
 
 describe("list-customers-created-at-range", () => {
 	const autumn = new AutumnInt({ version: ApiVersion.V2_3 });
-	// created_at is server-assigned, so every bound below is derived from what the
-	// unfiltered ascending page actually reported.
 	let observed: ObservedCustomer[] = [];
 
 	const idsInRange = ({ start, end }: CreatedAtRange): string[] =>
@@ -190,8 +183,6 @@ describe("list-customers-created-at-range", () => {
 		const start = observed[1]?.created_at ?? 1;
 		const end = start - 1;
 
-		// AutumnInt drops the HTTP status, and InvalidInputs is only produced by
-		// the 400 request-validation path.
 		const error = await listRange({ start, end }).then(
 			() => null,
 			(caught) => caught as { code?: string },
@@ -246,7 +237,6 @@ describe("list-customers-created-at-range", () => {
 			);
 		}
 
-		// Exact reversal only holds when no two customers share a millisecond.
 		const timestampsAreDistinct =
 			new Set(ascendingTimes).size === ascendingTimes.length;
 		if (timestampsAreDistinct) {
@@ -279,8 +269,6 @@ describe("list-customers-created-at-range", () => {
 	});
 });
 
-// Without `search`, the created_at filter is the last fragment and ends in a
-// bound parameter, so the cursor predicate must not be glued onto it ("$3AND").
 describe("list-customers-created-at-range (no search filter)", () => {
 	const autumn = new AutumnInt({ version: ApiVersion.V2_3 });
 	let start = 0;

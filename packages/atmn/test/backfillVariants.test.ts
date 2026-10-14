@@ -1,6 +1,3 @@
-/** A variant written as `variant({...})` in its own file takes the stable id
- * the catalog reports for it; the plan's inline text is untouched. */
-
 import { expect, test } from "bun:test";
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { backfillInternalIds } from "../src/actions/push/backfillInternalIds";
@@ -52,8 +49,6 @@ test("a variant fixture in its own file gets its internalId, once", () => {
 	);
 });
 
-/** The shape a real config takes: items naming another fixture's id make the
- * literal "dynamic", and a variant may state its id in single quotes. */
 test("a plan and its variant both take their id and slug from the catalog", () => {
 	const nestedDir = `${import.meta.dir}/.tmp/backfill-variants-nested`;
 	rmSync(nestedDir, { recursive: true, force: true });
@@ -89,7 +84,6 @@ test("a plan and its variant both take their id and slug from the catalog", () =
 		].join("\n"),
 	);
 
-	// `catalogV2.get` nests the resolved variant plan under the edge.
 	const rows = {
 		plans: [
 			{
@@ -118,7 +112,6 @@ test("a plan and its variant both take their id and slug from the catalog", () =
 	expect(source).toContain("variantPlanId: 'pro_yearly'");
 	expect(source.match(/versionSlug: "v1"/g)).toHaveLength(2);
 
-	// Second run is a no-op: nothing is stated twice.
 	const second = backfillInternalIds({
 		rows,
 		configPath: `${nestedDir}/autumn.config.ts`,

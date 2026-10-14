@@ -12,7 +12,6 @@ export type MigrationWithRunInfo = Migration & {
 	status: MigrationStatus;
 	blocked_by: string | null;
 	has_live_runs: boolean;
-	/** Whether a plain run of this migration takes the batch lane. */
 	batch_eligible: boolean;
 	summary: MigrationListSummary;
 };
@@ -23,7 +22,6 @@ const hasActiveMigration = (migrations: MigrationWithRunInfo[] = []) =>
 			migration.status === "waiting" || migration.status === "running",
 	);
 
-/** Customer counts load apart from the list: they cost seconds on large orgs. */
 export const useMigrationsQuery = ({
 	pollWhileActiveMs,
 }: {
@@ -75,7 +73,6 @@ export const useMigrationsQuery = ({
 		[data, customerCounts],
 	);
 
-	/** Loading, failed, or absent from the counts response: progress can't be measured yet. */
 	const pendingCustomerCountIds = useMemo(
 		() =>
 			new Set(

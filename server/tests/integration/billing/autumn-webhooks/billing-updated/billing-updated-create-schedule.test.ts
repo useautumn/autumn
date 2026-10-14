@@ -1,9 +1,3 @@
-/**
- * Integration test: `billing.updated` webhook fires for create-schedule.
- * Immediate-phase plans show up as `activated`, future-phase plans as
- * `scheduled`.
- */
-
 import { afterAll, beforeAll, expect, test } from "bun:test";
 import type {
 	BillingChangeResponse,
@@ -126,7 +120,6 @@ test(`${chalk.yellowBright("billing.updated: create-schedule with multi-plan pha
 	expect(result).not.toBeNull();
 	const { data } = result!.payload;
 
-	// Immediate phase (now): both plans activated
 	for (const planId of [pro.id, addonNow.id]) {
 		const change = findChange(data.plan_changes, {
 			action: "activated",
@@ -135,7 +128,6 @@ test(`${chalk.yellowBright("billing.updated: create-schedule with multi-plan pha
 		expect(change?.subscription?.status).toBe("active");
 	}
 
-	// Future phase (+30 days): both plans scheduled
 	for (const planId of [premium.id, addonLater.id]) {
 		const change = findChange(data.plan_changes, {
 			action: "scheduled",

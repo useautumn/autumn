@@ -18,7 +18,6 @@ export type CatalogVersioningOption = {
 
 export type CatalogDecisionVariant = {
 	conflictMessages: string[];
-	/** Conflict-free variants are propagated by default. */
 	defaultSelected: boolean;
 	hasCustomers: boolean;
 	name: string;
@@ -26,12 +25,8 @@ export type CatalogDecisionVariant = {
 	version: number;
 };
 
-/** Surface-neutral model of the versioning / variant-propagation / migration
- * decisions a previewed plan update needs. One source of truth for the option
- * wording shown on the dashboard, in chat surfaces, and in the CLI. */
 export type CatalogDecisionModel = {
 	defaultVersioning: CatalogVersioningChoice;
-	/** Metadata-only edits (name, description) skip the versioning choice. */
 	metadataOnly: boolean;
 	migration: { available: boolean; description: string; label: string };
 	needsDecision: boolean;
@@ -61,9 +56,6 @@ const hasCustomersAnywhere = (plan: CatalogPlanPreview): boolean =>
 		(variant: PlanUpdatePreviewVariant) => variant.has_customers,
 	);
 
-/** Whether `previewUpdateCatalog` returned enough for this plan (customers,
- * variants, or historical versions) that the versioning/variant/migration
- * choices matter, mirroring the dashboard's `PlanChangeDialog` gating. */
 export const planNeedsDecision = (plan: CatalogPlanPreview): boolean =>
 	isVersionableChange(plan) &&
 	(plan.versionable ||
@@ -131,7 +123,6 @@ export const buildCatalogDecisionModel = ({
 		defaultVersioning: metadataOnly ? "update_all_versions" : "create_version",
 		metadataOnly,
 		migration: {
-			// Only offered when the update lands in place on a plan with customers.
 			available: hasMigratableDiff(plan) && hasCustomersAnywhere(plan),
 			description:
 				"Moves existing customers onto the new plan shape. Review and run it separately after.",

@@ -8,7 +8,6 @@ const ATOM_TOKEN_BYTES = 32;
 export const generateAtomToken = (): string =>
 	`${ATOM_TOKEN_PREFIX}${randomBytes(ATOM_TOKEN_BYTES).toString("base64url")}`;
 
-/** What an Atom is given in place of its token; must stay equal to `hashToken` in apps/atom. */
 export const atomTokenToHash = ({ token }: { token: string }): string =>
 	createHash("sha256").update(token).digest("hex");
 

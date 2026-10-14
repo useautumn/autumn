@@ -9,12 +9,6 @@ import type { RequestContext } from "@/honoUtils/HonoEnv.js";
 import { getApiCustomerBase } from "./getApiCustomerBase.js";
 import { getApiCustomerExpand } from "./getApiCustomerExpand.js";
 
-/**
- * Transform FullCustomer to ApiCustomer with expand fields and version changes applied.
- *
- * Note: schedule is not included on the API customer. Consumers that need it
- * should call the dedicated schedule endpoint.
- */
 export const getApiCustomer = async ({
 	ctx,
 	fullCustomer,
@@ -24,14 +18,12 @@ export const getApiCustomer = async ({
 	fullCustomer: FullCustomer;
 	withAutumnId?: boolean;
 }): Promise<ApiCustomerV5> => {
-	// Get base ApiCustomer (subscriptions, balances, invoices)
 	const { apiCustomer: baseCustomer, legacyData } = await getApiCustomerBase({
 		ctx,
 		fullCus: fullCustomer,
 		withAutumnId,
 	});
 
-	// Clean base customer (remove entities from base, handle expand)
 	const cleanedBaseCustomer: ApiCustomerV5 = {
 		...baseCustomer,
 		entities: undefined,
@@ -41,7 +33,6 @@ export const getApiCustomer = async ({
 			: undefined,
 	};
 
-	// Get expand params (rewards, referrals, etc.)
 	const apiCustomerExpand = await getApiCustomerExpand({
 		ctx,
 		customerId: fullCustomer.id || fullCustomer.internal_id,
@@ -63,7 +54,6 @@ export const getApiCustomer = async ({
 			: {}),
 	};
 
-	// Apply version transformations based on API version
 	return applyResponseVersionChanges<ApiCustomerV5>({
 		input: apiCustomer,
 		targetVersion: ctx.apiVersion,

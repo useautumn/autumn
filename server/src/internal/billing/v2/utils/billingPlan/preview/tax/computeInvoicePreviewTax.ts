@@ -19,7 +19,6 @@ export const isThirdPartyTaxProviderError = (err: unknown) =>
 		"third party tax provider",
 	);
 
-/** Tax via a draft invoice preview, which runs whichever tax provider the Stripe account uses. */
 export const computeInvoicePreviewTax = async ({
 	stripeCli,
 	currency,
@@ -62,7 +61,6 @@ export const computeInvoicePreviewTax = async ({
 		],
 	});
 
-	// A customer preview also carries their pending items and subscription lines, so read tax off our line only.
 	const lines = preview.lines.has_more
 		? await getStripeInvoiceLineItems({
 				stripeClient: stripeCli,

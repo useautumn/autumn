@@ -1,12 +1,3 @@
-/**
- * catalogV2.update / preview_update — remove_plans verdicts.
- *
- * Unreferenced plans hard-delete. Expired-only customers tombstone.
- * Versionable customers or reward programs archive instead. A surviving
- * license parent blocks child archive/remove. Unpinned entries share one
- * verdict across every version.
- */
-
 import { expect, test } from "bun:test";
 import {
 	CouponDurationType,

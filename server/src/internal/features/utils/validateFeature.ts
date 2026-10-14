@@ -11,7 +11,6 @@ import {
 	validateMeteredConfig,
 } from "@/internal/features/featureUtils.js";
 
-/** Normalize + validate a feature row's type/config before insert or update. */
 export const validateFeature = ({
 	data,
 	allFeatures,

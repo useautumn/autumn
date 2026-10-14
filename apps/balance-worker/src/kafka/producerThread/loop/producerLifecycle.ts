@@ -1,4 +1,3 @@
-/** Control messages: create, connect and disconnect one producer, or stop them all. */
 import { explicitPartitioner } from "@autumn/kafka";
 import type { ProducerConfig } from "kafkajs";
 import { readSendFrame } from "../frames/sendFrame.js";
@@ -69,7 +68,6 @@ export function disconnectProducer({
 	const producer = producers.get(producerId);
 	producers.delete(producerId);
 	nextSeq.delete(producerId);
-	// Frames still waiting for an earlier sequence number will never see it: answer them now.
 	for (const bytes of held.get(producerId)?.values() ?? [])
 		answerDisconnected({
 			scope,
@@ -84,10 +82,6 @@ export function disconnectProducer({
 	});
 }
 
-/**
- * Flushes before it disconnects: every send already published is dispatched, every send in flight is
- * acked, and a frame still waiting for an earlier sequence number is answered disconnected.
- */
 export async function stopProducers({
 	scope,
 }: {

@@ -2,7 +2,6 @@ import type { CatalogRow } from "@autumn/balance-engine";
 import { z } from "zod/v4";
 import { sentAs } from "./sentAs.js";
 
-// As with subjects, Atom confirms only what it reads itself: the table, and the id the row is keyed on.
 const rowShape = z.union([
 	z.looseObject({
 		table: z.enum(["products", "features"]),
@@ -14,10 +13,8 @@ const rowShape = z.union([
 	}),
 ]);
 
-/** `POST /v1/catalog.set` as Autumn sends it: the org's whole shared catalog. */
 const catalogBodySchema = z.object({
 	rows: z.array(sentAs<CatalogRow>(rowShape)),
-	/** When Autumn read the rows, in epoch ms. */
 	read_at: z.number().int().nonnegative(),
 });
 

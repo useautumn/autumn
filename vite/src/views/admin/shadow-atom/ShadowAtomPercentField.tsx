@@ -1,6 +1,5 @@
 import { Input } from "@autumn/ui";
 
-/** A 0–100 number box with a trailing %. */
 export const ShadowAtomPercentField = ({
 	value,
 	onChange,

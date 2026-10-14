@@ -17,7 +17,6 @@ export function CopyablePre({ text }: { text: string }) {
 	);
 }
 
-// A compact, inline version for use in places like badges or small UI elements.
 export function CopyableSpan({
 	text,
 	className = "",

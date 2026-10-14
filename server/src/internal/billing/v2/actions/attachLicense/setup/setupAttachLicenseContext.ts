@@ -15,8 +15,6 @@ import { setupResetCycleAnchor } from "@/internal/billing/v2/setup/setupResetCyc
 import { licenseAssignmentRepo } from "@/internal/licenses/repos/licenseAssignmentRepo.js";
 import type { AttachLicenseContext } from "../types.js";
 
-/** Exactly one assignable parent must hold a pool of the license plan: zero
- * is unoffered (or not yet planted), more than one is ambiguous. */
 const resolveAssignmentTarget = ({
 	fullCustomer,
 	licensePlanId,
@@ -69,8 +67,6 @@ const resolveAssignmentTarget = ({
 	return target;
 };
 
-/** Requested entities split against the customer's existing ones — the
- * unmatched remainder is what the plan will create. */
 const splitRequestedEntities = ({
 	fullCustomer,
 	entityParams,
@@ -92,8 +88,6 @@ const splitRequestedEntities = ({
 	return { existingEntities, newEntityParams };
 };
 
-/** One full-customer load; the assignment target and entity split derive from
- * the hydrated customer, so compute stays a pure plan assembly. */
 export const setupAttachLicenseContext = async ({
 	ctx,
 	params,
@@ -115,8 +109,6 @@ export const setupAttachLicenseContext = async ({
 		entityParams: params.entities,
 	});
 
-	// The assignment's cycles anchor to the parent's billing state — same
-	// derivation as attach, minus any billing changes.
 	const [{ stripeSubscription, testClockFrozenTime }, unusedAssignments] =
 		await Promise.all([
 			setupStripeBillingContext({

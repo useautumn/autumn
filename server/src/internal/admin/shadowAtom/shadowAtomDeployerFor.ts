@@ -4,7 +4,6 @@ import { createMultiTenantAtomDeployer } from "@/internal/byoc/deployers/createM
 import type { MultiTenantAtomDeployer } from "@/internal/byoc/deployers/types/multiTenantAtom.js";
 import { decryptData } from "@/utils/encryptUtils.js";
 
-/** Our shadow Atom as its admin reaches it; refused until it has an address and a minted admin token. */
 export const shadowAtomDeployerFor = ({
 	config,
 }: {

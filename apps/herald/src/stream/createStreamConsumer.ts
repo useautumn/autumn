@@ -28,9 +28,7 @@ import {
 	type StreamConsumer,
 } from "./types/streamConsumer.js";
 
-// Small on purpose: herald is a follower, and one slow partition must not hold the others.
 const PARTITIONS_CONSUMED_CONCURRENTLY = 8;
-/** One store round trip per slice; the resolve and heartbeat after it bound what a lost partition can repeat. */
 const RECORDS_PER_SLICE = 500;
 const CONSUMER_TIMINGS: KafkaConsumerGroupTimings = {
 	fetchMaxWaitTimeMs: 250,
@@ -39,7 +37,6 @@ const CONSUMER_TIMINGS: KafkaConsumerGroupTimings = {
 	sessionTimeoutMs: 30000,
 };
 
-/** Runs one job over the balance log with a consumer group of its own. Everything Kafka lives here, none of it in a job. */
 export function createStreamConsumer({
 	ctx,
 	config,
@@ -48,9 +45,7 @@ export function createStreamConsumer({
 	ctx: {
 		kafka: Pick<Kafka, "consumer" | "admin">;
 		logger: AutumnLogger;
-		/** Where partition_progress lives; without it a fence is known only once read from the log. */
 		db?: PostgresExecutor;
-		/** The consumer died and kafkajs will not restart it: the process must end so the task is replaced. */
 		onCrashed: (params: { job: string; cause: unknown }) => void;
 		now?: () => number;
 	};
@@ -58,7 +53,6 @@ export function createStreamConsumer({
 		topic: string;
 		groupIdPrefix: string;
 		recordsPerSlice?: number;
-		/** Tests only: a short session so an evicted member is seen in seconds. */
 		timings?: KafkaConsumerGroupTimings;
 	};
 	streamConsumer: StreamConsumer;
@@ -81,7 +75,6 @@ export function createStreamConsumer({
 	let consumedAtJoin = new Map<number, bigint | null>();
 	let lastFetchAtMs: number | null = null;
 
-	/** A record that cannot be read is dropped, loudly: one bad record must never hold its partition. */
 	function onRecordError({
 		topic,
 		partition,
@@ -120,7 +113,6 @@ export function createStreamConsumer({
 		);
 	}
 
-	// Stopped mid-slice: thrown so nothing of the slice is resolved; the runner is already stopping, so it ends there.
 	async function applyRecords(slice: MeteringRecordSlice): Promise<void> {
 		const settled = await landRecords({
 			ctx: {
@@ -155,7 +147,6 @@ export function createStreamConsumer({
 				onRecordError,
 				onStaleRecord,
 				readOwnerFence,
-				// Herald follows a log its writer validated, so only the shape its readers lean on is checked.
 				parseRecord: parseTrustedMeteringRecord,
 			},
 		},
@@ -189,7 +180,6 @@ export function createStreamConsumer({
 		);
 	}
 
-	/** What the heartbeat reports: in the group or not, and how far behind the log this member is. */
 	function readStalledLagMs({ nowMs }: { nowMs: number }): number | null {
 		if (assignedPartitions.length === 0) {
 			if (membership !== "joining" || joiningSinceMs === null) return null;
@@ -253,7 +243,6 @@ export function createStreamConsumer({
 		await topicConsumer.start();
 	}
 
-	/** The runner is told first so it stops fetching; the abort then only cuts short a wait on the store. */
 	async function stop(): Promise<void> {
 		membership = "leaving";
 		const stopped = topicConsumer.stop();

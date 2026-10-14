@@ -14,7 +14,6 @@ export const asNonEmptyString = (value: unknown) =>
 const isJsonContentType = (contentType: string) =>
 	contentType.split(";")[0]?.trim().toLowerCase() === "application/json";
 
-/** Anything that is not a JSON object (arrays, numbers, null) carries no fields. */
 const jsonFieldsSchema = z.record(z.string(), z.unknown()).catch({});
 
 export const parseOAuthRequestFields = async (
@@ -40,12 +39,6 @@ export const parseOAuthRequestFields = async (
 	};
 };
 
-/**
- * Keys are emitted in a stable order because the token endpoint's refresh replay
- * key hashes this body: a client retrying the same refresh has to produce the
- * same bytes. Form encoding carries only strings, so non-string values are
- * dropped there but survive in JSON.
- */
 export const rebuildOAuthRequest = ({
 	fields,
 	isJson,

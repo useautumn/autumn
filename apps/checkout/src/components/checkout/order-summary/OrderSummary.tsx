@@ -28,7 +28,6 @@ export function OrderSummary() {
 
 	const { line_items, next_cycle } = preview;
 
-	// Build a map of next cycle line items by plan_id (for trial plans that have no immediate charges)
 	const nextCycleItemsByPlan = useMemo(() => {
 		if (!next_cycle?.line_items) return new Map<string, PreviewLineItem[]>();
 		const map = new Map<string, PreviewLineItem[]>();
@@ -44,12 +43,10 @@ export function OrderSummary() {
 	const hasNoImmediateCharges = line_items.length === 0 && total === 0;
 	const showNextCycleBreakdown = hasNoImmediateCharges && next_cycle;
 
-	// Use next cycle line items when showing next cycle breakdown, otherwise use immediate line items
 	const displayLineItems: PreviewLineItem[] = showNextCycleBreakdown
 		? next_cycle.line_items
 		: line_items;
 
-	// Build a map of plan_id -> plan_name from incoming and outgoing
 	const planNameMap = useMemo(() => {
 		const map = new Map<string, string>();
 		for (const change of [...outgoing, ...incoming]) {
@@ -63,7 +60,6 @@ export function OrderSummary() {
 
 	
 
-	// Group line items by plan_id
 	const planGroups = useMemo((): PlanGroup[] => {
 		const groupMap = new Map<string, PreviewLineItem[]>();
 
@@ -75,7 +71,6 @@ export function OrderSummary() {
 			groupMap.get(planId)!.push(item);
 		}
 
-		// Convert to array, with outgoing plans first (credits), then incoming plans
 		const outgoingByPlanId = new Map(
 			outgoing.map((change) => [change.plan_id, change]),
 		);
@@ -105,7 +100,6 @@ export function OrderSummary() {
 		const outgoingIds = new Set<string>(visibleOutgoing.map((c) => c.plan_id));
 		const groups: PlanGroup[] = [];
 
-		// Add outgoing plan groups first (including those with no line items like free plans)
 		for (const change of visibleOutgoing) {
 			const planId = change.plan_id;
 			const items = groupMap.get(planId) || [];
@@ -118,7 +112,6 @@ export function OrderSummary() {
 			});
 		}
 
-		// Add incoming plan groups (including those with no line items)
 		for (const change of visibleIncoming) {
 			const planId = change.plan_id;
 			const items = groupMap.get(planId) || [];
@@ -130,7 +123,6 @@ export function OrderSummary() {
 			});
 		}
 
-		// Add any remaining line item groups that weren't in incoming/outgoing
 		for (const [planId, items] of groupMap) {
 			if (!outgoingIds.has(planId) && !visibleIncomingIds.has(planId)) {
 				groups.push({

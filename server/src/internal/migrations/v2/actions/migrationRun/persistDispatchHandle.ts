@@ -69,8 +69,6 @@ const settleOrphanedRun = async ({
 	}
 };
 
-/** A run whose handle is not stored can never be checked against trigger.dev,
- * so a lost write cancels the dispatch and fails the claim. */
 export const persistDispatchHandle = async ({
 	ctx,
 	migrationRunId,

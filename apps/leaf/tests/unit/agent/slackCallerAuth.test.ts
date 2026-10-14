@@ -135,7 +135,6 @@ describe("resolveSlackStaffAuth", () => {
 			...staffParams,
 			fetchHomeTeamId: async () => "T_AUTUMN",
 			slackUserId: "U_STAFF",
-			// Empty, not undefined: undefined falls back to the ambient env.
 			staffTeamId: "",
 		});
 

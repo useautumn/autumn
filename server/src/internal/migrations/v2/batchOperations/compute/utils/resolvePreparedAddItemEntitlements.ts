@@ -19,8 +19,6 @@ const ensurePricesAndEntitlementsKey = buildPrepareModuleKey({
 	parts: ["update_plan"],
 });
 
-/** Resolves customize.add_items to the shared entitlement rows prepare created
- * for this from-product — the deterministic rows that make batch adds uniform. */
 export const resolvePreparedAddItemEntitlements = ({
 	migration,
 	op,

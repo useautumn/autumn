@@ -11,7 +11,6 @@ const itemPriceId = (item: PhaseItem) => {
 	return stripeRefToId(price);
 };
 
-/** A phase's items as a comparable string: price ids and quantities, order-independent. */
 export const schedulePhaseItemShape = (phase: { items: PhaseItem[] }) =>
 	JSON.stringify(
 		phase.items

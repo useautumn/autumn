@@ -4,8 +4,6 @@ import { toast } from "sonner";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useApprovalSeedStore } from "../stores/useApprovalSeedStore";
 
-/** After ANY successful sheet apply, the originating Slack approval must not
- * stay pending — settle it in the background and update its card. */
 export const useSettleApprovalOnApply = () => {
 	const axiosInstance = useAxiosInstance();
 	const approvalId = useApprovalSeedStore((state) => state.approvalId);

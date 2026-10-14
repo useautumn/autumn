@@ -13,7 +13,6 @@ import {
 import type { EveAuthContext, EveSessionRef } from "../../eve/types.js";
 import { DRAIN_IDLE_TIMEOUT_MS } from "../../turnBudget.js";
 
-/** Consumes one answered-input continuation without deciding any later parks. */
 export const drainParkedAgentTurn = async ({
 	auth,
 	orgId,

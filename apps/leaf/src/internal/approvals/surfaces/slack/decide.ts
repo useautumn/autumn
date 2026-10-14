@@ -33,8 +33,6 @@ import { requiredScopesForApproval } from "../../utils/approvalScopeRequirements
 import { publicToolArgs } from "../../utils/toolRequest.js";
 import { dashboardUrlFor } from "./present.js";
 
-/** Grouped writes for card bodies and scope checks; step-listing failures
- * degrade to the legacy marker fallback rather than blocking the click. */
 const groupedStepsForApproval = async ({
 	approval,
 	listSteps = (approvalId) => chatApprovalWritesRepo.list({ approvalId, db }),
@@ -100,12 +98,10 @@ const authorizeSlackApprovalClicker = async ({
 }): Promise<ApprovalAuthorization> => {
 	const { toolName } = detailsFromApproval({ approval });
 
-	// Slack-admin approvals are gated upstream by validateSlackAdminAccess.
 	if (isInternalAutumnSlackProvider({ provider: approval.provider })) {
 		return { allowed: true };
 	}
 
-	// A gated tool without a declared scope requirement fails closed.
 	const required = requiredScopesForApproval({
 		groupedToolNames: (await groupedStepsForApproval({ approval })).map(
 			(write) => write.toolName,
@@ -146,7 +142,6 @@ const authorizeSlackApprovalClicker = async ({
 		slackUserId: providerUserId,
 	});
 	if (!callerAuth.usePerUser) {
-		// The session already runs under the installer token; no approver token needed.
 		return { allowed: true };
 	}
 
@@ -184,8 +179,6 @@ const defaultApprovalActionDeps: ApprovalActionDeps = {
 	},
 };
 
-/** Every decide-path log line carries the click's identifiers, so approval
- * incidents reconstruct from logs without a DB lookup first. */
 const contextualApprovalLogger = ({
 	base,
 	fields,
@@ -198,7 +191,6 @@ const contextualApprovalLogger = ({
 	warn: (...args) => base.warn(...args, fields),
 });
 
-// Maps a DB row to the card state shown when a click can no longer act on it.
 const cardStatusForApproval = ({
 	approval,
 }: {
@@ -278,8 +270,6 @@ export const handleApprovalActionWithDeps = async ({
 		}
 
 		if (event.actionId === "cancel_billing_action") {
-			// Cancel first so exactly one click wins — the eve denial takes seconds
-			// and a second click in that window would discard and reply again.
 			const cancelled = await deps.cancelApproval({
 				approvalId,
 				providerUserId,
@@ -308,7 +298,6 @@ export const handleApprovalActionWithDeps = async ({
 			return;
 		}
 
-		// Claim first so exactly one click wins; losers never reach authorization.
 		const claimed = await deps.claimApproval({ approvalId, providerUserId });
 		if (!claimed) {
 			deps.logger.warn("Approval claim rejected", {
@@ -319,7 +308,6 @@ export const handleApprovalActionWithDeps = async ({
 			return;
 		}
 
-		// On denial, release the claim so another authorized user can still approve.
 		let authorization: ApprovalAuthorization | undefined;
 		try {
 			authorization = await deps.authorizeApprovalClicker?.({
@@ -356,7 +344,6 @@ export const handleApprovalActionWithDeps = async ({
 			return;
 		}
 		const details = await cardDetailsForApproval({ approval: claimed });
-		// Best effort: a failed card render must never block the execution.
 		await deps
 			.editActionMessage({
 				content: approvalStatusCard({
@@ -372,8 +359,6 @@ export const handleApprovalActionWithDeps = async ({
 			providerUserId,
 		});
 		if ("drifted" in result) {
-			// Nothing executed; the row is back in pending with fresh previews —
-			// re-render the PENDING card and tell the thread why.
 			const refreshed = await deps.getApproval({ approvalId });
 			if (refreshed) {
 				const groupedWrites = await groupedStepsForApproval({
@@ -425,7 +410,6 @@ export const handleApprovalActionWithDeps = async ({
 			tool: details.toolName,
 		});
 
-		// Conversation belongs in the thread; the card stays a compact record.
 		const postConversation = async (resumed: ApprovalRunResult) => {
 			if (!isErrorResult(resumed) && "text" in resumed && resumed.text.trim()) {
 				try {
@@ -470,8 +454,6 @@ export const handleApprovalActionWithDeps = async ({
 				approval: claimed,
 				outcome: result,
 				providerUserId,
-				// The action event's thread is generically typed; the reply surface
-				// is the same object the message path posts through.
 				target: event.thread as ReplyTarget,
 				threadId: event.threadId,
 			});
@@ -494,6 +476,5 @@ export const handleApprovalActionWithDeps = async ({
 	}
 };
 
-/** Positional signature kept for the chat SDK's action-handler callback boundary. */
 export const handleApprovalAction = async (event: ActionEvent) =>
 	handleApprovalActionWithDeps({ event });

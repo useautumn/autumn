@@ -44,7 +44,6 @@ export const cusEntToPurchasedBalance = ({
 	const billingType = getBillingType(cusPrice.price.config);
 
 	if (billingType === BillingType.UsageInAdvance) {
-		// Purchased balance is how much was prepaid
 		const prepaidQuantity = cusEntToPrepaidQuantity({
 			cusEnt,
 			sumAcrossEntities: nullish(entityId),

@@ -105,7 +105,6 @@ export function retirePartition({
 	entry: PartitionEntry;
 }): Promise<void> {
 	if (entry.retirement) return entry.retirement;
-	// A pending claim wait must let go: the entry is leaving, whoever the log names.
 	entry.handoffAbort.abort(new PartitionRetiredError());
 	closePartitionAdmission({ entry });
 	entry.retirement = completePartitionRetirement({ ctx, entry });
@@ -120,21 +119,11 @@ async function completePartitionRetirement({
 	entry: PartitionEntry;
 }): Promise<void> {
 	try {
-		// A late claim must settle before cleanup uses or disconnects its producer.
 		await entry.startup;
 	} catch {
-		// Startup failure is reported separately; retirement must still finish.
 	}
 	const drained = await entry.drain;
 	try {
-		// Release on having attempted a claim rather than on having seen one
-		// acknowledged: the record is durable before the publish resolves, so a
-		// worker torn down mid-claim was previously leaving a claim behind that it
-		// never withdrew. A release that does not name the current holder is now
-		// ignored, so letting go cannot evict whoever took the partition over.
-		// The drain still gates it. A partition that could not be drained may have
-		// work in flight, and advertising it as free would invite a second worker
-		// in before this one has finished.
 		if (drained?.ok && entry.claimAttempted) await entry.publication.release();
 	} catch (cause) {
 		entry.publicationFailed = true;

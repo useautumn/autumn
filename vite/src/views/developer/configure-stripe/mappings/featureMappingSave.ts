@@ -6,7 +6,6 @@ import {
 } from "./priceMappingRows";
 import { CREATE_STRIPE_PRODUCT } from "./StripeProductSelect";
 
-/** A touched row; `product_id: null` means it follows the default product. */
 export type FeatureRowChoice = {
 	product_id: string | null;
 	price_id: string | null;
@@ -17,7 +16,6 @@ export type FeatureSheetValues = {
 	rows: Record<string, FeatureRowChoice>;
 };
 
-/** What the row's product picker shows: `null` renders as "Default". */
 export const rowProductChoice = ({
 	row,
 	values,
@@ -49,7 +47,6 @@ export const rowEffectiveProductId = ({
 	rowProductChoice({ row, values, initialDefaultId }) ??
 	values.default_product_id;
 
-/** A price keeps showing its Stripe price until the user moves its row to another product. */
 export const rowPriceChoice = ({
 	row,
 	values,
@@ -112,7 +109,6 @@ export const buildFeatureSheetSave = ({
 			];
 		}
 		const productId = rowEffectiveProductId({ row, values, initialDefaultId });
-		// A price with no product bills under the feature's default, including a new or empty one.
 		if (!productId || productId === CREATE_STRIPE_PRODUCT) {
 			return [{ price_id: row.priceId, stripe_product_id: null }];
 		}
@@ -143,7 +139,6 @@ export const buildFeatureSheetSave = ({
 	};
 };
 
-/** Rows whose Stripe resources change, for the scoped-rewards warning. */
 export const affectedFeaturePriceIds = ({
 	rows,
 	values,

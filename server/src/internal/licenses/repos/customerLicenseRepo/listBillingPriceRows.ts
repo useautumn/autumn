@@ -8,7 +8,6 @@ import {
 import { type SQL, sql } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 
-/** SQL predicate: the aliased customer_products row is a live seat. */
 const liveSeatSql = (alias: string) =>
 	sql.raw(
 		`${alias}.customer_license_link_id IS NOT NULL AND ${alias}.internal_entity_id IS NOT NULL AND ${alias}.status IN ('active', 'past_due')`,
@@ -20,9 +19,6 @@ type AssignmentPriceCount = {
 	count: number;
 };
 
-/** The earliest `includedSeatCount` seats per pool link ride free —
- * a tiny per-link top-N via the (customer_license_link_id, created_at, id)
- * index, excluded from billing below. */
 const freeSeatExclusionSql = (
 	withFreeSeats: { linkId: string; includedSeatCount: number }[],
 ): SQL => {
@@ -47,13 +43,6 @@ const freeSeatExclusionSql = (
 	)`;
 };
 
-/**
- * Billing rows for assigned seats: each live seat bills at its own
- * customer_prices snapshot (grandfathered / customized rows flow through
- * untouched), grouped by price in one hash-agg pass — never enumerates
- * seats. The unassigned buffer is priced in-memory from the hydrated
- * customer license; it has no rows here by design.
- */
 export const listBillingPriceRows = async ({
 	db,
 	customerLicenses,
@@ -77,7 +66,6 @@ export const listBillingPriceRows = async ({
 		]),
 	);
 
-	// included = granted − paid; those earliest seats ride free.
 	const includedSeatCounts = customerLicenses.map((customerLicense) => ({
 		linkId: customerLicense.link_id,
 		includedSeatCount: Math.max(

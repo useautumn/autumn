@@ -1,10 +1,3 @@
-/**
- * atmn crud/plans — a stated config is the complete set of flags.
- *
- * Omitted config stays unmanaged (config-omitted-at-default.test.ts); a stated
- * `{}` or partial object turns every flag it does not list off.
- */
-
 import { expect, test } from "bun:test";
 import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 import { configBody } from "@tests/utils/atmnUtils/baseConfigs.js";
@@ -79,7 +72,6 @@ test.concurrent(
 				ignorePastDue: true,
 			});
 
-			// `{}` states every flag off: preview reports the change, push applies it.
 			rewrite({ config: "{}" });
 			expect((await changedPlanRows()).length).toBeGreaterThan(0);
 			const { output } = await scenario.push();
@@ -93,7 +85,6 @@ test.concurrent(
 				wire: await scenario.wireFromConfig(),
 			});
 
-			// A partial object turns off the flag it omits.
 			await scenario.client.update({
 				plans: [
 					{

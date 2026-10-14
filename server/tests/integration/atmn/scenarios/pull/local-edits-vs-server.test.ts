@@ -1,9 +1,3 @@
-/**
- * atmn scenarios/pull — local edits vs server → server copy wins, reported as `~`
- *
- * One line of plans/atmn-v3/07_tests.md. [a, b] is a matrix looped INSIDE this file.
- */
-
 import { expect, test } from "bun:test";
 import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 import {
@@ -42,7 +36,6 @@ test.concurrent(
 		try {
 			await scenario.push();
 
-			// A local edit that never gets pushed — the server still has 20.
 			scenario.writeConfig(configFor({ planId, amount: 99 }));
 
 			const pulled = await scenario.pull();

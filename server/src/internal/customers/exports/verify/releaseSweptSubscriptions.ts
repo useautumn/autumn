@@ -1,9 +1,6 @@
 import type { CustomerExportScalarRow } from "../queries/getCustomerExportScalars.js";
 import type { BillingVerifySweep } from "./setupBillingVerifySweep.js";
 
-/** The walk is a forward keyset scan, so a page's subscriptions are unreachable
- * once it is verified — except under a Stripe id shared with a customer on a
- * later page, which still has to find them. */
 export const releaseSweptSubscriptions = ({
 	sweep,
 	scalars,

@@ -12,7 +12,6 @@ const CAPY_PREFIX =
 	join(process.env.HOME ?? "/home/user", ".autumn-capy");
 const KEPT_PREFIX_ENTRIES = new Set(["opt-ins"]);
 
-/** Only this machine's branch: a state.json baked into a snapshot names another machine's. */
 function ownNeonBranchName(): string | undefined {
 	const statePath = join(CAPY_PREFIX, "state.json");
 	if (!existsSync(statePath)) return undefined;
@@ -50,7 +49,6 @@ function removeComposeProjects(): void {
 				"--volumes",
 				"--remove-orphans",
 			],
-			// `down` never pulls, but the trigger compose file refuses to parse without a tag.
 			{
 				cwd: REPO_ROOT,
 				env: { TRIGGER_IMAGE_TAG: "teardown", ...process.env } as Record<
@@ -95,7 +93,6 @@ function assertStartupIdle(): void {
 	}
 }
 
-/** Returns the machine to its pre-startup state; the next startup or `bun capy` rebuilds it all. */
 export function cmdCapyTeardown(): void {
 	assertStartupIdle();
 	ensureBunGlobalBin();
@@ -103,7 +100,6 @@ export function cmdCapyTeardown(): void {
 	const branchName = ownNeonBranchName();
 	if (branchName && findBranchByName(branchName)) {
 		deleteBranch(branchName);
-		// Provision adopts a surviving branch by name, which would silently keep the old data.
 		if (findBranchByName(branchName)) {
 			fatal(
 				`Neon branch ${branchName} still exists; teardown stopped before clearing state`,

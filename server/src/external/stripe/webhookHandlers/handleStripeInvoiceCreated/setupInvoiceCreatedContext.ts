@@ -44,9 +44,7 @@ export interface InvoiceCreatedContext {
 		invoice?: InvoiceUpsertResult;
 	};
 
-	/** Current time in ms, respecting test clocks */
 	nowMs: number;
-	/** Customer's payment method for paying arrear invoices */
 	paymentMethod: Stripe.PaymentMethod | null;
 }
 
@@ -60,14 +58,12 @@ export const setupInvoiceCreatedContext = async ({
 	const { stripeCli, logger } = ctx;
 	const fullCustomer = ctx.fullCustomer;
 
-	// 1. Get expanded invoice
 	const stripeInvoice = await getStripeInvoice({
 		stripeClient: stripeCli,
 		invoiceId: event.data.object.id!,
 		expand: ["discounts.source.coupon", "total_discount_amounts"],
 	});
 
-	// 2. Get subscription ID - return null if not a subscription invoice
 	const stripeSubscriptionId =
 		stripeInvoiceToStripeSubscriptionId(stripeInvoice);
 
@@ -76,19 +72,16 @@ export const setupInvoiceCreatedContext = async ({
 		return null;
 	}
 
-	// 3. Check fullCustomer exists
 	if (!fullCustomer) {
 		logger.info("[invoice.created] fullCustomer not found, skipping");
 		return null;
 	}
 
-	// 4. Get expanded stripe subscription
 	const stripeSubscription = await getExpandedStripeSubscription({
 		ctx,
 		subscriptionId: stripeSubscriptionId,
 	});
 
-	// 5. Get customer products by subscription ID
 	const currentCustomerProducts = fullCustomer.customer_products.filter(
 		(cp) => {
 			const onStripeSubscription = isCustomerProductOnStripeSubscription({
@@ -124,13 +117,11 @@ export const setupInvoiceCreatedContext = async ({
 		return null;
 	}
 
-	// 6. Update fullCustomer.customer_products with fresh data
 	fullCustomer.customer_products = [
 		...customerProducts,
 		...scheduledCustomerProducts,
 	];
 
-	// 7. Get expanded stripe customer (for discount info)
 	const stripeCustomer = await getExpandedStripeCustomer({
 		ctx,
 		stripeCustomerId: stripeSubscription.customer.id,
@@ -141,13 +132,11 @@ export const setupInvoiceCreatedContext = async ({
 		return null;
 	}
 
-	// 8. Get current time (respecting test clocks)
 	const nowMs = await stripeSubscriptionToNowMs({
 		stripeSubscription,
 		stripeCli: ctx.stripeCli,
 	});
 
-	// 9. Get payment method for arrear invoices
 	const paymentMethod = await getCusPaymentMethod({
 		stripeCli: ctx.stripeCli,
 		stripeId: stripeSubscription.customer.id,

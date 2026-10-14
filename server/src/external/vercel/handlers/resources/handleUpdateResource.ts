@@ -5,10 +5,6 @@ import { isUniqueConstraintError } from "@/db/dbUtils.js";
 import { VercelResourceService } from "@/external/vercel/services/VercelResourceService.js";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 
-/**
- * PATCH /v1/installations/{integrationConfigurationId}/resources/{resourceId}
- * Update a resource
- */
 export const handleUpdateResource = createRoute({
 	scopes: [Scopes.Public],
 	body: z.object({
@@ -43,7 +39,6 @@ export const handleUpdateResource = createRoute({
 		const { db, fullCustomer: customer } = ctx;
 		const body = c.req.valid("json");
 
-		// Block metadata updates - metadata is set during resource creation and cannot be modified
 		if (body.metadata !== undefined) {
 			const hasCurrentPlan = !!customer?.customer_products?.some(
 				(cp) => !cp?.product?.is_default,

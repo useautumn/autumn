@@ -1,8 +1,3 @@
-/**
- * A Stripe subscription Autumn still references can disappear from Stripe.
- * Requests that reach it are answered as a 404 the caller can act on, not a 400 Stripe error.
- */
-
 import { test } from "bun:test";
 import {
 	findActiveCustomerProductById,

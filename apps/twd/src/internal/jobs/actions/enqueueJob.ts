@@ -7,10 +7,6 @@ import { SYSTEM_ACTOR } from "../../../lib/createContext.ts";
 import type { TwdContext } from "../../../lib/types/twdContext.ts";
 import type { JobRow } from "../types/jobRow.ts";
 
-/**
- * Insert a job, or attach to the live job holding `singletonKey` (`deduped: true`).
- * Uses ctx.actor for created_by/via. OWNED BY THE JOBS TASK — signature is frozen.
- */
 export const enqueueJob = async ({
 	ctx,
 	kind,
@@ -23,7 +19,6 @@ export const enqueueJob = async ({
 	payload: Record<string, unknown>;
 }): Promise<{ job: JobRow; deduped: boolean }> => {
 	const actor = ctx.actor ?? SYSTEM_ACTOR;
-	// A live row can finish between our conflict and reselect; a retry then inserts cleanly.
 	for (let attempt = 0; attempt < 3; attempt++) {
 		const result = await ctx.db.transaction(async (tx) => {
 			const [inserted] = await tx

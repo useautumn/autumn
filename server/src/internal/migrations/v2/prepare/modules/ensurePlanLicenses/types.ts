@@ -38,7 +38,6 @@ export type PreparedPlanLicenseRef = z.infer<
 	typeof PreparedPlanLicenseRefSchema
 >;
 
-/** Stored under the module key in `migrations.prepared_state`. */
 export const EnsurePlanLicensesResultSchema = z.object({
 	planLicenses: z.array(z.custom<DbPlanLicense>()),
 	entitlements: z.array(EntitlementSchema),

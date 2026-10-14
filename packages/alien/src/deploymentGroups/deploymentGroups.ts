@@ -6,7 +6,6 @@ import type { AlienApi } from "../types/alienApi.js";
 
 const NOT_FOUND = 404;
 
-/** The group a customer's earlier setup links created, if any. Hosted only: the local manager has no external ids. */
 export const findDeploymentGroupByExternalId = async ({
 	api,
 	externalId,
@@ -27,7 +26,6 @@ export const findDeploymentGroupByExternalId = async ({
 	}
 };
 
-/** The group an external id names, if alien still has it; the local manager has no external ids, so none. */
 export const findDeploymentGroup = ({
 	api,
 	externalId,
@@ -39,7 +37,6 @@ export const findDeploymentGroup = ({
 		? Promise.resolve(null)
 		: findDeploymentGroupByExternalId({ api, externalId });
 
-/** A reused group takes the name its latest setup asks for, so it always matches the stack's. */
 export const renameDeploymentGroup = ({
 	api,
 	deploymentGroupId,

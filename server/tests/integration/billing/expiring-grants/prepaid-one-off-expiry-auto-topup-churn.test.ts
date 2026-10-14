@@ -1,6 +1,3 @@
-// Expiring prepaid one-off plan items: each purchase lands in a loose, expiring grant beside a
-// 0-balance keystone row; grants outlive plan changes and churn.
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV5 } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
@@ -14,7 +11,6 @@ import {
 	messageRows,
 } from "./utils/prepaidOneOffExpiry";
 
-/** Auto top-up runs through SQS; ceiling for the poll, which exits once it lands. */
 const AUTO_TOPUP_SETTLE_MS = 90_000;
 
 test.concurrent(
@@ -48,14 +44,12 @@ test.concurrent(
 			},
 		});
 
-		// 100 - 85 = 15, below the threshold of 20 → auto top-up fires.
 		await autumnV2_1.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
 			value: 85,
 		});
 
-		// The job queues behind this file's concurrent Stripe work; a fixed sleep raced it.
 		const fullCustomer = await pollUntil({
 			fetch: () =>
 				CusService.getFull({
@@ -72,7 +66,6 @@ test.concurrent(
 			planId,
 		});
 
-		// the top-up created a SECOND grant with its own expiry
 		expect(grants.length).toBe(2);
 		expect(new Set(grants.map((grant) => grant.expires_at)).size).toBe(2);
 		expect(
@@ -84,7 +77,6 @@ test.concurrent(
 			grants.find((grant) => grant.balance === 100)?.metadata?.source,
 		).toBe("auto_topup");
 
-		// keystone untouched, options NOT bumped
 		expect(keystones[0].balance).toBe(0);
 		expect(
 			customerProduct?.options.find(
@@ -92,7 +84,6 @@ test.concurrent(
 			)?.quantity,
 		).toBe(1);
 
-		// the cache saw the new row (the job drops it right after the insert)
 		const customer = await pollUntil({
 			fetch: () => autumnV2_1.customers.get<ApiCustomerV5>(customerId),
 			until: (customer) =>
@@ -137,7 +128,6 @@ test.concurrent(
 		});
 		const { grants } = messageRows({ fullCustomer, planId });
 
-		// the plan is gone; the purchased credits are not
 		expect(grants.length).toBe(1);
 		expect(grants[0].balance).toBe(100);
 		expect(grants[0].metadata?.plan_id).toBe(planId);

@@ -4,7 +4,6 @@ import { computePooledBalanceTransitionPlan } from "@/internal/billing/v2/pooled
 import { initFullCustomerProductFromProduct } from "@/internal/billing/v2/utils/initFullCustomerProduct/initFullCustomerProductFromProduct.js";
 import type { CreateEntitiesContext } from "../types/createEntitiesContext.js";
 
-/** Each new entity starts on the org's free entity defaults; their pooled grants join the customer's pools in the same plan. */
 export const computeEntityDefaultsPlan = ({
 	ctx,
 	context,

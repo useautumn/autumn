@@ -1,13 +1,3 @@
-/**
- * RevenueCat `autumn_customer_id` subscriber-attribute override.
- *
- * The client sets `app_user_id = email` in RevenueCat but declares the canonical
- * Autumn customer id via a subscriber attribute `autumn_customer_id`. The resolver
- * must treat that attribute as THE customer id — highest priority, short-circuiting
- * the app_user_id / customer_id chain. Missing target ⇒ auto-create with that id;
- * the webhook's app_user_id is still seeded into processors.revenuecat as an alias.
- */
-
 import { expect, test } from "bun:test";
 import { AppEnv, CusProductStatus, customers } from "@autumn/shared";
 import { items } from "@tests/utils/fixtures/items";
@@ -130,11 +120,6 @@ const pollUntil = async <T>(
 	return last;
 };
 
-// ═══════════════════════════════════════════════════════════════════
-// TEST 1: Override target does NOT exist ⇒ auto-create it, plan lands
-// on it, NO email-keyed customer, processors.revenuecat.id = the email.
-// ═══════════════════════════════════════════════════════════════════
-
 test.concurrent(
 	`${chalk.yellowBright("rc override: auto-creates the override id, seeds email as alias, no email customer")}`,
 	async () => {
@@ -185,7 +170,6 @@ test.concurrent(
 		);
 		expect(productIds).toContain(proMonthly.id);
 
-		// The email must NOT become an Autumn customer; it rides as an RC alias.
 		const emailCustomer = await ctx.db.query.customers.findFirst({
 			where: eq(customers.email, email),
 		});
@@ -196,11 +180,6 @@ test.concurrent(
 		expect(created?.processors?.revenuecat?.id).toBe(email);
 	},
 );
-
-// ═══════════════════════════════════════════════════════════════════
-// TEST 2: Override target ALREADY exists ⇒ plan lands on it, override
-// beats the email.
-// ═══════════════════════════════════════════════════════════════════
 
 test.concurrent(
 	`${chalk.yellowBright("rc override: existing override customer receives the plan (override beats email)")}`,
@@ -246,7 +225,6 @@ test.concurrent(
 		);
 		expect(productIds).toContain(proMonthly.id);
 
-		// No email customer created; email seeded as the RC alias on the override.
 		const emailCustomer = await ctx.db.query.customers.findFirst({
 			where: eq(customers.email, email),
 		});
@@ -258,11 +236,6 @@ test.concurrent(
 		expect(after?.processors?.revenuecat?.id).toBe(email);
 	},
 );
-
-// ═══════════════════════════════════════════════════════════════════
-// TEST 3: A different customer matches by app_user_id, but the override
-// wins — the client's explicit declaration beats the guess.
-// ═══════════════════════════════════════════════════════════════════
 
 test.concurrent(
 	`${chalk.yellowBright("rc override: override wins even when a different customer matches by app_user_id")}`,
@@ -279,14 +252,12 @@ test.concurrent(
 			setup: [
 				s.deleteCustomer({ customerId: overrideId }),
 				s.deleteCustomer({ customerId: appUserId }),
-				// Customer that WOULD match by customer_id == app_user_id.
 				s.customer({ testClock: false, skipWebhooks: true }),
 				s.products({ list: [proMonthly] }),
 			],
 			actions: [],
 		});
 
-		// Pre-create the override target so we can assert the plan lands here.
 		await initScenario({
 			customerId: overrideId,
 			setup: [s.customer({ testClock: false, skipWebhooks: true })],
@@ -314,7 +285,6 @@ test.concurrent(
 		);
 		expect(overrideProductIds).toContain(proMonthly.id);
 
-		// The app_user_id-matched customer must NOT receive the plan.
 		const appUserCustomer = await getCustomerByCustomerId(appUserId);
 		const appUserProductIds = await activeRcProductIds(
 			appUserCustomer!.internal_id,
@@ -322,10 +292,6 @@ test.concurrent(
 		expect(appUserProductIds).not.toContain(proMonthly.id);
 	},
 );
-
-// ═══════════════════════════════════════════════════════════════════
-// TEST 4: No override attribute ⇒ existing customer_id behavior unchanged.
-// ═══════════════════════════════════════════════════════════════════
 
 test.concurrent(
 	`${chalk.yellowBright("rc override: no override attribute preserves existing app_user_id resolution")}`,

@@ -1,6 +1,3 @@
-// Cancel end-of-cycle add-on tests: add-on cancellation, subscription handling, and interaction with
-// main products.
-
 import { test } from "bun:test";
 import type { ApiCustomerV3 } from "@autumn/shared";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
@@ -15,27 +12,6 @@ import { advanceToNextInvoice } from "@tests/utils/testAttachUtils/testAttachUti
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 1: Cancel add-on EOC - add-on canceling, pro active, free default not scheduled
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Free default product exists
- * - Pro product ($20/mo)
- * - Recurring add-on product ($20/mo)
- * - User attaches Pro and Add-on
- * - User cancels Add-on at end of cycle
- *
- * Expected Result:
- * - Pro should remain active
- * - Add-on should be canceling (has canceled_at but still active)
- * - Free default should NOT be scheduled (pro is still active)
- * - After advancing to next invoice:
- *   - Pro is still active
- *   - Add-on is removed
- *   - Free default is still not present
- */
 test.concurrent(
 	`${chalk.yellowBright("cancel addon EOC: addon canceling, pro active, free default not scheduled")}`,
 	async () => {
@@ -71,7 +47,6 @@ test.concurrent(
 			],
 		});
 
-		// Verify pro and add-on are active, free not present
 		const customerAfterAttach =
 			await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
@@ -81,25 +56,21 @@ test.concurrent(
 			notPresent: [free.id],
 		});
 
-		// Verify invoices: pro attach ($20) + add-on attach ($20)
 		expectCustomerInvoiceCorrect({
 			customer: customerAfterAttach,
 			count: 2,
 			latestTotal: 20,
 		});
 
-		// Cancel add-on at end of cycle
 		await autumnV1.subscriptions.update({
 			customer_id: customerId,
 			product_id: addon.id,
 			cancel_action: "cancel_end_of_cycle",
 		});
 
-		// Verify state after cancel
 		const customerAfterCancel =
 			await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-		// Pro should still be active, add-on canceling, free NOT scheduled
 		await expectCustomerProducts({
 			customer: customerAfterCancel,
 			active: [pro.id],
@@ -107,24 +78,20 @@ test.concurrent(
 			notPresent: [free.id],
 		});
 
-		// Advance to next billing cycle
 		await advanceToNextInvoice({
 			stripeCli: ctx.stripeCli,
 			testClockId: testClockId!,
 		});
 
-		// Verify state after cycle
 		const customerAfterAdvance =
 			await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-		// Pro should still be active, add-on removed, free still not present
 		await expectCustomerProducts({
 			customer: customerAfterAdvance,
 			active: [pro.id],
 			notPresent: [addon.id, free.id],
 		});
 
-		// Should have 1 subscription remaining (pro)
 		await expectSubToBeCorrect({
 			db: ctx.db,
 			customerId,
@@ -135,27 +102,6 @@ test.concurrent(
 	},
 );
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 2: Cancel pro product, add-on persists with free default scheduled
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Free default product exists
- * - Pro product ($20/mo)
- * - Recurring add-on product ($20/mo with 300 messages)
- * - User attaches Pro and Add-on
- * - User cancels Pro at end of cycle
- *
- * Expected Result:
- * - Pro should be canceling (active with canceled_at set)
- * - Free default should be scheduled
- * - Add-on should remain active (not affected by pro cancellation)
- * - After advancing to next invoice:
- *   - Pro is gone
- *   - Free is active
- *   - Add-on is still active
- */
 test.concurrent(
 	`${chalk.yellowBright("cancel addon EOC: cancel pro, addon persists with free scheduled")}`,
 	async () => {
@@ -163,20 +109,17 @@ test.concurrent(
 
 		const messagesItem = items.monthlyMessages({ includedUsage: 100 });
 
-		// Free is the default product
 		const free = products.base({
 			id: "free",
 			items: [messagesItem],
 			isDefault: true,
 		});
 
-		// Pro product ($20/mo)
 		const pro = products.pro({
 			id: "pro",
 			items: [messagesItem],
 		});
 
-		// Recurring add-on with its own price ($20/mo + 300 messages)
 		const addon = products.recurringAddOn({
 			id: "addon",
 			items: [items.monthlyMessages({ includedUsage: 300 })],
@@ -194,7 +137,6 @@ test.concurrent(
 			],
 		});
 
-		// Verify pro and add-on are active
 		const customerAfterAttach =
 			await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
@@ -208,21 +150,18 @@ test.concurrent(
 			productId: addon.id,
 		});
 
-		// Verify invoices: pro attach ($20) + add-on attach ($20)
 		expectCustomerInvoiceCorrect({
 			customer: customerAfterAttach,
 			count: 2,
-			latestTotal: 20, // Add-on invoice
+			latestTotal: 20,
 		});
 
-		// Cancel pro at end of cycle
 		await autumnV1.subscriptions.update({
 			customer_id: customerId,
 			product_id: pro.id,
 			cancel_action: "cancel_end_of_cycle",
 		});
 
-		// Verify state after cancel
 		const customerAfterCancel =
 			await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
@@ -233,13 +172,11 @@ test.concurrent(
 			active: [addon.id],
 		});
 
-		// Advance to next billing cycle
 		await advanceToNextInvoice({
 			stripeCli: ctx.stripeCli,
 			testClockId: testClockId!,
 		});
 
-		// Verify state after cycle
 		const customerAfterAdvance =
 			await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
@@ -249,13 +186,12 @@ test.concurrent(
 			active: [free.id, addon.id],
 		});
 
-		// Subscription should exist for the add-on
 		await expectSubToBeCorrect({
 			db: ctx.db,
 			customerId,
 			org: ctx.org,
 			env: ctx.env,
-			subCount: 1, // Add-on subscription remains
+			subCount: 1,
 		});
 	},
 );

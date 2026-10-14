@@ -14,7 +14,6 @@ export const immediatePhaseProrationBehavior = ({
 	params: FirstPhaseParams;
 }) => params.phases[0].proration_behavior;
 
-/** The anchor the request names: 'phase_start' on a first phase starting now resets the cycle now; a backdated or later start anchors on itself. */
 export const immediatePhaseBillingCycleAnchor = ({
 	params,
 	currentEpochMs,
@@ -32,10 +31,6 @@ export const immediatePhaseBillingCycleAnchor = ({
 	return startsNow ? "now" : undefined;
 };
 
-/**
- * Ending a live trial anchors the cycle on a date: with no anchor in the request, the old trial end.
- * Kept out of the requested anchor, so request guards only judge what the caller sent.
- */
 export const setupTrialEndAnchorMs = ({
 	params,
 	billingContext,

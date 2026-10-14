@@ -8,7 +8,6 @@ import type {
 } from "../../stream/types/streamConsumer.js";
 import { recordToAutoTopupPayloads } from "./actions/recordToAutoTopupPayloads.js";
 
-/** Runs the auto top-up jobs each record calls for; the pending key makes a replayed record, or a burst, one job. */
 export function createAutoTopupsConsumer({
 	ctx,
 }: {

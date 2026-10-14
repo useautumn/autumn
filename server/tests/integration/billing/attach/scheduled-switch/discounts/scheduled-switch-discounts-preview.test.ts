@@ -1,10 +1,3 @@
-/**
- * Scheduled Switch Discount Preview Tests
- *
- * Verifies that next_cycle preview line items and totals include only
- * discounts that should still be active when the scheduled switch takes effect.
- */
-
 import { expect, test } from "bun:test";
 import {
 	applySubscriptionDiscount,
@@ -130,8 +123,6 @@ test.concurrent(`${chalk.yellowBright("scheduled-switch-discounts-preview 2: fre
 	).toBe(true);
 });
 
-// Nothing is billed today on a scheduled switch, so a fresh once coupon
-// survives to the first invoice after the switch — next_cycle is discounted.
 test.concurrent(`${chalk.yellowBright("scheduled-switch-discounts-preview 3: fresh once coupon with no immediate invoice applies to next_cycle")}`, async () => {
 	const customerId = "sched-switch-disc-preview-once";
 

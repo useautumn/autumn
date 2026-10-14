@@ -114,10 +114,8 @@ export const getProductItemResponse = ({
 	withDisplay?: boolean;
 	options?: FeatureOptions[];
 }) => {
-	// 1. Get item type
 	const type = getItemType(item);
 
-	// 2. Get display
 	const display = getProductItemDisplay({
 		item,
 		features,

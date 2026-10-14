@@ -1,7 +1,3 @@
-/**
- * Contract: an unselected parent is frozen when its child version is edited in place.
- * The generated customization preserves the old effective plan and its parent customer snapshot.
- */
 import { expect, test } from "bun:test";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { items } from "@tests/utils/fixtures/items.js";

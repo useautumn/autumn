@@ -28,7 +28,6 @@ const partitionByRollout = ({
 	return { worker, legacy };
 };
 
-/** A batch names many customers, so each item is routed on its own; the two lanes then run side by side. */
 export const runBatchTrackByRollout = async ({
 	ctx,
 	body,
@@ -36,7 +35,6 @@ export const runBatchTrackByRollout = async ({
 }: {
 	ctx: AutumnContext;
 	body: BatchTrackParams;
-	/** Per item, aligned with `body`: set for batch track_tokens items. */
 	tokens?: (TokenDeduction | undefined)[];
 }): Promise<void> => {
 	const { worker, legacy } = partitionByRollout({

@@ -14,8 +14,6 @@ export const REPLAY_OPERATOR_DATABASE_URL_VARIABLE =
 const REPLAY_KAFKA_USERNAME_VARIABLE = "KAFKA_SASL_USERNAME_SERVER";
 const REPLAY_KAFKA_PASSWORD_VARIABLE = "KAFKA_SASL_PASSWORD_SERVER";
 
-/** An operator manifest capped at 1000 requests never approaches this; the
- *  limit only stops the process from reading an unbounded file. */
 const MAX_OPERATOR_FILE_BYTES = 10 * 1024 * 1024;
 
 export function readReplayDatabaseUrl({
@@ -67,8 +65,6 @@ export function readReplayKafkaSasl({
 	};
 }
 
-/** The deployment, topic, partition count and region are pinned constants: the
- *  command line cannot point the replay at another cluster. */
 export function buildReplayStagingTargetInput({
 	databaseUrl,
 }: {

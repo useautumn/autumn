@@ -2,11 +2,6 @@ import { AppEnv, Scopes } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 
-/**
- * POST /revenuecat/disconnect — remove the current env's RevenueCat connection
- * (OAuth tokens, project, api key). Keeps webhook_secret + mappings intact so a
- * reconnect reuses them.
- */
 export const handleDisconnectRevenueCat = createRoute({
 	scopes: [Scopes.Organisation.Write],
 	handler: async (c) => {

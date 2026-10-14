@@ -2,7 +2,6 @@ import type { CreateScheduleResponse } from "@autumn/shared";
 import { billingResultToResponse } from "@/internal/billing/v2/utils/billingResult/billingResultToResponse";
 import type { SetPlansResult } from "../types/setPlansResult";
 
-/** A persisted schedule is "created"; anything that stopped for payment is "pending_payment". */
 export const setPlansResultToResponse = ({
 	result,
 }: {

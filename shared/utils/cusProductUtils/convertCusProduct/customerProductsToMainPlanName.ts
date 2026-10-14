@@ -1,6 +1,5 @@
 import type { FullCusProduct } from "../../../models/cusProductModels/cusProductModels.js";
 
-/** A subscription is named after its main plan, or its first plan when it only bills add-ons. */
 export const customerProductsToMainPlanName = ({
 	customerProducts,
 }: {

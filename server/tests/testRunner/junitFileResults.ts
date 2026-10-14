@@ -1,4 +1,3 @@
-/** Per-file results from a shard's `bun test --reporter=junit` output, in the shape twd's /results/ingest takes. */
 export type UnitFileResult = {
 	file: string;
 	status: "passed" | "failed" | "crashed" | "skipped";
@@ -42,7 +41,6 @@ const parseTestCases = ({ xml }: { xml: string }): Case[] =>
 		}),
 	);
 
-/** Files bun reported no test cases for, which only a solo re-run can tell apart (crashed vs empty). */
 export const filesWithoutCases = ({
 	xml,
 	paths,
@@ -54,10 +52,8 @@ export const filesWithoutCases = ({
 	return paths.filter((file) => !reported.has(file));
 };
 
-/** twd ids are server/tests-relative; the runner's paths are server-relative. */
 const toTestId = (file: string) => file.replace(/^tests\//, "");
 
-/** Rolls test cases up per file; a case-less file is crashed when listed in `crashedFiles`, else left out. */
 export const junitFileResults = ({
 	xml,
 	paths,

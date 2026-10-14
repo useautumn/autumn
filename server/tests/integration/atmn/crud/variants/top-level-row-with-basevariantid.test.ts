@@ -1,9 +1,3 @@
-/**
- * atmn crud/variants — top-level row with baseVariantId → server refuses, error surfaced
- *
- * One line of plans/atmn-v3/07_tests.md. [a, b] is a matrix looped INSIDE this file.
- */
-
 import { expect, test } from "bun:test";
 import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 import {
@@ -33,9 +27,6 @@ test.concurrent(
 		try {
 			await scenario.push();
 
-			// A variant belongs under its base's `variants[]`; declaring it as a
-			// sibling top-level row with `baseVariantId` is not the same call
-			// shape, and the section note says variants stay nested.
 			scenario.writeConfig(
 				atmnConfigSource({
 					body: `{
@@ -53,7 +44,6 @@ test.concurrent(
 				}),
 			);
 
-			// Decision pending: exact error shape isn't pinned down here.
 			await expect(scenario.push()).rejects.toThrow();
 
 			expect(

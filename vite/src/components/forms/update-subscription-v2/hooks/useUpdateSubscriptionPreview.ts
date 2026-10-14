@@ -16,7 +16,6 @@ export function useUpdateSubscriptionPreview({
 		| UpdateSubscriptionV0Params
 		| UpdateSubscriptionV1ParamsInput
 		| null;
-	/** Set for a V1 body, which only the latest version accepts. */
 	apiVersion?: ApiVersion;
 	enabled?: boolean;
 }) {

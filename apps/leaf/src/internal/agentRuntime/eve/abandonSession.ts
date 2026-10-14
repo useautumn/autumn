@@ -6,8 +6,6 @@ import type { AgentThreadRef } from "../domain/agentTurnContext.js";
 import { deleteEveSession, type EveSessionDeleteReason } from "./repo.js";
 import type { EveSessionRef } from "./types.js";
 
-/** Drops the row and cancels every card that could only be decided through
- * the session behind it. */
 export const abandonEveSession = async ({
 	env,
 	orgId,

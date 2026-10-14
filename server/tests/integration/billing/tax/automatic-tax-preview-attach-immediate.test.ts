@@ -1,22 +1,3 @@
-/**
- * Integration test for the new `tax` field on `previewAttach`.
- *
- * Architecture (per fetch–build–execute):
- *   Symptom surfaces in: server/src/internal/billing/v2/utils/billingPlan/billingPlanToAttachPreview.ts
- *     (formatter passes through `billingPlan.preview.tax` to the response)
- *   Root cause lives in: server/src/internal/billing/v2/utils/billingPlan/preview/tax/computeAttachTaxPreview.ts
- *     (build-stage helper that calls Stripe Tax)
- *   Fix layer: upstream — preview enrichment is a build-stage output read by
- *     the formatter; never reaches the executor.
- *
- * Three concurrent cases:
- *  - auto_tax-on, AU customer with address, Pro→Premium upgrade preview →
- *    `response.tax.status === "complete"`, total > 0
- *  - auto_tax-off (default) → `response.tax === undefined`
- *  - auto_tax-on, customer with no resolvable location →
- *    `response.tax.status === "requires_location"`, totals all zero
- */
-
 import { expect, test } from "bun:test";
 import type { AttachPreviewResponse } from "@autumn/shared";
 import { products } from "@tests/utils/fixtures/products.js";
@@ -80,9 +61,6 @@ test.concurrent(`${chalk.yellowBright(
 	expect(preview.tax?.amount_exclusive).toBeGreaterThan(0);
 	expect(preview.tax?.amount_inclusive).toBe(0);
 
-	// New contract: `total` includes tax and the (capped) credit balance.
-	// `subtotal` stays pre-tax, pre-credit. Customer here has no credit on
-	// file, so credit term is 0 and total = subtotal + tax.
 	expect(preview.invoice_credits?.balance ?? 0).toBe(0);
 	expect(preview.total).toBeCloseTo(
 		preview.subtotal + (preview.tax?.total ?? 0),
@@ -101,7 +79,6 @@ test.concurrent(`${chalk.yellowBright(
 	const { autumnV2_2 } = await initScenario({
 		customerId,
 		setup: [
-			// No configOverrides — automatic_tax defaults to false.
 			s.platform.create({
 				taxRegistrations: ["AU"],
 			}),
@@ -133,16 +110,12 @@ test.concurrent(`${chalk.yellowBright(
 	const { ctx, autumnV2_2 } = await initScenario({
 		customerId,
 		setup: [
-			// Start with auto_tax OFF so initial Pro attach succeeds even
-			// without an address; flip on after to exercise the
-			// preview-with-no-address branch.
 			s.platform.create({
 				taxRegistrations: ["AU"],
 			}),
 			s.customer({
 				testClock: false,
 				paymentMethod: "success",
-				// NO stripeCustomerOverrides — no address.
 			}),
 			s.products({ list: [proProd, premiumProd] }),
 		],

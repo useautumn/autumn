@@ -1,7 +1,6 @@
 import type { FullProduct } from "@models/productModels/productModels";
 import { isFreeProduct } from "./classifyProductUtils.js";
 
-/** Allowed to hold `is_default`: not a variant, not historical, free or cardless trial. */
 export const isEligibleDefaultProduct = ({
 	product,
 	latestExistingVersion,

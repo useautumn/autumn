@@ -9,11 +9,6 @@ import {
 	hashApiKey,
 } from "@/internal/dev/apiKeys/apiKeyUtils.js";
 
-// Exercises the createRoute request path (zod validation + actor guards) over
-// real HTTP, which the *_ForOrg unit/integration tests bypass. Requires `bun dw`.
-// create/list/delete are open to a main-org secret key (resolveSandboxActor);
-// update/copy stayed dashboard-only (assertDashboardActor, still 401).
-
 const { db } = initDrizzle();
 const apiBase = `${(process.env.AUTUMN_TEST_BASE_URL ?? "http://localhost:8080").replace(/\/$/, "")}/v1`;
 const masterKey = defaultCtx.orgSecretKey;
@@ -55,8 +50,6 @@ afterAll(async () => {
 			.catch(() => {});
 	}
 	if (!createdSandboxId) return;
-	// The route runs the dependent teardown a direct row delete would skip, so a
-	// regression in it has to fail here rather than leak a sandbox against the cap.
 	expect(await postStatus("/sandboxes.delete", { id: createdSandboxId })).toBe(
 		200,
 	);
@@ -119,8 +112,6 @@ describe("sandbox route guards (zod + actor wiring on the request path)", () => 
 		expect(status).toBe(401);
 	});
 
-	// A live key resolves to AppEnv.Live, and reset is refused there before it
-	// deletes anything — the only reset case safe to drive against a real org.
 	test("reset from a live-mode key is refused (400)", async () => {
 		liveKey = await createKey({
 			db,

@@ -14,7 +14,6 @@ export function createPartitionCommitLogging({
 		appender: CommittedOutcomeAppender;
 		stateStore: PartitionRuntimeDependencies["stateStore"];
 		logger?: Partial<Pick<AutumnLogger, "error">>;
-		/** Where each batch's timings are summed for the window's summary line. */
 		summaries?: CommitSummaries;
 		monotonicNow?: () => number;
 	};
@@ -37,7 +36,6 @@ export function createPartitionCommitLogging({
 		try {
 			record(summaries);
 		} catch {
-			// Telemetry cannot turn a durable commit into a failed request.
 		}
 	}
 
@@ -112,10 +110,6 @@ export function createPartitionCommitLogging({
 		return result;
 	}
 
-	/** The caller was answered when Kafka took the batch, so a store verdict arriving
-	 *  afterwards has nobody to tell. A refused row used to reach an operator as that
-	 *  caller's failed request; now this is the only place it is visible, so it is
-	 *  logged at error rather than with the per-batch telemetry. */
 	function reportUnreachableVerdicts({
 		metadata,
 		results,
@@ -152,7 +146,6 @@ export function createPartitionCommitLogging({
 				"Balance worker store refused a record its caller was already told had landed",
 			);
 		} catch {
-			// Telemetry cannot turn a durable commit into a failed request.
 		}
 	}
 

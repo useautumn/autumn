@@ -35,10 +35,6 @@ import type { Entity } from "../entityModels/entityModels.js";
 import type { Invoice } from "../invoiceModels/invoiceModels.js";
 import type { SubjectType } from "./fullSubjectModel.js";
 
-/**
- * Schema mirror of the `SubjectFlag` shape. Used by the cached-payload
- * schema walker to know where nullable positions are.
- */
 export const SubjectFlagSchema = z.object({
 	featureId: z.string(),
 	internalFeatureId: z.string(),
@@ -53,14 +49,6 @@ export const SubjectFlagSchema = z.object({
 
 export type SubjectFlag = z.infer<typeof SubjectFlagSchema>;
 
-/**
- * Schema mirror of `SubjectBalance`. Extends `FullCustomerEntitlementSchema`
- * with the helper fields attached during normalization (customerPrice,
- * customerProductOptions, customerProductQuantity, isEntityLevel).
- *
- * Used by the cache-hole-filling walker; this is not a validator — the
- * runtime `SubjectBalance` type below is the source of truth.
- */
 export const SubjectBalanceSchema = FullCustomerEntitlementSchema.extend({
 	customerPrice: FullCustomerPriceSchema.nullable(),
 	customerProductOptions: FeatureOptionsSchema.nullable(),
@@ -107,12 +95,6 @@ export type SubjectBalance = {
 	isEntityLevel: boolean;
 };
 
-/**
- * Identity-only view of a boolean feature aggregated across all entity-level
- * grants. Sibling of `AggregatedFeatureBalance`, but for booleans — no balance
- * fields since booleans don't have them. Produced by splitting the entity
- * aggregate CTE output by feature type.
- */
 export const AggregatedSubjectFlagSchema = z.object({
 	feature_id: z.string(),
 	internal_feature_id: z.string(),
@@ -127,10 +109,6 @@ export type AggregatedSubjectFlag = {
 	api_id: string;
 };
 
-/**
- * Schema mirror of `EntityAggregations`. Reuses `CusProductSchema` as the Zod
- * mirror of `DbCustomerProduct` for the aggregated customer products array.
- */
 export const EntityAggregationsSchema = z.object({
 	aggregated_customer_products: z.array(CusProductSchema),
 	aggregated_customer_entitlements: z.array(AggregatedFeatureBalanceSchema),
@@ -145,20 +123,6 @@ export type EntityAggregations = {
 	aggregated_subject_flags: Record<string, AggregatedSubjectFlag>;
 };
 
-/**
- * Normalized (flat-array) representation of a customer or entity subject.
- *
- * - `customer_entitlements` contains metered balances only (product + extra
- *   combined, distinguished by `customer_product_id` being null for extras).
- * - Boolean CEs are collapsed into `flags`.
- * - Each `SubjectBalance` carries the pre-resolved context needed by the
- *   deduction path, so each Redis hash field can be self-contained.
- * - Catalog arrays (`products`, `entitlements`, `prices`, `free_trials`) are
- *   deduplicated reference data shared across the subject.
- *
- * This is the shape stored in Redis (split across a subject STRING + per-feature
- * balance HASHes) and the shape the DB query naturally returns.
- */
 export type NormalizedFullSubject = {
 	subjectType: SubjectType;
 	customerId: string;
@@ -178,14 +142,8 @@ export type NormalizedFullSubject = {
 	})[];
 	customer_entitlements: SubjectBalance[];
 	customer_prices: DbCustomerPrice[];
-	/** Self-contained rows (effective plan license + product pre-resolved);
-	 *  customer subjects only — entity subjects always carry []. */
 	customer_licenses: FullCustomerLicense[];
 
-	/** Windowed-cap counter rows for ALL scopes (customer + entity;
-	 *  internal_entity_id null = customer scope), live-read from the
-	 *  per-feature balance hashes' `_usage_windows` field — never the cached
-	 *  subject view. `normalizedToFullSubject` narrows to the subject's scope. */
 	usage_windows: UsageWindow[];
 
 	flags: Record<string, SubjectFlag>;
@@ -200,8 +158,5 @@ export type NormalizedFullSubject = {
 
 	entity_aggregations?: EntityAggregations;
 
-	/** Latest 10 `migration_item_runs` for this customer, scoped to the
-	 *  org's active lazy/background migrations. Empty when no migrations
-	 *  are active for the org. */
 	migration_item_runs?: MigrationItemRunData[];
 };

@@ -42,8 +42,6 @@ export type AdditionalCurrencyTier = z.infer<
 	typeof AdditionalCurrencyTierSchema
 >;
 
-// Reject the same currency twice in one list (case-insensitive). Lowercase
-// normalization itself is deferred to the write-path mapper (task 0.2).
 const hasNoDuplicateCurrencies = (entries: { currency: string }[]) => {
 	const seen = new Set<string>();
 	for (const { currency } of entries) {
@@ -67,8 +65,6 @@ export const AdditionalCurrencyTierArraySchema = z
 	.array(AdditionalCurrencyTierSchema)
 	.refine(hasNoDuplicateCurrencies, { message: DUPLICATE_CURRENCY_MESSAGE });
 
-// API-only tier shape: the storage UsageTierSchema plus per-currency amounts.
-// Kept separate so this public projection never leaks into the jsonb price config.
 export const ApiUsageTierWithCurrenciesSchema = z
 	.object({
 		to: z.number().or(z.literal(Infinite)),
@@ -99,9 +95,6 @@ type PlanItemPriceForCurrencyCheck = {
 	tiers?: { additional_currencies?: { currency: string }[] }[] | null;
 };
 
-// Cross-field invariants for additional_currencies on a plan-item price.
-// Shared by the response and params schemas so the rules can't drift; returns
-// messages and lets the caller push them as schema issues.
 export const additionalCurrencyPlanItemIssues = (
 	price: PlanItemPriceForCurrencyCheck | null | undefined,
 ): string[] => {

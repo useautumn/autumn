@@ -21,7 +21,6 @@ export type RestorePreviewResponse = {
 	previews: RestorePreviewEntry[];
 };
 
-/** Dry-run restore — evaluates the billing plan(s) without executing them. */
 export const previewRestore = async ({
 	ctx,
 	params,

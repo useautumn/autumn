@@ -14,13 +14,11 @@ import {
 } from "./computeApplyBillingPlan.js";
 import type { ApplyBillingPlanCommand } from "./types/applyBillingPlanCommand.js";
 
-/** An entity the plan names, as the worker holds it: its own rows, and its row. */
 export type BillingPlanEntityPart = {
 	state: SubjectState;
 	entity: WorkerEntity;
 };
 
-/** An entity the plan creates starts with no rows, under its own identity. */
 const createdEntityParts = ({
 	command,
 }: {
@@ -40,7 +38,6 @@ const createdEntityParts = ({
 			: [],
 	);
 
-/** The plan as one mutation over the customer and the entities it names, and what each owner holds after it. */
 export const applyBillingPlanToSubjects = ({
 	command,
 	customer,
@@ -48,16 +45,12 @@ export const applyBillingPlanToSubjects = ({
 	catalog,
 }: {
 	command: ApplyBillingPlanCommand;
-	/** Null when the plan creates the customer. */
 	customer: SubjectState | null;
-	/** The named entities that already exist; the ones the plan creates are added here. */
 	entityParts: readonly BillingPlanEntityPart[];
-	/** The rows the plan's state and inserts join to; a rebalance reads them. */
 	catalog?: Catalog;
 }): {
 	mutation: SubjectStateMutation;
 	nextState: SubjectState;
-	/** The customer's part first, then each entity's. */
 	projectedStates: SubjectState[];
 } => {
 	const parts = [...entityParts, ...createdEntityParts({ command })];

@@ -1,8 +1,3 @@
-/**
- * Attach V1 has no volume-tier billing path, so a plan with a pay-per-use volume
- * price stays blocked there with a 400 pointing at billing.attach.
- */
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3 } from "@autumn/shared";
 import { expectProductNotPresent } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
@@ -29,7 +24,6 @@ test.concurrent(
 			actions: [],
 		});
 
-		// The test client drops the HTTP status, so call V1 attach directly.
 		const response = await fetch(`${autumnV1.baseUrl}/attach`, {
 			method: "POST",
 			headers: autumnV1.headers,

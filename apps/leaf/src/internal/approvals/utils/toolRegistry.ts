@@ -21,6 +21,5 @@ export const writeToPreviewTool = (toolName: string): string | undefined =>
 export const isPreviewTool = (toolName: string): boolean =>
 	previewToolNames.has(normalizeToolName(toolName));
 
-/** A write only accepted with a request the agent previewed verbatim. */
 export const writeRequiresPreviewedRequest = (toolName: string): boolean =>
 	previewedRequestWrites.has(normalizeToolName(toolName));

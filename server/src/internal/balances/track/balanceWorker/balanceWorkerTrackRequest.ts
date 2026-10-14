@@ -9,7 +9,6 @@ import { featureToInternalFeatureId } from "../../balanceWorker/featureToInterna
 import { lockParamsToTrackLock } from "../../balanceWorker/lockParamsToTrackLock.js";
 import { requestContextToCommandBase } from "../../balanceWorker/requestContextToCommandBase.js";
 
-/** One per feature on an event-name track, so each feature dedupes on its own and a retry can finish the rest. */
 const commandIdOf = ({
 	ctx,
 	body,
@@ -25,7 +24,6 @@ const commandIdOf = ({
 	return [ctx.id, ...scope].join(":");
 };
 
-/** Legacy writes one event per request, named by its feature id or else its event name. */
 const usageEventOf = ({
 	ctx,
 	body,
@@ -59,15 +57,10 @@ export function trackParamsToTrackCommand({
 }: {
 	ctx: BalanceWorkerRequestContext;
 	body: TrackParams;
-	/** The request named an event, and this command is one of the features it maps to. */
 	isFanOut?: boolean;
-	/** False for a fan-out's features after the first, so the request records its one event once. */
 	recordsUsageEvent?: boolean;
-	/** A check that deducts honours the org's overdue block, as a plain check does. */
 	enforceOverdueBlock?: boolean;
-	/** A track_tokens command, whose event records `credit_cost`. */
 	recordsCreditCost?: boolean;
-	/** Only a check takes a lock; a plain track never does. */
 	lock?: LockParams;
 }): TrackCommand {
 	const occurredAt = body.timestamp ?? ctx.timestamp;
@@ -103,7 +96,6 @@ export function trackParamsToTrackCommand({
 	};
 }
 
-/** A feature id tracks itself; an event name tracks every feature that lists it. */
 export const trackedFeatureIdsOf = ({
 	ctx,
 	body,
@@ -123,7 +115,6 @@ export const trackedFeatureIdsOf = ({
 	return featureIds;
 };
 
-/** One command per feature the item tracks; an event name fans out, a feature id is one command. */
 export const trackParamsToTrackCommands = ({
 	ctx,
 	body,

@@ -12,7 +12,6 @@ import { mockModuleWithRestore } from "../utils/mockModuleWithRestore.js";
 
 const last = <T>(arr: T[]): T | undefined => arr[arr.length - 1];
 
-// Single ordered recorder: info/warn interleaving matters for transition order.
 const loggedFields: Record<string, unknown>[] = [];
 const info = mock((...args: unknown[]) => {
 	loggedFields.push(args[0] as Record<string, unknown>);

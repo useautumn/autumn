@@ -34,7 +34,6 @@ export const reapplyExistingRolloversToCustomerProduct = async ({
 		cusProduct: currentCustomerProduct,
 	});
 
-	// Reinitialize customer entitlements with reset balance
 	applyExistingRollovers({
 		customerProduct,
 		existingRollovers: currentRollovers,

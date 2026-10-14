@@ -1,6 +1,3 @@
-/** Legacy Attach V1 downgrade tests (customer-level): scheduled downgrades, clock
- * advancement to activate them, renewing to cancel them, mixed billing intervals. */
-
 import { test } from "bun:test";
 import { type ApiCustomerV3, BillingInterval } from "@autumn/shared";
 import {
@@ -17,23 +14,6 @@ import chalk from "chalk";
 import { addWeeks } from "date-fns";
 import { constructPriceItem } from "@/internal/products/product-items/productItemUtils";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts";
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 4: Pro-Quarter -> Premium -> Pro (mixed intervals)
-// (from downgrade4)
-//
-// Scenario:
-// - Pro-Quarter ($20/quarter) with consumable Words
-// - Premium ($50/month) with consumable Words
-// - Pro ($20/month) with consumable Words
-// - Attach Pro-Quarter
-// - Downgrade to Premium (scheduled for end of quarter)
-// - Change downgrade to Pro (scheduled for end of quarter)
-// - Advance clock 3 months
-//
-// Expected:
-// - After 3 months: Pro (monthly) is active
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(
 	`${chalk.yellowBright("legacy-downgrade 4: pro-quarter -> premium -> pro (mixed intervals)")}`,
@@ -66,7 +46,6 @@ test.concurrent(
 			actions: [s.attach({ productId: proQuarter.id })],
 		});
 
-		// Downgrade to Premium
 		await autumnV1.attach({
 			customer_id: customerId,
 			product_id: premium.id,
@@ -76,7 +55,6 @@ test.concurrent(
 		await expectProductCanceling({ customer, productId: proQuarter.id });
 		await expectProductScheduled({ customer, productId: premium.id });
 
-		// Change downgrade to Pro
 		await autumnV1.attach({
 			customer_id: customerId,
 			product_id: pro.id,
@@ -86,7 +64,6 @@ test.concurrent(
 		await expectProductCanceling({ customer, productId: proQuarter.id });
 		await expectProductScheduled({ customer, productId: pro.id });
 
-		// Advance clock 3 months (end of quarter) - advance 1.5 months twice
 		const advancedTo = await advanceTestClock({
 			stripeCli: ctx.stripeCli,
 			testClockId: testClockId!,
@@ -100,7 +77,6 @@ test.concurrent(
 			minimumWaitForSeconds: 30,
 		});
 
-		// Verify: Pro (monthly) is active
 		const customerAfter =
 			await autumnV1.customers.get<ApiCustomerV3>(customerId);
 

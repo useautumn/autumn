@@ -182,7 +182,6 @@ describe("workerCanApplyBillingPlan", () => {
 				customer_license_link_id: "license_link_1",
 			}),
 		).toBe(false);
-		// A released seat's update carries the bare row, without grants.
 		const { customer_entitlements: _grants, ...bareSeat } = {
 			...defaultProduct(),
 			customer_license_link_id: "license_link_1",

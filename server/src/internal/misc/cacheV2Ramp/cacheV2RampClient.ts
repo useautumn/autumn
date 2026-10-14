@@ -17,13 +17,6 @@ type CachedClient = {
 let cached: CachedClient | null = null;
 let lastDecryptFailureKey: string | null = null;
 
-/** Returns the Redis client for the ramp destination configured in the edge config.
- *
- *  Lazy: creates the client on first call after the destination is set.
- *  Hot-swappable: when the admin changes the URL OR rotates the encrypted
- *  connection string (e.g. credential rotation on the same host), the next
- *  call disconnects the old client and creates a new one. Returns null when
- *  no destination is configured (ramp is dormant). */
 export const getRampDestinationRedis = (): Redis | null => {
 	const config = getCacheV2RampConfig();
 	if (!config) {
@@ -94,7 +87,6 @@ export const getRampDestinationRedis = (): Redis | null => {
 	return instance;
 };
 
-/** Tear down the cached destination client. Safe to call multiple times. */
 export const closeRampDestinationClient = () => {
 	if (!cached) return;
 	try {
@@ -107,7 +99,6 @@ export const closeRampDestinationClient = () => {
 	cached = null;
 };
 
-/** Test-only: inject a Redis instance directly, bypassing the config + decryption. */
 export const _setRampDestinationClientForTesting = (
 	client: {
 		url: string;
@@ -122,9 +113,7 @@ export const _setRampDestinationClientForTesting = (
 	) {
 		try {
 			cached.instance.disconnect();
-		} catch {
-			// best effort
-		}
+		} catch {}
 	}
 	cached = client;
 };

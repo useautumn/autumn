@@ -10,10 +10,6 @@ import { VercelResourceService } from "@/external/vercel/services/VercelResource
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { productToBillingPlan } from "../handleListBillingPlans.js";
 
-/**
- * GET /v1/installations/{integrationConfigurationId}/resources/{resourceId}
- * Get a single resource by ID
- */
 export const handleGetResource = createRoute({
 	scopes: [Scopes.Public],
 	handler: async (c) => {

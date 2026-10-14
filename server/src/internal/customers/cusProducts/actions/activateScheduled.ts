@@ -16,7 +16,6 @@ import { findTransitionSourceCustomerProduct } from "@/internal/billing/v2/utils
 import { reapplyExistingRolloversToCustomerProduct } from "@/internal/billing/v2/utils/initFullCustomerProduct/reapplyExistingRolloversToCustomerProduct";
 import { reapplyExistingUsagesToCustomerProduct } from "@/internal/billing/v2/utils/initFullCustomerProduct/reapplyExistingUsagesToCustomerProduct";
 
-/** Activates a scheduled product and converges its inherited license state. */
 export const activateScheduledCustomerProduct = async ({
 	ctx,
 	fromCustomerProduct,
@@ -28,13 +27,12 @@ export const activateScheduledCustomerProduct = async ({
 	emitsBillingUpdated = false,
 }: {
 	ctx: AutumnContext;
-	fromCustomerProduct?: FullCusProduct; // for cases where expiry happens before activation (eg. expireAndActivateDefault)
+	fromCustomerProduct?: FullCusProduct;
 	customerProduct: FullCusProduct;
 	fullCustomer: FullCustomer;
 	subscriptionIds?: string[];
 	scheduledIds?: string[];
 	activatedAt: number;
-	/** The caller sends billing.updated and carries `allocationsAdjusted` on it. */
 	emitsBillingUpdated?: boolean;
 }): Promise<{
 	updates: Partial<InsertCustomerProduct>;
@@ -69,8 +67,6 @@ export const activateScheduledCustomerProduct = async ({
 		scheduled_ids: scheduledIds,
 		starts_at: Math.min(customerProduct.starts_at, activatedAt),
 	};
-	// Scheduled activations have no request params — the org transition rule
-	// is the only carry-over source.
 	const customerLicenseTransitions = transitionSource
 		? computeCustomerLicenseTransitions({
 				outgoingCustomerProducts: [transitionSource],
@@ -81,9 +77,6 @@ export const activateScheduledCustomerProduct = async ({
 				}),
 			})
 		: [];
-	// License pools only: seats move below and need them now. The caller swaps the parent's own
-	// pools once after resetting due pools; swapping here too double-counts (stale outgoing snapshot).
-	// TODO: dispatch seats after the caller's pool transition so pools transition exactly once.
 	const pooledBalancePlan = customerLicenseTransitions.length
 		? computeLicensePooledBalancePlan({
 				ctx,
@@ -111,7 +104,6 @@ export const activateScheduledCustomerProduct = async ({
 		},
 	});
 
-	// 2. Send webhook
 	await addProductsUpdatedWebhookTask({
 		ctx,
 		internalCustomerId: customerProduct.internal_customer_id,

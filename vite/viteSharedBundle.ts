@@ -2,13 +2,8 @@ import path from "node:path";
 import { type BuildContext, context } from "esbuild";
 import type { Plugin } from "vite";
 
-/**
- * Serves the `@autumn/shared` root barrel as one esbuild bundle instead of ~1,300 source
- * modules. Rebuilds incrementally on edit and hot-updates importers like any other module.
- */
 export function sharedBundle({ sharedDir }: { sharedDir: string }): Plugin {
 	const entry = path.join(sharedDir, "index.ts");
-	// A path inside shared/ so the bundle's bare imports resolve from shared's dependencies.
 	const bundleId = path.join(sharedDir, "__vite_shared_bundle__.js");
 	let build: BuildContext | undefined;
 

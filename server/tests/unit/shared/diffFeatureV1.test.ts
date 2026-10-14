@@ -47,7 +47,6 @@ test("diffFeatureV1 returns previous attributes for semantic changes", () => {
 });
 
 test("a boolean row with a stale usage_type does not phantom-diff on consumable", () => {
-	// A feature that was metered before becoming boolean keeps its old config.
 	const current = {
 		id: "webhooks",
 		internal_id: "fe_1",

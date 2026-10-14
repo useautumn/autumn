@@ -4,10 +4,6 @@ import {
 	parsePlanKey,
 } from "@/lib/planSelectionKeys";
 
-/**
- * A plan's scope within a selection: every version (the whole-plan key), a set
- * of pinned versions, or nothing. Whole-plan and pinned picks never coexist.
- */
 export const planScopeIsWholePlan = ({
 	selectedKeys,
 	planId,
@@ -53,7 +49,6 @@ export const toggleWholePlan = ({
 	if (planScopeIsWholePlan({ selectedKeys: keys, planId })) {
 		return keys.filter((key) => key !== planId);
 	}
-	// Whole plan supersedes any pinned versions of the same plan.
 	return [...keys.filter((key) => parsePlanKey(key).planId !== planId), planId];
 };
 
@@ -69,11 +64,9 @@ export const togglePlanVersion = ({
 	const keys = normalizePlanKeys(selectedKeys);
 	const key = makePlanKey({ planId, version });
 	if (keys.includes(key)) return keys.filter((existing) => existing !== key);
-	// A specific version supersedes the whole-plan pick.
 	return [...keys.filter((existing) => existing !== planId), key];
 };
 
-/** Trailing summary for a plan row: "All versions", "v1, v2", or "None". */
 export const planScopeLabel = ({
 	selectedKeys,
 	planId,
@@ -87,10 +80,6 @@ export const planScopeLabel = ({
 	return versions.map((version) => `v${version}`).join(", ");
 };
 
-/**
- * Collapse a plan whose every version is pinned down to the whole-plan key, so
- * the row reads "All versions" rather than enumerating them.
- */
 export const collapseFullyPinnedPlan = ({
 	selectedKeys,
 	planId,

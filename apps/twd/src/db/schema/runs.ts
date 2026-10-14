@@ -25,7 +25,6 @@ export type RunStatus =
 export type RunSelection = {
 	groups?: string[];
 	files?: string[];
-	/** Test-name filter forwarded to bun test --test-name-pattern. */
 	grep?: string;
 };
 
@@ -38,23 +37,16 @@ export const runs = pgTable(
 		pinnedSha: boolean("pinned_sha").notNull().default(false),
 		selection: jsonb("selection").$type<RunSelection>().notNull(),
 		status: text("status").$type<RunStatus>().notNull().default("queued"),
-		/** baseline = scheduled/merge run on dev that feeds the baseline. */
 		purpose: text("purpose")
 			.$type<"adhoc" | "baseline">()
 			.notNull()
 			.default("adhoc"),
 		workersWanted: integer("workers_wanted"),
-		/** Caller-chosen worker cap; null = one per file. */
 		maxWorkers: integer("max_workers"),
-		/** Caller-chosen files per worker; null with maxWorkers null = Auto. */
 		maxFilesPerWorker: integer("max_files_per_worker"),
-		/** What the swarm chose and why; null until it sizes the run. */
 		sizing: jsonb("sizing").$type<RunSizing>(),
-		/** Times each selected file runs (flake checks); repeat runs never feed baselines or drift. */
 		repeat: integer("repeat").notNull().default(1),
-		/** Feeds the dev baseline: decided once at creation (see countsAsBaseline). */
 		isBaseline: boolean("is_baseline").notNull().default(false),
-		/** Files failing here that were not failing in the previous baseline; null until finished or without one. */
 		newFailures: integer("new_failures"),
 		costUsd: real("cost_usd").notNull().default(0),
 		workerSeconds: real("worker_seconds").notNull().default(0),
@@ -63,7 +55,6 @@ export const runs = pgTable(
 		workerCount: integer("worker_count"),
 		passed: integer("passed").notNull().default(0),
 		failed: integer("failed").notNull().default(0),
-		/** Live progress snapshot from the swarm child (phase, worker grid, counts). */
 		progress: jsonb("progress")
 			.$type<Record<string, unknown>>()
 			.notNull()
@@ -95,13 +86,11 @@ export const warmImages = pgTable("warm_images", {
 		.notNull()
 		.defaultNow(),
 	readyAt: timestamp("ready_at", { withTimezone: true }),
-	/** Modal cost of building this warm image (warm sandbox lifetime). */
 	buildSeconds: real("build_seconds"),
 	costUsd: real("cost_usd"),
 	createdBy: text("created_by"),
 });
 
-/** One row per worker sandbox; cost = (ended_at ?? now) - started_at priced at its cores/memory. */
 export const runWorkers = pgTable(
 	"run_workers",
 	{
@@ -123,7 +112,6 @@ export const runWorkers = pgTable(
 	],
 );
 
-/** Append-only run output; file/worker null for orchestrator lines. */
 export const runLogs = pgTable(
 	"run_logs",
 	{

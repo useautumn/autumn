@@ -16,7 +16,6 @@ export const AttachLicenseEntityParamsSchema = z.object({
 export const AttachLicenseParamsV0Schema = z.object({
 	customer_id: z.string(),
 	plan_id: z.string(),
-	// Entities are upserted: unknown ones are created before assignment.
 	entities: z.array(AttachLicenseEntityParamsSchema).min(1),
 });
 

@@ -4,13 +4,8 @@ import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { validatePlatformOrg } from "../utils/validatePlatformOrg.js";
 
-/**
- * POST /platform.sync_revenuecat — push a managed org's plans into RevenueCat.
- * Omit product_ids to sync every plan in the org/env.
- */
 export const handleSyncRevenueCat = createRoute({
 	scopes: [Scopes.Platform.Write],
-	// Accepts "test"/"sandbox"/"live" — "test" + "sandbox" both map to AppEnv.Sandbox below.
 	body: SyncRevenueCatSchema,
 	handler: async (c) => {
 		const ctx = c.get("ctx");

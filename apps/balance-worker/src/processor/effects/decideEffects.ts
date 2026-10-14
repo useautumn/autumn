@@ -6,7 +6,6 @@ import type {
 import { subjectsToBalanceWebhooks } from "@autumn/balance-webhooks";
 import { decideAutoTopupEffects } from "./decideAutoTopupEffects.js";
 
-/** What must happen elsewhere because of this decision, read off the deduction and the subject as it found it and as it left it. */
 export const decideEffects = ({
 	decision: { mutation, outcome },
 	before,

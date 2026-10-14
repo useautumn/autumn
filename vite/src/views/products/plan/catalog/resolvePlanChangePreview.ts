@@ -36,7 +36,6 @@ export const resolveEffectiveVersionChoice = ({
 	choice: CatalogVersionChoice;
 	showNewOption: boolean;
 	showAllOption: boolean;
-	/** No content to version, so the save edits the row it targets. */
 	isMetadataOnly?: boolean;
 }): CatalogVersionChoice => {
 	if (isMetadataOnly) return "update";
@@ -89,7 +88,6 @@ export type PlanChangePreviewModel = {
 	settingsChanges: SettingChange[];
 };
 
-/** Dialog decisions from the discover preview + user picks. Never from a scoped preview. */
 export const resolvePlanChangePreview = ({
 	preview,
 	versionChoice,
@@ -147,7 +145,6 @@ export const resolvePlanChangePreview = ({
 	const selectedVariantKeys = (variantSelection ?? defaultVariantKeys).filter(
 		(key) => availableVariantKeys.has(key),
 	);
-	// License-only edits propagate too, so any content change opens the step.
 	const showVariantScope = !isMetadataOnly && variantTargets.length > 0;
 	const effectiveVariantKeys = showVariantScope
 		? selectedVariantKeys

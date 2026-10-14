@@ -20,7 +20,6 @@ const parseErrorBody = (body: string): ParsedErrorBody => {
 
 /** Transform any error into a BackendResult */
 export const transformSdkError = (error: unknown): BackendResult => {
-	// Handle Autumn SDK errors
 	if (error instanceof AutumnError) {
 		const parsed = parseErrorBody(error.body);
 
@@ -31,7 +30,6 @@ export const transformSdkError = (error: unknown): BackendResult => {
 		});
 	}
 
-	// Handle standard Error objects
 	if (error instanceof Error) {
 		return backendError({
 			message: error.message,
@@ -39,7 +37,6 @@ export const transformSdkError = (error: unknown): BackendResult => {
 		});
 	}
 
-	// Handle unknown errors
 	return backendError({
 		message: "Internal server error",
 		code: "internal_error",

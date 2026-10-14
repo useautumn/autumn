@@ -6,10 +6,6 @@ type LiveRunDemand = {
 	workersWanted: number | null;
 };
 
-/**
- * Account demand as the allocator sees it: only runs registered with it are asking.
- * A warming run's sized slots wait on its image, so they are reported apart, not as demand.
- */
 export const summariseAccountDemand = ({
 	liveRuns,
 	heldByRun,
@@ -17,7 +13,6 @@ export const summariseAccountDemand = ({
 }: {
 	liveRuns: LiveRunDemand[];
 	heldByRun: Map<string, number>;
-	/** Accounts a registered run can still use; undefined when it isn't asking. */
 	demandOf: (runId: string) => number | undefined;
 }) => {
 	let accountsWanted = 0;

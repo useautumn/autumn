@@ -30,7 +30,6 @@ export const buildAuthorizationUrl = ({
 		codeVerifier,
 		[...scopes],
 	);
-	// Always show the org picker; a silent grant would pin the wrong org.
 	url.searchParams.set("prompt", "consent");
 	return url;
 };

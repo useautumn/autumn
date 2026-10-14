@@ -48,7 +48,6 @@ const forbidden = ({ email }: { email: string }) =>
 		escalate: `twd is restricted to @${ALLOWED_DOMAIN}; ask an admin if you should have access.`,
 	});
 
-/** Authorization URL plus the state + PKCE verifier the caller must persist. */
 export const startGoogleSignIn = async ({ ctx }: { ctx: TwdContext }) => {
 	const { clientId } = requireGoogleConfig({ ctx });
 	const state = randomToken();
@@ -71,7 +70,6 @@ export const startGoogleSignIn = async ({ ctx }: { ctx: TwdContext }) => {
 	return { url: url.toString(), state, verifier };
 };
 
-/** Exchanges the code, enforces verified @useautumn.com, upserts the user, opens a session. */
 export const completeGoogleSignIn = async ({
 	ctx,
 	code,
@@ -108,7 +106,6 @@ export const completeGoogleSignIn = async ({
 		});
 	}
 
-	// Token came straight from Google over TLS, so claim checks suffice (OIDC core §3.1.3.7).
 	const payload = idToken.data.id_token.split(".")[1] ?? "";
 	const claims = z
 		.string()

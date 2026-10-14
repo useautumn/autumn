@@ -1,6 +1,3 @@
-/**
- * Generate imports for config file
- */
 export function buildImports({
 	includeBillingControls = false,
 	includeRewards = false,

@@ -1,23 +1,3 @@
-/**
- * TDD test for Stripe dual-auth: an org may have BOTH a secret key AND an
- * OAuth (Connect) account connected per env, simultaneously.
- *
- * Contract under test (pure-function / config layer):
- *   isStripeConnected (regression guard):
- *     - both api_key + account_id set -> default true; throughSecretKey true; throughAccountId true
- *   createOrgResponse (new response fields):
- *     - stripe_secret_key_connected: boolean
- *     - stripe_oauth_connected: boolean
- *     - both true when both channels present
- *     - stripe_connection stays "secret_key" (primary) when a secret key exists, even if oauth also present
- *   validateStripeSubscriptionActionOwnership:
- *     - shouldValidate is false when a secret key exists (even if account_id also set)
- *
- * Pre-impl red: stripe_secret_key_connected / stripe_oauth_connected do not exist on FrontendOrg
- * or createOrgResponse output; ownership-gate behavior with both present is untested.
- * Post-impl green: the new flags are emitted and the ownership gate respects secret-key presence.
- */
-
 import { describe, expect, test } from "bun:test";
 import { AppEnv, type Organization } from "@autumn/shared";
 import {

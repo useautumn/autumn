@@ -44,7 +44,6 @@ const cacheDeploymentIn = ({
 	created_at: 1,
 });
 
-/** A delete under way, with its stages as a removal reports them. */
 const removingWith = ({
 	removedStages,
 }: {
@@ -54,7 +53,6 @@ const removingWith = ({
 	stages: toRemovalStages({ removedStages, hasFailed: false }),
 });
 
-/** What alien reports on each poll, in order; a thrown error stands in for an outage. */
 let reports: (ByocCacheDeployment | null | Error)[] = [];
 let stored: ByocCacheDeployment | null = null;
 
@@ -71,7 +69,6 @@ const { watchAtomRecord } = await import(
 	"@/internal/byoc/atomRecords/watchAtomRecord/watchAtomRecord.js"
 );
 
-/** Each turn the watch reads `stored`; each refresh lands the next of `reports`. */
 const atomCtx: AtomContext<ByocCacheDeployment> = {
 	deployer: {} as AtomDeployer,
 	storage: {

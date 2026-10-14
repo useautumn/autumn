@@ -11,7 +11,6 @@ const isUsageLimitInterval = (
 ): interval is UsageLimitInterval =>
 	(USAGE_LIMIT_INTERVALS as readonly unknown[]).includes(interval);
 
-/** The cap as a webhook states it, with its live window; null for an interval the webhook has no name for. */
 export const usageWindowLimitToWebhookBlock = ({
 	limit,
 	usage,

@@ -27,7 +27,6 @@ const ChartArea = ({
 	return children;
 };
 
-/** A monitoring chart on the tray: what it shows and when it last read above, its latest readings and plot on the surface. */
 export const MonitoringChartCard = ({
 	title,
 	description,

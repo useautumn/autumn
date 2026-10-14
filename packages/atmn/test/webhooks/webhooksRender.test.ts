@@ -1,5 +1,3 @@
-/** The preview names an empty event list for what it is: every event. */
-
 import { expect, test } from "bun:test";
 import { renderWebhooks } from "../../src/render/renderWebhooks";
 

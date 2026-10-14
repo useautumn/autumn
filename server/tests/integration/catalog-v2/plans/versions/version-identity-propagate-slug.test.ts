@@ -1,16 +1,3 @@
-/**
- * catalogV2 version identity — `new_version_slug` on propagate targets.
- *
- * Contract:
- *   `propagate.variants[].new_version_slug` names that variant's minted row
- *   a base slug never reaches a target — an unnamed target falls back to `v{n}`
- *   a target's `new_version_slug` wins over `variants[].new_version_slug`
- *   a target that follows in place → its slug is untouched
- *   variant content drift survives propagation (editDiff, not absolute content)
- *   a target slug another version of that target holds → DuplicateVersionSlug
- *   `propagate.license_parents[].new_version_slug` names the parent's minted row
- */
-
 import { test } from "bun:test";
 import { ErrCode } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
@@ -30,7 +17,6 @@ import { expectVersionIdentityCorrect } from "../utils/expectVersionIdentity.js"
 import { expectVariantPlanCorrect } from "../variants/utils/expectVariantPointer.js";
 import { seedBaseWithVariant } from "../variants/utils/seedVariantPlans.js";
 
-/** Base mint that adds dashboard and asks the variant to follow. */
 const mintBaseWithFollowingVariant = async ({
 	autumn,
 	baseId,
@@ -109,8 +95,6 @@ test.concurrent(
 					version: 2,
 					versionSlug: "summer_eu",
 				});
-				// The variant's 200 messages must survive: propagation applies the
-				// base's delta, it does not overwrite with the base's content.
 				await expectVariantPlanCorrect({
 					ctx,
 					variantPlanId: variantId,
@@ -210,7 +194,6 @@ test.concurrent(
 			ctx,
 			planIds: [baseId, variantId],
 			run: async () => {
-				// No customers on the variant, so it follows in place instead of minting.
 				await seedBaseWithVariant({ autumn: autumnV2_3, baseId, variantId });
 
 				await mintBaseWithFollowingVariant({

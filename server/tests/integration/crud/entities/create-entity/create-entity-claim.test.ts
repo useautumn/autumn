@@ -7,7 +7,6 @@ import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 
-/** An id-less entity holds a seat; the create that names it takes the row over, not a second seat. */
 test.concurrent(
 	`${chalk.yellowBright("create-entity-claim: naming the id-less entity claims it without a second seat")}`,
 	async () => {
@@ -65,7 +64,6 @@ test.concurrent(
 	},
 );
 
-/** An id-less entity of another feature is not claimed; the request inserts. */
 test.concurrent(
 	`${chalk.yellowBright("create-entity-claim: an id-less entity of another feature is left alone")}`,
 	async () => {

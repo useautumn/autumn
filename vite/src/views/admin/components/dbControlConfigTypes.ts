@@ -1,10 +1,7 @@
 export type DbControlConfig = {
 	balanceCommitter: {
-		/** Flushes in flight per balance worker; null keeps the worker's pool size. */
 		concurrency: number | null;
-		/** How long committed batches gather before one flush; null keeps the worker's boot value. */
 		applyLingerMs: number | null;
-		/** Committed batches one flush takes; null keeps the worker's boot value. */
 		maxBatchesPerFlush: number | null;
 	};
 	configHealthy?: boolean;

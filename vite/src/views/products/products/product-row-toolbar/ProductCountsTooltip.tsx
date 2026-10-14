@@ -21,16 +21,12 @@ export const ProductCountsTooltip = ({ product }: { product: ProductV2 }) => {
 		e.stopPropagation();
 		if (activeCount === 0) return;
 
-		// Build version filter for all versions of this product (comma-separated)
 		const maxVersion = versionCounts[product.id] || 1;
 		const versionKeys = Array.from(
 			{ length: maxVersion },
 			(_, i) => `${product.id}:${i + 1}`,
 		).join(",");
 
-		// Build path via pushPage (handles sandbox prefix, encoding) but navigate
-		// ourselves so we can attach state that tells the customers page to skip
-		// restoring filters from localStorage.
 		const path = pushPage({
 			path: `/customers`,
 			queryParams: { version: versionKeys },

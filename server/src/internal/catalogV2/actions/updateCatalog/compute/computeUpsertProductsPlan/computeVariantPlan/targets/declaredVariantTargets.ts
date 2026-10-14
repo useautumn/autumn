@@ -4,7 +4,6 @@ import { selectVariantRows } from "../selectVariantRows";
 import { reachInternalIdsForBaseUpsert } from "../variantPlanUtils";
 import type { VariantEditTarget } from "./variantEditTarget";
 
-/** variants[] entries over existing rows → declared targets (repoint / customize / archive / unlink). */
 export const declaredVariantTargets = ({
 	upsert,
 	productStatesContext,
@@ -19,8 +18,6 @@ export const declaredVariantTargets = ({
 
 	return (upsert.declaredVariants ?? []).flatMap(
 		(variant): VariantEditTarget[] => {
-			// Link/unlink change the plan relationship, not one row: detaching
-			// clears every version, and first-linking a standalone claims every version.
 			const unlink = variant.base_variant_id === null;
 			const planRows =
 				productStatesContext.versionsByPlanId[variant.variant_plan_id] ?? [];

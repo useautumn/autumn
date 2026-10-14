@@ -7,7 +7,6 @@ import {
 	usageLimitFilterMatchesProperties,
 } from "@autumn/shared";
 
-// Legacy deductions carry no FullSubject; the evaluated subject is all there is.
 export const findBlockedFilterOnSubject = ({
 	subject,
 	feature,

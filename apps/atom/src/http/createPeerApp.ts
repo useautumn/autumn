@@ -28,11 +28,6 @@ import { requestBodyMiddleware } from "./middlewares/requestBodyMiddleware.js";
 import { requestLogMiddleware } from "./middlewares/requestLog/requestLogMiddleware.js";
 import type { AtomHttpContext, AtomHttpEnv } from "./types/atomHttp.js";
 
-/**
- * What other replicas reach, on the port the deployment keeps off its public endpoint: the same push and tenant
- * routes, applied as relayed, and what a replica catching up asks for, folder by folder. Every request must carry
- * the deployment's peer signature.
- */
 export function createPeerApp({
 	ctx,
 	secret,

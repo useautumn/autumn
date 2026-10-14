@@ -6,7 +6,6 @@ const higherVersion = (left: bigint | null, right: bigint | null) => {
 	return left > right ? left : right;
 };
 
-/** One push for two refs to the same subject: its newest offset, its oldest change, and its highest version, so coalescing never loses an evict. */
 export const mergeCacheSubjects = ({
 	held,
 	next,

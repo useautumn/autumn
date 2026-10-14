@@ -31,7 +31,6 @@ const aiCreditsFeature = {
 	internal_id: "iai_credits",
 	type: FeatureType.AiCreditSystem,
 } as Feature;
-// Credit system whose schema contains action1, for the membership-anchor path.
 const creditsContainingAction1 = {
 	id: "credits",
 	internal_id: "icredits",
@@ -45,7 +44,6 @@ const credits2ContainingAction1 = {
 	config: { schema: [{ metered_feature_id: "action1", credit_amount: 3 }] },
 } as unknown as Feature;
 
-// Minimal loose (product-less) customer entitlement for anchor tests.
 const looseEntitlement = ({
 	id,
 	featureId,
@@ -77,10 +75,6 @@ const looseEntitlement = ({
 		replaceables: [],
 	}) as unknown as FullSubject["extra_customer_entitlements"][number];
 
-// A customer product wrapping one entitlement, with an optional billing-cycle
-// anchor. Unlike loose entitlements, product-backed ones keep their
-// customer_product through fullSubjectToCustomerEntitlements, so the resolver can
-// read the cycle anchor from it.
 const customerProductWithEntitlement = ({
 	id,
 	featureId,
@@ -133,7 +127,6 @@ const buildSubject = ({
 	looseEntitlements = [],
 	customerProducts = [],
 }: {
-	// Entries injected as-is; pass Partial shapes to simulate stale stored data.
 	usageLimits?: Partial<DbUsageLimit>[];
 	spendLimits?: DbSpendLimit[];
 	looseEntitlements?: FullSubject["extra_customer_entitlements"];
@@ -245,7 +238,6 @@ describe("fullSubjectToUsageWindowLimits", () => {
 	test("the window interval comes from the entry, independent of the entitlement's reset interval", () => {
 		const limits = fullSubjectToUsageWindowLimits({
 			fullSubject: buildSubject({
-				// Entitlement resets monthly; the cap windows daily.
 				usageLimits: [
 					{ feature_id: "credits", limit: 3, interval: ResetInterval.Day },
 				],
@@ -295,7 +287,6 @@ describe("fullSubjectToUsageWindowLimits", () => {
 	});
 
 	test("aligns window bounds to the billing-cycle anchor when present", () => {
-		// Anchor: a non-midnight, non-first-of-month timestamp the cycle aligns to.
 		const cycleAnchor = Date.UTC(2026, 0, 9, 15, 30, 0);
 		const limits = fullSubjectToUsageWindowLimits({
 			fullSubject: buildSubject({
@@ -328,12 +319,10 @@ describe("fullSubjectToUsageWindowLimits", () => {
 		expect(limits).toHaveLength(1);
 		expect(limits[0].window_start_at).toBe(aligned.windowStartAt);
 		expect(limits[0].window_end_at).toBe(aligned.windowEndAt);
-		// Sanity: the anchored window genuinely differs from calendar alignment.
 		expect(aligned.windowStartAt).not.toBe(calendar.windowStartAt);
 	});
 
 	test("the anchor ent's next_reset_at outranks the billing-cycle anchor for bounds", () => {
-		// Non-calendar, non-cycle-anchor timestamps so all three alignments differ.
 		const cycleAnchor = Date.UTC(2026, 0, 9, 15, 30, 0);
 		const nextResetAt = Date.UTC(2026, 5, 22, 8, 45, 0);
 		const limits = fullSubjectToUsageWindowLimits({
@@ -369,7 +358,6 @@ describe("fullSubjectToUsageWindowLimits", () => {
 		expect(limits).toHaveLength(1);
 		expect(limits[0].window_start_at).toBe(resetAligned.windowStartAt);
 		expect(limits[0].window_end_at).toBe(resetAligned.windowEndAt);
-		// Sanity: the reset-cycle window genuinely differs from the cycle-anchor one.
 		expect(resetAligned.windowStartAt).not.toBe(cycleAligned.windowStartAt);
 	});
 
@@ -408,7 +396,6 @@ describe("fullSubjectToUsageWindowLimits", () => {
 			});
 
 		const today = resolveAt({ now: NOW, nextReset: nextResetAt });
-		// The daily ent has reset once: its next_reset_at moved forward a day.
 		const tomorrow = resolveAt({
 			now: NOW + DAY_MS,
 			nextReset: nextResetAt + DAY_MS,
@@ -425,7 +412,6 @@ describe("fullSubjectToUsageWindowLimits", () => {
 		expect(tomorrow[0].window_start_at).toBe(today[0].window_start_at);
 		expect(tomorrow[0].key).toBe(today[0].key);
 
-		// Sanity: anchoring to the moving next_reset_at would shift the window daily.
 		const nextResetAnchoredToday = getUsageWindowBounds({
 			interval: EntInterval.Month,
 			now: NOW,
@@ -442,8 +428,6 @@ describe("fullSubjectToUsageWindowLimits", () => {
 	});
 
 	test("a monthly cap on a daily-reset ent ignores a pending billing-cycle date", () => {
-		// The pending date is cleared when the anchor move lands; anchoring to it
-		// would shift the bounds at that moment and zero the counter mid-window.
 		const pendingAnchorResetsAt = Date.UTC(2026, 6, 9, 15, 30, 0);
 		const limits = fullSubjectToUsageWindowLimits({
 			fullSubject: buildSubject({
@@ -518,8 +502,6 @@ describe("fullSubjectToUsageWindowLimits", () => {
 	});
 
 	test("a weekly cap on a monthly-reset ent anchors to reset_cycle_anchor, not next_reset_at", () => {
-		// Months are not whole weeks, so a monthly next_reset_at would shift the
-		// weekly window's weekday on every monthly reset.
 		const resetCycleAnchor = Date.UTC(2026, 0, 9, 15, 30, 0);
 		const nextResetAt = Date.UTC(2026, 6, 9, 15, 30, 0);
 		const limits = fullSubjectToUsageWindowLimits({
@@ -747,8 +729,6 @@ describe("fullSubjectToUsageWindowLimits", () => {
 			window_start_at: calendar.windowStartAt,
 			window_end_at: calendar.windowEndAt,
 		});
-		// Sanity: a usable anchor WAS present and would have moved the bounds, so
-		// the assertion above cannot pass vacuously.
 		expect(anchored.windowStartAt).not.toBe(calendar.windowStartAt);
 	});
 
@@ -772,15 +752,12 @@ describe("fullSubjectToUsageWindowLimits", () => {
 			now: NOW,
 		});
 
-		// Same fixture anchors to ce_credits under billing_cycle; utc must not.
 		expect(limits).toHaveLength(1);
 		expect(limits[0].anchor_customer_entitlement_id).toBeNull();
 		expect(limits[0].anchor_mode).toBe("utc");
 	});
 
 	test("an entry with no anchor field falls back to billing-cycle alignment", () => {
-		// Stored entries are jsonb cast with drizzle's $type and never parsed on
-		// read, so pre-field rows arrive with `anchor` absent.
 		const cycleAnchor = Date.UTC(2026, 0, 9, 15, 30, 0);
 		const limits = fullSubjectToUsageWindowLimits({
 			fullSubject: buildSubject({

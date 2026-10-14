@@ -5,7 +5,6 @@ import type { AppEnv } from "@autumn/shared";
 import type { CatalogPushContext } from "../types/catalogPushContext.js";
 import { sendCatalogToAtom } from "./sendCatalogToAtom.js";
 
-/** An org's whole shared catalog into every Atom its customers can be in, as Postgres holds it now. */
 export const pushCatalogToCache = async ({
 	ctx,
 	orgId,
@@ -15,7 +14,6 @@ export const pushCatalogToCache = async ({
 	orgId: string;
 	env: AppEnv;
 }): Promise<void> => {
-	// Straight from Postgres: the org's cached copy can predate its Atom becoming ready.
 	const orgWithFeatures = await getOrgWithFeatures({ ctx, orgId, env });
 	if (!orgWithFeatures) return;
 	const atomConnections = orgToAtomTargets({
@@ -26,7 +24,6 @@ export const pushCatalogToCache = async ({
 	});
 	if (atomConnections.length === 0) return;
 
-	// Taken before the read: a catalog change that lands during it must still count as newer.
 	const readAt = Date.now();
 	const envelope = await getSharedCatalogRows({
 		ctx: { db: ctx.db, orgId, env },

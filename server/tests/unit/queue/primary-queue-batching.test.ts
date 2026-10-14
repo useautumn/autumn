@@ -1,16 +1,3 @@
-/**
- * TDD contract for routing primary queue sends through SendMessageBatch.
- *
- * Contract under test:
- *   - SQS_QUEUE_URL_V2 sends use SendMessageBatch with up to 10 entries
- *   - mixed job envelopes, FIFO identifiers, and delays are preserved
- *   - partial AWS failures reject only the corresponding addTaskToQueue caller
- *   - explicit dedicated queue overrides continue using SendMessage
- *
- * Pre-implementation red: queueUtils has no primary batcher routing or flush hook.
- * Post-implementation green: primary sends batch while dedicated queues stay unchanged.
- */
-
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { ApiVersion, AppEnv } from "@autumn/shared";
 import type { SQSClient } from "@aws-sdk/client-sqs";
@@ -42,7 +29,6 @@ describe("primary queue send batching", () => {
 
 	beforeEach(() => {
 		process.env.SQS_QUEUE_URL_V2 = PRIMARY_QUEUE_URL;
-		// Test workers route SyncCustomerDirty to a dedicated queue; this suite covers the primary one.
 		delete process.env.BALANCE_SYNC_SQS_QUEUE_URL;
 		primaryCommands = [];
 		dedicatedCommands = [];
@@ -251,7 +237,6 @@ describe("primary queue send batching", () => {
 
 			expect(asyncCommands).toHaveLength(1);
 			expect(asyncCommands[0].input.Entries).toHaveLength(2);
-			// Primary batcher untouched — the async queue has its own accumulator.
 			expect(primaryCommands).toHaveLength(0);
 		} finally {
 			await flushSqsSendBatchers();

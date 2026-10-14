@@ -29,7 +29,6 @@ const sendRequest = async ({
 	}
 };
 
-/** One call to an alien manager, parsed against the shape we rely on. */
 export const alienRequest = async <Schema extends z.ZodType>({
 	api,
 	method,

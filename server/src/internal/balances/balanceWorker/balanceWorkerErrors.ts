@@ -2,7 +2,6 @@ import { BalanceWorkerClientError } from "@autumn/balance-worker-client";
 import { PARTITION_RECOVERY_REASON } from "@autumn/balance-worker-client/protocol";
 import { ErrCode, RecaseError } from "@autumn/shared";
 
-/** A command conflict is the caller reusing an idempotency key; everything else is a request the worker path does not serve. */
 export class BalanceWorkerUnsupportedError extends RecaseError {
 	constructor({ reason }: { reason: string }) {
 		const isCommandConflict = reason === "command_conflict";
@@ -17,11 +16,6 @@ export class BalanceWorkerUnsupportedError extends RecaseError {
 	}
 }
 
-/** Failures the client raised on its own, before any worker returned a verdict.
- *  They say the worker path is momentarily unreachable, not that the request was
- *  wrong, so they belong in the retryable 5xx family. INVALID_RESPONSE and
- *  WORKER_ERROR are deliberately absent: those mean a worker answered with
- *  something we do not understand, which is a defect worth surfacing loudly. */
 const UNAVAILABLE_CLIENT_CODES = new Set([
 	"NO_OWNER",
 	"ROUTE_STILL_STALE",
@@ -32,7 +26,6 @@ const UNAVAILABLE_CLIENT_CODES = new Set([
 	"COMMAND_LOG_UNAVAILABLE",
 ]);
 
-/** The worker path failed before any verdict: no owner, still activating, stale route, transport or deadline. Check `outcome` before assuming nothing was submitted. */
 export const isBalanceWorkerUnconfirmed = (
 	error: unknown,
 ): error is BalanceWorkerClientError =>
@@ -44,15 +37,11 @@ const STALE_SUBJECT_CODE = "balance_worker_stale_subject";
 const UNAVAILABLE_CODE = "balance_worker_unavailable";
 const OVERLOADED_CODE = "balance_worker_overloaded";
 const RESULT_UNKNOWN_CODE = "balance_worker_result_unknown";
-/** The worker never took the command, or never confirmed it; a fallback that is safe to repeat may answer instead. */
 export type BalanceWorkerFailOpenReason =
 	| typeof UNAVAILABLE_CODE
 	| typeof OVERLOADED_CODE
 	| typeof RESULT_UNKNOWN_CODE;
 
-/** Which step of a worker request gave up, kept on the error so a fail-open line can say so:
- *  the client's own code (no owner, stale route, deadline...), the worker's code when one
- *  answered, and how far the request got before that. */
 export type BalanceWorkerFailure = {
 	clientCode: string;
 	workerCode?: string;
@@ -77,7 +66,6 @@ function balanceWorkerFailureOf({
 	};
 }
 
-/** The failure a fail-open error carries, or undefined for an error that is not one. */
 export function describeBalanceWorkerFailure({
 	error,
 }: {
@@ -97,21 +85,12 @@ const FAIL_OPEN_CODES: ReadonlySet<string> = new Set([
 	RESULT_UNKNOWN_CODE,
 ]);
 
-/** The worker's copy of the customer was behind Postgres: it dropped the copy and wrote nothing. */
 export const isBalanceWorkerStaleSubjectError = (error: unknown): boolean =>
 	error instanceof RecaseError && error.code === STALE_SUBJECT_CODE;
 
-/** The worker was unreachable and the command was never submitted, so answering another way loses nothing. */
 export const isBalanceWorkerUnavailableError = (error: unknown): boolean =>
 	error instanceof RecaseError && error.code === UNAVAILABLE_CODE;
 
-/**
- * Why a request may fail open, or null when the worker gave a verdict. Three cases
- * qualify: the worker was unreachable, it shed the command as overloaded, or it took
- * the command and never confirmed it. The last one is only safe for a fallback that
- * cannot apply twice: a track queued under the same command ids is deduplicated by
- * the worker, and a check's fallback writes nothing.
- */
 export const balanceWorkerFailOpenReasonOf = (
 	error: unknown,
 ): BalanceWorkerFailOpenReason | null => {
@@ -142,7 +121,6 @@ export function rethrowBalanceWorkerError({
 		cause instanceof BalanceWorkerClientError &&
 		cause.workerCode === "STALE_SUBJECT"
 	) {
-		// The worker rolled the decision back and dropped its copy of the customer; a retry decides on fresh rows.
 		throw new RecaseError({
 			code: STALE_SUBJECT_CODE,
 			statusCode: 409,
@@ -154,7 +132,6 @@ export function rethrowBalanceWorkerError({
 		cause instanceof BalanceWorkerClientError &&
 		cause.workerCode === "RECORD_REFUSED"
 	) {
-		// The worker skipped the command for good: a defect to surface, not an outage to retry through.
 		throw new RecaseError({
 			code: "balance_worker_record_refused",
 			statusCode: 500,
@@ -166,8 +143,6 @@ export function rethrowBalanceWorkerError({
 		cause instanceof BalanceWorkerClientError &&
 		cause.workerCode === "CUSTOMER_NOT_FOUND"
 	) {
-		// Same code as the legacy path: callers branch on it, and which engine
-		// served the request must not change the error they see.
 		throw new RecaseError({
 			code: ErrCode.CustomerNotFound,
 			statusCode: 404,
@@ -178,7 +153,6 @@ export function rethrowBalanceWorkerError({
 		cause instanceof BalanceWorkerClientError &&
 		cause.workerCode === "ENTITY_NOT_FOUND"
 	) {
-		// Same code and status as the legacy path.
 		throw new RecaseError({
 			code: ErrCode.EntityNotFound,
 			statusCode: 404,
@@ -197,7 +171,6 @@ export function rethrowBalanceWorkerError({
 		cause instanceof BalanceWorkerClientError &&
 		cause.workerCode === "LOCK_NOT_FOUND"
 	) {
-		// Settled or expired between the server's read and the worker's decision; same message as the legacy path.
 		throw new RecaseError({
 			code: ErrCode.InvalidRequest,
 			message: "Lock not found for ID: already finalized or expired",
@@ -207,7 +180,6 @@ export function rethrowBalanceWorkerError({
 		cause instanceof BalanceWorkerClientError &&
 		cause.workerCode === "LOCK_ALREADY_EXISTS"
 	) {
-		// Same code and status as the legacy path, which callers branch on.
 		throw new RecaseError({
 			code: ErrCode.LockAlreadyExists,
 			statusCode: 409,
@@ -268,8 +240,6 @@ export function rethrowBalanceWorkerError({
 		});
 	}
 	if (isBalanceWorkerUnconfirmed(cause)) {
-		// "unknown" means the command may already have been applied, so the caller
-		// must reuse its idempotency key rather than retry blind.
 		const mayHaveApplied = cause.outcome === "unknown";
 		throw new RecaseError({
 			code: mayHaveApplied ? RESULT_UNKNOWN_CODE : UNAVAILABLE_CODE,

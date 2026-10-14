@@ -1,8 +1,3 @@
-/**
- * FullProduct.parent_plan_licenses: reverse catalog-link hydration — a
- * license product carries its parent links (product = the parent plan),
- * on both ProductService.getFull and listFull.
- */
 import { expect, test } from "bun:test";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { items } from "@tests/utils/fixtures/items.js";
@@ -36,7 +31,6 @@ test.concurrent(
 			],
 		});
 
-		// getFull: license side carries the parent link
 		const seatFull = await ProductService.getFull({
 			db: ctx.db,
 			idOrInternalId: devSeat.id,
@@ -54,7 +48,6 @@ test.concurrent(
 			devSeat.id,
 		);
 
-		// parent side unchanged; non-license products carry no parent links
 		const parentFull = await ProductService.getFull({
 			db: ctx.db,
 			idOrInternalId: parent.id,
@@ -64,7 +57,6 @@ test.concurrent(
 		expect(parentFull.licenses?.[0]?.product.id).toBe(devSeat.id);
 		expect(parentFull.parent_plan_licenses ?? []).toEqual([]);
 
-		// listFull: same hydration
 		const list = await ProductService.listFull({
 			db: ctx.db,
 			orgId: ctx.org.id,

@@ -5,8 +5,6 @@ export const DEFAULT_IDEMPOTENCY_TTL_HOURS = 24;
 
 export const IdempotencyConfigEntrySchema = z.object({
 	routeGroup: z.enum(RouteGroup),
-	/** How long a claimed idempotency key blocks duplicates, in hours.
-	 *  Capped at 30 days for now. */
 	idempotencyTtl: z
 		.number()
 		.min(1, "Idempotency key duration must be at least 1 hour")

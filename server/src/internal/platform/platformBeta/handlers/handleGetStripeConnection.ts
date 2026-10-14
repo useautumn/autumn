@@ -24,7 +24,6 @@ export const handleGetStripeConnection = createRoute({
 			env: env === "live" ? AppEnv.Live : AppEnv.Sandbox,
 		});
 
-		// Managed links belong to the platform's own Stripe app, not Autumn OAuth.
 		const accountId = connect?.master_org_id ? null : connect?.account_id;
 		if (!accountId) {
 			return c.json({ connected: false, account_id: null, connected_at: null });

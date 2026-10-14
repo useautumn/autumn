@@ -87,8 +87,6 @@ test.concurrent(
 	},
 );
 
-// Regression: free usage above the new allocated-v2 grant must not become a midcycle invoice.
-// The carried usage should stay on the replacement product and bill in arrears.
 test.concurrent(
 	`${chalk.yellowBright("immediate-switch-allocated v2: free usage carries to paid seats without midcycle invoice")}`,
 	async () => {

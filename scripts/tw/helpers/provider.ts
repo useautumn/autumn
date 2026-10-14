@@ -1,38 +1,13 @@
-/**
- * Provider seam for the `bun tw` cloud test swarm.
- *
- * The orchestrator (commands/run.ts) is ~80% provider-agnostic; the only backend
- * coupling is raw sandbox ops (create / fork / snapshot / delete / list / exec /
- * public-url). This module defines a small `ProviderImpl` interface over those
- * ops plus a provider-neutral `ProviderSandbox` handle, and exports delegating
- * functions the orchestrator calls. `setProvider(name)` picks the backend
- * (Vercel today, Modal via `--provider=modal`) — the backend module is
- * dynamically imported so the unused SDK never loads.
- *
- * Implementations: `helpers/vercel.ts` (`vercelProvider`) wraps `@vercel/sandbox`;
- * `helpers/modal.ts` (`modalProvider`) wraps the `modal` SDK.
- */
-
 export type ProviderName = "vercel" | "modal" | "modalv2" | "freestyle";
 
-/** Provider-neutral sandbox handle: the backend-native object + its name. */
 export type ProviderSandbox = {
-	/** Sandbox name (the registry/cleanup key). */
 	name: string;
-	/** Backend-native handle (Vercel `Sandbox` | Modal `Sandbox`) — opaque here. */
 	handle: unknown;
-	/**
-	 * Backend-native sandbox id, when known. Recorded in the registry so teardown
-	 * can reattach cross-process (Modal V2 has no name lookup — only `fromId`).
-	 */
 	id?: string;
-	/** How a cached warm parent was served: exact sha image or stale `:latest`. */
 	warmHit?: "exact" | "stale";
-	/** Time a forked worker spent fast-forwarding its source (stale warm hit). */
 	checkoutMs?: number;
 };
 
-/** Git source cloned into a freshly-created sandbox (warm parent / ingress). */
 export type GitSource = {
 	url: string;
 	revision: string;
@@ -52,7 +27,6 @@ export type CreateSandboxOptions = {
 };
 
 export type ForkWorkerOptions = {
-	/** NAME of the warm source to fork/restore from. */
 	sourceSandbox: string;
 	name: string;
 	env: Record<string, string>;
@@ -75,17 +49,13 @@ export type RunStreamingOptions = {
 };
 
 export type RunDetachedOptions = {
-	/** Working directory for the detached command (the in-sandbox repo root). */
 	cwd?: string;
-	/** Combined stdout+stderr sink (scanned for the READY sentinel). */
 	onChunk: (text: string) => void;
 	env?: Record<string, string>;
 	signal?: AbortSignal;
 };
 
-/** A long-lived (detached) command — the worker boot / ingress server. */
 export type DetachedCommand = {
-	/** Resolves with the command's exit code if/when it ends. */
 	wait: (opts?: { signal?: AbortSignal }) => Promise<{ exitCode: number }>;
 };
 
@@ -98,11 +68,9 @@ export type ListedSandbox = {
 
 export type SnapshotAndStopOptions = {
 	signal?: AbortSignal;
-	/** Asked right before publishing, so a build overtaken mid-snapshot leaves `:latest` alone. */
 	shouldPublishLatest?: () => boolean;
 };
 
-/** The full surface a backend must implement. */
 export type ProviderImpl = {
 	createWarmSandbox(opts: CreateSandboxOptions): Promise<ProviderSandbox>;
 	createIngressSandbox(opts: CreateSandboxOptions): Promise<ProviderSandbox>;
@@ -138,10 +106,6 @@ export type ProviderImpl = {
 let impl: ProviderImpl | undefined;
 let active: ProviderName | undefined;
 
-/**
- * Select the backend. The backend module is dynamically imported so the unused
- * SDK (e.g. the `modal` package for a Vercel run) is never loaded.
- */
 export const setProvider = async (name: ProviderName): Promise<void> => {
 	if (name === "modalv2") {
 		impl = (await import("./modal.ts")).modalV2Provider;
@@ -155,7 +119,6 @@ export const setProvider = async (name: ProviderName): Promise<void> => {
 	active = name;
 };
 
-/** The currently-selected provider name (for logging / provider-keyed constants). */
 export const providerName = (): ProviderName => {
 	if (!active) {
 		throw new Error("provider not selected — call setProvider() first");
@@ -163,12 +126,6 @@ export const providerName = (): ProviderName => {
 	return active;
 };
 
-/**
- * The in-sandbox repo root for the active backend. Vercel's SDK clones into
- * `/vercel/sandbox`; Modal clones into `/repo`. Lazily reads the selected
- * provider (so it must be called after `setProvider`). `TW_SANDBOX_REPO_ROOT`
- * overrides both, for local iteration.
- */
 export const sandboxRepoRoot = (): string =>
 	process.env.TW_SANDBOX_REPO_ROOT ??
 	(providerName() === "vercel" ? "/vercel/sandbox" : "/repo");
@@ -180,7 +137,6 @@ const get = (): ProviderImpl => {
 	return impl;
 };
 
-// ---- delegating exports (the orchestrator's stable call surface) ----------
 export const createWarmSandbox = (o: CreateSandboxOptions) =>
 	get().createWarmSandbox(o);
 export const createIngressSandbox = (o: CreateSandboxOptions) =>

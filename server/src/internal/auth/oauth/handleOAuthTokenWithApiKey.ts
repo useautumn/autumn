@@ -32,20 +32,13 @@ import { setupOAuthTokenRequest } from "./token/setupOAuthTokenRequest.js";
 
 export const handleOAuthTokenWithApiKey = async (c: Context) => {
 	let heldReplayKey: string | null = null;
-	// A held claim blocks every concurrent replay, so an exit that stores no
-	// response must hand the key back instead of letting it time out.
 	let replayStored = false;
 	try {
-		// 1. Setup
 		const tokenRequest = await setupOAuthTokenRequest({
 			db,
 			request: c.req.raw,
 		});
 
-		// 2. Single-flight guard: refresh tokens are single-use and rotated, so
-		// byte-identical replays of one refresh request must share the winner's
-		// response. A Redis outage leaves `heldReplayKey` null and the request mints
-		// unguarded.
 		if (tokenRequest.refreshReplayKey) {
 			const replay = await claimOAuthRefreshReplay(
 				tokenRequest.refreshReplayKey,
@@ -65,7 +58,6 @@ export const handleOAuthTokenWithApiKey = async (c: Context) => {
 			if (replay.holdsKey) heldReplayKey = tokenRequest.refreshReplayKey;
 		}
 
-		// 3. better-auth mints the token
 		const response = await auth.handler(tokenRequest.normalizedRequest);
 		if (!response.ok) return response;
 
@@ -75,11 +67,9 @@ export const handleOAuthTokenWithApiKey = async (c: Context) => {
 		const accessToken = asNonEmptyString(body.access_token);
 		if (!accessToken) return response;
 
-		// 4. Read back the scopes better-auth granted
 		const { scopes: requestedScopes, resourceScopes: requestedResourceScopes } =
 			parseOAuthTokenResponseScopes({ scope: body.scope });
 
-		// 5. Bind the minted token to its consent and to the scopes that consent still backs
 		const tokenRecord = await getOAuthAccessTokenRecord({
 			db,
 			accessToken,
@@ -103,8 +93,6 @@ export const handleOAuthTokenWithApiKey = async (c: Context) => {
 			referenceId: tokenRecord.referenceId,
 		});
 
-		// The minted token names the authoritative client: a confidential client
-		// authenticates over the header, so setup saw no client_id to classify.
 		const isMcpClient =
 			tokenRecord.clientId === tokenRequest.clientId
 				? tokenRequest.isMcpClient
@@ -133,7 +121,6 @@ export const handleOAuthTokenWithApiKey = async (c: Context) => {
 			scopes: issuedScopes,
 		});
 
-		// 6. MCP and reserved clients keep the opaque OAuth token
 		if (
 			isMcpClient ||
 			returnsOAuthAccessTokenForClientId({ clientId: tokenRecord.clientId })
@@ -161,7 +148,6 @@ export const handleOAuthTokenWithApiKey = async (c: Context) => {
 			});
 		}
 
-		// 7. Everyone else exchanges the token for a scoped api key
 		const apiKeyResult = await getExternalOAuthApiKeyForToken({
 			db,
 			tokenRecord: {

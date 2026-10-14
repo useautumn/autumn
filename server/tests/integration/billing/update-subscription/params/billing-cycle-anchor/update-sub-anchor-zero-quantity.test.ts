@@ -10,8 +10,6 @@ import { advanceTestClock } from "@tests/utils/stripeUtils.js";
 import { addDays, addMonths } from "date-fns";
 import { setupAnchorQuantityScenario } from "./setupAnchorQuantityScenario.js";
 
-// Contract: a deferred decrease to zero grants zero at both a scheduled anchor and ordinary renewal.
-// The active option, persisted allowance, and API balance agree after consuming the pending change.
 for (const scheduled of [true, false]) {
 	test.concurrent(
 		`deferred zero quantity: ${scheduled ? "scheduled anchor" : "ordinary renewal"}`,

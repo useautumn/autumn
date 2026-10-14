@@ -6,11 +6,6 @@ import { useAdmin } from "../hooks/useAdmin";
 
 export type AdminMode = "regular" | "impersonate";
 
-/**
- * Regular = see exactly what a customer sees; Impersonate = act as one of them.
- * Switching back to Regular ends any live impersonation, since the customer flow
- * is meaningless on a borrowed session.
- */
 export const AdminModeTabs = ({
 	mode,
 	onModeChange,

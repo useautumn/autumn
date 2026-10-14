@@ -22,8 +22,6 @@ import { executeCustomerExport } from "../workflows/executeCustomerExport.js";
 const TRIGGER_ENQUEUE_ATTEMPTS = 3;
 const TRIGGER_ENQUEUE_RETRY_DELAY_MS = ms.seconds(1);
 
-// A lost response does not mean the enqueue failed; the stable idempotency key
-// makes a retry return the already-created run instead of duplicating it.
 const triggerCustomerExportWithRetry = async ({
 	logger,
 	exportId,
@@ -51,7 +49,6 @@ const triggerCustomerExportWithRetry = async ({
 			}),
 	});
 
-/** Inline runs have no Trigger run to subscribe to, so clients keep polling. */
 const runExportInline = ({
 	ctx,
 	payload,
@@ -95,7 +92,6 @@ const enqueueExportRun = async ({
 			payload,
 		});
 	} catch (error) {
-		// A queued row without a job would block later exports for the org.
 		await CustomerExportService.markFailed({
 			db: ctx.db,
 			id: customerExport.id,
@@ -104,7 +100,6 @@ const enqueueExportRun = async ({
 		throw error;
 	}
 
-	// The job is already enqueued, so persistence failure cannot fail the export.
 	try {
 		await CustomerExportService.setTriggerRunId({
 			db: ctx.db,
@@ -134,7 +129,6 @@ export const startCustomerExport = async ({
 	ctx: AutumnContext;
 	params: CreateCustomerExportParams;
 }): Promise<{ export: CustomerExportResponse }> => {
-	// Fail before creating a row a worker without S3 config could never publish.
 	getCustomerExportsS3Config();
 
 	const result = await createExportReclaimingStale({

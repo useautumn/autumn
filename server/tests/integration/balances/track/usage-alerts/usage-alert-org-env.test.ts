@@ -1,27 +1,3 @@
-/**
- * TDD coverage for env-discriminated org usage alerts.
- *
- * Contract under test:
- *   New types/fields:
- *     - OrgConfig.sandbox_usage_alerts: DbUsageAlert[]
- *   New behaviors:
- *     - In sandbox env, checkUsageAlerts reads ctx.org.config.sandbox_usage_alerts.
- *     - In sandbox env, ctx.org.config.usage_alerts (the live field) is IGNORED
- *       — alerts on it do NOT fire.
- *   Side effects:
- *     - A sandbox_usage_alerts entry produces a Svix balances.usage_alert_triggered
- *       webhook when its threshold is crossed.
- *     - A usage_alerts entry alone produces NO webhook when the runtime is sandbox.
- *
- * Pre-impl red:
- *   - OrgConfig.sandbox_usage_alerts type doesn't exist → TS error.
- *   - checkUsageAlerts still reads ctx.org.config.usage_alerts unconditionally,
- *     so test 2 (which expects no webhook from usage_alerts in sandbox) fails.
- *
- * Post-impl green: both behaviors hold once OrgConfigSchema gains
- * sandbox_usage_alerts and checkUsageAlerts switches on ctx.env.
- */
-
 import { afterAll, afterEach, beforeAll, expect, test } from "bun:test";
 import type { DbUsageAlert } from "@autumn/shared";
 import {
@@ -94,8 +70,6 @@ async function setOrgAlerts({
 	});
 }
 
-// ── Contract assertion 1: sandbox_usage_alerts fires in sandbox env ──
-
 test(`${chalk.yellowBright("org-alert-env1: sandbox_usage_alerts triggers webhook in sandbox env")}`, async () => {
 	const messagesItem = items.monthlyMessages({ includedUsage: 1000 });
 	const prod = products.base({
@@ -142,8 +116,6 @@ test(`${chalk.yellowBright("org-alert-env1: sandbox_usage_alerts triggers webhoo
 	expect(result!.payload.data.usage_alert.threshold).toBe(500);
 });
 
-// ── Contract assertion 2: usage_alerts (live field) does NOT fire in sandbox ──
-
 test(`${chalk.yellowBright("org-alert-env2: usage_alerts (live field) is ignored in sandbox env")}`, async () => {
 	const messagesItem = items.monthlyMessages({ includedUsage: 1000 });
 	const prod = products.base({
@@ -188,8 +160,6 @@ test(`${chalk.yellowBright("org-alert-env2: usage_alerts (live field) is ignored
 
 	expect(result).toBeNull();
 });
-
-// ── Contract assertion 3: only the sandbox entry fires when both fields are set ──
 
 test(`${chalk.yellowBright("org-alert-env3: with both fields set in sandbox, only sandbox_usage_alerts triggers")}`, async () => {
 	const messagesItem = items.monthlyMessages({ includedUsage: 1000 });

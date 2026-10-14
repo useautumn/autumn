@@ -17,18 +17,6 @@ export const FreeTrialSection = () => {
 	const lengthId = useId();
 
 	return (
-		// <SheetSection
-		// 	title="Free Trial"
-		// 	checked={notNullish(product.free_trial)}
-		// 	setChecked={(checked) => {
-		// 		if (checked) {
-		// 			setProduct({ ...product, free_trial: getDefaultFreeTrial() });
-		// 		} else {
-		// 			setProduct({ ...product, free_trial: null });
-		// 		}
-		// 	}}
-		// 	withSeparator={false}
-		// >
 		<div className="flex flex-col gap-4 text-sm mt-2">
 			<div className="w-full">
 				<FormLabel disabled={!product.free_trial}>Duration</FormLabel>
@@ -52,7 +40,6 @@ export const FreeTrialSection = () => {
 						}}
 						placeholder="eg. 7"
 					/>
-					{/* <FormLabel disabled={!product.free_trial}>Duration</FormLabel> */}
 					<Select
 						disabled={!product.free_trial}
 						value={product.free_trial?.duration || ""}
@@ -109,6 +96,5 @@ export const FreeTrialSection = () => {
 				</div>
 			</div>
 		</div>
-		// </SheetSection>
 	);
 };

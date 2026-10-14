@@ -121,7 +121,6 @@ export const setupDefaultProductsContext = async ({
 		selectedProducts = Object.values(groupToDefaultProd);
 	}
 
-	// Get paid products (for billing context)
 	const paidProducts = selectedProducts.filter(
 		(p) =>
 			!isFreeProduct({ product: p }) &&

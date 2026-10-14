@@ -22,7 +22,6 @@ export function DiscountsConfigRow({
 	onAdd: () => void;
 	onUpdate: (params: { index: number; rewardId: string }) => void;
 	onRemove: (params: { index: number }) => void;
-	/** Discounts already on the subscription, listed above new rows. */
 	appliedDiscounts?: ReactNode;
 	excludedRewardIds?: string[];
 }) {

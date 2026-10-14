@@ -1,8 +1,3 @@
-/**
- * The writer has to agree with `loadEnvFiles` about where keys live, and it has
- * to leave every line it did not put there alone.
- */
-
 import { afterEach, expect, test } from "bun:test";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -73,7 +68,6 @@ test(".env.local wins when both files exist", () => {
 	expect(readFileSync(join(dir, ".env.local"), "utf8")).toBe(
 		"AUTUMN_SECRET_KEY=new\n",
 	);
-	// The lower-precedence file is left exactly as it was.
 	expect(readFileSync(join(dir, ".env"), "utf8")).toBe(
 		"AUTUMN_SECRET_KEY=from_env\n",
 	);

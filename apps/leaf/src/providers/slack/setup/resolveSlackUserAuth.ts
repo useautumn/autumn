@@ -110,8 +110,6 @@ export const resolveSlackUserAuth = async ({
 	});
 };
 
-/** Grants an Autumn user's org role to a Slack turn: the user must be a
- * member with scopes the agent can use, and gets a chat credential for them. */
 export const authorizeAutumnUser = async ({
 	installation,
 	logger,
@@ -157,8 +155,6 @@ export const authorizeAutumnUser = async ({
 	return { ok: true, userId, role, scopes: supportedScopes };
 };
 
-/** A trusted bot has no Slack email to match, so its turns take the role of
- * the member it was configured to run as, re-checked on every turn. */
 export const resolveTrustedBotAuth = async ({
 	installation,
 	logger,
@@ -194,8 +190,6 @@ const parseSlackStaffUserIds = (value?: string) =>
 			.filter(Boolean),
 	);
 
-/** Denials that mean "we don't know you in this org", which a staff override
- * may answer; a member whose own role is too narrow stays denied. */
 export const STAFF_OVERRIDABLE_DENIALS = new Set<SlackAuthDenyReason>([
 	"ambiguous-autumn-user",
 	"no-autumn-user",
@@ -203,11 +197,6 @@ export const STAFF_OVERRIDABLE_DENIALS = new Set<SlackAuthDenyReason>([
 	"slack-email-unavailable",
 ]);
 
-/** Autumn staff may use the agent in any customer's installation. A staff
- * caller is an allowlisted Slack user id whose home team is Autumn's own
- * workspace (never their email, which the customer's workspace reports), and
- * their turn runs as the member who installed the app. Returns null when the
- * caller is not staff. */
 export const resolveSlackStaffAuth = async ({
 	authorize = authorizeAutumnUser,
 	botToken,

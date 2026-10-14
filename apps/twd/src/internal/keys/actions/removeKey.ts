@@ -5,7 +5,6 @@ import { TwdError } from "../../../http/apiError.ts";
 import type { TwdContext } from "../../../lib/types/twdContext.ts";
 import { forgetKeySecretsExcept, knownKeySecrets } from "../keySecrets.ts";
 
-/** Drops the stored secret and takes the key out of rotation. Stripe itself is untouched. */
 export const removeKey = async ({
 	ctx,
 	platformAccountId,

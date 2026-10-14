@@ -7,13 +7,6 @@ import type {
 } from "../types/partitionState.js";
 import type { PartitionConsumerStatus } from "../types/partitions.js";
 
-/**
- * A broker refused this worker's identity and kafkajs gave the group up for good. The verdict is the
- * broker's to change, and prod has changed it back within minutes twice, so the worker keeps its
- * task and rejoins with a growing pause instead of exiting: every worker shares one task role, and
- * exiting turned one shared refusal into a fleet with no owner for anything. Between attempts the
- * worker owns nothing and its callers fail open, which is what they did during the exit as well.
- */
 export function scheduleConsumerRejoin({
 	ctx,
 	state,
@@ -53,19 +46,14 @@ async function runConsumerRejoin({
 	state.consumerRejoin.timer = null;
 	if (!isCurrentAllocation({ state, allocationGeneration })) return;
 	try {
-		// The crashed allocation's partitions release their claims first, so the rejoin never races its own retirement.
 		await state.lifecycle;
 	} catch {
-		// Reported where it failed; the rejoin goes ahead regardless.
 	}
 	if (!isCurrentAllocation({ state, allocationGeneration })) return;
 	try {
 		await ctx.consumer.restart?.();
 	} catch (cause) {
 		if (!isCurrentAllocation({ state, allocationGeneration })) return;
-		// Only the broker's refusal is waited out. Any other reason the rejoin fails has nothing to
-		// clear on its own, and a worker kept alive owning nothing would leave its callers failing
-		// open for good, so the service stops and the task is replaced.
 		if (isKafkaAccessRefusal({ cause })) {
 			scheduleConsumerRejoin({ ctx, state, allocationGeneration, cause });
 			return;
@@ -79,7 +67,6 @@ async function runConsumerRejoin({
 	}
 }
 
-/** The group dealt this worker partitions again: whatever refused it has stopped. */
 export function noteConsumerJoined({ ctx, state }: PartitionsScope): void {
 	const rejoin = state.consumerRejoin;
 	if (rejoin.attempts === 0) return;

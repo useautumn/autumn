@@ -25,7 +25,6 @@ import { diffToReview, type SetPlansReview } from "./review/diffToReview";
 import { matchReviewPhases } from "./review/matchReviewPhases";
 import { setPlansPhaseBalanceChanges } from "./setPlansPhaseBalanceChanges";
 
-/** Credits on the immediate invoice, unless custom line items replace the computed ones. */
 const immediateCreditLineItems = (billingPlan: BillingPlan) =>
 	billingPlan.autumn.customLineItems?.length
 		? []

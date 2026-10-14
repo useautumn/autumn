@@ -12,8 +12,6 @@ const ROLLBACK_OPERATION_FIELDS = [
 	"pooledBalancePlan",
 ] satisfies (keyof AutumnBillingPlan)[];
 
-// These destroy or create state the plan does not capture (cascaded
-// contributions, zeroed source balances, expiry decisions) — not invertible.
 const UNINVERTIBLE_POOLED_FIELDS = [
 	"updatePoolContributions",
 	"deletePoolContributions",
@@ -90,8 +88,6 @@ export const handleRollbackPlanErrors = ({
 			);
 		}
 
-		// Rollovers cascade when their pool is deleted, so they are invertible
-		// only when every target pool was inserted by this same plan.
 		const insertedPoolCustomerEntitlementIds = new Set(
 			pooledBalancePlan.insertPoolBalances.map(({ id }) => id),
 		);

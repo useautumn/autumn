@@ -66,7 +66,6 @@ const compareActualItems = async ({
 
 			if (autumnPrice && isConsumablePrice(autumnPrice)) {
 				const config = autumnPrice.config;
-				// Try the other price ID (if expected was empty_price, try stripe_price and vice versa)
 				const alternatePriceId =
 					expectedItem.price === config.stripe_price_id
 						? config.stripe_empty_price_id
@@ -79,14 +78,12 @@ const compareActualItems = async ({
 		}
 
 		if (!actualItem) {
-			// Search for price by stripe id
 			await PriceService.getByStripeId({
 				db,
 				stripePriceId: expectedItem.price,
 			});
 			console.log(`(${type}) Missing item:`, expectedItem);
 
-			// Actual items
 			console.log(`(${type}) Actual items (${actualItems.length}):`);
 			await logPhaseItems({
 				db,
@@ -102,7 +99,6 @@ const compareActualItems = async ({
 
 		expect(actualItem).toBeDefined();
 
-		// Treat 0 and undefined as equivalent for quantity
 		const actualQty = actualItem?.quantity ?? 0;
 		const expectedQty = (expectedItem as any).quantity ?? 0;
 
@@ -184,7 +180,6 @@ export const expectSubToBeCorrect = async ({
 		withEntities: true,
 	});
 
-	// Check Stripe subscription count if specified
 	if (subCount !== undefined) {
 		const stripeCustomerId = fullCus.processor?.id;
 		if (!stripeCustomerId) {
@@ -196,7 +191,6 @@ export const expectSubToBeCorrect = async ({
 		expect(subs.data.length).toBe(subCount);
 	}
 
-	// 1. Only 1 sub ID available
 	let cusProducts = fullCus.customer_products;
 
 	if (!subId) {
@@ -211,7 +205,6 @@ export const expectSubToBeCorrect = async ({
 		);
 	}
 
-	// Get the items that should be in the sub
 	const supposedSubItems = [];
 
 	const scheduleUnixes = getUniqueUpcomingSchedulePairs({
@@ -221,14 +214,11 @@ export const expectSubToBeCorrect = async ({
 
 	const supposedPhases: any[] = scheduleUnixes.map((unix) => {
 		return {
-			start_date: unix, // milliseconds
+			start_date: unix,
 			items: [],
 		};
 	});
 
-	// console.log("Schedule unixes:", scheduleUnixes);
-
-	// console.log(`\n\nChecking sub correct`);
 	const printCusProduct = false;
 	if (printCusProduct) {
 		console.log(`\n\nChecking sub correct`);
@@ -239,7 +229,6 @@ export const expectSubToBeCorrect = async ({
 		const ents = cusProductToEnts({ cusProduct });
 		const product = cusProductToProduct({ cusProduct });
 
-		// Add to schedules
 		const scheduleIndexes: number[] = [];
 		const apiVersion = cusProduct.api_semver || defaultApiVersion;
 
@@ -267,7 +256,6 @@ export const expectSubToBeCorrect = async ({
 			if (cusProduct.status === CusProductStatus.Scheduled) return;
 
 			if (cusProduct.product.is_add_on) {
-				// 1. If it's canceled
 				if (cusProduct.canceled && (cusProduct.ended_at || 0) > unix) {
 					scheduleIndexes.push(index);
 					return;
@@ -279,12 +267,10 @@ export const expectSubToBeCorrect = async ({
 				return;
 			}
 
-			// 2. If main product is canceled and ends at or before this phase, exclude it
 			if (cusProduct.canceled && (cusProduct.ended_at || 0) <= unix) {
 				return;
 			}
 
-			// 3. If main product, check that schedule is AFTER this phase
 			const curScheduledProduct = cusProducts.find(
 				(cp) =>
 					cp.product.group === product.group &&
@@ -299,7 +285,6 @@ export const expectSubToBeCorrect = async ({
 				return;
 			}
 
-			// If scheduled product NOT in phase, add main product to schedule
 			if (
 				!cusProductInPhase({
 					phaseStartMillis: unix,
@@ -315,7 +300,6 @@ export const expectSubToBeCorrect = async ({
 			console.log("--------------------------------");
 		}
 
-		// const hasScheduledProduct =
 		cusProduct.status !== CusProductStatus.Scheduled &&
 			!cusProduct.product.is_add_on &&
 			cusProducts.some(
@@ -337,7 +321,7 @@ export const expectSubToBeCorrect = async ({
 				internalEntityId: cusProduct.internal_entity_id || undefined,
 			});
 
-			if (isOneOffPrice(price)) continue; // One-off prices are not in the subscription
+			if (isOneOffPrice(price)) continue;
 
 			const res = priceToStripeItem({
 				price,
@@ -439,10 +423,8 @@ export const expectSubToBeCorrect = async ({
 		expect(sub.status).toBe("trialing");
 	}
 
-	// Should be canceled
 	const cusSubShouldBeCanceled = cusProducts.every((cp) => {
 		if (cp.subscription_ids?.includes(subId!)) {
-			// 1. Get scheduled product
 			const { curScheduledProduct } = getExistingCusProducts({
 				cusProducts,
 				product: cp.product,
@@ -464,17 +446,12 @@ export const expectSubToBeCorrect = async ({
 		return true;
 	});
 
-	// console.log("Sub should be canceled:", cusSubShouldBeCanceled);
-
 	const finalShouldBeCanceled = notNullish(shouldBeCanceled)
 		? shouldBeCanceled!
 		: cusSubShouldBeCanceled;
 
-	// console.log("Final should be canceled:", finalShouldBeCanceled);
-
 	if (finalShouldBeCanceled) {
 		expect(sub.schedule).toBeNull();
-		// expect(sub.cancel_at).toBeDefined();
 		expect(isStripeSubscriptionCanceling(sub)).toBe(true);
 		return;
 	}
@@ -490,23 +467,11 @@ export const expectSubToBeCorrect = async ({
 				})
 			: null;
 
-	// Expected phases:
-	// await logPhases({
-	// 	phases: supposedPhases,
-	// 	db,
-	// });
-
-	// await logPhases({
-	// 	phases: schedule?.phases || [],
-	// 	db,
-	// });
-
 	for (let i = 0; i < supposedPhases.length; i++) {
 		const supposedPhase = supposedPhases[i];
 
 		if (supposedPhase.items.length === 0) continue;
 
-		// Find the actual phase by matching start date (Stripe schedule includes past phases)
 		const actualPhase = schedule?.phases?.find((phase) =>
 			similarUnix({
 				unix1: supposedPhase.start_date,

@@ -1,23 +1,3 @@
-/**
- * TDD test for usage alert `basis` / `filter` validation and round-trip.
- *
- * Contract under test:
- *   New types/fields:
- *     - usage_alerts[].basis defaults to "balance" and is echoed on reads
- *     - usage_alerts[].filter is echoed on reads (values canonicalised to strings)
- *   Validation:
- *     - filter without basis usage_limit → 400
- *     - duplicate (feature_id, basis, filterKey, threshold_type, threshold) → 400; differing basis accepted
- *     - basis usage_limit with no resolvable (feature_id, filter) limit → 400 on
- *       customers.update, entities.update and product create; resolves through
- *       customer-own, entity-own and plan limits
- *     - entity usage_limits dedup is filter-aware
- *     - org config rejects basis usage_limit
- *
- * Pre-impl red: basis/filter do not exist on the schema (compile), then the
- * validation rules are absent so updates succeed.
- */
-
 import { expect, test } from "bun:test";
 import {
 	type ApiCustomerV5,

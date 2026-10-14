@@ -1,8 +1,3 @@
-/**
- * Contract: delete/add patch migrations carry same-feature usage, one-off prepaid balance, and reset anchors.
- * These scenarios intentionally avoid update_items; item changes are remove_items + add_items.
- */
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3, ApiCustomerV5 } from "@autumn/shared";
 import {

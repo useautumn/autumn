@@ -92,7 +92,6 @@ test.concurrent(
 		expect(Math.abs(creditTotal)).toBeLessThan(40);
 
 		for (const creditLine of creditLines) {
-			// Stored coupon is metadata; it is not applied again to the net credit.
 			expect(creditLine.discounts ?? []).toHaveLength(1);
 		}
 

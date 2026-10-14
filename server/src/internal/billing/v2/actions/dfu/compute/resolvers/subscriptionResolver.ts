@@ -3,10 +3,6 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { initSubscriptionFromStripe } from "@/internal/subscriptions/utils/initSubscriptionFromStripe";
 import type { FlashPlanContext } from "../../setup/setupFlashContext";
 
-/**
- * Mirror each hydrated Stripe subscription into an Autumn subscription row, so
- * an imported plan reports its real billing period instead of null.
- */
 export const collectFlashSubscriptions = ({
 	ctx,
 	planContexts,

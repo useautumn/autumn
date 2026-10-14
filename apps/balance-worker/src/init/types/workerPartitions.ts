@@ -25,7 +25,6 @@ export type KafkaPartitionRuntimeFactory = (position: {
 	preparation: PartitionReplay;
 	recentCommands: RecentCommands;
 	producedOffsets?: ProducedOffsets;
-	/** Written by the runtime on its claim; the follower reads it to recognise a fence from a later owner. */
 	ownerEpoch?: OwnerEpochCell;
 }) => Omit<PartitionRuntimeResources, "markUnavailable">;
 
@@ -50,7 +49,6 @@ export type WorkerPartitionsContext = {
 
 export type WorkerPartitionsConfig = {
 	topic: string;
-	/** Consumed on the same membership when set; a bare partition group in a test has none. */
 	commandTopic?: string;
 	partitionsConsumedConcurrently: number;
 	healthRefreshIntervalMs: number;

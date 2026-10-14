@@ -1,14 +1,3 @@
-/**
- * Trial Revert — Attach Tests
- *
- * Verifies that attaching a product with on_end: "revert" correctly:
- * - Creates a new cusProduct with Trialing status
- * - Pauses the current cusProduct (not expired, not canceled)
- * - Links the trial cusProduct to the previous one via previous_customer_product_id
- * - Sets on_trial_end = "revert" on the trial cusProduct
- * - Does NOT create a Stripe subscription for the trial (card_required: false)
- */
-
 import { expect, test } from "bun:test";
 import {
 	ALL_STATUSES,
@@ -26,10 +15,6 @@ import chalk from "chalk";
 import { eq } from "drizzle-orm";
 import { CusService } from "@/internal/customers/CusService";
 
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 1: Pro customer → enterprise revert trial (happy path)
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(
 	`${chalk.yellowBright("trial-revert-attach 1: pro to enterprise revert trial — status + DB fields")}`,
@@ -71,14 +56,12 @@ test.concurrent(
 
 		await autumnV2.billing.attach<AttachParamsV1Input>(params);
 
-		// Query ALL statuses including Paused and Trialing
 		const fullCustomer = await CusService.getFull({
 			ctx,
 			idOrInternalId: customerId,
 			inStatuses: ALL_STATUSES,
 		});
 
-		// Find the enterprise (trial) and pro (paused) customer products
 		const trialCusProduct = fullCustomer.customer_products.find(
 			(cp) => cp.product_id === enterprise.id,
 		);
@@ -89,7 +72,6 @@ test.concurrent(
 		expect(trialCusProduct).toBeDefined();
 		expect(pausedCusProduct).toBeDefined();
 
-		// Trial cusProduct assertions (Active status + trial_ends_at, matching existing trial behavior)
 		expect(trialCusProduct!.status).toBe(CusProductStatus.Active);
 		expect(trialCusProduct!.on_trial_end).toBe("revert");
 		expect(trialCusProduct!.previous_customer_product_id).toBe(
@@ -100,7 +82,6 @@ test.concurrent(
 			Math.abs(trialCusProduct!.trial_ends_at! - (advancedTo + ms.days(14))),
 		).toBeLessThan(ms.hours(1));
 
-		// Paused cusProduct assertions
 		expect(pausedCusProduct!.status).toBe(CusProductStatus.Paused);
 		expect(pausedCusProduct!.canceled).toBe(false);
 		expect(pausedCusProduct!.canceled_at).toBeNull();
@@ -108,10 +89,6 @@ test.concurrent(
 		expect(pausedCusProduct!.subscription_ids?.length).toBeGreaterThan(0);
 	},
 );
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 2: API visibility + paused product retains data
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(
 	`${chalk.yellowBright("trial-revert-attach 2: API shows trial product, paused retains data")}`,
@@ -153,7 +130,6 @@ test.concurrent(
 
 		await autumnV2.billing.attach<AttachParamsV1Input>(params);
 
-		// Verify DB-level state
 		const fullCustomer = await CusService.getFull({
 			ctx,
 			idOrInternalId: customerId,
@@ -170,11 +146,9 @@ test.concurrent(
 		expect(pausedPro).toBeDefined();
 		expect(trialEnterprise).toBeDefined();
 
-		// Paused pro should retain its customer_prices and customer_entitlements
 		expect(pausedPro!.customer_prices.length).toBeGreaterThan(0);
 		expect(pausedPro!.customer_entitlements.length).toBeGreaterThan(0);
 
-		// Trial enterprise should have its own customer_entitlements and correct trial_ends_at
 		expect(trialEnterprise!.customer_entitlements.length).toBeGreaterThan(0);
 		expect(trialEnterprise!.trial_ends_at).toBeDefined();
 		expect(
@@ -182,10 +156,6 @@ test.concurrent(
 		).toBeLessThan(ms.hours(1));
 	},
 );
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 3: on_end: "bill" keeps normal behavior (regression check)
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(
 	`${chalk.yellowBright("trial-revert-attach 3: on_end bill — previous plan expired, not paused")}`,
@@ -243,31 +213,15 @@ test.concurrent(
 		expect(enterpriseCusProduct).toBeDefined();
 		expect(proCusProduct).toBeDefined();
 
-		// on_end: "bill" should NOT pause the previous plan — it should be expired
 		expect(proCusProduct!.status).toBe(CusProductStatus.Expired);
 		expect(proCusProduct!.canceled).toBe(true);
 
-		// Enterprise should be active (not Trialing status), on_trial_end should be null
 		expect(enterpriseCusProduct!.status).toBe(CusProductStatus.Active);
 		expect(enterpriseCusProduct!.on_trial_end).toBeNull();
 		expect(enterpriseCusProduct!.previous_customer_product_id).toBeNull();
 	},
 );
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 4: Cross-entity revert — pro on entity 1, enterprise revert on entity 2
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Customer has pro ($20/mo) on entity 1 with a Stripe subscription
- * - Attach enterprise with on_end: "revert" on entity 2
- *
- * Expected:
- * - Pro on entity 1 stays active (not paused -- different entity)
- * - Enterprise trial on entity 2 has no previous_customer_product_id
- * - Trial expires to nothing on entity 2
- */
 test.concurrent(
 	`${chalk.yellowBright("trial-revert-attach 4: cross-entity revert — pro on entity 1, enterprise revert on entity 2")}`,
 	async () => {
@@ -295,7 +249,6 @@ test.concurrent(
 			],
 		});
 
-		// Attach enterprise with revert trial on entity 2
 		const params: AttachParamsV1Input = {
 			customer_id: customerId,
 			entity_id: entities[1].id,
@@ -320,7 +273,6 @@ test.concurrent(
 			withEntities: true,
 		});
 
-		// Find pro on entity 1 and enterprise on entity 2
 		const proCusProduct = fullCustomer.customer_products.find(
 			(cp) => cp.product_id === pro.id && cp.entity_id === entities[0].id,
 		);
@@ -332,10 +284,8 @@ test.concurrent(
 		expect(proCusProduct).toBeDefined();
 		expect(enterpriseCusProduct).toBeDefined();
 
-		// Pro on entity 1 stays active (different entity, not paused)
 		expect(proCusProduct!.status).toBe(CusProductStatus.Active);
 
-		// Enterprise on entity 2: revert trial with no previous product link
 		expect(enterpriseCusProduct!.status).toBe(CusProductStatus.Active);
 		expect(enterpriseCusProduct!.on_trial_end).toBe("revert");
 		expect(enterpriseCusProduct!.previous_customer_product_id).toBeNull();

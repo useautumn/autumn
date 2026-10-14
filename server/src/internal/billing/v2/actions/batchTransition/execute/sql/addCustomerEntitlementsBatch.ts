@@ -15,8 +15,6 @@ const generatedContributionIdsCte = ({
 				WITH ORDINALITY AS generated(id, ordinality)
 		)`;
 
-// Same-statement UPDATE cannot see rows from `inserted` (CTE snapshot).
-// Write pooled_contribution_id on INSERT; never gate the granted bump on that UPDATE.
 const addPooledContributionsCtes = ({
 	pooledBalanceId,
 	contributionAmount,

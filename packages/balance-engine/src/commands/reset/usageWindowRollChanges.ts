@@ -15,7 +15,6 @@ import { fullSubjectToHeldRows } from "../../utils/subjectUtils/convertSubjectUt
 import type { ResetCommand } from "./types/resetCommand.js";
 import type { ResetRow } from "./types/resetResult.js";
 
-/** The subject as it stands once this reset lands: a refilled row's cycle has moved to its next reset. */
 const withRefilledCycles = ({
 	fullSubject,
 	refilledRows,
@@ -46,7 +45,6 @@ const withRefilledCycles = ({
 	};
 };
 
-/** Each counter's limit as the subject now derives it; a counter with no limit keeps its bounds. */
 const fullSubjectToUsageWindowRolls = ({
 	fullSubject,
 	command,
@@ -74,7 +72,6 @@ const fullSubjectToUsageWindowRolls = ({
 	return usageWindowsToRolls({ usageWindows, limits, now: command.occurredAt });
 };
 
-/** A counter with no limit left stays expired, so it rolls on every reset; once zeroed there is nothing to write. */
 const rollChangesNothing = ({
 	usageWindow,
 	roll,
@@ -88,7 +85,6 @@ const rollChangesNothing = ({
 	usageWindow.window_end_at === roll.window_end_at &&
 	(!roll.zero_usage || usageWindow.usage === 0);
 
-/** A roll re-bounds the counter, and zeroes its count only when the window it counted in is over. */
 const usageWindowRollToChange = ({
 	usageWindow,
 	roll,
@@ -117,7 +113,6 @@ const usageWindowRollToChange = ({
 	},
 });
 
-/** The counters this reset rolls to their limits' current windows, judged after its refills land. */
 export const usageWindowRollChanges = ({
 	fullSubject,
 	command,

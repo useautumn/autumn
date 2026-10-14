@@ -1,12 +1,3 @@
-/**
- * catalogV2.update — plan-license customize cannot add or change paid features.
- *
- * Contract:
- *   customize add_items with a prepaid feature → 400
- *   customize changing a child's prepaid amount → 400
- * Stock prepaid on the child (no customize) is still allowed.
- */
-
 import { test } from "bun:test";
 import { BillingInterval, BillingMethod, ErrCode } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";

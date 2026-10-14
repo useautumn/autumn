@@ -14,16 +14,13 @@ import type {
 } from "../atom/types/atomClient.js";
 import { getHeraldLogger } from "./getHeraldLogger.js";
 
-/** A subject is sent once: an Atom sits in the org's own cloud, and the customer's next change corrects a miss. */
 const SUBJECT_DELIVERY: AtomDelivery = { timeoutMs: 2_000, retry: null };
 
-/** The catalog is rare and every customer reads it, so it gets three tries: at most ~35s, waits included. */
 const CATALOG_DELIVERY: AtomDelivery = {
 	timeoutMs: 10_000,
 	retry: { attempts: 3, baseDelayMs: 500, maxDelayMs: 5_000 },
 };
 
-/** The queue `packages/alien/stacks/byoc/alien.json` opens to Autumn. */
 const PUSH_QUEUE = "pushes";
 
 const unreadableToken = (): string => {
@@ -32,7 +29,6 @@ const unreadableToken = (): string => {
 	);
 };
 
-/** Opens the token the server encrypted onto the org's record. */
 function decryptOf(): (encrypted: string) => string {
 	const password = getCacheEnv().CACHE_ENCRYPTION_PASSWORD;
 	return password ? createAesCipher({ password }).decrypt : unreadableToken;
@@ -42,7 +38,6 @@ let decrypt: ((encrypted: string) => string) | undefined;
 const atomClients = new Map<string, AtomClient>();
 const pushQueues = new Map<string, AtomPushQueue>();
 
-/** One queue per alien deployment group, shared by every org's folder on it. */
 const getAtomPushQueue = ({
 	externalId,
 }: {
@@ -96,7 +91,6 @@ const createConnectionClient = ({
 	});
 };
 
-/** One client per org's Atom and transport, made on its first push. A re-created Atom has a new token, so a new client. */
 export const getAtomClient: GetAtomClient = ({ connection }) => {
 	const key = [
 		connection.endpointUrl,

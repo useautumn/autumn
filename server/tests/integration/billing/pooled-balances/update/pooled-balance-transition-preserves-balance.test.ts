@@ -1,22 +1,3 @@
-/**
- * Transitions of a customer product whose pooled contribution was repointed by
- * the combine-pools merge, and therefore sits on a pool identified by a
- * DIFFERENT subscription.
- *
- * Recreated faithfully by setupMergedPoolScenario: entity 1 attaches the plan,
- * entity 2 attaches the same plan on its own Stripe subscription, then the two
- * pools are merged the way the production script merges them.
- *
- * Scenario A: spend from the pooled balance, then customize the base price on
- * the mis-matched plan. The removal from the old pool and the insert into the
- * newly identified one must balance — no credits created or destroyed.
- *
- * Red-failure mode (before the upsertPooledBalance fix):
- *  - the removal debits the merged pool correctly, but the insert seeds the new
- *    pool from the source cusEnt, which is zeroed for an existing contributor.
- *    The grant is dropped and the customer loses one contribution's worth.
- */
-
 import { expect, test } from "bun:test";
 import type {
 	ApiCustomerV5,
@@ -60,15 +41,12 @@ test(
 		});
 		const { ctx, customerId, autumnV2_3 } = scenario;
 
-		// ── Baseline: one merged pool holding both contributions.
 		const baseline = await getPooledBalanceDbState({ db: ctx.db, customerId });
 		expect(baseline.pools).toHaveLength(1);
 		expect(baseline.contributions).toHaveLength(2);
 		expect(sumGranted(baseline)).toBe(MERGED_GRANT);
 		expect(sumBalances(baseline)).toBe(REMAINING_AFTER_USAGE);
 
-		// ── Act: customize the base price on the plan whose contribution the
-		// merge left pointing at the other subscription's pool.
 		await autumnV2_3.subscriptions.update<UpdateSubscriptionV1ParamsInput>({
 			customer_id: customerId,
 			customer_product_id: scenario.mismatchedCustomerProduct.id,
@@ -76,7 +54,6 @@ test(
 			customize: { price: itemsV2.monthlyPrice({ amount: NEW_BASE_PRICE }) },
 		});
 
-		// ── Contract: nothing is created or destroyed by the transition.
 		const afterUpdate = await getPooledBalanceDbState({
 			db: ctx.db,
 			customerId,
@@ -84,7 +61,6 @@ test(
 		expect(sumGranted(afterUpdate)).toBe(MERGED_GRANT);
 		expect(sumBalances(afterUpdate)).toBe(REMAINING_AFTER_USAGE);
 
-		// ── Contract: and the customer reads the same remaining balance.
 		const customer = await autumnV2_3.customers.get<ApiCustomerV5>(customerId, {
 			skip_cache: "true",
 		});

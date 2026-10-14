@@ -18,7 +18,6 @@ export default function CustomerProductView() {
 	const { customer_id, product_id } = useParams();
 	const closeSheet = useSheetStore((s) => s.closeSheet);
 
-	//Close the subscription detail / attach product sheet when navigating to this page (prevents jank closing animation)
 	useEffect(() => {
 		closeSheet();
 	}, []);

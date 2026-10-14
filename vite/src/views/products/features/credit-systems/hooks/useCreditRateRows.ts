@@ -33,10 +33,6 @@ const asCredits = (rate?: {
 	credit_amount?: number;
 }) => (rate?.tier_behavior === "graduated" ? "tiered" : rate?.credit_amount);
 
-/**
- * The rates table. A row is a draft until a cost is typed: it shows the cost it
- * would inherit as a placeholder and becomes a saved rule on the first keystroke.
- */
 export function useCreditRateRows({
 	item,
 	onChange,
@@ -45,12 +41,7 @@ export function useCreditRateRows({
 	onChange: (item: CreditSchemaItem) => void;
 }) {
 	const [drafts, setDrafts] = useState<CreditRateDraft[]>([]);
-	// A draft that gains a cost is reborn as a saved rule, so its key is carried
-	// over by name — otherwise the row remounts on the first keystroke and the
-	// cell being typed into loses focus.
 	const keysByRuleName = useRef(new Map<string, string>());
-	// Saved rules and drafts live in separate stores, so the display order has to
-	// be remembered or a row would move as soon as it gained a cost.
 	const [rowOrder, setRowOrder] = useState<string[]>([]);
 
 	const rules = useMemo(() => rateRules(item), [item.dimensions]);
@@ -67,18 +58,12 @@ export function useCreditRateRows({
 
 	const baseRate = item.tier_behavior === "graduated" ? undefined : item;
 
-	/** The rule that would price this match at runtime, else the item's own rate. */
 	const rateFor = (match: CreditMatch) =>
 		coveringRule({ rules, match })?.dimension ?? baseRate;
 
 	const inheritedCredits = (match: CreditMatch): string =>
 		String(asCredits(rateFor(match)) ?? "");
 
-	/**
-	 * What a track matching this row would actually cost: its rate after every
-	 * multiplier the row pins. With none applying this is the rate itself — a
-	 * blank cell would read as "free".
-	 */
 	const effectiveCredits = (row: CreditRateRow): string => {
 		const rate = row.dimension ?? rateFor(row.match);
 		if (rate?.tier_behavior === "graduated") return "tiered";
@@ -97,7 +82,6 @@ export function useCreditRateRows({
 		);
 	};
 
-	/** Pairs that could both win one event are rejected at save, so flag both rows. */
 	const rateWarnings = useMemo(() => {
 		const warnings = new Map<string, string>();
 		for (const { names, example } of findAmbiguousCreditDimensions(
@@ -110,8 +94,6 @@ export function useCreditRateRows({
 	}, [item.dimensions]);
 
 	const setRows = (next: CreditRateRow[]) => {
-		// Names are derived from the match, so claim each row's key under the name
-		// it will be saved as before the item is rebuilt from it.
 		for (const { key, name, dimension } of nameRateRows(next)) {
 			if (dimension) keysByRuleName.current.set(name, key);
 		}
@@ -129,7 +111,6 @@ export function useCreditRateRows({
 			missingCombinationCount({ values, rows }),
 		restrictDrafts: (isAllowed: (draft: CreditRateDraft) => boolean) =>
 			setDrafts((current) => current.filter(isAllowed)),
-		// A rename rebuilds rule names, and row keys derive from them.
 		renameOrderField: ({ from, to }: { from: string; to: string }) =>
 			setRowOrder((current) =>
 				renamedRowOrder({ order: current, item, from, to }),
@@ -143,7 +124,6 @@ export function useCreditRateRows({
 			setRows(
 				replaceAt(rows, index, withRateMatch({ row: rows[index], match })),
 			),
-		// Shown when a row carries one, or when a clash needs one to resolve it.
 		showPriority:
 			rateWarnings.size > 0 ||
 			rows.some((row) => row.dimension?.priority !== undefined),

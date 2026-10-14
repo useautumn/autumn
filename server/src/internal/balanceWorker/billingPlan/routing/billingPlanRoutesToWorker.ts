@@ -6,7 +6,6 @@ import { billingPlanCustomerProducts } from "./billingPlanRows.js";
 import { billingPlanToWorkerCustomerId } from "./billingPlanToWorkerCustomerId.js";
 import { billingPlanNamesItsEntities } from "./billingPlanToWorkerEntityIds.js";
 
-/** License seats are left out of the worker's state, so a plan writing one keeps to Postgres. */
 const writesNoLicenseSeats = ({
 	autumnBillingPlan,
 }: {
@@ -16,7 +15,6 @@ const writesNoLicenseSeats = ({
 		({ customer_license_link_id }) => !customer_license_link_id,
 	);
 
-/** The worker never expires a license pool (it only expires pools that lose their last share), so that expiry keeps to Postgres. */
 const expiresNoLicensePools = ({
 	autumnBillingPlan,
 }: {
@@ -29,14 +27,12 @@ const expiresNoLicensePools = ({
 			!pooledCustomerEntitlement.pooled_balance?.customer_license_link_id,
 	);
 
-/** A claimed entity had no subject key before the plan, so the worker cannot guard it yet. */
 const claimsNoEntities = ({
 	autumnBillingPlan,
 }: {
 	autumnBillingPlan: AutumnBillingPlan;
 }): boolean => (autumnBillingPlan.claimEntities ?? []).length === 0;
 
-/** A top-up without its purchase fields carries only fixed deltas: those land in Postgres, as before the worker sized them. */
 const topUpNamesItsPurchase = ({
 	autumnBillingPlan,
 }: {
@@ -47,7 +43,6 @@ const topUpNamesItsPurchase = ({
 	return autoTopupRebalanceToPurchase({ autoTopupRebalance }) !== null;
 };
 
-/** Whether the worker can key every row it holds that the plan writes; the rest land in Postgres after it. */
 export const workerCanApplyBillingPlan = ({
 	autumnBillingPlan,
 }: {
@@ -55,13 +50,11 @@ export const workerCanApplyBillingPlan = ({
 }): boolean =>
 	billingPlanToWorkerCustomerId({ autumnBillingPlan }) !== null &&
 	claimsNoEntities({ autumnBillingPlan }) &&
-	// Before the entity walk: a seat update's product may carry no grants to walk.
 	writesNoLicenseSeats({ autumnBillingPlan }) &&
 	expiresNoLicensePools({ autumnBillingPlan }) &&
 	billingPlanNamesItsEntities({ autumnBillingPlan }) &&
 	topUpNamesItsPurchase({ autumnBillingPlan });
 
-/** Whether the customer's rows land through the worker instead of one Postgres transaction. */
 export const billingPlanRoutesToWorker = ({
 	ctx,
 	autumnBillingPlan,

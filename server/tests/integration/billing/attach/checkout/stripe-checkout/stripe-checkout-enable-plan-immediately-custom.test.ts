@@ -1,12 +1,3 @@
-/**
- * Stripe Checkout — enable_plan_immediately with a customized plan
- *
- * Attach inserts the customer product and its custom catalog rows (free trial,
- * prices, entitlements) up front. Before the fix, checkout.session.completed
- * re-inserted those rows, failed on their primary key and never linked the
- * Stripe subscription. After the fix, the completion links `subscription_ids`.
- */
-
 import { expect, test } from "bun:test";
 import {
 	type AttachParamsV1Input,
@@ -37,10 +28,7 @@ const attachCustomizedThroughCheckout = async ({
 
 	const { autumnV2_3, ctx } = await initScenario({
 		customerId,
-		setup: [
-			s.customer({ testClock: true }), // No payment method → stripe_checkout
-			s.products({ list: [pro] }),
-		],
+		setup: [s.customer({ testClock: true }), s.products({ list: [pro] })],
 		actions: [],
 	});
 

@@ -4,8 +4,6 @@ import {
 	featureUtils,
 } from "@autumn/shared";
 
-/** Mirrors attach: allocated usage always carries, `carry_from_previous`
- * carries its own entitlement, and the param carries listed consumables. */
 export const shouldCarryOverUsage = ({
 	toEntitlement,
 	carryOverUsages,

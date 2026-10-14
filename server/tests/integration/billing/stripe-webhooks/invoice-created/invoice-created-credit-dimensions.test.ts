@@ -1,11 +1,3 @@
-/**
- * Contract: invoice credits drawn through dimensions bill one line per
- * (feature, dimension). Action1 is dimensioned by size inside the plan item's
- * feature_override; the renewal invoice carries a charge line per dimension
- * naming it, a single "Credits applied" refund, an unchanged total, and
- * attribution resets after billing.
- */
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV5, FeatureConfigOverride } from "@autumn/shared";
 import { findCustomerEntitlement } from "@tests/balances/utils/findCustomerEntitlement.js";
@@ -61,8 +53,6 @@ test.concurrent(
 			],
 			actions: [
 				s.billing.attach({ productId: product.id }),
-				// 20 large @ 1 = 20 · 20 large spot @ 0.5 = 10 · 50 plain @ 0.2 = 10.
-				// 40 credits < 100 included, so the total stays the $20 base price.
 				s.track({
 					featureId: TestFeature.Action1,
 					value: 20,
@@ -116,7 +106,6 @@ test.concurrent(
 			{ description: "Action1 — large, 40 units", amount: 30 },
 		]);
 
-		// Re-read: the reset lands with the invoice, after the customer above was fetched.
 		const resetCustomer = await autumnV2_3.customers.get<ApiCustomerV5>(
 			customerId,
 			{ skip_cache: "true" },

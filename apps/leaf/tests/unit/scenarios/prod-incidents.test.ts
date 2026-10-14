@@ -1,9 +1,3 @@
-/**
- * Replications of the 24 Aug production incidents against Eve's fixed-session
- * contract: follow-ups run while approvals remain pending.
- * Each scenario asserts the outcome the user should have seen.
- */
-
 import { beforeEach, describe, expect, mock, test } from "bun:test";
 import { AppEnv, type ChatApproval } from "@autumn/shared";
 import type { EveEvent } from "../../../src/internal/agentRuntime/eve/eveEventSchemas.js";
@@ -45,8 +39,6 @@ class MockEveSessionDeadError extends Error {
 		this.name = "EveSessionDeadError";
 	}
 }
-
-// ---------------------------------------------------------------- fake eve
 
 type Park = { kind: "gated"; requestId: string };
 type FakeSession = {
@@ -170,7 +162,6 @@ await mockLeafModule({
 			const pending = fake.events.slice(session.state.streamIndex);
 			for (const event of pending) yield event;
 			if (pending.length === 0) {
-				// Nothing to send: the idle reaper cuts the socket.
 				throw new MockEveStreamDisconnectedError("socket closed");
 			}
 		},
@@ -355,7 +346,6 @@ describe("production incident replications", () => {
 
 	test("orphaned park — approval row gone but eve still parked (the dead-session trap)", async () => {
 		const fake = parkCard({ requestId: "tc_orphan" });
-		// The card row was cancelled/expired elsewhere; eve never heard.
 		pendingApprovals = [];
 
 		const result = await send("what does pro cost?");
@@ -374,8 +364,6 @@ describe("production incident replications", () => {
 
 		const result = await send("hello again");
 
-		// The upsert keys on the thread, so re-homing rewrites session_id in
-		// place; the row does not need deleting first.
 		expect(storedSession?.sessionId).not.toBe(fake.id);
 		expect(result.kind).toBe("reply");
 	});

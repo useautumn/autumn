@@ -3,7 +3,6 @@ import type { Feature } from "../../../models/featureModels/featureModels.js";
 import type { EventProperties } from "../creditDimensions/matchesEventProperties.js";
 import { featureToCreditSystem } from "./getCreditCost.js";
 
-/** How many of `requestedUnits` the available credits fund at this system's rate; bisects graduated tiers. */
 export const getCreditRateFundedUnits = ({
 	featureId,
 	creditSystem,

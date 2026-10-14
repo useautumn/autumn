@@ -16,7 +16,6 @@ import { encryptData } from "@/utils/encryptUtils.js";
 import { generateId } from "@/utils/genUtils.js";
 import { deleteAtomDeployment } from "../ensureAtomDeployment.js";
 
-/** Herald routes pushes by the cached org; a clear before Redis connects is skipped, so it waits for Redis first. */
 const forgetCachedOrg = async () => {
 	await waitForRedisReady(getMiscRedis(), "misc");
 	await clearOrgCache({
@@ -26,7 +25,6 @@ const forgetCachedOrg = async () => {
 	});
 };
 
-/** The org's Atom becomes the set: a ready record at the balancer, so herald pushes there and the API knows its token. */
 export const registerReplicaSet = async ({
 	autumn,
 	endpointUrl,
@@ -67,7 +65,6 @@ export const registerReplicaSet = async ({
 	await forgetCachedOrg();
 };
 
-/** Forgets whatever Atom record the org holds, so the next file starts from none. */
 export const unregisterReplicaSet = async (): Promise<void> => {
 	const cacheDeployment = await cacheDeploymentRepo.find({ ctx: defaultCtx });
 	if (!cacheDeployment) return;

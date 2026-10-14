@@ -8,7 +8,6 @@ import {
 } from "@autumn/shared";
 import { z } from "zod/v4";
 
-/** The catalog rows a set of ids names, fetched in one round trip. */
 export const catalogRowsEnvelopeSchema = z.object({
 	entitlements: z.array(EntitlementSchema),
 	products: z.array(ProductSchema),
@@ -23,7 +22,6 @@ export const catalogRowsEnvelopeSchema = z.object({
 			internal_feature_ids: z.array(z.string()),
 		}),
 	),
-	/** Scoped by the product each trial belongs to: the table carries no org or env of its own. */
 	free_trials: z.array(
 		FreeTrialSchema.extend({ org_id: z.string(), env: z.string() }),
 	),
@@ -31,7 +29,6 @@ export const catalogRowsEnvelopeSchema = z.object({
 
 export type CatalogRowsEnvelope = z.infer<typeof catalogRowsEnvelopeSchema>;
 
-/** Which rows to fetch: entitlements, prices, plan licenses and free trials by id, products and features by internal_id. */
 export type CatalogRowIds = {
 	entitlementIds: string[];
 	productInternalIds: string[];

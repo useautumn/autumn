@@ -7,23 +7,15 @@ export interface PlanCardProps {
 	width?: number;
 }
 
-// Rotate through plan name colors - terminal-native colors
 const PLAN_COLORS = ["yellow", "green", "cyan", "magenta"] as const;
 
-/**
- * Calculate the width needed for a plan card
- */
 export function calculatePlanWidth(tier: TemplateTier): number {
 	const titleWidth = tier.name.length;
 	const priceWidth = tier.price.length;
-	const maxFeatureWidth = Math.max(...tier.features.map((f) => f.length + 2)); // +2 for "• "
-	// Add padding (2 on each side) + border (2)
+	const maxFeatureWidth = Math.max(...tier.features.map((f) => f.length + 2));
 	return Math.max(titleWidth, priceWidth, maxFeatureWidth) + 6;
 }
 
-/**
- * Individual plan card with border box
- */
 export function PlanCard({ tier, index, width }: PlanCardProps) {
 	const titleColor = PLAN_COLORS[index % PLAN_COLORS.length];
 

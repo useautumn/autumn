@@ -8,17 +8,6 @@ import {
 import type { CronContext } from "@/cron/utils/CronContext.js";
 import type { OneOffCustomerProductResult } from "../oneOffCustomerProductResult.js";
 
-/**
- * Fetches one-off customer products eligible for cleanup.
- *
- * A customer product is eligible when:
- * 1. Status is Active or PastDue
- * 2. All its prices are one_off interval
- * 3. All its entitlements are either:
- *    - Boolean features, OR
- *    - Single-use consumables with balance=0 and usage_allowed=false
- * 4. A newer active customer product exists for the same product
- */
 export const getOneOffCustomerProductsToCleanup = async ({
 	ctx,
 }: {

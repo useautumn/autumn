@@ -51,10 +51,8 @@ export function useHeadlessAuth(
 				tokens.access_token,
 			);
 
-			// Use storeEnvKeys (non-interactive) instead of storeToEnv (interactive)
 			await storeEnvKeys({ prodKey, sandboxKey }, { forceOverwrite: true });
 
-			// Fetch org info with new key
 			const info = await fetchOrganizationMe({ secretKey: sandboxKey });
 			setOrgInfo(info);
 			setAuthState("authenticated");
@@ -83,7 +81,6 @@ export function useHeadlessAuth(
 					return;
 				}
 
-				// Verify the key works by fetching org info
 				const info = await fetchOrganizationMe({ secretKey: apiKey });
 				setOrgInfo(info);
 				setAuthState("authenticated");
@@ -93,7 +90,6 @@ export function useHeadlessAuth(
 					onComplete(info);
 				}
 			} catch {
-				// Key exists but is invalid
 				setAuthState("not_authenticated");
 				await performAuth();
 			}

@@ -1,15 +1,3 @@
-/**
- * atmn scenarios/motion — same as above, then pull → nothing to do, every file byte-identical
- *
- * code in motion: the config's shape is the user's; pull edits the AST, never rewrites a file
- *
- * One line of plans/atmn-v3/07_tests.md. [a, b] is a matrix looped INSIDE this file.
- *
- * "Above" is the previous matrix line: a fixture written by hand into
- * `bananas.ts`/`strawberries.ts`/`poo.ts` (spread into plans), then pushed. Push already backfills
- * that fixture's `internalId`, so a follow-up pull has nothing left to do.
- */
-
 import { expect, test } from "bun:test";
 import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 import {
@@ -73,8 +61,6 @@ export const poo: Plan[] = [];
 			try {
 				await scenario.push();
 
-				// A hand-edit adds ONE row to the file push already backfilled;
-				// it must not retype the existing row and lose its internalId.
 				const afterFirstPush = scenario.files();
 
 				if (target.kind === "feature") {

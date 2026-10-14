@@ -1,16 +1,3 @@
-/**
- * Attach Recurring + One-Off Tests (Attach V2)
- *
- * Tests for attaching products that have BOTH recurring prices AND one-off prepaid items.
- * This is a mixed product configuration that requires special handling.
- *
- * Key behaviors:
- * - Both recurring subscription + one-time payment are processed together
- * - Recurring features (prepaid words) reset monthly
- * - One-off features (one-off messages) never reset
- * - Quantities can be requested for both types of features
- */
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3 } from "@autumn/shared";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
@@ -23,25 +10,6 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 1: Attach product with both recurring and one-off items
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Customer with payment method
- * - Product has:
- *   - Monthly base price: $20
- *   - Monthly prepaid words (recurring): $15/pack (100 units)
- *   - One-off messages: $10/pack (100 units)
- * - Request 100 units of each feature
- *
- * Expected Result:
- * - Product attached successfully
- * - Invoice: $20 (base) + $15 (words) + $10 (messages) = $45
- * - Words: 100 balance (recurring, resets monthly)
- * - Messages: 100 balance (one-off, never resets)
- */
 test.concurrent(`${chalk.yellowBright("recurring-oneoff 1: attach with both items")}`, async () => {
 	const customerId = "recurring-oneoff-attach-both";
 	const basePrice = 20;
@@ -49,7 +17,6 @@ test.concurrent(`${chalk.yellowBright("recurring-oneoff 1: attach with both item
 	const messagesPricePerPack = 10;
 	const billingUnits = 100;
 
-	// Monthly prepaid words (recurring)
 	const monthlyWordsItem = items.prepaid({
 		featureId: TestFeature.Words,
 		includedUsage: 0,
@@ -57,7 +24,6 @@ test.concurrent(`${chalk.yellowBright("recurring-oneoff 1: attach with both item
 		price: wordsPricePerPack,
 	});
 
-	// One-off messages
 	const oneOffMessagesItem = items.oneOffMessages({
 		includedUsage: 0,
 		billingUnits,
@@ -78,12 +44,9 @@ test.concurrent(`${chalk.yellowBright("recurring-oneoff 1: attach with both item
 		actions: [],
 	});
 
-	// Request 100 units of each feature (1 pack each)
 	const wordsQuantity = 100;
 	const messagesQuantity = 100;
-	const expectedTotal = basePrice + wordsPricePerPack + messagesPricePerPack; // $45
-
-	// 1. Preview attach
+	const expectedTotal = basePrice + wordsPricePerPack + messagesPricePerPack;
 	const preview = await autumnV1.billing.previewAttach({
 		customer_id: customerId,
 		product_id: pro.id,
@@ -94,7 +57,6 @@ test.concurrent(`${chalk.yellowBright("recurring-oneoff 1: attach with both item
 	});
 	expect(preview.total).toBe(expectedTotal);
 
-	// 2. Attach product
 	await autumnV1.billing.attach({
 		customer_id: customerId,
 		product_id: pro.id,
@@ -104,7 +66,6 @@ test.concurrent(`${chalk.yellowBright("recurring-oneoff 1: attach with both item
 		],
 	});
 
-	// 3. Verify product is attached
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
 	await expectProductActive({
@@ -112,7 +73,6 @@ test.concurrent(`${chalk.yellowBright("recurring-oneoff 1: attach with both item
 		productId: pro.id,
 	});
 
-	// Verify words feature (recurring prepaid)
 	expectCustomerFeatureCorrect({
 		customer,
 		featureId: TestFeature.Words,
@@ -120,7 +80,6 @@ test.concurrent(`${chalk.yellowBright("recurring-oneoff 1: attach with both item
 		usage: 0,
 	});
 
-	// Verify messages feature (one-off)
 	expectCustomerFeatureCorrect({
 		customer,
 		featureId: TestFeature.Messages,
@@ -128,14 +87,12 @@ test.concurrent(`${chalk.yellowBright("recurring-oneoff 1: attach with both item
 		usage: 0,
 	});
 
-	// Verify invoice
 	await expectCustomerInvoiceCorrect({
 		customer,
 		count: 1,
 		latestTotal: expectedTotal,
 	});
 
-	// Verify Stripe subscription
 	await expectSubToBeCorrect({
 		db: ctx.db,
 		customerId,
@@ -144,25 +101,6 @@ test.concurrent(`${chalk.yellowBright("recurring-oneoff 1: attach with both item
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 2: Attach product with only one-off quantity (no recurring qty)
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Customer with payment method
- * - Product has:
- *   - Monthly base price: $20
- *   - Monthly prepaid words (recurring): $15/pack - NOT REQUESTED
- *   - One-off messages: $10/pack (100 units)
- * - Only request one-off messages quantity (no words)
- *
- * Expected Result:
- * - Product attached successfully
- * - Invoice: $20 (base) + $10 (messages) = $30 (no words charge)
- * - Words: 0 balance (none purchased)
- * - Messages: 100 balance (one-off)
- */
 test.concurrent(`${chalk.yellowBright("recurring-oneoff 2: attach with only one-off qty")}`, async () => {
 	const customerId = "recurring-oneoff-attach-oneoff-only";
 	const basePrice = 20;
@@ -170,7 +108,6 @@ test.concurrent(`${chalk.yellowBright("recurring-oneoff 2: attach with only one-
 	const messagesPricePerPack = 10;
 	const billingUnits = 100;
 
-	// Monthly prepaid words (recurring) - won't be purchased
 	const monthlyWordsItem = items.prepaid({
 		featureId: TestFeature.Words,
 		includedUsage: 0,
@@ -178,7 +115,6 @@ test.concurrent(`${chalk.yellowBright("recurring-oneoff 2: attach with only one-
 		price: wordsPricePerPack,
 	});
 
-	// One-off messages - will be purchased
 	const oneOffMessagesItem = items.oneOffMessages({
 		includedUsage: 0,
 		billingUnits,
@@ -199,11 +135,8 @@ test.concurrent(`${chalk.yellowBright("recurring-oneoff 2: attach with only one-
 		actions: [],
 	});
 
-	// Only request one-off messages, no words
 	const messagesQuantity = 100;
-	const expectedTotal = basePrice + messagesPricePerPack; // $30
-
-	// 1. Preview attach
+	const expectedTotal = basePrice + messagesPricePerPack;
 	const preview = await autumnV1.billing.previewAttach({
 		customer_id: customerId,
 		product_id: pro.id,
@@ -211,14 +144,12 @@ test.concurrent(`${chalk.yellowBright("recurring-oneoff 2: attach with only one-
 	});
 	expect(preview.total).toBe(expectedTotal);
 
-	// 2. Attach product
 	await autumnV1.billing.attach({
 		customer_id: customerId,
 		product_id: pro.id,
 		options: [{ feature_id: TestFeature.Messages, quantity: messagesQuantity }],
 	});
 
-	// 3. Verify product is attached
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
 	await expectProductActive({
@@ -226,7 +157,6 @@ test.concurrent(`${chalk.yellowBright("recurring-oneoff 2: attach with only one-
 		productId: pro.id,
 	});
 
-	// Verify words feature - 0 balance (not purchased)
 	expectCustomerFeatureCorrect({
 		customer,
 		featureId: TestFeature.Words,
@@ -234,7 +164,6 @@ test.concurrent(`${chalk.yellowBright("recurring-oneoff 2: attach with only one-
 		usage: 0,
 	});
 
-	// Verify messages feature (one-off)
 	expectCustomerFeatureCorrect({
 		customer,
 		featureId: TestFeature.Messages,
@@ -242,14 +171,12 @@ test.concurrent(`${chalk.yellowBright("recurring-oneoff 2: attach with only one-
 		usage: 0,
 	});
 
-	// Verify invoice
 	await expectCustomerInvoiceCorrect({
 		customer,
 		count: 1,
 		latestTotal: expectedTotal,
 	});
 
-	// Verify Stripe subscription
 	await expectSubToBeCorrect({
 		db: ctx.db,
 		customerId,

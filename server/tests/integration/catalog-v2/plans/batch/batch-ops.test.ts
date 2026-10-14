@@ -1,11 +1,3 @@
-/**
- * catalogV2.update — multi-plan batch interactions in one call.
- *
- * Green path: create + update + archive across three distinct plan_ids with
- * preview reporting all three and writing nothing.
- * Errors: duplicate plan_id creates, rename occupancy, stale refs.
- */
-
 import { test } from "bun:test";
 import { ErrCode, ResetInterval } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
@@ -142,7 +134,6 @@ test.concurrent(
 	},
 );
 
-// Occupancy: new_plan_id already persisted
 test.concurrent(
 	`${chalk.yellowBright("catalogV2 batch-ops: rename A→B while B already exists → error")}`,
 	async () => {
@@ -170,7 +161,6 @@ test.concurrent(
 	},
 );
 
-// Occupancy: new_plan_id is also a create in this call
 test.concurrent(
 	`${chalk.yellowBright("catalogV2 batch-ops: rename A→B while B created in same call → error")}`,
 	async () => {
@@ -198,7 +188,6 @@ test.concurrent(
 	},
 );
 
-// Request shape: creating a missing plan with two entries (unpinned + pinned)
 test.concurrent(
 	`${chalk.yellowBright("catalogV2 batch-ops: create + pinned v1 update same plan_id → error")}`,
 	async () => {

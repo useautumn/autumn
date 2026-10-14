@@ -14,7 +14,6 @@ import type { AttachParams } from "../customers/cusProducts/AttachParams.js";
 import { upsertInvoiceInCache } from "./actions/cache/upsertInvoiceInCache.js";
 import { InvoiceService, processInvoice } from "./InvoiceService.js";
 
-// Purpose of this function is to insert an invoice from attach params when sub is updated -> Correct product ID is set...
 export const insertInvoiceFromAttach = async ({
 	ctx,
 	attachParams,
@@ -37,7 +36,6 @@ export const insertInvoiceFromAttach = async ({
 			});
 		}
 
-		// Create or update
 		const invoice = await InvoiceService.getByStripeId({
 			db,
 			stripeId: stripeInvoice.id!,
@@ -177,10 +175,5 @@ export const attachToInvoiceResponse = ({
 		hosted_invoice_url: invoice.hosted_invoice_url,
 		total: invoice.total,
 		currency: invoice.currency,
-		// id: invoice.id,
-		// stripe_id: invoice.stripe_id,
-		// status: invoice.status,
-		// created_at: invoice.created_at,
-		// updated_at: invoice.updated_at,
 	};
 };

@@ -49,7 +49,6 @@ export const CreateReferralProgramParamsSchema =
 				});
 			}
 
-			// Checkout grants are skipped when redemption count >= max, so 0 blocks every grant
 			if (!program.max_redemptions) {
 				ctx.addIssue({
 					code: "custom",

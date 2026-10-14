@@ -7,7 +7,6 @@ import { deductionRowToUsageWindowHeadroom } from "./usageWindows.js";
 
 export type DeductionLimitType = z.infer<typeof LimitType>;
 
-/** A windowed cap is to blame when it leaves fewer units than are still owed, whatever the balance could have covered. */
 const isUsageWindowShort = ({
 	context,
 	deductionState,
@@ -24,10 +23,6 @@ const isUsageWindowShort = ({
 		return headroom?.lt(deductionState.remaining) ?? false;
 	});
 
-/**
- * Which limit left a deduction short, in the order the API's own check names them: a windowed usage cap first,
- * then the allowance when nothing may run over, then the spend limit, which outranks the plan's own overage cap.
- */
 export const deductionStateToLimitType = ({
 	context,
 	deductionState,

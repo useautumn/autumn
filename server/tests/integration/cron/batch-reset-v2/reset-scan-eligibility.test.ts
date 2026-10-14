@@ -1,26 +1,3 @@
-/**
- * TDD tests for the V2 reset scan page query
- * (customerEntitlementsRepo.getResetEligibleCustomerEntitlementsPage).
- *
- * Contract under test:
- *   Behaviors:
- *     - includes rows with next_reset_at < dueBefore
- *     - excludes rows with next_reset_at >= dueBefore
- *     - excludes rows with expired = true; includes expired = null AND
- *       expired = false (sticky manual false)
- *     - excludes rows with reset_by_invoice = true (invoice.created owns
- *       their reset); includes null AND false
- *     - excludes loose-expiry rows with expires_at <= dueBefore; includes
- *       expires_at > dueBefore
- *     - orders by (next_reset_at, id COLLATE "C"), id as tiebreak
- *     - keyset pagination: pages are disjoint, complete, and respect limit
- *
- * Isolation strategy: each test plants its rows at UNIQUE ancient
- * next_reset_at values (1970s-1980s) and scans with a dueBefore just above
- * its own window — rows from other tests/suites (which use ~now timestamps)
- * can never enter the window, so exact-membership assertions are safe.
- */
-
 import { expect, test } from "bun:test";
 import { customerEntitlements, ms } from "@autumn/shared";
 import { findCustomerEntitlement } from "@tests/balances/utils/findCustomerEntitlement.js";
@@ -36,7 +13,6 @@ test.concurrent(
 	`${chalk.yellowBright("batch-reset-v2 scan: eligibility filters (overdue, expired, expires_at)")}`,
 	async () => {
 		const customerId = "batch-reset-v2-scan-eligibility";
-		// Unique ancient window for this test only.
 		const windowStart = Date.UTC(1975, 0, 1);
 		const dueBefore = windowStart + ms.days(1);
 
@@ -77,7 +53,6 @@ test.concurrent(
 			return page.map((row) => row.id);
 		};
 
-		// ── Overdue row is included; future row is not ──────────────────
 		await ctx.db
 			.update(customerEntitlements)
 			.set({ next_reset_at: windowStart + 1000 })
@@ -91,7 +66,6 @@ test.concurrent(
 		expect(ids).toContain(messagesEnt!.id);
 		expect(ids).not.toContain(creditsEnt!.id);
 
-		// ── expired = true is excluded ──────────────────────────────────
 		await ctx.db
 			.update(customerEntitlements)
 			.set({ expired: true })
@@ -100,7 +74,6 @@ test.concurrent(
 		ids = await fetchIdsInWindow();
 		expect(ids).not.toContain(messagesEnt!.id);
 
-		// ── expired = false (sticky manual false) is included ───────────
 		await ctx.db
 			.update(customerEntitlements)
 			.set({ expired: false })
@@ -109,7 +82,6 @@ test.concurrent(
 		ids = await fetchIdsInWindow();
 		expect(ids).toContain(messagesEnt!.id);
 
-		// ── reset_by_invoice = true is excluded ─────────────────────────
 		await ctx.db
 			.update(customerEntitlements)
 			.set({ reset_by_invoice: true })
@@ -118,7 +90,6 @@ test.concurrent(
 		ids = await fetchIdsInWindow();
 		expect(ids).not.toContain(messagesEnt!.id);
 
-		// ── reset_by_invoice = false is included ────────────────────────
 		await ctx.db
 			.update(customerEntitlements)
 			.set({ reset_by_invoice: false })
@@ -127,7 +98,6 @@ test.concurrent(
 		ids = await fetchIdsInWindow();
 		expect(ids).toContain(messagesEnt!.id);
 
-		// ── expires_at in the past is excluded ──────────────────────────
 		await ctx.db
 			.update(customerEntitlements)
 			.set({ expires_at: windowStart + 500 })
@@ -136,7 +106,6 @@ test.concurrent(
 		ids = await fetchIdsInWindow();
 		expect(ids).not.toContain(messagesEnt!.id);
 
-		// ── expires_at in the future is included ────────────────────────
 		await ctx.db
 			.update(customerEntitlements)
 			.set({ expires_at: dueBefore + ms.days(365) })
@@ -152,10 +121,6 @@ test.concurrent(
 	async () => {
 		const customerId = "batch-reset-v2-scan-pagination";
 		const otherCustomerId = "batch-reset-v2-scan-pagination-b";
-		// Unique ancient window for this test only. Must be the LOWEST window
-		// in this file: a scan at dueBefore includes everything older, so the
-		// strict toEqual below only holds if no other test plants rows below
-		// this window.
 		const windowStart = Date.UTC(1971, 0, 1);
 		const dueBefore = windowStart + ms.days(1);
 
@@ -204,7 +169,6 @@ test.concurrent(
 		];
 		for (const row of rows) expect(row).toBeDefined();
 
-		// Two rows share the same next_reset_at to exercise the id tiebreak.
 		const plantedResetAts = [
 			windowStart + 1000,
 			windowStart + 2000,
@@ -223,7 +187,6 @@ test.concurrent(
 			.sort((a, b) => a.nextResetAt - b.nextResetAt || (a.id < b.id ? -1 : 1))
 			.map((row) => row.id);
 
-		// ── Page size is respected; pages are disjoint and complete ─────
 		const collected: string[] = [];
 		let cursor: { nextResetAt: number; id: string } | null = null;
 		let pages = 0;
@@ -244,7 +207,6 @@ test.concurrent(
 			expect(pages).toBeLessThan(10);
 		}
 
-		// ── Exactly our 4 rows, in (next_reset_at, id) order, no dupes ──
 		expect(collected).toEqual(expectedOrder);
 	},
 );

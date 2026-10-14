@@ -1,27 +1,3 @@
-/**
- * TDD test for persisting a `subscriptions` row on customer.subscription.created.
- *
- * Contract under test:
- *   New behaviors:
- *     - known customer + external sub, auto-sync skips (no product match)
- *       -> subscriptions row exists with org/env/periods/anchor
- *     - unknown Stripe customer -> NO row (no auto-provisioning)
- *     - auto-sync runs (matched product) -> exactly one row (idempotent with
- *       syncV2's own upsertSubscription)
- *     - attach-created sub (row already written by the attach flow) -> still
- *       exactly one row (upsertByStripeId updates, never duplicates)
- *   Side effects:
- *     - upsertSubscriptionRow runs LAST in the handler and rethrows TRANSIENT
- *       DB errors, so a lost row fails the webhook and rides replay / Stripe
- *       redelivery; deterministic errors log without looping the replay.
- *       Not fault-injectable here; enforced by structure.
- *
- * Pre-impl red: handleStripeSubscriptionCreated never wrote to the
- * subscriptions table itself; rows only appeared when syncV2 executed.
- * Post-impl green: the upsertSubscriptionRow step saves the row for every
- * known customer's subscription.
- */
-
 import { expect, test } from "bun:test";
 import { createStripeSubscriptionFromProduct } from "@tests/integration/billing/sync/utils/syncTestUtils";
 import { items } from "@tests/utils/fixtures/items";
@@ -79,7 +55,6 @@ test(`${chalk.yellowBright("sub-created row 1: saves subscriptions row even when
 
 	await timeout(10000);
 
-	// ── Contract: row exists with correct org/env/periods/anchor ───────────
 	const subscriptionRow = await SubService.getByStripeId({
 		db: ctx.db,
 		stripeId: stripeSubscription.id,
@@ -120,7 +95,6 @@ test(`${chalk.yellowBright("sub-created row 2: no row for unknown Stripe custome
 
 	await timeout(10000);
 
-	// ── Contract: unknown customer -> no auto-provisioned row ──────────────
 	const subscriptionRow = await SubService.getByStripeId({
 		db: ctx.db,
 		stripeId: stripeSubscription.id,
@@ -154,7 +128,6 @@ test(`${chalk.yellowBright("sub-created row 3: exactly one row when auto-sync ru
 
 	await timeout(10000);
 
-	// ── Contract: idempotent with syncV2's upsert — exactly one row ────────
 	const subscriptionRows = await SubService.getInStripeIds({
 		db: ctx.db,
 		ids: [stripeSubscription.id],
@@ -196,7 +169,6 @@ test(`${chalk.yellowBright("sub-created row 4: attach-created sub keeps exactly 
 		throw new Error(`Customer ${customerId} has no attached subscription`);
 	}
 
-	// ── Contract: attach row updated, never duplicated ─────────────────────
 	const subscriptionRows = await SubService.getInStripeIds({
 		db: ctx.db,
 		ids: [stripeSubscriptionId],

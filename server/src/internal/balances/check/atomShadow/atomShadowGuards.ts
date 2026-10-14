@@ -5,7 +5,6 @@ import { getShadowAtomConfig } from "@/internal/misc/shadowAtom/shadowAtomConfig
 import { decryptData } from "@/utils/encryptUtils.js";
 import type { AtomShadowTarget } from "./types/atomShadowOutcome.js";
 
-/** Mirrors Atom's FORWARD_RULES (apps/atom checkForwardRules.ts): Atom hands these to the API, so a shadow would run them twice. */
 export const isAtomAnswerableCheck = ({
 	ctx,
 	params,
@@ -24,7 +23,6 @@ export const isAtomAnswerableCheck = ({
 	);
 };
 
-/** Our shadow Atom, or null unless it has an address, the org is registered on it, and it holds this customer; the token is the request env's folder. */
 export const shadowAtomTarget = ({
 	ctx,
 	customerId,

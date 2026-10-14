@@ -38,13 +38,8 @@ interface InlinePlanEditorProps {
 	) => void;
 	onCancel: () => void;
 	isOpen: boolean;
-	/** Render the plan's license cards and collect edits into onSave's
-	 * `addLicenses` — only for flows whose payload supports a license patch. */
 	enableLicenseEditing?: boolean;
-	/** The flow's current license patch; re-seeds cards on reopen so earlier
-	 * edits aren't lost. */
 	initialAddLicenses?: CustomizePlanLicense[] | null;
-	/** Who the edits apply to, shown in the editor's banner. */
 	scope?: "customer" | "invoice";
 }
 
@@ -118,15 +113,11 @@ function InlinePlanEditorContent({
 	const hasPlanChanges = useHasPlanChanges();
 	const collectorStore = useLicenseCollectorStore();
 	const { pendingLicenseIds } = usePendingLicenseLinks();
-	// Staged links are primary state — don't depend solely on each card's
-	// effect having registered with the collector.
 	const hasLicenseChanges =
 		useHasCollectedLicenseChanges() || pendingLicenseIds.length > 0;
 	const hasChanges = hasPlanChanges || hasLicenseChanges;
 
 	const handleSave = () => {
-		// Only the edited cards go into add_licenses; untouched licenses keep
-		// inheriting the plan catalog.
 		const addLicenses =
 			hasLicenseChanges && collectorStore
 				? collectLicensePatchAdds(collectorStore)
@@ -152,7 +143,6 @@ function InlinePlanEditorContent({
 					animate={{ width: sheetType ? "calc(100% - 28rem)" : "100%" }}
 					transition={SHEET_ANIMATION}
 				>
-					{/* pb matches PlanEditorBar's h-40 so the last card scrolls clear of it */}
 					<div className="flex flex-col justify-start h-full w-full overflow-x-hidden overflow-y-auto pb-40">
 						<div onClick={(e) => e.stopPropagation()}>
 							<EditPlanHeader />

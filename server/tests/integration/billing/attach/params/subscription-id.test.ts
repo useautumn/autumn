@@ -14,8 +14,6 @@ import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 
-// ─── Test 1: Attach with subscription_id, verify id in response ───
-
 test.concurrent(`${chalk.yellowBright("subscription_id: attach with subscription_id returns id in response")}`, async () => {
 	const customerId = "sub-id-attach-basic";
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
@@ -30,14 +28,12 @@ test.concurrent(`${chalk.yellowBright("subscription_id: attach with subscription
 		actions: [],
 	});
 
-	// Attach with a subscription_id
 	await autumnV2_1.billing.attach<AttachParamsV1Input>({
 		customer_id: customerId,
 		plan_id: pro.id,
 		subscription_id: "my-custom-sub-id",
 	});
 
-	// Get customer with V2.1 and verify subscription has the custom id
 	const customer = await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
 
 	expect(customer.subscriptions.length).toBe(1);
@@ -46,8 +42,6 @@ test.concurrent(`${chalk.yellowBright("subscription_id: attach with subscription
 	await expectCustomerProducts({ customer, active: [pro.id] });
 	await expectStripeSubscriptionCorrect({ ctx, customerId });
 });
-
-// ─── Test 2: Attach without subscription_id, id falls back to internal id ───
 
 test.concurrent(`${chalk.yellowBright("subscription_id: attach without subscription_id uses internal id")}`, async () => {
 	const customerId = "sub-id-attach-fallback";
@@ -63,7 +57,6 @@ test.concurrent(`${chalk.yellowBright("subscription_id: attach without subscript
 		actions: [],
 	});
 
-	// Attach without subscription_id
 	await autumnV2_1.billing.attach<AttachParamsV1Input>({
 		customer_id: customerId,
 		plan_id: pro.id,
@@ -72,13 +65,10 @@ test.concurrent(`${chalk.yellowBright("subscription_id: attach without subscript
 	const customer = await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
 
 	expect(customer.subscriptions.length).toBe(1);
-	// id should be a non-empty string (the internal cus_prod_xxx id)
 	expect(customer.subscriptions[0].id).toBeTruthy();
 	expect(customer.subscriptions[0].id).toStartWith("cus_prod_");
 	await expectStripeSubscriptionCorrect({ ctx, customerId });
 });
-
-// ─── Test 2: Attach without subscription_id, id falls back to internal id ───
 
 test.concurrent(`${chalk.yellowBright("subscription_id: attach same add on twice with different subscription_ids")}`, async () => {
 	const customerId = "sub-id-attach-same-add-on-twice";
@@ -127,8 +117,6 @@ test.concurrent(`${chalk.yellowBright("subscription_id: attach same add on twice
 	await expectStripeSubscriptionCorrect({ ctx, customerId });
 });
 
-// ─── Test 3: Duplicate subscription_id on same customer → error ───
-
 test.concurrent(`${chalk.yellowBright("subscription_id: duplicate subscription_id on same customer throws error")}`, async () => {
 	const customerId = "sub-id-duplicate";
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
@@ -147,14 +135,12 @@ test.concurrent(`${chalk.yellowBright("subscription_id: duplicate subscription_i
 		actions: [],
 	});
 
-	// First attach with subscription_id "key-1" succeeds
 	await autumnV2_1.billing.attach<AttachParamsV1Input>({
 		customer_id: customerId,
 		plan_id: pro.id,
 		subscription_id: "key-1",
 	});
 
-	// Second attach with same subscription_id "key-1" should fail
 	await expectAutumnError({
 		errCode: ErrCode.DuplicateSubscriptionId,
 		func: async () => {
@@ -166,8 +152,6 @@ test.concurrent(`${chalk.yellowBright("subscription_id: duplicate subscription_i
 		},
 	});
 });
-
-// ─── Test 1: V2.1 shows unmerged subs with id, V2.0/V1.2 shows merged without id ───
 
 test.concurrent(`${chalk.yellowBright("subscription_id compat: V2.1 unmerged vs V2.0/V1.2 merged")}`, async () => {
 	const customerId = "sub-id-compat-merge";
@@ -186,7 +170,6 @@ test.concurrent(`${chalk.yellowBright("subscription_id compat: V2.1 unmerged vs 
 		actions: [],
 	});
 
-	// Multi-attach same add-on twice with different subscription_ids
 	await autumnV2_1.billing.multiAttach({
 		customer_id: customerId,
 		plans: [
@@ -195,7 +178,6 @@ test.concurrent(`${chalk.yellowBright("subscription_id compat: V2.1 unmerged vs 
 		],
 	});
 
-	// V2.1 response: unmerged, each subscription has its own id
 	const customerV2_1 =
 		await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
 
@@ -203,23 +185,17 @@ test.concurrent(`${chalk.yellowBright("subscription_id compat: V2.1 unmerged vs 
 	const ids = customerV2_1.subscriptions.map((sub) => sub.id).sort();
 	expect(ids).toEqual(["inst-1", "inst-2"]);
 
-	// V2.0 response: merged (same plan_id + active status = 1 entry, quantity summed)
 	const customerV2 = await autumnV2.customers.get<ApiCustomer>(customerId);
 
-	// V2.0 merges subscriptions by plan_id + status
 	expect(customerV2.subscriptions.length).toBe(1);
 	expect(customerV2.subscriptions[0].quantity).toBe(2);
-	// V2.0 subscription schema (ApiSubscription) does not have `id` field
 	expect("id" in customerV2.subscriptions[0]).toBe(false);
 
-	// V1.2 response: merged into products array
 	const customerV1 = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// V1.2 uses "products" instead of "subscriptions"
 	const addonProducts = (customerV1.products ?? []).filter(
 		(p) => p.id === addon.id,
 	);
-	// Should be merged into 1 product entry
 	expect(addonProducts.length).toBe(1);
 	expect(addonProducts[0].quantity).toBe(2);
 });

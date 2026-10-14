@@ -19,7 +19,6 @@ const LAZY_MIGRATION_CUSTOMER_LOCK_MAX_WAIT_MS = 2 * 60 * 1000;
 
 export type { RunMigrationCustomerPayload } from "./runMigrationCustomerPayload.js";
 
-/** Shared workload for the trigger.dev task and the local inline fallback. */
 export const executeRunMigrationCustomer = async ({
 	ctx,
 	logger,
@@ -36,7 +35,6 @@ export const executeRunMigrationCustomer = async ({
 		customerId,
 	} = payload;
 
-	// Backstop for tasks queued before the kill-switch: never migrate.
 	if (LAZY_MIGRATION_RUNS_DISABLED) {
 		logger.info("run-migration-customer: skipping, lazy runs disabled", {
 			data: { migrationInternalId, migrationRunId, customerInternalId },
@@ -80,9 +78,6 @@ export const executeRunMigrationCustomer = async ({
 		dryRun: false,
 		claimItemRun: true,
 		run: async () => {
-			// Bust the customer cache as soon as we own the claim so in-flight
-			// reads load fresh state and see the `running` item_run.
-			// `deleteCachedFullCustomer` also invalidates the FullSubject cache.
 			const cacheKey = customerId ?? customerInternalId;
 			await deleteCachedFullCustomer({
 				ctx,
@@ -115,7 +110,6 @@ export const executeRunMigrationCustomer = async ({
 	});
 };
 
-/** Lazy customer work shares fleet capacity; the item claim remains the duplicate authority. */
 export const runMigrationCustomerTask = task({
 	id: "run-migration-customer",
 	queue: migrationTaskQueue,

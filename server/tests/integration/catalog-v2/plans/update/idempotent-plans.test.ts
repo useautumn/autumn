@@ -1,12 +1,3 @@
-/**
- * catalogV2.update — idempotent re-send of identical plan params.
- *
- * Contract:
- *   - identical re-send → action "none", no entitlement/price writes
- *   - preview of identical re-send also reports "none"
- *   - row ids (entitlements + prices) stay stable across the no-op update
- */
-
 import { expect, test } from "bun:test";
 import { BillingInterval, ResetInterval } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";

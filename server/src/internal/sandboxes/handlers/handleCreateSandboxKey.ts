@@ -4,12 +4,6 @@ import { assertNotSandboxContext, createSandboxKey } from "../createSandbox.js";
 import { getOwnedSandbox } from "../getOwnedSandbox.js";
 import { resolveSandboxActor } from "../resolveSandboxActor.js";
 
-/**
- * A fresh key for a sandbox this organization owns: what `atmn sandbox use`
- * calls when the machine has no key for the sandbox it is pointed at. The
- * key carries the caller's scopes, so it can never reach further than the
- * main key that minted it.
- */
 export const handleCreateSandboxKey = createRoute({
 	scopes: [Scopes.Platform.Write, Scopes.ApiKeys.Write],
 	body: CreateSandboxKeyParamsSchema,

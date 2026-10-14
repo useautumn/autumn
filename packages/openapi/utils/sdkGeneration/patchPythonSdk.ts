@@ -1,16 +1,6 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
-/**
- * Patches the Python SDK to fix a Speakeasy bug with global defaults.
- *
- * The bug: `get_global_from_env` returns `None` when neither the argument nor
- * the env var is set, and passing that explicit `None` to `Globals(...)`
- * overrides the Pydantic default (e.g. `x_api_version = "2.4.0"`), so the
- * `x-api-version` header is never sent.
- *
- * Fix: only pass globals to `Globals` when they resolve to a non-`None` value.
- */
 const GLOBALS_CONSTRUCTION_PATTERN =
 	/_globals = internal\.Globals\(\n(?<body>(?:[ \t]+\w+=utils\.get_global_from_env\([\s\S]*?\),\n)+)[ \t]+\)/;
 

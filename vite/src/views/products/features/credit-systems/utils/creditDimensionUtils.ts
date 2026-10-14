@@ -9,12 +9,6 @@ import {
 	mapRecordValues,
 } from "@autumn/shared";
 
-/**
- * The dashboard edits dimensions as fields → values → rules: every rate or
- * multiplier is one rule whose match picks a value for some of the fields
- * (unset = any), named from its match.
- */
-
 export type CreditMatch = Record<string, string>;
 export type CreditRateRule = { name: string; dimension: CreditDimension };
 export type CreditMultiplierRule = {
@@ -23,10 +17,8 @@ export type CreditMultiplierRule = {
 };
 export type DimensionValues = Record<string, string[]>;
 
-/** Rates and multipliers alike; both are keyed by the match they apply to. */
 type MatchableRule = { match: CreditMatch };
 
-/** Rates and multipliers both match on dimensions, so both are read here. */
 const matchesFromRatesAndMultipliers = (
 	item: CreditSchemaItem,
 ): CreditMatch[] =>
@@ -37,7 +29,6 @@ const matchesFromRatesAndMultipliers = (
 
 const unique = (values: string[]) => Array.from(new Set(values));
 
-/** Every field and value referenced by a rate or multiplier, in first-seen order. */
 export const dimensionValues = (item: CreditSchemaItem): DimensionValues => {
 	const values: DimensionValues = {};
 	for (const match of matchesFromRatesAndMultipliers(item)) {
@@ -81,10 +72,6 @@ const ruleName = (match: CreditMatch) =>
 		.replace(/[^a-zA-Z0-9_]+/g, "_")
 		.slice(0, CREDIT_DIMENSION_NAME_MAX_LENGTH) || "rule";
 
-/**
- * Duplicate matches collapse to one name, so names are made unique by suffix —
- * trimming the stem first, since the whole key must stay within the API limit.
- */
 const uniqueName = (name: string, taken: Set<string>) => {
 	let candidate = name;
 	let index = 2;
@@ -150,7 +137,6 @@ const onlyAllowed = <T extends MatchableRule>(
 		),
 	);
 
-/** Removing a field or value drops every rate and multiplier that matched on it. */
 export const withAllowedValues = ({
 	item,
 	allowed,
@@ -177,7 +163,6 @@ export const createMultiplierRule = (): CreditMultiplierRule => ({
 	multiplier: { match: {}, factor: 1 },
 });
 
-/** An unset cell means "any value" for that field. */
 const renameMatchKey = ({
 	match,
 	from,
@@ -194,7 +179,6 @@ const renameMatchKey = ({
 		]),
 	);
 
-/** Renaming a dimension rewrites the key in every rate and multiplier that matched on it. */
 export const withRenamedField = ({
 	item,
 	from,
@@ -215,7 +199,6 @@ export const withRenamedField = ({
 			}),
 		});
 
-	// Names are derived from the match, so renaming a field renames the rules too.
 	const renamed = {
 		...item,
 		...(item.dimensions ? { dimensions: rename(item.dimensions) } : {}),
@@ -261,11 +244,6 @@ export const setMatchValue = ({
 	return value === undefined ? others : { ...others, [field]: value };
 };
 
-/**
- * A row of the rates table: a saved rule, or a draft that only has its match so
- * far. `key` is its identity — rows are rebuilt from the item on every render,
- * and every content-derived id (index, name, match) collides or changes mid-edit.
- */
 export type CreditRateRow = {
 	key: string;
 	name: string;
@@ -273,7 +251,6 @@ export type CreditRateRow = {
 	dimension?: CreditDimension;
 };
 
-/** A draft row is only a match until a cost is typed, so it carries its own key. */
 export type CreditRateDraft = { key: string; match: CreditMatch };
 
 export const createRateDraft = (match: CreditMatch = {}): CreditRateDraft => ({
@@ -281,10 +258,6 @@ export const createRateDraft = (match: CreditMatch = {}): CreditRateDraft => ({
 	match,
 });
 
-/**
- * The names these rows will be saved under, so a caller can carry a row's key
- * across the draft-to-rule transition before the item is rebuilt.
- */
 export const nameRateRows = (rows: CreditRateRow[]): CreditRateRow[] => {
 	const taken = new Set<string>();
 	return rows.map((row) =>
@@ -294,14 +267,8 @@ export const nameRateRows = (rows: CreditRateRow[]): CreditRateRow[] => {
 	);
 };
 
-/** The key a saved rule's row is identified by, absent a claim from its draft. */
 const ruleRowKey = (name: string) => `rule:${name}`;
 
-/**
- * Rule names derive from their match, so a rename changes every row's key.
- * Rewriting the recorded order keeps those rows in place instead of sorting
- * them to the bottom as unknown.
- */
 export const renamedRowOrder = ({
 	order,
 	item,
@@ -324,12 +291,6 @@ export const renamedRowOrder = ({
 	return order.map((key) => renamedKey.get(key) ?? key);
 };
 
-/**
- * Rules and drafts are stored apart, so rebuilding alone groups every saved row
- * above every draft — typing a cost into a lower row would jump it up the table.
- * `order` restores what the table last rendered; rows it does not name (a newly
- * added draft) sort to the end.
- */
 export const toRateRows = ({
 	rules,
 	drafts,
@@ -338,9 +299,7 @@ export const toRateRows = ({
 }: {
 	rules: CreditRateRule[];
 	drafts: CreditRateDraft[];
-	/** Keys claimed by a row before it was saved, so it keeps its identity. */
 	keysByRuleName?: Map<string, string>;
-	/** Row keys in display order. */
 	order?: string[];
 }): CreditRateRow[] => {
 	const rows: CreditRateRow[] = [
@@ -354,7 +313,6 @@ export const toRateRows = ({
 	];
 
 	const rank = new Map(order.map((key, index) => [key, index]));
-	// Sort is stable, so unranked rows keep their built order behind the rest.
 	return rows.sort(
 		(a, b) =>
 			(rank.get(a.key) ?? order.length) - (rank.get(b.key) ?? order.length),
@@ -387,7 +345,6 @@ export const withRateCredits = ({
 	return { ...row, dimension };
 };
 
-/** Preferring a row breaks a tie with an equally specific one; unset clears it. */
 export const withRatePriority = ({
 	row,
 	priority,
@@ -420,7 +377,6 @@ export const withRateMatch = ({
 
 const specificity = (match: CreditMatch) => Object.keys(match).length;
 
-// Mirrors the server resolver: an omitted priority ranks below an explicit 0.
 const priorityRank = (dimension: CreditDimension) =>
 	dimension.priority ?? Number.NEGATIVE_INFINITY;
 
@@ -431,7 +387,6 @@ const sameMatch = (left: CreditMatch, right: CreditMatch) =>
 const covers = (partial: CreditMatch, full: CreditMatch) =>
 	Object.entries(partial).every(([key, value]) => full[key] === value);
 
-/** The saved rule that would price this match at runtime: the most specific one covering it. */
 export const coveringRule = ({
 	rules,
 	match,
@@ -467,7 +422,6 @@ const fullCombinations = (values: DimensionValues): CreditMatch[] => {
 	);
 };
 
-/** Counted from the grid size rather than the grid: a wide product would freeze the editor. */
 export const missingCombinationCount = ({
 	values,
 	rows,
@@ -491,11 +445,6 @@ export const missingCombinationCount = ({
 	).length;
 };
 
-/**
- * One row per full combination: exact rows stay, combinations under a partial
- * rule inherit its rate, the rest become drafts. Partial rows are folded into
- * the grid and dropped, so the table never mixes both.
- */
 export const filledRateRows = ({
 	values,
 	rows,

@@ -415,7 +415,6 @@ const buildExtraEntitlementsCTE = ({
 }: {
 	includeExpiredLooseEntitlements?: boolean;
 } = {}) => {
-	// A separate budget, so expired rows can never crowd out active ones.
 	const expiredBranch = includeExpiredLooseEntitlements
 		? sql`
         UNION ALL
@@ -549,7 +548,6 @@ export const getFullCusQuery = ({
 }) => {
 	const sqlChunks: SQL[] = [];
 
-	// Step 1: Get customer record
 	sqlChunks.push(sql`
     WITH customer_record AS (
       SELECT * FROM customers c
@@ -563,56 +561,44 @@ export const getFullCusQuery = ({
     )
   `);
 
-	// Step 2: Get entities
 	if (withEntities) {
 		sqlChunks.push(sql`, `);
 		sqlChunks.push(buildEntitiesCTE({ withEntities, entitiesLimit }));
 	}
 
-	// Step 3: Get entity
 	if (entityId) {
 		sqlChunks.push(sql`, `);
 		sqlChunks.push(buildEntityCTE(entityId));
 	}
 
-	// Add customer products CTE
 	sqlChunks.push(sql`, `);
-	// sqlChunks.push(buildCusProductsCTE(inStatuses));
 	sqlChunks.push(
 		buildOptimizedCusProductsCTE({ inStatuses, cusProductLimit, entityId }),
 	);
 
-	// Conditionally add trials used CTE
 	if (withTrialsUsed) {
 		sqlChunks.push(sql`, `);
 		sqlChunks.push(buildTrialsUsedCTE(withTrialsUsed, orgId, env));
 	}
 
-	// Conditionally add subscriptions CTE
 	if (withSubs) {
 		sqlChunks.push(sql`, `);
 		sqlChunks.push(buildSubscriptionsCTE(withSubs, inStatuses));
 	}
 
-	// Unconditionally add extra entitlements CTE
 	sqlChunks.push(sql`, `);
 	sqlChunks.push(
 		buildExtraEntitlementsCTE({ includeExpiredLooseEntitlements }),
 	);
 
-	// Unconditionally add synthetic pooled customer entitlements.
 	sqlChunks.push(sql`, `);
 	sqlChunks.push(buildPooledCustomerEntitlementsCTE());
 
-	// Conditionally add invoices CTE
 	if (includeInvoices) {
 		sqlChunks.push(sql`, `);
 		sqlChunks.push(buildInvoicesCTE(!!entityId));
 	}
 
-	// Unconditional CTE for the customer's `migration_item_runs` scoped to
-	// the org's active lazy migrations. Empty in steady state — joins through
-	// `migration_runs` so callers don't have to thread the active list.
 	sqlChunks.push(sql`, `);
 	sqlChunks.push(sql`
     customer_migration_item_runs AS (
@@ -635,7 +621,6 @@ export const getFullCusQuery = ({
     )
   `);
 
-	// Conditionally add events CTE
 	if (withEvents) {
 		sqlChunks.push(sql`, `);
 		sqlChunks.push(sql`
@@ -661,7 +646,6 @@ export const getFullCusQuery = ({
     `);
 	}
 
-	// Build final SELECT
 	const selectFieldsChunks: SQL[] = [];
 	selectFieldsChunks.push(sql`
     cr.*,
@@ -689,25 +673,21 @@ export const getFullCusQuery = ({
     ) AS customer_products
   `);
 
-	// Add entities to SELECT if withEntities is true
 	if (withEntities) {
 		selectFieldsChunks.push(sql`,
       (SELECT entities FROM customer_entities) AS entities`);
 	}
 
-	// Add entity to SELECT if entityId is provided
 	if (entityId) {
 		selectFieldsChunks.push(sql`,
       (SELECT row_to_json(er) FROM entity_record er LIMIT 1) AS entity`);
 	}
 
-	// Add trials used to SELECT if withTrialsUsed is true
 	if (withTrialsUsed) {
 		selectFieldsChunks.push(sql`,
       (SELECT trials_used FROM customer_trials_used) AS trials_used`);
 	}
 
-	// Add subscriptions to SELECT if withSubs is true
 	if (withSubs) {
 		selectFieldsChunks.push(sql`,
       (SELECT subscriptions FROM customer_subscriptions) AS subscriptions`);
@@ -780,7 +760,6 @@ export const getPaginatedFullCusQuery = ({
 	processors?: ListCustomersV2Params["processors"];
 	search?: string;
 	cusProductLimit: number;
-	/** V2_4+ customer-level reads exclude entity-scoped rows entirely. */
 	aggregateEntityData?: boolean;
 }) => {
 	const customerLevelOnly = (alias: string) =>
@@ -807,9 +786,6 @@ export const getPaginatedFullCusQuery = ({
 		search,
 	});
 
-	// ADDITION: Unconditionally add extra entitlements CTE (305-308)
-	// This matches the style of the rest of the CTE construction blocks.
-	// Extra entitlements are those without a customer_product_id (loose entitlements)
 	const extraEntitlementsCTE = sql`, extra_customer_entitlements AS (
     SELECT
       cr.internal_id AS internal_customer_id,
@@ -1225,8 +1201,6 @@ export const getCustomerListFilterSql = ({
 	if (hasStatus || hasProductFilter || hasInterval) {
 		const innerClauses: SQL[] = [];
 
-		// Mirrors CusSearchService.buildSearchPredicates productMode:
-		// when no non-active status is requested, also constrain to active/past_due.
 		const hasNonActiveStatus =
 			statusFilters?.some((s) => s !== "active") ?? false;
 		const shouldApplyActiveFilter =
@@ -1249,9 +1223,6 @@ export const getCustomerListFilterSql = ({
 					case "free_trial":
 						return sql`(cp_dash.trial_ends_at > ${Date.now()} AND cp_dash.free_trial_id IS NOT NULL AND cp_dash.canceled_at IS NULL AND (cp_dash.status = ${CusProductStatus.Active} OR cp_dash.status = ${CusProductStatus.PastDue}))`;
 					case "expired":
-						// "Same plan" = same public product id (any version), resolved
-						// through the products join rather than the denormalized
-						// customer_products.product_id snapshot.
 						return sql`(cp_dash.status = ${CusProductStatus.Expired} AND cp_dash.canceled_at IS NULL AND NOT EXISTS (
 							SELECT 1 FROM customer_products cp_alias
 							JOIN products p_alias ON p_alias.internal_id = cp_alias.internal_product_id

@@ -8,17 +8,6 @@ export const SyncProposalsV2ParamsSchema = z.object({
 
 export type SyncProposalsV2Params = z.infer<typeof SyncProposalsV2ParamsSchema>;
 
-/**
- * One sync proposal — fluid with `SyncParamsV1` so the frontend can edit
- * the draft and pass it straight to `/billing.sync`.
- *
- * `phases` mirrors sync phases but may contain empty draft plan lists.
- * `stripe_subscription_id` and `stripe_schedule_id` identify the target.
- *
- * Display-only extras are the raw Stripe objects (so the UI can render
- * subscription items, schedules, etc. without re-fetching) plus the
- * `already_linked_product_id` summary.
- */
 const SyncProposalPhaseV2Schema = SyncPhaseSchema.extend({
 	plans: z.array(SyncPlanInstanceSchema),
 });
@@ -28,7 +17,6 @@ const BaseSyncProposalV2Schema = z.object({
 	stripe_schedule_id: z.string().optional(),
 	phases: z.array(SyncProposalPhaseV2Schema),
 
-	/** Raw Stripe objects — type-cast on the consumer side. */
 	stripe_subscription: z.unknown().nullable(),
 	stripe_schedule: z.unknown().nullable(),
 

@@ -6,7 +6,6 @@ import {
 	pathNormalizationSteps,
 } from "./normalizeRequestPath";
 
-/** Where the `express` request log keeps what the meter reads. One place to fix if a field moves. */
 export const apiCallLogFields = {
 	dataset: "['express']",
 	time: "_time",
@@ -17,16 +16,13 @@ export const apiCallLogFields = {
 	orgSlug: "['context.org_slug']",
 	env: "['context.env']",
 	authType: "['context.auth_type']",
-	/** `extras` is one JSON string per request; batch handlers will put item_count in it via addToExtraLogs. */
 	batchItemCount: "parse_json(tostring(extras))['item_count']",
-	/** The logged request body; for batch endpoints it is the JSON array of items. */
 	body: "['req.body']",
 } as const;
 
 const aplString = (value: string) =>
 	`'${value.replace(/\\/g, "\\\\").replace(/'/g, "\\'")}'`;
 
-/** The same normalisation as `normalizeRequestPath`, as nested `replace_regex` calls over `req.url`. */
 export const requestPathAplExpression = (): string =>
 	pathNormalizationSteps.reduce(
 		(expression, step) =>
@@ -40,7 +36,6 @@ const hasParams = (route: ApiRoute) => route.path.includes("{");
 const escapeRegex = (value: string) =>
 	value.replace(/[.*+?^$()|[\]\\]/g, "\\$&");
 
-/** Predicate for one route over the normalised `path` column; literals use ==, params a regex. */
 const routePredicate = (route: ApiRoute): string => {
 	const path = normalizeRequestPath(route.path);
 	const method = `${apiCallLogFields.method} == '${route.method}'`;
@@ -49,10 +44,6 @@ const routePredicate = (route: ApiRoute): string => {
 	return `${method} and path matches regex '${pattern}'`;
 };
 
-/**
- * `case(...)` mapping a request to its catalog endpoint id, '' when unmetered.
- * Literal routes are listed before parameterised ones, as in `routeToEndpoint`.
- */
 export const endpointIdAplExpression = (): string => {
 	const routes = apiRequestCatalog
 		.flatMap((endpoint) =>
@@ -66,14 +57,12 @@ export const endpointIdAplExpression = (): string => {
 	return `case(\n    ${branches.join(",\n    ")},\n    '')`;
 };
 
-/** Requests one logged call counts as: the batch size for per-item endpoints, else 1. */
 export const requestsAplExpression = (): string => {
 	const perItemIds = apiRequestCatalog
 		.filter((endpoint) => endpoint.weight === "one_per_item")
 		.map((endpoint) => `'${endpoint.id}'`);
 	if (perItemIds.length === 0) return "1";
 
-	// Logged item_count first (cheap, never truncated), else the body's array length, else one.
 	const batchSize = `coalesce(tolong(${apiCallLogFields.batchItemCount}), array_length(parse_json(tostring(${apiCallLogFields.body}))), 1)`;
 	return `case(endpoint_id in (${perItemIds.join(", ")}), ${batchSize}, 1)`;
 };
@@ -84,12 +73,6 @@ const LIVE_ENV = "live";
 const aplDatetime = (ms: number) => `datetime(${new Date(ms).toISOString()})`;
 const f = apiCallLogFields;
 
-/**
- * Requests per (org, hour, endpoint) over a contiguous set of hour windows.
- * Counts 2xx live traffic on API keys and customer tokens; everything else is
- * the catalog's job. Rows come back as { org_id, org_slug, hour, endpoint_id, requests };
- * the hour is cast to a string because tabular results drop raw time buckets.
- */
 export const apiCallsApl = ({ windows }: { windows: HourWindow[] }): string => {
 	const startMs = Math.min(...windows.map((window) => window.startMs));
 	const endMs = Math.max(...windows.map((window) => window.endMs));

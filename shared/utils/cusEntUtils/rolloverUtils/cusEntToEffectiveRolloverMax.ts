@@ -7,7 +7,6 @@ import {
 } from "../balanceUtils/cusEntToStartingBalance.js";
 import { getStartingBalance } from "../getStartingBalance.js";
 
-/** What the rollover cap reads: the grant's terms and what sizes its starting balance. */
 export type RolloverMaxCustomerEntitlement = StartingBalanceCustomerEntitlement;
 
 function hasFullCusProduct(
@@ -21,7 +20,6 @@ function hasFullCusProduct(
 	);
 }
 
-/** Effective rollover cap for a cusEnt: null = unlimited (or no config). */
 export const cusEntToEffectiveRolloverMax = ({
 	cusEnt,
 }: {

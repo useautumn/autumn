@@ -1,5 +1,3 @@
-/** `bill_difference` bills against the period that runs on, so a set_plans cycle reset now prorates like Stripe. */
-
 import { describe, expect, test } from "bun:test";
 import type { BillingContext } from "@autumn/shared";
 import chalk from "chalk";

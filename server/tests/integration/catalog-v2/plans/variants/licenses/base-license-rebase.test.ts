@@ -1,12 +1,3 @@
-/**
- * catalogV2.update — Team-EU licenses[seat].customize is a patch on Seat,
- * not a stack of Team's overlay. Follow replays Team's Seat current→next
- * onto Team-EU's Seat effective.
- *
- * Red (current):  copy / miss price / unlink on licenses: []
- * Green (after):  200 stays when adding Dashboard; price applyDiff; never unlink
- */
-
 import { test } from "bun:test";
 import { BillingInterval } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";

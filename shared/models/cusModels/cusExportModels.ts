@@ -46,7 +46,6 @@ export const CustomerExportField = {
 export type CustomerExportField =
 	(typeof CustomerExportField)[keyof typeof CustomerExportField];
 
-/** Canonical CSV column order — the serializer ignores user selection order. */
 export const CUSTOMER_EXPORT_FIELD_ORDER = [
 	CustomerExportField.Name,
 	CustomerExportField.Email,
@@ -116,7 +115,6 @@ export const CustomPlansExportSpecSchema = z.object({
 	snapshot: CustomPlansExportSnapshotSchema,
 });
 
-/** What an export produces; kind decides which fields and snapshot options apply. */
 export const CustomerExportSpecSchema = z.discriminatedUnion("kind", [
 	CustomersExportSpecSchema,
 	BillingVerifyExportSpecSchema,
@@ -146,7 +144,6 @@ export const BILLING_VERIFY_EXPORT_COLUMNS = [
 	{ key: "details", header: "Details" },
 ] as const;
 
-/** One row per customer; list columns hold every mismatch, comma-separated. */
 export type BillingVerifyExportRow = Record<
 	(typeof BILLING_VERIFY_EXPORT_COLUMNS)[number]["key"],
 	string | null

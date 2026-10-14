@@ -15,9 +15,6 @@ import { MetadataService } from "@/internal/metadata/MetadataService";
 import { toSuccessUrl } from "@/internal/orgs/orgUtils/convertOrgUtils";
 import { generateId } from "@/utils/genUtils";
 
-/**
- * Inserts deferred metadata so the webhook can attach the plan after setup completes.
- */
 const insertSetupPaymentMetadata = async ({
 	ctx,
 	params,
@@ -44,10 +41,6 @@ const insertSetupPaymentMetadata = async ({
 	});
 };
 
-/**
- * Creates a Stripe checkout session in setup mode.
- * If plan_id is specified, stores metadata so the webhook can attach the plan after setup.
- */
 export const createSetupCheckoutSession = async ({
 	ctx,
 	customer,
@@ -60,12 +53,10 @@ export const createSetupCheckoutSession = async ({
 	const { org, env, logger } = ctx;
 	const stripeCli = createStripeCli({ org, env });
 
-	// 1. Insert metadata (if plan_id specified)
 	const metadata = params.plan_id
 		? await insertSetupPaymentMetadata({ ctx, params })
 		: null;
 
-	// 2. Build session params
 	const fullParams = buildCheckoutSessionParams({
 		params: {
 			customer: customer.processor?.id ?? undefined,
@@ -79,7 +70,6 @@ export const createSetupCheckoutSession = async ({
 		autumnMetadataId: metadata?.id,
 	});
 
-	// 3. Create session with card-type fallback
 	const session = await createStripeSessionWithCardFallback({
 		stripeCli,
 		params: fullParams,
@@ -89,7 +79,6 @@ export const createSetupCheckoutSession = async ({
 		`Created setup checkout session for ${customer.id ?? customer.internal_id}`,
 	);
 
-	// 4. Link metadata to checkout session
 	if (metadata) {
 		await MetadataService.update({
 			db: ctx.db,

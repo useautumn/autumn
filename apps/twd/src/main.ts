@@ -16,7 +16,6 @@ const logger = getLogger();
 
 await runMigrations();
 const bootCtx = createContext({ actor: SYSTEM_ACTOR });
-// The shard platform must be retired before preload; a crash-looping boot beats a pooled shard key.
 for (let attempt = 1; ; attempt++) {
 	try {
 		await retireShardKey({ ctx: bootCtx });

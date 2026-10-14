@@ -8,15 +8,6 @@ import { customerEntitlementFundsFeature } from "../cusEntUtils/classifyCusEnt/c
 import { creditSystemContainsFeature } from "../featureUtils/creditSystemUtils.js";
 import { fullSubjectToCustomerEntitlements } from "./fullSubjectToCustomerEntitlements.js";
 
-/**
- * The credit systems that can fund a feature for this subject: catalog
- * membership adjusted by the plan-item feature_overrides on the subject's
- * entitlements. An override can add a credit system the catalog schema lacks
- * or remove one it has — judged per entitlement, so a credit system stays a
- * candidate while any of its attached entitlements funds the feature.
- * Catalog-only candidates (credit systems the subject holds no balance for)
- * keep their catalog membership, as conversion/response fallbacks.
- */
 export const fullSubjectToCreditSystems = ({
 	fullSubject,
 	featureId,

@@ -1,21 +1,3 @@
-/**
- * TDD test: a duplicate cancel-at-period-end call must not clear the cancellation.
- *
- * When a subscription is already set to cancel at period end and another
- * `cancel_at_period_end: true` update comes in, Stripe bumps `canceled_at` and
- * fires `customer.subscription.updated` with previous_attributes containing only
- * `canceled_at` — while the subscription is still canceling.
- *
- * Red-failure mode (pre-fix):
- *  - isStripeSubscriptionRenewedEvent treated any change to `canceled_at` as an
- *    un-cancellation, so the duplicate cancel cleared the customer product's
- *    cancellation fields and deleted the scheduled default product.
- *
- * Green-success criteria (post-fix):
- *  - Pro stays canceling, the scheduled default product stays scheduled, and the
- *    Autumn subscription still shows canceled.
- */
-
 import { test } from "bun:test";
 import type { ApiCustomerV3 } from "@autumn/shared";
 import {
@@ -69,7 +51,6 @@ test.concurrent(`${chalk.yellowBright("sub.updated: duplicate cancel via Stripe 
 		productId: pro.id,
 	});
 
-	// Cancel via Stripe CLI (simulating external cancellation)
 	await ctx.stripeCli.subscriptions.update(subscriptionId, {
 		cancel_at_period_end: true,
 	});
@@ -87,9 +68,6 @@ test.concurrent(`${chalk.yellowBright("sub.updated: duplicate cancel via Stripe 
 		productId: free.id,
 	});
 
-	// Duplicate cancel: re-sending cancel_at_period_end is a Stripe no-op, but
-	// re-setting cancel_at to the same timestamp re-stamps canceled_at and fires
-	// sub.updated with previous_attributes containing only canceled_at.
 	const stripeSubscription =
 		await ctx.stripeCli.subscriptions.retrieve(subscriptionId);
 	await ctx.stripeCli.subscriptions.update(subscriptionId, {
@@ -98,7 +76,6 @@ test.concurrent(`${chalk.yellowBright("sub.updated: duplicate cancel via Stripe 
 
 	await timeout(10000);
 
-	// Cancellation must survive the duplicate event
 	const customerAfterDuplicate =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	await expectProductCanceling({

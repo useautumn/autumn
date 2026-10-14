@@ -1,20 +1,9 @@
-/**
- * Runs one `bun test` command on a tw worker and, after it exits, prints one
- * `[tw-file-stats] {json}` line: Stripe load from the worker's Redis counters
- * (twStripeFileStats.lua), CPU and memory, for that file attempt.
- *
- * Shipped as `bun -e` source by the orchestrator, so it works on any sha and uses built-ins only.
- * Attribution: requests tagged with this file's TW_TEST_FILE are exact; untagged server
- * work (webhooks, queues) is split per second by each live file's share of tagged requests,
- * or evenly between live files when none were tagged. With one file per worker that is exact.
- */
 import { existsSync, readFileSync } from "node:fs";
 import { constants } from "node:os";
 
 export const FILE_STATS_MARKER = "[tw-file-stats]";
 const STATS_LUA =
 	"server/src/external/connect/clientCache/twStripeLimiter/twStripeFileStats.lua";
-/** Upper bounds (ms) of the permit-wait histogram; matches recordTwStripeFileStats.ts. */
 const WAIT_BUCKETS_MS = [1, 10, 50, 100, 250, 500, 1000, 2500, 5000, 10000];
 const ALIVE_TICK_MS = 500;
 const SAMPLE_TICK_MS = 1000;
@@ -28,18 +17,13 @@ export type ResourceSample = {
 };
 
 export type MachineSeconds = {
-	/** Untagged requests, their permit wait (ms) and 429s. */
 	untagged: number[];
 	untaggedWaitMs: number[];
 	untagged429: number[];
-	/** Network time of untagged requests (ms), for mean in-flight. */
 	untaggedBusyMs: number[];
-	/** Tagged requests from every file on the worker. */
 	tagged: number[];
-	/** Worker-wide peak in-flight and 429s. */
 	inFlight: number[];
 	rateLimited: number[];
-	/** Files alive on the worker (at least this one). */
 	alive: number[];
 };
 
@@ -47,18 +31,15 @@ export type FileStats = {
 	v: 1;
 	wallMs: number;
 	exitCode: number;
-	/** Peak files running at once on this worker during this file. */
 	concurrentMax: number;
 	stripe: {
 		requests: number;
 		testRequests: number;
 		serverRequests: number;
-		/** Untagged worker requests apportioned to this file (part of requests). */
 		apportionedRequests: number;
 		peakRps: number;
 		meanRps: number;
 		peakInFlight: number;
-		/** Time-averaged requests in flight: network time / wall time. */
 		meanInFlight: number;
 		rateLimited: number;
 		rateLimitedReasons: Record<string, number>;
@@ -70,14 +51,11 @@ export type FileStats = {
 		machineRateLimited: number;
 	} | null;
 	cpu: {
-		/** Worker CPU in this file's window, shared evenly with concurrent files. */
 		coreSeconds: number | null;
-		/** Worker-wide peak over 1 s samples; shared when concurrentMax > 1. */
 		peakCores: number | null;
 		testProcessSeconds: number | null;
 	};
 	mem: {
-		/** Worker-wide peak used memory; shared when concurrentMax > 1. */
 		peakMib: number | null;
 		testProcessPeakMib: number | null;
 	};
@@ -98,7 +76,6 @@ const readCpuUsec = (): number | null => {
 			.trim()
 			.split(/\s+/)
 			.map(Number);
-		// user nice system idle iowait irq softirq steal; USER_HZ is 100 on Linux.
 		const busy = fields
 			.slice(0, 8)
 			.reduce(
@@ -137,7 +114,6 @@ export const sampleResources = (): ResourceSample => ({
 	memBytes: readMemBytes(),
 });
 
-/** Bucket upper bound at or above the 95th percentile; the observed max when it falls past the last bucket. */
 export const permitWaitP95 = ({
 	histogram,
 	maxMs,
@@ -155,7 +131,6 @@ export const permitWaitP95 = ({
 	return maxMs;
 };
 
-/** Pure: turns raw counters for the file's window [firstSecond, firstSecond + n) into its stats. */
 export const summariseFileStats = ({
 	fileHash,
 	machine,

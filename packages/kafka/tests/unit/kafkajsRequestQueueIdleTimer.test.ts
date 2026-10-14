@@ -1,10 +1,6 @@
 import { expect, test } from "bun:test";
 import { createRequire } from "node:module";
 
-// kafkajs 2.2.4 re-arms a 1ms pending-request check on every idle connection:
-// with nothing pending and no throttle the delay goes negative, setTimeout clamps
-// it to 1ms, and the callback schedules the next one. Profiling a saturated
-// balance worker put this loop at ~11% of its CPU. Patched in patches/kafkajs@2.2.4.patch.
 const require = createRequire(import.meta.resolve("kafkajs"));
 const RequestQueue = require("./src/network/requestQueue/index.js");
 

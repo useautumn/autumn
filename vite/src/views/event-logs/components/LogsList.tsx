@@ -14,7 +14,6 @@ import { LogsSkeletonRow } from "./LogsSkeletonRow";
 import { ROW_GRID, ROW_HEIGHT } from "./logsListGrid";
 
 const LOADING_ROWS = 24;
-/** Rows from the end at which the next page starts loading. */
 const PREFETCH_THRESHOLD = 20;
 
 const CELL = "min-w-0 truncate";

@@ -8,7 +8,6 @@ export const handleOAuthClientRegistration = async (c: Context) => {
 	const result = await registerOAuthClient({ body: fields, db });
 
 	// RFC 7591 §3.2.2: `error` is one of the registered codes, and any human
-	// detail rides along in `error_description`.
 	if (result.status !== 201) {
 		return c.json(
 			{ error: result.error, error_description: result.error_description },

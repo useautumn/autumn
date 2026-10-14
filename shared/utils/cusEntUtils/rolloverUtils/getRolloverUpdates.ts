@@ -7,7 +7,6 @@ import type { Entitlement } from "../../../models/productModels/entModels/entMod
 import type { RolloverConfig } from "../../../models/productV2Models/productItemModels/productItemModels.js";
 import { notNullish, nullish } from "../../utils.js";
 
-/** What carrying a balance over reads: the balances left on the row and the grant's rollover terms. */
 export type RolloverUpdatesCustomerEntitlement = Pick<
 	CustomerEntitlement,
 	"id" | "balance" | "entities"
@@ -20,7 +19,7 @@ export const getRolloverUpdates = ({
 	nextResetAt,
 }: {
 	cusEnt: RolloverUpdatesCustomerEntitlement;
-	nextResetAt: number; // from when we add the rollover expiry duration to calculate the next expiry
+	nextResetAt: number;
 }) => {
 	const update: {
 		toDelete: string[];

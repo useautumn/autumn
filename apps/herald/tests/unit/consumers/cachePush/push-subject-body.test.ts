@@ -1,12 +1,3 @@
-/**
- * Herald builds its subjects.set body through the shared builder the server's pull also uses: the same body as before,
- * except that log_offset is the offset the worker's read covers, with the record's offset when the worker names none.
- *
- *  2.1 the worker's logOffset is the body's; 2.2 without one, the record's; 2.4 an evict's version rides along;
- *  2.5 read_at is taken before the worker read; and the body and the read it sends are exactly herald's old ones.
- *  A subject its worker no longer holds is sent to subjects.delete instead; any other failure sends nothing.
- */
-
 import { afterEach, beforeEach, expect, spyOn, test } from "bun:test";
 import type {
 	MeteringIdentity,
@@ -44,7 +35,6 @@ const identity = {
 const workerState = { customer: { id: "cus_1" } } as const;
 const workerCatalog = { features: {} } as const;
 
-/** org_1 with its own ready Atom, whose worker answers `reply` (or throws `refusal`) and moves the clock to 2 000 while it reads. */
 const createBodyContext = ({
 	reply = {},
 	refusal,
@@ -185,7 +175,6 @@ test("2.4 an evict's version still rides on the customer's body", async () => {
 	]);
 });
 
-/** The worker refusing a read with `workerCode`, as its client throws it. */
 const workerRefusal = (workerCode: BalanceWorkerClientError["workerCode"]) =>
 	new BalanceWorkerClientError({
 		code: "WORKER_ERROR",
@@ -220,7 +209,6 @@ test("an entity its worker no longer holds is sent to subjects.delete, under the
 
 const NOT_FOUND_CODES = new Set(["CUSTOMER_NOT_FOUND", "ENTITY_NOT_FOUND"]);
 
-/** Every way a worker read fails other than the worker's own not-found: each must fail the push and delete nothing. */
 const failuresThatAreNotDeletes: { name: string; error: unknown }[] = [
 	...WORKER_ERROR_CODES.filter((code) => !NOT_FOUND_CODES.has(code)).map(
 		(workerCode) => ({

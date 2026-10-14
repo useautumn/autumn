@@ -17,16 +17,6 @@ import {
 import { initFullCustomerProduct } from "@/internal/billing/v2/utils/initFullCustomerProduct/initFullCustomerProduct";
 import { isProductFreeInSyncCurrency } from "../utils/syncContextUtils";
 
-/**
- * Build the immediate-phase cusProduct row for one plan instance, mirroring
- * the legacy `processSyncMapping` flow:
- *   - inherit trial/cancel timestamps from the Stripe subscription
- *   - anchor the reset cycle to the Stripe billing_cycle_anchor
- *   - carry the previous plan's rollovers onto the matching features
- *   - link the Stripe subscription id
- *   - free plans skip all of the Stripe fields: they stay customer-wide
- *   - apply prepaid feature quantities + customize-derived custom prices/ents
- */
 export const initImmediateSyncCustomerProduct = ({
 	ctx,
 	fullCustomer,

@@ -12,8 +12,6 @@ export type InsertableCustomerEntitlementRow = EnrichedCycleCandidate & {
 	id: string;
 };
 
-/** One set-based insert from the enriched rows (jsonb_to_recordset — no
- * param-limit blowup). Replay-idempotent via the caller's dedup select. */
 export const buildInsertCustomerEntitlementRowsQuery = ({
 	scope,
 	entitlement,
@@ -133,8 +131,6 @@ export const insertCustomerEntitlementRows = async ({
 	rows: InsertableCustomerEntitlementRow[];
 	now: number;
 	invoiceCredit: boolean;
-	/** Ids of the rows that actually landed — the insert-time scope
-	 * re-assertion can drop rows the select had accepted. */
 }): Promise<string[]> => {
 	if (rows.length === 0) return [];
 

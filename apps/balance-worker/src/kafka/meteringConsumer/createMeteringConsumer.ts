@@ -59,7 +59,6 @@ export function createMeteringConsumer({
 		recentCommandsByPartition.set(partition, recentCommands);
 		if (ownerEpoch && !readOnly)
 			ownerEpochByPartition.set(partition, ownerEpoch);
-		// The read-only preparation replay is created after the writing one; it must not drop the writer's offsets.
 		if (producedOffsets)
 			producedOffsetsByPartition.set(partition, producedOffsets);
 		else if (!readOnly) producedOffsetsByPartition.delete(partition);
@@ -75,7 +74,6 @@ export function createMeteringConsumer({
 			},
 			position: { topic: config.topic, partition },
 		});
-		// A partition has one read-only and one writing replay; the handler parks whichever is reading.
 		function startAndCatchUp(
 			params: Parameters<PartitionReplay["startAndCatchUp"]>[0],
 		): Promise<void> {

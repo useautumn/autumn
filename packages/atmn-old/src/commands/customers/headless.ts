@@ -1,8 +1,3 @@
-/**
- * Headless mode for the customers command.
- * Provides structured output (text/json/csv) for AI/programmatic interaction.
- */
-
 import { AppEnv } from "../../lib/env/detect.js";
 import { createCustomersController } from "../../lib/headless/index.js";
 import type { ApiCustomer } from "../../lib/api/endpoints/customers.js";
@@ -10,23 +5,14 @@ import type { ApiCustomerExpanded } from "../../views/react/customers/types.js";
 import { formatError } from "../../lib/api/client.js";
 
 export interface HeadlessCustomersOptions {
-	/** Environment (sandbox/live) */
 	prod?: boolean;
-	/** Page number */
 	page?: number;
-	/** Search query */
 	search?: string;
-	/** Get specific customer by ID */
 	id?: string;
-	/** Items per page */
 	limit?: number;
-	/** Output format */
 	format?: "text" | "json" | "csv";
 }
 
-/**
- * Execute a headless customers command
- */
 export async function headlessCustomersCommand(
 	options: HeadlessCustomersOptions,
 ): Promise<void> {
@@ -36,14 +22,12 @@ export async function headlessCustomersCommand(
 	const limit = options.limit ?? 50;
 
 	try {
-		// Create controller
 		const controller = await createCustomersController(environment, {
 			pageSize: limit,
 			initialPage: page,
 			initialSearch: options.search,
 		});
 
-		// If --id is specified, fetch and output that specific customer
 		if (options.id) {
 			const expanded = await controller.getExpandedItem(options.id);
 			if (!expanded) {
@@ -53,7 +37,6 @@ export async function headlessCustomersCommand(
 			return;
 		}
 
-		// Otherwise output the list
 		outputCustomerList(controller.getItems(), controller.getPagination(), format, options.search);
 	} catch (error) {
 		const message = formatError(error);
@@ -79,9 +62,6 @@ export async function headlessCustomersCommand(
 	}
 }
 
-/**
- * Output a list of customers
- */
 function outputCustomerList(
 	customers: ApiCustomer[],
 	pagination: { page: number; pageSize: number; hasMore: boolean },
@@ -109,9 +89,7 @@ function outputCustomerList(
 	}
 
 	if (format === "csv") {
-		// CSV header
 		console.log("id,name,email,created_at,env,stripe_id");
-		// CSV rows
 		for (const c of customers) {
 			const name = escapeCsv(c.name ?? "");
 			const email = escapeCsv(c.email ?? "");
@@ -122,7 +100,6 @@ function outputCustomerList(
 		return;
 	}
 
-	// Text format
 	const envLabel = customers[0]?.env === "live" ? "live" : "sandbox";
 	console.log(`Customers (${envLabel}) - Page ${pagination.page}${pagination.hasMore ? " (more available)" : " (last page)"}`);
 	
@@ -137,18 +114,15 @@ function outputCustomerList(
 		return;
 	}
 
-	// Calculate column widths
 	const idWidth = Math.max(2, ...customers.map((c) => c.id.length));
 	const nameWidth = Math.max(4, ...customers.map((c) => (c.name ?? "-").length));
 	const emailWidth = Math.max(5, ...customers.map((c) => (c.email ?? "-").length));
 
-	// Header
 	console.log(
 		`${"ID".padEnd(idWidth)}  ${"Name".padEnd(nameWidth)}  ${"Email".padEnd(emailWidth)}  Created`,
 	);
 	console.log("-".repeat(idWidth + nameWidth + emailWidth + 30));
 
-	// Rows
 	for (const c of customers) {
 		const name = (c.name ?? "-").padEnd(nameWidth);
 		const email = (c.email ?? "-").padEnd(emailWidth);
@@ -160,9 +134,6 @@ function outputCustomerList(
 	console.log(`${customers.length} customers shown.`);
 }
 
-/**
- * Output a single customer with expanded details
- */
 function outputSingleCustomer(
 	customer: ApiCustomerExpanded,
 	format: "text" | "json" | "csv",
@@ -173,7 +144,6 @@ function outputSingleCustomer(
 	}
 
 	if (format === "csv") {
-		// For single customer, just output basic fields as CSV
 		console.log("id,name,email,created_at,env,stripe_id");
 		const name = escapeCsv(customer.name ?? "");
 		const email = escapeCsv(customer.email ?? "");
@@ -183,7 +153,6 @@ function outputSingleCustomer(
 		return;
 	}
 
-	// Text format - detailed view
 	console.log(`Customer: ${customer.id}`);
 	console.log("=".repeat(50));
 	console.log("");
@@ -197,7 +166,6 @@ function outputSingleCustomer(
 		console.log(`  Stripe ID:  ${customer.stripe_id}`);
 	}
 
-	// Subscriptions
 	if (customer.subscriptions?.length) {
 		console.log("");
 		console.log("Subscriptions:");
@@ -208,7 +176,6 @@ function outputSingleCustomer(
 		}
 	}
 
-	// Balances
 	const balances = customer.balances ? Object.values(customer.balances) : [];
 	if (balances.length) {
 		console.log("");
@@ -227,7 +194,6 @@ function outputSingleCustomer(
 		}
 	}
 
-	// Invoices
 	if (customer.invoices?.length) {
 		console.log("");
 		console.log(`Invoices (${customer.invoices.length}):`);
@@ -242,7 +208,6 @@ function outputSingleCustomer(
 		}
 	}
 
-	// Entities
 	if (customer.entities?.length) {
 		console.log("");
 		console.log(`Entities (${customer.entities.length}):`);
@@ -255,11 +220,7 @@ function outputSingleCustomer(
 	}
 }
 
-/**
- * Format a Unix timestamp as a readable date
- */
 function formatDate(timestamp: number): string {
-	// Handle both seconds and milliseconds
 	const ms = timestamp > 1e12 ? timestamp : timestamp * 1000;
 	return new Date(ms).toLocaleDateString("en-US", {
 		year: "numeric",
@@ -268,9 +229,6 @@ function formatDate(timestamp: number): string {
 	});
 }
 
-/**
- * Escape a value for CSV output
- */
 function escapeCsv(value: string): string {
 	if (value.includes(",") || value.includes('"') || value.includes("\n")) {
 		return `"${value.replace(/"/g, '""')}"`;

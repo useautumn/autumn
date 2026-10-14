@@ -216,7 +216,6 @@ test.concurrent(
 		});
 		expect(activeAssignmentsAfterUnassign).toHaveLength(0);
 
-		// Release unlinks the seat for reuse rather than ending it.
 		const { assignments: seatRows } = await getLicenseDbState({
 			db: ctx.db,
 			customerId,

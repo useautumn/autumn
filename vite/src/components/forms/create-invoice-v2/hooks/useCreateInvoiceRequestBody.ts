@@ -45,7 +45,6 @@ const toLicenseQuantity = ({
 	};
 };
 
-/** Parent plan id → license plan id → items of the license version the link pins. */
 export type LicenseItemsByPlanId = Map<string, Map<string, ProductItem[]>>;
 
 const toPlanParams = ({
@@ -59,11 +58,9 @@ const toPlanParams = ({
 }): InvoicePlanParams | null => {
 	if (!plan.planId) return null;
 
-	// An uncustomized plan has no items, so behavior comes from the catalog plan.
 	const pricedItems =
 		plan.items ?? catalogItemsByPlanId?.get(plan.planId) ?? null;
 
-	// The server prices license features through the linked license version, never the parent.
 	const linkedLicenseItems = licenseItemsByPlanId?.get(plan.planId);
 	const licenses = plan.licenses
 		.map((license) =>
@@ -108,7 +105,6 @@ const toPlanParams = ({
 	};
 };
 
-/** Extracted from the hook so the mapping is unit-testable. */
 export function buildCreateInvoiceRequestBody({
 	customerId,
 	form,

@@ -177,7 +177,6 @@ export const expectLicenseDiscountPreviewCorrect = ({
 }: {
 	preview: Pick<BillingPreviewResponse, "total" | "next_cycle">;
 	total: number;
-	/** Pass null when the preview should not have a next cycle. */
 	nextCycleTotal?: number | null;
 }) => {
 	expect(preview.total).toBe(total);

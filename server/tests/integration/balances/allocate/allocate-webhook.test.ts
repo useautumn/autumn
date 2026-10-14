@@ -1,10 +1,3 @@
-/**
- * A plan change that shrinks shared credits sends ONE billing.updated, tagged allocations_adjusted (PRD §11).
- *
- * Red (before):  two events: the plan's, then a second one carrying only the tag.
- * Green (after): the plan's own event carries the tag; no second event.
- */
-
 import { afterAll, beforeAll, expect, test } from "bun:test";
 import { ApiVersion, ResetInterval } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
@@ -89,7 +82,6 @@ test(`${chalk.yellowBright("allocate-webhook1: a shrinking plan change sends one
 	};
 	await autumnV2_3.customers.update(customerId, allocationUpdate);
 
-	// allocate's own tagged billing.updated is fire-and-forget: let it land before the baseline.
 	const allocateEvent = await waitForWebhook<BillingUpdatedPayload>({
 		token: webhook.playToken,
 		predicate: (payload) =>
@@ -128,7 +120,6 @@ test(`${chalk.yellowBright("allocate-webhook1: a shrinking plan change sends one
 		assert: (events) => expect(events.length).toBeGreaterThan(0),
 	});
 
-	// Give a stray second event time to arrive before counting.
 	await timeout(5000);
 	const events = await customerEventsSinceCancel();
 	expect(events).toHaveLength(1);

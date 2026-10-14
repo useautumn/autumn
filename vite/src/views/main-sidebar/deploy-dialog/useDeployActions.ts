@@ -7,10 +7,6 @@ import { DevService } from "@/services/DevService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
 
-/**
- * The three production-deploy actions, split from their markup so the dialog
- * and the onboarding page can each lay them out in their own grammar.
- */
 export const useConnectStripe = ({ isActive }: { isActive: boolean }) => {
 	const { org, mutate } = useOrg({ env: AppEnv.Live });
 	const axiosInstance = useAxiosInstance({ env: AppEnv.Live });
@@ -22,7 +18,6 @@ export const useConnectStripe = ({ isActive }: { isActive: boolean }) => {
 		org?.stripe_connection === "secret_key";
 
 	// OAuth completes in a popup we can't observe, so the org is re-read until
-	// the connection lands.
 	useEffect(() => {
 		if (!isPolling || !isActive) return;
 
@@ -50,7 +45,6 @@ export const useConnectStripe = ({ isActive }: { isActive: boolean }) => {
 					},
 				},
 			);
-			// A named popup (not "_blank") so window.close() works on callback.
 			window.open(
 				data.oauth_url,
 				"stripe_oauth",
@@ -87,8 +81,6 @@ export const useCopyPlansToProd = () => {
 	return { isCopied, isCopying, copyPlans };
 };
 
-/** Flips the org to deployed, which is what unlocks the production env in the
- * sidebar. A hard reload so every env-scoped query refetches against live. */
 export const useGoToProduction = () => {
 	const axiosInstance = useAxiosInstance();
 	const { mutate } = useOrg();

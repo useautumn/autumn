@@ -22,7 +22,6 @@ export const activateFreeDefaultProduct = async ({
 	customerProduct: FullCusProduct;
 	fullCustomer: FullCustomer;
 	defaultProduct?: FullProduct;
-	/** The caller sends billing.updated and carries `allocationsAdjusted` on it. */
 	emitsBillingUpdated?: boolean;
 }): Promise<{
 	insertedCustomerProduct?: FullCusProduct;
@@ -30,7 +29,6 @@ export const activateFreeDefaultProduct = async ({
 }> => {
 	const { logger } = ctx;
 
-	// customerProduct eligible for default product
 	const eligibleForDefaultProduct = customerProductEligibleForDefaultProduct({
 		ctx,
 		customerProduct,
@@ -43,7 +41,6 @@ export const activateFreeDefaultProduct = async ({
 		return { allocationsAdjusted: false };
 	}
 
-	// 1. Get free default product for group
 	const freeDefaultProduct =
 		defaultProduct ??
 		(await productActions.getFreeDefaultByGroup({
@@ -53,7 +50,6 @@ export const activateFreeDefaultProduct = async ({
 
 	if (!freeDefaultProduct) return { allocationsAdjusted: false };
 
-	// 2. Initialise customer product
 	const newCustomerProduct = initFullCustomerProductFromProduct({
 		ctx,
 		initContext: {
@@ -75,8 +71,6 @@ export const activateFreeDefaultProduct = async ({
 		},
 	});
 
-	// A default carrying pooled items mints its pool like any other transition,
-	// and the expiring product's contributions are torn down with it.
 	const { pooledBalancePlan } = computePooledBalanceTransitionPlan({
 		ctx,
 		fullCustomer,
@@ -85,7 +79,6 @@ export const activateFreeDefaultProduct = async ({
 		now: Date.now(),
 	});
 
-	// 3. Execute autumn billing plan
 	const { allocationsAdjusted = false } = await executeAutumnBillingPlan({
 		ctx,
 		emitsBillingUpdated,

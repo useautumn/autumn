@@ -68,8 +68,6 @@ export function RevenueCatSyncSheet({
 
 	const rows = useMemo(() => {
 		const byPlan = new Map(preflight.map((item) => [item.plan_id, item]));
-		// Prepaid plans are managed via raw mappings (per-SKU quantities), not the
-		// OAuth product sync — hide them here to avoid mismatched store products.
 		return (products ?? [])
 			.filter((product) => getPrepaidItems(product).length === 0)
 			.map((product) => {

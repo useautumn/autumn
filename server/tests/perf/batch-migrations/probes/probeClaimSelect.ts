@@ -1,11 +1,3 @@
-/**
- * Read-only probe for the claim step's SELECT (buildCustomerSelect): prints
- * the compiled SQL, EXPLAIN (ANALYZE, BUFFERS), and wall-clock timings.
- *
- *   bun tests/perf/batch-migrations/probeClaimSelect.ts --plan bench-paid
- *   bun tests/perf/batch-migrations/probeClaimSelect.ts --plan bench-paid --after cus_bench_999999
- */
-
 import { MigrationItemRunStatus } from "@autumn/shared";
 import { sql } from "drizzle-orm";
 import { PgDialect } from "drizzle-orm/pg-core";

@@ -167,7 +167,6 @@ export const updateTierCurrencyAmount = ({
 	const tier = tiers[tierIndex];
 	if (!tier) return item;
 
-	// Currency flat fees need a base flat field to survive save-time alignment.
 	const flatAmount =
 		field === "flat_amount" ? (tier.flat_amount ?? 0) : tier.flat_amount;
 	tiers[tierIndex] = {
@@ -208,8 +207,6 @@ export const migrateTierCurrenciesForMode = ({
 				},
 	);
 
-// The API rejects currency tiers whose flat_amount presence differs from the base tier.
-// When the base has one, only add a missing 0, so currency rates and fees are kept.
 const alignCurrencyEntries = (tier: PriceTier) => {
 	if (tier.flat_amount == null) {
 		return migrateTierCurrenciesForMode({

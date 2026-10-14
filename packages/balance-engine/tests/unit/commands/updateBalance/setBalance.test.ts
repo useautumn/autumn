@@ -19,12 +19,9 @@ import {
 	occurredAt,
 } from "../../engineFixtures.js";
 
-// Mirrors the `remaining` / `current_balance` cases in server/tests/integration/balances/update/.
-
 const FIRST_ENTITY = "ent_07";
 const LAST_ENTITY = "ent_99";
 
-/** A customer-level row whose balances live per entity. */
 const perEntityRow = ({
 	id,
 	balances,
@@ -83,10 +80,8 @@ const set = ({
 	entityId?: string | null;
 	perEntityRowIds?: string[];
 	lifetimeRowIds?: string[];
-	/** Every row's catalog allowance: its grant, per entity on a per-entity row. */
 	allowance?: number;
 	customer?: WorkerCustomer;
-	/** The rows' feature counts continuous use (seats, inboxes), so a free row may run over. */
 	continuousUse?: boolean;
 }): DeductionOutcome => {
 	const state = createSubjectState({
@@ -122,7 +117,6 @@ const set = ({
 	});
 };
 
-/** Each drawn balance after the set: `id` for a plain row, `id/entity` for a per-entity one. */
 const balancesAfter = (outcome: DeductionOutcome): Record<string, number> =>
 	Object.fromEntries(
 		outcome.context.rows.map((drawn) => {
@@ -139,7 +133,6 @@ const balancesAfter = (outcome: DeductionOutcome): Record<string, number> =>
 		}),
 	);
 
-/** The whole gap was drawn and the drawn balances now sum to the target. */
 const expectLandsOn = ({
 	outcome,
 	remaining,

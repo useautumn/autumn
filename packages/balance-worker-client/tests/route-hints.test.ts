@@ -10,7 +10,6 @@ test("a hint is kept only when it is newer than what ownership already says, and
 	expect(hints.adopt({ successor: known, known })).toBe(false);
 	expect(hints.adopt({ successor: later, known })).toBe(true);
 	expect(hints.find({ partition: 3 })).toEqual(later);
-	// An older hint never replaces a newer one already held.
 	expect(
 		hints.adopt({ successor: { ...later, routeEpoch: "11" }, known }),
 	).toBe(false);

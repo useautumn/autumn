@@ -15,7 +15,6 @@ import {
 	planLicenseItems,
 } from "./licenseCustomizeUtils";
 
-/** Seeds effective catalog items and builds parent or customer license patches. */
 export const useLicenseCardEditor = ({
 	planLicense,
 	license,
@@ -71,7 +70,6 @@ export const useLicenseCardEditor = ({
 			license: catalogLicense,
 			features,
 			currency,
-			// Re-emit a saved customer patch when its card was not edited.
 			itemsChanged: itemsChanged || Boolean(seededCustomize),
 		});
 

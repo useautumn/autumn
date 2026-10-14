@@ -1,5 +1,3 @@
-// Red: open invoice.pay result flowed through Stripe failure cleanup and voided.
-// Green: open invoice result throws without voiding an in-flight ACH invoice.
 import { describe, expect, test } from "bun:test";
 import { payForInvoice } from "@/external/stripe/stripeInvoiceUtils";
 

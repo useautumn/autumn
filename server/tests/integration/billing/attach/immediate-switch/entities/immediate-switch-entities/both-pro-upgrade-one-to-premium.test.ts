@@ -1,14 +1,3 @@
-/**
- * Immediate Switch Entity Tests (Attach V2)
- *
- * Tests for upgrade scenarios involving multiple entities (multi-tenant).
- *
- * Key behaviors:
- * - Each entity has independent subscription/products
- * - Upgrading one entity doesn't affect others
- * - Scheduled downgrades can be cancelled by upgrades
- */
-
 import { expect, test } from "bun:test";
 import type { ApiEntityV0 } from "@autumn/shared";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
@@ -22,18 +11,6 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 3: Entity 1 pro, entity 2 pro, upgrade entity 2 to premium
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Both entities have pro
- * - Upgrade entity 2 to premium
- *
- * Expected Result:
- * - Entity 1 still has pro, entity 2 has premium
- */
 test.concurrent(
 	`${chalk.yellowBright("immediate-switch-entities 3: both pro, upgrade one to premium")}`,
 	async () => {
@@ -64,16 +41,13 @@ test.concurrent(
 			],
 		});
 
-		// 1. Preview upgrade entity 2 to premium
 		const preview = await autumnV1.billing.previewAttach({
 			customer_id: customerId,
 			product_id: premium.id,
 			entity_id: entities[1].id,
 		});
-		// $50 - $20 = $30
 		expect(preview.total).toBe(30);
 
-		// 2. Upgrade entity 2
 		await autumnV1.billing.attach({
 			customer_id: customerId,
 			product_id: premium.id,
@@ -81,7 +55,6 @@ test.concurrent(
 			redirect_mode: "if_required",
 		});
 
-		// Get both entities
 		const entity1 = await autumnV1.entities.get<ApiEntityV0>(
 			customerId,
 			entities[0].id,
@@ -91,7 +64,6 @@ test.concurrent(
 			entities[1].id,
 		);
 
-		// Entity 1 still has pro
 		await expectProductActive({
 			customer: entity1,
 			productId: pro.id,
@@ -103,7 +75,6 @@ test.concurrent(
 			balance: 500,
 		});
 
-		// Entity 2 has premium
 		await expectCustomerProducts({
 			customer: entity2,
 			active: [premium.id],

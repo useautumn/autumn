@@ -1,7 +1,3 @@
-/**
- * Template data for the template selector UI
- */
-
 export interface TemplateBadge {
 	label: string;
 	color: "cyan" | "yellow" | "green" | "blue" | "gray" | "magenta";

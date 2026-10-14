@@ -1,4 +1,3 @@
-// Re-export everything from the mintlifyTransform folder
 export {
 	generateMintlifyDocs,
 	resolveSchemaExample,

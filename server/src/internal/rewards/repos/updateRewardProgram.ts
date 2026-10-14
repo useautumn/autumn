@@ -7,7 +7,6 @@ import {
 import { and, eq, or } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 
-/** Update a reward program. Throws if not found. */
 export const updateRewardProgram = async ({
 	db,
 	idOrInternalId,
@@ -19,7 +18,6 @@ export const updateRewardProgram = async ({
 	idOrInternalId: string;
 	orgId: string;
 	env: string;
-	/** Nullable columns take an explicit null to clear; undefined leaves them. */
 	data: Partial<
 		Omit<RewardProgram, "product_ids" | "max_redemptions" | "exclude_trial">
 	> & {

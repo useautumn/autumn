@@ -4,7 +4,6 @@ export const hashIdempotencyKey = (key: string): string => {
 	return hasher.digest("base64url");
 };
 
-/** The partition key. Its format is load-bearing across a deploy: a change orphans every in-flight key for its full TTL. */
 export const buildIdempotencyStorageKey = ({
 	orgId,
 	env,

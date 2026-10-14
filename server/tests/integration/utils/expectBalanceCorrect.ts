@@ -27,8 +27,6 @@ type BucketExpectation = {
 type BreakdownKey = ResetInterval | "lifetime" | BillingMethod;
 const TEN_MINUTES_MS = 10 * 60 * 1000;
 
-// Keys are ResetInterval values (eg. "hour", "month"), billing methods
-// (`prepaid`, `usage_based`), or "lifetime" for null-reset buckets.
 type BreakdownExpectation = Partial<Record<BreakdownKey, BucketExpectation>>;
 
 type BalanceExpectParams = PollableExpectParams<ApiCustomerV5 | ApiEntityV2> & {
@@ -41,7 +39,6 @@ type BalanceExpectParams = PollableExpectParams<ApiCustomerV5 | ApiEntityV2> & {
 	nextResetAt?: number | null;
 	toleranceMs?: number;
 	breakdown?: BreakdownExpectation;
-	/** Expected rollovers in order (oldest first). Only specified fields are checked. */
 	rollovers?: Partial<ApiBalanceRollover>[];
 	positiveRolloverCount?: number;
 	breakdownCount?: number;
@@ -156,10 +153,6 @@ const assertBalanceCorrect = ({
 
 const defaultAutumn = new AutumnInt({ version: ApiVersion.V2_1 });
 
-/**
- * Assert a feature balance. Pass `customerId` (instead of a fetched `customer`)
- * to poll until it settles — see {@link pollableCustomerExpect}.
- */
 export const expectBalanceCorrect = pollableCustomerExpect({
 	fetchCustomer: ({
 		customerId,

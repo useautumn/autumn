@@ -2,7 +2,6 @@ import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import type { z } from "zod/v4";
 import { TwdError } from "../../../http/apiError.ts";
 
-/** One-line human summary, then compact JSON. */
 export const toolOk = ({
 	summary,
 	data,
@@ -34,7 +33,6 @@ const toEscalate = (escalate: string | null) => {
 	return `Ask your human to resolve this: ${escalate}`;
 };
 
-/** Validates args, runs the tool, and turns TwdErrors (or anything else) into an isError result. */
 export const runTool = async <S extends z.ZodType>({
 	input,
 	rawArgs,

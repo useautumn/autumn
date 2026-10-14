@@ -5,9 +5,6 @@ interface FeatureRowProps {
 	feature: Feature;
 }
 
-/**
- * Displays a single feature with checkmark and type
- */
 export function FeatureRow({ feature }: FeatureRowProps) {
 	return (
 		<Text>

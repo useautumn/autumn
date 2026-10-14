@@ -9,6 +9,5 @@ export type MeteringContext = {
 	axiom: AxiomClient;
 	db: PostgresDb;
 	fx: FxClient;
-	/** Metering only tracks and creates customers; feature checks aren't its business. */
 	autumn: Pick<AutumnClient, "batchTrack" | "getOrCreateCustomer">;
 };

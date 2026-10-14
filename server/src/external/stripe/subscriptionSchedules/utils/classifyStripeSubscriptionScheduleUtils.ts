@@ -2,7 +2,6 @@ import { stripeRefToId } from "@autumn/shared";
 import type Stripe from "stripe";
 import { stripeSubscriptionScheduleToPhaseIndex } from "./convertStripeSubscriptionScheduleUtils";
 
-/** Checks if a Stripe subscription schedule phase is current. */
 export const isStripeSubscriptionSchedulePhaseCurrent = ({
 	phase,
 	nowSeconds,
@@ -15,7 +14,6 @@ export const isStripeSubscriptionSchedulePhaseCurrent = ({
 	return true;
 };
 
-/** Stripe keeps completed phases on an active schedule. */
 export const isStripeSubscriptionSchedulePhaseEnded = ({
 	phase,
 	nowSeconds,
@@ -30,7 +28,6 @@ const phaseItemToPriceId = ({
 	item: Stripe.SubscriptionSchedule.Phase.Item;
 }): string => stripeRefToId(item.price);
 
-/** Each ongoing item bills on as the previous phase billed it; a changed quantity is a scheduled change. */
 const continuesOngoingItems = ({
 	lastPhase,
 	previousPhase,
@@ -57,8 +54,6 @@ const continuesOngoingItems = ({
 	});
 };
 
-/** Stripe has no open-ended future phase, so a released schedule ends its plans
- * with a last phase holding only ongoing plans' prices; until it starts, that's release, not a phase. */
 export const findStripeScheduleReleaseTailPhase = ({
 	schedule,
 	ongoingStripePriceIds,
@@ -86,7 +81,6 @@ export const findStripeScheduleReleaseTailPhase = ({
 		: null;
 };
 
-/** Checks if a Stripe subscription schedule is in its last phase. */
 export const isStripeSubscriptionScheduleInLastPhase = ({
 	stripeSubscriptionSchedule,
 	nowMs,

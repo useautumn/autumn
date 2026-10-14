@@ -1,14 +1,3 @@
-/**
- * TDD tests for usage limits on the LOCK / FINALIZE flow.
- *
- * Contract under test:
- *   - a lock is gated by window headroom and counts at lock time
- *   - finalize at the lock value does not double count
- *   - finalize below the lock decrements the counter (freed headroom reusable)
- *   - finalize ABOVE the lock is held to the window's headroom: past it a
- *     reject lock (the default) refuses the finalize and stays open
- */
-
 import { expect, test } from "bun:test";
 import { ApiVersion, ErrCode } from "@autumn/shared";
 import { deleteLock } from "@tests/integration/balances/utils/lockUtils/deleteLock.js";
@@ -25,11 +14,8 @@ import {
 	setCustomerUsageLimit,
 } from "../utils/usage-limit-utils/customerUsageLimitUtils.js";
 
-// initScenario only exposes clients up to V2_2; build the latest-version client
-// directly (same pattern as the v2.2-vs-v2.3 parity tests).
 const autumnV2_3 = new AutumnInt({ version: ApiVersion.V2_3 });
 
-// ── Contract: locks are gated by headroom and count at lock time ──
 test.concurrent(
 	`${chalk.yellowBright("usage-window-lock1: a lock consumes window headroom; an over-cap lock is rejected")}`,
 	async () => {
@@ -57,7 +43,6 @@ test.concurrent(
 			limit: 5,
 		});
 
-		// Lock 4 of the 5-unit cap: granted, and counted at lock time.
 		const granted = await autumnV2_3.check({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
@@ -80,8 +65,6 @@ test.concurrent(
 			limit: 5,
 		});
 
-		// A second lock of 2 exceeds the remaining headroom of 1: rejected, and
-		// neither the balance nor the counter moves.
 		const rejected = await autumnV2_3.check({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
@@ -106,7 +89,6 @@ test.concurrent(
 	},
 );
 
-// ── Contract: finalize at lock value does not double count ────────
 test.concurrent(
 	`${chalk.yellowBright("usage-window-lock2: finalize at the lock value leaves the counter unchanged")}`,
 	async () => {
@@ -162,7 +144,6 @@ test.concurrent(
 	},
 );
 
-// ── Contract: finalize below the lock decrements the counter ──────
 test.concurrent(
 	`${chalk.yellowBright("usage-window-lock3: finalize below the lock value frees window headroom")}`,
 	async () => {
@@ -189,7 +170,6 @@ test.concurrent(
 			limit: 5,
 		});
 
-		// Lock 4, finalize at 1: the unwind must give 3 units of headroom back.
 		await autumnV2_3.check({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
@@ -217,7 +197,6 @@ test.concurrent(
 			limit: 5,
 		});
 
-		// The freed headroom (4) is consumable: a track of 5 clamps to 4.
 		await autumnV2_3.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
@@ -240,7 +219,6 @@ test.concurrent(
 	},
 );
 
-// ── Contract: finalize above the lock is held to the window limit ──
 test.concurrent(
 	`${chalk.yellowBright("usage-window-lock4: finalize above the lock value is refused past the window limit")}`,
 	async () => {
@@ -267,7 +245,6 @@ test.concurrent(
 			limit: 5,
 		});
 
-		// Lock 3 of the 5-unit cap (counter 3, headroom 2)...
 		const granted = await autumnV2_3.check({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
@@ -276,8 +253,6 @@ test.concurrent(
 		});
 		expect(granted.allowed).toBe(true);
 
-		// ...then finalize at 6: the extra 3 exceeds the headroom of 2. A lock rejects by
-		// default, so the finalize is refused whole: nothing moves and the lock stays open.
 		await expectAutumnError({
 			errCode: ErrCode.InsufficientBalance,
 			func: () =>
@@ -295,7 +270,6 @@ test.concurrent(
 			usage: 3,
 		});
 
-		// A finalize that fits the headroom lands exactly at the cap.
 		await autumnV2_3.balances.finalize({
 			lock_id: customerId,
 			action: "confirm",

@@ -51,7 +51,6 @@ describe("ownership handoff link", () => {
 			config: { topic: "balance-partition-owners", producerLimits: limits },
 		});
 		expect(groupIds).toHaveLength(1);
-		// The worker's IAM policy grants ownership-log readers this prefix; the tail's own default is refused by the broker.
 		expect(groupIds[0]).toStartWith("autumn-ownership-log-");
 	});
 

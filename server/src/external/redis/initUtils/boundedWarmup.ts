@@ -1,7 +1,5 @@
 export type BoundedWarmupResult = "warm" | "timeout" | "failed";
 
-/** Await a warmup with a hard bound: serve warm when redis is reachable, but
- *  never let an unreachable redis block boot — fail-open covers the gap. */
 export const awaitBoundedWarmup = async ({
 	warmup,
 	timeoutMs,

@@ -4,12 +4,6 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { CusService } from "@/internal/customers/CusService.js";
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// CUSTOMER CONFIG — disable_pooled_balance
-// Mirrors the billing_controls test style: cached API read, uncached API read,
-// and a direct DB read to prove the field round-trips through every layer.
-// ═══════════════════════════════════════════════════════════════════════════════
-
 test.concurrent(`${chalk.yellowBright("customer config: create customer without config leaves disable_pooled_balance undefined")}`, async () => {
 	const customerId = "customer-config-default";
 	const { autumnV2_1, ctx } = await initScenario({
@@ -33,7 +27,6 @@ test.concurrent(`${chalk.yellowBright("customer config: create customer without 
 	expect(uncached.config?.disable_pooled_balance).toBeUndefined();
 
 	const fromDb = await CusService.getFull({ ctx, idOrInternalId: customerId });
-	// DB row should be null/undefined when no config was provided.
 	expect(fromDb.config?.disable_pooled_balance).toBeUndefined();
 });
 
@@ -147,8 +140,6 @@ test.concurrent(`${chalk.yellowBright("customer config: update disable_pooled_ba
 });
 
 test.concurrent(`${chalk.yellowBright("customer config: partial update leaves other fields untouched")}`, async () => {
-	// Regression guard: mirrors the billing_controls pattern — updating config
-	// shouldn't clobber name/email/send_email_receipts.
 	const customerId = "customer-config-partial";
 	const { autumnV2_1 } = await initScenario({
 		setup: [s.deleteCustomer({ customerId })],
@@ -187,7 +178,6 @@ test.concurrent(`${chalk.yellowBright("customer config: omitting config in updat
 		config: { disable_pooled_balance: true },
 	});
 
-	// Update something unrelated — config should survive.
 	await autumnV2_1.customers.update(customerId, {
 		name: "Config Persist Renamed",
 	});
@@ -203,8 +193,6 @@ test.concurrent(`${chalk.yellowBright("customer config: omitting config in updat
 });
 
 test.concurrent(`${chalk.yellowBright("customer config: updating billing_controls alongside config does not clobber either")}`, async () => {
-	// Cross-field regression: config and billing_controls are both partial
-	// updates on the same row — updating one must not reset the other.
 	const customerId = "customer-config-mixed";
 	const { autumnV2_1 } = await initScenario({
 		setup: [s.deleteCustomer({ customerId })],

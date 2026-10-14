@@ -1,11 +1,3 @@
-/**
- * A lost settle-write strands a run as `running`, and the partial unique index
- * then blocks that migration forever. Seen in production on six runs.
- *
- * Red:   the stranded row stays `running` and blocks the next run.
- * Green: a confirmed-dead trigger run settles; a live or unreachable one does not.
- */
-
 import { expect, test } from "bun:test";
 import { MigrationRunStatus, ms } from "@autumn/shared";
 import { products } from "@tests/utils/fixtures/products.js";
@@ -17,7 +9,6 @@ import { migrationRunRepo } from "@/internal/migrations/v2/repos/index.js";
 
 type ScenarioCtx = Awaited<ReturnType<typeof initScenario>>["ctx"];
 
-/** Strands a run exactly as a lost settle-write does: started, never finished. */
 const strandRun = async ({
 	ctx,
 	migrationInternalId,
@@ -123,7 +114,6 @@ test(`${chalk.yellowBright("abandoned run: a dead trigger run is reconciled, a l
 		MigrationRunStatus.Running,
 	);
 
-	// Release the deliberately-live run before claiming another.
 	await migrationRunRepo.update({
 		ctx,
 		internalId: liveRunId,
@@ -133,7 +123,6 @@ test(`${chalk.yellowBright("abandoned run: a dead trigger run is reconciled, a l
 		},
 	});
 
-	// listMigrationStatuses is what the dashboard actually calls.
 	const readPathRunId = await strandRun({
 		ctx,
 		migrationInternalId: migration.internal_id,
@@ -183,7 +172,6 @@ test(`${chalk.yellowBright("abandoned run: a reconciled run stops blocking the n
 		triggerRunId: "run_dead_unblock",
 	});
 
-	// The live-run index blocks a second claim while the row looks active.
 	const blocked = await migrationRunRepo.insert({
 		ctx,
 		insert: { migration_internal_id: migration.internal_id, dry_run: false },

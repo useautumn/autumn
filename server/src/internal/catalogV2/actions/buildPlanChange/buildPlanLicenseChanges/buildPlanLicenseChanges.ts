@@ -11,7 +11,6 @@ import { planLicenseChanged } from "./planLicenseChanged.js";
 import { toApiPlanLicenseSnapshot } from "./toApiPlanLicenseSnapshot.js";
 import { toCustomizePlanLicense } from "./toCustomizePlanLicense.js";
 
-/** Re-key a from-link whose license row was renamed, so it pairs with its to-link by internal id. */
 const pairRenamedLicenses = ({
 	fromByPlanId,
 	toByPlanId,
@@ -35,7 +34,6 @@ const pairRenamedLicenses = ({
 	);
 };
 
-/** Diff two FullProduct.licenses arrays — create / update / remove. */
 export const buildPlanLicenseChanges = ({
 	fromLicenses,
 	toLicenses,

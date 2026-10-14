@@ -6,18 +6,6 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-/**
- * One-Off Prepaid Auto Top-Up Scenario
- *
- * Sets up a one-off prepaid add-on product with auto top-up configured.
- * Auto top-up requires: one-off price, prepaid usage model, and a payment method.
- *
- * Setup:
- * - One-off add-on: $10 per 100 message credits (no recurring charges)
- * - Customer with payment method, product attached with 100 initial credits
- * - Auto top-up: threshold=20, quantity=100 (triggers when balance drops below 20)
- */
-
 test(`${chalk.yellowBright("one-off-prepaid-auto-topup: one-off prepaid product with auto top-up attached")}`, async () => {
 	const customerId = "one-off-prepaid-auto-topup";
 

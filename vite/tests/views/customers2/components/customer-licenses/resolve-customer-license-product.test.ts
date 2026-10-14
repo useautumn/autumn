@@ -1,7 +1,3 @@
-/**
- * Repointed license pools must render their customized product, not the catalog
- * product that originally defined the license.
- */
 import { expect, test } from "bun:test";
 import {
 	AppEnv,

@@ -1,15 +1,3 @@
-/**
- * Contract: how a run resolves webhook delivery.
- *
- *   - `sendWebhooks` omitted → ON at/below the auto-disable threshold,
- *     OFF above it (bulk runs must be opted in);
- *   - explicit `sendWebhooks` always wins over the count;
- *   - concurrency defaults to DEFAULT and is clamped to [1, MAX].
- *
- * Subscription gating and dry-run behaviour live in the integration test —
- * they need a real ctx.
- */
-
 import { describe, expect, test } from "bun:test";
 import {
 	DEFAULT_MIGRATION_WEBHOOK_CONCURRENCY,

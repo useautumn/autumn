@@ -1,7 +1,3 @@
-/**
- * Backup utilities for nuke command
- */
-
 import fs from "node:fs";
 import path from "node:path";
 
@@ -11,17 +7,11 @@ export interface BackupResult {
 	error?: string;
 }
 
-/**
- * Create backup of autumn.config.ts
- * @param cwd - Working directory (defaults to process.cwd())
- * @returns BackupResult with path or error
- */
 export function createConfigBackup(cwd: string = process.cwd()): BackupResult {
 	const configPath = path.join(cwd, "autumn.config.ts");
 	const backupPath = path.join(cwd, "autumn.config.ts.backup");
 
 	try {
-		// Check if config exists
 		if (!fs.existsSync(configPath)) {
 			return {
 				created: false,
@@ -29,9 +19,7 @@ export function createConfigBackup(cwd: string = process.cwd()): BackupResult {
 			};
 		}
 
-		// Check if backup already exists
 		if (fs.existsSync(backupPath)) {
-			// Create timestamped backup instead
 			const timestamp = new Date()
 				.toISOString()
 				.replace(/[:.]/g, "-")
@@ -49,7 +37,6 @@ export function createConfigBackup(cwd: string = process.cwd()): BackupResult {
 			};
 		}
 
-		// Create backup
 		fs.copyFileSync(configPath, backupPath);
 
 		return {
@@ -64,9 +51,6 @@ export function createConfigBackup(cwd: string = process.cwd()): BackupResult {
 	}
 }
 
-/**
- * Check if config file exists
- */
 export function configExists(cwd: string = process.cwd()): boolean {
 	const configPath = path.join(cwd, "autumn.config.ts");
 	return fs.existsSync(configPath);

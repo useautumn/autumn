@@ -11,8 +11,6 @@ const parseBody = (text: string): unknown => {
 	}
 };
 
-// ~150k tokens; an unguarded page (e.g. listCustomers limit 1000) can exceed
-// the model's context outright, hard-failing the whole turn.
 const MAX_RESPONSE_CHARS = 600_000;
 const RETRYABLE_STATUS_CODES = new Set([502, 503, 504]);
 
@@ -32,7 +30,6 @@ const guardResponseSize = ({
 	};
 };
 
-/** POSTs a request to an Autumn endpoint using the caller's resolved auth. */
 export const callAutumn = async ({
 	auth,
 	endpoint,

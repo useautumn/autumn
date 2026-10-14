@@ -37,7 +37,6 @@ describe(
 					customerEntitlements: [cusEntA, cusEntB],
 				});
 
-				// 2 entities on feature A, 3 entities on feature B
 				const entityList = [
 					entities.create({
 						id: "ent1",
@@ -68,7 +67,6 @@ describe(
 
 				const existingUsages: ExistingUsages = {};
 
-				// Act
 				applyExistingUsages({
 					ctx,
 					customerProduct: cusProduct,
@@ -76,7 +74,6 @@ describe(
 					entities: entityList,
 				});
 
-				// Assert: Feature A balance = 10 - 2 = 8, Feature B balance = 10 - 3 = 7
 				const updatedCusEntA = cusProduct.customer_entitlements.find(
 					(ce) => ce.feature_id === "feature_a",
 				);
@@ -102,7 +99,6 @@ describe(
 					customerEntitlements: [cusEntA],
 				});
 
-				// 2 entities on feature A
 				const entityList = [
 					entities.create({
 						id: "ent1",
@@ -116,12 +112,10 @@ describe(
 					}),
 				];
 
-				// Existing usage says 5, but entities (2) should take priority
 				const existingUsages: ExistingUsages = {
 					[internalFeatureIdA]: { usage: 5, entityUsages: {} },
 				};
 
-				// Act
 				applyExistingUsages({
 					ctx,
 					customerProduct,
@@ -129,7 +123,6 @@ describe(
 					entities: entityList,
 				});
 
-				// Assert: Entity count (2) takes priority, balance = 10 - 2 = 8
 				const updatedCusEntA = customerProduct.customer_entitlements.find(
 					(ce) => ce.feature_id === "feature_a",
 				);
@@ -139,7 +132,6 @@ describe(
 			test("two cusEnts for feature A with starting balance 2, 3 entities - distributes usage across cusEnts", () => {
 				const internalFeatureIdA = "internal_feature_a";
 
-				// Two cusEnts for the same feature, each with balance 2
 				const cusEntA1 = customerEntitlements.create({
 					internalFeatureId: internalFeatureIdA,
 					featureId: "feature_a",
@@ -160,7 +152,6 @@ describe(
 					customerEntitlements: [cusEntA1, cusEntA2],
 				});
 
-				// 3 entities on feature A
 				const entityList = [
 					entities.create({
 						id: "ent1",
@@ -181,7 +172,6 @@ describe(
 
 				const existingUsages: ExistingUsages = {};
 
-				// Act
 				applyExistingUsages({
 					ctx,
 					customerProduct,
@@ -189,7 +179,6 @@ describe(
 					entities: entityList,
 				});
 
-				// Total usage = 3, distributed: first cusEnt uses 2, second cusEnt uses 1
 				const updatedCusEnts = customerProduct.customer_entitlements.filter(
 					(ce) => ce.feature_id === "feature_a",
 				);

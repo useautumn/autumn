@@ -9,8 +9,6 @@ import { clearOrgCache } from "@/internal/orgs/orgUtils/clearOrgCache.js";
 const appIdKey = ({ env }: { env: AppEnv }) =>
 	env === AppEnv.Live ? "live_app_id" : "sandbox_app_id";
 
-/** The org's Svix app for this env, created the way org provisioning does when
- * it was never made. A lost race keeps the winner's app and drops ours. */
 export const ensureSvixAppId = async ({
 	ctx,
 }: {

@@ -20,11 +20,6 @@ export interface ResolvedPlanLicense {
 	isPendingLink: boolean;
 }
 
-/**
- * Resolves a parent plan's licenses (persisted + staged) to their license
- * products, shared by the license cards and the parent-plan license rows.
- * Returns [] when the current editor is itself a license (licenses don't nest).
- */
 export function useResolvedPlanLicenses(): ResolvedPlanLicense[] {
 	const { product } = useProduct();
 	const isLicense = useIsLicenseEditor();
@@ -41,7 +36,6 @@ export function useResolvedPlanLicenses(): ResolvedPlanLicense[] {
 	return useMemo(() => {
 		if (isLicense || !product) return [];
 
-		// Staged links can point at any plan, so fall back to the full plans list.
 		const licenseById = new Map(
 			products.map((license) => [license.id, license]),
 		);
@@ -67,8 +61,6 @@ export function useResolvedPlanLicenses(): ResolvedPlanLicense[] {
 		const persistedIds = new Set(
 			persistedLicenses.map(({ planLicense }) => planLicense.license_plan_id),
 		);
-		// Patch keys cover links staged in a previous customize session — they
-		// exist only in the saved patch, so resurface them as pending.
 		const stagedIds = new Set(
 			[...pendingLicenseIds, ...Object.keys(initialPatches)].filter(
 				(licenseId) => !persistedIds.has(licenseId),

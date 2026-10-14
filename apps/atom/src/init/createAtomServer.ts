@@ -16,7 +16,6 @@ import type {
 	AtomServerDependencies,
 } from "./types/atomServer.js";
 
-/** One thread's server: it answers on the shared port and, when told to, receives Autumn's queued pushes. */
 export const createAtomServer = ({
 	ctx,
 	config,
@@ -25,7 +24,6 @@ export const createAtomServer = ({
 	config: AtomServerConfig;
 }): AtomServer => {
 	const { env } = config;
-	// A queued push names the folder it lands in, so a multi-tenant Atom reads the queue like an org's own.
 	const pushReceiver = config.receivesPushes
 		? createPushReceiver({
 				ctx: {
@@ -37,7 +35,6 @@ export const createAtomServer = ({
 				},
 			})
 		: undefined;
-	// Each thread learns and checks its own keys: no state crosses threads, at a forward and a sync per thread.
 	const secretKeys =
 		env.ATOM_MODE === "deployed"
 			? startSecretKeys({
@@ -66,7 +63,6 @@ export const createAtomServer = ({
 		peer: { port: env.ATOM_PORT },
 	};
 	const app = createAtomApp({ ctx: httpContext });
-	// The other replicas are listened to on the port the stack keeps off the public endpoint.
 	const peerApp = createPeerApp({
 		ctx: httpContext,
 		secret: env.ATOM_PEER_SECRET,
@@ -75,7 +71,6 @@ export const createAtomServer = ({
 		counters: ctx.counters,
 		held: ctx.held,
 	});
-	// The cap follows the mounted volume, so whatever disk the stack gives this replica, grown online included, counts.
 	const diskEvictor = createDiskEvictor({
 		ctx: {
 			folders: ctx.folders,
@@ -104,18 +99,15 @@ export const createAtomServer = ({
 		});
 	}
 
-	/** Receiving is async I/O beside serving, so a thread that receives pushes still answers checks. */
 	async function start(): Promise<void> {
 		listen();
 		receiving = pushReceiver?.run();
 		void diskEvictor.run();
 	}
 
-	/** In-flight requests and leased pushes finish before the files close. */
 	async function stop(): Promise<void> {
 		pushReceiver?.stop();
 		await Promise.all([listener?.stop(), peerListener?.stop(), receiving]);
-		// After the last push applied here: what it relays must still reach the peers before the files close.
 		await ctx.replication.stop();
 		diskEvictor.stop();
 		statsTick.stop();

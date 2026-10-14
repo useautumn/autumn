@@ -65,8 +65,6 @@ export const listWebThreads = async ({
 	});
 };
 
-/** Delete every dashboard conversation for one user in the current env. The
- * remote eve sessions survive but become unreachable, which is the intent. */
 export const deleteWebThreads = async ({
 	db,
 	env,

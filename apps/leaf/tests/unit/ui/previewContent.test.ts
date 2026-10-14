@@ -159,7 +159,6 @@ describe("approvalCard with structured previews", () => {
 		);
 		const mutedJson = JSON.stringify(muted);
 		expect(mutedJson).toContain("Draft invoice");
-		// Unset params no longer render badges — only explicit ones show.
 		expect(mutedJson).not.toContain("Prorations");
 		expect(JSON.stringify(card.children)).not.toContain("Environment");
 	});
@@ -263,7 +262,6 @@ describe("invoice approval cards", () => {
 			);
 
 			expect(json).toContain("Setup fee");
-			// The line shows its pre-discount amount; the discount is its own row.
 			expect(json).toContain('["Setup fee","$60.00"]');
 			expect(json).not.toContain("$50.00");
 			expect(json).toContain("Discounts");

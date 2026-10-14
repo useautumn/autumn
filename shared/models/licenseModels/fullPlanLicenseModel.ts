@@ -15,7 +15,6 @@ export type FullPlanLicense = DbPlanLicense & {
 	base_product?: FullProductWithoutLicenses;
 };
 
-/** Schema mirror of the drizzle row; keep fields in sync with planLicenseTable. */
 export const PlanLicenseRowSchema = z.object({
 	id: z.string(),
 	parent_internal_product_id: z.string(),
@@ -31,12 +30,9 @@ export const PlanLicenseRowSchema = z.object({
 
 export const FullPlanLicenseSchema: z.ZodType<FullPlanLicense> =
 	PlanLicenseRowSchema.extend({
-		// Defers module initialization only; the product shape cannot nest licenses.
 		product: z.lazy(() => FullProductWithoutLicensesSchema),
 		base_product: z.lazy(() => FullProductWithoutLicensesSchema).optional(),
 	});
-/** The same catalog link seen from the license side: product is the PARENT
- * plan offering this license. */
 export type ParentPlanLicense = DbPlanLicense & {
 	product: FullProductWithoutParentLicenses;
 	license_prices: Price[];

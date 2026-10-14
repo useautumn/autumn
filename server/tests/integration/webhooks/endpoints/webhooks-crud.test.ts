@@ -1,13 +1,3 @@
-/**
- * webhooks.create/get/list/update/delete against the real sandbox Svix app:
- * - create returns the signing secret once; get and list never do;
- * - the id is stored as the Svix uid, so a second create with it is a 409;
- * - duplicate URLs are allowed (Svix accepts them);
- * - update patches only stated fields and cannot rename;
- * - http, localhost URLs and empty events are 400s on the request path;
- * - write routes need organisation:write, read routes organisation:read.
- */
-
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { AppEnv, apiKeys, ErrCode, Scopes } from "@autumn/shared";
 import defaultCtx from "@tests/utils/testInitUtils/createTestContext.js";
@@ -149,7 +139,6 @@ describe("webhooks CRUD", () => {
 		});
 		expect([first.status, second.status]).toEqual([200, 200]);
 
-		// https, so Svix itself would accept these: the 400s must be ours.
 		const localhost = await postWebhooks({
 			route: "create",
 			body: {

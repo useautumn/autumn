@@ -1,6 +1,3 @@
-/** Approve executes the stored writes deterministically; outcomes land on the
- * write rows, and a drifted card refreshes instead of executing.
- *   bun tests/e2e/approveFlow.e2e.ts */
 import { AppEnv, chatApprovals, chatApprovalWrites } from "@autumn/shared";
 import { eq } from "drizzle-orm";
 import { createApproval } from "../../src/internal/approvals/actions/createApproval.js";
@@ -96,7 +93,6 @@ const customerHasLaunch = async (customerId: string) =>
 
 const approval = await parkGroupedAttach();
 
-// Concurrent double-click: the SQL claim admits exactly one.
 const [claimA, claimB] = await Promise.all([
 	chatApprovalRepo.claim({ approvalId: approval.id, db, providerUserId }),
 	chatApprovalRepo.claim({ approvalId: approval.id, db, providerUserId }),
@@ -147,7 +143,6 @@ const [finalRow] = await db
 	.where(eq(chatApprovals.id, approval.id));
 check("row finalized approved", finalRow?.status === "approved");
 
-// Re-click after apply: the claim refuses a decided row.
 const reclaim = await chatApprovalRepo.claim({
 	approvalId: approval.id,
 	db,
@@ -158,7 +153,6 @@ check(
 	reclaim === undefined || reclaim === null,
 );
 
-// Drift: mutate state between card and approve — nothing may execute.
 const driftTag = Date.now().toString(36);
 const customerC = `exec-${driftTag}-c`;
 await executeAutumnMcpTool({
@@ -199,16 +193,12 @@ const driftCreated = await createApproval({
 	workspaceId: installation.workspace_id,
 });
 if (!driftCreated) throw new Error("no drift approval");
-// Simulate world-state change deterministically: the stored preview no longer
-// matches what a fresh preview computes.
 const [primaryStep] = await db
 	.select()
 	.from(chatApprovalWrites)
 	.where(eq(chatApprovalWrites.approval_id, driftCreated.approvalId))
 	.orderBy(chatApprovalWrites.position);
 if (!primaryStep) throw new Error("drift write missing");
-// The stored inner preview may be an MCP envelope; replace it wholesale with
-// a parsed-shape record whose money facts cannot match a fresh preview.
 const tampered = {
 	preview: { currency: "usd", line_items: [], total: 999_999 },
 };

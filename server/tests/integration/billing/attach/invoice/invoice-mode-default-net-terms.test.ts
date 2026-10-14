@@ -1,15 +1,3 @@
-/**
- * Regression coverage for org-level `default_invoice_net_terms_days` on invoice-mode
- * attaches.
- *
- * Contract under test:
- *   - `org.config.default_invoice_net_terms_days` is applied as `days_until_due` on
- *     invoice-mode (send_invoice) subscription creation.
- *   - It is also applied to the standalone invoice a one-off attach creates.
- *   - Unset config keeps the historical 30-day due window, so existing orgs
- *     see no behavior change.
- */
-
 import { expect, test } from "bun:test";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { items } from "@tests/utils/fixtures/items.js";
@@ -20,10 +8,6 @@ import chalk from "chalk";
 const ORG_DEFAULT_NET_TERMS_DAYS = 45;
 const HARDCODED_NET_TERMS_DAYS = 30;
 const SECONDS_PER_DAY = 86_400;
-
-// ═══════════════════════════════════════════════════════════════════
-// TEST 1: org default lands on the invoice-mode subscription
-// ═══════════════════════════════════════════════════════════════════
 
 test.concurrent(
 	`${chalk.yellowBright("invoice-mode net terms: subscription uses the org default")}`,
@@ -67,10 +51,6 @@ test.concurrent(
 		expect(subscription.days_until_due).toBe(ORG_DEFAULT_NET_TERMS_DAYS);
 	},
 );
-
-// ═══════════════════════════════════════════════════════════════════
-// TEST 2: org default lands on a one-off attach's standalone invoice
-// ═══════════════════════════════════════════════════════════════════
 
 test.concurrent(
 	`${chalk.yellowBright("invoice-mode net terms: one-off invoice uses the org default")}`,
@@ -118,7 +98,6 @@ test.concurrent(
 
 		expect(invoice).toBeDefined();
 		expect(invoice.collection_method).toBe("send_invoice");
-		// Stripe resolves days_until_due into an absolute due_date at creation.
 		expect(invoice.due_date).not.toBeNull();
 		const dueInDays = Math.round(
 			((invoice.due_date ?? 0) - invoice.created) / SECONDS_PER_DAY,
@@ -126,10 +105,6 @@ test.concurrent(
 		expect(dueInDays).toBe(ORG_DEFAULT_NET_TERMS_DAYS);
 	},
 );
-
-// ═══════════════════════════════════════════════════════════════════
-// TEST 3: unset org config keeps the 30-day due window
-// ═══════════════════════════════════════════════════════════════════
 
 test.concurrent(
 	`${chalk.yellowBright("invoice-mode net terms: unset org config keeps 30 days")}`,

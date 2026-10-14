@@ -58,7 +58,6 @@ export const parseRequestedScopes = (scopes: unknown) => {
 	return parsed.data ?? null;
 };
 
-/** Keys with no scopes skip route scope checks, so never mint one. */
 export const assertMintableKeyScopes = (scopes: string[]) => {
 	if (scopes.length > 0) return;
 
@@ -88,8 +87,6 @@ export const tokenRecordFromResourceToken = (
 	};
 };
 
-/** Grants atmn keys the app scopes, capped by the user's org role, so older CLIs get them.
- * Explicitly requested scopes are minted as-is, with no grant. */
 export const withAtmnAppKeyScopes = async ({
 	db,
 	clientId,

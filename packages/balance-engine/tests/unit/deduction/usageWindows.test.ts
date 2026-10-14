@@ -117,7 +117,6 @@ describe("usage windows", () => {
 			const second = counterIdFor({ internalId: "cus_2" });
 			expect(first).toBeDefined();
 			expect(second).toBeDefined();
-			// A calendar-aligned window starts at the same instant for everyone, so the customer must be in the id.
 			expect(first).not.toBe(second);
 		},
 	);
@@ -237,7 +236,6 @@ describe("usage windows", () => {
 					overageBehavior: "reject",
 				}),
 			).toMatchObject({ rejected: true, changes: [] });
-			// Overflow skips the gate but the counter still records the draw, past its limit.
 			const overflowed = deductFrom({
 				customer,
 				customerEntitlements: rows,
@@ -338,7 +336,6 @@ describe("usage windows", () => {
 				}),
 			});
 
-			// 4 units × 0.2 = 0.8 credits under a 1-credit cap
 			expect(outcome).toMatchObject({ appliedValue: 4, remaining: 0 });
 			expect(windowChangesOf(outcome)).toEqual([
 				expect.objectContaining({
@@ -346,7 +343,6 @@ describe("usage windows", () => {
 				}),
 			]);
 
-			// 6 units would be 1.2 credits; the cap leaves 1 credit, so 5 units.
 			expect(
 				deduct({
 					fullSubject: subjectStateToFullSubject({ state, catalog }),
@@ -401,7 +397,6 @@ describe("usage windows", () => {
 				}),
 			});
 
-			// Units 1-2 at 1 credit, units 3-4 at 3: the window counts 8, what the balance lost.
 			expect(windowChangesOf(outcome)).toEqual([
 				expect.objectContaining({
 					row: expect.objectContaining({ feature_id: "credits", usage: 8 }),
@@ -418,7 +413,6 @@ describe("usage windows", () => {
 				request: createDeductionRequest({ org, value: 8 }),
 			});
 
-			// 5 of the 8 units fit the cap: 5 × 0.2 = 1 credit drawn.
 			expect(outcome).toMatchObject({ appliedValue: 5, remaining: 3 });
 			expect(windowChangesOf(outcome)).toEqual([
 				expect.objectContaining({
@@ -446,7 +440,6 @@ describe("usage windows", () => {
 	);
 });
 
-/** A `credits` pool whose schema prices messages; the catalog's feature row is what makes it a credit system. */
 const creditPoolSubject = ({ customer }: { customer: WorkerCustomer }) => {
 	const state = createSubjectState({
 		identity,

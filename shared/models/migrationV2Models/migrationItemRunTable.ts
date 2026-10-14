@@ -57,7 +57,6 @@ export const migrationItemRuns = pgTable(
 		uniqueIndex("migration_item_runs_live_unique")
 			.on(table.migration_internal_id, table.item_kind, table.item_id)
 			.where(sql`${table.dry_run} = false`),
-		// item_id COLLATE "C" so the candidate-query anti-join (item_id = customers.internal_id, which is "C") index-seeks instead of seq-scanning
 		index("migration_item_runs_live_c_idx")
 			.on(
 				table.migration_internal_id,
@@ -66,10 +65,6 @@ export const migrationItemRuns = pgTable(
 			)
 			.where(sql`${table.dry_run} = false`)
 			.concurrently(),
-		// Cross-migration mutex: an item can be RUNNING in at most one live
-		// migration. Claim paths pre-filter busy items; this backstops the
-		// select→insert race window. item_id COLLATE "C" so the busy anti-join
-		// (correlated on "C"-collated customer ids) index-seeks.
 		uniqueIndex("migration_item_runs_live_item_exclusive")
 			.on(table.item_kind, sql`${table.item_id} COLLATE "C"`)
 			.where(sql`${table.status} = 'running' AND ${table.dry_run} = false`)

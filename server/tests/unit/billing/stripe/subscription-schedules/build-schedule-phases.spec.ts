@@ -1,9 +1,3 @@
-/**
- * Basic tests for buildStripePhasesUpdate.
- *
- * These cover the fundamental scenarios for building subscription schedule phases.
- */
-
 import { describe, expect, test } from "bun:test";
 import { BillingVersion, CusProductStatus, msToSeconds } from "@autumn/shared";
 import { contexts } from "@tests/utils/fixtures/db/contexts";
@@ -20,8 +14,6 @@ import {
 	ONE_MONTH_MS,
 	setPrepaidStripeProductId,
 } from "../stripeSubscriptionTestHelpers";
-
-// ============ TESTS ============
 
 describe(
 	chalk.yellowBright("buildStripePhasesUpdate - Basic Scenarios"),
@@ -63,7 +55,6 @@ describe(
 					customerProducts: [premiumCustomerProduct],
 				});
 
-				// Should have 1 phase with no end date (indefinite)
 				expect(phases).toHaveLength(1);
 				expect(phases[0].start_date).toBe(msToSeconds(nowMs));
 				expect(phases[0].end_date).toBeUndefined();
@@ -88,7 +79,6 @@ describe(
 					customerProductId: "cus_prod_pro",
 				});
 
-				// Premium is ACTIVE now, scheduled to end when Pro starts
 				const premiumCustomerProduct = customerProducts.create({
 					id: "cus_prod_premium",
 					productId: "premium",
@@ -104,7 +94,6 @@ describe(
 					endedAt: proStartMs,
 				});
 
-				// Pro is SCHEDULED to start in the future
 				const proCustomerProduct = customerProducts.create({
 					id: "cus_prod_pro",
 					productId: "pro",
@@ -132,16 +121,13 @@ describe(
 					customerProducts: [premiumCustomerProduct, proCustomerProduct],
 				});
 
-				// Should have 2 phases
 				expect(phases).toHaveLength(2);
 
-				// Phase 1: Premium
 				expect(phases[0].start_date).toBe(msToSeconds(nowMs));
 				expect(phases[0].end_date).toBe(msToSeconds(proStartMs));
 				expect(phases[0].proration_behavior).toBeUndefined();
 				expectPhaseItems(phases[0].items!, getStripePriceIds(premium));
 
-				// Phase 2: Pro
 				expect(phases[1].start_date).toBe(msToSeconds(proStartMs));
 				expect(phases[1].end_date).toBeUndefined();
 				expect(phases[1].proration_behavior).toBe("always_invoice");
@@ -164,7 +150,6 @@ describe(
 					customerProductId: "cus_prod_pro",
 				});
 
-				// Premium is ACTIVE now, scheduled to end when Pro starts
 				const premiumCustomerProduct = customerProducts.create({
 					id: "cus_prod_premium",
 					productId: "premium",
@@ -180,7 +165,6 @@ describe(
 					endedAt: proStartMs,
 				});
 
-				// Pro is SCHEDULED to start in the future
 				const proCustomerProduct = customerProducts.create({
 					id: "cus_prod_pro",
 					productId: "pro",
@@ -208,15 +192,12 @@ describe(
 					customerProducts: [premiumCustomerProduct, proCustomerProduct],
 				});
 
-				// Should have 2 phases
 				expect(phases).toHaveLength(2);
 
-				// Phase 1: Premium (half month)
 				expect(phases[0].start_date).toBe(msToSeconds(nowMs));
 				expect(phases[0].end_date).toBe(msToSeconds(proStartMs));
 				expectPhaseItems(phases[0].items!, getStripePriceIds(premium));
 
-				// Phase 2: Pro
 				expect(phases[1].start_date).toBe(msToSeconds(proStartMs));
 				expect(phases[1].end_date).toBeUndefined();
 				expectPhaseItems(phases[1].items!, getStripePriceIds(pro));
@@ -247,7 +228,6 @@ describe(
 					isAddOn: true,
 				});
 
-				// Premium is ACTIVE now, ends at proStartMs
 				const premiumCustomerProduct = customerProducts.create({
 					id: "cus_prod_premium",
 					productId: "premium",
@@ -263,7 +243,6 @@ describe(
 					endedAt: proStartMs,
 				});
 
-				// Pro is SCHEDULED to start at proStartMs
 				const proCustomerProduct = customerProducts.create({
 					id: "cus_prod_pro",
 					productId: "pro",
@@ -278,7 +257,6 @@ describe(
 					startsAt: proStartMs,
 				});
 
-				// Add-on is ACTIVE throughout (no end date)
 				const addOnCustomerProduct = customerProducts.create({
 					id: "cus_prod_addon",
 					productId: "addon_credits",
@@ -314,10 +292,8 @@ describe(
 					],
 				});
 
-				// Should have 2 phases
 				expect(phases).toHaveLength(2);
 
-				// Phase 1: Premium + Add-on
 				expect(phases[0].start_date).toBe(msToSeconds(nowMs));
 				expect(phases[0].end_date).toBe(msToSeconds(proStartMs));
 				expectPhaseItems(phases[0].items!, [
@@ -325,7 +301,6 @@ describe(
 					...getStripePriceIds(addOn),
 				]);
 
-				// Phase 2: Pro + Add-on
 				expect(phases[1].start_date).toBe(msToSeconds(proStartMs));
 				expect(phases[1].end_date).toBeUndefined();
 				expectPhaseItems(phases[1].items!, [
@@ -357,7 +332,6 @@ describe(
 					isAddOn: true,
 				});
 
-				// Premium is ACTIVE now, scheduled to end when Pro starts
 				const premiumCustomerProduct = customerProducts.create({
 					id: "cus_prod_premium",
 					productId: "premium",
@@ -373,7 +347,6 @@ describe(
 					endedAt: proStartMs,
 				});
 
-				// Pro is SCHEDULED to start in the future
 				const proCustomerProduct = customerProducts.create({
 					id: "cus_prod_pro",
 					productId: "pro",
@@ -388,7 +361,6 @@ describe(
 					startsAt: proStartMs,
 				});
 
-				// Add-on is ACTIVE throughout (no end date)
 				const addOnCustomerProduct = customerProducts.create({
 					id: "cus_prod_addon",
 					productId: "addon_credits",
@@ -424,10 +396,8 @@ describe(
 					],
 				});
 
-				// Should have 2 phases
 				expect(phases).toHaveLength(2);
 
-				// Phase 1: Premium + Add-on
 				expect(phases[0].start_date).toBe(msToSeconds(nowMs));
 				expect(phases[0].end_date).toBe(msToSeconds(proStartMs));
 				expectPhaseItems(phases[0].items!, [
@@ -435,7 +405,6 @@ describe(
 					...getStripePriceIds(addOn),
 				]);
 
-				// Phase 2: Pro + Add-on
 				expect(phases[1].start_date).toBe(msToSeconds(proStartMs));
 				expect(phases[1].end_date).toBeUndefined();
 				expectPhaseItems(phases[1].items!, [
@@ -532,7 +501,6 @@ describe(
 					customerProductId: "cus_prod_premium",
 				});
 
-				// Premium is ACTIVE now, scheduled to be canceled
 				const premiumCustomerProduct = customerProducts.create({
 					id: "cus_prod_premium",
 					productId: "premium",
@@ -561,15 +529,12 @@ describe(
 					customerProducts: [premiumCustomerProduct],
 				});
 
-				// Should have 2 phases - Premium then empty
 				expect(phases).toHaveLength(2);
 
-				// Phase 1: Premium
 				expect(phases[0].start_date).toBe(msToSeconds(nowMs));
 				expect(phases[0].end_date).toBe(msToSeconds(cancelMs));
 				expectPhaseItems(phases[0].items!, getStripePriceIds(premium));
 
-				// Phase 2: Empty (no products)
 				expect(phases[1].start_date).toBe(msToSeconds(cancelMs));
 				expect(phases[1].end_date).toBeUndefined();
 				expect(phases[1].items).toHaveLength(0);
@@ -592,7 +557,6 @@ describe(
 					isAddOn: true,
 				});
 
-				// Premium is ACTIVE and stays active (no end date)
 				const premiumCustomerProduct = customerProducts.create({
 					id: "cus_prod_premium",
 					productId: "premium",
@@ -607,7 +571,6 @@ describe(
 					startsAt: nowMs,
 				});
 
-				// Add-on is ACTIVE now but scheduled to end
 				const addOnCustomerProduct = customerProducts.create({
 					id: "cus_prod_addon",
 					productId: "addon_credits",
@@ -636,10 +599,8 @@ describe(
 					customerProducts: [premiumCustomerProduct, addOnCustomerProduct],
 				});
 
-				// Should have 2 phases
 				expect(phases).toHaveLength(2);
 
-				// Phase 1: Premium + Add-on
 				expect(phases[0].start_date).toBe(msToSeconds(nowMs));
 				expect(phases[0].end_date).toBe(msToSeconds(addOnEndMs));
 				expectPhaseItems(phases[0].items!, [
@@ -647,7 +608,6 @@ describe(
 					...getStripePriceIds(addOn),
 				]);
 
-				// Phase 2: Premium only
 				expect(phases[1].start_date).toBe(msToSeconds(addOnEndMs));
 				expect(phases[1].end_date).toBeUndefined();
 				expectPhaseItems(phases[1].items!, getStripePriceIds(premium));
@@ -797,7 +757,6 @@ describe(
 					customerProductId: "cus_prod_premium",
 				});
 
-				// Pro is ACTIVE now, scheduled to end when Premium starts
 				const proCustomerProduct = customerProducts.create({
 					id: "cus_prod_pro",
 					productId: "pro",
@@ -813,7 +772,6 @@ describe(
 					endedAt: premiumStartMs,
 				});
 
-				// Premium is SCHEDULED to start in the future
 				const premiumCustomerProduct = customerProducts.create({
 					id: "cus_prod_premium",
 					productId: "premium",
@@ -841,15 +799,12 @@ describe(
 					customerProducts: [proCustomerProduct, premiumCustomerProduct],
 				});
 
-				// Should have 2 phases
 				expect(phases).toHaveLength(2);
 
-				// Phase 1: Pro
 				expect(phases[0].start_date).toBe(msToSeconds(nowMs));
 				expect(phases[0].end_date).toBe(msToSeconds(premiumStartMs));
 				expectPhaseItems(phases[0].items!, getStripePriceIds(pro));
 
-				// Phase 2: Premium
 				expect(phases[1].start_date).toBe(msToSeconds(premiumStartMs));
 				expect(phases[1].end_date).toBeUndefined();
 				expectPhaseItems(phases[1].items!, getStripePriceIds(premium));
@@ -859,11 +814,9 @@ describe(
 		describe(chalk.cyan("Millisecond Tolerance"), () => {
 			test("Products with sub-second timing differences collapse to same transition", () => {
 				const nowMs = Date.now();
-				// Truncate to second first, then add sub-second offsets to guarantee same second
 				const transitionSecondBase =
 					Math.floor((nowMs + ONE_MONTH_MS) / 1000) * 1000;
 
-				// Pro ends 100ms into the second, Premium starts 600ms into the same second
 				const proEndsAt = transitionSecondBase + 100;
 				const premiumStartsAt = transitionSecondBase + 600;
 
@@ -879,7 +832,6 @@ describe(
 					customerProductId: "cus_prod_premium",
 				});
 
-				// Pro is ACTIVE, ends at transitionSecond
 				const proCustomerProduct = customerProducts.create({
 					id: "cus_prod_pro",
 					productId: "pro",
@@ -895,7 +847,6 @@ describe(
 					endedAt: proEndsAt,
 				});
 
-				// Premium is SCHEDULED, starts 500ms after Pro ends
 				const premiumCustomerProduct = customerProducts.create({
 					id: "cus_prod_premium",
 					productId: "premium",
@@ -923,18 +874,14 @@ describe(
 					customerProducts: [proCustomerProduct, premiumCustomerProduct],
 				});
 
-				// Should have 2 phases (not 3!) because ms differences are truncated to seconds
 				expect(phases).toHaveLength(2);
 
-				// Both transition points should collapse to the same second
 				const expectedTransitionSeconds = msToSeconds(transitionSecondBase);
 
-				// Phase 1: Pro
 				expect(phases[0].start_date).toBe(msToSeconds(nowMs));
 				expect(phases[0].end_date).toBe(expectedTransitionSeconds);
 				expectPhaseItems(phases[0].items!, getStripePriceIds(pro));
 
-				// Phase 2: Premium
 				expect(phases[1].start_date).toBe(expectedTransitionSeconds);
 				expect(phases[1].end_date).toBeUndefined();
 				expectPhaseItems(phases[1].items!, getStripePriceIds(premium));

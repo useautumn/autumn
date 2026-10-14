@@ -1,26 +1,3 @@
-/**
- * TDD contract for pool identity across createSchedule.
- *
- * Contract under test:
- *   New behaviors:
- *     - One createSchedule phase carrying a FREE pooled plan and a PAID recurring
- *       pooled plan produces TWO pools: their identities differ on reset_mode and
- *       stripe_subscription_id (lazy/no-sub vs subscription/sub).
- *     - Re-declaring those plans alongside entity-scoped copies routes every
- *       contribution to the pool matching its identity rather than minting new
- *       pools per source.
- *   Side effects:
- *     - pooled_balances: one row per distinct identity, granted summed per pool
- *     - pooled_balance_contributions: one row per contributing source
- *
- * Pre-impl red: identity is not consulted across schedule phases, so either one
- * pool absorbs both plans or every source mints its own.
- * Post-impl green: pools are keyed by identity and reused when it matches.
- *
- * A schedule is customer-level: a later one replaces the earlier one outright,
- * so each call declares every plan it wants to keep.
- */
-
 import { expect, test } from "bun:test";
 import type { CreateScheduleParamsV0Input } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
@@ -76,7 +53,6 @@ test(
 		};
 		await autumnV1.billing.createSchedule(customerLevelParams);
 
-		// ── Contract: distinct identities produce distinct pools ─────────
 		const afterCustomerLevel = await getPooledBalanceDbState({
 			db: ctx.db,
 			customerId,
@@ -96,7 +72,6 @@ test(
 		expect(lazyPool.granted).toBe(FREE_GRANT);
 		expect(subscriptionPool.granted).toBe(PRO_GRANT);
 
-		// ── Same plans again, plus an entity-scoped copy of each ─────────
 		const entityLevelParams: CreateScheduleParamsV0Input = {
 			customer_id: customerId,
 			phases: [
@@ -113,13 +88,11 @@ test(
 		};
 		await autumnV1.billing.createSchedule(entityLevelParams);
 
-		// ── Contract: contributions route to the pool matching identity ──
 		const afterEntityLevel = await getPooledBalanceDbState({
 			db: ctx.db,
 			customerId,
 		});
 		expect(afterEntityLevel.contributions).toHaveLength(4);
-		// No new pools: both entity sources matched an existing identity.
 		expect(afterEntityLevel.pools).toHaveLength(2);
 
 		const lazyPoolAfter = afterEntityLevel.pools.find(
@@ -140,7 +113,6 @@ test(
 		}
 		expect(contributionsByPool.get(lazyPool.id)).toBe(2);
 
-		// Every pool's granted equals the sum of the contributions feeding it.
 		for (const pool of afterEntityLevel.pools) {
 			const fed = afterEntityLevel.contributions
 				.filter((contribution) => contribution.pooled_balance_id === pool.id)

@@ -12,10 +12,6 @@ import {
 import { cusEntToInvoiceUsage } from "@shared/utils/cusEntUtils/overageUtils/cusEntToInvoiceUsage";
 import { allocatedUsageToStripeUsage } from "@shared/utils/productUtils/priceUtils/convertPrice/allocatedUsageToStripeUsage";
 
-/**
- * Converts an in-arrear prorated (allocated) price to a StripeItemSpec.
- * Computes existing usage from the cusEnt.
- */
 export const allocatedToStripeItemSpec = ({
 	cusEntWithCusProduct,
 	currency,
@@ -53,7 +49,6 @@ export const allocatedToStripeItemSpec = ({
 		allowance: cusEntsToAllowance({ cusEnts: [cusEntWithCusProduct] }),
 	});
 
-	// Round existing usage to the nearest billing unit
 	const roundedUsage = roundUsageToNearestBillingUnit({
 		usage: existingUsage,
 		billingUnits: config.billing_units ?? 1,

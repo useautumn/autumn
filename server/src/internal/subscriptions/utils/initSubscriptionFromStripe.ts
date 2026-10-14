@@ -7,9 +7,6 @@ import {
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { initSubscription } from "@/internal/subscriptions/utils/initSubscription";
 
-/**
- * Creates a Subscription object from a Stripe subscription.
- */
 export const initSubscriptionFromStripe = ({
 	ctx,
 	stripeSubscription,

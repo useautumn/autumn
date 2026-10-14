@@ -20,7 +20,6 @@ const requestedEntityId = ({
 		? params.entity_id
 		: (planParams.entity_id ?? undefined);
 
-/** The customer's live entities the request names, read directly: a full customer hydrates only a capped page. */
 export const loadInvoiceEntities = async ({
 	ctx,
 	fullCustomer,
@@ -43,7 +42,6 @@ export const loadInvoiceEntities = async ({
 	return new Map(found.map((entity) => [entity.id as string, entity]));
 };
 
-/** The entity a plan bills to: its own entity_id, else the request's; undefined means customer-level. */
 export const resolveInvoicePlanEntity = ({
 	entitiesById,
 	params,

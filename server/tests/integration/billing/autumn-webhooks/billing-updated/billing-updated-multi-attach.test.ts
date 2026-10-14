@@ -1,8 +1,3 @@
-/**
- * Integration test: `billing.updated` webhook fires for multi-attach,
- * containing one `activated` plan_change per product attached in the call.
- */
-
 import { afterAll, beforeAll, expect, test } from "bun:test";
 import type {
 	BillingChangeResponse,

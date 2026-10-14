@@ -11,7 +11,7 @@ import {
 	enrichCustomerEntitlementCycles,
 } from "@/internal/migrations/v2/batchOperations/utils/enrichCustomerEntitlementCycles.js";
 
-const NOW = Date.UTC(2026, 6, 15); // 2026-07-15
+const NOW = Date.UTC(2026, 6, 15);
 
 const meteredEntitlement = ({
 	interval = EntInterval.Month,

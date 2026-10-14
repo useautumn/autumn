@@ -43,7 +43,6 @@ import { licensePooledBalanceIsLiveSql } from "@/internal/customers/licensePoole
 import RecaseError from "@/utils/errorUtils.js";
 
 export class CusEntService {
-	/** Whether any customer entitlement references one of these catalog rows. */
 	static async hasAnyEntitlementReferences({
 		db,
 		entitlementIds,
@@ -60,11 +59,6 @@ export class CusEntService {
 		return row.length > 0;
 	}
 
-	/**
-	 * Which of these catalog entitlements are referenced by any
-	 * customer_entitlements row — across every status, including loose,
-	 * scheduled and canceled.
-	 */
 	static async getReferencedEntitlementIds({
 		db,
 		entitlementIds,
@@ -146,11 +140,6 @@ export class CusEntService {
 		return data as CustomerEntitlement[];
 	}
 
-	/**
-	 * Like getByIds, but carries the owning product's entity — entity-attached
-	 * (seat) products stamp internal_entity_id on the customer_product, not on
-	 * the entitlement beneath it.
-	 */
 	static async getByIdsWithProductEntity({
 		db,
 		ids,
@@ -185,7 +174,6 @@ export class CusEntService {
 		}>;
 	}
 
-	/** Resolves rollover balance ids to their owning entitlement (+ product entity). */
 	static async getByRolloverIdsWithProductEntity({
 		db,
 		ids,
@@ -274,7 +262,6 @@ export class CusEntService {
 
 		await db.insert(customerEntitlements).values(insertData);
 
-		// Grants are structural; balance paths (update/increment/upsert) never mark.
 		await markCustomersUpdatedAtByInternalIds({
 			db,
 			internalCustomerIds: insertData.map((row) => row.internal_customer_id),
@@ -295,33 +282,25 @@ export class CusEntService {
 		includeSeparateIntervalResets: boolean;
 	}) {
 		// Sort keys are projected as top-level output columns because Postgres
-		// only allows ORDER BY on a set operation via output column names.
-		// Seat rows (license assignments) inherit lifecycle from their pool's
-		// parent — one lateral probe per seat row; a NULL link matches nothing
-		// so non-seat rows pay an empty index lookup.
 		const makeParentLateral = () => {
 			const pcl = alias(customerLicenses, "pcl");
 			const pcp = alias(customerProducts, "pcp");
-			return (
-				db
-					.select({
-						parent_status: pcp.status,
-						parent_subscription_ids: pcp.subscription_ids,
-					})
-					.from(pcl)
-					.innerJoin(pcp, eq(pcp.id, pcl.parent_customer_product_id))
-					.where(
-						sql`${pcl.link_id} = ${customerProducts.customer_license_link_id}`,
-					)
-					// Links can match multiple pool rows (predecessors linger on
-					// expired parents); seats inherit from the LIVE parent's pool.
-					.orderBy(
-						sql`(${pcp.status} IN ('active', 'past_due', 'scheduled')) DESC`,
-						sql`${pcl.created_at} DESC`,
-					)
-					.limit(1)
-					.as("parent_cp")
-			);
+			return db
+				.select({
+					parent_status: pcp.status,
+					parent_subscription_ids: pcp.subscription_ids,
+				})
+				.from(pcl)
+				.innerJoin(pcp, eq(pcp.id, pcl.parent_customer_product_id))
+				.where(
+					sql`${pcl.link_id} = ${customerProducts.customer_license_link_id}`,
+				)
+				.orderBy(
+					sql`(${pcp.status} IN ('active', 'past_due', 'scheduled')) DESC`,
+					sql`${pcl.created_at} DESC`,
+				)
+				.limit(1)
+				.as("parent_cp");
 		};
 
 		const makeBaseSelect = (
@@ -354,16 +333,11 @@ export class CusEntService {
 				),
 			);
 
-		// COLLATE "C" keeps the cursor comparison aligned with sort_id's ordering.
 		const afterCursor = () =>
 			cursor
 				? sql`(${customerEntitlements.next_reset_at}, ${customerEntitlements.id} COLLATE "C") > (${cursor.nextResetAt}, ${cursor.id})`
 				: undefined;
 
-		// Exclude normal price-backed cusEnts: their reset is owned by the Stripe
-		// invoice.created handler, not this cron. Must stay in sync with
-		// `cusEntToCusPrice` and the in-memory `getResettableCustomerEntitlements`
-		// filter. Only applies to branches with `customer_product_id` set (2 + 3).
 		const notPriceBacked = () =>
 			notExists(
 				db
@@ -395,9 +369,6 @@ export class CusEntService {
 		const isNotPooledBalanceSource = () =>
 			sql`${entitlements.pooled} IS NOT TRUE`;
 
-		// Branch 1: cusEnts with no customer_product. Left-join to
-		// customer_products on a false predicate so the row shape matches
-		// the other branches (customer_products columns come back NULL).
 		const parentLateral1 = makeParentLateral();
 		const branch1 = db
 			.select(makeBaseSelect(parentLateral1))
@@ -432,7 +403,6 @@ export class CusEntService {
 				),
 			);
 
-		// Branch 2: cusEnts on active customer_products.
 		const parentLateral2 = makeParentLateral();
 		const branch2 = db
 			.select(makeBaseSelect(parentLateral2))
@@ -468,8 +438,6 @@ export class CusEntService {
 				),
 			);
 
-		// Branch 3: cusEnts on past_due customer_products whose product
-		// opted into ignore_past_due via products.config.
 		const parentLateral3 = makeParentLateral();
 		const branch3 = db
 			.select(makeBaseSelect(parentLateral3))
@@ -510,8 +478,6 @@ export class CusEntService {
 				),
 			);
 
-		// One statement, one snapshot: branch consistency without a
-		// multi-statement transaction, and statement_timeout caps the whole page.
 		return unionAll(branch1, branch2, branch3)
 			.orderBy(sql`"sort_reset"`, sql`"sort_id"`)
 			.limit(batchSize);
@@ -616,7 +582,6 @@ export class CusEntService {
 		return data as FullCustomerEntitlement & {
 			customer: Customer;
 			customer_product?: CusProduct;
-			// replaceables?: Replaceable[];
 		};
 	}
 
@@ -642,7 +607,6 @@ export class CusEntService {
 		return data;
 	}
 
-	/** `entities[id].balance += delta` per key, seeding a missing entry at 0; other fields of the entry are kept. */
 	static async incrementEntityBalances({
 		ctx,
 		id,
@@ -679,7 +643,6 @@ export class CusEntService {
 			.returning();
 	}
 
-	/** Re-keys `entities[from]` as `entities[to]` (its `id` updated); a missing `from` moves nothing. */
 	static async moveEntityBalances({
 		ctx,
 		id,

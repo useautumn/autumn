@@ -12,8 +12,6 @@ import type { MigrationRuntime } from "@/internal/migrations/v2/types/migrationD
 import type { BatchMigrationRejection } from "../../types/index.js";
 import { resolvePreparedAddItemEntitlements } from "../utils/resolvePreparedAddItemEntitlements.js";
 
-/** A filter speaks ResetInterval ("one_off"), an entitlement speaks
- * EntInterval ("lifetime"); both sides normalize before comparing. */
 const matchesRemoveFilter = ({
 	entitlement,
 	filter,
@@ -44,8 +42,6 @@ const matchesRemoveFilter = ({
 	return true;
 };
 
-/** Version alone is a full transition to the target; with item customize,
- * items and base-price semantics evolve from fromProduct (version is a repoint). */
 export const resolveTargetFullProduct = ({
 	migration,
 	op,
@@ -66,8 +62,6 @@ export const resolveTargetFullProduct = ({
 	hasItemChanges: boolean;
 	rejections: BatchMigrationRejection[];
 } => {
-	// Prepared add rows are minted against the target product — the product
-	// the repointed row will claim.
 	const { entitlements: addEntitlements, rejections } =
 		resolvePreparedAddItemEntitlements({
 			migration,
@@ -103,7 +97,6 @@ export const resolveTargetFullProduct = ({
 	return {
 		toProduct: {
 			...targetProduct,
-			// Written add_items stay on toProduct even when catalog already has the same shape; execution dedupes.
 			entitlements: [...retainedEntitlements, ...addEntitlements],
 			prices: [
 				...itemBase.prices.filter(isFixedPrice),

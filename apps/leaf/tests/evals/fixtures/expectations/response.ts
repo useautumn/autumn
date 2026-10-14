@@ -31,10 +31,6 @@ export const response = {
 		toolName,
 		type: "response.askedBeforeTool",
 	}),
-	/**
-	 * LLM-judged conciseness: the final reply must state every required fact
-	 * with zero removable sentences. Facts are checked semantically, not verbatim.
-	 */
 	concise: ({
 		required,
 	}: {

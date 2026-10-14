@@ -1,17 +1,3 @@
-/**
- * TDD test for: previewUpdateSubscription with a fresh `once`-duration coupon
- * via `discounts: [{ reward_id }]` not applying it to next_cycle (flim-ai).
- * A discount-only update creates no immediate invoice, so Stripe applies the
- * once coupon to the next renewal invoice — the preview should match.
- *
- * Red-failure mode (current behavior):
- *  - next_cycle.total stays 34.90 with no discounts; the execution test shows
- *    the actual renewal invoice IS discounted to 17.45.
- *
- * Green-success criteria (after fix):
- *  - next_cycle.total = 17.45 with the discount on the base-price line item.
- */
-
 import { expect, test } from "bun:test";
 import type {
 	ApiCustomerV3,
@@ -56,7 +42,6 @@ test.concurrent(
 			discounts: [{ reward_id: coupon.id }],
 		})) as PreviewUpdateSubscriptionResponse;
 
-		// Discount-only update: nothing due today.
 		expect(preview.total).toBe(0);
 
 		expect(preview.next_cycle, "next_cycle should be defined").toBeDefined();
@@ -70,8 +55,6 @@ test.concurrent(
 	300_000,
 );
 
-// Ground truth: executing the same update and advancing to renewal shows
-// Stripe applies the once coupon to the renewal invoice (17.45, not 34.90).
 test.concurrent(
 	`${chalk.yellowBright("preview-update-once-discount: execution ground truth — renewal invoice is discounted")}`,
 	async () => {

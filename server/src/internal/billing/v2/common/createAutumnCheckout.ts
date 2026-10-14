@@ -20,12 +20,6 @@ export interface CreateAutumnCheckoutResult<T extends BillingContext> {
 	billingResult?: BillingResult;
 }
 
-/**
- * Creates an Autumn checkout session for customer confirmation.
- *
- * Used when checkoutMode === "autumn_checkout" (customer has payment method
- * but redirect_mode is "always", requiring user confirmation before billing).
- */
 export async function createAutumnCheckout<
 	T extends
 		| AttachBillingContext

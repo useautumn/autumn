@@ -1,7 +1,6 @@
 import type { CSSProperties } from "react";
 
 const CELL = 14;
-// Two offset dot grids so the cross-fade reads as dots shifting, not a flat pulse.
 const DOT = "radial-gradient(rgba(0,0,0,0.5) 1.1px, transparent 1.1px)";
 const FADE = "radial-gradient(150% 150% at 0% 0%, #000 0%, transparent 92%)";
 

@@ -7,7 +7,6 @@ import {
 import { and, eq, or } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 
-/** Delete a reward program. Throws if not found. */
 export const deleteRewardProgram = async ({
 	db,
 	idOrInternalId,

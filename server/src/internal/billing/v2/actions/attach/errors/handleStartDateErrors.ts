@@ -48,7 +48,6 @@ export const handleStartDateErrors = ({
 
 		assertNoBackdateWithExistingSubscription({ billingContext });
 
-		// Previews don't know whether the caller will settle via invoice (supports
 		// backdating) or Stripe Checkout (doesn't), so only block checkout on execute.
 		if (!preview && billingContext.checkoutMode === "stripe_checkout") {
 			throw new RecaseError({

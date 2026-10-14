@@ -10,10 +10,6 @@ const SyncCustomizePlanSchema = refineCustomizePlanV1Schema(
 	CustomizePlanV1BaseSchema.strict(),
 );
 
-/**
- * Per-plan sync intent. Extends the shared `MultiPlanInstance` with
- * sync-specific overrides.
- */
 export const SyncPlanInstanceSchema = MultiPlanInstanceSchema.omit({
 	customize: true,
 }).extend({
@@ -43,11 +39,6 @@ export const SyncPlanInstanceSchema = MultiPlanInstanceSchema.omit({
 	}),
 });
 
-/**
- * One phase of plan instances. Use `starts_at: "now"` for the immediate
- * phase; numeric `starts_at` for future-dated phases. The first entry of
- * a SyncParamsV1 `phases` array typically carries `"now"`.
- */
 export const SyncPhaseSchema = z.object({
 	starts_at: z.union([z.number(), z.literal("now")]).meta({
 		description:
@@ -65,7 +56,6 @@ const isPhasesOrdered = (
 	for (let i = 0; i < phases.length; i++) {
 		const entry = phases[i];
 		if (!entry) continue;
-		// "now" is only allowed as the first entry
 		if (entry.starts_at === "now") {
 			if (i !== 0) return false;
 			continue;
@@ -76,17 +66,6 @@ const isPhasesOrdered = (
 	return true;
 };
 
-/**
- * Inputs to the sync-to-Autumn action.
- *
- * - `phases` omitted    → pure auto-sync (run detection, use what it finds).
- * - `phases` supplied   → caller-specified plan instances; layered on top
- *                          of detection. First entry with `starts_at: "now"`
- *                          is the immediate phase.
- *
- * `acknowledge_warnings` whitelists detection warning types the caller
- * accepts. Empty / omitted = strict (any detection warning fails).
- */
 export const SyncParamsV1Schema = z
 	.object({
 		customer_id: z.string().meta({

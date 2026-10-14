@@ -1,12 +1,3 @@
-/**
- * Mixed schedules keep Stripe as the phase clock through free stretches via a $0
- * placeholder, which must sit on the free plan's own Stripe product.
- *
- * Red (current):  the placeholder borrows the paid plan's Stripe product.
- * Green (after):  the placeholder uses the free plan's product, and both free
- *                 boundaries after the paid phase still transition.
- */
-
 import { expect, test } from "bun:test";
 import type { CreateScheduleParamsV0Input } from "@autumn/shared";
 import { expectCustomerProducts } from "@tests/integration/billing/utils/expectCustomerProductCorrect";

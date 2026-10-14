@@ -1,12 +1,3 @@
-/**
- * One-off sanity check of the provider against Frankfurter (ECB), read-only.
- *
- *   OPEN_EXCHANGE_RATES_APP_ID=… bun scripts/checkUsdRates.ts --date 2026-09-26
- *
- * Prints both rates for a handful of major currencies and the % gap; a gap over
- * 1% means the direction or the code mapping is wrong, not the market.
- */
-
 import { convertToUsd } from "../src/convertToUsd";
 import { createFxClient } from "../src/createFxClient";
 import { getUsdRateTable } from "../src/getUsdRateTable";

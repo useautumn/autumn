@@ -1,7 +1,6 @@
 import { ErrCode, FeatureNotFoundError, RecaseError } from "@autumn/shared";
 import type { UpdateCatalogPlan } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogPlan";
 
-/** Throws when a removal is unknown, or contradicted by the same request. */
 export const handleRemoveFeatureErrors = ({
 	updateCatalogPlan,
 }: {

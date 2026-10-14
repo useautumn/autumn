@@ -1,15 +1,3 @@
-/**
- * catalogV2.update — child versioning × parent/propagate versioning.
- *
- * Contract:
- *   G1 child all_versions + Team existing: child ops v1+v2; parent latest only
- *   G2 child all_versions + Team all_versions: child v1, parent v2
- *   G3 Team all_versions rename + propagate all_versions → license-only parent op
- *   G4 child new_version + Team all_versions, no draft → no draft
- *   G5 Team new_version in plans[] + pin latest: child existing still drafts the pin
- *   G6 preview of G1 equals the update draft minus id; preview persists nothing
- */
-
 import { test } from "bun:test";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";

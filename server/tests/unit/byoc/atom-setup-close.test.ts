@@ -47,7 +47,6 @@ const awaitingTeardown: AtomDeployment = {
 	error: null,
 };
 
-/** A deployer reporting `found` on every read, and an in-memory record; `calls` is the order things happened in. */
 const atomContext = ({ found }: { found: AtomDeployment | null }) => {
 	const calls: string[] = [];
 	const deployer: AtomDeployer = {

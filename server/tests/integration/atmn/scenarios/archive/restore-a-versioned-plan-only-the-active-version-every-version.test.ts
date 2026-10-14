@@ -1,11 +1,3 @@
-/**
- * atmn scenarios/archive — restore a versioned plan [only the active version, every version] → assert what the server does
- *
- * one push carries the whole batch, so restore order must not matter
- *
- * One line of plans/atmn-v3/07_tests.md. [a, b] is a matrix looped INSIDE this file.
- */
-
 import { expect, test } from "bun:test";
 import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 import { paidMonthly } from "@tests/utils/atmnUtils/baseConfigs.js";
@@ -80,7 +72,6 @@ test.concurrent(
 		const scenario = await setUpTwoArchivedVersions();
 
 		try {
-			// Only v2 is stated: v1, already archived and unheld, stays archived.
 			scenario.writeConfig(
 				atmnConfigSource({
 					body: `{ plans: [plan({ active: true, planId: "pro", versionSlug: "v2", archived: false })] }`,

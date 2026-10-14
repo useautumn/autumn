@@ -18,16 +18,6 @@ import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js"
 import { constructPrepaidItem } from "../../../../src/utils/scriptUtils/constructItem.js";
 import { timeout } from "../../../utils/genUtils";
 
-// const pro = constructProduct({
-// 	type: "pro",
-// 	items: [
-// 		constructFeatureItem({
-// 			featureId: TestFeature.Messages,
-// 			includedUsage: 100,
-// 		}),
-// 	],
-// });
-
 const oneOffCredits = constructRawProduct({
 	id: "one_off_messages",
 	isAddOn: true,
@@ -51,7 +41,6 @@ const getMessagesRemaining = (customer: ApiCustomer) => {
 	return balance.remaining ?? balance.current_balance;
 };
 
-// Exercises the legacy Redis balance path, which worker-routed customers never use.
 describe.skipIf(isBalanceWorkerRoute())(
 	`${chalk.yellowBright("track-race-condition2: sync should not wipe out top up credits")}`,
 	() => {
@@ -91,7 +80,7 @@ describe.skipIf(isBalanceWorkerRoute())(
 				],
 			});
 
-			await timeout(3000); // let webhooks come in
+			await timeout(3000);
 		});
 
 		test("should manually reproduce race condition where sync wipes out attached credits", async () => {
@@ -140,7 +129,6 @@ describe.skipIf(isBalanceWorkerRoute())(
 				Object.keys(deductionResult.updates),
 			);
 
-			// Get the customer from Redis to see current balance
 			const customerAfterTrack =
 				await autumnV2.customers.get<ApiCustomer>(customerId);
 
@@ -195,11 +183,9 @@ describe.skipIf(isBalanceWorkerRoute())(
 				source: "test-setup",
 			});
 
-			// Check that credits weren't wiped out
 			const cachedCustomer =
 				await autumnV2.customers.get<ApiCustomer>(customerId);
 
-			// Expected: 100 (pro) + 100 (initial one-off) - 5 (tracked) + 100 (attached one-off) = 295
 			expect(getMessagesRemaining(cachedCustomer)).toBe(200);
 
 			const customerAfterSync = await autumnV2.customers.get<ApiCustomer>(

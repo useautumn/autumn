@@ -1,14 +1,3 @@
-/**
- * Catalog for the version-set bench: one parent plan at v1 and v2 whose diff
- * is 3 replaces / 2 deletes / 2 adds, linked to two license plans.
- *
- * Ids are deterministic so reruns are idempotent and every row is cleanable by
- * prefix. The v2 links mirror copyPlanLicensesToNewVersion: new plan_license
- * rows against the SAME license_internal_product_id, identical included /
- * prepaid_only / metadata, so resolvePlanLicenseTransitions emits a pool
- * repoint per link instead of rejecting the patch.
- */
-
 import {
 	AllowanceType,
 	EntInterval,
@@ -23,18 +12,15 @@ import { planLicenseRepo } from "@/internal/licenses/repos/planLicenseRepo.js";
 
 export const BENCH_VERSET_PLAN_ID = "bench-verset";
 
-/** Features whose allowance changes v1 → v2 (replace ops). */
 export const BENCH_VERSET_REPLACED_FEATURES = [
 	TestFeature.Messages,
 	TestFeature.Users,
 	TestFeature.Workflows,
 ];
-/** Present in v1 only (remove ops). */
 export const BENCH_VERSET_DELETED_FEATURES = [
 	TestFeature.Admin,
 	TestFeature.AdminRights,
 ];
-/** Present in v2 only (add ops). */
 export const BENCH_VERSET_ADDED_FEATURES = [
 	TestFeature.Words,
 	TestFeature.Storage,
@@ -42,13 +28,10 @@ export const BENCH_VERSET_ADDED_FEATURES = [
 
 export const BENCH_VERSET_V1_ALLOWANCE = 100;
 export const BENCH_VERSET_V2_ALLOWANCE = 200;
-/** Seats each link includes; identical across versions by design. */
 export const BENCH_VERSET_INCLUDED_SEATS = 2;
 
 const BENCH_VERSET_LICENSE_KEYS = ["a", "b"] as const;
 
-/** Every license child carries the same item shape as the parent's v1 half, so
- * a customize pass can replace three, drop two and add two. */
 export const BENCH_VERSET_LICENSE_FEATURES = [
 	...BENCH_VERSET_REPLACED_FEATURES,
 	...BENCH_VERSET_DELETED_FEATURES,
@@ -63,7 +46,6 @@ export type BenchVersionSetLicense = {
 	licenseInternalProductId: string;
 	v1PlanLicenseId: string;
 	v2PlanLicenseId: string;
-	/** Child's own entitlement ids, keyed by feature id. */
 	entitlementIdsByFeature: Map<string, string>;
 };
 
@@ -71,7 +53,6 @@ export type BenchVersionSetCatalog = {
 	planId: string;
 	v1InternalProductId: string;
 	v2InternalProductId: string;
-	/** v1 rows are what customers get seeded onto. */
 	v1EntitlementIdsByFeature: Map<string, string>;
 	v2EntitlementIdsByFeature: Map<string, string>;
 	licenses: BenchVersionSetLicense[];
@@ -135,8 +116,6 @@ const ensureProductVersion = async ({
 	return internalId;
 };
 
-/** Idempotent by deterministic id, and re-asserts allowance so a rerun after
- * an edited constant still lands the intended shape. */
 const ensureEntitlement = async ({
 	db,
 	orgId,
@@ -343,7 +322,6 @@ export const ensureBenchVersionSetCatalog = async ({
 	};
 };
 
-/** Drops only the version-set catalog rows; customer rows are the seeder's. */
 export const deleteBenchVersionSetCatalog = async ({
 	db,
 }: {

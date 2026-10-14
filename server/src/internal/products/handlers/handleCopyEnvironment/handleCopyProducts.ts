@@ -10,15 +10,6 @@ import { toCopyReadyProductsV2, upsertCopiedPlan } from "./upsertCopiedPlan.js";
 import { withLicensePlanProducts } from "./withLicensePlanProducts.js";
 import { withPulledInPlans } from "./withPulledInPlans.js";
 
-/**
- * Copies products from one (org, env) into another (org, env).
- *
- * Generalised from the original sandbox→live copy so the source and target may
- * be different organizations (e.g. two sandbox sub-orgs of the same master
- * org). Processor-specific ids (price/entitlement ids, price_config) are
- * stripped so the target gets a clean copy, and the write context is rebuilt
- * around an explicit `toOrg`/`toEnv`.
- */
 export const handleCopyProducts = async ({
 	ctx,
 	fromOrg,
@@ -38,10 +29,8 @@ export const handleCopyProducts = async ({
 }) => {
 	const { db } = ctx;
 
-	// Feature-only copy: nothing to read or map on the product side.
 	if (productIds?.length === 0) return;
 
-	// 1. Load both sides
 	const [fromFeatures, toFeatures, fromProductsAll, toProducts] =
 		await Promise.all([
 			providedFromFeatures ??
@@ -51,14 +40,10 @@ export const handleCopyProducts = async ({
 			ProductService.listFull({ db, orgId: toOrg.id, env: toEnv }),
 		]);
 
-	// undefined => copy every product (original behavior); a list (incl. empty)
-	// => only those ids.
 	const requestedFromProducts = productIds
 		? fromProductsAll.filter((p) => productIds.includes(p.id))
 		: fromProductsAll;
 
-	// 2. Build the copy set: variants pull their bases in, parents pull their
-	// license plans in. A same-id target plan is never pulled over.
 	const basePlanIdByVariantId = await resolveSourceBasePlanIds({
 		ctx,
 		fromProducts: requestedFromProducts,
@@ -83,8 +68,6 @@ export const handleCopyProducts = async ({
 		features: fromFeatures,
 	});
 
-	// 3. Copy bases first: a variant's link resolves against the target env, so
-	// its base must exist there before the variant is copied.
 	const baseProductsV2 = fromProductsV2.filter(
 		(p) => !basePlanIdByVariantId.has(p.id),
 	);
@@ -94,7 +77,6 @@ export const handleCopyProducts = async ({
 		),
 	);
 
-	// 4. Copy variants, linked to their bases in the target env
 	const variantProductsV2 = fromProductsV2.filter((p) =>
 		basePlanIdByVariantId.has(p.id),
 	);
@@ -105,9 +87,6 @@ export const handleCopyProducts = async ({
 		targetIds,
 	});
 
-	// 5. Init created variants in Stripe after their base's family exists.
-	// inIds bypasses the products cache — the copy ops' invalidations land
-	// async, so a plain listFull can still see the pre-copy (empty) snapshot.
 	const copiedToProducts = await ProductService.listFull({
 		db,
 		orgId: toOrg.id,
@@ -120,7 +99,6 @@ export const handleCopyProducts = async ({
 	);
 	await initVariantsInStripe({ ctx: toContext, products: createdVariants });
 
-	// 6. Recreate the copy set's license links in the target env
 	await copyEnvLicenseLinks({
 		toContext,
 		fromProducts,

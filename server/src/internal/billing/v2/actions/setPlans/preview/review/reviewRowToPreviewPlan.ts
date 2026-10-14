@@ -22,7 +22,6 @@ import {
 } from "./reviewSegmentCustomerProduct";
 import type { ReviewPlanRow } from "./types/reviewPhase";
 
-/** The saved row a removed or updated plan ran on, which is what any credit is for. */
 const replacedSavedRowId = (row: ReviewPlanRow) => {
 	if (!("before" in row) || row.status === "kept") return undefined;
 	if (row.before.source !== "saved") return undefined;
@@ -72,7 +71,6 @@ const pricesOf = ({
 	}));
 };
 
-/** One review row; a removed plan expires at endsAt, the others when their segment ends. */
 export const reviewRowToPreviewPlan = ({
 	row,
 	endsAt,

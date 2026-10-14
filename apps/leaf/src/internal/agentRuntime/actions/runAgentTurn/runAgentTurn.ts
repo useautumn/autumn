@@ -93,9 +93,6 @@ export const runAgentTurn = async ({
 			orgContext: await loadAgentOrgContext(ctx),
 		});
 	};
-	// A follow-up that lands mid-turn is posted straight into the session: eve
-	// steers, and the one reader below sees the replacement turn. It carries
-	// the same preamble a fresh turn would, minus attachments (never injected).
 	const followUpTransport = ({
 		prepared,
 		session,
@@ -118,8 +115,6 @@ export const runAgentTurn = async ({
 			});
 		},
 	});
-	// A turn that settles while a claimed follow-up is still coming is a real
-	// reply the thread needs now; only the last turn of the read is returned.
 	const emitSettledTurn = async (
 		outcome: EveTurnOutcome,
 		session: EveSessionRef,
@@ -183,8 +178,6 @@ export const runAgentTurn = async ({
 				return consume(session, {});
 			});
 		} finally {
-			// Nobody reads the stream past this point: a follow-up posted now
-			// would run unread, so the coordinator queues it as a new run.
 			run?.settle();
 		}
 		const result = await resolveAgentTurnOutcome({

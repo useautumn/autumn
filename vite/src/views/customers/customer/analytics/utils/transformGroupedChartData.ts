@@ -13,28 +13,19 @@ import {
 } from "./displayLabels";
 import { eventColor, isOtherSeries } from "./seriesColors";
 
-/**
- * Chart series configuration
- */
 export interface ChartSeriesConfig {
 	xKey: string;
 	yKey: string;
 	type: "bar";
 	stacked: boolean;
 	yName: string;
-	/** Group and feature halves of a grouped series' name, for two-line labels. */
 	nameParts?: { group: string; feature: string };
 	fill: string;
-	/** Set only when grouping by customer, for a real customer id. */
 	customerId?: string;
-	/** Both set only when grouping by entity and the owning customer resolved. */
 	entityId?: string;
 	entityCustomerId?: string;
 }
 
-/**
- * Gets feature name for a given event/feature key
- */
 function getFeatureName({
 	key,
 	features,
@@ -56,12 +47,6 @@ function getFeatureName({
 	return feature?.name || eventName;
 }
 
-/**
- * Splits a pivoted `feature__groupValue` column name into its parts. Feature
- * ids can themselves contain underscores, so the group value is the segment
- * after the LAST `__` separator. Returns null for names without a separator
- * (e.g. `period` or ungrouped feature columns).
- */
 export function parseSeriesKey({
 	name,
 }: {
@@ -85,13 +70,11 @@ const sumSeriesColumn = ({
 }): number =>
 	events.data.reduce((total, row) => total + Number(row[column] ?? 0), 0);
 
-/** The feature's catch-all column a trimmed grouped series folds into. */
 const otherColumnFor = ({ column }: { column: string }): string | null => {
 	const parsed = parseSeriesKey({ name: column });
 	return parsed ? `${parsed.featureKey}__${RESERVED_GROUP}` : null;
 };
 
-/** Drops series that are zero in every period, e.g. a group paired with an event it never sent. */
 export function dropZeroSeries({ events }: { events: EventsData }): EventsData {
 	const meta = events.meta.filter(
 		(m) =>
@@ -101,10 +84,6 @@ export function dropZeroSeries({ events }: { events: EventsData }): EventsData {
 	return { ...events, meta };
 }
 
-/**
- * Keeps the top-N series by total volume, folding the rest into their
- * feature's "Other" series so period totals stay intact.
- */
 export function trimToTopSeries({
 	events,
 	maxSeries,
@@ -116,7 +95,6 @@ export function trimToTopSeries({
 		.filter((m) => m.name !== "period")
 		.map((m) => m.name);
 
-	// Sorted ascending so the largest series is last → top of stack
 	const rankedGroups = seriesCols
 		.filter((key) => !isOtherSeries({ key }))
 		.map((column) => ({
@@ -147,27 +125,12 @@ export function trimToTopSeries({
 		return slim;
 	});
 
-	// The catch-all bucket always caps the stack, whatever its volume.
 	const orderedCols = [...keptGroups, ...otherCols];
 	const meta = [{ name: "period" }, ...orderedCols.map((name) => ({ name }))];
 
 	return { meta, rows: data.length, data };
 }
 
-/**
- * Transforms grouped data from backend format to chart-ready format.
- *
- * Backend returns (when group_by is used):
- * [
- *   { period: "2024-01-01", "properties.platform": "ios", messages_count: 5 },
- *   { period: "2024-01-01", "properties.platform": "android", messages_count: 3 },
- * ]
- *
- * Chart needs:
- * [
- *   { period: "2024-01-01", "messages_count__ios": 5, "messages_count__android": 3 },
- * ]
- */
 export function transformGroupedData({
 	events,
 	groupBy,
@@ -179,7 +142,6 @@ export function transformGroupedData({
 		return events;
 	}
 
-	// Handle special case for column-based operators (not a property)
 	const groupByColumn =
 		groupBy === "customer_id" ||
 		groupBy === "entity_id" ||
@@ -187,23 +149,17 @@ export function transformGroupedData({
 			? groupBy
 			: `properties.${groupBy}`;
 
-	// Check if data has the group_by column
 	const hasGroupColumn = events.meta.some((m) => m.name === groupByColumn);
 	if (!hasGroupColumn) {
 		return events;
 	}
 
-	// Get feature columns (exclude period and group_by column)
 	const featureColumns = events.meta
 		.filter((m) => m.name !== "period" && m.name !== groupByColumn)
 		.map((m) => m.name);
 
-	// For plan_id, an empty-string group value is meaningful ("no plan") and
-	// must be preserved as its own series. For property-based grouping, empty
-	// means the property is absent, which we drop.
 	const allowEmpty = groupBy === "plan_id";
 
-	// Collect all unique group values
 	const groupValues = new Set<string>();
 	for (const row of events.data) {
 		const groupValue = row[groupByColumn];
@@ -212,7 +168,6 @@ export function transformGroupedData({
 		groupValues.add(String(groupValue));
 	}
 
-	// Pivot data: group by period and create columns for each group value
 	const pivotedMap = new Map<
 		string | number,
 		Record<string, string | number>
@@ -234,14 +189,12 @@ export function transformGroupedData({
 
 		const pivotedRow = pivotedMap.get(period)!;
 
-		// Add each feature value with the group suffix
 		for (const featureCol of featureColumns) {
 			const newKey = `${featureCol}__${groupValue}`;
 			pivotedRow[newKey] = row[featureCol] ?? 0;
 		}
 	}
 
-	// Ensure all group combinations exist (fill with 0)
 	for (const pivotedRow of pivotedMap.values()) {
 		for (const featureCol of featureColumns) {
 			for (const groupValue of groupValues) {
@@ -253,7 +206,6 @@ export function transformGroupedData({
 		}
 	}
 
-	// Build new meta
 	const newMeta: Array<{ name: string }> = [{ name: "period" }];
 	for (const featureCol of featureColumns) {
 		for (const groupValue of groupValues) {
@@ -268,10 +220,6 @@ export function transformGroupedData({
 	};
 }
 
-/**
- * Generates chart configuration. Colors come from `seriesColors`, keyed by
- * series, so hiding one series never repaints the rest.
- */
 export function generateChartConfig({
 	events,
 	features,
@@ -305,20 +253,17 @@ export function generateChartConfig({
 			}));
 	}
 
-	// Grouped: create series for each feature__group combination
 	const config: ChartSeriesConfig[] = [];
 
 	for (const meta of events.meta) {
 		if (meta.name === "period") continue;
 
-		// Parse feature__groupValue format
 		const parsed = parseSeriesKey({ name: meta.name });
 		if (!parsed) continue;
 
 		const { featureKey, groupValue } = parsed;
 
 		const featureName = getFeatureName({ key: featureKey, features });
-		// Spillover series are the base entity's, tagged with a display suffix.
 		const isSpilloverSeries =
 			groupBy === "entity_id" && groupValue.endsWith(CUSTOMER_BALANCE_SUFFIX);
 		const baseEntityId = isSpilloverSeries
@@ -360,7 +305,6 @@ export function generateChartConfig({
 			yKey: meta.name,
 			type: "bar",
 			stacked: true,
-			// A balance deducted by its own feature would otherwise read "Emails (Emails)".
 			yName:
 				featureName === displayGroupValue
 					? featureName

@@ -22,7 +22,6 @@ const refusalReasonOf = (cause: unknown): string | undefined =>
 		? cause.workerReason
 		: undefined;
 
-/** The worker's refusals as legacy words them. */
 const rethrowDeleteBalanceError = ({
 	params,
 	cause,
@@ -56,7 +55,6 @@ export const runBalanceWorkerDeleteBalance = async ({
 	params: DeleteBalanceParamsV0;
 	client?: DeleteBalanceClient;
 }): Promise<void> => {
-	// The worker holds the write; the route's refresh would only evict its fresh copy.
 	ctx.testOptions = { ...ctx.testOptions, skipCacheDeletion: true };
 	try {
 		await client.deleteBalance({

@@ -23,13 +23,6 @@ import { setCustomerUsageLimit } from "../utils/usage-limit-utils/customerUsageL
 import { expireUsageWindowForReset } from "../utils/usage-limit-utils/expireUsageWindowForReset.js";
 import { fetchActivePlanCusEnt } from "../utils/usage-limit-utils/usageWindowDbTestUtils.js";
 
-// Usage-window LAZY ROLL, per read path (mirrors reset/get-customer-reset):
-// once a counter's stored window closes, ANY subject read -- DB (skip_cache),
-// cached, or entity-scoped -- must report usage 0 and ROLL the row in place
-// (usage zeroed, bounds advanced to the current derivation) in PG + cache.
-
-// initScenario only exposes clients up to V2_2; build the latest-version client
-// directly (same pattern as the v2.2-vs-v2.3 parity tests).
 const autumnV2_3 = new AutumnInt({ version: ApiVersion.V2_3 });
 
 // biome-ignore lint/suspicious/noExplicitAny: raw SQL rows are untyped
@@ -140,10 +133,6 @@ const fetchWindowRows = async ({
 		`),
 	);
 
-// ─────────────────────────────────────────────────────────────────
-// GET /customers (skip_cache) — DB path lazy reset
-// ─────────────────────────────────────────────────────────────────
-
 test.concurrent(
 	`${chalk.yellowBright("usage-window-reset1 (DB): skip_cache GET prunes an expired window")}`,
 	async () => {
@@ -175,7 +164,6 @@ test.concurrent(
 			value: 3,
 		});
 
-		// Flush the counter to Postgres, then close its window in both stores.
 		await timeout(4000);
 		expect(
 			await fetchWindowRows({
@@ -190,7 +178,6 @@ test.concurrent(
 			featureId: TestFeature.Messages,
 		});
 
-		// DB-path read: reports a fresh window and prunes the expired row.
 		const fromDb = await autumnV2_3.customers.get<ApiCustomerV5>(customerId, {
 			skip_cache: "true",
 		});
@@ -201,12 +188,9 @@ test.concurrent(
 			limit: 5,
 		});
 
-		// The worker writes its roll to Postgres after replying.
 		if (isBalanceWorkerRoute())
 			await flushBalanceWorkerCustomer({ ctx, customerId });
 
-		// The row PERSISTS, rolled in place: usage zeroed, bounds advanced to the
-		// current derivation (the messages ent's cycle).
 		const messagesEnt = await fetchActivePlanCusEnt({
 			ctx,
 			customerId,
@@ -223,8 +207,6 @@ test.concurrent(
 			Number(messagesEnt.next_reset_at),
 		);
 
-		// The cache field is rolled too (the DB-path roll patches both stores).
-		// Worker-routed customers have no Redis subject cache.
 		if (isBalanceWorkerRoute()) return;
 		const balanceKey = buildSharedFullSubjectBalanceKey({
 			orgId: ctx.org.id,
@@ -240,11 +222,6 @@ test.concurrent(
 	},
 );
 
-// ─────────────────────────────────────────────────────────────────
-// GET /customers (cached) — cache path lazy reset
-// ─────────────────────────────────────────────────────────────────
-
-// Exercises the legacy Redis balance path, which worker-routed customers never use.
 test.concurrent.skipIf(isBalanceWorkerRoute())(
 	`${chalk.yellowBright("usage-window-reset2 (cache): cached GET prunes an expired window")}`,
 	async () => {
@@ -276,7 +253,6 @@ test.concurrent.skipIf(isBalanceWorkerRoute())(
 			value: 3,
 		});
 
-		// Warm the cache with the live counter visible.
 		const warm = await autumnV2_3.customers.get<ApiCustomerV5>(customerId);
 		expectUsageLimitCorrect({
 			customer: warm,
@@ -285,7 +261,6 @@ test.concurrent.skipIf(isBalanceWorkerRoute())(
 			limit: 5,
 		});
 
-		// Flush to Postgres, then close the window in both stores.
 		await timeout(4000);
 		await expireUsageWindowForReset({
 			ctx,
@@ -293,7 +268,6 @@ test.concurrent.skipIf(isBalanceWorkerRoute())(
 			featureId: TestFeature.Messages,
 		});
 
-		// Cache-path read: reports a fresh window and prunes the expired row.
 		const cached = await autumnV2_3.customers.get<ApiCustomerV5>(customerId);
 		expectUsageLimitCorrect({
 			customer: cached,
@@ -324,15 +298,6 @@ test.concurrent.skipIf(isBalanceWorkerRoute())(
 	},
 );
 
-// ─────────────────────────────────────────────────────────────────
-// GET /entities — entity-subject path lazy reset
-// ─────────────────────────────────────────────────────────────────
-
-// Entity-scoped usage limits aren't writable in v1, but the roll machinery
-// must already handle entity-scoped counter rows (seeded here directly) so the
-// future entity path inherits a working lazy roll. The customer-scoped live
-// counter must survive the entity-scoped zeroing.
-// Exercises the legacy Redis balance path, which worker-routed customers never use.
 test.concurrent.skipIf(isBalanceWorkerRoute())(
 	`${chalk.yellowBright("usage-window-reset3 (entity): an entity read zeroes its expired window, customer counter untouched")}`,
 	async () => {
@@ -362,8 +327,6 @@ test.concurrent.skipIf(isBalanceWorkerRoute())(
 			limit: 5,
 		});
 
-		// Live CUSTOMER-scoped counter in the current window; flush it to
-		// Postgres so the end-state assertion can see it.
 		await autumnV2_3.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
@@ -397,7 +360,6 @@ test.concurrent.skipIf(isBalanceWorkerRoute())(
 		)[0];
 		expect(messagesEnt?.internal_feature_id).toBeTruthy();
 
-		// Seed a CLOSED, ENTITY-scoped window row into both stores.
 		const now = Date.now();
 		const closedEntityWindow = {
 			id: "uw_test_entity_closed",
@@ -438,11 +400,8 @@ test.concurrent.skipIf(isBalanceWorkerRoute())(
 			JSON.stringify([...JSON.parse(liveJson as string), closedEntityWindow]),
 		);
 
-		// An ENTITY read runs the lazy reset on the entity subject, which carries
-		// the entity-scoped rows.
 		await autumnV2_3.entities.get(customerId, entities[0].id);
 
-		// The expired entity row persists, ZEROED in place...
 		const entityRows = queryRows(
 			await ctx.db.execute(sql`
 				SELECT id, usage FROM usage_windows WHERE id = ${closedEntityWindow.id}
@@ -451,8 +410,6 @@ test.concurrent.skipIf(isBalanceWorkerRoute())(
 		expect(entityRows).toHaveLength(1);
 		expect(Number(entityRows[0].usage)).toBe(0);
 
-		// ...and in the cache field, while the live customer-scoped counter
-		// survives untouched.
 		const rolledJson = await ctx.redisV2.hget(balanceKey, "_usage_windows");
 		expect(rolledJson).toBeTruthy();
 		const rolledWindows = JSON.parse(rolledJson as string) as {
@@ -478,9 +435,6 @@ test.concurrent.skipIf(isBalanceWorkerRoute())(
 	},
 );
 
-// Red: competing checks queue on one expired-window UPDATE until the 2s fail-open.
-// Green: one check rolls while advisory-lock losers skip persistence and continue.
-// Exercises the legacy Redis balance path, which worker-routed customers never use.
 test.skipIf(isBalanceWorkerRoute())(
 	`${chalk.yellowBright("usage-window-reset4 (contention): competing checks do not queue behind the lazy roll")}`,
 	async () => {

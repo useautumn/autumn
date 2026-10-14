@@ -25,7 +25,6 @@ export type PartitionReplay = {
 		fromBookmark?: boolean;
 	}): Promise<void>;
 	readProgress(position: PartitionPosition): PartitionProgress;
-	/** Resolves once the replay has applied everything below `nextOffset`; rejects with the signal's reason. */
 	awaitNextOffset(params: {
 		topic: string;
 		partition: number;
@@ -37,16 +36,13 @@ export type PartitionReplay = {
 };
 
 export type PartitionReplayContext = {
-	/** The timestamp lookup is optional: without it a replay starts at the bookmark. */
 	partitionOffsets: Pick<Admin, "fetchTopicOffsets"> &
 		Partial<Pick<Admin, "fetchTopicOffsetsByTimestamp">>;
 	stateStore: Pick<StateStore, "readNextOffset">;
 	positionTracker: ProgressTracker;
 	replayWindow: ReplayWindow;
-	/** Set while a replay reads below the bookmark; the record handler reads it. */
 	replayFloorByPartition: Map<number, bigint>;
 	logger?: Pick<AutumnLogger, "warn">;
-	/** How often, and how many times, a stale log end is re-read before stored state counts as ahead of it. */
 	logEndSettle?: { attempts: number; delayMs: number };
 	consumption: Pick<
 		TopicConsumer,

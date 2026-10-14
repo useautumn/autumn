@@ -1,8 +1,3 @@
-/**
- * Active Postgres connection drops must stay inside the pool instead of killing the process.
- * Red: acquired errors are unhandled. Green: they are logged until release.
- */
-
 import { describe, expect, mock, test } from "bun:test";
 import { EventEmitter } from "node:events";
 import type { Pool, PoolClient } from "pg";

@@ -28,9 +28,6 @@ const parsedContentRecord = (
 	return;
 };
 
-/** MCP tool failures come back as FULFILLED results, not rejections: thrown
- * server errors as `isError` envelopes, guardResponseSize refusals as
- * `{error: true, message}` payloads. Skipping this check treats both as success. */
 export const autumnMcpErrorText = (value: unknown): string | undefined => {
 	if (!value || typeof value !== "object" || Array.isArray(value)) return;
 	const record = value as Record<string, unknown>;
@@ -44,8 +41,6 @@ export const autumnMcpErrorText = (value: unknown): string | undefined => {
 	return;
 };
 
-/** Raw payload variant: some callers see unwrapped payloads where a failure
- * is a bare `{error}` / `{message, code|domain}` / `{cause}` record. */
 export const rawErrorShapeText = (value: unknown): string | undefined => {
 	if (!value || typeof value !== "object" || Array.isArray(value)) return;
 	const record = value as Record<string, unknown>;

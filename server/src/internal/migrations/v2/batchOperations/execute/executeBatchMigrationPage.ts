@@ -26,18 +26,6 @@ import {
 	timePhase,
 } from "./utils/pagePhaseTimings.js";
 
-/**
- * Executes one claimed page: every patch's ops (scoped by the patch's
- * OperationScope), then the set-based status marks. Succeeded = customers a
- * patch actually changed (≥1 inserted row); everyone else — out-of-scope OR
- * already converged — is skipped.
- *
- * The unit of atomicity is one candidate BATCH, not the page: ops commit
- * per bounded batch (see runCandidateBatches) and the marks commit in their
- * own transaction. Safe because mutations are dedup-idempotent and the
- * page's claims stay `running` until the marks land — a mid-page failure
- * keeps committed batches and a replay converges the rest.
- */
 export const executeBatchMigrationPage = async ({
 	ctx,
 	migrationInternalId,
@@ -68,19 +56,10 @@ export const executeBatchMigrationPage = async ({
 	const insertedItems: BatchMigrationInsertedItem[] = [];
 	const removedItems: BatchMigrationRemovedItem[] = [];
 	const repointedProducts: BatchMigrationRepointedProduct[] = [];
-	// Customers a patch cannot serve (e.g. no usable reset anchor) drop
-	// from succeeded into skipped — the per-customer lane's territory.
 	const excludedIds = new Set<string>();
 	const repointedIds = new Set<string>();
 
 	for (const patch of plan.patches) {
-		// Op types stay ordered (removes, then replaces, then adds) but ops
-		// WITHIN a type run concurrently: each op owns one feature, and
-		// different features touch disjoint customer_entitlements rows.
-		// Results merge in op order so output stays deterministic.
-
-		// Removes run first: an add landing before its sibling remove would be
-		// dropped again by a filter matching the same feature.
 		const removeResults = await mapWithConcurrency({
 			items: patch.removeEntitlementOps,
 			concurrency: BATCH_MIGRATION_FEATURE_OP_CONCURRENCY,
@@ -109,7 +88,6 @@ export const executeBatchMigrationPage = async ({
 			});
 		}
 
-		// Replaces run before adds so the add dedup sees post-replace definitions.
 		const replaceResults = await mapWithConcurrency({
 			items: patch.replaceEntitlementOps,
 			concurrency: BATCH_MIGRATION_FEATURE_OP_CONCURRENCY,
@@ -177,8 +155,6 @@ export const executeBatchMigrationPage = async ({
 			});
 		}
 
-		// License ops stay sequential: two ops can target the same
-		// licensePlanId pool, so their rows are not disjoint.
 		for (const operation of patch.licenseEntitlementOps) {
 			const result = await runLicenseEntitlementOp({
 				db: ctx.db,
@@ -236,8 +212,6 @@ export const executeBatchMigrationPage = async ({
 		}
 	}
 
-	// A repointed pool or a dropped row is a real change even with nothing
-	// inserted; leaving it out of `succeeded` would skip its cache invalidation.
 	const succeeded = new Set([
 		...insertedItems.map((item) => item.internalCustomerId),
 		...removedItems.map((item) => item.internalCustomerId),
@@ -292,7 +266,6 @@ export const executeBatchMigrationPage = async ({
 	};
 };
 
-/** Skipped with a product in scope = already converged; otherwise ineligible. */
 const resolveSkipReasons = async ({
 	ctx,
 	plan,

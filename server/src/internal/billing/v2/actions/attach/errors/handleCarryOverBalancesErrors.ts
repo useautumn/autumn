@@ -7,12 +7,6 @@ import {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 
-/**
- * Validates carry_over_balances params.
- *
- * - Only valid for immediate switches — errors on scheduled/downgrade.
- * - Boolean and allocated (continuous_use) features cannot have balances carried over.
- */
 export const handleCarryOverBalancesErrors = ({
 	ctx,
 	params,

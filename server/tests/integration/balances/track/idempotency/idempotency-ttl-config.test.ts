@@ -1,16 +1,3 @@
-/**
- * Org-configurable idempotency TTLs, verified against real stores.
- *
- * Contract under test:
- *   - A balances claim for an org with idempotency_config uses the configured
- *     TTL: the Dynamo item's expiresAt lands at ~now + configured hours.
- *   - An org without config falls back to the 24h default.
- *
- * Claims run in-process through withIdempotencyKey (the same wrapper the
- * middleware and track use), with the config injected on a ctx clone — the
- * org row is the single source (no cache layer to poison).
- */
-
 import { describe, expect, test } from "bun:test";
 import {
 	DEFAULT_IDEMPOTENCY_TTL_HOURS,
@@ -62,7 +49,6 @@ const expectStoredTtls = async ({
 }) => {
 	const expectedTtlMs = ms.hours(ttlHours);
 
-	// DynamoDB is the only idempotency store; the claim is awaited, so the item is already there.
 	const { Item: item } = await getDynamoDocumentClient().send(
 		new GetCommand({
 			TableName: getIdempotencyTableName(),

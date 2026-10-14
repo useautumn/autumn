@@ -27,7 +27,6 @@ async function completeWorkerStartup({
 		state.status = "running";
 	} catch (cause) {
 		try {
-			// Startup cleanup must not wait for its own startup promise.
 			await completeWorkerShutdown({ ctx, state });
 		} catch (cleanupCause) {
 			throw new AggregateError(

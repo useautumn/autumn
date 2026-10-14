@@ -24,8 +24,6 @@ export function OnboardingCard() {
 		dismiss,
 	} = useOnboardingProgress();
 
-	// Render nothing until progress is known: "0 of 5" on a set-up org is worse
-	// than a beat of empty sidebar. A finished org gets its sidebar back too.
 	if (!completed || env !== AppEnv.Sandbox || allComplete || isDismissed) {
 		return null;
 	}
@@ -36,8 +34,6 @@ export function OnboardingCard() {
 		preserveParams: false,
 	});
 
-	// One element in both states rather than a card swapped for a nav row: the
-	// icon stays put and the rest fades, so collapsing doesn't jump.
 	return (
 		<div
 			className={cn(
@@ -47,15 +43,11 @@ export function OnboardingCard() {
 					: "border border-transparent p-0",
 			)}
 		>
-			{/* Relative so the trailing controls can be pinned rather than laid out:
-			    in flow they'd slide as the label collapses to zero width. */}
 			<Link
 				to={onboardingPath}
 				className="relative flex h-7 items-center gap-2 rounded-md px-2 text-muted-foreground hover:text-foreground"
 			>
 				<ListChecksIcon size={16} weight="duotone" className="shrink-0" />
-				{/* No transition, matching NavButton: fading text while the rail
-				    narrows leaves it legible over a shrinking box. It just goes. */}
 				<span
 					className={cn(
 						"whitespace-nowrap text-xs font-medium text-foreground",
@@ -89,15 +81,12 @@ export function OnboardingCard() {
 				</span>
 			</Link>
 
-			{/* Clipped rather than transitioned: anything that animates here reads as
-			    lagging behind the rail, which moves on its own 150ms. */}
 			<div
 				className={cn(
 					"overflow-hidden px-2",
 					expanded ? "max-h-40 pb-1 opacity-100" : "max-h-0 pb-0 opacity-0",
 				)}
 			>
-				{/* Per step rather than a count, since steps can finish out of order. */}
 				<div className="mt-1 flex gap-1">
 					{ONBOARDING_STEPS.map((step) => (
 						<span

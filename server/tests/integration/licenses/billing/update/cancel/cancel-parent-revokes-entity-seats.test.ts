@@ -1,5 +1,3 @@
-// TDD contract: canceling a paid license parent revokes every assigned entity seat.
-// End-of-cycle revokes at expiry; immediate cancellation revokes in the same action.
 import { expect, test } from "bun:test";
 import type {
 	ApiCustomerV5,

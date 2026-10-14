@@ -1,8 +1,3 @@
-/**
- * Contract: FireLens mode writes complete Pino JSON to stdout without creating
- * an Axiom transport, while direct mode retains the existing Axiom transport.
- */
-
 import { expect, spyOn, test } from "bun:test";
 import { Writable } from "node:stream";
 import pino from "pino";
@@ -119,8 +114,6 @@ test("logger selects FireLens without changing structured records", () => {
 	}
 });
 
-// FireLens is the default, so an unset variable must not fall back to spawning
-// a transport thread — that would silently keep the old path in production.
 test("logger defaults to FireLens in ECS when the variable is unset", () => {
 	const previousNodeEnv = process.env.NODE_ENV;
 	const previousAxiomToken = process.env.AXIOM_TOKEN;

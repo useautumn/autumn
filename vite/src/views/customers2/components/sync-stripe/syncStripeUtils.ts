@@ -10,7 +10,6 @@ const ACTIVE_STATUSES = new Set([
 	CusProductStatus.PastDue,
 ]);
 
-/** Check if the customer has an active main product in the same group as the selected plan. */
 export const hasActiveProductInGroup = ({
 	planId,
 	products,

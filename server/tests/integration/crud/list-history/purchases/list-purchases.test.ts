@@ -1,16 +1,3 @@
-/**
- * purchases.list — one-off customer_products in API shape, live or expired.
- *
- * Contract:
- *   POST /v1/purchases.list { customer_id?, entity_id?, statuses?[], plan_id?, limit, start_cursor }
- *     -> { list: PurchaseListRow[], has_more, next_cursor }
- *   - one-off plans only; recurring plans and add-ons are excluded
- *   - statuses omitted → live only; ["expired"] → expired only
- *
- * Red (before): the route does not exist.
- * Green (after): every assertion below holds.
- */
-
 import { expect, test } from "bun:test";
 import { CusProductStatus } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";

@@ -31,8 +31,6 @@ const entitlementsToPlanItems = ({
 		features,
 	});
 
-/** Definition repoints replace rows without changing content; identical
- * matched pairs cancel so the diff matches diffPlanV1's semantics. */
 const withoutIdenticalPairs = ({
 	createdItems,
 	deletedItems,

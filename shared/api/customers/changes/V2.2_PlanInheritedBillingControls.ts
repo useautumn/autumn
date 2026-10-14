@@ -7,7 +7,6 @@ import type { z } from "zod/v4";
 import type { BillingControlSource } from "../../billingControls/billingControlSource.js";
 import { ApiCustomerV5Schema } from "../apiCustomerV5";
 
-/** Restores the pre-2.3 view: customer-level entries only, no `source`. */
 const stripPlanInherited = <T extends { source?: BillingControlSource }>(
 	entries: T[] | undefined,
 ): Omit<T, "source">[] | undefined => {
@@ -15,7 +14,6 @@ const stripPlanInherited = <T extends { source?: BillingControlSource }>(
 	const customerEntries = entries
 		.filter((entry) => entry.source !== "plan")
 		.map(({ source: _source, ...rest }) => rest);
-	// Plan-only lists read as absent pre-2.3; a stored empty list stays [].
 	if (customerEntries.length === 0 && entries.length > 0) return undefined;
 	return customerEntries;
 };

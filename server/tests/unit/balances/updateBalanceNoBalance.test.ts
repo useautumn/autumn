@@ -1,12 +1,3 @@
-/**
- * balances.update must not report success when it resolves no entitlements.
- *
- * Pre-fix, a mutation that matched nothing — an unassigned feature, a typo'd
- * balance_id, or a fully drained one-off grant — ran to completion against an
- * empty entitlement list and returned `{ success: true }`, so a caller could
- * not tell a real update from a silent no-op.
- */
-
 import { afterAll, describe, expect, mock, test } from "bun:test";
 import {
 	ErrCode,
@@ -60,7 +51,6 @@ const runUpdate = (params: Partial<UpdateBalanceParamsV0>) =>
 		} as UpdateBalanceParamsV0,
 	});
 
-/** A loose grant the caller can still reach, i.e. not drained to zero. */
 const subjectWithLooseGrant = {
 	...emptySubject,
 	extra_customer_entitlements: [

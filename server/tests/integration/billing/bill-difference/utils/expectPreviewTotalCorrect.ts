@@ -2,7 +2,6 @@ import { expect } from "bun:test";
 import type { BillingPreviewResponse } from "@autumn/shared";
 import { Decimal } from "decimal.js";
 
-/** Preview totals are rounded to cents while expectations are computed from the period. */
 export const expectPreviewTotalCorrect = ({
 	preview,
 	total,

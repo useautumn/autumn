@@ -6,7 +6,6 @@ import {
 import type { UpsertProductPlan } from "@/internal/catalogV2/actions/updateCatalog/types/upsertProductPlan";
 import { upsertProductPlanToLicenses } from "../licensePlanUtils";
 
-/** licenses[] as-is, or current links + upsert/remove patch. */
 export const computeFinalDeclaredLicenses = ({
 	upsert,
 }: {

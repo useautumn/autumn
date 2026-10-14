@@ -8,7 +8,6 @@ import {
 	type ProfileMetrics,
 } from "../types/profileMetrics.ts";
 
-/** A folder stands in for its unprofiled files only once it has this many profiled ones. */
 const MIN_FOLDER_PROFILES = 5;
 const FULL_CONFIDENCE_SAMPLES = 3;
 const P90_Z = 1.28;
@@ -47,7 +46,6 @@ const ownEstimate = (profile: FileProfile): FileProfileEstimate => ({
 	) as ProfileMetrics,
 });
 
-/** Duration at durationQuantile, every resource at its p75: unknown files are assumed heavier than typical. */
 const groupEstimate = ({
 	profiles,
 	source,
@@ -92,7 +90,6 @@ const groupEstimate = ({
 	};
 };
 
-/** Pure: per-file estimates with cold start falling back to the nearest profiled folder, then the suite. */
 export const estimateFileProfiles = ({
 	files,
 	profiles,

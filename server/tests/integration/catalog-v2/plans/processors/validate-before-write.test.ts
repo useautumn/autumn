@@ -1,34 +1,3 @@
-/**
- * catalogV2.update — a rejected request leaves the catalog untouched.
- *
- * executeUpdateCatalogPlan is a straight sequence of independent,
- * non-transactional writes (rename -> features -> products -> remove ->
- * revenuecat -> init_stripe), and it cannot be wrapped in a transaction because
- * it calls Stripe. Two validators used to throw 400 from the tail of that
- * sequence, after earlier writes had already committed:
- *
- *   - assertRevenueCatIdsUnclaimed, inside executeRevenueCatMappings
- *   - validateAdoptedStripePrices, from initStripeResourcesForCatalog
- *
- * The Stripe one is worse than a partial write. `newlyAdoptedPrices` decides
- * what to validate by diffing against the CURRENT row, so once a failed attempt
- * has persisted the bad price id, the retry reads it as already-known, skips the
- * Stripe lookup entirely and SUCCEEDS on an id that does not exist.
- *
- * Contract:
- *   V1  a rename that also claims another plan's RevenueCat id is rejected with
- *       the rename NOT applied
- *   V2  a rename that also states a nonexistent Stripe price id is rejected
- *       with the rename NOT applied
- *   V3  retrying V2 verbatim is rejected again — the first attempt persisted
- *       nothing for the diff to wave through
- *
- * Red (before): V1/V2 reject but the plan has already moved to its new id, and
- *   V3 succeeds, leaving a price pointing at a Stripe id that does not exist.
- * Green (after): both checks run ahead of execute.rename_plans, so all three
- *   requests reject and the catalog is unchanged.
- */
-
 import { expect, test } from "bun:test";
 import { BillingInterval } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
@@ -97,7 +66,6 @@ test.concurrent(
 					],
 				});
 
-				// V1: one request, two effects — the rename must not outlive the 400.
 				await expect(
 					autumnV2_3.catalogV2.update({
 						plans: [
@@ -161,7 +129,6 @@ test.concurrent(
 						],
 					});
 
-				// V2: rejected, and the rename it rode with never landed.
 				await expect(badRequest()).rejects.toThrow();
 				await expectRenameNotApplied({
 					autumn: autumnV2_3,
@@ -169,7 +136,6 @@ test.concurrent(
 					toId: renamedId,
 				});
 
-				// V3: the retry must not be waved through as "already known".
 				await expect(badRequest()).rejects.toThrow();
 				await expectRenameNotApplied({
 					autumn: autumnV2_3,

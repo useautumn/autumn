@@ -1,14 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import type { CheckDataV2 } from "@/internal/balances/check/checkTypes/CheckDataV2.js";
 
-/**
- * Unit test for the fix: check with track (lock or send_event) on a feature the
- * customer doesn't have returns allowed: false.
- */
-
 describe("runCheckWithTrackV2 - no entitlement edge case", () => {
 	test("customerHasEntitlementForFeature returns false when apiBalance is undefined", () => {
-		// Simulate the helper function logic
 		// biome-ignore lint/suspicious/noExplicitAny: Test data
 		const checkData: any = {
 			apiBalance: undefined,
@@ -43,7 +37,6 @@ describe("runCheckWithTrackV2 - no entitlement edge case", () => {
 
 		const requiredBalance = 10;
 
-		// Simulate the buildNoEntitlementResponse logic
 		const response = {
 			allowed: false,
 			customer_id: checkData.customerId || "",
@@ -63,12 +56,11 @@ describe("runCheckWithTrackV2 - no entitlement edge case", () => {
 	test("early return condition is triggered when no entitlement and requiredBalance > 0", () => {
 		// biome-ignore lint/suspicious/noExplicitAny: Test data
 		const checkData: any = {
-			apiBalance: undefined, // No entitlement
+			apiBalance: undefined,
 		};
 
 		const requiredBalance = 10;
 
-		// Simulate the early return condition
 		const shouldReturnEarly =
 			checkData.apiBalance === undefined && requiredBalance > 0;
 
@@ -78,12 +70,11 @@ describe("runCheckWithTrackV2 - no entitlement edge case", () => {
 	test("early return condition is NOT triggered when requiredBalance is 0", () => {
 		// biome-ignore lint/suspicious/noExplicitAny: Test data
 		const checkData: any = {
-			apiBalance: undefined, // No entitlement
+			apiBalance: undefined,
 		};
 
 		const requiredBalance = 0;
 
-		// Should not trigger early return for requiredBalance = 0
 		const shouldReturnEarly =
 			checkData.apiBalance === undefined && requiredBalance > 0;
 

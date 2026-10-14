@@ -26,7 +26,6 @@ export const batchInvalidateCustomerEntitlementBalances = async ({
 	redisV2: Redis;
 	invalidations: CustomerEntitlementBalanceInvalidation[];
 }): Promise<void> => {
-	// The worker's copies go regardless of Redis: the rows behind these fields already changed.
 	await queueBalanceWorkerEvicts({ customers: invalidations });
 	if (redisV2.status !== "ready") return;
 

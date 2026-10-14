@@ -1,6 +1,5 @@
 import type { FixturePath } from "./schemaPaths";
 
-/** The shape `schemaPaths` and `documentPaths` both produce. */
 type PathMap = Map<FixturePath, Set<string>>;
 
 export type CoverageReport = {
@@ -19,12 +18,6 @@ const inCollection = ({
 	collection: string;
 }): boolean => path === collection || path.startsWith(`${collection}.`);
 
-/**
- * How much of `collection`'s schema paths the document touches — structurally
- * (the path was set at all) and by enum value (every value the schema allows
- * there was written somewhere in the document, not necessarily at that exact
- * path — a config can hit an enum value at any occurrence of the field).
- */
 export const coverageReport = ({
 	schema,
 	document,

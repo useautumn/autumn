@@ -499,7 +499,6 @@ describe("catalog plan preview helpers", () => {
 					version: 1,
 					version_slug: "v1",
 					state: { has_customers: true, will_archive: false },
-					// The discover preview sends no propagate, so no mint is resolved yet.
 					versioning: {
 						current_version: 1,
 						new_version: null,
@@ -532,14 +531,12 @@ describe("catalog plan preview helpers", () => {
 			baseMintsNewVersion: true,
 		} as Parameters<typeof toVariantPropagationTargets>[0]);
 
-		// Active v1 with customers, max v2 → the mint lands at v3, not active+1.
 		expect(withCustomers.mintsNewVersion).toBe(true);
 		expect(withCustomers.mintVersion).toBe(3);
 		expect(withCustomers.takenSlugs).toEqual(["add-dashboard", "v1"]);
 		expect(withCustomers.versions.map((entry) => entry.version)).toEqual([
 			2, 1,
 		]);
-		// No customers means the base edit lands in place, so there is nothing to name.
 		expect(withoutCustomers.mintsNewVersion).toBe(false);
 	});
 
@@ -627,7 +624,6 @@ describe("catalog plan preview helpers", () => {
 				],
 			},
 		];
-		// One target per parent plan, its linked versions newest first.
 		expect(toLicenseParentTargets({ parents })).toEqual([
 			{
 				planId: "team",
@@ -656,7 +652,6 @@ describe("catalog plan preview helpers", () => {
 			{ plan_id: "team", version: 1 },
 			{ plan_id: "team", version: 2 },
 		]);
-		// A whole-plan key expands into one pin per linked version.
 		expect(
 			buildSelectedLicenseParentPropagate({
 				selectedKeys: ["team"],
@@ -885,8 +880,6 @@ describe("catalog plan preview helpers", () => {
 	});
 
 	test("review shows the minted row for a customered variant under a base mint", () => {
-		// Discover lanes read resolved "existing" even when the save will mint,
-		// so review derives the mint from the base choice + customers.
 		const [variant] = buildCatalogMigrateTargets({
 			preview: planPreview({
 				plan_id: "team",
@@ -1003,7 +996,6 @@ describe("catalog plan preview helpers", () => {
 		expect(wholePlan).toHaveLength(1);
 		expect(wholePlan[0].id).toBe("license-parent:team");
 		expect(wholePlan[0].rows.map((row) => row.version)).toEqual([2, 1]);
-		// Only the plan's latest version is "Current", matching the base card.
 		expect(wholePlan[0].rows.map((row) => row.isCurrent)).toEqual([
 			true,
 			false,

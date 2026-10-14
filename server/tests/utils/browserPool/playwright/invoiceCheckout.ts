@@ -1,6 +1,5 @@
 import type { Page } from "playwright-core";
 
-// Kept self-contained because the remote browser executor serializes this function.
 export const invoiceCheckout = async ({
 	page,
 	url,
@@ -31,8 +30,6 @@ export const invoiceCheckout = async ({
 			'input[name="number"]:visible, input[data-elements-stable-field-name="cardNumber"]:visible, [role="button"][data-value="card"]:visible',
 		)
 		.first();
-	// Under tw the page's own Stripe API calls queue for rate-limit permits (up to 60s each),
-	// so the form can take well over the default timeout to render.
 	const initialState = await Promise.race([
 		paid.waitFor({ timeout: 60_000 }).then(() => "paid"),
 		readyForm.waitFor({ timeout: 60_000 }).then(() => "form"),
@@ -63,7 +60,6 @@ export const invoiceCheckout = async ({
 		.first();
 	if (await postalCode.count()) await postalCode.fill("10001");
 	const saveWithLink = paymentFrame.locator('input[name="linkOptIn"]');
-	// Link renders its opt-in (checked) after the card fields; deciding before it exists submits with Link on.
 	await saveWithLink
 		.waitFor({ state: "attached", timeout: 5_000 })
 		.catch(() => {});
@@ -74,15 +70,12 @@ export const invoiceCheckout = async ({
 			.waitFor({ state: "hidden" });
 	}
 
-	// A click here can land on the payment iframe while the page is still scrolling to Pay;
-	// Enter goes to the focused button wherever it is on screen.
 	await page
 		.locator(
 			'button[type="submit"], button.SubmitButton, [data-testid="hosted-payment-submit-button"]',
 		)
 		.first()
 		.press("Enter");
-	// Watches for errors and a CAPTCHA; the caller asks Stripe whether the payment went through.
 	const deadline = performance.now() + 10_000;
 	while (performance.now() < deadline) {
 		if (await paid.isVisible()) {

@@ -13,7 +13,6 @@ import type {
 } from "../../models/cusProductModels/cusProductModels.js";
 import type { Product } from "../../models/productModels/productModels.js";
 
-/** The control row each key holds, so a caller names the key and the control type follows. */
 export type BillingControlByKey = {
 	[K in BillingControlKey]: NonNullable<DbBillingControls[K]>[number];
 };
@@ -27,7 +26,6 @@ const MOST_RESTRICTIVE_BY_KEY: Partial<Record<BillingControlKey, Comparator>> =
 		overage_allowed: pickStricterOverageAllowed as Comparator,
 	};
 
-/** What resolving a plan control reads of a customer product; FullCusProduct and the balance worker's leaner row both qualify. */
 export type PlanControlCustomerProduct = Pick<
 	CusProduct,
 	| "id"
@@ -107,7 +105,6 @@ export const findPlanBillingControlWithProduct = <
 	matches: (control: TControl) => boolean;
 	now?: number;
 	inStatuses?: CusProductStatus[];
-	/** Projection used only for comparison; the original control is returned. */
 	normalizeForCompare?: (control: TControl) => TControl;
 }): { control: TControl; customerProduct: CP } | undefined => {
 	const mostRestrictive = MOST_RESTRICTIVE_BY_KEY[controlKey] as
@@ -160,11 +157,6 @@ export const findPlanBillingControl = <
 }): TControl | undefined =>
 	findPlanBillingControlWithProduct<TKey, TControl, CP>(args)?.control;
 
-/**
- * Resolve a billing control and report which plan it came from.
- * `customerProduct` is undefined when the control resolved from `controlLists`
- * (entity/customer scope), set when it resolved from a plan's product columns.
- */
 export const resolveBillingControlWithProduct = <
 	TKey extends BillingControlKey,
 	TControl extends { feature_id?: string } = BillingControlByKey[TKey],

@@ -1,10 +1,3 @@
-/**
- * catalogV2.update — new_plan_id with existing references. Renames move every
- * version row plus plan-id refs (reward programs, rewards, RevenueCat
- * mappings) atomically; customer_products.product_id stays as a historical
- * snapshot and customers keep resolving via internal_product_id.
- */
-
 import { expect, test } from "bun:test";
 import {
 	BillingInterval,
@@ -77,7 +70,6 @@ test.concurrent(
 			});
 			const { cusProductId } = await seedCustomerProductRef({ ctx, planId });
 
-			// Mint a second version; the rename must move both rows.
 			await autumnV2_3.catalogV2.update({
 				plans: [
 					{
@@ -156,8 +148,6 @@ test.concurrent(
 				.where(eq(rewardPrograms.id, programId!));
 			expect(program.product_ids).toEqual([newPlanId]);
 
-			// One reward row referencing the plan via both columns — proves the
-			// rewrite merges same-row touches into a single UPDATE.
 			const [reward] = await ctx.db
 				.select()
 				.from(rewards)

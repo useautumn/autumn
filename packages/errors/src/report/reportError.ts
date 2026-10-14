@@ -5,7 +5,6 @@ import { kindToReportPolicy } from "./reportPolicy.js";
 const errorMessageOf = (error: unknown): string =>
 	error instanceof Error ? error.message : String(error);
 
-/** A boundary's caught error, logged at the level its kind calls for; the logger's hook does the rest. */
 export const reportError = ({
 	ctx,
 	error,

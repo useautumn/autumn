@@ -1,13 +1,5 @@
 import { request } from "../client.js";
 
-/**
- * Customer API endpoints
- */
-
-/**
- * Customer response with X-API-Version: 2.0.0 (flat structure)
- * Matches BaseApiCustomerSchema from server
- */
 export interface ApiCustomer {
 	autumn_id?: string;
 	id: string;
@@ -37,9 +29,6 @@ export interface FetchCustomersResponse {
 	has_more: boolean;
 }
 
-/**
- * Fetch a single page of customers
- */
 export async function fetchCustomers(
 	options: FetchCustomersOptions,
 ): Promise<ApiCustomer[]> {
@@ -58,9 +47,6 @@ export async function fetchCustomers(
 	return response.list;
 }
 
-/**
- * Fetch all customers across all pages
- */
 export async function fetchAllCustomers({
 	secretKey,
 }: {
@@ -88,9 +74,6 @@ export async function fetchAllCustomers({
 	return all;
 }
 
-/**
- * Delete a single customer
- */
 export async function deleteCustomer(options: {
 	secretKey: string;
 	customerId: string;

@@ -1,7 +1,6 @@
 import type { CustomerWalkCursorFields } from "@autumn/shared";
 import { type SQL, sql } from "drizzle-orm";
 
-/** Customers at or after the cursor's customer, in walk order (internal_id DESC). */
 export const customerWalkStartSql = ({
 	column,
 	cursor,
@@ -15,7 +14,6 @@ export const customerWalkStartSql = ({
 		: sql`AND ${column} <= ${cursor.c}`;
 };
 
-/** Rows strictly after the cursor in (customer DESC, created_at DESC, id DESC) order. */
 export const customerWalkRowAfterSql = ({
 	customerColumn,
 	createdAtColumn,

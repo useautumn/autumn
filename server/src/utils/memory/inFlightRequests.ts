@@ -15,7 +15,6 @@ type InFlightRequest = {
 
 const inFlightRequests = new Set<InFlightRequest>();
 
-/** Returns a release function; callers must invoke it in a `finally`. */
 export const registerInFlightRequest = ({
 	startedAt,
 	method,
@@ -46,9 +45,7 @@ export const listInFlightRequests = ({
 		let identity: { orgSlug?: string; customerId?: string } = {};
 		try {
 			identity = request.resolveIdentity();
-		} catch {
-			// A half-built request context must not break the probe.
-		}
+		} catch {}
 
 		summaries.push({
 			method: request.method,

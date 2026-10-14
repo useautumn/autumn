@@ -8,7 +8,6 @@ Bun.serve({
 	routes: {
 		"/health": () => Response.json({ ok: true }),
 
-		// The product: paste a note, get a summary back.
 		"/api/summarize": {
 			POST: async (req) => {
 				const user = getUser();

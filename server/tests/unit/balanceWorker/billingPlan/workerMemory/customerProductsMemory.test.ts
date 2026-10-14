@@ -16,7 +16,6 @@ import {
 	idsOf,
 } from "./workerMemory.js";
 
-/** A product whose grant carries one stored rollover. */
 const productWithRollover = (id: string): FullCusProduct =>
 	product({
 		id,

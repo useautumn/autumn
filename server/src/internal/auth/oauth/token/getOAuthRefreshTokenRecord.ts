@@ -11,7 +11,6 @@ export const getOAuthRefreshTokenRecord = async ({
 	tokenRequestFields: OAuthTokenRequestFields;
 }) => {
 	// Other grants carry a `refresh_token` field too (better-auth ignores it),
-	// so the grant type decides whether it names the row being refreshed.
 	const { grantType, refreshToken } = tokenRequestFields;
 	if (grantType !== "refresh_token" || !refreshToken) return null;
 

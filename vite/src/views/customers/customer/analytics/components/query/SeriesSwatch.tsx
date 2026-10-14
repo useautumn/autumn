@@ -1,4 +1,3 @@
-/** The 8px chart-series colour square shown beside an event or group. */
 export const SeriesSwatch = ({ color }: { color?: string }) => (
 	<span
 		aria-hidden="true"

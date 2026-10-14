@@ -1,12 +1,3 @@
-/**
- * Scope coverage for ensure_prices_and_entitlements preparation.
- *
- * Contract under test:
- *   - plan filters prepare catalog rows only for matched products.
- *   - all matched product versions get distinct prepared rows.
- *   - unmatched products do not receive prepared price / entitlement pairs.
- */
-
 import { expect, test } from "bun:test";
 import { prepare } from "@/internal/migrations/v2/prepare/prepare.js";
 import { ProductService } from "@/internal/products/ProductService.js";

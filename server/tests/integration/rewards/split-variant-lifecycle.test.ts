@@ -1,12 +1,3 @@
-/**
- * Splitting a variant onto its own Stripe product must not disturb the
- * customers already on it, and must leave both sides fully operable.
- *
- * Two customers attach before the split, two after. Every one of the four is
- * then tracked, checked and updated to prove the split changed nothing about
- * how a subscription behaves.
- */
-
 import { expect, test } from "bun:test";
 import {
 	type ApiCustomerV5,
@@ -49,7 +40,6 @@ test.concurrent(
 					userEmail: "lifecycle-split@autumn.test",
 				}),
 				s.customer({ paymentMethod: "success" }),
-				// Stripe caps a test clock at three customers.
 				s.otherCustomers([
 					{ id: beforeVariant, paymentMethod: "success" },
 					{ id: afterBase, paymentMethod: "success", distinctTestClock: true },
@@ -107,7 +97,6 @@ test.concurrent(
 			);
 		};
 
-		// 1. Two customers attach while base and variant share a Stripe product.
 		await attach(beforeBase, baseId);
 		await attach(beforeVariant, variantId);
 		await trackAndExpect(beforeBase);
@@ -116,7 +105,6 @@ test.concurrent(
 		const sharedProducts = await stripeProductOf(beforeVariant);
 		expect(sharedProducts).toEqual(await stripeProductOf(beforeBase));
 
-		// 2. Split the variant onto its own Stripe product.
 		await splitVariantStripeProduct({ ctx, variantPlanId: variantId });
 
 		const base = await ProductService.getFull({
@@ -133,15 +121,12 @@ test.concurrent(
 		});
 		expect(variant.processor?.id).not.toBe(base.processor?.id);
 
-		// The customers attached before the split keep the product they joined on.
 		expect(await stripeProductOf(beforeVariant)).toEqual(sharedProducts);
 		expect(await stripeProductOf(beforeBase)).toEqual(sharedProducts);
 
-		// 3. Two more customers attach after the split.
 		await attach(afterBase, baseId);
 		await attach(afterVariant, variantId);
 
-		// The new variant subscription lands on the new product; the base does not.
 		expect(await stripeProductOf(afterVariant)).toContain(
 			variant.processor?.id as string,
 		);
@@ -149,7 +134,6 @@ test.concurrent(
 			variant.processor?.id as string,
 		);
 
-		// 4. Every customer, old and new, still tracks, checks and updates.
 		for (const customerId of [afterBase, afterVariant]) {
 			await trackAndExpect(customerId);
 		}
@@ -180,11 +164,9 @@ test.concurrent(
 			});
 		}
 
-		// 5. A plan change still works on both sides of the split.
 		await attach(beforeVariant, baseId);
 		await attach(afterBase, variantId);
 
-		// Switching onto the variant after the split uses the new product.
 		expect(await stripeProductOf(afterBase)).toContain(
 			variant.processor?.id as string,
 		);

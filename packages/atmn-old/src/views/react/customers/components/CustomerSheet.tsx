@@ -11,10 +11,6 @@ import {
 	SubscriptionsSection,
 } from "./sections/index.js";
 
-/**
- * Customer detail sheet (right panel).
- * Shows basic info immediately, then lazy-loads expanded data.
- */
 export function CustomerSheet({
 	customer,
 	isFocused,
@@ -27,17 +23,14 @@ export function CustomerSheet({
 }: CustomerSheetProps) {
 	const borderColor = isFocused ? "magenta" : "gray";
 
-	// Use expanded data if available, otherwise fall back to basic
 	const displayCustomer = expandedCustomer ?? customer;
 
-	// Title: Name > ID > Email
 	const title =
 		displayCustomer.name ||
 		displayCustomer.id ||
 		displayCustomer.email ||
 		"Unknown";
 
-	// Get balances (converted to proper type if expanded)
 	const balances = expandedCustomer?.balances ?? {};
 
 	return (
@@ -49,12 +42,10 @@ export function CustomerSheet({
 			minWidth={44}
 			height="100%"
 		>
-			{/* Customer Title */}
 			<Text bold color="white">
 				{title}
 			</Text>
 
-			{/* Basic Customer Info */}
 			<Box flexDirection="column" marginTop={1}>
 				<Text>
 					<Text color="gray">ID: </Text>
@@ -86,7 +77,6 @@ export function CustomerSheet({
 				)}
 			</Box>
 
-			{/* Loading state for expanded data */}
 			{isLoadingExpanded && (
 				<Box marginTop={1}>
 					<Text>
@@ -95,23 +85,19 @@ export function CustomerSheet({
 				</Box>
 			)}
 
-			{/* Error state for expanded data */}
 			{expandedError && (
 				<Box marginTop={1}>
 					<Text color="red">Failed to load details</Text>
 				</Box>
 			)}
 
-			{/* Expanded sections (only show when data is loaded) */}
 			{expandedCustomer && (
 				<Box flexDirection="column" marginTop={1}>
-					{/* Subscriptions - always at top */}
 					<SubscriptionsSection
 						subscriptions={expandedCustomer.subscriptions}
 						title="Subscriptions"
 					/>
 
-					{/* Scheduled Subscriptions */}
 					{expandedCustomer.scheduled_subscriptions.length > 0 && (
 						<Box marginTop={1}>
 							<SubscriptionsSection
@@ -121,14 +107,12 @@ export function CustomerSheet({
 						</Box>
 					)}
 
-					{/* Feature Balances */}
 					<Box marginTop={1}>
 						<BalancesSection
 							balances={balances as Record<string, ApiBalance>}
 						/>
 					</Box>
 
-					{/* Entities */}
 					{expandedCustomer.entities &&
 						expandedCustomer.entities.length > 0 && (
 							<Box marginTop={1}>
@@ -136,7 +120,6 @@ export function CustomerSheet({
 							</Box>
 						)}
 
-					{/* Invoices */}
 					{expandedCustomer.invoices &&
 						expandedCustomer.invoices.length > 0 && (
 							<Box marginTop={1}>
@@ -144,7 +127,6 @@ export function CustomerSheet({
 							</Box>
 						)}
 
-					{/* Rewards */}
 					{expandedCustomer.rewards &&
 						expandedCustomer.rewards.discounts.length > 0 && (
 							<Box marginTop={1}>
@@ -152,7 +134,6 @@ export function CustomerSheet({
 							</Box>
 						)}
 
-					{/* Referrals */}
 					{expandedCustomer.referrals &&
 						expandedCustomer.referrals.length > 0 && (
 							<Box marginTop={1}>
@@ -162,7 +143,6 @@ export function CustomerSheet({
 				</Box>
 			)}
 
-			{/* Basic subscriptions (fallback when expanded not loaded) */}
 			{!expandedCustomer && !isLoadingExpanded && (
 				<Box marginTop={1} flexDirection="column">
 					<Text bold color="gray">
@@ -194,10 +174,8 @@ export function CustomerSheet({
 				</Box>
 			)}
 
-			{/* Spacer to push actions to bottom */}
 			<Box flexGrow={1} />
 
-			{/* Actions - pinned to bottom */}
 			<Box flexDirection="column">
 				{copiedFeedback ? (
 					<Text color="green">Copied!</Text>

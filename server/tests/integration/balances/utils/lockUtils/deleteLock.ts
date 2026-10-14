@@ -22,7 +22,6 @@ export const deleteLock = async ({
 	});
 	const claimMarkerKey = buildClaimMarkerKey(redisReceiptKey);
 
-	// The balance worker keeps the lock as a row; its owner is evicted so the worker forgets the id too.
 	const deletedLocks = await ctx.db
 		.delete(balanceLocks)
 		.where(

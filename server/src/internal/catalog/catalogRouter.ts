@@ -5,7 +5,6 @@ import { handlePreviewUpdateCatalog } from "./handlers/handlePreviewUpdateCatalo
 import { handleUpdateCatalog } from "./handlers/handleUpdateCatalog.js";
 import { handleUpdateCatalogMappings } from "./handlers/handleUpdateCatalogMappings.js";
 
-/** RPC router for batch catalog (features + plans) operations. */
 export const catalogRpcRouter = new Hono<HonoEnv>();
 catalogRpcRouter.post("/catalog.get_mappings", ...handleGetCatalogMappings);
 catalogRpcRouter.post("/catalog.preview_update", ...handlePreviewUpdateCatalog);

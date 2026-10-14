@@ -1,26 +1,3 @@
-/**
- * Unlimited-deduction feature — edge scenarios beyond the core track path:
- * entity-scoped items, the set_usage (POST /usage) path, and negative-value
- * (refund) tracks. Tracking on an unlimited cusEnt should really deduct:
- * `balance -= value` with no clamp, so the raw DB row drifts negative as a
- * usage counter (surfaced as `usage` on the latest API version; older
- * versions stay masked). This file asserts the RAW DB counters only.
- *
- * Contract under test (raw `customer_entitlements` rows, never API values):
- *   1. Entity-scoped unlimited item: track 5 against an entity moves that
- *      entity's balance inside the cusEnt `entities` jsonb to -5.
- *   2. set_usage 42 on an unlimited feature: raw balance becomes -42
- *      (targetBalance = grantedBalance(0) + prepaid(0) - usage).
- *   3. Track 10 then track -4: raw balance is -6 — negative tracks add back,
- *      no clamping at 0 in either direction.
- *
- * Red (current):  the `unlimitedFeatureIds` skip in executeRedisDeductionV2
- *                 short-circuits before any deduction, so raw balances stay
- *                 0 (and entity balances stay 0 / absent).
- * Green (after):  unlimited cusEnts deduct for real and the raw counters
- *                 above hold.
- */
-
 import { expect, test } from "bun:test";
 import type { ProductItem } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
@@ -34,7 +11,6 @@ import { findCustomerEntitlement } from "../../utils/findCustomerEntitlement.js"
 
 const POLL_TIMEOUT_MS = 30_000;
 
-// ── 1. Entity-scoped unlimited: per-entity balance drifts negative ──
 test.concurrent(
 	`${chalk.yellowBright("unlimited-deduction: entity-scoped track moves per-entity balance to -5 (raw DB)")}`,
 	async () => {
@@ -70,7 +46,6 @@ test.concurrent(
 			value: 5,
 		});
 
-		// Track flushes to Postgres lazily — poll the raw cusEnt row.
 		const entityBalances = await pollUntil({
 			fetch: async () => {
 				const cusEnt = await findCustomerEntitlement({
@@ -86,12 +61,10 @@ test.concurrent(
 			timeoutMs: POLL_TIMEOUT_MS,
 		});
 
-		// One entity, its raw per-entity balance moved by -5.
 		expect(entityBalances).toEqual([-5]);
 	},
 );
 
-// ── 2. set_usage on unlimited: balance set to -usage ──
 test.concurrent(
 	`${chalk.yellowBright("unlimited-deduction: set_usage 42 sets raw balance to -42")}`,
 	async () => {
@@ -117,8 +90,6 @@ test.concurrent(
 			value: 42,
 		});
 
-		// set_usage computes targetBalance = grantedBalance + prepaid - usage;
-		// an unlimited cusEnt grants 0, so usage 42 => balance -42.
 		const balance = await pollUntil({
 			fetch: async () => {
 				const cusEnt = await findCustomerEntitlement({
@@ -136,7 +107,6 @@ test.concurrent(
 	},
 );
 
-// ── 3. Negative track (refund): adds back, no clamp at 0 ──
 test.concurrent(
 	`${chalk.yellowBright("unlimited-deduction: track 10 then -4 leaves raw balance at -6")}`,
 	async () => {

@@ -1,7 +1,3 @@
-/**
- * The `credit_cost` a token track's event records: what each feature other than the AI credit system
- * itself was charged. Undefined when nothing else was charged.
- */
 export const buildAiCreditCostProperty = ({
 	aiCreditFeatureId,
 	entries,

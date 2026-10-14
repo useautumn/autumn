@@ -1,10 +1,8 @@
 import { z } from "zod/v4";
 
-/** Which ECS service Flightcontrol currently calls Blue; the dashboard writes it, every worker polls it. */
 export const BALANCE_WORKER_ACTIVE_SLOT_KEY =
 	"admin/blue-green-balance-workers-active-slot.json";
 
-/** Mirrors the server's `ActiveSlotConfigSchema`; `flightcontrolBlueArn` is the only field the gate reads. */
 export const ActiveSlotEdgeConfigSchema = z.object({
 	activeTaskDefinitionArn: z.string().nullable(),
 	activeImageSha: z.string().nullable(),

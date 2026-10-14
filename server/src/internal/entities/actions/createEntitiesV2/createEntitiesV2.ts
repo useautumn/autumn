@@ -20,7 +20,6 @@ import { setupCreateEntitiesContext } from "./setup/setupCreateEntitiesContext.j
 import { setupEntityBillingContext } from "./setup/setupEntityBillingContext.js";
 import type { CreateEntitiesParams } from "./types/createEntitiesParams.js";
 
-/** Seats are charged before any row is written: an unpaid invoice is voided and nothing else happens. */
 const refuseUnpaidInvoice = async ({
 	ctx,
 	billingContext,
@@ -53,7 +52,6 @@ const refuseUnpaidInvoice = async ({
 	});
 };
 
-/** Entity creation as one billing plan: setup → errors → compute → Stripe → execute. */
 export const createEntitiesV2 = async ({
 	ctx,
 	params,
@@ -103,7 +101,6 @@ export const createEntitiesV2 = async ({
 		autumnBillingPlan,
 		billingContext: context,
 	});
-	// Fire-and-forget, as customer creation does
 	void sendBillingUpdatedWebhook({
 		allocationsAdjusted,
 		ctx,

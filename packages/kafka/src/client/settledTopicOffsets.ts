@@ -101,7 +101,6 @@ export function createSettledAdmin({
 		state.current = fresh;
 	}
 
-	/** Concurrent readers of one poisoned reply share a single replacement. */
 	async function replaceAdminOnce(): Promise<void> {
 		state.replacing ??= replaceAdmin();
 		try {
@@ -134,8 +133,6 @@ export function createSettledAdmin({
 	const overrides: Pick<Admin, "connect" | "disconnect" | "fetchTopicOffsets"> =
 		{ connect, disconnect, fetchTopicOffsets };
 
-	/** Everything else reads through to whichever admin is current, so a
-	 *  replacement also heals the other metadata-backed calls. */
 	function readMember(_target: Admin, property: string | symbol): unknown {
 		if (typeof property === "string" && property in overrides)
 			return overrides[property as keyof typeof overrides];
@@ -145,7 +142,6 @@ export function createSettledAdmin({
 	return new Proxy(state.current, { get: readMember });
 }
 
-/** A Kafka client whose admins settle topic offsets before answering. */
 export class KafkaWithSettledTopicOffsets extends Kafka {
 	readonly #retry: TopicOffsetsRetry;
 

@@ -35,7 +35,6 @@ const REQUEST_INVALID_REASON = "request_invalid";
 
 const EVENT_NAME_REASON = "event_name_not_supported";
 
-/** Replay cohorts are customer subjects; an entity request has no baseline to verify against yet. */
 const ENTITY_REASON = "entity_not_supported";
 
 const CONTEXT_ENV: Record<
@@ -59,7 +58,6 @@ export function replayRefusalReasonOf({
 	return typeof reason === "string" ? reason : undefined;
 }
 
-// The schemas strip unknown keys, so expand has to reach the context first.
 function replayContextExpand({
 	body,
 }: {
@@ -105,7 +103,6 @@ function normalizedReplayBody({
 	};
 }
 
-// Replay timestamps are logical, so the shared wall-clock refinement cannot judge them.
 function trackBodyWithoutTimestamp({ body }: { body: ReplayRequestBody }) {
 	const { [REPLAY_BODY_TIMESTAMP_FIELD]: _logical, ...rest } = body;
 	return rest;
@@ -152,7 +149,6 @@ function planTrackCommand({
 	};
 }
 
-/** `orgConfig` is what the org runs under now; the replayed command records it like a live one would. */
 export function planReplayRequest({
 	request,
 	orgConfig,
@@ -160,7 +156,6 @@ export function planReplayRequest({
 }: {
 	request: ReplayManifestRequest;
 	orgConfig: CommandOrg["config"];
-	/** The org's catalog features; without them a replayed command carries no internal feature id. */
 	features?: BalanceWorkerRequestContext["features"];
 }): ReplayRequestPlan {
 	const expand = replayContextExpand({ body: request.body });

@@ -1,8 +1,3 @@
-/**
- * A plan whose credits feed a pooled balance stays with the source: pooled rows are
- * owned by the customer, so the transfer skips it instead of splitting the pool.
- */
-
 import { expect, test } from "bun:test";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";

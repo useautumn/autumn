@@ -1,48 +1,23 @@
-/** The overlay holds CLI-only field treatment while OpenAPI owns shape; `default` omits values the server reads identically.
- * Casing is generic, so `version_slug` becomes `versionSlug` without an entry. */
-
-/** Dotted path from a collection item root, e.g. "items.price.billing_units". */
 export type FieldPath = string;
 
 export type FieldOverlay = {
-	/** Keep it out of fixtures, builders and emitters entirely. */
 	hidden?: true;
-	/** Use this fixture name instead of the recased one. */
 	rename?: string;
-	/** Required in the config even though the API accepts it as optional. */
 	required?: true;
-	/** Kept for existing catalogs only: struck through in editors, and push
-	 * warns when a config still states it. */
 	deprecated?: true;
-	/** A sentence appended to the field's JSDoc: what the server's description
-	 * leaves out and a reader (or an agent) needs to know in the config. */
 	describe?: string;
-	/** The value the CLI treats as this field's default: a field at it is not written into a fixture. */
 	default?: unknown;
-	/** Why — this is documentation, and it is not optional. */
 	reason: string;
 };
 
 export type CollectionOverlay = Record<FieldPath, FieldOverlay>;
 
 export type Overlay = {
-	/** Keyed by top-level wire collection: "features", "plans", … */
 	collections: Record<string, CollectionOverlay>;
-	/** Wire names allowed through despite `x-internal` — the ids the CLI must carry. */
 	exposeInternal: string[];
-	/**
-	 * Test-only bookkeeping; changes no generated output. `x-internal` fields
-	 * the server both returns and accepts are already dropped from fixtures,
-	 * and each is named here with why that is a no-op on push; an unnamed one
-	 * fails the generator's round-trip guard.
-	 */
 	serverOwnedInternal: Record<string, string>;
 };
 
-/**
- * Entries land with the concept they belong to, never ahead of it — an entry
- * for a fixture that does not exist yet is a guess at a path.
- */
 export const OVERLAY: Overlay = {
 	exposeInternal: ["internal_id", "entity_feature_id", "allocated_billing"],
 	serverOwnedInternal: {
@@ -270,7 +245,6 @@ export const isHidden = ({
 	path: FieldPath;
 }): boolean => fieldOverlay({ overlay, collection, path })?.hidden === true;
 
-/** The overlay's rename wins; otherwise the generic recasing stands. */
 export const fixtureNameFor = ({
 	overlay,
 	collection,
@@ -303,7 +277,6 @@ export const isDeprecatedByOverlay = ({
 	path: FieldPath;
 }): boolean => fieldOverlay({ overlay, collection, path })?.deprecated === true;
 
-/** Every deprecated field of a collection, wire-named and item-rooted, with its reason. */
 export const deprecatedFieldsOf = ({
 	overlay,
 	collection,
@@ -326,8 +299,6 @@ export const isRequiredByOverlay = ({
 	path: FieldPath;
 }): boolean => fieldOverlay({ overlay, collection, path })?.required === true;
 
-/** Server-owned unless the overlay names it: `x-internal` is opt-out, so a new
- * internal field can never leak into a fixture by default. */
 export const isInternalField = ({
 	overlay,
 	wireKey,
@@ -341,7 +312,6 @@ export const isInternalField = ({
 
 type JsonSchemaLike = { [key: string]: unknown };
 
-/** CLI wording where the shared label reads wrong at the terminal. */
 export const LABEL_OVERLAY: Record<string, string> = {
 	processors: "Processor mappings",
 	id: "ID",

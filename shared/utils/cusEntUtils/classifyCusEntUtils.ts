@@ -47,10 +47,6 @@ export const isUnlimitedCusEnt = (cusEnt: {
 	return cusEnt.entitlement.allowance_type === AllowanceType.Unlimited;
 };
 
-/**
- * Type guard that narrows cusEnt to have non-null entities.
- * Use directly with cusEnt (not wrapped in object) for type narrowing to work.
- */
 export const isEntityScopedCusEnt = <
 	T extends { entitlement: Pick<Entitlement, "entity_feature_id"> },
 >(
@@ -117,10 +113,6 @@ export const isCustomerEntitlementDueAtInvoice = ({
 	);
 };
 
-/**
- *
- * Only applicable for paid customer entitlements
- */
 export const customerEntitlementShouldBeBilled = ({
 	cusEnt,
 	invoicePeriodEndMs,
@@ -138,10 +130,6 @@ export const customerEntitlementShouldBeBilled = ({
 
 	const nextResetAt = cusEnt.next_reset_at;
 	if (!nextResetAt) {
-		// Allocated v2 (continuous-use) cusEnts never reset so they carry no
-		// next_reset_at — bill them whenever their price's billing cycle ends at
-		// this invoice's period end (multi-interval safe: a yearly item on a
-		// monthly subscription only bills at the year boundary).
 		if (!billingCycleAnchorMs) return false;
 		if (!isAllocatedV2CustomerEntitlement(cusEnt)) return false;
 
@@ -184,10 +172,6 @@ export const isUsageBasedAllocatedCustomerEntitlement = (
 	return isAllocated && isAllocatedPrice(cusPrice.price);
 };
 
-/**
- * Continuous-use feature billed like a consumable (allocated v2): holdings are
- * billed in arrears at each cycle end and the balance is never reset.
- */
 export const isAllocatedV2CustomerEntitlement = (
 	cusEnt: FullCusEntWithFullCusProduct,
 ) => {
@@ -199,7 +183,6 @@ export const isAllocatedV2CustomerEntitlement = (
 	return isAllocated && isAllocatedV2Price(cusPrice.price);
 };
 
-/** Whether the customer entitlement has a prepaid price (usage billed in advance). */
 export const isPrepaidCustomerEntitlement = (
 	cusEnt: FullCusEntWithFullCusProduct,
 ) => {
@@ -265,7 +248,6 @@ export const isCustomerEntitlementPrepaidWithSeparateResetInterval = ({
 	});
 };
 
-/** Whether the customer entitlement has a pay-per-use price (usage billed in arrears). */
 export const isPayPerUseCustomerEntitlement = (
 	cusEnt: FullCusEntWithFullCusProduct,
 ) => {
@@ -286,12 +268,6 @@ export const isConsumableCustomerEntitlement = (
 	cusEnt: FullCusEntWithFullCusProduct,
 ) => !isAllocatedCustomerEntitlement(cusEnt);
 
-/**
- * One-off prepaid consumable cusEnts are auto-preserved as a lifetime cusEnt
- * on product transitions (cusProductToOneOffPrepaidCarryOvers). Any other
- * carry-over / existing-usage path that iterates cusEnts must skip these to
- * avoid double-counting the same balance.
- */
 export const isOneOffPrepaidConsumableCustomerEntitlement = (
 	cusEnt: FullCusEntWithFullCusProduct,
 ) =>

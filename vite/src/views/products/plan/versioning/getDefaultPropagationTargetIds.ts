@@ -1,9 +1,5 @@
 import type { LicenseParentTarget } from "../catalog/catalogPlanPreview";
 
-/**
- * Pin every conflict-free parent version, collapsing to the whole-plan key when
- * a parent has no conflicting version so the row reads "All versions".
- */
 export const getDefaultLicenseParentKeys = ({
 	targets,
 }: {

@@ -1,10 +1,6 @@
 import type { DeletedSubject } from "../../../state/types/storedSubject.js";
 import type { SlotProcessorContext } from "../../types/slotProcessor.js";
 
-/**
- * Stores a deletion as the subject's newest row; a deleted customer takes every entity held for it, at the same version,
- * so no entity outlives it. False when a newer read of the subject is already held.
- */
 export const deleteSubject = ({
 	ctx,
 	subject,

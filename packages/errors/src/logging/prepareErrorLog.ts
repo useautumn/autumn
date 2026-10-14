@@ -33,7 +33,6 @@ const messageOf = ({ args }: { args: unknown[] }): string =>
 	args.filter((arg): arg is string => typeof arg === "string").at(-1) ??
 	"Logged error";
 
-/** Decides what a log call writes and, for an error-level bug, what it sends to Sentry. */
 export const prepareErrorLog = ({
 	logger,
 	args,
@@ -57,7 +56,6 @@ export const prepareErrorLog = ({
 	if (!loggedError) {
 		if (!captureToSentry || !isErrorLevel) return { args };
 
-		// Captured here, synchronously, so the stack still reaches the caller of logger.error.
 		const stack = new Error().stack ?? "";
 		const message = messageOf({ args });
 		const logContext = logContextOf({ logger, args });

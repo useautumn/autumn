@@ -7,20 +7,16 @@ import {
     prodTestOrgId,
 } from "./experimentEnv";
 
-// ---------------------------------------------------------------------------
-// EDIT ME — hardcode the customer / feature you want to diagnose
-// ---------------------------------------------------------------------------
 const CONFIG = {
 	orgId: prodTestOrgId as string,
 	env: AppEnv.Live as AppEnv,
 	customerId: prodTestCustomerId as string,
-	entityId: prodTestEntityId as string | undefined, // or undefined
-	featureId: undefined as string | undefined, // set to isolate to one feature
+	entityId: prodTestEntityId as string | undefined,
+	featureId: undefined as string | undefined,
 	iterations: 5,
-	runLua: true, // lua writes back entitlement hashes even for amount=0 — disable if paranoid
-	forceRepopulate: true, // DEL the cached subject before priming, so it's rebuilt from the DB
+	runLua: true,
+	forceRepopulate: true,
 };
-// ---------------------------------------------------------------------------
 
 const { resolveRedisV2 } = await import("../src/external/redis/resolveRedisV2");
 const { warmupRedisV2 } = await import("../src/external/redis/initRedisV2");
@@ -137,7 +133,6 @@ const runIteration = async ({
 		entityId: CONFIG.entityId,
 	});
 
-	// A1. GET subject
 	const { step: s1, value: cachedRaw } = await time(
 		"GET full_subject",
 		() => redisV2.get(subjectKey),
@@ -149,7 +144,6 @@ const runIteration = async ({
 		return { index: i, steps };
 	}
 
-	// parse
 	const { step: sParse, value: cached } = await time(
 		"JSON.parse + sanitize",
 		async () =>
@@ -175,7 +169,6 @@ const runIteration = async ({
 		}
 	}
 
-	// A2. epoch
 	const { step: s2 } = await time("getOrInitFullSubjectViewEpoch", () =>
 		getOrInitFullSubjectViewEpoch({ ctx, customerId: CONFIG.customerId }),
 	);
@@ -187,7 +180,6 @@ const runIteration = async ({
 
 	const includeAggregated = !CONFIG.entityId;
 
-	// A3. batch hmget pipeline
 	const { step: s3, value: batchOutcome } = await time(
 		`getCachedFeatureBalancesBatch (${meteredFeatures.length} features)`,
 		() =>
@@ -202,7 +194,6 @@ const runIteration = async ({
 	);
 	steps.push({ ...s3, extra: batchOutcome.kind });
 
-	// A4. sequential per-feature HMGET with per-feature timing (slow-key hunt)
 	const perFeature: Array<{ featureId: string; ms: number; bytes: number }> =
 		[];
 	const { step: s4 } = await time(
@@ -237,7 +228,6 @@ const runIteration = async ({
 	);
 	steps.push(s4);
 
-	// Only print on first iteration to keep output tidy
 	if (i === 1) {
 		const sorted = [...perFeature].sort((a, b) => b.ms - a.ms);
 		console.log("    top-5 slowest features (seq HMGET):");
@@ -248,7 +238,6 @@ const runIteration = async ({
 		}
 	}
 
-	// C. dry lua invocation (amount_to_deduct=0)
 	if (CONFIG.runLua && meteredFeatures.length > 0) {
 		const customerEntitlementDeductions: Array<{
 			customer_entitlement_id: string;
@@ -360,7 +349,6 @@ const main = async () => {
 
 	const ctx = makeCtx({ redisV2, db });
 
-	// Prime the cache if cold, so the iteration benchmarks always measure a hit path.
 	const subjectKey = buildFullSubjectKey({
 		orgId: CONFIG.orgId,
 		env: CONFIG.env,
@@ -368,9 +356,6 @@ const main = async () => {
 		entityId: CONFIG.entityId,
 	});
 	if (CONFIG.forceRepopulate) {
-		// Grab meteredFeatures from the existing subject so we know which
-		// balance hashes to drop. All keys share the {customerId} hash tag,
-		// so a single DEL across them is slot-safe.
 		const staleRaw = await redisV2.get(subjectKey);
 		const balanceKeys: string[] = [];
 		if (staleRaw) {

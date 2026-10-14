@@ -1,6 +1,3 @@
-/** A page whose checkpoint COMMIT reply is lost must not keep `succeeded`
- * checkpoints with stale caches: the runner busts its caches and releases its claims. */
-
 import { afterAll, describe, expect, mock, test } from "bun:test";
 import { drizzle } from "drizzle-orm/node-postgres";
 import pg from "pg";
@@ -61,7 +58,6 @@ mock.module(claimModulePath, () => ({
 			: { selectedCount: customers.length, cursor: "cursor_1", customers },
 }));
 
-// The page's customer writes and its checkpoints commit together, as the real marks do.
 mock.module(executeModulePath, () => ({
 	executeBatchMigrationPage: async ({
 		ctx,

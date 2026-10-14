@@ -6,7 +6,6 @@ type WithSubscriberAttributes = {
 	subscriber_attributes?: Record<string, { value: string } | undefined>;
 };
 
-/** Canonical Autumn id the client declares via the `autumn_customer_id` RC subscriber attribute. */
 export const getRevenueCatOverrideCustomerId = (
 	event: WithSubscriberAttributes,
 ): string | undefined => {
@@ -15,7 +14,6 @@ export const getRevenueCatOverrideCustomerId = (
 	return value ? value : undefined;
 };
 
-/** Canonical Autumn customer email the client declares via the `autumn_customer_email` RC subscriber attribute. */
 export const getRevenueCatCustomerEmail = (
 	event: WithSubscriberAttributes,
 ): string | undefined => {
@@ -24,7 +22,6 @@ export const getRevenueCatCustomerEmail = (
 	return value ? value : undefined;
 };
 
-/** Canonical Autumn customer fingerprint the client declares via the `autumn_customer_fingerprint` RC subscriber attribute. */
 export const getRevenueCatCustomerFingerprint = (
 	event: WithSubscriberAttributes,
 ): string | undefined => {

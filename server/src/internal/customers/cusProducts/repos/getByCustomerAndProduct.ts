@@ -5,7 +5,6 @@ import {
 } from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle";
 
-/** Finds customer products by internal customer + internal product IDs. */
 export const getByCustomerAndProduct = async ({
 	db,
 	internalCustomerId,

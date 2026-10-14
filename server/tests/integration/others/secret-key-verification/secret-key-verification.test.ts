@@ -16,9 +16,6 @@ describe("secret-key-verification: verifyKey shape (DB + cache)", () => {
 	const hashedKey = hashApiKey(ctx.orgSecretKey);
 
 	const cleanupDbState = async () => {
-		// Remove any active lazy/background runs we might leave behind on
-		// re-runs. The FK on migrations.internal_id → migration_runs cascades,
-		// but we delete by id-scoped to org/env so we have to do it explicitly.
 		await ctx.db
 			.delete(migrationRuns)
 			.where(
@@ -101,7 +98,6 @@ describe("secret-key-verification: verifyKey shape (DB + cache)", () => {
 		expect(run).not.toBeNull();
 		if (!run) throw new Error("failed to insert lazy migration_run");
 
-		// Bust the cached payload so verifyKey re-loads from DB.
 		await clearSecretKeyCache({ hashedKey });
 
 		const fromDb = await verifyKey({ db: ctx.db, key: ctx.orgSecretKey });
@@ -119,7 +115,6 @@ describe("secret-key-verification: verifyKey shape (DB + cache)", () => {
 		expect(fromDb.org.pendingMigrations).toHaveLength(1);
 		expect(fromDb.org.pendingMigrations?.[0]?.migration.id).toBe(MIGRATION_ID);
 
-		// Second call hits cache — should be the same shape (deep-equal).
 		const fromCache = await verifyKey({ db: ctx.db, key: ctx.orgSecretKey });
 		if (!fromCache) throw new Error("verifyKey returned no cached data");
 
@@ -130,7 +125,6 @@ describe("secret-key-verification: verifyKey shape (DB + cache)", () => {
 	});
 
 	test("non-lazy (background) runs do not surface on pendingMigrations", async () => {
-		// Wipe state, seed a fresh migration with a background-mode run.
 		await cleanupDbState();
 		await clearSecretKeyCache({ hashedKey });
 

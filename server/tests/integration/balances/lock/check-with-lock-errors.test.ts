@@ -9,10 +9,6 @@ import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 
-// ─────────────────────────────────────────────────────────────────────────────
-// ERR-1: lock on allocated feature → 400
-// ─────────────────────────────────────────────────────────────────────────────
-
 test.concurrent(`${chalk.yellowBright("check-with-lock-errors ERR-1: lock not supported for allocated feature")}`, async () => {
 	const allocatedUsers = items.allocatedUsers({ includedUsage: 5 });
 	const freeProd = products.base({
@@ -43,10 +39,6 @@ test.concurrent(`${chalk.yellowBright("check-with-lock-errors ERR-1: lock not su
 	});
 });
 
-// ─────────────────────────────────────────────────────────────────────────────
-// ERR-2: duplicate lock key (Redis path) → 409
-// ─────────────────────────────────────────────────────────────────────────────
-
 test.concurrent(`${chalk.yellowBright("check-with-lock-errors ERR-2: duplicate lock key (Redis) → 409")}`, async () => {
 	const freeProd = products.base({
 		id: "free",
@@ -63,7 +55,6 @@ test.concurrent(`${chalk.yellowBright("check-with-lock-errors ERR-2: duplicate l
 
 	await deleteLock({ ctx, lockId: customerId });
 
-	// First check — should succeed and create the lock receipt
 	await autumnV2_1.check({
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
@@ -71,7 +62,6 @@ test.concurrent(`${chalk.yellowBright("check-with-lock-errors ERR-2: duplicate l
 		lock: { enabled: true, lock_id: customerId },
 	});
 
-	// Second check with same lock key — should fail with LockAlreadyExists
 	await expectAutumnError({
 		errCode: ErrCode.LockAlreadyExists,
 		func: async () => {
@@ -84,10 +74,6 @@ test.concurrent(`${chalk.yellowBright("check-with-lock-errors ERR-2: duplicate l
 		},
 	});
 });
-
-// ─────────────────────────────────────────────────────────────────────────────
-// ERR-3: duplicate lock key (Postgres / skip_cache path) → 409
-// ─────────────────────────────────────────────────────────────────────────────
 
 test.concurrent(`${chalk.yellowBright("check-with-lock-errors ERR-3: duplicate lock key (Postgres) → 409")}`, async () => {
 	const freeProd = products.base({
@@ -105,7 +91,6 @@ test.concurrent(`${chalk.yellowBright("check-with-lock-errors ERR-3: duplicate l
 
 	await deleteLock({ ctx, lockId: customerId });
 
-	// First check via Postgres — should succeed
 	await autumnV2_1.check({
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
@@ -114,7 +99,6 @@ test.concurrent(`${chalk.yellowBright("check-with-lock-errors ERR-3: duplicate l
 		skip_cache: true,
 	});
 
-	// Second check with same lock key — should fail with LockAlreadyExists
 	await expectAutumnError({
 		errCode: ErrCode.LockAlreadyExists,
 		func: async () => {

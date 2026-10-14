@@ -19,9 +19,6 @@ const UpdateOrganizationStripeSchema = z
 		"At least one of test_account_id or live_account_id is required",
 	);
 
-/**
- * Validates that master org can access the Stripe account and updates the org's Stripe Connect config
- */
 const validateAndUpdateStripeAccount = async ({
 	accountId,
 	env,
@@ -42,7 +39,6 @@ const validateAndUpdateStripeAccount = async ({
 	const account = await stripeCli.accounts.retrieve(accountId);
 	logger.info(`Stripe account ${account?.id} retrieved successfully`);
 
-	// Update the organization's Stripe Connect configuration
 	const currentConnect =
 		env === AppEnv.Sandbox ? org.test_stripe_connect : org.live_stripe_connect;
 
@@ -53,13 +49,6 @@ const validateAndUpdateStripeAccount = async ({
 	};
 };
 
-/**
- * POST /organization/stripe
- * Updates Stripe Connect account for a platform organization
- * - Requires master org to have Stripe secret key connected
- * - Validates master org can access the account
- * - Stores master_org_id in the tenant org's stripe_connect config
- */
 export const handleUpdateOrganizationStripe = createRoute({
 	scopes: [Scopes.Platform.Write],
 	body: UpdateOrganizationStripeSchema,
@@ -70,14 +59,12 @@ export const handleUpdateOrganizationStripe = createRoute({
 		const { organization_slug, test_account_id, live_account_id } =
 			c.req.valid("json");
 
-		// Verify the organization exists and was created by this master org
 		const org = await validatePlatformOrg({
 			db,
 			organizationSlug: organization_slug,
 			masterOrg,
 		});
 
-		// Validate and update Stripe accounts
 		const updates: {
 			test_stripe_connect?: any;
 			live_stripe_connect?: any;
@@ -106,7 +93,6 @@ export const handleUpdateOrganizationStripe = createRoute({
 			.set(updates)
 			.where(eq(organizations.id, org.id));
 
-		// Clear organization cache
 		await clearOrgCache({ db, orgId: org.id });
 
 		logger.info(

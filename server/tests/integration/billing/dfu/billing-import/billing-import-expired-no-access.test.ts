@@ -1,8 +1,3 @@
-/**
- * dfu.flash — expired plan (contract 6, access-leak guard): status=expired is
- * reported AND the customer has no access to the plan's feature.
- */
-
 import { expect, test } from "bun:test";
 import { type ApiCustomerV5 } from "@autumn/shared";
 import {
@@ -42,7 +37,6 @@ test.concurrent(
 				{
 					processor: "stripe",
 					link: { subscription_id: subscriptionId },
-					// `plan` shorthand — equivalent to phases:[{ starts_at:"now", plans:[plan] }].
 					plan: { plan_id: pro.id, status: "expired" },
 				},
 			],
@@ -50,11 +44,9 @@ test.concurrent(
 
 		const flashRes = await callFlash(autumnV2_2 as FlashClient, payload);
 
-		// ── Contract 6a: flashed status reported as expired. ──
 		const flashed = flashRes.result?.flashed?.find((f) => f.plan_id === pro.id);
 		expect(flashed?.status).toBe("expired");
 
-		// ── Contract 6b: customer has NO access to the expired plan's feature. ──
 		const customer = await autumnV2_3.customers.get<ApiCustomerV5>(customerId);
 		await expectCustomerProducts({ customer, notPresent: [pro.id] });
 		const messagesBalance = customer.balances?.[TestFeature.Messages];

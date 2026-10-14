@@ -1,32 +1,3 @@
-/**
- * TDD contract for pooled balances on CUSTOMER-LEVEL plans.
- *
- * A pooled item attached without an entity must behave exactly as it does when
- * attached to an entity — it contributes to the shared pool rather than being
- * silently dropped.
- *
- * Contract under test:
- *   New behaviors:
- *     - Attaching a plan with a pooled item at the customer level creates the
- *       pooled balance graph (pool row + synthetic customer entitlement +
- *       contribution), same as an entity-scoped attach.
- *     - A customer-level source and an entity-scoped source with matching pool
- *       identity coalesce into ONE pool; `granted` is the sum.
- *     - Usage tracked at the customer level and on an entity draw the same pool.
- *     - Replacing the customer-level plan deletes its contribution and
- *       decrements `granted` — the entity-scoped contribution survives.
- *   Side effects:
- *     - `pooled_balance_contributions.source_customer_product_id` points at a
- *       customer-level customer product (`entity_id` null).
- *     - The customer-level source customer entitlement is normalized to 0.
- *
- * Pre-impl red: `applyIncoming/OutgoingPooledBalanceSources` bail out unless the
- * source customer product is entity-scoped, so no pool row is created and the
- * feature disappears from the customer's balances entirely (pooled sources are
- * hidden from the public balance list).
- * Post-impl green: customer-level sources participate in the pool.
- */
-
 import { expect, test } from "bun:test";
 import {
 	type ApiCustomerV5,
@@ -51,8 +22,6 @@ const CUSTOMER_USAGE = 12;
 const ENTITY_USAGE = 8;
 const TOTAL_USAGE = CUSTOMER_USAGE + ENTITY_USAGE;
 
-// Both plans are free + monthly, so they share a lazy pool identity (no Stripe
-// subscription, anchored on the customer) and must coalesce.
 const LAZY_POOL_LIFECYCLE = {
 	interval: EntInterval.Month,
 	nextResetAt: "present",
@@ -89,7 +58,6 @@ test(
 				},
 			],
 		});
-		// Same group as customerPlan → replaces it, and carries no pooled item.
 		const privatePlan = products.base({
 			id: "private-customer-level-plan",
 			group: customerGroup,
@@ -106,8 +74,6 @@ test(
 			actions: [s.billing.attach({ productId: customerPlan.id })],
 		});
 
-		// ── Contract 1: customer-level attach creates the pool ──────────────
-		// Pre-fix: zero pool rows; Messages absent from the customer entirely.
 		const afterCustomerAttach = await expectPooledBalanceCorrect({
 			db: ctx.db,
 			customerId,
@@ -127,7 +93,6 @@ test(
 		const pooledCustomerEntitlement =
 			afterCustomerAttach.poolCustomerEntitlements[0];
 
-		// The contributing source is customer-scoped, not entity-scoped.
 		const customerLevelCustomerProduct =
 			afterCustomerAttach.sourceCustomerProducts.find(
 				(customerProduct) => customerProduct.product_id === customerPlan.id,
@@ -157,7 +122,6 @@ test(
 			breakdownId: pooledCustomerEntitlement.id,
 		});
 
-		// ── Contract 2: an entity source joins the SAME pool ────────────────
 		await autumnV2_2.billing.attach<AttachParamsV1Input>({
 			customer_id: customerId,
 			entity_id: entities[0].id,
@@ -178,7 +142,6 @@ test(
 			sources: { count: 2, balance: 0, adjustment: 0 },
 		});
 
-		// Visible from an entity that holds no pooled plan of its own.
 		const entityWithoutPlan = await autumnV2_2.entities.get<ApiEntityV2>(
 			customerId,
 			entities[1].id,
@@ -195,14 +158,11 @@ test(
 			breakdownId: pooledCustomerEntitlement.id,
 		});
 
-		// ── Contract 3: customer-level and entity usage draw one pool ───────
 		await autumnV2_2.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
 			value: CUSTOMER_USAGE,
 		});
-		// The balance hash is shared, but each subject hydrates it independently on
-		// a cache miss and writes DB values over any deduction not yet synced.
 		await new Promise((resolve) => setTimeout(resolve, 5000));
 		await autumnV2_2.track({
 			customer_id: customerId,
@@ -237,7 +197,6 @@ test(
 			usage: TOTAL_USAGE,
 		});
 
-		// ── Contract 4: replacing the customer-level plan removes its share ──
 		await autumnV2_2.billing.attach<AttachParamsV1Input>({
 			customer_id: customerId,
 			plan_id: privatePlan.id,

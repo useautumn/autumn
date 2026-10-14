@@ -8,10 +8,6 @@ interface CancellationInfo {
 	cancelsAtMs: number | null;
 }
 
-/**
- * Detects if a subscription.updated event represents a new cancellation
- * by comparing previous attributes. Returns cancellation timing info.
- */
 export const isStripeSubscriptionCanceledEvent = ({
 	stripeSubscription,
 	previousAttributes,
@@ -19,11 +15,9 @@ export const isStripeSubscriptionCanceledEvent = ({
 	stripeSubscription: ExpandedStripeSubscription;
 	previousAttributes?: SubscriptionPreviousAttributes;
 }): CancellationInfo => {
-	// If no previous attributes, we can't determine if this is a new cancellation
 	if (!previousAttributes) {
 		return { canceled: false, canceledAtMs: null, cancelsAtMs: null };
 	}
-	// Not canceled if neither cancel_at nor cancel_at_period_end is set
 	if (
 		!stripeSubscription.cancel_at &&
 		!stripeSubscription.cancel_at_period_end
@@ -31,7 +25,6 @@ export const isStripeSubscriptionCanceledEvent = ({
 		return { canceled: false, canceledAtMs: null, cancelsAtMs: null };
 	}
 
-	// Check if this event represents a new cancellation
 	const cancelAtPeriodEndChanged =
 		"cancel_at_period_end" in previousAttributes &&
 		!previousAttributes.cancel_at_period_end &&

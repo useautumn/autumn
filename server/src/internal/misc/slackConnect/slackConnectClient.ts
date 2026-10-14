@@ -8,26 +8,16 @@ import {
 	getSlackAdminProvider,
 } from "@/internal/chat/chatUtils.js";
 
-/** Comma-separated Slack user ids added to every new channel. Defaults to
- * whoever installed the admin bot, so a new channel is never unattended. */
 const TEAM_USER_IDS = (process.env.AUTUMN_SUPPORT_SLACK_TEAM_USER_IDS ?? "")
 	.split(",")
 	.map((userId) => userId.trim())
 	.filter(Boolean);
 
 export const SLACK_CHANNEL_PREFIX = "autumn-";
-/** Slack caps channel names at 80 characters. */
 const MAX_CHANNEL_NAME_LENGTH = 80;
 const INVALID_CHANNEL_NAME_CHARS = /[^a-z0-9_-]+/g;
-/** Each request can name a new channel, so cap how many one org can create. */
 export const MAX_SLACK_CHANNELS_PER_ORG = 2;
 
-/**
- * The per-org support channels live in Autumn's own workspace, so they're
- * driven by the internal admin install of the Slack agent app (Admin → Slack
- * admin bot). That install requests `SLACK_CONNECT_ADMIN_SCOPES` on top of the
- * agent's scopes; returns null until it's installed with them.
- */
 type SlackConnectClient = {
 	slack: WebClient;
 	teamUserIds: string[];
@@ -71,14 +61,10 @@ export const toSlackChannelName = ({ name }: { name: string }) => {
 	return prefixed.slice(0, MAX_CHANNEL_NAME_LENGTH);
 };
 
-/** Thrown when the requested name belongs to a channel the org doesn't own. */
 export class SlackChannelNameTakenError extends Error {}
 
-/** Thrown when the org already has `MAX_SLACK_CHANNELS_PER_ORG` channels. */
 export class SlackChannelLimitError extends Error {}
 
-// Stamped into the channel purpose so a typed name can't reuse another org's
-// channel. It's also the only record of which channels an org owns.
 const orgChannelPurpose = ({ orgId }: { orgId: string }) =>
 	`Shared support channel with Autumn (${orgId})`;
 
@@ -92,7 +78,6 @@ const getSlackErrorCode = (error: unknown): string | undefined => {
 	return data?.error;
 };
 
-/** Every public channel in the workspace, archived ones included. */
 const listPublicChannels = async ({
 	client,
 }: {
@@ -112,9 +97,6 @@ const listPublicChannels = async ({
 	return channels;
 };
 
-/** Renames and archives a channel whose setup failed before it was stamped,
- * so its name is free for the next request instead of being held by a
- * channel no org owns. Best effort: the caller rethrows the setup error. */
 const releaseUnstampedChannel = async ({
 	client,
 	channelId,
@@ -128,9 +110,7 @@ const releaseUnstampedChannel = async ({
 			name: `${SLACK_CHANNEL_PREFIX}unused-${channelId.toLowerCase()}`,
 		});
 		await client.slack.conversations.archive({ channel: channelId });
-	} catch {
-		// Leave it; someone can free the name by hand.
-	}
+	} catch {}
 };
 
 const unarchiveChannel = async ({
@@ -147,8 +127,6 @@ const unarchiveChannel = async ({
 	}
 };
 
-/** Returns the channel if the org owns it (unarchiving it if needed), throws
- * if someone else holds the name, and returns undefined if the name is free. */
 const reuseOwnedChannel = async ({
 	client,
 	channel,
@@ -164,15 +142,12 @@ const reuseOwnedChannel = async ({
 	if (!channel.id || channel.purpose?.value !== purpose) {
 		throw new SlackChannelNameTakenError(`#${name} is already taken`);
 	}
-	// An archived channel still holds its name; bring it back.
 	if (channel.is_archived) {
 		await unarchiveChannel({ client, channelId: channel.id });
 	}
 	return channel.id;
 };
 
-/** The channel purpose doubles as the ownership record, so both the reuse
- * check and the per-org limit read it from Slack instead of a DB row. */
 const getOrCreateChannel = async ({
 	client,
 	name,
@@ -209,8 +184,6 @@ const getOrCreateChannel = async ({
 		channelId = response.channel?.id;
 	} catch (error) {
 		if (getSlackErrorCode(error) !== "name_taken") throw error;
-		// Either a concurrent request just created it (reuse it if it's this
-		// org's), or a private channel we can't list holds the name.
 		const racedChannelId = await reuseOwnedChannel({
 			client,
 			channel: (await listPublicChannels({ client })).find(
@@ -243,8 +216,6 @@ const getOrCreateChannel = async ({
 	return channelId;
 };
 
-/** Creates (or reuses) the org's channel and sends a Slack Connect invite to
- * `email`. Slack delivers the invite by email. */
 export const inviteToOrgSlackChannel = async ({
 	client,
 	orgId,
@@ -263,8 +234,6 @@ export const inviteToOrgSlackChannel = async ({
 		orgId,
 	});
 
-	// Slack defaults invitees to external limited members, who can't invite
-	// anyone else. Full external members can bring in their own teammates.
 	await client.slack.conversations.inviteShared({
 		channel: channelId,
 		emails: [email],

@@ -19,8 +19,6 @@ const priceText = (price: ApiPlanItemV1["price"]) => {
 		: `$${price.amount}${price.interval ? ` / ${price.interval}` : ""}`;
 };
 
-/** Read-only view of a plan item's config, opened from the catalog preview card.
- * Driven straight off ApiPlanItemV1 — no editing, no plan-editor context. */
 export function PlanItemSheet({
 	feature,
 	item,

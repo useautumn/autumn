@@ -18,13 +18,11 @@ export function EventDetailsDialog({
 }) {
 	if (!event) return null;
 
-	// Parse properties if it's a string
 	const properties =
 		typeof event.properties === "string"
 			? JSON.parse(event.properties)
 			: event.properties;
 
-	// Always null: idempotency keys live on the Idempotency-Key header, not the event row.
 	const { idempotency_key: _idempotencyKey, ...rest } = event;
 
 	const eventData = {

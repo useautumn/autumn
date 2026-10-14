@@ -1,15 +1,3 @@
-/**
- * invoices.void: void a finalized, unpaid Stripe invoice.
- *
- * Contract:
- *   POST /invoices.void { invoice_id } -> { invoice: ApiListInvoiceV1 }
- *   open invoice          → Stripe status void, our row updated inline
- *   deferred (pending)    → pending plan expires, new sub canceled, metadata deleted
- *   already void          → 200, unchanged
- *   paid invoice          → 400
- *   non-Stripe            → 400
- */
-
 import { expect, test } from "bun:test";
 import type { ApiListInvoiceV1 } from "@autumn/shared";
 import {

@@ -41,9 +41,6 @@ export const FrontendOrgSchema = z.object({
 	processor_configs: z.object({
 		vercel: z.object({
 			connected: z.boolean(),
-			/** These are all masked in the frontend
-			 * - e.g oac_******3a
-			 */
 			client_integration_id: z.string().optional(),
 			client_secret: z.string().optional(),
 			webhook_url: z.string().optional(),
@@ -54,9 +51,6 @@ export const FrontendOrgSchema = z.object({
 		}),
 		revenuecat: z.object({
 			connected: z.boolean(),
-			/** These API Keys are also masked in the frontend
-			 * - e.g test_******3a
-			 */
 			api_key: z.string().optional(),
 			sandbox_api_key: z.string().optional(),
 			project_id: z.string().optional(),

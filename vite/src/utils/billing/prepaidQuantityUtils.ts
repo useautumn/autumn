@@ -7,12 +7,6 @@ import {
 	TierInfinite,
 } from "@autumn/shared";
 
-/**
- * Selectable quantities for a volume-tiered prepaid item: the upper bound of
- * each finite tier, shifted by included usage to match the displayed quantity.
- * Empty unless the item has more than one volume-based tier, since graduated
- * tiers blend rates and have no single quantity worth snapping to.
- */
 export function prepaidTierStops({
 	item,
 }: {
@@ -34,10 +28,6 @@ export function prepaidTierStops({
 	return [...new Set(stops)].sort((a, b) => a - b);
 }
 
-/**
- * Bulk-converts backend option quantities to display quantities for form initialization.
- * e.g. backend quantity=1 with billing_units=1000 → display quantity=1000
- */
 export function backendToDisplayQuantity({
 	backendOptions,
 	prepaidItems,
@@ -75,10 +65,6 @@ export function backendToDisplayQuantity({
 	);
 }
 
-/**
- * Converts a prepaid options record into a FeatureOptions array.
- * Quantities are passed through as-is (inclusive of billing units).
- */
 export function convertPrepaidOptionsToFeatureOptions({
 	prepaidOptions,
 	product,

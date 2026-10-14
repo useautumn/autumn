@@ -14,7 +14,6 @@ const deploymentToAtomRecord = <T extends AtomRecord>({
 	deployment: AtomDeployment | null;
 }): T => {
 	const reportedStatus = deployment?.status ?? ByocCacheStatus.AwaitingSetup;
-	// A delete never goes back: the env may already have a new Atom in its place.
 	const isStillRemoving =
 		isCacheBeingRemoved({ cacheDeployment: record }) &&
 		!isCacheBeingRemoved({ cacheDeployment: { status: reportedStatus } });
@@ -24,7 +23,6 @@ const deploymentToAtomRecord = <T extends AtomRecord>({
 		deployment_id: deployment?.id ?? null,
 		status,
 		endpoint_url: deployment?.endpointUrl ?? null,
-		// Until setup creates a deployment, the record keeps the machine and region its setup asked for.
 		cpu: deployment ? (deployment.machine?.cpu ?? null) : record.cpu,
 		memory: deployment ? (deployment.machine?.memory ?? null) : record.memory,
 		region: deployment?.region ?? record.region,
@@ -38,7 +36,6 @@ const deploymentToAtomRecord = <T extends AtomRecord>({
 	};
 };
 
-/** Reads the Atom's state from its deployer and saves it when it moved; null once a delete has finished. */
 export const refreshAtomRecord = async <T extends AtomRecord>({
 	ctx,
 	record,

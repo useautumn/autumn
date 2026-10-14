@@ -13,13 +13,10 @@ export default function BetterAuthUseCustomerPage() {
   const { data: session } = useSession();
   const activeOrg = authClient.useActiveOrganization();
 
-  // Shared error state
   const [error, setError] = useState<unknown>(null);
 
-  // Backend test state
   const [backendCustomer, setBackendCustomer] = useState<unknown>(null);
 
-  // useCustomer hook
   const params = useMemo(
     () => ({
       errorOnNotFound: false,
@@ -50,13 +47,11 @@ export default function BetterAuthUseCustomerPage() {
 
   return (
     <div className="space-y-4">
-      {/* Auth & Org Controls Row */}
       <div className="grid gap-4 lg:grid-cols-2">
         <AuthControls onError={setError} onSignOut={handleSignOut} />
         {session && <OrgControls onError={setError} />}
       </div>
 
-      {/* Backend Test & Hook State Row */}
       {session && (
         <div className="grid gap-4 lg:grid-cols-2">
           <BackendTest onResult={setBackendCustomer} onError={setError} />
@@ -77,7 +72,6 @@ export default function BetterAuthUseCustomerPage() {
         </div>
       )}
 
-      {/* Data Viewers */}
       <div className="grid gap-4 lg:grid-cols-2">
         <DataViewer
           title="Backend Customer (auth.api)"

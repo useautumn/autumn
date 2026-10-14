@@ -18,7 +18,6 @@ type BinSize = ReturnType<typeof useLogsVolume>["binSize"];
 const binTitle = ({ bin, binSize }: { bin: VolumeBin; binSize: BinSize }) =>
 	format(new Date(bin.period), binSize === "hour" ? "MMM d HH:mm" : "MMM d");
 
-/** Hourly bins get a time every third hour; daily bins a date, thinned so they never overlap. */
 const axisLabel = ({
 	bin,
 	index,
@@ -39,11 +38,9 @@ const axisLabel = ({
 	return index % dayStride === 0 ? format(date, "d MMM") : null;
 };
 
-/** Event volume across the selected range, under the list's filters. */
 export const LogsVolumeStrip = () => {
 	const { bins, binSize, isLoading } = useLogsVolume();
 	const { filters } = useLogsFilters();
-	// The range's own bins, so each stub sits exactly where its bar lands.
 	const loadingBinStarts = useMemo(
 		() =>
 			isLoading
@@ -58,7 +55,6 @@ export const LogsVolumeStrip = () => {
 	);
 
 	if (isLoading) {
-		// Same two rows and bar slots as the loaded strip, so nothing shifts when data lands.
 		return (
 			<div className="flex flex-col gap-1.5">
 				<div className={cn(BAR_ROW, "relative")}>

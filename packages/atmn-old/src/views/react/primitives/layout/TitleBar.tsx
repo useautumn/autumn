@@ -3,26 +3,17 @@ import { Box, Text } from "ink";
 export interface TitleBarItem {
 	label: string;
 	value: string;
-	color?: string; // Text color for value (default: "white")
+	color?: string;
 }
 
 export interface TitleBarProps {
-	/** The command name to display (e.g., "atmn customers") */
 	commandName: string;
-	/** Optional version string */
 	version?: string;
-	/** Pagination display text (e.g., "Page 1 of many") */
 	paginationText?: string;
-	/** Active search query to display */
 	searchQuery?: string;
-	/** Additional items to display */
 	extraItems?: TitleBarItem[];
 }
 
-/**
- * Generic title bar for list views with round border, showing version,
- * command name, pagination info, extra items, and search query.
- */
 export function TitleBar({
 	commandName,
 	version,

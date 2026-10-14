@@ -2,7 +2,6 @@ import type { CarryOverUsages } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { TransitionRulesService } from "@/internal/orgs/transitionRules/TransitionRulesService";
 
-/** Explicit param wins; otherwise inherit the org's transition rule for this env. */
 export const resolveCarryOverUsagesParam = async ({
 	ctx,
 	carryOverUsages,

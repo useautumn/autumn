@@ -29,7 +29,6 @@ const pro = constructProduct({
 
 const oneOffCredits = constructRawProduct({
 	id: "one_off_credits",
-	// isAddOn: true,
 	items: [
 		constructPrepaidItem({
 			featureId: TestFeature.Credits,

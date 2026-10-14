@@ -21,7 +21,6 @@ type PlanBasePriceSnapshot = {
 	amount: number | null;
 };
 
-/** getFull filters is_custom rows, so a snapshot only holds definition rows. */
 export type PlanRowsSnapshot = {
 	planId: string;
 	version?: number;
@@ -30,14 +29,11 @@ export type PlanRowsSnapshot = {
 	featurePriceIds: string[];
 	basePriceId: string | null;
 	baseAmount: number | null;
-	/** First (pre-update: only) ent per feature id. */
 	ents: Record<string, PlanEntSnapshot>;
-	/** Every ent per feature id — leftovers from a broken retire show up here. */
 	entsByFeature: Record<string, PlanEntSnapshot[]>;
 	basePrices: PlanBasePriceSnapshot[];
 };
 
-/** Capture ent/price row identity for one plan version, for before/after diffing. */
 export const snapshotPlanRows = async ({
 	ctx,
 	planId,
@@ -122,35 +118,21 @@ const fetchPriceRow = async ({
 };
 
 export type ExpectedPlanRows = {
-	/** true → full sorted ent id list unchanged; string[] → those features' ent ids unchanged. */
 	stableEnts?: true | string[];
-	/** Full sorted feature-price id list unchanged. */
 	stableFeaturePrices?: true;
-	/** Base price row id unchanged. */
 	stableBase?: true;
-	/** New ent row minted per feature: some ent with id ≠ snapshot and the given allowance. */
 	mintedEnts?: { featureId: string; allowance: number }[];
-	/** New base price row: some fixed price with id ≠ snapshot and the given amount. */
 	mintedBase?: { amount: number };
-	/** Features with no definition ent on the plan anymore. */
 	absentFeatures?: string[];
-	/** Old ent row ids hard-deleted from the entitlements table. */
 	deletedEnts?: string[];
-	/** Old ent rows retained with is_custom: true. */
 	retiredEnts?: string[];
-	/** Old price row ids hard-deleted from the prices table. */
 	deletedPrices?: string[];
-	/** Old price rows retained with is_custom: true. */
 	retiredPrices?: string[];
-	/** Entitlement ids that must still have a customer_entitlements row. */
 	survivingCusEnts?: string[];
-	/** Price ids that must still have a customer_prices row. */
 	survivingCusPrices?: string[];
-	/** No entitlement/price row on this version is stamped is_custom. */
 	noCustomStamps?: true;
 };
 
-/** Row-claim asserts against a before-snapshot — only the lanes passed are checked. */
 export const expectPlanRowsCorrect = async ({
 	ctx,
 	before,
@@ -307,7 +289,6 @@ export const expectPlanRowsCorrect = async ({
 	}
 };
 
-/** Mint clone: every ent/price row id (and the products row) differs from `from`. */
 export const expectPlanRowIdsReminted = ({
 	from,
 	to,

@@ -1,36 +1,3 @@
-/**
- * TDD test for selective sync-ack of Stripe webhooks + Autumn origin detection.
- *
- * Contract under test:
- *   New types/fields:
- *     - classifyStripeWebhookAckMode({ event, now? }) -> "early" | "sync"
- *     - buildAutumnStripeIdempotencyKey / autumnStripeRequestOptions -> keys prefixed "autumn:"
- *     - isAutumnOriginatedStripeEvent({ event }) -> event.request.idempotency_key prefix test
- *     - StripeWebhookContext.webhookAckMode / webhookIdempotency hooks
- *   New behaviors (classifier policy):
- *     - checkout.session.completed / expired -> sync (always, even when Autumn-originated)
- *     - invoice.paid with metadata.autumn_metadata_id -> sync; otherwise early
- *     - invoice.finalized with metadata.vercel_installation_id or autumn_metadata_id -> sync; otherwise early
- *     - invoice.created with billing_reason subscription_cycle -> sync; otherwise early
- *     - customer.updated -> sync (pure external mirror, cheap handler)
- *     - customer.subscription.created/updated/deleted with autumn idempotency key on
- *       event.request -> early; with autumn-managed metadata (recent for updated/deleted,
- *       any age for created) -> early; otherwise sync
- *     - all other event types, or missing event -> early
- *   New behaviors (ack middleware):
- *     - sync mode: response waits for processing; success -> handler response +
- *       markCompleted(); unhandled error -> 500 + release() (so Stripe retries)
- *     - early mode: immediate 200 {received:true}; background success -> markCompleted();
- *       background failure -> release()
- *   Side effects:
- *     - Redis two-state idempotency semantics are covered by the integration test
- *       tests/integration/stripe/webhookAck/stripe-webhook-idempotency-retry.test.ts
- *
- * Pre-impl red: classifyStripeWebhookAckMode, autumnStripeIdempotency, and
- * stripeWebhookAckMiddleware do not exist yet.
- * Post-impl green: classifier + renamed ack middleware implement the policy above.
- */
-
 import { afterAll, describe, expect, test } from "bun:test";
 import { Hono } from "hono";
 import type Stripe from "stripe";
@@ -42,8 +9,6 @@ import {
 import { classifyStripeWebhookAckMode } from "@/external/stripe/webhookMiddlewares/classifyStripeWebhookAckMode";
 import { stripeWebhookAckMiddleware } from "@/external/stripe/webhookMiddlewares/stripeWebhookAckMiddleware";
 
-// Unit scope: the failure path must exercise idempotency hooks only, never a
-// real SQS enqueue — force the replay queue off regardless of local env.
 const originalReplayQueueUrl = process.env.STRIPE_WEBHOOK_SQS_QUEUE_URL;
 process.env.STRIPE_WEBHOOK_SQS_QUEUE_URL = "";
 afterAll(() => {
@@ -69,8 +34,6 @@ const buildEvent = ({
 		data: { object },
 		request,
 	}) as unknown as Stripe.Event;
-
-// ── Contract: classifier policy table ────────────────────────────
 
 describe("classifyStripeWebhookAckMode", () => {
 	const cases: {
@@ -277,8 +240,6 @@ describe("classifyStripeWebhookAckMode", () => {
 	}
 });
 
-// ── Contract: autumn idempotency key helpers ─────────────────────
-
 describe("autumnStripeIdempotency", () => {
 	test("built keys carry the autumn prefix and are unique per call", () => {
 		const first = buildAutumnStripeIdempotencyKey({ source: "attach" });
@@ -313,8 +274,6 @@ describe("autumnStripeIdempotency", () => {
 		expect(isAutumnOriginatedStripeEvent({ event: naturalEvent })).toBe(false);
 	});
 });
-
-// ── Contract: ack middleware behavior per mode ───────────────────
 
 type HookCalls = { completed: number; released: number };
 

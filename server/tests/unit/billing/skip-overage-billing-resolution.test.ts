@@ -1,9 +1,3 @@
-/**
- * Pins the backward-compatibility contract of fullCustomerToSkipOverageBilling:
- * undefined skip_overage_billing ALWAYS resolves to billed (false). Existing
- * customers with cap-only spend limits must never have overage posting skipped.
- */
-
 import { describe, expect, test } from "bun:test";
 import {
 	CusProductStatus,

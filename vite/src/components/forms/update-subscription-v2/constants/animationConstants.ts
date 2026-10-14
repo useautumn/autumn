@@ -31,7 +31,6 @@ export const STAGGER_ITEM: Variants = {
 	},
 };
 
-/** Opacity-only stagger item for elements using layout="position" — avoids y transform conflicts with layout animations */
 export const STAGGER_ITEM_LAYOUT: Variants = {
 	hidden: { opacity: 0 },
 	visible: {

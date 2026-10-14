@@ -34,7 +34,6 @@ const request: FlushRequest = {
 	],
 };
 
-/** Postgres's error for the rollback cast, as it words it. */
 const castError = (text: string) =>
 	databaseError({
 		message: `invalid input syntax for type integer: "${text}"`,
@@ -43,7 +42,6 @@ const castError = (text: string) =>
 
 const dialect = new PgDialect();
 
-/** The marker this flush's statement casts on abort, nonce included: only Postgres's echo of it is a rollback. */
 const markerOf = (query: SQL): string => {
 	const marker = /E'(flush_rolled_back:[0-9a-f]+:)'/.exec(
 		dialect.sqlToQuery(query).sql,

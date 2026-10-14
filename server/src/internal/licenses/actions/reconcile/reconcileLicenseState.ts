@@ -9,10 +9,6 @@ import { reconcileCustomerLicenseBalances } from "./reconcileCustomerLicenseBala
 import { setupReconcileContext } from "./setupReconcileContext.js";
 import type { CustomerLicenseState } from "./types.js";
 
-/**
- * Whole-customer license convergence: setup gathers bounded reads, balances
- * converge the numbers. Idempotent; null when the customer touches no licenses.
- */
 export const reconcileLicenseStateForCustomer = async ({
 	ctx,
 	idOrInternalId,

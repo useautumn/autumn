@@ -22,7 +22,6 @@ const isCreatePlanRoute = ({
 	);
 };
 
-/** `plans[]` and nested `variants[]` entries carrying internal_id, with the plan_id they stated. */
 const statedPlanIdsByInternalId = (
 	body: object,
 ): { entry: Record<string, unknown>; field: string; planId: unknown }[] => {
@@ -69,10 +68,6 @@ const isCatalogWriteRoute = ({ path }: { path: string }): boolean => {
 	return pathname.startsWith("/catalogV2.");
 };
 
-/**
- * Rewrites public plan ids in the JSON body and in `:product_id` path params.
- * Dashboard is skipped (it always sends canonical ids). Empty alias maps are a no-op.
- */
 export const planAliasMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 	if (c.req.header("x-client-type") === "dashboard") {
 		await next();
@@ -86,7 +81,6 @@ export const planAliasMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 		return;
 	}
 
-	// Own-property shadows param(); same trick as queryMiddleware.
 	// @ts-expect-error HonoRequest.param is a prototype method
 	c.req.param = rewritePlanIdAliasParams({
 		param: c.req.param.bind(c.req),
@@ -105,8 +99,6 @@ export const planAliasMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 	}
 
 	const before = JSON.stringify(body);
-	// A row addressed by internal_id states its desired plan_id (a reclaim
-	// rename names the alias on purpose), so that one field is kept as sent.
 	const statedIds = isCatalogWriteRoute({ path: c.req.path })
 		? statedPlanIdsByInternalId(body)
 		: [];
@@ -118,7 +110,6 @@ export const planAliasMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 			: undefined,
 	});
 	for (const { entry, field, planId } of statedIds) entry[field] = planId;
-	// Skip replaceJsonBody on a no-op rewrite so bodyCache.text stays the
 	// original bytes (Vercel HMAC runs captureRawBody after this middleware).
 	if (before !== JSON.stringify(body)) {
 		ctx.requestBody = body;

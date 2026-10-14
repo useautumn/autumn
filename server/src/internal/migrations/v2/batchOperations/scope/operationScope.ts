@@ -9,21 +9,11 @@ import {
 	type ScalarConstraint,
 } from "./utils/scalarConstraint.js";
 
-/**
- * The row-level scope one patch executes against — compute's lowered residue
- * of the plan filter. Catalog-decidable predicates (plan_id, version, addon)
- * are already erased into `internalProductId`; only row-varying constraints
- * survive, `null` meaning unconstrained.
- */
 export const OperationScopeSchema = z.object({
 	internalProductId: z.string(),
-	/** customer_products.is_custom. */
 	isCustom: z.boolean().nullable(),
-	/** Has ≥1 customer_price (base or item). */
 	isPaid: z.boolean().nullable(),
-	/** Has ≥1 customer_price whose price interval isn't one_off. */
 	isRecurring: z.boolean().nullable(),
-	/** Has a BASE customer_price (price with entitlement_id IS NULL). */
 	hasBasePrice: z.boolean().nullable(),
 });
 
@@ -37,9 +27,6 @@ export type OperationScopeConstraintKey = Exclude<
 const negatable = (fragment: SQL, constraint: boolean): SQL =>
 	constraint ? fragment : sql`NOT ${fragment}`;
 
-/** EXISTS semantics mirror the filter compiler's customerRegistry — the two
- * MUST stay in lockstep so batch-lane scoping equals customer-select
- * semantics. */
 const paidExists = sql`EXISTS (
 	SELECT 1 FROM customer_prices AS customer_price
 	WHERE customer_price.customer_product_id = cp.id
@@ -60,19 +47,12 @@ const basePriceExists = sql`EXISTS (
 )`;
 
 export type OperationScopeField = {
-	/** PlanFilter key this constraint lowers from. */
 	filterKey: "custom" | "paid" | "recurring" | "price";
 	scopeKey: OperationScopeConstraintKey;
 	lower: (raw: unknown) => ScalarConstraint;
 	toSql: (constraint: boolean) => SQL;
 };
 
-/**
- * Every row-decidable plan-filter field, in one table: resolution
- * (resolveOperationScope) and rendering (operationScopeSql) are both driven
- * by it. `item` stays unsupported (structural); plan_id/version/addon are
- * catalog-decidable and never reach the scope.
- */
 export const OPERATION_SCOPE_FIELDS: OperationScopeField[] = [
 	{
 		filterKey: "custom",
@@ -100,7 +80,6 @@ export const OPERATION_SCOPE_FIELDS: OperationScopeField[] = [
 	},
 ];
 
-/** An unconstrained scope for `internalProductId`, with per-field overrides. */
 export const buildOperationScope = ({
 	internalProductId,
 	...overrides
@@ -115,11 +94,6 @@ export const buildOperationScope = ({
 	...overrides,
 });
 
-/**
- * The plan filter with row-decidable fields stripped — safe for catalog
- * matching (planFilterMatchesProduct throws on `price` and cannot see rows);
- * the scope SQL enforces the stripped fields per row instead.
- */
 export const toCatalogPlanFilter = (filter: PlanFilter): PlanFilter => {
 	const catalogFilter = { ...filter };
 	for (const field of OPERATION_SCOPE_FIELDS) {
@@ -131,11 +105,6 @@ export const toCatalogPlanFilter = (filter: PlanFilter): PlanFilter => {
 	return catalogFilter;
 };
 
-/**
- * The single renderer of an operation scope over `customer_products AS cp`.
- * Callers AND this with their own customer-id predicate; license assignments
- * stay excluded — seats belong to the license machinery.
- */
 export const operationScopeSql = ({
 	scope,
 }: {

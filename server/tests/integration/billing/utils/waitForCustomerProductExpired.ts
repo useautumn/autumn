@@ -18,10 +18,6 @@ const isExpired = (
 		(customerProduct) => customerProduct.status === CusProductStatus.Expired,
 	);
 
-/**
- * Waits until the customer products linked to a Stripe subscription are expired.
- * Use before asserting a product is gone — polling for absence passes instantly.
- */
 export const waitForCustomerProductExpired = async ({
 	db,
 	orgId,

@@ -1,17 +1,3 @@
-/**
- * Multi-plan collapse for usage_limits: when a customer has TWO attached plans
- * each carrying a usage_limit for the same feature, the MOST RESTRICTIVE cap
- * (lowest limit) wins — NOT the most recently attached.
- *
- * To distinguish restrictiveness from recency, the LOOSER plan (limit 20) is
- * attached LAST. Recency-wins would yield a cap of 20; most-restrictive yields
- * 5. We assert enforcement at 5.
- *
- * Mechanism: findPlanBillingControl looks up MOST_RESTRICTIVE_BY_KEY for the
- * controlKey and reduces all matching plan entries with pickStricterUsageLimit
- * (lowest limit).
- */
-
 import { test } from "bun:test";
 import {
 	ApiVersion,
@@ -43,7 +29,6 @@ const usageLimit = (limit: number): CustomerBillingControlsParams => ({
 test.concurrent(
 	`${chalk.yellowBright("plan-restrictive: with two attached plans, the lowest usage_limit wins (not the most recent)")}`,
 	async () => {
-		// Base plan: tight cap 5. Add-on: loose cap 20, attached LAST.
 		const basePlan = products.base({
 			id: "plan-restrictive-base",
 			items: [items.monthlyMessages({ includedUsage: 100 })],
@@ -67,7 +52,6 @@ test.concurrent(
 				s.billing.attach({
 					productId: basePlan.id,
 				}),
-				// Looser plan attached LAST -> recency-wins would pick 20.
 				s.billing.attach({
 					productId: addOnPlan.id,
 				}),
@@ -76,8 +60,6 @@ test.concurrent(
 
 		await autumnV2_3.customers.get(customerId);
 
-		// Track 5 -> hits the restrictive cap. A 6th unit must reject. If recency
-		// had won (cap 20), this would still pass.
 		await autumnV2_3.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,

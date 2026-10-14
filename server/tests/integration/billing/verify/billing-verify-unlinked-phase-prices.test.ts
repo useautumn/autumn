@@ -1,20 +1,3 @@
-/**
- * Billing Verify: unlinked prices in a scheduled phase
- *
- * Both shapes came out of a production audit where verify reported a
- * future-phase item as missing although Stripe carried it.
- *
- * Red (current):
- *   - A scheduled prepaid price with nothing purchased renders an expected
- *     item of quantity 0; Stripe has no item, and verify reports
- *     prepaid_quantity_mismatch "expected 0, Stripe has 0".
- * Green (after): the subscription verifies as "correct".
- *
- * Also covered: a scheduled fixed price with no stored Stripe id whose phase
- * item is an untagged, archived price at the same amount matches on totals in
- * non-strict mode and is reported in strict mode (identity semantics).
- */
-
 import { expect, test } from "bun:test";
 import {
 	type CreateScheduleParamsV0Input,
@@ -76,8 +59,6 @@ const phaseUpdateParams = (
 	items,
 });
 
-/** Rewrites the schedule so the last phase no longer carries the given
- * price — Stripe's view of a plan whose prepaid quantity is zero. */
 const dropLastPhaseItem = async ({
 	ctx,
 	scheduleId,
@@ -130,8 +111,6 @@ const prepaidStripePriceIdFor = async ({
 	return priceId;
 };
 
-/** Rewrites the schedule so the last phase bills an untagged, archived clone
- * of its fixed price — what a hand-edited or restored schedule looks like. */
 const swapLastPhaseFixedItemForUntaggedClone = async ({
 	ctx,
 	scheduleId,

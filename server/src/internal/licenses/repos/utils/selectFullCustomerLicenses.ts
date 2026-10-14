@@ -14,7 +14,6 @@ type FullCustomerLicenseRow = {
 	product: FullProductWithoutLicenses;
 };
 
-/** Customer licenses with their effective plan license and product; `where` may use cl, c and cp. */
 export const selectFullCustomerLicenses = async ({
 	db,
 	where,

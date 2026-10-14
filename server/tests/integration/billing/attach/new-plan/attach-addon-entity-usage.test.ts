@@ -1,5 +1,3 @@
-/** Red: one entity counts against both plans. Green: pooled base + add-on capacity counts it once. */
-
 import { test } from "bun:test";
 import type { ApiCustomerV5, AttachParamsV1Input } from "@autumn/shared";
 import { expectBalanceCorrect } from "@tests/integration/utils/expectBalanceCorrect";

@@ -24,7 +24,6 @@ export function NumberField({
 	inputClassName?: string;
 	hideFieldInfo?: boolean;
 	disabled?: boolean;
-	/** Use parseFloat instead of parseInt */
 	float?: boolean;
 }) {
 	const field = useFieldContext<number | null>();

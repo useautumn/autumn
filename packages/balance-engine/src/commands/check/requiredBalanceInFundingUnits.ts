@@ -8,7 +8,6 @@ import { deductFromRows } from "../../deduction/utils/draw/deductFromRows.js";
 
 const BALANCE_BUCKETS = ["unlimited", "rollovers", "included"] as const;
 
-/** Draws the requirement through the funding feature's balances, then prices whatever is left on its last row. */
 const rateCardPrice = ({
 	context,
 	fundingFeatureId,
@@ -29,7 +28,6 @@ const rateCardPrice = ({
 	};
 	const deductionState: DeductionState = {
 		remaining: new Decimal(requiredBalance),
-		// Overflow skips caps and spend limits; the balance buckets still stop at zero.
 		terms: { overageBehavior: "overflow", enforcesSpendLimit: false },
 		deltas: [...precedingDeltas],
 		usageWindowConsumed: new Map(),
@@ -53,10 +51,6 @@ const rateCardPrice = ({
 		.toNumber();
 };
 
-/**
- * The requirement in the funding feature's units. A rate card prices each row from its own tier position and the last
- * row prices what no balance covers, as legacy `getCreditRateRequiredBalance` does.
- */
 export const requiredBalanceInFundingUnits = ({
 	context,
 	fundingRow,
@@ -66,7 +60,6 @@ export const requiredBalanceInFundingUnits = ({
 	context: DeductionContext;
 	fundingRow: DeductionRow | undefined;
 	requiredBalance: number;
-	/** Deltas already on the rows before the check's own draw, such as the track a check follows. */
 	precedingDeltas: DeductionDelta[];
 }): number => {
 	const pricedByRateCard =

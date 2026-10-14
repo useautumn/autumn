@@ -10,8 +10,6 @@ import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 
-// Product: hourlyMessages(5) + lifetimeMessages(20) = 25 total
-
 const makeFreeProd = () => {
 	const hourlyMessages = items.hourlyMessages({ includedUsage: 5 });
 	const lifetimeMessages = items.lifetimeMessages({ includedUsage: 20 });
@@ -20,11 +18,6 @@ const makeFreeProd = () => {
 		items: [hourlyMessages, lifetimeMessages],
 	});
 };
-
-// ─────────────────────────────────────────────────────────────────────────────
-// BD-1: lock=8, confirm=5 → hourly=0, lifetime=20
-// Deduct 8 from hourly first (5), then lifetime (3). Confirm 5, unwind 3 from lifetime.
-// ─────────────────────────────────────────────────────────────────────────────
 
 test.concurrent(`${chalk.yellowBright("refund BD-1: lock=8 confirm=5 — unwind 3 from lifetime bucket")}`, async () => {
 	const freeProd = makeFreeProd();
@@ -63,11 +56,6 @@ test.concurrent(`${chalk.yellowBright("refund BD-1: lock=8 confirm=5 — unwind 
 		},
 	});
 });
-
-// ─────────────────────────────────────────────────────────────────────────────
-// BD-2: lock=8, confirm=0 → hourly=5, lifetime=20
-// Full release: unwind all 8 (3 from lifetime, 5 from hourly)
-// ─────────────────────────────────────────────────────────────────────────────
 
 test.concurrent(`${chalk.yellowBright("refund BD-2: lock=8 confirm=0 — full release, both buckets restored")}`, async () => {
 	const freeProd = makeFreeProd();
@@ -146,11 +134,6 @@ test.concurrent(`${chalk.yellowBright("refund BD-2b: lock=0 confirm=0 — zero-c
 	await expectLockReceiptDeleted({ ctx, lockId: customerId });
 });
 
-// ─────────────────────────────────────────────────────────────────────────────
-// BD-3: lock=5, confirm=3 → hourly=2, lifetime=20
-// Lock=5, only deducts from hourly (5). Confirm=3, unwind 2 from hourly only.
-// ─────────────────────────────────────────────────────────────────────────────
-
 test.concurrent(`${chalk.yellowBright("refund BD-3: lock=5 confirm=3 — unwind stays within hourly bucket")}`, async () => {
 	const freeProd = makeFreeProd();
 	const customerId = "lock-breakdown-3";
@@ -191,12 +174,6 @@ test.concurrent(`${chalk.yellowBright("refund BD-3: lock=5 confirm=3 — unwind 
 	await expectLockReceiptDeleted({ ctx, lockId: customerId });
 });
 
-// ─────────────────────────────────────────────────────────────────────────────
-// BD-4: lock=8, confirm=8 → hourly=0, lifetime=17
-// finalValue == lockValue → early exit, no deduction step, no finalize event.
-// Only 1 event: the original check track (value=8).
-// ─────────────────────────────────────────────────────────────────────────────
-
 test.concurrent(`${chalk.yellowBright("refund BD-4: lock=8 confirm=8 — no unwind, lifetime bucket reduced")}`, async () => {
 	const freeProd = makeFreeProd();
 	const customerId = "lock-breakdown-4";
@@ -234,7 +211,6 @@ test.concurrent(`${chalk.yellowBright("refund BD-4: lock=8 confirm=8 — no unwi
 		},
 	});
 
-	// finalValue == lockValue → early exit, no finalize event emitted; only 1 event (check track)
 	await expectCustomerEventsCorrect({
 		customerId,
 		events: [{ value: 8 }],

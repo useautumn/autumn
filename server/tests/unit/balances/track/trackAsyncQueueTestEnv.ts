@@ -1,9 +1,3 @@
-/**
- * Producers prefer TRACK_ASYNC_STANDARD_SQS_QUEUE_URL over TRACK_ASYNC_SQS_QUEUE_URL.
- * Local `.env.local` (and dw seeds) often set STANDARD, so tests that only stub
- * the FIFO URL mock the wrong SQS client and see empty queueCommands.
- */
-
 const restoreEnv = (key: string, value: string | undefined): void => {
 	if (value === undefined) {
 		delete process.env[key];

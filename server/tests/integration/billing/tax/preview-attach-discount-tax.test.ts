@@ -1,13 +1,3 @@
-/**
- * Tests for billing.preview_attach discount precision and downgrade tax credits.
- *
- * Red-failure mode (current behavior):
- *  - A 3620-cent coupon appears as 36; downgrade tax credits appear as 0.
- *
- * Green-success criteria (after fix):
- *  - The preview preserves coupon cents and includes negative tax credits.
- */
-
 import { expect, test } from "bun:test";
 import {
 	type AttachParamsV1,

@@ -13,7 +13,6 @@ test("a pipeline can outlive the client timeout without extending concurrent com
 		let pending = "";
 		socket.on("data", (chunk) => {
 			pending += chunk.toString();
-			// All requests in this test are GET slow, including coalesced or fragmented writes.
 			const request = "*2\r\n$3\r\nget\r\n$4\r\nslow\r\n";
 			while (pending.startsWith(request)) {
 				pending = pending.slice(request.length);

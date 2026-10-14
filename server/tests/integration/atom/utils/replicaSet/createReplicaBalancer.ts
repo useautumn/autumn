@@ -14,7 +14,6 @@ type BalancerState = {
 	pushes: PushLanding[];
 };
 
-/** The pinned replica, else the next running one; a stopped target is left to fail, as a balancer's would. */
 const pickReplica = ({
 	ctx,
 	state,
@@ -29,7 +28,6 @@ const pickReplica = ({
 	return running[state.turn % running.length];
 };
 
-/** A balancer's 502, in JSON like every other reply a client reads. */
 const unreachable = ({ message }: { message: string }): Response =>
 	Response.json({ message, code: "replica_unreachable" }, { status: 502 });
 
@@ -53,7 +51,6 @@ const forwardToReplica = async ({
 					request.method === "GET" ? undefined : await request.arrayBuffer(),
 			},
 		);
-		// fetch already decoded the body, so its encoding and length no longer describe it.
 		const replyHeaders = new Headers(response.headers);
 		replyHeaders.delete("content-encoding");
 		replyHeaders.delete("content-length");
@@ -88,7 +85,6 @@ const recordPush = ({
 	});
 };
 
-/** The one endpoint Autumn knows the set by, as the load balancer in front of a deployment's replicas. */
 export const createReplicaBalancer = ({ ctx }: { ctx: ReplicaSetContext }) => {
 	const state: BalancerState = { routedTo: null, turn: 0, pushes: [] };
 

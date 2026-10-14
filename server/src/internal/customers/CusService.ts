@@ -78,8 +78,6 @@ import {
 	reassembleFlattenedCustomer,
 } from "./reassembleFlattenedCustomer/index.js";
 
-// const tracer = trace.getTracer("express");
-
 export class CusService {
 	static async getFull({
 		ctx,
@@ -107,9 +105,7 @@ export class CusService {
 		withEvents?: boolean;
 		explain?: boolean;
 		skipReset?: boolean;
-		/** Overrides the org-configured customer-product page size. */
 		cusProductLimit?: number;
-		/** Must stay false on public API paths. */
 		includeExpiredLooseEntitlements?: boolean;
 	}): Promise<FullCustomer> {
 		const { db, org, env } = ctx;
@@ -150,7 +146,6 @@ export class CusService {
 					!withTrialsUsed &&
 					!withEvents &&
 					!entityId &&
-					// The flat-model query has no expired-loose hydration.
 					!includeExpiredLooseEntitlements;
 
 				const query = useFlatModel
@@ -196,10 +191,6 @@ export class CusService {
 					useReplica: ctx.testOptions?.useReplica,
 				});
 				const sqlMs = performance.now() - tSqlStart;
-
-				// ctx.logger.info(
-				// 	`[CusService.getFull] path=${useFlatModel ? "flat" : "legacy"} orgId=${orgId} customer=${idOrInternalId} sqlMs=${sqlMs.toFixed(0)}`,
-				// );
 
 				let fullCus: FullCustomer;
 				if (useFlatModel) {
@@ -253,14 +244,6 @@ export class CusService {
 					fullCus = data as FullCustomer;
 				}
 
-				// if (orgId === "org_2x5sJDcxhpVDjyUSqs4khaaNnxq") {
-				// 	fullCus.customer_products = (
-				// 		fullCus.customer_products as FullCusProduct[]
-				// 	)
-				// 		.sort((a, b) => b.customer_prices.length - a.customer_prices.length)
-				// 		.slice(0, 5);
-				// }
-
 				if (
 					orgId === "GG6tnmO7cHb40PNhwYBTZtxQdeL74NHF" &&
 					idOrInternalId === "698fb72e4c5fa12c1cd11ddc"
@@ -284,22 +267,16 @@ export class CusService {
 					fullCustomer: fullCus,
 				});
 
-				// Seats (hydrated only on entityId fetches, with their pool +
-				// parent snapshot from the query) mirror the parent's lifecycle
-				// before the lazy reset below gates on status.
 				inheritParentCustomerProductProperties({
 					customerProducts: fullCus.customer_products ?? [],
 				});
 
 				if (usedReplica || skipReset) return fullCus;
 
-				// Skip reset only when executeWithHealthTracking explicitly chose the
-				// replica. Lazy reset writes themselves go through dbGeneral.
 				if (
 					fullCus.id &&
 					isBalanceWorkerRolloutEnabled({ ctx, customerId: fullCus.id })
 				) {
-					// The worker owns the rows: it refills and lands them, then the read is repeated on fresh rows.
 					const refilled = await resetCustomerEntitlementsViaWorker({
 						ctx,
 						fullCus,
@@ -541,7 +518,6 @@ export class CusService {
 	static async insert({ db, data }: { db: DrizzleCli; data: Customer }) {
 		const results = await db.insert(customers).values(data).returning();
 
-		// If insert succeeded, return the new customer
 		if (results && results.length > 0) {
 			const customer = results[0] as Customer;
 			if (customer.id) {
@@ -553,7 +529,6 @@ export class CusService {
 					internalCustomerId: customer.internal_id,
 				});
 			} else {
-				// Email-only rows have no external id yet; stamp whatever identity exists.
 				await markCustomersUpdatedAtByInternalIds({
 					db,
 					internalCustomerIds: [customer.internal_id],
@@ -562,8 +537,6 @@ export class CusService {
 			return customer;
 		}
 
-		// If no results, conflict occurred - fetch and return existing customer
-		// This handles race conditions gracefully without error logs
 		const existingCustomer = await CusService.get({
 			db,
 			idOrInternalId: data.id || data.internal_id,
@@ -575,7 +548,6 @@ export class CusService {
 			return existingCustomer;
 		}
 
-		// Should never reach here, but handle gracefully
 		return null;
 	}
 
@@ -723,20 +695,6 @@ export class CusService {
 		};
 	}
 
-	/**
-	 * Insert a new customer, or claim an existing null-ID customer by email.
-	 *
-	 * Behavior:
-	 * - If customer with same ID exists: return existing (no update)
-	 * - If customer with same email exists with id=NULL and new request has ID: claim it (set ID only)
-	 * - If customer with same email exists with id=NULL and new request has id=NULL: return existing
-	 * - Otherwise: insert new customer
-	 *
-	 * IMPORTANT: Only updates the `id` field when claiming. Does NOT update any other fields.
-	 * This prevents race conditions where concurrent requests could overwrite data.
-	 *
-	 * Returns { customer, wasUpdate } where wasUpdate=true if customer already existed.
-	 */
 	static async insertOrClaimEmail({
 		db,
 		data,
@@ -748,7 +706,6 @@ export class CusService {
 		const columnEntries = Object.entries(columns);
 		const columnNames = columnEntries.map(([_, col]) => col.name);
 
-		// Build values array in same order as columnNames
 		const values = columnEntries.map(([key, col]) => {
 			const value = data[key as keyof Customer];
 			if (col.dataType === "json") {
@@ -763,18 +720,11 @@ export class CusService {
 			return sql`${value ?? null}`;
 		});
 
-		// Conflict target differs based on incoming id:
-		// - id != NULL: Use cus_id_constraint (handles ID collisions)
-		// - id = NULL: Use partial index (handles email collisions for null-id rows)
 		const conflictClause =
 			data.id !== null
 				? sql`ON CONFLICT ON CONSTRAINT cus_id_constraint`
 				: sql`ON CONFLICT (org_id, env, lower(email)) WHERE id IS NULL AND email IS NOT NULL AND email != ''`;
 
-		// CTE handles all cases:
-		// - Claim: If email exists with id=NULL and new request has ID, set the ID (claim the customer)
-		// - Insert: If no claim happened, try to insert
-		// - On conflict: Do nothing (customer already exists), xmax will indicate it was an update
 		const results = await db.execute<
 			Customer & { xmax: string; was_claim: boolean }
 		>(sql`
@@ -804,7 +754,6 @@ export class CusService {
 
 		if (results && results.length > 0) {
 			const { xmax, was_claim, ...customer } = results[0];
-			// wasUpdate if: claimed existing row OR xmax indicates update (conflict happened)
 			const wasUpdate = was_claim || xmax !== "0";
 			if (customer.id) {
 				await markCustomerUpdatedAt({
@@ -815,7 +764,6 @@ export class CusService {
 					internalCustomerId: customer.internal_id,
 				});
 			} else {
-				// Email-only rows have no external id yet; stamp whatever identity exists.
 				await markCustomersUpdatedAtByInternalIds({
 					db,
 					internalCustomerIds: [customer.internal_id],
@@ -867,14 +815,12 @@ export class CusService {
 						internalCustomerId: customer.internal_id,
 					});
 				} else {
-					// Rows without an external id still stamp whatever identity exists.
 					await markCustomersUpdatedAtByInternalIds({
 						db,
 						internalCustomerIds: [customer.internal_id],
 					});
 				}
 
-				// On rename, readers still keyed on the old external id must pin to primary.
 				const idChanged =
 					update.id !== undefined && update.id !== idOrInternalId;
 				const addressedByExternalId = idOrInternalId !== customer.internal_id;
@@ -897,8 +843,6 @@ export class CusService {
 		}
 	}
 
-	// First paid attach only sends this when unset. Stripe sync also sends it
-	// to relock leftover currency after the previous paid product expired.
 	static async lockOrRelockCurrency({
 		ctx,
 		internalCustomerId,
@@ -1014,7 +958,6 @@ export class CusService {
 		return results;
 	}
 
-	/** Deletes customers in batches to avoid locking all rows at once. */
 	static async safeDeleteByOrgId({
 		db,
 		orgId,
@@ -1067,7 +1010,6 @@ export class CusService {
 	}) {
 		const { db, org, env } = ctx;
 
-		// This assumes the "processors" column is a JSONB object that can have a "vercel" object with "installation_id"
 		const results = await db
 			.select()
 			.from(customers as unknown as Table)
@@ -1075,8 +1017,6 @@ export class CusService {
 				and(
 					eq(customers.org_id, org.id),
 					eq(customers.env, env),
-					// This JSON path works for Postgres jsonb column
-					// Check for 'vercel.installation_id' inside the processors JSONB column
 					sql`${customers.processors}->'vercel'->>'installation_id' = ${vercelInstallationId}`,
 				),
 			);

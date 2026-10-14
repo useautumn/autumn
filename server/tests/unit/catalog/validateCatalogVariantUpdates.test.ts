@@ -65,7 +65,6 @@ test("catalog variant updates must target the latest base version", () => {
 	).not.toThrow();
 });
 
-/** Before: inherited variants failed schema validation; after: only an exact empty diff is accepted. */
 test("variant updates accept empty inherited customization", () => {
 	const variant = {
 		variant_plan_id: "pro_annual",

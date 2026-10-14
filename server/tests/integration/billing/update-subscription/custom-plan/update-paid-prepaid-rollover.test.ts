@@ -1,15 +1,3 @@
-/**
- * Update Subscription Custom Plan — Rollover Preservation
- *
- * Regression for double-counting bug in clearExcessRollovers: an updateSubscription
- * with a custom prepaid item change must preserve any existing rollover that fits
- * within the cap (max_percentage of starting balance).
- *
- * Pre-fix: the carried-over rollover was zeroed out because the cap check saw
- * `[...fullCusEnt.rollovers, ...newRows]` where both arrays were the same in-memory
- * objects, doubling the total balance and triggering excess clearing.
- */
-
 import { test } from "bun:test";
 import {
 	type ApiCustomerV5,
@@ -82,7 +70,6 @@ test.concurrent(`${chalk.yellowBright("update-paid-prepaid-rollover: max_percent
 		rollovers: [{ balance: expectedRollover }],
 	});
 
-	// Update subscription items (price change). Rollover must survive.
 	await autumnV1.subscriptions.update({
 		customer_id: customerId,
 		product_id: pro.id,

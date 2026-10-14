@@ -159,7 +159,6 @@ export function FeatureGrantRewardConfig({
 
 	return (
 		<>
-			{/* Promo Codes Section */}
 			<SheetSection title="Promo Codes" withSeparator={false}>
 				<div className="space-y-3">
 					{(reward.promo_codes || []).map((promoCode, index) => (
@@ -218,7 +217,6 @@ export function FeatureGrantRewardConfig({
 				<Separator />
 			</div>
 
-			{/* Entitlements Section */}
 			<SheetSection title="Feature Grants" withSeparator={false}>
 				<div className="space-y-4">
 					<AnimatePresence initial={false}>
@@ -241,7 +239,6 @@ export function FeatureGrantRewardConfig({
 										</button>
 									)}
 
-									{/* Feature selector */}
 									<div>
 										<FormLabel>Feature</FormLabel>
 										<SearchableSelect<Feature>
@@ -291,7 +288,6 @@ export function FeatureGrantRewardConfig({
 										/>
 									</div>
 
-									{/* Allowance (boolean features grant on/off access, no balance) */}
 									{!isBooleanFeature(ent.feature_id) && (
 										<div>
 											<FormLabel>Balance Grant</FormLabel>
@@ -316,7 +312,6 @@ export function FeatureGrantRewardConfig({
 										</div>
 									)}
 
-									{/* Expiry */}
 									<div>
 										<FormLabel>Expiry</FormLabel>
 										{ent.expiry ? (

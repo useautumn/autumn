@@ -7,12 +7,6 @@ import { timeout } from "@/utils/genUtils";
 
 const WEBHOOK_SETTLE_MS = 12_000;
 
-/**
- * Produces the drifted state these suites are about: an ACTIVE Autumn customer
- * product whose `subscription_ids` point at a canceled Stripe subscription.
- * Unlinking before the cancel makes `sub.deleted` a no-op — the same shape
- * production lands in when Autumn's own post-cancel bookkeeping never runs.
- */
 export const linkCustomerProductToCanceledSubscription = async ({
 	ctx,
 	customerId,

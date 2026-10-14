@@ -1,7 +1,6 @@
 import type { CatalogV2Client } from "../../../licenses/utils/seedLicensePlans.js";
 import { messagesItem } from "../../../licenses/utils/seedLicensePlans.js";
 
-/** Child v1..n first, then the parent link — so the license points at latest. */
 export const seedChildVersionsThenParent = async ({
 	autumn,
 	childId,

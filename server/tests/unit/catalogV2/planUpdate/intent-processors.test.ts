@@ -1,27 +1,3 @@
-/**
- * intentToUpsertProductPlan — the processors half of an intent fold.
- *
- * Two review findings ride this function:
- *
- *   Fix 1  `processors: { stripe: null }` clears `product.processor`, but the
- *          UpsertProductPlan carried no record that the clear was DELIBERATE.
- *          A cleared paid row then looks like a brand-new paid plan to
- *          `hasMissingStripeResourcesForProduct`, so execute mints a
- *          replacement Stripe product and the unlink dies inside its own
- *          request. The fan-out rows (`processor_sync`, `variant_propagation`)
- *          carry the same `{ stripe: null }` and need the same flag.
- *
- *   Fix 3  a variant may state `processors.revenuecat` — the mappings table is
- *          keyed by public plan id, and a variant is its own plan — but only
- *          `source === "direct"` carried `revenuecatProcessor`, so a
- *          `variant_link` create silently dropped the mapping.
- *
- * Red (before):  `stripeUnlinked` does not exist; `revenuecatProcessor` is
- *   undefined on every non-direct source.
- * Green (after): the unlink flag is set on every row that states the null, and
- *   revenuecat rides direct / variant_link / variant_propagation.
- */
-
 import { describe, expect, test } from "bun:test";
 import {
 	type ApiPlanProcessors,

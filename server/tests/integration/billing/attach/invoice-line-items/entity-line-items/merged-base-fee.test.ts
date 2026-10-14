@@ -1,14 +1,3 @@
-/**
- * Two entities on the same $20 plan merge into one "2 × Pro" $40 Stripe line.
- *
- * Contract:
- *   stored row links BOTH customer products and has two $20 entity entries
- *   cancelling one entity mid-cycle credits its $20 share, not the $40 line
- *
- * Red (current):  row links one product, entities has one entry, credit is on $40.
- * Green (after):  two ids, two entries, credit = prorate($20).
- */
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3 } from "@autumn/shared";
 import { waitForInvoiceLineItems } from "@tests/integration/billing/utils/expectInvoiceLineItemsCorrect";
@@ -84,7 +73,6 @@ test.concurrent(
 				.map((entity_id) => ({ entity_id, quantity: null, amount: basePrice })),
 		);
 
-		// Cancel alice 15 days in: credit must be her $20 share, not the $40 line
 		const cancelAt = addDays(new Date(renewalTime), 15).getTime();
 		await advanceTestClock({
 			stripeCli: ctx.stripeCli,

@@ -5,14 +5,6 @@ const isPositive = (
 	amountDecimal?: string | null,
 ): boolean => (amount ?? Number(amountDecimal ?? 0)) > 0;
 
-/**
- * Can this price ever bill money, regardless of current quantity? Distinct from
- * `stripePriceToAmount`, which answers what an item bills *right now* — a
- * metered item sits at quantity 0 between usage, yet still bills.
- *
- * Tiers are only present when expanded; an unexpanded tiered price is treated
- * as billable so an unknown price is surfaced rather than silently ignored.
- */
 export const stripePriceCanBill = ({
 	stripePrice,
 }: {

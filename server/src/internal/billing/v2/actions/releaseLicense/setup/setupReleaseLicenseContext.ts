@@ -9,8 +9,6 @@ import { listFullSubjectsByEntityIds } from "@/internal/entities/repos/listFullS
 import type { ReleaseLicenseContext } from "../types.js";
 import { resolveLicenseRelease } from "./resolveLicenseRelease.js";
 
-/** Entity subjects carry the seats (bounded by the request); the full
- * customer carries the pools. Compute stays a pure plan assembly. */
 export const setupReleaseLicenseContext = async ({
 	ctx,
 	params,

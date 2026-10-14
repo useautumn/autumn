@@ -2,8 +2,6 @@ import { describe, expect, test } from "bun:test";
 import { Scopes } from "@autumn/shared";
 import { requiredScopesForApproval } from "../../../src/internal/approvals/utils/approvalScopeRequirements.js";
 
-// A grouped card applies every step, so approving it must demand every step's
-// scopes — otherwise billing:write alone could apply a customer change.
 describe("grouped approvals require the union of step scopes", () => {
 	test("unions the primary tool and its grouped steps", () => {
 		expect(

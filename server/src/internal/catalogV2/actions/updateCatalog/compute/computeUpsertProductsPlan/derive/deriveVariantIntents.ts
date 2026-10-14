@@ -5,11 +5,6 @@ import type {
 	UpsertProductPlan,
 } from "@/internal/catalogV2/actions/updateCatalog/types/upsertProductPlan";
 
-/**
- * Declared variants[] + propagate.variants on a folded base.
- * Missing ids with a name → create. Existing ids → follow and/or declare.
- * Nested bases emit nothing.
- */
 export const deriveVariantIntents = ({
 	intent,
 	upsert,

@@ -1,9 +1,3 @@
-/**
- * sub.updated back-sync must ignore an Autumn-owned schedule advancing (Autumn's
- * mirror already applied the phase), but still run for schedules the customer
- * built in Stripe (e.g. license quantity changes).
- */
-
 import { describe, expect, test } from "bun:test";
 import type Stripe from "stripe";
 import { isAutumnScheduledPhaseChange } from "@/external/stripe/webhookHandlers/handleStripeSubscriptionUpdated/isAutumnScheduledPhaseChange";

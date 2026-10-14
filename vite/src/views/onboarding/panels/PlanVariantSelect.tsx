@@ -8,8 +8,6 @@ import { CaretDownIcon, CheckIcon } from "@phosphor-icons/react";
 import type { ProductListItem } from "@/hooks/queries/useProductsQuery";
 import { cn } from "@/lib/utils";
 
-/** Variants are the same plan on different terms, so they belong behind one
- * control on the card rather than taking cards of their own. */
 export function PlanVariantSelect({
 	options,
 	selectedId,
@@ -23,8 +21,6 @@ export function PlanVariantSelect({
 
 	return (
 		<DropdownMenu>
-			{/* Sizes are explicit rather than `text-tiny`: that's a plain CSS class,
-			    so the trigger's own font styles win over it. */}
 			<DropdownMenuTrigger
 				className={cn(
 					"flex max-w-[84px] shrink-0 items-center gap-0.5 rounded-[6px] bg-muted px-1 py-0",

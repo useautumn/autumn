@@ -5,7 +5,6 @@ export type PartitionCheckpointLease = {
 };
 
 export type PartitionCheckpointMaintenance = {
-	/** Register only after catch-up; abort this assignment before draining or recovery. */
 	start({
 		topic,
 		partition,

@@ -52,7 +52,6 @@ const assertFeatureType = ({
 	);
 };
 
-/** Plan item fixtures validate feature compatibility to avoid impossible setups. */
 export const items = {
 	boolean: ({ feature }: { feature: ApiFeatureV1 }): ApiPlanItemV1 => {
 		assertFeatureType({

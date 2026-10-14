@@ -17,7 +17,6 @@ import { featureToInternalFeatureId } from "../../balanceWorker/featureToInterna
 import { cancelLockExpirySchedule } from "../../balanceWorker/lockExpirySchedule.js";
 import { requestContextToCommandBase } from "../../balanceWorker/requestContextToCommandBase.js";
 
-/** Release settles at zero, an override at that value, a plain confirm at whatever the lock took. */
 const finalValueOf = ({
 	params,
 }: {
@@ -44,7 +43,6 @@ const finalizeOnWorker = async ({
 				featureId: lock.feature_id,
 				value: result.finalValue,
 			});
-		// Only a caller-supplied expiry had a timer; the 24 hour default is the sweep's.
 		if (lock.expiry_action === "release")
 			await cancelLockExpirySchedule({ ctx, lockId: lock.lock_id });
 		return { success: true };
@@ -53,7 +51,6 @@ const finalizeOnWorker = async ({
 	}
 };
 
-/** Settled by the owner in log order once it is back; the lock's expiry stays armed until then. */
 const queueFinalize = async ({
 	ctx,
 	command,
@@ -106,7 +103,6 @@ export async function runBalanceWorkerFinalize({
 		source: "finalize",
 		commandId: command.commandId,
 		run: () => finalizeOnWorker({ ctx, command, client }),
-		// An unconfirmed finalize may have been rejected; queueing it would answer success for a verdict never heard.
 		fallback: ({ error, reason }) =>
 			reason === "balance_worker_result_unknown"
 				? Promise.reject(error)

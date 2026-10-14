@@ -7,7 +7,6 @@ import { createStripeCli } from "@/external/connect/createStripeCli";
 import { voidOpenInvoicesForStripeSubscription } from "@/external/stripe/invoices/operations/voidOpenInvoicesForStripeSubscription";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 
-// Inline because the sub:<id> lock makes the subscription.deleted webhook skip its own void.
 export const voidInvoicesOnImmediateCancel = async ({
 	ctx,
 	billingContext,
@@ -23,8 +22,6 @@ export const voidInvoicesOnImmediateCancel = async ({
 	if (billingContext.cancelAction !== "cancel_immediately") return;
 	if (billingResult.stripe.deferred) return;
 
-	// Only when the whole sub was cancelled; a partial item removal (add-on survives) is an
-	// "update", and voiding the surviving product's invoices would be wrong.
 	if (billingPlan.stripe.subscriptionAction?.type !== "cancel") return;
 
 	const { stripeSubscription, stripeCustomer, fullCustomer } = billingContext;

@@ -5,7 +5,6 @@ import type { PartitionProcessorScope } from "../../../src/processor/types/parti
 import { createSubjectMap } from "../../../src/processor/writer/subjectMap/createSubjectMap.js";
 import { createState, testIdentity } from "../../fixtures/mutations.js";
 
-/** A scope whose writer evicts from a real subject map, and records which customers' loads were overtaken. */
 const createScope = () => {
 	const subjects = createSubjectMap();
 	const overtaken: string[] = [];

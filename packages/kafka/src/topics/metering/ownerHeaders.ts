@@ -3,11 +3,8 @@ import { InvalidRecordError } from "../../lib/recordErrors.js";
 import { OWNER_EPOCH_HEADER } from "../../producer/sendIdempotentBatch.js";
 import { OWNER_FENCE_HEADER } from "../../producer/sendOwnerFence.js";
 
-/** What a metering record's headers say about who wrote it. */
 export type OwnerHeaders = {
-	/** Absent on records written under a transaction, where the broker did the fencing. */
 	ownerEpoch?: bigint;
-	/** True for an ownership fence marker, which carries no mutation. */
 	fence: boolean;
 };
 
@@ -19,7 +16,6 @@ function headerText(value: IHeaders[string]): string | undefined {
 	return typeof single === "string" ? single : single.toString("utf8");
 }
 
-/** A header that does not parse is a broken record: its partition is parked, never guessed at. */
 export function readOwnerHeaders({
 	headers,
 }: {

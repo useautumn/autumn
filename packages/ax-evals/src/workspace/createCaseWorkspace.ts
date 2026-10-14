@@ -4,11 +4,6 @@ import { linkAtmn } from "./linkAtmn.ts";
 import type { CaseWorkspace } from "./types/caseWorkspace.ts";
 import { WORKSPACE_ROOT } from "./workspacePaths.ts";
 
-/**
- * One throwaway directory per run under WORKSPACE_ROOT, deleted by cleanup()
- * in the task's finally block. "atmn" resolves via a symlink — zero bytes
- * copied. AX_EVALS_KEEP=1 keeps a workspace for debugging.
- */
 export const createCaseWorkspace = async (
 	label: string,
 	{
@@ -23,9 +18,6 @@ export const createCaseWorkspace = async (
 	const dir = join(WORKSPACE_ROOT, `${label}-${runId}`);
 	await mkdir(dir, { recursive: true });
 	await linkAtmn({ dir, backendUrl });
-	// atmn declared as a dependency and a secret key in .env, so agents see an
-	// already-installed, already-authenticated project; install/login behavior
-	// is exercised by dedicated setup-flow cases instead.
 	await writeFile(
 		join(dir, "package.json"),
 		JSON.stringify(

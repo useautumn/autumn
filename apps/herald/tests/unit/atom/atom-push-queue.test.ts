@@ -17,7 +17,6 @@ const statusError = () =>
 
 const advanceBy = (ms: number) => setSystemTime(new Date(Date.now() + ms));
 
-/** A queue whose opens and sends fail while `failOpens`/`failSends` say so, counting each call. */
 const createQueue = () => {
 	const state = { failOpens: 0, failSends: 0, opens: 0, sends: 0 };
 	const logs: { level: string; type: string; data: unknown }[] = [];

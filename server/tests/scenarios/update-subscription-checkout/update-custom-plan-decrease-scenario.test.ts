@@ -10,13 +10,6 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-/**
- * Update Subscription Checkout - Custom plan decrease scenario
- *
- * Starts from a paid base plan, then previews an update-subscription checkout
- * that lowers the base price while keeping the same included features.
- */
-
 test(`${chalk.yellowBright("update-subscription-checkout: custom plan reduce base price")}`, async () => {
 	const customerId = "update-sub-checkout-custom-dec";
 

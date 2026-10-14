@@ -1,9 +1,3 @@
-/**
- * atmn scenarios/surgery — array with `satisfies` / `as const` → resolver still finds it, or errors clearly
- *
- * One line of plans/atmn-v3/07_tests.md. [a, b] is a matrix looped INSIDE this file.
- */
-
 import { expect, test } from "bun:test";
 import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 import {
@@ -105,8 +99,6 @@ export default atmn({
 			try {
 				await scenario.push();
 
-				// A dashboard-only plan the config's `as const`/`satisfies` array
-				// never mentions.
 				await scenario.client.update({
 					plans: [
 						{
@@ -125,10 +117,6 @@ export default atmn({
 				});
 
 				const before = scenario.files();
-				// Decision pending: resolveCollectionTarget's `declaresArray` check
-				// looks for a bare `const name = [...]`, which a trailing type
-				// modifier breaks — so the append is expected to error, naming the
-				// row, rather than silently landing nowhere.
 				await expect(scenario.pull()).rejects.toThrow(
 					new RegExp(`plans .*${newId}.*: append to \`plans\` by hand`),
 				);

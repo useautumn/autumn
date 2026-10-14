@@ -2,10 +2,6 @@ import type { AttachDiscount, StripeDiscountWithCoupon } from "@autumn/shared";
 import type Stripe from "stripe";
 import { resolveCoupon, resolvePromotionCode } from "@/external/stripe/coupons";
 
-/**
- * Resolves `discounts` param entries into validated Stripe coupon objects.
- * Accepts coupon IDs (passed directly) and human-readable promo code strings (resolved via Stripe API).
- */
 export const resolveParamDiscounts = async ({
 	stripeCli,
 	discounts,
@@ -25,7 +21,6 @@ export const resolveParamDiscounts = async ({
 		}),
 	);
 
-	// Deduplicate by coupon ID
 	const seen = new Set<string>();
 	return resolved.filter((d) => {
 		const couponId = d.source.coupon.id;

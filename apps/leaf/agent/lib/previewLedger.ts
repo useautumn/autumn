@@ -11,8 +11,6 @@ import {
 	writeToPreviewTool,
 } from "../../src/internal/approvals/utils/toolRegistry.js";
 
-/** Previews kept per session; a session that previews more than this has
- * long moved past its oldest ones. */
 const MAX_PREVIEWS_PER_SESSION = 20;
 
 const REJECTION_GUIDANCE =
@@ -21,13 +19,9 @@ const REJECTION_GUIDANCE =
 	"(the `approval_description` beside the request is the only allowed difference). " +
 	"If you changed your mind after previewing, preview the new request before writing it.";
 
-/** A gated write is only accepted with a request the agent previewed in this
- * session: the walkthrough it writes, the card the user approves and the
- * request that executes are then provably the same one. */
 export const createPreviewLedger = (
 	previewed: StateHandle<ReadonlyArray<PreviewedRequest>>,
 ) => ({
-	/** Records a preview call the model made, once the server accepted it. */
 	recordPreview: ({
 		args,
 		result,
@@ -46,8 +40,6 @@ export const createPreviewLedger = (
 			),
 		);
 	},
-	/** The rejection to hand the model for a write it did not preview
-	 * verbatim; undefined when the write is clear to record. */
 	rejectionFor: ({
 		args,
 		toolName,
@@ -69,9 +61,6 @@ export const createPreviewLedger = (
 	},
 });
 
-/** Durable per-session state: it survives step boundaries and process
- * restarts, so a preview in one step vouches for the write in the next
- * wherever that step runs. */
 export const previewLedger = createPreviewLedger(
 	defineState<ReadonlyArray<PreviewedRequest>>(
 		"leaf.previewed-requests",

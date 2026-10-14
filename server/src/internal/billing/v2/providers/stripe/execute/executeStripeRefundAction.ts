@@ -4,7 +4,6 @@ import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { createRefundAndUpdateInvoice } from "@/internal/customers/handlers/handleRefundInvoice/invoiceRefundUtils.js";
 
-/** Execute a prebuilt refund action: issues the refund and updates the Autumn invoice */
 export const executeStripeRefundAction = async ({
 	ctx,
 	refundAction,

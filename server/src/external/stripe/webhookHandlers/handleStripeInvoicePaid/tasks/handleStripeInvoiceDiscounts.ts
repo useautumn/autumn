@@ -22,7 +22,6 @@ export const handleStripeInvoiceDiscounts = async ({
 	ctx: StripeWebhookContext;
 	invoicePaidContext: StripeInvoicePaidContext;
 }) => {
-	// Handle coupon
 	const { org, env, logger } = ctx;
 	const { stripeInvoice, stripeSubscriptionId } = invoicePaidContext;
 	const stripeCli = createStripeCli({ org, env, legacyVersion: true });
@@ -39,7 +38,6 @@ export const handleStripeInvoiceDiscounts = async ({
 	try {
 		const totalDiscountAmounts = legacyInvoice.total_discount_amounts;
 
-		// Log coupon information for debugging
 		for (const discount of legacyInvoice.discounts) {
 			if (typeof discount === "string" || !("coupon" in discount)) continue;
 
@@ -68,7 +66,6 @@ export const handleStripeInvoiceDiscounts = async ({
 
 			if (!shouldRollover) continue;
 
-			// Get ID of coupon
 			const originalCoupon = await stripeCli.coupons.retrieve(couponId, {
 				expand: ["applies_to"],
 			});
@@ -116,7 +113,6 @@ export const handleStripeInvoiceDiscounts = async ({
 				`Coupon ${couponId}, stripeCus: ${stripeCus.id}, updating amount from ${curAmount} to ${newAmount}`,
 			);
 
-			// Set expiry date
 			let expiresAt = curCoupon.metadata?.expires_at || null;
 			const discountConfig = autumnReward?.discount_config;
 			if (discountConfig?.duration_type === CouponDurationType.Months) {

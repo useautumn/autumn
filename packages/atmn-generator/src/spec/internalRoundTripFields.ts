@@ -2,15 +2,7 @@ import { type JsonSchema, toCamelCase } from "../casing/schemaKeyCasing";
 import type { Overlay } from "../overlay/overlay";
 import { resolveRef } from "./resolveRef";
 
-/**
- * An `x-internal` field the server both returns on GET and accepts on update
- * is a round-trip field: a value the catalog holds and a push can restate.
- * Hidden from the fixture, a pull drops it and the next push reads as a
- * change — so each one must be exposed, or named as server-owned on purpose.
- */
-
 export type InternalRoundTripField = {
-	/** Fixture-cased dotted path from the collection root, e.g. "items.price.allocatedBilling". */
 	path: string;
 	wireKey: string;
 };
@@ -28,7 +20,6 @@ const branchesOf = ({
 		...(schema.oneOf ?? []),
 	].map((branch) => resolveRef({ schema: branch, root }) ?? branch);
 
-/** Every `x-internal` property under a schema, by fixture path; arrays elided. */
 const internalFieldsUnder = ({
 	schema,
 	root,
@@ -85,7 +76,6 @@ const internalFieldPaths = ({
 	return out;
 };
 
-/** Internal fields present on both the GET row and the update row for a collection. */
 export const internalRoundTripFields = ({
 	responseItem,
 	requestItem,
@@ -102,7 +92,6 @@ export const internalRoundTripFields = ({
 		.map(([path, wireKey]) => ({ path, wireKey }));
 };
 
-/** The overlay's verdict on one round-trip field. */
 export const roundTripFieldVerdict = ({
 	overlay,
 	field,

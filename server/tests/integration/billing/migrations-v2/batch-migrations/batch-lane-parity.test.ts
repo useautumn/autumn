@@ -1,18 +1,3 @@
-/**
- * Lane parity: the same add_items migration run through the batch lane and
- * the per-customer lane must leave equivalent customer state.
- *
- * The lanes write different DB SHAPES by construction — per-customer
- * (computeCustomPlan) inserts a replacement customer product and expires the
- * old one, while the batch lane patches the existing row in place. This test
- * pins what must nevertheless match: the active plan, its items, and
- * `is_custom`. Both lanes derive the flag against the catalog version, so
- * add_items the catalog lacks leave the row custom on either lane.
- *
- * Divergences it surfaces are recorded in
- * .plans/batch-migrations/webhooks-and-events.md.
- */
-
 import { expect, test } from "bun:test";
 import {
 	type ApiCustomerV5,
@@ -96,7 +81,6 @@ test.concurrent(
 			],
 		});
 
-		// Lane A: batch (plain run — batch-eligible).
 		const batchRun = await runChunkedMigration({
 			ctx,
 			migrationClient: autumnV2_2,
@@ -115,8 +99,6 @@ test.concurrent(
 		});
 		expect(batchRun.result?.lane).toBe("batch");
 
-		// Lane B: per-customer (`controls.limit` makes the run batch-ineligible;
-		// `only` narrows scope without selecting the lane).
 		const perCustomerRun = await runChunkedMigration({
 			ctx,
 			migrationClient: autumnV2_2,
@@ -136,7 +118,6 @@ test.concurrent(
 		});
 		expect(perCustomerRun.result?.lane).toBe("per_customer");
 
-		// ── Customer-visible state must match ──────────────────────────
 		for (const [customerId, planId] of [
 			[batchCustomerId, batchPlan.id],
 			[perCustomerId, perCustomerPlan.id],

@@ -105,8 +105,6 @@ export const seatLinkId = async ({
 	licenseProductId: string;
 }) => {
 	const { assignments, pools } = await getLicenseDbState({ db, customerId });
-	// Newest first: a dead parent's seats stay `active` in the DB (liveness is
-	// inherited at read time), so row order alone can return a stale link.
 	const matching = assignments
 		.filter((candidate) => candidate.product_id === licenseProductId)
 		.sort((left, right) => (right.created_at ?? 0) - (left.created_at ?? 0));
@@ -198,7 +196,6 @@ export const expectLicensePooledEntitlementNotHydrated = async ({
 	expect(hydrated).toHaveLength(0);
 };
 
-/** Parent liveness hides the license pool at read time — same as seats. */
 export const expectLicensePooledBalanceExpired = async ({
 	autumn,
 	ctx,
@@ -270,7 +267,6 @@ export const expectLicensePooledGrant = async ({
 		remaining: granted - usage,
 		usage,
 	});
-	// The read above may have reset the pool on the worker; Postgres lands that a moment later.
 	await pollUntilAsserted({
 		fetch: async () => undefined,
 		assert: () =>

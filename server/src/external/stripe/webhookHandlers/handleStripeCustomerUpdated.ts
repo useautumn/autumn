@@ -7,12 +7,6 @@ import type { StripeWebhookContext } from "../webhookMiddlewares/stripeWebhookCo
 
 const SYNCED_FIELDS = ["name", "email"] as const;
 
-/**
- * Syncs a Stripe customer's name + email to the linked Autumn customer on
- * `customer.updated`. Each field is synced independently; an unchanged or
- * cleared (empty/null) field is left as-is so a partial update never clobbers
- * Autumn's stored value.
- */
 export async function handleStripeCustomerUpdated({
 	ctx,
 	event,
@@ -22,9 +16,6 @@ export async function handleStripeCustomerUpdated({
 }) {
 	const { logger, fullCustomer } = ctx;
 	if (!fullCustomer) return;
-	// Autumn's own pushes are never news, and one made from a stale customer
-	// snapshot (e.g. an attach racing a customers.update) would overwrite the
-	// newer value if it were synced back.
 	if (isAutumnOriginatedStripeEvent({ event })) return;
 
 	const stripeCustomer = event.data.object;

@@ -1,13 +1,3 @@
-/**
- * catalogV2 version identity — targeting validation (unit 3).
- *
- * Contract:
- *   version + version_slug together → 400 (even if they agree)
- *   unknown version_slug → mints under that slug (reversed 2026-08-31)
- *   all_versions / new_version + slug pin → 400 (same as numeric pin)
- *   duplicate same slug twice → 400 InvalidRequest
- */
-
 import { expect, test } from "bun:test";
 import { ErrCode } from "@autumn/shared";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils.js";
@@ -66,11 +56,6 @@ test.concurrent(
 		try {
 			await seedV1({ autumn: autumnV2_3, planId });
 
-			// Reversed deliberately: this was a 400. Under a config that states the
-			// whole desired history, a slug naming no row is history the catalog
-			// does not have yet, so it is minted rather than rejected. The
-			// guarantee that matters — it must never land on the active row —
-			// still holds, and preview is what surfaces an accidental mint.
 			await autumnV2_3.catalogV2.update({
 				plans: [{ plan_id: planId, version_slug: "missing", name: "Ghost" }],
 			});

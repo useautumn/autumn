@@ -1,8 +1,3 @@
-/**
- * dfu.flash — `plan` shorthand: a singular `plan` on a billable is normalized to
- * phases:[{ starts_at:"now", plans:[plan] }] and imports the same cusProduct.
- */
-
 import { expect, test } from "bun:test";
 import { type ApiCustomerV5 } from "@autumn/shared";
 import {
@@ -43,7 +38,6 @@ test.concurrent(
 				{
 					processor: "stripe",
 					link: { subscription_id: subscriptionId },
-					// Singular `plan` — normalized to phases:[{ starts_at:"now", plans:[plan] }].
 					plan: {
 						plan_id: pro.id,
 						status: "active",

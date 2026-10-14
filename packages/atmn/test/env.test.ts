@@ -1,10 +1,3 @@
-/**
- * `atmn env` never touches the network here: the org lookup is injected. What
- * is under test is that the command reports the target every other command
- * resolves — so `-p` shows the production key, a pin shows its sandbox — and
- * that the global flags reach it from either side of the command name.
- */
-
 import { afterEach, beforeEach, expect, test } from "bun:test";
 import { runEnv } from "../src/actions/env";
 import type { OrgInfo } from "../src/actions/env/types/orgInfo";
@@ -50,7 +43,6 @@ test("names the pinned sandbox and a non-default server", async () => {
 	const { lines, write } = capture();
 	await runEnv({
 		target: resolveTarget({ sandbox: "sb_1", local: true }),
-		// A sandbox key authenticates as the sandbox's own org.
 		fetchOrgInfo: async () => ({ ...ORG, id: "sb_1", env: "sandbox" }),
 		write,
 	});

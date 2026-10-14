@@ -104,7 +104,6 @@ test.concurrent(
 			({ customerEntitlementId }) => customerEntitlementId,
 		);
 
-		// The Stripe-owned row resets when its invoice does, never by the cron.
 		expect(appliedIds).not.toContain(stripeOwnedCusEnt.id);
 		expect(
 			run.verdicts.some(
@@ -113,7 +112,6 @@ test.concurrent(
 					verdict.kind === "resets_via_invoice",
 			),
 		).toBe(true);
-		// The Autumn-owned row (its own reset interval) is the cron's to reset.
 		expect(appliedIds).toContain(autumnOwnedCusEnt.id);
 	},
 );

@@ -2,7 +2,6 @@ import { type EntitlementWithFeature, entsAreSame } from "@autumn/shared";
 import { computeCustomerEntitlementPatch } from "@/internal/billing/v2/actions/batchTransition/compute/operations/entitlementPriceOperations/computeCustomerEntitlementPatch.js";
 import type { CustomerEntitlementPatch } from "@/internal/billing/v2/actions/batchTransition/types/entitlementPriceOperationTypes.js";
 
-/** Discriminates patches that share one SQL UPDATE. `keep` means omit the column. */
 export const customerEntitlementPatchKey = ({
 	patch,
 }: {
@@ -28,7 +27,6 @@ const patchForLiveRow = ({
 	toEntitlement: EntitlementWithFeature;
 }): CustomerEntitlementPatch => {
 	if (entsAreSame(liveDefinition, toEntitlement)) return {};
-	// Migration edits amend the definition in place — usage always carries.
 	return computeCustomerEntitlementPatch({
 		fromEntitlement: liveDefinition,
 		toEntitlement,
@@ -40,7 +38,6 @@ type FilterReplaceLiveRow = {
 	liveDefinition?: EntitlementWithFeature;
 };
 
-/** Buckets live from-rows by grant delta so one UPDATE can apply each patch. */
 export const groupFilterReplaceRows = <
 	LiveRow extends FilterReplaceLiveRow,
 >({

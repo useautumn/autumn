@@ -1,24 +1,3 @@
-/**
- * TDD test for double carry-over on one-off prepaid cusEnts.
- *
- * Bug:
- *   One-off prepaid cusEnts are now ALWAYS auto-preserved as a lifetime
- *   cusEnt via cusProductToOneOffPrepaidCarryOvers (no opt-in needed).
- *   When the caller ALSO passes `carry_over_balances: { enabled: true }`,
- *   the existing-balance carry-over helper iterates the same one-off
- *   prepaid cusEnt and mints a second carry-over row — doubling the
- *   preserved balance.
- *
- * Red-failure mode (pre-fix):
- *   Upgrade pro(one-off-prepaid 200, 50 used → 150) → premium(500 monthly)
- *   with carry_over_balances enabled yields balance 800 (= 500 + 150 + 150)
- *   instead of the expected 650 (= 500 + 150).
- *
- * Green (post-fix):
- *   cusProductToExistingBalanceCarryOvers skips cusEnts already handled by
- *   the dedicated one-off prepaid path, so total balance = 650.
- */
-
 import { test } from "bun:test";
 import type { ApiCustomerV3 } from "@autumn/shared";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
@@ -60,7 +39,6 @@ test.concurrent(
 			],
 		});
 
-		// Burn 50 of 200 → one-off cusEnt balance = 150.
 		await autumnV2_1.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
@@ -68,9 +46,6 @@ test.concurrent(
 		});
 		await new Promise((resolve) => setTimeout(resolve, 2000));
 
-		// Upgrade WITH carry_over_balances on messages — the dedicated one-off
-		// prepaid path will also mint a carry-over, so the existing-balance
-		// path must NOT mint a second row for the same cusEnt.
 		await autumnV2_1.billing.attach({
 			customer_id: customerId,
 			plan_id: premium.id,
@@ -84,7 +59,6 @@ test.concurrent(
 
 		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-		// 500 premium + 150 preserved one-off = 650. Pre-fix: 800 (double-counted).
 		expectCustomerFeatureCorrect({
 			customer,
 			featureId: TestFeature.Messages,

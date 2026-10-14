@@ -1,6 +1,3 @@
-// Scheduled downgrades with entity-scoped prepaid products: each entity gets independent inline
-// Stripe prices, and the schedule must preserve per-entity pricing through the transition.
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3, ApiEntityV0 } from "@autumn/shared";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
@@ -27,19 +24,6 @@ import {
 	prepaidCost,
 } from "./utils/scheduledSwitchPrepaidEntities";
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 1: Single entity premium → pro downgrade + advance cycle
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Both entities start on premium ($50/mo) with 500 prepaid messages.
- * Downgrade entity 1 to pro ($20/mo) with 300 messages.
- *
- * Expected:
- *   Entity 1: premium canceling + pro scheduled, balance still 500 (until cycle ends)
- *   Entity 2: premium active, balance 500
- *   Stripe schedule reflects the scheduled downgrade with inline prepaid prices
- */
 test.concurrent(
 	`${chalk.yellowBright("scheduled-switch-entities-prepaid 1: single entity premium→pro downgrade + advance cycle")}`,
 	async () => {
@@ -80,7 +64,6 @@ test.concurrent(
 			],
 		});
 
-		// Action under test: downgrade entity 1 to pro (scheduled)
 		await autumnV1.billing.attach({
 			customer_id: customerId,
 			product_id: pro.id,
@@ -89,7 +72,6 @@ test.concurrent(
 			redirect_mode: "if_required",
 		});
 
-		// Verify entity 1: premium canceling, pro scheduled
 		const entity1 = await autumnV1.entities.get<ApiEntityV0>(
 			customerId,
 			entities[0].id,
@@ -97,7 +79,6 @@ test.concurrent(
 		await expectProductCanceling({ customer: entity1, productId: premium.id });
 		await expectProductScheduled({ customer: entity1, productId: pro.id });
 
-		// Balances unchanged before cycle ends
 		expectCustomerFeatureCorrect({
 			customer: entity1,
 			featureId: TestFeature.Messages,
@@ -105,7 +86,6 @@ test.concurrent(
 			usage: 0,
 		});
 
-		// Stripe schedule should reflect the downgrade
 		await expectStripeSubscriptionCorrect({ ctx, customerId });
 
 		await advanceToNextInvoice({
@@ -149,9 +129,6 @@ test.concurrent(
 		}
 		await expectStripeSubscriptionCorrect({ ctx, customerId });
 
-		// Invoices:
-		//   0 (latest): renewal — pro base ($20) + prepaid 300 ($20) = $40
-		//   1: initial — premium base ($50) + prepaid 500 ($40) = $90
 		await expectCustomerInvoiceCorrect({
 			customer: customerAfter,
 			count: 2,
@@ -166,14 +143,6 @@ test.concurrent(
 	},
 );
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 2: Entity 1 premium → pro, entity 2 stays premium → advance cycle
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Both entities on premium with 500 messages. Downgrade entity 1 to pro with 300.
- * After cycle: entity 1 on pro with 300 balance, entity 2 renewed on premium with 500 balance.
- */
 test.concurrent(
 	`${chalk.yellowBright("scheduled-switch-entities-prepaid 2: entity 1 premium→pro, entity 2 stays premium, advance cycle")}`,
 	async () => {
@@ -229,7 +198,6 @@ test.concurrent(
 			],
 		});
 
-		// After cycle: entity 1 on pro, entity 2 on premium
 		const entity1 = await autumnV1.entities.get<ApiEntityV0>(
 			customerId,
 			entities[0].id,
@@ -250,7 +218,6 @@ test.concurrent(
 			notPresent: [pro.id],
 		});
 
-		// Entity 1 gets pro quantity, entity 2 keeps premium quantity
 		expectCustomerFeatureCorrect({
 			customer: entity1,
 			featureId: TestFeature.Messages,
@@ -266,10 +233,6 @@ test.concurrent(
 
 		await expectStripeSubscriptionCorrect({ ctx, customerId });
 
-		// Invoices:
-		//   0 (latest): renewal — entity 1 pro ($20+$20) + entity 2 premium ($50+$40) = $130
-		//   1: initial — entity 2 premium ($50+$40) = $90
-		//   2: initial — entity 1 premium ($50+$40) = $90
 		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 		await expectCustomerInvoiceCorrect({
 			customer,

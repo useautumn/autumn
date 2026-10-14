@@ -17,8 +17,6 @@ import { ApiFeatureWithMeta, featuresOpenApi } from "./featuresOpenApi.js";
 import { ApiProductWithMeta, productsOpenApi } from "./productsOpenApi.js";
 import { referralsOpenApi } from "./referralsOpenApi.js";
 
-// Register schema with .meta() for OpenAPI spec generation
-
 const OPENAPI_1_2_0 = createDocument(
 	{
 		openapi: "3.1.0",

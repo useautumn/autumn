@@ -7,11 +7,6 @@ import {
 
 export const DEFAULT_BATCH_SIZE = 10_000;
 
-/**
- * Iterate keyset-paginated rows in batches. Caller supplies a `buildSelect`
- * closure that returns the SQL for the next page given a cursor; rows
- * MUST include `internal_id` for the cursor to advance.
- */
 export async function* iterateOverFilterResults<
 	TRow extends { internal_id: string },
 >({

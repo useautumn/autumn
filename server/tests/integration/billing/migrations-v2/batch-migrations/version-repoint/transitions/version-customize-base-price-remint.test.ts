@@ -1,11 +1,3 @@
-/**
- * Resend-shaped batch: paid pro, catalog-v2 remints Autumn base-price ids
- * (same Stripe/amount), migration is version + customize remove+add on one
- * feature. That remint is not a billing change and must stay on the batch lane.
- *
- * Red (before):  base_price_transition → per-customer.
- * Green (after): batch; product repoints; customize replace lands on FROM items.
- */
 import { expect, test } from "bun:test";
 import { type ApiCustomerV3, productToBasePrice } from "@autumn/shared";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";

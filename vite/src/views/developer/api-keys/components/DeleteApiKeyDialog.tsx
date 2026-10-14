@@ -30,7 +30,6 @@ export const DeleteApiKeyDialog = ({
 
 	const [deleteLoading, setDeleteLoading] = useState(false);
 
-	// Reset confirmText when dialog opens/closes
 	useEffect(() => {
 		if (open) {
 			setConfirmText("");

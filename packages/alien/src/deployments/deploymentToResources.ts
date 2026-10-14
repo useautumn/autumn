@@ -17,13 +17,11 @@ const StackStateSchema = z.object({
 	resources: z.record(z.string(), ResourceSchema),
 });
 
-/** alien's own words for an error, when it gave any. */
 const toErrorMessage = (error: unknown): string | null => {
 	const parsed = AlienErrorSchema.safeParse(error);
 	return parsed.success ? parsed.data.message : null;
 };
 
-/** Every resource in the deployment's stack; none until alien has started on it. */
 export const deploymentToResources = ({
 	deployment,
 }: {
@@ -40,7 +38,6 @@ export const deploymentToResources = ({
 	}));
 };
 
-/** Why the deployment stopped: its own error, else the first of its resources'. */
 export const deploymentToErrorMessage = ({
 	deployment,
 }: {

@@ -2,8 +2,6 @@ import { describe, expect, test } from "bun:test";
 import { withheldWritesFromToolArgs } from "../../../src/internal/agentRuntime/eve/parkedInput.js";
 import { publicToolArgs } from "../../../src/internal/approvals/utils/toolRequest.js";
 
-// The card needs the grouped writes, but `_eve*` keys are stripped as transport
-// before it renders — so the grouped steps must survive that strip.
 describe("grouped writes survive the public tool args strip", () => {
 	const toolArgs = {
 		_eveApproveOptionId: "approve",

@@ -1,6 +1,3 @@
-// Immediate switch reset behavior (attach V2): consumable/prepaid usage resets, allocated
-// usage carries over, and the reset_at anchor is preserved across upgrades.
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3 } from "@autumn/shared";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
@@ -12,23 +9,6 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { addMonths } from "date-fns";
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// FREE TO PAID TESTS
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Free to Paid - reset_at anchor preserved from free product
- *
- * Scenario:
- * - Free product (50 messages)
- * - Advance 15 days mid-cycle
- * - Track 20 usage
- * - Upgrade to Pro paid ($20/mo, 100 messages)
- *
- * Expected:
- * - next_reset_at anchor preserved from free product
- * - Usage resets for consumable
- */
 test.concurrent(
 	`${chalk.yellowBright("immediate-switch-reset 5: free to paid preserves reset_at anchor")}`,
 	async () => {
@@ -46,7 +26,6 @@ test.concurrent(
 			items: [proMessages],
 		});
 
-		// Advance 15 days so we're mid-cycle when upgrading
 		const { autumnV1, advancedTo } = await initScenario({
 			customerId,
 			setup: [
@@ -59,10 +38,8 @@ test.concurrent(
 			],
 		});
 
-		// Wait for webhooks to process and cache to reset
 		await new Promise((r) => setTimeout(r, 4000));
 
-		// Track some usage on free
 		await autumnV1.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
@@ -71,14 +48,12 @@ test.concurrent(
 
 		await new Promise((r) => setTimeout(r, 2000));
 
-		// Get free product's reset_at - this is the anchor we expect to be preserved
 		const customerBefore =
 			await autumnV1.customers.get<ApiCustomerV3>(customerId);
 		const freeResetAt =
 			customerBefore.features[TestFeature.Messages]?.next_reset_at;
 		expect(freeResetAt).toBeDefined();
 
-		// Upgrade to paid
 		await autumnV1.billing.attach({
 			customer_id: customerId,
 			product_id: pro.id,
@@ -93,40 +68,20 @@ test.concurrent(
 			notPresent: [free.id],
 		});
 
-		// KEY: next_reset_at should preserve the same anchor from free product
 		const newResetAt = customer.features[TestFeature.Messages]?.next_reset_at;
 		expect(newResetAt).toBeDefined();
-
-		// Reset anchor is preserved - should be the same as the free product's reset_at
 
 		expectCustomerFeatureCorrect({
 			customer,
 			featureId: TestFeature.Messages,
 			includedUsage: 100,
-			balance: 100, // Usage resets for consumable on upgrade
+			balance: 100,
 			usage: 0,
 			resetsAt: addMonths(advancedTo, 1).getTime(),
 		});
 	},
 );
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// INTERVAL CHANGE TESTS
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Monthly to Annual - reset_at anchor preserved
- *
- * Scenario:
- * - Pro monthly ($20/mo, 100 messages)
- * - Advance 15 days mid-cycle
- * - Track 30 usage
- * - Upgrade to Pro annual ($200/year, 100 messages)
- *
- * Expected:
- * - next_reset_at anchor is preserved from monthly
- * - Usage resets for consumable
- */
 test.concurrent(
 	`${chalk.yellowBright("immediate-switch-reset 6: monthly to annual preserves reset_at anchor")}`,
 	async () => {
@@ -144,7 +99,6 @@ test.concurrent(
 			items: [proAnnualMessages],
 		});
 
-		// Advance 15 days so we're mid-cycle when upgrading
 		const { autumnV1 } = await initScenario({
 			customerId,
 			setup: [
@@ -157,10 +111,8 @@ test.concurrent(
 			],
 		});
 
-		// Wait for webhooks to process and cache to reset
 		await new Promise((r) => setTimeout(r, 4000));
 
-		// Track some usage
 		await autumnV1.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
@@ -169,14 +121,12 @@ test.concurrent(
 
 		await new Promise((r) => setTimeout(r, 2000));
 
-		// Get monthly reset_at - this is the anchor we expect to be preserved
 		const customerBefore =
 			await autumnV1.customers.get<ApiCustomerV3>(customerId);
 		const monthlyResetAt =
 			customerBefore.features[TestFeature.Messages]?.next_reset_at;
 		expect(monthlyResetAt).toBeDefined();
 
-		// Upgrade to annual
 		await autumnV1.billing.attach({
 			customer_id: customerId,
 			product_id: proAnnual.id,
@@ -191,18 +141,16 @@ test.concurrent(
 			notPresent: [proMonthly.id],
 		});
 
-		// KEY: next_reset_at should preserve the same anchor (monthly reset carries over to annual)
 		const newResetAt = customer.features[TestFeature.Messages]?.next_reset_at;
 		expect(newResetAt).toBeDefined();
 
-		// Reset anchor is preserved - should be the same as the monthly reset_at
 		expect(newResetAt).toBe(monthlyResetAt);
 
 		expectCustomerFeatureCorrect({
 			customer,
 			featureId: TestFeature.Messages,
 			includedUsage: 100,
-			balance: 100, // Usage resets for consumable on upgrade
+			balance: 100,
 			usage: 0,
 			resetsAt: monthlyResetAt!,
 		});

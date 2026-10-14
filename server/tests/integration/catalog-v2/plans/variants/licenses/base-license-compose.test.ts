@@ -1,6 +1,3 @@
-/** Declared license content is inherited before variant overrides, with or without follow.
- * Items-only propagation leaves the Seat overlay unchanged. */
-
 import { test } from "bun:test";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";

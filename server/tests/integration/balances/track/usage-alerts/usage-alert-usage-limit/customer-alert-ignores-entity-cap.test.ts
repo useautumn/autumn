@@ -27,7 +27,6 @@ afterAll(async () => {
 	await webhook?.cleanup();
 });
 
-// ── B8b: an entity's own cap is not the customer alert's cap ────────────────
 test(`${chalk.yellowBright("ul-alert14: a customer alert ignores an entity-owned cap on entity tracks")}`, async () => {
 	const customerId = "ul-alert-entity-override-1";
 	const entity = await setupCustomer({

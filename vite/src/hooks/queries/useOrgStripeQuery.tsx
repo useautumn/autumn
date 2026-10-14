@@ -4,7 +4,6 @@ import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useOrg } from "../common/useOrg";
 
-/** Fetches organization Stripe account information */
 export const useOrgStripeQuery = () => {
 	const axiosInstance = useAxiosInstance();
 	const buildKey = useQueryKeyFactory();

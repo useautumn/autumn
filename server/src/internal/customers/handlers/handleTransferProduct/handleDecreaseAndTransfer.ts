@@ -28,12 +28,9 @@ export const handleDecreaseAndTransfer = async ({
 	cusProduct: FullCusProduct;
 	toEntity?: Entity | null;
 }) => {
-	// 1. Create new cus product for entity...
 	const { org, env, db, logger, features } = ctx;
 	const stripeCli = createStripeCli({ org, env });
 	const product = cusProductToProduct({ cusProduct });
-
-	// Decrease quantity of cus product...
 
 	const batchDecrement = [];
 	for (const cusEnt of cusProduct.customer_entitlements) {
@@ -68,7 +65,6 @@ export const handleDecreaseAndTransfer = async ({
 		},
 	});
 
-	// Hide the destination's plans so creating the split-off copy never expires them.
 	const cusProductsOutsideDestination = fullCus.customer_products.filter(
 		(customerProduct) =>
 			toEntity
@@ -83,7 +79,7 @@ export const handleDecreaseAndTransfer = async ({
 		subscriptionIds: cusProduct.subscription_ids || [],
 		attachParams: attachToInsertParams(
 			{
-				req: ctx as any, // Pass ctx as req for now (AttachParams still uses req)
+				req: ctx as any,
 				customer: fullCus,
 				products: [product],
 				prices: product.prices,

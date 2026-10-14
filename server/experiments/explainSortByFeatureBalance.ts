@@ -1,9 +1,6 @@
 import { AppEnv } from "@autumn/shared";
 import { sql, type SQL } from "drizzle-orm";
 import { PgDialect } from "drizzle-orm/pg-core";
-// Import initDrizzle directly — avoid `experimentEnv` because its
-// `loadLocalEnv()` reads `server/.env` and clobbers env vars injected by
-// `infisical run --env=prod` (e.g. DATABASE_URL).
 import { initDrizzle } from "../src/db/initDrizzle";
 
 const prodTestOrgId = (() => {
@@ -12,19 +9,12 @@ const prodTestOrgId = (() => {
 	return v;
 })();
 
-// Mask password but show host so we can verify which DB we're hitting.
 const dbUrl = process.env.DATABASE_URL ?? "";
 console.log(
 	"DATABASE URL host:",
 	dbUrl.replace(/:\/\/[^@]+@/, "://***:***@") || "(empty)",
 );
 
-// Run with:
-//   infisical run --env=prod --recursive -- bun run server/experiments/explainSortByFeatureBalance.ts
-// Optionally set PROD_TEST_FEATURE_ID to pin the feature; otherwise the org's
-// most-entitled metered feature is auto-picked.
-
-// ─── Configuration ──────────────────────────────────────────────────
 const ORG_ID = prodTestOrgId;
 const ENV = AppEnv.Live;
 const FEATURE_ID = process.env.PROD_TEST_FEATURE_ID || undefined;
@@ -34,8 +24,7 @@ const DEEP_OFFSET_PCT = 45;
 const STATEMENT_TIMEOUT_MS = 30_000;
 const TRUNCATE_EXPLAIN = true;
 const EXPLAIN_MAX_LINES = 30;
-const CUS_PRODUCT_LIMIT = 3; // matches DASHBOARD_LIST_PRODUCT_PREVIEW_LIMIT
-// ═════════════════════════════════════════════════════════════════════
+const CUS_PRODUCT_LIMIT = 3;
 
 type DB = ReturnType<typeof initDrizzle>["db"];
 
@@ -128,7 +117,6 @@ const measure = async ({
 	console.log(`\n=== ${label} ===`);
 	if (printSql) printSqlQuery({ query, label });
 
-	// Warmup
 	await runReadOnly({ db, query });
 
 	const samples: number[] = [];
@@ -148,16 +136,12 @@ const measure = async ({
 	return rows;
 };
 
-// ─── Feature selection ───────────────────────────────────────────────
-
 type FeatureRow = {
 	internal_id: string;
 	id: string;
 	cus_ent_count: number;
 };
 
-/** Auto-pick the org feature with the most cusEnt rows (capped counts so a
- * whale feature doesn't make selection itself expensive). */
 const pickFeature = async ({ db }: { db: DB }): Promise<FeatureRow> => {
 	const rows = await runReadOnly({
 		db,
@@ -196,10 +180,6 @@ const pickFeature = async ({ db }: { db: DB }): Promise<FeatureRow> => {
 	return features[0];
 };
 
-// ─── Resolver query ──────────────────────────────────────────────────
-
-// Excludes: expired cusEnts (denormalized parent-product expiry), lapsed loose
-// entitlements, and pooled contributions (their balance lives on the pool row).
 const balanceTotalsCte = ({
 	internalFeatureId,
 }: {
@@ -242,8 +222,6 @@ const buildBalanceSortQuery = ({
 	`;
 };
 
-/** A2: MATERIALIZED totals — computed once instead of per parallel worker.
- * The inlined variant rebuilt the full hash in each of 5 workers. */
 const buildMaterializedBalanceSortQuery = ({
 	internalFeatureId,
 	sortDesc = true,
@@ -263,8 +241,6 @@ const buildMaterializedBalanceSortQuery = ({
 	`;
 };
 
-/** A3: totals-only — skips the customers join entirely, so zero-balance
- * customers are EXCLUDED. Different semantics; bounds the aggregate cost. */
 const buildTotalsOnlyBalanceSortQuery = ({
 	internalFeatureId,
 	sortDesc = true,
@@ -310,8 +286,6 @@ const resolveDeepCursor = async ({
 	return { total: Number(row.total), internalId: row.internal_customer_id };
 };
 
-// ─── Main ────────────────────────────────────────────────────────────
-
 const main = async () => {
 	const replicaUrl = process.env.DATABASE_REPLICA_URL;
 	const usingReplica = Boolean(replicaUrl);
@@ -349,7 +323,6 @@ const main = async () => {
 			`\nUsing feature: ${feature.id} (internal ${feature.internal_id}, ~${Number(feature.cus_ent_count).toLocaleString()} cusEnts)`,
 		);
 
-		// ── A2: MATERIALIZED totals (one aggregate pass, not per-worker) ──
 		await measure({
 			db,
 			label: `A2: MATERIALIZED totals, first page (feature ${feature.id}, desc)`,
@@ -359,7 +332,6 @@ const main = async () => {
 			printSql: false,
 		});
 
-		// ── A3: totals-only, zero-balance customers excluded ──
 		await measure({
 			db,
 			label: `A3: totals-only (no customers join, zero-balance excluded), desc`,

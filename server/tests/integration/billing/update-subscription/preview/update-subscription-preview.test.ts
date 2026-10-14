@@ -276,8 +276,6 @@ test.concurrent(`${chalk.yellowBright("update-subscription preview: uncancel wit
 	});
 });
 
-// Regression: no_billing_changes previews showed immediate charges despite skipping Stripe.
-// Green: entitlement-only DB updates preview $0 due now and still show the plan change.
 test.concurrent(`${chalk.yellowBright("update-subscription preview: no_billing_changes custom entitlement has no immediate due")}`, async () => {
 	const customerId = "update-sub-preview-no-billing-custom-ent";
 	const pro = products.base({

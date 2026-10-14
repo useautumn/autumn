@@ -1,13 +1,3 @@
-/**
- * A new cycle starts every share over: entity counters read 0 and shares cut by a shrunk pot
- * are re-fitted to the refilled pot.
- *
- * Contract:
- *   A=5k, B=5k on 10k, A uses 4k → reset → A: usage 0, remaining 5k; shared remaining 10k.
- *   Shares cut to 1.5k each on a 3k pot → reset refills to 6k → 3k each, as requested.
- *   Shares of 10k requested on a 6k pot stay cut to 3k each after a reset.
- */
-
 import { test } from "bun:test";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { items } from "@tests/utils/fixtures/items.js";
@@ -111,7 +101,6 @@ test.concurrent(
 			expected: { remaining: 10000, allocated: 10000, unallocated: 0 },
 		});
 
-		// A's whole share is usable again.
 		await warmCaches({ customerId, entityIds });
 		await trackMessages({ customerId, entityId: a, value: 5000 });
 		await expectMessagesBalance({
@@ -131,7 +120,6 @@ test.concurrent(
 		});
 		const [a, b, c] = entityIds;
 
-		// A's 3k usage lands on the base row and stays after A's share is released.
 		await allocateMessages({
 			customerId,
 			allocations: [
@@ -159,7 +147,6 @@ test.concurrent(
 			],
 		});
 
-		// 6k requested on 3k left: each share is cut by half.
 		await cancelAddOn({ customerId, addOnId });
 		await expectGranted({ customerId, entityIds: [b, c], granted: 1500 });
 

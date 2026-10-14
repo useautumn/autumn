@@ -1,21 +1,3 @@
-/**
- * Scheduled Switch Basic Tests (Attach V2)
- *
- * Tests for basic downgrade scenarios where a lower-tier product takes effect at end of billing cycle.
- *
- * Key behaviors:
- * - Downgrade schedules new product for end of cycle
- * - Current product enters "canceling" state (active with canceled_at set)
- * - New product has "scheduled" status
- * - At cycle end: current product removed, scheduled product becomes active
- * - Scheduled downgrades can be replaced by other downgrades
- *
- * Each scenario is split into an "a" (mid-cycle) and "b" (after cycle) test with
- * separate customers so each test owns its own Stripe test clock.
- *
- * NOTE: Tests for "upgrade cancels scheduled downgrade" are in immediate-switch-basic.test.ts
- */
-
 import { test } from "bun:test";
 import type { ApiCustomerV3 } from "@autumn/shared";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
@@ -59,8 +41,8 @@ test.concurrent(
 			],
 			actions: [
 				s.billing.attach({ productId: premium.id }),
-				s.billing.attach({ productId: pro.id }), // Schedule downgrade to pro
-				s.billing.attach({ productId: free.id }), // Replace with free
+				s.billing.attach({ productId: pro.id }),
+				s.billing.attach({ productId: free.id }),
 				s.advanceToNextInvoice({ withPause: true }),
 			],
 		});
@@ -68,14 +50,12 @@ test.concurrent(
 		const customerAfterCycle =
 			await autumnV1After.customers.get<ApiCustomerV3>(customerId);
 
-		// After cycle: premium removed, free active
 		await expectCustomerProducts({
 			customer: customerAfterCycle,
 			active: [free.id],
 			notPresent: [premium.id, pro.id],
 		});
 
-		// Features updated to free tier
 		expectCustomerFeatureCorrect({
 			customer: customerAfterCycle,
 			featureId: TestFeature.Messages,
@@ -84,14 +64,12 @@ test.concurrent(
 			usage: 0,
 		});
 
-		// Invoice: only premium ($50), free has no renewal charge
 		await expectCustomerInvoiceCorrect({
 			customer: customerAfterCycle,
 			count: 1,
 			latestTotal: 50,
 		});
 
-		// After downgrading to free, there should be no Stripe subscription
 		await expectNoStripeSubscription({
 			db: ctxAfter.db,
 			customerId,

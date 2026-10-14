@@ -3,8 +3,6 @@ import type Stripe from "stripe";
 
 export const STRIPE_CUSTOMER_NOT_IN_AUTUMN = "stripe_customer_not_in_autumn";
 
-/** Incomplete subs are abandoned checkouts and paused ones bill nothing, so
- * only subscriptions a customer is actually being billed on are reported. */
 const BILLED_SUBSCRIPTION_STATUSES = new Set<Stripe.Subscription.Status>([
 	"active",
 	"trialing",

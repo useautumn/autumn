@@ -1,7 +1,5 @@
 const MB = 1024 * 1024;
 
-/** JSC never returns allocator-retained pages, so forks only shed memory by
- *  dying; recycling above this RSS is the bound the engine cannot provide. */
 export const FORK_RECYCLE_DEFAULTS = {
 	rssThresholdBytes: 2000 * MB,
 	minAgeMs: 30 * 60_000,
@@ -9,14 +7,10 @@ export const FORK_RECYCLE_DEFAULTS = {
 	drainTimeoutMs: 30_000,
 	drainGraceMs: 5_000,
 	maxDelayMs: 5 * 60_000,
-	// Replacement boots briefly saturate every core; the hourly burst is the
-	// one scheduled moment the serving forks cannot spare them.
 	blackoutBeforeMs: 2 * 60_000,
 	blackoutAfterMs: 3 * 60_000,
 } as const;
 
-/** Rolled once per fork: a private post-eligibility wait de-phases same-boot
- *  cohorts so a burst can't harvest a whole fleet's boots into one minute. */
 export const rollEligibilityDelayMs = ({
 	maxDelayMs,
 	random = Math.random,
@@ -67,8 +61,6 @@ export const shouldRequestRecycle = ({
 	minAgeMs: number;
 }): boolean => rssBytes >= thresholdBytes && ageMs >= minAgeMs;
 
-// Sub-second timings would hot-loop checks or defeat the drain bounds, so
-// intervals floor at 1s (thresholds/ages just need to be positive).
 const positiveOr = (raw: string | undefined, fallback: number): number => {
 	const value = Number(raw);
 	return Number.isFinite(value) && value > 0 ? value : fallback;
@@ -77,15 +69,11 @@ const positiveOr = (raw: string | undefined, fallback: number): number => {
 const intervalOr = (raw: string | undefined, fallback: number): number =>
 	Math.max(1_000, positiveOr(raw, fallback));
 
-// Zero is meaningful here: it disables the delay/blackout entirely.
 const nonNegativeOr = (raw: string | undefined, fallback: number): number => {
 	const value = Number(raw);
 	return Number.isFinite(value) && value >= 0 ? value : fallback;
 };
 
-/** Serving forks per task — single-threaded loops, so this is capacity.
- *  Cap 6: above it, forks x ~2.3GB worst case (default 2000MB threshold +
- *  overshoot) + primary can OOM a 16GB task; revisit if the threshold drops. */
 export const getServerForkCount = (): number => {
 	const value = Number(process.env.SERVER_FORK_COUNT);
 	if (!Number.isInteger(value) || value < 1) return 4;

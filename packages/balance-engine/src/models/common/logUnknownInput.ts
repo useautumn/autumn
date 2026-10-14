@@ -5,7 +5,6 @@ type UnknownInputLogger = {
 	error: (data: Record<string, unknown>, message: string) => void;
 };
 
-/** Sends each first sighting of an unknown input to the process's logger: a new enum value is a warning, a skipped change is an error. */
 export const logUnknownInput = ({
 	logger,
 }: {

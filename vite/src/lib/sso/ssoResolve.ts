@@ -12,10 +12,6 @@ export const parseSsoResolveResponse = (
 	return { action: "sso", url };
 };
 
-/**
- * Public, signed-out lookup. The backend decides whether a domain or remembered
- * provider is SSO-only, so the dashboard never picks the method itself.
- */
 export const resolveSso = async (
 	params:
 		| { email: string; next?: string }

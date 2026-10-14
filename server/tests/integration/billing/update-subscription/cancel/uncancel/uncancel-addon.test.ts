@@ -12,16 +12,6 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts";
 
-/**
- * Uncancel Add-on Tests
- *
- * Tests for uncanceling add-on products and multi-subscription scenarios.
- */
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 1: Uncancel add-on while main is active
-// ═══════════════════════════════════════════════════════════════════════════════
-
 test.concurrent(`${chalk.yellowBright("uncancel addon: main active")}`, async () => {
 	const customerId = "uncancel-addon-main-active";
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
@@ -52,7 +42,6 @@ test.concurrent(`${chalk.yellowBright("uncancel addon: main active")}`, async ()
 		],
 	});
 
-	// Verify pro is active and addon is canceling
 	const customerAfterCancel =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	await expectProductActive({
@@ -64,14 +53,12 @@ test.concurrent(`${chalk.yellowBright("uncancel addon: main active")}`, async ()
 		productId: addon.id,
 	});
 
-	// Uncancel the addon
 	await autumnV1.subscriptions.update({
 		customer_id: customerId,
 		product_id: addon.id,
 		cancel_action: "uncancel",
 	});
 
-	// Verify addon is now active, pro unchanged
 	const customerAfterUncancel =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	await expectProductActive({
@@ -83,7 +70,6 @@ test.concurrent(`${chalk.yellowBright("uncancel addon: main active")}`, async ()
 		productId: pro.id,
 	});
 
-	// Verify balances
 	expect(customerAfterUncancel.features?.[TestFeature.Messages]?.balance).toBe(
 		100,
 	);
@@ -91,7 +77,6 @@ test.concurrent(`${chalk.yellowBright("uncancel addon: main active")}`, async ()
 		50,
 	);
 
-	// Verify Stripe subscription is correct
 	await expectSubToBeCorrect({
 		db: ctx.db,
 		customerId,
@@ -100,10 +85,6 @@ test.concurrent(`${chalk.yellowBright("uncancel addon: main active")}`, async ()
 		shouldBeCanceled: false,
 	});
 });
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 2: Uncancel main while add-on is canceling
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(`${chalk.yellowBright("uncancel main: addon canceling")}`, async () => {
 	const customerId = "uncancel-main-addon-cancel";
@@ -139,7 +120,6 @@ test.concurrent(`${chalk.yellowBright("uncancel main: addon canceling")}`, async
 		],
 	});
 
-	// Verify both are canceling
 	const customerAfterCancel =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	await expectProductCanceling({
@@ -151,14 +131,12 @@ test.concurrent(`${chalk.yellowBright("uncancel main: addon canceling")}`, async
 		productId: addon.id,
 	});
 
-	// Uncancel only the main product
 	await autumnV1.subscriptions.update({
 		customer_id: customerId,
 		product_id: pro.id,
 		cancel_action: "uncancel",
 	});
 
-	// Verify main is active, addon still canceling
 	const customerAfterUncancel =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	await expectProductActive({
@@ -170,7 +148,6 @@ test.concurrent(`${chalk.yellowBright("uncancel main: addon canceling")}`, async
 		productId: addon.id,
 	});
 
-	// Verify Stripe subscription
 	await expectSubToBeCorrect({
 		db: ctx.db,
 		customerId,
@@ -178,10 +155,6 @@ test.concurrent(`${chalk.yellowBright("uncancel main: addon canceling")}`, async
 		env: ctx.env,
 	});
 });
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 3: Uncancel both main and add-on
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(`${chalk.yellowBright("uncancel both: main and addon")}`, async () => {
 	const customerId = "uncancel-both";
@@ -217,7 +190,6 @@ test.concurrent(`${chalk.yellowBright("uncancel both: main and addon")}`, async 
 		],
 	});
 
-	// Verify both are canceling
 	const customerAfterCancel =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	await expectProductCanceling({
@@ -229,7 +201,6 @@ test.concurrent(`${chalk.yellowBright("uncancel both: main and addon")}`, async 
 		productId: addon.id,
 	});
 
-	// Uncancel both products
 	await autumnV1.subscriptions.update({
 		customer_id: customerId,
 		product_id: pro.id,
@@ -241,7 +212,6 @@ test.concurrent(`${chalk.yellowBright("uncancel both: main and addon")}`, async 
 		cancel_action: "uncancel",
 	});
 
-	// Verify both are active
 	const customerAfterUncancel =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	await expectProductActive({
@@ -253,7 +223,6 @@ test.concurrent(`${chalk.yellowBright("uncancel both: main and addon")}`, async 
 		productId: addon.id,
 	});
 
-	// Verify balances
 	expect(customerAfterUncancel.features?.[TestFeature.Messages]?.balance).toBe(
 		100,
 	);
@@ -261,7 +230,6 @@ test.concurrent(`${chalk.yellowBright("uncancel both: main and addon")}`, async 
 		50,
 	);
 
-	// Verify Stripe subscription
 	await expectSubToBeCorrect({
 		db: ctx.db,
 		customerId,
@@ -271,19 +239,13 @@ test.concurrent(`${chalk.yellowBright("uncancel both: main and addon")}`, async 
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 4: Uncancel product on separate subscription
-// ═══════════════════════════════════════════════════════════════════════════════
-
 test.concurrent(`${chalk.yellowBright("uncancel: separate subscriptions")}`, async () => {
 	const customerId = "uncancel-separate-subs";
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
 	const creditsItem = items.monthlyCredits({ includedUsage: 50 });
 
-	// Main product - monthly billing
 	const pro = products.pro({ items: [messagesItem] });
 
-	// Add-on with different billing - will create separate subscription
 	const addon = constructProduct({
 		id: "addon",
 		items: [creditsItem],
@@ -304,14 +266,12 @@ test.concurrent(`${chalk.yellowBright("uncancel: separate subscriptions")}`, asy
 		],
 	});
 
-	// Cancel only the addon via subscriptions.update
 	await autumnV1.subscriptions.update({
 		customer_id: customerId,
 		product_id: addon.id,
 		cancel_action: "cancel_end_of_cycle",
 	});
 
-	// Verify addon is canceling, pro still active
 	const customerAfterCancel =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	await expectProductActive({
@@ -323,14 +283,12 @@ test.concurrent(`${chalk.yellowBright("uncancel: separate subscriptions")}`, asy
 		productId: addon.id,
 	});
 
-	// Uncancel the addon
 	await autumnV1.subscriptions.update({
 		customer_id: customerId,
 		product_id: addon.id,
 		cancel_action: "uncancel",
 	});
 
-	// Verify both active
 	const customerAfterUncancel =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	await expectProductActive({
@@ -342,7 +300,6 @@ test.concurrent(`${chalk.yellowBright("uncancel: separate subscriptions")}`, asy
 		productId: addon.id,
 	});
 
-	// Verify Stripe - main subscription should not have been affected
 	await expectSubToBeCorrect({
 		db: ctx.db,
 		customerId,

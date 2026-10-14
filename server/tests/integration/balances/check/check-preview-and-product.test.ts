@@ -1,10 +1,3 @@
-/**
- * `with_preview` and `product_id` checks answer the same on both balance routes.
- *
- * Red (before): the balance worker route refused both with a 400 `invalid_request`.
- * Green (after): a preview check returns the paywall preview; a product check reads the customer's plans.
- */
-
 import { expect, test } from "bun:test";
 import { ApiVersion, FeaturePreviewScenario } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
@@ -29,7 +22,6 @@ test.concurrent(
 			items: [items.monthlyMessages({ includedUsage: 100 })],
 		});
 		const customerId = "check-preview1";
-		// Own sub-org: the preview ranks every plan in the org's catalog, so concurrent files' plans leak in.
 		const { autumnV2_3: subOrgAutumn } = await initScenario({
 			customerId,
 			setup: [

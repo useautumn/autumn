@@ -20,21 +20,16 @@ export function PanelButton({
 			onClick={onClick}
 			data-state={isSelected ? "open" : "closed"}
 			className={cn(
-				// Fixed dimensions
 				"w-[124px] h-[72px] relative flex items-center justify-center overflow-hidden flex-shrink-0 cursor-pointer ",
 
-				// Thicker border for panel effect
 				"!rounded-[0.5rem] !border-[0.09375rem]",
-				// Custom panel shadows
 				"shadow-[inset_0px_-8px_22px_0px_rgba(0,0,0,0.04)]",
 
-				// Design system classes (following Select pattern)
 				"input-base input-shadow-default input-state-open outline-none !bg-background",
 				"hover:!border-primary focus-visible:!border-primary data-[state=open]:!border-primary",
 				className,
 			)}
 		>
-			{/* Screws in corners */}
 			<div
 				className={`absolute top-1.5 left-1.5 w-1.5 h-1.5 rounded-full ${
 					isSelected
@@ -64,16 +59,13 @@ export function PanelButton({
 				}`}
 			/>
 
-			{/* Vertical seams - touch inner border edge */}
 			<div className="absolute left-1/4 top-0 bottom-0 w-px bg-subtle/30" />
 			<div className="absolute left-1/2 top-0 bottom-0 w-px bg-subtle/30" />
 			<div className="absolute left-3/4 top-0 bottom-0 w-px bg-subtle/30" />
 
-			{/* Centered icon */}
 			<div
 				className={cn(
 					"size-9 rounded-xl flex items-center justify-center relative bg-interactive-secondary-hover border",
-					// isSelected ? "bg-interactive-secondary-hover" : " border-input",
 				)}
 			>
 				<div className={isSelected ? "text-primary" : "text-muted-foreground"}>

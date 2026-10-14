@@ -1,16 +1,3 @@
-/**
- * Cross-machine global lock via an atomic git ref on the shared GitHub remote.
- *
- * Teammates run `bun tw` concurrently with NO shared DB, so mutual exclusion
- * rides on the one thing everyone shares: the git remote. Creating a ref is
- * server-side atomic (the push is rejected if the ref already exists — a lock
- * commit has no parent, so updating is never a fast-forward), which makes
- * `refs/tw/locks/<name>` a correct distributed mutex. The lock holder's
- * `{ owner, startedAt, runId }` rides in the commit message so a breaker can
- * log whose stale lock it cleared. Hold locks for SECONDS (a claim phase), not
- * the whole run.
- */
-
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 
@@ -24,7 +11,6 @@ const gitEnv = Object.fromEntries(
 const LOCK_BREAK_AFTER_MS = 5 * 60 * 1000;
 const LOCK_POLL_MS = 3000;
 const LOCK_ACQUIRE_TIMEOUT_MS = 4 * 60 * 1000;
-/** Git's canonical empty tree — lets the lock commit carry only a message. */
 const EMPTY_TREE = "4b825dc642cb6eb9a060e54bf8d69288fbee4904";
 
 export type LockMeta = { owner: string; startedAt: number; runId: string };
@@ -36,7 +22,6 @@ const git = async (args: string[]): Promise<string> => {
 	return stdout.trim();
 };
 
-/** Create the lock commit locally (empty tree, no parent, JSON meta as message). */
 const makeLockCommit = async (meta: LockMeta): Promise<string> =>
 	git([
 		"-c",
@@ -49,7 +34,6 @@ const makeLockCommit = async (meta: LockMeta): Promise<string> =>
 		JSON.stringify(meta),
 	]);
 
-/** Try to CREATE the remote ref; false if it already exists (lock held). */
 const tryAcquire = async (name: string, commit: string): Promise<boolean> => {
 	try {
 		await git(["push", "--quiet", "origin", `${commit}:${lockRef(name)}`]);
@@ -59,7 +43,6 @@ const tryAcquire = async (name: string, commit: string): Promise<boolean> => {
 	}
 };
 
-/** Read the current holder's meta (fetches the lock ref). Null if unreadable. */
 const readHolder = async (
 	name: string,
 ): Promise<{ sha: string; meta: LockMeta | null } | null> => {
@@ -81,7 +64,6 @@ const readHolder = async (
 	}
 };
 
-/** Delete the remote lock ref, but only if it still points at `expectedSha`. */
 const releaseRef = async (name: string, expectedSha: string): Promise<void> => {
 	await git([
 		"push",
@@ -94,7 +76,6 @@ const releaseRef = async (name: string, expectedSha: string): Promise<void> => {
 
 export type HeldLock = { name: string; meta: LockMeta | null };
 
-/** All currently-held global locks on the remote (for `bun tw doctor`). */
 export const listHeldLocks = async (): Promise<HeldLock[]> => {
 	let lines: string;
 	try {
@@ -115,10 +96,6 @@ export const listHeldLocks = async (): Promise<HeldLock[]> => {
 	);
 };
 
-/**
- * Run `fn` under the named global lock. Acquire = atomic ref create; contested
- * = poll; holder older than `breakAfterMs` = break it (logged) and retry.
- */
 export const withGlobalLock = async <T>({
 	name,
 	meta,
@@ -145,9 +122,7 @@ export const withGlobalLock = async <T>({
 				log(
 					`lock ${name}: breaking stale lock held by ${holder.meta?.owner ?? "unknown"} (run ${holder.meta?.runId ?? "?"}, age ${Math.round(age / 1000)}s)`,
 				);
-				await releaseRef(name, holder.sha).catch(() => {
-					// Someone else broke/released it first — the retry loop handles it.
-				});
+				await releaseRef(name, holder.sha).catch(() => {});
 				continue;
 			}
 			log(
@@ -165,8 +140,6 @@ export const withGlobalLock = async <T>({
 	try {
 		return await fn();
 	} finally {
-		await releaseRef(name, commit).catch(() => {
-			// Best-effort: a stale-break already cleared it; the 5-min TTL is the backstop.
-		});
+		await releaseRef(name, commit).catch(() => {});
 	}
 };

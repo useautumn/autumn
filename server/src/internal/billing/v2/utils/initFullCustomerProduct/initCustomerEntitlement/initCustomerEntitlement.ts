@@ -7,7 +7,6 @@ import type {
 import { generateId } from "@server/utils/genUtils";
 import { initCustomerEntitlementFields } from "./initCustomerEntitlementFields";
 
-// MAIN FUNCTION
 export const initCustomerEntitlement = ({
 	initContext,
 	initOptions,

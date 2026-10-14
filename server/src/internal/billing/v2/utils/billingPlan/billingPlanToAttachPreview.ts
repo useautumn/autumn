@@ -20,7 +20,6 @@ export const billingPlanToAttachPreview = async ({
 		| MultiAttachBillingContext
 		| UpdateSubscriptionBillingContext;
 	billingPlan: BillingPlan;
-	/** Scope next_cycle to the plans this Stripe subscription's next invoice bills. */
 	nextCycleStripeSubscriptionId?: string;
 }): Promise<AttachPreviewResponse> => {
 	const { credit_applied, ...basePreview } = await billingPlanToPreviewResponse(
@@ -51,7 +50,6 @@ export const billingPlanToAttachPreview = async ({
 		redirect_to_checkout: willRedirectToCheckout,
 		checkout_type: checkoutType,
 		tax: billingPlan.preview?.tax,
-		// total already nets the credit off, so applied just explains the gap.
 		invoice_credits: invoiceCredits
 			? { ...invoiceCredits, applied: credit_applied }
 			: undefined,

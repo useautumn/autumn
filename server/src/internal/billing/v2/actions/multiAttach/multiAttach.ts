@@ -48,14 +48,12 @@ export async function multiAttach({
 		? await checkoutSessionLock.get({ ctx, customerId: params.customer_id })
 		: undefined;
 
-	// 1. Setup
 	const billingContext = await setupMultiAttachBillingContext({
 		ctx,
 		params,
 		preview,
 	});
 
-	// 2. Errors
 	await handleMultiAttachErrors({
 		ctx,
 		billingContext,
@@ -72,10 +70,8 @@ export async function multiAttach({
 		),
 	});
 
-	// 2b. Log context
 	logMultiAttachContext({ ctx, billingContext });
 
-	// 3. Compute
 	const autumnBillingPlan = computeMultiAttachPlan({
 		ctx,
 		multiAttachBillingContext: billingContext,
@@ -83,7 +79,6 @@ export async function multiAttach({
 
 	logAutumnBillingPlan({ ctx, plan: autumnBillingPlan, billingContext });
 
-	// 4. Evaluate Stripe billing plan
 	const stripeBillingPlan = await evaluateStripeBillingPlan({
 		ctx,
 		billingContext,
@@ -146,7 +141,6 @@ export async function multiAttach({
 		}
 	}
 
-	// 5. Execute billing plan
 	const billingResult = await executeBillingPlan({
 		ctx,
 		billingContext,

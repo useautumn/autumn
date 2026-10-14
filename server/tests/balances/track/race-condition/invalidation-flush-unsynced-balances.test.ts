@@ -1,21 +1,3 @@
-/**
- * TDD test: full-subject invalidation must not lose un-synced Redis deductions.
- *
- * Contract under test:
- *   New behaviors:
- *     - (unsynced Redis deduction) + (invalidateCachedFullSubject) -> deduction
- *       is flushed to Postgres via sync_balances_v2 before the cache is wiped.
- *   Side effects:
- *     - Balance hash cusEnt fields are still deleted (invalidation semantics kept).
- *     - Post-invalidation reads (skip_cache and rebuilt cache) both reflect the
- *       deduction instead of reverting to the pre-track balance.
- *
- * Pre-impl red: invalidateSharedBalanceFields blindly HDELs the balance hash
- * fields, so the unsynced deduction never reaches Postgres and both reads
- * show 100. Post-impl green: the fields are destructively read (atomic Lua)
- * and flushed, so both reads show 95.
- */
-
 import { beforeAll, describe, expect, test } from "bun:test";
 import { type ApiCustomer, ApiVersion } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
@@ -55,7 +37,6 @@ const getMessagesRemaining = (customer: ApiCustomer) => {
 	return balance.remaining ?? balance.current_balance;
 };
 
-// Exercises the legacy Redis balance path, which worker-routed customers never use.
 describe.skipIf(isBalanceWorkerRoute())(
 	`${chalk.yellowBright("invalidation-flush: invalidation must not lose unsynced deductions")}`,
 	() => {
@@ -95,8 +76,6 @@ describe.skipIf(isBalanceWorkerRoute())(
 				(feature) => feature.id === TestFeature.Messages,
 			)!;
 
-			// Deduct 5 in Redis WITHOUT queuing sync — stands in for a /track whose
-			// async syncItemV4 has not landed yet.
 			await executeRedisDeductionV2({
 				ctx,
 				deductions: [{ feature: messagesFeature, deduction: 5 }],
@@ -108,7 +87,6 @@ describe.skipIf(isBalanceWorkerRoute())(
 				await autumnV2.customers.get<ApiCustomer>(customerId);
 			expect(getMessagesRemaining(cachedBeforeInvalidation)).toBe(95);
 
-			// flushBalances opt-in mirrors customers.update and Stripe webhook refresh.
 			await invalidateCachedFullSubject({
 				ctx,
 				customerId,
@@ -116,8 +94,6 @@ describe.skipIf(isBalanceWorkerRoute())(
 				flushBalances: true,
 			});
 
-			// ── Contract: invalidation semantics preserved ───────────────────────
-			// The balance hash fields must still be deleted.
 			const balanceKey = buildSharedFullSubjectBalanceKey({
 				orgId: ctx.org.id,
 				env: ctx.env,
@@ -126,15 +102,11 @@ describe.skipIf(isBalanceWorkerRoute())(
 			});
 			expect(await ctx.redisV2.hlen(balanceKey)).toBe(0);
 
-			// ── Contract: deduction flushed to Postgres ──────────────────────────
-			// Pre-fix: HDEL wiped the unsynced deduction, DB shows 100.
-			// Post-fix: destructive read + sync_balances_v2 flush, DB shows 95.
 			const dbCustomer = await autumnV2.customers.get<ApiCustomer>(customerId, {
 				skip_cache: "true",
 			});
 			expect(getMessagesRemaining(dbCustomer)).toBe(95);
 
-			// ── Contract: rebuilt cache reflects the flushed balance ─────────────
 			const rebuiltCustomer =
 				await autumnV2.customers.get<ApiCustomer>(customerId);
 			expect(getMessagesRemaining(rebuiltCustomer)).toBe(95);

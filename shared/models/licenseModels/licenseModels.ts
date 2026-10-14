@@ -4,8 +4,6 @@ import { BasePriceParamsSchema } from "../../api/products/components/basePrice/b
 import { CreatePlanItemParamsV1Schema } from "../../api/products/items/crud/createPlanItemParamsV1";
 import { PlanItemFilterSchema } from "../../api/products/items/filter/planItemFilter";
 
-/** Diff-style customize applied on top of the license plan's own items —
- * price / items only. Licenses do not nest. */
 export const LicenseCustomizeSchema = z.object({
 	price: BasePriceParamsSchema.nullable().optional(),
 	add_items: z.array(CreatePlanItemParamsV1Schema).optional(),
@@ -26,7 +24,6 @@ export const PlanLicenseSchema = z.object({
 
 export const CustomizePlanLicenseSchema = z.object({
 	license_plan_id: z.string(),
-	/** Child version to anchor to. Stated = that slug's row; omitted keeps the existing link (new links use the child's active row). */
 	version_slug: z.string().optional(),
 	included: z.number().int().min(0).optional(),
 	prepaid_only: z.boolean().optional(),
@@ -34,12 +31,10 @@ export const CustomizePlanLicenseSchema = z.object({
 	metadata: z.record(z.string(), z.unknown()).optional(),
 });
 
-/** A planLicense dropped from a parent. Parallel to remove_items. */
 export const RemovePlanLicenseSchema = z.object({
 	license_plan_id: z.string(),
 });
 
-/** Structural issues in a license patch: duplicate license_plan_ids. */
 export const licensePatchIssues = ({
 	upsertLicenses = [],
 }: {

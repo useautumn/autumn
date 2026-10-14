@@ -1,9 +1,6 @@
 import { RecaseError } from "../base/RecaseError.js";
 import { CusErrorCode } from "../codes/cusErrCodes.js";
 
-/**
- * Customer not found error
- */
 export class CustomerNotFoundError extends RecaseError {
 	constructor(opts: { customerId: string }) {
 		super({

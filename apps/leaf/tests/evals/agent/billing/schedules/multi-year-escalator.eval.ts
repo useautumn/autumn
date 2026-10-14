@@ -51,9 +51,6 @@ const setup = withCustomers({
 
 const enterprisePlan = setup.refs.plans.enterprise;
 
-// Each phase escalates only the annual price; entitlements (credits, seats)
-// stay constant, so the price bump must land in customize.price — never as a
-// credit grant or a separate subscription.
 const enterprisePhase = ({
 	amount,
 	startsAt,

@@ -20,7 +20,6 @@ import type {
 	SubjectRowUpdate,
 } from "../../types/subjectRowUpdate.js";
 
-/** Balances are numeric read as JS numbers; the engine rounds at 1e-10, so equality is a tolerance. */
 const NUMERIC_TOLERANCE = 1e-9;
 
 /** pg binds a number as untyped text; the cast keeps `$set + $delta` numeric arithmetic. */
@@ -59,7 +58,6 @@ const tableNames: Record<SubjectRowTable, string> = {
 	locks: "balance_locks",
 };
 
-/** The columns this build's table has: a newer build's column is not among them and must not reach the SQL. */
 export const isSubjectRowColumn = ({
 	table,
 	column,
@@ -92,7 +90,6 @@ export class SubjectRowColumnNotCounterError extends Error {
 	}
 }
 
-/** The shared drizzle table is the allowlist: a change can only touch a column the schema declares. */
 const columnOf = ({
 	table,
 	column,
@@ -107,10 +104,8 @@ const columnOf = ({
 };
 
 const jsonSql = (value: unknown): SQL =>
-	// Travels as JSON text and is cast, so a string value stays a JSON string.
 	sql`${value === null ? null : JSON.stringify(value)}::text::jsonb`;
 
-/** `ARRAY[...]::<type>[]`, each element bound as its base column would be; the driver cannot infer an array's element type. */
 const arraySql = ({
 	info,
 	value,
@@ -152,7 +147,6 @@ const guardSql = ({
 	return sql`${column} IS NOT DISTINCT FROM ${valueSql({ info, value })}`;
 };
 
-/** `col = col + $delta` on a numeric column. */
 const addSql = ({
 	table,
 	column,
@@ -176,7 +170,6 @@ const addSql = ({
 
 type MapEntryBehaviour = { seed: (key: string) => SQL; prunesAtZero: boolean };
 
-/** How each counter map seeds a missing entry (counters at zero) and whether a zeroed entry leaves; mirrors the engine's rowIncrement.ts. */
 const MAP_ENTRIES: Record<
 	SubjectRowTable,
 	Record<string, MapEntryBehaviour>
@@ -209,7 +202,6 @@ const MAP_ENTRIES: Record<
 	locks: {},
 };
 
-/** The stored entry with its counters added; a field the entry lacks counts from zero. */
 const entryAfterAddSql = ({
 	column,
 	key,
@@ -229,7 +221,6 @@ const entryAfterAddSql = ({
 	return sql`coalesce(${stored}, ${seed(key)}) || jsonb_build_object(${sql.join(moved, sql`, `)})`;
 };
 
-/** One jsonb map column with each named entry rebuilt in place; a pruning column drops an entry whose counters all reached zero. */
 const mapAddSql = ({
 	table,
 	column,
@@ -273,7 +264,6 @@ const mapAddSql = ({
 	return sql`${identifier} = ${value}`;
 };
 
-/** A column both set and added to in one flush lands as `col = $set + $delta`; the fold keeps map columns to one of the two. */
 const assignmentsOf = ({ update }: { update: SubjectRowUpdate }): SQL[] => {
 	const { table } = update;
 	const assignments: SQL[] = [];
@@ -306,7 +296,6 @@ const assignmentsOf = ({ update }: { update: SubjectRowUpdate }): SQL[] => {
 const keyColumnSql = ({ table }: { table: SubjectRowTable }): SQL =>
 	sql`${sql.identifier(subjectRowKeyColumnOf({ table }))}`;
 
-/** UPDATE … SET <replaced columns, counters added> WHERE <key> = $id AND <guards> RETURNING <key>; no row back means the guard failed or the row is gone. */
 export const subjectRowUpdateSql = ({
 	update,
 }: {
@@ -329,7 +318,6 @@ export const subjectRowUpdateSql = ({
 	`;
 };
 
-/** INSERT … RETURNING <key>; the shared table is the column allowlist, jsonb values travel as text. */
 export const subjectRowInsertSql = ({
 	table,
 	row,
@@ -368,7 +356,6 @@ export const subjectRowDeleteSql = ({
 	`;
 };
 
-/** Every share of the pool due by `dueBy` takes its next value; re-running finds nothing due and changes nothing. */
 export const promotePooledContributionsSql = ({
 	pooledBalanceId,
 	dueBy,
@@ -386,7 +373,6 @@ export const promotePooledContributionsSql = ({
 	RETURNING id
 `;
 
-/** The CTE body for one folded change. */
 export const subjectRowChangeSql = ({
 	change,
 }: {

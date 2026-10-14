@@ -363,8 +363,6 @@ describe("fullSubject cache model", () => {
 		expect(isCustomerProductOneOff(customerProduct)).toBe(false);
 	});
 
-	// Red: FullSubject hydration dropped usage attribution from normalized balances.
-	// Green: attribution survives the normalized-to-full conversion unchanged.
 	test("preserves usage attribution when hydrating a normalized subject", () => {
 		const normalized = buildMixedIntervalNormalized();
 		const [customerEntitlement] = normalized.customer_entitlements;

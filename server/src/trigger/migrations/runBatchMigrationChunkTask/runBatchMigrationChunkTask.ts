@@ -10,9 +10,6 @@ import {
 } from "@/trigger/migrations/migrationTaskQueue.js";
 import { createTriggerContext } from "@/trigger/utils/createTriggerContext.js";
 
-/** One budgeted batch slice (up to PAGES_PER_CHUNK pages). Shares
- * migrationTaskQueue with per-customer chunks so concurrent migrations
- * interleave instead of one run holding the fleet. */
 export const runBatchMigrationChunkTask = task({
 	id: "run-batch-migration-chunk",
 	queue: migrationTaskQueue,

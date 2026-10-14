@@ -9,7 +9,6 @@ import { PlanRowControls } from "./PlanRowControls";
 import { PlanTrayLine } from "./PlanTrayLine";
 import { PlanTrayRow } from "./PlanTrayRow";
 
-/** Location-specific actions first, remove last. */
 const buildRowActions = ({
 	onRemove,
 	actions,
@@ -29,7 +28,6 @@ const buildRowActions = ({
 		: []),
 ];
 
-/** A chosen plan in the tray: name, price, ✏️ and ⋯, with its quantity rows beneath. */
 export function PlanTraySelectedRow({
 	productId,
 	product,

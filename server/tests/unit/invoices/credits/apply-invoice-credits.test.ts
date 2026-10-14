@@ -1,14 +1,3 @@
-/**
- * applyInvoiceCredits: how much of a customer's Stripe credit balance an
- * invoice consumes, and what is left to pay.
- *
- * Contract:
- *   no credits                  -> amount due is the total, credits untouched
- *   credit below the total      -> all of it applies, remainder is due
- *   credit above the total      -> only the total applies, nothing due
- *   zero or negative total      -> nothing applies, nothing due
- */
-
 import { describe, expect, test } from "bun:test";
 import { applyInvoiceCredits } from "@/internal/billing/v2/utils/billingPlan/preview/invoiceCredits/applyInvoiceCredits";
 

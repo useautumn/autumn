@@ -33,9 +33,6 @@ const byLicensePlanId = <T extends { license_plan_id: string }>(
 	right: T,
 ): number => left.license_plan_id.localeCompare(right.license_plan_id);
 
-/** Link-field patch. Numeric `version` / expanded `plan` are display — ignored;
- * `version_slug` (the version anchor) is a term.
- * Link lifecycle is skipped unless asked: `includeAdds` / `includeRemoves`. */
 export const diffPlanLicenses = ({
 	from,
 	to,

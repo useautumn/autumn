@@ -1,7 +1,3 @@
-/**
- * Dashboard in-place: add words onto a 100/mo + dashboard catalog, then
- * migrate. Messages must stay; words must appear once, not as a duplicate add.
- */
 import { test } from "bun:test";
 import { TestFeature } from "@tests/setup/v2Features";
 import { itemsV2 } from "@tests/utils/fixtures/itemsV2";

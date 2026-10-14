@@ -4,8 +4,6 @@ import { migrationTinybird } from "@/external/tinybird/migrations/migrationItemE
 
 const TINYBIRD_MIGRATION_ITEM_EVENT_MAX_RETRIES = 2;
 
-/** Parallel chunked POSTs: one 5k-row batch is a single multi-second upload
- * even gzipped, while ~1k-row chunks overlap the round trips. */
 const TINYBIRD_MIGRATION_ITEM_EVENT_CHUNK_ROWS = 1000;
 
 export const insertMigrationItemEvents = async ({

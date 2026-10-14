@@ -141,7 +141,7 @@ describe("usageWindowsToRolls", () => {
 					window_end_at: NOW - HOUR,
 				}),
 			],
-			limits: [limit({})], // customer-scope limit doesn't match the entity row
+			limits: [limit({})],
 			now: NOW,
 		});
 		expect(rolls).toHaveLength(1);

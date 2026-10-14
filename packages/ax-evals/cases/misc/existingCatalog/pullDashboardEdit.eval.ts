@@ -9,8 +9,6 @@ import {
 	pullGoldenConfig,
 } from "./proSetup.ts";
 
-/** The "dashboard edit": Pro's allowance raised in place on the server after
- * the config was pushed, so the file in the workspace is behind the org. */
 const raiseProAllowanceOnServer = async ({
 	backendUrl,
 	secretKey,
@@ -46,14 +44,6 @@ const raiseProAllowanceOnServer = async ({
 	}
 };
 
-/**
- * Existing catalog, sync: the org was edited in the dashboard after the last push,
- * then the user asks for a further change. Passing = the config ends up
- * holding both the dashboard's change (1,000 messages) and the new one (SSO),
- * on the same row — still carrying its server id — and nothing was pushed
- * (the user wants to review). The failure this catches: editing the stale file
- * and overwriting the dashboard change, or recreating the plan from scratch.
- */
 export const pullDashboardEdit = defineCase({
 	name: "existing-catalog-sync-dashboard-edit",
 	prompt: [

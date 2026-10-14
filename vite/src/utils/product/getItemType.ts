@@ -6,10 +6,7 @@ const isEmptyItem = (item: ProductItem) => {
 };
 
 export const isFeatureItem = (item: ProductItem) => {
-	return (
-		// notNullish(item.feature_id) &&
-		nullish(item.price) && nullish(item.tiers)
-	);
+	return nullish(item.price) && nullish(item.tiers);
 };
 
 export const isPriceItem = (item: ProductItem) => {

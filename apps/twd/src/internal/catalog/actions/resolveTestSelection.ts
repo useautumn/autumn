@@ -10,10 +10,6 @@ import { getTestTreeAtSha } from "./getTestTreeAtSha.ts";
 const CATALOG_HINT =
 	"GET /catalog (or the list_catalog MCP tool) lists every group and file name.";
 
-/**
- * Selection → sorted server/tests-relative files at `sha`, using that commit's
- * `_groups` + `bun tw` path resolution. A grep-only selection searches `core`.
- */
 export const resolveTestSelection = async ({
 	ctx,
 	sha,
@@ -85,7 +81,6 @@ export const resolveTestSelection = async ({
 	}
 
 	// bun exits 1 when --test-name-pattern matches 0 tests, so drop files that can't match.
-	// Runtime names join describe + test titles, so every grep word must appear in some title.
 	const grep = selection.grep;
 	const grepWords = grep?.toLowerCase().split(/\s+/).filter(Boolean) ?? [];
 	const titlesOf = (source: string) =>

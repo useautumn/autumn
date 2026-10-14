@@ -2,10 +2,6 @@ import { type Checkout, checkouts } from "@autumn/shared";
 import { eq } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle";
 
-/**
- * Get checkout by ID from the database.
- * Note: This is for audit/backup purposes. Primary lookup should use cache.
- */
 export async function getCheckout({
 	db,
 	id,

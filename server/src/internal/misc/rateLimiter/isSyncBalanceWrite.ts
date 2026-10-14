@@ -26,7 +26,6 @@ const isPostTo = ({ path, urls }: { path: string; urls: string[] }) =>
 		matchRoute({ url: path, method: "POST", pattern: { method: "POST", url } }),
 	);
 
-/** The raw body as the handler will see it, so `async` gets its version's default. */
 const toLatestBody = ({
 	ctx,
 	body,
@@ -44,7 +43,6 @@ const toLatestBody = ({
 		ctx,
 	});
 
-/** A track the handler will apply synchronously, or a check that writes a balance (lock or send_event). */
 export const isSyncBalanceWrite = ({
 	ctx,
 	method,
@@ -55,7 +53,6 @@ export const isSyncBalanceWrite = ({
 	path: string;
 }): boolean => {
 	if (method !== "POST" || !ctx?.apiVersion) return false;
-	// Runs before validation, so the raw body is read defensively.
 	const body = ctx.requestBody;
 	if (!body || typeof body !== "object" || Array.isArray(body)) return false;
 	const rawBody = body as RequestBody;

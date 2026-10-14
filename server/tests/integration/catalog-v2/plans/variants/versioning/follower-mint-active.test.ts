@@ -1,11 +1,3 @@
-/**
- * catalogV2.update — variant follower mint follows the base's planParams.active.
- *
- * Contract:
- *   base new_version omit active + propagate.variants → minted variant is draft
- *   same with base active:true → minted variant is active
- */
-
 import { test } from "bun:test";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";

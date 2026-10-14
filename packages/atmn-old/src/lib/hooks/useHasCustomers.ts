@@ -11,10 +11,6 @@ interface ListCustomersResponse {
 	total: number;
 }
 
-/**
- * Hook to check if the organization has at least one customer.
- * Uses a minimal query (limit: 1) to be efficient.
- */
 export function useHasCustomers(environment: AppEnv = AppEnv.Sandbox) {
 	return useQuery({
 		queryKey: ["hasCustomers", environment],

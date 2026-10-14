@@ -1,16 +1,3 @@
-/**
- * catalogV2.preview_update — each license parent reports the versioning strategy
- * that actually resolves for that parent plan.
- *
- * Contract:
- *   - new_version + customers → preview tops active v2, minted v3 sibling, resolved new_version
- *   - new_version + no customers → latest v2 follows, resolved existing
- *   - all_versions / pinned version → resolved strategy and per-version actions agree
- *
- * Red (current): parent mints are absent and license parents have no versioning.
- * Green (after): the lane's top row and versioning describe the actual target.
- */
-
 import { test } from "bun:test";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";

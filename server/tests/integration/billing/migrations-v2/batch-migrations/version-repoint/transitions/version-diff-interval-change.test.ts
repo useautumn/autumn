@@ -1,9 +1,3 @@
-/**
- * Interval change across versions (free items, both directions): definition
- * swaps, usage carries, and next_reset_at matches the batch replace-item
- * behavior — the live row's anchor is kept and the next reset is recomputed
- * from it at the target cadence.
- */
 import { expect, test } from "bun:test";
 import {
 	EntInterval,
@@ -18,7 +12,6 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-// version-only is per-customer until definition execute is restored
 import {
 	expectVersionRepointedOnce,
 	mintPlanVersion,
@@ -43,7 +36,6 @@ for (const scenario of [
 			included: 250,
 			reset: { interval: ResetInterval.Year },
 		},
-		// 100 - 30 usage, then +150 allowance delta.
 		expectedBalance: 220,
 		expectedInterval: EntInterval.Year,
 	},
@@ -51,7 +43,6 @@ for (const scenario of [
 		name: "year to month",
 		fromItem: yearlyMessagesItem({ includedUsage: 200 }),
 		toItem: itemsV2.monthlyMessages({ included: 100 }),
-		// 200 - 30 usage, then -100 allowance delta.
 		expectedBalance: 70,
 		expectedInterval: EntInterval.Month,
 	},
@@ -130,8 +121,6 @@ for (const scenario of [
 			});
 			expect(rowAfter.entitlementId).not.toBe(rowBefore.entitlementId);
 
-			// Replace-item anchor behavior: the live row's anchor is kept and the
-			// next reset is the first target-cadence boundary after it.
 			expect(rowAfter.resetCycleAnchor).toBe(rowBefore.resetCycleAnchor);
 			expect(rowAfter.nextResetAt).toBe(
 				getCycleEnd({

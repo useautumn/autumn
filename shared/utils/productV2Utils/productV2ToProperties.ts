@@ -22,7 +22,6 @@ export const productV2ToProperties = ({
 	trialAvailable: boolean;
 }) => {
 	const items = productV2.items;
-	// 1. Is free
 	const isFree = items.every(isFeatureItem);
 
 	const pricedItems = items.filter(
@@ -35,8 +34,6 @@ export const productV2ToProperties = ({
 			(i) => itemToBillingInterval({ item: i }) === BillingInterval.OneOff,
 		);
 
-	// Get largest interval
-	// Interval group:
 	const basePriceItem = productV2ToBasePrice({
 		product: productV2 as ProductV2,
 	});
@@ -49,17 +46,14 @@ export const productV2ToProperties = ({
 		}
 	}
 
-	// Updateable
 	const updateable =
 		!isOneOff &&
 		items.some(
 			(i) => isFeaturePriceItem(i) && i.usage_model === UsageModel.Prepaid,
 		);
 
-	// Has trial
 	const hasTrial = notNullish(productV2.free_trial) && trialAvailable;
 
-	// 2. Is one off
 	return {
 		is_free: isFree,
 		is_one_off: isOneOff,

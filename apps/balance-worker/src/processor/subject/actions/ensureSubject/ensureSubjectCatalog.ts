@@ -13,7 +13,6 @@ import {
 import type { SubjectScope } from "../../types/subject.js";
 import { readSubjectCatalog } from "../readSubject.js";
 
-/** Best effort: only a read renders license definitions, so a link removed since hydration must not fail a track. */
 const ensurePlanLicenseCatalog = async ({
 	scope,
 	identity,
@@ -36,7 +35,6 @@ const ensurePlanLicenseCatalog = async ({
 	});
 };
 
-/** Best effort, like plan licenses: only a read renders a trial, so one removed since hydration must not fail a track. */
 const ensureFreeTrialCatalog = async ({
 	scope,
 	identity,
@@ -53,14 +51,6 @@ const ensureFreeTrialCatalog = async ({
 	});
 };
 
-/**
- * Every catalog row the state references is in the cache afterwards, or the
- * command cannot be decided. A state joined once while the catalog has not
- * moved since needs no second pass: its rows were all present when the join
- * was built, and nothing has expired or been invalidated in between. That
- * pass (keys computed, rows re-read, the catalog object rebuilt) was ~9% of
- * a pinned worker's thread, paid on every call.
- */
 export const ensureSubjectCatalog = async ({
 	scope,
 	identity,
@@ -76,6 +66,5 @@ export const ensureSubjectCatalog = async ({
 	await ensureCatalogForState({ catalogCache, identity, state });
 	await ensurePlanLicenseCatalog({ scope, identity, state });
 	await ensureFreeTrialCatalog({ scope, identity, state });
-	// The awaits above can outlast a row's ttl; the read path's join tolerates that and checks every key.
 	return readSubjectCatalog({ scope, state });
 };

@@ -12,7 +12,6 @@ import type { WorkerFullCustomerEntitlementWithProduct } from "../../models/subj
 import type { DeductionRow } from "../types/deductionRow.js";
 import type { CreditCost } from "./resolveCreditCosts.js";
 
-/** The row's own overage: a plan or customer control can enable or veto it for the whole feature. */
 const usageAllowedOf = ({
 	customerEntitlement,
 	control,
@@ -27,7 +26,6 @@ const usageAllowedOf = ({
 	return Boolean(customerEntitlement.usage_allowed);
 };
 
-/** A free allocated grant may run over unless the draw rejects; a control that vetoes overage vetoes this too. */
 const freeAllocatedOf = ({
 	customerEntitlement,
 	control,
@@ -39,7 +37,6 @@ const freeAllocatedOf = ({
 	isAllocatedCustomerEntitlement(customerEntitlement) &&
 	isFreeCustomerEntitlement(customerEntitlement);
 
-/** A customer-level row whose balances live in `entities`; a row of the per-entity kind carries `internal_entity_id` and holds its balance like any row. */
 const isPerEntityMapRow = ({
 	customerEntitlement,
 }: {
@@ -48,7 +45,6 @@ const isPerEntityMapRow = ({
 	isEntityScopedCusEnt(customerEntitlement) &&
 	customerEntitlement.internal_entity_id == null;
 
-/** Which entities a track may draw from on a map row: the one it is for, or every one in key order (the Lua `sorted_keys` draw). */
 const entityKeysToDraw = ({
 	customerEntitlement,
 	entityId,
@@ -60,7 +56,6 @@ const entityKeysToDraw = ({
 		? [entityId]
 		: Object.keys(customerEntitlement.entities ?? {}).sort();
 
-/** What every balance on a row shares: how it prices, and how far it may move. */
 type RowBounds = Pick<
 	DeductionRow,
 	| "id"
@@ -76,7 +71,6 @@ type RowBounds = Pick<
 	| "skipsRollovers"
 > & { grant: number };
 
-/** How far a row may move: down to its overage floor if usage is allowed, and on a refund back up to its grant plus adjustment. */
 const resolveRowBounds = ({
 	customerEntitlement,
 	creditCost,
@@ -120,7 +114,6 @@ const resolveRowBounds = ({
 	};
 };
 
-/** One balance on the row as a deduction row: the shared bounds plus where it sits and how far a refund may lift it. */
 const balanceToDeductionRow = ({
 	bounds: { grant, ...bounds },
 	entityKey,
@@ -139,7 +132,6 @@ const balanceToDeductionRow = ({
 	maxBalance: bounds.unlimited ? null : grant + adjustment,
 });
 
-/** A plain row is one deduction row from its balance; a per-entity map row is one per entity balance drawn. */
 export const customerEntitlementToDeductionRows = ({
 	customerEntitlement,
 	entityId,
@@ -181,7 +173,6 @@ export const customerEntitlementToDeductionRows = ({
 	);
 };
 
-/** A rollover only ever drains to zero and is never refunded into; it charges at its owner's rate and holds a balance under each key its owner does. */
 export const rolloverToDeductionRow = ({
 	rollover,
 	owner,

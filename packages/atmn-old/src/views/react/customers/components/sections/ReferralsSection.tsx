@@ -6,9 +6,6 @@ export interface ReferralsSectionProps {
 	referrals: ApiReferral[];
 }
 
-/**
- * Renders customer referrals
- */
 export function ReferralsSection({ referrals }: ReferralsSectionProps) {
 	if (referrals.length === 0) {
 		return (

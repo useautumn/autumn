@@ -7,7 +7,6 @@ import {
 
 export type CombinedMultipliers = { factor: Decimal; add: Decimal };
 
-/** Every matching multiplier stacks: factors multiply together, adds sum. */
 export const combineCreditMultipliers = ({
 	multipliers,
 	eventProperties,

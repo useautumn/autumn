@@ -119,7 +119,6 @@ export const JoinedDateSubMenu = ({ onChange }: { onChange?: () => void }) => {
 		commitSelection({ mode: "range", anchor: null });
 
 	const hasAnchor = anchor !== null;
-	// Before/After are single-date modes; a multi-day range has no unambiguous boundary.
 	const hasSingleDayAnchor =
 		anchor !== null && isSameDay(anchor.from, anchor.to);
 

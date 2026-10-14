@@ -50,12 +50,8 @@ export const RevenueCatConnectionCard = ({
 	currentProjectName,
 	hasMappings,
 }: RevenueCatConnectionCardProps) => {
-	// Don't offer OAuth to legacy API-key orgs — they can't run both flows.
 	const showOAuthConnect = connection !== "oauth" && !currentApiKey;
-	// API-key auth is legacy: surface it for orgs that already have a key.
 	const hasLegacyApiKey = connection !== "oauth" && !!currentApiKey;
-	// Admins can always connect via secret key (escape hatch) — but never for OAuth orgs,
-	// which disconnect instead.
 	const showApiKeyActions = (isAdmin || hasLegacyApiKey) && !oauthConnected;
 
 	return (
@@ -97,7 +93,6 @@ export const RevenueCatConnectionCard = ({
 						</FormLabel>
 					</div>
 				)}
-				{/* Once on OAuth the legacy api key is dead — don't surface it. */}
 				{!oauthConnected && currentApiKey && (
 					<div className="mb-0">
 						<FormLabel className="mb-0 text-body">
@@ -135,7 +130,6 @@ export const RevenueCatConnectionCard = ({
 							Disconnect
 						</Button>
 					)}
-					{/* Legacy api-key orgs can migrate to OAuth by signing in. */}
 					{hasLegacyApiKey && (
 						<Button variant="primary" onClick={onMigrateClick}>
 							Migrate to OAuth
@@ -144,7 +138,6 @@ export const RevenueCatConnectionCard = ({
 					<Button variant="secondary" onClick={onProjectIdClick}>
 						{currentProjectId ? "Update Project ID" : "Select Project ID"}
 					</Button>
-					{/* Push-flow (OAuth) orgs sync products from Autumn — no manual mapping. */}
 					{oauthConnected ? (
 						<Button variant="secondary" onClick={onSyncClick}>
 							Sync Products

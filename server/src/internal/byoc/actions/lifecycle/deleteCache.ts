@@ -6,7 +6,6 @@ import { CACHE_LOCK_TTL_MS, cacheLockKey } from "../../utils/byocCacheUtils.js";
 import { cacheDeploymentAtomContext } from "./cacheDeploymentAtomContext.js";
 import { startCacheDeploymentWatch } from "./startCacheDeploymentWatch.js";
 
-/** Tears down the env's Atom, or retries one whose removal stopped. The record stays as removing until its stack is gone too. Deleting nothing is a no-op. */
 export const deleteCache = ({
 	ctx,
 	atomId,

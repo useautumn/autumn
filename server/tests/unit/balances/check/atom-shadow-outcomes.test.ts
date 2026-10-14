@@ -11,7 +11,6 @@ import { _setShadowAtomConfigForTesting } from "@/internal/misc/shadowAtom/shado
 import { encryptData } from "@/utils/encryptUtils.js";
 
 const previousPassword = process.env.ENCRYPTION_PASSWORD;
-/** Puts an env var back as it was, unset included. */
 const restoreEnv = ({
 	key,
 	value,
@@ -23,7 +22,6 @@ const restoreEnv = ({
 	else process.env[key] = value;
 };
 
-/** What the fake Atom does with the next check, and what it was sent. */
 const atom = {
 	reply: (): Response | Promise<Response> => Response.json({}),
 	received: [] as { url: string; headers: Headers; body: unknown }[],

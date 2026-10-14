@@ -44,8 +44,6 @@ export const consumablePriceToStripeItem = ({
 	}
 
 	if (!priceId) {
-		// Create custom price...?
-
 		throw new InternalError({
 			message: `[consumablePriceToStripeItem] config.stripe_price_id is empty for autumn price: ${price.id}`,
 		});

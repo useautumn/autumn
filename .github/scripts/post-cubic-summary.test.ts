@@ -12,7 +12,6 @@ const payloadBoundary = "\nexport PR_URL SLACK_MESSAGE";
 if (!summaryScript.includes(payloadBoundary)) {
 	throw new Error("Cannot locate the end of the workflow message formatter");
 }
-// Exercise the real workflow formatter, stopping before payload writes or HTTP calls.
 const formatterScript = `${summaryScript.split(payloadBoundary)[0]}\nprintf '%s' "$SLACK_MESSAGE"`;
 
 const formatMessage = ({

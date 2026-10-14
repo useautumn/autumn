@@ -35,7 +35,6 @@ export const deauthorizeAccount = async ({
 	logger: Logger;
 }) => {
 	// OAuth-connected accounts must be deauthorized, not deleted
-	// Platform-managed accounts can be deleted
 
 	const masterStripe = initMasterStripe({ env });
 	try {
@@ -48,8 +47,6 @@ export const deauthorizeAccount = async ({
 		});
 		logger.info(`Deauthorized account ${accountId} for ${env}`);
 	} catch (error) {
-		// If deauthorization fails, the account might have already been disconnected
-		// or it's a platform-managed account that needs to be deleted
 		logger.error("Failed to deauthorize account, attempting deletion:", error);
 	}
 };
@@ -65,8 +62,6 @@ export const deleteConnectedAccount = async ({
 }) => {
 	const masterStripe = initMasterStripe({ env, legacyVersion: false });
 	try {
-		// These accounts are created via v2 `core.accounts.create`, which are
-		// closed (not v1-deleted); all applied configurations must be passed.
 		await masterStripe.v2.core.accounts.close(accountId, {
 			applied_configurations: ["merchant"],
 		});

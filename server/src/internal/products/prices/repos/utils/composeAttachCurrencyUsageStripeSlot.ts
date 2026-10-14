@@ -7,7 +7,6 @@ const usableStripePriceId = (slot: SQL) => sql`
 	AND ${slot} NOT LIKE ${`${PREVIEW_STRIPE_PRICE_ID_PREFIX}%`}
 `;
 
-/** This currency's attach slot, whether it is base or overlay. Tiers stay in JS. */
 export const composeAttachCurrencyUsageStripeSlot = ({
 	targetCurrency,
 	orgDefaultCurrency,

@@ -87,15 +87,12 @@ export const applyPreview = ({
 		lines: [],
 		unlocated: [],
 	};
-	// Versioned collections key rows by id AND slug; a row without a slug is v1.
 	const versioned = spec.versioned === true;
 	const slugOf = (row: Record<string, unknown>): string =>
 		typeof row.versionSlug === "string" ? row.versionSlug : "v1";
 	const keyOf = ({ id, slug }: { id: string; slug: string }): string =>
 		versioned ? `${id}@${slug}` : id;
 
-	// A union item is addressed through its branch: the builder, the id field
-	// and the fixture keys are the branch's, not the collection's.
 	const specFor = (row: Record<string, unknown>): CollectionSpec =>
 		resolveBranch({ spec, row }).spec;
 	const bodyOf = (row: Record<string, unknown>): Record<string, unknown> =>
@@ -104,14 +101,11 @@ export const applyPreview = ({
 		bodyOf(row)[specFor(row).responseIdField];
 
 	const rowsById = new Map<string, Record<string, unknown>>();
-	// A variant row lives in its parent's `variants[]`, never top-level: the
-	// preview still names it by its own plan id and slug, so it is indexed too.
 	const nestedRowsById = new Map<
 		string,
 		{ edge: Record<string, unknown>; parent: Record<string, unknown> }
 	>();
 	for (const row of catalogRows) {
-		// Archived rows are server history, not something a pull should write.
 		if (row.archived === true) continue;
 		const id = idOfRow(row);
 		if (typeof id !== "string") continue;
@@ -310,9 +304,6 @@ export const applyPreview = ({
 			replaceRow({ id, entry: locatedEntry });
 			return true;
 		}
-		// A config that never mentioned the collection gets the key, then the row.
-		// Unless the object spreads another one: the key may live there, and a
-		// second `features:` after the spread would silently override it.
 		const configSource = files.get(configPath) ?? "";
 		const withKey = insertCollection({ source: configSource, collection });
 		if (withKey === null) return false;
@@ -325,7 +316,6 @@ export const applyPreview = ({
 			return false;
 		}
 		files.set(configPath, withKey);
-		// The array may be a const the config names, in this file or an imported one.
 		const resolved = resolveCollectionTarget({ configPath, files, collection });
 		if (resolved === null) {
 			result.unlocated.push({
@@ -334,7 +324,6 @@ export const applyPreview = ({
 			});
 			return false;
 		}
-		// The surgery indents the first line; the emitter indents the rest.
 		const text = (elementIndent: string) =>
 			emitFixture({
 				spec,
@@ -344,7 +333,6 @@ export const applyPreview = ({
 				context: { featureTypes, nestedBuilders },
 			});
 		const targetSource = files.get(resolved.file) ?? "";
-		// Versions of one plan sit together: a new one lands after its siblings.
 		const after = versioned
 			? (element: SgNode) =>
 					elementStatesPlanId({
@@ -372,7 +360,6 @@ export const applyPreview = ({
 			});
 			return false;
 		}
-		// The file now holds an inline literal, so it must import the builder.
 		files.set(
 			resolved.file,
 			ensureBuilderImport({
@@ -400,8 +387,6 @@ export const applyPreview = ({
 		located: NonNullable<ReturnType<typeof locateFixture>>;
 		rowSpec: CollectionSpec;
 	}): string | null => {
-		// The fixture may have been found by its stable id; the public id it
-		// states is what a rename has to move.
 		const keys = changedFixtureKeys({
 			spec: rowSpec,
 			entry,
@@ -414,8 +399,6 @@ export const applyPreview = ({
 		});
 		if (keys === null) return null;
 		let source = located.source;
-		// Identity keys come last, and the slug moves before the id, so every
-		// lookup still finds the fixture by what the config said before.
 		let where = located.where;
 		for (const property of keys) {
 			const text = emitFixtureProperty({
@@ -466,8 +449,6 @@ export const applyPreview = ({
 			where: constraintsFor(entry),
 		});
 		if (located === null) {
-			// A literal built from spreads or calls is there but cannot be edited;
-			// only a version the config never had is missing rather than unlocatable.
 			const dynamic = locateFixture({
 				configPath,
 				files,
@@ -486,16 +467,11 @@ export const applyPreview = ({
 			return;
 		}
 		const key = keyOf({ id, slug: slugOf(entry) });
-		// A sibling version rides the preview for context; only its own diff is work.
 		if (entry.siblingOf !== undefined && entry.planChange == null) return;
-		// The emitter's indent is the found call's own line indent, so the
-		// closing `})` lines up with the text it replaces.
 		const indent = leadingIndentOfLine(
 			located.source,
 			located.node.range().start.index,
 		);
-		// When the preview names the fields, only those move; the rest of the
-		// fixture keeps its bytes. A diff without fields rewrites the whole call.
 		const patched = patchChangedProperties({
 			entry,
 			row,
@@ -532,9 +508,6 @@ export const applyPreview = ({
 		result.lines.push(`~ ${key}`);
 	};
 
-	// The preview speaks for what the config states. A version the config never
-	// mentions is still the server's truth, so versioned rows the config has no
-	// fixture for are appended straight from the catalog.
 	const appendUnstatedVersions = (): void => {
 		if (!versioned) return;
 		for (const row of rowsById.values()) {
@@ -561,7 +534,6 @@ export const applyPreview = ({
 	for (const entry of entries) {
 		const id = entry[spec.idField];
 		if (typeof id !== "string") continue;
-		// `none` and `skip` mean the code already matches the server.
 		if (entry.action === "create") removeFixture({ id, entry });
 		else if (entry.action === "delete") appendRow({ id, entry });
 		else if (entry.action === "update") replaceRow({ id, entry });

@@ -30,7 +30,6 @@ export function createOwnershipConsumer({
 }: {
 	ctx: {
 		kafka: OwnershipKafka;
-		/** Told once when a consumer that had caught up stops following the log; it never resumes by itself. */
 		onFailed?: (failure: { cause: unknown }) => void;
 	};
 	config: OwnershipConsumerConfig;
@@ -46,20 +45,6 @@ export function createOwnershipConsumer({
 	const consumer = dependencies.kafka.consumer({
 		...createConsumerGroupConfig({
 			groupId,
-			/** This group has exactly one member: a fresh random group id per
-			 *  consumer, reading the whole ownership log to build its owner table.
-			 *  Nothing is waiting to take these partitions over, so a short session
-			 *  buys no faster failover, and it costs the cold replay everything. A
-			 *  catch-up applies every record in a fetched batch before the runner
-			 *  heartbeats again, so on a log of tens of thousands of records one
-			 *  batch outlasts a ten second session. The coordinator then drops the
-			 *  member, the next heartbeat comes back "not aware of this member",
-			 *  and because a crash here is terminal the whole catch-up fails about
-			 *  twelve seconds in, well inside its own deadline. The retry starts a
-			 *  brand new group and replays from the beginning into the same wall,
-			 *  so a large fleet never finishes catching up and routes nothing.
-			 *  Compaction is what keeps the log short; this is what survives it
-			 *  being long. */
 			timings: config.timings ?? {
 				fetchMaxWaitTimeMs: TAIL_FETCH_MAX_WAIT_MS,
 				heartbeatIntervalMs: 3_000,

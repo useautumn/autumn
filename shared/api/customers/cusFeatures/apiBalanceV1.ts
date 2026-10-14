@@ -192,7 +192,6 @@ export type ApiBalanceBreakdownPrice = z.infer<
 export type ApiBalanceBreakdownV1 = z.infer<typeof ApiBalanceBreakdownV1Schema>;
 export type ApiBalanceV1 = z.infer<typeof ApiBalanceV1Schema>;
 
-/** Internal: what check may draw for an allocated customer's subject; never part of the public schema. */
 export type ApiBalanceWithAllocationCheck = ApiBalanceV1 & {
 	allocation_check_remaining?: number;
 };

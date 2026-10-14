@@ -17,16 +17,6 @@ import { resolveSourceBasePlanIds } from "@/internal/products/handlers/handleCop
 import { ProductService } from "@/internal/products/ProductService.js";
 import { getOwnedSandbox } from "./getOwnedSandbox.js";
 
-/**
- * Copies plans (products) + features from one named sandbox into another.
- *
- * Both sandboxes are sub-orgs of the master org (`is_sandbox=true`,
- * `created_by = masterOrg.id`), each its own organization living in
- * `AppEnv.Sandbox`. The caller (a master-org dashboard session) must own BOTH
- * sandboxes; `getOwnedSandbox` applies the same 404-masking ownership check as
- * `assertSandboxAccess`, so a missing or non-owned id is indistinguishable from
- * a 404 and we never touch any org's live catalog.
- */
 export const copySandboxForOrg = async ({
 	ctx,
 	masterOrg,
@@ -55,10 +45,6 @@ export const copySandboxForOrg = async ({
 		});
 	}
 
-	// Target is always an owned named sandbox. Source is either another owned
-	// sandbox or — for a copy started from the default sandbox / production — the
-	// master org at the caller's current env. Ownership failures fold into a
-	// uniform 404 so ids/ownership can't be probed.
 	const toSandbox = await getOwnedSandbox({
 		db,
 		masterOrg,
@@ -75,8 +61,6 @@ export const copySandboxForOrg = async ({
 		});
 		fromEnv = AppEnv.Sandbox;
 	} else if (fromOrg && fromEnvArg) {
-		// The only non-sandbox source is the caller's own master org; never copy
-		// from an unrelated org into a sandbox this master owns.
 		if (fromOrg.id !== masterOrg.id) {
 			throw new RecaseError({
 				message: "Invalid copy source",
@@ -101,9 +85,6 @@ export const copySandboxForOrg = async ({
 		FeatureService.list({ db, orgId: toSandbox.id, env: toEnv }),
 	]);
 
-	// No filter => whole-catalog copy. Any filter => copy only the requested
-	// products + features, plus every feature the requested products reference
-	// so a copied plan never lands with a dangling feature reference.
 	const selective = productIds !== undefined || featureIds !== undefined;
 	let featuresToCopy = fromFeatures;
 	let productIdsToCopy = productIds;
@@ -116,8 +97,6 @@ export const copySandboxForOrg = async ({
 			env: fromEnv,
 		});
 
-		// A requested product/feature that isn't in the source would otherwise
-		// no-op and still toast success; surface it instead.
 		const sourceProductIds = new Set(fromProducts.map((p) => p.id));
 		const missingProducts = requestedProductIds.filter(
 			(id) => !sourceProductIds.has(id),
@@ -143,9 +122,6 @@ export const copySandboxForOrg = async ({
 			});
 		}
 
-		// A requested variant pulls its base (via handleCopyProducts); a requested
-		// base pulls its variants here; the set's license plans come along too.
-		// Every pulled-in plan needs its item features copied.
 		const basePlanIdByVariantId = await resolveSourceBasePlanIds({
 			ctx,
 			fromProducts,
@@ -195,8 +171,6 @@ export const copySandboxForOrg = async ({
 		]);
 	}
 
-	// Features first: products reference them, and credit systems reference
-	// metered features (handleCopyFeatures orders the batches accordingly).
 	await handleCopyFeatures({
 		toContext: { ...ctx, org: toSandbox, env: toEnv, features: toFeatures },
 		fromFeatures: featuresToCopy,

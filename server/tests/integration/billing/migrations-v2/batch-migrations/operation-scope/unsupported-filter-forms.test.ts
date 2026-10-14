@@ -1,16 +1,3 @@
-/**
- * Unsupported plan-filter forms must NEVER be silently batch-mishandled:
- *
- *   - `item` navigation → blocked entirely (prepare refuses it before either
- *     lane can mutate anything);
- *   - op-vs-migration disagreement (custom: true vs false) → per-customer
- *     lane; no row matches both, so nothing mutates;
- *   - a row-decidable field inside the MIGRATION filter's $or → per-customer
- *     lane, which then applies the op correctly;
- *   - schema-invalid forms (price: true, custom: {$eq}) are blocked at
- *     migrations.create — they never reach a run at all.
- */
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV5 } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features";
@@ -35,8 +22,6 @@ test.concurrent(
 			actions: [s.billing.attach({ productId: plan.id })],
 		});
 
-		// `item` navigation has no product-level matcher; prepare refuses it
-		// explicitly, so the run fails BEFORE either lane can mutate anything.
 		await expect(
 			runScopedMigration({
 				ctx,
@@ -108,7 +93,6 @@ test.concurrent(
 			expectedLane: "per_customer",
 		});
 
-		// The fallback lane still executes the op correctly.
 		expectWordsOnPlans({
 			customer: await autumnV2_2.customers.get<ApiCustomerV5>(customerId),
 			planIds: [plan.id],
@@ -139,11 +123,9 @@ test.concurrent(
 				no_billing_changes: true,
 			});
 
-		// `price` is a null-existence filter, not a boolean.
 		await expect(
 			createWith({ plan_id: plan.id, price: true }),
 		).rejects.toThrow();
-		// `custom` is a bare boolean, not a matcher object.
 		await expect(
 			createWith({ plan_id: plan.id, custom: { $eq: true } }),
 		).rejects.toThrow();

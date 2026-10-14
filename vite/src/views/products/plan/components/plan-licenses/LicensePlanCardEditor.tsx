@@ -51,8 +51,6 @@ export function LicensePlanCardEditor({
 	const requestedOpen = useLicenseRowStore((s) => s.openRequests[license.id]);
 	const consumeOpen = useLicenseRowStore((s) => s.consumeOpen);
 
-	// Mirror this card's live product to the parent-plan row so its price tracks
-	// unsaved edits (which only exist in this card's context).
 	useEffect(() => {
 		publish(license.id, {
 			product: liveLicense,
@@ -62,7 +60,6 @@ export function LicensePlanCardEditor({
 
 	useEffect(() => () => clear(license.id), [clear, license.id]);
 
-	// The parent-plan row can't reach this card's sheet state, so it signals here.
 	useEffect(() => {
 		if (!requestedOpen) return;
 		consumeOpen(license.id);
@@ -71,10 +68,6 @@ export function LicensePlanCardEditor({
 
 	const removed = useLicenseDraft(license.id)?.removed ?? false;
 
-	// This license is the active editor when its own sheet is open — lift it
-	// above the page overlay. Otherwise `isolate` contains PlanCard's internal
-	// z-50 so whichever overlay is active dims this card like the rest of the
-	// page.
 	const isActiveEditor = sheetType !== null;
 
 	return (
@@ -94,8 +87,6 @@ export function LicensePlanCardEditor({
 					className={cn(
 						"isolate relative flex justify-center transition-[opacity,filter] duration-200 ease-out",
 						removed && "opacity-50 grayscale",
-						// Lift only the card above the page dim — the connector lines
-						// stay beneath it so they dim with the rest of the page.
 						isActiveEditor && LICENSE_CARD_ACTIVE_CLASS,
 					)}
 				>

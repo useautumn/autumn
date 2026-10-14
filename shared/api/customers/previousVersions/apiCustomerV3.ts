@@ -104,7 +104,6 @@ const cusDescriptions = {
 	features:
 		"The features a customer has access to as a dictionary of feature IDs to customer feature objects.",
 
-	// Expand
 	invoices:
 		"The invoices for the customer. Returned only if invoices is provided in the expand parameter.",
 	entities:
@@ -147,7 +146,6 @@ export const ApiCusExpandV3Schema = z.object({
 });
 
 export const ApiCustomerV3Schema = z.object({
-	// Internal fields
 	autumn_id: z.string().nullish().meta({
 		internal: true,
 	}),

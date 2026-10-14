@@ -1,9 +1,3 @@
-/**
- * dfu.flash (test clock) — set-state replace mid-cycle: flash plan A on a
- * mid-cycle sub, then re-import plan B on a second mid-cycle sub. A must expire
- * (recoverable) and B activate with B's own real mid-cycle anchor.
- */
-
 import { expect, test } from "bun:test";
 import { CusProductStatus } from "@autumn/shared";
 import {
@@ -103,7 +97,6 @@ test.concurrent(
 		expect(expiredA?.expired).toBe(true);
 		expect(expiredA?.reason).toBe("expired_not_in_desired_state");
 
-		// A is expired but still queryable (recoverable), B is active.
 		const productA = await getFlashedCustomerProduct({
 			ctx,
 			customerId,
@@ -117,7 +110,6 @@ test.concurrent(
 			productId: planB.id,
 		});
 		expect(productB?.status).toBe(CusProductStatus.Active);
-		// B keeps its own real mid-cycle anchor, not import + 1 month.
 		expect(productB?.billing_cycle_anchor).toBe(bPeriodEndMs);
 
 		const messagesEnt = productB?.customer_entitlements.find(

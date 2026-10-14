@@ -26,10 +26,6 @@ type ExpectedLine = {
 	prorated?: boolean;
 };
 
-/**
- * Asserts a created invoice against the Stripe invoice it produced and the
- * Autumn row. `lines` are matched in order of the preview.
- */
 export const expectCreatedInvoiceCorrect = async ({
 	ctx,
 	response,

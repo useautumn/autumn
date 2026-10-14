@@ -5,7 +5,6 @@ type PaydownOrderFields = Pick<
 	"usage_allowed" | "created_at"
 >;
 
-/** Overage heals where it accrued first (`usage_allowed` rows), oldest first; ties keep the input order. */
 export const sortCusEntsForPaydown = <CE extends PaydownOrderFields>({
 	customerEntitlements,
 }: {

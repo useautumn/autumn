@@ -25,7 +25,6 @@ const org = {
 	default_currency: "usd",
 } as unknown as Organization;
 
-/** The org's own sandbox Atom as its cached org holds it, in `status`; none when null. */
 const atomDeploymentsIn = ({
 	status,
 }: {
@@ -43,7 +42,6 @@ const atomDeploymentsIn = ({
 			]
 		: [];
 
-/** The sandbox shadow Atom at `endpointUrl` (null is none), holding every customer or none, with org_1 registered unless told otherwise. */
 const shadowWith = ({
 	endpointUrl,
 	percent = 100,
@@ -74,7 +72,6 @@ const shadowWith = ({
 			: {},
 	});
 
-/** A herald reading org_1 with its own Atom in `atomStatus` (none when null); Atoms record what reached them and `failing` ones reject every push. */
 const createPushContext = ({
 	atomStatus,
 	shadowAtom,

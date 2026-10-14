@@ -6,7 +6,6 @@ import {
 	shadowAtomConfigStore,
 } from "@/internal/misc/shadowAtom/shadowAtomConfigStore.js";
 
-/** A registered org's share of customers on the shadow Atom; the change routes once settled. */
 export const setShadowAtomOrgPercent = ({
 	orgId,
 	percent,
@@ -19,7 +18,6 @@ export const setShadowAtomOrgPercent = ({
 		fn: async () => {
 			const config = await shadowAtomConfigStore.readFromSource();
 			const { orgs } = config;
-			// Own keys only: an id like "constructor" must not read Object.prototype as an org.
 			const current = Object.hasOwn(orgs, orgId) ? orgs[orgId] : undefined;
 			if (!current)
 				throw new RecaseError({

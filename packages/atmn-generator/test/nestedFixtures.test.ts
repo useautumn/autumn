@@ -18,7 +18,6 @@ test("every nested fixture has a generated module with its builder and type", ()
 });
 
 test("a nested fixture's hidden fields stay hidden through its own module", () => {
-	// `variants.new_plan_id` is overlay-hidden on plans, so the Variant type must not carry it.
 	const source = readFileSync(join(generated, "variants.ts"), "utf8");
 	expect(source).not.toContain("newPlanId");
 	expect(source).toContain("variantPlanId: string;");

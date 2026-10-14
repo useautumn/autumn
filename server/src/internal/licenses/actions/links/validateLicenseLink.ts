@@ -1,11 +1,6 @@
 import { ErrCode, type FullProduct, RecaseError } from "@autumn/shared";
 import { validateLicenseBillingMode } from "../../licenseUtils.js";
 
-/**
- * Every rule a parent→license link must satisfy. Parent-dependent checks run
- * only when parentProduct is present, billing mode only when prepaidOnly is
- * present, archived only when licensePlanId is present.
- */
 export const validateLicenseLink = ({
 	parentProduct,
 	licenseProduct,
@@ -27,21 +22,12 @@ export const validateLicenseLink = ({
 			statusCode: 400,
 		});
 	}
-	// Variants never inherit their base's links and never draft a parent
-	// migration, so a link either side of one silently diverges.
 	if (licenseProduct.base_internal_product_id) {
 		throw new RecaseError({
 			message: `A variant cannot be used as a plan license (${licensePlanId ?? licenseProduct.id}).`,
 			code: ErrCode.InvalidRequest,
 		});
 	}
-
-	// if (parentProduct?.base_internal_product_id) {
-	// 	throw new RecaseError({
-	// 		message: `A variant cannot link a plan license (${parentProduct.id}).`,
-	// 		code: ErrCode.InvalidRequest,
-	// 	});
-	// }
 
 	if (parentProduct && licenseProduct.id === parentProduct.id) {
 		throw new RecaseError({

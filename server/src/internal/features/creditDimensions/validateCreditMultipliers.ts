@@ -27,17 +27,10 @@ const validateMultiplierShape = ({
 	if (hasAdd && !Number.isFinite(add)) {
 		invalidCreditSystem(`Multiplier "${name}" add must be a number.`);
 	}
-	// Coerce in place: a string would concatenate rather than add downstream.
 	if (hasFactor) multiplier.factor = factor;
 	if (hasAdd) multiplier.add = add;
 };
 
-/**
- * A set of multipliers can apply together only if every pair can coexist, so the
- * worst case is the deepest discount over any such set. Grown greedily from each
- * multiplier: enough to catch a genuinely negative rate without enumerating the
- * power set.
- */
 const worstCaseRate = ({
 	multipliers,
 	cheapestRate,

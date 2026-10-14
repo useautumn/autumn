@@ -18,7 +18,6 @@ const RESOURCES: Resource[] = [
 	"memoryMib",
 ];
 
-/** One file's measured load at one file per worker; cores (Modal physical) and memory are worker-wide. */
 type FileLoad = {
 	file: string;
 	stripeRps: number;
@@ -71,7 +70,6 @@ const toFileLoad = ({
 	};
 };
 
-/** Idle-stack overhead (server, Postgres, Dragonfly) is the light end of worker-wide CPU and memory. */
 const measureOverhead = (loads: FileLoad[]): Load => ({
 	stripeRps: 0,
 	stripeInFlight: 0,
@@ -101,7 +99,6 @@ const fileIncrement = ({
 	),
 });
 
-/** Expected per-worker load of k co-scheduled files: overhead + k·μ + 2σ·√k. */
 const loadAt = ({
 	k,
 	increments,
@@ -131,7 +128,6 @@ const ceilingOf = ({ limits }: { limits: Limits }): Load => ({
 const firstOverCeiling = ({ load, ceiling }: { load: Load; ceiling: Load }) =>
 	RESOURCES.find((resource) => load[resource] > ceiling[resource]) ?? null;
 
-/** A file that alone takes over half of what a worker can share is never packed. */
 const isHeavy = ({
 	increment,
 	overhead,
@@ -146,7 +142,6 @@ const isHeavy = ({
 			increment[resource] > (ceiling[resource] - overhead[resource]) / 2,
 	);
 
-/** Largest k whose expected load fits every ceiling; profiled, light, non-solo files pack. */
 export const chooseFilesPerWorker = ({
 	files,
 	estimates,

@@ -64,7 +64,6 @@ const resolveHeldAiCreditFeatures = async ({
 			entity,
 		});
 
-		// Deduction order: the first entitlement drains, so it sets the markup.
 		const byFeatureId = new Map<string, Feature>();
 		for (const ce of cusEnts) {
 			const { feature } = ce.entitlement;
@@ -77,7 +76,6 @@ const resolveHeldAiCreditFeatures = async ({
 		}
 		return [...byFeatureId.values()];
 	} catch (error) {
-		// A named feature must not block the create-customer-on-track path.
 		if (input.feature_id && isSubjectNotFound(error)) return [];
 		throw error;
 	}

@@ -1,11 +1,3 @@
-/**
- * atmn scenarios/customers — delete a feature a customer's entitlement references → archived, not deleted; preview says will_archive with the customer count
- *
- * real `billing.attach` first; the point is to hit the dependency errors
- *
- * One line of plans/atmn-v3/07_tests.md. [a, b] is a matrix looped INSIDE this file.
- */
-
 import { expect, test } from "bun:test";
 import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 import {
@@ -18,8 +10,6 @@ import { FeatureService } from "@/internal/features/FeatureService.js";
 import { runPush } from "../../../../../../packages/atmn/src/actions/push";
 import { createClient } from "../../../../../../packages/atmn/src/generated/client";
 
-/** A plan with one item over a metered feature; `includeFeature: false` drops
- * both the feature and its item, as a user's config would after deleting it. */
 const catalogConfig = ({
 	featureId,
 	planId,
@@ -79,8 +69,6 @@ export default atmn(${catalogConfig({ featureId, planId, includeFeature: false }
 			});
 			const result = await runPush({ client, cwd: scenario.cwd });
 
-			// The generated client hands back preview rows camelCased, like every
-			// fixture-facing response — not the snake_case wire.
 			const featureRow = (result.preview.features ?? []).find(
 				(row) => (row as { featureId?: string }).featureId === featureId,
 			);

@@ -50,12 +50,6 @@ const groupChangedItemsByCustomer = ({
 	return grouped;
 };
 
-/**
- * Per-customer migration response for a page, without loading any customer:
- * the changed rows ARE the diff — created rows carry the after-state, deleted
- * rows the before-state (a replace contributes one of each). Same shape the
- * per-customer lane emits.
- */
 export const buildBatchMigrationItemResponses = ({
 	plan,
 	pageResult,
@@ -82,8 +76,6 @@ export const buildBatchMigrationItemResponses = ({
 				entitlementLookup,
 			});
 
-			// Typed literal rather than a Zod parse: this object is built in-process
-			// from already-typed inputs, so parsing 5000x per page re-derives nothing.
 			const preview: PreviewMigrateCustomer = {
 				object: "migration_customer_preview",
 				customer_id: customer.id ?? customer.internalId,

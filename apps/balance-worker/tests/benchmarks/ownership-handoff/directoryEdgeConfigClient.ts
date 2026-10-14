@@ -1,4 +1,3 @@
-/** The admin bucket as a directory: one file per key, so the orchestrator writes the slot record with plain fs. */
 import { existsSync, mkdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import type { EdgeConfigS3Client } from "@autumn/edge-config";

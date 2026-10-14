@@ -18,7 +18,6 @@ describe(`${chalk.yellowBright("loose-unlimited: unlimited loose entitlement")}`
 			withTestClock: false,
 		});
 
-		// Create unlimited loose entitlement
 		await autumnV1.balances.create({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
@@ -27,7 +26,6 @@ describe(`${chalk.yellowBright("loose-unlimited: unlimited loose entitlement")}`
 	});
 
 	test("should allow any track amount with unlimited", async () => {
-		// Track large amount
 		await autumnV1.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,

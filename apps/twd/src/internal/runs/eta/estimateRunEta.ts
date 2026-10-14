@@ -1,11 +1,9 @@
 import { splitRepetitionId } from "../repeat/repetitions.ts";
 
-/** Below this many finished files the speed factor is noise; the UI shows "estimating…". */
 const MIN_FINISHED_FOR_ETA = 5;
 const EWMA_ALPHA = 0.2;
 const MIN_FACTOR = 0.5;
 const MAX_FACTOR = 3;
-/** Never claim a running file is about to finish sooner than this. */
 const RUNNING_FLOOR_MS = 10_000;
 const DEFAULT_BOOT_MS = 60_000;
 const DEFAULT_TEARDOWN_MS = 30_000;
@@ -18,14 +16,12 @@ export type FileBaselineStats = {
 
 type Expectation = { p50Ms: number; p90Ms: number; failRate: number };
 
-/** Per-file expectations: own baseline, else the folder's median, else the global median. */
 export type DurationModel = {
 	expect: (file: string) => Expectation | null;
 };
 
 export type EtaPriors = {
 	model: DurationModel;
-	/** Recent worker boot p50 (account → serving); null falls back to a default. */
 	bootP50Ms: number | null;
 	teardownP50Ms: number | null;
 };
@@ -35,7 +31,6 @@ export type EtaFile = {
 	status: string;
 	durationMs: number | null;
 	finishedAt: number | null;
-	/** When the current attempt started on its worker; null while queued. */
 	startedAt: number | null;
 	worker: string | null;
 	attempt: number;
@@ -94,7 +89,6 @@ export const createDurationModel = ({
 const isFinished = (status: string) =>
 	status !== "queued" && status !== "running";
 
-/** observed/expected over this run's passed files in finish order; 1 when nothing comparable finished. */
 const speedFactor = ({
 	finished,
 	expect,
@@ -116,7 +110,6 @@ const speedFactor = ({
 	return Math.min(MAX_FACTOR, Math.max(MIN_FACTOR, factor));
 };
 
-/** Min-heap of worker free times; pop the earliest, push it back busy until later. */
 const createFreeTimeHeap = (times: number[]) => {
 	const heap: number[] = [];
 	const push = (value: number) => {
@@ -153,7 +146,6 @@ const createFreeTimeHeap = (times: number[]) => {
 	return { push, pop, values: () => heap };
 };
 
-/** Longest-processing-time-first list scheduling; returns when the last job ends. */
 export const simulateLptMakespan = ({
 	workerFreeAt,
 	jobs,
@@ -175,10 +167,6 @@ export const simulateLptMakespan = ({
 const LIVE_WORKER = new Set(["ready", "busy"]);
 const ARRIVING_WORKER = new Set(["provisioning", "booting"]);
 
-/**
- * Remaining wall time of a live run: per-file baselines scaled by this run's observed speed,
- * LPT-scheduled onto live and arriving workers, plus expected retries and teardown.
- */
 export const estimateRunEta = ({
 	now,
 	files,
@@ -190,10 +178,8 @@ export const estimateRunEta = ({
 	now: number;
 	files: EtaFile[];
 	workers: EtaWorker[];
-	/** Accounts the run still asks for beyond its live and booting workers. */
 	moreWorkersWanted: number;
 	priors: EtaPriors;
-	/** Files each worker runs at once. */
 	slotsPerWorker?: number;
 }): RunEta | null => {
 	const finished = files.filter((f) => isFinished(f.status));
@@ -206,7 +192,6 @@ export const estimateRunEta = ({
 		return { etaMs: left, etaP90Ms: left };
 	}
 
-	// With no baselines at all, this run's own finished durations are the only evidence.
 	const observed = finished.flatMap((f) => f.durationMs ?? []);
 	const observedFallback =
 		observed.length > 0
@@ -241,7 +226,6 @@ export const estimateRunEta = ({
 			const e = expect(f.file);
 			if (!e) return null;
 			const duration = e[quantile] * factor;
-			// A first attempt may still fail and rerun the whole file.
 			const retry = f.attempt <= 1 ? e.failRate * duration : 0;
 			const onWorker =
 				f.status === "running" &&

@@ -7,9 +7,6 @@ interface OverviewCardProps {
 	isLoading: boolean;
 }
 
-/**
- * Overview summary card
- */
 export function OverviewCard({ analysis, isLoading }: OverviewCardProps) {
 	if (isLoading) {
 		return (

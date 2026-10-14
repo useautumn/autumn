@@ -16,8 +16,6 @@ import {
 	identity,
 } from "../../engineFixtures.js";
 
-// Mirrors server/tests/integration/balances/update/included/ and update-balance-prepaid-granted.
-
 const ALLOWANCE = 100;
 const OTHER_ENTITY = "ent_99";
 

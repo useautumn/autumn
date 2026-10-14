@@ -23,12 +23,6 @@ const CreateOrganizationSchema = z.object({
 	env: z.enum(["test", "live", "both"]).default("both"),
 });
 
-/**
- * Creates an organization for platform users
- * - Reuses existing users and organizations
- * - Creates test account via Stripe Connect
- * - Returns Autumn secret keys
- */
 export const handleCreatePlatformOrg = createRoute({
 	scopes: [Scopes.Platform.Write],
 	body: CreateOrganizationSchema,
@@ -38,7 +32,6 @@ export const handleCreatePlatformOrg = createRoute({
 
 		const { user_email, name, slug, env } = c.req.valid("json");
 
-		// 1. Check if user with this email already exists, otherwise create
 		let user = await UserService.getByEmail({
 			db,
 			email: user_email,
@@ -69,7 +62,6 @@ export const handleCreatePlatformOrg = createRoute({
 			);
 		}
 
-		// 2. Check if organization with this slug exists (scoped to master org)
 		const orgSlug = `${slug}|${masterOrg.id}`;
 		const existingMembership = await db
 			.select()
@@ -114,7 +106,6 @@ export const handleCreatePlatformOrg = createRoute({
 			logger.info(`Found existing organization: ${org.id} (${orgSlug})`);
 		}
 
-		// 3. Generate Autumn secret keys based on env
 		let test_secret_key: string | undefined;
 		let live_secret_key: string | undefined;
 

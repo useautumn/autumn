@@ -12,7 +12,6 @@ import {
 	SHARD_KEY_REASON,
 } from "./syncKeys.ts";
 
-/** Additive: new keys are probed + stored encrypted; keys twd already has are skipped. */
 export const importKeys = async ({
 	ctx,
 	text,

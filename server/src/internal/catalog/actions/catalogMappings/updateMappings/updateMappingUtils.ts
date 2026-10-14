@@ -20,7 +20,6 @@ export type PriceTargets = Map<string, PriceTarget>;
 export const normalizeStripeProductId = (stripeProductId: string | null) =>
 	stripeProductId?.trim() ? stripeProductId.trim() : null;
 
-/** Aliases are a set, and the primary id is never also an alias. */
 export const normalizeAdditionalStripeProductIds = ({
 	additionalStripeProductIds,
 	stripeProductId,

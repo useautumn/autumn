@@ -1,15 +1,3 @@
-/**
- * One customer whose database read never settles must not stall the whole
- * billing verify export, and gets a second attempt on a fresh connection
- * before it is failed.
- *
- * Red (current):  verifyCustomerToExportRows awaits CusService.getFull with no
- *                 bound, so a silent connection hangs the page, the stream and
- *                 the run forever.
- * Green (after):  the read is bounded and retried once; the customer is then
- *                 written as a verify_failed row naming the last error.
- */
-
 import { afterEach, describe, expect, it, spyOn } from "bun:test";
 import type Stripe from "stripe";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";

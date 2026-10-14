@@ -12,10 +12,6 @@ import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 1: Catalog fallback when no stored row exists
-// ═══════════════════════════════════════════════════════════════════════════════
-
 test.concurrent(
 	`${chalk.yellowBright("invoice-matched edge 1: catalog fallback when no stored row exists")}`,
 	async () => {
@@ -70,10 +66,6 @@ test.concurrent(
 	},
 	300_000,
 );
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 2: Multi-attach with outgoing credit
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(
 	`${chalk.yellowBright("invoice-matched edge 2: multi-attach with outgoing credit from stored charge")}`,
@@ -162,10 +154,6 @@ test.concurrent(
 	300_000,
 );
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 3: No-op re-attach — filterUnchangedPrices cancels
-// ═══════════════════════════════════════════════════════════════════════════════
-
 test.concurrent(
 	`${chalk.yellowBright("invoice-matched edge 3: no-op re-attach — filterUnchangedPrices cancels")}`,
 	async () => {
@@ -207,10 +195,6 @@ test.concurrent(
 	},
 	300_000,
 );
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 4: Preview/execute rounding parity on upgrade
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(
 	`${chalk.yellowBright("invoice-matched edge 4: preview/execute rounding parity on mid-cycle upgrade")}`,

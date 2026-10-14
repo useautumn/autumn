@@ -1,13 +1,5 @@
 import { sql } from "drizzle-orm";
 
-/**
- * Keeps loose (plan-less) customer entitlements that still mean something:
- * a spendable balance, unlimited, or a boolean flag. Drained one-off grants
- * are dropped so they stop inflating reported granted/usage.
- *
- * Every query that hydrates loose entitlements must apply this — customers.get
- * and customers.list disagreed for exactly as long as one of them didn't.
- */
 export const looseEntitlementIsLiveSql = ({
 	alias = "ce",
 }: {

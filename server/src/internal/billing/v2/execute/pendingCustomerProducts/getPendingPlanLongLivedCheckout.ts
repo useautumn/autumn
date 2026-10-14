@@ -5,7 +5,6 @@ import {
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { checkoutRepo } from "@/internal/checkouts/repos/checkoutRepo";
 
-/** The long-lived link that opened this pending plan, while it can still be paid. */
 export const getPendingPlanLongLivedCheckout = async ({
 	ctx,
 	deferredData,

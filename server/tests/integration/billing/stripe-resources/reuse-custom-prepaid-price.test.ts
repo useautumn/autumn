@@ -1,15 +1,3 @@
-/**
- * Customize A then B: same diverging prepaid price shares one V2 Stripe Price.
- *
- * Catalog reuse already ran. This path fires when stripe_prepaid_price_v2_id
- * is still empty (catalog $10 → customize $20).
- *
- * Contract:
- *   A $20 included 100 then B same → same V2, not catalog; V1 untouched
- *   A $20 then B $30, or same amount / different included → different V2
- *   A volume+flat then B same → share V2
- */
-
 import { expect, test } from "bun:test";
 import { type AttachParamsV1Input, TierInfinite } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";

@@ -17,8 +17,6 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { CusService } from "@/internal/customers/CusService";
 
-// ─── Test 1: Update processor_subscription_id to null clears subscription_ids ───
-
 test(`${chalk.yellowBright("update processor_subscription_id: setting null clears subscription_ids")}`, async () => {
 	const customerId = "update-proc-sub-id-null";
 
@@ -51,8 +49,6 @@ test(`${chalk.yellowBright("update processor_subscription_id: setting null clear
 	expect(cusProductAfter).toBeDefined();
 	expect(cusProductAfter?.subscription_ids).toEqual([]);
 });
-
-// ─── Test 2: Update processor_subscription_id to a new stripe subscription ───
 
 test(`${chalk.yellowBright("update processor_subscription_id: set to new stripe subscription links correctly")}`, async () => {
 	const customerId = "update-proc-sub-id-set";
@@ -108,9 +104,6 @@ test(`${chalk.yellowBright("update processor_subscription_id: set to new stripe 
 		after: stripeSubscriptionAfter,
 	});
 });
-
-// ─── Test 3: Update processor_subscription_id + customize simultaneously ───
-// Stripe subscription should remain unchanged, only Autumn plan is updated.
 
 test(`${chalk.yellowBright("update processor_subscription_id: with customize leaves stripe subscription unchanged")}`, async () => {
 	const customerId = "update-proc-sub-id-customize";

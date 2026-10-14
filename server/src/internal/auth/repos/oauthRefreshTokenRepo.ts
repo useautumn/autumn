@@ -38,7 +38,6 @@ const getOAuthRefreshTokenByTokenValues = async ({
 	return token ?? null;
 };
 
-/** Null consent/resource leave the stored value alone; a grant is never blanked. */
 const updateOAuthRefreshTokenGrant = async ({
 	db,
 	id,

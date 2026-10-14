@@ -11,7 +11,6 @@ import type {
 	LicenseConfig,
 } from "./types/instanceConfig";
 
-/** A requested total means the same seats when it buys the paid seats the row already holds. */
 const requestedMatchesGranted = ({
 	quantities,
 	licenses,
@@ -30,7 +29,6 @@ const requestedMatchesGranted = ({
 		);
 	});
 
-/** Requested totals within the plan's included seats buy no paid seats, as included-only does. */
 const requestedIsIncludedOnly = ({
 	quantities,
 	planLicenses,
@@ -110,7 +108,6 @@ const licensesMatch = ({
 	return first.type === "includedOnly" && second.type === "includedOnly";
 };
 
-/** The one equality set_plans uses: same plan version, quantities, licenses and items. */
 export const instanceConfigsMatch = ({
 	features,
 	first,

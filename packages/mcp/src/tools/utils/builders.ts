@@ -5,12 +5,6 @@ import type {
 	OperationToolConfig,
 } from "./types.js";
 
-/**
- * Domain-scoped config composers bound to a domain's `endpoints` and `schemas`
- * maps. A tool's `id` keys into both maps, so each tool declares its id,
- * description, and semantics once — the schema and endpoint are looked up rather
- * than repeated. The `id` is type-checked against the relevant map keys.
- */
 export const createDomainTools = <
 	E extends Record<string, string>,
 	S extends Record<string, z.ZodType>,
@@ -24,7 +18,6 @@ export const createDomainTools = <
 	type EndpointId = Extract<keyof E & keyof S, string>;
 	type SchemaId = Extract<keyof S, string>;
 
-	/** A tool that calls its endpoint directly with the parsed request. */
 	const operation = ({
 		id,
 		description,
@@ -57,7 +50,6 @@ export const createDomainTools = <
 		previewEndpoint: endpoints[id],
 	});
 
-	/** A destructive write applied only after the user confirms a preview. */
 	const confirmedWrite = ({
 		id,
 		description,
@@ -72,7 +64,6 @@ export const createDomainTools = <
 		destructive: true,
 	});
 
-	/** A preview computed locally (no Autumn call) before a billing write. */
 	const localPreview = ({
 		id,
 		description,

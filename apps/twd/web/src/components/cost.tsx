@@ -20,7 +20,6 @@ export const RatesLine = ({ rates }: { rates: CostRates }) => (
 	</span>
 );
 
-/** Run cost; muted with a pulsing dot while it is still accruing. */
 export const CostValue = ({
 	cost,
 	rates,

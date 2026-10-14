@@ -35,7 +35,7 @@ export class FeatureService {
 			orderBy: (features, { desc }) => [desc(features.internal_id)],
 		});
 
-		return features as Feature[]; // TODO: DRIZZLE TYPE REFACTOR
+		return features as Feature[];
 	}
 
 	static async getFromReq(req: any) {
@@ -123,8 +123,6 @@ export class FeatureService {
 				.returning();
 		}
 
-		// The row may have been deleted between read and update (e.g. async
-		// display generation racing an org/feature teardown).
 		if (updatedFeatures.length === 0) return null;
 
 		await clearOrgCache({
@@ -148,7 +146,7 @@ export class FeatureService {
 		try {
 			const insertedData = await db
 				.insert(features)
-				.values(data as any) // DRIZZLE TYPE REFACTOR
+				.values(data as any)
 				.returning();
 
 			if (insertedData && insertedData.length > 0) {
@@ -159,7 +157,7 @@ export class FeatureService {
 					logger,
 				});
 			}
-			return insertedData as Feature[]; // DRIZZLE TYPE REFACTOR
+			return insertedData as Feature[];
 		} catch (error: any) {
 			if (error?.code === "23505") {
 				const id = Array.isArray(data)
@@ -220,7 +218,6 @@ export class FeatureService {
 			.where(and(eq(features.org_id, orgId), eq(features.env, env)));
 	}
 
-	/** Deletes features in batches to avoid locking all rows at once. */
 	static async safeDeleteByOrgId({
 		db,
 		orgId,

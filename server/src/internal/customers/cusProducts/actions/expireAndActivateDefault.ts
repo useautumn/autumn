@@ -14,7 +14,6 @@ import { activateFreeSuccessorProduct } from "@/internal/customers/cusProducts/a
 import { emitCustomerProductBillingUpdated } from "@/internal/customers/cusProducts/actions/emitCustomerProductBillingUpdated";
 import type { CustomerProductActivation } from "../types/customerProductActivation";
 
-/** Billing webhook emission is opt-in because some callers batch their own events; allocation changes still get exactly one. */
 export const expireCustomerProductAndActivateDefault = async ({
 	ctx,
 	customerProduct,
@@ -29,7 +28,6 @@ export const expireCustomerProductAndActivateDefault = async ({
 	fullCustomer: FullCustomer;
 	updates?: Partial<InsertCustomerProduct>;
 	emitBillingUpdated?: boolean;
-	/** The caller batches its own billing.updated and tags it from the returned `allocationsAdjusted`. */
 	callerEmitsBillingUpdated?: boolean;
 	activatedAt?: number;
 }): Promise<{
@@ -42,13 +40,11 @@ export const expireCustomerProductAndActivateDefault = async ({
 
 	const originalFullCustomer = structuredClone(fullCustomer);
 
-	// 1. Expire the product
 	const updates: Partial<InsertCustomerProduct> = {
 		status: CusProductStatus.Expired,
 		...extraUpdates,
 	};
 
-	// Both plans defer their allocation notice to this action, which sends one for the pair.
 	const { allocationsAdjusted: expiryAdjusted = false } =
 		await executeAutumnBillingPlan({
 			emitsBillingUpdated: true,
@@ -75,8 +71,6 @@ export const expireCustomerProductAndActivateDefault = async ({
 			: cp,
 	);
 
-	// 2. Send products_updated (Expired) — must be enqueued before successor
-	// activation, which enqueues its own products_updated (New).
 	await addProductsUpdatedWebhookTask({
 		ctx,
 		internalCustomerId: customerProduct.internal_customer_id,
@@ -87,7 +81,6 @@ export const expireCustomerProductAndActivateDefault = async ({
 		cusProduct: customerProduct,
 	});
 
-	// 3. Activate free successor (scheduled or default)
 	const {
 		activation,
 		insertedCustomerProduct,
@@ -101,7 +94,6 @@ export const expireCustomerProductAndActivateDefault = async ({
 	});
 	const allocationsAdjusted = expiryAdjusted || successorAdjusted;
 
-	// 4. Emit billing.updated (payload needs the activated/inserted products)
 	if (emitBillingUpdated) {
 		emitCustomerProductBillingUpdated({
 			allocationsAdjusted,

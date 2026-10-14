@@ -6,7 +6,6 @@ import { getProductGroupKey } from "@/components/forms/shared/utils/planGroupUti
 import { useCustomerStateContext } from "../CustomerStateProvider";
 import { PlanOptionStatus } from "./PlanOptionStatus";
 
-/** The shared plan picker, greying out conflicting groups and subscriptions. */
 export function CustomerStatePlanPicker({
 	products,
 	usedKeys,

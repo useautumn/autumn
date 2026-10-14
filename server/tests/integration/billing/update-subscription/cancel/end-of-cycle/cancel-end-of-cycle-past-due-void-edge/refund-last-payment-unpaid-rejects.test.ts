@@ -1,6 +1,3 @@
-// tw:solo: withVoidFlag mutates the shared org.config, so this file can't share a worker.
-// refund_last_payment on an unpaid past_due cycle has no charge to refund, so the cancel is rejected.
-
 import { expect, test } from "bun:test";
 import { type ApiCustomerV3, ErrCode } from "@autumn/shared";
 import { driveProductPastDue } from "@tests/integration/billing/utils/driveProductPastDue";

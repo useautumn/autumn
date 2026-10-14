@@ -3,12 +3,8 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { CusBatchService } from "@/internal/customers/CusBatchService.js";
 import type { MigrationWebhookRecord } from "../types/migrationWebhookRecord.js";
 
-/** Full customers fetched per batched read. */
 const PREFETCH_CHUNK_SIZE = 100;
 
-/** One batched full-customer read per chunk — the legacy payload embeds the
- * full customer, so this is the fetch `sendProductsUpdated` would otherwise
- * run once per customer product. */
 export const prefetchFullCustomers = async ({
 	ctx,
 	records,

@@ -8,11 +8,6 @@ export interface CancelUpdates {
 	status?: CusProductStatus;
 }
 
-/**
- * Builds the cancel field updates for a customer product.
- * For 'cancel_immediately' mode, includes status: Expired.
- * For 'cancel_end_of_cycle' mode, only sets cancel fields without status change.
- */
 export const computeCancelUpdates = ({
 	billingContext,
 	endOfCycleMs,

@@ -102,8 +102,6 @@ function FeaturesSortSubMenu({
 
 	const isFeatureBalanceActive = queryStates.sortBy === "feature_balance";
 
-	// Basis only reorders results when a feature sort is live; otherwise store
-	// it silently so the change doesn't reset the cursor or refetch.
 	const applyBasis = (basis: FeatureBalanceSortBasis) => {
 		if (isFeatureBalanceActive && queryStates.sortFeature !== "") {
 			setFilters({ sortBasis: basis });
@@ -159,8 +157,6 @@ function FeaturesSortSubMenu({
 										e.stopPropagation();
 										applyBasis(basis);
 									}}
-									// The RadioGroup wrapper blocks base-ui's focus-on-hover, so
-									// mirror the menu-item highlight with plain CSS hover.
 									className="flex items-center gap-2 cursor-pointer text-sm hover:bg-accent hover:text-accent-foreground"
 								>
 									<RadioGroupItem value={basis} />
@@ -209,7 +205,6 @@ export function CustomerListSortButton() {
 	const { queryStates, setFilters } = useCustomerFilters();
 	const [open, setOpen] = useState(false);
 
-	// Anything other than the default created_at desc counts as an active sort.
 	const hasActiveSort =
 		queryStates.sortBy !== "created_at" || queryStates.sort !== "desc";
 

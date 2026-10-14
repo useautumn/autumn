@@ -1,8 +1,6 @@
 import type { Redis } from "ioredis";
 import { tryRedisOp } from "./runRedisOp.js";
 
-/** Routes a SET ... NX to its three outcomes: "OK" → onSuccess, null (key
- *  exists) → onKeyAlreadyExists, Redis down/error → onRedisUnavailable. */
 export const tryRedisNx = async <TUnavailable, TSuccess, TExists>({
 	operation,
 	source,

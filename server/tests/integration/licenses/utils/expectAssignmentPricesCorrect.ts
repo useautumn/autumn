@@ -10,8 +10,6 @@ import { pollUntil } from "@tests/utils/genUtils";
 import type { TestContext } from "@tests/utils/testInitUtils/createTestContext";
 import { eq, inArray } from "drizzle-orm";
 
-/** DB-side seat pricing: every live assignment's fixed price row carries the
- * expected amount — the observable contract of a uniform seat re-price. */
 export const expectAssignmentPricesCorrect = async ({
 	ctx,
 	customerId,

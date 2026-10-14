@@ -1,25 +1,3 @@
-/**
- * atmn pull — plans, their versions, and licenses come back out of the catalog.
- *
- * Companion to pull-features: same config-in / catalog-out contract, extended
- * to versioned plans. Identity is the stable `internalId` first, else
- * `planId` + `versionSlug`; the active row lands in `plans`, a newer inactive
- * row is a draft also in `plans` (`active: false`), older rows are history in
- * `planVersions`. Assertions read the re-imported wire, `ProductService.listFull`,
- * and the catalogV2 get client — never rendered text.
- *
- * Contract:
- *   L1  dir A pushes `pro` v1; dir B (same org) mints `pro` v2, restates v1 in
- *       `planVersions`, and adds `seat` plus `enterprise` (licensing `seat`).
- *       Pulling in A makes its wire match the catalog for all four plans, every
- *       pulled fixture gains `internalId`, and a follow-up dry-run push idles.
- *   L2  from L1's end state, dir B mints `pro` v3 as an explicit draft
- *       alongside the still-active v2. Pulling in A adds v3 with `active: false`
- *       while v2 stays active.
- *   L3  pulling an up-to-date config (L1's end state) leaves the file
- *       byte-identical.
- */
-
 import { expect, test } from "bun:test";
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -31,8 +9,6 @@ import { s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { ProductService } from "@/internal/products/ProductService.js";
-// Relative rather than a package import, for the same reason initAtmnScenario
-// imports runPush that way: the package publishes only its bin.
 import { runPull } from "../../../../packages/atmn/src/actions/pull";
 import { runPush } from "../../../../packages/atmn/src/actions/push";
 import {
@@ -46,11 +22,6 @@ const CLI_PACKAGE_DIR = join(
 	"../../../../packages/atmn",
 );
 
-/**
- * initAtmnScenario's default source only imports `feature` — these tests also
- * need the `plan` builder, so this extends it inline rather than widening the
- * shared helper for one file's needs.
- */
 const atmnConfigSourceWithPlans = ({ body }: { body: string }): string =>
 	`import { feature } from "${CLI_PACKAGE_DIR}/src/generated/features";
 import { plan } from "${CLI_PACKAGE_DIR}/src/generated/plans";
@@ -59,10 +30,6 @@ import { atmn } from "${CLI_PACKAGE_DIR}/src/generated/wire";
 export default atmn(${body});
 `;
 
-/**
- * A second config dir for the same org — initAtmnScenario mints one org per
- * call, so a second scenario would be a different catalog, not a second dir.
- */
 const TMP_ROOT = join(
 	import.meta.dir,
 	"../../../../packages/atmn/test/.tmp",
@@ -140,8 +107,6 @@ const findPlan = ({
 			(versionSlug === undefined || row.version_slug === versionSlug),
 	);
 
-/** Every live version row for a plan_id, oldest first — catalogV2.get only
- * ever returns the active one, so versioning needs the DB directly. */
 const livePlanVersions = async ({
 	ctx,
 	planId,
@@ -172,11 +137,6 @@ type ProFixture = {
 	ids: { seats: string; pro: string; seatPlan: string; enterprisePlan: string };
 };
 
-/**
- * L1's end state, reusable by L2 and L3: dir A pushes `pro` v1, dir B (same
- * org) mints v2, restates v1 in `planVersions`, and adds `seat` plus
- * `enterprise` (licensing `seat`), then A pulls.
- */
 const pushProV1ThenV2WithLicensedSeat = async (): Promise<ProFixture> => {
 	const seats = uniqueTestId("atmn_seats");
 	const pro = uniqueTestId("atmn_pro");
@@ -304,8 +264,6 @@ test.concurrent(
 				}),
 			);
 
-			// Every one of the four pulled plan fixtures carries its internalId, and
-			// so does the feature the first push backfilled.
 			const text = readConfigText({ cwd: scenario.cwd });
 			expect(occurrencesOf({ text, needle: "internalId:" })).toBe(5);
 
@@ -316,7 +274,6 @@ test.concurrent(
 				{ version: 2, active: true },
 			]);
 
-			// What the config says is now what the server has, so push idles.
 			const dry = await scenario.push({ dryRun: true });
 			expect(dry.output).toContain("No changes");
 		} finally {
@@ -334,7 +291,6 @@ test.concurrent(
 		const { seats, pro, seatPlan, enterprisePlan } = ids;
 
 		try {
-			// v3 mints as an explicit draft alongside the still-active v2.
 			server.writeConfig(
 				atmnConfigSourceWithPlans({
 					body: `{

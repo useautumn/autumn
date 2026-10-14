@@ -4,7 +4,6 @@ import type { ReactNode } from "react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 
-// Strong ease-out (animations skill) — built-in CSS easings feel weak.
 export const EASE_OUT = [0.23, 1, 0.32, 1] as const;
 export const ENTER = { duration: 0.26, ease: EASE_OUT };
 export const LAYOUT = { duration: 0.3, ease: EASE_OUT };
@@ -82,7 +81,6 @@ function CursorIcon() {
 	);
 }
 
-// Shared pill used by inline triggers and both simulators' toolbars.
 export function TogglePill({
 	active,
 	onClick,

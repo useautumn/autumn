@@ -1,10 +1,3 @@
-/**
- * Contract: prepaid consumable features may bill on one interval and reset on
- * another. The price interval must drive Stripe billing, while the entitlement
- * interval must drive lazy/cron resets. invoice.created must not reset these
- * balances because the Stripe invoice cadence is intentionally different.
- */
-
 import { expect, test } from "bun:test";
 import {
 	type ApiCustomerV5,
@@ -350,7 +343,6 @@ test.concurrent(
 			planId,
 		});
 
-		// The read above reset the row on the worker; Postgres lands that a moment later.
 		const stateAfterLazyReset = await pollUntilAsserted({
 			fetch: () => getSplitCustomerProductState({ ctx, customerId, planId }),
 			assert: (state) => expect(state.customerEntitlement.balance).toBe(1000),

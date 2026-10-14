@@ -19,7 +19,6 @@ type SubjectStateRows = Partial<
 	>
 >;
 
-/** `customer` defaults to the identity's ids with no config; row-backed callers pass the real row. */
 export const createSubjectState = ({
 	identity,
 	customer = {

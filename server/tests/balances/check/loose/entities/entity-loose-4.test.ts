@@ -25,7 +25,6 @@ describe(`${chalk.yellowBright(`${testCase}: entity loose entitlement with reset
 			withTestClock: false,
 		});
 
-		// Create entity
 		await autumnV1.entities.create(customerId, [
 			{
 				id: entityId,
@@ -34,7 +33,6 @@ describe(`${chalk.yellowBright(`${testCase}: entity loose entitlement with reset
 			},
 		]);
 
-		// Create loose entitlement on entity with monthly reset
 		await autumnV1.balances.create({
 			customer_id: customerId,
 			feature_id: TestFeature.Action1,
@@ -62,7 +60,6 @@ describe(`${chalk.yellowBright(`${testCase}: entity loose entitlement with reset
 		expect(res.balance?.granted_balance).toBe(1000);
 		expect(res.balance?.current_balance).toBe(1000);
 
-		// Reset info should be present
 		expect(res.balance?.reset).toBeDefined();
 		expect(res.balance?.reset?.interval).toBe(ResetInterval.Month);
 		expect(res.balance?.reset?.resets_at).toBeDefined();

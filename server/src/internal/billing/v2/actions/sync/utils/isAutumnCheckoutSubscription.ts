@@ -1,12 +1,5 @@
 import type Stripe from "stripe";
 
-/**
- * True when `subscription` was created by an Autumn-managed Checkout Session.
- *
- * Why: `checkout.session.completed` materializes the cus_product itself, so
- * auto-sync from `customer.subscription.created` would race and produce a
- * duplicate row on the same Stripe sub.
- */
 export const isAutumnCheckoutSubscription = async ({
 	stripeCli,
 	subscription,

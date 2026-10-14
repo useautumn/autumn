@@ -17,27 +17,6 @@ import { nullish } from "../utils.js";
 import { isFixedPrice } from "./priceUtils/classifyPriceUtils.js";
 import { getBillingType } from "./priceUtils.js";
 
-/**
- * Prices an arbitrary quantity against a usage price's tier schedule.
- * This is the single entry point for converting a raw unit count into dollars —
- * it does NOT know whether that count represents included allowance, prepaid
- * purchased units, or paid overage. The caller is responsible for passing the
- * correct quantity for the billing context:
- *
- * - **Included usage** (free allowance): pass the size of the free bucket to
- *   find out its monetary value (used internally for proration math).
- * - **Prepaid** (`UsageInAdvance`): pass the quantity the customer is buying
- *   upfront. The result is the immediate charge.
- * - **Pay-per-use overage** (`UsageInArrear`): pass only the units consumed
- *   *above* any included free allowance — i.e. `totalUsage − includedFree`.
- *   Do NOT pass raw total usage here; the caller must subtract the free tier first.
- *
- * @param price - The usage price whose config contains `usage_tiers` and
- *   optionally `billing_units`.
- * @param quantity - The unit count to price. Must already be net of any free
- *   included allowance when called in an overage context.
- * @returns Dollar amount as a number rounded to 10 decimal places.
- */
 export const getAmountForQuantity = ({
 	price,
 	quantity,
@@ -108,14 +87,12 @@ export const priceToInvoiceAmount = ({
 }: {
 	price?: Price;
 	item?: ProductItem;
-	quantity?: number; // quantity should be multiplied by billing units
+	quantity?: number;
 	productQuantity?: number;
 	overage?: number;
 	proration?: Proration;
 	now?: number;
 }) => {
-	// 1. If fixed price, just return amount
-
 	let amount = 0;
 
 	if (price) {

@@ -12,7 +12,6 @@ import { mockModuleWithRestore } from "../utils/mockModuleWithRestore.js";
 
 type DirectoryEntry = { email: string; userId: string; role: string };
 
-/** Slack sender → Autumn identity; a sender missing here has no Autumn user. */
 const directory: Record<string, DirectoryEntry | undefined> = {
 	U_ADMIN: { email: "admin@example.com", role: "admin", userId: "user_admin" },
 	U_MEMBER: {

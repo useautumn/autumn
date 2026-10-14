@@ -1,8 +1,3 @@
-/**
- * Single→multiple same feature: the ladder's feature+interval rung keeps the
- * monthly pairing (usage carries); the new yearly row is minted fresh with a
- * full allowance.
- */
 import { expect, test } from "bun:test";
 import { EntInterval, ResetInterval } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features";
@@ -12,7 +7,6 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-// version-only is per-customer until definition execute is restored
 import {
 	expectVersionRepointedOnce,
 	mintPlanVersion,
@@ -44,8 +38,6 @@ test.skip(
 				}),
 			],
 		});
-		// Different allowances so the exact-definition rung cannot match: the
-		// monthly pairing must come from the feature+interval rung.
 		await mintPlanVersion({
 			client: autumnV2_3,
 			planId: plan.id,
@@ -105,7 +97,6 @@ test.skip(
 		);
 		const yearlyAfter = after.find((row) => row.interval === EntInterval.Year);
 
-		// The monthly row pairs and carries usage: 150 - 30.
 		expect(monthlyAfter).toMatchObject({
 			id: monthlyBefore.id,
 			balance: 120,
@@ -113,7 +104,6 @@ test.skip(
 		});
 		expect(monthlyAfter?.entitlementId).not.toBe(monthlyBefore.entitlementId);
 
-		// The yearly row is minted fresh with its full allowance.
 		expect(yearlyAfter).toMatchObject({ balance: 200, allowance: 200 });
 		expect(yearlyAfter?.id).not.toBe(monthlyBefore.id);
 	},

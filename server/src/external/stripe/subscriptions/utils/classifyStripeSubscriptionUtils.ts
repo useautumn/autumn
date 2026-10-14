@@ -3,16 +3,11 @@ import { UTCDate } from "@date-fns/utc";
 import type Stripe from "stripe";
 import { getLatestPeriodEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils";
 
-/** Stripe subscription that is trialing with guaranteed trial_end */
 type TrialingStripeSubscription = Stripe.Subscription & {
 	status: "trialing";
 	trial_end: number;
 };
 
-/**
- * Checks if a Stripe subscription is in the trialing status.
- * Type guard that narrows to TrialingStripeSubscription with defined trial_end.
- */
 export const isStripeSubscriptionTrialing = (
 	stripeSubscription?: Stripe.Subscription,
 ): stripeSubscription is TrialingStripeSubscription => {
@@ -23,11 +18,6 @@ export const isStripeSubscriptionTrialing = (
 	return stripeSubscription.status === "trialing";
 };
 
-/**
- * Checks if a Stripe subscription is in the canceling status.
- * @param stripeSubscription - The Stripe subscription to check.
- * @returns True if the subscription is in the canceling status, false otherwise.
- */
 export const isStripeSubscriptionCanceling = (
 	stripeSubscription?: Stripe.Subscription,
 ) => {
@@ -42,11 +32,6 @@ export const isStripeSubscriptionCanceling = (
 	);
 };
 
-/**
- * Checks if a Stripe subscription is in the canceled status.
- * @param stripeSubscription - The Stripe subscription to check.
- * @returns True if the subscription is in the canceled status, false otherwise.
- */
 export const isStripeSubscriptionCanceled = (
 	stripeSubscription?: Stripe.Subscription,
 ) => {
@@ -57,9 +42,6 @@ export const isStripeSubscriptionCanceled = (
 	return stripeSubscription.status === "canceled";
 };
 
-/**
- * Checks if a Stripe subscription has any metered price items.
- */
 export const stripeSubscriptionHasMeteredItems = (
 	stripeSubscription?: Stripe.Subscription,
 ) => {
@@ -82,17 +64,6 @@ export const isStripeSubscriptionVercel = (
 	return Boolean(stripeSubscription.metadata?.vercel_installation_id);
 };
 
-/**
- * Checks if a Stripe subscription was canceled immediately (not at end of period).
- *
- * For Stripe dashboard-initiated cancellations:
- * - "Cancel at end of period" → cancel_at_period_end = true → returns false
- * - "Cancel immediately" → cancel_at_period_end = false → returns true
- *
- * Note: This is only reliable for external (non-Autumn) cancellations.
- * Autumn-initiated cancellations use a lock mechanism and are filtered out
- * before this check in the subscription.deleted handler.
- */
 export const wasImmediateStripeCancellation = (
 	stripeSubscription?: Stripe.Subscription,
 ): boolean => {
@@ -106,10 +77,6 @@ export const wasImmediateStripeCancellation = (
 	);
 
 	return differenceInSeconds > 20;
-
-	// // If cancel_at_period_end is true, it was an end-of-period cancellation
-	// // If false, it was an immediate cancellation
-	// return !stripeSubscription.cancel_at_period_end;
 };
 
 export const isStripeSubscriptionPastDue = (
@@ -122,7 +89,6 @@ export const isStripeSubscriptionPastDue = (
 	return stripeSubscription.status === "past_due";
 };
 
-/** True only on the event where the subscription just entered past_due. */
 export const isStripeSubscriptionPastDueTransition = ({
 	stripeSubscription,
 	previousAttributes,
@@ -130,13 +96,10 @@ export const isStripeSubscriptionPastDueTransition = ({
 	stripeSubscription?: Stripe.Subscription;
 	previousAttributes?: { status?: Stripe.Subscription.Status };
 }) => {
-	// previousAttributes only contains fields that changed; status present means
-	// it changed in this event, so reaching past_due is a real transition.
 	const statusChanged = !!previousAttributes && "status" in previousAttributes;
 	return statusChanged && isStripeSubscriptionPastDue(stripeSubscription);
 };
 
-/** Day-of-month only: legacy anchors sit at 12:00 UTC on the 1st and still count. */
 export const isStripeSubscriptionAnchoredToMonthStart = (
 	stripeSubscription: Stripe.Subscription,
 ): boolean =>

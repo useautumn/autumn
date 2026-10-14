@@ -1,5 +1,3 @@
-/** Exact Stripe Price IDs must select and persist the matching plan version. */
-
 import { expect, test } from "bun:test";
 import {
 	filterCustomerProductsByActiveStatuses,

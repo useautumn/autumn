@@ -6,7 +6,6 @@ export type SeedOptions = {
 	features: string[];
 	events: number;
 	days: number;
-	/** Exclusive window end (UTC, hour-aligned); the hour starting here is the "live" hour. */
 	end: Date;
 	seed: number;
 	customers: number;
@@ -20,7 +19,6 @@ export type SeedOptions = {
 	liveHourEvents: number;
 	halfHourEvents: number;
 	batchSize: number;
-	/** Trailing events sent as separate small inserts, so rollups hold unmerged duplicate keys. */
 	smallBatchEvents: number;
 	smallBatchSize: number;
 	concurrency: number;
@@ -169,7 +167,6 @@ export const parseSeedOptions = ({
 	return options;
 };
 
-/** Fields that only change how rows are sent; everything else feeds the run key. */
 const SEND_ONLY_FIELDS = new Set<keyof SeedOptions>([
 	"batchSize",
 	"smallBatchEvents",
@@ -201,7 +198,6 @@ export type BatchRange = {
 	small: boolean;
 };
 
-/** Big batches first, then the trailing small-batch events; boundaries depend only on the options. */
 export const batchRanges = ({
 	options,
 }: {

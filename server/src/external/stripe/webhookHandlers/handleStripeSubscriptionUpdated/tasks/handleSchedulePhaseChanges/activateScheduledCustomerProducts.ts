@@ -13,16 +13,6 @@ import { addBillingChangeTag } from "../../../common/billingChangeTags";
 import { trackCustomerProductUpdate } from "../../../common/trackCustomerProductUpdate";
 import type { StripeSubscriptionUpdatedContext } from "../../stripeSubscriptionUpdatedContext";
 
-/**
- * Activates scheduled customer products that should now be active.
- *
- * Filters by:
- * 1. hasCustomerProductStarted (scheduled + starts_at reached)
- * 2. canActivate (free OR on this subscription OR on this schedule)
- *
- * For free products: uses empty subscription/schedule IDs, unless they ride a $0 placeholder
- * For paid products: uses IDs from stripeSubscription
- */
 export const activateScheduledCustomerProducts = async ({
 	ctx,
 	eventContext,
@@ -69,7 +59,6 @@ export const activateScheduledCustomerProducts = async ({
 			})
 				? stripeSubscriptionSchedule.id
 				: undefined;
-		// A free plan riding the $0 placeholder ends when this subscription is canceled.
 		const staysOnSubscription =
 			!isCustomerProductFree(customerProduct) ||
 			(!!scheduleId && isFreePhasePlaceholderCustomerProduct(customerProduct));

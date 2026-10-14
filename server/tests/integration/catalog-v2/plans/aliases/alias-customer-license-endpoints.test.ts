@@ -1,7 +1,3 @@
-/**
- * Ingress plan-id aliases on customer create, transfer, and license attach.
- */
-
 import { expect, test } from "bun:test";
 import {
 	type ApiEntityV2,

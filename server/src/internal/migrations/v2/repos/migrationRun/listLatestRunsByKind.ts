@@ -24,10 +24,6 @@ export type MigrationRunWithKind = MigrationRun & { kind: MigrationRunKind };
 
 const isActive = inArray(migrationRuns.status, ACTIVE_MIGRATION_RUN_STATUSES);
 
-/**
- * One run per (migration, kind): the active or latest started Run All, and
- * the latest finished dry run and scoped live run, whatever their outcome.
- */
 export const listLatestRunsByKind = async ({
 	ctx,
 	migrationInternalIds,

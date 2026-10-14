@@ -34,7 +34,6 @@ const expectReject = (email: unknown) => {
 };
 
 describe("CustomerDataSchema email — Google Workspace acceptance", () => {
-	// Plain ASCII baselines that were already accepted.
 	test.each([
 		"john@example.com",
 		"john.doe@example.com",
@@ -44,46 +43,30 @@ describe("CustomerDataSchema email — Google Workspace acceptance", () => {
 		expectAccept(email);
 	});
 
-	// Characters Google explicitly allows in usernames that the default
-	// zod email regex rejects.
 	test.each([
-		// Apostrophes
 		["apostrophe in local", "o'brien@example.com"],
-		// Ampersand
 		["ampersand in local", "a&b@example.com"],
-		// Equals sign
 		["equals in local", "a=b@example.com"],
-		// Angle brackets
 		["angle brackets in local", "user<tag>@example.com"],
-		// Plus already works but include for completeness
 		["plus in local", "user+tag@example.com"],
-		// Comma
 		["comma in local", "first,last@example.com"],
-		// Exclamation
 		["exclamation in local", "wow!@example.com"],
-		// Percent
 		["percent in local", "100%@example.com"],
-		// Caret
 		["caret in local", "up^stairs@example.com"],
 	])("accepts Google-allowed special char (%s)", (_label, email) => {
 		expectAccept(email);
 	});
 
 	test.each([
-		// Accented latin
 		["é", "josé@example.com"],
-		// CJK
 		["chinese", "用户@example.com"],
-		// Cyrillic
 		["cyrillic", "пользователь@example.com"],
-		// Arabic
 		["arabic", "مستخدم@example.com"],
 	])("accepts unicode local-part (%s)", (_label, email) => {
 		expectAccept(email);
 	});
 
 	test.each([
-		// Google: "Can begin or end with non-alphanumeric characters except periods (.)"
 		["trailing apostrophe", "user'@example.com"],
 		["trailing ampersand", "user&@example.com"],
 		["leading underscore", "_user@example.com"],
@@ -133,7 +116,6 @@ describe("CustomerDataSchema email — Google Workspace acceptance", () => {
 		expectReject(true);
 	});
 
-	// Regression: every form previously accepted by z.email() must keep parsing.
 	test.each([
 		"simple@example.com",
 		"first.last@example.com",
@@ -149,7 +131,6 @@ describe("CustomerDataSchema email — Google Workspace acceptance", () => {
 		expectAccept(email);
 	});
 
-	// Sanity: surrounding CustomerDataSchema fields keep working.
 	test("schema still validates other fields alongside email", () => {
 		const result = CustomerDataSchema.safeParse({
 			name: "Jane",

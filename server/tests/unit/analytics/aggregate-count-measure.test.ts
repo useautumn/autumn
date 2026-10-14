@@ -1,13 +1,3 @@
-/**
- * Drives the real `aggregate()` with mocked Tinybird pipes to pin the "count" measure.
- *
- * Green-success criteria:
- *  - measure "count" fills each bin from the pipe's event_count, ungrouped and grouped
- *    (including the AUTUMN_RESERVED bucket); the default measure keeps total_value.
- *  - Count queries rank top groups by event count in both the ranking pipe and the
- *    grouped series pipe; sum queries send no rank_by, so their SQL is unchanged.
- *  - A pipe row without event_count fails a count query rather than reporting zeros.
- */
 import { afterAll, beforeEach, expect, mock, test } from "bun:test";
 import { EventsAggregateParamsSchema } from "@autumn/shared";
 import chalk from "chalk";

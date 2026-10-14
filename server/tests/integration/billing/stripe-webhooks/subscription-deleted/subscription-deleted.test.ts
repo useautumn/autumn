@@ -1,17 +1,3 @@
-/**
- * Customer Subscription Deleted Webhook Tests
- *
- * Tests for handling the `customer.subscription.deleted` Stripe webhook event.
- * These tests simulate canceling subscriptions directly through the Stripe client
- * (not through Autumn's cancel API) to verify the webhook handler works correctly.
- *
- * The webhook handler should:
- * - Expire customer products on the deleted subscription
- * - Activate default products if available
- * - Delete any scheduled products in the same group
- * - Void open invoices when org config enabled (void_invoices_on_subscription_deletion)
- */
-
 import { test } from "bun:test";
 import type { ApiCustomerV3 } from "@autumn/shared";
 import {
@@ -28,21 +14,6 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { timeout } from "@/utils/genUtils";
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 1: Cancel subscription directly via Stripe (with default free)
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Init pro ($20/mo) and free (default) products
- * - Attach pro to customer
- * - Cancel subscription directly via Stripe client
- *
- * Expected Result:
- * - Pro is removed
- * - Free default becomes active
- * - No Stripe subscription exists
- */
 test(`${chalk.yellowBright("sub.deleted: cancel active subscription via Stripe (with default)")}`, async () => {
 	const customerId = "sub-deleted-basic";
 
@@ -68,7 +39,6 @@ test(`${chalk.yellowBright("sub.deleted: cancel active subscription via Stripe (
 		actions: [s.attach({ productId: pro.id })],
 	});
 
-	// Verify pro is active
 	const customerAfterAttach =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	await expectProductActive({
@@ -76,20 +46,16 @@ test(`${chalk.yellowBright("sub.deleted: cancel active subscription via Stripe (
 		productId: pro.id,
 	});
 
-	// Get subscription ID from internal customer data
 	const subscriptionId = await getSubscriptionId({
 		ctx,
 		customerId,
 		productId: pro.id,
 	});
 
-	// Cancel subscription directly via Stripe client (simulating external cancellation)
 	await ctx.stripeCli.subscriptions.cancel(subscriptionId);
 
-	// Wait for webhook to process
 	await timeout(12000);
 
-	// Verify pro is gone and free is active
 	const customerAfterCancel =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
@@ -99,7 +65,6 @@ test(`${chalk.yellowBright("sub.deleted: cancel active subscription via Stripe (
 		active: [free.id],
 	});
 
-	// Verify no Stripe subscription exists
 	await expectNoStripeSubscription({
 		db: ctx.db,
 		customerId,
@@ -108,22 +73,6 @@ test(`${chalk.yellowBright("sub.deleted: cancel active subscription via Stripe (
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 2: Cancel subscription after end_of_cycle cancel (via Stripe)
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Init pro ($20/mo) and free (default) products
- * - Attach pro to customer
- * - Cancel pro via Autumn API (end_of_cycle) - Pro is canceling, Free is scheduled
- * - Cancel subscription directly via Stripe client (immediate cancellation)
- *
- * Expected Result:
- * - Pro is removed immediately (not waiting for cycle end)
- * - Free default becomes active
- * - No Stripe subscription exists
- */
 test(`${chalk.yellowBright("sub.deleted: cancel after end_of_cycle via Stripe")}`, async () => {
 	const customerId = "sub-deleted-after-eoc";
 
@@ -149,7 +98,6 @@ test(`${chalk.yellowBright("sub.deleted: cancel after end_of_cycle via Stripe")}
 		actions: [s.attach({ productId: pro.id })],
 	});
 
-	// Verify pro is active
 	const customerAfterAttach =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	await expectProductActive({
@@ -157,14 +105,12 @@ test(`${chalk.yellowBright("sub.deleted: cancel after end_of_cycle via Stripe")}
 		productId: pro.id,
 	});
 
-	// Cancel pro at end of cycle via Autumn API
 	await autumnV1.subscriptions.update({
 		customer_id: customerId,
 		product_id: pro.id,
 		cancel_action: "cancel_end_of_cycle",
 	});
 
-	// Verify pro is canceling and free is scheduled
 	const customerAfterEoc =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	await expectProductCanceling({
@@ -176,22 +122,17 @@ test(`${chalk.yellowBright("sub.deleted: cancel after end_of_cycle via Stripe")}
 		productId: free.id,
 	});
 
-	await timeout(3000); // wait for lock to be released
-
-	// Get subscription ID from internal customer data
+	await timeout(3000);
 	const subscriptionId = await getSubscriptionId({
 		ctx,
 		customerId,
 		productId: pro.id,
 	});
 
-	// Cancel subscription directly via Stripe client (simulating external immediate cancellation)
 	await ctx.stripeCli.subscriptions.cancel(subscriptionId);
 
-	// Wait for webhook to process
 	await timeout(12000);
 
-	// Verify pro is gone and free is active
 	const customerAfterCancel =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
@@ -201,7 +142,6 @@ test(`${chalk.yellowBright("sub.deleted: cancel after end_of_cycle via Stripe")}
 		active: [free.id],
 	});
 
-	// Verify no Stripe subscription exists
 	await expectNoStripeSubscription({
 		db: ctx.db,
 		customerId,
@@ -210,23 +150,6 @@ test(`${chalk.yellowBright("sub.deleted: cancel after end_of_cycle via Stripe")}
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 3: Cancel subscription with scheduled downgrade via Stripe
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Init premium ($50/mo), pro ($20/mo), and free (default) products
- * - Attach premium to customer
- * - Attach pro (downgrade) - Premium is canceling, Pro is scheduled
- * - Cancel subscription directly via Stripe client
- *
- * Expected Result:
- * - Premium is removed
- * - Pro scheduled product is also removed (downgrade cancelled)
- * - Free default becomes active
- * - No Stripe subscription exists
- */
 test(`${chalk.yellowBright("sub.deleted: cancel with scheduled downgrade via Stripe")}`, async () => {
 	const customerId = "sub-deleted-downgrade";
 
@@ -257,11 +180,10 @@ test(`${chalk.yellowBright("sub.deleted: cancel with scheduled downgrade via Str
 		],
 		actions: [
 			s.attach({ productId: premium.id }),
-			s.attach({ productId: pro.id }), // Downgrade: premium canceling, pro scheduled
+			s.attach({ productId: pro.id }),
 		],
 	});
 
-	// Verify premium is canceling and pro is scheduled
 	const customerAfterDowngrade =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	await expectProductCanceling({
@@ -273,20 +195,16 @@ test(`${chalk.yellowBright("sub.deleted: cancel with scheduled downgrade via Str
 		productId: pro.id,
 	});
 
-	// Get subscription ID from internal customer data (from premium product)
 	const subscriptionId = await getSubscriptionId({
 		ctx,
 		customerId,
 		productId: premium.id,
 	});
 
-	// Cancel subscription directly via Stripe client
 	await ctx.stripeCli.subscriptions.cancel(subscriptionId);
 
-	// Wait for webhook to process
 	await timeout(12000);
 
-	// Verify premium and pro are gone, free is active
 	const customerAfterCancel =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
@@ -296,7 +214,6 @@ test(`${chalk.yellowBright("sub.deleted: cancel with scheduled downgrade via Str
 		active: [free.id],
 	});
 
-	// Verify no Stripe subscription exists
 	await expectNoStripeSubscription({
 		db: ctx.db,
 		customerId,
@@ -305,23 +222,6 @@ test(`${chalk.yellowBright("sub.deleted: cancel with scheduled downgrade via Str
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 4: Cancel subscription with add-on via Stripe
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Init pro ($20/mo), free (default), and monthly add-on ($10/mo) products
- * - Attach pro to customer
- * - Attach add-on to customer
- * - Cancel the subscription directly via Stripe client
- *
- * Expected Result:
- * - Pro is removed
- * - Add-on is also removed (on same subscription)
- * - Free default becomes active
- * - No Stripe subscription exists
- */
 test(`${chalk.yellowBright("sub.deleted: cancel subscription with add-on via Stripe")}`, async () => {
 	const customerId = "sub-deleted-addon";
 
@@ -356,7 +256,6 @@ test(`${chalk.yellowBright("sub.deleted: cancel subscription with add-on via Str
 		],
 	});
 
-	// Verify pro and addon are active
 	const customerAfterAttach =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	await expectCustomerProducts({
@@ -364,22 +263,17 @@ test(`${chalk.yellowBright("sub.deleted: cancel subscription with add-on via Str
 		active: [pro.id, addon.id],
 	});
 
-	// Get subscription ID from internal customer data (from pro product)
 	const subscriptionId = await getSubscriptionId({
 		ctx,
 		customerId,
 		productId: pro.id,
 	});
 
-	await timeout(5000); // wait for lock to be released
-
-	// Cancel subscription directly via Stripe client
+	await timeout(5000);
 	await ctx.stripeCli.subscriptions.cancel(subscriptionId);
 
-	// Wait for webhook to process
 	await timeout(12000);
 
-	// Verify pro and addon are gone, free is active
 	const customerAfterCancel =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
@@ -389,7 +283,6 @@ test(`${chalk.yellowBright("sub.deleted: cancel subscription with add-on via Str
 		active: [free.id],
 	});
 
-	// Verify no Stripe subscription exists
 	await expectNoStripeSubscription({
 		db: ctx.db,
 		customerId,

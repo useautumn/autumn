@@ -7,10 +7,6 @@ import { editedBaseInternalIds } from "@/internal/catalogV2/actions/updateCatalo
 import { initVariantPlanParams } from "./initVariantPlanParams";
 import { variantCreateTarget } from "./variantCreateTarget";
 
-/**
- * variants[] entries naming a row the catalog does not have: a v1 create, or a
- * new version of the variant plan anchored to this base row. Existing rows are edits.
- */
 export const deriveVariantCreates = ({
 	upsert,
 	projectedProductStatesContext,
@@ -48,15 +44,12 @@ export const deriveVariantCreates = ({
 						...(target.previous
 							? { name: variant.name ?? target.previous.name }
 							: {}),
-						// A minted version takes `active` from the base row it hangs off;
-						// the previous row may still be pending in this same push.
 						...(target.version > 1
 							? { active: upsert.row.nextFullProduct.active }
 							: {}),
 						...(target.newVersionSlug
 							? { new_version_slug: target.newVersionSlug }
 							: {}),
-						// Variant creates inherit the base's Stripe creation opt-out.
 						...(upsert.createInStripe !== undefined
 							? { create_in_stripe: upsert.createInStripe }
 							: {}),

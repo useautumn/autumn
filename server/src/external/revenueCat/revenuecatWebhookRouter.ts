@@ -36,7 +36,6 @@ export const revenuecatWebhookRouter = new Hono<RevenueCatWebhookHonoEnv>();
 revenuecatWebhookRouter.post(
 	"/:orgId/:env",
 	revenuecatSeederMiddleware,
-	// Before revenuecatLogMiddleware so its logger rebuild drops analytics' generic auth_type.
 	analyticsMiddleware,
 	revenuecatLogMiddleware,
 	revenuecatWebhookRefreshMiddleware,
@@ -50,8 +49,6 @@ revenuecatWebhookRouter.post(
 		try {
 			const webhookSecret = getRevenuecatWebhookSecret({ org, env });
 
-			// Missing secret must fail closed — otherwise an unauthenticated
-			// request (no header) matches an unconfigured secret (both undefined).
 			if (!webhookSecret || Authorization !== webhookSecret) {
 				logger.error("Invalid authorization for RevenueCat webhook", {
 					secretConfigured: Boolean(webhookSecret),
@@ -60,7 +57,6 @@ revenuecatWebhookRouter.post(
 				return c.json({ error: "Unauthorized" }, 401);
 			}
 
-			// Set event type in context for logging in refresh middleware
 			ctx.revenuecatEventType = body.event.type;
 
 			switch (body.event.type) {

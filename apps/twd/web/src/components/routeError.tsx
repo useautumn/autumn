@@ -20,7 +20,6 @@ const describe = (error: unknown) => {
 	};
 };
 
-/** Route errorElement: replaces react-router's developer screen. */
 export const RouteError = () => {
 	const error = useRouteError();
 	const { title, message } = describe(error);

@@ -1,12 +1,3 @@
-/**
- * Copied verbatim into the CLI by the generator, so this file imports nothing:
- * the rule vocabulary and what each rule means live together here on purpose.
- *
- * Linting locally, before any network call, is what lets a config report every
- * problem at once — a round trip per mistake is what makes one painful to write.
- */
-
-/** A warning is reported but never refuses the config. */
 export type LintIssue = { path: string; message: string; warning?: true };
 
 export class ConfigError extends Error {
@@ -25,7 +16,6 @@ export class ConfigError extends Error {
 	}
 }
 
-/** Every one of these is a zod call that survived into the spec. */
 export type FieldConstraints = {
 	readonly enum?: readonly unknown[];
 	readonly minimum?: number;
@@ -39,7 +29,6 @@ export type FieldConstraints = {
 	readonly pattern?: string;
 };
 
-/** Rules the spec cannot express. Data, never predicates: they are serialised. */
 export type LintRule =
 	| {
 			readonly kind: "requiredWhen";
@@ -56,33 +45,24 @@ export type LintRule =
 			readonly because: string;
 	  }
 	| {
-			/** At most one of `fields` may be set. */
 			readonly kind: "mutex";
 			readonly fields: readonly string[];
 			readonly because: string;
 	  }
 	| {
-			/** Precisely one of `fields` must be set. */
 			readonly kind: "exactlyOne";
 			readonly fields: readonly string[];
 			readonly because: string;
 	  }
 	| {
-			/** No two entries share `field` (or the first stated path), paired with
-			 * `alongside` when given. An omitted `alongside` is not keyed as a default. */
 			readonly kind: "unique";
 			readonly field: string | readonly string[];
 			readonly alongside?: string;
 			readonly absentMeans?: string;
-			/** Compare as an env var name segment: uppercased, `-` read as `_`. */
 			readonly asEnvName?: true;
 			readonly because: string;
 	  }
 	| {
-			/** No two entries sharing `groupBy` may link the same entry of their
-			 * own `collection`. A link is identified by `identity` plus the first
-			 * `pins` field it states; the entries themselves are named by
-			 * `namedBy`, reading as `absentMeans` when they state none. */
 			readonly kind: "linkedOnce";
 			readonly groupBy: string;
 			readonly namedBy: string;
@@ -93,7 +73,6 @@ export type LintRule =
 			readonly because: string;
 	  }
 	| {
-			/** Among the entries sharing `groupBy`, exactly one has `field: true`. */
 			readonly kind: "exactlyOneActive";
 			readonly groupBy: string;
 			readonly field: string;
@@ -101,10 +80,6 @@ export type LintRule =
 			readonly because: string;
 	  }
 	| {
-			/** `field` names an entry of top-level collection `in` by `matching`.
-			 * An array-valued `field` is checked element-wise; a list of `matching`
-			 * paths matches on whichever the candidate states. Skipped when that
-			 * collection is absent: absent means "not mine". */
 			readonly kind: "exists";
 			readonly field: string;
 			readonly in: string;
@@ -112,16 +87,12 @@ export type LintRule =
 			readonly because: string;
 	  }
 	| {
-			/** A stated `field` must be a non-empty list or map; `null` is not checked here. */
 			readonly kind: "nonEmpty";
 			readonly field: string;
-			/** Reported without refusing the config. */
 			readonly warning?: true;
 			readonly because: string;
 	  }
 	| {
-			/** Each name in list `field` should be one of `values`; any other is
-			 * reported, as a warning when `warning` is set. */
 			readonly kind: "knownValues";
 			readonly field: string;
 			readonly values: readonly string[];
@@ -129,21 +100,17 @@ export type LintRule =
 			readonly because: string;
 	  }
 	| {
-			/** A stated `field` must be a plain value, never an object map. */
 			readonly kind: "notMap";
 			readonly field: string;
 			readonly because: string;
 	  }
 	| {
-			/** List `field` holds names starting with `prefix` only, or none of them. */
 			readonly kind: "uniformPrefix";
 			readonly field: string;
 			readonly prefix: string;
 			readonly because: string;
 	  }
 	| {
-			/** A stated string `field`, or every value of a map `field`, must not
-			 * satisfy the named `check` the caller supplies to `lintDocument`. */
 			readonly kind: "rejects";
 			readonly field: string;
 			readonly check: string;
@@ -157,7 +124,6 @@ export type LintRule =
 			readonly because: string;
 	  }
 	| {
-			/** `field` must equal `mustBe` when `when` is `equals`. */
 			readonly kind: "valueWhen";
 			readonly when: string;
 			readonly equals: string;
@@ -166,8 +132,6 @@ export type LintRule =
 			readonly because: string;
 	  }
 	| {
-			/** `field` names a row of top-level collection `in` by `matching`;
-			 * that row's `target` must equal `equals`. Skipped when `when` is unset. */
 			readonly kind: "targetHas";
 			readonly when: string;
 			readonly field: string;
@@ -178,8 +142,6 @@ export type LintRule =
 			readonly because: string;
 	  }
 	| {
-			/** The entry is refused when it matches every `whenEquals`,
-			 * `whenStated` and `whenUnstated` path. */
 			readonly kind: "refusedWhen";
 			readonly whenEquals: Readonly<Record<string, string>>;
 			readonly whenStated: readonly string[];
@@ -187,9 +149,6 @@ export type LintRule =
 			readonly because: string;
 	  }
 	| {
-			/** `field` names a row of top-level collection `in` by `matching`. The
-			 * entry is refused when that row's `target` equals `equals` and the entry
-			 * matches every `whenEquals`, `whenStated` and `whenUnstated` path. */
 			readonly kind: "targetForbids";
 			readonly field: string;
 			readonly in: string;
@@ -198,18 +157,11 @@ export type LintRule =
 			readonly equals: string | boolean;
 			readonly whenEquals: Readonly<Record<string, string>>;
 			readonly whenStated: readonly string[];
-			/** At least one of these is stated; a `*` segment matches any list element. */
 			readonly whenAnyStated?: readonly string[];
 			readonly whenUnstated: readonly string[];
 			readonly because: string;
 	  }
 	| {
-			/** `field` names a row of top-level collection `in` by `matching`,
-			 * shown in the message as `label`; that row's `target` must not be
-			 * `true`. Skipped when the entry's own parent already has
-			 * `parentGuard` true — an archived plan may reference whatever
-			 * archived features it likes. `parentLabel`/`parentIdField` name
-			 * that parent in the message. */
 			readonly kind: "targetLacks";
 			readonly field: string;
 			readonly in: string;
@@ -222,37 +174,27 @@ export type LintRule =
 			readonly because: string;
 	  };
 
-/** The part of a node's rules that an anyOf/oneOf branch can override. */
 export type ShapeRules = {
 	readonly required?: readonly string[];
-	/** Fields the CLI keeps out of a config; stating one is an error. */
 	readonly hidden?: readonly string[];
 	readonly fields?: Readonly<Record<string, FieldConstraints>>;
 };
 
 export type NodeRules = ShapeRules & {
-	/** How an entry is named in a breadcrumb; the key name when absent. */
 	readonly label?: string;
-	/** Field whose value names one entry, e.g. `featureId`. */
 	readonly idField?: string;
-	/** Record keys are user data; the spec constrains them via `propertyNames`. */
 	readonly keys?: FieldConstraints;
-	/** A record's scalar values, constrained by its `additionalProperties`. */
 	readonly values?: FieldConstraints;
 	readonly rules?: readonly LintRule[];
-	/** anyOf/oneOf alternatives, chosen by the value of `on`. */
 	readonly variants?: {
 		readonly on: string;
 		readonly byValue: Readonly<Record<string, ShapeRules>>;
-		/** The branch(es) that do not name `on` at all. */
 		readonly fallback?: ShapeRules;
 	};
 };
 
-/** Keyed by fixture path with array indices elided — `features.creditSchema`. */
 export type LintRules = Readonly<Record<string, NodeRules>>;
 
-/** Predicates a `rejects` rule names: code the serialised rules cannot carry. */
 export type LintChecks = Readonly<Record<string, (value: string) => boolean>>;
 
 export type LintHints = {
@@ -273,8 +215,6 @@ type Walk = {
 const isEntry = (value: unknown): value is Entry =>
 	value !== null && typeof value === "object" && !Array.isArray(value);
 
-/** Dotted lookup, so a rule can name a field inside a union branch; a numeric
- * segment indexes an array. */
 const valueAtPath = ({
 	entry,
 	path,
@@ -294,7 +234,6 @@ const valueAtPath = ({
 	return current;
 };
 
-/** The first of `paths` the entry states — a union item is named by its branch. */
 const firstValueAtPaths = ({
 	entry,
 	paths,
@@ -491,7 +430,6 @@ const COMPARE = {
 	">=": { holds: (a: number, b: number) => a >= b, words: "at least" },
 } as const;
 
-/** Whether an entry matches a rule's `when*` paths; zero, false and null count as unstated. */
 const entryMatchesWhen = ({
 	entry,
 	rule,
@@ -736,7 +674,6 @@ const checkUnique = ({
 			rule.alongside === undefined ? normalized : `${normalized}@${pair}`;
 		const first = seen.get(composite);
 		if (rule.asEnvName && first !== undefined) {
-			// Identical values are the plain unique rule's to report.
 			if (first !== value)
 				issues.push({
 					path: render([...trail, crumbFor({ node, key, entry, index })]),
@@ -758,12 +695,8 @@ const checkUnique = ({
 	}
 };
 
-/** A pin's identity and how it reads: `version: 1` and `versionSlug: "v1"`
- * both display as `v1` but can name different rows, so the field is part of
- * what the link is keyed by. */
 type Pin = { key: string; display: string };
 
-/** The first pin an entry states — what names the row it addresses. */
 const pinOf = ({
 	entry,
 	pins,
@@ -811,8 +744,6 @@ const checkLinkedOnce = ({
 				continue;
 			}
 			const at = render([...trail, crumbFor({ node, key, entry, index })]);
-			// Nested collections have no unique rule of their own, so one entry
-			// naming a row twice is this rule's to report.
 			if (previous.index === index) {
 				issues.push({
 					path: at,
@@ -820,7 +751,6 @@ const checkLinkedOnce = ({
 				});
 				continue;
 			}
-			// Two entries naming one version is the unique rule's error, not this one.
 			if (previous.owner === owner) continue;
 			issues.push({
 				path: at,
@@ -830,7 +760,6 @@ const checkLinkedOnce = ({
 	}
 };
 
-/** Among the rows sharing a group, exactly one carries `field: true`. */
 const checkExactlyOneActive = ({
 	entries,
 	rule,
@@ -853,8 +782,6 @@ const checkExactlyOneActive = ({
 	for (const [group, members] of rowsByGroup) {
 		const active = members.filter((member) => member.active);
 		if (active.length === 1) continue;
-		// Report where the reader can act: the first row when none is active,
-		// the second active row when too many are.
 		const at = active.length === 0 ? members[0] : active[1];
 		if (at === undefined) continue;
 		const versions = `${members.length} version${members.length === 1 ? "" : "s"}`;
@@ -870,11 +797,6 @@ const checkExactlyOneActive = ({
 	}
 };
 
-/**
- * A group with no active row whose every row already has a stable id is what
- * a half-done rename looks like: the versions moved to the new id all came
- * from the server, and the live one stayed behind under the old id.
- */
 const renameHint = <T extends { active: boolean; entry: Entry }>({
 	active,
 	members,
@@ -890,7 +812,6 @@ const renameHint = <T extends { active: boolean; entry: Entry }>({
 	return " If you are renaming a plan, change the planId on every one of its versions, not just some.";
 };
 
-/** Rules about the collection as a whole, reported on the offending entry. */
 const checkCollection = ({
 	entries,
 	node,
@@ -973,7 +894,6 @@ const walkEntry = ({
 	}
 };
 
-/** Array indices are elided from the path, so one rule covers every element. */
 const walkValue = ({
 	value,
 	path,
@@ -1017,8 +937,6 @@ const walkValue = ({
 
 	if (!isEntry(value)) return;
 
-	// A record's keys are the user's, checked against `propertyNames`; its
-	// values are still ours, one level down at `path.*`.
 	if (walk.hints.recordPaths.has(path)) {
 		const keys = walk.rules[path]?.keys;
 		const values = walk.rules[path]?.values;
@@ -1056,7 +974,6 @@ const walkValue = ({
 	walkEntry({ entry: value, path, trail: [...trail, key], walk, parent });
 };
 
-/** Every issue in the document, in document order. */
 export const lintDocument = ({
 	document,
 	rules,

@@ -5,16 +5,10 @@ import { tinybirdIngest } from "../initTinybird.js";
 import { isTinybirdConfigured } from "../tinybirdUtils.js";
 import { mapToTinybirdEvent } from "./mapEvent.js";
 
-/** Generate a unique error ID for tracking */
 const generateErrorId = (): string => {
 	return `TB_ERR_${crypto.randomBytes(8).toString("hex").toUpperCase()}`;
 };
 
-/**
- * Send EventInsert[] to Tinybird using zod-bird client.
- * The zod-bird client has built-in retry logic (10 retries with exponential backoff).
- * Does not throw - logs errors instead (the logger reports bugs to Sentry).
- */
 export const sendEventsToTinybird = async ({
 	events,
 	logger,

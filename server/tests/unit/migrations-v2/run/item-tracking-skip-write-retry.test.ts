@@ -1,5 +1,3 @@
-// Contract: a customer skipped after a connection drop must not keep its `running` claim
-// when the skip write itself hits a transient DB error.
 import { afterEach, describe, expect, spyOn, test } from "bun:test";
 import { contexts } from "@tests/utils/fixtures/db/contexts";
 import { withMigrationItemTracking } from "@/internal/migrations/v2/actions/migrationItem/withMigrationItemTracking.js";

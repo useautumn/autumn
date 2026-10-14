@@ -15,7 +15,6 @@ export const computeFieldUpdates = ({
 	const updates: CusProductFieldUpdates = {};
 
 	if (params.processor_subscription_id !== undefined) {
-		// unsets processor subscription id if it is set to a new value
 		updates.subscription_ids = params.processor_subscription_id
 			? [params.processor_subscription_id]
 			: [];

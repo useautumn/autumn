@@ -87,8 +87,6 @@ export const getProductWithSupportedPlanFormValues = ({
 
 	const items = formValues.items ?? baseProduct.items;
 
-	// Custom items (e.g. a per-customer base price absent from the catalog plan)
-	// can change planType/basePriceType, so derive them from the merged items.
 	const { planType, basePriceType } = productV2ToFrontendProduct({
 		product: { ...baseProduct, items } as ProductV2,
 	});

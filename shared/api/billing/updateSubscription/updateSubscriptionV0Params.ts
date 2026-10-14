@@ -20,7 +20,6 @@ import {
 
 export const ExtUpdateSubscriptionV0ParamsSchema =
 	BillingParamsBaseV0Schema.extend({
-		// Product identification (optional for update subscription - can target by customer_product_id)
 		product_id: z.string().nullish(),
 
 		invoice: z.boolean().optional(),
@@ -30,14 +29,8 @@ export const ExtUpdateSubscriptionV0ParamsSchema =
 		net_terms_days: z.number().int().positive().optional(),
 		payment_method_types: z.array(InvoicePaymentMethodSchema).min(1).optional(),
 
-		// New
-
-		// Cancel action: 'cancel_immediately' | 'cancel_end_of_cycle' | 'uncancel'
 		cancel_action: CancelActionSchema.optional(),
 
-		// Billing behavior for subscription updates:
-		// - 'prorate_immediately' (default): Invoice line items are charged immediately
-		// - 'next_cycle_only': Do NOT create any charges due to the update
 		billing_behavior: BillingBehaviorSchema.optional(),
 		refund_last_payment: RefundLastPaymentSchema.optional(),
 		subscription_params: SubscriptionParamsSchema.optional(),
@@ -108,7 +101,6 @@ export const UpdateSubscriptionV0ParamsSchema =
 			(data) => {
 				if (data.cancel_action !== "cancel_end_of_cycle") return true;
 
-				// Cannot pass free_trial when cancel_action is 'cancel_end_of_cycle'
 				return data.free_trial === undefined;
 			},
 			{

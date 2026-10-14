@@ -38,7 +38,6 @@ export function TagSelect({
 	const removeTag = (tagValue: string, e: React.MouseEvent) => {
 		e.preventDefault();
 		e.stopPropagation();
-		// Prevent the select from toggling
 		e.nativeEvent.stopImmediatePropagation();
 		onChange(value.filter((v) => v !== tagValue));
 	};

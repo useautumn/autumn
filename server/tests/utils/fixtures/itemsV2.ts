@@ -126,7 +126,6 @@ const consumableMessages = ({ amount = 1 }: { amount?: number } = {}) => ({
 	},
 });
 
-/** Allocated usage-based — public V2 forbids top-level proration on UsageBased. */
 const allocatedUsers = ({
 	amount = 10,
 	included = 0,
@@ -197,11 +196,6 @@ const consumableWords = ({
 	},
 });
 
-/**
- * Tiered prepaid messages - tier `to` values INCLUDE the included amount.
- * Default: included=100, tiers=[{to:600, amount:10}, {to:"inf", amount:5}]
- * (internally stored as [{to:500}, {to:"inf"}] after subtracting included)
- */
 const tieredPrepaidMessages = ({
 	included = 100,
 	billingUnits = 100,
@@ -224,11 +218,6 @@ const tieredPrepaidMessages = ({
 	},
 });
 
-/**
- * Volume prepaid messages - tier `to` values INCLUDE the included amount.
- * Entire quantity is charged at whichever single tier it falls into.
- * Default: included=100, tiers=[{to:600, amount:10}, {to:"inf", amount:5}]
- */
 const volumePrepaidMessages = ({
 	included = 100,
 	billingUnits = 100,

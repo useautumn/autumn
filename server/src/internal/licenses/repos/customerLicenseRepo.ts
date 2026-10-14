@@ -28,8 +28,6 @@ const getByParentAndLicense = async ({
 		),
 	});
 
-/** All of a customer's pools, including ones whose parent is no longer live —
- * those are exactly the rows transitions operate on. */
 const listByInternalCustomerId = async ({
 	db,
 	internalCustomerId,
@@ -88,10 +86,6 @@ const listByParentCustomerProductIds = async ({
 	});
 };
 
-/**
- * Which of the given links a customer still points at. LATERAL LIMIT 1 is
- * load-bearing: one index seek per id, not every matching customer_licenses row.
- */
 const listReferencedPlanLicenseIds = async ({
 	db,
 	planLicenseIds,
@@ -116,8 +110,6 @@ const listReferencedPlanLicenseIds = async ({
 	return new Set(rows.map((row) => row.plan_license_id));
 };
 
-/** Idempotent ensure + granted sync for a (parent, license) balance row.
- * Stamps plan_license_id when provided so stale links converge too. */
 const upsertGranted = async ({
 	db,
 	internalCustomerId,
@@ -137,7 +129,6 @@ const upsertGranted = async ({
 		.insert(customerLicenses)
 		.values({
 			id: generateId("cus_lic"),
-			// Conflicting rows keep their link; only genuinely new pools mint.
 			link_id: generateId("cus_lic_link"),
 			internal_customer_id: internalCustomerId,
 			parent_customer_product_id: parentCustomerProductId,
@@ -152,8 +143,6 @@ const upsertGranted = async ({
 				customerLicenses.license_internal_product_id,
 			],
 			set: {
-				// Granted moves shift remaining by the same delta so assigned
-				// assignments stay accounted for.
 				remaining: sql`${customerLicenses.remaining} + (${granted} - ${customerLicenses.granted})`,
 				granted,
 				...(planLicenseId ? { plan_license_id: planLicenseId } : {}),
@@ -164,8 +153,6 @@ const upsertGranted = async ({
 	return row;
 };
 
-/** Insert-time pool creation (initFullCustomerProduct). Conflicts are left to
- * upsertGranted/reconcile — a concurrent take may have created the row. */
 const insertMany = async ({
 	db,
 	rows,
@@ -177,8 +164,6 @@ const insertMany = async ({
 	await db.insert(customerLicenses).values(rows).onConflictDoNothing();
 };
 
-/** Atomically takes `count` assignments; rejected (returns undefined) when
- * capacity is insufficient. */
 const takeAssignment = async ({
 	db,
 	customerLicenseId,
@@ -237,9 +222,6 @@ const releaseAssignments = async ({
 	return row;
 };
 
-/** Converges the pool to an absolute paid-seat count: granted shifts by
- * the same delta; remaining follows and may go NEGATIVE (over-allocated
- * until enough seats release — reconcile owns the truthful arithmetic). */
 const setPaidQuantity = async ({
 	db,
 	customerLicenseId,
@@ -262,8 +244,6 @@ const setPaidQuantity = async ({
 	return row;
 };
 
-/** Repoints in place; negative remaining preserves over-allocation for
- * assignment reconciliation. Same row and link, so seats stay attached. */
 const repointDefinition = async ({
 	db,
 	customerLicenseId,
@@ -312,7 +292,6 @@ const releaseAssignmentsByLinkId = async ({
 	return row;
 };
 
-/** Self-heal: remaining = granted - live assignment count. */
 const setRemaining = async ({
 	db,
 	customerLicenseId,

@@ -22,7 +22,6 @@ const NO_TEMPLATE_VALUE = "none";
 export interface InvoiceSettings {
 	templateId: string | null;
 	netTermsDays: number | null;
-	/** Null keeps the org's allowed payment methods. */
 	paymentMethodTypes: InvoicePaymentMethod[] | null;
 }
 

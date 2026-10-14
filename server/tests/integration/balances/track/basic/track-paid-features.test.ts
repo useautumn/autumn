@@ -14,10 +14,6 @@ import { pollUntil } from "@tests/utils/genUtils.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 
-// ═══════════════════════════════════════════════════════════════════
-// TRACK-PAID1: Prepaid tracking (no overage allowed)
-// ═══════════════════════════════════════════════════════════════════
-
 test.concurrent(
 	`${chalk.yellowBright("track-paid1: prepaid tracking with no overage allowed")}`,
 	async () => {
@@ -88,8 +84,6 @@ test.concurrent(
 			usage: 4,
 		});
 
-		// Track deductions reach Postgres asynchronously, so poll the uncached read
-		// rather than betting on a fixed sleep.
 		const customerNonCached = await pollUntil({
 			fetch: async () =>
 				(await autumnV2.customers.get(customerId, {
@@ -107,10 +101,6 @@ test.concurrent(
 		});
 	},
 );
-
-// ═══════════════════════════════════════════════════════════════════
-// TRACK-PAID2: Pay-per-use/arrear tracking (overage allowed with usage limit)
-// ═══════════════════════════════════════════════════════════════════
 
 test.concurrent(
 	`${chalk.yellowBright("track-paid2: pay-per-use tracking with overage allowed and usage limit")}`,

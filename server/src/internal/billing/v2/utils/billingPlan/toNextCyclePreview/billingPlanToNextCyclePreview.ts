@@ -75,8 +75,6 @@ const outgoingPlansRunToBoundary = ({
 			timestampsMatch(customerProduct.ended_at, renewalBoundaryMs),
 	);
 
-/** A change on a shared subscription at renewal doesn't end it, so the plans
- * that stay on that subscription still renew at the boundary. */
 const getPlansRenewingThroughChange = ({
 	event,
 	customerProducts,
@@ -162,8 +160,6 @@ const trialEndStubAnchorMs = ({
 	return anchorMs > nextCycleStart ? anchorMs : undefined;
 };
 
-/** Plans the subscription's next invoice bills: on it, on its schedule, or inserted by
- * this plan and not yet linked to any subscription. */
 const isCustomerProductBilledOnNextInvoice = ({
 	customerProduct,
 	stripeSubscriptionId,
@@ -202,7 +198,6 @@ export const billingPlanToNextCyclePreview = ({
 	ctx: AutumnContext;
 	billingContext: BillingContext;
 	billingPlan: BillingPlan;
-	/** Scope the preview to the plans this Stripe subscription's next invoice bills. */
 	nextCycleStripeSubscriptionId?: string;
 	options?: NextCycleLineItemOptions;
 }): NextCyclePreviewResult => {
@@ -240,7 +235,6 @@ export const billingPlanToNextCyclePreview = ({
 			cp(customerProduct).scheduled().valid &&
 			!hasCustomerProductStarted(customerProduct, {
 				nowMs: billingContext.currentEpochMs,
-				// toleranceMs: 0,
 			});
 		return isPaidRecurring || startsInFuture;
 	});
@@ -315,7 +309,6 @@ export const billingPlanToNextCyclePreview = ({
 			event,
 			customerProducts,
 		});
-		// Mirrors the renewal path: only prices whose period starts at the boundary.
 		const renewRemainingPlans = {
 			customerProducts: renewingCustomerProducts,
 			direction: "charge" as const,

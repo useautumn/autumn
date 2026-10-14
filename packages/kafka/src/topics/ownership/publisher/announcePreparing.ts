@@ -4,7 +4,6 @@ import type {
 	OwnershipReadinessContext,
 } from "./types/ownershipPublisher.js";
 
-/** Sent through the plain producer like `ready`: nothing about preparing may fence the owner. */
 export async function announcePreparing({
 	ctx,
 	topic,

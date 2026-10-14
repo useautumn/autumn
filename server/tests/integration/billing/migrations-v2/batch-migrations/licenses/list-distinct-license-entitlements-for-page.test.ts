@@ -1,16 +1,3 @@
-/**
- * Distinct live license entitlement defs are page-bounded: only this page's
- * assigned seats, this license product, this feature. Custom ids with the
- * same definition count as their own def; unassigned seats and out-of-scope
- * parents do not.
- *
- * Contract:
- *   - assigned seats surface the catalog entitlement id
- *   - a cloned same-definition id on one assignment is a second distinct def
- *   - unassigned seats and a mismatched parent scope are excluded
- *   - over the cap throws rather than scanning on
- */
-
 import { expect, test } from "bun:test";
 import { customerEntitlements, EntInterval } from "@autumn/shared";
 import { listDistinctLicenseEntitlementsForPage } from "@/internal/migrations/v2/batchOperations/actions/replaceLicenseEntitlementsForPage/listDistinctLicenseEntitlementsForPage.js";

@@ -3,7 +3,6 @@ import { useState } from "react";
 import type { AtomSectionState } from "./AtomStepper";
 import { hasAtomStack, isAtomConnected, isAtomSetUp } from "./atomDisplay";
 
-/** The steps a person edits before the stack exists; the rest follow alien. */
 type AtomEditableStep = "cloud" | "account";
 
 const editableStepState = ({
@@ -22,7 +21,6 @@ const editableStepState = ({
 	return isReached ? "done" : "upcoming";
 };
 
-/** While the org edits its settings, the deploy waits on the new link. */
 const deployState = ({
 	cache,
 	openStep,
@@ -38,7 +36,6 @@ const deployState = ({
 const verifyState = (cache: ApiByocCache | null): AtomSectionState =>
 	cache?.status === ByocCacheStatus.Ready ? "active" : "upcoming";
 
-/** Which step is open and where every step stands; a page without an Atom always starts at cloud and size. */
 export const useAtomSetupFlow = ({ cache }: { cache: ApiByocCache | null }) => {
 	const [chosenStep, setOpenStep] = useState<AtomEditableStep | null>(null);
 	const openStep = chosenStep ?? (cache ? null : "cloud");
@@ -49,10 +46,8 @@ export const useAtomSetupFlow = ({ cache }: { cache: ApiByocCache | null }) => {
 
 	return {
 		setOpenStep,
-		/** Set only by Finish, so the flow stays on verify through checks arriving, polls and reloads. */
 		isSetUp: isAtomSetUp(cache),
 		hasStack,
-		/** The one step whose body shows; a ready Atom shows verify even while it connects. */
 		openStep: openStep ?? (verify === "active" ? "verify" : "deploy"),
 		states: {
 			cloud: editableStepState({

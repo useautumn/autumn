@@ -20,11 +20,9 @@ import { withdrawnScheduledStarts } from "./withdrawnScheduledStarts";
 export type SetPlansReview = {
 	phases: { plans: SetPlansPreviewPlan[]; planChanges: CustomerPlanChange[] }[];
 	removedPhases: SetPlansPreviewRemovedPhase[];
-	/** Saved scheduled plans the request withdraws before they start. */
 	withdrawnStarts: FullCusProduct[];
 };
 
-/** The diff as preview rows: each request phase compared with itself, and the saved phases it removes. */
 export const diffToReview = ({
 	saved,
 	diff,

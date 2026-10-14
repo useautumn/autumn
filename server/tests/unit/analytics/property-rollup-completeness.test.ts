@@ -43,8 +43,6 @@ const totals = ({
 test(`${chalk.yellowBright(
 	"property rollup: a result matching the ungated totals is complete",
 )}`, () => {
-	// StackOne's accountId control: every value is short enough to survive the
-	// gate, so the grouped sums reconcile exactly against the totals.
 	const rows = [
 		row({ groupValue: "2GwnUDjVN8TZtba2AqvCR", totalValue: 18_686 }),
 		row({ groupValue: "aRq2ZOEzeItvNlnn8OPFF", totalValue: 11_916 }),
@@ -61,8 +59,6 @@ test(`${chalk.yellowBright(
 test(`${chalk.yellowBright(
 	"property rollup: a partially gate-dropped key is detected as incomplete",
 )}`, () => {
-	// StackOne's projectId: short slugs survive the gate, 32+ char opaque ids are
-	// dropped at insert, so a NON-EMPTY result still under-reports by ~93%.
 	const rows = [
 		row({ groupValue: "qa-71607", totalValue: 970 }),
 		row({ groupValue: "give-jeran-a-project-92237", totalValue: 284 }),
@@ -88,7 +84,6 @@ test(`${chalk.yellowBright(
 test(`${chalk.yellowBright(
 	"property rollup: a fully gate-dropped key is still detected as incomplete",
 )}`, () => {
-	// mastra's all-UUID project_id: the rollup has zero rows for the key.
 	expect(
 		groupedResultIsIncomplete({
 			rows: [],
@@ -143,8 +138,6 @@ test(`${chalk.yellowBright(
 test(`${chalk.yellowBright(
 	"property rollup: grouped sums exceeding totals are not a shortfall",
 )}`, () => {
-	// Late-arriving events can land in the rollup before the totals rollup sees
-	// them; retrying would not recover anything.
 	const rows = [row({ groupValue: "qa-71607", totalValue: 31_000 })];
 
 	expect(
@@ -158,9 +151,6 @@ test(`${chalk.yellowBright(
 test(`${chalk.yellowBright(
 	"property rollup: per-bin top-N truncation is not a shortfall",
 )}`, () => {
-	// The pipe relabels groups beyond max_groups to AUTUMN_RESERVED rather than
-	// dropping them, so a truncated result still carries the full mass. If a pipe
-	// change ever drops them instead, every truncated query would retry ungated.
 	const rows = [
 		row({ groupValue: "qa-71607", totalValue: 722 }),
 		row({ groupValue: "AUTUMN_RESERVED", totalValue: 29_880 }),
@@ -177,8 +167,6 @@ test(`${chalk.yellowBright(
 test(`${chalk.yellowBright(
 	"property rollup: the ungated retry only wins when it reports more",
 )}`, () => {
-	// The retry probes whether the shortfall was gate loss or an absent property;
-	// an absent property returns the same mass, so the gated result is kept.
 	const gated = [row({ groupValue: "qa-71607", totalValue: 2124 })];
 	const ungatedWithGateLoss = [
 		row({ groupValue: "qa-71607", totalValue: 2124 }),
@@ -199,9 +187,6 @@ test(`${chalk.yellowBright(
 test(`${chalk.yellowBright(
 	"property rollup: gate-dropped groups whose values cancel are still detected",
 )}`, () => {
-	// Negative values are mainstream (117 orgs in a 7d prod sample), so dropped
-	// groups can net to zero and leave the sum comparison blind. The count can't
-	// cancel, so it catches them.
 	const rows = [
 		row({ groupValue: "qa-71607", totalValue: 500, eventCount: 5 }),
 	];
@@ -271,8 +256,6 @@ test(`${chalk.yellowBright(
 test(`${chalk.yellowBright(
 	"property rollup: falls back to sum-only when the pipe omits counts",
 )}`, () => {
-	// A deployment predating the count column must not report every result as
-	// incomplete just because the field is missing.
 	const rows = [row({ groupValue: "qa-71607", totalValue: 500 })];
 
 	expect(
@@ -325,9 +308,6 @@ test(`${chalk.yellowBright(
 test(`${chalk.yellowBright(
 	"property rollup: a shortfall below the retry tolerance is not worth an ungated scan",
 )}`, () => {
-	// A ten-month day-binned group-by whose gated rollup is 0.009% short: the
-	// ungated raw-events retry reads hundreds of millions of rows and times out,
-	// and no dashboard can see the difference.
 	const rows = [
 		row({
 			groupValue: "proxy_usage",
@@ -347,14 +327,12 @@ test(`${chalk.yellowBright(
 			coverage: { action_calls: 176_483_286 },
 		}),
 	).toBe(false);
-	// Real gate loss, a whole value's worth of events, is far above the line.
 	expect(
 		propertyRollupCoverageIsIncomplete({
 			rows,
 			coverage: { action_calls: 178_000_000 },
 		}),
 	).toBe(true);
-	// Small results keep exact semantics: one missing event out of ninety matters.
 	expect(
 		propertyRollupCoverageIsIncomplete({
 			rows: [row({ groupValue: "a", totalValue: 89, eventCount: 89 })],
@@ -391,7 +369,6 @@ test(`${chalk.yellowBright(
 test(`${chalk.yellowBright(
 	"property rollup: value gaps from events without the key never force a retry",
 )}`, () => {
-	// 0.3% of events lack the key and carry 0.9% of the value.
 	const rows = [
 		row({ groupValue: "key_1", totalValue: 9_910, eventCount: 997 }),
 	];
@@ -403,7 +380,6 @@ test(`${chalk.yellowBright(
 			coverage: { action_calls: 997 },
 		}),
 	).toBe(false);
-	// With every event carrying the key, the same value gap is real loss.
 	expect(
 		groupedValueIsMateriallyShort({
 			rows,

@@ -1,8 +1,3 @@
-/**
- * Contract test for rewards.list — V0 coupon + feature-grant shapes, partitioning,
- * plan_id / feature_id resolution, promo-code divergence, and no internal-field leakage.
- */
-
 import { expect, test } from "bun:test";
 import {
 	CouponDurationType,
@@ -28,7 +23,6 @@ test(`${chalk.yellowBright("rewards-list: returns coupons + feature_grants in V0
 		items: [items.monthlyMessages({ includedUsage: 500 })],
 	});
 
-	// scoped: productId wires real price_ids -> non-null plan_ids
 	const scopedCoupon: CreateReward = {
 		id: "rl-coupon-scoped",
 		name: "Scoped Percentage",
@@ -66,12 +60,10 @@ test(`${chalk.yellowBright("rewards-list: returns coupons + feature_grants in V0
 	const { autumnV2_2 } = await initScenario({
 		customerId,
 		setup: [
-			// Fresh isolated sub-org per run → parallel-safe, no reward accumulation.
 			s.platform.create({ setupDefaultFeatures: true }),
 			s.customer({ testClock: false }),
 			s.products({ list: [pro] }),
 			s.reward({ reward: scopedCoupon, productId: pro.id }),
-			// apply_to_all=true must win over populated price_ids -> plan_ids null
 			s.reward({ reward: globalCoupon, productId: pro.id }),
 			s.featureGrant({
 				id: "rl-feature-grant",
@@ -82,7 +74,6 @@ test(`${chalk.yellowBright("rewards-list: returns coupons + feature_grants in V0
 						allowance: 1000,
 						expiry: { duration: EntitlementDuration.Month, length: 1 },
 					},
-					// Boolean feature: no allowance, no expiry -> included null, expiry null.
 					{ feature_id: TestFeature.Dashboard },
 				],
 				promoCodes: [{ code: grantCode, max_redemptions: 500 }],

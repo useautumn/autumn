@@ -262,7 +262,6 @@ test.concurrent(`${chalk.yellowBright("entity billing controls: updating usage a
 		billing_controls: initialBillingControls,
 	});
 
-	// Update only usage_alerts
 	await autumnV2_1.entities.update(customerId, "entity-preserve-1", {
 		billing_controls: usageAlertControls,
 	});
@@ -272,16 +271,13 @@ test.concurrent(`${chalk.yellowBright("entity billing controls: updating usage a
 		"entity-preserve-1",
 	);
 
-	// spend_limits should be preserved
 	expect(fetched.billing_controls?.spend_limits).toEqual(
 		initialBillingControls.spend_limits,
 	);
-	// usage_alerts should be set
 	expect(fetched.billing_controls?.usage_alerts).toEqual(
 		usageAlertControls.usage_alerts,
 	);
 
-	// Verify in DB too
 	const fromDb = await CusService.getFull({
 		ctx,
 		idOrInternalId: customerId,
@@ -308,7 +304,6 @@ test.concurrent(`${chalk.yellowBright("entity billing controls: updating spend l
 		billing_controls: usageAlertControls,
 	});
 
-	// Update only spend_limits
 	await autumnV2_1.entities.update(customerId, "entity-preserve-2", {
 		billing_controls: initialBillingControls,
 	});
@@ -318,11 +313,9 @@ test.concurrent(`${chalk.yellowBright("entity billing controls: updating spend l
 		"entity-preserve-2",
 	);
 
-	// usage_alerts should be preserved
 	expect(fetched.billing_controls?.usage_alerts).toEqual(
 		usageAlertControls.usage_alerts,
 	);
-	// spend_limits should be set
 	expect(fetched.billing_controls?.spend_limits).toEqual(
 		initialBillingControls.spend_limits,
 	);
@@ -345,7 +338,6 @@ test.concurrent(`${chalk.yellowBright("entity billing controls: clearing usage a
 		},
 	});
 
-	// Clear usage_alerts
 	await autumnV2_1.entities.update(customerId, "entity-clear-ua-1", {
 		billing_controls: { usage_alerts: [] },
 	});
@@ -356,7 +348,6 @@ test.concurrent(`${chalk.yellowBright("entity billing controls: clearing usage a
 	);
 
 	expect(fetched.billing_controls?.usage_alerts).toEqual([]);
-	// spend_limits should still be intact
 	expect(fetched.billing_controls?.spend_limits).toEqual(
 		initialBillingControls.spend_limits,
 	);

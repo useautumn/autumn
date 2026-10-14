@@ -1,11 +1,3 @@
-/**
- * initStripeResourcesForCatalog — creation guards (G-matrix) + no product reads.
- *
- * Carry is compute-side and env-independent; this asserts the execute step:
- * reuse always runs against in-memory family candidates, Stripe CREATION is
- * skipped in Live / disconnected, and ProductService.getFull is never called.
- */
-
 import { afterAll, beforeEach, describe, expect, mock, test } from "bun:test";
 import {
 	AppEnv,

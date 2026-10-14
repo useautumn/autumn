@@ -13,10 +13,6 @@ export default defineEval({
 			"change gen-attach-multi's email to billing@gen-attach-multi.com and put them on pro_gen-attach-multi at 1035 per month",
 		);
 
-		// Asserted by name: a bare count would stay green if one write were
-		// issued twice, and the turn-scoped gates below would hold vacuously
-		// on an empty set. Gated writes park unresolved, so match "pending"
-		// rather than calledTool's "completed" default.
 		turn.calledTool("autumn__updateCustomer", { status: "pending" });
 		turn.calledTool("autumn__attach", { status: "pending" });
 
@@ -28,8 +24,6 @@ export default defineEval({
 			);
 		});
 
-		// One request, one approval card — the user should not have to approve
-		// the same request twice.
 		turn.eventsSatisfy(
 			"exactly one approval is raised",
 			(events) =>

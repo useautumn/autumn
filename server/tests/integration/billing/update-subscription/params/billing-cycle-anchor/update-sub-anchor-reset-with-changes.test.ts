@@ -17,12 +17,6 @@ import chalk from "chalk";
 import { addMonths } from "date-fns";
 import { CusService } from "@/internal/customers/CusService.js";
 
-/**
- * Update Subscription — Billing Cycle Anchor Reset + Custom Plan Changes
- *
- * Tests combining `billing_cycle_anchor: "now"` with `customize` (UpdatePlan intent).
- */
-
 test.concurrent(`${chalk.yellowBright("update-sub anchor+custom 1: increase base price + anchor reset")}`, async () => {
 	const customerId = "update-sub-anchor-custom-inc";
 

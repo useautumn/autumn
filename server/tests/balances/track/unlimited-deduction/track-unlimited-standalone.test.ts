@@ -1,24 +1,3 @@
-/**
- * Unlimited cusEnts become an infinite sink that REALLY deducts.
- *
- * Contract:
- *   New behavior: tracking usage on a feature whose cusEnt is unlimited no
- *     longer short-circuits (the `unlimitedFeatureIds` skip in
- *     executeRedisDeductionV2.ts). The deduction really runs:
- *     raw `customer_entitlements.balance` -= tracked value, absorbed with no
- *     floor, so the balance drifts negative as a usage counter and the track
- *     request always succeeds.
- *   Latest API (V2_3): unlimited balances now surface real usage —
- *     `usage = -(raw balance)` while `granted`/`remaining` stay 0 and
- *     `unlimited: true`. Older API versions stay fully masked.
- *
- * Red (current): the skip means no deduction anywhere — raw DB balance stays
- *   0 after tracking, so the -5 / -8 assertions fail with `Expected: -5,
- *   Received: 0`, and V2_3 responses still mask usage to 0.
- * Green (after): track 5 → raw balance -5; track 3 more → -8; V2_3
- *   check/customer report usage 8 with granted/remaining 0.
- */
-
 import { expect, test } from "bun:test";
 import type {
 	ApiCustomerV5,
@@ -57,7 +36,6 @@ test.concurrent(
 		const internalCustomerId = customer.autumn_id;
 		expect(internalCustomerId).toBeDefined();
 
-		// ---- Track 5: request succeeds and the response stays masked --------
 		const track1 = (await autumnV2_3.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
@@ -68,7 +46,6 @@ test.concurrent(
 		expect(track1.value).toBe(5);
 		expect(track1.balance?.unlimited).toBe(true);
 
-		// ---- Raw DB balance really moved: 0 - 5 = -5 ------------------------
 		const rowAfter5 = await pollRawCusEntBalance({
 			internalCustomerId: internalCustomerId as string,
 			featureId: TestFeature.Messages,
@@ -77,7 +54,6 @@ test.concurrent(
 		expect(rowAfter5?.unlimited).toBe(true);
 		expect(rowAfter5?.balance).toBe(-5);
 
-		// ---- A second track accumulates: -5 - 3 = -8 ------------------------
 		const track2 = (await autumnV2_3.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
@@ -92,7 +68,6 @@ test.concurrent(
 		});
 		expect(rowAfter8?.balance).toBe(-8);
 
-		// ---- Latest API surfaces real usage (granted/remaining stay 0) ------
 		const checkRes = (await autumnV2_3.check({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,

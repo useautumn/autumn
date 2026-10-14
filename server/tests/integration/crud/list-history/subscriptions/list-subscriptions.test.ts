@@ -1,19 +1,3 @@
-/**
- * subscriptions.list — recurring customer_products in API shape, live or expired.
- *
- * Contract:
- *   POST /v1/subscriptions.list { customer_id?, entity_id?, statuses?[], plan_id?, limit, start_cursor }
- *     -> { list: SubscriptionListRow[], has_more, next_cursor }
- *   - statuses omitted → active + scheduled; ["expired"] → expired only; values combine
- *   - statuses ["past_due"] matches DB past_due, row reads status "active", past_due true
- *   - one-off purchases are excluded; add-ons are included
- *   - rows ordered newest first per customer; cursor walks without overlap
- *   - org-wide (no customer_id) walks customers; a page may be short while has_more is true
- *
- * Red (before): the route does not exist.
- * Green (after): every assertion below holds.
- */
-
 import { expect, test } from "bun:test";
 import { CusProductStatus, type SubscriptionListRow } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
@@ -70,7 +54,6 @@ test.concurrent(
 			status: CusProductStatus.PastDue,
 		});
 
-		// Default: live recurring plans only, newest first; pro (expired) and the one-off are absent
 		const live = await listSubscriptions({
 			autumn: autumnV2_4,
 			params: { customer_id: customerId },
@@ -92,7 +75,6 @@ test.concurrent(
 			false,
 		);
 
-		// Expired only
 		const expired = await listSubscriptions({
 			autumn: autumnV2_4,
 			params: { customer_id: customerId, statuses: ["expired"] },
@@ -100,7 +82,6 @@ test.concurrent(
 		expect(planIds(expired.list)).toEqual([pro.id]);
 		expect(expired.list[0].status).toBe("expired");
 
-		// past_due filters on DB state but reads as active + past_due
 		const pastDue = await listSubscriptions({
 			autumn: autumnV2_4,
 			params: { customer_id: customerId, statuses: ["past_due"] },
@@ -109,7 +90,6 @@ test.concurrent(
 		expect(pastDue.list[0].status).toBe("active");
 		expect(pastDue.list[0].past_due).toBe(true);
 
-		// Combined
 		const combined = await listSubscriptions({
 			autumn: autumnV2_4,
 			params: { customer_id: customerId, statuses: ["active", "expired"] },
@@ -218,7 +198,6 @@ test.concurrent(
 		const customersOf = (pages: { list: SubscriptionListRow[] }[]) =>
 			pages.flatMap((page) => page.list.map((row) => row.customer_id)).sort();
 
-		// Org-wide customer walk
 		const orgPages = await walkAllPages({
 			fetchPage: (startCursor) =>
 				listSubscriptions({
@@ -232,7 +211,6 @@ test.concurrent(
 		});
 		expect(customersOf(orgPages)).toEqual([...expiredCustomers].sort());
 
-		// Plan walk
 		const planPages = await walkAllPages({
 			fetchPage: (startCursor) =>
 				listSubscriptions({
@@ -247,7 +225,6 @@ test.concurrent(
 		});
 		expect(customersOf(planPages)).toEqual([...expiredCustomers].sort());
 
-		// Scan cap of 1 customer per page: pages come back short (even empty) while has_more is true
 		const cappedPages = await walkAllPages({
 			fetchPage: (startCursor) =>
 				listSubscriptions({

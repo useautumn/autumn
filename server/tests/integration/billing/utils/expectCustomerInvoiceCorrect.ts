@@ -21,14 +21,6 @@ type InvoiceExpectParams = PollableExpectParams<ApiCustomerV3> & {
 	latestInvoiceProductIds?: string[];
 };
 
-/**
- * Check customer invoice count and optionally invoice details at a given index.
- *
- * Note: `latestTotal` uses approximate comparison (±0.01) to handle
- * floating point precision differences in proration calculations.
- *
- * @param invoiceIndex - Which invoice to check (0 = latest, 1 = second latest, etc.). Defaults to 0.
- */
 const assertCustomerInvoiceCorrect = ({
 	customer,
 	count,
@@ -77,11 +69,6 @@ const assertCustomerInvoiceCorrect = ({
 	}
 };
 
-/**
- * Pass `customerId` (instead of a fetched `customer`) to poll until the
- * invoices settle — Stripe-generated invoices and status flips (draft → paid)
- * arrive by webhook. See {@link pollableCustomerExpect}.
- */
 export const expectCustomerInvoiceCorrect = pollableCustomerExpect({
 	fetchCustomer: ({ customerId, autumn }: InvoiceExpectParams) =>
 		(autumn ?? defaultAutumn).customers.get<ApiCustomerV3>(customerId!),

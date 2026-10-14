@@ -12,8 +12,6 @@ const requireEnv = (name: string): string => {
 	return value;
 };
 
-/** Meters Autumn's own usage for the hour that just closed. Sandbox key only until metering is live.
- * Retries re-send the same hour; idempotency keys make that safe. */
 export const pushHourlyMetersTask = schedules.task({
 	id: "push-hourly-meters",
 	cron: { pattern: "10 * * * *", environments: ["PRODUCTION"] },

@@ -26,14 +26,10 @@ interface PushPromptCardProps {
 	onRespond: (value: string) => void;
 }
 
-// Helper to safely get data from prompt
 function getData<T>(prompt: PushPrompt, key: string): T {
 	return prompt.data[key] as T;
 }
 
-/**
- * Renders appropriate prompt card based on prompt type
- */
 export function PushPromptCard({
 	prompt,
 	onBack,

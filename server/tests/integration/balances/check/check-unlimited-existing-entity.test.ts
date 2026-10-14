@@ -6,8 +6,6 @@ import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import { expectUnlimitedEntityCheck } from "../utils/expectUnlimitedEntityCheck.js";
 
-// Before entity-map initialization, adding a second entity denies the existing entity.
-// Both entities must retain access to the unlimited entitlement.
 test.concurrent(
 	"check-unlimited-existing-entity: adding an entity preserves access for an entity created before attachment",
 	async () => {

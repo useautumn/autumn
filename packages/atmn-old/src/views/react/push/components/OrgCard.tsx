@@ -6,9 +6,6 @@ interface OrgCardProps {
 	isLoading: boolean;
 }
 
-/**
- * Organization info card
- */
 export function OrgCard({ orgInfo, isLoading }: OrgCardProps) {
 	if (isLoading) {
 		return (

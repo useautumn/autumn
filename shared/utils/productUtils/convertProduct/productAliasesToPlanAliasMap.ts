@@ -1,4 +1,3 @@
-/** An org's product alias rows as the `alias_id → canonical plan id` map `org.planAliases` holds. */
 export const productAliasesToPlanAliasMap = ({
 	rows,
 }: {

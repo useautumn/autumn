@@ -1,6 +1,3 @@
-// Legacy V1 attach downgrade/schedule behavior for entity-level merged subscriptions
-// (migrated from server/tests/merged/downgrade).
-
 import { expect, test } from "bun:test";
 import { CusProductStatus } from "@autumn/shared";
 import { expectSubToBeCorrect } from "@tests/merged/mergeUtils/expectSubCorrect";
@@ -11,14 +8,6 @@ import { products } from "@tests/utils/fixtures/products";
 import ctx from "@tests/utils/testInitUtils/createTestContext";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 1: Downgrade 2 entities from Premium → Pro, then renew to Premium
-// (from mergedDowngrade1)
-//
-// Ops: Premium(ent1), Premium(ent2), Pro(ent1→sched), Pro(ent2→sched),
-//      Premium(ent1→renew), Premium(ent2→renew)
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(
 	`${chalk.yellowBright("legacy-dg-sched 1: downgrade 2 entities then renew")}`,
@@ -42,7 +31,6 @@ test.concurrent(
 			],
 		});
 
-		// Downgrade entity 1 to Pro (scheduled)
 		await autumnV1.attach({
 			customer_id: customerId,
 			product_id: pro.id,
@@ -67,7 +55,6 @@ test.concurrent(
 			env: ctx.env,
 		});
 
-		// Downgrade entity 2 to Pro (scheduled)
 		await autumnV1.attach({
 			customer_id: customerId,
 			product_id: pro.id,
@@ -89,7 +76,6 @@ test.concurrent(
 			env: ctx.env,
 		});
 
-		// Renew entity 1 back to Premium (cancels scheduled downgrade)
 		await autumnV1.attach({
 			customer_id: customerId,
 			product_id: premium.id,
@@ -109,7 +95,6 @@ test.concurrent(
 			env: ctx.env,
 		});
 
-		// Renew entity 2 back to Premium
 		await autumnV1.attach({
 			customer_id: customerId,
 			product_id: premium.id,
@@ -130,14 +115,6 @@ test.concurrent(
 		});
 	},
 );
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 7: Downgrade mixed annual + monthly, then renew both
-// (from mergedDowngrade8)
-//
-// Ops: PremiumAnnual(ent1), Premium(ent2), Pro(ent1→sched), Pro(ent2→sched),
-//      PremiumAnnual(ent1→renew), Premium(ent2→renew)
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(
 	`${chalk.yellowBright("legacy-dg-sched 5: mixed annual + monthly downgrade then renew")}`,
@@ -166,7 +143,6 @@ test.concurrent(
 			],
 		});
 
-		// Entity 1: Downgrade to Pro (scheduled)
 		await autumnV1.attach({
 			customer_id: customerId,
 			product_id: pro.id,
@@ -188,7 +164,6 @@ test.concurrent(
 			env: ctx.env,
 		});
 
-		// Entity 2: Downgrade to Pro (scheduled)
 		await autumnV1.attach({
 			customer_id: customerId,
 			product_id: pro.id,
@@ -210,7 +185,6 @@ test.concurrent(
 			env: ctx.env,
 		});
 
-		// Entity 1: Renew to PremiumAnnual (cancels schedule)
 		await autumnV1.attach({
 			customer_id: customerId,
 			product_id: premiumAnnual.id,
@@ -234,7 +208,6 @@ test.concurrent(
 			env: ctx.env,
 		});
 
-		// Entity 2: Renew to Premium (cancels schedule)
 		await autumnV1.attach({
 			customer_id: customerId,
 			product_id: premium.id,

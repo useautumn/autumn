@@ -1,8 +1,6 @@
 import crypto from "node:crypto";
 import type { AppEnv } from "@autumn/shared";
 
-// Worktree dev servers use https://wt<N>-api.localhost with self-signed
-// certs. The test process opts out of TLS validation for its own fetches.
 if (process.env.NODE_TLS_REJECT_UNAUTHORIZED === undefined) {
 	process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
 }
@@ -34,24 +32,11 @@ export interface VercelMarketplaceInvoiceRefundedPayload {
 interface VercelWebhookClientConfig {
 	orgId: string;
 	env: AppEnv;
-	/**
-	 * HMAC-SHA1 secret. Must match `org.processor_configs.vercel.sandbox_client_secret`
-	 * (or `.client_secret` for live).
-	 */
 	clientSecret: string;
 	baseUrl?: string;
-	/** Extra request headers, e.g. `x-mock-vercel-api` to route SDK calls to the mock. */
 	headers?: Record<string, string>;
 }
 
-/**
- * Mock client for sending Vercel marketplace webhook events in tests.
- *
- * Mirrors the shape of `RevenueCatWebhookClient` (see
- * `revenue-cat-webhook-client.ts`). Generates the `x-vercel-signature`
- * (HMAC-SHA1 over the raw JSON body) that
- * `vercelSignatureMiddleware.ts` verifies against the org's client secret.
- */
 export class VercelWebhookClient {
 	private orgId: string;
 	private env: AppEnv;
@@ -128,11 +113,6 @@ export class VercelWebhookClient {
 	}
 }
 
-/**
- * Asserts that a Vercel webhook responded with 2xx and a recognizably-success
- * body. The marketplace router uses `{ received: true }` or `{ success: true }`
- * depending on event type, so accept either.
- */
 export const expectVercelWebhookSuccess = ({
 	response,
 	data,

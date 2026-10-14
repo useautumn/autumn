@@ -13,7 +13,6 @@ const isServerSubject = (
 	fullSubject: FullSubject | WorkerFullSubject,
 ): fullSubject is FullSubject => "subjectType" in fullSubject;
 
-/** After a deduction or a check: dispatch a job for every feature at or under its top-up threshold. */
 export const triggerAutoTopUp = async ({
 	ctx,
 	fullSubject,
@@ -21,7 +20,6 @@ export const triggerAutoTopUp = async ({
 	now = Date.now(),
 }: {
 	ctx: AutumnContext;
-	/** The server's own view, or the worker's reply; the predicate reads either. */
 	fullSubject: FullSubject | WorkerFullSubject;
 	feature: Feature;
 	now?: number;

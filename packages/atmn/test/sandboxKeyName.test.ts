@@ -1,9 +1,3 @@
-/**
- * One key per sandbox, addressed by the sandbox's own id. Worth pinning: the
- * name is the only link between `--sandbox <id>` and the key in a `.env`, so a
- * change here silently stops finding keys that are already on disk.
- */
-
 import { expect, test } from "bun:test";
 import { sandboxKeyName } from "../src/env/sandboxKeyName";
 

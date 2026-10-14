@@ -1,14 +1,3 @@
-/**
- * catalogV2.update — customize bucketing: shared ops, match-key changes,
- * combined price+item diffs, feature rename in the same call.
- *
- * Contract:
- *   two plans with identical item diffs → one op whose plan_filter is $or
- *   interval change → remove old key + add new key
- *   price + items in one update → one customize with both lanes
- *   feature rename + included bump → remove old feature_id, add new
- */
-
 import { test } from "bun:test";
 import { BillingInterval, FeatureType, ResetInterval } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
@@ -294,7 +283,6 @@ test.concurrent(
 	},
 );
 
-// Same-call feature rename: from/to plans use each product's own feature objects.
 test.concurrent(
 	`${chalk.yellowBright("catalogV2 migration: feature rename + item bump → remove old feature_id, add new")}`,
 	async () => {
@@ -413,13 +401,6 @@ test.concurrent(
 	},
 );
 
-/**
- * Two plans whose items differ only by feature_override must not share an op:
- * a shared op carries one plan's override to both plans' customers.
- *
- * Red (pre-fix):  one $or op carrying the first plan's override for both plans.
- * Green (after):  one op per plan, each with its own override.
- */
 test.concurrent(
 	`${chalk.yellowBright("catalogV2 migration: items differing only by feature_override get separate ops")}`,
 	async () => {

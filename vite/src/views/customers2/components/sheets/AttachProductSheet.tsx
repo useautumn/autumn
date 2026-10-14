@@ -74,8 +74,6 @@ function ReviewPreviewBlock() {
 
 	if (!formValues.productId) return null;
 
-	// Hold the whole review block — updates, warnings and footer included —
-	// behind the shimmer until there is a preview to show.
 	if (!queryError && (previewLoading || !previewData)) {
 		return <PreviewLoadingSection />;
 	}

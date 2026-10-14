@@ -8,7 +8,6 @@ import { upsertProductPlanToLicenses } from "../licensePlanUtils";
 import { computeLicenseOverlays } from "./computeLicenseOverlays";
 import { resolveDeclaredPlanLicenses } from "./resolveDeclaredPlanLicenses";
 
-/** licenses[] → full-set replace of this parent's links, with customize overlays. */
 export const computeDeclaredPlanLicenses = ({
 	ctx,
 	upsert,

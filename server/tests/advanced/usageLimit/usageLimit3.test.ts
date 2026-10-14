@@ -25,17 +25,6 @@ export const pro = constructProduct({
 	type: "pro",
 });
 
-// const addOnMessages = constructFeatureItem({
-//   featureId: TestFeature.Messages,
-//   interval: null,
-//   includedUsage: 250,
-// }) as LimitedItem;
-
-// const messageAddOn = constructProduct({
-//   type: "one_off",
-//   items: [addOnMessages],
-// });
-
 const testCase = "usageLimit3";
 
 describe(`${chalk.yellowBright(`${testCase}: Testing usage limits for prepaid`)}`, () => {

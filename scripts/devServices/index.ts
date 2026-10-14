@@ -95,8 +95,6 @@ const getDomainFromUrl = ({ url }: { url: string }) => {
 const isLoopbackHost = (host: string) =>
 	/^(localhost|127\.0\.0\.1|0\.0\.0\.0|\[::1\])(:\d+)?$/.test(host);
 
-/** NGROK_DOMAIN is the reserved tunnel domain. Falling back to the API URL only
- * works when that URL is public: a loopback host is never a valid domain. */
 const configureNgrokUrl = () => {
 	const explicitDomain = composeEnv.NGROK_DOMAIN?.trim();
 	if (explicitDomain) {
@@ -252,7 +250,6 @@ const removeVolumes = ({
 					"autumn-dev-dragonfly",
 					"autumn-dev-localstack",
 					"kafka-data",
-					// Left behind by the pre-Dragonfly misc cache.
 					"autumn-dev-redis-stack",
 				]
 			: []),
@@ -404,9 +401,7 @@ const getNgrokUrl = async () => {
 				(tunnel) => tunnel.proto === "https" && tunnel.public_url,
 			);
 			if (tunnel?.public_url) return tunnel.public_url.replace(/\/$/, "");
-		} catch {
-			// ngrok's local API is not ready yet.
-		}
+		} catch {}
 
 		await new Promise((resolve) => setTimeout(resolve, 500));
 	}

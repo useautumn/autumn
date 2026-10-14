@@ -8,7 +8,6 @@ import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { resourcesToMachine } from "@/internal/byoc/utils/byocCacheUtils.js";
 import { startShadowAtom } from "../actions/startShadowAtom.js";
 
-/** As an org's create: a size, and optionally an existing VPC to run in instead of a new one. */
 const CreateShadowAtomParamsSchema = ResizeByocCacheParamsSchema.and(
 	z.object({ network: ByocCacheNetworkSchema.optional() }),
 );

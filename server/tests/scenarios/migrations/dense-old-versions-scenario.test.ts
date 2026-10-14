@@ -4,14 +4,6 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-/**
- * Migration setup: one old version with many customers, another old version
- * with a smaller group, and a latest version with no customers.
- *
- *   v1  100 messages              → cus migdense-v1-1..migdense-v1-6
- *   v2  250 messages + credits    → cus migdense-v2-1..migdense-v2-3
- *   v3  500 messages + credits + admin  (latest, no customer)
- */
 test(`${chalk.yellowBright("migration-setup: dense old versions")}`, async () => {
 	const team = products.base({
 		id: "team",

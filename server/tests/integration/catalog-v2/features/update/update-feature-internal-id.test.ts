@@ -1,16 +1,3 @@
-/**
- * catalogV2.update / preview_update — addressing a feature by internal_id.
- *
- * Contract:
- *   I1  create → preview has no id yet (null); the applied result carries the
- *       DB row's, and a later preview of the existing row carries the same
- *   I2  internal_id + a different feature_id is a rename: old id gone, new id
- *       present, same internal_id, reported as "update" with the old id in
- *       previous_attributes
- *   I3  internal_id + the same feature_id is a no-op ("none")
- *   I4  an unknown internal_id is refused, naming the id
- */
-
 import { expect, test } from "bun:test";
 import { FeatureType } from "@autumn/shared";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils.js";
@@ -54,7 +41,6 @@ test.concurrent(
 			).find((candidate) => candidate.id === id);
 
 		try {
-			// I1: the id is known at preview time and stable through apply
 			const preview = await autumnV2_3.catalogV2.previewUpdate({
 				features: [consumableFeature(oldId)],
 			});
@@ -62,7 +48,6 @@ test.concurrent(
 				(row) => row.feature_id === oldId,
 			);
 			expect(previewRow?.action).toBe("create");
-			// A create has no stable id until it is applied.
 			expect(previewRow?.internal_id).toBeNull();
 
 			const applied = await autumnV2_3.catalogV2.update({
@@ -75,7 +60,6 @@ test.concurrent(
 				applied.results.features.find((row) => row.id === oldId)?.internal_id,
 			).toBe(internalId);
 
-			// An existing row's id is stable in preview too.
 			const unchangedPreview = await autumnV2_3.catalogV2.previewUpdate({
 				features: [consumableFeature(oldId)],
 			});
@@ -84,7 +68,6 @@ test.concurrent(
 					?.internal_id,
 			).toBe(internalId);
 
-			// I2: same row, new public id
 			const renamed = { ...consumableFeature(newId), internal_id: internalId };
 			expectCatalogPreviewCorrect({
 				preview: await autumnV2_3.catalogV2.previewUpdate({
@@ -110,14 +93,11 @@ test.concurrent(
 			await expectDbFeaturesAbsent({ ctx, featureIds: [oldId] });
 			expect((await dbRow(newId))?.internal_id).toBe(internalId);
 
-			// I3: same row, same id → nothing to do
 			expectCatalogResultsCorrect({
 				response: await autumnV2_3.catalogV2.update({ features: [renamed] }),
 				features: [{ id: newId, action: "none" }],
 			});
 
-			// I4: an id nothing owns names a new resource: the entry falls back to
-			// feature_id, which is the row from I2, so there is nothing to do
 			const lenient = await autumnV2_3.catalogV2.previewUpdate({
 				features: [
 					{ ...consumableFeature(newId), internal_id: "fe_does_not_exist" },

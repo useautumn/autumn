@@ -20,8 +20,6 @@ const balanceAssignment = ({ patch }: { patch: CustomerEntitlementPatch }) => {
 export type ReplaceRow = ReplaceCandidateRow &
 	Pick<EnrichedCycleCandidate, "resetCycleAnchor" | "nextResetAt">;
 
-/** Writes the minted definition and resolved cycle onto already-selected rows,
- * re-asserting the patch scope so a row that drifted out never gets written. */
 export const applyReplacePatches = async ({
 	db,
 	rows,

@@ -10,8 +10,6 @@ import {
 	MIGRATION_RUN_CUSTOMER_CONCURRENCY,
 } from "./utils/migrationRunConstants.js";
 
-/** One chunk's workload (the child side of the process boundary): cancel
- * check, snapshot identity check, then a time-sliced run from the cursor. */
 export const executeRunMigrationChunk = async ({
 	ctx,
 	payload,

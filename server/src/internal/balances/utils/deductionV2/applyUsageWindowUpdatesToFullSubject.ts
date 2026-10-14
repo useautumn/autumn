@@ -1,14 +1,5 @@
 import type { FullSubject, UsageWindow } from "@autumn/shared";
 
-/**
- * Refresh the in-flight subject's customer-scoped usage-window counters from
- * the deduction result, so usage_limit_used (webhooks, API responses built
- * from this subject) reflects the deduction. Sibling of
- * applyDeductionUpdateToFullSubject / applyRolloverUpdatesToFullSubject.
- *
- * The Lua result carries ALL scopes. An entity subject keeps its own rows
- * plus the customer-scope rows, which back caps it inherits from the customer.
- */
 export const applyUsageWindowUpdatesToFullSubject = ({
 	fullSubject,
 	usageWindowsByFeatureId,

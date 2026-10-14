@@ -1,6 +1,3 @@
-/** Regression: product cron must expire selected trial rows even when full-customer product pagination omits them.
- * Red: row stays active; green: row becomes expired. */
-
 import { expect, test } from "bun:test";
 import {
 	CusProductStatus,

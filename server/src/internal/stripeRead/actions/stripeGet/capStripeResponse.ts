@@ -43,7 +43,6 @@ export const capStripeResponse = ({ body }: { body: unknown }): unknown => {
 	return {
 		truncated: true,
 		truncation_note: TRUNCATION_NOTE,
-		// Half the budget leaves room for escaping when the string is re-serialized.
 		partial_json: JSON.stringify(body).slice(0, MAX_RESPONSE_BYTES / 2),
 	};
 };

@@ -2,10 +2,6 @@ import type { CronContext } from "@/cron/utils/CronContext.js";
 import type { ResetScanCursor } from "@/internal/customers/cusProducts/cusEnts/repos/getResetEligibleCustomerEntitlementsPage.js";
 import { getBatchResetQueueDepth } from "../concurrency/getBatchResetQueueDepth.js";
 
-/**
- * Periodic status event for Axiom: current queue depth and how far behind
- * "now" the scan position is.
- */
 export const logResetBacklogGauge = async ({
 	ctx,
 	cursor,
@@ -24,7 +20,6 @@ export const logResetBacklogGauge = async ({
 			queueInFlight: queueDepth?.inFlight ?? null,
 			sweepScanned,
 			cursorResetAt: cursor?.nextResetAt ?? null,
-			// How far behind "now" the scan position is, in ms.
 			scanLagMs: cursor ? Date.now() - cursor.nextResetAt : null,
 		},
 	});

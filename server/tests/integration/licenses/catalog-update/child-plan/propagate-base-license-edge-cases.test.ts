@@ -1,5 +1,3 @@
-/** Customized catalog links rebase semantically; customer snapshots do not.
- * Overrides win conflicts, explicit removals persist, and no-op diffs collapse. */
 import { expect, test } from "bun:test";
 import {
 	type ApiEntityV2,

@@ -3,9 +3,7 @@ import type { RunStatus } from "../../../db/schema/runs.ts";
 import { publishLive } from "../../live/liveHub/liveHub.ts";
 import type { RunEta } from "../eta/estimateRunEta.ts";
 
-/** Per-file output kept in memory while a run is live in this process. */
 const FILE_LOG_MAX_CHARS = 64_000;
-/** Keep a finished run in memory a while so late SSE/log readers hit it. */
 const FINISHED_RETENTION_MS = 10 * 60 * 1000;
 
 export type LiveRun = {
@@ -16,7 +14,6 @@ export type LiveRun = {
 	fileLogs: Map<string, string>;
 	eta: RunEta | null;
 	listeners: Set<(event: RunEvent) => void>;
-	/** Set by the swarm job; aborts the child from POST /runs/:id/cancel. */
 	cancel?: () => void;
 };
 
@@ -47,7 +44,6 @@ export const openLiveRun = ({
 
 export const getLiveRun = ({ runId }: { runId: string }) => liveRuns.get(runId);
 
-/** Apply an event to the live snapshot, then fan it out to SSE subscribers. */
 export const publishRunEvent = ({
 	runId,
 	event,

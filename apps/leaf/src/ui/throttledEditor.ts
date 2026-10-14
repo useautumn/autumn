@@ -2,8 +2,6 @@ import { ms } from "@autumn/shared";
 
 const DEFAULT_MIN_EDIT_INTERVAL_MS = ms.seconds(1.5);
 
-// Slack tolerates ~1 chat.update/sec per channel; coalesce bursts into a
-// leading edit plus one trailing edit per interval.
 export const createThrottledCardEditor = ({
 	edit,
 	minIntervalMs = DEFAULT_MIN_EDIT_INTERVAL_MS,
@@ -33,7 +31,6 @@ export const createThrottledCardEditor = ({
 			}
 			scheduled = setTimeout(flush, wait);
 		},
-		/** Cancels pending edits and waits for the in-flight one, so a final edit can't be overwritten. */
 		finalize: async () => {
 			stopped = true;
 			if (scheduled) clearTimeout(scheduled);

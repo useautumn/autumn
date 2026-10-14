@@ -11,7 +11,6 @@ import {
 } from "@/internal/customers/customerLsns/markCustomerUpdatedAt.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 
-// One connection: a mark that checks out a second client inside the transaction starves.
 const { db, client } = initDrizzle({ maxConnections: 1 });
 
 const orgId = `lsn_deferred_org_${Date.now()}`;
@@ -78,7 +77,6 @@ describe.skipIf(!process.env.DATABASE_URL)(
 					customerId: "cus_one_conn",
 				}),
 			);
-			// A starved mark waits out two 5s checkout timeouts before giving up.
 			expect(Date.now() - startedAt).toBeLessThan(5_000);
 			expect(await ledgerCustomerIds()).toContain("cus_one_conn");
 		}, 20_000);

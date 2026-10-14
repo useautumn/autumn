@@ -6,7 +6,6 @@ import {
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { computeOrgSettingChanges } from "../../actions/updateOrganization/computeOrgSettingChanges.js";
 
-/** What organization.update would change, without persisting. Same body. */
 export const handlePreviewUpdateOrganization = createRoute({
 	scopes: [Scopes.Organisation.Read],
 	body: PreviewUpdateOrganizationParamsSchema,

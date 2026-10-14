@@ -1,9 +1,3 @@
-/**
- * Mid-life flip: a sub created before `automatic_tax` was enabled must
- * pick up auto_tax on its next sub.update after the flag flips. Covers
- * both v1 `/v1/attach` and v2 `/v1/billing.attach`.
- */
-
 import { expect, test } from "bun:test";
 import { products } from "@tests/utils/fixtures/products.js";
 import type { TestContext } from "@tests/utils/testInitUtils/createTestContext.js";
@@ -102,7 +96,6 @@ test.concurrent(`${chalk.yellowBright("automatic-tax-subscription-update (v2 /v1
 
 	await flipConfigOn(ctx);
 
-	// V2_2 uses `plan_id`.
 	await autumnV2_2.billing.attach({
 		customer_id: customerId,
 		plan_id: `premium_${customerId}`,

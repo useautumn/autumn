@@ -8,7 +8,6 @@ import type {
 import { enqueueCommands } from "./enqueueCommands.js";
 import type { CommandQueue, QueueContext } from "./types/queue.js";
 
-/** One typed door per queued command; each is the same append underneath. */
 export function createCommandQueue({
 	ctx,
 }: {

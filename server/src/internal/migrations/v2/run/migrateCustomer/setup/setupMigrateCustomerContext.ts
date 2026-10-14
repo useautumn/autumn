@@ -7,7 +7,6 @@ import type { MigrateCustomerContext } from "@/internal/migrations/v2/operations
 import { createMigrationStripeCache } from "@/internal/migrations/v2/stripeCache/index.js";
 import type { MigrationRuntime } from "../../../types/migrationDefinition.js";
 
-/** A run's catalog versions don't change mid-run, so the run shares one cache. */
 const baseProductsByMigration = new WeakMap<
 	MigrationRuntime,
 	BaseProductCache
@@ -25,7 +24,6 @@ const baseProductsForMigration = ({
 	return baseProducts;
 };
 
-// The custom guard is already in plan_filter by setup, so only the version is checked.
 const bumpsVersion = ({ migration }: { migration: MigrationRuntime }) =>
 	Boolean(
 		migration.operations?.customer?.some(
@@ -33,7 +31,6 @@ const bumpsVersion = ({ migration }: { migration: MigrationRuntime }) =>
 		),
 	);
 
-/** Drift onto a row stored as not custom is likely the catalog edit the migration applies. */
 const keepStoredNotCustomFlags = ({
 	stored,
 	derived,
@@ -51,7 +48,6 @@ const keepStoredNotCustomFlags = ({
 	),
 });
 
-/** Loads customer state and creates the lazy Stripe cache for migration ops. */
 export const setupMigrateCustomerContext = async ({
 	ctx,
 	migration,
@@ -73,7 +69,6 @@ export const setupMigrateCustomerContext = async ({
 			fullCustomer: storedFullCustomer,
 			baseProducts: baseProductsForMigration({ migration }),
 		});
-	// Version bumps spare every derived-custom plan; the billing-plan hook re-derives after ops.
 	const fullCustomer = bumpsVersion({ migration })
 		? derivedFullCustomer
 		: keepStoredNotCustomFlags({

@@ -2,7 +2,6 @@ const INDEX_DDL = /^\s*(CREATE\s+(UNIQUE\s+)?INDEX|DROP\s+INDEX|REINDEX)\b/i;
 const HAS_CONCURRENTLY = /\bCONCURRENTLY\b/i;
 const IDENTIFIER = `(?:"[^"]+"|\\w+)`;
 const TABLE_NAME = `((?:${IDENTIFIER}\\.)?${IDENTIFIER})`;
-// IF NOT EXISTS may hit an existing, populated table, so it earns no exemption.
 const CREATE_TABLE = new RegExp(
 	`CREATE\\s+TABLE\\s+(?!IF\\s+NOT\\s+EXISTS\\b)${TABLE_NAME}`,
 	"gi",
@@ -23,7 +22,6 @@ const normalizeTableName = (name: string): string =>
 		.replace(/^public\./i, "")
 		.toLowerCase();
 
-/** Tables created by these migrations: nothing can be waiting on their locks yet. */
 export function findCreatedTables(sqls: string[]): Set<string> {
 	const tables = new Set<string>();
 	for (const sql of sqls) {

@@ -28,7 +28,6 @@ export async function archiveTriggerDevBranch({
 		);
 		const body = await res.text();
 		if (!res.ok) {
-			// Already archived / missing — treat as success so races are fine.
 			if (res.status === 404 || /not found|already archived/i.test(body)) {
 				return { ok: true, detail: `already gone (${res.status})` };
 			}

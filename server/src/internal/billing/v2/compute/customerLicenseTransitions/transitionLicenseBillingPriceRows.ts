@@ -41,7 +41,6 @@ const billableAssignedQuantity = ({
 	);
 };
 
-/** Projects persisted outgoing seat rows through the transition's definition-aware operations. */
 export const transitionLicenseBillingPriceRows = ({
 	licenseBillingPriceRows,
 	customerLicenseTransition,

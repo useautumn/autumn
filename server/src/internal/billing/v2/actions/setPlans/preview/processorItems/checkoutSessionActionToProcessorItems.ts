@@ -7,7 +7,6 @@ import type { ProcessorItemContext } from "./types/processorItemContext";
 
 const isOneOffItem = (item: ProcessorItem) => item.price?.interval === null;
 
-/** A subscription checkout creates the subscription with its recurring line items; one-offs are only invoiced. */
 export const checkoutSessionActionToProcessorItems = ({
 	checkoutSessionAction,
 	context,

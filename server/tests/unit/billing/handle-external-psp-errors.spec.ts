@@ -1,15 +1,3 @@
-/**
- * Unit tests for handleExternalPSPErrors (V2 attach + update gate).
- *
- * Key invariants:
- *   - On `update`, fail when the targeted cusProduct is RC-managed — except
- *     an autumn-only cancel (cancel_action + no_billing_changes), which never
- *     touches Stripe and so cannot conflict with the external subscription.
- *   - On `attach`, scan ALL customer_products for non-Stripe processors.
- *   - On `attach`, bypass ONLY when attaching a true one-off (every price has
- *     interval === OneOff). Recurring add-ons take the strict path.
- */
-
 import { describe, expect, test } from "bun:test";
 import {
 	BillingInterval,
@@ -65,7 +53,6 @@ const buildMixedIntervalProduct = (id: string): FullProduct =>
 		isAddOn: true,
 		prices: [
 			priceFixtures.createOneOff({ id: `pr_${id}_oneoff` }),
-			// A recurring price alongside a one-off → not "only one off"
 			{
 				id: `pr_${id}_monthly`,
 				internal_product_id: "prod_internal",
@@ -99,7 +86,6 @@ const buildRcCusProduct = (id = "cus_prod_rc"): FullCusProduct => {
 	});
 };
 
-/** RC-managed cus product whose underlying product has only one-off prices. */
 const buildRcOneOffCusProduct = (id = "cus_prod_rc_oneoff"): FullCusProduct => {
 	const product = buildOneOffProduct("rc_oneoff", true);
 	return customerProducts.create({
@@ -369,10 +355,7 @@ describe(
 			);
 		});
 
-		// ─── External one-off-only products are NOT a conflict ──────────────────
 		test("BYPASS: customer has only an RC ONE-OFF product, attaching a Stripe recurring", () => {
-			// RC one-off (e.g. an in-app topup) doesn't have a recurring sub —
-			// nothing to conflict with the new Stripe attach.
 			const rcOneOff = buildRcOneOffCusProduct();
 			const recurringMain = buildRecurringProduct("pro_25_monthly", false);
 
@@ -399,7 +382,6 @@ describe(
 		});
 
 		test("THROWS: customer has BOTH RC recurring and RC one-off, attaching a Stripe recurring", () => {
-			// The one-off is benign but the recurring product still conflicts.
 			const rcRecurring = buildRcCusProduct("cus_prod_rc_recurring");
 			const rcOneOff = buildRcOneOffCusProduct("cus_prod_rc_oneoff");
 			const recurringMain = buildRecurringProduct("pro_50_monthly", false);
@@ -416,8 +398,6 @@ describe(
 		});
 
 		test("BYPASS: customer has only an RC ONE-OFF, no attachProduct provided", () => {
-			// Defensive: even without attachProduct, an RC one-off shouldn't
-			// trigger the guard since there's no recurring conflict.
 			const rcOneOff = buildRcOneOffCusProduct();
 
 			expect(() =>

@@ -1,29 +1,15 @@
-/**
- * Pure REST fetcher for Infisical secrets. Used at trigger.dev DEPLOY
- * time via `syncEnvVars` to push secrets to the cloud env. Kept SDK-free
- * so trigger.config.ts can import it without bloating the build.
- *
- * Runtime code uses `initInfisical` (SDK-based, populates process.env).
- */
-
 export type InfisicalSyncEnvVar = { name: string; value: string };
 
 export type FetchInfisicalSecretsArgs = {
 	clientId?: string | null;
 	clientSecret?: string | null;
 	projectId?: string | null;
-	/** Defaults to "prod" if not set. */
 	environment?: string | null;
 	secretPath?: string;
 	recursive?: boolean;
 	includeImports?: boolean;
 };
 
-/**
- * Authenticate via Universal Auth, fetch secrets at the given path, and
- * return them as `{ name, value }[]`. Imported groups are flattened in
- * after primary secrets, with first-write-wins de-duplication.
- */
 export const fetchInfisicalSecrets = async ({
 	clientId,
 	clientSecret,
@@ -97,11 +83,6 @@ export const fetchInfisicalSecrets = async ({
 	return envVars;
 };
 
-/**
- * Read the four credential vars (`INFISICAL_CLIENT_ID`, `_SECRET`,
- * `_PROJECT_ID`, `_ENVIRONMENT`) from the local process env first then
- * trigger.dev's deploy-time `ctx.env`. Convenience for `syncEnvVars`.
- */
 export const fetchInfisicalSecretsFromEnv = (
 	ctxEnv: Record<string, string | undefined> = {},
 ): Promise<InfisicalSyncEnvVar[]> =>

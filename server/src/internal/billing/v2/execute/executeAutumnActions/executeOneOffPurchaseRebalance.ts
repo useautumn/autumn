@@ -8,7 +8,6 @@ type OneOffPurchaseRebalance = NonNullable<
 	AutumnBillingPlan["oneOffPurchaseRebalance"]
 >;
 
-/** Each purchase is sized against the balances the one before it left, as the worker sizes them. */
 export const executeOneOffPurchaseRebalance = async ({
 	ctx,
 	customerId,

@@ -6,7 +6,6 @@ import type {
 
 type Comparable = Record<string, unknown>;
 
-/** Sorted by the field that names an entry, so array order never reads as a change. */
 const orderedBy = <T>({
 	entries,
 	key,
@@ -58,7 +57,6 @@ export const comparableFeatureGrant = (
 export const comparableProgram = (
 	program: Omit<ApiReferralProgramV0, "created_at">,
 ): Comparable => {
-	// A program with no plans stores `[""]`, which is the same as none stated.
 	const planIds = (program.plan_ids ?? []).filter(Boolean);
 	return {
 		reward_id: program.reward_id,
@@ -70,10 +68,6 @@ export const comparableProgram = (
 	};
 };
 
-/**
- * Changed top-level fields holding their PREVIOUS values, matching the shape
- * features already return. Null when the two sides are the same row.
- */
 export const previousAttributesOf = ({
 	from,
 	to,

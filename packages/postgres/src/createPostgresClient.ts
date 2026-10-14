@@ -9,7 +9,6 @@ import type {
 	PostgresLogger,
 } from "./types/postgresClient.js";
 
-/** pg's PoolConfig for a profile; unnamed pools leave application_name to the connection string. */
 export const poolConfigOf = ({
 	config,
 }: {

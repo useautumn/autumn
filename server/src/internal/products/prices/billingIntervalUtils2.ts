@@ -34,7 +34,6 @@ export const addIntervalToAnchor = ({
 };
 
 const isLessThanEquals = ({ a, b }: { a: UTCDate; b: UTCDate }) => {
-	// Check if a is <= now. return true if a is ~ same as b (maybe by a couple of hours?)
 	const aUnix = a.getTime();
 	const bUnix = b.getTime();
 	if (aUnix < bUnix + toMilliseconds.hours(1)) return true;
@@ -61,7 +60,6 @@ const subtractIntervalFromAnchor = ({
 			intervalCount: intervalConfig.intervalCount ?? 1,
 		});
 
-		// Return anchor before it goes below now
 		if (isLessThanEquals({ a: new UTCDate(newAnchor), b: new UTCDate(now) }))
 			return curAnchor;
 
@@ -71,8 +69,6 @@ const subtractIntervalFromAnchor = ({
 	return now;
 };
 
-// Finds the period start by advancing from anchor until reaching the period that contains targetEnd
-// Returns the start of the period that ends at or after targetEnd
 export const getPeriodStartForEnd = ({
 	anchor,
 	intervalConfig,
@@ -88,7 +84,6 @@ export const getPeriodStartForEnd = ({
 		intervalConfig,
 	});
 
-	// Keep advancing until we find the period containing targetEnd
 	const maxIterations = 50;
 	let iterations = 0;
 	while (periodEnd < targetEnd && iterations < maxIterations) {
@@ -108,7 +103,7 @@ export const getAlignedUnix = ({
 	intervalConfig,
 	now,
 }: {
-	anchor: number; // can be in the future or past
+	anchor: number;
 	intervalConfig: IntervalConfig;
 	now?: number;
 }) => {

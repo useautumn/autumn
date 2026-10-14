@@ -13,13 +13,12 @@ describe(chalk.yellowBright("applyExistingUsages"), () => {
 		test("deducts existing usage from new entitlement balance", () => {
 			const internalFeatureId = "internal_words";
 
-			// Setup: Feature "words" with starting balance 5000, existing usage 1500
 			const cusEnt = customerEntitlements.create({
 				internalFeatureId,
 				featureId: "words",
 				featureName: "Words",
-				allowance: 5000, // Starting balance (no related price)
-				balance: 5000, // Initial balance before applying existing usages
+				allowance: 5000,
+				balance: 5000,
 			});
 
 			const cusProduct = customerProducts.create({
@@ -30,7 +29,6 @@ describe(chalk.yellowBright("applyExistingUsages"), () => {
 				[internalFeatureId]: { usage: 1500, entityUsages: {} },
 			};
 
-			// Act
 			applyExistingUsages({
 				ctx,
 				customerProduct: cusProduct,
@@ -38,7 +36,6 @@ describe(chalk.yellowBright("applyExistingUsages"), () => {
 				entities: [],
 			});
 
-			// Assert: balance should be 5000 - 1500 = 3500
 			const updatedCusEnt = cusProduct.customer_entitlements.find(
 				(ce) => ce.feature_id === "words",
 			);

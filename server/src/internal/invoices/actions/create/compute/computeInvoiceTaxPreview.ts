@@ -6,7 +6,6 @@ import {
 import type Stripe from "stripe";
 import { taxableMinorUnitsToTaxMinorUnits } from "@/internal/billing/v2/utils/billingPlan/preview/tax/computeAttachTaxRateIdPreview";
 
-/** Tax for a manual Stripe tax rate applied to every line; no automatic tax. */
 export const computeInvoiceTaxPreview = ({
 	taxableAmounts,
 	currency,

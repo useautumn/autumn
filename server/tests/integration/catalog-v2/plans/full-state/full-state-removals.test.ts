@@ -1,26 +1,3 @@
-/**
- * catalogV2.update — `skip_deletions: false` makes the payload the whole catalog.
- *
- * Today the server only reasons about plans the request names, so deleting a
- * plan from a config file does nothing at all: the row sits in production
- * forever. Full state loads the catalog and reads an omission as a removal,
- * which is what makes a config file the source of truth rather than a set of
- * patches.
- *
- * Contract:
- *   C1  skip_deletions:false loads the whole catalog, not just payload plans
- *   C2  a plan the catalog holds but the payload omits is removed
- *   C3  skip_plan_ids exempts a plan from that
- *   C4  archived plans are not re-proposed — they are already off the surface
- *   C5  zero stated plans against a non-empty catalog is refused, not a wipe
- *   C6  the default is unchanged: omitting skip_deletions touches nothing
- *   C7  restating an archived plan revives it — presence is the signal
- *
- * Red (current): setup is payload-scoped, so absentees are uncomputable and
- *   every assertion below either no-ops or cannot see the plan.
- * Green (after): omission is a removal, with the guards above around it.
- */
-
 import { expect, test } from "bun:test";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
@@ -49,8 +26,6 @@ const planExists = async ({
 test.concurrent(
 	`${chalk.yellowBright("catalogV2 full-state: an omitted plan is removed, a skipped one is not")}`,
 	async () => {
-		// Full state speaks for the entire org catalog, so it needs an org of its
-		// own — in a shared one it would remove every concurrent test's plans.
 		const { autumnV2_3, ctx } = await initScenario({
 			setup: [
 				s.platform.create({
@@ -75,9 +50,6 @@ test.concurrent(
 					],
 				});
 
-				// C1 + C2 + C3: only `kept` is stated. `dropped` goes because the
-				// config no longer mentions it; `skipped` stays because it was named
-				// as out of scope rather than deleted.
 				await autumnV2_3.catalogV2.update({
 					skip_deletions: false,
 					skip_plan_ids: [skippedId],
@@ -103,8 +75,6 @@ test.concurrent(
 test.concurrent(
 	`${chalk.yellowBright("catalogV2 full-state: a stated empty collection removes everything in it")}`,
 	async () => {
-		// Full state speaks for the entire org catalog, so it needs an org of its
-		// own — in a shared one it would remove every concurrent test's plans.
 		const { autumnV2_3, ctx } = await initScenario({
 			setup: [
 				s.platform.create({
@@ -123,12 +93,6 @@ test.concurrent(
 					plans: [{ plan_id: planId, name: "Survivor", items: [] }],
 				});
 
-				// C5: `plans: []` is a claim — "I manage plans and there are none".
-				// This was refused until 2026-09-03 on the theory that a config which
-				// failed to load looks the same. It does not any more: a payload that
-				// failed to state plans omits the key, and an omitted key returns
-				// before the sweep. Refusing it also fired from preview_update, so it
-				// blocked SEEING the deletions as well as doing them.
 				await autumnV2_3.catalogV2.update({
 					skip_deletions: false,
 					plans: [],
@@ -146,8 +110,6 @@ test.concurrent(
 test.concurrent(
 	`${chalk.yellowBright("catalogV2 full-state: an omitted collection is still untouchable")}`,
 	async () => {
-		// The protection that actually matters, and the one a client too old to
-		// know about a collection relies on: it sends no key, so nothing is swept.
 		const { autumnV2_3, ctx } = await initScenario({
 			setup: [
 				s.platform.create({
@@ -183,8 +145,6 @@ test.concurrent(
 test.concurrent(
 	`${chalk.yellowBright("catalogV2 full-state: the default leaves unmentioned plans alone")}`,
 	async () => {
-		// Full state speaks for the entire org catalog, so it needs an org of its
-		// own — in a shared one it would remove every concurrent test's plans.
 		const { autumnV2_3, ctx } = await initScenario({
 			setup: [
 				s.platform.create({
@@ -211,8 +171,6 @@ test.concurrent(
 					],
 				});
 
-				// C6: every existing caller omits skip_deletions, and none of them
-				// expect a patch to delete the rest of the catalog.
 				await autumnV2_3.catalogV2.update({
 					plans: [{ plan_id: statedId, name: "Stated Again", items: [] }],
 				});
@@ -229,8 +187,6 @@ test.concurrent(
 test.concurrent(
 	`${chalk.yellowBright("catalogV2 full-state: restating an archived plan brings it back")}`,
 	async () => {
-		// Full state speaks for the entire org catalog, so it needs an org of its
-		// own — in a shared one it would remove every concurrent test's plans.
 		const { autumnV2_3, ctx } = await initScenario({
 			setup: [
 				s.platform.create({
@@ -256,8 +212,6 @@ test.concurrent(
 					"archived before the revive",
 				).toBe(false);
 
-				// C7: archived rows never live in a config, so stating one again is
-				// the whole signal. No `archived: false` — presence is the ask.
 				await autumnV2_3.catalogV2.update({
 					skip_deletions: false,
 					plans: [{ plan_id: planId, name: "Back", items: [] }],

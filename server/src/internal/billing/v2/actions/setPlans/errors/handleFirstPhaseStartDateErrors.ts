@@ -78,9 +78,7 @@ const handlePastStartErrors = ({
 		subject: "Past first phase starts_at",
 	});
 
-	// Previews don't yet know whether the caller will settle via invoice
 	// (which supports backdating) or Stripe Checkout (which doesn't), so only
-	// block the checkout path at execution time.
 	if (!preview && billingContext.checkoutMode === "stripe_checkout") {
 		throw new RecaseError({
 			message:
@@ -128,8 +126,6 @@ export const handleFirstPhaseStartDateErrors = ({
 
 	if (firstPhaseStart !== "past") return;
 
-	// A past start that keeps the live subscription or schedule replays its plans' own start,
-	// never a request to bill from it.
 	const replaysLiveStart =
 		!!billingContext.stripeSubscription ||
 		isExistingScheduleUpdate({ billingContext });

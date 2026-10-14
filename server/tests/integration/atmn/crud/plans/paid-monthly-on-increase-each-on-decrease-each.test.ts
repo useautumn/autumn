@@ -1,9 +1,3 @@
-/**
- * atmn crud/plans — paid [monthly] [on_increase: each] × [on_decrease: each]
- *
- * One line of plans/atmn-v3/07_tests.md. [a, b] is a matrix looped INSIDE this file.
- */
-
 import { expect, test } from "bun:test";
 import {
 	configBody,
@@ -35,8 +29,6 @@ const ON_DECREASE = [
 	"no_prorations",
 ] as const;
 
-/** bill_immediately isn't supported on a prepaid item price — every other
- * on_increase is valid, so it's asserted separately as a clean rejection. */
 const SUPPORTED_ON_INCREASE = ON_INCREASE.filter(
 	(onIncrease) => onIncrease !== "bill_immediately",
 );
@@ -65,9 +57,6 @@ const prepaidSeatItem = ({
 			},`;
 
 test("paid [monthly] proration: every on_increase × on_decrease combination", async () => {
-	// One scenario, one plan reused in place for the whole matrix — a fresh
-	// org (or a fresh Stripe-backed plan) per cell hits real limits at this
-	// cell count.
 	const scenario = await initAtmnScenario({
 		setup: [
 			s.platform.create({ userEmail: `${uniqueTestId("atmn")}@autumn.test` }),
@@ -79,8 +68,6 @@ test("paid [monthly] proration: every on_increase × on_decrease combination", a
 	});
 
 	try {
-		// Round trip on the first combo, before any further in-place mutation
-		// piles up — proves push/pull stay consistent for a proration item.
 		await expectRoundTrip({ scenario });
 
 		for (const { onIncrease, onDecrease } of VALID_COMBOS) {
@@ -94,16 +81,12 @@ test("paid [monthly] proration: every on_increase × on_decrease combination", a
 				}),
 			);
 			await scenario.push();
-			// A clean preview right after push proves the server stored exactly
-			// this on_increase/on_decrease pair, not just that push succeeded.
 			await expectPreviewNone({
 				client: scenario.client,
 				wire: await scenario.wireFromConfig(),
 			});
 		}
 
-		// bill_immediately is rejected outright on a prepaid item, for every
-		// on_decrease — a direct rejection, not a round trip.
 		for (const onDecrease of ON_DECREASE) {
 			scenario.writeConfig(
 				atmnConfigSource({

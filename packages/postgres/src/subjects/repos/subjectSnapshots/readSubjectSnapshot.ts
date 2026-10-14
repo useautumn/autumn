@@ -1,14 +1,11 @@
 import { type SQL, sql } from "drizzle-orm";
 import type { PostgresContext } from "../../../types/postgresClient.js";
 
-/** Which rows a probe may answer with: this build's version, written after the moment the table was last trusted from. */
 export type SubjectSnapshotProbe = {
 	stateVersion: number;
-	/** Epoch ms; rows written at or before it are passed over as if absent. */
 	writtenAfter: number;
 };
 
-/** The `WHERE` tail every probe shares: the row's version and age, after its key. */
 export const subjectSnapshotProbeSql = ({
 	probe,
 }: {
@@ -16,7 +13,6 @@ export const subjectSnapshotProbeSql = ({
 }): SQL => sql`s.state_version = ${probe.stateVersion}
 		AND s.written_at > ${probe.writtenAfter}`;
 
-/** The subject's snapshot state as the probe allows, or null: no row, or a row another build or an earlier period wrote. One PK probe. */
 export const readSubjectSnapshot = async ({
 	ctx,
 	customerId,
@@ -34,7 +30,6 @@ export const readSubjectSnapshot = async ({
 	return rows[0]?.state ?? null;
 };
 
-/** COLLATE "C" on the probe side so the primary key, which is "C", serves the lookup. */
 export const readSubjectSnapshotSql = ({
 	ctx,
 	customerId,

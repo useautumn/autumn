@@ -24,7 +24,6 @@ export interface WebhookDefinition {
 }
 
 export const webhookRegistry: WebhookDefinition[] = [
-	// ── Customer ──────────────────────────────────────────────────────────
 	{
 		eventType: WebhookEventType.CustomerProductsUpdated,
 		operationId: "customerProductsUpdated",
@@ -40,7 +39,6 @@ export const webhookRegistry: WebhookDefinition[] = [
 		description: "",
 	},
 
-	// ── Balances ──────────────────────────────────────────────────────────
 	{
 		eventType: WebhookEventType.BalancesUsageAlertTriggered,
 		operationId: "balancesUsageAlertTriggered",
@@ -60,7 +58,6 @@ export const webhookRegistry: WebhookDefinition[] = [
 			"Fired when a customer reaches the limit for a feature (included allowance, max purchase, spend limit, or a usage-limit billing control).",
 	},
 
-	// ── Billing ───────────────────────────────────────────────────────────
 	{
 		eventType: WebhookEventType.BillingAutoTopupFailed,
 		operationId: "billingAutoTopupFailed",
@@ -89,7 +86,6 @@ export const webhookRegistry: WebhookDefinition[] = [
 			"Fired when a customer's plans change — activated, scheduled, updated, or expired. Each event carries a `plan_changes` array describing what happened and a `tags` array (e.g. `trial_ended`, `phase_changed`) describing why.",
 	},
 
-	// ── Invoice ───────────────────────────────────────────────────────────
 	{
 		eventType: WebhookEventType.InvoiceFinalized,
 		operationId: "invoiceFinalized",
@@ -100,7 +96,6 @@ export const webhookRegistry: WebhookDefinition[] = [
 			"Fired when a Stripe invoice is finalized and its line items have been reconciled. The body is the invoice as returned by `invoices.list`, with `items` populated and each item carrying a per-entity `entities` breakdown.",
 	},
 
-	// ── Vercel ────────────────────────────────────────────────────────────
 	{
 		eventType: WebhookEventType.VercelResourcesDeleted,
 		operationId: "vercelResourcesDeleted",

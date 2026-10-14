@@ -22,13 +22,10 @@ import { versionSlugRenamed } from "@/views/products/plan/utils/versionSlug";
 import { useSheetStore } from "./useSheetStore";
 
 interface ProductState {
-	// The product being edited (working copy)
 	product: FrontendProduct;
 
-	// The base/original product (for comparison)
 	baseProduct: FrontendProduct | null;
 
-	// Actions
 	setProduct: (
 		product: FrontendProduct | ((prev: FrontendProduct) => FrontendProduct),
 	) => void;
@@ -46,10 +43,8 @@ export const useProductStore = create<ProductState>((set) => ({
 
 	setProduct: (product) => {
 		if (typeof product === "function") {
-			// Handle updater function pattern: setProduct(prev => newProduct)
 			set((state) => ({ product: product(state.product) }));
 		} else {
-			// Handle direct value: setProduct(newProduct)
 			set({ product });
 		}
 	},
@@ -59,13 +54,11 @@ export const useProductStore = create<ProductState>((set) => ({
 	reset: () => set(initialState),
 }));
 
-// Custom hook to determine if we're in customer product view based on URL
 export const useIsCusPlanEditor = () => {
 	const { customer_id } = useParams();
 	return !!customer_id;
 };
 
-// Custom hooks for computed values
 export const useHasChanges = () => {
 	const product = useProductStore((s) => s.product);
 	const baseProduct = useProductStore((s) => s.baseProduct);
@@ -95,8 +88,6 @@ export const useHasChanges = () => {
 	}, [product, baseProduct, features, selectedBasePlanId, basePlanId]);
 };
 
-// True when metadata is the only pending change — such saves skip the
-// "create new version?" dialog since metadata never versions.
 export const useIsMetadataOnlyChange = () => {
 	const product = useProductStore((s) => s.product);
 	const baseProduct = useProductStore((s) => s.baseProduct);
@@ -121,7 +112,6 @@ export const useIsMetadataOnlyChange = () => {
 	}, [product, baseProduct, features]);
 };
 
-/** True when anything other than the base plan link changed. Linking never versions. */
 export const useHasContentChanges = () => {
 	const product = useProductStore((s) => s.product);
 	const baseProduct = useProductStore((s) => s.baseProduct);
@@ -225,12 +215,10 @@ const useCurrentItem = () => {
 
 		const featureItems = productV2ToFeatureItems({ items: product.items });
 
-		// Find the item by comparing itemIds using the original items array indices
 		for (let i = 0; i < product.items.length; i++) {
 			const item = product.items[i];
 			if (!item) continue;
 
-			// Check if this item is in the featureItems array
 			const isFeatureItem = featureItems.some((fi) => fi === item);
 			if (!isFeatureItem) continue;
 
@@ -244,9 +232,6 @@ const useCurrentItem = () => {
 	}, [product, itemId]);
 };
 
-/**
- * Hook to check if the current item has unsaved changes compared to its initial state
- */
 const useHasItemChanges = () => {
 	const item = useCurrentItem();
 	const initialItem = useSheetStore((s) => s.initialItem);
@@ -265,9 +250,6 @@ const useHasItemChanges = () => {
 	}, [item, initialItem, features]);
 };
 
-/**
- * Hook to discard item changes (restore to initial state) and close the sheet
- */
 export const useDiscardItemAndClose = () => {
 	const setCurrentItem = useSetCurrentItem();
 	const initialItem = useSheetStore((s) => s.initialItem);
@@ -289,7 +271,6 @@ const useSetCurrentItem = () => {
 	return (updatedItem: ProductItem) => {
 		if (!product || !product.items || !itemId) return;
 
-		// Find the index in the original items array
 		let originalIndex = -1;
 		for (let i = 0; i < product.items.length; i++) {
 			const item = product.items[i];
@@ -304,16 +285,12 @@ const useSetCurrentItem = () => {
 
 		if (originalIndex === -1) return;
 
-		// Update the item in the original items array
 		const updatedItems = [...product.items];
 		updatedItems[originalIndex] = updatedItem;
 		setProduct({ ...product, items: updatedItems });
 	};
 };
 
-/**
- * Hook to check if the current product is the latest version.
- */
 export const useIsLatestVersion = (product: FrontendProduct) => {
 	const { products = [] } = useProductsQuery();
 
@@ -332,9 +309,6 @@ export interface PrepaidItemWithFeature extends ProductItem {
 	display: ReturnType<typeof getProductItemDisplay>;
 }
 
-/**
- * Hook to get prepaid items from a product with feature information and display
- */
 export const usePrepaidItems = ({
 	product,
 }: {

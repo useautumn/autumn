@@ -70,11 +70,6 @@ export const initFeature = ({
 					property: "value",
 				},
 				usage_type: usageType,
-				// group_by: groupBy
-				//   ? {
-				//       property: groupBy,
-				//     }
-				//   : undefined,
 			},
 		} as Feature;
 	}
@@ -241,18 +236,6 @@ export const initProduct = ({
 	freeTrial: CreateFreeTrial | null;
 	group?: string;
 }) => {
-	// if (notNullish(items)) {
-	//   return {
-	//     id,
-	//     name: keyToTitle(id),
-	//     is_default: isDefault,
-	//     is_add_on: isAddOn,
-	//     group: group,
-	//     items: items,
-	//     free_trial: freeTrial,
-	//   };
-	// }
-
 	return {
 		id,
 		name: keyToTitle(id),
@@ -301,17 +284,12 @@ export const initCustomer = async ({
 			}
 		: customer_data;
 
-	// Delete customer if exists
 	try {
 		await axiosInstance.delete(`/v1/customers/${customerData!.id}`);
-		// console.log("   - Successfully deleted customer");
-	} catch (error) {
-		// console.log("Failed to delete customer");
-	}
+	} catch (error) {}
 
 	try {
 		const { data } = await axiosInstance.post(`/v1/customers`, customerData);
-		// Attach stripe card
 
 		if (attachPm) {
 			await attachPmToCus({
@@ -329,7 +307,6 @@ export const initCustomer = async ({
 	}
 };
 
-// Init Reward
 export const initReward = ({
 	id,
 	type = RewardType.PercentageDiscount,

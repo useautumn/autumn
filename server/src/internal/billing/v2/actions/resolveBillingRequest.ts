@@ -40,8 +40,6 @@ export type ResolvedBillingRequestV0 =
 	| SetPlansParamsV0
 	| UpdateSubscriptionV0Params;
 
-/** Resolves one plan's `customize` patch into concrete V0 items against its
- * catalog plan — shared by schedule resolution and multi-attach generation. */
 export const resolveCustomizedPlan = async ({
 	ctx,
 	plan,
@@ -68,8 +66,6 @@ export const resolveCustomizedPlan = async ({
 	};
 };
 
-/** Maps a billing request into the dashboard's dialect — `customize` resolves
- * to items against catalog plans (attach/schedule) or the live subscription (updates). */
 export const resolveBillingRequest = async ({
 	ctx,
 	params,

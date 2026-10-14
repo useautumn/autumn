@@ -8,12 +8,6 @@ type DeliveryCounts = { delivered: number; failed: number };
 
 const NOT_SUBSCRIBED: DeliveryCounts = { delivered: 0, failed: 0 };
 
-/**
- * Delivers one batch of migration webhooks, one subscribed event type at a
- * time, `concurrency` records in flight within each. Per-record failures are
- * logged and skipped: a run's audit trail lives in the item events, so one
- * bad endpoint response must not stall or fail the rest of the batch.
- */
 export const sendMigrationWebhooks = async ({
 	ctx,
 	payload,

@@ -9,7 +9,6 @@ import { setupSetPlansTimeline } from "@/internal/billing/v2/actions/setPlans/se
 
 type UndeclaredPlans = SetPlansParamsV0["undeclared_plans"];
 
-/** The timeline setup would read for this context, then the plan compute builds from it. */
 export const computeSetPlansPlanFromContext = ({
 	ctx,
 	billingContext,

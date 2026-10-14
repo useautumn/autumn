@@ -44,10 +44,8 @@ const PHASES = [
 type Phase = (typeof PHASES)[number];
 
 const PAGE_SIZE = 100;
-/** Per-key Stripe write budget: deletes are heavy and share the key's rate limit with nothing else now. */
 const DELETE_CONCURRENCY = 4;
 
-/** Every connected account on the key, tagged or not. Listed fully before deleting so paging is stable. */
 const deleteAllConnectedAccounts = async ({
 	ctx,
 	platformAccountId,
@@ -115,10 +113,6 @@ const deleteAllConnectedAccounts = async ({
 	return { deleted, gone };
 };
 
-/**
- * payload: { platformAccountId, targetPerKey? }. Locks the key, deletes every connected account +
- * webhook on it, drops its ledger rows, re-registers the Connect webhook, tops up, re-probes, unlocks.
- */
 export const handleFullNukeKeyJob: JobHandler = async ({
 	ctx,
 	job,

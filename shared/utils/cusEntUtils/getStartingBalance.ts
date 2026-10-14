@@ -17,7 +17,6 @@ export const getStartingBalance = ({
 	relatedPrice?: Price;
 	productQuantity?: number;
 }) => {
-	// 1. No related price
 	if (!relatedPrice) {
 		return new Decimal(entitlement.allowance || 0)
 			.mul(productQuantity || 1)

@@ -7,7 +7,6 @@ import RecaseError from "@server/utils/errorUtils.js";
 import { eq, inArray } from "drizzle-orm";
 import type Stripe from "stripe";
 
-/** Every write ends here: the written rows name their own keys, so no caller has to remember. */
 const invalidateWrittenRows = async ({
 	rows,
 }: {
@@ -133,7 +132,6 @@ export class SubService {
 		db: DrizzleCli;
 		subscription: Subscription;
 	}) {
-		// 1. Get by stripe ID
 		const existingSub = await SubService.getByStripeId({
 			db,
 			stripeId: subscription.stripe_id ?? "",
@@ -160,7 +158,6 @@ export class SubService {
 
 		if (createdSub) return createdSub;
 
-		// A concurrent webhook inserted it between the read and the write.
 		const winningSub = await SubService.getByStripeId({
 			db,
 			stripeId: subscription.stripe_id ?? "",

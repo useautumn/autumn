@@ -5,7 +5,7 @@ config({ path: "../server/.env" });
 
 export default defineConfig({
 	dialect: "postgresql",
-	schema: "./models/eventModels/eventTableNeon.ts", // ONLY eventsNeon
+	schema: "./models/eventModels/eventTableNeon.ts",
 	dbCredentials: {
 		url: process.env.NEON_EVENTS_DATABASE_URL!,
 	},

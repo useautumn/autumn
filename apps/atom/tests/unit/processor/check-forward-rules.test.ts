@@ -11,7 +11,6 @@ import {
 	latestApiVersion,
 } from "../utils/atomFixtures.js";
 
-/** One request per reason Atom leaves a check to the API. */
 const forwardedRequests: [ForwardReason, CheckRequest][] = [
 	["no_api_version", checkRequestFor({ apiVersion: null })],
 	[

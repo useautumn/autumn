@@ -46,7 +46,6 @@ const getOnDecreaseText = ({
 	}
 };
 
-/** Visibility is controlled by parent AdvancedSettings */
 export function ProrationConfig() {
 	const { item, setItem } = useProductItemContext();
 

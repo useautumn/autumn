@@ -35,10 +35,7 @@ export const getOAuthConsentScopeGrant = async ({
 		});
 	}
 
-	// An explicit selection must be granted as-is so the result stays a subset
 	// of the app's original /authorize scopes — better-auth rejects consent
-	// with "Scope not originally requested" if we inject protocol scopes
-	// (e.g. profile/email) the client never asked for.
 	const finalRequestedScopes = requireRequestedResourceScopes
 		? (requestedScopes ?? [])
 		: getDefaultOAuthScopes(requestedScopes);

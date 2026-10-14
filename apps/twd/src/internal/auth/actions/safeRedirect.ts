@@ -1,13 +1,11 @@
 import type { TwdContext } from "../../../lib/types/twdContext.ts";
 
-/** Dashboard dev origins allowed for CORS + post-login redirects (optional, comma-separated). */
 export const getWebOrigins = () =>
 	(process.env.TWD_WEB_ORIGIN ?? "")
 		.split(",")
 		.map((origin) => origin.trim().replace(/\/$/, ""))
 		.filter(Boolean);
 
-/** Same-origin (or configured dashboard origin) redirect target; anything else becomes "/". */
 export const safeRedirect = ({
 	ctx,
 	target,

@@ -1,10 +1,3 @@
-/**
- * catalogV2.update — new_version + propagate mints from the active
- * variant row (same clone source as a direct new_version), or repoints
- * that row in place when it has no customers. License links copy onto
- * the minted version.
- */
-
 import { test } from "bun:test";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";

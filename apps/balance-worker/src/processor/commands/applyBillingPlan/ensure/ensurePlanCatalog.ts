@@ -5,7 +5,6 @@ import {
 } from "@autumn/balance-engine";
 import type { PartitionProcessorScope } from "../../../types/partitionProcessor.js";
 
-/** The rows the plan inserts, as a state, so their catalog references are found the way a subject's are. */
 export const planInsertedRowsState = ({
 	command,
 }: {
@@ -26,7 +25,6 @@ export const planInsertedRowsState = ({
 	});
 };
 
-/** The catalog rows the plan's new rows reference, loaded before the writer; the server's copies only save the trip. */
 export const ensurePlanCatalog = async ({
 	scope,
 	command,

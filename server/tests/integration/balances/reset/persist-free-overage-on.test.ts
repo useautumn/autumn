@@ -41,10 +41,6 @@ const persistFreeOverageOrg = ({ slug }: { slug: string }) =>
 		setupDefaultFeatures: true,
 	});
 
-// ─────────────────────────────────────────────────────────────────
-// 1. Lazy reset (DB path)
-// ─────────────────────────────────────────────────────────────────
-
 test.concurrent(
 	`${chalk.yellowBright("persist overage ON (DB): lazy reset deducts overage")}`,
 	async () => {
@@ -82,10 +78,6 @@ test.concurrent(
 		expect(after.balances[TestFeature.Messages].usage).toBe(100);
 	},
 );
-
-// ─────────────────────────────────────────────────────────────────
-// 2. Lazy reset (cache path)
-// ─────────────────────────────────────────────────────────────────
 
 test.concurrent(
 	`${chalk.yellowBright("persist overage ON (cache): lazy reset deducts overage from cache")}`,
@@ -135,10 +127,6 @@ test.concurrent(
 	},
 );
 
-// ─────────────────────────────────────────────────────────────────
-// 3. Cron reset path
-// ─────────────────────────────────────────────────────────────────
-
 test.concurrent(
 	`${chalk.yellowBright("persist overage ON (cron): cron reset deducts overage")}`,
 	async () => {
@@ -174,10 +162,6 @@ test.concurrent(
 		expect(cusEntAfter!.balance).toBe(25);
 	},
 );
-
-// ─────────────────────────────────────────────────────────────────
-// 4. No overage — positive balance resets normally
-// ─────────────────────────────────────────────────────────────────
 
 test.concurrent(
 	`${chalk.yellowBright("persist overage ON (no overage): positive balance resets to full allowance")}`,
@@ -216,10 +200,6 @@ test.concurrent(
 		expect(after.balances[TestFeature.Messages].usage).toBe(0);
 	},
 );
-
-// ─────────────────────────────────────────────────────────────────
-// 5. Per-entity — independent overage per entity
-// ─────────────────────────────────────────────────────────────────
 
 test.concurrent(
 	`${chalk.yellowBright("persist overage ON (per-entity): each entity carries its own overage")}`,
@@ -281,10 +261,6 @@ test.concurrent(
 	},
 );
 
-// ─────────────────────────────────────────────────────────────────
-// 6. Per-entity mixed — different overage amounts
-// ─────────────────────────────────────────────────────────────────
-
 test.concurrent(
 	`${chalk.yellowBright("persist overage ON (per-entity mixed): different overage per entity")}`,
 	async () => {
@@ -345,10 +321,6 @@ test.concurrent(
 	},
 );
 
-// ─────────────────────────────────────────────────────────────────
-// 7. Prepaid monthly + lifetime — overage carries on paid reset
-// ─────────────────────────────────────────────────────────────────
-
 test.concurrent(
 	`${chalk.yellowBright("persist overage ON (prepaid): invoice reset carries prepaid overage")}`,
 	async () => {
@@ -376,11 +348,6 @@ test.concurrent(
 			],
 		});
 
-		// After attach: prepaid balance = 200 (quantity=200, billingUnits=100, so 2*100=200), lifetime = 50
-		// Total messages balance = 200 + 50 = 250
-		// After track 300: deducted 300 from messages
-		// The prepaid cusEnt's balance should be negative (overage)
-		// On advance, handlePrepaidPrices resets prepaid with persistFreeOverage
 		await advanceToNextInvoice({
 			stripeCli: ctx.stripeCli,
 			testClockId: testClockId!,
@@ -389,11 +356,6 @@ test.concurrent(
 
 		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-		// Lifetime messages (50) should be untouched by the prepaid reset
-		// Prepaid: was 200, used 300 -> overage of some amount on the prepaid cusEnt
-		// After reset with persist_free_overage: new prepaid balance = 200 - overage
-		// The exact split depends on deduction order, so just verify the feature exists
-		// and the balance is less than the full 250 (200 prepaid + 50 lifetime)
 		expect(customer.features[TestFeature.Messages]).toBeDefined();
 		expect(customer.features[TestFeature.Messages].balance).toBeLessThan(250);
 	},

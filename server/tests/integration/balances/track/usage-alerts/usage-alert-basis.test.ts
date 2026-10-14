@@ -1,27 +1,3 @@
-/**
- * TDD test for usage alert `basis` on balance-backed bases.
- *
- * Contract under test:
- *   New types/fields:
- *     - usage_alerts[].basis: "balance" | "included" | "recurring" | "usage_limit" (default "balance")
- *     - webhook usage_alert.basis always present
- *     - webhook balance { usage, granted, included, remaining } present when basis != usage_limit
- *   New behaviors:
- *     - basis balance   → denominator = granted (today's behaviour)
- *     - basis included  → denominator = Σ breakdown.included_grant
- *     - basis recurring → denominator = Σ (included_grant + prepaid_grant) where reset != null
- *     - remaining = max(0, denominator − usage) for remaining / remaining_percentage
- *     - denominator 0 → percentage alerts skip
- *     - unlimited feature → balance bases skip
- *     - one track crossing two thresholds fires both
- *
- * Pre-impl red: `basis` does not exist on DbUsageAlert (compile), then the
- * payload lacks basis/balance and included/recurring never fire at their own
- * denominators.
- * Post-impl green: measurement per basis feeds one crossing check and the
- * payload carries the basis + balance block.
- */
-
 import { afterAll, beforeAll, expect, test } from "bun:test";
 import { type ApiCustomerV5, ApiVersion } from "@autumn/shared";
 import {
@@ -67,10 +43,6 @@ const track = (customerId: string, value: number) =>
 		value,
 	});
 
-/**
- * Monthly 1000 included + 500 prepaid (both reset) + 300 lifetime grant:
- *   balance = 1800, included = 1300, recurring = 1500.
- */
 const setupMixedGrants = async ({
 	customerId,
 	planId,
@@ -130,7 +102,6 @@ const setupMixedGrants = async ({
 	});
 };
 
-// ── A1: default basis is balance; payload carries basis + balance block ─────
 test(`${chalk.yellowBright("alert-basis1: default basis balance, payload has basis and balance block")}`, async () => {
 	const customerId = "alert-basis-default-1";
 	const plan = products.base({
@@ -174,7 +145,6 @@ test(`${chalk.yellowBright("alert-basis1: default basis balance, payload has bas
 	});
 });
 
-// ── A2 + A3: included and recurring use their own denominators ──────────────
 test(`${chalk.yellowBright("alert-basis2: included and recurring fire at their own denominators, balance last")}`, async () => {
 	const customerId = "alert-basis-mixed-1";
 	await setupMixedGrants({ customerId, planId: "alert-basis-mixed" });
@@ -207,7 +177,6 @@ test(`${chalk.yellowBright("alert-basis2: included and recurring fire at their o
 		],
 	});
 
-	// 1100 / 1300 = 84.6% of included; 73% of recurring; 61% of balance.
 	await track(customerId, 1100);
 	const includedFire = await waitForUsageAlert({
 		token: playToken,
@@ -235,7 +204,6 @@ test(`${chalk.yellowBright("alert-basis2: included and recurring fire at their o
 		timeoutMs: 1000,
 	});
 
-	// 1300 / 1500 = 86.7% of recurring; 72% of balance.
 	await track(customerId, 200);
 	const recurringFire = await waitForUsageAlert({
 		token: playToken,
@@ -252,7 +220,6 @@ test(`${chalk.yellowBright("alert-basis2: included and recurring fire at their o
 		basis: "balance",
 	});
 
-	// 1500 / 1800 = 83.3% of balance.
 	await track(customerId, 200);
 	const balanceFire = await waitForUsageAlert({
 		token: playToken,
@@ -268,7 +235,6 @@ test(`${chalk.yellowBright("alert-basis2: included and recurring fire at their o
 	});
 });
 
-// ── A4: remaining under included = max(0, included − usage) ─────────────────
 test(`${chalk.yellowBright("alert-basis3: remaining and remaining_percentage under included")}`, async () => {
 	const customerId = "alert-basis-remaining-1";
 	await setupMixedGrants({ customerId, planId: "alert-basis-remaining" });
@@ -294,7 +260,6 @@ test(`${chalk.yellowBright("alert-basis3: remaining and remaining_percentage und
 		],
 	});
 
-	// included remaining = 1300 − 1210 = 90 (≤ 100, 6.9% ≤ 10%); balance remaining is 590.
 	await track(customerId, 1210);
 	const remainingFire = await waitForUsageAlert({
 		token: playToken,
@@ -313,7 +278,6 @@ test(`${chalk.yellowBright("alert-basis3: remaining and remaining_percentage und
 	);
 });
 
-// ── A5: included = 0 skips percentage alerts ────────────────────────────────
 test(`${chalk.yellowBright("alert-basis4: included = 0 skips a percentage alert on basis included")}`, async () => {
 	const customerId = "alert-basis-zero-included-1";
 	const plan = products.pro({
@@ -354,7 +318,6 @@ test(`${chalk.yellowBright("alert-basis4: included = 0 skips a percentage alert 
 	await expectNoUsageAlert({ token: playToken, customerId, threshold: 50 });
 });
 
-// ── A6: unlimited feature skips balance bases ───────────────────────────────
 test(`${chalk.yellowBright("alert-basis5: unlimited feature never fires a balance-basis alert")}`, async () => {
 	const customerId = "alert-basis-unlimited-1";
 	const plan = products.base({
@@ -385,7 +348,6 @@ test(`${chalk.yellowBright("alert-basis5: unlimited feature never fires a balanc
 	await expectNoUsageAlert({ token: playToken, customerId, threshold: 10 });
 });
 
-// ── A7: one bulk track crosses 80 and 100 on basis included ─────────────────
 test(`${chalk.yellowBright("alert-basis6: bulk track crossing two thresholds fires both")}`, async () => {
 	const customerId = "alert-basis-bulk-1";
 	const plan = products.base({

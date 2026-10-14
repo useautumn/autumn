@@ -1,7 +1,5 @@
 const TRANSIENT = /RESOURCE_EXHAUSTED|rate limit|too many requests/i;
 
-/** Throttling rejects a create before it happens, so retrying can't orphan a sandbox; transport errors
- * (UNAVAILABLE, DEADLINE_EXCEEDED) may land after Modal accepted it, so they aren't retried. */
 export const isTransientModalError = (error: unknown) =>
 	TRANSIENT.test(error instanceof Error ? error.message : String(error));
 
@@ -25,7 +23,6 @@ export const withTransientRetry = async <T>({
 	}
 };
 
-/** Trips only on `limit` failures in a row, so a few flaky forks in a 3,000-wide run don't stop it. */
 export const createFailureBreaker = ({ limit }: { limit: number }) => {
 	let consecutive = 0;
 	return {

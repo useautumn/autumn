@@ -1,7 +1,6 @@
 import { createOwnerLink, type OwnerLink } from "./createOwnerLink.js";
 import type { SlotOwners } from "./types/slotOwners.js";
 
-/** Slot `s` belongs to thread `s % threads`: fixed for the life of the process, so a customer never changes owner. */
 export const createSlotOwners = ({
 	index,
 	threads,

@@ -32,8 +32,6 @@ const callTool = async (toolName: string, request: Record<string, unknown>) => {
 	return JSON.parse(result.content?.[0]?.text ?? "{}");
 };
 
-// The installation token lacks organisation:write, so the test writes notes
-// where the API would: the agent_rules row.
 const setNotes = async (notes: string) => {
 	await db.execute(
 		sql`insert into agent_rules (org_id, org_slug, entity_rules, credit_rules, notes)
@@ -100,9 +98,6 @@ try {
 			finalize?: boolean;
 		};
 		console.log(`parked invoice_mode: ${JSON.stringify(invoiceMode)}`);
-		// The skill default is a DRAFT invoice (finalize false); only the org
-		// policy demands finalized — so finalize=true proves the billing child
-		// received and followed the org instructions.
 		if (invoiceMode.enabled === true && invoiceMode.finalize === true) {
 			console.log("✅ billing child followed the org policy");
 			exitCode = 0;

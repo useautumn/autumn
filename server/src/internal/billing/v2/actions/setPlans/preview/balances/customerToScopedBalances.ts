@@ -24,7 +24,6 @@ type ScopedRow = { internal_entity_id?: string | null };
 
 const internalEntityIdOf = (row: ScopedRow) => row.internal_entity_id ?? null;
 
-/** Stored trialing plans are Active with a trial end, the only shape balances read. */
 const withTrialingPlansActive = (fullCustomer: FullCustomer): FullCustomer => ({
 	...fullCustomer,
 	customer_products: fullCustomer.customer_products.map((customerProduct) =>
@@ -60,10 +59,6 @@ const inScope =
 	(row: ScopedRow): boolean =>
 		internalEntityIdOf(row) === scope.internalEntityId;
 
-/**
- * Only the rows a scope owns: an entity read would also inherit customer-level plans, so scopes are sliced.
- * Pools are left out; their grants are attributed to the plans that contribute them.
- */
 const scopeFullCustomer = ({
 	fullCustomer,
 	scope,
@@ -80,7 +75,6 @@ const scopeFullCustomer = ({
 	pooled_customer_entitlements: [],
 });
 
-/** The given pools as the API reads them, summed per feature. */
 const poolsToTotals = async ({
 	ctx,
 	fullCustomer,
@@ -103,7 +97,6 @@ const poolsToTotals = async ({
 	return balances;
 };
 
-/** A contribution's pool, or the feature's pools together while billing has not linked it yet. */
 const poolKeyOf = ({
 	featureId,
 	contribution,
@@ -112,7 +105,6 @@ const poolKeyOf = ({
 	contribution: PooledContribution;
 }) => contribution.poolId ?? `feature:${featureId}`;
 
-/** Every scope's contributions summed per pool, the denominator each contributor's share is cut from. */
 const contributionTotalsByPoolKey = (
 	scopeContributions: Record<string, PooledContribution[]>[],
 ) => {
@@ -130,7 +122,6 @@ const contributionTotalsByPoolKey = (
 	return totals;
 };
 
-/** Each pool's totals by pool key: its own pool, plus every feature's pools together. */
 const customerToPoolTotalsByKey = async ({
 	ctx,
 	fullCustomer,
@@ -159,7 +150,6 @@ const customerToPoolTotalsByKey = async ({
 	return totalsByKey;
 };
 
-/** The customer's balances per scope: customer-level plans, then each entity's own plans. */
 export const customerToScopedBalances = async ({
 	ctx,
 	fullCustomer,

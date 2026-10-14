@@ -6,7 +6,6 @@ import { outOfScopeLiveCustomerProducts } from "./outOfScopeLiveCustomerProducts
 import { requestedPlans } from "./requestedPlans";
 import { subscriptionConflictError } from "./subscriptionScopeErrors";
 
-/** A plan billed elsewhere can only be edited from its own subscription. */
 export const assertNoRequestedPlanOnAnotherSubscription = ({
 	billingContext,
 }: {

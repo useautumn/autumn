@@ -1,12 +1,3 @@
-/**
- * catalogV2.update — license-parent follower mint follows the child's planParams.active.
- *
- * Contract:
- *   child new_version omit active + propagate.license_parents new_version
- *     → child draft mint only; parent stays on active until child takes the pointer
- *   same with child active:true → minted parent is active
- */
-
 import { test } from "bun:test";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";

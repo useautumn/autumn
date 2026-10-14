@@ -12,7 +12,6 @@ export type ResetBalancesUpdate = (
 	| { balance: number; additional_balance: number; adjustment: number }
 ) & { usage_attribution: UsageAttribution };
 
-/** What a refill reads: the balances being replaced and the grant that sizes them. */
 export type ResetBalancesCustomerEntitlement = Pick<
 	CustomerEntitlement,
 	"balance" | "entities"
@@ -20,7 +19,6 @@ export type ResetBalancesCustomerEntitlement = Pick<
 	entitlement: Pick<Entitlement, "allowance" | "entity_feature_id">;
 };
 
-/** Returns the overage amount to deduct: max(0, -balance). */
 const computeOverageDeduction = ({ balance }: { balance: number }): Decimal => {
 	return Decimal.max(0, new Decimal(balance).neg());
 };

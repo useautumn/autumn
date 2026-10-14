@@ -28,7 +28,6 @@ export async function bootstrapPartition({
 		? await loadPartitionCheckpoint({ ctx, topic, partition, signal })
 		: null;
 
-	// Keep the final state read, plan, and apply synchronous after checkpoint loading.
 	const state = readBootstrapState({
 		ctx,
 		topic,

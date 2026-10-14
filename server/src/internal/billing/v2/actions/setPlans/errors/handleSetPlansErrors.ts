@@ -96,7 +96,6 @@ export const handleSetPlansErrors = async ({
 	}
 
 	handleFirstPhaseStartDateErrors({ billingContext, timeline, preview });
-	// A trial controls the cycle start, except on a backdated trialing recreate, which anchors after the kept trial.
 	if (isTrialBackdateRecreate({ billingContext })) {
 		handleTrialBackdateAnchorErrors({ billingContext });
 	} else {
@@ -145,7 +144,6 @@ export const handleSetPlansComputeErrors = async ({
 	autumnBillingPlan: AutumnBillingPlan;
 	immediatePhaseTransition: ImmediatePhaseTransition;
 }) => {
-	// Only an explicit request is rejected; an org transition rule simply has nothing to carry.
 	handleCarryOverUsagesErrors({
 		ctx,
 		carryOverUsages: params.carry_over_usages,
@@ -182,8 +180,6 @@ export const handleSetPlansComputeErrors = async ({
 		assertNoAmbiguousDroppedLicenses({ unmatched });
 	}
 
-	// Preflight the batch-transition limit, so an oversized pool fails before
-	// Stripe and customer product writes begin.
 	await validateCustomerEntitlementBatchTransitions({
 		ctx,
 		transitions: autumnBillingPlan.customerLicenseTransitions,

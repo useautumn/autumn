@@ -13,7 +13,6 @@ import { handleMultiAttachCurrentProductErrors } from "./handleMultiAttachCurren
 import { handleMultiAttachRedirectErrors } from "./handleMultiAttachRedirectErrors";
 import { handleMultiAttachStartDateErrors } from "./handleMultiAttachStartDateErrors";
 
-/** Runs all multi-attach validation checks. */
 export const handleMultiAttachErrors = async ({
 	ctx,
 	billingContext,
@@ -40,7 +39,6 @@ export const handleMultiAttachErrors = async ({
 
 	handleMultiAttachBillingCycleAnchorErrors({ billingContext });
 
-	// Subscription ID uniqueness
 	await handleSubscriptionIdErrors({
 		db: ctx.db,
 		internalCustomerId: billingContext.fullCustomer.internal_id,

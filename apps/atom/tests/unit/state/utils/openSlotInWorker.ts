@@ -2,7 +2,6 @@ import { isMainThread, parentPort, workerData } from "node:worker_threads";
 import { shareSqliteOpenLock } from "../../../../src/state/newSqliteConnection.js";
 import { openSlotDatabase } from "../../../../src/state/openSlotDatabase.js";
 
-/** Run as a worker: opens the file once every opener has started, and reports how it went. */
 export const OPENER_PATH = import.meta.path;
 
 if (!isMainThread) {

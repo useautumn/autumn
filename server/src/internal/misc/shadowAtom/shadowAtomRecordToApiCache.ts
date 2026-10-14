@@ -5,7 +5,6 @@ import {
 } from "./shadowAtomNames.js";
 import type { ShadowAtomRecord } from "./types/shadowAtomRecord.js";
 
-/** A shadow Atom as an org's Atom page reads it. It serves both envs, so it reports live; it has no first check. */
 export const shadowAtomRecordToApiCache = ({
 	record,
 }: {

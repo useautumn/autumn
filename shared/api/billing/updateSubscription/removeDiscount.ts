@@ -16,7 +16,6 @@ export type RemoveDiscount = z.infer<typeof RemoveDiscountSchema>;
 
 export const RemoveDiscountsSchema = z.array(RemoveDiscountSchema);
 
-/** Adding and removing the same reward in one request is ambiguous, so it's rejected. */
 export const addsAndRemovesSameReward = ({
 	discounts,
 	remove_discounts,

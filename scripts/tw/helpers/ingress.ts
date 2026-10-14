@@ -1,20 +1,3 @@
-/**
- * Orchestrator-side helpers for the Stripe Connect webhook INGRESS (plan §6a / §9 / §9a).
- *
- * The ingress replaces the per-worker Connect webhook (Stripe caps webhook
- * endpoints at 16/account): the orchestrator stands up ONE lightweight ingress
- * sandbox running `scripts/tw/ingress/server.mjs`, registers ONE shared platform
- * Connect webhook pointed at it, and pushes each worker's `{ accountId → workerUrl }`
- * mapping to it as workers come up. Stripe → the one Connect webhook → ingress →
- * the owning worker, routed by `event.account`. Full per-worker delivery isolation
- * AND no 16-worker cap.
- *
- * Unlike the worker sandboxes (forked from the warm parent), the ingress sandbox
- * needs no repo: `server.mjs` is built-ins-only, so its source is shipped inline
- * (`bun -e`). It is a RECORDED sandbox, so the existing teardown
- * sandbox-deletion loop tears it down.
- */
-
 import { randomUUID } from "node:crypto";
 import chalk from "chalk";
 import { INGRESS_PORT, TW_ENV, WORKER_TIMEOUT_MS } from "../constants.ts";
@@ -29,12 +12,9 @@ import {
 } from "./provider.ts";
 
 const INGRESS_SCRIPT = "scripts/tw/ingress/server.mjs";
-/** The ingress sandbox has no repo checkout; any existing dir works as cwd. */
 const INGRESS_CWD = "/tmp";
 
-/** How long to wait for the ingress `/health` to come up after boot. */
 const INGRESS_HEALTH_TIMEOUT_MS = 90_000;
-/** Delay between `/health` polls. */
 const INGRESS_HEALTH_POLL_MS = 1500;
 
 const HTTP_OK = 200;
@@ -52,13 +32,6 @@ export type CreateIngressResult = {
 	token: string;
 };
 
-/**
- * Stand up the ingress sandbox: create a lightweight bun sandbox (no repo, no
- * services), launch the inline ingress server detached, and poll `/health` until
- * it's up. Returns the sandbox
- * (record it for teardown), its public URL (the Connect webhook target), and the
- * generated INGRESS_TOKEN that authenticates map writes.
- */
 export const createIngress = async ({
 	owner,
 	runId,
@@ -88,11 +61,6 @@ export const createIngress = async ({
 
 	const publicUrl = await getPublicUrl(sandbox, INGRESS_PORT);
 
-	// Launch the ingress http server DETACHED — it must keep running for the whole
-	// run (mirrors the worker boot's detached runCommand in run.ts). Forward its
-	// output through the shared log sink, so during the RUN phase (Ink mounted) the
-	// `[ingress] …` firehose lands in the run log file instead of fighting the TUI
-	// for stdout.
 	const ingressCommand = await runDetached(
 		sandbox,
 		["bun", "-e", readInlineBunScript(INGRESS_SCRIPT)],
@@ -104,11 +72,6 @@ export const createIngress = async ({
 		},
 	);
 
-	// The ingress server is detached and streams logs for the whole run; we never
-	// await its completion. When teardown deletes the ingress sandbox the log
-	// stream closes and `wait()` rejects with a benign `sandbox_stream_closed`
-	// StreamError. Attach a swallowing handler so it can't surface as an uncaught
-	// rejection spamming the console at teardown (any other error still throws).
 	void ingressCommand
 		.wait({ signal })
 		.catch((error: unknown) => {
@@ -117,13 +80,8 @@ export const createIngress = async ({
 			}
 			throw error;
 		})
-		.catch(() => {
-			// A genuine ingress crash is surfaced by the worker-mapping push / the
-			// teardown path; nothing to do here beyond not crashing the process.
-		});
+		.catch(() => {});
 
-	// Poll /health until the server is listening (bounded — fail loud if it never
-	// comes up so a broken ingress can't silently drop every worker's events).
 	const deadline = Date.now() + INGRESS_HEALTH_TIMEOUT_MS;
 	for (;;) {
 		if (signal.aborted) {
@@ -135,9 +93,7 @@ export const createIngress = async ({
 				log(`ingress: ${name} healthy at ${publicUrl}`);
 				return { sandbox, publicUrl, token };
 			}
-		} catch {
-			// not up yet — keep polling until the deadline.
-		}
+		} catch {}
 		if (Date.now() >= deadline) {
 			throw new Error(
 				`ingress ${name} did not become healthy within ${INGRESS_HEALTH_TIMEOUT_MS}ms (${publicUrl}/health)`,
@@ -147,13 +103,6 @@ export const createIngress = async ({
 	}
 };
 
-/**
- * Push one worker's `{ accountId → workerUrl }` mapping to the ingress (token-authed).
- * Called after a worker is booted + its public URL is known, so by the time any
- * test fires Stripe events the ingress can route them to the owning worker. Throws
- * on a non-2xx so a provisioning failure surfaces (the mapping is load-bearing for
- * that worker's delivery isolation).
- */
 export const pushWorkerMapping = async ({
 	ingressUrl,
 	token,

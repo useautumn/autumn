@@ -3,8 +3,6 @@ import { and, count, inArray } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { activeAssignmentConditions } from "../licenseAssignmentRepo.js";
 
-/** Live seats per pool link, as an aggregate — reconcile never loads seat
- * rows. Output is bounded by customer license count, not seats. */
 export const countActiveByCustomerLicenseLinkIds = async ({
 	db,
 	customerLicenseLinkIds,

@@ -1,29 +1,3 @@
-/**
- * Seeds the bench org with N customers spread across every anchor-ladder
- * shape, so each migration query path can be benchmarked in isolation via
- * its plan_filter:
- *
- *   shape     %   plan              rung exercised
- *   sibling   55  bench-free        sibling cusEnt anchor (monthly Messages)
- *   freeBare  15  bench-free-bare   starts_at fallback
- *   cpAnchor  10  bench-free-bare   cp.billing_cycle_anchor
- *   paidSub   10  bench-paid        subscriptions.billing_cycle_anchor_seconds
- *                                   (mock sub row + $20/mo cusPrice, no Stripe)
- *   paidNow    5  bench-paid        paid-recurring "now" fallback (cusPrice only)
- *   custom     5  bench-free        is_custom → skipped partition path
- *
- * Pure server-side generate_series inserts — no API/Stripe calls. Reruns are
- * resumable (ON CONFLICT DO NOTHING). Also refreshes the dashboard-runnable
- * bench migrations (see utils/benchMigrationDefs.ts).
- *
- *   bun tests/perf/batch-migrations/seedBatchBench.ts --customers 4000000
- *   bun tests/perf/batch-migrations/seedBatchBench.ts --migrations-only
- *   bun tests/perf/batch-migrations/seedBatchBench.ts --reset
- *
- * For a full reset at 4M scale, prefer re-branching the Neon bench branch —
- * --reset issues row DELETEs and is only sensible for small seeds.
- */
-
 import { CusProductStatus } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { type SQL, sql } from "drizzle-orm";
@@ -135,8 +109,6 @@ const seedShapeChunk = async ({
 	const { ctx, org, benchProducts } = bench;
 	const { db } = ctx;
 
-	// starts_at spreads deterministically across the past year so anchors vary
-	// per customer; the same expression repeats across tables without joins.
 	const startsAt = sql`${now}::bigint - (i % 365) * ${DAY_MS}::bigint`;
 	const series = sql`GENERATE_SERIES(${start}::int, ${end}::int) AS g(i)`;
 

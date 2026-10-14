@@ -11,7 +11,6 @@ export const isVerificationExpired = (expiresAt: string, now = new Date()) => {
 	return date.getTime() <= now.getTime();
 };
 
-/** `null` when the timestamp can't be parsed, so the UI just omits the line. */
 export const formatVerificationExpiry = (expiresAt: string) => {
 	const date = parse(expiresAt);
 	if (!date) return null;

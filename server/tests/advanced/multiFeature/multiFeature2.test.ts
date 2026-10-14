@@ -19,7 +19,6 @@ import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
 import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
 
-// Scenario 1: lifetime + pay per use monthly -> pay per use monthly
 const pro = constructProduct({
 	id: "multiFeature2Pro",
 	type: "pro",
@@ -44,7 +43,6 @@ const premium = constructProduct({
 	type: "premium",
 	excludeBase: true,
 	items: [
-		// Pay per use
 		constructArrearItem({
 			featureId: TestFeature.Messages,
 			includedUsage: 0,
@@ -122,13 +120,13 @@ describe(`${chalk.yellowBright(
 			featureId: TestFeature.Messages,
 		});
 
-		expect(lifetimeCusEnt?.balance).toBe(50); // pro.items[0].includedUsage
+		expect(lifetimeCusEnt?.balance).toBe(50);
 
-		expect(usageCusEnt?.balance).toBe(0); // pro.items[1].includedUsage
+		expect(usageCusEnt?.balance).toBe(0);
 	});
 
 	test("should use lifetime allowance first", async () => {
-		const value = 50; // pro.items[0].includedUsage
+		const value = 50;
 
 		await autumn.events.send({
 			customerId,
@@ -145,8 +143,8 @@ describe(`${chalk.yellowBright(
 			featureId: TestFeature.Messages,
 		});
 
-		expect(lifetimeCusEnt?.balance).toBe(50 - value); // pro.items[0].includedUsage - value
-		expect(usageCusEnt?.balance).toBe(0); // pro.items[1].includedUsage
+		expect(lifetimeCusEnt?.balance).toBe(50 - value);
+		expect(usageCusEnt?.balance).toBe(0);
 	});
 
 	test("should have correct usage after upgrade", async () => {
@@ -163,7 +161,6 @@ describe(`${chalk.yellowBright(
 			product_id: premium.id,
 		});
 
-		// return;
 		const { lifetimeCusEnt, usageCusEnt: newUsageCusEnt } =
 			await getLifetimeAndUsageCusEnts({
 				customerId,
@@ -172,12 +169,5 @@ describe(`${chalk.yellowBright(
 
 		expect(lifetimeCusEnt).toBeUndefined();
 		expect(newUsageCusEnt?.balance).toBe(0);
-
-		// Check invoice too
-		// const res = await autumn2.customers.get(customerId);
-		// const invoices = res.invoices;
-
-		// const invoice0Amount = value * 0.5; // value * pro.items[1].price
-		// expect(invoices![0].total).toBe(invoice0Amount);
 	});
 });

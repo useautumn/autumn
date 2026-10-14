@@ -10,7 +10,6 @@ afterEach(() => {
 	globalThis.fetch = originalFetch;
 });
 
-/** Sends one error envelope through the transport and returns the URLs it posted to. */
 const deliveredUrlsOf = async (
 	transport: NonNullable<
 		ReturnType<typeof errorReportingOptionsOf>

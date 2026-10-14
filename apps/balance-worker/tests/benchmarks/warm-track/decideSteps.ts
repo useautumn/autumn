@@ -32,7 +32,6 @@ import {
 } from "../../fixtures/mutations.js";
 import { buildScenario } from "../track-throughput/scenarios.js";
 
-/** The two expensive steps of a warm decide, split into their parts: where the deduction and the effect deciders allocate. */
 const args = Object.fromEntries(
 	process.argv.slice(2).map((arg) => {
 		const [key, value] = arg.replace(/^--/, "").split("=");

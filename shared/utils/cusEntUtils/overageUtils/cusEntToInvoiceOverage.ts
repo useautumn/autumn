@@ -10,7 +10,6 @@ export const cusEntToInvoiceOverage = ({
 	cusEnt: CustomerEntitlementWithPricesView;
 	entityId?: string;
 }) => {
-	// 1. If entity scoped
 	if (isEntityScopedCusEnt(cusEnt)) {
 		let totalOverage = new Decimal(0);
 		if (nullish(entityId)) {
@@ -20,7 +19,7 @@ export const cusEntToInvoiceOverage = ({
 				totalOverage = totalOverage.add(overage);
 			}
 
-			return totalOverage.toNumber(); // this is NOT to be used for any amount calculations OR billing calculations. ONLY display purposes (invoice descriptions)
+			return totalOverage.toNumber();
 		} else {
 			const entity = cusEnt.entities?.[entityId];
 			if (nullish(entity)) return 0;
@@ -29,7 +28,6 @@ export const cusEntToInvoiceOverage = ({
 		}
 	}
 
-	// 2. If not entity scoped
 	const overage = Decimal.max(0, new Decimal(-(cusEnt.balance || 0)));
 	return overage.toNumber();
 };

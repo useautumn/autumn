@@ -17,10 +17,8 @@ import {
 	CatalogVariantParamsSchema,
 } from "./catalogVariantParams.js";
 
-/** CatalogV2 plan entry — create/update fields only. */
 export const UpdateCatalogPlanParamsSchema = z
 	.object({
-		// ── Core ──────────────────────────────────────────────────────────────
 		plan_id: z.string().nonempty().regex(idRegex).meta({
 			description: "The ID of the plan to create or update.",
 		}),
@@ -91,7 +89,6 @@ export const UpdateCatalogPlanParamsSchema = z
 			description: "Arbitrary key-value metadata shared across all versions.",
 		}),
 
-		// ── Catalog update ────────────────────────────────────────────────────
 		version: z.number().int().min(1).optional().meta({
 			description:
 				"Deprecated. Use `version_slug` to target a row. Omit both to target the active row.",
@@ -123,7 +120,6 @@ export const UpdateCatalogPlanParamsSchema = z
 			description: "When false, skip Stripe product/price creation on create.",
 		}),
 
-		// ── Variants & licenses ───────────────────────────────────────────────
 		variants: z.array(CatalogVariantParamsSchema).optional().meta({
 			internal: true,
 			description:

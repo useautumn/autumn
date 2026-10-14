@@ -2,9 +2,6 @@ import { ACTIVE_STATUSES, MIGRATABLE_STATUSES } from "@autumn/shared";
 import { sql } from "drizzle-orm";
 import { sqlList } from "@/internal/billing/v2/actions/batchTransition/execute/sql/batchTransitionSqlUtils.js";
 
-/** The link a pool instantiates is its definition source, so its license plan is
- * resolved through plan_license rather than the denormalized product copy.
- * Matching the plan's public id keeps seats on any version reachable. */
 export const poolLicensePlanSql = ({
 	licensePlanId,
 	poolAlias = sql`pool`,
@@ -22,7 +19,6 @@ export const poolLicensePlanSql = ({
 	)
 `;
 
-/** A live parent outranks a scheduled successor: it is the one billing the seat. */
 export const canonicalPoolOrderingSql = ({
 	parentAlias,
 	poolAlias,
@@ -35,8 +31,6 @@ export const canonicalPoolOrderingSql = ({
 		${poolAlias}.created_at DESC, ${poolAlias}.id DESC
 `;
 
-/** link_id is copied to every successor row, so an assignment can reach several
- * pools; the live parent wins because it is the one that bills the seat. */
 export const canonicalPoolLateralSql = ({
 	licensePlanId,
 	columns = sql`pool.parent_customer_product_id`,

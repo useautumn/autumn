@@ -1,7 +1,3 @@
-/**
- * Replaying an identical delete must remain a clean no-op after the target row
- * is already gone.
- */
 import { expect, test } from "bun:test";
 import { MigrationItemRunStatus } from "@autumn/shared";
 import { runChunkedMigration } from "@tests/integration/billing/migrations-v2/utils/runChunkedMigration";

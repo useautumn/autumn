@@ -9,11 +9,6 @@ import chalk from "chalk";
 import { expectCustomerFeatureCorrect } from "../../utils/expectCustomerFeatureCorrect";
 import { expectCustomerInvoiceCorrect } from "../../utils/expectCustomerInvoiceCorrect";
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// ONE-OFF ERRORS - Price/Billing Changes Not Allowed
-// ═══════════════════════════════════════════════════════════════════════════════
-
-// 1. Error: changing base price on one-off product
 test.concurrent(`${chalk.yellowBright("error: one-off changing base price")}`, async () => {
 	const oneOffPriceItem = items.oneOffPrice({ price: 50 });
 	const oneOffProd = products.base({ items: [oneOffPriceItem], id: "oneoff" });
@@ -27,7 +22,6 @@ test.concurrent(`${chalk.yellowBright("error: one-off changing base price")}`, a
 		actions: [s.attach({ productId: "oneoff" })],
 	});
 
-	// Try to change base price - should fail
 	const newPriceItem = items.oneOffPrice({ price: 100 });
 	const updateParams = {
 		customer_id: customerId,
@@ -42,7 +36,6 @@ test.concurrent(`${chalk.yellowBright("error: one-off changing base price")}`, a
 	});
 });
 
-// 2. Error: changing feature price on one-off prepaid product
 test.concurrent(`${chalk.yellowBright("error: one-off changing feature price")}`, async () => {
 	const oneOffMessagesItem = items.oneOffMessages({
 		price: 10,
@@ -67,7 +60,6 @@ test.concurrent(`${chalk.yellowBright("error: one-off changing feature price")}`
 		],
 	});
 
-	// Try to change feature price - should fail
 	const newMessagesItem = items.oneOffMessages({
 		price: 20,
 		billingUnits: 100,
@@ -85,7 +77,6 @@ test.concurrent(`${chalk.yellowBright("error: one-off changing feature price")}`
 	});
 });
 
-// 3. Error: changing billing units on one-off prepaid product
 test.concurrent(`${chalk.yellowBright("error: one-off changing billing units")}`, async () => {
 	const oneOffMessagesItem = items.oneOffMessages({
 		price: 10,
@@ -110,7 +101,6 @@ test.concurrent(`${chalk.yellowBright("error: one-off changing billing units")}`
 		],
 	});
 
-	// Try to change billing units - should fail
 	const newMessagesItem = items.oneOffMessages({
 		price: 10,
 		billingUnits: 200,
@@ -128,7 +118,6 @@ test.concurrent(`${chalk.yellowBright("error: one-off changing billing units")}`
 	});
 });
 
-// 4. Error: changing both price and billing units on one-off
 test.concurrent(`${chalk.yellowBright("error: one-off changing price and billing units")}`, async () => {
 	const oneOffMessagesItem = items.oneOffMessages({
 		price: 10,
@@ -153,7 +142,6 @@ test.concurrent(`${chalk.yellowBright("error: one-off changing price and billing
 		],
 	});
 
-	// Try to change both price and billing units - should fail
 	const newMessagesItem = items.oneOffMessages({
 		price: 20,
 		billingUnits: 200,
@@ -171,7 +159,6 @@ test.concurrent(`${chalk.yellowBright("error: one-off changing price and billing
 	});
 });
 
-// 5. Updating the quantity of a one-off item on a recurring product is a manual top-up
 test.concurrent(`${chalk.yellowBright("one-off item quantity update on recurring product tops up")}`, async () => {
 	const billingUnits = 100;
 	const oneOffMessagesItem = items.oneOffMessages({
@@ -199,7 +186,6 @@ test.concurrent(`${chalk.yellowBright("one-off item quantity update on recurring
 		],
 	});
 
-	// Manual top-up treats the quantity as a delta: 2 more packs on top of 1
 	await autumnV1.subscriptions.update({
 		customer_id: customerId,
 		product_id: recurringProduct.id,
@@ -221,7 +207,6 @@ test.concurrent(`${chalk.yellowBright("one-off item quantity update on recurring
 	});
 });
 
-// 6. Error: adding a free trial to a one-off product
 test.concurrent(`${chalk.yellowBright("error: one-off adding free trial")}`, async () => {
 	const oneOffPriceItem = items.oneOffPrice({ price: 50 });
 	const oneOffProd = products.base({
@@ -238,7 +223,6 @@ test.concurrent(`${chalk.yellowBright("error: one-off adding free trial")}`, asy
 		actions: [s.attach({ productId: "oneoff-add-trial" })],
 	});
 
-	// Try to add a free trial to a one-off product - should fail
 	await expectAutumnError({
 		func: async () => {
 			await autumnV1.subscriptions.update({
@@ -254,7 +238,6 @@ test.concurrent(`${chalk.yellowBright("error: one-off adding free trial")}`, asy
 	});
 });
 
-// 8. Error: removing trial and adding one-off item
 test.concurrent(`${chalk.yellowBright("error: remove trial and add one-off item")}`, async () => {
 	const dashboardItem = items.dashboard();
 	const monthlyBasePrice = items.monthlyPrice({ price: 20 });
@@ -274,7 +257,6 @@ test.concurrent(`${chalk.yellowBright("error: remove trial and add one-off item"
 		actions: [s.attach({ productId: proTrial.id })],
 	});
 
-	// Try to remove trial and add one-off prepaid messages - should fail
 	const oneOffMessagesItem = items.oneOffMessages({
 		includedUsage: 0,
 		billingUnits: 100,
@@ -296,7 +278,6 @@ test.concurrent(`${chalk.yellowBright("error: remove trial and add one-off item"
 	});
 });
 
-// Update prepaid item included usage on one-off product
 test.concurrent(`${chalk.yellowBright("one-off: update prepaid item included usage")}`, async () => {
 	const billingUnits = 100;
 	const price = 10;
@@ -311,7 +292,7 @@ test.concurrent(`${chalk.yellowBright("one-off: update prepaid item included usa
 		id: "one-off-prepaid-included",
 	});
 
-	const quantity = 200; // 2 packs
+	const quantity = 200;
 
 	const { customerId, autumnV1 } = await initScenario({
 		customerId: "one-off-prepaid-included",
@@ -328,7 +309,6 @@ test.concurrent(`${chalk.yellowBright("one-off: update prepaid item included usa
 		],
 	});
 
-	// Track some usage
 	const messagesUsed = 100;
 	await autumnV1.track(
 		{
@@ -339,7 +319,6 @@ test.concurrent(`${chalk.yellowBright("one-off: update prepaid item included usa
 		{ timeout: 2000 },
 	);
 
-	// Included usage goes 50 -> 100; the remaining 150 carries over on top
 	const remainingBeforeUpdate = oldIncludedUsage + quantity - messagesUsed;
 	const newIncludedUsage = 100;
 	const newTotalGranted = newIncludedUsage + remainingBeforeUpdate;
@@ -371,10 +350,4 @@ test.concurrent(`${chalk.yellowBright("one-off: update prepaid item included usa
 		customer,
 		count: 1,
 	});
-
-	// await expectAutumnError({
-	// 	func: async () => {
-	// 		await autumnV1.subscriptions.update(updateParams);
-	// 	},
-	// });
 });

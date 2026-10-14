@@ -28,12 +28,10 @@ export function StripeStep({ step, totalSteps, onComplete }: StripeStepProps) {
 	const connectStripe = useCallback(async () => {
 		setStripeState("connecting");
 
-		// Open dashboard to Stripe connect page
 		const stripeConnectUrl = `${FRONTEND_URL}/dev?tab=stripe`;
 		await open(stripeConnectUrl);
 
-		// Poll for Stripe connection
-		const maxAttempts = 60; // 5 minutes with 5 second intervals
+		const maxAttempts = 60;
 		let attempts = 0;
 
 		const pollInterval = setInterval(async () => {
@@ -42,7 +40,7 @@ export function StripeStep({ step, totalSteps, onComplete }: StripeStepProps) {
 			try {
 				const secretKey = readFromEnv({ bypass: true });
 				if (!secretKey) {
-					return; // Continue polling, key may not be ready yet
+					return;
 				}
 
 				const orgDetails = await fetchOrganization({ secretKey });
@@ -66,7 +64,6 @@ export function StripeStep({ step, totalSteps, onComplete }: StripeStepProps) {
 					setStripeState("error");
 				}
 			} catch {
-				// Continue polling on error
 			}
 		}, 5000);
 
@@ -84,7 +81,6 @@ export function StripeStep({ step, totalSteps, onComplete }: StripeStepProps) {
 				return;
 			}
 
-			// Fetch org details to check Stripe connection
 			const orgDetails = await fetchOrganization({ secretKey });
 
 			if (
@@ -95,7 +91,6 @@ export function StripeStep({ step, totalSteps, onComplete }: StripeStepProps) {
 				onComplete();
 			} else {
 				setStripeState("not_connected");
-				// Auto-open Stripe connect page
 				await connectStripe();
 			}
 		} catch (error) {
@@ -109,13 +104,11 @@ export function StripeStep({ step, totalSteps, onComplete }: StripeStepProps) {
 	}, [connectStripe, onComplete]);
 
 	useEffect(() => {
-		// Only start checking when this step is active
 		if (stripeState === "pending") {
 			checkStripe();
 		}
 	}, [checkStripe, stripeState]);
 
-	// Cleanup: clear poll interval on unmount
 	useEffect(() => {
 		return () => {
 			if (pollIntervalRef.current) {

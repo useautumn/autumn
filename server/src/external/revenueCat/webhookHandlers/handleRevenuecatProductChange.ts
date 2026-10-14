@@ -7,7 +7,6 @@ import { CusService } from "@/internal/customers/CusService";
 import { customerProductActions } from "@/internal/customers/cusProducts/actions";
 import { customerProductRepo } from "@/internal/customers/cusProducts/repos";
 
-// Absorbs clock skew between the store ending the purchase and RevenueCat stamping the event.
 const ENDED_TOLERANCE_MS = 10 * 60 * 1000;
 
 const renewedAfterEvent = ({
@@ -18,10 +17,6 @@ const renewedAfterEvent = ({
 	eventTimestampMs: number;
 }) => (cusProduct.processor?.current_period_start ?? 0) > eventTimestampMs;
 
-/**
- * Google Play only: an immediate replacement ends the old purchase without an EXPIRATION, and may be
- * bought from another app user. Expires the plan that purchase created, found by its stored purchase id.
- */
 export const handleProductChange = async ({
 	event,
 	ctx,
@@ -45,7 +40,6 @@ export const handleProductChange = async ({
 	};
 
 	if (event.store !== "PLAY_STORE") return skip("not a Google Play change");
-	// Deferred changes end later and arrive as INITIAL_PURCHASE on the same app user.
 	if (
 		!expiration_at_ms ||
 		expiration_at_ms > eventTimestampMs + ENDED_TOLERANCE_MS

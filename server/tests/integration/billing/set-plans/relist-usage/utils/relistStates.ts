@@ -42,7 +42,6 @@ const advanceDays = async ({
 	});
 };
 
-/** Pro active in Autumn with no Stripe subscription. */
 export const noSubState: RelistStateSetup = async ({ scenario }) => {
 	await attachPro({ scenario, noBillingChanges: true });
 	return { periodStartMs: scenario.clockStartMs };
@@ -53,10 +52,8 @@ export const activeState: RelistStateSetup = async ({ scenario }) => {
 	return { periodStartMs: scenario.clockStartMs };
 };
 
-/** Pro attached with a trial (scenario created with trialDays), so the Stripe sub is trialing. */
 export const trialingState: RelistStateSetup = activeState;
 
-/** Pro set to cancel at period end on day 5, before the re-list on day 10. */
 export const cancelAtPeriodEndState: RelistStateSetup = async ({
 	scenario,
 }) => {
@@ -71,7 +68,6 @@ export const cancelAtPeriodEndState: RelistStateSetup = async ({
 	return { periodStartMs: scenario.clockStartMs };
 };
 
-/** Pro with a scheduled future phase at renewal (base price to $30), set on day 2. */
 export const futurePhaseState: RelistStateSetup = async ({ scenario }) => {
 	await attachPro({ scenario });
 	await advanceDays({ scenario, days: 2 });
@@ -112,7 +108,6 @@ export const futurePhaseState: RelistStateSetup = async ({ scenario }) => {
 	return { periodStartMs: scenario.clockStartMs };
 };
 
-/** Pro with a pending billing-cycle anchor reset on day 25, set on day 2. */
 export const pendingAnchorState: RelistStateSetup = async ({ scenario }) => {
 	await attachPro({ scenario });
 	await advanceDays({ scenario, days: 2 });
@@ -137,7 +132,6 @@ export const pendingAnchorState: RelistStateSetup = async ({ scenario }) => {
 	return { periodStartMs: scenario.clockStartMs };
 };
 
-/** Pro's renewal payment fails, leaving the Stripe sub past_due; the re-list happens 10 days later. */
 export const pastDueState: RelistStateSetup = async ({ scenario }) => {
 	await attachPro({ scenario });
 	const stripeCli = scenario.ctx.stripeCli;

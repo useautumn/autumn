@@ -21,21 +21,17 @@ import {
 import { setTwdPoolState } from "./setTwdPoolState.ts";
 
 const PAGE_SIZE = 100;
-/** Same cap as scripts/tw/helpers/stripePool.ts: pool accounts are recent and list first. */
 const MAX_PAGES = 10;
 const KEY_CONCURRENCY = 8;
 const RETAG_CONCURRENCY = 4;
 
-/** Adopt accounts tagged autumn_twd_pool=1 or legacy autumn_tw_pool=1; legacy ones are re-tagged twd, dirty ones nuked. */
 export const discoverPoolAccounts = async ({
 	ctx,
 	platformAccountIds,
 	includeLocked = false,
 }: {
 	ctx: TwdContext;
-	/** Only these keys (scoped reinit); default every known key. */
 	platformAccountIds?: string[];
-	/** A scoped reinit discovers on keys it has locked itself. */
 	includeLocked?: boolean;
 }): Promise<{ discovered: number; nuking: number; retagged: number }> => {
 	const locked = new Set(

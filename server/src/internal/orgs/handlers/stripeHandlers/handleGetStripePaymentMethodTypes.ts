@@ -26,7 +26,6 @@ const enabledTypes = (configuration: Stripe.PaymentMethodConfiguration) =>
 			: [],
 	);
 
-/** Dashboard-only: invoice payment method types the connected Stripe account supports. */
 export const handleGetStripePaymentMethodTypes = createRoute({
 	scopes: [Scopes.Organisation.Read],
 	handler: async (c) => {

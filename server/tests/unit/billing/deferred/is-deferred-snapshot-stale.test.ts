@@ -1,8 +1,3 @@
-/**
- * A deferred plan's snapshot is only rebuilt when the customer or subscription changed under it;
- * otherwise it is replayed exactly as it was computed.
- */
-
 import { expect, test } from "bun:test";
 import {
 	type BillingPlan,

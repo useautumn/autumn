@@ -57,7 +57,6 @@ export const acquireTwStripePermit = async ({
 	];
 	const id = randomUUID();
 	const lane = getTwStripeLane();
-	// Queueing time must not extend the in-flight lease left behind by a crashed worker.
 	const leaseMs = Math.max(requestTimeoutMs, 1000) + 5000;
 	const accountRps = stripeAccount
 		? Math.min(maxRps, CONNECTED_ACCOUNT_MAX_RPS)

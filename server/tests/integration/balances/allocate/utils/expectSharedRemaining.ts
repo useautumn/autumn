@@ -7,7 +7,6 @@ type SharedBalanceCustomer = {
 	balances: Record<string, { remaining: number }>;
 };
 
-/** The customer's shared balance for messages, polled until entity tracks settle into the customer view. */
 export const expectSharedRemaining = pollableCustomerExpect({
 	fetchCustomer: ({
 		customerId,

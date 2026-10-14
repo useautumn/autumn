@@ -1,17 +1,3 @@
-/**
- * findNewestReusablePrepaidPrice
- *
- * SQL is a coarse filter. The winner is the catalog-first, then newest
- * row that pricesAreSame accepts. Slot is stripe_prepaid_price_v2_id only.
- *
- * Contract:
- *   catalog beats a newer custom; among customs, newest matching V2 slot wins
- *   volume vs graduated → no (multi-tier only; a single tier ignores tier_behavior)
- *   flat_amount 50 vs unset/0 → no
- *   consumable, one-off, V1-only, preview, other product.id → no
- *   catalog cannot reuse custom; custom can reuse catalog
- */
-
 import { expect, test } from "bun:test";
 import {
 	BillingInterval,

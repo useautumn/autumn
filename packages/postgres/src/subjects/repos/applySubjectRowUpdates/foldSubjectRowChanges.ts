@@ -6,7 +6,6 @@ import type { SubjectRowUpdate } from "../../types/subjectRowUpdate.js";
 
 const isNumber = (value: unknown): value is number => typeof value === "number";
 
-/** Counters added onto a map value held in `set`: the entry is rebuilt in code the way SQL would rebuild the stored one. */
 const addEntriesToValue = ({
 	value,
 	entries,
@@ -31,9 +30,6 @@ const addEntriesToValue = ({
 	return map;
 };
 
-/** Later changes land on top of earlier ones: a set replaces what an add moved, an add after a set moves the set value.
- *  A later guard joins the first's as what the row held when the chain began: as is on a column the chain has not moved,
- *  less what it added on a column only added to. One a set or a map entry moved cannot be carried back, and is dropped. */
 const foldInto = ({
 	folded,
 	next,
@@ -78,7 +74,6 @@ const foldInto = ({
 	}
 };
 
-/** An update landing on a row this flush inserts: the inserted row is rewritten in code instead. */
 const applyUpdateToRow = ({
 	row,
 	update,
@@ -108,7 +103,6 @@ export class SubjectRowChangeOrderError extends Error {
 	}
 }
 
-/** The folded change after one more lands on the same row; null when the pair cancels out (insert then delete). */
 const foldChange = ({
 	folded,
 	next,
@@ -116,12 +110,10 @@ const foldChange = ({
 	folded: SubjectRowChange;
 	next: SubjectRowChange;
 }): SubjectRowChange | null => {
-	// Set-based changes carry no row: the later one stands.
 	if (next.op === "promote" || folded.op === "promote") return { ...next };
 	const { table } = folded;
 	const id = subjectRowIdOf(folded);
 	if (next.op === "insert") {
-		// A row removed and re-created in one flush is one replacement of every column.
 		if (folded.op === "delete") {
 			return {
 				op: "update",
@@ -167,11 +159,6 @@ const foldChange = ({
 	return folded;
 };
 
-/**
- * One change per row, in first-seen order. A statement may not touch a row twice, and a hot row's
- * many moves become one write. An update's guard is what the row held when the chain began.
- * `foldedIndexOf[i]` is null when change i cancelled out (an insert this flush later deleted).
- */
 export const foldSubjectRowChanges = ({
 	changes,
 }: {
@@ -194,7 +181,6 @@ export const foldSubjectRowChanges = ({
 		slots[slot] = foldChange({ folded: current, next: change });
 		slotOf.push(slot);
 	}
-	// Cancelled slots vanish; every index is remapped to the surviving position, or null.
 	const position = new Map<number, number>();
 	const folded: SubjectRowChange[] = [];
 	for (const [slot, change] of slots.entries()) {

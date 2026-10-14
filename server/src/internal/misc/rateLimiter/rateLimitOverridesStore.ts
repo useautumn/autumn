@@ -20,7 +20,6 @@ export const getRuntimeRateLimitOverridesStatus = () => store.getStatus();
 export const getRateLimitOverridesFromSource = async () =>
 	store.readFromSource();
 
-/** An org's overrides, looked up first by orgId, then by orgSlug. */
 const findOrgOverride = ({
 	orgId,
 	orgSlug,
@@ -34,7 +33,6 @@ const findOrgOverride = ({
 	);
 };
 
-/** The override limit for an org+type, or undefined if none is configured. */
 export const getOrgRateLimitOverride = ({
 	orgId,
 	orgSlug,
@@ -62,10 +60,6 @@ export const updateFullRateLimitOverridesConfig = async ({
 	await store.writeToSource({ config });
 };
 
-/**
- * Test-only helper: override the in-memory rate limit overrides config without
- * touching S3.
- */
 export const _setRateLimitOverridesConfigForTesting = ({
 	config,
 }: {

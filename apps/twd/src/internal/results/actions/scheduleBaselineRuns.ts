@@ -6,7 +6,6 @@ import { createRun } from "../../runs/actions/createRun.ts";
 import { BASELINE_BRANCH } from "./refreshBaselines.ts";
 
 const HOUR_MS = 60 * 60 * 1000;
-// Once a day flat for cost; dev moving does not trigger an early baseline.
 const BASELINE_INTERVAL_MS = 24 * HOUR_MS;
 
 export const baselineIsDue = ({
@@ -20,7 +19,6 @@ export const baselineIsDue = ({
 
 const UTC_DAYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
 
-/** True on a UTC day listed in `skipDays` (comma-separated, e.g. "sat,sun"; blank skips none). */
 export const isBaselineSkipDay = ({
 	now,
 	skipDays,
@@ -34,7 +32,6 @@ export const isBaselineSkipDay = ({
 	return skipped.includes(UTC_DAYS[new Date(now).getUTCDay()] ?? "");
 };
 
-/** Interval hook: start a full dev baseline run when the last baseline (scheduled or a full dev-HEAD run) is more than 24h old, except on skip days. */
 export const scheduleBaselineRuns = async ({
 	ctx,
 }: {
@@ -52,7 +49,6 @@ export const scheduleBaselineRuns = async ({
 	if (isBaselineSkipDay({ now, skipDays })) return null;
 	if (!baselineIsDue({ lastCreatedAt: lastRun?.createdAt, now })) return null;
 
-	// Every push to dev is auto-warmed, so the newest warm image tracks dev's head.
 	const [devHead] = await ctx.db
 		.select({ sha: warmImages.sha })
 		.from(warmImages)

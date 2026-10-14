@@ -2,7 +2,6 @@ import type { FullProduct } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { ProductService } from "@/internal/products/ProductService";
 
-/** A load failure resolves to null, which derivation reads as custom. */
 export const loadBaseProduct = async ({
 	ctx,
 	internalProductId,
@@ -31,7 +30,6 @@ export const loadBaseProduct = async ({
 
 export type BaseProductCache = Map<string, Promise<FullProduct | null>>;
 
-/** A null result is not kept, so a failed read is retried. */
 export const loadCachedBaseProduct = async ({
 	ctx,
 	internalProductId,

@@ -10,7 +10,6 @@ const matchesFeature = ({
 	candidate.internal_feature_id === featureOptions.internal_feature_id ||
 	candidate.feature_id === featureOptions.feature_id;
 
-/** Compares purchased quantities per feature, ignoring order. */
 export const featureOptionsAreSame = ({
 	curFeatureOptions,
 	newFeatureOptions,

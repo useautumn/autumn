@@ -35,7 +35,6 @@ const usableRate = ({
 	return rate !== undefined && Number.isFinite(rate) && rate > 0 ? rate : null;
 };
 
-/** Major-unit `amount` in `currency` → USD at the table's date. Rounds once, 2dp half-up. Throws rather than guess. */
 export const convertToUsd = ({
 	amount,
 	currency,

@@ -1,5 +1,3 @@
-// Preload script - runs BEFORE main script imports are evaluated
-// This allows local .env to override Infisical secrets.
 import { existsSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -11,9 +9,6 @@ import {
 
 loadLocalEnv();
 
-// Worktree-aware: `bun dw` writes per-worktree `.env.local` files to each
-// workspace dir. PW_MODE=1 (set by `bun pw`) skips this so prod Infisical
-// secrets aren't overridden by dev DB URLs.
 if (process.env.PW_MODE !== "1") {
 	const __preloadRoot = resolve(
 		fileURLToPath(new URL(".", import.meta.url)),
@@ -33,7 +28,6 @@ if (process.env.PW_MODE !== "1") {
 		"apps/checkout/.env.local",
 	].map(parseEnvFile);
 
-	// On Capy, env files baked into a snapshot point at another machine's Neon branch.
 	const bindingId = readCapyBindingId();
 	const stampedMachineId = envFiles[0].find(
 		(m) => m[1] === "CAPY_MACHINE_ID",
@@ -50,8 +44,6 @@ if (process.env.PW_MODE !== "1") {
 
 	for (const entries of isForeignCapyEnv ? [] : envFiles) {
 		for (const m of entries) {
-			// AUTUMN_DB_DIRECT callers inject DATABASE_URL for a DB that
-			// .env.local may not describe yet (fresh branch provisioning).
 			if (process.env.AUTUMN_DB_DIRECT === "1" && m[1] === "DATABASE_URL")
 				continue;
 			process.env[m[1]] = m[2];

@@ -34,7 +34,6 @@ const optionLabels = ({
 		)
 		.join(", ");
 
-/** Lists plans by name, adding versions only when some (not all) versions of a plan are picked. */
 const planLabels = ({
 	versionKeys,
 	products,

@@ -8,8 +8,6 @@ import { getStripePriceIdsForAutumnPrice } from "@/internal/billing/v2/providers
 
 const ONGOING_STATUSES = [...ACTIVE_STATUSES, CusProductStatus.Trialing];
 
-/** Stripe prices of plans on the subscription that run with no end date, i.e.
- * the ones a released schedule leaves billing. */
 export const customerProductsToOngoingStripePriceIds = ({
 	customerProducts,
 	stripeSubscriptionId,

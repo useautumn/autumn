@@ -46,7 +46,6 @@ beforeEach(() => {
 	setConfig({});
 });
 
-/** Deterministically find a requestId whose bucket lands in [min, max). */
 const findRequestIdInBucketRange = (min: number, max: number): string => {
 	for (let i = 0; i < 10_000; i++) {
 		const requestId = `req_test_${i}`;

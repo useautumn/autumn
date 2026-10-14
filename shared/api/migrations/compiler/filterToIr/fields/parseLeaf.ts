@@ -2,23 +2,6 @@ import type { IRLeaf, IRNode, LeafOp } from "../../ir/irTypes.js";
 import type { ResolutionContext } from "../resolutionContext.js";
 import { translateValue } from "./translateValue.js";
 
-/**
- * Parse a single field's matcher value into one IR leaf or a small AND of
- * leaves. Handles the supported operators: eq, ne, in, nin, exists, gt,
- * gte, lt, lte, startsWith, regex.
- *
- * Spelling normalization:
- * - bare value         → eq
- * - { $eq: x }         → eq
- * - { $ne: null }      → exists (true)
- * - { $eq: null }      → eq null
- * - { $in: [...] }     → in
- * - { $gt: n }         → gt   (and same for $gte / $lt / $lte)
- * - { $startsWith: s } → startsWith
- * - { $regex: s }      → regex
- *
- * Multiple operators on one field are combined with AND.
- */
 export function parseLeaf({
 	field,
 	rawValue,
@@ -35,7 +18,6 @@ export function parseLeaf({
 
 	if ("$eq" in ops) leaves.push(makeLeaf(field, "eq", ops.$eq, ctx) as IRLeaf);
 	if ("$ne" in ops) {
-		// $ne: null is the existence-check shorthand for nullable fields.
 		if (ops.$ne === null)
 			leaves.push(makeLeaf(field, "exists", true, ctx) as IRLeaf);
 		else leaves.push(makeLeaf(field, "ne", ops.$ne, ctx) as IRLeaf);

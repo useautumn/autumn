@@ -60,10 +60,6 @@ const validatePromotionCodeProducts = ({
 	});
 };
 
-/**
- * Validates Stripe-specific billing context requirements before executing billing plan.
- * These checks ensure the Stripe resources are in a valid state for the operations we need to perform.
- */
 export const handleStripeBillingPlanErrors = ({
 	ctx,
 	billingContext,

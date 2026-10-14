@@ -1,29 +1,3 @@
-/**
- * TDD test for RevenueCat addon → prepaid feature quantity mapping.
- *
- * Maps a specific RevenueCat product id (e.g. an addons_50 SKU) onto a fixed
- * prepaid feature quantity of an Autumn add-on product, so purchasing that SKU
- * grants that quantity. Quantity is stored in FEATURE units; attach divides it
- * by billing_units internally (50 packs × 100 units = 5000 messages).
- *
- * Contract under test:
- *   New types/fields:
- *     - revenuecat_mappings.feature_quantities jsonb (nullable):
- *         { [revenuecat_product_id]: [{ feature_id, quantity }] }
- *   New behaviors:
- *     - RCMappingService.resolveMapping(rcProductId) ->
- *         { autumnProductId, featureQuantities? }
- *     - NON_RENEWING_PURCHASE of a mapped SKU with feature_quantities grants
- *         that quantity on the customer (balance == quantity).
- *     - A mapped SKU WITHOUT feature_quantities behaves as today (plain attach).
- *   Side effects:
- *     - cus_product attached with prepaid options derived from the mapping.
- *
- * Pre-impl red: feature_quantities does not exist on the mapping; the purchase
- * attaches the add-on with 0 prepaid quantity, so the balance is the included
- * usage (0), not 5000.
- */
-
 import { expect, test } from "bun:test";
 import {
 	type ApiCustomerV5,
@@ -81,7 +55,6 @@ test.concurrent(
 		const customerId = "rc-prepaid-map-1";
 		const RC_ADDON_50_ID = "com.app.rc_prepaid_addons_50";
 
-		// $10 / 100 messages prepaid, one-off add-on (mirrors the credits add-on).
 		const addOn = products.base({
 			id: "rc-prepaid-addon",
 			isAddOn: true,
@@ -107,7 +80,6 @@ test.concurrent(
 			actions: [],
 		});
 
-		// Map the SKU to 5000 messages (= 50 packs of 100 units).
 		await RCMappingService.upsert({
 			db: ctx.db,
 			data: {
@@ -140,7 +112,6 @@ test.concurrent(
 			}),
 		);
 
-		// ── Contract assertion 1: add-on is active ───────────────────────────
 		const dbCustomer = await ctx.db.query.customers.findFirst({
 			where: eq(customers.id, customerId),
 		});
@@ -151,7 +122,6 @@ test.concurrent(
 		});
 		expect(cusProducts.map((cp) => cp.product.id)).toContain(addOn.id);
 
-		// ── Contract assertion 2: the mapped quantity was granted ────────────
 		const customer = await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
 		expectBalanceCorrect({
 			customer,

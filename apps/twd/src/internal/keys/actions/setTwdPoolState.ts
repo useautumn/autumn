@@ -34,7 +34,6 @@ export const twdPoolMetadata = ({
 	return metadata;
 };
 
-/** Tags a connected account as twd's (platform key, no Stripe-Account header). Pass `existing` to skip the retrieve. */
 export const setTwdPoolState = async ({
 	secret,
 	accountId,

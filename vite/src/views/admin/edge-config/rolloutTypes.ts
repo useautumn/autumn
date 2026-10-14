@@ -4,7 +4,6 @@ export type RolloutPercent = {
 	changedAt: number;
 };
 
-/** A customer pinned to the worker; `removedAt` is set once it has been removed. */
 export type RolloutCustomer = {
 	addedAt: number;
 	removedAt?: number;
@@ -20,7 +19,6 @@ export type RolloutCustomerName = {
 	email: string | null;
 };
 
-/** A customer found by the admin search, or typed in by id when it does not exist yet. */
 export type RolloutCustomerOption = RolloutCustomerName & { id: string };
 
 export type RolloutCustomerPin = {

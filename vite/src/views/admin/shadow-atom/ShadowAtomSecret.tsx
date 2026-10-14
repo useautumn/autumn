@@ -1,6 +1,5 @@
 import { CopyButton } from "@autumn/ui";
 
-/** A value the server hands out once; it is gone on the next reload. */
 export const ShadowAtomSecret = ({
 	label,
 	value,

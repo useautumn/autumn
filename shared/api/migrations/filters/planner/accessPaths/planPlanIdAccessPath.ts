@@ -8,7 +8,6 @@ import {
 } from "../../../compiler/registry/customerRegistry.js";
 import type { CustomerAccessPath } from "../types.js";
 
-/** Sibling plan-quantifier predicate the source can prove itself. */
 export type PlanSourceExtra =
 	| { field: "version"; op: "eq" | "in"; value: number | readonly number[] }
 	| {
@@ -21,12 +20,9 @@ export type PlanSourceExtra =
 export type PlanIdConstraint = Pick<IRLeaf, "op" | "value"> & {
 	field: "plan_id";
 	op: "eq" | "in";
-	/** Present only when the source proves the ENTIRE plan quantifier. */
 	extras?: PlanSourceExtra[];
 };
 
-/** Each extra renders in the products SELECT (`p`) or the cp WHERE (`cp`) —
- * derived-filter SQL is shared with the registry leaves for parity. */
 const EXTRA_DEFS: Record<
 	PlanSourceExtra["field"],
 	{ context: "product" | "customerProduct"; sql: string }
@@ -53,8 +49,6 @@ const renderExtra = (extra: PlanSourceExtra, params: unknown[]): string => {
 	return `AND ${expression} IN (${values.map(() => "?").join(", ")})`;
 };
 
-/** SELECT of matching plan product internal ids (org/env + plan predicate +
- * consumed product-level extras). */
 export const buildPlanProductsSql = ({
 	constraint,
 	ambient,
@@ -88,7 +82,6 @@ export const buildPlanProductsSql = ({
 	};
 };
 
-/** cp-level predicates: relevant-status ambient + consumed cp extras. */
 export const buildCustomerProductWhereSql = (
 	constraint: PlanIdConstraint,
 ): CompiledSql => {

@@ -5,17 +5,6 @@ import { initIntegrationEval } from "../../../../src/initIntegrationEval.ts";
 import { knowledgePlatformCatalog } from "../../catalogs/knowledgePlatformCatalog.ts";
 import { fixtureUser, integrateScenario } from "../../integrateShared.ts";
 
-/**
- * ATTACH flow: billing-page upgrade. The trial user picks Pro (or Pro Annual). They
- * have no card on file, so billing.attach returns a checkout_url — the
- * endpoint must hand that URL back so the frontend can redirect. The graded
- * trap: an agent that assumes attach just succeeds and returns { success }
- * leaves the user with no way to pay.
- *
- * The human is vague ("users can upgrade to pro"); the deterministic contract
- * (route path, body shape) is pinned by a stub the frontend team already
- * committed — like a real repo.
- */
 const upgradeRouteStub = `		// Billing page calls this when the user picks a plan. TODO: hook up
 		// to our billing provider.
 		"/api/billing/upgrade": {

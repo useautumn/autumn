@@ -1,5 +1,3 @@
-/** Multi-attach replaces every in-scope pooled source without disturbing other scopes. */
-
 import { expect, test } from "bun:test";
 import { EntInterval, PooledBalanceResetMode } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";

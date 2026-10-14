@@ -4,7 +4,6 @@ export function createAcceptedCommands(): AcceptedCommands {
 	return { active: new Set() };
 }
 
-/** Tracks the command until it settles so drain can wait; the caller still owns its rejection. */
 export function acceptCommand<Result>({
 	accepted,
 	operation,
@@ -35,7 +34,6 @@ async function forgetWhenSettled({
 	try {
 		await operation;
 	} catch {
-		// Rejections are the caller's; tracking only observes settlement.
 	} finally {
 		accepted.active.delete(operation);
 	}

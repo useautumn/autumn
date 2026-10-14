@@ -18,7 +18,6 @@ const rewriteValue = ({
 	return aliases[value] ?? value;
 };
 
-/** Wraps `c.req.param` so `product_id` / `productId` resolve through the alias map. */
 export const rewritePlanIdAliasParams = ({
 	param,
 	aliases,

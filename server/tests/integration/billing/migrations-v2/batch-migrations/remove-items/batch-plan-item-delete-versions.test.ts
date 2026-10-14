@@ -1,12 +1,3 @@
-/**
- * A version-less remove_items must reach customers on every version of the
- * plan, not just the latest.
- *
- * Entitlement ids are minted fresh per version, and the executor deletes by
- * id — so this only works because the catalog load enumerates all versions
- * (shouldRunBatchLane passes returnAll). Narrowing that to latest-only would
- * silently no-op every older-version customer, which this test would catch.
- */
 import { expect, test } from "bun:test";
 import { ResetInterval } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features";
@@ -36,8 +27,6 @@ test(`${chalk.yellowBright("batch plan-item delete: a version-less delete reache
 		actions: [s.billing.attach({ productId: plan.id })],
 	});
 
-	// v2 keeps both items; only the version number moves, so the v2 customer
-	// holds a different entitlement id for the same feature.
 	await autumnV1.products.update(plan.id, {
 		items: [
 			items.dashboard(),

@@ -19,10 +19,6 @@ export interface ClearCreditSystemCachePayload {
 	internalFeatureId: string;
 }
 
-/**
- * Clears the cache for all customers who have an entitlement to a credit system feature.
- * This is used when the credit schema is updated to ensure customers get the new deduction rates.
- */
 export const runClearCreditSystemCacheTask = async ({
 	db,
 	payload,
@@ -34,10 +30,6 @@ export const runClearCreditSystemCacheTask = async ({
 }) => {
 	const { orgId, env, internalFeatureId } = payload;
 
-	// TEMP 2026-04-24: skip credit-system cache clears for 1h to let the
-	// poison-message loop (SQS msg 2e30616f-7622-454a-91a2-e67d1fd0698a,
-	// redelivering every ~34s and hammering Redis with ~40k UNLINKs/sec)
-	// drain. Remove this guard after 2026-04-24 15:50 UTC.
 	const SKIP_UNTIL_MS = Date.UTC(2026, 3, 24, 15, 50, 0);
 	if (Date.now() < SKIP_UNTIL_MS) {
 		logger.warn(
@@ -63,7 +55,6 @@ export const runClearCreditSystemCacheTask = async ({
 		`Clearing cache for customers with credit system feature: ${internalFeatureId}`,
 	);
 
-	// First get the total count to check if we should proceed
 	const MAX_CUSTOMERS = 300000;
 	const [countResult] = await db
 		.select({ count: count() })
@@ -147,7 +138,6 @@ export const runClearCreditSystemCacheTask = async ({
 
 	logger.info(`Total affected customers: ${allAffectedCustomers.length}`);
 
-	// Process in batches of BATCH_SIZE
 	const CACHE_BATCH_SIZE = 1000;
 	let totalDeleted = 0;
 	for (let i = 0; i < allAffectedCustomers.length; i += CACHE_BATCH_SIZE) {

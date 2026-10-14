@@ -7,7 +7,6 @@ import { planV1ToProductItems } from "@autumn/shared/api/products/mappers/planV1
 import { validateProductItems } from "@server/internal/products/product-items/validateProductItems.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 
-/** Runs the catalog's feature-aware item rules over every customize.items list, plan and license alike. */
 export const validateInvoiceCustomizeItems = ({
 	ctx,
 	params,

@@ -1,6 +1,3 @@
-// customer.subscription.updated back-sync for license seat quantities: Stripe quantity
-// changes converge the single pool in place; entity seat usage survives every sync.
-
 import { expect, test } from "bun:test";
 import { type ApiEntityV2, CusProductStatus } from "@autumn/shared";
 import { expectLicenseDefinitionCorrect } from "@tests/integration/licenses/utils/expectLicenseDefinitionCorrect";
@@ -66,10 +63,6 @@ test(`${chalk.yellowBright("sub.updated license back-sync: current schedule quan
 	).toEqual([3, 1]);
 });
 
-// ═══════════════════════════════════════════════════════════════════════════
-// CASE 3: decrement below seats in use → remaining negative, spares expired
-// ═══════════════════════════════════════════════════════════════════════════
-
 test(`${chalk.yellowBright("sub.updated license back-sync: decrement below usage goes negative and expires spare seats")}`, async () => {
 	const customerId = "sub-updated-license-backsync-overflow";
 	const { autumnV2_3, parent, devSeat, subscription, seatItem } =
@@ -79,7 +72,6 @@ test(`${chalk.yellowBright("sub.updated license back-sync: decrement below usage
 			quantity: 3,
 		});
 
-	// Fill the pool: 4 bound seats (granted 4 = included 1 + paid 3)...
 	await autumnV2_3.licenses.attach({
 		customer_id: customerId,
 		plan_id: devSeat.id,
@@ -98,7 +90,6 @@ test(`${chalk.yellowBright("sub.updated license back-sync: decrement below usage
 		},
 		{ timeout: 2000 },
 	);
-	// ...then release one, leaving a spare row awaiting reuse (used 3).
 	await autumnV2_3.licenses.release({
 		customer_id: customerId,
 		license_plan_id: devSeat.id,
@@ -119,7 +110,6 @@ test(`${chalk.yellowBright("sub.updated license back-sync: decrement below usage
 
 	await updateSeatQuantity({ subscription, seatItem, quantity: 1 });
 
-	// paid 3 -> 1: granted 2 < 3 bound seats -> remaining -1 (no clamp).
 	await waitForPoolCounters({
 		autumnV2_3,
 		customerId,
@@ -129,7 +119,6 @@ test(`${chalk.yellowBright("sub.updated license back-sync: decrement below usage
 		usage: 3,
 	});
 
-	// The spare can never rebind while over-allocated — reconcile expired it.
 	await expectSpareSeatRowsCorrect({
 		ctx,
 		customerLicenseLinkId: poolBefore.link_id,
@@ -137,7 +126,6 @@ test(`${chalk.yellowBright("sub.updated license back-sync: decrement below usage
 		status: CusProductStatus.Expired,
 	});
 
-	// Bound seats were never re-provisioned — tracked usage survives.
 	const seatEntity = await autumnV2_3.entities.get<ApiEntityV2>(
 		customerId,
 		"ovf-seat-1",

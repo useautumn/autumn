@@ -18,11 +18,6 @@ const assignmentBatches = Array.from(
 		),
 );
 
-/**
- * Customer "license-pagination" for dashboard testing of the license pool
- * detail sheet with a large assignment list: one seat license with 105 of 110
- * entities assigned (120 included, so 15 seats stay free).
- */
 test(`${chalk.yellowBright("scenario: license pool with 100+ assigned entities")}`, async () => {
 	const parent = products.pro({
 		id: "license-pagination-parent",

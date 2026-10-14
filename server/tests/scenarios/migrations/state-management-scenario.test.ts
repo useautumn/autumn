@@ -8,23 +8,6 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { migrationRunRepo } from "@/internal/migrations/v2/repos/index.js";
 
-/**
- * QA setup for migration state management (status, frozen list, skip
- * reasons, version warning).
- *
- *   plan qa-starter  v1: 100 messages          v2: 200 messages + dashboard (latest)
- *   plan qa-other    v1: 100 messages
- *
- *   qa-v1-a, qa-v1-b   plain on starter v1
- *   qa-v1-dash         starter v1 with a custom dashboard item (already has it)
- *   qa-v2              plain on starter v2
- *   qa-other           plain on the other plan
- *
- *   qa-draft   draft — add dashboard to starter; never run (live filter, Run All)
- *   qa-version draft — starter v1 → v2 with no customize (version-only warning)
- *   qa-ran     run   — Run All executed: qa-v1-a/b succeeded, qa-v1-dash
- *                      no_updates_needed, qa-v2 and qa-other ineligible
- */
 test(`${chalk.yellowBright("migration-setup: state management QA")}`, async () => {
 	const starter = products.base({
 		id: "starter",

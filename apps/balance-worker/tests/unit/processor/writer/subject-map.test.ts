@@ -45,7 +45,6 @@ describe("createSubjectMap", () => {
 		const state = createState();
 		const entityKey = `${customerKey}:entity_1`;
 		map.setState({ subjectKey: customerKey, customerKey, state });
-		// Over the bound: the customer's row is dropped by LRU, the entity's stays as the one just written.
 		map.setState({ subjectKey: entityKey, customerKey, state });
 		expect(map.readState({ subjectKey: customerKey })).toBeNull();
 		expect(map.readState({ subjectKey: entityKey })).toEqual(state);
@@ -53,7 +52,6 @@ describe("createSubjectMap", () => {
 		map.evictCustomer({ customerKey });
 		expect(map.readState({ subjectKey: entityKey })).toBeNull();
 		expect(map.sizeBytes()).toBe(0);
-		// Nothing left for the customer: a second evict is a no-op, not an error.
 		map.evictCustomer({ customerKey });
 	});
 
@@ -190,7 +188,6 @@ describe("createSubjectMap", () => {
 		map.setState({ subjectKey: "a", customerKey: "a", state: a });
 		map.setState({ subjectKey: "b", customerKey: "b", state: b });
 
-		// Over the bound, but a is pinned and b was just written: nothing to evict.
 		expect(map.readState({ subjectKey: "a" })).toEqual(a);
 		expect(map.readState({ subjectKey: "b" })).toEqual(b);
 		map.unpin({ subjectKey: "a" });
@@ -201,7 +198,6 @@ describe("createSubjectMap", () => {
 	});
 });
 
-/** A store with nothing resident, the way the postgres backend answers; apply just records what it saw. */
 function createNullStore() {
 	const applied: DurableMutationRecord[] = [];
 	const stateStore: PartitionWriterContext["stateStore"] = {
@@ -350,7 +346,6 @@ describe("createSubjectMap onEvicted", () => {
 		map.setState({ subjectKey: customerKey, customerKey, state });
 		map.pin({ subjectKey: customerKey });
 		map.evictCustomer({ customerKey });
-		// A new entity of the customer, read whole after the evict.
 		map.setState({ subjectKey: entityKey, customerKey, state, baselineAt: 5 });
 
 		map.unpin({ subjectKey: customerKey });
@@ -489,7 +484,6 @@ describe("writer over a store with no resident state", () => {
 				}),
 			),
 		).toThrow("Command id reused with different input: cmd_1");
-		// The store applies behind the log; wait for it before counting what landed.
 		await writer.waitForStore();
 		expect(store.applied).toHaveLength(1);
 		expect(
@@ -583,7 +577,6 @@ describe("writer over a store with no resident state", () => {
 			readState: () => null,
 			readOwnState: () => null,
 			readReceipt: () => null,
-			// Like the committer store: records at and after the one that would not land are failed.
 			applyDurableMutations: async ({ records }) => {
 				let blocked = false;
 				return records.map((record) => {
@@ -648,9 +641,6 @@ describe("writer over a store with no resident state", () => {
 		const settled = await Promise.allSettled(
 			decided.map((d) => d.waitForCommit()),
 		);
-		// All three were answered when Kafka took the batch. The store refusing a row
-		// afterwards cannot reach a caller that already holds its reply, so the refusal
-		// surfaces as the partition entering recovery instead.
 		expect(settled.map((result) => result.status)).toEqual([
 			"fulfilled",
 			"fulfilled",
@@ -665,7 +655,6 @@ describe("writer over a store with no resident state", () => {
 				reason: expect.any(PartitionWriterRecoveryRequiredError),
 			})),
 		);
-		// cmd_3 landed nowhere: the store never reached it, and recovery rejects what is left.
 		expect(() =>
 			writer.decide(
 				trackSubmission({
@@ -680,9 +669,6 @@ describe("writer over a store with no resident state", () => {
 		).toThrow("Partition writer requires recovery");
 	});
 
-	/** A command that must not be told a thing landed until it has landed
-	 *  everywhere opts in with "store", and then behaves exactly as every write did
-	 *  before: it waits for the apply, and a refusal still reaches it. */
 	test("a store-durable command waits for the apply and still hears a refusal", async () => {
 		let releaseApply: () => void = () => undefined;
 		const applyGate = new Promise<void>((resolve) => {

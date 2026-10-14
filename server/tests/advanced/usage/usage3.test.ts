@@ -29,7 +29,6 @@ const testCase = "usage3";
 const PRECISION = 10;
 const CREDIT_MULTIPLIER = 100000;
 
-// Find credit system feature from test context
 const creditsFeature = ctx.features.find((f) => f.id === TestFeature.Credits);
 
 if (!creditsFeature) {
@@ -40,7 +39,7 @@ const gpuSystemStarter = constructRawProduct({
 	id: "gpu-system-starter",
 	items: [
 		constructPriceItem({
-			price: 20, // $20/month
+			price: 20,
 			interval: BillingInterval.Month,
 		}),
 		{
@@ -59,7 +58,7 @@ const gpuSystemPro = constructRawProduct({
 	id: "gpu-system-pro",
 	items: [
 		constructPriceItem({
-			price: 100, // $100/month
+			price: 100,
 			interval: BillingInterval.Month,
 		}),
 		{
@@ -102,7 +101,6 @@ describe(`${chalk.yellowBright(
 		stripeCli = ctx.stripeCli;
 	});
 
-	// 1. Attach GPU starter monthly
 	test("usage3: should attach GPU starter monthly", async () => {
 		await AutumnCli.attach({
 			customerId: customerId,
@@ -110,8 +108,6 @@ describe(`${chalk.yellowBright(
 		});
 	});
 
-	// 2. Send 20 events: 16 usage, then 4 refunds each smaller than the usage it mirrors.
-	// A refund applied before enough usage is capped at the grant, so mixing signs concurrently is order-dependent.
 	test("usage3: should send 20 events", async () => {
 		const usageEvents = Array.from({ length: 16 }, (_, i) => ({
 			featureId: i % 2 === 0 ? TestFeature.Action1 : TestFeature.Action2,
@@ -160,7 +156,6 @@ describe(`${chalk.yellowBright(
 		await sendEvents({ events: refundEvents });
 	});
 
-	// 3. Advance test clock by 15 days and upgrade
 	test("should advance test clock by 15 days and upgrade to GPU pro monthly", async () => {
 		curUnix = await advanceTestClock({
 			stripeCli,
@@ -172,8 +167,6 @@ describe(`${chalk.yellowBright(
 			customerId: customerId,
 			productId: gpuSystemPro.id,
 		});
-
-		// MAKE SURE STRIPE SUB ONLY HAS GPU PRO
 
 		const res = await AutumnCli.getCustomer(customerId);
 		await expectCustomerV0Correct({
@@ -191,12 +184,10 @@ describe(`${chalk.yellowBright(
 		});
 	});
 
-	// 4. Check invoice for 15 days of starter usage
 	test("should have invoice for 15 days of starter usage", async () => {
 		const res = await AutumnCli.getCustomer(customerId);
 		const invoices = res!.invoices;
 
-		// Convert V2 products to V1 to access prices
 		const starterV1 = convertProductV2ToV1({
 			productV2: gpuSystemStarter,
 			orgId: ctx.org.id,

@@ -29,8 +29,6 @@ const releaseClaim = async ({
 	}
 };
 
-/** Deterministic executor: the card's stored writes are the whole truth, and
- * the agent is never consulted again. */
 const executeStoredWrites = async ({
 	approval,
 	providerUserId,
@@ -72,8 +70,6 @@ export const resolveApproval = async ({
 			const drifted = await guardApprovalDrift({ approval, providerUserId });
 			if (drifted) return drifted;
 		} catch (error) {
-			// Nothing has executed when the guard throws (token mint / preview
-			// fetch), so releasing the claim is safe.
 			logger.error("[chat] Approval drift guard failed", error, {
 				event: "leaf.approval_drift_guard_failed",
 				approval_id: approval.id,
@@ -86,8 +82,6 @@ export const resolveApproval = async ({
 	const executed = await executeStoredWrites({ approval, providerUserId });
 	if (executed) return executed;
 
-	// The executor only returns undefined when it threw, and nothing ran — the
-	// claim goes back so the card stays clickable.
 	await releaseClaim({ approval, providerUserId });
 	return approvalErrorResult(new Error("Approval writes did not run"), {
 		retryable: true,

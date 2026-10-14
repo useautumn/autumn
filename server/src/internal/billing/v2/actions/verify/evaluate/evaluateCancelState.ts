@@ -77,7 +77,6 @@ const getActiveScheduleState = async ({
 	};
 };
 
-/** Evaluates cancel/schedule state on a subscription against the classified scenario. */
 export const evaluateCancelState = async ({
 	stripeCli,
 	sub,
@@ -104,7 +103,6 @@ export const evaluateCancelState = async ({
 		case "single_indefinite": {
 			const { scheduleActive, upcomingPhaseStarts, quantityOnly } =
 				await getActiveScheduleState({ stripeCli, sub });
-			// An active schedule here is a phase problem, not a cancel problem.
 			if (scheduleActive && !(quantityOnly && ignoresQuantityOnly)) {
 				return {
 					type: "schedule_mismatch",
@@ -125,7 +123,6 @@ export const evaluateCancelState = async ({
 		case "simple_cancel": {
 			const scheduleState = await getActiveScheduleState({ stripeCli, sub });
 
-			// A schedule that itself cancels at the expected time IS the cancel.
 			const scheduleImplementsCancel =
 				scheduleState.scheduleActive &&
 				scheduleState.endBehavior === "cancel" &&
@@ -190,8 +187,6 @@ export const evaluateCancelState = async ({
 		}
 
 		case "multi_phase":
-			// Schedule presence for multi_phase is evaluated by evaluateSchedulePhases,
-			// which reports a schedule_mismatch rather than a cancel-state mismatch.
 			return undefined;
 	}
 };

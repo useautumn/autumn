@@ -1,7 +1,6 @@
 import type { ApplyBillingPlanCommand } from "../../commands/applyBillingPlan/types/applyBillingPlanCommand.js";
 import type { MeteringIdentity } from "../../models/identity/meteringIdentity.js";
 
-/** The customer's log key: every subject of a customer shares it, so their mutations stay ordered. */
 export const meteringIdentityToPartitionKey = ({
 	identity,
 }: {
@@ -9,7 +8,6 @@ export const meteringIdentityToPartitionKey = ({
 }): string =>
 	JSON.stringify([identity.orgId, identity.env, identity.customerId]);
 
-/** The customer the partition key names: the identity's customer part, entityId null. */
 export const partitionKeyToMeteringIdentity = ({
 	partitionKey,
 }: {
@@ -23,7 +21,6 @@ export const partitionKeyToMeteringIdentity = ({
 	return { orgId, env, customerId, entityId: null };
 };
 
-/** The customer's key, suffixed by the entity when the identity names an entity. */
 export const meteringIdentityToSubjectKey = ({
 	identity,
 }: {
@@ -35,7 +32,6 @@ export const meteringIdentityToSubjectKey = ({
 		: customerKey;
 };
 
-/** The entities a plan names, each as the identity its own part is held under. */
 export const planCommandToEntityIdentities = ({
 	command,
 }: {

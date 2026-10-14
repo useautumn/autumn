@@ -11,14 +11,12 @@ import {
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useProductItemContext } from "@/views/products/product/product-item/ProductItemContext";
 
-/** Visibility is controlled by parent AdvancedSettings */
 export function EntityFeatureConfig() {
 	const { features } = useFeaturesQuery();
 	const { item, setItem } = useProductItemContext();
 
 	if (!item) return null;
 
-	// Filter for continuous use features, excluding the current feature (can't link to itself) and archived features
 	const continuousUseFeatures = features.filter(
 		(f) =>
 			!f.archived &&
@@ -29,7 +27,6 @@ export function EntityFeatureConfig() {
 	return (
 		<AreaCheckbox
 			title="Per entity feature"
-			// description="Link this item to a specific feature entity in your app"
 			checked={item.entity_feature_id != null}
 			onCheckedChange={(checked) => {
 				setItem({

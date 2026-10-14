@@ -6,7 +6,6 @@ import { toEnqueueResponses } from "../../accounts/actions/toEnqueueResponses.ts
 import { enqueueJob } from "../../jobs/actions/enqueueJob.ts";
 import { setKeyGate } from "../repos/keyGateRepo.ts";
 
-/** Closes the gate immediately so no new run claims accounts while the job waits for a lease. */
 export const enqueueReinitKeys = async ({
 	ctx,
 	targetPerKey,
@@ -39,7 +38,6 @@ export const enqueueReinitKeys = async ({
 			...(scope === "selected" ? { platformAccountIds: ids } : {}),
 		},
 	});
-	// Only a full reinit drains every run; scoped reinits lock just their keys.
 	if (!result.deduped && scope === "all") {
 		await setKeyGate({
 			db: ctx.db,

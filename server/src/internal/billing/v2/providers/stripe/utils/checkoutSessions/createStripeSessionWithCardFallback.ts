@@ -2,10 +2,6 @@ import type Stripe from "stripe";
 import type { createStripeCli } from "@/external/connect/createStripeCli";
 import { autumnStripeRequestOptions } from "@/external/stripe/common/autumnStripeIdempotency";
 
-/**
- * Creates a Stripe checkout session, retrying with explicit `payment_method_types: ["card"]`
- * if Stripe rejects automatic payment method determination.
- */
 export const createStripeSessionWithCardFallback = async ({
 	stripeCli,
 	params,
@@ -22,7 +18,6 @@ export const createStripeSessionWithCardFallback = async ({
 		const msg = error instanceof Error ? error.message : undefined;
 
 		if (msg?.includes("payment method") || msg?.includes("No valid payment")) {
-			// Fresh key: retry params differ, so reusing the first key would 400.
 			return stripeCli.checkout.sessions.create(
 				{
 					...params,

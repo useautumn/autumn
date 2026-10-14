@@ -9,7 +9,6 @@ import { claimEntitlementPrices } from "./claimEntitlementPrices";
 import { withCarryFromPreviousOfCurrent } from "./withCarryFromPreviousOfCurrent";
 import { withUnclaimedRows } from "./withUnclaimedRows";
 
-/** Pair desired rows to current rows via definition / successor match. */
 export const claimCurrentRows = ({
 	params,
 	desiredBasePriceAndEntitlementPrices,
@@ -17,7 +16,6 @@ export const claimCurrentRows = ({
 	params: ComputeEntitlementPricesPlanParams;
 	desiredBasePriceAndEntitlementPrices: BasePriceAndEntitlementPrices;
 }): ClaimResult => {
-	// Version mints every desired row; current stays on the old version.
 	if (params.mode.type === "version") {
 		return {
 			entitlementPriceClaims: [],

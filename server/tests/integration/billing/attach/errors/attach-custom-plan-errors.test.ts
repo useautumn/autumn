@@ -1,15 +1,3 @@
-/**
- * Custom Plan Error Tests (Attach V2)
- *
- * Tests for validation errors when using the `items` parameter in billing.attach.
- *
- * Key behaviors:
- * - Empty items array is rejected
- * - Same configuration as product is rejected (no change)
- * - Invalid feature ID is rejected
- * - Prepaid without quantity is rejected
- */
-
 import { test } from "bun:test";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils";
 import { items } from "@tests/utils/fixtures/items";
@@ -18,20 +6,6 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { constructFeatureItem } from "@/utils/scriptUtils/constructItem";
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// CUSTOM PLAN ATTACH ERRORS
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Test 2: Same configuration as product is rejected
- *
- * Scenario:
- * - Customer on Pro
- * - Attach same Pro with identical items
- *
- * Expected:
- * - Error: No changes to apply / already has product
- */
 test.concurrent(`${chalk.yellowBright("error: attach custom plan same config as existing")}`, async () => {
 	const customerId = "err-custom-plan-same-config";
 
@@ -48,28 +22,18 @@ test.concurrent(`${chalk.yellowBright("error: attach custom plan same config as 
 		actions: [s.billing.attach({ productId: pro.id })],
 	});
 
-	// Try to attach same product with same items
 	await expectAutumnError({
 		func: async () => {
 			await autumnV1.billing.attach({
 				customer_id: customerId,
 				product_id: pro.id,
-				items: [messagesItem, priceItem], // Same as product
+				items: [messagesItem, priceItem],
 				redirect_mode: "if_required",
 			});
 		},
 	});
 });
 
-/**
- * Test 3: Invalid feature ID is rejected
- *
- * Scenario:
- * - Attach with items referencing non-existent feature
- *
- * Expected:
- * - Error: Feature not found
- */
 test.concurrent(`${chalk.yellowBright("error: attach custom plan invalid feature id")}`, async () => {
 	const customerId = "err-custom-plan-invalid-feature";
 
@@ -85,7 +49,6 @@ test.concurrent(`${chalk.yellowBright("error: attach custom plan invalid feature
 		actions: [],
 	});
 
-	// Create item with invalid feature ID
 	const invalidFeatureItem = constructFeatureItem({
 		featureId: "non_existent_feature_12345",
 		includedUsage: 100,

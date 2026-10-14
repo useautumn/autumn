@@ -20,7 +20,6 @@ import type {
 } from "./types/committer.js";
 import type { CommitterStateStoreContext } from "./types/committerStateStoreContext.js";
 
-/** Reads answer null: the writer's map holds every subject this backend knows. */
 export const createCommitterStateStore = ({
 	ctx: dependencies,
 }: {
@@ -33,7 +32,6 @@ export const createCommitterStateStore = ({
 			| "claimPartitionProgress"
 		>;
 		logger?: Pick<NonNullable<CommitterContext["logger"]>, "warn">;
-		/** Present when the worker has the snapshot settings: evict DELETEs and refreshes land through the store's lane. */
 		subjectSnapshotsConfig?: EdgeConfigStore<SubjectSnapshotsEdgeConfig>;
 	};
 }): CommitterStateStore => {
@@ -46,7 +44,6 @@ export const createCommitterStateStore = ({
 		progress: createProgressMirror(),
 		claimTokenOf,
 	};
-	// Replay, writer applies, command-only bookmarks and evict DELETEs share one lane per partition: Postgres sees them in the order the partition asked.
 	const laneByPartition = new Map<string, Promise<unknown>>();
 	function runInLane<Result>({
 		position,

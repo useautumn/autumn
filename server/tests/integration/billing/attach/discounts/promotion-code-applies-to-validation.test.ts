@@ -1,13 +1,3 @@
-/**
- * TDD test for promotion codes restricted to products outside the attach order.
- *
- * Red-failure mode (current behavior):
- *  - Preview accepts the promo and displays a discount that Stripe will not apply.
- *
- * Green-success criteria (after fix):
- *  - Preview rejects the promo before showing an inapplicable discount.
- */
-
 import { test } from "bun:test";
 import { type AttachParamsV1Input, ErrCode } from "@autumn/shared";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils.js";

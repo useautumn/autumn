@@ -1,11 +1,3 @@
-/**
- * When shared credits shrink below what's been allocated, every share is cut by the same
- * proportion; when they grow back, shares return to the requested amounts.
- *
- * Red (before):  shares stay at 5k after the add-on goes, promising credits that don't exist.
- * Green (after): 6k left for 10k promised → each share 3k; re-adding the add-on → 5k again.
- */
-
 import { test } from "bun:test";
 import { ApiVersion, ResetInterval } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";

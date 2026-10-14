@@ -1,5 +1,3 @@
-/** A discount redeemed from a promotion code is redeemed again from that code while Stripe still accepts it, else from its coupon. */
-
 import { afterAll, describe, expect, mock, test } from "bun:test";
 import { msToSeconds } from "@autumn/shared";
 import type Stripe from "stripe";

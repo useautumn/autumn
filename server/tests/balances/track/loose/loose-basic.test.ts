@@ -18,7 +18,6 @@ describe(`${chalk.yellowBright("loose-basic: basic track with loose entitlement"
 			withTestClock: false,
 		});
 
-		// Create loose entitlement with 100 messages
 		await autumnV1.balances.create({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
@@ -27,17 +26,14 @@ describe(`${chalk.yellowBright("loose-basic: basic track with loose entitlement"
 	});
 
 	test("should deduct from loose entitlement", async () => {
-		// Track 10 usage
 		await autumnV1.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
 			value: 10,
 		});
 
-		// Wait for sync
 		await new Promise((resolve) => setTimeout(resolve, 2000));
 
-		// Check balance
 		const res = (await autumnV2.check({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,

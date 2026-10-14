@@ -44,7 +44,6 @@ export const priceToInvoiceItem = ({
 		overageDescription = `${overageDescription} (from ${formatUnixToDate(now)})`;
 	}
 
-	// Get overage
 	const overage = usage - ent.allowance!;
 
 	let invoiceAmount = priceToInvoiceAmount({

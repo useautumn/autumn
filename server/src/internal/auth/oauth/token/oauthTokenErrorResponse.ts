@@ -11,7 +11,6 @@ import { OAuthTokenResourceError } from "./resolveOAuthTokenResource.js";
  */
 const OAUTH_TOKEN_ERROR_STATUS = 400;
 
-/** Null for anything that is not an OAuth failure, which callers rethrow untouched. */
 export const oauthTokenErrorResponse = ({ error }: { error: unknown }) => {
 	if (error instanceof OAuthTokenResourceError) {
 		return jsonOAuthTokenResponse({
@@ -20,7 +19,6 @@ export const oauthTokenErrorResponse = ({ error }: { error: unknown }) => {
 		});
 	}
 
-	// The scope string itself is malformed, not the grant behind it.
 	if (error instanceof OAuthTokenScopeError) {
 		return jsonOAuthTokenResponse({
 			body: { error: "invalid_scope", error_description: error.message },

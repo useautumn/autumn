@@ -1,20 +1,3 @@
-/**
- * Benchmarks the license item-edit (supersede) batch path end to end against
- * the bench org: seed pools + assignments that ALREADY hold the feature →
- * prepareMigration → shouldRunBatchLane → runBatchMigrationChunk(maxPages: 1).
- *
- *   ./run.sh <abs path> --customers 20000 --assignments 3 --pages all
- *   ./run.sh <abs path> --cleanup
- *
- * The add benchmark measures inserting a feature assignments lack. This one
- * measures repointing a feature they already have, which is the shape a real
- * allowance edit takes (diffPlanV1 emits remove + add sharing a match key).
- *
- * Correctness is asserted after the run: every live assignment must carry
- * exactly one row for the feature, pointing at the minted entitlement, with
- * the allowance delta credited onto the balance it started with.
- */
-
 import { type Migration, migrations } from "@autumn/shared";
 import { MigrationFilterSchema } from "@autumn/shared/api/migrations/filters/migrationFilter.js";
 import { OperationsSchema } from "@autumn/shared/api/migrations/operations/operations.js";
@@ -104,11 +87,6 @@ const main = async () => {
 		process.exit(1);
 	}
 
-	// The bench org is raw-seeded, so its license plan may grant nothing. The
-	// edit needs an entitlement the plan actually issues, or the run measures a
-	// repoint that can never match.
-	// The edit targets a metered entitlement the license plan already grants,
-	// so assignments start holding it and the run must repoint rather than add.
 	const licenseProduct = await ensureBenchLicenseEntitlement({ ctx });
 	const existing = licenseProduct.entitlements.find(
 		(entitlement) => entitlement.id === BENCH_LICENSE_ENTITLEMENT_ID,

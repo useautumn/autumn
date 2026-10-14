@@ -3,7 +3,6 @@ import { isPaidContinuousUse } from "@/internal/features/featureUtils.js";
 import type { DeductionOptions } from "../types/deductionTypes.js";
 import type { FeatureDeduction } from "../types/featureDeduction.js";
 
-/** Deduction options with all defaults resolved (no optional fields) */
 type ResolvedDeductionOptions = Required<
 	Omit<DeductionOptions, "customerEntitlementFilters" | "eventProperties">
 > & {
@@ -11,10 +10,6 @@ type ResolvedDeductionOptions = Required<
 	eventProperties: DeductionOptions["eventProperties"];
 };
 
-/**
- * Prepares deduction options with defaults and paidAllocatedV1 overrides.
- * Returns a fully resolved options object.
- */
 export const prepareDeductionOptions = ({
 	options = {},
 	fullCustomer,
@@ -35,7 +30,7 @@ export const prepareDeductionOptions = ({
 		overageBehaviour: isPaidAllocatedV1
 			? "reject"
 			: (options.overageBehaviour ?? "cap"),
-		skipAdditionalBalance: true, // not used today
+		skipAdditionalBalance: true,
 		alterGrantedBalance: options.alterGrantedBalance ?? false,
 		countsAllocations: options.countsAllocations ?? false,
 		customerEntitlementFilters: options.customerEntitlementFilters,

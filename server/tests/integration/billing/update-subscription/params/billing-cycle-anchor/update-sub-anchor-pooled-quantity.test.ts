@@ -14,8 +14,6 @@ import {
 	setupAnchorQuantityScenario,
 } from "./setupAnchorQuantityScenario.js";
 
-// Contract: immediate prepaid decreases update the contribution and grant once while carrying usage;
-// combined quantities, explicit usage reset and pool reset dates use the same final grant.
 for (const variant of [
 	{ name: "prepaid", combined: false },
 	{ name: "combined", combined: true },

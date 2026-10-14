@@ -8,7 +8,6 @@ import { featureToInternalFeatureId } from "../../balanceWorker/featureToInterna
 import { requestContextToCommandBase } from "../../balanceWorker/requestContextToCommandBase.js";
 import { buildCustomerEntitlementFilters } from "../../utils/buildCustomerEntitlementFilters.js";
 
-/** The API's fields one to one; the engine owns what each means. Keyed by request, so a redelivered request dedups. */
 export const updateBalanceParamsToCommand = ({
 	ctx,
 	params,

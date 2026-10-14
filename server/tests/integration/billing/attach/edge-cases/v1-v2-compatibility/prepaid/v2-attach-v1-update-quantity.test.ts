@@ -1,24 +1,3 @@
-/**
- * V2 Attach → V1 Update Quantity Compatibility Tests
- *
- * Tests that verify V1's attach() works correctly to update quantity for
- * customers who were initially attached via V2 billing (using prepaid V2 pricing).
- *
- * V2 prepaid uses:
- * - stripe_prepaid_price_v2_id (per-unit pricing with free tier)
- * - Stripe quantity = units INCLUDING allowance
- * - Internal options.quantity = packs EXCLUDING allowance
- *
- * V1 prepaid uses:
- * - stripe_price_id (per-pack pricing)
- * - Stripe quantity = packs
- * - Internal options.quantity = packs EXCLUDING allowance
- *
- * Test flow:
- * 1. Use s.billing.attach() for initial V2 attach
- * 2. Use autumnV1.attach() for V1 quantity update
- */
-
 import { expect, test } from "bun:test";
 import {
 	type ApiCustomerV3,
@@ -38,10 +17,6 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { createStripeCli } from "@/external/connect/createStripeCli";
 import { CusService } from "@/internal/customers/CusService";
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// HELPER FUNCTIONS
-// ═══════════════════════════════════════════════════════════════════════════════
 
 const getStripePrepaidSubscriptionItem = async ({
 	customerId,
@@ -67,12 +42,7 @@ const getStripePrepaidSubscriptionItem = async ({
 	expect(subscriptions.data.length).toBeGreaterThan(0);
 	const subscription = subscriptions.data[0];
 
-	// Find the prepaid item specifically (not the base price)
-	// Prepaid items have quantity > 1 (packs) while base price has quantity = 1
-	// Also check for metered/usage prices which have different characteristics
 	const prepaidItem = subscription.items.data.find((item) => {
-		// Base price items typically have quantity = 1 and no transform_quantity
-		// Prepaid items have quantity representing packs
 		const hasQuantityGreaterThanOne =
 			item.quantity !== undefined && item.quantity > 1;
 		const hasTransformQuantity =
@@ -84,15 +54,11 @@ const getStripePrepaidSubscriptionItem = async ({
 	return { stripeCli, subscription, prepaidItem, stripeCustomerId };
 };
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 1: INCREMENT QUANTITY - MULTI BILLING UNITS (Messages)
-// ═══════════════════════════════════════════════════════════════════════════════
-
 test.concurrent(`${chalk.yellowBright("v2→v1 compat: increment quantity (multi billing units)")}`, async () => {
 	const customerId = "v2-v1-compat-incr-multi";
 	const billingUnits = 100;
 	const pricePerPack = 10;
-	const includedUsage = 100; // Allowance
+	const includedUsage = 100;
 
 	const prepaidItem = items.prepaidMessages({
 		includedUsage,
@@ -110,8 +76,6 @@ test.concurrent(`${chalk.yellowBright("v2→v1 compat: increment quantity (multi
 		items: [prepaidItem, priceItem],
 	});
 
-	// Initial: 500 total units (including 100 allowance)
-	// = 400 prepaid units = 4 packs
 	const initialTotalUnits = 500;
 
 	const { autumnV1 } = await initScenario({
@@ -130,13 +94,12 @@ test.concurrent(`${chalk.yellowBright("v2→v1 compat: increment quantity (multi
 		],
 	});
 
-	// Verify initial state
 	const customerBefore =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	expectCustomerFeatureCorrect({
 		customer: customerBefore,
 		featureId: TestFeature.Messages,
-		includedUsage: initialTotalUnits, // allowance + prepaid
+		includedUsage: initialTotalUnits,
 		balance: initialTotalUnits,
 		usage: 0,
 	});
@@ -147,12 +110,9 @@ test.concurrent(`${chalk.yellowBright("v2→v1 compat: increment quantity (multi
 	expect(itemBefore).toBeDefined();
 	expect(itemBefore!.quantity).toBe(5);
 
-	// Upgrade: 500 → 800 total units (including 100 allowance)
-	// = 700 prepaid units = 7 packs
 	const updatedTotalUnits = 800;
 	const updatedPacks = (updatedTotalUnits - includedUsage) / billingUnits;
 
-	// Use V1 attach to update quantity
 	await autumnV1.attach({
 		customer_id: customerId,
 		product_id: pro.id,
@@ -164,7 +124,6 @@ test.concurrent(`${chalk.yellowBright("v2→v1 compat: increment quantity (multi
 		],
 	});
 
-	// Verify customer feature balance updated correctly
 	const customerAfter = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	expectCustomerFeatureCorrect({
 		customer: customerAfter,
@@ -174,7 +133,6 @@ test.concurrent(`${chalk.yellowBright("v2→v1 compat: increment quantity (multi
 		usage: 0,
 	});
 
-	// Verify Stripe subscription item quantity
 	const { prepaidItem: itemAfter } = await getStripePrepaidSubscriptionItem({
 		customerId,
 	});
@@ -192,13 +150,9 @@ test.concurrent(`${chalk.yellowBright("v2→v1 compat: increment quantity (multi
 	await expectCustomerInvoiceCorrect({
 		customerId,
 		count: 2,
-		latestTotal: 3 * pricePerPack, // added 3 packs
+		latestTotal: 3 * pricePerPack,
 	});
 });
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 2: DECREMENT QUANTITY - MULTI BILLING UNITS (Messages)
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(`${chalk.yellowBright("v2→v1 compat: decrement quantity (multi billing units)")}`, async () => {
 	const customerId = "v2-v1-compat-decr-multi";
@@ -222,7 +176,6 @@ test.concurrent(`${chalk.yellowBright("v2→v1 compat: decrement quantity (multi
 		items: [prepaidItem, priceItem],
 	});
 
-	// Start high: 800 total units = 7 packs
 	const initialTotalUnits = 800;
 
 	const { autumnV1 } = await initScenario({
@@ -241,7 +194,6 @@ test.concurrent(`${chalk.yellowBright("v2→v1 compat: decrement quantity (multi
 		],
 	});
 
-	// Track some usage first
 	const messagesUsed = 150;
 	await autumnV1.track(
 		{
@@ -258,11 +210,8 @@ test.concurrent(`${chalk.yellowBright("v2→v1 compat: decrement quantity (multi
 	expect(itemBefore).toBeDefined();
 	expect(itemBefore!.quantity).toBe(8);
 
-	// Downgrade: 800 → 400 total units = 3 packs
 	const downgradedTotalUnits = 400;
-	const downgradedPacks = (downgradedTotalUnits - includedUsage) / billingUnits; // 4
-
-	// Use V1 attach to update quantity
+	const downgradedPacks = (downgradedTotalUnits - includedUsage) / billingUnits;
 	await autumnV1.attach({
 		customer_id: customerId,
 		product_id: pro.id,
@@ -274,7 +223,6 @@ test.concurrent(`${chalk.yellowBright("v2→v1 compat: decrement quantity (multi
 		],
 	});
 
-	// Verify customer feature balance
 	const customerAfter = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	expectCustomerFeatureCorrect({
 		customer: customerAfter,
@@ -295,13 +243,9 @@ test.concurrent(`${chalk.yellowBright("v2→v1 compat: decrement quantity (multi
 	await expectCustomerInvoiceCorrect({
 		customerId,
 		count: 2,
-		latestTotal: -4 * pricePerPack, // removed 4 packs
+		latestTotal: -4 * pricePerPack,
 	});
 });
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 4: DECREMENT WITH NO PRORATIONS
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(`${chalk.yellowBright("v2→v1 compat: decrement with no prorations")}`, async () => {
 	const customerId = "v2-v1-compat-decr-no-prorate";
@@ -315,7 +259,7 @@ test.concurrent(`${chalk.yellowBright("v2→v1 compat: decrement with no prorati
 		price: pricePerPack,
 		config: {
 			on_increase: OnIncrease.ProrateImmediately,
-			on_decrease: OnDecrease.None, // Key: no prorations on decrease
+			on_decrease: OnDecrease.None,
 		},
 	});
 
@@ -325,9 +269,8 @@ test.concurrent(`${chalk.yellowBright("v2→v1 compat: decrement with no prorati
 		items: [prepaidItem, priceItem],
 	});
 
-	// Start: 600 total units = 5 packs
 	const initialTotalUnits = 600;
-	const initialPacks = (initialTotalUnits - includedUsage) / billingUnits; // 5
+	const initialPacks = (initialTotalUnits - includedUsage) / billingUnits;
 
 	const { autumnV1, testClockId } = await initScenario({
 		customerId,
@@ -348,18 +291,14 @@ test.concurrent(`${chalk.yellowBright("v2→v1 compat: decrement with no prorati
 	const customerBefore =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Get initial invoice count
 	await expectCustomerInvoiceCorrect({
 		customer: customerBefore,
-		count: 1, // Initial attach invoice
+		count: 1,
 		latestTotal: (priceItem.price ?? 0) + initialPacks * pricePerPack,
 	});
 
-	// Downgrade: 600 → 300 total units = 2 packs
 	const downgradedTotalUnits = 300;
-	const downgradedPacks = (downgradedTotalUnits - includedUsage) / billingUnits; // 2
-
-	// Use V1 attach to update quantity
+	const downgradedPacks = (downgradedTotalUnits - includedUsage) / billingUnits;
 	await autumnV1.attach({
 		customer_id: customerId,
 		product_id: pro.id,
@@ -371,23 +310,19 @@ test.concurrent(`${chalk.yellowBright("v2→v1 compat: decrement with no prorati
 		],
 	});
 
-	// With NoProrations, balance should NOT change immediately
-	// The new quantity takes effect at next billing cycle
 	const customerAfter = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Balance stays at initial (no immediate decrement)
 	expectCustomerFeatureCorrect({
 		customer: customerAfter,
 		featureId: TestFeature.Messages,
-		includedUsage: initialTotalUnits, // Unchanged until renewal
+		includedUsage: initialTotalUnits,
 		balance: initialTotalUnits,
 		usage: 0,
 	});
 
-	// No new invoice should be created (no prorations)
 	await expectCustomerInvoiceCorrect({
 		customer: customerAfter,
-		count: 1, // Still just the initial invoice
+		count: 1,
 	});
 
 	await expectSubToBeCorrect({

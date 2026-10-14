@@ -13,8 +13,6 @@ const STRIPE_TO_AUTUMN_INTERVAL: Record<string, BillingInterval> = {
 	year: BillingInterval.Year,
 };
 
-/** Read a base-price shape off a raw Stripe item; null when the item can't
- * express one (missing amount/currency, unsupported interval). */
 export const stripeItemToCustomBasePrice = ({
 	item,
 }: {

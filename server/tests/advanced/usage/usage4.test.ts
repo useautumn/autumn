@@ -25,7 +25,6 @@ import { advanceClockForInvoice } from "../../utils/stripeUtils.js";
 
 const testCase = "usage4";
 
-// Find credit system feature from test context
 const creditsFeature = ctx.features.find((f) => f.id === TestFeature.Credits);
 
 if (!creditsFeature) {
@@ -36,7 +35,7 @@ const gpuStarterAnnual = constructRawProduct({
 	id: "gpu-starter-annual",
 	items: [
 		constructPriceItem({
-			price: 200, // $200/year
+			price: 200,
 			interval: BillingInterval.Year,
 		}),
 		{
@@ -127,7 +126,6 @@ describe(`${chalk.yellowBright("usage4: GPU starter annual")}`, () => {
 		await Promise.all(batchEvents);
 		await new Promise((resolve) => setTimeout(resolve, 15000));
 
-		// Convert V2 product to V1 to get allowance
 		const productV1 = convertProductV2ToV1({
 			productV2: gpuStarterAnnual,
 			orgId: ctx.org.id,
@@ -159,15 +157,6 @@ describe(`${chalk.yellowBright("usage4: GPU starter annual")}`, () => {
 			waitForMeterUpdate: true,
 		});
 
-		// await advanceTestClock({
-		// 	stripeCli,
-		// 	testClockId,
-		// 	advanceTo: addHours(
-		// 		addMonths(new Date(), 1),
-		// 		hoursToFinalizeInvoice,
-		// 	).getTime(),
-		// });
-
 		const res = await AutumnCli.getCustomer(customerId);
 		const invoices = res!.invoices;
 
@@ -184,7 +173,6 @@ describe(`${chalk.yellowBright("usage4: GPU starter annual")}`, () => {
 			includeBase: false,
 		});
 
-		// Convert V2 product to V1 to get allowance
 		const productV1 = convertProductV2ToV1({
 			productV2: gpuStarterAnnual,
 			orgId: ctx.org.id,

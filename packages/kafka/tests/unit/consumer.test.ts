@@ -41,7 +41,6 @@ type ConsumerFixtureOptions = {
 	startupFailure?: Error;
 	stopFailure?: Error;
 	disconnectFailure?: Error;
-	/** Thrown by pause, resume and seek, as kafkajs does once its consumer group is gone. */
 	steeringFailure?: Error;
 };
 
@@ -656,7 +655,6 @@ async function withdrawalDuringSynchronousApplication(): Promise<void> {
 	const fixture = createConsumerFixture();
 	const progress = createProgressTracker();
 	let consumer: ReturnType<typeof createTopicConsumer> | undefined;
-	// A handler that withdraws the partition while applying: neither record is resolved, nothing commits.
 	function applyRecord(): undefined {
 		void consumer?.withdrawPartition({ partition });
 		return undefined;
@@ -950,7 +948,6 @@ async function routesFencesAndEpochsFromHeaders(): Promise<void> {
 			ownerEpoch: 12n,
 		},
 	]);
-	// The fence's value is never decoded as a mutation, so nothing about it can fail parsing.
 	expect(fixture.commits).toEqual([[{ topic, partition, offset: "3" }]]);
 	await consumer.stop();
 }
@@ -1315,7 +1312,6 @@ test("a handler that declines a position gets the record passed without decoding
 				offset: "0",
 				...serializeMeteringRecord({ record: records.initialization }),
 			},
-			// Undecodable on purpose: a declined record must never be parsed.
 			{ offset: "1", key: Buffer.from("k"), value: Buffer.from("not json") },
 			{ offset: "2", ...serializeMeteringRecord({ record: records.outcome }) },
 		],
@@ -1375,7 +1371,6 @@ test("after kafkajs gave up on the group, restart joins it again on the same lis
 	});
 	await consumer.start();
 	expect(fixture.events).toEqual(["connect", "subscribe", "run"]);
-	// kafkajs disconnected itself on the crash; the worker asks to go again.
 	await consumer.restart();
 	expect(fixture.events).toEqual([
 		"connect",

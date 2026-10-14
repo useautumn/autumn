@@ -1,10 +1,3 @@
-/**
- * catalogV2.update — own-alias reclaim roundtrip.
- *
- * After pro → proNew, pro aliases proNew. Renaming back (proNew → pro)
- * reclaims the original id: proNew becomes the alias, the old alias dies.
- */
-
 import { expect, test } from "bun:test";
 import {
 	type ApiPlanV1,

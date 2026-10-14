@@ -350,7 +350,6 @@ function SpendLimitFields({ form }: { form: UsePlanBillingControlForm }) {
 							value={field.state.value}
 							onValueChange={(value) => {
 								field.handleChange(value as SpendLimitType);
-								// Units and percent aren't interchangeable.
 								form.setFieldValue("overage_limit", null);
 							}}
 							items={SPEND_LIMIT_TYPE_OPTIONS}

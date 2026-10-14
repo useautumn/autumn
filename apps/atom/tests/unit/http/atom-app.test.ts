@@ -64,7 +64,6 @@ type LogLine = {
 	message: unknown;
 };
 
-/** Every line the app logs, in order, so a test can read what an operator would. */
 const createLogger = () => {
 	const logged: LogLine[] = [];
 	const record =
@@ -80,7 +79,6 @@ const createLogger = () => {
 	};
 };
 
-/** An Atom as an org's cloud runs it: ATOM_TOKEN opens its one data folder, and checks the org's secret keys when given them. */
 const createDeployedApp = ({
 	secretKeys,
 	loop = loopOnTime,
@@ -116,7 +114,6 @@ const createDeployedApp = ({
 	};
 };
 
-/** Our multi-tenant Atom: no orgs until the admin token's holder registers one. */
 const createMultiTenantApp = () => {
 	const auth = createMultiTenantAuth({
 		dataDir: newDataDir(),
@@ -142,11 +139,9 @@ const createMultiTenantApp = () => {
 	});
 };
 
-/** The Autumn API answering whatever Atom forwards to it. */
 const autumnAnswering = ({ status, body }: { status: number; body: unknown }) =>
 	spyOn(globalThis, "fetch").mockResolvedValue(Response.json(body, { status }));
 
-/** A thread's first allowed checks are all logged; these use them up, and drop their lines. */
 const answerFirstAllowedChecks = async ({
 	app,
 	logged,
@@ -159,7 +154,6 @@ const answerFirstAllowedChecks = async ({
 	logged.length = 0;
 };
 
-/** Every allowed check falls inside the 1-in-100 sample, or none does. */
 const sampleEveryAllow = ({ sampled }: { sampled: boolean }) =>
 	spyOn(Math, "random").mockReturnValue(sampled ? 0 : 0.99);
 
@@ -186,7 +180,6 @@ const post = ({
 const withToken = (token: string | null): Record<string, string> =>
 	token ? { "x-atom-token": token } : {};
 
-/** The headers herald sends a subject push with. */
 const pushedFor = ({
 	customerId,
 }: {
@@ -196,7 +189,6 @@ const pushedFor = ({
 	[ATOM_CUSTOMER_ID_HEADER]: customerId,
 });
 
-/** As herald sends it: routed by the customer id in a header, so Atom passes the body on unparsed. */
 const setSubject = ({
 	balance,
 	token = ATOM_TOKEN,
@@ -211,7 +203,6 @@ const setSubject = ({
 		body: subjectBody({ balance }),
 	});
 
-/** A check on `cus_1`'s messages as an SDK on the latest API version sends it. */
 const checkMessages = ({
 	token = ATOM_TOKEN,
 	...body
@@ -364,7 +355,6 @@ describe("an Atom in an org's cloud", () => {
 			message: "Atom token required",
 			code: "atom_token_required",
 		});
-		// Neither push landed, so Atom still does not hold the customer.
 		expect(check.headers.get("x-atom-forwarded")).toBe("customer_not_stored");
 		expect(fetchSpy).toHaveBeenCalledTimes(1);
 	});
@@ -460,7 +450,6 @@ describe("an org's own Atom opened by the org's secret key", () => {
 		token: SECRET_KEY.slice("Bearer ".length),
 	});
 
-	/** Autumn names `invalid` as not the org's keys on every sync. */
 	const createSecretKeyApp = ({
 		invalid = [],
 	}: {
@@ -651,7 +640,6 @@ describe("a check Atom does not answer itself", () => {
 			message: "Atom could not reach the Autumn API",
 			code: "atom_upstream_unreachable",
 		});
-		// One warning: the request line carries where the forward was going and why it failed, without a stack.
 		expect(logged.map((line) => line.level)).toEqual(["warn"]);
 		expect(logged[0]?.fields).toMatchObject({
 			statusCode: 502,
@@ -1125,7 +1113,6 @@ describe("a customer's evict", () => {
 	});
 });
 
-/** An Autumn API that never answers: each forward waits until the request carrying it is aborted. */
 const autumnHanging = () =>
 	spyOn(globalThis, "fetch").mockImplementation(
 		((_input: URL | RequestInfo, init?: RequestInit) =>

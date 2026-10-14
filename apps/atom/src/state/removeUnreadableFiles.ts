@@ -3,7 +3,6 @@ import { join } from "node:path";
 import type { AutumnLogger } from "@autumn/logging";
 import { newSqliteConnection } from "./newSqliteConnection.js";
 
-/** What SQLite says of a file that is not, or no longer, a database it can read: it never will be. */
 const UNREADABLE_FILE_CODES = new Set(["SQLITE_NOTADB", "SQLITE_CORRUPT"]);
 
 const isUnreadableFile = (error: unknown): boolean =>
@@ -21,7 +20,6 @@ const listSqliteFiles = ({ dataDir }: { dataDir: string }): string[] => {
 	}
 };
 
-/** Reads what a thread's open reads first: the header, and the schema it checks its tables against. */
 const readSchema = ({ path }: { path: string }): void => {
 	const database = newSqliteConnection({
 		path,
@@ -34,10 +32,6 @@ const readSchema = ({ path }: { path: string }): void => {
 	}
 };
 
-/**
- * Before any thread opens a file: one SQLite cannot read would fail its thread's start on every boot. The files copy
- * what Autumn holds, so it is removed, and the thread opens it afresh for catch-up and pulls to fill.
- */
 export const removeUnreadableFiles = ({
 	dataDir,
 	logger,

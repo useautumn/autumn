@@ -1,11 +1,3 @@
-/**
- * atmn scenarios/versions — versioning a base with a nested variant, both carrying customers
- *
- * The config is the only shape the CLI can express: the new base version is a
- * second fixture in `plans` with a fresh `versionSlug`, its variant declares the
- * same fresh slug, and the old base + old variant stay on as inactive history.
- */
-
 import { expect, test } from "bun:test";
 import {
 	CusProductStatus,
@@ -201,8 +193,6 @@ test.concurrent(
 
 			scenario.writeConfig(atmnConfigSource({ body: v2WithHistoryConfig }));
 
-			// The preview must not 400, and must show the minted variant version as
-			// a create under the new base row.
 			const preview = (await scenario.preview()) as unknown as {
 				plans: PlanPreview[];
 			};
@@ -222,14 +212,12 @@ test.concurrent(
 
 			await scenario.push();
 
-			// `get` posts its body verbatim, so the request key stays snake_case.
 			const catalog = (await scenario.client.get({
 				include_versions: true,
 				// biome-ignore lint/suspicious/noExplicitAny: the wire is the CLI's own document
 			} as any)) as unknown as { plans: CatalogPlanRow[] };
 			const proRows = catalog.plans.filter((plan) => plan.id === "pro");
 			expect(proRows.map((row) => row.version).sort()).toEqual([1, 2]);
-			// Variants surface nested under the base row they hang off.
 			const nestedVariants = ({ version }: { version: number }) =>
 				proRows
 					.find((row) => row.version === version)
@@ -275,7 +263,6 @@ test.concurrent(
 				interval: "year",
 			});
 
-			// Nothing migrated: both v1 rows still carry the customer they had.
 			expect(
 				await activeCustomerCount({
 					ctx: scenario.ctx,
@@ -292,8 +279,6 @@ test.concurrent(
 			const settled = await scenario.push({ dryRun: true });
 			expect(settled.output).toContain("No changes");
 		} finally {
-			// seedCustomer writes straight to the DB; scenario.cleanup() only knows
-			// about the customer the scenario itself provisioned.
 			await deleteSeededCustomers({ ctx: scenario.ctx, seeded });
 			scenario.cleanup();
 		}

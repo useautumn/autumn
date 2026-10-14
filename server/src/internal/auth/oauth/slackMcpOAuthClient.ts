@@ -7,7 +7,6 @@ import { oauthClientRepo } from "../repos/index.js";
 
 const SLACK_MCP_OAUTH_CLIENT_NAME = "Slack";
 
-// Leaf mints Slack MCP tokens directly, so this URI is stored but never used.
 const SLACK_MCP_REDIRECT_URIS = ["slack://autumn-chat"];
 
 const SLACK_MCP_CLIENT_METADATA = {
@@ -15,7 +14,6 @@ const SLACK_MCP_CLIENT_METADATA = {
 	mcpClientType: "slack",
 } as const;
 
-/** Name/scopes/metadata match leaf's `ensureMcpOAuthClient` so the two writers never flip-flop the row. */
 export const ensureSlackMcpOAuthClient = async ({ db }: { db: DrizzleCli }) => {
 	const now = new Date();
 

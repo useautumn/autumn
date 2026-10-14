@@ -113,7 +113,6 @@ export const authRoutes = new Hono<TwdHono>()
 		return c.json({ ok: true });
 	});
 
-/** Signed-in account routes; API-only (never mounted at the root). */
 export const accountRoutes = new Hono<TwdHono>()
 	.get("/me", async (c) => c.json(await getMe({ ctx: c.get("ctx") })))
 	.get("/api-keys", async (c) =>

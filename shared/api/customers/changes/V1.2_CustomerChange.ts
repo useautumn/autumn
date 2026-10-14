@@ -16,27 +16,6 @@ import { transformSubscriptionToCusProductV3 } from "../cusPlans/changes/V1.2_Cu
 import type { ApiCusProductV3 } from "../cusPlans/previousVersions/apiCusProductV3";
 import { CustomerLegacyDataSchema } from "../customerLegacyData";
 import { ApiCustomerV3Schema } from "../previousVersions/apiCustomerV3";
-/**
- * V1_2_CustomerChange: Transforms customer response TO V1_2 format
- *
- * Applied when: targetVersion <= V1_2
- *
- * Breaking changes introduced in V2.0:
- *
- * 1. Products renamed to Plans:
- *    - V2.0+: "products" field contains ApiCusPlan objects
- *    - V1.2: "products" field contains ApiCusProductV3 objects
- *
- * 2. Simplified feature schema:
- *    - V2.0+: Minimal fields with optional feature object
- *    - V1.2: Verbose fields with all metadata
- *
- * 3. Features remain as record (no change from V1.1):
- *    - Both V2.0 and V1.2: Record<string, ApiCusFeature>
- *
- * Input: ApiCustomer (V2.0+ format)
- * Output: ApiCustomerV3 (V1.2 format)
- */
 
 export const V1_2_CustomerChange = defineVersionChange({
 	newVersion: ApiVersion.V2_0,
@@ -51,9 +30,7 @@ export const V1_2_CustomerChange = defineVersionChange({
 	oldSchema: ApiCustomerV3Schema,
 	legacyDataSchema: CustomerLegacyDataSchema,
 
-	// Response: V2.0 → V1.2
 	transformResponse: ({ input, legacyData, ctx }) => {
-		// Step 1: Transform plans V2.0 → V1.2 (products)
 		const v3CusProducts: ApiCusProductV3[] = [
 			...input.subscriptions,
 			...input.scheduled_subscriptions,
@@ -80,7 +57,6 @@ export const V1_2_CustomerChange = defineVersionChange({
 			return a.is_add_on ? 1 : -1;
 		});
 
-		// Step 2: Transform features V2.0 → V1.2
 		const v3_features: Record<string, ApiCusFeatureV3> = {};
 		for (const [featureId, feature] of Object.entries(input.balances)) {
 			v3_features[featureId] = transformBalanceToCusFeatureV3({
@@ -88,7 +64,6 @@ export const V1_2_CustomerChange = defineVersionChange({
 			});
 		}
 
-		// Step 3: Return V1.2 customer format
 		return {
 			autumn_id: input.autumn_id,
 			id: input.id,
@@ -103,7 +78,6 @@ export const V1_2_CustomerChange = defineVersionChange({
 			products: v3CusProducts,
 			features: v3_features,
 
-			// The others
 			invoices:
 				input.invoices?.map((invoice: ApiInvoiceV1) =>
 					transformInvoiceToV0({ input: invoice }),

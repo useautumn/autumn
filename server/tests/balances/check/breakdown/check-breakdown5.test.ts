@@ -12,11 +12,6 @@ import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
 import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
 
-/**
- * Test: Prepaid monthly messages + Pay-per-use monthly messages from different products
- * Expected: breakdown array with 2 items (same interval, different overage_allowed)
- */
-
 const prepaidMonthlyMessages = constructFeatureItem({
 	featureId: TestFeature.Messages,
 	includedUsage: 1000,
@@ -54,7 +49,7 @@ describe(`${chalk.yellowBright("check-breakdown5: prepaid monthly + pay-per-use 
 		await initCustomerV3({
 			ctx,
 			customerId,
-			attachPm: "success", // Required for pay-per-use
+			attachPm: "success",
 			withTestClock: false,
 		});
 
@@ -64,7 +59,6 @@ describe(`${chalk.yellowBright("check-breakdown5: prepaid monthly + pay-per-use 
 			prefix: testCase,
 		});
 
-		// Attach both products
 		await autumnV2.attach({
 			customer_id: customerId,
 			product_id: prepaidProd.id,
@@ -82,19 +76,17 @@ describe(`${chalk.yellowBright("check-breakdown5: prepaid monthly + pay-per-use 
 			feature_id: TestFeature.Messages,
 		})) as unknown as CheckResponseV2;
 
-		// Parent balance should sum both products, overage_allowed true if any breakdown allows
 		expect(res.balance).toMatchObject({
-			granted_balance: 1500, // 1000 + 500
+			granted_balance: 1500,
 			current_balance: 1500,
 			usage: 0,
-			overage_allowed: true, // true because pay-per-use allows overage
+			overage_allowed: true,
 			plan_id: null,
 			reset: {
 				interval: "month",
 			},
 		});
 
-		// Should have 2 breakdown items with unique IDs
 		const breakdown = res.balance?.breakdown;
 		expect(breakdown).toHaveLength(2);
 		expect(new Set(breakdown?.map((b) => b.id)).size).toBe(2);
@@ -113,7 +105,6 @@ describe(`${chalk.yellowBright("check-breakdown5: prepaid monthly + pay-per-use 
 			(b) => b.overage_allowed === true,
 		);
 
-		// Prepaid breakdown (no overage)
 		expect(prepaidBreakdown).toMatchObject({
 			granted_balance: 1000,
 			current_balance: 1000,
@@ -125,7 +116,6 @@ describe(`${chalk.yellowBright("check-breakdown5: prepaid monthly + pay-per-use 
 			},
 		});
 
-		// Pay-per-use breakdown (overage allowed)
 		expect(payPerUseBreakdown).toMatchObject({
 			granted_balance: 500,
 			current_balance: 500,

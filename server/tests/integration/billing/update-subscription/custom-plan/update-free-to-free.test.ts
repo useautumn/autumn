@@ -14,11 +14,6 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { constructFeatureItem } from "@/utils/scriptUtils/constructItem";
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// FREE-TO-FREE TESTS
-// ═══════════════════════════════════════════════════════════════════════════════
-
-// 1. Adding a boolean feature to existing free product (usage should stay)
 test.concurrent(`${chalk.yellowBright("free-to-free: add boolean feature")}`, async () => {
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
 	const free = products.base({ items: [messagesItem] });
@@ -29,7 +24,6 @@ test.concurrent(`${chalk.yellowBright("free-to-free: add boolean feature")}`, as
 		actions: [s.attach({ productId: "base" })],
 	});
 
-	// Track some usage before update
 	const messagesUsage = 40;
 	await autumnV1.track(
 		{
@@ -40,7 +34,6 @@ test.concurrent(`${chalk.yellowBright("free-to-free: add boolean feature")}`, as
 		{ timeout: 2000 },
 	);
 
-	// Add boolean dashboard feature
 	const dashboardItem = items.dashboard();
 
 	const updateParams = {
@@ -51,14 +44,12 @@ test.concurrent(`${chalk.yellowBright("free-to-free: add boolean feature")}`, as
 
 	const preview = await autumnV1.subscriptions.previewUpdate(updateParams);
 
-	// No charge for free-to-free
 	expect(preview.total).toEqual(0);
 
 	await autumnV1.subscriptions.update(updateParams);
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Messages usage should stay the same
 	expectCustomerFeatureCorrect({
 		customer,
 		featureId: TestFeature.Messages,
@@ -67,17 +58,14 @@ test.concurrent(`${chalk.yellowBright("free-to-free: add boolean feature")}`, as
 		usage: messagesUsage,
 	});
 
-	// Dashboard should be accessible (boolean feature)
 	expect(customer.features[TestFeature.Dashboard]).toBeDefined();
 
-	// No invoice for free-to-free
 	expectCustomerInvoiceCorrect({
 		customer,
 		count: 0,
 	});
 });
 
-// 2. Adding unlimited feature to existing free product (usage should stay)
 test.concurrent(`${chalk.yellowBright("free-to-free: add unlimited feature")}`, async () => {
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
 	const free = products.base({ items: [messagesItem] });
@@ -88,7 +76,6 @@ test.concurrent(`${chalk.yellowBright("free-to-free: add unlimited feature")}`, 
 		actions: [s.attach({ productId: "base" })],
 	});
 
-	// Track some usage before update
 	const messagesUsage = 50;
 	await autumnV1.track(
 		{
@@ -99,7 +86,6 @@ test.concurrent(`${chalk.yellowBright("free-to-free: add unlimited feature")}`, 
 		{ timeout: 2000 },
 	);
 
-	// Replace messages with unlimited
 	const unlimitedMessagesItem = items.unlimitedMessages();
 
 	const updateParams = {
@@ -116,17 +102,14 @@ test.concurrent(`${chalk.yellowBright("free-to-free: add unlimited feature")}`, 
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Messages should now be unlimited
 	expect(customer.features[TestFeature.Messages].unlimited).toBe(true);
 
-	// No invoice for free-to-free
 	expectCustomerInvoiceCorrect({
 		customer,
 		count: 0,
 	});
 });
 
-// 3. Adding additional included feature (usage should stay for existing)
 test.concurrent(`${chalk.yellowBright("free-to-free: add included feature")}`, async () => {
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
 	const free = products.base({ items: [messagesItem] });
@@ -137,7 +120,6 @@ test.concurrent(`${chalk.yellowBright("free-to-free: add included feature")}`, a
 		actions: [s.attach({ productId: "base" })],
 	});
 
-	// Track some usage before update
 	const messagesUsage = 35;
 	await autumnV1.track(
 		{
@@ -148,7 +130,6 @@ test.concurrent(`${chalk.yellowBright("free-to-free: add included feature")}`, a
 		{ timeout: 2000 },
 	);
 
-	// Add words feature
 	const wordsItem = items.monthlyWords({ includedUsage: 200 });
 
 	const updateParams = {
@@ -165,7 +146,6 @@ test.concurrent(`${chalk.yellowBright("free-to-free: add included feature")}`, a
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Messages usage should stay the same
 	expectCustomerFeatureCorrect({
 		customer,
 		featureId: TestFeature.Messages,
@@ -174,7 +154,6 @@ test.concurrent(`${chalk.yellowBright("free-to-free: add included feature")}`, a
 		usage: messagesUsage,
 	});
 
-	// Words should have full balance
 	expectCustomerFeatureCorrect({
 		customer,
 		featureId: TestFeature.Words,
@@ -189,7 +168,6 @@ test.concurrent(`${chalk.yellowBright("free-to-free: add included feature")}`, a
 	});
 });
 
-// 4. Removing a feature (usage for remaining should stay)
 test.concurrent(`${chalk.yellowBright("free-to-free: remove feature")}`, async () => {
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
 	const wordsItem = items.monthlyWords({ includedUsage: 200 });
@@ -201,7 +179,6 @@ test.concurrent(`${chalk.yellowBright("free-to-free: remove feature")}`, async (
 		actions: [s.attach({ productId: "base" })],
 	});
 
-	// Track usage on both features
 	const messagesUsage = 25;
 	const wordsUsage = 75;
 	await autumnV1.track(
@@ -221,7 +198,6 @@ test.concurrent(`${chalk.yellowBright("free-to-free: remove feature")}`, async (
 		{ timeout: 2000 },
 	);
 
-	// Remove words feature, keep only messages
 	const updateParams = {
 		customer_id: customerId,
 		product_id: free.id,
@@ -236,7 +212,6 @@ test.concurrent(`${chalk.yellowBright("free-to-free: remove feature")}`, async (
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Messages usage should stay the same
 	expectCustomerFeatureCorrect({
 		customer,
 		featureId: TestFeature.Messages,
@@ -245,7 +220,6 @@ test.concurrent(`${chalk.yellowBright("free-to-free: remove feature")}`, async (
 		usage: messagesUsage,
 	});
 
-	// Words should no longer exist
 	expect(customer.features[TestFeature.Words]).toBeUndefined();
 
 	expectCustomerInvoiceCorrect({
@@ -254,7 +228,6 @@ test.concurrent(`${chalk.yellowBright("free-to-free: remove feature")}`, async (
 	});
 });
 
-// 5. Update included usage on existing feature (increase)
 test.concurrent(`${chalk.yellowBright("free-to-free: increase included usage")}`, async () => {
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
 	const free = products.base({ items: [messagesItem] });
@@ -265,7 +238,6 @@ test.concurrent(`${chalk.yellowBright("free-to-free: increase included usage")}`
 		actions: [s.attach({ productId: "base" })],
 	});
 
-	// Track some usage
 	const messagesUsage = 60;
 	await autumnV1.track(
 		{
@@ -276,7 +248,6 @@ test.concurrent(`${chalk.yellowBright("free-to-free: increase included usage")}`
 		{ timeout: 2000 },
 	);
 
-	// Increase included usage from 100 to 200
 	const updatedMessagesItem = items.monthlyMessages({ includedUsage: 200 });
 
 	const updateParams = {
@@ -293,7 +264,6 @@ test.concurrent(`${chalk.yellowBright("free-to-free: increase included usage")}`
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Usage should stay, balance should increase
 	expectCustomerFeatureCorrect({
 		customer,
 		featureId: TestFeature.Messages,
@@ -308,7 +278,6 @@ test.concurrent(`${chalk.yellowBright("free-to-free: increase included usage")}`
 	});
 });
 
-// 6. Update included usage on existing feature (decrease)
 test.concurrent(`${chalk.yellowBright("free-to-free: decrease included usage")}`, async () => {
 	const messagesItem = items.monthlyMessages({ includedUsage: 200 });
 	const free = products.base({ items: [messagesItem] });
@@ -319,7 +288,6 @@ test.concurrent(`${chalk.yellowBright("free-to-free: decrease included usage")}`
 		actions: [s.attach({ productId: "base" })],
 	});
 
-	// Track some usage
 	const messagesUsage = 50;
 	await autumnV1.track(
 		{
@@ -330,7 +298,6 @@ test.concurrent(`${chalk.yellowBright("free-to-free: decrease included usage")}`
 		{ timeout: 2000 },
 	);
 
-	// Decrease included usage from 200 to 100
 	const updatedMessagesItem = items.monthlyMessages({ includedUsage: 100 });
 
 	const updateParams = {
@@ -347,7 +314,6 @@ test.concurrent(`${chalk.yellowBright("free-to-free: decrease included usage")}`
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Usage should stay, balance should decrease
 	expectCustomerFeatureCorrect({
 		customer,
 		featureId: TestFeature.Messages,
@@ -362,7 +328,6 @@ test.concurrent(`${chalk.yellowBright("free-to-free: decrease included usage")}`
 	});
 });
 
-// 7. Update interval on existing feature (month -> week)
 test.concurrent(`${chalk.yellowBright("free-to-free: change interval month to week")}`, async () => {
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
 	const free = products.base({ items: [messagesItem] });
@@ -373,7 +338,6 @@ test.concurrent(`${chalk.yellowBright("free-to-free: change interval month to we
 		actions: [s.attach({ productId: "base" })],
 	});
 
-	// Track some usage
 	const messagesUsage = 30;
 	await autumnV1.track(
 		{
@@ -384,7 +348,6 @@ test.concurrent(`${chalk.yellowBright("free-to-free: change interval month to we
 		{ timeout: 2000 },
 	);
 
-	// Change interval from monthly to weekly
 	const weeklyMessagesItem = constructFeatureItem({
 		featureId: TestFeature.Messages,
 		includedUsage: 100,
@@ -405,7 +368,6 @@ test.concurrent(`${chalk.yellowBright("free-to-free: change interval month to we
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Usage should stay
 	expectCustomerFeatureCorrect({
 		customer,
 		featureId: TestFeature.Messages,
@@ -414,7 +376,6 @@ test.concurrent(`${chalk.yellowBright("free-to-free: change interval month to we
 		usage: messagesUsage,
 	});
 
-	// Verify interval changed
 	expect(customer.features[TestFeature.Messages].interval).toEqual(
 		EntInterval.Week,
 	);
@@ -425,7 +386,6 @@ test.concurrent(`${chalk.yellowBright("free-to-free: change interval month to we
 	});
 });
 
-// 8. Update interval on existing feature (month -> year)
 test.concurrent(`${chalk.yellowBright("free-to-free: change interval month to year")}`, async () => {
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
 	const free = products.base({ items: [messagesItem] });
@@ -436,7 +396,6 @@ test.concurrent(`${chalk.yellowBright("free-to-free: change interval month to ye
 		actions: [s.attach({ productId: "base" })],
 	});
 
-	// Track some usage
 	const messagesUsage = 45;
 	await autumnV1.track(
 		{
@@ -447,7 +406,6 @@ test.concurrent(`${chalk.yellowBright("free-to-free: change interval month to ye
 		{ timeout: 2000 },
 	);
 
-	// Change interval from monthly to yearly
 	const yearlyMessagesItem = constructFeatureItem({
 		featureId: TestFeature.Messages,
 		includedUsage: 100,
@@ -468,7 +426,6 @@ test.concurrent(`${chalk.yellowBright("free-to-free: change interval month to ye
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Usage should stay
 	expectCustomerFeatureCorrect({
 		customer,
 		featureId: TestFeature.Messages,
@@ -477,7 +434,6 @@ test.concurrent(`${chalk.yellowBright("free-to-free: change interval month to ye
 		usage: messagesUsage,
 	});
 
-	// Verify interval changed
 	expect(customer.features[TestFeature.Messages].interval).toEqual(
 		EntInterval.Year,
 	);
@@ -488,11 +444,6 @@ test.concurrent(`${chalk.yellowBright("free-to-free: change interval month to ye
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// FREE-TO-FREE: RESET CYCLE ANCHOR PRESERVATION TESTS
-// ═══════════════════════════════════════════════════════════════════════════════
-
-// 9. Reset cycle anchor stays same after advancing clock 5 days
 test.concurrent(`${chalk.yellowBright("free-to-free: anchor stays same after 5 days")}`, async () => {
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
 	const free = products.base({ items: [messagesItem] });
@@ -503,7 +454,6 @@ test.concurrent(`${chalk.yellowBright("free-to-free: anchor stays same after 5 d
 		actions: [s.attach({ productId: "base" })],
 	});
 
-	// Track some usage
 	const messagesUsage = 20;
 	await autumnV1.track(
 		{
@@ -514,21 +464,18 @@ test.concurrent(`${chalk.yellowBright("free-to-free: anchor stays same after 5 d
 		{ timeout: 2000 },
 	);
 
-	// Get the original reset time
 	const customerBefore =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	const originalResetAt =
 		customerBefore.features[TestFeature.Messages].next_reset_at;
 	expect(originalResetAt).toBeDefined();
 
-	// Advance test clock by 5 days
 	await advanceTestClock({
 		stripeCli: ctx.stripeCli,
 		testClockId: testClockId!,
 		numberOfDays: 5,
 	});
 
-	// Update with slightly more included usage
 	const updatedMessagesItem = items.monthlyMessages({ includedUsage: 150 });
 
 	const updateParams = {
@@ -539,14 +486,12 @@ test.concurrent(`${chalk.yellowBright("free-to-free: anchor stays same after 5 d
 
 	const preview = await autumnV1.subscriptions.previewUpdate(updateParams);
 
-	// No charge for free-to-free
 	expect(preview.total).toEqual(0);
 
 	await autumnV1.subscriptions.update(updateParams);
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Usage should stay the same, reset anchor should stay approximately the same
 	expectCustomerFeatureCorrect({
 		customer,
 		featureId: TestFeature.Messages,
@@ -562,7 +507,6 @@ test.concurrent(`${chalk.yellowBright("free-to-free: anchor stays same after 5 d
 	});
 });
 
-// 11. Reset cycle anchor stays same after advancing clock 2 weeks (weekly feature)
 test.concurrent(`${chalk.yellowBright("free-to-free: weekly anchor stays same after 2 weeks")}`, async () => {
 	const weeklyMessagesItem = constructFeatureItem({
 		featureId: TestFeature.Messages,
@@ -577,7 +521,6 @@ test.concurrent(`${chalk.yellowBright("free-to-free: weekly anchor stays same af
 		actions: [s.attach({ productId: "base" })],
 	});
 
-	// Track some usage
 	const messagesUsage = 15;
 	await autumnV1.track(
 		{
@@ -588,22 +531,18 @@ test.concurrent(`${chalk.yellowBright("free-to-free: weekly anchor stays same af
 		{ timeout: 2000 },
 	);
 
-	// Get the original reset time
 	const customerBefore =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	const originalResetAt =
 		customerBefore.features[TestFeature.Messages].next_reset_at;
 	expect(originalResetAt).toBeDefined();
 
-	// Advance test clock by 10 days (note: this will trigger resets)
-	// We're testing that after update, the anchor day remains the same
 	await advanceTestClock({
 		stripeCli: ctx.stripeCli,
 		testClockId: testClockId!,
 		numberOfDays: 10,
 	});
 
-	// Update with more included usage
 	const updatedWeeklyMessagesItem = constructFeatureItem({
 		featureId: TestFeature.Messages,
 		includedUsage: 100,
@@ -618,19 +557,15 @@ test.concurrent(`${chalk.yellowBright("free-to-free: weekly anchor stays same af
 
 	const preview = await autumnV1.subscriptions.previewUpdate(updateParams);
 
-	// No charge for free-to-free
 	expect(preview.total).toEqual(0);
 
 	await autumnV1.subscriptions.update(updateParams);
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// After 2 weeks, balance would have reset, but anchor day should be preserved
-	// The next_reset_at should be aligned to the same day of week as original
 	const newResetAt = customer.features[TestFeature.Messages].next_reset_at;
 	expect(newResetAt).toBeDefined();
 
-	// Calculate day of week from both timestamps (should be same day)
 	const originalDay = new Date(originalResetAt!).getDay();
 	const newDay = new Date(newResetAt!).getDay();
 	expect(newDay).toEqual(originalDay);

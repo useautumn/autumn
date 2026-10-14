@@ -2,14 +2,6 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 import { AppEnv } from "@autumn/shared";
 import { env } from "../env.js";
 
-/**
- * The card PNG is served from a PUBLIC url (Slack fetches it), so the token in
- * that url is HMAC-signed: only urls we minted resolve, and the tenant identity
- * (orgId + env) is baked in and signed — it can't be tampered to probe another
- * org/env. The route still re-runs ownership validation on every fetch.
- *
- * One token can carry up to 3 customers (one composite image, cards side-by-side).
- */
 const MAX_ITEMS = 3;
 
 type CardItem = { customerId: string; env: AppEnv };
@@ -19,7 +11,6 @@ const b64url = (input: string): string =>
 	Buffer.from(input).toString("base64url");
 
 const sign = (payload: string): string => {
-	// Fail closed: an empty key would make the public card url forgeable.
 	if (!env.SLACK_SIGNING_SECRET) {
 		throw new Error("cardToken: ALU_SLACK_SIGNING_SECRET unset");
 	}
@@ -35,7 +26,6 @@ export function signCardToken(claims: CardClaims): string {
 }
 
 export function verifyCardToken(token: string): CardClaims | null {
-	// Exactly `<payload>.<sig>` — extra delimiters would alias one card to many urls.
 	const parts = token.split(".");
 	if (parts.length !== 2) return null;
 	const [payload, sig] = parts;
@@ -67,8 +57,6 @@ export function verifyCardToken(token: string): CardClaims | null {
 		}
 		if (items.length === 0) return null;
 		return { orgId: parsed.orgId, items };
-	} catch {
-		// fall through
-	}
+	} catch {}
 	return null;
 }

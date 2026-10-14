@@ -4,11 +4,6 @@ import { resolveSpendLimitOverageLimit } from "../cusEntUtils/convertCusEntUtils
 import { fullSubjectToCustomerEntitlements } from "./fullSubjectToCustomerEntitlements.js";
 import { DEFAULT_PLAN_CONTROL_STATUSES } from "./planBillingControlUtils.js";
 
-/**
- * Comparison projection that resolves usage_percentage spend limits to
- * absolute units, so most-restrictive picks across plans compare like for
- * like. Shared by check, track webhooks, and customer reads.
- */
 export const buildNormalizeSpendLimitForCompare = ({
 	fullSubject,
 	entityId,

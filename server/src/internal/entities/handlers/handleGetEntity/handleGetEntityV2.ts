@@ -22,7 +22,6 @@ export const handleGetEntityV2 = createRoute({
 
 		applySubjectLookupDbOnly({ ctx });
 
-		// 1. Entity -> Customer ID
 		if (!customerId) {
 			const customer = await shed503OnTransientError({
 				ctx,

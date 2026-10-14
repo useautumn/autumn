@@ -1,8 +1,3 @@
-/**
- * Allocated volume prices have no per-copy Stripe price, so two copies of one plan
- * (e.g. on two entities) would add their seats into one item and share a tier.
- */
-
 import { describe, expect, test } from "bun:test";
 import {
 	type FullCusProduct,

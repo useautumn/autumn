@@ -5,10 +5,6 @@ import type { PixelAnimationHandle } from "@/lib/types";
 import { FeatureIconAnimation } from "./feature-icon-animation";
 
 function FeatureCard({ feature }: { feature: (typeof featuresData)[number] }) {
-	// Only mount the hover-effect video on pointer:hover devices. The video is
-	// already CSS-hidden on mobile via `hidden md:block`, but CSS `display:none`
-	// does NOT stop `<video autoPlay>` from fetching, so without this every
-	// mobile visitor downloads one copy per feature card (≈ 9 × the file).
 	const [isHoverDevice, setIsHoverDevice] = useState(false);
 	useEffect(() => {
 		setIsHoverDevice(window.matchMedia("(hover: hover)").matches);
@@ -33,7 +29,6 @@ function FeatureCard({ feature }: { feature: (typeof featuresData)[number] }) {
 					/>
 				</div>
 			)}
-			{/* Hover Gradient Overlay */}
 			<div className="absolute inset-x-0 bottom-0 h-[70%] bg-[linear-gradient(to_bottom,rgba(10,10,10,0)_0%,rgba(135,82,250,0.15)_40%,rgba(135,82,250,0.45)_70%,rgba(135,82,250,0.85)_90%)] opacity-0 md:group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
 
 			<div className="relative z-10 flex flex-col h-full gap-[42px] md:gap-24.5">
@@ -73,7 +68,6 @@ export default function Features() {
 				{featuresData.map((feature, i) => (
 					<FeatureCard key={i} feature={feature} />
 				))}
-				{/* <div className="bg-[#0f0f0f] w-full h-full min-h-[280px] hidden lg:block border-r border-b border-[#292929]" /> */}
 			</div>
 		</section>
 	);

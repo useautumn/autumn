@@ -1,8 +1,3 @@
-/**
- * Integration tests for `billing.updated` webhooks emitted from Stripe's
- * `customer.subscription.updated` flow — `handleStripeSubscriptionUpdated`.
- */
-
 import { afterAll, beforeAll, expect, test } from "bun:test";
 import {
 	getTestSvixAppId,
@@ -36,10 +31,6 @@ afterAll(async () => {
 	await webhook?.cleanup();
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// SCHEDULE PHASE CHANGED
-// ═══════════════════════════════════════════════════════════════════════════════
-
 test(`${chalk.yellowBright("billing.updated: schedule phase change → tags includes phase_changed")}`, async () => {
 	const customerId = "billing-updated-phase-change";
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
@@ -54,7 +45,6 @@ test(`${chalk.yellowBright("billing.updated: schedule phase change → tags incl
 		],
 		actions: [
 			s.attach({ productId: premium.id }),
-			// Schedule downgrade: pro takes over at premium's period end.
 			s.attach({ productId: pro.id }),
 			s.advanceTestClock({ toNextInvoice: true }),
 		],
@@ -73,7 +63,6 @@ test(`${chalk.yellowBright("billing.updated: schedule phase change → tags incl
 	const { data } = result!.payload;
 	expect(data.tags).toContain("phase_changed");
 
-	// Old premium expires; pro (was scheduled) is now activated.
 	const expired = findChange(data.plan_changes, {
 		action: "expired",
 		planId: premium.id,

@@ -5,12 +5,6 @@ import type { DeductionOptions } from "@/internal/balances/utils/types/deduction
 import type { MutationLogItem } from "@/internal/balances/utils/types/mutationLogItem.js";
 import { tryRedisWrite } from "@/utils/cacheUtils/cacheUtils.js";
 
-/**
- * V2 save-lock-receipt. Stores the receipt as a plain JSON string via a single
- * `SET key value NX EXAT ttl_at` call — one Redis round trip instead of the
- * V1 `EXISTS` + `JSON.SET` + `EXPIREAT` sequence, and closes the EXISTS/SET
- * race since the atomic NX guards against concurrent creates.
- */
 export const saveLockReceiptV2 = async ({
 	lock,
 	customerId,

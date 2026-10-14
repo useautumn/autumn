@@ -8,11 +8,6 @@ import type {
 import { OrgService } from "@/services/OrgService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 
-/**
- * Mutations for the single org SSO connection. Every mutation that returns the
- * connection writes it straight into the query cache so the staged UI advances
- * without a second round trip.
- */
 export const useSsoActions = () => {
 	const axiosInstance = useAxiosInstance();
 	const queryClient = useQueryClient();
@@ -45,8 +40,6 @@ export const useSsoActions = () => {
 			await OrgService.deleteSso(axiosInstance);
 		},
 		onSuccess: () => {
-			// DELETE returns only `{ success: true }`, so keep the cached `setup`
-			// (the callback URL survives the connection) and drop the connection.
 			queryClient.setQueryData<SsoConnectionResponse>(queryKey, (old) =>
 				old ? { ...old, connection: null } : old,
 			);

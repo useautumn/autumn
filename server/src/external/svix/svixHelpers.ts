@@ -65,8 +65,6 @@ export const sendSvixEvent = async ({
 			message: { eventType, data, payloadFields, idempotencyKey, tags },
 		});
 	} catch (error) {
-		// Log the tags (the usual culprit) so tag-validation rejections aren't
-		// invisible. Don't log Svix's raw error body — it can echo request data.
 		const status = error as { code?: number; statusCode?: number };
 		ctx.logger.error(
 			`[svix] Failed to send ${eventType}: ${error} | status=${status.code ?? status.statusCode} | tags=${JSON.stringify(tags ?? [])}`,

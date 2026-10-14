@@ -10,10 +10,6 @@ import { computeRefundPlan } from "@/internal/billing/v2/compute/finalize/comput
 import { finalizeLineItems } from "@/internal/billing/v2/compute/finalize/finalizeLineItems";
 import { finalizeUpdateSubscriptionPooledBalancePlan } from "./finalizeUpdateSubscriptionPooledBalancePlan";
 
-/**
- * Finalizes the update subscription billing plan by processing line items,
- * applying update-subscription-specific guards, and computing refund preview.
- */
 export const finalizeUpdateSubscriptionPlan = async ({
 	ctx,
 	plan,
@@ -31,7 +27,6 @@ export const finalizeUpdateSubscriptionPlan = async ({
 		billingContext,
 	});
 
-	// Finalize line items (shared logic)
 	plan.lineItems = finalizeLineItems({
 		ctx,
 		lineItems: plan.lineItems ?? [],
@@ -40,12 +35,10 @@ export const finalizeUpdateSubscriptionPlan = async ({
 		customLineItems: params.custom_line_items,
 	});
 
-	// Guard: if current customer product is one off, make sure there are no line items
 	if (isCustomerProductOneOff(billingContext.customerProduct)) {
 		plan.lineItems = [];
 	}
 
-	// Filter refund line items and compute the refund plan
 	const { lineItems: filteredLineItems, refundPlan } = await computeRefundPlan({
 		ctx,
 		billingContext,

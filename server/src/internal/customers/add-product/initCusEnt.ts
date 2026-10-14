@@ -69,7 +69,6 @@ const initCusEntBalance = ({
 
 	options,
 	relatedPrice,
-	// existingCusEnt,
 	entities,
 	carryExistingUsages = false,
 }: {
@@ -78,7 +77,6 @@ const initCusEntBalance = ({
 
 	options?: FeatureOptions;
 	relatedPrice?: Price;
-	// existingCusEnt?: FullCustomerEntitlement;
 	entities: Entity[];
 	carryExistingUsages?: boolean;
 }) => {
@@ -101,7 +99,6 @@ const initCusEntBalance = ({
 	return { newBalance: resetBalance, newEntities };
 };
 
-// MAIN FUNCTION
 export const initCusEntitlement = ({
 	entitlement,
 	customer,
@@ -111,8 +108,6 @@ export const initCusEntitlement = ({
 	options,
 	nextResetAt,
 	relatedPrice,
-	// existingCusEnt,
-	// keepResetIntervals = false,
 	trialEndsAt,
 	anchorToUnix,
 	entities,
@@ -131,8 +126,6 @@ export const initCusEntitlement = ({
 	options?: FeatureOptions;
 	nextResetAt?: number;
 	relatedPrice?: Price;
-	// existingCusEnt?: FullCustomerEntitlement;
-	// keepResetIntervals?: boolean;
 	trialEndsAt?: number;
 	anchorToUnix?: number;
 	entities: Entity[];
@@ -165,7 +158,6 @@ export const initCusEntitlement = ({
 		anchorToUnix,
 		now,
 	});
-	// 3. Define expires at (TODO next time...)
 	const isBooleanFeature = entitlement.feature.type === FeatureType.Boolean;
 	let usageAllowed = false;
 
@@ -191,12 +183,10 @@ export const initCusEntitlement = ({
 		feature_id: entitlement.feature_id ?? entitlement.feature.id,
 		customer_id: customer.id,
 
-		// Foreign keys
 		entitlement_id: entitlement.id,
 		customer_product_id: cusProductId,
 		created_at: Date.now(),
 
-		// Entitlement fields
 		unlimited: isBooleanFeature
 			? null
 			: entitlement.allowance_type === AllowanceType.Unlimited,

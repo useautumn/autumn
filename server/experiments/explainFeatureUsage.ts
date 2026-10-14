@@ -1,15 +1,7 @@
 import { AppEnv } from "@autumn/shared";
 import { sql } from "drizzle-orm";
-// Import initDrizzle directly — experimentEnv's loadLocalEnv() clobbers vars
-// injected by `infisical run --env=staging`.
 import { initDrizzle } from "../src/db/initDrizzle";
 import { buildFeatureStatesQuery } from "../src/internal/features/repos/listFeatureStates";
-
-// Single feature-state probe for catalogV2 setupFeatureStatesContext.
-// bun auto-loads server/.env.local over the inherited env, so the target DB
-// comes in via EXPLAIN_DATABASE_URL (no .env file defines it). Run from server:
-//   EXPLAIN_ORG_ID=... infisical run --env=staging --recursive -- sh -c \
-//     'EXPLAIN_DATABASE_URL="$DATABASE_V2_URL" bun run experiments/explainFeatureUsage.ts [--analyze]'
 
 const STATEMENT_TIMEOUT_MS = 30_000;
 
@@ -86,8 +78,6 @@ const main = async () => {
 	`);
 	if (features.length === 0) throw new Error("org has no features in this env");
 
-	// EXPLAIN_COUNT_ALL_ROWS=1 → every feature runs rewrite COUNTs (worst case).
-	// Default: half/half — mirrors a typical mixed catalog batch.
 	const countAllRows = process.env.EXPLAIN_COUNT_ALL_ROWS === "1";
 	const featureRefs = features.map((feature, index) => ({
 		internalId: feature.internal_id,

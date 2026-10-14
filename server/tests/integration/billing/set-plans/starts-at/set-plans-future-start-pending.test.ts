@@ -1,11 +1,3 @@
-/**
- * set_plans over a pending future start (a Scheduled row on a standalone Stripe schedule):
- * - moving it later leaves exactly one schedule, starting on the new date, and charges nothing now;
- * - starting it now activates the plan, cancels the standalone schedule and charges it once;
- * - going back to the plan the future start ended cancels the schedule, and bills the restarted
- *   plan once on top of the credit the future start gave.
- */
-
 import { expect, test } from "bun:test";
 import { CusProductStatus, type SetPlansParamsV0Input } from "@autumn/shared";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";

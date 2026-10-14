@@ -21,7 +21,6 @@ const expireUnpaidPendingPlan = async ({
 	metadata,
 	stripeInvoice,
 }: ExpirePendingPlanParams & { ctx: RepoContext }) => {
-	// 1. Any payment keeps the pending plan; stop the cron re-picking it
 	if (hasStripeInvoicePayment(stripeInvoice)) {
 		await MetadataService.update({
 			db: ctx.db,
@@ -31,7 +30,6 @@ const expireUnpaidPendingPlan = async ({
 		return;
 	}
 
-	// 2. Close the invoice
 	const invoiceClosed = await voidInvoiceAtDueDate({
 		ctx,
 		stripeCli,
@@ -40,12 +38,10 @@ const expireUnpaidPendingPlan = async ({
 	});
 	if (!invoiceClosed) return;
 
-	// 3. Expire the plan, then cancel the sub it created
 	await expirePendingCustomerProducts({ ctx, metadataId: metadata.id });
 	await releaseExpiredPendingPlan({ ctx, stripeCli, metadata, stripeInvoice });
 };
 
-/** A deferred invoice reached its due date: give up the pending plan unless anything was paid. */
 export const expirePendingPlanAtDueDate = async ({
 	ctx,
 	orgId,
@@ -64,7 +60,6 @@ export const expirePendingPlanAtDueDate = async ({
 	};
 
 	try {
-		// Shares activation's lock so a late invoice.finalized can't activate a plan being expired.
 		await withDeferredBillingPlanLock({
 			orgId,
 			env,

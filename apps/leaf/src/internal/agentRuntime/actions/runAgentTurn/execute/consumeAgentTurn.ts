@@ -33,16 +33,8 @@ import { watchSubagentProgress } from "./watchSubagentProgress.js";
 
 const PERSIST_CURSOR_EVERY_EVENTS = 10;
 
-/** Keeps a window that opens just before a budget runs out from spinning
- * through reopens; the loop settles on its next check either way. */
 const MIN_IDLE_WINDOW_MS = ms.seconds(1);
 
-/** A quiet window must end by the time the turn may settle. A full window
- * opened near the deadline outlives the caller's backstop, which then kills
- * the run with a timeout warning instead of letting it settle on its own.
- * Read again at every arm, since each event restarts the window. The deadline
- * always lands before the quiet cap, because activity starts after it is set.
- * A working child keeps the full window: the deadline does not settle it. */
 const idleWindowFor = ({
 	activity,
 	deadlineAt,
@@ -59,16 +51,8 @@ const idleWindowFor = ({
 	);
 };
 
-/** A post that hangs must not pin the reader to the stream. Proceeding after
- * this is no worse than never having waited. */
 const FOLLOW_UP_POST_SETTLE_MS = ms.seconds(5);
 
-/** Waits out follow-up posts that are still in flight, so the claim that
- * follows counts what eve accepted rather than what was optimistically
- * reserved. Without it a post that fails after its reservation leaves this
- * reader waiting for a turn eve never received, while the coordinator falls
- * back to a new run — two readers on one session, which is the failure this
- * whole handoff exists to prevent. */
 const settleFollowUpPosts = async (run?: ActiveRun) => {
 	const deadline = Date.now() + FOLLOW_UP_POST_SETTLE_MS;
 	let inFlight = run?.followUpPostsInFlight();
@@ -83,14 +67,12 @@ const settleFollowUpPosts = async (run?: ActiveRun) => {
 			}),
 		]);
 		if (timer) clearTimeout(timer);
-		// A post can start while we wait for an earlier one.
 		inFlight = run?.followUpPostsInFlight();
 	}
 };
 
 type EveTurnContext = Omit<EveEventContext, "event"> & { auth: EveAuthContext };
 
-// Preserve events yielded before a stream error.
 type EveStreamPass = {
 	error?: unknown;
 	outcome?: EveTurnOutcome;
@@ -161,13 +143,7 @@ const streamPassEvents = async ({
 			const result = await applyEveEvent({ ...turn, event, progress });
 			progress = result.progress;
 			if (result.outcome) {
-				// The next post resumes from here, so a cursor left behind by the
-				// checkpoint interval would replay this turn as the next one's reply.
 				await saveEveSessionState({ orgId, session });
-				// A follow-up eve already accepted has a reply coming on this
-				// stream, and this reader is the only one attached to it. Hand
-				// this turn's outcome on now so nothing is lost, then read the
-				// replacement instead of leaving it to run unwatched.
 				await settleFollowUpPosts(run);
 				if (run?.claimFollowUpsOrSettle()) {
 					await emitSettledTurn(result.outcome);
@@ -201,8 +177,6 @@ const streamPassEvents = async ({
 	return { progress, sawEvent };
 };
 
-/** An idle window is a gap, not an ending — eve holds the turn durably, so
- * leaf reopens at the cursor; only an exhausted budget settles the turn. */
 const persistCursorAfterIdleStream = async ({
 	attempt,
 	logger,
@@ -231,7 +205,6 @@ const settleExhaustedTurn = ({
 	turn,
 }: {
 	activity: TurnActivity;
-	/** A turn already reached the thread on this stream. */
 	emittedSettledTurn: boolean;
 	logger: AutumnLogger;
 	turn: EveTurnContext;
@@ -249,9 +222,6 @@ const settleExhaustedTurn = ({
 			turn_ms: activity.msSinceStart(),
 		},
 	});
-	// The claimed follow-up never produced a turn. Its reply is already posted,
-	// so the thread is not waiting on us — an "eve stopped responding" notice
-	// here would contradict the answer the user just got.
 	if (emittedSettledTurn && !partialText)
 		return { declined: true, kind: "silent" };
 	if (!partialText) throw new Error(AGENT_UNREACHABLE_MESSAGE);
@@ -298,9 +268,6 @@ export const consumeAgentTurn = async ({
 	onAction?: EveEventContext["onAction"];
 	onFirstStreamEvent?: () => void;
 	onReasoning?: EveEventContext["onReasoning"];
-	/** A turn settled while this reader still owes a claimed follow-up: its
-	 * outcome is delivered here, and the reader stays on the stream for the
-	 * replacement. Only the last turn of a read comes back as the return. */
 	onSettledTurn?: (outcome: EveTurnOutcome) => Promise<void> | void;
 	onThinking?: EveEventContext["onThinking"];
 	orgId: string;
@@ -359,7 +326,6 @@ export const consumeAgentTurn = async ({
 
 	try {
 		while (idleRetries < MAX_IDLE_RETRIES) {
-			// Eve cannot be interrupted server-side.
 			if (run?.stop) {
 				return await abandonForStop({
 					progress: turn.progress,
@@ -367,8 +333,6 @@ export const consumeAgentTurn = async ({
 				});
 			}
 
-			// A quiet parent is not a done turn — children stream on their own
-			// sessions; MAX_TURN_DURATION_MS still bounds a runaway turn.
 			const childIsWorking = activity.activeChildren() > 0;
 			const quietTooLong = activity.msSinceActivity() >= MAX_QUIET_MS;
 			const deadlineReached =
@@ -407,8 +371,6 @@ export const consumeAgentTurn = async ({
 			}
 
 			if (pass.error instanceof EveStreamIdleTimeoutError) {
-				// A live child means the turn is working even when the parent
-				// stream is silent; the child relay owns when a child stops counting.
 				const turnIsWorking = activity.activeChildren() > 0;
 				idleRetries = pass.sawEvent || turnIsWorking ? 0 : idleRetries + 1;
 				if (idleRetries >= MAX_IDLE_RESYNCS) {

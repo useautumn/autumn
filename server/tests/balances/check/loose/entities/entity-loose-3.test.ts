@@ -42,7 +42,6 @@ describe(`${chalk.yellowBright(`${testCase}: entity with product + loose entitle
 			prefix: testCase,
 		});
 
-		// Create entity
 		await autumnV1.entities.create(customerId, [
 			{
 				id: entityId,
@@ -51,13 +50,11 @@ describe(`${chalk.yellowBright(`${testCase}: entity with product + loose entitle
 			},
 		]);
 
-		// Attach product at customer level (gives 100 messages)
 		await autumnV1.attach({
 			customer_id: customerId,
 			product_id: freeProd.id,
 		});
 
-		// Add loose entitlement for entity (adds 500 more just for entity)
 		await autumnV1.balances.create({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
@@ -77,11 +74,9 @@ describe(`${chalk.yellowBright(`${testCase}: entity with product + loose entitle
 		expect(res.entity_id).toBe(entityId);
 		expect(res.balance).toBeDefined();
 
-		// Entity should see: 100 (from customer product) + 500 (entity loose) = 600
 		expect(res.balance?.granted_balance).toBe(600);
 		expect(res.balance?.current_balance).toBe(600);
 
-		// Breakdown should show both sources
 		expect(res.balance?.breakdown).toBeDefined();
 		expect(res.balance?.breakdown).toHaveLength(2);
 	});
@@ -90,13 +85,10 @@ describe(`${chalk.yellowBright(`${testCase}: entity with product + loose entitle
 		const res = (await autumnV2.check({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
-			// No entity_id
 		})) as unknown as CheckResponseV2;
 
 		expect(res.allowed).toBe(true);
-		// The balance worker doesn't aggregate entity data onto the customer.
 		if (!isBalanceWorkerRoute()) {
-			// Customer should see merged: 100 (product) + 500 (entity loose) = 600
 			expect(res.balance?.granted_balance).toBe(600);
 			expect(res.balance?.current_balance).toBe(600);
 		}
@@ -113,12 +105,10 @@ describe(`${chalk.yellowBright(`${testCase}: entity with product + loose entitle
 		expect(breakdown).toBeDefined();
 		expect(breakdown).toHaveLength(2);
 
-		// Find the product entitlement (has plan_id)
 		const productEnt = breakdown?.find((b) => b.plan_id === freeProd.id);
 		expect(productEnt).toBeDefined();
 		expect(productEnt?.granted_balance).toBe(100);
 
-		// Find the loose entitlement (plan_id is null)
 		const looseEnt = breakdown?.find((b) => b.plan_id === null);
 		expect(looseEnt).toBeDefined();
 		expect(looseEnt?.granted_balance).toBe(500);

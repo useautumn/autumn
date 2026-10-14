@@ -5,7 +5,6 @@ import type { ApiPlan } from "@api/products/previousVersions/apiPlanV0";
 import type { ProductItem } from "@models/productV2Models/productItemModels/productItemModels";
 import type { SharedContext } from "../../../types";
 
-// Required.
 export const planV0ToProductItems = ({
 	ctx,
 	plan,
@@ -16,7 +15,6 @@ export const planV0ToProductItems = ({
 		price: ApiPlan["price"] | BasePriceParams;
 	};
 }): ProductItem[] => {
-	// Convert features to items
 	const featureItems =
 		plan.features?.map((planItem) =>
 			apiPlanItem.map.v0ToProductItem({ ctx, planItem }),

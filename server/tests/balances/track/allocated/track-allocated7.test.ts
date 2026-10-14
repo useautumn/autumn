@@ -6,9 +6,6 @@ import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 
-/**
- * Test: Attach pro plan with prepaid allocated users, then track concurrently
- */
 test.concurrent(`${chalk.yellowBright("prepaid-users: attach 50 users then track concurrently")}`, async () => {
 	const prepaidUsersItem = items.prepaidUsers({
 		includedUsage: 0,
@@ -35,7 +32,6 @@ test.concurrent(`${chalk.yellowBright("prepaid-users: attach 50 users then track
 		],
 	});
 
-	// Verify initial state: 50 prepaid users
 	const customerBefore = await autumnV2.customers.get<ApiCustomer>(customerId);
 	expect(customerBefore.balances[TestFeature.Users]).toMatchObject({
 		granted_balance: 0,
@@ -44,24 +40,20 @@ test.concurrent(`${chalk.yellowBright("prepaid-users: attach 50 users then track
 		usage: 0,
 	});
 
-	// Track 10 times concurrently - each adding 1 user
 	const trackPromises = Array.from({ length: 10 }, (_, i) =>
 		autumnV2.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Users,
 			value: 1,
-			// idempotency_key: `concurrent-track-${i}`,
 		}),
 	);
 
 	const trackResults = await Promise.all(trackPromises);
 
-	// All track calls should succeed
 	for (const result of trackResults) {
 		expect(result.balance).toBeDefined();
 	}
 
-	// Verify final state: 50 - 10 = 40 current_balance
 	const customerAfter = await autumnV2.customers.get<ApiCustomer>(customerId);
 	expect(customerAfter.balances[TestFeature.Users]).toMatchObject({
 		granted_balance: 0,

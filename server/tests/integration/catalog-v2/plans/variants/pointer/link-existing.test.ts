@@ -1,12 +1,3 @@
-/**
- * catalogV2.update — link an existing standalone plan as a variant.
- *
- * Signal: nest under `base.variants[]`, or `{ plan_id, base_variant_id }`.
- * Both stamp base_internal_product_id on every version row and keep items.
- * A top-level entry in the same call as the nest is content, not a second
- * home — unlike an already-linked variant, which still 400s.
- */
-
 import { test } from "bun:test";
 import { ErrCode } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
@@ -313,7 +304,6 @@ test.concurrent(
 				});
 			}
 
-			// The config's whole picture: v2 owns both EU rows, v1 declares none.
 			await autumnV2_3.catalogV2.update({
 				plans: [
 					{

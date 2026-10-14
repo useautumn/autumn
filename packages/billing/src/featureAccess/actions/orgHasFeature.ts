@@ -1,7 +1,6 @@
 import type { BillingFeatureId } from "../billingFeatureIds";
 import type { FeatureAccessContext } from "../types/featureAccessContext";
 
-/** Fails open like every gate on Autumn's own billing: an unreachable Autumn allows. */
 export const orgHasFeature = async ({
 	ctx,
 	orgId,
@@ -11,7 +10,6 @@ export const orgHasFeature = async ({
 	ctx: FeatureAccessContext;
 	orgId: string;
 	featureId: BillingFeatureId;
-	/** Ask Autumn's own Atom first; the SDK falls back to the Autumn API when it's down. */
 	useEdge?: boolean;
 }): Promise<boolean> => {
 	const startedAt = performance.now();

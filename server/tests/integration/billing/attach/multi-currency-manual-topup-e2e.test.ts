@@ -18,9 +18,6 @@ import { AutumnRpcCli } from "@/external/autumn/autumnRpcCli.js";
 const autumnRpc = new AutumnRpcCli({ version: ApiVersion.V2_1 });
 const getSuffix = () => Math.random().toString(36).slice(2, 9);
 
-// A manual top-up (subscriptions.update with feature_quantities on a one-off
-// prepaid item) must emit a standalone invoice at the eur pack price, exercising
-// computeManualTopUpPlan's currency resolution.
 test.concurrent(
 	`${chalk.yellowBright("multi-currency e2e: eur manual top-up bills the eur pack price")}`,
 	async () => {
@@ -72,7 +69,6 @@ test.concurrent(
 			remaining: 100,
 		});
 
-		// Manual top-up: add one more pack (delta semantics).
 		await autumnV2_2.subscriptions.update<UpdateSubscriptionV1ParamsInput>({
 			customer_id: customerId,
 			plan_id: planId,
@@ -86,7 +82,6 @@ test.concurrent(
 			remaining: 200,
 		});
 
-		// Standalone top-up invoice priced in eur (9), not usd (10).
 		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 		const stripeInvoices = await ctx.stripeCli.invoices.list({
 			customer: customer.stripe_id as string,

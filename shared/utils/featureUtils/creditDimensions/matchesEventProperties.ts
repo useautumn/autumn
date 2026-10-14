@@ -4,7 +4,6 @@ import type { CreditDimension } from "../../../models/featureModels/featureConfi
 
 export type { EventProperties };
 
-// An empty match applies to every event, so a missing property bag still matches it.
 export const matchesEventProperties = ({
 	match,
 	eventProperties,

@@ -1,12 +1,3 @@
-/**
- * catalogV2.update — declared plan_license links on a direct parent entry.
- *
- * Contract:
- *   - parent + child created in one batch with licenses:[child] → link exists
- *   - customize add_items/price on an existing parent → customized:true
- *   - licenses: [] removes existing links
- */
-
 import { test } from "bun:test";
 import { BillingInterval } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";

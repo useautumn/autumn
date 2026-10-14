@@ -25,8 +25,6 @@ export const useSyncSandboxFromUrl = () => {
 	const slug = getSandboxSlugFromPath(pathname);
 	const inSandboxEnv = pathname.startsWith(SANDBOX_PREFIX);
 
-	// The list can never resolve the slug — it errored, or the org has no
-	// production env so it owns no named sandboxes. Stop gating instead of hanging.
 	const listUnavailable = !!error || (!orgLoading && !!org && !org.deployed);
 
 	const match = useMemo(

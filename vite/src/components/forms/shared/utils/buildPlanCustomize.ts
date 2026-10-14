@@ -19,7 +19,6 @@ export interface PlanCustomize {
 	price?: ReturnType<typeof buildCustomizeBasePrice>;
 }
 
-/** The create APIs reject explicit nulls that the plan editor emits. */
 function sanitizeForCreateParams({
 	reset,
 	price,
@@ -76,7 +75,6 @@ export function buildCustomizeItems({
 	);
 }
 
-/** A stored base price whose amount and interval the user left untouched. */
 function isUnchangedStoredPrice({ item }: { item: ProductItem }) {
 	const config = item.price_config as Partial<FixedPriceConfig> | undefined;
 	if (!config) return false;
@@ -95,7 +93,6 @@ function unchangedBaseStripePriceId({ item }: { item: ProductItem }) {
 	return isUnchangedStoredPrice({ item }) ? config.stripe_price_id : undefined;
 }
 
-/** A $0 base price means free unless it is a stored $0 price kept as-is, which must round-trip. */
 const isFreeBasePrice = (item: ProductItem) =>
 	item.price === 0 && !isUnchangedStoredPrice({ item });
 

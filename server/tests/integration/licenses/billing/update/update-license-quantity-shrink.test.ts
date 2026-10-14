@@ -1,5 +1,3 @@
-// TDD contract (U3+U4): billing.update license_quantities converges the pool in place, seats stay anchored.
-// Every quantity change bills a refund/charge pair per seat price (previous vs new paid picture).
 import { test } from "bun:test";
 import type {
 	ApiCustomerV5,

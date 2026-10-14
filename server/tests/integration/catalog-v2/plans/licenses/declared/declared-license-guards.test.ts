@@ -1,12 +1,3 @@
-/**
- * catalogV2.update — declared licenses[] link guards.
- *
- * Contract:
- *   self-link → 400
- *   archived child → 400
- *   prepaid_only: false → 400
- */
-
 import { test } from "bun:test";
 import { ErrCode } from "@autumn/shared";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils.js";

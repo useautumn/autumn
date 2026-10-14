@@ -1,9 +1,5 @@
 import type { FullProduct } from "@autumn/shared";
 
-/**
- * Adds the given source plans to the copy set unless the set or the target
- * already has a plan with that id.
- */
 export const withPulledInPlans = ({
 	fromProducts,
 	fromProductsAll,

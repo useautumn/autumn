@@ -22,7 +22,6 @@ const readOwnEntityState = ({
 	return merged ? splitSubjectState({ state: merged }).entity : null;
 };
 
-/** Each named entity as the writer holds it now; the engine builds the parts of ones the plan creates, unless one is already held: it exists. */
 export const readEntityParts = ({
 	scope,
 	command,

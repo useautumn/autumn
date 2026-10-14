@@ -1,14 +1,3 @@
-/**
- * Addressing a feature by internal_id. Pure functions, so the subtle line —
- * a renamed row is still spoken for under the id it is leaving — is proven
- * without a shared org.
- *
- * Contract:
- *   A1  a rename by internal_id does not propose deleting the old id
- *   A2  a row nobody mentions is still proposed
- *   A3  an unknown internal_id is refused, naming the id
- */
-
 import { expect, test } from "bun:test";
 import type { Feature, UpdateCatalogParams } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";

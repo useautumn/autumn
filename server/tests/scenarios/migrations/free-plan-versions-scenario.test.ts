@@ -4,17 +4,6 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-/**
- * Migration setup: free plan with feature-only versions (no billing changes).
- *
- *   v1  100 messages                        → cus migfree-v1
- *   v2  200 messages                        → cus migfree-v2
- *   v3  200 messages + 50 credits           → cus migfree-v3
- *   v4  500 messages + 100 credits + admin  (latest, no customer)
- *
- * All changes are entitlement-only, so migrations here exercise the
- * no-billing-changes (DB-only) path.
- */
 test(`${chalk.yellowBright("migration-setup: free plan multi-version (no billing)")}`, async () => {
 	const free = products.base({
 		id: "starter",

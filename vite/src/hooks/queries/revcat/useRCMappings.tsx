@@ -23,15 +23,6 @@ export interface SaveMappingInput {
 	feature_quantities?: RCFeatureQuantities | null;
 }
 
-/**
- * Writes go through catalogV2 so the catalog is the single writer and an RC id
- * already claimed by another plan is rejected rather than silently shared.
- *
- * Every listed plan is restated, including the ones with nothing mapped: an
- * omitted plan means "keep this mapping unchanged", so an empty `products` array
- * is the only way to clear one (`executeRevenueCatMappings` deletes the row when
- * `products.length === 0`).
- */
 export const toCatalogParams = (
 	mappingsToSave: SaveMappingInput[],
 ): UpdateCatalogParamsInput => ({

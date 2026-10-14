@@ -1,10 +1,3 @@
-/**
- * Update Quantity Invoice Line Items Tests
- *
- * Tests for verifying that invoice line items are correctly persisted to the database
- * when updating quantities via the billing v2 flow.
- */
-
 import { expect, test } from "bun:test";
 import { type ApiCustomerV3, OnDecrease, OnIncrease } from "@autumn/shared";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
@@ -19,24 +12,6 @@ import ctx from "@tests/utils/testInitUtils/createTestContext";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 1: Increase quantity - verify line items persisted
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Customer has Pro with prepaid messages (100 initial)
- * - Increase quantity from 100 to 400 (+300)
- *
- * Expected Result:
- * - Invoice created for quantity increase
- * - Invoice line items are persisted to DB:
- *   - Refund for old quantity: 1 pack × $10 = -$10, quantity=100
- *   - Charge for new quantity: 4 packs × $10 = $40, quantity=400
- *   - Net: $30
- * - prorated: true (mid-cycle quantity change)
- * - customer_product_id populated
- */
 test.concurrent(`${chalk.yellowBright("update-quantity-line-items 1: increase quantity - line items persisted")}`, async () => {
 	const customerId = "update-qty-li-increase";
 	const billingUnits = 100;
@@ -60,7 +35,6 @@ test.concurrent(`${chalk.yellowBright("update-quantity-line-items 1: increase qu
 			s.products({ list: [pro] }),
 		],
 		actions: [
-			// Initial attach with 100 messages (1 pack = $10)
 			s.billing.attach({
 				productId: pro.id,
 				options: [{ feature_id: TestFeature.Messages, quantity: 100 }],
@@ -68,7 +42,6 @@ test.concurrent(`${chalk.yellowBright("update-quantity-line-items 1: increase qu
 		],
 	});
 
-	// Verify initial state
 	const customerBefore =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	expectCustomerFeatureCorrect({
@@ -77,42 +50,33 @@ test.concurrent(`${chalk.yellowBright("update-quantity-line-items 1: increase qu
 		balance: 100,
 	});
 
-	// Increase from 100 to 400 (+300 = net +3 packs = $30)
 	const result = await autumnV1.subscriptions.update({
 		customer_id: customerId,
 		product_id: pro.id,
 		options: [{ feature_id: TestFeature.Messages, quantity: 400 }],
 	});
 
-	// Verify invoice was created
 	expect(result.invoice).toBeDefined();
 	expect(result.invoice!.stripe_id).toBeDefined();
 
 	const customerAfter = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Verify messages increased
 	expectCustomerFeatureCorrect({
 		customer: customerAfter,
 		featureId: TestFeature.Messages,
 		balance: 400,
 	});
 
-	// Verify invoice total: 4 packs - 1 pack = $40 - $10 = $30
 	expectLatestInvoiceCorrect({
 		customer: customerAfter,
 		productId: pro.id,
 		amount: 30,
 	});
 
-	// ═══════════════════════════════════════════════════════════════════════════════
-	// KEY TEST: Verify invoice line items are persisted to DB
-	// ═══════════════════════════════════════════════════════════════════════════════
-
 	await expectInvoiceLineItemsCorrect({
 		stripeInvoiceId: result.invoice!.stripe_id,
-		expectedTotal: 30, // 4 packs - 1 pack = $40 - $10 = $30
+		expectedTotal: 30,
 		expectedLineItems: [
-			// Refund for old quantity: 1 pack × $10 = -$10
 			{
 				featureId: TestFeature.Messages,
 				billingTiming: "in_advance",
@@ -121,7 +85,6 @@ test.concurrent(`${chalk.yellowBright("update-quantity-line-items 1: increase qu
 				totalQuantity: 100,
 				paidQuantity: 100,
 			},
-			// Charge for new quantity: 4 packs × $10 = $40
 			{
 				featureId: TestFeature.Messages,
 				billingTiming: "in_advance",
@@ -134,22 +97,6 @@ test.concurrent(`${chalk.yellowBright("update-quantity-line-items 1: increase qu
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 2: Increase quantity with multiple features - verify line items persisted
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Customer has Pro with prepaid messages AND prepaid words
- * - Increase both quantities simultaneously
- *
- * Expected Result:
- * - Invoice line items for both features are persisted:
- *   - Messages: refund 1 pack (-$10, qty=100), charge 3 packs ($30, qty=300) = net $20
- *   - Words: refund 1 pack (-$5, qty=100), charge 4 packs ($20, qty=400) = net $15
- *   - Total: $35
- * - Each feature's line items are correctly attributed
- */
 test.concurrent(`${chalk.yellowBright("update-quantity-line-items 2: increase multiple features - line items persisted")}`, async () => {
 	const customerId = "update-qty-li-multi-feature";
 	const messagesBillingUnits = 100;
@@ -182,7 +129,6 @@ test.concurrent(`${chalk.yellowBright("update-quantity-line-items 2: increase mu
 			s.products({ list: [pro] }),
 		],
 		actions: [
-			// Initial attach with both features
 			s.billing.attach({
 				productId: pro.id,
 				options: [
@@ -193,10 +139,6 @@ test.concurrent(`${chalk.yellowBright("update-quantity-line-items 2: increase mu
 		],
 	});
 
-	// Increase both:
-	// Messages: 100 → 300 (refund 1 pack = -$10, charge 3 packs = $30, net = $20)
-	// Words: 100 → 400 (refund 1 pack = -$5, charge 4 packs = $20, net = $15)
-	// Total: $35
 	const result = await autumnV1.subscriptions.update({
 		customer_id: customerId,
 		product_id: pro.id,
@@ -206,19 +148,13 @@ test.concurrent(`${chalk.yellowBright("update-quantity-line-items 2: increase mu
 		],
 	});
 
-	// Verify invoice was created
 	expect(result.invoice).toBeDefined();
 	expect(result.invoice!.stripe_id).toBeDefined();
 
-	// ═══════════════════════════════════════════════════════════════════════════════
-	// KEY TEST: Verify invoice line items are persisted to DB
-	// ═══════════════════════════════════════════════════════════════════════════════
-
 	await expectInvoiceLineItemsCorrect({
 		stripeInvoiceId: result.invoice!.stripe_id,
-		expectedTotal: 35, // $20 (messages) + $15 (words)
+		expectedTotal: 35,
 		expectedLineItems: [
-			// Messages: refund 1 pack × $10 = -$10
 			{
 				featureId: TestFeature.Messages,
 				billingTiming: "in_advance",
@@ -227,7 +163,6 @@ test.concurrent(`${chalk.yellowBright("update-quantity-line-items 2: increase mu
 				totalQuantity: 100,
 				paidQuantity: 100,
 			},
-			// Messages: charge 3 packs × $10 = $30
 			{
 				featureId: TestFeature.Messages,
 				billingTiming: "in_advance",
@@ -236,7 +171,6 @@ test.concurrent(`${chalk.yellowBright("update-quantity-line-items 2: increase mu
 				totalQuantity: 300,
 				paidQuantity: 300,
 			},
-			// Words: refund 1 pack × $5 = -$5
 			{
 				featureId: TestFeature.Words,
 				billingTiming: "in_advance",
@@ -245,7 +179,6 @@ test.concurrent(`${chalk.yellowBright("update-quantity-line-items 2: increase mu
 				totalQuantity: 100,
 				paidQuantity: 100,
 			},
-			// Words: charge 4 packs × $5 = $20
 			{
 				featureId: TestFeature.Words,
 				billingTiming: "in_advance",
@@ -258,26 +191,6 @@ test.concurrent(`${chalk.yellowBright("update-quantity-line-items 2: increase mu
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 3: ProrateNextCycle increase - deferred proration on renewal invoice
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Pro ($20/mo) with prepaid messages (on_increase: ProrateNextCycle, 0 included, $10/100 units)
- * - Attach with 100 messages (1 pack = $10)
- * - Advance 15 days (mid-cycle)
- * - Increase from 100 → 400 (+3 packs)
- * - No immediate invoice (deferred to next cycle)
- * - Advance to next billing cycle
- *
- * Expected Renewal Invoice Line Items:
- * - Prorated refund for old quantity (1 pack, ~half-period) — direction=refund, prorated=true
- * - Prorated charge for new quantity (4 packs, ~half-period) — direction=charge, prorated=true
- * - Full renewal base price ($20) — direction=charge, prorated=false
- * - Full renewal prepaid charge (4 packs × $10 = $40) — direction=charge, prorated=false
- * - All linked to correct productId and featureId
- */
 test.concurrent(`${chalk.yellowBright("update-quantity-line-items 3: prorate next cycle increase - deferred proration on renewal")}`, async () => {
 	const customerId = "update-qty-li-prorate-next";
 	const billingUnits = 100;
@@ -306,7 +219,6 @@ test.concurrent(`${chalk.yellowBright("update-quantity-line-items 3: prorate nex
 			s.products({ list: [pro] }),
 		],
 		actions: [
-			// Attach with 100 messages (1 pack = $10)
 			s.billing.attach({
 				productId: pro.id,
 				options: [{ feature_id: TestFeature.Messages, quantity: 100 }],
@@ -318,7 +230,6 @@ test.concurrent(`${chalk.yellowBright("update-quantity-line-items 3: prorate nex
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	const invoiceCountBefore = customerBefore.invoices?.length ?? 0;
 
-	// Preview should show $0 (deferred to next cycle)
 	const preview = await autumnV1.subscriptions.previewUpdate({
 		customer_id: customerId,
 		product_id: pro.id,
@@ -326,14 +237,12 @@ test.concurrent(`${chalk.yellowBright("update-quantity-line-items 3: prorate nex
 	});
 	expect(preview.total).toBe(0);
 
-	// Update quantity from 100 → 400
 	await autumnV1.subscriptions.update({
 		customer_id: customerId,
 		product_id: pro.id,
 		options: [{ feature_id: TestFeature.Messages, quantity: 400 }],
 	});
 
-	// Balance should be updated immediately
 	const afterUpdate = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	expectCustomerFeatureCorrect({
 		customer: afterUpdate,
@@ -341,13 +250,11 @@ test.concurrent(`${chalk.yellowBright("update-quantity-line-items 3: prorate nex
 		balance: 400,
 	});
 
-	// No new finalized invoice yet
 	const finalizedInvoices = afterUpdate.invoices?.filter(
 		(inv) => inv.status === "paid" || inv.status === "open",
 	);
 	expect(finalizedInvoices?.length).toBe(invoiceCountBefore);
 
-	// Advance to next billing cycle
 	await advanceToNextInvoice({
 		stripeCli: ctx.stripeCli,
 		testClockId: testClockId!,
@@ -355,7 +262,6 @@ test.concurrent(`${chalk.yellowBright("update-quantity-line-items 3: prorate nex
 
 	const afterCycle = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Should have a new invoice
 	await expectCustomerInvoiceCorrect({
 		customer: afterCycle,
 		count: invoiceCountBefore + 1,
@@ -364,21 +270,15 @@ test.concurrent(`${chalk.yellowBright("update-quantity-line-items 3: prorate nex
 	const renewalInvoice = afterCycle.invoices?.[0];
 	expect(renewalInvoice?.stripe_id).toBeDefined();
 
-	// ═══════════════════════════════════════════════════════════════════════════════
-	// KEY TEST: Verify renewal invoice has deferred prorated + renewal line items
-	// ═══════════════════════════════════════════════════════════════════════════════
-
 	await expectInvoiceLineItemsCorrect({
 		stripeInvoiceId: renewalInvoice!.stripe_id,
 		expectedLineItems: [
-			// Base price renewal ($20, not prorated)
 			{
 				isBasePrice: true,
 				direction: "charge",
 				amount: basePrice,
 				productId: pro.id,
 			},
-			// Deferred prorated refund for old quantity (1 pack, prorated ~half-period)
 			{
 				featureId: TestFeature.Messages,
 				direction: "refund",
@@ -389,7 +289,6 @@ test.concurrent(`${chalk.yellowBright("update-quantity-line-items 3: prorate nex
 				minCount: 1,
 			},
 
-			// Full renewal charge for new quantity (4 packs × $10 = $40, not prorated)
 			{
 				featureId: TestFeature.Messages,
 				direction: "charge",

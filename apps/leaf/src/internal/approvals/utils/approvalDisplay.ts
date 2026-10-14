@@ -163,8 +163,6 @@ export const resolveApprovalDisplay = async ({
 	const planRecords = Object.fromEntries(
 		plans.map(([id, value]) => [id, record(value.plan ?? value)]),
 	);
-	// Only the catalog plan: the customer's live terms come from the preview's
-	// outgoing plan, which is scoped to the entity the write actually targets.
 	const currentPlanByPlan = planRecords;
 	const basePlanItemsByPlan = Object.fromEntries(
 		Object.entries(currentPlanByPlan).flatMap(([id, value]) =>

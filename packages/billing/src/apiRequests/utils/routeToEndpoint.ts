@@ -5,7 +5,6 @@ import { normalizeRequestPath } from "./normalizeRequestPath";
 
 const PARAM_SEGMENT = "[^/]+";
 
-/** Catalog path → regex over the normalised (version-less) path; each `{param}` is one segment. */
 export const routePathToRegex = (path: ApiRoute["path"]): RegExp => {
 	const escaped = normalizeRequestPath(path).replace(
 		/[.*+?^$()|[\]\\]/g,
@@ -28,12 +27,10 @@ const routeMatches = ({
 const paramCount = (route: ApiRoute): number =>
 	(route.path.match(/\{[^}]+\}/g) ?? []).length;
 
-/** Literal routes win over parameterised ones, so `/v1/x` never reads as `/v1/{id}`. */
 const catalogRoutesLiteralFirst = apiRequestCatalog
 	.flatMap((endpoint) => endpoint.routes.map((route) => ({ endpoint, route })))
 	.sort((a, b) => paramCount(a.route) - paramCount(b.route));
 
-/** The catalog endpoint a logged request maps to, or null when it isn't metered. */
 export const routeToEndpoint = ({
 	method,
 	url,

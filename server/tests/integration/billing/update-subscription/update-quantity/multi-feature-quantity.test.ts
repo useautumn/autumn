@@ -6,18 +6,6 @@ import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 
-/**
- * Subscription Update - Feature Matching Tests
- *
- * These tests verify that the subscription update flow correctly matches
- * features by feature_id rather than array index. This prevents critical
- * bugs where reordered features or partial updates could cause incorrect
- * billing calculations.
- *
- * Critical bug fix: Previously used array index to match old vs new options,
- * which would break if features were sent in a different order.
- */
-
 test.concurrent(`${chalk.yellowBright("update-quantity: features in reverse order")}`, async () => {
 	const customerId = "multi-feat-reverse-order";
 
@@ -41,7 +29,6 @@ test.concurrent(`${chalk.yellowBright("update-quantity: features in reverse orde
 		],
 	});
 
-	// Attach with features in order: Messages, Words, Users
 	const { autumnV1 } = await initScenario({
 		customerId,
 		setup: [
@@ -52,28 +39,26 @@ test.concurrent(`${chalk.yellowBright("update-quantity: features in reverse orde
 			s.attach({
 				productId: product.id,
 				options: [
-					{ feature_id: TestFeature.Messages, quantity: 10 * 10 }, // 100 messages
-					{ feature_id: TestFeature.Words, quantity: 5 * 100 }, // 500 words
-					{ feature_id: TestFeature.Users, quantity: 20 * 1 }, // 20 users
+					{ feature_id: TestFeature.Messages, quantity: 10 * 10 },
+					{ feature_id: TestFeature.Words, quantity: 5 * 100 },
+					{ feature_id: TestFeature.Users, quantity: 20 * 1 },
 				],
 			}),
 		],
 	});
 
-	// Update with features in REVERSE order: Users, Words, Messages
 	await autumnV1.subscriptions.update({
 		customer_id: customerId,
 		product_id: product.id,
 		options: [
-			{ feature_id: TestFeature.Users, quantity: 50 * 1 }, // 50 users (increased)
-			{ feature_id: TestFeature.Words, quantity: 10 * 100 }, // 1000 words (increased)
-			{ feature_id: TestFeature.Messages, quantity: 5 * 10 }, // 50 messages (decreased)
+			{ feature_id: TestFeature.Users, quantity: 50 * 1 },
+			{ feature_id: TestFeature.Words, quantity: 10 * 100 },
+			{ feature_id: TestFeature.Messages, quantity: 5 * 10 },
 		],
 	});
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Each feature should be updated correctly despite reordering
 	expect(customer.features?.[TestFeature.Messages]?.balance).toBe(50);
 	expect(customer.features?.[TestFeature.Words]?.balance).toBe(1000);
 	expect(customer.features?.[TestFeature.Users]?.balance).toBe(50);
@@ -102,7 +87,6 @@ test.concurrent(`${chalk.yellowBright("update-quantity: features in random order
 		],
 	});
 
-	// Attach with features in order: Messages, Words, Users
 	const { autumnV1 } = await initScenario({
 		customerId,
 		setup: [
@@ -121,14 +105,13 @@ test.concurrent(`${chalk.yellowBright("update-quantity: features in random order
 		],
 	});
 
-	// Update with features in random order: Words, Users, Messages
 	await autumnV1.subscriptions.update({
 		customer_id: customerId,
 		product_id: product.id,
 		options: [
-			{ feature_id: TestFeature.Words, quantity: 20 * 100 }, // 2000 words
-			{ feature_id: TestFeature.Users, quantity: 100 * 1 }, // 100 users
-			{ feature_id: TestFeature.Messages, quantity: 15 * 10 }, // 150 messages
+			{ feature_id: TestFeature.Words, quantity: 20 * 100 },
+			{ feature_id: TestFeature.Users, quantity: 100 * 1 },
+			{ feature_id: TestFeature.Messages, quantity: 15 * 10 },
 		],
 	});
 
@@ -172,31 +155,28 @@ test.concurrent(`${chalk.yellowBright("update-quantity: partial update (one feat
 			s.attach({
 				productId: product.id,
 				options: [
-					{ feature_id: TestFeature.Messages, quantity: 15 * 10 }, // 150 messages
-					{ feature_id: TestFeature.Words, quantity: 20 * 100 }, // 2000 words
-					{ feature_id: TestFeature.Users, quantity: 100 * 1 }, // 100 users
+					{ feature_id: TestFeature.Messages, quantity: 15 * 10 },
+					{ feature_id: TestFeature.Words, quantity: 20 * 100 },
+					{ feature_id: TestFeature.Users, quantity: 100 * 1 },
 				],
 			}),
 		],
 	});
 
-	// Only update Words, keep others the same
 	await autumnV1.subscriptions.update({
 		customer_id: customerId,
 		product_id: product.id,
 		options: [
-			{ feature_id: TestFeature.Words, quantity: 30 * 100 }, // 3000 words - only updating this
-			{ feature_id: TestFeature.Messages, quantity: 15 * 10 }, // Keep at 150
-			{ feature_id: TestFeature.Users, quantity: 100 * 1 }, // Keep at 100
+			{ feature_id: TestFeature.Words, quantity: 30 * 100 },
+			{ feature_id: TestFeature.Messages, quantity: 15 * 10 },
+			{ feature_id: TestFeature.Users, quantity: 100 * 1 },
 		],
 	});
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Words should be updated
 	expect(customer.features?.[TestFeature.Words]?.balance).toBe(3000);
 
-	// Others should remain the same
 	expect(customer.features?.[TestFeature.Messages]?.balance).toBe(150);
 	expect(customer.features?.[TestFeature.Users]?.balance).toBe(100);
 });
@@ -236,22 +216,19 @@ test.concurrent(`${chalk.yellowBright("update-quantity: duplicate feature_ids us
 		],
 	});
 
-	// Send the same feature twice (edge case - should use last value or error)
 	await autumnV1.subscriptions.update({
 		customer_id: customerId,
 		product_id: product.id,
 		options: [
-			{ feature_id: TestFeature.Messages, quantity: 20 * 10 }, // First value: 200
-			{ feature_id: TestFeature.Messages, quantity: 30 * 10 }, // Second value (duplicate): 300
+			{ feature_id: TestFeature.Messages, quantity: 20 * 10 },
+			{ feature_id: TestFeature.Messages, quantity: 30 * 10 },
 			{ feature_id: TestFeature.Words, quantity: 10 * 100 },
 		],
 	});
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// The last value should win (or this should error - either is acceptable)
 	const messagesBalance = customer.features?.[TestFeature.Messages]?.balance;
 
-	// Should be either 200 (first) or 300 (second), not some weird value from index mismatch
 	expect([200, 300]).toContain(messagesBalance ?? 0);
 });

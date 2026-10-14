@@ -24,7 +24,6 @@ afterAll(async () => {
 	await webhook?.cleanup();
 });
 
-// ── B15: limit 0 → percentage skips, nothing throws ─────────────────────────
 test(`${chalk.yellowBright("ul-alert13: a zero cap never fires and never divides by zero")}`, async () => {
 	const customerId = "ul-alert-zero-1";
 	await setupCustomer({ customerId, planId: "ul-alert-zero" });

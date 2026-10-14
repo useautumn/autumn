@@ -39,8 +39,6 @@ const testCase = "track-rollover3";
 describe(`${chalk.yellowBright(`${testCase}: Testing rollovers for usage price feature`)}`, () => {
 	const customerId = testCase;
 	const autumn: AutumnInt = new AutumnInt({ version: LegacyVersion.v1_4 });
-	// v1_4 responses carry `features`, not `balances` — balance assertions read
-	// through a V2 client.
 	const autumnV2_1 = new AutumnInt({ version: ApiVersion.V2_1 });
 	let testClockId: string;
 	let stripeCli: Stripe;
@@ -82,8 +80,6 @@ describe(`${chalk.yellowBright(`${testCase}: Testing rollovers for usage price f
 			value: messagesItem.included_usage - rollover,
 		});
 
-		// The deduction must have landed in Postgres before the cycle rolls,
-		// otherwise the reset rolls over the full (undeducted) balance.
 		await expectBalanceCorrect({
 			autumn: autumnV2_1,
 			customerId,
@@ -108,7 +104,6 @@ describe(`${chalk.yellowBright(`${testCase}: Testing rollovers for usage price f
 			rollovers: [{ balance: rollover }],
 		});
 
-		// Verify non-cached customer balance
 		await expectBalanceCorrect({
 			autumn: autumnV2_1,
 			customerId,

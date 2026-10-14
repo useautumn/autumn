@@ -10,27 +10,10 @@ import chalk from "chalk";
 import AutumnError from "@/external/autumn/autumnCli.js";
 import { expectProductAttached } from "../../utils/expectUtils/expectProductAttached.js";
 
-/**
- * Referrals3: Free product referrals (checkout trigger, both parties)
- *
- * Setup:
- * - Main customer (no PM) attached to proWithTrial
- * - 3 redeemers with payment methods
- * - Reward: free add-on product
- * - Program: checkout trigger, both referrer + redeemer, max 2 redemptions
- *
- * Flow:
- * 1. Create referral code
- * 2. Redeemers redeem code, 1st can't redeem again
- * 3. Redeemers attach pro → triggers reward (first 2 within max_redemptions)
- *    Both referrer and redeemer should get the free add-on
- */
-
 test(`${chalk.yellowBright("referrals3: free product referrals on checkout")}`, async () => {
 	const mainCustomerId = "main-referral-3";
 	const redeemers = ["referral3-r1", "referral3-r2", "referral3-r3"];
 
-	// Products
 	const proWithTrial = products.proWithTrial({
 		id: "pro",
 		items: [items.monthlyWords({ includedUsage: 0 })],
@@ -45,7 +28,6 @@ test(`${chalk.yellowBright("referrals3: free product referrals on checkout")}`, 
 		items: [items.lifetimeMessages({ includedUsage: 100 })],
 	});
 
-	// Reward & referral program
 	const reward = rewards.freeProduct({ freeProductId: freeAddOn.id });
 	const program = referralPrograms.onCheckoutBoth({
 		rewardId: reward.id,
@@ -53,7 +35,6 @@ test(`${chalk.yellowBright("referrals3: free product referrals on checkout")}`, 
 		maxRedemptions: 2,
 	});
 
-	// Setup
 	const { autumnV1, referralCode } = await initScenario({
 		customerId: mainCustomerId,
 		setup: [
@@ -88,7 +69,6 @@ test(`${chalk.yellowBright("referrals3: free product referrals on checkout")}`, 
 
 	expect(referralCode!.code).toBeDefined();
 
-	// 1. Redeemers redeem code, 1st can't redeem again
 	const redemptions: RewardRedemption[] = [];
 	for (const redeemer of redeemers) {
 		const redemption = await autumnV1.referrals.redeem({
@@ -111,7 +91,6 @@ test(`${chalk.yellowBright("referrals3: free product referrals on checkout")}`, 
 		);
 	}
 
-	// 2. Redeemers attach pro → triggers reward (first 2 within max_redemptions)
 	for (let i = 0; i < redeemers.length; i++) {
 		await autumnV1.attach({
 			customer_id: redeemers[i],
@@ -127,7 +106,6 @@ test(`${chalk.yellowBright("referrals3: free product referrals on checkout")}`, 
 			expect(redemption.triggered).toBe(false);
 			expect(redemption.applied).toBe(false);
 		} else {
-			// Both referrer and redeemer should have the free add-on
 			const mainCustomer = await autumnV1.customers.get(mainCustomerId);
 			const redeemerCustomer = await autumnV1.customers.get(redeemers[i]);
 

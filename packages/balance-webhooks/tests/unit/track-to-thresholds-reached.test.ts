@@ -41,7 +41,6 @@ const trackResult = ({
 	fundingCreditCost,
 });
 
-/** The balance after the track: 100 granted, `usage` used so far. */
 const balanceAfter = ({
 	usage,
 	unlimited = false,

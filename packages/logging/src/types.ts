@@ -21,7 +21,6 @@ export type CreateLoggerParams = {
 	axiomToken?: string;
 	axiomOrgId?: string;
 	useConsoleLog?: boolean;
-	/** pino hooks, e.g. @autumn/errors' error-report hook; it sees raw Errors, before they are serialised. */
 	hooks?: pino.LoggerOptions["hooks"];
 };
 
@@ -43,7 +42,6 @@ export type AutumnLogger = {
 	warn: (...args: LogArgs) => void;
 	warning: (...args: LogArgs) => void;
 	error: (...args: LogArgs) => void;
-	/** Drains buffered transport output (Axiom); call before process exit. */
 	flush?: () => Promise<void>;
 	child: (params: {
 		context: Record<string, unknown>;

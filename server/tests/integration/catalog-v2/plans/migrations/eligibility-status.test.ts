@@ -1,12 +1,3 @@
-/**
- * catalogV2.update — which customer statuses (and creates) produce a draft.
- *
- * Contract:
- *   Paused is versionable → draft
- *   Expired is not → no draft
- *   Create (no existing customers) + draft → no draft
- */
-
 import { expect, test } from "bun:test";
 import { CusProductStatus, ResetInterval } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";

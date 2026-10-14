@@ -1,5 +1,3 @@
-// Contract: a slice's continuation cursor never re-exposes a customer already handled in the same run.
-// Retry runs re-claim failed rows, so a cursor behind a failed customer would migrate it twice.
 import { describe, expect, test } from "bun:test";
 import { iterateScope } from "@/internal/migrations/v2/run/orchestrators/iterateScope.js";
 import type { MigrationRunScheduler } from "@/internal/migrations/v2/run/types/migrationRunScheduler.js";
@@ -21,7 +19,6 @@ describe("iterateScope retry-run cursor", () => {
 			now: Date.now,
 		};
 
-		// Keyset on internal_id DESC; the checkpoint keeps only unprocessed or retryable rows.
 		const iterateFrom = (cursor: string | null) =>
 			async function* (): AsyncGenerator<RunScopeItem[]> {
 				yield customerIds

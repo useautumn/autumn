@@ -21,7 +21,6 @@ type ApiCreditRate =
 	  }
 	| { credit_cost: number };
 
-/** The flat-or-graduated part of a rate, API → SDK naming. Rows and dimensions share it. */
 function mapCreditRate(rate: ApiCreditRate) {
 	if ("tier_behavior" in rate) {
 		return {
@@ -92,7 +91,6 @@ const BASE_COMPUTE = {
 export const featureTransformer = createTransformer<RawApiFeature, Feature>({
 	discriminator: "type",
 	cases: {
-		// Boolean features: just copy base fields, no consumable
 		boolean: {
 			copy: ["id", "name", "archived"],
 			compute: {
@@ -122,7 +120,6 @@ export const featureTransformer = createTransformer<RawApiFeature, Feature>({
 			},
 		},
 
-		// Backend bug: API returns "single_use" instead of "metered" with consumable=true
 		single_use: {
 			copy: ["id", "name", "archived"],
 			compute: {
@@ -132,7 +129,6 @@ export const featureTransformer = createTransformer<RawApiFeature, Feature>({
 			},
 		},
 
-		// Backend bug: API returns "continuous_use" instead of "metered" with consumable=false
 		continuous_use: {
 			copy: ["id", "name", "archived"],
 			compute: {
@@ -142,7 +138,6 @@ export const featureTransformer = createTransformer<RawApiFeature, Feature>({
 			},
 		},
 
-		// If API ever returns "metered" properly
 		metered: {
 			copy: ["id", "name", "archived"],
 			compute: {
@@ -153,7 +148,6 @@ export const featureTransformer = createTransformer<RawApiFeature, Feature>({
 		},
 	},
 
-	// Fallback for unknown types
 	default: {
 		copy: ["id", "name", "archived"],
 		compute: {

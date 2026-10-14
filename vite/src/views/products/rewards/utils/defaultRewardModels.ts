@@ -27,12 +27,9 @@ const defaultReward: CreateReward = {
 
 	type: RewardType.PercentageDiscount,
 
-	// For free product coupons
 	free_product_id: null,
 
-	// For discount type coupons
 	discount_config: defaultDiscountConfig,
 
-	// For free product type coupons
 	free_product_config: defaultFreeProductConfig,
 };

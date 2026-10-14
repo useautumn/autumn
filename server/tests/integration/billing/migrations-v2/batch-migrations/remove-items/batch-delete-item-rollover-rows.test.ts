@@ -1,15 +1,3 @@
-/**
- * Accrued rollover rows must survive a delete even when the catalog item no
- * longer declares rollover.
- *
- * The compute guard reads `entitlement.rollover` from the catalog, but
- * rollover rows are accumulated DB state: turning the flag off leaves the
- * balances behind, and rollover_cus_ent_id_fkey cascades. The executor
- * therefore checks the rows, not just the flag.
- *
- * Red (flag-only guard): the row is deleted and its rollover cascades away.
- * Green: the row survives and the customer falls out of the batch's changes.
- */
 import { expect, test } from "bun:test";
 import { customerEntitlements, rollovers } from "@autumn/shared";
 import { runChunkedMigration } from "@tests/integration/billing/migrations-v2/utils/runChunkedMigration";
@@ -52,8 +40,6 @@ test(`${chalk.yellowBright("batch migration: a delete spares rows carrying accru
 	expect(messageRows).toHaveLength(1);
 	const customerEntitlementId = messageRows[0].id;
 
-	// The catalog item never declared rollover, so only the row-level check
-	// can see this. That is exactly the case the flag-only guard misses.
 	await ctx.db.insert(rollovers).values({
 		id: generateId("ro"),
 		cus_ent_id: customerEntitlementId,
@@ -82,7 +68,6 @@ test(`${chalk.yellowBright("batch migration: a delete spares rows carrying accru
 		noBillingChanges: true,
 	});
 
-	// ── The row and its rollover both survive ──────────────────────────
 	const survivingRows = await ctx.db
 		.select({ id: customerEntitlements.id })
 		.from(customerEntitlements)

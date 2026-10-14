@@ -6,14 +6,12 @@ import type { ReplicatedOperation } from "../../../src/replication/types/replica
 
 type Delivery = { peer: string; path: string; operation: ReplicatedOperation };
 
-/** A peer that answers as told, per call; `true` once the script runs out. */
 const outboxOf = ({
 	peers,
 	answers = {},
 	onSend = () => {},
 }: {
 	peers: string[];
-	/** Per peer: the answer to each delivery in turn, delivered once the list runs out; `false` alone is a peer that is down. */
 	answers?: Record<string, Outcome[] | false>;
 	onSend?: () => void;
 }) => {
@@ -48,7 +46,6 @@ const outboxOf = ({
 				},
 			},
 			logger: { warn: () => {} },
-			// Retries wait nothing; the flush window on stop is kept, shortened, so a stop still waits for deliveries.
 			sleep: (ms) =>
 				ms >= 5_000
 					? new Promise((resolve) => setTimeout(resolve, 100))
@@ -67,7 +64,6 @@ const outboxOf = ({
 		advance: (ms: number) => {
 			now += ms;
 		},
-		/** The next peer lookups take this long, as a DNS answer does. */
 		holdResolving: () => {
 			let release = () => {};
 			resolving = new Promise((resolve) => {
@@ -225,7 +221,6 @@ describe("what a thread applied, on its way to the other replicas", () => {
 
 		expect(delivered.filter(({ peer }) => peer === "10.0.0.2").length).toBe(6);
 		expect(counts.relayed).toBe(6);
-		// Once stopping, a failed delivery is not retried: the down peer's six copies are dropped, and counted.
 		expect(counts.relayFailed).toBeGreaterThanOrEqual(6);
 		expect(counts.relayDropped).toBe(6);
 	});

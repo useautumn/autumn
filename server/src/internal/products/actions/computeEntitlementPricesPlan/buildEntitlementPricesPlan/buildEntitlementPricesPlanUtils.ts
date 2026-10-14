@@ -10,7 +10,6 @@ import type {
 	RowBuckets,
 } from "../types/entitlementPricesPlan";
 
-/** Where unclaimed current rows go — null means ignore (version / custom). */
 export const leaveBucketForMode = ({
 	mode,
 }: {
@@ -20,7 +19,6 @@ export const leaveBucketForMode = ({
 	return "retired";
 };
 
-/** Push both halves of an EP into the same bucket. */
 export const pushEntitlementPrice = ({
 	plan,
 	bucket,
@@ -36,7 +34,6 @@ export const pushEntitlementPrice = ({
 	}
 };
 
-/** Mint a new entitlement (+ optional price) with fresh ids for insert. */
 export const withFreshIds = ({
 	entitlementPrice,
 	isCustom,
@@ -64,7 +61,6 @@ export const withFreshIds = ({
 	};
 };
 
-/** Mint a standalone price row with a fresh id for insert. */
 export const withFreshPriceId = ({
 	price,
 	isCustom,

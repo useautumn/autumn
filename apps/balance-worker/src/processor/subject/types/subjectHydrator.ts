@@ -7,40 +7,29 @@ import type {
 } from "@autumn/balance-engine";
 import type { Subject } from "./subject.js";
 
-/** Resolves what a command computes against: the customer's state and the catalog rows it references. */
 export type SubjectHydrator = {
-	/** Async, before the writer: hydrates a missing customer, loads missing catalog rows. */
 	ensure(params: { identity: MeteringIdentity }): Promise<Subject>;
-	/** Sync, inside the critical section on the freshest state: the FullSubject-shaped view the command computes against. */
 	readSubject(params: {
 		state: SubjectState;
 		identity: MeteringIdentity;
 	}): WorkerFullSubject;
-	/** Async, before the writer: loads the catalog rows a state references that the cache lacks. */
 	ensureCatalog(params: {
 		identity: MeteringIdentity;
 		state: SubjectState;
 	}): Promise<Catalog>;
-	/** Sync: the state's joined catalog while it is current (catalog unmoved, recheck not due), else null: the ensure would refresh it. */
 	peekCatalog(params: { state: SubjectState }): Catalog | null;
-	/** Sync: the catalog rows that view was joined from, which a reply hands to the server so it need not load them. */
 	readCatalog(params: { state: SubjectState }): Catalog;
-	/** Sync: the same view over a catalog the caller already read, so a command that builds the subject twice reads the catalog once. */
 	readSubjectWith(params: {
 		state: SubjectState;
 		catalog: Catalog;
 		identity: MeteringIdentity;
 	}): WorkerFullSubject;
-	/** An evict arrived: any load of this customer still in flight started before it, so its rows cannot be trusted. */
 	overtakeInFlightLoads(params: { customerKey: string }): void;
-	/** Synchronous: the customer's subjects named are rebuilt as snapshot rows in the background; nothing becomes resident. */
 	refreshSnapshots(params: {
 		customer: MeteringIdentity;
 		subjects: readonly MeteringIdentity[];
 	}): void;
-	/** Releases what the hydrator holds for the partition: refreshes still waiting are dropped. */
 	dispose(): void;
-	/** The writer advanced a state; when the mutation kept its catalog keys, the next state starts with the same joined catalog. */
 	inheritCatalog(params: {
 		from: SubjectState | null;
 		to: SubjectState;

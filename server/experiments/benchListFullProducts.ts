@@ -3,14 +3,6 @@ import { inArray, sql } from "drizzle-orm";
 import { initDrizzle } from "../src/db/initDrizzle";
 import { ProductService } from "../src/internal/products/ProductService";
 
-// Bench ProductService.listFull for catalogV2 product setup.
-// Pass org id(s) and/or slug(s) via env — do not hardcode customer slugs here.
-//
-//   EXPLAIN_ORG_ID=... \
-//   EXPLAIN_ORG_SLUGS=slug_a,slug_b \
-//   infisical run --env=staging --recursive -- sh -c \
-//     'EXPLAIN_DATABASE_URL="$DATABASE_V2_URL" bun run experiments/benchListFullProducts.ts'
-
 const STATEMENT_TIMEOUT_MS = 60_000;
 const BENCH_RUNS = 5;
 
@@ -167,7 +159,6 @@ const benchOrg = async ({ orgId }: { orgId: string }) => {
 			skipCache: true,
 		});
 
-	// Sample: one plan_id — catalog update of a single product.
 	const samplePlanIdRow = await db.execute<{ id: string }>(sql`
 		SELECT id
 		FROM products

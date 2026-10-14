@@ -2,7 +2,6 @@ import { randomBytes } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
-/** Capy writes a fresh bindingId per machine; everything else on disk can come from a cloned snapshot. */
 export function readCapyBindingId({
 	machineConfig = process.env.CAPY_MACHINE_CONFIG,
 }: {
@@ -18,7 +17,6 @@ export function readCapyBindingId({
 export const machineIdForBinding = (bindingId: string) =>
 	`capy-${bindingId.toLowerCase()}`;
 
-/** Off Capy, a minted id persisted under the prefix stands in for the binding. */
 export function getMachineId({
 	prefix,
 	machineConfig,
@@ -40,7 +38,6 @@ export function getMachineId({
 	return minted;
 }
 
-/** State minted on another machine (a baked snapshot) must never be reused: it names that machine's branch and secrets. */
 export function stateForMachine<T extends { machineId: string }>({
 	state,
 	machineId,

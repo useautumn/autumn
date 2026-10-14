@@ -5,10 +5,6 @@ const NO_COMMITTED_OFFSET = "-1";
 
 export type SeedGroupPlacesOutcome = "kept" | "seeded";
 
-/**
- * A job reads from the start of every partition it has no place on, so a partition added later is read whole.
- * A job with no place anywhere is new: it starts at the end of the log, since nothing before it was ever its to deliver.
- */
 export async function seedGroupPlaces({
 	ctx,
 	groupId,
@@ -40,7 +36,6 @@ export async function seedGroupPlaces({
 		try {
 			await admin.setOffsets({ groupId, topic, partitions });
 		} catch (cause) {
-			// A sibling task seeded and joined first; its places are the group's now.
 			if (await hasAnyPlace({ admin, groupId, topic })) return "kept";
 			throw cause;
 		}

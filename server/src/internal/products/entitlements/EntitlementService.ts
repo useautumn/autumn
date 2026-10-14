@@ -20,7 +20,6 @@ export class EntitlementService {
 		env: string;
 		excludeCustom?: boolean;
 	}) {
-		// 1. get features for org
 		const featuresQuery = db
 			.select({
 				internal_id: features.internal_id,
@@ -68,7 +67,7 @@ export class EntitlementService {
 			return;
 		}
 
-		return await db.insert(entitlements).values(data as any); // DRIZZLE TYPE REFACTOR
+		return await db.insert(entitlements).values(data as any);
 	}
 
 	static async upsert({

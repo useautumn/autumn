@@ -21,9 +21,7 @@ type GetPlanResponseArgs = Omit<
 	features: Feature[];
 	expand?: string[];
 	fullCus?: FullCustomer;
-	/** Load a variant's base product when the caller brought neither the base plan nor its rows. */
 	resolveBaseFullProduct?: boolean;
-	/** This plan's own mapping, for a caller that loaded just the one row. */
 	revenuecatMapping?: RevenueCatPlanMapping | null;
 };
 
@@ -46,7 +44,6 @@ const fetchBaseFullProduct = async ({
 	);
 };
 
-/** A single mapping is this plan's own row; it outranks the same plan's entry in the map. */
 const toRevenuecatMappings = ({
 	product,
 	revenuecatMapping,
@@ -62,10 +59,6 @@ const toRevenuecatMappings = ({
 	]);
 };
 
-/**
- * A stored plan as the API returns it. The two things a plan's own rows cannot say are read here,
- * the customer's eligibility and a variant's base product; fullProductToApiPlan renders the rest.
- */
 export async function getPlanResponse(
 	args: GetPlanResponseArgs & { expandLicensePlans: true },
 ): Promise<ApiPlanExpandedV1>;

@@ -1,18 +1,3 @@
-/**
- * Contract: how the plan filters' row-level part lowers into an OperationScope.
- *
- *   - omitted at both levels → unconstrained (null) for every field;
- *   - `custom`/`paid`/`recurring` lower from booleans (or provable { $eq });
- *   - `price` lowers from null-existence forms: null / { $eq: null } →
- *     hasBasePrice false, { $ne: null } → true;
- *   - conjuncts + migration filter reconcile: agreeing → that value,
- *     disagreeing → unsupported (routes to the per-customer lane);
- *   - matcher forms the lane can't prove → unsupported;
- *   - a row-decidable field inside the MIGRATION filter's `$or` →
- *     unsupported (op-level $or expands into disjuncts before resolution);
- *   - a $some-navigated migration plan filter contributes nothing.
- */
-
 import { describe, expect, test } from "bun:test";
 import { resolveOperationScope } from "@/internal/migrations/v2/batchOperations/scope/resolveOperationScope.js";
 import type { MigrationRuntime } from "@/internal/migrations/v2/types/migrationDefinition.js";

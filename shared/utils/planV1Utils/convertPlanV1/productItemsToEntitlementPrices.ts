@@ -34,14 +34,9 @@ const stripeReusePriceForItem = ({
 
 export type DesiredBasePriceAndEntitlementPrices =
 	BasePriceAndEntitlementPrices & {
-		/** Slots the request stated as `null`, keyed by desired price id. */
 		unlinkedStripeSlots: UnlinkedStripeSlotsByPriceId;
 	};
 
-/**
- * Mint desired base Price + EntitlementPrice rows from ProductItems.
- * Construction only — no claim/classification against current rows.
- */
 export const productItemsToEntitlementPrices = ({
 	items,
 	product,
@@ -49,10 +44,8 @@ export const productItemsToEntitlementPrices = ({
 	stripeReusePrices,
 }: {
 	items: ProductItem[];
-	/** Stamp only — org_id / internal_id. */
 	product: Pick<Product, "org_id" | "internal_id">;
 	features: Feature[];
-	/** Current/candidate prices used only to refuse a mismatched stripe_price_id. */
 	stripeReusePrices?: Price[];
 }): DesiredBasePriceAndEntitlementPrices => {
 	let basePrice: Price | undefined;
@@ -65,8 +58,6 @@ export const productItemsToEntitlementPrices = ({
 			? findFeatureById({ features, featureId: item.feature_id })
 			: undefined;
 
-		// No curPrice/curEnt → itemToPriceAndEnt always returns the minted
-		// definition in `new*`. Claim classifies later.
 		const { newPrice, newEnt } = itemToPriceAndEnt({
 			item,
 			orgId: product.org_id,

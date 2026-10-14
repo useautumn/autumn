@@ -1,16 +1,3 @@
-/**
- * Batch migration lane: `customer.products.updated` webhook payloads, end to
- * end through Svix Play.
- *
- * Contract under test:
- *   - one webhook per migrated customer product, scenario "new" (what the
- *     customize path emits for the same shape);
- *   - `updated_product` is the migrated plan;
- *   - `customer` embeds the full post-migration customer — the added features
- *     are already present with their granted balances;
- *   - entity-level customer products carry `entity` in the payload.
- */
-
 import { afterAll, beforeAll, expect, test } from "bun:test";
 import {
 	getTestSvixAppId,
@@ -45,7 +32,6 @@ afterAll(async () => {
 	await webhook?.cleanup();
 });
 
-// ── Contract: scenario "new" + migrated plan + post-migration customer. ──
 test.concurrent(
 	`${chalk.yellowBright("batch migration customer.products.updated: delivers scenario new with the post-migration customer")}`,
 	async () => {
@@ -100,7 +86,6 @@ test.concurrent(
 	},
 );
 
-// ── Contract: entity-level products carry `entity` in the payload. ──
 test.concurrent(
 	`${chalk.yellowBright("batch migration customer.products.updated: entity-level product carries the entity")}`,
 	async () => {

@@ -34,7 +34,6 @@ const pricesInCurrency = ({
 		} as Price;
 	});
 
-/** Paid plans bill on the targeted subscription, so they must share its currency. */
 export const assertTargetSubscriptionCurrency = ({
 	billingContext,
 }: {

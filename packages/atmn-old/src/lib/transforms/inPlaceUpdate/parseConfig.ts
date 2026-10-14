@@ -1,9 +1,3 @@
-/**
- * Parse existing autumn.config.ts to extract entity information
- *
- * Uses simple line-based parsing instead of AST to avoid position corruption issues
- */
-
 import { readFileSync } from "node:fs";
 
 export interface ParsedEntity {
@@ -11,11 +5,8 @@ export interface ParsedEntity {
 	type: "feature" | "plan" | "referral_program" | "reward" | "variant";
 	varName: string;
 	version?: number;
-	/** Starting line index (0-based) */
 	startLine: number;
-	/** Ending line index (0-based, inclusive) */
 	endLine: number;
-	/** The original source lines */
 	lines: string[];
 }
 
@@ -36,22 +27,16 @@ export interface ParsedBlock {
 	endLine: number;
 	lines: string[];
 	declaration?: ParsedDeclaration;
-	/** For export blocks */
 	entity?: ParsedEntity;
 }
 
 export interface ParsedConfig {
-	/** All parsed blocks in order */
 	blocks: ParsedBlock[];
-	/** Just the managed config entity blocks */
 	entities: ParsedEntity[];
-	/** Original source lines */
 	lines: string[];
-	/** Original source */
 	source: string;
 }
 
-/** Resolve a literal ID, falling back to the generated variable name. */
 function extractIdentity({
 	identitiesByTypeAndVarName,
 	lines,
@@ -80,28 +65,19 @@ function extractIdentity({
 	return { id, version: version === undefined ? undefined : Number(version) };
 }
 
-/**
- * Extract variable name from export line
- * e.g., "export const myFeature = feature({" -> "myFeature"
- */
 function extractVarName(line: string): string | null {
 	const match = line.match(/export\s+const\s+(\w+)\s*=/);
 	return match ? (match[1] ?? null) : null;
 }
 
-/**
- * Determine entity type from source lines
- */
 function determineEntityType(lines: string[]): ParsedEntity["type"] | null {
 	const joined = lines.join("\n");
 	if (/=\s*reward\s*\(/.test(joined)) return "reward";
 	if (/=\s*referralProgram\s*\(/.test(joined)) return "referral_program";
 
-	// Check for feature indicators: type: 'boolean'|'metered'|'credit_system'
 	if (/type:\s*['"](?:boolean|metered|credit_system)['"]/.test(joined)) {
 		return "feature";
 	}
-	// Also check for feature() function call
 	if (/=\s*feature\s*\(/.test(joined)) {
 		return "feature";
 	}
@@ -110,11 +86,9 @@ function determineEntityType(lines: string[]): ParsedEntity["type"] | null {
 		return "variant";
 	}
 
-	// Check for plan indicators: items: [ array (or legacy features: [)
 	if (/items:\s*\[/.test(joined) || /features:\s*\[/.test(joined)) {
 		return "plan";
 	}
-	// Also check for plan() function call
 	if (/=\s*plan\s*\(/.test(joined)) {
 		return "plan";
 	}
@@ -126,9 +100,6 @@ const isResourceExpression = (source: string) =>
 	/=\s*(?:feature|plan|referralProgram|reward)\s*\(/.test(source) ||
 	/=\s*\w+\.variant\s*\(/.test(source);
 
-/**
- * Parse an existing autumn.config.ts file using line-based parsing
- */
 export function parseExistingConfig({
 	configPath,
 	identitiesByTypeAndVarName,
@@ -151,13 +122,11 @@ export function parseExistingConfig({
 		const line = lines[i]!;
 		const trimmed = line.trim();
 
-		// Skip empty lines - they'll be regenerated as needed
 		if (trimmed === "") {
 			i++;
 			continue;
 		}
 
-		// Import statement
 		if (trimmed.startsWith("import ")) {
 			const startLine = i;
 			while (
@@ -177,7 +146,6 @@ export function parseExistingConfig({
 			continue;
 		}
 
-		// Single-line comment
 		if (trimmed.startsWith("//")) {
 			blocks.push({
 				type: "comment",
@@ -189,7 +157,6 @@ export function parseExistingConfig({
 			continue;
 		}
 
-		// Multi-line comment
 		if (trimmed.startsWith("/*")) {
 			const startLine = i;
 			while (i < lines.length && !lines[i]!.includes("*/")) {
@@ -206,13 +173,10 @@ export function parseExistingConfig({
 			continue;
 		}
 
-		// Managed config export statement
 		if (trimmed.startsWith("export const")) {
 			const startLine = i;
 			const varName = extractVarName(line);
 
-			// Find the end of the export block
-			// Track brace/paren depth to handle nested structures
 			let depth = 0;
 			let foundStart = false;
 
@@ -277,7 +241,6 @@ export function parseExistingConfig({
 
 				entities.push(entity);
 			} else {
-				// Unknown export, preserve as-is
 				blocks.push({
 					type: "other",
 					startLine,
@@ -291,7 +254,6 @@ export function parseExistingConfig({
 			continue;
 		}
 
-		// Anything else - preserve as-is
 		blocks.push({
 			type: "other",
 			startLine: i,

@@ -18,7 +18,6 @@ type BasePriceParams = {
 	additional_currencies?: Array<{ currency: string; amount: number }>;
 };
 
-/** Preview → create → assert exact round-trip via catalogV2.get, then clean up. */
 export const createAndAssert = async ({
 	planId,
 	name,

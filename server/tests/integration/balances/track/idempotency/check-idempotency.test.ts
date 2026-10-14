@@ -1,14 +1,3 @@
-/**
- * Idempotency on /check.
- *
- * Contract under test:
- *   - The `Idempotency-Key` header applies to check like any apiRouter route:
- *     a successful check keeps the key → an identical retry gets 409.
- *   - Check has no body idempotency_key; the body-level dedup mechanism for
- *     check is the lock — a second check with the same lock_id is refused
- *     (lock_already_exists) until the lock is finalized or expires.
- */
-
 import { test } from "bun:test";
 import { ErrCode } from "@autumn/shared";
 import { deleteLock } from "@tests/integration/balances/utils/lockUtils/deleteLock.js";

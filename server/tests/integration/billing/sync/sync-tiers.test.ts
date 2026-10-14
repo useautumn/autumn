@@ -1,20 +1,3 @@
-/**
- * Sync Tier Tests
- *
- * Tests the Stripe → Autumn sync proposal metadata for different pricing
- * models: tiered (graduated), volume-based, and usage-based (metered).
- *
- * Each test creates a product with the specific pricing type, builds a
- * real Stripe subscription from it, then fetches sync proposals and
- * verifies the price metadata (billing_scheme, tiers_mode,
- * recurring_usage_type, unit_amount, etc.) is surfaced correctly.
- *
- * Test A: Tiered (graduated) pricing — prepaid messages with graduated tiers.
- * Test B: Volume-based pricing — prepaid messages with volume tiers.
- * Test C: Usage-based (metered) pricing — consumable messages billed per use.
- * Test D: Metered volume pricing — a pay-per-use volume item's metered price on net tiers.
- */
-
 import { expect, test } from "bun:test";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
@@ -27,10 +10,6 @@ import type {
 	SyncProposalsResponse,
 } from "@/internal/billing/v2/actions/sync/syncProposals";
 import { createStripeSubscriptionFromProduct } from "./utils/syncTestUtils";
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST A: Tiered (graduated) pricing
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(`${chalk.yellowBright("sync-tiers: tiered graduated pricing proposals")}`, async () => {
 	const customerId = "sync-tier-graduated";
@@ -95,10 +74,6 @@ test.concurrent(`${chalk.yellowBright("sync-tiers: tiered graduated pricing prop
 	await ctx.stripeCli.subscriptions.cancel(stripeSubscription.id);
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST B: Volume-based pricing
-// ═══════════════════════════════════════════════════════════════════════════════
-
 test.concurrent(`${chalk.yellowBright("sync-tiers: volume-based pricing proposals")}`, async () => {
 	const customerId = "sync-tier-volume";
 
@@ -162,10 +137,6 @@ test.concurrent(`${chalk.yellowBright("sync-tiers: volume-based pricing proposal
 	await ctx.stripeCli.subscriptions.cancel(stripeSubscription.id);
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST C: Usage-based (metered) pricing
-// ═══════════════════════════════════════════════════════════════════════════════
-
 test.concurrent(`${chalk.yellowBright("sync-tiers: metered usage-based pricing proposals")}`, async () => {
 	const customerId = "sync-tier-metered";
 
@@ -221,10 +192,6 @@ test.concurrent(`${chalk.yellowBright("sync-tiers: metered usage-based pricing p
 	await ctx.stripeCli.subscriptions.cancel(stripeSubscription.id);
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST D: Metered volume pricing
-// ═══════════════════════════════════════════════════════════════════════════════
-
 test.concurrent(`${chalk.yellowBright("sync-tiers: metered volume pricing proposals show a volume metered price on net tiers with no free tier")}`, async () => {
 	const customerId = "sync-tier-metered-volume";
 
@@ -263,7 +230,6 @@ test.concurrent(`${chalk.yellowBright("sync-tiers: metered volume pricing propos
 
 	expect(volumeItem).toBeDefined();
 	expect(volumeItem!.matched_price_id).toBeTruthy();
-	// Stripe quantity is usage past the 100 included, so tiers stay net: 0-500 @ 10¢, 501+ @ 5¢.
 	expect(volumeItem!.tiers).toEqual([
 		{ up_to: 500, unit_amount: 10, flat_amount: null },
 		{ up_to: null, unit_amount: 5, flat_amount: null },

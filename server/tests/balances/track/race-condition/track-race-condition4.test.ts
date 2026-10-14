@@ -38,7 +38,6 @@ const getMessagesRemaining = (customer: ApiCustomer) => {
 	return balance.remaining ?? balance.current_balance;
 };
 
-// Exercises the legacy Redis balance path, which worker-routed customers never use.
 describe.skipIf(isBalanceWorkerRoute())(
 	`${chalk.yellowBright("track-race-condition4: sync should not wipe out newly created entity credits")}`,
 	() => {
@@ -130,7 +129,6 @@ describe.skipIf(isBalanceWorkerRoute())(
 				Object.keys(deductionResult.updates),
 			);
 
-			// Get the customer from Redis to see current balance
 			const customerAfterTrack =
 				await autumnV2.customers.get<ApiCustomer>(customerId);
 
@@ -140,7 +138,6 @@ describe.skipIf(isBalanceWorkerRoute())(
 				),
 			);
 
-			// STEP 3: Create a new entity
 			console.log(chalk.yellow("\nStep 3: Creating a new entity..."));
 			await autumnV2WithoutCacheDeletion.entities.create(customerId, [
 				{
@@ -178,7 +175,6 @@ describe.skipIf(isBalanceWorkerRoute())(
 				source: "test-setup",
 			});
 
-			// Check that credits weren't wiped out (should be reset to 100)
 			const cachedCustomer =
 				await autumnV2.customers.get<ApiCustomer>(customerId);
 

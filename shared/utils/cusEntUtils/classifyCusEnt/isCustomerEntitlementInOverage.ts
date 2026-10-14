@@ -5,7 +5,6 @@ import {
 	isUnlimitedCusEnt,
 } from "../classifyCusEntUtils.js";
 
-/** The row's own balance is below 0; a per-entity row's overage lives in `entities`, not here. */
 export const isCustomerEntitlementInOverage = ({
 	customerEntitlement,
 }: {
@@ -15,7 +14,6 @@ export const isCustomerEntitlementInOverage = ({
 	>;
 }): boolean => {
 	const isBelowZero = (customerEntitlement.balance ?? 0) < 0;
-	// Unlimited by allowance only, not the row's `unlimited` column.
 	return (
 		isBelowZero &&
 		!isBooleanFeature(customerEntitlement.entitlement.feature) &&

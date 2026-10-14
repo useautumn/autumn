@@ -1,16 +1,3 @@
-/**
- * Attach Add-on Tests (Attach V2)
- *
- * Tests for attaching add-on products to customers.
- * Add-ons are additive - they never expire/cancel existing products.
- *
- * Key behaviors:
- * - Add-ons are always attached (never replace existing products)
- * - Features from add-ons combine with main product features
- * - Re-attaching same add-on creates separate customer_product records
- * - Multiple different add-ons can coexist
- */
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3 } from "@autumn/shared";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
@@ -22,19 +9,6 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 2: Free add-on to Free customer
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Customer on free product with 50 messages
- * - Attach free add-on with 100 words
- *
- * Expected:
- * - Both products active
- * - No invoices (both free)
- */
 test.concurrent(
 	`${chalk.yellowBright("addon 2: free addon to free")}`,
 	async () => {
@@ -56,14 +30,12 @@ test.concurrent(
 			actions: [s.billing.attach({ productId: free.id })],
 		});
 
-		// Preview add-on - should be free
 		const preview = await autumnV1.billing.previewAttach({
 			customer_id: customerId,
 			product_id: freeAddon.id,
 		});
 		expect(preview.total).toBe(0);
 
-		// Attach free add-on
 		await autumnV1.billing.attach({
 			customer_id: customerId,
 			product_id: freeAddon.id,
@@ -72,13 +44,11 @@ test.concurrent(
 
 		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-		// Both products active
 		await expectCustomerProducts({
 			customer,
 			active: [free.id, freeAddon.id],
 		});
 
-		// Messages from free
 		expectCustomerFeatureCorrect({
 			customer,
 			featureId: TestFeature.Messages,
@@ -87,7 +57,6 @@ test.concurrent(
 			usage: 0,
 		});
 
-		// Words from add-on
 		expectCustomerFeatureCorrect({
 			customer,
 			featureId: TestFeature.Words,
@@ -96,7 +65,6 @@ test.concurrent(
 			usage: 0,
 		});
 
-		// No invoices (both free)
 		await expectCustomerInvoiceCorrect({
 			customer,
 			count: 0,

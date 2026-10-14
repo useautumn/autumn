@@ -1,14 +1,3 @@
-/**
- * The webhook param schemas are the contract atmn's lint and the API share:
- * - URLs must be https, and ones pointing at localhost/private networks are
- *   rejected in every env; tunnels pass.
- * - ids follow `[a-zA-Z0-9_-]` (Svix's uid rule minus `.`), 1..256; get/update/delete
- *   also accept the `ep_…` id list shows for dashboard-made endpoints.
- * - omitting `events`, or passing `[]`, means every event; update keeps an
- *   omitted list and widens on `[]`.
- * - sync rejects the same id twice.
- */
-
 import { describe, expect, test } from "bun:test";
 import {
 	CreateWebhookParamsSchema,

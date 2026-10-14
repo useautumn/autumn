@@ -10,9 +10,6 @@ interface SuccessScreenProps {
 	onComplete: () => void;
 }
 
-/**
- * Success screen showing summary before explosion animation
- */
 export function SuccessScreen({
 	customers,
 	plans,
@@ -20,7 +17,6 @@ export function SuccessScreen({
 	backupCreated,
 	onComplete,
 }: SuccessScreenProps) {
-	// Auto-advance to explosion after 1.5 seconds
 	useEffect(() => {
 		const timer = setTimeout(() => {
 			onComplete();

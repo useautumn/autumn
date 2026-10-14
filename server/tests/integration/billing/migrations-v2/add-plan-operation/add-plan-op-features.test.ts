@@ -1,12 +1,3 @@
-/**
- * Integration tests for add_plan — feature quantities and paid plans.
- *
- * Contract under test:
- *   - add_plan with feature_quantities sets initial balances on the new plan.
- *   - add_plan attaching a paid plan creates prices on the cusProduct.
- *   - add_plan with a specific version targets that catalog version.
- */
-
 import { expect, test } from "bun:test";
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";

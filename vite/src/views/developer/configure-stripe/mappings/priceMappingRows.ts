@@ -7,7 +7,6 @@ import {
 	productV2ToBasePrice,
 } from "@autumn/shared";
 
-/** One Autumn price row on one plan version, as the sheets edit it. */
 export type PriceMappingRow = {
 	priceId: string;
 	planId: string;
@@ -24,7 +23,6 @@ export type PriceMappingGroup = {
 	rows: PriceMappingRow[];
 };
 
-/** Prepaid bills from the v2 slot, everything else from v1. */
 const itemStripePriceId = ({ item }: { item: ProductItem }): string | null =>
 	item.price_config?.stripe_prepaid_price_v2_id ??
 	item.price_config?.stripe_price_id ??
@@ -100,7 +98,6 @@ export const featurePriceMappingRows = ({
 		)
 		.sort(byNewestVersion);
 
-/** Keeps plans in first-seen order; rows inside stay newest version first. */
 export const groupRowsByPlan = ({
 	rows,
 }: {
@@ -119,7 +116,6 @@ export const groupRowsByPlan = ({
 	return [...groups.values()];
 };
 
-/** Features priced in at least one plan version — the rows of the features table. */
 export const pricedFeatures = ({
 	products,
 	features,
@@ -149,7 +145,6 @@ export const rowUsesAnotherProduct = ({
 	Boolean(row.stripeProductId) &&
 	row.stripeProductId !== defaultStripeProductId;
 
-/** Every Stripe product a feature's prices bill under, default first. */
 export const featureStripeProductIds = ({
 	rows,
 	defaultStripeProductId,

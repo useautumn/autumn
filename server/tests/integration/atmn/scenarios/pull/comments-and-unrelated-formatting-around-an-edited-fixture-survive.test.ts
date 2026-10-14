@@ -1,9 +1,3 @@
-/**
- * atmn scenarios/pull — comments and unrelated formatting around an edited fixture survive
- *
- * One line of plans/atmn-v3/07_tests.md. [a, b] is a matrix looped INSIDE this file.
- */
-
 import { expect, test } from "bun:test";
 import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 import {
@@ -45,7 +39,6 @@ export default atmn({
 		try {
 			await scenario.push();
 
-			// The server moves ahead by itself — a dashboard-style price edit.
 			await scenario.client.update({
 				plans: [{ plan_id: planId, price: { amount: 30, interval: "month" } }],
 				skip_deletions: false,

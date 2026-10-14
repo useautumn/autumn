@@ -18,7 +18,6 @@ export const filterUsageAlertsForFeature = ({
 		(alert) => alert.feature_id === feature.id || !alert.feature_id,
 	);
 
-// Plan alerts are a fallback at customer scope, used only when the customer has none for the feature.
 const resolveCustomerScopeAlerts = ({
 	fullSubject,
 	feature,
@@ -36,7 +35,6 @@ const resolveCustomerScopeAlerts = ({
 		return { scope: "customer", alerts: customerAlerts };
 	}
 
-	// A license link's product is its parent's plan, never a plan of its own; an entity's plan still counts.
 	const planProducts = fullSubject.customer_products.filter(
 		(customerProduct) =>
 			customerProduct.customer_license_link_id == null ||
@@ -82,7 +80,6 @@ const resolveEntityScopeAlerts = ({
 	};
 };
 
-// Org alerts measure the tracked subject, entity included.
 const resolveOrgScopeAlerts = ({
 	command,
 	feature,
@@ -103,7 +100,6 @@ const resolveOrgScopeAlerts = ({
 	};
 };
 
-/** Customer (or its plan) first, then the tracked entity's own, then the org's: each measured on its own balance. */
 export const resolveAlertScopes = ({
 	command,
 	fullSubject,

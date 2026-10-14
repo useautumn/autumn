@@ -23,31 +23,25 @@ const identity: MeteringIdentity = {
 	entityId: null,
 };
 
-/** Long enough that any apply a test sees was woken, never timed out. */
 const HELD_LINGER_MS = 60_000;
 
-/** Lets the commit loop take and append what is queued. */
 const settle = async (): Promise<void> => {
 	await new Promise<void>((resolve) => setImmediate(resolve));
 	await new Promise<void>((resolve) => setImmediate(resolve));
 };
 
-/** A writer whose store records each apply call's command ids, over an appender that commits at once. */
 const createLingeringWriter = ({
 	applyLingerMs = HELD_LINGER_MS,
 	dbControlLingerMs = null,
 	dbControlMaxBatchesPerFlush = null,
 }: {
 	applyLingerMs?: number;
-	/** DB control's live override; null leaves `applyLingerMs` in force. */
 	dbControlLingerMs?: number | null;
-	/** DB control's live flush size; null leaves the default in force. */
 	dbControlMaxBatchesPerFlush?: number | null;
 } = {}) => {
 	const applied: string[][] = [];
 	const control = { maxBatchesPerFlush: dbControlMaxBatchesPerFlush };
 	let applyGate: Promise<void> | null = null;
-	/** Holds the next apply in flight until the returned release is called. */
 	const holdNextApply = () => {
 		let release = () => {};
 		applyGate = new Promise<void>((resolve) => {
@@ -134,7 +128,6 @@ const createLingeringWriter = ({
 		});
 	};
 
-	/** One Kafka commit per track, so each lands in its own batch. */
 	const commitEach = async (commandIds: string[]) => {
 		for (const commandId of commandIds) {
 			await track({ commandId }).waitForCommit();

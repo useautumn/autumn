@@ -19,13 +19,11 @@ export const handleRemoveMember = createRoute({
 		const { memberId, userId } = c.req.valid("json");
 		const { org, db } = ctx;
 
-		// First check if the member exists by memberId
 		let existingMember = await db.query.member.findFirst({
 			where: and(eq(member.id, memberId), eq(member.organizationId, org.id)),
 		});
 
 		if (!existingMember) {
-			// Try to find by userId as fallback
 			const memberByUserId = await db.query.member.findFirst({
 				where: and(
 					eq(member.userId, userId),
@@ -41,7 +39,6 @@ export const handleRemoveMember = createRoute({
 				});
 			}
 
-			// Use the member found by userId
 			existingMember = memberByUserId;
 		}
 
@@ -70,7 +67,6 @@ export const handleRemoveMember = createRoute({
 			}
 		}
 
-		// Remove member from database using the found member
 		await db
 			.delete(member)
 			.where(
@@ -80,7 +76,6 @@ export const handleRemoveMember = createRoute({
 				),
 			);
 
-		// Revoke all sessions for this user in this organization
 		try {
 			await db
 				.delete(authSession)

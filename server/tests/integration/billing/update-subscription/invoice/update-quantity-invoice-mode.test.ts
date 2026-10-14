@@ -15,7 +15,6 @@ import { timeout } from "@/utils/genUtils.js";
 
 const billingUnits = 12;
 
-/** A draft keeps the new quantity pending; finalizing the invoice applies it before payment. */
 const expectQuantityAppliedOnFinalize = async ({
 	autumnV1,
 	customerId,
@@ -47,16 +46,6 @@ const expectQuantityAppliedOnFinalize = async ({
 		balance: balanceBefore + 60,
 	});
 };
-
-/**
- * Invoice Mode Tests
- *
- * These tests verify different invoice mode configurations:
- * - Default: draft invoice; the new quantity applies once the invoice is finalized
- * - Draft invoice with enable_product_immediately (explicit), applied on finalize
- * - Finalized invoice with immediate entitlements
- * - Entitlements after payment (via checkout)
- */
 
 test.concurrent(`${chalk.yellowBright("update-quantity: default invoice mode (draft, immediate entitlements)")}`, async () => {
 	const customerId = "inv-mode-default";
@@ -212,12 +201,11 @@ test.concurrent(`${chalk.yellowBright("update-quantity: draft invoice with immed
 	);
 	const afterBalance = afterEntitlement?.balance || 0;
 
-	// +5 units × 12 billing_units = +60 messages
 	expect(afterBalance).toBe(beforeBalance + 60);
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	const feature = customer.features?.[TestFeature.Messages];
-	expect(feature?.balance).toBe(180); // 15 units × 12 = 180
+	expect(feature?.balance).toBe(180);
 });
 
 test.concurrent(`${chalk.yellowBright("update-quantity: finalized invoice with immediate entitlements")}`, async () => {
@@ -273,7 +261,6 @@ test.concurrent(`${chalk.yellowBright("update-quantity: finalized invoice with i
 		enable_product_immediately: true,
 	});
 
-	// Entitlements should be updated immediately
 	const afterUpdate = await CusService.getFull({
 		ctx,
 		idOrInternalId: customerId,
@@ -287,13 +274,11 @@ test.concurrent(`${chalk.yellowBright("update-quantity: finalized invoice with i
 	);
 	const afterBalance = afterEntitlement?.balance || 0;
 
-	// +10 units × 12 billing_units = +120 messages
 	expect(afterBalance).toBe(beforeBalance + 120);
 
-	// Verify via API that balance is updated and invoice is paid
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	const feature = customer.features?.[TestFeature.Messages];
-	expect(feature?.balance).toBe(240); // 20 units × 12 = 240
+	expect(feature?.balance).toBe(240);
 
 	const paidInvoice = customer.invoices?.find((inv) => inv.status === "paid");
 	expect(paidInvoice).toBeDefined();
@@ -352,7 +337,6 @@ test.concurrent(`${chalk.yellowBright("update-quantity: entitlements after payme
 		enable_product_immediately: false,
 	});
 
-	// Entitlements should NOT be updated yet (waiting for payment)
 	const afterUpdate = await CusService.getFull({
 		ctx,
 		idOrInternalId: customerId,
@@ -366,29 +350,24 @@ test.concurrent(`${chalk.yellowBright("update-quantity: entitlements after payme
 	);
 	const afterBalance = afterEntitlement?.balance || 0;
 
-	// Balance should remain unchanged until payment
 	expect(afterBalance).toBe(beforeBalance);
 
-	// Verify via API that balance is NOT updated and invoice is open
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	const feature = customer.features?.[TestFeature.Messages];
-	expect(feature?.balance).toBe(120); // Still 10 units × 12 = 120
+	expect(feature?.balance).toBe(120);
 
 	const openInvoice = customer.invoices?.find((inv) => inv.status === "open");
 	expect(openInvoice).toBeDefined();
 	expect(openInvoice?.hosted_invoice_url).toBeDefined();
 
-	// Complete payment via checkout using Puppeteer
 	await completeInvoiceCheckout({
 		url: result.payment_url!,
 		ctx,
 		customerId,
 	});
 
-	// Wait for webhook processing
 	await timeout(10000);
 
-	// Entitlements should now be updated after payment
 	const afterPayment = await CusService.getFull({
 		ctx,
 		idOrInternalId: customerId,
@@ -402,17 +381,13 @@ test.concurrent(`${chalk.yellowBright("update-quantity: entitlements after payme
 	);
 	const paidBalance = paidEntitlement?.balance || 0;
 
-	// +15 units × 12 billing_units = +180 messages
 	expect(paidBalance).toBe(beforeBalance + 180);
 
-	// Verify via API that balance is now updated and invoice is paid
 	const customerAfterPayment =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	const featureAfterPayment =
 		customerAfterPayment.features?.[TestFeature.Messages];
-	expect(featureAfterPayment?.balance).toBe(300); // 25 units × 12 = 300
-
-	// All invoices should now be paid
+	expect(featureAfterPayment?.balance).toBe(300);
 	const unpaidInvoices = customerAfterPayment.invoices?.filter(
 		(inv) => inv.status !== "paid",
 	);

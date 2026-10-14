@@ -26,7 +26,6 @@ type ApiCreditRate =
 	  }
 	| { credit_cost: number };
 
-/** The flat-or-graduated part of a rate, SDK → API naming. Rows and dimensions share it. */
 function creditRateToApi(rate: SdkCreditRate): ApiCreditRate {
 	if (rate.tierBehavior === "graduated") {
 		return {

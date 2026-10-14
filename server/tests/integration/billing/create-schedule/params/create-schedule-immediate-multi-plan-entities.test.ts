@@ -119,7 +119,6 @@ test.concurrent(
 		expect(scopeByProductId.get(inheritedPlan.id)).toBe(entities[0].id);
 		expect(scopeByProductId.get(customerPlan.id)).toBeNull();
 		expect(scopeByProductId.get(explicitPlan.id)).toBe(entities[1].id);
-		// Unlisted plans are retained outside every phase; entity1 still holds it below.
 		expect(scopeByProductId.has(existingAddon.id)).toBe(false);
 		await expectCustomerProducts({
 			customer: entity0,
@@ -236,7 +235,6 @@ test.concurrent(
 	},
 );
 
-// Regression: add-on-only phases previously expired base plans in represented scopes.
 test.concurrent(
 	`${chalk.yellowBright("create-schedule immediate multi-plan: add-ons preserve base plans across scopes")}`,
 	async () => {
@@ -277,7 +275,6 @@ test.concurrent(
 		expect(preview.total).toBe(0);
 
 		const response = await autumnV1.billing.createSchedule(params);
-		// Only the two attached add-ons; the untouched base plans join no phase.
 		expect(response.phases[0]?.customer_product_ids).toHaveLength(2);
 		for (const entity of entities) {
 			const entityCustomer = await autumnV1.entities.get<ApiEntityV0>(

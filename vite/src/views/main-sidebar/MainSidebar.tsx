@@ -25,7 +25,6 @@ import { SidebarSearchButton } from "./SidebarSearchButton";
 import { SidebarToggleButton } from "./SidebarToggleButton";
 import { sidebarWidthClass } from "./sidebarRowClass";
 
-/** Exported so the command bar can offer the same tabs without a second list. */
 export const DEV_SUB_TABS = [
 	{
 		title: "API keys",
@@ -55,7 +54,6 @@ export const MainSidebar = ({
 		true,
 	);
 
-	// In mobile sheet mode, always show expanded sidebar
 	const isMobileSheet = !!onNavigate;
 	const expanded = isMobileSheet ? true : storedExpanded;
 
@@ -72,8 +70,6 @@ export const MainSidebar = ({
 			<div
 				data-slot="main-sidebar"
 				className={cn(
-					// Scrolls internally so a zoomed-in or crowded sidebar can't push
-					// its own content out of view.
 					`relative flex h-full flex-col justify-between overflow-x-hidden overflow-y-auto px-2.5 py-3.5 transition-all duration-150`,
 					sidebarWidthClass({ expanded, isMobileSheet }),
 				)}

@@ -25,10 +25,8 @@ export type RateLimitPolicySummary = {
 	overrides: RateLimitPolicyOverride[];
 };
 
-/** An extra cap on one endpoint for one org; a limit of 0 blocks it. */
 export type RateLimitEndpointOverride = { limit: number; windowMs: number };
 
-/** Keyed by org, then by layer name (`limits`) or `METHOD /v1/path` (`endpoints`). */
 export type RateLimitOverrideLimits = Record<
 	string,
 	{
@@ -40,7 +38,6 @@ export type RateLimitOverrideLimits = Record<
 export type RateLimitOverridesView = {
 	orgs: RateLimitOverrideLimits;
 	policies: RateLimitPolicySummary[];
-	/** Every `METHOD /v1/path` the API serves. */
 	knownEndpoints: string[];
 	orgsByKey: Record<string, { id: string; name: string; slug: string }>;
 	configHealthy: boolean;
@@ -49,7 +46,6 @@ export type RateLimitOverridesView = {
 	error: string | null;
 };
 
-/** An org as the page picks it; `key` is what its overrides are stored under. */
 export type RateLimitOrg = {
 	key: string;
 	id: string;
@@ -58,7 +54,6 @@ export type RateLimitOrg = {
 	overrideCount: number;
 };
 
-/** One endpoint and every org that caps it. */
 export type RateLimitEndpointPolicy = {
 	endpoint: string;
 	overrides: ({ orgKey: string } & RateLimitEndpointOverride)[];

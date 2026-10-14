@@ -5,8 +5,6 @@ import {
 	ReceiveMessageCommand,
 } from "@aws-sdk/client-sqs";
 
-// Snapshot (not the live namespace — its bindings retarget to the mock) so
-// afterAll can put the real module back for later files in this process.
 const realProcessMessage = { ...(await import("@/queue/processMessage.js")) };
 
 mock.module("@/queue/processMessage.js", () => ({
@@ -26,10 +24,6 @@ const makeAbortError = () => {
 	return error;
 };
 
-/**
- * A partial DeleteMessageBatch failure used to be ignored, so its successful job was redelivered.
- * The worker must retry only failed acknowledgements and leave successful deletions alone.
- */
 describe("SQS batch acknowledgement", () => {
 	test("retries only entries that SQS failed to delete", async () => {
 		const messages: Message[] = [

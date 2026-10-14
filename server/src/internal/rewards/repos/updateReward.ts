@@ -14,7 +14,6 @@ import {
 	rewardToEntitlementRows,
 } from "./rewardEntitlementRows.js";
 
-/** Update a reward by internal_id. Throws if not found. */
 export const updateReward = async ({
 	db,
 	internalId,

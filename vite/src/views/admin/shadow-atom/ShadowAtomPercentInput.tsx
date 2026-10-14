@@ -2,7 +2,6 @@ import { useForm } from "@tanstack/react-form";
 import { isValidPercent } from "../edge-config/rolloutTypes";
 import { ShadowAtomPercentField } from "./ShadowAtomPercentField";
 
-/** An org's percent, edited in place: saved on Enter or blur when it changed and is 0–100. */
 export const ShadowAtomPercentInput = ({
 	label,
 	percent,

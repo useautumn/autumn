@@ -5,10 +5,6 @@ import {
 } from "kafkajs";
 import type { ProducerError } from "../types/producerError.js";
 
-/**
- * The error the writer's split expects: a `KafkaJSProtocolError` when the broker refused (nothing appended),
- * a `KafkaJSError` for everything whose fate is unknown. The original name stays readable in logs.
- */
 export const kafkaErrorOf = ({ error }: { error: ProducerError }): Error => {
 	const cause = error.cause ? kafkaErrorOf({ error: error.cause }) : undefined;
 	let rebuilt: Error & { type?: string; code?: number; errors?: Error[] };

@@ -2,7 +2,6 @@ import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import type { RateChange } from "@/utils/product/featureOverrideRates";
 
-/** A boxed plan item with one subrow per changed rate. */
 export function ItemRateChangeRow({
 	children,
 	changes,
@@ -16,7 +15,6 @@ export function ItemRateChangeRow({
 	compact?: boolean;
 	onClick?: () => void;
 }) {
-	// Header plus the box's two 1px edges (or an edge and a divider) match a lone h-8 / h-10 row.
 	const headerClassName = cn(
 		"flex items-center gap-2 w-full min-w-0 px-3 text-left shrink-0",
 		compact ? "h-[30px]" : "h-[38px]",

@@ -1,53 +1,39 @@
-// Attach
 export * from "./attach/prevVersions/attachBodyV0";
 export * from "./attach/prevVersions/attachResponseV1";
 
-// Attach V2
 export * from "./attachV2/attachDiscount";
 export * from "./attachV2/attachParamsV0";
 export * from "./attachV2/attachParamsV1";
 export * from "./attachV2/multiAttachParamsV0";
-// Checkout
 export * from "./checkout/prevVersions/checkoutParamsV0";
 export * from "./checkout/prevVersions/checkoutResponseV0";
-// Common
 export * from "./common/index";
-// Components
 export * from "./components/billingChanges/previewBalanceChange";
 export * from "./components/billingChanges/previewFlagChange";
 export * from "./createSchedule/createScheduleParamsV0";
 export * from "./createSchedule/createScheduleResponse";
-// DFU (customer imaging / live migration)
 export * from "./dfu/dfuFlashParams";
-// Licenses
-// Multi Update
 export * from "./multiUpdate/multiUpdateParamsV0";
 export * from "./multiUpdate/multiUpdatePreviewResponseV0";
 export * from "./openBillingPortal/openBillingPortalParamsV1";
 export * from "./openBillingPortal/openBillingPortalResponse";
-// Restore
 export * from "./restore/restoreParamsV1";
 export * from "./setPlans/setPlansErrorCopy";
 export * from "./setPlans/setPlansErrorDetails";
-// Set Plans
 export * from "./setPlans/setPlansParamsV0";
 export * from "./setPlans/setPlansPreviewResponse";
 export * from "./setPlans/setPlansTextParts";
-// Setup Payment
 export * from "./setupPayment/setupPaymentParamsV0";
 export * from "./setupPayment/setupPaymentParamsV1";
 export * from "./sync/previewSyncV2";
-// Sync
 export * from "./sync/syncParamsV0";
 export * from "./sync/syncParamsV1";
 export * from "./sync/syncProposalsParamsV0";
 export * from "./sync/syncProposalsV2";
 
-// Update Subscription
 export * from "./updateSubscription/previewUpdateSubscriptionResponse";
 export * from "./updateSubscription/removeDiscount";
 export * from "./updateSubscription/updateSubscriptionV0Params";
 export * from "./updateSubscription/updateSubscriptionV1Params";
 
-// Verify
 export * from "./verify/verifyParamsV1";

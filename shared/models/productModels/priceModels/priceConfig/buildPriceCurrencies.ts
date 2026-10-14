@@ -11,7 +11,6 @@ type ItemTier = { additional_currencies?: CurrencyTierAmount[] | null };
 
 const toKey = (currency: string) => currency.toLowerCase();
 
-// Flat (fixed) price: each currency becomes a per-currency amount block.
 export const buildFixedPriceCurrencies = (
 	additionalCurrencies: CurrencyAmount[] | null | undefined,
 ): Record<string, PriceCurrencyConfig> | undefined => {
@@ -26,10 +25,6 @@ export const buildFixedPriceCurrencies = (
 	return currencies;
 };
 
-// Usage price: each currency becomes a full usage_tiers set whose boundaries are
-// copied from the base (already subtracted) tiers, so they can never drift.
-// `itemTiers` drives the tiered case; `flatCurrencies` the single-tier (prepaid)
-// case. Returns undefined when no currency is present, so callers omit the map.
 export const buildUsagePriceCurrencies = ({
 	baseTiers,
 	itemTiers,
@@ -84,9 +79,6 @@ export const buildUsagePriceCurrencies = ({
 	return undefined;
 };
 
-// --- Read-back: stored config.currencies -> API-shaped additional_currencies ---
-
-// Fixed price: per-currency amount blocks -> flat additional_currencies.
 export const fixedCurrenciesToApi = (
 	currencies: Record<string, PriceCurrencyConfig> | null | undefined,
 ): { currency: string; amount: number }[] | undefined => {
@@ -103,8 +95,6 @@ export const fixedCurrenciesToApi = (
 	}));
 };
 
-// Usage price: per-currency usage_tiers -> per-tier additional_currencies arrays,
-// aligned by index to the base tiers (index i = the currencies for base tier i).
 export const usageCurrenciesToTiers = (
 	currencies: Record<string, PriceCurrencyConfig> | null | undefined,
 	tierCount: number,

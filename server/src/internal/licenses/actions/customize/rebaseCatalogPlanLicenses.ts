@@ -30,8 +30,6 @@ type PreparedLinkRebase = {
 
 export type PreparedCatalogPlanLicenseRebases = PreparedLinkRebase[];
 
-/** A customized link keeps its own item set, but the rows it inherited from the
- * catalog are only spared from deletion while some link still references them. */
 const pinCatalogRefsForCustomizedLink = async ({
 	db,
 	planLicenseId,
@@ -80,8 +78,6 @@ export const materializeCustomerPlanLicenseSnapshots = async ({
 }: {
 	db: DrizzleCli;
 	baseProduct: FullProduct;
-	/** Links that keep the old shape after the base rewrite (non-propagated),
-	 * pinned so the rewrite relabels their rows instead of deleting them. */
 	alsoPinPlanLicenses?: DbPlanLicense[];
 }) => {
 	const referenced =
@@ -233,9 +229,6 @@ const hasLicenseCustomize = (customize: DiffedCustomizePlanV1) =>
 	customize.add_items !== undefined ||
 	customize.remove_items !== undefined;
 
-/** A customize names the shape it wants, not the rows behind it, so ids come
- * from the saved plan first — the previous snapshot's rows may have just been
- * replaced by the same save. */
 const resolveTargetItemRefs = ({
 	targetPlan,
 	newBasePlan,

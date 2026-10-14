@@ -6,13 +6,11 @@ import {
 import { useCreateInvoiceFormContext } from "../context/CreateInvoiceFormProvider";
 import { invoicePlansToScopedPlans } from "../utils/copyExistingPlansIntoInvoice";
 
-/** Fills the picker row with the customer's current plans at its scope. */
 export function CreateInvoiceCopyExistingPlans({
 	planIndex,
 	scopeLabel,
 }: {
 	planIndex: number;
-	/** Absent when the customer has no entities, so scope isn't a choice. */
 	scopeLabel?: string;
 }) {
 	const { formValues, existingPlans, planHandlers } =

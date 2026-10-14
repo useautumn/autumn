@@ -18,8 +18,6 @@ const generationErrorMessage = (error: unknown): string => {
 	return "Couldn't generate a configuration from that prompt";
 };
 
-/** Prompt state + generation call + error surfacing, shared by every billing
- * sheet. `onGenerated` applies the resolved V0 request to the sheet's form. */
 export function useBillingGeneration({
 	tool,
 	customerId,

@@ -31,8 +31,6 @@ export const updateSubjectBalanceCache = async ({
 		featureId,
 	});
 
-	// Runtime FullSubject cache patches must not mutate cache_version.
-	// cache_version is a DB-side stale-sync guard owned by lifecycle/billing flows.
 	await tryRedisWrite(
 		() =>
 			redisV2.updateSubjectBalances(

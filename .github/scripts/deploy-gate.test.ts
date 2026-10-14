@@ -22,7 +22,6 @@ const BOT = "autumn-codegen[bot]";
 
 let root = "";
 let base = "";
-// Commits made here are authored by the local identity; these SHAs stand in for publish-bot commits.
 const botShas = new Set<string>();
 
 const git = (...args: string[]) => {

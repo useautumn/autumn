@@ -6,7 +6,6 @@ import type {
 } from "../../../atom/types/atomClient.js";
 import type { CachePushContext } from "../types/cachePushContext.js";
 
-/** As a subject push: an Atom that does not take the deletion is logged and left behind, never holding back the others. */
 export const sendDeletionToAtom = async ({
 	ctx,
 	atomConnection,

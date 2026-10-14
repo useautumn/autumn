@@ -39,7 +39,6 @@ export const ByocCacheNetworkSchema = z
 
 const ByocCacheRegionSchema = z.enum(BYOC_CACHE_AWS_REGIONS);
 
-/** The part of a stack name the org picks; Autumn adds `-<6 hex chars>`, and the whole fits alien's 100. */
 export const ByocStackNameSchema = z
 	.string()
 	.trim()
@@ -97,7 +96,6 @@ const OFFERED_MACHINES = BYOC_CACHE_MACHINES.map(
 const isOfferedMachine = ({ cpu, memory }: { cpu: number; memory: number }) =>
 	findByocCacheMachine({ cpu, memory }) !== undefined;
 
-/** Both omitted takes the default machine; a lone `cpu` or `memory` names no machine. */
 const isDefaultOrOfferedMachine = ({
 	cpu,
 	memory,

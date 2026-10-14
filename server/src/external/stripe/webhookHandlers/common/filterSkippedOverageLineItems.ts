@@ -4,11 +4,6 @@ import {
 	type LineItem,
 } from "@autumn/shared";
 
-/**
- * Partition arrear line items by whether their feature resolves to an enabled
- * spend_limit with skip_overage_billing (entity > customer > plan). Skipped
- * items are never posted to Stripe; balance resets are unaffected.
- */
 export const partitionSkippedOverageLineItems = ({
 	fullCustomer,
 	lineItems,

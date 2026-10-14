@@ -42,10 +42,6 @@ const disablePersistFreeOverage = async ({
 	});
 };
 
-// ─────────────────────────────────────────────────────────────────
-// 1. Flag off — negative balance resets to full allowance
-// ─────────────────────────────────────────────────────────────────
-
 test.concurrent(`${chalk.yellowBright("persist overage OFF: resets to full allowance when disabled")}`, async () => {
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
 	const free = products.base({ items: [messagesItem] });

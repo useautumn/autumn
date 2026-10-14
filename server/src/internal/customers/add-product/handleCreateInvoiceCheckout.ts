@@ -25,7 +25,6 @@ export const handleCreateInvoiceCheckout = async ({
 	config: AttachConfig;
 	branch: AttachBranch;
 }): Promise<AttachFunctionResponse> => {
-	// if one off
 	const { stripeCli } = attachParams;
 
 	let invoiceResult: AttachFunctionResponse;
@@ -77,6 +76,6 @@ export const handleCreateInvoiceCheckout = async ({
 			: undefined,
 		message: `Successfully created invoice checkout for customer ${customerId}, product(s) ${productNames}`,
 		code: SuccessCode.CheckoutCreated,
-		invoice: config.finalizeInvoice ? undefined : invoice, // if finalizeInvoice, checkout_url is used
+		invoice: config.finalizeInvoice ? undefined : invoice,
 	});
 };

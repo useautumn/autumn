@@ -1,15 +1,3 @@
-/**
- * priceToStripeNickname
- *
- * Contract:
- *   fixed → Base price
- *   prepaid → Prepaid price (feature)
- *   in-arrear / prorated → Usage-based price (feature)
- *   customize source → " (custom)"
- *   placeholder → " [Placeholder]"
- *   missing feature name → no parentheses
- */
-
 import { describe, expect, test } from "bun:test";
 import { BillingInterval } from "@models/productModels/intervals/billingInterval";
 import { PriceType } from "@models/productModels/priceModels/priceEnums";

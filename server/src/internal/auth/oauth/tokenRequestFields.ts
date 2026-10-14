@@ -10,7 +10,6 @@ const tokenRequestFieldsSchema = z
 	.passthrough();
 
 export type OAuthTokenRequestFields = {
-	/** Null for confidential clients, which authenticate over the header instead. */
 	clientId: string | null;
 	grantType: string | null;
 	refreshToken: string | null;

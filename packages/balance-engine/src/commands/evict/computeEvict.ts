@@ -2,12 +2,10 @@ import type { SubjectStateMutation } from "../../models/mutation/subjectStateMut
 import type { SubjectState } from "../../models/subject/subjectState.js";
 import type { LoggedEvictCommand } from "./types/evictCommand.js";
 
-/** The evict as a log record: nothing moves, and the rows it names are no longer resident after it. */
 export const computeEvict = ({
 	state,
 	command,
 }: {
-	/** What was resident when it was dropped; null when the customer was not held. */
 	state: SubjectState | null;
 	command: LoggedEvictCommand;
 }): SubjectStateMutation => {

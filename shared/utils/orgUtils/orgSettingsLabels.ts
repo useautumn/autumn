@@ -1,10 +1,5 @@
 import type { OrgConfig } from "../../models/orgModels/orgConfig.js";
 
-/**
- * The org config flags a config file may state. Both the CLI's `settings`
- * block and the dashboard's toggles read from here, so neither can name a
- * flag the other lacks. Everything not listed is dashboard-only or internal.
- */
 export const ORG_SETTINGS_LABELS = {
 	cancel_on_past_due: "Cancel on past due",
 	reverse_deduction_order: "Reverse deduction order",

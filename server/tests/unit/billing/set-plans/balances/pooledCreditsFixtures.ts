@@ -94,7 +94,6 @@ const overagePrice = prices.createConsumable({
 	entitlementId: OVERAGE_ENTITLEMENT_ID,
 });
 
-/** A plan whose included credits pool into the customer's shared balance, with overage billed per use. */
 export const pooledCreditsPlan = ({
 	planId,
 	pooledAllowance,
@@ -131,7 +130,6 @@ export const pooledCreditsPlan = ({
 	};
 };
 
-/** A plan whose included credits stay with the entity. */
 export const ownCreditsPlan = ({
 	planId,
 	allowance,
@@ -183,7 +181,6 @@ export const entityRow = ({
 		endedAt,
 		internalEntityId: entity.internal_id,
 		entityId: entity.id ?? undefined,
-		// A running paid plan is billed on a Stripe subscription.
 		subscriptionIds: status === CusProductStatus.Scheduled ? [] : ["sub_live"],
 		customerEntitlements: product.entitlements.map((entitlement) => {
 			const customerEntitlement = customerEntitlements.create({
@@ -211,7 +208,6 @@ export const entityRow = ({
 		),
 	});
 
-/** The customer as attach leaves it: entity plan rows plus the pools their pooled credits feed. */
 export const customerWithPools = (rows: FullCusProduct[]): FullCustomer => {
 	const billing = contexts.createBilling({ customerProducts: rows });
 	const fullCustomer = {
@@ -240,7 +236,6 @@ export type RequestedPlan = {
 	ongoing?: boolean;
 };
 
-/** Runs the real set_plans compute, then the preview's per-phase balance diff against matched saved phases. */
 export const previewPooledBalances = async ({
 	current,
 	now,

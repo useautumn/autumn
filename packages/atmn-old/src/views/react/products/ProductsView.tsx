@@ -22,7 +22,6 @@ const AUTUMN_DASHBOARD_URL = "https://app.useautumn.com";
 
 const PAGE_SIZE = 50;
 
-// Column definitions for the DataTable
 const columns: Column<ApiPlan>[] = [
 	{
 		key: "id",
@@ -70,7 +69,6 @@ const columns: Column<ApiPlan>[] = [
 	},
 ];
 
-// Search function for plans
 const planSearchFn = (plan: ApiPlan, query: string): boolean => {
 	const lowerQuery = query.toLowerCase();
 	return (
@@ -81,7 +79,6 @@ const planSearchFn = (plan: ApiPlan, query: string): boolean => {
 	);
 };
 
-// Generate keyboard hints based on current state
 const getHints = (
 	focusTarget: FocusTarget,
 	sheetOpen: boolean,
@@ -113,13 +110,9 @@ const getHints = (
 
 export interface ProductsViewProps {
 	environment?: AppEnv;
-	/** Called when user exits (q or ctrl+c) - use to clear terminal */
 	onExit?: () => void;
 }
 
-/**
- * Main products view orchestrator
- */
 export function ProductsView({
 	environment = AppEnv.Sandbox,
 	onExit,
@@ -127,7 +120,6 @@ export function ProductsView({
 	const { exit } = useApp();
 	const { copy, showingFeedback } = useClipboard();
 
-	// Navigation state using generic hook
 	const {
 		state,
 		moveUp,
@@ -144,13 +136,11 @@ export function ProductsView({
 		clearSearch,
 	} = useListNavigation<ApiPlan>();
 
-	// Fetch all plans (no server pagination)
 	const { data: allPlans, isLoading, isError, error, refetch, isFetching } = usePlans({
 		environment,
 		includeArchived: true,
 	});
 
-	// Local pagination with search
 	const {
 		pageItems: plans,
 		page,
@@ -167,14 +157,12 @@ export function ProductsView({
 		searchFn: planSearchFn,
 	});
 
-	// Sync local search with navigation state
 	useEffect(() => {
 		if (state.searchQuery !== localSearch) {
 			setLocalSearch(state.searchQuery);
 		}
 	}, [state.searchQuery, localSearch, setLocalSearch]);
 
-	// Generate pagination display text
 	const paginationText = useMemo(() => {
 		if (totalItems === 0) return "";
 		const start = (page - 1) * PAGE_SIZE + 1;
@@ -182,16 +170,13 @@ export function ProductsView({
 		return `${start}-${end} of ${totalItems}`;
 	}, [page, totalItems]);
 
-	// Handle keyboard input
 	useInput(
 		useCallback(
 			(input, key) => {
-				// Don't handle input when search dialog is open
 				if (state.focusTarget === "search") {
 					return;
 				}
 
-				// Quit
 				if (input === "q") {
 					if (onExit) {
 						onExit();
@@ -201,33 +186,27 @@ export function ProductsView({
 					return;
 				}
 
-				// Refresh
 				if (input === "r") {
 					refetch();
 					return;
 				}
 
-				// Open search (/ or s)
 				if (input === "/" || input === "s") {
 					openSearch();
 					return;
 				}
 
-				// Clear search (x when search is active)
 				if (input === "x" && state.searchQuery) {
 					clearSearch();
 					return;
 				}
 
-				// Sheet-specific controls
 				if (state.focusTarget === "sheet" && state.sheetOpen) {
-					// Copy ID
 					if (input === "c" && state.selectedItem) {
 						copy(state.selectedItem.id);
 						return;
 					}
 
-					// Open in Autumn dashboard
 					if (input === "o" && state.selectedItem) {
 						const env = state.selectedItem.env === "live" ? "" : "/sandbox";
 						open(
@@ -236,13 +215,11 @@ export function ProductsView({
 						return;
 					}
 
-					// Close sheet
 					if (key.escape) {
 						closeSheet();
 						return;
 					}
 
-					// Toggle focus to table
 					if (key.tab) {
 						toggleFocus();
 						return;
@@ -251,41 +228,34 @@ export function ProductsView({
 					return;
 				}
 
-				// Table-specific controls
 				if (state.focusTarget === "table") {
-					// Navigate up
 					if (key.upArrow || input === "k") {
 						moveUp();
 						return;
 					}
 
-					// Navigate down
 					if (key.downArrow || input === "j") {
 						moveDown(plans.length - 1);
 						return;
 					}
 
-					// Previous page (p or left arrow)
 					if ((input === "p" || key.leftArrow) && hasPrev) {
 						prevPage();
 						setPage(page - 1);
 						return;
 					}
 
-					// Next page (n or right arrow)
 					if ((input === "n" || key.rightArrow) && hasMore) {
 						nextPage(hasMore);
 						setPage(page + 1);
 						return;
 					}
 
-					// Open sheet
 					if (key.return && plans[state.selectedIndex]) {
 						openSheet(plans[state.selectedIndex]!);
 						return;
 					}
 
-					// Toggle focus to sheet (if open)
 					if (key.tab && state.sheetOpen) {
 						toggleFocus();
 						return;
@@ -316,14 +286,12 @@ export function ProductsView({
 		),
 	);
 
-	// Sync selected plan when plans load
 	useEffect(() => {
 		if (plans.length > 0 && state.selectedIndex < plans.length) {
 			selectItem(plans[state.selectedIndex]!, state.selectedIndex);
 		}
 	}, [plans, state.selectedIndex, selectItem]);
 
-	// Determine view state for ListViewLayout
 	const getViewState = (): ListViewState => {
 		if (isLoading && !allPlans) return "loading";
 		if (isError && error) return "error";

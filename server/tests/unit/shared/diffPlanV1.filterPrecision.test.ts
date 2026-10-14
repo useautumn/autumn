@@ -1,17 +1,3 @@
-/**
- * PlanItemFilterPrecision: IdentityAndIncluded stamps grant onto remove
- * filters. Default Identity stays a cadence wildcard.
- *
- * Contract:
- *   D1 default 100→200 — remove has no included
- *   D2 IdentityAndIncluded 100→200 — remove included: 100, add 200, same match key
- *   D3 boolean / unlimited + flag — no included on the filter
- *   D4 planItemFiltersEqual treats omitted vs 100 as different
- *
- * included is a live-row dimension. It must not enter composeMatchKey /
- * planItemFilterMatchKey or 100/mo will fail to pair with add 200.
- */
-
 import { describe, expect, test } from "bun:test";
 import {
 	type ApiPlanV1,

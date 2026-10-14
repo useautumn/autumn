@@ -39,7 +39,6 @@ type FeatureTrackScope = {
 	body: TrackParams;
 	client: TrackClient;
 	featureId: string;
-	/** Only a fan-out's first feature records the request's one usage event. */
 	recordsUsageEvent: boolean;
 	recordsCreditCost: boolean;
 };
@@ -48,7 +47,6 @@ const isDuplicateCommand = (error: unknown): boolean =>
 	error instanceof BalanceWorkerClientError &&
 	error.workerCode === "DUPLICATE_COMMAND";
 
-/** One feature on exactly one engine: the worker, or Postgres when the worker refuses a v1 paid allocated grant. */
 const trackFeature = ({
 	ctx,
 	body,
@@ -73,7 +71,6 @@ const trackFeature = ({
 			});
 			return { engine: "worker", featureId, reply };
 		},
-		// The lane legacy defers to as well: it locks the customer, deducts and invoices.
 		postgres: async ({ fullSubject }) => {
 			const response = await runPostgresTrackV3({
 				ctx,
@@ -98,11 +95,6 @@ const trackFeature = ({
 		},
 	});
 
-/**
- * One track per feature, in order; a feature the customer lacks applies as a no-op, as on legacy.
- * On a fan-out, features already applied under this idempotency key are skipped so a retry finishes
- * a partial run. Every other error is the API's.
- */
 const trackEachFeature = async ({
 	ctx,
 	body,
@@ -140,7 +132,6 @@ const trackEachFeature = async ({
 	return outcomes;
 };
 
-/** The customer row the first outcome was decided against, for `customer_data` to apply to. */
 const customerOf = ({
 	outcomes,
 }: {
@@ -153,7 +144,6 @@ const customerOf = ({
 		: first.customer;
 };
 
-/** Behind the response: the deprecated webhook must never delay or fail the track that crossed it. */
 const fireReplyThresholdsReached = ({
 	ctx,
 	body,
@@ -171,7 +161,6 @@ const fireReplyThresholdsReached = ({
 	});
 };
 
-/** Applied on the worker and answered, or queued for it and answered with the queued response when async. */
 export async function runBalanceWorkerTrack({
 	ctx,
 	body,
@@ -183,9 +172,7 @@ export async function runBalanceWorkerTrack({
 	ctx: AutumnContext;
 	body: TrackParams;
 	isAsync?: boolean;
-	/** A track_tokens request, whose event records `credit_cost`. */
 	recordsCreditCost?: boolean;
-	/** False when the caller already claimed the body key (a queued replay). */
 	validateTrackBodyIdempotencyKey?: boolean;
 	client?: TrackClient;
 }): Promise<TrackResponseV3> {
@@ -194,15 +181,12 @@ export async function runBalanceWorkerTrack({
 		return getQueuedTrackResponse({ ctx, body });
 	}
 
-	// The same 24h claim as runTrackWithRollout: a duplicate key is 409 before the worker sees it,
-	// and a 503 releases it so the retry reaches the worker's own dedup.
 	return withIdempotencyKey({
 		ctx,
 		idempotencyKey: validateTrackBodyIdempotencyKey
 			? getTrackBodyIdempotencyKey({ body })
 			: null,
 		routeGroup: RouteGroup.Balances,
-		// Around the whole fan-out, inside the claim: a retry after creating re-runs every feature under the same key.
 		run: () =>
 			withCreateIfMissing({
 				ctx,

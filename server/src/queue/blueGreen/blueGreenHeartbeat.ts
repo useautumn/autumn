@@ -146,11 +146,6 @@ const writeReadinessHeartbeat = async ({
 	}
 };
 
-/**
- * Starts periodic inactive-slot readiness writes for this process.
- * No-op when no worker identity has been resolved (local dev without metadata).
- * Active slots do not write this key; it represents the latest green target.
- */
 export const startBlueGreenHeartbeat = ({
 	db,
 	logger,

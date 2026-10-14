@@ -12,13 +12,11 @@ import { handleNewProductItems } from "@/internal/products/product-items/product
 
 export const setupCustomFullProduct = async ({
 	ctx,
-	// customItems,
 	currentFullProduct,
 	customizePlan,
 	patchContext,
 }: {
 	ctx: AutumnContext;
-	// customItems?: ProductItem[];
 	currentFullProduct: FullProduct;
 	customizePlan?: CustomizePlanV1;
 	patchContext?: PatchContext;
@@ -36,8 +34,6 @@ export const setupCustomFullProduct = async ({
 		customizePlanV1: customizePlan,
 		fullProduct: currentFullProduct,
 	});
-
-	// Customize plan -> custom items
 
 	const { db, logger, features } = ctx;
 

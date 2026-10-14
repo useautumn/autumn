@@ -54,7 +54,6 @@ const priceOf = ({
 	},
 });
 
-/** One row under one plan; `catalog` and `product` patch the catalog and plan the row hangs off. */
 const dueRowIds = ({
 	row = {},
 	product = {},

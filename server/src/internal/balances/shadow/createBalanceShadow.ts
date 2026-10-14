@@ -6,7 +6,6 @@ import type {
 	BalanceShadowTrack,
 } from "./balanceShadowTypes.js";
 
-/** What the shadow reports per track: the verdict, and the rows it drew from as they stand after it. */
 function summarizeReply({ reply }: { reply: TrackReply }) {
 	const { result, state } = reply;
 	const drawnRowIds = new Set(result.deltas.map((delta) => delta.id));
@@ -49,9 +48,7 @@ export function createBalanceShadow({
 	function record(event: Record<string, unknown>): void {
 		try {
 			dependencies.report(event);
-		} catch {
-			// Shadow telemetry must not change the live response or stop delivery.
-		}
+		} catch {}
 	}
 	function status() {
 		return { ...counts, pending: queue.length, inFlight: jobs.size };

@@ -28,11 +28,6 @@ const assertDistinctIds = ({ params }: { params: UpdateCatalogParams }) => {
 	}
 };
 
-/**
- * A reward the catalog cannot express — a free product, an invoice credit —
- * still owns its id. Claiming it would silently rewrite a row the config can
- * never state back, so the push is refused instead.
- */
 const assertIdsNotHeldByUnstatableRewards = ({
 	params,
 	catalogContext,
@@ -52,8 +47,6 @@ const assertIdsNotHeldByUnstatableRewards = ({
 	}
 };
 
-/** A stated stable id this env holds must agree with the id beside it. An id it
- * does not hold came from another env, so the entry is matched by id instead. */
 const assertRewardIdentitiesAgree = ({
 	params,
 	catalogContext,
@@ -96,7 +89,6 @@ const assertRewardIdentitiesAgree = ({
 	}
 };
 
-/** A stated reward keeps its branch: a coupon never becomes a feature grant. */
 const assertBranchUnchanged = ({
 	updateCatalogPlan,
 	catalogContext,
@@ -118,7 +110,6 @@ const assertBranchUnchanged = ({
 	}
 };
 
-/** Every program names a reward this catalog will hold once the push lands. */
 const assertProgramRewardsResolve = ({
 	catalogContext,
 	updateCatalogPlan,
@@ -130,8 +121,6 @@ const assertProgramRewardsResolve = ({
 	const removedIds = new Set(
 		updateCatalogPlan.removeRewards.map((remove) => remove.rewardId),
 	);
-	// Unstatable rewards are deliberately absent: a config that could name one
-	// could not state the reward beside it, so the program would never round-trip.
 	const surviving = new Set([
 		...updateCatalogPlan.upsertRewards.map((upsert) => upsert.rewardId),
 		...rewards.map((reward) => reward.id).filter((id) => !removedIds.has(id)),
@@ -145,11 +134,6 @@ const assertProgramRewardsResolve = ({
 	}
 };
 
-/**
- * A reward a referral program still links cannot be deleted, and the writer
- * finds that out only mid-phase. The push is refused here instead, before the
- * feature and plan writes it would otherwise leave half applied.
- */
 const assertRemovedRewardsAreUnlinked = ({
 	catalogContext,
 	updateCatalogPlan,
@@ -164,8 +148,6 @@ const assertRemovedRewardsAreUnlinked = ({
 			(remove) => remove.referralProgramId,
 		),
 	);
-	// A program this push repoints stops linking its old reward before the
-	// removal runs, so it is not a blocker.
 	const repointedProgramIds = new Set(
 		updateCatalogPlan.upsertReferralPrograms
 			.filter((upsert) => upsert.internalId !== null)
@@ -188,11 +170,6 @@ const assertRemovedRewardsAreUnlinked = ({
 	}
 };
 
-/**
- * Coupons name plans and feature grants name features. The reward writers
- * resolve those only mid-phase, so a dangling reference is caught here against
- * the catalog this push will leave behind.
- */
 const assertRewardReferencesResolve = async ({
 	ctx,
 	updateCatalogPlan,
@@ -200,14 +177,9 @@ const assertRewardReferencesResolve = async ({
 	ctx: AutumnContext;
 	updateCatalogPlan: UpdateCatalogPlan;
 }) => {
-	// Features are always fully loaded, so the projection speaks for them.
 	const featureIds = new Set(
 		updateCatalogPlan.projected.features.map((feature) => feature.id),
 	);
-	// A rename moves every version row, but the projection only carries the new
-	// id for the versions the payload restated — an untouched sibling version
-	// still projects the old one. Reading each projected id through the rename
-	// gives the plan ids this push actually leaves behind.
 	const renamedTo = new Map(
 		updateCatalogPlan.renamePlans.map(({ planId, toId }) => [planId, toId]),
 	);
@@ -216,9 +188,6 @@ const assertRewardReferencesResolve = async ({
 			(product) => renamedTo.get(product.id) ?? product.id,
 		),
 	);
-	// An id this payload takes away: renamed off its rows, or removed with no
-	// version left holding it. The database still answers to it, so the lookup
-	// below would call it resolved — it has to be asked first.
 	const vacatedPlanIds = new Set(
 		[
 			...updateCatalogPlan.renamePlans.map(({ planId }) => planId),
@@ -240,9 +209,6 @@ const assertRewardReferencesResolve = async ({
 		}
 	}
 
-	// An id the push keeps is settled; every other id is looked up once. A
-	// vacated id is looked up too, and found — the database is pre-change — so
-	// the vacating question below has to be asked before this answer is read.
 	const unresolved = [
 		...new Set(
 			[...couponPlans.values()]
@@ -278,10 +244,6 @@ const assertRewardReferencesResolve = async ({
 	}
 };
 
-/**
- * A referral program the catalog hides still owns its public id. Claiming it
- * would be discovered only by the writer, after earlier phases have committed.
- */
 const assertIdsNotHeldByHiddenPrograms = ({
 	params,
 	catalogContext,

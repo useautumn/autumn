@@ -1,11 +1,3 @@
-/**
- * atmn crud/plans/rename — rename to an id another live plan holds → refused, error surfaced
- *
- * a rename is a changed planId on a row that carries internalId; aliases per catalog-v2/plans/aliases
- *
- * One line of plans/atmn-v3/07_tests.md. [a, b] is a matrix looped INSIDE this file.
- */
-
 import { expect, test } from "bun:test";
 import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 import {
@@ -66,11 +58,8 @@ test.concurrent(
 				}),
 			);
 
-			// Decision pending: exact error shape isn't pinned down here, only
-			// that a live id can't be stolen out from under another plan.
 			await expect(scenario.push()).rejects.toThrow();
 
-			// Nothing moved — `pro` is still `pro`, `enterprise` is untouched.
 			expect(
 				await ProductService.getFull({
 					db: scenario.ctx.db,

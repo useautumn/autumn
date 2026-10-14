@@ -6,7 +6,6 @@ import {
 import { and, eq, isNotNull } from "drizzle-orm";
 import type { RepoContext } from "@/db/repoContext.js";
 
-/** Every saved phase of the customer's schedules that names its own proration. */
 export const listSchedulePhaseProrations = async ({
 	ctx,
 	internalCustomerId,

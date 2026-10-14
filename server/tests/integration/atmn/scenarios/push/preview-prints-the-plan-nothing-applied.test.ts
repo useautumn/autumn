@@ -1,9 +1,3 @@
-/**
- * atmn scenarios/push — preview prints the plan, nothing applied
- *
- * One line of plans/atmn-v3/07_tests.md.
- */
-
 import { expect, test } from "bun:test";
 import {
 	configBody,
@@ -32,7 +26,6 @@ test("preview prints the plan, nothing applied", async () => {
 		expect(result.output).toContain("Dry run — nothing applied.");
 		expect(result.migrationIds).toEqual([]);
 
-		// Preview only — the org's catalog stays empty.
 		const catalog = (await scenario.client.get({})) as unknown as {
 			plans: Array<{ id: string }>;
 		};

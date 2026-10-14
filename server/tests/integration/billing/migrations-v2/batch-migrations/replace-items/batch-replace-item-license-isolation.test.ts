@@ -1,7 +1,3 @@
-/**
- * Replacing a parent-plan item must not repoint license assignment rows that
- * grant the same feature and definition shape.
- */
 import { expect, test } from "bun:test";
 import { customerEntitlements } from "@autumn/shared";
 import { runChunkedMigration } from "@tests/integration/billing/migrations-v2/utils/runChunkedMigration";

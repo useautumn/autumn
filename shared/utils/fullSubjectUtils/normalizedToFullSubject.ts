@@ -135,11 +135,6 @@ const subjectFlagToFullCustomerEntitlement = ({
 	} as FullCustomerEntitlement;
 };
 
-/**
- * Convert a NormalizedFullSubject (flat arrays) into a FullSubject (nested).
- * Reconstructs boolean CEs from flags + catalog, nests metered CEs into products,
- * and separates extras by null customer_product_id.
- */
 export const normalizedToFullSubject = ({
 	normalized,
 }: {
@@ -358,8 +353,6 @@ export const normalizedToFullSubject = ({
 		} as FullCusProduct);
 	}
 
-	// Seats mirror their parent's lifecycle (resolved via the pool row) so
-	// every downstream status/date gate reads the effective values.
 	inheritParentCustomerProductProperties({ customerProducts });
 
 	const extraCustomerEntitlements = [...extraMeteredCes, ...extraBooleanCes];
@@ -438,9 +431,6 @@ export const normalizedToFullSubject = ({
 		customer_products: customerProducts,
 		extra_customer_entitlements: extraCustomerEntitlements,
 		pooled_customer_entitlements: [...pooledMeteredCes, ...pooledBooleanCes],
-		// Normalized carries ALL scopes (the balance-hash field must stay
-		// complete); the subject view narrows to the rows that can gate it --
-		// an entity sees its own rows plus the inheritable customer-scope ones.
 		usage_windows: getArrayEntries<
 			NormalizedFullSubject["usage_windows"][number]
 		>({

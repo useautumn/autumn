@@ -24,7 +24,6 @@ test("spec defaults are keyed fixture-side, from the catalog root", () => {
 test("a path without a spec default is absent, so an empty items array is never elided", () => {
 	expect(defaults.has("plans.items")).toBe(false);
 	expect(defaults.has("plans.versionSlug")).toBe(false);
-	// A classic credit system must state its schema, even as [].
 	expect(defaults.has("features.creditSchema")).toBe(false);
 });
 

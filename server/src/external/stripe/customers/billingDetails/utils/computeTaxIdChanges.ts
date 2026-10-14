@@ -3,7 +3,6 @@ import type Stripe from "stripe";
 
 type TaxIdChanges = NonNullable<BillingDetailsParams["tax_ids"]>;
 
-/** Adds skip IDs the customer already has (or repeats); removes skip IDs it doesn't have. */
 export const computeTaxIdChanges = ({
 	currentTaxIds,
 	taxIds,

@@ -12,7 +12,6 @@ import {
 
 type PreviewRow = { action?: string } & Record<string, unknown>;
 
-/** Every preview row is `none`/`skip`: the server itself says config ≡ catalog. */
 export const expectPreviewNone = async ({
 	client,
 	wire,
@@ -55,12 +54,6 @@ const snapshot = (dir: string): Map<string, string> => {
 	return out;
 };
 
-/**
- * The crud contract in one call: push the config; the server's own preview
- * says nothing is left to apply; a pull into an empty dir scaffolds a config
- * the server also finds nothing to apply for; pulling that dir again writes
- * nothing. Returns the fresh dir's files for extra assertions.
- */
 export const expectRoundTrip = async ({
 	scenario,
 	includeMappings = false,
@@ -83,8 +76,6 @@ export const expectRoundTrip = async ({
 		const pullFresh = () =>
 			runCli({
 				cwd: freshDir,
-				// An empty dir has no config to find; -c names it so headless pull
-				// scaffolds instead of stopping at the folder question.
 				args: [
 					"pull",
 					"-c",
@@ -106,7 +97,6 @@ export const expectRoundTrip = async ({
 		expect([...after.entries()]).toEqual([...before.entries()]);
 		return { freshDir, freshFiles: after, freshWire };
 	} catch (error) {
-		// What the pull wrote is the evidence; the dir is gone by the time anyone looks.
 		const written = [...snapshot(freshDir).entries()]
 			.map(([file, text]) => `--- ${file}\n${text}`)
 			.join("\n");

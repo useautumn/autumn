@@ -1,16 +1,3 @@
-/**
- * TDD contract: syncV2 routes patch-style customize through the attach patch
- * path (setupPatchContext), so add_items / remove_items land on the synced
- * cusProduct. Regression for the legacy customizePlanV1ToV0 path, which
- * silently dropped both (only customize.price / customize.items survived).
- *
- * Contract under test (sync a product-matched Stripe sub with customize):
- *   A. remove_items + add_items on the same feature -> included overridden
- *      (the enterprise / csv-quota override shape).
- *   B. add_items with a feature NOT on the plan -> entitlement added,
- *      catalog items untouched.
- *   C. remove_items alone -> entitlement absent from the synced product.
- */
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3, CustomizePlanV1 } from "@autumn/shared";
 import { ResetInterval } from "@autumn/shared";
@@ -44,8 +31,6 @@ const syncWithCustomize = async ({
 		stripe_subscription_id: stripeSubscription.id,
 		phases: [{ starts_at: "now", plans: [{ plan_id: planId, customize }] }],
 	});
-
-// ── A. remove + re-add the same feature with a new included amount ─────────
 
 test.concurrent(
 	`${chalk.yellowBright("sync customize: remove+add overrides included usage")}`,
@@ -102,8 +87,6 @@ test.concurrent(
 	},
 );
 
-// ── B. add_items with a feature not on the plan ─────────────────────────────
-
 test.concurrent(
 	`${chalk.yellowBright("sync customize: add_items adds a new feature, catalog items untouched")}`,
 	async () => {
@@ -153,7 +136,6 @@ test.concurrent(
 			balance: 3,
 			usage: 0,
 		});
-		// Catalog item untouched by the add.
 		expectCustomerFeatureCorrect({
 			customer,
 			featureId: TestFeature.Messages,
@@ -165,8 +147,6 @@ test.concurrent(
 		await ctx.stripeCli.subscriptions.cancel(stripeSubscription.id);
 	},
 );
-
-// ── C. remove_items alone drops the catalog item ────────────────────────────
 
 test.concurrent(
 	`${chalk.yellowBright("sync customize: remove_items drops the catalog item")}`,

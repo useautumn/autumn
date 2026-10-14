@@ -26,7 +26,6 @@ afterAll(async () => {
 	await webhook?.cleanup();
 });
 
-// ── B1: basic usage_limit alert with full usage_limit block ─────────────────
 test(`${chalk.yellowBright("ul-alert1: 80% of a 200/day cap fires with the usage_limit block")}`, async () => {
 	const customerId = "ul-alert-basic-1";
 	await setupCustomer({ customerId, planId: "ul-alert-basic" });

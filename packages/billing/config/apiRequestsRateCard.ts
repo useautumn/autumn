@@ -5,7 +5,6 @@ import {
 
 const ONE_REQUEST = 1;
 
-/** One dimension per catalog endpoint, each costing one request. Deals override this per plan item. */
 export const apiRequestsRateCard = [
 	{
 		meteredFeatureId: "api_call",

@@ -1,6 +1,5 @@
 import type { TestGroup } from "../types";
 
-/** CI runs these on every PR, so twd's other groups leave them out; name this group to run them there. */
 export const unit: TestGroup = {
 	name: "unit",
 	description:

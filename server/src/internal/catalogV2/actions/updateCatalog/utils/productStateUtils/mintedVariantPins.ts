@@ -3,11 +3,6 @@ import { variantCreateTarget } from "@/internal/catalogV2/actions/updateCatalog/
 import type { ProductStatesContext } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext";
 import { variantPinKey } from "./variantEntryMintsRow";
 
-/**
- * Every identity the row a variants[] entry mints answers to: the version it
- * takes, the slug it will carry, and the unpinned form. A propagate target in
- * the same push may name it by any of them.
- */
 const pinsForMintedVariant = ({
 	variant,
 	anchorInternalIds,
@@ -38,7 +33,6 @@ const pinsForMintedVariant = ({
 	];
 };
 
-/** Pins these variants[] entries mint, keyed for a propagate target lookup. */
 export const mintedVariantPins = ({
 	variants,
 	anchorInternalIds,

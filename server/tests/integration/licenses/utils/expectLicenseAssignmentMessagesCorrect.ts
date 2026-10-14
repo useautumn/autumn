@@ -3,7 +3,6 @@ import { customerEntitlements } from "@autumn/shared";
 import { and, eq } from "drizzle-orm";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 
-/** One assignment's live messages grant: same definition when spared. */
 export const expectLicenseAssignmentMessagesCorrect = async ({
 	ctx,
 	customerProductId,

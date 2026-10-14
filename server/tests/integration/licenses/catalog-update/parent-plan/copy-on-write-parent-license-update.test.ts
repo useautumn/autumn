@@ -1,7 +1,3 @@
-/** Contract: parent-only versioning copies the license link's content (uncustomized) to v2's own
- * row; customizing v2 later marks it customized. V1, the original link, and its customer's pool
- * and effective definition remain unchanged. Each version owns its own plan_license row (the FK is
- * version-scoped), so ids always differ across versions — content equality is what "unchanged" means. */
 import { expect, test } from "bun:test";
 import {
 	type ApiCustomerV5,
@@ -136,7 +132,6 @@ test.concurrent(
 			}),
 		);
 		expect(v1AfterParentUpdate.licenses?.[0]?.id).toBe(originalLink.id);
-		// v2 owns its own row (version-scoped FK) but carries the same content forward.
 		expect(v2BeforeCustomize.licenses?.[0]?.id).not.toBe(originalLink.id);
 		expect(v2BeforeCustomize.licenses?.[0]).toMatchObject({
 			is_custom: false,

@@ -1,8 +1,3 @@
-/**
- * Pay-per-use volume follows the prepaid (Stripe) rule: once total usage passes the
- * included amount, every unit is charged at the band total usage lands in.
- */
-
 import { describe, expect, test } from "bun:test";
 import {
 	type EntityBalance,
@@ -155,7 +150,6 @@ describe("usagePriceToLineItem: pay-per-use volume", () => {
 	});
 
 	test("band is picked from total usage on the net tiers: 5 included, 25 used → 20 over × $0.80 = $16", () => {
-		// Total-usage bands 10/20/30/40 stored net of 5 included.
 		const netTiers = [
 			{ to: 5, amount: 1 },
 			{ to: 15, amount: 0.9 },
@@ -201,7 +195,6 @@ describe("usagePriceToLineItem: pay-per-use volume", () => {
 	});
 
 	test("entity feature: band and amount come from the customer's actual total usage", () => {
-		// 130 + 120 + 90 = 340 used against 300 included: the customer's 40 over at $0.50.
 		const entities = {
 			ent_a: { id: "ent_a", balance: -30, adjustment: 0 },
 			ent_b: { id: "ent_b", balance: -20, adjustment: 0 },
@@ -219,7 +212,6 @@ describe("usagePriceToLineItem: pay-per-use volume", () => {
 	});
 
 	test("entity feature: total usage within the customer's included amount → $0", () => {
-		// 150 + 50 used against 2 × 100 included.
 		const entities = {
 			ent_a: { id: "ent_a", balance: -50, adjustment: 0 },
 			ent_b: { id: "ent_b", balance: 50, adjustment: 0 },
@@ -236,7 +228,6 @@ describe("usagePriceToLineItem: pay-per-use volume", () => {
 	});
 
 	test("entity feature: total equal to included stays $0 when billing units would round it up", () => {
-		// 100 + 50 used against 2 × 75 included, billed per 100 units.
 		const entities = {
 			ent_a: { id: "ent_a", balance: -25, adjustment: 0 },
 			ent_b: { id: "ent_b", balance: 25, adjustment: 0 },
@@ -280,7 +271,6 @@ describe("usagePriceToLineItem: allocated (v1) volume", () => {
 
 describe("usagePriceToLineItem: prepaid volume is unchanged", () => {
 	test("100 included + 2 packs of 100 → whole 300 charged at the band rate", () => {
-		// Prepaid still adds the allowance back: 300 units at $10 per 100 = $30.
 		expect(
 			priceVolumeLine({
 				kind: "prepaid",
@@ -305,7 +295,6 @@ describe("usagePriceToLineItem: one volume line", () => {
 			balance: -50,
 		});
 
-		// Stored tiers sit above the 100 included, so 150 lands in 101–200; the 50 over bill at $1.
 		expect(line.amount).toBe(50);
 		expect(line.description).toBe(
 			"Pro - Messages: 50 @ $1.00 (volume tier 101–200)",

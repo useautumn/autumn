@@ -11,7 +11,6 @@ export const initialEveSessionState = (): EveSessionState => ({
 	pendingRequests: [],
 });
 
-/** Merges a patch into the live session ref, then persists the whole row. */
 export const saveEveSessionState = async ({
 	orgId,
 	session,

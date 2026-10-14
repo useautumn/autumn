@@ -126,9 +126,7 @@ describe("buildAttachRequestBody — billing_units handling", () => {
 			prepaidOptions: { messages: 5000 },
 		});
 
-		// Must NOT be 5 (5000 / 1000)
 		expect(result?.options?.[0]?.quantity).not.toBe(5);
-		// Must NOT be 5,000,000 (5000 * 1000)
 		expect(result?.options?.[0]?.quantity).not.toBe(5000000);
 		expect(result?.options?.[0]?.quantity).toBe(5000);
 	});
@@ -223,7 +221,6 @@ describe("buildAttachRequestBody — starts_at handling", () => {
 		],
 	});
 
-	/** Pre-fix omitted the selected default; post-fix sends "immediate" to keep the preview aligned with the UI. */
 	test("defaults plan_schedule to immediate", () => {
 		const result = buildAttachRequestBody({
 			...baseParams,

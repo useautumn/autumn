@@ -13,7 +13,6 @@ import type {
 } from "./types/rebalanceOutcome.js";
 import type { RebalanceRequest } from "./types/rebalanceRequest.js";
 
-/** Refund the purchase into each row's overage, in order, up to 0; what is not needed is left over. */
 const refundOverage = ({
 	customerEntitlementsInOverage,
 	quantity,
@@ -25,7 +24,6 @@ const refundOverage = ({
 	let leftover = quantity;
 	for (const { id, balance } of customerEntitlementsInOverage) {
 		if (leftover.isZero()) break;
-		// A refund's ceiling of 0: at most what brings the balance back to 0.
 		const refund = clampChange({
 			current: new Decimal(balance),
 			amount: leftover.neg(),
@@ -38,7 +36,6 @@ const refundOverage = ({
 	return { deltas, leftover };
 };
 
-/** One increment per row; a row given two deltas gets their sum. */
 const deltasToIncrements = ({
 	deltas,
 }: {
@@ -58,7 +55,6 @@ const deltasToIncrements = ({
 	}));
 };
 
-/** A purchase: refund the overage of the rows at its level, then credit the leftover. Pure. */
 export const rebalance = ({
 	fullSubject,
 	request,
@@ -73,7 +69,6 @@ export const rebalance = ({
 	const purchased = featureCustomerEntitlements.find(
 		({ id }) => id === request.customerEntitlementId,
 	);
-	// As on the server: a purchased row outside the feature's rows moves nothing.
 	if (!purchased || request.quantity <= 0) return { deltas: [], changes: [] };
 
 	const inOverage = selectCustomerEntitlementsInOverage({

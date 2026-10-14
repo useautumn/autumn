@@ -12,11 +12,6 @@ import type { ReactNode } from "react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 
-/**
- * Shared "Filter" dropdown shell: the funnel trigger with an active-filter dot,
- * a body for filter sub-menus (passed as children), and a Clear footer. Callers
- * supply the sections (e.g. FilterRadioSubMenu) and the active/clear state.
- */
 export function FilterButton({
 	hasActiveFilters,
 	onClear,

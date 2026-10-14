@@ -151,7 +151,6 @@ const CodeGroupCode = React.forwardRef<HTMLDivElement, CodeGroupCodeProps>(
 			"font-mono font-medium text-[13px] leading-[1.6] overflow-x-auto p-4",
 			className,
 		);
-		// Plain lines until the highlighter loads, so the block keeps its height as it colours in.
 		if (!highlightedCode)
 			return (
 				<div ref={ref} className={codeClassName} {...props}>

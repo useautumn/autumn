@@ -23,7 +23,6 @@ const oauthClientLookupLimiter = rateLimiter<HonoEnv>({
 	keyGenerator: getOAuthRateLimitKey,
 });
 
-// Registration is unauthenticated and append-only, so every call writes a row.
 const oauthClientRegisterLimiter = rateLimiter<HonoEnv>({
 	windowMs: 60 * 60 * 1000,
 	limit: process.env.NODE_ENV === "development" ? 1000 : 20,

@@ -10,9 +10,6 @@ type EvalMetadata = {
 
 const experimentName = "rsd-question-keeps-pending-write";
 
-// Replays the incident's card churn: every clarifying reply superseded the
-// pending card with a fresh write. A question must be answered in text while
-// exactly one previewed write survives to approval.
 const setup = incidentSetup();
 
 const customer = setup.refs.customers.sender;

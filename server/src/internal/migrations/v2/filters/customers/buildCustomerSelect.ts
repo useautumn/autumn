@@ -79,8 +79,6 @@ export type CustomerCheckpointExclusion = {
 	excludedStatuses: MigrationItemRunStatus[];
 };
 
-/** Single source of truth for the checkpoint exclusion predicate. The paged
- * composer correlates it on the walk key; legacy queries on c.internal_id. */
 const buildCheckpointPredicateSql = (
 	checkpoint: CustomerCheckpointExclusion,
 	keyColumn: string,
@@ -119,8 +117,6 @@ const buildCheckpointWhere = (
 	)}`;
 };
 
-/** Caller predicates for the paged/count composers: checkpoint (sinks onto
- * the walk key) + dashboard search/list filters (need the customer row). */
 const buildPagePredicates = ({
 	checkpoint,
 	orgId,
@@ -273,8 +269,6 @@ const buildExecutionStatusWhere = (
 	}
 
 	if (includeNotRun && filter.statuses.includes("not_run")) {
-		// Not run = no item-run row. Queued is a subset of that during an
-		// active Run All; excluding queue targets made Not Run empty.
 		clauses.push(sql`
 			NOT EXISTS (
 				SELECT 1
@@ -313,8 +307,6 @@ const getExecutionFilterMode = (
 	return "not_run_only";
 };
 
-// Predicates shared by both UNION branches (and the single-branch query).
-// Rebuilt per call so a branch never reuses another's SQL chunk instance.
 const buildCommonWhere = ({
 	checkpoint,
 	orgId,
@@ -340,14 +332,6 @@ const buildCommonWhere = ({
 	return sql`${buildCheckpointWhere(checkpoint)} ${buildCustomerListWhere({ orgId, env, search, customerFilters })} ${buildExecutionStatusWhere(includeProcessed, { includeNotRun })} ${cursor}`;
 };
 
-/**
- * Full SELECT. Returns `{ internal_id, id }` rows newest-first via keyset
- * pagination on `c.internal_id DESC`, so successive iterations over an
- * unchanged customer set yield rows in the same order.
- *
- * Pure filter set only — the run path. To also surface already-processed
- * customers (preview live view), use `buildProcessedPreviewSelect`.
- */
 export const buildCustomerSelect = ({
 	orgId,
 	env,
@@ -389,8 +373,6 @@ export const buildCustomerSelect = ({
 	`;
 };
 
-/** COUNT(*) applying the same filter. The compiler picks the aggregation
- * access path (cp-only vs batch-hash). */
 export const buildCustomerCount = ({
 	orgId,
 	env,
@@ -422,14 +404,6 @@ export const buildLimitedCustomerCount = ({
 	SELECT COUNT(*)::bigint AS count
 	FROM (${buildCustomerSelect({ ...args, limit })}) limited
 `;
-
-// ─── Preview-only: filter set ∪ already-processed set ────────────────
-// The live view surfaces customers an in-flight migration already ran for,
-// which the live filter no longer matches. We UNION the two scoped sets
-// rather than OR them: an `OR ... IN (...)` strips org/env scoping from the
-// customers scan and forces a full-table seq scan, whereas each UNION branch
-// keeps its own index. Equivalent to `(filter OR processed) AND <common>`
-// because `<common>` (checkpoint/search/cursor) is applied per branch.
 
 type ProcessedPreviewArgs = CustomerQueryArgs & {
 	includeProcessed: IncludeProcessed;

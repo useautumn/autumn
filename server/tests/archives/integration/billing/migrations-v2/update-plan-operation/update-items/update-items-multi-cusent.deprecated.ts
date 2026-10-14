@@ -64,7 +64,6 @@ test.concurrent(`${chalk.yellowBright("migrations update_items: interval filter 
 	const customer = await autumnV2_2.customers.get<ApiCustomerV5>(customerId);
 	await expectCustomerProducts({ customer, active: [base.id] });
 
-	// Aggregated balance: monthly (300 - 30 usage) + lifetime untouched (50)
 	expectBalanceCorrect({
 		customer,
 		featureId: TestFeature.Messages,
@@ -121,7 +120,6 @@ test.concurrent(`${chalk.yellowBright("migrations update_items: feature-id-only 
 	});
 
 	const customer = await autumnV2_2.customers.get<ApiCustomerV5>(customerId);
-	// Both monthly and lifetime entitlements should now be granted 999.
 	expectBalanceCorrect({
 		customer,
 		featureId: TestFeature.Messages,

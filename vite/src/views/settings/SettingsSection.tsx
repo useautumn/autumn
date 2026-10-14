@@ -8,14 +8,12 @@ import {
 import { createContext, useContext } from "react";
 import { LabelTag } from "@/components/general/LabelTag";
 
-/** Label of the settings group the active section belongs to, shown above its title. */
 export const SettingsGroupContext = createContext<string | undefined>(
 	undefined,
 );
 
 interface SettingsSectionProps {
 	readonly title: string;
-	/** A tag beside the title, e.g. PREVIEW. */
 	readonly badge?: string;
 	readonly description: string;
 	readonly actions?: React.ReactNode;

@@ -25,7 +25,6 @@ export const resolveIdentity = async ({
 				}
 			: { customerId: null, customerData: undefined };
 
-		// Validate customer requirement
 		if (requireCustomer && !identity.customerId) {
 			return {
 				success: false,

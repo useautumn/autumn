@@ -21,13 +21,11 @@ export const computeUpdateCustomerEntitlementPlan = ({
 		newOverage,
 	} = billingContext;
 
-	// 1. Compute autumn billing plan
 	const isUpgrade = allocatedInvoiceIsUpgrade({
 		billingContext,
 	});
 
 	if (isUpgrade) {
-		// Plan for upgrade
 		const newOverageUsage = new Decimal(newOverage)
 			.sub(previousOverage)
 			.toNumber();
@@ -44,15 +42,12 @@ export const computeUpdateCustomerEntitlementPlan = ({
 		};
 	}
 
-	// Downgrade case
 	if (previousOverage <= 0) {
-		// Just return
 		return {
 			customerEntitlement,
 			balanceChange: 0,
 		};
 	} else {
-		// Plan for downgrade
 		const customerPrice = cusEntToCusPrice({
 			cusEnt: customerEntitlement,
 			errorOnNotFound: true,
@@ -84,7 +79,6 @@ export const computeUpdateCustomerEntitlementPlan = ({
 			};
 		}
 
-		// When shouldCreateReplaceables is false, no customer entitlement update, but still do billing updates...
 		return {
 			customerEntitlement,
 			balanceChange: 0,

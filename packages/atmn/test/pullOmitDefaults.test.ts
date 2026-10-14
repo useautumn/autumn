@@ -1,10 +1,3 @@
-/**
- * A value at its spec default reads the same when omitted, so a pull leaves
- * it out at any depth, drops a container that ends up empty, and removes a
- * stated pair that has drifted back to default. `items: []` carries no
- * default and still states "none".
- */
-
 import { expect, test } from "bun:test";
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { runPull } from "../src/actions/pull";
@@ -169,7 +162,6 @@ test("billing controls: no lanes → no key; one lane → only that lane, row de
 	expect(one).not.toContain("autoTopups");
 	expect(one).not.toContain("enabled");
 	expect(one).toContain("limit: 1000");
-	// An all-default row is still a row: it stays as {}, never null.
 	const bare = emitPlan({
 		billingControls: { spendLimits: [{ enabled: false }] },
 	});
@@ -280,7 +272,6 @@ test("proration at the server default is not written; any other pair is", () => 
 	expect(legacy).toContain('onIncrease: "bill_immediately"');
 	expect(legacy).toContain('onDecrease: "none"');
 
-	// One knob at its default is not the default pair: both are written.
 	const half = emitPlan({
 		items: [prepaid({ onIncrease: "prorate_immediately", onDecrease: "none" })],
 	});

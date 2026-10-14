@@ -14,13 +14,6 @@ import {
 	setupSharedStripeFamilies,
 } from "./sharedStripeProductAutoSyncUtils";
 
-/**
- * "Automations (Overage)" add-on — its only Autumn price is a plain usage
- * price, matched to Stripe purely by stripe_product_id (findKeyedPrice), not
- * by shape. The real-world Stripe price on the customer's sub has a totally
- * different shape (graduated, N included then overage) that Autumn never
- * tries to reproduce.
- */
 export const automationsAddon = ({ id }: { id: string }): ProductV2 =>
 	products.base({
 		id,
@@ -28,7 +21,6 @@ export const automationsAddon = ({ id }: { id: string }): ProductV2 =>
 		items: [items.consumableMessages({ price: 0.1 })],
 	});
 
-/** Dedicated IPs — prepaid add-on, matched by prepaid price shape (unrelated mechanism). */
 export const dedicatedIpsAddon = ({ id }: { id: string }): ProductV2 =>
 	products.base({
 		id,
@@ -36,12 +28,6 @@ export const dedicatedIpsAddon = ({ id }: { id: string }): ProductV2 =>
 		items: [items.prepaidMessages({ billingUnits: 1, price: 30 })],
 	});
 
-/**
- * Native Stripe price simulating the real "Automations" price (graduated,
- * N included then overage) under the add-on's own dedicated Stripe product.
- * Shape is irrelevant to the contract — findKeyedPrice matches by
- * stripe_product_id alone, so a flat metered price is sufficient.
- */
 export const createNativeAutomationsPrice = async ({
 	ctx,
 	addonStripeProductId,
@@ -55,7 +41,6 @@ export const createNativeAutomationsPrice = async ({
 		unitAmountDecimal: "50",
 	});
 
-/** Native per-unit licensed price, e.g. the original "Dedicated IP $30". */
 export const createNativeDedicatedIpPrice = async ({
 	ctx,
 	addonStripeProductId,
@@ -70,7 +55,6 @@ export const createNativeDedicatedIpPrice = async ({
 		recurring: { interval: "month" },
 	});
 
-/** Price-level stripe_product_id override so findKeyedPrice uniquely claims the add-on. */
 const stampDedicatedAutomationsStripeProduct = async ({
 	ctx,
 	automationsId,
@@ -93,7 +77,6 @@ const stampDedicatedAutomationsStripeProduct = async ({
 	await invalidateProductsCache({ orgId: ctx.org.id, env: ctx.env });
 };
 
-/** findKeyedPrice matches on the usage price's stripe_product_id, not processor.id. */
 export const automationsStripeProductId = async ({
 	ctx,
 	productId,
@@ -110,7 +93,6 @@ export const automationsStripeProductId = async ({
 	return stripeProductId;
 };
 
-/** Dedicated IPs' prepaid price reuses the product-level processor.id. */
 export const dedicatedIpsStripeProductId = async ({
 	ctx,
 	productId,
@@ -126,12 +108,6 @@ export const dedicatedIpsStripeProductId = async ({
 	return stripeProductId;
 };
 
-/**
- * Sets up: a Transactional Pro base+variant family (group "transactional"),
- * optionally a second, unrelated base-only family in a different group (for
- * the multiple-subscriptions case), plus the Automations (Overage) and/or
- * Dedicated IPs add-ons in the same catalog.
- */
 export const setupKeyedUsageAddonScenario = async ({
 	customerId,
 	baseId,

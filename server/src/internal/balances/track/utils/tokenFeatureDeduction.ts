@@ -4,7 +4,6 @@ import type {
 	TokenDeduction,
 } from "../../utils/types/featureDeduction.js";
 
-/** A track_tokens deduction: one unit, priced at the token cost. */
 export const toTokenFeatureDeduction = ({
 	feature,
 	tokens,

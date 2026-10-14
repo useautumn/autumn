@@ -1,12 +1,3 @@
-// Max-QPS checker for getFullSubject, prepared vs unprepared.
-//
-//   ENV_FILE=.env infisical run --env=dev --recursive -- \
-//     bun experiments/maxQpsFullSubject.ts [secondsPerStep]
-//
-// Arms are interleaved at each concurrency step so CPU-credit throttling on a
-// burstable instance penalises both equally. Absolute QPS is only meaningful
-// relative to the box it ran on; the prepared/unprepared RATIO is the output
-// that transfers.
 import { AppEnv } from "@autumn/shared";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { PgDialect } from "drizzle-orm/pg-core";
@@ -22,8 +13,6 @@ if (!url) throw new Error("DATABASE_URL not set");
 
 const dialect = new PgDialect();
 const pool = new pg.Pool({ connectionString: url, max: 40 });
-// The prepared arm runs through the real production helper, not a hand-rolled
-// pool.query, so this benchmarks the shipped code path.
 const db = drizzle({ client: pool }) as never;
 
 const { rows: subjects } = await pool.query<{ id: string; org_id: string }>(
@@ -38,7 +27,6 @@ const compile = (orgId: string, customerId: string) =>
 		getFullSubjectQuery({ orgId, env: AppEnv.Sandbox, customerId }),
 	);
 
-/** Confirms every subject compiles to the same SQL text — required to prepare. */
 const texts = new Set(subjects.map((s) => compile(s.org_id, s.id).sql));
 if (texts.size !== 1) {
 	throw new Error(`SQL text is not stable: ${texts.size} distinct variants`);
@@ -107,7 +95,6 @@ console.log(
 console.log("-".repeat(104));
 
 for (const concurrency of CONCURRENCIES) {
-	// Interleave: cold arm first each step, so neither gets a cache advantage.
 	const plain = await runArm({ prepared: false, concurrency });
 	const prep = await runArm({ prepared: true, concurrency });
 

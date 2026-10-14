@@ -44,12 +44,10 @@ export const performDeductionOnCusEnt = ({
 	let newBalance: number = structuredClone(cusEnt[field]) ?? 0;
 	let deducted = 0;
 
-	// To deprecate: adjustment.
 	let newAdjustment = structuredClone(cusEnt.adjustment);
 
 	const cusProduct = cusEnt.customer_product;
 
-	// 2. Get options, related price and starting balance!
 	const options = notNullish(cusProduct)
 		? getEntOptions(cusProduct.options, cusEnt.entitlement)
 		: undefined;
@@ -67,8 +65,6 @@ export const performDeductionOnCusEnt = ({
 		: cusEnt.entitlement.allowance || 0;
 
 	if (isEntityScopedCusEnt(cusEnt)) {
-		// CASE 1: Deduct from entity balances
-
 		if (nullish(entityId)) {
 			newEntities = structuredClone(cusEnt.entities) as Record<
 				string,
@@ -111,10 +107,7 @@ export const performDeductionOnCusEnt = ({
 			}
 
 			toDeduct = toDeductCursor;
-		}
-
-		// CASE 2: Deduct from entity balance
-		else {
+		} else {
 			if (!newEntities) newEntities = {};
 
 			const currentEntityBalance = cusEnt.entities?.[entityId]?.[field];
@@ -146,10 +139,7 @@ export const performDeductionOnCusEnt = ({
 			toDeduct = newToDeduct;
 			deducted += newDeducted;
 		}
-	}
-
-	// CASE 3: Deduct from balance
-	else {
+	} else {
 		const currentBalance = cusEnt[field] || 0;
 
 		const {

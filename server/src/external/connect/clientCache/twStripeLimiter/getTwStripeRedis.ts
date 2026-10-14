@@ -18,7 +18,6 @@ export const getTwStripeRedis = (): Redis => {
 		autoResendUnfulfilledCommands: false,
 		retryStrategy: null,
 	});
-	// Command promises report failures without printing connection details.
 	redis.on("error", () => {});
 	return redis;
 };

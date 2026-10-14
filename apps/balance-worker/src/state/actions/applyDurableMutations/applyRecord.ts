@@ -33,7 +33,6 @@ import {
 
 type ApplyRecordParams = { ctx: StateStoreContext } & DurableMutationRecord;
 
-/** The stored view the mutation was decided against, proven to belong to the partition this record arrived on. */
 const readOwnedStates = ({
 	ctx,
 	position,
@@ -53,7 +52,6 @@ const readOwnedStates = ({
 	return stored;
 };
 
-/** The customer's state goes under its revision guard; the entity's own state rides along under it. */
 const writeStates = ({
 	ctx,
 	position,
@@ -97,7 +95,6 @@ const writeStates = ({
 	}
 };
 
-/** One write path: the log orders the mutation, the receipt only answers "have I seen this id". */
 export const applyRecord = ({
 	ctx,
 	position,
@@ -134,8 +131,6 @@ export const applyRecord = ({
 				entity: stored.entity,
 			})
 		: null;
-	// A receipt past this mutation's base revision is already folded into the state;
-	// an older one is a replay of a receipt the owner pruned, so it gets overwritten.
 	const receiptCoversState =
 		storedReceipt !== null &&
 		storedReceipt.mutation.revision.after > mutation.revision.before;
@@ -158,7 +153,6 @@ export const applyRecord = ({
 		};
 	}
 
-	// Keeps the command's identity so the entity state it names is the one written back.
 	const nextState: SubjectState = {
 		...applyMutation({ state: view, mutation }),
 		identity: mutation.identity,

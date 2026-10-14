@@ -1,11 +1,6 @@
 import { RedisUnavailableError } from "@/external/redis/utils/errors.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 
-/** Runs `operation`. If it throws or returns `undefined`, logs a warning,
- *  calls `invalidate`, and returns `undefined`. Collapses the repetitive
- *  "warn + invalidate + miss" pattern used by FullSubject cache readers
- *  for both try/catch blocks (parse, hydrate) and conditional guards
- *  (stale epoch, stale rollout, incomplete balances, etc). */
 export const tryOrInvalidate = async <T>({
 	ctx,
 	operation,

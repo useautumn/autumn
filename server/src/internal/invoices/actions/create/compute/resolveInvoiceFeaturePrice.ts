@@ -24,7 +24,6 @@ const findCustomizedPrice = ({
 	featureId: string;
 }) => customizeItems?.find((item) => item.feature_id === featureId)?.price;
 
-/** Overlays the invoice's pricing on the catalog price, keeping its Stripe mappings. */
 const overlayCustomizedPrice = ({
 	catalogPrice,
 	override,
@@ -34,7 +33,6 @@ const overlayCustomizedPrice = ({
 }): Price => ({
 	...catalogPrice,
 	is_custom: true,
-	// The override replaces the whole price, so an omitted tier_behavior is graduated, as in the catalog.
 	tier_behavior: override.tier_behavior ?? null,
 	config: {
 		...catalogPrice.config,
@@ -54,7 +52,6 @@ const overlayCustomizedPrice = ({
 	} as Price["config"],
 });
 
-/** In-memory price for a feature the catalog plan does not price this way; null when the override is free and names no Stripe price. */
 const mintCustomizedPrice = ({
 	ctx,
 	product,
@@ -67,7 +64,6 @@ const mintCustomizedPrice = ({
 	override: InvoiceItemPrice;
 }): Price | null => {
 	const { processors, ...price } = override;
-	// A named Stripe price bills its own amount, so a zero inline amount must not mint a free feature.
 	const pricing =
 		processors?.stripe?.price_id && !price.tiers
 			? {
@@ -85,12 +81,6 @@ const mintCustomizedPrice = ({
 	}).newPrice;
 };
 
-/**
- * The price that bills a feature on this invoice: the catalog price for the
- * requested behavior, customized when the invoice overrides it, or minted from
- * the override when the catalog has no price for that behavior. Null means the
- * invoice customized the feature to free, so it bills nothing.
- */
 export const resolveInvoiceFeaturePrice = ({
 	ctx,
 	customizeItems,

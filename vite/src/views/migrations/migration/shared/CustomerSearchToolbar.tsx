@@ -22,7 +22,6 @@ export function CustomerSearchToolbar({
 }: {
 	search: string;
 	onSearchChange: (value: string) => void;
-	/** Lazily loaded — null renders neutral placeholders instead of blocking. */
 	count: number | null;
 	pageSize: number;
 	onPageSizeChange: (size: number) => void;

@@ -43,7 +43,6 @@ const insertTokenForEnv = async ({
 			createdAt: now,
 			updatedAt: now,
 		});
-		// No refresh row: the token lives exactly one access-token lifetime.
 		await tx.insert(oauthAccessToken).values({
 			id: generateId("oauth_access"),
 			token: hashOAuthToken(rawToken),
@@ -60,7 +59,6 @@ const insertTokenForEnv = async ({
 	return prefixOAuthToken({ token: rawToken, env });
 };
 
-/** One-hour sandbox + live tokens on the reserved admin client, attributed to the staff user. */
 export const createImpersonationCliTokens = async ({
 	db,
 	impersonatedBy,

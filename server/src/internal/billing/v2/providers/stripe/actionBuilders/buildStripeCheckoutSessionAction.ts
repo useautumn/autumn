@@ -29,7 +29,6 @@ export const buildStripeCheckoutSessionAction = ({
 		checkoutSessionParams,
 	} = billingContext;
 
-	// 1. Get recurring and one-off items (recurring filtered to largest interval)
 	const { recurringLineItems, oneOffLineItems } =
 		buildStripeCheckoutSessionItems({
 			ctx,
@@ -37,13 +36,11 @@ export const buildStripeCheckoutSessionAction = ({
 			newCustomerProducts: autumnBillingPlan.insertCustomerProducts,
 		});
 
-	// 2. Determine mode: "subscription" or "payment"
 	const isOneOffOnly = recurringLineItems.length === 0;
 	const mode: "subscription" | "payment" = isOneOffOnly
 		? "payment"
 		: "subscription";
 
-	// Payment-mode checkout has no top-level default_tax_rates, so one-off items take per-line tax_rates.
 	const taxRateId = billingContext.taxRateId;
 	const applyTaxRateToLineItem = (
 		item: Stripe.Checkout.SessionCreateParams.LineItem,
@@ -57,19 +54,16 @@ export const buildStripeCheckoutSessionAction = ({
 			.map(applyTaxRateToLineItem),
 	];
 
-	// A recreate keeps the old subscription's manual tax rates unless the request sets one.
 	const carriedTaxRates =
 		mode === "subscription" && !taxRateId
 			? billingContext.carriedSubscriptionParams?.default_tax_rates
 			: undefined;
 
-	// 4. Trial handling (only for subscription mode)
 	const trialEnd =
 		mode === "subscription" && trialContext?.trialEndsAt
 			? msToSeconds(addMinutes(trialContext.trialEndsAt, 10).getTime())
 			: undefined;
 
-	// 5. Build subscription_data (only for subscription mode)
 	const subscriptionData:
 		| Stripe.Checkout.SessionCreateParams.SubscriptionData
 		| undefined =
@@ -90,13 +84,10 @@ export const buildStripeCheckoutSessionAction = ({
 				}
 			: undefined;
 
-	// 6. Build discounts for checkout session
 	const discounts = stripeDiscounts?.length
 		? stripeDiscountsToCheckoutParams({ stripeDiscounts })
 		: undefined;
 
-	// 7. Build params. Tax policy is baked in here (not at execute time) so
-	// the action object is self-describing in logs/EXTRA_LOGS.
 	const autumnAutoTax: Partial<Stripe.Checkout.SessionCreateParams> =
 		// Stripe rejects automatic_tax alongside default_tax_rates; carried manual rates take precedence.
 		org.config.automatic_tax &&

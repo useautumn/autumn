@@ -1,9 +1,3 @@
-/**
- * atmn crud/versions — draft [active: false on an existing plan] → three versions, active unchanged
- *
- * One line of plans/atmn-v3/07_tests.md. [a, b] is a matrix looped INSIDE this file.
- */
-
 import { expect, test } from "bun:test";
 import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 import {
@@ -20,7 +14,6 @@ import { s } from "@tests/utils/testInitUtils/initScenario.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 
-/** A minted draft: `active: false` alongside a plan_id that already has an active row. */
 const draftV3 = `
 		plan({
 			planId: "pro",
@@ -30,7 +23,6 @@ const draftV3 = `
 			price: { amount: 59, interval: "month" },
 		}),`;
 
-/** Every live version row for planId "pro", oldest first. */
 const livePlanVersions = async ({
 	ctx,
 }: {
@@ -64,7 +56,6 @@ test.concurrent(
 		try {
 			await scenario.push();
 
-			// Mint v2 as the new active version; v1 becomes history.
 			scenario.writeConfig(
 				atmnConfigSource({
 					body: configBody({
@@ -78,7 +69,6 @@ test.concurrent(
 				{ version: 2, active: true },
 			]);
 
-			// v3 mints as an explicit draft; v2 keeps the active pointer.
 			scenario.writeConfig(
 				atmnConfigSource({
 					body: configBody({

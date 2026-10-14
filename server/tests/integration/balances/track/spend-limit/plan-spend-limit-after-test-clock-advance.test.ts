@@ -1,13 +1,3 @@
-/**
- * TDD test for plan billing controls disappearing after a Stripe test-clock advance.
- *
- * Red-failure mode (current behavior):
- *  - An immediately attached active plan starts in Stripe's future clock, so its spend limit is omitted.
- *
- * Green-success criteria (after fix):
- *  - The active plan's spend limit remains present in the customer response.
- */
-
 import { expect, test } from "bun:test";
 import {
 	type ApiCustomerV5,

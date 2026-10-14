@@ -1,9 +1,3 @@
-/**
- * Pin-remove of a non-live version with only expired customers stamps
- * willTombstone (preview will_archive: false). Whole-plan expired-only
- * also tombstones (will_archive: false).
- */
-
 import { test } from "bun:test";
 import { CusProductStatus } from "@autumn/shared";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";

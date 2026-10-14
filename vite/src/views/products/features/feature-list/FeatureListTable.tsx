@@ -38,7 +38,6 @@ export function FeatureListTable() {
 		if (!open) setQueryStates({ feature: null });
 	};
 
-	// Filter features and credit systems based on archived state
 	const { regularFeatures, creditSystems, hasEventNames } = useMemo(() => {
 		const byCreatedAt = [...(features ?? [])].sort(
 			(a, b) => b.created_at - a.created_at,
@@ -56,7 +55,6 @@ export function FeatureListTable() {
 				? feature.archived
 				: !feature.archived;
 		});
-		// Check if any feature has event names
 		const hasEventNames = regularFeatures?.some(
 			(feature) => feature.event_names && feature.event_names.length > 0,
 		);
@@ -103,8 +101,6 @@ export function FeatureListTable() {
 		featureTable.getRowModel().rows.length > 0 ||
 		creditTable.getRowModel().rows.length > 0;
 
-	// For archived view, always show table structure even if empty
-	// For non-archived view, show EmptyState when no features exist
 	const showTableStructure = queryStates.showArchivedFeatures || hasFeatureRows;
 
 	const creditEmptyStateChildren = queryStates.showArchivedFeatures ? (
@@ -147,7 +143,6 @@ export function FeatureListTable() {
 			/>
 
 			<div className="flex flex-col gap-8">
-				{/* Features Table */}
 				{showTableStructure ? (
 					<div>
 						<Table.Provider
@@ -169,9 +164,7 @@ export function FeatureListTable() {
 									</Table.Heading>
 									<Table.Actions>
 										<div className="flex w-full justify-between items-center">
-											<div className="flex items-center gap-2">
-												{/* Add search and other filters here in the future if needed */}
-											</div>
+											<div className="flex items-center gap-2"></div>
 											<div className="flex items-center gap-2">
 												<FeatureListCreateButton />
 												<FeatureListMenuButton />
@@ -197,7 +190,6 @@ export function FeatureListTable() {
 					/>
 				)}
 
-				{/* Credits Table - Only shown if there's at least one feature */}
 				{hasFeatureRows && (
 					<div>
 						<Table.Provider
@@ -223,9 +215,7 @@ export function FeatureListTable() {
 									</Table.Heading>
 									<Table.Actions>
 										<div className="flex w-full justify-between items-center">
-											<div className="flex items-center gap-2">
-												{/* Add search and other filters here in the future if needed */}
-											</div>
+											<div className="flex items-center gap-2"></div>
 										</div>
 									</Table.Actions>
 								</div>

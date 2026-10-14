@@ -1,8 +1,3 @@
-/**
- * dfu.flash hydration — trial_ends_at + billing_cycle_anchor hydrated from the
- * real Stripe subscription's trial_end / current_period_end.
- */
-
 import { expect, test } from "bun:test";
 import {
 	getAllStripePriceIds,

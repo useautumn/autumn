@@ -65,7 +65,6 @@ const applyToTable = <Row extends StateRow>({
 			if (index === -1) throw new StaleMutationError({ subject: change.id });
 			return rows.filter((_, candidate) => candidate !== index);
 		}
-		// An add needs the row to exist and to still be the cycle the guard names; its counters may hold anything.
 		case "increment": {
 			const index = indexOfId(change.id);
 			const row = rows[index];
@@ -79,7 +78,6 @@ const applyToTable = <Row extends StateRow>({
 	}
 };
 
-/** An update must name the subject's own customer and find the columns it read still in place. */
 const applyToCustomer = ({
 	customer,
 	change,
@@ -97,7 +95,6 @@ const applyToCustomer = ({
 	return { ...customer, ...change.after };
 };
 
-/** Memory keeps only the ids of an open lock; the row the change carries is for Postgres. */
 const applyToOpenLocks = ({
 	openLocks,
 	change,
@@ -119,7 +116,6 @@ const applyToOpenLocks = ({
 	return remaining;
 };
 
-/** Generic over the change list: it never knows which command produced the changes. */
 export const applyChanges = ({
 	state,
 	changes,

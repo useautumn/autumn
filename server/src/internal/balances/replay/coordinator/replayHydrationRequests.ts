@@ -122,8 +122,6 @@ async function awaitPhysicalWork({
 	await Promise.allSettled([...scope.physicalTasks]);
 }
 
-/** Hydration succeeding is not licence to touch the worker for a caller or a
- * coordinator that has since gone away. */
 function assertResendAllowed({
 	scope,
 	signal,

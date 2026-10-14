@@ -10,7 +10,6 @@ import {
 const invalidRequest = (message: string) =>
 	new RecaseError({ message, code: ErrCode.InvalidRequest, statusCode: 400 });
 
-/** Free product rewards are deprecated; existing programs using them still run */
 export const validateRewardTypeSupported = (reward: Reward) => {
 	if (reward.type === RewardType.FreeProduct) {
 		throw invalidRequest(
@@ -19,7 +18,6 @@ export const validateRewardTypeSupported = (reward: Reward) => {
 	}
 };
 
-/** Checkout-triggered programs need products to match and a usable redemption cap */
 export const validateRewardProgramTrigger = ({
 	when,
 	productIds,
@@ -37,7 +35,6 @@ export const validateRewardProgramTrigger = ({
 		);
 	}
 
-	// Checkout grants are skipped when redemption count >= max, so 0 blocks every grant
 	if (!maxRedemptions) {
 		throw invalidRequest(
 			"When `Redeem On` is set to `Checkout`, max redemptions must be greater than 0",

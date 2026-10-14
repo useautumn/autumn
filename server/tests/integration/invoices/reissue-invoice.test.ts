@@ -1,16 +1,3 @@
-/**
- * invoices.reissue: void an open send-invoice invoice and issue a replacement.
- *
- * Contract:
- *   POST /invoices.reissue { invoice_id, invoice_template_id?, net_terms_days? }
- *     -> { invoice: ApiListInvoiceV1, voided_invoice_id }
- *   open invoice     → original void, replacement open with same total, template footer applied,
- *                      linked to the same subscription and inheriting deferred metadata
- *   deferred invoice → paying the replacement promotes the pending plan
- *   void invoice     → 400
- *   charge-automatically invoice → 400 (reissue is send-invoice only)
- */
-
 import { expect, test } from "bun:test";
 import type {
 	ApiCustomerV5,
@@ -143,7 +130,6 @@ test.concurrent(
 		expect(replacement.due_date).toBe(original.due_date);
 		expect(replacement.customer_email).toBe(NEW_EMAIL);
 
-		// Autumn holds the new address too, or the next Stripe sync would undo it.
 		const updatedCustomer =
 			await autumnV2_3.customers.get<ApiCustomerV5>(customerId);
 		expect(updatedCustomer.email).toBe(NEW_EMAIL);
@@ -262,7 +248,6 @@ test.concurrent(
 		expect(originalStripe.status).toBe("open");
 		expect(originalStripe.collection_method).toBe("charge_automatically");
 
-		// The card that failed is swapped for one that works before reissuing.
 		const stripeCusId = customer.processor?.id ?? "";
 		const working = await ctx.stripeCli.paymentMethods.attach("pm_card_visa", {
 			customer: stripeCusId,
@@ -337,7 +322,6 @@ test.concurrent(
 		expect(voided_invoice_id).toBeNull();
 		expect(credit_note_id).toBeTruthy();
 
-		// The credit covers the replacement, so the card is not charged again.
 		const replacement = await ctx.stripeCli.invoices.retrieve(
 			invoice.stripe_id,
 		);
@@ -378,7 +362,6 @@ test.concurrent(
 			lines: { add: [{ description: "Setup", amount: 10 }] },
 		})) as ReissueResponse;
 
-		// The credit covers the original; the extra $10 waits for the due date.
 		const replacement = await ctx.stripeCli.invoices.retrieve(
 			invoice.stripe_id,
 		);
@@ -422,7 +405,6 @@ test.concurrent(
 		const stripeSubId = stripeInvoiceToStripeSubscriptionId(originalStripe);
 		if (!stripeSubId) throw new Error("original invoice has no subscription");
 
-		// The subscription bills card A; the customer's default becomes card B.
 		const stripeCusId = customer.processor?.id ?? "";
 		const cardA = await ctx.stripeCli.paymentMethods.attach("pm_card_visa", {
 			customer: stripeCusId,
@@ -486,7 +468,6 @@ test.concurrent(
 			lines: { add: [{ description: "Setup", amount: 10 }] },
 		})) as { invoice: ApiListInvoiceV1 };
 
-		// The credit covers the original amount; the extra $10 is charged now.
 		const replacement = await ctx.stripeCli.invoices.retrieve(
 			invoice.stripe_id,
 		);

@@ -1,7 +1,3 @@
-/**
- * catalogV2.update — pin every parent version to follow.
- * Parent absent from plans[]. Each pinned row follows.
- */
 import { test } from "bun:test";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";

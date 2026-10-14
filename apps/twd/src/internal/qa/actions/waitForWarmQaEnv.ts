@@ -4,7 +4,6 @@ import { requireQaEnvRow } from "../repos/qaEnvsRepo.ts";
 import { toQaEnv } from "./toQaEnv.ts";
 
 const POLL_MS = 5_000;
-// Executor cuts tool calls off at 60 s, so a wait returns well before that and the agent calls again.
 const MAX_WAIT_MS = 45_000;
 
 const isServing = async ({
@@ -19,7 +18,6 @@ const isServing = async ({
 		.then((r) => r.ready === true)
 		.catch(() => false);
 
-/** Waits until the latest build is live and the stack answers; returns early on failure or 45 s after `startedAt`. */
 export const waitForWarmQaEnv = async ({
 	ctx,
 	name,
@@ -38,10 +36,8 @@ export const waitForWarmQaEnv = async ({
 			row,
 			statusTimeoutMs: remaining(),
 		});
-		// A re-ship clears `error`, so one here means the latest request failed.
 		if (env.state === "failed" || env.state === "deleted" || env.error)
 			return { env, warm: false };
-		// A re-ship isn't live until its job applies it; until then the old build still answers.
 		if (
 			row.appliedVersion >= row.requestVersion &&
 			env.state === "ready" &&

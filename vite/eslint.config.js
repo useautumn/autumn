@@ -23,10 +23,10 @@ export default tseslint.config(
 				"warn",
 				{ allowConstantExport: true },
 			],
-			"@typescript-eslint/no-explicit-any": "off", // Disable the "any" type warning
+			"@typescript-eslint/no-explicit-any": "off",
 			"@typescript-eslint/no-unused-vars": "off",
-			"no-unused-vars": "off", // Also disable the core ESLint unused vars rule
-			"react-hooks/exhaustive-deps": "off", // Disable exhaustive deps rule project-wide
+			"no-unused-vars": "off",
+			"react-hooks/exhaustive-deps": "off",
 		},
 	},
 );

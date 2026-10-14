@@ -1,16 +1,3 @@
-/**
- * Subscription Updated Webhook - Stripe-owned field sync
- *
- * `customer.subscription.updated` mirrors `trial_end` / `collection_method`
- * onto the Autumn products on that subscription. A shared subscription can
- * carry an Autumn-only trial that Stripe never knew about (e.g. a trial on a
- * sibling entity), so those fields must only move when Stripe changed them,
- * and `trial_ends_at` must only move on products whose trial was Stripe's.
- *
- * The Autumn-only trial is seeded directly in the DB: it stands in for a
- * trial merged onto an already-paid subscription or living in a schedule phase.
- */
-
 import { expect, test } from "bun:test";
 import {
 	ALL_STATUSES,
@@ -33,8 +20,6 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { CusService } from "@/internal/customers/CusService";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
 
-// Webhooks queue behind concurrent tests on one worker, so a no-op assertion
-// needs a generous settle before it proves anything.
 const WEBHOOK_SETTLE_MS = 20_000;
 
 const getEntityCustomerProduct = async ({
@@ -77,7 +62,6 @@ const seedAutumnOnlyTrial = async ({
 	});
 };
 
-/** Polls an entity's product until the webhook's expected write lands. */
 const waitForEntityCustomerProduct = ({
 	ctx,
 	customerId,
@@ -94,20 +78,6 @@ const waitForEntityCustomerProduct = ({
 		assert,
 	});
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 1: A non-trial Stripe change leaves an Autumn-only trial alone
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Entity-1 and entity-2 share one paid pro subscription (no Stripe trial)
- * - Entity-2 carries an Autumn-only trial (trial_ends_at set, Stripe trial_end null)
- * - Stripe flips the subscription to send_invoice (trial_end unchanged)
- *
- * Expected Result:
- * - collection_method is mirrored onto both entities (proves the event was processed)
- * - Entity-2's trial_ends_at is untouched
- */
 test.concurrent(
 	`${chalk.yellowBright("sub.updated: non-trial Stripe change leaves an Autumn-only trial alone")}`,
 	async () => {
@@ -179,20 +149,6 @@ test.concurrent(
 	},
 );
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 2: Shortening the Stripe trial moves only the Stripe-owned trial
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Entity-1 and entity-2 share one pro-trial subscription (7-day Stripe trial)
- * - Entity-2's trial is re-seeded to an Autumn-only 30-day trial
- * - The Stripe trial is shortened to 3 days from the dashboard
- *
- * Expected Result:
- * - Entity-1 (trial matched Stripe's previous trial_end) moves to 3 days
- * - Entity-2 (Autumn-only trial) keeps its 30-day trial
- */
 test.concurrent(
 	`${chalk.yellowBright("sub.updated: shortening the Stripe trial moves only the Stripe-owned trial")}`,
 	async () => {
@@ -259,19 +215,6 @@ test.concurrent(
 	},
 );
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 3: Ending the Stripe trial early ends only the Stripe-owned trial
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Same setup as test 2
- * - The Stripe trial is ended now from the dashboard (trial_end: "now")
- *
- * Expected Result:
- * - Entity-1's trial_ends_at moves to Stripe's new trial_end (now, so no longer trialing)
- * - Entity-2 keeps its Autumn-only trial
- */
 test.concurrent(
 	`${chalk.yellowBright("sub.updated: ending the Stripe trial early ends only the Stripe-owned trial")}`,
 	async () => {
@@ -315,7 +258,6 @@ test.concurrent(
 			productId: proTrial.id,
 		});
 
-		// Stripe keeps trial_end set to the moment the trial ended, not null
 		const endedSubscription = await ctx.stripeCli.subscriptions.update(
 			subscriptionId,
 			{ trial_end: "now", proration_behavior: "none" },
@@ -339,20 +281,6 @@ test.concurrent(
 	},
 );
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 4: Editing a sibling entity's plan leaves an Autumn-only trial alone
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Entity-1 and entity-2 share one paid pro subscription (no Stripe trial)
- * - Entity-2 carries an Autumn-only trial
- * - Entity-1 is moved to premium through Autumn (items change on the shared sub)
- *
- * Expected Result:
- * - Entity-1 is on premium
- * - Entity-2 keeps its trial after the attach and the sub.updated it triggers
- */
 test.concurrent(
 	`${chalk.yellowBright("sub.updated: editing a sibling entity's plan leaves an Autumn-only trial alone")}`,
 	async () => {

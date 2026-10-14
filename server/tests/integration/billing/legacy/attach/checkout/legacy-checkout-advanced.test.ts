@@ -1,17 +1,3 @@
-/**
- * Legacy Checkout Advanced Tests
- *
- * Migrated from:
- * - server/tests/attach/checkout/checkout4.test.ts (coupon/reward checkout)
- * - server/tests/attach/checkout/checkout8.test.ts (prepaid with quantity=0)
- * - server/tests/attach/upgrade/upgrade7.test.ts (force checkout after cancel)
- *
- * Tests V1 attach behavior with advanced checkout scenarios:
- * - Coupons/rewards with percentage discounts
- * - Prepaid items with quantity=0 edge case
- * - Force checkout upgrade after cancel
- */
-
 import { expect, test } from "bun:test";
 import { type ApiCustomerV3, RewardType } from "@autumn/shared";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
@@ -32,19 +18,6 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { CusService } from "@/internal/customers/CusService";
 import { constructCoupon } from "@/utils/scriptUtils/createTestProducts";
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 1: Coupon/reward checkout
-// (from checkout4)
-//
-// Scenario:
-// - Pro product ($20/month) with Messages (100 included)
-// - 50% discount coupon applied
-//
-// Expected:
-// - Customer has Pro active
-// - 1 invoice for $10 (50% of $20)
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(`${chalk.yellowBright("legacy-checkout-adv 1: coupon/reward checkout")}`, async () => {
 	const customerId = "legacy-checkout-adv-1";
@@ -73,7 +46,6 @@ test.concurrent(`${chalk.yellowBright("legacy-checkout-adv 1: coupon/reward chec
 		actions: [],
 	});
 
-	// reward.id is modified in place by s.reward (suffixed with productPrefix)
 	const res = await autumnV1.attach({
 		customer_id: customerId,
 		product_id: pro.id,
@@ -93,26 +65,9 @@ test.concurrent(`${chalk.yellowBright("legacy-checkout-adv 1: coupon/reward chec
 	await expectCustomerInvoiceCorrect({
 		customer,
 		count: 1,
-		latestTotal: 10, // 50% of $20
+		latestTotal: 10,
 	});
 });
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 2: Prepaid with quantity=0
-// (from checkout8)
-//
-// Scenario:
-// - Pro product ($20/month) with two one-off prepaid items:
-//   - Messages: $5/100 units
-//   - Words: $10/100 units
-// - Attach with options: Messages quantity=0, Words quantity=4 (400 units)
-//
-// Expected:
-// - Customer has Pro active
-// - 1 invoice for $20 (base) + $40 (4x $10 for Words) = $60
-// - Messages balance = 0
-// - Words balance = 400
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(`${chalk.yellowBright("legacy-checkout-adv 2: prepaid with quantity=0")}`, async () => {
 	const customerId = "legacy-checkout-adv-2";
@@ -161,7 +116,7 @@ test.concurrent(`${chalk.yellowBright("legacy-checkout-adv 2: prepaid with quant
 	await expectCustomerInvoiceCorrect({
 		customer,
 		count: 1,
-		latestTotal: 60, // $20 base + $40 (4 x $10 for Words)
+		latestTotal: 60,
 	});
 
 	expectCustomerFeatureCorrect({
@@ -174,23 +129,9 @@ test.concurrent(`${chalk.yellowBright("legacy-checkout-adv 2: prepaid with quant
 		customer,
 		featureId: TestFeature.Words,
 		includedUsage: 400,
-		balance: 400, // 4 packs x 100 units
+		balance: 400,
 	});
 });
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 3: Force checkout upgrade after cancel
-// (from upgrade7)
-//
-// Scenario:
-// - Pro product ($20/month) with no items
-// - Premium product ($50/month) with no items
-// - Attach Pro, then cancel immediately, then attach Premium with force_checkout
-//
-// Expected:
-// - Customer has Premium active after flow
-// - 2 invoices (Pro + Premium)
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(`${chalk.yellowBright("legacy-checkout-adv 3: force checkout upgrade after cancel")}`, async () => {
 	const customerId = "legacy-checkout-adv-3";
@@ -207,7 +148,6 @@ test.concurrent(`${chalk.yellowBright("legacy-checkout-adv 3: force checkout upg
 		actions: [],
 	});
 
-	// Attach Pro
 	await autumnV1.attach({
 		customer_id: customerId,
 		product_id: pro.id,
@@ -224,10 +164,9 @@ test.concurrent(`${chalk.yellowBright("legacy-checkout-adv 3: force checkout upg
 	await expectCustomerInvoiceCorrect({
 		customer: customerAfterPro,
 		count: 1,
-		latestTotal: 20, // Pro $20
+		latestTotal: 20,
 	});
 
-	// Cancel Pro immediately
 	await autumnV1.cancel({
 		customer_id: customerId,
 		product_id: pro.id,
@@ -243,7 +182,6 @@ test.concurrent(`${chalk.yellowBright("legacy-checkout-adv 3: force checkout upg
 		active: [],
 	});
 
-	// Attach Premium with force_checkout
 	const res = await autumnV1.attach({
 		customer_id: customerId,
 		product_id: premium.id,
@@ -263,26 +201,9 @@ test.concurrent(`${chalk.yellowBright("legacy-checkout-adv 3: force checkout upg
 	await expectCustomerInvoiceCorrect({
 		customer: customerAfterPremium,
 		count: 2,
-		latestTotal: 50, // Premium $50
+		latestTotal: 50,
 	});
 });
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 4: Separate subscriptions due to force checkout (per entity)
-// (from separate2)
-//
-// Scenario:
-// - Pro product ($20/month) with Messages (100 included)
-// - Premium product ($50/month) with Messages (100 included)
-// - Credits add-on (prepaid, $10/100 units)
-// - 2 entities, attach Pro to each with force_checkout (separate checkouts)
-// - Upgrade both to Premium
-// - Attach add-on to entity 2 (should use entity 2's subscription)
-//
-// Expected:
-// - Each entity gets a separate subscription (not merged)
-// - Add-on attaches to correct entity's subscription
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(`${chalk.yellowBright("legacy-checkout-adv 4: separate subs due to force checkout")}`, async () => {
 	const customerId = "legacy-checkout-adv-4";
@@ -315,7 +236,6 @@ test.concurrent(`${chalk.yellowBright("legacy-checkout-adv 4: separate subs due 
 	const { db, org, env } = ctx;
 	const subIds: string[] = [];
 
-	// Attach Pro to each entity with force_checkout (creates separate subs)
 	for (const entity of entities) {
 		const res = await autumnV1.attach({
 			customer_id: customerId,
@@ -328,7 +248,6 @@ test.concurrent(`${chalk.yellowBright("legacy-checkout-adv 4: separate subs due 
 		await completeStripeCheckoutFormV2({ url: res.checkout_url });
 	}
 
-	// Verify separate subscriptions
 	const fullCus = await CusService.getFull({
 		ctx,
 		idOrInternalId: customerId,
@@ -353,7 +272,6 @@ test.concurrent(`${chalk.yellowBright("legacy-checkout-adv 4: separate subs due 
 		subId: entity1SubId,
 	});
 
-	// Upgrade both entities to Premium
 	for (const entity of entities) {
 		await autumnV1.attach({
 			customer_id: customerId,
@@ -362,7 +280,6 @@ test.concurrent(`${chalk.yellowBright("legacy-checkout-adv 4: separate subs due 
 		});
 	}
 
-	// Verify subs still correct after upgrades
 	await expectSubToBeCorrect({
 		db,
 		customerId,
@@ -379,7 +296,6 @@ test.concurrent(`${chalk.yellowBright("legacy-checkout-adv 4: separate subs due 
 		subId: subIds[1],
 	});
 
-	// Attach add-on to entity 2
 	await autumnV1.attach({
 		customer_id: customerId,
 		product_id: addOn.id,
@@ -392,7 +308,6 @@ test.concurrent(`${chalk.yellowBright("legacy-checkout-adv 4: separate subs due 
 		],
 	});
 
-	// Verify add-on is on entity 2's subscription
 	const fullCusAfterAddOn = await CusService.getFull({
 		ctx,
 		idOrInternalId: customerId,
@@ -404,7 +319,7 @@ test.concurrent(`${chalk.yellowBright("legacy-checkout-adv 4: separate subs due 
 
 	expect(addOnProd).toBeDefined();
 	const addOnSubId = addOnProd?.subscription_ids?.[0];
-	expect(addOnSubId).toBe(subIds[1]); // Should be on entity 2's sub
+	expect(addOnSubId).toBe(subIds[1]);
 
 	await expectSubToBeCorrect({
 		db,
@@ -414,7 +329,6 @@ test.concurrent(`${chalk.yellowBright("legacy-checkout-adv 4: separate subs due 
 		subId: subIds[1],
 	});
 
-	// Verify entities have correct products
 	const entity1 = await autumnV1.entities.get(customerId, entities[0].id);
 	expectProductAttached({ customer: entity1, productId: premium.id });
 

@@ -16,7 +16,6 @@ const VALUE_WIDTHS = ["w-16", "w-12", "w-14"];
 const pickWidth = ({ widths, index }: { widths: string[]; index: number }) =>
 	widths[index % widths.length];
 
-/** One plan row's columns, matching ReviewChangeRowItem: name, status chip, value. */
 function SkeletonPlanRow({ index }: { index: number }) {
 	return (
 		<div
@@ -53,7 +52,6 @@ function SkeletonPlanRow({ index }: { index: number }) {
 	);
 }
 
-/** Phase blocks shaped like the form's phases and scopes, held while a preview loads. */
 export function ReviewChangeSkeletonPhases({
 	phases,
 }: {

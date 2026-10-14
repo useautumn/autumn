@@ -73,11 +73,6 @@ const getOAuthEnvironment = ({ env }: { env?: AppEnv | null }) => {
 	});
 };
 
-/**
- * The route scope check fails open on an empty scope list, so a scope-less OAuth
- * grant is admin-equivalent here. Only Leaf's unrestricted chat consent may hold
- * one; the consent row is already joined, so this costs no extra query.
- */
 const assertScopeLessGrantIsAllowed = ({
 	consentMetadata,
 	scopes,
@@ -179,7 +174,6 @@ const getOAuthRequestContext = async ({
 				config: OrgConfigSchema.parse(first.masterOrg.config || {}),
 			}
 		: null;
-	// Features × aliases is a cartesian product; keep one of each.
 	const orgFeatures: Feature[] = [];
 	const seenFeatureIds = new Set<string>();
 	const aliasRows: { alias_id: string; canonical_plan_id: string }[] = [];

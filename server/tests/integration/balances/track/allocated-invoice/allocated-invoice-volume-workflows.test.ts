@@ -1,8 +1,3 @@
-/**
- * Allocated v2 (arrear) volume on Workflows: the renewal bills holdings over included
- * at the net tier they land in. Preview must equal the invoice.
- */
-
 import { test } from "bun:test";
 import { AllocatedBillingBehavior } from "@autumn/shared";
 import { expectInvoiceLineItemsCorrect } from "@tests/integration/billing/utils/expectInvoiceLineItemsCorrect";
@@ -13,7 +8,6 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-// Net tiers 0-10 @ $10, 11+ @ $8 with 2 included: total bands 0-12 / 13+.
 const volumeAllocatedWorkflows = () =>
 	items.volumeAllocated({
 		featureId: TestFeature.Workflows,

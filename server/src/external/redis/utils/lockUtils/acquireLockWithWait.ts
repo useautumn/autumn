@@ -6,12 +6,6 @@ import {
 	lockConflictError,
 } from "./acquireLock.js";
 
-/**
- * Claim a lock, retrying conflicts (with jitter) until `maxWaitMs` elapses.
- * The deadline outlives any single lease, so a waiter only times out under
- * continuous reacquisition by others — never against one stuck holder.
- * Throws the 423 conflict error once the deadline passes.
- */
 export const acquireLockWithWait = async ({
 	lockKey,
 	ttlMs,

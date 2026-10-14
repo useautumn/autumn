@@ -12,16 +12,6 @@ import {
 } from "./applyTrialContextToPatchedCustomerProduct";
 import { initPatchedCustomerEntitlementsAndPrices } from "./initPatchedCustomerEntitlementsAndPrices";
 
-/**
- * Materializes the added side of a patch-style custom plan update.
- *
- * `setupPatchContext` has already removed the requested customer prices and
- * entitlements from `finalCustomerProduct` and recorded those rows on the patch
- * context. This function initializes customer rows for `customPrices` and
- * `customEntitlements`, carries usage and rollovers only from the deleted patch
- * items, inserts the new rows into `finalCustomerProduct`, and rebuilds the
- * derived `fullProduct` snapshot from that final customer-product state.
- */
 export const initPatchCustomerProduct = ({
 	ctx,
 	billingContext,
@@ -69,9 +59,6 @@ export const initPatchCustomerProduct = ({
 	patchContext.fullProduct = cusProductToProduct({
 		cusProduct: patchContext.finalCustomerProduct,
 	});
-
-	// `is_custom` is not set here: it is derived from the resulting item set in
-	// applyDerivedCustomerProductIsCustom, once the plan reaches the executor.
 
 	return {
 		finalCustomerProduct: patchContext.finalCustomerProduct,

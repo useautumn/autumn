@@ -11,13 +11,6 @@ import {
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService.js";
 
-/**
- * Set `expires_at` on the targeted balance via the FullSubject cache path.
- *
- * Cache coherence is handled by refreshCacheMiddleware (both /balances/update
- * and /balances.update are registered in REFRESH_CACHE_ROUTE_CONFIGS), so this
- * only needs to persist to Postgres.
- */
 export const updateExpiresAtV2 = async ({
 	ctx,
 	fullSubject,
@@ -53,11 +46,6 @@ export const updateExpiresAtV2 = async ({
 
 	const targetCusEnt = sorted[0];
 
-	// Only paid recurring balances are off-limits: their lifetime follows the
-	// billing cycle, so expiry belongs at the plan level (trial / ends_at).
-	// Free grants (recurring OR one-off) and one-off prepaid top-ups are fine —
-	// e.g. "100 credits/month for 6 months" is a free recurring grant that the
-	// reset cron keeps refilling until it expires. A null interval is one-off.
 	const interval = targetCusEnt.entitlement.interval;
 	const isRecurring = notNullish(interval) && interval !== EntInterval.Lifetime;
 	if (isRecurring && isPaidCustomerEntitlement(targetCusEnt)) {

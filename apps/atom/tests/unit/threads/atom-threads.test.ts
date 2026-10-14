@@ -24,7 +24,6 @@ afterEach(async () => {
 	for (const stop of stops.splice(0)) await stop();
 });
 
-/** A port nothing on this machine listens on right now. */
 const freePort = () => {
 	const probe = Bun.serve({
 		hostname: "127.0.0.1",
@@ -36,14 +35,12 @@ const freePort = () => {
 	return port;
 };
 
-/** The Atom as main.ts runs it, on its own port and folder: the workers are main.ts started again. */
 const startAtom = async ({
 	autumnApiUrl = "http://127.0.0.1:9",
 	failingSpawns = new Set<number>(),
 	sleep,
 }: {
 	autumnApiUrl?: string;
-	/** Which spawns, counted from 1, start a thread that fails before it is ready. */
 	failingSpawns?: Set<number>;
 	sleep?: (ms: number) => Promise<unknown>;
 } = {}) => {
@@ -88,7 +85,6 @@ const customerIds = Array.from({ length: 24 }, (_, i) => `cus_thread_${i}`);
 const ownerOf = (customerId: string) =>
 	customerIdToSlot({ customerId, slotCount: 16 }) % THREADS;
 
-// A fresh connection per request, so the kernel spreads them over every thread.
 const post = ({
 	url,
 	path,
@@ -112,7 +108,6 @@ const post = ({
 		body: JSON.stringify(body),
 	});
 
-/** Without features, the customer's own catalog cannot answer a check: the shared catalog must. */
 const pushCustomer = ({
 	url,
 	customerId,
@@ -242,7 +237,6 @@ describe("an Atom of several threads", () => {
 
 		expect(statuses.has(503)).toBe(true);
 		expect(recovered).toBe(true);
-		// The new owner reads its customers back from the files.
 		const after = await checkCustomer({
 			url,
 			customerId: orphaned[0] ?? "",
@@ -261,7 +255,6 @@ describe("calls between threads when one goes", () => {
 			await pushCustomer({ url, customerId, balance: 5 });
 		const ownedByOne = customerIds.filter((id) => ownerOf(id) === 1);
 
-		// Many checks in flight from every thread, then the owner of thread 1's customers dies mid-flight.
 		const inFlight = Array.from({ length: 60 }, (_, i) =>
 			checkCustomer({
 				url,
@@ -304,7 +297,6 @@ describe("calls between threads when one goes", () => {
 	}, 20_000);
 });
 
-/** Autumn as an Atom reaches it: a pull waits until the test answers it (the subject does not exist); a forward is allowed. */
 const startFakeAutumn = () => {
 	const pulls: unknown[] = [];
 	const firstPull = Promise.withResolvers<void>();
@@ -385,7 +377,6 @@ describe("a thread that fails never takes the replica down", () => {
 			await pushCustomer({ url, customerId, balance: 5 });
 		const others = customerIds.filter((id) => ownerOf(id) !== 1);
 
-		// From its close on: a connection already queued on the dying thread's socket is reset by the kernel, as in any crash.
 		const closed = new Promise((resolve) =>
 			workers[1]?.addEventListener("close", resolve, { once: true }),
 		);

@@ -1,7 +1,3 @@
-// Advancing Stripe's test clock through a same-plan reset-billing-cycle
-// transition charges the full base on a single invoice, with no unused-time
-// proration credit — matching the next-cycle preview.
-
 import { expect, test } from "bun:test";
 import {
 	type ApiCustomerV3,

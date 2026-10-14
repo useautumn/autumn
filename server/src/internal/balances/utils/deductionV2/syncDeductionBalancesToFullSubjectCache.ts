@@ -17,10 +17,6 @@ const withoutReplaceables = ({
 		),
 	);
 
-/**
- * Mirrors the committed balances before any invoice runs, so a webhook flush mid-invoice finds Redis at Postgres.
- * Replaceables are left to the final sync: the cache inserts them, so sending them twice would duplicate them.
- */
 export const syncDeductionBalancesToFullSubjectCache = async ({
 	cusEntUpdates,
 	...params

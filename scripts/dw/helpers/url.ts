@@ -16,7 +16,6 @@ export function rewriteDbEnv(
 	const dbUrl = forceSslVerifyFull(branchUrl);
 	out.DATABASE_URL = dbUrl;
 	out.DATABASE_CRITICAL_URL = dbUrl;
-	// Replica URL stays unset for agent branches (read from primary).
 	delete out.DATABASE_REPLICA_URL;
 	return out;
 }

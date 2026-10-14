@@ -89,7 +89,6 @@ export default function Pricing() {
 			<section id="pricing" className="bg-[#000000] w-full scroll-mt-16">
 				<div className="flex flex-col px-4 sm:px-8 py-12 md:py-16 xl:px-22.75">
 					<div className="text-white flex flex-col gap-6 lg:gap-0">
-						{/* Header */}
 						<div className="px-4 lg:px-8 pt-10 lg:pt-8 pb-16 lg:pb-18">
 							<h1 className="text-[30px] leading-[32px] md:leading-[40px] md:text-3xl lg:text-[40px] tracking-[-4%] text-white font-normal w-full text-center font-sans">
 								Start free. Scale with confidence.
@@ -100,7 +99,6 @@ export default function Pricing() {
 							</div>
 						</div>
 
-						{/* Pricing Columns */}
 						<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 relative z-60 gap-8 lg:gap-0">
 							{plans.map((plan, index) => {
 								const isHighlighted = plan.name === tier.plan;

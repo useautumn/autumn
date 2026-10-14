@@ -1,22 +1,3 @@
-/**
- * TDD test for Stripe dual-auth webhook registration guards.
- *
- * Contract under test:
- *   handleStripeSecretKey (adding a secret key):
- *     - when OAuth account_id ALREADY exists for the env: MUST NOT create/delete a direct
- *       webhook (no webhookEndpoints.create / .list / .del), and MUST NOT return a
- *       *_webhook_secret. Returns only the encrypted api key.
- *     - when NO OAuth account_id: registers a direct webhook as before and returns the secret.
- *
- * "No cross-channel teardown": adding a secret key never touches the master connect webhook;
- * the only Stripe webhook mutations it may perform are on the org's OWN account, and those are
- * suppressed entirely when OAuth already covers the org.
- *
- * Pre-impl red: handleStripeSecretKey currently always lists/deletes/creates a direct webhook
- * regardless of an existing OAuth connection, and always returns a *_webhook_secret.
- * Post-impl green: the OAuth-present branch skips all webhook mutations.
- */
-
 import { beforeEach, describe, expect, mock, test } from "bun:test";
 import { AppEnv, type Organization } from "@autumn/shared";
 
@@ -129,9 +110,6 @@ describe("dual-auth: handleStripeSecretKey webhook guard", () => {
 		expect(calls.create).toBe(0);
 	});
 
-	// Regression: adding a key under OAuth deletes the org's stale direct endpoint
-	// AND returns a null secret, so the caller clears the now-dead stored secret
-	// instead of leaving it to fail signature verification on later events.
 	test("OAuth connected + a secret already stored -> deletes endpoint and returns null secret to clear it", async () => {
 		staleWebhooks = [
 			{

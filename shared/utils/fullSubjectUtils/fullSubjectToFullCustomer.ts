@@ -1,6 +1,5 @@
 import type { FullCustomer, FullSubject } from "../../index.js";
 
-/** Converts a FullSubject back to a FullCustomer for legacy helper compatibility. */
 export const fullSubjectToFullCustomer = ({
 	fullSubject,
 }: {

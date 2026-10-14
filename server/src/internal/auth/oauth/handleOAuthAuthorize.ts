@@ -16,7 +16,6 @@ export const handleOAuthAuthorize = async (c: Context) => {
 	await ensureSummerOAuthClient({ db, clientId });
 	await ensureAtmnOAuthClient({ db, clientId });
 
-	// Old atmn CLIs request legacy CRUDL scopes; keep the reserved atmn client's
 	// stored scopes covering them so better-auth /authorize never rejects.
 	if (clientId) {
 		await ensureAtmnAuthorizeScopes({
@@ -35,7 +34,6 @@ export const handleOAuthAuthorize = async (c: Context) => {
 	}
 
 	// A missing `scope` is left alone: better-auth then falls back to the
-	// client's stored grant, which already carries offline_access.
 	const requestedScope = url.searchParams.get("scope");
 	if (requestedScope) {
 		url.searchParams.set(

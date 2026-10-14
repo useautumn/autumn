@@ -1,13 +1,3 @@
-/**
- * atmn crud/plans — config omitted at its default.
- *
- * The server always answers with `config`, but a fixture reads the same
- * without it while every flag is off: a fresh pull scaffolds no `config`.
- * The field is PATCH on the wire, so a plan that omits it leaves the flag
- * unmanaged: a dashboard flip is neither pulled nor overridden until the
- * config states the object, and a stated flag back at default is removed.
- */
-
 import { expect, test } from "bun:test";
 import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 import { configBody } from "@tests/utils/atmnUtils/baseConfigs.js";
@@ -57,8 +47,6 @@ test.concurrent("plan config is omitted at its default", async () => {
 		} as any);
 
 	try {
-		// A plan that never stated config scaffolds without it, and the server
-		// still answers with the flag at its default.
 		const { freshFiles, freshWire } = await expectRoundTrip({ scenario });
 		expect(freshFiles.get("plans.ts")).not.toContain("config");
 		const plans = freshWire.plans as Array<Record<string, unknown>>;
@@ -70,8 +58,6 @@ test.concurrent("plan config is omitted at its default", async () => {
 			ignorePastDue: false,
 		});
 
-		// Flipped on elsewhere: an unstated config is unmanaged, so pull has
-		// nothing to write and a push leaves the flag on.
 		await setFlag(true);
 		expect((await scenario.pull()).output).toContain("Nothing to pull.");
 		expect(configFile()).not.toContain("config");
@@ -81,8 +67,6 @@ test.concurrent("plan config is omitted at its default", async () => {
 			ignorePastDue: true,
 		});
 
-		// Stated, it is managed: the server's revert removes the pair on pull
-		// rather than writing the default back.
 		rewrite({ config: "{ ignorePastDue: true }" });
 		await expectPreviewNone({
 			client: scenario.client,
@@ -96,7 +80,6 @@ test.concurrent("plan config is omitted at its default", async () => {
 			wire: await scenario.wireFromConfig(),
 		});
 
-		// And a flag stated on pushes on.
 		rewrite({ config: "{ ignorePastDue: true }" });
 		await scenario.push();
 		expect(await proConfig()).toEqual({

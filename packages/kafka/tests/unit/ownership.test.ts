@@ -66,10 +66,8 @@ describe("ownershipRecords", function ownershipRecordsTests() {
 			};
 			const serialized = ownershipTopic.serialize({ record });
 
-			// Never the owner's key: a compacted topic would otherwise keep the ready and drop the claim.
 			expect(serialized.key.toString("utf8")).toBe("7:ready");
 			expect(ownershipTopic.parse(serialized)).toEqual(record);
-			// Records the first release wrote under the owner's key still read; a wrong key otherwise fails.
 			expect(
 				ownershipTopic.parse({
 					key: Buffer.from("7", "utf8"),
@@ -165,7 +163,6 @@ describe("ownershipRecords", function ownershipRecordsTests() {
 		preservesOwnershipWireBytes,
 	);
 
-	/** Every record type as a newer worker writes it: a field this build does not know. */
 	const fromNewerWriter = [
 		{ ...claimed, futureField: true },
 		{
@@ -761,7 +758,6 @@ describe("ownershipConsumption", function ownershipConsumptionTests() {
 			routeEpoch: "2",
 		});
 		expect(state.lastAppliedOffsets.get(partition)).toBe(4n);
-		// A `ready` keyed like the owner (the first release wrote them that way) still reads.
 		const legacyReady = {
 			key: Buffer.from(String(partition)),
 			value: ready.value,
@@ -773,7 +769,6 @@ describe("ownershipConsumption", function ownershipConsumptionTests() {
 			partition,
 			offset: 5n,
 		});
-		// A record type this build does not know is skipped, never fatal for routing.
 		const unknown = {
 			key: Buffer.from(`${partition}:handover`),
 			value: Buffer.from(
@@ -783,7 +778,6 @@ describe("ownershipConsumption", function ownershipConsumptionTests() {
 		applyOwnershipMessage({ state, message: unknown, partition, offset: 6n });
 		expect(state.owners.get(partition)?.routeEpoch).toBe("2");
 		expect(state.lastAppliedOffsets.get(partition)).toBe(6n);
-		// A malformed record of a known type still fails.
 		const broken = {
 			key: Buffer.from(String(partition)),
 			value: Buffer.from(
@@ -1108,8 +1102,6 @@ describe("ownershipReplay", function ownershipReplayTests() {
 
 	describe("applyOwnershipRecord", () => {
 		test("a later claim supersedes the current owner whoever wrote it", () => {
-			// A handoff has the predecessor write the claim on the successor's behalf;
-			// the table only sees a claim naming a new endpoint at a later offset.
 			const held = applyOwnershipRecord({
 				owners: new Map(),
 				record: claimed,
@@ -1154,9 +1146,6 @@ describe("ownershipReplay", function ownershipReplayTests() {
 		});
 
 		test("ignores a release from a worker that no longer holds the partition", () => {
-			// The case that stranded claims in staging: one worker claims, loses the
-			// partition to another on rebalance, then withdraws. Its withdrawal must
-			// not evict the worker that legitimately took over.
 			const original = applyOwnershipRecord({
 				owners: new Map(),
 				record: claimed,

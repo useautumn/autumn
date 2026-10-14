@@ -121,8 +121,6 @@ function getPlanId(change: PlanChange): string | undefined {
 	);
 }
 
-/** Top-level item_changes is deprecated; content lives on plan_change now.
- * Fallback covers older payloads and migration event records. */
 function getItemChanges(change: PlanChange): ItemChange[] {
 	const nested = change.plan_change?.item_changes;
 	return nested?.length ? nested : (change.item_changes ?? []);
@@ -350,7 +348,6 @@ function PreviewSummary({ preview }: { preview: MigrationPreview }) {
 		(fc) => fc.feature_id && !itemChangeFeatureIds.has(fc.feature_id),
 	);
 
-	// New plans without item changes absorb standalone balance/flag changes as children
 	const newPlanIndex = planChanges.findIndex(
 		(pc) =>
 			(pc.action === "activated" || pc.action === "created") &&

@@ -1,30 +1,3 @@
-/**
- * catalogV2.update — an explicit Stripe unlink survives its own request on a
- * PAID plan.
- *
- * `applyPlanProcessorsToProduct` clears `product.processor`, but a paid plan
- * with no processor id reads as "missing Stripe resources"
- * (hasMissingStripeResourcesForProduct), so the execute-phase init used to mint
- * a REPLACEMENT Stripe product on the very same request. The plan came back
- * mapped to a product the caller never asked for.
- *
- * The sibling file product-id-unlink.test.ts covers the same clear on a FREE
- * fixture, where `isFreeProduct` short-circuits the completeness check and the
- * bug cannot fire. This one carries a base price so it does.
- *
- * Contract:
- *   P1  a paid plan is left with NO Stripe product after an unlink — attach
- *       mints one lazily (attachRouter -> createStripePriceIFNotExist), so the
- *       plan is re-created under Stripe the next time it is sold
- *   P2  the fan-out rows obey it too: version siblings (processor_sync) and
- *       variants (variant_propagation) each restate `{ stripe: null }` on their
- *       own row and must not be re-minted either
- *
- * Red (before): every asserted row comes back holding a freshly minted
- *   `prod_...` id instead of null.
- * Green (after): every row's processor is null.
- */
-
 import { expect, test } from "bun:test";
 import { BillingInterval } from "@autumn/shared";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
@@ -42,7 +15,6 @@ const BASE_AMOUNT = 20;
 
 const paidPrice = { amount: BASE_AMOUNT, interval: BillingInterval.Month };
 
-/** Autumn minted this when the paid plan was created — the id an unlink drops. */
 const mintedProcessorId = async ({
 	ctx,
 	planId,
@@ -93,7 +65,6 @@ test.concurrent(
 					plans: [{ plan_id: planId, processors: { stripe: null } }],
 				});
 
-				// P1: cleared, and NOT swapped for a replacement product.
 				await expectVersionProcessorCorrect({
 					ctx,
 					planId,
@@ -139,7 +110,6 @@ test.concurrent(
 						},
 					],
 				});
-				// A second version so the processor_sync fan-out lane has a sibling.
 				await autumnV2_3.catalogV2.update({
 					plans: [{ plan_id: baseId, versioning: "new_version", active: true }],
 				});
@@ -150,7 +120,6 @@ test.concurrent(
 					plans: [{ plan_id: baseId, processors: { stripe: null } }],
 				});
 
-				// P2: the addressed row, its history, and the variant all stay bare.
 				for (const row of [
 					{ planId: baseId, version: 2 },
 					{ planId: baseId, version: 1 },

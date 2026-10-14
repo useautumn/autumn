@@ -25,7 +25,6 @@ test.concurrent(`${chalk.yellowBright("cross-version-list-customers: list custom
 	const autumnV2_1 = new AutumnInt({ version: ApiVersion.V2_1 });
 	const autumnV2_0 = new AutumnInt({ version: ApiVersion.V2_0 });
 
-	// V2.3 cursor envelope: { list, next_cursor }, no offset/limit/total echoed.
 	const customersV2_3 = (await autumnV2_3.customers.listV2({
 		start_cursor: "",
 		limit: 10,
@@ -44,7 +43,6 @@ test.concurrent(`${chalk.yellowBright("cross-version-list-customers: list custom
 		ApiCustomerV5Schema.parse(customer);
 	}
 
-	// V2.1 - should return ApiCustomerV5 schema (V1 balances with granted/remaining)
 	const customersV2_1 = (await autumnV2_1.customers.listV2({
 		keepInternalFields: true,
 	})) as {
@@ -54,7 +52,6 @@ test.concurrent(`${chalk.yellowBright("cross-version-list-customers: list custom
 		ApiCustomerV5Schema.parse(customer);
 	}
 
-	// V2.0 - should return ApiCustomer schema (V0 balances with granted_balance/current_balance)
 	const customersV2_0 = (await autumnV2_0.customers.list({
 		keepInternalFields: true,
 	})) as {
@@ -64,7 +61,6 @@ test.concurrent(`${chalk.yellowBright("cross-version-list-customers: list custom
 		ApiCustomerSchema.parse(customer);
 	}
 
-	// V1.2 - should return ApiCustomerV3 schema (features format)
 	const customersV1_2 = (await autumnV1.customers.list({
 		keepInternalFields: true,
 	})) as {

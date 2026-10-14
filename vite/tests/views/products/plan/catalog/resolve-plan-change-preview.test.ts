@@ -166,7 +166,6 @@ describe("resolvePlanChangePreview", () => {
 
 		expect(model.showLicenseParentScope).toBe(true);
 		expect(model.showVariantScope).toBe(true);
-		// A base mint sends plan-level variant targets; parents stay pinned.
 		expect(model.propagate).toEqual({
 			variants: [{ plan_id: "pro_eu" }],
 			license_parents: [{ plan_id: "team", version: 2 }],
@@ -217,7 +216,6 @@ describe("resolvePlanChangePreview", () => {
 		});
 
 		expect(model.strategy).toBe("all_versions");
-		// The whole-plan pick expands into explicit pins, one per linked version.
 		expect(model.propagate).toEqual({
 			license_parents: [
 				{ plan_id: "team", version: 2 },
@@ -432,8 +430,6 @@ describe("resolvePlanChangePreview", () => {
 			allVersions.variantTargets[0].versions.flatMap((entry) => entry.conflicts),
 		).toHaveLength(1);
 		expect(allVersions.defaultVariantKeys).toEqual(["pro_eu:2"]);
-		// Same-base siblings stay pinnable on existing — only sibling-base
-		// rows are added when the choice is all_versions.
 		expect(
 			existing.variantTargets[0].versions.map((entry) => entry.version),
 		).toEqual([2, 1]);
@@ -585,7 +581,6 @@ describe("resolvePlanChangePreview", () => {
 	});
 
 	test("defaults a conflict-free parent to all versions, pinning around conflicts", () => {
-		// v2 is the lane entry; v1 nests under it as a linked sibling version.
 		const teamParent = ({
 			v1Conflicts = [],
 		}: {

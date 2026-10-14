@@ -1,7 +1,4 @@
 // Starts the balance worker, under Bun's CPU profiler when
-// BALANCE_WORKER_CPU_PROFILE=1. The profile is only written when the process
-// exits, and a container's disk goes with it, so on exit the launcher uploads
-// whatever the profiler wrote to the checkpoint bucket before returning.
 import { readdirSync, readFileSync } from "node:fs";
 import { hostname } from "node:os";
 import { join } from "node:path";
@@ -54,7 +51,6 @@ async function uploadProfiles(): Promise<void> {
 			console.log(`cpu profile uploaded: s3://${bucket}/${prefix}/${file}`);
 		}
 	} catch (cause) {
-		// A failed upload must not change how the worker exited.
 		console.error("cpu profile upload failed", cause);
 	}
 }

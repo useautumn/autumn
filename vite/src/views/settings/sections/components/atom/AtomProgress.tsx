@@ -1,6 +1,5 @@
 import { cn } from "@/lib/utils";
 
-/** The bar over a step table, with what it is waiting on beneath. */
 export const AtomProgress = ({
 	label,
 	percent,
@@ -8,7 +7,6 @@ export const AtomProgress = ({
 	isFailed = false,
 }: {
 	label: string;
-	/** Null when alien reports no steps to count, so the bar only pulses. */
 	percent: number | null;
 	caption?: React.ReactNode;
 	isFailed?: boolean;

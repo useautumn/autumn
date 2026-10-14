@@ -10,7 +10,6 @@ const UNPAID_CLOSED_STATUSES = new Set(["void", "uncollectible"]);
 const isPendingPaymentError = (error: unknown) =>
 	error instanceof Error && error.message.includes(PENDING_PAYMENT_ERROR);
 
-/** Returns whether the invoice is now closed unpaid; a clearing payment defers cleanup a day. */
 export const voidInvoiceAtDueDate = async ({
 	ctx,
 	stripeCli,

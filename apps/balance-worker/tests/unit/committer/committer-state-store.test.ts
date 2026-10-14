@@ -21,7 +21,6 @@ import {
 const topic = "autumn-metering";
 const partition = 7;
 
-/** A Postgres stand-in that remembers its bookmark and every update, and can refuse a guard or a bookmark. */
 function createFakeCommitterDb({
 	storedNextOffset = null,
 	staleIds = new Set<string>(),
@@ -31,7 +30,6 @@ function createFakeCommitterDb({
 	storedNextOffset?: bigint | null;
 	staleIds?: Set<string>;
 	flushGate?: Promise<void>;
-	/** Rows whose flush finds the bookmark moved by another worker. */
 	conflictIds?: Set<string>;
 } = {}) {
 	const progress = new Map<string, bigint>();
@@ -68,7 +66,6 @@ function createFakeCommitterDb({
 			const key = `${topic}[${partition}]`;
 			if (progress.has(key)) claims.set(key, claimToken);
 		},
-		// Rolls back like Postgres would: nothing lands unless every bookmark moved.
 		flush: async (request) => {
 			await flushGate;
 			const applied = request.changes.map(
@@ -146,7 +143,6 @@ describe("committer state store", () => {
 			epoch: 512n,
 			offset: 40n,
 		});
-		// The marker moves no bookmark: the record after it does.
 		expect(fake.progress.get(`${topic}[${partition}]`)).toBe(43n);
 		expect(store.readOwnerFence?.({ topic, partition })).toEqual({
 			epoch: 512n,
@@ -371,7 +367,6 @@ describe("committer state store", () => {
 		).toEqual([{ balance: -5 }, { balance: -5 }]);
 		expect(store.readNextOffset({ topic, partition })).toBe(45n);
 
-		// A gap is a commit marker, not a lost record; going backwards inside a batch is corruption.
 		await expect(
 			store.applyDurableMutations({
 				records: [
@@ -408,7 +403,6 @@ describe("committer state store", () => {
 		expect(result?.kind === "rejected" && result.cause.message).toBe(
 			"Customer cus_1 changed underneath the decision in org_1/sandbox",
 		);
-		// The decision rolls back; the skip lands only the bookmark, so a replay never meets this record again.
 		expect(fake.transactions).toEqual(["rolled_back", "committed"]);
 		expect(fake.updates).toEqual([]);
 		expect(fake.progress.get(`${topic}[${partition}]`)).toBe(44n);

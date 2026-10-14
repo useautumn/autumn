@@ -4,14 +4,11 @@ import { isStoreFailure } from "./isStoreFailure.js";
 
 const INITIAL_BACKOFF_MS = 200;
 const MAX_BACKOFF_MS = 5_000;
-/** Consecutive store failures before the wait is reported, and again every so many after. */
 const DEGRADED_AFTER_ATTEMPTS = 5;
 
 export type LandRecordsContext = {
 	logger: Pick<AutumnLogger, "info" | "warn" | "error">;
-	/** Ends a wait on the store when herald stops. */
 	signal: AbortSignal;
-	/** Keeps the partition while the store is down; throws once Kafka has moved it. */
 	heartbeat: () => Promise<void>;
 	sleep?: (params: { delayMs: number; signal: AbortSignal }) => Promise<void>;
 };
@@ -33,7 +30,6 @@ const defaultSleep = ({
 		signal.addEventListener("abort", finish, { once: true });
 	});
 
-/** The batch again, for as long as the store is the problem; returns false once herald is stopping. */
 const handleWhileStoreAnswers = async ({
 	ctx,
 	job,
@@ -73,11 +69,6 @@ const handleWhileStoreAnswers = async ({
 	}
 };
 
-/**
- * Lands a batch so that no single record can hold its partition: a store failure waits in place with capped backoff
- * (never thrown to Kafka), and a failure in the job's own code is narrowed to the one record, which is skipped loudly.
- * Returns false when herald stopped before every record landed or was skipped.
- */
 export const landRecords = async ({
 	ctx,
 	job,

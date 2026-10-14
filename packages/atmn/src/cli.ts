@@ -71,7 +71,6 @@ const withTargetFlags = (program: Command): Command =>
 		.option("-p, --prod", "target production instead of sandbox")
 		.option("--sandbox <sandboxId>", "target a specific sandbox")
 		.option("-l, --local", "target a local server (default port 8080)")
-		// Long-only: -p is prod.
 		.option("--port <port>", "port of a local server (implies --local)")
 		.option("-b, --base-url <url>", "send to this URL instead")
 		.option("--client-id <id>", "OAuth client id the CLI identifies as")
@@ -287,8 +286,6 @@ export const buildProgram = (): Command => {
 				const flags = command.optsWithGlobals<GlobalFlags>();
 				const mainTarget = resolveTarget({ ...flags, sandbox: undefined });
 				const baseUrl = targetBaseUrl({ target: mainTarget });
-				// Tests run the CLI from source, where the package is not published:
-				// they point new packages at the checkout instead.
 				const dependencySpec = process.env.ATMN_INIT_DEPENDENCY;
 				await runInit({
 					...(dependencySpec === undefined ? {} : { dependencySpec }),
@@ -308,8 +305,6 @@ export const buildProgram = (): Command => {
 								cwd: repoRoot,
 								stdio: "inherit",
 							}).status === 0,
-						// A fresh process: the config imports a package that was
-						// installed a moment ago, which this process cannot resolve.
 						pull: async ({ configDir }) => pullInChildProcess({ configDir }),
 					},
 				});
@@ -342,8 +337,6 @@ Linking a keyless org to an account:
 					throw new Error("Pick one of --keyless and --claim.");
 				const target = prepareTarget({ command });
 				const prompter = prompterFor({ command });
-				// A keyless org lives in sandbox, so its key is the main sandbox one
-				// whatever --prod or a sandbox pin says.
 				const mainTarget = managementTarget({
 					target: { ...target, secretKeyName: "AUTUMN_SECRET_KEY" },
 				});
@@ -405,8 +398,6 @@ Linking a keyless org to an account:
 				command: Command,
 			) => {
 				const target = prepareTarget({ command });
-				// Nothing is applied unless asked: a plain push is the preview, and the
-				// same command with --yes is the write. Deletions ride the same gate.
 				const apply = options.yes === true && options.dryRun !== true;
 				const result = await runPush({
 					client: clientFor({ target }),
@@ -416,7 +407,6 @@ Linking a keyless org to an account:
 					webhookEnvs: webhookEnvsFor({ target }),
 					webhookClientFor: webhookClientFor({ target }),
 				});
-				// A dry run that never saw the catalog must not read as clean.
 				process.exitCode = pushExitCode({ apply, result });
 				if (!apply && !previewIsEmpty({ preview: result.preview }))
 					process.stdout.write(
@@ -522,8 +512,6 @@ Linking a keyless org to an account:
 		.option("-y, --yes", "wipe it")
 		.action(async (options: { yes?: boolean }, command: Command) => {
 			const target = prepareTarget({ command });
-			// Ahead of the client: --prod would otherwise fail on a missing prod
-			// key rather than on the refusal that matters.
 			assertSandboxTarget({ target });
 			try {
 				await runReset({
@@ -571,7 +559,6 @@ Linking a keyless org to an account:
 				command: Command,
 			) => {
 				const target = prepareTarget({ command });
-				// Clearing only edits .env: no key, no server, no reason to fail.
 				if (options.clear === true) {
 					await runSandboxUse({
 						clear: true,
@@ -620,8 +607,6 @@ Linking a keyless org to an account:
 					await runSandboxCreate({
 						client: sandboxClientFor({ target }),
 						name,
-						// The palette lives in the spec; an unknown colour is the
-						// server's error to give, not a list the CLI keeps in sync.
 						...(options.color === undefined
 							? {}
 							: { color: options.color as CreateSandboxParams["color"] }),
@@ -664,8 +649,6 @@ export const run = async ({ argv }: { argv: string[] }): Promise<void> => {
 	try {
 		await buildProgram().parseAsync(normalizeVersionFlag({ argv }));
 	} catch (error) {
-		// A headless run stopping at a prompt has already printed what it
-		// needs; that is a normal end, not a failure.
 		if (error instanceof NeedsInputError) return;
 		throw error;
 	} finally {

@@ -319,8 +319,6 @@ test.concurrent(
 			actions: [],
 		});
 
-		// The trial check is intentionally not preview-gated, so the form surfaces
-		// the error before the user clicks confirm.
 		await expectAutumnError({
 			errCode: ErrCode.InvalidRequest,
 			errMessage: "Past starts_at cannot be used together with a free trial",

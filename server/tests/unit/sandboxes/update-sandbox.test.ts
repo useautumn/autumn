@@ -7,8 +7,6 @@ const state = {
 	existing: [] as Array<Record<string, unknown>>,
 };
 
-// Spread the real module so every export stays defined — a partial factory
-// poisons later files in the same process with missing-export link errors.
 const realInitDrizzle = await import("@/db/initDrizzle.js");
 await mockModuleWithRestore("@/db/initDrizzle.js", () => ({
 	...realInitDrizzle,
@@ -143,8 +141,6 @@ describe("updateSandboxForOrg (ownership-guarded)", () => {
 		expect(state.updateCalls[0].updates).toEqual({ sandbox_color: "amber" });
 	});
 
-	// A missing org and a non-owned org must be indistinguishable: both report
-	// "Sandbox not found", never OrgService.get's "Organization not found".
 	test("rejects a missing org with the unified 404 message, no update", async () => {
 		state.target = null;
 		await expect(call("nope", { color: "blue" })).rejects.toMatchObject({

@@ -54,7 +54,6 @@ export const deleteCustomer = async ({
 		env,
 	});
 
-	// Delete customer and all entity caches atomically
 	await deleteCachedFullCustomer({
 		customerId: customer.id ?? "",
 		ctx,

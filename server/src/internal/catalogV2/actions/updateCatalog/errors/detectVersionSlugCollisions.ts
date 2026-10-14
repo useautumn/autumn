@@ -6,7 +6,6 @@ export type VersionSlugCollision = {
 	versions: number[];
 };
 
-/** Projected (plan id, version_slug) owned by more than one version. Null slugs ignored. */
 export const detectVersionSlugCollisions = ({
 	products,
 }: {

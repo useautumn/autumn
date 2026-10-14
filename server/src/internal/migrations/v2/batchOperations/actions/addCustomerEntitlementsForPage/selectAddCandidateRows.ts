@@ -36,14 +36,6 @@ const CandidateRowSchema = z.object({
 	sibling_reset_cycle_anchor: nullableNumeric,
 });
 
-/**
- * Selects the page's add candidates: scope + itemAlreadyExists-parity dedup
- * (same feature — feature-only for booleans, same reset interval otherwise;
- * this also makes replay idempotent). `includeAnchorSources` adds the cycle
- * anchor columns resetting (consumable/credit) adds need for enrichment.
- * `afterCustomerProductId` + `limit` keyset-paginate by cp.id so row-heavy
- * pages read in bounded batches.
- */
 export const buildAddCandidateRowsQuery = ({
 	internalCustomerIds,
 	scope,

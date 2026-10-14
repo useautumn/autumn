@@ -155,7 +155,6 @@ const PlanMappingDetailForm = ({
 						const productId = isBase
 							? values.stripe_product_id
 							: (values.variant_product_ids[plan.id] ?? null);
-						// Creating only runs for a plan without its own product, so otherwise it'd do nothing.
 						const savedProductId = isBase
 							? initial.stripe_product_id
 							: (initial.variant_product_ids[plan.id] ?? null);

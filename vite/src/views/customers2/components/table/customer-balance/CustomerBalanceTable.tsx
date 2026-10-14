@@ -58,7 +58,6 @@ export function CustomerBalanceTable({
 		() => new WeakSet(rowData.flatMap((row) => row.subRows ?? [])),
 		[rowData],
 	);
-	// Sub-rows read as one block, so only the last one keeps a divider.
 	const innerSubRowEnts = useMemo(
 		() =>
 			new WeakSet(rowData.flatMap((row) => row.subRows?.slice(0, -1) ?? [])),
@@ -172,7 +171,6 @@ export function CustomerBalanceTable({
 					mobileCards: true,
 					selectedItemId: getSelectedRowId(),
 					rowClassName: "h-10 py-0",
-					// No click target, so it must not inherit the table's pointer.
 					getRowClassName: (balance: CustomerBalanceRowData) =>
 						cn(
 							subRowEnts.has(balance) && "[&>td]:bg-card",

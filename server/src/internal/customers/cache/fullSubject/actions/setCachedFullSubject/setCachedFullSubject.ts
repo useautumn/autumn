@@ -88,7 +88,6 @@ export const setCachedFullSubject = async ({
 	);
 
 	if (result === "OK") {
-		// The view is already written; nothing here may fail the read that built it.
 		try {
 			evictWorkerCopyAfterRollback({ ctx, customerId });
 		} catch (error) {

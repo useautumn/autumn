@@ -3,24 +3,6 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { normalizeWindowCounter } from "@/internal/balances/autoTopUp/helpers/limits/autoTopupLimitWindowUtils.js";
 import { autoTopupLimitRepo } from "@/internal/balances/autoTopUp/repos";
 
-/**
- * When `expand=billing_controls.auto_topups.purchase_limit` is requested,
- * return a replacement `auto_topups` array where each entry's `purchase_limit`
- * is augmented with runtime tracking (`count`, `next_reset_at`) from the
- * `auto_topup_limit_states` table.
- *
- * Behavior:
- *   - Returns `undefined` when the expand path is not requested.
- *   - Returns `undefined` when there are no configured auto_topups.
- *   - For each configured auto_topup with a matching DB row, the `purchase_limit`
- *     object is rebuilt with `count` + `next_reset_at` from the row. If the
- *     stored window has elapsed, `count` is projected to 0 and `next_reset_at`
- *     is advanced from the stored boundary by the configured interval. If the
- *     config had no `purchase_limit`, `interval` / `interval_count` / `limit`
- *     are returned as `null`.
- *   - For configured auto_topups WITHOUT a matching DB row (no top-up has
- *     ever fired), the entry is passed through unchanged from config.
- */
 export const getCusAutoTopupPurchaseLimits = async ({
 	ctx,
 	internalCustomerId,
@@ -52,7 +34,6 @@ export const getCusAutoTopupPurchaseLimits = async ({
 	return autoTopupsConfig.map((config): AutoTopupResponse => {
 		const row = rowsByFeatureId.get(config.feature_id);
 		if (!row) {
-			// No runtime row yet — pass config through unchanged.
 			return config;
 		}
 

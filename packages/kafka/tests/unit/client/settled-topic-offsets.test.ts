@@ -25,7 +25,6 @@ type FakeAdmin = {
 	byTimestampReads: number;
 };
 
-/** An admin that answers with `failures` poisoned reads before a real one. */
 function createFakeAdmin({
 	failures,
 	failWith = emptyPartitions,
@@ -83,7 +82,6 @@ function createFactory(plan: FakeAdmin[]) {
 	return { createAdmin, created };
 }
 
-/** A clock that advances only while the retry sleeps. */
 function createFastRetry({ deadlineMs = 3 }: { deadlineMs?: number } = {}) {
 	let tick = 0;
 	return {
@@ -111,7 +109,6 @@ describe("settled topic offsets", () => {
 		expect(poisoned.reads).toBe(1);
 		expect(healthy.reads).toBe(1);
 		expect(healthy.connects).toBe(1);
-		// The poisoned admin stays up for anyone mid-flight on it.
 		expect(poisoned.disconnects).toBe(0);
 		await admin.disconnect();
 		expect(poisoned.disconnects).toBe(1);
@@ -128,7 +125,6 @@ describe("settled topic offsets", () => {
 		});
 		expect(await admin.fetchTopicOffsets(topic)).toEqual(answered);
 		expect(factory.created).toHaveLength(2);
-		// Never connected, so the replacement is not connected either.
 		expect(healthy.connects).toBe(0);
 	});
 
@@ -178,7 +174,6 @@ describe("settled topic offsets", () => {
 		await expect(failure).rejects.toBeInstanceOf(
 			KafkaTopicPartitionsUnavailableError,
 		);
-		// Attempts at ticks 0, 1 and 2; the wait after the third would pass the deadline.
 		expect(factory.created).toHaveLength(3);
 	});
 

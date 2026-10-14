@@ -31,7 +31,6 @@ export const deleteApp = async ({
 	await ctx.svix.application.delete(appId);
 };
 
-/** A link into Svix's own portal for the app, where an org manages its endpoints. */
 export const appPortalUrl = async ({
 	ctx,
 	appId,

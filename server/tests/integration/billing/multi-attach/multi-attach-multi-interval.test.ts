@@ -10,10 +10,6 @@ import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 
-// ═══════════════════════════════════════════════════════════════════
-// Test 1: Monthly + annual plans
-// Checks: preview total, post-attach products, features, invoice, sub
-// ═══════════════════════════════════════════════════════════════════
 test.concurrent(`${chalk.yellowBright("multi-attach multi-interval: monthly + annual plans")}`, async () => {
 	const messagesItem = items.monthlyMessages({ includedUsage: 500 });
 	const wordsItem = items.monthlyWords({ includedUsage: 200 });
@@ -42,14 +38,11 @@ test.concurrent(`${chalk.yellowBright("multi-attach multi-interval: monthly + an
 		plans: [{ plan_id: monthlyPlan.id }, { plan_id: annualPlan.id }],
 	};
 
-	// 1. Preview — $20 (monthly) + $200 (annual) = $220
 	const preview = await autumnV1.billing.previewMultiAttach(multiAttachParams);
 	expect(preview.total).toBeCloseTo(220, 0);
 
-	// 2. Attach
 	await autumnV1.billing.multiAttach(multiAttachParams);
 
-	// 3. Verify
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
 	await expectCustomerProducts({
@@ -83,10 +76,6 @@ test.concurrent(`${chalk.yellowBright("multi-attach multi-interval: monthly + an
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════
-// Test 2: Monthly recurring + one-off product with prepaid storage
-// Checks: preview total, post-attach products, features, invoice, sub
-// ═══════════════════════════════════════════════════════════════════
 test.concurrent(`${chalk.yellowBright("multi-attach multi-interval: monthly recurring + one-off product")}`, async () => {
 	const messagesItem = items.monthlyMessages({ includedUsage: 300 });
 	const storageItem = items.oneOffStorage({
@@ -126,14 +115,11 @@ test.concurrent(`${chalk.yellowBright("multi-attach multi-interval: monthly recu
 		],
 	};
 
-	// 1. Preview — $20 (monthly) + $10 (one-off base) + $100 (500/100*$20) = $130
 	const preview = await autumnV1.billing.previewMultiAttach(multiAttachParams);
 	expect(preview.total).toBeCloseTo(130, 0);
 
-	// 2. Attach
 	await autumnV1.billing.multiAttach(multiAttachParams);
 
-	// 3. Verify
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
 	await expectCustomerProducts({

@@ -33,7 +33,6 @@ export const handleUpdateFeatureV1 = createRoute({
 			throw new FeatureNotFoundError({ featureId: feature_id });
 		}
 
-		// If changing type and consumable not provided, throw error
 		if (body.type === FeatureType.Metered && nullish(body.consumable)) {
 			throw new RecaseError({
 				message: "Consumable is required when changing type to metered",

@@ -11,39 +11,39 @@ import {
 } from "@/internal/features/utils/constructFeatureUtils.js";
 
 export enum TestFeature {
-	Dashboard = "dashboard", // boolean feature
-	Messages = "messages", // single use (prepaid)
-	Users = "users", // cont use
-	Workflows = "workflows", // cont use
-	Admin = "admin", // cont use
-	AdminRights = "admin_rights", // cont use
-	Words = "words", // single use (pay per use)
-	Storage = "storage", // single use (prepaid)
+	Dashboard = "dashboard",
+	Messages = "messages",
+	Users = "users",
+	Workflows = "workflows",
+	Admin = "admin",
+	AdminRights = "admin_rights",
+	Words = "words",
+	Storage = "storage",
 
-	Action1 = "action1", // single use (pay per use)
-	Action2 = "action2", // single use (pay per use)
-	Credits = "credits", // credit system
+	Action1 = "action1",
+	Action2 = "action2",
+	Credits = "credits",
 
-	Action3 = "action3", // single use (pay per use)
-	Credits2 = "credits2", // credit system
+	Action3 = "action3",
+	Credits2 = "credits2",
 	TieredAction = "tiered_action",
 	TieredCredits = "tiered_credits",
 	InvoiceCredits = "invoice_credits",
 	DimensionAction = "dimension_action",
 	DimensionCredits = "dimension_credits",
 
-	Credits3 = "credits3", // credit system (overlaps with credits on action1)
+	Credits3 = "credits3",
 
-	AiCredits = "ai_credits", // AI credit system (models.dev pricing)
-	AiCredits2 = "ai_credits_2", // second AI credit system (for disambiguation tests)
-	AiCreditsTiered = "ai_credits_tiered", // AI credit system with global + provider markup tiers
+	AiCredits = "ai_credits",
+	AiCredits2 = "ai_credits_2",
+	AiCreditsTiered = "ai_credits_tiered",
 
-	Orbs = "orbs", // credit system that wraps an AI credit system (1000 orbs per $1)
-	EventSeats = "event_seats", // cont use, tracked by "seat-event" beside EventActions
-	EventActions = "event_actions", // single use, tracked by "seat-event" beside EventSeats
-	SharedAction1 = "shared_action1", // single use, tracked by "shared-credit-event" beside SharedAction2
-	SharedAction2 = "shared_action2", // single use, tracked by "shared-credit-event" beside SharedAction1
-	SharedCredits = "shared_credits", // credit system funding both shared actions
+	Orbs = "orbs",
+	EventSeats = "event_seats",
+	EventActions = "event_actions",
+	SharedAction1 = "shared_action1",
+	SharedAction2 = "shared_action2",
+	SharedCredits = "shared_credits",
 }
 
 export const getFeatures = ({ orgId }: { orgId: string }) => ({
@@ -119,7 +119,6 @@ export const getFeatures = ({ orgId }: { orgId: string }) => ({
 		orgId,
 		env: AppEnv.Sandbox,
 		usageType: FeatureUsageType.Single,
-		// eventNames: ["action-event"],
 	}),
 	[TestFeature.Action3]: constructMeteredFeature({
 		featureId: TestFeature.Action3,
@@ -292,7 +291,6 @@ export const getFeatures = ({ orgId }: { orgId: string }) => ({
 			],
 		},
 	},
-	// Overlaps with Credits on action1, and is seeded after it in the catalog
 	[TestFeature.Credits3]: constructCreditSystem({
 		featureId: TestFeature.Credits3,
 		orgId,
@@ -346,13 +344,11 @@ export const getFeatures = ({ orgId }: { orgId: string }) => ({
 			custom: { markup: 30 },
 		},
 		modelMarkups: {
-			// Per-model override wins over provider/global.
 			"custom/override-model": {
 				markup: 5,
 				input_cost: 10,
 				output_cost: 20,
 			},
-			// No markup -> inherits the "custom" provider markup (30%).
 			"custom/provider-fallback-model": {
 				input_cost: 10,
 				output_cost: 20,
@@ -366,7 +362,7 @@ export const getFeatures = ({ orgId }: { orgId: string }) => ({
 		schema: [
 			{
 				metered_feature_id: TestFeature.AiCredits,
-				credit_cost: 1000, // 1000 orbs per $1 of AI usage
+				credit_cost: 1000,
 			},
 		],
 	}),

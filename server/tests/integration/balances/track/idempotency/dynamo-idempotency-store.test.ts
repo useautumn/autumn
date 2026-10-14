@@ -1,15 +1,3 @@
-/**
- * Exercises the DynamoDB idempotency store against the local emulator
- * (dynamodb-local in `bun dw` / `bun dev:services`, dynoxide in `bun tw`).
- *
- * Contract under test:
- *   - First claim of a key succeeds ("claimed"), second rejects ("duplicate").
- *   - Release makes the key claimable again.
- *   - An expired-but-undeleted item (TTL sweepers lag, even on real AWS) is
- *     claimable — expiry is enforced in the claim's ConditionExpression.
- *   - The table is auto-created on first use against a local endpoint.
- */
-
 import { describe, expect, test } from "bun:test";
 import { PutCommand } from "@aws-sdk/lib-dynamodb";
 import { getIdempotencyTableName } from "@/external/aws/dynamodb/idempotencyKeys/idempotencyKeyTable.js";

@@ -13,7 +13,6 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 
-// Entity 2 downgrades from premium, then updates items - should remain downgrading
 test.concurrent(`${chalk.yellowBright("schedules-p2p: downgrade entity 2 from premium, update entity 2 items - remains downgrading")}`, async () => {
 	const customerId = "sched-p2p-downgrade-update-same";
 
@@ -44,14 +43,12 @@ test.concurrent(`${chalk.yellowBright("schedules-p2p: downgrade entity 2 from pr
 		],
 	});
 
-	// Entity 2 downgrades from Premium to Pro (scheduled)
 	await autumnV1.attach({
 		customer_id: customerId,
 		product_id: pro.id,
 		entity_id: entities[1].id,
 	});
 
-	// Verify entity 2 has scheduled downgrade (premium still active)
 	const entity2AfterDowngrade = await autumnV1.entities.get(
 		customerId,
 		entities[1].id,
@@ -61,8 +58,7 @@ test.concurrent(`${chalk.yellowBright("schedules-p2p: downgrade entity 2 from pr
 		productId: premium.id,
 	});
 
-	// Entity 2 updates premium's items while downgrade is scheduled
-	const newPriceItem = items.monthlyPrice({ price: 60 }); // $60/mo
+	const newPriceItem = items.monthlyPrice({ price: 60 });
 
 	await autumnV1.subscriptions.update({
 		customer_id: customerId,
@@ -71,7 +67,6 @@ test.concurrent(`${chalk.yellowBright("schedules-p2p: downgrade entity 2 from pr
 		items: [consumableItem, newPriceItem],
 	});
 
-	// Entity 2 should still have premium active (with downgrade scheduled)
 	const entity2AfterUpdate = await autumnV1.entities.get(
 		customerId,
 		entities[1].id,
@@ -81,7 +76,6 @@ test.concurrent(`${chalk.yellowBright("schedules-p2p: downgrade entity 2 from pr
 		productId: premium.id,
 	});
 
-	// Entity 1 should still be on premium
 	const entity1Data = await autumnV1.entities.get(customerId, entities[0].id);
 	await expectProductActive({
 		customer: entity1Data,
@@ -96,14 +90,11 @@ test.concurrent(`${chalk.yellowBright("schedules-p2p: downgrade entity 2 from pr
 		subCount: 1,
 	});
 
-	// Advance to next billing cycle
 	await advanceToNextInvoice({
 		stripeCli: ctx.stripeCli,
 		testClockId: testClockId!,
 	});
 
-	// Entity 1: Premium still active
-	// Entity 2: Premium gone, Pro active (downgrade completed)
 	const entity1AfterCycle = await autumnV1.entities.get(
 		customerId,
 		entities[0].id,

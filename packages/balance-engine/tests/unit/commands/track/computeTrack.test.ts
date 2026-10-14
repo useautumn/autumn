@@ -59,7 +59,6 @@ describe("track computation", () => {
 					creditCost: 1,
 				},
 			],
-			// What a usage event reports, read off the rows while the decision still has them.
 			deductions: [
 				{
 					balance_id: "messages_monthly",
@@ -131,7 +130,6 @@ describe("track computation", () => {
 				add: { balance: -5 },
 			},
 		]);
-		// The included bucket gives what it has, then the overage bucket takes the row negative.
 		expect(trackResultOf({ mutation })).toMatchObject({
 			status: "applied",
 			deltas: [
@@ -177,7 +175,6 @@ describe("track computation", () => {
 					command: createTrackCommand({ featureId, overageBehavior: "cap" }),
 				});
 
-				// Logged like any track, so its usage event is still recorded.
 				expect(mutation.revision).toEqual({ before: 0, after: 1 });
 				expect(mutation.changes).toEqual([]);
 				expect(trackResultOf({ mutation })).toEqual({

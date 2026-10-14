@@ -7,7 +7,6 @@ import {
 } from "@/internal/misc/shadowAtom/shadowAtomConfigStore.js";
 import { shadowAtomDeployerFor } from "./shadowAtomDeployerFor.js";
 
-/** Herald and the shadow check stop at once, then both of the org's folders go; a retry after a failed delete finishes it. */
 export const unregisterShadowAtomOrg = async ({
 	orgId,
 }: {

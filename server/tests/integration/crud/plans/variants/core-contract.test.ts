@@ -1,23 +1,3 @@
-/**
- * Contract catch-all for plan variants: edge cases + error paths.
- *
- * Contract under test (from _temp/variants/CONTRACT.md):
- *   - force_version + disable_version mutually exclusive → conflicting_version_flags
- *   - force_version bypasses customer-check, always versions
- *   - base_internal_product_id set on insert and mutable through base_plan_id
- *   - create_variant returns ApiPlanV1 shape
- *   - preview_update is idempotent, no writes
- *   - archived variants silently filtered from propagate
- *   - preview_update.versionable matches actual update
- *   - preview_update.diff matches manual diffPlanV1
- *   - update_variant_ids:[] ≡ omitted
- *   - invalid propagation targets rejected
- *   - create_variant id collision → 409
- *   - variant visible in plans.list
- *   - preview_update variants always present
- *   - free_trial propagation overwrites variant override
- */
-
 import { beforeAll, expect, test } from "bun:test";
 import {
 	type ApiPlanV1,
@@ -136,10 +116,6 @@ const listPlansRpc = async <T = { list: ApiPlanV1[] }>() =>
 const getPlanRpc = async (planId: string) =>
 	autumnRpc.plans.get<ApiPlanV1>(planId);
 
-// ─────────────────────────────────────────────────────────────────────────────
-// 1. force_version + disable_version both true → 400 conflicting_version_flags
-// ─────────────────────────────────────────────────────────────────────────────
-
 test.concurrent(
 	`${chalk.yellowBright("variants contract: force_version + disable_version both true → conflicting_version_flags")}`,
 	async () => {
@@ -158,10 +134,6 @@ test.concurrent(
 		});
 	},
 );
-
-// ─────────────────────────────────────────────────────────────────────────────
-// 2. force_version=true always versions even with no customers
-// ─────────────────────────────────────────────────────────────────────────────
 
 test.concurrent(
 	`${chalk.yellowBright("variants contract: force_version=true versions even with no customers")}`,
@@ -184,10 +156,6 @@ test.concurrent(
 		expect(v2.version).toBe(2);
 	},
 );
-
-// ─────────────────────────────────────────────────────────────────────────────
-// 3. disable_version=true performs in-place edit (no versioning) when customers exist
-// ─────────────────────────────────────────────────────────────────────────────
 
 test.concurrent(
 	`${chalk.yellowBright("variants contract: disable_version=true does in-place edit when customers exist")}`,
@@ -230,10 +198,6 @@ test.concurrent(
 		expect(after.version).toBe(before.version);
 	},
 );
-
-// ─────────────────────────────────────────────────────────────────────────────
-// 4. base_internal_product_id is set on create_variant
-// ─────────────────────────────────────────────────────────────────────────────
 
 test.concurrent(
 	`${chalk.yellowBright("variants contract: base_internal_product_id set on create_variant")}`,
@@ -311,10 +275,6 @@ test.concurrent(
 	},
 );
 
-// ─────────────────────────────────────────────────────────────────────────────
-// 5. base_plan_id can relink and detach an existing variant
-// ─────────────────────────────────────────────────────────────────────────────
-
 test.concurrent(
 	`${chalk.yellowBright("variants contract: base_plan_id relinks and detaches an existing variant")}`,
 	async () => {
@@ -370,10 +330,6 @@ test.concurrent(
 	},
 );
 
-// ─────────────────────────────────────────────────────────────────────────────
-// 6. create_variant returns standard getPlanResponse shape (ApiPlanV1)
-// ─────────────────────────────────────────────────────────────────────────────
-
 test.concurrent(
 	`${chalk.yellowBright("variants contract: create_variant returns ApiPlanV1 shape")}`,
 	async () => {
@@ -386,10 +342,6 @@ test.concurrent(
 		expect(variant.id).toBe(variantId);
 	},
 );
-
-// ─────────────────────────────────────────────────────────────────────────────
-// 8. archived variant silently filtered from propagate
-// ─────────────────────────────────────────────────────────────────────────────
 
 test.concurrent(
 	`${chalk.yellowBright("variants contract: archived variant silently filtered from propagate")}`,
@@ -423,10 +375,6 @@ test.concurrent(
 		expect(variantAfter.version).toBe(variantVersionBefore);
 	},
 );
-
-// ─────────────────────────────────────────────────────────────────────────────
-// 9. preview_update.versionable matches actual update outcome
-// ─────────────────────────────────────────────────────────────────────────────
 
 test.concurrent(
 	`${chalk.yellowBright("variants contract: preview versionable matches actual update outcome")}`,
@@ -479,10 +427,6 @@ test.concurrent(
 	},
 );
 
-// ─────────────────────────────────────────────────────────────────────────────
-// 10. preview_update.diff matches manual diffPlanV1
-// ─────────────────────────────────────────────────────────────────────────────
-
 test.concurrent(
 	`${chalk.yellowBright("variants contract: preview diff matches manual diffPlanV1")}`,
 	async () => {
@@ -502,9 +446,6 @@ test.concurrent(
 		const newPlan = await getPlanRpc(baseId);
 		const manualDiff = diffPlanV1({ from: oldPlan, to: newPlan });
 
-		// The API response is schema-parsed, so optional item fields come back
-		// filled with their defaults (e.g. `pooled: false`) that a local diff
-		// omits — compare semantically rather than structurally.
 		expect(
 			customizePlanV1DiffsEqual({
 				left: preview.customize,
@@ -519,16 +460,7 @@ test.concurrent(
 // 11. test.skip — contract #18: throw-on-first-failure (no Stripe injection hook in harness)
 // ─────────────────────────────────────────────────────────────────────────────
 
-test.skip(`${chalk.yellowBright("variants contract: throw-on-first-failure (contract #18)")}`, async () => {
-	// TODO: contract #18 — updateVariants throws on first failure.
-	// Requires a Stripe injection hook to simulate a mid-propagation failure
-	// (e.g., variant 2 of 3 throws) so we can assert base update is committed
-	// and variants before the throw are done while variants after are not.
-});
-
-// ─────────────────────────────────────────────────────────────────────────────
-// 12. update_variant_ids:[] identical to omitted
-// ─────────────────────────────────────────────────────────────────────────────
+test.skip(`${chalk.yellowBright("variants contract: throw-on-first-failure (contract #18)")}`, async () => {});
 
 test.concurrent(
 	`${chalk.yellowBright("variants contract: update_variant_ids empty array identical to omitted")}`,
@@ -563,10 +495,6 @@ test.concurrent(
 	},
 );
 
-// ─────────────────────────────────────────────────────────────────────────────
-// 13. update rejects base's own id in propagate
-// ─────────────────────────────────────────────────────────────────────────────
-
 test.concurrent(
 	`${chalk.yellowBright("variants contract: update rejects base's own id in propagate")}`,
 	async () => {
@@ -584,10 +512,6 @@ test.concurrent(
 		});
 	},
 );
-
-// ─────────────────────────────────────────────────────────────────────────────
-// 14. update rejects non-existent id in propagate
-// ─────────────────────────────────────────────────────────────────────────────
 
 test.concurrent(
 	`${chalk.yellowBright("variants contract: update rejects non-existent id in propagate")}`,
@@ -607,10 +531,6 @@ test.concurrent(
 	},
 );
 
-// ─────────────────────────────────────────────────────────────────────────────
-// 15. create_variant rejects id === plan_id (409 product_id_already_exists)
-// ─────────────────────────────────────────────────────────────────────────────
-
 test.concurrent(
 	`${chalk.yellowBright("variants contract: create_variant rejects id === plan_id")}`,
 	async () => {
@@ -625,10 +545,6 @@ test.concurrent(
 		});
 	},
 );
-
-// ─────────────────────────────────────────────────────────────────────────────
-// 16. create_variant variant appears in plans.list with base_internal_product_id set
-// ─────────────────────────────────────────────────────────────────────────────
 
 test.concurrent(
 	`${chalk.yellowBright("variants contract: variant appears in plans.list")}`,
@@ -673,10 +589,6 @@ test.concurrent(
 	},
 );
 
-// ─────────────────────────────────────────────────────────────────────────────
-// 17. preview_update on base with zero variants → variants: []
-// ─────────────────────────────────────────────────────────────────────────────
-
 test.concurrent(
 	`${chalk.yellowBright("variants contract: preview_update with zero variants → variants empty")}`,
 	async () => {
@@ -690,10 +602,6 @@ test.concurrent(
 		expectPreviewVariantsCorrect({ preview, variants: [] });
 	},
 );
-
-// ─────────────────────────────────────────────────────────────────────────────
-// 18. free_trial diff propagation overwrites variant override
-// ─────────────────────────────────────────────────────────────────────────────
 
 test.concurrent(
 	`${chalk.yellowBright("variants contract: free_trial propagation overwrites variant override")}`,
@@ -729,10 +637,6 @@ test.concurrent(
 		expect(variantAfter.free_trial?.duration_length).toBe(30);
 	},
 );
-
-// ─────────────────────────────────────────────────────────────────────────────
-// 19. force_version=true versions when no customers exist (standalone assertion)
-// ─────────────────────────────────────────────────────────────────────────────
 
 test.concurrent(
 	`${chalk.yellowBright("variants contract: force_version versions with no customers (standalone)")}`,

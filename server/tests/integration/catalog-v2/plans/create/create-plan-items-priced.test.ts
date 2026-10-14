@@ -1,12 +1,3 @@
-/**
- * catalogV2.update — create PRICED plan item shapes across the billing-model
- * matrix: consumable prepaid, allocated prepaid, consumable usage-based, and
- * allocated usage-based (arrear / "v2"; prorated "v1" is not creatable via
- * these params — proration + usage_based is rejected in plan-errors).
- *
- * Contract: each price field round-trips through catalogV2.get after create.
- */
-
 import { expect, test } from "bun:test";
 import {
 	AllocatedBillingBehavior,
@@ -30,8 +21,6 @@ import {
 	expectCatalogPlansCorrect,
 } from "../utils/expectCatalogPlans.js";
 import { createAndAssert } from "./utils/createAndAssert.js";
-
-// ─── Consumable usage-based ──────────────────────────────────────────────────
 
 test.concurrent(
 	`${chalk.yellowBright("catalogV2 create items: consumable usage-based — reset + priced (matched intervals)")}`,
@@ -112,8 +101,6 @@ test.concurrent(
 		});
 	},
 );
-
-// ─── Consumable prepaid ──────────────────────────────────────────────────────
 
 test.concurrent(
 	`${chalk.yellowBright("catalogV2 create items: consumable prepaid — flat + billing_units + max_purchase")}`,
@@ -232,8 +219,6 @@ test.concurrent(
 	},
 );
 
-// ─── Allocated prepaid (continuous-use feature + prepaid) ────────────────────
-
 test.concurrent(
 	`${chalk.yellowBright("catalogV2 create items: allocated prepaid — proration on_increase / on_decrease")}`,
 	async () => {
@@ -271,7 +256,6 @@ test.concurrent(
 				response,
 				plans: [{ id: planId, action: "create" }],
 			});
-			// catalogV2.get strips proration (productV2ToApiPlanV1); assert DB row.
 			await expectCatalogPlansCorrect({
 				autumn: autumnV2_3,
 				expected: [
@@ -306,10 +290,6 @@ test.concurrent(
 	},
 );
 
-// ─── Allocated usage-based (arrear / "v2") ───────────────────────────────────
-
-// Continuous-use feature + usage_based with no proration knobs resolves to
-// allocated arrear billing: never resets, bills holdings at cycle end.
 test.concurrent(
 	`${chalk.yellowBright("catalogV2 create items: allocated usage-based (arrear) — behavior + should_prorate false")}`,
 	async () => {
@@ -384,10 +364,6 @@ test.concurrent(
 	},
 );
 
-// ─── stripe_price_id threading (internal param) ──────────────────────────────
-
-// stripe_price_id is internal-only but raw API calls must thread it through to
-// the price config so sync flows can preserve existing Stripe prices.
 test.concurrent(
 	`${chalk.yellowBright("catalogV2 create items: price.stripe_price_id threaded to price config")}`,
 	async () => {
@@ -396,9 +372,6 @@ test.concurrent(
 		const stripeProduct = await ctx.stripeCli.products.create({
 			name: `Stripe Price Threaded ${planId}`,
 		});
-		// The item below is usage-based, and a usage-based price bills through the
-		// meter it is bound to — a plain recurring price could never report usage,
-		// so adoption rejects one. Mirrors what a sync flow would actually find.
 		const meter = await ctx.stripeCli.billing.meters.create({
 			display_name: `Threaded Meter ${planId}`,
 			event_name: `threaded_events_${planId}`,
@@ -454,8 +427,6 @@ test.concurrent(
 		}
 	},
 );
-
-// ─── Multi-currency + base price extras ──────────────────────────────────────
 
 test.concurrent(
 	`${chalk.yellowBright("catalogV2 create items: additional_currencies on flat amount + tiers")}`,

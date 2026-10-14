@@ -2,7 +2,6 @@ import { type AppEnv, type FullReward, rewards } from "@autumn/shared";
 import { and, desc, eq, sql } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 
-/** Fetch one reward by promo code */
 export const getRewardByCode = async ({
 	db,
 	code,

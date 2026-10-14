@@ -20,7 +20,6 @@ import { entityRolloverBalances } from "../entityRolloverBalances";
 export const PREPAID_ROLLOVER_MAX = 40;
 export const OVERAGE_ROLLOVER_MAX = 30;
 
-// After the cycle reset, each bucket rolls over up to its own max per entity.
 export const expectedRollovers = [OVERAGE_ROLLOVER_MAX, PREPAID_ROLLOVER_MAX];
 
 export const buildItems = () => ({
@@ -55,8 +54,6 @@ export const buildItems = () => ({
 	priceItem: items.monthlyPrice({ price: 30 }),
 });
 
-// Same items expressed in the public plan-item param shape, for
-// customize.items (PUT) and add_items (PATCH) calls.
 export const buildApiItems = () => ({
 	prepaidVolume: {
 		feature_id: TestFeature.Messages,

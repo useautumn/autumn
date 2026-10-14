@@ -298,7 +298,6 @@ describe("ownershipTail", function ownershipTailTests() {
 		const starting = tail.start();
 		while (!fixture.readSubscription().lifecycle.includes("run"))
 			await Promise.resolve();
-		// The fetch has been observed but start has not resumed yet when stop runs.
 		fixture.fetched();
 		const stopping = tail.stop();
 		await starting;
@@ -345,7 +344,6 @@ describe("ownershipTail", function ownershipTailTests() {
 				endpoint: "http://successor:8080",
 				claimedAt: 3,
 			};
-			// A preparation before any known owner is still worth remembering: the owner reads it.
 			await fixture.deliver({
 				partition: 4,
 				messages: [serialized({ record: preparing, offset: 20n })],
@@ -401,7 +399,6 @@ describe("ownershipTail", function ownershipTailTests() {
 				releasedAt: 5,
 			};
 			expect(tail.readView({ partition: 3 })).toBeNull();
-			// A drain before any known owner says nothing; a claim sets the owner.
 			await fixture.deliver({
 				partition: 3,
 				messages: [
@@ -415,7 +412,6 @@ describe("ownershipTail", function ownershipTailTests() {
 				activeDrain: null,
 				activePreparation: null,
 			});
-			// Only the owner's own drain counts; a stranger's is a late record.
 			await fixture.deliver({
 				partition: 3,
 				messages: [serialized({ record: drainingByStranger, offset: 12n })],
@@ -433,7 +429,6 @@ describe("ownershipTail", function ownershipTailTests() {
 				},
 				activePreparation: null,
 			});
-			// A claim or release concludes the drain.
 			await fixture.deliver({
 				partition: 3,
 				messages: [serialized({ record: released, offset: 14n })],
@@ -612,7 +607,6 @@ describe("ownershipTail", function ownershipTailTests() {
 			"abort",
 			"abort",
 		]);
-		// A listener that ended on its own signal is detached once, not again at stop.
 		const second = createFakeTailKafka();
 		const started = await startTail(second);
 		const own = new AbortController();

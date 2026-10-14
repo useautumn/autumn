@@ -7,10 +7,6 @@ import {
 	entitlementPricesPlanHasWrites,
 } from "@/internal/products/actions/computeEntitlementPricesPlan";
 
-/**
- * Mint is_custom overlay rows that copy the frozen child's items/price.
- * No currentRows — claiming stock ids would leak the in-place child edit.
- */
 export const cloneFrozenChildAsLicenseOverlay = ({
 	ctx,
 	frozenChildProduct,

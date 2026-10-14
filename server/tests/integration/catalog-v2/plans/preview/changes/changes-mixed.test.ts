@@ -1,9 +1,3 @@
-/**
- * catalogV2.preview_update — mixed changes blocks in one entry / multi-plan.
- *
- * Mixed change blocks in one entry / multi-plan; create → plan_change omitted.
- */
-
 import { expect, test } from "bun:test";
 import {
 	BillingInterval,
@@ -88,7 +82,6 @@ test.concurrent(
 	},
 );
 
-// Creates have no diff — plan_change is omitted; the row action conveys it.
 test.concurrent(
 	`${chalk.yellowBright("catalogV2 changes-mixed: create full shape → plan_change omitted")}`,
 	async () => {
@@ -128,7 +121,6 @@ test.concurrent(
 	},
 );
 
-// items + price, details untouched → previous_attributes null/empty
 test.concurrent(
 	`${chalk.yellowBright("catalogV2 changes-mixed: items+price, details untouched → no previous_attributes")}`,
 	async () => {
@@ -180,7 +172,6 @@ test.concurrent(
 	},
 );
 
-// multi-plan: each row's changes scoped to its own plan
 test.concurrent(
 	`${chalk.yellowBright("catalogV2 changes-mixed: multi-plan changes scoped per row")}`,
 	async () => {

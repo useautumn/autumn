@@ -18,8 +18,6 @@ const FRIENDLY_MESSAGES: Record<string, string> = {
 		"Add at least one operation",
 };
 
-// Empty operations persist as null because `{}` fails the server resource-block
-// check; non-empty drafts are kept so in-progress operations aren't lost.
 export function toOperationsPayload({
 	operations,
 	filter,

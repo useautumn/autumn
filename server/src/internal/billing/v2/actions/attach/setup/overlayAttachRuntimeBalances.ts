@@ -35,10 +35,6 @@ export const copyAttachRuntimeBalanceFields = ({
 	rollovers: runtimeCustomerEntitlement.rollovers,
 });
 
-/**
- * Billing structure still comes from Postgres. Only the mutable balance facts
- * are overlaid from Redis, where accepted-but-not-yet-synced tracks live.
- */
 export const overlayAttachRuntimeBalances = async ({
 	ctx,
 	fullCustomer,
@@ -48,8 +44,6 @@ export const overlayAttachRuntimeBalances = async ({
 	fullCustomer: FullCustomer;
 	entityId?: string;
 }): Promise<FullCustomer> => {
-	// The worker holds the live balances; the Redis subject is not kept fresh on its path.
-	// An id-less customer never routes to the worker.
 	const routedToWorker = fullCustomer.id
 		? isBalanceWorkerRolloutEnabled({ ctx, customerId: fullCustomer.id })
 		: false;

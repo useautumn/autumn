@@ -12,7 +12,6 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import type { UpsertProductPlan } from "@/internal/catalogV2/actions/updateCatalog/types/upsertProductPlan";
 import { PriceService } from "@/internal/products/prices/PriceService";
 
-/** Fixed prices bill from the v1 slot, prepaid from the v2 slot. */
 const PRICE_MAPPING_SLOTS = [
 	"stripe_price_id",
 	"stripe_prepaid_price_v2_id",
@@ -39,12 +38,6 @@ type AdoptedPrice = {
 const configIds = ({ price }: { price: Price }): PriceConfigIds =>
 	(price.config ?? {}) as PriceConfigIds;
 
-/**
- * What each existing price row holds, per slot. Keyed by price id so an id
- * MOVED from one row to another still counts as newly stated on the row that
- * now claims it — a product-wide set would wave that through and leave the
- * destination row pointing at the wrong Stripe product.
- */
 const currentSlotIdsByPriceId = ({
 	product,
 }: {
@@ -57,11 +50,6 @@ const currentSlotIdsByPriceId = ({
 	return byPriceId;
 };
 
-/**
- * A mint clones the previous row's prices under fresh price ids, so per-row
- * matching cannot see them. Those ids were real when Autumn wrote them, so the
- * cloned-from row stays a product-wide exemption.
- */
 const mintedStripePriceIds = ({
 	product,
 }: {
@@ -75,12 +63,6 @@ const mintedStripePriceIds = ({
 		),
 	);
 
-/**
- * Stated ids only — an id Autumn minted earlier was real when it was written.
- * Emits one entry per newly-supplied SLOT: a price can state both an internal
- * `stripe_price_id` and a `processors` id, and validating only the first would
- * let the other through unchecked.
- */
 export const newlyAdoptedPrices = ({
 	upsert,
 }: {
@@ -106,7 +88,6 @@ export const newlyAdoptedPrices = ({
 	});
 };
 
-/** Usage-based prices bill through a meter, so an adopted price must carry one. */
 export const priceRequiresMeter = ({
 	price,
 	product,
@@ -121,13 +102,6 @@ export type MeterDecision =
 	| { type: "clear" }
 	| { type: "adopt"; meterId: string };
 
-/**
- * A metered price is bound to a Stripe meter, and usage is reported against
- * that meter's event name — so adopting the price has to adopt both, or usage
- * has nowhere to go. Derived from the price, never stated. Re-mapping onto a
- * price with NO meter has to clear the old one, or usage keeps reporting to a
- * meter the plan no longer bills through.
- */
 export const meterDecision = ({
 	stripePrice,
 	config,
@@ -166,7 +140,6 @@ export const applyMeterDecision = async ({
 	return true;
 };
 
-/** Expanded prices carry the product object; unexpanded ones carry its id. */
 export const productIdOf = ({
 	stripePrice,
 }: {
@@ -179,15 +152,6 @@ export const productIdOf = ({
 	return product.id;
 };
 
-/**
- * A stated Stripe price must already exist — Autumn never mints a replacement,
- * which would hand back an id the caller never asked for. The same lookup
- * records the price's own Stripe product, so adoption never leaves a price
- * pointing at a product it does not belong to.
- *
- * Scoped to prices this request stated: shared init paths (attach, sync,
- * migrations) are untouched.
- */
 export const validateAdoptedStripePrices = async ({
 	ctx,
 	upsertProducts,
@@ -195,8 +159,6 @@ export const validateAdoptedStripePrices = async ({
 	ctx: AutumnContext;
 	upsertProducts: UpsertProductPlan[];
 }) => {
-	// `create_in_stripe: false` means this plan does not talk to Stripe at all,
-	// so its ids are threaded through rather than resolved.
 	const adopted = upsertProducts
 		.filter((upsert) => upsert.createInStripe !== false)
 		.flatMap((upsert) => newlyAdoptedPrices({ upsert }));
@@ -223,18 +185,12 @@ export const validateAdoptedStripePrices = async ({
 			});
 		}
 
-		// The stated price owns its product and meter: a changed price re-points
-		// them, rather than leaving the row on the ones it used to belong to.
 		const config = configIds({ price: entry.price });
 		const stripeProductId = productIdOf({ stripePrice });
 		const productChanged =
 			Boolean(stripeProductId) && config.stripe_product_id !== stripeProductId;
 		if (productChanged) config.stripe_product_id = stripeProductId;
 
-		// A usage item bills through the meter bound to its price. Adopting a
-		// meterless price would leave the meter slot unfillable — init re-runs
-		// forever and `createStripeInArrearPrice` returns early on the existing
-		// price — so the item could never report usage. Reject it up front.
 		if (
 			!stripePrice.recurring?.meter &&
 			priceRequiresMeter({ price: entry.price, product: entry.product })

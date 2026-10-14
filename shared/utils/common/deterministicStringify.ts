@@ -1,7 +1,3 @@
-/**
- * Recursively sort object keys, strip undefined values, and produce a stable string.
- * Array element order is preserved; object key order is not.
- */
 export const deterministicStringify = (value: unknown): string => {
 	if (value === null || value === undefined) return "null";
 	if (typeof value !== "object") return JSON.stringify(value);

@@ -5,14 +5,9 @@ interface AuthBackgroundProps {
 	children: ReactNode;
 }
 
-/**
- * Split-screen auth layout: image panel on left, content on right.
- * Clean border separation. Image hidden on mobile.
- */
 export function AuthBackground({ children }: AuthBackgroundProps) {
 	return (
 		<div className="h-screen bg-background flex">
-			{/* Image panel */}
 			<div className="hidden lg:block relative w-1/2 overflow-hidden border-r border-border bg-[#0a0a0a]">
 				<img
 					src="/auth-hero.avif"
@@ -27,7 +22,6 @@ export function AuthBackground({ children }: AuthBackgroundProps) {
 				</div>
 			</div>
 
-			{/* Form panel */}
 			<div className="w-full lg:w-1/2 flex items-center justify-center p-6">
 				<div className="w-full max-w-[350px]">{children}</div>
 			</div>

@@ -67,9 +67,6 @@ const initCusPrice = ({
 const initCusProduct = ({
 	customer,
 	product,
-	// subscriptionId,
-	// subscriptionScheduleId,
-	// lastInvoiceId,
 	cusProdId,
 	startsAt,
 	optionsList,
@@ -91,9 +88,6 @@ const initCusProduct = ({
 }: {
 	customer: Customer;
 	product: FullProduct;
-	// subscriptionId: string | undefined | null;
-	// subscriptionScheduleId?: string | null;
-	// lastInvoiceId?: string | null;
 	cusProdId: string;
 	startsAt?: number;
 	optionsList: FeatureOptions[];
@@ -141,9 +135,6 @@ const initCusProduct = ({
 
 		processor: {
 			type: processor ?? ProcessorType.Stripe,
-			// subscription_id: subscriptionId,
-			// subscription_schedule_id: subscriptionScheduleId,
-			// last_invoice_id: lastInvoiceId,
 		},
 
 		starts_at: startsAt || now,
@@ -212,7 +203,6 @@ const expireOrDeleteCusProduct = async ({
 	cusProducts?: FullCusProduct[];
 	internalEntityId?: string;
 }) => {
-	// 1. If startsAt
 	if (startsAt && startsAt > Date.now()) {
 		const curScheduledProduct = cusProducts?.find(
 			(cp) =>
@@ -336,7 +326,6 @@ export const createFullCusProduct = async ({
 	let { customer, product, prices, entitlements, optionsList, org, freeTrial } =
 		attachParams;
 
-	// Try to get current cus product or set to null...
 	const curCusProduct = await getExistingCusProduct({
 		db,
 		cusProducts: attachParams.cusProducts,
@@ -398,7 +387,6 @@ export const createFullCusProduct = async ({
 		},
 	});
 
-	// 1. create customer entitlements
 	const cusEnts: CustomerEntitlement[] = [];
 	const newReplaceables: InsertReplaceable[] = [];
 
@@ -447,7 +435,6 @@ export const createFullCusProduct = async ({
 		prices,
 	});
 
-	// 4. Get new rollovers
 	const rolloverOps = await getNewProductRollovers({
 		db,
 		curCusProduct: curCusProduct as FullCusProduct,
@@ -456,7 +443,6 @@ export const createFullCusProduct = async ({
 		logger,
 	});
 
-	// 4. create customer prices
 	const cusPrices: CustomerPrice[] = [];
 
 	for (const price of prices) {
@@ -469,7 +455,6 @@ export const createFullCusProduct = async ({
 		cusPrices.push(cusPrice);
 	}
 
-	// let entityId = customer.entity?.id;
 	const cusProd = initCusProduct({
 		cusProdId,
 		customer,
@@ -527,7 +512,6 @@ export const createFullCusProduct = async ({
 
 	const finalRollovers = (await Promise.all(rolloverInserts)).flat();
 
-	// Get rollovers for each entitlement
 	const cusEntsWithRollovers = await Promise.all(
 		cusEnts.map(async (ce) => ({
 			...ce,

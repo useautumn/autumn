@@ -9,17 +9,15 @@ const getActiveCusProductStatuses = () => [
 ];
 
 export const ADMIN_USER_IDs = [
-	"user_2tMgAiPsQzX8JTHjZZh9m0VdvUv", // a
-	"user_2sB3tBXsnVVLlTKliQIqvvM2xfB", // j
-	"ZsDswIXyOGMP9y1V1At4dAZNaiggClSs", // t
-	"NqNuL3MtS7MR2WYoqx2b28iY9vmfAs8h", // c
-	"y7xV3rybEkhoPfJe45dymZB1dXxvsolG", // o
-	"NqNuL3MtS7MR2WYoqx2b28iY9vmfAs8h", // charlie prod
-	"zviddNexn8HgLfo6jxxyK2KLcf8NrvtS", //jy
-
-	// Sandbox:
-	"user_2rypooIKyMQx81vMS8FFGx24UHU", // john
-	"K7NDwSwohMCV9BXJ3Yb5MxgeXhWcwj0L", // charlie sandbox
+	"user_2tMgAiPsQzX8JTHjZZh9m0VdvUv",
+	"user_2sB3tBXsnVVLlTKliQIqvvM2xfB",
+	"ZsDswIXyOGMP9y1V1At4dAZNaiggClSs",
+	"NqNuL3MtS7MR2WYoqx2b28iY9vmfAs8h",
+	"y7xV3rybEkhoPfJe45dymZB1dXxvsolG",
+	"NqNuL3MtS7MR2WYoqx2b28iY9vmfAs8h",
+	"zviddNexn8HgLfo6jxxyK2KLcf8NrvtS",
+	"user_2rypooIKyMQx81vMS8FFGx24UHU",
+	"K7NDwSwohMCV9BXJ3Yb5MxgeXhWcwj0L",
 ];
 
 export const dashboardOrigins = [

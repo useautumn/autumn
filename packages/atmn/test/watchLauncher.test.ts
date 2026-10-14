@@ -1,8 +1,3 @@
-/**
- * The behavioural half of headless detection. Every case here is one a TTY
- * check gets wrong: a container, an SSH session and CI all have terminals.
- */
-
 import { expect, test } from "bun:test";
 import { EventEmitter } from "node:events";
 import { watchLauncher } from "../src/auth/browser/watchLauncher";
@@ -30,7 +25,6 @@ test("a launcher that exits cleanly opened a browser", async () => {
 });
 
 test("a launcher that exits non-zero opened nothing", async () => {
-	// xdg-open with no display exits 3, whatever the terminal looks like.
 	const launcher = launcherThat({
 		emit: (emitter) => emitter.emit("close", 3),
 	});
@@ -52,7 +46,6 @@ test("a launcher that never spawned opened nothing", async () => {
 });
 
 test("a launcher still running after the settle window counts as opened", async () => {
-	// Some openers stay resident for the life of the browser they launched.
 	const launcher = new EventEmitter();
 
 	await expect(

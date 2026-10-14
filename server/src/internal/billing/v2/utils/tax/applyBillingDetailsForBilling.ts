@@ -4,7 +4,6 @@ import { assertBillingDetailsWritable } from "@/external/stripe/customers/billin
 import { getExpandedStripeCustomer } from "@/external/stripe/customers/operations/getExpandedStripeCustomer";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 
-/** Writes request billing details to the Stripe customer, returning the refreshed customer so tax sees the new location. */
 export const applyBillingDetailsForBilling = async ({
 	ctx,
 	billingContext,

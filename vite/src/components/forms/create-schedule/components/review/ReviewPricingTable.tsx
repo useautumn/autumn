@@ -45,7 +45,6 @@ export function PricingTablePhaseBadge({ badge }: { badge: ReviewPhaseBadge }) {
 	);
 }
 
-/** The phase's dates and status above a card holding its Product / Qty / Total table. */
 export function PricingTablePhase({
 	title,
 	children,
@@ -105,7 +104,6 @@ function PricingTableRow({ row }: { row: ReviewChangeRow }) {
 	);
 }
 
-/** Each phase as a Stripe-style pricing table: what the subscription bills, not a diff. */
 export function ReviewPricingTable({
 	phases,
 }: {

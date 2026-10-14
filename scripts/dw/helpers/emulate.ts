@@ -19,7 +19,6 @@ import { log, sh } from "./shell.ts";
 
 const EMULATE_LOG = join(homedir(), ".autumn-emulate.log");
 
-/** Browser-facing emulate origin. Never 127.0.0.1:4000 for Cloud browsers. */
 export function emulateGoogleUrl({ origin }: { origin?: string }): string {
 	if (origin && /^https?:\/\//i.test(origin)) {
 		return origin.replace(/\/$/, "");
@@ -99,7 +98,6 @@ export function spawnEmulateDaemon({
 	}
 }
 
-/** Laptop portless, or the public emulate host when Cloud sets origin. */
 export function ensureEmulateRunning({
 	origin,
 }: {

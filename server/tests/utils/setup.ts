@@ -1,4 +1,3 @@
-// Re-export functions from setupUtils
 export { clearOrg } from "./setup/clearOrg.js";
 export { getAxiosInstance, setupOrg } from "./setup/setupOrg.js";
 

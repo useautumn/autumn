@@ -4,10 +4,6 @@ import { cn } from "@/lib/utils";
 import { defaultVersionSlug } from "../components/versionLabel";
 import { mintTargetSlugError } from "./mintTargetSlugs";
 
-/**
- * Names the row a propagation target mints. Sits in the row's trailing slot so the
- * chip reads as this target's resulting version, with editing one click away.
- */
 export function TargetVersionSlugControl({
 	slug,
 	mintVersion,

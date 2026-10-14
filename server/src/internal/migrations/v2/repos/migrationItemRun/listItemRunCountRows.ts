@@ -16,8 +16,6 @@ export type MigrationItemRunCountRow = {
 	count: number;
 };
 
-/** Customer item-run counts for every live item of the migrations plus every
- * item of `dryRunIds`; each OR branch matches one partial index on `dry_run`. */
 export const listItemRunCountRows = async ({
 	ctx,
 	migrationInternalIds,

@@ -13,11 +13,6 @@ import { rewards } from "./rewards.js";
 import { stripe } from "./stripe.js";
 import type { ToolDomain } from "./utils/types.js";
 
-/**
- * Every business domain's tool declarations. New domains must be added here so
- * both the composed toolsets (`index.ts`) and the approval-gated tool list
- * (`approvalGated.ts`) see them.
- */
 export const domainModules = {
 	agent,
 	customers,

@@ -34,7 +34,6 @@ import { awsRegionLabel } from "./atomRegionDisplay";
 
 const NO_VALUE = "—";
 
-/** One labelled value; a cell after the first in its row draws the divider, which takes 1px of its inset. */
 const DetailCell = ({
 	label,
 	hasDivider = false,
@@ -66,7 +65,6 @@ const copyToClipboard = ({ text, label }: { text: string; label: string }) => {
 	toast.success(`${label} copied`);
 };
 
-/** Copying what the cards show, and deleting this Atom. */
 const AtomDetailsMenu = ({
 	url,
 	stackName,
@@ -122,7 +120,6 @@ const AtomDetailsMenu = ({
 	</DropdownMenu>
 );
 
-/** The details card's exact layout while the Atom loads: its labels in place, each value a skeleton. */
 export const AtomDetailsSkeleton = () => (
 	<div className={ATOM_PAGE_CARD_CLASS}>
 		<div
@@ -164,7 +161,6 @@ export const AtomDetailsSkeleton = () => (
 	</div>
 );
 
-/** The connected Atom: its status and actions on the tray, where it runs and how to reach it beneath. */
 export const AtomDetails = ({
 	cache,
 	onDelete,

@@ -7,10 +7,6 @@ interface ConfigCounts {
 	featuresCount: number;
 }
 
-/**
- * Hook to fetch configuration counts (plans and features)
- * Uses TanStack Query for caching and state management
- */
 export function useConfigCounts() {
 	return useQuery<ConfigCounts>({
 		queryKey: ["configCounts"],

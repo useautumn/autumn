@@ -19,7 +19,6 @@ const subjectBody = ({ padding = "" }: { padding?: string } = {}) =>
 		read_at: 1700,
 	}) as unknown as AtomSubjectBody;
 
-/** Random bytes do not compress, so the gzip body stays past one queue message. */
 const incompressible = (bytes: number) =>
 	Buffer.from(crypto.getRandomValues(new Uint8Array(bytes))).toString("hex");
 

@@ -1,27 +1,3 @@
-/**
- * Contract: pooled ROLLOVERS survive a transition of a customer product whose
- * contribution was repointed by the combine-pools merge.
- *
- * Production shape (see setupMergedPoolScenario): entity 1 attaches the plan,
- * entity 2 attaches the same plan on its own Stripe subscription so each mints
- * its own pool, then the pools are merged the way the combine-pools script
- * merges them. Entity 2's contribution now sits on a pool identified by entity
- * 1's subscription. Transitioning entity 2 splits the pool again.
- *
- * The split itself is ACCEPTED behavior and is deliberately not asserted
- * against. What must hold is that nothing is lost across it.
- *
- * Contract under test:
- *   New behaviors:
- *     - transition the mis-matched plan -> total rollover balance across all
- *       pools is unchanged
- *     - transition the mis-matched plan -> the customer's readable remaining
- *       for Messages is unchanged
- *   Side effects:
- *     - every rollover row remains attached to a synthetic cusEnt whose pool is
- *       still live, rather than stranded on a retired one
- */
-
 import { expect, test } from "bun:test";
 import {
 	type ApiCustomerV5,
@@ -70,14 +46,12 @@ test(
 			grant: GRANT,
 			rolloverConfig,
 			usage: { value: USAGE, entityIndex: 1 },
-			// Renewal is what mints the pooled rollover.
 			advanceToNextInvoice: true,
 		});
 		const { ctx, customerId, autumnV2_3 } = scenario;
 
 		const before = await getPooledBalanceDbState({ db: ctx.db, customerId });
 		const rolloverBefore = sumRolloverBalance(before);
-		// Guard: without a real rollover every assertion below passes vacuously.
 		expect(rolloverBefore).toBeGreaterThan(0);
 
 		const customerBefore = await autumnV2_3.customers.get<ApiCustomerV5>(
@@ -88,9 +62,6 @@ test(
 			customerBefore.balances?.[TestFeature.Messages]?.remaining;
 		expect(remainingBefore).toBeGreaterThan(0);
 
-		// ── Act: transition the plan whose contribution the merge left pointing
-		// at the other subscription's pool. Base-price customize only — the
-		// pooled item itself is untouched.
 		await autumnV2_3.subscriptions.update<UpdateSubscriptionV1ParamsInput>({
 			customer_id: customerId,
 			customer_product_id: scenario.mismatchedCustomerProduct.id,
@@ -100,10 +71,8 @@ test(
 
 		const after = await getPooledBalanceDbState({ db: ctx.db, customerId });
 
-		// ── Contract: the rollover balance is not lost across the split ──
 		expect(sumRolloverBalance(after)).toBe(rolloverBefore);
 
-		// ── Contract: no rollover is stranded on a retired pool ──────────
 		const livePoolCustomerEntitlementIds = new Set(
 			after.pools
 				.filter((pool) => pool.expires_at === null)
@@ -116,7 +85,6 @@ test(
 			}).toEqual({ rolloverId: rollover.id, onLivePool: true });
 		}
 
-		// ── Contract: the customer reads the same remaining as before ────
 		const customerAfter = await autumnV2_3.customers.get<ApiCustomerV5>(
 			customerId,
 			{ skip_cache: "true" },
@@ -142,11 +110,6 @@ const sumPoolBalance = (state: PooledState) =>
 		return sum + (synthetic?.balance ?? 0);
 	}, 0);
 
-/**
- * A free plan pools alongside a paid one — the free plan resets lazily with no
- * subscription, so the two identities differ by more than the subscription id.
- * After the merge, transitioning EITHER side must leave the pooled totals alone.
- */
 const expectFreeAndSubscriptionMergeConserved = async ({
 	customerId,
 	side,
@@ -178,9 +141,6 @@ const expectFreeAndSubscriptionMergeConserved = async ({
 			: scenario.alignedEntityId;
 	const isFreeTarget = target.product_id === scenario.freePlan.id;
 
-	// A free plan has no base price to customize, and re-declaring the pooled
-	// item unchanged is rejected as a no-op — so add an unrelated feature, which
-	// forces a transition while leaving the pooled Messages grant alone.
 	const customize = isFreeTarget
 		? {
 				items: [
@@ -197,7 +157,6 @@ const expectFreeAndSubscriptionMergeConserved = async ({
 		customize,
 	});
 
-	// ── Contract: the transition neither creates nor destroys pooled credit ──
 	const after = await getPooledBalanceDbState({ db: ctx.db, customerId });
 	expect(sumGranted(after)).toBe(MERGED_GRANT);
 	expect(sumPoolBalance(after)).toBe(REMAINING_AFTER_USAGE);

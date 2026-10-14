@@ -1,4 +1,3 @@
-/** A kafkajs record as send-frame parts: what is shared across its messages is written once. */
 import type { Producer } from "kafkajs";
 import type {
 	SendMessageMeta,

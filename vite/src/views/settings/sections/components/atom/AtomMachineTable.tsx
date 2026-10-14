@@ -17,7 +17,6 @@ import {
 const GRID_CLASS =
 	"grid grid-cols-[minmax(0,1fr)_64px_80px_144px_96px] items-center gap-4 px-4 [&>*:not(:first-child)]:text-right [&>*:not(:first-child)]:tabular-nums";
 
-/** Atom's sizes as rows on a section's surface; the one it runs on now is marked Current. */
 export const AtomMachineTable = ({
 	selected,
 	current,

@@ -1,5 +1,3 @@
-// Loads GSAP exactly once — first call triggers the dynamic import,
-// subsequent calls reuse the same promise.
 type Gsap = (typeof import("gsap"))["default"];
 
 let promise: Promise<Gsap> | null = null;

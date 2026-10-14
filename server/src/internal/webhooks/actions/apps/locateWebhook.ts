@@ -7,7 +7,6 @@ import { listWebhookApps, type WebhookApp } from "./webhookApps.js";
 const isNotFound = (error: unknown) =>
 	error instanceof ApiException && error.code === 404;
 
-/** The app holding this id, and its endpoint; null when neither app has it. */
 export const findWebhook = async ({
 	ctx,
 	id,

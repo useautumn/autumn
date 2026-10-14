@@ -11,7 +11,6 @@ const isCreditSystemSwitch = (from: FeatureType, to: FeatureType): boolean =>
 	(from === FeatureType.CreditSystem && to !== FeatureType.CreditSystem) ||
 	(from !== FeatureType.CreditSystem && to === FeatureType.CreditSystem);
 
-/** Whether a change touches the dimensions (type/id/usage_type) that can block. */
 export const isBlockableFeatureChange = ({
 	feature,
 	updates,
@@ -29,11 +28,6 @@ export const isBlockableFeatureChange = ({
 	return isChangingType || isChangingId || isChangingUsageType;
 };
 
-/**
- * Read-only detection of every condition that would make `updateFeature` reject
- * the change, in the same priority order it throws. Shared by the live update
- * path and `catalog.preview_update` so the two never drift.
- */
 export const detectFeatureUpdateBlockers = ({
 	feature,
 	updates,

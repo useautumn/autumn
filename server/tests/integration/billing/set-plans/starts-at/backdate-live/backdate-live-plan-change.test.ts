@@ -1,11 +1,3 @@
-/**
- * A backdate over a live subscription that also changes plans bills only the difference for the
- * rest of the current period: the old plans' unused time is credited, the new plans charged,
- * and the preview total equals the invoice. The period the old subscription paid isn't rebilled,
- * and the recreated subscription renews on the old date at the new plans' price. Switching a
- * monthly plan to an annual one works the same way, the annual price billed from the old renewal.
- */
-
 import { expect, test } from "bun:test";
 import {
 	addInterval,

@@ -19,8 +19,6 @@ const proxyChatRequest =
 				redirect: "manual",
 			} as RequestInit & { duplex: "half" });
 		} catch {
-			// Leaf is optional locally; an uncaught ConnectionRefused here runs
-			// before ctx exists and looks like the API process died.
 			return c.json({ error: "chat_server_unavailable" }, 502);
 		}
 	};
@@ -38,24 +36,17 @@ export const createChatProxyRouter = (
 	router.post("/slack/events", proxy);
 	router.post("/slack/interactions", proxy);
 
-	// Dashboard chat → Leaf. Pass-through (cookies forwarded); Leaf's web adapter
-	// authenticates the dashboard session in getUser.
 	router.post("/agent/chat", proxy);
 	router.get("/agent/chat/threads", proxy);
 	router.delete("/agent/chat/threads", proxy);
 	router.get("/agent/chat/:threadId/messages", proxy);
 
-	// Plan-preview / approval interactions for the dashboard chat (state-backed,
-	// fetched + resolved beside the text-only stream).
 	router.get("/agent/interactions", proxy);
 	router.get("/agent/approvals/:approvalId", proxy);
 	router.post("/agent/approvals/:approvalId/supersede", proxy);
 	router.post("/agent/approve", proxy);
 	router.post("/agent/reject", proxy);
 
-	// Proxy the MCP endpoint to leaf so the public API origin reaches it —
-	// Claude Managed Agents run in Anthropic's cloud and cannot hit leaf's localhost.
-	// Point MCP_SERVER_URL at this public origin so the agent + vault use it.
 	router.get("/.well-known/oauth-protected-resource/mcp", proxy);
 	router.all("/mcp", proxy);
 

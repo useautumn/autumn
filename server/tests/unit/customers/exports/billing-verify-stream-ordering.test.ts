@@ -1,11 +1,3 @@
-/**
- * The pool spans pages, so page N's subscriptions can still be in the swept Map
- * while page N+1's customers are already verifying. releaseSweptSubscriptions
- * must therefore run against the page that actually settled, in walk order —
- * releasing the wrong page would strip subscriptions a later customer needs and
- * silently turn a real mismatch into a clean row.
- */
-
 import { describe, expect, it } from "bun:test";
 import { mapStreamWithConcurrency } from "@/internal/customers/exports/workflows/upload/mapStreamWithConcurrency.js";
 
@@ -34,7 +26,6 @@ describe("billing verify page settlement", () => {
 		});
 
 		for await (const _ of stream) {
-			// drain
 		}
 
 		expect(settled).toEqual([
@@ -64,7 +55,6 @@ describe("billing verify page settlement", () => {
 
 		const drained = (async () => {
 			for await (const _ of stream) {
-				// drain
 			}
 		})();
 
@@ -90,7 +80,6 @@ describe("billing verify page settlement", () => {
 		});
 
 		for await (const _ of stream) {
-			// drain
 		}
 
 		expect(settledSizes).toEqual([0, 1, 0]);

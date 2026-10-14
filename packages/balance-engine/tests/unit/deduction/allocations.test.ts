@@ -1,11 +1,3 @@
-/**
- * The allocation gate on shared (customer-level) rows: an entity draws its own share,
- * then credits nobody holds, then its own overage; never another entity's share.
- *
- * Red (before):  shared rows give an entity everything they have.
- * Green (after): shared draws stop at own unused + unallocated, and the counters move.
- */
-
 import { describe, expect, test } from "bun:test";
 import {
 	ALLOCATION_USAGE_WINDOW_FILTER_KEY,

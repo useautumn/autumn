@@ -1,8 +1,3 @@
-/**
- * catalogV2.update — versioning × license planners.
- * Parent all_versions is not auto-adopt. propagate new_version must not
- * mint a plan that is not a license parent.
- */
 import { expect, test } from "bun:test";
 import { ErrCode } from "@autumn/shared";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils.js";

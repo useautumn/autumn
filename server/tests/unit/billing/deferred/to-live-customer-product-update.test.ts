@@ -1,8 +1,3 @@
-/**
- * When a deferred plan resumes, its "expire the plan being replaced" update must target the
- * customer's current plan, even if that plan was replaced while the payment was pending.
- */
-
 import { expect, test } from "bun:test";
 import {
 	type AutumnBillingPlan,

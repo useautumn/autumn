@@ -110,7 +110,6 @@ const buildRequestData = ({
 	}
 };
 
-// Each case starts from fresh Redis views, seeded directly: a balance-worker-routed customer's reads never fill them.
 const warmCaches = async ({
 	ctx,
 	customerId,

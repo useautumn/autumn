@@ -30,8 +30,6 @@ const anchoredPlanId = ({
 	return currentPlans.length === 1 ? currentPlans[0]?.plan_id : undefined;
 };
 
-/** Every generated request normalizes to plan customizations: schedule
- * phases and unscheduled plans, or the primary plan plus additional_plans. */
 const planCustomizations = ({
 	context,
 	customerProductId,

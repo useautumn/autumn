@@ -1,7 +1,6 @@
 import { z } from "zod/v4";
 import { ApiPlanItemV1Schema } from "../../items/apiPlanItemV1.js";
 
-/** One feature item added to or removed from a plan's definition. */
 export const PlanItemChangeV0Schema = z.object({
 	action: z.enum(["created", "deleted"]).meta({
 		description: "Whether the item was added to or removed from the plan.",

@@ -125,7 +125,6 @@ describe("attachItemCurrencies", () => {
 							{
 								to: "inf",
 								flat_amount: 20,
-								// base uses flat_amount; currency entry provides only amount
 								additional_currencies: [{ currency: "eur", amount: 5 }],
 							},
 						],

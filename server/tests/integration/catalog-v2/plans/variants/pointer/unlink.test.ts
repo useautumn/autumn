@@ -1,20 +1,3 @@
-/**
- * catalogV2.update — unlink a variant from its base.
- *
- * Signal: the base declares its `variants` array WITHOUT a currently-linked
- * variant, AND that variant appears as a top-level plans[] entry in the same
- * call. Unlink nulls base_internal_product_id on ALL the variant's version
- * rows and stops base→variant propagation.
- *
- * Contract:
- *   omit from variants[] + top-level entry → every version row unlinked
- *   omit from variants[] alone → stays linked (no accidental unlink)
- *   top-level edit alone (base absent) → stays linked
- *   after unlink, base edits no longer propagate to the ex-variant
- *   `{ plan_id, base_variant_id: null }` → every version row unlinked
- *   nest `{ variant_plan_id, base_variant_id: null }` → every version row unlinked
- */
-
 import { test } from "bun:test";
 import { ErrCode } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
@@ -270,7 +253,6 @@ test.concurrent(
 		try {
 			await seedBaseWithVariant({ autumn: autumnV2_3, baseId, variantId });
 
-			// Omitted from variants[] but NOT declared top-level → no unlink.
 			await autumnV2_3.catalogV2.update({
 				plans: [{ plan_id: baseId, variants: [] }],
 			});
@@ -280,7 +262,6 @@ test.concurrent(
 				basePlanId: baseId,
 			});
 
-			// Top-level edit without the base in the call → no unlink.
 			await autumnV2_3.catalogV2.update({
 				plans: [{ plan_id: variantId, name: "Team EU Renamed" }],
 			});
@@ -314,7 +295,6 @@ test.concurrent(
 				versions: [1],
 			});
 
-			// Base gains Dashboard; the ex-variant must not receive it.
 			await autumnV2_3.catalogV2.update({
 				plans: [
 					{

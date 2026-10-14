@@ -2,7 +2,6 @@ import type { UpdateBalanceCommand } from "@autumn/balance-engine";
 import type { ConsumeContext } from "./types/consume.js";
 import type { QueuedCommand } from "./types/queuedCommand.js";
 
-/** A queued balance update: decide it in arrival order. Null when the rows already held it, so there is no record to commit. */
 export async function consumeUpdateBalance({
 	ctx,
 	command,

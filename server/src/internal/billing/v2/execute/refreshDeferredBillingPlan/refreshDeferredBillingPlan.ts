@@ -35,7 +35,6 @@ const fetchLiveBillingContext = async ({
 			})
 		: undefined;
 
-	// A standalone (future-start) schedule is not on the subscription, so fall back to the snapshot's
 	const subscriptionScheduleId =
 		stripeSubscriptionToScheduleId({ stripeSubscription }) ??
 		billingContext.stripeSubscriptionSchedule?.id;
@@ -54,10 +53,6 @@ const fetchLiveBillingContext = async ({
 	};
 };
 
-/**
- * If the customer or subscription changed between invoice creation and payment, the subscription
- * update is rebuilt from their live state; otherwise the snapshot is replayed unchanged.
- */
 export const refreshDeferredBillingPlan = async ({
 	ctx,
 	deferredData,
@@ -67,7 +62,6 @@ export const refreshDeferredBillingPlan = async ({
 }): Promise<{ billingPlan: BillingPlan; billingContext: BillingContext }> => {
 	const { billingPlan, billingContext, resumeAfter } = deferredData;
 
-	// Past the invoice action the subscription was already updated, so there is nothing to rebuild
 	const subscriptionNotYetUpdated =
 		resumeAfter === StripeBillingStage.InvoiceAction;
 	if (!subscriptionNotYetUpdated) return { billingPlan, billingContext };

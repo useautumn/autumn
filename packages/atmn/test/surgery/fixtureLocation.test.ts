@@ -1,8 +1,3 @@
-/**
- * Where a fixture literal lives on disk — the piece a lint finding needs to
- * turn "feature x is wrong" into "open this file, this line".
- */
-
 import { expect, test } from "bun:test";
 import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { fixtureLocation } from "../../src/surgery/fixtureLocation";

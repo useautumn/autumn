@@ -124,19 +124,15 @@ describe("findEntitlementPriceSuccessor", () => {
 				priced: true,
 				priceConfig: { usage_tiers: [{ to: "inf", amount: 999 }] },
 			});
-			// Exact fails (amount differs), identity holds.
 			expect(find({ source, candidates: [amountEdit] })).toBe(amountEdit);
 		});
 
 		test("requires both sides priced — free source never matches at identity", () => {
-			const source = ep(); // free
-			// Candidate ent differs (breaks exact + interval via allowance? no —
-			// interval ignores allowance), so force interval mismatch too.
+			const source = ep();
 			const pricedCandidate = ep({
 				entitlement: { id: "cand", interval: EntInterval.Year },
 				priced: true,
 			});
-			// Falls all the way to Feature (identity requires both prices; interval key differs).
 			expect(find({ source, candidates: [pricedCandidate] })).toBe(
 				pricedCandidate,
 			);
@@ -162,11 +158,7 @@ describe("findEntitlementPriceSuccessor", () => {
 				priced: true,
 				priceConfig: { bill_when: BillWhen.InAdvance },
 			});
-			// Exact fails, identity fails (billing type), interval fails (allowance
-			// is not in the interval key — actually interval key matches feature+interval).
 			expect(find({ source, candidates: [shapeChanged] })).toBe(shapeChanged);
-			// It matched — but at EntitlementInterval, not PriceIdentity. Verify by
-			// also breaking the interval key: then only Feature remains.
 			const shapeAndIntervalChanged = ep({
 				entitlement: {
 					id: "cand2",

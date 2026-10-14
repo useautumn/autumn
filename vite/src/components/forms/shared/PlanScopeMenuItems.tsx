@@ -6,7 +6,6 @@ import { EntityOptionRow } from "./EntityOptionRow";
 import { entityKey } from "./utils/entityKey";
 import { CUSTOMER_LEVEL_LABEL } from "./utils/scopeLabel";
 
-/** The scope picker's options as menu items, for a "Move to" submenu. */
 export function PlanScopeMenuItems({
 	entities,
 	value,

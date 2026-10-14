@@ -3,21 +3,12 @@ import { AssignerProtocol, type PartitionAssigner } from "kafkajs";
 const ASSIGNER_NAME = "LoadAwareCoPartitionedAssigner";
 const ASSIGNER_VERSION = 1;
 const USER_DATA_VERSION = 2;
-/**
- * A move has to leave both members it touches this far under the source's
- * load, or it is churn: splitting a hot pair halves the source, shuffling a
- * light partition off it gains a few percent and rehydrates a customer.
- */
 const MIN_IMPROVEMENT = 0.2;
-/** Only a member carrying this many times the mean load is relieved: the rest is unevenness, not a hot pair. */
 const RELIEF_LOAD_RATIO = 1.25;
-/** A membership change moves the leaver's partitions and at most this many more, so a rebalance stays a small event. */
 const MAX_RELIEF_MOVES = 4;
 
-/** What a member knows about the recent cost of the partitions it has served, and which it serves now. */
 export type PartitionLoadSource = {
 	snapshot(): ReadonlyMap<number, number>;
-	/** The partitions this member serves right now; absent, the ones it reports weight for stand in. */
 	owned?(): ReadonlySet<number>;
 	assigned?(): ReadonlySet<number> | undefined;
 };
@@ -25,7 +16,6 @@ export type PartitionLoadSource = {
 export type WeightedPartition = {
 	partition: number;
 	weight: number;
-	/** The member serving it now, when one still is. */
 	owner?: string;
 };
 
@@ -37,22 +27,6 @@ type MemberReport = {
 	assigned?: Set<number>;
 };
 
-/**
- * Partition n of every subscribed topic still lands on one member, but the
- * leader places partitions by recent cost instead of by number, and keeps
- * them where they are unless moving one is what balance requires.
- *
- * Each member sends, in its join metadata, the weight of the partitions it
- * has served and the set it serves now. The leader keeps every partition on
- * its current member (shedding a member's lightest ones only when the count
- * cap of ceil(P / N) shrank under it), deals the ownerless ones heaviest
- * first to whoever carries least, then moves or swaps single partitions off
- * the heaviest members while a move still takes the members it touches
- * clearly under that member's load. Dealing every partition from scratch on
- * each membership change moved 63 of 64 partitions for one dropped member
- * and rehydrated every customer at once; this moves the few that matter.
- * With no history at all this is an even count per member, by number.
- */
 export function createLoadAwareAssigner({
 	loads,
 }: {
@@ -135,17 +109,6 @@ export function createLoadAwareAssigner({
 	return loadAwareAssigner;
 }
 
-/**
- * Sticky first: a partition stays with its owner while the owner is a member
- * with room under the cap of ceil(P / N); heaviest first, so a member over
- * the cap sheds its lightest. Ownerless partitions go heaviest first to the
- * member carrying the least (ties to fewer partitions, then the lower id).
- * Then, from the heaviest member down, one partition moves to another member
- * with room, or swaps with a lighter one there, when that leaves both members
- * at least MIN_IMPROVEMENT under the source's load; the move that leaves the
- * lowest peak wins, a plain move beating a swap. Repeats until nothing improves.
- * Load relief runs only when asked, so a rebalance nobody joined or left moves nothing.
- */
 export function balancePartitions({
 	partitions,
 	memberIds,
@@ -200,13 +163,6 @@ export function balancePartitions({
 	return dealt;
 }
 
-/**
- * Load relief never moves a partition nobody has weighed, so a cold fleet
- * that grew would keep every partition on the first members and leave the
- * newcomers idle. While one member holds two more than another, its lightest
- * partition moves to the emptiest member, unless that would make the
- * emptiest member the heaviest.
- */
 function evenOutCounts({
 	memberIds,
 	dealt,
@@ -284,12 +240,10 @@ type Relief = {
 	source: string;
 	target: string;
 	partition: number;
-	/** The target's partition that comes back, for a swap. */
 	inExchange?: number;
 	peak: number;
 };
 
-/** Moves single partitions off members carrying well over the mean, a few per rebalance, while a move still clearly lowers what they carry. */
 function relieve({
 	memberIds,
 	dealt,
@@ -399,7 +353,6 @@ function bestReliefFrom({
 	return best;
 }
 
-/** Lower peak first; then a plain move over a swap; then the lower partition, then the lower target id. */
 function betterRelief(candidate: Relief, current: Relief): boolean {
 	if (candidate.peak !== current.peak) return candidate.peak < current.peak;
 	const candidateMoves = candidate.inExchange === undefined ? 1 : 2;
@@ -508,7 +461,6 @@ function reportsOf({
 	return reports;
 }
 
-/** The highest weight any member reports for a partition; a former owner's stale report only decays. */
 function reportedWeightsOf({
 	reports,
 }: {
@@ -577,7 +529,6 @@ function membershipChangedOf({
 	return false;
 }
 
-/** Of the members claiming a partition, the one that has done the most on it, then the lower id. */
 function servingOwnersOf({
 	reports,
 	memberIds,
@@ -602,7 +553,6 @@ function servingOwnersOf({
 	return owners;
 }
 
-/** Unknown partitions take the median known weight, or 1 when nobody has reported anything. */
 function weigh({
 	partitions,
 	reported,
@@ -637,7 +587,6 @@ function medianOf(values: readonly number[]): number {
 	return ((sorted[middle - 1] ?? 0) + (sorted[middle] ?? 0)) / 2;
 }
 
-/** Owned partitions are always reported, at 0 when nothing has been committed on them yet, so the leader never guesses their weight. */
 function encodeUserData({
 	weights,
 	owned,
@@ -676,11 +625,6 @@ function byPartition(a: [number, number], b: [number, number]): number {
 	return a[0] - b[0];
 }
 
-/**
- * A member that sends nothing, or something this version cannot read, reports
- * no weights and owns nothing. A report without an owned set (version 1)
- * owns what it reports a positive weight for.
- */
 function decodeUserData(memberMetadata: Buffer): MemberReport {
 	const empty: MemberReport = { weights: new Map(), owned: new Set() };
 	let userData: Buffer | undefined;

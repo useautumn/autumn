@@ -17,8 +17,6 @@ import {
 import { getOrCreateStripeClient } from "./clientCache/stripeClientCache.js";
 import { getConnectWebhookSecret } from "./connectUtils.js";
 
-// tw-swarm seam: a forked worker can't change its snapshotted process env, so
-// its per-worker pool key is read from a file written at fork-bind time.
 const TW_WORKER_STRIPE_KEY_FILE = "/opt/autumn-tw/worker-stripe-key";
 const twWorkerStripeKey = (): string | undefined => {
 	if (
@@ -100,7 +98,6 @@ export const initPlatformStripe = ({
 		});
 	}
 
-	// Get master org's secret key and validate access to the account
 	const encrypted =
 		env === AppEnv.Sandbox
 			? masterOrg.stripe_config?.test_api_key
@@ -149,7 +146,6 @@ export const getStripeWebhookSecret = async ({
 	orgId?: string;
 	env: AppEnv;
 }) => {
-	// If org ID...
 	if (orgId) {
 		return await getConnectWebhookSecret({ db, orgId, env });
 	}

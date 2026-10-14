@@ -18,7 +18,6 @@ import {
 	skipUnknownRowChanges,
 } from "./rowChange.js";
 
-/** The command as it was sent, cast rather than parsed: never replayed, so a newer writer's fields must not break an older reader. */
 const mutationCommandSchema = z.custom<MutationCommand>(
 	(value) => typeof value === "object" && value !== null,
 );
@@ -52,26 +51,20 @@ const mutationRevisionSchema = z
 	})
 	.loose();
 
-/** The fields a command produces; the writer's record adds its receipt on top. */
 export const subjectStateMutationShape = {
 	schemaVersion: z.literal(1),
 	type: z.literal("mutation"),
 	id: nonEmptyStringSchema,
 	identity: meteringIdentitySchema,
-	/** The subject's internal ids, for readers of the log that have no rows to look them up in. Absent on records written before it existed. */
 	subject: mutationSubjectSchema.optional(),
 	revision: mutationRevisionSchema,
-	/** Why: the request, for humans and downstream consumers. Never replayed. */
 	command: mutationCommandSchema,
-	/** What moved: the only field replay applies. Strict, fixed forever. */
 	changes: z.array(rowChangeSchema),
-	/** What happened: the verdict and per-row movement. Never replayed. */
 	result: mutationResultSchema,
 };
 
 type MutationShape = z.infer<z.ZodObject<typeof subjectStateMutationShape>>;
 
-/** The envelope invariants every mutation, bare or recorded, must hold. */
 export const refineSubjectStateMutation = (
 	mutation: MutationShape,
 	context: z.RefinementCtx,
@@ -97,7 +90,6 @@ export const refineSubjectStateMutation = (
 			path: ["id"],
 		});
 	}
-	// A plan that creates the customer starts its log.
 	const planCreatesCustomer =
 		mutation.command.type === "applyBillingPlan" &&
 		changesInsertCustomer({ changes: mutation.changes });
@@ -108,7 +100,6 @@ export const refineSubjectStateMutation = (
 			path: ["revision", "before"],
 		});
 	}
-	// Nothing moves on an evict: the store lands its bookmark alone and replay has nothing to apply.
 	if (mutation.command.type === "evict" && mutation.changes.length > 0) {
 		context.addIssue({
 			code: "custom",
@@ -117,7 +108,6 @@ export const refineSubjectStateMutation = (
 		});
 	}
 	if (mutation.command.type === "initialize") {
-		// An entity initialize joins the customer's log mid-stream; a customer one starts it.
 		if (mutation.identity.entityId === null && mutation.revision.before !== 0) {
 			context.addIssue({
 				code: "custom",
@@ -136,7 +126,6 @@ export const refineSubjectStateMutation = (
 	}
 };
 
-/** What a command decided: the changes to one subject and the result readers see. Knows nothing about dedup. */
 export const subjectStateMutationSchema = z.preprocess(
 	skipUnknownRowChanges,
 	z

@@ -11,7 +11,6 @@ import chalk from "chalk";
 
 const creditsItem = items.monthlyCredits({ includedUsage: 100 });
 
-// Same group (null -> auto-grouped by prefix)
 const free = products.base({
 	id: "free",
 	isDefault: true,
@@ -24,17 +23,14 @@ const starter = products.base({
 const pro = products.pro({ id: "pro", items: [creditsItem] });
 const premium = products.premium({ id: "premium", items: [creditsItem] });
 
-// Different group
 const otherGroup = products.pro({
 	id: "other-group",
 	items: [creditsItem],
 	group: "other",
 });
 
-// Add-ons
 const addon = products.recurringAddOn({ id: "addon", items: [creditsItem] });
 
-// One-off
 const oneOffAddon = products.oneOffAddOn({
 	id: "one-off-addon",
 	items: [items.oneOffMessages()],
@@ -81,58 +77,49 @@ test.concurrent(`${chalk.yellowBright("customer-eligibility: customer on pro, li
 		customer_id: customerId,
 	});
 
-	// Pro - currently active
 	const proPlan = findPlan({ plans, productId: pro.id });
 	expect(proPlan.customer_eligibility?.attach_action).toBe(AttachAction.None);
 	expect(proPlan.customer_eligibility?.status).toBe(EligibilityStatus.Active);
 	expect(proPlan.customer_eligibility?.canceling).toBe(false);
 
-	// Premium - upgrade
 	const premiumPlan = findPlan({ plans, productId: premium.id });
 	expect(premiumPlan.customer_eligibility?.attach_action).toBe(
 		AttachAction.Upgrade,
 	);
 	expect(premiumPlan.customer_eligibility?.status).toBeUndefined();
 
-	// Starter - downgrade
 	const starterPlan = findPlan({ plans, productId: starter.id });
 	expect(starterPlan.customer_eligibility?.attach_action).toBe(
 		AttachAction.Downgrade,
 	);
 	expect(starterPlan.customer_eligibility?.status).toBeUndefined();
 
-	// Free - downgrade
 	const freePlan = findPlan({ plans, productId: free.id });
 	expect(freePlan.customer_eligibility?.attach_action).toBe(
 		AttachAction.Downgrade,
 	);
 	expect(freePlan.customer_eligibility?.status).toBeUndefined();
 
-	// Other group - activate (no plan in that group)
 	const otherPlan = findPlan({ plans, productId: otherGroup.id });
 	expect(otherPlan.customer_eligibility?.attach_action).toBe(
 		AttachAction.Activate,
 	);
 
-	// Recurring add-on - activate (not attached)
 	const addonPlan = findPlan({ plans, productId: addon.id });
 	expect(addonPlan.customer_eligibility?.attach_action).toBe(
 		AttachAction.Activate,
 	);
 
-	// One-off add-on - purchase
 	const oneOffAddonPlan = findPlan({ plans, productId: oneOffAddon.id });
 	expect(oneOffAddonPlan.customer_eligibility?.attach_action).toBe(
 		AttachAction.Purchase,
 	);
 
-	// One-off main - purchase
 	const oneOffMainPlan = findPlan({ plans, productId: oneOffMain.id });
 	expect(oneOffMainPlan.customer_eligibility?.attach_action).toBe(
 		AttachAction.Purchase,
 	);
 
-	// Verify scenario is filtered out of public API response
 	for (const plan of plans) {
 		if (plan.customer_eligibility) {
 			const raw = plan.customer_eligibility as Record<string, unknown>;
@@ -182,8 +169,6 @@ test.concurrent(
 			customer_id: customerId,
 		});
 
-		// The current plan costs $200 with its license. The target plan costs $150.
-		// The attach operation treats this change as a downgrade.
 		const target = findPlan({ plans, productId: targetPlan.id });
 		expect(target.customer_eligibility?.attach_action).toBe(
 			AttachAction.Downgrade,
@@ -217,13 +202,11 @@ test.concurrent(`${chalk.yellowBright("customer-eligibility: customer on pro can
 		customer_id: customerId,
 	});
 
-	// Pro should be canceling
 	const proPlan = findPlan({ plans, productId: cancelPro.id });
 	expect(proPlan.customer_eligibility?.attach_action).toBe(AttachAction.None);
 	expect(proPlan.customer_eligibility?.status).toBe(EligibilityStatus.Active);
 	expect(proPlan.customer_eligibility?.canceling).toBe(true);
 
-	// Premium should still be upgrade (current main product is still pro, even if canceling)
 	const premiumPlan = findPlan({ plans, productId: cancelPremium.id });
 	expect(premiumPlan.customer_eligibility?.attach_action).toBe(
 		AttachAction.Upgrade,

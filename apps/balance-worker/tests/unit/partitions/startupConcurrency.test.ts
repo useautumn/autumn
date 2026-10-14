@@ -2,7 +2,6 @@ import { expect, test } from "bun:test";
 import { runBoundedStartups } from "../../../src/partitions/lifecycle/startPartitions.js";
 import type { PartitionEntry } from "../../../src/partitions/types/partitionState.js";
 
-/** Only `startup` is written by the bounded runner, so the rest can stay absent. */
 const entriesFor = (count: number): PartitionEntry[] =>
 	Array.from({ length: count }, (_unused, partition) => ({
 		partition,
@@ -39,9 +38,6 @@ test("gives every entry its promise before any of them starts", async () => {
 	let sawUnassigned = false;
 
 	async function start(): Promise<void> {
-		// By the time the first partition begins, the last one already has the
-		// promise retirement would await. That is what stops a queued partition
-		// being retired against a null startup.
 		if (entries.some((entry) => entry.startup === null)) sawUnassigned = true;
 		await tick();
 	}
@@ -64,8 +60,6 @@ test("reports a failed startup without leaving its rejection unhandled", async (
 	const rejected = results.filter((result) => result.status === "rejected");
 	expect(rejected).toHaveLength(1);
 	expect((rejected[0] as PromiseRejectedResult).reason).toBe(boom);
-	// The caller's own handle rejects with the same cause, which is what
-	// retirement catches when it awaits entry.startup.
 	await expect(entries[3]?.startup).rejects.toBe(boom);
 });
 

@@ -22,10 +22,6 @@ import {
 	constructFeatureItem,
 } from "@/utils/scriptUtils/constructItem.js";
 
-// ═══════════════════════════════════════════════════════════════════
-// CHECK: No feature attached
-// ═══════════════════════════════════════════════════════════════════
-
 test.concurrent(`${chalk.yellowBright("check-no-feature: /check when no feature attached")}`, async () => {
 	const dashboardItem = items.dashboard();
 	const messagesItem = items.monthlyMessages({ includedUsage: 1000 });
@@ -39,10 +35,9 @@ test.concurrent(`${chalk.yellowBright("check-no-feature: /check when no feature 
 	const { customerId, autumnV1, autumnV2 } = await initScenario({
 		customerId: "check-no-feature",
 		setup: [s.customer({ testClock: false }), s.products({ list: [freeProd] })],
-		actions: [], // Don't attach product
+		actions: [],
 	});
 
-	// v2 response
 	const resV2 = (await autumnV2.check({
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
@@ -55,7 +50,6 @@ test.concurrent(`${chalk.yellowBright("check-no-feature: /check when no feature 
 		balance: null,
 	});
 
-	// v1 response
 	const resV1 = (await autumnV1.check({
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
@@ -69,7 +63,6 @@ test.concurrent(`${chalk.yellowBright("check-no-feature: /check when no feature 
 		code: SuccessCode.FeatureFound,
 	});
 
-	// v0 response
 	const resV0 = (await autumnV0.check({
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
@@ -79,10 +72,6 @@ test.concurrent(`${chalk.yellowBright("check-no-feature: /check when no feature 
 	expect(resV0.balances).toBeDefined();
 	expect(resV0.balances).toHaveLength(0);
 });
-
-// ═══════════════════════════════════════════════════════════════════
-// CHECK: Boolean feature
-// ═══════════════════════════════════════════════════════════════════
 
 test.concurrent(`${chalk.yellowBright("check-boolean: /check on boolean feature")}`, async () => {
 	const dashboardItem = items.dashboard();
@@ -121,7 +110,6 @@ test.concurrent(`${chalk.yellowBright("check-boolean: /check on boolean feature"
 		},
 	});
 
-	// v2 response
 	const resV2 = (await autumnV2.check({
 		customer_id: customerId,
 		feature_id: TestFeature.Dashboard,
@@ -158,7 +146,6 @@ test.concurrent(`${chalk.yellowBright("check-boolean: /check on boolean feature"
 		},
 	});
 
-	// v1 response
 	const resV1 = (await autumnV1.check({
 		customer_id: customerId,
 		feature_id: TestFeature.Dashboard,
@@ -192,7 +179,6 @@ test.concurrent(`${chalk.yellowBright("check-boolean: /check on boolean feature"
 		],
 	});
 
-	// v0 response
 	const resV0 = (await autumnV0.check({
 		customer_id: customerId,
 		feature_id: TestFeature.Dashboard,
@@ -209,10 +195,6 @@ test.concurrent(`${chalk.yellowBright("check-boolean: /check on boolean feature"
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════
-// CHECK: Metered feature
-// ═══════════════════════════════════════════════════════════════════
-
 test.concurrent(`${chalk.yellowBright("check-metered: /check on metered feature")}`, async () => {
 	const messagesItem = items.monthlyMessages({ includedUsage: 1000 });
 	const freeProd = products.base({
@@ -228,7 +210,6 @@ test.concurrent(`${chalk.yellowBright("check-metered: /check on metered feature"
 		actions: [s.attach({ productId: freeProd.id })],
 	});
 
-	// v2 response
 	const resV2 = (await autumnV2.check({
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
@@ -253,7 +234,6 @@ test.concurrent(`${chalk.yellowBright("check-metered: /check on metered feature"
 		},
 	});
 
-	// v1 response
 	const resV1 = (await autumnV1.check({
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
@@ -280,7 +260,6 @@ test.concurrent(`${chalk.yellowBright("check-metered: /check on metered feature"
 		);
 	}
 
-	// v0 response
 	const resV0 = (await autumnV0.check({
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
@@ -298,10 +277,6 @@ test.concurrent(`${chalk.yellowBright("check-metered: /check on metered feature"
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════
-// CHECK: Unlimited feature
-// ═══════════════════════════════════════════════════════════════════
-
 test.concurrent(`${chalk.yellowBright("check-unlimited: /check on unlimited feature")}`, async () => {
 	const messagesItem = items.unlimitedMessages();
 	const freeProd = products.base({
@@ -317,7 +292,6 @@ test.concurrent(`${chalk.yellowBright("check-unlimited: /check on unlimited feat
 		actions: [s.attach({ productId: freeProd.id })],
 	});
 
-	// v2 response
 	const resV2 = (await autumnV2.check({
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
@@ -353,7 +327,6 @@ test.concurrent(`${chalk.yellowBright("check-unlimited: /check on unlimited feat
 		},
 	});
 
-	// v1 response
 	const resV1 = (await autumnV1.check({
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
@@ -389,7 +362,6 @@ test.concurrent(`${chalk.yellowBright("check-unlimited: /check on unlimited feat
 
 	expect(resV1).toMatchObject(expectedResV1);
 
-	// v0 response
 	const resV0 = (await autumnV0.check({
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
@@ -406,10 +378,6 @@ test.concurrent(`${chalk.yellowBright("check-unlimited: /check on unlimited feat
 		required: null,
 	});
 });
-
-// ═══════════════════════════════════════════════════════════════════
-// CHECK: Usage-based (arrear) feature
-// ═══════════════════════════════════════════════════════════════════
 
 test.concurrent(`${chalk.yellowBright("check-usage-based: /check on usage-based feature")}`, async () => {
 	const messagesFeature = constructArrearItem({
@@ -434,7 +402,6 @@ test.concurrent(`${chalk.yellowBright("check-usage-based: /check on usage-based 
 		actions: [s.attach({ productId: proProd.id })],
 	});
 
-	// v2 response
 	const resV2 = (await autumnV2.check({
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
@@ -460,7 +427,6 @@ test.concurrent(`${chalk.yellowBright("check-usage-based: /check on usage-based 
 	});
 	expect(resV2.balance?.reset?.resets_at).toBeDefined();
 
-	// v1 response
 	const resV1 = (await autumnV1.check({
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
@@ -484,7 +450,6 @@ test.concurrent(`${chalk.yellowBright("check-usage-based: /check on usage-based 
 	expect(resV1).toMatchObject(expectedResV1);
 	expect(resV1.next_reset_at).toBeDefined();
 
-	// v0 response
 	const resV0 = (await autumnV0.check({
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
@@ -501,10 +466,6 @@ test.concurrent(`${chalk.yellowBright("check-usage-based: /check on usage-based 
 		required: null,
 	});
 });
-
-// ═══════════════════════════════════════════════════════════════════
-// CHECK: Multiple balances (one_off + monthly)
-// ═══════════════════════════════════════════════════════════════════
 
 test.concurrent(`${chalk.yellowBright("check-multiple-balances: /check on feature with multiple balances")}`, async () => {
 	const monthlyMessages = constructArrearItem({
@@ -535,7 +496,6 @@ test.concurrent(`${chalk.yellowBright("check-multiple-balances: /check on featur
 		actions: [s.attach({ productId: proProd.id })],
 	});
 
-	// v2 response
 	const resV2 = (await autumnV2.check({
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
@@ -598,7 +558,6 @@ test.concurrent(`${chalk.yellowBright("check-multiple-balances: /check on featur
 		},
 	});
 
-	// v1 response
 	const resV1 = (await autumnV1.check({
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
@@ -644,7 +603,6 @@ test.concurrent(`${chalk.yellowBright("check-multiple-balances: /check on featur
 	expect(resV1.breakdown?.[0]).toMatchObject(monthlyBreakdownV1);
 	expect(resV1.breakdown?.[1]).toMatchObject(lifetimeBreakdownV1);
 
-	// v0 response
 	const resV0 = (await autumnV0.check({
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,

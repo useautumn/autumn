@@ -5,7 +5,6 @@ import { TwdError } from "../../../http/apiError.ts";
 import type { TwdContext } from "../../../lib/types/twdContext.ts";
 import { toStripeAccount } from "./listAccounts.ts";
 
-/** Drops a ledger row (e.g. the account was deleted in Stripe). Never touches Stripe. */
 export const forgetAccount = async ({
 	ctx,
 	accountId,

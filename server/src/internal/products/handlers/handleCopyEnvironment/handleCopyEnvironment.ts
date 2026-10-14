@@ -6,21 +6,15 @@ import { OrgService } from "@/internal/orgs/OrgService.js";
 import { handleCopyFeatures } from "./handleCopyFeatures.js";
 import { handleCopyProducts } from "./handleCopyProducts.js";
 
-/**
- * POST /copy_to_production
- * Copies all products and features from sandbox to production
- */
 export const handleCopyEnvironment = createRoute({
 	scopes: [Scopes.Plans.Write],
 	handler: async (c) => {
 		const ctx = c.get("ctx");
 		const { db, org } = ctx;
 
-		// Always copy from sandbox to live
 		const fromEnv = AppEnv.Sandbox;
 		const toEnv = AppEnv.Live;
 
-		// 1. Get all sandbox products and features
 		const [fromFeatures, toFeatures] = await Promise.all([
 			FeatureService.list({
 				db,
@@ -35,7 +29,6 @@ export const handleCopyEnvironment = createRoute({
 			}),
 		]);
 
-		// 2. Copy features first
 		await handleCopyFeatures({
 			toContext: { ...ctx, org, env: toEnv, features: toFeatures },
 			fromFeatures,

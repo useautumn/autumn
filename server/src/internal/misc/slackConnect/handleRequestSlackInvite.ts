@@ -11,14 +11,11 @@ import {
 export const handleRequestSlackInvite = createRoute({
 	scopes: [Scopes.Public],
 	body: z.object({
-		// "autumn-" plus the 20-character name the popover allows.
 		channel_name: z.string().trim().min(1).max(27).optional(),
 	}),
 	handler: async (c) => {
 		const ctx = c.get("ctx");
 		const { channel_name } = c.req.valid("json");
-		// Always the signed-in user's own address, never one from the body, so
-		// this can't be used to send invites to arbitrary emails.
 		const email = ctx.user?.email;
 
 		if (!email) {

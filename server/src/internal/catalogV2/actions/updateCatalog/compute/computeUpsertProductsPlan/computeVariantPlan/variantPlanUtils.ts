@@ -2,7 +2,6 @@ import type { FullProduct } from "@autumn/shared";
 import type { ProductStatesContext } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext";
 import type { UpsertProductPlan } from "@/internal/catalogV2/actions/updateCatalog/types/upsertProductPlan";
 
-/** True when this upsert minted a new version row (clone source is baseFullProduct). */
 export const baseRowMinted = ({
 	upsert,
 }: {
@@ -11,7 +10,6 @@ export const baseRowMinted = ({
 	upsert.row.versioning === "new_version" &&
 	upsert.row.baseFullProduct != null;
 
-/** Variant product rows whose pointer is one of these base internal ids. */
 export const variantRowsAnchoredTo = ({
 	baseInternalIds,
 	productStatesContext,
@@ -38,10 +36,6 @@ export const variantRowsAnchoredTo = ({
 	return rows;
 };
 
-/**
- * Which base row(s) a variant must already point at to receive this upsert.
- * Mint: the clone source. Promote + propagate: the demoted row too.
- */
 export const reachInternalIdsForBaseUpsert = ({
 	upsert,
 }: {

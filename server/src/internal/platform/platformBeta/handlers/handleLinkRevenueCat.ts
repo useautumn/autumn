@@ -13,10 +13,6 @@ import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { generateOAuthState } from "../utils/oauthStateUtils.js";
 import { validatePlatformOrg } from "../utils/validatePlatformOrg.js";
 
-/**
- * POST /platform.link_revenuecat
- * Generates RevenueCat OAuth URL for a platform-managed organization.
- */
 export const handleLinkRevenueCat = createRoute({
 	scopes: [Scopes.Platform.Write],
 	body: LinkRevenueCatSchema,

@@ -1,5 +1,3 @@
-/** Contract: license quantity updates apply fresh and carried discounts, persist new coupons, and respect product restrictions across custom seat types. */
-/** Pre-change, restricted custom-seat coupons miss their line items; post-change preview, invoice, pool, and Stripe subscription state agree. */
 import { expect, test } from "bun:test";
 import type {
 	ApiCustomerV3,
@@ -170,7 +168,6 @@ test.concurrent(
 		});
 
 		if (!attached.invoice) throw new Error("Expected an attach invoice");
-		// The refund reads the discounted charge the attach stores asynchronously.
 		await waitForInvoiceLineItems({
 			stripeInvoiceId: attached.invoice.stripe_id,
 			timeoutMs: 30_000,

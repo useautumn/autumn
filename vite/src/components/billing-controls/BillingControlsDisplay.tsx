@@ -487,7 +487,6 @@ const AlertsLine = ({
 	featureId: string | undefined;
 	alerts: Array<ControlRef & { item: DbUsageAlert }>;
 	slim: boolean;
-	/** When every alert shares one source, the row badge replaces per-tag icons. */
 	badge?: ReactNode;
 } & ListCallbacks) => (
 	<SubRow
@@ -655,10 +654,8 @@ export function BillingControlsList({
 	billingControls?: CustomerBillingControls | null;
 	balanceAllocations?: BalanceAllocationControl[];
 	featureNameById: Map<string, string>;
-	/** When set, a feature's alerts row opens one view instead of editing each alert. */
 	onOpenAlerts?: ListCallbacks["onOpenAlerts"];
 	renderFeatureActions?: (args: { featureId: string | undefined }) => ReactNode;
-	/** Badge for an alerts row whose alerts all share one source. */
 	getSharedSourceBadge?: (args: { controls: ControlLine[] }) => ReactNode;
 	editingRow?: ControlRef;
 	renderEditingRow?: () => ReactNode;

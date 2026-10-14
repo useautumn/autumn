@@ -35,8 +35,6 @@ function skipsStripeAccountForWorkerMode(): boolean {
 	);
 }
 
-// Synthetic inviter pinned to the test org; satisfies invitation.inviter_id
-// NOT-NULL FK without needing a real human user in a fresh worktree branch.
 const TEST_INVITER_USER = {
 	id: "user_setup_test_inviter",
 	name: "Setup Test Inviter",
@@ -88,7 +86,6 @@ async function ensureTestInviterUser({ db }: { db: DrizzleCli }) {
 		.onConflictDoNothing();
 }
 
-/** Secret-key sandbox routes act as the org's owner, so the test org needs one. */
 export async function ensureTestOrgOwner({
 	db,
 }: {
@@ -133,9 +130,6 @@ const TEAM_INVITE_EMAILS = [
 	"owen@useautumn.com",
 ];
 
-/**
- * Creates a test organization in the database and generates an API key
- */
 export async function createTestOrg({
 	db,
 }: {
@@ -149,7 +143,6 @@ export async function createTestOrg({
 
 	const TEST_API_KEY = process.env.UNIT_TEST_AUTUMN_SECRET_KEY;
 
-	// Check if org already exists
 	const existingOrg = await db.query.organizations.findFirst({
 		where: eq(organizations.id, TEST_ORG_CONFIG.id),
 	});
@@ -194,7 +187,6 @@ export async function createTestOrg({
 			return key;
 		}
 
-		// No hardcoded key in env; generate a fresh one for the existing org.
 		const generated = await createKey({
 			db,
 			env: AppEnv.Sandbox,
@@ -215,7 +207,6 @@ export async function createTestOrg({
 		return generated;
 	}
 
-	// Create the test organization
 	const org = {
 		id: TEST_ORG_CONFIG.id,
 		slug: TEST_ORG_CONFIG.slug,
@@ -254,7 +245,6 @@ export async function createTestOrg({
 	await clearOrgDbOnly({ db, orgId: TEST_ORG_CONFIG.id, env: AppEnv.Sandbox });
 	await setupOrg({ orgId: TEST_ORG_CONFIG.id, env: AppEnv.Sandbox });
 
-	// Create API key for the new org
 	if (TEST_API_KEY) {
 		const { key, alreadyExists } = await createHardcodedKey({
 			db,
@@ -299,15 +289,10 @@ export async function createTestOrg({
 
 export { TEST_ORG_CONFIG };
 
-// Per-email: insert a member row if a user already exists, otherwise insert
-// an invitation row. Both paths skip if a matching member/invitation already
 // targets this org+email — safe to re-run. Note: better-auth does NOT auto-
-// accept invitations on sign-in. Invitees must visit /accept?id=<inv_id> (or
-// equivalent UI) after signing in to finish joining the org.
 async function seedTeamInvites({ db }: { db: DrizzleCli }): Promise<void> {
 	const { generateId } = await import("@server/utils/genUtils.js");
 
-	// Ensure a synthetic inviter exists so invitation.inviter_id FK resolves.
 	await ensureTestInviterUser({ db });
 
 	const existingUsers = await db

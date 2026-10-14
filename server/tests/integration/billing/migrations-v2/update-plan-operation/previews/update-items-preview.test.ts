@@ -1,14 +1,3 @@
-/**
- * Preview coverage for legacy update_items migrations.
- *
- * Contract under test:
- *   - update_items balance_changes use the balance snapshot +
- *     previous_attributes shape.
- *   - Untouched features do not emit balance_changes.
- *   - Carried usage remains in the post-preview balance and is omitted from
- *     previous_attributes when unchanged.
- */
-
 import { test } from "bun:test";
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";

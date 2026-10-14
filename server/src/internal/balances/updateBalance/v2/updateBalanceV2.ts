@@ -21,7 +21,6 @@ import {
 const ASYNC_UPDATE_BALANCE_UNAVAILABLE_MESSAGE =
 	"Async balance update is not available right now";
 
-/** One job per request, grouped per subject so updates apply in order; the consumer runs `runUpdateBalanceV2`. */
 const queueUpdateBalanceV2 = async ({
 	ctx,
 	params,
@@ -56,7 +55,6 @@ const queueUpdateBalanceV2 = async ({
 				targetBalance,
 			},
 		});
-		// The worker owns invalidation; route refresh could flush pre-job cache state.
 		ctx.testOptions = { ...ctx.testOptions, skipCacheDeletion: true };
 	} catch (error) {
 		ctx.logger.error("[updateBalanceV2] Failed to enqueue async update", {
@@ -70,7 +68,6 @@ const queueUpdateBalanceV2 = async ({
 	}
 };
 
-/** The sync gate between the worker and the legacy cache path; the SQS consumer runs it for jobs queued on the legacy path. */
 export const runUpdateBalanceV2 = async ({
 	ctx,
 	params,
@@ -94,7 +91,6 @@ export const runUpdateBalanceV2 = async ({
 		});
 };
 
-/** `balances.update`: queued for orgs on async updates, run now for everyone else. */
 export const updateBalanceV2 = async ({
 	ctx,
 	params,
@@ -112,7 +108,6 @@ export const updateBalanceV2 = async ({
 		(process.env.NODE_ENV !== "production" &&
 			ctx.testOptions?.asyncBalanceUpdate);
 
-	// On the worker path an async update is a queued command, as an async track is; SQS stays the legacy queue.
 	if (
 		asyncBalanceUpdateEnabled &&
 		isBalanceWorkerRolloutEnabled({ ctx, customerId: params.customer_id })

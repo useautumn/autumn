@@ -34,7 +34,6 @@ afterEach(() => {
 	dispatched.length = 0;
 });
 
-/** The fixture's plan, with a one-off prepaid price on its row and an enabled config on the customer. */
 const topUpFixture = ({
 	balance,
 	threshold,

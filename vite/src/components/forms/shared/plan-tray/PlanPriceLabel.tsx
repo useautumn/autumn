@@ -3,7 +3,6 @@ import { getSelectedPlanPriceProduct } from "@/components/forms/shared/selectedP
 import { useCustomerDisplayCurrency } from "@/hooks/common/useCustomerDisplayCurrency";
 import { getBasePriceLabel } from "./utils/getBasePriceLabel";
 
-/** A plan row's base price, including any customized items. */
 export function PlanPriceLabel({
 	product,
 	items,

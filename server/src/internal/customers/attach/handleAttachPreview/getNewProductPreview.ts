@@ -19,7 +19,6 @@ import {
 	getCustomerSub,
 } from "../attachUtils/convertAttachParams.js";
 
-// Just for new product...?
 const getNextCycleItems = async ({
 	newProduct,
 	attachParams,
@@ -39,7 +38,6 @@ const getNextCycleItems = async ({
 	config: AttachConfig;
 	trialEnds?: number | null;
 }) => {
-	// 2. If free trial
 	let nextCycleAt: number | undefined;
 
 	if (attachParams.freeTrial) {
@@ -53,7 +51,6 @@ const getNextCycleItems = async ({
 				})! * 1000;
 		}
 	} else if (branch !== AttachBranch.OneOff && anchor) {
-		// Yearly one
 		const largestInterval = getLargestInterval({ prices: newProduct.prices });
 		if (largestInterval) {
 			nextCycleAt = getAlignedUnix({
@@ -69,7 +66,6 @@ const getNextCycleItems = async ({
 		attachParams,
 		logger,
 		withPrepaid,
-		// anchor,
 	});
 
 	return {
@@ -109,7 +105,6 @@ export const getNewProductPreview = async ({
 		attachParams.freeTrial = null;
 	}
 
-	// Scenario where we update a current sub with new product (so no create sub)
 	let anchor: number | undefined;
 	if (mergeSub && !config.disableMerge) {
 		if (mergeCusProduct?.free_trial) {

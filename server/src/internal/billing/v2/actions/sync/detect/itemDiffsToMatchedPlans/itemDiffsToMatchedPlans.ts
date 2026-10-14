@@ -6,11 +6,6 @@ import { derivePlanQuantity } from "./derivePlanQuantity";
 import { rollupPlanLicenses } from "./rollupPlanLicenses";
 import { derivePlanWarnings, groupItemDiffsByPlan } from "./utils/rollupUtils";
 
-/**
- * Turn flat per-item diffs into per-plan verdicts:
- * ① group — which plan owns each Stripe item
- * ② derive — base, quantity, features, licenses, extras, warnings.
- */
 export const itemDiffsToMatchedPlans = ({
 	itemDiffs,
 }: {

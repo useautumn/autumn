@@ -18,7 +18,6 @@ import {
 import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
 import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
 
-// UNCOMMENT FROM HERE
 const pro = constructProduct({
 	type: "pro",
 
@@ -64,8 +63,6 @@ describe(`${chalk.yellowBright("newVersion4: Testing add ons")}`, () => {
 			prefix: customerId,
 		});
 
-		// testClockId = result.testClockId!;
-
 		await autumn.attach({
 			customer_id: customerId,
 			product_id: pro.id,
@@ -78,7 +75,6 @@ describe(`${chalk.yellowBright("newVersion4: Testing add ons")}`, () => {
 	});
 
 	test("should attach pro product", async () => {
-		// newPro = structuredClone(pro);
 		let newItems = replaceItems({
 			items: pro.items,
 			interval: BillingInterval.Month,

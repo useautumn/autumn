@@ -1,20 +1,5 @@
 import { z } from "zod/v4";
 
-/**
- * Identity of the ECS task this Node process is running in. Applies to
- * server, workers, and cron — used by the blue-green gate (matching on
- * `serviceArn`) and by log/trace tagging.
- *
- * - `serviceArn`: full ECS service ARN constructed at boot from the v4
- *   metadata `Cluster` ARN + `ServiceName`. Stable across deploys, unique
- *   per FC blue/green service. **Sole gate signal.**
- * - `imageSha`: from `FC_GIT_COMMIT_SHA` / `IMAGE_TAG` env. Used only for
- *   log/trace tagging (which deploy code is running) — NOT a gate signal,
- *   to avoid the stale-SHA failure mode.
- *
- * Both may be null on non-ECS hosts (Railway, local). The gate fails open
- * when `serviceArn` is null (`hasAwsTaskIdentity()` returns false).
- */
 export const AwsTaskIdentitySchema = z.object({
 	serviceArn: z.string().nullable(),
 	imageSha: z.string().nullable(),
@@ -25,13 +10,6 @@ let cachedIdentity: AwsTaskIdentity | null = null;
 let identityResolved = false;
 let identityPromise: Promise<AwsTaskIdentity> | null = null;
 
-/**
- * Build the full ECS service ARN from the v4 `Cluster` ARN + a service
- * name. Returns null if the cluster ARN doesn't match the expected format.
- *
- * - Cluster ARN: arn:aws:ecs:<region>:<accountId>:cluster/<clusterName>
- * - Service ARN: arn:aws:ecs:<region>:<accountId>:service/<clusterName>/<serviceName>
- */
 const constructServiceArn = ({
 	clusterArn,
 	serviceName,
@@ -45,10 +23,6 @@ const constructServiceArn = ({
 	return `arn:aws:ecs:${region}:${accountId}:service/${clusterName}/${serviceName}`;
 };
 
-/**
- * Reads the ECS task metadata endpoint to resolve this task's identity.
- * Cached for process lifetime — neither field changes for a running task.
- */
 export const resolveAwsTaskIdentity = async (): Promise<AwsTaskIdentity> => {
 	if (identityResolved && cachedIdentity) return cachedIdentity;
 	if (identityPromise) return identityPromise;
@@ -108,17 +82,9 @@ export const resolveAwsTaskIdentity = async (): Promise<AwsTaskIdentity> => {
 	return identityPromise;
 };
 
-/** Synchronous reader. Returns null until `resolveAwsTaskIdentity` resolves. */
 export const getAwsTaskIdentity = (): AwsTaskIdentity | null => cachedIdentity;
 
-/**
- * True iff `serviceArn` is known. The gate uses this — when false, we're
- * either on a non-ECS host (Railway, local) or ECS metadata didn't surface
- * the data we need (rare). Either way → fail open.
- */
 export const hasAwsTaskIdentity = (): boolean =>
 	Boolean(cachedIdentity?.serviceArn);
 
-// Fire-and-forget at module load so server, workers, and cron all get
-// identity resolved without each entry point having to await explicitly.
 void resolveAwsTaskIdentity();

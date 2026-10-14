@@ -1,9 +1,3 @@
-/**
- * Tiered prepaid on the v2 billing path is flattened into one inline Stripe price,
- * so the line gets full entity attribution (quantity = purchased units, amount = tiered total).
- * Stripe-native multi-tier groups (legacy) still store entities [] via the group guard.
- */
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3 } from "@autumn/shared";
 import { waitForInvoiceLineItems } from "@tests/integration/billing/utils/expectInvoiceLineItemsCorrect";
@@ -52,7 +46,6 @@ test.concurrent(
 			(li) => li.feature_id === TestFeature.Messages,
 		);
 		expect(tierLines.length).toBe(1);
-		// 500 units @ $10/100 + 300 units @ $5/100 = $50 + $15
 		expect(tierLines[0].amount).toBe(65);
 		expect(tierLines[0].entities).toEqual([
 			{ entity_id: entities[0].id, quantity: 800, amount: 65 },

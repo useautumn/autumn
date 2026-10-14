@@ -17,7 +17,6 @@ import { decideEffects } from "../../../src/processor/effects/decideEffects.js";
 import { createTrackCommand, testIdentity } from "../../fixtures/mutations.js";
 import { scenarios } from "../track-throughput/scenarios.js";
 
-/** In-memory cost of one track's decision and its effects, piece by piece: no processor, no Kafka, no I/O. */
 const args = Object.fromEntries(
 	process.argv.slice(2).map((arg) => {
 		const [key, value] = arg.replace(/^--/, "").split("=");
@@ -53,7 +52,6 @@ if (!feature) throw new Error("The track moved no feature");
 const checkCommand = mutationToCheckCommand({ mutation, feature });
 if (!checkCommand) throw new Error("No check command for the track");
 
-/** Mean µs per call after a warmup; the work is pure so every call sees the same inputs. */
 const measure = ({ name, run }: { name: string; run: () => unknown }) => {
 	for (let i = 0; i < warmup; i++) run();
 	const startedAt = performance.now();

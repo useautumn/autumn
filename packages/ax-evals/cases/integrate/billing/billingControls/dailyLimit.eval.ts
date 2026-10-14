@@ -5,16 +5,6 @@ import { initIntegrationEval } from "../../../../src/initIntegrationEval.ts";
 import { messagingFreeCatalog } from "../../catalogs/messagingFreeCatalog.ts";
 import { fixtureUser, integrateScenario } from "../../integrateShared.ts";
 
-/**
- * BILLING CONTROLS flow: the messaging-API daily throttle. Free includes
- * 3,000 emails/month; product wants a 100/day cap ON TOP — a second,
- * windowed dimension, not a smaller grant. That's a usage_limits entry
- * (limit: 100, interval: "day") via customers.update billing_controls: the
- * cap's window is independent of the allowance's monthly reset. The graded
- * trap: agents that shrink the included grant, hand-roll a daily counter
- * (cron / setInterval / in-memory map), or reach for spend_limits (which
- * caps overage, not in-allowance burst).
- */
 const dailyCapRouteStub = `		// Signup hook: apply free-tier sending policy. TODO: wire to billing provider.
 		"/api/billing/daily-cap": {
 			POST: async (req) => {
@@ -29,7 +19,6 @@ export const dailyLimit: IntegrationCase = {
 	fixture: "notes-api",
 	catalogConfig: messagingFreeCatalog,
 	scenario: integrateScenario,
-	// free is autoEnable — attaching on creation; no payment method needed.
 	seedCustomer: {
 		customer: {
 			id: fixtureUser.id,

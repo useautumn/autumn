@@ -49,7 +49,6 @@ test(`${chalk.yellowBright("billing-cycle-anchor-new-plan 1: free -> pro, schedu
 		billing_cycle_anchor: scheduledAnchorMs,
 	});
 
-	// A new subscription is created on the anchor, so only the days until it are charged.
 	expect(preview.total).toBe(
 		calculateNewSubscriptionAnchorStub({
 			advancedTo,
@@ -147,7 +146,6 @@ test(`${chalk.yellowBright("billing-cycle-anchor-new-plan 2: no plan -> pro, sch
 		billing_cycle_anchor: scheduledAnchorMs,
 	});
 
-	// A new subscription is created on the anchor, so only the days until it are charged.
 	expect(preview.total).toBe(
 		calculateNewSubscriptionAnchorStub({
 			advancedTo,

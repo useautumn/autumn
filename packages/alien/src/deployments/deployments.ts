@@ -15,7 +15,6 @@ import {
 } from "./deploymentSchemas.js";
 import { fixedPoolsToCompute } from "./fixedPoolsToCompute.js";
 
-/** The local manager filters by `deploymentGroupId`; the hosted API by `deploymentGroup`, scoped to a project. */
 const deploymentsQuery = ({
 	api,
 	deploymentGroupId,
@@ -49,7 +48,6 @@ const listGroupDeployments = async ({
 	return items;
 };
 
-/** The group's live deployment: the one its setup created. One being deleted is already gone for every caller. */
 export const findDeployment = async ({
 	ctx,
 	deploymentGroupId,
@@ -64,7 +62,6 @@ export const findDeployment = async ({
 	return live ? readDeployment({ ctx, deployment: live }) : null;
 };
 
-/** Until alien has deleted every deployment of the group, a stack may still need the setup link it was launched with. */
 export const hasUndeletedDeployment = async ({
 	ctx,
 	deploymentGroupId,
@@ -89,7 +86,6 @@ const deploymentPath = ({
 }) =>
 	`/v1/deployments/${encodeURIComponent(deploymentId)}${action}${hostedQuery({ api })}`;
 
-/** One deployment by id, deletes included; a deployment alien has dropped reads as null. */
 export const getDeployment = async ({
 	ctx,
 	deploymentId,
@@ -110,7 +106,6 @@ export const getDeployment = async ({
 	}
 };
 
-/** The hosted list leaves out `stackState`, so the endpoint is read from the record itself. */
 const readDeployment = ({
 	ctx,
 	deployment,
@@ -127,8 +122,6 @@ const readDeployment = ({
 				schema: AlienDeploymentSchema,
 			});
 
-/** A deployment that never ran is forgotten: cleanup would wait forever on resources that were never made.
- *  One that ran is cleaned up; setup-owned resources stay until the customer removes their stack. */
 export const deleteDeployment = async ({
 	ctx,
 	deployment,
@@ -152,7 +145,6 @@ export const deleteDeployment = async ({
 	});
 };
 
-/** Same machines is a no-op on alien's side. The local manager runs no machines, so it has nothing to change. */
 export const updateDeploymentCompute = async ({
 	ctx,
 	deployment,
@@ -176,7 +168,6 @@ export const updateDeploymentCompute = async ({
 	});
 };
 
-/** alien resumes a failed deployment from the step that failed. */
 export const retryDeployment = async ({
 	ctx,
 	deployment,

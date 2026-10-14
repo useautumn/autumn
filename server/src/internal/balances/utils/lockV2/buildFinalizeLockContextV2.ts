@@ -67,7 +67,6 @@ export const buildFinalizeLockContextV2 = async ({
 		finalValue,
 	});
 
-	// Expiry-triggered finalizes send no properties, so fall back to the check's.
 	const eventProperties = params.properties ?? receipt.properties ?? undefined;
 
 	const feature = findFeatureById({
@@ -99,7 +98,6 @@ export const buildFinalizeLockContextV2 = async ({
 			triggerAutoTopUp: true,
 			eventProperties,
 			countsAllocations: true,
-			// Receipts written before this field existed were always locked under reject.
 			overageBehaviour: receipt.overage_behavior ?? "reject",
 		},
 	};

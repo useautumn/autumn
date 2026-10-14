@@ -35,7 +35,6 @@ const identityOf = (customerId: string): MeteringIdentity => ({
 const keyOf = (customerId: string) =>
 	meteringIdentityToPartitionKey({ identity: identityOf(customerId) });
 
-/** Records every flush request; a flush refuses whatever `failWhen` names. */
 const createRecordingDb = ({
 	failWhen,
 }: {
@@ -65,9 +64,7 @@ const committerFor = ({
 	maxRowsPerFlush = 500,
 }: {
 	db: CommitterDb;
-	/** Null: the committer is not configured for snapshots at all. */
 	snapshots?: { partitionCount: number } | null;
-	/** Null: the worker registered no store, as a worker without edge configs. */
 	subjectSnapshotsConfig?: ReturnType<
 		typeof createSubjectSnapshotsStore
 	> | null;
@@ -105,7 +102,6 @@ const trackRecord = ({
 	}),
 });
 
-/** The intent the writer would attach: the state each customer leaves, from a full read at BASELINE_AT. */
 const writing = (...states: SubjectState[]): SnapshotIntent =>
 	new Map(
 		states.map((state) => [
@@ -308,7 +304,6 @@ describe("committer subject snapshots", () => {
 			customerEntitlements: [createCustomerEntitlement({ id: poisonId })],
 		});
 		const fine = createState({ identity: identityOf("cus_a") });
-		// The lane is busy with a held flush while both calls queue, so they land in one flush together.
 		const gate = Promise.withResolvers<void>();
 		const flush = db.flush;
 		db.flush = async (request) => {
@@ -437,7 +432,6 @@ describe("committer subject snapshots", () => {
 			...change,
 			id: staleId,
 		}));
-		// The lane is busy with a held flush while both calls queue, so they land in one flush together.
 		const held = committer.apply({
 			topic,
 			partition: 0,
@@ -533,7 +527,6 @@ describe("committer subject snapshots", () => {
 			await Promise.all([first, ...queued]);
 			return requests.length;
 		};
-		// Each record is one row change plus one snapshot row: at a cap of 3 the two queued calls no longer share a flush.
 		expect(await flushesOf(null)).toBe(2);
 		expect(await flushesOf(createSubjectSnapshotsStore({ mode: "off" }))).toBe(
 			2,

@@ -2,7 +2,6 @@ import type { ProductItem, ProductV2 } from "@autumn/shared";
 import type { ReactNode } from "react";
 import { PlanPriceLabel } from "./PlanPriceLabel";
 
-/** A plan's name and price, with row controls trailing. */
 export function PlanTrayLine({
 	productId,
 	product,

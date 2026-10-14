@@ -73,7 +73,6 @@ export interface BuildAttachRequestBodyParams {
 	removePlanIds: string[];
 }
 
-/** Pure function to build the attach request body. Extracted for testability. */
 export function buildAttachRequestBody({
 	customerId,
 	entityId,
@@ -417,7 +416,6 @@ export function useAttachRequestBody(params: BuildAttachRequestBodyParams) {
 					body.payment_method_types = paymentMethodTypes;
 				}
 
-				// Checkout activation is independent of invoice mode.
 				if (enableProductImmediately !== undefined) {
 					body.enable_product_immediately = enableProductImmediately;
 				}

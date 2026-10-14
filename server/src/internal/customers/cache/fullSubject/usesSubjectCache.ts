@@ -1,7 +1,6 @@
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { isBalanceWorkerRolloutEnabled } from "@/internal/misc/rollouts/isBalanceWorkerRolloutEnabled.js";
 
-/** A routed customer's balances move on the worker, so a Redis view of them would only ever go stale. */
 export const usesSubjectCache = ({
 	ctx,
 	customerId,

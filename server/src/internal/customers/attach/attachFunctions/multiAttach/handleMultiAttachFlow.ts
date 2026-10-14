@@ -95,7 +95,6 @@ export const handleMultiAttachFlow = async ({
 		}
 		curSub = newSub;
 		latestInvoice = newSub.latest_invoice as Stripe.Invoice;
-		// Do something about current sub...
 	} else if (itemSet.subItems.length > 0) {
 		console.log(`MULTI ATTACH FLOW, UPDATING SUB ${curSub!.id}`);
 		config.disableTrial = true;
@@ -109,7 +108,6 @@ export const handleMultiAttachFlow = async ({
 			branch,
 		});
 
-		// TODO: Add these missing functions or remove if not needed
 		const schedule = await paramsToCurSubSchedule({ attachParams });
 		if (schedule) {
 			await handleUpgradeFlowSchedule({
@@ -155,7 +153,6 @@ export const handleMultiAttachFlow = async ({
 		});
 	}
 
-	// Expire all existing cus products at the customer level
 	const batchInsert: unknown[] = [];
 	const newProdList = getProdListWithoutEntities({
 		attachParams,
@@ -201,21 +198,4 @@ export const handleMultiAttachFlow = async ({
 			? attachToInvoiceResponse({ invoice: latestInvoice })
 			: undefined,
 	});
-	// if (res) {
-	// 	const invoice = latestInvoice;
-	// 	res.status(200).json(
-	// 		AttachResultSchema.parse(
-	// 			AttachResultSchema.parse({
-	// 				message: `Successfully created subscriptions and attached ${attachParams.products.map((p) => p.name).join(", ")} to ${attachParams.customer.name}`,
-	// 				code: SuccessCode.NewProductAttached,
-	// 				product_ids: attachParams.products.map((p) => p.id),
-	// 				customer_id:
-	// 					attachParams.customer.id || attachParams.customer.internal_id,
-	// 				invoice: attachParams.invoiceOnly
-	// 					? attachToInvoiceResponse({ invoice })
-	// 					: undefined,
-	// 			}),
-	// 		),
-	// 	);
-	// }
 };

@@ -14,24 +14,6 @@ import type { ApiSubscription } from "../../customers/cusPlans/apiSubscription";
 import { ApiEntityV1Schema } from "../apiEntity";
 import { ApiEntityV2Schema } from "../apiEntityV2";
 
-/**
- * V2.0_EntityChange: Transforms entity response TO V1 format from V2 format
- *
- * Applied when: targetVersion <= V2.0 (request is for V2.0 or older)
- *
- * Breaking changes introduced in V2.1:
- *
- * 1. Subscription schema changes:
- *    - V2.1+: Single "subscriptions" array with ApiSubscriptionV1 (auto_enable, ApiPlanV1)
- *    - V2.0: Split arrays "subscriptions" + "scheduled_subscriptions" with ApiSubscription (default, ApiPlanV0)
- *
- * 2. Subscription merging:
- *    - V2.1+: Each customer product is a separate entry (unmerged)
- *    - V2.0: Same plan_id + status are merged (quantities summed)
- *
- * Input: ApiEntityV2 (V2.1+ format)
- * Output: ApiEntityV1 (V2.0 format)
- */
 export const V2_0_EntityChange = defineVersionChange({
 	name: "V2_0 Entity Change",
 	newVersion: ApiVersion.V2_1,
@@ -51,13 +33,11 @@ export const V2_0_EntityChange = defineVersionChange({
 		ctx: SharedContext;
 		input: z.infer<typeof ApiEntityV2Schema>;
 	}): z.infer<typeof ApiEntityV1Schema> => {
-		// Merge subscriptions first (V2.1 returns unmerged, V2.0 expects merged)
 		const mergedSubscriptions = apiSubscriptionsV1ToV0({
 			ctx,
 			input: input.subscriptions ?? [],
 		});
 
-		// Merge purchases as subscriptions
 		const purchasesAsSubscriptions: ApiSubscription[] =
 			apiPurchasesV0ToSubscriptionsV0({
 				ctx,
@@ -84,7 +64,6 @@ export const V2_0_EntityChange = defineVersionChange({
 			}
 		}
 
-		// Return V0 entity format (without purchases field)
 		const { purchases: _purchases, ...rest } = input;
 
 		return {

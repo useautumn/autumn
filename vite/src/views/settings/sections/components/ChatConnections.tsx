@@ -59,7 +59,6 @@ export const ChatConnections = () => {
 	const queryKey = ["chat"];
 	const { data: session } = useSession();
 	// better-auth's customSession additions aren't always inferred; cast to read
-	// the caller's scopes (mirrors CreateApiKeySheet).
 	const callerScopes = ((session as any)?.scopes ?? []) as string[];
 
 	const [sheetOpen, setSheetOpen] = useState(false);

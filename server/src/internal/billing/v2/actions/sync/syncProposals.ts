@@ -55,7 +55,6 @@ export const syncProposals = async ({
 }): Promise<SyncProposalsResponse> => {
 	const { db, org, env } = ctx;
 
-	// 1. Get full customer to find Stripe customer ID
 	const fullCustomer = await CusService.getFull({
 		ctx,
 		idOrInternalId: params.customer_id,
@@ -72,7 +71,6 @@ export const syncProposals = async ({
 		});
 	}
 
-	// 2. Create Stripe client and list subscriptions
 	const stripeCli = createStripeCli({ org, env });
 	const stripeSubscriptions = await stripeCli.subscriptions.list({
 		customer: stripeCustomerId,
@@ -84,7 +82,6 @@ export const syncProposals = async ({
 		return { proposals: [] };
 	}
 
-	// 3. Match Stripe subscription items to Autumn products
 	const proposals = await matchStripeSubscriptionsToProducts({
 		db,
 		orgId: org.id,

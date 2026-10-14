@@ -5,7 +5,6 @@ import {
 	shareSqliteOpenLock,
 } from "../../../../src/state/newSqliteConnection.js";
 
-/** Run as a script: workers open connections all at once, the way a replica's threads boot, and print each one's handles. */
 export const OPEN_MANY_PATH = import.meta.path;
 const WORKERS = 5;
 const CONNECTIONS = 2000;

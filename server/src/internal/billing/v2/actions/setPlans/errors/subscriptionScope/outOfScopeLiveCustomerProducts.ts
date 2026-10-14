@@ -6,7 +6,6 @@ import {
 } from "@autumn/shared";
 import { isCustomerProductInStripeSubscriptionScope } from "../../subscriptionScope/isCustomerProductInStripeSubscriptionScope";
 
-/** Live plans on the plan's entity that the targeted subscription doesn't cover. */
 export const outOfScopeLiveCustomerProducts = ({
 	billingContext,
 	internalEntityId,

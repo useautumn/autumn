@@ -1,9 +1,3 @@
-/**
- * Remy race: /track immediately after a paid attach, then invoice.created
- * webhook refresh. Without flushBalances the deduction lives only in Redis
- * and skip_cache reverts; with flush it lands in Postgres first.
- */
-
 import { beforeAll, describe, expect, test } from "bun:test";
 import {
 	type ApiCustomer,
@@ -80,7 +74,6 @@ const runInvoiceCreatedCacheRefresh = async ({
 	expect(response.status).toBe(200);
 };
 
-// Exercises the legacy Redis balance path, which worker-routed customers never use.
 describe.skipIf(isBalanceWorkerRoute())(
 	`${chalk.yellowBright("webhook-refresh-flush: invoice.created must not lose unsynced deductions")}`,
 	() => {

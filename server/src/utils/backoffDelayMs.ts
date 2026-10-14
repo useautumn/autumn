@@ -1,6 +1,3 @@
-/** Equal jitter: half the ceiling is always waited, so a caller riding out a
- * dead connection keeps a guaranteed floor, and the other half is spread so
- * several callers that failed together don't return in step. */
 export const backoffDelayMs = ({
 	attempt,
 	baseDelayMs,

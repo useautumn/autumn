@@ -1,17 +1,3 @@
-/**
- * THE isolation property: an operation's plan filter must NEVER touch a
- * customer product it doesn't match — proven on ONE customer holding several
- * products (free base + paid recurring add-on + paid one-off add-on), where
- * every row filter matches a strict subset of their rows.
- *
- * Contract under test (Words breakdown = exact per-row proof):
- *   - paid: true       → only the two paid add-on rows gain Words;
- *   - recurring: true  → only the recurring add-on row;
- *   - recurring: false → the free base + one-off rows, never the recurring;
- *   - price: {$eq: null} → only the base-price-less free row;
- *   - price: {$ne: null} → only the add-on rows with base prices.
- */
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV5 } from "@autumn/shared";
 import { products } from "@tests/utils/fixtures/products";
@@ -22,7 +8,6 @@ import {
 	runScopedMigration,
 } from "./operationScopeTestUtils";
 
-/** One customer, three coexisting products with distinct row shapes. */
 const initThreeProductCustomer = async ({
 	customerId,
 	prefix,
@@ -143,8 +128,6 @@ for (const scenario of scenarios) {
 				await setup.autumnV2_2.customers.get<ApiCustomerV5>(customerId);
 			const expected = scenario.expectPlans(setup);
 			expectWordsOnPlans({ customer, planIds: expected });
-			// The complement stayed untouched by construction of the breakdown
-			// assertion, but make the intent explicit:
 			expect(expected.length).toBeLessThan(setup.allPlanIds.length);
 		},
 	);

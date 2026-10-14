@@ -1,6 +1,5 @@
 import { z } from "zod/v4";
 
-/** Input a newer writer produced that this build does not know: carried or skipped, never refused. */
 export type UnknownInput =
 	| { kind: "enum_value"; schema: string; value: string }
 	| {
@@ -17,12 +16,10 @@ type UnknownInputListener = (input: UnknownInput) => void;
 const sighted = new Set<string>();
 let listener: UnknownInputListener = () => {};
 
-/** Where the first sighting of each unknown input goes; a process installs its logger once at boot. */
 export const onUnknownInput = (next: UnknownInputListener): void => {
 	listener = next;
 };
 
-/** Reports an unknown input once per process per key, so a rollout is visible without a line per read. */
 export const sightUnknownInput = ({
 	key,
 	input,
@@ -37,7 +34,6 @@ export const sightUnknownInput = ({
 	} catch {}
 };
 
-/** An enum whose values grow: any string parses, typed as the values this build branches on. */
 export const openEnum = <Value extends string>({
 	name,
 	values,
@@ -66,7 +62,6 @@ function openChild(child: unknown, path: string): unknown {
 	return child instanceof z.ZodType ? open({ schema: child, path }) : child;
 }
 
-/** The same schema with every object loose and every enum open, so a shared row schema reads a newer build's columns and values. */
 function open({
 	schema,
 	path,

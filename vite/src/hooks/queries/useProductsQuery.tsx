@@ -3,18 +3,11 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 
-// Stable empty object reference to prevent infinite re-renders
 const EMPTY_COUNTS: Record<string, ProductCounts> = {};
 
 export type ProductListItem = ProductV2 &
 	Pick<FullProduct, "licenses" | "parent_plan_licenses">;
 
-/**
- * Fetch all products for the current org.
- *
- * Pass `allVersions: true` to include every version of each plan (the default
- * route only returns the latest per public id).
- */
 export const useProductsQuery = ({
 	allVersions = false,
 }: {
@@ -53,9 +46,6 @@ export const useProductsQuery = ({
 		queryFn: fetchProductCounts,
 	});
 
-	/**
-	 * Invalidates all instances of products and product_counts queries across the app
-	 */
 	const invalidate = async () => {
 		await Promise.all([
 			queryClient.invalidateQueries({ queryKey: ["products"] }),

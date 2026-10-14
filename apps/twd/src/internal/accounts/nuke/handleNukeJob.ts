@@ -14,7 +14,6 @@ import { kickAllocator } from "../allocator/accountAllocator.ts";
 const NUKE_TRIES = 3;
 const RETRY_DELAY_MS = 5_000;
 
-/** payload: { accountId }. Cleans the account, flips it back to clean; drops it if Stripe deleted it. */
 export const handleNukeJob: JobHandler = async ({ ctx, job, signal }) => {
 	const accountId = String(job.payload.accountId);
 	const [account] = await ctx.db
@@ -34,7 +33,6 @@ export const handleNukeJob: JobHandler = async ({ ctx, job, signal }) => {
 		});
 		return;
 	}
-	// Conditional so a claim that lands between the read above and here wins.
 	const [started] = await ctx.db
 		.update(stripeAccounts)
 		.set({ state: "nuking", brokenReason: null, stateChangedAt: new Date() })

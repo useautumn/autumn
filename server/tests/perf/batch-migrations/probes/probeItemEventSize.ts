@@ -1,9 +1,3 @@
-/**
- * Measures the real NDJSON byte size of migration item events from the last
- * Fanout-shape bench run, to size the per-page Tinybird POST.
- *
- * Run: infisical run --env=dev --recursive -- bun server/tests/perf/batch-migrations/probes/probeItemEventSize.ts
- */
 import { migrationTinybird } from "@/external/tinybird/migrations/migrationItemEventsDataSource.js";
 import { getBenchContext } from "../utils/benchContext.js";
 
@@ -22,8 +16,6 @@ const main = async () => {
 	const rows = result.data ?? [];
 	if (rows.length === 0) throw new Error("no events found");
 
-	// ClickHouse returns nested JSON columns as pretty-printed strings; the
-	// ingest wire format is compact. Re-compact to estimate the true POST size.
 	const compact = (value: unknown): unknown => {
 		if (typeof value === "string") {
 			const trimmed = value.trim();

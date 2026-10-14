@@ -102,7 +102,6 @@ const checkCurStripePrice = async ({
 		}
 	}
 
-	// Get stripe product
 	let stripeProd: Stripe.Product | null = null;
 	if (!config.stripe_product_id) {
 		stripeProd = null;
@@ -178,8 +177,6 @@ export const createStripePriceIFNotExist = async ({
 	billingVersion?: BillingVersion;
 	source?: StripePriceNicknameSource;
 }) => {
-	// Fetch latest price data...
-
 	const { org, logger, db, env } = ctx;
 	assertNoPreviewStripeIdsOnProduct({ product });
 	const stripeCli = createStripeCli({ org, env });
@@ -252,7 +249,6 @@ export const createStripePriceIFNotExist = async ({
 
 	const isOneOffAndTiered = priceUtils.isTieredOneOff({ price, product });
 
-	// 1. If fixed price, just create price
 	if (
 		billingType === BillingType.FixedCycle ||
 		billingType === BillingType.OneOff
@@ -270,7 +266,6 @@ export const createStripePriceIFNotExist = async ({
 		}
 	}
 
-	// 2. If prepaid
 	if (billingType === BillingType.UsageInAdvance) {
 		if (
 			isOneOffAndTiered &&

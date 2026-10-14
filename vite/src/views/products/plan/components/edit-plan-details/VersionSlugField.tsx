@@ -7,7 +7,6 @@ import { defaultVersionSlug } from "../versionLabel";
 export const VersionSlugField = () => {
 	const { product, setProduct } = useProduct();
 	const fallbackSlug = defaultVersionSlug({ version: product.version });
-	// Only an unset slug falls back; a cleared one stays empty so it can be retyped.
 	const slug = product.version_slug ?? fallbackSlug;
 	const error = versionSlugError({ slug });
 

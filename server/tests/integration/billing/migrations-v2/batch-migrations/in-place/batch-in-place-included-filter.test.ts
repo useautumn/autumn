@@ -1,14 +1,3 @@
-/**
- * Dashboard catalogV2 existing-version draft: 100→200 must rewrite the
- * catalog grant and leave a customized 1k row alone.
- *
- * Contract (C2): catalog 100 → remaining 197 after consume 3; custom 1k
- * untouched (same entitlement id and balance). Draft remove_items carry
- * included: 100.
- *
- * Wildcard rewrite of 1k stays in batch-replace-item-custom-definitions.test.ts.
- */
-
 import { expect, test } from "bun:test";
 import { ResetInterval, type UpdateCatalogResponse } from "@autumn/shared";
 import { expectBalanceCorrect } from "@tests/integration/utils/expectBalanceCorrect";

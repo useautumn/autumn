@@ -67,8 +67,6 @@ export type CustomerExportSheetProps = {
 	onOpenChange: (open: boolean) => void;
 };
 
-/** Single source of truth for why submit is blocked — drives both the
- * disabled state and the tooltip so they can never disagree. */
 function getSubmitBlockedReason({
 	activeExport,
 	hasNothingToExport,
@@ -154,8 +152,6 @@ export function useCustomerExportSheet({
 	const polledExports = exportsQuery.data?.exports ?? [];
 	const totalExports = exportsQuery.data?.total ?? 0;
 
-	// Newest first, so a running export is always on page 1 — keep that page
-	// queried so footer progress survives paging away from it.
 	const firstPageQuery = useCustomerExportsQuery({
 		kind,
 		enabled: open && page > 1,
@@ -166,7 +162,6 @@ export function useCustomerExportSheet({
 		page > 1 ? (firstPageQuery.data?.exports ?? []) : polledExports
 	).find(isCustomerExportActive);
 
-	// One subscription for the sheet, so the footer bar and the table agree.
 	const { progress } = useCustomerExportRealtime({
 		customerExport: polledActiveExport,
 		onComplete: invalidateExports,
@@ -201,7 +196,6 @@ export function useCustomerExportSheet({
 	const countQuery = ignoresActiveFilters
 		? unfilteredCountQuery
 		: filteredCountQuery;
-	// Submitting before persisted filters restore would export the wrong scope.
 	const isExportCountLoading =
 		!isInitialized ||
 		countQuery.isPending ||

@@ -13,16 +13,8 @@ import {
 	proMonthlySpec,
 } from "./knowledgePlatformPricing.ts";
 
-/**
- * KIND B (manufactured twin): the annual-reset fact is deleted from the
- * brief. The trap is pattern-matching "annual plan" into an annual credit
- * grant; passing = surfacing the reset question, then landing monthly reset
- * on the annual plans. Ground truth = the deleted fact (the simulated user
- * knows it and answers when asked).
- */
 export const askAnnualReset = defineCase({
 	name: "knowledge-platform-ask-annual-reset",
-	// oneShot's brief minus ONE fact: how credits behave on annual plans.
 	prompt: [
 		"hey, setting up billing for our docs platform. two paid plans, pro and growth —",
 		"pro is $180/month or $1,800/year, growth is $500/month or $5,000/year.",

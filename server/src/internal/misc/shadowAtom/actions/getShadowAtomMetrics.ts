@@ -5,7 +5,6 @@ import type {
 import { queryAtomMetrics } from "@/internal/byoc/actions/telemetry/atomLogs/queryAtomMetrics.js";
 import { findShadowAtomRecords } from "../shadowAtomStorage.js";
 
-/** Our shadow Atom's CPU, memory and traffic over the range, from the same health lines an org's Atom logs. */
 export const getShadowAtomMetrics = async ({
 	params,
 }: {

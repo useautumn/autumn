@@ -4,7 +4,6 @@ import { getMiscCache } from "./getMiscCache.js";
 
 export { getRequestBucket } from "@autumn/cache";
 
-/** Read-through caches only: a ramp slice of requests reads from the ramp target. Locks use `getMiscRedis`. */
 export const resolveMiscRedis = (params: { requestId?: string }): Redis =>
 	getMiscCache().resolve(params);
 

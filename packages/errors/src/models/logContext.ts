@@ -1,4 +1,3 @@
-/** The slice of a log line's bindings + fields that says who and where; set by addAppContextToLogs etc. */
 export type LogContext = {
 	context?: {
 		org_id?: string;
@@ -10,6 +9,5 @@ export type LogContext = {
 	req?: { id?: string; name?: string; route?: string };
 	workflow?: { id?: string; name?: string };
 	error_type?: string;
-	/** The log line's own `type`, naming background work that has no request or job. */
 	type?: string;
 };

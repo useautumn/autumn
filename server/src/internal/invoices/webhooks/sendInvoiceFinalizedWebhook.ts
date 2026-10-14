@@ -5,7 +5,6 @@ import { InvoiceService } from "@/internal/invoices/InvoiceService.js";
 import { invoiceLineItemRepo } from "@/internal/invoices/lineItems/repos/index.js";
 import { invoiceListRowToApi } from "@/internal/invoices/utils/invoiceListRowToApi.js";
 
-/** Body must equal the `invoices.list` row so deliveries are replayable. */
 export const sendInvoiceFinalizedWebhook = async ({
 	ctx,
 	autumnInvoiceId,

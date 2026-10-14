@@ -1,9 +1,3 @@
-/**
- * TRANSFER destination resolves through the `autumn_customer_id` subscriber attribute
- * before any RC id lookup, so the purchase lands on the declared customer and no
- * customer is created for the raw RC user id.
- */
-
 import { expect, test } from "bun:test";
 import { customers } from "@autumn/shared";
 import ctx from "@tests/utils/testInitUtils/createTestContext";

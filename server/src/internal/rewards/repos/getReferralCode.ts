@@ -9,7 +9,6 @@ import {
 import { and, eq } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 
-/** Fetch a referral code by string value, optionally with reward program + reward */
 export const getReferralCode = async ({
 	db,
 	orgId,

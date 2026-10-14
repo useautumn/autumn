@@ -1,15 +1,3 @@
-/**
- * EXPLAIN (ANALYZE, BUFFERS) the queries a version SET drives, against the
- * seeded-but-not-yet-migrated bench-verset rows. Seed first:
- *
- *   infisical run --env=dev --recursive -- bun tests/perf/batch-migrations/benchRunVersionSet.ts --customers 200000 --pages 0
- *   infisical run --env=dev --recursive -- bun tests/perf/batch-migrations/probes/probeVersionSetQueries.ts
- *
- * The SELECT skeletons mirror production; every non-trivial predicate is
- * imported from the production builders so a plan here is a plan there. The
- * repoint UPDATE is analyzed inside a rolled-back transaction.
- */
-
 import { EntInterval } from "@autumn/shared";
 import { sql } from "drizzle-orm";
 import { sqlList } from "@/internal/billing/v2/actions/batchTransition/execute/sql/batchTransitionSqlUtils.js";
@@ -40,7 +28,6 @@ const parseArgs = () => {
 	return { pageSize: Number(get("--page-size") ?? "5000") };
 };
 
-/** Drizzle hands back a bare row array or a QueryResult depending on driver. */
 const printPlan = async ({ title, plan }: { title: string; plan: unknown }) => {
 	const rows = (
 		Array.isArray(plan) ? plan : ((plan as { rows?: unknown[] }).rows ?? [])
@@ -171,8 +158,6 @@ const main = async () => {
 		`),
 	});
 
-	// EXPLAIN ANALYZE executes, so the repoint runs inside a transaction the
-	// probe always aborts.
 	try {
 		await db.transaction(async (tx) => {
 			const plan = await tx.execute(sql`

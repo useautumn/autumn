@@ -1,8 +1,3 @@
-/**
- * The prompt layer: every question has a flag. Interactive asks; headless
- * prints the same line as a hint and stops with NeedsInputError.
- */
-
 import { expect, test } from "bun:test";
 import chalk from "chalk";
 import {

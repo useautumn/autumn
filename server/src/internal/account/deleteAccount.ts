@@ -18,11 +18,6 @@ import { auth } from "@/utils/auth.js";
 
 const isOwnerRole = (role: string) => role.split(",").includes("owner");
 
-/**
- * Works out which orgs go away with the user. Orgs where the user is the only
- * member are deleted (deleteOrg also removes their sandboxes). Orgs with other members are left
- * alone, but the user can't be their last owner.
- */
 const getOrgsToDelete = async ({
 	db,
 	userId,
@@ -75,10 +70,6 @@ const getOrgsToDelete = async ({
 	return orgsToDelete;
 };
 
-/**
- * Permanently deletes a user, every org they solely belong to (plus sandboxes),
- * and their marketing contacts (via the better-auth user.delete hook).
- */
 export const deleteAccount = async ({
 	db,
 	userId,
@@ -90,8 +81,6 @@ export const deleteAccount = async ({
 }) => {
 	const orgsToDelete = await getOrgsToDelete({ db, userId });
 
-	// Check every org (and sandbox) up front so we never leave the account
-	// half-deleted.
 	if (orgsToDelete.length > 0) {
 		const sandboxes = await listOrgSandboxes({
 			db,
@@ -118,9 +107,6 @@ export const deleteAccount = async ({
 		}
 	}
 
-	// Each org is re-validated right before deletion (membership here, live
-	// customers inside deleteOrg). If one fails midway, only orgs the user
-	// solely owned are gone and the account survives, so a retry picks up.
 	for (const org of orgsToDelete) {
 		const otherMember = await db.query.member.findFirst({
 			where: and(eq(member.organizationId, org.id), ne(member.userId, userId)),
@@ -137,8 +123,6 @@ export const deleteAccount = async ({
 		await deleteOrg({ db, org, logger, deleteOrgFromDb: true });
 	}
 
-	// Goes through better-auth so sessions/accounts are cleared and the
-	// user.delete hooks (Loops/Resend cleanup) run.
 	const authContext = await auth.$context;
 	await authContext.internalAdapter.deleteUser(userId);
 };

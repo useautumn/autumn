@@ -4,7 +4,6 @@ import {
 	type LicenseBillingPriceRow,
 } from "@autumn/shared";
 
-/** Prices the paid seat quantity without persisted assignment rows. */
 export const customerLicenseToUnusedPrepaidRows = ({
 	customerLicense,
 	billableAssignedQuantity,
@@ -21,7 +20,6 @@ export const customerLicenseToUnusedPrepaidRows = ({
 	);
 	if (quantity === 0) return [];
 
-	// License plans carry a single fixed price for now.
 	const fixedPrice = planLicense.product.prices.find((price) =>
 		isFixedPrice(price),
 	);

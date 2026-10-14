@@ -6,9 +6,6 @@ import {
 } from "@/external/redis/actions/savedViewsStore/savedViewsStore.js";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 
-/**
- * Delete a saved view for the organization
- */
 export const handleDeleteView = createRoute({
 	scopes: [Scopes.Public],
 	handler: async (c) => {

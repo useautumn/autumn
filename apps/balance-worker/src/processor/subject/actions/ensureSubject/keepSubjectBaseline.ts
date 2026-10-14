@@ -6,7 +6,6 @@ import {
 import { initializeSubject } from "../../../actions/initializeSubject.js";
 import type { SubjectScope } from "../../types/subject.js";
 
-/** Makes the rows resident: the customer's at revision zero, an entity's at the customer's current revision. */
 export const keepSubjectBaseline = async ({
 	scope,
 	identity,
@@ -19,7 +18,6 @@ export const keepSubjectBaseline = async ({
 	occurredAt: number;
 }): Promise<SubjectState> => {
 	const { ctx } = scope;
-	// Postgres is the baseline: nothing to log, the rows just become resident.
 	if ((ctx.baseline ?? "log") === "map")
 		return ctx.writer.adopt({ state: baseline, baselineAt: occurredAt });
 
@@ -34,11 +32,9 @@ export const keepSubjectBaseline = async ({
 				occurredAt,
 			},
 			state: baseline,
-			// Catalog rows are not part of hydration; ensureSubjectCatalog loads whatever the state references.
 			catalogRows: [],
 		},
 	});
-	// A server initialize may have landed first; either way the state the worker holds is what the command runs on.
 	const { state } = await initializeSubject({ ctx, request });
 	return state;
 };

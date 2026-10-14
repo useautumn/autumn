@@ -25,7 +25,6 @@ const isRefusedDeduction = (error: unknown): boolean =>
 	error instanceof InsufficientBalanceError ||
 	error instanceof UsageLimitExceededError;
 
-/** The feature's balance as the subject holds it now; null when nothing funds it. */
 const fullSubjectToApiBalance = ({
 	ctx,
 	fullSubject,
@@ -49,10 +48,6 @@ const fullSubjectToApiBalance = ({
 	}).data;
 };
 
-/**
- * A deducting check the worker refused for a v1 paid allocated grant: the same reject-mode track legacy
- * runs, on Postgres. Allowed iff it applied; a refused one reports the balance it was refused against.
- */
 export async function runPostgresDeductingCheck({
 	ctx,
 	body,

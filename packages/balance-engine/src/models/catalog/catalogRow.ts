@@ -9,7 +9,6 @@ import { openSchema } from "../common/openSchema.js";
 import { catalogFreeTrialSchema } from "./catalogFreeTrial.js";
 import { catalogPlanLicenseSchema } from "./catalogPlanLicense.js";
 
-/** One catalog row tagged with its table: the shared row as stored, never a pick, because it is cached, not kept in state. */
 export const catalogRowSchema = openSchema({
 	name: "catalogRow",
 	schema: z.discriminatedUnion("table", [

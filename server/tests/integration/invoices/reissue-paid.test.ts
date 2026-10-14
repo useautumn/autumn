@@ -1,13 +1,3 @@
-/**
- * invoices.reissue on a paid invoice: corrected with a credit note instead of a void.
- *
- * Contract:
- *   paid invoice -> original stays paid, a credit note returns its amount to the
- *                   customer's balance, and that balance covers the corrected replacement
- *   the replacement never carries the original's deferred-plan pointer, so paying it
- *   cannot promote a plan a second time
- */
-
 import { expect, test } from "bun:test";
 import type {
 	ApiListInvoiceV1,
@@ -114,26 +104,21 @@ test.concurrent(
 		expect(creditNote.invoice).toBe(original.stripe_id);
 		expect(creditNote.total).toBe(2200);
 
-		// The $22 credit covers the corrected $20; the preview reports what the
-		// replacement consumed, not the whole balance it was offered.
 		expect(preview.total).toBe(20);
 		expect(preview.invoice_credits?.balance).toBe(22);
 		expect(preview.invoice_credits?.applied).toBe(20);
 		expect(preview.amount_due).toBe(0);
 
-		// The customer holds the $22 back as balance, so the corrected $20 is covered.
 		const replacement = await ctx.stripeCli.invoices.retrieve(
 			invoice.stripe_id,
 		);
 		expect(replacement.total).toBe(2000);
-		// The $22 credit covers the corrected $20 in full, so nothing is owed again.
 		expect(replacement.starting_balance).toBe(-2200);
 		expect(replacement.amount_due).toBe(0);
 		expect(replacement.custom_fields).toEqual([
 			{ name: "PO number", value: "PO-9001" },
 		]);
 		expect(replacement.metadata?.autumn_reissued_from).toBe(original.stripe_id);
-		// Paying the replacement must not promote a plan the original already did.
 		expect(replacement.metadata?.autumn_metadata_id).toBeUndefined();
 	},
 );

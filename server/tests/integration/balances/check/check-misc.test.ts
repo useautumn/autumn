@@ -12,10 +12,6 @@ import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 
-// ═══════════════════════════════════════════════════════════════════
-// CHECK MISC 1: Auto-create customer and entity via /check
-// ═══════════════════════════════════════════════════════════════════
-
 test.concurrent(`${chalk.yellowBright("check-misc1: auto-create customer and entity when calling check")}`, async () => {
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
 	const freeProd = products.base({
@@ -26,7 +22,6 @@ test.concurrent(`${chalk.yellowBright("check-misc1: auto-create customer and ent
 	const customerId = "check-misc1";
 	const entityId = `${customerId}-entity-1`;
 
-	// Only create products, no customer (check should auto-create)
 	const { autumnV1 } = await initScenario({
 		setup: [s.deleteCustomer({ customerId }), s.products({ list: [freeProd] })],
 		actions: [],
@@ -60,10 +55,6 @@ test.concurrent(`${chalk.yellowBright("check-misc1: auto-create customer and ent
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════
-// CHECK MISC 2: Get customer with entities returns created entity
-// ═══════════════════════════════════════════════════════════════════
-
 test.concurrent(`${chalk.yellowBright("check-misc2: get customer with entities returns created entity")}`, async () => {
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
 	const freeProd = products.base({
@@ -79,7 +70,6 @@ test.concurrent(`${chalk.yellowBright("check-misc2: get customer with entities r
 		actions: [],
 	});
 
-	// Auto-create customer and entity via check
 	await autumnV1.check({
 		customer_id: customerId,
 		customer_data: {
@@ -104,10 +94,6 @@ test.concurrent(`${chalk.yellowBright("check-misc2: get customer with entities r
 	expect(customer.entities?.[0].name).toBe("Test Entity");
 });
 
-// ═══════════════════════════════════════════════════════════════════
-// CHECK MISC 3: customer_data updates name/email when cache is set
-// ═══════════════════════════════════════════════════════════════════
-
 test.concurrent(`${chalk.yellowBright("check-misc3: customer_data updates name/email on cached customer via /check")}`, async () => {
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
 	const freeProd = products.base({
@@ -115,7 +101,6 @@ test.concurrent(`${chalk.yellowBright("check-misc3: customer_data updates name/e
 		items: [messagesItem],
 	});
 
-	// Create customer WITHOUT name or email
 	const { customerId, autumnV1 } = await initScenario({
 		customerId: "check-misc3",
 		setup: [
@@ -125,16 +110,13 @@ test.concurrent(`${chalk.yellowBright("check-misc3: customer_data updates name/e
 		actions: [s.attach({ productId: freeProd.id })],
 	});
 
-	// Verify customer has no name or email
 	const customerBefore =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	expect(customerBefore.name).toBeFalsy();
 	expect(customerBefore.email).toBeFalsy();
 
-	// Call get customer to ensure it's in the cache
 	await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Call /check with customer_data containing name and email
 	await autumnV1.check({
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
@@ -144,15 +126,10 @@ test.concurrent(`${chalk.yellowBright("check-misc3: customer_data updates name/e
 		},
 	});
 
-	// Verify name and email are set on the customer
 	const customerAfter = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	expect(customerAfter.name).toBe("Updated Name");
 	expect(customerAfter.email).toBe("updated@example.com");
 });
-
-// ═══════════════════════════════════════════════════════════════════
-// CHECK MISC 4: Auto-create entity works with existing cached customer
-// ═══════════════════════════════════════════════════════════════════
 
 test.concurrent(`${chalk.yellowBright("check-misc4: auto-create entity on cached customer via /check")}`, async () => {
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
@@ -161,19 +138,16 @@ test.concurrent(`${chalk.yellowBright("check-misc4: auto-create entity on cached
 		items: [messagesItem],
 	});
 
-	// Create customer and attach product
 	const { customerId, autumnV1 } = await initScenario({
 		customerId: "check-misc4",
 		setup: [s.customer({ testClock: false }), s.products({ list: [freeProd] })],
 		actions: [s.attach({ productId: freeProd.id })],
 	});
 
-	// Call get customer to ensure it's in the cache
 	await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
 	const entityId = `${customerId}-auto-entity`;
 
-	// Call /check with entity_id that doesn't exist yet -- should auto-create
 	const checkRes = await autumnV1.check<CheckResponseV1>({
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
@@ -186,14 +160,12 @@ test.concurrent(`${chalk.yellowBright("check-misc4: auto-create entity on cached
 
 	expect(checkRes.allowed).toBe(true);
 
-	// Verify entity was created and is accessible
 	const entity = await autumnV1.entities.get(customerId, entityId);
 	expect(entity).toMatchObject({
 		id: entityId,
 		name: "Auto Entity",
 	});
 
-	// Verify customer has the entity in expanded response
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId, {
 		expand: [CustomerExpand.Entities],
 	});
@@ -203,7 +175,6 @@ test.concurrent(`${chalk.yellowBright("check-misc4: auto-create entity on cached
 	expect(createdEntity).toBeDefined();
 	expect(createdEntity?.name).toBe("Auto Entity");
 
-	// Call /check again with the same entity -- should still work from cache
 	const checkRes2 = await autumnV1.check<CheckResponseV1>({
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
@@ -212,10 +183,6 @@ test.concurrent(`${chalk.yellowBright("check-misc4: auto-create entity on cached
 
 	expect(checkRes2.allowed).toBe(true);
 });
-
-// ═══════════════════════════════════════════════════════════════════
-// CHECK MISC 5: V2.1 does not auto-create customer via /check
-// ═══════════════════════════════════════════════════════════════════
 
 test.concurrent(`${chalk.yellowBright("check-misc5: v2.1 does not auto-create customer via /check")}`, async () => {
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
@@ -232,7 +199,6 @@ test.concurrent(`${chalk.yellowBright("check-misc5: v2.1 does not auto-create cu
 	});
 
 	await expectAutumnError({
-		// errCode: ErrCode.CustomerNotFound,
 		func: async () =>
 			await autumnV2_1.check({
 				customer_id: customerId,

@@ -25,21 +25,17 @@ import { billingPlanToWorkerEntityIds } from "./routing/billingPlanToWorkerEntit
 
 type PlanClient = Pick<BalanceWorkerClient, "applyBillingPlan">;
 
-/** The worker may have applied it: a timeout after the send. */
 const isUnknownOutcome = (cause: unknown): boolean =>
 	cause instanceof BalanceWorkerClientError && cause.outcome === "unknown";
 
-/** The worker's copy was behind Postgres; it dropped it and wrote nothing. */
 const isStaleSubject = (cause: unknown): boolean =>
 	cause instanceof BalanceWorkerClientError &&
 	cause.workerCode === "STALE_SUBJECT";
 
-/** The worker already holds this command: an earlier send of it landed. */
 const isDuplicateCommand = (cause: unknown): boolean =>
 	cause instanceof BalanceWorkerClientError &&
 	cause.workerCode === "DUPLICATE_COMMAND";
 
-/** Sent under the given id: the same id is deduplicated by the worker, a new id is a new command. */
 const sendPlan = async ({
 	ctx,
 	client,
@@ -71,7 +67,6 @@ const sendPlan = async ({
 	return client.applyBillingPlan({ request });
 };
 
-/** A create that finds the row it was inserting: an earlier attempt of this same request landed. Someone else's entity is the Postgres lane's 409. */
 const replyToResult = ({
 	reply,
 	autumnBillingPlan,
@@ -95,7 +90,6 @@ const replyToResult = ({
 	return { status, internalCustomerId };
 };
 
-/** The plan as one worker mutation. An unknown outcome is resent under the same id; a stale copy on an update, as a new command. */
 export const applyBillingPlanOnWorker = async ({
 	ctx,
 	customerId,
@@ -108,7 +102,6 @@ export const applyBillingPlanOnWorker = async ({
 	client?: PlanClient;
 }): Promise<AutumnBillingPlanResult> => {
 	const ops = autumnBillingPlanToPlanOps({ autumnBillingPlan });
-	// Nothing the worker holds changes: only the Postgres remainder writes.
 	if (ops.length === 0) return { status: "applied" };
 
 	const createsCustomer = Boolean(autumnBillingPlan.insertCustomer);
@@ -117,16 +110,13 @@ export const applyBillingPlanOnWorker = async ({
 	const commandId = generateId("plan");
 	try {
 		const reply = await send({ commandId }).catch((cause: unknown) => {
-			// The first send may have landed: the same id again applies it at most once (a rebalance is not idempotent).
 			if (isUnknownOutcome(cause)) return send({ commandId });
-			// A refused command's id stays spent in the log, so a stale copy is retried as a new command.
 			if (!createsCustomer && isStaleSubject(cause))
 				return send({ commandId: generateId("plan") });
 			throw cause;
 		});
 		return replyToResult({ reply, autumnBillingPlan });
 	} catch (cause) {
-		// A create refused as stale collided with a customer Postgres already holds.
 		if (createsCustomer && isStaleSubject(cause))
 			return { status: "customer_exists" };
 		if (isDuplicateCommand(cause)) return { status: "applied" };

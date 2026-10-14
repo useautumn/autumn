@@ -4,21 +4,18 @@ import type { FullCustomer } from "@models/cusModels/fullCusModel.js";
 
 type FullCustomerWithEntity = FullCustomer & { entity: Entity };
 
-// Overload: errorOnNotFound = true → guaranteed entity
 export function enrichFullCustomerWithEntity(params: {
 	fullCustomer: FullCustomer;
 	internalEntityId: string | null;
 	errorOnNotFound: true;
 }): FullCustomerWithEntity;
 
-// Overload: errorOnNotFound = false/undefined → entity may be undefined
 export function enrichFullCustomerWithEntity(params: {
 	fullCustomer: FullCustomer;
 	internalEntityId: string | null;
 	errorOnNotFound?: false;
 }): FullCustomer;
 
-// Implementation
 export function enrichFullCustomerWithEntity({
 	fullCustomer,
 	internalEntityId,

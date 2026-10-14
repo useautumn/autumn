@@ -20,7 +20,6 @@ export const createRedisPipeline = ({
 	};
 	pipeline.exec = (callback) => {
 		// ioredis preserves an already-armed command timer instead of using its client default.
-		// Arm only at exec(), so time spent building the pipeline doesn't consume the budget.
 		for (const command of commands) command.setTimeout(commandTimeoutMs);
 		return exec(callback);
 	};

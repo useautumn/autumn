@@ -21,7 +21,6 @@ const replaceable = (id: string): Replaceable => ({
 	delete_next_cycle: true,
 });
 
-/** Seats at the usage limit (balance -5), holding the given paid-for, unused seats. */
 const contextAtSeatLimit = ({
 	replaceableIds,
 	newEntityIds,

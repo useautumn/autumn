@@ -14,11 +14,6 @@ import {
 } from "@autumn/shared";
 import { computeRebalancedAutoTopUp } from "@/internal/balances/autoTopUp/compute/computeRebalancedAutoTopUp";
 
-/**
- * Parity: the server's paydown (the Postgres lane) and the engine's rebalance (the worker lane)
- * must give the same deltas for the same customer. Each case also pins the expected deltas.
- */
-
 const createCustomerEntitlement = ({
 	id,
 	balance,
@@ -277,7 +272,6 @@ const buildFullCustomer = (
 	} as unknown as FullCustomer;
 };
 
-/** The purchased row's own subject, as the worker reads it: the customer's view, or its entity's. */
 const toWorkerSubject = ({
 	fullCustomer,
 	purchasedOnEntity,

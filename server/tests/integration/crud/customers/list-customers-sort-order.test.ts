@@ -1,8 +1,3 @@
-/**
- * customers.list sort_order (V2.3 cursor path): "asc" is the exact reverse of
- * the default "desc"; cursor pagination walks correctly in both directions.
- */
-
 import { expect, test } from "bun:test";
 import { type ApiCustomerV5, ApiVersion } from "@autumn/shared";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";

@@ -9,28 +9,6 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// PAID-TO-PAID: PREPAID FEATURE ITEM UPDATES
-//
-// These tests cover custom plan updates to prepaid feature ITEM configuration:
-// - Changing price per pack
-// - Changing billing units
-// - Changing included usage
-// - Adding/removing prepaid features
-//
-// NOTE: Quantity changes are tested in update-quantity/ folder.
-//
-// Prepaid billing logic on item update:
-// 1. Refund previous prepaid: old_packs * old_price
-// 2. Charge new prepaid: new_packs * new_price
-// 3. preview.total = new_charge - old_refund
-// ═══════════════════════════════════════════════════════════════════════════════
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// PRICE PER PACK CHANGES
-// ═══════════════════════════════════════════════════════════════════════════════
-
-// Increase price per pack (same quantity)
 test.concurrent(
 	`${chalk.yellowBright("prepaid: increase price per pack")}`,
 	async () => {
@@ -49,7 +27,7 @@ test.concurrent(
 		});
 
 		const packs = 3;
-		const quantity = packs * billingUnits; // 300 units
+		const quantity = packs * billingUnits;
 
 		const { customerId, autumnV1, ctx } = await initScenario({
 			customerId: "prepaid-price-up",
@@ -75,7 +53,6 @@ test.concurrent(
 			{ timeout: 2000 },
 		);
 
-		// Increase price from $10 to $15 per pack
 		const newPrice = 15;
 		const newPrepaidItem = items.prepaidMessages({
 			includedUsage: 0,
@@ -92,20 +69,16 @@ test.concurrent(
 
 		const preview = await autumnV1.subscriptions.previewUpdate(updateParams);
 
-		// Refund old: 3 * $10 = $30
-		// Charge new: 3 * $15 = $45
-		// Total: $45 - $30 = $15
 		expect(preview.total).toBe(packs * newPrice - packs * oldPrice);
 
 		await autumnV1.subscriptions.update(updateParams);
 
 		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-		// For prepaid: customer's included_usage = item's includedUsage + quantity
 		expectCustomerFeatureCorrect({
 			customer,
 			featureId: TestFeature.Messages,
-			includedUsage: quantity, // 0 + 300 = 300
+			includedUsage: quantity,
 			balance: quantity - messagesUsed,
 			usage: messagesUsed,
 		});
@@ -125,7 +98,6 @@ test.concurrent(
 	},
 );
 
-// Decrease price per pack (same quantity)
 test.concurrent(
 	`${chalk.yellowBright("prepaid: decrease price per pack")}`,
 	async () => {
@@ -170,7 +142,6 @@ test.concurrent(
 			{ timeout: 2000 },
 		);
 
-		// Decrease price from $20 to $10 per pack
 		const newPrice = 10;
 		const newPrepaidItem = items.prepaidMessages({
 			includedUsage: 0,
@@ -187,9 +158,6 @@ test.concurrent(
 
 		const preview = await autumnV1.subscriptions.previewUpdate(updateParams);
 
-		// Refund old: 3 * $20 = $60
-		// Charge new: 3 * $10 = $30
-		// Total: $30 - $60 = -$30 (credit)
 		expect(preview.total).toBe(packs * newPrice - packs * oldPrice);
 
 		await autumnV1.subscriptions.update(updateParams);
@@ -199,7 +167,7 @@ test.concurrent(
 		expectCustomerFeatureCorrect({
 			customer,
 			featureId: TestFeature.Messages,
-			includedUsage: quantity, // 0 + 300 = 300
+			includedUsage: quantity,
 			balance: quantity - messagesUsed,
 			usage: messagesUsed,
 		});

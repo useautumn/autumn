@@ -4,10 +4,6 @@ import { type LockParams, ms } from "@autumn/shared";
 
 const DEFAULT_LOCK_LIFETIME_MS = ms.hours(24);
 
-/**
- * Every lock expires. The caller's expires_at releases the balance; without one the lock is
- * confirmed after 24 hours, which is what the legacy receipt's TTL amounted to.
- */
 export function lockParamsToTrackLock({
 	lock,
 	occurredAt,

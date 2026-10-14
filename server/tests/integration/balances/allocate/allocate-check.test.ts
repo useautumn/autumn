@@ -1,10 +1,3 @@
-/**
- * check for allocated customers counts own share + unallocated credits, never other entities' shares.
- *
- * Red (before):  check ignores allocations: C is allowed against A and B's shares.
- * Green (after): check agrees with what track would let each entity draw.
- */
-
 import { expect, test } from "bun:test";
 import { ApiVersion, ResetInterval } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
@@ -71,7 +64,6 @@ test.concurrent(
 		for (const entityId of [a, b, c])
 			await autumnV2_3.entities.get(customerId, entityId);
 
-		// 2000 unallocated: C may use it, but not 2001.
 		expect(
 			await allowedFor({ customerId, entityId: c, requiredBalance: 2000 }),
 		).toBe(true);
@@ -79,7 +71,6 @@ test.concurrent(
 			await allowedFor({ customerId, entityId: c, requiredBalance: 2001 }),
 		).toBe(false);
 
-		// A: 6000 own + 2000 unallocated.
 		expect(
 			await allowedFor({ customerId, entityId: a, requiredBalance: 8000 }),
 		).toBe(true);

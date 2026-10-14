@@ -1,6 +1,5 @@
 import type { AplQuery, AplQueryContext, AplRow } from "./types/aplQuery.js";
 
-/** Runs an APL query in tabular format and flattens every result table into rows. */
 export const queryApl = async ({
 	ctx,
 	query,

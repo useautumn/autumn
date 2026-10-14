@@ -34,11 +34,9 @@ const liveRowCarries = ({
 	rules: CarryRules;
 }) => {
 	if (planned.origin === "retained") return true;
-	// A one-off purchase has no cycle to restart, so recreating it would only charge it again.
 	if (planned.lifetime) return true;
 	const keepsCancellation =
 		liveRow.canceling && rules.policies.canceling === "keepCancellation";
-	// No Stripe period is open for the plan, so even an unchanged listing starts one, like a new price would.
 	const startsStripeBilling =
 		liveRow.unbilledByStripe &&
 		rules.policies.unbilledRows === "recreate" &&
@@ -52,7 +50,6 @@ const liveRowCarries = ({
 	return true;
 };
 
-/** A saved segment carries a planned one when it already grants the same config from the same start. */
 const savedCarriesPlanned = ({
 	savedSegment,
 	planned,
@@ -78,7 +75,6 @@ const savedCarriesPlanned = ({
 	);
 };
 
-/** A canceling plan re-listed with no end of its own keeps its cancellation, carried or recreated; an explicit end replaces it. */
 const isCancellationKept = ({
 	planned,
 	savedSegment,
@@ -120,7 +116,6 @@ const carriedEndsAt = ({
 		? keptCancellationEndsAt({ savedSegment, policies })
 		: planned.endsAt;
 
-/** The live plan a recreated segment replaces now, when it keeps that plan's cancellation. */
 const findInheritedCancellation = ({
 	planned,
 	savedSegments,
@@ -216,7 +211,6 @@ const resolveKey = ({
 	});
 };
 
-/** A live one-off purchase nothing carries runs on exactly as saved. */
 const untouchedLifetimeSegments = ({
 	saved,
 	resolved,
@@ -273,7 +267,6 @@ const splitSegmentAt = ({
 	];
 };
 
-/** A saved run split where a planned segment starts, so the rows from there on can carry it alone. */
 const splitAtPlannedStarts = ({
 	saved,
 	planned,
@@ -336,7 +329,6 @@ const insertsPaidRecurringNow = ({
 			!startsInFuture({ segment, now }),
 	);
 
-/** Pairs every planned segment with the saved segment that already runs it, if any. */
 export const resolveTimeline = ({
 	saved: unsplitSaved,
 	planned,

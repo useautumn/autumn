@@ -1,8 +1,6 @@
 import { Activity, FileText, Zap } from "lucide-react";
 import type { ReactNode } from "react";
 import { InfoRow } from "@/components/general/info-row";
-// Light section primitives imported DIRECTLY (not via the barrel, which pulls in
-// motion/react-router/ErrorScreen) — these only depend on `cn`.
 import { TableActions } from "@/components/table/table-actions";
 import { TableContainer } from "@/components/table/table-container";
 import { TableHeading } from "@/components/table/table-heading";
@@ -43,7 +41,6 @@ const fmtWall = (ms: number): string => {
 	return m > 0 ? `${m}m${String(s % 60).padStart(2, "0")}s` : `${s}s`;
 };
 
-/** App-faithful borderless section: heading row (icon + title + right actions). */
 function Section({
 	icon,
 	title,
@@ -72,8 +69,6 @@ function Section({
 }
 
 function PhaseProgress({ snap }: { snap: Snapshot }) {
-	// Warm cache HIT: no pipeline ran, so the 6-step stepper would be a lie —
-	// show the single real step instead (the ingress spin-up we're waiting on).
 	if (snap.phase === "warm" && snap.warmHit) {
 		return (
 			<div className="flex flex-col gap-3">
@@ -204,7 +199,6 @@ function PhaseProgress({ snap }: { snap: Snapshot }) {
 			</div>
 		);
 	}
-	// run / done
 	return (
 		<div className="flex flex-col gap-3">
 			<ProgressBar
@@ -267,7 +261,6 @@ function LiveStats({ snap }: { snap: Snapshot }) {
 	);
 }
 
-/** File table — `ui/table` primitives styled to match the app's real tables. */
 function FileTable({
 	snap,
 	onOpenFile,

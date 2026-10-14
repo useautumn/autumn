@@ -378,11 +378,9 @@ test(`${chalk.yellowBright("sync multi-currency: leftover USD lock allows EUR sy
 	).toBe("eur");
 });
 
-/** Routes the customer through the balance worker; a no-op where the override or twd edge-config already does. */
 const pinToBalanceWorker = ({ customerId }: { customerId: string }) =>
 	setCustomerRolloutPinned({ ctx, customerId, pinned: true });
 
-// Forced-off rollout (BALANCE_WORKER_ROLLOUT_ENABLED=false) cannot exercise the worker route.
 const workerRouteForcedOff = getBalanceWorkerRolloutOverride() === false;
 
 test.skipIf(workerRouteForcedOff)(
@@ -441,7 +439,6 @@ test.skipIf(workerRouteForcedOff)(
 			actions: [],
 		});
 		await pinToBalanceWorker({ customerId });
-		// Autumn-only paid USD product: Stripe refuses a EUR subscription beside a live USD one.
 		await autumnV1.billing.attach<AttachParamsV0Input>({
 			customer_id: customerId,
 			product_id: usdPro.id,

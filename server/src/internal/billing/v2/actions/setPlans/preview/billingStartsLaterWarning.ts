@@ -19,7 +19,6 @@ const chargesOngoingPlanNow = (lineItems: LineItem[]) =>
 			lineItem.amountAfterDiscounts > 0,
 	);
 
-/** A later first phase bills from its start, and early access opens the plans before then. */
 export const billingStartsLaterWarning = ({
 	billingContext,
 	lineItems,

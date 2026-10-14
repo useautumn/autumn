@@ -7,7 +7,6 @@ import type { PriceMappingGroup, PriceMappingRow } from "./priceMappingRows";
 const versionCountLabel = (count: number) =>
 	`${count} ${count === 1 ? "price" : "prices"}`;
 
-/** One plan's prices, collapsed to a summary line until opened. */
 export const PriceMappingAccordion = ({
 	group,
 	summary,

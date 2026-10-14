@@ -8,7 +8,6 @@ import type { TestContext } from "@tests/utils/testInitUtils/createTestContext.j
 import { flushBalanceWorkerCustomer } from "@/internal/balances/balanceWorker/flushBalanceWorkerCustomer.js";
 import { CusService } from "@/internal/customers/CusService.js";
 
-/** Postgres trails the worker by its unflushed writes, so a read of the rows lands them first. */
 const readFullCustomerFromPostgres = async ({
 	ctx,
 	customerId,

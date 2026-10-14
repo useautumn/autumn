@@ -7,10 +7,6 @@ import { EMPTY_DISCOUNTS_FORM_VALUES } from "@/components/forms/shared/utils/dis
 import { DISABLED_FREE_TRIAL_FORM_VALUES } from "@/components/forms/shared/utils/freeTrialFormValues";
 import { useAppForm } from "@/hooks/form/form";
 
-/**
- * Values are passed through live, not frozen: each scope owns a separate
- * schedule, and the form re-seeds itself while the user hasn't touched it.
- */
 export function useCustomerStateForm({
 	initialValues,
 }: {

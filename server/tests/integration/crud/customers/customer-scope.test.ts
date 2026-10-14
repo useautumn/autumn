@@ -10,22 +10,6 @@ import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// CUSTOMER SCOPE — `scope` field on subscriptions and purchases
-//
-// Contract under test:
-//   New types/fields:
-//     - ApiSubscriptionV1.scope: "customer" | "entity"
-//     - ApiPurchaseV0.scope:    "customer" | "entity"
-//   New behaviors:
-//     - Customer-level product (internal_entity_id === null) → "customer"
-//     - Entity-level product (internal_entity_id !== null)   → "entity"
-//   Side effects: none (pure projection from existing FullCusProduct).
-//
-// Pre-impl red: scope field is undefined, schema parse rejects.
-// Post-impl green: all assertions pass.
-// ═══════════════════════════════════════════════════════════════════════════════
-
 test.concurrent(
 	`${chalk.yellowBright("customer scope: customer-level subscription has scope=customer, entity-level has scope=entity")}`,
 	async () => {
@@ -64,15 +48,12 @@ test.concurrent(
 		});
 		ApiCustomerV5Schema.parse(customer);
 
-		// ── Customer-level subscription ──
 		const cusSub = customer.subscriptions.find(
 			(s) => s.plan_id === cusLevelProd.id,
 		);
 		expect(cusSub).toBeDefined();
 		expect(cusSub!.scope).toBe("customer");
 
-		// ── Entity-level subscription ──
-		// The balance worker doesn't aggregate entity data onto the customer.
 		if (!isBalanceWorkerRoute()) {
 			const entSub = customer.subscriptions.find(
 				(s) => s.plan_id === entityProd.id,

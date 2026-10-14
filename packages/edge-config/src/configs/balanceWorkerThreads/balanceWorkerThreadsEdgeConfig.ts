@@ -8,19 +8,11 @@ const ringBytes = z
 	.min(1 << 16)
 	.refine((bytes) => (bytes & (bytes - 1)) === 0, "a power of two");
 
-/**
- * How a balance worker lays its threads out beside the decide thread. Read once at boot: a thread layout
- * cannot change while the process runs.
- */
 export const BalanceWorkerThreadsEdgeConfigSchema = z
 	.object({
-		/** `Bun.serve` threads beside the decide and producer threads (2 vCPU). */
 		httpWorkers: z.number().int().min(1).max(8).default(1),
-		/** Bytes per HTTP worker: request frames on their way to the decide thread. */
 		requestRingBytes: ringBytes.default(4 * MiB),
-		/** Bytes per HTTP worker: replies on their way back. */
 		replyRingBytes: ringBytes.default(16 * MiB),
-		/** Bytes of send frames from the partition writers to the producer thread. */
 		sendRingBytes: ringBytes.default(4 * MiB),
 	})
 	.strict();

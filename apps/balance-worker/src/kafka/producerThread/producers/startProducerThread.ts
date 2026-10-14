@@ -1,4 +1,3 @@
-/** Boots the producer thread: its client is built there, and `ready` settles once it can take producers. */
 import type { KafkaTokenInfo } from "@autumn/kafka";
 import type {
 	ProducerThreadInit,
@@ -76,7 +75,6 @@ export async function startProducerThread({
 	thread.onerror = function crashed(event) {
 		died(new Error(`Producer thread failed: ${event.message}`));
 	};
-	// A thread that exits on its own (uncaught error, process.exit) closes without being asked.
 	thread.addEventListener("close", function closed(event) {
 		if (state.stopping) {
 			scope.stopped.resolve();

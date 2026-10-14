@@ -13,9 +13,6 @@ import { computeCatalogEntitlementPricesPlan } from "@/internal/catalogV2/action
 import { computeFreeTrialPlan } from "@/internal/catalogV2/actions/updateCatalog/compute/computeUpsertProductsPlan/computeFreeTrialPlan/computeFreeTrialPlan";
 import { computeProductDetailsPlan } from "@/internal/catalogV2/actions/updateCatalog/compute/computeUpsertProductsPlan/computeProductDetailsPlan/computeProductDetailsPlan";
 import type { EntitlementPricesPlan } from "@/internal/products/actions/computeEntitlementPricesPlan/types/entitlementPricesPlan";
-// The CLI's own emit → parse path, so the test sees exactly what `atmn pull`
-// writes and what `atmn push` sends back. Relative because the package only
-// publishes its bin (same reason the atmn integration tests import this way).
 import { COLLECTIONS } from "../../../../../packages/atmn/src/generated/emit";
 import { emitFixture } from "../../../../../packages/atmn/src/generated/emitRuntime";
 import { feature as featureBuilder } from "../../../../../packages/atmn/src/generated/features";
@@ -32,19 +29,12 @@ import {
 	type RowDifference,
 } from "./describeRowDifferences";
 
-/**
- * The invariant `atmn pull` relies on: a catalog row, emitted as a fixture and
- * pushed back through preview_update, must be a no-op. Each facet is checked
- * through the same converters and comparators the real handler uses, no DB.
- */
-
 const WIRE_HINTS = hintsOf({
 	recordPaths: [],
 	frozenPaths: [],
 	renamedPaths: {},
 });
 
-/** Org flags a row can depend on; a case states the ones it needs. */
 export type RoundTripOrg = { multiCurrency?: boolean };
 
 const contextFor = (features: Feature[], org: RoundTripOrg = {}) =>
@@ -60,7 +50,6 @@ const contextFor = (features: Feature[], org: RoundTripOrg = {}) =>
 		} as never,
 	});
 
-/** GET response row (snake) → fixture text → evaluated fixture object. */
 const emitAndEvaluate = ({
 	collection,
 	builder,
@@ -82,8 +71,6 @@ const emitAndEvaluate = ({
 		indent: "",
 		context: { featureTypes },
 	});
-	// The emitted text is `plan({ active: true, ... })` / `feature({ ... })`; evaluate it with
-	// the same identity builder the config file would import.
 	const evaluate = new Function(spec.builder, `return ${text};`);
 	return { text, fixture: evaluate(builder) as Record<string, unknown> };
 };
@@ -91,10 +78,6 @@ const emitAndEvaluate = ({
 const featureTypesOf = (features: Feature[]) =>
 	Object.fromEntries(features.map((feature) => [feature.id, feature.type]));
 
-/**
- * What `atmn push` sends for a plan that `atmn pull` just wrote: the GET row,
- * emitted as fixture text, evaluated, and lowered to the wire again.
- */
 export const pulledPlanToWire = ({
 	plan,
 	featureTypes,
@@ -167,7 +150,6 @@ export type PlanFinding = {
 	detailsChanged: boolean;
 	previousAttributes: unknown;
 	freeTrialChanged: boolean;
-	/** `entitlement:<feature>` / `price:<feature|base>` → the fields that differ. */
 	differences: Record<string, RowDifference[]>;
 	entitlements: { new: string[]; retired: string[]; deleted: string[] };
 	prices: { new: number; retired: number; deleted: number };
@@ -175,11 +157,6 @@ export type PlanFinding = {
 
 const priceKey = (price: Price) => `price:${price.config.feature_id ?? "base"}`;
 
-/**
- * A retired row and the new row that replaces it are the same feature (or
- * both the base price); pairing them names exactly which field the comparator
- * refused, instead of only counting how many rows moved.
- */
 const pairedDifferences = ({
 	plan,
 }: {

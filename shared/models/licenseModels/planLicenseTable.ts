@@ -15,23 +15,15 @@ import { entitlements } from "../productModels/entModels/entTable.js";
 import { prices } from "../productModels/priceModels/priceTable.js";
 import { products } from "../productModels/productTable.js";
 
-/** A catalog definition or customer-specific override linking a parent plan to a license. */
 export const planLicenses = pgTable(
 	"plan_license",
 	{
 		id: text().primaryKey().notNull(),
 		parent_internal_product_id: text("parent_internal_product_id").notNull(),
 		license_internal_product_id: text("license_internal_product_id").notNull(),
-		// WHO owns the row: false = catalog link shared by every customer of the
-		// parent plan; true = one customer's definition, reachable only via its
-		// pool's customer_licenses.plan_license_id.
 		is_custom: boolean("is_custom").notNull().default(false),
 		included: integer("included").notNull().default(0),
 		prepaid_only: boolean("prepaid_only").notNull().default(true),
-		// WHAT the items are: true = license_entitlements/license_prices carry
-		// this row's item set; false = items come from the license product's base
-		// rows. An is_custom row with only included/price-free field changes stays
-		// customized=false.
 		customized: boolean("customized").notNull().default(false),
 		metadata: jsonb().$type<Record<string, unknown>>().default({}),
 		created_at: numeric({ mode: "number" }).notNull().default(sqlNow),
@@ -48,8 +40,6 @@ export const planLicenses = pgTable(
 			foreignColumns: [products.internal_id],
 			name: "plan_license_license_product_fkey",
 		}).onDelete("cascade"),
-		// Custom rows are unconstrained: many customers may customize the
-		// same (parent, license) pair.
 		uniqueIndex("unique_plan_license")
 			.on(table.parent_internal_product_id, table.license_internal_product_id)
 			.where(sql`${table.is_custom} = false`)

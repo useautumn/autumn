@@ -1,9 +1,3 @@
-/**
- * atmn crud/plans — paid [monthly] [unlimited item, pooled item, per-entity item (entity_feature_id)]
- *
- * One line of plans/atmn-v3/07_tests.md. [a, b] is a matrix looped INSIDE this file.
- */
-
 import { expect, test } from "bun:test";
 import {
 	configBody,
@@ -67,9 +61,6 @@ test.concurrent("paid [monthly] [pooled item]", async () => {
 	}
 });
 
-// entityFeatureId is x-internal in the openapi spec, so it is stripped from
-// the CLI's public builder types; it still executes fine since the config
-// source is never typechecked, only run.
 test.concurrent(
 	"paid [monthly] [per-entity item (entity_feature_id)]",
 	async () => {

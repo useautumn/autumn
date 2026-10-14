@@ -1,9 +1,3 @@
-/**
- * atmn scenarios/versions — edit a planVersions row → push updates that inactive version in place, no new version
- *
- * One line of plans/atmn-v3/07_tests.md. [a, b] is a matrix looped INSIDE this file.
- */
-
 import { expect, test } from "bun:test";
 import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 import { paidMonthly } from "@tests/utils/atmnUtils/baseConfigs.js";
@@ -57,7 +51,6 @@ test.concurrent(
 			);
 			await scenario.push();
 
-			// Edit the inactive v1 row in place — same versionSlug, new price.
 			scenario.writeConfig(
 				atmnConfigSource({
 					body: `{
@@ -85,7 +78,6 @@ test.concurrent(
 				}),
 			);
 
-			// Idempotent: re-pushing the same edit previews nothing further.
 			const dry = await scenario.push({ dryRun: true });
 			expect(dry.output).toContain("No changes");
 		} finally {

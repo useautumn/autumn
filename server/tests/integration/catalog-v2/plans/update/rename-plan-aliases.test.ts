@@ -1,18 +1,3 @@
-/**
- * catalogV2.update — plan-id aliases. Rename writes one alias row (old → new);
- * ingress rewrites the old id to the live id; responses stay canonical.
- *
- * Contract:
- *   Rename writes product_aliases (alias_id=old, canonical_plan_id=new)
- *   Re-rename replaces the row; the original alias no longer resolves
- *   Attach / GET with the old id succeeds; response id is canonical (no alias_id)
- *   REST POST /products reserved id → 400
- *   Catalog new_plan_id onto another plan's alias → succeeds; alias deleted
- *   Preview of that claim stamps alias_replacement
- *
- * Endpoint × field coverage: `../aliases/*.test.ts` and CASES.md §4.
- */
-
 import { expect, test } from "bun:test";
 import {
 	type ApiPlanV1,

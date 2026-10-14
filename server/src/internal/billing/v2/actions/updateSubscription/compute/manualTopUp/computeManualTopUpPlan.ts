@@ -23,7 +23,6 @@ import { entitlementToExpiry } from "@/internal/billing/v2/utils/expiringGrants/
 import { assertRoomForExpiringGrants } from "@/internal/billing/v2/utils/expiringGrants/hasRoomForExpiringGrant.js";
 import { routeRemainderToExpiringGrant } from "@/internal/billing/v2/utils/expiringGrants/routeRemainderToExpiringGrant.js";
 
-/** Charge the same one-off prepaid price the ManualTopUp intent was routed on. */
 const findTargetCusEnt = ({
 	billingContext,
 	featureId,
@@ -51,8 +50,6 @@ const findTargetCusEnt = ({
 	);
 };
 
-/** Build the AutumnBillingPlan for a manual top-up: invoice charge (unless
- * skipBillingChanges), paydown + remainder deltas, and an options.quantity bump. */
 export const computeManualTopUpPlan = ({
 	ctx,
 	billingContext,

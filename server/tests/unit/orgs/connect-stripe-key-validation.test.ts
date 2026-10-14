@@ -105,7 +105,6 @@ beforeEach(() => {
 afterAll(() => mock.restore());
 
 describe("newly supplied Stripe key validation", () => {
-	// Before: raw Stripe errors were captured as bugs. After: safe expected 400s.
 	test.each([
 		[
 			"invalid",

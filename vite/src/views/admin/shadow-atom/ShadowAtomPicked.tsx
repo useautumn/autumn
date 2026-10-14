@@ -1,6 +1,5 @@
 import { X } from "lucide-react";
 
-/** The picked org, by name, with a way to pick again. */
 export const ShadowAtomPicked = ({
 	title,
 	subtitle,

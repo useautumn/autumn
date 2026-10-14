@@ -14,12 +14,6 @@ export type LicenseQuantityDetails = {
 	lineItems: LineItem[];
 };
 
-/**
- * Converges pool paid counts onto the requested totals in place — the parent
- * customer product and seat anchors are untouched. Bills a refund of the full
- * previous quantity picture and a charge of the new one (one line per price,
- * like prepaid quantity updates); identical pairs cancel in finalizeLineItems.
- */
 export const computeLicenseQuantityDetails = ({
 	ctx,
 	billingContext,

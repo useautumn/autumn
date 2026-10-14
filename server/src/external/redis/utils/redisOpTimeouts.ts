@@ -14,19 +14,9 @@
  * figures below are measured against an already-truncated tail.
  */
 export const REDIS_OP_TIMEOUT_MS = {
-	/** p99.9 137ms. Falls through to Postgres via verifyKey. */
 	secretKeyGet: 200,
-	// The write-back halves. Unbounded they inherit the misc client's 10s prod
-	// `commandTimeout`, and both are awaited inline after the Postgres fallback.
 	secretKeySet: 200,
-	/** p99.9 297ms on shared V2; this site also serves the dedicated cluster.
-	 *  The only standby-retry caller the wrapper actually bounds, so 500 rather
-	 *  than 400: the reserve has to come out of headroom, not out of the tail. */
 	featureBalances: 500,
-	/** p99.9 643-938ms; latency scales with the customer's feature count.
-	 *  V2's 1s `commandTimeout` binds before this does. */
 	featureBalancesBatch: 1200,
-	/** p99.9 849ms across the pipe[get,get] pool.
-	 *  V2's 1s `commandTimeout` binds before this does. */
 	subjectPipeline: 1200,
 } as const;

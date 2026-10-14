@@ -4,7 +4,6 @@ import type { WorkerFullSubject } from "../../models/subject/workerFullSubject.j
 import { fullSubjectToUpdateBalanceRows } from "./fullSubjectToUpdateBalanceRows.js";
 import type { UpdateBalanceCommand } from "./types/updateBalanceCommand.js";
 
-/** Legacy `assertBalanceExists`: a miss under both the feature's rows and the rows that fund it is a typo or an unassigned feature. */
 export const assertBalanceExists = ({
 	fullSubject,
 	command,
@@ -28,7 +27,6 @@ export const assertBalanceExists = ({
 		throw new UnsupportedCommandError({ reason: "balance_not_found" });
 };
 
-/** An invoice credit's balance mirrors an invoice, so only the invoice may move it. */
 export const assertBalanceMutable = ({
 	fullSubject,
 	command,

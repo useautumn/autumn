@@ -5,11 +5,6 @@ import type {
 } from "@autumn/shared";
 import { lineItemsToCreateInvoiceItemsParams } from "../utils/invoiceLines/lineItemsToCreateInvoiceItemsParams";
 
-/**
- * Builds a StripeInvoiceItemsAction for deferred charges (added to next cycle).
- * Filters for line items where chargeImmediately === false.
- * Returns undefined if no deferred line items are provided.
- */
 export const buildStripeInvoiceItemsAction = ({
 	lineItems,
 	billingContext,

@@ -3,10 +3,6 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { copyPlanLicenseLinks } from "@/internal/licenses/actions/links/copyPlanLicenseLinks.js";
 import { planLicenseRepo } from "@/internal/licenses/repos/planLicenseRepo.js";
 
-/**
- * Recreates the copy set's plan license links in the target env, resolving
- * each end against the copied plans or licenses the target already had.
- */
 export const copyEnvLicenseLinks = async ({
 	toContext,
 	fromProducts,

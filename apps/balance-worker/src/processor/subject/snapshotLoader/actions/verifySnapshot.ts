@@ -2,7 +2,6 @@ import type { MeteringIdentity, SubjectState } from "@autumn/balance-engine";
 import type { SubjectScope } from "../../types/subject.js";
 import { snapshotDivergenceOf } from "../rules/snapshotDivergenceOf.js";
 
-/** A row read beside the rows it would have served: where the two disagree is logged, and the rows stay what is served. */
 export const verifySnapshot = ({
 	scope,
 	identity,

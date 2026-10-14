@@ -1,11 +1,3 @@
-/**
- * A scoped run must count only its own customers. One migration-wide live count
- * was handed to every non-dry run, so a second single-customer run read "2 of 1".
- *
- * Red:   the second scoped run reports total 2.
- * Green: it reports total 1.
- */
-
 import { expect, test } from "bun:test";
 import { isTerminalMigrationRunStatus } from "@autumn/shared";
 import { itemsV2 } from "@tests/utils/fixtures/itemsV2.js";
@@ -119,8 +111,6 @@ test(`${chalk.yellowBright("scoped run counts: each scoped run reports only its 
 			.total,
 	).toBe(1);
 
-	// A different customer: the migration now has two live item runs, but this
-	// run still covers exactly one.
 	const secondRun = await runAndWait({
 		ctx,
 		autumn: autumnV2_2,
@@ -132,13 +122,11 @@ test(`${chalk.yellowBright("scoped run counts: each scoped run reports only its 
 			.total,
 	).toBe(1);
 
-	// The earlier run's own numbers are unchanged by the later one.
 	expect(
 		(await countsForRun({ autumn: autumnV2_2, migrationId, runId: firstRun }))
 			.total,
 	).toBe(1);
 
-	// A sample run is scoped the same way, by target_limit rather than ids.
 	const sampleRun = await runAndWait({
 		ctx,
 		autumn: autumnV2_2,

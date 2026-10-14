@@ -19,8 +19,6 @@ const queryToDb = (query: MigrationQuery) =>
 		drizzle({ query } as unknown as PoolClient, { schema: schemas }),
 	) as unknown as DrizzleCli;
 
-/** A page's database: every statement, standalone or not, runs in an owned
- * transaction, so `abort` fences the page before anything can commit late. */
 export const createMigrationPageDb = ({
 	ctx,
 	queryTimeoutMs = BATCH_MIGRATION_PAGE_STATEMENT_TIMEOUT_MS,
@@ -52,7 +50,6 @@ export const createMigrationPageDb = ({
 			queryTimeoutMs,
 			maxAttempts,
 			retryDelayMs,
-			// A discarded socket doesn't stop the server; this bounds an abandoned copy.
 			run: async (query) => {
 				await query(
 					`SET LOCAL statement_timeout = ${Math.floor(queryTimeoutMs)}`,

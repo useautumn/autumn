@@ -110,11 +110,6 @@ export const attachAndExpectCorrect = async ({
 		options,
 	});
 
-	// const total = getAttachTotal({
-	//   preview,
-	//   options,
-	// });
-
 	const { checkout_url } = await autumn.attach({
 		customer_id: customerId,
 		product_id: product.id,
@@ -141,11 +136,7 @@ export const attachAndExpectCorrect = async ({
 
 	const productCount = (customer.products ?? []).reduce(
 		(acc: number, p: any) => {
-			if (
-				product.group === p.group &&
-				!p.is_add_on
-				// && (entityId ? p.entity_id === entityId : true)
-			) {
+			if (product.group === p.group && !p.is_add_on) {
 				return acc + 1;
 			} else return acc;
 		},
@@ -229,34 +220,6 @@ export const attachAndExpectCorrect = async ({
 		},
 		entityId,
 	});
-
-	// await expectSubItemsCorrect({
-	//   stripeCli,
-	//   customerId,
-	//   product,
-	//   db,
-	//   org,
-	//   env,
-	//   isCanceled,
-	//   entityId,
-	// });
-
-	// let cus = await autumn.customers.get(customerId);
-	// const stripeSubs = await stripeCli.subscriptions.list({
-	//   customer: cus.stripe_id!,
-	// });
-
-	// if (numSubs) {
-	//   expect(stripeSubs.data.length).to.equal(
-	//     numSubs,
-	//     `should have ${numSubs} subscriptions`
-	//   );
-	// } else {
-	//   expect(stripeSubs.data.length).to.equal(
-	//     1,
-	//     "should only have 1 subscription"
-	//   );
-	// }
 };
 
 export const expectAttachCorrect = async ({

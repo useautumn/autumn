@@ -6,8 +6,6 @@ import { createDatabaseTimings } from "../../../src/logging/databaseTimings.js";
 
 const dialect = new PgDialect();
 
-/** A drizzle stand-in: records every statement and every transaction it was asked to open.
- *  A flush whose guarded row did not move aborts as Postgres does, on its rollback marker's integer cast. */
 function createFakePostgres({ applied = [1] }: { applied?: number[] } = {}) {
 	const statements: { sql: string; params: unknown[] }[] = [];
 	const transactions: string[] = [];
@@ -23,7 +21,6 @@ function createFakePostgres({ applied = [1] }: { applied?: number[] } = {}) {
 					),
 					{ code: "22P02", severity: "ERROR" },
 				);
-			// pg answers a multi-statement simple query with one result per statement.
 			if (sql.includes("AS snapshot_deletes"))
 				return [
 					{ rows: [] },

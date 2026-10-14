@@ -67,9 +67,6 @@ export const impersonateUser = async ({
 	if (organizationId) {
 		await setActiveOrg(organizationId);
 
-		// Confirm the session reflects the target before reloading. The
-		// impersonation session is born with no active org, so a premature reload
-		// lets handleNoActiveOrg pick the wrong org.
 		const { data } = await authClient.getSession({
 			query: { disableCookieCache: true },
 		});
@@ -102,7 +99,6 @@ export const getCusEntHoverTexts = ({
 		},
 	];
 
-	// NEW APPROACH: Check if cusEnt has internal_entity_id (entity-level loose entitlement)
 	if (cusEnt.internal_entity_id) {
 		const entity = entities.find(
 			(e: Entity) => e.internal_id === cusEnt.internal_entity_id,
@@ -113,23 +109,18 @@ export const getCusEntHoverTexts = ({
 				value: `${entity.id} (${entity.name})${entity.deleted ? " Deleted" : ""}`,
 			});
 		}
-		// Always show internal_entity_id for debugging
 		hoverTexts.push({
 			key: "Internal Entity ID",
 			value: cusEnt.internal_entity_id,
 		});
-	}
-	// Check for per-entity features (features that ARE entity types)
-	else if (featureEntities.length > 0) {
+	} else if (featureEntities.length > 0) {
 		hoverTexts.push({
 			key: "Entities",
 			value: featureEntities
 				.map((e: Entity) => `${e.id} (${e.name})${e.deleted ? " Deleted" : ""}`)
 				.join("\n"),
 		});
-	}
-	// OLD APPROACH: entities object with per-entity balances
-	else if (cusEnt.entities && Object.keys(cusEnt.entities).length > 0) {
+	} else if (cusEnt.entities && Object.keys(cusEnt.entities).length > 0) {
 		const mappedEntities = Object.keys(cusEnt.entities)
 			.map((e: string) => {
 				const entity = entities.find((ee: Entity) => ee.id === e);

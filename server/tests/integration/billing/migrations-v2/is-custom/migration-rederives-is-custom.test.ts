@@ -1,5 +1,3 @@
-/** Both lanes clear a stale custom flag, flag a diverging plan, and re-derive converged customers. */
-
 import { expect, test } from "bun:test";
 import {
 	type ApiCustomerV3,
@@ -108,7 +106,6 @@ const migrateMessagesTo = async ({
 			],
 		},
 		noBillingChanges: true,
-		// A run limit keeps the migration off the batch lane.
 		...(lane === "per_customer" ? { controls: { limit: 10 } } : {}),
 	});
 	expect(result?.lane).toBe(lane);
@@ -122,7 +119,6 @@ for (const lane of LANES) {
 			const setup = await setupOnPlan({ id, catalogMessages: 200 });
 			const { ctx, plan } = setup;
 
-			// The customer drifted to 100 messages and was flagged custom for it.
 			await repointToCustomEntitlement({
 				ctx,
 				customerId: id,
@@ -185,7 +181,6 @@ test.concurrent(
 		const setup = await setupOnPlan({ id, catalogMessages: 100 });
 		const { ctx, autumnV1, autumnV2_2, plan } = setup;
 
-		// Customized to 500 messages, but the stored flag was never set.
 		await repointToCustomEntitlement({
 			ctx,
 			customerId: id,
@@ -246,7 +241,6 @@ for (const lane of LANES) {
 					),
 				);
 
-			// The customer already has the item, so the run skips them as converged.
 			const { result } = await runChunkedMigration({
 				ctx,
 				migrationClient: autumnV2_2,
@@ -262,7 +256,6 @@ for (const lane of LANES) {
 					],
 				},
 				noBillingChanges: true,
-				// A run limit keeps the migration off the batch lane.
 				...(lane === "per_customer" ? { controls: { limit: 10 } } : {}),
 			});
 			expect(result?.lane).toBe(lane);

@@ -20,10 +20,7 @@ export type ApiBalanceInput = {
 	apiSubject: ApiSubjectV0;
 	feature: Feature;
 	requiredBalance: number;
-	/** The checked feature when it differs from the evaluated one (credit
-	 *  system member), so metered usage caps on it can gate the check. */
 	originalFeature?: Feature;
-	/** The check's event properties; filtered usage caps only gate when these match. */
 	properties?: Record<string, unknown> | null;
 };
 
@@ -39,7 +36,6 @@ export const apiBalanceToAllowed = ({
 	const allocationCheckRemaining = (
 		displayedBalance as ApiBalanceWithAllocationCheck
 	).allocation_check_remaining;
-	// An allocated customer's entity may draw own unused + unallocated, not the shown rows' remaining.
 	const apiBalance =
 		allocationCheckRemaining === undefined
 			? displayedBalance
@@ -51,7 +47,6 @@ export const apiBalanceToAllowed = ({
 
 	if (requiredBalance < 0) return { allowed: true };
 
-	// Windowed usage caps gate regardless of balance or overage availability.
 	const usageLimitHeadroom = apiSubjectToUsageLimitHeadroom({
 		apiSubject,
 		feature,

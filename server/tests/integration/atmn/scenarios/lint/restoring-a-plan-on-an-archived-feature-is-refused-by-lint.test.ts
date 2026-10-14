@@ -1,9 +1,3 @@
-/**
- * atmn scenarios/lint — restoring a plan on an archived feature is refused by lint
- *
- * One line of plans/atmn-v3/07_tests.md.
- */
-
 import { expect, test } from "bun:test";
 import { join } from "node:path";
 import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
@@ -56,7 +50,6 @@ test("restoring a plan on an archived feature is refused by lint", async () => {
 			`Feature "${featureId}" is archived. Unarchive it, or archive plan "${planId}".`,
 		);
 
-		// Nothing was ever sent: the org's catalog stays empty.
 		const catalog = (await scenario.client.get({})) as unknown as {
 			features: Array<{ id: string }>;
 			plans: Array<{ id: string }>;

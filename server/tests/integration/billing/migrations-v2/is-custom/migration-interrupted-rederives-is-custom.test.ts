@@ -1,5 +1,3 @@
-/** A canceled run, or one whose chunk throws after its page committed, still re-derives is_custom. */
-
 import { expect, test } from "bun:test";
 import { CusProductStatus, customerProducts, customers } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features";

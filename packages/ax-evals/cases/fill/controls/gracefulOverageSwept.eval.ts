@@ -9,13 +9,6 @@ import {
 	gracefulOverageGolden,
 } from "./gracefulOverageSetup.ts";
 
-/**
- * Swept twin of gracefulOverage: the brief never mentions what happens when
- * enterprise runs out — the guardrails sweep must raise it, and the user's
- * answer (10% grace, never auto-billed) must land as the same
- * overage_allowed + spend_limits combination. Catches never-asking (both
- * plans hard-stop) and asking-then-mismodeling (a priced overage item).
- */
 export const gracefulOverageSwept = defineCase({
 	name: "fill-controls-graceful-overage-swept",
 	prompt: [

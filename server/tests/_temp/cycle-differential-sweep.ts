@@ -1,15 +1,3 @@
-/**
- * Differential sweep: OLD (origin/main) getCycleStart/getCycleEnd vs NEW
- * (bracket walk), both checked against an independent reference = the unique
- * lattice boundary pair bracketing `now` (unique because add(anchor, k) is
- * strictly increasing in k for every interval type).
- *
- * Verdict criteria:
- *  - newDeviations MUST be 0 (new always matches the ground truth)
- *  - every divergence between old and new MUST be an input where old != ref
- *    (i.e. the fix only changes outputs that were provably wrong)
- */
-
 import { UTCDate } from "@date-fns/utc";
 import {
 	addDays,
@@ -61,7 +49,6 @@ const INTERVAL_ENUM: Record<string, BillingInterval | EntInterval> = {
 	year: BillingInterval.Year,
 };
 
-// --- OLD implementations, verbatim logic from origin/main ---
 const oldStart = (fns: Fns, anchor: number, c: number, now: number) => {
 	const a = new UTCDate(anchor);
 	const k = Math.floor(fns.diff(new UTCDate(now), a) / c);
@@ -78,7 +65,6 @@ const oldEnd = (fns: Fns, anchor: number, c: number, now: number) => {
 	return fns.add(a, (k + 1) * c).getTime();
 };
 
-// --- Independent reference: walk to the unique bracketing k ---
 const ref = (fns: Fns, anchor: number, c: number, now: number) => {
 	const a = new UTCDate(anchor);
 	let k = Math.floor(fns.diff(new UTCDate(now), a) / c);
@@ -181,7 +167,6 @@ for (const cfg of configs) {
 		for (let now = cfg.sweepStart; now < cfg.sweepEnd; now += cfg.stepMs) {
 			checkOne(anchor, now);
 		}
-		// exact boundary instants ±1ms for the first 24 boundaries after sweepStart
 		let k = 0;
 		for (;;) {
 			const b = fns.add(new UTCDate(anchor), k * cfg.c).getTime();

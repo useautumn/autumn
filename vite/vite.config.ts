@@ -7,9 +7,6 @@ import tsconfigPaths from "vite-tsconfig-paths";
 import { viteHmrClient } from "../packages/env/src/viteDev.js";
 import { sharedBundle } from "./viteSharedBundle.ts";
 
-// Defaults so the app works when no .env.local is present
-// (e.g. after `bun dw disable`). Real values from .env / infisical /
-// process.env still take precedence.
 process.env.VITE_BACKEND_URL ||= "http://localhost:8080";
 process.env.VITE_FRONTEND_URL ||= "http://localhost:3000";
 
@@ -50,7 +47,6 @@ function printPortlessUrl(): Plugin {
 	};
 }
 
-// https://vite.dev/config/
 export default defineConfig({
 	define: {
 		__APP_ENV__: JSON.stringify(process.env.VITE_APP_ENV || ""),
@@ -64,7 +60,7 @@ export default defineConfig({
 			? [sharedBundle({ sharedDir: path.resolve(__dirname, "../shared") })]
 			: []),
 		react(),
-		tailwindcss(), // Automatically reads paths from tsconfig.json
+		tailwindcss(),
 		tsconfigPaths(),
 		sentryVitePlugin({
 			org: process.env.VITE_SENTRY_ORG,
@@ -76,12 +72,10 @@ export default defineConfig({
 
 	resolve: {
 		// recharts builds on React context; two copies mean the chart's provider
-		// and its children read different stores and nothing renders.
 		dedupe: ["react", "react-dom", "recharts"],
 		alias: {
 			"@": path.resolve(__dirname, "./src"),
 
-			// Workspace packages
 			"autumn-js/react": path.resolve(
 				__dirname,
 				"../packages/autumn-js/src/react/index.ts",
@@ -98,12 +92,7 @@ export default defineConfig({
 	},
 
 	optimizeDeps: {
-		// Only list deps the cold-start scanner can't reach on its own: base-ui
-		// subpaths are pulled in transitively by excluded workspace deps (see
 		// `exclude` below), so Vite never sees them when crawling from main.tsx,
-		// and discovering them mid-session re-optimizes (504 Outdated Dep).
-		// Directly-imported deps (phosphor, nanoid, etc.) are auto-discovered by
-		// the scanner on cold start and must NOT be listed here.
 		include: [
 			"@base-ui/react/accordion",
 			"@base-ui/react/button",
@@ -124,8 +113,6 @@ export default defineConfig({
 			"@base-ui/react/tooltip",
 			"@base-ui/react/use-render",
 		],
-		// Exclude workspace dependencies from pre-bundling to avoid cache issues.
-		// Capy pre-bundles the third-party ones: unbundled they cost ~1,400 requests per page load.
 		exclude: [
 			"@autumn/shared",
 			"@autumn/atmn-old/skills",
@@ -148,13 +135,12 @@ export default defineConfig({
 		],
 	},
 
-	// Clear cache on config change
 	cacheDir: "node_modules/.vite",
 
 	server: {
-		host: "0.0.0.0", // Required for Docker
+		host: "0.0.0.0",
 		port: vitePort,
-		strictPort: false, // Allow fallback to next available port
+		strictPort: false,
 		...(frontendUrl && {
 			origin: frontendUrl,
 		}),
@@ -197,7 +183,6 @@ export default defineConfig({
 				}
 			: undefined,
 		watch: {
-			// Required for Docker on Windows; Capy's Linux VMs get inotify instead of a 1s stat sweep.
 			usePolling: !isCapyDev,
 			interval: 1000,
 		},
@@ -205,13 +190,11 @@ export default defineConfig({
 			? { clientPort: 443 }
 			: viteHmrClient({ frontendUrl, vitePort }),
 		fs: {
-			// Allow serving files from workspace root (monorepo support)
 			allow: [".."],
 		},
 	},
 
 	build: {
-		// Disable sourcemaps in CI to reduce memory usage during build
 		sourcemap: !process.env.CI,
 	},
 });

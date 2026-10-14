@@ -1,10 +1,3 @@
-/**
- * Grader proofs for the workspace-seats suite: the shared golden passes
- * every config verdict; an empty workspace fails them all. Mutation proofs
- * pin the license signatures: per-unit seats instead of a license plan,
- * prepaid packs moved onto the seat plan, and a second seat plan minted for
- * starter must each go red.
- */
 import { expect, test } from "bun:test";
 import { askSeatGrants } from "../../cases/suites/workspaceSeats/askSeatGrants.eval.ts";
 import { clearSeatGrants } from "../../cases/suites/workspaceSeats/clearSeatGrants.eval.ts";

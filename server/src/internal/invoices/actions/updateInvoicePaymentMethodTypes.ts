@@ -14,7 +14,6 @@ const EDITABLE_STRIPE_STATUSES = new Set(["draft", "open"]);
 const invalidRequest = (message: string) =>
 	new RecaseError({ message, code: ErrCode.InvalidRequest, statusCode: 400 });
 
-/** Changes which payment methods a draft or open Stripe invoice accepts. */
 export const updateInvoicePaymentMethodTypes = async ({
 	ctx,
 	invoiceId,

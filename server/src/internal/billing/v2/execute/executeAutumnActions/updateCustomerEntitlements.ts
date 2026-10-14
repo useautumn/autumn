@@ -4,7 +4,6 @@ import { customerEntitlementActions } from "@/internal/customers/cusProducts/cus
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService";
 import { RolloverService } from "@/internal/customers/cusProducts/cusEnts/cusRollovers/RolloverService";
 
-/** Grant field updates, balance changes and carried rollovers; their replaceable rows are written with the Postgres-only rows. */
 export const updateCustomerEntitlements = async ({
 	ctx,
 	customerId,
@@ -31,7 +30,6 @@ export const updateCustomerEntitlements = async ({
 		);
 
 		const featureId = customerEntitlement.entitlement.feature.id;
-		// 1. Field-level updates (e.g. next_reset_at, adjustment, entities) replace the balance moves below
 		if (updates) {
 			await customerEntitlementActions.updateDbAndCache({
 				ctx,
@@ -42,7 +40,6 @@ export const updateCustomerEntitlements = async ({
 				featureId,
 			});
 		} else {
-			// 2. Handle balance change (DB + cache)
 			if (balanceChange !== 0) {
 				await customerEntitlementActions.adjustBalanceDbAndCache({
 					ctx,
@@ -53,7 +50,6 @@ export const updateCustomerEntitlements = async ({
 				});
 			}
 
-			// 3. Per-entity moves and deltas (Postgres only; the route's refresh middleware refreshes the cache)
 			if (moveEntityBalances && Object.keys(moveEntityBalances).length > 0) {
 				await CusEntService.moveEntityBalances({
 					ctx,
@@ -73,7 +69,6 @@ export const updateCustomerEntitlements = async ({
 			}
 		}
 
-		// 4. Rollovers a cycle end carries, capped against the ones the row already holds
 		if (insertRollovers.length > 0) {
 			await RolloverService.insert({
 				ctx,

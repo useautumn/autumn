@@ -8,7 +8,6 @@ const isElapsed = ({
 	nowSeconds: number;
 }) => timestamp !== undefined && timestamp <= nowSeconds;
 
-/** Keeps the quoted items but drops absolute times that have passed since the link was created. */
 export const toRenewableCheckoutSessionAction = ({
 	checkoutSessionAction,
 }: {

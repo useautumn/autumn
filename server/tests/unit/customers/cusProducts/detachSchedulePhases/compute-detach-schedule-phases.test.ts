@@ -1,11 +1,3 @@
-/**
- * computeDetachSchedulePhases
- *
- * Scheduled rows are the ones pointing at the schedule; phase-end rows are
- * the live rows on its subscription whose end date sits on a phase boundary.
- * A released schedule names its subscription under released_subscription.
- */
-
 import { describe, expect, test } from "bun:test";
 import { CusProductStatus, type FullCustomer } from "@autumn/shared";
 import type Stripe from "stripe";

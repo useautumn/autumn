@@ -51,7 +51,6 @@ export const uploadCustomerExportCsv = async ({
 		},
 	});
 
-	// The reporter is absent for inline runs; retries reset before re-walking.
 	await progress?.setTotalRows(totalCount);
 	await progress?.setPhase(CustomerExportPhase.Exporting);
 

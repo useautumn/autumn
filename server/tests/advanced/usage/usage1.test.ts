@@ -25,7 +25,7 @@ const proWithOverage = constructRawProduct({
 	id: "pro-with-overage",
 	items: [
 		constructPriceItem({
-			price: 10, // $10/month (matches global.ts default for monthly price)
+			price: 10,
 			interval: BillingInterval.Month,
 		}),
 		{
@@ -37,11 +37,11 @@ const proWithOverage = constructRawProduct({
 			tiers: [
 				{
 					to: 10,
-					amount: 0.5, // $0.5 per unit
+					amount: 0.5,
 				},
 				{
 					to: Infinite,
-					amount: 0.25, // $0.25 per unit
+					amount: 0.25,
 				},
 			],
 			reset_usage_when_enabled: true,
@@ -102,7 +102,6 @@ describe(`${chalk.yellowBright("usage1: Testing basic usage product")}`, () => {
 		}
 
 		await Promise.all(batchUpdates);
-		// await timeout(25000);
 	});
 
 	test("should have correct metered1 balance after sending events", async () => {
@@ -114,7 +113,6 @@ describe(`${chalk.yellowBright("usage1: Testing basic usage product")}`, () => {
 			(balance: any) => balance.feature_id === TestFeature.Messages,
 		);
 
-		// Convert V2 product to V1 to access entitlements
 		const productV1 = convertProductV2ToV1({
 			productV2: proWithOverage,
 			orgId: ctx.org.id,
@@ -133,7 +131,6 @@ describe(`${chalk.yellowBright("usage1: Testing basic usage product")}`, () => {
 		expect(balance?.usage_allowed, "should have usage_allowed").toBe(true);
 	});
 
-	// Check invoice
 	test("should advance stripe test clock and wait for event", async () => {
 		await advanceClockForInvoice({
 			stripeCli,
@@ -150,7 +147,6 @@ describe(`${chalk.yellowBright("usage1: Testing basic usage product")}`, () => {
 
 		const invoice = invoices[0];
 
-		// Calculate expected invoice total using getExpectedInvoiceTotal
 		const expectedTotal = await getExpectedInvoiceTotal({
 			customerId,
 			productId: proWithOverage.id,

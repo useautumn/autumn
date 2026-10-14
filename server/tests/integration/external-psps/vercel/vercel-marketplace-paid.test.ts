@@ -1,16 +1,3 @@
-/**
- * Vercel `marketplace.invoice.paid` webhook
- *
- * Replaces the legacy Stripe Custom Payment Method + Payment Records flow.
- * Vercel reports the invoice was paid out of band; our handler marks the
- * Stripe invoice paid via `invoices.pay(id, { paid_out_of_band: true })`.
- *
- * The handler MUST NOT call `paymentRecords.reportPayment` or
- * `invoices.attachPayment`. Tests assert by checking the resulting Stripe
- * invoice state (status = paid, `paid_out_of_band` flag) and the absence of
- * any attached payment_record on the invoice's payment rows.
- */
-
 import { expect, test } from "bun:test";
 import { CusProductStatus, stripeRefToId } from "@autumn/shared";
 import { items } from "@tests/utils/fixtures/items";
@@ -109,10 +96,6 @@ const provisionAndGetInvoice = async ({
 	};
 };
 
-// ─────────────────────────────────────────────────────────────────────────────
-// TEST 1: paid webhook marks invoice paid_out_of_band + resource ready
-// ─────────────────────────────────────────────────────────────────────────────
-
 test.concurrent(
 	`${chalk.yellowBright(
 		"vercel-marketplace-paid: marks Stripe invoice paid out-of-band, flips resource to ready, never calls paymentRecords",
@@ -147,15 +130,6 @@ test.concurrent(
 		);
 		expectVercelWebhookSuccess(result);
 
-		// Assert invoice is now paid. We can't reliably distinguish the new
-		// `invoices.pay({ paid_out_of_band: true })` from the legacy
-		// `paymentRecords.reportPayment` + `invoices.attachPayment` purely
-		// from the resulting Stripe state — both end up with a payment record
-		// of `processor_details.type === "custom"`. So we assert positively
-		// that the invoice transitions to paid and the amount is covered;
-		// the absence-of-legacy-calls is enforced at the source level (those
-		// imports and call sites have been removed from
-		// `handleMarketplaceInvoicePaid.ts`).
 		const finalInvoice = await ctx.stripeCli.invoices.retrieve(
 			externalInvoiceId,
 			{ expand: ["payments"] },
@@ -165,7 +139,6 @@ test.concurrent(
 			finalInvoice.amount_due,
 		);
 
-		// Resource status should be "ready"
 		const resource = await VercelResourceService.getById({
 			db: ctx.db,
 			resourceId,
@@ -175,10 +148,6 @@ test.concurrent(
 		expect(resource?.status).toBe("ready");
 	},
 );
-
-// ─────────────────────────────────────────────────────────────────────────────
-// TEST 2: paid webhook is idempotent — already-paid invoice short-circuits
-// ─────────────────────────────────────────────────────────────────────────────
 
 test.concurrent(
 	`${chalk.yellowBright(
@@ -215,7 +184,6 @@ test.concurrent(
 			),
 		);
 
-		// Second delivery should be a no-op — Stripe invoice stays paid.
 		expectVercelWebhookSuccess(
 			await client.invoicePaid(
 				buildPayload({ installationId, externalInvoiceId }),
@@ -226,10 +194,6 @@ test.concurrent(
 		expect(invoice.status).toBe("paid");
 	},
 );
-
-// ─────────────────────────────────────────────────────────────────────────────
-// TEST 3: bad signature is rejected by the Vercel signature middleware
-// ─────────────────────────────────────────────────────────────────────────────
 
 test.concurrent(
 	`${chalk.yellowBright(
@@ -254,10 +218,6 @@ test.concurrent(
 	},
 );
 
-// ─────────────────────────────────────────────────────────────────────────────
-// TEST 4: lazy migration — legacy charge_automatically sub flips to send_invoice
-// ─────────────────────────────────────────────────────────────────────────────
-
 test.concurrent(
 	`${chalk.yellowBright(
 		"vercel-marketplace-paid: lazy-migrates a legacy charge_automatically subscription to send_invoice",
@@ -279,9 +239,6 @@ test.concurrent(
 			prefix: `${TEST_CASE}-legacy`,
 		});
 
-		// Provision via the refactored path — gives us a subscription. We then
-		// force `collection_method` back to `charge_automatically` via Stripe to
-		// simulate a legacy sub created before the refactor.
 		const { subscription, externalInvoiceId, stripeCustomer } =
 			await provisionAndGetInvoice({
 				customerId,
@@ -310,11 +267,9 @@ test.concurrent(
 		const invoice = await ctx.stripeCli.invoices.retrieve(externalInvoiceId);
 		expect(invoice.status).toBe("paid");
 
-		// Force-clear unused stripeCustomer reference for lint
 		void stripeCustomer;
 	},
 );
 
-// Reference of imported but type-only used to keep tree-shake/lint happy
 void CusProductService;
 void CusProductStatus;

@@ -4,17 +4,6 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-/**
- * Migration setup: paid plan with many versions + a customer on each old version.
- *
- *   v1  $20/mo · 100 messages    → cus migpaid-v1
- *   v2  $30/mo · 200 messages    → cus migpaid-v2
- *   v3  $40/mo · 300 messages    → cus migpaid-v3
- *   v4  $50/mo · 500 messages    → cus migpaid-v4
- *   v5  $60/mo · 1000 messages   (latest, no customer)
- *
- * Gives you real customers stranded on v1-v4 to migrate forward.
- */
 test(`${chalk.yellowBright("migration-setup: paid plan multi-version")}`, async () => {
 	const pro = products.base({
 		id: "pro",

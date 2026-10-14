@@ -29,8 +29,6 @@ type BatchInvalidateCustomer = {
 
 type FeaturesByOrgEnv = Record<string, Feature[]>;
 
-/** Keys one subject's invalidation must touch, resolved before any write so a
- *  retry replays the same set without re-reading the manifest. */
 type SubjectInvalidation = {
 	subjectKey: string;
 	epochKey: string;
@@ -62,8 +60,6 @@ const resolveSubjectInvalidations = ({
 			}
 		}
 
-		// No manifest (miss, corrupt, or an unavailable read) — fall back to the
-		// org's whole feature list rather than skipping the subject.
 		if (featureIds.length === 0) {
 			const orgFeatures =
 				featuresByOrgEnv[buildFullSubjectOrgEnvKey({ orgId, env })] ?? [];
@@ -84,7 +80,6 @@ const resolveSubjectInvalidations = ({
 		};
 	});
 
-/** Any per-command error tuple means a key was not busted. */
 const throwOnAnyPipelineError = <T extends [Error | null, unknown][] | null>(
 	results: T,
 ): T => {
@@ -93,7 +88,6 @@ const throwOnAnyPipelineError = <T extends [Error | null, unknown][] | null>(
 	return results;
 };
 
-// A pipeline is single-use, so each attempt builds its own.
 const execInvalidationPipeline = ({
 	redisV2,
 	invalidations,
@@ -114,20 +108,11 @@ const execInvalidationPipeline = ({
 		pipeline.expire(epochKey, FULL_SUBJECT_EPOCH_TTL_SECONDS);
 	}
 
-	// exec() resolves even when commands failed; surface that so the retry loop
-	// runs instead of counting the pipeline as delivered.
 	return pipeline
 		.exec()
 		.then(strict ? throwOnAnyPipelineError : throwOnPipelineConnectionError);
 };
 
-/**
- * Runs the invalidation pipeline, retrying with exponential backoff up to
- * `maxAttempts`. `queueIfNotReady` rides out a handshake or reconnect blip;
- * retries cover the longer case where the client is down past its command
- * timeout. Returns false once every attempt is spent — the caller's caches
- * stay stale until TTL, so that outcome is logged, never silent.
- */
 const writeInvalidations = async ({
 	redisV2,
 	invalidations,
@@ -184,9 +169,6 @@ const batchInvalidateCachedFullSubjectsOnRedis = async ({
 	logger: Logger;
 }): Promise<BatchInvalidateCustomer[]> => {
 	const dropped: BatchInvalidateCustomer[] = [];
-	// No not-ready guard: a dedicated org Redis is created lazily, so its very
-	// first use (batch migrations inside a fresh trigger.dev runner) is always
-	// mid-handshake. Dropping the unlink there is silent staleness until TTL.
 	const invalidatable = customers.filter((customer) => customer.customerId);
 	if (invalidatable.length === 0) return dropped;
 
@@ -205,8 +187,6 @@ const batchInvalidateCachedFullSubjectsOnRedis = async ({
 			readPipeline.get(buildFullSubjectKey({ orgId, env, customerId }));
 		}
 
-		// Best-effort: an unavailable manifest read falls back to the org's
-		// feature list, never to skipping the invalidation.
 		const manifests = await tryRedisOp({
 			operation: () => readPipeline.exec(),
 			source: "batchInvalidateCachedFullSubjects:manifests",
@@ -265,18 +245,10 @@ export const batchInvalidateCachedFullSubjects = async ({
 	}: {
 		customer: BatchInvalidateCustomer;
 	}) => Redis[];
-	/** Attempts per pipeline, including the first. Callers whose writes are
-	 *  already committed (migrations) opt into retries; best-effort callers
-	 *  keep the single fail-open attempt. */
 	maxAttempts?: number;
-	/** Accumulates `invalidate_marks_db` / `invalidate_redis` ms for callers
-	 *  that need to tell a Postgres stall from a Redis one. */
 	phases?: Record<string, number>;
-	/** Strict mode for callers that can revoke a checkpoint: any failed command
-	 *  counts as a failed attempt, and spending every attempt rejects. */
 	throwWhenExhausted?: boolean;
 	commandTimeoutMs?: number;
-	/** The caller's logger, so a dropped invalidation names the request or job that asked for it. */
 	logger?: Logger;
 }): Promise<number> => {
 	if (customers.length === 0) return 0;
@@ -292,12 +264,10 @@ export const batchInvalidateCachedFullSubjects = async ({
 		phases[phase] = (phases[phase] ?? 0) + (Date.now() - startedAt);
 	};
 
-	// Chokepoint freshness marks — a pure DB write, never gated on Redis state.
 	const marksStartedAt = Date.now();
 	await markCustomersUpdatedAt({ customers });
 	addPhase({ phase: "invalidate_marks_db", startedAt: marksStartedAt });
 
-	// The worker's copies go the same way, queued so the owners drop them in log order.
 	await queueBalanceWorkerEvicts({ customers });
 
 	const customersByRedis = new Map<Redis, BatchInvalidateCustomer[]>();

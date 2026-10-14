@@ -1,12 +1,3 @@
-/**
- * Stripe Checkout Prepaid Tests — Multi-Feature & Tiered Pricing
- *
- * Tests 3, 5, 6 from the original stripe-checkout-prepaid.test.ts:
- * - Multiple prepaid features with quantity update
- * - Tiered prepaid with quantity update on checkout
- * - Volume prepaid with tiered pricing
- */
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3 } from "@autumn/shared";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
@@ -21,30 +12,11 @@ import { timeout } from "@tests/utils/genUtils";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 3: Multiple prepaid features with quantity update
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Customer with NO payment method
- * - Attach pro with prepaid messages AND prepaid words
- * - On Stripe checkout page, update quantity (messages line item)
- *
- * Note: completeStripeCheckoutForm adjusts the first adjustable line item, and
- * checkout line item order isn't fixed, so only messages is adjustable.
- *
- * Expected Result:
- * - Messages reflects updated checkout quantity
- * - Words reflects original attach quantity
- * - Invoice reflects both features correctly
- */
 test.concurrent(`${chalk.yellowBright("stripe-checkout-prepaid-tiered 1: multiple prepaid features with quantity update")}`, async () => {
 	const customerId = "stripe-checkout-multi-prepaid";
 	const billingUnits = 100;
 	const basePrice = 20;
 
-	// Messages: 100 included, $10/pack
 	const messagesIncluded = 100;
 	const messagesPricePerPack = 10;
 	const prepaidMessagesItem = items.prepaidMessages({
@@ -53,7 +25,6 @@ test.concurrent(`${chalk.yellowBright("stripe-checkout-prepaid-tiered 1: multipl
 		price: messagesPricePerPack,
 	});
 
-	// Words: 200 included, $5/pack (includedUsage must be multiple of billingUnits)
 	const wordsIncluded = 200;
 	const wordsPricePerPack = 5;
 	const prepaidWordsItem = items.prepaid({
@@ -74,9 +45,8 @@ test.concurrent(`${chalk.yellowBright("stripe-checkout-prepaid-tiered 1: multipl
 		actions: [],
 	});
 
-	// 1. Attach with initial quantities
-	const initialMessagesQty = 300; // 3 packs, 2 paid
-	const initialWordsQty = 300; // 3 packs, 1 paid (200 included)
+	const initialMessagesQty = 300;
+	const initialWordsQty = 300;
 	const result = await autumnV1.billing.attach({
 		customer_id: customerId,
 		product_id: pro.id,
@@ -95,16 +65,14 @@ test.concurrent(`${chalk.yellowBright("stripe-checkout-prepaid-tiered 1: multipl
 
 	expect(result.payment_url).toBeDefined();
 
-	// 2. Complete checkout with updated messages quantity (5 packs = 500 total)
 	const checkoutMessagesTotalUnits = 500;
-	const checkoutMessagesStripePacks = checkoutMessagesTotalUnits / billingUnits; // 5 packs
+	const checkoutMessagesStripePacks = checkoutMessagesTotalUnits / billingUnits;
 	await completeStripeCheckoutForm({
 		url: result.payment_url,
 		overrideQuantity: checkoutMessagesStripePacks,
 	});
 	await timeout(12000);
 
-	// 3. Verify both features
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
 	await expectProductActive({
@@ -112,7 +80,6 @@ test.concurrent(`${chalk.yellowBright("stripe-checkout-prepaid-tiered 1: multipl
 		productId: pro.id,
 	});
 
-	// Messages: updated to 500
 	expectCustomerFeatureCorrect({
 		customer,
 		featureId: TestFeature.Messages,
@@ -121,8 +88,7 @@ test.concurrent(`${chalk.yellowBright("stripe-checkout-prepaid-tiered 1: multipl
 		usage: 0,
 	});
 
-	// Words: remains at original (300 units, 1 paid pack since 200 included)
-	const wordsRoundedQty = initialWordsQty; // 300 (already a multiple of billingUnits)
+	const wordsRoundedQty = initialWordsQty;
 	expectCustomerFeatureCorrect({
 		customer,
 		featureId: TestFeature.Words,
@@ -131,10 +97,9 @@ test.concurrent(`${chalk.yellowBright("stripe-checkout-prepaid-tiered 1: multipl
 		usage: 0,
 	});
 
-	// 4. Verify invoice
 	const messagesPaidPacks =
-		(checkoutMessagesTotalUnits - messagesIncluded) / billingUnits; // 4
-	const wordsPaidPacks = (wordsRoundedQty - wordsIncluded) / billingUnits; // (300 - 200) / 100 = 1
+		(checkoutMessagesTotalUnits - messagesIncluded) / billingUnits;
+	const wordsPaidPacks = (wordsRoundedQty - wordsIncluded) / billingUnits;
 	const expectedTotal =
 		basePrice +
 		messagesPaidPacks * messagesPricePerPack +
@@ -154,33 +119,11 @@ test.concurrent(`${chalk.yellowBright("stripe-checkout-prepaid-tiered 1: multipl
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 5: Tiered prepaid with quantity updated on checkout
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Customer with NO payment method
- * - Attach pro with tiered prepaid messages (quantity: 300)
- * - On Stripe checkout page, update quantity to 8 packs (800 total)
- *
- * Tiered pricing: 0-500 at $10/pack, 501+ at $5/pack (100 units/pack)
- *
- * After checkout override to 800 units (8 packs):
- * - Tier 1: 5 packs × $10 = $50
- * - Tier 2: 3 packs × $5 = $15
- * - Total prepaid: $65
- *
- * Expected Result:
- * - Final state reflects checkout quantity (800)
- * - Invoice: $20 base + $65 tiered prepaid = $85
- */
 test.concurrent(`${chalk.yellowBright("stripe-checkout-prepaid-tiered 2: tiered prepaid with quantity update")}`, async () => {
 	const customerId = "stripe-checkout-tiered-prepaid";
 	const billingUnits = 100;
 	const basePrice = 20;
 
-	// Tiered pricing: 0-500 at $10/pack, 501+ at $5/pack (last tier must be "inf" for Stripe)
 	const tieredPrepaidItem = items.tieredPrepaidMessages({
 		includedUsage: 0,
 		billingUnits,
@@ -201,7 +144,6 @@ test.concurrent(`${chalk.yellowBright("stripe-checkout-prepaid-tiered 2: tiered 
 		actions: [],
 	});
 
-	// 1. Attach with initial quantity 300 (3 packs, all tier 1)
 	const initialQuantity = 300;
 	const result = await autumnV1.billing.attach({
 		customer_id: customerId,
@@ -218,16 +160,14 @@ test.concurrent(`${chalk.yellowBright("stripe-checkout-prepaid-tiered 2: tiered 
 	expect(result.payment_url).toBeDefined();
 	expect(result.payment_url).toContain("checkout.stripe.com");
 
-	// 2. Complete checkout with 8 packs (800 units, spans both tiers)
 	const checkoutTotalUnits = 800;
-	const checkoutStripePacks = checkoutTotalUnits / billingUnits; // 8 packs
+	const checkoutStripePacks = checkoutTotalUnits / billingUnits;
 	await completeStripeCheckoutForm({
 		url: result.payment_url,
 		overrideQuantity: checkoutStripePacks,
 	});
 	await timeout(12000);
 
-	// 3. Verify product attached with checkout quantity
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
 	await expectProductActive({
@@ -243,12 +183,8 @@ test.concurrent(`${chalk.yellowBright("stripe-checkout-prepaid-tiered 2: tiered 
 		usage: 0,
 	});
 
-	// 4. Verify invoice with tiered pricing
-	// Tier 1: 5 packs × $10 = $50
-	// Tier 2: 3 packs × $5 = $15
-	// Total prepaid: $65
-	const expectedPrepaidCost = 5 * 10 + 3 * 5; // $65
-	const expectedTotal = basePrice + expectedPrepaidCost; // $85
+	const expectedPrepaidCost = 5 * 10 + 3 * 5;
+	const expectedTotal = basePrice + expectedPrepaidCost;
 
 	await expectCustomerInvoiceCorrect({
 		customer,
@@ -263,10 +199,6 @@ test.concurrent(`${chalk.yellowBright("stripe-checkout-prepaid-tiered 2: tiered 
 		env: ctx.env,
 	});
 });
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 6: Prepaid volume with tiered pricing
-// ═══════════════════════════════════════════════════════════════════════════════
 
 const VOLUME_TIERS: { to: number | "inf"; amount: number }[] = [
 	{ to: 500, amount: 30 },

@@ -18,13 +18,10 @@ export const CheckRow = ({
 }: {
 	checked: boolean;
 	label: string;
-	/** Hover text; defaults to the label. */
 	title?: string;
 	trailing?: string;
-	/** The row's chart colour, shown as a swatch beside the label. */
 	color?: string;
 	isMonospace?: boolean;
-	/** Keeps the row from being unticked, e.g. the last visible group. */
 	isLocked?: boolean;
 	onToggle: () => void;
 }) => (

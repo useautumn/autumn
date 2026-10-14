@@ -64,7 +64,6 @@ function AreaCheckbox({
 				>
 					{title}
 				</label>
-				{/* Expanded content */}
 				{(children || description) && (
 					<div
 						className={cn(

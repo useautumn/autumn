@@ -8,7 +8,6 @@ import type { RepoContext } from "@/db/repoContext";
 import { stripeInvoiceToStripeSubscriptionId } from "@/external/stripe/invoices/utils/convertStripeInvoice";
 import { isStripeSubscriptionCanceled } from "@/external/stripe/subscriptions/utils/classifyStripeSubscriptionUtils";
 
-/** Only a sub created for the pending plan is canceled; an updated sub still carries active plans. */
 const deferredMetadataToCreatedStripeSubscriptionId = ({
 	metadata,
 	stripeInvoice,
@@ -26,7 +25,6 @@ const deferredMetadataToCreatedStripeSubscriptionId = ({
 	return stripeInvoiceToStripeSubscriptionId(stripeInvoice);
 };
 
-/** Throws on Stripe failure so the caller keeps the metadata and the cron retries. */
 export const cancelCreatedStripeSubscription = async ({
 	ctx,
 	stripeCli,

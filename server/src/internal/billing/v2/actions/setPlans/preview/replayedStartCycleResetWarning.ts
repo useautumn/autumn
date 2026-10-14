@@ -8,7 +8,6 @@ import { classifyFirstPhaseStart } from "../setup/classifyFirstPhaseStart";
 import type { SubscriptionWarningContext } from "./subscriptionStateToWarnings";
 import { warningText } from "./warningText";
 
-/** A first phase replaying the live start resets its cycle on that start, which is the anchor it already has. */
 export const replayedStartCycleResetWarning = ({
 	billingContext,
 }: {

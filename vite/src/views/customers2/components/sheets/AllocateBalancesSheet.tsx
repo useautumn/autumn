@@ -41,18 +41,13 @@ import { getBackendErr } from "@/utils/genUtils";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { useCustomerAllocationControls } from "../../hooks/useCustomerAllocationControls";
 import { getAllocatableSharedBalanceInterval } from "../table/customer-balance/customerBalanceUtils";
-import {
-	// AllocationUsageWindows,
-	allocationStateQueryKey,
-} from "./AllocationUsageWindows";
-// import { useAdmin } from "@/views/admin/hooks/useAdmin";
+import { allocationStateQueryKey } from "./AllocationUsageWindows";
 import { sharedIntervalBalanceTotals } from "./sharedIntervalBalanceTotals";
 
 type AmountInputs = Record<string, string>;
 
 const formatCredits = (value: number) => value.toLocaleString();
 
-/** Current shares keyed by public entity id, as text inputs; empty means not allocated. */
 const storedAmountInputs = ({
 	controls,
 	featureId,
@@ -74,7 +69,6 @@ const storedAmountInputs = ({
 	);
 };
 
-/** Only rows the user changed, in entity list order; a cleared row releases its share. */
 const changedAllocations = ({
 	entities,
 	inputs,
@@ -100,7 +94,6 @@ export function AllocateBalancesSheet() {
 	const { customer, features } = useCusQuery();
 	const axiosInstance = useAxiosInstance({ version: LATEST_VERSION });
 	const queryClient = useQueryClient();
-	// const { isAdmin } = useAdmin();
 
 	const fullCustomer = customer;
 	const entities = (fullCustomer?.entities ?? []).filter(
@@ -394,14 +387,6 @@ export function AllocateBalancesSheet() {
 						})}
 					</div>
 				</SheetSection>
-
-				{/* Hidden for QA; restore to show admins the allocation usage windows.
-				{isAdmin && (
-					<AllocationUsageWindows
-						customerId={customerId}
-						featureId={featureId}
-					/>
-				)} */}
 
 				{effectiveBalance && sharedTotals && (
 					<SheetSection withSeparator>

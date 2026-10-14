@@ -1,5 +1,3 @@
-// Minimal cluster exercising the real recycling modules without the app:
-// two HTTP forks that recycle constantly under FORK_RECYCLE_* test settings.
 import cluster from "node:cluster";
 import http from "node:http";
 import type { Logger } from "@/external/logtail/logtailUtils.js";
@@ -33,7 +31,6 @@ if (cluster.isPrimary) {
 } else {
 	const drainState = { draining: false };
 	const server = http.createServer((_req, res) => {
-		// In-flight window so a hard kill mid-request would surface as a failure.
 		setTimeout(() => {
 			res.setHeader("connection", drainState.draining ? "close" : "keep-alive");
 			res.end(`ok:${process.pid}`);

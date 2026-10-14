@@ -38,7 +38,6 @@ export function EditInvoicePaymentMethodsDialog({
 		InvoicePaymentMethod[] | null
 	>(null);
 
-	// Unsaved edits must never carry over to another invoice or a reopened dialog.
 	// biome-ignore lint/correctness/useExhaustiveDependencies: reset is keyed on these on purpose
 	useEffect(() => setPaymentMethodTypes(null), [open, invoice.id]);
 
@@ -60,7 +59,6 @@ export function EditInvoicePaymentMethodsDialog({
 
 	const invoicePaymentMethodTypes = stripeInvoice?.payment_settings
 		?.payment_method_types as InvoicePaymentMethod[] | null | undefined;
-	// Without the live invoice we'd overwrite its methods with unrelated org defaults.
 	const value = !stripeInvoice
 		? null
 		: (paymentMethodTypes ??

@@ -1,24 +1,3 @@
-/**
- * TDD tests for the V2 batch reset worker (batchResetCustomerEntitlementsV2):
- * rollover creation and cap enforcement at reset time.
- *
- * Contract under test:
- *   Behaviors:
- *     - unused balance below the cap rolls over in full; cusEnt balance
- *       returns to the allowance
- *     - `max` cap: rollover is clamped to min(unused, max)
- *     - `max_percentage` cap: rollover is clamped to pct of the allowance
- *     - Month duration: rollover expires_at = old next_reset_at + length
- *       months; Forever duration: expires_at is null
- *     - multi-cycle accumulation (Forever + max): total rollover balance
- *       across repeated resets stays <= max — exercises the V2
- *       performMaximumClearing + upsert/delete execute path
- *     - entity-scoped ents: each entity's balance resets to the allowance and
- *       rolls over per entity into rollover.entities
- *   Side effects:
- *     - rollover rows live in the `rollovers` table keyed by cus_ent_id
- */
-
 import { expect, test } from "bun:test";
 import {
 	ProductItemInterval,
@@ -43,8 +22,6 @@ import {
 
 const INCLUDED_USAGE = 100;
 
-/** Attach a free monthly-messages plan with the given rollover config, track
- * usage, wait for PG sync, expire, and return everything needed to reset. */
 const initRolloverScenario = async ({
 	customerId,
 	rolloverConfig,
@@ -117,7 +94,7 @@ test.concurrent(
 				length: 1,
 				duration: RolloverExpiryDurationType.Month,
 			},
-			trackValue: 70, // remaining 30 < max 50
+			trackValue: 70,
 		});
 
 		await runBatchResetV2({
@@ -125,14 +102,12 @@ test.concurrent(
 			customerEntitlementIds: [customerEntitlement.id],
 		});
 
-		// ── Contract: balance back to allowance ─────────────────────────
 		const row = await fetchCustomerEntitlementRow({
 			db: ctx.db,
 			customerEntitlementId: customerEntitlement.id,
 		});
 		expect(row.balance).toBe(INCLUDED_USAGE);
 
-		// ── Contract: one rollover row with full unused balance ─────────
 		const rolloverRows = await fetchRollovers({
 			db: ctx.db,
 			customerEntitlementId: customerEntitlement.id,
@@ -140,7 +115,6 @@ test.concurrent(
 		expect(rolloverRows.length).toBe(1);
 		expect(rolloverRows[0].balance).toBe(30);
 
-		// ── Contract: Month expiry = old next_reset_at + 1 month ────────
 		expect(rolloverRows[0].expires_at).toBe(addMonths(pastTime, 1).getTime());
 	},
 );
@@ -155,7 +129,7 @@ test.concurrent(
 				length: 1,
 				duration: RolloverExpiryDurationType.Month,
 			},
-			trackValue: 20, // remaining 80 > max 50
+			trackValue: 20,
 		});
 
 		await runBatchResetV2({
@@ -172,7 +146,6 @@ test.concurrent(
 			0,
 		);
 		expect(totalRollover).toBe(50);
-		// Clamping must not disturb the expiry of the surviving row.
 		expect(rolloverRows[0].expires_at).toBe(addMonths(pastTime, 1).getTime());
 	},
 );
@@ -187,7 +160,7 @@ test.concurrent(
 				length: 1,
 				duration: RolloverExpiryDurationType.Month,
 			},
-			trackValue: 0, // remaining 100, pct cap = 50
+			trackValue: 0,
 		});
 
 		await runBatchResetV2({
@@ -218,7 +191,7 @@ test.concurrent(
 				length: 3,
 				duration: RolloverExpiryDurationType.Month,
 			},
-			trackValue: 70, // remaining 30 < max 50
+			trackValue: 70,
 		});
 
 		await runBatchResetV2({
@@ -232,7 +205,6 @@ test.concurrent(
 		});
 		expect(rolloverRows.length).toBe(1);
 		expect(rolloverRows[0].balance).toBe(30);
-		// ── Contract: expiry = old next_reset_at + `length` months ──────
 		expect(rolloverRows[0].expires_at).toBe(addMonths(pastTime, 3).getTime());
 	},
 );
@@ -247,7 +219,7 @@ test.concurrent(
 				length: 1,
 				duration: RolloverExpiryDurationType.Forever,
 			},
-			trackValue: 60, // remaining 40
+			trackValue: 60,
 		});
 
 		await runBatchResetV2({
@@ -302,8 +274,6 @@ test.concurrent(
 		});
 		expect(customerEntitlement).toBeDefined();
 
-		// Full INCLUDED rolls over every cycle; without cap clearing the total
-		// would reach RESET_CYCLES * INCLUDED = 900, blowing past max 450.
 		for (let cycle = 0; cycle < RESET_CYCLES; cycle++) {
 			await expireCusEntForReset({
 				ctx,
@@ -325,10 +295,8 @@ test.concurrent(
 			(total, rolloverRow) => total + (rolloverRow.balance ?? 0),
 			0,
 		);
-		// ── Contract: EXACT clearing math — 300, 600→450, 750→450 ───────
 		expect(totalRollover).toBe(ROLLOVER_MAX);
 		expect(rolloverRows.length).toBeLessThanOrEqual(RESET_CYCLES);
-		// Forever duration: every surviving row keeps a null expiry.
 		for (const rolloverRow of rolloverRows) {
 			expect(rolloverRow.expires_at).toBeNull();
 		}
@@ -374,7 +342,6 @@ test.concurrent(
 		});
 		expect(customerEntitlement).toBeDefined();
 
-		// Cycle 1: rolls the full 100 with expiry = firstPastTime + 1 month.
 		const firstPastTime = Date.now() - 1000;
 		await expireCusEntForReset({
 			ctx,
@@ -387,8 +354,6 @@ test.concurrent(
 			customerEntitlementIds: [customerEntitlement!.id],
 		});
 
-		// Cycle 2: rolls another 100 (total 200) → clearing must trim the 50
-		// excess from the EARLIEST-expiring row (cycle 1's), not cycle 2's.
 		const secondPastTime = Date.now() - 1000;
 		await expireCusEntForReset({
 			ctx,
@@ -410,12 +375,10 @@ test.concurrent(
 		const sortedRows = [...rolloverRows].sort(
 			(a, b) => (a.expires_at ?? 0) - (b.expires_at ?? 0),
 		);
-		// ── Contract: earliest-expiring row trimmed to absorb the excess ─
 		expect(sortedRows[0].balance).toBe(50);
 		expect(sortedRows[0].expires_at).toBe(
 			addMonths(firstPastTime, 1).getTime(),
 		);
-		// ── Contract: newest row untouched, expiry from its own cycle ───
 		expect(sortedRows[1].balance).toBe(INCLUDED_USAGE);
 		expect(sortedRows[1].expires_at).toBe(
 			addMonths(secondPastTime, 1).getTime(),
@@ -468,7 +431,6 @@ test.concurrent(
 		});
 		expect(customerEntitlement).toBeDefined();
 
-		// Wait for the entity deduction to land in PG (Redis-path sync lag).
 		const startedAt = Date.now();
 		while (true) {
 			const row = await fetchCustomerEntitlementRow({
@@ -499,7 +461,6 @@ test.concurrent(
 			customerEntitlementIds: [customerEntitlement!.id],
 		});
 
-		// ── Contract: every entity balance reset to the allowance ───────
 		const row = await fetchCustomerEntitlementRow({
 			db: ctx.db,
 			customerEntitlementId: customerEntitlement!.id,
@@ -511,7 +472,6 @@ test.concurrent(
 			expect(entity.adjustment).toBe(0);
 		}
 
-		// ── Contract: per-entity rollover amounts (60 and 100) ──────────
 		const rolloverRows = await fetchRollovers({
 			db: ctx.db,
 			customerEntitlementId: customerEntitlement!.id,
@@ -524,7 +484,6 @@ test.concurrent(
 			.map((entity) => entity.balance)
 			.sort((a, b) => a - b);
 		expect(rolloverBalances).toEqual([INCLUDED_USAGE - 40, INCLUDED_USAGE]);
-		// ── Contract: entity rollover carries the Month expiry too ──────
 		expect(rolloverRows[0].expires_at).toBe(addMonths(pastTime, 1).getTime());
 	},
 );

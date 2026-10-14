@@ -35,7 +35,6 @@ export type ReplaceCandidateRow = CycleEnrichmentCandidate & {
 type SelectReplaceCandidateRowsArgs = {
 	internalCustomerIds: string[];
 	scope: OperationScope;
-	/** The minted to-entitlement; drives the sibling anchor's interval match. */
 	entitlement: EntitlementWithFeature;
 	filter: EntitlementPriceFilter;
 	excludeEntitlementId: string;
@@ -45,7 +44,6 @@ type SelectReplaceCandidateRowsArgs = {
 	limit: number;
 };
 
-/** Selects scoped live from-rows matching the compiled filter and cycle anchors. */
 export const buildReplaceCandidateRowsQuery = ({
 	internalCustomerIds,
 	scope,

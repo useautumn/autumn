@@ -12,13 +12,11 @@ import {
 	customerProductToPaidLicenseQuantities,
 } from "./customerProductPaidQuantities";
 
-/** A saved plan plus what the customer actually paid for, since invoices bill exclusive of grants. */
 export type InvoiceExistingPlan = CustomerStatePlan & {
 	paidFeatureQuantities: Record<string, number>;
 	paidLicenseQuantities: Record<string, number>;
 };
 
-/** The customer's active plans, offered by "Copy existing plans". */
 export function getInvoiceExistingPlans({
 	customer,
 	products,
@@ -37,7 +35,6 @@ export function getInvoiceExistingPlans({
 	}));
 }
 
-/** A customer's saved plan as an invoice row, keeping its customisations and scope. */
 export function customerStatePlanToInvoicePlan({
 	plan,
 }: {

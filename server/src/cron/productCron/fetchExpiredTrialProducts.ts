@@ -48,7 +48,6 @@ export const fetchExpiredTrialProducts = async ({
 	db: DrizzleCli;
 	nowMs?: number;
 	internalCustomerId?: string;
-	/** Rows already attempted this run, so ones left for a retry don't block newer rows. */
 	excludeCustomerProductIds?: string[];
 }) => {
 	const hasNoPrices = notExists(
@@ -58,7 +57,6 @@ export const fetchExpiredTrialProducts = async ({
 			.where(eq(customerPrices.customer_product_id, customerProducts.id)),
 	);
 
-	// Autumn writes on_trial_end "bill" only for no-card trials it runs without Stripe; legacy trials stay null.
 	const isAutumnManagedBillTrial = and(
 		eq(customerProducts.on_trial_end, "bill"),
 		sql`coalesce(cardinality(${customerProducts.subscription_ids}), 0) = 0`,

@@ -3,12 +3,6 @@ import { mdxToMarkdown } from "./mdxToMarkdown.js";
 
 const SNIPPET_IMPORT = /^import (\w+) from "(\/snippets\/[^"]+)";?\n/gm;
 
-/**
- * Import a docs `.mdx` page as clean markdown, prefixed with its frontmatter
- * `title` as a heading so the section isn't headless in the agent output.
- * Snippet imports (`import X from "/snippets/…"` + `<X />`) inline when a
- * `readSnippet` is given; otherwise they pass through untouched.
- */
 export const docsPageToMarkdown = ({
 	path,
 	text,

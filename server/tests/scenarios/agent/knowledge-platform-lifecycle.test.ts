@@ -35,7 +35,6 @@ test(`${chalk.yellowBright("agent: knowledge platform customer mid-cycle trialin
 	const customer = await autumnV2_2.customers.get<ApiCustomerV5>(customerId);
 	const subscription = getSubscription(customer, scaleTrial.id);
 
-	// Advanced 7 days into a 14-day trial: still trialing, ends in the future.
 	expect(subscription?.trial_ends_at).toBeGreaterThan(Date.now());
 });
 
@@ -60,7 +59,6 @@ test(`${chalk.yellowBright("agent: knowledge platform customer on paid scale")}`
 	const customer = await autumnV2_2.customers.get<ApiCustomerV5>(customerId);
 	const subscription = getSubscription(customer, plans.scale.id);
 
-	// Paid scale: active subscription, not trialing.
 	expect(subscription).toBeDefined();
 	expect(subscription?.trial_ends_at).toBeFalsy();
 });

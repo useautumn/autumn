@@ -45,9 +45,6 @@ const Testimonials = () => {
 	const progressRef = useRef<HTMLDivElement | null>(null);
 	const [canScrollLeft, setCanScrollLeft] = useState(false);
 	const [canScrollRight, setCanScrollRight] = useState(true);
-	// Only mount the hover-effect video on pointer:hover devices. Without this
-	// every mobile visitor downloads one copy of the clip per testimonial (6×
-	// the file) even though the hover effect they're gated on never triggers.
 	const [isHoverDevice, setIsHoverDevice] = useState(false);
 	useEffect(() => {
 		setIsHoverDevice(window.matchMedia("(hover: hover)").matches);

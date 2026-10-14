@@ -10,14 +10,6 @@ import { CusService } from "../../../CusService.js";
 
 export type ExecuteAutumnResult = { type: "created" } | { type: "existing" };
 
-/**
- * Execute the Autumn (DB) part of customer creation: one plan that inserts the customer and its
- * default products, or finds another request created it first and returns the existing customer.
- *
- * Does NOT emit webhooks — the caller emits after the Stripe customer id is
- * persisted, so webhook consumers calling customers.get see a non-null
- * stripe_id (see createCustomerWithDefaults).
- */
 export const executeAutumnCreateCustomerPlan = async ({
 	ctx,
 	context,

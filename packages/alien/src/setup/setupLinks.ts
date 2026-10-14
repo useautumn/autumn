@@ -34,7 +34,6 @@ const isActiveSetupLinkOf = ({
 	apiKey.deploymentGroupId === deploymentGroupId &&
 	apiKey.revokedAt === null;
 
-/** alien's key list has no group filter, so this pages through the project's keys. */
 const listSetupLinkKeyIds = async ({
 	api,
 	deploymentGroupId,
@@ -59,7 +58,6 @@ const listSetupLinkKeyIds = async ({
 	return keyIds;
 };
 
-/** A key our role may not revoke is left to expire (every link we mint does, within a week); any other failure still fails. */
 const revokeSetupLink = async ({
 	ctx: { api, logger },
 	keyId,
@@ -88,8 +86,6 @@ const revokeSetupLink = async ({
 	}
 };
 
-/** Every setup link is its own group-scoped key. A stack's delete calls alien with the link it was launched from,
- *  so the links stay until alien has deleted every deployment of the group. */
 export const revokeSetupLinksOnceDeleted = async ({
 	ctx,
 	deploymentGroupId,

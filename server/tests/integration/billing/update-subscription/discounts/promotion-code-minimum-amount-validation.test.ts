@@ -1,14 +1,3 @@
-/**
- * TDD test for validating Stripe promotion-code minimum spend before a
- * subscription update executes Stripe writes.
- *
- * Red-failure mode:
- *  - update charges and stores a rollback invoice before Stripe rejects the promo.
- *
- * Green-success criteria:
- *  - update rejects up front and leaves the customer's invoice list unchanged.
- */
-
 import { expect, test } from "bun:test";
 import type {
 	ApiCustomerV3,

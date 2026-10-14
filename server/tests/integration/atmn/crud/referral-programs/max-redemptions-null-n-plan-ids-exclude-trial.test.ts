@@ -1,18 +1,3 @@
-/**
- * atmn crud/referral programs — [max_redemptions null, n] [plan_ids] [exclude_trial]
- *
- * The optional fields of a program, through the full-state config. A config
- * states the whole row, so a field it stops naming is cleared — which is only
- * true if the update reaches the column as SQL NULL.
- *
- * Red (before the fix):
- *  - dropping maxRedemptions left the stored limit in place, because the merge
- *    turned an explicit null into undefined and the update dropped the key
- *
- * Green (after):
- *  - the round trip is stable in both directions: set, clear, set again
- */
-
 import { expect, test } from "bun:test";
 import {
 	configBody,
@@ -77,7 +62,6 @@ test.concurrent(
 			await scenario.push();
 			await expectRoundTrip({ scenario });
 
-			// Dropping both fields from the config clears the stored values.
 			scenario.writeConfig(atmnConfigSource({ body: config({ options: "" }) }));
 			await scenario.push();
 
@@ -88,13 +72,11 @@ test.concurrent(
 			expect(program0?.maxRedemptions ?? null).toBeNull();
 			expect(program0?.excludeTrial ?? false).toBe(false);
 
-			// And the cleared state is itself stable: no phantom diff.
 			await expectPreviewNone({
 				client: scenario.client,
 				wire: await scenario.wireFromConfig(),
 			});
 
-			// Setting them again moves them back.
 			scenario.writeConfig(
 				atmnConfigSource({
 					body: config({

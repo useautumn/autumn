@@ -1,6 +1,3 @@
-// Expiring prepaid one-off plan items: each purchase lands in a loose, expiring grant beside a
-// 0-balance keystone row; grants outlive plan changes and churn.
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV5 } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
@@ -33,7 +30,6 @@ test.concurrent(
 		const before = await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
 		expect(before.balances[TestFeature.Messages].remaining).toBe(100);
 
-		// Backdate the grant rather than wait two months.
 		await ctx.db.execute(sql`
 			UPDATE customer_entitlements
 			SET expires_at = ${Date.now() - 1000}
@@ -48,12 +44,9 @@ test.concurrent(
 		`);
 		await invalidateCachedFullSubject({ ctx, customerId });
 
-		// elapsed credits are not spendable
 		const after = await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
 		expect(after.balances[TestFeature.Messages]?.remaining ?? 0).toBe(0);
 
-		// the sweep deletes the elapsed row, scoped to this customer because the
-		// suite runs concurrently against a shared database
 		const scoped = await CusService.getFull({
 			ctx,
 			idOrInternalId: customerId,
@@ -71,7 +64,6 @@ test.concurrent(
 		});
 		const { keystones, grants } = messageRows({ fullCustomer, planId });
 		expect(grants.length).toBe(0);
-		// the keystone survives, so the item can still be topped up
 		expect(keystones.length).toBe(1);
 	},
 );
@@ -84,8 +76,6 @@ test.concurrent(
 		const { autumnV2_1, autumnV2_3, ctx } = await initScenario({
 			customerId,
 			setup: [
-				// The overage rebalance only runs for orgs with this flag, and it
-				// zeroes every one-off prepaid row it claims — the split has to win.
 				s.platform.create({
 					userEmail: `expiry-pfo-${Math.random().toString(36).slice(2, 8)}@autumn.test`,
 					configOverrides: { persist_free_overage: true },
@@ -110,7 +100,6 @@ test.concurrent(
 		});
 		const { keystones, grants } = messageRows({ fullCustomer, planId });
 
-		// the grant exists and expires; the keystone was not left holding 100
 		expect(grants.length).toBe(1);
 		expect(grants[0].balance).toBe(100);
 		expect(grants[0].expires_at).toBeGreaterThan(Date.now());

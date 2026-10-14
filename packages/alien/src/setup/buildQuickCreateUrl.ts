@@ -4,7 +4,6 @@ import type {
 	AlienNetwork,
 } from "../types/alienClient.js";
 
-/** The template's network parameters; a new VPC serves its endpoints over the internet, an existing one keeps them private to it. */
 const networkToStackParams = ({
 	network,
 }: {
@@ -22,14 +21,12 @@ const networkToStackParams = ({
 	};
 };
 
-/** A resource id as alien's template generator names its parameters: alphanumeric runs, each capitalised. */
 const toTemplateIdentifier = (id: string) =>
 	id
 		.split(/[^a-zA-Z0-9]+/)
 		.map((part) => part.charAt(0).toUpperCase() + part.slice(1))
 		.join("");
 
-/** Each pool's machine type and count, as the template names them: `Compute<Pool>Machine(s)`. */
 const poolsToStackParams = ({
 	pools,
 }: {
@@ -45,7 +42,6 @@ const poolsToStackParams = ({
 		}),
 	);
 
-/** Each container's allocation, as a release with resource ranges names it: `Container<Id>Cpu` and `Container<Id>Memory`. */
 const containersToStackParams = ({
 	containers,
 }: {
@@ -61,7 +57,6 @@ const containersToStackParams = ({
 		}),
 	);
 
-/** CloudFormation's quick-create page in `region`, prefilled; the setup link's `token` registers the stack against that link, and the template needs alien's managing role. */
 export const buildQuickCreateUrl = ({
 	templateUrl,
 	region,

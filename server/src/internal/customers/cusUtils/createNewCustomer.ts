@@ -44,7 +44,6 @@ const getGroupToDefaultProd = async ({
 		if (defaultProdsInGroup.length === 0) continue;
 
 		defaultProdsInGroup.sort((a, b) => {
-			// 1. If a is default trial, go first
 			if (isDefaultTrialFullProduct({ product: a })) return -1;
 
 			if (!isFreeProduct(a.prices)) return -1;
@@ -119,7 +118,6 @@ export const createNewCustomer = async ({
 		currency: parsedCustomer.currency?.toLowerCase() || null,
 	};
 
-	// Check if stripeCli exists
 	if (nonFreeProds.length > 0) {
 		createStripeCli({ org, env });
 	}
@@ -144,7 +142,6 @@ export const createNewCustomer = async ({
 		defaultProds,
 	});
 
-	// Filter to only the specified group if defaultGroup is provided
 	const groupsToProcess = defaultGroup
 		? Object.keys(groupToDefaultProd).filter((g) => g === defaultGroup)
 		: Object.keys(groupToDefaultProd);

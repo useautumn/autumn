@@ -20,7 +20,6 @@ import {
 	topic,
 } from "./receipt-replay-fixtures.js";
 
-// A restored receipt can outlive its live copy; replay must apply a committed successor, not conflict.
 describe("receipt reuse during checkpoint replay", () => {
 	test.concurrent.each([
 		"before_first_track",
@@ -77,7 +76,6 @@ describe("receipt reuse during checkpoint replay", () => {
 						},
 					}),
 				});
-				// Once the initialize receipt expires, a replay only sees that state exists.
 				expect(initializationRetry).toMatchObject({
 					result:
 						checkpointCut === "after_expiry"

@@ -9,7 +9,6 @@ import { RolloverService } from "../../../../customers/cusProducts/cusEnts/cusRo
 import { CusPriceService } from "../../../../customers/cusProducts/cusPrices/CusPriceService";
 import { insertCustomerLicensePools } from "./insertCustomerLicensePools";
 
-/** A plan's new products with their grants, prices and carried rollovers: the rows the balance worker holds. */
 export const insertCustomerProductRows = async ({
 	ctx,
 	customerProducts,
@@ -24,25 +23,21 @@ export const insertCustomerProductRows = async ({
 		(cusProduct) => cusProduct.customer_prices,
 	);
 
-	// 4. Insert cusProducts
 	await CusProductService.insert({
 		db: ctx.db,
 		data: customerProducts,
 	});
 
-	// 2. Insert cusEnts
 	await CusEntService.insert({
 		ctx,
 		data: cusEnts,
 	});
 
-	// 3. Insert cusPrices
 	await CusPriceService.insert({
 		db: ctx.db,
 		data: cusPrices,
 	});
 
-	// 1. Upsert rollovers (use upsert to handle carried-over rollovers from plan switches)
 	const rolloverInsertPromises = cusEnts.flatMap((cusEnt) => {
 		const cusProduct = customerProducts.find(
 			(cusProduct) => cusProduct.id === cusEnt.customer_product_id,
@@ -53,9 +48,6 @@ export const insertCustomerProductRows = async ({
 			RolloverService.insert({
 				ctx,
 				rows: cusEnt.rollovers,
-				// New cusEnt — no pre-existing DB rollovers. Pass [] so the max-cap
-				// check in clearExcessRollovers doesn't double-count the rows we're
-				// inserting (cusEnt.rollovers already holds the same objects as `rows`).
 				fullCusEnt: {
 					...cusEnt,
 					customer_product: cusProduct ?? null,
@@ -67,7 +59,6 @@ export const insertCustomerProductRows = async ({
 	await Promise.all(rolloverInsertPromises);
 };
 
-/** New products and the license pools born with them. */
 export const insertNewCusProducts = async ({
 	ctx,
 	newCusProducts,

@@ -8,8 +8,6 @@ import { buildPlanItemChangesFromDiff } from "./buildPlanItemChanges.js";
 import { buildPlanPreviousAttributes } from "./buildPlanPreviousAttributes.js";
 import { buildPriceChange } from "./buildPriceChange.js";
 
-/** Core plan diff (price, items, trial, scalars). Undefined when either side
- * is missing or nothing changed. */
 export const buildPlanChangeCore = ({
 	from,
 	to,

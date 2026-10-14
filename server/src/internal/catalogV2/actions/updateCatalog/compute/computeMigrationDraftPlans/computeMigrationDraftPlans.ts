@@ -9,10 +9,6 @@ import type { ProductStatesContext } from "@/internal/catalogV2/actions/updateCa
 import type { RemovePlanPlan } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogPlan";
 import type { UpsertProductPlan } from "@/internal/catalogV2/actions/updateCatalog/types/upsertProductPlan";
 
-/**
- * One draft covering this row's own plan diff plus its license-link diffs.
- * Empty diffs / mints never become targets.
- */
 export const computeMigrationDraftPlans = ({
 	upsertProductPlans,
 	params,

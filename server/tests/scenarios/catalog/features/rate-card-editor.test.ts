@@ -8,12 +8,6 @@ import {
 	resetCatalogPlans,
 } from "../utils/catalogScenario.js";
 
-/**
- * Dashboard fixture for QAing the rate-card editor release: per-row
- * dimensions, expand-on-select, removing the last row, no Stripe product
- * field, and everything visible to non-admins.
- */
-
 const smallId = "qa-rc-small";
 const largeId = "qa-rc-large";
 const tokensId = "qa-rc-tokens";

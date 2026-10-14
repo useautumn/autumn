@@ -19,10 +19,6 @@ export type PhaseStart = SyncPhase["starts_at"];
  * two drift by minutes on the same phase. */
 export const MAX_PHASE_START_DRIFT_MS = 24 * 60 * 60 * 1000;
 
-/**
- * Customer products store their entity by internal id — resolve it to the id
- * the scope picker uses, keeping the saved id for entities past the loaded page.
- */
 export const resolveEntityId = ({
 	entityId,
 	entities,
@@ -45,7 +41,6 @@ const findCopiesOnPhase = ({
 	customerProducts: FullCusProduct[];
 	startsAt: PhaseStart;
 }): FullCusProduct[] => {
-	// Past-due plans are still live, so they belong to the current phase too.
 	if (startsAt === "now")
 		return customerProducts.filter((customerProduct) =>
 			ACTIVE_STATUSES.includes(customerProduct.status),
@@ -73,7 +68,6 @@ const findCopiesOnPhase = ({
 	];
 };
 
-/** One row can span several phases, so a phase also holds the rows that started earlier and run past it. */
 const runsAcross = ({
 	customerProduct,
 	startsAt,
@@ -92,7 +86,6 @@ const runsAcross = ({
 	return isLiveOrScheduled && startedBefore && endsAfter;
 };
 
-/** A saved plan, as the customer holds it today. */
 const savedPlanToCustomerStatePlan = ({
 	customerProduct,
 	entities,
@@ -126,10 +119,6 @@ export const toCustomerStatePhase = ({
 	plans,
 });
 
-/**
- * The customer state the saved plans imply, cut into the given phases. With
- * several phases, a live plan that never ends runs across all of them.
- */
 export const customerProductsToCustomerState = ({
 	customerProducts,
 	phaseStarts,

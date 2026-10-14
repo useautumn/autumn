@@ -73,8 +73,6 @@ export const EventsBarChart = memo(function EventsBarChart({
 	const overflowItems = items.slice(MAX_TOOLTIP_ITEMS);
 	const overflowSum = overflowItems.reduce((sum, item) => sum + item.value, 0);
 
-	// Memoized so tooltip-driven re-renders never touch the recharts tree.
-	// Recharts stacks bars in mount order, so a changed series set must remount to restack.
 	const seriesSetKey = chartConfig.map((series) => series.yKey).join("|");
 
 	const { categoryGap, segmentGap } = barLayout({
@@ -100,9 +98,7 @@ export const EventsBarChart = memo(function EventsBarChart({
 						dataKey={series.yKey}
 						stackId="a"
 						fill={series.fill}
-						// Read as currentColor by the hover dim, which mixes it toward the background.
 						color={series.fill}
-						// A background-colored stroke reads as a gap between stacked segments.
 						stroke="var(--background)"
 						strokeWidth={segmentGap}
 						radius={si === chartConfig.length - 1 ? TOP_RADIUS : undefined}
@@ -135,7 +131,6 @@ export const EventsBarChart = memo(function EventsBarChart({
 			ref={containerRef}
 			className={cn(
 				"h-full w-full relative",
-				// Greyed with an opaque mix, not opacity, so the gridlines stay hidden behind the bars.
 				"[&[data-segment-hover]_.recharts-bar-rectangle:not(:hover)_path]:[fill:color-mix(in_oklab,currentColor_35%,var(--background))]",
 			)}
 			onMouseMove={handleMouseMove}
@@ -143,8 +138,6 @@ export const EventsBarChart = memo(function EventsBarChart({
 			onClick={handleChartClick}
 		>
 			{chart}
-			{/* Portaled: sticky table headers and animated card wrappers otherwise
-			    win the stacking-context fight regardless of z-index. */}
 			{tooltipData &&
 				hasTooltipAnchor &&
 				createPortal(

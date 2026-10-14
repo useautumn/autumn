@@ -14,7 +14,6 @@ interface PricingConfigSheetProps {
 	config: AgentPricingConfig | null;
 }
 
-/** Strip out display fields from features for cleaner JSON output */
 function filterConfigForDisplay({
 	config,
 }: {
@@ -22,10 +21,6 @@ function filterConfigForDisplay({
 }): AgentPricingConfig {
 	return {
 		...config,
-		// features: config.features.map((feature) => {
-		// 	const { display, ...rest } = feature;
-		// 	return rest as AgentFeature;
-		// }),
 	};
 }
 

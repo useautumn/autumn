@@ -1,21 +1,3 @@
-/**
- * Persistent Stripe sub-account POOL for the swarm.
- *
- * Pool state lives IN Stripe (no local file is authoritative): every pooled
- * sub-account carries `metadata.autumn_tw_pool="1"` and
- * `metadata.autumn_tw_pool_state=clean|dirty|nuking`. A run CLAIMS clean
- * accounts (list newest-first + mark dirty), tops up by creating tagged
- * accounts for any shortfall, and at teardown a detached sandbox marks each
- * used account `nuking`, NUKES its contents, and flips the state back to clean
- * (scripts/tw/image/nuke-accounts.mjs). A claim finding too few clean accounts
- * while a recent nuke is in flight WAITS for it instead of top-up-creating.
- *
- * Claiming is a read-modify-write race across teammates' machines, so callers
- * MUST hold the `stripe-pool` global lock (helpers/lock.ts) around
- * {@link claimPoolAccounts}. The async nuke needs no lock — it only touches
- * accounts its own run already claimed.
- */
-
 import pLimit from "p-limit";
 import type { OwnerTag } from "../types.js";
 import { createSandboxSubAccount } from "./stripe.js";
@@ -31,25 +13,18 @@ import {
 	withStripeRequestSlot,
 } from "./stripeRequestBudget.js";
 
-/** Stripe rate-limits per platform key, so claim writes are bounded per key. */
 const CLAIM_CONCURRENCY_PER_KEY = 4;
 const POOL_LIST_PAGE = 100;
-/** Stop paging a key once this many pages yield no clean pool accounts. */
 const MAX_POOL_LIST_PAGES = 10;
-/** `accounts.list` latency scales with page size (~0.8s at 3, ~8s at 100) and pool
- * accounts list first, so page one is sized to the claim plus dirty/nuking headroom. */
 const FIRST_PAGE_HEADROOM = 5;
 
 export const POOL_TAG = "autumn_tw_pool";
 export const POOL_STATE_TAG = "autumn_tw_pool_state";
 export const NUKING_AT_TAG = "autumn_tw_nuking_at";
-/** A `nuking` account older than this is a crashed nuke, not one worth waiting on. */
 export const NUKE_IN_PROGRESS_WINDOW_MS = 10 * 60 * 1000;
-/** Give a prior run's in-flight nuke this long to free clean accounts, then top-up-create. */
 const TEARDOWN_WAIT_TIMEOUT_MS = 4 * 60 * 1000;
 const TEARDOWN_WAIT_POLL_MS = 10_000;
 
-/** Whether a `nuking` account's timestamp marks a live (recent) nuke. */
 export const isNukeInProgress = (nukingAtRaw: string | undefined): boolean => {
 	const nukingAt = Number(nukingAtRaw);
 	return (
@@ -58,7 +33,6 @@ export const isNukeInProgress = (nukingAtRaw: string | undefined): boolean => {
 	);
 };
 
-/** Metadata patch marking a pooled account claimed by this run. */
 const dirtyPatch = (owner: string, runId: string): Record<string, string> => ({
 	[POOL_TAG]: "1",
 	[POOL_STATE_TAG]: "dirty",
@@ -67,10 +41,6 @@ const dirtyPatch = (owner: string, runId: string): Record<string, string> => ({
 	autumn_tw_claimed_at: String(Date.now()),
 });
 
-/**
- * Scan one key's pool: clean account ids (newest-first, up to `want`) plus how
- * many accounts a live nuke currently holds (`nuking` with a recent timestamp).
- */
 const scanPoolAccounts = async (
 	keyIndex: number,
 	want: number,
@@ -80,8 +50,6 @@ const scanPoolAccounts = async (
 	let nukingInProgress = 0;
 	let scanned = 0;
 	let startingAfter: string | undefined;
-	// Newest-first and pool accounts are recent; cap the scan so a huge legacy
-	// platform account can't stall the claim.
 	while (scanned < MAX_POOL_LIST_PAGES * POOL_LIST_PAGE) {
 		const limit =
 			scanned === 0
@@ -124,12 +92,6 @@ const scanPoolAccounts = async (
 const sleep = (ms: number): Promise<void> =>
 	new Promise((resolve) => setTimeout(resolve, ms));
 
-/**
- * Clean accounts for one key, WAITING on a prior run's in-flight nuke when the
- * pool is short (those accounts flip back to clean in seconds-to-minutes, and
- * top-up-creating instead would grow the pool for nothing). Falls through to
- * the shortfall-create path after the timeout or when no nuke is live.
- */
 const listCleanAccountsWaitingForNuke = async (
 	keyIndex: number,
 	want: number,
@@ -165,15 +127,11 @@ export type PoolCensus = {
 	keyIndex: number;
 	clean: number;
 	dirty: number;
-	/** `nuking` accounts with a live (recent) timestamp — a teardown in flight. */
 	nukingInProgress: number;
-	/** `nuking` accounts with a stale/absent timestamp — a crashed nuke. */
 	nukingStale: number;
-	/** Epoch-ms of the oldest live nuke, when any. */
 	oldestNukingAt?: number;
 };
 
-/** Per-key pool state tally (for `bun tw doctor`). Capped scan, read-only. */
 export const poolCensus = async (
 	maxPages = MAX_POOL_LIST_PAGES,
 ): Promise<PoolCensus[]> =>
@@ -220,20 +178,11 @@ export const poolCensus = async (
 	);
 
 export type ClaimResult = {
-	/** Worker idx → encoded `acct_*::keyIndex`, key-aligned with stripeKeyForWorker. */
 	byWorker: string[];
 	reused: number;
 	created: number;
 };
 
-/**
- * Claim `count` accounts (one per worker idx, on that idx's round-robin key):
- * reuse clean pool accounts first, create tagged ones for the shortfall. Marks
- * every claimed account dirty BEFORE returning (crash-safe: a dead run leaves
- * dirty accounts, which the next teardown's stale sweep re-nukes).
- *
- * MUST be called under the `stripe-pool` global lock.
- */
 export const claimPoolAccounts = async ({
 	count,
 	owner,
@@ -249,7 +198,6 @@ export const claimPoolAccounts = async ({
 	orgNameForIdx: (idx: number) => string;
 	log?: (line: string) => void;
 } & OwnerTag): Promise<ClaimResult> => {
-	// Workers per key, mirroring stripeKeyForWorker's round-robin.
 	const idxByKey = new Map<number, number[]>();
 	for (let idx = 0; idx < count; idx++) {
 		const { keyIndex } = stripeKeyForWorker(idx);

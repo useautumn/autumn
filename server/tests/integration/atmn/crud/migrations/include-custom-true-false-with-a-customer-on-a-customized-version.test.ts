@@ -1,11 +1,3 @@
-/**
- * atmn crud/migrations — include_custom [true, false] with a customer on a customized version → the draft still targets the version; the run-time filter includes / skips custom rows
- *
- * the `versionedPro` base config: base price, prepaid seat item, usage item, trial, seat license; every line has customers attached
- *
- * One line of plans/atmn-v3/07_tests.md. [a, b] is a matrix looped INSIDE this file.
- */
-
 import { expect, test } from "bun:test";
 import { seedVersionableCustomer } from "@tests/integration/catalog-v2/plans/migrations/utils/seedVersionableCustomer.js";
 import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
@@ -33,9 +25,6 @@ const targetsProV1 = (migrations: PreviewMigrations): boolean =>
 		),
 	);
 
-// `atmn()`'s wire always sends `migration: { draft: true }` with no
-// `include_custom` knob, so this axis is driven by calling the client with a
-// hand-built wire rather than through the CLI's push.
 for (const includeCustom of [true, false] as const) {
 	test.concurrent(
 		`${chalk.yellowBright(`atmn crud/migrations: migration.include_custom ${includeCustom} — a customized version's customer is ${includeCustom ? "matched" : "skipped"}`)}`,
@@ -83,9 +72,6 @@ for (const includeCustom of [true, false] as const) {
 					customWire as any,
 				)) as { migrations?: PreviewMigrations };
 
-				// include_custom shapes the migration's run-time filter, never which
-				// versions the draft targets: the customized customer's version is
-				// still listed, and custom rows are excluded when the migration runs.
 				expect(targetsProV1(preview.migrations)).toBe(true);
 				type DraftShape = {
 					includeCustom?: boolean;

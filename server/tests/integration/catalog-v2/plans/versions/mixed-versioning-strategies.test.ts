@@ -1,10 +1,3 @@
-/**
- * catalogV2.update — mixed versioning strategies in one call.
- *
- * Plan A new_version, B all_versions, C pinned in-place, D create. Each
- * plan's outcome is independent. Preview versioning blocks match the update.
- */
-
 import { test } from "bun:test";
 import { ResetInterval } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";

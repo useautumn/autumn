@@ -11,11 +11,6 @@ const getSubscriptionStatusKey = (cp: ApiSubscriptionV1) => {
 	return cp.status;
 };
 
-/**
- * Merges subscription responses by plan_id + status.
- * Subscriptions for the same plan in the same status group are combined:
- * quantities are summed, started_at takes the earliest, canceled_at takes the latest non-null.
- */
 export const mergeSubscriptionResponses = ({
 	subscriptions,
 }: {

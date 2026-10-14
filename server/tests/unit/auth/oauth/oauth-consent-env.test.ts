@@ -17,7 +17,6 @@ afterEach(() => {
 	process.env.ATMN_OAUTH_CLIENT_IDS = originalAtmnClientIds;
 });
 
-/** The consent handler's only db read is the client behind `client_id`. */
 const stubDb = (clientRow: Record<string, unknown> | null) =>
 	({
 		select: () => ({

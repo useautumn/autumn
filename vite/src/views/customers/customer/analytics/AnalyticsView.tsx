@@ -48,13 +48,10 @@ import {
 } from "./utils/transformGroupedChartData";
 
 const MAX_CHART_SERIES = 30;
-// The last result stays readable behind a load that only changes the data.
 const STALE_CHART_OPACITY = 0.35;
 const STALE_TABLE_OPACITY = 0.5;
-// Matches the default of charting the top three events.
 const PLACEHOLDER_TABLE_ROWS = 3;
 
-/** Pivots aggregate rows into one column per group×feature. */
 const toChartSeries = ({
 	events,
 	groupBy,
@@ -66,7 +63,6 @@ const toChartSeries = ({
 	chartGroupBy: string | null;
 	isDeducted: boolean;
 }): EventsData => {
-	// Dropping all-zero rows first skips ~95% of a grouped response before the pivot.
 	const nonZeroEvents = dropZeroRowsKeepingPeriods({
 		events,
 		groupColumn: groupBy ? groupByToColumn({ groupBy }) : null,
@@ -75,7 +71,6 @@ const toChartSeries = ({
 		events: nonZeroEvents,
 		groupBy: chartGroupBy,
 	});
-	// The pipe caps groups per event, so multi-event charts still need a chart-wide cap.
 	const series = isDeducted ? pivoted : dropZeroSeries({ events: pivoted });
 	return trimToTopSeries({ events: series, maxSeries: MAX_CHART_SERIES });
 };
@@ -115,15 +110,12 @@ export const AnalyticsView = () => {
 
 	const isDeducted = aggregateOn === "deducted";
 
-	// Own-vs-borrowed only means something per entity; other groupings ignore it.
 	const splitSpillover = groupBy === "entity_id";
 
 	useEffect(() => {
 		setHiddenGroupValues(new Set());
 	}, [groupBy, isDeducted]);
 
-	// The deductions pipe only emits buckets it has rows for; the events
-	// aggregation beside it is already zero-filled over the same window.
 	const deductionEvents = useMemo(
 		() =>
 			isDeducted && deductions?.length
@@ -141,9 +133,7 @@ export const AnalyticsView = () => {
 		[isDeducted, deductions, splitSpillover, events, utcPeriods],
 	);
 
-	// Extract unique group values from events data for filtering
 	const availableGroupValues = useMemo(() => {
-		// Deduction rows are pre-pivoted, so their groups live in the series keys.
 		if (isDeducted) {
 			return deductionGroupValues({ events: deductionEvents });
 		}
@@ -152,8 +142,6 @@ export const AnalyticsView = () => {
 		}
 
 		const groupByColumn = groupByToColumn({ groupBy });
-		// plan_id treats empty-string as a meaningful "no plan" bucket; for
-		// property grouping, empty means the property is absent and we drop it.
 		const allowEmpty = groupBy === "plan_id";
 		const uniqueValues = new Set<string>();
 
@@ -169,20 +157,13 @@ export const AnalyticsView = () => {
 
 	const { rawEvents } = useRawAnalyticsData();
 
-	// Extract property keys from raw events for the group by dropdown
 	const propertyKeys = useMemo(() => {
 		return extractPropertyKeys({ rawEvents: rawEvents?.data });
 	}, [rawEvents?.data]);
 
-	// Deducted mode reuses the whole pipeline below: deductionsToEventsData
-	// emits pre-pivoted feature__group columns, transformGroupedData no-ops
-	// on them (no raw group column), and generateChartConfig parses the
-	// names it already knows. Grouping defaults to the source feature — the
-	// question the mode exists to answer.
 	const chartGroupBy = isDeducted ? (groupBy ?? SOURCE_FEATURE_GROUP) : groupBy;
 	const chartSource = isDeducted ? deductionEvents : events;
 
-	// Coloured before hiding groups, so hiding one never repaints the others.
 	const seriesColors = useMemo(() => {
 		if (!chartSource) return {};
 		return assignSeriesColors({
@@ -196,7 +177,6 @@ export const AnalyticsView = () => {
 		});
 	}, [chartSource, groupBy, chartGroupBy, isDeducted, responseEventNames]);
 
-	// Transform and configure chart data
 	const { chartData, chartConfig } = useMemo(() => {
 		if (!chartSource) {
 			return { chartData: null, chartConfig: null };
@@ -261,7 +241,6 @@ export const AnalyticsView = () => {
 		return niceAxisTicks({ max: Math.max(...totals, 1) });
 	}, [chartData, chartConfig]);
 
-	// Each selected event's own colour, known before data lands and kept when grouping recolours its series.
 	const eventColors = useMemo(
 		() =>
 			Object.fromEntries(
@@ -273,7 +252,6 @@ export const AnalyticsView = () => {
 		[responseEventNames],
 	);
 
-	// A group can own several series (one per event); its first colour stands for it.
 	const groupColors = useMemo(() => {
 		const colorsByGroup: Record<string, string> = {};
 		for (const series of chartConfig ?? []) {
@@ -390,7 +368,6 @@ export const AnalyticsView = () => {
 	const isShowingStubs = loadingState === "stubs";
 	const displayedChart = freshChart ?? (isStale ? lastChart : null);
 
-	// The new range's bins, known before any data: stubs on the chart, columns in the table.
 	const loadingBinStarts = useMemo(
 		() =>
 			isShowingStubs

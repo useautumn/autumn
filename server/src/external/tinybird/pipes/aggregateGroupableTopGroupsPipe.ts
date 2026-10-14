@@ -22,7 +22,6 @@ export type AggregateGroupableTopGroupsPipeRow = z.infer<
 	typeof aggregateGroupableTopGroupsPipeResponseSchema
 >;
 
-/** Top customers or property values per event over a whole window, for org-wide window-ranked grouping */
 export const createAggregateGroupableTopGroupsPipe = (tb: Tinybird) =>
 	tb.buildPipe({
 		pipe: "aggregate_groupable_top_groups",

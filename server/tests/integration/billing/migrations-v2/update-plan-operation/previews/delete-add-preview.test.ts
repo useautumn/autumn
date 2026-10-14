@@ -1,26 +1,3 @@
-/**
- * TDD coverage for update_plan delete/add preview output.
- *
- * Contract under test:
- *   New types/fields:
- *     - plan_changes: structured array of plan-change objects, never JSON strings.
- *     - plan_changes[i].item_changes: structured array of item-change objects.
- *     - balance_changes: structured balance snapshots with sparse previous_attributes.
- *   New endpoints:
- *     - None; existing migrations dry-run item events return response.preview.
- *   New behaviors:
- *     - Monthly credits -> one-off prepaid credits emits created/deleted
- *       item_changes and a balance_change whose post-state has next_reset_at: null.
- *     - Monthly credits included +100 emits created/deleted item_changes and a
- *       balance_change for credits reflecting the +100 grant/remaining delta.
- *   Side effects:
- *     - Dry-run preview does not execute billing changes.
- *
- * Pre-impl red: Tinybird-backed event responses can expose nested preview
- * fields as JSON strings, and delete/add item changes may be empty.
- * Post-impl green: preview consumers receive structured plan/item/balance changes.
- */
-
 import { expect, test } from "bun:test";
 import { BillingInterval, BillingMethod, ResetInterval } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features";

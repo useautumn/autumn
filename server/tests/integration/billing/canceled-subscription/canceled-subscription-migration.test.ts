@@ -1,31 +1,3 @@
-/**
- * A migration that lands on a customer product whose Stripe subscription is
- * already `canceled` must apply its Autumn-side changes without billing and
- * without spawning a replacement subscription.
- *
- * Contract under test:
- *   New behaviors:
- *     - update_plan add_items on a canceled sub
- *         -> items applied, no new Stripe sub, no new invoice, sub link preserved
- *     - update_plan customize.price with `proration: true` on a canceled sub
- *         -> price applied, NO charge — while an identical migration on a live
- *            sub (the control) DOES charge, proving the assertion is not vacuous
- *   Side effects:
- *     - no additional Stripe subscription on the drifted customer
- *     - no additional Autumn invoice row on the drifted customer
- *
- * Note on `proration: true`: migrations are charge-free by default, so a bare
- * "no charge" assertion would pass even with the guard removed. The control
- * customer is what makes this test meaningful.
- *
- * Pre-impl red: both cases fail in `fetchStripeSubscriptionForBilling`, which
- * throws `Subscription <id> is canceled` (400) before the migration can run.
- * Post-impl green: the fetch reports the canceled id, so
- * `setupUpdatePlanProductContext` sets skipBillingChanges (its existing
- * `stripeSubscription === undefined` rule) and `contextBySubscriptionId` drops
- * the context before Stripe is ever evaluated.
- */
-
 import { expect, test } from "bun:test";
 import {
 	type ApiCustomerV3,
@@ -60,7 +32,6 @@ const getInvoiceCount = async ({
 	(await autumnV1.customers.get<ApiCustomerV3>(customerId)).invoices?.length ??
 	0;
 
-/** Fixed-price amounts on the customer's active product, ascending. */
 const getFixedPriceAmounts = async ({
 	ctx,
 	customerId,
@@ -90,10 +61,6 @@ const getFixedPriceAmounts = async ({
 		.sort((a, b) => a - b);
 };
 
-// ═══════════════════════════════════════════════════════════════════════════
-// Adding items to a plan whose subscription is dead
-// ═══════════════════════════════════════════════════════════════════════════
-
 test(`${chalk.yellowBright("canceled sub migration: add_items applies without a new sub or charge")}`, async () => {
 	const customerId = "canceled-sub-mig-add-items";
 	const pro = products.pro({ id: "pro", items: [] });
@@ -120,7 +87,6 @@ test(`${chalk.yellowBright("canceled sub migration: add_items applies without a 
 		stripeCustomerId,
 	});
 
-	// ── Contract assertion 1: the migration runs instead of 400-ing ───────────
 	await runUpdatePlanMigration({
 		ctx,
 		migrationClient: autumnV2_2,
@@ -144,7 +110,6 @@ test(`${chalk.yellowBright("canceled sub migration: add_items applies without a 
 		},
 	});
 
-	// ── Contract assertion 2: the Autumn-side change landed ──────────────────
 	const customer = await autumnV2_2.customers.get<ApiCustomerV5>(customerId);
 	await expectCustomerProducts({ customer, active: [pro.id] });
 	expectFlagCorrect({
@@ -160,7 +125,6 @@ test(`${chalk.yellowBright("canceled sub migration: add_items applies without a 
 		planId: pro.id,
 	});
 
-	// ── Contract assertion 3: no replacement subscription ────────────────────
 	const subscriptionsAfter = await listStripeSubscriptions({
 		ctx,
 		stripeCustomerId,
@@ -173,7 +137,6 @@ test(`${chalk.yellowBright("canceled sub migration: add_items applies without a 
 		"every stripe subscription should still be canceled",
 	).toBe(true);
 
-	// ── Contract assertion 4: no new invoice, sub link preserved ─────────────
 	await expectCustomerInvoiceCorrect({
 		customer: await autumnV1.customers.get<ApiCustomerV3>(customerId),
 		count: invoiceCountBefore,
@@ -182,10 +145,6 @@ test(`${chalk.yellowBright("canceled sub migration: add_items applies without a 
 		await getSubscriptionIdsForProduct({ ctx, customerId, productId: pro.id }),
 	).toEqual([subscriptionId]);
 });
-
-// ═══════════════════════════════════════════════════════════════════════════
-// Raising the base price with proration ON — control proves it really bills
-// ═══════════════════════════════════════════════════════════════════════════
 
 test(`${chalk.yellowBright("canceled sub migration: prorated base price change bills the live sub but not the canceled one")}`, async () => {
 	const customerId = "canceled-sub-mig-price";
@@ -222,14 +181,12 @@ test(`${chalk.yellowBright("canceled sub migration: prorated base price change b
 					type: "update_plan" as const,
 					plan_filter: { plan_id: pro.id },
 					customize: { price: itemsV2.monthlyPrice({ amount: 50 }) },
-					// Migrations are charge-free unless proration is explicitly enabled.
 					proration: true,
 				},
 			],
 		},
 	};
 
-	// ── Control: identical migration on a LIVE sub must actually bill ────────
 	const controlInvoicesBefore = await getInvoiceCount({
 		autumnV1,
 		customerId: controlId,
@@ -256,7 +213,6 @@ test(`${chalk.yellowBright("canceled sub migration: prorated base price change b
 		}),
 	).toEqual([50]);
 
-	// ── Subject: same migration on the canceled sub must NOT bill ────────────
 	const invoiceCountBefore = await getInvoiceCount({ autumnV1, customerId });
 	const subscriptionsBefore = await listStripeSubscriptions({
 		ctx,
@@ -289,7 +245,6 @@ test(`${chalk.yellowBright("canceled sub migration: prorated base price change b
 		"every stripe subscription should still be canceled",
 	).toBe(true);
 
-	// The Autumn-side price change still applied — only the money was dropped.
 	expect(
 		await getFixedPriceAmounts({ ctx, customerId, productId: pro.id }),
 	).toEqual([50]);

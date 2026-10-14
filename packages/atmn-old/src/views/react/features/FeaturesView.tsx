@@ -25,7 +25,6 @@ const AUTUMN_DASHBOARD_URL = "https://app.useautumn.com";
 
 const PAGE_SIZE = 50;
 
-// Column definitions for the DataTable
 const columns: Column<ApiFeature>[] = [
 	{
 		key: "id",
@@ -58,7 +57,6 @@ const columns: Column<ApiFeature>[] = [
 	},
 ];
 
-// Search function for features
 const featureSearchFn = (feature: ApiFeature, query: string): boolean => {
 	const lowerQuery = query.toLowerCase();
 	return (
@@ -68,7 +66,6 @@ const featureSearchFn = (feature: ApiFeature, query: string): boolean => {
 	);
 };
 
-// Generate keyboard hints based on current state
 const getHints = (
 	focusTarget: FocusTarget,
 	sheetOpen: boolean,
@@ -100,13 +97,9 @@ const getHints = (
 
 export interface FeaturesViewProps {
 	environment?: AppEnv;
-	/** Called when user exits (q or ctrl+c) - use to clear terminal */
 	onExit?: () => void;
 }
 
-/**
- * Main features view orchestrator
- */
 export function FeaturesView({
 	environment = AppEnv.Sandbox,
 	onExit,
@@ -114,7 +107,6 @@ export function FeaturesView({
 	const { exit } = useApp();
 	const { copy, showingFeedback } = useClipboard();
 
-	// Navigation state using generic hook
 	const {
 		state,
 		moveUp,
@@ -131,7 +123,6 @@ export function FeaturesView({
 		clearSearch,
 	} = useListNavigation<ApiFeature>();
 
-	// Fetch all features (no server pagination)
 	const {
 		data: allFeatures,
 		isLoading,
@@ -144,7 +135,6 @@ export function FeaturesView({
 		includeArchived: true,
 	});
 
-	// Local pagination with search
 	const {
 		pageItems: features,
 		page,
@@ -161,14 +151,12 @@ export function FeaturesView({
 		searchFn: featureSearchFn,
 	});
 
-	// Sync local search with navigation state
 	useEffect(() => {
 		if (state.searchQuery !== localSearch) {
 			setLocalSearch(state.searchQuery);
 		}
 	}, [state.searchQuery, localSearch, setLocalSearch]);
 
-	// Generate pagination display text
 	const paginationText = useMemo(() => {
 		if (totalItems === 0) return "";
 		const start = (page - 1) * PAGE_SIZE + 1;
@@ -176,16 +164,13 @@ export function FeaturesView({
 		return `${start}-${end} of ${totalItems}`;
 	}, [page, totalItems]);
 
-	// Handle keyboard input
 	useInput(
 		useCallback(
 			(input, key) => {
-				// Don't handle input when search dialog is open
 				if (state.focusTarget === "search") {
 					return;
 				}
 
-				// Quit
 				if (input === "q") {
 					if (onExit) {
 						onExit();
@@ -195,45 +180,37 @@ export function FeaturesView({
 					return;
 				}
 
-				// Refresh
 				if (input === "r") {
 					refetch();
 					return;
 				}
 
-				// Open search (/ or s)
 				if (input === "/" || input === "s") {
 					openSearch();
 					return;
 				}
 
-				// Clear search (x when search is active)
 				if (input === "x" && state.searchQuery) {
 					clearSearch();
 					return;
 				}
 
-				// Sheet-specific controls
 				if (state.focusTarget === "sheet" && state.sheetOpen) {
-					// Copy ID
 					if (input === "c" && state.selectedItem) {
 						copy(state.selectedItem.id);
 						return;
 					}
 
-					// Open in Autumn dashboard
 					if (input === "o" && state.selectedItem) {
 						open(`${AUTUMN_DASHBOARD_URL}/sandbox/features`);
 						return;
 					}
 
-					// Close sheet
 					if (key.escape) {
 						closeSheet();
 						return;
 					}
 
-					// Toggle focus to table
 					if (key.tab) {
 						toggleFocus();
 						return;
@@ -242,35 +219,29 @@ export function FeaturesView({
 					return;
 				}
 
-				// Table-specific controls
 				if (state.focusTarget === "table") {
-					// Navigate up
 					if (key.upArrow || input === "k") {
 						moveUp();
 						return;
 					}
 
-					// Navigate down
 					if (key.downArrow || input === "j") {
 						moveDown(features.length - 1);
 						return;
 					}
 
-					// Previous page (p or left arrow)
 					if ((input === "p" || key.leftArrow) && hasPrev) {
 						prevPage();
 						setPage(page - 1);
 						return;
 					}
 
-					// Next page (n or right arrow)
 					if ((input === "n" || key.rightArrow) && hasMore) {
 						nextPage(hasMore);
 						setPage(page + 1);
 						return;
 					}
 
-					// Open sheet
 					if (key.return) {
 						const feature = features[state.selectedIndex];
 						if (feature) {
@@ -279,7 +250,6 @@ export function FeaturesView({
 						return;
 					}
 
-					// Toggle focus to sheet (if open)
 					if (key.tab && state.sheetOpen) {
 						toggleFocus();
 						return;
@@ -310,7 +280,6 @@ export function FeaturesView({
 		),
 	);
 
-	// Sync selected feature when features load
 	useEffect(() => {
 		const feature = features[state.selectedIndex];
 		if (features.length > 0 && feature) {
@@ -318,7 +287,6 @@ export function FeaturesView({
 		}
 	}, [features, state.selectedIndex, selectItem]);
 
-	// Determine view state for ListViewLayout
 	const getViewState = (): ListViewState => {
 		if (isLoading && !allFeatures) return "loading";
 		if (isError && error) return "error";

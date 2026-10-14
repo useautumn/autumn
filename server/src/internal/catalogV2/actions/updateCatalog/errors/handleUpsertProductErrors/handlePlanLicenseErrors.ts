@@ -26,7 +26,6 @@ const parentLicensePlanIds = ({
 	];
 };
 
-/** Declared licenses[] guards: missing child, nesting, duplicates, link rules. */
 export const handlePlanLicenseErrors = ({
 	upsert,
 }: {
@@ -62,7 +61,6 @@ export const handlePlanLicenseErrors = ({
 	}
 
 	for (const planLicense of declared) {
-		// Declared anchor must resolve to a live row; drafts are allowed.
 		if (planLicense.declaredVersionSlug !== undefined) {
 			if (!planLicense.licenseProduct) {
 				throw new RecaseError({
@@ -86,7 +84,6 @@ export const handlePlanLicenseErrors = ({
 			});
 		}
 
-		// Validate the content customers would receive, post-customize.
 		validateLicenseLink({
 			parentProduct: upsert.row.nextFullProduct,
 			licenseProduct: planLicense.effectiveLicenseProduct,

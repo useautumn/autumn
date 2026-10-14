@@ -12,13 +12,8 @@ import { rolloutEdgeConfig } from "@/internal/misc/rollouts/rolloutConfigStore.j
 import { createWorkerContext } from "@/queue/createWorkerContext.js";
 import { addTriggerToLogs } from "@/utils/logging/addContextToLogs.js";
 
-// The trigger runtime has no boot hook, so each task run asks; a store that is already polling returns at once.
 const TRIGGER_EDGE_CONFIGS = [rolloutEdgeConfig] as const;
 
-/**
- * Build an `AutumnContext` for a trigger.dev task run. Uses the dual
- * logger (stdout + axiom) and tags every line with run/task/attempt ids.
- */
 export const createTriggerContext = async ({
 	orgId,
 	env,
@@ -30,7 +25,6 @@ export const createTriggerContext = async ({
 	env: AppEnv;
 	triggerCtx: TriggerRunContext;
 	customerId?: string;
-	/** Task-scoped pool; defaults to the shared general pool. */
 	db?: DrizzleCli;
 }): Promise<{ ctx: AutumnContext; logger: Logger }> => {
 	const logger = addTriggerToLogs({
@@ -57,9 +51,6 @@ export const createTriggerContext = async ({
 
 	ctx.insideTriggerTask = true;
 
-	// Only this org's dedicated connection — trigger runners are cold, and the
-	// pool creates it lazily, so the first cache op would otherwise race the
-	// handshake.
 	await warmOrgRedis({ org: ctx.org });
 
 	return { ctx, logger };

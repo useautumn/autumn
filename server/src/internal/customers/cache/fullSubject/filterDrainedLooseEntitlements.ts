@@ -3,7 +3,6 @@ import {
 	isLiveLooseCustomerEntitlement,
 } from "@autumn/shared";
 
-/** A cached subject can hold a loose grant a deduction has since patched to zero; the read's rule runs on the way out too. */
 export const filterDrainedLooseEntitlements = ({
 	fullSubject,
 }: {

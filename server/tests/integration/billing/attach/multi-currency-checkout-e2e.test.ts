@@ -12,9 +12,6 @@ import { AutumnRpcCli } from "@/external/autumn/autumnRpcCli.js";
 const autumnRpc = new AutumnRpcCli({ version: ApiVersion.V2_1 });
 const getSuffix = () => Math.random().toString(36).slice(2, 9);
 
-// A hosted Stripe Checkout session (triggered by attaching a paid recurring plan
-// with no payment method) must be created in the customer's eur currency —
-// exercising buildStripeCheckoutSessionItems' currency resolution.
 test.concurrent(
 	`${chalk.yellowBright("multi-currency e2e: eur hosted checkout session is created in eur")}`,
 	async () => {
@@ -30,7 +27,6 @@ test.concurrent(
 			},
 		});
 
-		// No payment method → attach returns a hosted Stripe Checkout url.
 		const { customerId, autumnV1, ctx } = await initScenario({
 			customerId: "mc-checkout-eur",
 			setup: [s.customer({ data: { currency: "eur" } })],

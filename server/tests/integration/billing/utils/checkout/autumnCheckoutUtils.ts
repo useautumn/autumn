@@ -9,7 +9,6 @@ import type {
 
 const CHECKOUT_BASE_URL =
 	process.env.AUTUMN_TEST_BASE_URL ?? "http://localhost:8080";
-// Preview/confirm make several Stripe calls, and under tw each one queues for a rate-limit permit.
 const CHECKOUT_TIMEOUT_MS = 120_000;
 
 export const fetchAutumnCheckout = async ({

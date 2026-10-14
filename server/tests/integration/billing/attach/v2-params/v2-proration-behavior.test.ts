@@ -9,16 +9,6 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-/**
- * Proration Behavior: V2 Params Tests
- *
- * Tests for proration_behavior param in V1 API schema:
- * - 'prorate_immediately' (default): Invoice line items are charged immediately
- * - 'none': Skip proration charges, defer to next billing cycle
- *
- * These tests use the V1 API schema directly (AttachParamsV1Input).
- */
-
 test.concurrent(`${chalk.yellowBright("v2-proration_behavior attach: default prorate_immediately")}`, async () => {
 	const customerId = "v2-attach-prorate-default";
 
@@ -47,7 +37,6 @@ test.concurrent(`${chalk.yellowBright("v2-proration_behavior attach: default pro
 		actions: [s.attach({ productId: starter.id })],
 	});
 
-	// Verify initial state
 	const customerBefore =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	await expectProductActive({
@@ -60,7 +49,6 @@ test.concurrent(`${chalk.yellowBright("v2-proration_behavior attach: default pro
 		latestTotal: 10,
 	});
 
-	// Upgrade without specifying proration_behavior (defaults to prorate_immediately)
 	const params: AttachParamsV1Input = {
 		customer_id: customerId,
 		plan_id: pro.id,
@@ -116,7 +104,6 @@ test.concurrent(`${chalk.yellowBright("v2-proration_behavior attach: prorate_imm
 		actions: [s.attach({ productId: starter.id })],
 	});
 
-	// Upgrade with explicit proration_behavior: prorate_immediately
 	const params: AttachParamsV1Input = {
 		customer_id: customerId,
 		plan_id: pro.id,
@@ -174,7 +161,6 @@ test.concurrent(`${chalk.yellowBright("v2-proration_behavior attach: none - no p
 		actions: [s.attach({ productId: starter.id })],
 	});
 
-	// Verify initial state
 	const customerBefore =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	await expectCustomerInvoiceCorrect({
@@ -183,7 +169,6 @@ test.concurrent(`${chalk.yellowBright("v2-proration_behavior attach: none - no p
 		latestTotal: 10,
 	});
 
-	// Preview WITH proration_behavior: none shows 0 (nothing charged now)
 	const previewNone = await autumnV2.billing.previewAttach<AttachParamsV1Input>(
 		{
 			customer_id: customerId,
@@ -194,7 +179,6 @@ test.concurrent(`${chalk.yellowBright("v2-proration_behavior attach: none - no p
 	);
 	expect(previewNone.total).toBe(0);
 
-	// Preview WITHOUT proration_behavior shows what would normally be charged
 	const previewNormal =
 		await autumnV2.billing.previewAttach<AttachParamsV1Input>({
 			customer_id: customerId,
@@ -203,7 +187,6 @@ test.concurrent(`${chalk.yellowBright("v2-proration_behavior attach: none - no p
 		});
 	expect(previewNormal.total).toBeGreaterThan(0);
 
-	// Upgrade with proration_behavior: none
 	const params: AttachParamsV1Input = {
 		customer_id: customerId,
 		plan_id: pro.id,
@@ -215,7 +198,6 @@ test.concurrent(`${chalk.yellowBright("v2-proration_behavior attach: none - no p
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Entitlements should be updated immediately
 	await expectProductActive({ customer, productId: pro.id });
 	expectCustomerFeatureCorrect({
 		customer,
@@ -225,7 +207,6 @@ test.concurrent(`${chalk.yellowBright("v2-proration_behavior attach: none - no p
 		usage: 0,
 	});
 
-	// NO new invoice should be created (only initial attach invoice)
 	await expectCustomerInvoiceCorrect({
 		customer,
 		count: 1,

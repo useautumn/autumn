@@ -1,9 +1,6 @@
 import { request } from "../client.js";
 import type { ApiFeature } from "../types/index.js";
 
-/**
- * Fetch features from API
- */
 export interface FetchFeaturesOptions {
 	secretKey: string;
 	includeArchived?: boolean;
@@ -27,9 +24,6 @@ export async function fetchFeatures(
 	return response.list;
 }
 
-/**
- * Create or update a feature
- */
 export async function upsertFeature(options: {
 	secretKey: string;
 	feature: Record<string, unknown>;
@@ -44,9 +38,6 @@ export async function upsertFeature(options: {
 	});
 }
 
-/**
- * Update an existing feature
- */
 export async function updateFeature(options: {
 	secretKey: string;
 	featureId: string;
@@ -62,9 +53,6 @@ export async function updateFeature(options: {
 	});
 }
 
-/**
- * Delete a single feature
- */
 export async function deleteFeature(options: {
 	secretKey: string;
 	featureId: string;
@@ -78,9 +66,6 @@ export async function deleteFeature(options: {
 	});
 }
 
-/**
- * Archive a feature
- */
 export async function archiveFeature(options: {
 	secretKey: string;
 	featureId: string;
@@ -95,9 +80,6 @@ export async function archiveFeature(options: {
 	});
 }
 
-/**
- * Unarchive a feature
- */
 export async function unarchiveFeature(options: {
 	secretKey: string;
 	featureId: string;
@@ -112,9 +94,6 @@ export async function unarchiveFeature(options: {
 	});
 }
 
-/**
- * Get deletion info for a feature (check if it can be deleted)
- */
 export interface FeatureDeletionInfo {
 	totalCount: number;
 	productName?: string;

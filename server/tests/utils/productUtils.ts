@@ -42,16 +42,12 @@ export const createProduct = async ({
 			inIds: [product.id],
 		});
 
-		// customer_products_internal_product_id_fkey has no ON DELETE CASCADE.
-		// Wipe referencing rows first so the product delete succeeds.
 		for (const prod of products) {
 			await db
 				.delete(customerProducts)
 				.where(eq(customerProducts.internal_product_id, prod.internal_id));
 		}
 
-		// license_entitlements/license_prices RESTRICT their item rows; drop
-		// plan_license first so the product delete can cascade items freely.
 		const internalIds = products.map((prod) => prod.internal_id);
 		if (internalIds.length > 0) {
 			await db
@@ -79,7 +75,6 @@ export const createProduct = async ({
 		await Promise.all(batchDelete);
 	} catch (error) {
 		console.error("Error deleting product", error);
-		// Ignore deletion errors (might have customers attached)
 	}
 
 	const clone = structuredClone(product);
@@ -99,7 +94,6 @@ export const createProduct = async ({
 	try {
 		await autumn.products.create(clone);
 	} catch (error: any) {
-		// If product already exists (race condition), silently continue
 		if (
 			error?.message?.includes("already exists") ||
 			error?.message?.includes("duplicate") ||
@@ -139,8 +133,6 @@ export const createProducts = async ({
 	const create = (product: (typeof products)[number]) =>
 		createProduct({ db, orgId, env, autumn, product, prefix, createInStripe });
 
-	// Defaults go one at a time: a default mid-create (row in, prices not yet)
-	// reads as a free default and fails the next default's validation.
 	const createDefaultsInOrder = async () => {
 		for (const product of products.filter((p) => p.is_default)) {
 			await create(product);
@@ -170,7 +162,6 @@ export const createReward = async ({
 	productId?: string;
 	onlyUsage?: boolean;
 }) => {
-	// Only fetch product if we need usage prices
 	if (onlyUsage && productId) {
 		const fullProduct = await ProductService.getFull({
 			db,
@@ -222,7 +213,6 @@ export const createReferralProgram = async ({
 	productId?: string;
 	onlyUsage?: boolean;
 }) => {
-	// Create reward first
 	await createReward({
 		db,
 		orgId,
@@ -233,11 +223,9 @@ export const createReferralProgram = async ({
 		onlyUsage,
 	});
 
-	// Create referral program (will fail if already exists, but that's ok)
 	try {
 		await autumn.rewardPrograms.create(rewardProgram);
 	} catch (error: any) {
-		// If program already exists (race condition), silently continue
 		if (
 			error?.message?.includes("already exists") ||
 			error?.message?.includes("duplicate") ||
@@ -246,7 +234,6 @@ export const createReferralProgram = async ({
 			return;
 		}
 
-		// Free product rewards are rejected by the API, so seed legacy fixtures directly
 		if (error?.message?.includes("Free product rewards are deprecated")) {
 			await seedLegacyRewardProgram({ db, orgId, env, reward, rewardProgram });
 			return;
@@ -256,7 +243,6 @@ export const createReferralProgram = async ({
 	}
 };
 
-/** Legacy reward types can no longer be created through the API, but must stay covered */
 const seedLegacyRewardProgram = async ({
 	db,
 	orgId,

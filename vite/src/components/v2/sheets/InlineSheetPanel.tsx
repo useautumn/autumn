@@ -24,11 +24,6 @@ interface InlineSheetPanelProps {
 	};
 }
 
-/**
- * Shared right-hand sheet panel used across the app's inline sheet orchestrators.
- * Renders a slide-in, rounded, inset panel that floats over the (separately
- * rendered) backdrop so the surrounding area reads as dimmed on every side.
- */
 export function InlineSheetPanel({
 	isOpen,
 	onClose,

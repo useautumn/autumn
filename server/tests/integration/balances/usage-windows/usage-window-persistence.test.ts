@@ -24,13 +24,6 @@ import {
 } from "../utils/usage-limit-utils/customerUsageLimitUtils.js";
 import { expireUsageWindowForReset } from "../utils/usage-limit-utils/expireUsageWindowForReset.js";
 
-// Usage-window PERSISTENCE: the counter's fate across cache-invalidating
-// events (config changes, re-grants, plan replacement) and cache loss. The
-// counter survives via the batched Redis->PG sync + rebuild rehydration, so
-// these tests wait ~4s after capped tracks before invalidating mutations.
-
-// initScenario only exposes clients up to V2_2; build the latest-version client
-// directly (same pattern as the v2.2-vs-v2.3 parity tests).
 const autumnV2_3 = new AutumnInt({ version: ApiVersion.V2_3 });
 
 // biome-ignore lint/suspicious/noExplicitAny: raw SQL rows are untyped
@@ -38,9 +31,6 @@ const queryRows = (result: unknown): any[] =>
 	// biome-ignore lint/suspicious/noExplicitAny: raw SQL rows are untyped
 	Array.isArray(result) ? result : ((result as { rows?: any[] })?.rows ?? []);
 
-// No manual sync flush: the counter must survive the mutation's cache
-// invalidation on its own, else the cap silently resets and hands out fresh
-// headroom.
 test.concurrent(
 	`${chalk.yellowBright("usage-window-persistence1: lowering the cap below current usage keeps the counter (clamps, no reset)")}`,
 	async () => {
@@ -72,8 +62,6 @@ test.concurrent(
 			value: 8,
 		});
 
-		// Let the batched sync flush the counter to Postgres before the
-		// cache-invalidating mutation (the rebuild rehydrates from PG).
 		await timeout(4000);
 
 		await autumnV2_3.customers.update(customerId, {
@@ -88,7 +76,6 @@ test.concurrent(
 			},
 		});
 
-		// The counter survived the cap change, so the next track fully clamps.
 		await autumnV2_3.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
@@ -109,8 +96,6 @@ test.concurrent(
 			limit: 3,
 		});
 
-		// Write-through: after the sync flush, the same state must come back from
-		// Postgres (skip_cache bypasses Redis entirely).
 		await timeout(4000);
 		const fromDb = await autumnV2_3.customers.get<ApiCustomerV5>(customerId, {
 			skip_cache: "true",
@@ -130,9 +115,6 @@ test.concurrent(
 	},
 );
 
-// A second balance grant (balances.create) is a cache-invalidating mutation;
-// the cap counter must survive it. It used to reset to 0, opening fresh
-// headroom.
 test.concurrent(
 	`${chalk.yellowBright("usage-window-persistence2: the cap counter survives a re-grant (clamps)")}`,
 	async () => {
@@ -176,11 +158,8 @@ test.concurrent(
 			usage: 5,
 		});
 
-		// Let the batched sync flush the counter to Postgres before the
-		// cache-invalidating mutation (the rebuild rehydrates from PG).
 		await timeout(4000);
 
-		// Re-grant a second balance for the same feature while at the cap.
 		await autumnV2_3.post("/balances.create", {
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
@@ -207,7 +186,6 @@ test.concurrent(
 			limit: 5,
 		});
 
-		// Write-through: the post-regrant counter must come back from Postgres.
 		await timeout(4000);
 		const fromDb = await autumnV2_3.customers.get<ApiCustomerV5>(customerId, {
 			skip_cache: "true",
@@ -228,11 +206,6 @@ test.concurrent(
 	},
 );
 
-// A missing '_usage_windows' field FAILS OPEN (deliberate for v1): the track
-// succeeds and the window simply restarts from zero. This documents the
-// accepted trade-off -- a lost counter field grants fresh headroom rather than
-// erroring. Stale-cache guards may return in a future iteration.
-// Exercises the legacy Redis balance path, which worker-routed customers never use.
 test.concurrent.skipIf(isBalanceWorkerRoute())(
 	`${chalk.yellowBright("usage-window-persistence4: missing _usage_windows field fails open (counter restarts)")}`,
 	async () => {
@@ -258,15 +231,12 @@ test.concurrent.skipIf(isBalanceWorkerRoute())(
 			limit: 5,
 		});
 
-		// Establish a counter.
 		await autumnV2_3.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
 			value: 2,
 		});
 
-		// Simulate a stale/partial cache: the counter field vanishes while the
-		// subject view stays valid.
 		const balanceKey = buildSharedFullSubjectBalanceKey({
 			orgId: ctx.org.id,
 			env: ctx.env,
@@ -275,8 +245,6 @@ test.concurrent.skipIf(isBalanceWorkerRoute())(
 		});
 		await ctx.redisV2.hdel(balanceKey, "_usage_windows");
 
-		// Fail open: the track succeeds; the window restarted, so only this track
-		// counts toward the cap (balance itself is unaffected: 3 tracked total).
 		await autumnV2_3.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
@@ -297,8 +265,6 @@ test.concurrent.skipIf(isBalanceWorkerRoute())(
 			limit: 5,
 		});
 
-		// Enforcement continues from the restarted counter: headroom is 4, so a
-		// track of 5 clamps to 4.
 		await autumnV2_3.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
@@ -318,8 +284,6 @@ test.concurrent.skipIf(isBalanceWorkerRoute())(
 			limit: 5,
 		});
 
-		// Write-through: the restarted counter upserts over the pre-restart row
-		// (same logical window key) and must come back from Postgres.
 		await timeout(4000);
 		const fromDb = await autumnV2_3.customers.get<ApiCustomerV5>(customerId, {
 			skip_cache: "true",
@@ -339,10 +303,6 @@ test.concurrent.skipIf(isBalanceWorkerRoute())(
 	},
 );
 
-// Lazy roll: a counter whose stored window closed must zero IN PLACE on any
-// subject read -- and two CONCURRENT reads must both succeed (the roll is
-// idempotent: PG update by id, atomic Lua cache patch).
-// Exercises the legacy Redis balance path, which worker-routed customers never use.
 test.concurrent.skipIf(isBalanceWorkerRoute())(
 	`${chalk.yellowBright("usage-window-persistence5: an expired counter rolls to zero on (concurrent) reads")}`,
 	async () => {
@@ -374,7 +334,6 @@ test.concurrent.skipIf(isBalanceWorkerRoute())(
 			value: 2,
 		});
 
-		// Flush, then close the counter's window in both stores.
 		await timeout(4000);
 		await expireUsageWindowForReset({
 			ctx,
@@ -382,7 +341,6 @@ test.concurrent.skipIf(isBalanceWorkerRoute())(
 			featureId: TestFeature.Messages,
 		});
 
-		// Concurrent reads: both succeed and both report the rolled count.
 		const [customer, concurrentCustomer] = await Promise.all([
 			autumnV2_3.customers.get<ApiCustomerV5>(customerId),
 			autumnV2_3.customers.get<ApiCustomerV5>(customerId),
@@ -400,7 +358,6 @@ test.concurrent.skipIf(isBalanceWorkerRoute())(
 			limit: 5,
 		});
 
-		// The row persists, zeroed, with bounds advanced to the live cycle.
 		const rows = queryRows(
 			await ctx.db.execute(sql`
 				SELECT usage, window_end_at FROM usage_windows

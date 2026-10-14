@@ -1,6 +1,3 @@
-/**
- * Remove specific description patterns from schema properties
- */
 export function removeDescriptions({
   spec,
   patterns
@@ -8,13 +5,11 @@ export function removeDescriptions({
   spec: any;
   patterns: RegExp[];
 }) {
-  // Recursively traverse the spec to find and clean descriptions
   function traverseAndClean(obj: any, path: string = '') {
     if (!obj || typeof obj !== 'object') {
       return;
     }
 
-    // If this object has a description, clean it
     if (typeof obj.description === 'string') {
       let cleaned = obj.description;
       let modified = false;
@@ -27,7 +22,6 @@ export function removeDescriptions({
         }
       }
 
-      // Remove the description entirely if it's now empty
       if (cleaned === '') {
         delete obj.description;
         if (modified) {
@@ -39,7 +33,6 @@ export function removeDescriptions({
       }
     }
 
-    // Recurse into all properties
     for (const key in obj) {
       if (obj.hasOwnProperty(key) && key !== 'description') {
         const newPath = path ? `${path}.${key}` : key;

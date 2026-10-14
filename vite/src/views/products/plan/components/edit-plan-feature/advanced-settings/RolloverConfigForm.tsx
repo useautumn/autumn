@@ -25,18 +25,12 @@ export const DEFAULT_ROLLOVER_CONFIG: RolloverConfigType = {
 type RolloverConfigFormProps = {
 	value: RolloverConfigType | null | undefined;
 	onChange: (value: RolloverConfigType | null) => void;
-	/** Disables the enable/disable checkbox (e.g., when no reset interval is set). */
 	disabled?: boolean;
 	tooltip?: string;
 	title?: string;
-	/** Called when the user toggles the rollover on. Defaults to { ...DEFAULT_ROLLOVER_CONFIG }. */
 	onEnable?: () => void;
 };
 
-/**
- * Fully controlled rollover config UI. The same visual component used inside the plan
- * editor's advanced settings and the balance-create sheet.
- */
 export function RolloverConfigForm({
 	value,
 	onChange,
@@ -141,9 +135,6 @@ export function RolloverConfigForm({
 									placeholder="e.g. 50"
 									onChange={(e) => {
 										const v = e.target.value;
-										// Empty input → fall back to the minimum valid percentage (1).
-										// max_percentage must be > 0 and <= 100 per backend validation,
-										// so coercing empty to 0 would produce an unsaveable config.
 										const parsed = v === "" ? 1 : parseInt(v) || 1;
 										setRolloverConfigKey(
 											"max_percentage",

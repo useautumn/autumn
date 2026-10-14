@@ -31,7 +31,6 @@ const customerRow = {
 	currency: null,
 };
 
-/** One product with a price, a grant, and a rollover on that grant. */
 const heldState = (): SubjectState =>
 	createSubjectState({
 		identity,

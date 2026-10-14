@@ -57,7 +57,6 @@ describe(`${chalk.yellowBright("track-legacy1: test legacy properties format wit
 		const initialBalance = 100;
 		const deductValue = 35.82;
 
-		// Legacy format: properties.value instead of value
 		await autumnV1.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,

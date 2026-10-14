@@ -5,9 +5,7 @@ import { ApiFreeTrialV2Schema } from "../apiFreeTrialV2.js";
 import { PlanItemChangeV0Schema } from "./planItemChangeV0.js";
 import { PlanPreviousAttributesV0Schema } from "./planPreviousAttributesV0.js";
 
-/** Before/after for the plan's price. Absent when the price is unchanged. */
 export const PlanPriceChangeV0Schema = z.object({
-	// Null when the plan is new: a create has no previous price.
 	previous: ApiPlanV1Schema.shape.price.nullable().meta({
 		description: "The plan's price before the change.",
 	}),
@@ -16,7 +14,6 @@ export const PlanPriceChangeV0Schema = z.object({
 	}),
 });
 
-/** Before/after for the plan's free trial. Absent when the trial is unchanged. */
 export const PlanFreeTrialChangeV0Schema = z.object({
 	previous: ApiFreeTrialV2Schema.nullable().meta({
 		description: "The plan's free trial before the change. Null when none.",
@@ -26,10 +23,6 @@ export const PlanFreeTrialChangeV0Schema = z.object({
 	}),
 });
 
-/**
- * Core plan diff (price, items, trial, scalars). Nested under a license change
- * as `plan_change` — the effective child is ApiPlanV1, so no license_changes.
- */
 export const PlanChangeCoreV0Schema = z.object({
 	plan: ApiPlanV1Schema.optional().meta({
 		description:

@@ -74,8 +74,6 @@ test.concurrent(
 		const stripeProduct = await ctx.stripeCli.products.retrieve(
 			feature.stripe_product_id!,
 		);
-		// Sibling tests may rename the shared Messages feature; the product
-		// is still named after the feature, never the plan.
 		expect(stripeProduct.name).toMatch(/^Messages/);
 		expect(stripeProduct.name).not.toContain("Pro");
 		expect(stripeProduct.name).not.toContain("Premium");

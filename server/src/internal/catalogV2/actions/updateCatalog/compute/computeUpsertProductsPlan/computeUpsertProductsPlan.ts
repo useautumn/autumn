@@ -15,12 +15,6 @@ import {
 import { createProductStatesFold } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/createProductStatesFold";
 import { projectPlanWideRenames } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/projectPlanWideRenames";
 
-/**
- * Derive direct intents → merge stated processors across each lineage → fold
- * each → deriveIntents onto the same pending list. First claim wins, so the
- * merge has to land before every direct intent is claimed. planLicenses
- * compute last, once all plan content is final.
- */
 export const computeUpsertProductsPlan = ({
 	ctx,
 	catalogContext,
@@ -32,8 +26,6 @@ export const computeUpsertProductsPlan = ({
 }): CatalogComputeStep => {
 	const { productStatesContext, internalIdRefs } = catalogContext;
 
-	// A row the payload named is claimed before the fold, so the derived
-	// mapping fan-out can never reach it — fill it in up front instead.
 	const pendingIntents = mergeDeclaredProcessors({
 		intents: deriveDirectIntents({
 			params,
@@ -58,7 +50,6 @@ export const computeUpsertProductsPlan = ({
 	const fold = createProductStatesFold({ original: productStatesContext });
 	const upsertProducts: UpsertProductPlan[] = [];
 
-	// Apply each plan's own changes: direct entries plus derived versions/variants.
 	for (const intent of pendingIntents) {
 		const { targetProductPlan, upsertProductPlans } = computeUpsertProductPlan({
 			ctx,
@@ -84,7 +75,6 @@ export const computeUpsertProductsPlan = ({
 		);
 	}
 
-	// planLicenses read other plans' results, so they compute once every plan has.
 	const upsertProductsWithPlanLicenses = computePlanLicensesPlan({
 		ctx,
 		upsertProducts,

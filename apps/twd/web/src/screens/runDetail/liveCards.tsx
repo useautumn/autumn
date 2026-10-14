@@ -67,7 +67,6 @@ const FailureRow = ({
 	);
 };
 
-/** Failed, crashed and timed-out files with their first error line; new failures first. */
 export const FailuresCard = ({
 	run,
 	live,
@@ -127,7 +126,6 @@ export const FailuresCard = ({
 	);
 };
 
-/** Files on a worker right now, longest-running first. */
 export const RunningCard = ({
 	run,
 	live,

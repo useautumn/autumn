@@ -1,5 +1,3 @@
-/** Human labels for the scalar plan fields `previous_attributes` can name.
- * The dashboard and the CLI both render from this one map. */
 export const PLAN_PREVIOUS_ATTRIBUTE_LABELS: Record<string, string> = {
 	name: "Name",
 	description: "Description",

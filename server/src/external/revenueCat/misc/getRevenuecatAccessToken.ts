@@ -60,7 +60,6 @@ const persistOAuthTokens = async ({
 const isOAuthAccessTokenValid = (oauthConfig: RevenueCatOAuthConfig) =>
 	oauthConfig.expires_at - TOKEN_EXPIRY_SKEW_MS > Date.now();
 
-// RC revokes the old token pair on every refresh, so concurrent refreshes invalidate each other.
 const withRefreshLock = async <T>({
 	org,
 	env,
@@ -106,8 +105,6 @@ const refreshRcTokensOrThrow = async ({
 	}
 };
 
-/** Refresh under a per-org/env lock, re-reading the stored tokens so waiters reuse the holder's result.
- *  `force` still reuses a pair another caller rotated after `observedRefreshToken` was read. */
 const refreshAndPersistTokens = async ({
 	db,
 	org,
@@ -163,12 +160,6 @@ const refreshAndPersistTokens = async ({
 		},
 	});
 
-/**
- * Force-refresh the env's OAuth access token, persisting the rotated refresh token for us.
- * Returns the fresh access token, or null if the org isn't OAuth-connected for this env.
- * Used to hand a platform master a usable access token WITHOUT exposing the refresh token —
- * so they can't rotate it and lock Autumn out.
- */
 export const refreshRevenuecatOAuthAccessToken = async ({
 	db,
 	org,

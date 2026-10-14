@@ -73,8 +73,6 @@ const plansFrom = (value: unknown): CustomerStatePlan[] =>
 			})
 		: [];
 
-/** `starting_after` offsets fold forward from the prior phase's resolved
- * start; the immediate phase's "now" maps to the form's null convention. */
 const startsAtFrom = ({
 	phase,
 	previousStartsAt,
@@ -95,7 +93,6 @@ const startsAtFrom = ({
 const isFreeTrialDuration = (value: unknown): value is FreeTrialDuration =>
 	Object.values(FreeTrialDuration).includes(value as FreeTrialDuration);
 
-/** `null` ends a running trial and an object starts one; an omitted trial leaves the row as seeded. */
 const freeTrialFrom = (
 	value: unknown,
 ): Partial<CustomerStateForm> | undefined => {
@@ -117,8 +114,6 @@ const freeTrialFrom = (
 	};
 };
 
-/** Inverse of the schedule request builder: maps a resolved set_plans
- * request (per-plan customize already flattened to items) into form values. */
 export const scheduleFormFromRequestBody = (
 	request: RequestBody,
 	persistedPhases: CustomerStatePhase[] = [],

@@ -19,7 +19,6 @@ export const getFeatureName = ({
 
 	if (feature.display) {
 		let finalPlural: boolean | undefined;
-		// Case 1: If units and nullish plural
 
 		if (plural !== undefined) {
 			finalPlural = plural;
@@ -113,12 +112,12 @@ export const getFeatureInvoiceDescription = ({
 	let result = "";
 
 	if (isPrepaid && billingUnits && billingUnits > 1) {
-		result = `${usageStr} x ${billingUnits} ${plural}`; // eg. 4 x 100 credits
+		result = `${usageStr} x ${billingUnits} ${plural}`;
 	} else {
 		if (usage === 1) {
-			result = `${usageStr} ${singular}`; // eg. 1 credit
+			result = `${usageStr} ${singular}`;
 		} else {
-			result = `${usageStr} ${plural}`; // eg. 4 credits
+			result = `${usageStr} ${plural}`;
 		}
 	}
 

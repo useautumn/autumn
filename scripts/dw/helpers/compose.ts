@@ -119,9 +119,7 @@ export function removeAllAutumnComposeStacks(): void {
 				console.error(`[dw] failed to remove compose stack ${p.Name}`);
 			}
 		}
-	} catch {
-		/* JSON parse failed, ignore */
-	}
+	} catch {}
 }
 
 export function listAutumnComposeProjects(): string[] {

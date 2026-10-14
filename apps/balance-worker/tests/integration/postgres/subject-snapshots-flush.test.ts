@@ -313,7 +313,6 @@ describe.skipIf(!databaseUrl)("subject snapshot flush", () => {
 				},
 			]);
 
-			// The next flush replaces the row in place; a write from an older log, such as a refresh read before that flush landed, does not.
 			await flushAt({
 				topic,
 				expectedOffset: 42n,
@@ -438,7 +437,6 @@ describe.skipIf(!databaseUrl)("subject snapshot flush", () => {
 				],
 			});
 
-			// The statement says which subjects went: the customer's own and its three entities, nobody else's.
 			const deletedOf = (entityId: string | null) => ({
 				orgId: seeded.orgId,
 				env: seeded.env,
@@ -597,7 +595,6 @@ describe.skipIf(!databaseUrl)("subject snapshot flush", () => {
 				claimToken: "owner_b",
 			});
 
-			// What the lane sends for a refresh: no records, the bookmark it last saw, its own claim.
 			const lateRefresh = commitFlush({
 				ctx: { db: postgres.db },
 				request: {
@@ -683,7 +680,6 @@ describe.skipIf(!databaseUrl)("subject snapshot flush", () => {
 			});
 			await committer.drain();
 			await Bun.sleep(20);
-			// The refresh landed under the bookmark; the DELETE enqueued after it lands after it, and says which row went.
 			expect(await readSnapshots({ seeded })).toHaveLength(1);
 			writes.enqueueDelete({ topic, partition: 0, customerKey });
 			const deleted = await writes.deleteLanded({
@@ -712,7 +708,6 @@ describe.skipIf(!databaseUrl)("subject snapshot flush", () => {
 		const blocker = openFixturePostgres({ databaseUrl: databaseUrl ?? "" });
 		const held = Promise.withResolvers<void>();
 		const locked = Promise.withResolvers<void>();
-		// Another session holds the bookmark row, so the flush statement waits past its timeout.
 		const holding = blocker.db.transaction(async (tx) => {
 			await tx.execute(
 				sql`SELECT 1 FROM partition_progress WHERE topic = ${topic} FOR UPDATE`,
@@ -844,7 +839,6 @@ describe.skipIf(!databaseUrl)("subject snapshot flush", () => {
 		const rolledBack = new Error("explain only");
 		let plan = "";
 		try {
-			// Populated and analyzed inside a transaction that never commits, so the plan is the one a full table gets.
 			await postgres.db
 				.transaction(async (tx) => {
 					await tx.execute(sql`INSERT INTO customers (internal_id, id, org_id, env, created_at)
@@ -860,7 +854,6 @@ describe.skipIf(!databaseUrl)("subject snapshot flush", () => {
 						env: "live",
 						customer_id: `cus_${index * 50 + 1}`,
 					}));
-					// The statement an evict-only flush sends, so the plan is production's.
 					const statement = flushSql({
 						changes: [],
 						bookmarks: [],

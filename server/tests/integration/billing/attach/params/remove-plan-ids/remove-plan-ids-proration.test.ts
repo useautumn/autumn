@@ -1,17 +1,3 @@
-/**
- * remove_plan_ids - Proration Tests
- *
- * A plan dropped via remove_plan_ids is expired mid-cycle, so the customer is
- * owed a credit for its unused time — the same credit a same-group replacement
- * produces. The removed plan lives in `updateCustomerProducts`, which was not
- * being passed to the line-item builder, so no credit was ever generated and
- * Stripe issued none either (Autumn always sends proration_behavior: "none").
- *
- * Key behaviors:
- * - Removing a paid cross-group plan credits its unused time on the invoice.
- * - billing_behavior: "none" still suppresses all proration.
- */
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3 } from "@autumn/shared";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
@@ -41,15 +27,6 @@ const currentPlan = () =>
 			items.monthlyMessages({ includedUsage: 500 }),
 		],
 	});
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 1: Removed cross-group plan is credited for its unused time
-//
-// Legacy plan ($30/mo, group "legacy") active, advance 15 days.
-// Attach current plan ($50/mo, group "current") with remove_plan_ids: [legacy].
-// Expected: ($50 - $30) x remaining ratio — the legacy credit nets off the charge.
-// Before the fix: the full prorated $50 with no credit at all.
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(
 	`${chalk.yellowBright("remove-plan-ids proration 1: removed cross-group plan is credited")}`,
@@ -85,8 +62,6 @@ test.concurrent(
 
 		expect(preview.total).toBeCloseTo(expectedTotal, 0);
 
-		// The credit must be its own line item attributed to the removed plan,
-		// not just folded into the total.
 		const legacyCredit = preview.line_items?.find(
 			(lineItem: { plan_id: string; total: number }) =>
 				lineItem.plan_id === legacy.id,
@@ -109,7 +84,6 @@ test.concurrent(
 			notPresent: [legacy.id],
 		});
 
-		// Invoices: legacy ($30) + the netted switch charge.
 		await expectCustomerInvoiceCorrect({
 			customerId,
 			count: 2,
@@ -118,13 +92,6 @@ test.concurrent(
 		});
 	},
 );
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 2: billing_behavior "none" still suppresses the credit
-//
-// Same setup, but the caller opts out of proration entirely. Neither the charge
-// nor the removal credit should reach the invoice.
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(
 	`${chalk.yellowBright("remove-plan-ids proration 2: billing_behavior none produces no credit")}`,
@@ -171,7 +138,6 @@ test.concurrent(
 			notPresent: [legacy.id],
 		});
 
-		// Only the original legacy invoice — the switch charged nothing.
 		await expectCustomerInvoiceCorrect({
 			customerId,
 			count: 1,
@@ -179,14 +145,6 @@ test.concurrent(
 		});
 	},
 );
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 3: A repeated plan id is credited exactly once
-//
-// remove_plan_ids has no uniqueness constraint, so ["legacy", "legacy"] resolves
-// the same customer product twice. Each occurrence would otherwise reach the
-// line-item builder and credit the unused time again.
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(
 	`${chalk.yellowBright("remove-plan-ids proration 3: a repeated plan id is credited once")}`,
@@ -220,7 +178,6 @@ test.concurrent(
 			remove_plan_ids: [legacy.id, legacy.id],
 		});
 
-		// Same total as the single-removal case, and exactly one credit line.
 		expect(preview.total).toBeCloseTo(expectedTotal, 0);
 
 		const legacyCredits = (preview.line_items ?? []).filter(

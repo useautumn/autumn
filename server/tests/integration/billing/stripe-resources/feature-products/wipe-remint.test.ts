@@ -1,9 +1,3 @@
-/**
- * Wipe clears Autumn stripe_* ids on the same pr_*.
- * Same mint shape → Stripe replays (same Price).
- * Amount/tiers change → new idempotency key → new Price, not a reject.
- */
-
 import { expect, test } from "bun:test";
 import type { AttachParamsV1Input } from "@autumn/shared";
 import { items } from "@tests/utils/fixtures/items.js";

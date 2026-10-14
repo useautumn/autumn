@@ -2,7 +2,6 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import type { UpsertProductPlan } from "@/internal/catalogV2/actions/updateCatalog/types/upsertProductPlan";
 import { ProductService } from "@/internal/products/ProductService.js";
 
-/** unique_product_version_slug is immediate — clear first so a same-call swap can land. */
 export const vacateRenamedVersionSlugs = async ({
 	ctx,
 	upsertProducts,

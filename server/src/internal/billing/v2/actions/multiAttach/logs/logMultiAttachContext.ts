@@ -2,9 +2,6 @@ import { formatMs, type MultiAttachBillingContext } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { addToExtraLogs } from "@/utils/logging/addToExtraLogs";
 
-/**
- * Logs the multi-attach billing context for observability.
- */
 export const logMultiAttachContext = ({
 	ctx,
 	billingContext,

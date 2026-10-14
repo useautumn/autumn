@@ -3,7 +3,6 @@ import { invalidateProductsCache } from "@/external/redis/actions/productsCache/
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 
-/** Unique index `unique_active_product` requires deactivating the current pointer first. */
 export const forceActiveVersion = async ({
 	ctx,
 	planId,

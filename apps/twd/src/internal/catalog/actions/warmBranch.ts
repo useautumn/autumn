@@ -36,7 +36,6 @@ const toJob = async ({
 	};
 };
 
-/** Warm any pushed branch head (no PR needed). Attaches to a live warm:<sha> job. */
 export const warmBranch = async ({
 	ctx,
 	branch,

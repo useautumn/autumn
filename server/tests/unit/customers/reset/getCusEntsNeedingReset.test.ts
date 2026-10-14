@@ -185,10 +185,6 @@ describe(chalk.yellowBright("getCusEntsNeedingReset"), () => {
 		expect(result).toHaveLength(0);
 	});
 
-	// The dashboard list embeds only a capped preview of customer_products, so its
-	// opportunistic batch reset only queues ents on the products it loaded. Ents on
-	// omitted products are reset lazily when the customer is fully loaded
-	// (detail GET → getFull, which loads up to the org product limit).
 	test("only considers ents on the products present in customer_products", () => {
 		const stale = (id: string) =>
 			customerProducts.create({
@@ -215,8 +211,6 @@ describe(chalk.yellowBright("getCusEntsNeedingReset"), () => {
 			3,
 		);
 
-		// Truncating the embedded array (as the list preview cap does) bounds the
-		// reset candidates to the loaded products — the omitted one is deferred.
 		const truncated: FullCustomer = {
 			...allThree,
 			customer_products: allThree.customer_products.slice(0, 2),

@@ -14,9 +14,6 @@ const PostTrmnlDeviceIdSchema = z.object({
 	hideRevenue: z.boolean().optional(),
 });
 
-/**
- * Save TRMNL device configuration for the authenticated organization
- */
 export const handlePostTrmnlDeviceId = createRoute({
 	scopes: [Scopes.Organisation.Write],
 	body: PostTrmnlDeviceIdSchema,
@@ -25,7 +22,6 @@ export const handlePostTrmnlDeviceId = createRoute({
 		const { org } = ctx;
 		const { deviceId, hideRevenue } = c.req.valid("json");
 
-		// Check if device is already registered to another org
 		const existingConfig = await getTrmnlDeviceConfig({ ctx, deviceId });
 
 		if (existingConfig && existingConfig.orgId !== org.id) {
@@ -36,7 +32,6 @@ export const handlePostTrmnlDeviceId = createRoute({
 			});
 		}
 
-		// Get current org's trmnl config and clear old device mapping if exists
 		const currentTrmnlConfig = await getTrmnlOrgConfig({ ctx, orgId: org.id });
 
 		if (currentTrmnlConfig) {

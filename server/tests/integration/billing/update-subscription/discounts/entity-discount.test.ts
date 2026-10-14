@@ -1,12 +1,3 @@
-/**
- * Integration tests for discounts on entity-based products in update subscription flow.
- *
- * Tests how discounts interact with multi-entity subscriptions:
- * - Discounts apply to all entities on a shared subscription
- * - Entity-specific upgrades are discounted correctly
- * - Unchanged entities are not affected by other entity upgrades
- */
-
 import { expect, test } from "bun:test";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { items } from "@tests/utils/fixtures/items.js";
@@ -76,7 +67,6 @@ test.concurrent(`${chalk.yellowBright("entity: discount on single entity upgrade
 		couponIds: [coupon.id],
 	});
 
-	// Preview upgrade for entity 0 only
 	const preview = await autumnV1.subscriptions.previewUpdate({
 		customer_id: customerId,
 		entity_id: entities[0].id,
@@ -86,10 +76,6 @@ test.concurrent(`${chalk.yellowBright("entity: discount on single entity upgrade
 		],
 	});
 
-	// Upgrade generates: refund (-$50) + charge ($100)
-	// Discounts only apply to charges, not refunds
-	// Charge with 25% off: $100 * 0.75 = $75
-	// Total: -$50 + $75 = $25
 	const refundAmount = -50;
 	const discountedCharge = Math.round(100 * 0.75);
 	const expectedAmount = refundAmount + discountedCharge;
@@ -151,7 +137,6 @@ test.concurrent(`${chalk.yellowBright("entity: both entities share subscription 
 		couponIds: [coupon.id],
 	});
 
-	// Preview upgrade for entity 0
 	const preview0 = await autumnV1.subscriptions.previewUpdate({
 		customer_id: customerId,
 		entity_id: entities[0].id,
@@ -161,7 +146,6 @@ test.concurrent(`${chalk.yellowBright("entity: both entities share subscription 
 		],
 	});
 
-	// Preview upgrade for entity 1
 	const preview1 = await autumnV1.subscriptions.previewUpdate({
 		customer_id: customerId,
 		entity_id: entities[1].id,
@@ -171,10 +155,6 @@ test.concurrent(`${chalk.yellowBright("entity: both entities share subscription 
 		],
 	});
 
-	// Upgrade generates: refund (-$50) + charge ($100)
-	// Discounts only apply to charges, not refunds
-	// Charge with 20% off: $100 * 0.8 = $80
-	// Total: -$50 + $80 = $30
 	const refundAmount = -50;
 	const discountedCharge = Math.round(100 * 0.8);
 	const expectedAmount = refundAmount + discountedCharge;
@@ -239,7 +219,6 @@ test.concurrent(`${chalk.yellowBright("entity: upgrade one entity while other un
 		couponIds: [coupon.id],
 	});
 
-	// Upgrade entity 0 only
 	const preview = await autumnV1.subscriptions.previewUpdate({
 		customer_id: customerId,
 		entity_id: entities[0].id,
@@ -249,17 +228,12 @@ test.concurrent(`${chalk.yellowBright("entity: upgrade one entity while other un
 		],
 	});
 
-	// Upgrade generates: refund (-$50) + charge ($100)
-	// Discounts only apply to charges, not refunds
-	// Charge with 30% off: $100 * 0.7 = $70
-	// Total: -$50 + $70 = $20
 	const refundAmount = -50;
 	const discountedCharge = Math.round(100 * 0.7);
 	const expectedAmount = refundAmount + discountedCharge;
 
 	expect(preview.total).toBe(expectedAmount);
 
-	// Execute the upgrade
 	await autumnV1.subscriptions.update({
 		customer_id: customerId,
 		entity_id: entities[0].id,
@@ -269,7 +243,6 @@ test.concurrent(`${chalk.yellowBright("entity: upgrade one entity while other un
 		],
 	});
 
-	// Verify entity 1 still has original balance (unchanged)
 	const entity1 = await autumnV1.entities.get(customerId, entities[1].id);
 	const feature = entity1.features?.[TestFeature.Messages];
 
@@ -285,7 +258,7 @@ test.concurrent(`${chalk.yellowBright("entity: discount on entity product switch
 			items.prepaid({
 				featureId: TestFeature.Messages,
 				billingUnits,
-				price: 5, // $5 per unit
+				price: 5,
 			}),
 		],
 	});
@@ -296,7 +269,7 @@ test.concurrent(`${chalk.yellowBright("entity: discount on entity product switch
 			items.prepaid({
 				featureId: TestFeature.Messages,
 				billingUnits,
-				price: pricePerUnit, // $10 per unit
+				price: pricePerUnit,
 			}),
 		],
 	});
@@ -309,7 +282,6 @@ test.concurrent(`${chalk.yellowBright("entity: discount on entity product switch
 			s.entities({ count: 2, featureId: TestFeature.Users }),
 		],
 		actions: [
-			// Entity 0 on basic product
 			s.attach({
 				productId: basicProduct.id,
 				entityIndex: 0,
@@ -317,7 +289,6 @@ test.concurrent(`${chalk.yellowBright("entity: discount on entity product switch
 					{ feature_id: TestFeature.Messages, quantity: 5 * billingUnits },
 				],
 			}),
-			// Entity 1 on pro product
 			s.attach({
 				productId: proProduct.id,
 				entityIndex: 1,
@@ -343,7 +314,6 @@ test.concurrent(`${chalk.yellowBright("entity: discount on entity product switch
 		couponIds: [coupon.id],
 	});
 
-	// Preview upgrade on entity 1's pro product
 	const preview = await autumnV1.subscriptions.previewUpdate({
 		customer_id: customerId,
 		entity_id: entities[1].id,
@@ -353,10 +323,6 @@ test.concurrent(`${chalk.yellowBright("entity: discount on entity product switch
 		],
 	});
 
-	// Upgrade generates: refund (-$50) + charge ($100)
-	// Discounts only apply to charges, not refunds
-	// Charge with 40% off: $100 * 0.6 = $60
-	// Total: -$50 + $60 = $10
 	const refundAmount = -50;
 	const discountedCharge = Math.round(100 * 0.6);
 	const expectedAmount = refundAmount + discountedCharge;

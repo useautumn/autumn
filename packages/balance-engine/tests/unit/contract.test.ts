@@ -107,7 +107,6 @@ describe("balance engine contract boundaries", () => {
 				input: { ...createTrackCommand(), schemaVersion: 2 },
 			}),
 		).toThrow();
-		// Zero is legal: a lock of 0 holds nothing and can still be confirmed above it.
 		expect(
 			parseTrackCommand({ input: { ...createTrackCommand(), value: 0 } }).value,
 		).toBe(0);

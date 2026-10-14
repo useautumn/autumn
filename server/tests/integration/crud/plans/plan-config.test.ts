@@ -10,13 +10,6 @@ import chalk from "chalk";
 import { AutumnRpcCli } from "@/external/autumn/autumnRpcCli.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// PLAN CONFIG — ignore_past_due
-//
-// Mirrors the old customer-config.test.ts, but the feature now lives on plans
-// (products.config.ignore_past_due) rather than on customers.
-// ═══════════════════════════════════════════════════════════════════════════════
-
 const autumnRpc = new AutumnRpcCli({ version: ApiVersion.V2_1 });
 
 const { db, org, env } = ctx;
@@ -141,7 +134,6 @@ test.concurrent(`${chalk.yellowBright("plan config: update ignore_past_due from 
 });
 
 test.concurrent(`${chalk.yellowBright("plan config: partial update leaves other fields untouched")}`, async () => {
-	// Regression guard — updating config shouldn't clobber name / add_on / auto_enable.
 	const planId = "plan_config_partial";
 	const group = `grp_${planId}`;
 	try {
@@ -182,7 +174,6 @@ test.concurrent(`${chalk.yellowBright("plan config: omitting config in update do
 		config: { ignore_past_due: true },
 	});
 
-	// Update something unrelated — config should survive.
 	await autumnRpc.plans.update<ApiPlanV1, UpdatePlanRpcInput>(planId, {
 		name: "Plan Config Persist Renamed",
 	});

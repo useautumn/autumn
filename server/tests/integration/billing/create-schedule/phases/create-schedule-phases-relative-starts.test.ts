@@ -1,19 +1,3 @@
-/**
- * TDD test for symbolic and relative create_schedule phase starts.
- *
- * Contract under test:
- *   New types/fields:
- *     - phases[].starts_at: number | "now"
- *     - phases[].starting_after: { duration_type: "month" | "year"; duration_count: positive integer }
- *   New endpoints:
- *     - Existing billing.createSchedule accepts symbolic and relative phase starts
- *   New behaviors:
- *     - starts_at: "now" resolves to the test-clock-aware current time
- *     - starting_after resolves from the previous resolved phase start
- *   Side effects:
- *     - Response phases, DB schedule phases, and customer_products store resolved numeric timestamps
- */
-
 import { expect, test } from "bun:test";
 import {
 	addDuration,

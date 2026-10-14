@@ -11,16 +11,13 @@ import { join } from "node:path";
 import { threadId } from "node:worker_threads";
 import { z } from "zod/v4";
 
-/** What the admin registers on a multi-tenant Atom: an id for the folder, and the hash of the token that opens it. */
 export type TenantAtom = { id: string; tokenHash: string };
 
 const ATOM_FILE = "atom.json";
-/** One path segment, so an id can never name a folder outside the data directory. */
 export const ATOM_ID = /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/;
 
 const atomFileSchema = z.object({ token_hash: z.string().min(1) });
 
-/** Whether the Atom's folder still records it; another thread may have deleted it. */
 export const hasAtomFile = ({
 	dataDir,
 	id,
@@ -40,7 +37,6 @@ export const atomFolderPath = ({
 	return join(dataDir, id);
 };
 
-/** Every folder under the data directory that records an Atom; anything else there is left alone. */
 export const listTenantAtoms = ({
 	dataDir,
 }: {
@@ -59,7 +55,6 @@ export const listTenantAtoms = ({
 	return tenantAtoms;
 };
 
-/** Null for a folder with no Atom, including one another thread is deleting right now. */
 const readAtomFile = ({ atomFile }: { atomFile: string }): unknown => {
 	try {
 		return JSON.parse(readFileSync(atomFile, "utf8"));
@@ -77,7 +72,6 @@ export const writeTenantAtom = ({
 }): void => {
 	const folder = atomFolderPath({ dataDir, id: tenantAtom.id });
 	mkdirSync(folder, { recursive: true });
-	// Renamed into place, so another thread re-reading the folders never sees half a file.
 	const staged = join(folder, `${ATOM_FILE}.${process.pid}.${threadId}.tmp`);
 	writeFileSync(staged, JSON.stringify({ token_hash: tenantAtom.tokenHash }));
 	renameSync(staged, join(folder, ATOM_FILE));

@@ -9,7 +9,6 @@ import {
 import { ApiInvoiceV1Schema } from "../others/apiInvoice/apiInvoiceV1.js";
 import { ApiBaseEntitySchema } from "./apiBaseEntity.js";
 
-// V2 base entity - uses V1 subscriptions (single array with status field)
 export const BaseApiEntityV2Schema = ApiBaseEntitySchema.extend({
 	subscriptions: z.array(ApiSubscriptionV1Schema),
 	purchases: z.array(ApiPurchaseV0Schema),

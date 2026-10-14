@@ -3,7 +3,6 @@ import { invalidateProductsCache } from "@/external/redis/actions/productsCache/
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 
-/** Test-only: mark a version tombstoned the way Unit 3 will. */
 export const stampProductTombstone = async ({
 	ctx,
 	planId,

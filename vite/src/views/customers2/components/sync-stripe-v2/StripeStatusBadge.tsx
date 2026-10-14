@@ -16,7 +16,6 @@ export const STRIPE_STATUS_INDICATORS: Record<
 	neutral: { tone: "neutral", glyph: "minus" },
 };
 
-/** The Stripe subscription's (or not-yet-started schedule's) live status. */
 export function StripeStatusBadge({ proposal }: { proposal: SyncProposalV2 }) {
 	const status = stripeObjectToStatus({
 		subscription: proposal.stripe_subscription,

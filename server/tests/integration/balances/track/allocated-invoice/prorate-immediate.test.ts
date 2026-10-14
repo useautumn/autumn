@@ -12,14 +12,6 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { constructArrearProratedItem } from "@/utils/scriptUtils/constructItem.js";
 
-// ═══════════════════════════════════════════════════════════════════
-// Allocated Invoice — ProrateImmediately / Prorate
-//
-// Product: 1 included seat, $50/seat
-// on_increase: ProrateImmediately (prorated charge for remaining period)
-// on_decrease: Prorate (prorated refund for remaining period)
-// ═══════════════════════════════════════════════════════════════════
-
 const PRICE_PER_SEAT = 50;
 const INCLUDED_USAGE = 1;
 
@@ -33,10 +25,6 @@ const userItem = constructArrearProratedItem({
 	},
 });
 
-// ═══════════════════════════════════════════════════════════════════
-// prorate-imm1: Mid-cycle track charges prorated amount
-// ═══════════════════════════════════════════════════════════════════
-
 test(`${chalk.yellowBright("prorate-imm1: mid-cycle track charges prorated amount")}`, async () => {
 	const pro = products.pro({ id: "pro", items: [userItem] });
 
@@ -46,10 +34,7 @@ test(`${chalk.yellowBright("prorate-imm1: mid-cycle track charges prorated amoun
 			s.customer({ testClock: true, paymentMethod: "success" }),
 			s.products({ list: [pro] }),
 		],
-		actions: [
-			s.attach({ productId: pro.id }),
-			// s.advanceTestClock({ days: 15 }),
-		],
+		actions: [s.attach({ productId: pro.id })],
 	});
 
 	const trackRes: TrackResponseV2 = await autumnV2.track({
@@ -89,10 +74,6 @@ test(`${chalk.yellowBright("prorate-imm1: mid-cycle track charges prorated amoun
 	await expectStripeSubscriptionCorrect({ ctx, customerId });
 });
 
-// ═══════════════════════════════════════════════════════════════════
-// prorate-imm2: Mid-cycle track negative issues prorated refund
-// ═══════════════════════════════════════════════════════════════════
-
 test(`${chalk.yellowBright("prorate-imm2: mid-cycle track negative issues prorated refund")}`, async () => {
 	const pro = products.pro({ id: "pro", items: [userItem] });
 
@@ -116,7 +97,6 @@ test(`${chalk.yellowBright("prorate-imm2: mid-cycle track negative issues prorat
 		latestStatus: "paid",
 	});
 
-	// Track -1 mid-cycle (from 3 to 2 usage)
 	const trackRes: TrackResponseV2 = await autumnV2.track({
 		customer_id: customerId,
 		feature_id: TestFeature.Users,

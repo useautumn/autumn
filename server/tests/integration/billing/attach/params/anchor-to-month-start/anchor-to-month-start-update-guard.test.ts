@@ -1,11 +1,3 @@
-/**
- * Turning `config.anchor_to_month_start` on for a plan that customers are already on
- * patches the plan in place. Updating an existing subscription must not re-anchor it.
- *
- * Contract:
- *   attach (flag off) → flag turned on → subscriptions.update → Stripe anchor unchanged
- */
-
 import { test } from "bun:test";
 import {
 	ApiVersion,

@@ -7,7 +7,6 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-// version-only is per-customer until definition execute is restored
 import { buildPlanChangeFromFullProducts } from "@/internal/catalogV2/actions/buildPlanChange/buildPlanChangeFromFullProducts";
 import { ProductService } from "@/internal/products/ProductService";
 import {
@@ -241,8 +240,6 @@ test.skip(
 		expect(change.subscription).toMatchObject({ plan_id: plan.id });
 		expect(change.previous_attributes).toBeNull();
 		expect(change.item_changes).toEqual([]);
-		// Rows were repointed onto identical definitions — no content changed,
-		// so there is no plan change to report (same as the per-customer lane).
 		expect(change.plan_change).toBeUndefined();
 	},
 );

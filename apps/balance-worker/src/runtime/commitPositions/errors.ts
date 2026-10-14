@@ -1,4 +1,3 @@
-/** Two writers of one partition must never hold unconfirmed sequence numbers at once, or their ranges interleave. */
 export class CommitPositionsOverlapError extends Error {
 	constructor({ partition }: { partition: number }) {
 		super(

@@ -6,9 +6,7 @@ import type { TransactionRetry } from "../../../../producer/sendTransactionalBat
 
 export type OwnershipPublisherContext = {
 	producer: KafkaProducer;
-	/** A plain producer for `ready` and `draining`; without one the publisher can only claim and release. */
 	sender?: KafkaSender;
-	/** How long a claim or release waits out broker refusals; defaults to less than a successor's claim wait. */
 	retry?: TransactionRetry;
 };
 
@@ -25,21 +23,17 @@ export type OwnershipClaim = {
 export type OwnershipRelease = {
 	partition: number;
 	releasedAt: number;
-	/** The releasing worker, so a consumer can refuse a release from a worker that
-	 *  no longer holds the partition. */
 	endpoint: string;
 };
 
 export type OwnershipReadiness = {
 	partition: number;
-	/** The worker that has prepared the partition and is waiting to be named its owner. */
 	endpoint: string;
 	readyAt: number;
 };
 
 export type OwnershipDraining = {
 	partition: number;
-	/** The owner that has withdrawn and is draining before naming its successor. */
 	endpoint: string;
 	successor: string;
 	drainingAt: number;
@@ -47,7 +41,6 @@ export type OwnershipDraining = {
 
 export type OwnershipPreparation = {
 	partition: number;
-	/** The worker assigned the partition that has started preparing it. */
 	endpoint: string;
 	preparingAt: number;
 };

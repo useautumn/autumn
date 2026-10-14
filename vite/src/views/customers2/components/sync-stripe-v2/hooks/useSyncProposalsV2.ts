@@ -5,7 +5,6 @@ import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
 
-/** Shared by the Sync sheet, the subscription picker and its prefetch, so all read one cache entry. */
 export const useSyncProposalsV2QueryOptions = ({
 	customerId,
 }: {

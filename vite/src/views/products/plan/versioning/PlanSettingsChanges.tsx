@@ -3,9 +3,6 @@ export type SettingChange = { key: string; label: string; detail: string };
 
 const SETTING_LABELS = PLAN_PREVIOUS_ATTRIBUTE_LABELS;
 
-// Derived entirely from the backend preview's previous_attributes — the
-// frontend never diffs plan objects itself. A null previous value means the
-// field was added.
 export function previousAttributesToSettingChanges(
 	previousAttributes: Record<string, unknown> | null | undefined,
 ): SettingChange[] {

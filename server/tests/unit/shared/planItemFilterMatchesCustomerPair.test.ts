@@ -1,11 +1,3 @@
-/**
- * PlanItemFilter matching must compare PlanItemInterval | null, never raw
- * EntInterval / ResetInterval / BillingInterval strings.
- *
- * one_off (filter/price) and lifetime (entitlement) both convert to null.
- * month on either side converts to ProductItemInterval.Month.
- */
-
 import { describe, expect, test } from "bun:test";
 import {
 	BillWhen,

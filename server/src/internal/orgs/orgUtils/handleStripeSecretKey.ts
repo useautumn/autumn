@@ -25,7 +25,6 @@ export const handleStripeSecretKey = async ({
 	env: AppEnv;
 	org: Organization;
 }) => {
-	// 1. Check if key is valid
 	try {
 		await checkKeyValid(secretKey);
 	} catch (error) {
@@ -36,8 +35,6 @@ export const handleStripeSecretKey = async ({
 	const stripe = new Stripe(secretKey);
 	const account = await stripe.accounts.retrieve();
 
-	// Both channels must point at the same Stripe account, else OAuth webhooks
-	// (account B) would be processed against secret-key billing state (account A).
 	const oauthAccountId = orgToAccountId({ org, env, noDefaultAccount: true });
 
 	if (oauthAccountId && oauthAccountId !== account.id) {
@@ -48,9 +45,6 @@ export const handleStripeSecretKey = async ({
 		});
 	}
 
-	// Always clear stale direct endpoints on the org's own account. When OAuth is
-	// connected its master connect webhook covers the org, so we must NOT also keep
-	// or create a direct webhook (it would double-deliver).
 	const curWebhooks = await stripe.webhookEndpoints.list();
 	for (const existing of curWebhooks.data) {
 		if (existing.url.includes(orgId) && existing.url.includes(env)) {
@@ -68,7 +62,6 @@ export const handleStripeSecretKey = async ({
 		}
 	}
 
-	// 3. Return encrypted
 	if (env === AppEnv.Sandbox) {
 		return {
 			test_api_key: encryptData(secretKey),

@@ -9,15 +9,6 @@ import { timeout } from "@tests/utils/genUtils";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 
-// ─────────────────────────────────────────────────────────────────
-// Rollover max_percentage — FREE entitlements
-//
-// Free entitlements are reset via two paths:
-// 1. Cron job (resetCustomerEntitlement) — tested via s.resetFeature
-// 2. Lazy reset (GET /customers triggers reset if next_reset_at expired)
-//    — tested via expireCusEntForReset + GET
-// ─────────────────────────────────────────────────────────────────
-
 test.concurrent(`${chalk.yellowBright("free rollover max_percentage (lazy reset): caps at percentage of included")}`, async () => {
 	const messagesItem = items.monthlyMessagesWithRollover({
 		includedUsage: 200,
@@ -53,8 +44,6 @@ test.concurrent(`${chalk.yellowBright("free rollover max_percentage (lazy reset)
 
 	await expireCusEntForReset({ ctx, customerId, featureId: TestFeature.Messages });
 
-	// Unused = 150, cap = floor(200 * 50 / 100) = 100 → rollover = 100
-	// Fresh grant = 200, total = 200 + 100 = 300
 	const afterDb = await autumnV2_2.customers.get<ApiCustomerV5>(customerId, {
 		skip_cache: "true",
 	});
@@ -101,8 +90,6 @@ test.concurrent(`${chalk.yellowBright("free rollover max_percentage (lazy reset)
 
 	await expireCusEntForReset({ ctx, customerId, featureId: TestFeature.Messages });
 
-	// Unused = 50, cap = 100 → 50 < 100, no capping → rollover = 50
-	// Fresh grant = 200, total = 250
 	const afterDb = await autumnV2_2.customers.get<ApiCustomerV5>(customerId, {
 		skip_cache: "true",
 	});
@@ -148,8 +135,6 @@ test.concurrent(`${chalk.yellowBright("free rollover max_percentage (cron reset)
 		],
 	});
 
-	// Unused = 150, cap = 100 → rollover = 100
-	// Fresh grant = 200, total = 300
 	const after = await autumnV2_2.customers.get<ApiCustomerV5>(customerId, {
 		skip_cache: "true",
 	});
@@ -185,11 +170,8 @@ test.concurrent(`${chalk.yellowBright("free rollover max_percentage (lazy reset)
 		],
 	});
 
-	// Cycle 1: 100 - 60 = 40 remaining
 	await expireCusEntForReset({ ctx, customerId, featureId: TestFeature.Messages });
 
-	// Unused = 40, cap = 50 → rollover = 40 (under cap)
-	// Fresh grant = 100, total = 140
 	const afterCycle1 = await autumnV2_2.customers.get<ApiCustomerV5>(customerId, {
 		skip_cache: "true",
 	});
@@ -200,14 +182,9 @@ test.concurrent(`${chalk.yellowBright("free rollover max_percentage (lazy reset)
 		rollovers: [{ balance: 40 }],
 	});
 
-	// Cycle 2: don't use any → full 140 remaining
 	await timeout(1000);
 	await expireCusEntForReset({ ctx, customerId, featureId: TestFeature.Messages });
 
-	// New rollover from main = 100, capped to 50.
-	// Previous rollover (40) still alive (length=3).
-	// Total rollovers = 40 + 50 = 90 > cap 50 → excess clearing trims to 50.
-	// Fresh grant = 100, total = 150.
 	const afterCycle2 = await autumnV2_2.customers.get<ApiCustomerV5>(customerId, {
 		skip_cache: "true",
 	});
@@ -241,8 +218,6 @@ test.concurrent(`${chalk.yellowBright("free rollover max_percentage (lazy reset)
 	await timeout(2000);
 	await expireCusEntForReset({ ctx, customerId, featureId: TestFeature.Messages });
 
-	// Unused = 200, cap = 200 → full rollover
-	// Fresh grant = 200, total = 400
 	const afterDb = await autumnV2_2.customers.get<ApiCustomerV5>(customerId, {
 		skip_cache: "true",
 	});

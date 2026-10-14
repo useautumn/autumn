@@ -1,13 +1,3 @@
-/**
- * Contract under test — DynamoDB is the only idempotency-key store:
- *   - claimed → the request proceeds.
- *   - duplicate → 409 DuplicateIdempotencyKey.
- *   - unavailable → fails OPEN, so a Dynamo outage never rejects live traffic.
- *   - The per-route-group ttlMs reaches the store unchanged.
- *   - Check and release address the same partition key, whose format is
- *     load-bearing across a deploy.
- */
-
 import {
 	afterAll,
 	afterEach,
@@ -26,10 +16,6 @@ import {
 } from "@/internal/misc/idempotency/idempotencyKeyUtils.js";
 
 const mockState = {
-	// mock.module is process-wide and leaks into later test files, and bun
-	// links other files' import bindings before afterAll can re-mock — so the
-	// mocks stay installed but delegate to the real implementations once this
-	// suite is done (passthrough=true).
 	passthrough: false,
 	claimResult: "claimed" as IdempotencyClaimResult,
 	claims: [] as string[],
@@ -37,9 +23,6 @@ const mockState = {
 	releases: [] as string[],
 };
 
-// Real implementations for the passthrough delegation. Snapshot the FUNCTION
-// references before mocking — a module namespace has live bindings, so after
-// mock.module it would resolve to the mock and passthrough would recurse.
 const realClaimDynamo = (
 	await import(
 		"@/external/aws/dynamodb/idempotencyKeys/operations/claimDynamoIdempotencyKey.js"

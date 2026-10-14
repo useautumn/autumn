@@ -18,13 +18,11 @@ import {
 } from "../utils/creditDimensionUtils";
 import { CreditDimensionValueSelect } from "./CreditDimensionValueSelect";
 
-/** A rule row: one select per field over its match, then whatever the table adds. */
 export interface MatchRow {
 	id: string;
 	index: number;
 	label: string;
 	match: CreditMatch;
-	/** Set when this row and another could match the same event; the save is blocked until fixed. */
 	warning?: string;
 }
 
@@ -67,7 +65,6 @@ export const matchColumns = <T extends MatchRow>(
 		},
 	}));
 
-/** Wide enough for the warning glyph beside the remove button. */
 const ACTIONS_COLUMN_WIDTH = 64;
 
 export const removeColumn = <T extends MatchRow>(): ColumnDef<T, unknown> => ({

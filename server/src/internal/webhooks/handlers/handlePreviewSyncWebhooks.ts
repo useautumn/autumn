@@ -4,7 +4,6 @@ import { listWebhookApps } from "../actions/apps/webhookApps.js";
 import { computeWebhookSyncChanges } from "../actions/sync/computeWebhookSyncChanges.js";
 import { listSyncRemote } from "../actions/sync/listSyncRemote.js";
 
-/** What webhooks.sync would change, without writing. Same body. */
 export const handlePreviewSyncWebhooks = createRoute({
 	scopes: [Scopes.Organisation.Read],
 	body: SyncWebhooksParamsSchema,

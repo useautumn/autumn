@@ -1,8 +1,3 @@
-/**
- * Individual time-segment input (hours / minutes / 12hours).
- * Adapted from openstatusHQ/time-picker (MIT).
- */
-
 import {
 	getArrowByType,
 	getDateByType,
@@ -49,8 +44,6 @@ const TimePickerInput = React.forwardRef<
 		const [flag, setFlag] = useState(false);
 		const [prevIntKey, setPrevIntKey] = useState("0");
 
-		// Allow the user to enter the second digit within 2 seconds,
-		// otherwise reset to first-digit entry.
 		useEffect(() => {
 			if (!flag) return;
 			const timer = setTimeout(() => setFlag(false), 2000);
@@ -63,8 +56,6 @@ const TimePickerInput = React.forwardRef<
 		);
 
 		const calculateNewValue = (key: string) => {
-			// For 12-hour mode: if the first digit entered was 0 and the display
-			// shows "01", the next keystroke should start a fresh two-digit entry.
 			if (picker === "12hours") {
 				if (flag && calculatedValue.slice(1, 2) === "1" && prevIntKey === "0") {
 					return `0${key}`;

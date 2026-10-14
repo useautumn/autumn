@@ -22,7 +22,6 @@ export type EvalOutput = {
 	toolCalls: Array<{ name: string; args: Record<string, unknown> }>;
 	turns?: Array<{
 		apiCalls?: AutumnApiCall[];
-		/** An optional approve turn that found no pending gate. */
 		skipped?: boolean;
 		text?: string;
 		toolCalls?: Array<{ name: string; args: Record<string, unknown> }>;
@@ -290,7 +289,6 @@ export const expectedApiCallsAfterApproval = ({
 	);
 
 	return expectations.every(({ approvalIndex, call: expectedCall }) => {
-		// 1-based so a scenario reads "after the second approval".
 		const target = approveIndexes[(approvalIndex ?? 1) - 1];
 		if (target === undefined) return false;
 
@@ -480,8 +478,6 @@ export const askedClarificationBeforeTool = ({
 }: EvalScoreArgs) => {
 	const questions = getExpectedQuestionsBeforeTool(expected);
 	if (!questions.length) return 1;
-	// Per-turn toolCalls are cumulative snapshots, so the asking turn must
-	// predate the tool's first appearance across any snapshot.
 	const turns = output.turns ?? [];
 	return questions.every((question) => {
 		const callsTargetTool = (turn: (typeof turns)[number]) =>
@@ -533,9 +529,6 @@ PASS only if the reply (1) states every required fact, (2) contains no greeting,
 
 Respond with JSON only: {"pass": true|false, "reason": "<one sentence>"}`;
 
-// Single ConCISE-style judge: one cheap LLM call over the final reply, scoring
-// "could this be shorter without dropping a required fact?" — verbosity-bias
-// correction is baked into the prompt rather than layered metrics.
 export const responseConcise = async ({
 	expected,
 	output,
@@ -561,7 +554,6 @@ export const responseConcise = async ({
 	const json = text.match(/\{[\s\S]*\}/)?.[0];
 	try {
 		const verdict = JSON.parse(json ?? "") as { pass: boolean; reason: string };
-		// Surface the verdict in the terminal; Braintrust metadata keeps it too.
 		process.stderr.write(
 			`[concise-judge] ${verdict.pass ? "pass" : "fail"}: ${verdict.reason}\n`,
 		);
@@ -647,9 +639,6 @@ export const noScheduleCalls = ({ output }: { output: EvalOutput }) =>
 const namedConciseScorer: EvalScorer = (args) => responseConcise(args);
 Object.defineProperty(namedConciseScorer, "name", { value: "Concise" });
 
-// One named evaluator per expectation type, in display order. The panel for a
-// file is derived from the expectation types its cases actually declare, so
-// Braintrust only shows columns a case can fail.
 const scorersByExpectationType: Record<EvalExpectation["type"], EvalScorer> = {
 	"tools.called": namedScorer({
 		name: "Expected tool calls",
@@ -716,7 +705,6 @@ const expectationTypesIn = (
 	];
 };
 
-/** Scorer panel derived from the expectation types declared across a file's cases. */
 export const scoresFromExpectations = (
 	expectedList: (EvalExpected | undefined)[],
 ): EvalScorer[] => {

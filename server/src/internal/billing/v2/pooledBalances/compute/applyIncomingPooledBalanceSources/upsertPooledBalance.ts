@@ -48,9 +48,6 @@ export const upsertPooledBalance = ({
 			entitlement: contributionCustomerEntitlement.entitlement,
 		});
 
-	// A source that was already pooled carries balance 0 — its grant lives in the
-	// pool it is leaving. Seed from the contribution instead, whether the grant
-	// lands back on the same pool or on a newly inserted one.
 	const replacesRemovedContribution = Array.from(
 		computeContext.pooledBalanceIdsWithRemovedContributions,
 	).some(
@@ -66,9 +63,6 @@ export const upsertPooledBalance = ({
 		balanceDelta = contributionAmounts.currentContribution;
 	}
 
-	// Re-admitting a source that still contributes to this very pool would count
-	// its grant twice: the pool already includes it, and nothing removed it. Only
-	// the difference is owed, so re-running a transition is a no-op.
 	const existingContribution =
 		contributionCustomerEntitlement.pooled_balance_contribution;
 	const alreadyCountedByPool =

@@ -1,6 +1,3 @@
-// Shared helpers for the role-management scripts (set-critical-role-timeouts,
-// create-neon-events-readonly-role) so arg parsing / quoting / Infisical loading can't drift.
-
 export const quoteIdent = (value: string) => `"${value.replaceAll('"', '""')}"`;
 export const quoteLiteral = (value: string) => `'${value.replaceAll("'", "''")}'`;
 

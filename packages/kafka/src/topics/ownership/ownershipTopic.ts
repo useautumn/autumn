@@ -58,14 +58,6 @@ function parseReady({
 	return parsed.data;
 }
 
-/** Key scheme on a compacted topic: `claimed` (and legacy `unowned`) share the
- *  partition's key, so compaction keeps only the latest word on who owns it.
- *  A handoff signal (`ready`, `draining`) is keyed `<partition>:<type>` so it only
- *  ever compacts against its own kind; under the owner's key it would replace
- *  the current `claimed` once a segment rolled, and a cold-starting owner
- *  table would see no owner while the predecessor was still serving. A `released`
- *  is keyed per releasing worker for the same reason: a release from a worker
- *  that already lost the partition is ignored live, so it must not outlive the claim. */
 function parseDraining({
 	input,
 }: {
@@ -125,7 +117,6 @@ const OWNERSHIP_RECORD_TYPES = new Set<OwnershipRecord["type"]>([
 	"preparing",
 ]);
 
-/** The first `ready` records were keyed like the owner; they still read, they are just never written. */
 function isLegacyReadyKey({
 	key,
 	record,
@@ -152,8 +143,6 @@ function parseOwnershipRecord({
 	return record;
 }
 
-/** For the owner table: a record type this build does not know is a signal for
- *  someone else, not a reason to stop routing. Malformed known types still throw. */
 export function parseOwnershipRecordIfKnown({
 	key,
 	value,

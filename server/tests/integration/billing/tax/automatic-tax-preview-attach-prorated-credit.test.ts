@@ -1,36 +1,3 @@
-/**
- * TDD: preview.tax inflated when proration credit lines are present.
- *
- * Bug: computeAttachTaxPreview filters lineItems with `net > 0`, dropping
- * "Unused" credit lines before passing to stripe.tax.calculations.create.
- * Tax gets computed on the positive sum, not the net invoice subtotal.
- *
- * User report: previewing Starter -> messy switch shows VAT $10.00
- * (20% x $50) but Stripe actually charges $8.60 (20% x $43 net subtotal).
- * Off by $1.40.
- *
- * Red-failure mode (current behavior):
- *  - Case 1 (upgrade with credit): preview.tax.total ~ positiveSum * rate
- *    (inflated, ignores negative proration credit)
- *  - Case 2 (downgrade, net < 0): preview.tax.total === 0
- *    (tax credit omitted from the preview)
- *  - Case 3 (all-positive new attach): correct
- *
- * Green-success criteria (after fix):
- *  - Case 1: preview.tax.total ~ netSubtotal * rate
- *  - Case 2: preview.tax.total ~ netSubtotal * rate (negative)
- *  - Case 3: unchanged (no regression)
- *
- * Architecture (per fetch-build-execute):
- *   Symptom surfaces in: billingPlanToAttachPreview.ts (formatter passes
- *     billingPlan.preview.tax through to the response)
- *   Root cause lives in: preview/tax/computeAttachTaxPreview.ts:55-58
- *     (filters net > 0, drops negative proration credits before Stripe Tax)
- *   Fix layer: same — computeAttachTaxPreview owns the "what subtotal gets
- *     taxed" invariant for previews. No upstream layer pre-computes a
- *     netSubtotal field.
- */
-
 import { expect, test } from "bun:test";
 import type { AttachPreviewResponse } from "@autumn/shared";
 import { products } from "@tests/utils/fixtures/products.js";
@@ -45,8 +12,6 @@ const auAddress = {
 	state: "NSW",
 };
 
-// AU GST rate, mirrors automatic-tax-proration.test.ts which uses
-// `prorationInvoice.subtotal * 1.1` for the same jurisdiction.
 const AU_GST_RATE = 0.1;
 
 test.concurrent(`${chalk.yellowBright(
@@ -76,13 +41,6 @@ test.concurrent(`${chalk.yellowBright(
 		],
 	});
 
-	// Pro $20/mo attached, advanced ~15 days into a 30-day cycle.
-	// Preview switching to Premium $50/mo immediately:
-	//   Premium prorated charge:   ~ +$25 (15 days remaining x $50 / 30)
-	//   Unused Pro credit:         ~ -$10 (15 days remaining x $20 / 30)
-	//   netSubtotal:               ~  $15
-	// Bug: tax = positiveSum * rate    = 25 * 0.10 = $2.50
-	// Fix: tax = netSubtotal * rate   = 15 * 0.10 = $1.50
 	const preview = (await autumnV2_2.billing.previewAttach({
 		customer_id: customerId,
 		plan_id: `premium_${customerId}`,
@@ -91,9 +49,6 @@ test.concurrent(`${chalk.yellowBright(
 	expect(preview.tax).toBeDefined();
 	expect(preview.tax?.status).toBe("complete");
 
-	// Compute expected tax from the preview's actual line items so we're
-	// robust to small proration timing wobble (Stripe rounds based on
-	// exact second of test-clock advance).
 	const immediateLineItemsTotal = preview.line_items.reduce(
 		(sum, li) => sum + li.total,
 		0,
@@ -104,20 +59,14 @@ test.concurrent(`${chalk.yellowBright(
 		`[preview-tax-prorated-credit upgrade] line_items_total=${immediateLineItemsTotal} expectedTax=${expectedTax} actualTax=${preview.tax?.total}`,
 	);
 
-	// Sanity: there ARE both positive and negative proration lines.
 	const positiveLines = preview.line_items.filter((li) => li.total > 0);
 	const negativeLines = preview.line_items.filter((li) => li.total < 0);
 	expect(positiveLines.length).toBeGreaterThan(0);
 	expect(negativeLines.length).toBeGreaterThan(0);
 
-	// Sanity: the positive sum is meaningfully larger than the net subtotal,
-	// so the bug's overstatement is observable.
 	const positiveSum = positiveLines.reduce((sum, li) => sum + li.total, 0);
 	expect(positiveSum).toBeGreaterThan(immediateLineItemsTotal + 5);
 
-	// Core assertion: tax matches net subtotal x rate (within ±$0.05 to
-	// absorb proration rounding). The buggy value is positiveSum * rate
-	// which is comfortably outside this band.
 	expect(preview.tax?.total).toBeGreaterThanOrEqual(expectedTax - 0.05);
 	expect(preview.tax?.total).toBeLessThanOrEqual(expectedTax + 0.05);
 });
@@ -149,13 +98,6 @@ test.concurrent(`${chalk.yellowBright(
 		],
 	});
 
-	// Premium $50/mo attached, advanced ~5 days into a 30-day cycle.
-	// Preview immediate downgrade to Pro $20/mo:
-	//   Pro prorated charge:        ~ +$16.67 (25 days x $20 / 30)
-	//   Unused Premium credit:      ~ -$41.67 (25 days x $50 / 30)
-	//   netSubtotal:                ~ -$25.00  (credit exceeds charge)
-	// Bug: tax = 0, omitting the tax credit from the preview
-	// Fix: tax = netSubtotal * rate = ~$-2.50
 	const preview = (await autumnV2_2.billing.previewAttach({
 		customer_id: customerId,
 		plan_id: `pro_${customerId}`,
@@ -165,7 +107,6 @@ test.concurrent(`${chalk.yellowBright(
 	expect(preview.tax).toBeDefined();
 	expect(preview.tax?.status).toBe("complete");
 
-	// Sanity: net subtotal of immediate line items is <= 0.
 	const immediateLineItemsTotal = preview.line_items.reduce(
 		(sum, li) => sum + li.total,
 		0,
@@ -175,13 +116,11 @@ test.concurrent(`${chalk.yellowBright(
 	);
 	expect(immediateLineItemsTotal).toBeLessThanOrEqual(0);
 
-	// Sanity: there's still a positive line that the buggy code would tax.
 	const positiveLines = preview.line_items.filter((li) => li.total > 0);
 	expect(positiveLines.length).toBeGreaterThan(0);
 
 	const expectedTax = immediateLineItemsTotal * AU_GST_RATE;
 
-	// Core assertion: tax mirrors the negative net subtotal.
 	expect(preview.tax?.total).toBeGreaterThanOrEqual(expectedTax - 0.05);
 	expect(preview.tax?.total).toBeLessThanOrEqual(expectedTax + 0.05);
 	expect(preview.tax?.amount_exclusive).toBeGreaterThanOrEqual(
@@ -213,8 +152,6 @@ test.concurrent(`${chalk.yellowBright(
 			}),
 			s.products({ list: [proProd] }),
 		],
-		// No prior attach — preview is for a fresh customer with no
-		// existing subscription, so there are no proration credits.
 		actions: [],
 	});
 
@@ -226,12 +163,9 @@ test.concurrent(`${chalk.yellowBright(
 	expect(preview.tax).toBeDefined();
 	expect(preview.tax?.status).toBe("complete");
 
-	// Only positive line items, no negatives.
 	const negativeLines = preview.line_items.filter((li) => li.total < 0);
 	expect(negativeLines.length).toBe(0);
 
-	// Tax = sum of all line items * rate (which equals positive sum here
-	// since no negatives). Same expectation before and after fix.
 	const immediateLineItemsTotal = preview.line_items.reduce(
 		(sum, li) => sum + li.total,
 		0,

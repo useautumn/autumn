@@ -34,11 +34,6 @@ const payloadHasExpectedFeatures = ({
 		(featureId) => data.customer?.features?.[featureId] === undefined,
 	);
 
-/**
- * Polls Svix Play for a customer.products.updated delivery. Returns the
- * payload data, or null when none arrives in time. `entityId: null` requires
- * a customer-level delivery; a string requires that entity's delivery.
- */
 export const waitForProductsUpdatedWebhook = async ({
 	playToken,
 	customerId,
@@ -56,9 +51,7 @@ export const waitForProductsUpdatedWebhook = async ({
 	entityId?: string | null;
 	planId?: string;
 	planVersion?: number;
-	/** Post-state features used to distinguish this delivery from setup events. */
 	features?: CustomerFeatureExpectation[];
-	/** Post-state absences used to distinguish this delivery from setup events. */
 	absentFeatureIds?: string[];
 	timeoutMs?: number;
 }): Promise<CustomerProductsUpdatedPayload["data"] | null> => {
@@ -86,8 +79,6 @@ export const waitForProductsUpdatedWebhook = async ({
 	return result?.payload.data ?? null;
 };
 
-/** Declarative assertions over a delivered customer.products.updated payload.
- * Only the fields provided are checked, expectBalanceCorrect-style. */
 export const expectProductsUpdatedCorrect = ({
 	data,
 	customerId,
@@ -101,11 +92,8 @@ export const expectProductsUpdatedCorrect = ({
 	customerId: string;
 	planId?: string;
 	scenario?: string;
-	/** null asserts a customer-level payload (no entity). */
 	entityId?: string | null;
-	/** Features the embedded customer must carry, with optional balances. */
 	features?: CustomerFeatureExpectation[];
-	/** Features the embedded customer must no longer expose. */
 	absentFeatureIds?: string[];
 }) => {
 	expect(data).not.toBeNull();

@@ -11,7 +11,6 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { Decimal } from "decimal.js";
 
-/** Wait time for SQS auto top-up processing */
 const AUTO_TOPUP_WAIT_MS = 40000;
 
 test.concurrent(`${chalk.yellowBright("auto-topup fm1: declining card — no balance increment")}`, async () => {
@@ -185,9 +184,6 @@ test.concurrent(`${chalk.yellowBright("auto-topup fm4: track exactly to threshol
 		}),
 	});
 
-	// Track 80 → balance = exactly 20 (AT threshold, not below it)
-	// threshold check is `remainingBalance >= autoTopupConfig.threshold`
-	// so balance=20 >= threshold=20 → does NOT trigger
 	await autumnV2_1.track({
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
@@ -243,7 +239,7 @@ test.concurrent(`${chalk.yellowBright("auto-topup fm5: insufficient balance reje
 	const mid = await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
 	const midBalance = mid.balances[TestFeature.Messages].remaining;
 	const expectedMid = new Decimal(100).sub(85).add(100).toNumber();
-	expect(midBalance).toBe(expectedMid); // 115
+	expect(midBalance).toBe(expectedMid);
 
 	const midInvoiceCount = mid.invoices?.length ?? 0;
 
@@ -254,7 +250,6 @@ test.concurrent(`${chalk.yellowBright("auto-topup fm5: insufficient balance reje
 			value: 200,
 		});
 	} catch {
-		// Insufficient balance rejection is expected
 	}
 
 	await timeout(AUTO_TOPUP_WAIT_MS);
@@ -290,7 +285,6 @@ test.concurrent(`${chalk.yellowBright("auto-topup fm6: threshold 0 — never tri
 		],
 	});
 
-	// threshold=0 → check is `remainingBalance >= 0` → always true → never triggers
 	await autumnV2_1.customers.update(customerId, {
 		billing_controls: makeAutoTopupConfig({
 			threshold: 0,

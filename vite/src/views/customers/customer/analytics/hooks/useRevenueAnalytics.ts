@@ -80,7 +80,6 @@ export const useRevenueByProduct = ({
 		enabled,
 	});
 
-	// Background prefetch other granularities so switching is instant
 	useEffect(() => {
 		if (!enabled) return;
 		for (const g of ["day", "month", "year"] as const) {

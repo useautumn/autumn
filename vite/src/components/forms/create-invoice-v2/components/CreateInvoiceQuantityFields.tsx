@@ -125,7 +125,6 @@ export function CreateInvoiceQuantityFields({
 	);
 }
 
-/** One feature billed as a prepaid pack plus usage beyond it: a shared name over two quantity rows. */
 function DualPricedQuantityRows({
 	row,
 	currency,

@@ -2,15 +2,6 @@ import { member, Scopes, user } from "@autumn/shared";
 import { eq, sql } from "drizzle-orm";
 import { createRoute } from "../../honoMiddlewares/routeHandler";
 
-/**
- * GET /admin/org-member
- *
- * Query params:
- * - org_id: The org ID to get a member for
- *
- * Returns the userId of the first non-admin member of the org, falling back to
- * any member for staff-only orgs (test orgs, internal sandboxes).
- */
 export const handleGetOrgMember = createRoute({
 	scopes: [Scopes.Superuser],
 	handler: async (c) => {
@@ -28,7 +19,6 @@ export const handleGetOrgMember = createRoute({
 			.from(member)
 			.leftJoin(user, eq(member.userId, user.id))
 			.where(eq(member.organizationId, orgId))
-			// Non-admin members first, so a real customer is preferred when one exists.
 			.orderBy(sql`CASE WHEN ${user.role} = 'admin' THEN 1 ELSE 0 END`)
 			.limit(1);
 

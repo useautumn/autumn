@@ -1,19 +1,3 @@
-/**
- * TDD test for the catalog batch endpoints.
- *
- * Contract under test:
- *   POST /v1/catalog.preview_update (read-only, NO persist):
- *     - plans[]: PlanUpdatePreview with the proposed ApiPlanV1 under `plan`
- *     - does NOT persist (plans.get still returns the original plan)
- *   POST /v1/catalog.update:
- *     - creates a new plan when plan_id does not exist
- *     - returns { plans: ApiPlanV1[], features: ApiFeatureV1[] }
- *
- * Pre-impl red: routes/handlers do not exist (404 / undefined fields).
- * Post-impl green: catalog handlers resolve params into the shared plan preview
- *   shape and upsert via create/updateProduct.
- */
-
 import { beforeAll, expect, test } from "bun:test";
 import { ErrCode } from "@autumn/shared";
 import { TestFeature, getFeatures } from "@tests/setup/v2Features.js";
@@ -141,7 +125,6 @@ test(`${chalk.yellowBright("catalog: preview_update resolves shared plan preview
 		],
 	});
 
-	// ── Contract 3: NOT persisted — original plan unchanged ──
 	const original = await autumnV2_2.post("/plans.get", { plan_id: prod.id });
 	const originalMessages = original.items.find(
 		(item: { feature_id: string }) => item.feature_id === "messages",
@@ -1911,21 +1894,16 @@ test(`${chalk.yellowBright("catalog: update creates a new plan in one call")}`, 
 		],
 	});
 
-	// ── Contract: response carries the created plan ──
 	expect(
 		res.plans.find((plan: { id: string }) => plan.id === newPlanId),
 	).toBeDefined();
 
-	// ── Contract: plan is persisted ──
 	const got = await autumnV2_2.post("/plans.get", { plan_id: newPlanId });
 	expect(got.id).toBe(newPlanId);
 	expect(got.price?.amount).toBe(10);
 });
 
 test(`${chalk.yellowBright("catalog: update creates a plan referencing a feature created in the same call")}`, async () => {
-	// Regression: the plan 404'd ("feature not found") because plan creation
-	// resolved features against the request-start snapshot, which did not
-	// include the feature created earlier in the same batch.
 	const { autumnV2_2 } = await initScenario({
 		setup: [],
 		actions: [],
@@ -1958,12 +1936,10 @@ test(`${chalk.yellowBright("catalog: update creates a plan referencing a feature
 		],
 	});
 
-	// ── Contract: feature persisted ──
 	expect(
 		res.features.find((feature: { id: string }) => feature.id === featureId),
 	).toBeDefined();
 
-	// ── Contract: plan persisted with the new feature as an item ──
 	const plan = await autumnV2_2.post("/plans.get", { plan_id: planId });
 	expect(plan.id).toBe(planId);
 	const item = plan.items.find(

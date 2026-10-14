@@ -61,7 +61,6 @@ export const EditOAuthClientDialog = ({
 	const handleSubmit = async () => {
 		if (!client) return;
 
-		// Parse redirect URIs
 		const parsedRedirectUris = redirectUris
 			.split("\n")
 			.map((uri) => uri.trim())
@@ -108,7 +107,6 @@ export const EditOAuthClientDialog = ({
 				</DialogHeader>
 
 				<div className="flex flex-col gap-4">
-					{/* Redirect URIs */}
 					<div className="flex flex-col gap-1.5">
 						<span className="text-sm font-medium text-foreground">
 							Redirect URIs
@@ -124,7 +122,6 @@ export const EditOAuthClientDialog = ({
 						</p>
 					</div>
 
-					{/* Scopes */}
 					<div className="flex flex-col gap-1.5">
 						<span className="text-sm font-medium text-foreground">
 							Allowed Scopes

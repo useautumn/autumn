@@ -6,10 +6,6 @@ import {
 	productToEffectivePrices,
 } from "@autumn/shared";
 
-/**
- * Determines if attaching a product is an upgrade from the current product.
- * An upgrade occurs when the new product has a higher price or longer billing interval.
- */
 export const isAttachUpgrade = ({
 	currentCustomerProduct,
 	attachProduct,

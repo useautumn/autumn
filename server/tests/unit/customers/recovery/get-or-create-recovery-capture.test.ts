@@ -1,14 +1,3 @@
-/**
- * TDD contract for wiring customer get-or-create overload failures to recovery.
- *
- * Contract under test:
- * - A transient FullSubject failure is still returned as the existing overload 503.
- * - The validated request is captured once with the execution stage at failure.
- * - Recovery workers can explicitly disable capture to prevent recursive enqueue.
- * - billing_details is captured too, so a replayed creation still applies it.
- * - An org over its rate cap gets the same capture, then a 429.
- */
-
 import { afterAll, beforeEach, describe, expect, mock, test } from "bun:test";
 import { ApiVersion, ApiVersionClass, AppEnv } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
@@ -21,8 +10,6 @@ const mockState = {
 	queueCalls: [] as Record<string, unknown>[],
 };
 
-// Real modules captured BEFORE mocking so afterAll can restore them — module
-// mocks leak across test files (mock.restore does not undo them).
 const MOCKED_MODULE_PATHS = [
 	"@/internal/misc/rollouts/fullSubjectRolloutUtils.js",
 	"@/internal/misc/rollouts/isBalanceWorkerRolloutEnabled.js",
@@ -46,7 +33,6 @@ mock.module("@/internal/misc/rollouts/fullSubjectRolloutUtils.js", () => ({
 	isFullSubjectRolloutEnabled: () => true,
 }));
 
-// Recovery capture is exercised on the Postgres lookup, not the balance worker's.
 mock.module(
 	"@/internal/misc/rollouts/isBalanceWorkerRolloutEnabled.js",
 	() => ({

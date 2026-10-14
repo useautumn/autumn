@@ -1,9 +1,3 @@
-/**
- * The producer thread's loop: the kafkajs producers live here, on their own thread. Send frames come off the
- * send ring (or by `postMessage` when they did not fit), each becomes one `producer.send`, and its outcome
- * goes back as an ack frame. Nothing here knows a record's meaning: it moves bytes and reports what the
- * broker said.
- */
 import {
 	createRingReader,
 	createRingWriter,
@@ -77,7 +71,6 @@ export function startProducerLoop({
 		else void stopProducers({ scope });
 	}
 
-	// A frame the loop cannot read ends it; the thread's uncaught rejection reaches the decide thread as its error.
 	void sendLoop({ scope });
 	return { receive };
 }

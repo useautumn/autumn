@@ -6,7 +6,6 @@ import type {
 import type { AxiosInstance } from "axios";
 import { RESERVED_GROUP } from "../utils/displayLabels";
 
-/** The display-names endpoint caps each id list at this size. */
 const MAX_IDS = 500;
 
 export type GroupDisplayNames = {
@@ -31,7 +30,6 @@ const collectGroupValues = ({
 	return [...values].sort().slice(0, MAX_IDS);
 };
 
-/** Names for the customer, entity or plan groups an aggregate is split by. */
 export const fetchGroupDisplayNames = async ({
 	axiosInstance,
 	groupBy,

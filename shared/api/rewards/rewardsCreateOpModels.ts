@@ -34,7 +34,6 @@ const CouponDurationSchema = z
 			"Use a positive integer length for months, and null for one_off or forever.",
 	});
 
-/** Stable id of an existing row, for catalog updates; ignored on create. */
 const internalId = z.string().min(1).optional().meta({
 	description:
 		"Address an existing reward by its stable id. Omit when creating — the server generates one.",

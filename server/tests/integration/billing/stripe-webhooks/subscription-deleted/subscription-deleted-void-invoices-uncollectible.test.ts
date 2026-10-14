@@ -17,10 +17,6 @@ import { CusService } from "@/internal/customers/CusService";
 import { OrgService } from "@/internal/orgs/OrgService";
 import { timeout } from "@/utils/genUtils";
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 7: Uncollectible invoices are voided
-// ═══════════════════════════════════════════════════════════════════════════════
-
 test(`${chalk.yellowBright("sub.deleted: uncollectible invoices are voided on subscription cancel")}`, async () => {
 	const customerId = "sub-deleted-void-uncollectible";
 

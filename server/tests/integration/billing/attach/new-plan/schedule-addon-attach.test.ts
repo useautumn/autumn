@@ -17,16 +17,6 @@ import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 
-/**
- * Reproduces: attaching a one-off add-on to a subscription that already
- * has a schedule (from a prior downgrade) fails with Stripe error
- * "You cannot migrate a subscription that is already attached to a schedule".
- *
- * The root cause is that setupStripeBillingContext skips fetching the schedule
- * when targetCustomerProduct is undefined (new attachment, no transition).
- * buildStripeSubscriptionScheduleAction then sees hasSchedule=false and emits
- * type:"create" instead of type:"update", which Stripe rejects.
- */
 test.concurrent(`${chalk.yellowBright("bug-repro: attach one-off add-on after scheduled downgrade hits 'subscription already attached to schedule'")}`, async () => {
 	const customerId = "repro-schedule-addon-attach";
 
@@ -62,7 +52,6 @@ test.concurrent(`${chalk.yellowBright("bug-repro: attach one-off add-on after sc
 		actions: [s.billing.attach({ productId: premium.id })],
 	});
 
-	// Apply a 20% discount to the subscription (matches production scenario)
 	const { stripeCli, subscription: subBefore } = await getStripeSubscription({
 		customerId,
 	});
@@ -78,14 +67,12 @@ test.concurrent(`${chalk.yellowBright("bug-repro: attach one-off add-on after sc
 		couponIds: [coupon.id],
 	});
 
-	// Schedule downgrade: Premium -> Pro (creates a subscription schedule)
 	await autumnV1.billing.attach({
 		customer_id: customerId,
 		product_id: pro.id,
 		redirect_mode: "if_required",
 	});
 
-	// Verify the downgrade was scheduled correctly
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	await expectProductCanceling({ customer, productId: premium.id });
 	await expectProductScheduled({ customer, productId: pro.id });

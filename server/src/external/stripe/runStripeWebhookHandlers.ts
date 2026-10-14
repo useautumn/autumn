@@ -16,10 +16,6 @@ import { handleStripeTestClockReady } from "./webhookHandlers/handleStripeTestCl
 import { handleSubscriptionScheduleCanceled } from "./webhookHandlers/handleSubScheduleCanceled.js";
 import type { StripeWebhookContext } from "./webhookMiddlewares/stripeWebhookContext.js";
 
-/**
- * Dispatches a Stripe event to its handler. Shared by the webhook route and
- * the SQS replay worker — errors propagate to the caller.
- */
 export const runStripeWebhookHandlers = async ({
 	ctx,
 }: {
@@ -27,8 +23,6 @@ export const runStripeWebhookHandlers = async ({
 }) => {
 	const { db, org, env, stripeEvent } = ctx;
 	const event = stripeEvent;
-
-	// await throwOnSimulatedWebhookFailure({ ctx });
 
 	switch (event.type) {
 		case "account.application.deauthorized":

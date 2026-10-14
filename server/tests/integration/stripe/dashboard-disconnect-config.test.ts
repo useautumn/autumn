@@ -6,8 +6,6 @@ import { deletePlatformSubOrg } from "@/internal/orgs/deleteOrg/deletePlatformSu
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import { encryptData } from "@/utils/encryptUtils.js";
 
-/** Red: disconnect writes stripe_config from the cached org and drops a concurrent key.
- * Green: only the disconnected keys change; concurrently written keys survive. */
 test("dashboard Stripe disconnect preserves stripe_config keys written concurrently", async () => {
 	const { ctx, autumnV2_3 } = await initScenario({
 		setup: [s.platform.create({ name: "Dashboard disconnect config" })],
@@ -22,7 +20,6 @@ test("dashboard Stripe disconnect preserves stripe_config keys written concurren
 		});
 		await autumnV2_3.get("/organization");
 
-		// Bypasses cache invalidation, so the request below authenticates with the pre-write org.
 		const liveKey = encryptData("sk_live_written_concurrently");
 		await ctx.db
 			.update(organizations)

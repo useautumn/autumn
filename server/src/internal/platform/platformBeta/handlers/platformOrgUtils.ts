@@ -1,8 +1,5 @@
 import type { ApiPlatformOrg } from "@autumn/shared";
 
-/**
- * Remove master org ID prefix from organization slug
- */
 function cleanOrgSlug({
 	slug,
 	orgId,
@@ -15,7 +12,6 @@ function cleanOrgSlug({
 	if (cleanedSlug.startsWith(prefix)) {
 		cleanedSlug = cleanedSlug.slice(prefix.length);
 	}
-	// Handle the case where slug is prepended with "slug_orgId"
 	const altPrefix1 = `_${orgId}`;
 	const altPrefix2 = `|${orgId}`;
 	if (cleanedSlug.endsWith(altPrefix1)) {
@@ -26,9 +22,6 @@ function cleanOrgSlug({
 	return cleanedSlug;
 }
 
-/**
- * Convert raw org data to ApiPlatformOrg format
- */
 export function toPlatformOrg({
 	org,
 	masterOrgId,

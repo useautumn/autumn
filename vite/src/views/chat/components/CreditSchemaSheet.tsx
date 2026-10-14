@@ -62,7 +62,6 @@ const CreditRate = ({ item }: { item: ApiCreditSchemaItem }) => {
 	);
 };
 
-/** One feature's entry in the rate card. */
 const SchemaRow = ({
 	item,
 	resolveFeature,
@@ -91,8 +90,6 @@ const SchemaRow = ({
 	);
 };
 
-/** Read-only view of a credit system's rate card — what each metered feature
- * costs from the shared pool. Opened from the catalog preview. */
 export function CreditSchemaSheet({
 	feature,
 	onOpenChange,

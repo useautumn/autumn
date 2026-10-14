@@ -9,7 +9,6 @@ import type { Snapshot, WorkerRow } from "../types";
 import type { SwarmSocket } from "../useSwarmSocket";
 import { WorkerStatusBadge } from "../widgets";
 
-/** "ready" only means booted — show "running" while the worker has a file in flight. */
 const deriveWorkerStatus = (
 	worker: WorkerRow,
 	busyWorkers: Set<string>,
@@ -127,7 +126,6 @@ export function PerWorker({
 							))}
 						</div>
 					) : null}
-					{/* WTERM read-only surface for this worker's server output. */}
 					<div className="min-h-0 flex-1 overflow-hidden rounded-lg border bg-card">
 						{showOutput ? (
 							<TerminalOutput text={socket.output} />

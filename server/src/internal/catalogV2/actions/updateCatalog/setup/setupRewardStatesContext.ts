@@ -9,10 +9,6 @@ import {
 	type RewardStatesContext,
 } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext/rewardStatesContext";
 
-/**
- * Loaded only when the payload speaks for rewards or programs: a payload that
- * mentions neither has no opinion about them, so it pays for no reads.
- */
 export const setupRewardStatesContext = async ({
 	ctx,
 	params,
@@ -24,13 +20,8 @@ export const setupRewardStatesContext = async ({
 		return emptyRewardStatesContext();
 
 	const loaded = await loadRewardStates({ ctx });
-	// Loaded when the payload states programs, and whenever a reward could be
-	// removed: a link the payload never mentions still blocks a delete. A
-	// partial reward update can remove nothing, so it pays for no scan.
 	const needsPrograms =
 		params.referral_programs !== undefined || params.skip_deletions === false;
-	// Hidden ids are needed whenever the payload states programs, even if no
-	// removal is possible: a claimed id must be refused before the writer sees it.
 	const loadedPrograms = needsPrograms
 		? await loadReferralProgramStates({
 				ctx,

@@ -1,13 +1,3 @@
-/**
- * An org's Atom run as a replica set: real Atom processes on this machine behind one balancer, fed by the dev stack.
- * Every push lands on replica 0, so another replica holds it only if replication carried it there.
- *
- * Contract:
- *  1. a track is answered off the new balance by every replica, within moments of the replica that took it;
- *  2. a catalog change reaches every replica as promptly: each answers, as the API does, a check on a feature that did not exist;
- *  3. a push a replica missed while cut off from the one that took it reaches it once the link heals.
- */
-
 import { expect, test } from "bun:test";
 import { FeatureType } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
@@ -25,12 +15,9 @@ import {
 } from "../utils/replicaSet/useReplicaSet.js";
 
 const replicaSet = useReplicaSet({ size: 2 });
-/** Past the 2-minute anti-entropy period, so a pass lands whatever moment the link heals. */
 const ANTI_ENTROPY_TIMEOUT_MS = 180_000;
-/** A relayed push lands in milliseconds; anything slower means only a later catch-up pass carried it. */
 const RELAY_TIMEOUT_MS = 3_000;
 
-/** Replica 0 first, as it takes every push; the others then within the relay bound. */
 const everyReplica = () =>
 	Array.from({ length: replicaSet().size() }, (_, index) => ({
 		index,
@@ -148,7 +135,6 @@ test.skipIf(!replicaSetRunsHere)(
 			value: 30,
 		});
 		await expectAtomBalance({ ...reached, remaining: 60 });
-		// The cut held: the push stopped at replica 0.
 		await expectAtomBalance({ ...cutOff, remaining: 90, timeoutMs: 0 });
 
 		await replicaSet().healPeers();

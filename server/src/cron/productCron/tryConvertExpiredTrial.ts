@@ -16,7 +16,6 @@ import {
 	trialConversionParams,
 } from "./trialConversionParams";
 
-/** billed: now on a Stripe sub. unbillable: expire the trial. retry: leave it for the next cron tick. */
 export type ExpiredTrialConversion = "billed" | "unbillable" | "retry";
 
 const PAYMENT_FAILURE_CODES = new Set<string>([
@@ -154,14 +153,12 @@ const billExpiredTrial = async ({
 		options: { skipAutumnCheckout: true },
 	});
 
-	// Billed only when a live subscription came back, not a deferred plan awaiting a failed payment.
 	const isBilled =
 		billingResult?.stripe.stripeSubscription !== undefined &&
 		!billingResult.stripe.deferred;
 	return isBilled ? "billed" : "unbillable";
 };
 
-/** Bills a lapsed Autumn-managed no-card trial into Stripe: by card on file, or by invoice when attached in invoice mode. */
 export const tryConvertExpiredTrial = async ({
 	ctx,
 	fullCustomer,

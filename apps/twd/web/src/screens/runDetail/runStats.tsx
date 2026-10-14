@@ -56,7 +56,6 @@ const FailedLabel = ({ files }: { files: RunDetail["files"] }) => {
 	);
 };
 
-/** Big counts, the timing chip, and the progress bar under them. */
 export const RunStats = ({
 	run,
 	now,

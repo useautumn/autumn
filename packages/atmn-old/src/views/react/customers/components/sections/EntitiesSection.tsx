@@ -5,9 +5,6 @@ export interface EntitiesSectionProps {
 	entities: ApiEntity[];
 }
 
-/**
- * Renders customer entities
- */
 export function EntitiesSection({ entities }: EntitiesSectionProps) {
 	if (entities.length === 0) {
 		return (

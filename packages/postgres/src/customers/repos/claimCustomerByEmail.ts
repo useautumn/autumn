@@ -5,7 +5,6 @@ import type { PostgresContext } from "../../types/postgresClient.js";
 
 const claimedRowSchema = z.object({ internal_id: z.string() }).strict();
 
-/** One UPDATE: the email-only customer with this email takes `customerId`. At most one exists, by the partial email index. */
 export const claimCustomerByEmailSql = ({
 	ctx,
 	customerId,
@@ -26,7 +25,6 @@ export const claimCustomerByEmailSql = ({
 	RETURNING internal_id
 `;
 
-/** The claimed customer's internal id, or null when no email-only customer has this email. */
 export const claimCustomerByEmail = async ({
 	ctx,
 	customerId,

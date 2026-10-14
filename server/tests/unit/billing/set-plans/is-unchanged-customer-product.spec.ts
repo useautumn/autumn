@@ -1,5 +1,3 @@
-/** A requested plan leaves a customer product untouched only when it asks for exactly that row. */
-
 import { describe, expect, test } from "bun:test";
 import {
 	BillingInterval,

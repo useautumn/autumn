@@ -4,10 +4,6 @@ import {
 	RewardType,
 } from "@autumn/shared";
 
-/**
- * 100% discount for 1 month
- * @param id - Reward ID (default: "month-off")
- */
 const monthOff = ({
 	id = "month-off",
 }: {
@@ -26,10 +22,6 @@ const monthOff = ({
 	},
 });
 
-/**
- * 50% discount for 1 month
- * @param id - Reward ID (default: "half-off")
- */
 const halfOff = ({ id = "half-off" }: { id?: string } = {}): CreateReward => ({
 	id,
 	name: "Half Off",
@@ -44,10 +36,6 @@ const halfOff = ({ id = "half-off" }: { id?: string } = {}): CreateReward => ({
 	},
 });
 
-/**
- * $10 fixed discount for 1 month
- * @param id - Reward ID (default: "ten-off")
- */
 const tenOff = ({ id = "ten-off" }: { id?: string } = {}): CreateReward => ({
 	id,
 	name: "$10 Off",
@@ -62,12 +50,6 @@ const tenOff = ({ id = "ten-off" }: { id?: string } = {}): CreateReward => ({
 	},
 });
 
-/**
- * Percentage discount with configurable value and duration
- * @param id - Reward ID (default: "percentage-discount")
- * @param discountValue - Percentage off (default: 100)
- * @param durationMonths - Number of months (default: 1)
- */
 const percentageDiscount = ({
 	id = "percentage-discount",
 	discountValue = 100,
@@ -90,12 +72,6 @@ const percentageDiscount = ({
 	},
 });
 
-/**
- * Fixed amount discount with configurable value and duration
- * @param id - Reward ID (default: "fixed-discount")
- * @param discountValue - Amount off in dollars (default: 10)
- * @param durationMonths - Number of months (default: 1)
- */
 const fixedDiscount = ({
 	id = "fixed-discount",
 	discountValue = 10,
@@ -118,11 +94,6 @@ const fixedDiscount = ({
 	},
 });
 
-/**
- * Free product reward — grants a free product to referrer/redeemer
- * @param id - Reward ID (default: "free-product")
- * @param freeProductId - The product ID to grant
- */
 const freeProduct = ({
 	id = "free-product",
 	freeProductId,
@@ -137,12 +108,6 @@ const freeProduct = ({
 	free_product_id: freeProductId,
 });
 
-/**
- * Feature grant reward — grants a loose balance on redemption
- * @param id - Reward ID (default: "feature-grant")
- * @param internalFeatureId - Internal ID of the feature to grant
- * @param allowance - Balance granted per redemption (default: 100)
- */
 const featureGrant = ({
 	id = "feature-grant",
 	internalFeatureId,

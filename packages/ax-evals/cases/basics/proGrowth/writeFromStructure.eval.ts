@@ -9,12 +9,6 @@ import {
 	proPlanSpec,
 } from "./proGrowthSetup.ts";
 
-/**
- * KIND E (fill/write isolate): the structure arrives already agreed, phrased
- * as the skill's own restate block. Nothing to derive or elicit — passing is
- * purely translating an agreed structure into a valid config with every
- * number in the right field.
- */
 export const writeFromStructure = defineCase({
 	name: "basics-pro-growth-write-from-structure",
 	prompt: [

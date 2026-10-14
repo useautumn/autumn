@@ -1,21 +1,3 @@
-/**
- * End-to-end test for Stripe webhook failure injection + redelivery recovery.
- *
- * Contract under test:
- *   - billing.attach (latest version) metadata `test_webhook_fail` rides onto
- *     the Stripe checkout session, so checkout.session.completed carries it.
- *     NOTE: must use the latest client — AttachParamsV0Schema (V1 client)
- *     silently strips `metadata`.
- *   - While the marker is present on the LIVE Stripe object, EVERY delivery
- *     of the event fails (sync-ack 500, no false ack): the customer has PAID
- *     but the product stays unactivated — the outage failure mode, held open
- *     deterministically.
- *   - Removing the metadata from the live object ends the "outage": the next
- *     redelivery (triggered via Stripe's event retry endpoint — what `stripe
- *     events resend` uses; no Autumn worker code) activates the product
- *     exactly once.
- */
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3 } from "@autumn/shared";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
@@ -29,7 +11,6 @@ import chalk from "chalk";
 import type Stripe from "stripe";
 
 const POLL_INTERVAL_MS = 500;
-// Generous: Stripe's events API is eventually consistent and can lag.
 const POLL_TIMEOUT_MS = 60_000;
 
 const waitFor = async <T>({
@@ -52,7 +33,6 @@ const waitFor = async <T>({
 
 const CHECKOUT_SESSION_ID_REGEX = /cs_(?:test|live)_[A-Za-z0-9]+/;
 
-// All initial deliveries (incl. dev duplicates) land well within this window.
 const FAILED_DELIVERY_SETTLE_MS = 8_000;
 
 test.concurrent(
@@ -67,14 +47,10 @@ test.concurrent(
 
 		const { autumnV1, autumnV2_2, ctx } = await initScenario({
 			customerId,
-			setup: [
-				s.customer({ testClock: false }), // No payment method → stripe checkout
-				s.products({ list: [pro] }),
-			],
+			setup: [s.customer({ testClock: false }), s.products({ list: [pro] })],
 			actions: [],
 		});
 
-		// ── 1. Attach with the failure-injection test option ──────────
 		const result = await autumnV2_2.billing.attach({
 			customer_id: customerId,
 			plan_id: pro.id,
@@ -87,10 +63,8 @@ test.concurrent(
 			throw new Error(`No session id in payment_url: ${result.payment_url}`);
 		}
 
-		// ── 2. Pay for real via Stripe checkout ───────────────────────
 		await completeStripeCheckoutFormV2({ url: result.payment_url });
 
-		// ── 3. The completed event exists on Stripe and carries the marker ──
 		const stripeEvent = await waitFor<Stripe.Event>({
 			description: "checkout.session.completed event on Stripe",
 			fetch: async () => {
@@ -107,8 +81,6 @@ test.concurrent(
 		const session = stripeEvent.data.object as Stripe.Checkout.Session;
 		expect(session.metadata?.test_webhook_fail).toBe("true");
 
-		// ── 4. Outage held open: every delivery fails while the marker is on
-		// the live session. Paid, but NOT provisioned. ──────────────────
 		await timeout(FAILED_DELIVERY_SETTLE_MS);
 
 		const customerDuringOutage =
@@ -118,8 +90,6 @@ test.concurrent(
 		);
 		expect(productDuringOutage).toBeUndefined();
 
-		// ── 5. End the outage: remove the marker from the live objects ──
-		// (Empty string deletes a metadata key in Stripe.)
 		await ctx.stripeCli.checkout.sessions.update(sessionId, {
 			metadata: { test_webhook_fail: "" },
 		});
@@ -129,14 +99,12 @@ test.concurrent(
 			});
 		}
 
-		// ── 6. Ask STRIPE to redeliver the same event (no Autumn worker) ──
 		await ctx.stripeCli.rawRequest(
 			"POST",
 			`/v1/events/${stripeEvent.id}/retry`,
 			{},
 		);
 
-		// ── 7. Recovered: product active, exactly once ────────────────
 		const customerAfterRetry = await waitFor<ApiCustomerV3>({
 			description: "product activation after redelivery",
 			fetch: async () => {

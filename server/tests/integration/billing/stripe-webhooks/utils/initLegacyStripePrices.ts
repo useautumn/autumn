@@ -7,7 +7,6 @@ import type { TestContext } from "@tests/utils/testInitUtils/createTestContext";
 import { invalidateProductsCache } from "@/external/redis/actions/productsCache/productsCache";
 import { createStripePriceIFNotExist } from "@/external/stripe/createStripePrice/createStripePrice";
 
-// Catalog creation initializes V2 resources; legacy back-sync fixtures also need V1 slots.
 export const initLegacyStripePrices = async ({
 	ctx,
 	products,

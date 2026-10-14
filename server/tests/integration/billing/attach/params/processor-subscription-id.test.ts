@@ -37,7 +37,6 @@ test(`${chalk.yellowBright("processor_subscription_id: attach with existing stri
 		actions: [],
 	});
 
-	// Stamped as Autumn-managed so the sub.created auto-sync leaves it for the explicit attach.
 	const stripeSubscription = await createCustomStripeSubscription({
 		ctx,
 		customerId,

@@ -1,6 +1,3 @@
-// Contract: license links accept pooled entitlements on the child and in
-// customize add_items. Self-link and archived-license still reject.
-
 import { expect, test } from "bun:test";
 import { type ApiPlanExpandedV1, ErrCode } from "@autumn/shared";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils.js";

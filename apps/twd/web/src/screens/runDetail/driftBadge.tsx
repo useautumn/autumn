@@ -6,7 +6,6 @@ import { formatMs } from "../../lib/format.ts";
 export const NEW_FAILURE_PILL =
 	"border border-red-200 bg-red-50 dark:border-red-900/60 dark:bg-red-950/40";
 
-/** "new failure" (passes on dev) or "N× slower" (than dev p90). */
 export const DriftBadge = ({ drift }: { drift: Drift }) =>
 	drift.kind === "new_failure" ? (
 		<Tooltip

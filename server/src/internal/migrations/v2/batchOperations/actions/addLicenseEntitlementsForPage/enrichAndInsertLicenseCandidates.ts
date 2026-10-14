@@ -16,8 +16,6 @@ export type EnrichAndInsertLicenseCandidatesResult = {
 	excludedInternalCustomerIds: string[];
 };
 
-/** Non-resetting entitlements carry no cycle — a boolean with a next_reset_at
- * would reset a flag on a clock it never had. */
 export const enrichAndInsertLicenseCandidates = async ({
 	db,
 	candidates,

@@ -5,12 +5,6 @@ import {
 	resolveBillingControl,
 } from "../../fullSubjectUtils/planBillingControlUtils.js";
 
-/**
- * Extract overage_allowed entries for the requested features from a FullCustomer.
- *
- * Entity inherits from the customer per feature_id: entity's entry wins when
- * present, customer's entry fills any gaps.
- */
 export const fullCustomerToOverageAllowedByFeatureId = ({
 	fullCustomer,
 	featureIds,

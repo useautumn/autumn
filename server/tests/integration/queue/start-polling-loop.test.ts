@@ -6,7 +6,6 @@ import {
 } from "@/queue/initWorkers.js";
 
 const originalSetTimeout = globalThis.setTimeout;
-// The ReceiveMessage watchdog (30s) must never fire, or every poll times out and the loop never ends.
 const LONG_TIMER_MS = 30_000;
 
 const makeAbortError = () => {

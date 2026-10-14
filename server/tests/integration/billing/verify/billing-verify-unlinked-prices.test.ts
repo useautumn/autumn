@@ -1,35 +1,3 @@
-/**
- * Billing Verify: Unlinked Prices (inline rendering)
- *
- * Contract under test (billingActions.verify):
- *   New behaviors:
- *     - A prepaid price with no stripe_prepaid_price_v2_id no longer fails the
- *       whole sub with expected_state_error: verify renders it as an inline
- *       price. The live item (valid metadata) matches and equal totals ->
- *       "correct" in BOTH non-strict and strict.
- *     - A fixed price with no stripe_price_id is rendered inline the same way;
- *       the attach-stamped item matches -> "correct".
- *     - Fixed price unlinked AND the actual item swapped to an unmarked
- *       same-amount clone -> non-strict matches by totals -> "correct";
- *       strict -> base_price_mismatch missing + item_mismatch unexpected.
- *     - Prepaid unlinked AND the actual item swapped to an inline-style item
- *       with STALE Autumn metadata but the same total -> non-strict "correct";
- *       strict -> mismatched.
- *     - Prepaid unlinked with a drifted quantity (total $ differs) -> still
- *       mismatched non-strict (totals comparison, not swallowed).
- *     - A consumable or allocated price with no stripe_price_id for the
- *       customer's currency contributes no expected item instead of throwing.
- *       Non-base-currency prices are materialized in Stripe lazily (at attach /
- *       migrate, never at catalog init), so an id-less one is normal state for
- *       an imported customer -> no expected_state_error, and the rest of the
- *       subscription still gets evaluated instead of being aborted.
- *   Side effects: none — verify stays read-only.
- *
- * Pre-impl red: spec builders throw on missing Stripe ids, so every verify
- * below reports expected_state_error. Post-impl green once verify renders
- * id-less fixed/prepaid prices inline and matches/compares on totals.
- */
-
 import { expect, test } from "bun:test";
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
@@ -63,8 +31,6 @@ const stripeCustomerIdFor = async ({
 	return stripeCustomerId;
 };
 
-/** Clones a live sub item's price into a fresh Stripe price Autumn has never
- * stored — optionally at a different amount. */
 const createUnlinkedClone = async ({
 	ctx,
 	item,
@@ -125,8 +91,6 @@ test.concurrent(
 			],
 		});
 
-		// ── Contract: no expected_state_error; live item matches by metadata,
-		// totals equal -> correct (non-strict AND strict) ──────────────────
 		const lenient = await verify({ ctx, params: { customer_id: customerId } });
 		expect(lenient.subscriptions.length).toBe(1);
 		expect(lenient.subscriptions[0].mismatches).toEqual([]);
@@ -166,7 +130,6 @@ test.concurrent(
 			slots: ["stripe_price_id", "stripe_empty_price_id"],
 		});
 
-		// ── Contract: attach-stamped base item matches the inline render ──
 		const result = await verify({ ctx, params: { customer_id: customerId } });
 		expect(result.subscriptions.length).toBe(1);
 		expect(result.subscriptions[0].mismatches).toEqual([]);
@@ -218,12 +181,10 @@ test.concurrent(
 			},
 		});
 
-		// ── Contract: totals-based match for the inline render, non-strict ─
 		const lenient = await verify({ ctx, params: { customer_id: customerId } });
 		expect(lenient.subscriptions[0].mismatches).toEqual([]);
 		expect(lenient.subscriptions[0].status).toBe("correct");
 
-		// ── Contract: strict keeps identity semantics ─────────────────────
 		const strict = await verify({
 			ctx,
 			params: { customer_id: customerId, strict: true },
@@ -282,8 +243,6 @@ test.concurrent(
 		);
 		if (!prepaidSubItem) throw new Error("Expected the prepaid item");
 
-		// 300 units × $10/100u = $30 — one inline-style item at the same total,
-		// tagged with a cus price that no longer exists (migration leftover).
 		const staleClone = await createUnlinkedClone({
 			ctx,
 			item: prepaidSubItem,
@@ -308,12 +267,10 @@ test.concurrent(
 			},
 		});
 
-		// ── Contract: stale tag doesn't block the totals match ────────────
 		const lenient = await verify({ ctx, params: { customer_id: customerId } });
 		expect(lenient.subscriptions[0].mismatches).toEqual([]);
 		expect(lenient.subscriptions[0].status).toBe("correct");
 
-		// ── Contract: strict keeps identity semantics ─────────────────────
 		const strict = await verify({
 			ctx,
 			params: { customer_id: customerId, strict: true },
@@ -381,7 +338,6 @@ test.concurrent(
 			},
 		});
 
-		// ── Contract: totals comparison catches real $ drift ──────────────
 		const result = await verify({ ctx, params: { customer_id: customerId } });
 		expect(result.subscriptions[0].status).toBe("mismatched");
 		expect(
@@ -394,11 +350,6 @@ test.concurrent(
 	},
 );
 
-// Qontext's report: a usage price whose Stripe price for the customer's currency
-// is materialized lazily (at attach/migrate, never at catalog init), so an
-// imported customer legitimately has an Autumn price with no Stripe link.
-// `removeItemPriceIds` drops the live item too, which is what that state looks
-// like in Stripe: the meter simply does not exist yet.
 const setupUnlinkedUsagePrice = async ({
 	ctx,
 	customerId,
@@ -452,13 +403,10 @@ test.concurrent(
 			featureId: TestFeature.Messages,
 		});
 
-		// ── Contract: the unlinked usage price is expected state, not drift ──
 		const clean = await verify({ ctx, params: { customer_id: customerId } });
 		expect(clean.subscriptions[0].mismatches).toEqual([]);
 		expect(clean.subscriptions[0].status).toBe("correct");
 
-		// ── Contract: evaluation continues past the skipped item — drift added
-		// afterwards is still reported, not swallowed with it ───────────────
 		const stripeCustomerId = await stripeCustomerIdFor({ ctx, customerId });
 		const [sub] = await listActiveStripeSubscriptions({
 			ctx,

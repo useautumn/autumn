@@ -19,10 +19,6 @@ const explicitScopeLabel = ({
 	return scopeLabel({ entityId: planEntityId, entity: selectedEntity });
 };
 
-/**
- * Per-plan entity scope for a plan row: resolves the effective scope, loads the
- * searchable entity list, and builds the scope popover for ScopedPlanRow.
- */
 export function usePlanScopeField({
 	planEntityId,
 	defaultEntityId,
@@ -45,7 +41,6 @@ export function usePlanScopeField({
 		useScopeEntitySearch({ selectedEntityId: effectiveEntityId });
 
 	const isUnset = planEntityId === undefined;
-	// An unset row shows the sheet's scope rather than an "inherit" option.
 	const pickerValue = isUnset ? (defaultEntityId ?? null) : planEntityId;
 	const selectedLabel = explicitScopeLabel({ planEntityId, selectedEntity });
 	const chipLabel =

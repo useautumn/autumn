@@ -1,5 +1,3 @@
-/** Atom's sizes: each pins one Graviton (t4g or c8g) EC2 type (`cpu` vCPUs, `memory` GiB). Its container gets one vCPU less and at most
- * 75% of the memory, never more than GKE's node reserve allows, so the OS and Alien's agent keep room. */
 export const BYOC_CACHE_MACHINES = [
 	{
 		cpu: 2,
@@ -47,19 +45,15 @@ export const BYOC_CACHE_MACHINES = [
 
 export type ByocCacheMachine = (typeof BYOC_CACHE_MACHINES)[number];
 
-/** Every Atom runs this many replicas, one per machine; `packages/alien/stacks/byoc/alien.json` declares the same. */
 export const BYOC_CACHE_REPLICAS = 2;
 
-/** Each replica's data volume, as `packages/alien/stacks/byoc/alien.json` sizes it; the Atom keeps its files within 80% of it. */
 export const BYOC_CACHE_DISK_GB = 20;
 
-/** AWS list price in us-east-1: (EC2 hourly × 730 h + the gp3 data disk × $0.08/GB-month) × replicas. */
 export const byocCacheMachineMonthlyUsd = (machine: ByocCacheMachine) =>
 	Math.round(
 		(machine.hourlyUsd * 730 + BYOC_CACHE_DISK_GB * 0.08) * BYOC_CACHE_REPLICAS,
 	);
 
-/** The container size every Atom ran before sizes existed, so a setup that names none is unchanged. */
 export const DEFAULT_BYOC_CACHE_MACHINE: ByocCacheMachine =
 	BYOC_CACHE_MACHINES[3];
 

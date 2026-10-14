@@ -16,7 +16,6 @@ export type ReadAtomSubjectResult =
 	| { kind: "body"; body: AtomSubjectBody }
 	| { kind: "not_found" | "not_held" | "worker_unavailable" };
 
-/** A pulled copy stays current only while herald keeps pushing it, so an Atom may pull just what herald pushes it. */
 const isPushedToAtom = ({
 	org,
 	atom,
@@ -39,7 +38,6 @@ const isPushedToAtom = ({
 	return isTarget && isOnWorker;
 };
 
-/** The subjects.set body herald would push this Atom for the subject now, read through the one builder herald uses. */
 export const readAtomSubject = async ({
 	ctx,
 	org,

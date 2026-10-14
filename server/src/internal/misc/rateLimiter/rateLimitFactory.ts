@@ -15,12 +15,10 @@ import {
 import { getOrgRateLimitOverride } from "./rateLimitOverridesStore";
 import { createRateLimitRedisStore } from "./rateLimitRedisStore";
 
-// Helper to get rate limit key from context
 const getRateLimitKeyFromContext = (c: Context): string => {
 	return (c as Context & { rateLimitKey?: string }).rateLimitKey ?? "unknown";
 };
 
-// Helper to set rate limit key in context
 export const setRateLimitKeyInContext = (c: Context, key: string): void => {
 	(c as Context & { rateLimitKey: string }).rateLimitKey = key;
 };
@@ -67,7 +65,6 @@ export const orgRateLimitExceededError = () =>
 		statusCode: 429,
 	});
 
-/** The limiter options for one bucket; every limiter for it, single or paired, is built from these. */
 const createRateLimitOptions = ({
 	type,
 	config,
@@ -89,7 +86,6 @@ const createRateLimitOptions = ({
 		return resolveRateLimit({ config, apiVersion }).limit;
 	};
 
-	// The handler runs and decides what degraded means for its route.
 	const degradeHandler = async (c: Context, next: Next): Promise<void> => {
 		const ctx = (c as Context<HonoEnv>).get("ctx");
 		warnOrgCapExceeded({ limitType: type, orgSlug: ctx?.org?.slug });
@@ -98,7 +94,6 @@ const createRateLimitOptions = ({
 		await next();
 	};
 
-	// The SDK retries this 429 on its own backoff, so no Retry-After.
 	const rejectHandler = async (c: Context): Promise<Response> => {
 		const ctx = (c as Context<HonoEnv>).get("ctx");
 		warnOrgCapExceeded({ limitType: type, orgSlug: ctx.org?.slug });
@@ -160,7 +155,6 @@ export const rateLimitFactory = ({
 	};
 };
 
-// Create rate limiters from central config
 const limiters = Object.fromEntries(
 	Object.entries(RATE_LIMIT_CONFIGS).map(([type, config]) => [
 		type,
@@ -177,7 +171,6 @@ type RateLimitKeyContext = {
 	customerId?: string;
 };
 
-/** `${type}:${orgId}:${env}[:v${version}][:${customerId}]`; live Redis counters depend on this shape. */
 export const toRateLimitKey = ({
 	ctx,
 	rateLimitType,
@@ -197,8 +190,6 @@ export const toRateLimitKey = ({
 	return `${baseKey}:${ctx.customerId}`;
 };
 
-// Route groups sharing an org counter can answer its cap differently, so each
-// answer gets its own wrapper over the same Redis key.
 const orgLimiters = new Map<string, ReturnType<typeof rateLimiter>>();
 
 export const getOrgLimiterFor = ({

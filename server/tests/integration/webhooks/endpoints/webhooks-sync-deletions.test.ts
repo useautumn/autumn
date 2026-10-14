@@ -1,12 +1,3 @@
-/**
- * skip_deletions on webhooks.preview_sync / webhooks.sync:
- * - false: every unstated endpoint in the env, id'd or dashboard-made (`ep_`),
- *   previews as `delete` and is deleted by sync;
- * - default (true): the same endpoints stay `unmanaged` and untouched.
- * Runs in its own sandbox org, since a delete-everything sync would wipe the
- * shared test org's endpoints from under other tests.
- */
-
 import { afterAll, beforeAll, expect, test } from "bun:test";
 import { organizations } from "@autumn/shared";
 import defaultCtx from "@tests/utils/testInitUtils/createTestContext.js";

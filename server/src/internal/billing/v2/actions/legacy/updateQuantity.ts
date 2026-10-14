@@ -38,7 +38,6 @@ export const updateQuantity = async ({
 		fullProduct,
 	});
 
-	// Current customer product
 	const currentCustomerProduct = findActiveCustomerProductById({
 		fullCus: attachParams.customer,
 		productId: fullProduct.id,

@@ -1,16 +1,3 @@
-/**
- * Attach Add-on Tests (Attach V2)
- *
- * Tests for attaching add-on products to customers.
- * Add-ons are additive - they never expire/cancel existing products.
- *
- * Key behaviors:
- * - Add-ons are always attached (never replace existing products)
- * - Features from add-ons combine with main product features
- * - Re-attaching same add-on creates separate customer_product records
- * - Multiple different add-ons can coexist
- */
-
 import { test } from "bun:test";
 import type { ApiCustomerV3 } from "@autumn/shared";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
@@ -23,20 +10,6 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 9: Multiple different add-ons
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Customer on Pro ($20/mo) with 100 messages
- * - Attach recurring add-on ($20/mo) with 200 words
- * - Attach one-off add-on ($10 base) with 50 storage
- *
- * Expected:
- * - All 3 products active
- * - Combined features from all products
- */
 test.concurrent(
 	`${chalk.yellowBright("addon 9: multiple different addons")}`,
 	async () => {
@@ -70,14 +43,12 @@ test.concurrent(
 			actions: [s.billing.attach({ productId: pro.id })],
 		});
 
-		// Attach recurring add-on ($20/mo)
 		await autumnV1.billing.attach({
 			customer_id: customerId,
 			product_id: recurringAddon.id,
 			redirect_mode: "if_required",
 		});
 
-		// Attach one-off add-on ($10 base + $5 for 50 storage = $15)
 		await autumnV1.billing.attach({
 			customer_id: customerId,
 			product_id: oneOffAddon.id,
@@ -87,13 +58,11 @@ test.concurrent(
 
 		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-		// All 3 products active
 		await expectCustomerProducts({
 			customer,
 			active: [pro.id, recurringAddon.id, oneOffAddon.id],
 		});
 
-		// Messages from Pro
 		expectCustomerFeatureCorrect({
 			customer,
 			featureId: TestFeature.Messages,
@@ -102,7 +71,6 @@ test.concurrent(
 			usage: 0,
 		});
 
-		// Words from recurring add-on
 		expectCustomerFeatureCorrect({
 			customer,
 			featureId: TestFeature.Words,
@@ -111,7 +79,6 @@ test.concurrent(
 			usage: 0,
 		});
 
-		// Storage from one-off add-on
 		expectCustomerFeatureCorrect({
 			customer,
 			featureId: TestFeature.Storage,
@@ -119,7 +86,6 @@ test.concurrent(
 			usage: 0,
 		});
 
-		// 3 invoices: Pro ($20) + recurring add-on ($20) + one-off add-on ($15)
 		await expectCustomerInvoiceCorrect({
 			customer,
 			count: 3,

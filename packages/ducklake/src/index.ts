@@ -1,11 +1,3 @@
-/**
- * ducklake: in-region lake aggregation job. Scans the Iceberg lake from
- * us-east-2 (same-region S3 = free), writes prepared parquet to a scratch
- * prefix, then has MotherDuck ingest the small files — replacing the
- * cross-region flights and the server cron's MotherDuck rebuild.
- * Contracts + phases: plans/ducklake/research.md
- */
-
 import { buildCeBalanceTotalsParquet } from "./buildCeBalanceTotals.js";
 import { headlineTotalsSql } from "./headlineTotals.js";
 import { openLocalLakeConnection } from "./localDuckDb.js";
@@ -21,7 +13,6 @@ import {
 	writeRefreshStatus,
 } from "./motherduckIngest.js";
 
-/** Structural so both pino and the server's logtail logger satisfy it. */
 export type DucklakeLogger = {
 	info: (obj: unknown, msg?: string) => void;
 	warn: (obj: unknown, msg?: string) => void;
@@ -33,12 +24,8 @@ export type DucklakeRunResult = {
 	skipped: string[];
 };
 
-/** Shadow mode suffixes every produced table so output can be diffed against
- * the incumbent writers before taking over the real names. */
 const isShadowMode = (): boolean => process.env.DUCKLAKE_SHADOW !== "0";
 
-/** The job fires every 20 minutes; mirrors are hourly. The container is
- * stateless, so gate by wall-clock: only the top-of-hour run mirrors. */
 const isHourlyRun = (): boolean =>
 	process.env.DUCKLAKE_FORCE_HOURLY === "1" || new Date().getMinutes() < 20;
 
@@ -81,9 +68,6 @@ export const runDucklake = async ({
 		runId,
 	});
 
-	// Sequential: one embedded engine; each scan already parallelizes inside.
-	// A failed table skips (stale-but-present, the flights' own behavior) so
-	// one bad manifest can't take down the whole refresh.
 	const mirrorsByGroup = new Map<string, MirrorParquet[]>();
 	if (hourly) {
 		for (const group of MIRROR_GROUPS) {
@@ -119,8 +103,6 @@ export const runDucklake = async ({
 			refreshed.push(`${totalsTable}:${totalsRows}`);
 
 			for (const group of MIRROR_GROUPS) {
-				// Gate on "this run attempted mirrors" (hourly), not on scan success:
-				// the rollup below must still run when every scan failed.
 				if (!mirrorsByGroup.has(group.statusTable)) continue;
 				const mirrors = mirrorsByGroup.get(group.statusTable) ?? [];
 
@@ -153,13 +135,7 @@ export const runDucklake = async ({
 					}
 				}
 
-				// Unconditional on hourly runs: the rollup reads whatever is live;
-				// cross-table snapshot consistency is explicitly not a goal here.
 				if (group.withRollup) {
-					// Rollup runs on MD because fx_rates only exists there; reads the
-					// just-swapped mirrors (shadow-suffixed in shadow mode). Stale
-					// sources are tolerated (incumbent semantics: rollup always reads
-					// whatever is live), but a rollup failure must not fail the run.
 					try {
 						await md.run(
 							headlineTotalsSql({
@@ -195,8 +171,6 @@ export const runDucklake = async ({
 	if (tablesRefreshed.length === 0) {
 		throw new Error("[ducklake] zero tables refreshed");
 	}
-	// A quietly-successful run must not mask a mirror-wide failure: the
-	// staleness monitor only sees the success line, so escalate instead.
 	const allMirrors = [...HOT_MIRROR_TABLES, ...COLD_MIRROR_TABLES];
 	if (hourly && allMirrors.every((t) => skipped.includes(t))) {
 		throw new Error(
@@ -204,7 +178,6 @@ export const runDucklake = async ({
 		);
 	}
 
-	// Reuse existing Axiom fields (durationMs); breakdown stays in msg.
 	logger.info(
 		{
 			type: "ducklake_phase",

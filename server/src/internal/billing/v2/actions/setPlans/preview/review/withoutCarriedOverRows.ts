@@ -8,7 +8,6 @@ const rowSignature = (row: ReviewPlanRow) => {
 	return JSON.stringify([key, row.status, before, after]);
 };
 
-/** A later phase drops a row the phase before it already shows: that change carries over, it isn't new. */
 export const withoutCarriedOverRows = <Phase extends { rows: ReviewPlanRow[] }>(
 	phases: Phase[],
 ): Phase[] => {

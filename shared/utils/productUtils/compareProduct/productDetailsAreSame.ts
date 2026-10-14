@@ -38,7 +38,6 @@ const strictEqual =
 	({ left, right }) =>
 		left === right;
 
-/** JSONB round-trips reorder object keys; sort so compareBillingControls is stable. */
 const stabilizeBillingControlColumn = (value: unknown): unknown => {
 	if (value == null) return undefined;
 	if (!Array.isArray(value)) return value;
@@ -60,7 +59,6 @@ const stabilizeBillingControlColumn = (value: unknown): unknown => {
 	return value.map(stabilize);
 };
 
-/** null/undefined/[] + spend_limits normalize via compareBillingControls. */
 const billingControlColumnIsSame =
 	<K extends BillingControlKey>(key: K): DetailComparator<K> =>
 	({ left, right }) =>
@@ -73,10 +71,6 @@ const billingControlColumnIsSame =
 			},
 		});
 
-/**
- * Explicit per-field equivalence for product detail columns.
- * The diff and the boolean derive from this one map so they can never drift.
- */
 export const productDetailComparators: {
 	[K in ProductDetailKey]: DetailComparator<K>;
 } = {

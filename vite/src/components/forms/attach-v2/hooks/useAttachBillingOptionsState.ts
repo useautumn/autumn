@@ -18,7 +18,6 @@ import {
 import type { UseAttachForm } from "./useAttachForm";
 import type { UseAttachPreviewReturn } from "./useAttachPreview";
 
-/** Encapsulates planSchedule + prorationBehavior derived state and mutations. */
 export function useAttachBillingOptionsState({
 	form,
 	formValues,
@@ -57,8 +56,6 @@ export function useAttachBillingOptionsState({
 	const incomingPlans = previewData?.incoming ?? [];
 	const outgoingPlan = previewData?.outgoing[0]?.plan;
 
-	// Multi-plan attaches produce several incoming changes, so these ask "does
-	// any incoming plan…" rather than inspecting only the first.
 	const isPaidRecurringAttach = incomingPlans.some(
 		(change) =>
 			(change.plan?.price?.amount ?? 0) > 0 &&
@@ -72,8 +69,6 @@ export function useAttachBillingOptionsState({
 	const createsNewStripeSubscription =
 		!hasActiveSubscription || effectiveNewBillingSubscription;
 
-	// Usage-only plans have a null base price (billing lives on items), so a
-	// recurring sub can be created even when the base price and immediate total are $0.
 	const incomingPlanHasRecurringPrice = incomingPlans.some(
 		(change) =>
 			(change.plan?.price != null &&
@@ -97,7 +92,6 @@ export function useAttachBillingOptionsState({
 		hasPaidRecurringSubscription &&
 		!isDirectPaidTransition;
 
-	// Always default to immediate; users can opt into end-of-cycle explicitly.
 	const defaultPlanSchedule: PlanTiming = "immediate";
 
 	const effectivePlanSchedule = !hasOutgoing

@@ -4,10 +4,6 @@ import { CusService } from "@/internal/customers/CusService.js";
 import type { StripeWebhookContext } from "../../../webhookMiddlewares/stripeWebhookContext.js";
 import type { CheckoutSessionCompletedContext } from "../setupCheckoutSessionCompletedContext.js";
 
-/**
- * Handles standalone setup checkout (setup mode without Autumn metadata).
- * Updates customer's default payment method.
- */
 export const handleStandaloneSetupCheckout = async ({
 	ctx,
 	checkoutContext,
@@ -18,7 +14,6 @@ export const handleStandaloneSetupCheckout = async ({
 	const { org, env, logger } = ctx;
 	const { stripeCheckoutSession, metadata } = checkoutContext;
 
-	// Only handle setup mode without Autumn metadata
 	if (stripeCheckoutSession.mode !== "setup" || metadata) {
 		return;
 	}

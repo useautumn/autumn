@@ -31,7 +31,6 @@ export const mergeControlsByFeature = <
 	planCustomerProducts: FullCusProduct[];
 	controlKey: TKey;
 	normalizeForCompare?: (control: TControl) => TControl;
-	/** Inheritance identity; defaults to feature_id. */
 	identityOf?: (control: TControl) => string | undefined;
 }): TControl[] => {
 	const identity = identityOf ?? ((entry: TControl) => entry.feature_id);
@@ -80,13 +79,6 @@ export const mergeControlsByFeature = <
 	return [...entityControls, ...inheritedCustomerControls, ...planControls];
 };
 
-/**
- * A plan-derived usage_limits entry (from mergeControlsByFeature's
- * planControls) is raw product config with no `usage` -- unlike
- * entity/customer-owned entries, which fullSubjectToApiUsageLimits already
- * decorated upstream. Fill in just the missing ones from the live
- * usage-window counters, so a plan-only cap can gate `check`.
- */
 export const decorateInheritedPlanUsageLimits = <
 	TUsageLimit extends DbUsageLimit,
 >({
@@ -132,17 +124,6 @@ export const decorateInheritedPlanUsageLimits = <
 	});
 };
 
-/**
- * Build a new entity apiSubject whose billing_controls inherit customer and
- * plan spend_limits, usage_limits and overage_allowed entries per feature_id.
- * Entity's own entry always wins per feature; customer, then plan fill gaps.
- *
- * Used at check time so `apiSubjectToSpendLimit` / `apiSubjectToUsageLimitHeadroom`
- * / `apiSubjectToOverageAllowedControl` (which read from `subject.billing_controls`)
- * see the inherited controls without needing to know about the customer separately.
- *
- * Pure — does not mutate inputs.
- */
 export const mergeCustomerBillingControlsForCheck = ({
 	entityApiSubject,
 	customerApiSubject,
@@ -154,10 +135,7 @@ export const mergeCustomerBillingControlsForCheck = ({
 	entityApiSubject: ApiEntityV2;
 	customerApiSubject: ApiCustomerV5;
 	planCustomerProducts?: FullCusProduct[];
-	/** Normalizes spend limits only for most-restrictive plan comparisons. */
 	normalizeSpendLimitForCompare?: (control: DbSpendLimit) => DbSpendLimit;
-	/** When provided (with `features`), a plan-inherited usage_limits entry is
-	 *  decorated with its current window `usage`. */
 	fullSubject?: FullSubject;
 	features?: Feature[];
 }): ApiEntityV2 => {
@@ -229,10 +207,7 @@ export const mergePlanBillingControlsForCheck = ({
 }: {
 	customerApiSubject: ApiCustomerV5;
 	planCustomerProducts?: FullCusProduct[];
-	/** Normalizes spend limits only for most-restrictive plan comparisons. */
 	normalizeSpendLimitForCompare?: (control: DbSpendLimit) => DbSpendLimit;
-	/** When provided (with `features`), a plan-inherited usage_limits entry is
-	 *  decorated with its current window `usage`. */
 	fullSubject?: FullSubject;
 	features?: Feature[];
 }): ApiCustomerV5 => {

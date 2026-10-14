@@ -102,7 +102,6 @@ type CustomerProductUpdate = NonNullable<
 	AutumnBillingPlan["updateCustomerProducts"]
 >[number];
 
-/** Apply schedule phase end timing to a customer product plan result. */
 export const applyScheduleTimingToCustomerProductPlan = ({
 	result,
 	endedAt,

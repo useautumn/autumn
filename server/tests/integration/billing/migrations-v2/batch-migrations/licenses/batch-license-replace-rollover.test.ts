@@ -1,22 +1,3 @@
-/**
- * Editing a ROLLOVER-bearing license item in place must not run on the batch
- * lane.
- *
- * DELETING a rollover item is rejected by `removes_rollover_item`. An in-place
- * edit takes the ADD artifact branch, which never sets that flag, so it
- * batch-lowers. The replace was believed safe because it UPDATEs rather than
- * deletes, preserving customer_entitlements.id and so the rollovers rows that
- * FK onto it. Preserving them is exactly the problem: the accrued rollover rows
- * survive onto whatever definition the edit lands on. If the new item drops or
- * changes the rollover config, nothing clears or clamps them —
- * performMaximumClearing only runs when a NEW rollover is written — and the
- * deduction path reads cusEnt.rollovers ungated by entitlement.rollover, so the
- * orphaned balance is still spent while /balance no longer reports it.
- *
- * Red: the op runs on the batch lane, leaving rollover rows attached to an
- * entitlement that no longer declares rollover.
- * Green: the op is rejected to the per-customer lane.
- */
 import { expect, test } from "bun:test";
 import { ResetInterval, RolloverExpiryDurationType } from "@autumn/shared";
 import { runChunkedMigration } from "@tests/integration/billing/migrations-v2/utils/runChunkedMigration";

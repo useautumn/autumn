@@ -8,13 +8,6 @@ import {
 } from "./irToSql/irToSql.js";
 import { customerRegistry } from "./registry/customerRegistry.js";
 
-/**
- * End-to-end: validated `CustomerFilter` → parameterized SQL fragment.
- *
- * `ambient` carries org/env scoping (and any other ambient values the
- * registry expects). Required because the customer registry declares
- * `org_id` / `env` predicates at every scope.
- */
 export function compileFilter({
 	filter,
 	ctx,

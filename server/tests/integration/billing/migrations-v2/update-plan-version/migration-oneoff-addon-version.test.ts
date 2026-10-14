@@ -1,23 +1,3 @@
-/**
- * TDD coverage for update_plan version migrations on one-off addon plans.
- *
- * Contract under test:
- *   Behavior:
- *     - update_plan with version: 2 moves customers from v1 -> v2 of a
- *       one-off addon plan (type: one_off, isAddOn: true) where v2 only
- *       adds feature entitlements (no price change).
- *     - Post-migration: customer's active product reflects v2; new
- *       entitlements are present on the customer.
- *   Side effects:
- *     - No new Stripe invoice is generated for the migrated customer.
- *     - If the customer also has a separate recurring main subscription,
- *       its Stripe subscription is untouched (anchor + items unchanged).
- *     - no_billing_changes=true: migration completes via DB-only path
- *       without raising the "produced Stripe mutations" error.
- *     - no_billing_changes=false: migration still completes; with no
- *       price delta there is nothing to bill and no invoice is created.
- */
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3 } from "@autumn/shared";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
@@ -55,7 +35,6 @@ test.concurrent(`${chalk.yellowBright("migrations update_plan: one-off addon v1-
 		(await autumnV1.customers.get<ApiCustomerV3>(customerId)).invoices
 			?.length ?? 0;
 
-	// v2: just adds an extra feature (Dashboard boolean). Base price unchanged.
 	await autumnV1.products.update(addon.id, {
 		items: [items.oneOffPrice({ price: 10 }), newFeatureItem()],
 	});

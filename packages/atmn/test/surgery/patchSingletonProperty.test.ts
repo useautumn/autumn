@@ -1,10 +1,3 @@
-/**
- * The settings block is edited where it stands, key by key: a pair appended
- * when the key is new, its literal replaced when wrong, the pair removed when
- * the server's value is the default. The block may be inline under the key or
- * a const the key names — the same shapes a collection's array may take.
- */
-
 import { expect, test } from "bun:test";
 import {
 	insertSingleton,
@@ -27,7 +20,6 @@ test("no settings key: insertSingleton seeds an empty block beside the collectio
 	expect(insertSingleton({ source, singleton: "settings" })).toBe(
 		config({ body: "\tfeatures: [],\n\tplans: [],\n\tsettings: {}," }),
 	);
-	// Already there: untouched.
 	const stated = config({ body: "\tfeatures: [],\n\tsettings: { a: true }," });
 	expect(insertSingleton({ source: stated, singleton: "settings" })).toBe(
 		stated,
@@ -110,7 +102,6 @@ test("a value back at its default removes the pair, on its own line or inline", 
 		config({ body: "\tfeatures: [],\n\tsettings: { multiCurrency: true }," }),
 	);
 
-	// The last pair out collapses to `{}`.
 	const last = config({
 		body: "\tfeatures: [],\n\tsettings: { cancelOnPastDue: true },",
 	});

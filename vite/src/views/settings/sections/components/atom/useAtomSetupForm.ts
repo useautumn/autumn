@@ -36,7 +36,6 @@ export type AtomSetupValues = z.infer<typeof AtomSetupSchema>;
 const isAwsRegion = (region: string | null): region is ByocCacheAwsRegion =>
 	BYOC_CACHE_AWS_REGIONS.some((awsRegion) => awsRegion === region);
 
-/** A setup in progress reopens with what it asked for; a new one starts from the recommended size in a new VPC. */
 const cacheToSetupValues = ({
 	cache,
 	stackNameBase,
@@ -70,7 +69,6 @@ const setupValuesToCreateParams = (
 	};
 };
 
-/** Cloud, size, network and stack name are one form; submitting it starts the setup and opens AWS. */
 export const useAtomSetupForm = ({
 	cache,
 	stackNameBase,

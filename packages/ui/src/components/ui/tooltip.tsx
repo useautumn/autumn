@@ -65,7 +65,6 @@ function TooltipContent({
 				sideOffset={sideOffset}
 				align={align}
 				positionMethod="fixed"
-				// Above popovers/selects/dropdowns (z-300): a tooltip is the topmost hint.
 				className="isolate z-[400]"
 			>
 				<TooltipPrimitive.Popup

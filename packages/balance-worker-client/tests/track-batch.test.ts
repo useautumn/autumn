@@ -48,7 +48,6 @@ function commandFor(id: string, customerId = "customer"): TrackCommand {
 	};
 }
 
-/** The client never reads a reply, so a marker stands in for one. */
 function replyFor(id: string): TrackReply {
 	return { marker: id } as unknown as TrackReply;
 }
@@ -138,7 +137,6 @@ function createFixture({
 			else waiters.push(waiter);
 		return response.promise;
 	}
-	/** Resolves once `count` requests have been sent, without any timer. */
 	function sent(count: number): Promise<void> {
 		if (requests.length >= count) return Promise.resolve();
 		const waiter = Promise.withResolvers<void>();
@@ -165,7 +163,6 @@ function idsOf(request: PendingRequest): string[] {
 	return request.body.commands.map((command) => command.commandId);
 }
 
-/** Lets settled promises run their callbacks before the next assertion. */
 async function flush(): Promise<void> {
 	for (let turn = 0; turn < 10; turn++) await Promise.resolve();
 }
@@ -174,7 +171,6 @@ test("an idle partition sends a track at once, as a batch of one", async () => {
 	const fixture = createFixture();
 	const command = commandFor("a");
 	const pending = fixture.client.track({ command });
-	// Synchronous: no timer, no microtask hop before the request leaves.
 	expect(fixture.requests).toHaveLength(1);
 	expect(fixture.requests[0].url).toBe("http://worker-a:8080/v1/track-batch");
 	expect(fixture.requests[0].body).toEqual({
@@ -363,12 +359,10 @@ test("a queued item past its deadline rejects not_submitted and is never sent", 
 		status: "rejected",
 		reason: { code: "DEADLINE", outcome: "not_submitted" },
 	});
-	// The in-flight item may already have applied, so it cannot claim otherwise.
 	expect(inFlightResult).toMatchObject({
 		status: "rejected",
 		reason: { code: "DEADLINE", outcome: "unknown" },
 	});
-	// Once nobody waits on the batch, its request is cancelled.
 	expect(fixture.requests[0].signal.aborted).toBe(true);
 	fixture.requests[0].respond(okResults(["a"]));
 	await flush();
@@ -399,7 +393,6 @@ test("an aborted queued item is dropped, an aborted in-flight one is uncertain",
 		code: "ABORTED",
 		outcome: "not_submitted",
 	});
-	// Its only item gave up, so the first batch's request is cancelled.
 	expect(fixture.requests[0].signal.aborted).toBe(true);
 	fixture.requests[0].respond(okResults(["a"]));
 	await fixture.sent(2);

@@ -14,7 +14,6 @@ const BUCKETS = [
 ];
 
 export type RunTiming = {
-	/** Offsets (ms) from run creation; null when that point hasn't happened. */
 	marks: {
 		warmReady: number | null;
 		accounts: number | null;
@@ -27,12 +26,9 @@ export type RunTiming = {
 		finished: number | null;
 	};
 	wallMs: number;
-	/** Sequential phases that add up to the wall time. */
 	phases: { phase: string; ms: number }[];
-	/** Cumulative files done over time, one point per finished file. */
 	completion: { atMs: number; done: number }[];
 	histogram: { bucket: string; passed: number; failed: number }[];
-	/** The long tail that sets wall time. */
 	slowest: {
 		file: string;
 		durationMs: number;
@@ -41,7 +37,6 @@ export type RunTiming = {
 	}[];
 };
 
-/** Where a run's wall time went, from its milestones, worker ready times and file finish times. */
 export const summariseRunTiming = (
 	run: Pick<
 		RunDetail,

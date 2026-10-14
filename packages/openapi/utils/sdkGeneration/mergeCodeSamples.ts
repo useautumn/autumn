@@ -2,9 +2,6 @@ import { existsSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { exec } from "./exec.js";
 
-/**
- * Merges code sample overlays from TypeScript and Python SDKs into the OpenAPI spec.
- */
 export function mergeCodeSamples({
 	speakeasySdkDir,
 	pythonSdkDir,
@@ -27,16 +24,13 @@ export function mergeCodeSamples({
 		".speakeasy/code-samples.overlay.yaml",
 	);
 
-	// Apply TypeScript code samples
 	exec({
 		command: `speakeasy overlay apply --schema "${baseOpenApiPath}" --overlay "${tsOverlayPath}" --out "${outputPath}"`,
 		cwd: speakeasySdkDir,
 	});
 
-	// Apply Python code samples on top (if exists)
 	if (existsSync(pythonOverlayPath)) {
 		const ext = path.extname(outputPath);
-		// Speakeasy picks output format from the extension (.yml/.yaml → YAML, else JSON).
 		const tempPath = `${outputPath.slice(0, -ext.length)}.tmp${ext}`;
 		exec({
 			command: `speakeasy overlay apply --schema "${outputPath}" --overlay "${pythonOverlayPath}" --out "${tempPath}"`,

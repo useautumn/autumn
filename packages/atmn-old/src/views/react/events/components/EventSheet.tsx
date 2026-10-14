@@ -12,10 +12,6 @@ export interface EventSheetProps {
 	copiedFeedback: boolean;
 }
 
-/**
- * Event detail sheet (right panel).
- * Shows event details including properties.
- */
 export function EventSheet({ event, isFocused, copiedFeedback }: EventSheetProps) {
 	const hasProperties =
 		event.properties && Object.keys(event.properties).length > 0;
@@ -38,7 +34,6 @@ export function EventSheet({ event, isFocused, copiedFeedback }: EventSheetProps
 				</Box>
 			}
 		>
-			{/* Event Info */}
 			<SheetSection title="Event Info">
 				<Text>
 					<Text color="gray">ID: </Text>
@@ -62,7 +57,6 @@ export function EventSheet({ event, isFocused, copiedFeedback }: EventSheetProps
 				</Text>
 			</SheetSection>
 
-			{/* Properties (if not empty) */}
 			{hasProperties && (
 				<SheetSection title="Properties">
 					<Text>{JSON.stringify(event.properties, null, 4)}</Text>

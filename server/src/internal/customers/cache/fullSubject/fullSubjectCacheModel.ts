@@ -17,9 +17,6 @@ import {
 } from "@autumn/shared";
 import { z } from "zod/v4";
 
-// `usage_windows` is omitted alongside balances: counters live in the
-// per-feature balance hashes (`_usage_windows` field) and would be instantly
-// stale if serialized into the subject view.
 export type CachedFullSubject = Omit<
 	NormalizedFullSubject,
 	"customer_entitlements" | "usage_windows"
@@ -28,11 +25,6 @@ export type CachedFullSubject = Omit<
 	_cachedAt: number;
 	meteredFeatures: string[];
 	customerEntitlementIdsByFeatureId: Record<string, string[]>;
-	/** Features with an armed windowed cap (customer + entity usage_limits);
-	 *  may include features with no entitlements, so it cannot be derived from
-	 *  customerEntitlementIdsByFeatureId. Drives `_usage_windows` reads,
-	 *  writes, and invalidation. Optional: cache entries written before usage
-	 *  windows existed don't carry it (treat as []). */
 	usageWindowFeatureIds?: string[];
 	subjectViewEpoch: number;
 };
@@ -50,7 +42,6 @@ export const normalizedToUsageWindowFeatureIds = ({
 	const planUsageLimits = (customerProduct: { internal_product_id: string }) =>
 		productById.get(customerProduct.internal_product_id)?.usage_limits ?? [];
 
-	// Allocation counters ride usage_windows, so allocated features cache them too.
 	const allocatedFeatureIds = Object.values(
 		normalized.customer.balance_allocations ?? {},
 	).map((allocation) => allocation.feature_id);
@@ -70,16 +61,6 @@ export const normalizedToUsageWindowFeatureIds = ({
 	];
 };
 
-/**
- * Schema mirror of `CachedFullSubject` used by the cache-hole-filling walker
- * ({@link normalizeFromSchema}) to locate nullable positions in cached
- * payloads. Not a validator — runtime type above is the source of truth.
- *
- * Sub-shapes intentionally reuse existing shared schemas (CusProductSchema
- * mirrors DbCustomerProduct, etc.). Mismatches at non-nullable positions
- * are harmless: the walker only fills undefined at nullable positions and
- * passes through unknown keys.
- */
 export const CachedFullSubjectSchema = z.object({
 	subjectType: z.enum(["customer", "entity"]),
 	customerId: z.string(),
@@ -92,7 +73,6 @@ export const CachedFullSubjectSchema = z.object({
 
 	customer_products: z.array(CusProductSchema),
 	customer_prices: z.array(CustomerPriceSchema),
-	// `.default([])`: entries written before licenses existed hole-fill empty.
 	customer_licenses: z.array(FullCustomerLicenseSchema).default([]),
 	flags: z.record(z.string(), SubjectFlagSchema),
 
@@ -106,17 +86,12 @@ export const CachedFullSubjectSchema = z.object({
 
 	entity_aggregations: EntityAggregationsSchema.optional(),
 
-	// `.default([])` makes pre-existing cache entries (written before this
-	// field existed) hole-fill to an empty array via `normalizeFromSchema`.
-	// The empty-array vs empty-object Lua quirk is also handled there.
 	migration_item_runs: z.array(MigrationItemRunSchema).default([]),
 
 	_schemaVersion: z.number().optional(),
 	_cachedAt: z.number(),
 	meteredFeatures: z.array(z.string()),
 	customerEntitlementIdsByFeatureId: z.record(z.string(), z.array(z.string())),
-	// Optional (not defaulted): pre-usage-windows cache entries don't carry it,
-	// and the hole-filling walker must not invent it.
 	usageWindowFeatureIds: z.array(z.string()).optional(),
 	subjectViewEpoch: z.number(),
 });
@@ -201,7 +176,6 @@ export const cachedFullSubjectToNormalized = ({
 		entity: cached.entity,
 		customer_products: cached.customer_products,
 		customer_entitlements: customerEntitlements,
-		// Entries written before licenses existed lack the field entirely.
 		customer_licenses: cached.customer_licenses ?? [],
 		customer_prices: cached.customer_prices,
 		flags: cached.flags,
@@ -213,8 +187,6 @@ export const cachedFullSubjectToNormalized = ({
 		invoices: cached.invoices,
 		entity_aggregations: cached.entity_aggregations,
 		migration_item_runs: cached.migration_item_runs ?? [],
-		// Live data: filled from the balance hashes' `_usage_windows` fields by
-		// the caller, never from the cached subject view.
 		usage_windows: [],
 	};
 };

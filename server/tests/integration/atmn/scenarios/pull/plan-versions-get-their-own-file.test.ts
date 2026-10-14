@@ -1,10 +1,3 @@
-/**
- * atmn scenarios/pull — every version of a plan lands in `plans.ts`, each
- * row stating `active`. A user may then lift a row into its own file under
- * any export name; pull keeps finding it by stable id and edits it where it
- * is, and a new server version is appended to the array the root imports.
- */
-
 import { expect, test } from "bun:test";
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -36,7 +29,6 @@ test.concurrent(
 		const pull = () =>
 			runCli({
 				cwd: freshDirectory,
-				// An empty dir: -c names the folder so headless pull scaffolds.
 				args: ["pull", "-c", "."],
 				secretKey: scenario.secretKey,
 				baseUrl: scenario.baseUrl,
@@ -65,7 +57,6 @@ test.concurrent(
 			await scenario.push();
 			await mintVersion({ name: "Pro v2", amount: 59 });
 
-			// A fresh pull: both versions in plans.ts, the root imports the array.
 			const firstOutput = await pull();
 			expect(firstOutput).toContain(`+ ${planId}@v1`);
 			expect(firstOutput).toContain(`+ ${planId}@v2`);
@@ -85,8 +76,6 @@ test.concurrent(
 			expect(readFileSync(plansPath, "utf8")).toBe(plans);
 			expect(await dryRun()).toContain("No changes");
 
-			// The user lifts v1 into its own file under a name of their choosing,
-			// and references it from the array. Pull must follow the reference.
 			const planLiterals = [
 				...plans.matchAll(/\tplan\(\{[\s\S]*?\t\}\),/g),
 			].map((match) => match[0]);
@@ -114,8 +103,6 @@ test.concurrent(
 			);
 			expect(await dryRun()).toContain("No changes");
 
-			// The server mints v3: it is appended to the array the root imports,
-			// v2 flips to inactive where it sits, and the lifted v1 is untouched.
 			await mintVersion({ name: "Pro v3", amount: 69 });
 			const thirdOutput = await pull();
 			expect(thirdOutput).toContain(`+ ${planId}@v3`);
@@ -131,7 +118,6 @@ test.concurrent(
 			expect(await pull()).toBe("Nothing to pull.\n");
 			expect(await dryRun()).toContain("No changes");
 
-			// A server-side edit to the lifted row lands in the user's file.
 			await scenario.client.update({
 				plans: [
 					{ plan_id: planId, version_slug: "v1", name: "Pro v1 (renamed)" },

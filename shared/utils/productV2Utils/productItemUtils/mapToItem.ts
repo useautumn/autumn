@@ -74,10 +74,8 @@ export const toFeatureItem = ({ ent }: { ent: EntitlementWithFeature }) => {
 		pooled: ent.pooled ?? false,
 		reset_usage_when_enabled: !ent.carry_from_previous,
 
-		// Include rollover config
 		config: itemConfig,
 
-		// Stored in backend
 		entitlement_id: ent.id,
 		created_at: ent.created_at,
 	};
@@ -163,7 +161,6 @@ export const toFeaturePriceItem = ({
 				? UsageModel.Prepaid
 				: UsageModel.PayPerUse,
 
-		// Stored in backend
 		created_at: ent.created_at,
 		entitlement_id: ent.id,
 		price_id: price.id,

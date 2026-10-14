@@ -1,6 +1,3 @@
-// Feature diffs preserve omitted fields and report exact previous values for explicit changes.
-// Collection ordering and default-equivalent values do not create changes.
-
 import { expect, test } from "bun:test";
 import { FeatureType } from "@autumn/shared";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
@@ -37,7 +34,6 @@ test.concurrent(
 		try {
 			await autumnV2_3.catalogV2.update({ features: [metered] });
 
-			// Identical entry, collections reordered → nothing changed
 			expectCatalogPreviewCorrect({
 				preview: await previewOne({
 					event_names: [...metered.event_names].reverse(),
@@ -45,13 +41,11 @@ test.concurrent(
 				features: [{ featureId, action: "none", previousAttributes: null }],
 			});
 
-			// Omitting display keeps the current one
 			expectCatalogPreviewCorrect({
 				preview: await previewOne({ display: undefined }),
 				features: [{ featureId, action: "none", previousAttributes: null }],
 			});
 
-			// One changed field → exactly that field, holding its previous value
 			expectCatalogPreviewCorrect({
 				preview: await previewOne({ name: "CV2 Diff Renamed" }),
 				features: [
@@ -85,7 +79,6 @@ test.concurrent(
 				],
 			});
 
-			// The CLI omits event_names, so omission must preserve existing mappings.
 			expectCatalogPreviewCorrect({
 				preview: await previewOne({ event_names: undefined }),
 				features: [{ featureId, action: "none", previousAttributes: null }],
@@ -158,7 +151,6 @@ test.concurrent(
 				],
 			});
 
-			// Same schema, reversed order → nothing changed
 			expectCatalogPreviewCorrect({
 				preview: await previewCreditSystem({
 					credit_schema: [...creditSchema].reverse(),
@@ -172,7 +164,6 @@ test.concurrent(
 				],
 			});
 
-			// Billing-unit change → previous schema captured whole
 			expectCatalogPreviewCorrect({
 				preview: await previewCreditSystem({
 					credit_schema: [
@@ -189,7 +180,6 @@ test.concurrent(
 				],
 			});
 
-			// Tier change → previous schema captured whole
 			expectCatalogPreviewCorrect({
 				preview: await previewCreditSystem({
 					credit_schema: [
@@ -240,7 +230,6 @@ test.concurrent(
 		try {
 			await autumnV2_3.catalogV2.update({ features: [aiCreditSystem] });
 
-			// Identical entry → nothing changed
 			expectCatalogPreviewCorrect({
 				preview: await previewOne({}),
 				features: [{ featureId, action: "none", previousAttributes: null }],
@@ -308,7 +297,6 @@ test.concurrent(
 			});
 			await expectDbFeatureArchived({ ctx, featureId });
 
-			// Omitting archived while changing name must not silently unarchive
 			expectCatalogPreviewCorrect({
 				preview: await autumnV2_3.catalogV2.previewUpdate({
 					features: [{ ...metered, name: "CV2 Diff Still Archived" }],
@@ -329,7 +317,6 @@ test.concurrent(
 			});
 			await expectDbFeatureArchived({ ctx, featureId });
 
-			// Explicit archived: false unarchives and surfaces the flip
 			expectCatalogPreviewCorrect({
 				preview: await autumnV2_3.catalogV2.previewUpdate({
 					features: [

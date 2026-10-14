@@ -41,7 +41,6 @@ const stateOf = ({
 	balance?: number;
 }): SubjectState => createState({ identity, balance });
 
-/** Leaves the partition at `nextOffset` with the customer seeded by its initialize mutation. */
 const seedPartition = ({
 	store,
 	partition,

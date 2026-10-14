@@ -2,11 +2,6 @@ import type { SsoOrgHint } from "@/lib/sso/ssoTypes";
 
 const SSO_HINT_KEY = "autumn_sso_org_hint";
 
-/**
- * Validates a persisted hint. Anything that isn't a complete hint is treated as
- * absent so a partially written / hand-edited value can never render a broken
- * "Continue with … SSO" button.
- */
 export const parseSsoHint = (raw: string | null): SsoOrgHint | null => {
 	if (!raw) return null;
 	try {
@@ -33,10 +28,6 @@ export const getSsoHint = (): SsoOrgHint | null => {
 	}
 };
 
-/**
- * Only ever called with the hint returned by a successful, authenticated SSO
- * completion — never from unauthenticated input.
- */
 export const setSsoHint = (hint: SsoOrgHint) => {
 	try {
 		localStorage.setItem(SSO_HINT_KEY, JSON.stringify(hint));

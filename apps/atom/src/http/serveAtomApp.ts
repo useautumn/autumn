@@ -1,6 +1,5 @@
 import type { AutumnLogger } from "@autumn/logging";
 
-/** In a worker, an error that escapes `fetch` with no `error` handler closes the thread's listeners; this answers it instead. */
 const answerEscapedError = ({
 	error,
 	logger,
@@ -14,7 +13,6 @@ const answerEscapedError = ({
 			"A request failed past the app's error handler",
 		);
 	} catch {
-		// The answer matters more than the line.
 	}
 	return Response.json(
 		{ message: "Atom could not answer", code: "internal_error" },
@@ -22,7 +20,6 @@ const answerEscapedError = ({
 	);
 };
 
-/** Every thread listens on the one port, and Linux gives each connection to one of them. */
 export const serveAtomApp = ({
 	hostname,
 	port,

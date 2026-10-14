@@ -1,13 +1,3 @@
-/**
- * A pooled Autumn MCP session outlives the server that issued it (restart,
- * server-side expiry). The next tools/call answers `-32000 Session not found`
- * as a JSON-RPC error, which the pool treated as an application error: it
- * kept the dead session and every call failed until the TTL evicted it.
- *
- * Red: the stale error surfaces as "Autumn MCP tools/call failed: … Session not found".
- * Green: the pool drops the session, re-initializes, and the call succeeds.
- */
-
 import { afterAll, describe, expect, test } from "bun:test";
 import { AppEnv } from "@autumn/shared";
 import { callAutumnMcpTool } from "../../../src/internal/autumnMcp/rpcClient.js";

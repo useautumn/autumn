@@ -1,9 +1,3 @@
-/**
- * Volume with entities. An entity_feature_id consumable prices the customer's actual usage
- * against the summed allowance, so one entity over its own limit is free while the total is
- * under it. Deleting an entity mid-cycle must keep preview = invoice for seats and usage.
- */
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3 } from "@autumn/shared";
 import { expectBalanceCorrect } from "@tests/integration/utils/expectBalanceCorrect";
@@ -28,7 +22,6 @@ const setupEntityConsumable = async ({
 	customerId: string;
 	entityUsages: number[];
 }) => {
-	// Default net tiers 0-500 @ $0.10 / 501+ @ $0.05, 100 included per entity.
 	const pro = products.pro({
 		id: customerId,
 		items: [
@@ -86,7 +79,6 @@ test.concurrent(
 			entityUsages: [150, 0],
 		});
 
-		// 150 + 0 used = 150 ≤ 2 × 100 included: nothing charged
 		await expectVolumeRenewalCorrect({ scenario, expectedFeatureAmount: 0 });
 	},
 );
@@ -95,7 +87,6 @@ test.concurrent(
 // Fixed off dev in #4625 (prorated allocated path); unskip once it lands and the stack is rebased.
 test.skip(`${chalk.yellowBright("volume-entities 2: allocated volume seats, 11 → 10 seats mid-cycle moves back to the $10 band; renewal = preview")}`, async () => {
 	const customerId = "vol-adv-entity-seats-delete";
-	// Tiers 0-10 @ $10 / 11+ @ $8 per seat, nothing included.
 	const pro = products.pro({
 		id: customerId,
 		items: [items.volumeAllocatedUsers()],
@@ -110,7 +101,6 @@ test.skip(`${chalk.yellowBright("volume-entities 2: allocated volume seats, 11 �
 		actions: [s.billing.attach({ productId: pro.id })],
 	});
 
-	// $20 base + 11 seats in band 11+: 11 × $8 = $88
 	const afterAttach =
 		await scenario.autumnV1.customers.get<ApiCustomerV3>(customerId);
 	expect(afterAttach.invoices?.[0]?.total).toBeCloseTo(108, 2);
@@ -126,7 +116,6 @@ test.skip(`${chalk.yellowBright("volume-entities 2: allocated volume seats, 11 �
 	const preview = await getInvoicePreview({ scenario });
 	expect(preview.total).toBeGreaterThanOrEqual(0);
 
-	// Next cycle bills 10 seats in band 0-10: 10 × $10 = $100
 	const { renewalInvoice } = await expectVolumeRenewalCorrect({
 		scenario,
 		featureId: TestFeature.Users,
@@ -144,7 +133,6 @@ test.concurrent(
 			entityUsages: [400, 300],
 		});
 
-		// 400 + 300 used = 700 against 200 included: 500 overage in band 201-700 × $0.10 = $50
 		const before = await getInvoicePreview({ scenario });
 		expect(
 			sumFeatureSubtotal({
@@ -162,7 +150,6 @@ test.concurrent(
 			).invoices?.length ?? 0;
 		await deleteEntities({ scenario, count: 1, fromIndex: 1 });
 
-		// Usage billed at deletion (if any) plus usage at renewal must still total $50
 		const afterDelete = await scenario.autumnV1.customers.get<ApiCustomerV3>(
 			scenario.customerId,
 		);

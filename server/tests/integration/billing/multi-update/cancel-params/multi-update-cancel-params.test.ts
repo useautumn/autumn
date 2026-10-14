@@ -1,19 +1,3 @@
-/**
- * multiUpdate cancel params: refund_last_payment + subscription_params.
- *
- * Contract:
- *   New types/fields:
- *     refund_last_payment: "prorated" | "full"
- *     subscription_params.cancellation_details.{feedback,comment}
- *   New behaviors:
- *     refund_last_payment on cancel_immediately refunds the last Stripe payment
- *     cancellation_details reach Stripe on cancel_immediately (subscriptions.cancel)
- *     cancellation_details reach Stripe on cancel_end_of_cycle (subscriptions.update)
- *   Side effects:
- *     Stripe refunds.refunded_amount
- *     Stripe subscription.cancellation_details
- */
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3, MultiUpdateParamsV0Input } from "@autumn/shared";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";

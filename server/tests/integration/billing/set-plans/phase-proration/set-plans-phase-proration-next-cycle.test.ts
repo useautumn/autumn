@@ -1,14 +1,3 @@
-/**
- * A later phase's proration_behavior decides what preview_set_plans shows as next_cycle,
- * exactly as it decides the Stripe phase's proration.
- *
- * Red (before):   reset + prorate_immediately previewed $50; Stripe's next invoice is
- *                 $50 minus the unused Pro credit. Kept anchor + none previewed a prorated
- *                 charge at the phase start; Stripe bills nothing until the renewal.
- * Green (after):  next_cycle equals Stripe's upcoming invoice for the schedule in all four
- *                 anchor × proration combinations.
- */
-
 import { test } from "bun:test";
 import type { PhaseProrationBehavior } from "@autumn/shared";
 import chalk from "chalk";

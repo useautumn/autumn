@@ -6,7 +6,6 @@ import type { CommandOrg } from "../models/command/commandOrg.js";
 import type { JsonValue } from "../models/common/json.js";
 import type { DeductionSelection } from "./types/deductionRequest.js";
 
-/** The one place a request reads the org's deduction settings. */
 export const toDeductionSelection = ({
 	featureId,
 	internalFeatureId,
@@ -28,7 +27,6 @@ export const toDeductionSelection = ({
 	countsAllocations: boolean;
 	customerEntitlementFilters?: CustomerEntitlementFilters;
 	org: CommandOrg;
-	/** Checks honour the org's overdue block; tracks only the threshold-billing one. */
 	enforceOverdueBlock: boolean;
 }): DeductionSelection => ({
 	featureId,

@@ -14,15 +14,10 @@ import {
 	RateLimitType,
 } from "../internal/misc/rateLimiter/rateLimitConfigs";
 
-/**
- * In-memory rate limiting middleware for Hono
- * Uses different rate limits based on endpoint type (General, Track, Check)
- */
 export const rateLimitMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 	const ctx = c.get("ctx");
 
 	try {
-		// An org's endpoint override caps on top of the group limits below.
 		if (
 			await isOverEndpointRateLimit({
 				ctx,
@@ -37,7 +32,6 @@ export const rateLimitMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 			});
 		}
 
-		// 1. Determine rate limit type based on endpoint
 		const { type: rateLimitType, overLimit } = getRateLimitRouteGroup(c);
 
 		if (
@@ -49,23 +43,17 @@ export const rateLimitMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 			return await next();
 		}
 
-		// 2. Get rate limit key based on type
 		const rateLimitKey = getRateLimitKey({ c, rateLimitType });
 
-		// 3. Store key in context for keyGenerator to access
 		setRateLimitKeyInContext(c as Context, rateLimitKey);
 
-		// 4. Get the appropriate limiter for this type
 		const limiter = getLimiterForType(rateLimitType);
 
 		const orgLimit = getOrgLimiterFor({ type: rateLimitType, overLimit });
 		if (!orgLimit) {
-			// 5. Apply rate limiting
 			return await limiter(c as Context<Env>, next);
 		}
 
-		// 5. The org limiter wraps the per-customer one; the key slot is
-		// swapped between them since keyGenerator reads it at execution time.
 		setRateLimitKeyInContext(
 			c as Context,
 			getRateLimitKey({ c, rateLimitType: orgLimit.type }),

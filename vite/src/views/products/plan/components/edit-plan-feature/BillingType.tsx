@@ -23,7 +23,6 @@ export function BillingType() {
 
 	if (!item) return null;
 
-	// Derive billing type from item state
 	const isFeaturePrice = isFeaturePriceItem(item);
 	const feature = features.find((f) => f.id === item.feature_id);
 
@@ -56,11 +55,10 @@ export function BillingType() {
 		};
 	};
 
-	// Determine if we should preselect based on explicit configuration
 	const hasExplicitConfig =
-		isFeaturePrice || // Has tiers, so it's priced
-		(item.included_usage !== undefined && item.included_usage !== null) || // Has explicit included usage
-		item.usage_model !== undefined; // Has explicit usage model
+		isFeaturePrice ||
+		(item.included_usage !== undefined && item.included_usage !== null) ||
+		item.usage_model !== undefined;
 
 	const shouldPreselect = hasExplicitConfig;
 
@@ -77,7 +75,6 @@ export function BillingType() {
 		};
 
 		if (type === "included") {
-			// Remove tiers to switch to included
 			setItem({
 				...item,
 				tiers: null,
@@ -90,9 +87,7 @@ export function BillingType() {
 				interval: isContUseItem({ item, features }) ? null : item.interval,
 			});
 		} else {
-			// Only switch if not already priced
 			if (!isFeaturePrice) {
-				// Add initial tier to switch to priced
 				setItem({
 					...item,
 					tiers: [{ to: Infinite, amount: 0 }],
@@ -101,7 +96,6 @@ export function BillingType() {
 					config: getConfigForBillingType({
 						usageModel: UsageModel.PayPerUse,
 					}),
-					// An invoice bills priced items without grants.
 					included_usage:
 						isInvoiceEditor || item.included_usage === Infinite
 							? 0
@@ -123,9 +117,7 @@ export function BillingType() {
 			plural: false,
 		}) || "credit";
 
-	const usageType =
-		feature?.config?.usage_type ||
-		undefined; /* could be FeatureUsageType.Single or FeatureUsageType.Continuous */
+	const usageType = feature?.config?.usage_type || undefined;
 
 	const isConsumable = usageType === FeatureUsageType.Single;
 	const isAllocated = usageType === FeatureUsageType.Continuous;

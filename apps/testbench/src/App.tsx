@@ -26,9 +26,6 @@ function resolveWsUrl(): string {
 	}
 	const proto = window.location.protocol === "https:" ? "wss:" : "ws:";
 	const sameOrigin = `${proto}//${window.location.host}/ws`;
-	// On the standalone dev server (:5910) the WS lives on another port, so fall
-	// back to the last-used URL; otherwise we're served by the dashboard server
-	// itself → connect to /ws on this same origin (no ?ws needed).
 	if (window.location.port === "5910") {
 		return localStorage.getItem(WS_STORAGE_KEY) ?? sameOrigin;
 	}
@@ -59,11 +56,8 @@ export function App() {
 	}, [socket.connected, snap]);
 
 	return (
-		// Outer shell: full viewport, never scrolls. Mirrors the vite app's
-		// `w-screen h-screen flex bg-outer-background` + inset rounded panel.
 		<div className="flex h-dvh w-screen flex-col overflow-hidden bg-outer-background p-3">
 			<div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border bg-background">
-				{/* Header — matches PageHeader spacing (icon + title left, actions right). */}
 				<div className="flex shrink-0 items-center justify-between gap-2 border-b px-4 py-2.5">
 					<div className="flex items-center gap-2 text-md text-muted-foreground">
 						<Activity className="size-4" />
@@ -118,8 +112,6 @@ export function App() {
 								</TabsTrigger>
 							</TabsList>
 						</div>
-						{/* Single scroll owner per view lives INSIDE each view; this region
-						    just clips so the page never grows past one screen. */}
 						<TabsContent
 							className="mt-0 mb-0 min-h-0 flex-1 overflow-hidden p-3"
 							value="overall"

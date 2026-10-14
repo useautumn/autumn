@@ -1,8 +1,3 @@
-/**
- * catalogV2.update — pinned versions, omit→latest, multi-entry, mint ladder,
- * all_versions propagation.
- */
-
 import { expect, test } from "bun:test";
 import {
 	BillingInterval,
@@ -169,7 +164,6 @@ test.concurrent(
 					},
 				],
 			});
-			// catalogV2.get is latest-only
 			await expectCatalogPlansCorrect({
 				autumn: autumnV2_3,
 				expected: [
@@ -458,7 +452,6 @@ test.concurrent(
 	},
 );
 
-// Cross-ref section 14 — free trial × versioning
 test.concurrent(
 	`${chalk.yellowBright("catalogV2 versions: all_versions propagates free_trial to every version")}`,
 	async () => {

@@ -7,7 +7,6 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 
 test.concurrent(`${chalk.yellowBright("create-entity-race: mainCusEnt path should be protected by lock")}`, async () => {
-	// Product with allocated users (seats) - this creates a mainCusEnt with balance
 	const usersItem = items.allocatedUsers({ includedUsage: 5 });
 	const pro = products.pro({ items: [usersItem] });
 
@@ -20,8 +19,6 @@ test.concurrent(`${chalk.yellowBright("create-entity-race: mainCusEnt path shoul
 		actions: [s.attach({ productId: pro.id })],
 	});
 
-	// Try to create two entities concurrently for the Users feature
-	// Since there's a mainCusEnt (allocated users with balance), the lock should be acquired
 	const [result1, result2] = await Promise.allSettled([
 		autumnV1.entities.create(customerId, [
 			{ id: "seat-1", name: "Seat 1", feature_id: TestFeature.Users },
@@ -31,7 +28,6 @@ test.concurrent(`${chalk.yellowBright("create-entity-race: mainCusEnt path shoul
 		]),
 	]);
 
-	// One should succeed, one should fail with 429 (lock conflict)
 	const successes = [result1, result2].filter((r) => r.status === "fulfilled");
 	const failures = [result1, result2].filter((r) => r.status === "rejected");
 
@@ -43,7 +39,6 @@ test.concurrent(`${chalk.yellowBright("create-entity-race: mainCusEnt path shoul
 });
 
 test.concurrent(`${chalk.yellowBright("create-entity-race: non-mainCusEnt path is protected by lock")}`, async () => {
-	// Product with messages only - no Users entitlement
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
 	const free = products.base({ items: [messagesItem] });
 
@@ -53,8 +48,6 @@ test.concurrent(`${chalk.yellowBright("create-entity-race: non-mainCusEnt path i
 		actions: [s.attach({ productId: free.id })],
 	});
 
-	// Create entities for Users feature (no entitlement exists for this feature in the product)
-	// All entity creation for a customer shares the same lock
 	const [result1, result2] = await Promise.allSettled([
 		autumnV1.entities.create(customerId, [
 			{ id: "user-1", name: "User 1", feature_id: TestFeature.Users },
@@ -74,7 +67,6 @@ test.concurrent(`${chalk.yellowBright("create-entity-race: non-mainCusEnt path i
 	);
 });
 
-/** Red: separate creates race. Green: one array request creates and hydrates every entity. */
 test.concurrent(
 	`${chalk.yellowBright("create-entity-race: bulk create retains linked entitlements")}`,
 	async () => {

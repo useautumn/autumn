@@ -4,7 +4,6 @@ import {
 	type FullCustomer,
 } from "@autumn/shared";
 
-/** Stored allocations are keyed by internal entity id; the API shape uses public entity ids. */
 export const fullCustomerToBalanceAllocationControls = ({
 	fullCustomer,
 }: {

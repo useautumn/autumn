@@ -1,9 +1,3 @@
-/**
- * ensure(): an org with no Svix app for the env gets one on first use, stored
- * in organizations.svix_config and reused afterwards, leaving the other env's
- * id alone.
- */
-
 import { afterAll, beforeAll, expect, test } from "bun:test";
 import { AppEnv, apiKeys, organizations } from "@autumn/shared";
 import { eq } from "drizzle-orm";

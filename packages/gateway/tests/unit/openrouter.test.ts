@@ -121,8 +121,6 @@ describe("withAutumn (openrouter)", () => {
 	test("prefers the requested slug over a provider-resolved snapshot slug", async () => {
 		const { calls, autumn } = createAutumn();
 		const { client } = createClient({
-			// Providers resolve aliases to dated snapshots that pricing data
-			// may not list — the requested slug must win.
 			model: "anthropic/claude-5-fable-20260609",
 			usage,
 		});
@@ -291,14 +289,12 @@ describe("withAutumn (openrouter)", () => {
 				cost: 0.001,
 			},
 		};
-		// JSON captures are awaited by the hook, so tracking is settled here.
 		await hooks[0]?.afterSuccess(
 			{ operationID: "createResponses" },
 			new Response(JSON.stringify(body), {
 				headers: { "content-type": "application/json" },
 			}),
 		);
-		// Ignored operation should not track.
 		await hooks[0]?.afterSuccess(
 			{ operationID: "listModels" },
 			new Response(JSON.stringify(body), {
@@ -352,7 +348,6 @@ describe("withAutumn (openrouter)", () => {
 			}),
 		);
 
-		// Streaming captures are fire-and-forget; trackingSettled awaits them.
 		await trackingSettled(client);
 		expect(calls).toHaveLength(1);
 		expect(calls[0]).toMatchObject({

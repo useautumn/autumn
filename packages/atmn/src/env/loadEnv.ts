@@ -31,8 +31,6 @@ export const loadEnvFiles = ({ dirs }: { dirs: string[] }): string[] => {
 				}
 				loaded.push(path);
 			} catch {
-				// An unreadable or malformed .env is not fatal — the key may well
-				// be in the real environment already.
 			}
 		}
 	}
@@ -100,8 +98,6 @@ export const removeEnvContent = ({
 	const kept = content
 		.split("\n")
 		.filter((line) => !keys.some((key) => isAssignmentFor({ line, key })));
-	// The split leaves a trailing empty segment for the final newline; rejoining
-	// without dropping it would grow a blank line on every removal.
 	const trimmed = kept[kept.length - 1] === "" ? kept.slice(0, -1) : kept;
 	return trimmed.length === 0 ? "" : `${trimmed.join("\n")}\n`;
 };

@@ -1,9 +1,3 @@
-/**
- * catalogV2.update — same-batch declared licenses[] vs child propagate.
- *
- * Declared is exclusive. version_slug stated → that row.
- * version_slug omitted → keep the existing link. Propagate does not move it.
- */
 import { test } from "bun:test";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";

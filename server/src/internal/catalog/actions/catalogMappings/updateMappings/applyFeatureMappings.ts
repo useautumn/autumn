@@ -32,7 +32,6 @@ const findMappedFeature = ({
 	});
 };
 
-/** Explicit item and price mappings outrank a feature's default. */
 const hasExplicitMapping = ({
 	priceId,
 	priceTargets,
@@ -44,7 +43,6 @@ const hasExplicitMapping = ({
 }) =>
 	priceMappedIds.has(priceId) || priceTargets.get(priceId)?.source === "item";
 
-/** Prices already on another product were chosen on purpose, so only the old default's move. */
 const targetFeaturePricesOnPreviousDefault = ({
 	ctx,
 	products,

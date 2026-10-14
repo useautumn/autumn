@@ -13,7 +13,6 @@ type CarriedSettings = Partial<
 	>
 >;
 
-/** Whatever the reason for a recreate, the new subscription keeps the old one's discounts, payment, collection, tax and metadata. */
 export const carryReplacedSubscriptionSettings = async ({
 	ctx,
 	billingContext,

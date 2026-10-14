@@ -27,11 +27,6 @@ import {
 	setCustomerUsageLimit,
 } from "../../utils/usage-limit-utils/customerUsageLimitUtils.js";
 
-// overage_behavior: "overflow" — deduct the entire tracked value, driving the
-// balance negative instead of clamping at 0, and punching through windowed
-// usage limits. Spend limits (monetary caps) still clamp. Check is untouched:
-// a negative balance or exhausted window still returns allowed: false.
-
 const autumnV2_3 = new AutumnInt({ version: ApiVersion.V2_3 });
 
 test.concurrent(
@@ -52,8 +47,6 @@ test.concurrent(
 			actions: [s.billing.attach({ productId: customerProduct.id })],
 		});
 
-		// The API floors `remaining` at 0 by convention; the negative balance
-		// (-50 underneath) surfaces as usage exceeding granted.
 		await autumnV2_3.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
@@ -75,7 +68,6 @@ test.concurrent(
 		});
 		expect(blocked.allowed).toBe(false);
 
-		// Default cap mode still floors at the current balance: nothing applies.
 		await autumnV2_3.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
@@ -123,7 +115,6 @@ test.concurrent(
 			value: 3,
 		});
 
-		// 3 of 5 used: an overflow track of 10 applies all 10, not the 2 that fit.
 		await autumnV2_3.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
@@ -146,7 +137,6 @@ test.concurrent(
 			limit: 5,
 		});
 
-		// The window is exhausted (counter past the limit): cap-mode clamps to 0.
 		await autumnV2_3.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
@@ -207,14 +197,12 @@ test.concurrent(
 			overageLimit: 25,
 		});
 
-		// 1100 granted + 20 overage consumed: 5 units of overage headroom left.
 		await autumnV2_1.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
 			value: 1120,
 		});
 
-		// overflow must NOT punch through the spend limit: only the 5 that fit apply.
 		await autumnV2_1.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
@@ -232,7 +220,6 @@ test.concurrent(
 			breakdownLength: 2,
 		});
 
-		// At the cap, a further overflow track applies nothing.
 		await autumnV2_1.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
@@ -252,8 +239,6 @@ test.concurrent(
 	},
 );
 
-// skip_cache forces the Postgres deduction fallback (performDeduction.sql),
-// covering the SQL parity changes for overflow.
 test.concurrent(
 	`${chalk.yellowBright("track-overage-overflow5: postgres path (skip_cache) drives the balance negative under overflow")}`,
 	async () => {
@@ -290,7 +275,6 @@ test.concurrent(
 			usage: 150,
 		});
 
-		// Cap mode on the Postgres path still floors at the negative balance.
 		await autumnV2_3.track(
 			{
 				customer_id: customerId,
@@ -310,9 +294,6 @@ test.concurrent(
 	},
 );
 
-// Entity-scoped spend limit: the customer-level variant cannot run on the PG
-// path today (pre-existing get_available_overage_from_spend_limit bug with
-// jsonb-null entities, tracked separately).
 test.concurrent(
 	`${chalk.yellowBright("track-overage-overflow6: postgres path (skip_cache) spend limit still clamps an overflow track")}`,
 	async () => {
@@ -346,9 +327,6 @@ test.concurrent(
 			overageLimit: 25,
 		});
 
-		// 100 granted + 20 overage consumed: 5 units of overage headroom left.
-		// Both tracks go through the PG path so the spend-limit helper (which
-		// reads customer_entitlements rows) sees authoritative state.
 		await autumnV2_1.track(
 			{
 				customer_id: customerId,
@@ -359,7 +337,6 @@ test.concurrent(
 			{ skipCache: true, timeout: 4000 },
 		);
 
-		// overflow must NOT punch through the spend limit on the PG path either.
 		await autumnV2_1.track(
 			{
 				customer_id: customerId,
@@ -383,8 +360,6 @@ test.concurrent(
 	},
 );
 
-// Rollover funding is gated by metered window limits too; overflow must
-// bypass the rollover-phase gate while the counter still records full usage.
 test.concurrent(
 	`${chalk.yellowBright("track-overage-overflow7: overflow bypasses the usage-limit gate on rollover-funded tracks")}`,
 	async () => {
@@ -410,9 +385,7 @@ test.concurrent(
 			],
 			actions: [
 				s.billing.attach({ productId: customerProduct.id }),
-				// The reset reads Postgres, so the track has to have flushed first.
 				s.track({ featureId: TestFeature.Messages, value: 40, timeout: 4000 }),
-				// Cron-path reset: unused 60 rolls over, fresh 100 -> remaining 160.
 				s.resetFeature({
 					featureId: TestFeature.Messages,
 					timeout: 4000,
@@ -442,7 +415,6 @@ test.concurrent(
 			value: 3,
 		});
 
-		// 3 of 5 used: an overflow track of 10 (rollover-funded) applies all 10.
 		await autumnV2_3.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
@@ -464,7 +436,6 @@ test.concurrent(
 			limit: 5,
 		});
 
-		// Exhausted window still clamps cap-mode tracks, rollover funds or not.
 		await autumnV2_3.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
@@ -502,7 +473,6 @@ test.concurrent(
 			actions: [s.attach({ productId: customerProduct.id })],
 		});
 
-		// Cost 0.125 exceeds the 0.1 balance: overflow applies it in full.
 		await autumnV2_2.post("/track_tokens", {
 			customer_id: customerId,
 			feature_id: TestFeature.AiCredits,
@@ -553,8 +523,6 @@ test.concurrent(
 			overageLimit: 25,
 		});
 
-		// 1100 granted + 20 overage: crosses into overage on the PG path, which
-		// exercises the spend-limit helper over a jsonb-null-entities cusEnt.
 		await autumnV2_1.track(
 			{
 				customer_id: customerId,
@@ -586,8 +554,6 @@ test.concurrent(
 	},
 );
 
-// Overflow debt is billed in arrears: usage_limit would normally cap billable
-// overage at 20 units, overflow punches past it and the whole debt invoices.
 test.concurrent(
 	`${chalk.yellowBright("track-overage-overflow10: overflow debt on a consumable feature is invoiced at cycle end")}`,
 	async () => {
@@ -634,7 +600,6 @@ test.concurrent(
 			withPause: true,
 		});
 
-		// $20 base renewal + 200 overage units x $0.50 = $120.
 		await expectCustomerInvoiceCorrect({
 			customerId,
 			count: 2,
@@ -643,8 +608,6 @@ test.concurrent(
 	},
 );
 
-// The deep-negative auto top-up interplay: an overflow track far below the
-// threshold still fires the configured top-up purchase.
 test.concurrent(
 	`${chalk.yellowBright("track-overage-overflow11: a deep overflow track below the threshold fires auto top-up")}`,
 	async () => {
@@ -685,7 +648,6 @@ test.concurrent(
 			},
 		});
 
-		// 100 -> -200: far below the threshold in a single overflow track.
 		await autumnV2_1.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
@@ -695,8 +657,6 @@ test.concurrent(
 
 		await timeout(20_000);
 
-		// Top-up purchased 100 more (granted 200), debt partially paid down:
-		// balance 200 - 300 = -100, surfaced as usage past granted.
 		await expectCustomerBalance({
 			autumn: autumnV2_1,
 			customerId,

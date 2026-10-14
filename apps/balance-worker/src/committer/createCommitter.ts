@@ -80,7 +80,6 @@ export const createCommitter = ({
 	return { apply, drain, stop };
 };
 
-/** Starts a flush per free lane; each lane loops until the queue is empty. landFlush never throws for a bad record, only for a bug. */
 async function startFlushes({
 	scope,
 	onIdle,
@@ -109,7 +108,6 @@ async function startFlushes({
 	if (state.queue.length === 0 && state.inFlight === 0) onIdle();
 }
 
-/** The live control's concurrency, clamped to the pool-sized ceiling; the boot value when unset. */
 function lanesOf({ scope }: { scope: CommitterScope }): number {
 	const ceiling = scope.config.concurrency;
 	const requested = scope.ctx.control?.read().concurrency ?? ceiling;
@@ -126,7 +124,6 @@ function countRowChanges({
 	return rows;
 }
 
-/** Rows the call's snapshot intent adds to its flush: one per state written, one per customer deleted; none unless snapshots are written. */
 function snapshotRowsOf({
 	scope,
 	call,

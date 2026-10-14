@@ -4,13 +4,10 @@ import type {
 	Feature,
 } from "@autumn/shared";
 
-/** Deductions split by the tracked feature that caused them unless told otherwise. */
 export const SOURCE_FEATURE_GROUP = "source_feature_id";
 
-/** Bucket the analytics pipe folds every group value beyond the top N into. */
 export const RESERVED_GROUP = "AUTUMN_RESERVED";
 
-/** Resolves the label shown for a customer group: name → email → id. */
 export function customerDisplayLabel({
 	customerId,
 	customerNames,
@@ -22,7 +19,6 @@ export function customerDisplayLabel({
 	return info?.name || info?.email || customerId;
 }
 
-/** Resolves the label shown for an entity group: name → id. */
 export function entityDisplayLabel({
 	entityId,
 	entityNames,
@@ -33,7 +29,6 @@ export function entityDisplayLabel({
 	return entityNames?.[entityId]?.name || entityId;
 }
 
-/** Resolves the label for any group value, including the catch-all bucket. */
 export function groupValueLabel({
 	groupValue,
 	groupBy,
@@ -75,6 +70,5 @@ const BUILT_IN_GROUP_LABELS: Record<string, string> = {
 	[SOURCE_FEATURE_GROUP]: "Source feature",
 };
 
-/** The name shown for what the chart is grouped by. */
 export const groupByLabel = ({ groupBy }: { groupBy: string }): string =>
 	BUILT_IN_GROUP_LABELS[groupBy] ?? groupBy;

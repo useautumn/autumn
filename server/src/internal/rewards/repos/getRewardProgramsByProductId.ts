@@ -6,7 +6,6 @@ import {
 import { and, arrayOverlaps, eq } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 
-/** Find checkout-triggered reward programs referencing ANY of the product IDs. */
 export const getRewardProgramsByProductId = async ({
 	db,
 	productIds,

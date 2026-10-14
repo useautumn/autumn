@@ -1,17 +1,3 @@
-/**
- * catalogV2 and the legacy allocated-usage-based ("prorated") price shape.
- *
- * Contract — `price.allocated_billing` on a usage_based allocated item:
- *   C1  GET emits `allocated_billing: "prorated_legacy"` on a legacy row and
- *       nothing on a v2 (arrear) row.
- *   C2  preview_update of exactly what GET returned is a no-op (`action: none`).
- *   C3  update with `allocated_billing: "prorated_legacy"` keeps the legacy row
- *       (no retire, no mint, same price id).
- *   C4  update that omits the field migrates the row to arrear — the explicit
- *       "I've moved on" signal.
- *   C5  a fresh plan created with the field omitted is arrear, and GET stays bare.
- */
-
 import { expect, test } from "bun:test";
 import {
 	type ApiPlanItemV1,
@@ -71,7 +57,6 @@ test.concurrent(
 		await forceOldAllocatedV1Config({ ctx, planId: pro.id });
 		const before = await getUsersPrice({ ctx, planId: pro.id });
 
-		// C1: GET says it's legacy.
 		const catalog = await autumnV2_3.catalogV2.get();
 		const plan = catalog.plans.find((row) => row.id === pro.id);
 		if (!plan) throw new Error("plan missing from catalog");
@@ -79,7 +64,6 @@ test.concurrent(
 			AllocatedBilling.ProratedLegacy,
 		);
 
-		// C3: explicit legacy keeps the row, same price id.
 		await autumnV2_3.catalogV2.update({
 			plans: [
 				{
@@ -101,7 +85,6 @@ test.concurrent(
 	},
 );
 
-// C2 rides the atmn emitter, which only carries fields in its generated spec.
 // Green once `openapi-internal.yml` and packages/atmn are regenerated
 // with `price.allocated_billing`; until then the emitter drops the flag and
 // the push reads as a migration.
@@ -155,13 +138,11 @@ test.concurrent(
 		await forceOldAllocatedV1Config({ ctx, planId: pro.id });
 		await expectAllocatedV1Price({ ctx, planId: pro.id });
 
-		// C4
 		await autumnV2_3.catalogV2.update({
 			plans: [{ plan_id: pro.id, items: [allocatedUsersItem()] }],
 		});
 		await expectAllocatedV2Price({ ctx, planId: pro.id });
 
-		// C1 (arrear side): the field is gone from GET once migrated.
 		const catalog = await autumnV2_3.catalogV2.get();
 		const plan = catalog.plans.find((row) => row.id === pro.id);
 		if (!plan) throw new Error("plan missing from catalog");
@@ -179,7 +160,6 @@ test.concurrent(
 			actions: [],
 		});
 
-		// C5
 		await autumnV2_3.catalogV2.update({
 			plans: [{ plan_id: planId, name: "Pro", items: [allocatedUsersItem()] }],
 		});

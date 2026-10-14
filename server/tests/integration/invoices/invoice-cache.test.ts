@@ -1,14 +1,3 @@
-/**
- * Customer invoice list behind the misc cache (`@autumn/cache` customerInvoicesCache).
- *
- * Contract under test:
- *   - readCachedCustomerInvoices fills invoices:<internal_customer_id> on a
- *     miss and serves the list from it afterwards.
- *   - Every InvoiceService write drops the key: invoices.pay updates the row
- *     inline through updateFromStripe, and the next read shows `paid`.
- *   - customers.get on the worker route renders the list the cache holds.
- */
-
 import { expect, test } from "bun:test";
 import { buildCustomerInvoicesCacheKey } from "@autumn/cache";
 import {
@@ -62,7 +51,6 @@ test.concurrent(
 		const internalCustomerId = customer!.internal_id;
 		const key = buildCustomerInvoicesCacheKey({ internalCustomerId });
 
-		// ── Contract: a miss reads Postgres and fills the key ──────────────
 		await getMiscRedis().del(key);
 		const firstRead = await readCachedCustomerInvoices({
 			ctx,
@@ -71,7 +59,6 @@ test.concurrent(
 		expect(firstRead.map(({ status }) => status)).toEqual([InvoiceStatus.Open]);
 		expect(await getMiscRedis().exists(key)).toBe(1);
 
-		// ── Contract: a hit serves the cached list ─────────────────────────
 		expect(
 			await readCachedCustomerInvoices({ ctx, internalCustomerId }),
 		).toEqual(firstRead);
@@ -81,7 +68,6 @@ test.concurrent(
 		})) as { list: ApiListInvoiceV1[] };
 		await autumnV2_3.post("/invoices.pay", { invoice_id: list[0].id });
 
-		// ── Contract: the write dropped the key; the next read is fresh ────
 		expect(await getMiscRedis().exists(key)).toBe(0);
 		const freshRead = await readCachedCustomerInvoices({
 			ctx,
@@ -90,7 +76,6 @@ test.concurrent(
 		expect(freshRead.map(({ status }) => status)).toEqual([InvoiceStatus.Paid]);
 		expect(await getMiscRedis().exists(key)).toBe(1);
 
-		// ── Contract: the response renders the list the cache holds ────────
 		if (!isBalanceWorkerRoute()) return;
 		const apiCustomer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 		await expectCustomerInvoiceCorrect({

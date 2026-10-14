@@ -1,18 +1,3 @@
-/**
- * Adding an item for a feature the license plan ALREADY grants must supersede
- * the base item, not sit alongside it.
- *
- * replaceItems swaps the whole item set, so prepare carries the license plan's
- * base item refs forward. Those refs key on entitlement id, and the minted
- * entitlement has a different id — so without deduping on the feature the
- * customized link ends up granting the same feature twice.
- *
- * Contract under test:
- *   - the customized definition carries exactly ONE entitlement for the feature
- *   - it is the prepared (minted) entitlement, not the base one
- *   - the license plan's other base items survive
- *   - each live assignment gains exactly one row for the feature
- */
 import { expect, test } from "bun:test";
 import { customerEntitlements } from "@autumn/shared";
 import { runChunkedMigration } from "@tests/integration/billing/migrations-v2/utils/runChunkedMigration";
@@ -38,7 +23,6 @@ test.concurrent(
 		const customerId = "migrate-license-existing-feature";
 		const idPrefix = "mig-lic-exist";
 
-		// The license plan ALREADY grants `dashboard` — this is the whole point.
 		const scenario = await setupLicenseUpdateScenario({
 			customerId,
 			idPrefix,
@@ -91,24 +75,20 @@ test.concurrent(
 			isCustomized: true,
 		});
 
-		// ── The definition grants the feature exactly once ──────────────────
 		const definitionEntitlements = pool.planLicense?.product.entitlements ?? [];
 		const dashboardEntitlements = definitionEntitlements.filter(
 			(entitlement) => entitlement.feature?.id === TestFeature.Dashboard,
 		);
 		expect(dashboardEntitlements).toHaveLength(1);
 
-		// The surviving one is the prepared row, not the base it replaced.
 		expect(dashboardEntitlements[0]?.is_custom).toBe(true);
 
-		// The plan's other base items are untouched.
 		expect(
 			definitionEntitlements
 				.map((entitlement) => entitlement.feature?.id)
 				.sort(),
 		).toEqual([TestFeature.Dashboard, TestFeature.Messages].sort());
 
-		// ── One row per assignment, not two ────────────────────────────────
 		const readDashboardRows = async () => {
 			const rows = await ctx.db
 				.select({

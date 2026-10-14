@@ -111,7 +111,6 @@ describe(`${chalk.yellowBright(`${testCase}: Testing multi interval features wit
 
 		const customer = await autumn.customers.get(customerId);
 
-		// Should deduct
 		const monthlyBreakdown = getBreakdown({ customer, intervalCount: 1 });
 		const biMonthlyBreakdown = getBreakdown({ customer, intervalCount: 2 });
 

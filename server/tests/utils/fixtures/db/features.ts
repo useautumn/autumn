@@ -1,8 +1,5 @@
 import { AppEnv, FeatureType, type ModelMarkups } from "@autumn/shared";
 
-/**
- * Create a feature fixture
- */
 const create = ({
 	id,
 	internalId,
@@ -31,10 +28,6 @@ const create = ({
 	event_names: [],
 	model_markups: modelMarkups ?? null,
 });
-
-// ═══════════════════════════════════════════════════════════════════
-// EXPORT
-// ═══════════════════════════════════════════════════════════════════
 
 export const features = {
 	create,

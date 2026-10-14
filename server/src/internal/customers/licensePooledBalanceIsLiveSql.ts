@@ -1,8 +1,6 @@
 import { RELEVANT_STATUSES } from "@autumn/shared";
 import { sql } from "drizzle-orm";
 
-/** License-keyed pools also inherit parent liveness: a dead parent hides
- * the pool even when no write-path expiry ran. */
 export const licensePooledBalanceIsLiveSql = ({
 	pooledBalanceAlias = "pb",
 }: {

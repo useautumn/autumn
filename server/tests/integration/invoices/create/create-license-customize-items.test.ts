@@ -1,13 +1,3 @@
-/**
- * invoices.create — license_quantities[].customize.items prices a license's
- * feature_quantities for this invoice only, the license-side counterpart of
- * the plan's customize.items.
- *
- * Red (before):  customize.items on a license entry is rejected by the schema.
- * Green (after): license items override, mint and name Stripe prices for the
- *                license's own feature lines; parent items never reach them.
- */
-
 import { expect, test } from "bun:test";
 import {
 	BillingInterval,
@@ -48,7 +38,6 @@ const tenOf = (featureId: string) => ({
 	quantity: 10,
 });
 
-/** A parent plan linked to one license plan, invoiced with no seat or base charge. */
 const setupLinkedLicense = async ({
 	customerId,
 	parentItems,
@@ -151,7 +140,6 @@ test.concurrent(
 			}),
 		});
 
-		// Parent: 10 × $1 (parent item). License: 10 × $0.50 (license item).
 		await expectCreatedInvoiceCorrect({
 			ctx,
 			response,
@@ -193,8 +181,6 @@ test.concurrent(
 			}),
 		});
 
-		// Messages: minted from the license item, 10 × $0.50. Words: the license
-		// plan's $0.05, not the parent's $1 item.
 		await expectCreatedInvoiceCorrect({
 			ctx,
 			response,
@@ -221,7 +207,6 @@ test.concurrent(
 			licenseItems: [items.prepaidUsers()],
 		});
 
-		// $9 per pack of 2 users in Stripe; the request's inline $7 is ignored.
 		const stripeProduct = await ctx.stripeCli.products.create({
 			name: "License seat pack",
 		});
@@ -261,7 +246,6 @@ test.concurrent(
 			}),
 		});
 
-		// 5 users over packs of 2 → 3 packs × $9, the Stripe price's amount.
 		const { stripeInvoice } = await expectCreatedInvoiceCorrect({
 			ctx,
 			response,

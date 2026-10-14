@@ -3,7 +3,6 @@ import {
 	type CustomerBillingControls,
 } from "@autumn/shared";
 
-/** Every lane present as `[]` — catalogV2 treats omitted keys as "keep". */
 export const EMPTY_BILLING_CONTROLS: CustomerBillingControls = {
 	auto_topups: [],
 	spend_limits: [],

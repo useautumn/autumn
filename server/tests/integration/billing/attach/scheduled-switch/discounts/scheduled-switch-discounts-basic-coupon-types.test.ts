@@ -1,6 +1,3 @@
-// Schedule discount preservation (Attach V2): coupons on a Stripe subscription survive scheduled
-// paid → paid downgrades.
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3 } from "@autumn/shared";
 import {
@@ -23,22 +20,6 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { extractCouponId } from "./utils/scheduledSwitchDiscountsBasic";
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 1: Premium to Pro with 20% discount - verify discount preserved through cycle
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Customer has premium ($50/mo) with 20% off coupon on subscription
- * - Downgrade to pro ($20/mo) - scheduled for end of cycle
- * - Advance test clock to next billing cycle
- *
- * Expected Result:
- * - Discount still present on Stripe subscription after scheduling the downgrade
- * - Premium is canceling, pro is scheduled
- * - After cycle: pro is active, premium removed
- * - Discount should STILL be on the subscription after the phase transition
- */
 test.concurrent(
 	`${chalk.yellowBright("schedule-discounts 1: 20% discount preserved after scheduling and cycle advance")}`,
 	async () => {
@@ -67,7 +48,6 @@ test.concurrent(
 			actions: [s.billing.attach({ productId: premium.id })],
 		});
 
-		// Apply 20% discount to the subscription
 		const { stripeCli, subscription: subBefore } = await getStripeSubscription({
 			customerId,
 		});
@@ -83,7 +63,6 @@ test.concurrent(
 			couponIds: [coupon.id],
 		});
 
-		// Verify discount is applied before downgrade
 		const subWithDiscount = await stripeCli.subscriptions.retrieve(
 			subBefore.id,
 			{
@@ -92,14 +71,12 @@ test.concurrent(
 		);
 		expect(subWithDiscount.discounts?.length).toBeGreaterThanOrEqual(1);
 
-		// Schedule downgrade to pro
 		await autumnV1.billing.attach({
 			customer_id: customerId,
 			product_id: pro.id,
 			redirect_mode: "if_required",
 		});
 
-		// Verify product states after scheduling
 		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 		await expectProductCanceling({
 			customer,
@@ -110,7 +87,6 @@ test.concurrent(
 			productId: pro.id,
 		});
 
-		// Verify discount is still on the subscription after scheduling the downgrade
 		const { subscription: subAfterSchedule } = await getStripeSubscription({
 			customerId,
 		});
@@ -125,7 +101,6 @@ test.concurrent(
 			coupon.id,
 		);
 
-		// Advance to next billing cycle
 		await advanceToNextInvoice({
 			stripeCli: ctx.stripeCli,
 			testClockId: testClockId!,
@@ -136,14 +111,12 @@ test.concurrent(
 		const customerAfterCycle =
 			await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-		// Verify pro is active, premium removed
 		await expectCustomerProducts({
 			customer: customerAfterCycle,
 			active: [pro.id],
 			notPresent: [premium.id],
 		});
 
-		// Verify features updated to pro tier
 		expectCustomerFeatureCorrect({
 			customer: customerAfterCycle,
 			featureId: TestFeature.Messages,
@@ -152,7 +125,6 @@ test.concurrent(
 			usage: 0,
 		});
 
-		// KEY BUG CHECK: verify discount survives the phase transition
 		const { subscription: subAfterCycle } = await getStripeSubscription({
 			customerId,
 		});
@@ -161,7 +133,6 @@ test.concurrent(
 			{ expand: ["discounts.source.coupon"] },
 		);
 
-		// The discount should still be present after the scheduled switch completed
 		expect(subAfterCycleExpanded.discounts?.length).toBeGreaterThanOrEqual(1);
 		expect(extractCouponId(subAfterCycleExpanded.discounts?.[0])).toBe(
 			coupon.id,
@@ -169,18 +140,6 @@ test.concurrent(
 	},
 );
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 2: Premium to Pro with $10 off discount - verify discount after schedule
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Customer has premium ($50/mo) with $10 off coupon on subscription
- * - Downgrade to pro ($20/mo) - scheduled for end of cycle
- *
- * Expected Result:
- * - Amount-off discount still present on subscription after scheduling
- */
 test.concurrent(
 	`${chalk.yellowBright("schedule-discounts 2: $10 off discount preserved after scheduling downgrade")}`,
 	async () => {
@@ -209,7 +168,6 @@ test.concurrent(
 			actions: [s.billing.attach({ productId: premium.id })],
 		});
 
-		// Apply $10 off discount to the subscription
 		const { stripeCli, subscription: subBefore } = await getStripeSubscription({
 			customerId,
 		});
@@ -225,14 +183,12 @@ test.concurrent(
 			couponIds: [coupon.id],
 		});
 
-		// Schedule downgrade to pro
 		await autumnV1.billing.attach({
 			customer_id: customerId,
 			product_id: pro.id,
 			redirect_mode: "if_required",
 		});
 
-		// Verify product states
 		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 		await expectProductCanceling({
 			customer,
@@ -243,7 +199,6 @@ test.concurrent(
 			productId: pro.id,
 		});
 
-		// Verify discount is still on the subscription
 		const { subscription: subAfter } = await getStripeSubscription({
 			customerId,
 		});

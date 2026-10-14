@@ -11,10 +11,6 @@ const noopSink: AnalyticsSink = {
 let cachedSink: AnalyticsSink | null | undefined;
 let overrideSink: AnalyticsSink | null | undefined;
 
-/**
- * Override the analytics sink (tests, or wiring a pino/OTEL sink from the host
- * app). Pass `null` to disable. Pass `undefined` to fall back to env defaults.
- */
 export const setAnalyticsSink = (sink: AnalyticsSink | null | undefined) => {
 	overrideSink = sink;
 	if (sink !== undefined) cachedSink = undefined;
@@ -32,6 +28,5 @@ export const getAnalyticsSink = (): AnalyticsSink => {
 	return cachedSink ?? noopSink;
 };
 
-/** True when a real sink is configured — lets callers skip hot-path work. */
 export const isAnalyticsEnabled = (): boolean =>
 	getAnalyticsSink() !== noopSink;

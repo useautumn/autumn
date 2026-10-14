@@ -21,11 +21,6 @@ const discountsToMetadata = (
 	return couponIds ? { coupon_ids: couponIds } : undefined;
 };
 
-/**
- * Builds a StripeInvoiceAction for immediate charges.
- * If customLineItems are provided, uses those directly (bypasses normal LineItem conversion).
- * Otherwise filters for line items where chargeImmediately === true.
- */
 export const buildStripeInvoiceAction = ({
 	lineItems,
 	customLineItems,
@@ -37,7 +32,6 @@ export const buildStripeInvoiceAction = ({
 	currency?: string;
 	stripeDiscounts?: StripeDiscountWithCoupon[];
 }): StripeInvoiceAction | undefined => {
-	// Custom line items bypass the normal LineItem → Stripe conversion
 	if (customLineItems?.length && currency) {
 		const customLineItemsWithDiscounts = customLineItemsToLineItems({
 			customLineItems,

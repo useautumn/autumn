@@ -30,11 +30,6 @@ const applyReplacements = ({
 	return [...new Set(replaced)];
 };
 
-/**
- * Drop phases the replacements emptied, then any schedule with nothing left to
- * do — one whose remaining phases have all started is spent, and consumers
- * already read it as gone. Phases cascade with the schedule.
- */
 const pruneSpentSchedules = async ({
 	ctx,
 	scheduleIds,
@@ -91,8 +86,6 @@ export const replaceScheduledPhaseCustomerProductIds = async ({
 }) => {
 	if (!replacements?.length) return;
 
-	// Keyed by customer alone: a customer product id already identifies the phase
-	// entry to swap, so narrowing by the schedule's entity can only miss.
 	const byCustomer = new Map<string, Replacement[]>();
 	for (const replacement of replacements) {
 		const { internalCustomerId } = replacement;

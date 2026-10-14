@@ -1,12 +1,3 @@
-/**
- * set_plans with a future phases[0].starts_at:
- * - nothing live: rows are Scheduled on a Stripe schedule that starts that day, nothing is invoiced now,
- *   the preview's next event is the start, and the subscription Stripe creates at the start activates them;
- * - a live plan ends now with a credit equal to the preview, its subscription is cancelled,
- *   and the new plan waits for the start;
- * - a trial, or a free plan nothing in Stripe would start, is rejected.
- */
-
 import { expect, test } from "bun:test";
 import { CusProductStatus, type SetPlansParamsV0Input } from "@autumn/shared";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";

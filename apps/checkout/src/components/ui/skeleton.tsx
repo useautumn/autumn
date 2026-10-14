@@ -1,14 +1,9 @@
 import { cn } from "@/lib/utils";
 
 interface SkeletonProps extends React.HTMLAttributes<HTMLDivElement> {
-	/** Use shimmer effect instead of pulse */
 	shimmer?: boolean;
 }
 
-/**
- * Skeleton loading placeholder with optional shimmer effect.
- * Shimmer provides a Stripe-style loading animation.
- */
 function Skeleton({ className, shimmer = true, ...props }: SkeletonProps) {
 	return (
 		<div

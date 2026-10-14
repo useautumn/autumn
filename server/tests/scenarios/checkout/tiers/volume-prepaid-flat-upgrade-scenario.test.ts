@@ -5,22 +5,6 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-/**
- * Volume Prepaid with Flat Amount Upgrade Scenario
- *
- * Tests upgrading from a simple plan to a volume-prepaid plan that combines
- * a per-unit amount AND a flat fee per tier. The flat_amount is charged once
- * for whichever tier the total quantity falls into.
- *
- * Tiers (billingUnits = 1, quantity maps directly to units):
- *   Tier 1: 0–100  → $1.00/unit + $10 flat fee
- *   Tier 2: 101+   → $0.50/unit + $25 flat fee
- *
- * Upgrade scenarios tested:
- *   50 units → tier 1 → (50 × $1.00) + $10 = $60
- *   150 units → tier 2 → (150 × $0.50) + $25 = $100
- */
-
 const FLAT_TIERS = [
 	{ to: 100, amount: 1, flat_amount: 10 },
 	{ to: "inf" as const, amount: 0.5, flat_amount: 25 },
@@ -31,7 +15,6 @@ test(
 	async () => {
 		const customerId = "tiers-vol-flat-tier1-upgrade";
 
-		// Starter: simple monthly plan
 		const starter = products.base({
 			id: "starter",
 			items: [
@@ -41,8 +24,6 @@ test(
 			],
 		});
 
-		// Pro: volume prepaid with flat_amount tiers (billingUnits=1)
-		// 50 units → tier 1 → 50×$1 + $10 flat = $60
 		const pro = products.base({
 			id: "pro",
 			items: [
@@ -70,7 +51,6 @@ test(
 			{ feature_id: TestFeature.Messages, quantity: 50 },
 		];
 
-		// 1. Preview upgrade - volume + flat: 50×$1 + $10 = $60
 		const upgradePreview = await autumnV1.billing.previewAttach({
 			customer_id: customerId,
 			product_id: `pro_${customerId}`,
@@ -79,7 +59,6 @@ test(
 		});
 		console.log("volume+flat upgrade preview (tier 1):", upgradePreview);
 
-		// 2. Perform the upgrade
 		const upgradeResult = await autumnV1.billing.attach({
 			customer_id: customerId,
 			product_id: `pro_${customerId}`,
@@ -95,7 +74,6 @@ test(
 	async () => {
 		const customerId = "tiers-vol-flat-tier2-upgrade";
 
-		// Starter: simple monthly plan
 		const starter = products.base({
 			id: "starter",
 			items: [
@@ -105,8 +83,6 @@ test(
 			],
 		});
 
-		// Pro: volume prepaid with flat_amount tiers (billingUnits=1)
-		// 150 units → tier 2 → 150×$0.50 + $25 flat = $100
 		const pro = products.base({
 			id: "pro",
 			items: [
@@ -134,7 +110,6 @@ test(
 			{ feature_id: TestFeature.Messages, quantity: 150 },
 		];
 
-		// 1. Preview upgrade - volume + flat: 150×$0.50 + $25 = $100
 		const upgradePreview = await autumnV1.billing.previewAttach({
 			customer_id: customerId,
 			product_id: `pro_${customerId}`,
@@ -143,7 +118,6 @@ test(
 		});
 		console.log("volume+flat upgrade preview (tier 2):", upgradePreview);
 
-		// 2. Perform the upgrade
 		const upgradeResult = await autumnV1.billing.attach({
 			customer_id: customerId,
 			product_id: `pro_${customerId}`,

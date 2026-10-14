@@ -8,11 +8,6 @@ import {
 } from "../getSchedulePhaseMoves.js";
 import type { StripeScheduleUpdatedContext } from "../setupScheduleUpdatedContext.js";
 
-/**
- * Applies phase-start moves to Autumn: for each moved phase, only the scheduled
- * customerProducts (and Autumn phase rows) anchored to its OLD start are
- * retargeted to the new start.
- */
 export const resyncScheduledCustomerProductStartsAt = async ({
 	ctx,
 	eventContext,
@@ -79,7 +74,6 @@ export const resyncScheduledCustomerProductStartsAt = async ({
 			)
 			.returning({ id: schedulePhases.id });
 
-		// 0 rows is normal for attach-origin schedules (no Autumn phase rows)
 		logger.info(
 			`[handleStripeSubscriptionScheduleUpdated] moved ${updatedPhaseRows.length} autumn phase row(s) ${oldStartMs} -> ${newStartMs} (schedule ${schedule.id})`,
 		);

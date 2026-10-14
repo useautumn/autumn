@@ -16,7 +16,6 @@ export const getLifetimeFreeCusEnt = ({
 	cusProduct: FullCusProduct;
 	featureId: string;
 }) => {
-	// Get lifetime free cus ent
 	return cusProduct.customer_entitlements.find(
 		(cusEnt: FullCustomerEntitlement) => {
 			if (cusEnt.entitlement.feature.id !== featureId) {
@@ -43,7 +42,6 @@ export const getPrepaidCusEnt = ({
 	cusProduct: FullCusProduct;
 	featureId: string;
 }) => {
-	// Get prepaid cus ent
 	return cusProduct.customer_entitlements.find(
 		(cusEnt: FullCustomerEntitlement) => {
 			if (cusEnt.entitlement.feature.id !== featureId) {
@@ -75,7 +73,6 @@ export const getUsageCusEnt = ({
 	cusProduct: FullCusProduct;
 	featureId: string;
 }) => {
-	// Get usage cus ent
 	return cusProduct.customer_entitlements.find(
 		(cusEnt: FullCustomerEntitlement) => {
 			if (cusEnt.entitlement.feature.id !== featureId) {

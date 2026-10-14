@@ -5,7 +5,6 @@ import type { RevenueCatPlanMapping } from "@utils/productUtils/convertProduct/p
 import { fullProductToApiPlan } from "../fullProductToApiPlan";
 import type { ApiPlanContext } from "../types/apiPlanContext";
 
-/** A base plan's down-link to a variant: id + name + customize + resolved plan. */
 export const fullProductToApiPlanVariant = ({
 	ctx,
 	basePlan,
@@ -17,7 +16,6 @@ export const fullProductToApiPlanVariant = ({
 	basePlan: DiffablePlanV1;
 	variant: FullProduct;
 	currency?: string;
-	/** Keyed by plan id: the variant owns its own `revenuecat_mappings` row. */
 	revenuecatMappings?: ReadonlyMap<string, RevenueCatPlanMapping>;
 }): ApiPlanVariantV1 => {
 	const variantPlan = fullProductToApiPlan({
@@ -28,7 +26,6 @@ export const fullProductToApiPlanVariant = ({
 		revenuecatMappings,
 	});
 
-	// The edge already carries customize; drop the plan's back-link to the base.
 	const { variant_details, ...resolvedPlan } = variantPlan;
 	const customize = variant_details?.customize;
 

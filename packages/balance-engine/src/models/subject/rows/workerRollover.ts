@@ -2,7 +2,6 @@ import { RolloverSchema } from "@autumn/shared";
 import { z } from "zod/v4";
 import { openSchema } from "../../common/openSchema.js";
 
-/** The rollovers columns deduction reads; picked from the shared row schema. */
 export const workerRolloverSchema = openSchema({
 	name: "workerRollover",
 	schema: RolloverSchema.pick({

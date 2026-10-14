@@ -6,7 +6,6 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-// version-only is per-customer until definition execute is restored
 import { readScopedFeatureRow } from "../../paidRowTestUtils";
 import {
 	expectPerCustomerLaneWithRejections,
@@ -61,8 +60,6 @@ test.skip(
 			{ feature_id: TestFeature.Messages, quantity: PURCHASED_PACKS },
 		]);
 
-		// The target version re-prices the prepaid item; the op carries no
-		// quantity strategy, so the transition cannot batch-lower.
 		await autumnV2_3.post("/plans.update", {
 			plan_id: plan.id,
 			force_version: true,

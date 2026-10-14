@@ -37,14 +37,12 @@ export function isUnderWorktree({
 	);
 }
 
-/** The dw CLI actually running a stack — not list/setup/teardown/kill. */
 export function isDwRunCli({ command }: { command: string }): boolean {
 	if (isIgnoredKillCommand({ command })) return false;
 	if (/scripts\/dw\/index\.ts\s+run(?:\s|$)/.test(command)) return true;
 	return command.includes("bun dw run");
 }
 
-/** `bun dw run` always starts scripts/dev.ts with --worktree. Bare `bun dev` does not. */
 export function isDwDevSupervisor({ command }: { command: string }): boolean {
 	if (isIgnoredKillCommand({ command })) return false;
 	return (

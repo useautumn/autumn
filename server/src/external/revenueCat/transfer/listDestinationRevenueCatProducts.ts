@@ -16,7 +16,6 @@ export type DestinationRevenueCatItems = {
 	autumnProductIds: Set<string>;
 };
 
-/** What RevenueCat says the destination owns right now; null when no RC client is configured. */
 export const listDestinationRevenueCatProducts = async ({
 	ctx,
 	appUserIds,

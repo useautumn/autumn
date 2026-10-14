@@ -41,7 +41,6 @@ async function settleReplay({
 	} catch (cause) {
 		failures.push(cause);
 	}
-	// Pausing does not settle callbacks already writing to SQLite.
 	const [, withdrawal] = await Promise.allSettled([
 		state.startPromise,
 		settling,
@@ -52,7 +51,6 @@ async function settleReplay({
 		throw new AggregateError(failures, "Partition replay did not stop safely");
 }
 
-/** Consumption halts at once: the batch in flight finds its generation gone before it resolves another record. */
 export function markReplayUnavailable({
 	ctx,
 	state,

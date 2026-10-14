@@ -15,18 +15,15 @@ export const isRefund = ({
 	deductionState: DeductionState;
 }): boolean => deductionState.remaining.lt(0);
 
-/** A flat zero rate: the row funds whatever reaches it without moving its balance. */
 export const isFreeRow = ({ row }: { row: DeductionRow }): boolean =>
 	row.rateCard === null && row.creditCost === 0;
 
-/** "overflow" drops the floors; "cap" and "reject" keep them. */
 export const allowsNegative = ({
 	deductionState,
 }: {
 	deductionState: DeductionState;
 }): boolean => deductionState.terms.overageBehavior === "overflow";
 
-/** Whether this draw may take the row below zero: its own overage, or a free allocated grant's unless the draw rejects. */
 export const isUsageAllowed = ({
 	row,
 	deductionState,
@@ -40,7 +37,6 @@ export const isUsageAllowed = ({
 const sameJson = (left: unknown, right: unknown): boolean =>
 	left === right || JSON.stringify(left) === JSON.stringify(right);
 
-/** Two selections that would find the same rows, read the same way: a context set up for one serves the other. */
 export const isSameSelection = ({
 	left,
 	right,
@@ -60,7 +56,6 @@ export const isSameSelection = ({
 	sameJson(left.properties, right.properties) &&
 	sameJson(left.customerEntitlementFilters, right.customerEntitlementFilters);
 
-/** Legacy's `isUsageBasedAllocatedCustomerEntitlement` over the worker's row: a continuous grant with an in-arrear prorated price. */
 const isPaidAllocatedV1CustomerEntitlement = ({
 	customerEntitlement,
 }: {
@@ -71,7 +66,6 @@ const isPaidAllocatedV1CustomerEntitlement = ({
 	return customerPrice ? isAllocatedPrice(customerPrice.price) : false;
 };
 
-/** A v1 paid allocated grant invoices on every track, which only Postgres does; the worker refuses so the server defers. v2 bills at cycle end and stays. */
 export const isPaidAllocatedV1Deduction = ({
 	outcome,
 }: {

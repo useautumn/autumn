@@ -12,10 +12,6 @@ import {
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { assertPlanOffersCurrency } from "@/internal/billing/v2/actions/attach/errors/handleCurrencyMismatchErrors";
 
-/**
- * Blocks a multi-attach that would bill the customer in an unsupported currency.
- * Runs pre-Stripe (before evaluateStripeBillingPlan, which creates Stripe prices).
- */
 export const handleMultiAttachCurrencyErrors = ({
 	ctx,
 	billingContext,
@@ -37,7 +33,6 @@ export const handleMultiAttachCurrencyErrors = ({
 		});
 	}
 
-	// Free / auto-enabled plans neither need nor lock a currency.
 	const allPrices = fullProducts.flatMap((product) =>
 		productToEffectivePrices({ product }),
 	);
@@ -57,7 +52,6 @@ export const handleMultiAttachCurrencyErrors = ({
 			stripeCurrency: billingContext.stripeCustomer?.currency,
 		});
 
-	// A locked customer cannot switch currencies (Stripe forbids it anyway).
 	if (locked && requested && requested !== locked) {
 		throw new RecaseError({
 			code: ErrCode.CurrencyMismatch,
@@ -66,7 +60,6 @@ export const handleMultiAttachCurrencyErrors = ({
 		});
 	}
 
-	// Every charging price on every plan must offer the resolved currency (no FX fallback).
 	for (const product of fullProducts) {
 		assertPlanOffersCurrency({
 			ctx,

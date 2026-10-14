@@ -41,10 +41,6 @@ const trackStreamRecord = ({
 const logger = { error: () => {} };
 const at = new Date("2026-09-28T00:00:00Z");
 
-/**
- * The ledger as Postgres would keep it, plus a Tinybird that can be told to fail: every call recorded in order.
- * Rows survive across handles, the way the table does; nothing here lives in the consumer.
- */
 const createStores = ({
 	tinybirdFailures = [],
 	postgresFailures = 0,

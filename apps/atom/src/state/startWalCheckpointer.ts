@@ -5,10 +5,6 @@ import { newSqliteConnection } from "./newSqliteConnection.js";
 import { JOURNAL_SIZE_LIMIT_BYTES } from "./openSqliteDatabase.js";
 
 const TICK_MS = 1000;
-/**
- * Each file is checkpointed once per this many ticks, a slice of the files each tick. A completed checkpoint makes the
- * next write restart the log, and that restart syncs the log header on the writing (serving) thread.
- */
 export const TICKS_PER_FILE = 30;
 const WAL_SUFFIX = "-wal";
 
@@ -22,10 +18,6 @@ const listWalDatabases = ({ dataDir }: { dataDir: string }): string[] => {
 	}
 };
 
-/**
- * Copies every SQLite log in the data folder back into its file, from the main thread, which serves nothing.
- * A checkpoint writes and syncs megabytes; done by a serving thread, it stalls every request queued behind that push.
- */
 export const startWalCheckpointer = ({
 	dataDir,
 	logger,
@@ -46,9 +38,7 @@ export const startWalCheckpointer = ({
 				});
 				open.set(path, database);
 			}
-			// Passive never waits on a reader or writer: what it cannot copy now it copies next time.
 			database.run("PRAGMA wal_checkpoint(PASSIVE)");
-			// A log past its limit is cut by the next write; a file nobody writes to any more is cut here instead.
 			if (statSync(`${path}${WAL_SUFFIX}`).size > JOURNAL_SIZE_LIMIT_BYTES)
 				database.run("PRAGMA wal_checkpoint(TRUNCATE)");
 			failing.delete(path);

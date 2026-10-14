@@ -2,8 +2,6 @@ import type { Checkout } from "@autumn/shared";
 import { getMiscRedis } from "@/external/redis/initRedis.js";
 import { tryRedisOp } from "@/external/redis/utils/runRedisOp.js";
 
-/** Pinned: updated in place on status changes (write-through), so ramped
- *  readers on another instance would see stale checkouts for the full TTL. */
 const CHECKOUT_CACHE_TTL_SECONDS = 86400;
 
 export const buildCheckoutCacheKey = (checkoutId: string) =>

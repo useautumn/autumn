@@ -76,7 +76,6 @@ describe("catalog store", () => {
 		const databasePath = catalogPath();
 		const catalogStore = openCatalogStore({ databasePath });
 		catalogStore.set({ rows, readAt: 1800 });
-		// A second process compares nothing beforehand: the replace itself must refuse the earlier read.
 		const otherProcess = { sqliteDb: new Database(databasePath) };
 
 		const stored = replaceCatalog({
@@ -122,7 +121,6 @@ describe("catalog store", () => {
 			catalog: catalogRowsToCatalog({ rows: features }),
 			readAt: 1800,
 		});
-		// The file still holds what the owner wrote: a reopened store reads that.
 		expect(openCatalogStore({ databasePath }).read()?.readAt).toBe(1700);
 		owner.close();
 		other.close();
@@ -132,7 +130,6 @@ describe("catalog store", () => {
 		const catalogStore = openCatalogStore({ databasePath: catalogPath() });
 		catalogStore.set({ rows, readAt: 1700 });
 
-		// The same object back means the held copy was reused, not rebuilt.
 		expect(catalogStore.read()).toBe(catalogStore.read());
 		catalogStore.close();
 	});

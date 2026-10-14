@@ -5,7 +5,6 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-// version-only is per-customer until definition execute is restored
 import {
 	expectBatchLane,
 	expectCustomerPlanRepointedInPlace,
@@ -15,8 +14,6 @@ import {
 	runVersionRepointMigration,
 } from "../utils/versionRepointTestUtils";
 
-// Plan versions accumulate across runs, so every test mints its own plan id to
-// keep version-number assertions deterministic.
 const uniqueStem = (name: string) =>
 	`${name}-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
 
@@ -402,7 +399,6 @@ for (const [index, scenario] of [
 	test.skip(
 		`${chalk.yellowBright(`batch version repoint rejects: ${scenario.name}`)}`,
 		async () => {
-			// Kept short: the customer id becomes an email local part, capped at 64.
 			const stem = uniqueStem(`bvr-mr-${index + 1}`);
 			const customerId = `${stem}-customer`;
 			const plan = products.base({

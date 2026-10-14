@@ -27,7 +27,6 @@ const oneOff = products.oneOff({
 	items: [items.monthlyWords({ includedUsage: 500 })],
 });
 
-// Reward: FixedDiscount $5, OneOff duration
 const rewardId = "attachcoupon";
 const promoCode = "attachcouponcode";
 const reward: CreateReward = {
@@ -48,7 +47,6 @@ const reward: CreateReward = {
 test(chalk.yellow(`${testCase} - Testing attach coupon`), async () => {
 	const customerId = testCase;
 
-	// Init scenario: products + customer with PM
 	const { ctx: testCtx } = await initScenario({
 		customerId,
 		setup: [
@@ -58,14 +56,11 @@ test(chalk.yellow(`${testCase} - Testing attach coupon`), async () => {
 		actions: [],
 	});
 
-	// Create autumn client with LegacyVersion.v1_4 (matches original test)
 	const autumn = new AutumnInt({
 		version: LegacyVersion.v1_4,
 		secretKey: testCtx.orgSecretKey,
 	});
 
-	// Create reward manually (s.reward calls createReward internally but we need to
-	// match the exact original behavior with the test-case-prefixed product ID)
 	await createReward({
 		orgId: testCtx.org.id,
 		env: testCtx.env,
@@ -77,7 +72,6 @@ test(chalk.yellow(`${testCase} - Testing attach coupon`), async () => {
 
 	const couponAmount = reward.discount_config!.discount_value;
 
-	// Attach pro with reward ID
 	await autumn.attach({
 		customer_id: customerId,
 		product_id: pro.id,
@@ -94,7 +88,6 @@ test(chalk.yellow(`${testCase} - Testing attach coupon`), async () => {
 	const basePrice = getBasePrice({ product: pro });
 	expect(invoice.total).toBe(basePrice - couponAmount);
 
-	// Attach one-off with reward ID
 	await autumn.attach({
 		customer_id: customerId,
 		product_id: oneOff.id,
@@ -112,7 +105,6 @@ test(chalk.yellow(`${testCase} - Testing attach coupon`), async () => {
 	expect(oneOffInvoice.total).toBe(oneOffBasePrice - couponAmount);
 	expect(oneOffInvoice.product_ids).toContain(oneOff.id);
 
-	// Attach one-off again with promo code
 	await autumn.attach({
 		customer_id: customerId,
 		product_id: oneOff.id,

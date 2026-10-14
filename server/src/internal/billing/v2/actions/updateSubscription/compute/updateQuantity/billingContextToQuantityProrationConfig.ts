@@ -5,8 +5,6 @@ import {
 } from "@autumn/shared";
 import { billingContextBillsDifference } from "@/internal/billing/v2/utils/billingContext/billingContextToProrationNow";
 
-/** `bill_difference` overrides a price's on_increase / on_decrease so the charge
- * or credit and the quantity change both apply now. */
 export const billingContextToQuantityProrationConfig = ({
 	billingContext,
 	price,

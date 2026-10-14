@@ -1,6 +1,5 @@
 import type { Product } from "../../../models/productModels/productModels.js";
 
-/** Alias ids are an unordered set, so sequence must not count as a difference. */
 const additionalIdsAreSame = ({
 	left,
 	right,
@@ -16,7 +15,6 @@ const additionalIdsAreSame = ({
 	);
 };
 
-/** Stripe mapping equality: the primary product id plus the set of alias ids. */
 export const productProcessorsAreSame = ({
 	left,
 	right,

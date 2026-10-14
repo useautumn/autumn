@@ -312,7 +312,6 @@ describe("invoice credit line items", () => {
 			lineItems: result.invoiceCreditLineItems,
 		});
 
-		// 0.012 credits round to 1 cent; the first line gives back its rounded-up cent.
 		expect(stripeInvoiceItems.map((invoiceItem) => invoiceItem.amount)).toEqual(
 			[0, 1, -1],
 		);
@@ -337,7 +336,6 @@ describe("invoice credit line items", () => {
 			lineItems: result.invoiceCreditLineItems,
 		});
 
-		// The credit line stays at the exact $1 included; a usage line absorbs the rounding.
 		expect(stripeInvoiceItems.map((invoiceItem) => invoiceItem.amount)).toEqual(
 			[50, 51, -100],
 		);

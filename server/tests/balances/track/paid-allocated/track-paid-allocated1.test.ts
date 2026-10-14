@@ -9,28 +9,6 @@ import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
 import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
 
-/**
- * Test to verify replaceable balance logic works correctly:
- *
- * Scenario:
- * - Product: 1 included usage, $50 per user
- * - Use 2 seats (1 paid)
- * - Track -1 to create replaceable
- * - Verify balance values match expected unused logic
- *
- * Expected behavior:
- * Before track -1:
- *   granted_balance: 1
- *   current_balance: 0
- *   purchased_balance: 1
- *   usage: 2
- *
- * After track -1 (creates 1 replaceable):
- *   granted_balance: 1
- *   current_balance: 1 (includes unused)
- *   purchased_balance: 1
- *   usage: 1 (reduced by unused)
- */
 const userItem = constructArrearProratedItem({
 	featureId: TestFeature.Users,
 	pricePerUnit: 50,

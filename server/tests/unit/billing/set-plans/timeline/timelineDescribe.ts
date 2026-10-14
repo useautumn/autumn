@@ -30,7 +30,6 @@ const rowConfig = (row: ReviewPlanRow) => {
 	}
 };
 
-/** Review rows as `phase:status:config`, removed phases as `phase:removed:config`, sorted. */
 export const describeReview = (review: ReviewRows) =>
 	[
 		...review.phases.flatMap(({ at, rows }) =>
@@ -41,7 +40,6 @@ export const describeReview = (review: ReviewRows) =>
 		),
 	].sort();
 
-/** Row writes as `type:id[:end]`, keeps left out, sorted. */
 export const describeOperations = (diff: TimelineDiff) =>
 	diff.operations
 		.flatMap((operation) => {

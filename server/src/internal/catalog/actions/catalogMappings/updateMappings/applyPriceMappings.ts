@@ -29,7 +29,6 @@ type MappedPrice = { price: Price; product: FullProduct };
 
 type StripeIdConfig = Record<string, string | null | undefined>;
 
-/** Prepaid bills from the v2 slot, everything else from v1. */
 const stripePriceSlot = ({
 	price,
 }: {
@@ -80,7 +79,6 @@ const isUnchanged = ({
 	(price.config.stripe_product_id ?? null) === stripeProductId &&
 	currentStripePriceId({ price }) === stripePriceId;
 
-/** A stated Stripe price must exist, sit under the stated product, and carry a meter if usage needs one. */
 const fetchAdoptableStripePrice = async ({
 	stripeCli,
 	mapped,
@@ -125,7 +123,6 @@ const fetchAdoptableStripePrice = async ({
 	return stripePrice;
 };
 
-/** Named like Autumn's own per-plan products, e.g. "Pro - Messages". */
 const newStripeProductName = ({
 	ctx,
 	mapped,
@@ -183,7 +180,6 @@ const stripeCliForMappings = ({
 		? createStripeCli({ org: ctx.org, env: ctx.env })
 		: null;
 
-/** Rejects a bad price mapping before any mapping write lands; returns the Stripe prices to adopt. */
 export const validatePriceMappings = async ({
 	ctx,
 	params,

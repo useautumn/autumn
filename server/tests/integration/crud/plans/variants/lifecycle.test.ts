@@ -1,25 +1,3 @@
-/**
- * Plan variants — lifecycle (base + variant, interval/price delta).
- *
- * Contract under test (from tests/_temp/variants/CONTRACT.md):
- *   New endpoints:
- *     - POST /v1/plans.create_variant { base_plan_id, variant_plan_id, name } → getPlanResponse
- *     - POST /v1/plans.preview_update (UpdatePlanParams omit propagate) → PlanUpdatePreview
- *     - POST /v1/plans.update (extended: update_variant_ids, force_version, is_default)
- *   New DB column:
- *     - products.base_internal_product_id — set on variant insert, immutable
- *   New behaviors:
- *     - create_variant: copies base items, sets base_internal_product_id, version=1, is_default=false
- *     - create_variant rejects: nested variant, archived base, id collision
- *     - preview_update: no DB writes, rejects on variant
- *     - propagate patches in-place when no customers, versions when customers exist
- *     - β-rule: variant versions iff baseWasVersioned || variantHasCustomers
- *     - propagate validation: max 20, unknown id rejected, base's own id rejected
- *     - force_version + disable_version mutually exclusive
- *     - variant cannot be is_default=true
- *     - Stripe: variant reuses base's stripe_product_id
- */
-
 import { expect, test } from "bun:test";
 import {
 	type ApiPlanV1,
@@ -99,9 +77,6 @@ const createVariant = async <T = ApiPlanV1>(
 		resetVariant: params.resetVariant,
 	});
 
-// ───────────────────────────────────────────────────────────────────
-// 1. create_variant happy path
-// ───────────────────────────────────────────────────────────────────
 test.concurrent(
 	`${chalk.yellowBright("variants create_variant: happy path — base_internal_product_id set, version=1, is_default=false")}`,
 	async () => {
@@ -138,9 +113,6 @@ test.concurrent(
 	},
 );
 
-// ───────────────────────────────────────────────────────────────────
-// 2. create_variant rejects nested
-// ───────────────────────────────────────────────────────────────────
 test.concurrent(
 	`${chalk.yellowBright("variants create_variant: rejects nested variant → 400 nested_variant_not_allowed")}`,
 	async () => {
@@ -179,9 +151,6 @@ test.concurrent(
 	},
 );
 
-// ───────────────────────────────────────────────────────────────────
-// 3. create_variant rejects archived base
-// ───────────────────────────────────────────────────────────────────
 test.concurrent(
 	`${chalk.yellowBright("variants create_variant: rejects archived base → 400 cannot_fork_archived_base")}`,
 	async () => {
@@ -214,9 +183,6 @@ test.concurrent(
 	},
 );
 
-// ───────────────────────────────────────────────────────────────────
-// 4. create_variant rejects id collision
-// ───────────────────────────────────────────────────────────────────
 test.concurrent(
 	`${chalk.yellowBright("variants create_variant: rejects id collision → 409 product_id_already_exists")}`,
 	async () => {
@@ -249,9 +215,6 @@ test.concurrent(
 	},
 );
 
-// ───────────────────────────────────────────────────────────────────
-// 5. preview_update happy path
-// ───────────────────────────────────────────────────────────────────
 test.concurrent(
 	`${chalk.yellowBright("variants preview_update: happy path — response shape correct, no DB writes")}`,
 	async () => {
@@ -299,11 +262,6 @@ test.concurrent(
 	},
 );
 
-// ───────────────────────────────────────────────────────────────────
-// 6. preview_update supported on variant
-// (the cannot_preview_on_variant guard was removed when variant
-// previews shipped — previews on a variant now resolve normally)
-// ───────────────────────────────────────────────────────────────────
 test.concurrent(
 	`${chalk.yellowBright("variants preview_update: supported on variant, previews its own changes")}`,
 	async () => {
@@ -333,14 +291,10 @@ test.concurrent(
 			items: [monthlyItem(200)],
 		})) as { versionable: boolean };
 
-		// Customer-less variant patches in place.
 		expect(preview.versionable).toBe(false);
 	},
 );
 
-// ───────────────────────────────────────────────────────────────────
-// 7. update without propagate leaves variant untouched
-// ───────────────────────────────────────────────────────────────────
 test.concurrent(
 	`${chalk.yellowBright("variants update: omit update_variant_ids → variant unchanged")}`,
 	async () => {
@@ -384,9 +338,6 @@ test.concurrent(
 	},
 );
 
-// ───────────────────────────────────────────────────────────────────
-// 8. propagate patches variant in place (no customers)
-// ───────────────────────────────────────────────────────────────────
 test.concurrent(
 	`${chalk.yellowBright("variants propagate: patches variant in place when no customers")}`,
 	async () => {
@@ -423,7 +374,6 @@ test.concurrent(
 		const baseAfter = await getFull(ctx, base.id);
 		const variantAfter = await getFull(ctx, variantId);
 
-		// Both patched in place — same internal_id
 		expect(variantAfter.internal_id).toBe(variantBefore.internal_id);
 		expect(variantAfter.version).toBe(1);
 
@@ -434,9 +384,6 @@ test.concurrent(
 	},
 );
 
-// ───────────────────────────────────────────────────────────────────
-// 9. base patch in place → propagated variant patches in place too
-// ───────────────────────────────────────────────────────────────────
 test.concurrent(
 	`${chalk.yellowBright("variants propagate: base patches in place → customer-bearing variant patches in place (disable_version cascades)")}`,
 	async () => {
@@ -464,7 +411,6 @@ test.concurrent(
 			name: "Variant",
 		});
 
-		// Attach customer to variant (not base)
 		await autumnV2_2.billing.attach({
 			customer_id: cid,
 			plan_id: variantId,
@@ -483,12 +429,9 @@ test.concurrent(
 		const baseAfter = await getFull(ctx, base.id);
 		const variantAfter = await getFull(ctx, variantId);
 
-		// Base patched in place (no customers on base)
 		expect(baseAfter.internal_id).toBe(baseBefore.internal_id);
 		expect(baseAfter.version).toBe(1);
 
-		// disable_version on the base cascades to explicitly-targeted variants:
-		// the propagated diff patches the variant in place, it does not version.
 		expect(variantAfter.internal_id).toBe(variantBefore.internal_id);
 		expectVariantProductCorrect({
 			base: baseAfter,
@@ -503,9 +446,6 @@ test.concurrent(
 	},
 );
 
-// ───────────────────────────────────────────────────────────────────
-// 10. base versions, customer-less variant patches in place onto new base
-// ───────────────────────────────────────────────────────────────────
 test.concurrent(
 	`${chalk.yellowBright("variants propagate: base versions, customer-less variant patches in place onto base v2")}`,
 	async () => {
@@ -543,8 +483,6 @@ test.concurrent(
 		const variantV2 = await getFull(ctx, variantId);
 
 		expect(baseV2.version).toBe(2);
-		// Variant has no customers of its own, so it doesn't need to version —
-		// it patches in place, re-pinned to the base's new v2 internal_id.
 		expectVariantProductCorrect({
 			base: baseV2,
 			variant: variantV2,
@@ -558,9 +496,6 @@ test.concurrent(
 	},
 );
 
-// ───────────────────────────────────────────────────────────────────
-// 12. update rejects unrelated id in propagate
-// ───────────────────────────────────────────────────────────────────
 test.concurrent(
 	`${chalk.yellowBright("variants update: rejects unrelated id in propagate → 400 invalid_propagation_target")}`,
 	async () => {
@@ -599,9 +534,6 @@ test.concurrent(
 	},
 );
 
-// ───────────────────────────────────────────────────────────────────
-// 13. update rejects base's own id in propagate
-// ───────────────────────────────────────────────────────────────────
 test.concurrent(
 	`${chalk.yellowBright("variants update: rejects base's own id in propagate → 400 invalid_propagation_target")}`,
 	async () => {
@@ -640,9 +572,6 @@ test.concurrent(
 	},
 );
 
-// ───────────────────────────────────────────────────────────────────
-// 14. update rejects > 20 variants
-// ───────────────────────────────────────────────────────────────────
 test.concurrent(
 	`${chalk.yellowBright("variants update: rejects > 20 ids in propagate → 400 too_many_variants")}`,
 	async () => {
@@ -683,9 +612,6 @@ test.concurrent(
 	},
 );
 
-// ───────────────────────────────────────────────────────────────────
-// 15. force_version + disable_version both true
-// ───────────────────────────────────────────────────────────────────
 test.concurrent(
 	`${chalk.yellowBright("variants update: force_version + disable_version both true → 400 conflicting_version_flags")}`,
 	async () => {
@@ -717,9 +643,6 @@ test.concurrent(
 	},
 );
 
-// ───────────────────────────────────────────────────────────────────
-// 16. create_variant Stripe reuse
-// ───────────────────────────────────────────────────────────────────
 test.concurrent(
 	`${chalk.yellowBright("variants create_variant: variant shares stripe_product_id with base")}`,
 	async () => {
@@ -754,9 +677,6 @@ test.concurrent(
 	},
 );
 
-// ───────────────────────────────────────────────────────────────────
-// 17. is_default=true on variant rejects
-// ───────────────────────────────────────────────────────────────────
 test.concurrent(
 	`${chalk.yellowBright("variants update: is_default=true on variant → 400 invalid_propagation_target")}`,
 	async () => {
@@ -788,9 +708,6 @@ test.concurrent(
 		);
 
 		expect(err).not.toBeNull();
-		// is_default is one of the general variant-settings fields blocked by
-		// validateVariantSettingsUpdate, which runs before the dedicated
-		// variant_cannot_be_default check in validateDefaultFlag.
 		expect(err?.code).toBe("invalid_propagation_target");
 	},
 );

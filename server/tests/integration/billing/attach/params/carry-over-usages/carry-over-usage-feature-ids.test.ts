@@ -1,10 +1,3 @@
-/**
- * Carry Over Usages — feature_ids Filter Tests
- *
- * When feature_ids is provided, only the listed features have their usage
- * carried over. All other consumable features start at their full new allowance.
- */
-
 import { test } from "bun:test";
 import type { ApiCustomerV3 } from "@autumn/shared";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
@@ -13,17 +6,6 @@ import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 1: feature_ids filter — only listed feature has usage carried over
-//
-// Pro: 50 messages (30 used), 100 words (60 used)
-// Upgrade to Premium (200 messages, 300 words)
-// with carry_over_usages: { enabled: true, feature_ids: ["messages"] }
-// Expected:
-//   messages: balance = 170 (200 - 30 carried usage), usage = 30
-//   words:    balance = 300 (full new allowance — words not in feature_ids), usage = 0
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(`${chalk.yellowBright("carry-over-usage-feature-ids 1: only feature_ids listed have usage carried — other features start at full new allowance")}`, async () => {
 	const proMessages = items.monthlyMessages({ includedUsage: 50 });
@@ -47,7 +29,6 @@ test.concurrent(`${chalk.yellowBright("carry-over-usage-feature-ids 1: only feat
 		actions: [s.attach({ productId: pro.id, timeout: 4000 })],
 	});
 
-	// Track 30 messages and 60 words
 	await autumnV2_1.track({
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
@@ -59,10 +40,8 @@ test.concurrent(`${chalk.yellowBright("carry-over-usage-feature-ids 1: only feat
 		value: 60,
 	});
 
-	// Wait for Redis → Postgres sync
 	await new Promise((resolve) => setTimeout(resolve, 2000));
 
-	// Upgrade with carry_over_usages scoped to messages only
 	await autumnV2_1.billing.attach({
 		customer_id: customerId,
 		plan_id: premium.id,
@@ -76,7 +55,6 @@ test.concurrent(`${chalk.yellowBright("carry-over-usage-feature-ids 1: only feat
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// messages: 200 - 30 carried usage = 170
 	expectCustomerFeatureCorrect({
 		customer,
 		featureId: TestFeature.Messages,
@@ -84,7 +62,6 @@ test.concurrent(`${chalk.yellowBright("carry-over-usage-feature-ids 1: only feat
 		usage: 30,
 	});
 
-	// words: full new allowance (not in feature_ids — usage not carried)
 	expectCustomerFeatureCorrect({
 		customer,
 		featureId: TestFeature.Words,

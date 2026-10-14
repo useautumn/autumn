@@ -1,7 +1,6 @@
 import type { FreeTrial } from "@autumn/shared";
 import type { FreeTrialPlan } from "@/internal/catalogV2/actions/updateCatalog/types/upsertProductPlan";
 
-/** Claim lanes → FreeTrialPlan wire shape. */
 export const buildFreeTrialPlan = ({
 	claim,
 }: {

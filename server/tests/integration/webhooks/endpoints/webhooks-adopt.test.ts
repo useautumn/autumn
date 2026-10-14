@@ -1,12 +1,3 @@
-/**
- * sync adopts webhooks made in the dashboard (no uid) by exact URL, and must
- * never create a duplicate:
- * - one uid-less match: adopted in place (same endpoint, same secret, uid set),
- *   previewed as `adopt`, and no secret in the sync response;
- * - several uid-less matches: a per-item error, nothing created;
- * - an endpoint that already has a uid is never adopted: the new id is created.
- */
-
 import { afterAll, expect, test } from "bun:test";
 import { ErrCode } from "@autumn/shared";
 import { createSvixCli } from "@/external/svix/svixUtils.js";
@@ -165,7 +156,6 @@ test("a dashboard webhook synced by its own ep_ id comes back in the response, c
 	expect(moved.body.webhooks).toMatchObject([
 		{ id: dashboard.id, url: `${url}-moved` },
 	]);
-	// Updated in place: no second endpoint appears for either URL.
 	expect(await endpointsAt({ url })).toHaveLength(0);
 	expect((await endpointsAt({ url: `${url}-moved` })).map((e) => e.id)).toEqual(
 		[dashboard.id],

@@ -1,11 +1,3 @@
-/**
- * Seeds one customize op that replaces, deletes and adds at the same time,
- * against a cast holding every row shape the batch lane has to tell apart.
- *
- * The messages remove+add share a match key, so they lower as a replace that
- * carries the balance. The words remove has no matching add, so it is a plain
- * deletion. Credits is a pure add.
- */
 import { test } from "bun:test";
 import { ResetInterval } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features";

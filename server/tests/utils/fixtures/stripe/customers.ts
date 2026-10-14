@@ -1,8 +1,5 @@
 import type Stripe from "stripe";
 
-/**
- * Create a Stripe customer fixture
- */
 const create = ({
 	id = "cus_stripe_test",
 	discount = null,
@@ -17,10 +14,6 @@ const create = ({
 		name: "Test Customer",
 		discount,
 	}) as Stripe.Customer;
-
-// ═══════════════════════════════════════════════════════════════════
-// EXPORT
-// ═══════════════════════════════════════════════════════════════════
 
 export const stripeCustomers = {
 	create,

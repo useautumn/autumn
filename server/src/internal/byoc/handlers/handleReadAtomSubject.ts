@@ -19,7 +19,6 @@ const READ_FAILURE_CODE = {
 	worker_unavailable: AtomSubjectReadErrorCode.WorkerUnavailable,
 } as const;
 
-/** An org's Atom pulls a subject it missed: the exact subjects.set body herald would push it. */
 export async function handleReadAtomSubject(c: Context<AtomHonoEnv>) {
 	const parsed = AtomSubjectReadRequestSchema.safeParse(
 		await c.req.json().catch(() => null),

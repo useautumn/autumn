@@ -183,7 +183,6 @@ export const saveCusSubsAndProducts = async ({
 	skipProducts?: boolean;
 	skipSubs?: boolean;
 }) => {
-	// Create directory if it doesn't exist
 	if (!fs.existsSync(path)) {
 		fs.mkdirSync(path, { recursive: true });
 	}
@@ -200,15 +199,6 @@ export const saveCusSubsAndProducts = async ({
 			JSON.stringify(products, null, 2),
 		);
 	}
-
-	// console.log("Fetching customers...");
-	// const { customers } = await getAllStripeCustomers({
-	// 	stripeCli,
-	// });
-	// fs.writeFileSync(
-	// 	`${path}/customers.json`,
-	// 	JSON.stringify(customers, null, 2),
-	// );
 
 	console.log("Fetching subscriptions...");
 	if (!skipSubs) {
@@ -261,23 +251,6 @@ export const initScript = async ({
 	return { stripeCli, autumnProducts, req };
 };
 
-/**
- * Initializes a read-only script context for safe investigations.
- * This variant wraps the Stripe client in a read-only proxy that blocks all write operations.
- *
- * Use this for investigation scripts to prevent accidental data modifications.
- *
- * @example
- * ```typescript
- * const { stripeCli, autumnProducts, req } = await initReadScript({ orgId, env });
- *
- * // ✅ Read operations work
- * await stripeCli.invoices.retrieve("in_xxx");
- *
- * // ❌ Write operations throw ReadOnlyStripeError
- * await stripeCli.invoices.create({ customer: "cus_xxx" });
- * ```
- */
 export const initReadScript = async ({
 	orgId,
 	env,

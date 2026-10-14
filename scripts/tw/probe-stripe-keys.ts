@@ -1,35 +1,14 @@
 #!/usr/bin/env bun
-/**
- * Probe every Stripe key the swarm would use (the pool env vars listed in
- * STRIPE_POOL_ENV_VARS, plus STRIPE_SANDBOX_SECRET_KEY as a fallback): for each,
- * fetch the platform account's id + display name and test whether
- * `v2.core.accounts.list` works (the gate the swarm needs to create sub-accounts).
- * Prints a table + a usable count.
- *
- * Keys come from `collectPoolKeys`, the same loader `bun tw` uses, so the
- * `pool[i]` labels here are the exact slots workers are assigned.
- *
- * Run:
- *   bun tw:pk
- */
 import {
 	collectPoolKeys,
 	stripeClientForKey,
 } from "./helpers/stripeKeyPool.ts";
 
 // Stripe's v2 `list()` leaves a dangling internal auto-pager promise that rejects
-// on a 404 ("API method cannot be found") even though we already await + catch the
-// result. Swallow it so the diagnostic exits clean.
-process.on("unhandledRejection", () => {
-	/* probe already records the per-key outcome */
-});
+process.on("unhandledRejection", () => {});
 
 type KeyRef = { key: string; label: string };
 
-/**
- * Reads the pool through the same collector the swarm uses, so probe indexes
- * line up exactly with the `pool[i]` slots `stripeKeyForWorker` assigns.
- */
 const collectKeys = (): KeyRef[] => {
 	const pool = collectPoolKeys();
 	const refs: KeyRef[] = pool.map((key, index) => ({
@@ -57,7 +36,6 @@ type Row = {
 const truncate = (text: string, max: number): string =>
 	text.length > max ? `${text.slice(0, max - 1)}…` : text;
 
-/** Pull the useful fields off a Stripe error (type, code, status, request log). */
 const describeStripeError = (
 	error: unknown,
 ): { short: string; full: string } => {
@@ -89,7 +67,6 @@ const probe = async ({ key, label }: KeyRef): Promise<Row> => {
 	let accountId = "—";
 	let name = "—";
 	try {
-		// No-arg retrieve → GET /v1/account: the account this key belongs to.
 		const account = await stripe.accounts.retrieve();
 		accountId = account.id;
 		name =

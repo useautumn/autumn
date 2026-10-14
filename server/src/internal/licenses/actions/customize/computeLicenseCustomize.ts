@@ -18,7 +18,6 @@ export type LicenseCustomizeComputation = {
 	customEntitlements: Entitlement[];
 };
 
-/** Builds the complete junction item set; unchanged definitions retain their stock ids. */
 export const derivePlanLicenseItemRefs = (effectiveProduct: FullProduct) => {
 	const priceReferencedEntitlementIds = new Set(
 		effectiveProduct.prices
@@ -48,7 +47,6 @@ export const derivePlanLicenseItemRefs = (effectiveProduct: FullProduct) => {
 	];
 };
 
-/** Applies a license diff while retaining stock row ids for reuse. */
 export const computeLicenseCustomize = async ({
 	ctx,
 	licenseProduct,

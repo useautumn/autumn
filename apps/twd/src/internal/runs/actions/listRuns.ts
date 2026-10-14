@@ -75,7 +75,6 @@ export const listRunsPage = async ({
 	};
 };
 
-/** Branches newest first by their latest finished run, each with its recent finished runs. */
 export const listBranchesPage = async ({
 	ctx,
 	branch,

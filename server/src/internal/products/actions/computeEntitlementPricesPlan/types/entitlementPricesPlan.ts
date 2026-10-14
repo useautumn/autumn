@@ -1,29 +1,21 @@
 import type { Entitlement, Price } from "@autumn/shared";
 
 export type RowBuckets<Row> = {
-	/** Insert — fresh catalog (or is_custom) rows. */
 	new: Row[];
-	/** Mutate existing row in place — only when not protecting referenced rows. */
 	updated: Row[];
-	/** Untouched — id carried forward. */
 	same: Row[];
-	/** Unused — execute retires these the same as `retired`. */
 	deleted: Row[];
-	/** Leave catalog; execute stamps is_custom and never deletes. */
 	retired: Row[];
 };
 
-/** Diff outcome before protect / stripe-carry attach retired. */
 export type EntitlementPricesDiff = {
 	prices: Omit<RowBuckets<Price>, "retired">;
 	entitlements: Omit<RowBuckets<Entitlement>, "retired">;
 };
 
-/** Planned price/entitlement writes for one product content holder. */
 export type EntitlementPricesPlan = {
 	prices: RowBuckets<Price>;
 	entitlements: RowBuckets<Entitlement>;
-	/** Product content after this plan: new + updated + same (not deleted/retired). */
 	projected: {
 		prices: Price[];
 		entitlements: Entitlement[];

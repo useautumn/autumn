@@ -1,15 +1,3 @@
-/**
- * CusService.getFull with entityId includes the entity's license seat
- * products with inherited parent lifecycle.
- *
- * Contract under test:
- *   - getFull without entityId: seat products excluded (shared cache shape
- *     unchanged).
- *   - getFull({ entityId }): the seat product hydrates with the parent's
- *     status/subscription_ids inherited in memory.
- *   - Expired parent: the seat's inherited status flips to expired even
- *     though the parent row itself no longer hydrates (RELEVANT_STATUSES).
- */
 import { expect, test } from "bun:test";
 import { CusProductStatus } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
@@ -59,7 +47,6 @@ test.concurrent(
 			],
 		});
 
-		// ── Plain getFull: no seat products ───────────────────────────────
 		const plain = await CusService.getFull({
 			ctx,
 			idOrInternalId: customerId,
@@ -74,7 +61,6 @@ test.concurrent(
 		);
 		expect(parentCusProduct?.subscription_ids?.length).toBeGreaterThan(0);
 
-		// ── Entity getFull: seat hydrates with inherited lifecycle ────────
 		const entityView = await CusService.getFull({
 			ctx,
 			idOrInternalId: customerId,
@@ -96,7 +82,6 @@ test.concurrent(
 			),
 		).toBe(true);
 
-		// ── Expired parent: inherited status flips even without parent row ─
 		await CusProductService.update({
 			ctx,
 			cusProductId: parentCusProduct?.id ?? "",

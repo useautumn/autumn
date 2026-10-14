@@ -11,9 +11,6 @@ import type { DrizzleCli } from "@/db/initDrizzle";
 export type RevenuecatFeatureQuantity = { feature_id: string; quantity?: number };
 
 export class RCMappingService {
-	/**
-	 * Find the Autumn product ID that maps to a given RevenueCat product ID
-	 */
 	static async getAutumnProductId({
 		db,
 		orgId,
@@ -42,10 +39,6 @@ export class RCMappingService {
 		return mapping?.autumn_product_id ?? null;
 	}
 
-	/**
-	 * Resolve a RevenueCat product id to its Autumn product and the prepaid
-	 * feature quantities configured for that specific RC id (if any).
-	 */
 	static async resolveMapping({
 		db,
 		orgId,
@@ -74,8 +67,6 @@ export class RCMappingService {
 			)
 			.limit(2);
 
-		// A RC SKU mapped to >1 Autumn product is ambiguous — fail loudly rather
-		// than provisioning against an arbitrarily-picked product.
 		if (matches.length > 1) {
 			throw new RecaseError({
 				message: `RevenueCat product ${revenuecatProductId} is mapped to multiple Autumn products (${matches

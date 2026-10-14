@@ -4,10 +4,6 @@ import type { Snapshot } from "../types";
 import type { SwarmSocket } from "../useSwarmSocket";
 import { Pill } from "../widgets";
 
-/**
- * Live failure feed: the same text the terminal failure report prints, streamed
- * as failures happen (test names, locations, messages, crash/output tails).
- */
 export function Errors({
 	snap,
 	socket,
@@ -15,7 +11,6 @@ export function Errors({
 	snap: Snapshot;
 	socket: SwarmSocket;
 }) {
-	// Subscribe once on mount; the server replays the buffer so far, then streams.
 	// biome-ignore lint/correctness/useExhaustiveDependencies: subscribe once per mount
 	useEffect(() => {
 		socket.subscribeErrors();

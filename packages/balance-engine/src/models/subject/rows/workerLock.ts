@@ -7,7 +7,6 @@ import {
 	timestampSchema,
 } from "../../common/primitives.js";
 
-/** One open lock as the balance_locks table stores it: the deduction already taken, and the deltas that undo it. */
 export const workerLockSchema = z
 	.object({
 		id: nonEmptyStringSchema,
@@ -23,7 +22,6 @@ export const workerLockSchema = z
 			values: ["cap", "reject", "overflow"],
 		}),
 		properties: propertiesSchema,
-		/** In draw order; finalize undoes them newest first. */
 		deltas: z.array(deductionDeltaSchema),
 		expires_at: timestampSchema,
 		expiry_action: openEnum({
@@ -36,7 +34,6 @@ export const workerLockSchema = z
 
 export type WorkerLock = z.infer<typeof workerLockSchema>;
 
-/** What memory keeps of an open lock: enough to refuse a duplicate and to name the row at finalize. The rest stays in Postgres. */
 export const openLockSchema = workerLockSchema
 	.pick({ id: true, lock_id: true })
 	.loose();

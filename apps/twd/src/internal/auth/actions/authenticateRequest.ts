@@ -36,7 +36,6 @@ const getDevActor = ({ ctx, email }: { ctx: TwdContext; email: string }) => {
 	return devActor;
 };
 
-/** Resolves the caller from `Authorization: Bearer twd_…`, the session cookie, or dev auth. */
 export const authenticateRequest = async ({
 	request,
 }: {

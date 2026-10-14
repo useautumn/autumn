@@ -1,7 +1,6 @@
 import { expect } from "bun:test";
 import type { ApiPlanV1 } from "@autumn/shared";
 
-/** Assert GET plan identity fields — only checks values that are passed. */
 export const expectApiPlanVersionIdentityCorrect = ({
 	plan,
 	version,

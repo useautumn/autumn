@@ -1,16 +1,4 @@
 #!/usr/bin/env bun
-/**
- * Find personal Infisical overrides still at `/` whose keys also exist as
- * shared secrets under a nested folder (orphaned after a folder move).
- *
- * Skips `/cloud`. Skips keys that still have a shared (non-personal) secret
- * at `/` — those are real overrides, not orphans.
- *
- * Prints a ready `infisical secrets delete …` command; does not delete.
- *
- * Usage:
- *   bun scripts/infisical-orphaned-overrides.ts
- */
 
 const env = "dev";
 const skippedFolderPrefixes = ["/cloud"];

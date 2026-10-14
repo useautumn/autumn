@@ -52,7 +52,6 @@ const hasStoredAllocations = async ({
 	return Object.keys(row?.balanceAllocations ?? {}).length > 0;
 };
 
-/** Re-fits every allocated feature to the shared credits left now, under the allocation lock. Only scale and the claimed counter change. */
 const refitAllocations = async ({
 	ctx,
 	tx,
@@ -98,7 +97,6 @@ const refitAllocations = async ({
 			internalFeatureId,
 			cycle,
 		});
-		// Claimed derives from entity counters; re-deriving it drops released or deleted entities.
 		const claimed = Object.entries(allocation.amounts).reduce(
 			(sum, [id, requested]) => sum + Math.min(usage[id] ?? 0, requested),
 			0,
@@ -113,7 +111,6 @@ const refitAllocations = async ({
 				internalEntityId: null,
 				cycle,
 				usage: claimed,
-				// Wall clock, not event time: syncs only overwrite a counter row with a newer updated_at.
 				now: Date.now(),
 			});
 			await setAllocationCounters({
@@ -148,8 +145,6 @@ const refitAllocations = async ({
 	return { next, changed, dirty, counterPatches };
 };
 
-/** Flushing first is only safe when the caller hasn't just written balances to Postgres itself.
- *  A routed customer's worker lands its writes either way, and its resets are the worker's, never this read's. */
 const loadFreshSubject = async ({
 	ctx,
 	customerId,
@@ -177,15 +172,12 @@ const loadFreshSubject = async ({
 };
 
 export type AllocationRefresh = {
-	/** A share moved and the change is committed. */
 	adjusted: boolean;
-	/** The stored allocations after this refit wrote them; null when it wrote nothing. */
 	written: BalanceAllocations | null;
 };
 
 const NO_REFRESH: AllocationRefresh = { adjusted: false, written: null };
 
-/** Re-solves each allocated feature's scale against the shared credits left now. */
 export const refreshAllocationScale = async ({
 	ctx,
 	customerId,
@@ -195,11 +187,8 @@ export const refreshAllocationScale = async ({
 }: {
 	ctx: AutumnContext;
 	customerId: string;
-	/** False when the caller sends its own billing.updated and adds the tag there. */
 	notify?: boolean;
-	/** False right after a direct Postgres balance write, where cached balances are no longer the truth. */
 	flushBalances?: boolean;
-	/** The event time, so Stripe test clocks pick the right cycle. */
 	now?: number;
 }): Promise<AllocationRefresh> => {
 	if (!(await hasStoredAllocations({ ctx, customerId }))) return NO_REFRESH;
@@ -239,7 +228,6 @@ export const refreshAllocationScale = async ({
 	return { adjusted: changed, written };
 };
 
-/** For callers that just wrote balances to Postgres themselves: never flushes, and a failed refit is logged, not thrown. */
 export const refreshAllocationScaleAfterWrite = async ({
 	ctx,
 	customerId,
@@ -248,7 +236,6 @@ export const refreshAllocationScaleAfterWrite = async ({
 }: {
 	ctx: AutumnContext;
 	customerId: string;
-	/** False when the caller sends its own billing.updated and adds the tag there. */
 	notify?: boolean;
 	/** The event time, so Stripe test clocks pick the right cycle. */
 	now?: number;
@@ -269,7 +256,6 @@ export const refreshAllocationScaleAfterWrite = async ({
 	}
 };
 
-/** The allocations with the entity's share dropped; a feature nobody holds a share of anymore goes with it. */
 const withoutEntity = ({
 	allocations,
 	internalEntityId,
@@ -286,7 +272,6 @@ const withoutEntity = ({
 	return remaining;
 };
 
-/** Drops a deleted entity's share and re-fits what's left in one locked write. Runs after the delete's own Postgres writes, so it never flushes. */
 export const releaseEntityAllocations = async ({
 	ctx,
 	customerId,
@@ -329,7 +314,6 @@ export const releaseEntityAllocations = async ({
 			});
 		},
 	});
-	// Nothing held: the delete may still have moved shared credits, so re-fit as any change would.
 	if (!released) {
 		await refreshAllocationScaleAfterWrite({ ctx, customerId });
 		return;

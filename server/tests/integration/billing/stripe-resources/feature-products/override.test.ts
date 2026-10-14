@@ -50,8 +50,6 @@ test.concurrent(
 		});
 
 		const feature = await getFeatureRow({ ctx });
-		// Shared-org siblings may stamp Messages.stripe_product_id. The
-		// override must stay on this price and must not become that default.
 		expect(feature.stripe_product_id ?? null).not.toBe(mapped.id);
 
 		const after = await usagePriceForFeature({ ctx, productId: pro.id });

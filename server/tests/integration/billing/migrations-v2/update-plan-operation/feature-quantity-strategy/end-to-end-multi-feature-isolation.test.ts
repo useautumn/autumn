@@ -1,12 +1,3 @@
-/**
- * End-to-end coverage for a cusProduct with MULTIPLE prepaid features, only
- * one of which is targeted by this migration's `feature_quantities_strategy`.
- * Directly validates (with a runnable test, not just code inspection) that
- * the untouched feature's quantity AND usage are fully preserved — no
- * cross-feature interference from `setupFeatureQuantitiesContext`'s
- * per-feature independent resolution.
- */
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3, ApiCustomerV5, CreatePlanItemParamsV1 } from "@autumn/shared";
 import { BillingInterval, BillingMethod, ResetInterval, TierBehavior } from "@autumn/shared";
@@ -76,8 +67,6 @@ test.concurrent(
 			(await autumnV1.customers.get<ApiCustomerV3>(customerId)).invoices
 				?.length ?? 0;
 
-		// Migration only touches Messages (AI_CREDITS-analogue) — Users (Seats-analogue)
-		// is never named in customize or feature_quantities_strategy.
 		await runUpdatePlanMigration({
 			ctx,
 			migrationClient: autumnV2_2,
@@ -110,7 +99,6 @@ test.concurrent(
 
 		const customer = await autumnV2_2.customers.get<ApiCustomerV5>(customerId);
 
-		// Migrated feature: 300 -> $20 old tier -> new 200/$10 tier, usage carries.
 		expectBalanceCorrect({
 			customer,
 			featureId: TestFeature.Messages,
@@ -120,7 +108,6 @@ test.concurrent(
 			planId: pro.id,
 		});
 
-		// Untouched feature: quantity AND usage completely unaffected.
 		expectBalanceCorrect({
 			customer,
 			featureId: TestFeature.Users,
@@ -132,7 +119,6 @@ test.concurrent(
 
 		await expectStripeSubscriptionCorrect({ ctx, customerId });
 
-		// Net proration for Messages only: -$20 (credit 300) + $10 (charge 200) = -$10.
 		const customerV3 = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 		await expectCustomerInvoiceCorrect({
 			customer: customerV3,

@@ -13,10 +13,6 @@ const unavailable = () =>
 		statusCode: 503,
 	});
 
-/** The org's Vercel Svix app for this env, where `vercel.*` events are
- * published, created and stored like handleVercelConfig does when missing.
- * Only `processor_configs.vercel.svix.<env>_id` is written; a lost race keeps
- * the winner's app. */
 export const ensureVercelSvixAppId = async ({
 	ctx,
 }: {

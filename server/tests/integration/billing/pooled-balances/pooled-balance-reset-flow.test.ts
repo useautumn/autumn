@@ -1,23 +1,3 @@
-/**
- * TDD contract for pooled balance reset ownership.
- *
- * New behavior:
- *   - overdue lazy pools reset through customer reads to pooled_balances.granted;
- *   - subscription pools also reset lazily once overdue; their subscription
- *     invoice remains a redundant boundary-aligned reset (CAS-guarded);
- *   - lifetime pools and pooled source entitlements never reset lazily or by cron;
- *   - rollover max_percentage is based on the complete pool grant;
- *   - the cron loader selects and hydrates overdue non-lifetime synthetic pools.
- *
- * Side effects:
- *   - reset writes the synthetic customer entitlement balance/next_reset_at;
- *   - unused balance is inserted as rollover and trimmed to its configured cap;
- *   - customer caches expose the reset pooled balance after the write.
- *
- * Pre-implementation red: every synthetic pool is excluded by the generic lazy
- * filter, invoice.created has no pooled task, and cron cannot hydrate a pool.
- */
-
 import { expect, test } from "bun:test";
 import {
 	type ApiCustomerV5,
@@ -186,8 +166,6 @@ test.concurrent(
 				skip_cache: "true",
 			}),
 		]);
-		// Pool grant = 400, so max rollover = 200. The source catalog grant is
-		// only 200 and would incorrectly cap this at 100.
 		for (const customer of customers) {
 			expectBalanceCorrect({
 				customer,
@@ -198,7 +176,6 @@ test.concurrent(
 				rollovers: [{ balance: 200 }],
 			});
 		}
-		// Postgres trails the worker by its lingering apply: land the customer's writes before reading the rows.
 		if (isBalanceWorkerRoute())
 			await flushBalanceWorkerCustomer({ ctx, customerId });
 		await expectPooledBalanceCorrect({
@@ -297,8 +274,6 @@ test.concurrent(
 			],
 		});
 
-		// Not yet due (real time hasn't moved), so a read must not reset —
-		// the boundary reset below is proven to come from invoice.created.
 		const beforeInvoice = await autumnV2_2.customers.get<ApiCustomerV5>(
 			customerId,
 			{ skip_cache: "true" },
@@ -331,14 +306,6 @@ test.concurrent(
 	},
 );
 
-/**
- * Contract:
- * - A two-month pooled entitlement on a monthly subscription is not reset by
- *   the first monthly invoice.
- * - The second monthly invoice resets it exactly once.
- * - Its next_reset_at advances by its own two-month interval, so the third
- *   monthly invoice does not reset it again.
- */
 test.concurrent(
 	`${chalk.yellowBright("pooled reset: subscription pool respects a two-month reset cycle")}`,
 	async () => {
@@ -533,7 +500,6 @@ test.concurrent(
 			.set({ reset_mode: PooledBalanceResetMode.Lifetime })
 			.where(eq(pooledBalances.id, pool.id));
 
-		// A lifetime pool is never reset: the cron classifies it as no action and leaves the balance.
 		const lifetimeRun = await runBatchResetOnCustomerEntitlements({
 			ctx,
 			customerEntitlementIds: [pooledCustomerEntitlement.id],

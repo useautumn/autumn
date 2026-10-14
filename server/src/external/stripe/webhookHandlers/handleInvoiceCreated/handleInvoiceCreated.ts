@@ -15,11 +15,6 @@ import { handleContUsePrices } from "./handleContUsePrices.js";
 import { handlePrepaidPrices } from "./handlePrepaidPrices.js";
 import { handleUsagePrices } from "./handleUsagePrices.js";
 
-// For cancel at period end: invoice period start = sub period start (cur cycle), invoice period end = sub period end (a month later...)
-// For cancel immediately: invoice period start = sub period start (cur cycle), invoice period end cancel immediately date
-// For regular billing: invoice period end = sub period start (next cycle)
-// For upgrade, bill_immediately: invoice period start = sub period start (cur cycle), invoice period end cancel immediately date
-
 export const sendUsageAndReset = async ({
 	ctx,
 	activeProduct,
@@ -63,7 +58,6 @@ export const sendUsageAndReset = async ({
 
 		if (!usageBasedSub || usageBasedSub.id !== subId) continue;
 
-		// If trial just ended, skip
 		const { start } = subToPeriodStartEnd({ sub: usageBasedSub });
 
 		if (usageBasedSub.trial_end === start) {

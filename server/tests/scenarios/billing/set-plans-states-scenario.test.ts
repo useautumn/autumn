@@ -1,5 +1,3 @@
-/** Customers left in each Stripe state set_plans must handle; run by hand from the dashboard. */
-
 import { expect, test } from "bun:test";
 import { ms } from "@autumn/shared";
 import {

@@ -1,9 +1,5 @@
 export type ViteHmrClient = { clientPort: number } | { port: number };
 
-/**
- * Don't pin `host` — the client uses location.hostname so the same Vite
- * process works on wtN.localhost and autumn-wtN.autumnworktree.com.
- */
 export function viteHmrClient({
 	frontendUrl,
 	vitePort,
@@ -19,8 +15,6 @@ export function viteHmrClient({
 		if (url.port) {
 			return { clientPort: Number(url.port) };
 		}
-	} catch {
-		// missing or invalid — talk to Vite on its listen port
-	}
+	} catch {}
 	return { port: vitePort };
 }

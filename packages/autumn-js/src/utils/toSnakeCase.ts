@@ -27,17 +27,14 @@ export const toSnakeCase = <T>({
 			Object.entries(obj).map(([key, value]) => {
 				const snakeKey = stringToSnakeCase(key);
 
-				// If this key is in excludeKeys, leave key and value untouched
 				if (excludeKeys?.includes(key)) {
 					return [key, value];
 				}
 
-				// If this key is in excludeChildrenOf, convert key but do not recurse into value
 				if (excludeChildrenOf?.includes(key)) {
 					return [snakeKey, value];
 				}
 
-				// Otherwise, convert key and recursively process value
 				return [
 					snakeKey,
 					toSnakeCase({

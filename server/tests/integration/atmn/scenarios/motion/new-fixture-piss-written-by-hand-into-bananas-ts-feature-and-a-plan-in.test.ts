@@ -1,11 +1,3 @@
-/**
- * atmn scenarios/motion — new fixture `piss` written by hand into `bananas.ts` (feature) [and a plan into `strawberries.ts`, a version into `poo.ts` (spread into plans)] → push creates it; the backfill seeks out that file and inserts the single `internalId` line into that fixture, nothing else in the file changes
- *
- * code in motion: the config's shape is the user's; pull edits the AST, never rewrites a file
- *
- * One line of plans/atmn-v3/07_tests.md. [a, b] is a matrix looped INSIDE this file.
- */
-
 import { expect, test } from "bun:test";
 import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 import {
@@ -78,8 +70,6 @@ export const poo: Plan[] = [];
 				await scenario.push();
 				const beforeHandEdit = scenario.files();
 
-				// A hand-edit adds ONE new fixture; it must not retype the file's
-				// existing row and lose the internalId push already backfilled.
 				if (target.kind === "feature") {
 					const existing = beforeHandEdit.get("bananas.ts") ?? "";
 					scenario.writeFile(
@@ -99,7 +89,6 @@ export const poo: Plan[] = [];
 						),
 					);
 				} else {
-					// A second, older version row for the already-active `pro` plan.
 					scenario.writeFile(
 						"poo.ts",
 						`${planImport}

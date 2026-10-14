@@ -26,12 +26,6 @@ import {
 } from "../../../balance-engine/tests/unit/engineFixtures.js";
 import { subjectsToBalanceWebhooks } from "../../src/balanceWebhooks.js";
 
-/**
- * The usage-alert matrix: which alerts a track considers (customer, plan, entity, org) for a customer
- * track and for an entity track, what each is measured on, and when a threshold counts as crossed.
- * Every case is what prod's checkUsageAlerts decides; see plans/herald/usage-alerts-matrix.md.
- */
-
 const ENTITY_FEATURE_ID = "seats";
 const OTHER_ENTITY_ID = "ent_07";
 
@@ -67,7 +61,6 @@ const entityOf = ({
 	usage_alerts: alerts,
 });
 
-/** A customer-level row whose balance lives per entity: the tracked entity draws its own key. */
 const perEntityRow = ({
 	balances = { [OTHER_ENTITY_ID]: 10, [entity.id]: 10 },
 }: {
@@ -103,13 +96,11 @@ const catalogOf = ({
 	return catalog;
 };
 
-/** What the worker hands the decision: the mutation and its deduction, with the subject as it found it and as it left it. */
 type DecidedOn = DeductionDecision & {
 	before: WorkerFullSubject;
 	after: WorkerFullSubject;
 };
 
-/** Tracks `value` and returns what the worker decides effects over. */
 const trackOn = ({
 	customer = customerOf(),
 	customerEntitlements = [createCustomerEntitlement({ balance: 10 })],
@@ -488,7 +479,6 @@ describe("idempotency", () => {
 });
 
 describe("a lock and its finalize", () => {
-	/** A lock that takes `lockValue`, then a finalize that settles it at `finalValue`; both as the worker decides them. */
 	const lockThenFinalize = ({
 		lockValue,
 		finalValue,

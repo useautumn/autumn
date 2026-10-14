@@ -2,9 +2,6 @@ import type { AutumnBillingPlan, FullCusProduct } from "@autumn/shared";
 import { isSameRowTransition } from "@/internal/billing/v2/compute/customerLicenseTransitions/isSameRowTransition";
 import { convergeCustomerLicense } from "@/internal/billing/v2/utils/convergeCustomerLicense";
 
-/** In-memory twin of the pool-converging executors: absolute paidQuantity
- * updates and same-row transitions (take/release moves never reach a
- * Stripe evaluate; cross-row successors ride their inserted rows). */
 export const applyCustomerLicensePlanOps = ({
 	customerProducts,
 	autumnBillingPlan,

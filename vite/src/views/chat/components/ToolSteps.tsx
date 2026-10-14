@@ -4,13 +4,10 @@ import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import type { LeafStepData } from "../chatTypes";
 
-/** A step (tool call) or a line of the agent's process narration ("reasoning"),
- * both shown inside the collapsible "Worked" group. */
 export type WorkedEntry =
 	| { type: "step"; step: LeafStepData }
 	| { type: "reasoning"; text: string };
 
-/** A tool the agent ran, shown as a compact step row. */
 function ToolStep({ step }: { step: LeafStepData }) {
 	const icon =
 		step.status === "done" ? "✓" : step.status === "error" ? "⚠" : "◷";
@@ -35,7 +32,6 @@ function ToolStep({ step }: { step: LeafStepData }) {
 	);
 }
 
-/** The agent's process narration, muted and blockquote-styled. */
 function ReasoningLine({ text }: { text: string }) {
 	return (
 		<div className="border-border border-l-2 pl-2 text-tertiary-foreground text-xs italic">
@@ -44,12 +40,6 @@ function ReasoningLine({ text }: { text: string }) {
 	);
 }
 
-/** The agent's process for a message — tool calls + reasoning narration —
- * grouped under a collapsible "Working…/Worked" header. `active` tracks the
- * whole turn (not per-step status, which blips off between tool calls while
- * the model thinks): open for the entire stream, collapse once on finish.
- * A manual toggle opts the group out of the auto-behavior for good. */
-// Rotated while a turn runs — keeps the wait alive without being a distraction.
 const WORKING_LABELS = [
 	"Working…",
 	"Crunching the numbers…",

@@ -53,11 +53,6 @@ export const getEnvFromPath = (path: string) => {
 	return AppEnv.Live;
 };
 
-/**
- * Where "/" lands. An org that hasn't gone to production is still setting up,
- * so onboarding is the more useful home — unless they've dismissed it, which
- * says they'd rather get on with the dashboard.
- */
 export const getDefaultOrgPath = (
 	org?: { deployed?: boolean } | null,
 	path = "/products?tab=products",
@@ -71,8 +66,6 @@ export const getSafeNextPath = (searchParams: URLSearchParams) => {
 	return isSafeLocalPath(next) ? next : "/";
 };
 
-// Guard against open redirects: only allow same-origin paths, rejecting
-// protocol-relative ("//host") and backslash-trick ("/\host") URLs.
 export const isSafeLocalPath = (path?: string | null): path is string =>
 	!!path && path.startsWith("/") && !path.startsWith("//") && path[1] !== "\\";
 
@@ -104,8 +97,6 @@ export const getOrgRouteRedirect = ({
 
 export const envToPath = (env: AppEnv, currentPath: string) => {
 	let bare = stripSandboxPrefix(currentPath);
-	// Detail routes carry an env-scoped id that does not exist in the other env;
-	// collapse to the list so the switch never lands on a 404.
 	if (/^\/(customers|products|migrations)\/[^/]+/.test(bare)) {
 		bare = `/${bare.split("/")[1]}`;
 	}
@@ -144,11 +135,9 @@ export const pushPage = ({
 	const pathname = window.location.pathname;
 	const curEnv = getEnvFromPath(pathname);
 
-	// Start fresh or with current params based on whether new params are provided
 	let curQueryParams: URLSearchParams;
 
 	if (queryParams) {
-		// When queryParams are provided, start fresh (replace mode)
 		curQueryParams = new URLSearchParams();
 		for (const [key, value] of Object.entries(queryParams)) {
 			if (value) {
@@ -156,10 +145,8 @@ export const pushPage = ({
 			}
 		}
 	} else if (preserveParams) {
-		// No new params provided, preserve existing if requested
 		curQueryParams = new URLSearchParams(window.location.search);
 	} else {
-		// No new params and don't preserve - empty params
 		curQueryParams = new URLSearchParams();
 	}
 
@@ -181,7 +168,6 @@ export const pushPage = ({
 };
 
 export const getRedirectUrl = (path: string, env: AppEnv) => {
-	// Replace @ with %40
 	path = path.replace("@", "%40");
 	if (env === AppEnv.Sandbox) {
 		return `${sandboxBasePath()}${path}`;
@@ -211,9 +197,6 @@ const parseNumberInput = ({
 	return Number.isNaN(numValue) ? fallback : numValue;
 };
 
-/**
- * Throws an error with backend message if available, otherwise rethrows original error
- */
 export const throwBackendError = (error: any): never => {
 	if (error?.response?.data?.message) {
 		throw new Error(error.response.data.message);
@@ -221,7 +204,6 @@ export const throwBackendError = (error: any): never => {
 	throw error;
 };
 
-/** Opens a URL in a new tab without being blocked by popup blockers */
 export const openInNewTab = ({ url }: { url: string }) => {
 	const a = document.createElement("a");
 	a.href = url;

@@ -22,11 +22,6 @@ export const CHECKOUT_EXPIRY_MS = ms.days(1);
 
 const CHECKOUT_PARAMS_VERSION = 1;
 
-/**
- * Creates an Autumn checkout from billing plan.
- * Stores in cache (primary) and DB (audit).
- * Returns the checkout object and URL.
- */
 export async function billingPlanToAutumnCheckout({
 	ctx,
 	action,
@@ -72,12 +67,10 @@ export async function billingPlanToAutumnCheckout({
 	};
 
 	await Promise.all([
-		// 1. Store in cache (primary storage)
 		setCheckoutCache({
 			checkoutId,
 			data: checkout,
 		}),
-		// 2. Store in DB (audit/backup)
 		checkoutRepo.insert({
 			db: ctx.db,
 			data: checkout,

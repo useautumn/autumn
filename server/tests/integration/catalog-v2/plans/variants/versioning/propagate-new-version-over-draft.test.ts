@@ -1,10 +1,3 @@
-/**
- * catalogV2.update — a second new_version while an unpromoted draft exists.
- *
- * Red (before): the follower guard called the variant's ACTIVE v1 "historical"
- * because a draft v2 sat above it, and refused with "historical version has
- * customers". Green (after): historical means not active, so v3 drafts mint.
- */
 import { test } from "bun:test";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
@@ -38,7 +31,6 @@ test.concurrent(
 				});
 				await seedVersionableCustomer({ ctx, planId: variantId, version: 1 });
 
-				// First versioning: v2 drafts for the base and its follower, never promoted.
 				await autumnV2_3.catalogV2.update({
 					plans: [
 						{
@@ -50,7 +42,6 @@ test.concurrent(
 					],
 				});
 
-				// The premise: v2 drafts exist above the still-active v1.
 				for (const planId of [baseId, variantId]) {
 					await expectVersionIdentityCorrect({
 						ctx,
@@ -61,7 +52,6 @@ test.concurrent(
 					});
 				}
 
-				// Second versioning from the still-active v1: must mint v3 drafts, not 400.
 				await autumnV2_3.catalogV2.update({
 					plans: [
 						{

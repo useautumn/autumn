@@ -3,7 +3,6 @@ import { TABLE_TRAY_SURFACE_ROW_CLASS } from "@/components/general/table";
 import { cn } from "@/lib/utils";
 import { ROW_GRID, ROW_HEIGHT } from "./logsListGrid";
 
-// Varied widths so the placeholder reads like real rows, not a uniform grid.
 const SKELETON_WIDTHS = {
 	event: ["w-24", "w-16", "w-20", "w-28"],
 	customer: ["w-20", "w-16", "w-24", "w-14"],

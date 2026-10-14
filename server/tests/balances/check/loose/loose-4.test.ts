@@ -44,7 +44,6 @@ describe(`${chalk.yellowBright("check-loose4: loose entitlement with reset inter
 			prefix: testCase,
 		});
 
-		// Create loose entitlement with monthly reset
 		await autumnV1.balances.create({
 			customer_id: customerId,
 			feature_id: TestFeature.Action1,
@@ -70,7 +69,6 @@ describe(`${chalk.yellowBright("check-loose4: loose entitlement with reset inter
 		expect(res.balance?.granted_balance).toBe(1000);
 		expect(res.balance?.current_balance).toBe(1000);
 
-		// Reset info should be present
 		expect(res.balance?.reset).toBeDefined();
 		expect(res.balance?.reset?.interval).toBe(ResetInterval.Month);
 		expect(res.balance?.reset?.resets_at).toBeDefined();

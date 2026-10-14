@@ -35,7 +35,6 @@ const ignored = (reason: string): GithubEventOutcome => ({
 	reason,
 });
 
-/** push to dev/main or PR opened/synchronize/reopened → warm the head sha; else ignore. */
 export const handleGithubEvent = async ({
 	ctx,
 	event,

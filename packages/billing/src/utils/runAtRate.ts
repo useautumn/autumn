@@ -1,4 +1,3 @@
-/** Runs `run` over `items` no faster than `perSecond`, in parallel batches of that size. */
 export const runAtRate = async <T>({
 	items,
 	perSecond,

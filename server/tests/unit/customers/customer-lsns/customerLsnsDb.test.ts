@@ -4,8 +4,6 @@ import { type DrizzleCli, initDrizzle } from "@/db/initDrizzle.js";
 import { isCustomerRecentlyUpdated } from "@/internal/customers/customerLsns/isCustomerRecentlyUpdated.js";
 import { markCustomerUpdatedAt } from "@/internal/customers/customerLsns/markCustomerUpdatedAt.js";
 
-// Real-DB coverage: upsert idempotency + freshness boundary use the DB clock,
-// so they cannot be faked meaningfully with an injected stub.
 const { db, client } = initDrizzle();
 
 const orgId = `lsn_test_org_${Date.now()}`;
@@ -109,7 +107,6 @@ describe.skipIf(!process.env.DATABASE_URL)(
 
 		it("marks write to the primary pool even when the caller's handle is replica-like", async () => {
 			const customerId = "cus_replica_handle";
-			// A pool handle ($client) that rejects writes, as a replica-swapped ctx.db would.
 			const replicaExecute = mock(async (): Promise<unknown[]> => {
 				throw new Error("cannot execute INSERT in a read-only transaction");
 			});

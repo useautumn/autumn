@@ -9,7 +9,6 @@ import { CatalogRowsNotFoundError } from "../catalogErrors.js";
 import type { CatalogCache } from "../types/catalogCache.js";
 import { ensureCatalogForKeys } from "./ensureCatalogForKeys.js";
 
-/** Every catalog row the state references is in the cache afterwards, or the state cannot be read against it. */
 export const ensureCatalogForState = async ({
 	catalogCache,
 	identity,

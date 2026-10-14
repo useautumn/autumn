@@ -2,11 +2,6 @@ import { z } from "zod/v4";
 import { createSchema } from "zod-openapi";
 import { webhookRegistry } from "./webhookDefinitions.js";
 
-/**
- * Injects OpenAPI `webhooks` entries and their component schemas into the
- * generated OpenAPI document. Only definitions with a Zod schema are included;
- * schema-less entries (description-only) are skipped.
- */
 export function injectWebhooks({
 	openApiDocument,
 }: {

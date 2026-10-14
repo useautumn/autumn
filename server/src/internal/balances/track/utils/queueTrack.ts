@@ -11,11 +11,7 @@ type QueueTrackOptions = {
 	queueUrl?: string;
 	messageGroupId?: string;
 	messageDeduplicationId?: string;
-	/** Per-item override (batch) — seeds the worker ctx.id and therefore the
-	 *  queue replay dedup keys. Defaults to the request's ctx.id. */
 	requestId?: string;
-	/** True when the enqueuer did NOT claim the body idempotency key at accept
-	 *  time (batch) — the worker claims it instead. */
 	validateTrackBodyIdempotencyKey?: boolean;
 	logFallback?: boolean;
 	markQueuedForReplay?: boolean;
@@ -29,7 +25,6 @@ export const queueTrack = async ({
 }: {
 	ctx: AutumnContext;
 	body: TrackParams;
-	/** A track_tokens cost, so the replay prices the event the way the sync path does. */
 	tokens?: TokenDeduction;
 	options?: QueueTrackOptions;
 }) => {
@@ -44,8 +39,6 @@ export const queueTrack = async ({
 	} = options;
 
 	try {
-		// Prefer the Standard async queue while keeping the legacy FIFO as a
-		// rollout fallback. TRACK_SQS_QUEUE_URL is the final deprecated fallback.
 		const resolvedQueueUrl =
 			queueUrl ??
 			getAsyncTrackProducerQueueUrl() ??
@@ -73,8 +66,6 @@ export const queueTrack = async ({
 				apiVersion: ctx.apiVersion.value,
 				body,
 				tokens,
-				// Sync/async paths claim the key at accept (default false) — only
-				// batch items ask the worker to claim.
 				validateTrackBodyIdempotencyKey,
 			},
 		});
@@ -102,7 +93,6 @@ export const queueTrack = async ({
 			body,
 		});
 	} catch (error) {
-		// A raw Error logs as {} (message/stack are non-enumerable) — flatten it.
 		ctx.logger.warn("[track] Queue fallback failed (SQS)", {
 			type: "track_queue_fallback_failed",
 			error: error instanceof Error ? error.message : String(error),

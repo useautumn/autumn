@@ -1,24 +1,3 @@
-/**
- * Plan variants — feature-drop propagation.
- *
- * Base has 7 items (6 feature items + 1 base price). Variants drop 1-2 items.
- * Tests OOTO-IWTN ("out with old, in with new") propagation semantics.
- *
- * Contract under test (from tests/_temp/variants/CONTRACT.md):
- *   - create_variant copies all base items
- *   - variant can be updated to strip items
- *   - preview_update shows item changes + affected variants (read-only)
- *   - propagate feature-add preserves strip
- *   - propagate item modification re-adds stripped item (OOTO-IWTN, contract #16)
- *   - opt-out (propagate=[]) preserves strip; opt-in re-adds
- *   - one-off variant preserves interval across propagation
- *   - multi-version skip: variant gets only latest diff, not cumulative
- *   - preview_update is read-only (no writes)
- *   - nested_variant_not_allowed: cannot fork a variant
- *   - invalid_propagation_target: is_default rejected on variant (blocked variant-settings field)
- *   - Stripe carry-forward: existing prices retain stripe_price_id across version-ups
- */
-
 import { expect, test } from "bun:test";
 import {
 	type ApiPlanV1,
@@ -67,8 +46,6 @@ const getFull = (
 		env: ctx.env,
 		version,
 	});
-
-// ── V1 item helpers ──────────────────────────────────────────────
 
 const v1 = {
 	msgFree: (included = 100) => ({
@@ -146,7 +123,6 @@ const itemsNoUsersFree = () => [
 
 const monthlyPrice = { amount: 20, interval: BillingInterval.Month as const };
 
-// V2 fixture: 6 feature items; products.pro adds base price → 7 total
 const baseProduct = (id: string) =>
 	products.pro({
 		id,
@@ -187,9 +163,6 @@ const createVariant = async (
 		name,
 	});
 
-// ═════════════════════════════════════════════════════════════════
-// 1. create_variant copies all 7 items
-// ═════════════════════════════════════════════════════════════════
 test.concurrent(
 	`${chalk.yellowBright("feature-drop create_variant: copies all 7 items (6 features + base price)")}`,
 	async () => {
@@ -214,9 +187,6 @@ test.concurrent(
 	},
 );
 
-// ═════════════════════════════════════════════════════════════════
-// 2. create variant + manually strip Dashboard → variant has 6, base has 7
-// ═════════════════════════════════════════════════════════════════
 test.concurrent(
 	`${chalk.yellowBright("feature-drop strip: variant drops Dashboard → 6 items, base keeps 7")}`,
 	async () => {
@@ -249,9 +219,6 @@ test.concurrent(
 	},
 );
 
-// ═════════════════════════════════════════════════════════════════
-// 3. preview_update with feature-add against stripped variant
-// ═════════════════════════════════════════════════════════════════
 test.concurrent(
 	`${chalk.yellowBright("feature-drop preview: feature-add item changes list stripped variant")}`,
 	async () => {
@@ -285,9 +252,6 @@ test.concurrent(
 	},
 );
 
-// ═════════════════════════════════════════════════════════════════
-// 4. propagate feature-add preserves strip
-// ═════════════════════════════════════════════════════════════════
 test.concurrent(
 	`${chalk.yellowBright("feature-drop propagate: feature-add to base → variant gets new feature, Dashboard still absent")}`,
 	async () => {
@@ -325,9 +289,6 @@ test.concurrent(
 	},
 );
 
-// ═════════════════════════════════════════════════════════════════
-// 5. propagate item modification re-adds stripped item (OOTO-IWTN)
-// ═════════════════════════════════════════════════════════════════
 test.concurrent(
 	`${chalk.yellowBright("feature-drop OOTO-IWTN: base changes Users 5→10, propagate re-adds stripped Users at 10")}`,
 	async () => {
@@ -373,9 +334,6 @@ test.concurrent(
 	},
 );
 
-// ═════════════════════════════════════════════════════════════════
-// 6. opt-out preserves strip vs opt-in re-adds
-// ═════════════════════════════════════════════════════════════════
 test.concurrent(
 	`${chalk.yellowBright("feature-drop opt-out: propagate=[] preserves strip, propagate=[variant] re-adds")}`,
 	async () => {
@@ -416,7 +374,6 @@ test.concurrent(
 			),
 		).toBeUndefined();
 
-		// Second update: Users 10→15 to produce a non-empty diff for propagation
 		await rpc.plans.update<ApiPlanV1, RpcUpdate>(baseId, {
 			items: [
 				v1.msgFree(),
@@ -440,9 +397,6 @@ test.concurrent(
 	},
 );
 
-// ═════════════════════════════════════════════════════════════════
-// 7. one-off variant preserves interval
-// ═════════════════════════════════════════════════════════════════
 test.concurrent(
 	`${chalk.yellowBright("feature-drop one-off: variant with one_off price preserves interval after propagation")}`,
 	async () => {
@@ -477,9 +431,6 @@ test.concurrent(
 	},
 );
 
-// ═════════════════════════════════════════════════════════════════
-// 8. multi-version skip
-// ═════════════════════════════════════════════════════════════════
 test.concurrent(
 	`${chalk.yellowBright("feature-drop multi-version skip: variant gets only v2→v3 diff, not v1→v2")}`,
 	async () => {
@@ -491,7 +442,6 @@ test.concurrent(
 		await createVariant(rpc, baseId, variantId1, "V1");
 		await createVariant(rpc, baseId, variantId2, "V2");
 
-		// v1→v2: add AdminRights, opt out both variants
 		await rpc.plans.update<ApiPlanV1, RpcUpdate>(baseId, {
 			items: [...allItems(), v1.adminRights()],
 			price: monthlyPrice,
@@ -499,7 +449,6 @@ test.concurrent(
 			update_variant_ids: [],
 		});
 
-		// v2→v3: add Storage, propagate to both
 		await rpc.plans.update<ApiPlanV1, RpcUpdate>(baseId, {
 			items: [...allItems(), v1.adminRights(), v1.storage()],
 			price: monthlyPrice,
@@ -510,7 +459,6 @@ test.concurrent(
 		const v1Plan = await rpc.plans.get<ApiPlanV1>(variantId1);
 		const v2Plan = await rpc.plans.get<ApiPlanV1>(variantId2);
 
-		// Both get Storage (v2→v3 diff) but NOT AdminRights (v1→v2 diff)
 		const storage1 = v1Plan.items.find(
 			(i) => i.feature_id === TestFeature.Storage,
 		);
@@ -531,9 +479,6 @@ test.concurrent(
 	},
 );
 
-// ═════════════════════════════════════════════════════════════════
-// 9. preview_update is read-only
-// ═════════════════════════════════════════════════════════════════
 test.concurrent(
 	`${chalk.yellowBright("feature-drop preview: read-only — no version change, same internal_id")}`,
 	async () => {
@@ -561,9 +506,6 @@ test.concurrent(
 	},
 );
 
-// ═════════════════════════════════════════════════════════════════
-// 10. nested_variant_not_allowed
-// ═════════════════════════════════════════════════════════════════
 test.concurrent(
 	`${chalk.yellowBright("feature-drop errors: nested variant → 400 nested_variant_not_allowed")}`,
 	async () => {
@@ -580,9 +522,6 @@ test.concurrent(
 	},
 );
 
-// ═════════════════════════════════════════════════════════════════
-// 11. is_default on variant rejects
-// ═════════════════════════════════════════════════════════════════
 test.concurrent(
 	`${chalk.yellowBright("feature-drop errors: is_default=true on variant → 400 invalid_propagation_target")}`,
 	async () => {
@@ -596,16 +535,10 @@ test.concurrent(
 			rpc.plans.update<ApiPlanV1, RpcUpdate>(variantId, { is_default: true }),
 		);
 		expect(err).not.toBeNull();
-		// is_default is one of the general variant-settings fields blocked by
-		// validateVariantSettingsUpdate, which runs before the dedicated
-		// variant_cannot_be_default check in validateDefaultFlag.
 		expect(err?.code).toBe("invalid_propagation_target");
 	},
 );
 
-// ═════════════════════════════════════════════════════════════════
-// 12. Stripe carry-forward across feature-add
-// ═════════════════════════════════════════════════════════════════
 test.concurrent(
 	`${chalk.yellowBright("feature-drop stripe: variant v2 existing prices retain stripe_price_id, new feature gets fresh")}`,
 	async () => {

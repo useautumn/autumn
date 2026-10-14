@@ -1,8 +1,3 @@
-/**
- * Timestamp billing_cycle_anchor edges on a first phase: anchors late in, at, or past the current period,
- * annual cycles, a plan change in the same request, and new subscriptions with prepaid items.
- */
-
 import { expect, test } from "bun:test";
 import { ms, type SetPlansParamsV0Input } from "@autumn/shared";
 import { stripeSchedulePhaseStartingAt } from "@tests/integration/billing/set-plans/phase-proration/utils/phaseProrationUtils";

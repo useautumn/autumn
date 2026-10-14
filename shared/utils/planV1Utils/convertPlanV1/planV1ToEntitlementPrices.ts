@@ -9,10 +9,6 @@ import type { Product } from "../../../models/productModels/productModels.js";
 import type { BasePriceAndEntitlementPrices } from "@utils/productUtils/entitlementPriceUtils/entitlementPriceTypes.js";
 import { productItemsToEntitlementPrices } from "./productItemsToEntitlementPrices.js";
 
-/**
- * PlanV1 price + items → minted base Price + EntitlementPrices.
- * ProductItem is an interim that dies inside this convert.
- */
 export const planV1ToEntitlementPrices = ({
 	ctx,
 	product,
@@ -24,7 +20,6 @@ export const planV1ToEntitlementPrices = ({
 	product: Pick<Product, "org_id" | "internal_id">;
 	basePrice?: BasePriceParams | ApiPlan["price"] | null;
 	planItems: ApiPlanItemV1[] | CreatePlanItemParamsV1[];
-	/** Feature working set used to stamp entitlements (defaults to ctx.features). */
 	features?: Feature[];
 }): BasePriceAndEntitlementPrices => {
 	const items = planV1ToProductItems({

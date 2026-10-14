@@ -19,15 +19,6 @@ const invitedWorkspaces = [
 	{ id: "ws_12", name: "Data" },
 ];
 
-/**
- * LICENSES flow, part 2: batch assignment past capacity. The customer is on
- * Team (10 workspaces included) with 8 already assigned; the app's add
- * dialog registers 4 at once. Capacity is enforced, never auto-purchased:
- * licenses.attach fails with 2 remaining < 4 needed. The endpoint must
- * notice the shortfall, billing.update the license quantity to 12 (paying
- * for 2 extra), THEN assign all 4 — order matters. Naive agents get the 400
- * and give up, or assign only 2.
- */
 export const inviteBatch: IntegrationCase = {
 	name: "integrate-licenses-invite-batch",
 	fixture: "notes-api",

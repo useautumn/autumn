@@ -1,17 +1,3 @@
-/**
- * Every CreatePlanItemParamsV1 field → batch vs per-customer, via
- * computeBatchMigration (the real redirection gate).
- *
- * Contract:
- *   feature_id / included / unlimited / reset → batch add
- *   price (any nested field) → priced_add_item
- *   proration alone → batch (no Stripe write without price)
- *   entity_feature_id → entity_scoped_entitlement
- *   pooled → pooled_add_item
- *   rollover on a new add → batch (definition only; no accrued rows)
- *   entitlement_id / price_id → identity, do not redirect
- */
-
 import { describe, expect, test } from "bun:test";
 import {
 	AllowanceType,

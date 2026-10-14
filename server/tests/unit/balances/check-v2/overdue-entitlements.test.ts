@@ -465,7 +465,6 @@ test("overdue access: rejected lock deductions release the claim; unknown failur
 				lockRedisInstance: new Redis({ lazyConnect: true }),
 			}),
 		).rejects;
-		// A balance rejection answers as a 4xx InsufficientBalanceError; anything else propagates as is.
 		if (releases) await finalized.toBeInstanceOf(InsufficientBalanceError);
 		else await finalized.toBe(error);
 		expect(releaseClaim).toHaveBeenCalledTimes(releases ? 1 : 0);

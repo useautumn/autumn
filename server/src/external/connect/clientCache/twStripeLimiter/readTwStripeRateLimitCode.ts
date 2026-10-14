@@ -9,7 +9,6 @@ export const readTwStripeRateLimitCode = async ({
 	timeoutMs: number;
 }): Promise<string | null> => {
 	const body = response.toJSON();
-	// The SDK still needs the original error body if this is the final attempt.
 	response.toJSON = () => body;
 	const payload = (await withTimeout({
 		fn: () => body,

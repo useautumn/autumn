@@ -138,8 +138,6 @@ export const keepMe = "custom";
 	});
 });
 
-/** Previously, constant IDs were unmatched and rewrites appended suffixed declarations.
- * Existing exports must remain unique across repeated in-place rewrites. */
 test("in-place updates match semicolonless exports with constant IDs", async () => {
 	await withConfigWorkspace(
 		`import { feature, plan } from "./builders" /* config
@@ -188,8 +186,6 @@ export const PLAN_IDS = { BASE: "base-plan", BASE_YEARLY: "base-plan-yearly" };`
 	);
 });
 
-/** A removed collision must not change the identity of a constant-ID export.
- * The surviving plan keeps its existing suffixed variable name. */
 test("constant-ID exports survive disappearing name collisions", async () => {
 	await withConfigWorkspace(
 		`import { plan } from "./builders";
@@ -218,8 +214,6 @@ export const fooBarPlan = plan({ id: PLAN_IDS.FOO_UNDERSCORE, name: "Underscore"
 	);
 });
 
-/** Adding a colliding resource must not rebind an existing constant-ID export.
- * The existing resource keeps its variable name regardless of API order. */
 test("constant-ID exports survive new name collisions", async () => {
 	await withConfigWorkspace(
 		`import { plan } from "./builders";
@@ -251,8 +245,6 @@ export const fooBar = plan({ id: PLAN_IDS.FOO_DASH, name: "Dash", items: [] });
 	);
 });
 
-/** Versioned constant-ID plans must use the same identity keys as full codegen.
- * In-place rewrites preserve each version exactly once. */
 test("in-place updates match versioned plans with constant IDs", async () => {
 	await withConfigWorkspace(
 		`import { plan } from "./builders";
@@ -296,8 +288,6 @@ export const proAnnualV2 = proV2.variant({ id: PLAN_IDS.PRO_ANNUAL, version: 2, 
 	);
 });
 
-/** Literal version identity must not depend on property order or adjacency.
- * Reordered versioned exports remain stable across in-place rewrites. */
 test("in-place updates parse reordered top-level versions", async () => {
 	await withConfigWorkspace(
 		`import { plan } from "./builders";

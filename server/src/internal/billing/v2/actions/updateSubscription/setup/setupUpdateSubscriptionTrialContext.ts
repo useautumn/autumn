@@ -19,17 +19,6 @@ import {
 } from "@/internal/billing/v2/setup/trialContext";
 import { isCustomerProductAutumnManagedTrial } from "@/internal/billing/v2/setup/trialContext/isCustomerProductAutumnManagedTrial";
 
-/**
- * Sets up trial context for update subscription operations.
- *
- * Logic:
- * 1. If a free_trial param passed (customize.free_trial or the shorthand) → Use it (null removes trial, value sets fresh trial)
- * 2. If revert trial → Inherit from customer product (its subscription belongs to the paused plan)
- * 3. If Autumn-managed no-card trial (on_trial_end "bill", no Stripe sub) → keep it Autumn-managed
- * 4. If paid product with trialing subscription → Inherit from subscription
- * 5. If customer product is trialing (free product case) → Inherit from customer product
- * 6. Otherwise → No trial context
- */
 export const setupUpdateSubscriptionTrialContext = ({
 	stripeSubscription,
 	customerProduct,
@@ -47,7 +36,6 @@ export const setupUpdateSubscriptionTrialContext = ({
 	const isAutumnManagedTrial =
 		isCustomerProductAutumnManagedTrial(customerProduct);
 
-	// Handle explicit free_trial param (null or value), in either shape
 	const freeTrialParam = resolveFreeTrialParam(params);
 	if (freeTrialParam !== undefined) {
 		const trialContext = handleFreeTrialParam({
@@ -61,7 +49,6 @@ export const setupUpdateSubscriptionTrialContext = ({
 		if (trialContext && isRevertTrial)
 			return { ...trialContext, onEnd: trialContext.onEnd ?? "revert" };
 
-		// A changed no-card trial stays Autumn's; removing it or requiring a card moves it to Stripe.
 		const staysAutumnManaged =
 			isAutumnManagedTrial &&
 			trialContext?.cardRequired === false &&
@@ -91,7 +78,6 @@ export const setupUpdateSubscriptionTrialContext = ({
 		};
 	}
 
-	// Inherit from stripe subscription (paid product case)
 	if (isProductPaidAndRecurring(fullProduct)) {
 		if (
 			stripeSubscription &&
@@ -102,7 +88,6 @@ export const setupUpdateSubscriptionTrialContext = ({
 		return undefined;
 	}
 
-	// Inherit from customer product (free product case)
 	if (customerProduct) {
 		return inheritTrialFromCustomerProduct({ customerProduct, currentEpochMs });
 	}

@@ -1,43 +1,5 @@
 #!/usr/bin/env bun
 
-/**
- * In-sandbox per-worker bring-up (plan §4c, §5, §6a, §9, §9a, §11a).
- *
- * Runs INSIDE a Vercel sandbox forked from the warm snapshot. The warm snapshot
- * already baked: deps, the migrated DB, the seeded unit-test-org (no Stripe), and
- * the clean-stopped native service data dirs. This script makes the worker
- * RUNNABLE, then prints a READY sentinel the orchestrator waits for. It does NOT
- * start the test run — the orchestrator drives `bun test <file>` via runCommand
- * after READY (plan §8.2).
- *
- * Sequence:
- *   1. Start native services (PG18 + Dragonfly + elasticmq-native) via the image
- *      start script (`scripts/tw/image/start-services.sh`), resolved against the
- *      in-sandbox repo root (process.cwd()).
- *   2. Wait for PG / Dragonfly / elasticmq TCP health.
- *   3. (if NEEDS_SVIX) bind the orchestrator-created Svix app into svix_config (plan §7/§9a).
- *   4. Bind the Stripe sub-account into the localhost DB (plan §6a step 2 / §9a).
- *   5. Start the Autumn server (dev single-process path, NODE_ENV=development)
- *      listening on SERVER_PORT, plus any TW_CAPABILITIES services (restarted on exit).
- *   6. Wait for the server health endpoint (`GET /`, 200 when ready) and each
- *      capability service's port.
- *   7. Print `TW_WORKER_READY` to stdout.
- *
- * Fails loud: any service that doesn't come up within its budget throws with a
- * clear message and a non-zero exit so the orchestrator can evict + replace the
- * worker (plan §8.4).
- *
- * Inputs (env, injected at fork by the orchestrator — see plan §11a):
- *   - ORG_ID            (hardcoded unit-test-org id; defaults to TEST_ORG_CONFIG.id)
- *   - STRIPE_ACCOUNT_ID (the `acct_*` the orchestrator minted + recorded; §9a)
- *   - NEEDS_SVIX        (set/truthy on the single dedicated Svix shard; §7)
- *   - SVIX_API_KEY      (only present on the Svix shard; §7/§11a)
- *   - SVIX_APP_ID       (orchestrator-created Svix app id; only on the Svix shard; §9a)
- *   - TW_CAPABILITIES   (capability ids from helpers/testCapabilities.ts; unset on normal workers)
- *   - SERVER_PORT       (the only exposed port; defaults to constants.SERVER_PORT)
- *   - plus the baked/localhost service env from §11a.
- */
-
 import { createHash, randomBytes } from "node:crypto";
 import { connect } from "node:net";
 import { join } from "node:path";
@@ -64,7 +26,6 @@ import {
 } from "../helpers/testCapabilities.js";
 import { prepareBalanceSyncQueue } from "./prepareBalanceSyncQueue.js";
 
-/** The READY sentinel the orchestrator scans stdout for. Plan §9 step 5. */
 export const READY_SENTINEL = "TW_WORKER_READY";
 
 const SERVICE_HEALTH_TIMEOUT_MS = 60_000;
@@ -76,9 +37,7 @@ const TCP_CONNECT_TIMEOUT_MS = 1_000;
 
 const bootStartedAt = Date.now();
 
-/** Minted per boot: the server registers each org's Atom with it; the Atom keeps only its hash. */
 const ATOM_ADMIN_TOKEN = `atom_admin_${randomBytes(32).toString("base64url")}`;
-// ms-since-boot prefix so worker logs double as a boot-phase profile.
 const log = (message: string): void => {
 	console.log(
 		chalk.cyan(`[tw-boot] +${Date.now() - bootStartedAt}ms ${message}`),
@@ -102,7 +61,6 @@ const resolveServerPort = (): number => {
 const isTruthyEnv = (value: string | undefined): boolean =>
 	value !== undefined && value !== "" && value !== "0" && value !== "false";
 
-/** Resolves true if a TCP connection to localhost:<port> succeeds. */
 const tcpProbe = (port: number): Promise<boolean> =>
 	new Promise((resolve) => {
 		const socket = connect({ host: "127.0.0.1", port });
@@ -139,7 +97,6 @@ const waitForTcpPort = async (
 	);
 };
 
-/** Waits for the Autumn server health endpoint (`GET /`) to return 200. */
 export const waitForServerHealth = async (
 	port: number,
 	timeoutMs: number,
@@ -165,11 +122,9 @@ export const waitForServerHealth = async (
 	);
 };
 
-/** Whether this worker's server routes to the balance worker; the orchestrator sends the flag. */
 export const balanceWorkerEnabled = (): boolean =>
 	process.env.BALANCE_WORKER_ROLLOUT_ENABLED !== "false";
 
-/** Waits for the balance worker's `GET /health` to answer 200. */
 export const waitForBalanceWorkerHealth = async (
 	timeoutMs: number,
 ): Promise<void> => {
@@ -194,11 +149,6 @@ export const waitForBalanceWorkerHealth = async (
 	);
 };
 
-/**
- * Starts the balance worker (`apps/balance-worker`) on the µVM's Kafka broker. State
- * is in-memory: checkpoints are off and nothing outlives the µVM. Started before
- * the server so partitions are owned by the time the first track arrives.
- */
 export const startBalanceWorker = (repoRoot: string): Subprocess => {
 	const workerRoot = join(repoRoot, "apps/balance-worker");
 	log(
@@ -222,11 +172,6 @@ export const startBalanceWorker = (repoRoot: string): Subprocess => {
 	});
 };
 
-/**
- * Starts herald (`apps/herald`): it follows the balance worker's log and delivers
- * webhooks, auto top-ups and usage-event rows. It joins at the log's end, so it
- * must be up before the server takes traffic.
- */
 export const startHerald = (repoRoot: string): Subprocess => {
 	log(`starting herald (bun src/main.ts), brokers ${KAFKA_BROKERS}`);
 	return spawn(["bun", "--config=./bunfig.toml", "src/main.ts"], {
@@ -243,10 +188,6 @@ export const startHerald = (repoRoot: string): Subprocess => {
 	});
 };
 
-/**
- * Starts Atom (`apps/atom`) in multi-tenant mode, as on a dev stack: one process stands in for
- * every org's Atom, and the server registers each through `ATOM_URL` with the admin token.
- */
 export const startAtom = (repoRoot: string): Subprocess => {
 	log(`starting Atom (bun src/main.ts) on :${ATOM_PORT}`);
 	return spawn(["bun", "--config=./bunfig.toml", "src/main.ts"], {
@@ -271,13 +212,11 @@ export const startAtom = (repoRoot: string): Subprocess => {
 const capabilityProcs = new Set<Subprocess>();
 let capabilityServicesStopped = false;
 
-/** Stops supervision and kills capability services once the worker itself is going down. */
 const stopCapabilityServices = (): void => {
 	capabilityServicesStopped = true;
 	for (const proc of capabilityProcs) proc.kill();
 };
 
-/** Starts and supervises a capability service; a crash restarts it so the worker keeps serving its shard. */
 const superviseCapabilityService = (
 	repoRoot: string,
 	service: CapabilityService,
@@ -310,11 +249,6 @@ const superviseCapabilityService = (
 	});
 };
 
-/**
- * Spawns the image start script that brings up the native services. The script
- * lives in the image layer (`scripts/tw/image/start-services.sh`) and is resolved
- * against the in-sandbox repo root. Throws loudly if it exits non-zero.
- */
 const startNativeServices = async (repoRoot: string): Promise<void> => {
 	const startScript = join(
 		repoRoot,
@@ -338,7 +272,6 @@ const startNativeServices = async (repoRoot: string): Promise<void> => {
 	}
 };
 
-/** Starts a streaming hot standby of the worker's PostgreSQL (pg-replica shard only). */
 export const startPgReplica = async (repoRoot: string): Promise<void> => {
 	const startedAt = Date.now();
 	log(`starting PostgreSQL hot standby on :${PG_REPLICA_PORT}`);
@@ -364,14 +297,6 @@ export const startPgReplica = async (repoRoot: string): Promise<void> => {
 	log(`PostgreSQL standby streaming (+${Date.now() - startedAt}ms)`);
 };
 
-/**
- * Binds the orchestrator-created Svix app into the localhost org (plan §7/§9a).
- * The orchestrator now CREATES + RECORDS the one dedicated svix-shard app before
- * this worker boots (so a fork/boot failure can never orphan an untracked Svix
- * app), injecting its id as `SVIX_APP_ID`. This worker only writes
- * `svix_config.sandbox_app_id` so the tests' `getTestSvixAppId` resolves — it
- * does NOT call `createSvixApp`.
- */
 export const provisionSvixApp = async (orgId: string): Promise<void> => {
 	const svixAppId = process.env.SVIX_APP_ID;
 	if (!svixAppId) {
@@ -408,12 +333,6 @@ export const provisionSvixApp = async (orgId: string): Promise<void> => {
 	);
 };
 
-/**
- * Starts the Autumn server on the dev single-process path (`bun src/index.ts`,
- * NODE_ENV=development). NODE_ENV must NOT be `production` or skip-verify turns
- * off and the legacy seeder demands a webhook secret we never stored (§6a gotcha
- * a, §11a). Returns the long-lived subprocess so the caller keeps it alive.
- */
 export const startServer = (repoRoot: string, port: number): Subprocess => {
 	const serverRoot = join(repoRoot, "server");
 	log(`starting Autumn server (bun src/index.ts) on :${port}`);
@@ -425,24 +344,12 @@ export const startServer = (repoRoot: string, port: number): Subprocess => {
 			...process.env,
 			NODE_ENV: "development",
 			SERVER_PORT: String(port),
-			// Set here, not by the orchestrator: boot.ts runs from the ref under test.
 			ATOM_URL,
 			ATOM_ADMIN_TOKEN,
 		} as Record<string, string>,
 	});
 };
 
-/**
- * Starts the SQS queue workers (`bun src/workers.ts`) AND the cron job
- * (`bun src/cron.ts`). WITHOUT these, tests that POST to `/track` / `/batch_track`
- * fail: the server fails open and returns 202 ("queued for replay"), the message
- * lands in `autumn-track.fifo`, and nothing ever drains it — so balances never
- * settle and every balance assertion is wrong. The cron (runs every minute) is
- * what resets/expires entitlements and generates invoices. Both skip Infisical
- * (no creds in the µVM → `initInfisical` no-ops) and inherit the localhost
- * service env from `process.env`. NODE_ENV=development keeps the dev process
- * counts + skip-verify consistent with the server.
- */
 export const startBackgroundProcs = (
 	repoRoot: string,
 ): { workersProc: Subprocess; cronProc: Subprocess } => {
@@ -475,9 +382,6 @@ const main = async (): Promise<void> => {
 	const repoRoot = process.cwd();
 	const serverPort = resolveServerPort();
 
-	// ORG_ID is always injected at fork. Do not import createTestOrg here —
-	// that pulls initLogger → @autumn/logging before a stale-warm bun install
-	// can link newly added workspace packages.
 	const orgId = process.env.ORG_ID;
 	if (!orgId) {
 		throw new Error(
@@ -492,16 +396,12 @@ const main = async (): Promise<void> => {
 		);
 	}
 
-	// 1 + 2. Native services up, then wait for their ports.
 	await startNativeServices(repoRoot);
 	await Promise.all([
 		waitForTcpPort("PostgreSQL", PG_PORT, SERVICE_HEALTH_TIMEOUT_MS),
 		waitForTcpPort("Dragonfly", DRAGONFLY_PORT, SERVICE_HEALTH_TIMEOUT_MS),
 		waitForTcpPort("goaws (SQS)", ELASTICMQ_PORT, SERVICE_HEALTH_TIMEOUT_MS),
 		waitForTcpPort("Kafka", KAFKA_PORT, SERVICE_HEALTH_TIMEOUT_MS),
-		// Non-fatal: start-services degrades without dynoxide on stale base
-		// images (the app fails open on an unreachable DynamoDB, and
-		// dynamo-gated tests skip). Short timeout keeps the degraded tail small.
 		waitForTcpPort("dynoxide (DynamoDB)", DYNAMODB_PORT, 15_000).catch(
 			(error) => {
 				log(`WARN: continuing without dynoxide — ${(error as Error).message}`);
@@ -512,9 +412,6 @@ const main = async (): Promise<void> => {
 
 	await prepareBalanceSyncQueue();
 
-	// 2a. Self-heal dependency drift: a stale warm fork can lag the
-	//     fast-forwarded lockfile (missing newly-added packages). Frozen
-	//     install is a no-op in seconds when node_modules is current.
 	log("reconciling node_modules (bun install --frozen-lockfile)");
 	const installEnv = process.env as Record<string, string>;
 	let installExit = await spawn(["bun", "install", "--frozen-lockfile"], {
@@ -524,8 +421,6 @@ const main = async (): Promise<void> => {
 		env: installEnv,
 	}).exited;
 	if (installExit !== 0) {
-		// Stale warm + fast-forward can land on a lockfile that drifted from the
-		// baked node_modules — regenerate in-sandbox instead of failing the fan-out.
 		log("frozen install failed — regenerating lockfile (bun install)");
 		installExit = await spawn(["bun", "install"], {
 			cwd: repoRoot,
@@ -540,10 +435,6 @@ const main = async (): Promise<void> => {
 		);
 	}
 
-	// 2b. Self-heal schema drift: the warm snapshot bakes a migrated DB at
-	//     warm build time, but a stale warm parent (failed refresh) can lag
-	//     the fast-forwarded code's schema (e.g. a new org column crashes the
-	//     binds below). Pending migrations only — a no-op on current snapshots.
 	log("applying pending DB migrations (schema self-heal)");
 	const migrateProc = spawn(["bun", "scripts/db/index.ts", "migrate"], {
 		cwd: repoRoot,
@@ -558,24 +449,18 @@ const main = async (): Promise<void> => {
 		);
 	}
 
-	// 2c. Standby after migrations, so pg_basebackup copies the current schema.
 	if (isTruthyEnv(process.env.TW_PG_REPLICA)) {
 		await startPgReplica(repoRoot);
 	}
 
-	// 3. Bind the orchestrator-created Svix app (only when flagged). It only
-	//    touches the DB, so it runs before the server starts to keep all DB-bind
-	//    steps together.
 	if (isTruthyEnv(process.env.NEEDS_SVIX)) {
 		await provisionSvixApp(orgId);
 	}
 
-	// 4. Bind the Stripe sub-account into the localhost DB (§6a step 2 / §9a).
 	log(`binding Stripe sub-account ${stripeAccountId}`);
 	const { bindStripeAccount } = await import("./bindStripeAccount.js");
 	await bindStripeAccount({ orgId, stripeAccountId });
 
-	// 4b. The balance worker owns its partitions before the server takes traffic.
 	const balanceWorkerProc = balanceWorkerEnabled()
 		? startBalanceWorker(repoRoot)
 		: null;
@@ -598,14 +483,12 @@ const main = async (): Promise<void> => {
 		log("balance worker rollout off — server keeps the Postgres path");
 	}
 
-	// 4c. Atom is up before the server, which registers an org's Atom on byoc.create_atom.
 	const atomProc = startAtom(repoRoot);
 	void atomProc.exited.then((code) => {
 		console.error(chalk.red(`[tw-boot] Atom exited early with code ${code}`));
 	});
 	await waitForTcpPort("Atom", ATOM_PORT, SERVICE_HEALTH_TIMEOUT_MS);
 
-	// 5 + 6. Start the server (and any capability service) and wait for health.
 	const capabilityServices = workerCapabilityServices(process.env);
 	for (const service of capabilityServices) {
 		superviseCapabilityService(repoRoot, service);
@@ -621,9 +504,6 @@ const main = async (): Promise<void> => {
 		}
 	});
 
-	// 5b. Start the SQS workers + cron so /track messages get drained and balances
-	//     settle (without these every balance test fails with a 202 fail-open).
-	//     They run independently of server health; monitor them for early crashes.
 	const { workersProc, cronProc } = startBackgroundProcs(repoRoot);
 	void workersProc.exited.then((code) => {
 		if (code !== 0) {
@@ -651,12 +531,9 @@ const main = async (): Promise<void> => {
 		),
 	);
 
-	// 7. Signal readiness. The orchestrator scans stdout for this exact line, then
-	//    starts dispatching `bun test <file>` to this worker (plan §8.2).
 	log(`worker ready (env=${TW_ENV}, server :${serverPort})`);
 	console.log(READY_SENTINEL);
 
-	// Keep the process alive so the server + workers + cron stay up for the run.
 	await Promise.all([
 		serverProc.exited,
 		workersProc.exited,

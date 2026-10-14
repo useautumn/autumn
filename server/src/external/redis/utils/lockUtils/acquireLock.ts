@@ -20,15 +20,6 @@ export const lockConflictError = (errorMessage: string) =>
 export const isLockConflict = (error: unknown): boolean =>
 	error instanceof RecaseError && error.code === ErrCode.LockAlreadyExists;
 
-/**
- * Claim a distributed lock via SET NX. Throws a 423 on conflict (with the
- * HOLDER's errorMessage when readable, so contenders see what's running).
- *
- * `failOpen` (default) treats Redis unavailability as "proceed unlocked" —
- * right for short request-path locks where blocking every request on a Redis
- * outage is worse than a rare race. Pass `failOpen: false` for long exclusive
- * operations (e.g. migrations) that must never run concurrently.
- */
 export const acquireLock = async ({
 	lockKey,
 	ttlMs = 10000,
@@ -65,7 +56,6 @@ export const acquireLock = async ({
 			"NX",
 		);
 
-		// If result is null, lock already exists (NX failed)
 		if (result === null) {
 			conflict = true;
 			const existingData = await redis.get(lockKey);
@@ -87,7 +77,6 @@ export const acquireLock = async ({
 	} catch (error) {
 		if (error instanceof RecaseError) throw error;
 
-		// A known conflict must stay a conflict even if reading its message failed
 		if (conflict) throw lockConflictError(errorMessage);
 
 		if (failOpen) return true;

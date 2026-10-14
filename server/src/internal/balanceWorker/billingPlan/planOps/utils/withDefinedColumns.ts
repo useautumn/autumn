@@ -1,4 +1,3 @@
-/** The columns an update actually sets; null when it sets none, which the Postgres lane skips too. */
 export const withDefinedColumns = ({
 	updates,
 }: {

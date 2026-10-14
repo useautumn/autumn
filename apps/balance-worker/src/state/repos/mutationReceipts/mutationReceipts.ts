@@ -139,7 +139,6 @@ export const insertReceipt = ({
 		.run(receiptWriteParamsOf({ partitionKey, position, mutation }));
 };
 
-/** Guarded by record_offset so a replayed older copy never rewinds the stored receipt. */
 export const updateReceipt = ({
 	ctx,
 	partitionKey,

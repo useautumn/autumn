@@ -1,9 +1,3 @@
-/**
- * atmn scenarios/pull — idempotent: second pull leaves every file byte-identical
- *
- * One line of plans/atmn-v3/07_tests.md. [a, b] is a matrix looped INSIDE this file.
- */
-
 import { expect, test } from "bun:test";
 import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 import {
@@ -31,8 +25,6 @@ test.concurrent(
 
 		try {
 			await scenario.push();
-			// A first pull settles the config into pull's own rendering (internalId
-			// order, quoting, etc.) — the claim under test is about the pull AFTER that.
 			await scenario.pull();
 
 			const before = scenario.files();

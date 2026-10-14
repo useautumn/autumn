@@ -7,13 +7,6 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { constructArrearProratedItem } from "@/utils/scriptUtils/constructItem";
 
-/**
- * Scenario:
- *
- * - Pro plan with 100,000 users free, then $0.5 per 1 user per month usage based
- * - Track 0.0003 (decimal amount)
- * - Ensure @priceToArrearProrated is correct.
- */
 test.concurrent(`${chalk.yellowBright("continuous-usage-decimal: track 0.0003 (decimal amount)")}`, async () => {
 	const customerId_one = "billing-units-continuous-use-decimal-1";
 	const customerId_two = "billing-units-continuous-use-decimal-2";

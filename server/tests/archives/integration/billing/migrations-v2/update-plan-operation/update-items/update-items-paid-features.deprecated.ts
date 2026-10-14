@@ -1,24 +1,3 @@
-/**
- * TDD coverage for update_items against paid / billed features and edge
- * cases.
- *
- * Contract under test:
- *   New behaviors:
- *     - PREPAID feature update_items: bumping `included` carries the
- *       customer-selected quantity forward and leaves the Stripe
- *       subscription unchanged. No new invoice.
- *     - CONSUMABLE (usage-in-arrear) update_items: bumping `included`
- *       preserves arrears usage. Stripe subscription untouched.
- *     - update_items targeting a free feature on a customer with a PAID
- *       Stripe subscription leaves the subscription's line items + anchor
- *       intact (no proration invoice).
- *     - Filter that matches nothing is a graceful no-op (the migration
- *       succeeds, customer state unchanged, no charge artifacts).
- *     - Unlimited entitlement + update_items.included: the override is
- *       silently ignored (unlimited stays unlimited; we do not regress to
- *       a numeric allowance).
- */
-
 import { expect, test } from "bun:test";
 import {
 	type ApiCustomerV3,
@@ -97,10 +76,6 @@ test.concurrent(`${chalk.yellowBright("migrations update_items: prepaid feature 
 	});
 
 	const customer = await autumnV2_2.customers.get<ApiCustomerV5>(customerId);
-	// Bumping `included` on a prepaid item absorbs that allowance into the
-	// already-purchased prepaid quantity (see cusProductToConvertedFeatureOptions).
-	// Total grant stays at the original 200; the new entitlement carries
-	// `included_grant: 100` and the prepaid_grant drops to 100.
 	expectBalanceCorrect({
 		customer,
 		featureId: TestFeature.Messages,
@@ -180,7 +155,6 @@ test.concurrent(`${chalk.yellowBright("migrations update_items: consumable (usag
 	});
 
 	const customer = await autumnV2_2.customers.get<ApiCustomerV5>(customerId);
-	// new included (300) - existing usage (150) → remaining 150
 	expectBalanceCorrect({
 		customer,
 		featureId: TestFeature.Messages,
@@ -241,9 +215,6 @@ test.concurrent(`${chalk.yellowBright("migrations update_items: allocated (entit
 		},
 	});
 
-	// Allocated/seat features count existing entities as usage (see
-	// mergeEntitiesWithExistingUsages). With 2 entities + new included=10, the
-	// expected post-update balance per entity is 10 − 2 = 8.
 	for (const entity of entities) {
 		const customer = await autumnV1.entities.get(customerId, entity.id);
 		expect(
@@ -294,7 +265,6 @@ test.concurrent(`${chalk.yellowBright("migrations update_items: filter that matc
 	});
 
 	const customer = await autumnV2_2.customers.get<ApiCustomerV5>(customerId);
-	// Untouched state: original 100 included, 20 used → 80 remaining.
 	expectBalanceCorrect({
 		customer,
 		featureId: TestFeature.Messages,

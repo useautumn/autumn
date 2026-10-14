@@ -3,7 +3,6 @@ import { useQuery } from "@tanstack/react-query";
 import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 
-/** Fetches product data for a specific version (or latest if version is omitted). */
 export function useProductVersionQuery({
 	productId,
 	version,

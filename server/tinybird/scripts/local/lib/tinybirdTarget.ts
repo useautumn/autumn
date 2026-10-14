@@ -19,7 +19,6 @@ type LocalWorkspace = { id: string; name: string; token: string };
 const DEFAULT_URL = "http://localhost:7181";
 const DEFAULT_WORKSPACE = "dev";
 
-/** Seed/reset/build mutate data, so a Tinybird Cloud host is refused unless explicitly allowed. */
 const assertNotCloud = ({
 	url,
 	allowCloud,
@@ -145,7 +144,6 @@ const getOrCreateWorkspace = async ({
 	return created;
 };
 
-/** Resolves a workspace token from --token, or from Local's /tokens endpoint and --workspace. */
 export const resolveTarget = async (
 	flags: TargetFlags,
 ): Promise<TinybirdTarget> => {

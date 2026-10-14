@@ -1,6 +1,3 @@
-/** customer.subscription.updated webhook - past_due: failed payments flip the customer
- * product to past_due while its features stay available. */
-
 import { expect, test } from "bun:test";
 import {
 	type ApiCustomerV3,
@@ -114,8 +111,6 @@ const syncManualPastDue = async ({
 	await deleteCachedFullCustomer({ ctx, customerId });
 };
 
-/** TDD: duplicate manual upgrade invoices can emit past_due with only latest_invoice changed.
- * Red flips the active plan to past_due; green ignores manual billing-update invoices. */
 test.concurrent(
 	`${chalk.yellowBright("sub.updated: duplicate manual upgrade invoice does not mark active plan past_due")}`,
 	async () => {

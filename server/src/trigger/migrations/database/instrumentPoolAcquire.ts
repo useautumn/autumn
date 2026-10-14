@@ -7,7 +7,6 @@ type ConnectCallback = (
 	done?: (error?: Error | boolean) => void,
 ) => void;
 
-/** Reports failed checkouts, which fail before any per-client query wrapper exists. */
 export const instrumentPoolAcquire = ({
 	pool,
 	report,

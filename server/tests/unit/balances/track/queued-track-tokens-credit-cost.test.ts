@@ -12,9 +12,6 @@ import { createFakeMiscCache } from "../../utils/fakeMiscCache.js";
 import { mockModuleWithRestore } from "../../utils/mockModuleWithRestore.js";
 import { pinTrackProducerQueueToFifo } from "./trackAsyncQueueTestEnv.js";
 
-// A track_tokens queued by default must replay with the token cost, so its event
-// records the same credit_cost as the sync path. Pre-fix the queue message dropped it.
-
 const previousRollout = process.env.BALANCE_WORKER_ROLLOUT_ENABLED;
 process.env.BALANCE_WORKER_ROLLOUT_ENABLED = "false";
 
@@ -127,7 +124,6 @@ const requestBody = {
 	output_tokens: 0,
 };
 
-// $120 drained $100 of AI credits and overflowed 20,000 orbs.
 const drawn = [
 	{ featureId: "ai_credits", amount: 100 },
 	{ featureId: "orbs", amount: 20_000 },
@@ -135,7 +131,6 @@ const drawn = [
 
 type QueuedTrackMessage = Omit<Parameters<typeof runQueuedTrack>[0], "ctx">;
 
-/** The credit_cost runRedisTrackV3 records for these deductions over the draws above. */
 const creditCostOf = (
 	featureDeductions: { feature: { id: string }; tokens?: unknown }[],
 ) => {

@@ -12,7 +12,6 @@ import { ScopeTab } from "./ScopeTab";
 
 const INLINE_ENTITY_COUNT = 3;
 
-/** Picks the scope a new plan is added under, from inside the plan picker. */
 export function PlanPickerScopeRow({
 	value,
 	onChange,

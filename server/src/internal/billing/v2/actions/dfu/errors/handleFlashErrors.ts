@@ -9,11 +9,6 @@ const rejectUnsupported = (message: string): never => {
 	});
 };
 
-/**
- * Guards deferred capabilities and enforces cross-processor exclusivity. We call
- * executeAutumnBillingPlan directly, bypassing attach's PSP guards, so the
- * cross-processor rule is enforced here.
- */
 export const handleFlashErrors = ({
 	flashContext,
 }: {
@@ -37,9 +32,6 @@ export const handleFlashErrors = ({
 		}
 	}
 
-	// Cross-processor exclusivity: a Stripe-owned recurring base plan and a
-	// RevenueCat-owned recurring base plan can't coexist. Add-ons and one-offs
-	// are parallel cus_products and safe to mix.
 	const hasStripeRecurringBase = planContexts.some(
 		(pc) => pc.processor === "stripe" && !pc.isAddOn && pc.isRecurring,
 	);

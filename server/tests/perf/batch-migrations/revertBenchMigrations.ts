@@ -1,14 +1,3 @@
-/**
- * One-shot revert of EVERY bench migration's effects — regardless of which
- * migration or feature ran — back to the seeded state, without re-seeding:
- *   1. deletes all migration-added customer_entitlements on bench customers
- *      (seeded rows are ce_bench_* and are never touched)
- *   2. deletes all bench migration item runs
- *   3. deletes the bench org's migration runs (dashboard statuses reset)
- *
- *   bun tests/perf/batch-migrations/revertBenchMigrations.ts
- */
-
 import { sql } from "drizzle-orm";
 import {
 	BENCH_INTERNAL_CUSTOMER_PREFIX,
@@ -50,7 +39,6 @@ const main = async () => {
 		`revert: deleted bench migration_runs in ${Date.now() - runsStarted}ms`,
 	);
 
-	// Reclaim dead tuples so revert cycles don't degrade later claim probes.
 	const vacuumStarted = Date.now();
 	await db.execute(sql`VACUUM (ANALYZE) migration_item_runs`);
 	await db.execute(sql`VACUUM (ANALYZE) customer_entitlements`);

@@ -1,12 +1,3 @@
-/**
- * Resubmitting a customer's schedule unchanged leaves it untouched: same rows, same Stripe schedule, nothing due.
- *
- * Red (before):  every scheduled row was deleted and recreated, and the Stripe schedule rebuilt, so an
- *                untouched Set Plans sheet warned that the scheduled plans and schedule would be replaced.
- * Green (after): identical future-phase plans keep their rows and the live Stripe schedule; the preview shows
- *                every phase's plans as kept, with no phase removed.
- */
-
 import { expect, test } from "bun:test";
 import {
 	CusProductStatus,
@@ -23,7 +14,6 @@ import { findStripeSubscriptionByStatus } from "../utils/subscriptionStateUtils"
 
 const REBUILD_WARNINGS = ["future_phase_removed"];
 
-/** Row ids per plan and status, so a resubmit can be compared row for row. */
 const customerProductIdsByPlan = async ({
 	ctx,
 	customerId,
@@ -92,7 +82,6 @@ test.concurrent(
 		expect(scheduledStart).toBeDefined();
 		expect(scheduleBefore).toBeTruthy();
 
-		// The prefilled sheet dates each future phase to its scheduled row.
 		const params: SetPlansParamsV0Input = {
 			customer_id: customerId,
 			phases: [

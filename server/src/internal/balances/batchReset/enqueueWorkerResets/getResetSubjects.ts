@@ -3,7 +3,6 @@ import { inArray } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { ResetEligibleCustomerEntitlementRow } from "@/internal/customers/cusProducts/cusEnts/repos/getResetEligibleCustomerEntitlementsPage.js";
 
-/** Who a reset is addressed to: the customer, and the entity when the due row is the entity's own. */
 export type ResetSubject = {
 	internalCustomerId: string;
 	customerId: string;
@@ -17,7 +16,6 @@ const unique = (values: (string | null)[]): string[] => [
 	...new Set(values.flatMap((value) => value ?? [])),
 ];
 
-/** The entity behind each plan on the page: an entity plan's rows carry no entity of their own. */
 const entityByPlanOf = async ({
 	db,
 	page,
@@ -37,7 +35,6 @@ const entityByPlanOf = async ({
 	return new Map(rows.map((row) => [row.id, row.internalEntityId ?? null]));
 };
 
-/** One subject per distinct (customer, entity) behind the page's rows; rows whose customer or entity can't be addressed are left to the SQL lane. */
 export const getResetSubjects = async ({
 	db,
 	page,

@@ -1,16 +1,3 @@
-/**
- * Seeds two allocated usage-based plans on the same feature, one per billing
- * shape, so `atmn pull` shows them side by side:
- *
- *   seats_legacy   pre-v2 row (prorated)  → pulls with `allocatedBilling: "prorated_legacy"`
- *   seats_arrear   v2 row (arrear)        → pulls bare
- *
- * Push the file back unchanged and the preview is a no-op; delete the
- * `allocatedBilling` line on seats_legacy and push to migrate it to arrear.
- *
- *   bun scenario alloc [--skip-clear]
- */
-
 import { AppEnv } from "@autumn/shared";
 import { forceOldAllocatedV1Config } from "@tests/integration/crud/plans/utils/allocatedV1Utils";
 import { items } from "@tests/utils/fixtures/items";
@@ -52,7 +39,6 @@ export const seedAllocatedBillingCatalog = async ({
 		actions: [],
 		ctx,
 	});
-	// The fixture writes today's rows; rewrite one to the pre-v2 shape.
 	await forceOldAllocatedV1Config({ ctx, planId: legacy.id });
 
 	return { legacy: legacy.id, arrear: arrear.id, group: GROUP };

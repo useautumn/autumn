@@ -1,5 +1,3 @@
-/** Contract: license coupons follow Stripe renewal expiry, and later updates never resurrect an expired discount. */
-/** Upgrade credits use stored post-discount invoice amounts so refunds cannot exceed what the customer paid. */
 import { expect, test } from "bun:test";
 import type {
 	ApiCustomerV3,

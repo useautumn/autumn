@@ -1,6 +1,5 @@
 import type { UpsertProductPlan } from "@/internal/catalogV2/actions/updateCatalog/types/upsertProductPlan";
 
-/** Base rows this upsert edits — what anchored variant rows must point at. */
 export const editedBaseInternalIds = ({
 	upsert,
 }: {

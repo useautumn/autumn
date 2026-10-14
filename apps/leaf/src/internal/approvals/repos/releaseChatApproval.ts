@@ -2,12 +2,6 @@ import { chatApprovals } from "@autumn/shared";
 import { and, eq } from "drizzle-orm";
 import type { ChatDb } from "../../../lib/db.js";
 
-/**
- * Revert a claim the given clicker just made (running→pending) so another user
- * can still decide the approval — used when the clicker turns out to lack the
- * Autumn scopes to run it. Scoped to the claimer's own running row so it can
- * never disturb a claim someone else now holds.
- */
 export const releaseChatApproval = async ({
 	approvalId,
 	db,

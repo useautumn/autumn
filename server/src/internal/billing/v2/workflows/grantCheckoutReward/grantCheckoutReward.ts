@@ -1,11 +1,3 @@
-/**
- * Workflow: GrantCheckoutReward
- *
- * Triggers checkout rewards when a customer completes a purchase.
- * Checks for reward redemptions, validates the subscription isn't on trial,
- * and applies the appropriate reward (free product or other reward type).
- */
-
 import {
 	type AppEnv,
 	type Customer,

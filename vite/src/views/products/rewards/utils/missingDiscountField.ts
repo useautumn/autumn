@@ -1,11 +1,6 @@
 import { CouponDurationType } from "@autumn/shared";
 import type { FrontendReward } from "../types/frontendReward";
 
-/**
- * Amount and Duration render an empty input with a placeholder when they hold
- * 0, so a blank field looks filled. Name the field rather than letting Stripe
- * reject the value.
- */
 export const missingDiscountField = ({
 	reward,
 }: {

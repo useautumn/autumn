@@ -12,19 +12,6 @@ import type {
 } from "./VersionChange.js";
 import { VersionChangeRegistryClass } from "./VersionChangeRegistryClass.js";
 
-/**
- * Apply response transformations (backward: new → old)
- *
- * Walks backwards from currentVersion to targetVersion,
- * applying each version change's transformResponse() function.
- *
- * @param input - Data in the newest version format
- * @param legacyData - Legacy fields data for reconstructing deprecated fields (optional)
- * @param currentVersion - Version of the input data (defaults to LATEST_VERSION)
- * @param targetVersion - Version to transform to (older)
- * @param resource - Resource being transformed
- *
- */
 // biome-ignore lint/suspicious/noExplicitAny: Generic type parameter needs flexibility
 export function applyResponseVersionChanges<T = any, TLegacyData = any>({
 	input,
@@ -41,35 +28,24 @@ export function applyResponseVersionChanges<T = any, TLegacyData = any>({
 	resource: AffectedResource;
 	ctx: SharedContext;
 }): T {
-	// Default currentVersion to latest if not provided
 	const _currentVersion = currentVersion || new ApiVersionClass(LATEST_VERSION);
 
-	// If versions are equal, no transformation needed
 	if (_currentVersion.eq(targetVersion)) {
 		return input;
 	}
 
-	// If target is newer than current, throw error (can't transform forward)
 	if (targetVersion.gt(_currentVersion)) {
 		targetVersion = _currentVersion;
-		// throw new Error(
-		// 	`Cannot transform forward from ${_currentVersion} to ${targetVersion}. ` +
-		// 		"Transforms only work backwards to older versions.",
-		// );
 	}
 
-	// Get all versions between current and target (exclusive of target, inclusive of current)
 	const versionsToApply = getVersionsBetween({
 		from: targetVersion.value,
 		to: _currentVersion.value,
-	}).filter((v) => v !== targetVersion.value); // Exclude target itself
-
-	// Sort versions from newest to oldest (we apply backwards)
+	}).filter((v) => v !== targetVersion.value);
 	versionsToApply.reverse();
 
 	const printLogs = false;
 
-	// Apply each version's changes
 	let transformedData = input;
 
 	for (const version of versionsToApply) {
@@ -81,23 +57,18 @@ export function applyResponseVersionChanges<T = any, TLegacyData = any>({
 		}
 
 		for (const change of changes) {
-			// Skip if this change doesn't affect our resource
 			if (!change.affects(resource)) {
 				continue;
 			}
 
-			// Skip if doesn't affect responses
 			if (!change.affectsResponse) {
 				continue;
 			}
 
-			// Skip if this change has side effects (must be handled elsewhere)
 			if (change.hasSideEffects) {
 				continue;
 			}
 
-			// Apply if targetVersion <= oldVersion
-			// Example: If change.oldVersion = V0_2 and targetVersion = V0_2, then apply
 			const shouldApply = targetVersion.lte(change.oldVersion);
 			if (!shouldApply) continue;
 
@@ -105,7 +76,6 @@ export function applyResponseVersionChanges<T = any, TLegacyData = any>({
 				console.log(`Applying change ${change.name} for version ${version}`);
 			}
 
-			// Apply the response transformation (backward)
 			transformedData = change.transformResponse({
 				input: transformedData,
 				legacyData: legacyData,
@@ -117,29 +87,6 @@ export function applyResponseVersionChanges<T = any, TLegacyData = any>({
 	return transformedData;
 }
 
-/**
- * Apply request transformations (forward: old → new)
- *
- * Walks FORWARD from targetVersion to currentVersion,
- * applying each version change's transformRequest() function.
- *
- * This is used to transform old request formats to the latest version.
- *
- * @param input - Data in the older version format
- * @param legacyData - Legacy fields data for reconstructing deprecated fields (optional)
- * @param targetVersion - User's version (older)
- * @param currentVersion - Latest version (newer)
- * @param resource - Resource being transformed
- *
- * @example
- * // Data is in V1_1 format, transform to V1_2
- * const v1_2_data = applyRequestVersionChanges({
- *   input: v1_1_request,
- *   targetVersion: new ApiVersionClass(ApiVersion.V1_1),  // User's version
- *   currentVersion: new ApiVersionClass(ApiVersion.V1_2),  // Latest
- *   resource: AffectedResource.Product
- * });
- */
 // biome-ignore lint/suspicious/noExplicitAny: Generic type parameter needs flexibility
 export function applyRequestVersionChanges<T = any, TLegacyData = any>({
 	input,
@@ -151,17 +98,15 @@ export function applyRequestVersionChanges<T = any, TLegacyData = any>({
 }: {
 	input: T;
 	legacyData?: TLegacyData;
-	fromVersion: ApiVersionClass; // User's version (old)
-	toVersion: ApiVersionClass; // Latest version (new)
+	fromVersion: ApiVersionClass;
+	toVersion: ApiVersionClass;
 	resource: AffectedResource;
 	ctx: SharedContext;
 }): T {
-	// If versions are equal, no transformation needed
 	if (fromVersion.eq(toVersion)) {
 		return input;
 	}
 
-	// If target is newer than current, throw error
 	if (fromVersion.gt(toVersion)) {
 		throw new Error(
 			`Cannot transform forward from ${fromVersion} to ${toVersion}. ` +
@@ -169,16 +114,11 @@ export function applyRequestVersionChanges<T = any, TLegacyData = any>({
 		);
 	}
 
-	// Get all versions between target and current (exclusive of current, inclusive of target)
 	const versionsToApply = getVersionsForRequestTransform({
 		from: fromVersion.value,
 		to: toVersion.value,
 	});
 
-	// Don't reverse - we want to go forward (old → new)
-	// versionsToApply is already in ascending order from getVersionsBetween
-
-	// Apply each version's changes
 	let transformedData = input;
 	for (const version of versionsToApply) {
 		const changes = VersionChangeRegistryClass.getChangesForVersion({
@@ -186,22 +126,18 @@ export function applyRequestVersionChanges<T = any, TLegacyData = any>({
 		});
 
 		for (const change of changes) {
-			// Skip if this change doesn't affect our resource
 			if (!change.affects(resource)) {
 				continue;
 			}
 
-			// Skip if doesn't affect requests
 			if (!change.affectsRequest) {
 				continue;
 			}
 
-			// Skip if this change has side effects (must be handled elsewhere)
 			if (change.hasSideEffects) {
 				continue;
 			}
 
-			// Apply the request transformation (forward)
 			transformedData = change.transformRequest({
 				input: transformedData,
 				// biome-ignore lint/suspicious/noExplicitAny: Runtime type flexibility needed for version changes
@@ -214,20 +150,6 @@ export function applyRequestVersionChanges<T = any, TLegacyData = any>({
 	return transformedData;
 }
 
-/**
- * Check if a specific change is active for the given target version
- *
- * Used for side-effect changes that can't be encapsulated in transforms.
- * A change is "active" if the target version is older than the version
- * where the change was introduced.
- *
- * @example
- * // In your code:
- * if (isChangeActive(targetVersion, LegacyExpandInvoicesChange)) {
- *   // Add expand=invoices to the query
- *   expandArray.push(CusExpand.Invoices);
- * }
- */
 export function backwardsChangeActive({
 	apiVersion,
 	versionChange,
@@ -239,9 +161,6 @@ export function backwardsChangeActive({
 	return apiVersion.lte(change.oldVersion);
 }
 
-/**
- * Helper to apply response changes to an array of objects
- */
 // biome-ignore lint/suspicious/noExplicitAny: Generic type parameter needs flexibility
 export function applyResponseVersionChangesToArray<T = any, TLegacyData = any>({
 	inputArray,
@@ -270,9 +189,6 @@ export function applyResponseVersionChangesToArray<T = any, TLegacyData = any>({
 	);
 }
 
-/**
- * Helper to apply request changes to an array of objects
- */
 // biome-ignore lint/suspicious/noExplicitAny: Generic type parameter needs flexibility
 export function applyRequestVersionChangesToArray<T = any, TLegacyData = any>({
 	inputArray,
@@ -301,9 +217,6 @@ export function applyRequestVersionChangesToArray<T = any, TLegacyData = any>({
 	);
 }
 
-/**
- * Get all version changes that affect a specific resource between two versions
- */
 export function getChangesForResource({
 	currentVersion,
 	targetVersion,

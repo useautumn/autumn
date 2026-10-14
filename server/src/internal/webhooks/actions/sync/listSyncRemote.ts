@@ -5,16 +5,12 @@ import type { WebhookApp } from "../apps/webhookApps.js";
 
 export type SyncRemote = {
 	remote: Webhook[];
-	/** Made in the dashboard: no uid, so adoptable by URL. */
 	uidlessIds: Set<string>;
-	/** Which app each remote webhook lives in. */
 	remoteKinds: Map<string, WebhookAppKind>;
 	appIdOf: Map<string, string>;
-	/** Every app holding each id; normally one, both after a concurrent create. */
 	appIdsOf: Map<string, string[]>;
 };
 
-/** The env's webhooks across its apps, with where each one lives. */
 export const listSyncRemote = async ({
 	apps,
 }: {

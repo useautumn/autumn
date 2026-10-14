@@ -2,7 +2,6 @@ import type { CSSProperties } from "react";
 
 export const ROW_HEIGHT = 40;
 
-/** One grid template for the header and every row, so columns always line up. */
 export const ROW_GRID: CSSProperties = {
 	display: "grid",
 	gridTemplateColumns:

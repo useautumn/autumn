@@ -1,16 +1,3 @@
-/**
- * Attach Add-on Tests (Attach V2)
- *
- * Tests for attaching add-on products to customers.
- * Add-ons are additive - they never expire/cancel existing products.
- *
- * Key behaviors:
- * - Add-ons are always attached (never replace existing products)
- * - Features from add-ons combine with main product features
- * - Re-attaching same add-on creates separate customer_product records
- * - Multiple different add-ons can coexist
- */
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3 } from "@autumn/shared";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
@@ -23,20 +10,6 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 1: Free add-on to Pro customer
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Customer on Pro ($20/mo) with 100 messages
- * - Attach free add-on with 200 words
- *
- * Expected:
- * - Both Pro and add-on active
- * - Messages from Pro (100), Words from add-on (200)
- * - No additional charge for add-on
- */
 test.concurrent(
 	`${chalk.yellowBright("addon 1: free addon to pro")}`,
 	async () => {
@@ -61,14 +34,12 @@ test.concurrent(
 			actions: [s.billing.attach({ productId: pro.id })],
 		});
 
-		// Preview add-on - should be free
 		const preview = await autumnV1.billing.previewAttach({
 			customer_id: customerId,
 			product_id: freeAddon.id,
 		});
 		expect(preview.total).toBe(0);
 
-		// Attach free add-on
 		await autumnV1.billing.attach({
 			customer_id: customerId,
 			product_id: freeAddon.id,
@@ -77,13 +48,11 @@ test.concurrent(
 
 		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-		// Both products active
 		await expectCustomerProducts({
 			customer,
 			active: [pro.id, freeAddon.id],
 		});
 
-		// Messages from Pro
 		expectCustomerFeatureCorrect({
 			customer,
 			featureId: TestFeature.Messages,
@@ -92,7 +61,6 @@ test.concurrent(
 			usage: 0,
 		});
 
-		// Words from add-on
 		expectCustomerFeatureCorrect({
 			customer,
 			featureId: TestFeature.Words,
@@ -101,7 +69,6 @@ test.concurrent(
 			usage: 0,
 		});
 
-		// Only 1 invoice (Pro $20), no charge for free add-on
 		await expectCustomerInvoiceCorrect({
 			customer,
 			count: 1,

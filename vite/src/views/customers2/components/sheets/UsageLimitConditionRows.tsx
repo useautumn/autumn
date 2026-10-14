@@ -14,7 +14,6 @@ const EMPTY_SUGGESTIONS: CustomerPropertySuggestions = {
 	valuesByKey: {},
 };
 
-/** Property equality conditions for a filtered usage limit (AND across rows). */
 export function UsageLimitConditionRows({
 	conditions,
 	onChange,
@@ -23,7 +22,6 @@ export function UsageLimitConditionRows({
 }: {
 	conditions: UsageLimitCondition[];
 	onChange: (conditions: UsageLimitCondition[]) => void;
-	/** Observed keys/values for suggestions and typo warnings (free text always allowed). */
 	suggestions?: CustomerPropertySuggestions;
 	maxConditions?: number;
 }) {

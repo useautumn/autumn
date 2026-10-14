@@ -9,10 +9,6 @@ import { getFullSubject } from "../../repos/getFullSubject/getFullSubject.js";
 const CUSTOMER_REHYDRATION_CONCURRENCY = 5;
 const BATCH_SIZE = 100;
 
-/**
- * SQS worker handler: rehydrates each subject, which triggers lazy reset internally.
- * An entity of a balance-worker customer is reset through the worker, never on the SQL lane.
- */
 export const batchResetCustomerEntitlements = async ({
 	ctx,
 	payload,
@@ -35,7 +31,6 @@ export const batchResetCustomerEntitlements = async ({
 					const isEntityReset = Boolean(
 						reset.internalEntityId || reset.entityId,
 					);
-					// The worker is the sole reset writer for its customers; getFull resets every due subject through it.
 					const resetsOnSqlLane =
 						isEntityReset &&
 						!isBalanceWorkerRolloutEnabled({

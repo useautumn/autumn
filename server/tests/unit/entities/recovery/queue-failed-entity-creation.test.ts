@@ -1,16 +1,3 @@
-/**
- * TDD contract for durable entities.create failure capture.
- *
- * Contract under test:
- * - Transient failures are sent as the entity creation recovery job, on the customer creation
- *   recovery queue.
- * - Payloads preserve org, environment, API version, the validated create params, and request ID.
- * - Identical recovery requests share a deterministic deduplication ID.
- * - The message group is the subject: an entity replay lands after any customer creation
- *   queued for the same customer, beside other customers' replays.
- * - A send the queue could not make never replaces the original API failure.
- */
-
 import { beforeEach, describe, expect, mock, test } from "bun:test";
 import { ApiVersion, ApiVersionClass, AppEnv } from "@autumn/shared";
 import type { SendOptions } from "@autumn/sqs";

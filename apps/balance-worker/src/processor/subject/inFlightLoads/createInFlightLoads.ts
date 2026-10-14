@@ -44,7 +44,6 @@ const overtakeCustomer = ({
 	}
 };
 
-/** The subject reads still running against Postgres, so an evict can reach rows that are not resident yet. */
 export const createInFlightLoads = (): InFlightLoads => {
 	const entries: Entries = new Map();
 	return {

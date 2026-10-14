@@ -3,7 +3,6 @@ import { z } from "zod/v4";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { registerShadowAtomOrg } from "./shadowAtom/registerShadowAtomOrg.js";
 
-/** Staff-only: puts an org on our shadow Atom for both envs. Its tokens are in this response once, and nowhere else in plain form. */
 export const handleRegisterAdminShadowAtomOrg = createRoute({
 	scopes: [Scopes.Superuser],
 	params: z.object({ org_id: z.string().min(1) }),

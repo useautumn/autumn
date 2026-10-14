@@ -3,11 +3,6 @@ import { and, eq } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { getConnectedOrgSlug } from "./platformUtils.js";
 
-/**
- * Validates that a platform organization exists and is owned by the master org
- * @returns The organization if valid
- * @throws RecaseError if org not found or not owned by master
- */
 export const validatePlatformOrg = async ({
 	db,
 	organizationSlug,

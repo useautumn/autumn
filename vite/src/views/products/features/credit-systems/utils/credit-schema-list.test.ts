@@ -1,12 +1,3 @@
-/**
- * Rate-card list mechanics behind useCreditSchemaList.
- *
- * Red (current):  removing the only row is intercepted by a toast, and a row
- *                 whose feature is picked stays collapsed until clicked again.
- * Green (after):  removing the only row yields an empty card, and picking a
- *                 feature expands that row straight away.
- */
-
 import { expect, test } from "bun:test";
 import type { CreditSchemaItem } from "@autumn/shared";
 import {

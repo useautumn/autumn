@@ -8,7 +8,6 @@ async function getVersion(): Promise<string> {
 async function build() {
 	const version = await getVersion();
 
-	// Build everything with Bun
 	console.time(`Building atmn v${version}`);
 	await Bun.build({
 		entrypoints: ["./src/cli.tsx", "./src/compose/index.ts"],
@@ -22,7 +21,6 @@ async function build() {
 	});
 	console.timeEnd(`Building atmn v${version}`);
 
-	// Generate TypeScript declarations with tsc
 	console.time(`Generating type declarations`);
 	const tsc = Bun.spawn(["tsc", "--project", "tsconfig.build.json"], {
 		stdio: ["inherit", "inherit", "inherit"],

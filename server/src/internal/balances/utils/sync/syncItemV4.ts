@@ -70,13 +70,9 @@ interface SyncItemV4 {
 	timestamp: number;
 	rolloverIds?: string[];
 	modifiedCusEntIdsByFeatureId: Record<string, string[]>;
-	/** Post-deduction counter snapshots handed straight from the Lua result
-	 *  (no Redis re-read); mirrored to the customer-scoped usage_windows table
-	 *  via full-replace per (customer, feature). */
 	usageWindowUpdates?: UsageWindowUpdate[];
 }
 
-/** Sync cached subject balances to Postgres using targeted hash reads. */
 export const syncItemV4 = async ({
 	ctx,
 	payload,
@@ -93,8 +89,6 @@ export const syncItemV4 = async ({
 	} = payload;
 	const { db } = ctx;
 
-	// The worker owns a routed customer's rows: a sync that lands after the flip carries a pre-flip
-	// absolute balance and would overwrite what the worker has since acked. Those last deductions are dropped.
 	if (isBalanceWorkerRolloutEnabled({ ctx, customerId })) {
 		logSyncItem({
 			ctx,
@@ -103,7 +97,6 @@ export const syncItemV4 = async ({
 		return;
 	}
 
-	// Read targeted balance hashes
 	let allSubjectBalances: SubjectBalance[] = [];
 	for (const [featureId, customerEntitlementIds] of Object.entries(
 		modifiedCusEntIdsByFeatureId,
@@ -113,7 +106,6 @@ export const syncItemV4 = async ({
 			customerId,
 			featureId,
 			customerEntitlementIds,
-			// readMaster: true,
 		});
 
 		if (outcome.kind !== "ok") {
@@ -128,9 +120,6 @@ export const syncItemV4 = async ({
 					feature: featureId,
 				},
 			});
-			// A miss (e.g. an invalidation racing the batch) drops the BALANCE
-			// sync wholesale, but usage-window snapshots ride in the payload and
-			// need no cache read -- they must still land.
 			allSubjectBalances = [];
 			break;
 		}
@@ -138,12 +127,10 @@ export const syncItemV4 = async ({
 		allSubjectBalances.push(...outcome.value.balances);
 	}
 
-	// Build sync entries
 	const entries: SyncEntry[] = allSubjectBalances.map((subjectBalance) =>
 		subjectBalanceToSyncEntry({ subjectBalance }),
 	);
 
-	// Build rollover sync entries
 	const rolloverEntries: RolloverSyncEntry[] = [];
 	if (rolloverIds && rolloverIds.length > 0) {
 		const rolloverIdSet = new Set(rolloverIds);
@@ -162,9 +149,6 @@ export const syncItemV4 = async ({
 		}
 	}
 
-	// Customer-scoped usage-window counters arrive pre-built from the deduction
-	// result (same atomic Lua execution that incremented them) -- no Redis
-	// re-read here. Full-replaced per (customer, feature) by the SQL function.
 	const usageWindowEntries: UsageWindowUpdate[] = usageWindowUpdates ?? [];
 
 	if (

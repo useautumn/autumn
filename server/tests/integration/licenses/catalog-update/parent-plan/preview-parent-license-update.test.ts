@@ -1,5 +1,3 @@
-/** Contract: license_changes combines link snapshots with effective child-plan diffs.
- * Baselines use the parent link's persisted customization and previews are read-only. */
 import { expect, test } from "bun:test";
 import {
 	BillingInterval,
@@ -41,8 +39,6 @@ test.concurrent(
 				s.products({ list: [parent, license] }),
 			],
 			actions: [
-				// Link before attach: linking after a customer already exists would
-				// itself trigger a version bump, leaving the customer pinned to v1.
 				s.licenses.link({
 					parentProductId: parent.id,
 					licenseProductId: license.id,

@@ -66,8 +66,6 @@ describe("computeSyncPlan queued products", () => {
 		});
 
 		expect(autumnBillingPlan.deleteCustomerProducts).toEqual([queuedAddOn]);
-		// Otherwise the old schedule gets re-pointed at this sync's new plans,
-		// and replacing that schedule then deletes them.
 		expect(autumnBillingPlan.ownsSchedulePersistence).toBe(true);
 	});
 

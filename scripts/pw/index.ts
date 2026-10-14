@@ -39,8 +39,6 @@ async function cmdRun(): Promise<void> {
 		SERVER_PORT: String(8080 + offset),
 		VITE_PORT: String(3000 + offset),
 		CHECKOUT_PORT: String(3001 + offset),
-		// Empty string overrides dev.ts's `?? "https://google.emulate.localhost"`
-		// fallback so real Google OAuth is used against the prod DB.
 		EMULATE_GOOGLE_URL: "",
 	};
 
@@ -122,8 +120,6 @@ function cmdIdentify(): void {
 	console.log(`PW_VITE_PORT=${vitePort}`);
 }
 
-// Manual cleanup for .pw-stash files left by older buggy pw versions that
-// renamed .env.local. Safe — refuses to overwrite an existing .env.local.
 function cmdRestore(): void {
 	let restored = 0;
 	let conflicts = 0;

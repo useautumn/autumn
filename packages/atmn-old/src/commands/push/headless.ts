@@ -317,16 +317,10 @@ function resolveHeadlessUpdateDecisions({
 	};
 }
 
-/**
- * Load local config file using jiti
- */
 async function loadLocalConfig(cwd: string): Promise<LocalConfig> {
 	return loadConfig({ cwd });
 }
 
-/**
- * Build the list of prompts that would be shown in interactive mode
- */
 export function buildPromptQueueFromPreview(
 	preview: CatalogPreviewUpdateResponse,
 	archivedTargets: ArchivedTargets,
@@ -465,9 +459,6 @@ export function buildPromptQueueFromPreview(
 	return prompts;
 }
 
-/**
- * Format a human-readable description of the issues that require confirmation
- */
 function formatIssuesSummary(prompts: PushPrompt[]): string {
 	const issues: string[] = [];
 
@@ -620,9 +611,6 @@ async function getArchivedTargets(
 	};
 }
 
-/**
- * Execute the push with --yes flag (auto-confirm all prompts with defaults)
- */
 async function executePushWithDefaults(
 	config: LocalConfig,
 	archivedTargets: ArchivedTargets,
@@ -650,7 +638,6 @@ async function executePushWithDefaults(
 		referralProgramsDeleted: [],
 	};
 
-	// Build response map from defaults
 	const responses = new Map<string, string>();
 	for (const prompt of prompts) {
 		if (prompt.type === "prod_confirmation") {
@@ -664,7 +651,6 @@ async function executePushWithDefaults(
 		);
 	}
 
-	// Handle archived features - unarchive if default says so
 	for (const feature of archivedTargets.features) {
 		const promptId = prompts.find(
 			(p) => p.type === "feature_archived" && p.entityId === feature.id,
@@ -676,7 +662,6 @@ async function executePushWithDefaults(
 		}
 	}
 
-	// Handle archived plans - unarchive if default says so
 	for (const plan of archivedTargets.plans) {
 		const promptId = prompts.find(
 			(p) => p.type === "plan_archived" && p.entityId === plan.id,
@@ -703,9 +688,6 @@ async function executePushWithDefaults(
 	return result;
 }
 
-/**
- * Execute a clean push (no edge cases, no prompts needed)
- */
 async function executeCleanPush(
 	config: LocalConfig,
 	preview: CatalogPreviewUpdateResponse,
@@ -718,28 +700,14 @@ async function executeCleanPush(
 	return headlessResultFromPushResult(result);
 }
 
-/**
- * Headless push command - uses V2 logic without interactive prompts
- *
- * If any edge cases require user decisions and --yes is not set,
- * exits with a helpful message instructing the user to either:
- * - Run in an interactive terminal
- * - Use the --yes flag to auto-confirm with defaults
- *
- * Automatically handles 401 errors by running OAuth flow and retrying.
- */
 export async function headlessPush(
 	options: HeadlessPushOptions = {},
 ): Promise<HeadlessPushResult> {
-	// Wrap the entire push operation with auth recovery
 	return withAuthRecovery(async () => {
 		return await _headlessPushImpl(options);
 	});
 }
 
-/**
- * Internal implementation of headless push
- */
 async function _headlessPushImpl(
 	options: HeadlessPushOptions = {},
 ): Promise<HeadlessPushResult> {
@@ -750,7 +718,6 @@ async function _headlessPushImpl(
 
 	const envLabel = environment === AppEnv.Live ? "production" : "sandbox";
 
-	// Load config
 	console.log(chalk.dim(`Loading autumn.config.ts...`));
 	const config = await loadLocalConfig(cwd);
 	console.log(
@@ -759,7 +726,6 @@ async function _headlessPushImpl(
 		),
 	);
 
-	// Validate config for missing required fields
 	console.log(chalk.dim(`Validating config...`));
 	const validation = validateConfig(config.features, config.plans);
 	if (!validation.valid) {
@@ -768,7 +734,6 @@ async function _headlessPushImpl(
 		process.exit(1);
 	}
 
-	// Analyze changes
 	console.log(chalk.dim(`Analyzing changes against ${envLabel}...`));
 	const [{ preview }, archivedTargets] = await Promise.all([
 		previewCatalogPush({ config }),
@@ -822,7 +787,6 @@ async function _headlessPushImpl(
 		process.exit(1);
 	}
 
-	// If there are prompts and --yes is not set, exit with helpful message
 	if (prompts.length > 0 && !yes) {
 		console.log(
 			chalk.yellow("\nPush requires confirmation for the following:"),
@@ -841,16 +805,13 @@ async function _headlessPushImpl(
 		console.log(formatJsonExample());
 		console.log("");
 
-		// Exit with non-zero to indicate action required
 		process.exit(1);
 	}
 
-	// Execute the push
 	console.log(chalk.dim(`\nPushing to ${envLabel}...`));
 
 	let result: HeadlessPushResult;
 	if (prompts.length > 0) {
-		// --yes was set, execute with defaults
 		result = await executePushWithDefaults(
 			config,
 			archivedTargets,
@@ -861,11 +822,9 @@ async function _headlessPushImpl(
 			decisions,
 		);
 	} else {
-		// No edge cases, clean push
 		result = await executeCleanPush(config, preview);
 	}
 
-	// Print summary
 	console.log(chalk.green(`\nPush complete!`));
 
 	if (result.featuresCreated.length > 0) {

@@ -1,10 +1,3 @@
-/**
- * Attach Payment Failure Tests - No Payment Method
- *
- * Tests for attach when customer has no payment method on file.
- * Expected: required_action.code = "payment_method_required"
- */
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3 } from "@autumn/shared";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
@@ -15,10 +8,6 @@ import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// UPGRADE - No Payment Method
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(`${chalk.yellowBright("no-pm 2: upgrade")}`, async () => {
 	const customerId = "attach-fail-upgrade-no-pm";

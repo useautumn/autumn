@@ -50,7 +50,6 @@ const checkMessages = async ({
 		...(entityId ? { entity_id: entityId } : {}),
 	});
 
-// Serial: each test flips the shared org's block_overdue_entitlements and restores it in `finally`.
 test(
 	"overdue access: custom plan exemption can be added and removed",
 	async () => {
@@ -234,7 +233,6 @@ test(
 					entityId: entities[1].id,
 				}),
 			).toMatchObject({ allowed: false });
-			// The parent is past due and not exempt, so its flag is blocked (see unit overdue-entitlements.test.ts).
 			expect(
 				await autumn.check<CheckResponseV3>({
 					customer_id: customerId,

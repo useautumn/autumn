@@ -1,11 +1,3 @@
-/**
- * A plan gains a license after customers are already on it; the auto-drafted
- * update_plan migration carries the link via upsert_licenses. The per-customer
- * lane goes through the billing.update patch path, which must mint the pool.
- *
- * Red (current):  run succeeds, customer still has no pool, licenses.attach 400s.
- * Green (after):  one pool per matched customer with granted = included.
- */
 import { expect, test } from "bun:test";
 import { runChunkedMigration } from "@tests/integration/billing/migrations-v2/utils/runChunkedMigration";
 import {
@@ -45,8 +37,6 @@ test(`${chalk.yellowBright("migration-license: upsert_licenses mints a pool for 
 	const before = await getLicenseDbState({ db: ctx.db, customerId });
 	expect(before.pools).toHaveLength(0);
 
-	// Catalog gains the link after the customer attached; the migration is
-	// what the dashboard auto-drafts for that edit.
 	await autumnV2_2.post("/plans.update", {
 		plan_id: parent.id,
 		licenses: [{ license_plan_id: license.id, included: INCLUDED_SEATS }],

@@ -7,7 +7,6 @@ import { timeout } from "@tests/utils/genUtils.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import { generateId } from "@/utils/genUtils.js";
 
-// Values deliberately differ from 1 so a count can't pass by coincidence with the sum.
 const events = [
 	{ at: Date.UTC(2026, 5, 15, 9), value: 7, region: "us" },
 	{ at: Date.UTC(2026, 5, 15, 10, 30), value: 0.5, region: "eu" },

@@ -1,26 +1,3 @@
-// scripts/capy/provision.ts
-//
-// One-shot provisioning for a Capy v2 VM. Sister to scripts/dw (which
-// uses Docker + portless on a developer laptop) and scripts/tw (which
-// targets the Vercel µVM with snapshot fork).
-//
-// What this does, in order:
-//   1. Verify NEON_API_KEY is set (neon CLI auth — see
-//      https://neon.com/docs/cli/auth — falls back to OAuth browser flow
-//      otherwise, which isn't possible inside a Capy sandbox).
-//   2. Verify the Docker Compose services started by capy-startup.sh.
-//   3. Provision (or resume) a Neon branch named capy-<shortHash(machineId)>
-//      off the shared `dw-template` branch. Reuses scripts/dw/helpers/neon.ts
-//      so the dw and capy stacks branch out of the same template.
-//   4. Apply pending committed migrations and refresh SQL functions.
-//   5. Write server/.env.local, vite/.env.local, apps/checkout/.env.local
-//      with the per-machine DATABASE_URL + localhost service URLs.
-//
-// Run via `bun scripts/capy/provision.ts`. Idempotent: a second run is a
-// no-op for the Neon branch and refreshes env files in place. A run in the
-// same boot with unchanged migrations, SQL functions and env files exits
-// right after the infra checks (see provisionStamp.ts); `--force` redoes it.
-//
 import { createCipheriv, createHash, randomBytes } from "node:crypto";
 import {
 	chmodSync,
@@ -68,10 +45,6 @@ import {
 	parseLogEndOffsets,
 } from "./staleKafkaBookmarks.ts";
 
-// ---------------------------------------------------------------------------
-// Constants
-// ---------------------------------------------------------------------------
-
 const SCRIPT_DIR = new URL(".", import.meta.url).pathname;
 const PROJECT_ROOT = join(SCRIPT_DIR, "..", "..");
 const CAPY_PREFIX = process.env.CAPY_PREFIX ?? join(homedir(), ".autumn-capy");
@@ -89,12 +62,6 @@ const TRIGGER_IMAGE_TAG = `v${
 	).devDependencies["trigger.dev"]
 }`;
 
-// ---------------------------------------------------------------------------
-// Tiny logging / shell helpers (we don't reuse dw's helpers because they tag
-// every log line with `[dw]` and shell to neon by name, which is what we want
-// here too, but the wrapper API is small).
-// ---------------------------------------------------------------------------
-
 function log(msg: string): void {
 	console.log(`[capy] ${msg}`);
 }
@@ -104,10 +71,6 @@ function fatal(msg: string): never {
 	process.exit(1);
 }
 
-// ---------------------------------------------------------------------------
-// Machine identity
-// ---------------------------------------------------------------------------
-
 function shortHash(input: string): string {
 	return createHash("sha1").update(input).digest("hex").slice(0, 7);
 }
@@ -116,12 +79,6 @@ function deriveBranchName(machineId: string): string {
 	return `capy-${shortHash(machineId)}`;
 }
 
-// ---------------------------------------------------------------------------
-// State file — tracks branch id + creation timestamp so we don't recreate
-// or re-migrate on every startup. Lives in $CAPY_PREFIX so it persists for
-// the lifetime of the sandbox filesystem.
-// ---------------------------------------------------------------------------
-
 type State = {
 	machineId: string;
 	branchName?: string;
@@ -129,10 +86,6 @@ type State = {
 	databaseUrl?: string;
 	branchExpiresAt?: string;
 	createdAt: number;
-	// Per-machine secrets — generated once on first run, persisted, then
-	// re-used so a server restart doesn't invalidate every session.
-	// scripts/setup/writeAgentEnv.ts does the same for the legacy bootstrap;
-	// the dw flow inherits these from infisical instead.
 	secrets?: {
 		betterAuthSecret: string;
 		encryptionIv: string;
@@ -159,10 +112,6 @@ const triggerEnvironmentSql = ({
 }) =>
 	`INSERT INTO "RuntimeEnvironment" (id, slug, "apiKey", "pkApiKey", type, shortcode, "organizationId", "projectId", "orgMemberId", "updatedAt") VALUES ('${id}', '${slug}', '${apiKey}', '${pkApiKey}', '${type}', '${shortcode}', 'capy-org', 'capy-project', ${memberId ? `'${memberId}'` : "NULL"}, now()) ON CONFLICT (id) DO NOTHING;`;
 
-// URL-safe base64 random string. Same shape as scripts/setup/writeAgentEnv.ts
-// (`genUrlSafeBase64`) — server/src/utils/initUtils.ts::checkEnvVars exits
-// the process if BETTER_AUTH_SECRET / ENCRYPTION_IV / ENCRYPTION_PASSWORD
-// are missing, so first-run provisioning must mint these.
 function genUrlSafeBase64(bytes: number): string {
 	return randomBytes(bytes)
 		.toString("base64")
@@ -198,11 +147,6 @@ function saveState(state: State): void {
 	writeFileSync(CAPY_STATE, JSON.stringify(state, null, 2), { mode: 0o600 });
 	chmodSync(CAPY_STATE, 0o600);
 }
-
-// ---------------------------------------------------------------------------
-// Service readiness. capy-startup.sh owns Docker Compose; this script waits
-// for published ports before writing env files that point at them.
-// ---------------------------------------------------------------------------
 
 function isDragonflyUp(): Promise<boolean> {
 	return new Promise((resolve) => {
@@ -263,13 +207,6 @@ async function waitForHttpService(
 		`${name} did not become ready within ${timeoutSeconds}s; inspect \`docker compose logs\``,
 	);
 }
-
-// ---------------------------------------------------------------------------
-// Env file writer — localhost equivalent of
-// scripts/dw/helpers/env-files.ts::writeEnvLocalFiles. Capy v2's desktop and
-// browser run inside the VM, and listening services are discovered
-// automatically. preload-env.ts loads these into every bun invocation.
-// ---------------------------------------------------------------------------
 
 function parseEnvFile(contents: string): { raw: string[] } {
 	return { raw: contents.split(/\r?\n/) };
@@ -509,12 +446,6 @@ function ensureTriggerProject(): {
 	return { secretKey: key, accessToken };
 }
 
-// ---------------------------------------------------------------------------
-// Neon branch provisioning. First run: create branch off dw-template, run
-// migrations, load functions. Subsequent runs: read connection string,
-// no DDL. Matches scripts/dw/helpers/setup.ts::setupAgentWorktree behavior.
-// ---------------------------------------------------------------------------
-
 function ensureNeonAuth(): void {
 	if (!process.env.NEON_API_KEY) {
 		fatal(
@@ -537,8 +468,6 @@ function ensureNeonBranch(
 ): { state: State; created: boolean } {
 	const branchName = deriveBranchName(machineId);
 
-	// Branch already provisioned in state file and still exists on Neon →
-	// just refresh the connection string and return.
 	if (state?.branchName === branchName && state.branchId) {
 		const existing = findBranchByName(branchName);
 		if (existing) {
@@ -558,8 +487,6 @@ function ensureNeonBranch(
 		);
 	}
 
-	// State-less, or branch was deleted upstream — check if it exists by name
-	// before creating (handles a stale state file after a sandbox snapshot).
 	const existingByName = findBranchByName(branchName);
 	if (existingByName) {
 		log(`adopting existing Neon branch ${branchName} (${existingByName.id})`);
@@ -577,7 +504,6 @@ function ensureNeonBranch(
 		};
 	}
 
-	// True first run.
 	log(
 		`first run for ${branchName} — provisioning Neon branch off ${NEON_TEMPLATE_BRANCH}`,
 	);
@@ -602,8 +528,6 @@ function ensureNeonBranch(
 	};
 }
 
-// The template branch carries a better-auth `jwks` row encrypted with the
-// machine secret of whoever last booted against it — undecryptable here.
 function clearInheritedJwks(directUrl: string): void {
 	const res = sh("psql", [directUrl, "-v", "ON_ERROR_STOP=1"], {
 		stdin: `DO $$ BEGIN IF to_regclass('public.jwks') IS NOT NULL THEN DELETE FROM public.jwks; END IF; END $$;\n`,
@@ -614,8 +538,6 @@ function clearInheritedJwks(directUrl: string): void {
 	log("cleared inherited jwks rows (better-auth re-mints on first boot)");
 }
 
-// The local broker can come back emptier than the branch's bookmarks (lost data dir,
-// pre-flush crash); the worker rightly refuses those, so capy drops them here.
 function clearStaleKafkaBookmarks(directUrl: string): void {
 	const offsets = sh(
 		"bash",
@@ -669,10 +591,6 @@ function clearStaleKafkaBookmarks(directUrl: string): void {
 	);
 }
 
-// ---------------------------------------------------------------------------
-// Entry point
-// ---------------------------------------------------------------------------
-
 async function main(): Promise<void> {
 	if (process.env.NODE_ENV === "production") {
 		fatal("capy provision is disabled when NODE_ENV=production");
@@ -681,8 +599,6 @@ async function main(): Promise<void> {
 	const machineId = getMachineId({ prefix: CAPY_PREFIX });
 	log(`branch=${deriveBranchName(machineId)}`);
 
-	// 1. Local services were started by capy-startup.sh. Wait for their
-	// published ports before provisioning anything that writes their URLs.
 	await waitForDragonfly();
 	const triggerOptedIn = isOptedIn({ name: "trigger" });
 	await Promise.all([
@@ -692,7 +608,6 @@ async function main(): Promise<void> {
 	// fakecloud has no startup config for seeding queues; create them like bun dw does.
 	await ensureFakecloudQueues({ port: FAKECLOUD_PORT });
 
-	// Startup already provisioned this boot; `bun capy` then only adds the app.
 	const bootId = readBootId();
 	const fingerprint = () =>
 		bootId &&
@@ -727,7 +642,6 @@ async function main(): Promise<void> {
 
 	const trigger = triggerOptedIn ? ensureTriggerProject() : undefined;
 
-	// 2. Neon auth + branch + migrations.
 	ensureNeonAuth();
 	const savedState = loadState();
 	const priorState = stateForMachine({ state: savedState, machineId });
@@ -743,25 +657,16 @@ async function main(): Promise<void> {
 	loadDbFunctions(nextState.branchName, directUrl);
 	clearStaleKafkaBookmarks(directUrl);
 
-	// Per-machine secrets — mint on first run, then persist. Server can't
-	// boot without BETTER_AUTH_SECRET / ENCRYPTION_IV / ENCRYPTION_PASSWORD.
 	const secretsMinted = !priorState?.secrets;
 	nextState.secrets = ensureSecrets(priorState);
 
-	// A fresh branch inherits the template's jwks row; a re-minted secret
-	// (lost state file) orphans an adopted branch's row the same way.
 	if (created || secretsMinted) clearInheritedJwks(directUrl);
 
 	saveState(nextState);
 	if (!nextState.databaseUrl) fatal("provisioning produced no databaseUrl");
 
-	// Leaf's chat-sdk wants a separate `chat` DB on the same branch (env.ts
-	// rewrites /neondb -> /chat). dw calls this on every setup (not just on
-	// branch creation) so a transient Neon hiccup gets retried next time;
-	// match that behavior here. Non-fatal — the helper logs and continues.
 	if (nextState.branchName) ensureChatDatabase(nextState.branchName);
 
-	// 3. Env files. preload-env.ts at every bun entry point auto-loads these.
 	writeEnvFiles(machineId, nextState.databaseUrl, nextState.secrets, trigger);
 
 	runSetupTest(["--ensure"], directUrl);

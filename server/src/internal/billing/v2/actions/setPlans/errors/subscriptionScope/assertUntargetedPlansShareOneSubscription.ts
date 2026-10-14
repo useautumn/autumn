@@ -43,7 +43,6 @@ const replacedCustomerProducts = ({
 		])
 		.filter(notNullish);
 
-/** Without a target subscription, the plans a request touches must already share one. */
 export const assertUntargetedPlansShareOneSubscription = ({
 	billingContext,
 }: {

@@ -47,8 +47,6 @@ type TrackResponse = {
 	} | null;
 };
 
-// Track always records the event; warn when caps/exhaustion deduct less than
-// requested so the unchanged balance reads as expected, not broken.
 const showRecordUsageToast = ({
 	requested,
 	response,
@@ -71,7 +69,6 @@ const showRecordUsageToast = ({
 		.reduce((sum, deduction) => sum.plus(deduction.value), new Decimal(0))
 		.toNumber();
 
-	// Credit-system deductions are in credits, not tracked units, so only a zero deduction is comparable.
 	const deductedInTrackedUnits = response.deductions.every(
 		(deduction) => deduction.feature_id === featureId,
 	);
@@ -91,7 +88,6 @@ const showRecordUsageToast = ({
 			? `no ${feature} balance remaining`
 			: "a usage limit was reached";
 
-	// No reason here: a free (0-credit) feature lands in this branch as well as an exhausted or capped balance.
 	if (deducted <= 0) {
 		toast.warning("Usage tracked without any balance deductions");
 		return;
@@ -125,8 +121,6 @@ export function RecordUsageSheet() {
 	const creditSystem = features.find((f) => f.id === featureId);
 	const isCreditSystem = creditSystem?.type === FeatureType.CreditSystem;
 
-	// Credit systems can deduct from the credit balance directly (default) or
-	// from any metered feature in their schema that still exists.
 	const featureOptions = useMemo<Feature[]>(() => {
 		if (!(isCreditSystem && creditSystem)) return [];
 		const schema =
@@ -246,7 +240,6 @@ export function RecordUsageSheet() {
 			customer_id: customerId,
 			feature_id: trackingFeatureId,
 			value: parsedValue,
-			// The toast reads deductions from the response, so track must apply before responding.
 			async: false,
 		};
 

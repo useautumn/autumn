@@ -6,7 +6,6 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import type { DeductionUpdate } from "@/internal/balances/utils/types/deductionUpdate.js";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService.js";
 
-/** Rolls back deduction updates by restoring original entitlement values (FullSubject version). */
 export const rollbackDeductionV2 = async ({
 	ctx,
 	oldFullSubject,

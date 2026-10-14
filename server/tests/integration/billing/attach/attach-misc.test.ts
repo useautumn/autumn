@@ -1,11 +1,3 @@
-/**
- * Attach Miscellaneous Tests
- *
- * Tests for checkout_session_params passthrough to Stripe checkout sessions.
- * Verifies that user-provided subscription_data.metadata and session-level
- * metadata are correctly merged with Autumn's internal params.
- */
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3, AttachParamsV1Input } from "@autumn/shared";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
@@ -20,19 +12,6 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { CusService } from "@/internal/customers/CusService";
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 1: subscription_data.metadata passthrough via Stripe checkout
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Customer with no payment method (forces Stripe checkout)
- * - Attach with checkout_session_params containing subscription_data.metadata
- *
- * Expected Result:
- * - Stripe subscription created after checkout has the user-provided metadata
- * - Autumn's internal metadata (autumn_metadata_id) is also present on the session
- */
 test.concurrent(`${chalk.yellowBright("checkout_session_params: subscription_data.metadata passthrough")}`, async () => {
 	const customerId = "attach-misc-sub-data-metadata";
 
@@ -45,13 +24,12 @@ test.concurrent(`${chalk.yellowBright("checkout_session_params: subscription_dat
 	const { autumnV1, autumnV2_1, ctx } = await initScenario({
 		customerId,
 		setup: [
-			s.customer({ testClock: true }), // No payment method → Stripe checkout
+			s.customer({ testClock: true }),
 			s.products({ list: [pro] }),
 		],
 		actions: [],
 	});
 
-	// 1. Attach with checkout_session_params including subscription_data.metadata
 	const result = await autumnV2_1.billing.attach<AttachParamsV1Input>({
 		customer_id: customerId,
 		plan_id: pro.id,
@@ -65,15 +43,12 @@ test.concurrent(`${chalk.yellowBright("checkout_session_params: subscription_dat
 		},
 	});
 
-	// Should return a Stripe checkout URL
 	expect(result.payment_url).toBeDefined();
 	expect(result.payment_url).toContain("checkout.stripe.com");
 
-	// 2. Complete checkout
 	await completeStripeCheckoutForm({ url: result.payment_url });
 	await timeout(12000);
 
-	// 3. Verify product is attached
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
 	await expectProductActive({
@@ -95,7 +70,6 @@ test.concurrent(`${chalk.yellowBright("checkout_session_params: subscription_dat
 		latestTotal: 20,
 	});
 
-	// 4. Verify Stripe subscription has user-provided metadata
 	const fullCustomer = await CusService.getFull({
 		ctx,
 		idOrInternalId: customerId,
@@ -116,7 +90,6 @@ test.concurrent(`${chalk.yellowBright("checkout_session_params: subscription_dat
 	);
 	expect(subscription).toBeDefined();
 
-	// Verify user-provided metadata is on the subscription
 	expect(subscription!.metadata.user_id).toBe("test-user-123");
 	expect(subscription!.metadata.custom_field).toBe("custom-value");
 	expect(subscription!.metadata.autumn_managed_at).toBeDefined();

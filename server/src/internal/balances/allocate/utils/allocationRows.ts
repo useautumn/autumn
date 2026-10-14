@@ -11,7 +11,6 @@ const isCustomerLevel = (customerEntitlement: FullCusEntWithFullCusProduct) =>
 	!customerEntitlement.internal_entity_id &&
 	!customerEntitlement.customer_product?.internal_entity_id;
 
-/** Customer-level rows for the feature on the interval: the credits allocations divide. */
 export const sharedRowsOf = ({
 	customerEntitlements,
 	featureId,
@@ -28,7 +27,6 @@ export const sharedRowsOf = ({
 			customerEntitlement.entitlement.interval === interval,
 	);
 
-/** The current cycle's bounds, anchored to the parent row's reset. */
 export const allocationCycleOf = ({
 	sharedRows,
 	interval,

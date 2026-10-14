@@ -9,7 +9,6 @@ import type { ResetCommand } from "../../commands/reset/types/resetCommand.js";
 import type { TrackCommand } from "../../commands/track/types/trackCommand.js";
 import type { UpdateBalanceCommand } from "../../commands/updateBalance/types/updateBalanceCommand.js";
 
-/** A command that appends a mutation to the subject's log. */
 export type MutatingCommand =
 	| TrackCommand
 	| InitializeCommand

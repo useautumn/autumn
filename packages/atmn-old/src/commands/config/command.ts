@@ -9,15 +9,10 @@ function getStore() {
 	return new Conf({ projectName: "atmn", projectSuffix: "" });
 }
 
-/** Read a single key from global config */
 export function getGlobalConfig(): Conf {
 	return getStore();
 }
 
-/**
- * atmn config command — git-config style, always headless.
- * `atmn config --global <key> [value]`
- */
 function printHelp() {
 	const store = getStore();
 	console.log("Usage: atmn config --global <key> [value]");
@@ -45,7 +40,6 @@ export function configCommand(args: string[], flags: { global?: boolean }) {
 		process.exit(1);
 	}
 
-	// Read
 	if (value === undefined) {
 		const val = store.get(key);
 		if (val !== undefined) {
@@ -54,7 +48,6 @@ export function configCommand(args: string[], flags: { global?: boolean }) {
 		return;
 	}
 
-	// Write
 	if (BOOLEAN_KEYS.includes(key as ConfigKey)) {
 		if (value !== "true" && value !== "false") {
 			console.error(`error: '${key}' expects 'true' or 'false', got '${value}'`);

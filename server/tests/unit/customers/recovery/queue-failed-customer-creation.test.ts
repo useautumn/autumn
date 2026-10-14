@@ -1,15 +1,3 @@
-/**
- * TDD contract for durable customer get-or-create failure capture.
- *
- * Contract under test:
- * - Transient failures are sent as the customer creation recovery job, without API credentials.
- * - Payloads preserve org, environment, API version, normalized request, stage, and request ID.
- * - Identical recovery requests share a deterministic deduplication ID.
- * - The message group is the subject, so one customer's replays stay in failure order while
- *   other customers replay in parallel.
- * - A send the queue could not make never replaces the original API failure.
- */
-
 import { beforeEach, describe, expect, mock, test } from "bun:test";
 import { ApiVersion, ApiVersionClass, AppEnv } from "@autumn/shared";
 import type { SendOptions } from "@autumn/sqs";

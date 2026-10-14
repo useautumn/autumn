@@ -11,10 +11,6 @@ import {
 import { createTrackCommand, testIdentity } from "../../fixtures/mutations.js";
 import { scenarios } from "../track-throughput/scenarios.js";
 
-/**
- * One process of the spike: tracks against slot files that other processes write too.
- * locked: read, decide and write inside BEGIN IMMEDIATE. optimistic: decide outside, write only if nobody else did.
- */
 const args = Object.fromEntries(
 	process.argv.slice(2).map((arg) => {
 		const [key, value] = arg.replace(/^--/, "").split("=");
@@ -33,7 +29,6 @@ const startAt = Number(args.startAt);
 const catalog = catalogRowsToCatalog({ rows: scenario.catalogRows });
 const databases = Array.from({ length: slots }, (_, slot) => {
 	const db = new Database(join(dir, `slot-${slot}.sqlite`));
-	// First: another process may be recovering this file's log right now, and only the busy handler waits for it.
 	db.exec("PRAGMA busy_timeout = 10000");
 	db.exec("PRAGMA journal_mode = WAL");
 	db.exec("PRAGMA synchronous = NORMAL");
@@ -51,7 +46,6 @@ const databases = Array.from({ length: slots }, (_, slot) => {
 	};
 });
 
-/** Read the customer, run the engine's track on it, and return the rows to write back. */
 const decide = ({
 	stateJson,
 	customerId,
@@ -134,14 +128,12 @@ const trackOptimistic = ({
 
 const track = mode === "locked" ? trackLocked : trackOptimistic;
 
-// Every process starts at the same instant, so the contention is real from the first track.
 while (Date.now() < startAt) await Bun.sleep(1);
 
 const latencies: number[] = [];
 const deadline = performance.now() + durationMs;
 let tracks = 0;
 const pick = (count: number) => Math.floor(Math.random() * count);
-/** owned: a process only ever touches the slots that are its own, so no two processes share a file. */
 const ownedSlots = Array.from({ length: slots }, (_, slot) => slot).filter(
 	(slot) => slot % Number(args.processes) === workerIndex,
 );

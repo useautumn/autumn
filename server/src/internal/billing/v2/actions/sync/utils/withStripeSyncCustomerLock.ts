@@ -6,7 +6,6 @@ import { timeout } from "@/utils/genUtils";
 
 const LOCK_TIMEOUT_MS = ms.seconds(30);
 
-/** Serializes initial imports with subscription-created webhooks and waits for the winner. */
 export const withStripeSyncCustomerLock = async <T>({
 	ctx,
 	customerId,

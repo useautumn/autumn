@@ -1,6 +1,3 @@
-// Contract: new allocated usage-based API items default arrear; explicit IDs preserve v1.
-// Green: dashboard/V2 config can explicitly migrate existing allocated-v1 to arrear.
-
 import { expect, test } from "bun:test";
 import {
 	AllocatedBillingBehavior,
@@ -257,7 +254,6 @@ test.concurrent(
 			latestInvoiceProductId: pro.id,
 		});
 		expect(customer.invoices?.[0]?.total).toBeGreaterThan(0);
-		// Verification reads DB balances, which track syncs asynchronously.
 		await pollUntil({
 			fetch: () => expectStripeSubscriptionCorrect({ ctx, customerId }),
 			until: () => true,
@@ -266,43 +262,3 @@ test.concurrent(
 		});
 	},
 );
-
-// test.concurrent(
-// 	`${chalk.yellowBright("products.update: explicit arrear config migrates allocated v1")}`,
-// 	async () => {
-// 		const customerId = "update-plan-allocated-v1-to-arrear";
-// 		const pro = products.pro({
-// 			id: "update_plan_allocated_v1_to_arrear",
-// 			items: [items.allocatedUsers({ includedUsage: 1 })],
-// 		});
-
-// 		const { autumnV1Beta, ctx } = await initScenario({
-// 			customerId,
-// 			setup: [
-// 				s.customer({ paymentMethod: "success" }),
-// 				s.products({ list: [pro] }),
-// 			],
-// 			actions: [],
-// 		});
-
-// 		await forceOldAllocatedV1Config({ ctx, planId: pro.id });
-// 		await expectAllocatedV1Price({ ctx, planId: pro.id });
-
-// 		const usersItem = await getUsersProductItem({ ctx, planId: pro.id });
-// 		const arrearUsersItem: ProductItem = {
-// 			...usersItem,
-// 			config: {
-// 				...usersItem.config,
-// 				allocated_billing_behavior: AllocatedBillingBehavior.Arrear,
-// 				on_increase: undefined,
-// 				on_decrease: undefined,
-// 			},
-// 		};
-
-// 		await autumnV1Beta.products.update(pro.id, {
-// 			items: [arrearUsersItem],
-// 		});
-
-// 		await expectAllocatedV2Price({ ctx, planId: pro.id });
-// 	},
-// );

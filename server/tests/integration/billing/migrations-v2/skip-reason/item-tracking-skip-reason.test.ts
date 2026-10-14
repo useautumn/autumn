@@ -1,11 +1,3 @@
-/**
- * withMigrationItemTracking settles the item run's skip_reason for the paths
- * that never reach an operation:
- *   a guard hook skip                  → skipped, ineligible
- *   a transient DB drop during the run → skipped, ineligible
- *   a retry that then succeeds         → succeeded, skip_reason cleared
- */
-
 import { expect, test } from "bun:test";
 import {
 	type FullCustomer,

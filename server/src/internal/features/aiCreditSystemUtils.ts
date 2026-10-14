@@ -52,11 +52,6 @@ const unsupportedPricingError = (modelName: string) =>
 		data: { modelName },
 	});
 
-/**
- * Resolve a `model_id` to a models.dev entry by exact `<provider>/<model>` lookup. The id is
- * split on the first `/` (so openrouter slugs like `openrouter/openai/gpt-4o` keep their inner
- * `/`); the model key must match a models.dev entry exactly. `custom/` models skip resolution.
- */
 const resolveModel = ({
 	modelName,
 	pricingData,
@@ -80,11 +75,6 @@ const resolveModel = ({
 	return { custom: false, providerKey: provider, modelKey, model };
 };
 
-/**
- * Resolve the effective per-token rates for a request, overlaying the active long-context
- * tier (or `context_over_200k`) onto the base rates. Tier-level cache, audio-input, and
- * reasoning rates override the base rates when present, not just input/output.
- */
 const getEffectiveCost = (
 	cost: ModelsDevCost,
 	totalInputTokens: number,
@@ -130,7 +120,6 @@ const getEffectiveCost = (
 	return { effective: cost, tierApplied: false };
 };
 
-/** Effective per-token rates ($/M) used for a charge, after tier overlays and fallbacks. */
 export type ModelCostRates = {
 	input: number;
 	output: number;
@@ -173,7 +162,6 @@ const computeCost = ({
 	const totalInput = tokens.input + cacheRead + cacheWrite;
 	const { effective, tierApplied } = getEffectiveCost(cost, totalInput);
 
-	// Pools without a published rate fall back to the base text rate.
 	const rates: ModelCostRates = {
 		input: effective.input,
 		output: effective.output,
@@ -252,8 +240,6 @@ export const getModelCreditCostBreakdown = async ({
 		modelMarkup: markupEntry,
 	});
 
-	// Custom models carry no models.dev rates; they bill input/output at the user-supplied
-	// costs only (cache/audio/reasoning pools are not priced for custom models).
 	if (resolved.custom) {
 		if (markupEntry?.input_cost == null || markupEntry?.output_cost == null) {
 			throw new RecaseError({

@@ -21,7 +21,6 @@ export const subToDiscounts = async ({
 }): Promise<StripeDiscountWithCoupon[]> => {
 	if (!sub) return [];
 
-	// Detect whether any discount has a deleted coupon.
 	const hasDeletedCoupon = sub.discounts.some((discount) => {
 		if (typeof discount === "string") return false;
 		const coupon = discount.source?.coupon;
@@ -33,8 +32,6 @@ export const subToDiscounts = async ({
 		);
 	});
 
-	// If deleted coupons exist, re-fetch the subscription via the legacy API which
-	// exposes discounts under `discount.coupon` with all original fields intact.
 	const deletedCouponMap = new Map<string, Stripe.Coupon>();
 	const currentCouponMap = new Map<string, Stripe.Coupon>();
 	if (hasDeletedCoupon) {
@@ -82,14 +79,10 @@ export const subToDiscounts = async ({
 			const coupon = discount.source?.coupon;
 			if (!coupon || typeof coupon === "string") return null;
 
-			// Hydrate deleted coupons with full data from the legacy fetch.
-			// Fall back to including the discount as-is if not in the map, so it
-			// is still carried over via { discount: id } in stripeDiscountsToParams.
 			if ("deleted" in coupon && coupon.deleted) {
 				const fullCoupon = deletedCouponMap.get(discount.id);
 				if (!fullCoupon) return discount as StripeDiscountWithCoupon;
 				const currentCoupon = currentCouponMap.get(fullCoupon.id);
-				// Reapply same-ID replacements because old discount IDs retain deleted coupon scope.
 				return {
 					...discount,
 					id: currentCoupon ? undefined : discount.id,

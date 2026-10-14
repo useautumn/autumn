@@ -1,11 +1,3 @@
-/**
- * A standalone (future-start) schedule is linked through customer products, not the subscription.
- * If it still exists when the invoice is paid, the snapshot must replay rather than create another.
- *
- * Red (before):  the live lookup only follows subscription.schedule, so the schedule looks replaced
- * Green (after): the snapshot's own schedule id is looked up too, and the plan replays unchanged
- */
-
 import { expect, test } from "bun:test";
 import {
 	AppEnv,

@@ -1,12 +1,3 @@
-/**
- * invoices.create — license feature_quantities are priced by the license plan,
- * never by the parent plan's customize.items.
- *
- * Red (before):  the parent's customize.items override repriced the license's
- *                feature line, and could mint a price the license plan lacks.
- * Green (after): license feature lines use the license plan's prices only.
- */
-
 import { expect, test } from "bun:test";
 import { BillingInterval, BillingMethod, ErrCode } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features";
@@ -87,7 +78,6 @@ test.concurrent(
 			},
 		});
 
-		// Parent: 10 × $1 (customized). License: 10 × $0.20 (license catalog).
 		await expectCreatedInvoiceCorrect({
 			ctx,
 			response,

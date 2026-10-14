@@ -1,9 +1,3 @@
-/**
- * An Autumn-managed no-card bill trial attached in invoice mode stores
- * collection_method send_invoice, so the product cron invoices it at trial end.
- * Every other trial keeps the default charge_automatically.
- */
-
 import { expect, test } from "bun:test";
 import {
 	type AttachBillingContext,

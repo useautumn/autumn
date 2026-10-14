@@ -13,7 +13,6 @@ type Generations = {
 	currentStartedAt: number;
 };
 
-/** Two customers may reuse the same idempotency key, so the customer is part of the key. */
 const commandKeyOf = ({
 	identity,
 	commandId,
@@ -23,7 +22,6 @@ const commandKeyOf = ({
 }): string =>
 	JSON.stringify([meteringIdentityToPartitionKey({ identity }), commandId]);
 
-/** A whole generation is dropped at once, so forgetting costs nothing per command. */
 const rotateGenerations = ({
 	generations,
 	windowMs,
@@ -38,7 +36,6 @@ const rotateGenerations = ({
 	const previousIsStale = elapsed >= 2 * windowMs;
 	generations.previous = previousIsStale ? new Map() : generations.current;
 	generations.current = new Map();
-	// Aligned to the window, so a late first access does not stretch the next generation.
 	generations.currentStartedAt = now - (elapsed % windowMs);
 };
 

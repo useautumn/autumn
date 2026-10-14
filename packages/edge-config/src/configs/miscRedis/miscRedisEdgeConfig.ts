@@ -1,15 +1,9 @@
 import { z } from "zod/v4";
 import { MISC_REDIS_CONFIG_KEY } from "../../keys.js";
 
-/**
- * Exactly two misc-cache instances:
- *  - main:   env-configured (MISC_CACHE_DRAGONFLY_PRIVATE_URL / _PUBLIC_URL; ECS prefers private)
- *  - backup: encrypted connection strings stored here: the migration target, or a point-anywhere override
- */
 export const MiscRedisInstanceNameSchema = z.enum(["main", "backup"]);
 export type MiscRedisInstanceName = z.infer<typeof MiscRedisInstanceNameSchema>;
 
-/** Legacy values still written by stored S3 payloads and the old admin UI. */
 const LEGACY_INSTANCE_MAP = { primary: "main", fallback: "backup" } as const;
 type LegacyInstanceName = keyof typeof LEGACY_INSTANCE_MAP;
 
@@ -30,7 +24,6 @@ export const otherMiscRedisInstance = (
 	name: MiscRedisInstanceName,
 ): MiscRedisInstanceName => (name === "main" ? "backup" : "main");
 
-/** The ramp always flows toward the instance that is NOT active. */
 export const MiscRedisRampSchema = z.object({
 	percent: z.number().min(0).max(100).default(0),
 	previousPercent: z.number().min(0).max(100).default(0),
@@ -38,7 +31,6 @@ export const MiscRedisRampSchema = z.object({
 });
 export type MiscRedisRamp = z.infer<typeof MiscRedisRampSchema>;
 
-/** Connection strings are AES-256-CBC encrypted (the per-org redis_config scheme). `privateConnectionString` is the VPC endpoint ECS prefers; `url` is a plain host:port for logs. */
 export const MiscRedisBackupSchema = z.object({
 	publicConnectionString: z.string().min(1),
 	privateConnectionString: z.string().min(1).nullable().default(null),

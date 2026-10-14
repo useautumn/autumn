@@ -21,14 +21,12 @@ import {
 	type KeybindHint,
 	type ListViewState,
 } from "../primitives/index.js";
-// Keep CustomerSheet - it's domain-specific
 import { CustomerSheet } from "./components/CustomerSheet.js";
 
 const AUTUMN_DASHBOARD_URL = "https://app.useautumn.com";
 
 const PAGE_SIZE = 50;
 
-// Column definitions for the DataTable
 const columns: Column<ApiCustomer>[] = [
 	{
 		key: "id",
@@ -54,7 +52,6 @@ const columns: Column<ApiCustomer>[] = [
 	},
 ];
 
-// Generate keyboard hints based on current state
 const getHints = (
 	focusTarget: FocusTarget,
 	sheetOpen: boolean,
@@ -86,13 +83,9 @@ const getHints = (
 
 export interface CustomersViewProps {
 	environment?: AppEnv;
-	/** Called when user exits (q or ctrl+c) - use to clear terminal */
 	onExit?: () => void;
 }
 
-/**
- * Main customers view orchestrator
- */
 export function CustomersView({
 	environment = AppEnv.Sandbox,
 	onExit,
@@ -125,7 +118,6 @@ export function CustomersView({
 		},
 	);
 
-	// Lazy load expanded customer data when sheet is open
 	const {
 		data: expandedCustomer,
 		isLoading: isLoadingExpanded,
@@ -145,16 +137,13 @@ export function CustomersView({
 		hasMore,
 	);
 
-	// Handle keyboard input
 	useInput(
 		useCallback(
 			(input, key) => {
-				// Don't handle input when search dialog is open (it handles its own input)
 				if (state.focusTarget === "search") {
 					return;
 				}
 
-				// Quit
 				if (input === "q") {
 					if (onExit) {
 						onExit();
@@ -164,33 +153,27 @@ export function CustomersView({
 					return;
 				}
 
-				// Refresh
 				if (input === "r") {
 					refetch();
 					return;
 				}
 
-				// Open search (/ or s)
 				if (input === "/" || input === "s") {
 					openSearch();
 					return;
 				}
 
-				// Clear search (x when search is active)
 				if (input === "x" && state.searchQuery) {
 					clearSearch();
 					return;
 				}
 
-				// Sheet-specific controls
 				if (state.focusTarget === "sheet" && state.sheetOpen) {
-					// Copy ID
 					if (input === "c" && state.selectedCustomer) {
 						copy(state.selectedCustomer.id);
 						return;
 					}
 
-					// Open in Autumn dashboard
 					if (input === "o" && state.selectedCustomer) {
 						const env = state.selectedCustomer.env === "live" ? "" : "/sandbox";
 						open(
@@ -199,13 +182,11 @@ export function CustomersView({
 						return;
 					}
 
-					// Close sheet
 					if (key.escape) {
 						closeSheet();
 						return;
 					}
 
-					// Toggle focus to table
 					if (key.tab) {
 						toggleFocus();
 						return;
@@ -214,39 +195,32 @@ export function CustomersView({
 					return;
 				}
 
-				// Table-specific controls
 				if (state.focusTarget === "table") {
-					// Navigate up
 					if (key.upArrow || input === "k") {
 						moveUp();
 						return;
 					}
 
-					// Navigate down
 					if (key.downArrow || input === "j") {
 						moveDown(customers.length - 1);
 						return;
 					}
 
-					// Previous page
 					if (key.leftArrow && pagination.canGoPrev) {
 						prevPage();
 						return;
 					}
 
-					// Next page
 					if (key.rightArrow && pagination.canGoNext) {
 						nextPage(pagination.canGoNext);
 						return;
 					}
 
-					// Open sheet
 					if (key.return && customers[state.selectedIndex]) {
 						openSheet(customers[state.selectedIndex]!);
 						return;
 					}
 
-					// Toggle focus to sheet (if open)
 					if (key.tab && state.sheetOpen) {
 						toggleFocus();
 						return;
@@ -274,14 +248,12 @@ export function CustomersView({
 		),
 	);
 
-	// Sync selected customer when customers load
 	useEffect(() => {
 		if (customers.length > 0 && state.selectedIndex < customers.length) {
 			selectCustomer(customers[state.selectedIndex]!, state.selectedIndex);
 		}
 	}, [customers, state.selectedIndex, selectCustomer]);
 
-	// Determine view state for ListViewLayout
 	const getViewState = (): ListViewState => {
 		if (isLoading && !data) return "loading";
 		if (isError && error) return "error";

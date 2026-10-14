@@ -1,7 +1,3 @@
-/** TDD contract: sync_v2 restores a pooled source and expire_previous replaces it. */
-// Cancelling the sole contributor expires the pool, so sync-back mints a FRESH one.
-// expire_previous then swaps the contribution in place, reusing that same pool.
-
 import { expect, test } from "bun:test";
 import {
 	customerEntitlements,
@@ -95,8 +91,6 @@ test(
 			no_billing_changes: true,
 		});
 
-		// Cancelling the only contributor expires the pool: the row survives for
-		// audit, but nothing live is left behind.
 		const afterCancel = await getPooledBalanceDbState({
 			db: ctx.db,
 			customerId,
@@ -149,7 +143,6 @@ test(
 			},
 			sources: { count: 2, balance: 0, adjustment: 0 },
 		});
-		// The expired pool freed its identity slot, so sync-back mints a new one.
 		const syncedPoolId = syncedState.pools[0].id;
 		expect(syncedPoolId).not.toBe(initialPoolId);
 
@@ -201,7 +194,6 @@ test(
 			},
 			sources: { count: 3, balance: 0, adjustment: 0 },
 		});
-		// Swapping the contribution never drops it to zero, so the pool is reused.
 		expect(replacedState.pools[0].id).toBe(syncedPoolId);
 
 		const replacementSourceId =

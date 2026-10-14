@@ -4,9 +4,6 @@ import {
 	normalizeErrorValues,
 } from "../../src/logger/normalizeErrors.js";
 
-/** An Error keeps message, stack and cause on non-enumerable properties, so a
- *  log payload carrying one serialises to `{}` and the line reaches Axiom with
- *  no sign of what failed. */
 describe("normalizeErrorValues", () => {
 	it("rescues an error that JSON would render as an empty object", () => {
 		const error = new Error("boom");

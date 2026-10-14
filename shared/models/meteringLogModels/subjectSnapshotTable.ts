@@ -13,15 +13,12 @@ import { collatePgColumn } from "../../db/utils.js";
 import { customers } from "../cusModels/cusTable.js";
 import { entities } from "../cusModels/entityModels/entityTable.js";
 
-/** A balance worker subject's resident state, kept by its committer so a cold load is one row; keyed by the identity the worker holds. */
 export const subjectSnapshots = pgTable(
 	"subject_snapshots",
 	{
 		org_id: text("org_id").notNull(),
 		env: text("env").notNull(),
-		/** The public or internal id, exactly as the worker's identity carries it. */
 		customer_id: text("customer_id").notNull(),
-		/** Empty for the customer's own subject. */
 		entity_id: text("entity_id").notNull(),
 		internal_customer_id: text("internal_customer_id").notNull(),
 		internal_entity_id: text("internal_entity_id"),
@@ -29,10 +26,8 @@ export const subjectSnapshots = pgTable(
 		partition_count: integer("partition_count").notNull(),
 		state_version: integer("state_version").notNull(),
 		state: jsonb("state").notNull(),
-		/** When the subject's lineage was last read whole from Postgres; ages the row, a flush never refreshes it. */
 		baseline_at: bigint("baseline_at", { mode: "number" }).notNull(),
 		written_at: bigint("written_at", { mode: "number" }).notNull(),
-		/** The last log offset the row's state includes; a write from an older log never replaces the row. */
 		log_offset: bigint("log_offset", { mode: "bigint" }),
 	},
 	(table) => [

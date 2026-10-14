@@ -1,13 +1,11 @@
 import { ErrCode } from "@autumn/shared";
 import type { StripeLikeError } from "./isStripeError.js";
 
-/** Stripe failures the merchant caused; server-specific route rules live in the server's errorMiddleware. */
 export type StripeCallerErrorRule = {
 	name: string;
 	matches: (error: StripeLikeError) => boolean;
 	context?: "new_stripe_key";
 	message?: string;
-	/** Set when the error is the caller's only on some request paths; never matches outside a request. */
 	matchesPath?: (path: string) => boolean;
 	statusCode: number;
 	code: string;
@@ -18,7 +16,6 @@ const messageIncludes =
 	({ message }) =>
 		message.includes(text);
 
-/** Webhooks have no caller, and usage routes reach Stripe only as a billing side effect. */
 const NON_CALLER_STRIPE_PATHS = [
 	/^\/webhooks\//,
 	/^\/v1\/(track|track_tokens|events|usage|check|entitled)$/,

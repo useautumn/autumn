@@ -1,7 +1,6 @@
 import type { Tinybird } from "@chronark/zod-bird";
 import { z } from "../tinybirdZod.js";
 
-/** Response schema for the list_events_cursor pipe */
 export const listEventsCursorPipeResponseSchema = z.object({
 	id: z.string(),
 	org_id: z.string(),
@@ -20,7 +19,6 @@ export type ListEventsCursorPipeRow = z.infer<
 	typeof listEventsCursorPipeResponseSchema
 >;
 
-/** Parameters schema for the list_events_cursor pipe */
 export const listEventsCursorPipeParamsSchema = z.object({
 	org_id: z.string(),
 	env: z.string(),
@@ -48,7 +46,6 @@ export type ListEventsCursorPipeParams = z.infer<
 	typeof listEventsCursorPipeParamsSchema
 >;
 
-/** Creates the list_events_cursor pipe caller */
 export const createListEventsCursorPipe = (tb: Tinybird) =>
 	tb.buildPipe({
 		pipe: "list_events_cursor",

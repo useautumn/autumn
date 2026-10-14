@@ -1,8 +1,3 @@
-/**
- * EXPLAIN the replace candidate select against leftover bench-plan-replace rows.
- *
- *   bun tests/perf/batch-migrations/probes/probeReplaceCandidates.ts
- */
 import { sql } from "drizzle-orm";
 import { getBenchContext } from "../utils/benchContext.js";
 import { BENCH_PLANREP_PREFIXES } from "../utils/seedBenchPlanItems.js";

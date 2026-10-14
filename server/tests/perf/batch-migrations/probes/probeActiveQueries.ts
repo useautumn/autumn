@@ -1,9 +1,3 @@
-/**
- * Prints the longest-running active statements — use it against a bench run in
- * another shell to catch whichever query is hanging.
- *
- *   infisical run --env=dev --recursive -- bun tests/perf/batch-migrations/probes/probeActiveQueries.ts
- */
 import { Client } from "pg";
 
 const MIN_DURATION = "2 seconds";

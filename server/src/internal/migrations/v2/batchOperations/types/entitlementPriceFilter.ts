@@ -6,10 +6,6 @@ import {
 import { priceToBillingMethod } from "@autumn/shared/utils/productUtils/priceUtils/convertPriceUtils.js";
 import { z } from "zod/v4";
 
-/**
- * Compute's lowered residue of a PlanItemFilter — execute reads these fields
- * into SQL with no interval conversion.
- */
 export const EntitlementPriceFilterSchema = z.object({
 	feature_id: z.string().optional(),
 	interval: z.nativeEnum(EntInterval).optional(),
@@ -22,7 +18,6 @@ export type EntitlementPriceFilter = z.infer<
 	typeof EntitlementPriceFilterSchema
 >;
 
-/** Same COALESCE semantics as entitlementPriceFilterSql, for compute guards. */
 export const entitlementPriceFilterMatchesEntitlementPrice = ({
 	filter,
 	entitlementPrice,

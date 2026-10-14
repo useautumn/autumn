@@ -10,17 +10,13 @@ import { FreeTrialFormFieldsSchema } from "@/components/forms/shared/utils/freeT
 export const CustomerStatePlanSchema = z.object({
 	productId: z.string().min(1),
 	prepaidOptions: z.record(z.string(), z.number().nonnegative()),
-	/** Total seats per license plan, included seats counted. */
 	licenseQuantities: z.record(z.string(), z.number().int().nonnegative()),
 	items: z.custom<ProductItem[]>().nullable(),
 	addLicenses: z.custom<CustomizePlanLicense[]>().nullable(),
 	isCustom: z.boolean(),
 	version: z.number().positive().optional(),
-	// Only meaningful on the first phase — later phases inherit its scope.
 	entityId: z.string().nullable().optional(),
 
-	// Sync only — carried over from what Stripe bills.
-	/** Add-on instances to create from this row. */
 	quantity: z.number().int().min(1).optional(),
 });
 
@@ -34,11 +30,9 @@ export const EMPTY_CUSTOMER_STATE_PLAN: CustomerStatePlan = {
 	addLicenses: null,
 	isCustom: false,
 	version: undefined,
-	// null is customer-level: a plan picks its own scope, the sheet has none.
 	entityId: null,
 };
 
-/** Where a plan row sits: in a phase, or among the unscheduled plans. */
 export type PlanLocation =
 	| { location: "phase"; phaseIndex: number; planIndex: number }
 	| { location: "unscheduled"; planIndex: number };
@@ -52,9 +46,7 @@ export const CustomerStatePhaseSchema = z.object({
 	startsAt: z.number().nullable(),
 	persistedStartsAt: z.number().nullable().optional(),
 	plans: z.array(CustomerStatePlanSchema).min(1),
-	/** Later phases reset the billing cycle at their start unless this is set. */
 	keepsCycleAnchor: z.boolean().optional(),
-	/** The first phase's is the request's proration; a later phase's bills its start. */
 	prorationBehavior: BillingBehaviorSchema.nullable().optional(),
 });
 
@@ -183,7 +175,7 @@ export function getPhaseTimingError({
 	const startsAt = phases[phaseIndex]?.startsAt;
 	const previousStartsAt = phases[phaseIndex - 1]?.startsAt ?? nowMs;
 
-	if (startsAt === null) return null; // no date picked yet — no error until submit
+	if (startsAt === null) return null;
 
 	if (startsAt <= previousStartsAt) {
 		return `Must start after phase ${phaseIndex}`;
@@ -202,7 +194,6 @@ export function getPhaseTimingError({
 export const CustomerStateFormSchema = z
 	.object({
 		phases: z.array(CustomerStatePhaseSchema).min(1),
-		/** Billed with the first phase, then left alone by the schedule. */
 		unscheduledPlans: z.array(CustomerStatePlanSchema),
 		resetBillingCycle: z.boolean(),
 		billingCycleAnchorMode: z.enum(["now", "custom"]),
@@ -212,7 +203,6 @@ export const CustomerStateFormSchema = z
 		carryOverUsages: z.boolean(),
 		carryOverUsageFeatureIds: z.array(z.string()),
 		...FreeTrialFormFieldsSchema.shape,
-		/** Set once the user touches the trial row, so plan changes stop re-seeding it. */
 		trialEdited: z.boolean(),
 		...DiscountsFormFieldsSchema.shape,
 	})

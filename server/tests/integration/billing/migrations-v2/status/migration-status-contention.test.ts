@@ -1,13 +1,3 @@
-/**
- * Two Run Alls in one org through the real dispatch path. Trigger serializes
- * them on the org concurrency key, so the second migration reads `waiting`
- * (blocked_by the first) until the first finishes executing, then runs.
- *
- * Both are dispatched back to back; the waiter must read `waiting` at some
- * point while the blocker's trigger run executes. Cloud workers run trigger
- * tasks inline with no queue, so the test is skipped there.
- */
-
 import { test } from "bun:test";
 import { MigrationRunStatus } from "@autumn/shared";
 import { items } from "@tests/utils/fixtures/items.js";

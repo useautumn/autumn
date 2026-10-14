@@ -27,7 +27,6 @@ import { useUpdateSubscriptionFormContext } from "../context/UpdateSubscriptionF
 import { CollectionMethodConfigRow } from "./CollectionMethodConfigRow";
 import { UpdateSubscriptionFreeTrialRow } from "./UpdateSubscriptionFreeTrialRow";
 
-// The form stores the default as null, so any non-null billingBehavior is a change.
 const DEFAULT_PRORATION: BillingBehavior = "prorate_immediately";
 
 export function UpdateSubscriptionAdvancedSection() {

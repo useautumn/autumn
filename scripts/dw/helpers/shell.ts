@@ -28,7 +28,6 @@ export function sh(
 	};
 }
 
-// Like sh() but streams stdio so the caller can watch progress in real time.
 export function shInherit(
 	cmd: string,
 	args: string[],

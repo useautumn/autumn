@@ -8,14 +8,6 @@ import chalk from "chalk";
 const CUSTOMER_COUNT = 100;
 const ATTACH_BATCH_SIZE = 10;
 
-/**
- * QA setup for migration progress at volume.
- *
- *   plan qa-bulk        100 messages
- *   qa-bulk-000..099    plain on the bulk plan
- *   qa-bulk (draft)     add dashboard to the bulk plan; never run, so Run All
- *                       shows the progress footer over 100 customers
- */
 test(`${chalk.yellowBright("migration-setup: state management bulk QA")}`, async () => {
 	const bulk = products.base({
 		id: "bulk",

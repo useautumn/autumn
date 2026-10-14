@@ -35,11 +35,6 @@ export const premium = constructProduct({
 			featureId: TestFeature.Words,
 			intervalCount: 2,
 		}),
-		// constructArrearItem({ featureId: TestFeature.Words }),
-		// constructArrearProratedItem({
-		//   featureId: TestFeature.Users,
-		//   pricePerUnit: 30,
-		// }),
 	],
 	intervalCount: 2,
 	type: "premium",

@@ -30,7 +30,6 @@ export function buildMoveToAction({
 	};
 }
 
-/** Row-level actions behind a "…" button, sitting next to the scope picker. */
 export function PlanRowActionsMenu({
 	actions,
 	variant = "muted",

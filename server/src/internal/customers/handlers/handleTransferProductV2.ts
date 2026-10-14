@@ -23,11 +23,6 @@ const TransferProductSchema = z.object({
 	customer_product_id: z.string().nullish(),
 });
 
-// Moves exactly one customer product; the target scope is never checked for conflicts.
-// Supports:
-// - Transfer from entity to entity
-// - Transfer from entity to org
-// - Transfer from org to entity
 export const handleTransferProductV2 = createRoute({
 	scopes: [Scopes.Billing.Write],
 	body: TransferProductSchema,
@@ -115,7 +110,6 @@ export const handleTransferProductV2 = createRoute({
 			});
 		}
 
-		// 1. If cus product has quantity > 1, only transfer 1...
 		if (cusProduct.quantity > 1) {
 			await handleDecreaseAndTransfer({
 				ctx,

@@ -4,24 +4,9 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-/**
- * Customer with many plans across all types, for testing the paginated
- * customer-products table at scale (multiple pages, type ordering + filter,
- * page-size changes).
- *
- *   1 subscription
- *   10 one-off products  → "One-off"
- *   10 recurring add-ons → "Add-on"
- *   10 one-off add-ons   → "Add-on"
- *   = 31 plans on customer "many-plans".
- *
- * A customer can only hold one main subscription, so add-ons (which stack)
- * make up the bulk. One-off products give the "One-off" type its own rows.
- */
 const ONE_OFF_COUNT = 10;
 const RECURRING_ADDON_COUNT = 10;
 const ONE_OFF_ADDON_COUNT = 10;
-// 31 sequential attaches overrun bun's 300s default; skip the extra 8s settle each.
 const ATTACH_SETTLE_MS = 0;
 
 test(

@@ -64,7 +64,6 @@ export const constructPrice = ({
 };
 
 export const getBillingType = (config: FixedPriceConfig | UsagePriceConfig) => {
-	// 1. Fixed cycle / one off
 	if (
 		config.type === PriceType.Fixed &&
 		config.interval === BillingInterval.OneOff
@@ -73,8 +72,6 @@ export const getBillingType = (config: FixedPriceConfig | UsagePriceConfig) => {
 	} else if (config.type === PriceType.Fixed) {
 		return BillingType.FixedCycle;
 	}
-
-	// 2. Prepaid
 
 	const usageConfig = config as UsagePriceConfig;
 	if (
@@ -114,23 +111,11 @@ export const getBillingInterval = (prices: Price[]) => {
 					intervalCount: b.config!.interval_count || 1,
 				},
 			});
-			// return (
-			//   BillingIntervalOrder.indexOf(b.config!.interval!) -
-			//   BillingIntervalOrder.indexOf(a.config!.interval!)
-			// );
 		});
 	} catch (error) {
 		console.log("Error sorting prices:", error);
 		throw error;
 	}
-
-	// console.log(
-	//   "pricesCopy",
-	//   pricesCopy.map((p) => ({
-	//     interval: p.config!.interval,
-	//     intervalCount: p.config!.interval_count,
-	//   }))
-	// );
 
 	if (pricesCopy.length === 0) {
 		throw new RecaseError({
@@ -144,7 +129,6 @@ export const getBillingInterval = (prices: Price[]) => {
 		interval: pricesCopy[0].config!.interval as BillingInterval,
 		intervalCount: pricesCopy[0].config!.interval_count || 1,
 	};
-	// return pricesCopy[pricesCopy.length - 1].config!.interval as BillingInterval;
 };
 
 export const pricesOnlyOneOff = (prices: Price[]) => {
@@ -161,7 +145,6 @@ export const pricesOnlyOneOff = (prices: Price[]) => {
 };
 
 export const pricesContainRecurring = (prices: Price[]) => {
-	// TODO: Look into this...
 	return prices.some((price) => {
 		const interval = price.config?.interval;
 
@@ -173,7 +156,6 @@ export const pricesContainRecurring = (prices: Price[]) => {
 	});
 };
 
-// Get price options
 export const getEntOptions = (
 	optionsList: FeatureOptions[] | null | undefined,
 	entitlement: Entitlement | EntitlementWithFeature,
@@ -249,7 +231,6 @@ export const getProductForPrice = (price: Price, products: FullProduct[]) => {
 	);
 };
 
-// Price to price / tiers
 const priceToAmountOrTiers = (price: Price) => {
 	if (price.config!.type === PriceType.Fixed) {
 		const config = price.config as FixedPriceConfig;

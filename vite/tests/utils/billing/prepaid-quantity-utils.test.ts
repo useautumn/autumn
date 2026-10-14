@@ -145,7 +145,6 @@ describe("convertPrepaidOptionsToFeatureOptions", () => {
 			product,
 		});
 
-		// Must NOT be 5,000,000 (5000 * 1000)
 		expect(result).toEqual([{ feature_id: "feat_credits", quantity: 5000 }]);
 	});
 
@@ -165,7 +164,6 @@ describe("convertPrepaidOptionsToFeatureOptions", () => {
 			product,
 		});
 
-		// Must NOT be 5 (5000 / 1000)
 		expect(result).toEqual([{ feature_id: "feat_credits", quantity: 5000 }]);
 	});
 

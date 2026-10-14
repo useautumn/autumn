@@ -1,13 +1,3 @@
-/**
- * catalogV2.preview_update — license-slot conflicts on a following variant.
- *
- * Team-EU.licenses[seat].customize is a Seat patch. Conflicts compare
- * Team's Seat effective current→next to Team-EU's Seat effective — not
- * Team plan items vs Team-EU plan items.
- *
- * Follow and pin list it with license_plan_id; explicit swallows it.
- */
-
 import { test } from "bun:test";
 import { BillingInterval } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";

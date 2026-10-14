@@ -3,17 +3,11 @@ import TextInput from "ink-text-input";
 import { useState } from "react";
 
 export interface SearchInputProps {
-	/** Current search value */
 	initialValue: string;
-	/** Called when search is submitted */
 	onSubmit: (query: string) => void;
-	/** Called when search is cancelled */
 	onCancel: () => void;
 }
 
-/**
- * Inline search input that appears below the title bar
- */
 export function SearchInput({
 	initialValue,
 	onSubmit,

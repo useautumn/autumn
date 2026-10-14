@@ -31,7 +31,6 @@ describe("buildFixedPriceCurrencies", () => {
 describe("buildUsagePriceCurrencies (tiered)", () => {
 	test("transposes per-tier amounts, copying boundaries from the base tiers", () => {
 		const result = buildUsagePriceCurrencies({
-			// base = subtracted internal tiers (boundaries source of truth)
 			baseTiers: [{ to: 500 }, { to: "inf" }],
 			itemTiers: [
 				{ additional_currencies: [{ currency: "eur", amount: 0.4 }] },

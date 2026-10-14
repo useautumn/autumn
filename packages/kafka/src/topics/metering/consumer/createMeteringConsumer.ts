@@ -103,7 +103,6 @@ export function createMeteringConsumer({
 		return ctx.handler.readResumeOffset(position);
 	}
 
-	/** The record path, bound once to its handler so nothing is looked up or wrapped per record. */
 	function bindApplyRecord(handler: MeteringRecordHandler) {
 		return applyRecord;
 		function applyRecord(
@@ -118,7 +117,6 @@ export function createMeteringConsumer({
 					partition,
 					offset: parseKafkaOffset({ offset: message.offset }),
 				};
-				// A record this process wrote is already projected and queued for the store; decoding it again is the cost being avoided.
 				if (handler.shouldApply && !handler.shouldApply(position))
 					return undefined;
 				const owner = readOwnerHeaders({ headers: message.headers });
@@ -168,7 +166,6 @@ export function createMeteringConsumer({
 		}
 	}
 
-	/** Decodes a slice for a slice handler: fence markers pass unread, a declined or undecodable record is dropped. */
 	function bindApplyRecords(handler: MeteringRecordsHandler) {
 		const parseRecord = handler.parseRecord ?? parseMeteringRecord;
 		return applyRecords;
@@ -234,7 +231,6 @@ export function createMeteringConsumer({
 		await secondaryHandlerOf(position)?.settleBatch?.(position);
 	}
 
-	// The handler kind is decided once here, never per record.
 	const handler: TopicConsumerHandler = isRecordsHandler(ctx.handler)
 		? { readResumeOffset, applyRecords: bindApplyRecords(ctx.handler) }
 		: {

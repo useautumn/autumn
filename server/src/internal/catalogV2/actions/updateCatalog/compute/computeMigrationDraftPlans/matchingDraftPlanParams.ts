@@ -49,16 +49,12 @@ const upsertMatchesDraftEntry = ({
 			planParams.version_slug
 		);
 	}
-	// One request can carry many direct rows of a plan, so "any direct row" would
-	// let one entry's draft claim its siblings. An unpinned entry named the
-	// active row, and only that row.
 	return (
 		upsertProductPlan.row.source === "direct" &&
 		upsertProductPlan.row.nextFullProduct.active === true
 	);
 };
 
-/** The params entry whose `migration.draft` claims this upsert row. */
 export const matchingDraftPlanParams = ({
 	upsertProductPlan,
 	params,
@@ -72,11 +68,6 @@ export const matchingDraftPlanParams = ({
 			upsertMatchesDraftEntry({ upsertProductPlan, planParams }),
 	);
 
-/**
- * A request-level draft claims every row, leaving `rowCanReceiveMigrationDraft`
- * and the diff to decide which actually get one — a caller pushing a whole
- * catalog cannot know which plans hold customers.
- */
 export const upsertClaimsMigrationDraft = ({
 	upsertProductPlan,
 	params,

@@ -8,7 +8,6 @@ const jobEnvelopeSchema = z.object({
 	data: z.unknown(),
 });
 
-/** The message exactly as the server has always sent it. */
 export const serializeJobEnvelope = ({
 	id,
 	name,
@@ -24,7 +23,6 @@ export const serializeJobEnvelope = ({
 		data: payload,
 	} satisfies JobEnvelope);
 
-/** A message body back into the job it names, validated against that job's schema. */
 export const parseJobEnvelope = <const TJobs extends readonly JobDefinition[]>({
 	body,
 	jobs,

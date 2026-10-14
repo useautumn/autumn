@@ -4,13 +4,8 @@ import type {
 	SavedSegment,
 } from "./timelineSegment";
 
-/**
- * declared: the request lists it. retained: the request leaves it out and the
- * policy keeps it. untouched: a one-off purchase nothing may end.
- */
 export type ResolvedSegmentOrigin = "declared" | "retained" | "untouched";
 
-/** One interval of the timeline the request results in. */
 export type ResolvedSegment = InstanceIdentity & {
 	id: string;
 	configHash: string;
@@ -19,9 +14,7 @@ export type ResolvedSegment = InstanceIdentity & {
 	endsAt: number | null;
 	origin: ResolvedSegmentOrigin;
 	desired?: DesiredSegment;
-	/** The saved segment whose rows carry this one; absent when a row is inserted. */
 	carriedBy?: SavedSegment;
-	/** The inserted row takes over the cancellation of the canceling row it replaces. */
 	inheritsCancellation?: boolean;
 };
 

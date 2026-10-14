@@ -4,7 +4,6 @@ import type { Replication } from "../replication/types/replication.js";
 import type { ReplicationHandler } from "../replication/types/replicationHandler.js";
 import type { Slots } from "../slots/types/slots.js";
 
-/** A push is applied again wherever it lands: a store keeps the newest read per subject, so a repeat changes nothing. */
 export const SUBJECT_PUSH: ReplicationHandler = {
 	kind: "subjects.set",
 	path: "/v1/subjects.set",
@@ -17,7 +16,6 @@ export const CATALOG_PUSH: ReplicationHandler = {
 	kind: "catalog.set",
 	path: "/v1/catalog.set",
 };
-/** A customer's view and each of its entities' are distinct subjects: a newer copy of one must not replace another still waiting. */
 const subjectKeyOf = ({
 	customerId,
 	body,
@@ -31,16 +29,10 @@ const subjectKeyOf = ({
 	return `${customerId}\u0000${parsed.state?.identity?.entityId ?? ""}`;
 };
 
-/** The one catalog per folder: a newer copy replaces an older one still on its way. */
 const CATALOG_KEY = "catalog";
 
-/** How a push reaches the other replicas: not again when it was relayed here. */
 export type PushReplication = { replication: Replication; relayed?: boolean };
 
-/**
- * A subject as Autumn pushes it, over HTTP or the queue: routed by the customer id sent beside it and handed on as text,
- * so only its owner thread parses it. False when an older read was ignored; a stored one goes on to the other replicas.
- */
 export const applySubjectPush = async ({
 	slots,
 	customerId,
@@ -66,7 +58,6 @@ export const applySubjectPush = async ({
 	return stored;
 };
 
-/** A deletion as Autumn pushes it, applied and relayed as a subject push is; false when a newer read is already held. */
 export const applyDeletePush = async ({
 	slots,
 	customerId,
@@ -96,7 +87,6 @@ export const applyDeletePush = async ({
 	return stored;
 };
 
-/** The shared catalog as Autumn pushes it; false when an older read was ignored. */
 export const applyCatalogPush = async ({
 	slots,
 	body,

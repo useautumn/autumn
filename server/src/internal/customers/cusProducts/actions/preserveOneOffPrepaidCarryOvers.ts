@@ -4,15 +4,6 @@ import { cusProductToOneOffPrepaidCarryOvers } from "@/internal/billing/v2/utils
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService";
 import { EntitlementService } from "@/internal/products/entitlements/EntitlementService";
 
-/**
- * Persists any remaining one-off prepaid balances on the outgoing customer
- * product as lifetime cusEnts before the product is expired.
- *
- * Billing-action flows handle this at compute time via the same helper; this
- * action is the webhook-driven equivalent (e.g. Stripe schedule phase advance)
- * where there is no AutumnBillingPlan to attach the rows to. The caller is
- * responsible for surfacing the returned counts in its own structured logs.
- */
 export const preserveOneOffPrepaidCarryOvers = async ({
 	ctx,
 	customerProduct,

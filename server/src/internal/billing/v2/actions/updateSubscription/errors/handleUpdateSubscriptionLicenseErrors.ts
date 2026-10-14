@@ -16,8 +16,6 @@ const throwInvalidRequest = (message: string): never => {
 	});
 };
 
-/** Pool-in-place quantity moves: every entry must target an existing pool
- * and may not shrink it below its live assignments. */
 const handleLicenseQuantityErrors = ({
 	billingContext,
 	params,
@@ -46,8 +44,6 @@ const handleLicenseQuantityErrors = ({
 	}
 };
 
-/** Plan restructures replace the customer product; until license transitions
- * execute on updates, pools may only ride when nothing would strand. */
 const handleUpdatePlanLicenseErrors = ({
 	billingContext,
 	params,
@@ -77,9 +73,6 @@ const handleUpdatePlanLicenseErrors = ({
 		);
 	}
 
-	// Expire+insert transitions carry pools across rows, but only for
-	// licenses the incoming plan still offers — a dropped license with
-	// assigned seats would strand them.
 	if (!patchContext) {
 		for (const pool of pools) {
 			const licensePlanId = pool.planLicense?.product.id;

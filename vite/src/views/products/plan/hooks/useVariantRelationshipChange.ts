@@ -6,11 +6,6 @@ import {
 } from "../catalog/variantRelationshipChange";
 import { useVariantLinkVisibility } from "./useVariantLinkVisibility";
 
-/**
- * The base-plan picker's pending change, resolved against every version of
- * this plan. Versions load only once the picker moves; until they land,
- * `resolve()` throws so a save cannot relink half the family.
- */
 export const useVariantRelationshipChange = (product: ProductV2) => {
 	const { basePlanId: persistedBasePlanId, selectedBasePlan } =
 		useVariantLinkVisibility(product);

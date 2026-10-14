@@ -15,7 +15,6 @@ import { autumnBillingPlanToFinalFullCustomer } from "@/internal/billing/v2/util
 import { mergePooledBalancePlans } from "@/internal/billing/v2/utils/billingPlan/mergePooledBalancePlans.js";
 import { emptyPooledBalancePlan } from "@/internal/billing/v2/utils/billingPlan/pooledBalancePlan.js";
 
-/** Reconciles final quantities and reset dates onto existing pools, preserving their identities. */
 export const computeUpdateQuantityPooledAnchorResetPlan = ({
 	ctx,
 	plan,

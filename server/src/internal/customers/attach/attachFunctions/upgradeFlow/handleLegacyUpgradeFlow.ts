@@ -116,19 +116,12 @@ export const handleLegacyUpgradeFlow = async ({
 
 	if (!curSub) {
 		logger.info("UPGRADE FLOW: no sub (from cancel maybe...?)");
-		// Do something about current sub...
 	} else if (shouldCancelSub({ sub: curSub, newSubItems: subItems })) {
 		logger.info(
 			`UPGRADE FLOW: canceling sub ${curSub.id}, proration: ${config.proration}`,
 		);
 		canceled = true;
 		const { stripeCli } = attachParams;
-
-		// // Set lock to prevent webhook handler from processing this cancellation
-		// await setStripeSubscriptionLock({
-		// 	stripeSubscriptionId: curSub.id,
-		// 	lockedAtMs: Date.now(),
-		// });
 
 		await stripeCli.subscriptions.cancel(
 			curSub.id,
@@ -186,14 +179,12 @@ export const handleLegacyUpgradeFlow = async ({
 			let removeCusProducts: FullCusProduct[] | undefined;
 			let addNewProducts = true;
 			if (fromMigration) {
-				// 1. If customer product is canceling, already removed from schedule.
 				if (isCustomerProductCanceling(curCusProduct)) {
 					removeCusProducts = [];
 				} else {
 					removeCusProducts = [curCusProduct!];
 				}
 
-				// For adding the new product to the schedule, we need to add it ONLY if the customer product is not canceling.
 				if (isCustomerProductCanceling(curCusProduct)) {
 					addNewProducts = false;
 				}

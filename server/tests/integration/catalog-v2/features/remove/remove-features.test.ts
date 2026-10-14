@@ -1,18 +1,3 @@
-/**
- * catalogV2.update / preview_update — remove_features verdicts.
- *
- * Contract: a removed feature is HARD DELETED when nothing references it
- * after the batch, and ARCHIVED when any reference survives — customer
- * entitlement history (expired customer products included), entitlements on
- * any product (archived products included), usage prices, or a persisted
- * credit system schema. Verdicts are projected against the batch: removing a
- * credit system and its metered feature in one call hard-deletes both, a
- * same-call CS insert/update that KEEPS referencing a removed feature archives
- * it (never a 400 — atmn/V1 parity), and one that DROPS the reference frees it
- * for hard delete. Preview reports action "delete" with the will_archive
- * verdict and writes nothing.
- */
-
 import { test } from "bun:test";
 import { type AttachParamsV1Input, FeatureType } from "@autumn/shared";
 import { items } from "@tests/utils/fixtures/items.js";
@@ -80,7 +65,6 @@ test.concurrent(
 					},
 				],
 			});
-			// Preview wrote nothing
 			await expectDbFeaturesCorrect({
 				ctx,
 				expected: [{ id: plainId, type: FeatureType.Metered }],
@@ -168,8 +152,6 @@ test.concurrent(
 			await initProductsV0({ ctx, products: [activeProduct, archivedProduct] });
 			await autumnV2_3.products.update(archivedProduct.id, { archived: true });
 
-			// Referenced four different ways: product entitlement (active and
-			// archived product), usage price, credit-system schema, entity scoping.
 			const removeFeatureIds = [
 				onProductId,
 				onArchivedProductId,
@@ -237,7 +219,6 @@ test.concurrent(
 				plan_id: attachedProduct.id,
 			});
 
-			// Expire the customer product — history still archives
 			await autumnV2_3.cancel({
 				customer_id: customerId,
 				product_id: attachedProduct.id,
@@ -294,7 +275,6 @@ test.concurrent(
 				],
 			});
 
-			// Alone, the metered feature would only archive (schema references it)
 			expectCatalogPreviewCorrect({
 				preview: await autumnV2_3.catalogV2.previewUpdate({
 					remove_features: [{ feature_id: meteredId }],
@@ -304,7 +284,6 @@ test.concurrent(
 				],
 			});
 
-			// Together, the reference leaves with the batch — both hard delete
 			expectCatalogPreviewCorrect({
 				preview: await autumnV2_3.catalogV2.previewUpdate({
 					remove_features: [
@@ -373,10 +352,6 @@ test.concurrent(
 				],
 			});
 
-			// One call: a NEW credit system references one removed feature, an
-			// EXISTING credit system keeps one removed member and drops another.
-			// Upserts land before removals, so kept references archive and the
-			// dropped reference frees its feature for hard delete.
 			const sameCallParams = {
 				features: [
 					{

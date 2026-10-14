@@ -16,7 +16,6 @@ const DEFAULT_EXPIRY: EntitlementExpiry = {
 	length: 1,
 };
 
-/** Visibility is controlled by parent AdvancedSettings */
 export function ExpiryConfig() {
 	const { item, setItem } = useProductItemContext();
 

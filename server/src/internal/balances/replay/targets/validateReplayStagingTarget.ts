@@ -107,13 +107,6 @@ const assertPinnedField = ({
 	}
 };
 
-/**
- * Proves that a replay target matches the pinned staging deployment and the
- * separately supplied trusted operator policy. Matching the policy is not proof
- * that the policy itself addresses staging infrastructure, and this guard is
- * not authorization to run a replay: the operator must still verify the policy
- * against the staging inventory before execution.
- */
 export const validateReplayStagingTarget = ({
 	target,
 	policy,

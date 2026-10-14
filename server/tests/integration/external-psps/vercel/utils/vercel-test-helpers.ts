@@ -1,23 +1,3 @@
-/**
- * Shared setup helpers for the Vercel integration test suite.
- *
- * Companion to `vercel-webhook-client.ts`. These functions:
- * - Configure the test org with Vercel processor credentials.
- * - Seed an Autumn customer with `processors.vercel` set (no CPM — the new
- *   flow doesn't require one).
- * - Seed a `vercel_resources` row.
- * - Read recorded Vercel SDK calls back from the dev server's test mock
- *   (`/__test/vercel/api`) via the inspector endpoints.
- * - Build the test OIDC bearer token (`test_oidc:<installationId>`) that
- *   `verifyToken` synthesizes claims for outside production.
- * - Hand-craft legacy `charge_automatically` Vercel Stripe subscriptions for
- *   lazy-migration coverage.
- */
-
-// Worktree dev servers use https://wt<N>-api.localhost with self-signed
-// certs (see `bun dw identify`). The test process opts out of TLS validation
-// for any https request it makes — scoped to the integration-test runtime,
-// not the running server.
 if (process.env.NODE_TLS_REJECT_UNAUTHORIZED === undefined) {
 	process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
 }
@@ -38,31 +18,12 @@ import { CusService } from "@/internal/customers/CusService.js";
 import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 
-// ──────────────────────────────────────────────────────────────────────────
-// Org config
-// ──────────────────────────────────────────────────────────────────────────
-
 export interface VercelTestOrgConfig {
 	clientId?: string;
 	clientSecret?: string;
 	customPaymentMethodTypeId?: string;
 }
 
-/**
- * Idempotently writes the SANDBOX slot of the Vercel processor config used by
- * the test suite. No-op when the config already matches the requested values.
- *
- * IMPORTANT: this writes only to the `sandbox_*` slots and to fields that are
- * env-agnostic (`marketplace_mode`). It MUST NOT touch `client_integration_id`
- * / `client_secret` / `webhook_url` — those are the LIVE-env values and may
- * be the org's real production Vercel credentials. Overwriting them breaks
- * the live OIDC audience check (a previous bug here ate the live values and
- * caused 401s on live-env webhook DELETEs).
- *
- * NOTE: `sandbox_client_secret` is the HMAC secret used to sign sandbox
- * marketplace webhooks — `VercelWebhookClient` must be constructed with the
- * same value.
- */
 export const setupVercelOrg = async (
 	ctx: TestContext,
 	{
@@ -91,12 +52,9 @@ export const setupVercelOrg = async (
 				...ctx.org.processor_configs,
 				vercel: {
 					...(existing ?? {}),
-					// LIVE slots intentionally NOT touched — preserve whatever
-					// real credentials the org has for production Vercel.
 					client_integration_id: existing?.client_integration_id ?? clientId,
 					client_secret: existing?.client_secret ?? clientSecret,
 					webhook_url: existing?.webhook_url ?? "https://test.example/webhook",
-					// SANDBOX slots are owned by the test suite.
 					sandbox_client_id: clientId,
 					sandbox_client_secret: clientSecret,
 					sandbox_webhook_url:
@@ -116,7 +74,6 @@ export const setupVercelOrg = async (
 		},
 	});
 
-	// Refresh ctx.org so downstream reads see the updated config in this run.
 	const refreshed = await OrgService.getBySlug({
 		db: ctx.db,
 		slug: ctx.org.slug!,
@@ -124,17 +81,12 @@ export const setupVercelOrg = async (
 	if (refreshed) ctx.org = refreshed;
 };
 
-// ──────────────────────────────────────────────────────────────────────────
-// Customer seeding
-// ──────────────────────────────────────────────────────────────────────────
-
 export interface SeedVercelCustomerOptions {
 	ctx: TestContext;
 	customerId: string;
 	installationId: string;
 	accessToken?: string;
 	accountId?: string;
-	/** Set to a CPM `pm_*` id to simulate a legacy onboarder. Default: omitted. */
 	customPaymentMethodId?: string;
 }
 
@@ -144,15 +96,6 @@ export interface SeedVercelCustomerResult {
 	internalCustomerId: string;
 }
 
-/**
- * Creates an Autumn customer pre-wired with `processors.vercel` and a backing
- * Stripe customer. Mirrors what `handleUpsertInstallation` does but skips the
- * (legacy) CPM creation by default — that's the whole point of the refactor.
- *
- * If `customPaymentMethodId` is provided, sets it on the customer's
- * `processors.vercel.custom_payment_method_id` so we can prove the new code
- * paths still behave correctly for legacy customers.
- */
 export const seedVercelCustomer = async ({
 	ctx,
 	customerId,
@@ -161,7 +104,6 @@ export const seedVercelCustomer = async ({
 	accountId = `acc_test_${installationId}`,
 	customPaymentMethodId,
 }: SeedVercelCustomerOptions): Promise<SeedVercelCustomerResult> => {
-	// Best-effort delete so the test is re-runnable.
 	try {
 		const existing = await CusService.getByVercelId({
 			ctx,
@@ -175,9 +117,7 @@ export const seedVercelCustomer = async ({
 				env: ctx.env,
 			});
 		}
-	} catch {
-		// ignore
-	}
+	} catch {}
 
 	const processorsValue: ExternalProcessors = {
 		vercel: {
@@ -217,8 +157,6 @@ export const seedVercelCustomer = async ({
 		},
 	});
 
-	// Tag the Stripe customer with the installation id so any code path that
-	// reads it via stripe metadata behaves like prod.
 	await ctx.stripeCli.customers.update(stripeCustomer.id, {
 		metadata: { vercel_installation_id: installationId },
 	});
@@ -240,10 +178,6 @@ export const seedVercelCustomer = async ({
 	};
 };
 
-// ──────────────────────────────────────────────────────────────────────────
-// Resource seeding
-// ──────────────────────────────────────────────────────────────────────────
-
 export interface SeedVercelResourceOptions {
 	ctx: TestContext;
 	resourceId: string;
@@ -261,7 +195,6 @@ export const seedVercelResource = async ({
 	status = "ready",
 	metadata = {},
 }: SeedVercelResourceOptions) => {
-	// Wipe any prior rows for this id (idempotent test reruns).
 	await ctx.db
 		.delete(vercelResources)
 		.where(
@@ -279,8 +212,6 @@ export const seedVercelResource = async ({
 	});
 };
 
-// Local helper to avoid pulling drizzle's full query builder into this file;
-// we delete by id+org+env which is unique enough for tests.
 const require_eq = (
 	idCol: typeof vercelResources.id,
 	id: string,
@@ -296,11 +227,6 @@ const require_eq = (
 	);
 };
 
-// ──────────────────────────────────────────────────────────────────────────
-// OIDC test token
-// ──────────────────────────────────────────────────────────────────────────
-
-/** Builds the test-only bearer token accepted with the explicit allow header. */
 export const buildTestOidcToken = (installationId: string): string =>
 	`test_oidc:${installationId}`;
 
@@ -313,10 +239,6 @@ export const buildTestOidcHeaders = (
 	"x-allow-vercel-test-oidc": "true",
 	"content-type": "application/json",
 });
-
-// ──────────────────────────────────────────────────────────────────────────
-// Vercel SDK mock captures
-// ──────────────────────────────────────────────────────────────────────────
 
 export interface CapturedVercelCall {
 	method: string;
@@ -350,16 +272,9 @@ export const clearVercelCaptures = async (
 	await fetch(
 		`${captureBaseUrl()}/__captures/${encodeURIComponent(installationId)}`,
 		{ method: "DELETE" },
-	).catch(() => {
-		// best-effort
-	});
+	).catch(() => {});
 };
 
-/**
- * Polls the capture inspector until at least one call matching `predicate`
- * has been recorded, or `timeoutMs` elapses. Useful for the
- * "wait for the real Stripe webhook" pattern.
- */
 export const waitForVercelCapture = async ({
 	installationId,
 	predicate,
@@ -381,10 +296,6 @@ export const waitForVercelCapture = async ({
 	return null;
 };
 
-// ──────────────────────────────────────────────────────────────────────────
-// Legacy Stripe subscription (for lazy-migration tests)
-// ──────────────────────────────────────────────────────────────────────────
-
 export interface CreateLegacyVercelSubscriptionOptions {
 	ctx: TestContext;
 	stripeCustomerId: string;
@@ -392,16 +303,9 @@ export interface CreateLegacyVercelSubscriptionOptions {
 	billingPlanId: string;
 	productId: string;
 	resourceId?: string;
-	/** Stripe Price id (recurring). Caller must create the price beforehand. */
 	stripePriceId: string;
 }
 
-/**
- * Creates a Stripe subscription with `collection_method: "charge_automatically"`
- * and the Vercel metadata that the (old) provisioning path used to write. Tests
- * use this to assert the lazy-migration helper flips the subscription to
- * `send_invoice`.
- */
 export const createLegacyVercelSubscription = async ({
 	ctx,
 	stripeCustomerId,

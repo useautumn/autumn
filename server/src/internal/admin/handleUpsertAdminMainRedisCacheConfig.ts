@@ -5,8 +5,6 @@ import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { MiscRedisConfigSchema } from "@/internal/misc/miscRedisConfig/miscRedisConfigSchemas.js";
 import { setActiveMiscRedisInstance } from "@/internal/misc/miscRedisConfig/miscRedisConfigStore.js";
 
-/** Legacy route kept for API compat — accepts the old primary/fallback
- *  vocabulary alongside main/backup. Flipping always clears any ramp. */
 export const handleUpsertAdminMainRedisCacheConfig = createRoute({
 	scopes: [Scopes.Superuser],
 	body: z.object({

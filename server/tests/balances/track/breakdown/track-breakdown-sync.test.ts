@@ -18,27 +18,6 @@ import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
 import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
 
-/**
- * Test: Track → Attach race condition (Redis-Postgres sync)
- *
- * This test verifies that when tracking exhausts a balance into overage,
- * then attaching a new product, the balances are correctly merged.
- *
- * IMPORTANT: There's a race condition between track and attach:
- * - Track updates Redis immediately, syncs to Postgres asynchronously
- * - Attach rebuilds cache from Postgres
- * - If attach happens before sync, cache gets stale data
- *
- * This test includes timeout(2000) between track and attach to avoid the race.
- *
- * Scenario:
- * 1. Attach pay-per-use monthly (500 included, overage allowed)
- * 2. Track 600 → 500 prepaid exhausted, 100 in overage
- * 3. Wait for sync, then attach lifetime prepaid (200 messages)
- * 4. Track 150 → should deduct from lifetime prepaid first, not add to overage
- * 5. Track 100 → exhaust lifetime (50 remaining), then 50 goes to overage
- */
-
 const monthlyPayPerUseMessages = constructArrearItem({
 	featureId: TestFeature.Messages,
 	includedUsage: 500,
@@ -49,7 +28,7 @@ const monthlyPayPerUseMessages = constructArrearItem({
 const lifetimeMessages = constructFeatureItem({
 	featureId: TestFeature.Messages,
 	includedUsage: 200,
-	interval: null, // lifetime
+	interval: null,
 });
 
 const payPerUseProd = constructProduct({
@@ -78,7 +57,7 @@ describe(`${chalk.yellowBright("track-breakdown-sync: track→attach race condit
 		await initCustomerV3({
 			ctx,
 			customerId,
-			attachPm: "success", // Required for pay-per-use
+			attachPm: "success",
 			withTestClock: false,
 		});
 
@@ -88,7 +67,6 @@ describe(`${chalk.yellowBright("track-breakdown-sync: track→attach race condit
 			prefix: testCase,
 		});
 
-		// Only attach pay-per-use product initially
 		await autumnV2.attach({
 			customer_id: customerId,
 			product_id: payPerUseProd.id,
@@ -109,7 +87,6 @@ describe(`${chalk.yellowBright("track-breakdown-sync: track→attach race condit
 			overage_allowed: true,
 		});
 
-		// Should have 1 breakdown item
 		expect(res.balance?.breakdown).toHaveLength(1);
 	});
 
@@ -122,7 +99,6 @@ describe(`${chalk.yellowBright("track-breakdown-sync: track→attach race condit
 			value: deductValue,
 		});
 
-		// 500 from prepaid, 100 from overage
 		expect(trackRes.balance).toMatchObject({
 			granted_balance: 500,
 			current_balance: 0,
@@ -141,8 +117,6 @@ describe(`${chalk.yellowBright("track-breakdown-sync: track→attach race condit
 			overage_allowed: true,
 		});
 
-		// CRITICAL: Wait for Redis → Postgres sync before attaching new product
-		// Without this, attach would rebuild cache from stale Postgres data
 		await timeout(4000);
 	});
 
@@ -157,17 +131,13 @@ describe(`${chalk.yellowBright("track-breakdown-sync: track→attach race condit
 			feature_id: TestFeature.Messages,
 		})) as unknown as CheckResponseV2;
 
-		// Now have: 500 granted (monthly) + 200 granted (lifetime) = 700 total granted
-		// Current balance: 0 (monthly exhausted) + 200 (lifetime) = 200
-		// Purchased balance: 100 (monthly overage)
 		expect(res.balance).toMatchObject({
 			granted_balance: 700,
-			current_balance: 200, // Only lifetime has balance left
+			current_balance: 200,
 			usage: 600,
 			purchased_balance: 100,
 		});
 
-		// Should now have 2 breakdown items
 		expect(res.balance?.breakdown).toHaveLength(2);
 
 		const payPerUseBreakdown = res.balance?.breakdown?.find(
@@ -203,13 +173,11 @@ describe(`${chalk.yellowBright("track-breakdown-sync: track→attach race condit
 			value: deductValue,
 		});
 
-		// Lifetime has 200, deduct 150 → 50 remaining
-		// Monthly overage should stay at 100 (no additional overage)
 		expect(trackRes.balance).toMatchObject({
 			granted_balance: 700,
-			current_balance: 50, // Only lifetime has balance left
-			usage: 750, // 600 + 150
-			purchased_balance: 100, // Unchanged! No new overage
+			current_balance: 50,
+			usage: 750,
+			purchased_balance: 100,
 		});
 
 		const breakdown = trackRes.balance?.breakdown;
@@ -222,15 +190,13 @@ describe(`${chalk.yellowBright("track-breakdown-sync: track→attach race condit
 			(b) => b.overage_allowed === false,
 		);
 
-		// Pay-per-use should be unchanged
 		expect(payPerUseBreakdown).toMatchObject({
 			granted_balance: 500,
 			current_balance: 0,
-			usage: 600, // Unchanged
-			purchased_balance: 100, // Unchanged
+			usage: 600,
+			purchased_balance: 100,
 		});
 
-		// Lifetime should have 150 deducted
 		expect(lifetimeBreakdown).toMatchObject({
 			granted_balance: 200,
 			current_balance: 50,
@@ -238,11 +204,9 @@ describe(`${chalk.yellowBright("track-breakdown-sync: track→attach race condit
 			purchased_balance: 0,
 		});
 
-		// V1 verification
 		const customer = await autumnV1.customers.get(customerId);
 		const msgesFeature = customer.features[TestFeature.Messages];
 
-		// Sum of breakdown balances should equal top-level balance
 		const monthlyBreakdownV1 = msgesFeature.breakdown?.find(
 			(b) => b.interval === "month",
 		);
@@ -264,13 +228,11 @@ describe(`${chalk.yellowBright("track-breakdown-sync: track→attach race condit
 			value: deductValue,
 		});
 
-		// Lifetime has 50, deduct all → 0 remaining
-		// Remaining 50 goes to monthly overage
 		expect(trackRes.balance).toMatchObject({
 			granted_balance: 700,
 			current_balance: 0,
-			usage: 850, // 750 + 100
-			purchased_balance: 150, // 100 + 50 new overage
+			usage: 850,
+			purchased_balance: 150,
 		});
 
 		const breakdown = trackRes.balance?.breakdown;
@@ -283,15 +245,13 @@ describe(`${chalk.yellowBright("track-breakdown-sync: track→attach race condit
 			(b) => b.overage_allowed === false,
 		);
 
-		// Pay-per-use should have 50 more overage
 		expect(payPerUseBreakdown).toMatchObject({
 			granted_balance: 500,
 			current_balance: 0,
-			usage: 650, // 600 + 50 overage
-			purchased_balance: 150, // 100 + 50
+			usage: 650,
+			purchased_balance: 150,
 		});
 
-		// Lifetime should be exhausted
 		expect(lifetimeBreakdown).toMatchObject({
 			granted_balance: 200,
 			current_balance: 0,
@@ -340,7 +300,6 @@ describe(`${chalk.yellowBright("track-breakdown-sync: track→attach race condit
 			purchased_balance: 0,
 		});
 
-		// V1 API verification with skip_cache
 		const customerV1 = await autumnV1.customers.get(customerId, {
 			skip_cache: "true",
 		});
@@ -348,7 +307,6 @@ describe(`${chalk.yellowBright("track-breakdown-sync: track→attach race condit
 
 		expect(msgesFeature.usage).toBe(850);
 
-		// Verify sum of breakdown balances
 		const monthlyBreakdownV1 = msgesFeature.breakdown?.find(
 			(b) => b.interval === "month",
 		);

@@ -1,18 +1,3 @@
-/**
- * A deleted customer or entity is deleted on its Atom too, end to end: API delete → balance worker evict → herald →
- * the Atom's deletion of it. Checks on it are forwarded to the API, and only a newer read brings it back.
- *
- * Contract:
- *  1. deleting a customer: the Atom stops answering for it and for each of its entities (customer_deleted), and its
- *     balance worker keeps no state for it;
- *  2. deleting an entity of a customer that stays: the Atom forwards that entity (entity_deleted) and keeps answering
- *     the customer itself; the same when the entity is deleted by its id alone;
- *  3. a customer created again under the same id: the Atom answers it itself, off its new balance, never the old one.
- *
- * Red (dev): the Atom keeps answering every one of these checks itself from the deleted subject's last copy.
- * The scenarios share the test org's one Atom, so they run in order, in this one file.
- */
-
 import { afterAll, beforeAll, test } from "bun:test";
 import type { AttachParamsV1Input } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
@@ -49,7 +34,6 @@ const free = () =>
 		items: [items.monthlyMessages({ includedUsage: 100 })],
 	});
 
-/** A customer on 100 monthly messages with two entities of ids only it has, each on its own plan, and each check answered by the Atom itself. */
 const initCustomerOnAtom = async ({ customerId }: { customerId: string }) => {
 	const plan = free();
 	const scenario = await initScenario({
@@ -58,7 +42,6 @@ const initCustomerOnAtom = async ({ customerId }: { customerId: string }) => {
 		actions: [s.billing.attach({ productId: plan.id })],
 	});
 	const { autumnV2_4 } = scenario;
-	// Ids unique to the customer, so an entity can be deleted by its id alone.
 	const entityIds = [`${customerId}-ent-1`, `${customerId}-ent-2`];
 	await autumnV2_4.entities.create(
 		customerId,
@@ -72,7 +55,6 @@ const initCustomerOnAtom = async ({ customerId }: { customerId: string }) => {
 		});
 	const atom = await ensureAtomDeployment({ autumn });
 	const subjects = [undefined, ...entityIds];
-	// A track on each puts it on the Atom; the Atom then answers it without the API.
 	for (const entityId of subjects)
 		await autumnV2_4.track({
 			customer_id: customerId,
@@ -111,7 +93,6 @@ const expectAtomAnswers = ({
 		allowed: true,
 	});
 
-/** Polls until the Atom forwards the check to the API for `forwarded`, whatever the API answers. */
 const expectAtomForwards = ({
 	atom,
 	customerId,
@@ -205,7 +186,6 @@ test.skipIf(!runsOnDevAtom)(
 			value: 30,
 		});
 
-		// The old copy had 90 left; the new customer has 70, so only a fresh read allows 70 and refuses 71.
 		await expectAtomAnswers({ atom, customerId, requiredBalance: 70 });
 		await expectAtomCheckCorrect({
 			atom,

@@ -1,27 +1,3 @@
-/**
- * Auto top-ups across the plan shapes a credits catalog actually uses:
- *   1. fixed plan: free monthly allowance + FLAT one-off refill on the same plan
- *   2. base plan with a free allowance + VOLUME one-off refill on an add-on
- *   3. base plan with a free allowance + GRADUATED one-off refill on an add-on
- *   4. one plan hosting BOTH a monthly volume prepaid item and the volume
- *      one-off refill item for the same feature
- *
- * Contract:
- *   - the refill charge is the configured top-up quantity priced through the
- *     refill item's tiers, never shifted by sibling allowances
- *   - in shape 4 the monthly prepaid item owns the feature-keyed
- *     `options.quantity`, so the refill must leave it untouched (500 stays
- *     500) while still granting the credits and invoicing the refill
- *
- * Tiers per credit: ≤75 @ $0.22, ≤125 @ $0.20, ≤250 @ $0.18, then $0.17.
- *   volume 125    = 125 × 0.20                         = $25
- *   graduated 250 = 75 × 0.22 + 50 × 0.20 + 125 × 0.18 = $49
- *
- * Red (current):  shape 4 never refills — the one-off price loses the
- *                 prepaid quantity tie-break, so the charge computes to $0.
- * Green (after):  every shape refills and invoices the tiered amount.
- */
-
 import { test } from "bun:test";
 import type { ApiCustomerV3, ApiCustomerV5 } from "@autumn/shared";
 import { makeAutoTopupConfig } from "@tests/integration/balances/auto-topup/utils/makeAutoTopupConfig.js";
@@ -104,7 +80,6 @@ test.concurrent(
 		});
 		const invoicesBefore = await invoiceCount({ customerId, autumn: autumnV1 });
 
-		// 25 - 21 = 4 (below threshold 5) -> refill 10 at $0.40 -> 14.
 		await autumnV2_3.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
@@ -163,7 +138,6 @@ test.concurrent(
 		});
 		const invoicesBefore = await invoiceCount({ customerId, autumn: autumnV1 });
 
-		// 300 - 260 = 40 (below threshold 50) -> refill 125 at $0.20 -> 165.
 		await autumnV2_3.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
@@ -229,7 +203,6 @@ test.concurrent(
 		});
 		const invoicesBefore = await invoiceCount({ customerId, autumn: autumnV1 });
 
-		// 300 - 260 = 40 (below threshold 50) -> refill 250 banded -> 290.
 		await autumnV2_3.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
@@ -281,7 +254,6 @@ test.concurrent(
 			],
 		});
 
-		// The monthly prepaid item owns the feature quantity: 500 credits = $100.
 		await expectCustomerInvoiceCorrect({
 			customerId,
 			count: 1,
@@ -292,7 +264,6 @@ test.concurrent(
 			billing_controls: makeAutoTopupConfig({ threshold: 50, quantity: 125 }),
 		});
 
-		// 500 - 460 = 40 (below threshold 50) -> refill 125 at $0.20 -> 165.
 		await autumnV2_3.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
@@ -313,7 +284,6 @@ test.concurrent(
 			latestStatus: "paid",
 			latestInvoiceProductId: plan.id,
 		});
-		// The refill must not inflate the monthly prepaid quantity.
 		await expectCustomerProductOptions({
 			ctx,
 			customerId,

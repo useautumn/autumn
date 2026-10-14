@@ -104,9 +104,7 @@ export const DateInputUnix = ({
 	maxUnixDate?: number;
 	fromYear?: number;
 	withTime?: boolean;
-	/** Show 24-hour clock (00–23) instead of 12-hour with AM/PM. */
 	use24Hour?: boolean;
-	/** Override the empty-state label (e.g. "Now" when null means immediate). */
 	placeholder?: string;
 	className?: string;
 }) => {
@@ -145,8 +143,6 @@ export const DateInputUnix = ({
 	};
 
 	const handleDaySelect = (newDay: Date | undefined) => {
-		// Ignore deselect (re-clicking the selected day fires onSelect(undefined));
-		// callers should clear via their own control (e.g. a toggle), not via the calendar.
 		if (!newDay) return;
 
 		if (!withTime) {
@@ -161,7 +157,6 @@ export const DateInputUnix = ({
 			return;
 		}
 
-		// Preserve the current time on the newly selected day.
 		const newDateFull = new Date(dateObj);
 		newDateFull.setFullYear(
 			newDay.getFullYear(),

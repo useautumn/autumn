@@ -1,9 +1,3 @@
-// Single source of truth for the currencies Autumn can bill in, their Stripe
-// minor-unit handling, and code validation. Deliberately scoped to Stripe's
-// supported presentment currencies (not the full ISO 4217 set) so that:
-//   1. the dashboard picker only offers currencies Stripe can actually charge,
-//   2. server-side validation and the client picker agree exactly (a static
-//      list, so no ICU-version drift between Bun and the browser).
 // Source: https://docs.stripe.com/currencies. Codes are lowercase.
 
 // Stripe zero-decimal currencies (no minor units — amount is already whole).
@@ -27,9 +21,6 @@ export const STRIPE_ZERO_DECIMAL_CURRENCIES = new Set([
 ]);
 
 // Stripe three-decimal currencies (thousandths). Stripe does NOT list these as
-// presentment currencies, so they are never offered by the picker or accepted
-// by validation; this set exists only so the amount-conversion utils handle
-// them correctly if they ever appear from imported/legacy Stripe data.
 export const STRIPE_THREE_DECIMAL_CURRENCIES = new Set([
 	"bhd",
 	"jod",
@@ -39,7 +30,6 @@ export const STRIPE_THREE_DECIMAL_CURRENCIES = new Set([
 ]);
 
 // Stripe's supported presentment currencies, verbatim from
-// https://docs.stripe.com/currencies (verified 2026-07-06).
 const STRIPE_PRESENTMENT_CURRENCIES = [
 	"usd",
 	"aed",
@@ -177,7 +167,6 @@ const STRIPE_PRESENTMENT_CURRENCIES = [
 	"zmw",
 ];
 
-// Common currencies surfaced first in the picker; the rest follow alphabetically.
 const COMMON = ["usd", "eur", "gbp", "cad", "aud", "jpy", "chf", "cny", "inr"];
 const COMMON_SET = new Set(COMMON);
 
@@ -191,7 +180,6 @@ const SUPPORTED_SET = new Set(CURRENCY_CODES);
 export const isValidCurrencyCode = (code: string | null | undefined): boolean =>
 	!!code && SUPPORTED_SET.has(code.toLowerCase());
 
-// Stripe minor-unit multiplier: 1 (zero-decimal), 100 (default), 1000 (three-decimal).
 export const stripeMinorUnitFactor = (
 	code: string | null | undefined,
 ): number => {
@@ -202,14 +190,11 @@ export const stripeMinorUnitFactor = (
 };
 
 // Chargeable input precision. Stripe caps three-decimal currencies at two
-// effective decimals (the integer amount must be divisible by ten), so the
-// editor only ever offers 0 or 2 decimal places.
 export const currencyInputDecimals = (
 	code: string | null | undefined,
 ): number =>
 	STRIPE_ZERO_DECIMAL_CURRENCIES.has((code ?? "usd").toLowerCase()) ? 0 : 2;
 
-// Round an amount to the currency's chargeable precision, avoiding float drift.
 export const roundToCurrencyPrecision = (
 	amount: number,
 	code: string | null | undefined,
@@ -218,10 +203,7 @@ export const roundToCurrencyPrecision = (
 	return Math.round(amount * factor) / factor;
 };
 
-// Static English names so the picker renders identically on every runtime.
 // `Intl.DisplayNames` diverges by ICU version — e.g. older browsers lack the
-// 2025 "XCG" name and would show a blank. Generated from ICU; keep in sync with
-// STRIPE_PRESENTMENT_CURRENCIES.
 const CURRENCY_NAMES: Record<string, string> = {
 	usd: "US Dollar",
 	eur: "Euro",

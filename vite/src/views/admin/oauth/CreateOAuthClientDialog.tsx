@@ -44,7 +44,7 @@ export const CreateOAuthClientDialog = ({
 	const [formData, setFormData] = useState({
 		name: "",
 		redirectUris: "",
-		isPublic: true, // Default to public for CLI usage
+		isPublic: true,
 		skipConsent: false,
 		scopes: ["openid", "profile", "email"],
 	});
@@ -143,7 +143,6 @@ export const CreateOAuthClientDialog = ({
 						</DialogHeader>
 
 						<div className="flex flex-col gap-4">
-							{/* Client Name */}
 							<div className="flex flex-col gap-1.5">
 								<span className="text-sm font-medium text-foreground">
 									Client Name
@@ -160,7 +159,6 @@ export const CreateOAuthClientDialog = ({
 								</p>
 							</div>
 
-							{/* Client Type */}
 							<div className="flex flex-col gap-2">
 								<span className="text-sm font-medium text-foreground">
 									Client Type
@@ -201,7 +199,6 @@ export const CreateOAuthClientDialog = ({
 								</div>
 							</div>
 
-							{/* Redirect URIs */}
 							<div className="flex flex-col gap-1.5">
 								<span className="text-sm font-medium text-foreground">
 									Redirect URIs
@@ -220,7 +217,6 @@ export const CreateOAuthClientDialog = ({
 								</p>
 							</div>
 
-							{/* Scopes */}
 							<div className="flex flex-col gap-1.5">
 								<span className="text-sm font-medium text-foreground">
 									Allowed Scopes
@@ -235,7 +231,6 @@ export const CreateOAuthClientDialog = ({
 								</p>
 							</div>
 
-							{/* Skip Consent */}
 							<div className="flex items-start gap-3 p-3 rounded-lg border border-border bg-muted/30">
 								<Checkbox
 									checked={formData.skipConsent}
@@ -280,7 +275,6 @@ export const CreateOAuthClientDialog = ({
 						</DialogHeader>
 
 						<div className="flex flex-col gap-4">
-							{/* Client ID */}
 							<div className="flex flex-col gap-1.5">
 								<span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
 									Client ID
@@ -301,7 +295,6 @@ export const CreateOAuthClientDialog = ({
 								</div>
 							</div>
 
-							{/* Client Secret (only for confidential clients) */}
 							{createdClient?.clientSecret && (
 								<div className="flex flex-col gap-1.5">
 									<span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">

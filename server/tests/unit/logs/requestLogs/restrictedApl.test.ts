@@ -260,7 +260,6 @@ describe("restricted request-log APL", () => {
 		).toThrow("Field cannot be used in numeric aggregation");
 	});
 
-	// Shapes below are sanitized reproductions of real failed production queries.
 	test("accepts bare predicates with an implicit where", () => {
 		const ast = parseRestrictedApl({
 			query: "customer_id == 'cus_123'",

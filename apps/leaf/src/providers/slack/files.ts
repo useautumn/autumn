@@ -79,8 +79,6 @@ const fetchSlackFileInfo = async ({
 	if (!response.ok)
 		throw new Error(`Slack files.info failed: ${response.status}`);
 	const data = await response.json();
-	// A rejected lookup (e.g. no access to a shared-channel file) throws, so
-	// callers log why the file could not be read.
 	if (!isRecord(data) || data.ok !== true) {
 		const reason =
 			isRecord(data) && typeof data.error === "string" ? data.error : "unknown";
@@ -89,9 +87,6 @@ const fetchSlackFileInfo = async ({
 	return parseSlackFile(data.file);
 };
 
-/** Slack Connect (shared channel) events carry file stubs with only an id, so
- * the adapter builds attachments with no name, type or URL. Fill those in from
- * files.info; the adapter maps `files` to attachments in order. */
 export const hydrateSlackAttachment = async ({
 	attachment,
 	botToken,

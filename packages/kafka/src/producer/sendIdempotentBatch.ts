@@ -7,23 +7,8 @@ import { metadataToBaseOffset } from "../client/kafkaOffsetUtils.js";
 import type { KafkaSender } from "../client/types/kafkaClient.js";
 import { assertNonEmpty } from "../lib/assert.js";
 
-/** The record header that names the ownership epoch a batch was written under. */
 export const OWNER_EPOCH_HEADER = "ownerEpoch";
 
-/**
- * One broker round trip per commit: the batch goes out with acks=all on an
- * idempotent producer and the leader's acknowledgement is the commit. A
- * batch to one partition is appended atomically whether or not a
- * transaction wraps it, and the producer's sequence numbers drop a retried
- * send the broker already has. What a transaction added was a fence on a
- * stale owner; here the owner's epoch travels in a header instead, for
- * readers to judge by.
- *
- * A broker refusal (a protocol error on the produce response) means nothing
- * was appended. Any other failure, a timeout or a lost connection after the
- * retries, leaves the batch's fate unknown, which the caller treats exactly
- * like an unknown transaction commit.
- */
 export async function sendIdempotentBatch({
 	sender,
 	topic,

@@ -16,7 +16,6 @@ let allocatorCtx: TwdContext | undefined;
 let ticking: Promise<void> | undefined;
 let tickAgain = false;
 
-/** Strict FIFO: each run (oldest first) is filled before any later run gets an account. */
 const allocate = async ({ ctx }: { ctx: TwdContext }) => {
 	if (demands.size === 0) return;
 	if ((await getKeyGate({ db: ctx.db })).state === "draining") return;
@@ -63,7 +62,6 @@ const allocate = async ({ ctx }: { ctx: TwdContext }) => {
 	}
 };
 
-/** Run an allocation pass now (coalesced with one in flight). */
 export const kickAllocator = () => {
 	const ctx = allocatorCtx;
 	if (!ctx) return;
@@ -83,7 +81,6 @@ export const kickAllocator = () => {
 	});
 };
 
-/** Registers a run's demand; returns the unregister function. */
 export const registerRunDemand = ({
 	runId,
 	demand,

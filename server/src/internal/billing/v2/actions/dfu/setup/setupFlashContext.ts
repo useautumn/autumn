@@ -38,7 +38,6 @@ export type FlashPlanContext = {
 	billingCycleAnchor?: number;
 	isAddOn: boolean;
 	isRecurring: boolean;
-	// Undefined = customer-level scope; set = plan is scoped to this entity.
 	entityId?: string;
 	internalEntityId?: string;
 	existingActiveCustomerProduct?: FullCusProduct;
@@ -55,7 +54,6 @@ export type FlashContext = {
 	planContexts: FlashPlanContext[];
 };
 
-// Collapse the `plan` shorthand into phases so all downstream code sees phases only.
 const normalizeBillable = (billable: FlashBillable): FlashBillable => {
 	if (!billable.plan) return billable;
 	const { plan, ...rest } = billable;
@@ -91,14 +89,10 @@ const upsertFullCustomer = async ({
 		allowNotFound: true,
 	});
 	if (existing) {
-		// dry_run must not persist anything; return existing state so previews
-		// compute from actual persisted data (not hypothetical proposed updates).
 		if (params.dry_run) return existing;
 
 		const update: Parameters<typeof CusService.update>[0]["update"] = {};
 
-		// Self-migration: seed the RC app_user_id so Phase 1 webhooks resolve this
-		// customer by it. Only-if-absent — never clobber an existing value.
 		if (revenueCatIdentity && !existing.processors?.revenuecat?.id) {
 			update.processors = {
 				...existing.processors,
@@ -200,8 +194,6 @@ const buildPlanContext = async ({
 
 	const isRecurring = fullProduct.prices.some((price) => !isOneOffPrice(price));
 
-	// Match only within this plan's scope so entity products don't cross into
-	// customer-level (and vice-versa).
 	const matchesScope = (customerProduct: FullCusProduct): boolean =>
 		internalEntityId
 			? isCusProductOnEntity({ cusProduct: customerProduct, internalEntityId })
@@ -284,7 +276,6 @@ export const setupFlashContext = async ({
 		});
 	}
 
-	// Fill omitted fields from processors BEFORE status/balance resolution.
 	const revenueCatAppUserId = params.processors?.find(
 		(p) => p.type === "revenuecat",
 	)?.id;

@@ -4,7 +4,6 @@ import { CheckIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const NO_PRODUCT_VALUE = "__none";
-/** Emitted when the user picks the "create a new Stripe product" option. */
 export const CREATE_STRIPE_PRODUCT = "__create";
 
 type StripeProductOption = CatalogStripeProduct;
@@ -32,19 +31,14 @@ export const StripeProductSelect = ({
 }: {
 	value: string | null;
 	products: CatalogStripeProduct[];
-	// Used only to resolve the selected value's display name (e.g. lazily
-	// resolved products not present in the search-filtered options).
 	knownProducts?: CatalogStripeProduct[];
 	onChange: (value: string | null) => void;
 	onSearchChange: (search: string) => void;
 	isLoading?: boolean;
 	disabled?: boolean;
-	/** Label for the `null` choice, e.g. "Same as Pro" when null means inherit. */
 	noneLabel?: string;
 	createLabel?: string;
-	/** While true, an unknown selected id is still loading rather than missing. */
 	isResolving?: boolean;
-	/** Tags this product's row so it's clear which one the default choice uses. */
 	defaultProductId?: string | null;
 }) => {
 	const noProductOption: StripeProductOption = {
@@ -114,7 +108,6 @@ export const StripeProductSelect = ({
 					);
 				}
 
-				// Resolved products always carry a name; a nameless one Stripe never returned.
 				if (!product.name && !isResolving) {
 					return (
 						<span className="flex min-w-0 items-center gap-2">

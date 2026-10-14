@@ -22,7 +22,6 @@ type KeptSubscriptionCycle = Partial<
 	>
 >;
 
-/** The rows the diff keeps that ride on the replaced subscription, so its replacement carries them. */
 const keptCustomerProductsOnReplacedSubscription = ({
 	billingContext,
 	operations,
@@ -43,7 +42,6 @@ const keptCustomerProductsOnReplacedSubscription = ({
 	});
 };
 
-/** The first renewal of a cycle restarted on the backdated start, over every plan the recreated subscription runs. */
 const backdatedCycleRenewalMs = ({
 	billingContext,
 	timeline,
@@ -78,10 +76,6 @@ const backdatedCycleRenewalMs = ({
 	});
 };
 
-/**
- * The requested anchor, else the replaced period end; a trial ended on a backdated start with no anchor
- * (phase_start) anchors on that start, like any backdate.
- */
 const keptPlansAnchorMs = ({
 	billingContext,
 	periodEndMs,
@@ -100,10 +94,6 @@ const keptPlansAnchorMs = ({
 		: periodEndMs;
 };
 
-/**
- * A replacement subscription for kept plans continues them to a date: the requested anchor (an ended trial's), else the old period end.
- * A backdate recreate does too unless it restarts the cycle on its start, and leaves proration to the plan changes it makes.
- */
 export const setupKeptSubscriptionCycle = ({
 	billingContext,
 	timeline,

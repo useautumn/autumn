@@ -57,7 +57,6 @@ export const getCustomerBalanceId = ({
 	balance: FullCusEntWithFullCusProduct;
 }) => balance.external_id ?? balance.id;
 
-/** Pooled balances are owned by their contributing plans, not deletable on their own. */
 export const canDeleteCustomerBalance = ({
 	balance,
 }: {
@@ -124,7 +123,6 @@ const getRegularPooledBalancePlanName = ({
 	return [...planNames][0];
 };
 
-/** Plan that granted this balance. Pooled ents have no customer_product. */
 export const getCustomerBalancePlanName = ({
 	balance,
 	fullCustomer,
@@ -136,8 +134,6 @@ export const getCustomerBalancePlanName = ({
 		return balance.customer_product.product.name;
 	}
 
-	// An expiring purchase grant outlives its plan; name it by where it came
-	// from so the row reads "Pro · Auto top-up" rather than "No plan".
 	const grantSource = balance.metadata?.source;
 	if (grantSource) {
 		const sourceLabel = {

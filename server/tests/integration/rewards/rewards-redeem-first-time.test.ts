@@ -1,12 +1,3 @@
-/**
- * Integration tests for feature-grant promo codes restricted to
- * first-time transactions (promo_codes[].first_time_transaction).
- *
- * Tests:
- * - Customer with a prior paid purchase is blocked with PromoCodeFirstTimeOnly
- * - Fresh customer (no payments) can still redeem the same code
- */
-
 import { expect, test } from "bun:test";
 import { ErrCode } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
@@ -39,7 +30,6 @@ test(`${chalk.yellowBright("feature-grant-first-time: blocked after purchase, fr
 		actions: [s.billing.attach({ productId: pro.id })],
 	});
 
-	// Customer with a paid invoice is blocked
 	await expectAutumnError({
 		errCode: ErrCode.PromoCodeFirstTimeOnly,
 		func: async () => {
@@ -56,7 +46,6 @@ test(`${chalk.yellowBright("feature-grant-first-time: blocked after purchase, fr
 	});
 	expect(blockedCheck.balance ?? 0).toBe(0);
 
-	// Fresh customer with no payments redeems successfully
 	await autumnV1.rewards.redeem({
 		code: "FIRSTTIMEMSG",
 		customerId: freshCustomerId,

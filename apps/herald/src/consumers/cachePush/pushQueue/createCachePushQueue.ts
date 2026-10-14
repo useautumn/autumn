@@ -4,9 +4,7 @@ import { mergeCacheSubjects } from "../utils/mergeCacheSubjects.js";
 
 export type CachePushQueue = {
 	enqueue(params: { subjects: CacheSubjectRef[] }): void;
-	/** Resolves once the queue has room, so the log is never read far ahead of the pushes. */
 	waitForRoom(): Promise<void>;
-	/** Resolves once nothing is waiting or in flight. */
 	drain(): Promise<void>;
 	pendingCount(): number;
 	activeCount(): number;
@@ -14,11 +12,6 @@ export type CachePushQueue = {
 
 type Waiting = { cacheSubject: CacheSubjectRef; queuedAt: number };
 
-/**
- * Pushes subjects on a pool that runs apart from the slice that named them. A subject waits `lingerMs` from its first
- * change, so the changes a hot customer makes meanwhile are pushed once, at its newest offset. Pushes may land out of
- * order: the Atom keeps the newest by its own read_at and log_offset guard, so order is not kept here.
- */
 export function createCachePushQueue({
 	push,
 	concurrency,
@@ -37,7 +30,6 @@ export function createCachePushQueue({
 	let roomWaiters: (() => void)[] = [];
 	let drainWaiters: (() => void)[] = [];
 
-	/** The oldest subject once it has lingered; a map keeps first-insertion order, so a change never moves its subject back. */
 	function takeLingered(): CacheSubjectRef | undefined {
 		for (const [key, waiting] of pending) {
 			const waitLeft = waiting.queuedAt + lingerMs - performance.now();
@@ -98,7 +90,6 @@ export function createCachePushQueue({
 		return new Promise((resolve) => roomWaiters.push(resolve));
 	}
 
-	/** Pushes what is still lingering at once: the slices that named it are already committed. */
 	function drain(): Promise<void> {
 		draining = true;
 		pump();

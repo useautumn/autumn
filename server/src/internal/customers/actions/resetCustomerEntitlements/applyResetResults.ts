@@ -9,14 +9,11 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { RolloverService } from "@/internal/customers/cusProducts/cusEnts/cusRollovers/RolloverService.js";
 import type { ProcessResetResult } from "./processReset.js";
 
-/** Per-cusEnt rollover clearing info for cache propagation. */
 export type RolloverClearingInfo = {
 	deletedIds: string[];
 	overwrites: Rollover[];
 };
 
-/** Finds the stored entitlement and its parent without adding a back-reference.
- * Mutations stay on the stored entitlement so FullCustomer remains serializable. */
 const findCusEnt = ({
 	fullCus,
 	cusEntId,
@@ -53,12 +50,6 @@ const findCusEnt = ({
 	return null;
 };
 
-/**
- * Applies computed reset values to in-memory FullCustomer for all cusEnts,
- * and runs rollover max-clearing only for DB-applied (non-skipped) ones.
- * For skipped entries (another request won the race), re-reads rollovers from DB.
- * Returns per-cusEnt clearing info so the cache update can propagate deletes/overwrites.
- */
 export const applyResetResults = async ({
 	ctx,
 	fullCus,
@@ -73,8 +64,6 @@ export const applyResetResults = async ({
 	const skippedSet = new Set(skipped);
 	const clearingMap: Record<string, RolloverClearingInfo> = {};
 
-	// Use the general pool for rollover DB operations to avoid consuming
-	// critical pool connections during lazy resets.
 	const generalCtx = { ...ctx, db: ctx.dbGeneral };
 
 	for (const { cusEntId, result } of computed) {
@@ -94,8 +83,6 @@ export const applyResetResults = async ({
 		if (!result.rolloverInsert) continue;
 
 		if (!skippedSet.has(cusEntId)) {
-			// Winner: we inserted the rollover into DB. Clear excess and
-			// update the in-memory array to include the new rollovers.
 			const { rollovers, deletedIds, overwrites } =
 				await RolloverService.clearExcessRollovers({
 					ctx: generalCtx,
@@ -111,8 +98,6 @@ export const applyResetResults = async ({
 				clearingMap[cusEntId] = { deletedIds, overwrites };
 			}
 		} else {
-			// Loser: the winning request already inserted the rollover and
-			// cleared excess. Re-read from DB to get the authoritative state.
 			original.rollovers = await RolloverService.getCurrentRollovers({
 				ctx: generalCtx,
 				cusEntID: cusEntId,

@@ -1,12 +1,3 @@
-/**
- * catalogV2.preview_update — license_parents omit-version top card is the active parent.
- *
- * Contract:
- *   v2 active (lockstep) → top v2 propagated, sibling v1 unchanged
- *   v1 forced active → top v1 propagated, sibling v2 unchanged
- *   versioning.current_version stays max (the number), not the pointer
- */
-
 import { test } from "bun:test";
 import { forceActiveVersion } from "@tests/integration/utils/forceActiveVersion.js";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";

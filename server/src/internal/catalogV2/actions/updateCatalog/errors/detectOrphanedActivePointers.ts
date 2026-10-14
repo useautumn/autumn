@@ -19,15 +19,6 @@ const rowsByPlanId = ({
 	return byPlanId;
 };
 
-/**
- * Projected plans still holding a live version while the version customers
- * attach to is archived. Archiving every version is a plan going away and is
- * left alone.
- *
- * Pinned `remove_plans` is exempt: it deliberately archives one version and
- * leaves the pointer where it was (`version-identity-remove.test.ts:107`), and
- * that is the remove machinery's call to make, not this one's.
- */
 export const detectOrphanedActivePointers = ({
 	products,
 	removedKeys,

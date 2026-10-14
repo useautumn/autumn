@@ -15,7 +15,6 @@ import { cn } from "@/lib/utils";
 import { AtomStatusChip } from "./AtomStatusChip";
 import { ATOM_CHECK_ANSWERED_BY_CHIPS } from "./atomDisplay";
 
-/** The SDK setup that sends checks to this Atom, per language; the copy button copies the open tab. */
 const checkSnippets = ({ endpointUrl }: { endpointUrl: string }) => [
 	{
 		value: "typescript",
@@ -57,11 +56,9 @@ autumn.edge.check(customer_id="<customer_id>", feature_id="<feature_id>")`,
 	},
 ];
 
-/** Checks shown as they first came in; the list keeps room for this many so it never grows as they land. */
 const SHOWN_CHECKS = 3;
 const CHECKS_HEIGHT_CLASS = "h-[110px]";
 
-/** The SDK setup that points at this Atom, per language; the copy button copies the open tab. */
 const AtomCheckSnippets = ({ endpointUrl }: { endpointUrl: string }) => {
 	const snippets = checkSnippets({ endpointUrl });
 	const [open, setOpen] = useState(snippets[0].value);
@@ -100,7 +97,6 @@ const AtomCheckRow = ({ check }: { check: AtomCheck }) => (
 	</div>
 );
 
-/** Where the first checks land: a quiet wait until one does, in the same box the checks then fill. */
 const AtomCheckList = ({
 	isConnected,
 	checks,
@@ -143,7 +139,6 @@ const AtomCheckList = ({
 	);
 };
 
-/** Verify's last part: how to send checks to this Atom, and the first ones as they reach it. */
 export const AtomFirstChecks = ({
 	endpointUrl,
 	isConnected,

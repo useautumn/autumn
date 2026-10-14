@@ -89,7 +89,6 @@ describe("oauthAudienceAllowsResource", () => {
 
 type RefreshTokenRow = { clientId?: string; resource: string | null };
 
-/** Rows the two lookups behind a token request read: the refresh grant and the client. */
 const stubDb = ({
 	isMcpClient,
 	refreshTokenRow,

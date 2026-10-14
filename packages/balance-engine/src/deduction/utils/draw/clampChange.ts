@@ -26,7 +26,6 @@ const refundable = ({
 		? amount
 		: Decimal.min(amount, Decimal.max(0, new Decimal(ceiling).minus(current)));
 
-/** How much of `amount` (in the row's units) the row can give between its floor and ceiling; signed like the amount. */
 export const clampChange = ({
 	current,
 	amount,

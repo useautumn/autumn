@@ -36,7 +36,6 @@ export function CreateInvoicePreviewSection() {
 								: {}),
 						}
 					: null,
-				// A row already explains a rejected service period inline.
 				error: planIdsOutsidePeriod.size > 0 ? null : previewQuery.error,
 				isLoading: previewQuery.isLoading,
 			}}

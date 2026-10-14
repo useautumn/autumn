@@ -1,8 +1,3 @@
-/**
- * A reply crossing from the decide thread back to the HTTP worker that holds the connection:
- * `[u32 reqId][u16 status][u16 partition][f64 heldUntilSeq][u32 metaLength][meta json][body]`, meta = { headers }.
- * `heldUntilSeq` 0 goes out at once; above 0 waits for the partition's commit position to reach it.
- */
 import type {
 	RingFrame,
 	RingReader,
@@ -31,7 +26,6 @@ export const replyFrameMaxLength = ({
 	body: Uint8Array;
 }): number => HEADER_BYTES + metaText.length * 3 + body.length;
 
-/** False when the ring has no room for it now. */
 export const writeReplyFrame = ({
 	writer,
 	reqId,
@@ -66,7 +60,6 @@ export const writeReplyFrame = ({
 	return true;
 };
 
-/** The body is copied out, so the frame can be advanced past at once. */
 export const readReplyFrame = ({
 	reader,
 	frame,

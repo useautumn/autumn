@@ -31,7 +31,6 @@ const segmentEndsAt = ({
 	return nextPhaseStartsAt ?? endsAt;
 };
 
-/** One instance listed unchanged across consecutive phases is one segment, so one row. */
 const mergeContiguousSegments = (
 	segments: DesiredSegment[],
 ): DesiredSegment[] =>
@@ -94,7 +93,6 @@ const recordSegment = ({
 	if (externalId) slot.externalIds.add(externalId);
 };
 
-/** The request's phases as per-instance segments, each placed on the saved instance it continues. */
 export const requestedPhasesToDesiredTimeline = ({
 	phases,
 	endsAt,

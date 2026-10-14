@@ -1,13 +1,3 @@
-/**
- * Downgrades and cancels onto free plans with `config.anchor_to_month_start`.
- *
- * Contract:
- *   paid → flagged free (end of cycle) → free starts when the paid cycle ends and keeps that
- *                                         date (a scheduled switch follows the outgoing cycle)
- *   cancel at end of cycle             → flagged default free resets on the 1st after it starts
- *   cancel immediately                 → flagged default free resets on the next 1st
- */
-
 import { expect, test } from "bun:test";
 import {
 	type ApiCustomerV5,

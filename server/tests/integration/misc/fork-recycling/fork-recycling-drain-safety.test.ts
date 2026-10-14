@@ -3,8 +3,6 @@ import path from "node:path";
 
 const FIXTURE = path.join(import.meta.dir, "fixtures/recycleLoadFixture.ts");
 
-/** Let the OS name a free port rather than gambling on a random one; a leftover
- *  process on a hardcoded port would fail as EADDRINUSE, not as a real bug. */
 const reserveFreePort = async (): Promise<number> => {
 	const probe = Bun.listen({
 		hostname: "127.0.0.1",
@@ -39,8 +37,6 @@ const callOnce = async (url: string): Promise<Outcome> => {
 	}
 };
 
-// A keep-alive socket can be idle-swept in the same instant fetch reuses it.
-// Mid-response cuts still fail immediately (truncated body / HTTP status).
 const call = async (url: string): Promise<Outcome> => {
 	const first = await callOnce(url);
 	if (
@@ -69,8 +65,6 @@ describe("drain safety under concurrent load", () => {
 					FORK_RECYCLE_MIN_AGE_MS: "600",
 					FORK_RECYCLE_CHECK_INTERVAL_MS: "1000",
 					FORK_RECYCLE_DRAIN_TIMEOUT_MS: "1000",
-					// The 5s production grace outlasts the 3s slow requests, so none would
-					// still be in flight when the drain deadline checks for active ones.
 					FORK_RECYCLE_DRAIN_GRACE_MS: "200",
 					FORK_RECYCLE_MAX_DELAY_MS: "0",
 					FORK_RECYCLE_BLACKOUT_BEFORE_MS: "0",
@@ -116,9 +110,6 @@ describe("drain safety under concurrent load", () => {
 				const countLines = (needle: string) =>
 					stdoutLines.filter((line) => line.includes(needle)).length;
 
-				// Run until the interesting states have actually been observed rather
-				// than for a fixed wall clock, so a slow CI box takes longer instead
-				// of failing. The cap keeps a genuinely broken build from hanging.
 				const startedAt = Date.now();
 				const hardDeadline = startedAt + 60_000;
 				const enoughObserved = () =>
@@ -127,8 +118,6 @@ describe("drain safety under concurrent load", () => {
 					Date.now() < hardDeadline &&
 					(!enoughObserved() || Date.now() < startedAt + 8_000);
 
-				// 24 concurrent fast callers plus 4 slow ones whose 3s response
-				// straddles a recycle, so a drain that cut early would truncate.
 				const fastCaller = async () => {
 					while (keepGoing()) {
 						const outcome = await call(`${base}/?ms=15`);
@@ -169,14 +158,9 @@ describe("drain safety under concurrent load", () => {
 					}`,
 				);
 
-				// Recycles actually happened, and nothing was dropped or cut.
 				expect(recycleCount).toBeGreaterThanOrEqual(3);
-				// More than the 3 boot forks served, so replacements really did take
-				// over traffic rather than the load staying pinned to the originals.
 				expect(servingPids.size).toBeGreaterThan(3);
 				expect(failures).toHaveLength(0);
-				// Without this the suite could stop exercising the case it exists for:
-				// a slow request must push the drain deadline back, not get cut.
 				expect(extended.length).toBeGreaterThan(0);
 				expect(
 					stdoutLines.filter((line) => line.includes("max drain exceeded")),

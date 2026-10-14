@@ -65,8 +65,6 @@ export const handleAddCouponToCusV2 = createRoute({
 			return c.json({ customer, coupon });
 		}
 
-		// Autumn reward ids double as Stripe coupon ids, so a single Stripe
-		// lookup covers both Autumn rewards and Stripe-only coupons.
 		const { source } = await resolveCoupon({
 			stripeCli: createStripeCli({ org, env }),
 			couponId: coupon?.id ?? coupon_id,
@@ -83,7 +81,6 @@ export const handleAddCouponToCusV2 = createRoute({
 			customer,
 		});
 
-		// Attach coupon to customer
 		await legacyStripeCli.rawRequest(
 			"POST",
 			`/v1/customers/${customer.processor.id}`,

@@ -1,5 +1,3 @@
-/** The product action worth billing for: summarize a note for a user.
- * (Stub for the expensive AI call.) */
 export const summarizeNote = async (
 	userId: string,
 	text: string,

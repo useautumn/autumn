@@ -1,11 +1,6 @@
 import type { UsagePoint } from "../data/types.js";
 import { theme } from "./theme.js";
 
-/**
- * Build a compact area/line chart as an inline SVG data URI. takumi rasterises
- * SVG images, so this gives a real smooth area chart (line + gradient fill)
- * rather than chunky bars.
- */
 export function usageChartSvgDataUri(
 	points: UsagePoint[],
 	{ width = 1000, height = 90 }: { width?: number; height?: number } = {},

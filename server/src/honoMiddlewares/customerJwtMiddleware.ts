@@ -16,12 +16,6 @@ import {
 import { getCustomerJwtAuth } from "@/internal/auth/getCustomerJwtAuth.js";
 import RecaseError from "@/utils/errorUtils.js";
 
-/**
- * Default-deny allowlists keyed by token audience. Access tokens reach the
- * allowlisted data + analytics routes; refresh tokens reach ONLY keys.refresh.
- * Anything else is 403 by virtue of not being listed — bidirectional aud
- * isolation.
- */
 const ACCESS_ROUTES = new Set([
 	"POST /v1/check",
 	"POST /v1/track",
@@ -34,8 +28,6 @@ const ACCESS_ROUTES = new Set([
 ]);
 const REFRESH_ROUTES = new Set(["POST /v1/keys.refresh"]);
 
-// Scopes are a server-side constant (not minted into the token); scopeCheckMiddleware
-// enforces them per-route. Hardcoded here so an empty ctx.scopes can't fail open.
 const TOKEN_SCOPES: string[] = [
 	Scopes.Customers.Read,
 	Scopes.Balances.Read,
@@ -54,7 +46,6 @@ export const customerJwtMiddleware = async (
 	try {
 		claims = await verifyCustomerJwt({ token });
 	} catch (error) {
-		// Missing/weak secret is OUR misconfig — surface as 500, not a fake 401.
 		if (error instanceof CustomerJwtConfigError) {
 			throw error;
 		}
@@ -75,14 +66,11 @@ export const customerJwtMiddleware = async (
 		});
 	}
 
-	// One read: org + features + revocation epoch, keyed by the immutable
-	// internal_customer_id. Cache miss → DB; DB down → throws → auth fails.
 	const auth = await getCustomerJwtAuth({
 		internalCustomerId: claims.internalCustomerId,
 		requestId: ctx.id,
 	});
 	if (!auth) {
-		// Family gone (customer deleted) or unresolvable org — treat as auth failure.
 		throw new RecaseError({
 			message: "Customer token is no longer valid",
 			code: ErrCode.InvalidRequest,
@@ -103,12 +91,10 @@ export const customerJwtMiddleware = async (
 	ctx.org = auth.org;
 	ctx.features = auth.features;
 	ctx.env = env;
-	// Override the pre-auth value resolved from the raw body so downstream
-	// scoping (rate-limit bucket, cache, blocks) keys on the authenticated customer.
 	ctx.customerId = claims.customerId;
 	ctx.authType = AuthType.CustomerJwt;
 	ctx.scopes = TOKEN_SCOPES;
-	ctx.isCustomerJwt = true; // read by customerJwtVersionMiddleware (v2.3+ gate)
+	ctx.isCustomerJwt = true;
 	ctx.customerJwt = {
 		customerId: claims.customerId,
 		internalCustomerId: claims.internalCustomerId,
@@ -116,8 +102,6 @@ export const customerJwtMiddleware = async (
 		refreshKid: claims.refreshKid,
 	};
 
-	// Access tokens: force-set customer_id (the external `sub`) so every
-	// downstream load is scoped. Refresh tokens carry no body to scope.
 	if (claims.aud !== AUD_REFRESH) {
 		await forceJsonBodyField(c, "customer_id", claims.customerId);
 	}

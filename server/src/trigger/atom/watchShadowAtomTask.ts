@@ -12,7 +12,6 @@ type WatchShadowAtomPayload = z.infer<typeof WatchShadowAtomPayloadSchema>;
 
 const WATCH_SHADOW_ATOM_TASK_ID = "watch-shadow-atom";
 
-/** Follows our shadow Atom as the org watch follows theirs, through its edge config instead of a row. */
 export const watchShadowAtomTask = task({
 	id: WATCH_SHADOW_ATOM_TASK_ID,
 	run: async (raw: WatchShadowAtomPayload) => {
@@ -21,7 +20,6 @@ export const watchShadowAtomTask = task({
 			ctx: shadowAtomContext({ deploymentGroupId }),
 			waitFor: wait.for,
 		});
-		// A finished watch frees its group's key, so the next start, retry or delete starts a new one.
 		await idempotencyKeys.reset(
 			WATCH_SHADOW_ATOM_TASK_ID,
 			await atomWatchIdempotencyKey({ deploymentGroupId }),

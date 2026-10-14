@@ -8,7 +8,6 @@ const JWKS = createRemoteJWKSet(
 	new URL(`https://marketplace.vercel.com/.well-known/jwks`),
 );
 
-/** Vercel OIDC Claims schema */
 export const OidcClaimsSchema = z.object({
 	sub: z.string(),
 	aud: z.string(),
@@ -84,19 +83,12 @@ export async function verifyToken({
 			clockTolerance: 5,
 		});
 
-		// Get the correct client_integration_id based on env
 		const clientIntegrationId =
 			env === AppEnv.Live
 				? org.processor_configs?.vercel?.client_integration_id
 				: org.processor_configs?.vercel?.sandbox_client_id;
 
 		if (claims.aud !== clientIntegrationId) {
-			// Dump both sides so an audience mismatch is debuggable end-to-end.
-			// Common causes: org config has the wrong env's client_id, or the
-			// integration was re-installed and the org's `sandbox_client_id`
-			// hasn't been refreshed. Claim values are intentionally redacted —
-			// `aud` is the only one relevant here; surface present keys for
-			// schema-drift debugging without leaking user_email/etc.
 			console.warn("[vercel/oidc] Invalid audience", {
 				env,
 				"token.aud (from Vercel)": claims.aud,
@@ -118,8 +110,6 @@ export async function verifyToken({
 
 		return claims;
 	} catch (err) {
-		// Don't log here — the caller (vercelOidcAuthMiddleware) already runs
-		// logCaughtError on the re-thrown error with the request-scoped logger.
 		if (err instanceof JWTExpired) {
 			throw new AuthError("Auth expired");
 		}
@@ -153,7 +143,6 @@ export const verifyClaims = ({
 		integrationConfigurationId: string;
 	};
 }) => {
-	// Get the correct client_integration_id based on env
 	const clientIntegrationId =
 		env === AppEnv.Live
 			? org.processor_configs?.vercel?.client_integration_id
@@ -176,17 +165,6 @@ export const verifyClaims = ({
 
 export class AuthError extends Error {}
 
-/**
- * OIDC authentication middleware for Vercel integration routes
- * Validates both user and system authentication via OIDC tokens
- *
- * Flow:
- * 1. Extract Authorization Bearer token and X-Vercel-Auth header (user|system)
- * 2. Verify JWT using JWKS
- * 3. For user auth: validate installation_id matches URL param
- * 4. For system auth: validate installation_id if not null
- * 5. Store validated claims in context
- */
 export const vercelOidcAuthMiddleware = async (c: any, next: any) => {
 	const { org, env, logger, testOptions } = c.get("ctx");
 	const authHeader = c.req.header("authorization");
@@ -194,9 +172,6 @@ export const vercelOidcAuthMiddleware = async (c: any, next: any) => {
 	const path = c.req.path;
 	const method = c.req.method;
 
-	// Helper so every 401/403 here screams to console before the response is
-	// returned. The 401/403 body's `code` is useful but doesn't show up in
-	// dev server logs unless you tail responses, so we dump the reason here.
 	const reject = (code: string, status: 401 | 403, reason?: string) => {
 		console.warn({
 			message: `[vercel/oidc] REJECT ${status} ${code}`,
@@ -210,7 +185,6 @@ export const vercelOidcAuthMiddleware = async (c: any, next: any) => {
 		return c.json({ error, code }, status);
 	};
 
-	// Validate required headers
 	if (!authHeader) {
 		return reject("missing_auth_header", 401);
 	}
@@ -223,7 +197,6 @@ export const vercelOidcAuthMiddleware = async (c: any, next: any) => {
 		return reject("invalid_auth_type", 401, `got "${authType}"`);
 	}
 
-	// Extract and verify token
 	let token: string;
 	try {
 		token = getAuthorizationToken(authHeader);
@@ -242,7 +215,6 @@ export const vercelOidcAuthMiddleware = async (c: any, next: any) => {
 		);
 	}
 
-	// Verify JWT using JWKS
 	let claims: OidcClaims;
 	try {
 		claims = await verifyToken({ token, org, env, testOptions });
@@ -274,17 +246,12 @@ export const vercelOidcAuthMiddleware = async (c: any, next: any) => {
 		);
 	}
 
-	// Validate installation_id based on auth type and route
 	const integrationConfigurationId = c.req.param("integrationConfigurationId");
 
-	// For /v1/products/* routes, integrationConfigurationId is a product config ID, not installation ID
-	// So we skip installation_id validation for these routes
 	const isProductsRoute = path.includes("/v1/products/");
 
 	if (!isProductsRoute) {
-		// Only validate installation_id for /v1/installations/* routes
 		if (authType === "user") {
-			// User auth: always validate installation_id matches URL param
 			if (claims.installation_id !== integrationConfigurationId) {
 				return reject(
 					"installation_id_mismatch",
@@ -293,7 +260,6 @@ export const vercelOidcAuthMiddleware = async (c: any, next: any) => {
 				);
 			}
 		} else if (authType === "system") {
-			// System auth: validate installation_id only if not null
 			if (claims.installation_id !== null) {
 				if (claims.installation_id !== integrationConfigurationId) {
 					return reject(
@@ -303,10 +269,8 @@ export const vercelOidcAuthMiddleware = async (c: any, next: any) => {
 					);
 				}
 			}
-			// If installation_id is null, we only validate JWKS (already done above)
 		}
 	}
-	// Store claims in context for downstream handlers
 	c.set("vercelClaims", claims);
 
 	await next();

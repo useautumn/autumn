@@ -1,8 +1,3 @@
-/**
- * The set_plans preview lists the current discounts: only the customer's own coupon loses its subscription,
- * so a replaced subscription coupon (whose discount has no id) stays on the subscription and removable.
- */
-
 import { describe, expect, test } from "bun:test";
 import type { StripeDiscountWithCoupon } from "@autumn/shared";
 import type Stripe from "stripe";

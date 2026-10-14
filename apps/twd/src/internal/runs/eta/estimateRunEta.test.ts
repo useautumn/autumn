@@ -57,14 +57,12 @@ const running = (file: string, worker: string, elapsedS: number): EtaFile => ({
 const busy = (name: string) => ({ name, status: "busy" });
 const ready = (name: string) => ({ name, status: "ready" });
 
-/** Five finished files that ran exactly at baseline: speed factor 1. */
 const ON_PACE = ["a/1", "a/2", "a/3", "a/4", "a/5"];
 const onPaceBaselines = Object.fromEntries(ON_PACE.map((f) => [f, stats(10)]));
 const onPaceDone = ON_PACE.map((f) => done(f, 10));
 
 describe("simulateLptMakespan", () => {
 	test("schedules longest first onto the earliest free worker", () => {
-		// LPT on 2 workers: 7 | 5+2 → 7; naive in-order 2+7 | 5 → 9.
 		expect(
 			simulateLptMakespan({ workerFreeAt: [0, 0], jobs: [2, 5, 7], now: 0 }),
 		).toBe(7);
@@ -106,7 +104,6 @@ describe("estimateRunEta", () => {
 				{ teardownP50Ms: 5 * SEC },
 			),
 		});
-		// p50: 60 | 40+20 → 60s; p90: 90 | 50+30 → 90s; plus 5s teardown.
 		expect(eta).toEqual({ etaMs: 65 * SEC, etaP90Ms: 95 * SEC });
 	});
 
@@ -118,9 +115,7 @@ describe("estimateRunEta", () => {
 			"b/z": stats(300),
 		});
 		expect(priors.model.expect("b/new")?.p50Ms).toBe(200 * SEC);
-		// Global median over 5×10s, 100, 200, 300 is 10s.
 		expect(priors.model.expect("c/new")?.p50Ms).toBe(10 * SEC);
-		// A repetition id resolves to its file's baseline.
 		expect(priors.model.expect("b/x#3")?.p50Ms).toBe(100 * SEC);
 
 		const eta = estimateRunEta({
@@ -163,7 +158,6 @@ describe("estimateRunEta", () => {
 			moreWorkersWanted: 0,
 			priors: priorsFor({ ...onPaceBaselines, "b/1": stats(60, 60) }),
 		});
-		// Ratios of 3 pull the EWMA (prior 1, α 0.2) to 1 + 2·(1−0.8⁵) ≈ 2.34.
 		expect(eta?.etaMs).toBeGreaterThan(60 * SEC * 2.3);
 		expect(eta?.etaMs).toBeLessThan(60 * SEC * 2.4);
 	});
@@ -233,7 +227,6 @@ describe("estimateRunEta", () => {
 			moreWorkersWanted: 3,
 			priors,
 		});
-		// The second worker boots for 30s, then runs b/2 alongside w1.
 		expect(withArrival?.etaMs).toBe(130 * SEC);
 	});
 

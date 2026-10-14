@@ -1,10 +1,3 @@
-/**
- * organization.preview_update is the whole of what the CLI knows about org
- * settings: a stated flag that differs is an update; an unstated one sitting
- * off its default is unmanaged, and the default is the spec's, not the row's —
- * a row written with every default spelled out must still read as default.
- */
-
 import { expect, test } from "bun:test";
 import { OrgConfigSchema } from "@autumn/shared";
 import { computeOrgSettingChanges } from "@/internal/orgs/actions/updateOrganization/computeOrgSettingChanges";
@@ -38,7 +31,6 @@ test("an unstated flag off its default is unmanaged, with no current value", () 
 });
 
 test("a row with every default spelled out reads as all-default", () => {
-	// The spread bug: the dashboard once wrote the whole parsed config back.
 	const changes = computeOrgSettingChanges({ config: config(), stated: {} });
 	expect(changes).toEqual([]);
 });
@@ -64,8 +56,6 @@ test("changes come out in the settable set's order, updates and unmanaged mixed"
 });
 
 test("the overdue flag is the stored one: the legacy twin does not speak for it", () => {
-	// Entitlement checks read block_overdue_entitlements alone, and so does the
-	// dashboard toggle; a legacy include_past_due: false must not be read as it.
 	const legacy = { ...config(), include_past_due: false };
 	expect(computeOrgSettingChanges({ config: legacy, stated: {} })).toEqual([]);
 	expect(

@@ -16,13 +16,10 @@ export const useProductCountsQuery = ({
 	const { queryStates } = useProductQueryState();
 	const product = useProductStore((s) => s.product);
 
-	// Prefer store product ID, fallback to query state, then route params
 	const productId = product?.id || queryStates.productId || product_id;
 
 	const fetchProductCounts = async () => {
 		if (!productId) return null;
-		// Always get counts for the latest version (don't pass version param)
-		// This ensures we check if the CURRENT version has customers, not older versions
 		const { data } = await axiosInstance.get(`/products/${productId}/count`, {
 			...(version ? { params: { version } } : {}),
 		});
@@ -32,8 +29,8 @@ export const useProductCountsQuery = ({
 	const { data, isLoading, error, refetch } = useQuery({
 		queryKey: buildKey(["product_counts", productId, version]),
 		queryFn: fetchProductCounts,
-		retry: false, // Don't retry on error (e.g., product not found)
-		enabled: !!productId, // Only run query if productId exists
+		retry: false,
+		enabled: !!productId,
 	});
 
 	return { counts: data, isLoading, error, refetch };

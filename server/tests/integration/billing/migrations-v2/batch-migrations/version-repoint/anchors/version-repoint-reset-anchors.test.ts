@@ -1,7 +1,3 @@
-/**
- * Batch never re-anchors billing: a version-only replace must keep the row's
- * live reset cycle exactly (no mid-cycle reset), while the definition swaps.
- */
 import { expect, test } from "bun:test";
 import { customerEntitlements, EntInterval, getCycleEnd } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features";
@@ -11,7 +7,6 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-// version-only is per-customer until definition execute is restored
 import { eq } from "drizzle-orm";
 import { getCustomerEntitlementCycle } from "../../batchTestUtils";
 import { readScopedFeatureRow } from "../../paidRowTestUtils";
@@ -45,7 +40,6 @@ test.skip(
 			customerId,
 			featureId: TestFeature.Messages,
 		});
-		// A mid-cycle anchor makes "kept" distinguishable from "recomputed at now".
 		const resetCycleAnchor = Date.now() - 5 * DAY_MS;
 		const nextResetAt = getCycleEnd({
 			anchor: resetCycleAnchor,

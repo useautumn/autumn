@@ -29,13 +29,11 @@ type QueueScope = {
 	config: QueueConfig;
 	isFifo: boolean;
 	accumulator: BatchAccumulator | null;
-	/** Set by shutdown: a send after it is a request that outlived teardown. */
 	closed: boolean;
 };
 
 const newJobId = (): string => `job_${KSUID.randomSync().string}`;
 
-/** `{ id, name, data }` as the server has always sent it; FIFO ids only on a FIFO queue. */
 const toEntry = ({
 	scope,
 	job,
@@ -76,7 +74,6 @@ const sendOnce = ({
 				entry,
 			});
 
-/** One retry, alone rather than batched, so a batch-level transport blip costs one extra call and not the job. */
 const send = async ({
 	scope,
 	job,

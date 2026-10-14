@@ -24,8 +24,6 @@ const wrap = (index: number, count: number) =>
 
 export function useMobileCarousel(count: number): MobileCarousel {
 	const containerRef = useRef<HTMLDivElement | null>(null);
-	// Track renders three copies of the cards; `slot` indexes the middle copy so
-	// there is always a real card to slide onto in either direction.
 	const slotRef = useRef(count);
 	const x = useMotionValue(0);
 	const [activeIndex, setActiveIndex] = useState(0);
@@ -46,8 +44,6 @@ export function useMobileCarousel(count: number): MobileCarousel {
 		return () => window.removeEventListener("resize", measure);
 	}, [count, x]);
 
-	// Animate to the target slot, then silently recentre onto the equivalent
-	// card in the middle copy so the track never runs out of cards.
 	const settle = useCallback(
 		(slot: number) => {
 			const wrapped = wrap(slot, count);
@@ -74,7 +70,6 @@ export function useMobileCarousel(count: number): MobileCarousel {
 			const target = wrap(index, count);
 			const current = wrap(slotRef.current, count);
 			let delta = target - current;
-			// Take the shorter way round rather than scrolling back through the middle.
 			if (delta > count / 2) delta -= count;
 			if (delta < -count / 2) delta += count;
 			settle(slotRef.current + delta);

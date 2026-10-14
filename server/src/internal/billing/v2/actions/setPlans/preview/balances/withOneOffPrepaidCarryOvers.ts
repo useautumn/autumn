@@ -24,7 +24,6 @@ const expiringCustomerProducts = ({
 			})?.status === CusProductStatus.Expired,
 	);
 
-/** The loose lifetime rows billing and phase activation insert for expiring one-off prepaid balances. */
 const oneOffPrepaidCarryOvers = ({
 	fullCustomer,
 	customerProducts,
@@ -62,7 +61,6 @@ const oneOffPrepaidCarryOvers = ({
 	});
 };
 
-/** Phase customers with the one-off prepaid balances that outlive each expiring plan, as billing and activation keep them. */
 export const withOneOffPrepaidCarryOvers = ({
 	originalFullCustomer,
 	phaseCustomers,

@@ -1,7 +1,6 @@
 import { expect, test } from "bun:test";
 import { describeMskToken } from "../../src/client/mskTokenInfo.js";
 
-/** What the MSK IAM signer hands kafkajs: a presigned URL, base64url-encoded, whose query names the key it was signed with. */
 function fakeToken({
 	keyId,
 	date,

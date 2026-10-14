@@ -38,8 +38,6 @@ export const CustomerUsageAnalyticsColumns: ColumnDef<Event>[] = [
 		accessorKey: "timestamp",
 		minSize: 100,
 		cell: ({ row }: { row: Row<Event> }) => {
-			// Timestamp comes from backend in UTC without timezone designator (e.g., "2025-02-09 14:25:47")
-			// Append 'Z' to parse as UTC, then format displays in user's local timezone
 			let timestampStr = String(row.original.timestamp);
 			const hasTimezone = /Z|[+-]\d{2}:\d{2}$/.test(timestampStr);
 			if (!hasTimezone) {
@@ -56,7 +54,6 @@ export const CustomerUsageAnalyticsColumns: ColumnDef<Event>[] = [
 	},
 ];
 
-/** Checks if a property value is displayable as a table column */
 function isDisplayableProperty(key: string, value: unknown): boolean {
 	if (key === "value") return false;
 	return (
@@ -66,7 +63,6 @@ function isDisplayableProperty(key: string, value: unknown): boolean {
 	);
 }
 
-/** Generates dynamic columns from event properties */
 export function generatePropertyColumns({
 	events,
 }: {

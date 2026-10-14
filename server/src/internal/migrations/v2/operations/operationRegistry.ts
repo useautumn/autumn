@@ -3,7 +3,6 @@ import { processAddPlan } from "./addPlan/index.js";
 import type { OperationProcessor } from "./types/index.js";
 import { processUpdatePlan } from "./updatePlan/index.js";
 
-/** Execution order — operations are sorted to match this sequence. */
 const EXECUTION_ORDER: CustomerOperation["type"][] = [
 	"add_plan",
 	"update_plan",

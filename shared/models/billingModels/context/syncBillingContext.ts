@@ -22,21 +22,15 @@ export interface SyncProductContext {
 	customPrices: Price[];
 	customEntitlements: Entitlement[];
 	featureQuantities: FeatureOptions[];
-	/** Requested total seat quantities per license plan (from license_quantities). */
 	customerLicenseQuantities?: CustomerLicenseQuantity[];
-	/** Custom license definitions (is_custom plan licenses) to persist. */
 	insertPlanLicenses?: InsertPlanLicenseSpec[];
-	/** Resolved per-plan entity scope (from plan.entity_id), if any. */
 	entity?: Entity;
-	/** Existing active cusProduct in the same product group, if `expire_previous` was set. */
 	currentCustomerProduct?: FullCusProduct;
 	accessStartsAt?: number;
 }
 
 export interface SyncPhaseContext {
-	/** Resolved phase start in ms epoch. `"now"` is materialized to `currentEpochMs`. */
 	startsAt: number;
-	/** Resolved phase end in ms epoch — equals the next phase's `startsAt`, or null for the final phase. */
 	endsAt: number | null;
 	productContexts: SyncProductContext[];
 }
@@ -47,32 +41,20 @@ export interface SyncBillingContext {
 
 	stripeSubscription: Stripe.Subscription | null;
 	stripeSchedule: Stripe.SubscriptionSchedule | null;
-	/** Effective billing currency used by every normalized Stripe item. */
 	currency: string;
 
-	/** First phase if its `starts_at` was `"now"`, else null. */
 	immediatePhase: SyncPhaseContext | null;
-	/** Remaining phases (or all phases if there is no immediate phase). */
 	futurePhases: SyncPhaseContext[];
-	/** Start now like the immediate phase but never end at a phase boundary. */
 	unscheduledProductContexts: SyncProductContext[];
-	/** Customer-wide free plans the request repeats unchanged; kept as they are. */
 	retainedCustomerProducts: FullCusProduct[];
-	/** Plans the customer's current Autumn schedule has queued. A multi-phase
-	 * sync replaces that schedule, so they get deleted. */
 	queuedCustomerProducts: FullCusProduct[];
 
 	currentEpochMs: number;
 	acknowledgedWarnings: NonNullable<SyncParamsV1["acknowledge_warnings"]>;
 
-	/** On a live subscription sync, expire its linked plans and the free plans the request leaves out.
-	 * Schedule-only syncs expire nothing. */
 	expireUnlistedPlans: boolean;
 
-	/** Carry an expired plan's consumed usage onto the replacement plan's
-	 * balances for shared features on the same subject. Defaults to true. */
 	carryOverUsage: boolean;
 
-	/** Inherited org transition-rule carry config; undefined = carry all consumables. */
 	carryOverUsages?: CarryOverUsages;
 }

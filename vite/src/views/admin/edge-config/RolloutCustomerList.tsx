@@ -7,7 +7,6 @@ import type {
 	RolloutOrg,
 } from "./rolloutTypes";
 
-/** Every pinned customer, or the note that there are none. */
 export const RolloutCustomerList = ({
 	customerPins,
 	orgsById,

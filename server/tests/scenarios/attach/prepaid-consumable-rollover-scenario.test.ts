@@ -10,17 +10,6 @@ import {
 	constructPrepaidItem,
 } from "@/utils/scriptUtils/constructItem";
 
-/**
- * Scenario: Prepaid + Consumable messages on the same plan, both with rollovers.
- *
- * - Prepaid messages: 100 included + purchasable in packs of 100 at $10
- * - Consumable messages: 50 included + $0.10/unit overage
- * - Both have 50% max_percentage rollover, 1 month duration
- *
- * After attach + some usage + a reset cycle, inspect the dashboard
- * to see how rollovers display for this combo.
- */
-
 test(`${chalk.yellowBright("scenario: prepaid + consumable messages with rollover")}`, async () => {
 	const rolloverConfig = {
 		max_percentage: 50,

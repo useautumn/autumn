@@ -8,7 +8,6 @@ import {
 } from "@autumn/shared";
 import { findFeatureOnSubject } from "../findSubject/findFeatureOnSubject.js";
 
-/** A finalize's unwind can land on a row the selection left out (a past-due product, an expired rollover); its feature is read off the subject. */
 const featuresOfRowsOnSubject = ({
 	fullSubject,
 	rowIds,
@@ -26,10 +25,6 @@ const featuresOfRowsOnSubject = ({
 		)
 		.map((customerEntitlement) => customerEntitlement.entitlement.feature);
 
-/**
- * The features whose rows the deduction moved: the tracked one, and a credit system that paid for it.
- * Prod checks every one of them; with nothing moved it falls back to the tracked feature.
- */
 export const outcomeToAffectedFeatures = ({
 	outcome,
 	fullSubject,

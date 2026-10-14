@@ -21,7 +21,6 @@ import { SyncProposalCard } from "./SyncProposalCard";
 import type { SyncMapping, SyncProposal } from "./syncStripeTypes";
 import { hasActiveProductInGroup } from "./syncStripeUtils";
 
-/** Build default mappings from proposals — auto-select matched plans. */
 const buildDefaultMappings = ({
 	proposals,
 	products,
@@ -76,7 +75,6 @@ export function SyncStripeSheet() {
 
 	const customerProducts: FullCusProduct[] = customer?.customer_products ?? [];
 
-	// InlinePlanEditor state
 	const [editingMapping, setEditingMapping] = useState<{
 		subscriptionId: string;
 		mappingIndex: number;
@@ -126,7 +124,6 @@ export function SyncStripeSheet() {
 		);
 	};
 
-	// InlinePlanEditor: build FrontendProduct for the mapping being edited
 	const editingProduct: FrontendProduct | null = useMemo(() => {
 		if (!editingMapping || !products) return null;
 

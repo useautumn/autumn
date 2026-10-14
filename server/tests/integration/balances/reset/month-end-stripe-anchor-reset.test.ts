@@ -2,9 +2,6 @@ import { afterAll, afterEach, expect, mock, test } from "bun:test";
 import { AppEnv, EntInterval, type FullCusProduct } from "@autumn/shared";
 import chalk from "chalk";
 
-// A day-31 Stripe anchor must not push a shorter-month reset into the next month.
-// Expected failure without clamping: June 30 becomes July 1.
-
 const MAY_31_2026 = Date.UTC(2026, 4, 31, 15, 13, 9);
 const MAY_15_2026 = Date.UTC(2026, 4, 15, 15, 13, 9);
 const JUST_AFTER_MAY_31_RESET = MAY_31_2026 + 60_000;

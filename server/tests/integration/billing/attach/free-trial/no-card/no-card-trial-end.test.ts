@@ -1,13 +1,3 @@
-/**
- * No-card trials at trial end (settled by the product cron, driven here by the test clock).
- *
- * Contract:
- *  - no card on file → trial expires and the free default plan takes over, still no Stripe sub
- *  - card added during the trial → plan is billed into a new Stripe sub and stops trialing
- *  - two entities trialing the same plan convert into a single Stripe sub
- *  - a trial Autumn did not mark on_trial_end "bill" (e.g. no_billing_changes, legacy rows) is never settled
- */
-
 import { expect, test } from "bun:test";
 import type {
 	ApiCustomerV3,

@@ -13,7 +13,6 @@ import {
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
 
-// The pure credit math lives in @autumn/shared so the balance engine can price the same way; these names stay importable here.
 export {
 	addCreditSystemMeteredFeatureIds,
 	type CreditRateCard,
@@ -45,8 +44,6 @@ export const getCreditRateRequiredBalance = ({
 	inStatuses?: CusProductStatus[];
 	eventProperties?: EventProperties;
 }): number => {
-	// Only this credit system's entitlements that actually fund the source
-	// feature under their effective schema (an override may have removed it).
 	const customerEntitlements = fullSubjectToCustomerEntitlements({
 		fullSubject,
 		featureIds: [creditSystem.id],
@@ -55,9 +52,6 @@ export const getCreditRateRequiredBalance = ({
 		inStatuses,
 	});
 
-	// A flat catalog rate converts without walking entitlements — unless one
-	// of them carries a feature_override, whose rate (possibly graduated)
-	// applies to the credits it funds.
 	const schemaItem = findCreditSchemaItemByFeatureId({
 		featureId: sourceFeature.id,
 		creditSystem,

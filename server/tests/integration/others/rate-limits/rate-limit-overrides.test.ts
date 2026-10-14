@@ -1,8 +1,3 @@
-/**
- * Asserts the server honors the edge-config rate-limit override, lowered for a
- * throwaway sub-org through the admin route, by firing more requests than it allows.
- */
-
 import { afterEach, expect, test } from "bun:test";
 import { ApiVersion } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";

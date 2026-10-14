@@ -1,15 +1,3 @@
-/**
- * `bun tw refresh-warm [--ref=<ref>]` — SYNCHRONOUS freestyle warm-snapshot
- * refresh (the CI-first-class version of the detached in-run background refresh).
- *
- * Resolves the ref to a sha (default: origin/dev HEAD), and if the exact
- * `tw-warm-<sha12>` snapshot is already READY exits 0 immediately. Otherwise it
- * drives the provider's normal warm flow — createWarmSandbox (fast-forward from
- * the newest warm generation, cold build as fallback) → warmup.sh → memory
- * snapshot — and waits until the snapshot is READY server-side. Exit 0 only on a
- * verified READY snapshot; the flow's own teardown deletes the build VM.
- */
-
 import chalk from "chalk";
 import { Freestyle } from "freestyle";
 import {
@@ -40,7 +28,6 @@ const log = (line: string): void => {
 	console.log(chalk.cyan(`[refresh-warm] ${line}`));
 };
 
-// ---- stage timing ----------------------------------------------------------
 const stageTimings: { label: string; ms: number }[] = [];
 const timed = async <T>(label: string, fn: () => Promise<T>): Promise<T> => {
 	const startedAt = Date.now();
@@ -64,7 +51,6 @@ const printTimingSummary = (totalStartedAt: number): void => {
 	);
 };
 
-// ---- git resolution --------------------------------------------------------
 const git = (...args: string[]): string =>
 	new TextDecoder()
 		.decode(
@@ -73,7 +59,6 @@ const git = (...args: string[]): string =>
 		)
 		.trim();
 
-/** Full sha for `ref`: pass-through for shas, else remote lookup, else local. */
 const resolveSha = (ref: string): string => {
 	if (FULL_SHA.test(ref)) {
 		return ref;
@@ -90,7 +75,6 @@ const resolveSha = (ref: string): string => {
 	throw new Error(`refresh-warm: cannot resolve ref "${ref}" to a commit sha`);
 };
 
-/** Same normalization as run.ts's resolveGitSource (origin url → anonymous https). */
 const resolveGitSource = (revision: string): GitSource => {
 	let url =
 		process.env.TW_GIT_URL || git("config", "--get", "remote.origin.url");
@@ -104,7 +88,6 @@ const resolveGitSource = (revision: string): GitSource => {
 		: { url, revision };
 };
 
-// ---- warm env (mirrors run.ts buildWarmEnv) --------------------------------
 const requireSecret = (name: string): string => {
 	const value = process.env[name];
 	if (!value) {
@@ -132,9 +115,6 @@ const buildWarmEnv = (): Record<string, string> => ({
 	AUTUMN_PUBLIC_API_URL: `http://localhost:${SERVER_PORT}`,
 });
 
-// ---- snapshot state (direct API — the provider seam has no exact-name check;
-// its getSandboxByName treats STALE generations as hits and kicks a detached
-// refresh, which is exactly what this command must not do) -------------------
 const freestyleClient = (): Freestyle =>
 	new Freestyle({ apiKey: requireSecret("FREESTYLE_API_KEY") });
 
@@ -168,12 +148,6 @@ const waitForReadySnapshot = async (
 	}
 };
 
-// ---- modal path --------------------------------------------------------------
-/**
- * Modal refresh: exact-published-image check via the provider's own lookup
- * (TW_MODAL_NO_STALE keeps stale `:latest` hits from masquerading as fresh),
- * then the normal warm flow — snapshotAndStop publishes `tw-warm:<sha12>`.
- */
 const refreshModalWarm = async ({
 	provider,
 	sha,
@@ -185,7 +159,6 @@ const refreshModalWarm = async ({
 	warmName: string;
 	totalStartedAt: number;
 }): Promise<number> => {
-	// Must be set BEFORE setProvider dynamically imports modal.ts (module-load read).
 	process.env.TW_MODAL_NO_STALE = "1";
 	await setProvider(provider);
 
@@ -220,9 +193,7 @@ const refreshModalWarm = async ({
 		await timed("snapshot + publish warm image", () => snapshotAndStop(warm));
 	} catch (error) {
 		log(chalk.red(`build failed — deleting sandbox ${warmName}`));
-		await deleteSandbox(warm).catch(() => {
-			/* best-effort */
-		});
+		await deleteSandbox(warm).catch(() => {});
 		throw error;
 	}
 
@@ -239,8 +210,6 @@ const refreshModalWarm = async ({
 	return 0;
 };
 
-// ---- command ---------------------------------------------------------------
-/** Returns the process exit code (0 = snapshot READY for the resolved sha). */
 export const refreshWarm = async (args: string[]): Promise<number> => {
 	const totalStartedAt = Date.now();
 	const ref =
@@ -280,8 +249,6 @@ export const refreshWarm = async (args: string[]): Promise<number> => {
 
 	await setProvider("freestyle");
 
-	// createWarmSandbox fast-forwards from the newest warm generation when one
-	// exists (checkout only), and cold-builds a fresh Debian VM otherwise.
 	const warm = await timed("create warm VM (fast-forward or cold build)", () =>
 		createWarmSandbox({
 			name: warmName,
@@ -303,16 +270,12 @@ export const refreshWarm = async (args: string[]): Promise<number> => {
 			throw new Error(`refresh-warm: warmup.sh exited ${warmup.exitCode}`);
 		}
 
-		// snapshotAndStop restarts services + server, memory-snapshots, deletes the
-		// build VM, and GCs old warm generations.
 		await timed("snapshot warm parent (services + server running)", () =>
 			snapshotAndStop(warm),
 		);
 	} catch (error) {
 		log(chalk.red(`build failed — deleting VM ${warmName}`));
-		await deleteSandbox(warm).catch(() => {
-			/* best-effort */
-		});
+		await deleteSandbox(warm).catch(() => {});
 		throw error;
 	}
 

@@ -8,7 +8,6 @@ type DefaultPaymentMethodConfiguration = {
 	payment_method_types: string[];
 };
 
-/** Invoice payment method types turned on in the connected Stripe account, and the default configuration Stripe falls back to; null when unknown. */
 export const useStripePaymentMethodTypesQuery = () => {
 	const axiosInstance = useAxiosInstance();
 	const buildKey = useQueryKeyFactory();

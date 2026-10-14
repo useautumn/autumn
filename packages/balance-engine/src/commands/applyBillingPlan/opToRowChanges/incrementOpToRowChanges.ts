@@ -5,7 +5,6 @@ import {
 	wasDeletedByPlan,
 } from "./planRowChangeContext.js";
 
-/** Unguarded: a rebalance's delta lands on whatever the grant holds by then, as the Postgres lane's `balance + delta`. */
 export const incrementOpToRowChanges = ({
 	op,
 	context,

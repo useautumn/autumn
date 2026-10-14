@@ -1,14 +1,6 @@
 import { ApiProductItemV0Schema } from "@api/products/items/previousVersions/apiProductItemV0";
 import { z } from "zod/v4";
 
-/**
- * ApiCusProductV2Schema - Customer Product schema for API V1.1+ (post V0_2)
- *
- * Added in V0_2:
- * - items: Array of product items (features, prices)
- * - current_period_start: Billing period start timestamp
- * - current_period_end: Billing period end timestamp
- */
 export const ApiCusProductV2Schema = z.object({
 	id: z.string(),
 	name: z.string().nullable(),

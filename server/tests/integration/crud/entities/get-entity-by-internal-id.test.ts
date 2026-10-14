@@ -1,10 +1,3 @@
-/**
- * An id-less entity is read by its internal id, as the dashboard reads a pending entity, on both balance routes.
- *
- * Red (before): the balance worker route answered 500 `entity_subject_required`; legacy answered the entity.
- * Green (after): both answer the entity with its features.
- */
-
 import { expect, test } from "bun:test";
 import type { ApiEntityV0 } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";

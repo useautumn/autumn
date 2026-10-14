@@ -41,7 +41,6 @@ const applyMultiUpdateParamsRefinements = <
 			},
 		);
 
-/** Per-update entry in the multi-update request (external fields only) */
 const extMultiUpdateItemShape = z.object({
 	plan_id: z.string().optional().meta({
 		description:

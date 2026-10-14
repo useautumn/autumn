@@ -20,10 +20,6 @@ export function runProgressLabel({
 	return activeRun.dry_run ? "Dry run in progress" : "Migrating customers";
 }
 
-/** Claims land page by page, so `total` grows mid-run; the expected scope
- * (the filter count) keeps the bar from lurching backwards. Until that count
- * loads the scope is unknown, so the bar stays indeterminate rather than
- * reading complete against the customers claimed so far. */
 export function migrationProgress({
 	completed,
 	total,

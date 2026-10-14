@@ -1,9 +1,6 @@
 import { Button } from "@autumn/ui";
 import type { LeafQuestionData, LeafQuestionResponse } from "../chatTypes";
 
-/** Answer chips for an agent question. Clicking sends the label as the visible
- * message plus a structured inputResponse (when the part carries the request
- * id) so eve resolves the parked question reliably. */
 export function QuestionOptions({
 	onAnswer,
 	question,

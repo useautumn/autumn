@@ -1,18 +1,10 @@
-/**
- * Fetches billing period directly from Stripe subscription for proration calculations.
- *
- * Handles:
- * - Single subscription
- * - Multiple subscriptions (filter by interval)
- */
-
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { CusService } from "@/internal/customers/CusService.js";
 
 export type BillingPeriod = {
-	start: number; // ms timestamp
-	end: number; // ms timestamp
+	start: number;
+	end: number;
 };
 
 export type GetBillingPeriodParams = {
@@ -22,25 +14,9 @@ export type GetBillingPeriodParams = {
 
 export type GetBillingPeriodResult = {
 	billingPeriod: BillingPeriod;
-	billingAnchorMs: number; // Original subscription start (billing_cycle_anchor)
+	billingAnchorMs: number;
 };
 
-/**
- * Get billing period directly from Stripe subscription.
- *
- * @param customerId - The Autumn customer ID
- * @param interval - Optional: filter by billing interval ("month" or "year")
- *
- * @throws Error if no subscription found or billing period is missing
- *
- * @example
- * // Simple case - single subscription
- * const { billingPeriod, billingAnchorMs } = await getBillingPeriod({ customerId });
- *
- * @example
- * // Multi-interval - filter by billing interval
- * const { billingPeriod } = await getBillingPeriod({ customerId, interval: "month" });
- */
 export const getBillingPeriod = async ({
 	customerId,
 	interval,
@@ -68,7 +44,6 @@ export const getBillingPeriod = async ({
 		throw new Error(`No subscriptions found for customer "${customerId}"`);
 	}
 
-	// Find an active subscription (not canceled)
 	let matchingSubs = subscriptions.data.filter(
 		(sub) => sub.status === "active" || sub.status === "trialing",
 	);
@@ -77,7 +52,6 @@ export const getBillingPeriod = async ({
 		matchingSubs = subscriptions.data;
 	}
 
-	// Filter by interval if specified
 	if (interval) {
 		const intervalSubs = matchingSubs.filter((sub) => {
 			const firstItem = sub.items.data[0];
@@ -103,8 +77,6 @@ export const getBillingPeriod = async ({
 
 	const subscription = matchingSubs[0];
 
-	// Get billing period from the first subscription item
-	// Stripe stores current_period_start/end on each item, not the subscription itself
 	const firstItem = subscription.items.data[0];
 	if (!firstItem) {
 		throw new Error("No subscription items found");

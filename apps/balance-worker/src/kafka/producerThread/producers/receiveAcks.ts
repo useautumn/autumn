@@ -1,4 +1,3 @@
-/** Every request's outcome comes back here: ack frames off the ack ring, and control replies by message. */
 import { ACK_FRAME, decodeAckFrame, type SendAck } from "../frames/ackFrame.js";
 import type { ThreadedProducersScope } from "../types/threadedProducersScope.js";
 import { reportProducerThreadFailure } from "./reportProducerThreadFailure.js";
@@ -64,7 +63,6 @@ async function ackLoop({
 	const { state, acks } = scope;
 	while (!state.stopping && !state.failed) {
 		if (drainAcks({ scope }) > 0) {
-			// Let the settled sends' continuations run before the next batch.
 			await new Promise<void>((resolve) => setImmediate(resolve));
 			continue;
 		}
@@ -72,7 +70,6 @@ async function ackLoop({
 	}
 }
 
-/** A frame the loop cannot read breaks the ring for good: that is fatal. */
 export function startAckLoop({
 	scope,
 }: {

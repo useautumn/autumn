@@ -57,7 +57,6 @@ export type BalanceWorkerRequestLog = {
 		| RecalculateBalanceReply;
 	error?: Error;
 	errorCode?: WorkerErrorCode;
-	/** A track batch logs once: its size and failures counted by code, never one line per command. */
 	batch?: BalanceWorkerBatchLog;
 };
 
@@ -67,9 +66,7 @@ export type BalanceWorkerBatchLog = {
 	succeeded: number;
 	failed: number;
 	errorCodes: Partial<Record<WorkerErrorCode, number>>;
-	/** The worst status any command was answered with, so the line logs at that level. */
 	worstStatus: number;
-	/** Org of the first command; customer and entity only when every command shares them. */
 	identity?: Partial<MeteringIdentity>;
 	orgSlug?: string;
 };
@@ -80,13 +77,11 @@ export type BalanceWorkerHttpContext = {
 			route: PartitionRoute,
 		): BalanceWorkerRequestContext["runtime"] | undefined;
 		awaitHandoff?(target: { partition: number }): Promise<void>;
-		/** The route a finished handoff claimed for the successor, to tell a caller that still arrives here. */
 		findSuccessor?(target: {
 			partition: number;
 		}): WorkerRouteSuccessor | undefined;
 	};
 	partitionResolver: MeteringPartitionResolver;
 	logger: Pick<AutumnLogger, "debug" | "info" | "warn" | "error">;
-	/** Absent, every request is logged; failures always are. */
 	requestLog?: { successSampleRate: number };
 };

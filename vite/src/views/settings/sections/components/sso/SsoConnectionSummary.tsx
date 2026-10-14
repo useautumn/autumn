@@ -40,13 +40,11 @@ const DetailRow = ({
 	</div>
 );
 
-/** Domain / issuer / masked client ID / Autumn callback URL. Never the secret. */
 export const SsoConnectionSummary = ({
 	connection,
 	callbackUrl,
 }: {
 	connection: SsoConnection;
-	/** Falls back to the org-level setup callback URL. */
 	callbackUrl: string | null;
 }) => {
 	const resolvedCallbackUrl = connection.callbackUrl || callbackUrl;

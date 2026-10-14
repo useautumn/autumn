@@ -1,10 +1,3 @@
-/**
- * An explicit set_plans trial starts on new plans and is patched onto live plans it keeps.
- *
- * Red (before):  a trial recreated every live plan, resetting its balances and usage.
- * Green (after): the same row is kept with its usage, and only its trial end moves.
- */
-
 import { expect, test } from "bun:test";
 import {
 	type ApiCustomerV3,

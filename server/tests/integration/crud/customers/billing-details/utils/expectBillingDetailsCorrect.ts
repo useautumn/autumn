@@ -13,7 +13,6 @@ export const EMPTY_BILLING_DETAILS: ApiBillingDetails = {
 	invoice_settings: { custom_fields: [] },
 };
 
-/** Reads billing_details through the expand (live from Stripe) and compares the full shape. */
 export const expectBillingDetailsCorrect = async ({
 	autumn,
 	customerId,

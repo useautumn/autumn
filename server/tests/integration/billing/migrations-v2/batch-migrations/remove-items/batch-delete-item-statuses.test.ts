@@ -1,7 +1,3 @@
-/**
- * Operation scope includes scheduled, paused, and past-due products while
- * expired products remain historical and untouched.
- */
 import { expect, test } from "bun:test";
 import {
 	CusProductStatus,

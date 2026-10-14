@@ -1,16 +1,3 @@
-/**
- * Step 2: Deduplicate March NDJSON files by streaming line by line.
- *
- * Since the export is sorted, duplicate rows are always adjacent.
- * Simply compares each line to the previous - if identical, skip it.
- * Only v2 rows are deduplicated (SDK rows are kept as-is regardless).
- *
- * Memory usage: O(1) - only holds one line in memory at a time.
- *
- * Usage: bun run scripts/firecrawl-march-dedup.ts [YYYY-MM-DD]
- * Run from: sirtenzin-autumn/server/tinybird/
- */
-
 import { createReadStream, createWriteStream } from "node:fs";
 import { readFile, writeFile, mkdir } from "node:fs/promises";
 import { createInterface } from "node:readline";
@@ -76,7 +63,6 @@ for (const file of files) {
     rowsOut++;
     prevLine = line;
 
-    // Progress log every 5s
     if (Date.now() - lastLog >= LOG_INTERVAL_MS) {
       const pct = ((bytesRead / fileSize) * 100).toFixed(1);
       const elapsedSec = (Date.now() - dayStart) / 1000;

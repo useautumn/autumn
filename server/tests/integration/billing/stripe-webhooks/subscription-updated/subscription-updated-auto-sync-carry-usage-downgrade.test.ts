@@ -1,6 +1,3 @@
-// Contract: back-synced plan changes (sub.updated / sub.created auto-sync) carry consumed usage onto
-// the replacement plan with the same carry semantics as attach.
-
 import { test } from "bun:test";
 import {
 	createCustomBasePriceForProduct,
@@ -24,9 +21,6 @@ import {
 	setupConsumableFamilyOnBase,
 } from "./utils/autoSyncCarryUsage";
 
-// ═══════════════════════════════════════════════════════════════════════════
-// 4. Downgrade: 100k/100k -> 50k plan => balance -50k (follows attach)
-// ═══════════════════════════════════════════════════════════════════════════
 test(`${chalk.yellowBright("sub.updated auto-sync carry 4: downgrade carries usage into overage")}`, async () => {
 	const customerId = "sync-carry-downgrade";
 	const baseId = "sync-carry-down-base";
@@ -78,9 +72,6 @@ test(`${chalk.yellowBright("sub.updated auto-sync carry 4: downgrade carries usa
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════════════
-// 5. Allocated downgrade (marketing contacts): 25k/25k -> 5k => balance -20k
-// ═══════════════════════════════════════════════════════════════════════════
 test(`${chalk.yellowBright("sub.updated auto-sync carry 5: allocated usage never changes, balance goes negative")}`, async () => {
 	const customerId = "sync-carry-allocated";
 	const group = "grp-sync-carry-allocated";

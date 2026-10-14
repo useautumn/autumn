@@ -5,8 +5,6 @@ import { BillingControlPlanManagedSheetContent } from "./BillingControlPlanManag
 
 type KeyedControl = { feature_id?: string; filter?: UsageLimitFilter | null };
 
-/** Remounts the content per item so a usage draft never carries over when the
- * open sheet switches to another plan-managed control. */
 export function BillingControlPlanManagedSheet() {
 	const sheetData = useSheetStore((s) => s.data);
 	const controlKey = sheetData?.key as BillingControlKey | undefined;

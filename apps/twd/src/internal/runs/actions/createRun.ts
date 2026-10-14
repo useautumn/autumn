@@ -14,7 +14,6 @@ import { getRunWithEmail, toRunSummary, updateRun } from "../repos/runsRepo.ts";
 import { getWarmImage, isWarmImageFresh } from "../repos/warmImagesRepo.ts";
 import type { RunProgress } from "../types/runProgress.ts";
 
-/** Gate → sha → files → runs row → warm:<sha> (if not ready) → swarm:<runId>. */
 export const createRun = async ({
 	ctx,
 	...input

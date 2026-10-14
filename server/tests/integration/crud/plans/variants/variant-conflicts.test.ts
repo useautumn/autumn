@@ -1,11 +1,3 @@
-/**
- * Plan variants — preview_update conflict detection.
- *
- * A variant conflicts when the base edit changes a feature the variant holds
- * only at an interval the edit doesn't touch (different_interval): propagating
- * would insert a spurious item, so the owner should handle it separately.
- */
-
 import { expect, test } from "bun:test";
 import {
 	type ApiPlanV1,
@@ -65,9 +57,6 @@ const previewMsgMonthBump = (rpc: AutumnRpcCli, baseId: string) =>
 		include_variants: true,
 	}) as Promise<PlanUpdatePreview>;
 
-// ═════════════════════════════════════════════════════════════════
-// 1. variant on a different interval → different_interval conflict
-// ═════════════════════════════════════════════════════════════════
 test.concurrent(
 	`${chalk.yellowBright("variant conflicts: variant holds Messages yearly, base edits monthly → different_interval conflict")}`,
 	async () => {
@@ -99,9 +88,6 @@ test.concurrent(
 	},
 );
 
-// ═════════════════════════════════════════════════════════════════
-// 2. variant on the same interval → no conflict
-// ═════════════════════════════════════════════════════════════════
 test.concurrent(
 	`${chalk.yellowBright("variant conflicts: variant shares Messages monthly interval → no conflict")}`,
 	async () => {

@@ -4,7 +4,6 @@ import type {
 	StopReason,
 } from "./types/heraldLifecycle.js";
 
-/** A start that fails still leaves through stopHerald, so stores close and the exit code says what happened. */
 export async function startHerald({
 	ctx,
 	state,
@@ -23,7 +22,6 @@ export async function startHerald({
 	}
 }
 
-/** The only way out. Once: a second stop, whatever its reason, waits for the first. */
 export function stopHerald({
 	ctx,
 	state,
@@ -37,7 +35,6 @@ export function stopHerald({
 	return state.stopping;
 }
 
-/** Exit 0 only for a clean stop on a signal; a crash, a failed start or a failed stop all exit 1. */
 async function finishStop({
 	ctx,
 	reason,
@@ -72,7 +69,6 @@ async function finishStop({
 	}
 }
 
-/** Logs are flushed before the process ends, so the last line of a failed stop is never lost. */
 async function exitHerald({
 	ctx,
 	code,
@@ -87,7 +83,6 @@ async function exitHerald({
 	}
 }
 
-/** SIGTERM is the orchestrator asking; SIGINT is a person. Both are a clean stop. */
 export function registerProcessSignals({
 	ctx,
 	state,

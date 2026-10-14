@@ -1,11 +1,3 @@
-/**
- * Regression coverage for Redis monitor connection ownership.
- *
- * Before, the monitor eagerly opened its probe, warmed connections serially,
- * and could disconnect the request client. The monitor now creates an isolated
- * probe only when started, warms both clients concurrently, and leaves request
- * reconnects to ioredis.
- */
 import { describe, expect, test } from "bun:test";
 import net from "node:net";
 import { Redis } from "ioredis";

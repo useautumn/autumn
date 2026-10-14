@@ -1,26 +1,3 @@
-/**
- * catalogV2.update — an explicit `processors.stripe: null` unlinks a price.
- *
- * Presence in the body is the signal. A normal plan edit re-sends every item
- * without a `processors` key, so an omitted key has to leave the mapping
- * exactly where it is; only a stated null unlinks. Unlike a plan's Stripe
- * product, a paid price has to bill from SOME Stripe price, so init mints a
- * replacement on the same request — what the unlink guarantees is that the
- * adopted id is gone, not that the slot stays empty.
- *
- * Contract:
- *   U1  `price.processors.stripe: null` drops an adopted id from the prepaid
- *       v2 slot the item bills from
- *   U2  the same on `plan.price` drops it from the base price's v1 slot
- *   U3  an edit that omits `processors` keeps the adopted id — the routine
- *       save must never read as an unlink
- *
- * Red (before): `price_id` was a bare string and `stripe` was `.optional()`,
- *   so the request 400d before it could express an unlink at all.
- * Green (after): the stated null clears the slot the mapping occupied, and an
- *   omitted key still leaves it alone.
- */
-
 import { expect, test } from "bun:test";
 import {
 	BillingInterval,
@@ -57,7 +34,6 @@ const getFull = async ({
 		env: ctx.env,
 	});
 
-/** A price Autumn did not make — the shape a real import starts from. */
 const createExternalPrice = async ({
 	stripeCli,
 	label,
@@ -77,7 +53,6 @@ const createExternalPrice = async ({
 	return price.id;
 };
 
-/** `undefined` states nothing; `null` unlinks; a string adopts. */
 const prepaidItem = ({ priceId }: { priceId?: string | null }) => ({
 	feature_id: TestFeature.Messages,
 	included: 100,
@@ -140,7 +115,6 @@ test.concurrent(
 					"starts mapped to the adopted price",
 				).toBe(adoptedPriceId);
 
-				// U3: the routine save — same definition, no `processors` key.
 				await autumnV2_3.catalogV2.update({
 					plans: [{ plan_id: planId, items: [prepaidItem({})] }],
 				});
@@ -149,7 +123,6 @@ test.concurrent(
 					"an omitted processors key is not an unlink",
 				).toBe(adoptedPriceId);
 
-				// U1: the stated null is.
 				await autumnV2_3.catalogV2.update({
 					plans: [{ plan_id: planId, items: [prepaidItem({ priceId: null })] }],
 				});
@@ -190,7 +163,6 @@ test.concurrent(
 					"starts mapped to the adopted price",
 				).toBe(adoptedPriceId);
 
-				// U3 again, on the base lane.
 				await autumnV2_3.catalogV2.update({
 					plans: [{ plan_id: planId, price: basePrice({}) }],
 				});
@@ -199,7 +171,6 @@ test.concurrent(
 					"an omitted processors key is not an unlink",
 				).toBe(adoptedPriceId);
 
-				// U2: the stated null clears the v1 slot the base price bills from.
 				await autumnV2_3.catalogV2.update({
 					plans: [{ plan_id: planId, price: basePrice({ priceId: null }) }],
 				});

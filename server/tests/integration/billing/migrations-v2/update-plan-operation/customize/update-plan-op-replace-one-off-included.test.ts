@@ -1,11 +1,3 @@
-/**
- * Upsolve: bumping a one-off included grant (100 → 2000) via remove+add.
- * The auto-draft filter uses reset interval `one_off`; the entitlement is stored as `lifetime`.
- *
- * Red (current):  "two items for the same feature" / customer stays at 100
- * Green (after):  grant becomes 2000 and usage carries
- */
-
 import { test } from "bun:test";
 import type { ApiCustomerV5 } from "@autumn/shared";
 import { ResetInterval } from "@autumn/shared";

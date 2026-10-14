@@ -33,7 +33,6 @@ export const deleteLoopsContact = async ({ email }: { email: string }) => {
 		const loops = createLoopsCli();
 		await loops.deleteContact({ email });
 	} catch (error) {
-		// Loops returns 404 when no contact exists for the email, which is fine.
 		logger.warn("Failed to delete loops contact", { error, email });
 	}
 };

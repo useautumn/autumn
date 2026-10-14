@@ -1,10 +1,3 @@
-/**
- * Pass an explicit Stripe tax rate ID (`tax_rate_id`) through
- * `/v1/billing.attach` and assert that:
- *   - The created Stripe subscription carries it in `default_tax_rates`.
- *   - The first invoice applies the 10% rate on top of pro's $20 base.
- */
-
 import { expect, test } from "bun:test";
 import { stripeRefToId } from "@autumn/shared";
 import { getStripeSubscription } from "@tests/integration/billing/utils/stripeSubscriptionUtils.js";

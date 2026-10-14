@@ -58,7 +58,6 @@ test.concurrent(
 			featureIds: ["messages"],
 			commandId: "baseline",
 		};
-		// Skips the DynamoDB body-key claim so retries reach the worker's own command-id dedup.
 		const validateTrackBodyIdempotencyKey = false;
 		const body: TrackParams = {
 			customer_id: fullSubject.customerId,
@@ -138,7 +137,6 @@ test.concurrent(
 				"track",
 				"track",
 			]);
-			// A retried command id replies with the current state and never deducts twice.
 			const retried = await runBalanceWorkerTrack({
 				ctx,
 				body,

@@ -11,13 +11,11 @@ export enum ApiKeyPrefix {
 
 function generateApiKey(length = 32, prefix = "") {
 	try {
-		// Define allowed characters (alphanumeric only)
 		const allowedChars =
 			"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
 		const array = new Uint8Array(length);
 		crypto.getRandomValues(array);
 
-		// Convert random bytes to alphanumeric string
 		const key = Array.from(array)
 			.map((byte) => allowedChars[byte % allowedChars.length])
 			.join("");
@@ -33,10 +31,6 @@ export const hashApiKey = (apiKey: string) => {
 	return crypto.createHash("sha256").update(apiKey).digest("hex");
 };
 
-/**
- * Note: scope subset validation (requestedScopes ⊆ callerScopes) is the
- * caller's responsibility. This function trusts its input.
- */
 export const createKey = async ({
 	db,
 	env,
@@ -77,10 +71,6 @@ export const createKey = async ({
 	return apiKey;
 };
 
-/**
- * Note: scope subset validation (requestedScopes ⊆ callerScopes) is the
- * caller's responsibility. This function trusts its input.
- */
 export const createHardcodedKey = async ({
 	db,
 	env,
@@ -100,7 +90,6 @@ export const createHardcodedKey = async ({
 }): Promise<{ key: string; alreadyExists: boolean }> => {
 	const hashedKey = hashApiKey(hardcodedKey);
 
-	// Check if key already exists
 	const existing = await apiKeyRepo.getVerificationData({
 		db,
 		hashedKey,

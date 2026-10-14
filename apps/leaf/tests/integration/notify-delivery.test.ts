@@ -1,8 +1,3 @@
-/**
- * NOTIFY delivery against a real Postgres: the precondition for eve getting a
- * durable world at all. Needs CHAT_DATABASE_URL pointing at that database.
- */
-
 import { describe, expect, test } from "bun:test";
 
 const url = process.env.CHAT_DATABASE_URL;

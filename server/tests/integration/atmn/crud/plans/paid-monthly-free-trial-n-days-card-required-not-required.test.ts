@@ -1,9 +1,3 @@
-/**
- * atmn crud/plans — paid [monthly] [free trial: n days] [card required, not required]
- *
- * One line of plans/atmn-v3/07_tests.md. [a, b] is a matrix looped INSIDE this file.
- */
-
 import { expect, test } from "bun:test";
 import { configBody, paidMonthly } from "@tests/utils/atmnUtils/baseConfigs.js";
 import { expectRoundTrip } from "@tests/utils/atmnUtils/expectRoundTrip.js";
@@ -35,8 +29,6 @@ for (const cardRequired of CARD_REQUIRED) {
 				const { freshWire } = await expectRoundTrip({ scenario });
 				const plans = freshWire.plans as Array<Record<string, unknown>>;
 				const pro = plans.find((plan) => plan.plan_id === "pro");
-				// A pull elides the spec defaults: `cardRequired: false` and
-				// `onEnd: "bill"` read the same when absent.
 				expect(pro?.free_trial).toEqual({
 					duration_length: 14,
 					duration_type: "day",

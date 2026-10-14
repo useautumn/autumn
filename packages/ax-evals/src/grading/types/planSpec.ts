@@ -8,8 +8,4 @@ type DeepPartial<T> = {
 			: T[K];
 };
 
-/**
- * Structural subset of the wire shape a plan must match — never matched by
- * id: several valid modelings exist and agents pick their own ids.
- */
 export type PlanSpec = DeepPartial<ApiPlanParams> & { freePlan?: boolean };

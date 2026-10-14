@@ -1,5 +1,3 @@
-// shared/utils/billingUtils/invoicingUtils/lineItemBuilders/buildLineItem.ts
-
 import { generateKsuid } from "@autumn/ksuid";
 import {
 	type LineItem,
@@ -32,7 +30,6 @@ export const buildLineItem = ({
 	usage?: number;
 	overage?: number;
 }): LineItem => {
-	// 1. Compute effectivePeriod if not already set
 	let effectivePeriod = context.effectivePeriod;
 	if (!effectivePeriod && context.billingPeriod) {
 		effectivePeriod = getEffectivePeriod({
@@ -42,7 +39,6 @@ export const buildLineItem = ({
 		});
 	}
 
-	// Update context with effective period
 	const defaultDiscountable = context.direction === "charge" && amount >= 0;
 
 	const updatedContext: LineItemContext = {
@@ -51,7 +47,6 @@ export const buildLineItem = ({
 		discountable: context.discountable ?? defaultDiscountable,
 	};
 
-	// 2. Apply proration if needed
 	let prorated = false;
 	if (shouldProrate && context.billingPeriod) {
 		amount = applyProration({
@@ -62,7 +57,6 @@ export const buildLineItem = ({
 		prorated = true;
 	}
 
-	// 3. Handle refund direction
 	if (context.direction === "refund") {
 		amount = -amount;
 	}
@@ -79,7 +73,6 @@ export const buildLineItem = ({
 		? `${description} (${entityLabel})`
 		: description;
 
-	// 5. Return LineItem
 	const lineItemData = {
 		id: generateKsuid({ prefix: "invoice_li_" }),
 		amount,

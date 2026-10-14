@@ -1,13 +1,3 @@
-/**
- * Dimensions live inside each rate-card row as an "Add dimension" action
- * beside Add Tier; once a row has rules the tables show with a
- * "Remove dimensions" action, and the collapsed summary counts them.
- *
- * Red (current):  the row renders a Dimensions switch instead.
- * Green (after):  button when empty, tables + remove action when populated,
- *                 nothing for non-admins or collapsed rows.
- */
-
 import { expect, test } from "bun:test";
 import {
 	type CreditSchemaItem,

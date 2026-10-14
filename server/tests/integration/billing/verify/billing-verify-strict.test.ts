@@ -1,5 +1,3 @@
-/** Contract tests for verify's strict and non-strict usage-item handling. */
-
 import { expect, test } from "bun:test";
 import { findPriceByFeatureId } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features";
@@ -16,7 +14,6 @@ import {
 	listActiveStripeSubscriptions,
 } from "../restore/utils/corruptStripeSubscription";
 
-/** Removes the (single) feature-linked usage item from the customer's sub. */
 const removeUsageItem = async ({
 	ctx,
 	customerId,
@@ -89,8 +86,6 @@ const featurePriceIdFor = async ({
 	return priceId;
 };
 
-// ── A + B: same corrupted state, verdict flips on `strict` ──────────────────
-
 test.concurrent(
 	`${chalk.yellowBright("billing-verify strict: missing usage item tolerated by default, reported when strict")}`,
 	async () => {
@@ -110,13 +105,11 @@ test.concurrent(
 
 		await removeUsageItem({ ctx, customerId, productId: pro.id });
 
-		// A. Default: the monthly base item still invoices -> correct.
 		const lenient = await verify({ ctx, params: { customer_id: customerId } });
 		expect(lenient.subscriptions.length).toBe(1);
 		expect(lenient.subscriptions[0].status).toBe("correct");
 		expect(lenient.subscriptions[0].mismatches).toEqual([]);
 
-		// B. Strict: the same state reports the missing usage item.
 		const strict = await verify({
 			ctx,
 			params: { customer_id: customerId, strict: true },
@@ -138,8 +131,6 @@ test.concurrent(
 	async () => {
 		const customerId = "verify-strict-unexpected-metered";
 		const pro = products.pro({ id: "pro", items: [] });
-		// $0 tiers — non-strict only tolerates meters that bill nothing; a
-		// priced meter Autumn doesn't model is real drift.
 		const meteredSource = products.pro({
 			id: "metered-source",
 			items: [
@@ -197,8 +188,6 @@ test.concurrent(
 	},
 );
 
-// ── C: no item on the usage price's interval -> fallback must not apply ─────
-
 test.concurrent(
 	`${chalk.yellowBright("billing-verify strict: fallback requires an item on the same interval")}`,
 	async () => {
@@ -218,8 +207,6 @@ test.concurrent(
 			actions: [s.billing.attach({ productId: pro.id })],
 		});
 
-		// Annual base stays; the monthly usage item is removed — no monthly
-		// invoice cadence remains, so even non-strict verify must report it.
 		await removeUsageItem({ ctx, customerId, productId: pro.id });
 
 		const result = await verify({ ctx, params: { customer_id: customerId } });

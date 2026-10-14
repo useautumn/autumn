@@ -23,7 +23,6 @@ export function HierarchyFlatSimulator() {
 
 	const running = status === "running";
 
-	// Scrolling window of customer rows: ids stream past as each is written.
 	const windowSize = Math.min(count, WINDOW);
 	const lastId =
 		status === "idle"

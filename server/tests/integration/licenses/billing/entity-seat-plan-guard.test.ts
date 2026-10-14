@@ -1,19 +1,3 @@
-/**
- * TDD test for blocking direct plan operations on seat-holding entities.
- *
- * Contract under test:
- *   New behaviors:
- *     - billing.attach with entity_id where the entity holds a license
- *       assignment (customer product with customer_license_link_id) -> 400.
- *     - billing.update_subscription with entity_id targeting such an
- *       entity -> 400.
- *   Side effects:
- *     - Neither call mutates the entity's seat or the pool counters.
- *
- * Pre-impl red: both calls succeed (or fail for unrelated reasons),
- * attaching plans directly onto a licensed entity.
- * Post-impl green: handleEntityLicenseAssignmentErrors rejects both.
- */
 import { test } from "bun:test";
 import type { ApiCustomerV5 } from "@autumn/shared";
 import { expectCustomerLicenses } from "@tests/integration/licenses/utils/expectCustomerLicenses";
@@ -79,7 +63,6 @@ test(`${chalk.yellowBright("licenses guard: attach and update_subscription on a 
 		],
 	});
 
-	// ── Contract: attach onto the licensed entity rejects ────────────────
 	await expectAutumnError({
 		errMessage: "holds a license",
 		func: () =>
@@ -90,7 +73,6 @@ test(`${chalk.yellowBright("licenses guard: attach and update_subscription on a 
 			}),
 	});
 
-	// ── Contract: update_subscription onto the licensed entity rejects ───
 	await expectAutumnError({
 		errMessage: "holds a license",
 		func: () =>
@@ -102,7 +84,6 @@ test(`${chalk.yellowBright("licenses guard: attach and update_subscription on a 
 			}),
 	});
 
-	// ── Side effect: pool untouched (1 seat used of 2 included) ──────────
 	const customer = await autumnV2_3.customers.get<ApiCustomerV5>(customerId);
 	expectCustomerLicenses({
 		customer,

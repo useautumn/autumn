@@ -1,17 +1,3 @@
-/**
- * catalogV2.update — same-call feature op ordering.
- *
- * Compute fold: update → insert → remove (projected after each step).
- * Execute:     insert → update → remove.
- * Inserts sort non-credit-systems before credit systems.
- * Update blockers ignore CS rows inserted in this call; they do see projected
- * schema drops / CS removals. Remove willArchive is stamped on the post-upsert
- * projection (owned by remove/remove-features.test.ts).
- *
- * This file owns every order-dependent CREATE/UPDATE/REMOVE×CS combination
- * that is not already covered as a remove verdict.
- */
-
 import { test } from "bun:test";
 import { FeatureType, FeatureUsageType } from "@autumn/shared";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils.js";
@@ -84,8 +70,6 @@ const seedMeteredAndCreditSystem = async ({
 	});
 };
 
-// ─── CREATE × CREATE ─────────────────────────────────────────────────────────
-
 test.concurrent(
 	`${chalk.yellowBright("catalogV2 ordering: CREATE consumable + CREATE CS (CS listed first) succeeds via insert sort")}`,
 	async () => {
@@ -96,7 +80,6 @@ test.concurrent(
 		await deleteDbFeatures({ ctx, featureIds });
 
 		try {
-			// CS before metered in the request — insert sort must still apply metered first
 			await autumnV2_3.catalogV2.update({
 				features: [
 					creditSystemFeature({
@@ -157,8 +140,6 @@ test.concurrent(
 		}
 	},
 );
-
-// ─── UPDATE × CREATE ─────────────────────────────────────────────────────────
 
 test.concurrent(
 	`${chalk.yellowBright("catalogV2 ordering: UPDATE →consumable + CREATE CS sees the feature as updated")}`,
@@ -249,8 +230,6 @@ test.concurrent(
 		}
 	},
 );
-
-// ─── UPDATE × UPDATE (schema ↔ usage) ───────────────────────────────────────
 
 test.concurrent(
 	`${chalk.yellowBright("catalogV2 ordering: UPDATE →consumable + UPDATE CS to add member succeeds")}`,
@@ -385,7 +364,6 @@ test.concurrent(
 					}),
 			});
 
-			// Dropping the schema ref projects the member free — flip is allowed
 			await autumnV2_3.catalogV2.update({
 				features: [
 					meteredFeature(droppedId, false),
@@ -421,8 +399,6 @@ test.concurrent(
 		}
 	},
 );
-
-// ─── REMOVE × UPDATE ─────────────────────────────────────────────────────────
 
 test.concurrent(
 	`${chalk.yellowBright("catalogV2 ordering: REMOVE CS unblocks UPDATE →continuous; CS hard-deletes")}`,
@@ -509,8 +485,6 @@ test.concurrent(
 		}
 	},
 );
-
-// ─── CREATE × UPDATE (new member on existing CS) ─────────────────────────────
 
 test.concurrent(
 	`${chalk.yellowBright("catalogV2 ordering: CREATE consumable + UPDATE CS to add it succeeds (execute insert→update)")}`,
@@ -610,8 +584,6 @@ test.concurrent(
 	},
 );
 
-// ─── RENAME × CREATE ─────────────────────────────────────────────────────────
-
 test.concurrent(
 	`${chalk.yellowBright("catalogV2 ordering: RENAME A→B + CREATE CS on B uses the projected id")}`,
 	async () => {
@@ -675,7 +647,6 @@ test.concurrent(
 				features: [meteredFeature(oldId, true)],
 			});
 
-			// CS before rename in the request — fold still projects B before insert validates
 			await autumnV2_3.catalogV2.update({
 				features: [
 					creditSystemFeature({

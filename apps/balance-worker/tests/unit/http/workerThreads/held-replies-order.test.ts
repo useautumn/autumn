@@ -28,7 +28,6 @@ test("a failure published between the reader's two loads fails the held reply in
 		const value = realLoad(array, index);
 		if (!interleaved) {
 			interleaved = true;
-			// The writer fails (5, 10] and moves past the gap while the reader is between its loads.
 			Atomics.add(failures, partition, 1);
 			Atomics.store(positions, partition, 11n);
 		}

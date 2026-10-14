@@ -7,7 +7,6 @@ import {
 import { useAdmin } from "@/views/admin/hooks/useAdmin";
 import { useMasterStripeAccount } from "@/views/admin/hooks/useMasterStripeAccount";
 
-/** Builds a Stripe dashboard URL for a path, using the admin connect view-as path when available. */
 export const useStripeDashboardLink = () => {
 	const env = useEnv();
 	const { stripeAccount } = useOrgStripeQuery();

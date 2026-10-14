@@ -4,11 +4,6 @@ import { setupScheduleUpdatedContext } from "./setupScheduleUpdatedContext.js";
 import { applyStartedScheduleFuturePhaseEdit } from "./tasks/applyStartedScheduleFuturePhaseEdit.js";
 import { resyncScheduledCustomerProductStartsAt } from "./tasks/resyncScheduledCustomerProductStartsAt.js";
 
-/**
- * Re-syncs scheduled customerProduct starts_at when a not-yet-started schedule
- * is rescheduled outside Autumn (e.g. Stripe dashboard). On a started schedule
- * only an edit to a future phase is acted on; phase add/remove is left alone.
- */
 export const handleStripeSubscriptionScheduleUpdated = async ({
 	ctx,
 	event,

@@ -135,8 +135,6 @@ const licensePooledIdentity = ({
 	};
 };
 
-/** Creates, resizes (purchased seats × per-seat grant) and expires each
- * license link's pools. */
 export const applyLicensePooledBalances = ({
 	ctx,
 	computeContext,
@@ -202,7 +200,6 @@ export const applyLicensePooledBalances = ({
 				);
 
 			if (!existing) {
-				// Seats (bought or still assigned) need a pool, even at 0 grant.
 				const hasSeats =
 					customerLicense.granted > 0 ||
 					customerLicense.remaining < customerLicense.granted;

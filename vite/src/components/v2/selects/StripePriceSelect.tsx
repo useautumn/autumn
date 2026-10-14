@@ -14,7 +14,6 @@ import {
 import { useDebounce } from "@/hooks/useDebounce";
 import { cn } from "@/lib/utils";
 
-/** Amount and interval — what the price actually charges. */
 const priceHeadline = ({ price }: { price: CatalogStripePrice }) => {
 	if (price.unit_amount === null) return price.id;
 
@@ -33,14 +32,12 @@ const priceHeadline = ({ price }: { price: CatalogStripePrice }) => {
 	return `${amount} / ${every}`;
 };
 
-/** Tiered and metered prices carry no single unit amount, so name the kind instead. */
 const foundPriceHeadline = ({ price }: { price: CatalogStripePrice }) => {
 	if (price.unit_amount !== null) return priceHeadline({ price });
 	const label = price.nickname ?? "Usage-based";
 	return price.interval ? `${label} / ${price.interval}` : label;
 };
 
-/** Null while a price is unresolved — the headline is already its id. */
 const priceSubtext = ({
 	price,
 }: {
@@ -76,11 +73,6 @@ const createPriceOption = ({
 const isCreateOption = (price: CatalogStripePrice) =>
 	price.id === CREATE_PRICE_VALUE;
 
-/**
- * Picks the Stripe price this Autumn price bills as. With a product id it lists
- * that product's prices; otherwise search takes an exact price or product id.
- * `null` means Autumn creates the price.
- */
 export const StripePriceSelect = ({
 	value,
 	onChange,
@@ -100,8 +92,6 @@ export const StripePriceSelect = ({
 	const { stripePrices, isFetching } = useStripePricesSearchQuery({
 		search: lookup,
 	});
-	// The mapped id is resolved up front so it reads like any searched result
-	// rather than a bare id. Same query key as searching it, so it is a cache hit.
 	const { stripePrices: mappedPrices, isFetching: isResolvingMapped } =
 		useStripePricesSearchQuery({ search: value ?? "" });
 
@@ -129,7 +119,6 @@ export const StripePriceSelect = ({
 	return (
 		<SearchableSelect<CatalogStripePrice>
 			disabled={disabled}
-			// Nothing to show until the id is one Stripe can actually resolve.
 			emptyText={isStripeLookup(search.trim()) ? "No Stripe price found" : null}
 			footer={
 				isFetching || isResolvingMapped ? (

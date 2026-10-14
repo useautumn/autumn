@@ -16,7 +16,6 @@ type TopEventNamesResult = {
 	result: { data: TopEventNameRow[] };
 };
 
-/** Gets top event names by count for the organization */
 export const getTopEventNames = async ({
 	ctx,
 	limit = 3,
@@ -35,7 +34,6 @@ export const getTopEventNames = async ({
 
 	const ch = getClickhouseClient();
 
-	// The org hourly rollup keeps this cheap; raw events scan every event in the month.
 	const query = `
 		SELECT sum(event_count) as count, event_name
 		FROM events_org_hourly_mv

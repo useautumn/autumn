@@ -8,21 +8,13 @@ import type { AutumnInt } from "@/external/autumn/autumnCli";
 const DEFAULT_STARTS_AT_TOLERANCE_MS = 5 * 60 * 1000;
 
 export type ExpectedSubscriptionPreview = {
-	/** Matched against the entry's plan_ids as a set. */
 	planIds: string[];
-	/** EXACT amount due today for this subscription group. */
 	total: number;
-	/** EXACT next_cycle.total; null asserts no next cycle for this group. */
 	nextCycleTotal: number | null;
-	/** Expected next_cycle.starts_at, within toleranceMs. */
 	nextCycleStartsAt?: number;
 	nextCycleStartsAtToleranceMs?: number;
 };
 
-/**
- * Previews a multiUpdate and pins EXACT totals: the combined total plus, when
- * given, one core preview per subscription group (matched by plan_ids set).
- */
 export const expectMultiUpdatePreviewCorrect = async ({
 	autumn,
 	params,

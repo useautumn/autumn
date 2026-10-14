@@ -1,27 +1,3 @@
-/**
- * TDD test for plan variants — rollover disambiguation.
- *
- * Contract under test:
- *   New endpoints:
- *     - POST /v1/plans.create_variant -> ApiPlanV1
- *     - POST /v1/plans.preview_update -> PlanUpdatePreview
- *     - POST /v1/plans.update (extended with update_variant_ids)
- *   New behaviors:
- *     - create_variant copies items including rollover config
- *     - create_variant preserves duplicate feature_id items + Stripe product reuse
- *     - preview_update diff on rollover change produces remove_items + add_items
- *     - propagate rollover change to variant (versioning, v1 untouched)
- *     - variant strips an item, subsequent propagation preserves strip
- *     - filter precision: same feature_id, different reset.interval
- *     - base versions on rollover change with customer (both base and variant version)
- *     - preview_update returns 0 writes when nothing changes
- *     - stripe_price_id carried forward on versioning (V1 attach stamps)
- *     - create_variant rejects archived base (cannot_fork_archived_base)
- *     - base+variant both have customers → both version, variant pins to new base
- *   Error codes:
- *     - cannot_fork_archived_base (400)
- */
-
 import { expect, test } from "bun:test";
 import {
 	type ApiPlanV1,
@@ -71,7 +47,6 @@ const cleanupCustomers = async (...customerIds: string[]) => {
 };
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-// CREDITS with rollover (monthly, free metered) + CREDITS daily (same feature_id, different interval) + Messages
 const rolloverBaseItems = (rolloverMax = 200) => [
 	{
 		feature_id: TestFeature.Credits,
@@ -181,9 +156,6 @@ const getAllVersions = async (planId: string) => {
 	return await ProductService.listFull({ db, orgId: org.id, env, inIds: [planId], returnAll: true });
 };
 
-// ═══════════════════════════════════════════════════════════════════
-// 1. create_variant copies items including rollover
-// ═══════════════════════════════════════════════════════════════════
 test.concurrent(
 	`${chalk.yellowBright("rollover create_variant: copies items including rollover config")}`,
 	async () => {
@@ -215,9 +187,6 @@ test.concurrent(
 	},
 );
 
-// ═══════════════════════════════════════════════════════════════════
-// 2. create_variant preserves duplicate feature_id items + Stripe reuse
-// ═══════════════════════════════════════════════════════════════════
 test.concurrent(
 	`${chalk.yellowBright("rollover create_variant: preserves duplicate feature_id items + Stripe reuse")}`,
 	async () => {
@@ -259,9 +228,6 @@ test.concurrent(
 	},
 );
 
-// ═══════════════════════════════════════════════════════════════════
-// 3. preview_update diff on rollover change
-// ═══════════════════════════════════════════════════════════════════
 test.concurrent(
 	`${chalk.yellowBright("rollover preview_update: diff on rollover change produces remove + add")}`,
 	async () => {
@@ -293,9 +259,6 @@ test.concurrent(
 	},
 );
 
-// ═══════════════════════════════════════════════════════════════════
-// 4. propagate rollover change to variant
-// ═══════════════════════════════════════════════════════════════════
 test.concurrent(
 	`${chalk.yellowBright("rollover propagate: rollover change to variant (versioning, v1 untouched)")}`,
 	async () => {
@@ -346,9 +309,6 @@ test.concurrent(
 	},
 );
 
-// ═══════════════════════════════════════════════════════════════════
-// 5. variant strips an item, subsequent propagation preserves strip
-// ═══════════════════════════════════════════════════════════════════
 test.concurrent(
 	`${chalk.yellowBright("rollover propagate: variant strip preserved across propagation")}`,
 	async () => {
@@ -397,8 +357,6 @@ test.concurrent(
 			update_variant_ids: [variantId],
 		});
 
-		// Customer is on the base, not the variant — the variant has no
-		// customers of its own, so it patches in place instead of versioning.
 		const variantVersions = await getAllVersions(variantId);
 		expect(variantVersions.length).toBe(1);
 
@@ -412,9 +370,6 @@ test.concurrent(
 	},
 );
 
-// ═══════════════════════════════════════════════════════════════════
-// 6. filter precision: same feature_id, different reset.interval
-// ═══════════════════════════════════════════════════════════════════
 test.concurrent(
 	`${chalk.yellowBright("rollover filter precision: same feature_id different interval, only targeted item changes")}`,
 	async () => {
@@ -460,8 +415,6 @@ test.concurrent(
 			update_variant_ids: [variantId],
 		});
 
-		// Customer is on the base, not the variant — the variant has no
-		// customers of its own, so it patches in place instead of versioning.
 		const variantVersions = await getAllVersions(variantId);
 		expect(variantVersions.length).toBe(1);
 
@@ -484,9 +437,6 @@ test.concurrent(
 	},
 );
 
-// ═══════════════════════════════════════════════════════════════════
-// 7. base versions on rollover change with customer
-// ═══════════════════════════════════════════════════════════════════
 test.concurrent(
 	`${chalk.yellowBright("rollover base+variant version: customer on base versions the base, customer-less variant patches in place")}`,
 	async () => {
@@ -517,8 +467,6 @@ test.concurrent(
 		expect(baseVersions.length).toBe(2);
 		expect(baseVersions.find((v: any) => v.version === 2)).toBeDefined();
 
-		// Variant has no customers of its own, so it patches in place onto the
-		// base's new version instead of versioning itself.
 		const variantVersions = await getAllVersions(variantId);
 		expect(variantVersions.length).toBe(1);
 
@@ -534,9 +482,6 @@ test.concurrent(
 	},
 );
 
-// ═══════════════════════════════════════════════════════════════════
-// 8. preview_update returns 0 writes
-// ═══════════════════════════════════════════════════════════════════
 test.concurrent(
 	`${chalk.yellowBright("rollover preview_update: 0 writes when nothing changes")}`,
 	async () => {
@@ -564,9 +509,6 @@ test.concurrent(
 	},
 );
 
-// ═══════════════════════════════════════════════════════════════════
-// 9. stripe_price_id carried forward on versioning (V1 attach stamps)
-// ═══════════════════════════════════════════════════════════════════
 test.concurrent(
 	`${chalk.yellowBright("rollover versioning: stripe_price_id carried forward to variant v2")}`,
 	async () => {
@@ -621,9 +563,6 @@ test.concurrent(
 	},
 );
 
-// ═══════════════════════════════════════════════════════════════════
-// 10. create_variant rejects archived base
-// ═══════════════════════════════════════════════════════════════════
 test.concurrent(
 	`${chalk.yellowBright("rollover create_variant: rejects archived base with cannot_fork_archived_base")}`,
 	async () => {
@@ -650,9 +589,6 @@ test.concurrent(
 	},
 );
 
-// ═══════════════════════════════════════════════════════════════════
-// 11. base+variant both have customers → both version
-// ═══════════════════════════════════════════════════════════════════
 test.concurrent(
 	`${chalk.yellowBright("rollover both customers: base+variant both version, variant pins to new base")}`,
 	async () => {

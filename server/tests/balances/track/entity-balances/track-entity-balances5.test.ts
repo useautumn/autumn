@@ -13,7 +13,6 @@ import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js"
 
 const testCase = "track-entity-balances5";
 
-// Customer-level messages (monthly) - kept low so it dips into entity balance
 const customerMessagesItem = constructFeatureItem({
 	featureId: TestFeature.Messages,
 	includedUsage: 500,
@@ -21,7 +20,6 @@ const customerMessagesItem = constructFeatureItem({
 	intervalCount: 1,
 }) as LimitedItem;
 
-// Entity-level messages (monthly, per entity)
 const entityMessagesItem = constructFeatureItem({
 	featureId: TestFeature.Messages,
 	includedUsage: 5000,
@@ -36,24 +34,19 @@ const freeProd = constructProduct({
 	items: [customerMessagesItem, entityMessagesItem],
 });
 
-// Reduced from 5000 — local Redis saturates under new FullSubject cache load.
 const NUM_REQUESTS = 500;
 const NUM_CUSTOMERS = 1;
 const NUM_ENTITIES = 2;
 
-// Helper to generate random decimal between min and max
 const randomDecimal = (min: number, max: number): Decimal => {
 	const value = Math.random() * (max - min) + min;
 	return new Decimal(value).toDecimalPlaces(2);
 };
 
-// Helper to randomly choose an entity or null (for customer-level)
 const randomEntityOrNull = (entities: { id: string }[]): string | null => {
-	// 50% chance customer-level, 50% chance entity-level
 	if (Math.random() < 0.5) {
-		return null; // Customer-level
+		return null;
 	}
-	// Randomly pick an entity
 	const randomIndex = Math.floor(Math.random() * entities.length);
 	return entities[randomIndex].id;
 };
@@ -61,7 +54,6 @@ const randomEntityOrNull = (entities: { id: string }[]): string | null => {
 describe(`${chalk.yellowBright(`${testCase}: Concurrent per entity tracking`)}`, () => {
 	const autumnV1: AutumnInt = new AutumnInt({ version: ApiVersion.V1_2 });
 
-	// Create multiple customers with their entities
 	const customers = Array.from({ length: NUM_CUSTOMERS }, (_, i) => {
 		const customerId = `${testCase}_customer${i + 1}`;
 		return {
@@ -74,11 +66,9 @@ describe(`${chalk.yellowBright(`${testCase}: Concurrent per entity tracking`)}`,
 		};
 	});
 
-	// Track expected balances per customer
 	const expectedCustomerBalances: Record<string, Decimal> = {};
 	const expectedEntityBalances: Record<string, Decimal> = {};
 
-	// Initialize expected balances
 	for (const customer of customers) {
 		expectedCustomerBalances[customer.id] = new Decimal(0);
 		for (const entity of customer.entities) {
@@ -94,14 +84,12 @@ describe(`${chalk.yellowBright(`${testCase}: Concurrent per entity tracking`)}`,
 				withTestClock: false,
 			});
 		}
-		// Initialize products once
 		await initProductsV0({
 			ctx,
 			products: [freeProd],
 			prefix: testCase,
 		});
 
-		// Initialize all customers
 		for (const customer of customers) {
 			await autumnV1.attach({
 				customer_id: customer.id,
@@ -110,7 +98,6 @@ describe(`${chalk.yellowBright(`${testCase}: Concurrent per entity tracking`)}`,
 
 			await autumnV1.entities.create(customer.id, customer.entities);
 
-			// Initialize cache
 			for (const entity of customer.entities) {
 				await autumnV1.entities.get(customer.id, entity.id);
 			}
@@ -130,13 +117,11 @@ describe(`${chalk.yellowBright(`${testCase}: Concurrent per entity tracking`)}`,
 				`  Customer usage: ${customerData.features[TestFeature.Messages].usage}`,
 			);
 
-			// Customer should have: 200 (customer-level) + 1000*3 (entity-level) = 3200
 			expect(customerData.features[TestFeature.Messages].balance).toBe(
 				customerMessagesItem.included_usage +
 					entityMessagesItem.included_usage * NUM_ENTITIES,
 			);
 
-			// Each entity should have: 1000 (entity-level) + 200 (customer-level inherited) = 1200
 			for (const entity of customer.entities) {
 				const _entity = await autumnV1.entities.get(customer.id, entity.id);
 				console.log(
@@ -161,26 +146,20 @@ describe(`${chalk.yellowBright(`${testCase}: Concurrent per entity tracking`)}`,
 			Array<{ entityId: string | null; value: Decimal }>
 		> = {};
 
-		// Initialize tracking logs per customer
 		for (const customer of customers) {
 			trackingLogs[customer.id] = [];
 		}
 
 		for (let i = 0; i < NUM_REQUESTS; i++) {
-			// Randomly pick a customer
 			const customer = customers[Math.floor(Math.random() * customers.length)];
 
-			// Generate random value between 0.01 and 2.00
 			const decimalValue = randomDecimal(0.01, 2.0);
 			const value = decimalValue.toNumber();
 
-			// Randomly choose entity or customer-level
 			const entityId = randomEntityOrNull(customer.entities);
 
-			// Store for tracking
 			trackingLogs[customer.id].push({ entityId, value: decimalValue });
 
-			// Create track request
 			const promise = autumnV1.track({
 				customer_id: customer.id,
 				entity_id: entityId || undefined,
@@ -192,7 +171,6 @@ describe(`${chalk.yellowBright(`${testCase}: Concurrent per entity tracking`)}`,
 			allPromises.push(promise);
 		}
 
-		// Execute all requests concurrently
 		const startTime = Date.now();
 		await Promise.all(allPromises);
 		const endTime = Date.now();
@@ -204,7 +182,6 @@ describe(`${chalk.yellowBright(`${testCase}: Concurrent per entity tracking`)}`,
 			`   Average: ${((endTime - startTime) / NUM_REQUESTS).toFixed(2)}ms per request`,
 		);
 
-		// Calculate expected balances by simulating deduction logic for each customer
 		console.log(`\n📊 Calculating expected balances per customer...`);
 
 		for (const customer of customers) {
@@ -213,7 +190,6 @@ describe(`${chalk.yellowBright(`${testCase}: Concurrent per entity tracking`)}`,
 			console.log(`\n  ${customer.id}:`);
 			console.log(`    Tracks: ${trackingLog.length}`);
 
-			// Initialize balances (separate customer and entity balances)
 			let customerBalance = new Decimal(customerMessagesItem.included_usage);
 			const entityBalances: Record<string, Decimal> = {};
 			for (const entity of customer.entities) {
@@ -225,22 +201,18 @@ describe(`${chalk.yellowBright(`${testCase}: Concurrent per entity tracking`)}`,
 			let customerLevelTracks = 0;
 			let entityLevelTracks = 0;
 
-			// Process each track sequentially to calculate expected state
 			for (const log of trackingLog) {
 				let remaining = log.value;
 
 				if (log.entityId === null) {
-					// Customer-level tracking: deduct from customer balance first, then entities in order
 					customerLevelTracks++;
 
-					// 1. Deduct from customer balance
 					if (customerBalance.gt(0)) {
 						const deducted = Decimal.min(customerBalance, remaining);
 						customerBalance = customerBalance.minus(deducted);
 						remaining = remaining.minus(deducted);
 					}
 
-					// 2. If remaining, deduct from entities in alphabetical order
 					if (remaining.gt(0)) {
 						const sortedEntityIds = Object.keys(entityBalances).sort();
 						for (const entityId of sortedEntityIds) {
@@ -253,10 +225,8 @@ describe(`${chalk.yellowBright(`${testCase}: Concurrent per entity tracking`)}`,
 						}
 					}
 				} else {
-					// Entity-level tracking: deduct from entity balance first, then customer balance
 					entityLevelTracks++;
 
-					// 1. Deduct from specific entity's balance first
 					const entityBalance = entityBalances[log.entityId];
 					if (entityBalance.gt(0)) {
 						const deducted = Decimal.min(entityBalance, remaining);
@@ -264,7 +234,6 @@ describe(`${chalk.yellowBright(`${testCase}: Concurrent per entity tracking`)}`,
 						remaining = remaining.minus(deducted);
 					}
 
-					// 2. If remaining, deduct from customer balance
 					if (remaining.gt(0)) {
 						const deducted = Decimal.min(customerBalance, remaining);
 						customerBalance = customerBalance.minus(deducted);
@@ -284,7 +253,6 @@ describe(`${chalk.yellowBright(`${testCase}: Concurrent per entity tracking`)}`,
 				);
 			}
 
-			// Store expected values for next test
 			expectedCustomerBalances[customer.id] = customerBalance;
 			for (const entity of customer.entities) {
 				expectedEntityBalances[entity.id] = entityBalances[entity.id];
@@ -298,10 +266,8 @@ describe(`${chalk.yellowBright(`${testCase}: Concurrent per entity tracking`)}`,
 
 			console.log(`\n🔍 Final cached state for ${customer.id}:`);
 
-			// Get expected customer balance for this customer
 			const expectedCusBalance = expectedCustomerBalances[customer.id];
 
-			// Get expected entity balances for this customer
 			const expectedCusEntityBalances = customer.entities.reduce(
 				(acc, entity) => {
 					acc[entity.id] = expectedEntityBalances[entity.id];
@@ -310,7 +276,6 @@ describe(`${chalk.yellowBright(`${testCase}: Concurrent per entity tracking`)}`,
 				{} as Record<string, Decimal>,
 			);
 
-			// Customer cache shows aggregated balance (customer + all entities)
 			const expectedAggregatedBalance = expectedCusBalance.plus(
 				Object.values(expectedCusEntityBalances).reduce(
 					(sum, b) => sum.plus(b),
@@ -330,7 +295,6 @@ describe(`${chalk.yellowBright(`${testCase}: Concurrent per entity tracking`)}`,
 
 			expect(actualBalance).toBe(expectedBalance);
 
-			// Each entity cache shows merged balance (entity + customer)
 			for (const entity of customer.entities) {
 				const _entity = await autumnV1.entities.get(customer.id, entity.id);
 				const expectedEntityMergedBalance =
@@ -362,18 +326,15 @@ describe(`${chalk.yellowBright(`${testCase}: Concurrent per entity tracking`)}`,
 		await timeout(4000);
 
 		for (const customer of customers) {
-			// Read from database (skip cache)
 			const customerFromDb = await autumnV1.customers.get(customer.id, {
 				skip_cache: "true",
 			});
 			const customerFromCache = await autumnV1.customers.get(customer.id);
 
-			// Customer features should match
 			expect(customerFromDb.features[TestFeature.Messages]).toEqual(
 				customerFromCache.features[TestFeature.Messages],
 			);
 
-			// All entities should match
 			for (const entity of customer.entities) {
 				const entityFromDb = await autumnV1.entities.get(
 					customer.id,

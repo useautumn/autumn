@@ -1,11 +1,3 @@
-/**
- * invoice.paid reconstitutes AttachParams from metadata snapshotted before
- * version_slug/active existed. LineItemSchema then ZodErrors on those keys.
- *
- * Schema defaults make parse a no-throw. Hydrate still fills v{version} / false
- * so snapshots don't persist null slug into line-item context.
- */
-
 import { describe, expect, test } from "bun:test";
 import { LineItemSchema, ProductSchema } from "@autumn/shared";
 import { prices } from "@tests/utils/fixtures/db/prices";

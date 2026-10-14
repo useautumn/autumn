@@ -338,7 +338,7 @@ test.concurrent(
 		await timeout(2000);
 
 		for (const entity of entities) {
-			await autumnV2_1.entities.get(customerId, entity.id); // initialize cache.
+			await autumnV2_1.entities.get(customerId, entity.id);
 		}
 
 		await autumnV2_1.track({
@@ -661,7 +661,6 @@ test.concurrent(
 			breakdownLength: 1,
 		});
 
-		// The balance worker doesn't aggregate entity data onto the customer.
 		if (!isBalanceWorkerRoute()) {
 			await expectCustomerFeatureCachedAndDb({
 				autumn: autumnV2_1,
@@ -673,15 +672,5 @@ test.concurrent(
 				breakdownLength: 2,
 			});
 		}
-
-		// expect(
-		// 	(
-		// 		await autumnV2_1.check({
-		// 			customer_id: customerId,
-		// 			feature_id: TestFeature.Messages,
-		// 			required_balance: 10,
-		// 		})
-		// 	).allowed,
-		// ).toBe(true);
 	},
 );

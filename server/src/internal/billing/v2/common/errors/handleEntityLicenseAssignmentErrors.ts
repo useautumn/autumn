@@ -5,8 +5,6 @@ import {
 	RecaseError,
 } from "@autumn/shared";
 
-/** An entity holding a license seat gets its plan through the pool — direct
- * attach/update on that entity is blocked until the seat is released. */
 export const handleEntityLicenseAssignmentErrors = ({
 	fullCustomer,
 }: {

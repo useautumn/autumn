@@ -15,10 +15,6 @@ import { EMPTY_CUSTOMER_STATE_PLAN } from "@/components/forms/customer-state/cus
 import { getActiveCustomerPlans } from "@/components/forms/customer-state/getActiveCustomerPlans";
 import { buildInitialValues } from "@/views/customers2/components/sheets/CreateScheduleSheet";
 
-// ---------------------------------------------------------------------------
-// Fixtures
-// ---------------------------------------------------------------------------
-
 function makeProduct({
 	id = "prod_1",
 	name = "Pro Plan",
@@ -199,10 +195,6 @@ function makeCustomer({
 		schedule,
 	} as unknown as FullCustomer;
 }
-
-// ---------------------------------------------------------------------------
-// customerProductToCustomerStatePlan
-// ---------------------------------------------------------------------------
 
 describe("customerProductToCustomerStatePlan", () => {
 	test("returns items: null for non-custom product", () => {
@@ -609,10 +601,6 @@ describe("customerProductToCustomerStatePlan", () => {
 		expect(plan.items).toBeNull();
 	});
 });
-
-// ---------------------------------------------------------------------------
-// buildInitialValues
-// ---------------------------------------------------------------------------
 
 describe("buildInitialValues", () => {
 	const products = [
@@ -1128,10 +1116,6 @@ describe("buildInitialValues", () => {
 		expect(result.phases[0].plans[0]).toEqual(EMPTY_CUSTOMER_STATE_PLAN);
 	});
 });
-
-// ---------------------------------------------------------------------------
-// getActiveCustomerPlans
-// ---------------------------------------------------------------------------
 
 describe("getActiveCustomerPlans", () => {
 	const products = [

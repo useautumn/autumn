@@ -15,8 +15,6 @@ export type RemovedItemSourceRow = {
 	trialEndsAt: number | null;
 };
 
-/** Stamps the row's own live definition and pre-write balance, so finalize
- * diffs that customer's from-state rather than a shared catalog entitlement. */
 export const toRemovedItem = ({
 	row,
 	planId,

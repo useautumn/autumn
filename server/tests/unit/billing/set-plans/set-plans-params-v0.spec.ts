@@ -1,5 +1,3 @@
-/** set_plans sets proration and the billing cycle anchor per phase; create_schedule keeps them on the request and maps them onto the first phase. */
-
 import { describe, expect, test } from "bun:test";
 import {
 	type BillingContext,

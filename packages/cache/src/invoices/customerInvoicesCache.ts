@@ -3,17 +3,14 @@ import type { ReadThroughCacheContext } from "../misc/types/readThroughCacheCont
 import { REDIS_OP_TIMEOUT_MS } from "../ops/redisOpTimeouts.js";
 import { runRedisOp, tryRedisOp } from "../ops/runRedisOp.js";
 
-/** Bounds the miss-then-stale-set race and any staleness that slips past a repo's DEL. */
 export const CUSTOMER_INVOICES_CACHE_TTL_SECONDS = 3600;
 
-/** One list per customer, newest first, the ten a customers.get renders; keyed by the column every invoice write has in hand. */
 export const buildCustomerInvoicesCacheKey = ({
 	internalCustomerId,
 }: {
 	internalCustomerId: string;
 }): string => `invoices:${internalCustomerId}`;
 
-/** Null on a miss, a Redis failure or a corrupt payload: the caller goes to Postgres, never errors. */
 export const getCachedCustomerInvoices = async ({
 	ctx,
 	internalCustomerId,
@@ -69,7 +66,6 @@ export const setCachedCustomerInvoices = async ({
 	});
 };
 
-/** Drops the lists on every live target, so a ramped reader never serves the list a repo just changed. */
 export const invalidateCustomerInvoicesCache = async ({
 	ctx,
 	internalCustomerIds,

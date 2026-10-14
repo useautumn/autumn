@@ -5,7 +5,6 @@ import { useAxiosInstance } from "@/services/useAxiosInstance";
 
 const REFETCH_INTERVAL_MS = 60_000;
 
-/** The env's Atom's CPU, memory and traffic per period over the range, and its last minute, refreshed every minute. */
 export const useAtomMetricsQuery = ({
 	range,
 	enabled = true,
@@ -26,13 +25,11 @@ export const useAtomMetricsQuery = ({
 			return { ...data, range, fetchedAt: Date.now() };
 		},
 		enabled,
-		// A range switch keeps the current charts until the new range lands, rather than blinking to skeletons.
 		placeholderData: keepPreviousData,
 		refetchInterval: REFETCH_INTERVAL_MS,
 	});
 
 	return {
-		/** The range and fetch time the data is for: the previous range's until a switched one lands. */
 		range: data?.range ?? range,
 		periodSeconds: data?.period_seconds ?? 0,
 		points: data?.points ?? [],

@@ -11,7 +11,6 @@ type WorkerEnvShape = {
 	BALANCE_WORKER_PORT: number;
 };
 
-/** The rules that span variables: what one setting requires of another. */
 export function validateBalanceWorkerEnv(
 	env: WorkerEnvShape,
 	context: z.RefinementCtx,

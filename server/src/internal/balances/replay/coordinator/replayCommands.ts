@@ -62,7 +62,6 @@ export function freezeTrackCommand({
 	) as TrackCommand;
 }
 
-/** A probe reads zero units, so no org setting can change its answer; the defaults keep it deterministic. */
 const PROBE_ORG: CommandOrg = {
 	config: {
 		reverse_deduction_order: false,

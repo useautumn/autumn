@@ -2,9 +2,6 @@ import { z } from "zod/v4";
 import { queryStringArray } from "../apiUtils.js";
 import { CustomerExpand } from "../customers/components/customerExpand/customerExpand.js";
 
-// Create Entity Params (based on CreateEntitySchema from shared/models)
-
-// Get Entity Query Params
 export const GetEntityQuerySchema = z.object({
 	expand: queryStringArray(
 		z.enum([

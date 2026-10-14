@@ -1,16 +1,3 @@
-/**
- * Spray test: `automatic_tax: true` across 8 jurisdictions on ONE sub-org.
- * Verifies that the factory's `taxRegistrations: [...]` array correctly
- * handles multi-country registration and that every per-jurisdiction
- * customer's resulting sub has auto_tax enabled.
- *
- * Coverage: GB, CA, US/CA, AU, FR, DE, SA, RU.
- *
- * Does NOT assert specific tax rates — SaaS is sometimes $0 (e.g. CA), so
- * `tax > 0` would be false-positive prone. Watch run logs for any
- * "Failed to register Stripe Tax" warnings (factory swallows them).
- */
-
 import { stripeRefToId } from "@autumn/shared";
 import { expect, test } from "bun:test";
 import chalk from "chalk";
@@ -116,9 +103,6 @@ test(
 	async () => {
 		const proProd = products.pro({ id: "pro", items: [] });
 
-		// ONE sub-org with all 8 tax registrations. No primary customer —
-		// we provision per-jurisdiction customers in the test body so they
-		// share the same Connect account.
 		const { ctx, autumnV1 } = await initScenario({
 			setup: [
 				s.platform.create({
@@ -130,7 +114,6 @@ test(
 			actions: [],
 		});
 
-		// Per-jurisdiction customer + attach + fetch sub, in parallel.
 		const results = await Promise.all(
 			jurisdictions.map(async (j) => {
 				const customerId = `tax-spray-${j.country.toLowerCase()}`;
@@ -159,8 +142,6 @@ test(
 			}),
 		);
 
-		// Every jurisdiction's sub has auto_tax enabled. Log computed tax
-		// for visibility (SaaS is sometimes $0).
 		for (const { jurisdiction, sub } of results) {
 			expect(sub).toBeDefined();
 			expect(sub.automatic_tax.enabled).toBe(true);

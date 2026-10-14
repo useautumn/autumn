@@ -12,8 +12,6 @@ const TINYBIRD_INGEST_WAIT_MS = 3000;
 test.concurrent(
 	`${chalk.yellowBright("track timestamp: backdated timestamp is written to Tinybird events")}`,
 	async () => {
-		// Contract: track accepts timestamp?: number and emits that event timestamp.
-		// Side effect: events.list reads the Tinybird event back with the same ms.
 		const messagesItem = items.free({
 			featureId: TestFeature.Messages,
 			includedUsage: 100,

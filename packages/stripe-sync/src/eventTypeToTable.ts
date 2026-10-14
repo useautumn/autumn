@@ -1,7 +1,3 @@
-/**
- * Maps a Stripe event type to the sync DB table that stores the object.
- * Returns undefined for event types that don't map to a known table.
- */
 export const eventTypeToTable = ({
 	eventType,
 }: {
@@ -32,7 +28,6 @@ export const eventTypeToTable = ({
 	return undefined;
 };
 
-/** All tables in the stripe sync schema that store Stripe objects. */
 export const SYNCED_TABLES = [
 	"charges",
 	"checkout_sessions",

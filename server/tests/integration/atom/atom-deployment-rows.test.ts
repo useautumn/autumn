@@ -1,13 +1,3 @@
-/**
- * The atom_deployments repo against real Postgres and the real org cache.
- *
- * Contract:
- *  1. one Atom per org and env: a second claim loses and the first is read back;
- *  2. a write only lands on the row as it was read: a stale copy cannot undo a move or forget a replacement;
- *  3. the cached org follows an Atom's route (status, endpoint, token) and ignores its deploy progress;
- *  4. a token hash names its Atom's org and env.
- */
-
 import { afterAll, beforeAll, expect, test } from "bun:test";
 import { buildOrgWithFeaturesCacheKey } from "@autumn/cache";
 import {
@@ -26,7 +16,6 @@ import { toCacheStages } from "@/internal/byoc/utils/cacheStageUtils.js";
 import { getOrgWithFeaturesCached } from "@/internal/orgs/orgUtils/getOrgWithFeaturesCached.js";
 import { generateId } from "@/utils/genUtils.js";
 
-// A throwaway org, so these rows never meet the test org's own Atom in atom-deployment.test.ts.
 const orgId = `org_atom_rows_${crypto.randomUUID()}`;
 const ctx = {
 	...defaultCtx,
@@ -104,7 +93,6 @@ test(`${chalk.yellowBright("atom-rows2: a stale copy neither undoes a move nor f
 	await cacheDeploymentRepo.insert({ ctx, cacheDeployment: original });
 	await cacheDeploymentRepo.update({ ctx, from: original, to: moved });
 
-	// A refresh that read the row before the move lands nowhere.
 	await cacheDeploymentRepo.update({
 		ctx,
 		from: original,
@@ -112,7 +100,6 @@ test(`${chalk.yellowBright("atom-rows2: a stale copy neither undoes a move nor f
 	});
 	expect(await cacheDeploymentRepo.find({ ctx })).toEqual(moved);
 
-	// A replacement reuses the group but is a new row, so the old one's delete misses it.
 	await cacheDeploymentRepo.delete({ ctx, cacheDeployment: moved });
 	const replacement = atomRow({ deploymentGroupId: moved.deployment_group_id });
 	await cacheDeploymentRepo.insert({ ctx, cacheDeployment: replacement });

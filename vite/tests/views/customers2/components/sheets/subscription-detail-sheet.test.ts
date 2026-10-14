@@ -1,4 +1,3 @@
-// Before: $1,050 rendered as 10.5. After: API major units display unchanged.
 import { expect, test } from "bun:test";
 import {
 	type ApiDiscount,

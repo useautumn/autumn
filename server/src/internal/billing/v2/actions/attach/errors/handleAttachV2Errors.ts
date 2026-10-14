@@ -27,7 +27,6 @@ import { handleStripeBillingPlanErrors } from "@/internal/billing/v2/providers/s
 import { handleCustomPaymentMethodErrorsV2 } from "@/internal/customers/attach/attachUtils/handleAttachErrors";
 import { handleTaxLocationErrors } from "./handleTaxLocationErrors";
 
-/** Validates attach v2 request before executing the billing plan. */
 export const handleAttachV2Errors = async ({
 	ctx,
 	billingContext,
@@ -43,9 +42,6 @@ export const handleAttachV2Errors = async ({
 }) => {
 	const { autumn: autumnBillingPlan } = billingPlan;
 
-	// 1.1. External PSP errors (RevenueCat)
-	// Skipped when the caller IS the external PSP origin (e.g. the RevenueCat
-	// webhook handler attaching onto its own RC-managed customer).
 	if (!billingContext.skipExternalPSPGuard) {
 		handleExternalPSPErrors({
 			customerProducts: billingContext.fullCustomer.customer_products,
@@ -54,76 +50,60 @@ export const handleAttachV2Errors = async ({
 		});
 	}
 
-	// 1.2. Custom Payment Method errors (Vercel)
 	handleCustomPaymentMethodErrorsV2({ billingContext });
 
-	// 1.3. Seat-holding entities are managed through their license
 	handleEntityLicenseAssignmentErrors({
 		fullCustomer: billingContext.fullCustomer,
 	});
 
-	// 1.4. License linkage preconditions on the attach target
 	handleLicenseAttachTargetErrors({
 		fullCustomer: billingContext.fullCustomer,
 		attachProduct: billingContext.attachProduct,
 	});
 
-	// 2. Current customer product errors (same product)
 	handleCurrentCustomerProductErrors({ billingContext });
 
-	// 3. new_billing_subscription validation errors
 	handleNewBillingSubscriptionErrors({ billingContext, params });
 
-	// 4. Stripe checkout errors
 	handleStripeCheckoutErrors({ billingContext, autumnBillingPlan });
 
-	// 5. Invoice mode errors (deferred + downgrade, no-card trial invoice options)
 	handleAttachInvoiceModeErrors({ ctx, billingContext, params });
 	if (!preview) handleTaxLocationErrors({ ctx, billingContext, billingPlan });
 
-	// 6. Scheduled switch with one-off prepaid quantities
 	handleScheduledSwitchOneOffErrors({ ctx, billingContext });
 	handleBillingCycleAnchorErrors({ billingContext, params });
 	handleStartDateErrors({ billingContext, params, preview });
 	handleEndDateErrors({ billingContext, params });
 
-	// 7. Transition config errors (reset_after_trial_end on allocated features)
 	handleTransitionConfigErrors({ ctx, billingContext });
 
-	// 8. Carry over balances errors (non-consumable features, downgrade block)
 	handleCarryOverBalancesErrors({ ctx, params, billingContext });
 
-	// 9. Carry over usages errors (non-consumable features, downgrade block)
 	handleCarryOverUsagesErrors({
 		ctx,
 		carryOverUsages: params.carry_over_usages,
 		replacesPlanNow: billingContext.planTiming === "immediate",
 	});
 
-	// 10. Proration behavior errors (none restrictions)
 	handleProrationBehaviorErrors({
 		billingContext,
 		billingPlan,
 	});
 
-	// 11. Subscription ID uniqueness
 	await handleSubscriptionIdErrors({
 		db: ctx.db,
 		internalCustomerId: billingContext.fullCustomer.internal_id,
 		subscriptionIds: [billingContext.externalId],
 	});
 
-	// 12. Custom line items errors (only valid for subscription updates)
 	handleCustomLineItemsErrors({
 		params,
 		billingContext,
 		billingPlan,
 	});
 
-	// 13. Revert trial errors (card_required + revert, missing existing plan)
 	handleRevertTrialErrors({ billingContext });
 
-	// 14. Adding and removing the same discount in one request
 	handleRemoveDiscountsErrors({ params });
 
 	handleStripeBillingPlanErrors({ ctx, billingContext, billingPlan });

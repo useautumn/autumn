@@ -13,15 +13,6 @@ import {
 	constructRawProduct,
 } from "@/utils/scriptUtils/createTestProducts.js";
 
-/**
- * Base product - no base price, customizable defaults
- * @param items - Product items (features)
- * @param id - Product ID (default: "base")
- * @param isDefault - Whether this is a default product (default: false)
- * @param group - Optional product group (if set, won't be overridden by test prefix)
- * @param trialDays - Optional number of trial days (shorthand)
- * @param freeTrial - Optional full free trial config (overrides trialDays)
- */
 const base = ({
 	items,
 	id = "base",
@@ -70,12 +61,6 @@ const base = ({
 			}),
 });
 
-/**
- * Pro product - $20/month base price
- * @param items - Product items (features)
- * @param id - Product ID (default: "pro")
- * @param group - Optional product group
- */
 const pro = ({
 	items,
 	id = "pro",
@@ -99,11 +84,6 @@ const pro = ({
 		: {}),
 });
 
-/**
- * Pro annual product - $200/year base price
- * @param items - Product items (features)
- * @param id - Product ID (default: "pro-annual")
- */
 const proAnnual = ({
 	items,
 	id = "pro-annual",
@@ -119,14 +99,6 @@ const proAnnual = ({
 		isDefault: false,
 	});
 
-/**
- * Pro product with free trial - $20/month base price with configurable trial
- * @param items - Product items (features)
- * @param id - Product ID (default: "pro-trial")
- * @param trialDays - Number of trial days (default: 7)
- * @param cardRequired - Whether card is required for trial (default: true)
- * @param uniqueFingerprint - Deduplicate trials by fingerprint (default: false)
- */
 const proWithTrial = ({
 	items,
 	id = "pro-trial",
@@ -153,13 +125,6 @@ const proWithTrial = ({
 		},
 	});
 
-/**
- * Premium product with free trial - $50/month base price with configurable trial
- * @param items - Product items (features)
- * @param id - Product ID (default: "premium-trial")
- * @param trialDays - Number of trial days (default: 7)
- * @param cardRequired - Whether card is required for trial (default: true)
- */
 const premiumWithTrial = ({
 	items,
 	id = "premium-trial",
@@ -184,13 +149,6 @@ const premiumWithTrial = ({
 		},
 	});
 
-/**
- * Base (free) product with free trial - no base price, with configurable trial
- * @param items - Product items (features)
- * @param id - Product ID (default: "base-trial")
- * @param trialDays - Number of trial days (default: 7)
- * @param cardRequired - Whether card is required for trial (default: false)
- */
 const baseWithTrial = ({
 	items,
 	id = "base-trial",
@@ -212,13 +170,6 @@ const baseWithTrial = ({
 	} as unknown as FreeTrial,
 });
 
-/**
- * Default trial product - $20/month product with trial that's set as default
- * @param items - Product items (features)
- * @param id - Product ID (default: "default-trial")
- * @param trialDays - Number of trial days (default: 7)
- * @param cardRequired - Whether card is required for trial (default: false)
- */
 const defaultTrial = ({
 	items,
 	id = "default-trial",
@@ -246,11 +197,6 @@ const defaultTrial = ({
 	} as unknown as FreeTrial,
 });
 
-/**
- * Premium product - $50/month base price
- * @param items - Product items (features)
- * @param id - Product ID (default: "premium")
- */
 const premium = ({
 	items,
 	id = "premium",
@@ -265,11 +211,6 @@ const premium = ({
 		isDefault: false,
 	});
 
-/**
- * Growth product - $100/month base price
- * @param items - Product items (features)
- * @param id - Product ID (default: "growth")
- */
 const growth = ({
 	items,
 	id = "growth",
@@ -284,11 +225,6 @@ const growth = ({
 		isDefault: false,
 	});
 
-/**
- * Ultra product - $200/month base price (uses base with custom price)
- * @param items - Product items (features)
- * @param id - Product ID (default: "ultra")
- */
 const ultra = ({
 	items,
 	id = "ultra",
@@ -306,12 +242,6 @@ const ultra = ({
 	is_default: false,
 });
 
-/**
- * One-off product - one-time purchase with $10 base price
- * @param items - Product items (features)
- * @param id - Product ID (default: "one-off")
- * @param isAddOn - Whether this is an add-on product (default: false)
- */
 const oneOff = ({
 	items,
 	id = "one-off",
@@ -329,11 +259,6 @@ const oneOff = ({
 		isAddOn,
 	});
 
-/**
- * Recurring add-on product - $20/month base price, is_add_on: true
- * @param items - Product items (features)
- * @param id - Product ID (default: "addon")
- */
 const recurringAddOn = ({
 	items,
 	id = "addon",
@@ -355,11 +280,6 @@ const recurringAddOn = ({
 		: {}),
 });
 
-/**
- * One-off add-on product - $10 base price (one-time), is_add_on: true
- * @param items - Product items (features)
- * @param id - Product ID (default: "one-off-addon")
- */
 const oneOffAddOn = ({
 	items,
 	id = "one-off-addon",

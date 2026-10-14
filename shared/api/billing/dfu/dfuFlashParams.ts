@@ -3,14 +3,7 @@ import { z } from "zod/v4";
 import { CustomerEmailSchema } from "../../common/customerData";
 import { ApiCustomerV5Schema } from "../../customers/apiCustomerV5";
 
-/**
- * `POST /v1/billing.import` — image a customer INTO Autumn for live migration.
- * Read-only against processors. v1 fields are public; deferred capabilities
- * are schema-defined but `.meta({ internal: true })` so docs hide them.
- */
-
 // RevenueCat processor `id` is the customer's `app_user_id`. (Vercel is not yet
-// supported and is intentionally omitted so `type` renders as a clean enum.)
 const ProcessorTypeSchema = z.enum(["stripe", "revenuecat"]);
 
 const FlashCustomerDataSchema = z.object({
@@ -60,7 +53,6 @@ const FlashStartingAfterSchema = z
 	.meta({ internal: true });
 
 const FlashBalanceFilterSchema = z.object({
-	// Intentionally the full EntInterval set: filters match against the line's own interval.
 	interval: z.enum(EntInterval).nullable().optional().meta({
 		description:
 			"Reset interval selecting which entitlement line to target when a feature has several ('lifetime' or null = the non-resetting one-off line).",
@@ -168,8 +160,6 @@ const FlashBillableSchema = z
 			description:
 				"Unix ms billing anchor shared by co-billed plans on this billable.",
 		}),
-		// `plan` is the public single-plan path; `phases` is exclusive with it but
-		// stays internal until multi-phase/scheduled imaging is fully implemented.
 		plan: FlashPlanSchema.optional().meta({
 			description:
 				"The single plan on this billable (provide either plan or phases, not both).",
@@ -259,7 +249,6 @@ export const DfuFlashResultSchema = z.object({
 	flashed: z
 		.array(DfuFlashedPlanSchema)
 		.meta({ description: "Per-plan outcome of the flash." }),
-	// Freshly-read imaged customer; null for dry_run since nothing is persisted.
 	customer: ApiCustomerV5Schema.nullable().meta({
 		description: "The freshly-read imaged customer; null for dry_run.",
 	}),

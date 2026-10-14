@@ -4,8 +4,6 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { buildLockReceiptKey } from "../lock/buildLockReceiptKey.js";
 import { buildClaimMarkerKey } from "./buildClaimMarkerKey.js";
 
-/** Best-effort claim-marker DEL after a failed finalize attempt, so an inline
- *  retry or queued replay can reclaim instead of hitting a contested 409. */
 export const releaseLockClaimMarker = async ({
 	ctx,
 	lockId,

@@ -28,7 +28,6 @@ const getFutureTrialEndsAt = ({
 	return trialEndsAt[0];
 };
 
-/** Builds preview candidates from Stripe schedule transitions plus trial ends. */
 export const buildNextCycleTransitionPoints = ({
 	billingContext,
 	customerProducts,

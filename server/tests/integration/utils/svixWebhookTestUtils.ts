@@ -1,14 +1,5 @@
-/**
- * Shared Svix webhook test utilities.
- *
- * Consolidates Svix Play client + endpoint management into one module
- * so every webhook test file doesn't have to duplicate boilerplate.
- */
-
 import { Svix } from "svix";
 import { createTestWait } from "../../utils/testWait/createTestWait";
-
-// ─── Svix Admin Client ───────────────────────────────────────────────────────
 
 let svixClient: Svix | null = null;
 
@@ -24,8 +15,6 @@ const getSvixClient = (): Svix => {
 	return svixClient;
 };
 
-// ─── Svix Play Client ───────────────────────────────────────────────────────
-
 const SVIX_PLAY_API_BASE = "https://api.play.svix.com/api/v1";
 
 export type SvixPlayEvent = {
@@ -33,7 +22,7 @@ export type SvixPlayEvent = {
 	url: string;
 	method: string;
 	created_at: string;
-	body: string; // base64 encoded
+	body: string;
 	headers: Record<string, string>;
 	response: {
 		status_code: number;
@@ -89,13 +78,6 @@ export const parseEventBody = <T = unknown>(event: SvixPlayEvent): T => {
 	return JSON.parse(decoded) as T;
 };
 
-/**
- * Poll Svix Play until a webhook matching `predicate` appears, or timeout.
- *
- * When `logWebhook` is true (default), the matched payload is pretty-printed
- * to stdout — useful for eyeballing webhook shapes during local test runs.
- * Set to false to suppress (e.g., in CI).
- */
 export const waitForWebhook = async <T = unknown>({
 	token,
 	predicate,
@@ -130,9 +112,7 @@ export const waitForWebhook = async <T = unknown>({
 						}
 						return { event, payload };
 					}
-				} catch {
-					// Skip events that can't be parsed.
-				}
+				} catch {}
 			}
 			await wait.sleep(500);
 		}
@@ -145,15 +125,6 @@ export const waitForWebhook = async <T = unknown>({
 	}
 };
 
-// ─── Event Type Registration ───────────────────────────────────────────────
-
-/**
- * Idempotently registers an event type. Svix requires event types referenced
- * in `filterTypes` to be pre-registered at the org level; without this the
- * endpoint.create call fails with HTTP 422.
- *
- * Catches "already exists" (409) errors so this can be called every test run.
- */
 export const ensureSvixEventType = async (name: string): Promise<void> => {
 	const svix = getSvixClient();
 	try {
@@ -167,8 +138,6 @@ export const ensureSvixEventType = async (name: string): Promise<void> => {
 		throw error;
 	}
 };
-
-// ─── Endpoint Lifecycle ─────────────────────────────────────────────────────
 
 export const createWebhookTestEndpoint = async ({
 	appId,
@@ -206,19 +175,12 @@ export const deleteWebhookTestEndpoint = async ({
 	}
 };
 
-// ─── High-Level Setup Helper ────────────────────────────────────────────────
-
 export type WebhookTestSetup = {
 	playToken: string;
 	endpointId: string;
 	cleanup: () => Promise<void>;
 };
 
-/**
- * Full lifecycle helper: generates a Svix Play token, creates a filtered
- * endpoint in the given app, and returns everything needed for tests +
- * a `cleanup` function for `afterAll`.
- */
 export const setupWebhookTest = async ({
 	appId,
 	filterTypes,
@@ -226,8 +188,6 @@ export const setupWebhookTest = async ({
 	appId: string;
 	filterTypes: string[];
 }): Promise<WebhookTestSetup> => {
-	// Ensure every filter type is registered in Svix before creating the
-	// endpoint, otherwise endpoint.create fails with HTTP 422.
 	for (const eventType of filterTypes) {
 		await ensureSvixEventType(eventType);
 	}
@@ -253,10 +213,6 @@ export const setupWebhookTest = async ({
 	return { playToken, endpointId, cleanup };
 };
 
-/**
- * Resolves the org's Svix sandbox app ID or throws a clear error.
- * Keeps the guard-clause out of every test file.
- */
 export const getTestSvixAppId = ({
 	svixConfig,
 }: {

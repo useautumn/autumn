@@ -1,6 +1,3 @@
-/** Red: billing.sync_v2 attaches the plan but omits customer.products.updated.
- * Green: sync emits the webhook with the attached active plan. */
-
 import { afterAll, beforeAll, expect, test } from "bun:test";
 import type { ApiCustomerV3, ApiProduct, SyncParamsV1 } from "@autumn/shared";
 import { createStripeSubscriptionFromProduct } from "@tests/integration/billing/sync/utils/syncTestUtils.js";

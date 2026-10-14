@@ -28,7 +28,6 @@ export const rewardToEntitlementRows = ({
 
 	return entitlements.map((entitlement) => {
 		const expiry = "expiry" in entitlement ? entitlement.expiry : undefined;
-		// Boolean grants carry no allowance, whatever the payload says
 		const isBoolean =
 			features != null &&
 			findFeatureByInternalId({

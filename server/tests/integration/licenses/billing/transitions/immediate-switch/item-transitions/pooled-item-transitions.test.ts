@@ -1,5 +1,3 @@
-/** Pooled license replacements reset the shared balance by default and carry
- * aggregate usage only when carry_over_usages enables the feature. */
 import { test } from "bun:test";
 import { EntInterval, PooledBalanceResetMode } from "@autumn/shared";
 import { expectPooledBalanceCorrect } from "@tests/integration/billing/pooled-balances/utils/expectPooledBalanceCorrect";

@@ -9,7 +9,6 @@ import {
 } from "@aws-sdk/client-sqs";
 import { extractLocalEndpoint, getSqsClient } from "@/queue/initSqs.js";
 
-// Same queue URL the workers poll; test queues sit beside it on the same local SQS (goaws/fakecloud).
 const primaryQueueUrl = process.env.SQS_QUEUE_URL_V2;
 const hasLocalSqs = !!extractLocalEndpoint({ queueUrl: primaryQueueUrl });
 const WORKER_FIXTURE_PATH = new URL(

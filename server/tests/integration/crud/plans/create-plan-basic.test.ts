@@ -22,10 +22,6 @@ import { AutumnInt } from "@/external/autumn/autumnCli.js";
 const autumnV2 = new AutumnInt({ version: ApiVersion.V2_0 });
 const autumnV1_2 = new AutumnInt({ version: ApiVersion.V1_2 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// BASIC CREATION TESTS
-// ═══════════════════════════════════════════════════════════════════════════════
-
 test.concurrent(
 	`${chalk.yellowBright("create: minimal plan (id + name only)")}`,
 	async () => {
@@ -76,10 +72,6 @@ test.concurrent(
 	},
 );
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// BOOLEAN FEATURE TESTS
-// ═══════════════════════════════════════════════════════════════════════════════
-
 test.concurrent(
 	`${chalk.yellowBright("create: boolean feature")}`,
 	async () => {
@@ -109,10 +101,6 @@ test.concurrent(
 	},
 );
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// FLAGS TESTS
-// ═══════════════════════════════════════════════════════════════════════════════
-
 test.concurrent(
 	`${chalk.yellowBright("create: add_on and auto_enable flags")}`,
 	async () => {
@@ -139,10 +127,6 @@ test.concurrent(
 		expect(v1_2.is_default).toBe(false);
 	},
 );
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// BASE PRICING TESTS
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(
 	`${chalk.yellowBright("create: monthly base price")}`,
@@ -198,10 +182,6 @@ test.concurrent(
 	},
 );
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// COMPLEX REAL-WORLD SCENARIOS
-// ═══════════════════════════════════════════════════════════════════════════════
-
 test.concurrent(
 	`${chalk.yellowBright("create: full SaaS plan with multiple feature types")}`,
 	async () => {
@@ -250,7 +230,7 @@ test.concurrent(
 		expect(v2.description).toBe("Full-featured SaaS plan");
 
 		const v1_2 = await autumnV1_2.products.get<ApiProduct>(productId);
-		expect(v1_2.items).toHaveLength(4); // 1 base price + 3 features
+		expect(v1_2.items).toHaveLength(4);
 		expect(v1_2.free_trial).toBeDefined();
 	},
 );
@@ -378,7 +358,6 @@ test.concurrent(
 			},
 		});
 
-		// V2 validation
 		const v2 = await autumnV2.products.get<ApiPlan>(productId);
 
 		expect(v2).toMatchObject({
@@ -388,14 +367,12 @@ test.concurrent(
 		});
 		expect(v2.features).toHaveLength(3);
 
-		// Boolean feature
 		expect(v2.features).toEqual(
 			expect.arrayContaining([
 				expect.objectContaining({ feature_id: TestFeature.Dashboard }),
 			]),
 		);
 
-		// Metered feature
 		const meteredFeature = v2.features.find(
 			(f) => f.feature_id === TestFeature.Messages,
 		);
@@ -405,7 +382,6 @@ test.concurrent(
 		});
 		expect(meteredFeature!.price!.tiers).toHaveLength(4);
 
-		// Seats feature
 		const seatsFeature = v2.features.find(
 			(f) => f.feature_id === TestFeature.Users,
 		);
@@ -416,18 +392,11 @@ test.concurrent(
 				interval: BillingInterval.Month,
 				usage_model: UsageModel.PayPerUse,
 				max_purchase: null,
-				// interval_count: 1,
-				// billing_method: BillingMethod.UsageBased,
 			}),
-			// proration: {
-			// 	on_increase: OnIncrease.ProrateImmediately,
-			// 	on_decrease: OnDecrease.ProrateImmediately,
-			// },
 		});
 
-		// V1.2 validation
 		const v1_2 = await autumnV1_2.products.get<ApiProduct>(productId);
-		expect(v1_2.items).toHaveLength(4); // 1 base price + 3 features
+		expect(v1_2.items).toHaveLength(4);
 		expect(v1_2.free_trial).toMatchObject({ length: 30 });
 
 		const basePriceItem = v1_2.items.find((i) => !i.feature_id);
@@ -440,7 +409,6 @@ test.concurrent(
 			(i) => i.feature_id === TestFeature.Messages,
 		);
 		expect(meteredItem!.tiers).toHaveLength(4);
-		// V1.2 items expose tier bounds relative to included (200000 - 100000).
 		expect(meteredItem!.tiers![0]).toMatchObject({ to: 100000, amount: 10 });
 
 		const seatsItem = v1_2.items.find(
@@ -448,10 +416,6 @@ test.concurrent(
 		);
 		expect(seatsItem).toMatchObject({
 			price: 20,
-			// config: {
-			// 	on_increase: OnIncrease.ProrateImmediately,
-			// 	on_decrease: OnDecrease.ProrateImmediately,
-			// },
 		});
 	},
 );

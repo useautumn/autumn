@@ -11,26 +11,14 @@ import { ProductService } from "@/internal/products/ProductService.js";
 type ProposedFeature = { existing: Feature | null; dbFeature: Feature };
 
 export interface PreviewCatalogContext {
-	/** Latest version of every product, for feature-usage lookups. */
 	products: FullProduct[];
-	/** Current product for each plan param (honoring a pinned version), or null if new. */
 	currents: (FullProduct | null)[];
-	/** Internal product ids that have at least one customer. */
 	withCustomers: Set<string>;
-	/** Migration-eligible customer count per internal product id. */
 	customerCountByInternalId: Map<string, number>;
-	/** The batch's features resolved to DB shape, paired with what they replace. */
 	proposedFeatures: ProposedFeature[];
-	/** ctx with the batch's features virtually upserted, so plans can reference net-new ones. */
 	planCtx: AutumnContext;
 }
 
-/**
- * Batch the reads shared across the preview (catalog via one cached listFull,
- * each plan's current product, which products have customers) and virtually
- * upsert the batch's features so plans resolve against them, mirroring
- * catalog.update's "features first, then plans" ordering.
- */
 export const setupPreviewCatalogContext = async ({
 	ctx,
 	params,

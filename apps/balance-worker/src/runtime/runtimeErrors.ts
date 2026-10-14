@@ -100,7 +100,6 @@ export class PartitionPreparationFailedError extends Error {
 	}
 }
 
-/** The partition's log carried a fence from a higher epoch: another worker owns it now, whatever this one still believes. */
 export class OwnerEpochSupersededError extends Error {
 	readonly retriable = false;
 	readonly topic: string;

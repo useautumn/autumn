@@ -18,7 +18,6 @@ export const checkEntitledOnProduct = async ({
 	usageBased?: boolean;
 	timeoutMs?: number;
 }) => {
-	// Get allowance from ProductV2 - find the feature item for Messages
 	const messagesItem = product.items.find(
 		(item) => item.feature_id === TestFeature.Messages,
 	);
@@ -29,7 +28,6 @@ export const checkEntitledOnProduct = async ({
 			? messagesItem.included_usage
 			: 0);
 
-	// const randomNum = Math.floor(Math.random() * (allowance - 1));
 	const randomNum = 3;
 
 	const batchUpdates = [];
@@ -43,10 +41,8 @@ export const checkEntitledOnProduct = async ({
 	}
 
 	await Promise.all(batchUpdates);
-	// await timeout(timeoutMs);
 	let used = randomNum;
 
-	// 2. Check entitled
 	const { allowed, balanceObj }: any = await AutumnCli.entitled(
 		customerId,
 		TestFeature.Messages,
@@ -61,7 +57,6 @@ export const checkEntitledOnProduct = async ({
 
 	if (!finish) return used;
 
-	// Finish up
 	const batchUpdates2 = [];
 	for (let i = 0; i < allowance - randomNum; i++) {
 		batchUpdates2.push(
@@ -72,10 +67,8 @@ export const checkEntitledOnProduct = async ({
 		);
 	}
 	await Promise.all(batchUpdates2);
-	// await timeout(timeoutMs);
 	used += allowance - randomNum;
 
-	// 3. Check entitled again
 	const { allowed: allowed2, balanceObj: balanceObj2 }: any =
 		await AutumnCli.entitled(customerId, TestFeature.Messages, true);
 	try {

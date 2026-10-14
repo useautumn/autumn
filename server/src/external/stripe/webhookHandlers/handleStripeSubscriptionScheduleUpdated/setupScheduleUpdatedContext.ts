@@ -9,7 +9,6 @@ export type StripeScheduleUpdatedResults = {
 
 export type StripeScheduleUpdatedContext = {
 	schedule: Stripe.SubscriptionSchedule;
-	/** Null unless the phases changed in place: none changed, or phases were added or removed. */
 	previousPhases: Stripe.SubscriptionSchedule.Phase[] | null;
 	nowSeconds: number;
 	results: StripeScheduleUpdatedResults;

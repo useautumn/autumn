@@ -1,12 +1,3 @@
-/**
- * draft   → no Run All (live, unscoped run) has ever started
- * waiting → a Run All is queued behind another migration's running run
- * running → a Run All is queued/running and not blocked
- * run     → the latest Run All succeeded
- * failed  → the latest Run All failed after starting
- * canceled→ the latest Run All was canceled after starting
- */
-
 import { describe, expect, test } from "bun:test";
 import type { MigrationRun } from "@autumn/shared";
 import {

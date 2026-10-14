@@ -10,10 +10,6 @@ import { findPlanLinkedToAnotherSubscription } from "../../common/subscriptionSy
 import { shouldSkipSubscriptionSync } from "../../common/subscriptionSync/shouldSkipSubscriptionSync.js";
 import type { StripeSubscriptionCreatedContext } from "../setupStripeSubscriptionCreatedContext.js";
 
-/**
- * Custom base prices can auto-sync; custom feature prices and unresolved items
- * still abort via canAutoSync.
- */
 type AutoSyncFromSubscriptionParams = {
 	ctx: StripeWebhookContext;
 	subscriptionCreatedContext: StripeSubscriptionCreatedContext;

@@ -28,7 +28,6 @@ export type SearchableSelectProps<T> = {
 	options: T[];
 	getOptionValue: (option: T) => string;
 	getOptionLabel: (option: T) => string;
-	/** Extra strings to match on, alongside the option's label and value. */
 	getOptionSearchTerms?: (option: T) => (string | null | undefined)[];
 	getOptionDisabled?: (option: T) => boolean;
 	renderOption?: (option: T, isSelected: boolean) => ReactNode;
@@ -36,23 +35,17 @@ export type SearchableSelectProps<T> = {
 	placeholder?: string;
 	searchable?: boolean;
 	searchPlaceholder?: string;
-	/** `null` renders no empty state at all — the search input stands alone. */
 	emptyText?: ReactNode | null;
 	disabled?: boolean;
 	triggerClassName?: string;
 	contentClassName?: string;
 	defaultOpen?: boolean;
-	/** Replaces the default value-and-chevron button, e.g. with an icon button. */
 	trigger?: ReactNode;
 	open?: boolean;
 	onOpenChange?: (open: boolean) => void;
 	header?: ReactNode;
 	footer?: SearchableSelectFooter;
 	onSearchChange?: (search: string) => void;
-	/**
-	 * Whether to filter options locally as the user types. Defaults to off when
-	 * `onSearchChange` is set, since the caller is usually searching server-side.
-	 */
 	shouldFilter?: boolean;
 	isLoading?: boolean;
 };

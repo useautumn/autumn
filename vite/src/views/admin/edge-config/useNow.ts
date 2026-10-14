@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 
-/** The current time, re-read on an interval while `active`; the one effect a countdown needs. */
 export const useNow = ({
 	active,
 	intervalMs = 1_000,

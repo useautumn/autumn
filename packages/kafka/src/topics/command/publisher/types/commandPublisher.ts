@@ -6,12 +6,10 @@ export type CommandPublisherContext = {
 	topic: string;
 };
 
-/** The caller names each command's partition: it is the routing decision, made where routing lives. */
 export type CommandAppend = {
 	records: readonly { partition: number; command: CommandRecord }[];
 };
 
 export type CommandPublisher = {
-	/** One request for the whole batch, however many partitions it spans; appends made during a send share the next. */
 	append(params: CommandAppend): Promise<void>;
 };

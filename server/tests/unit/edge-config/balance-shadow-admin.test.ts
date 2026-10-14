@@ -170,7 +170,6 @@ test.concurrent(
 			await verifyAdminConfig();
 			return;
 		}
-		// Isolate environment gates and singleton store spies from concurrent unit tests.
 		const child = Bun.spawn({
 			cmd: [process.execPath, "test", import.meta.filename],
 			cwd: new URL("../../../", import.meta.url).pathname,

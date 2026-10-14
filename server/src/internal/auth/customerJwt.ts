@@ -1,21 +1,15 @@
 import { prefixCustomerJwt, stripCustomerJwtPrefix } from "@autumn/auth";
 import { jwtVerify, SignJWT } from "jose";
 
-/**
- * Per-customer JWTs: scoped credentials so self-hosted / licensed apps call
- * Autumn directly without an `am_sk` key. Identity only — never balances/plan
- * state. Flat, short claims keep the token small in the Authorization header.
- */
 const ALG = "HS256";
 export const AUD_ACCESS = "autumn-api";
 export const AUD_REFRESH = "autumn-refresh";
 const ISSUER = "https://iss.useautumn.com";
-const ACCESS_TTL_SECONDS = 60 * 60; // 1h
-const REFRESH_TTL_SECONDS = 24 * 60 * 60; // 24h
+const ACCESS_TTL_SECONDS = 60 * 60;
+const REFRESH_TTL_SECONDS = 24 * 60 * 60;
 const MIN_SECRET_LENGTH = 32;
 const SCHEMA_VERSION = 1;
 
-/** Missing/weak secret = server misconfig (→ 500), not a bad token (→ 401). */
 export class CustomerJwtConfigError extends Error {}
 
 const getSecret = () => {
@@ -33,8 +27,8 @@ const getSecret = () => {
 
 export type CustomerJwtClaims = {
 	version: number;
-	customerId: string; // sub — external id, force-set onto the body
-	internalCustomerId: string; // fam — immutable family + cache key
+	customerId: string;
+	internalCustomerId: string;
 	env: string;
 	epoch: number;
 	refreshKid: number;
@@ -49,7 +43,7 @@ type SignArgs = {
 	refreshKid: number;
 	aud: string;
 	nowSeconds: number;
-	ttlSeconds: number | null; // null ⇒ no `exp` (indefinite token)
+	ttlSeconds: number | null;
 };
 
 const sign = async (args: SignArgs) => {
@@ -104,8 +98,6 @@ export const mintTokenPair = async ({
 		ttlSeconds: indefinite ? null : ACCESS_TTL_SECONDS,
 	});
 
-	// Indefinite tokens never expire and have no refresh — revoke is the only kill
-	// switch (which is why this mode requires the durable DB family record).
 	if (indefinite) {
 		return {
 			accessToken,

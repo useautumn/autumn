@@ -9,11 +9,9 @@ import {
 const ACTIVE_DELAY_MS = ms.seconds(1);
 const IDLE_DELAY_MS = ms.seconds(30);
 
-// Not gated on the rollout: a customer's locks live where they were taken, and an empty table is the off state.
 const shouldSweepLocks = (): boolean =>
 	process.env.DISABLE_CRON !== "true" && isActiveSlot({ serviceName: "cron" });
 
-/** A full last page means the deadline cut the pass short, so the loop comes straight back; otherwise it idles. */
 export const lockSweepResultToDelayMs = ({
 	result,
 }: {
@@ -26,7 +24,6 @@ export const lockSweepResultToDelayMs = ({
 	return wasCutShort ? ACTIVE_DELAY_MS : IDLE_DELAY_MS;
 };
 
-/** One batch; a failure is reported and swallowed so the loop outlives it. */
 const sweepOnce = async ({
 	ctx,
 }: {
@@ -62,10 +59,6 @@ const waitForNextBatch = async ({
 	});
 };
 
-/**
- * Settles locks nobody finalized within the 24 hour default. A caller-set expiry is its EventBridge timer's job.
- * A loop, not a cron tick: the next batch starts only when the last one has finished, so it cannot overlap itself.
- */
 export const runLockSweepLoop = async ({
 	ctx,
 	signal,

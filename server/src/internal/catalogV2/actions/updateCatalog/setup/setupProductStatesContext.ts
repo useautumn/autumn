@@ -26,7 +26,6 @@ const payloadPlanIds = ({
 	internalIdRefs: InternalIdRefs;
 }): string[] => [
 	...new Set([
-		// A renamed row's current id is only known through its internal_id.
 		...[...internalIdRefs.values()].map((ref) => ref.planId),
 		...(params.plans ?? []).flatMap((entry) => [
 			entry.plan_id,
@@ -49,9 +48,6 @@ const payloadPlanIds = ({
 	]),
 ];
 
-/**
- * One listFull of payload plan ids, then flatten nested parents and variants.
- */
 export const setupProductStatesContext = async ({
 	ctx,
 	params,
@@ -64,8 +60,6 @@ export const setupProductStatesContext = async ({
 	internalIdRefs: InternalIdRefs;
 }): Promise<ProductStatesContext> => {
 	const { db, org, env } = ctx;
-	// Full state means the payload is the whole desired catalog, so the server
-	// has to see everything to know what is missing from it.
 	const fullState = params.skip_deletions === false;
 	const loadedPlanIds = payloadPlanIds({ params, internalIdRefs });
 	if (!fullState && loadedPlanIds.length === 0) {
@@ -93,8 +87,6 @@ export const setupProductStatesContext = async ({
 			? [...new Set(payloadVersions.map((product) => product.id))]
 			: loadedPlanIds,
 	});
-	// Full state can legitimately load an org with no plans at all, and the
-	// versioning probes reject empty id lists rather than returning nothing.
 	if (allVersions.length === 0) return emptyProductStatesContext();
 
 	const allPlanIds = [

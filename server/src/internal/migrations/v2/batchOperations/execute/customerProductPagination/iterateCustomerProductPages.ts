@@ -5,17 +5,6 @@ import {
 	BATCH_MIGRATION_PAGE_STATEMENT_TIMEOUT_MS,
 } from "../utils/batchMigrationExecutionConstants.js";
 
-/**
- * Iterates an operation over a customer page's scope-matched customer
- * products in cp.id-keyset pages: one bounded transaction per `executePage`
- * call. The rows a call returns drive the cursor; a short page ends the
- * iteration.
- *
- * Partial iterations are safe by design: every mutation is dedup-idempotent
- * and the customer page's claims stay `running` until the marks land, so a
- * failure keeps committed pages, aborts only the current one, and a replay
- * converges.
- */
 export const iterateCustomerProductPages = async <
 	Row extends { customerProductId: string },
 	Result,
@@ -27,17 +16,12 @@ export const iterateCustomerProductPages = async <
 }: {
 	db: DrizzleCli;
 	pageSize: number;
-	/** Select + mutate one page inside `transaction`; returns the rows it
-	 * visited (selected, whether or not they were mutated). Must call
-	 * `assertWithinCeiling` after selecting and before mutating, so the runaway
-	 * ceiling trips without committing a partial page. */
 	executePage: (args: {
 		transaction: DrizzleCli;
 		afterCustomerProductId: string | undefined;
 		limit: number;
 		assertWithinCeiling: (selectedCount: number) => void;
 	}) => Promise<{ rows: Row[]; result: Result }>;
-	/** Publishes a batch's result only once its transaction has committed. */
 	onCommit: (result: Result) => void;
 }): Promise<{ rowCount: number }> => {
 	let afterCustomerProductId: string | undefined;

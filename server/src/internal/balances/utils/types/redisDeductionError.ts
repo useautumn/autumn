@@ -1,4 +1,3 @@
-/** Error codes returned by the Lua deduction script */
 export enum RedisDeductionErrorCode {
 	RedisUnavailable = "REDIS_UNAVAILABLE",
 	CustomerNotFound = "CUSTOMER_NOT_FOUND",
@@ -12,7 +11,6 @@ export enum RedisDeductionErrorCode {
 	DuplicateIdempotencyKey = "DUPLICATE_IDEMPOTENCY_KEY",
 }
 
-/** Errors that should trigger a fallback to Postgres */
 export const FALLBACK_ERROR_CODES = [
 	RedisDeductionErrorCode.CustomerNotFound,
 	RedisDeductionErrorCode.NoCustomerProducts,
@@ -21,7 +19,6 @@ export const FALLBACK_ERROR_CODES = [
 	RedisDeductionErrorCode.SkipCache,
 ] as const;
 
-/** Error thrown by Redis deduction operations */
 export class RedisDeductionError extends Error {
 	code: RedisDeductionErrorCode;
 	featureId?: string;
@@ -45,7 +42,6 @@ export class RedisDeductionError extends Error {
 		return this.code === RedisDeductionErrorCode.RedisUnavailable;
 	}
 
-	/** Check if this error should trigger a Postgres fallback */
 	shouldFallback(): boolean {
 		return FALLBACK_ERROR_CODES.includes(
 			this.code as (typeof FALLBACK_ERROR_CODES)[number],

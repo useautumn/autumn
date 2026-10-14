@@ -1,17 +1,3 @@
-/**
- * Preview accuracy for backdated starts_at on new Stripe subscriptions.
- *
- * Contract under test:
- *   - Immediate preview total = base price × number of elapsed billing periods
- *     (Stripe flexible billing emits one line item per backdated period).
- *   - next_cycle.starts_at = the renewal boundary anchored to the past starts_at
- *     (getCycleEnd(startsAt, now)), with next_cycle.total = one full cycle.
- *   - Feature resets (next_reset_at) align to the backdated anchor.
- *
- * preview.total / subtotal must equal the executed invoice total, so these
- * assertions are cross-checked against the real Stripe backdated invoice.
- */
-
 import { expect, test } from "bun:test";
 import {
 	type AttachParamsV1Input,
@@ -55,14 +41,12 @@ test.concurrent(
 				starts_at: startsAt,
 			})) as AttachPreviewResponse;
 
-		// One elapsed period -> one full base charge now.
 		expect(preview.total).toBe(20);
 		expect(preview.subtotal).toBe(20);
 		expect(
 			preview.line_items.reduce((sum, lineItem) => sum + lineItem.total, 0),
 		).toBe(preview.total);
 
-		// Renewal is anchored to starts_at + 1 month, charging a full cycle.
 		expectPreviewNextCycleCorrect({
 			preview,
 			startsAt: addMonths(startsAt, 1).getTime(),
@@ -75,7 +59,6 @@ test.concurrent(
 			starts_at: startsAt,
 		});
 
-		// preview.total must equal the real backdated invoice total.
 		expect(result.invoice?.total).toBe(preview.total);
 
 		const cusProduct = await expectAttachBackdateCorrect({
@@ -115,7 +98,6 @@ test.concurrent(
 			actions: [],
 		});
 
-		// 40 days back reliably spans two monthly periods regardless of month length.
 		const startsAt = advancedTo - ms.days(40);
 
 		const preview =
@@ -125,14 +107,12 @@ test.concurrent(
 				starts_at: startsAt,
 			})) as AttachPreviewResponse;
 
-		// Two elapsed periods -> two full base charges now.
 		expect(preview.total).toBe(40);
 		expect(preview.subtotal).toBe(40);
 		expect(
 			preview.line_items.reduce((sum, lineItem) => sum + lineItem.total, 0),
 		).toBe(preview.total);
 
-		// Renewal is anchored to starts_at + 2 months, charging a single full cycle.
 		expectPreviewNextCycleCorrect({
 			preview,
 			startsAt: addMonths(startsAt, 2).getTime(),
@@ -158,7 +138,6 @@ test.concurrent(
 			minInvoiceLineCount: 2,
 		});
 
-		// Next reset aligns to the anchor two months out (one month past now).
 		expectResetAnchoredTo({
 			cusProduct,
 			featureId: TestFeature.Messages,

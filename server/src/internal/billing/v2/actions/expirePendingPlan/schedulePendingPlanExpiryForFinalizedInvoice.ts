@@ -7,7 +7,6 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { getDeferredBillingMetadataExpiresAt } from "@/internal/billing/v2/providers/stripe/execute/getDeferredBillingMetadataExpiresAt";
 import { MetadataService } from "@/internal/metadata/MetadataService";
 
-/** A deferred draft had no due date to expire at; once finalized, its pending plan expires at the due date. */
 export const schedulePendingPlanExpiryForFinalizedInvoice = async ({
 	ctx,
 	stripeInvoice,

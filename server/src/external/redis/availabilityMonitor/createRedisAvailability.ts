@@ -62,8 +62,6 @@ export const createRedisAvailability = ({
 }) => {
 	let probeRedis: Redis | null = null;
 	let probeSourceRedis: Redis | null = null;
-	// Optimistic start: a boot-time gate check must not read as an outage. A real
-	// outage degrades after failuresToDegrade probes; per-op timeouts bound the gap.
 	let redisAvailabilityState: RedisAvailabilityState = "healthy";
 	let redisMonitorInterval: ReturnType<typeof setInterval> | null = null;
 	let redisTickInFlight = false;
@@ -74,8 +72,6 @@ export const createRedisAvailability = ({
 	let consecutiveInconclusive = 0;
 	let lastEventLoopLagMs = 0;
 
-	// Probes run on a dedicated duplicate so main-client saturation can't mask an
-	// outage; recreated whenever getRedis() starts returning a different instance.
 	const getOrCreateProbeRedis = (): Redis => {
 		const sourceRedis = getRedis();
 		if (!hasConfig) return sourceRedis;
@@ -271,8 +267,6 @@ export const createRedisAvailability = ({
 			const activeProbeRedis = getOrCreateProbeRedis();
 			const readinessPromises: Promise<void>[] = [];
 
-			// Any non-ready status (wait/connecting/connect/reconnecting) means the
-			// handshake is still in flight — probing now would misread boot as an outage.
 			if (mainRedis.status !== "ready") {
 				readinessPromises.push(
 					waitForRedisReady(mainRedis, logPrefix).catch(() => undefined),

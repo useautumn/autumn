@@ -12,7 +12,6 @@ export type PlanMappingGroup = {
 
 const isBasePlan = (product: ProductV2) => !product.base_internal_product_id;
 
-/** Groups variants under their base plan; variants share the base's mapping. */
 export const groupPlanMappings = (
 	products: ProductV2[],
 ): PlanMappingGroup[] => {
@@ -63,9 +62,6 @@ export const findPlanMapping = ({
 }): CatalogPlanMapping | undefined =>
 	mappings.plan_mappings.find((mapping) => mapping.plan_id === planId);
 
-// Ordering drives the master row rollup: real errors win, then a verified base,
-// then in-progress states. An unmapped item must NOT override a mapped base, so
-// `unmapped` ranks below `ok`.
 const STATUS_SEVERITY: Record<CatalogStripeMapping["status"], number> = {
 	unmapped: 0,
 	unchecked: 1,
@@ -81,11 +77,6 @@ export type ResolvedMapping = {
 	pending: boolean;
 };
 
-/**
- * Computes a mapping's status from lazily-resolved Stripe products. While the
- * resolve query is in flight and the id is unresolved, `pending` is true so the
- * UI can show a skeleton instead of a premature "missing".
- */
 export const resolveMapping = ({
 	stripeProductId,
 	backendStatus,
@@ -134,7 +125,6 @@ export const collectPlanStripeProductIds = (
 	].filter((id): id is string => Boolean(id));
 };
 
-/** Rolls a plan's product and aliases into the most severe status. */
 export const rollupPlanStatus = ({
 	planMapping,
 	stripeConnected,

@@ -4,12 +4,6 @@ import { catalog } from "../../../src/grading/expectations/catalogExpectations.t
 import { conduct } from "../../../src/grading/expectations/conductExpectations.ts";
 import { initAxEval } from "../../../src/initAxEval.ts";
 
-/**
- * FILL / rollover, terms stated: the structure is trivial and every rollover
- * term is in the brief — 50% cap, expires after 2 months. Passing = the item
- * carries the exact rollover config (max_percentage, not max; month expiry
- * with length 2). Grading is fully deterministic on the wire shape.
- */
 export const rolloverStated = defineCase({
 	name: "fill-rollover-stated",
 	prompt: [

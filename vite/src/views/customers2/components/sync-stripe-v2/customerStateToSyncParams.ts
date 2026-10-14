@@ -40,7 +40,6 @@ const toSyncPlan = ({
 	};
 };
 
-/** The customer state as a `/billing.sync` request, phase by phase. */
 export const customerStateToSyncParams = ({
 	customerId,
 	proposal,
@@ -111,7 +110,6 @@ export const customerStateToSyncParams = ({
 			? { unscheduled_plans: unscheduledPlans }
 			: {}),
 		carry_over_usage: carryOverUsage,
-		// The sheet lists every plan on the subscription, so a removed row expires.
 		expire_unlisted_plans: expirePrevious,
 	};
 };

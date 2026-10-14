@@ -17,10 +17,6 @@ import {
 	buildCustomizeItems,
 } from "@/components/forms/shared/utils/buildPlanCustomize";
 
-// ---------------------------------------------------------------------------
-// Fixtures
-// ---------------------------------------------------------------------------
-
 function makeProduct({
 	id = "prod_1",
 	items = [],
@@ -118,10 +114,6 @@ const schedulePhase = ({
 	plans: productIds.map(schedulePlan),
 });
 
-// ---------------------------------------------------------------------------
-// buildCustomizeBasePrice
-// ---------------------------------------------------------------------------
-
 describe("buildCustomizeBasePrice", () => {
 	test("extracts base price from items", () => {
 		const result = buildCustomizeBasePrice({
@@ -206,10 +198,6 @@ describe("buildCustomizeBasePrice", () => {
 	});
 });
 
-// ---------------------------------------------------------------------------
-// buildCustomizeItems
-// ---------------------------------------------------------------------------
-
 describe("buildCustomizeItems", () => {
 	test("converts priced feature items to plan items", () => {
 		const result = buildCustomizeItems({
@@ -280,10 +268,6 @@ describe("buildCustomizeItems", () => {
 	});
 });
 
-// ---------------------------------------------------------------------------
-// buildCustomize
-// ---------------------------------------------------------------------------
-
 describe("buildCustomize", () => {
 	test("returns undefined for null items", () => {
 		const result = buildCustomize({ items: null, features });
@@ -337,10 +321,6 @@ describe("buildCustomize", () => {
 		expect(result).toEqual({ items: [], price: null });
 	});
 });
-
-// ---------------------------------------------------------------------------
-// buildCreateScheduleRequestBody
-// ---------------------------------------------------------------------------
 
 describe("buildCreateScheduleRequestBody", () => {
 	const defaultProducts = [makeProduct({ id: "prod_1" })];

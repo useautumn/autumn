@@ -9,7 +9,6 @@ import { InlinePlanEditor } from "@/components/v2/inline-custom-plan-editor/Inli
 import { useCustomerContext } from "@/views/customers2/customer/CustomerContext";
 import { useCustomerStateContext } from "../CustomerStateProvider";
 
-/** Opens the plan being edited in the inline editor and saves it back as items. */
 export function CustomerStatePlanEditor() {
 	const {
 		products,

@@ -6,10 +6,6 @@ export type CustomerWalkRow = {
 	id: string;
 };
 
-/**
- * Rows arrive fetched with limit + 1. When fewer come back but the walk hit its scan cap,
- * the page is short and resumes after the boundary customer.
- */
 export const assembleCustomerWalkPage = <TRow, TItem>({
 	rows,
 	limit,

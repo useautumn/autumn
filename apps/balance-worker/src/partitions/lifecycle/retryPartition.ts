@@ -55,7 +55,6 @@ export function clearPartitionRetries({
 	state.partitionRetryTimers.clear();
 }
 
-// A full retirement: the claim is released, so the route is not advertised while the partition waits.
 async function cleanUpPartitionForRetry({
 	ctx,
 	entry,

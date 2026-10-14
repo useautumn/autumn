@@ -18,11 +18,8 @@ const graduatedCreditRateShape = {
 	tiers: z.array(CreditTierSchema),
 };
 
-// Event property values are compared as strings at track time.
 export const CreditMatchSchema = z.record(
 	z.string(),
-	// `.pipe(z.string())` gives the OpenAPI exporter a plain output schema; a bare
-	// transform is rejected when this record appears in response bodies.
 	z
 		.union([z.string(), z.number(), z.boolean()])
 		.transform(String)
@@ -56,7 +53,6 @@ export const CreditMultiplierSchema = z
 export const USAGE_ATTRIBUTION_DIMENSION_SEPARATOR = "::";
 export const CREDIT_DIMENSION_NAME_MAX_LENGTH = 64;
 
-// Dimension names become usage-attribution keys, so they must stay parseable.
 export const CreditDimensionNameSchema = z
 	.string()
 	.min(1)
@@ -88,14 +84,11 @@ export const CreditSchemaItemSchema = z.union([
 ]);
 
 const MarkupEntrySchema = z.object({
-	markup: z.number().min(-100), // percentage markup, e.g. 20 for 20%, -100 for free
+	markup: z.number().min(-100),
 });
 
 export const ProviderMarkupsSchema = z
-	.record(
-		z.string(), // Provider key from the model name, e.g. "openrouter" in "openrouter/anthropic/claude"
-		MarkupEntrySchema,
-	)
+	.record(z.string(), MarkupEntrySchema)
 	.nullish();
 
 export const CreditSystemConfigSchema = z.object({
@@ -106,14 +99,6 @@ export const CreditSystemConfigSchema = z.object({
 	provider_markups: ProviderMarkupsSchema,
 });
 
-/**
- * `<provider>/<model>`, split on the FIRST slash so `openrouter/openai/gpt-4o`
- * keeps its inner one. Rejecting a bare key here only moves an existing failure
- * earlier: `resolveModel` already throws "not found in models.dev pricing data"
- * at track time, which is a billing-time surprise rather than a config error.
- * Shape only — whether the model exists needs the models.dev catalog, and that
- * lookup does not belong on the write path.
- */
 export const ModelMarkupsSchema = z
 	.record(
 		z
@@ -123,14 +108,13 @@ export const ModelMarkupsSchema = z
 				'Model keys are "<provider>/<model>", e.g. "openai/gpt-4o" or "custom/my-model".',
 			),
 		MarkupEntrySchema.extend({
-			markup: z.number().min(-100).optional(), // Omit to inherit provider/global markup
-			input_cost: z.number().min(0).optional(), // $/M tokens, required for custom/ models
-			output_cost: z.number().min(0).optional(), // $/M tokens, required for custom/ models
+			markup: z.number().min(-100).optional(),
+			input_cost: z.number().min(0).optional(),
+			output_cost: z.number().min(0).optional(),
 		}),
 	)
 	.nullish();
 
-// markups replaces as one unit: its three levels are a single precedence chain.
 export const FeatureMarkupsOverrideSchema = z.strictObject({
 	default_markup: z.number().min(-100).optional(),
 	provider_markups: ProviderMarkupsSchema,

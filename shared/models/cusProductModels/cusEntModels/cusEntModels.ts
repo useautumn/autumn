@@ -16,7 +16,6 @@ export const CustomerEntitlementFiltersSchema = z.object({
 
 export const EntityBalanceSchema = z.object({
 	id: z.string(),
-	// Legacy unlimited rows stored null: the balance tracks nothing, so it reads as 0.
 	balance: z
 		.number()
 		.nullable()
@@ -45,7 +44,6 @@ export type CustomerEntitlementSource = z.infer<
 	typeof CustomerEntitlementSourceSchema
 >;
 
-/** Written by expiring purchase grants so the origin survives churn. */
 export const CustomerEntitlementMetadataSchema = z.object({
 	source: CustomerEntitlementSourceSchema,
 	plan_id: z.string().nullish(),
@@ -56,32 +54,26 @@ export type CustomerEntitlementMetadata = z.infer<
 >;
 
 export const CustomerEntitlementSchema = z.object({
-	// Foreign keys
 	id: z.string(),
 	internal_customer_id: z.string(),
 	internal_entity_id: z.string().nullable(),
 	internal_feature_id: z.string(),
-	customer_id: z.string().nullish(), // for debugging purposes
-	feature_id: z.string(), // for debugging purposes
+	customer_id: z.string().nullish(),
+	feature_id: z.string(),
 
 	customer_product_id: z.string().nullable(),
 	entitlement_id: z.string(),
 	created_at: z.number(),
 
-	// Balance fields
 	unlimited: z.boolean().nullish(),
 	balance: z.number().nullish().default(0),
 
 	additional_balance: z.number().default(0),
-	// Optional at the model boundary for legacy cached/in-memory objects. The
-	// database column is non-null and defaults to an empty object.
 	usage_attribution: UsageAttributionSchema.optional(),
 	invoice_credit: z.boolean().optional(),
 
 	usage_allowed: z.boolean().nullable(),
 	separate_interval: z.boolean().default(false),
-	// Optional at the model boundary for legacy cached objects. The DB column is
-	// non-null and defaults to false.
 	is_pooled_balance: z.boolean().optional(),
 	pooled_balance_id: z.string().nullable().optional(),
 	pooled_contribution_id: z.string().nullable().optional(),
@@ -90,16 +82,13 @@ export const CustomerEntitlementSchema = z.object({
 	next_reset_at: z.number().nullable(),
 	adjustment: z.number().nullish().default(0),
 
-	// Expiry for loose entitlements (entitlements without reset intervals)
 	expires_at: z.number().nullable(),
 	cache_version: z.number().optional().default(0),
 
-	// Group by fields
 	entities: z.record(z.string(), EntityBalanceSchema).nullish(),
 
 	external_id: z.string().nullable(),
 
-	/** Provenance for rows that outlive the plan that created them. */
 	metadata: CustomerEntitlementMetadataSchema.nullish(),
 });
 

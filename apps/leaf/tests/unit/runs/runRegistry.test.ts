@@ -52,8 +52,6 @@ describe("runRegistry", () => {
 			kind: "message",
 			ownerProviderUserId: "U1",
 		});
-		// The Slack path registers before it knows the session; the turn binds
-		// the transport once eve has answered.
 		run.resolveSessionId("sesn_1", {
 			sendUserMessage: async ({ sessionId, text }) => {
 				sent.push(`${sessionId}:${text}`);
@@ -93,15 +91,11 @@ describe("runRegistry", () => {
 		});
 		run.resolveSessionId("sesn_1");
 
-		// eve folds adjacent messages into one replacement turn, so a claim
-		// takes every message accepted so far rather than one per boundary.
 		run.pendingTurns = 2;
 		expect(run.claimFollowUpsOrSettle()).toBe(true);
 		expect(run.pendingTurns).toBe(0);
 		expect(run.settling).toBeUndefined();
 
-		// Nothing outstanding: the same call is what closes the run, so there is
-		// no moment where a message can be accepted by a reader that has left.
 		expect(run.claimFollowUpsOrSettle()).toBe(false);
 		expect(run.settling).toBe(true);
 		expect(run.injectFollowUp({ text: "too late" })).rejects.toThrow(
@@ -129,20 +123,13 @@ describe("runRegistry", () => {
 		accepts[0]?.();
 		await accepted;
 
-		// A start with no cancel after the accept may be a turn that predates
-		// the message, so it covers nothing.
 		run.coverAcceptedFollowUps();
 		expect(run.pendingTurns).toBe(2);
 
-		// The cancel the accepted one caused arms it; the replacement's start
-		// covers it. The other was still posting at the cancel, so stays owed.
 		run.noteTurnCancelled();
 		run.coverAcceptedFollowUps();
 		expect(run.pendingTurns).toBe(1);
 
-		// A claim hands the in-flight post to the reader. Its accept landing
-		// afterwards was already counted, so a later turn start must not use it
-		// to cover a message injected after the claim.
 		expect(run.claimFollowUpsOrSettle()).toBe(true);
 		accepts[1]?.();
 		await inFlight;

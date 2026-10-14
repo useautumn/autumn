@@ -11,10 +11,8 @@ import { BYOC_CACHE_REMOVAL_STAGES, ByocCacheStage } from "@autumn/shared";
 const COMPUTE_CLUSTER_TYPE = "compute-cluster";
 const RUNNING = "running";
 
-/** alien's agent reports in every minute or so; ten minutes of silence means it lost touch. */
 const HEARTBEAT_STALE_MS = 10 * 60 * 1000;
 
-/** Connected rests on alien's heartbeat, the same for public and private networks. */
 const hasRecentHeartbeat = ({ deployment }: { deployment: AlienDeployment }) =>
 	deployment.lastHeartbeatAt != null &&
 	Date.now() - Date.parse(deployment.lastHeartbeatAt) < HEARTBEAT_STALE_MS;
@@ -24,7 +22,6 @@ const hasVolume = ({ container }: { container?: AlienResourceState }) => {
 	return Array.isArray(volumes) && volumes.length > 0;
 };
 
-/** The deploy steps alien reports done for an Atom: its stack, the container's volume, machine and endpoint, its health, then its heartbeat. */
 export const alienDeploymentToDoneStages = ({
 	deployment,
 	atomResourceId,
@@ -56,7 +53,6 @@ export const alienDeploymentToDoneStages = ({
 const isGone = ({ resource }: { resource?: AlienResourceState }) =>
 	!resource || resource.status === "deleted";
 
-/** What a delete has taken down so far; once alien waits on the org's stack, all of it. */
 export const alienDeploymentToRemovedStages = ({
 	deployment,
 	atomResourceId,

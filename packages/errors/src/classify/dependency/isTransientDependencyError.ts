@@ -1,4 +1,3 @@
-/** Socket-level failures from fetch, Bun and Node: the remote end was unreachable, not wrong. */
 const TRANSIENT_NETWORK_CODES = new Set([
 	"ECONNRESET",
 	"ECONNREFUSED",
@@ -13,7 +12,6 @@ const TRANSIENT_NETWORK_CODES = new Set([
 	"UND_ERR_CONNECT_TIMEOUT",
 ]);
 
-/** postgres.js connection failures, and SQLSTATEs for a dropped connection, exhausted resources, shutdown or statement timeout. */
 const TRANSIENT_POSTGRES_CODES = new Set([
 	"CONNECTION_CLOSED",
 	"CONNECTION_ENDED",
@@ -59,7 +57,6 @@ const isTransientPostgresError = (error: Error) => {
 	);
 };
 
-/** AWS SDK v3 errors carry `$metadata`; throttles and 5xx from SQS, S3 etc. clear on their own. */
 const isTransientAwsError = (error: Error) => {
 	if (!("$metadata" in error)) return false;
 	const metadata = error.$metadata as { httpStatusCode?: number } | undefined;
@@ -69,7 +66,6 @@ const isTransientAwsError = (error: Error) => {
 	);
 };
 
-/** Tinybird's SDK error: rate limits and server errors are theirs, other statuses are our request. */
 const isTransientTinybirdError = (error: Error) =>
 	error.name === "TinybirdError" &&
 	"statusCode" in error &&
@@ -77,7 +73,6 @@ const isTransientTinybirdError = (error: Error) =>
 
 const MAX_CAUSE_DEPTH = 3;
 
-/** Network, Kafka, Postgres, AWS and Tinybird failures that resolve on retry; follows `cause` so a wrapper (e.g. TinybirdIngestError) counts. */
 export const isTransientDependencyError = ({
 	error,
 }: {

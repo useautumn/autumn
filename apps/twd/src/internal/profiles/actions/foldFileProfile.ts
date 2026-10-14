@@ -11,7 +11,6 @@ const MEAN_ALPHA = 0.3;
 const PEAK_UP_ALPHA = 0.5;
 const PEAK_DOWN_ALPHA = 0.15;
 const FAIL_ALPHA = 0.1;
-/** One packed failure is enough to stop packing a file. */
 const PACKED_FAIL_ALPHA = 0.5;
 
 export const statsToProfileMetrics = (stats: FileStats): ProfileMetrics => ({
@@ -40,7 +39,6 @@ const mean = (values: number[]) =>
 const present = (values: (number | null)[]) =>
 	values.filter((value): value is number => value !== null);
 
-/** A repeat run counts once: means are averaged, peaks keep the worst repetition. */
 export const combineRunSamples = (
 	samples: FileProfileSample[],
 ): FileProfileSample => {
@@ -99,7 +97,6 @@ const smoothPeak = ({
 				: PEAK_DOWN_ALPHA,
 	});
 
-/** EW mean and variance of duration; a hung sample can only raise the mean. */
 const foldDuration = ({
 	previous,
 	sample,
@@ -123,7 +120,6 @@ const foldDuration = ({
 	};
 };
 
-/** Folds one run's sample into a file's rolling profile. */
 export const foldFileProfile = ({
 	previous,
 	sample,

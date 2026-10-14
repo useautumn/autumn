@@ -43,9 +43,6 @@ export const assertSandboxAccess = ({
 		});
 	}
 
-	// Uniform 404 for every target-resolution failure (missing, your own org,
-	// not yours, not a sandbox) so the response can't probe ids or ownership.
-	// preview + reseller sub-orgs also carry created_by, so created_by isn't enough.
 	if (
 		!candidate ||
 		candidate.id === sessionOrgId ||

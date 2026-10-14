@@ -8,7 +8,6 @@ import {
 
 export type CreditRateType = "flat" | "graduated";
 
-/** Any graduated rate — a rate-card row or one of its dimensions. */
 export type GraduatedCreditRate = {
 	tier_behavior: "graduated";
 	tiers: CreditTier[];
@@ -21,8 +20,6 @@ export type GraduatedCreditSchemaItem = Extract<
 
 const DEFAULT_TIER_STEP = 100;
 
-/** Editing keeps raw input in local component state, but a stale draft can still
- * reach here as a string. */
 const toNumber = (value: unknown) => {
 	const parsed = Number(value);
 	return Number.isFinite(parsed) ? parsed : 0;
@@ -41,8 +38,6 @@ export const createSchemaItem = (): CreditSchemaItem => ({
 	credit_amount: 0,
 });
 
-/** The flat and graduated variants forbid each other's cost fields, so the
- * switch has to rebuild the item rather than merge into it. */
 export const setRateType = ({
 	item,
 	rateType,

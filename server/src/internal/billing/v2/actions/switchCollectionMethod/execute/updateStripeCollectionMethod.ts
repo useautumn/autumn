@@ -50,7 +50,6 @@ const buildChargeAutomaticallyParams = ({
 
 	return {
 		collection_method: "charge_automatically",
-		// Invoice-only types (e.g. customer_balance) are rejected on charge_automatically.
 		payment_settings: { payment_method_types: "" },
 		...(!hasDefaultPaymentMethod &&
 			paymentMethod && { default_payment_method: paymentMethod.id }),

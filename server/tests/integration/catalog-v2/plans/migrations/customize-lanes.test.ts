@@ -1,14 +1,3 @@
-/**
- * catalogV2.update — migratable customize lanes: paid add/remove, price null,
- * trial stripped when items also change.
- *
- * Contract:
- *   adding a priced item → add_items only, no_billing_changes false
- *   removing a priced item → remove_items only, no_billing_changes false
- *   price: null → price lane null + previous_price, no_billing_changes false
- *   trial + items → trial dropped from customize, items remain
- */
-
 import { test } from "bun:test";
 import {
 	BillingInterval,

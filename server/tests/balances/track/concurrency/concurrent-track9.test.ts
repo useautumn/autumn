@@ -40,7 +40,6 @@ describe(`${chalk.yellowBright(`concurrentTrack9: Testing concurrent track right
 			prefix: testCase,
 		});
 
-		// Attach product to customer
 		await autumnV1.attach({
 			customer_id: customerId,
 			product_id: pro.id,
@@ -78,7 +77,6 @@ describe(`${chalk.yellowBright(`concurrentTrack9: Testing concurrent track right
 
 		await Promise.all(promises);
 
-		// Check final balance
 		const customer = await autumnV1.customers.get(customerId);
 		const finalBalance = customer.features[TestFeature.Users].balance;
 

@@ -1,5 +1,3 @@
-/** A later phase's proration_behavior is saved on its schedule phase and decides how Stripe bills that phase's start. */
-
 import { expect, test } from "bun:test";
 import type { PhaseProrationBehavior } from "@autumn/shared";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils";

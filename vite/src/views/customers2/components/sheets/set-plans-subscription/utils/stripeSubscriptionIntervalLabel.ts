@@ -37,7 +37,6 @@ const findLongestRecurring = ({
 			undefined,
 		);
 
-/** How often the subscription bills, read from its longest recurring item. */
 export const stripeSubscriptionIntervalLabel = ({
 	subscription,
 }: {

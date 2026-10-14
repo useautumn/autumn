@@ -1,7 +1,3 @@
-/**
- * Contract: an in-place customized license edit retires the customer-referenced catalog link and creates a successor.
- * The parent stays on v1, its catalog uses the successor, and the existing customer stays pinned to the old definition.
- */
 import { expect, test } from "bun:test";
 import {
 	BillingInterval,

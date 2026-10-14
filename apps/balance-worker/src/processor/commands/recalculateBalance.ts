@@ -12,7 +12,6 @@ import { PartitionProcessorStateNotFoundError } from "../common/processorErrors.
 import type { PartitionProcessorScope } from "../types/partitionProcessor.js";
 import type { MutationResult } from "../writer/types/mutation.js";
 
-/** A preview reads like a check and writes nothing; a recalculation is decided and answered once Postgres holds it. */
 export async function recalculateBalance({
 	scope,
 	command,
@@ -30,7 +29,6 @@ export async function recalculateBalance({
 	});
 	const committed = await decided.waitForCommit();
 	if (!("mutation" in committed)) {
-		// Nothing moved, but the caller reads Postgres next: earlier records must have landed first.
 		await decided.waitForStore();
 		return committed;
 	}
@@ -57,7 +55,6 @@ async function previewRecalculateBalance({
 	return { result: computeRecalculateBalance({ fullSubject, command }).result };
 }
 
-/** Runs inside the writer's critical section: no await, no I/O. */
 function mutateRecalculateBalance({
 	scope,
 	state,

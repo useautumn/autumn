@@ -13,14 +13,13 @@ describe(chalk.yellowBright("applyExistingUsages (entity usages)"), () => {
 		test("each entity's balance is reduced by its respective usage", () => {
 			const internalFeatureId = "internal_feature_a";
 
-			// Entity-scoped cusEnt with 3 entities, each with balance 100
 			const entityScopedCusEnt = customerEntitlements.create({
 				internalFeatureId,
 				featureId: "feature_a",
 				featureName: "Feature A",
 				allowance: 100,
-				balance: 0, // Top-level balance not used for entity-scoped
-				entityFeatureId: "entity_feature_id", // Makes it entity-scoped
+				balance: 0,
+				entityFeatureId: "entity_feature_id",
 				entities: {
 					entity1: { id: "entity1", balance: 100, adjustment: 0 },
 					entity2: { id: "entity2", balance: 100, adjustment: 0 },
@@ -32,7 +31,6 @@ describe(chalk.yellowBright("applyExistingUsages (entity usages)"), () => {
 				customerEntitlements: [entityScopedCusEnt],
 			});
 
-			// Apply entity usages: entity1: 50, entity2: 100, entity3: 25
 			const existingUsages: ExistingUsages = {
 				[internalFeatureId]: {
 					usage: 0,
@@ -44,7 +42,6 @@ describe(chalk.yellowBright("applyExistingUsages (entity usages)"), () => {
 				},
 			};
 
-			// Act
 			applyExistingUsages({
 				ctx,
 				customerProduct: cusProduct,
@@ -52,12 +49,11 @@ describe(chalk.yellowBright("applyExistingUsages (entity usages)"), () => {
 				entities: [],
 			});
 
-			// Assert
 			const updatedCusEnt = cusProduct.customer_entitlements[0];
 			expect(updatedCusEnt.entities).not.toBeNull();
-			expect(updatedCusEnt.entities?.entity1.balance).toBe(50); // 100 - 50
-			expect(updatedCusEnt.entities?.entity2.balance).toBe(0); // 100 - 100
-			expect(updatedCusEnt.entities?.entity3.balance).toBe(75); // 100 - 25
+			expect(updatedCusEnt.entities?.entity1.balance).toBe(50);
+			expect(updatedCusEnt.entities?.entity2.balance).toBe(0);
+			expect(updatedCusEnt.entities?.entity3.balance).toBe(75);
 		});
 	});
 
@@ -65,21 +61,18 @@ describe(chalk.yellowBright("applyExistingUsages (entity usages)"), () => {
 		test("nothing is deducted when entityUsages are applied to non-entity-scoped cusEnt", () => {
 			const internalFeatureId = "internal_feature_a";
 
-			// Non-entity-scoped cusEnt (no entityFeatureId, entities is null)
 			const nonEntityScopedCusEnt = customerEntitlements.create({
 				internalFeatureId,
 				featureId: "feature_a",
 				featureName: "Feature A",
 				allowance: 100,
 				balance: 100,
-				// No entityFeatureId - not entity-scoped
 			});
 
 			const cusProduct = customerProducts.create({
 				customerEntitlements: [nonEntityScopedCusEnt],
 			});
 
-			// Try to apply entity usages to non-entity-scoped cusEnt
 			const existingUsages: ExistingUsages = {
 				[internalFeatureId]: {
 					usage: 0,
@@ -90,7 +83,6 @@ describe(chalk.yellowBright("applyExistingUsages (entity usages)"), () => {
 				},
 			};
 
-			// Act
 			applyExistingUsages({
 				ctx,
 				customerProduct: cusProduct,
@@ -98,10 +90,9 @@ describe(chalk.yellowBright("applyExistingUsages (entity usages)"), () => {
 				entities: [],
 			});
 
-			// Assert: Balance should remain unchanged since cusEnt is not entity-scoped
 			const updatedCusEnt = cusProduct.customer_entitlements[0];
-			expect(updatedCusEnt.balance).toBe(100); // Unchanged
-			expect(updatedCusEnt.entities).toBeNull(); // Still null
+			expect(updatedCusEnt.balance).toBe(100);
+			expect(updatedCusEnt.entities).toBeNull();
 		});
 	});
 
@@ -109,14 +100,13 @@ describe(chalk.yellowBright("applyExistingUsages (entity usages)"), () => {
 		test("entity balances are deducted as if aggregated", () => {
 			const internalFeatureId = "internal_feature_a";
 
-			// Entity-scoped cusEnt with 3 entities
 			const entityScopedCusEnt = customerEntitlements.create({
 				internalFeatureId,
 				featureId: "feature_a",
 				featureName: "Feature A",
 				allowance: 50,
-				balance: 0, // Top-level balance not used for entity-scoped
-				entityFeatureId: "entity_feature_id", // Makes it entity-scoped
+				balance: 0,
+				entityFeatureId: "entity_feature_id",
 				entities: {
 					entity1: { id: "entity1", balance: 50, adjustment: 0 },
 					entity2: { id: "entity2", balance: 50, adjustment: 0 },
@@ -128,9 +118,6 @@ describe(chalk.yellowBright("applyExistingUsages (entity usages)"), () => {
 				customerEntitlements: [entityScopedCusEnt],
 			});
 
-			// Apply top-level usage (no targetEntityId) - should aggregate across entities
-			// Total entity balance = 150, usage = 80
-			// Should deduct from entities in order: entity1: 50->0, entity2: 50->20
 			const existingUsages: ExistingUsages = {
 				[internalFeatureId]: {
 					usage: 80,
@@ -138,7 +125,6 @@ describe(chalk.yellowBright("applyExistingUsages (entity usages)"), () => {
 				},
 			};
 
-			// Act
 			applyExistingUsages({
 				ctx,
 				customerProduct,
@@ -146,17 +132,15 @@ describe(chalk.yellowBright("applyExistingUsages (entity usages)"), () => {
 				entities: [],
 			});
 
-			// Assert: Deduction should flow through entities
 			const updatedCusEnt = customerProduct.customer_entitlements[0];
 			expect(updatedCusEnt.entities).not.toBeNull();
 
-			// The total deducted should be 80, distributed across entities
 			const totalRemainingBalance =
 				(updatedCusEnt.entities?.entity1.balance ?? 0) +
 				(updatedCusEnt.entities?.entity2.balance ?? 0) +
 				(updatedCusEnt.entities?.entity3.balance ?? 0);
 
-			expect(totalRemainingBalance).toBe(70); // 150 - 80 = 70
+			expect(totalRemainingBalance).toBe(70);
 		});
 	});
 
@@ -164,14 +148,13 @@ describe(chalk.yellowBright("applyExistingUsages (entity usages)"), () => {
 		test("each entity balance can be deducted below 0", () => {
 			const internalFeatureId = "internal_feature_a";
 
-			// Entity-scoped cusEnt with usage_allowed = true
 			const entityScopedCusEnt = customerEntitlements.create({
 				internalFeatureId,
 				featureId: "feature_a",
 				featureName: "Feature A",
 				allowance: 50,
 				balance: 0,
-				usageAllowed: true, // Can go negative
+				usageAllowed: true,
 				entityFeatureId: "entity_feature_id",
 				entities: {
 					entity1: { id: "entity1", balance: 50, adjustment: 0 },
@@ -183,18 +166,16 @@ describe(chalk.yellowBright("applyExistingUsages (entity usages)"), () => {
 				customerEntitlements: [entityScopedCusEnt],
 			});
 
-			// Apply entity usages that exceed balances
 			const existingUsages: ExistingUsages = {
 				[internalFeatureId]: {
 					usage: 0,
 					entityUsages: {
-						entity1: 70, // 50 - 70 = -20
-						entity2: 50, // 30 - 50 = -20
+						entity1: 70,
+						entity2: 50,
 					},
 				},
 			};
 
-			// Act
 			applyExistingUsages({
 				ctx,
 				customerProduct,
@@ -202,11 +183,10 @@ describe(chalk.yellowBright("applyExistingUsages (entity usages)"), () => {
 				entities: [],
 			});
 
-			// Assert: Entity balances should go negative
 			const updatedCusEnt = customerProduct.customer_entitlements[0];
 			expect(updatedCusEnt.entities).not.toBeNull();
-			expect(updatedCusEnt.entities?.entity1.balance).toBe(-20); // 50 - 70 = -20
-			expect(updatedCusEnt.entities?.entity2.balance).toBe(-20); // 30 - 50 = -20
+			expect(updatedCusEnt.entities?.entity1.balance).toBe(-20);
+			expect(updatedCusEnt.entities?.entity2.balance).toBe(-20);
 		});
 	});
 
@@ -215,13 +195,12 @@ describe(chalk.yellowBright("applyExistingUsages (entity usages)"), () => {
 			const internalFeatureId = "internal_feature_a";
 			const entityFeatureId = "entity_feature_id";
 
-			// Entity-scoped cusEnt with 3 entities, each with balance 100
 			const entityScopedCusEnt = customerEntitlements.create({
 				internalFeatureId,
 				featureId: "feature_a",
 				featureName: "Feature A",
 				allowance: 100,
-				balance: 0, // Top-level balance not used for entity-scoped
+				balance: 0,
 				entityFeatureId,
 				entities: {
 					entity1: { id: "entity1", balance: 100, adjustment: 0 },
@@ -234,7 +213,6 @@ describe(chalk.yellowBright("applyExistingUsages (entity usages)"), () => {
 				customerEntitlements: [entityScopedCusEnt],
 			});
 
-			// Existing entity usages: entity1 used 30, entity2 used 50, entity3 used 10
 			const existingUsages: ExistingUsages = {
 				[internalFeatureId]: {
 					usage: 0,
@@ -246,7 +224,6 @@ describe(chalk.yellowBright("applyExistingUsages (entity usages)"), () => {
 				},
 			};
 
-			// Act
 			applyExistingUsages({
 				ctx,
 				customerProduct: cusProduct,
@@ -254,19 +231,17 @@ describe(chalk.yellowBright("applyExistingUsages (entity usages)"), () => {
 				entities: [],
 			});
 
-			// Assert: Each entity's balance should be reduced by its usage
 			const updatedCusEnt = cusProduct.customer_entitlements[0];
 			expect(updatedCusEnt.entities).not.toBeNull();
-			expect(updatedCusEnt.entities?.entity1.balance).toBe(70); // 100 - 30
-			expect(updatedCusEnt.entities?.entity2.balance).toBe(50); // 100 - 50
-			expect(updatedCusEnt.entities?.entity3.balance).toBe(90); // 100 - 10
+			expect(updatedCusEnt.entities?.entity1.balance).toBe(70);
+			expect(updatedCusEnt.entities?.entity2.balance).toBe(50);
+			expect(updatedCusEnt.entities?.entity3.balance).toBe(90);
 		});
 
 		test("entity usages are preserved even when some entities have no prior usage", () => {
 			const internalFeatureId = "internal_feature_a";
 			const entityFeatureId = "entity_feature_id";
 
-			// Entity-scoped cusEnt with 3 entities
 			const entityScopedCusEnt = customerEntitlements.create({
 				internalFeatureId,
 				featureId: "feature_a",
@@ -285,18 +260,15 @@ describe(chalk.yellowBright("applyExistingUsages (entity usages)"), () => {
 				customerEntitlements: [entityScopedCusEnt],
 			});
 
-			// Only entity1 has existing usage, entity2/entity3 have none
 			const existingUsages: ExistingUsages = {
 				[internalFeatureId]: {
 					usage: 0,
 					entityUsages: {
 						entity1: 25,
-						// entity2 and entity3 have no entry - should remain at full balance
 					},
 				},
 			};
 
-			// Act
 			applyExistingUsages({
 				ctx,
 				customerProduct: cusProduct,
@@ -304,12 +276,11 @@ describe(chalk.yellowBright("applyExistingUsages (entity usages)"), () => {
 				entities: [],
 			});
 
-			// Assert
 			const updatedCusEnt = cusProduct.customer_entitlements[0];
 			expect(updatedCusEnt.entities).not.toBeNull();
-			expect(updatedCusEnt.entities?.entity1.balance).toBe(25); // 50 - 25
-			expect(updatedCusEnt.entities?.entity2.balance).toBe(50); // Unchanged
-			expect(updatedCusEnt.entities?.entity3.balance).toBe(50); // Unchanged
+			expect(updatedCusEnt.entities?.entity1.balance).toBe(25);
+			expect(updatedCusEnt.entities?.entity2.balance).toBe(50);
+			expect(updatedCusEnt.entities?.entity3.balance).toBe(50);
 		});
 	});
 
@@ -317,25 +288,21 @@ describe(chalk.yellowBright("applyExistingUsages (entity usages)"), () => {
 		test("entity usages are NOT summed when applied to non-entity-scoped cusEnt (current behavior)", () => {
 			const internalFeatureId = "internal_feature_a";
 
-			// Non-entity-scoped cusEnt (no entityFeatureId)
 			const nonEntityScopedCusEnt = customerEntitlements.create({
 				internalFeatureId,
 				featureId: "feature_a",
 				featureName: "Feature A",
 				allowance: 300,
 				balance: 300,
-				// No entityFeatureId - not entity-scoped
 			});
 
 			const cusProduct = customerProducts.create({
 				customerEntitlements: [nonEntityScopedCusEnt],
 			});
 
-			// Entity usages from previous entity-scoped product
-			// entity1: 30, entity2: 50, entity3: 10 = total 90
 			const existingUsages: ExistingUsages = {
 				[internalFeatureId]: {
-					usage: 0, // No top-level usage
+					usage: 0,
 					entityUsages: {
 						entity1: 30,
 						entity2: 50,
@@ -344,7 +311,6 @@ describe(chalk.yellowBright("applyExistingUsages (entity usages)"), () => {
 				},
 			};
 
-			// Act
 			applyExistingUsages({
 				ctx,
 				customerProduct: cusProduct,
@@ -352,10 +318,8 @@ describe(chalk.yellowBright("applyExistingUsages (entity usages)"), () => {
 				entities: [],
 			});
 
-			// Assert: Entity usages should NOT be applied (cusEnt is non-entity-scoped)
-			// This is the CURRENT intentional behavior - entity usages don't convert to top-level
 			const updatedCusEnt = cusProduct.customer_entitlements[0];
-			expect(updatedCusEnt.balance).toBe(300); // Unchanged - entity usages ignored
+			expect(updatedCusEnt.balance).toBe(300);
 			expect(updatedCusEnt.entities).toBeNull();
 		});
 	});

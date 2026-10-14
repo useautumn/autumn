@@ -44,7 +44,6 @@ export const createHttpClient = (config: HttpClientConfig) => {
 	}): Promise<T> => {
 		const url = `${baseUrl}/${route}`;
 
-		// Build headers with custom headers merged
 		const headers: Record<string, string> = {
 			"Content-Type": "application/json",
 			...customHeaders,
@@ -60,14 +59,12 @@ export const createHttpClient = (config: HttpClientConfig) => {
 
 			const statusCode = response.status;
 
-			// Handle 204 No Content
 			if (statusCode === 204) {
 				return null as T;
 			}
 
 			const result = await response.json();
 
-			// Error response (4xx/5xx)
 			if (!response.ok) {
 				const error = isErrorBody(result)
 					? new AutumnClientError(result)
@@ -84,12 +81,10 @@ export const createHttpClient = (config: HttpClientConfig) => {
 
 			return result as T;
 		} catch (error) {
-			// Re-throw AutumnClientError as-is
 			if (error instanceof AutumnClientError) {
 				throw error;
 			}
 
-			// Network/fetch errors
 			const message = error instanceof Error ? error.message : "Network error";
 			const autumnError = new AutumnClientError({
 				message,

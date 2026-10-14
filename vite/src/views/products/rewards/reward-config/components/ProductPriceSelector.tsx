@@ -40,7 +40,6 @@ export function ProductPriceSelector({
 	const priceIds = config.price_ids ?? [];
 	const applyToAll = config.apply_to_all ?? false;
 
-	// Selected prices may belong to historical versions absent from the latest list.
 	const { products: linkedProductVersions } =
 		useProductsByPriceIdsQuery(priceIds);
 
@@ -59,7 +58,6 @@ export function ProductPriceSelector({
 			},
 		});
 
-	// Coupons saved before grouping may cover part of a shared Stripe product.
 	const expandedPriceIds =
 		applyToAll || priceIds.length === 0 || groups.length === 0
 			? priceIds

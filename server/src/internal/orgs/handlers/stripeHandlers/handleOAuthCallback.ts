@@ -41,18 +41,12 @@ const failureMessages = {
 		"The Stripe connection could not be completed. Please try again.",
 };
 
-/**
- * Handles Stripe OAuth callback
- * Uses Redis state for both standard and platform flows
- */
 export const handleOAuthCallback = async (c: Context<HonoEnv>) => {
 	const query = c.req.query();
 	const { code, state, error } = query;
 
-	// Get database connection
 	const { db } = initDrizzle({ pool: getPostgresPools().adHoc });
 
-	// Build frontend redirect URL (default)
 	const frontendUrl = process.env.CLIENT_URL || "http://localhost:3000";
 	let redirectUrl = new URL(`${frontendUrl}`);
 	redirectUrl.searchParams.set("tab", "stripe");
@@ -72,11 +66,9 @@ export const handleOAuthCallback = async (c: Context<HonoEnv>) => {
 	if (!state) return fail("missing_parameters");
 
 	try {
-		// Consume OAuth state from Redis
 		const redisState = await consumeOAuthState({ stateKey: state });
 
 		if (!redisState) {
-			// A signed return URL outlives the stored state, so send the user back there
 			const stateReturn = readOAuthStateReturn({ state });
 			if (!stateReturn) return fail("invalid_state");
 
@@ -90,7 +82,6 @@ export const handleOAuthCallback = async (c: Context<HonoEnv>) => {
 		}
 		if (redisState.provider === "revenuecat") return fail("invalid_state");
 
-		// Extract state data
 		const {
 			organization_slug,
 			env: envStr,
@@ -100,7 +91,6 @@ export const handleOAuthCallback = async (c: Context<HonoEnv>) => {
 		const env = envStr === "live" ? AppEnv.Live : AppEnv.Sandbox;
 		const isPlatformFlow = master_org_id !== null;
 
-		// Use custom redirect URI if provided (platform flow)
 		if (isPlatformFlow) {
 			redirectUrl = new URL(redirect_uri);
 		} else {
@@ -111,7 +101,6 @@ export const handleOAuthCallback = async (c: Context<HonoEnv>) => {
 					);
 		}
 
-		// Handle OAuth error from Stripe, now that the caller's return URL is trusted
 		if (error) {
 			return fail(
 				error === "access_denied"
@@ -121,10 +110,8 @@ export const handleOAuthCallback = async (c: Context<HonoEnv>) => {
 		}
 		if (!code) return fail("missing_parameters");
 
-		// Fetch the organization by slug
 		const org = await OrgService.getBySlug({ db, slug: organization_slug });
 
-		// Platform state may only connect orgs its master still owns
 		const ownershipChanged =
 			isPlatformFlow && org?.created_by !== master_org_id;
 		if (!org || ownershipChanged) {
@@ -145,7 +132,6 @@ export const handleOAuthCallback = async (c: Context<HonoEnv>) => {
 			return fail("account_id_not_found");
 		}
 
-		// Check if account ID is already connected to another organization (reconnecting is fine)
 		const existingOrg = await OrgService.findByStripeAccountId({
 			db,
 			accountId,
@@ -158,7 +144,6 @@ export const handleOAuthCallback = async (c: Context<HonoEnv>) => {
 				`Account ${accountId} is already connected to org ${existingOrg.id}`,
 			);
 
-			// Platform flow only learns about conflicts inside its own platform
 			if (isPlatformFlow) {
 				if (existingOrg.created_by !== master_org_id) {
 					return fail("account_already_connected");
@@ -173,9 +158,7 @@ export const handleOAuthCallback = async (c: Context<HonoEnv>) => {
 				});
 			}
 
-			// Standard flow returns detailed error
 			const master = createStripeCli({ org: existingOrg, env });
-			// The conflict is still reported if the account can no longer be read
 			const account = await master.accounts
 				.retrieve(accountId)
 				.catch(() => null);
@@ -187,8 +170,6 @@ export const handleOAuthCallback = async (c: Context<HonoEnv>) => {
 			});
 		}
 
-		// Both channels must point at the same Stripe account, else OAuth webhooks
-		// (this account) would be processed against secret-key billing state.
 		const secretKeyConnected = isStripeConnected({
 			org,
 			env,
@@ -217,7 +198,6 @@ export const handleOAuthCallback = async (c: Context<HonoEnv>) => {
 			}
 		}
 
-		// Fails if the grant was revoked after the token exchange
 		await stripe.balance.retrieve({}, { stripeAccount: accountId });
 
 		// Update organization with Stripe Connect account
@@ -230,7 +210,6 @@ export const handleOAuthCallback = async (c: Context<HonoEnv>) => {
 
 		console.log(`Successfully connected Stripe account for org ${org.id}`);
 
-		// Redirect to success
 		redirectUrl.searchParams.set("success", "true");
 		return c.redirect(redirectUrl.toString());
 	} catch (error: unknown) {

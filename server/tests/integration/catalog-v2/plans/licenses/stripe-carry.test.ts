@@ -1,11 +1,3 @@
-/**
- * catalogV2.update — Stripe id carry onto plan-license overlay rows.
- *
- * Pin overlay (parent omitted while the child changes) carries from the
- * FROZEN child. Declared customize cannot add or change paid features, so
- * overlay usage-price mint/carry is not a path.
- */
-
 import { expect, test } from "bun:test";
 import { BillingInterval, BillingMethod } from "@autumn/shared";
 import { getFullLicenseProduct } from "@tests/integration/licenses/catalog-update/utils/getFullLicenseProduct.js";
@@ -64,7 +56,6 @@ test.concurrent(
 					featureId: TestFeature.Messages,
 				})!;
 
-				// Child changes in place; parent omitted → pin overlay from frozen child.
 				await autumnV2_3.catalogV2.update({
 					plans: [
 						{

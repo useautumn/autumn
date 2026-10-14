@@ -8,10 +8,6 @@ import {
 	type UpsertProductPlan,
 } from "@/internal/catalogV2/actions/updateCatalog/types/upsertProductPlan";
 
-/**
- * Intents implied by a just-folded row. Each edge decides its own policy;
- * first claim wins so derived work never overrides earlier intents.
- */
 export const deriveIntents = ({
 	intent,
 	upsert,

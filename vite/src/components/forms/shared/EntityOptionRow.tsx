@@ -14,7 +14,6 @@ const ID_HEAD_LENGTH = 8;
 const ID_TAIL_LENGTH = 4;
 const TOOLTIP_DELAY_MS = 250;
 
-/** Uuid-style ids share a head, so the tail is what tells rows apart. */
 const truncateIdMiddle = (id: string): string => {
 	if (id.length <= ID_HEAD_LENGTH + ID_TAIL_LENGTH + 1) return id;
 	return `${id.slice(0, ID_HEAD_LENGTH)}…${id.slice(-ID_TAIL_LENGTH)}`;
@@ -38,7 +37,6 @@ const useIsClipped = () => {
 	return { ref, isClipped };
 };
 
-/** Truncated text that only earns a tooltip once it is actually clipped. */
 const ClippedText = ({
 	value,
 	className,
@@ -87,7 +85,6 @@ const EntityIdTag = ({ id }: { id: string }) => {
 	);
 };
 
-/** Name reads in full, id sits right-aligned at a fixed length, copy on hover of either. */
 export const EntityOptionRow = ({
 	entity,
 	isSelected,

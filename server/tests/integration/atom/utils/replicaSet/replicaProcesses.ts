@@ -8,10 +8,8 @@ import type {
 } from "./types/replicaSet.js";
 
 const ATOM_APP_DIR = join(import.meta.dir, "../../../../../../apps/atom");
-/** Every replica listens on these, each on its own loopback address, as each container does on its own IP. */
 export const REPLICA_PORT = 18790;
 const REPLICA_PEER_PORT = 18791;
-/** Two threads, so a slot another thread owns is crossed the way a deployed Atom crosses it. */
 const REPLICA_THREADS = 2;
 const READY_TIMEOUT_MS = 60_000;
 const STOP_TIMEOUT_MS = 20_000;
@@ -39,7 +37,6 @@ const replicaEnv = ({
 	AUTUMN_API_URL: ctx.autumnApiUrl,
 });
 
-/** The same program a deployed replica runs, appending to the replica's log across restarts. */
 export const spawnReplica = ({
 	ctx,
 	replica,
@@ -72,7 +69,6 @@ export const replicaHealth = async ({
 	}
 };
 
-/** Until /health says ready: every thread listens and has caught up. */
 export const waitUntilReplicaReady = async ({
 	replica,
 }: {
@@ -92,7 +88,6 @@ export const waitUntilReplicaReady = async ({
 	);
 };
 
-/** Sends the signal and waits for the process to end; a replica that will not stop is killed. */
 export const signalReplica = async ({
 	replica,
 	signal,

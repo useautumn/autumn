@@ -15,7 +15,6 @@ export const createSlotProcessor = ({
 }: {
 	ctx: SlotProcessorContext;
 }): SlotProcessor => {
-	/** Customers whose latest push failed to store (a full or failing disk): their rows are older than what Autumn sent. */
 	const unwritten = new Set<string>();
 
 	return {

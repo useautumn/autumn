@@ -1,12 +1,3 @@
-/**
- * Integration tests for discounts with proration in update subscription flow.
- *
- * Tests how discounts interact with mid-cycle changes:
- * - Mid-cycle upgrades should have prorated amounts discounted
- * - Mid-cycle downgrades (refunds) should NOT be discounted
- * - Test clock advancement to verify discount behavior over time
- */
-
 import { expect, test } from "bun:test";
 import { applyProration } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
@@ -51,12 +42,10 @@ test.concurrent(`${chalk.yellowBright("proration: mid-cycle upgrade with discoun
 					{ feature_id: TestFeature.Messages, quantity: 5 * billingUnits },
 				],
 			}),
-			// Advance 15 days into the billing cycle
 			s.advanceTestClock({ days: 15 }),
 		],
 	});
 
-	// Get billing period from customer's subscription
 	const customer = await autumnV1.customers.get(customerId);
 	const subscription = customer.products?.[0];
 
@@ -87,7 +76,6 @@ test.concurrent(`${chalk.yellowBright("proration: mid-cycle upgrade with discoun
 		couponIds: [coupon.id],
 	});
 
-	// Preview upgrade from 5 to 10 units mid-cycle
 	const preview = await autumnV1.subscriptions.previewUpdate({
 		customer_id: customerId,
 		product_id: product.id,
@@ -96,13 +84,10 @@ test.concurrent(`${chalk.yellowBright("proration: mid-cycle upgrade with discoun
 		],
 	});
 
-	// Upgrade generates: refund (prorated -$50) + charge (prorated $100)
-	// Discounts only apply to charges, not refunds
-	// Use floored seconds to match Stripe's frozen_time calculation
 	const frozenTimeMs = Math.floor(advancedTo! / 1000) * 1000;
 
-	const baseRefundAmount = 5 * pricePerUnit; // $50 for 5 units
-	const baseChargeAmount = 10 * pricePerUnit; // $100 for 10 units
+	const baseRefundAmount = 5 * pricePerUnit;
+	const baseChargeAmount = 10 * pricePerUnit;
 
 	const proratedRefund = applyProration({
 		now: frozenTimeMs,
@@ -116,11 +101,9 @@ test.concurrent(`${chalk.yellowBright("proration: mid-cycle upgrade with discoun
 		amount: baseChargeAmount,
 	});
 
-	// Refund is not discounted, charge gets 20% off
 	const discountedCharge = new Decimal(proratedCharge).times(0.8).toNumber();
 	const expectedAmount = -proratedRefund + discountedCharge;
 
-	// Use toBeCloseTo due to proration timing precision differences
 	expect(preview.total).toBeCloseTo(expectedAmount, 0);
 });
 
@@ -148,16 +131,13 @@ test.concurrent(`${chalk.yellowBright("proration: mid-cycle downgrade (refund no
 			s.attach({
 				productId: product.id,
 				options: [
-					// Start with 10 units
 					{ feature_id: TestFeature.Messages, quantity: 10 * billingUnits },
 				],
 			}),
-			// Advance 15 days into the billing cycle
 			s.advanceTestClock({ days: 15 }),
 		],
 	});
 
-	// Get billing period from customer's subscription
 	const customer = await autumnV1.customers.get(customerId);
 	const subscription = customer.products?.[0];
 
@@ -177,7 +157,6 @@ test.concurrent(`${chalk.yellowBright("proration: mid-cycle downgrade (refund no
 		customerId,
 	});
 
-	// Apply a 50% discount
 	const coupon = await createPercentCoupon({
 		stripeCli,
 		percentOff: 50,
@@ -189,20 +168,16 @@ test.concurrent(`${chalk.yellowBright("proration: mid-cycle downgrade (refund no
 		couponIds: [coupon.id],
 	});
 
-	// Preview downgrade from 10 to 5 units mid-cycle
 	const preview = await autumnV1.subscriptions.previewUpdate({
 		customer_id: customerId,
 		product_id: product.id,
 		options: [{ feature_id: TestFeature.Messages, quantity: 5 * billingUnits }],
 	});
 
-	// Downgrade generates: refund (prorated -$100 for 10 units) + charge (prorated $50 for 5 units)
-	// Discounts only apply to charges, not refunds
-	// Use floored seconds to match Stripe's frozen_time calculation
 	const frozenTimeMs = Math.floor(advancedTo! / 1000) * 1000;
 
-	const baseRefundAmount = 10 * pricePerUnit; // $100 for old 10 units
-	const baseChargeAmount = 5 * pricePerUnit; // $50 for new 5 units
+	const baseRefundAmount = 10 * pricePerUnit;
+	const baseChargeAmount = 5 * pricePerUnit;
 
 	const proratedRefund = applyProration({
 		now: frozenTimeMs,
@@ -216,11 +191,9 @@ test.concurrent(`${chalk.yellowBright("proration: mid-cycle downgrade (refund no
 		amount: baseChargeAmount,
 	});
 
-	// Refund is not discounted, charge gets 50% off
 	const discountedCharge = new Decimal(proratedCharge).times(0.5).toNumber();
 	const expectedAmount = -proratedRefund + discountedCharge;
 
-	// Use toBeCloseTo due to proration timing precision differences
 	expect(preview.total).toBeCloseTo(expectedAmount, 0);
 });
 
@@ -254,7 +227,6 @@ test.concurrent(`${chalk.yellowBright("proration: discount on upgrade with prora
 		],
 	});
 
-	// Get billing period from customer's subscription
 	const customer = await autumnV1.customers.get(customerId);
 	const subscription = customer.products?.[0];
 
@@ -270,7 +242,6 @@ test.concurrent(`${chalk.yellowBright("proration: discount on upgrade with prora
 		end: subscription.current_period_end,
 	};
 
-	// Get frozen time from Stripe test clock (matches what backend uses)
 	const testClock = await ctx.stripeCli.testHelpers.testClocks.retrieve(
 		testClockId!,
 	);
@@ -280,7 +251,6 @@ test.concurrent(`${chalk.yellowBright("proration: discount on upgrade with prora
 		customerId,
 	});
 
-	// Apply discount before upgrade
 	const coupon = await createPercentCoupon({
 		stripeCli,
 		percentOff: 30,
@@ -292,7 +262,6 @@ test.concurrent(`${chalk.yellowBright("proration: discount on upgrade with prora
 		couponIds: [coupon.id],
 	});
 
-	// Preview upgrade (subscription just created, so nearly full period remaining)
 	const preview = await autumnV1.subscriptions.previewUpdate({
 		customer_id: customerId,
 		product_id: product.id,
@@ -301,10 +270,8 @@ test.concurrent(`${chalk.yellowBright("proration: discount on upgrade with prora
 		],
 	});
 
-	// Upgrade generates: refund (prorated -$50) + charge (prorated $100)
-	// Discounts only apply to charges, not refunds
-	const baseRefundAmount = 5 * pricePerUnit; // $50 for 5 units
-	const baseChargeAmount = 10 * pricePerUnit; // $100 for 10 units
+	const baseRefundAmount = 5 * pricePerUnit;
+	const baseChargeAmount = 10 * pricePerUnit;
 
 	const proratedRefund = applyProration({
 		now: frozenTimeMs,
@@ -318,7 +285,6 @@ test.concurrent(`${chalk.yellowBright("proration: discount on upgrade with prora
 		amount: baseChargeAmount,
 	});
 
-	// Refund is not discounted, charge gets 30% off
 	const discountedCharge = new Decimal(proratedCharge).times(0.7).toNumber();
 	const expectedAmount = -proratedRefund + discountedCharge;
 

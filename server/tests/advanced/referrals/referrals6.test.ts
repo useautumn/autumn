@@ -9,13 +9,6 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import AutumnError, { type AutumnInt } from "@/external/autumn/autumnCli.js";
 
-/**
- * Referrals6: Referral programs must be linked to feature grant rewards
- *
- * Free product and discount rewards remain in the DB for existing programs,
- * but can no longer be linked to a new program through the API.
- */
-
 const recreateReward = async ({
 	autumnV1,
 	reward,
@@ -71,7 +64,6 @@ test(`${chalk.yellowBright("referrals6: reward program creation rejects non-feat
 		actions: [],
 	});
 
-	// Free product rewards are rejected
 	const freeProductReward = rewards.freeProduct({
 		id: "referral6-free-product",
 		freeProductId: freeAddOn.id,
@@ -87,7 +79,6 @@ test(`${chalk.yellowBright("referrals6: reward program creation rejects non-feat
 		),
 	).rejects.toThrow(AutumnError);
 
-	// Discount rewards are still supported
 	const discountReward = rewards.monthOff({ id: "referral6-discount" });
 	await recreateReward({ autumnV1, reward: discountReward });
 

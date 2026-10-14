@@ -1,9 +1,3 @@
-/**
- * diffPlanV1 license lanes: upsert_licenses / remove_licenses, keyed by
- * license_plan_id. Link fields only (included, prepaid_only, customize).
- * version and expanded plan are ignored. No licenses on input → no license lane.
- */
-
 import { describe, expect, test } from "bun:test";
 import {
 	AppEnv,
@@ -121,8 +115,6 @@ describe("diffPlanV1 licenses — empty / identity", () => {
 	});
 });
 
-// Added and removed links are link lifecycle, not plan terms — the diff only
-// carries changes to links present on both sides.
 describe("diffPlanV1 licenses — add / remove are link lifecycle", () => {
 	test("new license → no lane", () => {
 		const seat = license({

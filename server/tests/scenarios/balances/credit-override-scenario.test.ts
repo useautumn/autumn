@@ -6,18 +6,6 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-/**
- * Dashboard fixture for QAing plan-item feature_overrides.
- *
- * Builds four plans over two credit systems — one AI (markup override) and one
- * classic (rate-card override) — and attaches a customer to each, so every
- * override shape can be inspected in the dashboard rather than read in code.
- *
- * AiCreditsTiered catalog chain: default 10%, `custom` provider 30%,
- * custom/override-model 5% per-model. Both custom models bill $10/M in,
- * $20/M out, so 10k in + 5k out has a base cost of $0.20.
- */
-
 const withOverride = (
 	item: ReturnType<typeof items.free>,
 	featureOverride: FeatureConfigOverride,
@@ -38,13 +26,11 @@ test(
 				includedUsage: 1_000,
 			});
 
-		// No override — the control. The feature's own chain applies.
 		const standard = products.base({
 			id: "qa-standard",
 			items: [aiItem()],
 		});
 
-		// Every markup level zeroed: this plan bills at cost.
 		const enterprise = products.base({
 			id: "qa-enterprise",
 			items: [
@@ -57,14 +43,11 @@ test(
 			],
 		});
 
-		// Only the default is set. The catalog's per-model 5% and provider 30%
-		// must NOT survive — the chain replaces as one unit.
 		const flat50 = products.base({
 			id: "qa-flat50",
 			items: [withOverride(aiItem(), { markups: { default_markup: 50 } })],
 		});
 
-		// Classic rate card: Action1 repriced 0.2 → 0.5 credits.
 		const cheapActions = products.base({
 			id: "qa-rate-card",
 			items: [
@@ -136,7 +119,6 @@ test(
 			productId: cheapActions.id,
 		});
 
-		// Same model, same tokens, three different plans.
 		const standardCost = await trackTokens({
 			customer: customerId,
 			model: "custom/provider-fallback-model",

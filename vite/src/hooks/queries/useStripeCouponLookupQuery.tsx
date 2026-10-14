@@ -3,10 +3,6 @@ import { useQuery } from "@tanstack/react-query";
 import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 
-/**
- * Exact lookup of the coupon behind one promotion code. One indexed Stripe
- * call, so it scales to orgs with far more codes than the bulk listing loads.
- */
 export const useStripeCouponLookupQuery = ({
 	code,
 	enabled = true,

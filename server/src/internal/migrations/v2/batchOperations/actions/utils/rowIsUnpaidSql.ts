@@ -1,7 +1,5 @@
 import { type SQL, sql } from "drizzle-orm";
 
-/** A customer_price marks a paid customization that the free catalog
- * definition and entsAreSame cannot see. */
 export const rowIsUnpaidSql = ({
 	customerProductId,
 	entitlementId,

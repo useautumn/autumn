@@ -22,11 +22,6 @@ const addressToForm = (
 	country: address?.country ?? "",
 });
 
-/**
- * Prefills from the live Stripe customer when the invoice carries it expanded,
- * so an edit corrects the current record instead of pushing the invoice-time
- * snapshot back over it. The snapshot is the fallback.
- */
 export const stripeInvoiceToPrefill = (
 	stripeInvoice: Stripe.Invoice | undefined,
 ): ReissuePrefill => {

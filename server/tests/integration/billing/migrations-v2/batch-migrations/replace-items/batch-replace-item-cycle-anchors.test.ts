@@ -1,7 +1,3 @@
-/**
- * Replace keeps or recomputes reset cycles through the same anchor ladder as
- * batch add: live row, sibling, product, subscription, then product start.
- */
 import { expect, test } from "bun:test";
 import {
 	type CreatePlanItemParamsV1,

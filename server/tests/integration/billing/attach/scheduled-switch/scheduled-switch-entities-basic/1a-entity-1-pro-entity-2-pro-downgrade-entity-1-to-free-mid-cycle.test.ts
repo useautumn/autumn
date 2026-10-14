@@ -1,14 +1,3 @@
-/**
- * Scheduled Switch Entity Basic Tests (Attach V2)
- *
- * Tests for basic downgrade scenarios involving multiple entities (sub-accounts).
- *
- * Key behaviors:
- * - Each entity has independent product states
- * - Downgrades on one entity don't affect other entities
- * - Scheduled products can be replaced independently per entity
- */
-
 import { test } from "bun:test";
 import type { ApiEntityV0 } from "@autumn/shared";
 import {
@@ -23,19 +12,6 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 1: Entity 1 pro, entity 2 pro, downgrade entity 1 to free
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Both entities on pro ($20/mo each)
- * - Downgrade entity 1 to free
- *
- * Expected Result:
- * - Entity 1 has pro canceling + free scheduled
- * - Entity 2 unchanged (pro active)
- */
 test.concurrent(
 	`${chalk.yellowBright("scheduled-switch-entities-basic 1a: entity 1 pro, entity 2 pro, downgrade entity 1 to free (mid-cycle)")}`,
 	async () => {
@@ -66,7 +42,6 @@ test.concurrent(
 			],
 		});
 
-		// Verify Stripe subscription after initial attaches
 		await expectSubToBeCorrect({
 			db: ctx.db,
 			customerId,
@@ -74,7 +49,6 @@ test.concurrent(
 			env: ctx.env,
 		});
 
-		// Downgrade entity 1 to free
 		await autumnV1.billing.attach({
 			customer_id: customerId,
 			product_id: free.id,
@@ -82,7 +56,6 @@ test.concurrent(
 			redirect_mode: "if_required",
 		});
 
-		// Verify entity 1: pro canceling, free scheduled
 		const entity1 = await autumnV1.entities.get<ApiEntityV0>(
 			customerId,
 			entities[0].id,
@@ -96,7 +69,6 @@ test.concurrent(
 			productId: free.id,
 		});
 
-		// Verify entity 2: pro still active
 		const entity2 = await autumnV1.entities.get<ApiEntityV0>(
 			customerId,
 			entities[1].id,
@@ -106,7 +78,6 @@ test.concurrent(
 			productId: pro.id,
 		});
 
-		// Verify Stripe subscription after scheduling downgrade
 		await expectSubToBeCorrect({
 			db: ctx.db,
 			customerId,

@@ -26,7 +26,6 @@ const runIdsWhere = ({
 }) =>
 	`${orgEnvWhere(options)} AND startsWith(id, ${sqlString(`seed_${runKey}_`)})`;
 
-/** Which batches still need inserting: a rerun of the same args inserts nothing, a crashed run resumes. */
 const findPendingBatches = async ({
 	target,
 	options,
@@ -95,7 +94,6 @@ const otherRunsBlockInsert = async ({
 	return true;
 };
 
-/** Live-hour events sit in the first minute of the current hour; wait until that minute is in the past. */
 const waitForLiveMinute = async ({ options }: { options: SeedOptions }) => {
 	if (options.liveHourEvents === 0) return;
 	const waitMs = options.end.getTime() + 61_000 - Date.now();

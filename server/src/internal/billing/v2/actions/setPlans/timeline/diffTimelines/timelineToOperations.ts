@@ -11,7 +11,6 @@ const rowRunsBefore = ({
 	endsAt: number | null;
 }) => endsAt === null || row.startsAt < endsAt;
 
-/** Rows that start before the carried segment ends stay; the last one takes its end. */
 const carriedSegmentOperations = ({
 	segment,
 	carriedBy,
@@ -67,7 +66,6 @@ const uncarriedRowOperation = ({
 		? { type: "delete", key, customerProductId: row.customerProductId }
 		: { type: "expire", key, customerProductId: row.customerProductId };
 
-/** The row writes that turn the saved timeline into the resolved one. */
 export const timelineToOperations = ({
 	saved,
 	timeline,

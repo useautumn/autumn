@@ -27,7 +27,6 @@ test.concurrent(`${chalk.yellowBright("get-plan-basic: get plan response v1.2")}
 	const autumnV1 = new AutumnInt({ version: ApiVersion.V1_2 });
 	const productV2 = (await autumnV1.products.get(pro.id)) as ApiProduct;
 
-	// Check messages product item
 	const messagesResponseItem = productV2.items.find(
 		(item) => item.feature_id === TestFeature.Messages,
 	);

@@ -154,7 +154,6 @@ export const useDeletePlanDialog = ({
 	const handleConfirm = async () => {
 		try {
 			if (archived) {
-				// Archiving fans out to every version, so unarchiving must match.
 				await updateCatalog({
 					plans: [
 						{

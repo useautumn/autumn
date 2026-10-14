@@ -8,7 +8,6 @@ export type PartitionCheckpointPublishResult =
 	| { kind: "skipped"; remoteNextOffset: bigint };
 
 export type PartitionCheckpointPublisher = {
-	/** Settle promptly on abort; the scheduler retains the export slot until this settles. */
 	publish({
 		checkpoint,
 		signal,

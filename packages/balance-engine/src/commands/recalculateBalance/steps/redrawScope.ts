@@ -15,7 +15,6 @@ import type { RecalculateBalanceCommand } from "../types/recalculateBalanceComma
 
 type Row = WorkerFullCustomerEntitlementWithProduct;
 
-/** Legacy `resetCusEntInPlace`: back to its starting balance, adjustment cleared. */
 const resetRow = (row: Row): Row => {
 	const startingBalance = cusEntToStartingBalance({ cusEnt: row });
 	const reset = getResetBalancesUpdate({
@@ -57,7 +56,6 @@ const resetToRowChange = ({
 	},
 });
 
-/** One owner's grants: each reset, then the scope's usage drawn back across them in draw order. */
 export const redrawScope = ({
 	fullSubject,
 	command,
@@ -72,7 +70,6 @@ export const redrawScope = ({
 	const resets = rows.map((row) => ({ row, reset: resetRow(row) }));
 	const resetById = new Map(resets.map(({ row, reset }) => [row.id, reset]));
 	const { changes: draws } = deduct({
-		// The redraw moves main balances only, so the scope's rollovers are set aside.
 		fullSubject: fullSubjectWithCustomerEntitlements({
 			fullSubject,
 			edit: (row) => {

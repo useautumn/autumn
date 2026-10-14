@@ -50,7 +50,6 @@ export const handleDeleteInstallation = createRoute({
 				]),
 			);
 
-			// 2. Delete the customer/installation using the actual customer ID
 			if (customer) {
 				await customerActions.delete({
 					ctx,

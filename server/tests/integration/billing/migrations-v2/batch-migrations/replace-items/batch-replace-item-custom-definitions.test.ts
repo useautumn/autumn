@@ -1,13 +1,3 @@
-/**
- * Filter-mode replace rewrites free custom definitions of the matched
- * feature+interval, including a 1k allowance that used to be left untouched.
- *
- * Contract (C3): catalog 100 and free-custom 1k both replace to 30 in place.
- * Grouping: two custom 100/mo defs with different ids share one grant Δ
- * (increment:-70, remaining 100→30) — `customerEntitlementPatchKey`, not
- * entitlement_id. Unit test also covers increment:20 for 10→30.
- * Paid different-allowance rows stay in batch-replace-item-paid-rows.test.ts.
- */
 import { expect, test } from "bun:test";
 import { ResetInterval } from "@autumn/shared";
 import {

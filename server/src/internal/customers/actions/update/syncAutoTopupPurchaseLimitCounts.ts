@@ -31,17 +31,6 @@ export const validateAutoTopupPurchaseLimitCounts = ({
 	}
 };
 
-/**
- * When customers.update includes `purchase_limit.count`, sync that value into
- * `auto_topup_limit_states` and return auto_topups safe for JSONB storage
- * (runtime `count` stripped).
- *
- * Omit `count` → leave the limit-state row unchanged.
- * `count > limit` → 400.
- * Stale/equal window → project a future `purchase_window_ends_at` so expand /
- * preflight do not immediately normalize the written count back to 0.
- * Active window → preserve `purchase_window_ends_at`.
- */
 export const syncAutoTopupPurchaseLimitCounts = async ({
 	ctx,
 	customer,

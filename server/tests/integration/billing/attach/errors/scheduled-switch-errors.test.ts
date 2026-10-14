@@ -1,13 +1,3 @@
-/**
- * Scheduled Switch Error Tests (Attach V2)
- *
- * Tests for error conditions when attempting scheduled switches (downgrades).
- *
- * Key behaviors:
- * - Scheduled switch with non-zero one-off prepaid quantities is blocked
- * - Scheduled switch to mixed product WITHOUT one-off quantity is allowed (defaults to 0)
- */
-
 import { test } from "bun:test";
 import { ErrCode } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features";
@@ -17,18 +7,6 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 1: Scheduled switch with explicit one-off prepaid quantity should fail
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Customer has premium ($50/mo + one-off prepaid messages)
- * - Attempt downgrade to pro ($20/mo + one-off prepaid messages) with quantity: 200
- *
- * Expected Result:
- * - Error thrown: scheduled switch with one-off prepaid quantities not supported
- */
 test.concurrent(`${chalk.yellowBright("error: scheduled switch with one-off prepaid quantity")}`, async () => {
 	const customerId = "sched-switch-err-oneoff-qty";
 
@@ -66,7 +44,6 @@ test.concurrent(`${chalk.yellowBright("error: scheduled switch with one-off prep
 		],
 	});
 
-	// Attempt scheduled downgrade with explicit one-off prepaid quantity
 	await expectAutumnError({
 		errCode: ErrCode.InvalidRequest,
 		func: async () => {

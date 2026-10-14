@@ -4,12 +4,6 @@ import { products } from "@tests/utils/fixtures/db/products";
 import { buildVariantEditDiff } from "@/internal/catalogV2/actions/updateCatalog/compute/computeUpsertProductsPlan/computeVariantPlan/editDiff/buildVariantEditDiff";
 import { getPlanResponse } from "@/internal/products/productUtils/productResponseUtils/getPlanResponse.js";
 
-/**
- * A variant whose overlay swaps the base's license link for its own: the
- * read side must state the swap as customize, and the diff side must not
- * re-add the base's link on an unchanged config.
- */
-
 const planLicense = ({
 	parent,
 	licenseProduct,

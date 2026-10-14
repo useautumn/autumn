@@ -1,15 +1,3 @@
-/**
- * catalogV2 promote — pointer flip, unique_active_product, active:false reject.
- *
- * Contract:
- *   promote v1 while v2 is active → v1 takes the pointer; exactly one active
- *   is_default does not jump onto a historical version (v1 < latest v2)
- *   active:false on the current pointer with no successor → 400
- *   active:false is allowed when another entry in the same call takes the pointer
- *   promote + new_plan_id in one call → previously active row (old id) still demotes
- *   numeric `version: 1` + `active: true` promotes the same as version_slug
- */
-
 import { expect, test } from "bun:test";
 import { ErrCode, ResetInterval } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
@@ -170,7 +158,6 @@ test.concurrent(
 				versionSlug: "v2",
 				active: true,
 			});
-			// The row it replaces still carries the old plan id — demote it anyway.
 			await expectVersionIdentityCorrect({
 				ctx,
 				planId,

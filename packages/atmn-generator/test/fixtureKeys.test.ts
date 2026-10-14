@@ -9,8 +9,6 @@ import { collectionItemSchema, loadSpec } from "../src/spec/loadSpec";
 const spec = loadSpec();
 const schema = collectionItemSchema({ spec, collection: "features" });
 
-/** emitType emits unformatted, so the repo Biome supplies the indentation the
- * member parser keys on. */
 const formattedType = (type: string): string => {
 	const dir = join(import.meta.dir, ".tmp");
 	mkdirSync(dir, { recursive: true });
@@ -28,8 +26,6 @@ test("fixture keys match the emitted fixture type, key for key", () => {
 		collection: "features",
 	});
 
-	// The emitted type is the truth, so the keys are read back out of it: one
-	// walk cannot drift from the other. Top-level members sit at one tab.
 	const type = formattedType(
 		emitFixtureType({
 			name: "Feature",
@@ -64,11 +60,8 @@ test("overlay and spec-order rules hold for features", () => {
 	]) {
 		expect(keys).toContain(expected);
 	}
-	// Soft-deprecated: the server keeps existing names when a push omits it.
 	expect(keys).not.toContain("eventNames");
-	// Dead since internal_id: a changed featureId is the rename.
 	expect(keys).not.toContain("newFeatureId");
-	// Spec order across the allOf branches, not alphabetical.
 	expect(keys.indexOf("name")).toBeLessThan(keys.indexOf("featureId"));
 	expect(keys.indexOf("featureId")).toBeLessThan(keys.indexOf("processors"));
 });

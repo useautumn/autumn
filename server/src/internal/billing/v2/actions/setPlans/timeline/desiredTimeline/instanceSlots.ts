@@ -5,7 +5,6 @@ import type { SavedTimeline } from "../types/timeline";
 import type { TimelineRow } from "../types/timelineRow";
 import type { DesiredSegment } from "../types/timelineSegment";
 
-/** What one instance slot holds, saved and so far requested, when placing the next plan. */
 export type InstanceSlot = {
 	slot: number;
 	externalIds: Set<string>;
@@ -21,7 +20,6 @@ export type InstanceSlot = {
 export const instanceKeySlot = (key: string) =>
 	Number(key.slice(key.lastIndexOf("|") + 1));
 
-/** Every saved slot per plan and scope, with what it runs now. */
 export const savedInstanceSlots = ({
 	saved,
 	rows,

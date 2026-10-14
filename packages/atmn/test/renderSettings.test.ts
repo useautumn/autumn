@@ -1,10 +1,3 @@
-/**
- * The Settings section reports what organization.preview_update said: a
- * stated flag that moves, and an unstated one the config leaves behind. The
- * unmanaged line is the one place the CLI explains PATCH: nothing is reset by
- * omission, so the way to turn a flag off is to state it off.
- */
-
 import { expect, test } from "bun:test";
 import { previewIsEmpty, renderPreview } from "../src/render/renderPreview";
 

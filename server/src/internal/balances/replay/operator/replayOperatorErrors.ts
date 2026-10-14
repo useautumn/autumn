@@ -1,7 +1,3 @@
-/** Operator output never carries raw database messages, connection strings or
- *  archived request bodies, so failures are described by name and code only.
- *  Errors this operator raises itself are safe by construction and keep their
- *  reason. */
 const SAFE_REPLAY_OPERATOR_ERROR_NAMES: ReadonlySet<string> = new Set([
 	"ReplayOperatorError",
 	"ReplayOperatorArgumentError",

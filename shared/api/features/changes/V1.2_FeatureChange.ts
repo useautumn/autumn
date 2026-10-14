@@ -41,31 +41,6 @@ export const apiCreditSchemaToV0 = ({
 	return legacyCreditSchema;
 };
 
-/**
- * V1_2_FeatureChange: Transforms feature response between V1 and V0
- *
- * Applied when: targetVersion <= V1_Beta
- *
- * Breaking changes introduced in V2.0:
- *
- * 1. Type enum changes:
- *    - V1: Uses FeatureType (boolean, metered, credit_system)
- *    - V0: Uses ApiFeatureType (static, boolean, single_use, continuous_use, credit_system)
- *
- * 2. Fields in V1 not in V0:
- *    - `consumable`: Boolean flag for metered features
- *    - `event_names`: Optional array of event names
- *
- * 3. Type mapping (V1 → V0):
- *    - boolean → boolean
- *    - credit_system → credit_system
- *    - metered (consumable: true) → single_use
- *    - metered (consumable: false) → continuous_use
- *
- * Input: ApiFeatureV1 (V2.0+ format)
- * Output: ApiFeatureV0 (V1.2 format)
- */
-
 export const V1_2_FeatureChange = defineVersionChange({
 	name: "V1_2 Feature Change",
 	newVersion: ApiVersion.V2_0,
@@ -80,13 +55,11 @@ export const V1_2_FeatureChange = defineVersionChange({
 	affectsResponse: true,
 	affectsRequest: false,
 
-	// Response: V1 → V0 (new format to old)
 	transformResponse: ({
 		input,
 	}: {
 		input: z.infer<typeof ApiFeatureV1Schema>;
 	}): z.infer<typeof ApiFeatureV0Schema> => {
-		// Map V1 type to V0 type
 		let v0Type: ApiFeatureType;
 
 		if (input.type === FeatureType.Boolean) {

@@ -100,9 +100,7 @@ export const TransitionRulesSubsection = () => {
 		try {
 			await mutateAsync(next);
 			toast.success("Transition rules updated");
-		} catch {
-			// onError handles toast + invalidate
-		}
+		} catch {}
 	};
 
 	const handleModeChange = (nextMode: CarryOverMode) => {

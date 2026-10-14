@@ -9,7 +9,6 @@ import {
 } from "@autumn/shared";
 import type { RevenueCatStoreDuration } from "../revenuecatTypes.js";
 
-/** Autumn's base (flat) price for a plan, as RevenueCat micros + currency. Null when free/usage-only. */
 export const getRcBasePrice = ({
 	product,
 	org,
@@ -26,7 +25,6 @@ export const getRcBasePrice = ({
 	};
 };
 
-/** Push is available once the org connected RevenueCat via OAuth for this env. */
 export const isRevenueCatPushEnabled = ({
 	revenueCatConfig,
 	env,
@@ -38,7 +36,6 @@ export const isRevenueCatPushEnabled = ({
 		? !!revenueCatConfig.oauth
 		: !!revenueCatConfig.sandbox_oauth;
 
-/** Version-stable, env-scoped store identifier Autumn mints for a pushed plan. */
 export const getRcStoreIdentifier = ({
 	env,
 	orgId,
@@ -49,11 +46,9 @@ export const getRcStoreIdentifier = ({
 	planId: string;
 }): string => `autumn.${env}.${orgId}.${planId}`;
 
-/** Apple subscription group name for create_in_store. */
 export const getSubscriptionGroupName = (group?: string | null): string =>
 	group && group.length > 0 ? `Autumn - ${group} Group` : "Autumn - Default Group";
 
-/** ISO-8601 duration for createProduct. Null = RC can't represent it (lossy). */
 export const autumnIntervalToRcDuration = ({
 	interval,
 	intervalCount,
@@ -83,7 +78,6 @@ export const autumnIntervalToRcDuration = ({
 	}
 };
 
-/** Enum duration for create_in_store (different format than createProduct). */
 export const autumnIntervalToStoreDuration = ({
 	interval,
 	intervalCount,

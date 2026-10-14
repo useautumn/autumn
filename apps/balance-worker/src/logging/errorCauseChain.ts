@@ -1,6 +1,5 @@
 const MAX_CAUSE_DEPTH = 8;
 
-/** The logger serializes an error's name/message/stack only; the recovery reason lives in `cause`. */
 export function errorCauseChain({
 	error,
 }: {
@@ -18,7 +17,6 @@ export function errorCauseChain({
 	return chain;
 }
 
-/** An aggregate names no cause of its own; its first member is the one the chain follows. */
 function nextCause(error: Error): unknown {
 	if (error.cause !== undefined) return error.cause;
 	if (error instanceof AggregateError) return error.errors[0];

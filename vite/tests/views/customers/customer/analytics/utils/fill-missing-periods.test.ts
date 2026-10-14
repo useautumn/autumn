@@ -1,6 +1,3 @@
-// The deductions pipe only emits buckets it has rows for; the period grid comes
-// from the events aggregation beside it, which is zero-filled over the same window.
-
 import { expect, test } from "bun:test";
 import { fillMissingPeriods } from "@/views/customers/customer/analytics/utils/fillMissingPeriods";
 

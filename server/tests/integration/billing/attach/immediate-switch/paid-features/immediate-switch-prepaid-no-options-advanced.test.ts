@@ -1,10 +1,3 @@
-/**
- * Immediate Switch Prepaid No-Options Tests (Attach V2)
- *
- * Advanced prepaid no-options scenarios, including price changes, usage,
- * multi-feature behavior, and explicit overrides.
- */
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3 } from "@autumn/shared";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";

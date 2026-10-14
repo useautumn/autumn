@@ -57,8 +57,6 @@ describe("edge config timestamp", () => {
 		expect(timestamp).toBe(`${body.updatedAt}:${body.changeId}`);
 	});
 
-	// A config PUT that lands while the timestamp PUT fails leaves the new config
-	// in S3 with nothing signalling it, so every process keeps serving the old one.
 	test("retries a transient timestamp write failure", async () => {
 		let attempts = 0;
 		const send = jest.fn(async (_command: unknown) => {
@@ -76,8 +74,6 @@ describe("edge config timestamp", () => {
 		expect(timestamp).toContain(":");
 	});
 
-	// A retry that reuses the first attempt's marker can overwrite a concurrent
-	// writer's signal with a value pollers have already observed and skipped.
 	test("uses a distinct marker on each retry attempt", async () => {
 		const bodies: string[] = [];
 		let attempts = 0;

@@ -41,8 +41,6 @@ export const withVoidFlag = async ({
 	}
 };
 
-// A past_due cancel must never credit the customer for the cycle they never paid:
-// no negative-total invoice anywhere, and a zero Stripe customer balance.
 export const expectNoCredit = async ({
 	ctx,
 	stripeCustomerId,
@@ -125,7 +123,6 @@ export const waitForProductRemoved = async ({
 	});
 };
 
-/** Waits for the past_due cancel to remove the product and void the subscription's unpaid invoices. */
 export const waitForPastDueCancelResolved = async ({
 	autumn,
 	ctx,

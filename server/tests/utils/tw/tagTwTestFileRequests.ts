@@ -16,7 +16,6 @@ const originOf = (url: string | undefined) => {
 	}
 };
 
-/** bun tw: every call this test file makes to its worker's server carries the file tag, so the server's Stripe calls count against it. */
 export const tagTwTestFileRequests = async ({
 	fileTag,
 	serverUrls,

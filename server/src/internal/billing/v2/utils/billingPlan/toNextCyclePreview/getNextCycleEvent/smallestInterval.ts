@@ -5,7 +5,6 @@ import {
 	getSmallestInterval,
 } from "@autumn/shared";
 
-/** Chooses the interval that defines the next invoice boundary. */
 export const getSmallestIntervalForNextCycle = ({
 	customerProducts,
 	currentEpochMs,

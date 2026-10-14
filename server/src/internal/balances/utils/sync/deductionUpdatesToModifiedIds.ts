@@ -1,10 +1,5 @@
 import type { DeductionUpdate } from "../types/deductionUpdate";
 
-/**
- * Convert deduction updates to modified customer entitlement IDs.
- * @param updates - The deduction updates.
- * @returns The modified customer entitlement IDs.
- */
 export const deductionUpdatesToModifiedIds = ({
 	updates,
 }: {

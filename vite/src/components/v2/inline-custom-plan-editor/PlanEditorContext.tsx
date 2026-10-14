@@ -48,11 +48,6 @@ export interface ProductContextValue {
 
 const ProductContext = createContext<ProductContextValue | null>(null);
 
-/**
- * Returns the index of the feature item matching `itemId`, or -1 if none.
- * Base-price and other non-feature items are skipped so indexes line up with
- * the ids produced by getItemId().
- */
 function findFeatureItemIndex(
 	product: FrontendProduct,
 	itemId: string,
@@ -68,7 +63,6 @@ function findFeatureItemIndex(
 	});
 }
 
-/** Compares two products field-by-field, hiding the V2 casts at a single site. */
 function compareProducts(
 	product: FrontendProduct,
 	other: FrontendProduct,
@@ -81,11 +75,6 @@ function compareProducts(
 	});
 }
 
-/**
- * Provider that allows overriding the product and sheet state source.
- * When wrapped with this provider, child components will use the provided
- * values instead of the Zustand stores.
- */
 export function ProductProvider({
 	children,
 	...value
@@ -95,17 +84,14 @@ export function ProductProvider({
 	);
 }
 
-/** True inside a license card's editor; the page-level plan editor is never one. */
 export function useIsLicenseEditor() {
 	return useContext(ProductContext)?.isLicenseEditor ?? false;
 }
 
-/** True when editing a plan for one invoice, which bills no grants. */
 export function useIsInvoiceEditor() {
 	return useContext(ProductContext)?.isInvoiceEditor ?? false;
 }
 
-/** Hook to get product and setProduct. Uses context if available, otherwise Zustand. */
 export function useProduct() {
 	const context = useContext(ProductContext);
 	const storeProduct = useProductStore((s) => s.product);
@@ -126,7 +112,6 @@ export function useProduct() {
 	};
 }
 
-/** Hook to get sheet state and actions. Uses context if available, otherwise Zustand. */
 export function useSheet() {
 	const context = useContext(ProductContext);
 	const sheetType = useSheetStore((s) => s.type);
@@ -162,7 +147,6 @@ export function useSheet() {
 	};
 }
 
-/** Hook to get current item being edited. Uses context if available, otherwise Zustand. */
 export function useCurrentItem() {
 	const context = useContext(ProductContext);
 	const { product } = useProduct();
@@ -178,15 +162,12 @@ export function useCurrentItem() {
 	}, [draftSession, product, itemId]);
 }
 
-/** Hook to set the current item being edited. Uses context if available, otherwise Zustand. */
 export function useSetCurrentItem() {
 	const { product, setProduct } = useProduct();
 	const { itemId, itemDraft, updateItemId } = useSheet();
 
 	return useCallback(
 		(nextItem: ProductItem) => {
-			// An item edited out of threshold eligibility must not keep its
-			// threshold: the API rejects that payload on save.
 			const updatedItem = reconcileThresholdBilling({ item: nextItem });
 
 			if (itemDraft.session && itemDraft.session.itemId === itemId) {
@@ -210,7 +191,6 @@ export function useSetCurrentItem() {
 	);
 }
 
-/** Hook to check if the current item has unsaved changes. Uses context if available, otherwise Zustand. */
 export function useHasItemChanges() {
 	const item = useCurrentItem();
 	const { initialItem, itemDraft } = useSheet();
@@ -233,12 +213,6 @@ interface PlanSheetState {
 	discard: () => void;
 }
 
-/**
- * Drives a plan-level sheet's change tracking: snapshots the product when the
- * sheet opens (keyed to its type, so it re-snapshots per sheet and clears on
- * close), reports whether it has been edited since, and reverts to the snapshot
- * on discard. Host agnostic across the Zustand and context editor flows.
- */
 export function usePlanSheet(sheetType: string | null): PlanSheetState {
 	const { product, setProduct } = useProduct();
 	const initialProduct = useSheetStore((s) => s.initialProduct);
@@ -285,7 +259,6 @@ export function usePlanSheet(sheetType: string | null): PlanSheetState {
 	return { hasChanges, discard };
 }
 
-/** Hook to check if the product has unsaved changes compared to initial state. Only works in context mode. */
 export function useHasPlanChanges() {
 	const context = useContext(ProductContext);
 	const { product, initialProduct } = useProduct();

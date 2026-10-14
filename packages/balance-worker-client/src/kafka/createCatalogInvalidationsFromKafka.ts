@@ -9,12 +9,10 @@ import type {
 import type { BalanceWorkerKafka } from "./types/kafkaBalanceWorkerClient.js";
 
 export type CatalogInvalidationsFromKafka = CatalogInvalidations & {
-	/** Pays the producer connect now, so the first publish does not. */
 	connect(): Promise<void>;
 	stop(): Promise<void>;
 };
 
-/** Connects on the first invalidation, never before: a process that edits no catalog owns no producer. */
 export function createCatalogInvalidationsFromKafka({
 	ctx,
 	config,
@@ -32,7 +30,6 @@ export function createCatalogInvalidationsFromKafka({
 	});
 	let connecting: Promise<void> | undefined;
 
-	/** A failed connect is forgotten so the next invalidation tries again. */
 	async function connect(): Promise<void> {
 		connecting ??= producer.connect();
 		try {

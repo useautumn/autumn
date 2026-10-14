@@ -1,4 +1,3 @@
-/** Sleeps for delayMs, resolving early if the signal aborts. */
 export const sleepWithAbort = async ({
 	delayMs,
 	signal,

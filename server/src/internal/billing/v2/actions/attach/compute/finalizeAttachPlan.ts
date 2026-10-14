@@ -6,10 +6,6 @@ import type {
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { finalizeLineItems } from "@/internal/billing/v2/compute/finalize/finalizeLineItems";
 
-/**
- * Finalizes the attach billing plan by processing line items
- * and applying attach-specific guards.
- */
 export const finalizeAttachPlan = ({
 	ctx,
 	plan,

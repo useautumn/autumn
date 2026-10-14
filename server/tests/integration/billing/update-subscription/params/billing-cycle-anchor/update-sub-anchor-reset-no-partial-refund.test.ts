@@ -9,20 +9,6 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-/**
- * Update Subscription: Anchor Reset -- Refund vs No Partial Refund Tests
- *
- * "With refund" tests: `billing_cycle_anchor: "now"` (default proration) credits
- * the prorated remainder of the old plan, then charges the full new amount.
- *
- * "No partial refund" tests: `billing_cycle_anchor: "now"` + `billing_behavior: "none"`
- * strips refund items. The customer pays the full new amount with no credit.
- */
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// WITH REFUND (default proration)
-// ═══════════════════════════════════════════════════════════════════════════════
-
 test.concurrent(`${chalk.yellowBright("update-sub-anchor-refund 1: monthly -> monthly (with refund)")}`, async () => {
 	const customerId = "update-sub-refund-m2m";
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
@@ -120,10 +106,6 @@ test.concurrent(`${chalk.yellowBright("update-sub-anchor-refund 2: monthly -> mo
 	});
 	await expectStripeSubscriptionCorrect({ ctx, customerId });
 });
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// NO PARTIAL REFUND (billing_behavior: "none")
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(`${chalk.yellowBright("update-sub-no-partial-refund 1: monthly -> monthly (no refund)")}`, async () => {
 	const customerId = "update-sub-no-partial-m2m";

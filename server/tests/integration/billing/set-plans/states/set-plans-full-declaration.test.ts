@@ -1,8 +1,3 @@
-/**
- * set_plans is the full list of the customer's plans in its scope, whatever placed them,
- * and keeps an unchanged plan on its own row when only a phase date moves.
- */
-
 import { expect, test } from "bun:test";
 import {
 	CusProductStatus,

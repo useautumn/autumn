@@ -21,7 +21,6 @@ export const liveItemToProcessorItem = ({
 		context,
 	});
 
-/** The items the customer's Stripe subscription holds today. */
 export const stripeSubscriptionToProcessorItems = ({
 	stripeSubscription,
 	context,

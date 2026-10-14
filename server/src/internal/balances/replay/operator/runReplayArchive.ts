@@ -27,12 +27,8 @@ export type {
 	ReplayRequestReport,
 } from "./replayArchiveContracts.js";
 
-/** A signal that never aborts keeps every downstream port on one code path. */
 const createIdleSignal = (): AbortSignal => new AbortController().signal;
 
-/** Replays a whole archive: hydrate every selected customer, wait for that
- *  barrier, then replay the manifest under bounded lanes and global pacing.
- *  The caller owns the coordinator and closes it. */
 export async function runReplayArchive({
 	manifest,
 	coordinator,

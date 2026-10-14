@@ -1,10 +1,5 @@
 import { useEffect, useMemo, useRef } from "react";
 
-/**
- * No-wrap log pane for the ANSI-lite errors feed: long lines scroll
- * horizontally instead of soft-wrapping like the wterm emulator does.
- */
-
 const ESCAPE = String.fromCharCode(27);
 const SGR_RE = new RegExp(`${ESCAPE}\\[([0-9;]*)m`, "g");
 
@@ -49,11 +44,9 @@ const PIN_THRESHOLD_PX = 24;
 
 export function AnsiLog({ text }: { text: string }) {
 	const ref = useRef<HTMLPreElement>(null);
-	// Follow the tail only while the user hasn't scrolled up.
 	const pinned = useRef(true);
 	const segments = useMemo(() => parseAnsi(text), [text]);
 
-	// No dependency array: re-pin after every commit (renders only when text changes).
 	useEffect(() => {
 		const el = ref.current;
 		if (el && pinned.current) {

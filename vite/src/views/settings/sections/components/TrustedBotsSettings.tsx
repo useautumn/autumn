@@ -179,8 +179,6 @@ const AddTrustedBotDialog = ({
 	);
 };
 
-/** Other Slack apps whose @-mentions the agent answers, each acting as an org
- * member. */
 export const TrustedBotsSettings = ({
 	trustedBots,
 }: {

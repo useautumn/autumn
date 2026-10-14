@@ -25,8 +25,6 @@ export const setFixtureProperty = ({
 	property: string;
 	value: string;
 }): string | null => {
-	// A splice keeps every other byte, so a literal the pull rewriter refuses
-	// (it names another fixture) still takes the new value.
 	const call = findFixture({
 		source,
 		builder,

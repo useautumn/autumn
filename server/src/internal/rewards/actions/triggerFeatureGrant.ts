@@ -18,7 +18,6 @@ import {
 } from "@/internal/rewards/rewardUtils.js";
 import { grantRewardEntitlements } from "./grantRewardEntitlements.js";
 
-/** Grant a feature-grant reward's entitlements to referrer and/or redeemer */
 export const triggerFeatureGrant = async ({
 	ctx,
 	referralCode,
@@ -61,8 +60,6 @@ export const triggerFeatureGrant = async ({
 
 	const balanceIdPrefix = `referral_${rewardProgram.id}`;
 
-	// Grants insert new balances, so each recipient is persisted as soon as it
-	// succeeds — a retry must not re-grant whoever already got their balance
 	let { applied: referrerApplied, redeemer_applied: redeemerApplied } =
 		redemption;
 

@@ -3,15 +3,11 @@ import type { AxRunOutput } from "../../types/axRunOutput.ts";
 import type { AxScore } from "../types/axScore.ts";
 import type { Expectation } from "../types/expectation.ts";
 
-/** Pinned separately from the agent and the simulated user. Override with
- * AX_EVALS_JUDGE_MODEL. */
 const JUDGE_MODEL =
 	process.env.AX_EVALS_JUDGE_MODEL ?? "google/gemini-2.5-flash";
 
 export type JudgeCheck = {
-	/** scorer name shown in Braintrust, e.g. "asked about metered features" */
 	name: string;
-	/** the yes/no question the judge answers about the conversation */
 	question: string;
 };
 
@@ -48,7 +44,6 @@ Transcript:
 ${transcript}
 ---`;
 
-/** One judge call per run, shared by every judged check via memoization. */
 const judgeVerdicts = async ({
 	output,
 	checks,
@@ -79,12 +74,6 @@ const judgeVerdicts = async ({
 	return JSON.parse(raw) as Record<string, boolean>;
 };
 
-/**
- * Judge a run's conversation with ONE LLM call answering several yes/no
- * checks — replaces keyword-matching flow scorers for question coverage.
- * `judge.conversation({ "scorer name": "question", ... })` expands to one
- * named Expectation per check, all sharing the single memoized call.
- */
 export const judge = {
 	conversation: (checks: Record<string, string>): Expectation[] =>
 		judgeConversation(

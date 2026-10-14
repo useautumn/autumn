@@ -1,5 +1,3 @@
-/** Reading saved rows and request phases into timelines: scope, claims and the undeclared policy, never provenance. */
-
 import { describe, expect, test } from "bun:test";
 import {
 	type CreateScheduleBillingContext,

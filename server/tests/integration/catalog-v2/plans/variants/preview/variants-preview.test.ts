@@ -1,22 +1,3 @@
-/**
- * catalogV2.preview_update — variants[] nest on the base row.
- *
- * Contract:
- *   always list every latest variant
- *   variant_action: explicit | propagated | unchanged
- *   follow-only overlapping slot → conflicts; explicit swallows them
- *   sibling_versions lists every existing candidate with its own variant_action
- *   existing → latest propagated, historical unchanged
- *   all_versions → latest and historical propagated
- *   explicit target version → only that version propagated
- *   new_version → mint propagated, every existing version unchanged
- *   unchanged candidates still report conflicts for scope decisions
- *   preview writes nothing
- *
- * Red (current):  existing/new_version omit unchanged candidate versions.
- * Green (after):  every candidate version is present and explicitly classified.
- */
-
 import { expect, test } from "bun:test";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";

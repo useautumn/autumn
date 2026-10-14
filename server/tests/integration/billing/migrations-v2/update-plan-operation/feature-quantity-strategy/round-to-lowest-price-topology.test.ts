@@ -1,11 +1,3 @@
-/**
- * TDD coverage for `feature_quantities_strategy`/`proration` against realistic
- * Mintlify customer topologies (grounded in a real prod-shape survey, not
- * imagined cases): active+scheduled pairs sharing one subscription,
- * multi-entity customers with independent per-entity quantities, add-ons
- * attached alongside a main plan, and custom/negotiated cusProducts.
- */
-
 import { test } from "bun:test";
 import type { ApiCustomerV5, CreatePlanItemParamsV1 } from "@autumn/shared";
 import {
@@ -71,8 +63,6 @@ test.concurrent(
 					entityIndex: 0,
 					options: [{ feature_id: TestFeature.Messages, quantity: 300 }],
 				}),
-				// Attaching the lower plan on the same entity schedules a downgrade —
-				// premium stays active this cycle, pro takes over next cycle.
 				s.billing.attach({
 					productId: pro.id,
 					entityIndex: 0,
@@ -121,8 +111,6 @@ test.concurrent(
 			},
 		});
 
-		// Premium (active) was at 300 -> $20 old tier -> new $10/200 tier.
-		// Pro (scheduled) was at 700 -> $50 old tier -> new $40/1000 tier.
 		const entity = await autumnV2_2.entities.get<ApiCustomerV5>(
 			customerId,
 			entities[0].id,
@@ -135,7 +123,6 @@ test.concurrent(
 			planId: premium.id,
 		});
 
-		// The whole schedule (both phases) must be restored to Stripe in one shot.
 		await expectStripeSubscriptionCorrect({ ctx, customerId });
 	},
 );
@@ -209,7 +196,6 @@ test.concurrent(
 			entities[1].id,
 		);
 
-		// Entity 1: 300 -> $20 old tier -> new 200/$10 tier.
 		expectBalanceCorrect({
 			customer: entity1,
 			featureId: TestFeature.Messages,
@@ -217,7 +203,6 @@ test.concurrent(
 			usage: 0,
 			planId: pro.id,
 		});
-		// Entity 2: 700 -> $50 old tier -> new 1000/$40 tier.
 		expectBalanceCorrect({
 			customer: entity2,
 			featureId: TestFeature.Messages,
@@ -299,7 +284,6 @@ test.concurrent(
 			planId: pro.id,
 		});
 
-		// Worker customer reads omit entity-owned plans, so pro is read off the entity.
 		if (isBalanceWorkerRoute()) {
 			await expectCustomerProducts({ customer: entity, active: [pro.id] });
 			await expectCustomerProducts({ customerId, active: [addon.id] });
@@ -327,9 +311,6 @@ test.concurrent(
 			actions: [],
 		});
 
-		// Custom/negotiated plan (is_custom: true) — direct client call with a
-		// custom base price override, matching how attach/params/custom-plan
-		// tests build one.
 		await autumnV1.billing.attach({
 			customer_id: customerId,
 			entity_id: entities[0].id,

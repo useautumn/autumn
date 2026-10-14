@@ -16,10 +16,6 @@ import {
 import { CusProductLegacyDataSchema } from "../cusProductLegacyData";
 import { ApiCusProductV3Schema } from "../previousVersions/apiCusProductV3";
 
-/**
- * Transform plan from V2.0 format to V1.2 product format
- * Exported so it can be reused in other transformations (e.g., V1_2_CustomerChange)
- */
 export function transformSubscriptionToCusProductV3({
 	input,
 	legacyData,
@@ -33,10 +29,7 @@ export function transformSubscriptionToCusProductV3({
 		if (plan.status === CusProductStatus.Active) {
 			if (plan.past_due) {
 				return "past_due";
-			}
-
-			// trialing
-			else if (plan.trial_ends_at && plan.trial_ends_at > Date.now()) {
+			} else if (plan.trial_ends_at && plan.trial_ends_at > Date.now()) {
 				return "trialing";
 			}
 			return "active";
@@ -66,13 +59,12 @@ export function transformSubscriptionToCusProductV3({
 	return {
 		id: input.plan_id,
 
-		// Plan properties...
 		name: input.plan?.name ?? null,
 		group: input.plan?.group ?? null,
 		is_default: input.plan?.default ?? false,
 		is_add_on: input.add_on,
 		version: input.plan?.version ?? undefined,
-		items: items, // Map from plan to product v2 items...
+		items: items,
 
 		status: cusPlanToCusProductV3Status(input),
 
@@ -81,27 +73,10 @@ export function transformSubscriptionToCusProductV3({
 		current_period_start: input.current_period_start,
 		current_period_end: input.current_period_end,
 
-		// entity_id: null,
-
 		quantity: input.quantity,
 	} satisfies z.infer<typeof ApiCusProductV3Schema>;
 }
 
-/**
- * V1_2_CusPlanChange: Transforms customer plan response TO V1_2 format
- *
- * Applied when: targetVersion <= V1_2
- *
- * Breaking changes introduced in V2.0:
- *
- * 1. Renamed "products" to "plans" in SDK
- * 2. Simplified status enum to only "active"
- * 3. Added trial_ends_at field
- * 4. Optional product object for expanded plan data
- *
- * Input: ApiCusPlan (V2.0+ format with "product" field)
- * Output: ApiCusProductV3 (V1.2 format with verbose fields)
- */
 const V1_2_CusPlanChange = defineVersionChange({
 	newVersion: ApiVersion.V2_0,
 	oldVersion: ApiVersion.V1_2,

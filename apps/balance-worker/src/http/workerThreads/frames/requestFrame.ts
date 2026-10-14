@@ -1,7 +1,3 @@
-/**
- * A request crossing from an HTTP worker to the decide thread:
- * `[u32 reqId][u32 metaLength][meta json][body]`, meta = { method, path, headers }.
- */
 import type {
 	RingFrame,
 	RingReader,
@@ -15,7 +11,6 @@ const decoder = new TextDecoder();
 
 export type RequestMeta = {
 	method: string;
-	/** Path and query, as the client sent them. */
 	path: string;
 	headers: [string, string][];
 };
@@ -26,7 +21,6 @@ export type RequestFrame = {
 	body: Uint8Array;
 };
 
-/** The most ring bytes the request can take: a UTF-16 unit of meta encodes to at most three bytes. */
 export const requestFrameMaxLength = ({
 	metaText,
 	body,
@@ -35,7 +29,6 @@ export const requestFrameMaxLength = ({
 	body: Uint8Array;
 }): number => HEADER_BYTES + metaText.length * 3 + body.length;
 
-/** False when the ring has no room for it now. */
 export const writeRequestFrame = ({
 	writer,
 	reqId,
@@ -61,7 +54,6 @@ export const writeRequestFrame = ({
 	return true;
 };
 
-/** The body is copied out, so the frame can be advanced past at once. */
 export const readRequestFrame = ({
 	reader,
 	frame,

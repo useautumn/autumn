@@ -18,7 +18,6 @@ import type { Slots } from "./types/slots.js";
 
 export const CATALOG_FILE = "catalog.sqlite";
 
-/** The filesystem the folder sits on, as Linux lists it: a volume shows as its device, the container's own disk as overlay. */
 const mountOf = ({ folder }: { folder: string }): string | null => {
 	try {
 		const mounts = readFileSync("/proc/mounts", "utf8")
@@ -34,7 +33,6 @@ const mountOf = ({ folder }: { folder: string }): string | null => {
 	}
 };
 
-/** Opens a data folder once: this thread's slot files and the one catalog they share stay open. */
 export const openSlots = ({
 	folder,
 	slotCount,
@@ -46,17 +44,12 @@ export const openSlots = ({
 }: {
 	folder: string;
 	slotCount: number;
-	/** The folder's name on a multi-tenant Atom, so a call to another thread names it too. */
 	atomId?: string | null;
 	owners: SlotOwners;
-	/** This thread's parsed subjects, shared by every store it opens. */
 	held: HeldSubjects;
-	/** This replica's clock, stamped on every write. */
 	now?: () => number;
-	/** This thread's pulls, and the token hash the folder proves itself with. */
 	pulls: { subjectPulls: SubjectPulls; tokenHash: () => string };
 }): Slots => {
-	// Counted before anything is created: an empty folder on a restart means the volume did not come back.
 	const filesFound = existsSync(folder) ? readdirSync(folder).length : 0;
 	mkdirSync(folder, { recursive: true });
 	removeSlotFilesOfOtherCounts({ folder, slotCount });
@@ -65,7 +58,6 @@ export const openSlots = ({
 		databasePath: join(folder, CATALOG_FILE),
 	});
 	const logger = getAtomLogger();
-	// A miss is decided on the slot's owner thread, so the pulled body is stored there too.
 	const subjectPulls = pulls.subjectPulls.forFolder({
 		tokenHash: pulls.tokenHash,
 		applyPulled: ({ customerId, body }) =>
@@ -116,10 +108,6 @@ export const openSlots = ({
 		catalogStore.close();
 	}
 
-	/**
-	 * The catalog's file belongs to slot 0's owner, which hands each stored catalog to every other thread. A thread
-	 * that is restarting misses the hand-off and reads the file as it opens, so the push still counts as stored.
-	 */
 	async function setCatalog(params: CatalogUpdate): Promise<boolean> {
 		const catalogOwner = owners.ownerOf({ slot: 0 });
 		if (catalogOwner !== owners.index)

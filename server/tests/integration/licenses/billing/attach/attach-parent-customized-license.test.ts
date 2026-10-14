@@ -1,5 +1,3 @@
-// Contract: a parent link customizes its child from $10 to $20/mo and 100 to 200 messages/mo.
-// Attaching 2 bills $40; an assigned entity gets 200 while the shared child stays unchanged.
 import { expect, test } from "bun:test";
 import type {
 	ApiCustomerV3,

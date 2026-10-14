@@ -1,15 +1,5 @@
 import { sql } from "drizzle-orm";
 
-/**
- * Builds customer-level entity aggregate CTEs for prepaid grant inferred from
- * `customer_products.options`, following the same shape as
- * `cusEntsToPrepaidQuantity`:
- * - match option -> customer entitlement by feature id/internal feature id
- * - resolve prepaid customer price for that entitlement
- * - compute quantity * billing_units
- *
- * NOTE: intentionally does not multiply by `ce.entities` key count yet.
- */
 export const getEntityOptionsAggregateFragments = () => {
 	const ctes = sql`
 		entity_option_rows AS MATERIALIZED (

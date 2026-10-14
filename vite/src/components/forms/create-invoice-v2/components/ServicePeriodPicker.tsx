@@ -34,7 +34,6 @@ function PeriodBoundField({
 	);
 }
 
-/** Start/End, a range calendar, then Clear or Apply. The first click picks the start, the next the end. */
 export function ServicePeriodPicker({
 	value,
 	showTitle = true,

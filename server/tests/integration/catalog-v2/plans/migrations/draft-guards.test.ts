@@ -1,12 +1,3 @@
-/**
- * catalogV2.update — migration draft guards: include_custom, previous_price,
- * billing changes, and one draft across all requesting plans.
- *
- * The custom guard must thread to BOTH the migration filter and every
- * update_plan op's plan_filter — a customer holding a custom copy of the
- * plan must be excluded (or included) consistently at each level.
- */
-
 import { expect, test } from "bun:test";
 import { BillingInterval, ResetInterval } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
@@ -111,7 +102,6 @@ const seedTwoVersionsWithCustomCustomer = async ({
 			},
 		],
 	});
-	// Differing v2 shape so all_versions produces two buckets (two ops).
 	await autumn.catalogV2.update({
 		plans: [
 			{
@@ -234,7 +224,6 @@ test.concurrent(
 					});
 				}
 			}
-			// No `custom` guard anywhere in the persisted draft.
 			expect(
 				JSON.stringify({
 					filter: migration?.filter,

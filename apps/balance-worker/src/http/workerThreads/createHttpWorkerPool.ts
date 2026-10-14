@@ -1,9 +1,3 @@
-/**
- * The decide thread's side of the HTTP worker threads: starts them, drains their request rings into the
- * worker's own `fetch` (the Hono app, unchanged), and writes each reply's bytes back to the thread that
- * holds the connection. The decide thread never accepts a socket.
- */
-
 import { createRingSignal } from "../../threads/ring/ringSignal.js";
 import { createLatencyCells, drainLatency } from "./latency/latencyCells.js";
 import { startDispatchLoop } from "./pool/dispatchRequests.js";
@@ -48,7 +42,6 @@ export function createHttpWorkerPool({
 		return stopHttpWorkers({ scope });
 	}
 
-	/** Resolves once every thread is bound to the port; a thread that cannot bind takes the others down. */
 	function positionMoved(params: { partition: number; seq: number }): void {
 		commitPositionMoved({ scope, ...params });
 	}

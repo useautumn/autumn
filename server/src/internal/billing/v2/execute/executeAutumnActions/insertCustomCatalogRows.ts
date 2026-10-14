@@ -4,7 +4,6 @@ import { EntitlementService } from "@/internal/products/entitlements/Entitlement
 import { FreeTrialService } from "@/internal/products/free-trials/FreeTrialService";
 import { PriceService } from "@/internal/products/prices/PriceService";
 
-/** Custom catalog rows must exist before any customer row can reference them. */
 export const insertCustomCatalogRows = async ({
 	ctx,
 	autumnBillingPlan,

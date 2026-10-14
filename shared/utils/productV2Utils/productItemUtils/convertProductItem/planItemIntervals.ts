@@ -29,9 +29,6 @@ export const resetIntvToItemIntv = (
 	}
 };
 
-/**
- * Convert ProductItemInterval back to ResetInterval
- */
 export const itemIntvToResetIntv = (
 	itemIntv: ProductItemInterval | null,
 ): ResetInterval => {

@@ -1,6 +1,5 @@
 import { AppEnv, type Organization } from "@autumn/shared";
 
-/** The org's Vercel Svix app for this env, if it has one. */
 export const vercelSvixAppId = ({
 	org,
 	env,

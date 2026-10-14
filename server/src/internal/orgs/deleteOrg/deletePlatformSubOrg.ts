@@ -21,12 +21,6 @@ import {
 	deleteSvixWebhooks,
 } from "@/internal/orgs/orgUtils/deleteOrgUtils.js";
 
-/**
- * Deletes a platform-created sub-org and all its dependencies.
- * Used by `DELETE /platform/organizations` and `clearMasterOrg.ts`.
- *
- * `skipLiveCustomerCheck` bypasses the `OrgHasCustomers` guard (test cleanup).
- */
 export const deletePlatformSubOrg = async ({
 	db,
 	org,
@@ -77,7 +71,6 @@ export const deletePlatformSubOrg = async ({
 	logger.info("5. Deleting org memberships");
 	await db.delete(member).where(eq(member.organizationId, org.id));
 
-	// Keys cascade with the org row; cached ones would authenticate until their TTL.
 	const keys = await db
 		.select({ hashedKey: apiKeys.hashed_key })
 		.from(apiKeys)

@@ -13,7 +13,6 @@ import type {
 	PooledBalancePlan,
 } from "@autumn/shared";
 
-/** POOL_CE with the balance as computed, then the pool row. */
 const insertPoolBalanceToPlanOps = ({
 	pooledCustomerEntitlement,
 }: {
@@ -35,7 +34,6 @@ const insertPoolBalanceToPlanOps = ({
 	];
 };
 
-/** The pool's totals move by the plan's deltas, as the Postgres lane adds them; its lifecycle columns are set. */
 const updatePoolBalanceToPlanOps = ({
 	pooledCustomerEntitlement,
 	balanceDelta,
@@ -73,7 +71,6 @@ const updatePoolBalanceToPlanOps = ({
 	];
 };
 
-/** An insert row may leave columns to their Postgres defaults; the worker carries them filled in. */
 const contributionWithTableDefaults = (
 	contribution: InsertPooledBalanceContribution,
 ) => ({
@@ -85,7 +82,6 @@ const contributionWithTableDefaults = (
 	updated_at: contribution.updated_at ?? contribution.created_at ?? Date.now(),
 });
 
-/** The share replaced whole, as the Postgres lane sets it. */
 const updateContributionToPlanOps = ({
 	id,
 	pooled_balance_id: _pooledBalanceId,
@@ -105,7 +101,6 @@ const deleteContributionToPlanOps = (
 		},
 	});
 
-/** A rolled-back pool graph: the pool row, then POOL_CE; its shares cascade in Postgres and are not state. */
 const deletePoolBalanceToPlanOps = ({
 	pooledCustomerEntitlement,
 }: {
@@ -122,10 +117,6 @@ const deletePoolBalanceToPlanOps = ({
 	];
 };
 
-/**
- * The pooled plan as worker ops, in the order the Postgres lane writes it. Expiry candidates send nothing:
- * the worker asks Postgres which pools lost their last share and expires those itself.
- */
 export const pooledBalancePlanToPlanOps = ({
 	autumnBillingPlan,
 }: {

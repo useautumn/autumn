@@ -1,12 +1,3 @@
-/**
- * Contract under test — org-configurable idempotency TTLs:
- *   - resolveIdempotencyTtlMs reads ctx.org.idempotency_config: a matching
- *     routeGroup entry → hours converted to ms; no entry, no config, or a
- *     null routeGroup → the 24h default.
- *   - RouteGroups are declared per route via createRoute and resolved from
- *     middleware (before the handler runs) via getRouteGroup(c).
- */
-
 import { describe, expect, test } from "bun:test";
 import {
 	DEFAULT_IDEMPOTENCY_TTL_HOURS,
@@ -116,7 +107,6 @@ describe("routeGroup registry", () => {
 		const app = new Hono<HonoEnv>();
 		const seen: Record<string, RouteGroup | null> = {};
 
-		// Middleware runs BEFORE the handler — mirrors idempotencyMiddleware.
 		app.use("*", async (c, next) => {
 			seen[c.req.path] = getRouteGroup(c);
 			await next();

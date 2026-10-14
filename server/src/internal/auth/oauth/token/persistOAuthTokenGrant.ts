@@ -4,7 +4,6 @@ import {
 	oauthRefreshTokenRepo,
 } from "../../repos/index.js";
 
-/** One transaction, so a partial write can never split a grant across its two rows. */
 export const persistOAuthTokenGrant = async ({
 	accessTokenId,
 	db,

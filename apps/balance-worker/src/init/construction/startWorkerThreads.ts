@@ -10,11 +10,6 @@ import {
 import type { WorkerListener } from "../types/balanceWorker.js";
 import { connectHeldReplies } from "./connectHeldReplies.js";
 
-/**
- * The HTTP worker threads first (they own the port), then the producer thread. A producer thread that cannot
- * start takes the HTTP threads down with it, so a task never serves with no way to commit. Stopping goes the
- * other way round: the HTTP threads finish their requests, then the producers disconnect.
- */
 export async function startWorkerThreads({
 	ctx,
 	config,
@@ -22,20 +17,17 @@ export async function startWorkerThreads({
 	ctx: {
 		fetch(request: Request): Response | Promise<Response>;
 		logger: Pick<AutumnLogger, "warn" | "error">;
-		/** A thread died: what it carried cannot be trusted, so the task is replaced. */
 		onFatal(failure: {
 			cause: unknown;
 			scope: "http-workers" | "producer-thread";
 		}): void;
 		onToken(info: KafkaTokenInfo): void;
-		/** Where held replies learn their fate: the commit positions, and how a failure is answered. */
 		heldReplies?: Omit<Parameters<typeof connectHeldReplies>[0], "http">;
 	};
 	config: { http: HttpWorkerPoolConfig; producers: ThreadedProducersConfig };
 }): Promise<{
 	listener: WorkerListener;
 	producers: ThreadedProducers;
-	/** The threads' window for the summary line, reset by the read: health counts and in-worker latency. */
 	drainThreadSignals(): {
 		threads: Record<string, number>;
 		latencyMs: Record<string, unknown>;
@@ -71,7 +63,6 @@ export async function startWorkerThreads({
 	}
 	async function stop(): Promise<void> {
 		try {
-			// Partitions stopped first, so every held reply has had its commit or its failure.
 			await http.stop();
 			disconnectHeld?.();
 		} finally {

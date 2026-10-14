@@ -40,7 +40,6 @@ class RecordingCommittedAppender implements CommittedOutcomeAppender {
 	}
 }
 
-/** Holds every store apply until opened, so a test can see who waits for the store. */
 const gateStoreApplies = ({ store }: { store: SqliteStateStore }) => {
 	const gate = Promise.withResolvers<void>();
 	const gatedStore = new Proxy(store, {

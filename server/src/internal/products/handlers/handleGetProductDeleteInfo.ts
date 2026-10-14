@@ -7,7 +7,6 @@ export const handleGetProductDeleteInfo = createRoute({
 	scopes: [Scopes.Plans.Read],
 	resource: AffectedResource.Product,
 	handler: async (c) => {
-		// 1. Get number of versions
 		const ctx = c.get("ctx");
 		const { db, org, env } = ctx;
 		const { productId } = c.req.param();

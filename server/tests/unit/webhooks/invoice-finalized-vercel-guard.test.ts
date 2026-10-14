@@ -1,8 +1,3 @@
-/**
- * `invoice.finalized` only reaches org webhooks for regular invoices: Vercel
- * marketplace invoices settle out of band and must never emit it.
- */
-
 import { beforeEach, describe, expect, test } from "bun:test";
 import chalk from "chalk";
 import type Stripe from "stripe";

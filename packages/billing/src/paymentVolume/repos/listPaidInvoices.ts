@@ -18,10 +18,6 @@ const paidInvoiceRowSchema = z.object({
 const paidInWindow = (window: HourWindow): SQL =>
 	sql`(i.paid_at >= ${window.startMs} AND i.paid_at < ${window.endMs})`;
 
-/**
- * Billing volume is money collected from live customers: `paid_at` set (Stripe and RevenueCat
- * write it, `invoices.insert` never does), `amount_paid` when known else `total`.
- */
 export const paidInvoicesSql = ({
 	windows,
 }: {
@@ -59,7 +55,6 @@ const rowToPaidInvoice = (row: unknown): PaidInvoice => {
 	};
 };
 
-/** Every invoice paid by a live customer within the given hours. */
 export const listPaidInvoices = async ({
 	ctx,
 	windows,

@@ -8,7 +8,6 @@ import type {
 	BalanceWorkerKafkaConfig,
 } from "./types/kafkaBalanceWorkerClient.js";
 
-/** Builds the connection; nothing connects until the ownership reader starts or the first command is queued. */
 export function createBalanceWorkerKafka({
 	clientId,
 	brokers,

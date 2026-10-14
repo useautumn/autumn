@@ -18,40 +18,30 @@ const templateToRegex = (raw: string) =>
 const BLOCK_NAME = String.raw`\b(?:describe|test(?:\.concurrent)?|Eval(?:<[^>]+>)?)`;
 const BLOCK_OPEN = new RegExp(`${BLOCK_NAME}\\s*\\(`);
 
-// Chalk forms must precede the plain-string form: it would otherwise capture the
-// `${` prefix of a template-wrapped name and stop at the quote inside it.
 const MATCHERS: Array<[RegExp, (raw: string) => string]> = [
-	// test(`${chalk.x(`name`)}`
 	[
 		new RegExp(
 			`${BLOCK_NAME}\\s*\\(\\s*\`\\$\\{chalk\\.\\w+\\(\`([\\s\\S]*?)\`\\)\\}\``,
 		),
 		templateToRegex,
 	],
-	// test(`${chalk.x("name")}`
 	[
 		new RegExp(
 			`${BLOCK_NAME}\\s*\\(\\s*\`\\$\\{chalk\\.\\w+\\(["'](.*?)["']\\)\\}\``,
 		),
 		escapeRegex,
 	],
-	// test(chalk.x(`name`)
 	[
 		new RegExp(`${BLOCK_NAME}\\s*\\(\\s*chalk\\.\\w+\\(\\s*\`([\\s\\S]*?)\``),
 		templateToRegex,
 	],
-	// test(chalk.x("name")
 	[
 		new RegExp(`${BLOCK_NAME}\\s*\\(\\s*chalk\\.\\w+\\(\\s*["'](.*?)["']`),
 		escapeRegex,
 	],
-	// test("name")
 	[new RegExp(`${BLOCK_NAME}\\s*\\(\\s*["'\`](.*?)["'\`]`), escapeRegex],
 ];
 
-// Walk backwards from the cursor to the nearest enclosing block opener. Each
-// candidate is matched over a short multi-line window, so a name argument
-// wrapped onto following lines is still found.
 for (let i = lineNum - 1; i >= 0; i--) {
 	if (!BLOCK_OPEN.test(lines[i])) continue;
 
@@ -68,4 +58,4 @@ for (let i = lineNum - 1; i >= 0; i--) {
 	}
 }
 
-console.log(".*"); // fallback: run all
+console.log(".*");

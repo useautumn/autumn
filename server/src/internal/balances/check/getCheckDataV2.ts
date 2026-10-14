@@ -19,7 +19,6 @@ import { buildEvaluationSubject } from "./buildEvaluationSubject.js";
 import type { CheckDataV2 } from "./checkTypes/CheckDataV2.js";
 import { getCheckSubject } from "./getCheckSubject.js";
 
-/** Deadline for check's cache-miss DB hydration — check's ~50ms latency SLO can't wait out the 15s pool clocks. */
 export const CHECK_DB_HYDRATION_BUDGET_MS = 2_000;
 
 export const withCheckDbHydrationBudget = <T>(fn: () => Promise<T>) =>
@@ -29,9 +28,6 @@ export const withCheckDbHydrationBudget = <T>(fn: () => Promise<T>) =>
 		fn,
 	});
 
-/** Load-set for the partial subject. Overrides live on entitlement rows we
- * haven't loaded yet, so any credit system could fund the feature — load them
- * all and narrow to effective candidates after the subject is in hand. */
 const getCheckLoadFeatureIds = ({
 	features,
 	featureId,
@@ -70,8 +66,6 @@ export const getCheckDataV2 = async ({
 		featureId: feature_id,
 	});
 
-	// "Query read timeout" is in TRANSIENT_DB_ERROR_MESSAGES, so isTransientDbError
-	// classifies the expiry as transient and check's withRedisFailOpen fallback engages.
 	const fullSubject = await withCheckDbHydrationBudget(() =>
 		ctx.apiVersion.gte(ApiVersion.V2_1)
 			? getOrSetCachedPartialFullSubject({
@@ -104,8 +98,6 @@ export const getCheckDataV2 = async ({
 		entityId: entity_id,
 	});
 
-	// Candidates from the subject's effective schemas (feature_override aware),
-	// now that the entitlement rows are loaded.
 	const creditSystems = fullSubjectToCreditSystems({
 		fullSubject: evaluationFullSubject,
 		featureId: feature_id,
@@ -137,7 +129,6 @@ export const getCheckDataV2 = async ({
 			})
 		: evaluationFeature;
 
-	// Trigger auto top-up
 	triggerAutoTopUp({ ctx, fullSubject, feature: featureToUse }).catch(
 		(error) => {
 			ctx.logger.error(

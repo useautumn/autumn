@@ -50,11 +50,10 @@ const formatPrepaidPrice = ({
 	const billingUnits = config.billing_units || 1;
 
 	if (billingUnits === 1) {
-		if (quantity === 1)
-			return `${quantity} ${singular}`; // eg. 1 credit
-		else return `${quantity} ${plural}`; // eg. 4 credits
+		if (quantity === 1) return `${quantity} ${singular}`;
+		else return `${quantity} ${plural}`;
 	} else {
-		return `${quantity} x ${billingUnits} ${plural}`; // eg. 4 x 100 credits
+		return `${quantity} x ${billingUnits} ${plural}`;
 	}
 };
 

@@ -1,4 +1,3 @@
-/** Regenerates web/src/mock/catalogFixture.json from the real server/tests/_groups. */
 import { writeFile } from "node:fs/promises";
 import path from "node:path";
 import { createTestFileResolver } from "../../../../scripts/tw/testDiscovery/createTestFileResolver.ts";

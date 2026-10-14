@@ -66,7 +66,6 @@ const envelopeOf = (entityId: string): SubjectRowsEnvelope => ({
 	},
 });
 
-/** Entity loads over a scripted Postgres: `rows` are the snapshot rows that exist, every full read answers the entity's own rows. */
 const createScope = ({
 	mode = "serve",
 	rows = new Map<string, unknown>(),

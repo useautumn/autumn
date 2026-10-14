@@ -12,20 +12,6 @@ import { eq } from "drizzle-orm";
 import { CusService } from "@/internal/customers/CusService.js";
 import { migrationItemRunRepo } from "@/internal/migrations/v2/repos/index.js";
 
-/**
- * TDD coverage for migration draft CRUD used by the dashboard.
- *
- * Contract under test:
- *   New fields:
- *     - migrations.archived: boolean, default false.
- *   New behaviors:
- *     - PATCH /migrations.update accepts updates.archived.
- *     - POST /migrations.delete hard-deletes migrations with no customer runs.
- *     - POST /migrations.delete rejects migrations with customer run history.
- *   Side effects:
- *     - Rejected deletes keep the migration row and run history unchanged.
- */
-
 test.concurrent(
 	`${chalk.yellowBright("migrations.update: persists no_billing_changes from dashboard PATCH")}`,
 	async () => {

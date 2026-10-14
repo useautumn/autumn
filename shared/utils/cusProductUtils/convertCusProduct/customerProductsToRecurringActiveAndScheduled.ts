@@ -5,7 +5,6 @@ import {
 	isCustomerProductOneOff,
 } from "../classifyCustomerProduct/classifyCustomerProduct";
 
-/** Split customer products into recurring-active and recurring-scheduled buckets. */
 export const customerProductsToRecurringActiveAndScheduled = ({
 	customerProducts,
 }: {

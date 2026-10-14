@@ -9,8 +9,6 @@ import {
 } from "bun:test";
 import { OAuth2Tokens } from "arctic";
 
-// Real modules captured BEFORE mocking so afterAll can restore them — module
-// mocks leak across test files (mock.restore does not undo them).
 const MOCKED_MODULE_PATHS = [
 	"@/db/initDrizzle.js",
 	"@/internal/platform/platformBeta/utils/oauthStateUtils.js",
@@ -79,8 +77,6 @@ const mockMappingsGetAll = mock(
 	(): Promise<{ revenuecat_product_ids: string[] }[]> => Promise.resolve([]),
 );
 
-// Spread the real module so every export stays defined — a partial factory
-// poisons later files in the same process with missing-export link errors.
 const realInitDrizzle = await import("@/db/initDrizzle.js");
 mock.module("@/db/initDrizzle.js", () => ({
 	...realInitDrizzle,
@@ -478,7 +474,6 @@ describe("handleRevenueCatOAuthCallback", () => {
 		const sandboxOauth =
 			updateCall?.updates.processor_configs?.revenuecat?.sandbox_oauth;
 		expect(sandboxOauth?.project_id).toBe("proj_123");
-		// platform org had no webhook secret → callback generates + persists one
 		const rc = updateCall?.updates.processor_configs?.revenuecat;
 		expect(typeof rc?.sandbox_webhook_secret).toBe("string");
 		expect(rc?.sandbox_webhook_secret?.length).toBe(64);
@@ -517,7 +512,6 @@ describe("handleRevenueCatOAuthCallback", () => {
 		expect(ctx.getRedirectUrl()).toContain("message=RC+API+error");
 	});
 
-	// ── API-key → OAuth migration ────────────────────────────────────────────
 	const migrationState = (): MockOAuthState => ({
 		organization_slug: "test-org",
 		env: "sandbox",
@@ -559,12 +553,9 @@ describe("handleRevenueCatOAuthCallback", () => {
 		expect(mockOrgUpdate).toHaveBeenCalledTimes(1);
 		const rc =
 			mockOrgUpdate.mock.calls[0]?.[0]?.updates.processor_configs?.revenuecat;
-		// OAuth connected against the existing project
 		expect(rc?.sandbox_oauth?.project_id).toBe("proj_existing");
-		// legacy api key + project id stripped
 		expect(rc?.sandbox_api_key).toBeUndefined();
 		expect(rc?.sandbox_project_id).toBeUndefined();
-		// untouched legacy fields preserved
 		expect(rc?.sandbox_webhook_secret).toBe("whsec_sandbox");
 		expect(ctx.getRedirectUrl()).toContain("success=true");
 	});

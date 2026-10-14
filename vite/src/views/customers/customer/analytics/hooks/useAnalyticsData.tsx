@@ -41,13 +41,10 @@ export const useAnalyticsData = ({
 
 	const { queryStates } = useAnalyticsQueryState();
 	const { interval, start, end } = queryStates;
-	// Resolve the bin here rather than letting the server default it: a range's
-	// default granularity is a UI decision, and the two must not drift.
 	const binSize = getEffectiveBinSize({
 		interval,
 		binSize: queryStates.bin_size,
 	});
-	// The deduction rollup is keyed by customer, so it cannot run org-wide.
 	const aggregateOn =
 		queryStates.aggregate_on === "deducted" && customerId
 			? "deducted"
@@ -65,16 +62,11 @@ export const useAnalyticsData = ({
 	} = useSelectedEventNames();
 
 	const timezone = useMemo(() => getUserTimezone(), []);
-	// Month bins are requested in UTC so they can be served from the monthly
-	// rollups, which key on UTC month starts; a local month never aligns with one.
 	const effectiveTimezone = binSize === "month" ? "UTC" : timezone;
 	const utcPeriods = isUtcBin({ binSize, timezone: effectiveTimezone });
 
-	// Deducted mode defaults to splitting by which tracked feature caused the
-	// deduction — the story the mode exists to tell. An explicit group_by wins.
 	const effectiveGroupBy =
 		!groupBy && aggregateOn ? SOURCE_FEATURE_GROUP : groupBy;
-	// Source-feature grouping only splits the deductions; the usage series stays whole.
 	const eventsGroupColumn =
 		effectiveGroupBy && effectiveGroupBy !== SOURCE_FEATURE_GROUP
 			? groupByToColumn({ groupBy: effectiveGroupBy })
@@ -100,7 +92,6 @@ export const useAnalyticsData = ({
 			aggregateOn ?? "",
 			measure ?? "",
 		]),
-		// Names load in the same step as the chart so rows never flash raw ids.
 		queryFn: async () => {
 			const aggregate = await fetchEventsAggregate({
 				axiosInstance,
@@ -174,7 +165,6 @@ export const useRawAnalyticsData = () => {
 
 	const { queryStates } = useAnalyticsQueryState();
 	const { interval, start, end } = queryStates;
-	// The table must cover the chart's window, so it resolves the bin the same way.
 	const binSize = getEffectiveBinSize({
 		interval,
 		binSize: queryStates.bin_size,

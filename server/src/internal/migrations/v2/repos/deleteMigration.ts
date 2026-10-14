@@ -9,7 +9,6 @@ import {
 import { and, eq } from "drizzle-orm";
 import type { RepoContext } from "@/db/repoContext.js";
 
-/** Delete by user `id`, scoped to the current org + env. */
 export const deleteMigration = async ({
 	ctx,
 	id,

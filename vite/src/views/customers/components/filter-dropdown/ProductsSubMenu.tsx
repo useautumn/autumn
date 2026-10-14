@@ -18,7 +18,6 @@ export const ProductsSubMenu = ({ onChange }: { onChange?: () => void }) => {
 
 	const selectedVersions = queryStates.version;
 
-	// Deduplicate products by ID (since backend may return multiple entries per product, one per version)
 	const uniqueProducts =
 		products?.reduce((acc: any[], product: any) => {
 			if (!acc.find((p) => p.id === product.id)) {
@@ -27,7 +26,6 @@ export const ProductsSubMenu = ({ onChange }: { onChange?: () => void }) => {
 			return acc;
 		}, []) || [];
 
-	// Get all possible product:version combinations
 	const getAllProductVersions = () => {
 		const productVersions: Array<{
 			productId: string;
@@ -50,7 +48,6 @@ export const ProductsSubMenu = ({ onChange }: { onChange?: () => void }) => {
 	const allProductVersions = getAllProductVersions();
 	const hasSelections = selectedVersions.length > 0;
 
-	// Calculate unique products that have at least one version selected
 	const selectedProductIds = new Set(
 		selectedVersions.map((versionKey: string) => versionKey.split(":")[0]),
 	);
@@ -87,12 +84,10 @@ export const ProductsSubMenu = ({ onChange }: { onChange?: () => void }) => {
 		let newSelectedVersions: string[] = [];
 		let newNone = queryStates.none;
 		if (allProductVersionsSelected) {
-			// Deselect all versions of this product
 			newSelectedVersions = selectedVersions.filter(
 				(key: string) => !productVersionKeys.includes(key),
 			);
 		} else {
-			// Select all versions of this product
 			const toAdd = productVersionKeys.filter(
 				(key) => !selectedVersions.includes(key),
 			);
@@ -210,7 +205,6 @@ export const ProductsSubMenu = ({ onChange }: { onChange?: () => void }) => {
 								return (
 									<div key={product.id}>
 										{versionCount === 1 ? (
-											// Single version - show just one button for the product
 											<DropdownMenuItem
 												closeOnClick={false}
 												onClick={(e) => {
@@ -226,7 +220,6 @@ export const ProductsSubMenu = ({ onChange }: { onChange?: () => void }) => {
 												<span className="truncate">{product.name}</span>
 											</DropdownMenuItem>
 										) : (
-											// Multiple versions - show product name with hover submenu for versions
 											<DropdownMenuSub>
 												<DropdownMenuSubTrigger
 													className="flex items-center gap-2 cursor-pointer font-medium"

@@ -10,10 +10,6 @@ import type { SnapshotRefreshRead } from "../types/snapshotRefreshQueue.js";
 
 const ignoreOthersFailure = (): void => {};
 
-/**
- * The subject's rows for its row, shared with any request that arrives while it reads. A request's own read may have
- * answered from a row, so one in flight is waited out and the rows read afresh. Null when there is nothing to write back.
- */
 export const readSubjectForRefresh = async ({
 	scope,
 	identity,
@@ -23,7 +19,6 @@ export const readSubjectForRefresh = async ({
 }): Promise<SnapshotRefreshRead | null> => {
 	const { inFlightLoads } = scope.state;
 	const subjectKey = meteringIdentityToSubjectKey({ identity });
-	// Taken before the read: a flush landing while it runs has a later offset, so its row outranks this one.
 	const logOffset = bookmarkOf({ scope }) - 1n;
 	for (
 		let running = inFlightLoads.inFlight({ subjectKey });
@@ -37,7 +32,6 @@ export const readSubjectForRefresh = async ({
 			customerKey: meteringIdentityToPartitionKey({ identity }),
 			start: () => readSubjectRows({ scope, identity, rowsOnly: true }),
 		});
-		// A read an evict overtook may predate the write behind it: the evict's own refresh follows.
 		return load.overtaken ? null : { ...read, logOffset };
 	} catch (cause) {
 		if (cause instanceof SubjectNotFoundError) return null;
@@ -45,7 +39,6 @@ export const readSubjectForRefresh = async ({
 	}
 };
 
-/** The partition's bookmark as the store holds it; zero on a store or hydrator that keeps none, where no refresh is written. */
 const bookmarkOf = ({ scope }: { scope: SubjectScope }): bigint => {
 	const { readNextOffset, position } = scope.ctx;
 	return (position && readNextOffset?.(position)) ?? 0n;

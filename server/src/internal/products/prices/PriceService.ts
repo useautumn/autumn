@@ -92,8 +92,6 @@ export class PriceService {
 			.where(inArray(prices.id, ids));
 	}
 
-	/** A plan's catalog (non-custom) prices for one feature and entity scope,
-	 * newest first. Retired prices are custom. */
 	static async listCatalogForFeature({
 		db,
 		internalProductId,
@@ -151,7 +149,6 @@ export class PriceService {
 		if (!stripePriceIds || stripePriceIds.length === 0)
 			return {} as Record<string, Price & { product: Product }>;
 
-		// Build a more efficient query using SQL with proper JSON path operations
 		const rows = (await db.query.prices.findMany({
 			where: sql`(
 				${prices.config} ->> 'stripe_price_id' = ANY(ARRAY[${sql.join(

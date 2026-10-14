@@ -9,8 +9,6 @@ import { SPINE_WIDTH, TRACK_GAP, useAccordion } from "./use-accordion";
 const CARD_HEIGHT = 420;
 const DARK_SURFACE = "#0A0A0A";
 
-// Colour the pixels dissolve away from. DARK_SURFACE reads as the slide fading
-// up from black; the prev slide's surface gives a colour-to-colour crossfade.
 const DISSOLVE_FROM = "dark" as "dark" | "crossfade";
 
 export function DesktopAccordion() {
@@ -29,9 +27,6 @@ export function DesktopAccordion() {
 			? DARK_SURFACE
 			: featuredCustomerStories[prevActiveIndex].surface;
 
-	// Track laid out left→right by flex order: left spine, content, right spine.
-	// trackX gives each surface its slot offset so the directional gradient is
-	// one continuous sweep across all three rather than restarting per card.
 	const trackWidth = contentWidth + 2 * (SPINE_WIDTH + TRACK_GAP);
 	const contentTrackX = SPINE_WIDTH + TRACK_GAP;
 	const rightSpineTrackX = contentTrackX + contentWidth + TRACK_GAP;

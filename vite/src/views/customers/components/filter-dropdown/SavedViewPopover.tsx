@@ -34,9 +34,7 @@ export const SaveViewPopover = ({ onClose }: SaveViewPopoverProps) => {
 		try {
 			setLoading(true);
 
-			// Get current search params and encode as base64
 			const currentParams = new URLSearchParams(window.location.search);
-			// Remove page and lastItemId from saved params
 			currentParams.delete("page");
 			currentParams.delete("lastItemId");
 
@@ -51,8 +49,8 @@ export const SaveViewPopover = ({ onClose }: SaveViewPopoverProps) => {
 			toast.success(`View "${name}" saved successfully`);
 			setName("");
 			setOpen(false);
-			onClose?.(); // Close the main filter modal
-			refetchSavedViews(); // Refresh the views list
+			onClose?.();
+			refetchSavedViews();
 		} catch (error) {
 			console.error(error);
 			toast.error(getBackendErr(error, "Failed to save view"));

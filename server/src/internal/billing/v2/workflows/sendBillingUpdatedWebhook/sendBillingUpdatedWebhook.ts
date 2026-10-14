@@ -1,15 +1,3 @@
-/**
- * Sends the `billing.updated` webhook with a freshly built BillingChangeResponse.
- *
- * Skips when:
- *   - `ctx.testOptions?.skipWebhooks` is set
- *   - the resulting response has no `plan_changes` and no `tags`
- *
- * Intended to be called fire-and-forget from emission sites:
- *   `void sendBillingUpdatedWebhook({ ctx, autumnBillingPlan, originalFullCustomer });`
- * Errors are caught and logged internally.
- */
-
 import {
 	type AutumnBillingPlan,
 	type FullCustomer,
@@ -35,7 +23,6 @@ export const sendBillingUpdatedWebhook = async ({
 	autumnBillingPlan: AutumnBillingPlan;
 	originalFullCustomer: FullCustomer;
 	tags?: string[];
-	/** The plan moved shared credits enough to change allocated shares. */
 	allocationsAdjusted?: boolean;
 }): Promise<void> => {
 	if (ctx.testOptions?.skipWebhooks) return;
@@ -50,15 +37,8 @@ export const sendBillingUpdatedWebhook = async ({
 				: tags,
 		});
 
-		// console.log("response", response);
-		// console.log("response", response);
-		// console.log("response", response);
-
 		if (!billingChangeResponseHasContent(response)) return;
 
-		// Svix message tags (separate from the payload `tags` field) — used
-		// for routing/filtering at the Svix dashboard level. Mirrors the
-		// pattern in sendProductsUpdated.
 		const svixTags = fullCustomerToTags({ fullCustomer: originalFullCustomer });
 
 		await sendSvixEvent({

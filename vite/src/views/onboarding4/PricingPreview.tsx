@@ -41,19 +41,16 @@ export function PricingPreview({
 			})
 		: [];
 
-	// Compute which products have changed from initial config
 	const changedProductIds = getChangedProductIds({
 		initialConfig: initialConfig ?? null,
 		currentConfig: config,
 	});
 
-	// Compute which features have changed from initial config
 	const changedFeatureIds = getChangedFeatureIds({
 		initialConfig: initialConfig ?? null,
 		currentConfig: config,
 	});
 
-	// Find credit system features to display their schemas
 	const creditSystemFeatures = hasProducts
 		? config.features.filter(
 				(f) =>
@@ -65,7 +62,6 @@ export function PricingPreview({
 
 	return (
 		<div className="flex-1 flex flex-col bg-secondary/30 rounded-xl overflow-hidden border border-border/50 shadow-sm">
-			{/* Mac window header */}
 			<div className="relative flex items-center justify-between px-4 py-2 bg-background border-b border-border/50 h-10">
 				<div className="flex gap-2">
 					<div className="w-3 h-3 rounded-full bg-[#FF5F56]" />
@@ -84,7 +80,6 @@ export function PricingPreview({
 				)}
 			</div>
 
-			{/* Content area with dotted grid background */}
 			<div
 				className="flex-1 flex flex-col p-4 overflow-auto bg-card [--dot-color:rgba(0,0,0,0.15)] dark:[--dot-color:rgba(255,255,255,0.12)]"
 				style={{
@@ -102,7 +97,6 @@ export function PricingPreview({
 							changedProductIds={changedProductIds}
 						/>
 
-						{/* Credit system schema cards */}
 						{creditSystemFeatures.length > 0 && (
 							<div className="flex gap-3 flex-wrap justify-center">
 								{creditSystemFeatures.map((creditFeature) => (

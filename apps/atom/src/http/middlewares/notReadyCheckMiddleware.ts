@@ -3,12 +3,9 @@ import { isServing } from "../../init/atomHealth.js";
 import { forwardRequest } from "../forward/forwardRequest.js";
 import type { AtomHttpContext, AtomHttpEnv } from "../types/atomHttp.js";
 
-/** A check that already crossed from a starting replica is answered where it lands: one hop, never a loop. */
 const PROXIED_HEADER = "x-atom-proxied";
-/** A ready peer answers in a few ms; one that takes longer may still be acting on the check, so it is not run again here. */
 const PROXY_TIMEOUT_MS = 2_000;
 
-/** Failures that prove the peer never got the request; any other may have, and a check that sends an event must never run twice. */
 const NEVER_REACHED_PEER = new Set([
 	"ECONNREFUSED",
 	"ConnectionRefused",
@@ -23,10 +20,6 @@ const NEVER_REACHED_PEER = new Set([
 const neverReachedPeer = (error: unknown): boolean =>
 	NEVER_REACHED_PEER.has(String((error as { code?: unknown })?.code));
 
-/**
- * The load balancer sends checks to a replica as it listens, before /health says ready, and so to a thread that replaced
- * a dead one before catching up. Either may lack pushes, so it hands checks to a peer and answers only when none can.
- */
 export function notReadyCheckMiddleware({
 	ctx,
 }: {
@@ -49,8 +42,6 @@ export function notReadyCheckMiddleware({
 				send: peer.fetch,
 			});
 		} catch (error) {
-			// Nothing reached the peer: this replica answers from what it holds. Otherwise the peer may have answered
-			// Autumn already, so the check is not run again here.
 			if (neverReachedPeer(error)) return next();
 			context.set("failure", {
 				code: "atom_peer_timeout",

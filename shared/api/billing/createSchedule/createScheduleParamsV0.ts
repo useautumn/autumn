@@ -19,8 +19,6 @@ export enum StartingAfterDuration {
 	Year = "year",
 }
 
-// update_items is internal / not prod-ready — omit it from the schedule customize
-// surface so the agent never uses it.
 const CreateScheduleCustomizePlanSchema = refineCustomizePlanV1Schema(
 	CustomizePlanV1BaseSchema.omit({
 		free_trial: true,

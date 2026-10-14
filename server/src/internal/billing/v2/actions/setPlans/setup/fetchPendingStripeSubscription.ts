@@ -17,7 +17,6 @@ const isPendingOnSubscription = ({
 	(customerProduct.internal_entity_id ?? undefined) === internalEntityId &&
 	(customerProduct.subscription_ids?.length ?? 0) > 0;
 
-/** A failed first payment leaves its plans Pending on an incomplete subscription the target lookup skips. */
 export const fetchPendingStripeSubscription = async ({
 	ctx,
 	fullCustomer,

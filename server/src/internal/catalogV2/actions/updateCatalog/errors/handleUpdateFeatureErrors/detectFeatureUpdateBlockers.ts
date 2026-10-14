@@ -21,11 +21,6 @@ const stateHasEntityFeatureEntitlements = (state: FeatureState | undefined) =>
 				state.has_loose_entity_feature_entitlements),
 	);
 
-/**
- * Batch twin of the live-update blocker matrix
- * (features/utils/updateFeatureUtils/detectFeatureUpdateBlockers) — same codes
- * and priority order, fed from featureStatesContext (+ projected credit ids).
- */
 export const detectFeatureUpdateBlockers = ({
 	updateFeaturePlan,
 	takenFeatureIds,
@@ -35,7 +30,6 @@ export const detectFeatureUpdateBlockers = ({
 	updateFeaturePlan: UpdateFeaturePlan;
 	takenFeatureIds: Set<string>;
 	featureState: FeatureState | undefined;
-	/** Credit systems still referencing this feature after the batch projects. */
 	projectedCreditSystemFeatureIds: string[];
 }): FeatureUpdateBlocker[] => {
 	const { current, next } = updateFeaturePlan;

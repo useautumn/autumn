@@ -6,7 +6,6 @@ import type { AutumnLogger } from "@autumn/logging";
 import type { SvixClient } from "@autumn/svix";
 import { recordToWebhookAppId } from "./recordToWebhookAppId.js";
 
-/** One webhook to the app its org delivers through; a failed send is logged, since one endpoint must not hold the partition. */
 export const deliverBalanceWebhook = async ({
 	ctx,
 	record,

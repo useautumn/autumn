@@ -38,12 +38,9 @@ import { PooledBalancePlanSchema } from "./pooledBalancePlan";
 export const UpdateCustomerEntitlementSchema = z.object({
 	customerEntitlement: FullCustomerEntitlementSchema,
 	balanceChange: z.number().optional(),
-	/** Per-entity balance deltas; a missing entry is seeded at 0, so it composes with tracks like `balanceChange`. */
 	entityBalanceChanges: z.record(z.string(), z.number()).optional(),
-	/** Per-entity entries re-keyed (`from → to`): a freed seat's balance parks under its replaceable id and returns on reuse. */
 	moveEntityBalances: z.record(z.string(), z.string()).optional(),
 
-	// For arrear billing:
 	updates: z
 		.object({
 			next_reset_at: z.number().optional(),
@@ -55,7 +52,6 @@ export const UpdateCustomerEntitlementSchema = z.object({
 			usage_attribution: UsageAttributionSchema.optional(),
 		})
 		.optional(),
-	/** Rollovers a cycle end carries onto the row; its cap is applied against the row's existing rollovers. */
 	insertRollovers: z.array(RolloverSchema).optional(),
 
 	deletedReplaceables: z.array(ReplaceableSchema).optional(),
@@ -67,7 +63,6 @@ export const CustomerProductUpdateSchema = z.object({
 	updates: z.object({
 		options: z.array(FeatureOptionsSchema).optional(),
 		status: z.enum(CusProductStatus).optional(),
-		// License seat release/reuse: entity unlink + pool-return timestamp.
 		internal_entity_id: z.string().nullish(),
 		entity_id: z.string().nullish(),
 		released_at: z.number().nullish(),
@@ -76,7 +71,6 @@ export const CustomerProductUpdateSchema = z.object({
 		billing_cycle_anchor_resets_at: z.number().nullish(),
 		free_trial_id: z.string().nullish(),
 		trial_ends_at: z.number().nullish(),
-		// Cancel fields (nullish to support uncancel - setting to null)
 		canceled: z.boolean().nullish(),
 		canceled_at: z.number().nullish(),
 		ended_at: z.number().nullish(),
@@ -85,12 +79,10 @@ export const CustomerProductUpdateSchema = z.object({
 		updated_at: z.number().optional(),
 		billing_version: z.enum(BillingVersion).optional(),
 		is_custom: z.boolean().optional(),
-		// Already merged against the DB row (e.g. RevenueCat period/id), so it replaces wholesale.
 		processor: FullCusProductSchema.shape.processor.optional(),
 	}),
 });
 
-/** An id-less entity taking the id a create request names; written only while it is still id-less. */
 export const EntityClaimSchema = z.object({
 	entity: EntitySchema,
 	updates: EntitySchema.pick({
@@ -103,7 +95,6 @@ export const EntityClaimSchema = z.object({
 	}).partial(),
 });
 
-/** Customer columns a billing plan writes: filled from `customer_data`, or the Stripe customer it links. */
 export const CustomerUpdateSchema = z.object({
 	customer: CustomerSchema,
 	updates: CustomerSchema.pick({
@@ -153,12 +144,9 @@ export const BalanceTransitionPlanSchema = z.object({
 export const AutumnBillingPlanSchema = z.object({
 	customerId: z.string(),
 	balanceTransitionPlan: BalanceTransitionPlanSchema.optional(),
-	// Inserted first and only if absent: the insert elects the one request that creates the customer.
 	insertCustomer: CustomerSchema.optional(),
 	updateCustomer: CustomerUpdateSchema.optional(),
-	// Inserted before customer products — provisioned rows may reference them.
 	insertEntities: z.array(EntitySchema).optional(),
-	/** Existing entities the plan writes rows for, so it can name them by external id (a grant created for an entity). */
 	existingEntities: z
 		.array(EntitySchema.pick({ internal_id: true, id: true }))
 		.optional(),
@@ -175,12 +163,8 @@ export const AutumnBillingPlanSchema = z.object({
 		})
 		.optional(),
 
-	// Set by actions that rewrite the schedule rows themselves, so phases must not
-	// be repointed underneath them.
 	ownsSchedulePersistence: z.boolean().optional(),
 
-	// The schedule phases a set_plans computed, so resuming after a deferred payment
-	// persists the same phases instead of re-deriving them from the inserted rows.
 	schedulePhases: z
 		.array(
 			z.object({
@@ -191,8 +175,6 @@ export const AutumnBillingPlanSchema = z.object({
 		)
 		.optional(),
 
-	// A null newCustomerProductId drops the old id from its phases instead of
-	// remapping it — the plan retires it without a successor.
 	schedulePhaseCustomerProductReplacements: z
 		.array(
 			z.object({
@@ -204,12 +186,12 @@ export const AutumnBillingPlanSchema = z.object({
 		)
 		.optional(),
 
-	deleteCustomerProduct: FullCusProductSchema.optional(), // Scheduled product to delete (e.g., when updating while canceling)
+	deleteCustomerProduct: FullCusProductSchema.optional(),
 	deleteCustomerProducts: z.array(FullCusProductSchema).optional(),
 
-	customPrices: z.array(PriceSchema).optional(), // Custom prices to insert
-	customEntitlements: z.array(EntitlementSchema).optional(), // Custom entitlements to insert
-	customFreeTrial: FreeTrialSchema.optional(), // Custom free trial to insert
+	customPrices: z.array(PriceSchema).optional(),
+	customEntitlements: z.array(EntitlementSchema).optional(),
+	customFreeTrial: FreeTrialSchema.optional(),
 	insertPlanLicenses: z.array(InsertPlanLicenseSpecSchema).optional(),
 	customerLicenseUpdates: z.array(CustomerLicenseUpdateSchema).optional(),
 	customerLicenseTransitions: z
@@ -228,10 +210,6 @@ export const AutumnBillingPlanSchema = z.object({
 		.optional(),
 	pooledBalancePlan: PooledBalancePlanSchema.optional(),
 
-	/**
-	 * A purchase's paydown + remainder, sized at compute time from the context's FullCustomer; the
-	 * Postgres lane applies these deltas. The worker re-sizes live from the purchase fields below.
-	 */
 	autoTopupRebalance: z
 		.object({
 			deltas: z.array(
@@ -241,11 +219,9 @@ export const AutumnBillingPlanSchema = z.object({
 					delta: z.number(),
 				}),
 			),
-			/** The purchased cusEnt; absent on plans saved before the worker sized rebalances. */
 			customerEntitlementId: z.string().optional(),
 			featureId: z.string().optional(),
 			quantity: z.number().optional(),
-			/** Where the remainder lands: the purchased cusEnt, an expiring grant, or null when none was planned. */
 			creditedCustomerEntitlementId: z.string().nullable().optional(),
 		})
 		.optional(),
@@ -262,8 +238,6 @@ export const AutumnBillingPlanSchema = z.object({
 		})
 		.optional(),
 
-	// Lock the customer to a currency on the first paid attach (only set when the
-	// customer has none yet). Applied as a conditional, race-safe DB update.
 	lockCustomerCurrency: z
 		.object({
 			internalCustomerId: z.string(),
@@ -271,11 +245,9 @@ export const AutumnBillingPlanSchema = z.object({
 		})
 		.optional(),
 
-	// Upsert operations (populated during webhook handling, e.g., checkout.session.completed)
 	upsertSubscriptions: SubscriptionSchema.array().optional(),
 	upsertInvoice: z.custom<InsertInvoice>().optional(),
 
-	/** Refund plan computed by computeRefundPlan: the amount to refund and source invoice */
 	refundPlan: z
 		.object({
 			amount: z.number(),

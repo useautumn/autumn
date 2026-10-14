@@ -1,6 +1,5 @@
 import { isFeaturePriceItem, type ProductItem } from "@autumn/shared";
 
-/** An invoice bills quantities exclusive of grants, so priced items carry no included usage. */
 export function clearInvoiceIncludedUsage({
 	items,
 }: {
@@ -11,7 +10,6 @@ export function clearInvoiceIncludedUsage({
 	);
 }
 
-/** The items an invoice plan row bills and displays: its edited items, else the catalog plan's, without grants. */
 export function invoicePlanItems({
 	planItems,
 	catalogItems,

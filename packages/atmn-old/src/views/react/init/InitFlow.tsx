@@ -23,17 +23,14 @@ export function InitFlow() {
 	const [targetPath, setTargetPath] = useState<string>(process.cwd());
 	const [monorepoInfo, setMonorepoInfo] = useState<MonorepoInfo | null>(null);
 
-	// Check if org has customers (for handoff step logic)
 	const { data: customersData } = useHasCustomers();
 
 	const handleAuthComplete = (info: OrgInfo) => {
 		setOrgInfo(info);
 
-		// Detect monorepo
 		const detected = detectMonorepo();
 		setMonorepoInfo(detected);
 
-		// If monorepo detected, go to path step; otherwise skip to config
 		if (detected.detected) {
 			setCurrentStep("path");
 		} else {
@@ -52,20 +49,16 @@ export function InitFlow() {
 	};
 
 	const handleHandoffComplete = () => {
-		// HandoffStep handles exit via useApp()
 	};
 
-	// Calculate total steps dynamically based on monorepo detection
 	const totalSteps = monorepoInfo?.detected ? 4 : 3;
 
 	return (
 		<Box flexDirection="column" paddingLeft={1} paddingRight={1}>
-			{/* ASCII Title */}
 			<Box marginTop={1} marginBottom={1}>
 				<Text>{ASCII_TITLE}</Text>
 			</Box>
 
-			{/* Welcome message */}
 			<Box marginBottom={1}>
 				<Text>
 					Welcome to{" "}
@@ -76,14 +69,12 @@ export function InitFlow() {
 				</Text>
 			</Box>
 
-			{/* Step 1: Authentication */}
 			<AuthStep
 				step={1}
 				totalSteps={totalSteps}
 				onComplete={handleAuthComplete}
 			/>
 
-			{/* Step 2: Path Input (only if monorepo detected) - stays visible after completion */}
 			{monorepoInfo?.detected &&
 				(currentStep === "path" ||
 					currentStep === "config" ||
@@ -96,7 +87,6 @@ export function InitFlow() {
 					/>
 				)}
 
-			{/* Step 3: Configuration (only show after auth/path) */}
 			{(currentStep === "config" || currentStep === "handoff") && (
 				<ConfigStep
 					step={monorepoInfo?.detected ? 3 : 2}
@@ -106,7 +96,6 @@ export function InitFlow() {
 				/>
 			)}
 
-			{/* Step 4: Handoff */}
 			{currentStep === "handoff" && (
 				<HandoffStep
 					step={monorepoInfo?.detected ? 4 : 3}

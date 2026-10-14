@@ -12,7 +12,6 @@ import type {
 	CatalogInvalidationKafka,
 } from "./types/catalogInvalidationConsumer.js";
 
-/** A long session is cheap: a per-process group has no one to hand its partition to, and a shared one only delays a takeover. */
 const CONSUMER_TIMINGS = {
 	fetchMaxWaitTimeMs: TAIL_FETCH_MAX_WAIT_MS,
 	heartbeatIntervalMs: 3_000,
@@ -26,10 +25,6 @@ function groupIdOf({ group }: { group: CatalogInvalidationGroup }): string {
 		: `${group.idPrefix}-${crypto.randomUUID()}`;
 }
 
-/**
- * Reads catalog invalidations in log order. A group with no position yet starts from now:
- * a per-process group always does, a shared group only the first time it ever runs.
- */
 export function createCatalogInvalidationConsumer({
 	ctx,
 	config,

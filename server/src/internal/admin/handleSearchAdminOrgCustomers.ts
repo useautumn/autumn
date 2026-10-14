@@ -5,7 +5,6 @@ import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 
 const SEARCH_LIMIT = 20;
 
-/** Customers of one org whose id, name or email contains the search, across both envs. */
 export const handleSearchAdminOrgCustomers = createRoute({
 	scopes: [Scopes.Superuser],
 	params: z.object({ org_id: z.string().min(1) }),

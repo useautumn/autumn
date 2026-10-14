@@ -23,7 +23,6 @@ const reject = (message: string): never => {
 export const isBlacklistedStripePath = ({ path }: { path: string }) =>
 	BLACKLISTED_PATH_PATTERNS.some((pattern) => pattern.test(path.toLowerCase()));
 
-/** Every leaf under an expand key, however nested: qs serializes them all. */
 const leafStrings = (value: unknown): string[] => {
 	if (Array.isArray(value)) return value.flatMap(leafStrings);
 	if (value && typeof value === "object") {

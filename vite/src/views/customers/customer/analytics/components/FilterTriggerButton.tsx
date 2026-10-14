@@ -3,7 +3,6 @@ import { CaretDownIcon } from "@phosphor-icons/react";
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
-/** "Label value ⌄" trigger shared by every Usage filter; spread props so popups can attach. */
 export const FilterTriggerButton = ({
 	label,
 	value,

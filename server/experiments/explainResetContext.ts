@@ -12,14 +12,6 @@ const { buildResetContextByIdsQuery, getResetContextByIds } = await import(
 	"../src/internal/customers/cusProducts/cusEnts/repos/getResetContextByIds"
 );
 
-// Benchmarks the batch reset worker's ID hydration: scans one keyset page,
-// then times and explains the same ID-based query the worker runs.
-//
-// Run with:
-//   bun run experiments/explainResetContext.ts
-// Options (env vars):
-//   RESET_CONTEXT_BATCH_SIZE=1000   number of cusEnt IDs to hydrate
-
 const main = async () => {
 	const batchSize = Number(process.env.RESET_CONTEXT_BATCH_SIZE ?? 1000);
 	const { db } = initDrizzle();
@@ -38,7 +30,6 @@ const main = async () => {
 	}
 	console.log(`Scanned ${page.length} eligible customer entitlement IDs\n`);
 
-	// Full repo call, cold then warm.
 	for (const run of ["cold", "warm"]) {
 		const start = performance.now();
 		const result = await getResetContextByIds({
@@ -51,7 +42,6 @@ const main = async () => {
 		);
 	}
 
-	// Query-only timing, to separate row-mapping cost from DB cost.
 	{
 		const start = performance.now();
 		const rows = await db.execute(

@@ -1,13 +1,3 @@
-/**
- * Worst-case timing for executeRenamePlans (one multi-CTE statement) on a
- * throwaway DEV org: 100 plan versions + reward/RC/alias refs.
- *
- *   bun tests/perf/catalog-v2/benchExecuteRenamePlans.ts
- *
- * Creates `bench-rename-txn-*`, times the CTE, then deletes the org.
- * Does not call Stripe or the catalog HTTP path.
- */
-
 import {
 	CouponDurationType,
 	CusProductStatus,
@@ -136,7 +126,6 @@ const seedRenameFixture = async ({
 		})),
 	);
 
-	// PK is (org_id, env, autumn_product_id) — one row per plan is the max legal.
 	await db.insert(revenuecatMappings).values({
 		org_id: org.id,
 		env,

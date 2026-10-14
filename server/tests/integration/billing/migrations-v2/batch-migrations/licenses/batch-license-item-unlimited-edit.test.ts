@@ -1,8 +1,3 @@
-/**
- * Flipping a license item from a finite allowance to unlimited. tracksBalance
- * differs across the two definitions, so the balance is set to the incoming
- * starting balance rather than credited by a delta.
- */
 import { expect, test } from "bun:test";
 import { customerEntitlements, ResetInterval } from "@autumn/shared";
 import { runChunkedMigration } from "@tests/integration/billing/migrations-v2/utils/runChunkedMigration";

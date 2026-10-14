@@ -1,5 +1,3 @@
-/** Stripe rejects default_tax_rates alongside automatic_tax, so a created subscription's manual rate wins. */
-
 import { afterAll, beforeEach, describe, expect, mock, test } from "bun:test";
 import type { BillingContext, StripeSubscriptionAction } from "@autumn/shared";
 import type Stripe from "stripe";

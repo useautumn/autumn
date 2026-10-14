@@ -17,10 +17,6 @@ import { ACTIVE_STATUSES, RELEVANT_STATUSES } from "..";
 import { cusProductToPrices } from "../convertCusProduct";
 import { customerProductToEffectivePrices } from "../convertCusProduct/customerProductToEffectivePrices";
 
-// ============================================================================
-// PRODUCT TYPE CHECKS
-// ============================================================================
-
 export const isCustomerProductMain = (customerProduct?: {
 	product: Pick<Product, "is_add_on">;
 }) => {
@@ -41,7 +37,6 @@ export const isCustomerProductOneOff = (
 	return isOneOffProduct({ prices });
 };
 
-/** Returns true if the product is recurring (not a one-off). Includes free products. */
 export const isCustomerProductRecurring = (
 	customerProduct?: CustomerProductWithPricesView,
 ) => {
@@ -59,14 +54,12 @@ export const isCustomerProductFree = (cusProduct?: FullCusProduct) => {
 	return isFreeProduct({ prices });
 };
 
-/** Customer product has at least one price that's not free */
 export const isCustomerProductPaid = (customerProduct?: FullCusProduct) => {
 	if (!customerProduct) return false;
 	const prices = customerProductToEffectivePrices({ customerProduct });
 	return !isFreeProduct({ prices });
 };
 
-/** Customer product is both paid AND recurring (not free, not one-off) */
 export const isCustomerProductPaidRecurring = (
 	customerProduct?: FullCusProduct,
 ) => {
@@ -79,27 +72,17 @@ export const isCustomerProductPaidRecurring = (
 	return !freeProduct && !oneOffProduct;
 };
 
-// ============================================================================
-// STATUS CHECKS
-// ============================================================================
-
 export const isCustomerProductScheduled = (cp?: FullCusProduct) => {
 	if (!cp) return false;
 	return cp.status === CusProductStatus.Scheduled;
 };
 
-/**
- * Checks if a scheduled customer product should be activated based on its starts_at time.
- * Uses an optional tolerance to handle timing differences between Stripe and webhook arrival.
- *
- * @param toleranceMs - Tolerance in milliseconds (default: 10 minutes)
- */
 export const hasCustomerProductStarted = (
 	cp: FullCusProduct,
 	params: { nowMs: number; toleranceMs?: number },
 ) => {
 	if (cp.status !== CusProductStatus.Scheduled) return false;
-	const toleranceMs = params.toleranceMs ?? 10 * 60 * 1000; // 10 minutes default
+	const toleranceMs = params.toleranceMs ?? 10 * 60 * 1000;
 	return cp.starts_at <= params.nowMs + toleranceMs;
 };
 
@@ -122,7 +105,6 @@ export const hasCustomerProductEnded = (
 	const toleranceMs = params?.toleranceMs ?? ms.seconds(1);
 
 	const hasEnded =
-		// isCustomerProductCanceling(cp) &&
 		notNullish(cp.ended_at) && nowMs + toleranceMs >= cp.ended_at;
 	return hasEnded;
 };
@@ -137,7 +119,6 @@ export const isCustomerProductTrialing = (
 	return customerProduct.trial_ends_at && customerProduct.trial_ends_at > nowMs;
 };
 
-/** Attach writes nothing to Stripe for a trial that reverts on end. */
 export const isCustomerProductRevertingTrial = (customerProduct?: {
 	on_trial_end?: string | null;
 }) => customerProduct?.on_trial_end === "revert";
@@ -152,8 +133,6 @@ export const customerProductHasActiveStatus = (cp?: FullCusProduct) => {
 	return ACTIVE_STATUSES.includes(cp.status);
 };
 
-/** A pool owner: customer-level, not itself an assignment, in a live status
- * (PastDue included — dunning must not revoke pools). */
 export const isCustomerProductLicenseParent = (
 	customerProduct?: Pick<
 		FullCusProduct,
@@ -182,8 +161,6 @@ export const isLicenseAssignableParentCustomerProduct = ({
 	nullish(customerProduct.customer_license_link_id) &&
 	ACTIVE_STATUSES.includes(customerProduct.status as CusProductStatus);
 
-/** An entity-held seat in a live status — the mirror of
- * isCustomerProductLicenseParent. */
 export const isCustomerProductLicenseAssignment = (
 	customerProduct?: LicenseParentCandidate,
 ) => {
@@ -195,14 +172,6 @@ export const isCustomerProductLicenseAssignment = (
 	);
 };
 
-// ============================================================================
-// ENTITY CHECKS
-// ============================================================================
-
-/**
- * Returns true if the customer product is assigned to the given entity,
- * or if no entity is specified, true if the product is not assigned to any entity.
- */
 export const isCusProductOnEntity = ({
 	cusProduct,
 	internalEntityId,
@@ -214,10 +183,6 @@ export const isCusProductOnEntity = ({
 		? cusProduct.internal_entity_id === internalEntityId
 		: nullish(cusProduct.internal_entity_id);
 };
-
-// ============================================================================
-// STRIPE SUBSCRIPTION CHECKS
-// ============================================================================
 
 export const isCustomerProductOnStripeSubscription = ({
 	customerProduct,
@@ -240,7 +205,6 @@ export const isCustomerProductOnStripeSubscriptionSchedule = ({
 	return customerProduct.scheduled_ids?.includes(stripeSubscriptionScheduleId);
 };
 
-/** Billed on the Stripe subscription itself or on its schedule. */
 export const isCustomerProductInStripeSubscriptionScope = ({
 	customerProduct,
 	stripeSubscriptionId,
@@ -262,8 +226,6 @@ export const isCustomerProductInStripeSubscriptionScope = ({
 			}),
 	);
 
-/** Free and billed on no Stripe subscription or schedule, so no single subscription owns it
- * (it may still be scoped to an entity). */
 export const isCustomerProductUnlinkedFree = (
 	customerProduct: FullCusProduct,
 ) =>
@@ -271,7 +233,6 @@ export const isCustomerProductUnlinkedFree = (
 	!customerProduct.subscription_ids?.length &&
 	!customerProduct.scheduled_ids?.length;
 
-/** Note: this does not CONFIRM that the subscription is active (might be canceled in Stripe...) */
 export const cusProductHasSubscription = ({
 	cusProduct,
 }: {
@@ -305,7 +266,6 @@ export const customerProductHasSubscription = (cusProduct?: FullCusProduct) => {
 	return notNullish(subId);
 };
 
-/** Returns true if multiple customer products share the given product ID. */
 export const customerProductsHaveDuplicateProductId = ({
 	customerProducts,
 	productId,
@@ -356,11 +316,6 @@ export const customerProductHasPrepaidPrice = (
 	return prices.some((price) => isPrepaidPrice(price));
 };
 
-// ============================================================================
-// AGGREGATE CHECKS
-// ============================================================================
-
-/** Returns true if any customer product is active (or trialing), has a subscription, and is paid recurring. */
 export const hasActivePaidSubscription = ({
 	customerProducts,
 }: {

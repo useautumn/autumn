@@ -1,12 +1,3 @@
-/**
- * Integration tests for discounts on add-on products in update subscription flow.
- *
- * Tests how discounts interact with add-on products:
- * - Add-ons can have their own subscription-level discounts
- * - Main product discounts may or may not affect add-ons
- * - Customer-level discounts apply to all subscriptions
- */
-
 import { expect, test } from "bun:test";
 import { getCusStripeSubCount } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
@@ -79,7 +70,6 @@ test.concurrent(`${chalk.yellowBright("addon: discount on add-on upgrade")}`, as
 		customerId,
 	});
 
-	// Apply discount to the (shared) subscription
 	const coupon = await createPercentCoupon({
 		stripeCli,
 		percentOff: 20,
@@ -91,17 +81,12 @@ test.concurrent(`${chalk.yellowBright("addon: discount on add-on upgrade")}`, as
 		couponIds: [coupon.id],
 	});
 
-	// Preview upgrade on the add-on
 	const preview = await autumnV1.subscriptions.previewUpdate({
 		customer_id: customerId,
 		product_id: addonProduct.id,
 		options: [{ feature_id: TestFeature.Credits, quantity: 8 * billingUnits }],
 	});
 
-	// Upgrade generates: refund (-$30 for 3 units) + charge ($80 for 8 units)
-	// Discounts only apply to charges, not refunds
-	// Charge with 20% off: $80 * 0.8 = $64
-	// Total: -$30 + $64 = $34
 	const refundAmount = -30;
 	const discountedCharge = Math.round(80 * 0.8);
 	const expectedAmount = refundAmount + discountedCharge;
@@ -161,7 +146,6 @@ test.concurrent(`${chalk.yellowBright("addon: customer discount applies to add-o
 		customerId,
 	});
 
-	// Apply customer-level discount (applies to all subscriptions)
 	const coupon = await createPercentCoupon({
 		stripeCli,
 		percentOff: 30,
@@ -173,17 +157,12 @@ test.concurrent(`${chalk.yellowBright("addon: customer discount applies to add-o
 		couponId: coupon.id,
 	});
 
-	// Preview upgrade on the add-on
 	const preview = await autumnV1.subscriptions.previewUpdate({
 		customer_id: customerId,
 		product_id: addonProduct.id,
 		options: [{ feature_id: TestFeature.Credits, quantity: 8 * billingUnits }],
 	});
 
-	// Upgrade generates: refund (-$30 for 3 units) + charge ($80 for 8 units)
-	// Discounts only apply to charges, not refunds
-	// Charge with 30% off: $80 * 0.7 = $56
-	// Total: -$30 + $56 = $26
 	const refundAmount = -30;
 	const discountedCharge = Math.round(80 * 0.7);
 	const expectedAmount = refundAmount + discountedCharge;
@@ -205,7 +184,6 @@ test.concurrent(`${chalk.yellowBright("addon: separate subscription with own dis
 		],
 	});
 
-	// Create add-on with a base price so it creates its own subscription
 	const paidAddon = products.base({
 		id: "paid-addon",
 		isAddOn: true,
@@ -232,7 +210,6 @@ test.concurrent(`${chalk.yellowBright("addon: separate subscription with own dis
 		],
 	});
 
-	// Verify we have 2 separate subscriptions
 	const fullCustomer = await CusService.getFull({
 		ctx,
 		idOrInternalId: customerId,
@@ -241,7 +218,6 @@ test.concurrent(`${chalk.yellowBright("addon: separate subscription with own dis
 	const subCount = getCusStripeSubCount({ fullCus: fullCustomer });
 	expect(subCount).toBe(2);
 
-	// Get the add-on's subscription (should be the second one)
 	const stripeCli = createStripeCli({ org: ctx.org, env: ctx.env });
 	const stripeCustomerId =
 		fullCustomer.processor?.id || fullCustomer.processor?.processor_id;
@@ -255,8 +231,6 @@ test.concurrent(`${chalk.yellowBright("addon: separate subscription with own dis
 		status: "all",
 	});
 
-	// Apply discount only to the add-on subscription
-	// Stripe returns subscriptions newest-first, so data[0] is the add-on (created second)
 	const addonSub = subscriptions.data[0];
 
 	const coupon = await createPercentCoupon({
@@ -270,7 +244,6 @@ test.concurrent(`${chalk.yellowBright("addon: separate subscription with own dis
 		couponIds: [coupon.id],
 	});
 
-	// Preview on main product should NOT have discount
 	const mainPreview = await autumnV1.subscriptions.previewUpdate({
 		customer_id: customerId,
 		product_id: mainProduct.id,
@@ -279,9 +252,6 @@ test.concurrent(`${chalk.yellowBright("addon: separate subscription with own dis
 		],
 	});
 
-	// Upgrade generates: refund (-$50 for 5 units) + charge ($100 for 10 units)
-	// Main product has no discount applied
-	// Total: -$50 + $100 = $50
 	expect(mainPreview.total).toBe(50);
 });
 
@@ -299,7 +269,6 @@ test.concurrent(`${chalk.yellowBright("addon: base price add-on with discount")}
 		],
 	});
 
-	// Add-on with just a base price
 	const basePriceAddon = products.base({
 		id: "base-addon",
 		isAddOn: true,
@@ -329,7 +298,6 @@ test.concurrent(`${chalk.yellowBright("addon: base price add-on with discount")}
 		customerId,
 	});
 
-	// Apply discount
 	const coupon = await createPercentCoupon({
 		stripeCli,
 		percentOff: 25,
@@ -341,7 +309,6 @@ test.concurrent(`${chalk.yellowBright("addon: base price add-on with discount")}
 		couponIds: [coupon.id],
 	});
 
-	// Preview update on main product (add-on base price is unchanged)
 	const preview = await autumnV1.subscriptions.previewUpdate({
 		customer_id: customerId,
 		product_id: mainProduct.id,
@@ -350,10 +317,6 @@ test.concurrent(`${chalk.yellowBright("addon: base price add-on with discount")}
 		],
 	});
 
-	// Upgrade generates: refund (-$50 for 5 units) + charge ($100 for 10 units)
-	// Discounts only apply to charges, not refunds
-	// Charge with 25% off: $100 * 0.75 = $75
-	// Total: -$50 + $75 = $25
 	const refundAmount = -50;
 	const discountedCharge = Math.round(100 * 0.75);
 	const expectedAmount = refundAmount + discountedCharge;
@@ -413,7 +376,6 @@ test.concurrent(`${chalk.yellowBright("addon: main discount doesn't affect isola
 		customerId,
 	});
 
-	// Get the Stripe product ID for the main product only
 	const mainStripeProductId =
 		typeof subscription.items.data[0]?.price?.product === "string"
 			? subscription.items.data[0].price.product
@@ -423,7 +385,6 @@ test.concurrent(`${chalk.yellowBright("addon: main discount doesn't affect isola
 		throw new Error("Could not find main Stripe product ID");
 	}
 
-	// Apply discount restricted to main product only
 	const coupon = await stripeCli.coupons.create({
 		percent_off: 40,
 		duration: "forever",
@@ -438,17 +399,14 @@ test.concurrent(`${chalk.yellowBright("addon: main discount doesn't affect isola
 		couponIds: [coupon.id],
 	});
 
-	// Preview upgrade on addon - should NOT get discount
 	const addonPreview = await autumnV1.subscriptions.previewUpdate({
 		customer_id: customerId,
 		product_id: addonProduct.id,
 		options: [{ feature_id: TestFeature.Credits, quantity: 8 * billingUnits }],
 	});
 
-	// Addon upgrade: 5 units * $10 = $50, no discount (not in applies_to)
 	expect(addonPreview.total).toBe(50);
 
-	// Preview upgrade on main - should get discount
 	const mainPreview = await autumnV1.subscriptions.previewUpdate({
 		customer_id: customerId,
 		product_id: mainProduct.id,
@@ -457,8 +415,5 @@ test.concurrent(`${chalk.yellowBright("addon: main discount doesn't affect isola
 		],
 	});
 
-	// Main upgrade generates: refund (-$50 for 5 units) + charge ($100 for 10 units)
-	// Discount only applies to charge: $100 * 0.6 = $60
-	// Total: -$50 + $60 = $10
 	expect(mainPreview.total).toBe(10);
 });

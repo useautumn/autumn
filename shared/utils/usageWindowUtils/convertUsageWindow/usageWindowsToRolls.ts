@@ -6,25 +6,6 @@ import type { UsageWindow } from "../../../models/cusProductModels/cusEntModels/
 import { isSameUsageWindow } from "../classifyUsageWindow/isSameUsageWindow.js";
 import { findUsageWindowLimitByWindow } from "../findUsageWindow/findUsageWindowLimitByWindow.js";
 
-/**
- * Decides, per counter row, whether it needs rolling. A count is only valid
- * within the window stamped on it (isSameUsageWindow); the anchor is
- * provenance, so an anchor-only re-point keeps the count:
- *
- *   expired | window moved | anchor moved | result
- *   --------+--------------+--------------+---------------------------------
- *   no      | no           | no           | no roll (the common case)
- *   no      | no           | yes          | re-point anchor, count kept
- *   no      | drifted      | any          | re-bound, count kept (isSameUsageWindow)
- *   no      | yes          | any          | re-bound, count zeroed (plan change)
- *   yes     | any          | any          | re-bound, count zeroed (period over)
- *   yes     | (no limit)   | --           | bounds kept, count zeroed (entity rows, v1)
- *
- * "Window moved" compares the row's bounds against its limit's CURRENT
- * derivation (anchor ent's cycle). Entity-scoped rows have no resolvable
- * limit in v1, so their bounds can't re-derive -- but an expired count must
- * still zero.
- */
 export const usageWindowsToRolls = ({
 	usageWindows,
 	limits,
@@ -69,8 +50,6 @@ export const usageWindowsToRolls = ({
 			feature_id: usageWindow.feature_id,
 			internal_entity_id: usageWindow.internal_entity_id ?? null,
 			filter_key: usageWindow.filter_key ?? null,
-			// A count never survives its stamped window; an anchor-only
-			// re-point (e.g. an ent recreated with the same cycle) keeps it.
 			zero_usage: expired || windowMoved,
 			...target,
 		});

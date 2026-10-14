@@ -11,9 +11,6 @@ import { normalizeToolName } from "../../agentRuntime/tools/toolPolicy.js";
 import { isInternalAutumnSlackProvider } from "../../slackAdmin/provider.js";
 import { publicToolArgs } from "../utils/toolRequest.js";
 
-/** Column-first accessors; the `_eve*` marker fallbacks cover pre-column
- * pending rows and can be deleted once no such rows remain. */
-
 export const markerString = (
 	toolArgs: Record<string, unknown>,
 	key: string,
@@ -38,8 +35,6 @@ export const denyOptionOf = (approval: ChatApproval): string =>
 	) ??
 	"cancel";
 
-/** Sibling park ids are the grouped writes' request ids — derived, not stored
- * twice. Legacy rows fall back to the marker. */
 export const siblingRequestIdsOf = ({
 	approval,
 	writes,
@@ -55,8 +50,6 @@ export const siblingRequestIdsOf = ({
 		: siblingRequestIdsFromToolArgs(approval.tool_args);
 };
 
-/** Deny option id per grouped sibling request — eve rejects option ids
- * absent from a request, so each sibling's own deny option must be used. */
 export const siblingDenyOptionFor = (
 	writes: ReadonlyArray<ChatApprovalWrite>,
 ): ((siblingRequestId: string) => string | undefined) => {
@@ -73,8 +66,6 @@ export const childSessionIdsOf = (
 ): ReadonlyArray<string> =>
 	approval.child_session_ids ?? childSessionIdsFromToolArgs(approval.tool_args);
 
-/** The grouped writes beyond the primary, in execution order. Prefers write
- * rows; falls back to the legacy `_eveWithheldWrites` marker. */
 export const withheldWritesOf = ({
 	approval,
 	writes,
@@ -95,7 +86,6 @@ export const withheldWritesOf = ({
 	return withheldWritesFromToolArgs(approval.tool_args);
 };
 
-/** Every write on the card — primary first — in execution order. */
 export const allWritesOf = ({
 	approval,
 	writes,
@@ -113,8 +103,6 @@ export const allWritesOf = ({
 	...withheldWritesOf({ approval, writes }),
 ];
 
-/** Slack cards render the whole parked batch, so approving approves the
- * group; the dashboard shows the primary write alone. */
 export const surfaceRendersGroup = (provider: string) =>
 	provider === "slack" || isInternalAutumnSlackProvider({ provider });
 
@@ -130,8 +118,6 @@ const UNSEEDABLE_CUSTOMIZE_KEYS = [
 	"update_items",
 ] as const;
 
-/** These keys have no sheet representation — a seed would silently drop
- * them, so their cards stay Slack-only. */
 const sheetSeedableCustomize = (customize: unknown) => {
 	if (!customize) return true;
 	if (typeof customize !== "object") return false;
@@ -140,8 +126,6 @@ const sheetSeedableCustomize = (customize: unknown) => {
 	);
 };
 
-/** Excludes requests the sheet cannot faithfully represent; internal admin
- * threads link too — the URL carries org_id and the dashboard switches org. */
 export const dashboardLinkableApproval = ({
 	approval,
 	groupedStepCount,
@@ -165,8 +149,6 @@ export const dashboardLinkableApproval = ({
 	);
 };
 
-/** The full answer that releases a parked batch: the primary deny plus the
- * option that denies each grouped sibling. */
 export const approvalDenyPlan = ({
 	approval,
 	writes,

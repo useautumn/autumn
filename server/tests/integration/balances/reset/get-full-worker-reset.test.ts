@@ -1,8 +1,3 @@
-/**
- * CusService.getFull on the worker path: a due row is refilled by the owning worker, landed in
- * Postgres, and the read returns the fresh rows. Nothing in the server writes the reset itself.
- */
-
 import { expect, test } from "bun:test";
 import { fullCustomerToCustomerEntitlements } from "@autumn/shared";
 import { findCustomerEntitlement } from "@tests/balances/utils/findCustomerEntitlement.js";
@@ -61,7 +56,6 @@ test.concurrent(
 		});
 		await evictBalanceWorkerCustomer({ ctx, customerId });
 
-		// The read itself brings the row current: the worker refills, lands it, and getFull re-reads.
 		const fullCustomer = await CusService.getFull({
 			ctx,
 			idOrInternalId: customerId,
@@ -82,7 +76,6 @@ test.concurrent(
 		expect(row.balance).toBe(INCLUDED_USAGE);
 		expect(row.next_reset_at).toBe(refilled?.next_reset_at ?? null);
 
-		// Already current: a second read asks for nothing and changes nothing.
 		const again = await CusService.getFull({ ctx, idOrInternalId: customerId });
 		const still = await findCustomerEntitlement({
 			ctx,
@@ -138,7 +131,6 @@ test.concurrent(
 		});
 		await evictBalanceWorkerCustomer({ ctx, customerId });
 
-		// One getFull, two entity subjects due: both refilled before the rows come back.
 		const fullCustomer = await CusService.getFull({
 			ctx,
 			idOrInternalId: customerId,

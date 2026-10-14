@@ -511,7 +511,6 @@ describe("ownershipPublication", function ownershipPublicationTests() {
 				offset: 1n,
 				record: record({ type: "ready", endpoint: "http://other.test" }),
 			});
-			// A drain handing to some third worker is not this worker's signal.
 			f.deliver({
 				partition: 2,
 				offset: 2n,
@@ -531,7 +530,6 @@ describe("ownershipPublication", function ownershipPublicationTests() {
 		});
 		test("a drain by the current owner counts whoever it names; a late one from a past owner does not", async () => {
 			const f = fixture({ withHandoff: true });
-			// Nothing seen yet: no drain to hold for, and any owner's drain is trusted.
 			expect(f.publication.readActiveDrain()).toBeNull();
 			const controller = new AbortController();
 			const first = f.publication.awaitDraining({ signal: controller.signal });
@@ -546,7 +544,6 @@ describe("ownershipPublication", function ownershipPublicationTests() {
 			});
 			expect(await first).toEqual({ endpoint: "http://other.test" });
 
-			// The owner is known to be someone else: a drain from a past owner is late and ignored.
 			f.views.set(2, {
 				owner: "http://third.test",
 				activeDrain: null,
@@ -573,7 +570,6 @@ describe("ownershipPublication", function ownershipPublicationTests() {
 			});
 			expect(await second).toEqual({ endpoint: "http://third.test" });
 
-			// A drain the owner began before this worker listened is read from the tail's view.
 			f.views.set(2, {
 				owner: "http://third.test",
 				activeDrain: { endpoint: "http://third.test", successor: "http://x" },
@@ -583,7 +579,6 @@ describe("ownershipPublication", function ownershipPublicationTests() {
 				endpoint: "http://third.test",
 			});
 
-			// A claim naming someone else is reported as a foreign claim, never as this worker's.
 			const foreign = f.publication.awaitForeignClaim({
 				signal: controller.signal,
 			});

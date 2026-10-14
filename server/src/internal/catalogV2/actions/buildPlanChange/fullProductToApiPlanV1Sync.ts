@@ -29,7 +29,6 @@ export const fullProductToApiPlanV1Sync = ({
 				}
 			: {}),
 	});
-	// Carried so the plan-change diff can report mapping edits.
 	const processors = productToPlanProcessors({ product });
 	return {
 		...plan,

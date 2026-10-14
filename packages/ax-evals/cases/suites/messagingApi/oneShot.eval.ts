@@ -12,11 +12,6 @@ import {
 	ssoAddOnSpec,
 } from "./messagingApiPricing.ts";
 
-/**
- * KIND A: the whole brief in one message. Grades the two-lines→groups
- * decision (①), the per-1k overage (③), lifetime caps, free defaults per
- * group, and the flat SSO add-on in one structure.
- */
 export const oneShot = defineCase({
 	name: "messaging-api-one-shot",
 	prompt: [

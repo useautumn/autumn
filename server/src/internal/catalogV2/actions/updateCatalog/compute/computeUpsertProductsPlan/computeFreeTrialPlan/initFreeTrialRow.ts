@@ -1,7 +1,6 @@
 import type { FreeTrial, FreeTrialParamsV1 } from "@autumn/shared";
 import { generateId } from "@/utils/genUtils.js";
 
-/** Mint a FreeTrial row from V1 params (defaults already applied at parse). */
 export const initFreeTrialRow = ({
 	freeTrialParams,
 	internalProductId,

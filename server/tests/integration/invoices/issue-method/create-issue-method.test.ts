@@ -1,12 +1,3 @@
-/**
- * invoices.create issue_method.
- *
- * Contract:
- *   issue_method: "draft"    -> Stripe invoice stays draft, stored in Autumn as draft
- *   issue_method: "finalize" -> open with auto_advance off (no email, reminders or charge)
- *   omitted                  -> today's behavior: open with auto_advance on
- */
-
 import { test } from "bun:test";
 import type { InvoiceIssueMethod } from "@autumn/shared";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";

@@ -1,9 +1,5 @@
 import type { RootScope } from "./registryTypes.js";
 
-/**
- * Phase 1 plan-rooted registry. Used for migrations that target the
- * catalog directly (e.g. "find all plans where plan_id = 'pro'").
- */
 export const planRegistry: RootScope = {
 	from: "products p",
 	ambient: [

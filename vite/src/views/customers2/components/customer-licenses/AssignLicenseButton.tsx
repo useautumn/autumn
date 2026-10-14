@@ -14,12 +14,6 @@ import { CaretDownIcon, PlusIcon } from "@phosphor-icons/react";
 import { LicenseIcon } from "@/components/v2/icons/LicenseIcon";
 import type { LicenseAssignment } from "@/hooks/queries/useLicenseBalancesQuery";
 
-/**
- * "Assign License" header action, mirroring Attach Plan: a dropdown of the
- * customer's license pools that still have availability and aren't already
- * assigned to this entity. Disabled with an explanatory tooltip when none
- * qualify.
- */
 export function AssignLicenseButton({
 	pools,
 	entityAssignments,
@@ -27,7 +21,6 @@ export function AssignLicenseButton({
 	isAssigning,
 }: {
 	pools: ApiCustomerLicenseV0[];
-	/** The selected entity's active assignments. */
 	entityAssignments: LicenseAssignment[];
 	onAssign: (pool: ApiCustomerLicenseV0) => void;
 	isAssigning: boolean;
@@ -41,8 +34,6 @@ export function AssignLicenseButton({
 		(pool) => pool.remaining > 0 && !isAssignedToEntity(pool),
 	);
 
-	// Swap only the plus icon for the spinner so the label keeps its width and
-	// the button doesn't shift while assigning.
 	const triggerLabel = (
 		<>
 			{isAssigning ? (

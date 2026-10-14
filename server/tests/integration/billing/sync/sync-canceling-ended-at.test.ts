@@ -1,19 +1,3 @@
-/**
- * TDD contract: syncV2 of a CANCELING Stripe subscription always lands the
- * cancel lifecycle fields on the inserted cusProduct.
- *
- * Contract under test:
- *   Behavior: create a Stripe sub directly, set cancel_at_period_end, then
- *   sync via /billing.sync_proposals_v2 -> /billing.sync_v2. The resulting
- *   customer_products row must have:
- *     - canceled = true
- *     - canceled_at set (ms)
- *     - ended_at set (ms) — from Stripe's cancel_at when present; the
- *       anchor+largest-interval fallback covers payloads without it
- *       (unit-tested in tests/unit/billing/sync/get-cancel-fields-from-stripe.spec.ts,
- *       since live Stripe always populates cancel_at)
- *     - starts_at = sub.start_date * 1000
- */
 import { expect, test } from "bun:test";
 import type { SyncProposalsV2Response } from "@autumn/shared";
 import { items } from "@tests/utils/fixtures/items";
@@ -43,7 +27,6 @@ test.concurrent(
 			actions: [],
 		});
 
-		// 1. Create a Stripe sub directly, then flip it to canceling.
 		const stripeSubscription = await createStripeSubscriptionFromProduct({
 			ctx,
 			customerId,
@@ -55,7 +38,6 @@ test.concurrent(
 		);
 		expect(cancelingSub.cancel_at_period_end).toBe(true);
 
-		// 2. Sync it through the real V2 pipeline.
 		const proposalsResponse: SyncProposalsV2Response = await autumnV1.post(
 			"/billing.sync_proposals_v2",
 			{ customer_id: customerId },
@@ -71,7 +53,6 @@ test.concurrent(
 			phases: proposal!.phases,
 		});
 
-		// 3. The inserted cusProduct carries the full cancel lifecycle.
 		const fullCustomer = await CusService.getFull({
 			ctx,
 			idOrInternalId: customerId,
@@ -86,11 +67,9 @@ test.concurrent(
 		expect(cusProduct!.canceled).toBe(true);
 		expect(cusProduct!.canceled_at).not.toBeNull();
 		expect(cusProduct!.ended_at).not.toBeNull();
-		// Live Stripe populates cancel_at for cancel_at_period_end subs.
 		expect(cusProduct!.ended_at).toBe(cancelingSub.cancel_at! * 1000);
 		expect(cusProduct!.starts_at).toBe(cancelingSub.start_date * 1000);
 
-		// 4. Clean up the directly-created Stripe subscription.
 		await ctx.stripeCli.subscriptions.cancel(stripeSubscription.id);
 	},
 );

@@ -3,10 +3,8 @@ import { z } from "zod/v4";
 
 export type DiscountMode = "reward" | "promo";
 
-/** Form discount with unique ID for stable React keys */
 export type FormDiscount = AttachDiscount & { _id: string };
 
-/** New discount rows, plus the applied discounts marked for removal. */
 export const DiscountsFormFieldsSchema = z.object({
 	discounts: z.custom<FormDiscount[]>(),
 	removedRewardIds: z.array(z.string()),
@@ -77,12 +75,10 @@ export const toggleDiscountMode = (
 	return updateDiscount(discounts, index, base);
 };
 
-/** Converts form discounts to API format (strips _id) */
 export const toApiDiscounts = (discounts: FormDiscount[]): AttachDiscount[] => {
 	return discounts.map(({ _id, ...rest }) => rest);
 };
 
-/** Filters out empty/invalid discounts before sending to API */
 export const filterValidDiscounts = (
 	discounts: FormDiscount[],
 ): AttachDiscount[] => {
@@ -95,8 +91,6 @@ export const filterValidDiscounts = (
 	);
 };
 
-/** Only what changed: picked rows go to `discounts`, marked ones to `remove_discounts`, untouched ones are left to the server.
- * Pass `removableRewardIds` to drop any marked discount that isn't removable, such as a customer-level coupon. */
 export const buildDiscountParams = ({
 	discounts,
 	removedRewardIds,

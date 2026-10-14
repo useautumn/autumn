@@ -23,7 +23,6 @@ const { getModelCreditCost, getModelCreditCostBreakdown } = await import(
 const { getCreditCost, getCreditRateCard, getCreditRateRequiredBalance } =
 	await import("@/internal/features/creditSystemUtils.js");
 
-// custom/* models price from model_markups; pricing data is mocked empty.
 const CUSTOM_MODEL = "custom/foo";
 
 const aiCreditFeature: Feature = {
@@ -384,7 +383,6 @@ describe("getModelCreditCost — token pricing", () => {
 			input: 1000,
 			output: 500,
 		});
-		// (1000 * 1000 + 2000 * 500) / 1_000_000 = 2.0
 		expect(cost).toBeCloseTo(2.0, 10);
 	});
 
@@ -424,7 +422,6 @@ describe("getModelCreditCostBreakdown — pricing audit trail", () => {
 		expect(breakdown.tierApplied).toBe(false);
 		expect(breakdown.rates.input).toBe(1000);
 		expect(breakdown.rates.output).toBe(2000);
-		// Unpublished pools fall back to the text rates.
 		expect(breakdown.rates.cacheRead).toBe(1000);
 		expect(breakdown.rates.reasoning).toBe(2000);
 	});

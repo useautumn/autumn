@@ -22,7 +22,6 @@ import {
 } from "@autumn/shared";
 import { sql } from "drizzle-orm";
 
-/** The worktree's own Postgres branch, the same one `bun db migrate` targets. */
 export function readWorktreeDatabaseUrl(): string | null {
 	const fromEnv = process.env.BALANCE_WORKER_DATABASE_URL?.trim();
 	if (fromEnv) return fromEnv;
@@ -72,13 +71,11 @@ export type SeededCustomer = {
 		topic: string;
 		partition: number;
 	}): Promise<bigint | null>;
-	/** Removes the grant row as a legacy writer would; `restoreGrant` puts it back with the given balance. */
 	deleteGrant(): Promise<void>;
 	restoreGrant(params: { balance: number }): Promise<void>;
 	cleanup(): Promise<void>;
 };
 
-/** One org, customer, feature, product and a monthly grant, all under a unique suffix; cleanup removes them. */
 export async function seedCustomer({
 	postgres,
 	balance = 100,
@@ -89,13 +86,9 @@ export async function seedCustomer({
 }: {
 	postgres: PostgresClient;
 	balance?: number;
-	/** The grant's refill amount; defaults to the seeded balance. */
 	allowance?: number;
-	/** The cycle end already on the row; null seeds a row that never resets. */
 	nextResetAt?: number | null;
-	/** Seeds a subscription with this billing anchor and links the plan to it. */
 	billingCycleAnchor?: number;
-	/** The grant carries unused balance over, capped at this many units. */
 	rolloverMax?: number;
 }): Promise<SeededCustomer> {
 	const suffix = crypto.randomUUID().slice(0, 8);
@@ -317,10 +310,6 @@ export async function seedCustomer({
 	};
 }
 
-/**
- * A subscription-keyed pool on the customer's feature: the pool row, its synthetic cusEnt, and one contribution
- * per source, each source a cusEnt of its own that the worker never loads. Cleanup removes them all.
- */
 export async function seedPool({
 	postgres,
 	customer,
@@ -340,7 +329,6 @@ export async function seedPool({
 		next: number;
 		effectiveAt: number | null;
 	}[];
-	/** A license pool: live only while the link's parent product is. */
 	customerLicenseLinkId?: string | null;
 }): Promise<SeededPool> {
 	const suffix = crypto.randomUUID().slice(0, 8);
@@ -488,28 +476,22 @@ export type PlannedCustomer = {
 	internalCustomerId: string;
 	customerProductId: string;
 	customerEntitlementId: string;
-	/** The plan that creates the customer; `customerProductId` overrides the product row's id, `email` the customer's. */
 	request(params: {
 		commandId: string;
 		customerProductId?: string;
 		email?: string | null;
 	}): ApplyBillingPlanRequest;
-	/** An email-only customer (no id) with this email, as a checkout without a customer id leaves; its internal id. */
 	seedEmailOnlyCustomer(params: { email: string }): Promise<string>;
-	/** The internal id of the row holding this customer's id, if any. */
 	readInternalIdHoldingCustomerId(): Promise<unknown>;
-	/** A plan updating the created rows: the Stripe customer on the customer, a subscription on the product. */
 	linkBackRequest(params: {
 		commandId: string;
 		customerProductId?: string;
 	}): ApplyBillingPlanRequest;
-	/** Any ops on this customer (and the entities named), as one plan. */
 	opsRequest(params: {
 		commandId: string;
 		entityIds?: string[];
 		ops: ApplyBillingPlanRequest["command"]["ops"];
 	}): ApplyBillingPlanRequest;
-	/** A plan updating only the customer row: its name. */
 	renameRequest(params: {
 		commandId: string;
 		name: string;
@@ -519,16 +501,13 @@ export type PlannedCustomer = {
 	readName(): Promise<unknown>;
 	readCurrency(): Promise<unknown>;
 	readEntity(entityId: string): Promise<Record<string, unknown> | null>;
-	/** Another writer deleting the product (its grants cascade) behind the worker. */
 	deleteCustomerProductBehindWorker(): Promise<void>;
-	/** Another writer changing the product's subscriptions behind the worker. */
 	writeSubscriptionIdsBehindWorker(ids: string[]): Promise<void>;
 	countCustomers(): Promise<number>;
 	readBalance(): Promise<number>;
 	cleanup(): Promise<void>;
 };
 
-/** A customer the seeded org does not have yet, and the plan that creates it on the seeded product and grant. */
 export async function planNewCustomer({
 	postgres,
 	seeded,
@@ -915,7 +894,6 @@ export type PlannedEntity = {
 	identity: MeteringIdentity;
 	customerProductId: string;
 	customerEntitlementId: string;
-	/** One plan over two owners: the customer's name, and a product with its grant on the entity. */
 	request(params: {
 		commandId: string;
 		customerProductId?: string;
@@ -925,7 +903,6 @@ export type PlannedEntity = {
 	cleanup(): Promise<void>;
 };
 
-/** An entity of a planned customer the plan already created, seeded in Postgres, and a plan that touches it and the customer. */
 export async function planEntityOfCustomer({
 	postgres,
 	seeded,
@@ -953,7 +930,6 @@ export async function planEntityOfCustomer({
 		internal_feature_id: seeded.internalFeatureId,
 	});
 
-	// The created customer's own rows, moved onto the entity.
 	const createdOps = planned.request({ commandId: "entity_template" }).command
 		.ops;
 	const [productRow] = createdOps.flatMap((op) =>
@@ -1045,12 +1021,10 @@ export type PlannedPool = {
 	poolId: string;
 	poolCustomerEntitlementId: string;
 	entities: { id: string; identity: MeteringIdentity; sourceId: string }[];
-	/** One plan: a product and source on each entity, the pool and its two shares on the customer. */
 	request(params: {
 		commandId: string;
 		entityIds?: string[];
 	}): ApplyBillingPlanRequest;
-	/** The entity leaves: its product goes (its source with it), its share is removed, the pool moves by −100. */
 	removeRequest(params: {
 		commandId: string;
 		entityId: string;
@@ -1066,7 +1040,6 @@ export type PlannedPool = {
 	cleanup(): Promise<void>;
 };
 
-/** Two entities of the planned customer, each about to contribute 100 to one new lazy pool. */
 export async function planPooledEntities({
 	postgres,
 	seeded,
@@ -1159,7 +1132,6 @@ export async function planPooledEntities({
 							customer_product_id: null,
 							internal_entity_id: null,
 							balance: 200,
-							// Drawn before the customer's own grant: rows go soonest reset first.
 							next_reset_at: now + THIRTY_DAYS_MS,
 							is_pooled_balance: true,
 							pooled_balance_id: poolId,
@@ -1339,7 +1311,6 @@ export type SeededSeat = {
 	cleanup(): Promise<void>;
 };
 
-/** An entity holding one seat of the seeded customer's license, with its own grant on the seeded feature. */
 export async function seedSeat({
 	postgres,
 	seeded,
@@ -1351,10 +1322,8 @@ export async function seedSeat({
 	postgres: PostgresClient;
 	seeded: SeededCustomer;
 	linkId: string;
-	/** The column the seat row carries; the parent's status is the truth. */
 	seatStatus: string;
 	balance?: number;
-	/** A seat nobody holds yet: no entity row, entity columns null. */
 	spare?: boolean;
 }): Promise<SeededSeat> {
 	const { db } = postgres;
@@ -1395,7 +1364,6 @@ export async function seedSeat({
 	};
 }
 
-/** A pool on the seeded product licensing that product itself; it cascades away with the product. Its product also holds a custom entitlement, which only a customized license's overlay names. */
 export async function seedLicensePool({
 	postgres,
 	seeded,
@@ -1409,7 +1377,6 @@ export async function seedLicensePool({
 	linkId: string;
 	planLicenseId: string;
 	customEntitlementId: string;
-	/** Runs before the seeded customer's cleanup: the overlay pins the entitlement it names. */
 	cleanup(): Promise<void>;
 }> {
 	const { db } = postgres;

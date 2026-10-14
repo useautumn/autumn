@@ -3,7 +3,6 @@ import { useActiveSandbox } from "@/hooks/sandbox/useActiveSandbox";
 import { cn } from "@/lib/utils";
 import { useEnv } from "@/utils/envUtils";
 
-/** Shows which environment a per-environment settings page is editing. */
 export const EnvironmentBadge = () => {
 	const env = useEnv();
 	const activeSandbox = useActiveSandbox();

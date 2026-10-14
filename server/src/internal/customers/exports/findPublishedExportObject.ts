@@ -7,7 +7,6 @@ export type PublishedExportObject =
 	| { status: "absent" }
 	| { status: "unknown" };
 
-/** The upload and the completion write are not atomic, so a live object can outlive a dead run. */
 export const findPublishedExportObject = async ({
 	logger,
 	customerExport,

@@ -30,7 +30,6 @@ const settingsChanged = ({
 }): boolean =>
 	!productDetailFieldIsSame({ key, product1: current, product2: next });
 
-/** Base current→next settings. Name / default / archive never copy. */
 export const variantSettingsPlanParams = ({
 	current,
 	next,
@@ -72,7 +71,6 @@ export const variantSettingsPlanParams = ({
 		})
 	) {
 		const nextProcessors = productToPlanProcessors({ product: next });
-		// A cleared mapping has no next value — send the explicit unlink instead.
 		patch.processors = nextProcessors ?? { stripe: null };
 	}
 

@@ -11,8 +11,6 @@ const free = products.base({
 	items: [items.monthlyMessages({ includedUsage: 100 })],
 });
 
-// Events are read back over raw ClickHouse, which needs the Tinybird endpoint on
-// top of the ingest credentials — skip loudly where it is unset.
 const clickhouseConfigured = Boolean(
 	process.env.TINYBIRD_US_EAST_CLICKHOUSE_URL &&
 		process.env.TINYBIRD_US_EAST_TOKEN,
@@ -24,16 +22,6 @@ if (!clickhouseConfigured) {
 		"[track-tinybird-migration] skipped: TINYBIRD_US_EAST_CLICKHOUSE_URL / TINYBIRD_US_EAST_TOKEN not set",
 	);
 }
-
-/**
- * Tinybird Migration Test Suite
- *
- * Cases to check that events work:
- * - check with track
- * - track through redis
- * - track through postgres (paid allocated case, or skipCache=true)
- * - idempotency key passed in
- */
 
 testWithClickhouse("tinybird migration - dual write", async () => {
 	const customerId = "track-tinybird-migration";
@@ -48,7 +36,6 @@ testWithClickhouse("tinybird migration - dual write", async () => {
 		customerId,
 	});
 
-	// 1. Check with send_event: true
 	const checkEventId = generateId("evt");
 	await autumnV1.check(
 		{
@@ -62,7 +49,6 @@ testWithClickhouse("tinybird migration - dual write", async () => {
 		},
 	);
 
-	// 2. Track through redis (default path)
 	const redisEventId = generateId("evt");
 	await autumnV1.track(
 		{
@@ -75,7 +61,6 @@ testWithClickhouse("tinybird migration - dual write", async () => {
 		},
 	);
 
-	// 3. Track through postgres (skipCache=true)
 	const postgresEventId = generateId("evt");
 	await autumnV1.track(
 		{
@@ -89,7 +74,6 @@ testWithClickhouse("tinybird migration - dual write", async () => {
 		},
 	);
 
-	// 4. Track with idempotency key
 	const idempotencyEventId = generateId("evt");
 	const idempotencyKey = `idem-${generateId("test")}`;
 	await autumnV1.track(
@@ -104,8 +88,6 @@ testWithClickhouse("tinybird migration - dual write", async () => {
 		},
 	);
 
-	// Tinybird ingestion is async and its lag varies with load, so poll for each
-	// event rather than betting on a fixed wait.
 	const getIngestedEvent = (eventId: string) =>
 		pollUntilAsserted({
 			fetch: () =>
@@ -115,7 +97,6 @@ testWithClickhouse("tinybird migration - dual write", async () => {
 			intervalMs: 2_000,
 		});
 
-	// Verify all events in Tinybird
 	const checkEvent = await getIngestedEvent(checkEventId);
 	expect(checkEvent.id).toBe(checkEventId);
 	expect(checkEvent.customer_id).toBe(customerId);

@@ -11,16 +11,6 @@ import { getCusAutoTopupPurchaseLimits } from "@/internal/customers/cusUtils/cus
 import { getCusRewards } from "@/internal/customers/cusUtils/cusResponseUtils/getCusRewards";
 import { getCusUsageLimitsWithUsage } from "@/internal/customers/cusUtils/cusResponseUtils/getCusUsageLimitsWithUsage";
 
-/**
- * Internal route for get full customer object.
- *
- * Note: schedules are NOT hydrated here. Dashboard consumers that need the
- * customer's persisted schedule must fetch it separately via
- * `GET /customers/:customer_id/schedule`.
- *
- * Supports optional `?expand=rewards` query param to lazily fetch
- * per-subscription discount data from Stripe.
- */
 export const handleGetCustomer = createRoute({
 	scopes: [Scopes.Customers.Read],
 	handler: async (c) => {
@@ -29,7 +19,6 @@ export const handleGetCustomer = createRoute({
 
 		const expandParam = c.req.query("expand");
 		const entityId = c.req.query("entity_id");
-		// Query middleware coerces "true" to boolean true, so compare via String.
 		const includeExpiredLooseEntitlements =
 			String(c.req.query("include_expired_loose")) === "true";
 		const extraExpands = expandParam
@@ -81,8 +70,6 @@ export const handleGetCustomer = createRoute({
 			}),
 		]);
 
-		// Overlay usage onto the customer and every entity that has caps, so the
-		// pill shows usage regardless of which scope the client fetched.
 		const entities = usageLimitsWithUsage
 			? fullCus.entities?.map((entity) => {
 					const decorated =

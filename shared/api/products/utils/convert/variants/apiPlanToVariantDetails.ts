@@ -7,10 +7,6 @@ import {
 import { fullProductToApiPlan } from "../fullProductToApiPlan";
 import type { ApiPlanContext } from "../types/apiPlanContext";
 
-/**
- * A variant plan's up-link to its base: base_plan_id + the customize diff, license links included.
- * The base comes pre-rendered or as rows; with neither there is nothing to state.
- */
 export const apiPlanToVariantDetails = ({
 	ctx,
 	plan,

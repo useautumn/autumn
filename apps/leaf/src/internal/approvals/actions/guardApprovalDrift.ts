@@ -11,8 +11,6 @@ import { writeToPreviewTool } from "../utils/toolRegistry.js";
 const DRIFT_MESSAGE =
 	"Prices changed since this card was shown — nothing was applied. Review the updated preview and approve again.";
 
-/** Re-previews every write and compares money facts against what the card
- * showed. Fail closed: an unfetchable preview counts as drifted. */
 const detectPreviewDrift = async ({
 	env,
 	writes,
@@ -62,8 +60,6 @@ const detectPreviewDrift = async ({
 	} as const;
 };
 
-/** The primary write is mirrored on the parent row for card rendering, so a
- * refreshed preview must land on both copies or they drift apart. */
 const setWritePreviewEverywhere = async ({
 	preview,
 	write,
@@ -86,8 +82,6 @@ const setWritePreviewEverywhere = async ({
 	}
 };
 
-/** Pre-resume money guard: a drifted card is released back to pending with
- * fresh previews instead of resuming — nothing executes. */
 export const guardApprovalDrift = async ({
 	approval,
 	providerUserId,
@@ -117,8 +111,6 @@ export const guardApprovalDrift = async ({
 	});
 	if (!drift.drifted) return undefined;
 
-	// Release first: the preview writers are pending-guarded, so the fresh
-	// previews can only land once the row is back in pending.
 	await chatApprovalRepo.release({
 		approvalId: approval.id,
 		db,

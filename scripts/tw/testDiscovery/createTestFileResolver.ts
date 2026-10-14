@@ -16,7 +16,6 @@ export const createTestFileResolver = async ({
 		if (exactFiles.has(exactPath)) return [exactPath];
 		if (exactDirectories.has(exactPath)) return filesWithin(exactPath);
 
-		// Preserve the existing depth-first suffix match for paths that omit "integration/".
 		const suffix = `${sep}${path}`;
 		if (path.endsWith(".test.ts")) {
 			const file = files.find((file) => file.endsWith(suffix));

@@ -1,5 +1,3 @@
-/** Customers for hand QA of free-plan seeding in Sync and Set Plans, single and multi subscription. */
-
 import { test } from "bun:test";
 import { createStripeSubscriptionFromProduct } from "@tests/integration/billing/sync/utils/syncTestUtils";
 import { driveProductPastDue } from "@tests/integration/billing/utils/driveProductPastDue";
@@ -8,7 +6,6 @@ import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 
-/** Keeps the webhook from linking the subscription, leaving it for a first import. */
 const SKIPS_AUTO_SYNC = { autumn_managed_at: String(Date.now()) };
 
 const qaProducts = () => ({

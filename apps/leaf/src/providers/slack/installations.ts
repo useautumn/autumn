@@ -87,9 +87,6 @@ export const findSlackInstallationForWorkspace = async ({
 	return await findInstallationWithOrg("slack", workspaceId);
 };
 
-/** Whether any of these Slack user ids is the bot user of one of our
- * installations. In a Slack Connect channel each workspace sees its own copy
- * of the app, so a tag can name another installation's bot. */
 export const isAgentBotUser = async ({
 	userIds,
 }: {
@@ -196,7 +193,6 @@ export const replaceInstallation = async ({
 		for (const installation of existingInstallations) {
 			await deleteInstallationArtifacts(tx, installation);
 		}
-		// A reconnect replaces the row; settings chosen on the dashboard carry over.
 		const previousOrgInstallation = existingInstallations.find(
 			(installation) => installation.org_id === state.orgId,
 		);

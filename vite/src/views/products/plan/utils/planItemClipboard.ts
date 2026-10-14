@@ -2,7 +2,6 @@ import { type ProductItem, ProductItemSchema } from "@autumn/shared";
 
 const PLAN_ITEM_CLIPBOARD_TYPE = "autumn/plan-item";
 
-/** Strips backend-persisted ids so a pasted item is treated as a new row. */
 const toClipboardItem = (item: ProductItem): ProductItem => ({
 	...item,
 	created_at: undefined,
@@ -45,7 +44,6 @@ export const parsePlanItemClipboardText = (
 		return null;
 	}
 
-	// try/catch since ProductItemSchema preprocess steps can throw past safeParse
 	try {
 		const result = ProductItemSchema.safeParse(
 			(payload as { item?: unknown }).item,

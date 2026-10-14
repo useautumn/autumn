@@ -1,6 +1,3 @@
-/** Red: lazy reset makes the subscription.deleted expired-product cache payload cyclic.
- * Green: reset preserves serializable product snapshots and the cache write succeeds. */
-
 import { expect, test } from "bun:test";
 import {
 	customerEntitlements,

@@ -250,7 +250,6 @@ test.concurrent(`${chalk.yellowBright("customer billing controls: updating usage
 		actions: [],
 	});
 
-	// Set spend limits and auto topups first
 	await autumnV2_1.customers.update(customerId, {
 		billing_controls: spendLimitControls,
 	});
@@ -258,7 +257,6 @@ test.concurrent(`${chalk.yellowBright("customer billing controls: updating usage
 		billing_controls: autoTopupControls,
 	});
 
-	// Now update only usage_alerts
 	await autumnV2_1.customers.update(customerId, {
 		billing_controls: usageAlertControls,
 	});
@@ -296,12 +294,10 @@ test.concurrent(`${chalk.yellowBright("customer billing controls: updating spend
 		actions: [],
 	});
 
-	// Set usage alerts first
 	await autumnV2_1.customers.update(customerId, {
 		billing_controls: usageAlertControls,
 	});
 
-	// Now update only spend_limits
 	await autumnV2_1.customers.update(customerId, {
 		billing_controls: spendLimitControls,
 	});
@@ -333,7 +329,6 @@ test.concurrent(`${chalk.yellowBright("customer billing controls: clearing usage
 		actions: [],
 	});
 
-	// Set both spend limits and usage alerts
 	await autumnV2_1.customers.update(customerId, {
 		billing_controls: {
 			...spendLimitControls,
@@ -341,7 +336,6 @@ test.concurrent(`${chalk.yellowBright("customer billing controls: clearing usage
 		},
 	});
 
-	// Clear only usage_alerts
 	await autumnV2_1.customers.update(customerId, {
 		billing_controls: { usage_alerts: [] },
 	});
@@ -490,26 +484,6 @@ test.concurrent(`${chalk.yellowBright("customer billing controls: clearing overa
 });
 
 test.concurrent(`${chalk.yellowBright("customer billing controls: auto_topups.purchase_limit expand surfaces runtime tracking")}`, async () => {
-	/**
-	 * Exercises the new `expand=billing_controls.auto_topups.purchase_limit`
-	 * path through three branches:
-	 *
-	 *   Phase A — purchase_limit configured, no DB row yet
-	 *             → expand is a passthrough (no count / next_reset_at)
-	 *   Phase B — purchase_limit configured, top-up has fired
-	 *             → expand surfaces count + next_reset_at; non-expanded fetch
-	 *               must NOT include them; uncached path matches cached
-	 *   Phase C — purchase_limit removed from config, prior row persists
-	 *             → expand returns null for interval/interval_count/limit but
-	 *               continues to surface count + next_reset_at from the row
-	 *
-	 * Phase C asserts `count: 1` (carried over from Phase B's top-up).
-	 * Removing `purchase_limit` from config does not delete the row, but
-	 * `recordAutoTopupAttempt` only increments `purchase_count` when
-	 * `purchaseLimit` is configured — so subsequent top-ups don't advance the
-	 * counter. The runtime field reflects this honestly: an attempt without a
-	 * configured limit is, definitionally, not "consumed against a quota."
-	 */
 	const customerId = "customer-billing-controls-12";
 	const oneOffProd = products.oneOffAddOn({
 		id: "topup-expand",
@@ -536,8 +510,6 @@ test.concurrent(`${chalk.yellowBright("customer billing controls: auto_topups.pu
 		],
 	});
 
-	// ── Phase A: purchase_limit configured, no DB row yet → expand is a
-	// passthrough of the static config shape.
 	await autumnV2_2.customers.update(customerId, {
 		billing_controls: makeAutoTopupConfig({
 			threshold: 50,
@@ -559,8 +531,6 @@ test.concurrent(`${chalk.yellowBright("customer billing controls: auto_topups.pu
 	expect(phaseAPurchaseLimit).not.toHaveProperty("count");
 	expect(phaseAPurchaseLimit).not.toHaveProperty("next_reset_at");
 
-	// ── Phase B: track usage to fire one auto top-up, then assert expand
-	// returns the runtime count + window end.
 	await autumnV2_1.track({
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
@@ -591,8 +561,6 @@ test.concurrent(`${chalk.yellowBright("customer billing controls: auto_topups.pu
 	expect(typeof phaseBPurchaseLimit?.next_reset_at).toBe("number");
 	expect(phaseBPurchaseLimit?.next_reset_at).toBeGreaterThan(Date.now());
 
-	// Without the expand the runtime fields must not leak in, even though the
-	// DB row now exists.
 	const phaseBPlain = await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
 	const phaseBPlainPurchaseLimit =
 		phaseBPlain.billing_controls?.auto_topups?.[0]?.purchase_limit;
@@ -604,7 +572,6 @@ test.concurrent(`${chalk.yellowBright("customer billing controls: auto_topups.pu
 	expect(phaseBPlainPurchaseLimit).not.toHaveProperty("count");
 	expect(phaseBPlainPurchaseLimit).not.toHaveProperty("next_reset_at");
 
-	// skip_cache parity — uncached read should match the cached expanded read.
 	const phaseBUncached = await autumnV2_1.customers.get<ApiCustomerV5>(
 		customerId,
 		{
@@ -616,9 +583,6 @@ test.concurrent(`${chalk.yellowBright("customer billing controls: auto_topups.pu
 		phaseBUncached.billing_controls?.auto_topups?.[0]?.purchase_limit,
 	).toEqual(phaseBPurchaseLimit);
 
-	// ── Phase C: drop purchase_limit from config; the existing DB row keeps
-	// tracking. Expand should report null config fields plus the cumulative
-	// runtime count.
 	await autumnV2_2.customers.update(customerId, {
 		billing_controls: makeAutoTopupConfig({ threshold: 50, quantity: 100 }),
 	});
@@ -646,9 +610,6 @@ test.concurrent(`${chalk.yellowBright("customer billing controls: auto_topups.pu
 		interval: null,
 		interval_count: null,
 		limit: null,
-		// count stays at 1 — see header comment: Phase C's top-up fires but
-		// does not increment purchase_count because no purchase_limit is
-		// configured.
 		count: 1,
 	});
 	expect(typeof phaseCPurchaseLimit?.next_reset_at).toBe("number");

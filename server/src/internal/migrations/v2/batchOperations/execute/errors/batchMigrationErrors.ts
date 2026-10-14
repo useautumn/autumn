@@ -1,12 +1,9 @@
-/** Names survive trigger's subtask serialization, unlike the classes. */
 export const BatchMigrationErrorName = {
 	Stall: "BatchMigrationStallError",
 	CacheInvalidation: "BatchMigrationCacheInvalidationError",
 	PageLimit: "BatchMigrationPageLimitError",
 } as const;
 
-/** A phase stopped making progress inside its budget. Not a transient DB
- * error, so the page retry wrapper lets it surface. */
 export class BatchMigrationStallError extends Error {
 	readonly phase: string;
 
@@ -17,8 +14,6 @@ export class BatchMigrationStallError extends Error {
 	}
 }
 
-/** Committed pages whose cache invalidation did not land; their checkpoints
- * were revoked so a retry re-invalidates them. */
 export class BatchMigrationCacheInvalidationError extends BatchMigrationStallError {
 	constructor({ message }: { message: string }) {
 		super({ phase: "finalize_caches", message });

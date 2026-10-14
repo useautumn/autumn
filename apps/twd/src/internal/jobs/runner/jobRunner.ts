@@ -9,7 +9,6 @@ import { type LeasedJob, runLeasedJob } from "./runLeasedJob.ts";
 
 export type JobRunner = { stop: () => Promise<void> };
 
-/** One per process: polls for runnable jobs per kind up to its concurrency and runs them. */
 export const startJobRunner = ({
 	concurrency,
 }: {

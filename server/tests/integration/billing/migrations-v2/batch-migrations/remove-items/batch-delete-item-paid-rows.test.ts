@@ -1,17 +1,3 @@
-/**
- * A delete of a free catalog item must spare rows the customer actually pays
- * for, in both shapes a free→paid customization leaves behind:
- *  - a custom price hung off the SHARED catalog entitlement id (the API
- *    reuses the ent id when the fields stay identical), and
- *  - a custom price hung off a field-identical custom entitlement copy.
- *
- * entsAreSame never looks at pricing, so both rows resolve as "the same
- * item" — the paid check has to be row-level: does THIS customer product
- * carry a customer_price for THIS entitlement.
- *
- * Red: both paid rows are deleted and their customer_prices dropped.
- * Green: both survive intact; the plain catalog row is removed.
- */
 import { expect, test } from "bun:test";
 import { runChunkedMigration } from "@tests/integration/billing/migrations-v2/utils/runChunkedMigration";
 import { TestFeature } from "@tests/setup/v2Features";
@@ -41,7 +27,6 @@ test(`${chalk.yellowBright("batch migration: a delete spares rows the customer p
 			itemsV2.monthlyMessages({ included: MESSAGES_INCLUDED }),
 		],
 	});
-	// Attached to nobody — exists only so a valid usage price can be cloned.
 	const paidTemplate = products.base({
 		id: "batch-delete-paid-template",
 		items: [items.consumableMessages()],
@@ -73,7 +58,6 @@ test(`${chalk.yellowBright("batch migration: a delete spares rows the customer p
 	});
 	const planId = plan.id;
 
-	// Shape 1: paid price on the shared catalog entitlement id.
 	const sharedPaid = await attachCustomerPaidPrice({
 		ctx,
 		customerId: sharedPaidCustomerId,
@@ -81,7 +65,6 @@ test(`${chalk.yellowBright("batch migration: a delete spares rows the customer p
 		templatePlanId: paidTemplate.id,
 	});
 
-	// Shape 2: field-identical custom copy, paid price on the copy.
 	await repointToCustomEntitlement({
 		ctx,
 		customerId: customPaidCustomerId,
@@ -120,7 +103,6 @@ test(`${chalk.yellowBright("batch migration: a delete spares rows the customer p
 		),
 	}).toEqual({ lane: "batch", rejections: [] });
 
-	// ── The plain catalog row is removed ────────────────────────────────
 	await expectCustomerEntitlementRowCount({
 		ctx,
 		customerId: catalogCustomerId,
@@ -129,7 +111,6 @@ test(`${chalk.yellowBright("batch migration: a delete spares rows the customer p
 		count: 0,
 	});
 
-	// ── Both paid rows survive with their customer_prices ───────────────
 	await expectCustomerEntitlementRowCount({
 		ctx,
 		customerId: sharedPaidCustomerId,

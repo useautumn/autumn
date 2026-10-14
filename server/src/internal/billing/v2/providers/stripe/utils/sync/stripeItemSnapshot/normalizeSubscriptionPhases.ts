@@ -9,14 +9,6 @@ import { normalizeSubscriptionItem } from "./normalizeSubscriptionItem";
 import { resolveStripeSyncCurrency } from "./resolveStripeSyncCurrency";
 import type { PhaseSnapshot } from "./types";
 
-/**
- * Build PhaseSnapshot[] from a Stripe subscription, schedule, or both.
- *
- *   - schedule supplied  → one snapshot per schedule phase
- *   - subscription only  → single open-ended snapshot from subscription.items
- *
- * At least one input is required.
- */
 export const normalizeSubscriptionPhases = ({
 	subscription,
 	schedule,

@@ -5,10 +5,6 @@ import type { UpsertProductPlan } from "@/internal/catalogV2/actions/updateCatal
 import { fullProductForPlanParams } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/fullProductForPlanParams";
 import { rowHasVersionableCustomers } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/rowHasVersionableCustomers";
 
-/**
- * propagate.license_parents pins must name an existing parent row whose
- * license link points at an edited row of this child plan.
- */
 export const handleLicenseParentPropagationErrors = ({
 	upsert,
 	productStatesContext,

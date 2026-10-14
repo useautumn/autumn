@@ -22,7 +22,6 @@ const parentsAnchoredTo = ({
 	),
 ];
 
-/** Parents this same call declares a link to the child plan on. */
 const parentsDeclaringLink = ({
 	childPlanId,
 	updateCatalogPlan,
@@ -41,11 +40,6 @@ const parentsDeclaringLink = ({
 	),
 ];
 
-/**
- * Block archive/remove of a child version that catalog links still point at.
- * Named parents come from the projected catalog (same-call unlinks are gone),
- * plus parents whose declared licenses[] still name a plan removed outright.
- */
 export const handleLicenseAnchorLifecycleErrors = ({
 	updateCatalogPlan,
 }: {

@@ -20,13 +20,6 @@ import { ProductService } from "@/internal/products/ProductService";
 import { pricesOnlyOneOff } from "@/internal/products/prices/priceUtils.js";
 import { getOrCreateCustomer } from "../../../internal/customers/cusUtils/getOrCreateCustomer";
 
-/**
- * Maintain the customer's RC identity alias set. Every RC id ever seen for this
- * customer is kept: `id` is the primary (set once on first seed, NEVER updated),
- * `aliases` accumulates every other id (append-only, deduped, never removed).
- * On first seed `id = app_user_id`, `aliases = [original_app_user_id?]`.
- * Fire-and-forget: must never block or throw the webhook.
- */
 const accumulateRevenueCatAliases = ({
 	ctx,
 	customer,
@@ -49,7 +42,6 @@ const accumulateRevenueCatAliases = ({
 
 	const existing = customer.processors?.revenuecat;
 
-	// First seed: no RC identity yet. Primary id = app_user_id.
 	if (!existing?.id) {
 		const nextRevenuecat = {
 			id: appUserId,
@@ -70,7 +62,6 @@ const accumulateRevenueCatAliases = ({
 		return;
 	}
 
-	// Append: keep id, add any incoming id not already known.
 	const knownIds = new Set<string>([existing.id, ...(existing.aliases ?? [])]);
 	const toAppend = incomingIds.filter((incoming) => !knownIds.has(incoming));
 
@@ -91,11 +82,6 @@ const accumulateRevenueCatAliases = ({
 	});
 };
 
-/**
- * Update customer email and fingerprint from RevenueCat subscriber attributes.
- * Updates if provided values differ from current values.
- * Fire-and-forget: must never block or throw the webhook.
- */
 const updateRevenueCatCustomerDetails = ({
 	ctx,
 	customer,
@@ -110,12 +96,10 @@ const updateRevenueCatCustomerDetails = ({
 	const resolvedCustomerId = customer.id ?? customer.internal_id;
 	const updates: { email?: string; fingerprint?: string } = {};
 
-	// Update email if provided and different
 	if (customerEmail && customer.email !== customerEmail) {
 		updates.email = customerEmail;
 	}
 
-	// Update fingerprint if provided and different
 	if (customerFingerprint && customer.fingerprint !== customerFingerprint) {
 		updates.fingerprint = customerFingerprint;
 	}
@@ -196,12 +180,6 @@ const writeRevenueCatIdentity = async ({
 	}
 };
 
-/**
- * Dual-key customer resolution for RevenueCat webhooks. Matches by
- * `processors.revenuecat.id` (against BOTH app_user_id and original_app_user_id)
- * first, then falls back to `customer_id`. Ambiguity (processors key and
- * customer_id resolving to different customers) is rejected, not silently picked.
- */
 export const resolveRevenueCatCustomer = async ({
 	ctx,
 	appUserId,
@@ -223,8 +201,6 @@ export const resolveRevenueCatCustomer = async ({
 		originalAppUserId && originalAppUserId !== appUserId,
 	);
 
-	// Client-declared canonical id wins outright: resolve/auto-create by it and
-	// still seed the webhook's app_user_id as an RC alias for attribute-less events.
 	if (overrideCustomerId) {
 		const overrideMatch = await CusService.getFull({
 			ctx,
@@ -279,7 +255,6 @@ export const resolveRevenueCatCustomer = async ({
 		return overrideCustomer;
 	}
 
-	// Processors-key match, read-both (app_user_id first, then original).
 	let processorMatch = await CusService.getByRevenueCatAppUserId({
 		ctx,
 		appUserId,
@@ -298,7 +273,6 @@ export const resolveRevenueCatCustomer = async ({
 		if (processorMatch) matchedBy = "processors_key_original_app_user_id";
 	}
 
-	// Customer_id fallback, read-both. Always run so ambiguity can be detected.
 	let customerIdMatch = await CusService.getFull({
 		ctx,
 		idOrInternalId: appUserId,
@@ -414,8 +388,6 @@ export const resolveRevenueCatCustomer = async ({
 		throw new CustomerNotFoundError({ customerId: appUserId });
 	}
 
-	// An email app_user_id is an invalid Autumn customer.id: create with a null
-	// id + email, keep the email only in the processors key.
 	const idIsValid = CreateCustomerSchema.shape.id.safeParse(appUserId).success;
 	const createdCustomer = await getOrCreateCustomer({
 		ctx,
@@ -450,11 +422,6 @@ export const resolveRevenueCatCustomer = async ({
 	return createdCustomer;
 };
 
-/**
- * Resolves a RevenueCat product ID to an Autumn product and fetches the customer.
- * Also sets ctx.customerId for cache invalidation by the refresh middleware.
- * Throws if product mapping, product, customer is not found, or customer has non-RevenueCat products.
- */
 export const resolveRevenuecatResources = async ({
 	ctx,
 	revenuecatProductId,
@@ -484,7 +451,6 @@ export const resolveRevenuecatResources = async ({
 }> => {
 	const { db, org, env } = ctx;
 
-	// Look up Autumn product ID + prepaid grants from the RevenueCat mapping
 	const mapping = await RCMappingService.resolveMapping({
 		db,
 		orgId: org.id,
@@ -503,8 +469,6 @@ export const resolveRevenuecatResources = async ({
 		});
 	}
 
-	// Product is resolved and validated before the customer, since resolution can
-	// create one and a rejected event must not leave that write behind.
 	const product = await ProductService.getFull({
 		db,
 		orgId: org.id,
@@ -524,12 +488,6 @@ export const resolveRevenuecatResources = async ({
 		autoCreateCustomer,
 	});
 
-	// If the customer has a product from a different processor than RevenueCat and it has no subscriptions, throw an error.
-	//
-	// Exception: true one-off purchases (no recurring intervals) are safe to mix
-	// across processors because they create a parallel cus_product without
-	// replacing the customer's existing subscription. This lets a Stripe-subscribed
-	// customer buy a one-off pack via RevenueCat (and vice versa).
 	const incomingIsOneOff = pricesOnlyOneOff(product.prices);
 
 	if (

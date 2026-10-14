@@ -58,7 +58,6 @@ async function applyBatch({
 	const firstMessage = messages[0];
 	if (!firstMessage) return;
 
-	// An offset that will not parse is the handler's to judge, so the resume read waits for a readable one.
 	const firstOffset = readOffsetOrNull({ offset: firstMessage.offset });
 	if (
 		firstOffset !== null &&
@@ -97,7 +96,6 @@ async function applyBatch({
 		const application = ctx.handler.applyRecord({ topic, partition, message });
 		const result =
 			application instanceof Promise ? await application : application;
-		// A handler may withdraw the partition while applying; nothing of that record is resolved then.
 		if (
 			!payload.isRunning() ||
 			!hasCurrentBatchGeneration({ state, payload, generation })
@@ -123,11 +121,6 @@ async function applyBatch({
 	await commitBatchOffsets({ ctx, state, payload, generation });
 }
 
-/**
- * Lands the batch a slice at a time: a slice is resolved only once it returned, and the heartbeat after it
- * is where a lost partition surfaces, so nothing past the slice in flight is ever written under an old lease.
- * False when the batch was cut short; its resolved slices are still committed by the caller's runner.
- */
 async function applySlices({
 	ctx,
 	state,

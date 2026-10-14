@@ -25,13 +25,10 @@ export interface CombinedVariantMigrationTarget {
 
 export interface AllVersionsUpdateMigrationTarget {
 	id: string;
-	/** Pins the op to one version. Targets without it sweep every version;
-	 * license-parent targets set it because a link pins the version it offers. */
 	version?: number;
 	customize: DiffedCustomizePlanV1 | null;
 }
 
-/** True when the diff changes what a customer is billed (price or any priced item). */
 export const planDiffHasBillingChanges = (
 	diff: DiffedCustomizePlanV1,
 	from: ApiPlanV1,
@@ -47,8 +44,6 @@ export const planDiffHasBillingChanges = (
 	) {
 		return true;
 	}
-	// Remove filters can omit billing_method even when priced, so check the
-	// source items by feature_id rather than the lossy filter.
 	const removedFeatureIds = new Set(
 		diff.remove_items?.map((item) => item.feature_id) ?? [],
 	);
@@ -129,8 +124,6 @@ const groupTargetsByCustomize = <
 	return [...groups.values()];
 };
 
-/** Build a draft that moves customers on `planId` from `from` to `to`.
- * Creating a draft does not run it. */
 export const buildMigrationDraft = ({
 	from,
 	to,
@@ -242,8 +235,6 @@ export const buildAllVersionsUpdateMigrationDraft = ({
 					includeCustom,
 					planFilter: {
 						plan_id: planMatcher(ids),
-						// Only when every target in the group pins the SAME version; a
-						// mixed group has to stay version-less to stay correct.
 						...(sharedVersion === undefined ? {} : { version: sharedVersion }),
 					},
 				}),

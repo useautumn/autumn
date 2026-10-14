@@ -1,18 +1,3 @@
-/**
- * Benchmarks the plain plan item-REPLACE batch path end to end against the
- * bench org on the DEV DB: seed customers holding a partly-consumed allowance
- * → prepareMigration → shouldRunBatchLane → runBatchMigrationChunk.
- *
- * run.sh drops trailing args, so invoke bun directly to pass flags:
- *
- *   infisical run --env=dev --recursive -- bun <path> --customers 400000 --pages all
- *   infisical run --env=dev --recursive -- bun <path> --customers 50000 --groups 10
- *   infisical run --env=dev --recursive -- bun <path> --cleanup
- *
- * Isolated from seedBatchBench: a replace rewrites entitlement_id + balance
- * on every measured row, so it re-seeds its own plan each run.
- */
-
 import { type Migration, migrations } from "@autumn/shared";
 import { MigrationFilterSchema } from "@autumn/shared/api/migrations/filters/migrationFilter.js";
 import { OperationsSchema } from "@autumn/shared/api/migrations/operations/operations.js";

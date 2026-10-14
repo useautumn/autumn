@@ -1,13 +1,3 @@
-/**
- * Discount removals resolve against the subscription's live Stripe discounts.
- *
- * Contract:
- *   - Only discounts whose coupon matches a removed reward are dropped.
- *   - A reward that is no longer applied is a no-op, not an error.
- *   - Rollover copies (`<reward>_roll_<n>`) match their original reward id.
- *   - Clearing every discount sends an explicit Stripe unset; untouched empty lists send nothing.
- */
-
 import { describe, expect, test } from "bun:test";
 import { discounts } from "@tests/utils/fixtures/db/discounts";
 import chalk from "chalk";

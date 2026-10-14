@@ -22,22 +22,18 @@ export const priceIsTieredOneOff = ({
 	price: Price;
 	product: FullProduct;
 }): boolean => {
-	// Fixed prices can't be tiered
 	if (isFixedPrice(price)) return false;
 
 	const config = price.config as UsagePriceConfig;
 
-	// Must be one-off
 	if (config.interval !== BillingInterval.OneOff) {
 		return false;
 	}
 
-	// Has multiple tiers
 	if (config.usage_tiers.length > 1) {
 		return true;
 	}
 
-	// Check if entitlement has allowance (creates implicit free tier)
 	const entitlement = priceToEnt({
 		price,
 		entitlements: product.entitlements,

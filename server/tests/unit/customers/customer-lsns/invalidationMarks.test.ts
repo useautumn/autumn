@@ -5,8 +5,6 @@ import { initDrizzle } from "@/db/initDrizzle.js";
 import { batchInvalidateCachedFullSubjects } from "@/internal/customers/cache/fullSubject/actions/invalidate/batchInvalidateCachedFullSubjects.js";
 import { markCustomersUpdatedAt } from "@/internal/customers/customerLsns/markCustomerUpdatedAt.js";
 
-// Real-DB coverage: the invalidation chokepoints must stamp the freshness
-// ledger even when no Redis client is reachable — marks are pure DB writes.
 const { db, client } = initDrizzle();
 
 const orgId = `lsn_inv_org_${Date.now()}`;
@@ -32,8 +30,6 @@ describe.skipIf(!process.env.DATABASE_URL)(
 	"invalidation chokepoint freshness marks (real DB)",
 	() => {
 		it("bulk mark dedupes duplicate triples instead of erroring", async () => {
-			// Duplicate conflict targets in one multi-row upsert are a Postgres
-			// error ("cannot affect row a second time") — dedupe must prevent it.
 			await markCustomersUpdatedAt({
 				db,
 				customers: [
@@ -76,8 +72,6 @@ describe.skipIf(!process.env.DATABASE_URL)(
 		});
 
 		it("batchInvalidateCachedFullSubjects marks every customer even with zero redis targets", async () => {
-			// getRedisTargetsForCustomer returning [] models "no reachable Redis":
-			// the cache side is a no-op but the ledger stamp must still land.
 			const customers = [
 				{ orgId, env: env as AppEnv, customerId: "cus_batch_a" },
 				{ orgId, env: env as AppEnv, customerId: "cus_batch_b" },

@@ -1,27 +1,3 @@
-/**
- * TDD contract: subscription.updated auto-sync must reflect prepaid add-on
- * quantity changes (the Resend dedicated_ip shape) with usage carry-over.
- *
- * Contract under test:
- *   New behaviors:
- *     - Stripe item quantity 1 -> 2 on the add-on's native prepaid price
- *       (quantity-only change MUST trigger auto-sync): feature total becomes
- *       2 and consumed usage carries over (usage 1 -> balance 1 of 2).
- *     - quantity 2 -> 1: feature total becomes 1, usage 1 carries
- *       (balance 0 of 1). Still exactly ONE add-on instance.
- *     - add-on item removed from the sub: add-on cusProduct expires; the
- *       main plan and its usage are untouched.
- *   Side effects:
- *     - subscription_ids linkage maintained; no duplicate add-on instances.
- *
- * Pre-impl red: quantity-only updates don't pass the priceOrProductChanged
- * gate (and incremental sync has no feature-quantity drift / removal
- * handling), so Autumn state never changes after the Stripe update.
- * Post-impl green: gate fires on quantity changes; incremental sync
- * re-syncs the add-on with expire_previous (carrying usage) and expires
- * removed add-ons.
- */
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3 } from "@autumn/shared";
 import { getBaseStripePriceId } from "@tests/integration/billing/sync/utils/syncProductHelpers";
@@ -169,10 +145,6 @@ const updateAddonItemQuantity = async ({
 		proration_behavior: "none",
 	});
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// CASE 1: quantity 1 -> 2 carries usage (0/1 used 1 -> 1/2)
-// ═══════════════════════════════════════════════════════════════════════════════
-
 test(`${chalk.yellowBright("sub.updated prepaid add-on: qty 1 -> 2 carries usage")}`, async () => {
 	const customerId = "sub-updated-prepaid-addon-1";
 	const { autumnV1, pro, addon, subscription, addonItem } =
@@ -192,7 +164,6 @@ test(`${chalk.yellowBright("sub.updated prepaid add-on: qty 1 -> 2 carries usage
 
 	await updateAddonItemQuantity({ subscription, addonItem, quantity: 2 });
 
-	// ── Contract: total 2, usage 1 carried -> balance 1 ──
 	await waitForFeatureState({
 		autumnV1,
 		customerId,
@@ -202,17 +173,12 @@ test(`${chalk.yellowBright("sub.updated prepaid add-on: qty 1 -> 2 carries usage
 		usage: 1,
 	});
 
-	// ── Contract: still exactly one add-on instance on the sub ──
 	await expectActiveLinkedCustomerProducts({
 		ctx,
 		stripeSubscriptionId: subscription.id,
 		productIds: [pro.id, addon.id],
 	});
 });
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// CASE 2: quantity 2 -> 1 carries usage (1/2 used 1 -> 0/1)
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test(`${chalk.yellowBright("sub.updated prepaid add-on: qty 2 -> 1 carries usage")}`, async () => {
 	const customerId = "sub-updated-prepaid-addon-2";
@@ -233,7 +199,6 @@ test(`${chalk.yellowBright("sub.updated prepaid add-on: qty 2 -> 1 carries usage
 
 	await updateAddonItemQuantity({ subscription, addonItem, quantity: 1 });
 
-	// ── Contract: total 1, usage 1 carried -> balance 0 ──
 	await waitForFeatureState({
 		autumnV1,
 		customerId,
@@ -248,10 +213,6 @@ test(`${chalk.yellowBright("sub.updated prepaid add-on: qty 2 -> 1 carries usage
 		productIds: [pro.id, addon.id],
 	});
 });
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// CASE 3: removing the add-on item expires the add-on, main plan untouched
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test(`${chalk.yellowBright("sub.updated prepaid add-on: item removal expires the add-on")}`, async () => {
 	const customerId = "sub-updated-prepaid-addon-3";
@@ -275,7 +236,6 @@ test(`${chalk.yellowBright("sub.updated prepaid add-on: item removal expires the
 		proration_behavior: "none",
 	});
 
-	// ── Contract: add-on expired, main plan still active ──
 	const customer = await waitForCustomerProducts({
 		autumnV1,
 		customerId,
@@ -283,7 +243,6 @@ test(`${chalk.yellowBright("sub.updated prepaid add-on: item removal expires the
 		notPresent: [addon.id],
 	});
 
-	// ── Contract: main plan usage untouched (Users 2 of 5 used) ──
 	expectCustomerFeatureCorrect({
 		customer,
 		featureId: TestFeature.Users,
@@ -297,6 +256,5 @@ test(`${chalk.yellowBright("sub.updated prepaid add-on: item removal expires the
 		productIds: [pro.id],
 	});
 
-	// ── Contract: only the add-on instance was expired ──
 	expect(customer.products.some((p) => p.id === addon.id)).toBe(false);
 });

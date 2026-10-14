@@ -8,7 +8,6 @@ import { CouponDurationType, RewardType } from "./rewardEnums";
 const PromoCodeSchema = z.object({
 	code: z.string(),
 	global_max_redemption: z.number().positive().optional(),
-	/** Only redeemable by customers with no prior successful payments or invoices */
 	first_time_transaction: z.boolean().optional(),
 	/** @deprecated Use global_max_redemption. */
 	max_redemptions: z.number().positive().optional(),
@@ -16,7 +15,6 @@ const PromoCodeSchema = z.object({
 
 const RewardEntitlementSchema = z.object({
 	internal_feature_id: z.string().min(1),
-	// Optional: boolean features grant on/off access with no allowance
 	allowance: z.number().nonnegative().optional(),
 	expiry: EntitlementExpirySchema.optional(),
 });
@@ -36,7 +34,6 @@ export const FreeProductConfigSchema = z.object({
 	duration_value: z.number(),
 });
 
-/** Stripe's coupon name limit; feature grants never become a Stripe coupon. */
 export const MAX_COUPON_NAME_LENGTH = 40;
 
 const COUPON_NAME_TOO_LONG = `Reward name must be at most ${MAX_COUPON_NAME_LENGTH} characters`;

@@ -2,7 +2,6 @@ import type { AppEnv, CusProductStatus } from "@autumn/shared";
 import { sql } from "drizzle-orm";
 import { getFullSubjectRowsQuery } from "@/internal/customers/repos/getFullSubject/getFullSubjectRowsQuery.js";
 
-/** Hydrates customer-level subject rows once per customer, merged back into entity list rows by mergeEntityAndCustomerSubjectRows. */
 export const getCustomerLevelSubjectRowsQuery = ({
 	orgId,
 	env,

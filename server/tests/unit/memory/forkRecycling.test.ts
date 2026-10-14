@@ -113,8 +113,6 @@ type CoordinatorHarness = {
 	respawned: string[];
 };
 
-/** Coordinator with capture-everything callbacks; tests drive the lifecycle
- *  through the handle* methods directly. */
 const createHarness = ({
 	bootTimeoutMs = 5_000,
 	drainCompletionTimeoutMs = 5_000,
@@ -190,13 +188,11 @@ describe("createRecycleCoordinator", () => {
 		coordinator.handleRecycleRequest({ workerId: "w1" });
 		coordinator.handleRecycleRequest({ workerId: "w2" });
 
-		// Only one replacement forked so far.
 		expect(forked).toHaveLength(1);
 
 		coordinator.handleWorkerListening({ workerId: forked[0] });
 		expect(drained).toEqual(["w1"]);
 
-		// w1's exit completes the cycle and releases w2's.
 		coordinator.handleWorkerExit({ workerId: "w1" });
 		expect(forked).toHaveLength(2);
 
@@ -236,15 +232,11 @@ describe("createRecycleCoordinator", () => {
 
 		coordinator.handleRecycleRequest({ workerId: "w1" });
 		coordinator.handleRecycleRequest({ workerId: "w2" });
-		// w1 dies before its replacement reports listening.
 		coordinator.handleWorkerExit({ workerId: "w1" });
 
-		// No extra fork: the already-booting replacement is w1's respawn.
 		expect(respawned).toHaveLength(0);
 		expect(forked).toHaveLength(1);
 
-		// Replacement comes up, takes the slot without a drain, then w2's
-		// queued cycle starts.
 		coordinator.handleWorkerListening({ workerId: forked[0] });
 		expect(drained).toHaveLength(0);
 		expect(forked).toHaveLength(2);
@@ -259,12 +251,10 @@ describe("createRecycleCoordinator", () => {
 		coordinator.handleRecycleRequest({ workerId: "w1" });
 		coordinator.handleWorkerExit({ workerId: forked[0] });
 
-		// Old fork still serves: nothing to respawn, worker told to re-arm.
 		expect(respawned).toHaveLength(0);
 		expect(aborted).toEqual(["w1"]);
 		expect(drained).toHaveLength(0);
 
-		// The re-request starts a fresh cycle.
 		coordinator.handleRecycleRequest({ workerId: "w1" });
 		expect(forked).toHaveLength(2);
 	});
@@ -276,11 +266,9 @@ describe("createRecycleCoordinator", () => {
 		coordinator.handleWorkerListening({ workerId: forked[0] });
 		expect(drained).toEqual(["w1"]);
 
-		// Replacement crashes while w1 is already draining.
 		coordinator.handleWorkerExit({ workerId: forked[0] });
 		expect(respawned).toEqual([forked[0]]);
 
-		// w1's exit is still a recycle completion, not a crash.
 		expect(coordinator.handleWorkerExit({ workerId: "w1" })).toBe(true);
 	});
 
@@ -289,7 +277,6 @@ describe("createRecycleCoordinator", () => {
 
 		coordinator.handleRecycleRequest({ workerId: "w1" });
 		coordinator.handleWorkerExit({ workerId: "w1" });
-		// Both the old worker and its adopted replacement are gone: refill.
 		coordinator.handleWorkerExit({ workerId: forked[0] });
 
 		expect(respawned).toEqual([forked[0]]);
@@ -303,15 +290,11 @@ describe("createRecycleCoordinator", () => {
 		coordinator.handleWorkerListening({ workerId: forked[0] });
 		expect(drained).toEqual(["w1"]);
 
-		// Replacement dies after listening; w2's queued cycle starts AND the
-		// dead replacement's slot respawns — but w1's exit must stay expected.
 		coordinator.handleWorkerExit({ workerId: forked[0] });
 		expect(respawned).toEqual([forked[0]]);
 		expect(forked).toHaveLength(2);
 
 		expect(coordinator.handleWorkerExit({ workerId: "w1" })).toBe(true);
-		// Accounting: w2's drain waits for the crash respawn to boot, then the
-		// fleet returns to N (2 forked + 1 respawned − w1 − w2).
 		coordinator.handleWorkerListening({ workerId: forked[1] });
 		coordinator.handleWorkerListening({
 			workerId: `respawn-of-${forked[0]}`,
@@ -331,10 +314,8 @@ describe("createRecycleCoordinator", () => {
 		expect(aborted).toEqual(["w1"]);
 		expect(respawned).toHaveLength(0);
 
-		// The killed replacement's exit needs no further respawn…
 		expect(coordinator.handleWorkerExit({ workerId: forked[0] })).toBe(true);
 		expect(respawned).toHaveLength(0);
-		// …and the worker can request again.
 		coordinator.handleRecycleRequest({ workerId: "w1" });
 		expect(forked).toHaveLength(2);
 	});
@@ -342,12 +323,10 @@ describe("createRecycleCoordinator", () => {
 	test("a drain is deferred while a crash respawn is still booting", () => {
 		const { coordinator, forked, drained } = createHarness();
 
-		// Plain crash: its respawn starts booting.
 		coordinator.handleWorkerExit({ workerId: "w-crashed" });
 
 		coordinator.handleRecycleRequest({ workerId: "w1" });
 		coordinator.handleWorkerListening({ workerId: forked[0] });
-		// Replacement is up, but draining now would dip below N.
 		expect(drained).toHaveLength(0);
 
 		coordinator.handleWorkerListening({ workerId: "respawn-of-w-crashed" });
@@ -364,12 +343,9 @@ describe("createRecycleCoordinator", () => {
 		coordinator.handleWorkerListening({ workerId: forked[0] });
 		expect(drained).toEqual(["w1"]);
 
-		// Drain message lost / drainer wedged: no exit arrives.
 		await new Promise((resolve) => setTimeout(resolve, 150));
 		expect(killed).toEqual(["w1"]);
 
-		// The kill's exit completes the cycle through the expected path —
-		// no respawn (replacement already serves) and w2's cycle starts.
 		expect(coordinator.handleWorkerExit({ workerId: "w1" })).toBe(true);
 		expect(respawned).toHaveLength(0);
 		expect(forked).toHaveLength(2);
@@ -380,18 +356,13 @@ describe("createRecycleCoordinator", () => {
 			bootTimeoutMs: 100,
 		});
 
-		// Plain crash: respawn boots... and hangs (never listens).
 		coordinator.handleWorkerExit({ workerId: "w-crashed" });
 		coordinator.handleRecycleRequest({ workerId: "w1" });
 		coordinator.handleWorkerListening({ workerId: forked[0] });
 		expect(drained).toHaveLength(0);
 
-		// One deadline generation only (fires at 100ms; the next at 200ms) —
-		// 50ms of margin on both sides against CI timer jitter.
 		await new Promise((resolve) => setTimeout(resolve, 150));
 
-		// The hung respawn was killed and replaced; second respawn listening
-		// releases the deferred drain.
 		expect(killed).toEqual(["respawn-of-w-crashed"]);
 		expect(respawned).toEqual(["w-crashed", "respawn-of-w-crashed"]);
 		coordinator.handleWorkerListening({
@@ -407,11 +378,8 @@ describe("createRecycleCoordinator", () => {
 		coordinator.handleWorkerExit({ workerId: "w-crashed" });
 		coordinator.handleRecycleRequest({ workerId: "w1" });
 		coordinator.handleWorkerListening({ workerId: forked[0] });
-		// Deferred; now the listening replacement itself dies.
 		coordinator.handleWorkerExit({ workerId: forked[0] });
 
-		// Old worker never got its drain and still serves: no respawn owed
-		// beyond the original crash's, and w1 is re-armed to ask again.
 		expect(respawned).toEqual(["w-crashed"]);
 		expect(aborted).toEqual(["w1"]);
 		expect(drained).toHaveLength(0);
@@ -422,20 +390,15 @@ describe("createRecycleCoordinator", () => {
 	test("old worker crashing while its drain is deferred completes the cycle instead of wedging", () => {
 		const { coordinator, forked, drained } = createHarness();
 
-		// Crash respawn booting defers the upcoming drain.
 		coordinator.handleWorkerExit({ workerId: "w-crashed" });
 		coordinator.handleRecycleRequest({ workerId: "w1" });
 		coordinator.handleRecycleRequest({ workerId: "w2" });
 		coordinator.handleWorkerListening({ workerId: forked[0] });
 		expect(drained).toHaveLength(0);
 
-		// Old worker dies while deferred: cycle must complete, not wait forever.
 		coordinator.handleWorkerExit({ workerId: "w1" });
-		// w2's queued cycle starts…
 		expect(forked).toHaveLength(2);
 
-		// …and when the crash respawn finally listens, no drain goes to the
-		// dead w1 — only w2's normal drain proceeds.
 		coordinator.handleWorkerListening({ workerId: "respawn-of-w-crashed" });
 		coordinator.handleWorkerListening({ workerId: forked[1] });
 		expect(drained).toEqual(["w2"]);
@@ -449,8 +412,6 @@ describe("createRecycleCoordinator", () => {
 		coordinator.handleWorkerListening({ workerId: forked[0] });
 		expect(drained).toEqual(["w1"]);
 
-		// Replacement crashes post-drain: w2's cycle forks, but its drain must
-		// wait until the crash respawn is listening.
 		coordinator.handleWorkerExit({ workerId: forked[0] });
 		expect(forked).toHaveLength(2);
 		coordinator.handleWorkerListening({ workerId: forked[1] });
@@ -469,7 +430,6 @@ describe("createRecycleCoordinator", () => {
 
 		coordinator.handleRecycleRequest({ workerId: "w1" });
 		coordinator.handleWorkerExit({ workerId: "w1" });
-		// One deadline generation (fires at 100ms, refill's at 200ms).
 		await new Promise((resolve) => setTimeout(resolve, 150));
 
 		expect(killed).toEqual([forked[0]]);
@@ -515,7 +475,6 @@ describe("createWorkerDrainer", () => {
 		drainer.drain();
 		expect(exits).toHaveLength(0);
 
-		// Sweeps start one interval in, never at t=0 (header-retirement beat).
 		expect(idleSweeps).toBe(0);
 		await new Promise((resolve) => setTimeout(resolve, 25));
 		expect(idleSweeps).toBeGreaterThanOrEqual(1);
@@ -566,7 +525,6 @@ describe("createWorkerDrainer", () => {
 
 		drainer.drain();
 		await new Promise((resolve) => setTimeout(resolve, 35));
-		// A long-running request held the fork alive past the deadline.
 		expect(exits).toHaveLength(0);
 
 		activeCount = 0;

@@ -29,8 +29,6 @@ const TINYBIRD_INGEST_WAIT_MS = 3000;
 const hasRate = (rate: number | undefined): rate is number =>
 	typeof rate === "number" && rate > 0;
 
-// Picks a random priced model through the same fetch+cache path the server
-// bills with, so the test survives models.dev catalog churn.
 const pickRandomModel = async ({
 	label,
 	requireCachePricing = false,
@@ -61,10 +59,6 @@ const pickRandomModel = async ({
 	console.log(`${label}: using models.dev model ${modelId}`);
 	return modelId;
 };
-
-// ═══════════════════════════════════════════════════════════════════
-// TRACK-TOKENS-1: Basic trackTokens with models.dev pricing
-// ═══════════════════════════════════════════════════════════════════
 
 test.concurrent(
 	`${chalk.yellowBright("track-tokens-1: basic trackTokens with models.dev pricing")}`,
@@ -240,10 +234,6 @@ test.concurrent(
 	},
 );
 
-// ═══════════════════════════════════════════════════════════════════
-// TRACK-TOKENS-2: Disambiguation error + explicit feature_id resolution
-// ═══════════════════════════════════════════════════════════════════
-
 test.concurrent(
 	`${chalk.yellowBright("track-tokens-2: disambiguation error and explicit feature_id resolution")}`,
 	async () => {
@@ -271,7 +261,6 @@ test.concurrent(
 
 		const modelId = await pickRandomModel({ label: "track-tokens-2" });
 
-		// Without feature_id, should fail with disambiguation error
 		let error: any;
 		try {
 			await autumnV2.post("/track_tokens", {
@@ -286,7 +275,6 @@ test.concurrent(
 		expect(error).toBeDefined();
 		expect(error.message).toContain("Multiple AI credit system features");
 
-		// With explicit feature_id, should succeed and only deduct from AiCredits
 		const aiCreditFeature = ctx.features.find(
 			(f) => f.id === TestFeature.AiCredits,
 		);
@@ -328,10 +316,6 @@ test.concurrent(
 	},
 );
 
-// ═══════════════════════════════════════════════════════════════════
-// TRACK-TOKENS-3: custom/* model pricing (with and without markup)
-// ═══════════════════════════════════════════════════════════════════
-
 test.concurrent(
 	`${chalk.yellowBright("track-tokens-3: custom model pricing with and without markup")}`,
 	async () => {
@@ -353,12 +337,11 @@ test.concurrent(
 			actions: [s.attach({ productId: freeProd.id })],
 		});
 
-		// custom/internal-model: input_cost=5 $/M, output_cost=15 $/M, markup=0%
 		const expectedCostNoMarkup = new Decimal(5)
 			.mul(10000)
 			.add(new Decimal(15).mul(5000))
 			.div(1_000_000)
-			.toNumber(); // 0.125
+			.toNumber();
 
 		const trackRes1: TrackResponseV2 = await autumnV2.post("/track_tokens", {
 			customer_id: customerId,
@@ -370,14 +353,13 @@ test.concurrent(
 
 		expect(trackRes1.value).toBeCloseTo(expectedCostNoMarkup, 10);
 
-		// custom/marked-up-model: input_cost=10 $/M, output_cost=30 $/M, markup=50%
 		const baseCost = new Decimal(10)
 			.mul(8000)
 			.add(new Decimal(30).mul(2000))
 			.div(1_000_000);
 		const expectedCostWithMarkup = baseCost
 			.mul(new Decimal(1).add(new Decimal(50).div(100)))
-			.toNumber(); // 0.21
+			.toNumber();
 
 		const trackRes2: TrackResponseV2 = await autumnV2.post("/track_tokens", {
 			customer_id: customerId,
@@ -401,17 +383,12 @@ test.concurrent(
 	},
 );
 
-// ═══════════════════════════════════════════════════════════════════
-// TRACK-TOKENS-4: models.dev pricing with markup + error for non-AI feature
-// ═══════════════════════════════════════════════════════════════════
-
 test.concurrent(
 	`${chalk.yellowBright("track-tokens-4: models.dev markup and non-AI feature_id error")}`,
 	async () => {
 		const modelId = await pickRandomModel({ label: "track-tokens-4" });
 		const markupPercent = 20;
 
-		// Throwaway feature so the shared AiCredits fixture stays untouched
 		const featureId = `ai_credits_markup_${Date.now()}_${Math.random()
 			.toString(36)
 			.slice(2, 8)}`;
@@ -450,7 +427,6 @@ test.concurrent(
 		const inputTokens = 50000;
 		const outputTokens = 10000;
 
-		// Mirrors the markup config created above; only markup fields are read.
 		const markupFeature = {
 			type: FeatureType.AiCreditSystem,
 			model_markups: { [modelId]: { markup: markupPercent } },
@@ -489,7 +465,6 @@ test.concurrent(
 			usage: expectedCost,
 		});
 
-		// Pointing at a regular credit system should fail
 		let error: any;
 		try {
 			await autumnV2.post("/track_tokens", {
@@ -506,10 +481,6 @@ test.concurrent(
 		expect(error.message).toContain("not an AI credit system");
 	},
 );
-
-// ═══════════════════════════════════════════════════════════════════
-// TRACK-TOKENS-5: Multiple tracks accumulate correctly
-// ═══════════════════════════════════════════════════════════════════
 
 test.concurrent(
 	`${chalk.yellowBright("track-tokens-5: multiple tracks accumulate balance deductions")}`,
@@ -539,7 +510,6 @@ test.concurrent(
 			throw new Error(`${TestFeature.AiCredits} feature not found`);
 		}
 
-		// First track: custom/internal-model (input_cost=5, output_cost=15, markup=0%)
 		const cost1 = await getModelCreditCost({
 			modelName: "custom/internal-model",
 			creditSystem: aiCreditFeature,
@@ -555,7 +525,6 @@ test.concurrent(
 			output_tokens: 2000,
 		});
 
-		// Second track: custom/marked-up-model (input_cost=10, output_cost=30, markup=50%)
 		const cost2 = await getModelCreditCost({
 			modelName: "custom/marked-up-model",
 			creditSystem: aiCreditFeature,
@@ -580,10 +549,6 @@ test.concurrent(
 		});
 	},
 );
-
-// ═══════════════════════════════════════════════════════════════════
-// TRACK-TOKENS-6: custom/* model without configured costs errors
-// ═══════════════════════════════════════════════════════════════════
 
 test.concurrent(
 	`${chalk.yellowBright("track-tokens-6: custom model missing input_cost/output_cost errors")}`,
@@ -629,10 +594,6 @@ test.concurrent(
 	},
 );
 
-// ═══════════════════════════════════════════════════════════════════
-// TRACK-TOKENS-7: cache/audio/reasoning pools forwarded end-to-end
-// ═══════════════════════════════════════════════════════════════════
-
 test.concurrent(
 	`${chalk.yellowBright("track-tokens-7: cache/audio/reasoning token pools are billed end-to-end")}`,
 	async () => {
@@ -661,7 +622,6 @@ test.concurrent(
 			throw new Error(`${TestFeature.AiCredits} feature not found`);
 		}
 
-		// Total input (input + cache pools) stays far below the 200k tier threshold
 		const modelId = await pickRandomModel({
 			label: "track-tokens-7",
 			requireCachePricing: true,
@@ -682,8 +642,6 @@ test.concurrent(
 			...pools,
 		});
 
-		// Pools must increase the bill vs text-only — otherwise the assertion
-		// below couldn't tell whether the HTTP layer forwarded them at all.
 		const textOnlyCost = await getModelCreditCost({
 			modelName: modelId,
 			creditSystem: aiCreditFeature,
@@ -717,10 +675,6 @@ test.concurrent(
 	},
 );
 
-// ═══════════════════════════════════════════════════════════════════
-// TRACK-TOKENS-8: custom models bill input/output only
-// ═══════════════════════════════════════════════════════════════════
-
 test.concurrent(
 	`${chalk.yellowBright("track-tokens-8: custom models ignore cache/audio/reasoning pools")}`,
 	async () => {
@@ -742,13 +696,11 @@ test.concurrent(
 			actions: [s.attach({ productId: freeProd.id })],
 		});
 
-		// custom/internal-model: input_cost=5 $/M, output_cost=15 $/M, markup=0%
-		// Pool tokens are dropped for custom models, so cost is text-only.
 		const expectedCost = new Decimal(5)
 			.mul(10000)
 			.add(new Decimal(15).mul(5000))
 			.div(1_000_000)
-			.toNumber(); // 0.125
+			.toNumber();
 
 		const trackRes: TrackResponseV3 = await autumnV2_2.post("/track_tokens", {
 			customer_id: customerId,

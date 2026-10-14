@@ -10,7 +10,6 @@ import { entitySubjectRowsSql } from "./entitySubjectRowsSql.js";
 
 const envelopesSchema = z.array(subjectRowsEnvelopeSchema);
 
-/** One envelope per requested entity that exists for the customer; an unknown id is simply absent. */
 export const getEntitySubjectRows = async ({
 	ctx,
 	customerId,

@@ -8,7 +8,6 @@ import {
 import { createSubjectJoinCache } from "../../../../src/processor/subject/subjectJoinCache/createSubjectJoinCache.js";
 import { createState, createSubjectFor } from "../../../fixtures/mutations.js";
 
-/** A catalog cache whose reads stay current until the test moves the rows under them. */
 const createCatalogs = () => {
 	const issued = new Set<Catalog>();
 	const moved = new WeakSet<Catalog>();
@@ -180,7 +179,6 @@ describe("peekCatalog", () => {
 			catalog,
 		);
 		expect(fixture.joinCache.peekCatalog({ state })).toBe(catalog);
-		// A replaced state is a different object; its catalog's rows moving invalidates the join.
 		expect(fixture.joinCache.peekCatalog({ state: createState() })).toBeNull();
 		fixture.moveCatalog();
 		expect(fixture.joinCache.peekCatalog({ state })).toBeNull();
@@ -188,7 +186,6 @@ describe("peekCatalog", () => {
 });
 
 describe("inheritCatalog", () => {
-	/** A join cache whose clock the test moves. */
 	const createClockedFixture = ({ recheckMs }: { recheckMs: number }) => {
 		const catalogs = createCatalogs();
 		let clock = 1_000;

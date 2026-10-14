@@ -1,5 +1,3 @@
-/** set_plans moves a terminal or unusable subscription and its schedule to `replacedStripeSubscription`, so a new one is created in its place. */
-
 import { describe, expect, test } from "bun:test";
 import type Stripe from "stripe";
 import { splitReplacedStripeSubscription } from "@/internal/billing/v2/actions/setPlans/setup/splitReplacedStripeSubscription";

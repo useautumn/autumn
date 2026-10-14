@@ -1,7 +1,5 @@
 export type RateCode = {
-	/** Uppercase ISO 4217 code the provider quotes. */
 	code: string;
-	/** Invoice units per provider unit; 1 except for redenominated currencies. */
 	scale: number;
 };
 
@@ -19,7 +17,6 @@ export class UnknownCurrencyError extends Error {
 	}
 }
 
-/** Maps a Stripe (lowercase) invoice currency to the code and scale a rate table is keyed by. */
 export const currencyToRateCode = ({
 	currency,
 }: {

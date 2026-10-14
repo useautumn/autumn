@@ -26,7 +26,6 @@ export const handlePreviewUpdateSubscription = createRoute({
 		const ctx = c.get("ctx");
 		const body = c.req.valid("json");
 
-		// A switch bills nothing now: validate it like billing.update does, then preview the unchanged plan.
 		const isSwitch = isCollectionMethodSwitch(body);
 		if (isSwitch) {
 			const switchContext = await setupSwitchCollectionMethodContext({
@@ -62,7 +61,6 @@ export const handlePreviewUpdateSubscription = createRoute({
 			});
 		}
 
-		// 7. Format response
 		const previewResponse = await billingPlanToUpdateSubscriptionPreview({
 			ctx,
 			billingContext,

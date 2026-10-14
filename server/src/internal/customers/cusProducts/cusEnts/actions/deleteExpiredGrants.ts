@@ -2,19 +2,9 @@ import { customerEntitlements, entitlements } from "@autumn/shared";
 import { and, eq, inArray, isNotNull, isNull, lt, sql } from "drizzle-orm";
 import type { CronContext } from "@/cron/utils/CronContext.js";
 
-/** Bounded per tick so one sweep can never hold a long transaction on a table
- * this large; the next tick picks up where it left off. */
 const DELETE_BATCH_SIZE = 5_000;
 const MAX_BATCHES_PER_TICK = 20;
 
-/**
- * Deletes expired purchase grants: loose rows stamped with a purchase
- * `metadata.source` whose `expires_at` has passed. Other loose rows (reward
- * grants, carry-overs) are untouched — they are filtered from reads today and
- * deleting them would change existing behavior.
- *
- * Seeks the loose-expiry index and deletes by primary key.
- */
 export const deleteExpiredGrants = async ({
 	ctx,
 	now = Date.now(),
@@ -22,7 +12,6 @@ export const deleteExpiredGrants = async ({
 }: {
 	ctx: CronContext;
 	now?: number;
-	/** Narrows the sweep to one customer; the cron sweeps everything. */
 	internalCustomerId?: string;
 }): Promise<{ deleted: number }> => {
 	let deleted = 0;
@@ -62,8 +51,6 @@ export const deleteExpiredGrants = async ({
 			),
 		);
 
-		// Each grant minted its own custom definition; the FK cascades the other
-		// way, so drop them here or they accumulate forever.
 		await ctx.db.delete(entitlements).where(
 			and(
 				inArray(

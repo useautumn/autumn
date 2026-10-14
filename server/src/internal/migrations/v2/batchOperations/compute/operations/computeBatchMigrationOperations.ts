@@ -61,8 +61,6 @@ export const toLicenseOps = (
 	];
 };
 
-/** Lowers both halves of a patch into the operations a page executes. Paid
- * pairs are skipped -- the transition-eligibility guard rejects them. */
 export const computeBatchMigrationOperations = ({
 	productTransitions,
 	licenseLinks,

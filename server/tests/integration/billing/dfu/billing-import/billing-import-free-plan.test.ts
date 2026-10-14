@@ -1,8 +1,3 @@
-/**
- * dfu.flash — a free-plan customer (never created in any processor) imports with
- * no top-level `processors` and no `billable.processor`.
- */
-
 import { expect, test } from "bun:test";
 import { type ApiCustomerV5 } from "@autumn/shared";
 import {
@@ -20,7 +15,6 @@ test.concurrent(
 	`${chalk.yellowBright("dfu.flash: free-plan customer imports with no processors and no billable processor")}`,
 	async () => {
 		const customerId = "dfu-flash-free-plan";
-		// `base` has no base price — a genuinely free plan (no processor needed).
 		const free = products.base({
 			id: "dfu-free-plan",
 			items: [items.monthlyMessages({ includedUsage: 100 })],
@@ -35,8 +29,6 @@ test.concurrent(
 		const payload = {
 			customer_id: customerId,
 			customer_data: { email: `${customerId}@example.com` },
-			// No `processors` and no `billable.processor` — the customer was only
-			// ever on a free plan, so it exists in no processor.
 			billables: [
 				{
 					plan: {

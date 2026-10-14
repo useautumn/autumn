@@ -1,13 +1,3 @@
-/**
- * Does the model emit several writes in ONE assistant message?
- *
- * Talks to the model directly with the real Leaf system prompt and the real MCP
- * write schemas — no MCP server, no eval harness. Answers only the batching
- * question, which is the one thing Slack testing cannot isolate.
- *
- *   ENV_FILE=.env infisical run --env=dev --recursive -- \
- *     bun apps/leaf/scripts/probeBatching.ts
- */
 import Anthropic from "@anthropic-ai/sdk";
 import { leafSystemPrompt } from "@autumn/agent-docs/agent";
 
@@ -17,8 +7,6 @@ const RUNS_PER_SCENARIO = Number(process.env.PROBE_RUNS ?? 5);
 const WRITE_TOOLS = ["attach", "updateCustomer", "updateSubscription"] as const;
 const READ_TOOLS = ["listCustomers", "listPlans", "previewAttach"] as const;
 
-// Shapes only — the question is how MANY writes land in one message, not
-// whether their bodies validate.
 const requestProperties: Record<string, Record<string, unknown>> = {
 	attach: {
 		customer_id: { type: "string" },
@@ -80,8 +68,6 @@ const client = new Anthropic();
 
 type Turn = { role: "assistant" | "user"; content: unknown };
 
-/** The prompt requires a preview first, so the writes land a turn later — run
- * the loop until writes appear and report the batch they arrived in. */
 const writesInOneMessage = async (message: string) => {
 	const messages: Turn[] = [{ role: "user", content: message }];
 	for (let step = 0; step < 4; step += 1) {

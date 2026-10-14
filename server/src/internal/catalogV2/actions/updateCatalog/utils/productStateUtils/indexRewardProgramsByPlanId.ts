@@ -1,6 +1,5 @@
 import type { RewardProgram } from "@autumn/shared";
 
-/** Index reward programs by each product_id they reference. */
 export const indexRewardProgramsByPlanId = ({
 	rewardPrograms,
 }: {

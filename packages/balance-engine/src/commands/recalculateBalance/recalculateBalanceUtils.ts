@@ -9,7 +9,6 @@ import type { WorkerFullCustomerEntitlementWithProduct } from "../../models/subj
 
 type Row = WorkerFullCustomerEntitlementWithProduct;
 
-/** Legacy `cusEntsToRecalculateUsage`: usage, less what a grant below zero never granted. */
 export const rowsToRecalculateUsage = ({
 	rows,
 	entityId,
@@ -26,7 +25,6 @@ export const rowsToRecalculateUsage = ({
 	return usage.toNumber();
 };
 
-/** The rows grouped by owner (customer or entity), only where one is overdrawn and another can absorb it. */
 export const rowsToRecalculableScopes = ({
 	rows,
 	entityId,

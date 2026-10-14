@@ -16,7 +16,6 @@ export const buildRouter = ({
 	const router = createRouter<RouteMatch>();
 
 	for (const route of routes) {
-		// Convert "billing.attach" to "/api/autumn/billing.attach"
 		const fullPath = `${pathPrefix}/${route.route}`;
 
 		addRoute(router, "POST", fullPath, { route });

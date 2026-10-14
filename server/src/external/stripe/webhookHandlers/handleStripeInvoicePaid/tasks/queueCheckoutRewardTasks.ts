@@ -22,19 +22,5 @@ export const queueCheckoutRewardTasks = async ({
 			productId: customerProduct.product.id,
 			stripeSubscriptionId,
 		});
-		// await addTaskToQueue({
-		// 	jobName: JobName.TriggerCheckoutReward,
-		// 	payload: {
-		// 		// For createWorkerContext
-		// 		orgId: org.id,
-		// 		env,
-		// 		customerId: fullCustomer.id,
-
-		// 		// For triggerCheckoutReward
-		// 		customer: fullCustomer,
-		// 		product: customerProduct.product,
-		// 		subId: stripeSubscriptionId,
-		// 	},
-		// });
 	}
 };

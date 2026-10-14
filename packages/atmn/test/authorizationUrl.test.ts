@@ -1,5 +1,3 @@
-/** The URL is the whole contract with the authorization server. */
-
 import { expect, test } from "bun:test";
 import {
 	buildAuthorizationUrl,
@@ -25,7 +23,6 @@ test("asks for PKCE against the backend's authorize endpoint", () => {
 	expect(url.searchParams.get("code_challenge_method")).toBe("S256");
 	expect(url.searchParams.get("code_challenge")).toBeTruthy();
 	expect(url.searchParams.get("state")).toBe("state_value");
-	// The verifier is the secret half — it must never leave the process.
 	expect(url.search).not.toContain("verifier_value");
 });
 
@@ -45,8 +42,6 @@ test("requests modern read/write scopes and forces the org picker", () => {
 });
 
 test("asks for the scopes the sandbox commands and reset need", () => {
-	// A key without these is refused by the server, and only a re-login mints
-	// one that has them — so the list, not the flow, is what breaks.
 	const scopes = new Set<string>(CLI_OAUTH_SCOPES);
 	for (const scope of [
 		"platform:read",
@@ -59,7 +54,6 @@ test("asks for the scopes the sandbox commands and reset need", () => {
 });
 
 test("asks for the scopes an app needs from the minted key", () => {
-	// Keys land in apps' .env as AUTUMN_SECRET_KEY; track, attach, and usage 403 without these.
 	const scopes = new Set<string>(CLI_OAUTH_SCOPES);
 	for (const scope of [
 		"analytics:read",

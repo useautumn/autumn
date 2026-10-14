@@ -41,7 +41,6 @@ const constructFeature = ({
 		event_names: [],
 		model_markups: null,
 	};
-	// This function isn't used anywhere, maybe delete it?
 	return newFeature;
 };
 

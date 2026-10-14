@@ -3,7 +3,6 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import type { UpdateCatalogPlan } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogPlan";
 import { migrationRepo } from "@/internal/migrations/v2/repos/index.js";
 
-/** Persist computed drafts after product writes. */
 export const executeMigrationDrafts = async ({
 	ctx,
 	updateCatalogPlan,

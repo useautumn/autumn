@@ -1,12 +1,3 @@
-/**
- * Save-time rules for credit dimensions, applied through validateCreditSystem
- * so feature-level and plan-item overrides get the same bar:
- * - every dimension is a well-formed flat or graduated rate;
- * - two dimensions that could both win the same event must be separable by
- *   key count or priority;
- * - multipliers cannot push any rate below zero.
- */
-
 import { describe, expect, test } from "bun:test";
 import {
 	type CreditMultiplier,

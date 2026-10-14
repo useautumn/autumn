@@ -38,7 +38,6 @@ const BILLS_EVERY = "every ";
 const isWeekly = ({ interval }: PlanInterval) =>
 	interval === BillingInterval.Week;
 
-/** Quarter ×1 and month ×3 are the same Stripe recurrence; four weeks is not a month. */
 const isSameRecurrence = ({
 	first,
 	second,
@@ -49,8 +48,6 @@ const isSameRecurrence = ({
 	isWeekly(first) === isWeekly(second) &&
 	compareBillingIntervals({ configA: first, configB: second }) === 0;
 
-/** New paid plans bill on the targeted subscription, so they must share the
- * interval of the plans that stay on it. Replacing every plan may change it. */
 export const assertNoBillingIntervalMix = ({
 	stripeSubscriptionScope,
 	currentCustomerProducts,

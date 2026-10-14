@@ -4,10 +4,6 @@ import { tryRedisOp } from "@/external/redis/utils/runRedisOp.js";
 
 export type ModelPricingData = Record<string, ModelsDevProvider>;
 
-/** Pinned: global (non-org) read-through of models.dev — no request affinity,
- *  and a flip just refetches. Stale copy outlives the primary as a fallback
- *  for models.dev outages. */
-/** Bump when the fetched feed's URL or shape changes, so no stale-shape copy is served. */
 export const MODEL_PRICING_CACHE_VERSION = 2;
 export const MODEL_PRICING_CACHE_KEY = `models_dev_pricing:v${MODEL_PRICING_CACHE_VERSION}`;
 export const MODEL_PRICING_STALE_CACHE_KEY = `models_dev_pricing_stale:v${MODEL_PRICING_CACHE_VERSION}`;
@@ -79,7 +75,6 @@ export const setCachedModelPricing = async ({
 	});
 };
 
-/** Seconds until the primary copy expires, null when nothing is cached, undefined when Redis failed. */
 export const getModelPricingCacheTtl = async (): Promise<
 	number | null | undefined
 > => {
@@ -93,7 +88,6 @@ export const getModelPricingCacheTtl = async (): Promise<
 	return ttl > 0 ? ttl : null;
 };
 
-/** Drops the primary copy so the next lookup refetches; the stale copy stays as the outage fallback. */
 export const clearModelPricingCache = async (): Promise<boolean> => {
 	const miscRedis = getMiscRedis();
 	const deleted = await tryRedisOp({

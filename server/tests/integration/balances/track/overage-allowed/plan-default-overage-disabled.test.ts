@@ -1,10 +1,3 @@
-/**
- * A plan-default overage_allowed:false disables overage on a feature that allows
- * it natively (pay-per-use). The control's `false` branch overrides
- * usage_allowed at deduction-prep even for native-overage features, so the
- * balance caps at granted.
- */
-
 import { test } from "bun:test";
 import type { ApiCustomerV5 } from "@autumn/shared";
 import { expectBalanceCorrect } from "@tests/integration/utils/expectBalanceCorrect.js";
@@ -46,8 +39,6 @@ test.concurrent(
 			],
 		});
 
-		// Natively this feature would consume into its purchase allowance (250 ok).
-		// The plan's false floors it at the granted 100.
 		await autumnV2_1.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,

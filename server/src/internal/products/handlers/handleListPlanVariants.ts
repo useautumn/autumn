@@ -20,7 +20,6 @@ export const handleListPlanVariants = createRoute({
 		});
 		if (!base) throw new ProductNotFoundError({ productId });
 
-		// Variants can be bound to any prior version's internal_id, so match the whole family.
 		const family = await ProductService.listFull({
 			db,
 			orgId: org.id,

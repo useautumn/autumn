@@ -4,14 +4,10 @@ import {
 	generationRegistry,
 } from "../generationSchemas";
 
-/** The billing skill bundle, references inlined — the same single source Leaf
- * runs on. */
 const SHARED_PARAM_DOCS = leafSkillBundle(["autumn-billing"])
 	.map(skillToText)
 	.join("\n\n");
 
-/** Stable per tool — with the varying context in the user message, this whole
- * block (plus the tool schema) is a cacheable prompt prefix. */
 export const buildSystemPrompt = (tool: GenerateBillingTool) => {
 	const rules = [
 		`You convert a natural-language billing request into structured parameters for Autumn's ${tool} operation, in one shot.`,

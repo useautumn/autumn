@@ -63,7 +63,6 @@ const PreviewFilterBody = z.object({
 	migrationRunDryRun: z.boolean().optional(),
 });
 
-/** POST /migrations.filter.preview — count + enriched paginated customers. */
 export const handlePreviewMigrationFilter = createRoute({
 	scopes: [Scopes.Migrations.Read],
 	body: PreviewFilterBody,
@@ -94,8 +93,6 @@ export const handlePreviewMigrationFilter = createRoute({
 			});
 		}
 
-		// An empty customer scope compiles to nothing (wrapAnd throws). Treat "no
-		// active filter" as selecting nobody rather than 500ing the preview.
 		const hasAnyField = Object.values(filter ?? {}).some(
 			(v) => v !== undefined,
 		);
@@ -201,7 +198,6 @@ export const handlePreviewMigrationFilter = createRoute({
 			itemRuns.map((run) => [run.item_id, run]),
 		);
 
-		// enrichCustomers returns join order — restore the page's cursor order.
 		const pageOrder = new Map(
 			pageRows.map((row, index) => [row.internal_id, index]),
 		);
@@ -248,8 +244,6 @@ async function enrichCustomers(db: DrizzleCli, ids: string[]) {
 			customer_product: {
 				id: customerProducts.id,
 				internal_product_id: customerProducts.internal_product_id,
-				// Live plan id from the products join (stays correct across renames),
-				// not the denormalized customer_products.product_id snapshot.
 				product_id: products.id,
 				canceled_at: customerProducts.canceled_at,
 				status: customerProducts.status,

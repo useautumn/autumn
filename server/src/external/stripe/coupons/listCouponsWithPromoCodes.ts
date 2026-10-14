@@ -4,10 +4,8 @@ import { getPromoCouponId } from "@/external/stripe/stripeCouponUtils/stripeCoup
 
 type WarnLogger = { warn: (message: string) => void };
 
-/** Upper bound on promotion codes pulled from Stripe, so the listing stays fast. */
 const MAX_PROMOTION_CODES = 1000;
 
-/** Groups active promotion codes by the coupon they belong to. */
 const listPromoCodesByCoupon = async ({
 	stripeCli,
 	logger,
@@ -47,11 +45,6 @@ const listPromoCodesByCoupon = async ({
 	return codesByCouponId;
 };
 
-/**
- * Lists an org's valid Stripe coupons, each with its active promotion codes.
- * Promotion codes are only there to be searched on, so a failure to fetch them
- * leaves the coupons intact rather than failing the whole listing.
- */
 export const listCouponsWithPromoCodes = async ({
 	stripeCli,
 	logger,
@@ -61,7 +54,6 @@ export const listCouponsWithPromoCodes = async ({
 	logger: WarnLogger;
 	orgId: string;
 }): Promise<StripeCouponWithPromoCodes[]> => {
-	// Started before the coupon listing so the two paginate in parallel.
 	const codesByCouponIdPromise = listPromoCodesByCoupon({
 		stripeCli,
 		logger,
@@ -77,7 +69,6 @@ export const listCouponsWithPromoCodes = async ({
 	for await (const coupon of stripeCli.coupons.list({ limit: 100 })) {
 		if (!coupon.valid) continue;
 
-		// Already in flight, so only the first valid coupon can actually wait.
 		const codesByCouponId = await codesByCouponIdPromise;
 		coupons.push({
 			...coupon,

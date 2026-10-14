@@ -16,7 +16,6 @@ const ATOM_SECTION = {
 	description: "Answer balance checks from your own cloud.",
 };
 
-/** Whether this browser last saw a set-up Atom, so a cold load draws the layout that is about to arrive. */
 const useLastSeenAtomSetUp = () =>
 	useLocalStorage("autumn.atom.lastSeenSetUp", true);
 
@@ -78,7 +77,6 @@ export const AtomSection = () => {
 	);
 };
 
-/** The section as it loads, before the org it reads is known. */
 export const AtomSectionSkeleton = () => (
 	<SettingsSection {...ATOM_SECTION}>
 		<AtomBodySkeleton />

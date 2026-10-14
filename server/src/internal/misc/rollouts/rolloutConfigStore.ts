@@ -14,7 +14,6 @@ import {
 } from "./rolloutSchemas.js";
 import { rolloutEffectiveAt, routingPercentAt } from "./rolloutUtils.js";
 
-// An S3 read error must not send every routed customer back to the old path with no handoff.
 const store = createEdgeConfigStore<RolloutConfig>({
 	s3Key: ADMIN_ROLLOUT_CONFIG_KEY,
 	schema: RolloutConfigSchema,
@@ -27,7 +26,6 @@ registerEdgeConfig({ store });
 export const getRolloutConfig = () => store.get();
 export const getRolloutConfigStatus = () => store.getStatus();
 export const getRolloutConfigFromSource = async () => store.readFromSource();
-/** The store handle, for runtimes that poll a chosen few configs (see startEdgeConfigPolling). */
 export const rolloutEdgeConfig = store;
 export const _setRolloutConfigForTesting = ({
 	config,
@@ -35,7 +33,6 @@ export const _setRolloutConfigForTesting = ({
 	config: z.input<typeof RolloutConfigSchema>;
 }) => store._setRuntimeConfigForTesting(RolloutConfigSchema.parse(config));
 
-// No Redis view outlives its TTL, so a decrease or removal older than that cannot mark one stale.
 const STALENESS_RETENTION_MS = FULL_SUBJECT_CACHE_TTL_SECONDS * 1000;
 
 const emptyRolloutEntry = (): RolloutEntry => ({
@@ -47,7 +44,6 @@ const emptyRolloutEntry = (): RolloutEntry => ({
 	customers: {},
 });
 
-/** A scheduled change starts from what routes right now; a new org override inherits that from the global entry. */
 export const scheduleRolloutPercent = ({
 	current,
 	percent,
@@ -66,7 +62,6 @@ export const scheduleRolloutPercent = ({
 	return { previousPercent: routing, percent, changedAt: now, decreases };
 };
 
-/** Update a rollout percentage (global or per-org). Auto-manages previousPercent and changedAt. */
 export const updateRolloutPercent = async ({
 	rolloutId,
 	orgId,
@@ -83,7 +78,6 @@ export const updateRolloutPercent = async ({
 	const entry = config.rollouts[rolloutId] ?? emptyRolloutEntry();
 
 	if (orgId) {
-		// An org with no override has been following the global entry.
 		entry.orgs[orgId] = scheduleRolloutPercent({
 			current: entry.orgs[orgId] ?? entry,
 			percent,
@@ -102,7 +96,6 @@ export const updateRolloutPercent = async ({
 	return config;
 };
 
-/** Remove an org override: the org follows the global entry again from the next config poll. */
 export const removeRolloutOrg = async ({
 	rolloutId,
 	orgId,
@@ -120,7 +113,6 @@ export const removeRolloutOrg = async ({
 	return config;
 };
 
-/** Every org override above 0 is scheduled down to 0; one already there keeps its change time. */
 export const scheduleOrgsToZero = ({
 	orgs,
 	now,
@@ -137,7 +129,6 @@ export const scheduleOrgsToZero = ({
 		]),
 	);
 
-/** Send every org override back to the legacy path in one write; the overrides stay, at 0. */
 export const resetRolloutOrgs = async ({
 	rolloutId,
 	now = Date.now(),
@@ -155,7 +146,6 @@ export const resetRolloutOrgs = async ({
 	return config;
 };
 
-/** Re-adding a customer before its removal lands cancels the removal, so it never dips back to the fallback. */
 export const scheduleCustomerAdd = ({
 	current,
 	now,
@@ -170,7 +160,6 @@ export const scheduleCustomerAdd = ({
 	return removalLanded ? { addedAt: now } : { addedAt: current.addedAt };
 };
 
-/** A second removal keeps the first one's time, which is when the customer actually leaves the worker. */
 export const scheduleCustomerRemoval = ({
 	current,
 	now,
@@ -192,7 +181,6 @@ const removalExpired = ({
 		rolloutEffectiveAt({ changedAt: customer.removedAt }) +
 			STALENESS_RETENTION_MS;
 
-/** Drops removed customers once no pre-removal Redis view can remain, and orgs left with none. */
 export const pruneExpiredCustomerRemovals = ({
 	customers,
 	now,
@@ -244,7 +232,6 @@ const writeRolloutCustomers = async ({
 	return config;
 };
 
-/** Pin customers of one org to the worker, one settle window from now. */
 export const addRolloutCustomers = async ({
 	rolloutId,
 	orgId,
@@ -264,7 +251,6 @@ export const addRolloutCustomers = async ({
 		schedule: (current) => scheduleCustomerAdd({ current, now }),
 	});
 
-/** Unpin customers of one org: they follow the org or global percent again one settle window from now. */
 export const removeRolloutCustomers = async ({
 	rolloutId,
 	orgId,
@@ -285,7 +271,6 @@ export const removeRolloutCustomers = async ({
 			current ? scheduleCustomerRemoval({ current, now }) : undefined,
 	});
 
-/** Deleting an entry skips the handoff, so a live rollout is rolled back to 0 first, then deleted. */
 export const assertRolloutInactive = ({
 	rolloutId,
 	entry,
@@ -310,10 +295,6 @@ export const assertRolloutInactive = ({
 	});
 };
 
-/**
- * Delete a rollout entry entirely. Use this instead of setting percent to 0
- * when you want to reset the staleness window (previousPercent/changedAt).
- */
 export const deleteRollout = async ({ rolloutId }: { rolloutId: string }) => {
 	const config = await store.readFromSource();
 	assertRolloutInactive({ rolloutId, entry: config.rollouts[rolloutId] });

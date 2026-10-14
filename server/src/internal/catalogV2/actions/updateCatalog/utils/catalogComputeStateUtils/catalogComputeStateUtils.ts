@@ -9,7 +9,6 @@ import {
 import type { UpdateCatalogPlan } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogPlan";
 import { projectCatalog } from "./projectCatalog";
 
-/** Replace each plan slice the step provides; leave the rest untouched. */
 const mergeCatalogPlanDraft = ({
 	base,
 	incoming,
@@ -24,7 +23,6 @@ const mergeCatalogPlanDraft = ({
 	removePlans: incoming.removePlans ?? base.removePlans,
 });
 
-/** Empty fold: projected catalog equals the frozen originals. */
 export const emptyCatalogComputeState = ({
 	originalFeatures,
 	originalProducts,
@@ -38,10 +36,6 @@ export const emptyCatalogComputeState = ({
 	projected: { features: originalFeatures, products: originalProducts },
 });
 
-/**
- * Apply one compute step to the fold.
- * Rebuilds `projected` from originals + full plan (never mutates projected in place).
- */
 export const advanceCatalogCompute = ({
 	state,
 	step,
@@ -62,10 +56,6 @@ export const advanceCatalogCompute = ({
 	};
 };
 
-/**
- * Progressive compute handle for `computeUpdateCatalogPlan`.
- * Call `advance({ step })` after each compute step; finish with `toPlan()`.
- */
 export const createCatalogComputeState = ({
 	originalFeatures,
 	originalProducts,
@@ -76,19 +66,15 @@ export const createCatalogComputeState = ({
 	let state = emptyCatalogComputeState({ originalFeatures, originalProducts });
 
 	return {
-		/** Catalog after all advances so far — pass into the next compute step. */
 		get projected() {
 			return state.projected;
 		},
-		/** Plan draft after all advances so far — later steps may extend a slice. */
 		get plan() {
 			return state.plan;
 		},
-		/** Merge `step` into the plan and refresh `projected`. */
 		advance: ({ step }: { step: CatalogComputeStep }) => {
 			state = advanceCatalogCompute({ state, step });
 		},
-		/** Final UpdateCatalogPlan (draft slices + projected). */
 		toPlan: (): UpdateCatalogPlan => toUpdateCatalogPlan({ state }),
 	};
 };

@@ -12,7 +12,6 @@ const chipLabel = ({ plan }: { plan: FormInvoicePlan }): string | null => {
 	return itemCount > 0 ? `${base} · +${items}` : base;
 };
 
-/** A row's service period chip, and the popover that edits it, anchored to the row's line. */
 export function PlanServicePeriodChip({
 	plan,
 	isInvalid,

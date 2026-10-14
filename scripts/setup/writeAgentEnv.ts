@@ -1,12 +1,3 @@
-// NOTE: For worktree-based agent flows, bun dw writes .env.local directly via
-// writeEnvLocalFiles. This file is the Cursor Cloud / agent-bootstrap path.
-//
-// Isolation keys (local Postgres/Redis/SQS) MUST be in this file so they win
-// over Infisical after `infisical run`. Do NOT write empty Stripe/etc lines —
-// loadLocalEnv overwrites process.env, and empty values would clobber Infisical.
-//
-// Do NOT write ENCRYPTION_* / BETTER_AUTH_SECRET here. A random password
-// cannot decrypt Infisical/DB-stored Dragonfly backup URLs (BAD_DECRYPT).
 import { existsSync, readFileSync, copyFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
@@ -30,7 +21,6 @@ const PASS_THROUGH = [
 	"POSTHOG_HOST",
 ] as const;
 
-/** Random secrets previously written here; Infisical must win. */
 const STRIP_PINNED_SECRETS = new Set([
 	"BETTER_AUTH_SECRET",
 	"ENCRYPTION_IV",
@@ -98,7 +88,6 @@ function upsertIsolation(contents: string): string {
 		const key = m[1];
 		const value = m[2];
 		if (STRIP_PINNED_SECRETS.has(key)) continue;
-		// Dummy ElasticMQ keys (`x`) clobber Infisical and break S3 edge-config.
 		if (
 			(key === "AWS_ACCESS_KEY_ID" || key === "AWS_SECRET_ACCESS_KEY") &&
 			value === "x"

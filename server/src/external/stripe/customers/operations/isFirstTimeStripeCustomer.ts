@@ -1,20 +1,12 @@
 import { ErrCode, RecaseError } from "@autumn/shared";
 import type Stripe from "stripe";
 
-/**
- * Drafts (and null statuses) don't count — never finalized or collected, and a
- * false block is a hard denial while a false pass falls back to Stripe's check.
- */
 const BLOCKING_INVOICE_STATUSES: Stripe.Invoice.Status[] = [
 	"open",
 	"paid",
 	"uncollectible",
 ];
 
-/**
- * Whether the customer has no prior successful payments or non-void invoices —
- * Stripe's `restrictions.first_time_transaction` definition.
- */
 export const isFirstTimeStripeCustomer = async ({
 	stripeCli,
 	stripeCustomerId,
@@ -53,7 +45,6 @@ export const isFirstTimeStripeCustomer = async ({
 	return !(paymentFound || invoiceFound);
 };
 
-/** Throws PromoCodeFirstTimeOnly when the customer has prior transactions */
 export const assertFirstTimeStripeCustomer = async ({
 	stripeCli,
 	stripeCustomerId,

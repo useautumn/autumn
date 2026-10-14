@@ -3,8 +3,6 @@ import { GATED_WRITES } from "../../../../agent/lib/gatedWrites.js";
 import { withheldWritesFromToolArgs } from "../../agentRuntime/eve/parkedInput.js";
 import { normalizeToolName } from "../../agentRuntime/tools/toolPolicy.js";
 
-/** Per-user approval scopes, derived from the authoritative gated-write table.
- * Entries without scopes are intentionally absent — they fail closed here. */
 export const approvalScopeRequirements: Record<string, RouteScopeRequirement> =
 	Object.fromEntries(
 		GATED_WRITES.flatMap((write) =>
@@ -12,8 +10,6 @@ export const approvalScopeRequirements: Record<string, RouteScopeRequirement> =
 		),
 	);
 
-/** Only plain and ALL requirements can be unioned; an ANY requirement has no
- * sound merge, so a group containing one fails closed. */
 const allScopesIn = (
 	requirement: RouteScopeRequirement,
 ): readonly ScopeString[] | undefined => {
@@ -22,8 +18,6 @@ const allScopesIn = (
 	return requirement.ALL;
 };
 
-/** Approving a grouped card applies every step, so it requires every step's
- * scopes. An unrecognised step fails closed. */
 export const requiredScopesForApproval = ({
 	groupedToolNames,
 	toolArgs,

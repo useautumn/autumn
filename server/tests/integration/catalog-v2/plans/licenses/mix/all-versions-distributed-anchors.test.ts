@@ -1,13 +1,3 @@
-/**
- * catalogV2.update — child `all_versions` with parents anchored to different
- * child rows. Each sibling edit reaches only the links on THAT row.
- *
- * Contract:
- *   A → child v1, B → child v2. Child all_versions + both in propagate
- *   → A follows v1's edited stock, B follows v2's; anchors stay put.
- *   Same anchors, no propagate → A pins v1's pre-edit 10, B pins v2's 50.
- */
-
 import { test } from "bun:test";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";

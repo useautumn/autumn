@@ -2,7 +2,6 @@ import type { HourWindow } from "../types/hourWindow";
 
 const HOUR_MS = 60 * 60 * 1000;
 
-/** The last `count` whole hours that have already ended at `nowMs`, oldest first. */
 export const closedHourWindows = ({
 	nowMs,
 	count,

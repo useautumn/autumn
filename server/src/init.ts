@@ -38,7 +38,6 @@ import {
 	stopAllEdgeConfigPolling,
 } from "./internal/misc/edgeConfig/edgeConfigRegistry.js";
 
-// Edge config modules self-register on import
 import "./internal/misc/requestBlocks/requestBlockStore.js";
 import "./internal/misc/rollouts/rolloutConfigStore.js";
 import "./internal/misc/featureFlags/featureFlagStore.js";
@@ -55,7 +54,6 @@ import "./internal/misc/asyncBalanceUpdate/asyncBalanceUpdateStore.js";
 import "./internal/misc/asyncTrack/asyncTrackStore.js";
 import "./internal/misc/rateLimiter/public/agentProvisionRateLimit/agentProvisionRateLimitStore.js";
 
-// Side-effect: configures trigger.dev SDK to use TRIGGER_SERVER_SECRET_KEY.
 import "./trigger/configureTrigger.js";
 import { closeStripeSyncEngine } from "@autumn/stripe-sync";
 import { prewarmMotherDuckResolver } from "./external/motherduck/initMotherDuck.js";
@@ -94,8 +92,6 @@ import { startMemoryMonitor } from "./utils/memoryMonitor.js";
 checkEnvVars();
 
 let shuttingDown = false;
-// Set once the worker's HTTP server exists; SIGTERM shutdown uses it to stop
-// accepting before any teardown, mirroring the fork-recycle drain shape.
 let stopAcceptingRequests: (() => void) | null = null;
 const drainState: {
 	draining: boolean;
@@ -114,13 +110,8 @@ const init = async ({
 
 	initPgHealthMonitor({ client: clientCritical });
 	startPgPoolMonitor();
-	// `db` is the general pool — the probe must never occupy a critical-pool slot.
 	startReplicaRoutingProber({ db });
 
-	// Kicked off early, awaited (bounded) just before listen: a fork must not
-	// serve its first requests against still-connecting redis clients.
-	// Each arm catches its own failure: a regional rejection must not
-	// short-circuit the wait for healthy dedicated org connections.
 	const redisWarmup = Promise.all([
 		warmupRegionalRedis().catch((error) => {
 			console.error("[Redis] regional warmup failed -", error);
@@ -129,17 +120,11 @@ const init = async ({
 			logger.warn("[OrgRedis] Warmup failed", { error });
 		}),
 	]);
-	// Observed immediately: awaits run before the bounded wait consumes it, and
-	// an early rejection would otherwise hit the fatal unhandledRejection exit.
 	void redisWarmup.catch(() => {});
 
-	// Pay the MotherDuck handshake at boot, not inside the first balance sort.
 	prewarmMotherDuckResolver();
 
 	await startAllEdgeConfigPolling({ logger });
-	// Ownership discovery must not gate the HTTP listener: start() waits for the
-	// initial catch-up, and the load balancer kills the task long before a slow or
-	// failing Kafka connect finishes. Routing refreshes on its own afterwards.
 	void startBalanceWorkerClient().catch((error) => {
 		logger.error(
 			{ error },
@@ -157,16 +142,10 @@ const init = async ({
 
 	const requestListener = getRequestListener(app.fetch);
 	const server = http.createServer((req, res) => {
-		// While draining for a fork recycle, tell pooled clients to retire the
-		// socket after this response instead of racing the idle eviction.
 		if (drainState.draining) res.setHeader("connection", "close");
 		requestListener(req, res);
 	});
 
-	// Streamed responses outlive the request middleware (the body keeps writing
-	// after the handler returns), so drain-extension counts sockets: during a
-	// drain the idle sweeps evict keep-alives, leaving only genuinely active
-	// connections — streams included.
 	const openSockets = new Set<import("node:net").Socket>();
 	server.on("connection", (socket) => {
 		openSockets.add(socket);
@@ -230,11 +209,7 @@ if (process.env.NODE_ENV === "development") {
 		});
 
 		cluster.on("exit", (worker, code, signal) => {
-			// True = a coordinated recycle finished; the replacement is already
-			// serving and the coordinator respawns crashes itself.
 			if (forkRecycling.handleExit(worker)) return;
-			// Intentional exits during shutdown are not crashes — but a genuine
-			// crash in the shutdown window still deserves its log line.
 			if (shuttingDown && (signal === "SIGTERM" || code === 0)) return;
 			logger.error("WORKER DIED", {
 				pid: worker.process.pid,
@@ -244,9 +219,6 @@ if (process.env.NODE_ENV === "development") {
 			});
 		});
 
-		// Container init delivers SIGTERM to this primary only; without
-		// forwarding, workers never run their graceful shutdown and ECS
-		// SIGKILLs them mid-request at stopTimeout.
 		const shutdownPrimary = async () => {
 			if (shuttingDown) return;
 			shuttingDown = true;
@@ -259,7 +231,6 @@ if (process.env.NODE_ENV === "development") {
 			const workersAlive = () =>
 				Object.values(cluster.workers ?? {}).filter((w) => w && !w.isDead())
 					.length;
-			// Must exceed the workers' own 30s shutdown backstop.
 			const deadline = Date.now() + 35_000;
 			while (workersAlive() > 0 && Date.now() < deadline) {
 				await new Promise((resolve) => setTimeout(resolve, 200));
@@ -269,8 +240,6 @@ if (process.env.NODE_ENV === "development") {
 					`[Shutdown] ${workersAlive()} worker(s) still alive after 35s; exiting anyway`,
 				);
 			}
-			// Same bound as every other exit path: a hung pool close must not
-			// leave the primary for the platform SIGKILL.
 			const forceExit = setTimeout(() => process.exit(0), 30_000);
 			forceExit.unref?.();
 			await gracefulShutdown();
@@ -291,8 +260,6 @@ if (process.env.NODE_ENV === "development") {
 				drainState.draining = true;
 			},
 			exitGracefully: () => {
-				// Backstop: a hung flush must not strand a drained fork. Sized so a
-				// full 10s settle still leaves teardown ample time.
 				const forceExit = setTimeout(() => process.exit(0), 30_000);
 				forceExit.unref?.();
 				void gracefulShutdown();
@@ -320,7 +287,6 @@ function registerFatalErrorHandlers() {
 }
 
 function registerShutdownHandlers() {
-	// Same 30s bound as recycle exits: no shutdown path may hang unbounded.
 	const shutdownWithBackstop = () => {
 		const forceExit = setTimeout(() => process.exit(0), 30_000);
 		forceExit.unref?.();
@@ -328,7 +294,6 @@ function registerShutdownHandlers() {
 	};
 	process.on("SIGTERM", shutdownWithBackstop);
 	process.on("SIGINT", shutdownWithBackstop);
-	// Do NOT use process.on("exit", ...) for async cleanup!
 }
 
 async function waitForInFlightRequestsToSettle({
@@ -336,8 +301,6 @@ async function waitForInFlightRequestsToSettle({
 }: {
 	timeoutMs: number;
 }) {
-	// Streamed bodies outlive the request registry, so wait on open sockets
-	// too (idle keep-alives clear within a sweep once accepting stopped).
 	const activeWork = () =>
 		Math.max(
 			listInFlightRequests({ now: Date.now() }).length,
@@ -359,15 +322,11 @@ async function gracefulShutdown() {
 	shuttingDown = true;
 	console.log("Shutting down worker, flushing telemetry and closing DB...");
 	try {
-		// Stop taking new requests first (SIGTERM path: ALB keeps routing
-		// through deregistration), then let in-flight work finish. Requests and
-		// their delayed timers enqueue SQS work, so the batchers close LAST.
 		stopAcceptingRequests?.();
 		await waitForInFlightRequestsToSettle({ timeoutMs: 10_000 });
 		await stopBalanceShadow();
 		await stopBalanceWorkerClient();
 
-		// Flush any buffered OTel spans before shutting down
 		if (otelSdk) {
 			await otelSdk.shutdown();
 		}
@@ -379,8 +338,6 @@ async function gracefulShutdown() {
 		stopRedisV2Monitor();
 		stopMemorySpikeProbe();
 		stopAllEdgeConfigPolling();
-		// App-level batch windows (events 350ms, balance sync 1s) hold work in
-		// timers that process.exit would silently kill: deliver them, then close
 		// the SQS batchers at the last possible moment.
 		const flushResults = await Promise.allSettled([
 			globalEventBatchingManager.flush(),

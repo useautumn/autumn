@@ -24,7 +24,6 @@ import type {
 	ShadowAtomRecords,
 } from "./types/shadowAtomRecord.js";
 
-/** The record but for its group and endpoint, which sit beside it in the file because herald and the shadow check route by them. */
 const ShadowAtomDeploymentSchema = ApiByocCacheSchema.pick({
 	deployment_id: true,
 	status: true,
@@ -40,7 +39,6 @@ const ShadowAtomDeploymentSchema = ApiByocCacheSchema.pick({
 	stack_name: z.string().nullable().default(null),
 });
 
-/** A setup just started: nothing deployed yet, only its names and the machine and region it asked for. */
 export const awaitingShadowAtomRecord = ({
 	deploymentGroupId,
 	atomId,
@@ -82,7 +80,6 @@ const entryToShadowAtomRecord = ({
 		"deploymentGroupId" | "endpointUrl"
 	> & { deployment: ShadowAtomDeploymentEntry["deployment"] | null };
 }): ShadowAtomRecord => {
-	// A file from before the record was kept reads as a setup just started; its first refresh fills it in.
 	const kept = deployment
 		? ShadowAtomDeploymentSchema.parse(deployment)
 		: awaitingShadowAtomRecord({
@@ -126,7 +123,6 @@ const configToShadowAtomRecords = ({
 	previous: config.previous.map((entry) => entryToShadowAtomRecord({ entry })),
 });
 
-/** Where herald and the shadow check find the current Atom, and its record beside them. */
 export const shadowAtomRecordToCurrentConfig = ({
 	record,
 }: {
@@ -141,7 +137,6 @@ export const shadowAtomRecordToCurrentConfig = ({
 	deployment: record && shadowAtomRecordToEntry({ record }).deployment,
 });
 
-/** An Atom being removed steps aside into `previous`, as an org's row does, so a new one can start while it finishes. */
 const shadowAtomRecordsToConfig = ({
 	records: { current, previous },
 }: {
@@ -162,7 +157,6 @@ export const findShadowAtomRecords = async (): Promise<ShadowAtomRecords> =>
 		config: await shadowAtomConfigStore.readFromSource(),
 	});
 
-/** Under the config lock, against the records the file holds now; a null result leaves the file alone. */
 const rewriteShadowAtomRecords = ({
 	toRecords,
 }: {
@@ -180,7 +174,6 @@ const rewriteShadowAtomRecords = ({
 		},
 	});
 
-/** Swaps the record of `deploymentGroupId`, wherever it sits, for what `toRecord` makes of it; null when it has none. */
 const replaceRecordOfGroup = ({
 	records: { current, previous },
 	deploymentGroupId,
@@ -205,7 +198,6 @@ const replaceRecordOfGroup = ({
 	};
 };
 
-/** One shadow Atom's record by its group, in place of an org's `atom_deployments` row; a stale write never undoes a newer one. */
 export const shadowAtomStorage = ({
 	deploymentGroupId,
 }: {

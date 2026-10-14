@@ -7,11 +7,6 @@ import {
 	isOneOffProduct,
 } from "@autumn/shared";
 
-/**
- * Determine the billing cycle anchor based on product transitions.
- *
- * For future starts, feature resets anchor to the billing start (`startsAt`).
- */
 export const setupResetCycleAnchor = ({
 	billingCycleAnchorMs,
 	customerProduct,
@@ -37,7 +32,6 @@ export const setupResetCycleAnchor = ({
 	const currentIsFree = isCustomerProductFree(customerProduct);
 	const newIsFree = isFreeProduct({ product: newFullProduct });
 
-	// Free -> Free: keep original anchor
 	if (currentIsFree && newIsFree) {
 		return customerProduct?.starts_at ?? "now";
 	}
@@ -45,7 +39,6 @@ export const setupResetCycleAnchor = ({
 	const currentIsOneOff = isCustomerProductOneOff(customerProduct);
 	const newIsOneOff = isOneOffProduct({ product: newFullProduct });
 
-	// One-off -> One-off: keep original anchor
 	if (currentIsOneOff && newIsOneOff) {
 		return customerProduct?.starts_at ?? "now";
 	}

@@ -12,7 +12,6 @@ import type { AutoTopupSubject } from "../../../../src/trigger/types/autoTopupSu
 
 export const FEATURE = "messages";
 export const CREDITS = "credits";
-/** The legacy function reads the clock for expiry, so the test instant is the real one. */
 export const NOW = Date.now();
 export const PAST = 1;
 export const FUTURE = NOW + 1_000_000_000;
@@ -70,7 +69,6 @@ export const usagePrice = ({
 	},
 });
 
-/** The monthly base price that marks a product as a subscription plan. */
 export const fixedPrice = ({
 	id,
 	customerProductId,
@@ -132,9 +130,7 @@ export const row = ({
 		usage: number;
 		expires_at: number | null;
 	}[];
-	/** The entitlement carries a rollover config, which is what makes `rollovers` count. */
 	rollover?: boolean;
-	/** Set on an entity-scoped entitlement, whose balance lives in `entities`. */
 	entityFeatureId?: string | null;
 	pooled?: boolean;
 }) => ({
@@ -202,7 +198,6 @@ export const plan = ({
 	customer_entitlements: rows,
 });
 
-/** A plan attached at `createdAt` whose one-off prepaid row for the feature holds `balance`. */
 export const oneOffPrepaidPlan = ({
 	id,
 	createdAt = NOW,
@@ -280,7 +275,6 @@ export const subject = ({
 		pooled_customer_entitlements: pooled,
 	}) as unknown as AutoTopupSubject;
 
-/** The FullCustomer the server built from the same subject before calling the legacy function. */
 export const legacyCustomerOf = (fullSubject: AutoTopupSubject): FullCustomer =>
 	({
 		...fullSubject.customer,

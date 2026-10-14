@@ -3,12 +3,6 @@ import type Stripe from "stripe";
 import { lineItemToMetadata } from "./lineItemToMetadata";
 import { lineItemToStripeProductId } from "./lineItemToStripeProductId";
 
-/**
- * Converts a single LineItem to Stripe.InvoiceAddLinesParams.Line
- *
- * Uses effectivePeriod (the actual period being charged/refunded) for Stripe,
- * which accounts for mid-cycle changes.
- */
 const toStripeAddLineParams = ({
 	lineItem,
 }: {
@@ -17,7 +11,6 @@ const toStripeAddLineParams = ({
 	const { amount, amountAfterDiscounts, description, context } = lineItem;
 	const { effectivePeriod, currency, discountable } = context;
 
-	// If discountable, use amount (let Stripe apply discounts), otherwise use amountAfterDiscounts
 	const lineAmount = discountable ? amount : amountAfterDiscounts;
 	const isNegative = lineAmount < 0;
 	const stripeProductId = lineItemToStripeProductId({ lineItem });
@@ -47,9 +40,6 @@ const toStripeAddLineParams = ({
 	};
 };
 
-/**
- * Converts an array of LineItems to Stripe.InvoiceAddLinesParams.Line[]
- */
 export const lineItemsToInvoiceAddLinesParams = ({
 	lineItems,
 }: {

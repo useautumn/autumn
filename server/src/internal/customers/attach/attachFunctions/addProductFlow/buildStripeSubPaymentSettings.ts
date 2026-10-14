@@ -13,7 +13,6 @@ export const buildStripeSubPaymentSettings = ({
 	const paymentSettings: Stripe.SubscriptionCreateParams.PaymentSettings = {};
 
 	if (isCustomPaymentMethod) {
-		// Save the custom PM on the sub so webhook handlers and renewals can find it.
 		paymentSettings.save_default_payment_method = "on_subscription";
 	}
 

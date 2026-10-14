@@ -1,8 +1,3 @@
-/**
- * Volume with entities: an entity-feature item bills the customer's actual total past its total included
- * on one net band; per-entity plans each bill their own overage. Preview must equal the renewal invoice.
- */
-
 import { expect, test } from "bun:test";
 import { waitForInvoiceLineItems } from "@tests/integration/billing/utils/expectInvoiceLineItemsCorrect";
 import { expectNextInvoiceMatchesPreview } from "@tests/integration/billing/utils/expectNextInvoiceMatchesPreview";
@@ -12,7 +7,6 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-// Default tiers: 0-500 @ $0.10, 501+ @ $0.05, net of included.
 test.concurrent(
 	`${chalk.yellowBright("volume-entity 1: entity feature, 3 entities × 100 included, one under → 550 over in net band 2 on customer total")}`,
 	async () => {
@@ -52,7 +46,6 @@ test.concurrent(
 			],
 		});
 
-		// 850 used − 300 included = 550 over (net band 2): 550 × $0.05 = $27.50; unused allowance doesn't offset
 		const { preview } = await expectNextInvoiceMatchesPreview({
 			ctx: scenario.ctx,
 			autumnV1: scenario.autumnV1,
@@ -63,7 +56,6 @@ test.concurrent(
 			featureId: TestFeature.Messages,
 			expectedFeatureAmount: 27.5,
 		});
-		// $20 base + $27.50 usage
 		expect(preview.total).toBeCloseTo(47.5, 2);
 	},
 );
@@ -99,7 +91,6 @@ test.concurrent(
 			],
 		});
 
-		// Entity 0: 50 over (net band 1): 50 × $0.10 = $5. Entity 1: 600 over (net band 2): 600 × $0.05 = $30
 		const { preview, renewalInvoice } = await expectNextInvoiceMatchesPreview({
 			ctx: scenario.ctx,
 			autumnV1: scenario.autumnV1,
@@ -114,7 +105,6 @@ test.concurrent(
 			.map((lineItem) => lineItem.subtotal)
 			.sort((a, b) => a - b);
 		expect(previewUsageSubtotals).toEqual([5, 30]);
-		// 2 × $20 base + $5 + $30
 		expect(preview.total).toBeCloseTo(75, 2);
 
 		const [entity0, entity1] = scenario.entities;

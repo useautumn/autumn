@@ -10,7 +10,6 @@ export function AttachPreviewSection() {
 		isAutoSelectingImmediateSchedule,
 	} = useAttachFormContext();
 
-	// Multi-plan attaches always start immediately.
 	const startDate = additionalPlans.isMultiPlan ? null : formValues.startDate;
 
 	return (

@@ -1,10 +1,3 @@
-/**
- * C4: a paid row with a different allowance than the catalog is untouchable
- * on the batch lane (rowIsUnpaidSql), for both remove and replace.
- *
- * Same-allowance paid rows stay in batch-*-item-paid-rows.test.ts.
- */
-
 import { expect, test } from "bun:test";
 import { ResetInterval } from "@autumn/shared";
 import { runChunkedMigration } from "@tests/integration/billing/migrations-v2/utils/runChunkedMigration";

@@ -1,9 +1,5 @@
 import { type AnyColumn, type SQL, sql } from "drizzle-orm";
 
-/**
- * Live public id when the product row exists; snapshot id when that
- * internal id is gone. Partial resolve is not treated as complete.
- */
 const resolvedProductIdsMergeSql = ({
 	internalProductIds,
 	productIds,

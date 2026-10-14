@@ -1,8 +1,3 @@
-/**
- * Template data for the template selector
- * Each template has 3 pricing plans with features
- */
-
 export interface PlanData {
 	name: string;
 	features: string[];

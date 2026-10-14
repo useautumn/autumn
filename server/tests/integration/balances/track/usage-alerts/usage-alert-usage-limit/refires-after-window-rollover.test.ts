@@ -33,7 +33,6 @@ afterAll(async () => {
 	await webhook?.cleanup();
 });
 
-// ── B10: re-fires in the next window ────────────────────────────────────────
 test(`${chalk.yellowBright("ul-alert9: the alert fires again after the window rolls over")}`, async () => {
 	const customerId = "ul-alert-refire-1";
 	await setupCustomer({ customerId, planId: "ul-alert-refire" });

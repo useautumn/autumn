@@ -18,10 +18,6 @@ const planLicenseIdsInContext = ({
 		]),
 	);
 
-/**
- * Customer references for every loaded link — declared licenses[] parents
- * and reverse license-parents of touched children.
- */
 export const setupLicenseStatesContext = async ({
 	ctx,
 	productStatesContext,

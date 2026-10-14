@@ -41,8 +41,6 @@ export const countBackdatedPeriodsForPrice = ({
 	return periods;
 };
 
-// Number of in-advance billing periods a backdated price spans, floored at 1
-// so non-recurring / not-yet-elapsed prices act as a no-op multiplier.
 export const getBackdatedCycleCountForPrice = ({
 	price,
 	startsAt,

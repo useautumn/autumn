@@ -61,7 +61,6 @@ export const PlanVersionSelect = ({
 		}
 		const versionNumber = Number.parseInt(version, 10);
 		const selected = sortedRows.find((row) => row.version === versionNumber);
-		// Pin unless we know the row is active; a missing flag must not read as active.
 		if (Boolean(selected?.active) && !isCusPlanEditor) {
 			setQueryStates({ version: null });
 			return;

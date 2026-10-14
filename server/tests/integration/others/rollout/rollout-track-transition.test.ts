@@ -16,10 +16,8 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { buildFullSubjectKey } from "@/internal/customers/cache/fullSubject/builders/buildFullSubjectKey.js";
 
 const testCase = "rollout-track-transition";
-// Redis syncs to Postgres within a few seconds; the flip must see that landed.
 const SYNC_LAG_MS = 3_000;
 
-/** The Redis view's load time, or null when no view exists: the trace of which lane served the customer. */
 const readViewCachedAt = async ({
 	ctx,
 	customerId,
@@ -34,7 +32,6 @@ const readViewCachedAt = async ({
 	return (JSON.parse(raw) as { _cachedAt: number })._cachedAt;
 };
 
-// Needs the local server on BALANCE_WORKER_ROLLOUT_ENABLED=config: the override would ignore the percent.
 test.skipIf(!serverRoutesByRolloutConfig())(
 	`${chalk.yellowBright(`${testCase}: track across Redis → worker → Redis`)}`,
 	async () => {
@@ -69,7 +66,6 @@ test.skipIf(!serverRoutesByRolloutConfig())(
 		};
 
 		try {
-			// Phase 1, Redis: the track builds a view and syncs to Postgres.
 			await setOrgRolloutPercent({ orgId, percent: 0 });
 			await trackTen();
 			await timeout(SYNC_LAG_MS);
@@ -77,13 +73,11 @@ test.skipIf(!serverRoutesByRolloutConfig())(
 			const cachedAtOnRedis = await readViewCachedAt({ ctx, customerId });
 			expect(cachedAtOnRedis).not.toBeNull();
 
-			// Phase 2, worker: the view is never read or rebuilt; the balance comes from the worker.
 			await setOrgRolloutPercent({ orgId, percent: 100 });
 			await trackTen();
 			await expectRemaining(80);
 			expect(await readViewCachedAt({ ctx, customerId })).toBe(cachedAtOnRedis);
 
-			// Phase 3, Redis again: the pre-flip view is evicted on first read and rebuilt from Postgres.
 			await setOrgRolloutPercent({ orgId, percent: 0 });
 			await trackTen();
 			await timeout(SYNC_LAG_MS);

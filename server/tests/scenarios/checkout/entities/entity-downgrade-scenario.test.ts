@@ -5,17 +5,9 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-/**
- * Entity Downgrade Scenario
- *
- * Tests downgrading a specific entity's plan while another entity keeps its current plan.
- * Customer has premium on both entities, then downgrades entity-2 to pro (scheduled).
- */
-
 test(`${chalk.yellowBright("attach: entity downgrade - premium on both, downgrade entity-2 to pro")}`, async () => {
 	const customerId = "entity-downgrade";
 
-	// Premium plan ($50/mo) - top tier features
 	const premium = products.premium({
 		id: "premium",
 		items: [
@@ -32,7 +24,6 @@ test(`${chalk.yellowBright("attach: entity downgrade - premium on both, downgrad
 		],
 	});
 
-	// Pro plan ($20/mo) - mid tier features
 	const pro = products.pro({
 		id: "pro",
 		items: [
@@ -48,7 +39,6 @@ test(`${chalk.yellowBright("attach: entity downgrade - premium on both, downgrad
 		],
 	});
 
-	// Setup: customer with payment method, 2 entities, premium attached to both
 	const { autumnV1, entities } = await initScenario({
 		customerId,
 		setup: [
@@ -57,13 +47,11 @@ test(`${chalk.yellowBright("attach: entity downgrade - premium on both, downgrad
 			s.entities({ count: 2, featureId: TestFeature.Users }),
 		],
 		actions: [
-			// Attach premium plan to both entities
 			s.attach({ productId: "premium", entityIndex: 0 }),
 			s.attach({ productId: "premium", entityIndex: 1 }),
 		],
 	});
 
-	// Get customer state after initial attaches
 	const customerBefore = await autumnV1.customers.get(customerId);
 	console.log("customer before entity downgrade:", {
 		products: customerBefore.products?.map(
@@ -75,25 +63,22 @@ test(`${chalk.yellowBright("attach: entity downgrade - premium on both, downgrad
 		entities: entities.map((e) => ({ id: e.id, name: e.name })),
 	});
 
-	// 1. Preview downgrading entity-2 to pro (will be scheduled for end of cycle)
 	const downgradePreview = await autumnV1.billing.previewAttach({
 		customer_id: customerId,
 		product_id: `pro_${customerId}`,
-		entity_id: entities[1].id, // ent-2
+		entity_id: entities[1].id,
 		redirect_mode: "always",
 	});
 	console.log("entity downgrade preview:", downgradePreview);
 
-	// 2. Downgrade entity-2 to pro (automatically scheduled for end of cycle)
 	const downgradeResult = await autumnV1.billing.attach({
 		customer_id: customerId,
 		product_id: `pro_${customerId}`,
-		entity_id: entities[1].id, // ent-2
+		entity_id: entities[1].id,
 		redirect_mode: "always",
 	});
 	console.log("entity downgrade result:", downgradeResult);
 
-	// Get customer state after scheduled downgrade
 	const customerAfter = await autumnV1.customers.get(customerId);
 	console.log("customer after entity downgrade:", {
 		products: customerAfter.products?.map(

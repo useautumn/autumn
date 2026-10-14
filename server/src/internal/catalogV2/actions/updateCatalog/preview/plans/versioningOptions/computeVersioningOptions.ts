@@ -44,7 +44,6 @@ const computeVersioningOptionsForPlanId = ({
 	});
 };
 
-/** This plan's options unioned with license parents and variants. */
 export const computeVersioningOptions = ({
 	upsert,
 	versionsForPlan,
@@ -105,8 +104,6 @@ export const computeVersioningOptions = ({
 		});
 	}
 
-	// new_version is only legal on the latest row — a pinned historical
-	// version must not inherit it from a customered variant.
 	if (!isNewVersionMint && !isLatestUpdate) {
 		return options.filter((option) => option !== "new_version");
 	}

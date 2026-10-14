@@ -11,10 +11,6 @@ import { customerProductToArrearLineItems } from "@/internal/billing/v2/utils/li
 import { customerProductToLineItems } from "@/internal/billing/v2/utils/lineItems/customerProductToLineItems";
 import { getRefundLineItems } from "@/internal/billing/v2/utils/lineItems/getRefundLineItems";
 
-/**
- * Restarts a plan the request didn't change on a subscription whose cycle resets now, as Stripe does for
- * every item: unused time credited, a full new period charged, accrued usage billed and balances refilled.
- */
 export const computeSharedSubscriptionResetBilling = ({
 	ctx,
 	billingContext,
@@ -31,7 +27,6 @@ export const computeSharedSubscriptionResetBilling = ({
 		ctx,
 		customerProduct,
 		billingContext,
-		// Allocated v2 holdings carry into the new period and bill at its end, as on a plan switch.
 		filters: {
 			cusEntFilter: (cusEnt) => !isAllocatedV2CustomerEntitlement(cusEnt),
 		},

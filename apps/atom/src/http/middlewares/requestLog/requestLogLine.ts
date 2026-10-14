@@ -6,13 +6,11 @@ const FORWARDED_HEADER = "x-atom-forwarded";
 const isRecord = (value: unknown): value is Record<string, unknown> =>
 	typeof value === "object" && value !== null && !Array.isArray(value);
 
-/** Who a request was about, read from its body: a check names the customer at the top, a push inside its state. */
 export const requestFieldsOf = ({
 	body,
 	routedCustomerId,
 }: {
 	body: unknown;
-	/** A subject push's customer, sent beside a body left unparsed here. */
 	routedCustomerId?: string;
 }): Record<string, unknown> => {
 	if (!isRecord(body))
@@ -32,7 +30,6 @@ export const requestFieldsOf = ({
 	};
 };
 
-/** What came back, at `res`: a failure's body, or an answered check's verdict where its body has it; a reply the API sent is never read. */
 export const loggedResponseOf = async ({
 	context,
 }: {
@@ -52,14 +49,12 @@ export const loggedResponseOf = async ({
 	}
 };
 
-/** A 5xx is Atom's own fault, except an API it could not reach: that one is answered, and logged, as the caller's news. */
 export const isAtomsOwnFault = ({
 	statusCode,
 }: {
 	statusCode: number;
 }): boolean => statusCode >= 500 && statusCode !== 502;
 
-/** Only Atom's own fault is worth a stack; a refusal or an unreachable API says everything in name and message. */
 export const loggedErrorOf = ({
 	error,
 	statusCode,
@@ -71,7 +66,6 @@ export const loggedErrorOf = ({
 		? error
 		: { name: error.name, message: error.message };
 
-/** Why the Autumn API answered instead of Atom, when it did. */
 export const forwardedReason = ({
 	context,
 }: {

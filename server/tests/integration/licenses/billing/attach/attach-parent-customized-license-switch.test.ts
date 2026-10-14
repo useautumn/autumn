@@ -1,7 +1,3 @@
-// Contract: Pro and Pro Annual price the same 200-message dev seat at $20/mo and $200/yr.
-// Switching preserves assignments and reset timestamps, and re-prices every seat
-// annually. The entitlement is retained (same definition), so usage resets to the
-// grant unless carry_over_usages is set.
 import { expect, test } from "bun:test";
 import type {
 	ApiCustomerV5,

@@ -20,7 +20,6 @@ import {
 	isAtomRemovalWaitingOnYou,
 } from "./atomDisplay";
 
-/** Atoms that finish removing while this page is open stay as Removed until dismissed. */
 const useRemovedAtoms = (removing: ApiByocCache[]) => {
 	const [seen, setSeen] = useState<ApiByocCache[]>([]);
 	const [dismissedIds, setDismissedIds] = useState<string[]>([]);
@@ -37,7 +36,6 @@ const useRemovedAtoms = (removing: ApiByocCache[]) => {
 	};
 };
 
-/** Amber while any delete waits on you, under way while the rest run, done once only removed ones are left. */
 const removalsChip = (removing: ApiByocCache[]) => {
 	if (removing.some(isAtomRemovalWaitingOnYou)) return ATOM_ACTION_IN_AWS_CHIP;
 	return removing.length ? ATOM_REMOVING_CHIP : ATOM_STAGE_STATUS_CHIPS.done;
@@ -46,7 +44,6 @@ const removalsChip = (removing: ApiByocCache[]) => {
 const previousAtoms = (count: number) =>
 	`${count} previous Atom${count === 1 ? "" : "s"}`;
 
-/** A header badge counting earlier Atoms still coming down; it opens a sheet with each one's steps. */
 export const AtomRemovalSheet = ({
 	removing,
 }: {

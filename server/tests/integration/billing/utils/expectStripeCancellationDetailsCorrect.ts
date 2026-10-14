@@ -7,9 +7,6 @@ type StripeCancellationDetails = NonNullable<
 	Stripe.Subscription.CancellationDetails
 >;
 
-/**
- * Asserts Stripe stored cancellation_details on the customer's subscription.
- */
 export const expectStripeCancellationDetailsCorrect = async ({
 	ctx,
 	customerId,

@@ -17,7 +17,6 @@ import type { CurrentSubject } from "../../types/currentSubject.js";
 import type { SlotProcessorContext } from "../../types/slotProcessor.js";
 import { freshestCatalog } from "./freshestCatalog.js";
 
-/** The API answers, and the subject is pulled beside it so a later check can be answered here. */
 const subjectNotStored = ({
 	ctx,
 	customerId,
@@ -40,7 +39,6 @@ const subjectNotStored = ({
 	return new CannotAnswerError({ reason });
 };
 
-/** A deleted part is a miss no copy read before the delete can fill: the API answers, and a pull finds it if it is back. */
 const readLivePart = ({
 	ctx,
 	customerId,
@@ -65,7 +63,6 @@ const readLivePart = ({
 	});
 };
 
-/** The customer's own rows, and the entity's own beside them when the request is for an entity. */
 const readStoredParts = ({
 	ctx,
 	customerId,
@@ -84,7 +81,6 @@ const readStoredParts = ({
 	if (entityId === null) return { customer, entity: null };
 
 	const entity = readLivePart({ ctx, customerId, entityId, part: "entity" });
-	// Read from before the customer's latest evict, the entity may still hold rows that evict replaced.
 	const isEntityCurrent = entity.logOffset >= customer.customerVersion;
 	if (!isEntityCurrent)
 		throw subjectNotStored({
@@ -96,20 +92,14 @@ const readStoredParts = ({
 	return { customer, entity };
 };
 
-/** The parts a subject was joined from: the view is current while the store still holds these very copies. */
 type SubjectJoinCacheEntry = {
 	customer: StoredSubject;
 	shared: SharedCatalog | null;
 	current: CurrentSubject;
 };
 
-/** Keyed by the copy the request is for (the entity's, or the customer's), so a copy the store replaces takes its view with it. */
 const subjectJoinCache = new WeakMap<StoredSubject, SubjectJoinCacheEntry>();
 
-/**
- * The subject a request is decided on, as Autumn last sent it: for an entity, the customer's rows and its own as one.
- * Joined once per change to its parts, not per check. A customer or entity Atom does not hold is left to the API.
- */
 export const readCurrentSubject = ({
 	ctx,
 	customerId,
@@ -125,7 +115,6 @@ export const readCurrentSubject = ({
 	const joined = subjectJoinCache.get(target);
 	if (joined?.customer === customer && joined.shared === shared)
 		return joined.current;
-	// Frozen, because every check until the next push shares it.
 	const current = deepFreeze(
 		joinSubject({ customer, entity, shared, entityId }),
 	);
@@ -144,7 +133,6 @@ const joinSubject = ({
 	shared: SharedCatalog | null;
 	entityId: string | null;
 }): CurrentSubject => {
-	// The part read later is merged last, so where both hold a row its copy is the one kept.
 	const parts = entity ? [customer, entity] : [customer];
 	const partsOldestFirst = [...parts].sort(
 		(left, right) => left.readAt - right.readAt,
@@ -165,7 +153,6 @@ const joinSubject = ({
 			entityId,
 		}),
 		catalog,
-		// The joined catalog already holds the freshest copy of each feature the subject references.
 		features: Object.values({
 			...shared?.catalog.features,
 			...catalog.features,

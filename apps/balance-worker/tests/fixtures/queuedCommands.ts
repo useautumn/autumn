@@ -69,7 +69,6 @@ export const updateBalanceOf = ({
 		},
 	});
 
-/** The sync check-with-lock path: a track that opens a lock, answered once the store holds the lock row. */
 export const takeLock = async ({
 	pipeline,
 	customerId,
@@ -100,7 +99,6 @@ export const takeLock = async ({
 	return opened.row;
 };
 
-/** What the server queues when the lock's owner is unreachable: the lock row it read, and the value to settle at. */
 export const finalizeOf = ({
 	lock,
 	finalValue,

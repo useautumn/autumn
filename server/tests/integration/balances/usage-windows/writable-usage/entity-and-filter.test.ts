@@ -1,14 +1,3 @@
-/**
- * Writable usage-limit counters — entity scope and filtered windows.
- *
- * Contract:
- *   An entity counter write touches only that entity's window.
- *   A counter write with `filter` targets the filtered window; without it, the
- *   unfiltered window. Neither touches the other.
- *   { feature_id, limit, interval, usage } on an entity sets config and counter
- *   together, and check enforces the written counter.
- */
-
 import { expect, test } from "bun:test";
 import { ApiVersion, ResetInterval } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";

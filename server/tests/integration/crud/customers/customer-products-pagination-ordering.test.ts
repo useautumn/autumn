@@ -54,7 +54,6 @@ test(`${chalk.yellowBright("customer products page: scheduled plans follow activ
 		return row.id;
 	};
 
-	// oneOff2 was attached last, so created_at DESC alone would surface it first.
 	const now = Date.now();
 	await ctx.db
 		.update(customerProducts)

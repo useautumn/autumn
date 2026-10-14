@@ -12,7 +12,6 @@ import type {
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import type { FlashPlanContext } from "../setupFlashContext";
 
-/** Structurally compatible with `StripeHydration` so the same resolvers fill gaps. */
 export type RevenueCatHydration = {
 	status?: CusProductStatus;
 	canceledAt?: number;
@@ -23,7 +22,6 @@ export type RevenueCatHydration = {
 	startsAt?: number;
 };
 
-// Unknown/unmapped statuses fail closed to Expired so access is never leaked.
 const RC_STATUS_TO_AUTUMN: Record<
 	RevenueCatSubscriptionStatus,
 	CusProductStatus
@@ -52,8 +50,6 @@ const buildSubscriptionHydration = (
 		status,
 		processorId: subscription.id,
 		periodEndMs: periodEnd,
-		// Expired ends at period-end; will_not_renew ends at the future period-end
-		// (the resolver reads a future `endedAt` as canceled-till-cycle-end).
 		endedAt: isExpired || willNotRenew ? periodEnd : undefined,
 		trialEndsAt: isTrial ? periodEnd : undefined,
 	};
@@ -66,13 +62,6 @@ const buildPurchaseHydration = (
 	startsAt: purchase.purchased_at,
 });
 
-/**
- * Read-only RevenueCat hydration: for each RC billable, read the customer's RC
- * subscriptions/purchases ONCE and stash the status/timestamp fields the caller
- * omitted. Payload always wins downstream; balances are never touched. A missing
- * `app_user_id`, null client, or fetch error is skipped so the flash falls back
- * to caller-supplied values.
- */
 export const hydrateRevenueCatBillables = async ({
 	ctx,
 	planContexts,
@@ -117,7 +106,6 @@ export const hydrateRevenueCatBillables = async ({
 			cli.listCustomerSubscriptions(appUserId),
 			cli.listCustomerPurchases(appUserId),
 		]);
-		// Rebuild in mock mode so concurrent tests never share a stale catalog.
 		storeIdentifierMap = await getRevenueCatStoreIdentifierMap({
 			rcCli: cli,
 			orgId: org.id,

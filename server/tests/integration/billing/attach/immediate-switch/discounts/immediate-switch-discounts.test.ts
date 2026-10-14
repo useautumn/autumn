@@ -1,11 +1,3 @@
-/**
- * Immediate Switch Discount Preservation Tests
- *
- * Tests that discounts are preserved (same ID, same duration/end date)
- * when upgrading from one paid product to another.
- * Users should NOT get extra discount duration from plan changes.
- */
-
 import { expect, test } from "bun:test";
 import {
 	applyCustomerCoupon,
@@ -22,20 +14,6 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { Decimal } from "decimal.js";
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 1: Upgrade pro → premium preserves discount identity and duration
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Customer has pro ($20/mo) with 2-month repeating 20% off coupon
- * - Advance 2 weeks (mid-cycle)
- * - Upgrade to premium ($50/mo) — immediate switch
- *
- * Expected:
- * - Discount ID unchanged (same di_xxx)
- * - Discount end timestamp unchanged (duration not reset)
- */
 test.concurrent(`${chalk.yellowBright("immediate-switch-discounts 1: upgrade pro -> premium preserves discount identity and duration")}`, async () => {
 	const customerId = "imm-switch-discount-upgrade";
 
@@ -58,7 +36,6 @@ test.concurrent(`${chalk.yellowBright("immediate-switch-discounts 1: upgrade pro
 		actions: [s.billing.attach({ productId: pro.id })],
 	});
 
-	// Apply 2-month repeating 20% off coupon
 	const { stripeCli, subscription: sub } = await getStripeSubscription({
 		customerId,
 	});
@@ -76,7 +53,6 @@ test.concurrent(`${chalk.yellowBright("immediate-switch-discounts 1: upgrade pro
 		couponIds: [coupon.id],
 	});
 
-	// Record discount before upgrade
 	const subWithDiscount = await stripeCli.subscriptions.retrieve(sub.id, {
 		expand: ["discounts.source.coupon"],
 	});
@@ -90,21 +66,18 @@ test.concurrent(`${chalk.yellowBright("immediate-switch-discounts 1: upgrade pro
 	expect(discountIdBefore).not.toBeNull();
 	expect(discountEndBefore).not.toBeNull();
 
-	// Advance 2 weeks
 	await advanceTestClock({
 		stripeCli: ctx.stripeCli,
 		testClockId: testClockId!,
 		numberOfDays: 14,
 	});
 
-	// Upgrade to premium (immediate switch)
 	await autumnV1.billing.attach({
 		customer_id: customerId,
 		product_id: premium.id,
 		redirect_mode: "if_required",
 	});
 
-	// Verify discount is preserved
 	const { subscription: subAfterUpgrade } = await getStripeSubscription({
 		customerId,
 	});
@@ -119,28 +92,11 @@ test.concurrent(`${chalk.yellowBright("immediate-switch-discounts 1: upgrade pro
 	const discountEndAfter =
 		typeof discountAfter !== "string" ? discountAfter.end : null;
 
-	// Discount ID must be the same (not re-created)
 	expect(discountIdAfter).toBe(discountIdBefore);
 
-	// Discount end must be the same (duration not reset)
 	expect(discountEndAfter).toBe(discountEndBefore);
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 2: Upgrade pro → premium → ultra preserves discount through multiple switches
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Customer has pro ($20/mo) with 3-month repeating 20% off coupon
- * - Advance 2 weeks
- * - Upgrade to premium ($50/mo)
- * - Upgrade to ultra ($200/mo)
- *
- * Expected:
- * - Discount ID unchanged through both upgrades
- * - Discount end timestamp unchanged (duration not reset)
- */
 test.concurrent(`${chalk.yellowBright("immediate-switch-discounts 2: discount preserved through multiple upgrades")}`, async () => {
 	const customerId = "imm-switch-discount-multi-upgrade";
 
@@ -168,7 +124,6 @@ test.concurrent(`${chalk.yellowBright("immediate-switch-discounts 2: discount pr
 		actions: [s.billing.attach({ productId: pro.id })],
 	});
 
-	// Apply 3-month repeating 20% off coupon
 	const { stripeCli, subscription: sub } = await getStripeSubscription({
 		customerId,
 	});
@@ -186,7 +141,6 @@ test.concurrent(`${chalk.yellowBright("immediate-switch-discounts 2: discount pr
 		couponIds: [coupon.id],
 	});
 
-	// Record original discount
 	const subWithDiscount = await stripeCli.subscriptions.retrieve(sub.id, {
 		expand: ["discounts.source.coupon"],
 	});
@@ -198,28 +152,24 @@ test.concurrent(`${chalk.yellowBright("immediate-switch-discounts 2: discount pr
 	expect(discountIdBefore).not.toBeNull();
 	expect(discountEndBefore).not.toBeNull();
 
-	// Advance 2 weeks
 	await advanceTestClock({
 		stripeCli: ctx.stripeCli,
 		testClockId: testClockId!,
 		numberOfDays: 14,
 	});
 
-	// Upgrade pro → premium
 	await autumnV1.billing.attach({
 		customer_id: customerId,
 		product_id: premium.id,
 		redirect_mode: "if_required",
 	});
 
-	// Upgrade premium → ultra
 	await autumnV1.billing.attach({
 		customer_id: customerId,
 		product_id: ultra.id,
 		redirect_mode: "if_required",
 	});
 
-	// Verify discount is preserved after both upgrades
 	const { subscription: subAfter } = await getStripeSubscription({
 		customerId,
 	});
@@ -234,25 +184,11 @@ test.concurrent(`${chalk.yellowBright("immediate-switch-discounts 2: discount pr
 	const discountEndAfter =
 		typeof discountAfter !== "string" ? discountAfter.end : null;
 
-	// Discount ID must be the same through both upgrades
 	expect(discountIdAfter).toBe(discountIdBefore);
 
-	// Discount end must be the same (duration not reset)
 	expect(discountEndAfter).toBe(discountEndBefore);
 });
 
-/**
- * Scenario:
- * - Customer has pro ($20/mo) with 2-month repeating 20% off coupon
- * - Delete the coupon from Stripe (coupon.deleted = true)
- * - Advance 2 weeks (mid-cycle)
- * - Upgrade to premium ($50/mo) — immediate switch
- *
- * Expected:
- * - Upgrade succeeds (no error even though coupon is deleted)
- * - Discount ID unchanged (same di_xxx — carried over via { discount: id })
- * - Discount end timestamp unchanged (duration not reset)
- */
 test.concurrent(`${chalk.yellowBright("immediate-switch-discounts 3: upgrade carries over discount when coupon is deleted")}`, async () => {
 	const customerId = "imm-switch-discount-deleted-coupon";
 
@@ -275,7 +211,6 @@ test.concurrent(`${chalk.yellowBright("immediate-switch-discounts 3: upgrade car
 		actions: [s.billing.attach({ productId: pro.id })],
 	});
 
-	// Apply 2-month repeating 20% off coupon to the subscription
 	const { stripeCli, subscription: sub } = await getStripeSubscription({
 		customerId,
 	});
@@ -319,23 +254,6 @@ test.concurrent(`${chalk.yellowBright("immediate-switch-discounts 3: upgrade car
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 4: Upgrade carries over customer-level discount when coupon is deleted
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Customer has pro ($20/mo) with NO subscription-level discount
- * - Apply a 2-month repeating 20% off coupon directly to the Stripe customer
- *   (legacy API, sets customer.discount rather than subscription.discounts)
- * - Delete the coupon from Stripe (coupon.deleted = true)
- * - Advance 2 weeks (mid-cycle)
- * - Upgrade to premium ($50/mo) — immediate switch
- *
- * Expected:
- * - Upgrade succeeds (no error even though coupon is deleted)
- * - The customer discount is carried over — new subscription has a discount
- */
 test.concurrent(`${chalk.yellowBright("immediate-switch-discounts 4: upgrade carries over customer-level discount when coupon is deleted")}`, async () => {
 	const customerId = "imm-switch-discount-deleted-customer-coupon";
 
@@ -362,7 +280,6 @@ test.concurrent(`${chalk.yellowBright("immediate-switch-discounts 4: upgrade car
 		customerId,
 	});
 
-	// Apply coupon to customer (not subscription) via legacy API
 	const coupon = await createPercentCoupon({
 		stripeCli,
 		percentOff: 20,
@@ -373,14 +290,12 @@ test.concurrent(`${chalk.yellowBright("immediate-switch-discounts 4: upgrade car
 	await applyCustomerCoupon({ stripeCustomerId, couponId: coupon.id });
 	await deleteCoupon({ stripeCli, couponId: coupon.id });
 
-	// Upgrade to premium (immediate switch)
 	await autumnV1.billing.attach({
 		customer_id: customerId,
 		product_id: premium.id,
 		redirect_mode: "if_required",
 	});
 
-	// Verify upgrade succeeded and the customer-level discount carried over
 	const { subscription: subAfterUpgrade } = await getStripeSubscription({
 		customerId,
 	});
@@ -390,21 +305,6 @@ test.concurrent(`${chalk.yellowBright("immediate-switch-discounts 4: upgrade car
 	expect(subAfter.discounts?.length).toBeGreaterThanOrEqual(1);
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 5: Upgrade applies 1-month recurring coupon to immediate switch invoice
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Customer has pro ($20/mo)
- * - Pass a 1-month repeating 20% off coupon during the upgrade attach call
- * - Upgrade immediately to premium ($50/mo)
- *
- * Expected:
- * - Upgrade succeeds
- * - Preview + invoice reflect the discounted upgrade charge
- * - The coupon is attached to the upgraded subscription with a non-null end date
- */
 test.concurrent(`${chalk.yellowBright("immediate-switch-discounts 5: upgrade works with 1-month recurring coupon")}`, async () => {
 	const customerId = "imm-switch-discount-one-month-upgrade";
 

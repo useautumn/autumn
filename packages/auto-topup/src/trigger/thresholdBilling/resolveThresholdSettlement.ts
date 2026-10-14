@@ -32,7 +32,6 @@ export type ThresholdSettlement<
 			charge: ThresholdCharge;
 	  };
 
-/** The pay-per-use price carrying a threshold, with the threshold it declares. */
 const thresholdPrice = (
 	row: AutoTopupCustomerEntitlement & {
 		customer_product: AutoTopupCustomerProduct;

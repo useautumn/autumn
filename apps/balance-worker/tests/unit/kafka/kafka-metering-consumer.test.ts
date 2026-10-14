@@ -126,7 +126,6 @@ function createKafkaMeteringConsumer(params: {
 	});
 }
 
-/** A replay following the partition from its bookmark, as the runtime holds it during catch-up. */
 async function followPartition({
 	consumer,
 	targetNextOffset,
@@ -947,7 +946,6 @@ describe("Kafka metering consumer", () => {
 			});
 			await consumerPort.deliver({ offset: "5000", ...serialized });
 
-			// The batch settles without a throw: the partition is parked, paused and left where it was.
 			expect(unavailable).toHaveLength(1);
 			expect(unavailable[0]).toBeInstanceOf(StateBehindKafkaLogStartError);
 			expect(unavailable[0]).toMatchObject({ retriable: false });
@@ -1555,7 +1553,6 @@ describe("replay window", () => {
 		try {
 			const state = createState();
 			const record = createMutation({ state });
-			// Above the bookmark, where a writing follower would apply it.
 			const result = await handler.applyRecord({
 				position: { topic, partition, offset: 5n },
 				record,
@@ -2066,7 +2063,6 @@ test("the handler passes offsets this partition's writer produced and reads ever
 		expect(at(5n)).toBe(false);
 		expect(at(6n)).toBe(false);
 		expect(at(7n)).toBe(true);
-		// Another partition's records are never ours.
 		expect(at(5n, partition + 1)).toBe(true);
 	} finally {
 		fixture.store.close();
@@ -2131,7 +2127,6 @@ describe("owner fences", () => {
 				now: () => clock,
 			},
 		});
-		/** Only the drops: parking a partition warns too. */
 		function staleLines() {
 			return warnings.filter(
 				([message]) => message === "Stale owner record skipped",
@@ -2226,7 +2221,6 @@ describe("owner fences", () => {
 				fenceEpoch: 9n,
 				fenceOffset: 3n,
 			});
-			// The new owner lands the fence; the fenced worker only steps aside.
 			expect(f.advanced).toEqual([]);
 
 			expect(
@@ -2285,7 +2279,6 @@ describe("owner fences", () => {
 				f.recentCommands.read({ identity, commandId: "cmd_newer" }),
 			).toEqual({ fingerprint: newer.receipt.fingerprint });
 
-			// Markers from an epoch at or below the fence change nothing.
 			await f.handler.applyFence?.({
 				position: { topic, partition, offset: 8n },
 				ownerEpoch: 5n,
@@ -2466,7 +2459,6 @@ test("a record the failed writer produced is skipped by its own follower and app
 			targetNextOffset: 0n,
 			onUnavailable: () => {},
 		});
-		// Written under the failed writer's epoch and never remembered: its apply failed and recovery disposes the runtime.
 		const record = {
 			offset: "0",
 			...serializeMeteringRecord({ record: createMutation({ state }) }),

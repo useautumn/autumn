@@ -1,24 +1,3 @@
-/**
- * Regression coverage for the OAuth discovery gap that broke the Devin MCP
- * client (observed 2026-07-30 14:10:08 UTC).
- *
- * The client fetched the MCP protected-resource metadata, took the issuer from
- * it, then looked for protected-resource metadata on the API host too. Neither
- * path it tried was registered, so both fell through to the internal router,
- * which session-authenticates every unmatched path.
- *
- * Pre-fix behavior:
- *  - GET /.well-known/oauth-protected-resource          -> 401 {"code":"no_auth_header"}
- *  - GET /.well-known/oauth-protected-resource/api/auth -> 401 {"code":"no_auth_header"}
- *  - both leaked {"env":"sandbox"} to unauthenticated callers
- *
- * Post-fix behavior:
- *  - the bare path serves real metadata: the Autumn API accepts OAuth bearer
- *    tokens, so it is a protected resource and must advertise its issuer
- *  - the /api/auth path describes the authorization server, which is not a
- *    resource, so it 404s rather than returning a session error
- */
-
 import { expect, test } from "bun:test";
 import chalk from "chalk";
 
@@ -68,10 +47,6 @@ test.concurrent(
 	},
 );
 
-/**
- * Positive control: the discovery family the client *should* have used still
- * resolves, so a failure above is a routing defect and not an unreachable host.
- */
 test.concurrent(
 	`${chalk.yellowBright("oauth discovery: RFC 8414 authorization-server metadata resolves")}`,
 	async () => {

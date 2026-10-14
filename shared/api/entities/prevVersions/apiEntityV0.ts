@@ -91,7 +91,6 @@ export const ApiEntityV0Schema = z.object({
 	}),
 	env: z.enum(AppEnv),
 
-	// V1.2 format: products and features (not subscriptions and balances)
 	products: z.array(ApiCusProductV3Schema).optional().meta({
 		description: entityDescriptions.products,
 	}),

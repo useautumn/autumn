@@ -1,9 +1,7 @@
-// Main customer schemas
 export * from "./apiCustomer";
 export * from "./apiCustomerV5";
 export * from "./apiSubjectV0";
 export * from "./baseApiCustomer";
-// Submodules
 export * from "./components/index";
 export * from "./crud/createCustomerParams";
 export * from "./crud/index";
@@ -16,8 +14,5 @@ export * from "./customerOpModels";
 export * from "./exports/customerExportParams";
 export * from "./flags/index";
 export * from "./previousVersions/index";
-
-// NOTE: changes/ and requestChanges/ are NOT exported here to avoid circular imports
-// Import them directly where needed (e.g., versionChangeRegistry.ts)
 
 export * from "./utils/index";

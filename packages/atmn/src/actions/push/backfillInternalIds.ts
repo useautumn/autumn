@@ -68,7 +68,6 @@ export const identityRowsFromCatalog = ({
 		Object.keys(COLLECTIONS).map((collection) => {
 			const rows = catalog[collection];
 			if (!Array.isArray(rows)) return [collection, []];
-			// A union row carries its identity inside its branch.
 			const spec = COLLECTIONS[collection];
 			return [
 				collection,
@@ -130,7 +129,6 @@ export const backfillInternalIds = ({
 		for (const row of collectionRows) {
 			if (typeof row.id !== "string" || typeof row.internalId !== "string")
 				continue;
-			// A union row could be written with any of the branch builders.
 			let rowSpec = spec;
 			let located: ReturnType<typeof locateFixture> = null;
 			for (const candidate of branchSpecs({ spec })) {
@@ -156,18 +154,14 @@ export const backfillInternalIds = ({
 					break;
 				}
 			}
-			// No literal to write into: the row still matches by public id next push.
 			if (located === null) continue;
 			const stated = statedProperty({
 				call: located.node,
 				property: "internalId",
 			});
-			// An expression the fixture computes would override an inserted pair.
 			if (stated.kind === "dynamic") continue;
 			if (stated.kind === "literal" && stated.value === row.internalId)
 				continue;
-			// A stated id the server did not know was ignored and the row minted
-			// fresh, so the fixture takes the real id in place of the guess.
 			const updated =
 				stated.kind === "absent"
 					? insertFirstProperty({
@@ -191,8 +185,6 @@ export const backfillInternalIds = ({
 			files.set(located.file, updated);
 			backfilled.push(row.id);
 		}
-		// The slug travels with the id: a fixture that never stated one takes the
-		// server's, so a nuke-and-repush or a sandbox-to-prod push keeps its names.
 		if (spec.versioned) {
 			for (const row of collectionRows) {
 				if (
@@ -210,7 +202,6 @@ export const backfillInternalIds = ({
 					allowDynamic: true,
 				});
 				if (located === null) continue;
-				// A slug the fixture already states, literal or computed, is its own.
 				if (
 					fixtureStatesProperty({
 						call: located.node,
@@ -234,10 +225,6 @@ export const backfillInternalIds = ({
 		}
 	}
 
-	// A variant is a `variant({...})` fixture of its own, or an object literal
-	// inline under its base plan's `variants`; either takes its id and slug.
-	// The inline lookup is scoped to the base row the edge came from, so two
-	// versions each holding a slug-less `{ variantPlanId }` get their own ids.
 	const variantSpec = NESTED_FIXTURES.variants;
 	const parentSpec = COLLECTIONS[variantSpec.parent];
 	const variantShapesUnder = (row: IdentityRow): FixtureShape[] => [
@@ -288,8 +275,6 @@ export const backfillInternalIds = ({
 			allowDynamic: true,
 		});
 		if (located !== null || inlineUnderBase === undefined) return located;
-		// One base declares a variant once, so under it the slug is redundant:
-		// a slug-less inline entry belongs to whatever row its base links.
 		return locateFixture({
 			configPath,
 			files,
@@ -313,8 +298,6 @@ export const backfillInternalIds = ({
 				row,
 				variantPlanId: edge.variantPlanId,
 				internalId,
-				// Versions of one variant share the id; the slug tells them apart
-				// whenever the catalog states one.
 				...(typeof versionSlug === "string"
 					? {
 							where: [
@@ -358,7 +341,6 @@ export const backfillInternalIds = ({
 				backfilled.push(edge.variantPlanId);
 			}
 			if (typeof versionSlug !== "string") continue;
-			// The id is on the literal now, so the slug lookup addresses it by that.
 			const identified = locateVariant({
 				row,
 				variantPlanId: edge.variantPlanId,

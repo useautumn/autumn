@@ -4,7 +4,6 @@ import { OrgSearchResults } from "../edge-config/OrgSearchResults";
 import type { RolloutOrg } from "../edge-config/rolloutTypes";
 import { ShadowAtomPicked } from "./ShadowAtomPicked";
 
-/** Search orgs by name or slug (the admin org search) and pick one; its id is what gets stored. */
 export const ShadowAtomOrgPicker = ({
 	value,
 	onChange,

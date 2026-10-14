@@ -1,10 +1,3 @@
-/**
- * Unit tests for buildRcPreflightItems — the read-only sync preview. Per plan it
- * matches the minted store id (autumn.{env}.{org}.{planId}) to an RC product and
- * reports Autumn's base price vs RC's, so the sheet can show Create/Rename + price
- * mismatch. No network/DB: listPrices is injected.
- */
-
 import {
 	AppEnv,
 	BillingInterval,
@@ -62,7 +55,6 @@ test(`${chalk.yellowBright("preflight: matching RC product surfaces name + price
 		rcProducts: [rcProduct(storeId("pro"), "Old Name", "prod_1")],
 		org,
 		env,
-		// RC price differs from Autumn's 4.99 -> a mismatch the sheet flags
 		listPrices: async (id) =>
 			id === "prod_1" ? [{ id: "prc1", amount_micros: 5_990_000, currency: "USD" }] : [],
 	});
@@ -91,7 +83,6 @@ test(`${chalk.yellowBright("preflight: only the first RC product per store id is
 	let priceCalls = 0;
 	const items = await buildRcPreflightItems({
 		products: [product("pro", "Pro")],
-		// two apps share the same minted store id
 		rcProducts: [
 			rcProduct(storeId("pro"), "Pro", "prod_ios"),
 			rcProduct(storeId("pro"), "Pro", "prod_android"),

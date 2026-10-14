@@ -1,23 +1,3 @@
-/**
- * TDD test for keyed-usage-price add-on lifecycle via subscription.updated
- * auto-sync (the "Automations (Overage)" shape — see the sibling
- * sub-created-keyed-usage-addon.test.ts for the subscription.created case
- * and full contract background).
- *
- * Contract under test:
- *   - item added to an existing subscription that already has a base plan ->
- *     the add-on auto-syncs active, base plan untouched.
- *   - item removed from a subscription that has both the base plan and the
- *     add-on active -> the add-on expires, base plan untouched.
- *   - multiple subscriptions, each with its own base plan in a different
- *     group, item added to only ONE -> add-on links to exactly that
- *     subscription; the other subscription's linked products are untouched;
- *     exactly one add-on instance total.
- *   - coexistence with an unrelated prepaid add-on (Dedicated IPs) already
- *     active on the same subscription -> both add-ons end up correctly and
- *     independently active, no cross-contamination.
- */
-
 import { expect, test } from "bun:test";
 import {
 	automationsStripeProductId,
@@ -68,10 +48,6 @@ const waitProducts = ({
 		eventTypes,
 	});
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// CASE 1: item added to an existing base-plan-only subscription
-// ═══════════════════════════════════════════════════════════════════════════════
-
 test(
 	`${chalk.yellowBright("sub.updated keyed-usage add-on: item added to base-plan-only subscription")}`,
 	async () => {
@@ -120,7 +96,6 @@ test(
 			proration_behavior: "none",
 		});
 
-		// ── Contract: add-on auto-syncs active, base plan untouched ──
 		await waitProducts({
 			autumnV1,
 			ctx,
@@ -137,10 +112,6 @@ test(
 	},
 	{ timeout: WEBHOOK_TEST_TIMEOUT_MS },
 );
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// CASE 2: item removed expires the add-on, base plan untouched
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test(
 	`${chalk.yellowBright("sub.updated keyed-usage add-on: item removal expires the add-on")}`,
@@ -198,7 +169,6 @@ test(
 			proration_behavior: "none",
 		});
 
-		// ── Contract: add-on expires, base plan untouched ──
 		await waitProducts({
 			autumnV1,
 			ctx,
@@ -216,10 +186,6 @@ test(
 	},
 	{ timeout: WEBHOOK_TEST_TIMEOUT_MS },
 );
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// CASE 3: multiple subscriptions, item added to only one
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test(
 	`${chalk.yellowBright("sub.updated keyed-usage add-on: added to only one of two subscriptions")}`,
@@ -289,7 +255,6 @@ test(
 			proration_behavior: "none",
 		});
 
-		// ── Contract: add-on links to subscription A only ──
 		await waitProducts({
 			autumnV1,
 			ctx,
@@ -303,14 +268,12 @@ test(
 			stripeSubscriptionId: subscriptionA.id,
 			productIds: [variantId, automationsId],
 		});
-		// ── Contract: subscription B is completely untouched ──
 		await expectActiveLinkedCustomerProducts({
 			ctx,
 			stripeSubscriptionId: subscriptionB.id,
 			productIds: [secondGroupBaseId],
 		});
 
-		// ── Contract: exactly one Automations instance total ──
 		const fullCustomer = await CusService.getFull({ ctx, idOrInternalId: customerId });
 		expect(
 			fullCustomer.customer_products.filter(
@@ -320,10 +283,6 @@ test(
 	},
 	{ timeout: WEBHOOK_TEST_TIMEOUT_MS },
 );
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// CASE 4: coexistence with an unrelated prepaid add-on (Dedicated IPs)
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test(
 	`${chalk.yellowBright("sub.updated keyed-usage add-on: coexists with an unrelated prepaid add-on")}`,
@@ -395,7 +354,6 @@ test(
 			proration_behavior: "none",
 		});
 
-		// ── Contract: both add-ons independently active, no cross-contamination ──
 		await waitProducts({
 			autumnV1,
 			ctx,

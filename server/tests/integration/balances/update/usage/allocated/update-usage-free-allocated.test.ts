@@ -6,11 +6,6 @@ import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 
-// ═══════════════════════════════════════════════════════════════════
-// UPDATE-USAGE-FREE-ALLOC1: Set usage on free allocated feature
-// freeAllocatedUsers: ContinuousUse, no price, 5 included seats
-// ═══════════════════════════════════════════════════════════════════
-
 test.concurrent(`${chalk.yellowBright("update-usage-free-alloc1: basic usage on free allocated")}`, async () => {
 	const usersItem = items.freeAllocatedUsers({ includedUsage: 5 });
 	const freeProd = products.base({ id: "free", items: [usersItem] });
@@ -21,7 +16,6 @@ test.concurrent(`${chalk.yellowBright("update-usage-free-alloc1: basic usage on 
 		actions: [s.attach({ productId: freeProd.id })],
 	});
 
-	// Set usage to 3: targetBalance = 5 + 0 - 3 = 2
 	await autumnV2.balances.update({
 		customer_id: customerId,
 		feature_id: TestFeature.Users,
@@ -36,7 +30,6 @@ test.concurrent(`${chalk.yellowBright("update-usage-free-alloc1: basic usage on 
 		usage: 3,
 	});
 
-	// Verify DB sync
 	const customerDb = await autumnV2.customers.get<ApiCustomer>(customerId, {
 		skip_cache: "true",
 	});
@@ -48,11 +41,6 @@ test.concurrent(`${chalk.yellowBright("update-usage-free-alloc1: basic usage on 
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════
-// UPDATE-USAGE-FREE-ALLOC2: Set usage beyond included on free allocated (overage)
-// Overage absorbed into purchased_balance
-// ═══════════════════════════════════════════════════════════════════
-
 test.concurrent(`${chalk.yellowBright("update-usage-free-alloc2: overage on free allocated")}`, async () => {
 	const usersItem = items.freeAllocatedUsers({ includedUsage: 5 });
 	const freeProd = products.base({ id: "free", items: [usersItem] });
@@ -63,8 +51,6 @@ test.concurrent(`${chalk.yellowBright("update-usage-free-alloc2: overage on free
 		actions: [s.attach({ productId: freeProd.id })],
 	});
 
-	// Set usage to 8: targetBalance = 5 + 0 - 8 = -3
-	// Overage absorbed into purchased_balance
 	await autumnV2.balances.update({
 		customer_id: customerId,
 		feature_id: TestFeature.Users,
@@ -79,7 +65,6 @@ test.concurrent(`${chalk.yellowBright("update-usage-free-alloc2: overage on free
 		usage: 8,
 	});
 
-	// Verify DB sync
 	const customerDb = await autumnV2.customers.get<ApiCustomer>(customerId, {
 		skip_cache: "true",
 	});

@@ -14,17 +14,12 @@ import type { ReplayWindow } from "./replayWindow.js";
 export type MeteringConsumer = {
 	start(): Promise<void>;
 	stop(): Promise<void>;
-	/** Joins the group again after kafkajs gave it up. */
 	restart(): Promise<void>;
-	/** The replay remembers every record it sees land into the partition's `recentCommands`.
-	 *  A read-only replay remembers and nothing else: no store write, no bookmark. */
 	createReplay(position: {
 		partition: number;
 		recentCommands: RecentCommands;
-		/** Records the partition's own writer produced are passed unread. */
 		producedOffsets?: ProducedOffsets;
 		readOnly?: boolean;
-		/** The epoch the partition's writer holds; a fence in the log above it parks the replay as fenced. */
 		ownerEpoch?: () => string | undefined;
 	}): PartitionReplay;
 	withdrawPartition(position: { partition: number }): Promise<void>;
@@ -38,7 +33,6 @@ export type MeteringConsumerContext = {
 	stateStore: StateStore;
 	positionTracker: ProgressTracker;
 	replayWindow: ReplayWindow;
-	/** Consumed on the same group membership, so partition n's commands reach partition n's owner. */
 	commands?: { topic: string; handler: TopicRecordHandler };
 	logger?: Pick<AutumnLogger, "warn">;
 };

@@ -7,8 +7,6 @@ import {
 import { ProductService } from "@/internal/products/ProductService.js";
 import type { PlanCopySource } from "@/internal/products/productUtils.js";
 
-/** A variant may still link to an older base version, so every version's
- * internal id is queried. */
 const listSourceVariants = async ({
 	ctx,
 	source,
@@ -35,10 +33,6 @@ const listSourceVariants = async ({
 	});
 };
 
-/**
- * Loads everything a single-plan copy must carry along: the base's variants,
- * the family's license links, and the license plans those links point at.
- */
 export const loadSourcePlanFamily = async ({
 	ctx,
 	source,

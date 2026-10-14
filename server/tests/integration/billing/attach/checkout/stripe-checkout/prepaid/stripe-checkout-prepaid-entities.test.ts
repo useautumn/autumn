@@ -88,17 +88,13 @@ test.concurrent(`${chalk.yellowBright("attach: stripe checkout prepaid entities"
 	const preview = await autumnV1.billing.previewAttach(params);
 	expect(preview.total).toBe(20);
 
-	// Attach to entity 1
 	const res = await autumnV1.billing.attach(params);
 	expect(res.payment_url).toBeDefined();
 	expect(res.payment_url).toContain("checkout.stripe.com");
 
-	// Complete checkout
-
 	await completeStripeCheckoutFormV2({ url: res.payment_url });
 
 	const customerAfter = await autumnV1.customers.get(customerId);
-	// Worker customer reads omit entity-owned products and balances.
 	const subject = isBalanceWorkerRoute()
 		? await autumnV1.entities.get<ApiEntityV0>(customerId, entities[0].id)
 		: customerAfter;
@@ -365,7 +361,6 @@ test.concurrent(`${chalk.yellowBright("attach: stripe checkout monthly volume pr
 		entityAfter.id,
 	);
 
-	// Worker customer reads omit entity-owned balances; the entity assert below covers it.
 	if (!isBalanceWorkerRoute()) {
 		expectCustomerFeatureCorrect({
 			customerId,
@@ -527,19 +522,14 @@ test.concurrent(`${chalk.yellowBright("attach: stripe checkout prepaid volume en
 	};
 
 	const preview = await autumnV1.billing.previewAttach(params);
-	expect(preview.total).toBe(30); // flat amount
-
-	// Attach to entity 1
+	expect(preview.total).toBe(30);
 	const res = await autumnV1.billing.attach(params);
 	expect(res.payment_url).toBeDefined();
 	expect(res.payment_url).toContain("checkout.stripe.com");
 
-	// Complete checkout
-
 	await completeStripeCheckoutFormV2({ url: res.payment_url });
 
 	const customerAfter = await autumnV1.customers.get(customerId);
-	// Worker customer reads omit entity-owned products and balances.
 	const subject = isBalanceWorkerRoute()
 		? await autumnV1.entities.get<ApiEntityV0>(customerId, entities[0].id)
 		: customerAfter;
@@ -563,7 +553,7 @@ test.concurrent(`${chalk.yellowBright("attach: stripe checkout prepaid volume en
 		customerId,
 		customer: customerAfter,
 		count: 1,
-		latestTotal: 30, // flat amount
+		latestTotal: 30,
 		latestStatus: "paid",
 	});
 

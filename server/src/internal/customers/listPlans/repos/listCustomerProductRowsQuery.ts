@@ -53,7 +53,6 @@ const rowFiltersSql = ({
 	${customerWalkRowAfterSql({ ...walkColumns, cursor })}
 `;
 
-/** Picks the cheapest walk: one customer, one plan's rows, or customer by customer up to the boundary. */
 const selectPageSql = ({
 	ctx,
 	scope,
@@ -116,10 +115,6 @@ const selectPageSql = ({
 		LIMIT ${limit + 1}`;
 };
 
-/**
- * One page of customer_products in (customer DESC, created_at DESC, id DESC) order.
- * Scoped to a customer, walked by plan, or walked customer by customer up to a boundary.
- */
 export const listCustomerProductRowsQuery = ({
 	ctx,
 	scope,

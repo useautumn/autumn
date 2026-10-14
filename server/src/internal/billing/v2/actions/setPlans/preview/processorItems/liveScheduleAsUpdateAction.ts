@@ -2,7 +2,6 @@ import type { StripeSubscriptionScheduleAction } from "@autumn/shared";
 import { stripeRefToId } from "@autumn/shared";
 import type Stripe from "stripe";
 
-/** An unchanged schedule gets no action, so its future items are read off the live schedule instead. */
 export const liveScheduleAsUpdateAction = (
 	schedule: Stripe.SubscriptionSchedule,
 ): StripeSubscriptionScheduleAction => ({

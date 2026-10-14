@@ -3,7 +3,6 @@ import type { ProductStatesContext } from "@/internal/catalogV2/actions/updateCa
 import { activeFullProductForPlan } from "./activeFullProductForPlan";
 import { fullProductForSlug } from "./fullProductForSlug";
 
-/** Existing row this plan entry addresses. Mint-without-pin → null. */
 export const fullProductForPlanParams = ({
 	planParams,
 	productStatesContext,

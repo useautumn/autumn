@@ -1,12 +1,3 @@
-/**
- * Unit 1 — catalog reads hide tombstones; mint max still sees them.
- *
- * Contract:
- *   get / listFull / catalog.get omit a deleted_at row
- *   listFull({ includeDeleted }) still returns it (occupancy)
- *   new_version after tombstoning v2 mints v3, not a colliding v2
- */
-
 import { expect, test } from "bun:test";
 import { ResetInterval } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";

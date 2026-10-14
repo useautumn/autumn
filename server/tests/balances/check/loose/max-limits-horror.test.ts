@@ -1,13 +1,3 @@
-/**
- * Stress fixture + bounds contract for loose entitlement hydration budgets:
- *   - Active loose ents share a single LIMIT 30 (EXTRA_CUSTOMER_ENTITLEMENT_LIMIT).
- *   - Expired loose ents ride a SEPARATE LIMIT 20 bucket (dashboard flag only),
- *     so they can never crowd active ones out.
- *
- * Seeds customer "max-limits-horror" with 35 live + 25 expired loose Messages
- * balances and leaves it behind for manual dashboard QA of the bounded view.
- */
-
 import { expect, test } from "bun:test";
 import {
 	ALL_STATUSES,
@@ -36,8 +26,6 @@ function sleepUntil(epochMs: number): Promise<void> {
 const testCase = "max-limits-horror";
 const LIVE_COUNT = EXTRA_CUSTOMER_ENTITLEMENT_LIMIT + 5;
 const EXPIRED_COUNT = EXPIRED_EXTRA_CUSTOMER_ENTITLEMENT_LIMIT + 5;
-// Default cusProductLimit is 15; 16 sequential attaches of the same main
-// product leave 15 expired + 1 active, pressing the plan hydration bound too.
 const ATTACH_COUNT = 16;
 const CUS_PRODUCT_LIMIT = 15;
 
@@ -64,8 +52,6 @@ test.concurrent(
 			actions: [],
 		});
 
-		// Alternating attaches of two main plans: each attach expires the other,
-		// leaving ATTACH_COUNT - 1 expired + 1 active.
 		for (let i = 0; i < ATTACH_COUNT; i++) {
 			await autumnV2_3.attach({
 				customer_id: customerId,
@@ -96,7 +82,6 @@ test.concurrent(
 		}
 		await sleepUntil(expiresAt + 1000);
 
-		// Flag off: exactly the active budget, no expired rows.
 		const publicFullCustomer = await CusService.getFull({
 			ctx,
 			idOrInternalId: customerId,
@@ -107,7 +92,6 @@ test.concurrent(
 			true,
 		);
 
-		// Flag on: active budget untouched PLUS the separate expired budget.
 		const internalFullCustomer = await CusService.getFull({
 			ctx,
 			idOrInternalId: customerId,
@@ -125,8 +109,6 @@ test.concurrent(
 		expect(activeCount).toBe(EXTRA_CUSTOMER_ENTITLEMENT_LIMIT);
 		expect(expiredCount).toBe(EXPIRED_EXTRA_CUSTOMER_ENTITLEMENT_LIMIT);
 
-		// Plan side: hydration bounded by cusProductLimit, active plan always
-		// survives (relevant statuses sort ahead of expired before the LIMIT).
 		const dashboardFullCustomer = await CusService.getFull({
 			ctx,
 			idOrInternalId: customerId,

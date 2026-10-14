@@ -8,21 +8,12 @@ import type {
 import { regexSql, startsWithSql } from "./stringMatchSql.js";
 
 export type CompiledSql = {
-	/** WHERE-clause fragment with `?` placeholders. */
 	sql: string;
-	/** Values to bind in placeholder order. */
 	params: unknown[];
 };
 
-/** Values supplied to ambient predicates with `source.kind === "context"`. */
 export type AmbientContext = Record<string, unknown>;
 
-/**
- * Compile an IR tree into a parameterized SQL fragment. The root scope's
- * ambient predicates are emitted at the top of the WHERE clause; every
- * nested scope's ambient predicates are auto-injected into its EXISTS
- * subquery.
- */
 export function irToSql({
 	ir,
 	root,
@@ -68,7 +59,6 @@ function compileAmbient({
 			params.push(value);
 			return `${pred.column} = ?`;
 		}
-		// values: static IN list
 		if (pred.source.values.length === 0) return "FALSE";
 		const placeholders = pred.source.values
 			.map((v) => {
@@ -106,7 +96,6 @@ function compileNode({
 		);
 		return `(${parts.join(" OR ")})`;
 	}
-	// nav
 	const def = fields[node.name];
 	if (!def) throw new Error(`Unknown nav field: ${node.name}`);
 	if (def.kind !== "nav") throw new Error(`Field "${node.name}" is not a nav`);

@@ -1,15 +1,3 @@
-/**
- * Integration tests for customer.products.updated webhook.
- *
- * Verifies that webhooks are sent correctly for:
- * - Customer creation with default products
- * - Cancel end of cycle (scenario: cancel)
- * - Uncancel (scenario: renew)
- * - Entity-level cancel and uncancel
- *
- * Uses Svix Play (https://www.svix.com/play/) to receive and verify webhooks.
- */
-
 import { afterAll, beforeAll, expect, test } from "bun:test";
 import type {
 	ApiCustomerV3,
@@ -50,10 +38,6 @@ type CustomerProductsUpdatedPayload = {
 	};
 };
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// SVIX PLAY SETUP (shared across all tests)
-// ═══════════════════════════════════════════════════════════════════════════════
-
 let webhook: WebhookTestSetup;
 let playToken: string;
 
@@ -69,10 +53,6 @@ beforeAll(async () => {
 afterAll(async () => {
 	await webhook?.cleanup();
 });
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// WEBHOOK TESTS - CUSTOMER CREATION
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(`${chalk.yellowBright("webhook: customer.products.updated on create with default product")}`, async () => {
 	const customerId = "webhook-create-default";
@@ -92,7 +72,6 @@ test.concurrent(`${chalk.yellowBright("webhook: customer.products.updated on cre
 		actions: [],
 	});
 
-	// Create customer with default product and webhooks enabled
 	await autumnV1.customers.create({
 		id: customerId,
 		name: "Webhook Test Customer",
@@ -136,17 +115,12 @@ test.concurrent(`${chalk.yellowBright("webhook: customer.products.updated on cre
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// WEBHOOK TESTS - CANCEL
-// ═══════════════════════════════════════════════════════════════════════════════
-
 test.concurrent(`${chalk.yellowBright("webhook: cancel end of cycle (no default product) - scenario: cancel")}`, async () => {
 	const customerId = "webhook-cancel-no-default";
 
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
 	const pro = products.pro({ id: "pro", items: [messagesItem] });
 
-	// Initialize customer, attach pro, then cancel at end of cycle
 	await initScenario({
 		customerId,
 		setup: [
@@ -195,7 +169,6 @@ test.concurrent(`${chalk.yellowBright("webhook: cancel end of cycle (with free d
 		isDefault: true,
 	});
 
-	// Initialize customer, attach pro, then cancel at end of cycle
 	await initScenario({
 		customerId,
 		setup: [
@@ -225,7 +198,6 @@ test.concurrent(`${chalk.yellowBright("webhook: cancel end of cycle (with free d
 
 	const { data } = result!.payload;
 
-	// Scenario is "cancel" (not "downgrade") since scheduled product is FREE
 	expect(data.scenario).toBe("cancel");
 	expect(data.updated_product).toBeDefined();
 	expect(data.updated_product.id).toBe(pro.id);
@@ -233,10 +205,6 @@ test.concurrent(`${chalk.yellowBright("webhook: cancel end of cycle (with free d
 	expect(data.customer.id).toBe(customerId);
 	expect(data.entity).toBeUndefined();
 });
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// WEBHOOK TESTS - STRIPE-INITIATED CANCEL (default scheduled before webhook)
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(`${chalk.yellowBright("webhook: Stripe-initiated cancel fires after default product scheduled")}`, async () => {
 	const customerId = "webhook-stripe-cancel-default";
@@ -258,7 +226,6 @@ test.concurrent(`${chalk.yellowBright("webhook: Stripe-initiated cancel fires af
 		actions: [s.attach({ productId: pro.id })],
 	});
 
-	// Verify pro is active
 	const customerAfterAttach =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	await expectProductActive({
@@ -266,7 +233,6 @@ test.concurrent(`${chalk.yellowBright("webhook: Stripe-initiated cancel fires af
 		productId: pro.id,
 	});
 
-	// Get Stripe subscription ID and cancel externally via Stripe CLI
 	const subscriptionId = await getSubscriptionId({
 		ctx: testCtx,
 		customerId,
@@ -277,7 +243,6 @@ test.concurrent(`${chalk.yellowBright("webhook: Stripe-initiated cancel fires af
 		cancel_at_period_end: true,
 	});
 
-	// Wait for webhook triggered by the Stripe-initiated cancellation
 	const result = await waitForWebhook<CustomerProductsUpdatedPayload>({
 		token: playToken,
 		predicate: (payload) =>
@@ -298,15 +263,12 @@ test.concurrent(`${chalk.yellowBright("webhook: Stripe-initiated cancel fires af
 	expect(data.customer).toBeDefined();
 	expect(data.customer.id).toBe(customerId);
 
-	// The webhook customer should include the scheduled default product
-	// because webhooks now fire AFTER defaults are scheduled
 	const scheduledProduct = data.customer.products.find(
 		(p) => p.id === freeDefault.id,
 	);
 	expect(scheduledProduct).toBeDefined();
 	expect(scheduledProduct!.status).toBe("scheduled");
 
-	// Also verify via API that the state is correct
 	await timeout(2000);
 	const customerAfterCancel =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
@@ -320,17 +282,12 @@ test.concurrent(`${chalk.yellowBright("webhook: Stripe-initiated cancel fires af
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// WEBHOOK TESTS - UNCANCEL
-// ═══════════════════════════════════════════════════════════════════════════════
-
 test.concurrent(`${chalk.yellowBright("webhook: uncancel - scenario: renew")}`, async () => {
 	const customerId = "webhook-uncancel";
 
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
 	const pro = products.pro({ id: "pro", items: [messagesItem] });
 
-	// Initialize customer, attach pro, cancel, then uncancel
 	const { autumnV1 } = await initScenario({
 		customerId,
 		setup: [
@@ -368,14 +325,9 @@ test.concurrent(`${chalk.yellowBright("webhook: uncancel - scenario: renew")}`, 
 	expect(data.customer.id).toBe(customerId);
 	expect(data.entity).toBeUndefined();
 
-	// Verify product is now active (not canceling)
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	await expectProductActive({ customer, productId: pro.id });
 });
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// WEBHOOK TESTS - ENTITY-LEVEL CANCEL/UNCANCEL
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(`${chalk.yellowBright("webhook: entity cancel end of cycle - scenario: cancel")}`, async () => {
 	const customerId = "webhook-entity-cancel";
@@ -383,7 +335,6 @@ test.concurrent(`${chalk.yellowBright("webhook: entity cancel end of cycle - sce
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
 	const pro = products.pro({ id: "pro", items: [messagesItem] });
 
-	// Initialize customer, attach pro to entity, then cancel at end of cycle
 	const { autumnV1, entities } = await initScenario({
 		customerId,
 		setup: [
@@ -424,11 +375,9 @@ test.concurrent(`${chalk.yellowBright("webhook: entity cancel end of cycle - sce
 	expect(data.customer).toBeDefined();
 	expect(data.customer.id).toBe(customerId);
 
-	// Verify entity is included in webhook
 	expect(data.entity).toBeDefined();
 	expect(data.entity?.id).toBe(entityId);
 
-	// Verify entity product is canceling
 	const entity = await autumnV1.entities.get<ApiEntityV0>(customerId, entityId);
 	await expectProductCanceling({ customer: entity, productId: pro.id });
 });
@@ -439,7 +388,6 @@ test.concurrent(`${chalk.yellowBright("webhook: entity uncancel - scenario: rene
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
 	const pro = products.pro({ id: "pro", items: [messagesItem] });
 
-	// Initialize customer, attach pro to entity, cancel, then uncancel
 	const { autumnV1, entities } = await initScenario({
 		customerId,
 		setup: [
@@ -485,11 +433,9 @@ test.concurrent(`${chalk.yellowBright("webhook: entity uncancel - scenario: rene
 	expect(data.customer).toBeDefined();
 	expect(data.customer.id).toBe(customerId);
 
-	// Verify entity is included in webhook
 	expect(data.entity).toBeDefined();
 	expect(data.entity?.id).toBe(entityId);
 
-	// Verify entity product is now active (not canceling)
 	const entity = await autumnV1.entities.get<ApiEntityV0>(customerId, entityId);
 	await expectProductActive({ customer: entity, productId: pro.id });
 });

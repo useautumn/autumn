@@ -20,7 +20,6 @@ type SetPlansCheckoutModeContext = Pick<
 	| "replacedStripeSubscription"
 >;
 
-/** A later first phase bills only its ongoing plans now. */
 const productsChargedNow = ({
 	billingContext,
 	startsInFuture,
@@ -50,7 +49,6 @@ export const setupSetPlansCheckoutMode = ({
 	const chargesNothingNow =
 		startsInFuture &&
 		chargedProducts.every((product) => isFreeProduct({ product }));
-	// A recreate keeps a send_invoice subscription invoiced, so its customer is never asked for a card.
 	const keepsSendingInvoices =
 		billingContext.replacedStripeSubscription?.collection_method ===
 		"send_invoice";

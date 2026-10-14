@@ -65,7 +65,6 @@ export function CustomerFeatureUsageDisplay({
 		let canCompute = true;
 
 		for (const subRow of subRows) {
-			// Only process CreditSystemSubRow items
 			if (!("isSubRow" in subRow) || !subRow.isSubRow) continue;
 
 			const meteredCusEnt = subRow.meteredCusEnt;

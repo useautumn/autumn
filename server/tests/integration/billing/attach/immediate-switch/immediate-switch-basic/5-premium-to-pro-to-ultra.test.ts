@@ -1,14 +1,3 @@
-/**
- * Immediate Switch Basic Tests (Attach V2)
- *
- * Tests for basic upgrade scenarios where a higher-tier product takes effect immediately.
- *
- * Key behaviors:
- * - Upgrade replaces existing product immediately
- * - Prorated charge for price difference
- * - Scheduled downgrades are cancelled when upgrading
- */
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3 } from "@autumn/shared";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
@@ -23,20 +12,6 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 5: Premium to Pro (scheduled) to Ultra (upgrade cancels scheduled)
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Customer has premium ($50/mo)
- * - Downgrade to pro (scheduled for end of cycle)
- * - Upgrade to ultra ($200/mo) - should cancel scheduled downgrade
- *
- * Expected Result:
- * - Scheduled downgrade is cancelled
- * - Ultra is active immediately
- */
 test.concurrent(
 	`${chalk.yellowBright("immediate-switch-basic 5: premium to pro to ultra")}`,
 	async () => {
@@ -68,11 +43,10 @@ test.concurrent(
 			],
 			actions: [
 				s.billing.attach({ productId: premium.id }),
-				s.billing.attach({ productId: pro.id }), // Downgrade - scheduled
+				s.billing.attach({ productId: pro.id }),
 			],
 		});
 
-		// Verify scheduled state before upgrade
 		const customerBefore =
 			await autumnV1.customers.get<ApiCustomerV3>(customerId);
 		await expectProductCanceling({
@@ -84,15 +58,12 @@ test.concurrent(
 			productId: pro.id,
 		});
 
-		// 1. Preview upgrade to ultra
 		const preview = await autumnV1.billing.previewAttach({
 			customer_id: customerId,
 			product_id: ultra.id,
 		});
-		// Upgrade from premium ($50) to ultra ($200) = $150 difference
 		expect(preview.total).toBe(150);
 
-		// 2. Attach ultra (upgrade - should cancel scheduled downgrade)
 		await autumnV1.billing.attach({
 			customer_id: customerId,
 			product_id: ultra.id,
@@ -101,14 +72,12 @@ test.concurrent(
 
 		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-		// Verify product states - ultra active, premium and pro removed
 		await expectCustomerProducts({
 			customer,
 			active: [ultra.id],
 			notPresent: [premium.id, pro.id],
 		});
 
-		// Verify messages has ultra's balance
 		expectCustomerFeatureCorrect({
 			customer,
 			featureId: TestFeature.Messages,

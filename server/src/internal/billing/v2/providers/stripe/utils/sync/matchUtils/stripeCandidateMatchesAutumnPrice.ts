@@ -10,11 +10,6 @@ import { stripePriceIdMatchesAutumnPrice } from "./stripePriceIdMatchesAutumnPri
 import { stripePriceMatchesFixedPrice } from "./stripePriceMatchesAutumnPrice.js";
 import { stripeProductIdMatchesAutumnPrice } from "./stripeProductIdMatchesAutumnPrice.js";
 
-/**
- * When the Stripe item has a price ID, match strictly on it — a shared product
- * would conflate sibling variants and differently priced items. The one
- * exception is a fixed price billed on a legacy product at the same amount.
- */
 export const stripeCandidateMatchesAutumnPrice = ({
 	candidate,
 	stripePrice,
@@ -40,7 +35,5 @@ export const stripeCandidateMatchesAutumnPrice = ({
 		});
 	}
 
-	// Only fall back to product-ID matching when no Stripe price ID is present
-	// (legacy / unexpanded items).
 	return stripeProductIdMatchesAutumnPrice({ candidate, price, product });
 };

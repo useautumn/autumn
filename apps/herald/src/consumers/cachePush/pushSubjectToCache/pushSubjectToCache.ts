@@ -10,7 +10,6 @@ import { readSubjectAtomTargets } from "./readSubjectAtomTargets.js";
 import { sendDeletionToAtom } from "./sendDeletionToAtom.js";
 import { sendSubjectToAtom } from "./sendSubjectToAtom.js";
 
-/** One subject into every Atom that holds it, as its worker holds it now, or its deletion once it holds none; null when no Atom does. */
 export const pushSubjectToCache = async ({
 	ctx,
 	cacheSubject,
@@ -24,7 +23,6 @@ export const pushSubjectToCache = async ({
 	if (!targets) return null;
 
 	const readStartedAt = performance.now();
-	// Taken before the read: a push of the subject created again, read after this one, outranks its deletion.
 	const readAt = Date.now();
 	let send: (atomConnection: AtomConnection) => Promise<void>;
 	try {

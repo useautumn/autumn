@@ -1,5 +1,3 @@
-/** Resync with a later phase keeps the old start and anchor and starts the next phase on its requested date. */
-
 import { expect, test } from "bun:test";
 import {
 	msToSeconds,

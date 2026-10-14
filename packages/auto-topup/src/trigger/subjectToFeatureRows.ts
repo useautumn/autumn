@@ -20,10 +20,6 @@ const ROW_STATUSES: CusProductStatus[] = [
 	CusProductStatus.PastDue,
 ];
 
-/**
- * A feature's rows the way the server's customer-level selection reads them: every entity's rows pool
- * up (only license seat assignments stay out), so an entity view is not narrowed to its own rows.
- */
 export const subjectToFeatureRows = <
 	CE extends AutoTopupCustomerEntitlement,
 	CP extends AutoTopupCustomerProduct,
@@ -34,13 +30,10 @@ export const subjectToFeatureRows = <
 	now,
 }: {
 	fullSubject: AutoTopupSubject<CE, CP>;
-	/** The feature's own rows. */
 	featureId?: string;
-	/** Every row whose balance can pay for the feature: its own, and credit systems containing it. */
 	fundsFeatureId?: string;
 	now: number;
 }): AutoTopupFeatureRow<CE, CP>[] => {
-	// A loose or pooled row has no product to judge by status, so it stays.
 	const rows: AutoTopupFeatureRow<CE, CP>[] = fullSubjectToRowsWithProduct({
 		fullSubject,
 	}).filter(

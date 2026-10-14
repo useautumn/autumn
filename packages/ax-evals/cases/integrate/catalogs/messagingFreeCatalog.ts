@@ -1,9 +1,3 @@
-/**
- * Messaging-API archetype catalog (Resend-like free tier): one metered
- * consumable feature with a generous monthly grant on a free auto-enable
- * plan and NO overage price — the shape where a daily usage_limits cap on
- * top of the monthly allowance is the right throttle.
- */
 export const messagingFreeCatalog = `import { atmn, feature, plan } from "atmn";
 
 export default atmn({

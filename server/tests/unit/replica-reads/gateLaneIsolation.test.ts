@@ -44,7 +44,6 @@ describe("full subject gate lanes", () => {
 		const customerId = "cus-lane-isolation";
 		const hold = () => new Promise((resolve) => setTimeout(resolve, 200));
 
-		// 1 running + 2 pending fills the replica lane; the rest must 429.
 		const replicaTasks = Promise.allSettled(
 			Array.from({ length: 8 }, () =>
 				runWithFullSubjectGate({
@@ -69,7 +68,6 @@ describe("full subject gate lanes", () => {
 		const primaryElapsedMs = Date.now() - start;
 
 		expect(primaryResult).toBe("primary-ok");
-		// Admitted immediately — never queued behind the saturated replica lane.
 		expect(primaryElapsedMs).toBeLessThan(100);
 
 		const replicaResults = await replicaTasks;

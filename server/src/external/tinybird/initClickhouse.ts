@@ -9,7 +9,6 @@ if (TINYBIRD_CLICKHOUSE_URL && TINYBIRD_TOKEN) {
 	);
 }
 
-/** ClickHouse client for raw SQL queries to Tinybird. Null if not configured. */
 export const clickhouseClient: ClickHouseClient | null =
 	TINYBIRD_CLICKHOUSE_URL && TINYBIRD_TOKEN
 		? createClient({
@@ -18,7 +17,6 @@ export const clickhouseClient: ClickHouseClient | null =
 			})
 		: null;
 
-/** Get ClickHouse client, throws if not configured. */
 export const getClickhouseClient = (): ClickHouseClient => {
 	if (!clickhouseClient) {
 		throw new Error("Tinybird ClickHouse is not configured");

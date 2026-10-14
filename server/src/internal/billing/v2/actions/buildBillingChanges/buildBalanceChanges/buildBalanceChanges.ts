@@ -50,8 +50,6 @@ export const buildBalanceChanges = ({
 
 	return Array.from(featureIds).flatMap((featureId) => {
 		const after = afterBalances[featureId];
-		// Feature disappeared post-migration → flag_changes / plan_changes own
-		// that signal; we don't emit a balance_change carrying nothing.
 		if (!after) return [];
 
 		const before = balanceSubset(beforeBalances[featureId]);

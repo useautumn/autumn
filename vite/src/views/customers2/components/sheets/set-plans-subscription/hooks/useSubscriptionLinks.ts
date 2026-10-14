@@ -11,8 +11,6 @@ import {
 	subscriptionPickerRowDetails,
 } from "../utils/buildSubscriptionPickerRows";
 
-/** Lets the Set Plans form describe and open the customer's other subscriptions,
- * from the same Stripe data the picker already loaded. */
 export const useSubscriptionLinks = ({
 	enabled,
 }: {

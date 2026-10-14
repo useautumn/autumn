@@ -7,10 +7,6 @@ import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 
-// Check + send_event on a feature linked to a credit system should:
-//  - keep `balance` populated with the tracked feature (backwards compat)
-//  - populate `balances` with both the feature and the credit system
-
 test.concurrent(
 	`${chalk.yellowBright("check-send-event-credit-system: returns balance + balances for linked credit system")}`,
 	async () => {
@@ -44,11 +40,8 @@ test.concurrent(
 		});
 
 		expect(checkRes.allowed).toBe(true);
-		// Backwards-compat single balance
 		expect(checkRes.balance).not.toBeNull();
 		expect(checkRes.balance?.feature_id).toBe(TestFeature.Action1);
-		// New balances field exposes the feature and every linked credit system;
-		// pools the customer doesn't carry (credits3) are present but null
 		expect(checkRes.balances).toBeDefined();
 		expect(Object.keys(checkRes.balances ?? {}).sort()).toEqual(
 			[

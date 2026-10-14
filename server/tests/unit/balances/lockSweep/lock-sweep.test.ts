@@ -44,7 +44,6 @@ describe("lock sweep", () => {
 		expect(delayOf({ fetched: 1_000, pageSize: 500 })).toBe(ms.seconds(1));
 		expect(delayOf({ fetched: 700, pageSize: 500 })).toBe(ms.seconds(30));
 		expect(delayOf({ fetched: 0, pageSize: 500 })).toBe(ms.seconds(30));
-		// Not swept at all: disabled, inactive slot, or the batch failed.
 		expect(delayOf(null)).toBe(ms.seconds(30));
 	});
 });

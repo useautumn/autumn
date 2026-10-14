@@ -4,7 +4,6 @@ import { peerRequestHeaders } from "./peerSignature.js";
 
 const DELIVERY_TIMEOUT_MS = 2_000;
 
-/** Taken, refused for good (the peer will never apply this body), or not taken yet (try again). */
 export type Delivery = "delivered" | "rejected" | "failed";
 
 export type PeerSender = (params: {
@@ -13,7 +12,6 @@ export type PeerSender = (params: {
 	operation: ReplicatedOperation;
 }) => Promise<Delivery>;
 
-/** Only a body the peer could read and refused is final; any other answer, a 401 or a 5xx included, is tried again. */
 const REJECTED_STATUSES = new Set([400, 422]);
 
 export const createPeerSender = ({

@@ -8,11 +8,6 @@ import { countActiveByCustomerLicenseLinkIds } from "../../repos/customerLicense
 import { listAdoptableStrandedCustomerLicenses } from "../../repos/customerLicenseRepo/listAdoptableStrandedCustomerLicenses.js";
 import type { ReconcileContext } from "./types.js";
 
-/**
- * Gathers everything reconcile needs. Parents and customer licenses come
- * straight off the FullCustomer (live parents only); stranded rows and seat
- * counts are the only DB reads, both bounded by customer license count.
- */
 export const setupReconcileContext = async ({
 	ctx,
 	fullCustomer,
@@ -43,7 +38,6 @@ export const setupReconcileContext = async ({
 			(customerLicense) => customerLicense.link_id,
 		),
 	});
-	// Seats anchor by link; downstream still keys by row id.
 	const seatCountByCustomerLicenseId = new Map(
 		allCustomerLicenses.map((customerLicense) => [
 			customerLicense.id,

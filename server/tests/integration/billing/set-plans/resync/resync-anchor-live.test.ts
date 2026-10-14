@@ -1,5 +1,3 @@
-/** A timestamp billing_cycle_anchor on a live subscription resets its cycle, and every plan on it, on the anchor. */
-
 import { expect, test } from "bun:test";
 import { formatMsToDate, ms, type SetPlansParamsV0Input } from "@autumn/shared";
 import { advanceToAnchor } from "@tests/integration/billing/utils/advanceUtils/advanceToAnchor";

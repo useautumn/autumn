@@ -1,10 +1,3 @@
-/**
- * catalogV2.update — free_trial projected-state validation.
- *
- * Spec: reject with 400; no silent is_default flips. Validation must see
- * projected plan state (same-call one-off + trial, default + carded trial).
- */
-
 import { test } from "bun:test";
 import {
 	BillingInterval,
@@ -35,7 +28,6 @@ const trialDay = ({
 	card_required: cardRequired,
 });
 
-// RED until validation is wired against projected state
 test.concurrent(
 	`${chalk.yellowBright("catalogV2 free-trial validation: trial on one-off create → 400")}`,
 	async () => {
@@ -74,7 +66,6 @@ test.concurrent(
 	},
 );
 
-// RED
 test.concurrent(
 	`${chalk.yellowBright("catalogV2 free-trial validation: add trial to existing one-off → 400")}`,
 	async () => {
@@ -120,7 +111,6 @@ test.concurrent(
 	},
 );
 
-// RED — same-call projection: becoming one-off while keeping/adding trial
 test.concurrent(
 	`${chalk.yellowBright("catalogV2 free-trial validation: same-call one-off + trial → 400")}`,
 	async () => {
@@ -169,7 +159,6 @@ test.concurrent(
 	},
 );
 
-// RED — default + carded trial must 400 (not silent is_default flip)
 test.concurrent(
 	`${chalk.yellowBright("catalogV2 free-trial validation: default + card_required true → 400")}`,
 	async () => {
@@ -206,7 +195,6 @@ test.concurrent(
 	},
 );
 
-// Update on an existing default preserves auto_enable even when trial becomes carded.
 test.concurrent(
 	`${chalk.yellowBright("catalogV2 free-trial validation: default trial card_required false→true → OK")}`,
 	async () => {
@@ -257,7 +245,6 @@ test.concurrent(
 	},
 );
 
-// Update on an existing default preserves auto_enable when trial is removed.
 test.concurrent(
 	`${chalk.yellowBright("catalogV2 free-trial validation: remove trial from default paid → OK")}`,
 	async () => {
@@ -303,7 +290,6 @@ test.concurrent(
 	},
 );
 
-// Control: free default without trial → OK (may already be green)
 test.concurrent(
 	`${chalk.yellowBright("catalogV2 free-trial validation: free default without trial → OK")}`,
 	async () => {

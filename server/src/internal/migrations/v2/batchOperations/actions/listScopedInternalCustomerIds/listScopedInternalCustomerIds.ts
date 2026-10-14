@@ -6,9 +6,6 @@ import {
 } from "../../scope/operationScope.js";
 import { pageCustomerIdsCte } from "../utils/pageCustomerIdsSql.js";
 
-/** Which of the page's customers hold at least one customer product inside
- * any patch scope. A skipped customer outside every scope was ineligible;
- * one inside a scope had nothing left to change. */
 export const listScopedInternalCustomerIds = async ({
 	db,
 	internalCustomerIds,

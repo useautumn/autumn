@@ -2,8 +2,6 @@ import type { Catalog } from "@autumn/balance-engine";
 import type { CatalogCacheScope } from "../types/catalogCacheContext.js";
 import { isCatalogRowCurrent } from "./catalogVersions.js";
 
-/** True while every key the read asked for still holds the same row, none invalidated; a ttl alone doesn't count.
- *  Other rows coming and going don't matter, and a cache that hasn't changed answers without looking at the keys. */
 export const isCatalogCurrent = ({
 	scope,
 	catalog,

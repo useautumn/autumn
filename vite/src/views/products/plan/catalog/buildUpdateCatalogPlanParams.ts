@@ -64,11 +64,8 @@ const planItemsToCatalogParams = (
 const pinsVersion = (versioning: CatalogPlanVersioningStrategy | undefined) =>
 	versioning == null || versioning === "existing";
 
-/** The two things `new_version_slug` can mean on one save. Never both at once. */
 export type NewVersionSlugSource =
-	/** Rename the row this save targets — derived from the edited product. */
 	| { source: "renamed_row" }
-	/** Name the row a `new_version` save mints. Blank falls back to a slug edit. */
 	| { source: "minted_row"; slug?: string };
 
 const renamedRowSlug = ({
@@ -82,7 +79,6 @@ const renamedRowSlug = ({
 		? editedProduct.version_slug?.trim()
 		: undefined;
 
-/** `all_versions` names no single row, so it never carries a slug. */
 const resolveNewVersionSlug = ({
 	newVersionSlug,
 	baseProduct,
@@ -121,7 +117,6 @@ export const buildUpdateCatalogPlanParams = ({
 	propagate?: CatalogPropagateParams;
 	licenses?: PlanLicenseParams[];
 	migration?: MigrationParamsInput;
-	/** When false, omit items/price/free_trial so a licenses-only write preserves them. */
 	includeContent?: boolean;
 }): UpdateCatalogPlanParamsInput => {
 	const source = baseProduct ?? editedProduct;
@@ -175,12 +170,6 @@ export const buildUpdateCatalogPlanParams = ({
 	};
 };
 
-/**
- * Relationship rows first, then the content row when there is content to
- * write. A pure link/unlink save has no content row: the relationship rows
- * already name every version, and a bare content row would be a second
- * (partial) statement about the same plan.
- */
 export const buildCatalogUpdatePlans = ({
 	relationship = { kind: "unchanged" },
 	...args
@@ -196,7 +185,6 @@ export const buildCatalogUpdatePlans = ({
 		args.includeContent !== false || relationship.kind === "unchanged";
 	if (!includeContent) return relationshipRows;
 	if (relationship.kind !== "unlink") return [...relationshipRows, content];
-	// One statement per row: the content row carries its own version's unlink.
 	return [
 		...relationshipRows.filter((row) => row.version !== content.version),
 		{ ...content, base_variant_id: null },

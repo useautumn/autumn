@@ -16,7 +16,6 @@ export const checkpointLimits = {
 	maxReceipts: 100,
 };
 
-/** `catalogRows` stands in for Postgres: a worker restored from a checkpoint holds no catalog and must fetch it. */
 export function createWorkerFixture({
 	stateStore,
 	records,
@@ -28,7 +27,6 @@ export function createWorkerFixture({
 	now: number;
 	catalogRows?: CatalogRow[];
 }) {
-	/** Postgres stand-in: no customers, and only the catalog rows the test hands over. */
 	const db: WorkerDb = {
 		getSubjectRows: async () => null,
 		readSubjectSnapshot: async () => null,

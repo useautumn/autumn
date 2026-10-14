@@ -3,7 +3,6 @@ import type { TwdContext } from "../../../lib/types/twdContext.ts";
 import type { LiveConnection } from "../types/liveConnection.ts";
 import { loadTopicSnapshot } from "./loadTopicSnapshot.ts";
 
-/** A client this far behind gets dropped; it reconnects and resnapshots. */
 const MAX_BUFFERED_BYTES = 8 * 1024 * 1024;
 
 const connections = new Map<string, LiveConnection>();
@@ -23,7 +22,6 @@ const deliver = ({
 		return;
 	}
 	const pending = connection.pending.get(topic);
-	// seq is stamped when a message actually goes out, so buffered topics can't reorder it.
 	if (pending) pending.push({ type: "event", topic, seq: 0, event });
 	else connection.send({ type: "event", topic, seq: ++connection.seq, event });
 };
@@ -33,7 +31,6 @@ export const hasLiveSubscribers = ({ topic }: { topic: string }) =>
 
 const lastPayloads = new Map<string, string>();
 
-/** Publishes only when the payload differs from the last one with the same key. */
 export const publishLiveIfChanged = ({
 	key,
 	topic,
@@ -80,7 +77,6 @@ export const removeLiveConnection = ({
 	connections.delete(connectionId);
 };
 
-/** Subscribes, then sends the snapshot followed by any events raised while it loaded. */
 export const subscribeLive = async ({
 	ctx,
 	connection,

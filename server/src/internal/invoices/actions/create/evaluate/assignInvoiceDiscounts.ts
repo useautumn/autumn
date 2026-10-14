@@ -11,11 +11,6 @@ export type AssignedInvoiceDiscounts = {
 	lineCouponIds: Record<string, string[]>;
 };
 
-/**
- * Invoice-level discounts ride on the invoice; a plan's discounts ride on each
- * of that plan's lines. A fixed-amount coupon over several lines would be taken
- * once per line, so it is refused rather than split.
- */
 export const assignInvoiceDiscounts = ({
 	lines,
 	invoiceDiscounts,

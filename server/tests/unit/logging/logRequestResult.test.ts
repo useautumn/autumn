@@ -92,7 +92,6 @@ const captureJsonResponse = async ({
 
 const originalNodeEnv = process.env.NODE_ENV;
 
-// Development adds an EXTRA LOGS debug line; these tests assert only the terminal record.
 beforeEach(() => {
 	process.env.NODE_ENV = "test";
 });

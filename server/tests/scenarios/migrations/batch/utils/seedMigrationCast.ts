@@ -20,10 +20,6 @@ import { and, eq } from "drizzle-orm";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { generateId } from "@/utils/genUtils.js";
 
-/** How a member's plan diverges from the catalog it was attached from.
- * Absent means a plain catalog holder — the customer a migration must move.
- * Only `custom_attach` and `custom_patch` set customer_products.is_custom,
- * which is the flag plan_filter.custom actually reads. */
 export type CastDivergence =
 	| { kind: "custom_attach"; items: ProductItem[] }
 	| { kind: "custom_patch"; addItems: ProductItem[] }
@@ -32,23 +28,17 @@ export type CastDivergence =
 	| { kind: "rollover"; featureId: string; balance: number; usage?: number };
 
 export type CastMember = {
-	/** Suffixes the customer id and labels the member in the briefing. */
 	role: string;
-	/** Catalog version to attach from; defaults to the latest. */
 	version?: number;
 	divergence?: CastDivergence;
-	/** Seats bought on the linked license plan, and how many get assigned. */
 	seats?: { attached: number; assigned: number };
 	usage?: { featureId: string; value: number }[];
-	/** Forced onto the plan row after attach, for lifecycle coverage. */
 	status?: CusProductStatus;
-	/** Leaves the customer with no parent plan at all. */
 	unattached?: boolean;
 	note?: string;
 };
 
 export type LicensePlanSpec = {
-	/** One item set per version; index 0 is v1, later ones are minted. */
 	versions: ProductItem[][];
 	includedSeats: number;
 };
@@ -62,14 +52,11 @@ const needsPaidTemplate = (members: CastMember[]) =>
 
 export type SeedMigrationCastParams = {
 	idPrefix: string;
-	/** One item set per parent-plan version; index 0 is v1. */
 	planVersions: ProductItem[][];
 	licensePlan?: LicensePlanSpec;
 	members: CastMember[];
 };
 
-/** Re-reads an already-seeded cast without touching it, so a scenario file can
- * print state after you have driven the migration yourself. */
 const resolveSeededCast = ({
 	idPrefix,
 	planVersions,
@@ -99,19 +86,11 @@ const resolveSeededCast = ({
 	};
 };
 
-/**
- * Seeds one parent plan (optionally linked to a license plan), mints every
- * requested catalog version, then puts each cast member into its declared state.
- * Re-running deletes the whole cast first, so a scenario always resets clean.
- * `SEED=0` skips all of that and just re-reads what is already there.
- */
 export const seedMigrationCast = async (params: SeedMigrationCastParams) => {
 	if (process.env.SEED === "0") return resolveSeededCast(params);
 
 	const { idPrefix, planVersions, licensePlan, members } = params;
 	const [firstVersion] = planVersions;
-	// Plans are created bare: the V1_2 create route silently strips v2 item
-	// shapes, so every version is set through the v2_3 route instead.
 	const parent = products.base({ id: "parent", items: [] });
 	const seat = licensePlan
 		? products.base({
@@ -156,7 +135,6 @@ export const seedMigrationCast = async (params: SeedMigrationCastParams) => {
 		items: firstVersion,
 	});
 
-	// Linking before minting means every later version inherits the link.
 	if (seat && licensePlan) {
 		await autumnV2_3.post("/plans.update", {
 			plan_id: seat.id,
@@ -207,8 +185,6 @@ export const seedMigrationCast = async (params: SeedMigrationCastParams) => {
 		}
 	};
 
-	// Attaching a member while its version is still the latest is what lets a
-	// custom attach pin a version — `items` and `version` together are ignored.
 	for (let version = 1; version <= planVersions.length; version++) {
 		if (version > 1) {
 			await autumnV2_3.post("/plans.update", {

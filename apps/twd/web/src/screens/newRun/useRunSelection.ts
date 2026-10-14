@@ -6,7 +6,6 @@ type File = z.infer<typeof TestFile>;
 
 export type Selection = { groups: string[]; files: string[]; grep: string };
 
-/** Group ↔ file selection state; a file unchecked out of a group splits that group into files. */
 export const useRunSelection = ({
 	catalog,
 }: {
@@ -75,7 +74,6 @@ export const useRunSelection = ({
 			};
 		});
 
-	/** Batch add (select all / paint). Removal goes through toggleFile to split groups. */
 	const addFiles = (paths: string[]) =>
 		setSelection((s) => ({
 			...s,

@@ -1,16 +1,3 @@
-/**
- * Long-lived checkout (deferred plan)
- *
- * Contract:
- * - Creating the link leaves the plan pending straight away, before anyone opens it.
- * - The link is a reusable launcher that reuses an open Stripe session and opens
- *   a fresh one once it expires.
- * - The pending plan opened by the link survives each 24h Stripe session expiry,
- *   and reopening the link renews the session for the SAME pending row.
- * - Paying a renewed session promotes that pending row to active.
- * - The cron expires the pending plan once the link's 90 days pass.
- */
-
 import { expect, test } from "bun:test";
 import {
 	type AttachParamsV1Input,
@@ -204,7 +191,6 @@ test.concurrent(
 		});
 		expect(pendingAtCreation).toBeDefined();
 
-		// Opening the link sells that same pending row.
 		await startLongLivedCheckout(checkoutId);
 		const pendingAfterOpen = await getPendingProRow({
 			ctx,
@@ -232,8 +218,6 @@ test.concurrent(
 		});
 		expect(pendingAtOpen).toBeDefined();
 
-		// 1. Expiring the Stripe session must not remove the pending plan. Timing out after
-		// a successful replay of the expired event proves the handler ran and was a no-op.
 		await ctx.stripeCli.checkout.sessions.expire(firstSessionId);
 		await expect(
 			waitForStripeWebhook({
@@ -252,7 +236,6 @@ test.concurrent(
 			}),
 		).rejects.toThrow(DELIVERED_WITHOUT_EFFECT);
 
-		// 2. Reopening renews the session for the same pending row.
 		const secondSessionId = getStripeSessionId(
 			await startLongLivedCheckout(checkoutId),
 		);
@@ -324,13 +307,11 @@ test.concurrent(
 		});
 		const metadataId = pendingRow!.metadata_id!;
 
-		// 1. Before the link expires, the cron leaves the pending plan alone.
 		await runLongLivedCheckoutExpiry({ ctx });
 		expect(
 			await getPendingProRow({ ctx, internalCustomerId, productId: pro.id }),
 		).toBeDefined();
 
-		// 2. Once expired, the cron removes the pending plan and its metadata.
 		await ctx.db
 			.update(metadata)
 			.set({ expires_at: Date.now() - 1000 })

@@ -9,8 +9,6 @@ import {
 import { atmnToStripeAmountDecimal } from "@shared/utils/productUtils/priceUtils/convertAmountUtils";
 import { priceToStripeRecurringParams } from "@shared/utils/productUtils/priceUtils/convertPrice/priceToStripeRecurringParams";
 
-/** Builds a flat inline Stripe price for a fixed price — the base-price
- * counterpart of `cusEntToInlineStripePrice`. */
 export const fixedPriceToInlineStripePrice = ({
 	cusPrice,
 	cusProduct,

@@ -14,10 +14,6 @@ import { resolveEntitlementPricesCustomize } from "./resolveEntitlementPricesCus
 import type { ComputeEntitlementPricesPlanParams } from "./types/computeEntitlementPricesPlanParams";
 import type { EntitlementPricesPlan } from "./types/entitlementPricesPlan";
 
-/**
- * Claim-based planner: PUT/PATCH customize → price/entitlement write buckets.
- * Expand omitted lanes from current, then mint/claim/build as a full desired set.
- */
 export const computeEntitlementPricesPlan = ({
 	ctx,
 	params,

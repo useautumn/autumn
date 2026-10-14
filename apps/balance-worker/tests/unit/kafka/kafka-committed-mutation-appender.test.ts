@@ -86,7 +86,6 @@ const waitForTurn = async (): Promise<void> => {
 	await new Promise<void>((resolve) => setImmediate(resolve));
 };
 
-/** Real timers with no gap: a settled offset lands on the next timer turn. */
 const promptSettleTiming = (): CommandOffsetSettleTiming => ({
 	gapMs: 0,
 	now: () => performance.now(),
@@ -360,7 +359,6 @@ test("an appended batch is remembered as this writer's own offsets", async () =>
 			createMutation({ state, commandId: "b" }),
 		],
 	});
-	// The fake producer reports baseOffset 41 for every batch.
 	expect(remembered).toEqual([{ from: 41n, to: 42n }]);
 });
 
@@ -450,7 +448,6 @@ describe("idempotent commits", () => {
 			source: { commandOffset: "11" },
 		};
 		await appender.appendCommitted({ topic, partition, outcomes: [sourced] });
-		// One produce; the offset is not awaited inline, it lands through the group after the gap.
 		expect(sends).toHaveLength(2);
 		expect(committed).toEqual([]);
 		await settleGap();

@@ -1,8 +1,3 @@
-/**
- * UI mapping for DbSpendLimit.skip_overage_billing. The UI is binary (Billed
- * writes false, Skipped writes true); unset entries (API-created) display as
- * Billed and are rewritten to explicit false on save.
- */
 export type OverageBillingOption = "skipped" | "billed";
 
 export const OVERAGE_BILLING_OPTIONS: {

@@ -27,7 +27,6 @@ export const getApiCustomerExpand = async ({
 }): Promise<ApiCustomerExpandResult> => {
 	const { org, env, db, expand } = ctx;
 
-	// Filter out synthetic nested expand paths handled within sub-builders.
 	const filteredExpand = filterExpand({
 		expand,
 		filter: [

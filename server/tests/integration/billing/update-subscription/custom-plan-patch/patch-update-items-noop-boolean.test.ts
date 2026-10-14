@@ -1,26 +1,3 @@
-/**
- * TDD coverage for the boolean-feature noop path in patch-style add_items.
- *
- * Contract under test:
- *   Behavior:
- *     - customize.add_items containing a boolean feature_id whose target customer
- *       product ALREADY has a customer_entitlement for that feature is a noop —
- *       no second customer_entitlement row is inserted.
- *   Side effects:
- *     - cus_product retains exactly 1 customer_entitlement for that feature.
- *     - flags[feature_id] still present and still tied to the same plan_id.
- *     - update call succeeds; preview total = 0 for a pure noop.
- *   Negative control:
- *     - Adding a boolean feature NOT already on the cus_product creates exactly
- *       1 customer_entitlement (normal add path is unaffected by the filter).
- *
- * Pre-impl red: without handleCustomizeNoopItems, handleCustomizeAddItems builds
- * a fresh Entitlement for the boolean feature; applyCustomerProductItemsPatch
- * appends it alongside the existing one, leaving 2 cusEnts for the same feature.
- * Post-impl green: the noop filter drops the duplicate add_item before it reaches
- * the add-items handler, so the cusEnt count stays at 1.
- */
-
 import { expect, test } from "bun:test";
 import {
 	type ApiCustomerV5,
@@ -85,7 +62,6 @@ test.concurrent(
 			actions: [s.billing.attach({ productId: pro.id })],
 		});
 
-		// ── Sanity: start with exactly 1 Dashboard cusEnt ──────────────
 		expect(
 			await countDashboardCusEnts({ ctx, customerId, productId: pro.id }),
 		).toBe(1);
@@ -101,12 +77,10 @@ test.concurrent(
 			},
 		};
 
-		// ── Contract: update succeeds (noop dashboard + real words add) ─
 		await autumnV2_2.subscriptions.update<UpdateSubscriptionV1ParamsInput>(
 			updateParams,
 		);
 
-		// ── Contract: flag still present, tied to pro ──────────────────
 		const customer = await autumnV2_2.customers.get<ApiCustomerV5>(customerId);
 		await expectCustomerProducts({ customer, active: [pro.id] });
 		expectFlagCorrect({
@@ -115,12 +89,6 @@ test.concurrent(
 			planId: pro.id,
 		});
 
-		// ── Contract: noop produced no duplicate cusEnt row ────────────
-		// Pre-fix: this would be 2 (handleCustomizeAddItems built a fresh
-		//   Entitlement for Dashboard; applyCustomerProductItemsPatch tacked
-		//   it on alongside the existing one).
-		// Post-fix: handleCustomizeNoopItems drops the duplicate add_item
-		//   before it reaches the add handler.
 		expect(
 			await countDashboardCusEnts({ ctx, customerId, productId: pro.id }),
 		).toBe(1);
@@ -142,7 +110,6 @@ test.concurrent(
 			actions: [s.billing.attach({ productId: pro.id })],
 		});
 
-		// ── Sanity: start with 0 Dashboard cusEnts ─────────────────────
 		expect(
 			await countDashboardCusEnts({ ctx, customerId, productId: pro.id }),
 		).toBe(0);
@@ -167,7 +134,6 @@ test.concurrent(
 			planId: pro.id,
 		});
 
-		// ── Contract: filter must not block legitimate adds ────────────
 		expect(
 			await countDashboardCusEnts({ ctx, customerId, productId: pro.id }),
 		).toBe(1);

@@ -6,7 +6,6 @@ import {
 	type UpdateSubscriptionV1Params,
 } from "@autumn/shared";
 
-/** Per-update entity_id wins over the request-level default. */
 export const multiUpdateItemToParams = ({
 	params,
 	item,

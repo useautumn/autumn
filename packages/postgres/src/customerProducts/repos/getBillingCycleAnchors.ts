@@ -10,7 +10,6 @@ const billingCycleAnchorRowSchema = z
 	})
 	.strict();
 
-/** Each plan's subscription anchor, from the row `sub.updated` keeps current; plans without one are absent. */
 export const billingCycleAnchorsSql = ({
 	ctx,
 	customerProductIds,

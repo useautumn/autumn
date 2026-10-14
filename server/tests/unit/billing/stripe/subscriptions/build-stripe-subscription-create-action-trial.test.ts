@@ -1,8 +1,3 @@
-/**
- * Stripe rejects trial_settings.missing_payment_method together with send_invoice,
- * so a Stripe-run no-card trial in invoice mode is created without trial_settings.
- */
-
 import { expect, test } from "bun:test";
 import type { BillingContext, InvoiceMode } from "@autumn/shared";
 import { contexts } from "@tests/utils/fixtures/db/contexts";

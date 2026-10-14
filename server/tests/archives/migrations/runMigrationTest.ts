@@ -22,14 +22,11 @@ export const expectSubsSame = ({
 	subsBefore: Stripe.Subscription[];
 	subsAfter: Stripe.Subscription[];
 }) => {
-	// let invoicesBefore = subsBefore.map((sub) => sub.latest_invoice);
-	// let invoicesAfter = subsAfter.map((sub) => sub.latest_invoice);
 	const subIdsBefore = subsBefore.map((sub) => sub.id);
 	const subIdsAfter = subsAfter.map((sub) => sub.id);
 	const periodsBefore = subsBefore.map((sub) => subToPeriodStartEnd({ sub }));
 	const periodsAfter = subsAfter.map((sub) => subToPeriodStartEnd({ sub }));
 
-	// expect(invoicesAfter).toEqual(invoicesBefore);
 	expect(subIdsAfter).toEqual(subIdsBefore);
 	expect(periodsBefore).toEqual(periodsAfter);
 };
@@ -119,10 +116,6 @@ export const runMigrationTest = async ({
 			env,
 		});
 	}
-
-	// if (!isFreeProductV2({ product: toProduct })) {
-	//   expect(cusAfter.invoices.length).to.equal(numInvoices);
-	// }
 
 	return {
 		stripeSubs: subsAfter,

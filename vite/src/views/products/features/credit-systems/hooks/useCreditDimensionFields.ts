@@ -12,13 +12,6 @@ import {
 } from "../utils/creditDimensionUtils";
 import { without } from "../utils/listUtils";
 
-/**
- * The dimensions and their values. Seeded from what is saved so a dimension
- * outlives the last rule using it — deleting rates must never delete the
- * dimension they matched on. Unnamed rows have no key to live under yet, so
- * they are counted separately until named; a fresh item starts with one,
- * since configuring dimensions always begins by naming one.
- */
 export function useCreditDimensionFields({
 	item,
 	onChange,
@@ -33,8 +26,6 @@ export function useCreditDimensionFields({
 	const [draftValues, setDraftValues] = useState<DimensionValues>(() =>
 		dimensionValues(item),
 	);
-	// Keyed, not counted: two blank rows must be distinguishable, or the same
-	// name typed into both passes the duplicate guard twice.
 	const [unnamedKeys, setUnnamedKeys] = useState<string[]>(() =>
 		Object.keys(dimensionValues(item)).length === 0
 			? [crypto.randomUUID()]
@@ -62,11 +53,6 @@ export function useCreditDimensionFields({
 		restrictTo(allowed);
 	};
 
-	/**
-	 * `from` is a dimension name, or an unnamed row's key when it is being named.
-	 * Rejecting a name already in use here — not just at the call site — is what
-	 * stops two blank rows being given the same one.
-	 */
 	const renameField = (from: string, to: string) => {
 		if (from === to || to in values) return;
 		if (unnamedKeys.includes(from)) {

@@ -110,8 +110,6 @@ export const createInvoiceForBilling = async ({
 		stripeCli,
 		stripeCusId: billingContext.stripeCustomer?.id ?? "none",
 		stripeSubId,
-		// Subscription-linked invoices inherit currency from the subscription;
-		// standalone invoices default to the account currency, not the org's.
 		currency: stripeSubId
 			? undefined
 			: billingContextToCurrency({ org: ctx.org, billingContext }),
@@ -141,7 +139,6 @@ export const createInvoiceForBilling = async ({
 	const finalizedInvoice = await finalizeStripeInvoice({
 		stripeCli,
 		invoiceId: invoiceWithLines.id,
-		// Invoice mode: let Stripe email the finalized invoice (fires invoice.sent).
 		autoAdvance: isInvoiceMode,
 	});
 

@@ -7,7 +7,6 @@ import {
 
 type ModelMarkupMap = NonNullable<ModelMarkups>;
 
-/** Append a blank custom-model row, choosing the next free `custom/model-N` key. */
 export const addCustomModelMarkup = (prev: ModelMarkupMap): ModelMarkupMap => {
 	const existing = Object.keys(prev).filter((key) => isCustomModel(key));
 	let index = 1;

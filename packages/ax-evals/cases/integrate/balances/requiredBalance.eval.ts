@@ -5,12 +5,6 @@ import { initIntegrationEval } from "../../../src/initIntegrationEval.ts";
 import { aiWordsCatalog } from "../catalogs/aiWordsCatalog.ts";
 import { fixtureUser, integrateScenario } from "../integrateShared.ts";
 
-/**
- * CHECK flow: variable-cost gating. A summarize costs as many words as the
- * note; the free plan grants 1,000 words a month. The graded trap: the agent
- * must pass requiredBalance: N on check and value: N on track — a default
- * check (requiredBalance 1) lets a 600-word job start with only 500 left.
- */
 const noteOf = (wordCount: number) => "word ".repeat(wordCount).trim();
 
 export const requiredBalance: IntegrationCase = {
@@ -26,7 +20,6 @@ export const requiredBalance: IntegrationCase = {
 	probes: [
 		{ path: "/api/summarize", body: { text: noteOf(200) } },
 		{ path: "/api/summarize", body: { text: noteOf(300) } },
-		// 500 of 1,000 words remain — a 600-word note must be refused upfront.
 		{ path: "/api/summarize", body: { text: noteOf(600) } },
 	],
 	oracleCustomerId: fixtureUser.id,

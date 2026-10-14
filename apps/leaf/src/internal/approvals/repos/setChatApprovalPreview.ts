@@ -2,7 +2,6 @@ import { chatApprovals } from "@autumn/shared";
 import { and, eq } from "drizzle-orm";
 import type { ChatDb } from "../../../lib/db.js";
 
-/** Pending-guarded: a resolved card keeps the preview it was approved with. */
 export const setChatApprovalPreview = async ({
 	approvalId,
 	db,

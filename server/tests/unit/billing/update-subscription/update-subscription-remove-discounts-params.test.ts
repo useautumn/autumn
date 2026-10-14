@@ -1,13 +1,3 @@
-/**
- * Update-subscription requests take additions in `discounts` and removals in `remove_discounts`.
- *
- * Contract:
- *   - `discounts` keeps its existing shape: `{ reward_id }` or `{ promotion_code }`, always added.
- *   - `remove_discounts: [{ reward_id }]` removes; a promotion code or missing reward_id is rejected.
- *   - A removal alone is a valid update.
- *   - Adding and removing the same reward in one request is rejected.
- */
-
 import { describe, expect, test } from "bun:test";
 import { UpdateSubscriptionV0ParamsSchema } from "@api/billing/updateSubscription/updateSubscriptionV0Params";
 import { UpdateSubscriptionV1ParamsSchema } from "@api/billing/updateSubscription/updateSubscriptionV1Params";

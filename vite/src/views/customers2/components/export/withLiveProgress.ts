@@ -3,12 +3,6 @@ import type {
 	CustomerExportResponse,
 } from "@autumn/shared";
 
-/** A stale realtime frame keeps its last value forever, so the poll wins once
- * it moves past it — otherwise a dropped subscription freezes the bar.
- *
- * On a phase disagreement the poll wins too: realtime reaching exporting early
- * and a retry rewinding to scanning look identical from the phase alone, and
- * showing a stale frame is worse than a delay bounded by the 2s poll. */
 export const liveProgressOf = ({
 	polled,
 	live,
@@ -21,7 +15,6 @@ export const liveProgressOf = ({
 	return polled.processed_rows > live.processed_rows ? polled : live;
 };
 
-/** Merges the freshest of the two sources into the active export. */
 export function withLiveProgress({
 	customerExports,
 	activeExportId,

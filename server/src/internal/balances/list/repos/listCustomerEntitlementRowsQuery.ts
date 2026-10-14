@@ -23,13 +23,11 @@ const walkColumns = {
 	idColumn: sql`ce.id`,
 };
 
-/** A loose grant ends at expires_at; a license pool also ends when its parent plan does. */
 const looseExpiredSql = ({ now }: { now: number }) => sql`(
 	(ce.expires_at IS NOT NULL AND ce.expires_at <= ${now})
 	OR (ce.pooled_balance_id IS NOT NULL AND NOT ${licensePooledBalanceIsLiveSql()})
 )`;
 
-/** Plan-backed rows follow their customer_product's status; loose grants and pools follow looseExpiredSql. */
 const expiredSql = ({ now }: { now: number }) => sql`(
 	(cp.id IS NOT NULL AND cp.status = ${CusProductStatus.Expired})
 	OR (ce.customer_product_id IS NULL AND ${looseExpiredSql({ now })})
@@ -43,7 +41,6 @@ const activeSql = ({ now }: { now: number }) => sql`(
 	OR (ce.customer_product_id IS NULL AND NOT ${looseExpiredSql({ now })})
 )`;
 
-/** A pool's contributing rows are folded into its synthetic row, so they are never balances themselves. */
 const notPooledSourceSql = sql`
 	ce.pooled_contribution_id IS NULL
 	AND (
@@ -162,10 +159,6 @@ const selectPageSql = ({
 		LIMIT ${limit + 1}`;
 };
 
-/**
- * One page of customer_entitlements in (customer DESC, created_at DESC, id DESC) order,
- * each hydrated with its entitlement, rollovers and (when plan-backed) customer_product.
- */
 export const listCustomerEntitlementRowsQuery = ({
 	ctx,
 	scope,

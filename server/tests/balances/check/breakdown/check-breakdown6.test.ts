@@ -14,11 +14,6 @@ import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
 import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
 
-/**
- * Test: Monthly messages + Lifetime messages under the SAME product
- * Expected: breakdown array with 2 items (different reset intervals, same product)
- */
-
 const monthlyMessages = constructFeatureItem({
 	featureId: TestFeature.Messages,
 	includedUsage: 500,
@@ -28,7 +23,7 @@ const monthlyMessages = constructFeatureItem({
 const lifetimeMessages = constructFeatureItem({
 	featureId: TestFeature.Messages,
 	includedUsage: 200,
-	interval: null, // lifetime
+	interval: null,
 });
 
 const combinedProd = constructProduct({
@@ -70,15 +65,13 @@ describe(`${chalk.yellowBright("check-breakdown6: monthly + lifetime messages in
 			feature_id: TestFeature.Messages,
 		})) as unknown as CheckResponseV2;
 
-		// Parent balance should sum both items
 		expect(res.balance).toMatchObject({
-			granted_balance: 700, // 500 + 200
+			granted_balance: 700,
 			current_balance: 700,
 			usage: 0,
-			plan_id: combinedProd.id, // Same product for both
+			plan_id: combinedProd.id,
 		});
 
-		// Should have 2 breakdown items with unique IDs
 		const breakdown = res.balance?.breakdown;
 		expect(breakdown).toHaveLength(2);
 		expect(new Set(breakdown?.map((b) => b.id)).size).toBe(2);
@@ -125,12 +118,10 @@ describe(`${chalk.yellowBright("check-breakdown6: monthly + lifetime messages in
 			feature_id: TestFeature.Messages,
 		})) as unknown as CheckResponseV1;
 
-		// Parent balance should sum both items
-		expect(res.included_usage).toBe(700); // 500 + 200
+		expect(res.included_usage).toBe(700);
 		expect(res.balance).toBe(700);
 		expect(res.usage).toBe(0);
 
-		// Should have 2 breakdown items
 		expect(res.breakdown).toHaveLength(2);
 	});
 

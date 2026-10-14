@@ -7,7 +7,6 @@ import { migrationProgress } from "./migrationProgress";
 
 const EASE_OUT = [0.32, 0.72, 0, 1] as const;
 const ENTER_TRANSITION = { duration: 0.3, ease: EASE_OUT };
-/** Held back so the bar visibly completes before the footer collapses. */
 const EXIT_TRANSITION = { duration: 0.25, ease: EASE_OUT, delay: 0.55 };
 const FILL_TRANSITION = { duration: 0.45, ease: EASE_OUT };
 
@@ -29,7 +28,6 @@ export function MigrationRunProgress({
 	label: string;
 	active: boolean;
 	waiting?: boolean;
-	/** Resets the held running count when a new run starts. */
 	runKey?: string | null;
 	slot?: HTMLElement | null;
 }) {

@@ -1,10 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { repairCachedProductCollections } from "@/internal/customers/cache/repairCachedProductCollections.js";
 
-// Shared safeguard used by both customer cache readers (FullCustomer +
-// FullSubject). Upstash cjson collapses an empty `{}` to `[]`, and cache
-// entries written before a field existed lack it entirely — both must read
-// back as `{}`.
 describe("repairCachedProductCollections", () => {
 	test("metadata: empty array -> {} (cjson collapse)", () => {
 		const product: { config?: unknown; metadata?: unknown } = { metadata: [] };

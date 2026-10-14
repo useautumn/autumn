@@ -61,7 +61,6 @@ export const useEnvChange = () => {
 export const useSelectSandbox = () => {
 	const handleEnvChange = useEnvChange();
 
-	// null selects the default (unnamed) sandbox.
 	return (sandbox: SandboxSummary | null) => {
 		setActiveSandbox(
 			sandbox && {
@@ -117,7 +116,6 @@ export const EnvDropdown = ({ env }: { env: AppEnv }) => {
 	const inLegacySandbox = env === AppEnv.Sandbox && !activeSandbox;
 	const environmentCount = sandboxes.length + (isDeployed ? 2 : 1);
 	const isSearchable = environmentCount >= SEARCHABLE_ENVIRONMENT_COUNT;
-	// The default sandbox always exists, so any named sandbox makes it multiple.
 	const hasMultipleSandboxes = sandboxes.length > 0;
 
 	const showProduction =

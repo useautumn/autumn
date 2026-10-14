@@ -1,8 +1,3 @@
-/**
- * Dashboard in-place: drop messages/mo from the live catalog, then migrate.
- * Dashboard stays on the plan so you can see something survived after the row
- * is gone.
- */
 import { test } from "bun:test";
 import { ResetInterval } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features";

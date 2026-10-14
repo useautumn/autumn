@@ -7,7 +7,6 @@ const StackSettingsSchema = z.object({
 	}),
 });
 
-/** The EC2 type a pool runs on; null for a deployment with no compute settings (the local manager). */
 export const deploymentToPoolMachine = ({
 	deployment,
 	pool,

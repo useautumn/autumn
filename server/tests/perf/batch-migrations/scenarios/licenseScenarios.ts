@@ -7,10 +7,6 @@ const monthly = (featureId: string, included: number) => ({
 	interval: "month",
 });
 
-/**
- * One row per end-to-end case. Guard cases assert the op is REFUSED, which the
- * throughput benchmarks cannot express because they assume the batch lane runs.
- */
 export const LICENSE_SCENARIOS: LicenseScenario[] = [
 	{
 		name: "edit-free-metered",

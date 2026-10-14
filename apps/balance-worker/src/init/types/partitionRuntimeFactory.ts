@@ -44,12 +44,9 @@ export type PartitionRuntimeFactoryInput = {
 	topic: string;
 	partition: number;
 	follower: PartitionOutcomeFollowerPort;
-	/** Read-only replay of the same partition for preparation; absent in a bare test. */
 	preparation?: PartitionOutcomeFollowerPort;
 	recentCommands: RecentCommands;
-	/** Offsets this runtime's writer produced; its consumer passes them unread. */
 	producedOffsets?: ProducedOffsets;
-	/** Where the claim's epoch is published; the follower reads it to recognise a fence from above. */
 	ownerEpoch?: OwnerEpochCell;
 };
 
@@ -71,17 +68,13 @@ export type PartitionRuntimeFactoryContext = {
 	stateStore: StateStore;
 	db: WorkerDb;
 	catalogCache: CatalogCache;
-	/** Built beside the store: checkpoint restore for sqlite, the Postgres bookmark for postgres. */
 	bootstrapper: PartitionBootstrapper;
 	checkpointMaintenance?: PartitionCheckpointMaintenance;
 	partitionResolver: MeteringPartitionResolver;
 	subjectSnapshotsConfig?: EdgeConfigStore<SubjectSnapshotsEdgeConfig>;
 	dbControl?: EdgeConfigStore<DbControlEdgeConfig>;
-	/** Shared by every partition runtime; the consumer group's assigner reads it on each rejoin. */
 	partitionLoad?: PartitionLoad;
-	/** The task's commit positions; each partition's writer publishes to its own cell. */
 	commitPositions?: Pick<CommitPositions, "sinkFor">;
-	/** Commits command offsets through the consumer group when no transaction carries them (idempotent commits). */
 	commandOffsets?: { commit(offsets: KafkaOffsetCommit): Promise<void> };
 };
 
@@ -94,7 +87,6 @@ export type PartitionRuntimeFactoryConfig = {
 	writerLimits: PartitionWriterLimits;
 	trackReceiptRetentionMs: number;
 	producerLimits: KafkaProducerLimits;
-	/** Defaults to transactional. */
 	commit?: { mode: KafkaCommitMode };
 	timings: KafkaBalanceWorkerTimings;
 };

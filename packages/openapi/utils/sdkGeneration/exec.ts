@@ -1,9 +1,5 @@
 import { execSync, spawn } from "node:child_process";
 
-/**
- * Executes a command asynchronously, capturing output and returning it.
- * Used for parallel execution where we don't want interleaved output.
- */
 export function execAsyncQuiet({
 	command,
 	args,
@@ -47,9 +43,6 @@ export function execAsyncQuiet({
 	});
 }
 
-/**
- * Executes a command synchronously with inherited stdio.
- */
 export function exec({ command, cwd }: { command: string; cwd: string }): void {
 	execSync(command, { stdio: "inherit", cwd });
 }

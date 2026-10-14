@@ -10,13 +10,8 @@ import { invoiceLineItemRepo } from "@/internal/invoices/lineItems/repos";
 
 const DEFAULT_POLL_INTERVAL_MS = 500;
 
-/**
- * Waits for invoice line items to be stored in the database.
- * Polls the database until line items are found or timeout is reached.
- */
 export const waitForInvoiceLineItems = async ({
 	stripeInvoiceId,
-	// Line items land via an SQS job whose Stripe reads queue for tw rate-limit permits.
 	timeoutMs = DEFAULT_SETTLE_TIMEOUT_MS,
 	pollIntervalMs = DEFAULT_POLL_INTERVAL_MS,
 }: {
@@ -44,43 +39,33 @@ export const waitForInvoiceLineItems = async ({
 	);
 };
 
-/** Discount-specific expectations, grouped to avoid noise on the main type */
 type DiscountExpectation = {
-	amountAfterDiscounts?: number; // Exact amount_after_discounts (single item)
-	totalAmountAfterDiscounts?: number; // Sum of amount_after_discounts across matching items
-	hasDiscounts?: boolean; // true = discounts array is non-empty
-	discountCount?: number; // Exact number of discount entries per item
-	discountAmountOff?: number; // Sum of amount_off across all discounts on matching items
-	couponIds?: string[]; // stripe_coupon_id values that must be present on each matching item
-	stripeDiscountable?: boolean; // Expected stripe_discountable value
+	amountAfterDiscounts?: number;
+	totalAmountAfterDiscounts?: number;
+	hasDiscounts?: boolean;
+	discountCount?: number;
+	discountAmountOff?: number;
+	couponIds?: string[];
+	stripeDiscountable?: boolean;
 };
 
-/**
- * Expected line item definition - flexible matching
- */
 type ExpectedLineItem = {
-	// Filter criteria
-	isBasePrice?: boolean; // true = feature_id is null
-	featureId?: string; // Match specific feature
+	isBasePrice?: boolean;
+	featureId?: string;
 	direction?: "charge" | "refund";
 	billingTiming?: "in_advance" | "in_arrear";
-	stripeId?: string; // Match specific Stripe line item ID
-	stripeSubscriptionItemId?: string; // Match items in same group
-
-	// Expectations
-	amount?: number; // Exact amount (for single item match)
-	totalAmount?: number; // Sum of all matching items
-	count?: number; // Exact number of matching items
-	minCount?: number; // At least this many
-	prorated?: boolean; // Accepted but not used as a filter — kept for backward compat
+	stripeId?: string;
+	stripeSubscriptionItemId?: string;
+	amount?: number;
+	totalAmount?: number;
+	count?: number;
+	minCount?: number;
+	prorated?: boolean;
 	productId?: string;
 
-	// Quantity expectations
-	stripeQuantity?: number; // Single item's stripe_quantity
-	totalQuantity?: number; // Sum of total_quantity across matching items
-	paidQuantity?: number; // Sum of paid_quantity across matching items
-
-	// Discount expectations (grouped)
+	stripeQuantity?: number;
+	totalQuantity?: number;
+	paidQuantity?: number;
 	discount?: DiscountExpectation;
 };
 
@@ -94,9 +79,6 @@ type ExpectInvoiceLineItemsParams = {
 	debug?: boolean;
 };
 
-/**
- * Builds a human-readable description of filter criteria for error messages
- */
 const buildFilterDescription = (expected: ExpectedLineItem): string => {
 	const parts: string[] = [];
 	if (expected.isBasePrice) parts.push("base price");
@@ -109,16 +91,12 @@ const buildFilterDescription = (expected: ExpectedLineItem): string => {
 	return parts.join(", ") || "all";
 };
 
-/**
- * Validates a single expected line item against the actual line items
- */
 const validateExpectedLineItem = (
 	lineItems: DbInvoiceLineItem[],
 	expected: ExpectedLineItem,
 ): void => {
 	const filterDesc = buildFilterDescription(expected);
 
-	// Filter matching items
 	const matching = lineItems.filter((li) => {
 		if (expected.isBasePrice === true && li.feature_id !== null) return false;
 		if (expected.isBasePrice === false && li.feature_id === null) return false;
@@ -136,7 +114,6 @@ const validateExpectedLineItem = (
 			li.stripe_subscription_item_id !== expected.stripeSubscriptionItemId
 		)
 			return false;
-		// productId filter: when specified, only match items with that product_id
 		if (
 			expected.productId !== undefined &&
 			li.product_id !== expected.productId
@@ -145,7 +122,6 @@ const validateExpectedLineItem = (
 		return true;
 	});
 
-	// Count validations
 	if (expected.count !== undefined) {
 		expect(
 			matching.length,
@@ -159,7 +135,6 @@ const validateExpectedLineItem = (
 		).toBeGreaterThanOrEqual(expected.minCount);
 	}
 
-	// If no count specified, expect at least one
 	if (expected.count === undefined && expected.minCount === undefined) {
 		expect(
 			matching.length,
@@ -167,7 +142,6 @@ const validateExpectedLineItem = (
 		).toBeGreaterThanOrEqual(1);
 	}
 
-	// Amount validations
 	if (expected.amount !== undefined) {
 		if (matching.length !== 1) {
 			throw new Error(
@@ -187,7 +161,6 @@ const validateExpectedLineItem = (
 		).toBe(expected.totalAmount);
 	}
 
-	// Quantity validations (sum across group)
 	if (expected.totalQuantity !== undefined) {
 		const actualTotal = matching.reduce(
 			(sum, li) => sum + (li.total_quantity ?? 0),
@@ -215,7 +188,6 @@ const validateExpectedLineItem = (
 		).toBe(expected.stripeQuantity);
 	}
 
-	// Other validations
 	if (expected.productId !== undefined) {
 		for (const li of matching) {
 			expect(
@@ -225,10 +197,8 @@ const validateExpectedLineItem = (
 		}
 	}
 
-	// Discount validations
 	const disc = expected.discount;
 	if (disc) {
-		/** Helper to cast jsonb discounts to typed array */
 		const getDiscounts = (li: DbInvoiceLineItem) =>
 			li.discounts as InvoiceLineItemDiscount[];
 
@@ -314,13 +284,6 @@ const validateExpectedLineItem = (
 	}
 };
 
-/**
- * Verifies invoice line items match expectations.
- * Always validates core fields (id prefix, stripe_invoice_id, amounts, product/price relationships).
- * Waits for line items to be stored (async workflow) before validating.
- *
- * @returns The fetched line items for additional custom assertions
- */
 export const expectInvoiceLineItemsCorrect = async ({
 	stripeInvoiceId,
 	expectedTotal,
@@ -330,21 +293,17 @@ export const expectInvoiceLineItemsCorrect = async ({
 	allRefunds,
 	debug = true,
 }: ExpectInvoiceLineItemsParams): Promise<DbInvoiceLineItem[]> => {
-	// 1. Wait for line items to be stored (async workflow)
 	const lineItems = await waitForInvoiceLineItems({ stripeInvoiceId });
 
-	// 2. Debug logging FIRST (before any assertions)
 	if (debug) {
 		logInvoiceLineItems({ lineItems, stripeInvoiceId });
 	}
 
-	// 3. Basic existence check (should always pass after waitForInvoiceLineItems)
 	expect(
 		lineItems.length,
 		`Expected invoice ${stripeInvoiceId} to have line items, but found none`,
 	).toBeGreaterThan(0);
 
-	// 4. Core field validations (always run)
 	for (const li of lineItems) {
 		expect(li.id, "Line item missing id").toBeDefined();
 		expect(
@@ -370,7 +329,6 @@ export const expectInvoiceLineItemsCorrect = async ({
 		expect(li.price_id, `Line item ${li.id} missing price_id`).toBeDefined();
 	}
 
-	// 5. Count validation
 	if (expectedCount !== undefined) {
 		expect(
 			lineItems.length,
@@ -378,7 +336,6 @@ export const expectInvoiceLineItemsCorrect = async ({
 		).toBe(expectedCount);
 	}
 
-	// 6. Total validation
 	if (expectedTotal !== undefined) {
 		const actualTotal = lineItems.reduce((sum, li) => sum + li.amount, 0);
 		expect(
@@ -387,7 +344,6 @@ export const expectInvoiceLineItemsCorrect = async ({
 		).toBe(expectedTotal);
 	}
 
-	// 7. All charges/refunds validation
 	if (allCharges) {
 		for (const li of lineItems) {
 			expect(
@@ -405,7 +361,6 @@ export const expectInvoiceLineItemsCorrect = async ({
 		}
 	}
 
-	// 8. Expected line items validation
 	if (expectedLineItems) {
 		for (const expected of expectedLineItems) {
 			validateExpectedLineItem(lineItems, expected);
@@ -415,9 +370,6 @@ export const expectInvoiceLineItemsCorrect = async ({
 	return lineItems;
 };
 
-/**
- * Expects a base price line item exists with given criteria
- */
 export const expectBasePriceLineItem = async ({
 	stripeInvoiceId,
 	amount,
@@ -446,9 +398,6 @@ export const expectBasePriceLineItem = async ({
 	return basePrice!;
 };
 
-/**
- * Expects feature line items exist and returns them
- */
 export const expectFeatureLineItems = async ({
 	stripeInvoiceId,
 	featureId,
@@ -486,9 +435,6 @@ export const expectFeatureLineItems = async ({
 	return lineItems.filter((li) => li.feature_id === featureId);
 };
 
-/**
- * Expects a specific Stripe line item exists by stripe_id
- */
 export const expectStripeLineItem = async ({
 	stripeInvoiceId,
 	stripeId,

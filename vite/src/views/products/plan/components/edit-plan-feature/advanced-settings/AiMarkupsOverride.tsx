@@ -10,7 +10,6 @@ export function AiMarkupsOverride() {
 	const form = useMarkupsOverrideForm({
 		creditSystem,
 		markups,
-		// Seeding must not itself write an override the user never enabled.
 		onChange: (next) => hasOverride && setMarkups(next),
 	});
 

@@ -7,11 +7,9 @@ import { createRedisReadPool } from "./createRedisReadPool.js";
 import { createStandbyRedisRouter } from "./createStandbyRedisRouter.js";
 import { onRedisClientCreated } from "./onRedisClientCreated.js";
 
-/** V2 (Dragonfly/dedicated) clients run a much tighter budget than the misc cache. */
 export const REDIS_V2_COMMAND_TIMEOUT_MS =
 	process.env.NODE_ENV === "production" ? 1_000 : 10_000;
 
-/** The server's binding of the shared client: otel tracing and the Lua commands on every connection. */
 export const createRedisClient = ({
 	cacheUrl,
 	region,
@@ -62,7 +60,6 @@ export const createStandbyRedisConnection = ({
 		}),
 	});
 
-/** Two read lanes, each retaining the preferred/standby failover pair. */
 export const createPooledStandbyRedisConnection = ({
 	region,
 	...options

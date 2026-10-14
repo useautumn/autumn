@@ -16,7 +16,6 @@ const StackStateSchema = z.object({
 	),
 });
 
-/** Where a resource's public endpoint answers; null until alien has brought it up. */
 export const deploymentToPublicEndpointUrl = ({
 	deployment,
 	resourceId,
@@ -30,7 +29,6 @@ export const deploymentToPublicEndpointUrl = ({
 	if (!stackState.success) return null;
 	const { outputs } = stackState.data.resources[resourceId] ?? {};
 	const endpoints = Object.values(outputs?.publicEndpoints ?? {});
-	// The hosted manager keys a container's one endpoint `default`; the local manager keys it by name.
 	const endpoint =
 		outputs?.publicEndpoints?.[endpointName] ??
 		(endpoints.length === 1 ? endpoints[0] : undefined);

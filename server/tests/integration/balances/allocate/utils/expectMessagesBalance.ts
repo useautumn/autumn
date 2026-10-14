@@ -6,7 +6,6 @@ import type { AutumnInt } from "@/external/autumn/autumnCli.js";
 
 type WithBalances = { balances: Record<string, ApiBalanceV1> };
 
-/** Polls the customer's (or one entity's) messages balance until it matches `expected`. */
 export const expectMessagesBalance = ({
 	autumn,
 	customerId,

@@ -12,12 +12,10 @@ export type ResetEligibleCustomerEntitlementRow = {
 	id: string;
 	nextResetAt: number;
 	internalCustomerId: string;
-	/** Set on a loose entity row; an entity plan's rows carry the entity on the plan instead. */
 	internalEntityId: string | null;
 	customerProductId: string | null;
 };
 
-/** The partial index covers every leg except expiry, which remains a heap filter. */
 export const resetEligibleFilterSql = ({ dueBefore }: { dueBefore: number }) =>
 	sql`${customerEntitlements.next_reset_at} < ${dueBefore}
 		AND ${customerEntitlements.expired} IS NOT TRUE
@@ -25,8 +23,6 @@ export const resetEligibleFilterSql = ({ dueBefore }: { dueBefore: number }) =>
 		AND ${customerEntitlements.pooled_contribution_id} IS NULL
 		AND (${customerEntitlements.expires_at} IS NULL OR ${customerEntitlements.expires_at} > ${dueBefore})`;
 
-/** The exact scan page statement (tagged). Exported so experiments can
- * EXPLAIN what the cron actually runs. */
 export const buildResetEligiblePageQuery = ({
 	db,
 	dueBefore,
@@ -67,14 +63,6 @@ export const buildResetEligiblePageQuery = ({
 	`;
 };
 
-/**
- * One page of the lightweight reset scan: overdue and not expired.
- * Single-table, keyset-paginated on (next_reset_at, id) so page N costs the
- * same as page 1.
- *
- * Eligibility here is intentionally coarse — the batch reset worker classifies
- * product and invoice-driven reset rules after hydration.
- */
 export const getResetEligibleCustomerEntitlementsPage = async ({
 	db,
 	dueBefore,

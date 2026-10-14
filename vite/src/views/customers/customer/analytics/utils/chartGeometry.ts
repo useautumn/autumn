@@ -1,14 +1,10 @@
 import { MONTH_RANGES, type MonthRangeEnum } from "@autumn/shared";
 import { type Granularity, getEffectiveBinSize } from "./intervals";
 
-/** The usage chart's layout, read by UsageChartFrame (chart and skeleton) and the loading stubs.
- * Spacing lives in the margin, never in CSS padding on the svg, which would scale it off whole pixels. */
-
 export const CHART_MARGIN = { top: 17, right: 13, bottom: 5, left: 5 } as const;
 export const Y_AXIS_WIDTH = 40;
 export const X_AXIS_HEIGHT = 30;
 
-/** Plot insets (px) from each edge of the chart box; the loading stubs sit on its bottom edge. */
 export const PLOT_INSETS = {
 	left: CHART_MARGIN.left + Y_AXIS_WIDTH,
 	right: CHART_MARGIN.right,
@@ -16,17 +12,10 @@ export const PLOT_INSETS = {
 	bottom: X_AXIS_HEIGHT + CHART_MARGIN.bottom,
 } as const;
 
-/** Past this many bins a 4px gap would eat most of each slot, so the gap turns proportional. */
 const DENSE_BAR_COUNT = 120;
-/** Past this many bins a bar is only a few pixels wide, so a segment gap would hide it. */
 const NO_SEGMENT_GAP_BAR_COUNT = 90;
 const BUSY_SERIES_COUNT = 20;
 
-/**
- * Bar layout shared by the chart and its loading stubs. `categoryGap` feeds recharts (both sides of
- * a bar) and `segmentGap` its background stroke; `fillInset`/`fillWidth` place, within one bin's
- * slot, exactly the fill recharts paints: its rounded width, less half the stroke on each side.
- */
 export const barLayout = ({
 	barCount,
 	seriesCount,
@@ -73,14 +62,11 @@ const STANDARD_INTERVAL_DAYS: Record<string, number> = {
 const NICE_STEP_FRACTIONS = [1, 2, 2.5, 5, 10];
 const MAX_AXIS_INTERVALS = 4;
 
-/** Before data lands, the skeleton draws the gridlines a full four-interval axis would. */
 export const SKELETON_Y_TICKS = Array.from(
 	{ length: MAX_AXIS_INTERVALS + 1 },
 	(_, i) => i,
 );
 
-/** Y-axis ticks on an even, readable step (1/2/2.5/5 × 10^n) with at most
- * four intervals, so the top tick sits just above the tallest bar. */
 export const niceAxisTicks = ({ max }: { max: number }): number[] => {
 	if (!Number.isFinite(max) || max <= 0) return [0, 1];
 	const roughStep = max / MAX_AXIS_INTERVALS;
@@ -92,7 +78,6 @@ export const niceAxisTicks = ({ max }: { max: number }): number[] => {
 	return Array.from({ length: intervals + 1 }, (_, i) => i * step);
 };
 
-/** Truncates a timestamp down to the start of its bin, matching the backend. */
 const alignDown = ({
 	ms,
 	binSize,
@@ -107,7 +92,6 @@ const alignDown = ({
 		date.setUTCDate(1);
 		date.setUTCHours(0, 0, 0, 0);
 	} else if (binSize === "week") {
-		// Monday-aligned, matching the backend's toStartOfWeek(..., 1).
 		date.setUTCHours(0, 0, 0, 0);
 		const daysSinceMonday = (date.getUTCDay() + 6) % 7;
 		date.setUTCDate(date.getUTCDate() - daysSinceMonday);
@@ -117,8 +101,6 @@ const alignDown = ({
 	return date.getTime();
 };
 
-/** Start of a month range's window, mirroring the backend: month bins open on
- * the 1st so the range renders exactly `months` bars. */
 const monthRangeStart = ({
 	rangeEnd,
 	months,
@@ -136,8 +118,6 @@ const monthRangeStart = ({
 		return Date.UTC(year, month - (months - 1), 1);
 	}
 
-	// Clamp the day the way date-fns `sub` does on the server: day 0 of the
-	// following month is the last day of the target one.
 	const lastDayOfTarget = new Date(
 		Date.UTC(year, month - months + 1, 0),
 	).getUTCDate();
@@ -157,11 +137,6 @@ interface RangeParams {
 	end: number | null;
 }
 
-/**
- * Predicts the start of every bin the backend will return, replicating its
- * `generateAllPeriods` (bin-aligned start, inclusive bins up to end). Used only
- * for the pre-data loading frames; once data arrives the real bins are used.
- */
 export const predictBinStarts = ({
 	interval,
 	binSize,

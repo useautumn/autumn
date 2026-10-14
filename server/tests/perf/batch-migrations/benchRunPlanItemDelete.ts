@@ -1,23 +1,3 @@
-/**
- * Benchmarks the plain plan item-DELETE batch path end to end against the bench
- * org: seed customers holding the feature → prepareMigration →
- * shouldRunBatchLane → runBatchMigrationChunk(maxPages: 1).
- *
- * run.sh drops trailing args, so invoke bun directly to pass flags:
- *
- *   infisical run --env=dev --recursive -- bun <path> --customers 20000 --pages all
- *   infisical run --env=dev --recursive -- bun <path> --cleanup
- *
- * The license delete drops rows off entity-scoped seat assignments. This one
- * drops them off the customer products themselves, which is the higher-volume
- * shape: every customer on the plan holds a row, not just those with seats.
- *
- * Runs on its own plan and re-seeds each time: a delete consumes the rows it
- * measures, and the shared seedBatchBench dataset is other benches' baseline.
- * The VACUUM matters — repeated mass-DELETE cycles leave dead tuples that
- * degrade the claim select from ~150ms to seconds until autovacuum catches up.
- */
-
 import { type Migration, migrations } from "@autumn/shared";
 import { MigrationFilterSchema } from "@autumn/shared/api/migrations/filters/migrationFilter.js";
 import { OperationsSchema } from "@autumn/shared/api/migrations/operations/operations.js";
@@ -108,7 +88,6 @@ const main = async () => {
 		`bench: seeded ${customers.toLocaleString()} customers holding ${TestFeature.Messages} in ${Date.now() - seedStarted}ms`,
 	);
 
-	// Dead tuples from the cleanup above skew the claim select otherwise.
 	const vacuumStarted = Date.now();
 	await db.execute(sql`VACUUM (ANALYZE) customer_entitlements`);
 	await db.execute(sql`VACUUM (ANALYZE) customer_products`);
@@ -254,7 +233,6 @@ const main = async () => {
 			`bench:   phases: ${phases.map(([phase, ms]) => `${phase}=${ms}ms`).join(" ")}`,
 		);
 	}
-	// A --pages bound stops mid-dataset by design, so rows legitimately remain.
 	const ranToCompletion = pages === Number.POSITIVE_INFINITY;
 	console.log("");
 	console.log(

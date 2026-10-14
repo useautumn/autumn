@@ -92,8 +92,6 @@ test.skipIf(!testDatabaseUrl)(
 				{ id: "run_open", finished_at: null },
 				{ id: "run_none", finished_at: at(59) },
 			])}`;
-			// run_waves: 3 overlap, then a fourth starts the instant one ends, then a lone straggler.
-			// run_open: still running, so its open workers are all attached.
 			await client`insert into run_workers ${client([
 				{ run_id: "run_waves", started_at: at(0), ended_at: at(10) },
 				{ run_id: "run_waves", started_at: at(1), ended_at: at(20) },

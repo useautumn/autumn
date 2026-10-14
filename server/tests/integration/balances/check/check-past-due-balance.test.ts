@@ -1,12 +1,3 @@
-/**
- * A check's balance counts only the plans the org's statuses allow: with `include_past_due` off, a past-due plan's
- * grant is left out, as it is left out of the decision.
- *
- * Red (before): the balance worker route counted the past-due plan in `balance` (150, and 50 when it was the only
- *   plan) while deciding on the active plan alone; legacy answered 100, and null.
- * Green (after): both routes answer 100, and null.
- */
-
 import { expect, test } from "bun:test";
 import {
 	type CheckResponseV3,
@@ -24,8 +15,6 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { invalidateCachedFullSubject } from "@/internal/customers/cache/fullSubject/index.js";
 
-/** An org that renders only active plans; the shared test org counts past-due ones.
- *  Each gets its own owner: concurrent sub-orgs under the default owner race to create the same user. */
 const activeOnlyOrg = ({ customerId }: { customerId: string }) =>
 	s.platform.create({
 		userEmail: `${customerId}@autumn.test`,
@@ -36,7 +25,6 @@ const activeOnlyOrg = ({ customerId }: { customerId: string }) =>
 		setupDefaultFeatures: true,
 	});
 
-/** Marks one of the customer's plans past due, then drops every cached copy so the next check reads it. */
 const setPlanPastDue = async ({
 	ctx,
 	customerId,

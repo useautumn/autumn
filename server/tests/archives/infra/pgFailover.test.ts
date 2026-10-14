@@ -81,11 +81,6 @@ const timedFetch = async ({
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-/**
- * Fire a batch of concurrent skip_cache requests (get customer + check only).
- * Track is excluded because skip_cache track does a Postgres deduction.
- * `count` controls how many of each endpoint to fire (default 1 = 2 requests total).
- */
 const testCriticalEndpoints = async ({
 	label,
 	count = 1,
@@ -127,10 +122,6 @@ const logResults = (
 	}
 };
 
-// ---------------------------------------------------------------------------
-// Flood worker management
-// ---------------------------------------------------------------------------
-
 let floodWorker: ChildProcess | null = null;
 
 const startFloodWorker = (): ChildProcess => {
@@ -164,7 +155,6 @@ const stopFloodWorker = (): Promise<void> => {
 		worker.on("exit", () => resolve());
 		worker.kill("SIGTERM");
 
-		// Force kill after 5s if it doesn't exit gracefully
 		setTimeout(() => {
 			if (!worker.killed) {
 				worker.kill("SIGKILL");
@@ -174,7 +164,6 @@ const stopFloodWorker = (): Promise<void> => {
 	});
 };
 
-// Ensure flood worker is killed on ctrl+c or unexpected exit
 const cleanup = () => {
 	if (floodWorker && !floodWorker.killed) {
 		floodWorker.kill("SIGKILL");
@@ -184,13 +173,8 @@ const cleanup = () => {
 process.on("SIGINT", cleanup);
 process.on("SIGTERM", cleanup);
 
-// ---------------------------------------------------------------------------
-// Test
-// ---------------------------------------------------------------------------
-
 test(`${chalk.yellowBright("pg failover: critical endpoints failover to replica under sustained DB load")}`, async () => {
 	try {
-		// ---- Setup ----
 		console.log("\n--- Setup ---");
 		await fetch(`${BASE_URL}/v1/customers/${CUSTOMER_ID}`, {
 			method: "DELETE",
@@ -210,10 +194,8 @@ test(`${chalk.yellowBright("pg failover: critical endpoints failover to replica 
 		console.log(`  Customer create: ${createRes.status}`);
 		expect(createRes.ok).toBe(true);
 
-		// Ensure clean state
 		await pgHealth({ action: "force-healthy" });
 
-		// ---- 1. Verify HEALTHY ----
 		console.log(
 			"\n--- Step 1: Verify HEALTHY + endpoints work (skip_cache) ---",
 		);
@@ -231,20 +213,14 @@ test(`${chalk.yellowBright("pg failover: critical endpoints failover to replica 
 			expect(r.ok).toBe(true);
 		}
 
-		// ---- 2. Start sustained CPU burn (direct DB connections) ----
 		console.log(
 			"\n--- Step 2: Starting CPU flood (20 direct DB connections) ---",
 		);
 		startFloodWorker();
 
-		// Give the burns time to saturate DB CPU.
-		// 20 concurrent heavy queries should peg the DB within seconds.
 		console.log("  Waiting 20s for DB CPU to saturate...");
 		await wait(20_000);
 
-		// ---- 3. Fire skip_cache requests — expect failures ----
-		// With DB CPU pegged, getFullCusQuery should be slow enough to hit
-		// statement_timeout (10s) → fails → recordDbFailure().
 		console.log(
 			"\n--- Step 3: Firing skip_cache requests (expect failures from statement_timeout) ---",
 		);
@@ -253,8 +229,6 @@ test(`${chalk.yellowBright("pg failover: critical endpoints failover to replica 
 		const MAX_ROUNDS = 15;
 
 		for (let round = 1; round <= MAX_ROUNDS; round++) {
-			// Fire 20x each endpoint (60 concurrent requests) to accumulate
-			// failures fast enough to hit the 50-in-60s threshold.
 			const results = await testCriticalEndpoints({
 				label: `load-${round}`,
 				count: 20,
@@ -278,7 +252,6 @@ test(`${chalk.yellowBright("pg failover: critical endpoints failover to replica 
 			}
 		}
 
-		// ---- 4. Verify DEGRADED ----
 		console.log("\n--- Step 4: Verify DEGRADED ---");
 		const degradedStatus = await pgHealth({ action: "status" });
 		console.log(`  Health: ${degradedStatus.health}`);
@@ -292,7 +265,6 @@ test(`${chalk.yellowBright("pg failover: critical endpoints failover to replica 
 		}
 		expect(degradedStatus.health).toBe("DEGRADED");
 
-		// ---- 5. Test endpoints in DEGRADED mode ----
 		if (degradedStatus.hasReplica) {
 			console.log(
 				"\n--- Step 5: Test endpoints in DEGRADED mode (should use replica) ---",
@@ -307,7 +279,6 @@ test(`${chalk.yellowBright("pg failover: critical endpoints failover to replica 
 				expect(r.ok).toBe(true);
 			}
 
-			// Extra round for stability
 			const extraResults = await testCriticalEndpoints({
 				label: "DEGRADED-r2",
 			});
@@ -321,15 +292,12 @@ test(`${chalk.yellowBright("pg failover: critical endpoints failover to replica 
 			);
 		}
 
-		// ---- 6. Stop flood + poll for recovery ----
 		console.log("\n--- Step 6: Stopping flood worker ---");
 		await stopFloodWorker();
 		console.log("  Flood worker stopped, polling for recovery...");
 
-		// Poll every 5s for up to 60s instead of a fixed wait.
-		// The probe needs time to detect recovery + 10s stability.
 		let recovered = false;
-		const MAX_RECOVERY_POLLS = 12; // 12 * 5s = 60s max
+		const MAX_RECOVERY_POLLS = 12;
 		for (let i = 1; i <= MAX_RECOVERY_POLLS; i++) {
 			await wait(5_000);
 			const status = await pgHealth({ action: "status" });
@@ -340,11 +308,9 @@ test(`${chalk.yellowBright("pg failover: critical endpoints failover to replica 
 			}
 		}
 
-		// ---- 7. Verify HEALTHY recovery ----
 		console.log("\n--- Step 7: Verify HEALTHY recovery ---");
 		expect(recovered).toBe(true);
 
-		// ---- 8. Endpoints work after recovery ----
 		console.log("\n--- Step 8: Test endpoints after recovery (skip_cache) ---");
 		const recoveredResults = await testCriticalEndpoints({
 			label: "RECOVERED",
@@ -356,7 +322,6 @@ test(`${chalk.yellowBright("pg failover: critical endpoints failover to replica 
 
 		console.log("\nPG failover lifecycle complete.");
 	} finally {
-		// Always clean up
 		await stopFloodWorker();
 		await pgHealth({ action: "force-healthy" }).catch(() => {});
 	}

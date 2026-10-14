@@ -1,5 +1,3 @@
-/** SQL for the two string matchers, each returning its own bound params so
- * the caller never threads a mutable array through the branch. */
 export type StringMatchSql = { sql: string; params: string[] };
 
 const asPattern = ({
@@ -16,9 +14,6 @@ const asPattern = ({
 	return value;
 };
 
-/** Smallest string greater than every value starting with `prefix`: bump the
- * last character that can be bumped. Null when every character is already the
- * maximum code point, leaving the range open-ended. */
 const prefixUpperBound = (prefix: string): string | null => {
 	const chars = Array.from(prefix);
 	for (let index = chars.length - 1; index >= 0; index--) {
@@ -29,12 +24,6 @@ const prefixUpperBound = (prefix: string): string | null => {
 	return null;
 };
 
-/**
- * A prefix match as a range rather than LIKE, which cannot use a btree index
- * under a non-C collation. The uncollated bounds drive the index seek; the
- * C-collated pair is the exact prefix test, because en_US sorts 'aB' and
- * 'a-bz' inside ['ab','ac') without carrying the prefix.
- */
 export const startsWithSql = ({
 	column,
 	field,
@@ -61,8 +50,6 @@ export const startsWithSql = ({
 	};
 };
 
-/** Rejects an invalid pattern here rather than letting Postgres raise it
- * mid-preview or mid-run. */
 export const regexSql = ({
 	column,
 	field,

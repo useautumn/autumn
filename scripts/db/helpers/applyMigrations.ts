@@ -1,9 +1,7 @@
 import type { MigrationMeta } from "drizzle-orm/migrator";
 import type pg from "pg";
 
-// CONCURRENTLY (e.g. CREATE INDEX CONCURRENTLY) cannot run inside a transaction
 // block. drizzle's own migrate() wraps everything in one transaction, so those
-// statements are applied here in autocommit instead.
 const NON_TRANSACTIONAL = /\bCONCURRENTLY\b/i;
 
 const TRACKING_TABLE = `"drizzle"."__drizzle_migrations"`;
@@ -20,12 +18,6 @@ async function recordApplied(
 
 export type ApplyResult = { transactional: boolean };
 
-/**
- * Applies one migration's statements. If any statement is non-transactional
- * (CONCURRENTLY), the whole migration runs in autocommit; otherwise it's wrapped
- * in a single transaction so DDL + tracking row commit atomically — matching
- * drizzle's own per-migration semantics.
- */
 export async function applyMigration(
 	client: pg.Client,
 	migration: MigrationMeta,

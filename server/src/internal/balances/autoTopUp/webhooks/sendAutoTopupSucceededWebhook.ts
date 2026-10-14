@@ -30,8 +30,6 @@ const getInvoicePayload = ({
 	};
 };
 
-// Refetches because executeBillingPlan applied the rebalance via SQL increments;
-// the in-memory autoTopupContext.customerEntitlement is now stale.
 const getBalanceAfter = async ({
 	ctx,
 	autoTopupContext,

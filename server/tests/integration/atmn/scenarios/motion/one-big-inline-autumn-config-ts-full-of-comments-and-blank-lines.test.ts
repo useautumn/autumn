@@ -1,11 +1,3 @@
-/**
- * atmn scenarios/motion — one big inline `autumn.config.ts` full of comments and blank lines → a plan added remotely → pull appends one fixture to `plans`; the diff of the file is exactly that appended literal
- *
- * code in motion: the config's shape is the user's; pull edits the AST, never rewrites a file
- *
- * One line of plans/atmn-v3/07_tests.md. [a, b] is a matrix looped INSIDE this file.
- */
-
 import { expect, test } from "bun:test";
 import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 import {
@@ -14,7 +6,6 @@ import {
 } from "@tests/utils/atmnUtils/initAtmnScenario.js";
 import { s } from "@tests/utils/testInitUtils/initScenario.js";
 
-/** The text inserted between `before` and `after`, asserting nothing else moved. */
 const insertedText = ({
 	before,
 	after,

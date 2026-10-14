@@ -17,8 +17,6 @@ export const LockParamsSchema = z.object({
 	}),
 });
 
-// "reject" is the default and stays internal like on track, so public docs
-// only surface "cap" and "overflow" as opt-ins.
 export const LockOverageBehaviorSchema = z
 	.union([
 		z.enum(["cap", "overflow"]),

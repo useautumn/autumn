@@ -1,17 +1,3 @@
-/**
- * catalogV2.update — two parents, each with v1 + v2, offering the same child.
- * One parent is in the child's propagate, the other is omitted (pinned).
- * Locks that a per-parent strategy stays inside that parent, across versions.
- *
- * Contract:
- *   - A `all_versions`, B omitted
- *     → both A versions follow; both B versions freeze (not just B's latest)
- *   - same + A v1 customized 500, child adds Words
- *     → A v1 rebases (500 + Words), A v2 stock (200 + Words), B frozen with no Words
- *   - A `{ version: 1 }`, B omitted
- *     → only A v1 follows; A v2 freezes; both B versions freeze
- */
-
 import { test } from "bun:test";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
@@ -27,7 +13,6 @@ import {
 	wordsItem,
 } from "../utils/seedLicensePlans.js";
 
-/** Both versions of one parent share an expectation. */
 const expectBothVersions = async ({
 	ctx,
 	parentPlanId,
@@ -141,7 +126,6 @@ test.concurrent(
 					},
 				});
 
-				// The override survives; the new child item still flows in.
 				await expectLicenseLinkCorrect({
 					ctx,
 					parentPlanId: followId,

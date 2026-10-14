@@ -1,19 +1,3 @@
-/**
- * computePatchProductTransition is a customize lowerer, not a product diff.
- * Catalog products are identity (repoint) only; item ops come from
- * removeItems + minted addEntitlementPrices.
- *
- * Contract:
- *   1. In-place customize: catalog ents ignored; sparse month filter + minted 30 → one replace
- *   2. Remove only → removed filter
- *   3. Add only → added minted row
- *   4. Two features → independent ops
- *   5. Mismatched interval → remove + add, not replace
- *   6. Distinct from/to ids + replace → customerProduct repoint
- *   7. Same internal_id → customerProduct undefined
- *   8. Sibling cadence → replace the monthly filter only
- */
-
 import { describe, expect, test } from "bun:test";
 import {
 	AllowanceType,

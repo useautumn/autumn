@@ -5,7 +5,6 @@ import {
 import { firstPhaseStartsInFuture } from "../../setup/classifyFirstPhaseStart";
 import type { RequestedPhase } from "./types/requestedPhase";
 
-/** The opening phase runs from now, or its later start: its plans plus the unscheduled ones, then each scheduled phase. */
 export const billingContextToRequestedPhases = ({
 	billingContext,
 	now,

@@ -10,8 +10,6 @@ import {
 const resetCycleKey = (entitlement: EntitlementWithFeature) =>
 	`${entitlement.internal_feature_id}|${entitlement.interval ?? ""}|${entitlement.interval_count ?? 1}`;
 
-/** An item that gains or loses its cycle still moves the rows it granted, but
- * two items on different cycles are siblings -- the seat holds both. */
 const sharesResetCycle = ({
 	minted,
 	existing,
@@ -24,9 +22,6 @@ const sharesResetCycle = ({
 		existing.interval === null ||
 		resetCycleKey(minted) === resetCycleKey(existing));
 
-/** Diffs a license product against a customize of itself. Minted rows swap in
- * for the same feature; removed features drop. Successor matching is the
- * shared one — lifetime → monthly is a transition, not a delete+add. */
 export const computeLicenseProductTransitions = ({
 	fromLicenseProduct,
 	mintedEntitlements,

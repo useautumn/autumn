@@ -2,7 +2,6 @@ import type { FeatureType, UpdatePlanOp } from "@autumn/shared";
 import type { StatusGlyph, StatusTone } from "@autumn/ui";
 import type { migrationOpRateRows } from "@/utils/product/featureOverrideRates";
 
-/** One StatusChip: an optional coloured tile, a label and muted text around it. */
 export type ChipView = {
 	label: string;
 	tile?: { tone: StatusTone; glyph: StatusGlyph };
@@ -10,7 +9,6 @@ export type ChipView = {
 	details?: string[];
 };
 
-/** Table cells stay quiet; only hover detail carries the coloured tile. */
 export const withoutTile = ({ tile: _tile, ...chip }: ChipView): ChipView =>
 	chip;
 
@@ -25,7 +23,6 @@ export type MigrationCatalog = {
 	rateRows: (op: UpdatePlanOp) => ReturnType<typeof migrationOpRateRows>;
 };
 
-/** A chip list capped for a hover card; `moreCount` feeds a trailing "+N more" chip. */
 export type CappedChips = { chips: ChipView[]; moreCount: number };
 
 const CHIP_LIST_LIMIT = 3;

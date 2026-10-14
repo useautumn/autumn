@@ -1,4 +1,3 @@
-/** The business side of the inline seam: the routes the pool may decide inline, and how each is decided. */
 import type { InlineHandler } from "../../workerThreads/types/inlineHandler.js";
 import { receiveCheckInline } from "./receiveCheckInline.js";
 import { receiveTrackBatchInline } from "./receiveTrackBatchInline.js";
@@ -11,7 +10,6 @@ const INLINE_RECEIVERS = [
 	{ path: "/v1/check", receive: receiveCheckInline },
 ];
 
-/** The pool names a route by its index in this list. */
 export const INLINE_ROUTES = INLINE_RECEIVERS.map(({ path }) => path);
 
 export function createInlineHandler({

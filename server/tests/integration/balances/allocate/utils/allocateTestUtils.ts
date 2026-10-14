@@ -45,7 +45,6 @@ export const expectAllocatedMessages = async ({
 			balances: Record<string, ApiBalanceV1>;
 		}>(customerId, entityId);
 		const messages = entity.balances[TestFeature.Messages];
-		// Allocated rows also show the unallocated credits the entity may spend; compare the share alone.
 		const unallocated = messages.unallocated ?? 0;
 		const allocated = {
 			granted: -unallocated,
@@ -62,7 +61,6 @@ export const expectAllocatedMessages = async ({
 	}
 };
 
-/** A customer with one monthly shared messages pool and `entityCount` entities, caches warm. */
 export const setupSharedPool = async ({
 	customerId,
 	includedUsage = 10000,
@@ -90,7 +88,6 @@ export const setupSharedPool = async ({
 	return { ctx, entityIds };
 };
 
-/** Warms customer and entity caches so a track isn't lost to a cold customer refill. */
 export const warmCaches = async ({
 	customerId,
 	entityIds,
@@ -173,7 +170,6 @@ const sharedMessagesRows = async ({
 		`),
 	);
 
-/** Waits until the shared rows' remaining balance in Postgres sums to `remainingBalance`, for steps that drop the cache. */
 export const waitForSharedBalanceInDb = ({
 	ctx,
 	customerId,
@@ -191,7 +187,6 @@ export const waitForSharedBalanceInDb = ({
 			),
 	});
 
-/** Starts a new cycle on every shared messages row: backdates the reset, then runs the reset cron. */
 export const resetSharedCycle = async ({
 	ctx,
 	customerId,
@@ -199,7 +194,6 @@ export const resetSharedCycle = async ({
 	ctx: TestContext;
 	customerId: string;
 }) => {
-	// A real reset moves the window a whole interval; the forced one only moves it seconds.
 	await expireUsageWindowForReset({
 		ctx,
 		customerId,

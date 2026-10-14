@@ -82,9 +82,6 @@ export const setupUpdateSubscriptionProductContext = async ({
 		includeUpsertLicenses: true,
 	});
 
-	// Both paths resolve licenses through the same core
-	// (setupCustomizeLicenses); they differ in where the result lands —
-	// patch converges the existing row's pools, replace plants fresh ones.
 	if (patchContext) {
 		const { insertPlanLicenses, customerLicenseQuantities } =
 			await handleCustomizeUpsertLicenses({

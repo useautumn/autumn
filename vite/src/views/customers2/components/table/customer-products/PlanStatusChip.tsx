@@ -20,7 +20,6 @@ type StatusDetail = {
 	tooltipSubtext?: string;
 };
 
-/** Short text sits inside the chip; the tooltip carries the full date. */
 function getStatusDetail({
 	planStatus,
 	customerProduct,
@@ -82,7 +81,6 @@ function getStatusDetail({
 	return { shortText: showsLabel ? label : null, tooltipText: label };
 }
 
-/** "icon" hides the status text; "status" drops the plan name for tables that show it elsewhere. */
 type ChipDisplay = "full" | "icon" | "status";
 
 export function PlanStatusChip({

@@ -1,8 +1,3 @@
-/**
- * dfu.flash RevenueCat hydration — processors.revenuecat.id is seeded on the
- * customer after flash.
- */
-
 import { expect, test } from "bun:test";
 import { AppEnv, customers } from "@autumn/shared";
 import {

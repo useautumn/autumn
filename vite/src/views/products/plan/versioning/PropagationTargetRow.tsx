@@ -15,10 +15,6 @@ import {
 import { TargetDiffPreview } from "./TargetDiffPreview";
 import { conflictBadgeLabel, conflictSentence } from "./variantConflicts";
 
-/**
- * One selectable propagation target. The label region is the toggle button so
- * that `trailing` controls stay siblings rather than nested interactives.
- */
 export function PropagationTargetRow({
 	name,
 	detail,

@@ -6,11 +6,9 @@ import { setupMigrationListContext } from "@/internal/migrations/v2/actions/migr
 import { migrationRepo } from "@/internal/migrations/v2/repos/index.js";
 
 const ListMigrationsBody = z.object({
-	/** False leaves `summary.customer_count` null; read it from `migrations.customer_counts`. */
 	customer_counts: z.boolean().default(true),
 });
 
-/** POST /migrations.list — list migrations for the current org + env. */
 export const handleListMigrations = createRoute({
 	scopes: [Scopes.Migrations.Read],
 	body: ListMigrationsBody,

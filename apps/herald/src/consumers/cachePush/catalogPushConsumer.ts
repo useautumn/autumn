@@ -11,7 +11,6 @@ import type { CatalogPushContext } from "./types/catalogPushContext.js";
 
 const appEnvSchema = z.enum(AppEnv);
 
-/** Sends an org's catalog to its Atom whenever the server says that catalog changed. */
 export function createCatalogPushConsumer({
 	ctx,
 	config,
@@ -44,7 +43,6 @@ export function createCatalogPushConsumer({
 
 	return createKafkaCatalogInvalidationConsumer({
 		ctx: { kafka: ctx.kafka, handler: { apply, skip } },
-		// One group for every herald: a change is pushed once, and a restart resumes where the group stopped.
 		config: {
 			topic: config.topic,
 			group: { kind: "shared", id: config.groupId },

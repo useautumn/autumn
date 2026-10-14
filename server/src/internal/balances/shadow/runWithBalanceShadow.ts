@@ -47,9 +47,7 @@ export async function runWithBalanceShadow({
 	function record(event: Record<string, unknown>): void {
 		try {
 			mirror.record({ ...context, ...event });
-		} catch {
-			/* Logging cannot change the live result. */
-		}
+		} catch {}
 	}
 	let plan: BalanceShadowPlan;
 	try {

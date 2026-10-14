@@ -14,9 +14,6 @@ const ListEventNamesSchema = z.object({
 	end: z.coerce.number().optional(),
 });
 
-/**
- * List distinct event names for the org (or one customer) sorted by popularity
- */
 export const handleListEventNames = createRoute({
 	scopes: [Scopes.Analytics.Read],
 	query: ListEventNamesSchema,

@@ -1,6 +1,3 @@
-// Schedule discount preservation (Attach V2): coupons on a Stripe subscription survive scheduled
-// paid → paid downgrades.
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3 } from "@autumn/shared";
 import {
@@ -20,22 +17,6 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { extractCouponId } from "./utils/scheduledSwitchDiscountsBasic";
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 3: Premium to Pro (scheduled) to Free (replace) - discount preserved
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Customer has premium ($50/mo) with 20% off coupon
- * - Downgrade to pro ($20/mo) - scheduled
- * - Replace scheduled with free - re-schedules
- *
- * Expected Result:
- * - Discount still on subscription after replacing the scheduled downgrade
- *
- * The schedule is released and recreated during replacement. This test verifies
- * that the discount survives the release + recreate cycle.
- */
 test.concurrent(
 	`${chalk.yellowBright("schedule-discounts 3: discount preserved when replacing scheduled downgrade")}`,
 	async () => {
@@ -70,7 +51,6 @@ test.concurrent(
 			actions: [s.billing.attach({ productId: premium.id })],
 		});
 
-		// Apply 20% discount to the subscription
 		const { stripeCli, subscription: subBefore } = await getStripeSubscription({
 			customerId,
 		});
@@ -86,14 +66,12 @@ test.concurrent(
 			couponIds: [coupon.id],
 		});
 
-		// Schedule downgrade to pro
 		await autumnV1.billing.attach({
 			customer_id: customerId,
 			product_id: pro.id,
 			redirect_mode: "if_required",
 		});
 
-		// Verify mid-state
 		const customerMid = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 		await expectProductCanceling({
 			customer: customerMid,
@@ -104,14 +82,12 @@ test.concurrent(
 			productId: pro.id,
 		});
 
-		// Replace scheduled pro with free
 		await autumnV1.billing.attach({
 			customer_id: customerId,
 			product_id: free.id,
 			redirect_mode: "if_required",
 		});
 
-		// Verify product states after replacement
 		const customerAfterReplace =
 			await autumnV1.customers.get<ApiCustomerV3>(customerId);
 		await expectProductCanceling({
@@ -123,7 +99,6 @@ test.concurrent(
 			productId: free.id,
 		});
 
-		// Verify discount is still on the subscription after schedule replacement
 		const { subscription: subAfterReplace } = await getStripeSubscription({
 			customerId,
 		});
@@ -137,18 +112,6 @@ test.concurrent(
 	},
 );
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 4: Multiple discounts preserved after scheduled downgrade
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Customer has premium ($50/mo) with two discounts (20% off + $5 off)
- * - Downgrade to pro ($20/mo) - scheduled
- *
- * Expected Result:
- * - Both discounts still present on subscription after scheduling
- */
 test.concurrent(
 	`${chalk.yellowBright("schedule-discounts 4: multiple discounts preserved after scheduling")}`,
 	async () => {
@@ -177,7 +140,6 @@ test.concurrent(
 			actions: [s.billing.attach({ productId: premium.id })],
 		});
 
-		// Apply two discounts to the subscription
 		const { stripeCli, subscription: subBefore } = await getStripeSubscription({
 			customerId,
 		});
@@ -192,28 +154,24 @@ test.concurrent(
 			amountOffCents: 500,
 		});
 
-		// Apply both discounts
 		await applySubscriptionDiscount({
 			stripeCli,
 			subscriptionId: subBefore.id,
 			couponIds: [percentCoupon.id, amountCoupon.id],
 		});
 
-		// Verify both discounts applied
 		const subWithDiscounts = await stripeCli.subscriptions.retrieve(
 			subBefore.id,
 			{ expand: ["discounts.source.coupon"] },
 		);
 		expect(subWithDiscounts.discounts?.length).toBe(2);
 
-		// Schedule downgrade to pro
 		await autumnV1.billing.attach({
 			customer_id: customerId,
 			product_id: pro.id,
 			redirect_mode: "if_required",
 		});
 
-		// Verify product states
 		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 		await expectProductCanceling({
 			customer,
@@ -224,7 +182,6 @@ test.concurrent(
 			productId: pro.id,
 		});
 
-		// Verify BOTH discounts are still on the subscription
 		const { subscription: subAfter } = await getStripeSubscription({
 			customerId,
 		});
@@ -239,20 +196,6 @@ test.concurrent(
 	},
 );
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 5: Upgrade from scheduled downgrade - discount preserved
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Customer has premium ($50/mo) with 20% off coupon
- * - Downgrade to pro ($20/mo) - scheduled
- * - Upgrade to ultra ($200/mo) - immediate, cancels schedule
- *
- * Expected Result:
- * - Discount should still be on the subscription after upgrade cancels the schedule
- * - Ultra is active, premium and pro are removed
- */
 test.concurrent(
 	`${chalk.yellowBright("schedule-discounts 5: discount preserved after upgrade cancels scheduled downgrade")}`,
 	async () => {
@@ -292,7 +235,6 @@ test.concurrent(
 			],
 		});
 
-		// Apply 20% discount to the subscription
 		const { stripeCli, subscription: subBefore } = await getStripeSubscription({
 			customerId,
 		});
@@ -308,7 +250,6 @@ test.concurrent(
 			couponIds: [coupon.id],
 		});
 
-		// Verify scheduled state
 		const customerBefore =
 			await autumnV1.customers.get<ApiCustomerV3>(customerId);
 		await expectProductCanceling({
@@ -320,14 +261,12 @@ test.concurrent(
 			productId: pro.id,
 		});
 
-		// Upgrade to ultra (should cancel scheduled downgrade)
 		await autumnV1.billing.attach({
 			customer_id: customerId,
 			product_id: ultra.id,
 			redirect_mode: "if_required",
 		});
 
-		// Verify ultra is active, premium and pro removed
 		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 		await expectCustomerProducts({
 			customer,
@@ -335,7 +274,6 @@ test.concurrent(
 			notPresent: [premium.id, pro.id],
 		});
 
-		// Verify discount is still on the subscription after upgrade
 		const { subscription: subAfter } = await getStripeSubscription({
 			customerId,
 		});

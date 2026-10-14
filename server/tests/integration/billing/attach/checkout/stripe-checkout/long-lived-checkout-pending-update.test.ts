@@ -1,14 +1,3 @@
-/**
- * Editing a pending plan opened from a long-lived checkout link.
- *
- * Contract:
- * - A billing edit returns the same link, which then sells the edited plan, with
- *   exactly one pending plan left.
- * - The preview and the charge both keep the link's discounts.
- * - An edit that needs no payment attaches directly and closes the link.
- * - An expired link is not reused; the edit falls back to a fresh checkout.
- */
-
 import { expect, test } from "bun:test";
 import {
 	type AttachParamsV1Input,
@@ -32,7 +21,6 @@ import {
 	startLongLivedCheckout,
 } from "./utils/longLivedCheckoutUtils";
 
-/** Sends a $1,200 long-lived link and opens it, leaving one pending plan. */
 const setupOpenedLongLivedLink = async ({
 	name,
 	discountPercentOff,
@@ -108,7 +96,6 @@ test.concurrent(
 			listCustomerProducts,
 		} = await setupOpenedLongLivedLink({ name: "ll-pending-update-price" });
 
-		// 1. The edit returns the same link instead of a new Stripe URL.
 		const updateResult =
 			await autumnV2_2.subscriptions.update<UpdateSubscriptionV1ParamsInput>({
 				customer_id: customerId,
@@ -117,7 +104,6 @@ test.concurrent(
 			});
 		expect(updateResult.payment_url).toBe(linkUrl);
 
-		// 2. Opening the link sells the edited plan in a new Stripe session.
 		const editedSessionId = getStripeSessionId(
 			await startLongLivedCheckout(checkoutId),
 		);
@@ -126,7 +112,6 @@ test.concurrent(
 			await ctx.stripeCli.checkout.sessions.retrieve(editedSessionId);
 		expect(editedSession.amount_total).toBe(100_000);
 
-		// 3. The customer still has exactly one pending plan.
 		expect(await listCustomerProducts(CusProductStatus.Pending)).toHaveLength(
 			1,
 		);

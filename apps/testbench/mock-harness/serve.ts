@@ -1,17 +1,9 @@
-/**
- * Serves the built dashboard (dist/) with a mock same-origin /ws snapshot feed,
- * so chart rendering can be exercised without a live swarm run.
- * Usage: bun run mock-harness/serve.ts (after `bun run build`). PORT env optional.
- */
 import { join } from "node:path";
 import { buildMockSnapshot } from "./mockSnapshot";
 
 const DIST = join(import.meta.dir, "..", "dist");
 const PORT = Number.parseInt(process.env.PORT || "5915", 10);
 
-// ERRORS=1 mirrors the real server's errors feed: a persistent server-side
-// buffer that grows over time, replayed on subscribeErrors, chunks relayed
-// only to subscribed sockets (same semantics as dashboard/server.ts + hub.ts).
 const errorsEnabled = process.env.ERRORS === "1";
 let errorsBuffer = "";
 let errorSeq = 0;
@@ -54,9 +46,7 @@ const server = Bun.serve<WsData>({
 	websocket: {
 		open(ws) {
 			sockets.add(ws);
-			// PROGRESSIVE=1 mimics a live run: warm phase first, files complete over time.
 			const progressive = process.env.PROGRESSIVE === "1";
-			// WARM_HIT=exact|stale pins the compact warm-cache-hit state (screenshots).
 			const warmHit = process.env.WARM_HIT;
 			let tick = 0;
 			const send = () => {
@@ -102,7 +92,6 @@ const server = Bun.serve<WsData>({
 			clearInterval(ws.data.interval);
 		},
 		message(ws, raw) {
-			// Mirror the real server's subscribeErrors contract (replay-then-stream).
 			if (!errorsEnabled) {
 				return;
 			}

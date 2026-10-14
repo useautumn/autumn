@@ -2,8 +2,6 @@ import chalk from "chalk";
 import type { ProbeResult } from "./fixtureProbe.ts";
 import type { OracleCustomer } from "./sandboxOracle.ts";
 
-/** Colorized unified diff, hunk headers and context dimmed, ± colored.
- * File-header noise ("Only in …", index lines) is dropped. */
 export const renderDiff = (diff: string): string =>
 	diff
 		.split("\n")
@@ -37,7 +35,6 @@ export const renderProbe = (probe: ProbeResult): string => {
 		.join("\n");
 };
 
-/** One line per fact — not the raw customer JSON. */
 export const renderOracle = (oracle: OracleCustomer): string => {
 	if (!oracle.found) return chalk.red("customer NOT found in org");
 	const balances = Object.entries(oracle.balances)

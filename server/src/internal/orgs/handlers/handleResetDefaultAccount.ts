@@ -11,7 +11,6 @@ export const handleResetDefaultAccount = createRoute({
 		const ctx = c.get("ctx");
 		const { db, org, logger, env } = ctx;
 
-		// Validation: Only allow for test org
 		if (org.id !== process.env.TESTS_ORG_ID) {
 			throw new RecaseError({
 				message: "This endpoint can only be used for test organizations",
@@ -20,7 +19,6 @@ export const handleResetDefaultAccount = createRoute({
 			});
 		}
 
-		// Only works for sandbox environment
 		if (env !== AppEnv.Sandbox) {
 			throw new RecaseError({
 				message: "This endpoint only works for sandbox environment",
@@ -31,12 +29,10 @@ export const handleResetDefaultAccount = createRoute({
 
 		const currentDefaultAccountId = org.test_stripe_connect?.default_account_id;
 
-		// Delete the current default account if it exists
 		if (currentDefaultAccountId) {
 			try {
 				const masterStripe = initMasterStripe({ env: AppEnv.Sandbox });
 
-				// Try to close the account
 				try {
 					await masterStripe.accounts.del(currentDefaultAccountId);
 					logger.info(`Closed default account: ${currentDefaultAccountId}`);
@@ -48,12 +44,9 @@ export const handleResetDefaultAccount = createRoute({
 				}
 			} catch (error) {
 				logger.error("Error deleting default account", { error });
-				// Continue anyway to create a new account
 			}
 		}
 
-		// Create a new default account
-		// We need a dummy user object for creating the account
 		const dummyUser = {
 			id: "test-user",
 			email: org.slug ? `${org.slug}@test.com` : "test@test.com",
@@ -65,7 +58,6 @@ export const handleResetDefaultAccount = createRoute({
 			user: dummyUser as any,
 		});
 
-		// Update the organization with the new default account ID
 		await OrgService.update({
 			db,
 			orgId: org.id,

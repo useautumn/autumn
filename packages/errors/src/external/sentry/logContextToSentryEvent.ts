@@ -1,7 +1,6 @@
 import type { ErrorClassification } from "../../models/errorClassification.js";
 import type { LogContext } from "../../models/logContext.js";
 
-/** Tags are what alerts filter on and Slack shows; the org is the Sentry user so issues count orgs affected. */
 export const logContextToSentryEvent = ({
 	service,
 	logContext,

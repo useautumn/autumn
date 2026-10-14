@@ -28,10 +28,6 @@ import {
 } from "../writerErrors.js";
 import { scheduleCommit } from "./commit.js";
 
-/**
- * Synchronous until the record is enqueued: no await may separate reading the
- * projection from recording the next one, or concurrent commands would interleave.
- */
 export function decide<Reply>({
 	scope,
 	submission,
@@ -63,7 +59,6 @@ export function decide<Reply>({
 		});
 	}
 
-	// A null state is legal here: initialize is the command that creates one.
 	const currentState = readFreshestState({ scope, identity });
 	const receipt = ctx.stateStore.readReceipt({
 		identity,
@@ -83,7 +78,6 @@ export function decide<Reply>({
 			}),
 		});
 	}
-	// A store without records (postgres) still remembers the id: same request → duplicate, else conflict.
 	const remembered = ctx.recentCommands.read({ identity, commandId });
 	if (remembered) {
 		assertSameRequest({ commandId, fingerprint, record: remembered });
@@ -131,7 +125,6 @@ export function decide<Reply>({
 	});
 }
 
-/** A write decided on one the store has not taken yet waits for the store too: if that one is refused, this one sits on rows that never landed. */
 function durabilityFor({
 	scope,
 	customerKey,
@@ -164,7 +157,6 @@ function decidedWith<Reply>({
 	return { kind, waitForCommit, waitForStore };
 }
 
-/** Snapshot at call time: mutations enqueued after this returns do not extend the wait. */
 export async function waitForPendingCommits({
 	scope,
 	customerKey,
@@ -177,8 +169,6 @@ export async function waitForPendingCommits({
 	if (scope.state.recoveryError) throw scope.state.recoveryError;
 }
 
-/** Per subject, the map first (projected or committed), then the store: same-customer commands see uncommitted deductions, whichever subject made them. */
-/** An entity's view merged from its customer's and its own state: one object per pair, so joins keyed by state hold across reads. */
 const entityViews = new WeakMap<
 	SubjectState,
 	WeakMap<SubjectState, SubjectState>
@@ -200,7 +190,6 @@ function entityViewOf({
 	return view;
 }
 
-/** The decision joined its next state; readers see the stored parts merged, so hand that view the same joins. */
 export function advanceStoredView({
 	scope,
 	identity,
@@ -223,8 +212,6 @@ export function readFreshestState({
 	scope: PartitionWriterScope;
 	identity: MeteringIdentity;
 }): SubjectState | null {
-	// One subject's own rows: the map first, then the store. Only sqlite answers from the
-	// store (its resident row); the postgres store returns null, so a miss means hydrate.
 	const readOwnState = ({ ownIdentity }: { ownIdentity: MeteringIdentity }) =>
 		scope.state.subjects.readState({
 			subjectKey: meteringIdentityToSubjectKey({ identity: ownIdentity }),
@@ -240,7 +227,6 @@ export function readFreshestState({
 	return entity ? entityViewOf({ customer, entity }) : customer;
 }
 
-/** A known record for this commandId must have been produced by the same request. */
 export function assertSameRequest({
 	commandId,
 	fingerprint,

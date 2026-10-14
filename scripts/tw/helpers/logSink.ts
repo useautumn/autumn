@@ -1,24 +1,3 @@
-/**
- * Log sink — the SINGLE owner of "where does orchestrator output go" for `bun tw`.
- *
- * Why this exists: `bun tw` runs the Ink TUI runner IN-PROCESS (via
- * `runWithExecutor`), so the TUI and a firehose of raw stdout writes (the
- * orchestrator's own `[tw] …` logs, the forwarded `[ingress] …` lines, the
- * per-worker boot/server logs) all share the SAME stdout. Ink can only render
- * correctly when it OWNS stdout, so during the RUN phase those concurrent writes
- * cause layout shift + lag (50 workers × server logs is a huge volume).
- *
- * The sink solves this with a quiet-mode switch:
- *   - BEFORE the run (resolve, warm-up, fan-out) and AFTER (teardown): there is no
- *     TUI, so the sink writes straight to `process.stdout` exactly as before.
- *   - DURING the run (while the Ink app is mounted): the sink writes to a per-run
- *     LOG FILE instead, so NOTHING but Ink touches the terminal. The file
- *     (`~/.autumn-tw/runs/<runId>.log`) keeps the full noise for inspection.
- *
- * This is SWARM-ONLY: `bun t` spawns the runner as a subprocess (it owns stdout)
- * and never imports/uses this module, so its output is unchanged.
- */
-
 import { appendFileSync, mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 
@@ -26,17 +5,9 @@ let quietMode = false;
 let logFilePath: string | undefined;
 let warnedFileFailure = false;
 
-/**
- * Optional live subscriber (the opentui TUI's raw-logs pane). When set, every
- * complete line is delivered to it AND the terminal is left untouched (the TUI
- * owns stdout), while the run log file still captures the full firehose.
- */
 let logSubscriber: ((line: string) => void) | undefined;
 let lineBuffer = "";
 
-// SGR / control escape sequences (chalk colors etc). opentui draws its own colors,
-// so raw ANSI in `<text>` content is rendered as literal bytes and corrupts the
-// layout — strip it before handing lines to the TUI subscriber.
 // biome-ignore lint/suspicious/noControlCharactersInRegex: matching ANSI escapes is the point
 const ANSI_PATTERN = /\u001b\[[0-9;]*[A-Za-z]/g;
 export const stripAnsi = (text: string): string =>
@@ -55,11 +26,6 @@ const feedSubscriber = (text: string): void => {
 	}
 };
 
-/**
- * Register (or clear with `undefined`) the live logs subscriber. Setting one puts
- * the sink in "TUI owns the terminal" mode: lines flow to the subscriber + log
- * file, never to stdout.
- */
 export const setLogSubscriber = (
 	subscriber: ((line: string) => void) | undefined,
 ): void => {
@@ -69,31 +35,21 @@ export const setLogSubscriber = (
 	}
 };
 
-/**
- * Point the sink at a run log file. Creates the parent directory. Called by the
- * orchestrator right before it mounts the Ink runner, so quiet-mode writes have
- * somewhere to land.
- */
 export const setLogFile = (path: string): void => {
 	logFilePath = path;
 	try {
 		mkdirSync(dirname(path), { recursive: true });
-	} catch {
-		// best-effort; the append below will surface a real failure once.
-	}
+	} catch {}
 };
 
-/** Enter quiet mode: subsequent `sink(...)` writes go to the log file, not stdout. */
 export const enableQuietMode = (): void => {
 	quietMode = true;
 };
 
-/** Leave quiet mode: subsequent `sink(...)` writes go back to stdout. */
 export const disableQuietMode = (): void => {
 	quietMode = false;
 };
 
-/** The active log file path (so the orchestrator can print it in the final summary). */
 export const getLogFile = (): string | undefined => logFilePath;
 
 const appendToLogFile = (text: string): void => {
@@ -112,12 +68,6 @@ const appendToLogFile = (text: string): void => {
 	}
 };
 
-/**
- * Route raw text to the sink. The run log file always keeps the full firehose;
- * stdout only gets it outside quiet mode and when no TUI owns the terminal. The
- * text is written VERBATIM (no implicit newline), so streamed sandbox chunks
- * aren't fragmented. Never throws — a logging failure must not break the run.
- */
 export const sink = (text: string): void => {
 	feedSubscriber(text);
 	appendToLogFile(text);
@@ -127,27 +77,14 @@ export const sink = (text: string): void => {
 	process.stdout.write(text);
 };
 
-/** Route one complete log line (newline appended) through {@link sink}. */
 export const sinkLine = (line: string): void => {
 	sink(`${line}\n`);
 };
 
-/**
- * Stage-marker channel: ALWAYS surfaces on the terminal, even in quiet mode.
- *
- * `sink`/`sinkLine` go to the run log file during the warm-up / fan-out / run
- * phases (quiet mode), so the terminal would otherwise sit silent for minutes
- * (image build, snapshot, …). `narrate` is for the coarse "what phase are we in,
- * is it alive" breadcrumbs that must stay visible regardless — it writes to
- * stdout (ignoring quiet mode) AND tees to the log file. When an opentui TUI owns
- * the terminal (a log subscriber is set), it feeds the TUI pane instead of
- * corrupting the render. Never throws.
- */
 export const narrate = (line: string): void => {
 	const text = `${line}\n`;
 	feedSubscriber(text);
 	appendToLogFile(text);
-	// A TUI subscriber owns the terminal — never write stdout underneath it.
 	if (logSubscriber) {
 		return;
 	}

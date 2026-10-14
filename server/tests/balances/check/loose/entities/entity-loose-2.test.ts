@@ -22,7 +22,6 @@ describe(`${chalk.yellowBright(`${testCase}: unlimited entity loose entitlement`
 			withTestClock: false,
 		});
 
-		// Create entity
 		await autumnV1.entities.create(customerId, [
 			{
 				id: entityId,
@@ -31,7 +30,6 @@ describe(`${chalk.yellowBright(`${testCase}: unlimited entity loose entitlement`
 			},
 		]);
 
-		// Create unlimited loose entitlement on entity
 		await autumnV1.balances.create({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
@@ -68,17 +66,14 @@ describe(`${chalk.yellowBright(`${testCase}: unlimited entity loose entitlement`
 		expect(res.balance?.unlimited).toBe(true);
 	});
 
-	// The balance worker doesn't aggregate entity data onto the customer.
 	test.skipIf(isBalanceWorkerRoute())(
 		"v2: customer-level should see merged entity's unlimited balance",
 		async () => {
 			const res = (await autumnV2.check({
 				customer_id: customerId,
 				feature_id: TestFeature.Messages,
-				// No entity_id
 			})) as unknown as CheckResponseV2;
 
-			// Customer should see merged unlimited from entity
 			expect(res.balance?.unlimited).toBe(true);
 		},
 	);

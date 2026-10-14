@@ -26,7 +26,6 @@ export const initNextResetAt = ({
 	anchorToUnix?: number;
 	now: number;
 }) => {
-	// 1. If entitlement is boolean or lifetime, then next reset at is null
 	if (
 		entitlement.feature.type === FeatureType.Boolean ||
 		!entitlement.interval ||
@@ -35,10 +34,8 @@ export const initNextResetAt = ({
 		return null;
 	}
 
-	// 2. If nextResetAt is provided, return it...
 	if (nextResetAt) return nextResetAt;
 
-	// 3. Get next reset at:
 	let nextResetAtCalculated = null;
 	const trialEndTimestamp = trialEndsAt
 		? Math.round(trialEndsAt / 1000)
@@ -64,7 +61,6 @@ export const initNextResetAt = ({
 		entitlement.interval_count || 1,
 	).getTime();
 
-	// If anchorToUnix, align next reset at to anchorToUnix...
 	if (
 		anchorToUnix &&
 		nextResetAtCalculated &&
@@ -79,14 +75,6 @@ export const initNextResetAt = ({
 			intervalCount: entitlement.interval_count || 1,
 			now,
 		});
-		// nextResetAtCalculated = getAlignedUnix({
-		// 	anchor: anchorToUnix,
-		// 	intervalConfig: {
-		// 		interval: entitlement.interval as unknown as BillingInterval,
-		// 		intervalCount: entitlement.interval_count || 1,
-		// 	},
-		// 	now,
-		// });
 	}
 
 	return nextResetAtCalculated;

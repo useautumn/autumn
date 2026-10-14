@@ -1,23 +1,3 @@
-/**
- * TDD repro for two reported reward/coupon bugs.
- *
- * Bug 1 — duplicate id+code allowed:
- *  POST /rewards twice with the SAME id and SAME promo code but different
- *  discount config succeeds both times, leaving two reward rows.
- *  Red (current): second create succeeds. Green (after fix): second create errors.
- *
- * Bug 2 — reusing a promo code leaks a raw "already exists in Stripe" error:
- *  Because Bug 1 allows duplicate codes, creating a second reward whose promo
- *  code is already owned by an active reward surfaces the low-level Stripe guard
- *  (PromoCodeAlreadyExistsInStripe) instead of a clean reward-layer rejection.
- *  This is the same error the customer hit recreating after a sibling duplicate
- *  kept an active promo. Note: a plain delete→recreate of the SAME id works in
- *  this harness — delete deactivates the promo — so the conflict only arises
- *  from the duplicate-code situation Bug 1 permits.
- *  Red (current): create leaks PromoCodeAlreadyExistsInStripe.
- *  Green (after fix): duplicate code is rejected at the reward layer (or handled).
- */
-
 import { test, expect } from "bun:test";
 import chalk from "chalk";
 import {
@@ -66,7 +46,6 @@ test(
 			actions: [],
 		});
 
-		// First create: fixed $3000 off
 		await autumnV2_2.post(
 			"/rewards",
 			buildReward({
@@ -77,7 +56,6 @@ test(
 			}),
 		);
 
-		// Second create: SAME id + code, but 100% percentage off
 		let errorCode: string | undefined;
 		try {
 			await autumnV2_2.post(
@@ -93,8 +71,6 @@ test(
 			errorCode = (e as { code?: string }).code;
 		}
 
-		// Duplicate id must be rejected with the specific reward-layer error, not
-		// silently accepted (which used to create a 2nd row).
 		expect(errorCode).toBe(ErrCode.DuplicateRewardId);
 	},
 );
@@ -127,7 +103,6 @@ test(
 			errorCode = (e as { code?: string }).code;
 		}
 
-		// Must be caught at the reward layer, not leak PromoCodeAlreadyExistsInStripe.
 		expect(errorCode).toBe(ErrCode.DuplicatePromoCode);
 	},
 );
@@ -145,7 +120,6 @@ test(
 			actions: [],
 		});
 
-		// First reward owns an active promo for `code`.
 		await autumnV2_2.post(
 			"/rewards",
 			buildReward({
@@ -156,7 +130,6 @@ test(
 			}),
 		);
 
-		// Second reward reuses the same code (Bug 1 lets this through to Stripe).
 		let errorCode: string | undefined;
 		try {
 			await autumnV2_2.post(
@@ -172,8 +145,6 @@ test(
 			errorCode = (e as { code?: string }).code;
 		}
 
-		// Must reject the duplicate code cleanly at the reward layer, not leak the
-		// low-level Stripe guard (PromoCodeAlreadyExistsInStripe).
 		expect(errorCode).toBe(ErrCode.DuplicatePromoCode);
 	},
 );

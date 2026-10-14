@@ -52,7 +52,6 @@ export const expireOneOffCustomerProductResults = async ({
 			logger: ctx.logger,
 			redisV2: resolveRedisV2(),
 		};
-		// The worker evict is a command: it needs a request id and a clock the repo context lacks.
 		const evictionContext = {
 			...repoContext,
 			id: generateId("cron"),

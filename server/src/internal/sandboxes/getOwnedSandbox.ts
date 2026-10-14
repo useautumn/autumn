@@ -2,10 +2,6 @@ import { ErrCode, type Organization, RecaseError } from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 
-/**
- * Fetch a sandbox the master org owns, or throw a uniform 404. Folds "doesn't
- * exist" and "exists but isn't yours" into one message so neither leaks.
- */
 export const getOwnedSandbox = async ({
 	db,
 	masterOrg,

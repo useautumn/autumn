@@ -3,7 +3,6 @@ import {
 	TABLE_TRAY_SURFACE_CLASS,
 } from "@/components/general/table";
 
-/** The open step's rows on the tray's surface, an optional note under them, its status on the left of the footer and its buttons on the right. */
 export const AtomSetupSection = ({
 	status,
 	actions,

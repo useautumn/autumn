@@ -1,9 +1,3 @@
-/**
- * atmn scenarios/pull — hand layout [fixtures in separate files, `plans: corePlans` imported array, nested folders] → every edit lands in the file that holds the fixture
- *
- * One line of plans/atmn-v3/07_tests.md. [a, b] is a matrix looped INSIDE this file.
- */
-
 import { expect, test } from "bun:test";
 import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 import {

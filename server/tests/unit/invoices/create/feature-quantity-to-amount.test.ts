@@ -14,11 +14,11 @@ import { findInvoiceFeaturePrice } from "@/internal/invoices/actions/create/comp
 const prepaidSeats = prices.createPrepaid({
 	id: "seats_prepaid",
 	featureId: "seats",
-}); // $10 / unit
+});
 const usageCredits = prices.createConsumable({
 	id: "credits_usage",
 	featureId: "credits",
-}); // $1 / unit
+});
 const catalog = [
 	prices.createFixed({ id: "base" }),
 	prepaidSeats,
@@ -99,7 +99,6 @@ describe("featureQuantityToAmount", () => {
 	});
 
 	test("billing units round the quantity up to the next pack", () => {
-		// 250 units at $10 per 100 → rounds to 300 units → 3 packs → $30
 		expect(
 			featureQuantityToAmount({
 				price: {
@@ -113,7 +112,6 @@ describe("featureQuantityToAmount", () => {
 	});
 
 	test("graduated tiers charge each band at its own rate", () => {
-		// 800 units, packs of 100: 5 packs at $10 + 3 packs at $5 = $65
 		expect(
 			featureQuantityToAmount({
 				price: tiered,
@@ -124,7 +122,6 @@ describe("featureQuantityToAmount", () => {
 	});
 
 	test("volume tiers charge the whole quantity at the matched tier", () => {
-		// 800 units → tier "inf" at $5 per pack → 8 packs → $40
 		expect(
 			featureQuantityToAmount({
 				price: volume,

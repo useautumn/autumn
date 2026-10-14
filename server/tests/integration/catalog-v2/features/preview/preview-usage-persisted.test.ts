@@ -1,7 +1,3 @@
-/**
- * catalogV2.preview_update — persisted plan/customer usage buckets + reasons.
- */
-
 import { test } from "bun:test";
 import { type AttachParamsV1Input, FeatureType } from "@autumn/shared";
 import { items } from "@tests/utils/fixtures/items.js";

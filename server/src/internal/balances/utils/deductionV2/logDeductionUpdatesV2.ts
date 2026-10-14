@@ -6,7 +6,6 @@ import {
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import type { DeductionUpdate } from "../types/deductionUpdate.js";
 
-/** Logs deduction updates with customer entitlement details (FullSubject version). */
 export const logDeductionUpdatesV2 = ({
 	ctx,
 	fullSubject,

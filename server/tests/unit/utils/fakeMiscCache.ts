@@ -8,7 +8,6 @@ const FAKE_BACKUP = {
 	url: "backup.test:6385",
 };
 
-/** A misc cache over in-memory fakes; the backup exists in the config exactly when a fake backup is given. */
 export const createFakeMiscCache = ({
 	main,
 	backup = null,

@@ -42,17 +42,14 @@ export function CopyPlansButton({ pricingConfig }: CopyPlansButtonProps) {
 	const isAddLoading =
 		copyState.status === "copying" && copyState.mode === "add";
 
-	/** Execute the copy operation */
 	const executeCopy = async ({ nukeFirst }: { nukeFirst: boolean }) => {
 		const mode = nukeFirst ? "replace" : "add";
 		try {
-			// Nuke existing config if requested
 			if (nukeFirst) {
 				setCopyState({ status: "nuking", mode: "replace" });
 				await axiosInstance.delete("/v1/configs/nuke");
 			}
 
-			// Push the new configuration
 			setCopyState({ status: "copying", mode });
 			await axiosInstance.post("/v1/configs/push", {
 				features: pricingConfig.features,
@@ -62,7 +59,6 @@ export function CopyPlansButton({ pricingConfig }: CopyPlansButtonProps) {
 			toast.success("Plans copied successfully");
 			await refetchProducts();
 
-			// Mark org as onboarded
 			if (!org?.onboarded) {
 				await axiosInstance.patch("/v1/organization", { onboarded: true });
 				await mutateOrg();
@@ -78,15 +74,12 @@ export function CopyPlansButton({ pricingConfig }: CopyPlansButtonProps) {
 		}
 	};
 
-	/** Handle clicking the Copy plans button */
 	const handleCopyPlans = async () => {
-		// If there are existing products, show the confirmation dialog
 		if (existingProducts.length > 0) {
 			setCopyDialogOpen(true);
 			return;
 		}
 
-		// No existing products - copy directly
 		await executeCopy({ nukeFirst: false });
 	};
 

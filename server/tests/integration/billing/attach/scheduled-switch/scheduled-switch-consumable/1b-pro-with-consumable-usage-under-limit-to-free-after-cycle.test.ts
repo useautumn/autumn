@@ -1,14 +1,3 @@
-/**
- * Scheduled Switch Consumable Tests (Attach V2)
- *
- * Tests for downgrades involving consumable (usage-in-arrear) features.
- *
- * Key behaviors:
- * - Consumable overage is charged at cycle end via invoice-created webhook
- * - These tests verify the downgrade flow works correctly with consumable usage
- * - Overage from the old product is billed when downgrade completes
- */
-
 import { test } from "bun:test";
 import type { ApiCustomerV3 } from "@autumn/shared";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
@@ -47,7 +36,7 @@ test.concurrent(
 			actions: [
 				s.billing.attach({ productId: pro.id }),
 				s.track({ featureId: TestFeature.Messages, value: 50 }),
-				s.billing.attach({ productId: free.id }), // Schedule downgrade
+				s.billing.attach({ productId: free.id }),
 				s.advanceToNextInvoice({ withPause: true }),
 			],
 		});
@@ -55,14 +44,12 @@ test.concurrent(
 		const customerAfterCycle =
 			await autumnV1After.customers.get<ApiCustomerV3>(customerId);
 
-		// After cycle: free active, pro removed
 		await expectCustomerProducts({
 			customer: customerAfterCycle,
 			active: [free.id],
 			notPresent: [pro.id],
 		});
 
-		// Features at free tier (50 included)
 		expectCustomerFeatureCorrect({
 			customer: customerAfterCycle,
 			featureId: TestFeature.Messages,
@@ -70,8 +57,6 @@ test.concurrent(
 			usage: 0,
 		});
 
-		// Only pro invoice ($20), no overage since usage was under included.
-		// The cycle-end invoice lands via webhook, so poll.
 		await expectCustomerInvoiceCorrect({
 			autumn: autumnV1After,
 			customerId,
@@ -80,7 +65,6 @@ test.concurrent(
 			latestInvoiceProductIds: [pro.id],
 		});
 
-		// After downgrading to free, there should be no Stripe subscription
 		await expectNoStripeSubscription({
 			db: ctxAfter.db,
 			customerId,

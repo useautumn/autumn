@@ -1,6 +1,3 @@
-/** A cycle reset clears prior attribution in the same typed intent as the
- * balance refill. */
-
 import { describe, expect, test } from "bun:test";
 import {
 	type FullCustomerEntitlement,

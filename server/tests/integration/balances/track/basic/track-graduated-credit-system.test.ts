@@ -1,8 +1,3 @@
-/**
- * Contract: graduated credit cards charge marginal cumulative usage, advance
- * tier position with the balance atomically, and keep Redis/Postgres parity.
- */
-
 import { expect, test } from "bun:test";
 import {
 	type ApiCustomerV3,
@@ -115,7 +110,6 @@ test.concurrent(
 			required_balance: 100,
 		});
 
-		// Paid 0-grant addon is usage-allowed; required_balance is its first-tier rate.
 		expect(check.allowed).toBe(true);
 		expect(check.required_balance).toBeCloseTo(1, 10);
 	},
@@ -196,8 +190,6 @@ test.concurrent(
 			credits: 99.5,
 		});
 
-		// Reserve across the first tier boundary, then finalize below the
-		// reservation. Only the final 100 source units (0.8 credits) unwind.
 		await autumnV2_3.check({
 			customer_id: customerId,
 			feature_id: TestFeature.TieredAction,
@@ -218,8 +210,6 @@ test.concurrent(
 			afterPartialFinalize.features[TestFeature.TieredCredits].balance,
 		).toBeCloseTo(899.6, 10);
 
-		// Finalizing above the reservation keeps the reserve and rates the extra
-		// units from the already-advanced tier position.
 		await autumnV2_3.check({
 			customer_id: customerId,
 			feature_id: TestFeature.TieredAction,
@@ -235,7 +225,6 @@ test.concurrent(
 			override_value: 100,
 		});
 
-		// A release is a full unwind of both the balance and attribution entry.
 		await autumnV2_3.check({
 			customer_id: customerId,
 			feature_id: TestFeature.TieredAction,
@@ -348,8 +337,6 @@ test.concurrent(
 			},
 		});
 
-		// Releasing the earlier 50 units removes the current marginal tail (0.4
-		// credits), leaving cost(10,000), rather than its original 0.5-credit cost.
 		await autumnV2_3.track({
 			customer_id: customerId,
 			feature_id: TestFeature.TieredAction,
@@ -436,7 +423,6 @@ test.concurrent(
 	{ timeout: 120_000 },
 );
 
-// Exercises the legacy Redis balance path, which worker-routed customers never use.
 test.concurrent.skipIf(isBalanceWorkerRoute())(
 	`${chalk.yellowBright("graduated-credit-rating: Postgres fallback matches marginal rating")}`,
 	async () => {

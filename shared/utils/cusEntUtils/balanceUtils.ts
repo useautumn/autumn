@@ -71,8 +71,6 @@ export const getCusEntBalance = ({
 	}
 
 	if (notNullish(entitlement.entity_feature_id)) {
-		// NEW APPROACH: has internal_entity_id set, use top-level balance
-		// (one row per entity, balance stored directly on the row)
 		if (notNullish(cusEnt.internal_entity_id)) {
 			return {
 				balance: cusEnt.balance || 0,
@@ -83,7 +81,6 @@ export const getCusEntBalance = ({
 			};
 		}
 
-		// OLD APPROACH: entities object stores per-entity balances
 		if (nullish(entityId)) {
 			return getSummedEntityBalances({
 				cusEnt,

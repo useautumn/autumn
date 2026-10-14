@@ -1,14 +1,3 @@
-/**
- * Immediate Switch Basic Tests (Attach V2)
- *
- * Tests for basic upgrade scenarios where a higher-tier product takes effect immediately.
- *
- * Key behaviors:
- * - Upgrade replaces existing product immediately
- * - Prorated charge for price difference
- * - Scheduled downgrades are cancelled when upgrading
- */
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3 } from "@autumn/shared";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
@@ -21,19 +10,6 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { timeout } from "@/utils/genUtils";
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 2: Pro to Premium
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Customer has pro ($20/mo)
- * - Upgrade to premium ($50/mo)
- *
- * Expected Result:
- * - Premium is active, pro is removed
- * - Prorated charge for price difference
- */
 test.concurrent(
 	`${chalk.yellowBright("immediate-switch-basic 2: pro to premium")}`,
 	async () => {
@@ -60,15 +36,12 @@ test.concurrent(
 			actions: [s.billing.attach({ productId: pro.id })],
 		});
 
-		// 1. Preview upgrade - verify prorated charge
 		const preview = await autumnV1.billing.previewAttach({
 			customer_id: customerId,
 			product_id: premium.id,
 		});
-		// At start of cycle, full price difference: $50 - $20 = $30
 		expect(preview.total).toBe(30);
 
-		// 2. Attach premium (upgrade)
 		await autumnV1.billing.attach({
 			customer_id: customerId,
 			product_id: premium.id,
@@ -77,14 +50,12 @@ test.concurrent(
 
 		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-		// Verify product states
 		await expectCustomerProducts({
 			customer,
 			active: [premium.id],
 			notPresent: [pro.id],
 		});
 
-		// Verify messages feature has premium's balance
 		expectCustomerFeatureCorrect({
 			customer,
 			featureId: TestFeature.Messages,
@@ -95,7 +66,6 @@ test.concurrent(
 
 		await timeout(2000);
 
-		// Verify invoices: pro ($20) + upgrade ($30)
 		await expectCustomerInvoiceCorrect({
 			customer,
 			count: 2,

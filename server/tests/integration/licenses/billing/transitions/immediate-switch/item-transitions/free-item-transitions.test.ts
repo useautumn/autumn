@@ -1,8 +1,3 @@
-/** Contract: replacements RESET consumable usage by default — seats start the
- * incoming plan at its full grant (reset cycles untouched); additions inherit
- * Stripe cycles. Mixed metered/boolean transitions repoint assignments and
- * keep Stripe converged. Usage carry-over is opt-in via carry_over_usages
- * (see carry-over-item-transitions.test.ts). */
 import { expect, test } from "bun:test";
 import type { ApiEntityV2 } from "@autumn/shared";
 import { expectBalanceCorrect } from "@tests/integration/utils/expectBalanceCorrect";

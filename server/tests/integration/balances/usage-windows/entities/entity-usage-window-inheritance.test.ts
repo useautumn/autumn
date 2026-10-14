@@ -18,24 +18,6 @@ import {
 } from "../../utils/usage-limit-utils/entityUsageLimitUtils.js";
 import { fetchUsageWindowRows } from "../../utils/usage-limit-utils/usageWindowDbTestUtils.js";
 
-/**
- * TDD tests for usage-limit INHERITANCE (spend-limit mirror: per feature the
- * entity's own usage_limits entry wins; without one the customer's entry
- * "fills the gap" and applies at CUSTOMER scope — one shared aggregate window
- * across the customer and every entity without its own cap).
- *
- * Contract under test (inheritance half):
- *  - no entity entry -> entity tracks count into the shared customer window
- *    (inherit1 pins this aggregate behavior)
- *  - entity with its own entry is CARVED OUT: its tracks consume only its
- *    entity window, never the customer's aggregate window (inherit2)
- *  - arming an entity cap mid-window moves that entity to a fresh entity
- *    window; the customer window keeps its count (inherit3)
- *
- * Pre-impl red: inherit2/inherit3 fail because entity usage_limits don't
- * exist, so every entity track still lands in the customer window.
- */
-
 const autumnV2_3 = new AutumnInt({ version: ApiVersion.V2_3 });
 
 test.concurrent(
@@ -69,12 +51,11 @@ test.concurrent(
 			limit: 5,
 		});
 
-		await autumnV2_3.customers.get(customerId); // initialize cache.
+		await autumnV2_3.customers.get(customerId);
 		for (const entity of entities) {
-			await autumnV2_3.entities.get(customerId, entity.id); // initialize cache.
+			await autumnV2_3.entities.get(customerId, entity.id);
 		}
 
-		// e0: 3, e1: 1 -> aggregate 4. e1's next 3 applies only the remaining 1.
 		await autumnV2_3.track({
 			customer_id: customerId,
 			entity_id: entities[0].id,
@@ -114,7 +95,6 @@ test.concurrent(
 				}),
 		});
 
-		// ── Side effect: ONE shared customer-scope row, no entity rows ──
 		await timeout(4000);
 		const rows = await fetchUsageWindowRows({
 			ctx,
@@ -165,12 +145,11 @@ test.concurrent(
 			limit: 2,
 		});
 
-		await autumnV2_3.customers.get(customerId); // initialize cache.
+		await autumnV2_3.customers.get(customerId);
 		for (const entity of entities) {
-			await autumnV2_3.entities.get(customerId, entity.id); // initialize cache.
+			await autumnV2_3.entities.get(customerId, entity.id);
 		}
 
-		// e1 (own cap 2) tracks 3 -> applies 2, into its OWN window.
 		await autumnV2_3.track({
 			customer_id: customerId,
 			entity_id: entities[1].id,
@@ -186,8 +165,6 @@ test.concurrent(
 			limit: 2,
 		});
 
-		// e0 (no own cap) tracks 5 -> the FULL 5 fits in the customer window,
-		// proving e1's tracks never touched it (else only 3 would fit).
 		await autumnV2_3.track({
 			customer_id: customerId,
 			entity_id: entities[0].id,
@@ -202,7 +179,6 @@ test.concurrent(
 			limit: 5,
 		});
 
-		// Both windows now full: e0 rejects on the customer window, e1 on its own.
 		await expectAutumnError({
 			errCode: ErrCode.InsufficientBalance,
 			func: async () =>
@@ -226,7 +202,6 @@ test.concurrent(
 				}),
 		});
 
-		// ── Side effect: one customer-scope row (5) + one entity row (2) ──
 		await timeout(4000);
 		const rows = await fetchUsageWindowRows({
 			ctx,
@@ -280,12 +255,11 @@ test.concurrent(
 			limit: 5,
 		});
 
-		await autumnV2_3.customers.get(customerId); // initialize cache.
+		await autumnV2_3.customers.get(customerId);
 		for (const entity of entities) {
-			await autumnV2_3.entities.get(customerId, entity.id); // initialize cache.
+			await autumnV2_3.entities.get(customerId, entity.id);
 		}
 
-		// e0 inherits: 4 land in the customer window.
 		await autumnV2_3.track({
 			customer_id: customerId,
 			entity_id: entities[0].id,
@@ -300,8 +274,6 @@ test.concurrent(
 			limit: 5,
 		});
 
-		// Carve e0 out mid-window: its next 5 fit its FRESH entity window
-		// (had it still tracked the customer window, only 1 would fit).
 		await setEntityUsageLimit({
 			autumn: autumnV2_3,
 			customerId,
@@ -324,7 +296,6 @@ test.concurrent(
 			limit: 5,
 		});
 
-		// Customer window kept its 4: e1 (still inheriting) fits exactly 1 more.
 		await autumnV2_3.track({
 			customer_id: customerId,
 			entity_id: entities[1].id,

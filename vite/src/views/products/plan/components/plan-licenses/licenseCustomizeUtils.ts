@@ -18,14 +18,11 @@ import {
 import { planItemV1ToProductItem } from "@/utils/product/productItemUtils/planItemV1ToProductItem";
 import { useLicenseDraftStore } from "./useLicenseDraftStore";
 
-/** Snapshot of a license card's edited state at save/collect time. */
 export type LicenseEditSnapshot = {
 	product: FrontendProduct;
 	itemsChanged: boolean;
 };
 
-/** The license plan's own items (base price + feature items) — what a card's
- * inline editor is seeded with. */
 export const planLicenseItems = ({
 	license,
 }: {
@@ -36,8 +33,6 @@ export const planLicenseItems = ({
 		withBasePrice: true,
 	});
 
-/** Card seed for a flow that already holds a customize patch: the stock
- * license items with the saved diff applied. */
 export const licenseItemsWithCustomize = ({
 	license,
 	customize,
@@ -69,8 +64,6 @@ export const licenseItemsWithCustomize = ({
 	return [priceItem, ...featureItems];
 };
 
-/** The license's effective items (base price included): stock items with the
- * saved catalog customize applied, then any staged patch on top. */
 export const layeredLicenseItems = ({
 	license,
 	catalogCustomize,
@@ -101,7 +94,6 @@ export const layeredLicenseItems = ({
 	});
 };
 
-/** Builds one parent `licenses[]` entry, including its item diff when edited. */
 export const buildPlanLicenseParams = ({
 	product,
 	planLicense,
@@ -117,8 +109,6 @@ export const buildPlanLicenseParams = ({
 	currency?: string;
 	itemsChanged: boolean;
 }): PlanLicenseParams => {
-	// Read the drafts imperatively at save time so editing them doesn't
-	// re-render callers on every keystroke.
 	const draft = useLicenseDraftStore.getState().drafts[license.id];
 	return {
 		license_plan_id: license.id,
@@ -137,7 +127,6 @@ export const buildPlanLicenseParams = ({
 	};
 };
 
-/** Returns the item diff against the supplied base, or null to clear it. */
 export const productToLicenseCustomize = ({
 	product,
 	license,
@@ -174,7 +163,6 @@ export const productToLicenseCustomize = ({
 	return Object.keys(customize).length > 0 ? customize : null;
 };
 
-/** Builds a customer-level `add_licenses` entry from the edited card state. */
 export const buildCustomizePlanLicense = ({
 	product,
 	planLicense,

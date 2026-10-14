@@ -1,24 +1,3 @@
-/**
- * Catalog preview_update edge cases: customer impact, versioning, feature diffing.
- *
- * Contract under test (POST /v1/catalog.preview_update, read-only, NO persist):
- *   A. has_customers — true for a plan with an attached customer, false otherwise.
- *      Resolved independently per plan when several are previewed at once.
- *   B. versionable — only true when the proposed change differs in ITEMS and the
- *      plan has customers. A name-only or id-only change → false. An items change
- *      on a plan WITHOUT customers → false.
- *   C. feature diffing — features[] resolves each proposed feature and surfaces
- *      blockers[] (field/code/message) that would make updateCatalog reject it:
- *        - new feature (does not exist) → resolved, no blockers
- *        - existing feature, non-blockable change (name) → no blockers
- *        - existing feature attached to a customer, type change → attached_to_customer
- *   D. batch upsert — a plan may reference a feature created in the SAME batch;
- *      the preview virtually upserts features before resolving plans (no 404).
- *
- * Nothing here persists, so feature-blocker cases can safely target the shared
- * org's features.
- */
-
 import { test } from "bun:test";
 import { FeatureType } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
@@ -57,7 +36,6 @@ test.concurrent(
 			actions: [s.attach({ productId: planWithCustomer.id })],
 		});
 
-		// Both plans change items (100 -> 500) in a single preview call.
 		const preview = await autumnV2_2.post("/catalog.preview_update", {
 			expand: ["plan_changes.plan"],
 			plans: [
@@ -106,7 +84,6 @@ test.concurrent(
 			actions: [s.attach({ productId: plan.id })],
 		});
 
-		// ── B: unchanged plan → no action ──
 		const noChange = await autumnV2_2.post("/catalog.preview_update", {
 			plans: [
 				{
@@ -128,7 +105,6 @@ test.concurrent(
 			],
 		});
 
-		// ── B: rename only (items unchanged) → has customers but no version ──
 		const nameOnly = await autumnV2_2.post("/catalog.preview_update", {
 			plans: [
 				{ plan_id: plan.id, name: "Renamed Pro", items: [messagesItem(100)] },
@@ -146,7 +122,6 @@ test.concurrent(
 			],
 		});
 
-		// ── B: new_plan_id only (items unchanged) → no version ──
 		const idOnly = await autumnV2_2.post("/catalog.preview_update", {
 			plans: [
 				{
@@ -168,7 +143,6 @@ test.concurrent(
 			],
 		});
 
-		// ── B: item change → versions (control) ──
 		const itemChange = await autumnV2_2.post("/catalog.preview_update", {
 			plans: [{ plan_id: plan.id, items: [messagesItem(500)] }],
 		});
@@ -203,11 +177,9 @@ test.concurrent(
 				s.customer({ testClock: false, paymentMethod: "success" }),
 				s.products({ list: [plan] }),
 			],
-			// Attaching messages creates a customer entitlement for it.
 			actions: [s.attach({ productId: plan.id })],
 		});
 
-		// ── C: a brand-new feature + a non-blockable rename of an existing one ──
 		const allowed = await autumnV2_2.post("/catalog.preview_update", {
 			expand: ["feature_changes.feature"],
 			features: [
@@ -232,7 +204,6 @@ test.concurrent(
 			noBlockers: true,
 		});
 
-		// ── C: changing the type of an attached feature → blocked ──
 		const blocked = await autumnV2_2.post("/catalog.preview_update", {
 			features: [
 				{ feature_id: TestFeature.Messages, name: "Messages", type: "boolean" },
@@ -257,7 +228,6 @@ test.concurrent(
 			actions: [],
 		});
 
-		// ── D: net-new feature + a plan that uses it, in one preview call ──
 		const preview = await autumnV2_2.post("/catalog.preview_update", {
 			expand: ["plan_changes.plan", "feature_changes.feature"],
 			features: [

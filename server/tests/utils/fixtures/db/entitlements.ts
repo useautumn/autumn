@@ -12,9 +12,6 @@ import {
 } from "@autumn/shared";
 import { features } from "./features";
 
-/**
- * Create an entitlement fixture
- */
 const create = ({
 	id,
 	featureId,
@@ -74,7 +71,6 @@ const defaultMessagesFeature = () =>
 		config: { usage_type: FeatureUsageType.Single },
 	});
 
-/** Stable-id entitlement for field-level comparison tests. */
 const build = (overrides: Partial<Entitlement> = {}): Entitlement => {
 	const feature = defaultMessagesFeature();
 	return {
@@ -98,7 +94,6 @@ const build = (overrides: Partial<Entitlement> = {}): Entitlement => {
 	};
 };
 
-/** Stable-id entitlement with joined feature. */
 const buildWithFeature = (
 	overrides: Partial<EntitlementWithFeature> = {},
 ): EntitlementWithFeature => {
@@ -111,7 +106,6 @@ const buildWithFeature = (
 	};
 };
 
-/** Entitlement + optional price pair. */
 const buildPricePair = ({
 	entitlement = buildWithFeature(),
 	price,
@@ -119,10 +113,6 @@ const buildPricePair = ({
 	entitlement?: EntitlementWithFeature;
 	price?: Price;
 } = {}): EntitlementPrice => ({ entitlement, price });
-
-// ═══════════════════════════════════════════════════════════════════
-// EXPORT
-// ═══════════════════════════════════════════════════════════════════
 
 export const entitlements = {
 	create,

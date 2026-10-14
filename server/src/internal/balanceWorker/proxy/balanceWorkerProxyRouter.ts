@@ -5,7 +5,6 @@ import { getBalanceWorkerClient } from "@/external/balanceWorker/getBalanceWorke
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import { receiveProxyRequest } from "./receiveProxyRequest/receiveProxyRequest.js";
 
-/** Null unless this API reaches the workers itself; a proxied API would forward the call back to itself. */
 function readServingSecret(): string | null {
 	const env = getBalanceWorkerTransportEnv();
 	if (env.BALANCE_WORKER_TRANSPORT !== "direct") return null;

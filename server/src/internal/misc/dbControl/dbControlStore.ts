@@ -5,7 +5,6 @@ import {
 import { registerEdgeConfig } from "@/internal/misc/edgeConfig/edgeConfigRegistry.js";
 import { createEdgeConfigStore } from "@/internal/misc/edgeConfig/edgeConfigStore.js";
 
-/** Live knobs on how our processes drive Postgres; the balance worker polls the same object. */
 const store = createEdgeConfigStore<DbControlEdgeConfig>({
 	s3Key: dbControlEdgeConfig.key,
 	schema: dbControlEdgeConfig.schema,

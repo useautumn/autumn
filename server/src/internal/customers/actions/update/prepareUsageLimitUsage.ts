@@ -15,7 +15,6 @@ import { generateId } from "@/utils/genUtils.js";
 import { invalidateCachedFullSubject } from "../../cache/fullSubject/index.js";
 import { getFullSubject } from "../../repos/getFullSubject/getFullSubject.js";
 
-/** The subject as it will look once this request's usage-limit config is saved. */
 const withPendingUsageLimits = ({
 	fullSubject,
 	usageLimits,

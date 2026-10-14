@@ -1,7 +1,3 @@
-/**
- * Contract: generated and explicit license customizations rebase semantically.
- * Preservation diffs collapse when unnecessary, overrides win, and explicit removals persist.
- */
 import { expect, test } from "bun:test";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { items } from "@tests/utils/fixtures/items.js";

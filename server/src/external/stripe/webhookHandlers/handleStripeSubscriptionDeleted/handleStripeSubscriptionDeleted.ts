@@ -6,13 +6,6 @@ import { expireAndActivateCustomerProducts } from "./tasks/expireAndActivateCust
 import { processConsumablePricesForSubscriptionDeleted } from "./tasks/processConsumablePricesForSubscriptionDeleted";
 import { voidInvoicesForSubscriptionDeleted } from "./tasks/voidInvoicesForSubscriptionDeleted";
 
-/**
- * Handles Stripe subscription.deleted webhook.
- *
- * NOTE: Previously there was a race condition concern where subscription.updated
- * might expire products before subscription.deleted arrives. For now we assume
- * this is not an issue, but monitor if problems arise.
- */
 export const handleStripeSubscriptionDeleted = async ({
 	ctx,
 	event,
@@ -34,22 +27,17 @@ export const handleStripeSubscriptionDeleted = async ({
 
 	logger.info(`[sub.deleted] Processing subscription.deleted`);
 
-	// Task 1: Create invoices for arrear prices (usage-based)
 	await processConsumablePricesForSubscriptionDeleted({ ctx, eventContext });
 
-	// Task 2: Expire customer products + delete scheduled + activate defaults
 	await expireAndActivateCustomerProducts({ ctx, eventContext });
 
-	// Task 3: Void open invoices (if org config enabled)
 	await voidInvoicesForSubscriptionDeleted({ ctx, eventContext });
 
-	// Task 4: Log all customer product updates, deletions, and insertions
 	logCustomerProductUpdates({
 		ctx,
 		eventContext,
 	});
 
-	// Task 5: Emit billing.updated webhook (fire-and-forget) if anything changed
 	emitBillingChangeWebhook({
 		ctx,
 		eventContext,

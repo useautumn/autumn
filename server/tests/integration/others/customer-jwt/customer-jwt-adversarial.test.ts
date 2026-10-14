@@ -1,16 +1,3 @@
-/**
- * Adversarial tests for per-customer JWTs — proving the credential is scoped
- * down and cannot be abused. Complements customer-jwt-contract.test.ts (the
- * happy path). Each block is an attack that MUST be rejected:
- *
- *   - Forged signature (signed with the wrong secret)        -> 401
- *   - alg:none token (algorithm-confusion)                   -> 401
- *   - Garbage / malformed token                              -> 401
- *   - Privilege escalation: access token -> keys.mint/revoke -> 403
- *   - Cross-customer: A's token cannot read B (force-set) or B's entity
- *   - Refresh reuse: replaying a rotated-away refresh token revokes the family
- */
-
 import { expect, test } from "bun:test";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { items } from "@tests/utils/fixtures/items.js";
@@ -87,7 +74,6 @@ test(`${chalk.yellowBright("customer-jwt adversarial: forgery / escalation / cro
 
 	const accessToken = (await mint(customerId)).access_token;
 
-	// ── 1: forged signature (wrong secret) -> 401 ────────────────────────
 	const forged = await new SignJWT({
 		orgId,
 		env: "sandbox",
@@ -107,7 +93,6 @@ test(`${chalk.yellowBright("customer-jwt adversarial: forgery / escalation / cro
 	});
 	expect(forgedCheck.status).toBe(401);
 
-	// ── 2: alg:none algorithm-confusion -> 401 ───────────────────────────
 	const noneToken = `am_jwt_${b64url({ alg: "none", typ: "JWT" })}.${b64url({
 		sub: customerId,
 		orgId,
@@ -123,7 +108,6 @@ test(`${chalk.yellowBright("customer-jwt adversarial: forgery / escalation / cro
 	});
 	expect(noneCheck.status).toBe(401);
 
-	// ── 3: garbage / malformed token -> 401 ──────────────────────────────
 	const garbage = await raw({
 		path: "/balances.check",
 		token: "am_jwt_not.a.real.jwt",
@@ -131,7 +115,6 @@ test(`${chalk.yellowBright("customer-jwt adversarial: forgery / escalation / cro
 	});
 	expect(garbage.status).toBe(401);
 
-	// ── 4: privilege escalation — access token cannot mint or revoke ─────
 	const escalateMint = await raw({
 		path: "/keys.mint",
 		token: accessToken,
@@ -145,24 +128,22 @@ test(`${chalk.yellowBright("customer-jwt adversarial: forgery / escalation / cro
 	});
 	expect(escalateRevoke.status).toBe(403);
 
-	// ── 5: cross-customer — A cannot read B, nor A's token read B's view ─
 	const readOther = await raw({
 		path: "/customers.get",
 		token: accessToken,
 		body: { customer_id: otherId },
 	});
 	expect(readOther.status).toBe(200);
-	expect(readOther.json?.id).toBe(customerId); // force-set wins, never B
+	expect(readOther.json?.id).toBe(customerId);
 
 	const otherToken = (await mint(otherId)).access_token;
 	const crossEntity = await raw({
 		path: "/entities.get",
 		token: otherToken,
-		body: { entity_id: mainEntity.id }, // A's entity, B's token
+		body: { entity_id: mainEntity.id },
 	});
 	expect([400, 404]).toContain(crossEntity.status);
 
-	// ── 6: refresh reuse — replaying a rotated-away refresh revokes family ─
 	const family = await mint(reuseId);
 	const rt1 = family.refresh_token;
 	const refresh1 = await raw({ path: "/keys.refresh", token: rt1 });
@@ -171,11 +152,9 @@ test(`${chalk.yellowBright("customer-jwt adversarial: forgery / escalation / cro
 	const rt3 = refresh2.json.refresh_token as string;
 	expect(refresh2.status).toBe(200);
 
-	// rt1 is now 2 generations stale -> reuse detected -> 401 + family killed
 	const replay = await raw({ path: "/keys.refresh", token: rt1 });
 	expect(replay.status).toBe(401);
 
-	// the just-issued (valid-kid) rt3 is now dead too — whole family revoked
 	const afterReuse = await raw({ path: "/keys.refresh", token: rt3 });
 	expect(afterReuse.status).toBe(401);
 });

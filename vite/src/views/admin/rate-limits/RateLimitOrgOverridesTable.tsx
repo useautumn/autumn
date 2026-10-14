@@ -31,7 +31,6 @@ const COLUMNS =
 	"md:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.8fr)_140px]";
 const HEADERS = ["Limit", "Per customer", "Per org", "", ""];
 
-/** "120k → 300k/min" when the org overrides the layer, else its default. */
 const OverriddenLayerCell = ({
 	layer,
 	value,
@@ -73,7 +72,6 @@ const OverriddenLayerCell = ({
 	);
 };
 
-/** Each write replaces the whole config, so a second one waits for the first to land. */
 const RowActions = ({
 	onEdit,
 	onRemove,
@@ -104,7 +102,6 @@ const RowActions = ({
 	</div>
 );
 
-/** One org's overrides only: default → new per layer, then its endpoint caps, with edit and remove. */
 export const RateLimitOrgOverridesTable = ({
 	org,
 	policies,

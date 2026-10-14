@@ -11,7 +11,6 @@ import {
 	writeSnapshot,
 } from "./onboardingSnapshot";
 
-/** Steps only ever complete, so polling can stop once everything is done. */
 const REFETCH_INTERVAL = 10_000;
 
 export const ONBOARDING_STEP_IDS = [
@@ -44,12 +43,9 @@ const useOnboardingDismissedStore = create<OnboardingDismissedState>()(
 	}),
 );
 
-/** Use this when you only need to show/dismiss without fetching progress data */
 export const useOnboardingVisibility = () => useOnboardingDismissedStore();
 
 export interface OnboardingProgress {
-	/** Null until the first status is known — distinct from "nothing done yet",
-	 * so the UI can hold rather than render a wrong zero. */
 	completed: Record<OnboardingStepId, boolean> | null;
 	currentStep: OnboardingStepId | null;
 	completedCount: number;
@@ -63,17 +59,13 @@ export interface OnboardingProgress {
 const toCompleted = (
 	status: OnboardingStatus,
 ): Record<OnboardingStepId, boolean> => ({
-	// The prompt resolves itself: the agent's first visible output is a catalog.
 	prompt: status.catalog,
 	catalog: status.catalog,
 	customer: status.customer,
-	// Unknown usage reads as incomplete for progress, but never overwrites a
-	// cached true — see the merge below.
 	usage: status.usage ?? false,
 	deploy: status.deployed,
 });
 
-/** Analytics can time out; a step that was true must not flip back to false. */
 const mergeStatus = ({
 	fetched,
 	cached,
@@ -85,11 +77,6 @@ const mergeStatus = ({
 	usage: fetched.usage ?? cached?.usage ?? null,
 });
 
-/**
- * One request for the whole checklist. Progress used to be derived from four
- * independent queries, so the count ticked upward on screen as each resolved;
- * the cached snapshot means a returning user's first paint is already right.
- */
 export const useOnboardingProgress = (): OnboardingProgress => {
 	const axiosInstance = useAxiosInstance();
 	const buildKey = useQueryKeyFactory();
@@ -108,7 +95,6 @@ export const useOnboardingProgress = (): OnboardingProgress => {
 			writeSnapshot({ env, status: merged });
 			return merged;
 		},
-		// Paints the last known state immediately, then reconciles in place.
 		initialData: cached ?? undefined,
 		refetchInterval: (query) =>
 			query.state.data && !Object.values(query.state.data).includes(false)

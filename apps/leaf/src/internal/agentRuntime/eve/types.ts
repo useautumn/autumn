@@ -9,8 +9,6 @@ export const evePendingRequestSchema = z.strictObject({
 
 export type EvePendingRequest = z.infer<typeof evePendingRequestSchema>;
 
-// Non-strict so rows written before a field was retired still parse; a strict
-// object would fail them all and silently restart every live thread.
 export const eveSessionStateSchema = z.object({
 	streamIndex: z.number().int().nonnegative(),
 	pendingRequests: z.array(evePendingRequestSchema).default([]),

@@ -3,9 +3,6 @@ import { assertTinybirdAvailable } from "@/external/tinybird/tinybirdUtils.js";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { eventActions } from "../actions/eventActions.js";
 
-/**
- * Get top event names for the organization
- */
 export const handleGetEventNames = createRoute({
 	scopes: [Scopes.Analytics.Read],
 	handler: async (c) => {
@@ -20,7 +17,6 @@ export const handleGetEventNames = createRoute({
 		const eventNames: string[] = [];
 
 		for (let i = 0; i < result.length; i++) {
-			// Is an event name
 			if (
 				features.some(
 					(feature: Feature) =>

@@ -1,13 +1,3 @@
-/**
- * No-card trials at attach time.
- *
- * Contract:
- *  - card_required: false, no invoice mode → trial runs in Autumn only: trialing, no Stripe sub, no invoice,
- *    marked on_trial_end "bill" so the product cron settles it
- *  - upgrading off an Autumn-only trial bills the new plan and drops the trial
- *  - downgrading off it also switches immediately: there is no paid period to wait out
- */
-
 import { expect, test } from "bun:test";
 import {
 	type ApiCustomerV3,

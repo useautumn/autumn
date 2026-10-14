@@ -12,8 +12,6 @@ import {
 	pickAnchorCustomerEntitlementId,
 } from "./pickAnchorCustomerEntitlementId.js";
 
-// Lower rank wins in the anchor tie-break. Loose entitlements (no product) are
-// treated as active grants.
 const customerProductStatusToAnchorRank = (
 	status: CusProductStatus | undefined,
 ): number => {
@@ -55,17 +53,6 @@ const toAnchorCandidate = (
 		customerEntitlement.created_at,
 });
 
-/**
- * Finds the usage window's ANCHOR entitlement: a bounds/billing-cycle
- * reference only (counters are customer-scoped rows, never entitlement-owned).
- * It supplies billing-cycle alignment for the window bounds and is stamped on
- * counter rows at creation as provenance.
- *
- * Owner preference: the capped feature's own entitlements first, then (for
- * non-credit features) entitlements of credit systems that contain it. Null
- * when no eligible entitlement exists -- the cap stays enforceable with
- * calendar-aligned bounds.
- */
 export const findUsageWindowAnchor = <
 	CE extends CustomerEntitlementRowView,
 	CP extends PlanControlCustomerProduct & CustomerProductWithPricesView,

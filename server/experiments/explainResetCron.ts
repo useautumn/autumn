@@ -11,10 +11,6 @@ import {
 import { and, eq, gt, isNull, lt, notExists, or, sql } from "drizzle-orm";
 import { initDrizzle } from "./experimentEnv";
 
-// Run with `bun run experiments/explainResetCron.ts`
-// Source: CusEntitlementService.getActiveResetPassed
-// File: server/src/internal/customers/cusProducts/cusEnts/CusEntitlementService.ts:161
-
 const RELEVANT_TABLES = [
 	"customer_entitlements",
 	"entitlements",
@@ -51,7 +47,6 @@ const main = async () => {
 
 	await listIndexes({ db });
 
-	// Reproduce the exact Drizzle query from getActiveResetPassed
 	const query = db
 		.select()
 		.from(customerEntitlements)
@@ -86,7 +81,6 @@ const main = async () => {
 		)
 		.limit(5000);
 
-	// ── Original query ──────────────────────────────────────────────────
 	console.log("=== ORIGINAL: getActiveResetPassed (LEFT JOIN + OR) ===\n");
 	const startOrig = performance.now();
 	const resultOrig = await db.execute(query.getSQL());
@@ -106,7 +100,6 @@ const main = async () => {
 		gt(customerEntitlements.expires_at, now),
 	);
 
-	// ── Optimized Sub-query A: Loose entitlements ───────────────────────
 	console.log(
 		"\n=== OPTIMIZED A: Loose entitlements (customer_product_id IS NULL) ===\n",
 	);
@@ -147,7 +140,6 @@ const main = async () => {
 		console.log((row as Record<string, unknown>)["QUERY PLAN"]);
 	}
 
-	// ── Optimized Sub-query B: Active product entitlements ──────────────
 	console.log(
 		"\n=== OPTIMIZED B: Active product entitlements (INNER JOIN) ===\n",
 	);
@@ -192,12 +184,6 @@ const main = async () => {
 		console.log((row as Record<string, unknown>)["QUERY PLAN"]);
 	}
 
-	// ── Optimized Sub-query C: Active product + NOT price-backed ───────
-	// Mirrors `cusEntToCusPrice` filter applied in `getResettableCustomerEntitlements`
-	// at the SQL level: a cusEnt is price-backed when a customer_price exists
-	// for the same customer_product whose price.entitlement_id matches the
-	// cusEnt's entitlement_id. Such cusEnts MUST NOT be picked up by the reset
-	// cron — their reset is owned by the Stripe invoice.created handler.
 	console.log(
 		"\n=== OPTIMIZED C: Active product + NOT price-backed (NOT EXISTS) ===\n",
 	);
@@ -254,7 +240,6 @@ const main = async () => {
 		console.log((row as Record<string, unknown>)["QUERY PLAN"]);
 	}
 
-	// ── Summary ─────────────────────────────────────────────────────────
 	console.log("\n=== SUMMARY ===\n");
 	console.log(`Original:    ${elapsedOrig.toFixed(2)}ms (${resultOrig.length} rows)`);
 	console.log(`Optimized A: ${elapsedLoose.toFixed(2)}ms (${resultLoose.length} rows)`);

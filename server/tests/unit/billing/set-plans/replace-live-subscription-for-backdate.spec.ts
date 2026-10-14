@@ -1,5 +1,3 @@
-/** A past start away from the live start recreates a healthy subscription and its schedule; a start now, a future start, or a re-save of the live start keeps it. */
-
 import { describe, expect, test } from "bun:test";
 import {
 	CusProductStatus,

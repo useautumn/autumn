@@ -17,7 +17,6 @@ const revokeOrgConnection = async ({
 	const orgCtx = { ...ctx, org };
 	const connect = orgToStripeConnect({ org, env: ctx.env });
 
-	// A newer authorization of the same account outlives this event.
 	const isReconnected =
 		connect?.account_id === accountId &&
 		(await isStripeAuthorizationCurrent({
@@ -46,7 +45,6 @@ export const handleStripeApplicationDeauthorized = async ({
 		env,
 	});
 
-	// Legacy rows can share one OAuth grant; clear all of them before surfacing a failure.
 	const results = await Promise.allSettled(
 		orgs.map((org) => revokeOrgConnection({ ctx, org, accountId })),
 	);

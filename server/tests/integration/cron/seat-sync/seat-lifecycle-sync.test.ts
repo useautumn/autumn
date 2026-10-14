@@ -1,12 +1,3 @@
-/**
- * Seat-sync cron: seat customer products converge onto the pool parent's
- * lifecycle (status, subscription_ids, scheduled_ids).
- *
- * Contract under test:
- *   - Fresh seats (born without subscription_ids) get the parent's stamped.
- *   - After the parent expires, the next run flips the seat row to expired.
- *   - Idempotent: a converged seat is not selected again (updated_at stable).
- */
 import { expect, test } from "bun:test";
 import { CusProductStatus, customerProducts } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
@@ -86,11 +77,9 @@ test.concurrent(
 			return seat;
 		};
 
-		// Born drifted: no subscription_ids on the seat.
 		const seatBefore = await getSeat();
 		expect(seatBefore.subscription_ids ?? []).toEqual([]);
 
-		// ── Run 1: parent's sub ids stamped onto the seat ─────────────────
 		await runSeatSyncCron({ ctx });
 		const seatSynced = await getSeat();
 		expect(seatSynced.subscription_ids).toEqual(
@@ -98,12 +87,10 @@ test.concurrent(
 		);
 		expect(seatSynced.status).toBe(CusProductStatus.Active);
 
-		// ── Idempotent: converged seat is untouched on the next run ──────
 		await runSeatSyncCron({ ctx });
 		const seatIdle = await getSeat();
 		expect(seatIdle.updated_at).toBe(seatSynced.updated_at);
 
-		// ── Parent expires: next run flips the seat row ───────────────────
 		await CusProductService.update({
 			ctx,
 			cusProductId: parentCusProduct?.id ?? "",

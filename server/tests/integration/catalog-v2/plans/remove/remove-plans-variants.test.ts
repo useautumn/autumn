@@ -1,5 +1,3 @@
-/** Base removal cannot strand a retained variant; removing both unused rows is valid. */
-
 import { test } from "bun:test";
 import { CusProductStatus, ErrCode } from "@autumn/shared";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils.js";

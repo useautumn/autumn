@@ -6,7 +6,6 @@ import { changesAtomRoute } from "../utils/classifyCacheDeployment.js";
 import { pickChangedFields } from "../utils/pickChangedFields.js";
 import { isReadRow } from "./utils/cacheDeploymentWhere.js";
 
-/** Writes what changed from `from` to `to`, unless the status moved since the read; the cached org only drops when herald would route differently. */
 export const updateCacheDeployment = async ({
 	ctx,
 	from,

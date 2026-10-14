@@ -69,7 +69,6 @@ export const getBaseStripePriceId = ({
 	return id;
 };
 
-/** Returns the Stripe product id used by the prepaid usage price. */
 export const getPrepaidStripeProductId = ({
 	fullProduct,
 }: {
@@ -132,12 +131,6 @@ export const createStripeTieredPriceUnderProduct = async ({
 		tiers,
 	});
 
-/**
- * Create a Stripe subscription schedule with the supplied phases and return
- * both the live subscription (running phase 0) and the schedule object.
- * Each phase iterates once over its billing interval; the schedule releases
- * after the final phase.
- */
 export const createStripeSubscriptionSchedule = async ({
 	ctx,
 	customerId,

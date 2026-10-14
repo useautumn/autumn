@@ -260,15 +260,6 @@ test.concurrent(
 	},
 );
 
-/**
- * Contract under test:
- *   - POST /catalog.update_mappings with a base plan mapping and
- *     scope="base_price" updates product.processor.id for every version of
- *     the base plan and every version of each variant.
- *   - The same mapping updates only base-price stripe_product_id values.
- *   - Item-level stripe_product_id values and dependent Stripe fields are not
- *     touched unless an item mapping targets them.
- */
 test.concurrent(
 	`${chalk.yellowBright("catalog mappings: base_price scope maps base family processors and base prices only")}`,
 	async () => {

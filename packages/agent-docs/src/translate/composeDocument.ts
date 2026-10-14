@@ -1,14 +1,9 @@
 import { parseFrontmatter } from "./ingest/frontmatter.js";
 
-// Inline a sibling content file at this tag.
 const PART_TAG = /<part\s+([^>]*?)\/>/g;
-// A skill renders these as cross-skill pointers; a document inlines the target.
 const POINTER_TAG = /<pointer\s+([^>]*?)\/>/g;
-// Inline a translated docs page at this tag.
 const DOCS_TAG = /<docs\s+([^>]*?)\/>/g;
-// A skill splits these into references/; a document inlines the docs page.
 const REFERENCE_TAG = /<reference\s+([^>]*?)\/>/g;
-// Point at a prerequisite resource the agent should read first.
 const SKILL_TAG = /<skill\s+([^>]*?)\/>/g;
 const ATTR = /(\w+)="([^"]*)"/g;
 
@@ -20,12 +15,6 @@ const parseAttrs = (raw: string): Record<string, string> => {
 	return attrs;
 };
 
-/**
- * Render a tagged mdx into an MCP resource body: strip frontmatter, then inline
- * its tags in place. `<part>`/`<docs>`/`<reference>` inline a content file or
- * docs page; `<skill>` becomes a "read X first" pointer. Shares its source with
- * the skill format, which instead splits parts into `references/`.
- */
 export const composeDocument = ({
 	path,
 	text,
@@ -44,7 +33,6 @@ export const composeDocument = ({
 			if (!name) {
 				throw new Error(`<skill> in ${path} is missing a name`);
 			}
-			// `text` renders verbatim, for prose that already names the prerequisite.
 			if (text) {
 				return text;
 			}
@@ -71,7 +59,6 @@ export const composeDocument = ({
 			if (!file) {
 				throw new Error(`<pointer> in ${path} is missing a file`);
 			}
-			// Documents have no references/ split, so inline the target.
 			return resolveContentFile(file).trim();
 		})
 		.replace(DOCS_TAG, (_match, raw: string) => {

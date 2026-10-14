@@ -10,7 +10,6 @@ const licensePlanIdOf = (customerLicense: FullCustomerLicense) =>
 	customerLicense.planLicense?.product.id ??
 	customerLicense.license_internal_product_id;
 
-/** Blocks ambiguous mappings; dropped pools inherit their parent's lifecycle. */
 export const assertNoAmbiguousDroppedLicenses = ({
 	unmatched,
 }: {

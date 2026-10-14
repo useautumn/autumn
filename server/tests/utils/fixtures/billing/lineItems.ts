@@ -1,18 +1,6 @@
 import { generateKsuid } from "@autumn/ksuid";
 import type { LineItem } from "@autumn/shared";
 
-// ═══════════════════════════════════════════════════════════════════
-// LINE ITEM FIXTURES
-// ═══════════════════════════════════════════════════════════════════
-
-/**
- * Create a basic line item for testing
- * @param amount - The line item amount (positive for charge, negative for refund)
- * @param direction - "charge" or "refund" (default: inferred from amount sign)
- * @param stripeProductId - Optional Stripe product ID for applies_to matching
- * @param discounts - Existing discounts on this line item
- * @param amountAfterDiscounts - Override amountAfterDiscounts (default: same as amount)
- */
 const create = ({
 	amount,
 	direction,
@@ -48,10 +36,6 @@ const create = ({
 	prorated: false,
 });
 
-/**
- * Create a charge line item
- * @param amount - Positive amount (default: 100)
- */
 const charge = ({
 	amount = 100,
 	stripeProductId,
@@ -71,10 +55,6 @@ const charge = ({
 		amountAfterDiscounts,
 	});
 
-/**
- * Create a refund line item
- * @param amount - Positive value that will be negated (default: 100)
- */
 const refund = ({
 	amount = 100,
 	stripeProductId,
@@ -94,9 +74,6 @@ const refund = ({
 		amountAfterDiscounts,
 	});
 
-/**
- * Create a charge line item with a specific Stripe product ID
- */
 const chargeForProduct = ({
 	amount = 100,
 	stripeProductId,
@@ -105,9 +82,6 @@ const chargeForProduct = ({
 	stripeProductId: string;
 }): LineItem => charge({ amount, stripeProductId });
 
-/**
- * Create a refund line item with a specific Stripe product ID
- */
 const refundForProduct = ({
 	amount = 100,
 	stripeProductId,
@@ -116,9 +90,6 @@ const refundForProduct = ({
 	stripeProductId: string;
 }): LineItem => refund({ amount, stripeProductId });
 
-/**
- * Create a line item with existing discounts applied
- */
 const withExistingDiscount = ({
 	amount,
 	direction = "charge",
@@ -145,22 +116,14 @@ const withExistingDiscount = ({
 	});
 };
 
-// ═══════════════════════════════════════════════════════════════════
-// EXPORT
-// ═══════════════════════════════════════════════════════════════════
-
 export const lineItems = {
-	// Generic builder
 	create,
 
-	// Direction-specific
 	charge,
 	refund,
 
-	// With product ID
 	chargeForProduct,
 	refundForProduct,
 
-	// With existing discounts
 	withExistingDiscount,
 } as const;

@@ -1,7 +1,3 @@
-/**
- * dfu.flash — dry_run: returns customer: null and persists nothing.
- */
-
 import { expect, test } from "bun:test";
 import { type ApiCustomerV5 } from "@autumn/shared";
 import {
@@ -54,7 +50,6 @@ test.concurrent(
 		const flashRes = await callFlash(autumnV2_3 as FlashClient, payload);
 		expect(flashRes.result?.customer).toBeNull();
 
-		// Nothing persisted: the plan is not present on a fresh fetch.
 		const customer = await autumnV2_3.customers.get<ApiCustomerV5>(customerId);
 		await expectCustomerProducts({ customer, notPresent: [pro.id] });
 	},

@@ -18,7 +18,6 @@ const WORKER_COLOR: Record<WorkerStatus, string> = {
 };
 const LEGEND_ORDER = Object.keys(WORKER_COLOR) as WorkerStatus[];
 
-/** Big runs get smaller squares so the grid keeps to a few rows. */
 const boxClass = (slots: number) =>
 	slots > 160
 		? { box: "size-2.5 rounded-[2px]", gap: "gap-[3px]" }
@@ -77,7 +76,6 @@ const WorkerGrid = ({
 	);
 };
 
-/** Splits sized-but-unspawned slots by what they wait on, from this run's own allocator demand. */
 const pendingSlots = ({
 	run,
 	unspawned,
@@ -90,7 +88,6 @@ const pendingSlots = ({
 	const owed =
 		run.live?.accountsPending ?? (run.queuePosition !== null ? unspawned : 0);
 	const forAccounts = Math.min(unspawned, owed);
-	// Past provisioning, a slot nobody owes accounts for won't start: the swarm lowered its demand.
 	return [
 		{ label: "waiting for accounts", count: forAccounts },
 		{
@@ -100,7 +97,6 @@ const pendingSlots = ({
 	];
 };
 
-/** Worker squares (click one for its log), a status legend, and boot p50 · p90. */
 export const WorkersCard = ({
 	run,
 	live,

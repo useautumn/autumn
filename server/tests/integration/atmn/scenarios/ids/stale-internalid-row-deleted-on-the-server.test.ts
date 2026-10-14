@@ -1,9 +1,3 @@
-/**
- * atmn scenarios/ids — stale internalId (row deleted on the server) → the id names a new resource: push recreates the row and the fixture takes the new id
- *
- * One line of plans/atmn-v3/07_tests.md. [a, b] is a matrix looped INSIDE this file.
- */
-
 import { expect, test } from "bun:test";
 import { configBody } from "@tests/utils/atmnUtils/baseConfigs.js";
 import { initAtmnScenario } from "@tests/utils/atmnUtils/initAtmnScenario.js";
@@ -35,8 +29,6 @@ test.concurrent(
 				)?.[1];
 			expect(internalId).toBeTruthy();
 
-			// Deleted through the API directly — the dashboard/another tool, not
-			// this config — so the local fixture still states the now-dead id.
 			await scenario.client.update({
 				remove_features: [{ feature_id: featureId }],
 			} as Record<string, unknown>);

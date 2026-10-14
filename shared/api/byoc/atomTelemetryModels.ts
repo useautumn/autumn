@@ -21,7 +21,6 @@ export const ListAtomChecksResponseSchema = z.object({
 
 export const ATOM_METRICS_RANGES = ["1h", "24h", "7d"] as const;
 
-/** How a period's 10s windows fold into one value: its busiest window, or its mean rate. */
 export const ATOM_METRICS_STATISTICS = ["maximum", "average"] as const;
 
 export const GetAtomMetricsParamsSchema = z.object({

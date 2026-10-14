@@ -53,8 +53,6 @@ export const buildIncomingFullProduct = ({
 		free_trial: product.free_trial ?? base.free_trial,
 		config: product.config ?? base.config,
 		metadata: product.metadata ?? base.metadata,
-		// billing_controls are stored as top-level columns, not on items; overlay
-		// the incoming ones so the version-impact preview diff sees the change.
 		...pickBillingControlColumns(product.billing_controls),
 	} as FullProduct;
 };

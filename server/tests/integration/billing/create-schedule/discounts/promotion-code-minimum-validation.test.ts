@@ -1,13 +1,3 @@
-/**
- * Regression for create_schedule immediate transitions with minimum-amount promo codes.
- *
- * Red-failure mode: create_schedule accepts the promo, invoices the customer,
- * then Stripe rejects the subscription update.
- *
- * Green-success criteria: preview and create_schedule reject before any new
- * invoice or plan transition side effect.
- */
-
 import {
 	type ApiCustomerV3,
 	type AttachPreviewResponse,

@@ -18,16 +18,6 @@ export interface UseCreateSkillsResult {
 	skillsDir: string;
 }
 
-/**
- * Hook to create AI skill files in the SKILLS standard format.
- * Skills are saved as SKILL.md files in subdirectories:
- *
- * <targetDir>/
- *   autumn-setup/SKILL.md
- *   autumn-gating/SKILL.md
- *   autumn-billing-page/SKILL.md
- *   autumn-modelling-pricing-plans/SKILL.md
- */
 export function useCreateSkills(): UseCreateSkillsResult {
 	const [state, setState] = useState<CreateSkillsState>("idle");
 	const [filesCreated, setFilesCreated] = useState<string[]>([]);
@@ -47,9 +37,7 @@ export function useCreateSkills(): UseCreateSkillsResult {
 
 			const created: string[] = [];
 
-			// Filter skills based on options
 			const skillsToCreate = skills.filter((skill) => {
-				// Skip pricing skill if user already has pricing (unless saveAll is true)
 				if (
 					skill.id === "autumn-pricing" &&
 					!options?.saveAll &&
@@ -60,7 +48,6 @@ export function useCreateSkills(): UseCreateSkillsResult {
 				return true;
 			});
 
-			// Create each skill in its own subdirectory
 			for (const skill of skillsToCreate) {
 				const skillDir = path.join(skillsPath, skill.id);
 				await fs.mkdir(skillDir, { recursive: true });

@@ -1,7 +1,6 @@
 import type { CreateScheduleBillingContext } from "@autumn/shared";
 import { isCustomerProductInStripeSubscriptionScope } from "./isCustomerProductInStripeSubscriptionScope";
 
-/** Plans billed outside the targeted subscription, which its schedule must keep. */
 export const findOutOfScopeCustomerProductIds = ({
 	billingContext,
 }: {

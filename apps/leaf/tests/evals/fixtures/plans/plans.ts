@@ -97,7 +97,6 @@ const applyCustomizeItems = ({
 	return nextItems;
 };
 
-/** Base price amounts are in dollars; returned API price.amount is cents. */
 export const basePrice = {
 	annual: ({ amount = 200 } = {}): PlanPrice => ({
 		amount: dollarsToCents(amount),
@@ -149,7 +148,6 @@ const createPlan = ({
 	metadata: {},
 });
 
-/** Plan fixtures default to realistic base prices and accept plan items directly. */
 export const plan = {
 	addOn: ({
 		basePrice: price = null,

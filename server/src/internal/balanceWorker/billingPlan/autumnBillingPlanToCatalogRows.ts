@@ -6,7 +6,6 @@ import {
 import type { AutumnBillingPlan, FullCusProduct } from "@autumn/shared";
 import { getUpdateCustomerProducts } from "@/internal/billing/v2/utils/billingPlan/customerProductPlanMutations.js";
 
-/** The trial carries no org or env of its own; the product it belongs to scopes it for invalidation. */
 const freeTrialToCatalogRows = ({
 	customerProduct,
 }: {
@@ -43,7 +42,6 @@ const customerProductToCatalogRows = ({
 	),
 ];
 
-/** A pool's synthetic entitlement and its feature: minted by the plan, so no source has them yet. */
 const pooledBalancesToCatalogRows = ({
 	autumnBillingPlan,
 }: {
@@ -56,7 +54,6 @@ const pooledBalancesToCatalogRows = ({
 		],
 	);
 
-/** The catalog rows the plan's customer products and pools reference, once each; the worker caches them beside the state. */
 export const autumnBillingPlanToCatalogRows = ({
 	autumnBillingPlan,
 }: {

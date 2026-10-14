@@ -2,11 +2,6 @@ import { type SQL, sql } from "drizzle-orm";
 import type { PostgresContext } from "../../../types/postgresClient.js";
 import { SUBJECT_ROW_LIMITS } from "./subjectRowLimits.js";
 
-/**
- * Several entities of one customer in one read: the same rows the single-entity
- * query returns for each, one envelope per entity, joined laterally against the
- * base tables so each entity's rows come off its own index probes.
- */
 export const entitySubjectRowsSql = ({
 	ctx,
 	customerId,

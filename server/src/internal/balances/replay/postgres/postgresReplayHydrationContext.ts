@@ -13,8 +13,6 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import type { ReplayHydrationBaseline } from "../replayHydrationContracts.js";
 import { PostgresReplayRedisUnavailableError } from "./postgresReplayHydrationErrors.js";
 
-/** Detached org metadata: it carries no FullSubject, engine seed or open
- *  transaction handle, so it stays valid after the snapshot transaction ends. */
 export type ReplayContextMetadata = Readonly<{
 	identity: MeteringIdentity;
 	env: AppEnv;
@@ -51,9 +49,6 @@ function throwRedisUnavailable(): never {
 	throw new PostgresReplayRedisUnavailableError();
 }
 
-/** Replay hydration reads one frozen snapshot, so accidental Redis access must
- *  fail loudly. The getter stays non-enumerable because callers spread the
- *  context, and a spread would otherwise resolve it. */
 export function createReplayHydrationContext({
 	metadata,
 	db,

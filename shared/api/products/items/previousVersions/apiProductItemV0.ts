@@ -17,7 +17,6 @@ import { z } from "zod/v4";
 
 export const ApiProductItemV0Schema = z
 	.object({
-		// Feature stuff
 		type: z
 			.enum(ProductItemType)
 			.nullish()
@@ -35,7 +34,6 @@ export const ApiProductItemV0Schema = z
 				"Single use features are used once and then depleted, like API calls or credits. Continuous use features are those being used on an ongoing-basis, like storage or seats.",
 		}),
 
-		// Feature response
 		feature: ApiFeatureV0Schema.nullish().meta({
 			internal: true,
 		}),
@@ -53,7 +51,6 @@ export const ApiProductItemV0Schema = z
 			description: "The interval count of the product item.",
 		}),
 
-		// Price config
 		price: z.number().nullish().meta({
 			description:
 				"The price of the product item. Should be `null` if tiered pricing is set.",

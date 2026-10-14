@@ -17,7 +17,6 @@ type InvoiceMetadataResponse = {
 
 export type InvoiceProcessorVariant = ProcessorType | "vercel";
 
-/** Vercel invoices are Stripe-ledgered; only the metadata says they're Vercel. */
 export const resolveInvoiceProcessor = ({
 	processorType,
 	metadata,
@@ -53,7 +52,6 @@ const invoiceMetadataQueryOptions = ({
 	staleTime: 5 * 60 * 1000,
 });
 
-/** Stripe invoice metadata for one invoice; only fetched while the sheet is open. */
 export const useInvoiceMetadataQuery = ({
 	customerId,
 	stripeInvoiceId,
@@ -79,7 +77,6 @@ export const useInvoiceMetadataQuery = ({
 	return { metadata: data?.metadata ?? {}, isLoading, isError };
 };
 
-/** Metadata for every invoice on the page, keyed by Stripe invoice id. */
 export const useInvoicesMetadataQuery = ({
 	customerId,
 	stripeInvoiceIds,
@@ -102,7 +99,6 @@ export const useInvoicesMetadataQuery = ({
 		[stripeInvoiceIds],
 	);
 
-	/** combine keeps the map referentially stable; a fresh object per render loops the invoices table. */
 	const metadataByStripeId = useQueries({
 		queries: stripeInvoiceIds.map((stripeInvoiceId) =>
 			invoiceMetadataQueryOptions({

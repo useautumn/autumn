@@ -7,7 +7,6 @@ import { getTinybirdPipes } from "@/external/tinybird/initTinybird.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { validatePropertyPathForJSON } from "@/internal/analytics/actions/eventValidationUtils.js";
 
-/** Lists events for the external API with offset-based pagination */
 export const listEvents = async ({
 	ctx,
 	params,
@@ -26,7 +25,6 @@ export const listEvents = async ({
 	const pipes = getTinybirdPipes();
 	const { org, env } = ctx;
 
-	// Convert epoch ms to DateTime strings (if provided)
 	const startDate = params.custom_range?.start
 		? epochToDateTime(params.custom_range.start)
 		: undefined;
@@ -34,7 +32,6 @@ export const listEvents = async ({
 		? epochToDateTime(params.custom_range.end)
 		: undefined;
 
-	// Fetch N+1 for has_more calculation
 	const fetchLimit = params.limit + 1;
 
 	ctx.logger.debug("Listing events for API via Tinybird", {
@@ -46,7 +43,6 @@ export const listEvents = async ({
 		limit: params.limit,
 	});
 
-	// Build filter_by indexed params
 	const filterParams: Record<string, string> = {};
 	if (params.filter_by) {
 		const entries = Object.entries(params.filter_by).slice(0, 5);
@@ -76,15 +72,12 @@ export const listEvents = async ({
 	const hasMore = result.data.length > params.limit;
 	const rows = hasMore ? result.data.slice(0, params.limit) : result.data;
 
-	// Transform to API format
 	const list: ApiEventsListItem[] = rows.map((row) => {
 		let properties = {};
 		if (row.properties) {
 			try {
 				properties = JSON.parse(row.properties);
-			} catch {
-				// Invalid JSON, use empty object
-			}
+			} catch {}
 		}
 
 		let deductions: TrackDeduction[] | null = null;
@@ -92,7 +85,6 @@ export const listEvents = async ({
 			try {
 				const parsed = JSON.parse(row.deductions);
 				// Tinybird's JSON column re-encodes nested-object array items
-				// as strings; second parse brings them back to TrackDeduction.
 				const rawList = Array.isArray(parsed)
 					? parsed
 					: parsed && Array.isArray(parsed.list)

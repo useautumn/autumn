@@ -5,7 +5,6 @@ import type {
 } from "@autumn/balance-engine";
 import type { ReceiptPolicy } from "../../types/receiptPolicy.js";
 
-/** Stamps the writer's receipt onto what the engine decided: the record the log, store and checkpoint hold. */
 export const mutationToRecord = ({
 	mutation,
 	fingerprint,

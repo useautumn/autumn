@@ -13,29 +13,11 @@ import { addDays } from "date-fns";
 import type { Stripe } from "stripe";
 import AutumnError from "@/external/autumn/autumnCli.js";
 
-/**
- * Referrals1: Checkout-triggered referrals with percentage discount
- *
- * Setup:
- * - Main customer attached to proWithTrial
- * - 3 redeemers + 1 alternate (same fingerprint as main)
- * - Reward: 100% off for 1 month
- * - Program: checkout trigger, referrer only, max 2 redemptions
- *
- * Flow:
- * 1. Create referral code (idempotent)
- * 2. Own customer / same fingerprint can't redeem
- * 3. 3 redeemers redeem code, 1st can't redeem again
- * 4. Redeemers attach pro → triggers reward (only first 2 within max_redemptions)
- * 5. Advance clock → verify discount on invoice
- */
-
 test(`${chalk.yellowBright("referrals1: checkout-triggered referrals with percentage discount")}`, async () => {
 	const mainCustomerId = "main-referral-1";
 	const alternateCustomerId = "alternate-referral-1";
 	const redeemers = ["referral1-r1", "referral1-r2", "referral1-r3"];
 
-	// Products
 	const proWithTrial = products.proWithTrial({
 		id: "pro",
 		items: [items.monthlyWords({ includedUsage: 0 })],
@@ -45,7 +27,6 @@ test(`${chalk.yellowBright("referrals1: checkout-triggered referrals with percen
 		items: [items.monthlyWords({ includedUsage: 0 })],
 	});
 
-	// Reward & referral program
 	const reward = rewards.monthOff();
 	const program = referralPrograms.onCheckoutReferrer({
 		rewardId: reward.id,
@@ -53,7 +34,6 @@ test(`${chalk.yellowBright("referrals1: checkout-triggered referrals with percen
 		maxRedemptions: 2,
 	});
 
-	// Setup: each other customer gets its own test clock to avoid Stripe's 3-per-clock limit
 	const { autumnV1, testClockId, referralCode, customer } = await initScenario({
 		customerId: mainCustomerId,
 		setup: [
@@ -94,7 +74,6 @@ test(`${chalk.yellowBright("referrals1: checkout-triggered referrals with percen
 		],
 	});
 
-	// 1. Code should exist and be idempotent
 	expect(referralCode!.code).toBeDefined();
 
 	const referralCode2 = await autumnV1.referrals.createCode({
@@ -103,7 +82,6 @@ test(`${chalk.yellowBright("referrals1: checkout-triggered referrals with percen
 	});
 	expect(referralCode2.code).toBe(referralCode!.code);
 
-	// 2. Own customer can't redeem, same fingerprint can't either
 	try {
 		await autumnV1.referrals.redeem({
 			customerId: mainCustomerId,
@@ -132,7 +110,6 @@ test(`${chalk.yellowBright("referrals1: checkout-triggered referrals with percen
 		);
 	}
 
-	// 3. Redeemers redeem code, 1st can't redeem again
 	const redemptions: RewardRedemption[] = [];
 	for (const redeemer of redeemers) {
 		const redemption = await autumnV1.referrals.redeem({
@@ -155,7 +132,6 @@ test(`${chalk.yellowBright("referrals1: checkout-triggered referrals with percen
 		);
 	}
 
-	// 4. Redeemers attach pro → triggers reward (only first 2 within max_redemptions)
 	for (let i = 0; i < redeemers.length; i++) {
 		await autumnV1.attach({
 			customer_id: redeemers[i],
@@ -175,14 +151,12 @@ test(`${chalk.yellowBright("referrals1: checkout-triggered referrals with percen
 			expect(redemption.applied).toBe(i === 0);
 		}
 
-		// Check stripe customer has discount
 		const stripeCus = (await ctx.stripeCli.customers.retrieve(
 			customer!.processor?.id,
 		)) as Stripe.Customer;
 		expect(stripeCus.discount).not.toBe(null);
 	}
 
-	// 5. Advance clock → verify discount on invoice
 	const advanceTo = addDays(addDays(new Date(), 7), 4);
 	await advanceTestClock({
 		testClockId: testClockId!,

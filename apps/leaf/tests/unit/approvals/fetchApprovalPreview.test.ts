@@ -175,9 +175,6 @@ describe("fetchApprovalPreview", () => {
 	});
 });
 
-// A billing card that silently drops to params-only asks the user to approve
-// money they were never shown, so a failed preview must be distinguishable
-// from a write that simply has no preview tool.
 describe("failed billing previews are not silently swallowed", () => {
 	test("reports failure for a write whose preview errored", async () => {
 		const result = await fetchApprovalPreview({
@@ -221,8 +218,6 @@ describe("failed billing previews are not silently swallowed", () => {
 	});
 });
 
-// A grouped card renders one money cell per write; a write stored without a
-// preview silently shows $0.00, so every grouped write must be backfilled.
 describe("withWritePreviews", () => {
 	test("backfills a preview onto every write", async () => {
 		const previewedCustomers: string[] = [];

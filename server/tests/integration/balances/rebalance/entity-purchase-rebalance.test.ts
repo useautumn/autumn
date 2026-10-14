@@ -1,11 +1,3 @@
-/**
- * A purchase on an entity's plan is credited to that entity, through the balance worker.
- *
- * Red (before the fix): the worker built the purchase's view without the entity, so the
- * purchased row was invisible: the customer was charged and the entity's balance never moved.
- * Green (after): the entity's overage is paid down to 0 and the rest is credited.
- */
-
 import { expect, test } from "bun:test";
 import type {
 	ApiEntityV2,
@@ -19,7 +11,6 @@ import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 
-/** One plan's balance on the entity, so the paydown is checked per plan and not only in total. */
 const planBalanceOf = ({
 	entity,
 	planId,
@@ -113,7 +104,6 @@ test.concurrent(
 			],
 			actions: [
 				s.billing.attach({ productId: recurringPlan.id, entityIndex: 0 }),
-				// 1500 against 1000 included: the entity's recurring balance is -500.
 				s.track({
 					featureId: TestFeature.Messages,
 					value: 1500,
@@ -132,7 +122,6 @@ test.concurrent(
 			redirect_mode: "if_required",
 		});
 
-		// 600 bought: 500 pays the recurring balance back to 0, 100 lands on the add-on.
 		const entity = await autumnV2_2.entities.get<ApiEntityV2>(
 			customerId,
 			entityId,

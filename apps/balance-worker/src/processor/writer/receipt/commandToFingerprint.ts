@@ -5,11 +5,9 @@ import {
 	type SubjectState,
 } from "@autumn/balance-engine";
 
-/** Parsed from JSON, so every key is a JSON value, a newer server's included: a retry must repeat those too. */
 const filtersKey = (filters: object | undefined) =>
 	canonicalizeJsonValue((filters ?? null) as JsonValue);
 
-/** What a retry must repeat: the request, never its envelope (requestId, occurredAt) or the state it lands on. */
 export const commandToFingerprint = ({
 	command,
 	baseline,
@@ -34,10 +32,8 @@ export const commandToFingerprint = ({
 				command.properties && Object.keys(command.properties).length > 0
 					? canonicalizeJsonValue(command.properties)
 					: null,
-				// Appended only when present, so tracks without a lock keep the fingerprint they always had.
 				...(command.lock ? [command.lock.lockId] : []),
 			]);
-		// Settling the same lock at a different value is a different request.
 		case "finalize":
 			return JSON.stringify([
 				...identityKey,
@@ -49,10 +45,8 @@ export const commandToFingerprint = ({
 			]);
 		case "confirmExpiredLock":
 			return JSON.stringify([...identityKey, command.lock.id]);
-		// The clock is the request, and it rides in the id; a retry carries the same id.
 		case "reset":
 			return JSON.stringify([...identityKey, command.type]);
-		// The plan's rows are the request; a retry with different rows is a conflict.
 		case "applyBillingPlan":
 			return JSON.stringify(
 				canonicalizeJsonValue(
@@ -61,7 +55,6 @@ export const commandToFingerprint = ({
 					),
 				),
 			);
-		// Every field is the request; a retry asking for a different balance is a conflict.
 		case "updateBalance":
 			return JSON.stringify([
 				...identityKey,
@@ -87,10 +80,8 @@ export const commandToFingerprint = ({
 				command.featureId,
 				filtersKey(command.customerEntitlementFilters),
 			]);
-		// Nothing but the customer is the request; each evict mints its own id, so none is ever retried.
 		case "evict":
 			return JSON.stringify([...identityKey, command.type]);
-		// The baseline rows are the request; a retry with different rows is a conflict.
 		case "initialize":
 			return JSON.stringify(
 				canonicalizeJsonValue(

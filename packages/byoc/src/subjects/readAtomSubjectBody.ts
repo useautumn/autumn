@@ -8,10 +8,6 @@ import type { Organization } from "@autumn/shared";
 import { orgToAtomOrg } from "./orgToAtomOrg.js";
 import type { AtomSubjectBody } from "./types/atomSubjectBody.js";
 
-/**
- * The subject as its worker holds it now, as `subjects.set` takes it: herald pushes it, an Atom pulls it.
- * Null only when the worker named no offset and the caller has none to fall back to.
- */
 export const readAtomSubjectBody = async ({
 	ctx,
 	identity,
@@ -26,11 +22,9 @@ export const readAtomSubjectBody = async ({
 	identity: MeteringIdentity;
 	org: Organization;
 	requestId: string;
-	/** The record that moved the subject, for a worker that predates the read offset. */
 	fallbackLogOffset?: bigint | null;
 	customerVersion?: bigint | null;
 }): Promise<AtomSubjectBody | null> => {
-	// Taken before the read: a catalog change that lands during it must still count as newer.
 	const readAt = Date.now();
 	const { state, catalog, logOffset } =
 		await ctx.balanceWorkerClient.readSubjectState({

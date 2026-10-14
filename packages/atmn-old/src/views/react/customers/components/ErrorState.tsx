@@ -1,9 +1,6 @@
 import { Box, Text } from "ink";
 import type { ErrorStateProps } from "../types.js";
 
-/**
- * Error state with retry option
- */
 export function ErrorState({ error, onRetry: _onRetry }: ErrorStateProps) {
 	return (
 		<Box

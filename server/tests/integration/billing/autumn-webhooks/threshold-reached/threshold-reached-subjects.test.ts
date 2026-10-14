@@ -1,13 +1,3 @@
-/**
- * `customer.threshold_reached` (limit_reached) on the worker path, beyond a plain customer feature.
- *
- * Contract:
- *   - An entity track that exhausts the entity's own allowance sends one event, carrying the
- *     customer (not the entity) as the payload's customer.
- *   - A track funded by a credit system that exhausts the credits names the credit system as
- *     the feature, as `balances.limit_reached` does.
- */
-
 import { afterAll, beforeAll, expect, test } from "bun:test";
 import {
 	getTestSvixAppId,
@@ -26,7 +16,6 @@ import {
 	waitForThresholdReachedWebhook,
 } from "../utils/expectThresholdReachedWebhook.js";
 
-/** action1 costs 0.2 credits (tests/setup/v2Features.ts), so 500 of them spend 100. */
 const ACTION1_UNITS_FOR_100_CREDITS = 500;
 
 let webhook: WebhookTestSetup;
@@ -86,7 +75,6 @@ test.concurrent(
 	},
 );
 
-// Legacy only evaluates the tracked feature, never the credit system funding it.
 test.concurrent.skipIf(!isBalanceWorkerRoute())(
 	`${chalk.yellowBright("threshold-subject2: a credit-funded track that exhausts the credits names the credit system")}`,
 	async () => {

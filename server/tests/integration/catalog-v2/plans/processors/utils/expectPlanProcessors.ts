@@ -3,7 +3,6 @@ import type { ApiPlanV1 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 
-/** DB-side stripe product id on one plan version. `null` asserts unset. */
 export const expectVersionProcessorCorrect = async ({
 	ctx,
 	planId,
@@ -31,10 +30,6 @@ export const expectVersionProcessorCorrect = async ({
 	expect(product?.processor?.id, label).toBe(productId);
 };
 
-/**
- * API-side processors asserts via catalogV2.get.
- * Omit a field to skip. Pass `null` on `stripe` / a price slot to assert omitted.
- */
 export const expectApiPlanProcessorsCorrect = ({
 	plan,
 	stripe,

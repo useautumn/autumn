@@ -10,7 +10,6 @@ type OrgLike = {
 	} | null;
 };
 
-/** What a log reader needs of the org; picked field by field so a secret can never ride along by accident. */
 export const orgToCommandOrg = ({ org }: { org: OrgLike }): CommandOrg => ({
 	id: org.id,
 	slug: org.slug,

@@ -1,15 +1,3 @@
-/**
- * Tests for `getItemId` — the single source of truth for plan-editor item
- * identity. Two regressions to protect against here:
- *
- * 1. Same `feature_id` with different intervals must produce DISTINCT ids
- *    (this turn's bug — the per-item edit sheet retargeted the wrong row).
- * 2. Item identity must NOT depend on list position. Charlie's earlier fixes
- *    (commits 709e1fd23 + 5ee6eeb3a) replaced index-based ids with stable,
- *    item-intrinsic ids to prevent React from reusing DOM rows on delete
- *    ("ghost item" bug). The new id format must still be position-invariant.
- */
-
 import { describe, expect, test } from "bun:test";
 import type { ProductItem } from "@autumn/shared";
 import { getItemId } from "@/utils/product/productItemUtils";
@@ -54,7 +42,7 @@ describe("getItemId — interval discriminator (turn fix)", () => {
 		const b = getItemId({ item: threeMonths, itemIndex: 1 });
 
 		expect(a).not.toBe(b);
-		expect(a).toBe("feature-action1-month"); // count=1 is implicit
+		expect(a).toBe("feature-action1-month");
 		expect(b).toBe("feature-action1-monthx3");
 	});
 
@@ -120,9 +108,6 @@ describe("getItemId — position-invariance (Charlie's earlier fix)", () => {
 	});
 
 	test("deleting a sibling does not change other items' ids", () => {
-		// Simulates the ghost-item scenario: build a list, drop an item from
-		// the middle, and verify the remaining items still hash to their
-		// original ids (which is what prevents React from reusing DOM rows).
 		const items = [
 			make({ feature_id: "messages", interval: "month" }),
 			make({ feature_id: "to-be-deleted", interval: "month" }),

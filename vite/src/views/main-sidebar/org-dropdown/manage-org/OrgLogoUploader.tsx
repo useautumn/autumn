@@ -30,9 +30,6 @@ const OrgLogoUploader: React.FC = () => {
 	const handleRemove = async () => {
 		setRemoving(true);
 		try {
-			// Clear the DB reference first — the org row is what the UI renders.
-			// Only then delete the S3 object, as best-effort cleanup, so a failed
-			// delete can never strand org.logo pointing at a removed object.
 			const { error } = await authClient.organization.update({
 				data: { logo: "" },
 			});
@@ -44,10 +41,7 @@ const OrgLogoUploader: React.FC = () => {
 
 			try {
 				await axiosInstance.delete("/organization/logo");
-			} catch {
-				// Orphaned object is harmless and DeleteObject is idempotent, so a
-				// later removal retries it. The logo is already gone for the user.
-			}
+			} catch {}
 		} catch (error) {
 			toast.error(getBackendErr(error, "Failed to remove logo"));
 		} finally {
@@ -75,8 +69,6 @@ const OrgLogoUploader: React.FC = () => {
 	const saveLogoUrl = useCallback(
 		async (publicUrl: string): Promise<boolean> => {
 			// Uploads overwrite the same S3 key, so the URL is byte-identical each
-			// time. Store a cache-bust token so every surface that renders org.logo
-			// (this preview + the sidebar org selector) repaints the new image.
 			const versionedUrl = `${publicUrl}?v=${Date.now()}`;
 			const { error } = await authClient.organization.update({
 				data: { logo: versionedUrl },
@@ -113,15 +105,11 @@ const OrgLogoUploader: React.FC = () => {
 
 	const handleUploading = async (e: React.ChangeEvent<HTMLInputElement>) => {
 		const file = e.target.files?.[0];
-		// Reset so re-selecting the same file still fires onChange.
 		e.target.value = "";
 		if (!file) return;
 		await uploadFile(file);
 	};
 
-	// Pasting an image anywhere on the page sets it as the logo. Pastes into
-	// editable fields (e.g. the name/slug inputs) are left alone, even when the
-	// clipboard also carries an image.
 	useEffect(() => {
 		const handlePaste = (e: ClipboardEvent) => {
 			if (isEditableTarget(e.target)) return;

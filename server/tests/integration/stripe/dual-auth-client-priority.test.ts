@@ -1,14 +1,3 @@
-/**
- * TDD test locking the core dual-auth invariant: when an org has BOTH a secret
- * key AND an OAuth account for an env, createStripeCli MUST build the client from
- * the secret key — never the master/platform (OAuth) path.
- *
- * Contract under test:
- *   createStripeCli({ org, env }) with both channels present ->
- *     constructs `new Stripe(<decrypted secret key>)` WITHOUT a stripeAccount header
- *     (the stripeAccount header is the tell-tale of the master/OAuth path).
- */
-
 import { describe, expect, mock, test } from "bun:test";
 import { AppEnv, type Organization } from "@autumn/shared";
 
@@ -54,7 +43,6 @@ describe("dual-auth: createStripeCli prefers secret key when both present", () =
 
 		expect(constructed).toHaveLength(1);
 		expect(constructed[0].key).toBe("sk_test_priority");
-		// Master/OAuth path sets stripeAccount; secret-key path must not.
 		expect(constructed[0].opts.stripeAccount).toBeUndefined();
 	});
 });

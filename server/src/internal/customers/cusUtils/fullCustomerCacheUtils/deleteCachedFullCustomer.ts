@@ -16,7 +16,6 @@ export const deleteCachedFullCustomer = async ({
 	customerId: string;
 	entityId?: string;
 	source?: string;
-	/** No-op since the legacy FullCustomer cache was removed. */
 	skipGuard?: boolean;
 	flushBalances?: boolean;
 }): Promise<void> => {

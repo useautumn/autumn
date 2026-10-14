@@ -6,7 +6,6 @@ import {
 import type { z } from "zod/v4";
 import { TrackTokensParamsSchema } from "../trackTokensParams.js";
 
-/** V2.5 tracks tokens async unless `async: false`; older clients keep sync unless `async: true`. */
 export const V2_4_TrackTokensParamsChange = defineVersionChange({
 	name: "V2_4 Track Tokens Params Change",
 	newVersion: ApiVersion.V2_5,

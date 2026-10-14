@@ -12,7 +12,6 @@ import type { UpdateCatalogPlan } from "@/internal/catalogV2/actions/updateCatal
 import type { UpsertProductPlan } from "@/internal/catalogV2/actions/updateCatalog/types/upsertProductPlan";
 import { maxVersionForPlan } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/maxVersionForPlan";
 
-/** Rows of each source plan this batch edits — what propagate pins must anchor to. */
 const editedSourceInternalIdsByPlan = ({
 	upsertProducts,
 }: {
@@ -36,7 +35,6 @@ const editedSourceInternalIdsByPlan = ({
 	return byPlan;
 };
 
-/** Projected-state guards for each upsertProducts row. */
 export const handleUpsertProductErrors = ({
 	updateCatalogPlan,
 	productStatesContext,
@@ -67,21 +65,18 @@ export const handleUpsertProductErrors = ({
 		});
 		const latestExistingVersion = maxVersion === 0 ? undefined : maxVersion;
 
-		// 1. Free trial errors (one-off products cannot trial); new usage_limit alerts need a cap
 		handleFreeTrialErrors({ nextFullProduct });
 		handleUsageLimitAlertErrors({
 			nextFullProduct,
 			currentFullProduct: upsert.row.currentFullProduct,
 		});
 
-		// 2. Default flag errors (historical version; paid default; never on a variant)
 		handleDefaultFlagErrors({
 			nextFullProduct,
 			currentFullProduct: upsert.row.currentFullProduct,
 			latestExistingVersion,
 		});
 
-		// 3. Declared variants[] create / nest / id-collision
 		const editedSourceInternalIds =
 			editedByPlan.get(upsert.row.planId) ?? new Set<string>();
 		handleVariantErrors({
@@ -101,7 +96,6 @@ export const handleUpsertProductErrors = ({
 			editedSourceInternalIds,
 		});
 
-		// 4. Declared plan_license link guards
 		handlePlanLicenseErrors({ upsert });
 	}
 };

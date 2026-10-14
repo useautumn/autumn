@@ -3,7 +3,6 @@ import { UTCDate } from "@date-fns/utc";
 import { add } from "date-fns";
 import { formatUnixToDate } from "./genUtils.js";
 
-// Time conversion constants
 const TIME_MS = {
 	SECOND: 1000,
 	MINUTE: 1000 * 60,
@@ -12,7 +11,6 @@ const TIME_MS = {
 	WEEK: 1000 * 60 * 60 * 24 * 7,
 } as const;
 
-// Time conversion utility functions
 export const toMilliseconds = {
 	seconds: (n: number) => n * TIME_MS.SECOND,
 	minutes: (n: number) => n * TIME_MS.MINUTE,

@@ -1,13 +1,3 @@
-/**
- * Integration test: `billing.updated` webhook fires when manually syncing
- * a Stripe subscription via `billing.sync_v2`.
- *
- * Scenario: A customer has a Stripe subscription that needs to be synced into
- * Autumn state (e.g., after correcting customer mapping, importing existing
- * subscriptions, or reconciling state). The sync operation should emit
- * `billing.updated` so downstream systems can update their local state.
- */
-
 import { afterAll, beforeAll, expect, test } from "bun:test";
 import type {
 	BillingChangeResponse,
@@ -58,10 +48,6 @@ afterAll(async () => {
 	await webhook?.cleanup();
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// SYNC EMITS WEBHOOK
-// ═══════════════════════════════════════════════════════════════════════════════
-
 test(`${chalk.yellowBright("billing.updated: manual sync emits webhook with 'resync' tag")}`, async () => {
 	const customerId = "billing-updated-sync";
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
@@ -73,10 +59,7 @@ test(`${chalk.yellowBright("billing.updated: manual sync emits webhook with 'res
 			s.customer({ paymentMethod: "success", skipWebhooks: true }),
 			s.products({ list: [pro] }),
 		],
-		actions: [
-			// Attach creates the Stripe subscription
-			s.attach({ productId: pro.id }),
-		],
+		actions: [s.attach({ productId: pro.id })],
 	});
 
 	const subscriptionId = await getSubscriptionId({
@@ -85,7 +68,6 @@ test(`${chalk.yellowBright("billing.updated: manual sync emits webhook with 'res
 		productId: pro.id,
 	});
 
-	// expire_previous so re-sync produces real plan_changes (activated + expired)
 	await autumnV1.post("/billing.sync_v2", {
 		customer_id: customerId,
 		stripe_subscription_id: subscriptionId,

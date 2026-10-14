@@ -1,16 +1,5 @@
 import type { NumberMatcher } from "../matcher.js";
 
-/**
- * Evaluate a `NumberMatcher` against a value. Returns `true` when the
- * value satisfies the matcher.
- *
- * Implemented operators: bare value, `null` shorthand, `$eq`, `$ne`,
- * `$in`, `$nin`, `$gt`, `$gte`, `$lt`, `$lte`.
- *
- * `null` and `undefined` on the value side are treated identically.
- * Ordering operators (`$gt` etc.) skip null/undefined values (they
- * can't be compared meaningfully — predicate returns `false`).
- */
 export const numberMatcherMatches = ({
 	matcher,
 	value,

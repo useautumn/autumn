@@ -5,7 +5,6 @@ import { resolveThresholdSettlement } from "./thresholdBilling/resolveThresholdS
 import type { AutoTopupSubject } from "./types/autoTopupSubject.js";
 import type { AutoTopupTrigger } from "./types/autoTopupTrigger.js";
 
-/** A deduction on a feature also moves every credit system that funds it, so each is a candidate. */
 export const subjectToAutoTopupFeatureIds = ({
 	fullSubject,
 	featureId,
@@ -24,7 +23,6 @@ export const subjectToAutoTopupFeatureIds = ({
 		}).map((row) => row.entitlement.feature.id),
 	]);
 
-/** Whether one feature's job should run: its balance sits at or under its threshold, or threshold billing has a chunk to settle. */
 export const subjectToAutoTopupTrigger = ({
 	fullSubject,
 	featureId,
@@ -55,7 +53,6 @@ export const subjectToAutoTopupTrigger = ({
 	};
 };
 
-/** Every feature a deduction on `featureId` should top up now, the tracked feature first. */
 export const subjectToAutoTopupTriggers = ({
 	fullSubject,
 	featureId,

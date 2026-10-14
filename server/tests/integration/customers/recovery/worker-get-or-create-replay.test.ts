@@ -1,17 +1,3 @@
-/**
- * customers.get_or_create on the balance worker path: a worker outage during the create is
- * replayed from the customer creation recovery queue.
- *
- * Contract under test:
- * - With `x-balance-worker-outage`, the create's worker write fails as unreachable: the
- *   request answers the worker's own 503 and no customer exists.
- * - The failed request itself enqueues the CustomerCreationRecovery job; the REAL worker process
- *   consumes it off SQS and creates the customer with its customer_data applied and a Stripe
- *   customer linked (create_in_stripe).
- * - A second replay of the same request is a no-op: the customer is fetched, not re-created,
- *   and keeps the Stripe customer it already has.
- */
-
 import { expect, test } from "bun:test";
 import { type ApiCustomerV5, ApiVersion } from "@autumn/shared";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
@@ -55,7 +41,6 @@ test.concurrent(
 	`${chalk.yellowBright("worker get_or_create replay: outage during create is replayed with customer_data and a Stripe customer")}`,
 	async () => {
 		const customerId = "worker-get-or-create-replay";
-		// Per run: the FIFO dedupe id is derived from the request, and a repeat inside the dedupe window would be dropped.
 		const customerData = {
 			name: `Replayed Customer ${Date.now()}`,
 			email: `${customerId}@example.com`,
@@ -67,7 +52,6 @@ test.concurrent(
 			actions: [],
 		});
 
-		// ── 1. Outage held open for this request: the worker write never lands ──
 		const code = await rejectedCode(
 			autumnV2_3.post(
 				"/customers.get_or_create",
@@ -80,8 +64,6 @@ test.concurrent(
 			"customer_not_found",
 		);
 
-		// ── 2. The failed request enqueued its own recovery; the dev worker consumes it.
-		// The replay links Stripe after the row lands, so wait for the whole create. ──
 		const replayed = await waitFor<ApiCustomerV5>({
 			description: "customer created by the recovery replay",
 			fetch: async () => {
@@ -98,7 +80,6 @@ test.concurrent(
 		expect(replayed.email).toBe(customerData.email);
 		expect(replayed.stripe_id).toBeString();
 
-		// ── 3. Replaying again finds the customer and leaves it alone ──
 		const payload: CustomerCreationRecoveryPayload = {
 			orgId: ctx.org.id,
 			env: ctx.env,

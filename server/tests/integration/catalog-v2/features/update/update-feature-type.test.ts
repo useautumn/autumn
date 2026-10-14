@@ -1,15 +1,3 @@
-/**
- * catalogV2.update / preview_update — changing a feature's type.
- *
- * Contract: boolean↔metered flips are allowed when only products reference
- * the feature, and CONVERT the entitlement rows (boolean→metered: unlimited
- * allowance, lifetime interval; metered→boolean: allowance and entity scoping
- * stripped). The change throws when the feature has customer history, scopes
- * an entity item, or carries a usage price. Switching to or from
- * credit_system always throws, and a metered feature referenced by a credit
- * system's schema cannot change type at all.
- */
-
 import { test } from "bun:test";
 import {
 	AllowanceType,
@@ -75,7 +63,6 @@ test.concurrent(
 			});
 			await initProductsV0({ ctx, products: [product] });
 
-			// boolean → metered: entitlements become unlimited lifetime
 			expectCatalogPreviewCorrect({
 				preview: await autumnV2_3.catalogV2.previewUpdate({
 					features: [meteredFeature(boolId)],
@@ -117,7 +104,6 @@ test.concurrent(
 				},
 			});
 
-			// metered → boolean: allowance and entity scoping stripped
 			expectCatalogResultsCorrect({
 				response: await autumnV2_3.catalogV2.update({
 					features: [booleanFeature(meteredId)],
@@ -205,7 +191,6 @@ test.concurrent(
 					}),
 			});
 
-			// Expired customer products still count as customer history
 			await autumnV2_3.cancel({
 				customer_id: customerId,
 				product_id: attachedProduct.id,
@@ -233,7 +218,6 @@ test.concurrent(
 					}),
 			});
 
-			// Nothing changed
 			await expectDbFeaturesCorrect({
 				ctx,
 				expected: featureIds.map((id) => ({ id, type: FeatureType.Metered })),
@@ -278,7 +262,6 @@ test.concurrent(
 				],
 			});
 
-			// metered → credit_system: blocked even with zero references
 			await expectAutumnError({
 				errMessage: `Cannot change type of feature ${plainId} from metered to credit_system`,
 				func: () =>
@@ -293,7 +276,6 @@ test.concurrent(
 					}),
 			});
 
-			// credit_system → metered: blocked
 			await expectAutumnError({
 				errMessage: `Cannot change type of feature ${creditSystemId} from credit_system to metered`,
 				func: () =>
@@ -302,7 +284,6 @@ test.concurrent(
 					}),
 			});
 
-			// metered referenced by a credit system schema: blocked
 			await expectAutumnError({
 				errMessage: `Cannot change type of feature ${meteredId} because it is used in a credit system`,
 				func: () =>
@@ -311,7 +292,6 @@ test.concurrent(
 					}),
 			});
 
-			// credit_system → ai_credit_system is still a credit-system switch
 			await expectAutumnError({
 				errMessage: `Cannot change type of feature ${creditSystemId} from credit_system to ai_credit_system`,
 				func: () =>
@@ -327,8 +307,6 @@ test.concurrent(
 					}),
 			});
 
-			// metered → ai_credit_system is NOT a classic credit-system switch —
-			// allowed while nothing references the feature
 			expectCatalogPreviewCorrect({
 				preview: await autumnV2_3.catalogV2.previewUpdate({
 					features: [

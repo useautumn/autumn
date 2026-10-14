@@ -111,7 +111,6 @@ const createFakeDb = ({ metadata }: { metadata?: unknown }) =>
 		}),
 	}) as unknown as DrizzleCli;
 
-// Kind-matching matrix is pinned above; here only the db-backed delegation.
 describe("isMcpOAuthClient (server, db-backed)", () => {
 	test("classifies from the stored client row", async () => {
 		const db = createFakeDb({ metadata: { kind: MCP_CLIENT_KIND } });

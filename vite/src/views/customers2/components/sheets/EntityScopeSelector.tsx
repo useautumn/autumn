@@ -26,7 +26,6 @@ export function EntityScopeSelector({
 	showLabel?: boolean;
 	onSearchChange?: (search: string) => void;
 	isLoading?: boolean;
-	/** Renders the picker as a popover off this element instead of a full-width select. */
 	trigger?: ReactNode;
 	open?: boolean;
 	onOpenChange?: (nextOpen: boolean) => void;

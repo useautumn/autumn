@@ -1,25 +1,3 @@
-/**
- * Orchestrator-side Stripe helpers for the `bun tw` cloud test swarm.
- *
- * Per bun-tw-plan.md §9a, the ORCHESTRATOR (not the worker) creates + registers
- * + records every Stripe resource before anything that can fail, so a worker
- * dying mid-bring-up can never orphan an untracked sub-account. The worker only
- * binds the returned `acct_*` id into its localhost DB (that half lives in the
- * server's `attachSandboxStripeAccount`, §6a).
- *
- * Everything here runs in the orchestrator process. It drives Stripe through a
- * POOL of platform keys (helpers/stripeKeyPool.ts) rather than one shared key:
- * Stripe rate-limits per platform key, so sharding workers across keys multiplies
- * the ceiling. Each call uses a per-key client (`stripeClientForKey`):
- *   - `createSandboxSubAccount` mints the sub-account via `stripe.v2.core.accounts.create`
- *     on a chosen pool key (owner-tag `metadata` lets the sweeper find orphans).
- *   - `registerConnectIngressWebhook` registers ONE platform Connect webhook per key.
- *   - `deleteSubAccount` deletes a sub-account under the key it was created on
- *     (the registry stores `acct_*::keyIndex`).
- *
- * See plan §6, §6a, §9a.
- */
-
 import type { Logger } from "@server/external/logtail/logtailUtils.js";
 import {
 	MAIN_STRIPE_EVENT_TYPES,
@@ -52,7 +30,6 @@ import {
 	withStripeRequestSlot,
 } from "./stripeRequestBudget.js";
 
-/** Flatten a logger's varargs into one line (strings as-is; errors → message). */
 const formatLogArgs = (args: unknown[]): string =>
 	args
 		.map((arg) => {
@@ -70,13 +47,6 @@ const formatLogArgs = (args: unknown[]): string =>
 		})
 		.join(" ");
 
-/**
- * A minimal `Logger` for `deleteConnectedAccount`. The real server logger pulls
- * in pino + OTel at module load (and expects Infisical secrets), which we don't
- * want in the orchestrator. Routes through the log sink so teardown chatter
- * (e.g. "Deleted account …") lands in the run log file / logs pane instead of
- * spamming the foreground during the run.
- */
 const orchestratorLogger: Logger = {
 	debug: (...args: unknown[]) => sinkLine(`[connect] ${formatLogArgs(args)}`),
 	info: (...args: unknown[]) => sinkLine(`[connect] ${formatLogArgs(args)}`),
@@ -85,19 +55,8 @@ const orchestratorLogger: Logger = {
 	child: () => orchestratorLogger,
 };
 
-/** All Stripe events the legacy webhook + sync middleware chain needs (plan §6a). */
 const WEBHOOK_EVENTS = [...MAIN_STRIPE_EVENT_TYPES, ...SYNC_STRIPE_EVENT_TYPES];
 
-/**
- * `accounts.create` is a PLATFORM-account write — creating N sub-accounts at once
- * gets the platform 429'd. Throttle to a low concurrency AND retry 429s with
- * exponential backoff + jitter (plan §6a "provisioning burst").
- *
- * Lazily-built concurrency limiter so a `--stripe-concurrency=N` CLI flag (which
- * `index.ts` surfaces as the `STRIPE_SUBACCOUNT_CONCURRENCY` env var before the
- * run starts) is honored — a module-load-time `pLimit()` would capture the
- * default before the flag is applied.
- */
 let subAccountCreateLimit: ReturnType<typeof pLimit> | undefined;
 const getSubAccountCreateLimit = (): ReturnType<typeof pLimit> => {
 	if (!subAccountCreateLimit) {
@@ -111,12 +70,6 @@ const getSubAccountCreateLimit = (): ReturnType<typeof pLimit> => {
 	return subAccountCreateLimit;
 };
 
-/**
- * Global creation pacer: regardless of concurrency, no two `accounts.create`
- * calls START closer than `STRIPE_SUBACCOUNT_CREATE_SPACING_MS` apart. This
- * smooths the provisioning burst so the platform account's rate-limit bucket
- * refills between writes.
- */
 let nextCreateAt = 0;
 const paceCreate = async (): Promise<void> => {
 	const now = Date.now();
@@ -159,19 +112,6 @@ const withRateLimitRetry = async <T>(
 	}
 };
 
-/**
- * Create a Stripe Connect sub-account for one worker org under a SPECIFIC pool
- * key (`secretKey`), tagged with the run's owner/run metadata so
- * {@link sweepOrphans} can find it later. The account belongs to that key's
- * platform, so the worker's server must use the same key (see stripeKeyPool.ts).
- * Returns the `acct_*` id; the orchestrator records it (with the key index) in
- * the registry, then the worker binds it into its localhost DB (§6a/§9a).
- *
- * Mirrors the server's `createConnectAccount` v2 create body, but on a per-key
- * client so account creation shards across the pool (we never have a full
- * better-auth `Organization`/`User` orchestrator-side — the v2 call only reads
- * `display_name` / `contact_email`).
- */
 export const createSandboxSubAccount = async ({
 	orgName,
 	ownerEmail,
@@ -185,13 +125,10 @@ export const createSandboxSubAccount = async ({
 	ownerEmail: string;
 	orgId: string;
 	secretKey: string;
-	/** Additional metadata merged over the owner tag (e.g. pool state tags). */
 	extraMetadata?: Record<string, string>;
 } & OwnerTag): Promise<string> => {
 	const stripe = stripeClientForKey(secretKey);
 
-	// Throttle + retry: bursting `accounts.create` across N workers 429s the
-	// platform account (plan §6a provisioning burst).
 	const account = await getSubAccountCreateLimit()(() =>
 		withRateLimitRetry(async () => {
 			await paceCreate();
@@ -223,15 +160,6 @@ export const createSandboxSubAccount = async ({
 	return account.id;
 };
 
-/**
- * Preflight the key pool: probe each key's v2 Connect account capability and DROP
- * the ones that can't (so workers aren't assigned to dead keys mid-fan-out). The
- * probe is a read (`v2.core.accounts.list`) which fails with "The API method
- * cannot be found." on platforms that don't have Connect / the v2 Accounts API
- * enabled — the exact gate that breaks {@link createSandboxSubAccount} — so no
- * throwaway accounts are created. Keys that passed within the health-cache TTL
- * skip the probe. Returns the usable count + the dropped keys (by prefix + reason).
- */
 export const validateStripeKeyPool = async (): Promise<{
 	usable: number;
 	dropped: { keyPrefix: string; reason: string }[];
@@ -306,9 +234,7 @@ export const registerConnectIngressWebhook = async (
 	ingressUrl: string,
 	secretKey: string,
 ): Promise<string> => {
-	// PLATFORM client (no `accountId`/`stripeAccount`) — required for a
 	// `connect: true` endpoint. One webhook is registered PER pool key, since each
-	// platform key only delivers events for the accounts it owns.
 	const stripeCli = stripeClientForKey(secretKey);
 
 	const endpoint = await withStripeRequestSlot(() =>
@@ -345,15 +271,7 @@ export const deleteConnectWebhook = async (
 	}
 };
 
-/**
- * Delete a sub-account (idempotently — tolerates "already deleted"). Deleting
- * the account drops its account-scoped webhook automatically (plan §9a). Reuses
- * the server's `deleteConnectedAccount`, which swallows errors and logs them, so
- * this is safe to call during best-effort, time-boxed teardown.
- */
 export const deleteSubAccount = async (encoded: string): Promise<void> => {
-	// The registry stores `acct_*::keyIndex`; the account belongs to that pool
-	// key's platform, so it can only be deleted with that key.
 	const { accountId, keyIndex } = decodeSubAccount(encoded);
 	try {
 		await stripeClientForKey(stripeKeyByIndex(keyIndex)).accounts.del(
@@ -367,11 +285,6 @@ export const deleteSubAccount = async (encoded: string): Promise<void> => {
 
 const STRIPE_LIST_PAGE_SIZE = 100;
 
-/**
- * Read an account's effective creation time (epoch ms). Prefers our own
- * `autumn_created_at` metadata stamp (set by {@link stripeMetadata}); falls back
- * to Stripe's `created` (epoch seconds) when the stamp is missing or unparseable.
- */
 const accountCreatedAtMs = (account: {
 	created?: number | null;
 	metadata?: Record<string, string> | null;
@@ -385,7 +298,6 @@ const accountCreatedAtMs = (account: {
 	}
 
 	if (typeof account.created === "number") {
-		// Stripe `created` is epoch seconds.
 		const SECONDS_TO_MS = 1000;
 		return account.created * SECONDS_TO_MS;
 	}
@@ -393,12 +305,6 @@ const accountCreatedAtMs = (account: {
 	return undefined;
 };
 
-/**
- * Tag-sweep fallback for SIGKILL'd runs (plan §9a `kill --orphans`): page through
- * the platform account's sub-accounts and delete every one this `owner` created
- * older than `olderThanMs`. Matches on `metadata.autumn_tw_owner === owner` so a
- * teammate's live swarm is never touched. Returns the deleted `acct_*` ids.
- */
 export const sweepOrphans = async ({
 	owner,
 	olderThanMs,
@@ -409,7 +315,6 @@ export const sweepOrphans = async ({
 	const cutoff = Date.now() - olderThanMs;
 	const deleted: string[] = [];
 
-	// Orphans can live under ANY pool key's platform — sweep every key.
 	for (let keyIndex = 0; keyIndex < stripeKeyPoolSize(); keyIndex++) {
 		const stripe = stripeClientForKey(stripeKeyByIndex(keyIndex));
 		for await (const account of stripe.accounts.list({
@@ -419,15 +324,11 @@ export const sweepOrphans = async ({
 			if (metadata?.autumn_tw_owner !== owner) {
 				continue;
 			}
-			// Pool accounts are persistent by design — never sweep them. A crashed
-			// run leaves them dirty; the next run's teardown nuke reclaims them.
 			if (metadata?.autumn_tw_pool === "1") {
 				continue;
 			}
 
 			const createdAtMs = accountCreatedAtMs(account);
-			// Without a usable timestamp we can't prove the account is stale, so skip
-			// it rather than risk deleting a live worker's sub-account.
 			if (createdAtMs === undefined || createdAtMs > cutoff) {
 				continue;
 			}
@@ -435,9 +336,7 @@ export const sweepOrphans = async ({
 			try {
 				await stripe.accounts.del(account.id);
 				deleted.push(account.id);
-			} catch {
-				// best-effort sweep — a failed delete is retried on the next sweep
-			}
+			} catch {}
 		}
 	}
 

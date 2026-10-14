@@ -7,11 +7,6 @@ import type {
 	StripeWebhookHonoEnv,
 } from "./stripeWebhookContext.js";
 
-/**
- * Mirrors a Stripe event into the sync DB. Fire-and-forget — errors are
- * caught and logged, never propagated. Shared by the webhook route and the
- * SQS replay worker.
- */
 export const syncStripeEventToSyncDb = ({
 	ctx,
 }: {
@@ -29,8 +24,6 @@ export const syncStripeEventToSyncDb = ({
 	if (!isSyncableEvent({ eventType: stripeEvent.type })) return;
 
 	try {
-		// Events from account-registered webhooks carry no `account` — resolve
-		// from org connect config so sync rows are never left tenant-unstamped.
 		const stripeAccountId =
 			stripeEvent.account ?? orgToAccountId({ org, env: ctx.env });
 
@@ -60,9 +53,6 @@ export const syncStripeEventToSyncDb = ({
 	}
 };
 
-/**
- * Post-handler middleware that syncs Stripe events to the sync DB.
- */
 export const stripeSyncMiddleware = async (
 	c: Context<StripeWebhookHonoEnv>,
 	next: Next,

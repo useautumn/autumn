@@ -1,7 +1,3 @@
-/**
- * catalogV2.preview_update — customized follow rebase and declared
- * swallowing the child-edit conflict.
- */
 import { test } from "bun:test";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";

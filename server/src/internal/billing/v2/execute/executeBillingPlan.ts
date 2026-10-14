@@ -34,7 +34,6 @@ export const executeBillingPlan = async ({
 				});
 
 	if (stripeBillingResult.deferred) {
-		// Store line items even when deferred — invoice already exists in DB
 		if (
 			stripeBillingResult.autumnInvoice &&
 			stripeBillingResult.stripeInvoice
@@ -89,14 +88,12 @@ export const executeBillingPlan = async ({
 		autumnInvoice: stripeBillingResult.autumnInvoice,
 	});
 
-	// Queue webhooks after Autumn billing plan is executed
 	await billingPlanToSendProductsUpdated({
 		ctx,
 		autumnBillingPlan: billingPlan.autumn,
 		billingContext,
 	});
 
-	// Fire-and-forget: don't block the action on svix delivery
 	void sendBillingUpdatedWebhook({
 		allocationsAdjusted,
 		ctx,

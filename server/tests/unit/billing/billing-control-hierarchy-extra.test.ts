@@ -1,14 +1,3 @@
-/**
- * Hierarchy coverage for the control types whose precedence is NOT the plain
- * FullSubject spend-limit path (covered in billing-control-hierarchy.test.ts):
- *
- *   - resolveBillingControl chokepoint with controlLists [entity, customer]
- *     (usage_limits / overage_allowed / spend_limits) and [customer] only
- *     (auto_topups — no entity scope) → plan fallback.
- *   - usage_alerts: customer-scope resolver resolveCustomerScopeAlerts
- *     (entity > customer > plan), which does NOT use resolveBillingControl.
- */
-
 import { describe, expect, test } from "bun:test";
 import {
 	CusProductStatus,
@@ -39,7 +28,6 @@ const planProductWith = (key: string, items: unknown[]): FullCusProduct =>
 		access_starts_at: NOW - 1000,
 		ended_at: null,
 		created_at: NOW - 1000,
-		// Plan controls live on the joined product, not the customer_product.
 		product: { [key]: items.length ? items : null },
 	}) as unknown as FullCusProduct;
 
@@ -156,8 +144,6 @@ describe("usage_alerts custom scope resolver (entity > customer > plan)", () => 
 		};
 	};
 
-	// Entity alerts fire additively in checkUsageAlerts (not in this resolver);
-	// here we assert the customer-scope resolution: customer wins, plan fills in.
 	test("plan applies when no customer alert", () => {
 		const { level, scope } = resolveLevel(
 			buildFullCustomer({ plan: [alert("plan")] }),

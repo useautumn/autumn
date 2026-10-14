@@ -1,20 +1,3 @@
-/**
- * TDD test for lock + finalize on unlimited balance features.
- *
- * Contract under test:
- *   New behaviors:
- *     - check with lock=true on unlimited feature → allowed=true, lock receipt saved
- *     - finalize confirm on unlimited lock → success, receipt deleted
- *     - finalize release on unlimited lock → success, receipt deleted
- *   Side effects:
- *     - Lock receipt is saved to Redis with empty items for unlimited features
- *     - Lock receipt is cleaned up after finalize
- *
- * Pre-fix red: check with lock on unlimited skips lock receipt save entirely,
- *   so finalize throws "Lock not found for ID: ...".
- * Post-fix green: empty lock receipt is saved, finalize finds and deletes it.
- */
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV5 } from "@autumn/shared";
 import { expectCustomerEventsCorrect } from "@tests/integration/balances/utils/events/expectCustomerEventsCorrect.js";
@@ -33,7 +16,6 @@ const makeUnlimitedProd = () =>
 		items: [items.unlimitedMessages()],
 	});
 
-// ── Contract assertion 1: check with lock on unlimited → allowed, finalize confirm → success ──
 test.concurrent(`${chalk.yellowBright("lock-unlimited: check with lock on unlimited feature, finalize confirm succeeds")}`, async () => {
 	const unlimitedProd = makeUnlimitedProd();
 	const customerId = "lock-unlimited-confirm";
@@ -76,7 +58,6 @@ test.concurrent(`${chalk.yellowBright("lock-unlimited: check with lock on unlimi
 	expect(customer).toBeDefined();
 });
 
-// ── Contract assertion 2: check with lock on unlimited → allowed, finalize release → success ──
 test.concurrent(`${chalk.yellowBright("lock-unlimited: check with lock on unlimited feature, finalize release succeeds")}`, async () => {
 	const unlimitedProd = makeUnlimitedProd();
 	const customerId = "lock-unlimited-release";
@@ -118,7 +99,6 @@ test.concurrent(`${chalk.yellowBright("lock-unlimited: check with lock on unlimi
 	});
 });
 
-// ── Contract assertion 3: check with lock=0 on unlimited, finalize confirm → success ──
 test.concurrent(`${chalk.yellowBright("lock-unlimited: lock=0 on unlimited feature, finalize confirm succeeds")}`, async () => {
 	const unlimitedProd = makeUnlimitedProd();
 	const customerId = "lock-unlimited-zero";

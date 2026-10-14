@@ -10,18 +10,15 @@ import {
 	timestamp,
 } from "drizzle-orm/pg-core";
 
-/** Append-only: one `[tw-file-stats]` line per file attempt (Stripe load, CPU, memory). */
 export const fileRunStats = pgTable(
 	"file_run_stats",
 	{
 		id: text("id").primaryKey(),
 		runId: text("run_id").notNull(),
 		file: text("file").notNull(),
-		/** 1-based repetition of a repeat run; null for normal runs. */
 		repetition: integer("repetition"),
 		attempt: integer("attempt").notNull(),
 		worker: text("worker"),
-		/** Worker size and region the sample ran on, e.g. "2c4g-us-east-1". */
 		workerClass: text("worker_class").notNull(),
 		stats: jsonb("stats").$type<FileStats>().notNull(),
 		createdAt: timestamp("created_at", { withTimezone: true })
@@ -31,7 +28,6 @@ export const fileRunStats = pgTable(
 	(t) => [index("file_run_stats_run_idx").on(t.runId)],
 );
 
-/** Rolling per-file EWMAs, folded in after every completed run; null until a sample carries the metric. */
 export const fileProfiles = pgTable(
 	"file_profiles",
 	{
@@ -42,7 +38,6 @@ export const fileProfiles = pgTable(
 		durationMeanMs: real("duration_mean_ms").notNull(),
 		durationVariance: real("duration_variance").notNull().default(0),
 		failRate: real("fail_rate").notNull().default(0),
-		/** First-attempt failures while sharing a worker; well above failRate means the file must run alone. */
 		packedSamples: integer("packed_samples").notNull().default(0),
 		packedFailRate: real("packed_fail_rate"),
 		stripeRequests: real("stripe_requests"),

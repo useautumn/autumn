@@ -17,7 +17,6 @@ import {
 import { diffPlanV1 } from "@autumn/shared/utils/planV1Utils/diff/diffPlanV1.js";
 import { normalizePlan } from "./utils/normalizePlan.js";
 
-// --- test matrix ---
 const groups = [
 	{ name: "scale", base: scaleTier1Base, variants: scaleVariants },
 	{ name: "hobby", base: hobbyBase, variants: hobbyVariants },

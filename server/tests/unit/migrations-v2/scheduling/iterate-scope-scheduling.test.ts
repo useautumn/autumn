@@ -1,5 +1,3 @@
-// Contract: scheduled scopes honor concurrency and finish the task only between items.
-// Exhausting the source on the final customer must not request an unnecessary continuation.
 import { describe, expect, test } from "bun:test";
 import { iterateScope } from "@/internal/migrations/v2/run/orchestrators/iterateScope.js";
 import type { MigrationRunScheduler } from "@/internal/migrations/v2/run/types/migrationRunScheduler.js";

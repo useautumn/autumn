@@ -13,8 +13,6 @@ import { AutumnRpcCli } from "@/external/autumn/autumnRpcCli.js";
 const autumnRpc = new AutumnRpcCli({ version: ApiVersion.V2_1 });
 const getSuffix = () => Math.random().toString(36).slice(2, 9);
 
-// A setup-payment checkout session for an eur-locked customer must be created in
-// eur (createSetupCheckoutSession resolves the customer currency).
 test.concurrent(
 	`${chalk.yellowBright("multi-currency e2e: eur setup-payment session is created in eur")}`,
 	async () => {

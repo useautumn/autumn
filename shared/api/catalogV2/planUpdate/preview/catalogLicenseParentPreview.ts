@@ -11,10 +11,6 @@ export const CatalogLicenseActionSchema = z
 			"How this parent's license resolved against the child edit: frozen (`unchanged`), followed the child (`propagated`), or the parent sent `licenses[]` (`explicit`).",
 	});
 
-/**
- * Another existing version of this parent that also offers the child. Each
- * version holds its own planLicense overlay, so its diff and conflicts differ.
- */
 export const CatalogLicenseParentVersionPreviewSchema =
 	CatalogSiblingVersionPreviewSchema.extend({
 		license_action: CatalogLicenseActionSchema.optional().meta({
@@ -27,11 +23,6 @@ export const CatalogLicenseParentVersionPreviewSchema =
 		}),
 	});
 
-/**
- * One license parent plan whose planLicense points at this child version
- * row. Older linked versions of the same parent nest under
- * `sibling_versions`. License ops live on plan_change.
- */
 export const CatalogLicenseParentPreviewSchema =
 	CatalogCorePreviewSchema.extend({
 		name: z.string().meta({

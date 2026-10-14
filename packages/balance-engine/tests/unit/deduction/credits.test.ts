@@ -187,7 +187,6 @@ describe("credit systems", () => {
 				}),
 				value: 3,
 			});
-			// 2 units at 1 credit, then 1 at 3 = 5 credits
 			expect(first.deltas).toMatchObject([
 				{
 					balanceDelta: -5,
@@ -223,7 +222,6 @@ describe("credit systems", () => {
 				}),
 				value: 1,
 			});
-			// the fourth unit sits in the 3-credit tier
 			expect(second.deltas).toMatchObject([
 				{ balanceDelta: -3, valueDelta: -1 },
 			]);
@@ -385,7 +383,6 @@ describe("credit systems", () => {
 				],
 			]);
 
-			// From 3 attributed units: 2 more free, then 5 paid.
 			const paid = run({
 				state: createSubjectState({
 					identity,
@@ -433,7 +430,6 @@ describe("credit systems", () => {
 					customerEntitlements: [attributed],
 				});
 
-			// 15 → 5 units: the top 5 at 0.5 and 5 at 1 come back, not 10 × the original average.
 			const partial = run({ state: stateOf(), value: -10 });
 			expect(partial).toMatchObject({ appliedValue: -10 });
 			expect(balancesAfter(partial)).toEqual([
@@ -555,7 +551,6 @@ describe("credit systems", () => {
 				}),
 			});
 
-			// 2 credits at 0.2 cover 10 units; the other 20 cost 10 credits at 0.5.
 			expect(outcome).toMatchObject({ appliedValue: 30, remaining: 0 });
 			expect(
 				outcome.deltas.map((delta) => [
@@ -595,7 +590,6 @@ describe("credit systems", () => {
 				value: 8,
 			});
 
-			// 1 rollover credit is 5 units; the other 3 units cost 0.6 from the pool.
 			expect(outcome).toMatchObject({ appliedValue: 8, remaining: 0 });
 			expect(
 				outcome.deltas.map((delta) => [
@@ -630,7 +624,6 @@ describe("credit systems", () => {
 				value: 100,
 			});
 
-			// 5 credits of headroom buys 25 units at 0.2.
 			expect(outcome).toMatchObject({ appliedValue: 25, remaining: 75 });
 			expect(balancesAfter(outcome)).toEqual([
 				["credits_row", { balance: -5 }],

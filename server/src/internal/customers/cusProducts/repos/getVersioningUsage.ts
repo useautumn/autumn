@@ -14,9 +14,7 @@ import {
 export type CustomerProductVersioningFlags = {
 	hasAnyCustomerProducts: boolean;
 	hasVersionableCustomerProducts: boolean;
-	/** Versionable CPs that are not seat assignments (`customer_license_link_id` null). */
 	hasVersionableDirectCustomerProducts: boolean;
-	/** This version's ent/price ids are referenced by a cus_ent/cus_price, including expired. */
 	hasVersionableRowRefs: boolean;
 };
 
@@ -168,9 +166,6 @@ export const buildBoundedVersioningCustomerProductsQuery = ({
 }) => {
 	const statuses = sqlIn({ values: [...VERSIONABLE_CUSTOMER_STATUSES] });
 
-	// One indexed pass over the candidate ids. Correlated EXISTS against an
-	// unnest() candidate hides the id from the planner, which then seq-scans
-	// customer_products once per subquery (12s+ on large orgs).
 	return sql`
 		SELECT
 			cp.internal_product_id,
@@ -281,8 +276,6 @@ export const getVersioningUsage = async ({
 	internalProductIds: string[];
 	orgId: string;
 	env: AppEnv;
-	/** Seat assignments live on the license plan but are migrated through the
-	 * parent's upsert_licenses, so a plan-scoped op can never reach them. */
 	excludeLicenseAssignments?: boolean;
 	timePhase?: TimeVersioningPhase;
 }): Promise<Map<string, CustomerProductVersioningUsage>> => {

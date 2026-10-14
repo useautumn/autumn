@@ -32,7 +32,6 @@ type GroupsDump = {
 	resolved: Record<string, string[] | null>;
 };
 
-/** A pushed commit's `_groups` is untrusted code: evaluate it in a child with no env (no DB, Stripe, GitHub or encryption secrets). */
 const loadGroupsIsolated = async ({
 	testsDir,
 }: {
@@ -70,7 +69,6 @@ const loadGroupsIsolated = async ({
 const TREE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
 const trees = new Map<string, Promise<TestTree>>();
-/** Fetch `sha` into the mirror and extract its server/tests into `targetDir`. */
 const extractTree = async ({
 	sha,
 	targetDir,
@@ -103,7 +101,6 @@ const extractTree = async ({
 	}
 };
 
-/** Drops trees (and their mirror refs) unused for 7 days; stale temp dirs go too. */
 const evictStaleTrees = async ({ treesDir }: { treesDir: string }) => {
 	const cutoff = Date.now() - TREE_TTL_MS;
 	for (const name of await readdir(treesDir)) {
@@ -167,7 +164,6 @@ const loadTree = async ({
 	};
 };
 
-/** server/tests as of `sha`, extracted once per sha into `<TWD_CACHE_DIR>/trees/<sha>`. */
 export const getTestTreeAtSha = async ({
 	ctx,
 	sha,

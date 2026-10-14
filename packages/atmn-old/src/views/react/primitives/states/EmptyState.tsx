@@ -6,9 +6,6 @@ export interface EmptyStateProps {
 	searchQuery?: string;
 }
 
-/**
- * Generic empty state with customizable content
- */
 export function EmptyState({
 	title,
 	description,

@@ -25,21 +25,10 @@ import type {
 	UsageSeries,
 } from "./types.js";
 
-/**
- * Real data layer — runs in-process in the server:
- *   createWorkerContext (org+env ctx, pinned to latest API version)
- *     -> getFullSubject / getCachedFullSubject (aggregated subject)
- *     -> getApiCustomerV2 (plans/balances/flags/invoices)
- *   CusService.getFull (entity count) + eventActions (usage, via Tinybird).
- */
 type Subscription = ApiCustomerV5["subscriptions"][number];
 type Balance = ApiCustomerV5["balances"][string];
 type Invoice = NonNullable<ApiCustomerV5["invoices"]>[number];
 
-/**
- * Subject load: Redis cache first (fast), DB fallback on miss. Both paths still
- * run the subject's lazy resets, so this is a speed win, not a reset-skip.
- */
 async function loadSubject(
 	ctx: AutumnContext,
 	customerId: string,
@@ -66,8 +55,6 @@ export async function getCardDataLive(
 	customerId: string,
 	env: AppEnv,
 ): Promise<CustomerCardData | null> {
-	// env comes from the URL path (/sandbox/... = sandbox, else live), so we
-	// resolve exactly that env. Every query is org+env-scoped → tenant-safe.
 	let ctx: AutumnContext | undefined;
 	try {
 		ctx = await createWorkerContext({
@@ -83,15 +70,10 @@ export async function getCardDataLive(
 	}
 	if (!ctx) return null;
 
-	// Pin to the latest API version — otherwise getApiCustomerV2 emits this org's
-	// legacy response shape (e.g. v1.2) with no subscriptions/balances/flags keys.
 	ctx.apiVersion = new ApiVersionClass(LATEST_VERSION);
 
-	// Invoices + expand each subscription's plan so we get real prices.
 	ctx.expand = [CustomerExpand.Invoices, CustomerExpand.SubscriptionsPlan];
 
-	// Aggregated subject (rolls entity-scoped products/entitlements/flags up to
-	// the customer) — this is what getApiCustomerV2 is built to consume.
 	let fullSubject: FullSubject | undefined;
 	try {
 		fullSubject = await loadSubject(ctx, customerId);
@@ -110,7 +92,6 @@ export async function getCardDataLive(
 
 	const apiCustomer = await getApiCustomerV2({ ctx, fullSubject });
 
-	// Entity count comes from the full customer (getFullSubject doesn't carry it).
 	let fullCustomer: FullCustomer | undefined;
 	try {
 		fullCustomer = await CusService.getFull({
@@ -128,8 +109,6 @@ export async function getCardDataLive(
 	const featureIds = Object.keys(apiCustomer.balances ?? {});
 	const usage = await fetchUsage(ctx, customerId, fullCustomer, featureIds);
 
-	// Prices live at entity level for entity-scoped plans, so the customer view
-	// flattens them. Collect each entity's plan prices to widen the range.
 	const entityPrices = await fetchEntityPlanPrices(
 		ctx,
 		customerId,
@@ -155,7 +134,7 @@ async function fetchUsage(
 	const params = {
 		customer_id: customerId,
 		interval: "7d" as RangeEnum,
-		event_names: featureIds, // event_name === feature id
+		event_names: featureIds,
 		bin_size: "day" as const,
 		aggregateAll: false,
 		customer: fullCustomer,
@@ -254,7 +233,6 @@ const subPriceEntry = (sub: Subscription): PriceEntry => ({
 	label: planPriceLabel(sub),
 });
 
-/** Single price if every plan in the group prices the same, else "low – high". */
 const priceRangeLabel = (entries: PriceEntry[]): string => {
 	const uniqueLabels = [...new Set(entries.map((entry) => entry.label))];
 	if (uniqueLabels.length <= 1) return uniqueLabels[0] ?? "—";
@@ -264,12 +242,6 @@ const priceRangeLabel = (entries: PriceEntry[]): string => {
 	return low.label === high.label ? low.label : `${low.label} – ${high.label}`;
 };
 
-/**
- * Per-entity plan prices keyed by plan name. Entity-scoped plans price at the
- * entity level, so the customer view flattens them — we query each entity's
- * subject to recover the real prices and widen the range. Sequential to avoid
- * racing on the shared ctx.
- */
 async function fetchEntityPlanPrices(
 	ctx: AutumnContext,
 	customerId: string,
@@ -302,8 +274,6 @@ function groupPlans(
 	subscriptions: Subscription[],
 	entityPrices: Map<string, PriceEntry[]>,
 ): GroupedPlan[] {
-	// Collapse by plan name. Count comes from the customer view; the price range
-	// spans both customer- and entity-level prices (lowest to highest).
 	const groups = new Map<
 		string,
 		{ name: string; count: number; status: PlanStatus; prices: PriceEntry[] }
@@ -324,9 +294,6 @@ function groupPlans(
 		}
 	}
 	return [...groups.values()].map((group) => {
-		// Entity-scoped plans price at the entity level; the customer-level price
-		// is flattened (often a phantom "Free"). So when this plan has entity
-		// prices, those are authoritative — don't mix in the flattened price.
 		const entityList = entityPrices.get(group.name);
 		const prices =
 			entityList && entityList.length > 0 ? entityList : group.prices;
@@ -351,8 +318,6 @@ function mapBalances(balances: Record<string, Balance>): BalanceBar[] {
 				overageLabel: null,
 			};
 		}
-		// Overage is derived at read time (not stored): negative remaining, else
-		// usage past the grant. Display remaining clamps at 0.
 		const granted = balance.granted;
 		const rawRemaining = balance.remaining;
 		const overage =
@@ -379,7 +344,6 @@ function mapToCard(
 	usage: UsageSeries | null,
 	entityPrices: Map<string, PriceEntry[]>,
 ): CustomerCardData {
-	// plan_id -> display name, from the (expanded) subscriptions.
 	const planNameById = new Map<string, string>();
 	for (const sub of apiCustomer.subscriptions ?? []) {
 		planNameById.set(sub.plan_id, sub.plan?.name ?? prettify(sub.plan_id));

@@ -1,16 +1,3 @@
-/**
- * TDD test for catalog updates when a customer product references an
- * entitlement from a newer plan version.
- *
- * Red-failure mode (current behavior):
- *  - catalog.update treats the newer version as customer-free, deletes its
- *    referenced entitlement, and hits the customer_entitlements FK.
- *
- * Green-success criteria (after fix):
- *  - catalog.update retires the referenced entitlement, preserves the
- *    customer row, and updates every plan version successfully.
- */
-
 import { expect, test } from "bun:test";
 import {
 	customerEntitlements,
@@ -54,7 +41,6 @@ test.concurrent(
 		});
 		await expectStripeSubscriptionCorrect({ ctx, customerId });
 
-		// Create v2 while the customer remains attached to v1.
 		await autumnV1.products.update(plan.id, {
 			items: [items.monthlyMessages({ includedUsage: 200 })],
 		});
@@ -70,8 +56,6 @@ test.concurrent(
 		);
 		expect(v2MessagesEntitlement).toBeDefined();
 
-		// Reproduce Popfly's script-created state: the v1 customer product points
-		// at a catalog entitlement owned by v2, which has no direct customers.
 		const customer = await CusService.getFull({
 			ctx,
 			idOrInternalId: customerId,

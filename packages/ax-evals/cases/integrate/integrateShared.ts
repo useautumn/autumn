@@ -1,7 +1,5 @@
 import { evalBackendUrl } from "../../src/workspace/backendUrl.ts";
 
-/** The environment facts every integration case shares, regardless of which
- * catalog the org was seeded with. */
 export const integrateScenario = {
 	primer: [
 		"Project state (already verified, do not re-check): this is the app's repo;",
@@ -12,8 +10,6 @@ export const integrateScenario = {
 	].join(" "),
 };
 
-/** The notes-api fixture's signed-in user — every request runs as this
- * identity. */
 export const fixtureUser = {
 	id: "user_123",
 	email: "ada@acme.dev",

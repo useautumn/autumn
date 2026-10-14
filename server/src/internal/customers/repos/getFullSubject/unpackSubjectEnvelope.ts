@@ -11,11 +11,6 @@ const EMPTY_CATALOG: SubjectCatalog = {
 	free_trials: [],
 };
 
-/**
- * getFullSubjectRowsQuery returns one row holding the subject array plus the
- * page's catalog. The catalog is spread onto each subject by reference, so a
- * page of 5,000 subjects holds one copy of it, not 5,000.
- */
 export const unpackSubjectEnvelope = ({
 	rows,
 }: {

@@ -5,7 +5,6 @@ type ApiCreditSchemaRow = NonNullable<
 	ApiFeatureOverride["credit_schema"]
 >[number];
 
-/** Rows keyed by feature so order is not semantic; billing_units defaults to 1. */
 const creditSchemaFingerprint = (
 	rows: ApiCreditSchemaRow[] | undefined,
 ): string =>
@@ -18,7 +17,6 @@ const creditSchemaFingerprint = (
 		),
 	);
 
-/** Stable identity of a plan-item rate-card override (API shape); absent is "". */
 export const featureOverrideToKey = (
 	override: ApiFeatureOverride | null | undefined,
 ): string => {
@@ -26,7 +24,6 @@ export const featureOverrideToKey = (
 	return `credit_schema:${creditSchemaFingerprint(override.credit_schema)}|markups:${deterministicStringify(override.markups ?? {})}`;
 };
 
-/** Structural equality of two plan-item rate-card overrides (API shape). */
 export const featureOverridesEqual = (
 	a: ApiFeatureOverride | null | undefined,
 	b: ApiFeatureOverride | null | undefined,

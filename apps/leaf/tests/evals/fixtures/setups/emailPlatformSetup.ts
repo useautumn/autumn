@@ -24,10 +24,6 @@ const planIds = {
 
 const MARKETING_GROUP = "Marketing";
 
-/** Anonymized email-platform org: a Marketing plan ladder with sized contact
- * variants (no 700K size exists), a custom-priced Enterprise with zero
- * contacts, and a separate transactional plan — the shape behind the
- * "upgrade their marketing product" incident. */
 export const emailPlatformSetup = () =>
 	createSetup({
 		tag: "email-platform",

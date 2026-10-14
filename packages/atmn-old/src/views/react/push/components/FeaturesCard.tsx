@@ -8,7 +8,6 @@ interface FeaturesCardProps {
 	features: Feature[];
 	updates: Feature[];
 	progress: Map<string, FeatureStatus>;
-	/** Features pending deletion */
 	deletions?: FeatureDeleteInfo[];
 }
 
@@ -58,16 +57,12 @@ function getActionFromFeatureStatus(
 	}
 }
 
-/**
- * Features progress card (includes deletions/archives)
- */
 export function FeaturesCard({
 	features,
 	updates,
 	progress,
 	deletions = [],
 }: FeaturesCardProps) {
-	// Combine all features and deletions
 	const allItems: Array<{ id: string; name: string }> = [
 		...features.map((f) => ({ id: f.id, name: f.name })),
 		...updates.map((f) => ({ id: f.id, name: f.name })),

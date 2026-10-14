@@ -5,15 +5,6 @@ import { batchInvalidateCustomerEntitlementBalances } from "@/internal/customers
 import { markCustomersUpdatedAt } from "@/internal/customers/customerLsns/markCustomerUpdatedAt.js";
 import type { BatchResetGroup, ResetMutation } from "../types.js";
 
-/**
- * Drops the V2 shared subject-balance hash state for every customer
- * entitlement a reset mutation touched: one HDEL pipeline (cusEnt field +
- * aggregated field) per routed redis client. Pipelines never span groups, so
- * each stays org-scoped (cluster slot safety).
- *
- * Deletion, not patching — the next read rehydrates from Postgres. The
- * legacy FullCustomer cache is dead and intentionally not touched.
- */
 export const invalidateResetCaches = async ({
 	resetGroups,
 	resetMutations,
@@ -62,7 +53,6 @@ export const invalidateResetCaches = async ({
 			}
 		};
 
-		// Reset writes must pin these customers to primary for 60s (a replica read
 		// would serve pre-reset balances); concurrent so it never waits on Redis.
 		await Promise.all([
 			invalidateRedisCaches(),

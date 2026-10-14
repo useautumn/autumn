@@ -8,8 +8,6 @@ import { withMotherDuckRw } from "./initMotherDuck.js";
 const GLUE_REGION = process.env.LAKE_GLUE_REGION ?? "us-east-2";
 const GLUE_DATABASE = "internal";
 
-/** metadata_location is interpolated into SQL (DDL can't take bind params),
- * so it must match the lake's exact shape before we trust it. */
 const metadataLocationPattern = (table: string) =>
 	new RegExp(
 		`^s3://autumn-lake-prod-us-east-2/internal/${table}/[A-Za-z0-9/_.-]+\\.metadata\\.json$`,
@@ -20,8 +18,6 @@ const glueClient = new GlueClient({ region: GLUE_REGION });
 export const LIVE_LOOSE_BALANCE_CACHE_PREDICATE =
 	"b.balance != 0 OR b.unlimited IS TRUE OR a.feature_type = 'boolean'";
 
-/** The Glue pointer advances on every RW sink commit — always read it fresh;
- * a pinned metadata.json 404s within hours once compaction expires it. */
 export const getCurrentLakeMetadataLocation = async ({
 	table,
 }: {
@@ -39,14 +35,6 @@ export const getCurrentLakeMetadataLocation = async ({
 	return location;
 };
 
-// Aggregate once here (~1s/feature at query time otherwise); expiry
-// is baked at refresh, which the 5-min staleness window already covers.
-// granted ≈ allowance + adjustment (quantity lives only in PG).
-// remaining/granted sums cover FINITE rows only; usage covers ALL rows
-// (unlimited rows track real deductions, so −balance = their usage).
-// The ORDER BY clusters row groups so per-feature top-N prunes.
-/** Reads the lake in one pass: the `ce_balances` intermediate this replaced was
- * 114M rows rewritten per run for a table nothing else ever queried. */
 export const ceBalanceTotalsSql = ({
 	ceMetadataLocations,
 	totalsTable = "ce_balance_totals",
@@ -91,14 +79,11 @@ export const ceBalanceTotalsSql = ({
 
 let inFlight: Promise<void> | null = null;
 
-/** Never throws (a failed tick must not crash the cron); returns whether the
- * refresh actually completed so one-shot callers can fail loudly. */
 export const refreshCeBalancesCache = async ({
 	logger,
 	totalsTable,
 }: {
 	logger: Logger;
-	/** Shadow target for verifying a query change against the live table. */
 	totalsTable?: string;
 }): Promise<{ ok: boolean }> => {
 	if (inFlight) {
@@ -137,8 +122,6 @@ export const refreshCeBalancesCache = async ({
 							ON f.internal_id = e.internal_feature_id
 					`),
 				);
-				// Statuses must mirror PG's ACTIVE_STATUSES — dead product-history
-				// rows otherwise inflate every aggregate (granted by 10-30x).
 				await db.execute(
 					sql.raw(`
 						CREATE OR REPLACE TABLE main.cp_active AS

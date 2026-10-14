@@ -1,21 +1,3 @@
-/**
- * Dashboard WebSocket server for `bun tw` (consumed by apps/testbench).
- *
- * Bun's built-in WS server on a RANDOM port. Protocol:
- *   server → client:
- *     { type: "snapshot", data }              every 250ms + on connect (metadata only)
- *     { type: "fileBuffer", file, output }     on subscribeFile (full current buffer)
- *     { type: "fileOutput", file, chunk }      streamed while subscribed to that file
- *     { type: "workerBuffer", worker, output } on subscribeWorker
- *     { type: "workerOutput", worker, chunk }  streamed while subscribed to that worker
- *   client → server:
- *     { type: "subscribeFile", file } | { type: "subscribeWorker", worker } | { type: "unsubscribe" }
- *
- * The snapshot is metadata only (phase, progress, per-file pass/fail, worker list,
- * completions, summary) — raw test/server output is streamed on demand so the
- * snapshot stays small even with 189 files × 50 workers.
- */
-
 import { existsSync } from "node:fs";
 import { join, resolve } from "node:path";
 import type { ServerWebSocket } from "bun";
@@ -45,7 +27,6 @@ export const getDashboardSnapshot = () => {
 		phase: s.phase,
 		target: s.target,
 		workerCount: s.workers,
-		// Warm-up liveness: latest activity line + monotonic stage + phase clock.
 		warmActivity: s.warmActivity,
 		warmBuilding: s.warmBuilding,
 		warmStage: s.warmStage,
@@ -104,30 +85,23 @@ export const getDashboardSnapshot = () => {
 };
 
 export type DashboardServer = {
-	/** Base HTTP origin (also the WS origin). */
 	url: string;
-	/** The openable browser URL: the served SPA when built, else the dev-server combo. */
 	webUrl: string;
 	port: number;
-	/** Whether the built dashboard SPA is being served same-origin. */
 	servingSpa: boolean;
 	stop: () => void;
 };
 
-/** Built dashboard SPA dir (apps/testbench/dist), relative to this file. */
 const DIST_DIR = resolve(import.meta.dir, "../../../apps/testbench/dist");
 const ASSET_EXT = /\.(js|css|png|svg|ico|woff2?|map|json|txt)$/;
 
-/** Start the dashboard WS server on a random port. Enables the data hub. */
 export const startDashboardServer = (): DashboardServer => {
 	enableHub();
 	const clients = new Set<ServerWebSocket<ClientData>>();
-	// Serve the built SPA same-origin (one-click) when it exists; the app then
-	// connects to ws://<same-host>/ws with no query param needed.
 	const servingSpa = existsSync(join(DIST_DIR, "index.html"));
 
 	const server = Bun.serve<ClientData>({
-		port: 0, // random
+		port: 0,
 		fetch(req, srv) {
 			const { pathname } = new URL(req.url);
 			if (pathname === "/ws") {
@@ -136,7 +110,6 @@ export const startDashboardServer = (): DashboardServer => {
 					: new Response("upgrade failed", { status: 500 });
 			}
 			if (servingSpa) {
-				// Static asset by extension; otherwise SPA fallback to index.html.
 				const file = ASSET_EXT.test(pathname)
 					? Bun.file(join(DIST_DIR, pathname.slice(1)))
 					: Bun.file(join(DIST_DIR, "index.html"));
@@ -184,7 +157,6 @@ export const startDashboardServer = (): DashboardServer => {
 						}),
 					);
 				} else if (msg.type === "subscribeErrors") {
-					// Independent of the file/worker sub — the errors feed is its own pane.
 					ws.data.subErrors = true;
 					ws.send(
 						JSON.stringify({ type: "errorsBuffer", output: getErrorsOutput() }),
@@ -200,7 +172,6 @@ export const startDashboardServer = (): DashboardServer => {
 		},
 	});
 
-	// Stream output chunks only to the clients subscribed to that file/worker.
 	const off = onHubEvent((event) => {
 		if (event.type === "fileOutput") {
 			const payload = JSON.stringify(event);
@@ -226,7 +197,6 @@ export const startDashboardServer = (): DashboardServer => {
 		}
 	});
 
-	// Periodic metadata broadcast (cheap; raw output isn't included).
 	const interval = setInterval(() => {
 		if (clients.size === 0) {
 			return;
@@ -242,8 +212,6 @@ export const startDashboardServer = (): DashboardServer => {
 
 	const port = server.port ?? 0;
 	const url = `http://localhost:${port}`;
-	// One-click when the SPA is built (served same-origin); otherwise point at the
-	// testbench dev server (5910) with the ws origin in the query string.
 	const webUrl = servingSpa
 		? url
 		: `http://localhost:5910/?ws=${encodeURIComponent(`ws://localhost:${port}/ws`)}`;

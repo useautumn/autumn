@@ -5,8 +5,6 @@ import {
 	milliseconds,
 } from "date-fns";
 
-/** Concurrency alone doesn't bound the request rate: N workers whose calls
- * return instantly issue far more than N requests per second. */
 export const createRatePacer = ({
 	requestsPerSecond,
 }: {

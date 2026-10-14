@@ -10,7 +10,6 @@ import {
 	assertBalanceRowsMutable,
 } from "../common/balanceRowGuards.js";
 
-/** Legacy's refusals, in its order: nothing matched, an invoice credit, then delete's own: a paid grant, either half of a pool. */
 export const assertBalancesDeletable = ({
 	customerEntitlements,
 }: {
@@ -23,7 +22,6 @@ export const assertBalancesDeletable = ({
 			throw new UnsupportedCommandError({
 				reason: "paid_balance_not_deletable",
 			});
-		// Deleting either half orphans the other: a pool granted for a missing source, or shares pointing at nothing.
 		const isPoolHalf =
 			isSyntheticPooledBalanceCustomerEntitlement({ customerEntitlement }) ||
 			isPooledBalanceSourceCustomerEntitlement({ customerEntitlement });

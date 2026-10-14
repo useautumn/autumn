@@ -33,10 +33,6 @@ interface InlineNukeFlowProps {
 	onCancel: () => void;
 }
 
-/**
- * Inline nuke flow for use within InitFlow ConfigStep
- * Simplified flow without fullscreen takeover
- */
 export function InlineNukeFlow({ onComplete, onCancel }: InlineNukeFlowProps) {
 	const [state, setState] = useState<NukeState>(() => {
 		try {
@@ -58,10 +54,8 @@ export function InlineNukeFlow({ onComplete, onCancel }: InlineNukeFlowProps) {
 		}
 	});
 
-	// Fetch org and counts
 	const { data: nukeData, isLoading, error: fetchError } = useNukeData();
 
-	// Nuke mutation
 	const {
 		nuke,
 		phases,
@@ -79,7 +73,6 @@ export function InlineNukeFlow({ onComplete, onCancel }: InlineNukeFlowProps) {
 		},
 	});
 
-	// After data loads, validate customer limit
 	useEffect(() => {
 		if (state === "loading" && nukeData) {
 			try {
@@ -121,13 +114,11 @@ export function InlineNukeFlow({ onComplete, onCancel }: InlineNukeFlowProps) {
 
 	const handleExplosionComplete = () => {
 		setState("complete");
-		// Short delay before calling onComplete
 		setTimeout(() => {
 			onComplete();
 		}, 500);
 	};
 
-	// Render current state
 	if (state === "loading") {
 		if (isLoading) {
 			return (

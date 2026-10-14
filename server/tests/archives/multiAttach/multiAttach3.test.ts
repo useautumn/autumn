@@ -222,7 +222,6 @@ describe(`${chalk.yellowBright("multiAttach3: Testing multi attach for trial pro
 		const customer = await autumn.customers.get(customerId);
 		const latestInvoice = customer.invoices[0];
 
-		// Should only have paid for 4 pro and 2 premium...
 		const invoiceTotal =
 			getBasePrice({ product: pro }) * 4 +
 			getBasePrice({ product: premium }) * 2;

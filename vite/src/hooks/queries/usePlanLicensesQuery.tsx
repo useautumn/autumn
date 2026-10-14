@@ -27,9 +27,6 @@ export const toPlanLicenses = ({
 		updated_at: 0,
 	}));
 
-/** The same links as they arrive on the products list, where each carries its
- * hydrated license product rather than a public id. Lets callers that already
- * hold a product reuse its licenses instead of refetching the parent plan. */
 export const fullPlanLicensesToPlanLicenses = ({
 	parentPlanId,
 	licenses,
@@ -56,12 +53,6 @@ export const fullPlanLicensesToPlanLicenses = ({
 		];
 	});
 
-/**
- * Loads the license offerings configured on a parent plan (the plan's
- * `licenses` from plans.get). Pass a falsy `parentPlanId` (e.g. when the
- * product is itself a license) to skip the query. Writes go through the plan
- * save bar, which composes the full `licenses` array into one plans.update.
- */
 export const usePlanLicensesQuery = (parentPlanId?: string) => {
 	const axiosInstance = useAxiosInstance();
 	const queryClient = useQueryClient();

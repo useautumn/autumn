@@ -1,6 +1,3 @@
-/**
- * Calculate Levenshtein distance between two strings
- */
 function levenshteinDistance(a: string, b: string): number {
 	const matrix: number[][] = [];
 
@@ -29,10 +26,6 @@ function levenshteinDistance(a: string, b: string): number {
 	return matrix[b.length][a.length];
 }
 
-/**
- * Calculate relevance score for a search term against text
- * Lower score = better match
- */
 export function calculateRelevanceScore(
 	searchTerm: string,
 	text: string,
@@ -40,20 +33,14 @@ export function calculateRelevanceScore(
 	const lowerSearch = searchTerm.toLowerCase();
 	const lowerText = text.toLowerCase();
 
-	// Exact match = best score
 	if (lowerText === lowerSearch) return 0;
 
-	// Starts with search term = very good score
 	if (lowerText.startsWith(lowerSearch)) return 1;
 
-	// Contains search term = good score
 	const indexOfSearch = lowerText.indexOf(lowerSearch);
 	if (indexOfSearch !== -1) {
-		// Earlier in string = better score
 		return 2 + indexOfSearch / 100;
 	}
 
-	// Use Levenshtein distance for fuzzy matching
-	// Add 100 to differentiate from substring matches
 	return 100 + levenshteinDistance(lowerSearch, lowerText);
 }

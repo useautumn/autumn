@@ -10,8 +10,6 @@ import {
 	type SharedContext,
 } from "@autumn/shared";
 
-/** Plan items carry a one-tier price as a flat amount, but the item editor only
- * renders a price input for tiers — restore the one-tier form. */
 const flatPriceToSingleTier = (item: ProductItem): ProductItem =>
 	item.feature_id && item.price != null && !item.tiers?.length
 		? {
@@ -21,12 +19,6 @@ const flatPriceToSingleTier = (item: ProductItem): ProductItem =>
 			}
 		: item;
 
-/**
- * Apply a `customize` block to a `ProductV2`, returning the effective
- * product. `customize.items` are V1 plan items (feature items only) — they
- * must be converted back to `ProductItem` shape, else the editor reads
- * `included_usage`/`price` off the wrong shape and renders NaN.
- */
 export const applyCustomizeToProduct = ({
 	product,
 	customize,
@@ -53,8 +45,6 @@ export const applyCustomizeToProduct = ({
 						),
 					];
 				} catch {
-					// Conversion throws if the feature referenced in `customize` has been
-					// deleted since it was saved; drop that item instead of crashing the editor.
 					return [];
 				}
 			})
@@ -71,7 +61,6 @@ export const applyCustomizeToProduct = ({
 				price: customize.price.amount,
 				interval: customize.price.interval,
 				interval_count: customize.price.interval_count ?? 1,
-				// Lets the base price keep its Stripe price until it's edited.
 				price_config: {
 					amount: customize.price.amount,
 					interval: customize.price.interval,

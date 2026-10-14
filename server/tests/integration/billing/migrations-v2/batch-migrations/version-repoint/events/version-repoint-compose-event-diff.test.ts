@@ -49,8 +49,6 @@ const getUpdatedEventChange = async ({
 	return change as CustomerPlanChange;
 };
 
-// version + customize = pure repoint + customize on the customer's FROM items.
-// The event diff must carry the customize delta only, never the catalog v1→v2 delta.
 test.concurrent(
 	`${chalk.yellowBright("batch version repoint events: version+customize diff shows customize deltas only")}`,
 	async () => {
@@ -68,7 +66,6 @@ test.concurrent(
 			setup: [s.customer({ testClock: false }), s.products({ list: [plan] })],
 			actions: [s.billing.attach({ productId: plan.id })],
 		});
-		// The catalog changes Messages 100→500; the customer must NOT adopt it.
 		await autumnV2_3.post("/plans.update", {
 			plan_id: plan.id,
 			items: [
@@ -106,7 +103,6 @@ test.concurrent(
 			planId: plan.id,
 		});
 		expect(after.version).toBe(2);
-		// Pure repoint: untouched items keep the customer's from-version claims.
 		expect(
 			(
 				await readScopedFeatureRow({
@@ -138,8 +134,6 @@ test.concurrent(
 		expect(change.subscription).toMatchObject({ plan_id: plan.id });
 		expect(change.previous_attributes).toBeNull();
 		expect(change.item_changes).toEqual([]);
-		// Exactly the customize delta: the Credits add. No Messages 100→500
-		// entries — the customer kept its from-version Messages definition.
 		expect(change.plan_change?.item_changes).toEqual([
 			expect.objectContaining({
 				action: "created",

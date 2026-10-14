@@ -56,15 +56,6 @@ const throwIfRedisUnavailable = ({
 	}
 };
 
-/**
- * Executes a Redis write operation with automatic fallback handling.
- * Returns the result of the operation if successful, null if Redis is unavailable or operation fails.
- * If the operation returns void/undefined, returns true instead.
- *
- * @param operation - The Redis write operation to execute
- * @param redisInstance - Optional Redis instance to use (defaults to local region instance)
- * @returns Promise<T | null | true> - The result if successful, null otherwise. Returns true if operation returns void/undefined.
- */
 export const tryRedisWrite = async <T>(
 	operation: () => Promise<T>,
 	redisInstance?: Redis,
@@ -96,14 +87,6 @@ export const tryRedisWrite = async <T>(
 	}
 };
 
-/**
- * Executes a Redis read operation with automatic fallback handling.
- * Returns the data if successful, null if Redis is unavailable or operation fails.
- *
- * @param operation - The Redis read operation to execute
- * @param redisInstance - Optional Redis instance to use (defaults to local region instance)
- * @returns Promise<T | null> - The data if successful, null otherwise
- */
 export const tryRedisRead = async <T>(
 	operation: () => Promise<T>,
 	redisInstance?: Redis,

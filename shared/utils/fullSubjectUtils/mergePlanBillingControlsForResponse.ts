@@ -28,8 +28,6 @@ const tagUntaggedAsPlan = <T extends { source?: BillingControlSource }>(
 		entry.source ? entry : { ...entry, source: "plan" as const },
 	);
 
-/** Customer alerts for a feature shadow ALL of that feature's plan alerts;
- *  otherwise the most recent plan carrying alerts for the feature owns it. */
 const mergePlanUsageAlerts = ({
 	customerAlerts,
 	planProducts,
@@ -61,12 +59,6 @@ const mergePlanUsageAlerts = ({
 	return [...customerAlerts, ...planAlerts];
 };
 
-/**
- * Response-shape merge of plan-default billing controls into the customer's
- * `billing_controls`, with every entry tagged by `source`. Same resolution as
- * enforcement: a customer entry shadows the plan entry for its identity;
- * across plans the most restrictive wins (auto top-ups: most recent plan).
- */
 export const mergePlanBillingControlsForResponse = ({
 	billingControls,
 	planCustomerProducts = [],
@@ -81,8 +73,6 @@ export const mergePlanBillingControlsForResponse = ({
 	const preserveEmpty = <T>(merged: T[], original: T[] | undefined) =>
 		merged.length === 0 ? original : merged;
 
-	// Filter/sort the plan products once; the per-identity resolvers re-run
-	// cheaply over this small active set instead of the full product history.
 	const planProducts = getPlanBillingControlProducts({
 		customerProducts: planCustomerProducts,
 	});

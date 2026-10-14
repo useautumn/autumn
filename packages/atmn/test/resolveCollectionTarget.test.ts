@@ -1,7 +1,3 @@
-/** Where pull appends: inline arrays, local and imported consts (aliased,
- * typed), and the const behind a trailing spread. TypeScript-only: relative
- * `.ts` and `index.ts` specifiers; anything else is null, never a guess. */
-
 import { expect, test } from "bun:test";
 import { resolveCollectionTarget } from "../src/actions/pull/resolveCollectionTarget";
 

@@ -6,11 +6,6 @@ import {
 } from "@/utils/constants/migrationListPagination";
 import { useMigrationsQueryState } from "./useMigrationsQueryState";
 
-/**
- * URL-backed pagination for the migration list. Both values are re-derived
- * from the URL every render, so a hand-edited param or a shrinking row count
- * can never strand the table on a page that does not exist.
- */
 export const useMigrationListPagination = ({
 	rowCount,
 }: {

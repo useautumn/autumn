@@ -7,14 +7,12 @@ export type CustomerRedisRoutingInfo = {
 	usesDedicatedRedis: boolean;
 };
 
-// Mirrors full-subject cache identity: public ID first, internal ID fallback.
 export const getCustomerRedisRoutingId = ({
 	customer,
 }: {
 	customer: { id?: string | null; internal_id: string };
 }): string => customer.id ?? customer.internal_id;
 
-// Deterministic rollout bucket, not a cryptographic hash.
 export const getCustomerBucket = (customerId: string): number =>
 	Number(BigInt(Bun.hash(customerId)) % 100n);
 

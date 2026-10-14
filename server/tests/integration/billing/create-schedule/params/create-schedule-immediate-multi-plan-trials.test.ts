@@ -137,8 +137,6 @@ test.concurrent(
 			freeTrial: null,
 		});
 
-		// Ending a trial with no anchor keeps the cycle on the old trial end (set_plans' trial-end recreate),
-		// so each plan bills a prorated stub up to it and the full period from there, as Stripe does.
 		const trialEndsAt = await expectProductTrialing({
 			customer: await autumnV1.customers.get<ApiCustomerV3>(customerId),
 			productId: pro.id,

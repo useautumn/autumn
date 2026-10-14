@@ -145,7 +145,6 @@ describe("blue-green slot heartbeat", () => {
 			gate: { active: true, reason: "active" },
 			partitions: [
 				health({ partition: 0, status: "ready" }),
-				// Activating after a silent predecessor: the ownership topic may still name the old owner.
 				health({ partition: 1, status: "catching_up", lag: 5n }),
 				health({ partition: 2, status: "stopped" }),
 			],
@@ -174,7 +173,6 @@ describe("blue-green slot heartbeat", () => {
 			ok: false,
 			partitions: { prepared: 0, total: 0 },
 		});
-		// Assigned but dealt nothing (more workers than partitions) is not ok either.
 		const empty = createHarness({
 			gate: { active: false, reason: "idle", expectedServiceArn: "arn:blue" },
 			partitions: [],

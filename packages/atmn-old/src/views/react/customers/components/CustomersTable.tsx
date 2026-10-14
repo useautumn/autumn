@@ -8,9 +8,6 @@ export interface CustomersTableComponentProps extends CustomersTableProps {
 	columnWidths: ColumnWidths;
 }
 
-/**
- * Scrollable customer table using ink-scroll-list
- */
 export function CustomersTable({
 	customers,
 	selectedIndex,
@@ -20,7 +17,6 @@ export function CustomersTable({
 }: CustomersTableComponentProps) {
 	const listRef = useRef<ScrollListRef>(null);
 
-	// Handle terminal resize
 	useEffect(() => {
 		const handleResize = () => {
 			listRef.current?.remeasure();
@@ -32,7 +28,6 @@ export function CustomersTable({
 		};
 	}, []);
 
-	// Update selected customer when index changes
 	useEffect(() => {
 		if (customers[selectedIndex]) {
 			onSelect(customers[selectedIndex], selectedIndex);

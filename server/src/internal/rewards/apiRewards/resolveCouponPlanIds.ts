@@ -2,7 +2,6 @@ import type { Reward } from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { PriceService } from "@/internal/products/prices/PriceService.js";
 
-/** Coupons store price ids, but the API exposes plan ids — build the lookups getApiCoupon needs */
 export const resolveCouponPlanIds = async ({
 	db,
 	rewards,

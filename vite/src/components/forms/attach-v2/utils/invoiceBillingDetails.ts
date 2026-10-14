@@ -30,7 +30,6 @@ const trimmedOrUndefined = (value: string) => value.trim() || undefined;
 export const hasInvoiceBillingDetails = (form: InvoiceBillingDetailsForm) =>
 	Boolean(form.country) || form.taxExempt !== "none";
 
-/** Maps the Send Invoice address form to `billing_details`; Stripe has two address lines. */
 export const invoiceBillingDetailsToParams = (
 	form: InvoiceBillingDetailsForm,
 ): BillingDetailsBillingParams | undefined => {
@@ -42,7 +41,6 @@ export const invoiceBillingDetailsToParams = (
 	);
 	const taxIdValue = form.taxIdValue.trim();
 
-	// Exempt hides the address fields, so never send an address the user can't see.
 	const sendsAddress = Boolean(form.country) && form.taxExempt !== "exempt";
 
 	return {

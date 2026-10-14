@@ -1,17 +1,5 @@
 import { z } from "zod/v4";
 
-/**
- * Mongo-style matchers for migration filters.
- *
- * Rules:
- * - Bare value = equality (Mongo convention). `feature_id: "credits"` ≡
- *   `feature_id: { $eq: "credits" }`.
- * - `null` is a valid bare value: `price: null` matches null fields.
- * - Object form lets the caller use operators ($in, $ne, $gt, $regex, ...).
- * - Operator keys are prefixed with `$` to disambiguate from nested-object
- *   filters. Keys without `$` are treated as field names on the resource.
- */
-
 export const StringMatcherSchema = z.union([
 	z.string(),
 	z.null(),
@@ -47,7 +35,6 @@ export type NumberMatcher = z.infer<typeof NumberMatcherSchema>;
 export const BooleanMatcherSchema = z.boolean();
 export type BooleanMatcher = z.infer<typeof BooleanMatcherSchema>;
 
-/** Build a string-enum matcher: bare literal, null, or { $eq, $ne, $in, $nin }. */
 export const enumMatcher = <T extends readonly [string, ...string[]]>(
 	values: T,
 ) => {
@@ -64,11 +51,6 @@ export const enumMatcher = <T extends readonly [string, ...string[]]>(
 	]);
 };
 
-/**
- * Wrap a nested-object filter with null-equality shorthand. Allows callers to
- * write `price: null` (matches null), `price: { $ne: null }` (matches
- * non-null), or `price: { interval: "month" }` (non-null AND nested matches).
- */
 export const nullableObjectFilter = <T extends z.ZodTypeAny>(inner: T) =>
 	z.union([
 		z.null(),

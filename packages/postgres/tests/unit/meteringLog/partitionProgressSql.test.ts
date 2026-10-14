@@ -10,7 +10,6 @@ import {
 
 const dialect = new PgDialect();
 
-/** Captures the statement instead of running it; `rows` is what execute answers. */
 const capturingDb = ({ rows }: { rows: unknown[] }) => {
 	const statements: { sql: string; params: unknown[] }[] = [];
 	const execute = async (query: SQL) => {

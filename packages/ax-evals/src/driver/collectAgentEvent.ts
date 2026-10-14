@@ -5,7 +5,6 @@ import type { AgentRunResult } from "./types/agentRunResult.ts";
 const isRecord = (value: unknown): value is Record<string, unknown> =>
 	typeof value === "object" && value !== null && !Array.isArray(value);
 
-/** Folds one SDK stream event into the run result, tracing as it goes. */
 export const collectAgentEvent = ({
 	message,
 	result,
@@ -69,8 +68,6 @@ export const collectAgentEvent = ({
 							);
 				trace(label, `tool: ${block.name} ${detail}`);
 			}
-			// Accumulate: a turn can emit several text blocks (e.g. catalog then
-			// closing line); keeping only the last starves the user simulator.
 			if (block.type === "text" && block.text.trim()) {
 				result.finalText = result.finalText
 					? `${result.finalText}\n\n${block.text}`

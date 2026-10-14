@@ -6,7 +6,6 @@ import {
 } from "@/external/redis/actions/modelPricingCache/modelPricingCache.js";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 
-/** GET /admin/model-pricing-cache */
 export const handleGetAdminModelPricingCache = createRoute({
 	scopes: [Scopes.Superuser],
 	handler: async (c) => {
@@ -25,7 +24,6 @@ export const handleGetAdminModelPricingCache = createRoute({
 	},
 });
 
-/** DELETE /admin/model-pricing-cache — the next token track refetches models.dev. */
 export const handleClearAdminModelPricingCache = createRoute({
 	scopes: [Scopes.Superuser],
 	handler: async (c) => {

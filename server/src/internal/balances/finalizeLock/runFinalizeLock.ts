@@ -13,7 +13,6 @@ type RunFinalizeLockArgs = {
 	params: FinalizeLockParamsV0;
 };
 
-/** A lock lives where it was taken and names its customer; the request names only the lock. */
 export const finalizeWhereTheLockLives = async ({
 	ctx,
 	params,
@@ -29,8 +28,6 @@ export const runFinalizeLock = async (args: RunFinalizeLockArgs) =>
 		source: "runFinalizeLock",
 		run: () => finalizeWhereTheLockLives(args),
 		fallback: async (error) => {
-			// The dying attempt may have claimed the receipt; release so the
-			// queued replay can reclaim.
 			await releaseLockClaimMarker({
 				ctx: args.ctx,
 				lockId: args.params.lock_id,

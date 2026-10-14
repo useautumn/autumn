@@ -7,7 +7,6 @@ import type { TestContext } from "@tests/utils/testInitUtils/createTestContext";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import { CusService } from "@/internal/customers/CusService";
 
-/** Pro on subscription A, a recurring seats add-on on subscription B, plus a customer-wide free add-on. */
 export const initMultiSubScenario = async ({
 	customerId,
 }: {

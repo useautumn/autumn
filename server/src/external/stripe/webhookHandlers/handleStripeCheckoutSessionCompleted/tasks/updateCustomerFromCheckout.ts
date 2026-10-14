@@ -3,10 +3,6 @@ import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/
 import { CusService } from "@/internal/customers/CusService";
 import type { CheckoutSessionCompletedContext } from "../setupCheckoutSessionCompletedContext";
 
-/**
- * Syncs customer name/email from Stripe checkout session to Autumn.
- * Only updates if Autumn is missing the field and Stripe has it.
- */
 export const updateCustomerFromCheckout = async ({
 	ctx,
 	checkoutSessionContext,
@@ -23,7 +19,6 @@ export const updateCustomerFromCheckout = async ({
 
 	const updates: { name?: string; email?: string } = {};
 
-	// Only update if Autumn is missing the field and Stripe has it
 	if (!fullCustomer.name && notNullish(customerDetails.name)) {
 		updates.name = customerDetails.name;
 	}
@@ -32,7 +27,6 @@ export const updateCustomerFromCheckout = async ({
 		updates.email = customerDetails.email;
 	}
 
-	// Skip if no updates needed
 	if (!updates.name && !updates.email) return;
 
 	await CusService.update({

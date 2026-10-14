@@ -30,7 +30,6 @@ export type CreateCustomerExportResult =
 	| { created: false; activeExport: DbCustomerExport | null };
 
 export const CustomerExportService = {
-	/** Returns `created: false` when the partial unique index rejects a second active export. */
 	createIfNoneActive: async ({
 		db,
 		orgId,
@@ -197,10 +196,6 @@ export const CustomerExportService = {
 			.where(eq(customerExports.id, id));
 	},
 
-	/**
-	 * Guarded to active rows so a reclaimed (failed) export is never resurrected;
-	 * returns whether the row was actually completed.
-	 */
 	markCompleted: async ({
 		db,
 		id,
@@ -231,10 +226,6 @@ export const CustomerExportService = {
 		return updated.length > 0;
 	},
 
-	/**
-	 * Compare-and-swap reclaim: fails the export only while it still matches the
-	 * observed lifecycle state, so a run that just progressed is left alone.
-	 */
 	failIfStillActive: async ({
 		db,
 		id,

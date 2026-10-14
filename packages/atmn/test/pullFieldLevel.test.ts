@@ -1,9 +1,3 @@
-/**
- * Pull patches only the fields the preview names: a renamed plan keeps its
- * one-line shape, a changed name moves alone, and a diff that names no fields
- * still rewrites the whole fixture.
- */
-
 import { expect, test } from "bun:test";
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { runPull } from "../src/actions/pull";

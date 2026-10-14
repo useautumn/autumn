@@ -28,29 +28,22 @@ type SubjectCustomerEntitlementRow = DbCustomerEntitlement & {
 	pooled_balance?: DbPooledBalance | null;
 };
 
-/** One customer license bundle: the row, its effective plan license
- * (customer override beats catalog; null when the link was removed), and
- * that license's effective product — mirrors getFullCustomerLicenses. */
 export type SubjectCustomerLicenseRow = {
 	customerLicense: DbCustomerLicense;
 	planLicense: DbPlanLicense | null;
 	product: FullProductWithoutLicenses;
 };
 
-/** Parent lifecycle fields a seat inherits, fetched status-filter-free. */
 export type ParentCustomerProductLifecycle = Pick<
 	DbCustomerProduct,
 	"status" | "subscription_ids" | "canceled_at"
 >;
 
-/** Seat rows carry their anchoring pool row + the parent's lifecycle
- * snapshot; null on non-seat rows. */
 export type CustomerProductRow = DbCustomerProduct & {
 	parent_customer_license?: DbCustomerLicense | null;
 	parent_customer_product?: ParentCustomerProductLifecycle | null;
 };
 
-/** Raw row shape returned by the getFullSubjectQuery SQL query. */
 export type SubjectQueryRow = {
 	customer: DbCustomer;
 	customer_products: CustomerProductRow[];
@@ -75,8 +68,6 @@ export type SubjectQueryRow = {
 	migration_item_runs?: MigrationItemRunData[];
 };
 
-/** Catalog is org-level, so the query returns it once beside the subject array
- *  rather than repeating it on every subject. */
 export type SubjectCatalog = {
 	products: DbProduct[];
 	entitlements: EntitlementWithFeatureRow[];
@@ -84,7 +75,6 @@ export type SubjectCatalog = {
 	free_trials: DbFreeTrial[];
 };
 
-/** The single row getFullSubjectRowsQuery returns. */
 export type SubjectQueryEnvelope = SubjectCatalog & {
 	subjects: Omit<SubjectQueryRow, keyof SubjectCatalog>[];
 };

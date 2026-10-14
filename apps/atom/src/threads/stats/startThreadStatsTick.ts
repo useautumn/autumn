@@ -2,10 +2,8 @@ import type { HeldSubjects } from "../../state/heldSubjects/types/heldSubjects.j
 import type { ThreadCounters } from "./threadStats.js";
 
 const TICK_MS = 1000;
-/** A tick this late means the loop was busy with one thing for that long: a stall worth counting. */
 const STALL_MS = 100;
 
-/** Once a second, the thread drops what sat idle, publishes what it holds and how late its event loop ran the tick. */
 export const startThreadStatsTick = ({
 	counters,
 	held,

@@ -1,13 +1,3 @@
-/**
- * Regression: productsAreSame must detect a billing-controls difference when
- * called with V1 (FullProduct) inputs.
- *
- * The "identical configuration" guard in handleCustomPlanErrors compares two
- * V1 products. The new-side billing controls previously had no V1 column
- * fallback (only the current side did), so a billing-control-only change was
- * reported as billingControlsSame: true and rejected as "identical".
- */
-
 import { describe, expect, test } from "bun:test";
 import { AppEnv, type FullProduct, productsAreSame } from "@autumn/shared";
 

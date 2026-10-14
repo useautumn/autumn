@@ -5,10 +5,6 @@ import {
 	useReactTable,
 } from "@tanstack/react-table";
 
-/**
- * Custom hook for admin tables with standardized configuration.
- * Provides consistent table setup across admin user and org tables.
- */
 export function useAdminTable<TData>({
 	data,
 	columns,

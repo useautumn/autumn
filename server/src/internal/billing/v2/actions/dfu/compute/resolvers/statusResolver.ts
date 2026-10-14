@@ -11,7 +11,6 @@ export type ResolvedFlashStatus = {
 
 type PayloadStatus = NonNullable<FlashPlan["status"]>;
 
-/** Fall back to the hydrated Stripe status when the caller omitted `plan.status`. */
 const autumnStatusToPayloadStatus = (
 	status?: CusProductStatus,
 ): PayloadStatus | undefined => {
@@ -27,12 +26,6 @@ const autumnStatusToPayloadStatus = (
 	}
 };
 
-/**
- * Derives status + canceled_at + ended_at together so an ended plan can never
- * be written as `active` with a past `ended_at` — access is gated on status
- * alone, so that shape would leak feature access. Payload status wins; Stripe
- * hydration only fills gaps (cancel/end timestamps and an omitted status).
- */
 export const resolveFlashStatus = ({
 	plan,
 	now,
@@ -70,8 +63,6 @@ export const resolveFlashStatus = ({
 				reportStatus,
 			};
 		case "canceled":
-			// A future period-end governs access; without one, fail safe to Expired
-			// so a canceled plan can't leak access via status:active.
 			if (hydratedFutureEnd !== undefined) {
 				return {
 					status: CusProductStatus.Active,
@@ -89,7 +80,6 @@ export const resolveFlashStatus = ({
 				reportStatus,
 			};
 		default: {
-			// Active / trialing: honor a hydrated future cancellation as canceled.
 			if (hydratedFutureEnd !== undefined) {
 				return {
 					status: CusProductStatus.Active,

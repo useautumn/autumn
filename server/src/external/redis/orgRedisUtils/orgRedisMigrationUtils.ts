@@ -14,11 +14,6 @@ const dedupeRedisInstances = ({ candidates }: { candidates: Redis[] }) =>
 		(candidate, index) => candidates.indexOf(candidate) === index,
 	);
 
-/** Adds BOTH primary and ramp destination to the candidate list when the ramp
- *  is active. Lock/cleanup state may exist on EITHER cluster mid-ramp.
- *
- *  Gated on `activeInstance === "dragonfly"` so the upstash/redis kill switch
- *  also disables ramp fan-out. */
 const withRampClustersIfActive = ({
 	candidates,
 }: {
@@ -28,9 +23,6 @@ const withRampClustersIfActive = ({
 	if (!isCacheV2RampActive()) return candidates;
 	const destination = getRampDestinationRedis();
 	if (!destination) return candidates;
-	// Use redisV2Primary directly: at 100% ramp, resolveRedisV2() with no
-	// args returns the destination (isCacheV2RampEnabled short-circuits to
-	// true when migrationPercent >= 100 regardless of customerId).
 	return [...candidates, destination, redisV2Primary];
 };
 

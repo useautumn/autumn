@@ -26,9 +26,6 @@ export type SyncV2Result = {
 	scheduled_phases: SyncV2PersistedPhase[];
 };
 
-/**
- * Sync a Stripe subscription/schedule into Autumn state.
- */
 export const syncV2 = async ({
 	ctx,
 	params,
@@ -38,25 +35,20 @@ export const syncV2 = async ({
 	params: SyncParamsV1;
 	tags?: string[];
 }): Promise<SyncV2Result> => {
-	// 1. Setup
 	const syncContext = await setupSyncContext({ ctx, params });
 	logSyncContext({ ctx, syncContext });
 
-	// 2. Errors
 	handleSyncErrors({ syncContext });
 
-	// 3. Compute
 	const { autumnBillingPlan, phases } = computeSyncPlan({ ctx, syncContext });
 	logSyncPlan({ ctx, autumnBillingPlan, phases });
 
-	// 4. Execute
 	const { allocationsAdjusted } = await executeAutumnBillingPlan({
 		ctx,
 		autumnBillingPlan,
 		emitsBillingUpdated: true,
 	});
 
-	// 5. Persist scheduled phases (only when sync produced more than one phase)
 	let scheduleId: string | null = null;
 	let scheduledPhases: SyncV2PersistedPhase[] = [];
 	if (phases.length > 0) {

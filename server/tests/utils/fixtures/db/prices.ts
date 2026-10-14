@@ -10,9 +10,6 @@ import {
 	type UsagePriceConfig,
 } from "@autumn/shared";
 
-/**
- * Create a prepaid price fixture
- */
 const createPrepaid = ({
 	id,
 	featureId,
@@ -50,9 +47,6 @@ const createPrepaid = ({
 		},
 	}) as Price;
 
-/**
- * Create a fixed price fixture
- */
 const createFixed = ({
 	id,
 	stripePriceId,
@@ -77,9 +71,6 @@ const createFixed = ({
 		},
 	}) as Price;
 
-/**
- * Create a consumable price fixture
- */
 const createConsumable = ({
 	id,
 	featureId,
@@ -117,9 +108,6 @@ const createConsumable = ({
 		},
 	}) as Price;
 
-/**
- * Create an allocated price fixture
- */
 const createAllocated = ({
 	id,
 	featureId,
@@ -147,7 +135,7 @@ const createAllocated = ({
 		config: {
 			type: PriceType.Usage,
 			bill_when: BillWhen.EndOfPeriod,
-			should_prorate: true, // Required for getBillingType to return InArrearProrated
+			should_prorate: true,
 			billing_units: 1,
 			internal_feature_id: internalFeatureId ?? `internal_${featureId}`,
 			feature_id: featureId,
@@ -158,9 +146,6 @@ const createAllocated = ({
 		},
 	}) as Price;
 
-/**
- * Create a one-off price fixture
- */
 const createOneOff = ({
 	id,
 	stripePriceId,
@@ -187,9 +172,6 @@ const createOneOff = ({
 		},
 	}) as Price;
 
-/**
- * Create a customer price fixture
- */
 const createCustomer = ({
 	price,
 	customerProductId,
@@ -205,7 +187,6 @@ const createCustomer = ({
 	price,
 });
 
-/** Stable-id fixed price for field-level comparison tests. */
 const buildFixed = ({
 	overrides = {},
 	configOverrides = {},
@@ -234,7 +215,6 @@ const buildFixed = ({
 	};
 };
 
-/** Stable-id usage price for field-level comparison tests. */
 const buildUsage = ({
 	overrides = {},
 	configOverrides = {},
@@ -266,10 +246,6 @@ const buildUsage = ({
 		...overrides,
 	};
 };
-
-// ═══════════════════════════════════════════════════════════════════
-// EXPORT
-// ═══════════════════════════════════════════════════════════════════
 
 export const prices = {
 	createPrepaid,

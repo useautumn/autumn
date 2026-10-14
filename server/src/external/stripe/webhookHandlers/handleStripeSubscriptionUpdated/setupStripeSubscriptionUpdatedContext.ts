@@ -26,7 +26,6 @@ export const setupStripeSubscriptionUpdatedContext = async ({
 
 	const previousAttributes = event.data.previous_attributes ?? {};
 
-	// Get current time (respecting test clocks)
 	const stripeCli = createStripeCli({ org, env });
 	const nowMs = await stripeSubscriptionToNowMs({
 		stripeSubscription,

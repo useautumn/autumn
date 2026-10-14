@@ -1,9 +1,7 @@
 import type { HeldSubject } from "../types/heldSubject.js";
 import type { HeldSubjects } from "./types/heldSubjects.js";
 
-/** The balance worker's: a subject nobody read or wrote for this long is dropped, so a quiet Atom's memory falls. */
 export const HELD_IDLE_EXPIRY_MS = 4 * 3_600_000;
-/** Each hold looks at this many of the least recent entries for idle ones, so a hold's cost is bounded whatever is held. */
 export const HELD_IDLE_SCAN_PER_HOLD = 32;
 
 type Entry = HeldSubject & { touchedAt: number };
@@ -17,7 +15,6 @@ export const createHeldSubjects = ({
 	idleExpiryMs?: number;
 	now?: () => number;
 }): HeldSubjects => {
-	// A Map iterates in insertion order, so re-inserting on each read keeps the least recent first.
 	const held = new Map<string, Entry>();
 	let bytes = 0;
 	let lookups = 0;

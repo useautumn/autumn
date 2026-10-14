@@ -17,7 +17,6 @@ import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { getItemId } from "@/utils/product/productItemUtils";
 import { getDefaultItem } from "../utils/getDefaultItem";
 
-/** Get all feature IDs already in the plan, including underlying features from credit systems */
 const getFeaturesAlreadyInPlan = ({
 	items,
 	features,
@@ -32,7 +31,6 @@ const getFeaturesAlreadyInPlan = ({
 
 		featureIds.add(item.feature_id);
 
-		// If this feature is a credit system, also add all its underlying metered features
 		const feature = features.find((f) => f.id === item.feature_id);
 		if (feature?.type === FeatureType.CreditSystem && feature.config?.schema) {
 			for (const schemaItem of feature.config.schema as CreditSchemaItem[]) {
@@ -84,12 +82,10 @@ export function SelectFeatureSheet({
 
 		const newItem = getDefaultItem({ feature: selectedFeature });
 
-		// Add the new item to the product
 		const newItems = [...product.items, newItem];
 		const updatedProduct = { ...product, items: newItems };
 		setProduct(updatedProduct);
 
-		// Open edit sidebar for the new item
 		const itemIndex = newItems.length - 1;
 		const itemId = getItemId({ item: newItem, itemIndex });
 

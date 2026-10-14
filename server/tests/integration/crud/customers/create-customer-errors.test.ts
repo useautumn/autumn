@@ -4,10 +4,6 @@ import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// AUTO-ENABLE PLAN ERROR TESTS
-// ═══════════════════════════════════════════════════════════════════════════════
-
 test.concurrent(`${chalk.yellowBright("errors: auto_enable_plan_id with non-existent product")}`, async () => {
 	const customerId = "error-auto-enable-nonexistent";
 

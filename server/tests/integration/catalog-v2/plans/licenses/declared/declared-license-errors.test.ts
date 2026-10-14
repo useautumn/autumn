@@ -1,10 +1,3 @@
-/**
- * catalogV2.update — declared plan_license error surface.
- *
- * Missing child → 4xx; a licensed plan cannot offer licenses of its own;
- * duplicate license_plan_id → 400.
- */
-
 import { test } from "bun:test";
 import { ErrCode, ResetInterval } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";

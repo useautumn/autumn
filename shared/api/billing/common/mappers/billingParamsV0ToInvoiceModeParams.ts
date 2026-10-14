@@ -1,9 +1,6 @@
 import type { InvoicePaymentMethod } from "@models/orgModels/orgConfig.js";
 import type { InvoiceModeParams } from "../invoiceModeParams";
 
-/**
- * Converts V0 billing params invoice fields to V1 InvoiceModeParams.
- */
 export const billingParamsV0ToInvoiceModeParams = ({
 	input,
 }: {

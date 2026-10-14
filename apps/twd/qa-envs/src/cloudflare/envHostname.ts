@@ -39,7 +39,6 @@ type WorkerRoute = { id: string; pattern: string };
 const hostname = ({ env, name }: { env: Env; name: string }) =>
 	`${name}.${env.QA_DOMAIN}`;
 
-/** A hostname another project already uses must never be taken over by a QA env. */
 export async function isHostnameFree({
 	env,
 	name,
@@ -54,7 +53,6 @@ export async function isHostnameFree({
 	return records.every((r) => r.comment === RECORD_COMMENT);
 }
 
-/** Proxied placeholder record plus a Worker route, so `<name>.<domain>` reaches this Worker. */
 export async function ensureEnvHostname({
 	env,
 	name,

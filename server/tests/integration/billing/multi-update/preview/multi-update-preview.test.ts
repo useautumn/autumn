@@ -1,25 +1,3 @@
-/**
- * TDD tests for the multiUpdate preview response schema.
- *
- * Contract under test:
- *   New types:
- *     - MultiUpdatePreviewResponseV0: { customer_id, currency, total,
- *       subscriptions: ({ plan_ids } & core billing preview)[] } — one core
- *       preview per Stripe subscription group, composed from the SAME builders
- *       as single-update previews (no redefined preview math)
- *   Changed endpoint:
- *     - POST /billing.preview_multi_update -> MultiUpdatePreviewResponseV0
- *   Exact-value behaviors:
- *     - Each group's next_cycle.starts_at is anchored to THAT subscription's own
- *       billing anchor (two subs created 5 days apart -> anchors ~5 days apart)
- *     - Each group's next_cycle.total covers ONLY that subscription's surviving
- *       renewals (no cross-sub leakage)
- *     - top-level total = sum of subscriptions[].total
- *
- * Pre-impl red: response has no `subscriptions` array (old single-context shape).
- * Post-impl green: per-group composition over the sub-scoped plans.
- */
-
 import { expect, test } from "bun:test";
 import type { MultiUpdateParamsV0Input } from "@autumn/shared";
 import { expectMultiUpdatePreviewCorrect } from "@tests/integration/billing/multi-update/utils/expectMultiUpdatePreviewCorrect";
@@ -32,25 +10,6 @@ import { addDays, addMonths } from "date-fns";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 1: Two subs with DIFFERENT anchors — per-sub next_cycle is exactly scoped
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Sub 1 at T0: Pro A ($20, group a) + Premium B ($50, group b)
- * - Advance test clock 5 days
- * - Sub 2 at T0+5d (new_billing_subscription): add-on X ($20) + add-on Y ($50)
- * - Preview ONE multiUpdate: cancel Premium B EOC + cancel add-on Y EOC
- *
- * Expected Result:
- * - total EXACTLY 0 (EOC cancels charge nothing today)
- * - Sub 1 group: plan_ids [premiumB], next_cycle { starts_at ~ T0+1mo, total 20 }
- *   (Pro A's renewal ONLY — not add-on X's)
- * - Sub 2 group: plan_ids [addonY], next_cycle { starts_at ~ T0+5d+1mo, total 20 }
- *   (add-on X's renewal ONLY — not Pro A's)
- * - The two starts_at differ by ~5 days
- */
 test.concurrent(
 	`${chalk.yellowBright("multi update preview: per-sub next_cycle anchors and totals")}`,
 	async () => {
@@ -92,7 +51,6 @@ test.concurrent(
 			],
 		});
 
-		// Sub 2 gets its own anchor, 5 days after sub 1's
 		await advanceTestClock({
 			stripeCli: ctx.stripeCli,
 			testClockId: testClockId!,
@@ -139,7 +97,6 @@ test.concurrent(
 			],
 		});
 
-		// ── Contract: the two groups renew on their OWN anchors, ~5 days apart ───
 		const [first, second] = [...preview.subscriptions].sort(
 			(a, b) => (a.next_cycle?.starts_at ?? 0) - (b.next_cycle?.starts_at ?? 0),
 		);
@@ -152,20 +109,6 @@ test.concurrent(
 	},
 );
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 2: Cross-sub immediate cancels — per-sub totals match per-sub invoices
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Pro ($20) on sub 1; add-on ($20) on sub 2 (new_billing_subscription)
- * - Preview ONE multiUpdate: cancel both immediately
- *
- * Expected Result:
- * - subscriptions: two groups, EXACTLY -20 each (matching the per-sub credit
- *   invoices execution creates), no next cycle for either
- * - top-level total EXACTLY -40 (the sum)
- */
 test.concurrent(
 	`${chalk.yellowBright("multi update preview: per-sub totals for cross-sub immediate cancels")}`,
 	async () => {

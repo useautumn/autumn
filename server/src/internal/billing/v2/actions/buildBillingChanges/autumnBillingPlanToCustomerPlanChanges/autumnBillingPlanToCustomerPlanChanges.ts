@@ -24,7 +24,6 @@ export const transitionsToCustomerPlanChanges = ({
 			.filter((change): change is CustomerPlanChange => change !== undefined),
 	);
 
-/** Billing plan → per-product before/after transitions → kernel → dedupe. */
 export const autumnBillingPlanToCustomerPlanChanges = ({
 	autumnBillingPlan,
 	originalFullCustomer,

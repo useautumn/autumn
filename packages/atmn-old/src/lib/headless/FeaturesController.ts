@@ -1,11 +1,3 @@
-/**
- * Headless controller for the features command.
- * Provides a programmatic API for AI agents to interact with features.
- *
- * Key difference from CustomersController: Features use LOCAL pagination since
- * the backend returns all features in a single call.
- */
-
 import { isGraduatedCreditSchemaItem } from "@autumn/shared";
 import type { ApiFeature } from "../api/types/index.js";
 import { fetchFeatures } from "../api/endpoints/features.js";
@@ -15,29 +7,14 @@ import type {
 	PaginationState,
 } from "./types.js";
 
-/**
- * Options for creating a FeaturesController
- */
 export interface FeaturesControllerOptions {
-	/** API secret key for authentication */
 	secretKey: string;
-	/** Page size for local pagination (default: 50) */
 	pageSize?: number;
-	/** Include archived features (default: false) */
 	includeArchived?: boolean;
-	/** Initial search query */
 	initialSearch?: string;
-	/** Initial page */
 	initialPage?: number;
 }
 
-/**
- * Headless controller for features.
- * Can be used by AI agents to programmatically browse and inspect features.
- *
- * Uses LOCAL pagination: all features are fetched once from the API,
- * then filtered and paginated in memory.
- */
 export class FeaturesController
 	implements ListController<ApiFeature, ApiFeature>
 {
@@ -58,13 +35,6 @@ export class FeaturesController
 		this.page = options.initialPage ?? 1;
 	}
 
-	// ─────────────────────────────────────────────────────────────────
-	// Data Fetching (internal)
-	// ─────────────────────────────────────────────────────────────────
-
-	/**
-	 * Fetch all features from the API once
-	 */
 	private async fetchAllFeatures(): Promise<void> {
 		this.allFeatures = await fetchFeatures({
 			secretKey: this.secretKey,
@@ -74,9 +44,6 @@ export class FeaturesController
 		this.applyFilter();
 	}
 
-	/**
-	 * Apply search filter to allFeatures, storing result in filteredFeatures
-	 */
 	private applyFilter(): void {
 		const query = this.searchQuery.trim().toLowerCase();
 
@@ -91,25 +58,17 @@ export class FeaturesController
 			});
 		}
 
-		// Reset selection if out of bounds
 		const pageItems = this.getCurrentPageItems();
 		if (this.selectedIndex >= pageItems.length) {
 			this.selectedIndex = Math.max(0, pageItems.length - 1);
 		}
 	}
 
-	/**
-	 * Get items for the current page (local pagination)
-	 */
 	private getCurrentPageItems(): ApiFeature[] {
 		const start = (this.page - 1) * this.pageSize;
 		const end = start + this.pageSize;
 		return this.filteredFeatures.slice(start, end);
 	}
-
-	// ─────────────────────────────────────────────────────────────────
-	// State Queries
-	// ─────────────────────────────────────────────────────────────────
 
 	getItems(): ApiFeature[] {
 		return this.getCurrentPageItems();
@@ -147,23 +106,13 @@ export class FeaturesController
 		return this.searchQuery;
 	}
 
-	/**
-	 * Get the total number of features (after filtering)
-	 */
 	getTotalCount(): number {
 		return this.filteredFeatures.length;
 	}
 
-	/**
-	 * Get the total number of pages
-	 */
 	getTotalPages(): number {
 		return Math.ceil(this.filteredFeatures.length / this.pageSize);
 	}
-
-	// ─────────────────────────────────────────────────────────────────
-	// Navigation Actions
-	// ─────────────────────────────────────────────────────────────────
 
 	selectByIndex(index: number): ApiFeature | null {
 		const items = this.getCurrentPageItems();
@@ -200,10 +149,6 @@ export class FeaturesController
 		}
 		return null;
 	}
-
-	// ─────────────────────────────────────────────────────────────────
-	// Data Actions (Local Pagination)
-	// ─────────────────────────────────────────────────────────────────
 
 	async nextPage(): Promise<void> {
 		if (this.hasNextPage()) {
@@ -245,22 +190,10 @@ export class FeaturesController
 		await this.fetchAllFeatures();
 	}
 
-	// ─────────────────────────────────────────────────────────────────
-	// Detail Data
-	// ─────────────────────────────────────────────────────────────────
-
-	/**
-	 * Get expanded details for a feature.
-	 * For features, no additional data is needed - returns the feature as-is.
-	 */
 	async getExpandedItem(id: string): Promise<ApiFeature | null> {
 		const feature = this.allFeatures.find((f) => f.id === id);
 		return feature ?? null;
 	}
-
-	// ─────────────────────────────────────────────────────────────────
-	// Output Formats
-	// ─────────────────────────────────────────────────────────────────
 
 	toJSON(): ListControllerState<ApiFeature> {
 		return {
@@ -365,9 +298,6 @@ export class FeaturesController
 	}
 }
 
-/**
- * Create a new FeaturesController and initialize it with data
- */
 export async function createFeaturesController(
 	options: FeaturesControllerOptions,
 ): Promise<FeaturesController> {

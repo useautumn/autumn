@@ -24,8 +24,6 @@ import {
 import { findBlockingUsageLimit } from "../../src/limitReached/findBlockingUsageLimit.js";
 import { measureUsageLimitAlert } from "../../src/usageAlerts/measure/measureUsageLimitBasis.js";
 
-/** A daily cap of 5 on messages, which the subject holds no row of: only a `credits` pool pays for them. */
-
 const CAP = 5;
 const today = getUsageWindowBounds({
 	interval: EntInterval.Day,
@@ -85,7 +83,6 @@ const creditFundedSubject = ({
 	return subjectStateToFullSubject({ state, catalog });
 };
 
-/** The messages catalog row, off a subject that does hold one. */
 const messagesFeature = () => {
 	const state = createSubjectState({
 		identity,

@@ -27,27 +27,17 @@ export const CustomerPlanEditorBar = () => {
 	const { type: sheetType } = useSheetStore();
 
 	const [queryStates, setQueryStates] = useQueryStates({
-		id: parseAsString, // This is the original cusProduct.id
+		id: parseAsString,
 		version: parseAsInteger,
 		entity_id: parseAsString,
 	});
 
 	const differentVersion =
-		//diff version selected if its a update flow vs an attach flow
 		(queryStates.id && !cusProduct) || (!queryStates.id && !isLatestVersion);
 
 	const changesMade = hasChanges || differentVersion;
 
-	// Reset product store to default when component unmounts
-	// useEffect(() => {
-	// 	return () => {
-	// 		setProduct(DEFAULT_PRODUCT);
-	// 		setBaseProduct(null);
-	// 	};
-	// }, [setProduct, setBaseProduct]);
-
 	const returnToCustomer = () => {
-		// Open the appropriate sheet based on whether we have a subscription ID
 		if (!queryStates.id) {
 			setSheet({
 				type: "attach-product",
@@ -55,7 +45,6 @@ export const CustomerPlanEditorBar = () => {
 				data: changesMade ? { customizedProduct: product } : null,
 			});
 		} else {
-			// We have a subscription ID, so we're editing an existing subscription
 			setSheet({
 				type: changesMade ? "subscription-update" : "subscription-detail",
 				itemId: queryStates.id,
@@ -63,14 +52,12 @@ export const CustomerPlanEditorBar = () => {
 			});
 		}
 
-		//navigate back to the customer plan page
 		pushPage({
 			path: `/customers/${customer?.id ?? customer?.internal_id}/`,
 			navigate,
 			preserveParams: false,
 		});
 
-		//clear query params to prevent stale product states
 		setQueryStates(
 			{ version: null, id: null, entity_id: queryStates.entity_id ?? null },
 			{ history: "replace" },
@@ -82,13 +69,8 @@ export const CustomerPlanEditorBar = () => {
 		returnToCustomer();
 	};
 
-	// if (!hasChanges && activeVersion === product.version) {
-	// 	return null;
-	// }
-
 	const handleDiscardClicked = () => {
 		setQueryStates({ version: null });
-		// Reset product to baseProduct
 		if (baseProduct) {
 			setProduct(baseProduct);
 		}

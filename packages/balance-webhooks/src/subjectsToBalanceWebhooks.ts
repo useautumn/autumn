@@ -13,10 +13,6 @@ import { outcomeToAffectedFeatures } from "./common/convertOutcome/outcomeToAffe
 import { checkLimitReached } from "./limitReached/checkLimitReached.js";
 import { checkUsageAlerts } from "./usageAlerts/checkUsageAlerts.js";
 
-/**
- * Every webhook one mutation calls for, given the deduction behind it and the subject as it found it and as it
- * left it: each check runs for each feature the deduction moved (the tracked one, and a credit system that paid for it).
- */
 export const subjectsToBalanceWebhooks = ({
 	mutation,
 	outcome,
@@ -28,7 +24,6 @@ export const subjectsToBalanceWebhooks = ({
 	before: WorkerFullSubject;
 	after: WorkerFullSubject;
 }): BalanceWebhookEffect[] => {
-	// Only a mutation that moved a tracked feature can call for one; others are never crossed.
 	const tracked = mutationToTrackedFeature({ mutation });
 	if (!tracked || !mutation.changes.some(isBalanceChange)) return [];
 

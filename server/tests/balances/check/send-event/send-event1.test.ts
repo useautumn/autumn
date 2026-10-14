@@ -10,7 +10,6 @@ import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js"
 import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
 import { timeout } from "../../../utils/genUtils.js";
 
-// UNCOMMENT FROM HERE
 const pro = constructProduct({
 	type: "free",
 	isDefault: false,
@@ -51,7 +50,7 @@ describe(`${chalk.yellowBright("send-event1: Testing send event")}`, () => {
 			product_id: pro.id,
 		});
 
-		await autumn.customers.get(customerId); // set cache
+		await autumn.customers.get(customerId);
 	});
 
 	test("should check with track for allocated feature", async () => {

@@ -14,7 +14,6 @@ type Customize = NonNullable<UpdatePlanOp["customize"]>;
 type AddItem = NonNullable<Customize["add_items"]>[number];
 type RemoveFilter = NonNullable<Customize["remove_items"]>[number];
 
-/** A flat rate's old → new credits; with no `to`, a rate the card can't summarise changed. */
 export type RateChange = {
 	key: string;
 	label: string;
@@ -22,16 +21,13 @@ export type RateChange = {
 	from?: string;
 	to?: string;
 };
-/** `updated`: the add and its paired remove are one item whose rates alone changed. */
 export type ItemRateRow = ReturnType<
 	typeof migrationOpRateRows
 >["rows"][number];
 
-/** Flat per-feature costs, plus everything else on the card as one comparable string. */
 const rateCard = (override: FeatureConfigOverride, inherited?: Feature) => {
 	const schema: CreditSchemaItem[] =
 		override.schema ?? inherited?.config?.schema ?? [];
-	// A per-units rate (feature_amount) isn't flat, so a change to it shows as "Rate card changed".
 	const isFlat = (item: CreditSchemaItem) =>
 		!item.tiers &&
 		!hasCreditDimensionRules(item) &&
@@ -51,7 +47,6 @@ const sameCadence = (add: AddItem, remove: RemoveFilter) =>
 	(add.price?.interval_count ?? add.reset?.interval_count ?? 1) ===
 		(remove.interval_count ?? 1);
 
-/** Pairs each add with the remove it replaces and diffs their rates; with no stamp, the new card shows alone. */
 export const migrationOpRateRows = ({
 	op,
 	features,
@@ -76,7 +71,6 @@ export const migrationOpRateRows = ({
 			featureId: add.feature_id,
 			errorOnNotFound: false,
 		});
-		// An empty stamp means the old item inherited the credit system's rates, and so does a cleared override.
 		const before = stamp
 			? rateCard(apiFeatureOverrideToDb(stamp), creditSystem)
 			: undefined;

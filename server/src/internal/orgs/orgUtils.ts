@@ -175,10 +175,8 @@ const initDefaultConfig = () => {
 	return {
 		free_trial_paid_to_paid: false,
 
-		// 1. Upgrade prorates immediately
 		bill_upgrade_immediately: true,
 
-		// 2. Convert invoice to charge automatically
 		convert_to_charge_automatically: false,
 	};
 };
@@ -220,16 +218,6 @@ export const createOrgResponse = ({
 					slug: org.master.slug,
 				}
 			: null,
-		// sandbox_config: {
-		//   stripe_connected: isStripeConnected({ org, env: AppEnv.Sandbox }),
-		//   default_currency: org.default_currency || "USD",
-		//   return_url: org.sandbox_config?.return_url || "",
-		// },
-		// production_config: {
-		//   stripe_connected: isStripeConnected({ org, env: AppEnv.Live }),
-		//   default_currency: org.default_currency || "USD",
-		//   return_url: org.production_config?.return_url || "",
-		// },
 
 		success_url: toSuccessUrl({ org, env }) || "",
 		default_currency: org.default_currency || "usd",

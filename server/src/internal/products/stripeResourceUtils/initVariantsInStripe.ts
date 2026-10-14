@@ -3,10 +3,6 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { initProductInStripe } from "../productUtils.js";
 import { applyStripeReuseFromVariantFamilies } from "./applyStripeReuseFromVariantFamilies.js";
 
-/**
- * Inits created variants' Stripe resources: family reuse first, then one
- * product at a time so siblings can't double-create a shared price.
- */
 export const initVariantsInStripe = async ({
 	ctx,
 	products,

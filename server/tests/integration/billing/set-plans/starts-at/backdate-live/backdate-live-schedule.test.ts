@@ -1,12 +1,3 @@
-/**
- * set_plans with a past phases[0].starts_at over a live subscription that has a saved later phase:
- * - the old subscription is cancelled with no final invoice, which cancels its schedule too;
- * - the subscription is recreated from the backdated date, anchored on the old period end;
- * - the live plan stays active on it once the old subscription's webhooks settle;
- * - a new schedule on it starts the later phase on its date;
- * - every period is billed exactly once.
- */
-
 import { expect, test } from "bun:test";
 import {
 	CusProductStatus,
@@ -29,7 +20,6 @@ import {
 const LATER_PHASE_DAYS_AFTER_RENEWAL = 10;
 const LIVE_DAYS = 10;
 
-/** Live pro, aged LIVE_DAYS, with a saved later phase switching to premium after its renewal. */
 const initScheduledLivePro = async ({ customerId }: { customerId: string }) => {
 	const { premium } = startsAtProducts();
 	const scenario = await initLiveProScenario({

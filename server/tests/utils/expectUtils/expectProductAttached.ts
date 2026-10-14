@@ -37,7 +37,6 @@ export const expectProductAttached = ({
 	const finalProductId = productId || product?.id;
 	const productAttached = cusProducts.find(
 		(p) => p.id === finalProductId,
-		// && (entityId ? p.entity_id === entityId : true),
 	);
 
 	expect(
@@ -85,7 +84,6 @@ export const expectProductNotAttached = ({
 	const finalProductId = productId || product?.id;
 	const productAttached = cusProducts.find(
 		(p) => p.id === finalProductId,
-		// && (entityId ? p.entity_id === entityId : true),
 	);
 
 	expect(
@@ -212,17 +210,12 @@ export const expectAddOnAttached = ({
 export const expectInvoicesCorrect = ({
 	customer,
 	first,
-	// second,
 }: {
 	customer: CustomerLike & { invoices: { total: number; product_ids: string[] }[] };
 	first: {
 		productId: string;
 		total: number;
 	};
-	// second?: {
-	//   productId: string;
-	//   total: number;
-	// };
 }) => {
 	const invoices = customer.invoices;
 	if (!invoices) {

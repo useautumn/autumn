@@ -2,7 +2,6 @@ type JsonLdProps = {
 	data: Record<string, unknown> | Array<Record<string, unknown>>;
 };
 
-// Server-rendered structured data so crawlers and LLMs read it without executing JS.
 export default function JsonLd({ data }: JsonLdProps) {
 	return (
 		<script

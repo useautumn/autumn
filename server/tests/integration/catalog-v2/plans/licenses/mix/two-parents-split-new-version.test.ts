@@ -1,7 +1,3 @@
-/**
- * catalogV2.update — two parents, both propagate new_version.
- * Customered parent mints; parent with no customers stays in place.
- */
 import { test } from "bun:test";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";

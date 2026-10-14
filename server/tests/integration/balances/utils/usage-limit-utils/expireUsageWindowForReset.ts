@@ -5,12 +5,6 @@ import { buildSharedFullSubjectBalanceKey } from "@/internal/customers/cache/ful
 
 const THIRTY_FIVE_DAYS_MS = 35 * 24 * 60 * 60 * 1000;
 
-/**
- * Backdates a feature's usage-window counters in BOTH stores so the window is
- * wall-clock closed -- the windows analog of expireCusEntForReset. The next
- * subject read should lazily prune the rows. The owning balance worker holds a
- * third copy, so it is told to forget the customer too.
- */
 export const expireUsageWindowForReset = async ({
 	ctx,
 	customerId,

@@ -15,7 +15,6 @@ import { composeNewestReusableFixedPriceQuery } from "../src/internal/products/p
 
 const STATEMENT_TIMEOUT_MS = 30_000;
 
-// Infisical staging DATABASE_URL is the unit-test Neon. Mintlify lives on the replica.
 const dbUrl = process.env.DATABASE_REPLICA_URL || process.env.DATABASE_URL || "";
 const maskedUrl = dbUrl.replace(/:\/\/[^@]+@/, "://***:***@") || "(empty)";
 

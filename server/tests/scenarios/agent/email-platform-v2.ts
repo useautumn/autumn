@@ -33,15 +33,11 @@ import {
 	seedCustomersWithEntities,
 } from "../seedUtils";
 
-// ── Email platform seed config ──
-// Modeled loosely on Resend's pricing. Transactional paid tiers are represented
-// as variants, each with its own base price and overage item.
-// Defaults for `bun scenario ep`; CLI flags override (e.g. `--count 1000`).
 const EP_SEED = {
-	customerCount: 0, // 0 = catalog only (features + plans, no customers)
+	customerCount: 0,
 	concurrency: 10,
 	attachPlan: null as "free" | "enterprise" | null,
-	clear: true, // wipe org before seeding; --skip-clear keeps existing
+	clear: true,
 };
 
 export const emailPlatformFeatureIds = {
@@ -89,7 +85,6 @@ export const emailPlatformPlanIds = {
 	scale2_5m: "scale_2_5m",
 } as const;
 
-// Boolean flags shared by every plan ("all plans include ...").
 const sharedBooleanFeatureIds = [
 	emailPlatformFeatureIds.sending_receiving,
 	emailPlatformFeatureIds.smtp_relay,
@@ -101,7 +96,6 @@ const sharedBooleanFeatureIds = [
 	emailPlatformFeatureIds.scoped_api_keys,
 ] as const;
 
-// Tier-specific boolean flags.
 const tieredBooleanFeatureIds = [
 	emailPlatformFeatureIds.ticket_support,
 	emailPlatformFeatureIds.slack_support,
@@ -189,7 +183,6 @@ const emailItems = ({
 	}),
 ];
 
-// 10k automation runs included, then per-run overage.
 const automationItems = () => [
 	items.consumable({
 		featureId: emailPlatformFeatureIds.automation_runs,
@@ -799,7 +792,6 @@ export const initEmailPlatformScenario = async ({
 	};
 };
 
-/** Return a copy of a plan with a card-required free trial, for trialing-state scenarios. */
 export const withFreeTrial = ({
 	product,
 	trialDays,
@@ -907,9 +899,6 @@ export const runEmailPlatformSeed = async () => {
 		await clearOrg({
 			orgSlug: process.env.TESTS_ORG,
 			env: AppEnv.Sandbox,
-			// Reset the Stripe account by default so stale usage meters don't
-			// collide on re-seed; pass --skip-stripe-reset to keep them (faster).
-			// skipStripeReset: process.argv.includes("--skip-stripe-reset"),
 			skipStripeReset: true,
 		});
 	}

@@ -1,17 +1,8 @@
-/**
- * Decoded cursor with verbose property names for code readability
- */
 export interface DecodedCursorV1 {
 	timestamp: number;
 	id: string;
 }
 
-/**
- * Encodes cursor into compact base64url string
- * Format: version|timestamp|id (e.g., "1|1764746499167|evt_xxx")
- * Uses pipe-delimited format for optimal performance and 25% size reduction vs JSON
- * Uses base64url encoding for URL safety
- */
 export const encodeCursor = ({
 	timestamp,
 	id,
@@ -23,11 +14,6 @@ export const encodeCursor = ({
 	return Buffer.from(raw).toString("base64url");
 };
 
-/**
- * Decodes base64url cursor string to extract timestamp and ID
- * Expects format: version|timestamp|id
- * @throws Error if cursor format is invalid
- */
 export const decodeCursor = (cursorStr: string): DecodedCursorV1 => {
 	try {
 		const decoded = Buffer.from(cursorStr, "base64url").toString();

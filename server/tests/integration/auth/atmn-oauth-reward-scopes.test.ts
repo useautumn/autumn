@@ -1,5 +1,3 @@
-/** Regression: atmn reward scopes must self-heal before Better Auth validates the full authorize request. */
-
 import { expect, test } from "bun:test";
 import { oauthClient } from "@autumn/shared";
 import { eq } from "drizzle-orm";

@@ -1,15 +1,3 @@
-/**
- * Batch-operations lane: add_items across several customers on a free plan.
- *
- * Contract under test:
- *   - An eligible add_items migration (no_billing_changes, free entitlements)
- *     converges every filter-matched customer: boolean flag + static balance.
- *   - A customer who attached with the items customized (is_custom product)
- *     is marked skipped and their items are NOT touched — no duplicate adds,
- *     custom amounts preserved.
- *   - Plain customers' item runs are marked succeeded; products stay active.
- */
-
 import { test } from "bun:test";
 import { type ApiCustomerV5, MigrationItemRunStatus } from "@autumn/shared";
 import { expectCustomerProducts } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
@@ -115,8 +103,6 @@ test.concurrent(
 			});
 		}
 
-		// The customized customer is outside the batch lane's authority: skipped,
-		// items untouched — custom amount preserved, no duplicate workflows row.
 		const customCustomer =
 			await autumnV2_2.customers.get<ApiCustomerV5>(customId);
 		await expectCustomerProducts({

@@ -1,9 +1,6 @@
 import { type StripeDiscountWithCoupon, secondsToMs } from "@autumn/shared";
 import { addMonths } from "date-fns";
 
-/**
- * Keeps only discounts that are still active when the next cycle starts.
- */
 export const filterStripeDiscountsForNextCycle = ({
 	stripeDiscounts,
 	currentEpochMs,
@@ -28,9 +25,6 @@ export const filterStripeDiscountsForNextCycle = ({
 	);
 };
 
-/**
- * Checks whether a Stripe discount should affect next-cycle preview charges.
- */
 const stripeDiscountAppliesToNextCycle = ({
 	discount,
 	currentEpochMs,
@@ -56,8 +50,6 @@ const stripeDiscountAppliesToNextCycle = ({
 	}
 
 	if (coupon.duration === "once") {
-		// A fresh once coupon hits the first invoice after it's applied — when
-		// nothing is invoiced immediately, that first invoice is the next cycle's.
 		return !hasImmediateInvoice;
 	}
 

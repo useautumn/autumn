@@ -83,8 +83,6 @@ interface SettingsNavGroup {
 	readonly items: readonly SettingsNavItem[];
 }
 
-/** Also drives the command bar, so a new tab is searchable without being
- * registered in a second place. */
 export const SETTINGS_GROUPS: readonly SettingsNavGroup[] = [
 	{
 		label: "Organization",
@@ -209,14 +207,12 @@ const SECTION_MAP: Record<SettingsTab, React.ComponentType> = {
 	atom: AtomSection,
 };
 
-/** Tabs that only render while their feature flag is on. */
 const FLAGGED_TABS: Partial<Record<SettingsTab, "sso" | "vercel" | "atoms">> = {
 	sso: "sso",
 	vercel: "vercel",
 	atom: "atoms",
 };
 
-/** Integrations were previously behind the developer page's scope. */
 const API_KEY_SCOPED_TABS: readonly SettingsTab[] = [
 	"stripe",
 	"vercel",
@@ -235,7 +231,6 @@ export const useIsSettingsTabEnabled = () => {
 	};
 };
 
-/** The tab the URL asks for, or Account when it isn't enabled; a flagged tab waits for billing instead of flashing Account first. */
 const useActiveSettingsTab = (): SettingsTab => {
 	const [searchParams] = useSearchParams();
 	const isTabEnabled = useIsSettingsTabEnabled();
@@ -247,7 +242,6 @@ const useActiveSettingsTab = (): SettingsTab => {
 		: "account";
 };
 
-/** The settings nav beside the active tab's content. */
 const SettingsFrame = ({
 	activeTab,
 	children,
@@ -349,12 +343,10 @@ export const SettingsView = () => {
 	);
 };
 
-/** Tabs whose loading state is drawn as their layout, so the page settles in place. */
 const SECTION_SKELETONS: Partial<Record<SettingsTab, React.ComponentType>> = {
 	atom: AtomSectionSkeleton,
 };
 
-/** Settings as it will render, while the org it needs still loads. */
 export const SettingsViewSkeleton = () => {
 	const activeTab = useActiveSettingsTab();
 	const SectionSkeleton = SECTION_SKELETONS[activeTab] ?? LoadingScreen;

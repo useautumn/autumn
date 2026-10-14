@@ -6,9 +6,6 @@ import { toolAllowlists } from "../../../agent/lib/toolAllowlists.js";
 import { approvalScopeRequirements } from "../../../src/internal/approvals/utils/approvalScopeRequirements.js";
 import { writeToPreviewTool } from "../../../src/internal/approvals/utils/toolRegistry.js";
 
-/** Locks the derived registries to exact literals so the single-table registry
- * — and the flattening that repointed it at one agent — provably kept every
- * gate. The live agent must gate every write it can reach. */
 describe("gated-write registry derivations", () => {
 	test("the single agent gates every write the old split gated", () => {
 		expect([...approvalSets.leaf].sort()).toEqual([
@@ -105,8 +102,6 @@ describe("gated-write registry derivations", () => {
 		}
 	});
 
-	// Approval and explanation are one contract: the tool schema the agent sees
-	// is built from the same flag, so a gated write cannot skip its summary.
 	test("approval and summary duty cover exactly the same writes", () => {
 		for (const write of GATED_WRITES) {
 			expect(approvalSets.leaf.has(write.toolName)).toBe(

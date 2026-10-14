@@ -61,7 +61,6 @@ export async function readBalanceShadowSubject({
 	ctx: AutumnContext;
 	customerId: string;
 }): Promise<FullSubject> {
-	// Normal cache reads can reset or invalidate. Operator reads must do neither.
 	const view = await readView({ ctx, customerId });
 	const cached = sanitizeCachedFullSubject({
 		cachedFullSubject: JSON.parse(view.raw) as CachedFullSubject,

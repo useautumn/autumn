@@ -76,16 +76,13 @@ export interface UpdateSubscriptionFormContext {
 }
 
 interface UpdateSubscriptionFormContextValue {
-	// Core data
 	formContext: UpdateSubscriptionFormContext;
 	form: UseUpdateSubscriptionForm;
 	formValues: UpdateSubscriptionForm;
 	features: Feature[];
 
-	// Trial state
 	trialState: UseTrialStateReturn;
 
-	// Derived values
 	originalItems: ProductItem[] | undefined;
 	initialPrepaidOptions: Record<string, number | undefined>;
 	changedPrepaidOptions: Record<string, number> | undefined;
@@ -94,14 +91,12 @@ interface UpdateSubscriptionFormContextValue {
 	hasChanges: boolean;
 	hasNoBillingChanges: boolean;
 
-	// Preview
 	previewQuery: UseUpdateSubscriptionPreviewReturn;
 
 	collectionMethodSwitch: CollectionMethodSwitch;
 
 	generation: BillingGenerationState;
 
-	// Plan editor state
 	showPlanEditor: boolean;
 	handleEditPlan: () => void;
 	handlePlanEditorSave: (
@@ -110,7 +105,6 @@ interface UpdateSubscriptionFormContextValue {
 	) => void;
 	handlePlanEditorCancel: () => void;
 
-	// Mutation
 	isPending: boolean;
 	handleConfirm: () => void;
 	handleInvoiceUpdate: (params: SendInvoiceSubmitParams) => Promise<{
@@ -181,7 +175,6 @@ export function UpdateSubscriptionFormProvider({
 	const formValues = useStore(form.store, (state) => state.values);
 	const { prepaidOptions } = formValues;
 
-	// Fetch the target version's product data when version differs from current
 	const isVersionChanged = formValues.version !== currentVersion;
 	const versionProductQuery = useProductVersionQuery({
 		productId: product?.id,
@@ -189,7 +182,6 @@ export function UpdateSubscriptionFormProvider({
 		enabled: isVersionChanged,
 	});
 
-	// Use the target version's product when a different version is selected
 	const isVersionReady = isVersionChanged && !!versionProductQuery.data;
 	const effectiveProduct = useMemo((): ProductV2 | undefined => {
 		if (isVersionReady) {
@@ -326,8 +318,6 @@ export function UpdateSubscriptionFormProvider({
 		newProduct: newProduct as FrontendProduct,
 	});
 
-	// The parent-product comparison above can't see license-level changes:
-	// staged seat totals and license customize price edits bill too.
 	const { rows: licenseRows } = usePlanLicenseRows({
 		planId: product?.id,
 		addLicenses: normalizedFormValues.addLicenses,
@@ -357,8 +347,6 @@ export function UpdateSubscriptionFormProvider({
 		pendingBillingCycleAnchor,
 	});
 
-	// Build the update body reactively — formValues triggers recomputation,
-	// buildRequestBody reads the latest snapshot from the form store.
 	const updateBody = useMemo(
 		() => buildRequestBody(),
 		[buildRequestBody, formValues],
@@ -366,7 +354,6 @@ export function UpdateSubscriptionFormProvider({
 
 	const collectionMethodSwitch = useCollectionMethodSwitch({
 		formContext,
-		// Reset usage alone isn't a plan change, but a switch request would drop it.
 		hasOtherChanges: hasChanges || formValues.resetUsage,
 		onApplied,
 		onSuccess,

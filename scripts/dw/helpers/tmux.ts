@@ -36,7 +36,6 @@ export function spawnDevInTmux(
 		killTmuxSession(name);
 	}
 
-	// Single-quote and escape each env value safely for shell.
 	const exports = Object.entries(env)
 		.map(([k, v]) => {
 			if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(k)) return "";
@@ -69,8 +68,6 @@ export function spawnDevInTmux(
 		fatal(`tmux new-session failed: ${res.stderr || res.stdout}`);
 	}
 
-	// tmux has spawned bash which holds the script open; safe to delete shortly.
-	// Give it a brief tick by deferring removal via a separate shell.
 	sh("bash", ["-c", `(sleep 5 && rm -f '${scriptPath}') >/dev/null 2>&1 &`]);
 	log(`started dev inside tmux session ${name} (use 'bun dw logs' / 'bun dw attach')`);
 }

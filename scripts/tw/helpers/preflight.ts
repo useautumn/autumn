@@ -1,22 +1,6 @@
-/**
- * `bun tw` preflight — fail fast with ACTIONABLE guidance before we spend minutes
- * building a warm parent and forking 50 sandboxes. Three gates:
- *
- *   1. Vercel auth resolvable (the SDK reads it from env).
- *   2. The Infisical-injected secrets every worker needs are present (catches
- *      "ran bare `bun scripts/tw/...` instead of the `bun tw` wrapper").
- *   3. Git is in a state the µVM can actually run: clean working tree AND the
- *      current HEAD is pushed to `origin/<ref>` (workers clone `origin/<ref>`, so
- *      uncommitted or unpushed work silently doesn't run). `--allow-dirty` skips
- *      gate 3 for intentional debugging.
- *
- * Designed for new teammates: every failure prints exactly what to run.
- */
-
 import chalk from "chalk";
 import type { ProviderName } from "./provider.ts";
 
-/** Run a git command, returning trimmed stdout ("" on failure). */
 const git = (...args: string[]): string => {
 	const proc = Bun.spawnSync(["git", ...args], {
 		stdout: "pipe",
@@ -25,7 +9,6 @@ const git = (...args: string[]): string => {
 	return new TextDecoder().decode(proc.stdout).trim();
 };
 
-/** Secrets the worker server needs, normally injected by the `bun tw` Infisical wrapper. */
 const REQUIRED_SECRETS = [
 	"ENCRYPTION_IV",
 	"ENCRYPTION_PASSWORD",
@@ -109,10 +92,6 @@ const checkGit = (ref: string): PreflightProblem | undefined => {
 	return undefined;
 };
 
-/**
- * Run all preflight gates. On any failure, prints each problem + its fix and
- * exits non-zero. `allowDirty` skips the git gate.
- */
 export const runPreflight = ({
 	ref,
 	allowDirty,
@@ -129,9 +108,6 @@ export const runPreflight = ({
 		}
 	};
 
-	// Only the Vercel backend touches the Vercel SDK, so its auth gate is
-	// irrelevant (and its `vercel link` fix message misleading) for Modal runs —
-	// which are the default. Gate it on the selected provider.
 	if (provider === "vercel") {
 		push(checkVercelAuth());
 	}
@@ -139,8 +115,6 @@ export const runPreflight = ({
 	if (!allowDirty) {
 		const gitProblem = checkGit(ref);
 		push(gitProblem);
-		// Lockfile state reflects what workers will clone only when the tree
-		// matches origin, which the git gate just proved.
 		if (!gitProblem) {
 			warnLockfileDrift();
 		}

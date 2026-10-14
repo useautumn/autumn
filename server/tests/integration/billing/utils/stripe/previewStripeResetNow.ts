@@ -4,7 +4,6 @@ import { Decimal } from "decimal.js";
 import type Stripe from "stripe";
 import { findStripeSubscriptionByStatus } from "../../set-plans/utils/subscriptionStateUtils";
 
-/** One unit moved on the shared subscription by the reset, in major units. */
 export type StripeResetNowChange = {
 	removeUnitAmount?: number;
 	addUnitAmount?: number;
@@ -41,7 +40,6 @@ const toPriceData = ({
 	},
 });
 
-/** The twin's items with the changes applied: one unit off a matching item, one new item per added unit. */
 const applyChangesToTwinItems = ({
 	twinSubscription,
 	changes,
@@ -83,10 +81,6 @@ const applyChangesToTwinItems = ({
 	];
 };
 
-/**
- * What Stripe invoices at a reset-now on a Stripe-native twin of the customer's live
- * subscription. A preview on Autumn's subscription is skewed: in flexible mode Stripe only credits what it billed itself.
- */
 export const previewStripeTwinResetNowTotal = async ({
 	ctx,
 	customerId,
@@ -143,7 +137,6 @@ export const previewStripeTwinResetNowTotal = async ({
 				items: applyChangesToTwinItems({ twinSubscription, changes }),
 			},
 		});
-		// Without an immediate invoice the preview is the next renewal, so nothing is billed at the reset.
 		const invoicedAtReset = preview.period_end <= msToSeconds(advancedTo);
 		return invoicedAtReset ? new Decimal(preview.total).div(100).toNumber() : 0;
 	} finally {

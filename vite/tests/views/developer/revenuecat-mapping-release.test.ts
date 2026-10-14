@@ -1,25 +1,3 @@
-/**
- * A hidden plan's RevenueCat mapping could never be released.
- *
- * `hasUnsupportedUsagePrice` drops metered plans from the mapping sheet, and
- * the sheet built both its rows and its save payload from that filtered list.
- * A plan that gained a metered item after being mapped therefore vanished while
- * still owning its RevenueCat ids — and because catalogV2 rejects an id claimed
- * by two plans (`assertRevenueCatIdsUnclaimed`), those ids could never be
- * reassigned and there was no row to release them from.
- *
- * Red (pre-fix):  `listRevenueCatProducts` did not exist; the sheet filtered
- *                 every unsupported plan out unconditionally, mapped or not.
- * Green (post-fix): the filter governs CREATING mappings, not rendering them —
- *                 an unsupported plan that still owns ids stays listed (flagged
- *                 `unsupported`, so the row goes read-only for adds), and
- *                 clearing its ids sends `products: []`, which
- *                 `executeRevenueCatMappings` reads as "delete the row".
- *
- * The React wiring (badge, hidden add-select, disabled packs input) is not
- * covered here — only the two pure decisions the fix turns on.
- */
-
 import { expect, test } from "bun:test";
 import { type ProductV2, UsageModel } from "@autumn/shared";
 import { toCatalogParams } from "@/hooks/queries/revcat/useRCMappings";

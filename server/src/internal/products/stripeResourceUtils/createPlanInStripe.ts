@@ -8,7 +8,6 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { initProductInStripe } from "@/internal/products/productUtils.js";
 
-/** Creates the Stripe product and prices for a plan that has never been pushed. */
 export const createPlanInStripe = async ({
 	ctx,
 	planId,
@@ -23,8 +22,6 @@ export const createPlanInStripe = async ({
 		env: ctx.env,
 	});
 
-	// The product is persisted before its prices, so a failure part way through
-	// leaves the plan mapped but incomplete. Only refuse a plan that is done.
 	if (
 		plan.processor?.id &&
 		!hasMissingStripeResourcesForProduct({ product: plan })
@@ -62,7 +59,6 @@ export const createPlanInStripe = async ({
 		});
 	}
 
-	// listFull is cached, so the mappings page would keep showing it unmapped.
 	await invalidateProductsCache({ orgId: ctx.org.id, env: ctx.env });
 
 	return created;

@@ -10,7 +10,6 @@ const REDIS_PROTOCOLS = new Set(["redis:", "rediss:"]);
 
 const orgIdParam = z.object({ org_id: z.string().min(1) });
 
-/** Host of the encrypted public mirror, for display — never the credentials. */
 const publicHostForDisplay = (
 	publicConnectionString: string | undefined,
 ): string | null => {
@@ -22,10 +21,6 @@ const publicHostForDisplay = (
 	}
 };
 
-/**
- * GET /admin/orgs/:org_id/redis
- * Returns the org's redis_config in frontend-safe shape (host + percent only).
- */
 export const handleGetAdminOrgRedisConfig = createRoute({
 	scopes: [Scopes.Superuser],
 	params: orgIdParam,
@@ -53,11 +48,6 @@ export const handleGetAdminOrgRedisConfig = createRoute({
 	},
 });
 
-/**
- * PATCH /admin/orgs/:org_id/redis  body: { connectionString }
- * Initial-create the redis_config for the target org. Encrypts connection
- * string, stores host separately, sets migrationPercent: 0.
- */
 export const handleUpsertAdminOrgRedisConfig = createRoute({
 	scopes: [Scopes.Superuser],
 	params: orgIdParam,
@@ -156,11 +146,6 @@ export const handleUpsertAdminOrgRedisConfig = createRoute({
 	},
 });
 
-/**
- * PATCH /admin/orgs/:org_id/redis/public-url  body: { publicConnectionString }
- * Set or update the public mirror on an existing config — the create route
- * refuses once a config exists, and delete is blocked mid-migration.
- */
 export const handleUpdateAdminOrgRedisPublicUrl = createRoute({
 	scopes: [Scopes.Superuser],
 	params: orgIdParam,
@@ -213,8 +198,6 @@ export const handleUpdateAdminOrgRedisPublicUrl = createRoute({
 			},
 		});
 		await clearOrgCache({ db, orgId: org.id, env: ctx.env, logger });
-		// Pool keys on redis_config.url, which didn't change — evict so the next
-		// getOrgRedis re-resolves with the new public string.
 		removeOrgRedis({ orgId: org.id });
 
 		logger.info(
@@ -225,12 +208,6 @@ export const handleUpdateAdminOrgRedisPublicUrl = createRoute({
 	},
 });
 
-/**
- * PATCH /admin/orgs/:org_id/redis/migration  body: { migrationPercent }
- * Update the migrationPercent field. Stores previous value + timestamp so
- * the staleness primitive (isRedisMigrationCacheStale) can evict entries
- * whose bucket crossed the threshold.
- */
 export const handleUpdateAdminOrgRedisMigration = createRoute({
 	scopes: [Scopes.Superuser],
 	params: orgIdParam,
@@ -273,11 +250,6 @@ export const handleUpdateAdminOrgRedisMigration = createRoute({
 	},
 });
 
-/**
- * DELETE /admin/orgs/:org_id/redis
- * Removes the redis_config entirely. Refuses while migrationPercent > 0
- * to prevent yanking the rug from under in-flight customers.
- */
 export const handleDeleteAdminOrgRedisConfig = createRoute({
 	scopes: [Scopes.Superuser],
 	params: orgIdParam,

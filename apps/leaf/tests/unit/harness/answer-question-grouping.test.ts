@@ -57,8 +57,6 @@ const { answerAgentQuestion } = await import(
 	"../../../src/internal/agentRuntime/actions/answerAgentQuestion/answerAgentQuestion.js"
 );
 
-// Answering a question rebuilds the card, so the grouped writes must survive it
-// — otherwise half the request is silently dropped.
 describe("answering a question keeps the grouped writes", () => {
 	test("passes the withheld writes to the chained approval", async () => {
 		chainedCalls.length = 0;

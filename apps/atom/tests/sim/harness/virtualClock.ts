@@ -1,4 +1,3 @@
-/** mulberry32: a small seeded generator; the same seed replays the same run. */
 export const createSeededRandom = (seed: number) => {
 	let state = seed >>> 0;
 	const next = (): number => {
@@ -22,10 +21,6 @@ export type SeededRandom = ReturnType<typeof createSeededRandom>;
 
 type Wake = { at: number; seq: number; resolve: () => void };
 
-/**
- * Discrete time: every wait registers a wake, and `run` fires wakes in order, letting the promise chains
- * between them settle before the clock moves. Nothing in a simulated run touches a real timer.
- */
 export const createVirtualClock = ({
 	startAt = 1_700_000_000_000,
 }: {
@@ -40,7 +35,6 @@ export const createVirtualClock = ({
 			wakes.push({ at: now + Math.max(0, ms), seq: seq++, resolve });
 		});
 
-	/** Lets every promise chain run to its next wait: a few macrotask turns, until nothing new was scheduled. */
 	const settle = async (): Promise<void> => {
 		for (let turn = 0; turn < 50; turn++) {
 			const before = seq;
@@ -50,7 +44,6 @@ export const createVirtualClock = ({
 		}
 	};
 
-	/** Advances to `until`, firing every wake due by then in order. */
 	const run = async (ms: number): Promise<void> => {
 		const until = now + ms;
 		await settle();

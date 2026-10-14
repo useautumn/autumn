@@ -16,7 +16,6 @@ import {
 } from "../licensePlanUtils";
 import { rebaseAdoptedLicenseCustomize } from "./rebaseAdoptedLicenseCustomize";
 
-/** Uncustomized follow: share stock in place; write on a child mint or parent mint. */
 const propagatedStockPlanLicense = ({
 	currentPlanLicense,
 	child,
@@ -42,10 +41,6 @@ const propagatedStockPlanLicense = ({
 	};
 };
 
-/**
- * Customized follow: rebase the overlay onto the new child. licenseProduct
- * is always next, so a mint re-points in the same write.
- */
 const propagatedOverlayPlanLicense = ({
 	ctx,
 	currentPlanLicense,
@@ -94,10 +89,6 @@ const propagatedPlanLicense = ({
 		? propagatedOverlayPlanLicense({ ctx, currentPlanLicense, child })
 		: propagatedStockPlanLicense({ currentPlanLicense, child, parent });
 
-/**
- * Child-driven adopt: listed parents follow this child's next items.
- * In-place uncustomized share stock; mint/promote may re-point.
- */
 export const computePropagatedPlanLicenses = ({
 	ctx,
 	parent,

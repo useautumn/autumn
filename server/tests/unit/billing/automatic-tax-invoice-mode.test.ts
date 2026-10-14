@@ -1,5 +1,3 @@
-/** Invoice mode taxes automatically and blocks on a missing tax location instead of silently skipping tax. */
-
 import { describe, expect, test } from "bun:test";
 import type { BillingContext } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";

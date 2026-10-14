@@ -29,9 +29,7 @@ export const apiKeys = pgTable(
 			.notNull()
 			.references(() => users.id),
 		name: text("name").notNull(),
-		/** First 8 chars shown in the UI (`twd_ab12…`). */
 		prefix: text("prefix").notNull(),
-		/** sha256 of the full key; the plaintext is shown once at creation. */
 		keyHash: text("key_hash").notNull(),
 		lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
 		revokedAt: timestamp("revoked_at", { withTimezone: true }),

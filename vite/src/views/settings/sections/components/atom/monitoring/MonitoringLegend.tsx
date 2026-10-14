@@ -4,7 +4,6 @@ import type {
 	AtomMetricsValues,
 } from "./atomMetricsChartData";
 
-/** Each series' colour and name beside its latest reading. */
 export const MonitoringLegend = ({
 	series,
 	latest,

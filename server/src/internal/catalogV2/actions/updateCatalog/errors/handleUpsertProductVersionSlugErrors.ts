@@ -2,7 +2,6 @@ import { ErrCode, RecaseError } from "@autumn/shared";
 import { detectVersionSlugCollisions } from "@/internal/catalogV2/actions/updateCatalog/errors/detectVersionSlugCollisions";
 import type { UpdateCatalogPlan } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogPlan";
 
-/** Block projected version_slug clashes on the same plan id (swap-safe: final set). */
 export const handleUpsertProductVersionSlugErrors = ({
 	updateCatalogPlan,
 }: {

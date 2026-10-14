@@ -1,6 +1,5 @@
 import { RecaseError } from "@autumn/shared";
 
-/** A delete or recalculation that matched no grant: legacy's wording, shared by both lanes. */
 export const balanceRowsNotFoundError = ({
 	customerId,
 	featureId,

@@ -1,24 +1,3 @@
-/**
- * TDD tests for the V2 batch reset worker (batchResetCustomerEntitlementsV2):
- * candidates that must NOT be reset, and the verdicts they receive.
- *
- * Contract under test:
- *   Behaviors:
- *     - price-backed ent on a live subscription -> verdict
- *       "resets_via_invoice"; balance AND next_reset_at untouched (that reset
- *       is owned by the invoice.created webhook); reset_by_invoice = true is
- *       persisted so the scan stops re-picking the row
- *     - past_due product WITHOUT config.ignore_past_due -> verdict
- *       "no_action" (reason product_past_due); untouched
- *     - past_due product WITH config.ignore_past_due = true -> resets normally
- *     - expired product -> verdict "should_expire"; cusEnt marked expired
- *     - entitlement flipped to unlimited (monthly) -> still resets: usage
- *       counter back to 0, next_reset_at advanced (unlimited rows with an
- *       interval are a reset candidate like any consumable)
- *   Side effects:
- *     - should_expire persists the denormalized cusEnt expiry flag.
- */
-
 import { expect, test } from "bun:test";
 import {
 	AllowanceType,
@@ -90,7 +69,6 @@ test.concurrent(
 			customerEntitlementIds: [customerEntitlement!.id],
 		});
 
-		// ── Contract: resets_via_invoice verdict, no mutation ───────────
 		expect(result.resetMutations.length).toBe(0);
 		expect(result.verdicts).toEqual([
 			expect.objectContaining({
@@ -99,7 +77,6 @@ test.concurrent(
 			}),
 		]);
 
-		// ── Contract: row untouched, but flagged reset_by_invoice ───────
 		const rowAfter = await fetchCustomerEntitlementRow({
 			db: ctx.db,
 			customerEntitlementId: customerEntitlement!.id,
@@ -108,7 +85,6 @@ test.concurrent(
 		expect(rowAfter.next_reset_at).toBe(pastTime);
 		expect(rowAfter.reset_by_invoice).toBe(true);
 
-		// ── Contract: the scan no longer picks the flagged row up ───────
 		const page = await getResetEligibleCustomerEntitlementsPage({
 			db: ctx.db,
 			dueBefore: Date.now(),
@@ -316,8 +292,6 @@ test.concurrent(
 		});
 		expect(customerEntitlement).toBeDefined();
 
-		// Simulate the catalog entitlement having become unlimited while the
-		// cusEnt still carries a stale next_reset_at.
 		await ctx.db
 			.update(entitlements)
 			.set({ allowance_type: AllowanceType.Unlimited, allowance: null })

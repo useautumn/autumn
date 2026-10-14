@@ -22,15 +22,6 @@ const DELIVERY_OFF: MigrationWebhookControls = {
 	eventTypes: [],
 };
 
-/**
- * Resolves how a run delivers webhooks — once at run start, inside the run
- * task. Never the request path: sizing the scope and reading the org's Svix
- * endpoints are both too slow to sit in front of the API response.
- *
- *   1. an explicit `sendWebhooks` wins;
- *   2. otherwise bulk runs (> threshold customers) default off;
- *   3. either way, the org must actually subscribe to at least one event.
- */
 export const resolveMigrationWebhookControls = async ({
 	ctx,
 	filter,
@@ -52,8 +43,6 @@ export const resolveMigrationWebhookControls = async ({
 		matchedCustomerCount: await resolveScopeSize({
 			ctx,
 			filter,
-			// Lazy runs migrate on customer reads, so there's no up-front scope
-			// to size; an explicit choice needs no sizing either.
 			skipSizing: lazyRun || params?.sendWebhooks !== undefined,
 		}),
 	});
@@ -69,8 +58,6 @@ export const resolveMigrationWebhookControls = async ({
 	return { ...resolved, eventTypes };
 };
 
-/** Stops counting once the threshold is exceeded — the exact size past that
- * point can't change the decision. */
 const resolveScopeSize = async ({
 	ctx,
 	filter,

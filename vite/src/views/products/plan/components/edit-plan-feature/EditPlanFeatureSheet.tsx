@@ -45,7 +45,6 @@ export function EditPlanFeatureSheet({
 	const isInvoiceEditor = useIsInvoiceEditor();
 	const [editFeatureOpen, setEditFeatureOpen] = useState(false);
 
-	// The toggle only picks which field the tier inputs edit; it never moves stored prices.
 	const [volumePricingMode, setVolumePricingMode] = useState(() =>
 		itemToVolumePricingModeOnOpen({ item }),
 	);
@@ -82,15 +81,12 @@ export function EditPlanFeatureSheet({
 
 	const handleFeatureUpdateSuccess = async (oldId: string, newId: string) => {
 		if (oldId !== newId && product.items) {
-			// Wait for features to be refetched to avoid race condition
 			await refetch();
-			// Update the feature_id in the product item
 			const updatedItems = product.items.map((i) =>
 				i.feature_id === oldId ? { ...i, feature_id: newId } : i,
 			);
 			setProduct({ ...product, items: updatedItems });
 
-			// Also update initialItem so it doesn't show as having changes
 			if (item?.feature_id === oldId) {
 				setInitialItem({ ...item, feature_id: newId });
 			}
@@ -108,7 +104,6 @@ export function EditPlanFeatureSheet({
 		}
 	};
 
-	// Copy the open item unless the user is copying selected text
 	useHotkeys("mod+c", () => {
 		if (window.getSelection()?.toString()) return;
 		handleCopyItem();
@@ -120,7 +115,6 @@ export function EditPlanFeatureSheet({
 
 	const isFeaturePrice = isFeaturePriceItem(item);
 
-	// Allow confirming a priced feature that has a $0 tier (valid zero-price config)
 	const isZeroPriceItem =
 		isFeaturePrice &&
 		item.tiers?.length === 1 &&
@@ -131,7 +125,6 @@ export function EditPlanFeatureSheet({
 
 	return (
 		<div className="flex flex-col h-full overflow-hidden">
-			{/* Scrollable content area */}
 			<div className="flex-1 overflow-y-auto overscroll-none [scrollbar-gutter:stable]">
 				{!isOnboarding && (
 					<SheetHeader
@@ -221,10 +214,8 @@ export function EditPlanFeatureSheet({
 				)}
 			</div>
 
-			{/* Footer stays at bottom */}
 			<SheetFooterActions isDirty={hasItemChanges} canConfirm={canConfirm} />
 
-			{/* Edit Feature Sheet */}
 			{isAnyCreditSystem(feature?.type) ? (
 				<UpdateCreditSystemSheet
 					open={editFeatureOpen}

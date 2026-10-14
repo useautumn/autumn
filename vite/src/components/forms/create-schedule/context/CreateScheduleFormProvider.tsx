@@ -85,23 +85,15 @@ interface CreateScheduleFormContextValue {
 	products: ProductV2[];
 	features: Feature[];
 	isExistingSchedule: boolean;
-	/** First phase may start in the past; a live subscription is recreated from that date. */
 	allowFirstPhaseBackdate: boolean;
-	/** An existing schedule's started first phase may move earlier, recreating its live subscription. */
 	allowStartedPhaseBackdate: boolean;
-	/** The first phase is backdated over a live subscription, which set_plans recreates from that date. */
 	backdatesLiveSubscription: boolean;
 	hasActiveSubscription: boolean;
-	/** The first phase replaces a live plan, resets the cycle or ends a trial now, so its usage can carry over. */
 	carriesUsageNow: boolean;
-	/** What the Proration row shows until the user changes it. */
 	defaultFirstPhaseProration: BillingBehavior;
-	/** Proration can't change what's billed here, so the row stays as shown and explains why. */
 	prorationOverride: ProrationBehaviorOverride | undefined;
-	/** A new Stripe subscription with recurring/usage pricing is created by the immediate phase. */
 	createsRecurringSubscription: boolean;
 	subscriptionTarget: SetPlansSubscriptionTarget | null;
-	/** The trial the edited subscription is running now, if any. */
 	currentTrial: CurrentScheduleTrial | null;
 	canScheduleTrial: boolean;
 	isPending: boolean;
@@ -114,7 +106,6 @@ interface CreateScheduleFormContextValue {
 		paymentUrl: string | null | undefined;
 	}>;
 	preview: SetPlansPreviewResponse | null | undefined;
-	/** The preview's discounts on the edited subscription; customer-level coupons aren't removable here. */
 	appliedDiscounts: SetPlansPreviewDiscount[];
 	previewQuery: { data: SetPlansPreviewResponse | null | undefined };
 	isPreviewLoading: boolean;
@@ -185,8 +176,6 @@ export function CreateScheduleFormProvider({
 		[scopedCustomerProducts],
 	);
 
-	// Only a new scoped subscription can backdate its immediate phase, so this
-	// asks whether any scope the opening phase targets is already subscribed.
 	const hasActiveSubscription = useMemo(() => {
 		const openingScopes = new Set(
 			(formValues.phases[0]?.plans ?? [])
@@ -234,8 +223,6 @@ export function CreateScheduleFormProvider({
 		hasActiveSubscription,
 	});
 
-	// Mirrors attach: a new sub is created when there's no active subscription, and
-	// usage-only plans still bill recurring even though nothing is due immediately.
 	const createsRecurringSubscription =
 		!hasActiveSubscription && immediatePlansPaidRecurring;
 
@@ -317,7 +304,6 @@ export function CreateScheduleFormProvider({
 		formValues,
 		currentTrial,
 	});
-	// Attach's rule, worked out once when the sheet opens: No charges on a live subscription, prorated on a new one.
 	const [defaultFirstPhaseProration] = useState(() =>
 		defaultProrationBehavior({ noChargesAllowed: hasActiveSubscription }),
 	);
@@ -420,7 +406,6 @@ export function CreateScheduleFormProvider({
 		removedRewardIds: formValues.removedRewardIds,
 	});
 
-	// Clear stale backdates when the selected scope can no longer use them.
 	useEffect(() => {
 		if (allowFirstPhaseBackdate || isExistingSchedule) return;
 		const { phases } = form.store.state.values;
@@ -452,8 +437,6 @@ export function CreateScheduleFormProvider({
 		nowMs,
 	});
 
-	// Checkout and a later first phase set this, so drop it once neither applies
-	// — otherwise a stale `true` reaches a direct submit.
 	useEffect(() => {
 		if (preview?.redirect_to_checkout || startsLater) return;
 		if (form.store.state.values.enablePlanImmediately) {
@@ -604,7 +587,6 @@ export function CreateScheduleFormProvider({
 				form={form}
 				nowMs={nowMs}
 				existingPlans={existingPlans}
-				// Updating a schedule can't attach new plans, so only a new one can.
 				canMakeUnscheduled={!hasScheduledPlans}
 				findSubscriptionConflict={findPlanSubscriptionConflict}
 				subscriptionLinks={subscriptionLinks}

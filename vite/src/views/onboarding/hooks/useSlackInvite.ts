@@ -15,8 +15,6 @@ const IDLE_STATE: SlackInviteState = { status: "idle" };
 const storageKey = ({ orgId }: { orgId: string }) =>
 	`autumn_slack_invite_${orgId}`;
 
-/** Raw strings are what's compared between reads, so `useSyncExternalStore`
- * sees a stable snapshot until something is actually written. */
 const readRaw = ({ orgId }: { orgId: string }): string | null => {
 	try {
 		return localStorage.getItem(storageKey({ orgId }));
@@ -34,8 +32,6 @@ const parseState = (raw: string | null): SlackInviteState => {
 	}
 };
 
-// The sidebar menu and the onboarding card are mounted together, so a write
-// from one has to reach the other.
 const listeners = new Set<() => void>();
 
 const subscribe = (listener: () => void) => {
@@ -52,14 +48,10 @@ const writeState = ({
 }) => {
 	try {
 		localStorage.setItem(storageKey({ orgId }), JSON.stringify(state));
-	} catch {
-		// Losing the flag only costs us a re-shown card.
-	}
+	} catch {}
 	for (const listener of listeners) listener();
 };
 
-/** Requests a Slack Connect invite to the org's shared channel for the
- * signed-in user. Slack emails the invite itself. */
 export const useSlackInvite = () => {
 	const { org } = useOrg();
 	const axiosInstance = useAxiosInstance();

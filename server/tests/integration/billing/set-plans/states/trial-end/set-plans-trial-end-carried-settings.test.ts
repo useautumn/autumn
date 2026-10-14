@@ -1,13 +1,3 @@
-/**
- * Ending a trial onto a future anchor recreates the subscription. The new one keeps everything the old one was
- * billed with: collection method and terms, payment method, tax rates, metadata, and discounts as Stripe would
- * have kept applying them.
- *
- * Red (before):  only a paid backdate carried settings, so this recreate dropped them all; a send_invoice
- *                customer became charge_automatically.
- * Green (after): every recreate carries them, and the preview bills what Stripe invoices.
- */
-
 import { expect, test } from "bun:test";
 import { stripeRefToId } from "@autumn/shared";
 import chalk from "chalk";
@@ -159,7 +149,6 @@ test.concurrent(
 				},
 			});
 
-		// The old discount reaches the trial-end renewal and the one after: two months from now.
 		const [carried] = recreated.discounts;
 		const carriedCoupon =
 			typeof carried === "string" ? undefined : carried?.source?.coupon;

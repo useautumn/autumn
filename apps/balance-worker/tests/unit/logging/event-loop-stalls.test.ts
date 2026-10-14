@@ -63,7 +63,6 @@ function createFixture({
 			cpuModel: "Intel(R) Xeon(R) Platinum 8259CL CPU @ 2.50GHz",
 		},
 	});
-	/** Advance the clock by `elapsedMs`, doing `work` in that time, then fire the timer. */
 	function elapse({
 		elapsedMs,
 		work,

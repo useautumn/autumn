@@ -43,10 +43,6 @@ const expireCustomerProduct = ({
 	},
 });
 
-/**
- * Build cusProducts (status=Scheduled) for every non-immediate phase plus
- * the per-phase descriptors that `persistSyncPhases` writes after execute.
- */
 export const computeSyncFuturePhases = ({
 	ctx,
 	syncContext,

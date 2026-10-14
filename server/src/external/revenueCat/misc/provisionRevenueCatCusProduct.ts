@@ -33,12 +33,6 @@ const subscriptionGivesAccess = (sub: RevenueCatSubscription): boolean =>
 	sub.status === "active" ||
 	sub.status === "trialing";
 
-/**
- * Best-effort: resolve the RC subscription/purchase that provisioned this
- * cus_product and store its id on `cusProduct.processor.id`. NEVER throws or
- * slows the insert — on any error/no-match the product stays inserted without
- * the id. Logs the outcome under `rc_id_fetch`.
- */
 export const storeRevenueCatProcessorId = async ({
 	ctx,
 	cusProduct,
@@ -76,7 +70,6 @@ export const storeRevenueCatProcessorId = async ({
 			cli.listCustomerPurchases(appUserId),
 		]);
 
-		// Build fresh in mock mode so concurrent tests don't share a stale catalog.
 		const storeIdentifierMap = await getRevenueCatStoreIdentifierMap({
 			rcCli: cli,
 			orgId: org.id,
@@ -120,7 +113,6 @@ export const storeRevenueCatProcessorId = async ({
 			}
 		}
 
-		// Prefer active, then most recent.
 		candidates.sort((a, b) =>
 			a.active !== b.active
 				? Number(b.active) - Number(a.active)
@@ -139,13 +131,11 @@ export const storeRevenueCatProcessorId = async ({
 			return;
 		}
 
-		// Merge, not replace: the period stamped at provisioning must survive this async write.
 		await customerProductRepo.mergeProcessor({
 			db,
 			cusProductId: cusProduct.id,
 			processor: { type: ProcessorType.RevenueCat, id: matchedId },
 		});
-		// Invalidate rather than patch: this lands after the webhook, and a whole-processor patch could regress the cache.
 		await invalidateCachedFullSubject({
 			ctx,
 			customerId: cusProduct.customer_id ?? "",
@@ -167,21 +157,6 @@ export const storeRevenueCatProcessorId = async ({
 	}
 };
 
-/**
- * Provisions a RevenueCat customer product via V2 attach.
- *
- * RC payments happen on App Store / Play Store / etc., so Autumn never reads
- * or writes Stripe state for these flows. We funnel through V2 `attach()` so
- * the new cus_product, entitlements, prices, line items, webhooks, and rollover
- * carry-overs all run through the same pipeline as Stripe/Vercel, just with
- * the Stripe and external-PSP guards disabled.
- *
- * Handles new / upgrade / downgrade scenarios via `computeAttachPlan`'s
- * transition logic — the caller does not need to expire the outgoing
- * cus_product manually. Transitions are forced immediate (`plan_schedule`)
- * since RC is the payment source-of-truth; we don't schedule downgrades
- * end-of-cycle the way a Stripe-billed attach would.
- */
 export const provisionRevenueCatCusProduct = async ({
 	ctx,
 	customer,
@@ -203,9 +178,6 @@ export const provisionRevenueCatCusProduct = async ({
 }): Promise<{ cusProduct: FullCusProduct; product: FullProduct }> => {
 	const { db, org, env } = ctx;
 
-	// `resolveRevenuecatResources` loads `customer` with `withEntities: true`, which
-	// is what `setupFullCustomerContext` would do anyway. Passing it as an override
-	// skips a redundant DB fetch.
 	const contextOverride: BillingContextOverride = {
 		fullCustomer: customer,
 		productContext: { fullProduct: product },
@@ -230,8 +202,6 @@ export const provisionRevenueCatCusProduct = async ({
 			redirect_mode: "if_required",
 			no_billing_changes: true,
 			enable_plan_immediately: true,
-			// RC payments are source-of-truth: apply product changes now rather
-			// than scheduling downgrades end-of-cycle like Stripe-style attaches.
 			plan_schedule: "immediate",
 			...(revenuecatMetadata ? { metadata: revenuecatMetadata } : {}),
 			...(featureQuantities?.length
@@ -272,8 +242,6 @@ export const provisionRevenueCatCusProduct = async ({
 		});
 	}
 
-	// Fire-and-forget: must not block or slow the webhook response. The function
-	// self-logs every outcome; the outer catch guards the pre-try client await.
 	void storeRevenueCatProcessorId({
 		ctx,
 		cusProduct,

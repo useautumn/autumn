@@ -2,11 +2,6 @@ import { AnimatePresence, motion } from "motion/react";
 import { createPortal } from "react-dom";
 import { useSheet } from "@/components/v2/inline-custom-plan-editor/PlanEditorContext";
 
-/**
- * Determines if the sheet should close based on the mouse down event.
- * Clicking out while an input inside the sheet is focused blurs it first instead
- * of closing, so a stray click after typing doesn't unexpectedly dismiss the sheet.
- */
 function shouldCloseSheetOnMouseDown({
 	e,
 	sheetType,
@@ -43,10 +38,6 @@ function shouldCloseSheetOnMouseDown({
 	return !!sheetType;
 }
 
-/**
- * Shared overlay component for plan editors.
- * Portals to [data-main-content] by default, or renders inline if `inline` prop is true.
- */
 export function SheetOverlay({
 	inline = false,
 	zIndex = 40,

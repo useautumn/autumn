@@ -18,7 +18,6 @@ const BIN_LABELS: Record<Granularity, string> = {
 
 export const BinSizeCell = () => {
 	const { granularities, binSize, setBinSize } = useTimeRange();
-	// Some ranges allow a single bin size, so there is nothing to choose.
 	const hasChoice = granularities.length > 1;
 
 	return (

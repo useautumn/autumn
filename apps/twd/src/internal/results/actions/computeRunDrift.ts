@@ -8,7 +8,6 @@ const NEW_FAILURE_MIN_PASS_RATE = 0.9;
 const SLOW_FACTOR = 1.5;
 const SLOW_MIN_MS = 30_000;
 
-/** Flags files that newly fail (baseline pass rate ≥ 0.9) or run > 1.5× a swarm baseline p90 (and > 30s); none for repeat runs. */
 export const computeRunDrift = async ({
 	ctx,
 	runId,

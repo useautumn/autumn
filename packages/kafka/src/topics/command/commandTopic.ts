@@ -11,7 +11,6 @@ import type {
 } from "../../lib/types/topicSchema.js";
 import type { CommandRecord } from "./types/commandRecord.js";
 
-/** Same key as the metering log, so a command lands on the partition its mutation will. */
 function commandRecordToKey({ record }: { record: CommandRecord }): string {
 	return meteringIdentityToPartitionKey({ identity: record.identity });
 }
@@ -26,8 +25,6 @@ const QUEUED_COMMAND_TYPES: ReadonlySet<string> = new Set([
 	"updateBalance",
 ] satisfies CommandRecord["type"][]);
 
-/** Cast, not parsed: our server built and validated it, and a newer server's field must not drop the record.
- *  The type is still checked, because the consumer routes on it. */
 function parseCommandPayload({
 	type,
 	payload,

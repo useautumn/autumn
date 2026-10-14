@@ -25,7 +25,6 @@ import {
 } from "../catalogUtils/convertCatalogUtils.js";
 import { subjectStateToFullSubject } from "../subjectUtils/convertSubjectUtils.js";
 
-// The shared row schemas as the worker's rows need them read: a newer build's columns and values pass through.
 const fullCustomerEntitlementSchema = openSchema({
 	name: "fullCustomerEntitlement",
 	schema: FullCustomerEntitlementSchema,
@@ -37,14 +36,12 @@ const fullCusProductSchema = openSchema({
 	schema: FullCusProductSchema,
 });
 
-/** A pool's source row holds no balance; the worker keeps it for apply-plan, the Postgres read never loads it. */
 const isPooledContributionSource = ({
 	customerEntitlement,
 }: {
 	customerEntitlement: WorkerFullCustomerEntitlement;
 }) => customerEntitlement.pooled_contribution_id != null;
 
-/** The Postgres read drops expired rollovers once, at hydration; a resident row must drop them by the clock at read. */
 const withoutExpiredRollovers = ({
 	customerEntitlement,
 	now,
@@ -69,7 +66,6 @@ const toFullCustomerEntitlement = ({
 		withoutExpiredRollovers({ customerEntitlement, now }),
 	);
 
-/** A product's license pools as the worker holds them, each with its definition; a removed link keeps planLicense null. */
 const customerLicensesOf = ({
 	state,
 	catalog,
@@ -94,7 +90,6 @@ const customerLicensesOf = ({
 				: null,
 		}));
 
-/** Legacy's order: the entity's own plans, then priced before free, main before add-on, newest first. */
 const compareCustomerProductsForRender = ({
 	internalEntityId,
 }: {
@@ -129,7 +124,6 @@ const isBoolean = ({
 	customerEntitlement: WorkerFullCustomerEntitlement;
 }) => customerEntitlement.entitlement.feature.type === FeatureType.Boolean;
 
-/** Legacy's ladder for a flag's source: an active plan, a past-due one, a loose grant, anything else. */
 const flagPriorityOf = ({
 	customerProductStatus,
 }: {
@@ -141,7 +135,6 @@ const flagPriorityOf = ({
 	return 3;
 };
 
-/** One row per boolean feature, the way legacy's normalize picks it: best ladder rung, first seen on a tie. */
 const renderedFlagIdsOf = ({
 	customerProducts,
 	looseCustomerEntitlements,
@@ -158,7 +151,6 @@ const renderedFlagIdsOf = ({
 		priority: number;
 	}) => {
 		if (!isBoolean({ customerEntitlement })) return;
-		// A source never renders, so it must not win the flag from the pool it feeds.
 		if (isPooledContributionSource({ customerEntitlement })) return;
 		const featureId = customerEntitlement.entitlement.feature.id;
 		const winner = winnerByFeatureId.get(featureId);
@@ -188,7 +180,6 @@ const renderedFlagIdsOf = ({
 	return new Set([...winnerByFeatureId.values()].map(({ id }) => id));
 };
 
-/** The entity view's own fields; a customer view has none. */
 const subjectEntityOf = ({
 	state,
 }: {
@@ -198,7 +189,6 @@ const subjectEntityOf = ({
 	"subjectType" | "entityId" | "internalEntityId" | "entity"
 > => {
 	const { entityId } = state.identity;
-	// A pending entity has no id, so it is named by its internal id, as legacy names it.
 	const entityKey = state.entity?.id ?? state.entity?.internal_id;
 	if (!entityId || entityKey !== entityId) return { subjectType: "customer" };
 	const entity = entitySchema.parse(state.entity);
@@ -210,11 +200,6 @@ const subjectEntityOf = ({
 	};
 };
 
-/**
- * A subject as the worker holds it, in the shape `getApiCustomerV2` / `getApiEntityV2` render:
- * the customer's rows, plus the entity's own when the read named one.
- * Parsed, not cast: the worker's rows are whole only once hydrated since the widening.
- */
 export const workerStateToFullSubject = ({
 	state,
 	catalog,
@@ -226,7 +211,6 @@ export const workerStateToFullSubject = ({
 	catalog: Catalog;
 	subscriptions: Subscription[];
 	invoices: Invoice[];
-	/** The clock expiry is judged by; a test pins it. */
 	now?: number;
 }): FullSubject => {
 	const workerFullSubject = subjectStateToFullSubject({

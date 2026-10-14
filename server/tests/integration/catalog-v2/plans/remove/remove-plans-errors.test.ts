@@ -1,7 +1,3 @@
-/**
- * catalogV2.update / preview_update — remove_plans error cases.
- */
-
 import { test } from "bun:test";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils.js";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";

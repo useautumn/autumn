@@ -8,8 +8,6 @@ import { entityKey } from "@/components/forms/shared/utils/entityKey";
 import { CUSTOMER_LEVEL_LABEL } from "@/components/forms/shared/utils/scopeLabel";
 import { SheetSection } from "@/components/v2/sheets/SharedSheetComponents";
 
-// Non-empty sentinel: cmdk derives a value from text content for empty ones,
-// which breaks both selection matching and clicking.
 const CUSTOMER_LEVEL_VALUE = "__customer_level__";
 const INHERITED_VALUE = "__inherited__";
 type EntityOption = Entity | null | typeof INHERITED_VALUE;
@@ -47,7 +45,6 @@ export function PlanEntityScopeSelector({
 	onSearchChange?: (search: string) => void;
 	isLoading?: boolean;
 	disabled?: boolean;
-	/** Renders the picker as a popover off this element instead of a full-width select. */
 	trigger?: ReactNode;
 	open?: boolean;
 	onOpenChange?: (nextOpen: boolean) => void;

@@ -14,11 +14,6 @@ import {
 
 type ServerEdgeConfigCtx = { org: { id: string }; env: AppEnv };
 
-/**
- * Read-modify-write an edge config through the server's superuser /admin route, so the
- * change lands in the server process (in memory under AUTUMN_EDGE_CONFIG_OVERRIDE_B64).
- * A Redis lock per path serializes test files, since the PUT replaces the whole config.
- */
 export const updateServerEdgeConfig = async <T>({
 	ctx,
 	path,
@@ -87,7 +82,6 @@ export const updateServerEdgeConfig = async <T>({
 
 const RATE_LIMIT_OVERRIDES_PATH = "/admin/rate-limit-overrides-config";
 
-/** Read-modify-write of the server's rate-limit overrides, refused unless edge config is in memory. */
 export const updateServerRateLimitOverrides = async ({
 	ctx,
 	update,
@@ -95,7 +89,6 @@ export const updateServerRateLimitOverrides = async ({
 	ctx: ServerEdgeConfigCtx;
 	update: (config: RateLimitOverridesConfig) => RateLimitOverridesConfig;
 }) => {
-	// Without the in-memory override the route writes the shared S3 config the fleet reads.
 	if (!process.env.AUTUMN_EDGE_CONFIG_OVERRIDE_B64) {
 		throw new Error(
 			"Server rate-limit override writes require AUTUMN_EDGE_CONFIG_OVERRIDE_B64 (in-memory edge config)",
@@ -110,10 +103,6 @@ export const updateServerRateLimitOverrides = async ({
 	});
 };
 
-/**
- * Sets the server's rate-limit override for one org key (id or slug), leaving other
- * entries untouched. Returns a restore that removes only that key.
- */
 export const setServerRateLimitOverride = async ({
 	ctx,
 	orgKey,

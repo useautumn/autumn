@@ -26,7 +26,6 @@ export const PREVIEW_REVEAL_TRANSITION: Transition = {
 	ease: SHEET_EASE,
 };
 
-/** The only thing on screen until a preview has fully resolved. */
 export function PreviewLoadingSection() {
 	return (
 		<SheetSection withSeparator={false}>
@@ -37,7 +36,6 @@ export function PreviewLoadingSection() {
 
 type PreviewLineItems = ComponentProps<typeof LineItemsContent>["lineItems"];
 
-/** Loose enough to accept every billing preview response shape. */
 type PreviewData = {
 	currency: string;
 	subtotal: number;
@@ -57,18 +55,12 @@ type PreviewData = {
 	checkout_type?: "stripe_checkout" | "autumn_checkout" | null;
 };
 
-/** Optional fields so confirmation stages can pass a bare `{ data }`. */
 export type PreviewSectionQuery = {
 	isLoading?: boolean;
 	data?: (PreviewData & object) | null;
 	error?: unknown;
 };
 
-/**
- * Who renders the bottom-line amount. "block" is the subtotal/tax/credits
- * stack; "row" is a plain total under the line items; "none" suits flows
- * where nothing is due now.
- */
 type TotalDueMode = "block" | "row" | "none";
 
 const resolvePreviewError = (error: unknown) => {
@@ -93,10 +85,6 @@ const formatCredit = ({
 		amountFormatOptions: { currencyDisplay: "narrowSymbol" },
 	});
 
-/**
- * Shared pricing preview. A shimmer holds the section until the first preview
- * resolves; refetches dim the last preview in place so the sheet never jumps.
- */
 export function PreviewSection({
 	previewQuery,
 	hidden = false,
@@ -112,19 +100,13 @@ export function PreviewSection({
 	nextCycleVariant = "secondary",
 }: {
 	previewQuery: PreviewSectionQuery;
-	/** Nothing to preview yet — render nothing at all. */
 	hidden?: boolean;
-	/** Override when the flow has extra loading state of its own. */
 	isLoading?: boolean;
-	/** Defaults to the response's line items. */
 	lineItems?: PreviewLineItems;
 	filterZeroAmounts?: boolean;
-	/** Keep the last preview on screen through a refetch instead of flashing the error. */
 	suppressErrorWhileLoading?: boolean;
 	totalDue?: TotalDueMode;
-	/** Turn off where a negative total is a refund rather than credit on file. */
 	showCreditNote?: boolean;
-	/** A future start date moves the whole charge to that date. */
 	startDate?: number | null;
 	refundBehavior?: string | null;
 	includeNextCycle?: boolean;
@@ -155,8 +137,6 @@ export function PreviewSection({
 		includeTotalDue: totalDue === "row",
 	});
 
-	// A future start date makes buildPreviewTotals emit its own primary row,
-	// so the block would be a second, contradictory bottom line.
 	const totalsBlockVisible =
 		totalDue === "block" &&
 		!totals.some((total) => total.variant === "primary");

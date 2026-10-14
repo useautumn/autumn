@@ -1,4 +1,3 @@
-/** Phase and remaining time from prepare.sh's `[qa-prepare]` lines, using measured step durations. */
 const STEPS: [marker: string, phase: string, doneMs: number][] = [
 	["ready for snapshot", "snapshotting", 115_000],
 	["dashboard built", "finishing migrations", 100_000],

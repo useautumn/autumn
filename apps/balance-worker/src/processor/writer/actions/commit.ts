@@ -108,9 +108,6 @@ function releaseDeferredRecords({
 	state.deferredCommitDue = false;
 }
 
-/** Kafka commit → answer log callers → hand the batch to the store, then straight
- *  on to the next batch. The store applies behind the log in order; the loop only
- *  waits for it when too many batches are still unapplied. */
 async function commitOutcomes({
 	scope,
 }: {
@@ -162,16 +159,6 @@ async function commitOutcomes({
 	}
 }
 
-/**
- * Waits for more of the queue before the next commit, but only where it pays.
- * A commit is three broker round trips whatever it carries, and on a busy
- * partition the commits arrive back to back with one or two records each: the
- * partition's throughput is then bounded by commits per second, and every track
- * waits behind that stream. A short linger lets a busy partition carry several
- * tracks per commit instead. A quiet partition, where the last batch held one
- * record, never waits: a linger there gathers nothing and costs every track
- * its length. A full batch ends the wait early.
- */
 async function lingerForBatch({
 	scope,
 }: {
@@ -193,10 +180,6 @@ async function lingerForBatch({
 	});
 }
 
-/** Hands a committed batch to the store. One flush runs at a time, and each takes
- *  every batch queued behind the one before it, because a flush costs about the same
- *  for one row as for hundreds. Order is the log's: batches join the queue in commit
- *  order and a flush applies them in that order. */
 function queueApply({
 	scope,
 	batch,
@@ -218,7 +201,6 @@ function queueApply({
 	state.applyTail = applyQueued({ scope });
 }
 
-/** The store is awaited now: a reader is waiting on it, a store-durable caller is, or a full flush is queued. */
 function applyIsDue({ scope }: { scope: PartitionWriterScope }): boolean {
 	const { state, ctx, config } = scope;
 	return (
@@ -231,8 +213,6 @@ function applyIsDue({ scope }: { scope: PartitionWriterScope }): boolean {
 	);
 }
 
-/** A flush costs about the same for one batch as for a full one, and repeated changes to a row fold into one,
- *  so batches gather until the apply is due or the linger ends; null applies now, without yielding. */
 function lingerForApply({
 	scope,
 }: {
@@ -267,7 +247,6 @@ async function applyQueued({
 			const linger = lingerForApply({ scope });
 			if (linger) await linger;
 			if (state.recoveryError) return;
-			// Read once per flush: the splice below removes exactly what was taken, whatever DB control says meanwhile.
 			const taken = state.unapplied.slice(
 				0,
 				maxBatchesPerFlushOf({ ctx, limits: config.limits }),
@@ -301,7 +280,6 @@ async function applyQueued({
 	}
 }
 
-/** Returns null when draining must stop: proven no-commit rejects, anything else is recovery. */
 async function appendBatch({
 	scope,
 	batch,
@@ -329,9 +307,6 @@ async function appendBatch({
 		}
 		return baseOffset;
 	} catch (cause) {
-		// Clearing speculative state is only safe when every committed batch is
-		// already in the store; otherwise memory holds rows the store lacks, so the
-		// partition rebuilds from the log instead.
 		const provenUncommitted =
 			cause instanceof MutationBatchNotCommittedError &&
 			state.unapplied.length === 0;
@@ -340,7 +315,6 @@ async function appendBatch({
 			rejectAllPending({ state, batch, error });
 			failAboveSettled({ scope, cause: error });
 			state.storeCompletion = Promise.resolve();
-			// Nothing is unapplied and nothing dropped will be stored: later waits cover only new writes.
 			state.lastRowSeq = state.storedSeq;
 		} else {
 			enterRecovery({ scope, batch, cause });
@@ -349,8 +323,6 @@ async function appendBatch({
 	}
 }
 
-/** A queued command that missed the log is a gap in the command stream: carrying on would let a
- *  later command commit past it, and the bookmark move over a command that never happened. */
 function holdsQueuedCommand({
 	state,
 	batch,
@@ -365,16 +337,6 @@ function isQueuedCommand(pending: PendingMutation): boolean {
 	return pending.mutation.source !== undefined;
 }
 
-/** The log is the record and the store is a projection of it, so once Kafka has
- *  the batch the outcome is durable and the caller can be answered. Everything the
- *  reply carries was decided in memory before either durability step: the balance
- *  is the state computed at decide time, and the store hands back the very mutation
- *  it was given. Waiting for the store therefore added its whole cost to every
- *  write without changing a byte of the response.
- *
- *  The writer still applies batches in order behind this; only the caller stops
- *  waiting. What is given up is the ability to tell a caller that the store later
- *  refused its row, which is why that refusal is logged where it happens. */
 function settleAppended({
 	scope,
 	batch,
@@ -386,14 +348,12 @@ function settleAppended({
 		if (pending.durability !== "log") continue;
 		settlePending({ scope, pending });
 	}
-	// Bookkeeping first, position last: a reply released by it may bring the next command at once.
 	const last = batch.at(-1);
 	if (!last || last.seq <= scope.state.settledSeq) return;
 	scope.state.settledSeq = last.seq;
 	scope.ctx.commitPositions?.committed({ seq: last.seq });
 }
 
-/** Nothing this writer issued past what it already settled will reach the log. */
 export function failAboveSettled({
 	scope,
 	cause,
@@ -411,7 +371,6 @@ export function failAboveSettled({
 	state.settledSeq = state.lastSeq;
 }
 
-/** Remember the command for dedup and answer the caller. */
 function settlePending({
 	scope,
 	pending,
@@ -425,7 +384,6 @@ function settlePending({
 	pending.settlement?.settle({ mutation, state: pending.nextState });
 }
 
-/** A committed batch that cannot be applied leaves the writer in recovery. */
 async function applyBatch({
 	scope,
 	batch,
@@ -448,9 +406,6 @@ async function applyBatch({
 		if (results.length !== batch.length) {
 			throw new Error("Durable apply result count did not match batch");
 		}
-		// A "log" caller was answered when Kafka took the batch, so nothing here can
-		// reach it and the store's verdict only decides the partition's fate. A
-		// "store" caller is still waiting, and hears the verdict as it always did.
 		let firstFailure: unknown = null;
 		for (const [index, pending] of batch.entries()) {
 			const result = results[index];
@@ -462,8 +417,6 @@ async function applyBatch({
 				pending.settlement?.rejectCommit({ error: result.cause });
 				continue;
 			}
-			// Refused by the store, not broken: the customer's rows are dropped because
-			// memory had already applied a deduction that never landed there.
 			if (result.kind === "rejected") {
 				scope.state.subjects.evictCustomer({
 					customerKey: pending.customerKey,
@@ -494,8 +447,6 @@ async function applyBatch({
 	}
 }
 
-/** Every committed-but-unapplied batch still owns a store milestone, so recovery
- *  rejects those along with whatever never reached Kafka. */
 function enterRecovery({
 	scope,
 	batch,
@@ -515,9 +466,6 @@ function enterRecovery({
 	scope.ctx.onRecoveryRequired?.({ cause: error });
 }
 
-// Only the log's copy carries the effects; the store, its receipts and checkpoints hold the record without them.
-/** Up to maxBatchSize records and maxBatchBytes, and never empty: enqueue already
- *  refused any single record over the byte limit. */
 function queuedMsOf({
 	batch,
 	takenAt,
@@ -550,7 +498,6 @@ function takeBatch({
 	);
 }
 
-/** A held group never straddles two appends: cut before it, or take all of it when it leads the batch. */
 function keepHeldGroupWhole({
 	queue,
 	count,
@@ -592,18 +539,6 @@ function durableRecordsOf({
 	return records;
 }
 
-/** The follower may apply a position first; then the store has to say what we appended.
- *  A private SQLite store keeps a receipt per applied position, so it can prove the
- *  record coming back is the one already durable, and a mismatch is a real conflict
- *  worth stopping for.
- *
- *  The Postgres-backed store keeps no receipts at all. Its reads answer null on
- *  purpose, because Postgres holds the baseline rather than a file this worker owns,
- *  and its progress bookmark is the only evidence it has. That bookmark is what
- *  reported the position applied in the first place, so the pending mutation stands.
- *  Asking it for a receipt it was never built to store meant the first re-applied
- *  record put the partition into recovery, which stops the whole worker and every
- *  other partition it holds. */
 function assertPersistedMutation({
 	scope,
 	result,

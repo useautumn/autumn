@@ -12,7 +12,6 @@ import { selectBrokenToRetry } from "./selectBrokenToRetry.ts";
 
 const NUKE_KEY_PREFIX = "nuke:";
 
-/** Bulk "Retry nuke": the row action applied to every broken account. */
 export const retryBrokenAccounts = async ({
 	ctx,
 }: {

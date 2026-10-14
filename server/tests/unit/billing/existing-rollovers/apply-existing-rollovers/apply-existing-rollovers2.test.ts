@@ -33,13 +33,11 @@ describe(
 				},
 			];
 
-			// Act
 			applyExistingRollovers({
 				customerProduct: newCusProduct,
 				existingRollovers,
 			});
 
-			// Assert: no rollovers added since feature doesn't match
 			const updatedCusEnt = newCusProduct.customer_entitlements[0];
 			expect(updatedCusEnt.rollovers.length).toBe(0);
 		});

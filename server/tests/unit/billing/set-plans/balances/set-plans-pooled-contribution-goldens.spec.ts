@@ -24,7 +24,6 @@ import {
 
 const SECOND_RENEWAL = RENEWAL + ms.days(365);
 
-/** Entity A renews through two saved scheduled plans; entity B pools alongside it throughout. */
 const renewingPoolOnTwoEntities = () => {
 	const [first, second, third] = ["first", "second", "third"].map((term) =>
 		pooledCreditsPlan({

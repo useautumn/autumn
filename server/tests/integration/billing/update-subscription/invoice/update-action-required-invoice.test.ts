@@ -11,19 +11,6 @@ import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 
-/**
- * Invoice Action Required Tests - Invoice Action Group
- *
- * Tests for action required scenarios when updating base price on existing subscription:
- * - No payment method (payment_method_required)
- * - 3DS authentication required (3ds_required)
- * - Payment failed (payment_failed)
- */
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// GROUP 1: INVOICE ACTION - Update base price on item
-// ═══════════════════════════════════════════════════════════════════════════════
-
 test.concurrent(`${chalk.yellowBright("invoice-action: no payment method")}`, async () => {
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
 	const priceItem = items.monthlyPrice({ price: 20 });
@@ -40,11 +27,10 @@ test.concurrent(`${chalk.yellowBright("invoice-action: no payment method")}`, as
 		],
 		actions: [
 			s.attach({ productId: pro.id }),
-			s.removePaymentMethod(), // Remove payment method after attach
+			s.removePaymentMethod(),
 		],
 	});
 
-	// Update with price increase - should require payment method
 	const newMessagesItem = items.monthlyMessages({ includedUsage: 200 });
 	const newPriceItem = items.monthlyPrice({ price: 30 });
 
@@ -56,21 +42,18 @@ test.concurrent(`${chalk.yellowBright("invoice-action: no payment method")}`, as
 
 	const result = await autumnV1.subscriptions.update(updateParams);
 
-	// Should return required_action with payment_method_required code
 	expect(result.required_action).toBeDefined();
 	expect(result.required_action?.code).toBe("payment_method_required");
 	expect(result.payment_url).toBeDefined();
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Features should not have changed - still original values
 	expectCustomerFeatureCorrect({
 		customer,
 		featureId: TestFeature.Messages,
 		balance: 100,
 	});
 
-	// Complete checkout with new payment method
 	await completeInvoiceCheckout({
 		url: result.payment_url!,
 		ctx,
@@ -85,7 +68,6 @@ test.concurrent(`${chalk.yellowBright("invoice-action: no payment method")}`, as
 		productId: pro.id,
 	});
 
-	// After checkout - balance should be 200 (new plan)
 	expectCustomerFeatureCorrect({
 		customer: customerAfterCheckout,
 		featureId: TestFeature.Messages,
@@ -94,7 +76,7 @@ test.concurrent(`${chalk.yellowBright("invoice-action: no payment method")}`, as
 
 	await expectCustomerInvoiceCorrect({
 		customer: customerAfterCheckout,
-		count: 2, // Initial attach + update
+		count: 2,
 		latestStatus: "paid",
 	});
 });
@@ -115,11 +97,10 @@ test.concurrent(`${chalk.yellowBright("invoice-action: 3ds authentication requir
 		],
 		actions: [
 			s.attach({ productId: pro.id }),
-			s.attachPaymentMethod({ type: "authenticate" }), // Switch to 3DS-required card
+			s.attachPaymentMethod({ type: "authenticate" }),
 		],
 	});
 
-	// Update with price increase - should require 3DS
 	const newMessagesItem = items.monthlyMessages({ includedUsage: 200 });
 	const newPriceItem = items.monthlyPrice({ price: 30 });
 
@@ -131,21 +112,18 @@ test.concurrent(`${chalk.yellowBright("invoice-action: 3ds authentication requir
 
 	const result = await autumnV1.subscriptions.update(updateParams);
 
-	// Should return required_action with 3ds_required code
 	expect(result.required_action).toBeDefined();
 	expect(result.required_action?.code).toBe("3ds_required");
 	expect(result.payment_url).toBeDefined();
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Features should not have changed - still original values
 	expectCustomerFeatureCorrect({
 		customer,
 		featureId: TestFeature.Messages,
 		balance: 100,
 	});
 
-	// Complete 3DS authentication
 	await completeInvoiceConfirmation({
 		url: result.payment_url!,
 	});
@@ -158,7 +136,6 @@ test.concurrent(`${chalk.yellowBright("invoice-action: 3ds authentication requir
 		productId: pro.id,
 	});
 
-	// After authentication - balance should be 200 (new plan)
 	expectCustomerFeatureCorrect({
 		customer: customerAfterAuth,
 		featureId: TestFeature.Messages,
@@ -167,7 +144,7 @@ test.concurrent(`${chalk.yellowBright("invoice-action: 3ds authentication requir
 
 	await expectCustomerInvoiceCorrect({
 		customer: customerAfterAuth,
-		count: 2, // Initial attach + update
+		count: 2,
 		latestStatus: "paid",
 	});
 });
@@ -188,11 +165,10 @@ test.concurrent(`${chalk.yellowBright("invoice-action: payment failed")}`, async
 		],
 		actions: [
 			s.attach({ productId: pro.id }),
-			s.attachPaymentMethod({ type: "fail" }), // Switch to failing card
+			s.attachPaymentMethod({ type: "fail" }),
 		],
 	});
 
-	// Update with price increase - should fail payment
 	const newMessagesItem = items.monthlyMessages({ includedUsage: 200 });
 	const newPriceItem = items.monthlyPrice({ price: 30 });
 
@@ -204,14 +180,12 @@ test.concurrent(`${chalk.yellowBright("invoice-action: payment failed")}`, async
 
 	const result = await autumnV1.subscriptions.update(updateParams);
 
-	// Should return required_action with payment_failed code
 	expect(result.required_action).toBeDefined();
 	expect(result.required_action?.code).toBe("payment_failed");
 	expect(result.payment_url).toBeDefined();
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Features should not have changed - still original values
 	expectCustomerFeatureCorrect({
 		customer,
 		featureId: TestFeature.Messages,

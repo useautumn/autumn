@@ -9,8 +9,6 @@ import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 
-// Product: hourlyMessages(5) + monthlyMessages(10) = 15 total
-
 const makeFreeProd = () => {
 	const hourlyMessages = items.hourlyMessages({ includedUsage: 5 });
 	const monthlyMessages = items.monthlyMessages({ includedUsage: 10 });
@@ -19,11 +17,6 @@ const makeFreeProd = () => {
 		items: [hourlyMessages, monthlyMessages],
 	});
 };
-
-// ─────────────────────────────────────────────────────────────────────────────
-// RF-1: lock=8, confirm=5 → remaining=10
-// Unwind 3 (8 deducted, 5 kept), 15-5=10
-// ─────────────────────────────────────────────────────────────────────────────
 
 test.concurrent(`${chalk.yellowBright("refund RF-1: lock=8 confirm=5 — partial keep, remaining=10")}`, async () => {
 	const freeProd = makeFreeProd();
@@ -74,11 +67,6 @@ test.concurrent(`${chalk.yellowBright("refund RF-1: lock=8 confirm=5 — partial
 	});
 });
 
-// ─────────────────────────────────────────────────────────────────────────────
-// RF-2: lock=8, confirm=-3 → remaining=18
-// Negative confirm = credit 3 back on top: 15-8 → 7, then unwind 8 and credit 3 → 18
-// ─────────────────────────────────────────────────────────────────────────────
-
 test.concurrent(`${chalk.yellowBright("refund RF-2: lock=8 confirm=-3 — credit beyond lock, remaining=18")}`, async () => {
 	const freeProd = makeFreeProd();
 	const customerId = "lock-refund-2";
@@ -122,11 +110,6 @@ test.concurrent(`${chalk.yellowBright("refund RF-2: lock=8 confirm=-3 — credit
 		events: [{ value: -11 }, { value: 8 }, { value: 5 }],
 	});
 });
-
-// ─────────────────────────────────────────────────────────────────────────────
-// RF-3: lock=-5, confirm=-3 → remaining=18
-// Negative lock = credit 5 (balance→20), negative confirm=-3 means keep credit of 3 → 18
-// ─────────────────────────────────────────────────────────────────────────────
 
 test.concurrent(`${chalk.yellowBright("refund RF-3: lock=-5 confirm=-3 — negative lock with partial release, remaining=18")}`, async () => {
 	const freeProd = makeFreeProd();
@@ -181,11 +164,6 @@ test.concurrent(`${chalk.yellowBright("refund RF-3: lock=-5 confirm=-3 — negat
 	});
 });
 
-// ─────────────────────────────────────────────────────────────────────────────
-// RF-4: lock=-5, confirm=3 → remaining=12
-// Negative lock = credit 5 (balance→20), confirm=3 = deduct 3 → 12
-// ─────────────────────────────────────────────────────────────────────────────
-
 test.concurrent(`${chalk.yellowBright("refund RF-4: lock=-5 confirm=3 — cross-zero confirm, remaining=12")}`, async () => {
 	const freeProd = makeFreeProd();
 	const customerId = "lock-refund-4";
@@ -224,8 +202,6 @@ test.concurrent(`${chalk.yellowBright("refund RF-4: lock=-5 confirm=3 — cross-
 		remaining: 2,
 	});
 
-	// lock=-5 (lockValue=-5), confirm=3 (finalValue=3), delta = 3-(-5) = 8
-	// prior track=10, newest-first: finalize delta, check track, prior track
 	await expectCustomerEventsCorrect({
 		customerId,
 		events: [{ value: 8 }, { value: -5 }, { value: 10 }],

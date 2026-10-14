@@ -6,10 +6,6 @@ import { and, eq, sql } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle";
 import { markCustomersUpdatedAtByInternalIds } from "@/internal/customers/customerLsns/markCustomerUpdatedAt.js";
 
-/**
- * Shallow-merges keys into `processor` in one statement, so concurrent processor writes don't clobber each other.
- * With `periodEndAtLeast`, skips the write when the stored period already ends later. Returns the merged processor, or null if skipped.
- */
 export const mergeCustomerProductProcessor = async ({
 	db,
 	cusProductId,

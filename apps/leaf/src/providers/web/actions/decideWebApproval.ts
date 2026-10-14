@@ -21,8 +21,6 @@ export const decideWebApproval = async ({
 	providerUserId: string;
 }): Promise<WebApprovalDecision> => {
 	const approval = await chatApprovalRepo.get({ approvalId, db });
-	// The dashboard renders only its own approvals (and only a group's primary
-	// write), so it must not decide cards another surface showed.
 	if (
 		!approval ||
 		approval.org_id !== orgId ||
@@ -41,14 +39,12 @@ export const decideWebApproval = async ({
 	}
 
 	if (action === "reject") {
-		// Cancel first so a repeated click cannot deny in Eve twice.
 		const cancelled = await chatApprovalRepo.cancel({
 			approvalId,
 			db,
 			providerUserId,
 		});
 		if (!cancelled) {
-			// A repeated reject that lost the race still rejected the card.
 			const current = await chatApprovalRepo.get({ approvalId, db });
 			return current?.status === "cancelled"
 				? { status: "rejected" }

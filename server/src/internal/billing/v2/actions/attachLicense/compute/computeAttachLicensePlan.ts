@@ -12,7 +12,6 @@ import type { AttachLicenseContext, AttachLicensePlan } from "../types.js";
 
 type LicenseAssignment = { entity: Entity; customerProduct: FullCusProduct };
 
-/** Entities that don't exist yet, constructed for the plan's insertEntities. */
 const computeNewEntities = ({
 	ctx,
 	context,
@@ -38,8 +37,6 @@ const computeNewEntities = ({
 		}),
 	);
 
-/** Re-point each reused seat to its incoming entity — the seat keeps its
- * snapshots, it just changes hands. */
 const computeReusedCustomerProductUpdates = ({
 	reusedAssignments,
 }: {
@@ -66,7 +63,6 @@ export const computeAttachLicensePlan = ({
 	const newEntities = computeNewEntities({ ctx, context });
 	const assignmentEntities = [...context.existingEntities, ...newEntities];
 
-	// Unused seats are re-pointed before any new seat is provisioned.
 	const reusedAssignments: LicenseAssignment[] = assignmentEntities
 		.slice(0, unusedAssignments.length)
 		.map((entity, index) => ({

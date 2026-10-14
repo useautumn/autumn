@@ -1,11 +1,3 @@
-/**
- * Integration tests for duplicate discount handling across billing cycles.
- *
- * Tests that when a discount code already applied to a subscription is passed
- * again on a subsequent billing cycle, it is silently ignored (not applied twice)
- * and the attach still succeeds.
- */
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3 } from "@autumn/shared";
 import { expectCustomerProducts } from "@tests/integration/billing/utils/expectCustomerProductCorrect.js";
@@ -23,21 +15,6 @@ import {
 	getStripeSubscription,
 } from "../../utils/discounts/discountTestUtils.js";
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 1: billing.attach - duplicate discount on next cycle is silently ignored
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Customer on free (no subscription)
- * - Cycle 1: Attach pro WITH a 20% forever coupon → subscription created with coupon
- * - Advance to next invoice (cycle 2)
- * - Cycle 2: Upgrade to premium WITH same coupon → attach succeeds, duplicate ignored
- *
- * Expected:
- * - No error — attach succeeds
- * - premium is active, coupon not double-applied
- */
 test.concurrent(`${chalk.yellowBright("attach-discount-double-use 1: billing.attach - duplicate discount on next cycle silently ignored")}`, async () => {
 	const customerId = "att-disc-double-use-attach";
 
@@ -68,14 +45,12 @@ test.concurrent(`${chalk.yellowBright("attach-discount-double-use 1: billing.att
 	const stripeCli = createStripeCli({ org: ctx.org, env: ctx.env });
 	const coupon = await createPercentCoupon({ stripeCli, percentOff: 20 });
 
-	// Cycle 1: Attach pro with discount
 	await autumnV1.billing.attach({
 		customer_id: customerId,
 		product_id: pro.id,
 		discounts: [{ reward_id: coupon.id }],
 	});
 
-	// Record discount ID after cycle 1
 	const { subscription: subAfterCycle1 } = await getStripeSubscription({
 		customerId,
 		expand: ["data.discounts.source.coupon"],
@@ -91,7 +66,6 @@ test.concurrent(`${chalk.yellowBright("attach-discount-double-use 1: billing.att
 			: null;
 	expect(discountIdBefore).not.toBeNull();
 
-	// Advance to next invoice (start of cycle 2)
 	await advanceTestClock({
 		stripeCli: ctx.stripeCli,
 		testClockId: testClockId!,
@@ -102,7 +76,6 @@ test.concurrent(`${chalk.yellowBright("attach-discount-double-use 1: billing.att
 		waitForSeconds: 30,
 	});
 
-	// Cycle 2: Upgrade with same discount — should succeed, duplicate silently ignored
 	await autumnV1.billing.attach({
 		customer_id: customerId,
 		product_id: premium.id,
@@ -116,7 +89,6 @@ test.concurrent(`${chalk.yellowBright("attach-discount-double-use 1: billing.att
 		notPresent: [pro.id],
 	});
 
-	// Coupon must appear exactly once — not double-applied, and discount ID must be unchanged
 	const { subscription } = await getStripeSubscription({
 		customerId,
 		expand: ["data.discounts.source.coupon"],
@@ -132,21 +104,6 @@ test.concurrent(`${chalk.yellowBright("attach-discount-double-use 1: billing.att
 	expect(discountIdAfter).toBe(discountIdBefore);
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 2: billing.multiAttach - duplicate discount on next cycle is silently ignored
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Customer on free (no subscription)
- * - Cycle 1: multiAttach [pro] WITH a 20% forever coupon → subscription created with coupon
- * - Advance to next invoice (cycle 2)
- * - Cycle 2: multiAttach [addon] WITH same coupon → attach succeeds, duplicate ignored
- *
- * Expected:
- * - No error — attach succeeds
- * - addon is active
- */
 test.concurrent(`${chalk.yellowBright("attach-discount-double-use 2: billing.multiAttach - duplicate discount on next cycle silently ignored")}`, async () => {
 	const customerId = "att-disc-double-use-multi";
 
@@ -177,14 +134,12 @@ test.concurrent(`${chalk.yellowBright("attach-discount-double-use 2: billing.mul
 	const stripeCli = createStripeCli({ org: ctx.org, env: ctx.env });
 	const coupon = await createPercentCoupon({ stripeCli, percentOff: 20 });
 
-	// Cycle 1: multiAttach pro with discount
 	await autumnV1.billing.multiAttach({
 		customer_id: customerId,
 		plans: [{ plan_id: pro.id }],
 		discounts: [{ reward_id: coupon.id }],
 	});
 
-	// Record discount ID after cycle 1
 	const { subscription: subAfterCycle1 } = await getStripeSubscription({
 		customerId,
 		expand: ["data.discounts.source.coupon"],
@@ -200,7 +155,6 @@ test.concurrent(`${chalk.yellowBright("attach-discount-double-use 2: billing.mul
 			: null;
 	expect(discountIdBefore).not.toBeNull();
 
-	// Advance to next invoice (start of cycle 2)
 	await advanceTestClock({
 		stripeCli: ctx.stripeCli,
 		testClockId: testClockId!,
@@ -211,7 +165,6 @@ test.concurrent(`${chalk.yellowBright("attach-discount-double-use 2: billing.mul
 		waitForSeconds: 30,
 	});
 
-	// Cycle 2: multiAttach addon with same discount — should succeed, duplicate silently ignored
 	await autumnV1.billing.multiAttach({
 		customer_id: customerId,
 		plans: [{ plan_id: addon.id }],
@@ -225,7 +178,6 @@ test.concurrent(`${chalk.yellowBright("attach-discount-double-use 2: billing.mul
 		notPresent: [free.id],
 	});
 
-	// Coupon must appear exactly once on the pro subscription — not double-applied, and discount ID must be unchanged
 	const { subscription } = await getStripeSubscription({
 		customerId,
 		expand: ["data.discounts.source.coupon"],
@@ -241,23 +193,10 @@ test.concurrent(`${chalk.yellowBright("attach-discount-double-use 2: billing.mul
 	expect(discountIdAfter).toBe(discountIdBefore);
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 3: same coupon on a different customer's subscription → allowed
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Customer 1 attaches pro WITH a 20% forever coupon → their subscription gets the coupon
- * - Customer 2 (different subscription) attaches pro with the SAME coupon → should succeed
- *
- * This confirms the check is per-subscription, not a global coupon blacklist.
- * The same coupon ID may be freely used across different customers' subscriptions.
- */
 test.concurrent(`${chalk.yellowBright("attach-discount-double-use 3: same coupon on different customer subscription → allowed")}`, async () => {
 	const customerId1 = "att-disc-double-use-c1";
 	const customerId2 = "att-disc-double-use-c2";
 
-	// Separate product objects per customer — initScenario mutates product.id in-place
 	const free1 = products.base({
 		id: "free",
 		items: [items.monthlyMessages({ includedUsage: 100 })],
@@ -297,14 +236,12 @@ test.concurrent(`${chalk.yellowBright("attach-discount-double-use 3: same coupon
 	const stripeCli = createStripeCli({ org: ctx.org, env: ctx.env });
 	const coupon = await createPercentCoupon({ stripeCli, percentOff: 20 });
 
-	// Customer 1: attach pro with coupon → their subscription gets the coupon
 	await autumnV1.billing.attach({
 		customer_id: customerId1,
 		product_id: pro1.id,
 		discounts: [{ reward_id: coupon.id }],
 	});
 
-	// Customer 2: attach pro with the SAME coupon → different subscription → must succeed
 	await autumnV1.billing.attach({
 		customer_id: customerId2,
 		product_id: pro2.id,

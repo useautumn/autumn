@@ -36,7 +36,6 @@ const planHasVersionableCustomers = ({
 			}).customerUsage.hasVersionableCustomerProducts,
 	);
 
-/** One intent → one UpsertProductPlan. Demoted sibling attaches in `computeUpsertProductPlan`. */
 export const intentToUpsertProductPlan = ({
 	ctx,
 	intent,
@@ -67,7 +66,6 @@ export const intentToUpsertProductPlan = ({
 	});
 	const unlink = pointer === null;
 
-	// Content baseline: row at this version, or the active row when minting.
 	const baseFullProduct =
 		currentFullProduct ??
 		(versioning === "new_version"
@@ -82,8 +80,6 @@ export const intentToUpsertProductPlan = ({
 		currentFullProduct: currentFullProduct ?? baseFullProduct,
 	});
 
-	// variant_link clones content via planParams, not baseFullProduct — the
-	// folded base is still the Stripe baseline (processor + price id carry).
 	const variantBaseFullProduct =
 		source === "variant_link" && baseInternalProductId
 			? findFullProductByInternalId({
@@ -131,8 +127,6 @@ export const intentToUpsertProductPlan = ({
 			: {}),
 	});
 
-	// The plan as this update leaves it: a free plan has no card gate, so the
-	// trial's card_required is inert there (isTrialCardRequired's rule).
 	const resultingPrices = entitlementPricesPlan
 		? [
 				...entitlementPricesPlan.prices.same,
@@ -180,14 +174,12 @@ export const intentToUpsertProductPlan = ({
 			source,
 			versioning,
 			currentFullProduct,
-			// Mint-only clone source for preview; null on in-place writes.
 			baseFullProduct: versioning === "new_version" ? baseFullProduct : null,
 			nextFullProduct,
 		},
 		...(details.changed ? { details } : {}),
 		...(entitlementPricesPlan ? { entitlementPricesPlan } : {}),
 		...(freeTrialPlan.changed ? { freeTrialPlan } : {}),
-		// Direct / variant_link send licenses[]. Siblings rebase via editDiff.
 		...((source === "direct" ||
 			source === "all_versions" ||
 			source === "variant_link" ||
@@ -209,18 +201,12 @@ export const intentToUpsertProductPlan = ({
 		planParams.propagate !== undefined
 			? { propagate: planParams.propagate }
 			: {}),
-		// Mappings are keyed by public plan id, and a variant is its own plan — so
-		// every source that names a concrete plan writes its own row. The version
-		// fan-out lanes are excluded: they restate the addressed row's plan id.
 		...((source === "direct" ||
 			source === "variant_link" ||
 			source === "variant_propagation") &&
 		planParams.processors?.revenuecat !== undefined
 			? { revenuecatProcessor: planParams.processors.revenuecat }
 			: {}),
-		// Every lane that carries the null needs the flag: the Stripe fan-out and
-		// the variant settings patch both restate `{ stripe: null }` on their own
-		// rows, and a sibling left without it gets a replacement product minted.
 		...(planParams.processors?.stripe === null ? { stripeUnlinked: true } : {}),
 		...(planParams.create_in_stripe !== undefined
 			? { createInStripe: planParams.create_in_stripe }

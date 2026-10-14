@@ -1,5 +1,3 @@
-/** Version previews expose structural, balance, and flag changes. */
-
 import { expect, test } from "bun:test";
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";

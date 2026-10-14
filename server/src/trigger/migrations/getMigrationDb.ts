@@ -6,7 +6,6 @@ import { applyMigrationQueryDeadline } from "./database/applyMigrationQueryDeadl
 
 let migrationDb: DrizzleCli | undefined;
 
-/** Lazily created so only processes that run migration chunks open this pool. */
 export const getMigrationDb = (): DrizzleCli => {
 	if (migrationDb) return migrationDb;
 	const { db, client } = initDrizzle({

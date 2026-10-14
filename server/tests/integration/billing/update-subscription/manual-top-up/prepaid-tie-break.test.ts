@@ -1,26 +1,3 @@
-/**
- * Tie-break for `feature_quantities` when a plan hosts BOTH a recurring prepaid
- * AND a one-off prepaid price for the SAME feature: the recurring price wins
- * (shortest interval among recurring). Stop-gap semantics while the options
- * model stays feature-keyed.
- *
- * Contract under test:
- *   New behaviors:
- *     - billing.attach with feature_quantities on a mixed plan → quantity lands
- *       on the recurring prepaid only; one-off contributes just included usage;
- *       first invoice = base + recurring prepaid charge (no one-off charge).
- *     - subscriptions.update with feature_quantities on a mixed plan → routed as
- *       UpdateQuantity on the recurring price (absolute semantics), NOT
- *       ManualTopUp (delta semantics + standalone pack invoice).
- *     - a different feature with only a one-off prepaid on the same plan is
- *       unaffected: update still routes ManualTopUp for that feature.
- *
- * Red (current):  attach double-charges (recurring + one-off both read the same
- *                 feature-keyed options entry) and double-grants balance; update
- *                 routes to ManualTopUp whenever any one-off prepaid matches.
- * Green (after):  recurring prepaid wins the tie-break at both call sites.
- */
-
 import { expect, test } from "bun:test";
 import type {
 	ApiCustomerV5,
@@ -37,11 +14,7 @@ import chalk from "chalk";
 
 const RECURRING_PACK_PRICE = 8;
 const ONE_OFF_PACK_PRICE = 7;
-const BASE_PRICE = 20; // products.pro monthly base
-
-// ─────────────────────────────────────────────────────────────────────────────
-// 1. attach: quantity applies to the recurring prepaid only.
-// ─────────────────────────────────────────────────────────────────────────────
+const BASE_PRICE = 20;
 
 test.concurrent(
 	`${chalk.yellowBright("prepaid tie-break 1: attach with feature_quantities on mixed plan charges recurring prepaid only")}`,
@@ -70,7 +43,6 @@ test.concurrent(
 			],
 		});
 
-		// ── balance: 200 from recurring prepaid only (not 400)
 		const customer = await autumnV2_3.customers.get<ApiCustomerV5>(customerId);
 		expectBalanceCorrect({
 			customer,
@@ -78,7 +50,6 @@ test.concurrent(
 			remaining: 200,
 		});
 
-		// ── options: single feature entry at 2 packs
 		await expectCustomerProductOptions({
 			ctx,
 			customerId,
@@ -87,7 +58,6 @@ test.concurrent(
 			quantity: 2,
 		});
 
-		// ── invoice: base $20 + 2 packs × $8 recurring = $36 (no one-off charge)
 		await expectCustomerInvoiceCorrect({
 			autumn: autumnV1,
 			customerId,
@@ -96,11 +66,6 @@ test.concurrent(
 		});
 	},
 );
-
-// ─────────────────────────────────────────────────────────────────────────────
-// 2. update: routed as UpdateQuantity (absolute) on the recurring prepaid,
-//    not ManualTopUp (delta on the one-off).
-// ─────────────────────────────────────────────────────────────────────────────
 
 test.concurrent(
 	`${chalk.yellowBright("prepaid tie-break 2: update with feature_quantities on mixed plan is absolute on the recurring prepaid")}`,
@@ -135,7 +100,6 @@ test.concurrent(
 			feature_quantities: [{ feature_id: TestFeature.Messages, quantity: 300 }],
 		});
 
-		// ── absolute semantics: balance = 300 (ManualTopUp delta would give 400)
 		const customer = await autumnV2_3.customers.get<ApiCustomerV5>(customerId);
 		expectBalanceCorrect({
 			customer,
@@ -143,7 +107,6 @@ test.concurrent(
 			remaining: 300,
 		});
 
-		// ── options: 3 packs absolute on the recurring price
 		await expectCustomerProductOptions({
 			ctx,
 			customerId,
@@ -152,8 +115,6 @@ test.concurrent(
 			quantity: 3,
 		});
 
-		// ── upgrade invoice: +2 packs × $8 recurring = $16
-		// (ManualTopUp would have charged 3 packs × $7 one-off = $21)
 		await expectCustomerInvoiceCorrect({
 			autumn: autumnV1,
 			customerId,
@@ -162,11 +123,6 @@ test.concurrent(
 		});
 	},
 );
-
-// ─────────────────────────────────────────────────────────────────────────────
-// 3. isolation: a different feature with ONLY a one-off prepaid on the same
-//    plan still routes ManualTopUp.
-// ─────────────────────────────────────────────────────────────────────────────
 
 test.concurrent(
 	`${chalk.yellowBright("prepaid tie-break 3: one-off-only feature on the same plan still manual-tops-up")}`,
@@ -195,7 +151,6 @@ test.concurrent(
 			],
 		});
 
-		// Manual top-up of Words (delta semantics on the one-off prepaid).
 		await autumnV2_3.subscriptions.update<UpdateSubscriptionV1ParamsInput>({
 			customer_id: customerId,
 			plan_id: plan.id,
@@ -208,7 +163,6 @@ test.concurrent(
 			featureId: TestFeature.Words,
 			remaining: 100,
 		});
-		// Messages untouched by the Words top-up.
 		expectBalanceCorrect({
 			customer,
 			featureId: TestFeature.Messages,
@@ -223,7 +177,6 @@ test.concurrent(
 			quantity: 1,
 		});
 
-		// Standalone pack invoice: 1 pack × $7 one-off.
 		await expectCustomerInvoiceCorrect({
 			autumn: autumnV1,
 			customerId,

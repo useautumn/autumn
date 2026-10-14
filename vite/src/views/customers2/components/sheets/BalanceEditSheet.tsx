@@ -49,8 +49,6 @@ import {
 	useBalanceEditForm,
 } from "./useBalanceEditForm";
 
-/* ─── Outer Shell ─── */
-
 const GRANT_SOURCE_LABELS: Record<string, string> = {
 	attach: "Purchased at attach",
 	manual_topup: "Manual top-up",
@@ -167,8 +165,6 @@ export function BalanceEditSheet() {
 		</div>
 	);
 }
-
-/* ─── Unlimited Form (usage + next reset only) ─── */
 
 function UnlimitedBalanceForm({
 	entity,
@@ -294,8 +290,6 @@ function UnlimitedBalanceForm({
 	);
 }
 
-/* ─── Inner Form ─── */
-
 function BalanceEditForm({
 	selectedCusEnt,
 	entity,
@@ -359,8 +353,6 @@ function BalanceEditForm({
 	);
 }
 
-/* ─── Rollovers Section ─── */
-
 function RolloversSection({
 	selectedCusEnt,
 	entityId,
@@ -413,8 +405,6 @@ function RolloversSection({
 		</SheetSection>
 	);
 }
-
-/* ─── Entitlement Info Rows ─── */
 
 function EntitlementInfoRows({
 	entity,
@@ -530,8 +520,6 @@ function EntitlementInfoRows({
 	);
 }
 
-/* ─── Balance Fields Section ─── */
-
 function BalanceFields({
 	form,
 	selectedCusEnt,
@@ -580,8 +568,6 @@ function BalanceFields({
 	);
 }
 
-/* ─── Set Balance Mode ─── */
-
 function SetBalanceFields({
 	form,
 	selectedCusEnt,
@@ -598,16 +584,11 @@ function SetBalanceFields({
 	const balance = useStore(form.store, (s) => s.values.balance);
 	const gpb = useStore(form.store, (s) => s.values.grantedAndPurchasedBalance);
 
-	// Mirror the backend guard (updateExpiresAt): only paid recurring balances
-	// can't expire (their lifetime follows the billing cycle). Free grants —
-	// recurring or one-off — and one-off prepaid top-ups are all fine.
 	const interval = selectedCusEnt.entitlement.interval;
 	const isRecurringBalance =
 		notNullish(interval) && interval !== EntInterval.Lifetime;
 	const isPaidBalance = !!cusPrice;
 	const expiresAtDisabled = isRecurringBalance && isPaidBalance;
-	// Setting a brand-new expiry is a rare, API-only flow — only surface the
-	// field in the dashboard when the balance already has one (to view/edit/clear).
 	const showExpiresAt = notNullish(selectedCusEnt.expires_at);
 
 	return (
@@ -676,8 +657,6 @@ function SetBalanceFields({
 				</form.Field>
 			</div>
 
-			{/* Reset-related notes (e.g. "Lifetime balances have no reset date")
-			    pertain to Next Reset, so they sit directly under it. */}
 			<BalanceEditPreviews
 				cusPrice={cusPrice}
 				interval={selectedCusEnt.entitlement.interval}
@@ -710,8 +689,6 @@ function SetBalanceFields({
 		</div>
 	);
 }
-
-/* ─── Add Balance Mode ─── */
 
 function AddBalanceFields({ form }: { form: BalanceEditFormInstance }) {
 	const updateGrantedBalance = useStore(
@@ -754,8 +731,6 @@ function AddBalanceFields({ form }: { form: BalanceEditFormInstance }) {
 	);
 }
 
-/* ─── Submit Button ─── */
-
 function SubmitButton({
 	form,
 	customer,
@@ -788,7 +763,6 @@ function SubmitButton({
 		const values = form.state.values;
 		const promises: Promise<unknown>[] = [];
 
-		// Validate before firing any requests
 		if (hasBalanceChanges({ form })) {
 			if (values.mode === "set") {
 				const balanceNum = parseFloat(String(values.balance));
@@ -811,7 +785,6 @@ function SubmitButton({
 
 		setLoading(true);
 		try {
-			// Queue balance update
 			if (hasBalanceChanges({ form })) {
 				if (values.mode === "set") {
 					const grantedBalanceInput = computeGrantedBalanceInput({
@@ -883,8 +856,6 @@ function SubmitButton({
 		</div>
 	);
 }
-
-/* ─── Dirty Helpers ─── */
 
 function hasBalanceChanges({
 	form,

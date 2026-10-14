@@ -1,4 +1,3 @@
-/** Replies on their way back: written to the lane's reply ring in order, made visible once per turn. */
 import { failFrameLength, writeFailFrame } from "../frames/failFrame.js";
 import { replyFrameMaxLength, writeReplyFrame } from "../frames/replyFrame.js";
 import type { HttpWorkerLane, PendingReply } from "../types/httpWorkerLane.js";
@@ -40,7 +39,6 @@ function lengthOf(pending: PendingReply): number {
 	return failFrameLength(pending.fail);
 }
 
-/** Writes queued replies in order; a full ring waits for the thread to read, then carries on. */
 async function pump({
 	scope,
 	lane,
@@ -94,7 +92,6 @@ function postReply({
 	headers: [string, string][];
 	body: Uint8Array;
 }): void {
-	// Transferred, so the bytes must be a buffer of their own.
 	const buffer = body.slice().buffer;
 	const message: DecideThreadMessage = {
 		kind: "reply",
@@ -127,7 +124,6 @@ export function replyToLane({
 }): void {
 	if (heldUntilSeq > 0) scope.state.health.heldReplies += 1;
 	const metaText = JSON.stringify({ headers });
-	// A reply over an eighth of the ring could need more contiguous room than the ring can ever free.
 	if (
 		replyFrameMaxLength({ metaText, body }) <=
 		scope.config.replyRingBytes >>> 3
@@ -147,7 +143,6 @@ export function replyToLane({
 		});
 		return;
 	}
-	// The message port can overtake the ring, so a large held reply waits here for its position instead.
 	if (heldUntilSeq > 0) {
 		scope.state.heldOnDecideThread.push({
 			lane,
@@ -163,7 +158,6 @@ export function replyToLane({
 	postReply({ lane, reqId, status, headers, body });
 }
 
-/** Every thread re-checks what it holds; a large held reply the position reached goes out from here. */
 export function commitPositionMoved({
 	scope,
 	partition,
@@ -183,7 +177,6 @@ export function commitPositionMoved({
 	});
 }
 
-/** Behind every reply already queued, so a failure never overtakes a reply it covers. */
 export function failHeld({
 	scope,
 	failure,
@@ -191,7 +184,6 @@ export function failHeld({
 	scope: HttpWorkerPoolScope;
 	failure: HeldFailure;
 }): void {
-	// Without inline routes nothing is held, and a thread treats a FAIL frame it can't hold as fatal.
 	if (!scope.config.inline) return;
 	scope.state.health.failRanges += 1;
 	const { partition, aboveSeq, lastSeq, status } = failure;

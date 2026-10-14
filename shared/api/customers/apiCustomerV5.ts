@@ -11,8 +11,8 @@ import { ApiCusProcessorsSchema } from "./cusProcessors/apiCusProcessors";
 import { ApiFlagV0Schema } from "./flags/apiFlagV0";
 
 export const API_CUSTOMER_V5_EXAMPLE = {
-	id: "2ee25a41-0d81-4ad2-8451-ec1aadaefe58", // Example UUID
-	name: "Patrick", // Example random name
+	id: "2ee25a41-0d81-4ad2-8451-ec1aadaefe58",
+	name: "Patrick",
 	email: "patrick@useautumn.com",
 	createdAt: 1771409161016,
 	fingerprint: null,
@@ -87,7 +87,6 @@ export const API_CUSTOMER_V5_EXAMPLE = {
 	},
 };
 
-// V5 base customer - uses V1 subscriptions (single array with status field) and V1 balances
 export const BaseApiCustomerV5Schema = BaseApiCustomerSchema.extend({
 	subscriptions: z.array(ApiSubscriptionV1Schema).meta({
 		description:

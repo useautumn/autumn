@@ -52,9 +52,6 @@ const getFrontendExpiry = (entitlement: ApiRewardEntitlement) => {
 	return undefined;
 };
 
-/**
- * Maps frontend reward to API reward type
- */
 export function mapFrontendToApiReward({
 	frontendReward,
 	features,
@@ -69,7 +66,6 @@ export function mapFrontendToApiReward({
 		...baseReward
 	} = frontendReward;
 
-	// Determine the API reward type based on frontend category and discount type
 	let type: RewardType;
 
 	if (rewardCategory === FrontendRewardCategory.FeatureGrant) {
@@ -92,7 +88,6 @@ export function mapFrontendToApiReward({
 		type,
 	};
 
-	// Map frontend feature_id → internal_feature_id for feature grant entitlements
 	if (
 		rewardCategory === FrontendRewardCategory.FeatureGrant &&
 		featureGrantEntitlements?.length
@@ -115,9 +110,6 @@ export function mapFrontendToApiReward({
 	return result;
 }
 
-/**
- * Maps API reward to frontend reward
- */
 export function mapApiToFrontendReward({
 	apiReward,
 	features,
@@ -145,7 +137,6 @@ export function mapApiToFrontendReward({
 
 	const { type, entitlements, ...baseReward } = apiReward;
 
-	// Map internal_feature_id → feature_id for display
 	const featureGrantEntitlements = (entitlements ?? []).map((e) => {
 		const feature = features
 			? findFeatureByInternalId({

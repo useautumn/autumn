@@ -1,11 +1,3 @@
-/**
- * catalogV2.preview_update — base versioning.options union must not offer
- * new_version when the base row is a pinned historical version, even if a
- * variant has customers.
- *
- * has_customers on the base row stays the base's own customers.
- */
-
 import { test } from "bun:test";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";

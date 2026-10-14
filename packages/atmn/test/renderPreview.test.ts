@@ -1,8 +1,3 @@
-/** The preview prints the server's field-level diff under each changed row:
- * plan attributes as old -> new, items paired from deleted+created, license
- * links nested, feature attributes (snake_case, frozen) as "was". Creates and
- * deletes print only their row. */
-
 import { expect, test } from "bun:test";
 import chalk from "chalk";
 import { previewIsEmpty, renderPreview } from "../src/render/renderPreview";
@@ -329,7 +324,6 @@ test("an unchanged plan is context for the variant it creates", () => {
 	const out = render(preview);
 	expect(out).not.toContain("No changes");
 	expect(out).toContain("Plans (1)");
-	// Context only: the plan itself is untouched, so it takes no marker.
 	expect(out).toContain("    pro@v1  Pro");
 	expect(out).not.toContain("~ pro@v1");
 	expect(out).toContain("+ pro_yearly@v1  Pro Yearly, $200 per year");
@@ -457,8 +451,6 @@ test("a demoted variant names the field it hands over", () => {
 	expect(out).toContain("~ active: true -> false");
 });
 
-/** Archiving is a plan-definition change, so the server sends it as
- * `previousAttributes.archived` — the variant row carries no state of its own. */
 test("a variant that only archives counts as work and says so", () => {
 	const preview = {
 		features: [],
@@ -488,7 +480,6 @@ test("a variant that only archives counts as work and says so", () => {
 	expect(previewIsEmpty({ preview: preview as never })).toBe(false);
 	const out = render(preview);
 	expect(out).toContain("~ pro_yearly@v1");
-	// No field carries the new state, so the line reports the one it left.
 	expect(out).toContain("~ Archived: was false");
 });
 
@@ -529,7 +520,6 @@ test("a created variant still shows its trial and licenses, once", () => {
 	expect(out).toContain("+ pro_yearly@v1  Pro Yearly, $200 per year");
 	expect(out).toContain("~ Free trial: none -> 14 day trial");
 	expect(out).toContain("+ seat@v1");
-	// The row label carries the price and the items are already out above.
 	expect(out.match(/\+ credits/g)).toHaveLength(1);
 	expect(out).not.toContain("Price: Free -> $200 per year");
 	expect(out).not.toContain("Name: added");
@@ -583,8 +573,6 @@ test("a migration target with no row of its own renders without details", () => 
 	expect(out).not.toContain('Name: was "Pro two"');
 });
 
-/** The server diffs a create against an empty row, so its diff reads as
- * "everything added", defaults included. */
 const freshPlanChange = {
 	previousAttributes: { name: null, add_on: false, auto_enable: false },
 	priceChange: { previous: null, current: { amount: 25, interval: "month" } },

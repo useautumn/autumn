@@ -53,7 +53,6 @@ export const handleGetProductInternal = createRoute({
 			features: features,
 		});
 
-		// Every row anchored to this version, including historical — the editor picks among them.
 		const variantProducts = await ProductService.listVariantsByParent({
 			db,
 			baseInternalProductIds: [product.internal_id],

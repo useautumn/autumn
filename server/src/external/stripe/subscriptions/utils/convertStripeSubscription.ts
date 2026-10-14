@@ -28,32 +28,25 @@ export const stripeSubscriptionToAutumnStatus = ({
 	stripeStatus: Stripe.Subscription.Status;
 }): CusProductStatus => {
 	switch (stripeStatus) {
-		// Active states - subscription is valid and usable
 		case "trialing":
 		case "active":
 			return CusProductStatus.Active;
 
-		// Payment issue states - subscription exists but needs attention
 		case "incomplete":
 		case "past_due":
 		case "unpaid":
 		case "paused":
 			return CusProductStatus.PastDue;
 
-		// Terminal states - subscription is no longer active
 		case "incomplete_expired":
 		case "canceled":
 			return CusProductStatus.Expired;
 
 		default:
-			// Unknown status - return unknown status
 			return CusProductStatus.Unknown;
 	}
 };
 
-/**
- * Gets the trial ends at in milliseconds for a Stripe subscription.
- */
 export const stripeSubscriptionToTrialEndsAtMs = ({
 	stripeSubscription,
 }: {
@@ -74,7 +67,6 @@ export const stripeSubscriptionToTrialEndsAtMs = ({
 		: undefined;
 };
 
-/** Gets the earliest current period start for a Stripe subscription. */
 export const stripeSubscriptionToStartDate = ({
 	stripeSubscription,
 }: {
@@ -89,10 +81,6 @@ export const stripeSubscriptionToStartDate = ({
 	}, stripeSubscription.items.data[0].current_period_start);
 };
 
-/**
- * Gets the latest invoice for a Stripe subscription.
- * Handles both expanded (object) and unexpanded (string ID) cases.
- */
 export const stripeSubscriptionToLatestInvoice = async ({
 	stripeSubscription,
 	stripeCli,
@@ -102,19 +90,13 @@ export const stripeSubscriptionToLatestInvoice = async ({
 }): Promise<Stripe.Invoice | null> => {
 	if (!stripeSubscription.latest_invoice) return null;
 
-	// If already expanded, return directly
 	if (typeof stripeSubscription.latest_invoice !== "string") {
 		return stripeSubscription.latest_invoice;
 	}
 
-	// Otherwise fetch
 	return await stripeCli.invoices.retrieve(stripeSubscription.latest_invoice);
 };
 
-/**
- * Gets the current time in milliseconds for a Stripe subscription, respecting test clocks.
- * Checks subscription.test_clock first, then falls back to customer.test_clock.
- */
 export const stripeSubscriptionToNowMs = async ({
 	stripeSubscription,
 	stripeCli,
@@ -126,7 +108,6 @@ export const stripeSubscriptionToNowMs = async ({
 		return Date.now();
 	}
 
-	// Check subscription's test_clock first (only in test mode)
 	if (stripeSubscription.test_clock) {
 		return stripeTestClockToNowMs({
 			stripeCli,
@@ -134,7 +115,6 @@ export const stripeSubscriptionToNowMs = async ({
 		});
 	}
 
-	// Fall back to customer's test_clock
 	if (
 		stripeSubscription.customer &&
 		typeof stripeSubscription.customer !== "string" &&
@@ -169,8 +149,6 @@ const approxRecurringMs = (recurring: Stripe.Price.Recurring) =>
 	(APPROX_INTERVAL_MS[recurring.interval] ?? 0) *
 	(recurring.interval_count ?? 1);
 
-/** Largest recurring interval across the subscription's items, by approximate
- * total duration (interval × count). Null when no item has a known interval. */
 export const stripeSubscriptionToLargestInterval = ({
 	stripeSubscription,
 }: {

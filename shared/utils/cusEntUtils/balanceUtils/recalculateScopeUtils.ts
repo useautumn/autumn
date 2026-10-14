@@ -3,16 +3,10 @@ import { cusEntsToBalance } from "./cusEntsToBalance";
 
 export const RECALCULATE_CUSTOMER_SCOPE = "__customer__";
 
-/** What scoping reads of a row: its owner, directly or through its product. */
 type RecalculateScopeCustomerEntitlement = FullCustomerEntitlementView & {
 	customer_product: { internal_entity_id?: string | null } | null;
 };
 
-/**
- * Balances are only ever recalculated against siblings with the same scope: a
- * balance owned by an entity stays within that entity, and customer-level
- * balances stay at the customer level.
- */
 export const cusEntToRecalculateScopeKey = ({
 	cusEnt,
 }: {
@@ -22,14 +16,6 @@ export const cusEntToRecalculateScopeKey = ({
 	cusEnt.customer_product?.internal_entity_id ??
 	RECALCULATE_CUSTOMER_SCOPE;
 
-/**
- * Returns the scope keys that can be recalculated - i.e. scopes that contain
- * both an overdrawn balance and a balance with remaining to absorb it. Uses the
- * main balance (not rollovers) because recalculation redistributes the main
- * balance, so this matches exactly what a recalculation would change. Shared by
- * the dashboard (to decide whether to offer the action) and the backend (to
- * decide which scopes to redistribute) so the two never disagree.
- */
 export const getRecalculableScopeKeys = ({
 	cusEnts,
 	entityId,

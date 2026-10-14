@@ -37,7 +37,6 @@ export const handleContUsePrices = async ({
 		return false;
 	}
 
-	// If invoice is not for new period (eg. upgrades, etc, skip)
 	const { start } = subToPeriodStartEnd({
 		sub: usageSub,
 	});

@@ -7,15 +7,9 @@ import {
 	type OrgSettingKey,
 } from "../../utils/orgUtils/orgSettingsLabels.js";
 
-/**
- * A stated flag is written; an omitted one is left alone. `OrgConfigSchema`'s
- * `.default()`s are stripped so parsing never fills a flag the caller never
- * sent, and the default is carried on the spec instead, where the CLI reads it.
- */
 const settingField = ({ key }: { key: OrgSettingKey }) => {
 	const field = OrgConfigSchema.shape[key];
 	const stated = field.removeDefault().optional();
-	// The registry entry replaces the global meta, so the description lives here too.
 	JSON_SCHEMA_REGISTRY.add(stated, {
 		description: `${ORG_SETTINGS_LABELS[key]}.`,
 		default: field.def.defaultValue,

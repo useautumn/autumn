@@ -10,10 +10,6 @@ import type { CusProductLegacyData } from "../cusProductLegacyData";
 import type { ApiCusProductV1Schema } from "../previousVersions/apiCusProductV1";
 import type { ApiCusProductV2Schema } from "../previousVersions/apiCusProductV2";
 
-/**
- * Transform product from V2 format to V1 format
- * Exported so it can be reused in other transformations (e.g., V0_2_CustomerChange)
- */
 const transformItemToPrice = ({
 	item,
 }: {
@@ -30,7 +26,6 @@ const transformItemToPrice = ({
 			quantity: item.quantity,
 		};
 	} else {
-		// Add allowance to tiers
 		const allowance = item.included_usage as number;
 		let tiers: {
 			to: number | "inf";
@@ -108,7 +103,7 @@ export function transformCusProductV2ToV1({
 		name: v2CusProduct.name,
 		group: v2CusProduct.group || "",
 		status: v2CusProduct.status,
-		created_at: v2CusProduct.started_at, // legacy field..., just use started at...
+		created_at: v2CusProduct.started_at,
 		canceled_at: v2CusProduct.canceled_at,
 
 		processor: {

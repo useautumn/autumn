@@ -2,11 +2,6 @@ import { ErrCode, type Migration, RecaseError } from "@autumn/shared";
 import { and, eq } from "drizzle-orm";
 import type { RepoContext } from "@/db/repoContext.js";
 
-/**
- * Single-row lookup by user `id` (or `internal_id`), scoped to the
- * current org + env. Throws `MigrationNotFound` if missing — callers
- * that need a nullable result use `migrationRepo.get(...)` instead.
- */
 export const findMigration = async ({
 	ctx,
 	id,

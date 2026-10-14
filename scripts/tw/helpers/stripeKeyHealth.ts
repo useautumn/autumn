@@ -1,6 +1,3 @@
-/** Pool keys that passed the Connect probe: enablement is static, so healthy keys skip
- * the probe until the TTL lapses. Failures aren't cached, so a fixed key recovers. */
-
 import { createHash } from "node:crypto";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -22,7 +19,6 @@ const isKeyHealthCache = (value: unknown): value is KeyHealthCache =>
 			typeof entry.checkedAt === "number",
 	);
 
-/** Stable, non-reversible id for a secret key (the key itself is never stored). */
 const keyFingerprint = (key: string): string =>
 	createHash("sha256").update(key).digest("hex").slice(0, 24);
 
@@ -50,7 +46,6 @@ export const isKeyKnownHealthy = ({
 
 export const loadKeyHealthCache = (): KeyHealthCache => readCache();
 
-/** Record freshly-probed healthy keys; drops entries whose TTL has lapsed. */
 export const saveHealthyKeys = ({
 	cache,
 	healthyKeys,
@@ -71,7 +66,5 @@ export const saveHealthyKeys = ({
 	try {
 		mkdirSync(REGISTRY_DIR, { recursive: true });
 		writeFileSync(KEY_HEALTH_FILE, JSON.stringify(next, null, 2));
-	} catch {
-		// best-effort — the next run just re-probes.
-	}
+	} catch {}
 };

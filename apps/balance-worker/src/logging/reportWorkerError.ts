@@ -2,10 +2,6 @@ import type { AutumnLogger } from "@autumn/logging";
 import { partitionLifecycleEventOf } from "../partitions/lifecycle/partitionLifecycleErrors.js";
 import { errorCauseChain } from "./errorCauseChain.js";
 
-/** One line per failure, with the cause chain in the message: `data` is hidden
- *  from the local terminal, and the root cause is what matters. A failure that
- *  is only the partition lifecycle at work is information, not an error, so a
- *  deploy's worth of hand-offs does not bury the failures that need reading. */
 export function reportWorkerError({
 	logger,
 	cause,

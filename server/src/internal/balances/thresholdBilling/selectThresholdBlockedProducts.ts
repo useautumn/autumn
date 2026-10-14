@@ -5,10 +5,6 @@ import {
 	type FullCustomer,
 } from "@autumn/shared";
 
-/**
- * A customer can hold several threshold plans, each with its own unpaid
- * invoice, so a paid invoice only clears the plan it names.
- */
 export const selectThresholdBlockedProducts = ({
 	fullCustomer,
 	customerProductId,

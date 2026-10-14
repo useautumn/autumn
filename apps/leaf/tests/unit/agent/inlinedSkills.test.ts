@@ -1,12 +1,3 @@
-/**
- * The billing skill is inlined into leaf's prompt on every turn. On 2026-09-02
- * the skill was renamed `billing` → `autumn-billing` and the inline lookup
- * silently returned nothing for twelve days: the "use add_items/remove_items,
- * never replace `items`" rule was only in context when the model chose to
- * load the skill, and on 2026-09-14 a Slack attach wiped a plan's items.
- * These tests pin the inline to a real skill and make a bad name throw.
- */
-
 import { describe, expect, test } from "bun:test";
 
 const { loadableSkills } = await import("../../../agent/lib/agentSkills.js");

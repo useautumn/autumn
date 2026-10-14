@@ -78,7 +78,6 @@ export function createPartitionRuntimeFactory({
 			},
 			config: { ...config.ownership, partition },
 		});
-		// The epoch a claim hands back is what this writer's records are stamped with.
 		const { publication, ownerEpoch } = trackOwnerEpoch({
 			publication: ownership,
 			cell: epochCell,
@@ -141,7 +140,6 @@ export function createPartitionRuntimeFactory({
 	return createRuntime;
 }
 
-/** Remembers the route epoch of the latest claim this worker won for the partition, however it won it. */
 function trackOwnerEpoch({
 	publication,
 	cell,

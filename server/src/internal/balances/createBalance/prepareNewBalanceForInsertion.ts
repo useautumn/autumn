@@ -56,10 +56,6 @@ export const prepareNewBalanceForInsertion = async ({
 
 	const entity = fullCustomer.entity;
 
-	// NOTE: We do NOT set entity_feature_id here. That field means "per-entity balances"
-	// (e.g., 10 messages per seat). For entity-scoped loose balances, we only set
-	// internal_entity_id on the cusEnt to scope the balance to a specific entity.
-
 	const newEntitlementWithFeature = enrichEntitlementWithFeature({
 		entitlement: newEntitlement,
 		feature,
@@ -78,24 +74,16 @@ export const prepareNewBalanceForInsertion = async ({
 		cusProductId: null,
 	});
 
-	// If entity is provided, assign balance to entity instead of customer-level
 	if (entity) {
 		newCustomerEntitlement.internal_entity_id = entity.internal_id;
 	}
 
-	// Set expiry if provided (mutually exclusive with reset interval)
 	if (params.expires_at) {
 		newCustomerEntitlement.expires_at = params.expires_at ?? null;
-		// Clear next_reset_at since expiring entitlements don't reset
 		newCustomerEntitlement.next_reset_at = null;
 		newCustomerEntitlement.reset_cycle_anchor = null;
 	}
 
-	// Apply an explicit first reset boundary if provided. This overrides the
-	// derived next_reset_at (and the null set above when expires_at is present),
-	// allowing a custom first period that resets up until expiry. The cycle
-	// anchor follows it: resets step from next_reset_at, so the explicit boundary
-	// is the cycle's phase, and usage windows read the anchor to stay fixed.
 	if (params.next_reset_at !== undefined) {
 		newCustomerEntitlement.next_reset_at = params.next_reset_at;
 		if (isResettingEntitlement({ entitlement: newEntitlementWithFeature })) {

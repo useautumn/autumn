@@ -24,7 +24,6 @@ const standaloneOrg = {
 	created_by: null,
 };
 
-/** Global at 0%, the master org overridden to 100%. */
 const masterOnWorker: RolloutConfig = {
 	rollouts: {
 		[ACTIVE_ROLLOUT_ID]: {

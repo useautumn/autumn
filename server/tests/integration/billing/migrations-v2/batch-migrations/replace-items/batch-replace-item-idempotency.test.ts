@@ -1,7 +1,3 @@
-/**
- * Replay of a filter-replace may remint the 200 entitlement and rematch the
- * live row. The invariant is the allowance delta is credited once.
- */
 import { expect, test } from "bun:test";
 import { customerEntitlements } from "@autumn/shared";
 import { runChunkedMigration } from "@tests/integration/billing/migrations-v2/utils/runChunkedMigration";

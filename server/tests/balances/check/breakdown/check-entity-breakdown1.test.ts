@@ -13,19 +13,11 @@ import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
 import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
 
-/**
- * Test: Per-entity messages breakdown
- * - Product gives 100 messages per entity (monthly)
- * - 3 entities created
- * - Customer should have 300 total (100 x 3), with 1 breakdown item
- * - Each entity should have 100, with 1 breakdown item
- */
-
 const perEntityMessages = constructFeatureItem({
 	featureId: TestFeature.Messages,
 	includedUsage: 100,
 	interval: ProductItemInterval.Month,
-	entityFeatureId: TestFeature.Users, // Per entity
+	entityFeatureId: TestFeature.Users,
 });
 
 const freeProd = constructProduct({
@@ -74,7 +66,6 @@ describe(`${chalk.yellowBright("check-entity-breakdown1: per-entity messages bre
 			feature_id: TestFeature.Messages,
 		})) as unknown as CheckResponseV2;
 
-		// 3 entities x 100 = 300
 		expect(res.balance).toMatchObject({
 			granted_balance: 300,
 			current_balance: 300,
@@ -83,7 +74,6 @@ describe(`${chalk.yellowBright("check-entity-breakdown1: per-entity messages bre
 			plan_id: freeProd.id,
 		});
 
-		// Should have 1 breakdown item
 		expect(res.balance?.breakdown).toHaveLength(1);
 
 		const breakdown = res.balance?.breakdown?.[0];
@@ -115,7 +105,6 @@ describe(`${chalk.yellowBright("check-entity-breakdown1: per-entity messages bre
 				plan_id: freeProd.id,
 			});
 
-			// Each entity should have 1 breakdown item
 			expect(res.balance?.breakdown).toHaveLength(1);
 
 			const breakdown = res.balance?.breakdown?.[0];

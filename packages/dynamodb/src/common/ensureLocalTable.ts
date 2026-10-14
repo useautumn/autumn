@@ -40,9 +40,7 @@ const createTable = async ({
 				TimeToLiveSpecification: { AttributeName: ttlAttribute, Enabled: true },
 			}),
 		);
-	} catch {
-		// Already enabled. Emulators accept but never sweep TTL, so conditions enforce expiry themselves.
-	}
+	} catch {}
 };
 
 /** Emulators start empty, so a table is created on first use, once per process. On AWS tables are infra: a no-op. */

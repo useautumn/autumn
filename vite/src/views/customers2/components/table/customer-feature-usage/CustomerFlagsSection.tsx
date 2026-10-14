@@ -12,8 +12,6 @@ const FLAG_VIEWS: { value: FlagsView; label: string }[] = [
 	{ value: "catalog", label: "Full Catalog" },
 ];
 
-// The primitive's active chip is near-black and its track is bg-muted, a point
-// off interactive-secondary in dark mode — neither separates from the card.
 const TAB_CLASSNAME = cn(
 	"px-2.5 py-0.5 rounded-md text-xs font-medium text-tertiary-foreground",
 	"transition-colors hover:text-foreground",
@@ -23,7 +21,6 @@ const TAB_CLASSNAME = cn(
 
 const ENTER_TRANSITION = { duration: 0.2, ease: [0.23, 1, 0.32, 1] } as const;
 const EXIT_TRANSITION = { duration: 0.12, ease: "easeOut" } as const;
-// No spring — bouncing the row height would shove everything below it around.
 const HEIGHT_TRANSITION = { duration: 0.25, ease: [0.23, 1, 0.32, 1] } as const;
 
 export function CustomerFlagsSection({
@@ -50,8 +47,6 @@ export function CustomerFlagsSection({
 		toggleExpanded,
 	} = useFlagsView({ booleanEnts, hasCatalog });
 
-	// Pills keep their slot across views — only trailing ones are added or
-	// removed — so a plain fade reads calmer than layout animation plus scale.
 	const pillMotion = {
 		initial: { opacity: 0 },
 		animate: { opacity: 1 },
@@ -59,7 +54,6 @@ export function CustomerFlagsSection({
 		transition: reduceMotion ? { duration: 0 } : ENTER_TRANSITION,
 	};
 
-	// Catalog is an expansion of the customer's flags, never a section on its own.
 	if (booleanEnts.length === 0) return null;
 
 	return (
@@ -88,8 +82,6 @@ export function CustomerFlagsSection({
 			)}
 
 			<div ref={containerRef} className="relative">
-				{/* Always mounted — gating this on the view would leave the count stale
-				    for a frame when returning to Flags, collapsing to the wrong width. */}
 				<div
 					ref={measureRef}
 					aria-hidden
@@ -115,9 +107,6 @@ export function CustomerFlagsSection({
 						ref={rowRef}
 						className={cn(
 							"flex gap-2 flex-wrap",
-							// Clip to one row by height, not nowrap: nowrap lets the row
-							// exceed the container, parking trailing children off-screen
-							// right until the count catches up.
 							isCollapsed && "max-h-10 overflow-hidden",
 						)}
 					>

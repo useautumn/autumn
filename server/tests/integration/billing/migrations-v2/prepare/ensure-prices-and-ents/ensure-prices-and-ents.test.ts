@@ -1,13 +1,3 @@
-/**
- * TDD coverage for ensure_prices_and_entitlements preparation.
- *
- * Contract under test:
- *   - prepared catalog rows are content-addressed by the exact update_plan input,
- *     operation position, and matched product version.
- *   - unchanged add_items keep their prepared row IDs across migration edits.
- *   - changed add_items/base prices receive new prepared row IDs.
- */
-
 import { expect, test } from "bun:test";
 import type { Price } from "@autumn/shared";
 import { prepare } from "@/internal/migrations/v2/prepare/prepare.js";

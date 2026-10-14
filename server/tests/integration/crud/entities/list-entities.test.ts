@@ -1,22 +1,3 @@
-/**
- * TDD test for entities.list.
- *
- * Contract under test:
- *   New endpoints:
- *     - POST /v1/entities.list -> page-paginated full entity responses.
- *   New behaviors:
- *     - search matches entity id/name only, not parent customer fields.
- *     - plan filters include inherited customer-level products.
- *     - plan filters include matching entity-level products only for that entity.
- *     - trialing entity products are returned in full entity list responses.
- *     - subscription_status alone shapes hydrated products but does not reduce entity selection.
- *   Side effects:
- *     - none; endpoint is read-only.
- *
- * Pre-impl red: the RPC route and list handler do not exist.
- * Post-impl green: all assertions pass through the FullSubject-backed entity list path.
- */
-
 import { expect, test } from "bun:test";
 import {
 	type ApiEntityV1,
@@ -103,7 +84,6 @@ test.concurrent(`${chalk.yellowBright("list entities: filters inherited and enti
 		entity_id: gammaEntityId,
 	});
 
-	// Contract: full V2.1 entity responses, pagination, and entity-only search.
 	const firstPage = await autumnV2_1.entitiesV2.list<
 		ListEntitiesResponse<ApiEntityV2>
 	>({
@@ -132,7 +112,6 @@ test.concurrent(`${chalk.yellowBright("list entities: filters inherited and enti
 	expect(customerSearch.total).toBe(0);
 	expect(customerSearch.total_filtered_count).toBe(0);
 
-	// Contract: inherited customer-level product makes all three entities match.
 	const inheritedPlanPage = await autumnV2_1.entitiesV2.list<
 		ListEntitiesResponse<ApiEntityV2>
 	>({
@@ -150,7 +129,6 @@ test.concurrent(`${chalk.yellowBright("list entities: filters inherited and enti
 		gammaEntityId,
 	]);
 
-	// Contract: entity-level product only matches its owning entity, including trial products.
 	const trialPlanPage = await autumnV2_1.entitiesV2.list<
 		ListEntitiesResponse<ApiEntityV2>
 	>({
@@ -173,7 +151,6 @@ test.concurrent(`${chalk.yellowBright("list entities: filters inherited and enti
 		usage: 0,
 	});
 
-	// Contract: subscription_status alone does not reduce selected entities.
 	const scheduledOnlySelection = await autumnV2_1.entitiesV2.list<
 		ListEntitiesResponse<ApiEntityV2>
 	>({
@@ -185,7 +162,6 @@ test.concurrent(`${chalk.yellowBright("list entities: filters inherited and enti
 	expect(scheduledOnlySelection.total).toBe(3);
 	expect(scheduledOnlySelection.total_filtered_count).toBe(3);
 
-	// Contract: response versioning applies to each listed entity.
 	await timeout(1100);
 	const v2_0Page = await autumnV2.entitiesV2.list<
 		ListEntitiesResponse<ApiEntityV1>

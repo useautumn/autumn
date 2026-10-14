@@ -7,7 +7,6 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-// version-only is per-customer until definition execute is restored
 import {
 	expectPerCustomerLaneWithRejections,
 	readRepointableCustomerPlanRow,
@@ -52,8 +51,6 @@ test.skip(
 		});
 		expect(before.pools).toHaveLength(1);
 
-		// Same license product version, same items — only the link's `included`
-		// changes, which linkFieldsMatch cannot prove uniform.
 		await scenario.autumnV2_3.post("/plans.update", {
 			plan_id: parent.id,
 			items: [itemsV2.dashboard()],
@@ -89,8 +86,6 @@ test.skip(
 			result?.rejections?.map((rejection) => String(rejection.code)),
 		).toEqual(["license_link_transition"]);
 
-		// The per-customer lane still lands the version: the parent row moves to
-		// v2 and the pool follows the target version's plan_license link.
 		const afterParent = await readRepointableCustomerPlanRow({
 			ctx: scenario.ctx,
 			customerId,
@@ -104,8 +99,6 @@ test.skip(
 			parentVersion: 2,
 			licensePlanId: seat.id,
 		});
-		// The per-customer lane expires the v1 parent and inserts a v2 one, so the
-		// live pool is the one hanging off the surviving parent row.
 		const after = await getLicenseDbState({ db: scenario.ctx.db, customerId });
 		const livePools = after.pools.filter(
 			(pool) => pool.parent_customer_product_id === afterParent.id,

@@ -2,9 +2,6 @@ import { Box, Text } from "ink";
 import type { ColumnWidths, CustomerRowProps } from "../types.js";
 import { formatDate, truncate } from "../types.js";
 
-/**
- * Single customer row in the table
- */
 export function CustomerRow({
 	customer,
 	isSelected,
@@ -53,9 +50,6 @@ export interface CustomerTableHeaderProps {
 	columnWidths: ColumnWidths;
 }
 
-/**
- * Table header row
- */
 export function CustomerTableHeader({
 	columnWidths,
 }: CustomerTableHeaderProps) {

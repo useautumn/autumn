@@ -9,9 +9,7 @@ import type {
 	SubjectPulls,
 } from "./types/subjectPulls.js";
 
-/** Per thread: bounds the load pulls put on Autumn, and slows them as Autumn slows. */
 export const MAX_PULLS_IN_FLIGHT = 8;
-/** A subject is pulled at most once per hold, whatever Autumn answers; herald's pushes keep a stored one fresh. */
 export const PULL_HOLD_MS = 30_000;
 
 type SubjectPullsContext = {
@@ -24,11 +22,9 @@ type SubjectPullsContext = {
 const autumnRefusalOf = (error: unknown): string | null =>
 	error instanceof AutumnClientError ? error.code : null;
 
-/** Autumn does not know the folder's token, as for our shadow Atom: the whole folder is held. */
 const isAtomUnknown = (error: unknown): boolean =>
 	autumnRefusalOf(error) === AtomSubjectReadErrorCode.AtomUnknown;
 
-/** Autumn has no subject this Atom may hold: an expected answer, not a failure. */
 const isSubjectUnavailable = (error: unknown): boolean => {
 	const code = autumnRefusalOf(error);
 	return (
@@ -45,7 +41,6 @@ const subjectKeyOf = ({
 	entityId: string | null;
 }) => (entityId === null ? customerId : `${customerId}\u0000${entityId}`);
 
-/** A miss pulls its subject from Autumn beside the forward, never instead of it, and stores it as a push would. */
 export const createSubjectPulls = ({
 	ctx,
 }: {
@@ -56,7 +51,6 @@ export const createSubjectPulls = ({
 	let inFlight = 0;
 	let failureLoggedAt = Number.NEGATIVE_INFINITY;
 
-	/** At most one warning per hold per thread, so an Autumn that is down cannot flood the logs. */
 	function logFailure({ error }: { error: unknown }): void {
 		const at = now();
 		if (at - failureLoggedAt < PULL_HOLD_MS) return;
@@ -74,7 +68,6 @@ export const createSubjectPulls = ({
 		tokenHash: () => string;
 		applyPulled: ApplyPulled;
 	}): FolderSubjectPulls {
-		// Every hold is equally long, so insertion order is expiry order and expired holds leave from the front.
 		const heldUntil = new Map<string, number>();
 		let folderHeldUntil = Number.NEGATIVE_INFINITY;
 

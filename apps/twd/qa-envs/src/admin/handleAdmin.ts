@@ -8,13 +8,11 @@ import {
 import type { CreateEnvInput, Env } from "../types";
 
 const NAME_RE = /^[a-z0-9](?:[a-z0-9-]{0,40}[a-z0-9])?$/;
-/** New envs can't use `--`: it marks a Tinybird hostname (`<env>--tb`). */
 const isNewEnvName = (name: string) => !name.includes("--");
 const RESERVED = new Set(["hooks", "www", "api", "app", "twd", "admin"]);
 
 const json = (data: unknown, status = 200) => Response.json(data, { status });
 
-/** twd's control API: `/__admin/<name>/<action>`, bearer QA_ADMIN_TOKEN. */
 export async function handleAdmin({
 	req,
 	env,

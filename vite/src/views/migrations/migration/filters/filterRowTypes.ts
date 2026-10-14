@@ -61,8 +61,6 @@ const STRING_MATCH_OPERATORS: OperatorOption[] = [
 	{ value: "not_in", label: "not in" },
 ];
 
-// Plan adds "has none" — selects customers with no active plans at all
-// (compiles to the `$none` quantifier, not a per-plan matcher).
 const PLAN_OPERATORS: OperatorOption[] = [
 	...STRING_MATCH_OPERATORS,
 	{ value: "none", label: "has none" },
@@ -141,11 +139,6 @@ function selectionToFilter({ planId, version }: PlanSelection): PlanFilter {
 		: { plan_id: planId, version };
 }
 
-/**
- * Plan-selection value keys → the PlanFilter for one quantifier. Version-less
- * keys collapse to `plan_id` / `$in`; any pinned version forces an `$or` of
- * `{ plan_id, version }` branches (each compiles to a single bound EXISTS).
- */
 export function planKeysToFilter(keys: string[]): PlanFilter {
 	const selections = [
 		...new Set(keys.map((key) => key.trim()).filter(Boolean)),
@@ -172,9 +165,6 @@ function planIdsFromMatcher(
 	return null;
 }
 
-// A version pin folds into a plan key only as a single concrete number — bare
-// `N` or `{ $eq: N }`. Returns `undefined` when absent, or `"unfoldable"` for
-// matcher forms ($in, ranges, $ne, null) a key can't carry.
 function pinnedVersion(
 	matcher: NumberMatcher | undefined,
 ): number | undefined | "unfoldable" {
@@ -190,8 +180,6 @@ function pinnedVersion(
 	return "unfoldable";
 }
 
-/** A PlanFilter that is purely a plan selection (`plan_id` and an optional
- *  single-version pin) → its value keys, else null. */
 function pureSelectionKeys(filter: PlanFilter): string[] | null {
 	if (filter.plan_id === undefined) return null;
 	if (Object.keys(filter).some((key) => !PLAN_SELECTION_KEYS.has(key)))
@@ -203,14 +191,7 @@ function pureSelectionKeys(filter: PlanFilter): string[] | null {
 	return ids.map((planId) => makePlanKey({ planId, version }));
 }
 
-/**
- * Decode a quantifier's PlanFilter to plan-selection keys, or null when it
- * isn't a plan selection (a non-plan field, or a legacy `$or` of full filters
- * — those are handled by `planFilterToGroups`).
- */
 export function planFilterToPlanKeys(filter: PlanFilter): string[] | null {
-	// Property siblings (`custom`, `paid`, …) are not part of the selection.
-	// Catalog drafts are `{ $or: [{ plan_id, version }, …], custom: false }`.
 	const {
 		custom: _custom,
 		paid: _paid,
@@ -240,8 +221,6 @@ function planKeysToRule(keys: string[]): FilterRule {
 }
 
 export function planFilterToGroups(filter: PlanFilter): FilterGroupData[] {
-	// Property siblings (`custom`, `paid`, …) must not hide a `$or` of plan
-	// selections — catalog drafts are `{ $or: [{ plan_id, version }, …], custom: false }`.
 	const { custom, paid, recurring, price, ...selection } = filter;
 	const planKeys = planFilterToPlanKeys(selection);
 	if (planKeys !== null) {
@@ -260,8 +239,6 @@ export function planFilterToGroups(filter: PlanFilter): FilterGroupData[] {
 
 	const planIdRule = stringMatcherToRule("plan_id", filter.plan_id);
 	if (planIdRule) {
-		// Sibling fields (e.g. custom) keep this off the pure-selection path, so
-		// fold a concrete version pin into the plan keys here or it's lost.
 		const version = pinnedVersion(filter.version);
 		if (typeof version === "number")
 			planIdRule.values = planIdRule.values.map((planId) =>
@@ -285,7 +262,6 @@ export function planFilterToGroups(filter: PlanFilter): FilterGroupData[] {
 	const groups: FilterGroupData[] =
 		mainRules.length > 0 ? [{ rules: mainRules }] : [];
 
-	// Legacy `$or` of full filters — each branch is its own OR-group.
 	if (filter.$or) {
 		for (const orFilter of filter.$or) {
 			const orGroups = planFilterToGroups(orFilter);

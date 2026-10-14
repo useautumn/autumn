@@ -41,7 +41,6 @@ export function loopbackServiceUrls({
 	};
 }
 
-/** Local dashboard / API URLs for this worktree (portless aliases when provisioned). */
 export function localServiceUrls({
 	entry,
 }: {
@@ -67,7 +66,6 @@ export function localServiceUrls({
 	};
 }
 
-/** Cloud agent: browser-facing URLs are the public service hosts. */
 export function publicDevEnv({
 	urls,
 	worktreeNum,
@@ -93,7 +91,6 @@ export function publicDevEnv({
 	};
 }
 
-/** Laptop page and browser API stay on portless. Public hosts are Cloud + inbound webhooks. */
 export function laptopDevEnv({
 	aliases,
 	publicUrls,

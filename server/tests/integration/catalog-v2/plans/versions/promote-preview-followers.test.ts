@@ -1,12 +1,3 @@
-/**
- * catalogV2 preview — variant + license lanes on promote match execute.
- *
- * Contract:
- *   base promote lists the follow variant at its current version (no mint)
- *   historical variant v1 stays in sibling_versions; latest follow is listed
- *   child promote: parents stay on v1 (sibling_versions); pin follows, omit freezes
- */
-
 import { test } from "bun:test";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";

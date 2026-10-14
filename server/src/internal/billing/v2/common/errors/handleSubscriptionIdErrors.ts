@@ -6,7 +6,6 @@ export const presentSubscriptionIds = (
 	subscriptionIds: (string | undefined | null)[],
 ): string[] => subscriptionIds.filter((id): id is string => !!id);
 
-/** Rejects a subscription_id repeated within one set of requested plans. */
 export const assertNoDuplicateSubscriptionIds = ({
 	subscriptionIds,
 }: {
@@ -37,7 +36,6 @@ export const throwSubscriptionIdInUse = ({
 	});
 };
 
-/** Validates that a subscription_id is not already in use for the given customer. */
 export const handleSubscriptionIdErrors = async ({
 	db,
 	internalCustomerId,

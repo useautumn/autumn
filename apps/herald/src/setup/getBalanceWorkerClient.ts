@@ -12,7 +12,6 @@ import { getHeraldLogger } from "./getHeraldLogger.js";
 
 let balanceWorkerClient: BalanceWorkerClient | undefined;
 
-/** Reads subjects from their owners; routing answers "no owner" until `start` has read the ownership log through. */
 export function getBalanceWorkerClient(): BalanceWorkerClient {
 	const env = getBalanceWorkerClientEnv();
 	balanceWorkerClient ??= createKafkaBalanceWorkerClient({
@@ -32,7 +31,6 @@ export function getBalanceWorkerClient(): BalanceWorkerClient {
 			partitionCount: env.BALANCE_WORKER_PARTITION_COUNT,
 			timeoutMs: BALANCE_WORKER_REQUEST_TIMEOUT_MS,
 			catchUpTimeoutMs: BALANCE_WORKER_OWNERSHIP_CATCH_UP_TIMEOUT_MS,
-			// Herald only reads subjects; it never queues or publishes.
 			connectProducersOnStart: false,
 		},
 	});

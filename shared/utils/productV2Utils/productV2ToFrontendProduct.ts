@@ -1,5 +1,3 @@
-// 1. productV2ToPlanType
-
 import type { ProductItem } from "@models/productV2Models/productItemModels/productItemModels.js";
 import type {
 	FrontendProduct,
@@ -8,8 +6,6 @@ import type {
 import { isFeaturePriceItem, notNullish, nullish } from "@utils/index.js";
 import { productV2ToBasePrice } from "@utils/productV3Utils/productItemUtils/productV3ItemUtils.js";
 
-// The API mirrors `price_interval` onto priced items even when it just echoes
-// `interval`; drop it so editors treat "split" as price_interval being set.
 export const normalizeResetInterval = (item: ProductItem): ProductItem => {
 	if (nullish(item.price_interval)) return item;
 
@@ -23,23 +19,16 @@ export const normalizeResetInterval = (item: ProductItem): ProductItem => {
 	return item;
 };
 
-// 2. productV2ToBasePriceType
-
-// 3. productV2ToFrontendProduct
 export const productV2ToPlanType = ({
 	product,
 }: {
 	product: ProductV2 | FrontendProduct;
 }): FrontendProduct["planType"] => {
-	// return product.planType;
 	if ("planType" in product) {
 		return product.planType;
 	}
 
-	// Default
 	return null;
-
-	// Backend logic to determine plan type
 };
 
 export const productV2ToFrontendProduct = ({
@@ -66,11 +55,3 @@ export const productV2ToFrontendProduct = ({
 					: null,
 	};
 };
-
-// export const productV2ToBasePriceType = ({
-// 	product,
-// }: {
-// 	product: ProductV2;
-// }) => {
-// 	return product.basePriceType;
-// };

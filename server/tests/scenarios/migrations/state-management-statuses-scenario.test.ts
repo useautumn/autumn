@@ -29,8 +29,6 @@ type ScenarioCtx = Awaited<ReturnType<typeof initScenario>>["ctx"];
 type ScenarioClient = Awaited<ReturnType<typeof initScenario>>["autumnV2_2"];
 
 const CUSTOMER_IDS = ["a", "b", "c", "d", "e", "f"].map((id) => `qa-st-${id}`);
-/** Seeded live runs make every other queued Run All in the org read
- * `waiting`, so group runs settle them; set this for manual QA. */
 const KEEP_LIVE_RUNS = process.env.QA_KEEP_LIVE_RUNS === "1";
 
 const transientDbError = () =>
@@ -41,7 +39,6 @@ const transientDbError = () =>
 		},
 	);
 
-/** Live runs block `deleteAndCreate`, so settle them before recreating. */
 const resetMigration = async ({
 	ctx,
 	migrationId,
@@ -121,23 +118,6 @@ const seedRun = async ({
 	return run.internal_id;
 };
 
-/**
- * QA setup for every migration status and every item outcome.
- *
- *   plan qa-status, customers qa-st-a..f on it
- *
- *   qa-dry      draft   — dry run only, so dry-run rows show without a Run All
- *   qa-skips    run     — a: guard skip (ineligible)   b: connection dropped (ineligible)
- *                         c: no_updates_needed         d: failed (error shown in sheet)
- *                         e: succeeded                 f: never claimed
- *   qa-running  running — a, b claimed and running, c succeeded; the run row is
- *                         seeded so it stays executing until you cancel it
- *   qa-waiting  waiting — queued behind qa-running
- *
- * qa-running and qa-waiting stay live only with QA_KEEP_LIVE_RUNS=1; while
- * they are, any other Run All in the org reads "Waiting on qa-running" until
- * its trigger task starts. Cancel qa-running when done.
- */
 test(`${chalk.yellowBright("migration-setup: state management statuses QA")}`, async () => {
 	const plan = products.base({
 		id: "status",

@@ -1,9 +1,3 @@
-/**
- * Knowledge-platform archetype catalog (Minify-like), for flow cases that
- * need: a DEFAULT trial plan (autoEnable + no-card free trial), paid monthly
- * and annual twins, and a metered credit feature. Pushed to the case's org
- * before the agent starts.
- */
 export const knowledgePlatformCatalog = `import { atmn, feature, plan } from "atmn";
 
 export default atmn({

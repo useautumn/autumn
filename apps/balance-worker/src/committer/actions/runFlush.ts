@@ -50,11 +50,6 @@ const isBalanceTable = (table: RowChange["table"]): table is BalanceTable =>
 	table === "pooledBalances" ||
 	table === "locks";
 
-/**
- * An update replaces its columns; with guards on, under its `before` unless a billing plan's, which lands last-write-wins.
- * A reset's refill is always guarded: it was decided from the cycle it ended, so a writer outside the worker that moved
- * the row since (a renewal, an anchor sync) superseded it, and the reset is skipped rather than landed over that write.
- */
 const updateToSubjectRowUpdate = ({
 	table,
 	change,
@@ -69,7 +64,6 @@ const updateToSubjectRowUpdate = ({
 	set: { ...change.after },
 	add: {},
 	addEntries: {},
-	// `before` stays on the log for its readers either way.
 	guard:
 		(commandType === "reset" && table === "customerEntitlements") ||
 		(BALANCE_WORKER_COMMITTER_GUARDS_ENABLED &&
@@ -78,7 +72,6 @@ const updateToSubjectRowUpdate = ({
 			: {},
 });
 
-/** An increment adds its counters; with guards on, only while the row is still in the cycle it names. */
 const incrementToSubjectRowUpdate = ({
 	change,
 }: {
@@ -114,7 +107,6 @@ const incrementToSubjectRowUpdate = ({
 	};
 };
 
-/** The subject's own rows: a billing plan's, and any command's that edits one (a delete marking its product custom). */
 const PLAN_TABLES = {
 	customer: "customers",
 	entity: "entities",
@@ -155,7 +147,6 @@ const planRowChangeToSubjectRowChange = ({
 	}
 };
 
-/** The change as Postgres lands it: the balance tables and their locks, and a billing plan's changes to the subject's own rows. */
 const rowChangeToSubjectRowChange = ({
 	change,
 	commandType,
@@ -163,7 +154,6 @@ const rowChangeToSubjectRowChange = ({
 	change: RowChange;
 	commandType: MutationCommand["type"];
 }): SubjectRowChange => {
-	// A reset's promote is set-based over rows the worker never holds; Postgres applies it as one statement.
 	if (change.table === "pooledContributions" && change.op === "promote")
 		return {
 			op: "promote",
@@ -172,7 +162,6 @@ const rowChangeToSubjectRowChange = ({
 			dueBy: change.dueBy,
 		};
 	if (isPlanRowChange(change)) {
-		// An initialize's rows are what Postgres already holds; writing them back would re-insert them.
 		if (commandType === "initialize")
 			throw new UnsupportedRowChangeError({
 				table: change.table,
@@ -210,7 +199,6 @@ const rowChangeToSubjectRowChange = ({
 	}
 };
 
-/** Which records touched each change, so a row that did not land names the mutations it belonged to. */
 const collectChanges = ({
 	flush,
 }: {
@@ -227,7 +215,6 @@ const collectChanges = ({
 						commandType: record.mutation.command.type,
 					}),
 				});
-				// An update that only touched a newer build's columns has nothing left to land.
 				if (known === null) continue;
 				changes.push(known);
 				recordOf.push(record);
@@ -237,7 +224,6 @@ const collectChanges = ({
 	return { changes, recordOf };
 };
 
-/** The command bookmark follows the last consumed command in the call; calls without one leave it where it is. */
 const commandNextOffsetOf = ({
 	call,
 }: {
@@ -250,7 +236,6 @@ const commandNextOffsetOf = ({
 	return call.commandNextOffset;
 };
 
-/** A call with nothing to move still carries its bookmark when it writes snapshot rows: the bookmark is the fence a stale owner's rows roll back on. Deletes alone are always safe and go unfenced. */
 const bookmarkOf = ({ call }: { call: FlushCall }): FlushBookmark | null => {
 	const last = call.records.at(-1);
 	if (
@@ -271,7 +256,6 @@ const bookmarkOf = ({ call }: { call: FlushCall }): FlushBookmark | null => {
 	};
 };
 
-/** An earlier attempt landed when every bookmark sits exactly where this flush would leave it, under this writer's claim. */
 export const flushLandedEarlier = async ({
 	ctx,
 	flush,
@@ -301,7 +285,6 @@ export const flushLandedEarlier = async ({
 	return outcomes;
 };
 
-/** One transaction for the whole flush: every call's row updates, its subject snapshots, then every call's bookmark. */
 export const runFlush = async ({
 	ctx,
 	config,
@@ -342,8 +325,6 @@ export const runFlush = async ({
 	return outcomes;
 };
 
-/** The changes that did not land, each with its record. Changes folded onto one row miss together; where one of them carried
- *  a guard, that guard is why (the row is still there), so only the guarded changes are stale and the rest land without them. */
 const staleRowsOf = ({
 	changes,
 	applied,
@@ -370,7 +351,6 @@ const staleRowsOf = ({
 	});
 };
 
-/** Each deleted row goes to the call whose intent deleted its customer, so a lane tick learns what its evicts removed. */
 const attributeDeletedSnapshots = ({
 	flush,
 	outcomes,

@@ -61,11 +61,6 @@ const getScheduledLicensePools = async ({
 		);
 };
 
-/**
- * Asserts the license pools hanging off a scheduled parent product. Scheduled
- * products are absent from the customer API until activation, so the pools are
- * read straight from the DB.
- */
 export const expectScheduledLicensePools = async ({
 	ctx,
 	customerId,

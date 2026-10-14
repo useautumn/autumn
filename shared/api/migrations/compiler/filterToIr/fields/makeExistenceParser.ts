@@ -1,16 +1,5 @@
 import type { IRNode } from "../../ir/irTypes.js";
 
-/**
- * Factory for nullable-existence field parsers. The pattern is identical
- * across `price`, `rollover`, and any future field where the only phase-1
- * questions are "is this column null?" / "is it non-null?":
- *   field: null           → exists(false)
- *   field: { $eq: null }  → exists(false)
- *   field: { $ne: null }  → exists(true)
- *
- * `scopePath` is the dotted public path used in error messages
- * (e.g. "plan.item.rollover"). The IR `field` is the bare name.
- */
 export function makeExistenceParser({
 	field,
 	scopePath,

@@ -29,11 +29,6 @@ const priceMatchKey = (price: Price): string => {
 	return `feature:${featureId ?? "<missing>"}|bill_when:${billWhen}`;
 };
 
-/**
- * Attach a customer's primary FullCusProduct (custom or otherwise) to the
- * matching catalog plan's prices via feature_id (or "fixed" for base prices).
- * Returns matched pairs and the catalog plan for further assertions.
- */
 export const loadCustomerAndCatalogPrices = async ({
 	ctx,
 	customerId,
@@ -102,10 +97,6 @@ const formatDiff = (catalog: Price, customer: Price): string => {
 		.join("\n  ");
 };
 
-/**
- * Assert every (catalog, customer) price pair shares all Stripe-object IDs.
- * Each catalog price must hold its V2 billing price id, so reuse is real, not "both empty".
- */
 export const expectAllStripeIdsReused = ({
 	pairs,
 	catalogProduct,
@@ -130,10 +121,6 @@ export const expectAllStripeIdsReused = ({
 	}
 };
 
-/**
- * Assert the customer price keyed by `featureId` (null = fixed base) does NOT reuse the
- * catalog's V2 billing price id. Falls back to feature-only matching (e.g. prepaid → consumable).
- */
 export const expectStripePriceIdNotReused = ({
 	pairs,
 	catalogProduct,
@@ -189,5 +176,4 @@ export const expectStripePriceIdNotReused = ({
 
 export { priceMatchKey };
 
-// Re-export for callers
 export type { DrizzleCli, AppEnv };

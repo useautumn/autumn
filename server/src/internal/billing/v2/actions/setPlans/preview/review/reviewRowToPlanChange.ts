@@ -6,7 +6,6 @@ import {
 } from "./reviewSegmentCustomerProduct";
 import type { ReviewPlanRow } from "./types/reviewPhase";
 
-/** The before/after rows plan_changes reads for one review row; a kept plan reports nothing. */
 export const reviewRowToPlanChange = ({
 	row,
 	lookup,

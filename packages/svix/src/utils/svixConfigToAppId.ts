@@ -1,6 +1,5 @@
 import { AppEnv } from "@autumn/shared";
 
-/** The Svix app an org delivers through in an env, as its row stores them; null where it has none set up. */
 export const svixConfigToAppId = ({
 	svixConfig,
 	env,

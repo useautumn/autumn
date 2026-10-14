@@ -49,8 +49,6 @@ const customizeFor = (scenario: MigrationScenario) => {
 	};
 };
 
-/** Turns a scenario into the operation the migration runs, targeting either the
- * plan the customer holds or a license plan its parent links. */
 export const buildScenarioOperations = ({
 	scenario,
 	planId,

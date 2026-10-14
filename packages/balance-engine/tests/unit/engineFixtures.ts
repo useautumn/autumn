@@ -84,7 +84,6 @@ export const createCustomerProduct = ({
 	...(canceledAt !== undefined && { canceled_at: canceledAt }),
 });
 
-/** A license pool on `parentCustomerProductId`, reachable from seats by `linkId`. */
 export const createCustomerLicense = ({
 	id = "cl_1",
 	linkId = "link_1",
@@ -177,7 +176,6 @@ export const entity = {
 	feature_id: "seats",
 } as const;
 
-/** What an entity initialize carries: the entity and the rows it owns, under the entity's identity. */
 export const createEntityState = ({
 	customerEntitlements = [
 		{
@@ -269,7 +267,6 @@ const productRowOf = (internalProductId: string): CatalogRow => ({
 	},
 });
 
-/** Every catalog row `state` references. */
 export const createCatalogRowsFor = ({
 	state,
 }: {
@@ -284,7 +281,6 @@ export const createCatalogRowsFor = ({
 	...state.customerProducts.map((row) => productRowOf(row.internal_product_id)),
 ];
 
-/** An evict as the worker logs it: nothing moves, the customer's revision steps once. */
 export const createEvictRecord = ({
 	commandId = "evict_1",
 	revisionBefore = 0,
@@ -316,7 +312,6 @@ export const createEvictRecord = ({
 export const createCatalogFor = ({ state }: { state: SubjectState }): Catalog =>
 	catalogRowsToCatalog({ rows: createCatalogRowsFor({ state }) });
 
-/** The view a command computes against: state joined with the catalog it references. */
 export const createSubjectFor = ({
 	state,
 	entityId = null,

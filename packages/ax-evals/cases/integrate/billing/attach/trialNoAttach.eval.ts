@@ -5,12 +5,6 @@ import { initIntegrationEval } from "../../../../src/initIntegrationEval.ts";
 import { knowledgePlatformCatalog } from "../../catalogs/knowledgePlatformCatalog.ts";
 import { fixtureUser, integrateScenario } from "../../integrateShared.ts";
 
-/**
- * ATTACH flow: pro_trial is a DEFAULT plan (autoEnable): creating the customer is
- * enough — Autumn puts them on the trial. The graded trap: an agent that
- * doesn't understand default plans will call billing.attach("pro_trial")
- * anyway, or worse, gate on it manually.
- */
 export const trialNoAttach: IntegrationCase = {
 	name: "integrate-trial-no-attach",
 	fixture: "notes-api",

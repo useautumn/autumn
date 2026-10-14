@@ -1,8 +1,4 @@
 #!/usr/bin/env bun
-/**
- * Detached babysitter: archive a Trigger DEV branch when the watched pid dies.
- * Started by scripts/dev.ts — do not run manually.
- */
 
 import { archiveTriggerDevBranch } from "./trigger/archiveDevBranch.ts";
 
@@ -43,7 +39,6 @@ async function sleep({ ms }: { ms: number }): Promise<void> {
 async function main(): Promise<void> {
 	const { watchPid, branch, projectRoot } = parseArgs(process.argv.slice(2));
 
-	// Survive terminal Ctrl+C aimed at the parent process group.
 	for (const signal of ["SIGINT", "SIGTERM", "SIGHUP"] as const) {
 		process.on(signal, () => {});
 	}

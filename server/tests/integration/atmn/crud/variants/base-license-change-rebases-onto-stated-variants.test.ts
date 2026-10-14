@@ -1,15 +1,3 @@
-/**
- * atmn crud/variants — a variant restates its content customize on every push
- * but says nothing about licenses. The base's `licenses[]` is therefore the
- * variant's stock link: when the base pins a new child version, or customizes
- * the link, every stated variant version follows; a variant that customizes
- * its own link keeps that.
- *
- * Red (current):  base moves seat v1 → v2; both Team EU rows stay on v1.
- * Green (after):  every stated variant row links the base's declared child
- *                 version and carries its customize; round-trips.
- */
-
 import { expect, test } from "bun:test";
 import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 import { expectRoundTrip } from "@tests/utils/atmnUtils/expectRoundTrip.js";
@@ -28,7 +16,6 @@ const messagesItem = (included: number) =>
 const euVariant = ({ slug, messages }: { slug: string; messages: number }) =>
 	`{ variantPlanId: "teamEu", name: "Team EU", versionSlug: "${slug}", customize: { removeItems: [{ featureId: "messages", interval: "month", intervalCount: 1 }], addItems: [${messagesItem(messages)}] } }`;
 
-/** seat v1 (history) + v2 (active); team v1 links seat via `seatLink` and lists the EU rows. */
 const config = ({
 	seatLink,
 	euSlugs,
@@ -97,7 +84,6 @@ test.concurrent(
 
 		try {
 			await scenario.push();
-			// A second EU row: stated with a fresh slug on its own push, it mints.
 			scenario.writeConfig(
 				atmnConfigSource({
 					body: config({ seatLink: v1Link, euSlugs: ["v1", "v2"] }),
@@ -110,7 +96,6 @@ test.concurrent(
 				).toMatchObject({ seatSlug: "v1", customized: false, messages: 10 });
 			}
 
-			// Base pins seat v2. Variants restate the same content customize.
 			scenario.writeConfig(
 				atmnConfigSource({
 					body: config({
@@ -126,7 +111,6 @@ test.concurrent(
 				).toMatchObject({ seatSlug: "v2", customized: false, messages: 20 });
 			}
 
-			// Base customizes the link. Every stated variant carries it.
 			scenario.writeConfig(
 				atmnConfigSource({
 					body: config({

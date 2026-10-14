@@ -9,7 +9,6 @@ export const STRIPE_ROW_CLASS = cn(
 	TABLE_TRAY_SURFACE_DIVIDER_CLASS,
 );
 
-/** Fixed slot so match icons line up with the header's leading icon. */
 export const STRIPE_ICON_LANE_CLASS = "flex w-3.5 shrink-0 justify-center";
 
 export function StripeItemRow({

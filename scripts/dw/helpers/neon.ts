@@ -46,7 +46,6 @@ function resolveNeonCmd(): string {
 }
 
 // neonctl reads NEON_API_KEY for non-interactive auth; headless environments
-// (CI, Devin VMs) have no browser for `neonctl auth`.
 function neonEnv(): Record<string, string> | undefined {
 	const apiKey = process.env.NEON_WORKTREE_API_KEY;
 	if (!apiKey) return undefined;
@@ -242,11 +241,7 @@ export function connectionString(
 		branchName,
 		"--project-id",
 		neonProjectId(),
-		// Once we create the leaf `chat` DB on the same branch (see
 		// ensureChatDatabase) `neonctl` refuses to pick a default and errors
-		// with "Multiple databases found". Default to `neondb` here so the
-		// helper stays usable across the lifetime of a branch; callers can
-		// override to read the chat URL specifically.
 		"--database-name",
 		opts.database ?? "neondb",
 	];
@@ -260,10 +255,6 @@ export function connectionString(
 	return res.stdout.trim();
 }
 
-// Leaf's chat-sdk connects to a separate `chat` database on the same branch
-// (env.ts rewrites DATABASE_URL's path to /chat). Create it via the Neon control
-// plane (no CREATE DATABASE privilege / pooler issues), owned by the same role as
-// neondb so leaf can connect. Idempotent + non-fatal.
 export function ensureChatDatabase(branchName: string): void {
 	const list = neon([
 		"databases",
@@ -326,7 +317,6 @@ export function ensureTemplateBranch(): void {
 	if (branch) return;
 	log(`bootstrap: ${NEON_TEMPLATE_BRANCH} missing, creating empty parent`);
 	createBranch(NEON_TEMPLATE_BRANCH, neonTemplateParent());
-	// Wipe the inherited schema so children start truly empty.
 	const url = connectionString(NEON_TEMPLATE_BRANCH);
 	const reset = sh("psql", [url, "-v", "ON_ERROR_STOP=1"], {
 		stdin: `DROP SCHEMA IF EXISTS drizzle CASCADE;\nDROP SCHEMA IF EXISTS public CASCADE;\nCREATE SCHEMA public;\nCREATE EXTENSION IF NOT EXISTS pg_trgm;\n`,

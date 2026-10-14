@@ -6,7 +6,6 @@ import {
 } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
 
-/** Reject free trials on one-off products (nothing recurring to trial). */
 export const handleFreeTrialErrors = ({
 	nextFullProduct,
 }: {

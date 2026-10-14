@@ -11,7 +11,6 @@ import type {
 } from "../types/committer.js";
 import { upsertRowsOf } from "./rows/upsertRowsOf.js";
 
-/** One action per customer per flush: write the rows the writer vouched for, else delete the customer's. Undefined when the flush touches no snapshot. */
 export const collectSnapshotWrites = ({
 	ctx,
 	config,

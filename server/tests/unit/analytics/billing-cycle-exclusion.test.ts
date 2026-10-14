@@ -1,5 +1,3 @@
-// A default plan used to hide billing-cycle options even alongside a non-default plan.
-// Mixed plans must leave the options visible; default-only customers remain excluded.
 import { afterEach, expect, mock, spyOn, test } from "bun:test";
 import { CusProductStatus, type FullCustomer } from "@autumn/shared";
 import { Hono } from "hono";

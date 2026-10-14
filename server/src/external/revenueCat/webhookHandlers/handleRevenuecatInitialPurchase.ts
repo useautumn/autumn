@@ -43,8 +43,6 @@ export const handleInitialPurchase = async ({
 		cusProducts,
 	});
 
-	// Guard the same-product attach explicitly so RC consumers get the canonical
-	// CustomerAlreadyHasProduct error rather than V2 attach's PlanAlreadyAttached.
 	if (curSameProduct) {
 		throw new RecaseError({
 			message: `[handleInitialPurchase] Customer ${customer.id} already has product ${product.id}`,

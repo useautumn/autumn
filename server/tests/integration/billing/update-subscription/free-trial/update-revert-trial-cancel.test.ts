@@ -1,12 +1,3 @@
-/**
- * Extending a revert trial via billing.update must keep on_trial_end and the
- * previous plan link, so cancelling it afterwards still restores the paused plan.
- *
- * Red (before):  the replacement customer product lost on_trial_end, so cancel left
- *                the previous plan Paused and created the default product instead.
- * Green (after): cancel restores the previous plan and creates no default product.
- */
-
 import { expect, test } from "bun:test";
 import {
 	CusProductStatus,

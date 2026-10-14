@@ -18,8 +18,6 @@ import {
 
 const DEFAULT_LIMIT = 1000;
 
-/** Lookback for ranges with no fixed window, e.g. billing-cycle ranges whose
- * subscription lookup came up empty. */
 const FALLBACK_LOOKBACK_DAYS = 24;
 
 const formatJsDateToClickHouseDateTime = (date: Date): string => {
@@ -44,7 +42,6 @@ const calculateStartDateFromInterval = ({
 	return window?.start ?? sub(new UTCDate(), { days: FALLBACK_LOOKBACK_DAYS });
 };
 
-/** Converts pipe row to the expected ClickHouse format */
 const convertPipeRowToClickHouseFormat = (
 	row: ListEventsPaginatedPipeRow,
 ): RawEventFromClickHouse => ({
@@ -71,7 +68,6 @@ export type ListRawEventsParams = {
 	limit?: number;
 };
 
-/** Lists raw events with optional filtering by customer and date range */
 export const listRawEvents = async ({
 	ctx,
 	params,
@@ -85,7 +81,6 @@ export const listRawEvents = async ({
 	const intervalType = params.interval ?? "day";
 	const isBillingCycle = intervalType === "1bc" || intervalType === "3bc";
 
-	// Calculate billing cycle dates if needed
 	const billingCycleResult =
 		isBillingCycle && !params.aggregateAll && params.customer
 			? ((await getBillingCycleStartDate({
@@ -99,7 +94,6 @@ export const listRawEvents = async ({
 				})) as BillingCycleResult | null)
 			: null;
 
-	// Calculate date range
 	const startDate = calculateStartDateFromInterval({
 		interval: intervalType,
 		binSize: params.bin_size,
@@ -139,22 +133,8 @@ export const listRawEvents = async ({
 		offset: 0,
 	};
 
-	// ctx.logger.debug("Listing raw events via Tinybird pipe", {
-	// 	customerId: params.customer_id,
-	// 	aggregateAll: params.aggregateAll,
-	// 	startDate: finalStartDate,
-	// 	endDate: finalEndDate,
-	// 	limit: pipeParams.limit,
-	// });
-
 	const result = await pipes.listEventsPaginated(pipeParams);
 
-	// ctx.logger.debug("Raw events result", {
-	// 	queryMs: Math.round(performance.now() - startTime),
-	// 	rowCount: result.data.length,
-	// });
-
-	// Convert to ClickHouseResult format for backwards compatibility
 	const data = result.data.map(convertPipeRowToClickHouseFormat);
 
 	return {

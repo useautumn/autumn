@@ -28,11 +28,9 @@ const stripeBillingPlanToPriceIds = (
 	);
 };
 
-/** Subscriptions are fetched without price tiers, so a tiered live price is refetched with them. */
 const hasBillingDetail = (price: Stripe.Price) =>
 	price.billing_scheme !== "tiered" || price.tiers !== undefined;
 
-/** Every real Stripe price the preview references, keyed by id. */
 export const buildStripePriceLookup = async ({
 	ctx,
 	stripeBillingPlan,

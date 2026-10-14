@@ -3,7 +3,6 @@ import { listAllSvixEndpoints } from "@/external/svix/endpoints/listAllSvixEndpo
 import { svixEndpointToWebhook } from "@/external/svix/endpoints/svixEndpointToWebhook.js";
 import type { WebhookApp } from "./apps/webhookApps.js";
 
-/** Every webhook across the env's apps. */
 export const listWebhooks = async ({
 	apps,
 }: {

@@ -1,14 +1,3 @@
-/**
- * Calculate total charge for cross-interval switches (e.g., monthly → annual, annual → monthly).
- *
- * Logic:
- * 1. Credit for remaining old period (prorated)
- * 2. Prorated new charge (from now until anchor + newInterval)
- * 3. Total = newCharge - oldCredit
- *
- * Uses Decimal.js for precision.
- */
-
 import { addInterval, BillingInterval } from "@autumn/shared";
 import { Decimal } from "decimal.js";
 import { getBillingPeriod } from "./getBillingPeriod";
@@ -40,7 +29,6 @@ export const calculateCrossIntervalUpgrade = async ({
 	const periodStart = new Decimal(billingPeriod.start);
 	const periodEnd = new Decimal(billingPeriod.end);
 
-	// 1. Credit for remaining old period
 	const oldRemaining = periodEnd.minus(now);
 	const oldTotal = periodEnd.minus(periodStart);
 	const oldRatio = oldTotal.isZero()
@@ -48,7 +36,6 @@ export const calculateCrossIntervalUpgrade = async ({
 		: oldRemaining.div(oldTotal);
 	const oldCredit = oldRatio.mul(oldAmount);
 
-	// 2. Prorated new charge (anchor → anchor + newInterval)
 	const newPeriodEndMs = addInterval({
 		from: billingAnchorMs,
 		interval: newInterval,

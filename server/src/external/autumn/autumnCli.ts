@@ -138,7 +138,6 @@ export type MigrationFilterPreviewResponse = {
 	next_cursor: string | null;
 };
 
-/** Update-request billing controls: usage limits may be counter-only writes. */
 type WritableBillingControls<T extends { usage_limits?: unknown }> = Omit<
 	T,
 	"usage_limits"
@@ -191,10 +190,8 @@ export class AutumnInt {
 		orgConfig?: Partial<OrgConfig>;
 		liveUrl?: boolean;
 		skipCacheDeletion?: boolean;
-		/** Sent on every request, e.g. a test-only `x-*` toggle. */
 		headers?: Record<string, string>;
 	} = {}) {
-		// this.apiKey = apiKey || process.env.AUTUMN_API_KEY || "";
 		this.apiKey =
 			apiKey || secretKey || process.env.UNIT_TEST_AUTUMN_SECRET_KEY || "";
 
@@ -230,7 +227,6 @@ export class AutumnInt {
 		});
 
 		if (response.status !== 200) {
-			// Handle rate limit errors
 			if (response.status === 429) {
 				throw new AutumnError({
 					message: `request failed, rate limit exceeded`,
@@ -264,13 +260,11 @@ export class AutumnInt {
 			body: JSON.stringify(body),
 		});
 
-		// Any 2xx is a success — async/queued endpoints respond 202/204.
 		if (response.ok) {
 			const rawBody = await response.text();
 			return rawBody ? JSON.parse(rawBody) : null;
 		}
 
-		// Handle rate limit errors
 		if (response.status === 429) {
 			throw new AutumnError({
 				message: `request failed, rate limit exceeded`,
@@ -279,8 +273,6 @@ export class AutumnInt {
 		}
 
 		// Read the raw body once. Some upstream failures (timeouts, 5xx from
-		// infra) return non-JSON or empty bodies — surface the snippet so the
-		// caller's log isn't a bare "Failed to parse JSON".
 		const rawBody = await response.text();
 		let parsed: any;
 		try {
@@ -331,7 +323,6 @@ export class AutumnInt {
 		});
 
 		if (response.status !== 200) {
-			// Handle rate limit errors
 			if (response.status === 429) {
 				throw new AutumnError({
 					message: `request failed, rate limit exceeded`,
@@ -695,7 +686,6 @@ export class AutumnInt {
 			return data;
 		},
 
-		/** Uses the RPC route POST /customers.update (handleUpdateCustomerV2) */
 		updateRpc: async (
 			customerId: string,
 			updates: {
@@ -781,7 +771,6 @@ export class AutumnInt {
 			customerId: string,
 			entity: CreateEntityParams | CreateEntityParams[],
 		) => {
-			// let entities = Array.isArray(entity) ? entity : [entity];
 			const data = await this.post(
 				`/customers/${customerId}/entities?with_autumn_id=true`,
 				entity,
@@ -1102,7 +1091,6 @@ export class AutumnInt {
 		},
 
 		aggregate: async (params: {
-			// Optional so the "aggregate_on without a customer" rejection is callable.
 			customer_id?: string;
 			entity_id?: string;
 			feature_id?: string | string[];
@@ -1431,14 +1419,12 @@ export class AutumnInt {
 	};
 
 	licenses = {
-		/** Provisions seats: upserts entities and assigns one seat each. */
 		attach: async <TInput = AttachLicenseParamsV0>(
 			params: TInput,
 		): Promise<{ success: true }> => {
 			return await this.post(`/licenses.attach`, params);
 		},
 
-		/** Releases each entity's seat back to its pool for reuse. */
 		release: async <TInput = ReleaseLicenseParamsV0>(
 			params: TInput,
 		): Promise<{ success: true }> => {
@@ -1535,7 +1521,6 @@ export class AutumnInt {
 			return data;
 		},
 
-		/** Create a billing schedule through the internal RPC API. */
 		createSchedule: async <
 			TInput = CreateScheduleParamsV0Input,
 			TResponse = CreateScheduleResponse,

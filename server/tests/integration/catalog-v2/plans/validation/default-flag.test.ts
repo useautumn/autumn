@@ -1,11 +1,3 @@
-/**
- * catalogV2.update — auto_enable / default-flag rules.
- *
- * Spec (validateDefaultFlag): only free plans and default-trial plans
- * (card_required: false) can be auto_enable. catalogV2 does not call
- * validateDefaultFlag yet → most REJECT cases are RED.
- */
-
 import { test } from "bun:test";
 import {
 	BillingInterval,

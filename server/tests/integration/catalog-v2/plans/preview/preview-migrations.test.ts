@@ -1,10 +1,3 @@
-/**
- * catalogV2.preview_update — migrations block is a projection of computed drafts.
- * Preview does not persist a migration row.
- *
- * In-place drafts use versioning: "existing". `new_version` rows skip drafts.
- */
-
 import { expect, test } from "bun:test";
 import { BillingInterval, ResetInterval } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";

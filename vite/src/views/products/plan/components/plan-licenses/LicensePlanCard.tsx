@@ -23,8 +23,6 @@ export function LicensePlanCard({
 		features,
 	});
 
-	// The editor seeds once from initialProduct; mounting before features load
-	// would bake an empty item set into the draft.
 	if (isFeaturesLoading) return null;
 
 	return (

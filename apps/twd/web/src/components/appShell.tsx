@@ -47,12 +47,10 @@ import { Skeleton, Tooltip } from "./ui.tsx";
 
 const ICON_STROKE = 1.5;
 
-/** Route handle for list pages that fit the viewport and scroll their table instead (sm and up). */
 export const FILL_PAGE = { fill: true };
 const isFillPage = (handle: unknown) =>
 	(handle as typeof FILL_PAGE | undefined)?.fill === true;
 
-/** Autumn's sidebar row (vite/src/views/main-sidebar/sidebarRowClass.ts). */
 const rowClass = (isActive: boolean) =>
 	cn(
 		"group/row flex h-[30px] w-full shrink-0 cursor-pointer items-center gap-2.5 rounded-md px-2.5 text-[13px] font-[450] leading-4 outline-none transition-colors duration-150 ease-out focus-visible:bg-black/[0.05] dark:focus-visible:bg-white/[0.06]",
@@ -314,7 +312,6 @@ export const AppShell = () => {
 	const location = useLocation();
 	const signedOut =
 		me.error instanceof ApiRequestError && me.error.status === 401;
-	// Keyed to the path it was opened on, so navigating closes it without an effect.
 	const [menuOpenedAt, setMenuOpenedAt] = useState<string | null>(null);
 	const menuOpen = menuOpenedAt === location.pathname;
 	const fill = useMatches().some((m) => isFillPage(m.handle));
@@ -324,7 +321,6 @@ export const AppShell = () => {
 		return (
 			<Navigate to="/sign-in" replace state={{ from: location.pathname }} />
 		);
-	// Render nothing until /me answers, so a signed-out visitor never sees the shell flash.
 	if (me.isPending)
 		return <div className="h-dvh w-screen bg-outer-background" />;
 

@@ -1,25 +1,3 @@
-/**
- * atmn push — plans, their items, versions, and licenses land in the catalog.
- *
- * Companion to push-features: same config-in / catalog-out contract, extended
- * to plans. Assertions read the DB (ProductService.listFull) or the catalogV2
- * get client, never the CLI's rendered text.
- *
- * Contract:
- *   P1  a config with one feature and two plans (a free default plan with an
- *       included-usage item, and a paid monthly plan with a flat price, a
- *       prepaid seat item with a price, and a 14-day free trial) creates both
- *       plans with those items and the trial; re-pushing the same config is a
- *       no-op (preview has no create/update/delete rows)
- *   P2  pushing `pro` v1, then a config with `pro` v2 in `plans` (price
- *       changed) and the v1 row in `planVersions`, leaves two versions of
- *       `pro` — v2 active, v1 inactive; a third push adding `pro` v3 as a
- *       draft (`active: false` in `plans`) alongside v2 leaves three
- *       versions, v2 still active
- *   P3  pushing `seat` and `enterprise` where `enterprise` licenses `seat`
- *       with `included: 25` links the two plans with that included count
- */
-
 import { expect, test } from "bun:test";
 import { join } from "node:path";
 import { initAtmnScenario } from "@tests/utils/atmnUtils/initAtmnScenario.js";
@@ -27,8 +5,6 @@ import { s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { ProductService } from "@/internal/products/ProductService.js";
-// Relative rather than a package import, for the same reason initAtmnScenario
-// imports runPush that way: the package publishes only its bin.
 import {
 	type AutumnClient,
 	createClient,
@@ -40,11 +16,6 @@ const CLI_PACKAGE_DIR = join(
 	"../../../../packages/atmn",
 );
 
-/**
- * initAtmnScenario's default source only imports `feature` — these tests also
- * need the `plan` builder, so this extends it inline rather than widening the
- * shared helper for one file's needs.
- */
 const atmnConfigSourceWithPlans = ({ body }: { body: string }): string =>
 	`import { feature } from "${CLI_PACKAGE_DIR}/src/generated/features";
 import { plan } from "${CLI_PACKAGE_DIR}/src/generated/plans";
@@ -55,7 +26,6 @@ export default atmn(${body});
 
 const APPLIED_PLAN_ACTIONS = new Set(["create", "update", "delete"]);
 
-/** Rows with a real action — the same filter runPush's renderer applies. */
 const changedRows = (
 	rows: Array<{ action?: string }> | undefined,
 ): Array<{ action?: string }> =>
@@ -86,8 +56,6 @@ const liveCatalogPlans = async ({
 	return catalog.plans;
 };
 
-/** Every live version row for a plan_id, oldest first — catalogV2.get only
- * ever returns the active one, so versioning needs the DB directly. */
 const livePlanVersions = async ({
 	ctx,
 	planId,
@@ -192,8 +160,6 @@ test.concurrent(
 				expect.objectContaining({ durationLength: 14, durationType: "day" }),
 			);
 
-			// Re-pushing the unchanged config previews nothing to create, update,
-			// or delete — read off the structured preview, never rendered text.
 			const wire = await scenario.wireFromConfig();
 			const preview = (await client.previewUpdate(wire)) as unknown as {
 				features?: Array<{ action?: string }>;
@@ -244,8 +210,6 @@ test.concurrent(
 				await livePlanVersions({ ctx: scenario.ctx, planId: pro }),
 			).toEqual([{ version: 1, active: true }]);
 
-			// v2 mints under a new slug with a changed price; v1 is restated in
-			// planVersions, which stamps it inactive.
 			scenario.writeConfig(
 				atmnConfigSourceWithPlans({
 					body: `{
@@ -281,7 +245,6 @@ test.concurrent(
 				expect.objectContaining({ amount: 20 }),
 			);
 
-			// A third push mints v3 as an explicit draft alongside the still-active v2.
 			scenario.writeConfig(
 				atmnConfigSourceWithPlans({
 					body: `{

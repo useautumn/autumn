@@ -10,41 +10,31 @@ export enum JobName {
 	DetectBaseVariant = "detect-base-variant",
 
 	HandleProductsUpdated = "handle-products-updated",
-	/** Sends customer.products.updated webhook (v2 lean payload) */
 	SendProductsUpdated = "send-products-updated",
 	HandleCustomerCreated = "handle-customer-created",
 
 	SyncBalanceBatchV4 = "sync-balance-batch-v4",
-	/** Signal-only sync: payload identifies the customer; selectors and
-	 *  usage-window snapshots live in the Redis dirty state. */
 	SyncCustomerDirty = "sync-customer-dirty",
 	PersistPublishedBalanceTransitions = "persist-published-balance-transitions",
 	RefreshEntityAggregate = "refresh-entity-aggregate",
 	InsertEventBatch = "insert-event-batch",
 	Track = "track",
 	CustomerCreationRecovery = "customer-creation-recovery",
-	/** Replays a failed entities.create from the customer creation recovery queue */
 	EntityCreationRecovery = "entity-creation-recovery",
 
 	ClearCreditSystemCustomerCache = "clear-credit-system-customer-cache",
 
 	BatchResetCusEnts = "batch-reset-cus-ents",
-	/** ID-based reset worker (balances/batchReset); supersedes BatchResetCusEnts */
 	BatchResetCustomerEntitlementsV2 = "batch-reset-customer-entitlements-v2",
 
 	AutoTopUp = "auto-top-up",
-	/** Stores invoice line items from Stripe to DB (async to allow extra API calls) */
 	StoreInvoiceLineItems = "store-invoice-line-items",
 
-	/** Stores deferred invoice line items (ProrateNextCycle pending items) before an invoice exists */
 	StoreDeferredInvoiceLineItems = "store-deferred-invoice-line-items",
 
-	/** Replays failed early-acked Stripe webhooks from the dedicated queue */
 	StripeWebhookReplay = "stripe-webhook-replay",
 
-	/** Queued finalize-lock replay when Redis was unavailable at finalize time */
 	FinalizeLock = "finalize-lock",
 
-	// EventBridge scheduled jobs
 	ExpireLockReceipt = "expire-lock-receipt",
 }

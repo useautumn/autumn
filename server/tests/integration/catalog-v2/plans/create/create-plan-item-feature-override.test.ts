@@ -1,10 +1,3 @@
-/**
- * catalogV2.update — plan-item feature_override: round-trips through
- * create/update/clear, persists on the entitlement row, and rejects invalid
- * shapes. Each present key fully replaces the feature's config value at
- * runtime (runtime behavior covered by track tests).
- */
-
 import { expect, test } from "bun:test";
 import {
 	ErrCode,
@@ -44,7 +37,6 @@ const seedFeatures = ({
 	},
 ];
 
-/** Feature ids are unique per test, so filtering by feature_id is enough. */
 const getDbEntFeatureOverride = async ({
 	ctx,
 	creditSystemId,
@@ -100,7 +92,6 @@ test.concurrent(
 		await deleteDbFeatures({ ctx, featureIds });
 
 		try {
-			// 1. Create with a flat override.
 			await autumnV2_3.catalogV2.update({
 				features: seedFeatures({ meteredFeatureId, creditSystemId }),
 				plans: [
@@ -127,7 +118,6 @@ test.concurrent(
 				],
 			});
 
-			// Persisted in DB shape (config keys) on the entitlement row.
 			const flatRows = await getDbEntFeatureOverride({
 				ctx,
 				creditSystemId,
@@ -142,7 +132,6 @@ test.concurrent(
 				),
 			).toBe(true);
 
-			// 2. Update to a graduated override.
 			await autumnV2_3.catalogV2.update({
 				plans: [
 					{
@@ -166,7 +155,6 @@ test.concurrent(
 				],
 			});
 
-			// 3. Omit feature_override → override cleared (items are PUT-style).
 			await autumnV2_3.catalogV2.update({
 				plans: [
 					{
@@ -213,7 +201,6 @@ test.concurrent(
 				features: seedFeatures({ meteredFeatureId, creditSystemId }),
 			});
 
-			// On a non-credit-system item.
 			await expectAutumnError({
 				errCode: ErrCode.InvalidProductItem,
 				errMessage: "feature_override is only supported on credit system items",
@@ -243,7 +230,6 @@ test.concurrent(
 					}),
 			});
 
-			// Referencing a feature that doesn't exist.
 			await expectAutumnError({
 				errCode: ErrCode.InvalidProductItem,
 				func: () =>
@@ -272,7 +258,6 @@ test.concurrent(
 					}),
 			});
 
-			// Referencing another credit system (nesting).
 			await expectAutumnError({
 				errCode: ErrCode.InvalidFeature,
 				func: () =>
@@ -301,7 +286,6 @@ test.concurrent(
 					}),
 			});
 
-			// Unknown override keys are rejected (strict object).
 			await expectAutumnError({
 				func: () =>
 					autumnV2_3.catalogV2.update({

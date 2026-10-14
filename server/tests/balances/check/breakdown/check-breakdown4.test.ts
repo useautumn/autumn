@@ -13,11 +13,6 @@ import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
 import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
 
-/**
- * Test: Two products with different monthly message balances
- * Expected: breakdown array with 2 items (same interval, different products)
- */
-
 const monthlyMessages1 = constructFeatureItem({
 	featureId: TestFeature.Messages,
 	includedUsage: 1000,
@@ -64,7 +59,6 @@ describe(`${chalk.yellowBright("check-breakdown4: two products with different mo
 			prefix: testCase,
 		});
 
-		// Attach both products
 		await autumnV2.attach({
 			customer_id: customerId,
 			product_id: prod1.id,
@@ -82,18 +76,16 @@ describe(`${chalk.yellowBright("check-breakdown4: two products with different mo
 			feature_id: TestFeature.Messages,
 		})) as unknown as CheckResponseV2;
 
-		// Parent balance should sum both products
 		expect(res.balance).toMatchObject({
-			granted_balance: 1500, // 1000 + 500
+			granted_balance: 1500,
 			current_balance: 1500,
 			usage: 0,
-			plan_id: null, // null when multiple products
+			plan_id: null,
 			reset: {
 				interval: "month",
 			},
 		});
 
-		// Should have 2 breakdown items with unique IDs
 		const breakdown = res.balance?.breakdown;
 		expect(breakdown).toHaveLength(2);
 		expect(new Set(breakdown?.map((b) => b.id)).size).toBe(2);

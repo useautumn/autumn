@@ -1,12 +1,3 @@
-/**
- * Seeds three cadence changes in one op, one per anchor path: monthly →
- * every-3-months, lifetime → monthly, monthly → lifetime.
- *
- * Note these do NOT lower as in-place replaces: the match key includes the
- * interval, so a cadence change pairs as a delete plus an add. The thing worth
- * checking is that the balance still carries and the new row gets a sane
- * next_reset_at rather than inheriting the old cycle.
- */
 import { test } from "bun:test";
 import { ResetInterval } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features";
@@ -19,7 +10,6 @@ const ID_PREFIX = "mq4";
 const SCENARIO_FILE =
 	"tests/scenarios/migrations/batch/04-cadence-transition-anchors-scenario.test.ts";
 
-/** No reset block at all is what makes an item lifetime. */
 const lifetimeItem = ({
 	featureId,
 	included,

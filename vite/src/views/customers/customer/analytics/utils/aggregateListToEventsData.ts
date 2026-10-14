@@ -4,10 +4,6 @@ import { epochToPeriodString } from "./epochToPeriodString";
 
 const toSeriesColumn = (featureId: string) => `${featureId}_count`;
 
-/**
- * Lays an events.aggregate `list` out as the row shape the chart pipeline
- * reads: one row per period, or per period and group value when grouped.
- */
 export const aggregateListToEventsData = ({
 	list,
 	featureIds,
@@ -16,7 +12,6 @@ export const aggregateListToEventsData = ({
 }: {
 	list: EventAggregateListItemV1[];
 	featureIds: string[];
-	/** Row column holding the group value, e.g. "customer_id" or "properties.region". */
 	groupColumn?: string;
 	utc: boolean;
 }): EventsData => {

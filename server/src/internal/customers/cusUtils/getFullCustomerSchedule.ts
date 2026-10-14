@@ -10,7 +10,6 @@ import { asc, eq, inArray } from "drizzle-orm";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { resolveScheduleScopes } from "../schedules/utils/resolveScheduleScopes.js";
 
-/** A product is dead once expired or deleted, but phases keep pointing at it either way. */
 const selectLiveProductIds = async ({
 	ctx,
 	customerProductIds,
@@ -32,10 +31,6 @@ const selectLiveProductIds = async ({
 	);
 };
 
-/**
- * Schedules with a future phase that still points at a live product. Schedules
- * carry no status of their own, so dates alone don't prove one is pending.
- */
 const loadLiveSchedules = async ({
 	ctx,
 	internalCustomerId,
@@ -68,8 +63,6 @@ const loadLiveSchedules = async ({
 		],
 	});
 
-	// Dead ids stay in the phase row forever, so prune them here — consumers
-	// resolve each id against the customer and can't tell a dead one from a gap.
 	const livePhases = allPhases
 		.map((phase) => ({
 			...phase,
@@ -89,10 +82,6 @@ const loadLiveSchedules = async ({
 		);
 };
 
-/**
- * Buckets a customer's schedules by scope, derived from the customer products
- * each one owns rather than the schedules row's own entity column.
- */
 export const getCustomerSchedulesByScope = async ({
 	ctx,
 	internalCustomerId,
@@ -152,7 +141,6 @@ export const hydrateFullCustomerSchedule = async ({
 	}),
 });
 
-/** Loads all schedules and attaches them to the customer and its entities. */
 export const hydrateCustomerWithSchedules = async ({
 	ctx,
 	fullCustomer,

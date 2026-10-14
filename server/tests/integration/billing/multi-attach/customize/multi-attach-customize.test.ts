@@ -1,14 +1,3 @@
-/**
- * Multi-Attach Customize Tests
- *
- * Tests for the per-plan `customize` field in billing.multi_attach.
- * Each plan can independently override its base price or items.
- *
- * Key behaviors:
- * - Different custom prices per plan
- * - Different custom items per plan (add/change features)
- */
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3 } from "@autumn/shared";
 import {
@@ -26,19 +15,6 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { expectStripeSubscriptionCorrect } from "../../utils/expectStripeSubCorrect";
 
-// ═══════════════════════════════════════════════════════════════════
-// Test 1: Different custom prices per plan
-//
-// Scenario:
-// - planA: Pro ($20/mo) with messages — customized to $35/mo
-// - planB: Base ($30/mo) with users in group-b — customized to $50/mo
-//
-// Expected:
-// - Preview total = $85 ($35 + $50)
-// - Both products active
-// - Features correct
-// - Invoice total = $85
-// ═══════════════════════════════════════════════════════════════════
 test.concurrent(`${chalk.yellowBright("multi-attach customize 1: different custom prices per plan")}`, async () => {
 	const messagesItem = items.monthlyMessages({ includedUsage: 500 });
 	const usersItem = items.monthlyUsers({ includedUsage: 10 });
@@ -77,14 +53,11 @@ test.concurrent(`${chalk.yellowBright("multi-attach customize 1: different custo
 		],
 	};
 
-	// 1. Preview — $35 (planA custom) + $50 (planB custom) = $85
 	const preview = await autumnV1.billing.previewMultiAttach(multiAttachParams);
 	expect(preview.total).toBeCloseTo(85, 0);
 
-	// 2. Attach
 	await autumnV1.billing.multiAttach(multiAttachParams);
 
-	// 3. Verify
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
 	await expectCustomerProducts({
@@ -118,8 +91,6 @@ test.concurrent(`${chalk.yellowBright("multi-attach customize 1: different custo
 	});
 });
 
-// Separate groups allow both customized plans to remain active.
-// Purchased messages total 800; billable packs cost $40 + $120.
 test.concurrent(`${chalk.yellowBright("multi-attach customize 2: custom items per plan")}`, async () => {
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
 
@@ -172,14 +143,11 @@ test.concurrent(`${chalk.yellowBright("multi-attach customize 2: custom items pe
 		],
 	};
 
-	// 1. Preview — two $20 packs + four $30 packs = $160.
 	const preview = await autumnV1.billing.previewMultiAttach(multiAttachParams);
 	expect(preview.total).toEqual(40 + 120);
 
-	// 2. Attach
 	await autumnV1.billing.multiAttach(multiAttachParams);
 
-	// 3. Verify
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
 	await expectCustomerProducts({
@@ -187,14 +155,12 @@ test.concurrent(`${chalk.yellowBright("multi-attach customize 2: custom items pe
 		active: [addon.id, planB.id],
 	});
 
-	// Messages: 300 + 500 purchased across the two plans.
 	expectCustomerFeatureCorrect({
 		customer,
 		featureId: TestFeature.Messages,
 		balance: 800,
 	});
 
-	// Dashboard: added via customize items
 	await expectCustomerFeatureExists({
 		customer,
 		featureId: TestFeature.Dashboard,

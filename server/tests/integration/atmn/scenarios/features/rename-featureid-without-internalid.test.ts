@@ -1,9 +1,3 @@
-/**
- * atmn scenarios/features — rename featureId without internalId → create + old one archived (what "created already archived" was)
- *
- * One line of plans/atmn-v3/07_tests.md. [a, b] is a matrix looped INSIDE this file.
- */
-
 import { expect, test } from "bun:test";
 import { configBody } from "@tests/utils/atmnUtils/baseConfigs.js";
 import {
@@ -37,9 +31,6 @@ test.concurrent(
 			await scenario.push();
 			await scenario.attachCustomer({ planId });
 
-			// A plain new fixture under a different featureId: no internalId ties
-			// it to the old row, so the server sees a create and an implicit
-			// removal of whatever the config no longer lists.
 			scenario.writeConfig(
 				atmnConfigSource({
 					body: configBody({
@@ -59,8 +50,6 @@ test.concurrent(
 				catalog.features.find((feature) => feature.id === oldId),
 			).toBeUndefined();
 
-			// The old row still exists, archived — the customer's entitlement
-			// history keeps it from hard-deleting.
 			const dbFeatures = await FeatureService.list({
 				db: scenario.ctx.db,
 				orgId: scenario.ctx.org.id,

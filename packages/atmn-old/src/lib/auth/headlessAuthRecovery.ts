@@ -7,13 +7,6 @@ import {
 import { isAuthError } from "../hooks/useAuthRecovery.js";
 import { storeEnvKeys } from "../hooks/useEnvironmentStore.js";
 
-/**
- * Handle 401 errors in headless mode by running OAuth flow
- *
- * @param error The error to check
- * @returns true if auth was recovered, false if error was not a 401
- * @throws if auth recovery fails
- */
 export async function handleHeadlessAuthError(
 	error: unknown,
 ): Promise<boolean> {
@@ -30,7 +23,6 @@ export async function handleHeadlessAuthError(
 	);
 
 	try {
-		// Start OAuth flow - will open browser
 		const { tokens } = await startOAuthFlow(CLI_CLIENT_ID, { headless: true });
 
 		console.log(chalk.dim("Creating API keys..."));
@@ -57,20 +49,6 @@ export async function handleHeadlessAuthError(
 	}
 }
 
-/**
- * Wrap an async function to automatically handle 401 errors with auth recovery
- *
- * @param fn The async function to wrap
- * @param maxRetries Maximum number of auth recovery attempts (default: 1)
- * @returns The wrapped function that handles 401s automatically
- *
- * Usage:
- * ```typescript
- * const result = await withAuthRecovery(async () => {
- *   return await someApiCall();
- * });
- * ```
- */
 export async function withAuthRecovery<T>(
 	fn: () => Promise<T>,
 	maxRetries = 1,
@@ -83,10 +61,8 @@ export async function withAuthRecovery<T>(
 		} catch (error) {
 			if (attempts < maxRetries && (await handleHeadlessAuthError(error))) {
 				attempts++;
-				// Auth recovered, retry the operation
 				continue;
 			}
-			// Not a 401, or max retries exceeded, or auth recovery failed
 			throw error;
 		}
 	}

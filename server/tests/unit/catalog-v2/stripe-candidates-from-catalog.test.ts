@@ -1,13 +1,3 @@
-/**
- * Stripe init candidates come from the projected catalog — including nested
- * base_product / variants — never a second listFull.
- *
- * Contract:
- *   top-level projected rows win over nested snapshots
- *   variant-only payload still sees Team via TeamEU.base_product
- *   family is the base row + its variants; unrelated plans are excluded
- */
-
 import { describe, expect, test } from "bun:test";
 import type { FullProduct } from "@autumn/shared";
 import {

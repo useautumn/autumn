@@ -1,5 +1,3 @@
-/** Basic license assignment lifecycle coverage: release, reuse, and customer-level
- * visibility. */
 import { expect, test } from "bun:test";
 import type {
 	ApiCustomerV5,

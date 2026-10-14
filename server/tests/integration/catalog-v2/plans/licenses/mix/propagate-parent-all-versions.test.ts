@@ -1,6 +1,3 @@
-/**
- * catalogV2.update — pin every parent version vs pin latest only.
- */
 import { test } from "bun:test";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";

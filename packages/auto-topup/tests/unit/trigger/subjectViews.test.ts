@@ -14,12 +14,10 @@ import {
 import { subjectToAutoTopupObjects } from "../../../src/trigger/subjectToAutoTopupObjects.js";
 import type { AutoTopupSubject } from "../../../src/trigger/types/autoTopupSubject.js";
 
-/** Compile-time proof: the server's FullSubject is a trigger subject without conversion. */
 export const serverSubjectIsTriggerSubject = (
 	fullSubject: FullSubject,
 ): AutoTopupSubject => fullSubject;
 
-/** The worker's view satisfies the trigger's subject type as is: no conversion to FullCustomer. */
 test("a worker subject with no charge source resolves its plan config and yields nothing", () => {
 	const state = createSubjectState({
 		identity,

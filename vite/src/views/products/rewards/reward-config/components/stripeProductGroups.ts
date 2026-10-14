@@ -1,11 +1,9 @@
 import type { Feature, ProductItem, ProductV2 } from "@autumn/shared";
 import { isFeatureItem, isFeaturePriceItem } from "@/utils/product/getItemType";
 
-/** One selectable option per Stripe product a coupon can be scoped to. */
 export type StripeProductGroup = {
 	key: string;
 	kind: "plan" | "feature";
-	/** Feature name for usage groups; plan groups are named after their lead plan. */
 	featureName?: string;
 	products: ProductV2[];
 	priceIds: string[];
@@ -17,10 +15,6 @@ export const priceItemsOf = (product: ProductV2) =>
 			!isFeatureItem(item) && Boolean(item.price_id),
 	);
 
-/**
- * Mirrors the server: fixed prices scope to the plan's Stripe product (shared
- * by its variants), usage prices to the feature's, which is shared org-wide.
- */
 const stripeScopeOfItem = ({
 	product,
 	item,
@@ -43,7 +37,6 @@ export const buildStripeProductGroups = ({
 	features?: Feature[];
 }): StripeProductGroup[] => {
 	const seenProducts = new Set<string>();
-	// A plan can arrive from both the latest-versions list and the by-price-id lookup.
 	const unique = products.filter((product) => {
 		const key = product.internal_id ?? `${product.id}:${product.version}`;
 		if (seenProducts.has(key)) return false;
@@ -68,7 +61,6 @@ export const buildStripeProductGroups = ({
 				products: [],
 				priceIds: [],
 			};
-			// Older versions of a plan share its prices' scope but aren't extra plans.
 			if (!group.products.some(({ id }) => id === product.id))
 				group.products.push(product);
 			group.priceIds.push(item.price_id);
@@ -91,11 +83,9 @@ export const findGroupForPriceId = ({
 	priceId: string;
 }) => groups.find((group) => group.priceIds.includes(priceId)) ?? null;
 
-/** The base plan leads the group, so a family reads "Base + N variants". */
 const leadProduct = ({ group }: { group: StripeProductGroup }) =>
 	group.products.find((product) => !product.base_id) ?? group.products[0];
 
-/** Every sibling is a variant of the lead plan, rather than an unrelated plan sharing a feature. */
 const isVariantFamily = ({ group }: { group: StripeProductGroup }) => {
 	const lead = leadProduct({ group });
 	const familyId = lead.base_id ?? lead.id;
@@ -107,7 +97,6 @@ const isVariantFamily = ({ group }: { group: StripeProductGroup }) => {
 export const groupLabel = ({ group }: { group: StripeProductGroup }) =>
 	group.featureName ?? leadProduct({ group }).name;
 
-/** The muted "+ N variants" suffix, or null when a group is a single plan. */
 export const groupSuffix = ({ group }: { group: StripeProductGroup }) => {
 	if (group.kind === "feature") {
 		const count = group.products.length;
@@ -121,7 +110,6 @@ export const groupSuffix = ({ group }: { group: StripeProductGroup }) => {
 	return `+ ${extra} ${noun}${extra > 1 ? "s" : ""}`;
 };
 
-/** Lists the plans a coupon would reach, base first, one per line. */
 export const sharedProductHint = ({ group }: { group: StripeProductGroup }) => {
 	if (group.kind === "feature")
 		return [
@@ -151,7 +139,6 @@ export const isGroupSelected = ({
 	priceIds: string[];
 }) => group.priceIds.every((id) => priceIds.includes(id));
 
-/** A coupon opened in the legacy partial state expands to its whole group. */
 export const expandToFullGroups = ({
 	groups,
 	priceIds,

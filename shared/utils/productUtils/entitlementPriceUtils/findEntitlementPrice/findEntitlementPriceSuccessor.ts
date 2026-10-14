@@ -7,17 +7,12 @@ import { entitlementPricesAreSame } from "../compareEntitlementPrice/entitlement
 import type { EntitlementPrice } from "../entitlementPriceTypes.js";
 
 export enum EntitlementPriceMatchPrecision {
-	/** Same semantic entitlement and optional price definitions. */
 	EntitlementAndPriceDefinition = "entitlement_and_price_definition",
-	/** Same feature, derived billing type, billing interval, and interval count. */
 	PriceIdentity = "price_identity",
-	/** Same entitlement feature, reset interval, and interval count. */
 	EntitlementInterval = "entitlement_interval",
-	/** Same entitlement feature only. */
 	EntitlementFeature = "entitlement_feature",
 }
 
-/** Candidate matching order from strongest to weakest. */
 export const ENTITLEMENT_PRICE_MATCH_PRECISIONS = [
 	EntitlementPriceMatchPrecision.EntitlementAndPriceDefinition,
 	EntitlementPriceMatchPrecision.PriceIdentity,
@@ -25,7 +20,6 @@ export const ENTITLEMENT_PRICE_MATCH_PRECISIONS = [
 	EntitlementPriceMatchPrecision.EntitlementFeature,
 ] as const;
 
-/** Compares price identity without comparing amounts or physical IDs. */
 const entitlementPricesHaveSamePriceIdentity = ({
 	sourceEntitlementPrice,
 	candidateEntitlementPrice,
@@ -45,7 +39,6 @@ const entitlementPricesHaveSamePriceIdentity = ({
 	);
 };
 
-/** Compares the entitlements using only the requested precision. */
 const entitlementPricesMatchEntitlementAtPrecision = ({
 	sourceEntitlementPrice,
 	candidateEntitlementPrice,
@@ -63,7 +56,6 @@ const entitlementPricesMatchEntitlementAtPrecision = ({
 		}),
 	);
 
-/** Applies one entitlement-price precision to a source and candidate. */
 const entitlementPricesMatchAtPrecision = ({
 	sourceEntitlementPrice,
 	candidateEntitlementPrice,
@@ -99,8 +91,6 @@ const entitlementPricesMatchAtPrecision = ({
 	}
 };
 
-/** Returns the first unclaimed candidate at the strongest available precision.
- * Pass `matchPrecisions` to restrict the ladder (e.g. one rung at a time). */
 export const findEntitlementPriceSuccessor = ({
 	sourceEntitlementPrice,
 	candidateEntitlementPrices,

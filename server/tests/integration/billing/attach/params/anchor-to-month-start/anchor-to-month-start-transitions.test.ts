@@ -1,14 +1,3 @@
-/**
- * Transitions onto and between plans with `config.anchor_to_month_start`.
- *
- * Contract:
- *   explicit billing_cycle_anchor "now" → the explicit param wins over the flag
- *   free (flag off) → paid (flagged)    → the new subscription is anchored to the 1st
- *   paid (flagged)  → paid (flagged)    → the existing anchor on the 1st is kept
- *   paid (20th)     → paid (flagged)    → charged as an ordinary upgrade now; the cycle
- *                                         resets to the 1st when it arrives
- */
-
 import { expect, test } from "bun:test";
 import {
 	type ApiCustomerV5,
@@ -34,7 +23,6 @@ import {
 } from "./utils/anchorToMonthStartUtils";
 
 const ANCHOR_NOW_TOLERANCE_MS = 60_000;
-// Pinned: a cycle started any time on a 1st already counts as anchored.
 const PAID_ON_THE_20TH_MS = Date.UTC(2027, 2, 20, 12);
 
 test.concurrent(
@@ -205,7 +193,6 @@ test(`${chalk.yellowBright("anchor-to-month-start transitions 4: paid on the 20t
 	};
 	const preview =
 		await autumnV2_3.billing.previewAttach<AttachParamsV1Input>(upgradeParams);
-	// Ordinary upgrade diff for the current cycle: the anchor moves later.
 	expect(preview.total).toBe(30);
 	await autumnV2_3.billing.attach<AttachParamsV1Input>(upgradeParams);
 

@@ -20,20 +20,6 @@ import { CusProductService } from "@/internal/customers/cusProducts/CusProductSe
 import { MetadataService } from "@/internal/metadata/MetadataService";
 import { workflows } from "@/queue/workflows";
 
-/**
- * Webhook task: handles checkout.session.completed for the
- * `enable_plan_immediately + stripe_checkout` flow.
- *
- * The cusProduct rows were already inserted at attach time and linked to the
- * pending checkout session via `stripe_checkout_session_id`. This task:
- *   1. Reconciles the Stripe subscription shape and (for createSchedule) creates
- *      the Stripe `subscription_schedule`.
- *   2. Builds an "update-only" autumn billing plan that patches `subscription_ids`
- *      / `scheduled_ids` onto the existing rows + carries the `upsertSubscription`
- *      and `upsertInvoice` from `updateBillingPlanFromCheckout`.
- *   3. Hands that plan to `executeAutumnBillingPlan`, which is the canonical path
- *      for cusProduct mutations + sub/invoice upserts + line-item workflow.
- */
 export const handleCheckoutSessionEnabledImmediately = async ({
 	ctx,
 	checkoutContext,
@@ -57,28 +43,20 @@ export const handleCheckoutSessionEnabledImmediately = async ({
 
 	const deferredData = metadata.data as DeferredAutumnBillingPlanData;
 
-	// 1. Sync Autumn metadata onto subscription items created by checkout
 	await syncSubscriptionItemMetadataFromCheckout({ ctx, checkoutContext });
 
-	// 2. Build upsertSubscription / upsertInvoice from Stripe and update the
-	//    in-memory billing plan.
 	const updatedDeferredData = await updateBillingPlanFromCheckout({
 		ctx,
 		checkoutContext,
 		deferredData,
 	});
 
-	// 3. Reconcile the Stripe subscription shape (e.g. add monthly prepaid
-	//    quantities when checkout only created an annual base sub).
 	await modifyStripeSubscriptionFromCheckout({
 		ctx,
 		checkoutContext,
 		deferredData: updatedDeferredData,
 	});
 
-	// 4. For createSchedule contexts, create the Stripe subscription_schedule
-	//    against the now-existing subscription. Returns null for attach (no
-	//    schedule action on the plan).
 	const stripeScheduleId = await createStripeScheduleFromCheckout({
 		ctx,
 		checkoutContext,
@@ -92,9 +70,6 @@ export const handleCheckoutSessionEnabledImmediately = async ({
 			updatedDeferredData.billingPlan.stripe.replacedSubscriptionAction,
 	});
 
-	// 5. Look up the cusProduct rows linked to this checkout session so we can
-	//    patch subscription_ids / scheduled_ids onto them. One DB read serves
-	//    both patches below.
 	const existingCusProducts =
 		await CusProductService.getByStripeCheckoutSessionId({
 			db: ctx.db,
@@ -103,10 +78,6 @@ export const handleCheckoutSessionEnabledImmediately = async ({
 			env: ctx.env,
 		});
 
-	// 6. Build update entries on the autumn plan instead of writing to DB
-	//    directly — this is the canonical mutation path picked up by
-	//    `executeAutumnBillingPlan`. Empty out `insertCustomerProducts` /
-	//    `updateCustomerEntitlements` since both already ran at attach time.
 	const updatedAutumnPlan = updatedDeferredData.billingPlan.autumn;
 	const updateCustomerProducts = existingCusProducts.map((customerProduct) => {
 		const { valid: isPaidRecurring } = cp(customerProduct).paid().recurring();
@@ -155,7 +126,6 @@ export const handleCheckoutSessionEnabledImmediately = async ({
 		billingPlan: updatedDeferredData.billingPlan,
 	});
 
-	// 8. Emit post-payment webhooks (mirrors executeBillingPlan).
 	await billingPlanToSendProductsUpdated({
 		ctx,
 		autumnBillingPlan: completionAutumnPlan,
@@ -170,14 +140,8 @@ export const handleCheckoutSessionEnabledImmediately = async ({
 		originalFullCustomer: updatedDeferredData.billingContext.fullCustomer,
 	});
 
-	// 9. Cleanup metadata.
 	await MetadataService.delete({ db: ctx.db, id: metadata.id });
 
-	// 10. Trigger grant-checkout-reward workflow per inserted product.
-	// Note: feature quantities can't be changed on the Stripe checkout page in
-	// this flow — `handleStripeCheckoutErrors` blocks `enable_plan_immediately`
-	// + adjustable_quantity at attach time, so the cusProduct row inserted
-	// up-front is guaranteed to match what the customer pays for.
 	const customerId =
 		updatedDeferredData.billingContext.fullCustomer.id ??
 		updatedDeferredData.billingContext.fullCustomer.internal_id;

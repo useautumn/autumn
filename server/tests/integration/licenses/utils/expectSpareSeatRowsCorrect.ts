@@ -3,8 +3,6 @@ import { type CusProductStatus, customerProducts } from "@autumn/shared";
 import type { TestContext } from "@tests/utils/testInitUtils/createTestContext";
 import { and, eq, isNull } from "drizzle-orm";
 
-/** Asserts the released (entity-less) seat rows anchored to a pool link:
- * how many exist and the status they all carry. */
 export const expectSpareSeatRowsCorrect = async ({
 	ctx,
 	customerLicenseLinkId,

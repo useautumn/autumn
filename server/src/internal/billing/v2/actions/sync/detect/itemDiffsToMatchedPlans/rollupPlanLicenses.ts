@@ -7,11 +7,6 @@ export type PlanLicensesRollup = {
 	warnings: PlanWarning[];
 };
 
-/**
- * Fold seat items into per-license totals: link included + Stripe paid
- * quantity (summed across items on the same license plan). A non-catalog
- * price becomes a customize; one that can't express a base price warns.
- */
 export const rollupPlanLicenses = ({
 	diffs,
 }: {
@@ -30,8 +25,6 @@ export const rollupPlanLicenses = ({
 			continue;
 		}
 
-		// price === null means the item hit the license's Stripe product with a
-		// price Autumn doesn't own — sync it as a custom license definition.
 		const hasCatalogPrice = diff.match.price !== null;
 		const customPrice = hasCatalogPrice
 			? null

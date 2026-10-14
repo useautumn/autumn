@@ -13,7 +13,6 @@ import { overageCarrierToRowChange } from "./overageCarrierToRowChange.js";
 
 export type UsageRecalculation = {
 	changes: RowChange[];
-	/** The deleted grant kept to carry the usage; null when the usage went elsewhere, or there was none. */
 	overageCarrierId: string | null;
 };
 
@@ -22,10 +21,6 @@ const NO_RECALCULATION: UsageRecalculation = {
 	overageCarrierId: null,
 };
 
-/**
- * Legacy `recalculate_balances`: the deleted grants' usage is kept. It is drawn from the feature's rows that remain,
- * like a balance update; with none left, the first deleted grant stays behind as the overage carrier.
- */
 export const recalculateUsage = ({
 	fullSubject,
 	command,

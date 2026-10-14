@@ -4,10 +4,8 @@ import type {
 } from "@autumn/balance-engine";
 import type { Feature } from "@autumn/shared";
 
-/** Just over nothing, so a balance that is exactly empty is refused: what the API's own check asks after a track. */
 const A_HAIR_ABOVE_ZERO = 0.0000001;
 
-/** The feature a mutation moved and the properties it carried: a track names them; a finalize settles the lock's. */
 export const mutationToTrackedFeature = ({
 	mutation,
 }: {
@@ -26,7 +24,6 @@ export const mutationToTrackedFeature = ({
 	return null;
 };
 
-/** The check the API would answer right after this mutation, for one of the features it moved. */
 export const mutationToCheckCommand = ({
 	mutation,
 	feature,

@@ -2,7 +2,6 @@ import { Input } from "@autumn/ui";
 import { mintVersionSlugError } from "../utils/versionSlug";
 import { PlanChangeFieldLabel } from "./PlanChangeFieldLabel";
 
-/** Names the row this save mints. Optional — blank keeps the server default. */
 export function MintVersionSlugInput({
 	defaultSlug,
 	value,

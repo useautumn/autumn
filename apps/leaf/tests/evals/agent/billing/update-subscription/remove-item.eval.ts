@@ -16,9 +16,6 @@ type EvalMetadata = {
 
 const experimentName = "update-subscription-remove-item";
 
-// Customer on Scale (expanded features + seats + credits). Removing one feature
-// must be PATCH-style (remove_items) — a PUT-style `customize.items` would wipe
-// their seat and credit balances.
 const setup = withCustomers({
 	setup: orgSetups.knowledgePlatform(),
 	customers: ({ customers, plans }) => ({
@@ -76,8 +73,6 @@ initEval<EvalMetadata>({
 						toolName: "updateSubscription",
 					},
 				}),
-				// PATCH-style only: a full `customize.items` replacement would drop the
-				// customer's seats and credit balances.
 				api.bodyExcludes({
 					fields: ["customize.items"],
 					toolName: "previewUpdateSubscription",

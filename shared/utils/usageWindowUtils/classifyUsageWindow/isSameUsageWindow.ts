@@ -3,7 +3,6 @@ export const USAGE_WINDOW_BOUND_TOLERANCE_MS = 30_000;
 
 type UsageWindowBounds = { window_start_at: number; window_end_at: number };
 
-/** Whether a counter row still counts in a window: its bounds match, but for that recomputation drift. */
 export const isSameUsageWindow = ({
 	usageWindow,
 	window,

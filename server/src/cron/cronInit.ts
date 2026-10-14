@@ -64,8 +64,6 @@ const shouldRunTick = () => {
 		return false;
 	}
 
-	// Blue-green gate: skip the tick on the idle task set so a swap doesn't
-	// double-fire jobs. Fail-open on non-AWS hosts (no task identity).
 	if (!isActiveSlot({ serviceName: "cron" })) {
 		const reason = describeSlotGate({ serviceName: "cron" });
 		logger.info("Cron tick skipped (idle slot)", {
@@ -91,8 +89,6 @@ const main = async () => {
 	]);
 };
 
-// Cleanup re-derives "depleted one-off" candidates from scratch (no time
-// column to seek on), so it runs on a slower cadence than the other jobs.
 const oneOffCleanupTick = async () => {
 	if (!shouldRunTick()) return;
 
@@ -105,15 +101,11 @@ const oneOffCleanupTick = async () => {
 	]);
 };
 
-// DB health probes (long-txn / xmin pin, ...) — a separate tick so a heavy
-// billing cron can't delay detection. Slot-gated like the other jobs.
 const dbProbesTick = async () => {
 	if (!shouldRunTick()) return;
 	await runDbProbes({ db: probeDb });
 };
 
-// On by default wherever the RW token exists; the miscellaneous edge config
-// kill switch (disableMotherduckCacheRefresh) turns it off without a deploy.
 const mdCacheRefreshTick = async () => {
 	if (!shouldRunTick()) return;
 	if (!process.env.MOTHERDUCK_RW_TOKEN) return;
@@ -123,45 +115,18 @@ const mdCacheRefreshTick = async () => {
 	await refreshCeBalancesCache({ logger });
 };
 
-new CronJob(
-	"* * * * *", // Run every minute
-	main,
-	null, // onComplete
-	true, // start immediately
-	"UTC", // timezone (adjust as needed)
-);
+new CronJob("* * * * *", main, null, true, "UTC");
 
-new CronJob(
-	"*/10 * * * *", // Run every 10 minutes
-	oneOffCleanupTick,
-	null, // onComplete
-	true, // start immediately
-	"UTC", // timezone (adjust as needed)
-);
+new CronJob("*/10 * * * *", oneOffCleanupTick, null, true, "UTC");
 
-new CronJob(
-	"* * * * *", // Run every minute
-	dbProbesTick,
-	null, // onComplete
-	true, // start immediately
-	"UTC", // timezone (adjust as needed)
-);
+new CronJob("* * * * *", dbProbesTick, null, true, "UTC");
 
-new CronJob(
-	// Each run bills full-rebuild duckling time + cross-region S3 for the whole
-	// scan, so cadence is the cost knob; 20min stays inside the sort disclaimer.
-	"*/20 * * * *",
-	mdCacheRefreshTick,
-	null, // onComplete
-	true, // start immediately
-	"UTC", // timezone (adjust as needed)
-);
+new CronJob("*/20 * * * *", mdCacheRefreshTick, null, true, "UTC");
 
 main();
 oneOffCleanupTick();
 dbProbesTick();
 
-// Gated by the reset-job-v2 edge config, so it can be flipped without a deploy.
 const resetLoopController = new AbortController();
 const resetLoopV2Promise = runResetLoopV2({
 	ctx,

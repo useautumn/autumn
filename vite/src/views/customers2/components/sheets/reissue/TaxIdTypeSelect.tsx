@@ -10,7 +10,6 @@ const optionIndex = new Map(
 	STRIPE_TAX_ID_OPTIONS.map((option, index) => [option.id, index]),
 );
 
-/** Flat list of every Stripe tax id type, grouped visually by country. */
 export function TaxIdTypeSelect({
 	value,
 	onValueChange,
@@ -18,7 +17,6 @@ export function TaxIdTypeSelect({
 }: {
 	value: string | null;
 	onValueChange: (id: string) => void;
-	/** Narrow trigger showing only the flag and registration label. */
 	compact?: boolean;
 }) {
 	return (

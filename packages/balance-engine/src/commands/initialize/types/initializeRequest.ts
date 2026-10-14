@@ -3,12 +3,10 @@ import { catalogRowSchema } from "../../../models/catalog/catalogRow.js";
 import { subjectStateSchema } from "../../../models/subject/subjectState.js";
 import { initializeCommandSchema } from "./initializeCommand.js";
 
-/** What the server hands the worker: the command plus the subject's rows and the catalog rows they reference. */
 export const initializeRequestSchema = z
 	.object({
 		command: initializeCommandSchema,
 		state: subjectStateSchema,
-		// The worker caches these; the log never carries them.
 		catalogRows: z.array(catalogRowSchema),
 	})
 	.loose()
@@ -33,8 +31,6 @@ export const initializeRequestSchema = z
 				path: ["command", "identity"],
 			});
 		}
-		// The split relies on it: a customer initialize carries customer-level rows,
-		// an entity initialize carries its entity and that entity's rows.
 		if ((state.entity?.id ?? null) !== identity.entityId) {
 			context.addIssue({
 				code: "custom",

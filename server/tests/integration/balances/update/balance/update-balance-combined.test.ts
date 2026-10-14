@@ -6,10 +6,6 @@ import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 
-// ═══════════════════════════════════════════════════════════════════
-// UPDATE-COMBINED1: current_balance + granted_balance together
-// ═══════════════════════════════════════════════════════════════════
-
 test.concurrent(`${chalk.yellowBright("update-combined1: current_balance + granted_balance together")}`, async () => {
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
 	const freeProd = products.base({ id: "free", items: [messagesItem] });
@@ -20,7 +16,6 @@ test.concurrent(`${chalk.yellowBright("update-combined1: current_balance + grant
 		actions: [s.attach({ productId: freeProd.id })],
 	});
 
-	// Track 30 usage first
 	const trackRes = await autumnV2.track({
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
@@ -33,8 +28,6 @@ test.concurrent(`${chalk.yellowBright("update-combined1: current_balance + grant
 		usage: 30,
 	});
 
-	// Update current_balance: 50 and granted_balance: 100
-	// When BOTH are passed, granted_balance IS updated
 	await autumnV2.balances.update({
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
@@ -46,11 +39,10 @@ test.concurrent(`${chalk.yellowBright("update-combined1: current_balance + grant
 	expect(customer1.balances[TestFeature.Messages]).toMatchObject({
 		granted_balance: 100,
 		current_balance: 50,
-		usage: 50, // 100 - 50
+		usage: 50,
 		purchased_balance: 0,
 	});
 
-	// Update current_balance: 80 and granted_balance: 150
 	await autumnV2.balances.update({
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
@@ -62,11 +54,10 @@ test.concurrent(`${chalk.yellowBright("update-combined1: current_balance + grant
 	expect(customer2.balances[TestFeature.Messages]).toMatchObject({
 		granted_balance: 150,
 		current_balance: 80,
-		usage: 70, // 150 - 80
+		usage: 70,
 		purchased_balance: 0,
 	});
 
-	// Update to reset usage: current_balance: 100, granted_balance: 100
 	await autumnV2.balances.update({
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
@@ -82,7 +73,6 @@ test.concurrent(`${chalk.yellowBright("update-combined1: current_balance + grant
 		purchased_balance: 0,
 	});
 
-	// Verify DB sync
 	await new Promise((resolve) => setTimeout(resolve, 2000));
 
 	const customerFromDb = await autumnV2.customers.get<ApiCustomer>(customerId, {
@@ -95,12 +85,6 @@ test.concurrent(`${chalk.yellowBright("update-combined1: current_balance + grant
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════
-// UPDATE-COMBINED2: current_balance + next_reset_at together
-// NOTE: When only current_balance is passed (not granted_balance),
-// granted_balance does NOT change - only usage changes
-// ═══════════════════════════════════════════════════════════════════
-
 test.concurrent(`${chalk.yellowBright("update-combined2: current_balance + next_reset_at together")}`, async () => {
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
 	const freeProd = products.base({ id: "free", items: [messagesItem] });
@@ -111,7 +95,6 @@ test.concurrent(`${chalk.yellowBright("update-combined2: current_balance + next_
 		actions: [s.attach({ productId: freeProd.id })],
 	});
 
-	// Get original reset time and customer_entitlement_id
 	const initialCheck = await autumnV2.check<CheckResponseV2>({
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
@@ -123,9 +106,7 @@ test.concurrent(`${chalk.yellowBright("update-combined2: current_balance + next_
 	expect(originalResetAt).toBeGreaterThan(Date.now());
 	expect(cusEntId).toBeTruthy();
 
-	// Update current_balance and next_reset_at together
-	// NOTE: granted_balance stays at 100, only usage changes
-	const newResetAt1 = Date.now() + 7 * 24 * 60 * 60 * 1000; // 7 days
+	const newResetAt1 = Date.now() + 7 * 24 * 60 * 60 * 1000;
 
 	await autumnV2.balances.update({
 		customer_id: customerId,
@@ -137,20 +118,18 @@ test.concurrent(`${chalk.yellowBright("update-combined2: current_balance + next_
 
 	const customer1 = await autumnV2.customers.get<ApiCustomer>(customerId);
 	expect(customer1.balances[TestFeature.Messages]).toMatchObject({
-		granted_balance: 100, // Unchanged - only current_balance was passed
+		granted_balance: 100,
 		current_balance: 50,
-		usage: 50, // 100 - 50
+		usage: 50,
 	});
 
-	// Verify reset time was updated
 	const check1 = await autumnV2.check<CheckResponseV2>({
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
 	});
 	expect(check1.balance?.reset?.resets_at).toBeCloseTo(newResetAt1, -3);
 
-	// Update current_balance and push next_reset_at to 30 days
-	const newResetAt2 = Date.now() + 30 * 24 * 60 * 60 * 1000; // 30 days
+	const newResetAt2 = Date.now() + 30 * 24 * 60 * 60 * 1000;
 
 	const updateParams = {
 		customer_id: customerId,
@@ -163,19 +142,17 @@ test.concurrent(`${chalk.yellowBright("update-combined2: current_balance + next_
 
 	const customer2 = await autumnV2.customers.get<ApiCustomer>(customerId);
 	expect(customer2.balances[TestFeature.Messages]).toMatchObject({
-		granted_balance: 100, // Still unchanged
+		granted_balance: 100,
 		current_balance: 200,
-		usage: -100, // 100 - 200 = -100 (credit)
+		usage: -100,
 	});
 
-	// Verify reset time
 	const check2 = await autumnV2.check<CheckResponseV2>({
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
 	});
 	expect(check2.balance?.reset?.resets_at).toBeCloseTo(newResetAt2, -3);
 
-	// Verify immediate DB sync (no retry window / sleep)
 	const customerFromDb = await autumnV2.customers.get<ApiCustomer>(customerId, {
 		skip_cache: "true",
 	});
@@ -185,10 +162,6 @@ test.concurrent(`${chalk.yellowBright("update-combined2: current_balance + next_
 		usage: -100,
 	});
 });
-
-// ═══════════════════════════════════════════════════════════════════
-// UPDATE-COMBINED3: current_balance + granted_balance + next_reset_at all together
-// ═══════════════════════════════════════════════════════════════════
 
 test.concurrent(`${chalk.yellowBright("update-combined3: current_balance + granted_balance + next_reset_at")}`, async () => {
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
@@ -200,14 +173,12 @@ test.concurrent(`${chalk.yellowBright("update-combined3: current_balance + grant
 		actions: [s.attach({ productId: freeProd.id })],
 	});
 
-	// Get customer_entitlement_id
 	const initialCheck = await autumnV2.check<CheckResponseV2>({
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
 	});
 	const cusEntId = initialCheck.balance?.breakdown?.[0]?.id ?? "";
 
-	// Track 30 usage first
 	await autumnV2.track({
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
@@ -221,8 +192,7 @@ test.concurrent(`${chalk.yellowBright("update-combined3: current_balance + grant
 		usage: 30,
 	});
 
-	// Update all three values at once
-	const newResetAt1 = Date.now() + 14 * 24 * 60 * 60 * 1000; // 14 days
+	const newResetAt1 = Date.now() + 14 * 24 * 60 * 60 * 1000;
 
 	await autumnV2.balances.update({
 		customer_id: customerId,
@@ -237,19 +207,17 @@ test.concurrent(`${chalk.yellowBright("update-combined3: current_balance + grant
 	expect(customer1.balances[TestFeature.Messages]).toMatchObject({
 		granted_balance: 150,
 		current_balance: 80,
-		usage: 70, // 150 - 80
+		usage: 70,
 		purchased_balance: 0,
 	});
 
-	// Verify reset time
 	const check1 = await autumnV2.check<CheckResponseV2>({
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
 	});
 	expect(check1.balance?.reset?.resets_at).toBeCloseTo(newResetAt1, -3);
 
-	// Update all values to reset state
-	const newResetAt2 = Date.now() + 30 * 24 * 60 * 60 * 1000; // 30 days
+	const newResetAt2 = Date.now() + 30 * 24 * 60 * 60 * 1000;
 
 	await autumnV2.balances.update({
 		customer_id: customerId,
@@ -268,14 +236,12 @@ test.concurrent(`${chalk.yellowBright("update-combined3: current_balance + grant
 		purchased_balance: 0,
 	});
 
-	// Verify reset time
 	const check2 = await autumnV2.check<CheckResponseV2>({
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
 	});
 	expect(check2.balance?.reset?.resets_at).toBeCloseTo(newResetAt2, -3);
 
-	// Verify DB sync
 	await new Promise((resolve) => setTimeout(resolve, 2000));
 
 	const customerFromDb = await autumnV2.customers.get<ApiCustomer>(customerId, {

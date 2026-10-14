@@ -5,11 +5,6 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-/**
- * Customer "license-paid-extras" for dashboard testing of the seat price
- * display: a $20/mo seat license with 3 included seats and 2 paid extras
- * (5 total), 2 of them assigned.
- */
 test(`${chalk.yellowBright("scenario: license pool with included + paid extra seats")}`, async () => {
 	const parent = products.pro({
 		id: "paid-extras-parent",

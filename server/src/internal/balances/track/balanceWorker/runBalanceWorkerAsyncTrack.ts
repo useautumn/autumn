@@ -9,7 +9,6 @@ import { trackParamsToTrackCommands } from "./balanceWorkerTrackRequest.js";
 
 type QueueClient = Pick<BalanceWorkerClient, "queue">;
 
-/** The async contract on the worker path: the key is claimed and kept, the commands are queued, nobody waits. */
 export async function runBalanceWorkerAsyncTrack({
 	ctx,
 	body,
@@ -22,7 +21,6 @@ export async function runBalanceWorkerAsyncTrack({
 	client?: QueueClient;
 }): Promise<void> {
 	const commands = trackParamsToTrackCommands({ ctx, body, recordsCreditCost });
-	// A failed append is a 503, which releases the claim so the client can retry.
 	await withIdempotencyKey({
 		ctx,
 		idempotencyKey: getTrackBodyIdempotencyKey({ body }),

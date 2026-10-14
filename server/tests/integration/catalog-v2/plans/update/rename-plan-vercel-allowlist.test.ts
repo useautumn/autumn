@@ -1,13 +1,3 @@
-/**
- * catalogV2.update new_plan_id must rewrite the env Vercel allowlist
- * so handleListBillingPlans still lists the renamed plan.
- *
- * Red (current):  allowlist keeps the old public id; listFull({ inIds })
- *                 misses the renamed products.id and the plan vanishes.
- * Green (after):  sandbox allowlist swaps old → new in the rename CTE;
- *                 list billing plans returns the new id, not the old.
- */
-
 import { expect, test } from "bun:test";
 import { BillingInterval, ResetInterval } from "@autumn/shared";
 import {
@@ -130,7 +120,6 @@ test.concurrent(
 				newId: newPlanId,
 			});
 
-			// Seed after rename so the Vercel subscriber gate does not block it.
 			await seedVercelCustomer({ ctx, customerId, installationId });
 			const listed = await listVercelBillingPlans({ ctx, installationId });
 			expectVercelBillingPlansListed({

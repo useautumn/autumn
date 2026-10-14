@@ -1,5 +1,3 @@
-/** Immediate child-license upgrades preserve each assignment's non-consumable usage.
- * The incoming entitlement replaces the grant without replacing the assignment. */
 import { expect, test } from "bun:test";
 import type { ApiEntityV2 } from "@autumn/shared";
 import { listLicenseAssignments } from "@tests/integration/licenses/licenseTestUtils";

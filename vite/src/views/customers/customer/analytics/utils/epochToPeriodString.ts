@@ -1,6 +1,5 @@
 const pad = (value: number): string => String(value).padStart(2, "0");
 
-/** Whether a bin's periods are UTC wall-clock times rather than viewer-local ones. */
 export const isUtcBin = ({
 	binSize,
 	timezone,
@@ -9,10 +8,6 @@ export const isUtcBin = ({
 	timezone: string;
 }) => binSize === "hour" || timezone === "UTC";
 
-/**
- * Formats a bucket-start epoch as the "yyyy-MM-dd HH:mm:ss" period string the
- * chart pipeline parses: UTC for hour bins, viewer-local for day/week/month.
- */
 export const epochToPeriodString = ({
 	epochMs,
 	utc,

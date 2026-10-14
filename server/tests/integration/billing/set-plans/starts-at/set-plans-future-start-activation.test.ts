@@ -1,10 +1,3 @@
-/**
- * A future phases[0].starts_at once the test clock passes the start:
- * - the Scheduled row turns Active, invoiced once at the start, including the prepaid quantity it
- *   was set with, and its balance resets a cycle after the start;
- * - a metered price bills nothing at the start; its usage is billed at the end of the first cycle.
- */
-
 import { expect, test } from "bun:test";
 import {
 	CusProductStatus,
@@ -38,7 +31,6 @@ const WORD_PRICE = 0.05;
 type FeatureQuantities =
 	SetPlansParamsV0Input["phases"][number]["plans"][number]["feature_quantities"];
 
-/** Sets a plan to start a week out, then moves the clock past the start and activates it. */
 const scheduleAndActivate = async ({
 	customerId,
 	pro,

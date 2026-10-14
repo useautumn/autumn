@@ -18,7 +18,6 @@ const verification = {
 	pendingMigrations: [],
 } as unknown as ApiKeyVerificationData;
 
-// A cold process: L1 and Redis both miss, so every caller falls through to Postgres.
 mock.module(
 	"@/external/redis/actions/secretKeyCache/secretKeyCache.js",
 	() => ({
@@ -67,7 +66,6 @@ describe("verifyKey on a cache miss", () => {
 		const results = await Promise.all(callers);
 		expect(dbReads).toBe(1);
 		for (const result of results) expect(result?.org.id).toBe("org_1");
-		// Each request still gets its own org object to put on its context.
 		expect(results[0]).not.toBe(results[1]);
 		expect(results[0]?.org).not.toBe(results[1]?.org);
 	});

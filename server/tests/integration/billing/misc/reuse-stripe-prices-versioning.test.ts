@@ -1,26 +1,3 @@
-/**
- * Plan versioning reuses the previous version's Stripe resources where possible.
- *
- * When a plan with existing customers is updated with a new items list, the
- * V1 update handler (handleUpdatePlanV1) auto-creates a new product version via
- * handleVersionProductV2. That path calls handleNewProductItems with
- * { curPrices: latestProduct.prices, newVersion: true }. The carry-forward
- * inside handleNewProductItems must copy the previous version's
- * `stripe_*_id` fields onto each new-version price whose config still matches.
- *
- * Contract under test:
- *   - Versioning a plan with the same paid items (just adding a boolean entitlement)
- *     keeps every paid price's Stripe IDs intact on the new version.
- *   - Same for paid feature shapes (prepaid / consumable / allocated).
- *   - Negative: versioning with a changed item (price amount, tier behavior,
- *     billing_units) does NOT reuse stripe_price_id for that item.
- *
- * Implementation surface:
- *   server/src/internal/products/handlers/handleVersionProduct.ts — versioning entry.
- *   server/src/internal/products/handlers/handleUpdatePlan/handleUpdatePlanV1.ts — triggers versioning when customers exist + items differ.
- *   server/src/internal/products/product-items/productItemUtils/handleNewProductItems.ts — calls carryForwardStripeResources.
- */
-
 import { expect, test } from "bun:test";
 import {
 	type ApiPlanItemV1,
@@ -74,10 +51,6 @@ const findPriceForFeature = (
 		(price) =>
 			(price.config as Record<string, unknown>).feature_id === featureId,
 	);
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 1: version a plan with same paid items + new boolean → all reused
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(
 	`${chalk.yellowBright("versioning: add boolean entitlement → all paid Stripe IDs reused on new version")}`,
@@ -152,10 +125,6 @@ test.concurrent(
 	},
 );
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 2 (negative): versioning with prepaid amount change → stripe_price_id not reused
-// ═══════════════════════════════════════════════════════════════════════════════
-
 test.concurrent(
 	`${chalk.yellowBright("versioning: prepaid amount change → stripe_price_id NOT reused on new version")}`,
 	async () => {
@@ -222,10 +191,6 @@ test.concurrent(
 		expect(afterStripePriceId).not.toBe(beforeStripePriceId);
 	},
 );
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 3 (negative): versioning with tier_behavior change → stripe_price_id not reused
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(
 	`${chalk.yellowBright("versioning: graduated → volume tier_behavior → stripe_price_id NOT reused on new version")}`,

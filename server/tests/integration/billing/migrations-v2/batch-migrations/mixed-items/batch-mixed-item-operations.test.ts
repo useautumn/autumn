@@ -1,7 +1,3 @@
-/**
- * Mixed item operations share one execution plan: removes run first,
- * replacements second, and standalone adds last.
- */
 import { expect, test } from "bun:test";
 import { runChunkedMigration } from "@tests/integration/billing/migrations-v2/utils/runChunkedMigration";
 import { TestFeature } from "@tests/setup/v2Features";

@@ -16,7 +16,6 @@ const eventOf = ({ id }: { id: string }): EventInsert => ({
 	value: 1,
 });
 
-/** One statement: refuses the whole lot when it holds a bad row, the way Postgres does. */
 const statementRefusing = ({ badIds }: { badIds: string[] }) => {
 	const statements: string[][] = [];
 	const insertRows = async (rows: EventInsert[]): Promise<string[]> => {

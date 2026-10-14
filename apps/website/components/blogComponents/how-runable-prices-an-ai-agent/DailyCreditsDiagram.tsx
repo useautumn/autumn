@@ -60,7 +60,6 @@ export function DailyCreditsDiagram() {
 			<div className="flex w-full max-w-[688px] flex-col gap-8">
 				<PlanRow name="Free" price="$0" labelOffset="sm:pt-[46px]">
 					<div className="relative pt-7">
-						{/* sits in the gap after day 10: one third of the strip, minus a sixth of a gap */}
 						<div className="absolute top-1.5 bottom-[-6px] left-[calc(33.333%-1px)] w-px bg-[#E5E5E5]" />
 						<span className="absolute top-0 left-[calc(33.333%+7px)] whitespace-nowrap font-mono text-[10px] text-[#E5E5E5]">
 							15,000 cap reached · day 10

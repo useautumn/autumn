@@ -3,13 +3,10 @@ import { normalizeOpenRouterUsage } from "../../src/openrouter/usage.js";
 
 const MODEL = "openrouter/openai/gpt-test";
 
-// OpenRouter usage arrives in four dialects: chat completions vs responses
-// API, each as SDK camelCase or raw snake_case. All four must normalize to
-// identical exclusive pools.
 describe("normalizeOpenRouterUsage shape matrix", () => {
 	const expected = {
-		inputTokens: 82, // 100 − 15 (cached) − 2 (cache write) − 1 (audio)
-		outputTokens: 37, // 40 − 3 (reasoning)
+		inputTokens: 82,
+		outputTokens: 37,
 		cacheReadTokens: 15,
 		cacheWriteTokens: 2,
 		reasoningTokens: 3,
@@ -161,7 +158,6 @@ describe("normalizeOpenRouterUsage edge cases", () => {
 	});
 
 	test("cached-heavy prompt: cache read dominates, text input clamps cleanly", () => {
-		// 95% cache hit — common for agent loops re-sending big system prompts
 		expect(
 			normalizeOpenRouterUsage(
 				{

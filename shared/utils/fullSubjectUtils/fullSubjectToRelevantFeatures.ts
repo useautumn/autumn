@@ -2,11 +2,6 @@ import type { FullSubjectView } from "../../models/cusProductModels/cusEntModels
 import type { Feature } from "../../models/featureModels/featureModels.js";
 import { fullSubjectToCreditSystems } from "./fullSubjectToCreditSystems.js";
 
-/**
- * The feature plus every credit system that can fund it for this subject —
- * the effective-schema (plan-item feature_override aware) twin of the
- * catalog-only getRelevantFeatures.
- */
 export const fullSubjectToRelevantFeatures = ({
 	fullSubject,
 	featureId,

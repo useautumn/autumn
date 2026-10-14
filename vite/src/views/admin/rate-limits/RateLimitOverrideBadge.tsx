@@ -1,6 +1,5 @@
 import { StatusChip } from "@autumn/ui";
 
-/** "Acme 20k/s · 240k/min": an org and the values it overrides. */
 export const RateLimitOverrideBadge = ({
 	orgName,
 	values,

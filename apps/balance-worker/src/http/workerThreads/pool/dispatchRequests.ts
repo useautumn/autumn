@@ -1,4 +1,3 @@
-/** Requests coming in: drained off every lane's request ring into the worker's own `fetch`. */
 import {
 	REQUEST_FRAME,
 	type RequestMeta,
@@ -32,7 +31,6 @@ function requestOf({
 const JSON_HEADERS: [string, string][] = [["content-type", "application/json"]];
 const encoder = new TextEncoder();
 
-/** An inline route is decided now, in the drain's turn, so replies leave in decide order; null falls through. */
 function serveInline({
 	scope,
 	lane,
@@ -111,7 +109,6 @@ async function answerLater({
 	}
 }
 
-/** Answers one request through `fetch`; a handler that throws is answered 500, never left hanging. */
 export async function serveRequest({
 	scope,
 	lane,
@@ -153,7 +150,6 @@ export async function serveRequest({
 			body: replyBody,
 		});
 	} catch (cause) {
-		// Only a dead thread refuses a reply (postMessage on a terminated thread).
 		reportPoolFailure({ scope, cause });
 	}
 }
@@ -183,7 +179,6 @@ function drainLane({
 	return read;
 }
 
-/** Drains until the pool stops; a frame it cannot read means a broken ring, which nothing downstream recovers. */
 export async function runDispatchLoop({
 	scope,
 }: {
@@ -197,7 +192,6 @@ export async function runDispatchLoop({
 		let read = 0;
 		for (const lane of state.lanes) read += drainLane({ scope, lane });
 		if (read > 0) {
-			// Let the dispatched requests run before the next batch, so a flood cannot starve replies.
 			await new Promise<void>((resolve) => setImmediate(resolve));
 			continue;
 		}

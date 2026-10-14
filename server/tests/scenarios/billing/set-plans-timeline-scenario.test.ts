@@ -1,5 +1,3 @@
-/** Customers in each state the set_plans timeline diff classifies, for hand QA of the Set Plans review. */
-
 import { test } from "bun:test";
 import { ms } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features";

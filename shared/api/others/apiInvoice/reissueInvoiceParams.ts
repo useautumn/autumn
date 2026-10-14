@@ -8,7 +8,6 @@ import {
 	InvoicePlanParamsSchema,
 } from "./createInvoiceParams.js";
 
-/** Name/value pairs Stripe renders on the invoice, e.g. a PO number. */
 export const InvoiceCustomFieldSchema = z
 	.object({
 		name: z.string().max(30),
@@ -16,7 +15,6 @@ export const InvoiceCustomFieldSchema = z
 	})
 	.strict();
 
-/** Changes scoped to the replacement invoice only. */
 export const ReissueInvoiceOverridesSchema = z
 	.object({
 		automatic_tax: z.boolean().optional().meta({
@@ -56,7 +54,6 @@ export const ReissueInvoiceOverridesSchema = z
 		{ message: "automatic_tax: true cannot be combined with tax_rate_id" },
 	);
 
-/** Changes written to the customer, which the replacement then snapshots. */
 export const ReissueCustomerOverridesSchema = z
 	.object({
 		email: z.email().optional().meta({
@@ -107,7 +104,6 @@ export const ReissueCustomerOverridesSchema = z
 	})
 	.strict();
 
-/** Line edits against the original's lines. */
 export const ReissueLineEditsSchema = z
 	.object({
 		add: z

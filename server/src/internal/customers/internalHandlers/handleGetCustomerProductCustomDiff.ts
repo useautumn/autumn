@@ -11,7 +11,6 @@ export const handleGetCustomerProductCustomDiff = createRoute({
 		const ctx = c.get("ctx");
 		const { customer_id, customer_product_id } = c.req.param();
 
-		// By id: the customer's product list is paged and status-filtered.
 		const customer = await CusService.get({
 			db: ctx.db,
 			idOrInternalId: customer_id,

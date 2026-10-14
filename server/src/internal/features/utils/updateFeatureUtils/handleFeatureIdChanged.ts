@@ -28,8 +28,6 @@ export const handleFeatureIdChanged = async ({
 }) => {
 	const { db, org, env } = ctx;
 
-	// Propagate the new id to every linked object. Blocking conditions are
-	// validated upstream by detectFeatureUpdateBlockers.
 	const batchUpdate = [];
 
 	for (const entitlement of linkedEntitlements) {
@@ -46,7 +44,6 @@ export const handleFeatureIdChanged = async ({
 
 	await Promise.all(batchUpdate);
 
-	// 3. Update all linked prices
 	const priceUpdate = [];
 	for (const price of prices) {
 		priceUpdate.push(
@@ -65,7 +62,6 @@ export const handleFeatureIdChanged = async ({
 
 	await Promise.all(priceUpdate);
 
-	// 4. Update all linked credit systems
 	const creditSystemUpdate = [];
 	for (const creditSystem of creditSystems) {
 		const newSchema = structuredClone(creditSystem.config.schema);
@@ -92,7 +88,6 @@ export const handleFeatureIdChanged = async ({
 
 	await Promise.all(creditSystemUpdate);
 
-	// 5. Update all linked entitlements
 	const entitlementUpdate = [];
 
 	for (const entitlement of entitlements) {

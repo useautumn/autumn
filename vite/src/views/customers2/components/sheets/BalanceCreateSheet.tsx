@@ -74,8 +74,6 @@ export function BalanceCreateSheet() {
 	const [nextResetAt, setNextResetAt] = useState<number | null>(null);
 	const [rollover, setRollover] = useState<RolloverConfig | null>(null);
 
-	// Rollover requires a recurring reset interval. If the interval goes away
-	// (or the user picks one-off/unlimited), clear rollover to keep state valid.
 	const hasRecurringReset = Boolean(resetInterval) && !oneOff && !unlimited;
 
 	const nonArchivedFeatures = features.filter((f: Feature) => !f.archived);
@@ -86,20 +84,11 @@ export function BalanceCreateSheet() {
 		selectedFeature?.type === FeatureType.Metered ||
 		selectedFeature?.type === FeatureType.CreditSystem;
 
-	// Continuous-use features (non-consumable) don't support rollover — the
-	// server rejects it in validateCreateBalanceParams, so we gate the UI too.
 	const isContUse = selectedFeature
 		? isContUseFeature({ feature: selectedFeature })
 		: false;
 	const canEnableRollover = isMetered && !isContUse && hasRecurringReset;
 
-	/**
-	 * Authoritative feature-select handler.
-	 *
-	 * Rollover is only valid for metered/credit-system features that are
-	 * consumable (non-continuous). When the user swaps features, clear any
-	 * existing rollover state synchronously here — no useEffect needed.
-	 */
 	const handleSelectFeature = (nextFeatureId: string) => {
 		setFeatureId(nextFeatureId);
 		const nextFeature = nonArchivedFeatures.find(
@@ -114,7 +103,6 @@ export function BalanceCreateSheet() {
 		if (!nextIsMetered || nextIsContUse) {
 			setRollover(null);
 		}
-		// next_reset_at only applies to a resetting (metered) balance.
 		if (!nextIsMetered) {
 			setNextResetAt(null);
 		}
@@ -161,9 +149,6 @@ export function BalanceCreateSheet() {
 			params.expires_at = expiresAt;
 		}
 
-		// next_reset_at sets a custom first reset boundary. It requires a recurring
-		// reset, must be in the future, and must precede expires_at — match the
-		// server-side validation so we fail fast with a clear message.
 		if (nextResetAt && hasRecurringReset) {
 			if (nextResetAt <= Date.now()) {
 				toast.error("Next reset must be in the future");

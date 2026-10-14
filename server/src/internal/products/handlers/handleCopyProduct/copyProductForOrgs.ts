@@ -22,12 +22,6 @@ import { copyMissingFeatures } from "./copyMissingFeatures.js";
 import { listExistingTargetPlanIds } from "./listExistingTargetPlanIds.js";
 import { loadSourcePlanFamily } from "./loadSourcePlanFamily.js";
 
-/**
- * Copies a single product between (org, env) pairs. When fromOrg === toOrg this
- * is the classic same-org env-copy; when they differ it's a named-sandbox
- * promote into the master org. The handler owns the auth gate that decides the
- * orgs — this only executes the copy.
- */
 export const copyProductForOrgs = async ({
 	ctx,
 	fromOrg,
@@ -79,7 +73,6 @@ export const copyProductForOrgs = async ({
 		env: toEnv,
 	});
 
-	// 1. Load the source plan and both sides' features
 	const [fromFullProduct, fromFeatures, toFeatures] = await Promise.all([
 		ProductService.getFull({
 			db,
@@ -91,8 +84,6 @@ export const copyProductForOrgs = async ({
 		FeatureService.list({ db, orgId: toOrg.id, env: toEnv }),
 	]);
 
-	// A variant's base link only resolves in its own (org, env), so it can only
-	// be copied there, as a sibling variant of the same base.
 	const fromBaseInternalId = fromFullProduct.base_internal_product_id ?? null;
 	const copiesWithinCatalog = fromOrg.id === toOrg.id && fromEnv === toEnv;
 	if (fromBaseInternalId && !copiesWithinCatalog) {
@@ -108,12 +99,9 @@ export const copyProductForOrgs = async ({
 	const toContext = { ...ctx, org: toOrg, env: toEnv, features: toFeatures };
 	const crossOrg = fromOrg.id !== toOrg.id;
 
-	// 2. Load the plan family: variants, license links, and license plans
 	const { variants, sourceLicenseLinks, sourceLicensePlans } =
 		await loadSourcePlanFamily({ ctx, source, base: fromFullProduct });
 
-	// 3. Copy the features the copied plans reference. A license plan already
-	// in the target is reused, not copied, so its features stay out of scope.
 	const existingTargetLicensePlanIds = await listExistingTargetPlanIds({
 		toContext,
 		planIds: sourceLicensePlans.map((licensePlan) => licensePlan.id),
@@ -138,7 +126,6 @@ export const copyProductForOrgs = async ({
 		});
 	}
 
-	// 4. Copy the plan and init its Stripe resources
 	const toBaseInternalId = await copyProduct({
 		source,
 		ctx: toContext,
@@ -159,7 +146,6 @@ export const copyProductForOrgs = async ({
 		await initProductInStripe({ ctx: toContext, product: copiedBase });
 	}
 
-	// 5. Copy the base's variants, relinked to the copied base
 	const copiedVariantIds = await copyBaseVariants({
 		source,
 		toContext,
@@ -167,7 +153,6 @@ export const copyProductForOrgs = async ({
 		toBaseInternalId,
 	});
 
-	// 6. Recreate the family's license links in the target
 	await copyLicenseLinksForPlanCopy({
 		source,
 		toContext,

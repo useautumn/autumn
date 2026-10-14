@@ -15,7 +15,6 @@ type SetPlansAnchorFields = Pick<
 	"billingCycleAnchorMs" | "resetCycleAnchorMs" | "anchorResetRefund"
 >;
 
-/** The running recurring plan whose cycle an anchor reset restarts: a main plan before an add-on. */
 const currentRecurringCustomerProduct = ({
 	billingContext,
 	timeline,
@@ -38,10 +37,6 @@ const currentRecurringCustomerProduct = ({
 	return live.find(({ product }) => !product.is_add_on) ?? live[0];
 };
 
-/**
- * The requested anchor, resolved against the outgoing recurring product. Immediate setup
- * cannot see that product, whose ms-precise starts_at a live subscription keeps.
- */
 export const setupSetPlansBillingCycleAnchor = ({
 	billingContext,
 	timeline,
@@ -72,7 +67,6 @@ export const setupSetPlansBillingCycleAnchor = ({
 		};
 	}
 
-	// A trial anchors the cycle on its end, unless a backdated recreate anchors it after the kept trial.
 	const trialEndsAt = anchorFollowsKeptTrial({ billingContext })
 		? undefined
 		: billingContext.trialContext?.trialEndsAt;

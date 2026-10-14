@@ -28,7 +28,6 @@ export const executeCustomerExport = async ({
 	const { exportId, orgId, env } = payload;
 	const { bucket, region } = getCustomerExportsS3Config();
 
-	// 1. Resolve the row this attempt should act on
 	const customerExport = await resolveRunnableExport({
 		ctx,
 		logger,
@@ -38,7 +37,6 @@ export const executeCustomerExport = async ({
 	});
 	if (!customerExport) return;
 
-	// 2. Count and stream; nothing is published if this throws
 	const key = getCustomerExportKey({ orgId, env, exportId });
 	let totals: { rowCount: number; byteCount: number };
 	try {
@@ -53,7 +51,6 @@ export const executeCustomerExport = async ({
 			progress,
 		});
 	} catch (error) {
-		// Earlier attempts stay active because the next attempt restarts the upload.
 		if (isFinalAttempt) {
 			await CustomerExportService.markFailed({
 				db: ctx.db,
@@ -64,7 +61,6 @@ export const executeCustomerExport = async ({
 		throw error;
 	}
 
-	// 3. The file is published, so completion failures propagate for a retry to reconcile
 	const completed = await markCompletedWithRetry({
 		ctx,
 		logger,

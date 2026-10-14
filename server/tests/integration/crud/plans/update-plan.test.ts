@@ -19,17 +19,12 @@ const autumnV1_2 = new AutumnInt({ version: ApiVersion.V1_2 });
 
 const { db, org, env } = ctx;
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// ENTITLEMENT REMAPPING TESTS
-// ═══════════════════════════════════════════════════════════════════════════════
-
 test.concurrent(`${chalk.yellowBright("update: match existing entitlement by feature_id (no entitlement_id)")}`, async () => {
 	const productId = "update_match_1";
 	try {
 		await autumnV2.products.delete(productId);
 	} catch (_error) {}
 
-	// 1. Create initial product via V1.2 (has entitlement_id in items)
 	await autumnV1_2.products.create<ApiProduct, CreateProductV2ParamsInput>({
 		id: productId,
 		name: "Update Match Test",
@@ -42,7 +37,6 @@ test.concurrent(`${chalk.yellowBright("update: match existing entitlement by fea
 		],
 	});
 
-	// Get internal entitlement ID using ProductService
 	const initialFull = await ProductService.getFull({
 		db,
 		idOrInternalId: productId,
@@ -54,7 +48,6 @@ test.concurrent(`${chalk.yellowBright("update: match existing entitlement by fea
 	)!.id;
 	expect(initialEntId).toBeDefined();
 
-	// 2. Update via V2 (NO entitlement_id in features)
 	await autumnV2.products.update<ApiPlan, UpdatePlanParamsInput>(productId, {
 		items: [
 			{
@@ -65,7 +58,6 @@ test.concurrent(`${chalk.yellowBright("update: match existing entitlement by fea
 		],
 	});
 
-	// 3. Verify entitlement was UPDATED (not created new)
 	const updatedFull = await ProductService.getFull({
 		db,
 		idOrInternalId: productId,
@@ -75,8 +67,7 @@ test.concurrent(`${chalk.yellowBright("update: match existing entitlement by fea
 	const updatedEnt = updatedFull.entitlements.find(
 		(e) => e.feature_id === TestFeature.Messages,
 	)!;
-	// expect(updatedEnt.id).toBe(initialEntId); // Same ID!
-	expect(updatedEnt.allowance).toBe(2000); // Updated value
+	expect(updatedEnt.allowance).toBe(2000);
 });
 
 test.concurrent(`${chalk.yellowBright("update: match entitlement with same feature + interval")}`, async () => {
@@ -85,7 +76,6 @@ test.concurrent(`${chalk.yellowBright("update: match entitlement with same featu
 		await autumnV2.products.delete(productId);
 	} catch (_error) {}
 
-	// 1. Create product with quarterly feature
 	await autumnV1_2.products.create<ApiProduct, CreateProductV2ParamsInput>({
 		id: productId,
 		name: "Quarterly Match Test",
@@ -108,7 +98,6 @@ test.concurrent(`${chalk.yellowBright("update: match entitlement with same featu
 		(e) => e.feature_id === TestFeature.Messages,
 	)!.id;
 
-	// 2. Update via V2 - change granted amount
 	await autumnV2.products.update<ApiPlan, UpdatePlanParamsInput>(productId, {
 		items: [
 			{
@@ -119,7 +108,6 @@ test.concurrent(`${chalk.yellowBright("update: match entitlement with same featu
 		],
 	});
 
-	// 3. Verify same entitlement updated
 	const updatedFull = await ProductService.getFull({
 		db,
 		idOrInternalId: productId,
@@ -129,7 +117,6 @@ test.concurrent(`${chalk.yellowBright("update: match entitlement with same featu
 	const updatedEnt = updatedFull.entitlements.find(
 		(e) => e.feature_id === TestFeature.Messages,
 	)!;
-	// expect(updatedEnt.id).toBe(initialEntId);
 	expect(updatedEnt.allowance).toBe(1500);
 });
 
@@ -139,7 +126,6 @@ test.concurrent(`${chalk.yellowBright("update: create NEW entitlement when inter
 		await autumnV2.products.delete(productId);
 	} catch (_error) {}
 
-	// 1. Create monthly feature
 	await autumnV1_2.products.create<ApiProduct, CreateProductV2ParamsInput>({
 		id: productId,
 		name: "Interval Change Test",
@@ -162,7 +148,6 @@ test.concurrent(`${chalk.yellowBright("update: create NEW entitlement when inter
 		(e) => e.feature_id === TestFeature.Messages,
 	)!.id;
 
-	// 2. Update to quarterly (different interval)
 	await autumnV2.products.update<ApiPlan, UpdatePlanParamsInput>(productId, {
 		items: [
 			{
@@ -173,7 +158,6 @@ test.concurrent(`${chalk.yellowBright("update: create NEW entitlement when inter
 		],
 	});
 
-	// 3. Verify NEW entitlement created (different ID)
 	const updatedFull = await ProductService.getFull({
 		db,
 		idOrInternalId: productId,
@@ -183,7 +167,6 @@ test.concurrent(`${chalk.yellowBright("update: create NEW entitlement when inter
 	const updatedEnt = updatedFull.entitlements.find(
 		(e) => e.feature_id === TestFeature.Messages,
 	)!;
-	// expect(updatedEnt.id).not.toBe(initialEntId); // Different ID!
 	expect(updatedEnt.allowance).toBe(3000);
 });
 
@@ -193,7 +176,6 @@ test.concurrent(`${chalk.yellowBright("update: handle multiple features with sam
 		await autumnV2.products.delete(productId);
 	} catch (_error) {}
 
-	// Edge case: Product has same feature with different intervals
 	await autumnV1_2.products.create<ApiProduct, CreateProductV2ParamsInput>({
 		id: productId,
 		name: "Multi Interval Test",
@@ -224,7 +206,6 @@ test.concurrent(`${chalk.yellowBright("update: handle multiple features with sam
 		(e) => e.feature_id === TestFeature.Messages && e.interval === "quarter",
 	)!.id;
 
-	// Update via V2 - both features
 	await autumnV2.products.update<ApiPlan, UpdatePlanParamsInput>(productId, {
 		items: [
 			{
@@ -240,7 +221,6 @@ test.concurrent(`${chalk.yellowBright("update: handle multiple features with sam
 		],
 	});
 
-	// Verify correct entitlements updated
 	const updatedFull = await ProductService.getFull({
 		db,
 		idOrInternalId: productId,
@@ -254,9 +234,6 @@ test.concurrent(`${chalk.yellowBright("update: handle multiple features with sam
 		(e) => e.feature_id === TestFeature.Messages && e.interval === "quarter",
 	)!;
 
-	// expect(monthlyEnt.id).toBe(monthlyEntId); // Same ID
-	expect(monthlyEnt.allowance).toBe(1500); // Updated value
-
-	// expect(quarterlyEnt.id).toBe(quarterlyEntId); // Same ID
-	expect(quarterlyEnt.allowance).toBe(4500); // Updated value
+	expect(monthlyEnt.allowance).toBe(1500);
+	expect(quarterlyEnt.allowance).toBe(4500);
 });

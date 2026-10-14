@@ -1,6 +1,3 @@
-// Red: every invoice-backed pending plan was rejected with 409, then the first row's
-// invoice was resumed regardless of siblings. Green: earliest open wins; paid blocks.
-
 import { expect, test } from "bun:test";
 import {
 	AppEnv,

@@ -4,10 +4,6 @@ import { getTrmnlDeviceConfig } from "@/external/redis/actions/trmnlDeviceStore/
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import { OrgService } from "@/internal/orgs/OrgService";
 
-/**
- * TRMNL authentication middleware for Hono
- * Authenticates requests using the X-TRMNL-ID header (device ID)
- */
 export const trmnlAuthMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 	const ctx = c.get("ctx");
 	const { logger, db } = ctx;
@@ -43,7 +39,6 @@ export const trmnlAuthMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 		env,
 	});
 
-	// Update context with org, env, and features
 	if (data) {
 		ctx.org = {
 			...data?.org,

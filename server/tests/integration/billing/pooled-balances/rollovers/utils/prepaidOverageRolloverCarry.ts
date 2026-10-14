@@ -17,8 +17,6 @@ const USAGE = 40;
 const POOLED_GRANT = 10_000;
 export const POOLED_GRANT_INCREASED = 20_000;
 
-// 50% of the 200 prepaid grant = 100, BELOW the 160 left after usage, so the
-// outgoing cap binds first and only 100 is ever minted.
 export const CARRIED = PREPAID_GRANT * 0.5;
 
 const rolloverConfig = {
@@ -39,7 +37,6 @@ export const pooledCreditsItem = ({ included }: { included: number }) => ({
 	},
 });
 
-/** Drop both same-feature credit items, add one pooled included item. */
 export const customization = {
 	remove_items: [
 		{ feature_id: TestFeature.Credits, billing_method: BillingMethod.Prepaid },
@@ -51,7 +48,6 @@ export const customization = {
 	add_items: [pooledCreditsItem({ included: POOLED_GRANT })],
 };
 
-/** Pro plan on a prepaid credit bucket with a rollover, plus an overage bucket. */
 export const setupPrepaidOverageCredits = async ({
 	customerId,
 }: {
@@ -88,12 +84,9 @@ export const setupPrepaidOverageCredits = async ({
 		actions: [
 			s.billing.attach({
 				productId: creditsPro.id,
-				// quantity is in feature units, not billing units.
 				options: [{ feature_id: TestFeature.Credits, quantity: PREPAID_GRANT }],
 			}),
 			s.track({ featureId: TestFeature.Credits, value: USAGE, timeout: 2000 }),
-			// Both credit items are price-backed on a live subscription, so the reset
-			// that mints the rollover runs off invoice.created, not the cron.
 			s.advanceToNextInvoice(),
 		],
 	});
@@ -126,16 +119,12 @@ export const expectRolloverCarriedToPool = async ({
 	expect(afterMove.pools).toHaveLength(1);
 	expect(afterMove.pools[0].granted).toBe(POOLED_GRANT);
 
-	// ── Contract: the rollover lands on the POOLED cusEnt ────────────
 	const pooledCustomerEntitlement = afterMove.poolCustomerEntitlements[0];
 	const pooledRollovers = pooledCustomerEntitlement.rollovers ?? [];
 	expect(pooledRollovers).toHaveLength(1);
 
-	// The pooled cap (50% of 10k = 5000) does not bind, so the full 100 survives
-	// — the carry is clamped by the pool's rules, not erased by them.
 	expect(pooledRollovers[0].balance).toBe(CARRIED);
 
-	// ── Contract: it is readable, not stranded on the zeroed source ──
 	const customerAfterMove = await autumnV2_3.customers.get<ApiCustomerV5>(
 		customerId,
 		{ skip_cache: "true" },

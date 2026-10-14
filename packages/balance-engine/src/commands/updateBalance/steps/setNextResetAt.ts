@@ -8,7 +8,6 @@ import {
 } from "../fullSubjectToUpdateBalanceRows.js";
 import type { UpdateBalanceCommand } from "../types/updateBalanceCommand.js";
 
-/** Legacy `updateNextResetAtV2`: moves the soonest reset; a lifetime balance never resets. */
 export const setNextResetAt = ({
 	fullSubject,
 	command,

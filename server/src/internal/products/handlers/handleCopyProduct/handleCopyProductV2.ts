@@ -5,14 +5,6 @@ import { OrgService } from "@/internal/orgs/OrgService.js";
 import { copyProductForOrgs } from "./copyProductForOrgs.js";
 import { isSameEnvVariantCopy } from "./isSameEnvVariantCopy.js";
 
-/**
- * Route: POST /v1/products/:productId/copy - Copy a product
- *
- * Same-org env-copy by default. From a named sandbox (a dashboard session acting
- * via `x-sandbox-org-id`), it promotes into the MASTER org's env instead — so
- * "Copy to Production" reaches real production rather than the sub-org's own
- * unviewable Live env. A sandbox API key (non-dashboard) keeps same-org copy.
- */
 export const handleCopyProductV2 = createRoute({
 	scopes: [Scopes.Plans.Write],
 	body: CopyProductParamsSchema,

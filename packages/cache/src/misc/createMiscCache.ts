@@ -36,7 +36,6 @@ type MiscCacheScope = {
 	state: MiscCacheState;
 };
 
-/** Lazy on purpose: env may land after import, so the URL is read on first use and retried until it does. */
 const getMain = ({ scope }: { scope: MiscCacheScope }): Redis => {
 	const { ctx, config, state } = scope;
 	if (state.main) return state.main;
@@ -68,7 +67,6 @@ const closeBackup = ({ scope }: { scope: MiscCacheScope }): void => {
 	state.backup = null;
 };
 
-/** Hot-swappable: a changed or rotated connection disconnects the old client on the next call. Null while unconfigured or undecryptable. */
 const getBackup = ({ scope }: { scope: MiscCacheScope }): Redis | null => {
 	const { ctx, config, state } = scope;
 	const backup = ctx.config().backup;
@@ -126,7 +124,6 @@ const getBackup = ({ scope }: { scope: MiscCacheScope }): Redis | null => {
 	return redis;
 };
 
-/** The active instance per the edge config; a selected but unroutable backup falls back to main. */
 const getActive = ({ scope }: { scope: MiscCacheScope }): Redis => {
 	const { ctx, state } = scope;
 	const activeInstance = ctx.config().activeInstance;
@@ -147,7 +144,6 @@ const getActive = ({ scope }: { scope: MiscCacheScope }): Redis => {
 	return getMain({ scope });
 };
 
-/** The ramp always flows toward the instance that is NOT active. */
 const getRampTarget = ({ scope }: { scope: MiscCacheScope }): Redis | null =>
 	scope.ctx.config().activeInstance === "main"
 		? getBackup({ scope })
@@ -173,7 +169,6 @@ const rampTargetOrActive = ({ scope }: { scope: MiscCacheScope }): Redis => {
 	return getActive({ scope });
 };
 
-/** Only safe for keys where a miss recomputes from the source of truth; cross-request state and locks use `getActive`. */
 const resolve = ({
 	scope,
 	requestId,
@@ -189,7 +184,6 @@ const resolve = ({
 	return rampTargetOrActive({ scope });
 };
 
-/** The active instance, plus the ramp target whenever a ramp exists, even at 0%, so invalidations fan out before traffic moves. */
 const targets = ({ scope }: { scope: MiscCacheScope }): MiscCacheTarget[] => {
 	const { activeInstance, ramp } = scope.ctx.config();
 	const active: MiscCacheTarget = {

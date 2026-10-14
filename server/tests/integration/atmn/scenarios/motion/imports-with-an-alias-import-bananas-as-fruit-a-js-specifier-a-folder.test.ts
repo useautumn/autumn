@@ -1,11 +1,3 @@
-/**
- * atmn scenarios/motion — imports with an alias (`import { bananas as fruit }`), a `.js` specifier, a folder index, a re-exporting barrel → every append and backfill still lands in the file that holds the array
- *
- * code in motion: the config's shape is the user's; pull edits the AST, never rewrites a file
- *
- * One line of plans/atmn-v3/07_tests.md. [a, b] is a matrix looped INSIDE this file.
- */
-
 import { expect, test } from "bun:test";
 import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 import {
@@ -15,21 +7,14 @@ import {
 } from "@tests/utils/atmnUtils/initAtmnScenario.js";
 import { s } from "@tests/utils/testInitUtils/initScenario.js";
 
-// Relative rather than a package import, for the same reason initAtmnScenario
-// imports runPull that way: the package publishes only its bin.
-
 const featureImport = `import { feature } from "${CLI_PACKAGE_DIR}/src/generated/features";\n`;
 const wireImport = `import { atmn } from "${CLI_PACKAGE_DIR}/src/generated/wire";\n`;
 
 type Layout = {
 	kind: string;
-	/** Whether the resolver is expected to follow the root import (TypeScript-only resolution). */
 	resolvable: boolean;
-	/** Files under cwd besides autumn.config.ts. */
 	files: Record<string, string>;
-	/** Root import line naming the array the root references. */
 	rootImport: string;
-	/** File whose text actually holds the array literal. */
 	ownerFile: string;
 };
 
@@ -96,8 +81,6 @@ const KINDS = [
 	"re-exporting barrel",
 ] as const;
 
-// One org per file: pushing each cell's config archives the previous cell's
-// rows, so cells can share one scenario when run sequentially.
 let scenarioPromise: Promise<AtmnScenario> | null = null;
 const getScenario = (): Promise<AtmnScenario> => {
 	if (scenarioPromise === null) {
@@ -151,8 +134,6 @@ export default atmn({
 			});
 
 			if (!layout.resolvable) {
-				// `.js` specifiers and re-exporting barrels are out of scope for
-				// the TypeScript-only resolver: pull must refuse, naming the collection.
 				let thrown: unknown;
 				try {
 					await scenario.pull();
@@ -162,7 +143,6 @@ export default atmn({
 				expect(String(thrown)).toMatch(/plain literal/);
 				expect(String(thrown)).toContain("features");
 				expect(String(thrown)).toContain(remoteFeatureId);
-				// A refused pull writes nothing.
 				expect([...scenario.files().entries()]).toEqual([...before.entries()]);
 				return;
 			}

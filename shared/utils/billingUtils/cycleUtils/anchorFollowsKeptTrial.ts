@@ -1,4 +1,3 @@
-/** A backdate that keeps a trialing subscription's trial and anchors the cycle after it ends, so Stripe bills a stub between. */
 export const anchorFollowsKeptTrial = ({
 	backdatesTrialingSubscription,
 	keepsTrial,

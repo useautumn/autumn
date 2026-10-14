@@ -49,11 +49,8 @@ export const resolveSlackCallerAuth = async ({
 	logger: AutumnLogger;
 	orgId: string;
 	slackUserId: string;
-	/** Set when the caller is a trusted bot; it runs as its configured member. */
 	trustedBot?: ChatTrustedBot;
 }): Promise<SlackCallerAuthResult> => {
-	// Every install, unrestricted included, acts with the sender's own org role;
-	// a sender we cannot resolve is denied, never granted the installer's access.
 	try {
 		if (trustedBot) {
 			return toCallerAuthResult(

@@ -3,7 +3,6 @@ import type {
 	IdempotencyKeyStore,
 } from "@autumn/dynamodb";
 
-/** An in-memory key store with the same owner rules as DynamoDB: the owner resumes, anyone else is a duplicate. */
 export function createFakeIdempotencyKeys({
 	outcome,
 }: {

@@ -5,8 +5,6 @@ import { listFullCustomerProductsByIds } from "../../repos/listFullCustomerProdu
 import { collectSurplusUnusedAssignmentIds } from "./collectSurplusUnusedAssignmentIds.js";
 import type { ReconcileContext } from "./types.js";
 
-/** Unused seats beyond remaining can never rebind — expire them so their
- * contributions leave the credit pool. Bound assignments are untouched. */
 export const expireUnusedAssignments = async ({
 	ctx,
 	context,

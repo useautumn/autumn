@@ -6,13 +6,6 @@ import { isBalanceWorkerRolloutEnabled } from "@/internal/misc/rollouts/isBalanc
 import { runBalanceWorkerRecalculateBalance } from "./balanceWorker/runBalanceWorkerRecalculateBalance.js";
 import { computeRecalculateBalance } from "./computeRecalculateBalance";
 
-/**
- * Recalculates a customer's balances for a feature by resetting every matching
- * entitlement to its starting balance and re-applying the total usage across
- * them in priority order. This redistributes usage so a positive balance
- * absorbs the overage of a negative one, without deleting any balance. The
- * aggregate balance is unchanged; only the per-entitlement distribution moves.
- */
 export const recalculateBalance = async ({
 	ctx,
 	params,

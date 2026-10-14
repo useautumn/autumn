@@ -1,7 +1,5 @@
 import type { FullProduct } from "@autumn/shared";
 
-/** Flatten listFull rows plus nested license parents and payload-base variants.
- * Prefer a row that already carries reverse `parent_plan_licenses`. */
 export const collectProductStateRows = ({
 	products,
 	payloadPlanIds,

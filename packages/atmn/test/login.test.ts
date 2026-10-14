@@ -1,9 +1,3 @@
-/**
- * Login never touches the network here: the OAuth flow and the key-minting call
- * are injected. What is under test is the part v2 got wrong — deciding whether
- * a browser exists by trying to open one, not by looking at `isTTY`.
- */
-
 import { afterEach, expect, test } from "bun:test";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -60,7 +54,6 @@ const createFakeApiKeys: CreateApiKeys = async () => ({
 });
 
 const openerThatWorks: BrowserOpener = async () => {
-	// Resolving is what "a browser opened" means.
 };
 
 const openerThatThrows: BrowserOpener = async () => {
@@ -91,7 +84,6 @@ const loginInto = ({
 };
 
 test("prints the authorization URL even when the browser opens", async () => {
-	// Copyable on a machine that is not the one running the CLI.
 	const { output } = await loginInto({
 		cwd: makeProjectDir(),
 		openBrowser: openerThatWorks,
@@ -111,7 +103,6 @@ test("a throwing opener means headless: the flow prints the URL and continues", 
 
 	expect(output).toContain(AUTHORIZATION_URL);
 	expect(output).toContain("No browser could be opened here");
-	// Continuing is the point: a failed open is not a failed login.
 	expect(envPath).toBe(join(cwd, ".env"));
 	expect(readFileSync(envPath, "utf8")).toContain(
 		"AUTUMN_SECRET_KEY=am_sk_test_new",

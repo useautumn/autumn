@@ -31,7 +31,6 @@ export const useCusProductCache = ({
 			queryKey: ["products"],
 		});
 
-		// Sort by most recently updated first to get the freshest data
 		const sortedQueries = productsQuery.sort((a, b) => {
 			const aTime = a.state.dataUpdatedAt || 0;
 			const bTime = b.state.dataUpdatedAt || 0;
@@ -51,13 +50,11 @@ export const useCusProductCache = ({
 	} | null => {
 		if (!customerId || !productId) return null;
 
-		// Check all cached full customers queries
 		const queryCache = queryClient.getQueryCache();
 		const customerQuery = queryCache.findAll({
 			queryKey: ["customer", customerId],
 		});
 
-		// Sort by most recently updated first to get the freshest data
 		const sortedQueries = customerQuery.sort((a, b) => {
 			const aTime = a.state.dataUpdatedAt || 0;
 			const bTime = b.state.dataUpdatedAt || 0;
@@ -65,7 +62,6 @@ export const useCusProductCache = ({
 		});
 
 		for (const query of sortedQueries) {
-			// Only use data that's not stale and has been successfully fetched
 			if (query.state.status === "success" && query.state.data) {
 				const cachedData = query.state.data as
 					| { customer: FullCustomer }

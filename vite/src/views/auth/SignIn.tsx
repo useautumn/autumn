@@ -18,10 +18,6 @@ import { AutumnWordmark } from "./components/AutumnWordmark";
 import { OTPSignIn } from "./components/OTPSignIn";
 import { RememberedSsoSignIn } from "./components/RememberedSsoSignIn";
 
-/**
- * Check if URL has OAuth parameters (from OAuth provider redirect)
- * These params are added by better-auth when redirecting unauthenticated users
- */
 function getOAuthRedirectUrl(searchParams: URLSearchParams): string | null {
 	const clientId = searchParams.get("client_id");
 	const responseType = searchParams.get("response_type");
@@ -72,14 +68,10 @@ export const SignIn = () => {
 	}, [defaultPath, isCapyDev, session, sessionLoading]);
 
 	// Passkey Conditional UI: browsers surface saved passkeys directly in the
-	// email field's autocomplete dropdown (no extra button needed). Requires
-	// the `webauthn` token in autoComplete and `autoFill: true` on signIn.
-	// Skipped during OAuth flows since the post-auth redirect would be lost.
 	useEffect(() => {
 		if (isCapyDev || oauthRedirectUrl || session) return;
 		if (typeof window === "undefined") return;
 		// Some browsers (notably Firefox) don't support Conditional UI; signIn
-		// gracefully no-ops in that case. We still call it on supported browsers.
 		const controller = new AbortController();
 		(async () => {
 			try {
@@ -87,9 +79,7 @@ export const SignIn = () => {
 					autoFill: true,
 					fetchOptions: { signal: controller.signal },
 				});
-			} catch {
-				// Aborts, cancels, and unsupported-browser errors are non-fatal.
-			}
+			} catch {}
 		})();
 		return () => {
 			controller.abort();
@@ -106,8 +96,6 @@ export const SignIn = () => {
 		}
 		setSendOtpLoading(true);
 		try {
-			// The backend owns the decision: an active SSO domain never falls
-			// through to an email code.
 			let resolved: Awaited<ReturnType<typeof resolveSso>>;
 			try {
 				resolved = await resolveSso({ email, next: defaultPath });
@@ -181,7 +169,6 @@ export const SignIn = () => {
 		<AuthBackground>
 			<CustomToaster />
 			<div className="flex flex-col items-center gap-6">
-				{/* Wordmark logo + welcome text */}
 				<div className="flex flex-col items-center gap-3">
 					<AutumnWordmark className="h-7 w-auto text-foreground" />
 					<p className="text-sm text-muted-foreground">
@@ -238,9 +225,6 @@ export const SignIn = () => {
 								}}
 								required
 								className="text-base !w-full"
-								// "webauthn" token activates Passkey Conditional UI on
-								// Chromium/Safari — saved passkeys appear in the input's
-								// autofill dropdown.
 								autoComplete="username webauthn"
 							/>
 							<IconButton

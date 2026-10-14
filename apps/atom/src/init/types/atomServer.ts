@@ -8,7 +8,6 @@ import type { HeldSubjects } from "../../state/heldSubjects/types/heldSubjects.j
 import type { ThreadCounters } from "../../threads/stats/threadStats.js";
 import type { ThreadHealthSource } from "../atomHealth.js";
 
-/** Something the Atom starts and stops: a thread's server, or the main thread's set of them. */
 export type AtomServer = {
 	start(): Promise<void>;
 	stop(): Promise<void>;
@@ -21,9 +20,7 @@ export type AtomServerDependencies = {
 	health: ThreadHealthSource;
 	counters: ThreadCounters;
 	held: HeldSubjects;
-	/** Every folder this thread holds, whose files it keeps within its share of the volume. */
 	folders: Pick<ReplicaFolders, "all">;
-	/** Keeps the other replicas holding what this thread applies. */
 	replication: Replication;
 };
 

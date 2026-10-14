@@ -22,8 +22,6 @@ export const runPrepareModules = async ({
 	const results: PrepareModuleResult[] = [];
 	const nextState: PreparedState = {};
 
-	/** Deliberately blind to result shapes — consumers re-parse
-	 * `prepared_state` with their own schema. */
 	const runInstance = async (
 		instance: ImplicitPrepInstance,
 	): Promise<unknown> => {

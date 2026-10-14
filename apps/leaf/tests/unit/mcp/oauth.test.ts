@@ -39,7 +39,6 @@ const unusedDb = oauthTokenDb(undefined);
 const resourceUrl = "http://localhost:2718/mcp";
 const internalResourceUrl = "http://localhost:2718/internal/mcp";
 
-/** Omitting `error` is the RFC 6750 §3.1 challenge for a request with no credentials. */
 const expectedChallenge = ({
 	error,
 	resourcePath,
@@ -53,7 +52,6 @@ const expectedChallenge = ({
 		...(error ? [`error="${error}"`] : []),
 	].join(", ");
 
-/** The no-credential cases assert an absent code, which toMatchObject cannot see. */
 const rejectionFrom = async ({
 	flags: requestFlags,
 	headers,

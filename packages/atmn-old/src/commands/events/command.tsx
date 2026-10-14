@@ -3,35 +3,21 @@ import { headlessEventsCommand } from "./headless.js";
 
 export interface EventsCommandOptions {
 	prod?: boolean;
-	/** Run in headless mode (output for AI/programmatic use) */
 	headless?: boolean;
-	/** Page number */
 	page?: number;
-	/** Items per page */
 	limit?: number;
-	/** Output format: text, json, csv */
 	format?: "text" | "json" | "csv";
-	/** Filter by customer ID */
 	customerId?: string;
-	/** Filter by feature ID (can be comma-separated for multiple) */
 	featureId?: string;
-	/** Time range: 24h, 7d, 30d, 90d */
 	timeRange?: "24h" | "7d" | "30d" | "90d";
-	/** View mode: list or aggregate */
 	mode?: "list" | "aggregate";
-	/** Bin size for aggregate: hour, day, month */
 	binSize?: "hour" | "day" | "month";
-	/** Group by property (for aggregate mode) */
 	groupBy?: string;
 }
 
-/**
- * Events command entry point
- */
 export async function eventsCommand(
 	options: EventsCommandOptions = {},
 ): Promise<void> {
-	// Use headless mode if explicitly requested or if not in a TTY
 	const useHeadless = options.headless || !process.stdout.isTTY;
 
 	if (useHeadless) {
@@ -50,7 +36,6 @@ export async function eventsCommand(
 		return;
 	}
 
-	// Interactive mode - render the EventsView
 	const { QueryProvider } = await import(
 		"../../views/react/components/providers/QueryProvider.js"
 	);
@@ -69,7 +54,6 @@ export async function eventsCommand(
 		</QueryProvider>,
 	);
 
-	// Handle SIGINT for clean exit
 	process.on("SIGINT", () => {
 		instance.clear();
 		process.exit(0);

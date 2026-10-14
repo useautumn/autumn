@@ -1,11 +1,3 @@
-/**
- * catalogV2.update — bounded reference rewrites.
- *
- * Contract: id/type/usage_type changes that would rewrite more than
- * FEATURE_REWRITE_ROW_LIMIT entitlements or prices throw. Name-only updates
- * never count/propagate, so many entitlements do not block them.
- */
-
 import { test } from "bun:test";
 import {
 	AllowanceType,

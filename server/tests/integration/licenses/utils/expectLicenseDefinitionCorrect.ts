@@ -8,7 +8,6 @@ import {
 import type { TestContext } from "@tests/utils/testInitUtils/createTestContext";
 import { CusService } from "@/internal/customers/CusService";
 
-/** Asserts the customer pool's parent product and effective license definition. */
 export const expectLicenseDefinitionCorrect = async ({
 	ctx,
 	customerId,
@@ -21,7 +20,6 @@ export const expectLicenseDefinitionCorrect = async ({
 	ctx: TestContext;
 	customerId: string;
 	parentPlanId: string;
-	/** When set, the parent customer product must be linked to this Stripe sub. */
 	subscriptionId?: string;
 	isCustom: boolean;
 	isCustomized?: boolean;

@@ -1,14 +1,3 @@
-/**
- * Regression test for scheduled attaches whose Stripe schedule is rescheduled
- * outside Autumn (e.g. Stripe dashboard) before it starts. Fully webhook-driven:
- * no handlers are invoked in-process — assertions poll for the effects of real
- * stripe-listen deliveries.
- *
- * Pre-fix: Autumn ignored subscription_schedule.updated, so the scheduled
- * customerProduct kept its stale starts_at; when the phase started earlier than
- * that, activation was skipped and the product stayed `scheduled` forever.
- */
-
 import { expect, test } from "bun:test";
 import {
 	type ApiCustomerV5,
@@ -88,11 +77,8 @@ test.concurrent(`${chalk.yellowBright("starts_at: external schedule move resyncs
 		scheduleId,
 	)) as Stripe.SubscriptionSchedule;
 
-	// Warm the customer cache so a missed webhook invalidation would surface
-	// as a stale API read below
 	await autumnV2_2.customers.get<ApiCustomerV5>(customerId);
 
-	// External edit (dashboard-style): move the phase start 8h earlier
 	const editedStartSec = Math.floor((requestedStart - ms.hours(8)) / 1000);
 	await ctx.stripeCli.subscriptionSchedules.update(scheduleId, {
 		phases: schedule.phases.map((phase) => ({
@@ -106,7 +92,6 @@ test.concurrent(`${chalk.yellowBright("starts_at: external schedule move resyncs
 		})),
 	});
 
-	// Real subscription_schedule.updated webhook resyncs starts_at
 	const resyncedProduct = await pollUntil({
 		fetch: () => getCustomerProduct({ ctx, customerId, productId: pro.id }),
 		until: (cp) => cp.starts_at === editedStartSec * 1000,
@@ -114,8 +99,6 @@ test.concurrent(`${chalk.yellowBright("starts_at: external schedule move resyncs
 	});
 	expect(resyncedProduct.status).toBe(CusProductStatus.Scheduled);
 
-	// The webhook must also evict the warmed cache: the API (cached read path)
-	// has to serve the NEW start, not the pre-edit snapshot
 	const cachedCustomer =
 		await autumnV2_2.customers.get<ApiCustomerV5>(customerId);
 	await expectProductScheduled({
@@ -124,8 +107,6 @@ test.concurrent(`${chalk.yellowBright("starts_at: external schedule move resyncs
 		startsAt: editedStartSec * 1000,
 	});
 
-	// Phase starts at the EDITED (earlier) time; the real
-	// customer.subscription.created webhook must activate the scheduled product
 	await advanceTestClock({
 		stripeCli: ctx.stripeCli,
 		testClockId: testClockId!,
@@ -140,11 +121,8 @@ test.concurrent(`${chalk.yellowBright("starts_at: external schedule move resyncs
 	});
 	expect(activatedProduct.subscription_ids?.length).toBe(1);
 
-	// The phase-start subscription_schedule.updated (status -> active) must NOT
-	// touch starts_at anymore — started schedules are ignored
 	expect(activatedProduct.starts_at).toBe(editedStartSec * 1000);
 
-	// No stranded duplicate
 	const fullCustomer = await CusService.getFull({
 		ctx,
 		idOrInternalId: customerId,
@@ -197,7 +175,6 @@ test.concurrent(`${chalk.yellowBright("starts_at: moving one phase of a multi-ph
 	const phase2StartSec = Math.floor((advancedTo + ms.days(40)) / 1000);
 	const phase3StartSec = Math.floor((advancedTo + ms.days(70)) / 1000);
 
-	// External edit #1: expand to 3 phases (structural change — Autumn must not react)
 	await ctx.stripeCli.subscriptionSchedules.update(scheduleId, {
 		phases: [
 			{ items: phaseItems, start_date: phase1StartSec, end_date: phase2StartSec },
@@ -206,7 +183,6 @@ test.concurrent(`${chalk.yellowBright("starts_at: moving one phase of a multi-ph
 		],
 	});
 
-	// External edit #2: move ONLY phase 1 (+4 days); phases 2 and 3 untouched
 	const editedPhase1StartSec = phase1StartSec + Math.floor(ms.days(4) / 1000);
 	await ctx.stripeCli.subscriptionSchedules.update(scheduleId, {
 		phases: [
@@ -216,8 +192,6 @@ test.concurrent(`${chalk.yellowBright("starts_at: moving one phase of a multi-ph
 		],
 	});
 
-	// The real webhook must retarget the product anchored to phase 1 — and to
-	// phase 1's NEW start specifically, not any other phase's
 	const resyncedProduct = await pollUntil({
 		fetch: () => getCustomerProduct({ ctx, customerId, productId: pro.id }),
 		until: (cp) => cp.starts_at !== phase1Start,
@@ -226,10 +200,6 @@ test.concurrent(`${chalk.yellowBright("starts_at: moving one phase of a multi-ph
 	expect(resyncedProduct.starts_at).toBe(editedPhase1StartSec * 1000);
 	expect(resyncedProduct.status).toBe(CusProductStatus.Scheduled);
 
-	// External edit #3: move phase 1 AND phase 2 in one update. The product must
-	// follow phase 1's new start — if moves were applied indiscriminately, it
-	// would land on phase 2's start instead. Deterministic: the phase-1 move is
-	// the pollable proof this webhook was fully processed.
 	const finalPhase1StartSec = editedPhase1StartSec + Math.floor(ms.days(2) / 1000);
 	const editedPhase2StartSec = phase2StartSec + Math.floor(ms.days(5) / 1000);
 	await ctx.stripeCli.subscriptionSchedules.update(scheduleId, {

@@ -24,9 +24,6 @@ export function MigrationCustomerSheet({
 		invalidate: invalidateRuns,
 	} = useMigrationRunsQuery({
 		migrationId,
-		// Scope events to THIS customer server-side: the un-scoped list caps at
-		// the 1000 most recent events, so on large runs earlier customers'
-		// events never appear in the global window.
 		itemIds: [customer.internal_id],
 	});
 

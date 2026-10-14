@@ -10,8 +10,6 @@ test.concurrent(`${chalk.yellowBright("stripe-checkout: prepaid volume: flat_amo
 	const customerId = "stripe-cko-prepaid-volume-flat";
 	const quantity = 50;
 
-	// Tier 1: 0-100 → $0/unit, $20 flat. Tier 2: 101+ → $0/unit, $50 flat.
-	// 50 units → falls in tier 1 → 50 × $0 + $20 = $20
 	const expectedTotal = 20;
 
 	const volumeItem = items.volumePrepaidMessages({

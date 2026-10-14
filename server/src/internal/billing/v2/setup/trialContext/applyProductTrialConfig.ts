@@ -5,16 +5,6 @@ import { isStripeSubscriptionTrialing } from "@/external/stripe/subscriptions/ut
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { getFreeTrialAfterFingerprint } from "@/internal/products/free-trials/freeTrialUtils";
 
-/**
- * Applies the product's trial configuration with deduplication check.
- * Used for upgrades and fresh attaches.
- *
- * Deduplication is skipped if:
- * - org.config.multiple_trials is true
- * - Product's free_trial.unique_fingerprint is false
- *
- * Returns undefined if product has no trial config or dedup check fails.
- */
 export const applyProductTrialConfig = async ({
 	ctx,
 	fullProduct,
@@ -58,7 +48,7 @@ export const applyProductTrialConfig = async ({
 	});
 
 	if (!freeTrial) {
-		return undefined; // second entity upgrade case comes here
+		return undefined;
 	}
 
 	const trialEndsAt = addDuration({

@@ -36,21 +36,15 @@ type CustomerOrEntity =
 	| ApiEntityV2;
 type V5CustomerOrEntity = ApiCustomerV5 | ApiEntityV2;
 
-/** Type guard for V5/V2 customer/entity (has subscriptions instead of products). */
 const isV5Customer = (
 	customer: CustomerOrEntity,
 ): customer is V5CustomerOrEntity => "subscriptions" in customer;
 
-/** Maps V3 state names to V5 state names. */
 const toV5State = (
 	state: ProductState,
 ): "active" | "canceling" | "scheduled" | "past_due" | "undefined" =>
 	state === "canceled" ? "canceling" : state;
 
-/**
- * Verify a customer/entity has the expected product in the expected state.
- * Routes to V5 subscription checks when the customer has `subscriptions`.
- */
 type ProductExpectParams = PollableExpectParams<CustomerOrEntity> & {
 	productId: string;
 	state: ProductState;
@@ -63,7 +57,6 @@ const assertCustomerProductCorrect = ({
 }: ProductExpectParams & {
 	customer: CustomerOrEntity;
 }): void | Promise<void> => {
-	// Route to V5 functions
 	if (isV5Customer(customer)) {
 		return expectSubscriptionCorrect({
 			customer,
@@ -90,18 +83,15 @@ const assertCustomerProductCorrect = ({
 	}
 
 	if (state === "active") {
-		// Product can be "active" or "trialing" - both are considered active states
 		expect(
 			product.status === "active" || product.status === "trialing",
 			`Product ${productId} should be "active" or "trialing" but got "${product.status}"`,
 		).toBe(true);
-		// canceled_at can be undefined or null when not canceled
 		expect(
 			product.canceled_at == null,
 			`Product ${productId} should not be canceled (canceled_at: ${product.canceled_at})`,
 		).toBe(true);
 	} else if (state === "canceled") {
-		// Product can be "active" or "trialing" when canceling (scheduled to end)
 		expect(
 			product.status === "active" || product.status === "trialing",
 			`Product ${productId} should be "active" or "trialing" but got "${product.status}"`,
@@ -117,14 +107,12 @@ const assertCustomerProductCorrect = ({
 	}
 };
 
-/** Pass `customerId` to poll until the product reaches the expected state. */
 export const expectCustomerProductCorrect = pollableCustomerExpect({
 	fetchCustomer: ({ customerId, autumn }: ProductExpectParams) =>
 		(autumn ?? defaultAutumn).customers.get<CustomerOrEntity>(customerId!),
 	assert: assertCustomerProductCorrect,
 });
 
-/** Shorthand for checking product is active. Prefer {@link expectCustomerProducts} for batch checks. */
 export const expectProductActive = async (
 	params: PollableExpectParams<CustomerOrEntity> & {
 		productId: string;
@@ -139,10 +127,6 @@ export const expectProductActive = async (
 	return expectCustomerProductCorrect({ ...params, state: "active" });
 };
 
-/**
- * Shorthand for checking product is canceling (active but with canceled_at set).
- * Prefer {@link expectCustomerProducts} for batch checks.
- */
 export const expectProductCanceling = async (
 	params: PollableExpectParams<CustomerOrEntity> & {
 		productId: string;
@@ -157,10 +141,6 @@ export const expectProductCanceling = async (
 	return expectCustomerProductCorrect({ ...params, state: "canceled" });
 };
 
-/**
- * Shorthand for checking product is scheduled. Prefer {@link expectCustomerProducts} for batch checks.
- * Optionally verify the `started_at` timestamp is within a tolerance of the expected value.
- */
 type ScheduledExpectParams = PollableExpectParams<CustomerOrEntity> & {
 	productId: string;
 	startsAt?: number;
@@ -175,7 +155,6 @@ const assertProductScheduled = ({
 }: ScheduledExpectParams & {
 	customer: CustomerOrEntity;
 }): void | Promise<void> => {
-	// Route to V5
 	if (isV5Customer(customer)) {
 		return expectSubscriptionScheduled({
 			customer,
@@ -205,14 +184,12 @@ const assertProductScheduled = ({
 	}
 };
 
-/** Pass `customerId` to poll until the product is scheduled. */
 export const expectProductScheduled = pollableCustomerExpect({
 	fetchCustomer: ({ customerId, autumn }: ScheduledExpectParams) =>
 		(autumn ?? defaultAutumn).customers.get<CustomerOrEntity>(customerId!),
 	assert: assertProductScheduled,
 });
 
-/** Shorthand for checking product is past_due. Prefer {@link expectCustomerProducts} for batch checks. */
 export const expectProductPastDue = async (
 	params: PollableExpectParams<CustomerOrEntity> & {
 		productId: string;
@@ -227,7 +204,6 @@ export const expectProductPastDue = async (
 	return expectCustomerProductCorrect({ ...params, state: "past_due" });
 };
 
-/** Shorthand for checking product does not exist. Prefer {@link expectCustomerProducts} for batch checks. */
 export const expectProductNotPresent = async (
 	params: PollableExpectParams<CustomerOrEntity> & {
 		productId: string;
@@ -242,10 +218,6 @@ export const expectProductNotPresent = async (
 	return expectCustomerProductCorrect({ ...params, state: "undefined" });
 };
 
-/**
- * Verify multiple product states in a single call.
- * Each array contains product IDs that should be in that state.
- */
 type ProductsExpectParams = PollableExpectParams<CustomerOrEntity> & {
 	active?: string[];
 	canceling?: string[];
@@ -264,7 +236,6 @@ const assertCustomerProducts = ({
 }: ProductsExpectParams & {
 	customer: CustomerOrEntity;
 }): void | Promise<void> => {
-	// Route to V5
 	if (isV5Customer(customer)) {
 		return expectSubscriptions({
 			customer,
@@ -297,7 +268,6 @@ const assertCustomerProducts = ({
 	}
 };
 
-/** Pass `customerId` to poll until every listed product settles. */
 export const expectCustomerProducts = pollableCustomerExpect({
 	fetchCustomer: ({ customerId, autumn }: ProductsExpectParams) =>
 		(autumn ?? defaultAutumn).customers.get<CustomerOrEntity>(customerId!),

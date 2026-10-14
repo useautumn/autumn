@@ -26,29 +26,15 @@
 
 import { execSync } from "child_process";
 
-// ============================================================================
-// CONFIGURATION
-// ============================================================================
-
 const COPY_PIPE = "events_deductions_hourly_mv_backfill";
 const DATASOURCE = "events_deductions_hourly_mv";
 
-// Before the first deduction was ever written to events. Earlier windows copy
-// zero rows by construction — this is a data-existence floor, NOT a serving
-// window: custom_range queries are unbounded. Override with --target-date if
-// deductions ever get backfilled onto older events.
 const TARGET_DATE = "2026-04-01 00:00:00";
 
-// The deductions ARRAY JOIN fans out and pays a double JSONExtract per field,
-// so default chunks are a day, not the wide chunks the no-fan-out backfills use.
 const DEFAULT_CHUNK_HOURS = 24;
 const MAX_RETRIES = 3;
 const RETRY_DELAY_MS = 5000;
 const DELAY_BETWEEN_CHUNKS_MS = 2000;
-
-// ============================================================================
-// TYPES / ARGS
-// ============================================================================
 
 interface Args {
 	chunkHours: number;
@@ -112,14 +98,6 @@ Safe to re-run at any time, safe to change chunk size between runs.
 	return args;
 }
 
-// ============================================================================
-// UTILITIES
-// ============================================================================
-
-// stdin is ALWAYS ignored: with it piped, any interactive tb prompt (workspace,
-// auth, region) renders invisibly and the script hangs forever. Ignored, the
-// prompt read fails and the error surfaces instead. Queries also carry a
-// timeout for the same reason; copy runs don't (chunks legitimately run long).
 const QUERY_TIMEOUT_MS = 300_000;
 
 function exec(cmd: string, silent = false): string {
@@ -216,11 +194,6 @@ function extractCount(result: string): number {
 	return 0;
 }
 
-// ============================================================================
-// TINYBIRD QUERIES
-// ============================================================================
-
-/** Seam on the first run, resume point on every later one. */
 function getMinHour(): string | null {
 	console.log("Querying the MV for backfill progress...");
 	const timestamp = extractTimestamp(
@@ -234,17 +207,6 @@ function getMinHour(): string | null {
 	return timestamp;
 }
 
-/**
- * The exact timestamp where forward materialization took over, derived live.
- *
- * The MV's earliest bucket H only contains what materialized forward (first
- * run) or a complete backfilled hour (continuations). Either way, the min
- * timestamp of the LAST mv-count deduction rows in raw events for that hour
- * is the precise upper bound the backfill must fill up to: mid-bucket on a
- * fresh deploy, exactly H once the bucket is complete. Relies on live traffic
- * being timestamp-ordered at ingest; sub-second truncation of the boundary
- * loses at most the pre-promote sliver inside the seam second.
- */
 function deriveSeam(minHour: string): string {
 	const bucketStart = floorToHour(minHour);
 	const bucketEnd = addHours(bucketStart, 1);
@@ -256,9 +218,6 @@ function deriveSeam(minHour: string): string {
 		),
 	);
 	if (mvCount === 0) {
-		// The bucket came from min(hour), so it MUST contain rows — zero means
-		// the count query failed. Falling back to the hour boundary would
-		// silently skip everything between it and the actual promote time.
 		console.error(
 			"\nRefusing to run: the MV count query for the seam bucket failed or" +
 				"\nreturned zero, which is impossible for the min(hour) bucket." +
@@ -289,19 +248,12 @@ function deriveSeam(minHour: string): string {
 		process.exit(1);
 	}
 
-	// Truncate to whole seconds (the copy-pipe DateTime params carry no
-	// fraction). Flooring can only lose the pre-promote sliver within the
-	// seam second — never double-count.
 	return seam.split(".")[0];
 }
 
 function getRowCount(): number {
 	return extractCount(tbSql(`SELECT count() FROM ${DATASOURCE}`));
 }
-
-// ============================================================================
-// COPY EXECUTION
-// ============================================================================
 
 async function waitForCopyJobs(): Promise<void> {
 	const maxAttempts = 60;
@@ -312,8 +264,6 @@ async function waitForCopyJobs(): Promise<void> {
 		const working = execCapture(
 			"tb --cloud job ls --status working --kind copy 2>/dev/null | grep -c '^id:' || echo 0",
 		);
-		// Failed/empty job-ls output must count as zero, not NaN — NaN kept
-		// this loop spinning forever, which was the observed "hang".
 		const total = (parseInt(waiting, 10) || 0) + (parseInt(working, 10) || 0);
 		if (total === 0) return;
 		if (attempt === 0) {
@@ -357,10 +307,6 @@ async function runCopyJob(
 	return false;
 }
 
-// ============================================================================
-// CHUNKS
-// ============================================================================
-
 function generateChunksDownward(
 	resumePoint: string,
 	target: string,
@@ -369,9 +315,6 @@ function generateChunksDownward(
 	const chunks: Chunk[] = [];
 	let current = resumePoint;
 
-	// A mid-hour seam gets its own partial chunk down to the hour boundary, so
-	// every later chunk start is hour-aligned — which is what makes resuming
-	// from floor(min(hour)) exact after an interruption.
 	const aligned = floorToHour(resumePoint);
 	if (aligned !== resumePoint && parseDate(aligned) > parseDate(target)) {
 		chunks.push({ start: aligned, end: current });
@@ -389,10 +332,6 @@ function generateChunksDownward(
 
 	return chunks;
 }
-
-// ============================================================================
-// MAIN
-// ============================================================================
 
 async function main() {
 	console.log(`=== ${DATASOURCE} Backfill (Downward Fill) ===\n`);

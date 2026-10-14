@@ -1,26 +1,3 @@
-/**
- * Vercel invoice refunds
- *
- * Vercel invoices have no Stripe charge — Vercel moves the money and Stripe is
- * only the ledger. Refunds therefore go through Vercel's Invoice Actions API
- * (`POST /v1/installations/{id}/billing/invoices/{invoiceId}/actions`), keyed
- * by the Vercel-side invoice id that `submitInvoice` returns.
- *
- * Flow under test:
- * 1. `processVercelInvoice` stores the returned `invoiceId` on the Stripe
- *    invoice as `metadata.vercel_invoice_id`.
- * 2. Internal `GET /customers/:id/invoices/:stripe_id/metadata` (dashboard
- *    session auth) exposes it so the invoice sheet can gate the refund button.
- * 3. `POST /customers/:id/invoices/:stripe_id/refund` calls Vercel's
- *    `updateInvoice` with `{ action: "refund", reason, total }`. Nothing is
- *    written to Autumn yet — Vercel settles asynchronously.
- * 4. `marketplace.invoice.refunded` webhook fetches the invoice from Vercel and
- *    sets `refunded_amount` to its `refundTotal` (idempotent across retries).
- *
- * The Vercel SDK is pointed at the dev server's `/__test/vercel/api` mock via
- * `x-mock-vercel-api` / `ctx.testOptions.mockVercelApi`.
- */
-
 import { expect, test } from "bun:test";
 import { ApiVersion, ErrCode, stripeRefToId } from "@autumn/shared";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils";
@@ -95,7 +72,6 @@ const refundedPayload = ({
 	},
 });
 
-/** The Vercel invoice id `processVercelInvoice` stamped on the Stripe invoice. */
 const getVercelInvoiceId = async (stripeInvoiceId: string) => {
 	const stripeInvoice = await ctx.stripeCli.invoices.retrieve(stripeInvoiceId);
 	const vercelInvoiceId = stripeInvoice.metadata?.vercel_invoice_id;
@@ -111,11 +87,6 @@ const getRefundedAmount = async (stripeInvoiceId: string) =>
 		})
 	)?.refunded_amount;
 
-/**
- * Provision a Vercel customer + paid plan, run the finalize task against the
- * mock so the Vercel invoice id lands on Stripe metadata, then mark the
- * invoice paid out of band (what `marketplace.invoice.paid` does).
- */
 const setupPaidVercelInvoice = async ({ suffix }: { suffix: string }) => {
 	const customerId = `${TEST_CASE}-${suffix}-customer`;
 	const installationId = `icfg_${TEST_CASE}_${suffix}`;
@@ -194,10 +165,6 @@ const setupPaidVercelInvoice = async ({ suffix }: { suffix: string }) => {
 	return { customerId, installationId, stripeInvoiceId };
 };
 
-// ─────────────────────────────────────────────────────────────────────────────
-// TEST 1: finalize task persists Vercel's invoiceId onto Stripe metadata
-// ─────────────────────────────────────────────────────────────────────────────
-
 test(`${chalk.yellowBright(
 	"vercel-invoice-refund: processVercelInvoice stores vercel_invoice_id on Stripe invoice metadata",
 )}`, async () => {
@@ -216,10 +183,6 @@ test(`${chalk.yellowBright(
 	const stripeInvoice = await ctx.stripeCli.invoices.retrieve(stripeInvoiceId);
 	expect(stripeInvoice.metadata?.vercel_invoice_id).toMatch(/^vi_test_/);
 }, 60000);
-
-// ─────────────────────────────────────────────────────────────────────────────
-// TEST 2: metadata route exposes the Vercel invoice id to the dashboard
-// ─────────────────────────────────────────────────────────────────────────────
 
 test(`${chalk.yellowBright(
 	"vercel-invoice-refund: GET /invoices/:stripe_id/metadata returns vercel_invoice_id",
@@ -244,10 +207,6 @@ test(`${chalk.yellowBright(
 		await session.cleanup();
 	}
 }, 60000);
-
-// ─────────────────────────────────────────────────────────────────────────────
-// TEST 3: full refund → Vercel Invoice Actions; refunded webhook → DB
-// ─────────────────────────────────────────────────────────────────────────────
 
 test(`${chalk.yellowBright(
 	"vercel-invoice-refund: full refund requests via Vercel, refunded webhook records it",
@@ -280,7 +239,6 @@ test(`${chalk.yellowBright(
 		total: "20.00",
 	});
 
-	// Nothing recorded until Vercel confirms.
 	expect(await getRefundedAmount(stripeInvoiceId)).toBe(0);
 
 	const vercelInvoiceId = await getVercelInvoiceId(stripeInvoiceId);
@@ -296,7 +254,6 @@ test(`${chalk.yellowBright(
 	);
 	expect(await getRefundedAmount(stripeInvoiceId)).toBe(20);
 
-	// The handler reconciles against Vercel's Get Invoice rather than the payload.
 	const getCall = await waitForVercelCapture({
 		installationId,
 		predicate: (call) =>
@@ -307,17 +264,12 @@ test(`${chalk.yellowBright(
 	expect(getCall).not.toBeNull();
 }, 60000);
 
-// ─────────────────────────────────────────────────────────────────────────────
-// TEST 4: partial refund sends the dollar-string total Vercel expects
-// ─────────────────────────────────────────────────────────────────────────────
-
 test(`${chalk.yellowBright(
 	"vercel-invoice-refund: partial refund sends decimal total and rejects over-refund",
 )}`, async () => {
 	const { customerId, installationId, stripeInvoiceId } =
 		await setupPaidVercelInvoice({ suffix: "partial" });
 
-	// Sub-cent input is normalized so Vercel and the DB agree on the amount.
 	await autumn.post(
 		`/customers/${customerId}/invoices/${stripeInvoiceId}/refund`,
 		{ mode: "partial", amount: 7.499 },
@@ -343,7 +295,6 @@ test(`${chalk.yellowBright(
 	);
 	expect(await getRefundedAmount(stripeInvoiceId)).toBe(7.5);
 
-	// Remaining refundable is 12.50 — asking for more must 400.
 	await expect(
 		autumn.post(
 			`/customers/${customerId}/invoices/${stripeInvoiceId}/refund`,
@@ -352,10 +303,6 @@ test(`${chalk.yellowBright(
 		),
 	).rejects.toThrow();
 }, 60000);
-
-// ─────────────────────────────────────────────────────────────────────────────
-// TEST 4b: a retried refunded webhook must not double-count
-// ─────────────────────────────────────────────────────────────────────────────
 
 test(`${chalk.yellowBright(
 	"vercel-invoice-refund: redelivered refunded webhook leaves refunded_amount unchanged",
@@ -384,14 +331,9 @@ test(`${chalk.yellowBright(
 	expectVercelWebhookSuccess(await webhookClient().invoiceRefunded(payload));
 	expect(await getRefundedAmount(stripeInvoiceId)).toBe(20);
 
-	// Vercel retries deliveries; the same event again must be a no-op.
 	expectVercelWebhookSuccess(await webhookClient().invoiceRefunded(payload));
 	expect(await getRefundedAmount(stripeInvoiceId)).toBe(20);
 }, 60000);
-
-// ─────────────────────────────────────────────────────────────────────────────
-// TEST 4c: two legitimate partial refunds of the same amount both count
-// ─────────────────────────────────────────────────────────────────────────────
 
 test(`${chalk.yellowBright(
 	"vercel-invoice-refund: two equal partial refunds accumulate to their sum",
@@ -441,10 +383,6 @@ test(`${chalk.yellowBright(
 	expect(await getRefundedAmount(stripeInvoiceId)).toBe(15);
 }, 60000);
 
-// ─────────────────────────────────────────────────────────────────────────────
-// TEST 5: historical Vercel invoice without a mapping is rejected
-// ─────────────────────────────────────────────────────────────────────────────
-
 test(`${chalk.yellowBright(
 	"vercel-invoice-refund: Vercel invoice without vercel_invoice_id metadata returns 400",
 )}`, async () => {
@@ -452,7 +390,6 @@ test(`${chalk.yellowBright(
 		suffix: "legacy",
 	});
 
-	// Simulate an invoice submitted before this feature: strip the mapping.
 	await ctx.stripeCli.invoices.update(stripeInvoiceId, {
 		metadata: { vercel_invoice_id: "" },
 	});
@@ -465,10 +402,6 @@ test(`${chalk.yellowBright(
 		),
 	).rejects.toThrow(/vercel/i);
 }, 60000);
-
-// ─────────────────────────────────────────────────────────────────────────────
-// TEST 6: invoice must belong to the customer in the URL
-// ─────────────────────────────────────────────────────────────────────────────
 
 test(`${chalk.yellowBright(
 	"vercel-invoice-refund: refund via another customer's URL is rejected",
@@ -492,10 +425,6 @@ test(`${chalk.yellowBright(
 	expect(refundCalls).toHaveLength(0);
 }, 90000);
 
-// ─────────────────────────────────────────────────────────────────────────────
-// TEST 7: a Vercel rejection surfaces and records nothing
-// ─────────────────────────────────────────────────────────────────────────────
-
 test(`${chalk.yellowBright(
 	"vercel-invoice-refund: Vercel 409 (already refund_requested) surfaces as an error",
 )}`, async () => {
@@ -516,10 +445,6 @@ test(`${chalk.yellowBright(
 	expect(await getRefundedAmount(stripeInvoiceId)).toBe(0);
 }, 60000);
 
-// ─────────────────────────────────────────────────────────────────────────────
-// TEST 4d: transient Vercel failure on Get Invoice is NOT acked, so Vercel retries
-// ─────────────────────────────────────────────────────────────────────────────
-
 test(`${chalk.yellowBright(
 	"vercel-invoice-refund: refunded webhook returns 500 when Vercel Get Invoice fails, leaving refunded_amount untouched",
 )}`, async () => {
@@ -538,10 +463,6 @@ test(`${chalk.yellowBright(
 	expect(response.status).toBe(500);
 	expect(await getRefundedAmount(stripeInvoiceId)).toBe(0);
 }, 60000);
-
-// ─────────────────────────────────────────────────────────────────────────────
-// TEST 8: credit notes are blocked on Vercel invoices; refunds go through Vercel
-// ─────────────────────────────────────────────────────────────────────────────
 
 test(`${chalk.yellowBright(
 	"vercel-invoice-refund: invoices.issue_credit_note rejects a Vercel invoice",
@@ -571,10 +492,6 @@ test(`${chalk.yellowBright(
 	});
 	expect(creditNotes.data).toHaveLength(0);
 }, 60000);
-
-// ─────────────────────────────────────────────────────────────────────────────
-// TEST 9: reissue is blocked on Vercel invoices
-// ─────────────────────────────────────────────────────────────────────────────
 
 test(`${chalk.yellowBright(
 	"vercel-invoice-refund: invoices.reissue rejects a Vercel invoice",

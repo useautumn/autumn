@@ -1,23 +1,3 @@
-/**
- * Contract: rollover config is part of pool identity.
- *
- * Five free pooled plans on the same feature and interval, each on its own entity,
- * so the ONLY identity difference is rollover_signature:
- *   - no rollover                                    -> its own pool
- *   - max_percentage 50                              -> its own pool
- *   - max_percentage 25                              -> its own pool
- *   - { duration, length } (max/max_percentage omitted)  ─┐ same signature,
- *   - { max: null, max_percentage: null, duration, length } ┘ so ONE shared pool
- *
- * The last pair is the undefined-vs-null guard: RolloverConfigSchema declares max
- * and max_percentage as .nullable().optional(), so zod normalizes neither. If the
- * signature ever distinguished them, these two would split into separate pools and
- * silently stop sharing a balance.
- *
- * Complements rolloverConfigToSignature.test.ts, which asserts the same
- * normalization on the pure helper — this proves it survives the API + DB round trip.
- */
-
 import { expect, test } from "bun:test";
 import { EntInterval, RolloverExpiryDurationType } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
@@ -88,7 +68,6 @@ test(
 				duration: RolloverExpiryDurationType.Month,
 			},
 		});
-		// Same config expressed two ways: omitted caps vs explicit nulls.
 		const compactCaps = rolloverPlan({
 			id: "pooled-rollover-compact",
 			rolloverConfig: {
@@ -128,17 +107,13 @@ test(
 
 		const state = await getPooledBalanceDbState({ db: ctx.db, customerId });
 
-		// ── Contract: one contribution per plan ──────────────────────────
 		expect(state.contributions).toHaveLength(plans.length);
 
-		// ── Contract: four distinct identities, not five ─────────────────
 		expect(state.pools).toHaveLength(4);
 		expect(
 			new Set(state.pools.map((pool) => pool.rollover_signature)).size,
 		).toBe(4);
 
-		// Every pool shares feature/interval, so rollover_signature is the only
-		// thing that can be separating them.
 		for (const pool of state.pools) {
 			expect(pool.interval).toBe(EntInterval.Month);
 			expect(pool.stripe_subscription_id).toBeNull();
@@ -175,13 +150,11 @@ test(
 			entityIndex: 4,
 		});
 
-		// ── Contract: differing configs never share a pool ───────────────
 		expect(new Set([nonePoolId, halfPoolId, quarterPoolId]).size).toBe(3);
 		expect(nonePoolId).not.toBe(compactPoolId);
 		expect(halfPoolId).not.toBe(compactPoolId);
 		expect(quarterPoolId).not.toBe(compactPoolId);
 
-		// ── Contract: omitted caps and explicit nulls are the SAME identity ─
 		expect(compactPoolId).toBe(explicitNullPoolId);
 
 		const sharedPool = state.pools.find((pool) => pool.id === compactPoolId);

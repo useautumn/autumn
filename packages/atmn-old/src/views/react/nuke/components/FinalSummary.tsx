@@ -8,10 +8,6 @@ interface FinalSummaryProps {
 	backupCreated?: boolean;
 }
 
-/**
- * Final summary screen shown after explosion animation
- * Displays completion stats for user's benefit
- */
 export function FinalSummary({
 	customers,
 	plans,

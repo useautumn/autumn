@@ -182,8 +182,6 @@ test.concurrent(
 		expect(eventChange.previous_attributes).toBeNull();
 
 		const itemChanges = eventChange.plan_change?.item_changes ?? [];
-		// Customize makes the version a pure repoint: only the added credits row
-		// is applied; Messages keeps its v1 definition as a grandfathered claim.
 		expect(itemChanges).toEqual([
 			expect.objectContaining({
 				action: "created",

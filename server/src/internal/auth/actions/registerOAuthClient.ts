@@ -93,10 +93,6 @@ const createOAuthClient = async ({
 	});
 };
 
-/**
- * Dynamic client registration is append-only: every call mints a fresh client
- * so one caller can never take over another's registration by name or uri.
- */
 export const registerOAuthClient = async ({
 	body,
 	db,

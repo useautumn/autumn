@@ -1,13 +1,3 @@
-/**
- * catalogV2.update — no_billing_changes flag across mixed plans and diffs.
- *
- * Contract:
- *   any billing target poisons the whole draft (one flag per draft)
- *   additional-currency add/remove alone is not a migratable diff → no draft
- *   free-item edit with a paid sibling on the same feature_id currently
- *   counts as a billing change (lossy feature_id lookup)
- */
-
 import { expect, test } from "bun:test";
 import {
 	BillingInterval,

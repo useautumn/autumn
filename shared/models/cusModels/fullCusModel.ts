@@ -68,9 +68,6 @@ export const FullCustomerSchema = CustomerSchema.extend({
 	invoices: z.array(InvoiceSchema).optional(),
 	schedule: FullCustomerScheduleSchema.optional(),
 	products_total_count: z.number().optional(),
-	// `.default([])` makes the FullCustomer cache (which uses this schema for
-	// hole-filling via `normalizeFromSchema`) tolerant of entries written
-	// before this field existed. Empty array also matches the SQL default.
 	migration_item_runs: z.array(MigrationItemRunSchema).optional(),
 	pooled_customer_entitlements: z
 		.array(FullCustomerEntitlementSchema)
@@ -82,10 +79,8 @@ export type FullCustomerSchedule = Schedule & { phases: SchedulePhase[] };
 export type FullCustomer = Customer & {
 	customer_products: FullCusProduct[];
 	products_total_count?: number;
-	/** Monthly-normalized base price total; dashboard list hydration only. */
 	base_price_total?: number;
 	products_page?: CustomerProductsPage;
-	/** Plan-inherited caps decorated with live usage; dashboard hydration only. */
 	plan_usage_limits?: ApiUsageLimit[];
 	entities: Entity[];
 	entity?: Entity;
@@ -100,7 +95,6 @@ export type FullCustomer = Customer & {
 	extra_customer_entitlements: FullCustomerEntitlement[];
 	schedule?: FullCustomerSchedule;
 	migration_item_runs?: MigrationItemRunData[];
-	/** Hydrated by customer/subject readers; optional for legacy cached objects. */
 	pooled_customer_entitlements?: FullCustomerEntitlement[];
 };
 

@@ -13,10 +13,6 @@ function describeTarget(url: string): string {
 	}
 }
 
-// Sets the better-auth global role to 'admin' for every user in the given DB,
-// which grants the superuser scope locally. Org membership roles (the `member`
-// table) are intentionally left untouched. Throws (rather than exiting) so
-// callers like `bun dw setup` can treat a failure as non-fatal.
 export function promoteAllUsersToAdmin(url: string): void {
 	assertNotProductionDb(url);
 	log(`making all users admin on ${describeTarget(url)}`);

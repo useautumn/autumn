@@ -1,12 +1,3 @@
-/**
- * A customer allocates a feature on one interval at a time, and never unlimited credits.
- *
- * Contract:
- *   allocations on another interval while any share is held -> allocation_interval_mismatch
- *   releasing every share frees the feature to be allocated on another interval
- *   unlimited shared credits -> allocations_not_supported_for_unlimited
- */
-
 import { expect, test } from "bun:test";
 import { ProductItemInterval, ResetInterval } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
@@ -21,7 +12,6 @@ import {
 	expectAllocatedMessages,
 } from "./utils/allocateTestUtils.js";
 
-/** Monthly and yearly shared messages, so either interval can be allocated. */
 const setupTwoIntervalPools = async ({
 	customerId,
 }: {

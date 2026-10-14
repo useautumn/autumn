@@ -6,7 +6,6 @@ import {
 import { arrayContains } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle";
 
-/** Finds customer products whose subscription_ids contain the given Stripe subscription ID. */
 export const getByStripeSubId = async ({
 	db,
 	stripeSubId,

@@ -138,8 +138,6 @@ export const upsertEveSession = async ({
 		});
 };
 
-/** Forgets a session id eve no longer streams anything for. The row is the only
- * pointer to it, so keeping it replays the same dead resume on every message. */
 export type EveSessionDeleteReason =
 	| "approval_session_gone"
 	| "drain_stuck"
@@ -232,7 +230,6 @@ export const deleteHarnessSessionsByPrefix = async ({
 		);
 };
 
-/** Guarded on IS NULL so a client re-sending "first message" never retitles. */
 export const setHarnessSessionTitleIfEmpty = async ({
 	db,
 	env,

@@ -1,8 +1,3 @@
-/**
- * Adding or removing a seat on volume allocated seats sets the Stripe quantity to the
- * seats over included, matching the net-tier Stripe price.
- */
-
 import { describe, expect, test } from "bun:test";
 import {
 	type FullCusEntWithFullCusProduct,
@@ -76,7 +71,6 @@ const seatSetup = ({ tierBehavior }: { tierBehavior?: TierBehavior }) => {
 	const ctx = {
 		logger: { info: () => {}, warn: () => {}, error: () => {} },
 	} as unknown as AutumnContext;
-	// Trialing skips the proration invoice, so only the quantity update runs.
 	const sub = { id: "sub_1", status: "trialing" } as Stripe.Subscription;
 	const subItem = { id: "si_1" } as Stripe.SubscriptionItem;
 

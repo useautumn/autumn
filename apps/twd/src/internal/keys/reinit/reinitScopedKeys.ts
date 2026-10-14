@@ -25,7 +25,6 @@ const KEY_CONCURRENCY = 16;
 const DRAIN_POLL_MS = 5_000;
 export const DEFAULT_SCOPED_TARGET_PER_KEY = 2;
 
-/** Which keys a scope touches; keys under another lock (full nuke) are never included. */
 const selectTargetKeys = ({
 	keys,
 	scope,
@@ -66,10 +65,6 @@ const inUseOn = async ({
 	return row.n;
 };
 
-/**
- * No global gate: only the target keys are touched, so other runs keep going.
- * `selected` locks + drains its keys and replaces their webhooks; the other scopes only add what's missing.
- */
 export const reinitScopedKeys = async ({
 	ctx,
 	job,

@@ -1,22 +1,3 @@
-/**
- * Editing an existing allowance on a plain plan (100 -> 200 messages) should
- * batch-lower as an in-place replace, carrying consumption across.
- *
- * diffPlanV1 has no update_items — a modify-in-place is expressed as a remove
- * plus an add sharing one match key. The batch guard rejected any such pair as
- * unsupported_remove_items, so a plain allowance edit fell to the per-customer
- * lane even though nothing about it touches Stripe.
- *
- * Red-failure mode (before):
- *  - the op is rejected as unsupported_remove_items and runs per_customer
- *
- * Green-success criteria (after):
- *  - the op runs on the batch lane
- *  - the customer keeps exactly one row for the feature
- *  - the allowance delta is credited, so a partly consumed balance keeps its
- *    consumption instead of being reset
- *  - the plan's other items survive
- */
 import { expect, test } from "bun:test";
 import {
 	customerEntitlements,
@@ -93,8 +74,6 @@ test(`${chalk.yellowBright("batch migration: editing a free plan item batch-lowe
 		actions: [s.attach({ productId: plan.id })],
 	});
 
-	// Spend part of the allowance, so the migration has to credit the delta
-	// rather than reset the balance.
 	const beforeRow = await readMessagesRow({ ctx, customerId });
 	await ctx.db
 		.update(customerEntitlements)
@@ -125,8 +104,6 @@ test(`${chalk.yellowBright("batch migration: editing a free plan item batch-lowe
 
 	expect(result?.lane).toBe("batch");
 
-	// A replaced row is a real change; marking the customer skipped would
-	// skip its cache invalidation.
 	await expectMigrationItemRunStatus({
 		ctx,
 		migrationInternalId: migration.internal_id,
@@ -144,7 +121,6 @@ test(`${chalk.yellowBright("batch migration: editing a free plan item batch-lowe
 		intervalMs: 250,
 	});
 
-	// The row was replaced in place, not dropped and re-added.
 	const afterRow = await readMessagesRow({ ctx, customerId });
 	expect(afterRow.id).toBe(beforeRow.id);
 	expect(afterRow.balance).toBe(NEW_MESSAGES_INCLUDED - CONSUMED);
@@ -157,7 +133,6 @@ test(`${chalk.yellowBright("batch migration: editing a free plan item batch-lowe
 		count: 1,
 	});
 
-	// ── The plan's other item survives ────────────────────────────────
 	await expectCustomerEntitlementRowCount({
 		ctx,
 		customerId,

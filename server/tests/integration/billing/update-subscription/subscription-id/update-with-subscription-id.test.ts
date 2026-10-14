@@ -10,8 +10,6 @@ import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 
-// ─── Test 1: Cancel a specific add-on by subscription_id ───
-
 test.concurrent(`${chalk.yellowBright("update subscription_id: cancel specific add-on by subscription_id")}`, async () => {
 	const customerId = "upd-sub-id-cancel";
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
@@ -29,7 +27,6 @@ test.concurrent(`${chalk.yellowBright("update subscription_id: cancel specific a
 		actions: [],
 	});
 
-	// Multi-attach same add-on twice with different subscription_ids
 	await autumnV2_1.billing.multiAttach({
 		customer_id: customerId,
 		plans: [
@@ -38,7 +35,6 @@ test.concurrent(`${chalk.yellowBright("update subscription_id: cancel specific a
 		],
 	});
 
-	// Cancel only the second instance using subscription_id
 	await autumnV2_1.subscriptions.update<UpdateSubscriptionV1ParamsInput>({
 		customer_id: customerId,
 		subscription_id: "addon-cancel",
@@ -47,7 +43,6 @@ test.concurrent(`${chalk.yellowBright("update subscription_id: cancel specific a
 
 	const customer = await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
 
-	// One should be active, one should be canceling
 	const keptSub = customer.subscriptions.find((sub) => sub.id === "addon-keep");
 	const canceledSub = customer.subscriptions.find(
 		(sub) => sub.id === "addon-cancel",
@@ -60,8 +55,6 @@ test.concurrent(`${chalk.yellowBright("update subscription_id: cancel specific a
 
 	await expectStripeSubscriptionCorrect({ ctx, customerId });
 });
-
-// ─── Test 2: Update quantity by subscription_id ───
 
 test.concurrent(`${chalk.yellowBright("update subscription_id: update quantity by subscription_id")}`, async () => {
 	const customerId = "upd-sub-id-quantity";
@@ -84,7 +77,6 @@ test.concurrent(`${chalk.yellowBright("update subscription_id: update quantity b
 		actions: [],
 	});
 
-	// Multi-attach same add-on twice with different subscription_ids and quantities
 	await autumnV2_1.billing.multiAttach({
 		customer_id: customerId,
 		plans: [
@@ -105,17 +97,14 @@ test.concurrent(`${chalk.yellowBright("update subscription_id: update quantity b
 		],
 	});
 
-	// Update only the "addon-small" instance to increase quantity
 	await autumnV2_1.subscriptions.update<UpdateSubscriptionV1ParamsInput>({
 		customer_id: customerId,
 		subscription_id: "addon-small",
 		feature_quantities: [{ feature_id: TestFeature.Messages, quantity: 300 }],
 	});
 
-	// Verify the update targeted the correct subscription
 	const customer = await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
 
-	// Total messages balance: 300 (updated small) + 200 (large) = 500
 	const messagesBalance = customer.balances[TestFeature.Messages];
 	expect(messagesBalance).toBeDefined();
 	expect(messagesBalance.remaining).toBe(500);

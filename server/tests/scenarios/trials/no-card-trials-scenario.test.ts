@@ -5,20 +5,6 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-/**
- * No-card trials run by Autumn (no Stripe subscription until they convert).
- *
- * Each test sets up one customer in a state to inspect in the dashboard and Stripe:
- * - qa-nct-fresh:           no plans yet, no card (attach the no-card trial yourself from the dashboard)
- * - qa-nct-trialing:        no card, mid-trial (try upgrade / downgrade / cancel / extend in the UI)
- * - qa-nct-trialing-card:   card on file, mid-trial (try upgrade / downgrade / remove trial in the UI)
- * - qa-nct-expired:         trial ended with no card → back on the free default, no Stripe sub
- * - qa-nct-converted:       card added mid-trial, trial ended → billed $20, one Stripe sub
- * - qa-nct-declined:        declining card, trial ended → trial expired, no Stripe sub
- * - qa-nct-entities:        two entities on the trial, trial ended with a card → one Stripe sub
- * - qa-nct-paid-default:    signed up onto a paid default plan → Autumn-only trial, no Stripe sub
- */
-
 const TRIAL_DAYS = 7;
 const DAYS_PAST_TRIAL_END = TRIAL_DAYS + 1;
 

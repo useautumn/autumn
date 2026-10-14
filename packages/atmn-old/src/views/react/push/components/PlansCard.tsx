@@ -7,7 +7,6 @@ import { Card, StatusRow } from "../../components/index.js";
 interface PlansCardProps {
 	plans: Pick<Plan, "id" | "name">[];
 	progress: Map<string, PlanStatus>;
-	/** Plans pending deletion (shown during deleting phase) */
 	deletions?: PlanDeleteInfo[];
 }
 
@@ -61,14 +60,10 @@ function getActionFromPlanStatus(
 	}
 }
 
-/**
- * Plans progress card (includes deletions/archives)
- */
 export function PlansCard({ plans, progress, deletions = [] }: PlansCardProps) {
 	const displayLimit = 4;
 	const totalCount = plans.length + deletions.length;
 
-	// Combine plans and deletions for display
 	const allItems: Array<{ id: string; name: string; isDeletion: boolean }> = [
 		...plans.map((p) => ({ id: p.id, name: p.name, isDeletion: false })),
 		...deletions.map((d) => ({ id: d.id, name: d.id, isDeletion: true })),

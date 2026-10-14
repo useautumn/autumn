@@ -115,7 +115,6 @@ const buildPlanChangeSteps = ({
 	{ key: "migrate", label: "Review", icon: SealCheckIcon },
 ];
 
-/** A slug problem blocks the step that shows it, so Next never hides its own cause. */
 const stepBlocksPlanChangeAdvance = ({
 	step,
 	confirmed,
@@ -385,7 +384,6 @@ export default function PlanChangeDialog({
 				preview: planPreview,
 				nextPlanId: product.id,
 			});
-	// On a mint the typed slug names the new row, so only an in-place save renames.
 	const versionSlugRename =
 		createConfirm || strategy === "new_version"
 			? undefined

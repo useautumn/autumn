@@ -10,7 +10,6 @@ export function UsageLimit() {
 	return (
 		<AreaCheckbox
 			title="Max purchase limit"
-			// tooltip="Set maximum usage limits for this feature to prevent overages"
 			description="A limit on the maximum amount of this feature a customer can purchase, including any included usage."
 			checked={notNullish(item.usage_limit)}
 			onCheckedChange={(checked) => {

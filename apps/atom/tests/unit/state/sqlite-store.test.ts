@@ -239,7 +239,6 @@ describe("sqlite store", () => {
 			["cus_b", 1_701],
 			["cus_c", 1_701],
 		]);
-		// Two rows written in the same ms straddle the page edge; the cursor's key carries the second one over.
 		expect(
 			firstPage.map(({ subject }) => subject.state.identity.customerId),
 		).toEqual(["cus_a", "cus_b"]);
@@ -294,7 +293,6 @@ describe("sqlite store", () => {
 		const first = read();
 
 		expect(first?.logOffset).toBe(41n);
-		// Only the slot's owner writes its file: a row changed behind the store's back is not looked for.
 		new Database(databasePath).run(
 			"UPDATE subject_states SET log_offset = 3 WHERE customer_id = 'cus_1'",
 		);
@@ -436,7 +434,6 @@ describe("sqlite store", () => {
 		});
 		const read = () =>
 			sqliteStore.readSubject({ customerId: "cus_1", entityId: null });
-		// Each push parses its own copy, equal to the last.
 		const pushAt = (logOffset: bigint): StoredSubject => ({
 			...structuredClone(subjectAt({ logOffset })),
 			logOffset,
@@ -742,7 +739,6 @@ describe("a slot file's footprint", () => {
 			dataDir: join(databasePath, ".."),
 			logger: quietLogger,
 		});
-		// The main thread's checkpointer reaches each file once per this many ticks.
 		const checkpointEveryFile = () => {
 			for (let tick = 0; tick < TICKS_PER_FILE; tick++)
 				checkpointer.checkpoint();
@@ -769,7 +765,6 @@ describe("a slot file's footprint", () => {
 
 		expect(sqliteStore.countSubjects()).toBe(1);
 		expect(sqliteStore.dataBytes()).toBeLessThan(100_000);
-		// What is left on the volume is a near-empty file and a log cut back to its 1 MiB limit at most.
 		expect(onVolume()).toBeLessThan(1.5 * 1024 * 1024);
 		checkpointer.stop();
 		sqliteStore.close();

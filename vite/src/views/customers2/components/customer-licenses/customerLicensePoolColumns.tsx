@@ -23,7 +23,6 @@ export interface CustomerLicensePoolRow {
 
 const formatNumber = (value: number) => new Intl.NumberFormat().format(value);
 
-// Widths mirror the plans table (Price 180, Scope 200, Status 220) so columns line up.
 const PLANS_SCOPE_COLUMN_WIDTH = 200;
 
 export const createCustomerLicensePoolColumns = ({
@@ -72,7 +71,6 @@ export const createCustomerLicensePoolColumns = ({
 	{
 		header: "Status",
 		accessorKey: "status",
-		// Starts under the plans table's Scope column and spans Scope + Status.
 		size: hasEntities ? PLANS_SCOPE_COLUMN_WIDTH + 220 : 220,
 		cell: ({ row }: { row: Row<CustomerLicensePoolRow> }) => (
 			<div className="flex items-baseline gap-1 truncate">
@@ -96,7 +94,6 @@ export const createCustomerLicensePoolColumns = ({
 		header: "",
 		size: 40,
 		meta: { skeleton: hiddenSkeleton },
-		// Spacer matching the plans table's actions column.
 		cell: () => null,
 	},
 ];

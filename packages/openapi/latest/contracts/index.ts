@@ -135,7 +135,6 @@ import {
 } from "./webhooksContract.js";
 
 export const v2_3ContractRouter = oc.router({
-	// Customers
 	getOrCreateCustomer: getOrCreateCustomerContract,
 	getCustomer: getCustomerContract,
 	listCustomers: listCustomersContract,
@@ -145,21 +144,18 @@ export const v2_3ContractRouter = oc.router({
 	listSubscriptions: listSubscriptionsContract,
 	listPurchases: listPurchasesContract,
 
-	// Plans
 	plansCreate: createPlanContract,
 	plansGet: getPlanContract,
 	plansList: listPlansContract,
 	plansUpdate: updatePlanContract,
 	plansDelete: deletePlanContract,
 
-	// Features
 	featuresCreate: createFeatureContract,
 	featuresGet: getFeatureContract,
 	featuresList: listFeaturesContract,
 	featuresUpdate: updateFeatureContract,
 	featuresDelete: deleteFeatureContract,
 
-	// Billing
 	billingAttach: billingAttachContract,
 	billingAdvanceTestClock: legacyBillingAdvanceTestClockContract,
 	billingCreateSchedule: billingCreateScheduleContract,
@@ -174,10 +170,8 @@ export const v2_3ContractRouter = oc.router({
 	billingSetupPayment: billingSetupPaymentContract,
 	billingVerify: billingVerifyContract,
 
-	// DFU (customer imaging / live migration)
 	dfuFlash: dfuFlashContract,
 
-	// Balances
 	balancesCreate: balancesCreateContract,
 	balancesList: balancesListContract,
 	balancesUpdate: balancesUpdateContract,
@@ -188,14 +182,11 @@ export const v2_3ContractRouter = oc.router({
 	balancesTrackTokens: balancesTrackTokensContract,
 	balancesBatchTrack: balancesBatchTrackContract,
 
-	// Events
 	eventsList: eventsListContract,
 	eventsAggregate: eventsAggregateContract,
 
-	// Logs
 	logsSearch: logsSearchContract,
 
-	// Invoices
 	invoicesCreate: createInvoiceContract,
 	invoicesFinalize: finalizeInvoiceContract,
 	invoicesInsert: insertInvoicesContract,
@@ -207,20 +198,17 @@ export const v2_3ContractRouter = oc.router({
 	invoicesUpdate: updateInvoiceContract,
 	invoicesVoid: voidInvoiceContract,
 
-	// Licenses
 	licensesAttach: attachLicenseContract,
 	licensesRelease: releaseLicenseContract,
 	licensesListAssignments: listLicenseAssignmentsContract,
 	licensesList: listLicensesContract,
 
-	// Entities
 	entitiesCreate: createEntityContract,
 	entitiesGet: getEntityContract,
 	entitiesList: listEntitiesContract,
 	entitiesUpdate: updateEntityContract,
 	entitiesDelete: deleteEntityContract,
 
-	// Rewards & Referrals
 	referralsCreateCode: referralsCreateCodeContract,
 	referralsRedeemCode: referralsRedeemCodeContract,
 	referralProgramsCreate: referralProgramsCreateContract,
@@ -235,25 +223,21 @@ export const v2_3ContractRouter = oc.router({
 	rewardsDelete: rewardsDeleteContract,
 	rewardsRedeemCode: rewardsRedeemCodeContract,
 
-	// Platform
 	platformGetStripeConnection: platformGetStripeConnectionContract,
 	platformDisconnectStripe: platformDisconnectStripeContract,
 	platformLinkRevenueCat: platformLinkRevenueCatContract,
 	platformSyncRevenueCat: platformSyncRevenueCatContract,
 	platformGetRevenueCatKeys: platformGetRevenueCatKeysContract,
 
-	// Customer Keys (per-customer JWTs)
 	keysMint: keysMintContract,
 	keysRefresh: keysRefreshContract,
 	keysRevoke: keysRevokeContract,
 
-	// Sandboxes (isolated sub-orgs)
 	sandboxesCreate: createSandboxContract,
 	sandboxesList: listSandboxesContract,
 	sandboxesDelete: deleteSandboxContract,
 	sandboxesReset: resetSandboxContract,
 
-	// Webhooks (endpoints Autumn sends events to)
 	webhooksCreate: createWebhookContract,
 	webhooksGet: getWebhookContract,
 	webhooksList: listWebhooksContract,
@@ -263,27 +247,16 @@ export const v2_3ContractRouter = oc.router({
 	webhooksSync: syncWebhooksContract,
 });
 
-/**
- * The public router plus catalogV2, used ONLY to generate
- * `openapi-internal.yml` for the atmn generator. Keeping catalogV2 off
- * `v2_3ContractRouter` is what keeps it out of the published spec, the SDKs
- * and the docs — a filter downstream could be forgotten; a router it was
- * never added to cannot leak.
- */
 export const v2_3InternalContractRouter = oc.router({
 	...v2_3ContractRouter,
 
-	// catalogV2 (internal — see catalogContract.ts)
 	catalogV2Get: catalogV2GetContract,
 	catalogV2Diff: catalogV2DiffContract,
 	catalogV2PreviewUpdate: catalogV2PreviewUpdateContract,
 	catalogV2Update: catalogV2UpdateContract,
 
-	// sandbox key minting (internal — the CLI's `sandbox use` needs it; the
-	// public surface keeps `sandboxes.create` as the only key-returning route)
 	sandboxesCreateKey: createSandboxKeyContract,
 
-	// organization settings (internal — see organizationContract.ts)
 	organizationPreviewUpdate: organizationPreviewUpdateContract,
 	organizationUpdate: organizationUpdateContract,
 });

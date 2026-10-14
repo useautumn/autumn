@@ -12,7 +12,6 @@ import { writeEmptyConfig } from "../../../lib/writeEmptyConfig.js";
 
 type Step = "auth" | "detect" | "sync" | "skills" | "complete" | "error";
 
-// Default skills location for headless mode
 const DEFAULT_SKILLS_DIR = ".claude/skills";
 
 interface SyncResult {
@@ -28,7 +27,6 @@ export function HeadlessInitFlow() {
 	const [errorMessage, setErrorMessage] = useState<string | null>(null);
 	const [monorepoInfo, setMonorepoInfo] = useState<{ detected: boolean; reason?: string } | null>(null);
 
-	// Hooks
 	const { authState, orgInfo, error: authError } = useHeadlessAuth();
 	const {
 		data: configCounts,
@@ -42,11 +40,9 @@ export function HeadlessInitFlow() {
 		skillsDir,
 	} = useCreateSkills();
 
-	// Refs to prevent double-execution
 	const hasStartedSync = useRef(false);
 	const hasStartedSkills = useRef(false);
 
-	// Step 1: Auth -> Detect
 	useEffect(() => {
 		if (step !== "auth") return;
 
@@ -58,7 +54,6 @@ export function HeadlessInitFlow() {
 		}
 	}, [step, authState, authError]);
 
-	// Step 2: Detect -> Sync
 	useEffect(() => {
 		if (step !== "detect") return;
 
@@ -77,7 +72,6 @@ export function HeadlessInitFlow() {
 		}
 	}, [step, isLoadingConfig, configCounts, configError]);
 
-	// Step 3: Sync step
 	useEffect(() => {
 		if (step !== "sync" || hasStartedSync.current || !configCounts) return;
 		hasStartedSync.current = true;
@@ -88,7 +82,6 @@ export function HeadlessInitFlow() {
 					configCounts.plansCount > 0 || configCounts.featuresCount > 0;
 
 				if (hasConfig) {
-					// Pull existing config
 					const result = await pull({
 						generateSdkTypes: true,
 						cwd: process.cwd(),
@@ -100,7 +93,6 @@ export function HeadlessInitFlow() {
 						typesPath: result.sdkTypesPath,
 					});
 				} else {
-					// Write empty config
 					writeEmptyConfig();
 					setSyncResult({ features: 0, plans: 0 });
 				}
@@ -116,7 +108,6 @@ export function HeadlessInitFlow() {
 		doSync();
 	}, [step, configCounts]);
 
-	// Step 4: Skills step
 	useEffect(() => {
 		if (step !== "skills" || hasStartedSkills.current) return;
 		hasStartedSkills.current = true;
@@ -125,12 +116,10 @@ export function HeadlessInitFlow() {
 		createSkills(DEFAULT_SKILLS_DIR, { saveAll: true, hasPricing });
 	}, [step, createSkills, configCounts]);
 
-	// Step 5: Skills -> Complete
 	useEffect(() => {
 		if (step !== "skills") return;
 
 		if (skillsState === "done") {
-			// Detect monorepo before completing
 			const detected = detectMonorepo();
 			setMonorepoInfo(detected);
 			setStep("complete");
@@ -140,7 +129,6 @@ export function HeadlessInitFlow() {
 		}
 	}, [step, skillsState]);
 
-	// Exit on complete or error
 	useEffect(() => {
 		if (step !== "complete" && step !== "error") {
 			return;
@@ -158,7 +146,6 @@ export function HeadlessInitFlow() {
 
 	return (
 		<Box flexDirection="column" paddingLeft={1}>
-			{/* Step 1: Auth - always show */}
 			<Text>Checking authentication...</Text>
 		{authState === "authenticating" && (
 			<Text dimColor>Waiting for authentication... (timeout: 5 minutes)</Text>
@@ -169,7 +156,6 @@ export function HeadlessInitFlow() {
 				</Text>
 			)}
 
-			{/* Step 2: Detect - show after auth complete */}
 			{step !== "auth" && (
 				<>
 					<Text>{"\n"}Checking your sandbox...</Text>
@@ -185,7 +171,6 @@ export function HeadlessInitFlow() {
 				</>
 			)}
 
-			{/* Step 3: Sync - show after detect */}
 			{(step === "sync" || step === "skills" || step === "complete") &&
 				configCounts && (
 					<>
@@ -213,7 +198,6 @@ export function HeadlessInitFlow() {
 					</>
 				)}
 
-			{/* Step 4: Skills - show after sync */}
 			{(step === "skills" || step === "complete") && (
 				<>
 					<Text>{"\n"}Creating AI skills...</Text>
@@ -233,7 +217,6 @@ export function HeadlessInitFlow() {
 				</>
 			)}
 
-			{/* Step 5: Complete */}
 			{step === "complete" && (
 				<Box flexDirection="column" marginTop={1}>
 					<Text bold>Setup complete!</Text>
@@ -248,7 +231,6 @@ export function HeadlessInitFlow() {
 					3. Run `atmn push` when ready to deploy changes to your sandbox
 				</Text>
 
-				{/* Monorepo warning */}
 				{monorepoInfo?.detected && (
 					<Box flexDirection="column" marginTop={1}>
 						<Text color="yellow">
@@ -272,7 +254,6 @@ export function HeadlessInitFlow() {
 			</Box>
 			)}
 
-			{/* Error state */}
 			{step === "error" && (
 				<Box flexDirection="column" marginTop={1}>
 					<Text color="red">

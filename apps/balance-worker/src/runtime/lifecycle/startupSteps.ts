@@ -44,7 +44,6 @@ export async function completeRuntimeStartup({
 		await ctx.stateStore.claimPartition?.({ topic, partition });
 		assertStartupContinues({ state });
 
-		// Activation keeps one status: a command that meets it waits instead of reading each step.
 		if (!prepared) state.status = "bootstrapping";
 		const logRange = await ctx.follower.readLogRange({
 			topic,
@@ -52,7 +51,6 @@ export async function completeRuntimeStartup({
 			signal,
 		});
 		assertStartupContinues({ state });
-		// Bootstrap again after preparation: the bookmark moved while the predecessor drained.
 		await ctx.bootstrapper.bootstrap({ topic, partition, logRange, signal });
 		assertStartupContinues({ state });
 
@@ -110,7 +108,6 @@ export async function completeRuntimePreparation({
 		try {
 			await ctx.bootstrapper.bootstrap({ topic, partition, logRange, signal });
 		} catch (cause) {
-			// The owner is still writing: its bookmark can pass a log end read a moment earlier.
 			if (!isProgressAheadOfLiveLog({ cause })) throw cause;
 			logRange = await follower.readLogRange({ topic, partition, signal });
 		}
@@ -149,7 +146,6 @@ export async function completeRuntimePreparation({
 	}
 }
 
-/** Where a successor's preparation spent its time, so a slow handoff can be attributed. */
 function logPreparation({
 	ctx,
 	startedAt,

@@ -23,7 +23,6 @@ type LicenseItemPair = {
 	priceId?: string;
 };
 
-/** A link's item rows: the mix of live base rows and is_custom overrides. */
 const listByPlanLicenseIds = async ({
 	db,
 	planLicenseIds,
@@ -120,7 +119,6 @@ const sweepUnreferencedCustomRows = async ({
 	}
 };
 
-/** Pure write: replace a link's junction rows with the given ref sets. */
 const setItems = async ({
 	db,
 	planLicenseId,
@@ -164,11 +162,6 @@ const setItems = async ({
 	}
 };
 
-/**
- * Replace-set a link's items: new rows in, old rows out, then
- * formerly-referenced is_custom rows are swept when nothing (no link, no
- * customer) references them. Callers wrap in a transaction.
- */
 const replaceItems = async ({
 	db,
 	planLicenseId,
@@ -270,7 +263,6 @@ const listReferencedPriceIds = async ({
 	return new Set(rows.map((row) => row.price_id));
 };
 
-/** Version copies share rows — item refs are copied, underlying rows are not cloned. */
 const cloneItems = async ({
 	db,
 	fromPlanLicenseId,
@@ -286,7 +278,6 @@ const cloneItems = async ({
 		db,
 		planLicenseIds: [fromPlanLicenseId],
 	});
-	// Idempotent for version-copy retries: the target link's refs are replaced.
 	await db
 		.delete(licenseEntitlements)
 		.where(eq(licenseEntitlements.plan_license_id, toPlanLicenseId));

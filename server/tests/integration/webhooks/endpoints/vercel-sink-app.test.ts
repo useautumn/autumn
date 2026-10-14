@@ -1,8 +1,3 @@
-/**
- * The dashboard's Vercel sink page ensures only the current env's Vercel Svix
- * app, and never replaces an app another env (or webhooks.*) already stored.
- */
-
 import { afterAll, beforeAll, expect, test } from "bun:test";
 import { AppEnv, apiKeys, organizations } from "@autumn/shared";
 import { eq } from "drizzle-orm";
@@ -101,7 +96,6 @@ test("with no Vercel apps yet, opening the live sink stores the live app it show
 	expect(res.status).toBe(200);
 	const svixIds = (await storedOrg())?.processor_configs?.vercel?.svix;
 	createdByRun.push(svixIds?.live_id, svixIds?.sandbox_id);
-	// Vercel's live events go to the stored live app: it must be the one created.
 	expect(svixIds?.live_id).toMatch(/^app_/);
 	expect(svixIds?.sandbox_id).toBeUndefined();
 });

@@ -37,8 +37,6 @@ type CustomerListFilters = {
 
 const COUNT_DEBOUNCE_MS = 400;
 const COUNT_STALE_MS = 60_000;
-/** The filter∪processed count barely moves during a run, and computing it is
- * seconds of DB CPU on large orgs — poll it far slower than the rows. */
 const COUNT_ACTIVE_POLL_MS = 60_000;
 
 export const useMigrationFilterPreview = ({
@@ -120,10 +118,6 @@ export const useMigrationFilterPreview = ({
 		refetchInterval: isActive ? ACTIVE_POLL_MS : false,
 	});
 
-	// Counts are expensive server-side aggregates (seconds on large filtered
-	// scopes) and don't change per keystroke: debounce the inputs and drop
-	// empty search/list filters so every consumer of the same filter shares
-	// ONE request + cache entry, kept fresh for a minute.
 	const debouncedFilterKey = useDebounce({
 		value: filterKey,
 		delayMs: COUNT_DEBOUNCE_MS,

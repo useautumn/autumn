@@ -1,17 +1,3 @@
-/**
- * Contract: a parent whose license link overrides the edited feature is left
- * out of the migration entirely.
- *
- * The override pins its own value, so the child's edit never reaches it — the
- * rebase re-applies the override onto the edited child and the delta comes out
- * empty. This mirrors the catalog write path, which skips customized links
- * (rebaseCatalogPlanLicenses.ts:50), so preview, draft and write agree.
- *
- * The plain parents still collapse into one `$in` op. Emitting an op for the
- * customized parent would be worse than useless: an upsert_licenses entry with
- * no add_items resets the link to catalog inheritance, silently discarding the
- * override.
- */
 import { expect, test } from "bun:test";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { items } from "@tests/utils/fixtures/items.js";
@@ -113,7 +99,6 @@ test(`${chalk.yellowBright("plans.update: a customized parent link gets its own 
 	});
 	const customerOps = migration?.operations?.customer ?? [];
 
-	// Only the plain parents are migrated; the override has nothing to apply.
 	expect(customerOps).toHaveLength(1);
 
 	const plainOp = customerOps[0];
@@ -125,10 +110,8 @@ test(`${chalk.yellowBright("plans.update: a customized parent link gets its own 
 		[pro.id, scale.id].sort(),
 	);
 
-	// The customized parent is absent — not swept in, and not reset.
 	expect(planIdsOf(plainOp.plan_filter)).not.toContain(ent.id);
 
-	// The plain parents move to the child's new allowance.
 	expect(
 		plainOp.customize?.upsert_licenses?.[0]?.customize?.add_items,
 	).toContainEqual(

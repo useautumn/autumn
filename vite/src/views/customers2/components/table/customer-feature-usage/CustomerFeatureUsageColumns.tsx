@@ -154,7 +154,6 @@ export const CustomerFeatureUsageColumns = [
 					cusEnts: [meteredCusEnt],
 				});
 			} else {
-				// Not a subrow, so cusEnt is FullCusEntWithSubRows
 				const parentEnt = cusEnt as FullCusEntWithSubRows;
 				featureType = parentEnt.entitlement.feature.type;
 				allowanceType =

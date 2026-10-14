@@ -1,14 +1,3 @@
-/**
- * TDD contract for entity creation recovery replay.
- *
- * Contract under test:
- * - A replay re-runs the public batch create with the original API version and cannot
- *   enqueue itself again.
- * - An entity the original request did land is a successful replay, not a 409; the rest of the
- *   batch is still created.
- * - Replays log whether they created the entities or found them.
- */
-
 import { beforeEach, describe, expect, mock, test } from "bun:test";
 import {
 	ApiVersion,
@@ -31,7 +20,6 @@ await mockModuleWithRestore(
 	() => ({
 		batchCreateEntities: async (args: Record<string, unknown>) => {
 			mockState.batchCreateCalls.push(args);
-			// The first attempt fails as the real create does on any existing id; a retry with the rest lands.
 			if (
 				mockState.batchCreateFailure &&
 				mockState.batchCreateCalls.length === 1

@@ -8,21 +8,11 @@ import type { KafkaSender } from "../client/types/kafkaClient.js";
 import { assertNonEmpty } from "../lib/assert.js";
 import { OWNER_EPOCH_HEADER } from "./sendIdempotentBatch.js";
 
-/** Marks a record as an ownership fence rather than a mutation; its value carries nothing a reader needs. */
 export const OWNER_FENCE_HEADER = "ownerFence";
 export const OWNER_FENCE_KEY = "owner-fence";
 
 const DECIMAL_EPOCH = /^\d+$/;
 
-/**
- * The one-trip commit has no broker fence, so the new owner writes the fence
- * itself: one record into the partition it now owns, stamped with its
- * ownership epoch. The partition's log is totally ordered, which is what
- * makes the marker a fence. Everything a lower epoch wrote before it is the
- * predecessor's last legitimate work and the new owner reads it while
- * catching up; anything a lower epoch writes after it came from an owner
- * that had already lost the partition, and every reader drops it.
- */
 export async function sendOwnerFence({
 	sender,
 	topic,

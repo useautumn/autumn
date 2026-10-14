@@ -18,7 +18,6 @@ import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
 import { useLeafThreadsQuery } from "../hooks/useLeafThreadsQuery";
 
-/** History dropdown in the Leaf panel header: the user's last ~10 chats. */
 export const LeafThreadHistory = () => {
 	const [open, setOpen] = useState(false);
 	const { threads, threadsError, threadsLoading } = useLeafThreadsQuery({
@@ -37,18 +36,13 @@ export const LeafThreadHistory = () => {
 			toast.error(getBackendErr(error, "Failed to clear chats"));
 		},
 		onSuccess: () => {
-			// Write the empty list directly — invalidate alone leaves the old list
-			// visible (stale-while-refetch) if the dropdown reopens immediately.
 			queryClient.setQueryData(buildKey(["leaf-threads"]), { threads: [] });
-			// The active thread's server history is gone too — start clean.
 			newThread();
 		},
 	});
 
 	const resumeThread = (threadId: string) => {
 		if (threadId === activeThreadId) return;
-		// The thread cache hydrates once with Infinity staleTime — drop it so a
-		// resume always reflects turns sent since it was last cached.
 		queryClient.removeQueries({
 			queryKey: buildKey(["leaf-thread", threadId]),
 		});

@@ -122,8 +122,6 @@ test.concurrent(
 	},
 );
 
-// Pre-fix: scheduled sync ignored expire_previous because setup skipped transition lookup for future phases.
-// Post-fix: the first scheduled phase expires the active product in the same group.
 test.concurrent(
 	`${chalk.yellowBright("sync-v2: future schedule expires previous product in same group")}`,
 	async () => {

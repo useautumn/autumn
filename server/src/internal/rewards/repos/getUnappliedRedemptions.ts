@@ -8,7 +8,6 @@ import {
 import { and, eq, or } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 
-/** Find triggered but unapplied redemptions for referrer or redeemer */
 export const getUnappliedRedemptions = async ({
 	db,
 	internalCustomerId,

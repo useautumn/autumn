@@ -3,8 +3,6 @@ import { CopyButton } from "@autumn/ui";
 export const SETUP_PROMPT =
 	"Add Autumn to my app: useautumn.com/SKILL.md";
 
-/** One line the user pastes into their coding agent — the agent fetches the URL
- * and gets the whole setup skill, so nothing long has to live in the dashboard. */
 export function SetupPromptPanel() {
 	return (
 		<div className="flex items-center gap-2 rounded-lg border bg-interactive-secondary px-3 py-2">

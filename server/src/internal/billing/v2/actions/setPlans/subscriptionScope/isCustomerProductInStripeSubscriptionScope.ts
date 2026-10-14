@@ -1,6 +1,5 @@
 import type { FullCusProduct, StripeSubscriptionScope } from "@autumn/shared";
 
-/** Without a target subscription every plan is in scope. */
 export const isCustomerProductInStripeSubscriptionScope = ({
 	stripeSubscriptionScope,
 	customerProduct,

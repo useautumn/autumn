@@ -44,7 +44,6 @@ const percentOffTotal = ({
 		return remaining;
 	}, new Decimal(amount));
 
-/** Maps computed lines onto Stripe add-lines params and the preview totals. */
 export const evaluateStripeInvoicePlan = ({
 	invoiceContext,
 	lines,
@@ -93,7 +92,6 @@ export const evaluateStripeInvoicePlan = ({
 			amount: lineItem.amount,
 			currency,
 		});
-		// Preview the amount Stripe bills, so subtotal and total add up the same lines.
 		const billedAmount = stripeToAtmnAmount({ amount: minorAmount, currency });
 		const amountAfterLineDiscounts = percentOffTotal({
 			amount: billedAmount,
@@ -104,8 +102,6 @@ export const evaluateStripeInvoicePlan = ({
 		const stripeProductId = lineItemToStripeProductId({ lineItem });
 		stripeLines.push({
 			description: lineItem.description,
-			// A named Stripe price bills through Stripe's own tiers; otherwise the
-			// amount Autumn computed is billed inline.
 			...(line.stripePriceId
 				? {
 						pricing: { price: line.stripePriceId },
@@ -120,8 +116,6 @@ export const evaluateStripeInvoicePlan = ({
 							},
 						}
 					: { amount: minorAmount }),
-			// Invoice-level coupons only reach discountable lines; the invoice's explicit
-			// discounts array keeps customer-level coupons out.
 			discountable: true,
 			discounts: lineCoupons.map((coupon) => ({ coupon: coupon.id })),
 			period: lineItem.context.effectivePeriod
@@ -164,7 +158,6 @@ export const evaluateStripeInvoicePlan = ({
 	});
 
 	// Stripe rounds tax per line, so the preview must tax each line's discounted
-	// share rather than the invoice total.
 	const invoiceDiscountRatio = afterLineDiscounts.isZero()
 		? new Decimal(0)
 		: afterInvoiceDiscounts.div(afterLineDiscounts);

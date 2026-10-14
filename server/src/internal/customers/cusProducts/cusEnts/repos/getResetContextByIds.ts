@@ -5,38 +5,11 @@ import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { resetCronQueryTag } from "@/internal/balances/batchReset/resetCronQueryTag.js";
 import { licensePooledBalanceIsLiveSql } from "@/internal/customers/licensePooledBalanceIsLiveSql.js";
 
-/**
- * A customer entitlement hydrated with everything batch reset needs:
- * the FullCusEntWithFullCusProduct shape processReset consumes, plus the
- * owning customer for org/env checks, cache invalidation and redis routing.
- *
- * Hydration is intentionally UNVALIDATED (same trust in the DB shape as the
- * V1 cron and lazy-reset paths): legacy quirks like an entity balance keyed
- * "null" with a null id must still reset — a validation reject would leave
- * such rows permanently unreset at the head of the scan.
- */
 export type ResetContextCustomerEntitlement = FullCusEntWithFullCusProduct & {
 	customer: Customer;
-	// Reset-scan denormalization flag; not yet part of the shared API model.
 	expired?: boolean | null;
 };
 
-/**
- * Single-statement hydration query for an explicit set of customer entitlement
- * IDs. The full reset-context object is assembled in SQL as jsonb, shaped
- * exactly like ResetContextCustomerEntitlementSchema:
- *   - parent_cp lateral: seat rows (license assignments) inherit
- *     status/subscription_ids from their pool's LIVE parent product; a NULL
- *     link matches nothing, and predecessors lingering on expired parents
- *     lose to live ones via the ORDER BY.
- *   - prices_agg lateral: customer_prices with nested price per product
- *     (price-backed detection + prepaid starting balance).
- *   - rollovers_agg lateral: only evaluated when the entitlement has a
- *     rollover config (needed for post-reset max-cap clearing).
- *
- * Sibling customer_entitlements on the product are intentionally left empty.
- * Exported separately so experiments can EXPLAIN the exact worker query.
- */
 export const buildResetContextByIdsQuery = ({
 	customerEntitlementIds,
 }: {
@@ -96,12 +69,6 @@ export const buildResetContextByIdsQuery = ({
 	${resetCronQueryTag("hydrateContext")}
 `;
 
-/**
- * Hydrates the requested customer entitlement IDs. IDs can legitimately be
- * missing if their rows were deleted between scan and execution. Rows are
- * returned as-is — see ResetContextCustomerEntitlement for why hydration is
- * unvalidated.
- */
 export const getResetContextByIds = async ({
 	db,
 	customerEntitlementIds,

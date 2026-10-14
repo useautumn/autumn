@@ -12,7 +12,6 @@ const DEFAULT_ENV = AppEnv.Sandbox;
 
 async function main() {
 	console.log("🧹 Clearing org...");
-	// await clearOrg({ orgSlug: ORG_SLUG, env: DEFAULT_ENV });
 
 	const { db } = initDrizzle();
 	const org = await OrgService.getBySlug({ db, slug: ORG_SLUG });

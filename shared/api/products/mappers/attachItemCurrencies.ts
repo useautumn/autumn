@@ -7,16 +7,6 @@ import type { SharedContext } from "../../../types/sharedContext";
 
 const toKey = (currency: string) => currency.toLowerCase();
 
-/**
- * V1-layer: read additional_currencies off the original plan item and attach
- * them onto the built ProductItem (per-tier amounts merged by index), stamping
- * base_currency only when currencies are present. Validates here (we have ctx)
- * that no additional currency equals the base, and that each currency tier's
- * flat_amount shape mirrors the base tier.
- *
- * Deliberately NOT done in the V0 hop: ApiPlanItemV0 is part of the public
- * apiPlanV0 response and planItemV1ToV0 is reused by the V1->V0 downgrade.
- */
 export const attachItemCurrencies = ({
 	ctx,
 	productItem,

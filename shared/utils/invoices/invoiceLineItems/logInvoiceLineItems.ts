@@ -1,6 +1,5 @@
 import type { DbInvoiceLineItem } from "../../..";
 
-/** Logs invoice line items in a compact tree format for debugging. */
 export const logInvoiceLineItems = ({
 	lineItems,
 	stripeInvoiceId,

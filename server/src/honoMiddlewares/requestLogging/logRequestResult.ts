@@ -28,7 +28,6 @@ const LIST_RESPONSE_ROUTES = new Set<string>([
 	"/v1/plans.list",
 ]);
 
-// Event pages run to megabytes each, dwarfing every other route's ingest.
 const RESPONSE_BODY_EXCLUDED_ROUTES = new Set<string>([
 	"/v1/events/list",
 	"/v1/events.list",

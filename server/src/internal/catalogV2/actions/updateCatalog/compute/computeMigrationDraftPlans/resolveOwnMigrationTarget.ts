@@ -16,7 +16,6 @@ import { rowCanReceiveMigrationDraft } from "@/internal/catalogV2/actions/update
 import type { ProductStatesContext } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext";
 import type { UpsertProductPlan } from "@/internal/catalogV2/actions/updateCatalog/types/upsertProductPlan";
 
-/** This row's own plan diff, or null when it did not ask / has nothing to migrate. */
 export const resolveOwnMigrationTarget = ({
 	upsertProductPlan,
 	params,

@@ -36,8 +36,6 @@ import type {
 
 type LicenseItemRef = PreparedPlanLicenseRef["base_item_refs"][number];
 
-/** Mirrors removeLicenseEntitlementRows' interval predicate so the guard sees
- * exactly the rows that deletion would drop. */
 const entitlementMatchesRemovalInterval = ({
 	entitlement,
 	filter,
@@ -53,9 +51,6 @@ const entitlementMatchesRemovalInterval = ({
 	);
 };
 
-/** What the batch lane cannot express about a catalog entitlement it is about to
- * drop or move. Both verbs resolve it the same way so a guard can never land on
- * one and miss the other. */
 const unsupportedTraitsOf = ({
 	licenseProduct,
 	entitlementId,
@@ -90,8 +85,6 @@ const unsupportedTraitsOf = ({
 	};
 };
 
-/** Supersession keys on feature AND interval, the identity diffPlanV1 pairs
- * items by, so an item only ever replaces one at its own interval. */
 const supersessionKey = ({
 	featureId,
 	interval,
@@ -179,8 +172,6 @@ const getMatchedParentProducts = async ({
 	return [...preparedProducts.values()];
 };
 
-/** Mints one row per (op, license plan, parent product) rather than per
- * customer, so one shared entitlement fans out to every assignment. */
 export const ensurePlanLicenses: PrepareModule<
 	EnsurePlanLicensesInput,
 	EnsurePlanLicensesResult
@@ -200,8 +191,6 @@ export const ensurePlanLicenses: PrepareModule<
 
 			for (const entry of upsertLicenses) {
 				const addItems = entry.customize?.add_items ?? [];
-				// A removal keeps the same match key as the add that supersedes it,
-				// so only filters without one are standalone deletions.
 				const removeFilters = (entry.customize?.remove_items ?? []).filter(
 					(filter) =>
 						!isModifyInPlaceOnly({
@@ -215,7 +204,6 @@ export const ensurePlanLicenses: PrepareModule<
 					const catalogLink = parentProduct.licenses?.find(
 						(link) => link.product.id === entry.license_plan_id,
 					);
-					// The link pins a version; only an unlinked plan resolves to latest.
 					const licenseProduct =
 						catalogLink?.product ??
 						(await getFullLicenseProduct({
@@ -295,8 +283,6 @@ export const ensurePlanLicenses: PrepareModule<
 							baseItemRefs,
 						});
 
-						// Parent-independent by design: every parent matched by this op
-						// shares one entitlement, so only the first parent mints it.
 						if (!entitlementsById.has(entitlementId)) {
 							entitlementsById.set(entitlementId, {
 								...newEnt,
@@ -399,8 +385,6 @@ export const ensurePlanLicenses: PrepareModule<
 				});
 		}
 
-		// replaceItems swaps the whole item set, so a base item that was superseded
-		// or removed must be dropped or it is granted again on the next assignment.
 		const refsByPlanLicenseId = new Map<string, Map<string, LicenseItemRef>>();
 		for (const artifact of planned.artifacts) {
 			const refs =

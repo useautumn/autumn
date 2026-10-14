@@ -1,17 +1,3 @@
-/**
- * invoices.list returns `items` built from stored invoice_line_items.
- *
- * Contract (per item):
- *   description, period_start, period_end, feature_id, feature_name
- *   plan_id      ← invoice_line_items.product_id
- *   quantity     ← paid_quantity (null on fixed lines)
- *   amount       ← amount (pre-discount, pre-tax)
- *   entities[]   ← invoice_line_items.entities
- *
- * Red (current):  `items` absent from the list response.
- * Green (after):  items match the stored rows for that invoice.
- */
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3, ApiListInvoiceV1 } from "@autumn/shared";
 import { calculateExpectedInvoiceAmount } from "@tests/integration/billing/utils/calculateExpectedInvoiceAmount";
@@ -103,7 +89,6 @@ test.concurrent(
 		expect(baseItem.quantity).toBeNull();
 		expect(baseItem.amount).toBe(40);
 
-		// Every item mirrors its stored row one-to-one
 		for (const row of rows) {
 			const item = renewal.items!.find(
 				(i) => i.description === row.description,
@@ -112,7 +97,6 @@ test.concurrent(
 			expect(item.entities).toEqual(row.entities);
 		}
 
-		// Older invoices (attach invoices here) still get items, older-than-storage ones would get []
 		for (const inv of list) expect(Array.isArray(inv.items)).toBe(true);
 	},
 );

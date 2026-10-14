@@ -1,21 +1,3 @@
-/**
- * Billing Verify: an unlinked active Stripe subscription that costs the
- * customer their plan is an error, not a warning.
- *
- * Contract under test (billingActions.verify):
- *   New types/fields:
- *     - SubscriptionMismatch "plan_on_ending_subscription"
- *       { ending_subscription_id } — severity "error".
- *   New behaviors:
- *     - An active Stripe sub is unlinked while the customer's main plan is
- *       linked to a different sub that is set to cancel
- *       -> plan_on_ending_subscription on the unlinked sub.
- *     - An active Stripe sub is unlinked and the customer holds no paid
- *       recurring plan -> stripe_sub_not_in_autumn at severity "error".
- *   Unchanged (billing-verify-severity 1): a Stripe-only sub beside a healthy
- *   paid plan stays a warning.
- */
-
 import { expect, test } from "bun:test";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
@@ -72,8 +54,6 @@ test.concurrent(
 			cancel_at_period_end: true,
 		});
 
-		// The state a subscription takeover leaves behind: the plan now hangs
-		// off the canceling sub and the paying sub is unlinked.
 		const planCustomerProduct = fullCustomer.customer_products.find(
 			(customerProduct) => customerProduct.product_id === pro.id,
 		);

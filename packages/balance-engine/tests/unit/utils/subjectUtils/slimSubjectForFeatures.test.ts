@@ -15,7 +15,6 @@ import {
 	occurredAt,
 } from "../../engineFixtures.js";
 
-/** A credit system whose schema funds `messages`; every other fixture feature is metered. */
 const creditsFeatureRow: CatalogRow = {
 	table: "features",
 	row: {
@@ -92,7 +91,6 @@ function createFixture() {
 			},
 		],
 	});
-	// The fixture's feature rows are metered; the credit system's row replaces its generated one.
 	const rows = createCatalogRowsFor({ state }).filter(
 		(row) =>
 			!(row.table === "features" && row.row.internal_id === "feat_credits"),
@@ -115,7 +113,6 @@ describe("slimSubjectForFeatures", () => {
 			credits.id,
 		]);
 		expect(slim.state.rollovers.map((row) => row.id)).toEqual(["ro_messages"]);
-		// Replaceables belong to a row too; a dropped row's seats go with it.
 		expect(slim.state.replaceables.map((row) => row.id)).toEqual([
 			"rp_messages",
 		]);
@@ -126,7 +123,6 @@ describe("slimSubjectForFeatures", () => {
 			"feat_credits",
 			"feat_messages",
 		]);
-		// The customer's own row and its products are what the server still needs untouched.
 		expect(slim.state.customer).toBe(state.customer);
 		expect(slim.state.customerProducts).toEqual(state.customerProducts);
 		expect(slim.catalog.products).toEqual(catalog.products);

@@ -7,7 +7,6 @@ import {
 } from "@autumn/shared";
 import { z } from "zod/v4";
 
-// Register schema with .meta() for OpenAPI spec generation
 export const ApiProductWithMeta = ApiProductSchema.meta({
 	id: "Product",
 	examples: [PRODUCT_EXAMPLE],

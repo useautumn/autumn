@@ -54,7 +54,6 @@ const envelope: SubjectRowsEnvelope = {
 	entity: null,
 };
 
-/** A hydrator scope over a scripted Postgres that records each probe and each full read and answers what it is told. */
 const createScope = ({
 	mode = "serve",
 	snapshot = null,

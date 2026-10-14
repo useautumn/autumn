@@ -20,8 +20,6 @@ const licensePlanIdOf = (customerLicense: FullCustomerLicense) =>
 	customerLicense.planLicense?.product.id ??
 	customerLicense.license_internal_product_id;
 
-/** Empty group never cross-pairs — grouping is the explicit opt-in for
- * "this is the same seat across plans". */
 const licenseGroupOf = (customerLicense: FullCustomerLicense) =>
 	customerLicense.planLicense?.product.group || null;
 
@@ -120,7 +118,6 @@ const planLicenseToCandidate = (
 	group: planLicense.product.group || null,
 });
 
-/** Matches pools by exact license plan, then by an unambiguous 1:1 group. */
 export const matchCustomerLicenseSuccessors = ({
 	outgoingCustomerLicenses,
 	incomingCustomerLicenses,

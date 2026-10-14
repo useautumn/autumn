@@ -5,9 +5,6 @@ export interface RewardsSectionProps {
 	rewards: ApiRewards | null | undefined;
 }
 
-/**
- * Renders customer rewards/discounts
- */
 export function RewardsSection({ rewards }: RewardsSectionProps) {
 	const discounts = rewards?.discounts ?? [];
 

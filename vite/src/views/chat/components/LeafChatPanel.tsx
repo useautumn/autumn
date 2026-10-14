@@ -56,8 +56,6 @@ interface LeafChatPanelProps {
 	queue: PromptInputMessage[];
 	onSendQueuedNow: () => void;
 	onRemoveQueued: (index: number) => void;
-	// Constrains/centers the thread + composer (e.g. expanded mode) while the
-	// scroll container spans full width so the scrollbar hugs the panel edge.
 	contentClassName?: string;
 }
 
@@ -65,11 +63,6 @@ type RenderSegment =
 	| { kind: "work"; entries: WorkedEntry[] }
 	| { kind: "node"; node: ReactNode };
 
-/** Render a message's parts, grouping consecutive tool steps into one
- * collapsible block so the thread reads as text + a tidy step list + cards.
- * `streaming` marks the message as the live turn: its tail work group stays
- * open ("Working…") until the stream finishes, instead of flapping with
- * per-step status. */
 function renderParts({
 	deciding,
 	message,
@@ -95,10 +88,6 @@ function renderParts({
 	streaming: boolean;
 }): ReactNode[] {
 	const segments: RenderSegment[] = [];
-	// The agent's text is process narration (reasoning) when it leads up to an
-	// action — it precedes the final tool call, or the message ends in an approval
-	// card (the card is the real result). Otherwise it's the answer. Reasoning +
-	// steps fold under the "Worked" group.
 	const lastStepIndex = message.parts.reduce(
 		(last, part, index) => (part.type === "data-step" ? index : last),
 		-1,
@@ -184,8 +173,6 @@ function renderParts({
 	}
 	flushWork();
 
-	// Key work groups by their ordinal among work groups (stable as trailing
-	// parts stream in); only the tail group of a live turn shows "Working…".
 	let workOrdinal = 0;
 	return segments.map((segment, index) => {
 		if (segment.kind === "node") return segment.node;
@@ -201,8 +188,6 @@ function renderParts({
 	});
 }
 
-/** Leaf chat: text/image messages, with grouped tool steps + an inline approval
- * card (one tool result → one card in the thread). */
 export function LeafChatPanel({
 	messages,
 	input,
@@ -224,9 +209,6 @@ export function LeafChatPanel({
 	const lastMessage = messages[messages.length - 1];
 	const streamingMessageId =
 		isLoading && lastMessage?.role === "assistant" ? lastMessage.id : undefined;
-	// Exactly one progress indicator at a time: "Thinking…" only before the
-	// assistant message has anything to show — once parts stream in, the
-	// "Working…" group (or the streaming text itself) takes over.
 	const streamingHasContent = Boolean(
 		streamingMessageId && lastMessage && lastMessage.parts.length > 0,
 	);
@@ -267,8 +249,6 @@ export function LeafChatPanel({
 						</div>
 					)}
 
-					{/* A dead turn must never fail silently — that's how "the agent
-					    just stopped" bugs hide. */}
 					{error && !isLoading && (
 						<span className="text-red-600 text-xs dark:text-red-500">
 							Something went wrong mid-turn — send your message again.
@@ -319,8 +299,6 @@ export function LeafChatPanel({
 				>
 					<LeafImageAttachments />
 					<PromptInputBody>
-						{/* Keep the composer typable during a turn (like Claude/ChatGPT);
-						    only submission is gated on the stream finishing. */}
 						<PromptInputTextarea
 							className="max-h-40 min-h-9 px-3 py-2.5 text-[13px]"
 							value={input}
@@ -330,8 +308,6 @@ export function LeafChatPanel({
 					</PromptInputBody>
 					<PromptInputFooter className="px-2 pb-2">
 						<LeafImageUploadButton />
-						{/* Never disabled: submit must fire mid-turn so handleSubmit can
-						    queue the message (Enter is a no-op when this is disabled). */}
 						<PromptInputSubmit
 							className="size-6 rounded-full"
 							variant="primary"

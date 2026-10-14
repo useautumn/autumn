@@ -9,7 +9,6 @@ import { and, eq } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 
-/** Runs `fn` holding the customer row lock, so allocation writers never interleave. */
 export const withAllocationLock = async <T>({
 	ctx,
 	tx,
@@ -72,7 +71,6 @@ export const writeAllocations = async ({
 		);
 };
 
-/** Live counter usage for one feature's cycle, read under the lock; the claimed total sits under "". */
 export const readAllocationCounters = async ({
 	tx,
 	internalCustomerId,

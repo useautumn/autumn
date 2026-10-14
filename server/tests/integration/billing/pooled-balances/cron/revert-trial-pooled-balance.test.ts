@@ -1,6 +1,3 @@
-/** TDD contract: cron expiry removes a pooled trial source and restores its paused source. */
-// The monthly pool is reused, and its contribution graph changes without duplication.
-
 import { expect, test } from "bun:test";
 import {
 	ALL_STATUSES,

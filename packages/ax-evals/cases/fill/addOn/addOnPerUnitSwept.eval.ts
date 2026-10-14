@@ -5,13 +5,6 @@ import { conduct } from "../../../src/grading/expectations/conductExpectations.t
 import { judge } from "../../../src/grading/expectations/judgeExpectations.ts";
 import { initAxEval } from "../../../src/initAxEval.ts";
 
-/**
- * FILL / add-on shape, unstated: "a domains add-on for $10" is ambiguous —
- * $10 per domain (prepaid per-unit item) or $10 flat for the capability
- * (base price on the add-on plan)? The agent must probe; the user's answer
- * (per domain, buy as many as needed) must land as a prepaid per-unit item,
- * not a flat base price.
- */
 export const addOnPerUnitSwept = defineCase({
 	name: "fill-add-on-per-unit-swept",
 	prompt: [

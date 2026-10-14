@@ -1,4 +1,3 @@
-/** Converts time units to milliseconds. */
 export const ms = {
 	seconds: (n: number) => n * 1000,
 	minutes: (n: number) => n * 60 * 1000,
@@ -8,7 +7,6 @@ export const ms = {
 	months: (n: number) => n * 30 * 24 * 60 * 60 * 1000,
 };
 
-/** Converts time units to seconds. */
 export const seconds = {
 	minutes: (n: number) => n * 60,
 	hours: (n: number) => n * 60 * 60,
@@ -17,31 +15,21 @@ export const seconds = {
 	months: (n: number) => n * 30 * 24 * 60 * 60,
 };
 
-/**
- * Validates that a timestamp is in milliseconds (not seconds).
- * Returns true if valid, false otherwise.
- */
 export const isValidMsTimestamp = (unixTimestamp: number): boolean => {
-	// Millisecond timestamps from ~2001 onwards are > 10^12
-	// Second timestamps won't reach 10^12 until year ~33658
-	const MIN_MS_TIMESTAMP = 1_000_000_000_000; // ~Sept 2001 in ms
-	const MAX_MS_TIMESTAMP = 10_000_000_000_000; // ~Nov 2286 in ms
+	const MIN_MS_TIMESTAMP = 1_000_000_000_000;
+	const MAX_MS_TIMESTAMP = 10_000_000_000_000;
 
 	if (unixTimestamp < MIN_MS_TIMESTAMP) {
-		return false; // Likely in seconds, not milliseconds
+		return false;
 	}
 
 	if (unixTimestamp > MAX_MS_TIMESTAMP) {
-		return false; // Too large to be valid
+		return false;
 	}
 
 	return true;
 };
 
-/**
- * Validates that a timestamp is in seconds, then converts to milliseconds.
- * Returns undefined if input is undefined or not a valid seconds timestamp.
- */
 export function secondsToMs(seconds: number): number;
 export function secondsToMs(seconds: undefined): undefined;
 export function secondsToMs(seconds: number | undefined): number | undefined;
@@ -50,13 +38,11 @@ export function secondsToMs(seconds: number | undefined): number | undefined {
 		return undefined;
 	}
 
-	// Seconds timestamps are currently ~10 digits (1.7 billion)
-	// They won't reach 10^12 until year ~33658
 	const MIN_SEC_TIMESTAMP = 0;
-	const MAX_SEC_TIMESTAMP = 10_000_000_000; // ~Nov 2286 in seconds
+	const MAX_SEC_TIMESTAMP = 10_000_000_000;
 
 	if (seconds < MIN_SEC_TIMESTAMP || seconds > MAX_SEC_TIMESTAMP) {
-		return undefined; // Not a valid seconds timestamp
+		return undefined;
 	}
 
 	return seconds * 1000;
@@ -66,7 +52,6 @@ export const msToSeconds = (ms: number): number => {
 	return Math.floor(ms / 1000);
 };
 
-/** Truncates ms to second-level precision (removes sub-second component). */
 export const truncateMsToSecondPrecision = (ms: number): number => {
 	return Math.floor(ms / 1000) * 1000;
 };

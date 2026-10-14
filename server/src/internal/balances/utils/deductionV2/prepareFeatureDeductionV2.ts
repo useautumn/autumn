@@ -30,10 +30,6 @@ import type {
 } from "../types/deductionTypes.js";
 import type { FeatureDeduction } from "../types/featureDeduction.js";
 
-/**
- * Prepares all the inputs needed to execute a deduction for a single feature.
- * Mirrors the legacy helper, but reads from FullSubject.
- */
 export const prepareFeatureDeductionV2 = ({
 	ctx,
 	fullSubject,
@@ -65,9 +61,6 @@ export const prepareFeatureDeductionV2 = ({
 		fullSubject = getCheckSubject({ ctx, fullSubject });
 	}
 
-	// Membership is per cusEnt (fundsFeatureId), not per catalog feature — a
-	// plan item's feature_override can add or remove the tracked feature from
-	// its credit system's schema. set_usage still targets only the feature.
 	const customerEntitlements = fullSubjectToCustomerEntitlements({
 		fullSubject,
 		...(notNullish(targetBalance)
@@ -89,13 +82,8 @@ export const prepareFeatureDeductionV2 = ({
 		ce.entitlement.allowance_type === AllowanceType.Unlimited ||
 		Boolean(ce.unlimited);
 
-	// Unlimited tracks never touch or enforce usage windows: when any relevant
-	// cusEnt is unlimited, no window limits are resolved or handed to the
-	// deduction script.
 	const hasUnlimitedCusEnt = customerEntitlements.some(isUnlimitedCusEnt);
 
-	// From the gathered cusEnts (not the catalog) so override-added credit
-	// systems get their spend limits / overage controls / windows respected.
 	const effectiveFeatureIds = deduplicateArray([
 		feature.id,
 		...customerEntitlements.map(
@@ -115,9 +103,6 @@ export const prepareFeatureDeductionV2 = ({
 		fullSubject,
 		featureIds: effectiveFeatureIds,
 	});
-	// Resolve windows against the full relevant set (incl credit-system parents)
-	// even under set_usage, so a parent-feature cap can't be bypassed by set_usage
-	// on a member feature.
 	const fundingEntitlements = notNullish(targetBalance)
 		? fullSubjectToCustomerEntitlements({
 				fullSubject,
@@ -137,9 +122,6 @@ export const prepareFeatureDeductionV2 = ({
 		featureIds: windowFeatureIds,
 	});
 
-	// Filtered limits only bind events whose properties match; the script never
-	// sees non-matching limits, so their counters stay untouched. Unlimited
-	// tracks bypass windows entirely, so the script never sees window limits.
 	const usageWindowLimits = hasUnlimitedCusEnt
 		? []
 		: allUsageWindowLimits.filter((windowLimit) =>
@@ -149,8 +131,6 @@ export const prepareFeatureDeductionV2 = ({
 				}),
 			);
 
-	// Counters are customer-scoped: a null anchor only means calendar-aligned
-	// bounds with no provenance, not an unenforceable cap.
 	for (const windowLimit of usageWindowLimits) {
 		windowLimit.new_window_id = generateId("uw");
 		if (
@@ -189,9 +169,6 @@ export const prepareFeatureDeductionV2 = ({
 				cusEnt: customerEntitlement,
 			});
 
-			// Unlimited cusEnts are an infinite sink: always usage-allowed with no
-			// balance clamps in either direction, so the balance drifts negative as
-			// a usage counter and refunds can move it back up freely.
 			const isUnlimited = isUnlimitedCusEnt(customerEntitlement);
 
 			const featureId = customerEntitlement.entitlement.feature.id;
@@ -219,11 +196,6 @@ export const prepareFeatureDeductionV2 = ({
 			};
 		});
 
-	// The deduction sort only prefers unlimited within a tier (entity level and
-	// credit systems sort first/last regardless), but the sink contract is that
-	// an unlimited entitlement absorbs everything and finite siblings stay
-	// untouched — exactly what the pre-sink skip did. Hoist the first unlimited
-	// entry to the front so the scripts always see the sink lead.
 	const unlimitedEntryIndex = customerEntitlementDeductions.findIndex(
 		(deductionEntry) => deductionEntry.unlimited,
 	);
@@ -268,7 +240,6 @@ export const prepareFeatureDeductionV2 = ({
 					lockKey: lock.hashed_key ?? Bun.hash(lock.lock_id!).toString(),
 				}),
 				created_at: Date.now(),
-				// Persisted so finalize can reuse the check's metadata and overage mode.
 				properties: options.eventProperties ?? null,
 				overage_behavior: overageBehaviour,
 				ttl_at: lock.expires_at

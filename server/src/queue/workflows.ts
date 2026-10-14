@@ -6,8 +6,6 @@ import { generateId } from "@/utils/genUtils.js";
 import { JobName } from "./JobName.js";
 import { addTaskToQueue } from "./queueUtils.js";
 
-// ============ Payload Types ============
-
 export type SendProductsUpdatedPayload = {
 	orgId: string;
 	env: AppEnv;
@@ -47,20 +45,15 @@ export type StoreInvoiceLineItemsPayload = {
 	env: AppEnv;
 	stripeInvoiceId: string;
 	autumnInvoiceId: string;
-	/** LineItem[] for matching Stripe line items back to Autumn billing context */
 	billingLineItems?: unknown[];
-	/** When true, only update Stripe-authoritative fields (amounts, quantities) and preserve Autumn metadata */
 	reconcileOnly?: boolean;
-	/** Fire `invoice.finalized` to the org once line items are stored */
 	emitFinalizedWebhook?: boolean;
 };
 
 export type StoreDeferredInvoiceLineItemsPayload = {
 	orgId: string;
 	env: AppEnv;
-	/** Stripe InvoiceItem[] from createStripeInvoiceItems for ProrateNextCycle deferred charges */
 	deferredStripeInvoiceItems: unknown[];
-	/** LineItem[] (chargeImmediately=false) for matching to Stripe invoice items */
 	billingLineItems: unknown[];
 };
 
@@ -72,11 +65,8 @@ export type ExpireLockReceiptPayload = {
 	hashedKey: string;
 };
 
-// ============ Workflow Registry ============
-
 type WorkflowRunner = "sqs" | "hatchet" | "eventbridge";
 
-/** Required options for EventBridge scheduled workflows */
 export type EventBridgeScheduleOptions = {
 	scheduleAt: Date;
 	scheduleName: string;
@@ -125,8 +115,6 @@ const workflowRegistry = {
 	} as WorkflowConfig<ExpireLockReceiptPayload>,
 } as const;
 
-// ============ Type Utilities ============
-
 type WorkflowRegistry = typeof workflowRegistry;
 type WorkflowName = keyof WorkflowRegistry;
 
@@ -139,8 +127,6 @@ type TriggerOptions = {
 	scheduleAt?: Date;
 	scheduleName?: string;
 };
-
-// ============ Generic Trigger Function (internal) ============
 
 const triggerWorkflow = async <T extends WorkflowName>({
 	name,
@@ -182,8 +168,6 @@ const triggerWorkflow = async <T extends WorkflowName>({
 		}
 	}
 };
-
-// ============ Typed Trigger Functions (exported) ============
 
 export const workflows = {
 	triggerSendProductsUpdated: (

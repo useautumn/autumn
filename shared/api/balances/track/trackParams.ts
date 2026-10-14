@@ -12,7 +12,6 @@ export const TrackQuerySchema = z.object({
 	skip_cache: z.boolean().optional(),
 });
 
-// Track Schemas
 const hasExactlyOneOfFeatureIdOrEventName = {
 	check: (data: { feature_id?: string; event_name?: string }) =>
 		Boolean(data.feature_id) !== Boolean(data.event_name),
@@ -69,8 +68,6 @@ export const TrackParamsSchema = TrackParamsBaseSchema.refine(
 export type TrackParams = z.infer<typeof TrackParamsSchema>;
 export type TrackQuery = z.infer<typeof TrackQuerySchema>;
 
-// Only batch track exposes the key: each item dedups on its own.
-// Batch always queues, so 2.5 items have no async (V2_4_BatchTrackParamsChange drops it).
 export const BatchTrackItemSchema = TrackParamsBaseSchema.omit({
 	async: true,
 })

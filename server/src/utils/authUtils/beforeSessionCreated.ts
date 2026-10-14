@@ -49,8 +49,6 @@ export const beforeSessionCreated = async (
 			return;
 		}
 
-		// Impersonation sets its own active org; don't override with the
-		// target user's most-recent membership.
 		if ((session as { impersonatedBy?: string | null }).impersonatedBy) {
 			return;
 		}
@@ -72,7 +70,6 @@ export const beforeSessionCreated = async (
 					providerId,
 				});
 				// better-auth only redirects the callback when `code` is set;
-				// without it the raw APIError body is served as JSON.
 				throw new APIError("FORBIDDEN", {
 					code: "SSO_INVITATION_REQUIRED",
 					message: `Ask your Autumn admin to invite you to ${orgName ?? "this organization"} before signing in with SSO.`,

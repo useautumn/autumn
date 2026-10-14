@@ -4,7 +4,6 @@ import { SOURCE_FEATURE_GROUP } from "../utils/displayLabels";
 import { isBuiltInGroupBy } from "../utils/groupByColumn";
 import { monthRangeWindow } from "../utils/monthRangeWindow";
 
-/** Maps the dashboard's group-by value onto events.aggregate's `group_by`. */
 const toPublicGroupBy = ({ groupBy }: { groupBy?: string | null }) => {
 	if (!groupBy) return undefined;
 	if (groupBy === SOURCE_FEATURE_GROUP) return "$feature_id";
@@ -12,7 +11,6 @@ const toPublicGroupBy = ({ groupBy }: { groupBy?: string | null }) => {
 	return `properties.${groupBy}`;
 };
 
-/** A preset range, unless it's a custom window or a month range the API lacks. */
 const toRangeParams = ({
 	interval,
 	binSize,
@@ -26,7 +24,6 @@ const toRangeParams = ({
 	return window ? { custom_range: window } : { range: interval };
 };
 
-/** Callers pass an axios instance pinned to LATEST_VERSION for the V1 response shape. */
 export const fetchEventsAggregate = async ({
 	axiosInstance,
 	customerId,
@@ -66,7 +63,6 @@ export const fetchEventsAggregate = async ({
 			timezone,
 			group_by: publicGroupBy,
 			max_groups: publicGroupBy ? (maxGroups ?? undefined) : undefined,
-			// One top-N set for the whole range, so a group never drops to a fake 0.
 			group_ranking: publicGroupBy ? "window" : undefined,
 			aggregate_on: aggregateOn,
 			measure,

@@ -3,7 +3,6 @@ import { CUSTOMER_BALANCE_SUFFIX } from "./deductionsToEventsData";
 import { groupByToColumn } from "./groupByColumn";
 import { parseSeriesKey } from "./transformGroupedChartData";
 
-/** Drops the raw rows whose group value the viewer unticked. */
 export const hideGroupRows = ({
 	events,
 	groupBy,
@@ -25,7 +24,6 @@ const baseGroupValue = ({ groupValue }: { groupValue: string }) =>
 		? groupValue.slice(0, -CUSTOMER_BALANCE_SUFFIX.length)
 		: groupValue;
 
-/** The distinct groups in pre-pivoted deduction series, spillover folded in. */
 export const deductionGroupValues = ({
 	events,
 }: {
@@ -39,8 +37,6 @@ export const deductionGroupValues = ({
 	return Array.from(values).sort();
 };
 
-/** Deduction rows arrive pre-pivoted into `feature__group` columns, so hiding a
- * group drops its columns rather than rows. */
 export const hideGroupSeries = ({
 	events,
 	hiddenGroupValues,
@@ -52,7 +48,6 @@ export const hideGroupSeries = ({
 		if (name === "period") return true;
 		const groupValue = parseSeriesKey({ name })?.groupValue;
 		if (groupValue === undefined) return false;
-		// An entity's spillover series belongs to that entity.
 		return !hiddenGroupValues.has(baseGroupValue({ groupValue }));
 	});
 	const columns = meta.map(({ name }) => name);

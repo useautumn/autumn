@@ -90,7 +90,6 @@ export const updateCatalogMappings = async ({
 		}
 		await persistPriceTargets({ ctx, priceTargets });
 
-		// Explicit price picks win over the feature default, so they land last.
 		if (params.price_mappings.length > 0) {
 			await applyPriceMappings({
 				ctx,

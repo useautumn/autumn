@@ -1,20 +1,3 @@
-/**
- * TDD coverage for MigrationFilter.customer.plan.version.
- *
- * Contract under test:
- *   Filter:
- *     - PlanFilter.version is a NumberMatcher (bare number, $eq, $gt,
- *       $gte, $lt, $lte, $in, $nin, $ne).
- *   Behavior:
- *     - When `plan.version` matches the customer's product version, the
- *       customer is included in the migration run.
- *     - When `plan.version` does NOT match, the customer is excluded
- *       (no migration_item_runs row created).
- *   Side effects:
- *     - migration_item_runs rows reflect the customer set actually
- *       selected by the filter — empty when no customer matches.
- */
-
 import { expect, test } from "bun:test";
 import {
 	isTerminalMigrationRunStatus,
@@ -83,12 +66,10 @@ test(`${chalk.yellowBright("migrations plan-filter: version filter restricts cus
 		actions: [s.billing.attach({ productId: plan.id })],
 	});
 
-	// Bump plan to v2. Customer stays on v1.
 	await autumnV1.products.update(plan.id, {
 		items: [items.monthlyMessages({ includedUsage: 200 })],
 	});
 
-	// ── Assertion 1: version: 2 filter excludes the v1 customer ──
 	const noMatchMigration = await autumnV2_2.migrationsV2.deleteAndCreate({
 		id: `${customerId}-mig-nomatch`,
 		filter: {
@@ -118,7 +99,6 @@ test(`${chalk.yellowBright("migrations plan-filter: version filter restricts cus
 		"customer on v1 must NOT match version: 2 filter",
 	).toBe(0);
 
-	// ── Assertion 2: version: 1 filter selects the v1 customer ──
 	const matchMigration = await autumnV2_2.migrationsV2.deleteAndCreate({
 		id: `${customerId}-mig-match`,
 		filter: {
@@ -148,7 +128,6 @@ test(`${chalk.yellowBright("migrations plan-filter: version filter restricts cus
 		"customer on v1 must match version: 1 filter",
 	).toBe(1);
 
-	// ── Assertion 3: $lt: 2 operator also selects the v1 customer ──
 	const ltMigration = await autumnV2_2.migrationsV2.deleteAndCreate({
 		id: `${customerId}-mig-lt`,
 		filter: {

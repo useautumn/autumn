@@ -8,7 +8,6 @@ import {
 	unavailableShardExecutor,
 } from "./stripeConnectShard.ts";
 
-// The real client factory pulls in the server's Redis/Kafka graph, which keeps the test process alive.
 mock.module("@server/external/connect/stripeFromKey.js", () => ({
 	stripeClientForKey: () => {
 		throw new Error("unused");

@@ -11,11 +11,6 @@ import {
 
 const DIGITS_ONLY = /^\d*$/;
 
-/**
- * "Included quantity" field for a license, shown in its Plan Settings sheet. The
- * value is a draft (seeded by the license card) that persists when the plan is
- * saved. Renders nothing outside a plan-license editor.
- */
 export function IncludedQuantitySection() {
 	const { product } = useProduct();
 	const isLicenseEditor = useIsLicenseEditor();

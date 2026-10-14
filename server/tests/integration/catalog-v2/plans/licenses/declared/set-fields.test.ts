@@ -1,12 +1,3 @@
-/**
- * catalogV2.update — declared licenses[] field-only writes.
- *
- * Contract:
- *   customize: null clears the overlay
- *   included / prepaid_only / metadata-only (no customize)
- *   create feature + parent customize add_items that feature
- */
-
 import { expect, test } from "bun:test";
 import { FeatureType } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";

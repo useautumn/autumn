@@ -1,16 +1,11 @@
 import { getBackendUrl } from "../env/backendUrl.js";
 
-/**
- * Low-level API client for making authenticated requests
- */
-
 export interface RequestOptions {
 	method: "GET" | "POST" | "PUT" | "DELETE" | "PATCH";
 	path: string;
 	secretKey: string;
 	body?: unknown;
 	queryParams?: Record<string, string | number | boolean>;
-	/** Additional headers to include in the request */
 	headers?: Record<string, string>;
 }
 
@@ -21,9 +16,6 @@ export interface ApiError extends Error {
 	method?: string;
 }
 
-/**
- * Format an error for display, including full context for debugging
- */
 export function formatError(err: unknown): string {
 	if (!(err instanceof Error)) {
 		return String(err);
@@ -37,17 +29,14 @@ export function formatError(err: unknown): string {
 
 	const lines = [message];
 
-	// Add request context if available
 	if (apiError.method && apiError.url) {
 		lines.push(`  Request: ${apiError.method} ${apiError.url}`);
 	}
 
-	// Add status if available
 	if (apiError.status) {
 		lines.push(`  Status: ${apiError.status}`);
 	}
 
-	// Add response details if available
 	if (apiError.response) {
 		const resp = apiError.response as Record<string, unknown>;
 		lines.push(
@@ -58,9 +47,6 @@ export function formatError(err: unknown): string {
 	return lines.join("\n");
 }
 
-/**
- * Make an authenticated API request
- */
 export async function request<T = unknown>(
 	options: RequestOptions,
 ): Promise<T> {
@@ -73,7 +59,6 @@ export async function request<T = unknown>(
 		headers: customHeaders,
 	} = options;
 
-	// Build URL with query params (respects --local flag)
 	const url = new URL(path, getBackendUrl());
 	if (queryParams) {
 		for (const [key, value] of Object.entries(queryParams)) {
@@ -81,7 +66,6 @@ export async function request<T = unknown>(
 		}
 	}
 
-	// Build request headers
 	const headers: Record<string, string> = {
 		Authorization: `Bearer ${secretKey}`,
 		"Content-Type": "application/json",
@@ -98,15 +82,12 @@ export async function request<T = unknown>(
 		requestInit.body = JSON.stringify(body);
 	}
 
-	// Make request
 	try {
-		// Debug: log the request URL (can be removed later)
 		if (process.env.ATMN_DEBUG) {
 			console.log(`[DEBUG] ${method} ${url.toString()}`);
 		}
 		const response = await fetch(url.toString(), requestInit);
 
-		// Parse response
 		let data: unknown;
 		const contentType = response.headers.get("content-type");
 		if (contentType?.includes("application/json")) {
@@ -115,7 +96,6 @@ export async function request<T = unknown>(
 			data = await response.text();
 		}
 
-		// Check for errors
 		if (!response.ok) {
 			const error = new Error(
 				`API request failed: ${response.status} ${response.statusText}`,
@@ -130,9 +110,8 @@ export async function request<T = unknown>(
 		return data as T;
 	} catch (error) {
 		if (error instanceof Error && "status" in error) {
-			throw error; // Re-throw API errors
+			throw error;
 		}
-		// Wrap network errors
 		const apiError = new Error(
 			`Network request failed: ${error instanceof Error ? error.message : String(error)}`,
 		) as ApiError;

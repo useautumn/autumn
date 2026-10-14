@@ -7,7 +7,6 @@ import { withheldWritesOf } from "../../domain/approvalRecord.js";
 import { chatApprovalWritesRepo } from "../../repos/chatApprovalWritesRepo.js";
 import type { ActionMessageContent } from "../../types.js";
 
-/** Replaces auto-cancelled approval cards in place so stale Approve buttons disappear. */
 export const editSupersededApprovalCards = async ({
 	approvals,
 	logger,

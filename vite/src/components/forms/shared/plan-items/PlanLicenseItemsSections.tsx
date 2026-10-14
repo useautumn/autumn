@@ -20,12 +20,6 @@ import {
 
 const EMPTY_QUANTITIES: Record<string, number | undefined> = {};
 
-/**
- * One section per license with the license's own feature rows — the forms twin
- * of the subscription detail sheet's SubscriptionDetailLicenses. In diff mode
- * each section diffs its items against the outgoing license (attach review) or
- * the saved catalog items (staged customize in the update flow).
- */
 export function PlanLicenseItemsSections({
 	planId,
 	addLicenses,

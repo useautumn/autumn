@@ -11,7 +11,6 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-// version-only is per-customer until definition execute is restored
 import {
 	expectBatchLane,
 	expectCustomerPlanRepointedInPlace,
@@ -20,8 +19,6 @@ import {
 	runVersionRepointMigration,
 } from "../utils/versionRepointTestUtils";
 
-// Plan versions accumulate across runs, so every test mints its own plan id to
-// keep `version: 2` deterministic.
 const uniqueStem = (name: string) =>
 	`${name}-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
 

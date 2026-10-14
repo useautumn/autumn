@@ -6,10 +6,8 @@ export const freeTrialParamsV0ToV1 = ({
 }: {
 	freeTrialParamsV0: FreeTrialParamsV0 | null | undefined;
 }): FreeTrialParamsV1 | null | undefined => {
-	// If it's undefined, means no action
 	if (freeTrialParamsV0 === undefined) return undefined;
 
-	// If it's null, means remove the trial
 	if (freeTrialParamsV0 === null) return null;
 
 	return {

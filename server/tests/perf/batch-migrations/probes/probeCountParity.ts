@@ -1,11 +1,3 @@
-/**
- * U3 count verification: buildCustomerCount (compiler-chosen access path)
- * vs ground truth (COUNT over the legacy no-limit select) — value parity
- * plus timings, per filter shape.
- *
- *   bun tests/perf/batch-migrations/probes/probeCountParity.ts
- */
-
 import type { CustomerFilter } from "@autumn/shared";
 import { MigrationItemRunStatus } from "@autumn/shared";
 import { sql } from "drizzle-orm";

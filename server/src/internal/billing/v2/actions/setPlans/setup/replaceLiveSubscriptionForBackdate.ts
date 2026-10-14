@@ -9,7 +9,6 @@ import {
 	replaceStripeSubscription,
 } from "./replaceStripeSubscription";
 
-/** A past start away from the live start can't move a live subscription, so the subscription and its schedule are recreated from it. */
 export const replaceLiveSubscriptionForBackdate = ({
 	billingContext,
 	immediatePhase,

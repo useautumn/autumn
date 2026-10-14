@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 
-/** Wall clock that re-renders every `intervalMs` while `active`. */
 export const useNow = ({
 	active = true,
 	intervalMs = 1_000,

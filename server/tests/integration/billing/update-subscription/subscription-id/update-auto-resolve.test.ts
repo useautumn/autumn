@@ -10,8 +10,6 @@ import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 
-// ─── Test 1: Auto-resolve cancels paid recurring main over add-on ───
-
 test.concurrent(`${chalk.yellowBright("auto-resolve: cancel without filter targets paid recurring main")}`, async () => {
 	const customerId = "auto-resolve-cancel-main";
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
@@ -30,7 +28,6 @@ test.concurrent(`${chalk.yellowBright("auto-resolve: cancel without filter targe
 		actions: [],
 	});
 
-	// Attach main + add-on
 	await autumnV2_1.billing.multiAttach({
 		customer_id: customerId,
 		plans: [
@@ -39,8 +36,6 @@ test.concurrent(`${chalk.yellowBright("auto-resolve: cancel without filter targe
 		],
 	});
 
-	// Cancel without specifying plan_id or subscription_id
-	// Should auto-resolve to the paid recurring main (pro)
 	await autumnV2_1.subscriptions.update<UpdateSubscriptionV1ParamsInput>({
 		customer_id: customerId,
 		cancel_action: "cancel_end_of_cycle",
@@ -54,14 +49,11 @@ test.concurrent(`${chalk.yellowBright("auto-resolve: cancel without filter targe
 	expect(mainSub).toBeDefined();
 	expect(addonSub).toBeDefined();
 
-	// Main should be canceling, add-on should remain active
 	expect(mainSub!.canceled_at).not.toBeNull();
 	expect(addonSub!.canceled_at).toBeNull();
 
 	await expectStripeSubscriptionCorrect({ ctx, customerId });
 });
-
-// ─── Test 2: Auto-resolve with feature_quantities targets matching product ───
 
 test.concurrent(`${chalk.yellowBright("auto-resolve: feature_quantities targets product with matching prepaid features")}`, async () => {
 	const customerId = "auto-resolve-qty-match";
@@ -100,19 +92,15 @@ test.concurrent(`${chalk.yellowBright("auto-resolve: feature_quantities targets 
 		],
 	});
 
-	// Update with feature_quantities for messages, no plan_id/subscription_id
-	// Should auto-resolve to the add-on (which has prepaid messages)
 	await autumnV2_1.subscriptions.update<UpdateSubscriptionV1ParamsInput>({
 		customer_id: customerId,
 		feature_quantities: [{ feature_id: TestFeature.Messages, quantity: 200 }],
 	});
 
-	// Verify the add-on was updated (balance should reflect 200 messages from prepaid)
 	const customer = await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
 
 	const messagesBalance = customer.balances[TestFeature.Messages];
 	expect(messagesBalance).toBeDefined();
-	// 100 from pro (monthly included) + 200 from updated addon (prepaid) = 300
 	expect(messagesBalance.remaining).toBe(300);
 
 	await expectStripeSubscriptionCorrect({ ctx, customerId });

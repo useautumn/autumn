@@ -1,20 +1,3 @@
-/**
- * Attach Invoice Mode Tests - Draft + Deferred
- *
- * Tests for invoice mode with:
- * - invoice: true
- * - finalize_invoice: false (draft invoice)
- * - enable_product_immediately: false (product waits for payment)
- *
- * Use case: Merchant wants to review invoice, and product should only activate after payment.
- * Note: Draft invoices can't be paid directly - they need to be finalized first.
- *
- * Scenarios:
- * 1. New plan (no product → pro)
- * 2. Upgrade (pro → premium)
- * 3. One-off credits purchase
- */
-
 import { expect, test } from "bun:test";
 import { type ApiCustomerV3, type AttachParamsV0, ms } from "@autumn/shared";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
@@ -30,20 +13,6 @@ import ctx from "@tests/utils/testInitUtils/createTestContext";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 1: New plan (draft, deferred)
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Customer has no existing product
- * - Attach pro with invoice mode (draft, deferred)
- *
- * Expected Result:
- * - Draft invoice created
- * - Product NOT activated (deferred)
- * - After finalizing and paying: product activates
- */
 test.concurrent(
 	`${chalk.yellowBright("attach-invoice-draft-def 1: new plan")}`,
 	async () => {
@@ -65,16 +34,12 @@ test.concurrent(
 			actions: [],
 		});
 
-		// After initScenario, pro.id is mutated to include the prefix
-
-		// Preview attach
 		const preview = await autumnV1.billing.previewAttach({
 			customer_id: customerId,
 			product_id: pro.id,
 		});
 		expect(preview.total).toBe(20);
 
-		// Attach with invoice mode (draft, deferred)
 		const result = await autumnV1.billing.attach({
 			customer_id: customerId,
 			product_id: pro.id,
@@ -84,12 +49,11 @@ test.concurrent(
 			redirect_mode: "if_required",
 		});
 
-		// Verify invoice is draft
 		expect(result.invoice).toBeDefined();
 		expect(result.invoice!.status).toBe("draft");
 		expect(result.invoice!.stripe_id).toBeDefined();
 		expect(result.invoice!.total).toBe(preview.total);
-		expect(result.invoice!.hosted_invoice_url).toBeNull(); // Draft invoices don't have hosted URL
+		expect(result.invoice!.hosted_invoice_url).toBeNull();
 
 		const stripeInvoice = await ctx.stripeCli.invoices.retrieve(
 			result.invoice!.stripe_id,
@@ -99,11 +63,8 @@ test.concurrent(
 		const customerBefore =
 			await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-		// Before payment - product should NOT be activated (deferred)
-		// Messages feature should not exist yet
 		expect(customerBefore.features?.[TestFeature.Messages]).toBeUndefined();
 
-		// Verify invoice status in customer
 		await expectCustomerInvoiceCorrect({
 			customer: customerBefore,
 			count: 1,
@@ -111,21 +72,18 @@ test.concurrent(
 			latestStatus: "draft",
 		});
 
-		// Finalize the invoice
 		const finalizedInvoice = await ctx.stripeCli.invoices.finalizeInvoice(
 			result.invoice!.stripe_id,
 		);
 		expect(finalizedInvoice.status).toBe("open");
 		expect(finalizedInvoice.hosted_invoice_url).toBeDefined();
 
-		// Complete payment
 		await completeInvoiceCheckout({
 			url: finalizedInvoice.hosted_invoice_url!,
 			ctx,
 			customerId,
 		});
 
-		// After payment - product should be active
 		await expectCustomerProducts({
 			autumn: autumnV1,
 			customerId,
@@ -133,7 +91,6 @@ test.concurrent(
 			active: [pro.id],
 		});
 
-		// Verify balance is correct
 		const customerAfter =
 			await autumnV1.customers.get<ApiCustomerV3>(customerId);
 		expectCustomerFeatureCorrect({
@@ -144,7 +101,6 @@ test.concurrent(
 			usage: 0,
 		});
 
-		// Verify invoice is now paid
 		await expectCustomerInvoiceCorrect({
 			autumn: autumnV1,
 			customerId,
@@ -156,21 +112,6 @@ test.concurrent(
 	},
 );
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 2: Upgrade (draft, deferred)
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Customer starts on pro trial ($20/mo, 7-day trial, no card required)
- * - Advance 3 days into the trial
- * - Upgrade to premium ($50/mo) with invoice mode (draft, deferred)
- *
- * Expected Result:
- * - Draft invoice for full premium amount (trial ends on upgrade)
- * - Pro trial stays active until invoice is paid
- * - After payment: premium active and invoice paid
- */
 test.concurrent(
 	`${chalk.yellowBright("attach-invoice-draft-def 2: upgrade")}`,
 	async () => {
@@ -211,13 +152,11 @@ test.concurrent(
 			notPresent: [premium.id],
 		});
 
-		// Preview upgrade
 		const preview = await autumnV1.billing.previewAttach({
 			customer_id: customerId,
 			product_id: premium.id,
 		});
 
-		// Attach premium with invoice mode (draft, deferred)
 		const result = await autumnV1.billing.attach<AttachParamsV0>({
 			customer_id: customerId,
 			product_id: premium.id,
@@ -227,7 +166,6 @@ test.concurrent(
 			redirect_mode: "if_required",
 		});
 
-		// Verify invoice is draft
 		expect(result.invoice).toBeDefined();
 		expect(result.invoice!.status).toBe("open");
 		expect(result.invoice!.stripe_id).toBeDefined();
@@ -250,7 +188,6 @@ test.concurrent(
 			latestStatus: "open",
 		});
 
-		// Complete payment
 		await completeInvoiceCheckout({
 			url: result.invoice!.hosted_invoice_url!,
 			ctx,
@@ -262,7 +199,6 @@ test.concurrent(
 		);
 		expect(paidInvoice.status).toBe("paid");
 
-		// After payment - premium active, pro removed
 		await expectCustomerProducts({
 			autumn: autumnV1,
 			customerId,
@@ -271,7 +207,6 @@ test.concurrent(
 			notPresent: [proTrial.id],
 		});
 
-		// Verify balance is premium's balance
 		const customerAfter =
 			await autumnV1.customers.get<ApiCustomerV3>(customerId);
 		expectCustomerFeatureCorrect({
@@ -293,21 +228,6 @@ test.concurrent(
 	},
 );
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 3: New plan without payment method (draft, deferred)
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Customer has no payment method
- * - Attach pro with invoice mode (draft, deferred)
- *
- * Expected Result:
- * - Draft invoice created
- * - payment_url is NOT defined (draft invoice)
- * - Product NOT activated (deferred)
- * - After finalizing and paying: product activates
- */
 test.concurrent(
 	`${chalk.yellowBright("attach-invoice-draft-def 3: new plan no pm")}`,
 	async () => {
@@ -322,21 +242,16 @@ test.concurrent(
 
 		const { autumnV1 } = await initScenario({
 			customerId,
-			setup: [
-				s.customer({}), // No payment method
-				s.products({ list: [pro] }),
-			],
+			setup: [s.customer({}), s.products({ list: [pro] })],
 			actions: [],
 		});
 
-		// Preview attach
 		const preview = await autumnV1.billing.previewAttach({
 			customer_id: customerId,
 			product_id: pro.id,
 		});
 		expect(preview.total).toBe(20);
 
-		// Attach with invoice mode (draft, deferred)
 		const result = await autumnV1.billing.attach({
 			customer_id: customerId,
 			product_id: pro.id,
@@ -346,14 +261,11 @@ test.concurrent(
 			redirect_mode: "if_required",
 		});
 
-		// Verify invoice is draft
 		expect(result.invoice).toBeDefined();
 		expect(result.invoice!.status).toBe("draft");
 		expect(result.invoice!.stripe_id).toBeDefined();
 		expect(result.invoice!.total).toBe(preview.total);
-		expect(result.invoice!.hosted_invoice_url).toBeNull(); // Draft invoices don't have hosted URL
-
-		// payment_url should NOT be defined for draft invoices
+		expect(result.invoice!.hosted_invoice_url).toBeNull();
 		expect(result.payment_url).toBeNull();
 
 		const stripeInvoice = await ctx.stripeCli.invoices.retrieve(
@@ -364,11 +276,8 @@ test.concurrent(
 		const customerBefore =
 			await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-		// Before payment - product should NOT be activated (deferred)
-		// Messages feature should not exist yet
 		expect(customerBefore.features?.[TestFeature.Messages]).toBeUndefined();
 
-		// Verify invoice status in customer
 		await expectCustomerInvoiceCorrect({
 			customer: customerBefore,
 			count: 1,
@@ -376,21 +285,18 @@ test.concurrent(
 			latestStatus: "draft",
 		});
 
-		// Finalize the invoice
 		const finalizedInvoice = await ctx.stripeCli.invoices.finalizeInvoice(
 			result.invoice!.stripe_id,
 		);
 		expect(finalizedInvoice.status).toBe("open");
 		expect(finalizedInvoice.hosted_invoice_url).toBeDefined();
 
-		// Complete payment
 		await completeInvoiceCheckout({
 			url: finalizedInvoice.hosted_invoice_url!,
 			ctx,
 			customerId,
 		});
 
-		// After payment - product should be active
 		await expectCustomerProducts({
 			autumn: autumnV1,
 			customerId,
@@ -398,7 +304,6 @@ test.concurrent(
 			active: [pro.id],
 		});
 
-		// Verify balance is correct
 		const customerAfter =
 			await autumnV1.customers.get<ApiCustomerV3>(customerId);
 		expectCustomerFeatureCorrect({
@@ -409,7 +314,6 @@ test.concurrent(
 			usage: 0,
 		});
 
-		// Verify invoice is now paid
 		await expectCustomerInvoiceCorrect({
 			autumn: autumnV1,
 			customerId,
@@ -421,20 +325,6 @@ test.concurrent(
 	},
 );
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 4: One-off (draft, deferred)
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Customer has no existing product
- * - Attach one-off credits with invoice mode (draft, deferred)
- *
- * Expected Result:
- * - Draft invoice created
- * - Credits NOT granted until payment
- * - After payment: credits granted
- */
 test.concurrent(
 	`${chalk.yellowBright("attach-invoice-draft-def 4: one-off")}`,
 	async () => {
@@ -460,9 +350,6 @@ test.concurrent(
 			actions: [],
 		});
 
-		// After initScenario, oneOff.id is mutated to include the prefix
-
-		// Preview attach - base ($10) + prepaid ($10) = $20
 		const preview = await autumnV1.billing.previewAttach({
 			customer_id: customerId,
 			product_id: oneOff.id,
@@ -470,7 +357,6 @@ test.concurrent(
 		});
 		expect(preview.total).toBe(20);
 
-		// Attach with invoice mode (draft, deferred)
 		const result = await autumnV1.billing.attach({
 			customer_id: customerId,
 			product_id: oneOff.id,
@@ -481,7 +367,6 @@ test.concurrent(
 			redirect_mode: "if_required",
 		});
 
-		// Verify invoice is draft
 		expect(result.invoice).toBeDefined();
 		expect(result.invoice!.status).toBe("draft");
 		expect(result.invoice!.stripe_id).toBeDefined();
@@ -490,23 +375,19 @@ test.concurrent(
 		const customerBefore =
 			await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-		// Before payment - credits should NOT be granted
 		expect(customerBefore.features?.[TestFeature.Messages]).toBeUndefined();
 
-		// Finalize the invoice
 		const finalizedInvoice = await ctx.stripeCli.invoices.finalizeInvoice(
 			result.invoice!.stripe_id,
 		);
 		expect(finalizedInvoice.status).toBe("open");
 
-		// Complete payment
 		await completeInvoiceCheckout({
 			url: finalizedInvoice.hosted_invoice_url!,
 			ctx,
 			customerId,
 		});
 
-		// After payment - product active and credits granted
 		await expectCustomerProducts({
 			autumn: autumnV1,
 			customerId,
@@ -523,7 +404,6 @@ test.concurrent(
 			usage: 0,
 		});
 
-		// Verify invoice is paid
 		await expectCustomerInvoiceCorrect({
 			autumn: autumnV1,
 			customerId,

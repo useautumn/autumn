@@ -1,23 +1,3 @@
-/**
- * Legacy New Attach — Volume Pricing Tests
- *
- * Tests that the V1 attach() path applies volume tier semantics correctly.
- * V1 quantity = purchased units (excludes includedUsage).
- * Volume pricing charges the ENTIRE purchased quantity at the rate of its tier
- * (not split across tiers like graduated pricing).
- *
- * Tiers (billingUnits = 100):
- *   Tier 1: 0–500 units @ $10/pack
- *   Tier 2: 501+ units  @ $5/pack
- *
- * Base product price: $20/month (products.pro)
- *
- * V1 vs V2 quantity reminder:
- *   V1: options[].quantity = purchased units (EXCLUDES includedUsage)
- *   V2: options[].quantity = total units (INCLUDES includedUsage)
- *   For includedUsage=0, V1 and V2 quantities are identical.
- */
-
 /** biome-ignore-all lint/suspicious/noExplicitAny: test file */
 
 import { test } from "bun:test";
@@ -41,26 +21,12 @@ const VOLUME_TIERS = [
 	{ to: "inf" as const, amount: 5 },
 ];
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 1: purchased=300, allowance=0, tier 1 → invoice $50
-//
-// V1 options.quantity: 300 (purchased; allowance = 0)
-// Total balance:       300
-//
-// Volume math:
-//   300 units → tier 1 → 3 × $10 = $30
-//   Graduated would also be $30 (same tier — no differentiator)
-//
-// Invoice total: $20 (base) + $30 (prepaid) = $50
-// ═══════════════════════════════════════════════════════════════════════════════
-
 // DISABLED: attach V1 rejects volume tiers by design (handlePrepaidVolumeErrors); V2 attach covers
 // volume in attach-prepaid-volume*.test.ts. Delete if V1 volume is never reopened.
 test.skip(`${chalk.yellowBright("legacy-new-volume 1: purchased=300, no allowance, tier 1 → $50")}`, async () => {
 	const customerId = "legacy-new-volume-t1";
 	const purchasedQuantity = 300;
 	const includedUsage = 0;
-	// Volume: 3 packs × $10 = $30; graduated would also be $30 (same tier)
 	const expectedPrepaid = (purchasedQuantity / BILLING_UNITS) * 10;
 
 	const volumeItem = items.volumePrepaidMessages({
@@ -111,26 +77,12 @@ test.skip(`${chalk.yellowBright("legacy-new-volume 1: purchased=300, no allowanc
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 2: purchased=800, allowance=0, tier 2 → invoice $60
-//
-// V1 options.quantity: 800
-// Total balance:       800
-//
-// Volume math:
-//   800 units → tier 2 → 8 × $5 = $40
-//   Graduated would be: 5×$10 + 3×$5 = $65 — KEY DIFFERENTIATOR
-//
-// Invoice total: $20 (base) + $40 (prepaid) = $60
-// ═══════════════════════════════════════════════════════════════════════════════
-
 // DISABLED: attach V1 rejects volume tiers by design (handlePrepaidVolumeErrors); V2 attach covers
 // volume in attach-prepaid-volume*.test.ts. Delete if V1 volume is never reopened.
 test.skip(`${chalk.yellowBright("legacy-new-volume 2: purchased=800, no allowance, tier 2 → $60 (graduated would be $65)")}`, async () => {
 	const customerId = "legacy-new-volume-t2";
 	const purchasedQuantity = 800;
 	const includedUsage = 0;
-	// Volume: 8 packs × $5 = $40; graduated would be: 5×$10 + 3×$5 = $65
 	const expectedPrepaid = (purchasedQuantity / BILLING_UNITS) * 5;
 
 	const volumeItem = items.volumePrepaidMessages({
@@ -181,28 +133,12 @@ test.skip(`${chalk.yellowBright("legacy-new-volume 2: purchased=800, no allowanc
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 3: purchased=200, allowance=100, tier 1 → invoice $40
-//
-// V1 options.quantity: 200 (purchased only; allowance excluded per V1 semantics)
-// includedUsage:       100
-// Total balance:       300 (100 allowance + 200 purchased)
-//
-// Volume math applies to the PURCHASED portion (200 units):
-//   200 units → tier 1 → 2 × $10 = $20
-//   Graduated would also be $20 (same tier — no differentiator)
-//
-// Invoice total: $20 (base) + $20 (prepaid) = $40
-// ═══════════════════════════════════════════════════════════════════════════════
-
 // DISABLED: attach V1 rejects volume tiers by design (handlePrepaidVolumeErrors); V2 attach covers
 // volume in attach-prepaid-volume*.test.ts. Delete if V1 volume is never reopened.
 test.skip(`${chalk.yellowBright("legacy-new-volume 3: purchased=200, allowance=100, tier 1 → $20 (balance=300)")}`, async () => {
 	const customerId = "legacy-new-volume-t3";
 	const purchasedQuantity = 200;
 	const includedUsage = 100;
-	// V1: quantity = purchased only (200); balance = allowance + purchased = 300
-	// Volume: 2 packs × $10 = $20; graduated would also be $20 (same tier)
 	const expectedPrepaid =
 		(purchasedQuantity + includedUsage / BILLING_UNITS) * 10;
 
@@ -222,7 +158,6 @@ test.skip(`${chalk.yellowBright("legacy-new-volume 3: purchased=200, allowance=1
 		actions: [
 			s.attach({
 				productId: pro.id,
-				// V1 quantity = purchased units only (excludes includedUsage)
 				options: [
 					{ feature_id: TestFeature.Messages, quantity: purchasedQuantity },
 				],
@@ -234,7 +169,6 @@ test.skip(`${chalk.yellowBright("legacy-new-volume 3: purchased=200, allowance=1
 
 	expectProductAttached({ customer: customer as any, product: pro });
 
-	// balance = allowance (100) + purchased (200) = 300
 	expectCustomerFeatureCorrect({
 		customer,
 		featureId: TestFeature.Messages,
@@ -256,28 +190,12 @@ test.skip(`${chalk.yellowBright("legacy-new-volume 3: purchased=200, allowance=1
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 4: purchased=700, allowance=100, tier 2 → invoice $55
-//
-// V1 options.quantity: 700 (purchased only; allowance excluded per V1 semantics)
-// includedUsage:       100
-// Total balance:       800 (100 allowance + 700 purchased)
-//
-// Volume math applies to the PURCHASED portion (700 units):
-//   700 units → tier 2 → 7 × $5 = $35
-//   Graduated would be: 5×$10 + 2×$5 = $60 — KEY DIFFERENTIATOR
-//
-// Invoice total: $20 (base) + $35 (prepaid) = $55
-// ═══════════════════════════════════════════════════════════════════════════════
-
 // DISABLED: attach V1 rejects volume tiers by design (handlePrepaidVolumeErrors); V2 attach covers
 // volume in attach-prepaid-volume*.test.ts. Delete if V1 volume is never reopened.
 test.skip(`${chalk.yellowBright("legacy-new-volume 4: purchased=700, allowance=100, tier 2 → $40 (balance=800)")}`, async () => {
 	const customerId = "legacy-new-volume-t4";
 	const purchasedQuantity = 700;
 	const includedUsage = 100;
-	// V1: quantity = purchased only (700); balance = allowance + purchased = 800
-	// Volume: 7 packs × $5 = $35; graduated would be: 5×$10 + 2×$5 = $60
 	const expectedPrepaid =
 		(purchasedQuantity + includedUsage / BILLING_UNITS) * 5;
 
@@ -297,7 +215,6 @@ test.skip(`${chalk.yellowBright("legacy-new-volume 4: purchased=700, allowance=1
 		actions: [
 			s.attach({
 				productId: pro.id,
-				// V1 quantity = purchased units only (excludes includedUsage)
 				options: [
 					{ feature_id: TestFeature.Messages, quantity: purchasedQuantity },
 				],
@@ -309,7 +226,6 @@ test.skip(`${chalk.yellowBright("legacy-new-volume 4: purchased=700, allowance=1
 
 	expectProductAttached({ customer: customer as any, product: pro });
 
-	// balance = allowance (100) + purchased (700) = 800
 	expectCustomerFeatureCorrect({
 		customer,
 		featureId: TestFeature.Messages,
@@ -331,24 +247,12 @@ test.skip(`${chalk.yellowBright("legacy-new-volume 4: purchased=700, allowance=1
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 5: purchased=0, allowance=100 → invoice $20 (base only)
-//
-// V1 options.quantity: 0
-// includedUsage:       100
-// Total balance:       100 (allowance only, no purchased units)
-//
-// Volume math: 0 units → no prepaid charge
-// Invoice total: $20 (base only)
-// ═══════════════════════════════════════════════════════════════════════════════
-
 // DISABLED: attach V1 rejects volume tiers by design (handlePrepaidVolumeErrors); V2 attach covers
 // volume in attach-prepaid-volume*.test.ts. Delete if V1 volume is never reopened.
 test.skip(`${chalk.yellowBright("legacy-new-volume 5: purchased=0, allowance=100 → $20 base only (balance=100)")}`, async () => {
 	const customerId = "legacy-new-volume-t5";
 	const purchasedQuantity = 0;
 	const includedUsage = 100;
-	// Volume: 0 units → $0 prepaid charge
 	const expectedPrepaid = 0;
 
 	const volumeItem = items.volumePrepaidMessages({
@@ -367,7 +271,6 @@ test.skip(`${chalk.yellowBright("legacy-new-volume 5: purchased=0, allowance=100
 		actions: [
 			s.attach({
 				productId: pro.id,
-				// V1 quantity = 0 (no purchased units; allowance comes from includedUsage)
 				options: [
 					{ feature_id: TestFeature.Messages, quantity: purchasedQuantity },
 				],
@@ -379,7 +282,6 @@ test.skip(`${chalk.yellowBright("legacy-new-volume 5: purchased=0, allowance=100
 
 	expectProductAttached({ customer: customer as any, product: pro });
 
-	// balance = allowance only (100)
 	expectCustomerFeatureCorrect({
 		customer,
 		featureId: TestFeature.Messages,

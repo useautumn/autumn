@@ -1,10 +1,3 @@
-/**
- * A variants[] entry with no version pin resolves to the variant row anchored
- * to the base row it sits under, never to the variant's active row. Once pro@v2
- * and proYearly@v2 are active, the v1 history base still owns proYearly@v1; a
- * base no row points at mints its own.
- */
-
 import { expect, test } from "bun:test";
 import {
 	ErrCode,
@@ -41,7 +34,6 @@ const row = ({
 	base_internal_product_id: baseInternalId,
 });
 
-/** pro@v1 (history) → proYearly@v1, pro@v2 (active) → proYearly@v2. */
 const versionedCatalog = (): ProductStatesContext => {
 	const proV1 = row({ planId: "pro", version: 1, active: false });
 	const proV2 = row({ planId: "pro", version: 2, active: true });
@@ -214,7 +206,6 @@ test("two bases pinning the same variant row are still refused", () => {
 
 test("an entry stating internal_id resolves to that exact row before any unpinned logic", () => {
 	const productStatesContext = versionedCatalog();
-	// The anchor points at the v2 base, yet the id names the v1 row.
 	const resolved = variantRowForDeclaredEntry({
 		variant: {
 			variant_plan_id: "proYearly",
@@ -232,7 +223,6 @@ test("an entry stating internal_id resolves to that exact row before any unpinne
 			productStatesContext,
 		}).map((product) => product.internal_id),
 	).toEqual(["internal_proYearly_v1"]);
-	// An id nothing owns is ignored: the entry falls back to its anchor.
 	expect(
 		variantRowForDeclaredEntry({
 			variant: {

@@ -4,10 +4,6 @@ import type {
 	ProjectedCatalog,
 } from "@/internal/catalogV2/actions/updateCatalog/types/catalogComputeState";
 
-/**
- * Pure projection: catalog after `plan` applies.
- * Always derived from originals + the full draft (billing's applyPlan analogue).
- */
 export const projectCatalog = ({
 	originalFeatures,
 	originalProducts,
@@ -29,8 +25,6 @@ export const projectCatalog = ({
 				: [],
 		),
 	);
-	// Keep upserted+removed features in the projection so later compute can
-	// resolve items; errors owns the same-call conflict.
 	const upsertedFeatureIds = new Set([
 		...plan.insertFeatures.map((feature) => feature.id),
 		...plan.updateFeatures.flatMap((updateFeaturePlan) => [
@@ -47,8 +41,6 @@ export const projectCatalog = ({
 				: [],
 		),
 	);
-	// Archived (not hard-deleted) features stay in the projection, same as
-	// archived plans below — other rows keep referencing them after this batch.
 	const archivedFeatureByInternalId = new Map(
 		plan.removeFeatures.flatMap((removeFeaturePlan) =>
 			removeFeaturePlan.current?.internal_id && removeFeaturePlan.willArchive
@@ -74,8 +66,6 @@ export const projectCatalog = ({
 		.filter((upsertProductPlan) => upsertProductPlan.row.op === "create")
 		.map((upsertProductPlan) => upsertProductPlan.row.nextFullProduct);
 
-	// Keyed by row, not plan: removing one version beside an upsert of a
-	// sibling version must still drop the removed row from the projection.
 	const upsertedRows = new Set(
 		plan.upsertProducts
 			.filter((upsert) => upsert.row.source !== "demoted_product")

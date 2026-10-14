@@ -4,9 +4,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 interface SchemaSource {
-	/** Source file in SDK (relative to sdk/src/models/) */
 	sdkFile: string;
-	/** Output filename */
 	outputFile: string;
 }
 
@@ -69,9 +67,6 @@ const SCHEMA_SOURCES: SchemaSource[] = [
 	},
 ];
 
-/**
- * Post-process generated schema file to use zod/v4 instead of zod
- */
 function fixZodImport(filePath: string): void {
 	const content = readFileSync(filePath, "utf-8");
 	const fixed = content.replace(
@@ -81,9 +76,6 @@ function fixZodImport(filePath: string): void {
 	writeFileSync(filePath, fixed, "utf-8");
 }
 
-/**
- * Generate Zod schemas from Speakeasy SDK TypeScript types
- */
 export async function generateZodSchemas({
 	sdkDir,
 	outputDir,
@@ -95,7 +87,6 @@ export async function generateZodSchemas({
 
 	const sdkModelsDir = path.join(sdkDir, "src/models");
 
-	// Get workspace root for running ts-to-zod
 	const currentFile = fileURLToPath(import.meta.url);
 	const workspaceRoot = path.resolve(path.dirname(currentFile), "../../..");
 
@@ -114,14 +105,11 @@ export async function generateZodSchemas({
 		const inputPath = path.join(sdkModelsDir, source.sdkFile);
 		const outputPath = path.join(outputDir, source.outputFile);
 
-		// Convert to relative paths from workspace root
 		const relativeInput = path.relative(workspaceRoot, inputPath);
 		const relativeOutput = path.relative(workspaceRoot, outputPath);
 
 		console.log(`  ${source.sdkFile} -> ${source.outputFile}`);
 
-		// Run ts-to-zod from workspace root with relative paths
-		// Skip validation since generated files use zod/v4 after post-processing
 		execSync(
 			`bunx ts-to-zod --skipValidation "${relativeInput}" "${relativeOutput}"`,
 			{
@@ -130,11 +118,9 @@ export async function generateZodSchemas({
 			},
 		);
 
-		// Fix zod import to use zod/v4
 		fixZodImport(outputPath);
 	}
 
-	// Generate index file that re-exports everything
 	const exportLines = SCHEMA_SOURCES.map(
 		(s) => `export * from "./${s.outputFile.replace(".ts", "")}";`,
 	).join("\n");
@@ -145,7 +131,6 @@ ${exportLines}
 `;
 	writeFileSync(path.join(outputDir, "index.ts"), indexContent, "utf-8");
 
-	// Format generated files with biome
 	console.log("Formatting generated files...");
 	execSync(`bunx biome check --write "${outputDir}"`, {
 		stdio: "pipe",

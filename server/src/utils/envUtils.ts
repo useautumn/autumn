@@ -5,7 +5,6 @@ import { config } from "dotenv";
 let hasLoadedLocalEnv = false;
 const shouldLogLocalEnvLoading = false;
 
-/** Directory that actually contains ENV_FILE. Monorepo-root package.json is not a match. */
 export const resolveEnvDir = ({
 	cwd = process.cwd(),
 	envFileName = process.env.ENV_FILE || ".env",
@@ -30,16 +29,12 @@ export const loadLocalEnv = ({ force = false }: { force?: boolean } = {}) => {
 
 	const serverDir = resolveEnvDir();
 
-	// Determine which env file to load based on ENV_FILE environment variable
-	// Defaults to .env if not specified
 	const envFileName = process.env.ENV_FILE || ".env";
 	const envPath = join(serverDir, envFileName);
 
-	// Load local .env file FIRST - these will take precedence over Infisical
 	const result = config({ path: envPath });
 	if (result.parsed) {
 		if (shouldLogLocalEnvLoading) {
-			// Use stderr so output doesn't pollute stdout for scripts using shell substitution
 			console.error(
 				`📄 Loading ${Object.keys(result.parsed).length} variables from ${envFileName}`,
 			);

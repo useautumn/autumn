@@ -1,14 +1,3 @@
-/**
- * catalogV2.preview_update — sibling_versions[].conflicts before and after
- * all_versions is picked. atmn needs the list on the unselected checkbox.
- *
- * Contract:
- *   - v1 drifted (500 vs v2 current 100), edit 100→200, versioning omitted
- *     → v1 unselected, value_divergence
- *   - v1 tracks current 100 → no conflicts
- *   - all_versions still lists the same conflict (edit overwrites, still shown)
- */
-
 import { test } from "bun:test";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";

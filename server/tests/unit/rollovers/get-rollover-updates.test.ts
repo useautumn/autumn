@@ -47,7 +47,6 @@ const makeCustomerEntitlement = ({
 
 const CYCLE_ENDED_AT = Date.UTC(2027, 0, 31);
 
-// Month arithmetic runs in the process time zone; pin UTC like production and restore after.
 const originalTimeZone =
 	process.env.TZ ?? Intl.DateTimeFormat().resolvedOptions().timeZone;
 beforeAll(() => {
@@ -276,7 +275,6 @@ describe("getRolloverUpdates: expiry is the cycle that ended plus the rollover l
 			nextResetAt: CYCLE_ENDED_AT,
 		});
 
-		// NOTE: current behavior; possible bug: a length-0 rollover is born already expired.
 		expect(update.toInsert[0].expires_at).toBe(CYCLE_ENDED_AT);
 	});
 
@@ -310,7 +308,6 @@ describe("getRolloverUpdates: expiry is the cycle that ended plus the rollover l
 		const correct = getRolloverUpdates({ cusEnt, nextResetAt: cycleEndedAt });
 		const wrong = getRolloverUpdates({ cusEnt, nextResetAt: newNextResetAt });
 
-		// A 1-month rollover lives exactly one cycle: it expires when the new cycle ends.
 		expect(correct.toInsert[0].expires_at).toBe(newNextResetAt);
 		expect(wrong.toInsert[0].expires_at).toBe(Date.UTC(2027, 4, 15));
 		expect(wrong.toInsert[0].expires_at).not.toBe(
@@ -326,7 +323,6 @@ describe("getRolloverUpdates: expiry is the cycle that ended plus the rollover l
 		process.env.TZ = "Europe/Paris";
 		try {
 			const inParis = getRolloverUpdates({ cusEnt, nextResetAt: cycleEndedAt });
-			// NOTE: current behavior; possible bug: expiry is TZ-dependent (Mar 28 in UTC vs Mar 31 in Paris).
 			expect(inUtc.toInsert[0].expires_at).toBe(Date.UTC(2027, 2, 28, 23, 30));
 			expect(inParis.toInsert[0].expires_at).toBe(
 				Date.UTC(2027, 2, 31, 22, 30),

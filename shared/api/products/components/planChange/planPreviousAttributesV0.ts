@@ -4,10 +4,6 @@ import { ApiPlanV1Schema } from "../../apiPlanV1.js";
 import { ApiFreeTrialV2Schema } from "../apiFreeTrialV2.js";
 import { ApiPlanProcessorsSchema } from "../processors.js";
 
-/**
- * Sparse definition scalars that changed, holding their previous values.
- * Keys match `diffPlanV1PreviousAttributes`.
- */
 export const PlanPreviousAttributesV0Schema = ApiPlanV1Schema.pick({
 	id: true,
 	name: true,
@@ -24,8 +20,6 @@ export const PlanPreviousAttributesV0Schema = ApiPlanV1Schema.pick({
 })
 	.partial()
 	.extend({
-		// Diff emits null when the previous value was unset so the key survives JSON;
-		// a create has every previous value unset, so each scalar admits null too.
 		id: ApiPlanV1Schema.shape.id.nullable().optional(),
 		name: ApiPlanV1Schema.shape.name.nullable().optional(),
 		description: ApiPlanV1Schema.shape.description.nullable().optional(),
@@ -59,7 +53,6 @@ export const PlanPreviousAttributesV0Schema = ApiPlanV1Schema.pick({
 			description:
 				"Previous free trial when it changed. Null when the plan had none.",
 		}),
-		// Each lane admits null too: a lane that was unset and is now set reads as added.
 		billing_controls: z
 			.object(
 				Object.fromEntries(

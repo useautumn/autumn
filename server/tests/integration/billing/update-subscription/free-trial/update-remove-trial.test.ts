@@ -32,7 +32,6 @@ test.concurrent(`${chalk.yellowBright("subscription-update: remove trial with no
 
 	await timeout(2000);
 
-	// New items for the update
 	const newMessagesItem = items.monthlyMessages({ includedUsage: 200 });
 	const priceItem = items.monthlyPrice({ price: 30 });
 
@@ -43,24 +42,18 @@ test.concurrent(`${chalk.yellowBright("subscription-update: remove trial with no
 		items: [newMessagesItem, priceItem],
 	};
 
-	// 2. Verify preview.total is correct
 	const preview = await autumnV1.subscriptions.previewUpdate(updateParams);
-	expect(preview.total).toEqual(30); // $30 monthly price
-
-	// Perform the update
+	expect(preview.total).toEqual(30);
 	await autumnV1.subscriptions.update(updateParams);
 
-	// 3. Verify customer invoice and feature changes
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Invoice should be correct
 	expectCustomerInvoiceCorrect({
 		customer,
-		count: 2, // Initial $0 trial invoice + $30 for update
+		count: 2,
 		latestTotal: 30,
 	});
 
-	// Features should reflect new items
 	expectCustomerFeatureCorrect({
 		customer,
 		featureId: TestFeature.Messages,

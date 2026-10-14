@@ -55,8 +55,6 @@ const getCusEntMasterBalance = ({
 		};
 	}
 
-	// Get unused count
-
 	return {
 		balance: cusEnt.balance,
 		adjustment: cusEnt.adjustment,
@@ -101,7 +99,6 @@ const getCusEntBalance = ({
 	};
 };
 
-// Get related cusPrice
 export const getRelatedCusPrice = (
 	cusEnt: FullCustomerEntitlement,
 	cusPrices: FullCustomerPrice[],
@@ -116,7 +113,6 @@ export const getRelatedCusPrice = (
 	});
 };
 
-// 3. Perform deductions and update customer balance
 const updateCusEntInStripe = async ({
 	cusEnt,
 	cusPrices,
@@ -140,7 +136,6 @@ const updateCusEntInStripe = async ({
 		return;
 	}
 
-	// Send event to Stripe
 	const stripeCli = createStripeCli({
 		org,
 		env,
@@ -166,8 +161,6 @@ export const getUnlimitedAndUsageAllowed = ({
 	internalFeatureId: string;
 	includeUsageLimit?: boolean;
 }) => {
-	// Unlimited
-
 	const unlimited = cusEnts.some(
 		(cusEnt) =>
 			cusEnt.internal_feature_id === internalFeatureId &&
@@ -214,10 +207,8 @@ export const getFeatureBalance = ({
 			return null;
 		}
 
-		// 1. If feature entity exists...
 		let cusEntBalance = cusEnt.balance!;
 
-		// If entity feature id exists, then it is grouped...
 		const entityFeatureId = cusEnt.entitlement.entity_feature_id;
 
 		if (notNullish(entityFeatureId)) {
@@ -236,8 +227,6 @@ export const getFeatureBalance = ({
 		}
 
 		balance += cusEntBalance;
-
-		// 2. If no entityId provided, use main balance
 	}
 
 	return balance;
@@ -325,7 +314,6 @@ export const getTotalNegativeBalance = ({
 	return totalNegative;
 };
 
-// GET EXISTING USAGE
 export const getExistingUsageFromCusProducts = ({
 	entitlement,
 	cusProducts,
@@ -343,7 +331,6 @@ export const getExistingUsageFromCusProducts = ({
 		return 0;
 	}
 
-	// Existing usage should also include entities
 	const entityUsage = entities.reduce((acc, entity) => {
 		if (entity.internal_feature_id !== entitlement.internal_feature_id) {
 			return acc;
@@ -358,7 +345,6 @@ export const getExistingUsageFromCusProducts = ({
 
 	let existingUsage = 0;
 
-	// NOTE: Assuming that feature entitlements are unique to each main product...
 	const existingCusEnt = cusProducts
 		?.filter(
 			(cp) =>
@@ -386,7 +372,6 @@ export const getExistingUsageFromCusProducts = ({
 		return existingUsage;
 	}
 
-	// Get options
 	const cusProduct = cusProducts?.find(
 		(cp) => cp.id === existingCusEnt.customer_product_id,
 	);

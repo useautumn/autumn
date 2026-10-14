@@ -16,14 +16,6 @@ import {
 } from "@/internal/billing/v2/setup/trialContext";
 import { isAttachUpgrade } from "../utils/isAttachUpgrade";
 
-/**
- * Sets up trial context for attach operations.
- *
- * Logic:
- * 1. If free_trial param passed → Use it (null removes trial, value sets fresh trial)
- * 2. If NOT upgrade AND stripeSubscription exists → Inherit from subscription
- * 3. Otherwise (upgrade OR fresh attach) → Apply product's trial config with dedup
- */
 export const setupAttachTrialContext = async ({
 	ctx,
 	params,
@@ -57,27 +49,16 @@ export const setupAttachTrialContext = async ({
 		});
 	}
 
-	// Determine if this is an upgrade
 	const isUpgrade = isAttachUpgrade({
 		currentCustomerProduct,
 		attachProduct,
 	});
 
-	// If there's current stripe subscription and no upgrade, inherit trial from stripe subscription...
 	const newProductIsPaidRecurring = isProductPaidAndRecurring(attachProduct);
 	if (newProductIsPaidRecurring && stripeSubscription && !isUpgrade) {
 		return inheritTrialFromSubscription({ stripeSubscription });
 	}
 
-	// // For free products, inherit trial from current customer product
-	// if (!newProductIsPaidRecurring && currentCustomerProduct) {
-	// 	return inheritTrialFromCustomerProduct({
-	// 		customerProduct: currentCustomerProduct,
-	// 		currentEpochMs,
-	// 	});
-	// }
-
-	// Apply product's trial config (upgrade or fresh attach) with dedup check
 	return applyProductTrialConfig({
 		ctx,
 		fullProduct: attachProduct,

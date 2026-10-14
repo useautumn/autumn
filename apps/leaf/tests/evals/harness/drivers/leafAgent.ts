@@ -38,9 +38,6 @@ const applyToolApprovalPolicy = (tools: Record<string, ToolWithApproval>) => {
 	}
 };
 
-/** The MCP client rebuilds each tool's JSON Schema into zod and back, which
- * inlines every nullable branch (~50 KB -> ~875 KB for attach). The eval server
- * is in-process, so the agent can use the registry's zod schemas directly. */
 const restoreSourceSchemas = (tools: Record<string, ToolWithApproval>) => {
 	const sourceTools = createRawAutumnOperationTools() as Record<
 		string,
@@ -131,8 +128,6 @@ export const createLeafAgentDriver = ({
 						`Current Autumn environment: ${env}.`,
 						leafSkillsText(),
 					].join("\n\n"),
-					// One breakpoint here caches the whole static prefix (tool schemas +
-					// instructions, ~140k tokens) across every call and case.
 					providerOptions: {
 						anthropic: { cacheControl: { type: "ephemeral" } },
 					},
@@ -163,8 +158,6 @@ export const createLeafAgentDriver = ({
 						},
 					]
 				: undefined,
-			// Exponential backoff from 2s; six attempts ride out a per-minute
-			// token-rate limit on a 140k-token prefix instead of failing the case.
 			maxRetries: 6,
 			maxSteps: stepLimit ?? maxSteps,
 			requestContext: createRequestContext(context.auth),

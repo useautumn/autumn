@@ -1,8 +1,3 @@
-/**
- * Migration execution should emit billing.updated like normal billing actions.
- * Red: server-run migrations mutate Autumn but never send the webhook.
- */
-
 import { afterAll, beforeAll, expect, test } from "bun:test";
 import type {
 	BillingChangeResponse,

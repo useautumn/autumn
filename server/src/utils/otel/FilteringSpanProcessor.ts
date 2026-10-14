@@ -37,7 +37,6 @@ const hashStringToUnitInterval = (value: string): number => {
 	return (hash >>> 0) / 0xffffffff;
 };
 
-// Happy-path only — duplicates/unavailability always export; metrics recorded before drop.
 const DYNAMO_SAMPLED_OUTCOMES = new Set(["claimed", "released"]);
 
 const isSuccessfulDynamoSpan = (span: ReadableSpan) =>
@@ -82,8 +81,6 @@ export class FilteringSpanProcessor implements SpanProcessor {
 
 	constructor(
 		private readonly delegate: SpanProcessor,
-		// Overridable so tests pin the rate instead of depending on the ambient
-		// OTEL_REDIS_SUCCESS_SAMPLE_RATE and on where a span's hash happens to land.
 		private readonly sampleRate: number = normalizedRedisSuccessSampleRate,
 	) {}
 
@@ -106,7 +103,6 @@ export class FilteringSpanProcessor implements SpanProcessor {
 					error,
 				);
 			} catch {
-				// Diagnostic reporting must not block fail-open span export.
 			}
 		}
 

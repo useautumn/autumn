@@ -22,10 +22,6 @@ const untouchedPrepaidQuantities: PrepaidQuantityDetails = {
 	updatePoolContributions: [],
 };
 
-/**
- * Converges the customer product's quantity dials in place — recurring prepaid
- * options on the parent and license pool paid counts — in one plan.
- */
 export const computeUpdateQuantityPlan = ({
 	ctx,
 	billingContext,
@@ -48,8 +44,6 @@ export const computeUpdateQuantityPlan = ({
 					resetCycleAnchorMs: currentBillingCycleAnchorMs,
 				};
 
-	// featureQuantities always carries current options as fallback, so a
-	// seat-only request must skip the prepaid facet to leave options untouched.
 	const prepaid = isLicenseOnlyRequest({ params })
 		? untouchedPrepaidQuantities
 		: computePrepaidQuantityDetails({

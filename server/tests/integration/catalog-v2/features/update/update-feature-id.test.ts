@@ -1,14 +1,3 @@
-/**
- * catalogV2.update / preview_update — renaming a feature id.
- *
- * Contract: a features[] entry may carry new_feature_id. The rename applies
- * only when no customer entitlement has EVER referenced the feature (any
- * status, expired included) and the target id is free in the PROJECTED
- * catalog — persisted ids and ids inserted by the same call both collide.
- * Product references (active and archived) follow the rename. Preview
- * reports action "update" + previous_attributes and throws the same errors.
- */
-
 import { test } from "bun:test";
 import { type AttachParamsV1Input, FeatureType } from "@autumn/shared";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils.js";
@@ -56,7 +45,6 @@ test.concurrent(
 		const featureIds = [creditSystemId, oldId, newId];
 		await deleteDbFeatures({ ctx, featureIds });
 
-		// One item carrying both an entitlement and a usage price on the feature
 		const activeProduct = products.pro({
 			id: uniqueTestId("cv2_rename_clean_active"),
 			items: [items.consumable({ featureId: oldId, includedUsage: 100 })],
@@ -81,7 +69,6 @@ test.concurrent(
 			await initProductsV0({ ctx, products: [activeProduct, archivedProduct] });
 			await autumnV2_3.products.update(archivedProduct.id, { archived: true });
 
-			// Preview reports the rename without writing
 			expectCatalogPreviewCorrect({
 				preview: await autumnV2_3.catalogV2.previewUpdate({
 					features: [renameFeature({ from: oldId, to: newId })],
@@ -97,7 +84,6 @@ test.concurrent(
 			});
 			await expectDbFeaturesAbsent({ ctx, featureIds: [newId] });
 
-			// Apply: old id gone, new id present, product items follow
 			expectCatalogResultsCorrect({
 				response: await autumnV2_3.catalogV2.update({
 					features: [renameFeature({ from: oldId, to: newId })],
@@ -116,7 +102,6 @@ test.concurrent(
 					featureIds: [newId],
 				});
 			}
-			// Price configs and credit-system schemas follow the rename too
 			await expectDbPricesCorrect({
 				ctx,
 				featureId: newId,
@@ -128,7 +113,6 @@ test.concurrent(
 				meteredFeatureIds: [newId],
 			});
 
-			// Identical entry again → nothing to change, action "none"
 			expectCatalogResultsCorrect({
 				response: await autumnV2_3.catalogV2.update({
 					features: [consumableFeature(newId)],
@@ -162,7 +146,6 @@ test.concurrent(
 				],
 			});
 
-			// Target id already persisted
 			await expectAutumnError({
 				errCode: "duplicate_feature_id",
 				func: () =>
@@ -171,7 +154,6 @@ test.concurrent(
 					}),
 			});
 
-			// Target id inserted by the SAME call — the projected catalog collides
 			await expectAutumnError({
 				errCode: "duplicate_feature_id",
 				func: () =>
@@ -183,7 +165,6 @@ test.concurrent(
 					}),
 			});
 
-			// Preview throws identically
 			await expectAutumnError({
 				errCode: "duplicate_feature_id",
 				func: () =>
@@ -192,7 +173,6 @@ test.concurrent(
 					}),
 			});
 
-			// Swapping two ids in one call is order-dependent — blocked
 			await expectAutumnError({
 				errCode: "duplicate_feature_id",
 				func: () =>
@@ -204,7 +184,6 @@ test.concurrent(
 					}),
 			});
 
-			// The whole batch failed before any write: A intact, insert absent
 			await expectDbFeaturesCorrect({
 				ctx,
 				expected: [
@@ -257,10 +236,8 @@ test.concurrent(
 				plan_id: attachedProduct.id,
 			});
 
-			// Active customer product → blocked
 			await expectRenameBlocked();
 
-			// Expired customer product → still blocked (history counts)
 			await autumnV2_3.cancel({
 				customer_id: customerId,
 				product_id: attachedProduct.id,

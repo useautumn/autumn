@@ -57,7 +57,6 @@ export const buildUsageAlertPayload = ({
 	};
 };
 
-// The period keeps windowed alerts re-firing each window; the minute bucket collapses a burst into one send.
 export const buildUsageAlertIdempotencyKey = ({
 	orgId,
 	env,
@@ -94,7 +93,6 @@ export const buildUsageAlertIdempotencyKey = ({
 		Math.floor(now / ms.minutes(1)),
 	].join(":");
 
-/** The webhook a fired alert becomes. The payload names the scope's entity; the tags name the tracked one, as prod does. */
 export const usageAlertToWebhook = ({
 	command,
 	feature,

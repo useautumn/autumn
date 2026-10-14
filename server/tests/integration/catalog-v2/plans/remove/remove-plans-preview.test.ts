@@ -1,7 +1,3 @@
-/**
- * catalogV2.preview_update — remove_plans dialog reasons.
- */
-
 import { test } from "bun:test";
 import { CusProductStatus, ErrCode } from "@autumn/shared";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils.js";

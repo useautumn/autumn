@@ -12,7 +12,6 @@ import { fullSubjectToUsageWindowFeatures } from "../common/convertSubject/fullS
 
 type BlockingUsageLimit = Pick<BalancesLimitReached, "filter" | "usage_limit">;
 
-/** Enforcement stops at the cap with the least headroom; that one is reported, filter included: prod's rule, on the worker's rows. */
 export const findBlockingUsageLimit = ({
 	command,
 	fullSubject,

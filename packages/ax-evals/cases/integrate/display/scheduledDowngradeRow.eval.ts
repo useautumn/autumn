@@ -5,17 +5,6 @@ import { initIntegrationEval } from "../../../src/initIntegrationEval.ts";
 import { messagingCatalog } from "../catalogs/messagingCatalog.ts";
 import { fixtureUser, integrateScenario } from "../integrateShared.ts";
 
-/**
- * DISPLAY flow: scheduled downgrade. Seeding attaches Marketing Pro then
- * Marketing Free — a downgrade within the group, which the server schedules
- * for end of cycle (attach transition: upgrade = immediate, downgrade =
- * end_of_cycle). The customer object then carries BOTH: marketing_pro
- * (status "active") and marketing_free (status "scheduled"). The graded
- * traps: the scheduled plan has no balance breakdown yet (its grant kicks
- * in at activation — quota must come from the catalog, not the breakdown),
- * and its switch date is the ACTIVE sibling's currentPeriodEnd. Naive code
- * filters to status === "active" and the pending change vanishes.
- */
 const summaryRouteStub = `		// Billing page loads this to render the subscription table. TODO: hook
 		// up to our billing provider.
 		"/api/billing/summary": {
@@ -65,8 +54,6 @@ console.log(\`acme-notes-api listening on :\${port}\`);
 			email: fixtureUser.email,
 		},
 		paymentMethod: true,
-		// Second attach is a downgrade within the marketing group → the server
-		// schedules it, leaving an active pro + a scheduled free sub.
 		attach: [{ plan_id: "marketing_pro" }, { plan_id: "marketing_free" }],
 	},
 	prompt: [

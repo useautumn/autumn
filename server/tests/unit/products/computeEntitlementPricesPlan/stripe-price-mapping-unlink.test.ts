@@ -1,18 +1,3 @@
-/**
- * `processors.stripe` on a catalog price states the Stripe price it bills as.
- * Omitting the key keeps whatever the row is mapped to; stating `null` unlinks
- * it. Presence in the body is the signal — a normal edit never sends the key.
- *
- * Red (before):  `price_id` was a bare string and `stripe` was `.optional()`,
- *                so an unlink could not be expressed; and every mapper
- *                optional-chained a null straight to undefined, so the planner
- *                saw the same thing a plain edit sends and left the row in
- *                `same` with its old Stripe id.
- * Green (after): a stated null lands the row in `updated` with the slot
- *                nulled, and carry-forward no longer refills it. An omitted
- *                key still leaves a mapped price exactly as it was.
- */
-
 import { describe, expect, test } from "bun:test";
 import {
 	AppEnv,
@@ -73,19 +58,16 @@ const currentEntitlement = entitlements.buildWithFeature({
 	interval: EntInterval.Month,
 });
 
-/** A mapped base price: fixed prices bill from the v1 slot. */
 const currentBasePrice = prices.buildFixed({
 	overrides: { id: "pr_base" },
 	configOverrides: { amount: 50, stripe_price_id: BASE_STRIPE_PRICE_ID },
 });
 
-/** A mapped usage price: also the v1 slot. */
 const currentUsagePrice = prices.buildUsage({
 	overrides: { id: "pr_usage", entitlement_id: "ent_messages" },
 	configOverrides: { stripe_price_id: USAGE_STRIPE_PRICE_ID },
 });
 
-/** A mapped prepaid price: prepaid bills from the v2 slot. */
 const currentPrepaidPrice = prices.buildUsage({
 	overrides: {
 		id: "pr_prepaid",
@@ -137,7 +119,6 @@ const prepaidItemParams = (processors?: StatedProcessors) => ({
 	},
 });
 
-/** Runs the wire payload through the catalog schema, as the real path does. */
 const planFor = ({
 	payload,
 	currentPrices,

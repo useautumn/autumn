@@ -7,34 +7,6 @@ import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 
-/**
- * Volume Pricing — Update Quantity Tests
- *
- * Verifies that `subscriptions.update` charges the correct delta when quantity changes
- * under VOLUME pricing (entire quantity billed at the rate of its tier).
- *
- * Uses V2 billing.attach (quantity INCLUDES included usage / allowance).
- * With includedUsage=0, the quantity is purely purchased units.
- *
- * Tier setup (billingUnits = 100):
- *   Tier 1: 0–500 units  → $10 / pack  →  volumeCost(n) = (n/100) × $10
- *   Tier 2: 501+ units   → $5  / pack  →  volumeCost(n) = (n/100) × $5
- *
- * Cost table used throughout:
- *   300 units → tier 1 → 3 × $10 = $30
- *   500 units → tier 1 → 5 × $10 = $50
- *   600 units → tier 2 → 6 × $5  = $30
- *   800 units → tier 2 → 8 × $5  = $40
- *  1000 units → tier 2 → 10 × $5 = $50
- *
- * Volume vs Graduated delta comparison (the KEY tests are 2 and 5):
- *   Test 1: 300→500  same tier   volume +$20  graduated +$20  (no diff)
- *   Test 2: 300→800  tier 1→2   volume +$10  graduated +$35  ← DIFFERENTIATOR
- *   Test 3: 600→1000 same tier   volume +$20  graduated +$20  (no diff)
- *   Test 4: 500→300  same tier   volume −$20  graduated −$20  (no diff)
- *   Test 5: 800→300  tier 2→1   volume −$10  graduated −$35  ← DIFFERENTIATOR
- */
-
 const BILLING_UNITS = 100;
 
 const VOLUME_TIERS = [
@@ -42,17 +14,13 @@ const VOLUME_TIERS = [
 	{ to: "inf" as const, amount: 5 },
 ];
 
-// ─── Test 1: Increase — same tier (300 → 500, both tier 1) ───────────────────
-
 test.concurrent(`${chalk.yellowBright("volume-tiers-update-quantity: increase same tier 300→500")}`, async () => {
 	const customerId = "volume-update-qty-increase-t1";
 	const initQuantity = 300;
 	const newQuantity = 500;
 
-	// Old cost: 3 × $10 = $30. New cost: 5 × $10 = $50. Delta: +$20.
-	// Graduated delta: same (+$20) — no difference within same tier.
 	const expectedDelta =
-		(newQuantity / BILLING_UNITS) * 10 - (initQuantity / BILLING_UNITS) * 10; // $20
+		(newQuantity / BILLING_UNITS) * 10 - (initQuantity / BILLING_UNITS) * 10;
 
 	const volumeItem = items.volumePrepaidMessages({
 		includedUsage: 0,
@@ -79,7 +47,6 @@ test.concurrent(`${chalk.yellowBright("volume-tiers-update-quantity: increase sa
 		],
 	});
 
-	// Preview update
 	const preview = await autumnV1.subscriptions.previewUpdate({
 		customer_id: customerId,
 		product_id: product.id,
@@ -87,7 +54,6 @@ test.concurrent(`${chalk.yellowBright("volume-tiers-update-quantity: increase sa
 	});
 	expect(preview.total).toBe(expectedDelta);
 
-	// Execute update
 	await autumnV1.subscriptions.update({
 		customer_id: customerId,
 		product_id: product.id,
@@ -105,17 +71,13 @@ test.concurrent(`${chalk.yellowBright("volume-tiers-update-quantity: increase sa
 	});
 });
 
-// ─── Test 2: Increase — crosses tier boundary (300 → 800, tier 1 → tier 2) ──
-
 test.concurrent(`${chalk.yellowBright("volume-tiers-update-quantity: increase crossing tier 300→800")}`, async () => {
 	const customerId = "volume-update-qty-increase-t2";
 	const initQuantity = 300;
 	const newQuantity = 800;
 
-	// Volume: old cost = 3 × $10 = $30. New cost = 8 × $5 = $40. Delta: +$10.
-	// Graduated would charge: 5×$10 + 3×$5 = $65 for new; delta = $65 − $30 = +$35. KEY DIFF.
 	const expectedDelta =
-		(newQuantity / BILLING_UNITS) * 5 - (initQuantity / BILLING_UNITS) * 10; // $40 − $30 = $10
+		(newQuantity / BILLING_UNITS) * 5 - (initQuantity / BILLING_UNITS) * 10;
 
 	const volumeItem = items.volumePrepaidMessages({
 		includedUsage: 0,
@@ -142,16 +104,13 @@ test.concurrent(`${chalk.yellowBright("volume-tiers-update-quantity: increase cr
 		],
 	});
 
-	// Preview update
 	const preview = await autumnV1.subscriptions.previewUpdate({
 		customer_id: customerId,
 		product_id: product.id,
 		options: [{ feature_id: TestFeature.Messages, quantity: newQuantity }],
 	});
-	// Volume charges $10; graduated would charge $35 — assert the volume amount
 	expect(preview.total).toBe(expectedDelta);
 
-	// Execute update
 	await autumnV1.subscriptions.update({
 		customer_id: customerId,
 		product_id: product.id,
@@ -169,17 +128,13 @@ test.concurrent(`${chalk.yellowBright("volume-tiers-update-quantity: increase cr
 	});
 });
 
-// ─── Test 3: Increase — within tier 2 already (600 → 1000) ──────────────────
-
 test.concurrent(`${chalk.yellowBright("volume-tiers-update-quantity: increase same tier 600→1000")}`, async () => {
 	const customerId = "volume-update-qty-increase-t3";
 	const initQuantity = 600;
 	const newQuantity = 1000;
 
-	// Old cost: 6 × $5 = $30. New cost: 10 × $5 = $50. Delta: +$20.
-	// Graduated delta: same (+$20) — no difference within same tier.
 	const expectedDelta =
-		(newQuantity / BILLING_UNITS) * 5 - (initQuantity / BILLING_UNITS) * 5; // $50 − $30 = $20
+		(newQuantity / BILLING_UNITS) * 5 - (initQuantity / BILLING_UNITS) * 5;
 
 	const volumeItem = items.volumePrepaidMessages({
 		includedUsage: 0,
@@ -206,7 +161,6 @@ test.concurrent(`${chalk.yellowBright("volume-tiers-update-quantity: increase sa
 		],
 	});
 
-	// Preview update
 	const preview = await autumnV1.subscriptions.previewUpdate({
 		customer_id: customerId,
 		product_id: product.id,
@@ -214,7 +168,6 @@ test.concurrent(`${chalk.yellowBright("volume-tiers-update-quantity: increase sa
 	});
 	expect(preview.total).toBe(expectedDelta);
 
-	// Execute update
 	await autumnV1.subscriptions.update({
 		customer_id: customerId,
 		product_id: product.id,
@@ -232,17 +185,13 @@ test.concurrent(`${chalk.yellowBright("volume-tiers-update-quantity: increase sa
 	});
 });
 
-// ─── Test 4: Decrease — same tier (500 → 300, both tier 1) ──────────────────
-
 test.concurrent(`${chalk.yellowBright("volume-tiers-update-quantity: decrease same tier 500→300")}`, async () => {
 	const customerId = "volume-update-qty-decrease-t1";
 	const initQuantity = 500;
 	const newQuantity = 300;
 
-	// Old cost: 5 × $10 = $50. New cost: 3 × $10 = $30. Delta: −$20.
-	// Graduated delta: same (−$20) — no difference within same tier.
 	const expectedDelta =
-		(newQuantity / BILLING_UNITS) * 10 - (initQuantity / BILLING_UNITS) * 10; // $30 − $50 = −$20
+		(newQuantity / BILLING_UNITS) * 10 - (initQuantity / BILLING_UNITS) * 10;
 
 	const volumeItem = items.volumePrepaidMessages({
 		includedUsage: 0,
@@ -269,7 +218,6 @@ test.concurrent(`${chalk.yellowBright("volume-tiers-update-quantity: decrease sa
 		],
 	});
 
-	// Preview downgrade
 	const preview = await autumnV1.subscriptions.previewUpdate({
 		customer_id: customerId,
 		product_id: product.id,
@@ -277,7 +225,6 @@ test.concurrent(`${chalk.yellowBright("volume-tiers-update-quantity: decrease sa
 	});
 	expect(preview.total).toBe(expectedDelta);
 
-	// Execute downgrade
 	await autumnV1.subscriptions.update({
 		customer_id: customerId,
 		product_id: product.id,
@@ -295,17 +242,13 @@ test.concurrent(`${chalk.yellowBright("volume-tiers-update-quantity: decrease sa
 	});
 });
 
-// ─── Test 5: Decrease — crosses tier boundary (800 → 300, tier 2 → tier 1) ──
-
 test.concurrent(`${chalk.yellowBright("volume-tiers-update-quantity: decrease crossing tier 800→300")}`, async () => {
 	const customerId = "volume-update-qty-decrease-t2";
 	const initQuantity = 800;
 	const newQuantity = 300;
 
-	// Volume: old cost = 8 × $5 = $40. New cost = 3 × $10 = $30. Delta: −$10.
-	// Graduated old cost: 5×$10 + 3×$5 = $65. New: 3×$10 = $30. Graduated delta = −$35. KEY DIFF.
 	const expectedDelta =
-		(newQuantity / BILLING_UNITS) * 10 - (initQuantity / BILLING_UNITS) * 5; // $30 − $40 = −$10
+		(newQuantity / BILLING_UNITS) * 10 - (initQuantity / BILLING_UNITS) * 5;
 
 	const volumeItem = items.volumePrepaidMessages({
 		includedUsage: 0,
@@ -332,16 +275,13 @@ test.concurrent(`${chalk.yellowBright("volume-tiers-update-quantity: decrease cr
 		],
 	});
 
-	// Preview downgrade
 	const preview = await autumnV1.subscriptions.previewUpdate({
 		customer_id: customerId,
 		product_id: product.id,
 		options: [{ feature_id: TestFeature.Messages, quantity: newQuantity }],
 	});
-	// Volume credits $10; graduated would credit $35 — assert the volume amount
 	expect(preview.total).toBe(expectedDelta);
 
-	// Execute downgrade
 	await autumnV1.subscriptions.update({
 		customer_id: customerId,
 		product_id: product.id,
@@ -359,34 +299,15 @@ test.concurrent(`${chalk.yellowBright("volume-tiers-update-quantity: decrease cr
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// Tests 6–7: With included usage (includedUsage=100)
-//
-// V2 billing.attach quantity INCLUDES included usage.
-// V2 Stripe volume tiers have boundaries shifted by allowance (1 pack),
-// and Stripe quantity = total packs (including included).
-//
-// Stripe tiers: [{up_to: 6, $10}, {up_to: inf, $5}]  (500/100+1=6)
-//   4 total packs (400 units) → tier 1 → 4 × $10 = $40
-//   9 total packs (900 units) → tier 2 → 9 × $5  = $45
-// ═══════════════════════════════════════════════════════════════════════════════
-
 const INCLUDED_USAGE = 100;
-
-// ─── Test 6: Increase with included — crosses tier (400 → 900 total) ─────────
 
 test.concurrent(`${chalk.yellowBright("volume-tiers-update-quantity: increase with included 400→900")}`, async () => {
 	const customerId = "volume-update-qty-incl-increase";
-	const initQuantity = 400; // 4 total packs (1 included + 3 purchased)
-	const newQuantity = 900; // 9 total packs (1 included + 8 purchased)
-
-	// Stripe V2 volume tiers shifted by allowance (1 pack): [{up_to:6,$10}, {up_to:inf,$5}]
-	// Old: 4 total packs → tier 1 (≤6) → 4 × $10 = $40
-	// New: 9 total packs → tier 2 (>6) → 9 × $5 = $45
-	// Delta: +$5
-	const oldCost = (initQuantity / BILLING_UNITS) * 10; // $40
-	const newCost = (newQuantity / BILLING_UNITS) * 5; // $45
-	const expectedDelta = newCost - oldCost; // $5
+	const initQuantity = 400;
+	const newQuantity = 900;
+	const oldCost = (initQuantity / BILLING_UNITS) * 10;
+	const newCost = (newQuantity / BILLING_UNITS) * 5;
+	const expectedDelta = newCost - oldCost;
 
 	const volumeItem = items.volumePrepaidMessages({
 		includedUsage: INCLUDED_USAGE,
@@ -439,20 +360,13 @@ test.concurrent(`${chalk.yellowBright("volume-tiers-update-quantity: increase wi
 	});
 });
 
-// ─── Test 7: Decrease with included — crosses tier (900 → 400 total) ─────────
-
 test.concurrent(`${chalk.yellowBright("volume-tiers-update-quantity: decrease with included 900→400")}`, async () => {
 	const customerId = "volume-update-qty-incl-decrease";
-	const initQuantity = 900; // 9 total packs (1 included + 8 purchased)
-	const newQuantity = 400; // 4 total packs (1 included + 3 purchased)
-
-	// Stripe V2 volume tiers shifted by allowance (1 pack): [{up_to:6,$10}, {up_to:inf,$5}]
-	// Old: 9 total packs → tier 2 (>6) → 9 × $5 = $45
-	// New: 4 total packs → tier 1 (≤6) → 4 × $10 = $40
-	// Delta: −$5
-	const oldCost = (initQuantity / BILLING_UNITS) * 5; // $45
-	const newCost = (newQuantity / BILLING_UNITS) * 10; // $40
-	const expectedDelta = newCost - oldCost; // -$5
+	const initQuantity = 900;
+	const newQuantity = 400;
+	const oldCost = (initQuantity / BILLING_UNITS) * 5;
+	const newCost = (newQuantity / BILLING_UNITS) * 10;
+	const expectedDelta = newCost - oldCost;
 
 	const volumeItem = items.volumePrepaidMessages({
 		includedUsage: INCLUDED_USAGE,

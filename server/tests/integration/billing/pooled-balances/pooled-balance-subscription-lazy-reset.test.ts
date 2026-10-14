@@ -1,27 +1,3 @@
-/**
- * TDD contract for lazy/cron reset ownership of subscription-mode pooled
- * balances. A pool whose reset interval is shorter than its subscription's
- * invoice cadence (e.g. a monthly pool on an annual sub) previously never
- * reset — invoice.created was its only trigger.
- *
- * Contract under test:
- *   New behaviors:
- *     - overdue subscription-mode pool resets on customer read (lazy path):
- *       balance -> pooled_balances.granted, next_reset_at advances past now;
- *     - the V2 cron scan selects
- *       overdue subscription-mode pools and resetCustomerEntitlement resets
- *       them to the pooled grant;
- *     - the pool keeps reset_mode 'subscription' and its Stripe sub linkage —
- *       only the reset trigger widens, invoice.created remains a valid
- *       (now redundant) reset path.
- *   Side effects:
- *     - synthetic pool customer entitlements are no longer stamped
- *       reset_by_invoice = true at attach, so the batch-reset scan sees them.
- *
- * Pre-impl red: the lazy filter and both cron loaders skip pools whose
- * reset_mode !== 'lazy', and initPooledBalanceGraph stamps reset_by_invoice.
- */
-
 import { expect, test } from "bun:test";
 import {
 	type ApiCustomerV5,
@@ -92,7 +68,6 @@ test.concurrent(
 			trackedUsage: 200,
 		});
 
-		// ── Contract: pool cusEnt is not stamped reset_by_invoice at attach ──
 		const attachedState = await getPooledBalanceDbState({
 			db: ctx.db,
 			customerId,
@@ -107,7 +82,6 @@ test.concurrent(
 			resetMode: PooledBalanceResetMode.Subscription,
 		});
 
-		// ── Contract: overdue subscription pool resets on customer read ──
 		const customer = await autumnV2_2.customers.get<ApiCustomerV5>(customerId, {
 			skip_cache: "true",
 		});
@@ -119,10 +93,8 @@ test.concurrent(
 			usage: 0,
 		});
 
-		// Postgres trails the worker by its lingering apply: land the customer's writes before reading the rows.
 		if (isBalanceWorkerRoute())
 			await flushBalanceWorkerCustomer({ ctx, customerId });
-		// ── Contract: pool keeps subscription mode + Stripe sub linkage ──
 		await expectPooledBalanceCorrect({
 			db: ctx.db,
 			customerId,
@@ -141,7 +113,6 @@ test.concurrent(
 			sources: { count: 1, balance: 0, adjustment: 0 },
 		});
 
-		// ── Contract: next_reset_at catches up past now in a single reset ──
 		const resetState = await getPooledBalanceDbState({
 			db: ctx.db,
 			customerId,
@@ -169,7 +140,6 @@ test.concurrent(
 			resetMode: PooledBalanceResetMode.Subscription,
 		});
 
-		// ── Contract: the cron scan includes the overdue subscription pool ──
 		expect(
 			await findResetEligibleRow({
 				ctx,
@@ -178,7 +148,6 @@ test.concurrent(
 			"Expected the cron scan to select the subscription pooled balance",
 		).not.toBeNull();
 
-		// ── Contract: cron reset refills to the pooled grant ──
 		await runResetOnCustomerEntitlement({
 			ctx,
 			customerId,

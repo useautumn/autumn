@@ -1,7 +1,7 @@
 import { z } from "zod/v4";
 
 export enum ApiFeatureType {
-	Static = "static", // legacy (will deprecate)
+	Static = "static",
 
 	Boolean = "boolean",
 	SingleUsage = "single_use",
@@ -22,7 +22,6 @@ export const FEATURE_EXAMPLE = {
 	archived: false,
 };
 
-// Base schema without .meta() to avoid side effects during imports
 export const ApiFeatureV0Schema = z.object({
 	id: z.string().meta({
 		description:

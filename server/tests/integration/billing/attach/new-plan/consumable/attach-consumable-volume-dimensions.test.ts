@@ -1,8 +1,3 @@
-/**
- * Pay-per-use volume on dimensioned credits: bills resolved credits past included at their net tier.
- * Invoice-credit features (DimensionCredits) bill credits 1:1 and ignore tiers, so this uses Credits.
- */
-
 import { test } from "bun:test";
 import type { FeatureConfigOverride } from "@autumn/shared";
 import { expectInvoiceLineItemsCorrect } from "@tests/integration/billing/utils/expectInvoiceLineItemsCorrect";
@@ -32,8 +27,6 @@ test.concurrent(
 	`${chalk.yellowBright("consumable-volume-dimensions 1: 730 resolved credits (100 included) bill the 630 over at net band 2; preview = invoice")}`,
 	async () => {
 		const customerId = "cons-volume-dimensions";
-		// 40 large × 16 = 640 · 10 large spot × 16 × 0.5 = 80 · 50 plain × 0.2 = 10
-		// 730 credits − 100 included = 630 over (net band 2, 501+): 630 × $0.05 = $31.50
 		const expectedFeatureAmount = 31.5;
 
 		const volumeCreditsItem = items.volumeConsumable({

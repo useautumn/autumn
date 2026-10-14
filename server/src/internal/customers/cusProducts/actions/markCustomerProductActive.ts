@@ -9,17 +9,6 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { dispatchCustomerProductUpdatedWebhooks } from "@/internal/customers/cusProducts/actions/dispatchCustomerProductUpdatedWebhooks";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
 
-/**
- * Marks a customer product as active (e.g. recovering from past-due).
- *
- * This action:
- * 1. Sets status to Active on the customer product
- * 2. Updates the FullCustomer in memory
- * 3. Sends products_updated + billing.updated webhooks
- *
- * Used by RevenueCat renewal webhooks (past-due → active recovery) and any
- * external active-recovery flow.
- */
 export const markCustomerProductActive = async ({
 	ctx,
 	customerProduct,

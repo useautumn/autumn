@@ -2,13 +2,6 @@ import type { CustomizePlanLicense } from "@autumn/shared";
 import { createContext, type ReactNode, useContext, useState } from "react";
 import { create, useStore } from "zustand";
 
-/**
- * Customize-mode collection target for license cards. On the plan page cards
- * persist via link; inside a customize editor (attach / update
- * subscription) this provider is mounted instead, and each card registers a
- * dirty flag plus a `get` that snapshots its CustomizePlanLicense. The editor's
- * save collects the dirty entries as the payload's `add_licenses` patch.
- */
 interface LicenseCollectorEntry {
 	dirty: boolean;
 	get: () => CustomizePlanLicense;
@@ -50,8 +43,6 @@ export function LicenseCustomizeCollectorProvider({
 	initialPatches,
 }: {
 	children: ReactNode;
-	/** Previously saved add_licenses patch — re-seeds cards so edits survive
-	 * closing and reopening the editor. */
 	initialPatches?: CustomizePlanLicense[] | null;
 }) {
 	const [value] = useState<LicenseCollectorContextValue>(() => ({
@@ -67,12 +58,9 @@ export function LicenseCustomizeCollectorProvider({
 	);
 }
 
-/** Non-null only inside a customize-mode editor. */
 export const useLicenseCollectorStore = () =>
 	useContext(LicenseCollectorContext)?.store ?? null;
 
-/** Saved add_licenses entries keyed by license plan id; empty outside a
- * customize editor. */
 export const useInitialLicensePatches = () =>
 	useContext(LicenseCollectorContext)?.initialPatches ?? EMPTY_PATCHES;
 
@@ -84,8 +72,6 @@ export const useHasCollectedLicenseChanges = () => {
 	);
 };
 
-/** Snapshot of the edited (dirty) license cards as add_licenses entries;
- * untouched cards are omitted so they keep inheriting the plan catalog. */
 export const collectLicensePatchAdds = (
 	store: LicenseCollectorStore,
 ): CustomizePlanLicense[] =>

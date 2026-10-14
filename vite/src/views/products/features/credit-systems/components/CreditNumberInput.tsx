@@ -5,7 +5,6 @@ import { useState } from "react";
 interface CreditNumberInputProps {
 	value: number | undefined;
 	onValueChange: (value: number) => void;
-	/** Blurring while empty clears instead of writing 0. */
 	onClear?: () => void;
 	placeholder?: string;
 	className?: string;
@@ -14,8 +13,6 @@ interface CreditNumberInputProps {
 	ariaLabel: string;
 }
 
-/** Numeric field that keeps partially-typed values ("1.", "") local so the form
- * only ever holds numbers. */
 export function CreditNumberInput({
 	value,
 	onValueChange,

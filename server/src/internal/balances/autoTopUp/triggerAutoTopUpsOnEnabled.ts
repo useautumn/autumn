@@ -3,7 +3,6 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { dispatchAutoTopup } from "./helpers/dispatchAutoTopup.js";
 import { sendAutoTopupFailedWebhook } from "./webhooks/sendAutoTopupFailedWebhook";
 
-/** Triggers an auto top-up for the first feature that transitions to enabled. */
 export const triggerAutoTopUpsOnEnabled = async ({
 	ctx,
 	oldCustomer,

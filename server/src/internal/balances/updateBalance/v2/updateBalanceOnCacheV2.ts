@@ -16,11 +16,6 @@ import { updateNextResetAtV2 } from "./updateNextResetAtV2.js";
 import { updateRemainingV2 } from "./updateRemainingV2.js";
 import { updateUsageV2 } from "./updateUsageV2.js";
 
-/**
- * A mutation that resolves no entitlements silently changed nothing and still
- * reported success, so a typo'd balance_id, an unassigned feature and a fully
- * drained grant were indistinguishable from a real update.
- */
 const assertBalanceExists = ({
 	params,
 	fullSubject,
@@ -32,8 +27,6 @@ const assertBalanceExists = ({
 }) => {
 	if (customerEntitlements.length > 0) return;
 
-	// The deduction path resolves by funding membership rather than by catalog
-	// feature, so only an empty result under BOTH readings means "nothing here".
 	const fundingEntitlements = fullSubjectToCustomerEntitlements({
 		fullSubject,
 		fundsFeatureId: params.feature_id,
@@ -82,7 +75,6 @@ export const validateBalanceMutation = ({
 	assertBalanceExists({ params, fullSubject, customerEntitlements });
 };
 
-/** Update balance using the FullSubject cache path: the lane before the balance worker, and its paid allocated fallback. */
 export const updateBalanceOnCacheV2 = async ({
 	ctx,
 	params,

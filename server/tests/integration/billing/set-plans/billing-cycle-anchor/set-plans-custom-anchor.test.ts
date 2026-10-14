@@ -1,10 +1,3 @@
-/**
- * A custom first-phase billing_cycle_anchor, sent the way the dashboard's Set Plans sheet sends it:
- * a timestamp on phases[0] with the default proration (no proration_behavior).
- * Live subscription → cycle resets on the anchor; new subscription → stub until the anchor;
- * a later phase still resets at its own start.
- */
-
 import { expect, test } from "bun:test";
 import {
 	type ApiCustomerV5,

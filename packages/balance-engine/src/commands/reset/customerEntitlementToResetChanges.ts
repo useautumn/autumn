@@ -11,13 +11,11 @@ import { addRolloversWithinMax } from "../common/addRolloversWithinMax.js";
 import type { ResetCommand } from "./types/resetCommand.js";
 import type { ResetRow } from "./types/resetResult.js";
 
-/** A row the reset refills: the changes replay applies and the row the result reports. */
 export type CustomerEntitlementReset = {
 	changes: RowChange[];
 	row: ResetRow;
 };
 
-/** What is left on the row carries over, then the cap trims the oldest rollovers first. */
 const customerEntitlementToRolloverChanges = ({
 	row,
 	cycleEndedAt,
@@ -31,12 +29,6 @@ const customerEntitlementToRolloverChanges = ({
 			.toInsert,
 	});
 
-/**
- * Runs for every due row that is a pool's own row. Before the row refills like any other, its pool
- * moves to the new cycle: the grant becomes the sum of its promoted shares (the sender summed it), and
- * the shares take their next value in Postgres by one set-based change. The refill then reads the new
- * grant. An unlimited pool has no grant to move.
- */
 const promoteDuePool = ({
 	row,
 	command,
@@ -73,7 +65,6 @@ const promoteDuePool = ({
 	};
 };
 
-/** The row's current value of every balance column the refill sets. The attribution is cleared, not guarded: it is not a balance. */
 const replacedBalancesOf = ({
 	row,
 	balances,
@@ -90,7 +81,6 @@ const replacedBalancesOf = ({
 	);
 };
 
-/** The same refill the server computes, over the worker's row: the shared helpers own every rule. */
 export const customerEntitlementToResetChanges = ({
 	row: dueRow,
 	command,
@@ -98,7 +88,6 @@ export const customerEntitlementToResetChanges = ({
 	row: DueRow;
 	command: ResetCommand;
 }): CustomerEntitlementReset => {
-	// A pool row refills from its pool's grant, so the pool moves first and the row below sees the new grant.
 	const { row, changes: poolChanges } = promoteDuePool({
 		row: dueRow,
 		command,
@@ -126,8 +115,6 @@ export const customerEntitlementToResetChanges = ({
 				table: "customerEntitlements",
 				op: "update",
 				id: row.id,
-				// The guard is what the refill replaces: the cycle that ended, and the balances it held. A row already moved on
-				// refuses a second refill; one a writer outside the worker changed since refuses a refill decided without it.
 				before: {
 					next_reset_at: cycleEndedAt,
 					...replacedBalancesOf({ row, balances }),

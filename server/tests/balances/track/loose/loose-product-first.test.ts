@@ -34,23 +34,19 @@ describe(`${chalk.yellowBright("loose-product-first: deducts from product before
 			withTestClock: false,
 		});
 
-		// Create product with 10 messages
 		await initProductsV0({
 			ctx,
 			products: [testProduct],
 			prefix: testCase,
 		});
 
-		// Attach product to customer
 		await autumnV1.attach({
 			customer_id: customerId,
 			product_id: testProduct.id,
 		});
 
-		// Wait for product attachment
 		await new Promise((resolve) => setTimeout(resolve, 1000));
 
-		// Create loose entitlement with 50 messages (created AFTER product, so deducted second)
 		await autumnV1.balances.create({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
@@ -65,11 +61,10 @@ describe(`${chalk.yellowBright("loose-product-first: deducts from product before
 		})) as unknown as CheckResponseV2;
 
 		expect(res.allowed).toBe(true);
-		expect(res.balance?.current_balance).toBe(60); // 10 from product + 50 from loose
+		expect(res.balance?.current_balance).toBe(60);
 	});
 
 	test("should deduct from product first, then loose entitlement", async () => {
-		// Track 15 messages (should use all 10 from product, then 5 from loose)
 		await autumnV1.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
@@ -84,12 +79,11 @@ describe(`${chalk.yellowBright("loose-product-first: deducts from product before
 		})) as unknown as CheckResponseV2;
 
 		expect(res.allowed).toBe(true);
-		expect(res.balance?.current_balance).toBe(45); // 60 - 15
+		expect(res.balance?.current_balance).toBe(45);
 		expect(res.balance?.usage).toBe(15);
 	});
 
 	test("should continue deducting from loose after product exhausted", async () => {
-		// Track 30 more messages (all from loose since product is exhausted)
 		await autumnV1.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
@@ -104,7 +98,7 @@ describe(`${chalk.yellowBright("loose-product-first: deducts from product before
 		})) as unknown as CheckResponseV2;
 
 		expect(res.allowed).toBe(true);
-		expect(res.balance?.current_balance).toBe(15); // 45 - 30
-		expect(res.balance?.usage).toBe(45); // 15 + 30
+		expect(res.balance?.current_balance).toBe(15);
+		expect(res.balance?.usage).toBe(45);
 	});
 });

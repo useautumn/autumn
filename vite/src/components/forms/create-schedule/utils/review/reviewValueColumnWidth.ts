@@ -12,7 +12,6 @@ const valueText = (value: ReviewChangeValue) =>
 const rowsWithItems = (rows: ReviewChangeRow[]): ReviewChangeRow[] =>
 	rows.flatMap((row) => [row, ...(row.items ?? [])]);
 
-/** One width for every row's value column in a section, so the status chips beside it line up. */
 export const reviewValueColumnWidth = (section: ReviewChangeSection) => {
 	const longestValue = Math.max(
 		0,

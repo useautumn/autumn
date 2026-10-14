@@ -1,19 +1,3 @@
-/**
- * Editing a plan's included grant to `unlimited` must not bill the usage that
- * grant already covered — and must not forgive overage accrued before the edit.
- *
- * The plan carries two items for one feature: a free included grant, and a
- * separate metered price for overage. Carryover collapses both into one usage
- * figure, so the split matters:
- *
- *   grant-covered usage  -> absorbed by the unlimited grant, never billable
- *   accrued overage      -> stays on the priced row, still owed
- *
- * Red (before the fix):
- *   t1  upbeat invoice gains a MESSAGES_TRACKED x OVERAGE_PRICE line
- *   t2  (with a blanket skip) the already-owed overage silently disappears
- */
-
 import { expect, test } from "bun:test";
 import { type ApiCustomerV5, CustomerExpand } from "@autumn/shared";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
@@ -59,7 +43,7 @@ test.concurrent(
 	async () => {
 		const customerId = "unlim-grant-covered";
 		const { meteredItem, plan } = buildPlan({ id: "unlim-grant-covered-pro" });
-		const tracked = 80; // comfortably inside the grant, no overage
+		const tracked = 80;
 
 		const { autumnV1, autumnV2_2 } = await initScenario({
 			customerId,
@@ -77,7 +61,6 @@ test.concurrent(
 			],
 		});
 
-		// Polls until the track lands, so the zero below can't pass vacuously.
 		await expectCustomerFeatureCorrect({
 			customerId,
 			autumn: autumnV1,
@@ -108,7 +91,7 @@ test.concurrent(
 	async () => {
 		const customerId = "unlim-carry-overage";
 		const { meteredItem, plan } = buildPlan({ id: "unlim-carry-overage-pro" });
-		const tracked = 150; // 100 covered by the grant, 50 genuine overage
+		const tracked = 150;
 		const expectedOverage = (tracked - MESSAGES_INCLUDED) * OVERAGE_PRICE;
 
 		const { autumnV1, autumnV2_2 } = await initScenario({

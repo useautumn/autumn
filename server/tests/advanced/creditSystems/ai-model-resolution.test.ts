@@ -9,7 +9,6 @@ import {
 	type ModelsDevProvider,
 } from "@autumn/shared";
 
-// Stub the models.dev fetch so resolution + pricing are deterministic and offline.
 const pricingData: Record<string, ModelsDevProvider> = {
 	anthropic: {
 		id: "anthropic",
@@ -76,7 +75,6 @@ const pricingData: Record<string, ModelsDevProvider> = {
 		id: "nano-gpt",
 		name: "NanoGPT",
 		models: {
-			// Decision-type model from models.dev's ?type=all feed: sub-cent input, free output.
 			"typesafe/jev-latest": {
 				id: "typesafe/jev-latest",
 				name: "Jev",
@@ -150,8 +148,6 @@ const pricingData: Record<string, ModelsDevProvider> = {
 		id: "openrouter",
 		name: "OpenRouter",
 		models: {
-			// Openrouter keys contain a subprovider slash; the id keeps it after the
-			// first `/` split (openrouter/openai/gpt-4o-2024-08-06).
 			"openai/gpt-4o-2024-08-06": {
 				id: "openai/gpt-4o-2024-08-06",
 				name: "GPT-4o (OpenRouter)",
@@ -203,7 +199,6 @@ describe("resolveModel — exact match", () => {
 			input: 1000,
 			output: 0,
 		});
-		// openrouter's own rate (3), not openai's direct rate (2.5).
 		expect(cost).toBeCloseTo((3 * 1000) / PER_MILLION, 10);
 	});
 
@@ -271,7 +266,6 @@ describe("computeCost — token pools", () => {
 			output: 0,
 			cacheRead: 1000,
 		});
-		// totalInput 301k > 200k -> tier input (2) and tier cache_read (1), not base 0.5.
 		expect(above).toBeCloseTo((2 * 300_000 + 1 * 1000) / PER_MILLION, 10);
 
 		const below = await getModelCreditCost({
@@ -281,7 +275,6 @@ describe("computeCost — token pools", () => {
 			output: 0,
 			cacheRead: 1000,
 		});
-		// totalInput 2k < 200k -> base input (1) and base cache_read (0.5).
 		expect(below).toBeCloseTo((1 * 1000 + 0.5 * 1000) / PER_MILLION, 10);
 	});
 
@@ -308,7 +301,6 @@ describe("computeCost — token pools", () => {
 			output: 0,
 			cacheRead: 1000,
 		});
-		// no published cache_read rate -> bill at the base input rate (10)
 		expect(cost).toBeCloseTo((10 * 1000) / PER_MILLION, 10);
 	});
 

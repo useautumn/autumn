@@ -56,7 +56,6 @@ const apiItem: CreatePlanItemParamsV1 = CreatePlanItemParamsV1Schema.parse({
 	},
 });
 
-/** What the dashboard loads for a plan item created through the V1 API. */
 const dashboardItem = planItemV0ToProductItem({
 	ctx,
 	planItem: planItemV1ToV0({ ctx, item: apiItem }),

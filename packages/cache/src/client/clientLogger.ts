@@ -5,7 +5,6 @@ import type { CacheLogger } from "./types/redisClient.js";
 const loggers = new WeakMap<Redis, CacheLogger>();
 let fallback: CacheLogger | undefined;
 
-/** The logger a client was created with rides on the instance, so an op never has it passed. */
 export const rememberClientLogger = ({
 	redis,
 	logger,

@@ -1,18 +1,3 @@
-/**
- * Linked-plan preference for unclaimed items under a shared Stripe product.
- *
- * Scenario (the Resend marketing_pro_150k incident): sibling plans (no
- * base_variant_id) are all mapped to ONE Stripe product. The customer is on
- * the pricier sibling; someone edits the subscription item in Stripe to a
- * custom amount that shape-matches no catalog price.
- *
- * Contract under test:
- *   - detection keeps the plan already linked to the subscription (custom
- *     base at the new amount) instead of falling back to the first/cheapest
- *     sibling in catalog order.
- *   - incremental auto-sync sees no product change -> no plan swap.
- */
-
 import { expect, test } from "bun:test";
 import { ProcessorType } from "@autumn/shared";
 import {
@@ -63,7 +48,6 @@ test(`${chalk.yellowBright("to-sync-params: custom price under a shared Stripe p
 		actions: [],
 	});
 
-	// Both siblings share one Stripe product, like marketing_pro / _150k.
 	const sharedStripeProduct = await ctx.stripeCli.products.create({
 		name: `Linked Plan ${customerId}`,
 	});
@@ -79,7 +63,6 @@ test(`${chalk.yellowBright("to-sync-params: custom price under a shared Stripe p
 	}
 	await invalidateProductsCache({ orgId: ctx.org.id, env: ctx.env });
 
-	// $50 shape-matches the expensive sibling -> auto-sync links it.
 	const catalogPrice = await createStripeFixedPriceUnderProduct({
 		ctx,
 		stripeProductId: sharedStripeProduct.id,
@@ -104,8 +87,6 @@ test(`${chalk.yellowBright("to-sync-params: custom price under a shared Stripe p
 		eventTypes: ["customer.subscription.created"],
 	});
 
-	// Snapshot the linked state before the Stripe edit, so the sub.updated
-	// webhook racing below can't change what detection is judged against.
 	const { customer_products: customerProducts } = await CusService.getFull({
 		ctx,
 		idOrInternalId: customerId,
@@ -115,7 +96,6 @@ test(`${chalk.yellowBright("to-sync-params: custom price under a shared Stripe p
 	);
 	expect(linkedCustomerProducts.map((cp) => cp.product.id)).toEqual([linkedId]);
 
-	// Edit the item in Stripe to $75 — matches neither $20 nor $50.
 	const customPrice = await createStripeFixedPriceUnderProduct({
 		ctx,
 		stripeProductId: sharedStripeProduct.id,
@@ -140,7 +120,6 @@ test(`${chalk.yellowBright("to-sync-params: custom price under a shared Stripe p
 		customerProducts,
 	});
 
-	// ── Contract: the linked sibling stays, carrying the custom amount ──
 	expectSubscriptionMatchCorrect({
 		match,
 		currentPhase: {
@@ -151,7 +130,6 @@ test(`${chalk.yellowBright("to-sync-params: custom price under a shared Stripe p
 	const currentPhase = match.phaseMatches.find((phase) => phase.is_current);
 	expect(currentPhase?.plans[0]?.customize?.price?.amount).toBe(75);
 
-	// ── Contract: incremental auto-sync sees no product change -> no swap ──
 	const incremental = buildIncrementalSyncParams({
 		match,
 		params,

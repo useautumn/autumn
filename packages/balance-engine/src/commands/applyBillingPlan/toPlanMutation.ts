@@ -4,7 +4,6 @@ import type { SubjectState } from "../../models/subject/subjectState.js";
 import { parseSubjectStateMutation } from "../../parsers.js";
 import type { ApplyBillingPlanCommand } from "./types/applyBillingPlanCommand.js";
 
-/** The plan as one mutation carrying these changes; the revision moves by one. */
 export const toPlanMutation = ({
 	command,
 	state,

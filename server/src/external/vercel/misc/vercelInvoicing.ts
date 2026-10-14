@@ -20,28 +20,6 @@ import {
 	type VercelSdkTestOptions,
 } from "./vercelSdkOptions.js";
 
-/**
- * Vercel Marketplace Payment Flow:
- *
- * 1. Resource creation provisions a Stripe subscription in invoice mode
- *    (`collection_method: "send_invoice"`, `days_until_due: 30`). The
- *    subscription auto-activates regardless of first-invoice status.
- * 2. `invoice.finalized` → `processVercelInvoice` submits the finalized
- *    invoice to Vercel via `submitBillingDataToVercel` +
- *    `submitInvoiceToVercel`.
- * 3. Vercel marketplace collects payment from the end customer out of band.
- * 4. `marketplace.invoice.paid` → `handleMarketplaceInvoicePaid` marks the
- *    Stripe invoice paid via `invoices.pay(id, { paid_out_of_band: true })`.
- *    Stripe Payment Records / `attachPayment` are intentionally NOT used.
- * 5. `marketplace.invoice.notpaid` → `handleMarketplaceInvoiceNotPaid`
- *    suspends the Vercel resource, expires the Autumn cus_product (activating
- *    the default fallback), and cancels the Stripe subscription.
- */
-
-/**
- * Submits billing and usage data to Vercel
- * Shows detailed breakdown of usage by feature in Vercel dashboard
- */
 export const submitBillingDataToVercel = async ({
 	installationId,
 	invoice,
@@ -67,25 +45,23 @@ export const submitBillingDataToVercel = async ({
 	const periodEnd =
 		rawPeriodEnd > rawPeriodStart ? rawPeriodEnd : rawPeriodStart + 1;
 
-	// Map invoice line items to Vercel billing format
 	const billingItems = invoice.lines.data
-		.filter((line) => line.amount > 0) // Only include items with charges
+		.filter((line) => line.amount > 0)
 		.map((line) => {
-			const amount = line.amount / 100; // Convert to dollars
+			const amount = line.amount / 100;
 			return {
 				resourceId: line.metadata?.vercel_resource_id || installationId,
 				billingPlanId: line.metadata?.vercel_billing_plan_id || product.id,
 				name: line.description || product.name,
-				price: (amount / (line.quantity || 1)).toFixed(2), // Unit price
+				price: (amount / (line.quantity || 1)).toFixed(2),
 				quantity: line.quantity || 1,
 				units: "units",
 				total: amount.toFixed(2),
 			};
 		});
 
-	// Extract usage metrics from line items (for usage-based features)
 	const usageMetrics = invoice.lines.data
-		.filter((line) => line.description?.includes("Messages")) // Usage items
+		.filter((line) => line.description?.includes("Messages"))
 		.map((line) => ({
 			resourceId: installationId,
 			name: "Messages",
@@ -142,7 +118,6 @@ export const submitInvoiceToVercel = async ({
 		throw new Error("Price not found");
 	}
 
-	// Get the actual billing period from line items (invoice period_start/end can be the same on creation)
 	const firstLineItem = invoice.lines.data[0];
 	const rawPeriodStart = firstLineItem?.period?.start || invoice.period_start;
 	const rawPeriodEnd = firstLineItem?.period?.end || invoice.period_end;
@@ -151,14 +126,11 @@ export const submitInvoiceToVercel = async ({
 		rawPeriodEnd > rawPeriodStart ? rawPeriodEnd : rawPeriodStart + 1;
 
 	// Vercel requires period.start <= invoiceDate <= period.end. For manual InvoiceItem
-	// charges (top-ups) the InvoiceItem is created after the Invoice, so invoice.created
-	// can fall before the line item's period.start — clamp into range.
 	const invoiceDateSec = Math.max(
 		periodStart,
 		Math.min(invoice.created, periodEnd),
 	);
 
-	// Calculate total amount from invoice (includes subscription + usage charges)
 	const totalAmount = invoice.amount_due / 100;
 
 	let memo: string | undefined;
@@ -187,10 +159,10 @@ export const submitInvoiceToVercel = async ({
 					resourceId: installationId,
 					billingPlanId: product.id,
 					name: product.name,
-					price: totalAmount.toFixed(2), // Total price including usage
+					price: totalAmount.toFixed(2),
 					quantity: 1,
 					units: price.interval?.toString() ?? "month",
-					total: totalAmount.toFixed(2), // Same as price since quantity=1
+					total: totalAmount.toFixed(2),
 				},
 			],
 			period: {
@@ -202,7 +174,6 @@ export const submitInvoiceToVercel = async ({
 						test: {
 							validate: true,
 							result: "paid",
-							// result: "notpaid",
 						},
 					}
 				: {}),
@@ -211,11 +182,6 @@ export const submitInvoiceToVercel = async ({
 	});
 };
 
-/**
- * Parses Vercel metadata to extract prepaid quantities for features
- * Expected metadata format: { "<feature_id>": quantity, ... }
- * Validates features exist in product and have prepaid prices configured
- */
 export const parseVercelPrepaidQuantities = ({
 	metadata,
 	product,
@@ -227,14 +193,11 @@ export const parseVercelPrepaidQuantities = ({
 }): FeatureOptions[] => {
 	const optionsList: FeatureOptions[] = [];
 
-	// Iterate over metadata entries
 	for (const [featureId, quantity] of Object.entries(metadata)) {
-		// Skip non-numeric values silently
 		if (typeof quantity !== "number" || Number.isNaN(quantity)) {
 			continue;
 		}
 
-		// Find entitlement for this feature
 		const entitlement = product.entitlements.find(
 			(ent) => ent.feature.id === featureId,
 		);
@@ -243,7 +206,6 @@ export const parseVercelPrepaidQuantities = ({
 			continue;
 		}
 
-		// Validate prepaid price exists for this feature
 		const prepaidPrice = findPrepaidPrice({
 			prices,
 			internalFeatureId: entitlement.internal_feature_id,
@@ -253,7 +215,6 @@ export const parseVercelPrepaidQuantities = ({
 			continue;
 		}
 
-		// Valid prepaid feature with price - add to options list
 		optionsList.push({
 			feature_id: featureId,
 			internal_feature_id: entitlement.internal_feature_id,

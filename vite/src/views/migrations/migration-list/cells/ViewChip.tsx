@@ -60,7 +60,6 @@ export function CountChip({
 	);
 }
 
-/** Wraps instead of shrinking, so every chip keeps a readable label inside the card. */
 export function ChipList({
 	chips,
 	moreCount,
@@ -118,7 +117,6 @@ export const PopoverSeparator = () => (
 	<div className="h-px shrink-0 bg-overlay-separator preset:bg-border" />
 );
 
-/** Hover detail anchored under the hovered cell, never the whole row. */
 export function CellHoverCard({
 	trigger,
 	children,

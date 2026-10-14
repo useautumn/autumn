@@ -1,10 +1,4 @@
-/** Findings an org has reviewed and accepted, keyed by org id rather than slug
- * so the customer is not identifiable here. */
 export const IGNORED_VERIFY_RULES = {
-	/** Schedules whose future phases carry the same prices as the current one
-	 * only step a quantity; the subscription webhook applies it, so Autumn holds
-	 * no phase for it by design. A schedule that changes price or plan still
-	 * reports. */
 	quantityOnlySchedule: "quantity_only_schedule",
 } as const;
 

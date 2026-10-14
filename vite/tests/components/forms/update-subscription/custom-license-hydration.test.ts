@@ -1,9 +1,3 @@
-/**
- * A persisted customer-level license customization must seed the update editor.
- *
- * Red: details showed 600 messages, but reopening Update Subscription showed
- * the catalog's 400. Green: the initial upsert patch carries 600.
- */
 import { expect, test } from "bun:test";
 import {
 	AllowanceType,

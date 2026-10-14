@@ -11,7 +11,6 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { Decimal } from "decimal.js";
 
-/** Wait time for SQS auto top-up processing */
 const AUTO_TOPUP_WAIT_MS = 20000;
 
 const makeAutoTopupConfig = ({
@@ -58,7 +57,6 @@ test.concurrent(`${chalk.yellowBright("auto-topup basic: track below threshold t
 		],
 	});
 
-	// Configure auto top-up: threshold=20, quantity=100
 	await autumnV2_1.customers.update(customerId, {
 		billing_controls: makeAutoTopupConfig({
 			threshold: 20,
@@ -66,21 +64,17 @@ test.concurrent(`${chalk.yellowBright("auto-topup basic: track below threshold t
 		}),
 	});
 
-	// Verify starting balance
 	const before = await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
 	expect(before.balances[TestFeature.Messages].remaining).toBe(100);
 
-	// Track 85 → balance drops to 15 (below threshold of 20)
 	await autumnV2_1.track({
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
 		value: 85,
 	});
 
-	// Wait for auto top-up to process via SQS
 	await timeout(AUTO_TOPUP_WAIT_MS);
 
-	// Balance should be: 100 - 85 + 100 = 115
 	const after = await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
 	const expectedBalance = new Decimal(100).sub(85).add(100).toNumber();
 	expectBalanceCorrect({
@@ -96,9 +90,6 @@ test.concurrent(`${chalk.yellowBright("auto-topup basic: track below threshold t
 		latestInvoiceProductId: oneOffProd.id,
 	});
 
-	// Verify cusProduct.options.quantity incremented correctly (in packs).
-	// Initial: 100 credits / 100 billingUnits = 1 pack.
-	// After 1 top-up of 100 credits (1 pack): expected = 2 packs.
 	await expectCustomerProductOptions({
 		ctx,
 		customerId,
@@ -133,7 +124,6 @@ test.concurrent(`${chalk.yellowBright("auto-topup basic: track above threshold d
 		],
 	});
 
-	// Configure auto top-up: threshold=20, quantity=100
 	await autumnV2_1.customers.update(customerId, {
 		billing_controls: makeAutoTopupConfig({
 			threshold: 20,
@@ -141,11 +131,9 @@ test.concurrent(`${chalk.yellowBright("auto-topup basic: track above threshold d
 		}),
 	});
 
-	// Get initial invoice count
 	const before = await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
 	const initialInvoiceCount = before.invoices?.length ?? 0;
 
-	// Track 50 → balance drops to 50 (above threshold of 20)
 	await autumnV2_1.track({
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
@@ -154,7 +142,6 @@ test.concurrent(`${chalk.yellowBright("auto-topup basic: track above threshold d
 
 	await timeout(AUTO_TOPUP_WAIT_MS);
 
-	// Balance should remain at 50 — no top-up
 	const after = await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
 	expectBalanceCorrect({
 		customer: after,
@@ -197,7 +184,6 @@ test.concurrent(`${chalk.yellowBright("auto-topup basic: disabled config does NO
 		],
 	});
 
-	// Configure auto top-up but DISABLED
 	await autumnV2_1.customers.update(customerId, {
 		billing_controls: makeAutoTopupConfig({
 			threshold: 20,
@@ -206,7 +192,6 @@ test.concurrent(`${chalk.yellowBright("auto-topup basic: disabled config does NO
 		}),
 	});
 
-	// Track 85 → balance drops to 15 (below threshold)
 	await autumnV2_1.track({
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
@@ -215,7 +200,6 @@ test.concurrent(`${chalk.yellowBright("auto-topup basic: disabled config does NO
 
 	await timeout(AUTO_TOPUP_WAIT_MS);
 
-	// Balance should stay at 15 — disabled, no top-up
 	const after = await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
 	expectBalanceCorrect({
 		customer: after,
@@ -256,7 +240,6 @@ test.concurrent(`${chalk.yellowBright("auto-topup basic: sequential tracks each 
 		],
 	});
 
-	// Configure auto top-up: threshold=30, quantity=100
 	await autumnV2_1.customers.update(customerId, {
 		billing_controls: makeAutoTopupConfig({
 			threshold: 30,
@@ -264,8 +247,6 @@ test.concurrent(`${chalk.yellowBright("auto-topup basic: sequential tracks each 
 		}),
 	});
 
-	// Starting balance: 200
-	// Track 180 → balance = 20 (below threshold 30) → top-up fires → balance = 120
 	await autumnV2_1.track({
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
@@ -275,7 +256,6 @@ test.concurrent(`${chalk.yellowBright("auto-topup basic: sequential tracks each 
 	await timeout(AUTO_TOPUP_WAIT_MS);
 
 	const mid = await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
-	// 200 - 180 + 100 = 120
 	const expectedMid = new Decimal(200).sub(180).add(100).toNumber();
 	expectBalanceCorrect({
 		customer: mid,
@@ -290,7 +270,6 @@ test.concurrent(`${chalk.yellowBright("auto-topup basic: sequential tracks each 
 		latestInvoiceProductId: oneOffProd.id,
 	});
 
-	// Track 100 → balance = 20 (below threshold 30 again) → second top-up fires → balance = 120
 	await autumnV2_1.track({
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
@@ -300,7 +279,6 @@ test.concurrent(`${chalk.yellowBright("auto-topup basic: sequential tracks each 
 	await timeout(AUTO_TOPUP_WAIT_MS);
 
 	const after = await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
-	// 120 - 100 + 100 = 120
 	const expectedAfter = new Decimal(120).sub(100).add(100).toNumber();
 	expectBalanceCorrect({
 		customer: after,
@@ -315,9 +293,6 @@ test.concurrent(`${chalk.yellowBright("auto-topup basic: sequential tracks each 
 		latestInvoiceProductId: oneOffProd.id,
 	});
 
-	// Verify cusProduct.options.quantity after two top-ups (in packs).
-	// Initial: 200 credits / 100 billingUnits = 2 packs.
-	// After 2 top-ups of 100 credits (1 pack each): expected = 4 packs.
 	await expectCustomerProductOptions({
 		ctx,
 		customerId,
@@ -359,17 +334,14 @@ test.concurrent(`${chalk.yellowBright("auto-topup basic: cache and DB agree afte
 		}),
 	});
 
-	// Track 85 → triggers top-up
 	await autumnV2_1.track({
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
 		value: 85,
 	});
 
-	// Wait for top-up + DB sync
 	await timeout(AUTO_TOPUP_WAIT_MS);
 
-	// Verify cached balance (from Redis)
 	const cached = await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
 	const expectedBalance = new Decimal(100).sub(85).add(100).toNumber();
 	expectBalanceCorrect({
@@ -385,10 +357,8 @@ test.concurrent(`${chalk.yellowBright("auto-topup basic: cache and DB agree afte
 		latestInvoiceProductId: oneOffProd.id,
 	});
 
-	// Wait additional time for DB sync to settle
 	await timeout(3000);
 
-	// Verify DB balance (skip cache)
 	const fromDb = await autumnV2_1.customers.get<ApiCustomerV5>(customerId, {
 		skip_cache: "true",
 	});

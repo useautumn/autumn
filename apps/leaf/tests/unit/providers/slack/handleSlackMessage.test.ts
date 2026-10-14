@@ -215,11 +215,9 @@ describe("handleSubscribedSlackMessage", () => {
 			messages: [{ author: "U1", isBot: false, text: "make it annual" }],
 			omittedCount: 0,
 		});
-		// The missed-message lookup reuses the history the run already loaded.
 		await lastDispatchInput().recentMessages();
 		expect(getRecentMessages).toHaveBeenCalledTimes(1);
 
-		// Once the turn has run with them, the next mention starts clean.
 		await lastDispatchInput().onMissedMessagesDelivered();
 		await handleSubscribedSlackMessage(thread, tagged);
 		expect(await lastDispatchInput().missedMessages()).toBeUndefined();
@@ -250,8 +248,6 @@ describe("handleSubscribedSlackMessage", () => {
 	});
 
 	test("a tag of another workspace's copy of the agent still hands over earlier files", async () => {
-		// Slack Connect: the message arrives through this workspace's
-		// installation but tags the bot the other workspace sees.
 		mentionsAgentResult = false;
 		tagsAnyAgentResult = true;
 		const contract = {
@@ -578,8 +574,6 @@ describe("handleEditedSlackMessage", () => {
 });
 
 describe("messageTagsAnyAgent", () => {
-	// The bot users of every installation, e.g. ours and a customer's copy of
-	// the app in a shared Slack Connect channel.
 	const storedBotUserIds = new Set(["U0B796GJARM", "U0BAS3B3G6N"]);
 	const isAgentBot = async ({ userIds }: { userIds: ReadonlyArray<string> }) =>
 		userIds.some((userId) => storedBotUserIds.has(userId));

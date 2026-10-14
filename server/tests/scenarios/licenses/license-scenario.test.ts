@@ -5,15 +5,6 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-/**
- * Customer "license-scenario" for dashboard testing of license pools and
- * assignments:
- *
- *   pro parent plan with two linked licenses:
- *     seat-license  (included: 3) → assigned to entity 0 and 1, 1 seat free
- *     admin-license (included: 1) → assigned to entity 0, pool exhausted
- *   3 entities, so entity 2 has no assignments.
- */
 test(`${chalk.yellowBright("scenario: customer with license pools + assignments")}`, async () => {
 	const parent = products.pro({
 		id: "license-parent",

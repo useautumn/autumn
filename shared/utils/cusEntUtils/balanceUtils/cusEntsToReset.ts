@@ -32,10 +32,8 @@ export const cusEntsToReset = ({
 
 	const feature = cusEnts[0].entitlement.feature;
 
-	// 1. If feature is allocated, null
 	if (isContUseFeature({ feature })) return null;
 
-	// Check if there are multiple intervals
 	const uniqueIntervals = [
 		...new Set(cusEnts.map((cusEnt) => cusEnt.entitlement.interval)),
 	];
@@ -44,7 +42,6 @@ export const cusEntsToReset = ({
 		return { interval: "multiple", interval_count: undefined, resets_at: null };
 	}
 
-	// 3. Only 1 interval
 	return {
 		interval: entIntvToResetIntv({
 			entInterval: cusEnts[0].entitlement.interval,

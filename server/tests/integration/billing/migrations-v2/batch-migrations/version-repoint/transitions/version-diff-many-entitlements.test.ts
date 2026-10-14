@@ -1,8 +1,3 @@
-/**
- * One version-only diff carrying five kinds of change at once: two
- * allowance-replaced items, one added, one removed, two identical-repointed.
- * Every row must land in a single pass.
- */
 import { expect, test } from "bun:test";
 import { ResetInterval } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features";
@@ -12,7 +7,6 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-// version-only is per-customer until definition execute is restored
 import { readScopedFeatureRow } from "../../paidRowTestUtils";
 import {
 	expectVersionRepointedOnce,
@@ -51,8 +45,6 @@ test.skip(
 				s.track({ featureId: TestFeature.Words, value: 10, timeout: 2_000 }),
 			],
 		});
-		// v2: Messages/Words replaced, Credits/Dashboard identical,
-		// Storage removed, Action2 added.
 		await mintPlanVersion({
 			client: autumnV2_3,
 			planId: plan.id,
@@ -109,7 +101,6 @@ test.skip(
 			result,
 		});
 
-		// Replaced rows: new allowance minus the usage already consumed.
 		expect(
 			(
 				await readScopedFeatureRow({
@@ -129,7 +120,6 @@ test.skip(
 			).balance,
 		).toBe(70);
 
-		// Identical rows: claims move to the target's rows, state untouched.
 		const creditsAfter = await readScopedFeatureRow({
 			ctx,
 			customerId,
@@ -148,7 +138,6 @@ test.skip(
 			dashboardBefore.entitlement_id,
 		);
 
-		// Removed feature is gone; added feature exists with a full allowance.
 		await expect(
 			readScopedFeatureRow({
 				ctx,

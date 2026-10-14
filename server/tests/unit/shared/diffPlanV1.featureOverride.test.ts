@@ -1,20 +1,3 @@
-/**
- * A plan item's rate-card override is part of its identity for diffing.
- *
- * Red (current):  itemsEqual ignores feature_override and toCreatePlanItemParams
- *                 drops it, so a customer customization that only changes the
- *                 rate card diffs to "no change" and never reaches the server.
- * Green (after):  overrides compare field by field and travel on add_items.
- *
- * Contract:
- *   O1 itemsEqual: same item, different override credit_cost → not equal
- *   O2 itemsEqual: override present vs absent → not equal
- *   O3 itemsEqual: identical overrides with dimension keys reordered → equal
- *   O4 diffPlanV1: adding an override emits add_items carrying it (+ remove filter)
- *   O5 diffPlanV1: unchanged override → empty diff
- *   O6 applyDiff: applying that diff yields an item carrying the override
- */
-
 import { expect, test } from "bun:test";
 import {
 	type ApiFeatureOverride,

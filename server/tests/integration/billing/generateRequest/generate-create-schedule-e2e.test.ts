@@ -1,9 +1,3 @@
-/**
- * End-to-end coverage for editing a persisted schedule through billing.generate.
- * The generated request must preview, execute, and persist the requested version
- * while preserving every untouched phase and the targeted phase's custom price.
- */
-
 import { expect, test } from "bun:test";
 import {
 	BillingInterval,
@@ -37,7 +31,6 @@ import { resetCatalogPlans } from "../../../scenarios/catalog/utils/catalogScena
 const GENERATE_PATH = "/agent.generate_billing_request";
 const planId = "generate-schedule-e2e-plan";
 
-/** Generation returns the set_plans request the dashboard submits, so it applies through set_plans. */
 const generatedRequestToApi = ({
 	ctx,
 	request,
@@ -199,7 +192,6 @@ test(`${chalk.yellowBright("billing.generate schedule: generated edit previews, 
 	expect(generatedPhases.map(({ plans }) => plans[0]?.version)).toEqual(
 		phaseTerms.map(({ version }) => version),
 	);
-	// The request's top-level billing_cycle_anchor 'now' is the first phase's 'phase_start' in set_plans.
 	expect(
 		generatedPhases.map(({ billing_cycle_anchor }) => billing_cycle_anchor),
 	).toEqual(["phase_start", "phase_start", undefined, "phase_start"]);

@@ -1,8 +1,3 @@
-/**
- * Resetting the cycle now restarts every plan on the subscription, so plans the request keeps are
- * billed like changed ones: unused time credited, a full new period charged, balances re-anchored.
- */
-
 import { expect, test } from "bun:test";
 import type {
 	ApiCustomerV3,
@@ -90,7 +85,6 @@ test.concurrent(
 			phases: [resetNowPhase({ planIds: [pro.id], prorationBehavior: "none" })],
 		};
 
-		// Stripe keeps an unchanged item through a reset under none: no new-period charge, no credit.
 		const preview = await autumnV2_4.billing.previewSetPlans(params);
 		expect(preview.total).toBe(0);
 		expectPreviewNextCycleCorrect({
@@ -331,7 +325,6 @@ test.concurrent(
 
 		await autumnV2_4.billing.setPlans(params);
 
-		// Stripe closes the metered item's period with its own $0 invoice; the usage is billed once, by Autumn.
 		await expectCustomerInvoiceCorrect({ customerId, count: 3 });
 		const { invoices } =
 			await autumnV1.customers.get<ApiCustomerV3>(customerId);
@@ -381,7 +374,6 @@ test.concurrent(
 			});
 
 		const renewalAt = addMonths(advancedTo, 1).getTime();
-		// Stripe re-bills entity 2's unchanged plan too when the shared cycle resets now.
 		const expectedTotal = await previewStripeTwinResetNowTotal({
 			ctx,
 			customerId,
@@ -499,7 +491,6 @@ test.concurrent(
 			phases: [resetNowPhase({ planIds: [pro.id] })],
 		};
 
-		// Stripe still bills the extension to the new period end and moves the cancel there.
 		const expectedTotal = await calculateResetBillingCycleNowTotal({
 			customerId,
 			advancedTo,

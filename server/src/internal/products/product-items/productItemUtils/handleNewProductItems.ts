@@ -36,8 +36,6 @@ const updateDbPricesAndEnts = async ({
 	deletedPrices: Price[];
 	deletedEnts: Entitlement[];
 }) => {
-	// 1. Create new ents
-
 	await Promise.all([
 		EntitlementService.insert({
 			db,
@@ -49,7 +47,6 @@ const updateDbPricesAndEnts = async ({
 		}),
 	]);
 
-	// 2. Create new prices
 	await Promise.all([
 		PriceService.insert({
 			db,
@@ -144,7 +141,6 @@ export const handleNewProductItems = async ({
 	saveToDb?: boolean;
 	multiCurrencyEnabled: boolean;
 }) => {
-	// Create features if not exist...
 	if (!newItems) {
 		return {
 			prices: [],
@@ -157,15 +153,12 @@ export const handleNewProductItems = async ({
 
 	newItems = supersedeUnlimitedItems({ items: newItems });
 
-	// Validate product items...
 	const { allFeatures, newFeatures } = validateProductItems({
 		newItems,
 		features,
 		orgId: product.org_id!,
 		env: product.env as AppEnv,
 		multiCurrencyEnabled,
-		// A custom plan's items are round-tripped from a persisted plan, so they
-		// no longer answer for authoring-time rules.
 		validateAuthoringRules: !isCustom,
 	});
 
@@ -178,7 +171,6 @@ export const handleNewProductItems = async ({
 	const updatedEnts: Entitlement[] = [];
 
 	const deletedPrices: Price[] = curPrices.filter((price) => {
-		// Check if this price matches any new item (by ID or feature+interval)
 		const item = newItems.find((item) => item.price_id === price.id);
 		if (!item) {
 			return true;
@@ -200,7 +192,6 @@ export const handleNewProductItems = async ({
 		const curEnt = curEnts.find((ent) => ent.id === item.entitlement_id);
 		const curPrice = curPrices.find((price) => price.id === item.price_id);
 
-		// 3. Update price and entitlement?
 		const { newPrice, newEnt, updatedPrice, updatedEnt, samePrice, sameEnt } =
 			itemToPriceAndEnt({
 				item,
@@ -257,7 +248,6 @@ export const handleNewProductItems = async ({
 		logPrices({ prices: samePrices, prefix: "Same prices" });
 		logEnts({ ents: sameEnts, prefix: "Same entitlements" });
 	}
-	// throw new Error("test");
 
 	if (newFeatures.length > 0 && saveToDb) {
 		await FeatureService.insert({

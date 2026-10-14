@@ -5,7 +5,6 @@ import { mcpAnnotations } from "./annotations.js";
 import { callAutumn } from "./client.js";
 import type { LocalPreviewToolConfig, OperationToolConfig } from "./types.js";
 
-/** Reads the `request` payload out of a tool input without casting. */
 const getRequest = (input: unknown): unknown =>
 	input && typeof input === "object" && "request" in input
 		? input.request
@@ -14,8 +13,6 @@ const getRequest = (input: unknown): unknown =>
 const signalOf = (context: { mcp?: { extra?: { signal?: AbortSignal } } }) =>
 	context?.mcp?.extra?.signal;
 
-/** The request schemas do not declare `expand` (or a tool's fixed fields), so
- * they are merged after parsing rather than offered to the caller as inputs. */
 const withFixedFields = ({
 	expand,
 	fixedFields,
@@ -34,13 +31,11 @@ const withFixedFields = ({
 	};
 };
 
-/** Builds a `{ id: tool }` record from a list of configs. */
 export const toTools = <Config extends { id: string }>(
 	configs: Config[],
 	create: (config: Config) => ReturnType<typeof createTool>,
 ) => Object.fromEntries(configs.map((config) => [config.id, create(config)]));
 
-/** Calls an Autumn endpoint directly with the parsed request. */
 export const operationTool = ({
 	id,
 	description,
@@ -74,7 +69,6 @@ export const operationTool = ({
 		},
 	});
 
-/** Raw variant of a local preview: just returns the computed preview. */
 export const rawLocalPreviewTool = ({
 	id,
 	description,

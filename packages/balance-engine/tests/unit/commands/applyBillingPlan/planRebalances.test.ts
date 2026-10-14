@@ -38,7 +38,6 @@ const messagesRow = ({
 	usage_allowed: usageAllowed,
 });
 
-/** A customer row in overage, and an entity plan with its own row in overage and the purchased row. */
 const planState = () => {
 	const customer = createState({
 		customerEntitlements: [
@@ -98,7 +97,6 @@ const rebalancePlan = ({
 	expiringPooledBalanceIds: [],
 });
 
-/** Each entitlement increment's balance move, by row id; a mutation's changes are read-only and mixed. */
 const balanceIncrementsOf = (changes: readonly RowChange[]) =>
 	Object.fromEntries(
 		changes.flatMap((change) =>

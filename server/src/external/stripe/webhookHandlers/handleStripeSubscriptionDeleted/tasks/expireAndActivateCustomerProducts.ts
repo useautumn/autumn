@@ -19,7 +19,6 @@ import {
 } from "../../common";
 import type { StripeSubscriptionDeletedContext } from "../setupStripeSubscriptionDeletedContext";
 
-/** Expires live products, then activates or removes their scheduled successors. */
 export const expireAndActivateCustomerProducts = async ({
 	ctx,
 	eventContext,
@@ -48,7 +47,6 @@ export const expireAndActivateCustomerProducts = async ({
 		})),
 	});
 	for (const customerProduct of liveCustomerProducts) {
-		// 1. If not on stripe subscription, skip
 		const onStripeSubscription = isCustomerProductOnStripeSubscription({
 			customerProduct,
 			stripeSubscriptionId: stripeSubscription.id,
@@ -56,7 +54,6 @@ export const expireAndActivateCustomerProducts = async ({
 
 		if (!onStripeSubscription) continue;
 
-		// 2. Expire and activate free successor (with tracking)
 		const { activation, insertedCustomerProduct } =
 			await expireAndActivateWithTracking({
 				ctx,
@@ -72,7 +69,6 @@ export const expireAndActivateCustomerProducts = async ({
 			incomingCustomerProducts.push(insertedCustomerProduct);
 		}
 
-		// 3. Delete paid scheduled customer product for this group if it exists...
 		const scheduledCustomerProduct = findMainScheduledCustomerProductByGroup({
 			fullCustomer,
 			productGroup: customerProduct.product.group,
@@ -104,7 +100,6 @@ export const expireAndActivateCustomerProducts = async ({
 		now: eventContext.nowMs,
 	});
 
-	// Pools moved after the plans re-fit, so shares re-fit against the final pot; the batch event carries the tag.
 	const { adjusted } = await refreshAllocationScaleAfterWrite({
 		ctx,
 		customerId: fullCustomer.id || fullCustomer.internal_id,

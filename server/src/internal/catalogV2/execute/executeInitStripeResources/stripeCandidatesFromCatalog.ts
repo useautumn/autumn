@@ -16,10 +16,6 @@ const nestedProductsOf = ({
 	),
 ];
 
-/**
- * Live catalog keyed by internal_id. Top-level rows win so nextFullProduct
- * (mutated as Stripe ids land) beats nested listFull snapshots.
- */
 export const catalogProductsByInternalId = ({
 	products,
 }: {
@@ -57,7 +53,6 @@ const isInStripeFamily = ({
 	product.internal_id === familyBaseId ||
 	product.base_internal_product_id === familyBaseId;
 
-/** Base row + its variants, excluding `product` itself. */
 export const stripeCandidatesFromCatalog = ({
 	product,
 	catalogByInternalId,

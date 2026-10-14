@@ -22,8 +22,6 @@ const toBytes = (value: string | number | null): number | null => {
 export const replicationSlotProbe: DbProbe = {
 	name: "db_replication_slots",
 	run: async ({ db }) => {
-		// LEFT JOIN so a primary with zero slots still returns a row: "the slots
-		// vanished" and "we never reached the server" must not look identical.
 		const rows = await db.execute<SlotRow>(sql`
 			SELECT
 				recovery.in_recovery,

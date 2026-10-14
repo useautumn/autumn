@@ -1,11 +1,6 @@
 import { expect, test } from "bun:test";
 import { createRequire } from "node:module";
 
-// kafkajs 2.2.4 sends FindCoordinator before every AddPartitionsToTxn,
-// AddOffsetsToTxn and EndTxn, so a one-send transaction was five broker round
-// trips instead of three. Patched in patches/kafkajs@2.2.4.patch to keep the
-// coordinator until a request to it fails for a reason other than
-// CONCURRENT_TRANSACTIONS.
 const require = createRequire(import.meta.resolve("kafkajs"));
 const createEosManager = require("./src/producer/eosManager/index.js");
 

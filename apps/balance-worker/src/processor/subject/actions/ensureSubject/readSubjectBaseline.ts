@@ -29,7 +29,6 @@ export const subjectEnvelopeToState = ({
 		entity: envelope.entity,
 	});
 
-/** The subject's own rows as Postgres holds them at `occurredAt`. Nothing becomes resident here. */
 export const readSubjectBaseline = async ({
 	scope,
 	identity,

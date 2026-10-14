@@ -12,8 +12,6 @@ import {
 	proPlanSpec,
 } from "./proGrowthSetup.ts";
 
-/** Withheld: the features (messages + SSO). Prices are given. Passing = ask
- * what the plans include before writing, then land the config. */
 export const missingFeatures = defineCase({
 	name: "basics-pro-growth-missing-features",
 	prompt:

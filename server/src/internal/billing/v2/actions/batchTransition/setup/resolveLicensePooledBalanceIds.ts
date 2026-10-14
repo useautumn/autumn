@@ -15,8 +15,6 @@ const isPooledAddOperation = (
 ): operation is PooledAddOperation =>
 	operation.type === "add" && operation.pooledAdd !== undefined;
 
-/** Stamps each pooled add with its license pool. Billing creates pools before
- * seats move, so the batch only looks them up — it never writes one. */
 export const resolveLicensePooledBalanceIds = async ({
 	ctx,
 	operations,
@@ -36,8 +34,6 @@ export const resolveLicensePooledBalanceIds = async ({
 			now,
 		});
 
-		// No exact pool: the license no longer grants this item (a newer plan
-		// change won), so skip the stale add rather than attach to the wrong pool.
 		if (!match?.isExactMatch) {
 			ctx.logger.warn(
 				"[batchTransition] skipping stale pooled seat addition — no exact license pool",

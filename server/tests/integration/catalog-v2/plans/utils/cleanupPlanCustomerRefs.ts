@@ -2,7 +2,6 @@ import { customerProducts, customers } from "@autumn/shared";
 import { eq } from "drizzle-orm";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 
-/** Delete every customer (and their cusProduct rows) attached to these plans. */
 export const cleanupPlanCustomerRefs = async ({
 	ctx,
 	planIds,

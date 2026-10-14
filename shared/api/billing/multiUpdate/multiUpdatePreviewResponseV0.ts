@@ -8,7 +8,6 @@ const planIdsField = z.array(z.string()).meta({
 	description: "The IDs of the plans updated on this subscription.",
 });
 
-/** The core billing preview, scoped to ONE Stripe subscription group. */
 export const MultiUpdateSubscriptionPreviewV0Schema =
 	BillingPreviewResponseSchema.extend({
 		plan_ids: planIdsField,

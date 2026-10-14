@@ -3,8 +3,6 @@ import { isFeaturePriceMatch } from "@/internal/billing/v2/providers/stripe/util
 import type { StripeItemSnapshot } from "@/internal/billing/v2/providers/stripe/utils/sync/stripeItemSnapshot/types";
 import type { ItemDiff } from "../types";
 
-/** The plan's instance count. Prepaid quantities are pack counts and
- * license-seat quantities are pool sizes — neither drives it. */
 export const derivePlanQuantity = ({
 	baseStripeItem,
 	diffs,

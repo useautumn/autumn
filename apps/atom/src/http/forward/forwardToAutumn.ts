@@ -4,16 +4,10 @@ import { ATOM_TOKEN_HEADER } from "../middlewares/atomTokenMiddleware.js";
 import type { AtomHttpContext, AtomHttpEnv } from "../types/atomHttp.js";
 import { forwardRequest } from "./forwardRequest.js";
 
-/** Long enough for the API's own slowest check; past it the caller gets an error, not a hung request. */
 const FORWARD_TIMEOUT_MS = 30_000;
 
-/** Tells a caller, and a test, that the API answered and why. */
 const FORWARDED_HEADER = "x-atom-forwarded";
 
-/**
- * Sends the caller's request to the Autumn API as it arrived and hands back the API's reply unchanged:
- * status, body and errors alike. Only an API that cannot be reached is answered by Atom.
- */
 export const forwardToAutumn = async ({
 	ctx,
 	context,
@@ -25,7 +19,6 @@ export const forwardToAutumn = async ({
 }): Promise<Response> => {
 	const { pathname, search } = new URL(context.req.url);
 	const target = `${ctx.autumnApiUrl}${pathname}${search}`;
-	// The API can only refuse a keyless request: the server's shadow checks send none, by design.
 	if (!context.req.header("authorization"))
 		return context.json(
 			{
@@ -39,7 +32,6 @@ export const forwardToAutumn = async ({
 		return await forwardRequest({
 			context,
 			target,
-			// The Atom token is Atom's alone and never travels on.
 			heldBack: [ATOM_TOKEN_HEADER],
 			replyHeaders: { [FORWARDED_HEADER]: reason },
 			timeoutMs: FORWARD_TIMEOUT_MS,

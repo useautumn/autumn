@@ -1,11 +1,6 @@
 import { afterEach, expect, setSystemTime, test } from "bun:test";
 import { createRequire } from "node:module";
 
-// MSK periodically forgets a connection's authenticated session and refuses
-// everything on it as unauthorized until kafkajs re-authenticates on its own
-// timer, up to 290s later. Patched in patches/kafkajs@2.2.4.patch to
-// re-authenticate the moment a broker refuses a session, and to send the
-// refused request once more on the new one.
 const require = createRequire(import.meta.resolve("kafkajs"));
 const Connection = require("./src/network/connection.js");
 const Encoder = require("./src/protocol/encoder.js");

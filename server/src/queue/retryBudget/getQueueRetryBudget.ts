@@ -2,7 +2,6 @@ import { GetQueueAttributesCommand, type SQSClient } from "@aws-sdk/client-sqs";
 import { logger } from "@/external/logtail/logtailUtils.js";
 import type { RetryBudget } from "./types/retryBudget.js";
 
-/** Read from the live queue, not a constant: prod queues differ (10, 5, none) and infra can change. */
 export const getQueueRetryBudget = async ({
 	sqs,
 	queueUrl,

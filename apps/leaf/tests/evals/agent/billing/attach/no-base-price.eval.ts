@@ -18,8 +18,6 @@ type EvalMetadata = {
 const experimentName = "attach-no-base-price";
 const annualPrice = 36_000;
 
-// Enterprise has no base price. The agent must ask for commercial terms before
-// previewing rather than inventing a price (or attaching at $0).
 const setup = withCustomers({
 	setup: orgSetups.knowledgePlatform(),
 	customers: ({ customers }) => ({
@@ -81,7 +79,6 @@ initEval<EvalMetadata>({
 				approve(),
 			],
 			expect: [
-				// Enterprise carries no base price; the agent must ask before previewing.
 				response.askedBeforeTool({
 					phrases: ["price"],
 					toolName: "previewAttach",

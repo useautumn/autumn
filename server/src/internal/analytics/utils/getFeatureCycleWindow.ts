@@ -43,8 +43,6 @@ const customerEntitlementToCycleWindow = ({
 	};
 };
 
-/** Current reset cycle of the shortest-cadence entitlement funding any of the
- * features, so mixed-interval subscriptions resolve to the charted feature's cycle. */
 export const getFeatureCycleWindow = ({
 	customerProducts,
 	featureIds,

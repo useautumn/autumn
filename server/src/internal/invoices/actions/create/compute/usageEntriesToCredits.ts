@@ -16,11 +16,6 @@ const stableKey = (entry: InvoiceUsageEntry) =>
 		),
 	)}`;
 
-/**
- * Converts billable source-feature units into credits through the credit
- * system's rate card. Entries sharing a feature and properties are summed first
- * so graduated credit tiers run once over the batch, from zero.
- */
 export const usageEntriesToCredits = ({
 	creditSystem,
 	entries,

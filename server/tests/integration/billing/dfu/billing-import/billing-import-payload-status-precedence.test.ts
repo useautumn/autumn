@@ -1,14 +1,3 @@
-/**
- * dfu.flash — payload status precedence: an explicit payload status wins over the
- * hydrated Stripe status. Fully e2e (real sub, real cancel, real flash).
- *
- * We assert the flash RESPONSE (`flashed[].status`) — the resolver's decision
- * returned by the endpoint at compute time. The post-flash DB status is NOT
- * asserted here: canceling a linked sub fires a customer.subscription.deleted
- * webhook that legitimately reconciles the cusProduct to expired, which is
- * inherent live-reconciliation racing the read, not a flash bug.
- */
-
 import { expect, test } from "bun:test";
 import { createStripeSubscriptionFromProduct } from "@tests/integration/billing/sync/utils/syncTestUtils.js";
 import {
@@ -43,7 +32,6 @@ test.concurrent(
 			customerId,
 			productId: pro.id,
 		});
-		// Fully cancel: hydrated status would be Expired.
 		await ctx.stripeCli.subscriptions.cancel(sub.id);
 
 		const payload = {
@@ -65,7 +53,6 @@ test.concurrent(
 
 		const flashRes = await callFlash(autumnV2_2 as FlashClient, payload);
 
-		// Payload said active -> resolver reports active, despite hydrated Expired.
 		const flashed = flashRes.result?.flashed?.find((f) => f.plan_id === pro.id);
 		expect(flashed?.status).toBe("active");
 	},

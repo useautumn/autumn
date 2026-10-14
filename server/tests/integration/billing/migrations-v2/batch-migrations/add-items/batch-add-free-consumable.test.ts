@@ -1,29 +1,3 @@
-/**
- * TDD test for batch migrations admitting consumable metered add_items with
- * per-customer reset cycle anchors (the anchor ladder).
- *
- * Contract under test:
- *   New types/fields:
- *     - MigrationChunkRunResult.lane: "batch" | "per_customer" — run result
- *       reports the executed lane; eligible metered adds take "batch".
- *   New behaviors:
- *     - Pro plan (paid recurring, no metered siblings): each new cusEnt's
- *       reset_cycle_anchor === its cusProduct's billing_cycle_anchor, exactly —
- *       including a customer attached mid-cycle under an advanced test clock
- *       (anchors genuinely differ across customers).
- *     - Free plan: reset_cycle_anchor === cusProduct.starts_at.
- *     - Sibling with the SAME reset interval already on the plan: the new
- *       cusEnt's (reset_cycle_anchor, next_reset_at) equal the sibling's.
- *     - In all cases next_reset_at === getCycleEnd(anchor, interval, now) —
- *       the same primitive the per-customer lane uses.
- *   Side effects:
- *     - customer_entitlements rows inserted per customer with granted balance.
- *
- * Pre-impl red: compute rejects resetting adds (resetting_entitlement_add) →
- * runs fall back to lane "per_customer". Post-impl green: rejection lifted,
- * lane reported, anchors resolved by the ladder.
- */
-
 import { expect, test } from "bun:test";
 import { EntInterval, getCycleEnd } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features";
@@ -66,8 +40,6 @@ test.concurrent(
 					s.billing.attach({ productId: pro.id }),
 					s.billing.attach({ customerId: secondId, productId: pro.id }),
 				),
-				// The third customer attaches 10 days into the shared test clock —
-				// their billing anchor genuinely differs from the first two.
 				s.advanceTestClock({ days: 10, waitForSeconds: 30 }),
 				s.billing.attach({ customerId: midCycleId, productId: pro.id }),
 			],
@@ -93,10 +65,8 @@ test.concurrent(
 			noBillingChanges: true,
 		});
 
-		// ── Contract: eligible metered add takes the batch lane ──────────
 		expect(result?.lane).toBe("batch");
 
-		// ── Contract: anchor === cp.billing_cycle_anchor, per customer ───
 		const cycles = new Map<string, { resetCycleAnchor: number | null }>();
 		for (const customerId of [firstId, secondId, midCycleId]) {
 			const cycle = await getCustomerEntitlementCycle({
@@ -113,7 +83,6 @@ test.concurrent(
 			cycles.set(customerId, cycle);
 		}
 
-		// ── Contract: the mid-cycle customer's anchor differs ────────────
 		const firstAnchor = cycles.get(firstId)?.resetCycleAnchor as number;
 		const midCycleAnchor = cycles.get(midCycleId)?.resetCycleAnchor as number;
 		expect(midCycleAnchor).toBeGreaterThan(firstAnchor);
@@ -162,7 +131,6 @@ test.concurrent(
 			noBillingChanges: true,
 		});
 
-		// ── Contract: batch lane + anchor === cp.starts_at per customer ──
 		expect(result?.lane).toBe("batch");
 		for (const customerId of [firstId, secondId]) {
 			const cycle = await getCustomerEntitlementCycle({
@@ -224,7 +192,6 @@ test.concurrent(
 			noBillingChanges: true,
 		});
 
-		// ── Contract: batch lane + new cusEnt inherits the sibling cycle ─
 		expect(result?.lane).toBe("batch");
 		for (const customerId of [firstId, secondId]) {
 			const sibling = await getCustomerEntitlementCycle({

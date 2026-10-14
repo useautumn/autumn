@@ -1,17 +1,3 @@
-/**
- * `$startsWith` and `$regex` are part of StringMatcherSchema, so the API
- * accepts and persists filters using them, but the compiler never lowered
- * them. A migration saved with either operator stored cleanly and then threw
- * `No supported operator found` on every preview, run and count.
- *
- * `$startsWith` lowers to a half-open range rather than LIKE: under a
- * non-C collation LIKE cannot use a btree index, so on millions of rows it
- * degrades to a sequential scan, while the range uses the existing index.
- *
- * Red (current):  compiling such a filter throws.
- * Green (after):  startsWith becomes >= prefix AND < successor, regex uses ~.
- */
-
 import { expect, test } from "bun:test";
 import { compileFilter } from "@autumn/shared/api/migrations/compiler/compileFilter.js";
 import { contexts } from "@tests/utils/fixtures/db/contexts";
@@ -35,8 +21,6 @@ test("customer_id $startsWith compiles to an index-usable range", () => {
 });
 
 test("the range seeks in the index collation and rechecks byte order", () => {
-	// Under en_US, 'a-bz' and 'aB' sort inside ['ab','ac') but lack the prefix,
-	// so the index-usable bounds are narrowed by a C-collated recheck.
 	const result = compile({ customer_id: { $startsWith: "ab" } });
 	expect(result.sql).toContain("c.id >= ?");
 	expect(result.sql).toContain("c.id < ?");

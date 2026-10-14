@@ -20,13 +20,11 @@ export const ApiPlanV0Schema = z.object({
 	add_on: z.boolean(),
 	default: z.boolean(),
 
-	// Change
 	price: BasePriceSchema.nullable(),
 
 	features: z.array(ApiPlanItemV0Schema),
 	free_trial: ApiFreeTrialV2Schema.nullable().optional(),
 
-	// Misc
 	created_at: z.number(),
 	env: z.enum(AppEnv),
 	archived: z.boolean(),

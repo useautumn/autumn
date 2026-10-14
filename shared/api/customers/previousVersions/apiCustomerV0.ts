@@ -5,25 +5,7 @@ import { AppEnv } from "@models/genModels/genEnums";
 import { z } from "zod/v4";
 import { ApiTrialsUsedV0Schema } from "../components/apiTrialsUsed/prevVersions/apiTrialsUsedV0";
 
-/**
- * ApiCustomerV0Schema - Customer response format for API V0_1
- *
- * Structure: Split into separate objects
- * - customer: Core customer fields
- * - products: Array of non-add-on products
- * - add_ons: Array of add-on products
- * - entitlements: Array of customer features (V0 format - minimal fields)
- * - invoices: Array of customer invoices
- *
- * Key differences from V1:
- * - Features (entitlements) use V0 format with minimal fields (no next_reset_at, allowance, usage_limit)
- * - Products don't have items or period tracking (same as V1)
- * - Invoices always included (no expand parameter)
- */
-
-// Core customer object (without products/features/invoices)
 const ApiCustomerV0CoreSchema = z.object({
-	// Internal fields
 	id: z.string().nullable(),
 	name: z.string().default(""),
 	email: z.string().default(""),
@@ -41,7 +23,6 @@ const ApiCustomerV0CoreSchema = z.object({
 	metadata: z.record(z.any(), z.any()).default({}),
 });
 
-// Split response structure
 export const ApiCustomerV0Schema = z.object({
 	customer: ApiCustomerV0CoreSchema,
 	products: z.array(ApiCusProductV0Schema),

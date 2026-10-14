@@ -1,15 +1,3 @@
-/**
- * Free Trial Conversion Tests (Attach V2)
- *
- * Tests for trial end/conversion behaviors.
- *
- * Key behaviors:
- * - Trial end triggers first charge
- * - Billing cycle starts from trial end
- * - Features continue after conversion
- * - Arrears usage billed at trial end
- */
-
 import { expect, test } from "bun:test";
 import { type ApiCustomerV3, ms } from "@autumn/shared";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
@@ -25,20 +13,6 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { addMonths } from "date-fns";
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 1: Trial ends naturally - first charge
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Customer has proWithTrial (7-day trial)
- * - Advance past trial end
- *
- * Expected Result:
- * - Product converts to active (not trialing)
- * - First charge of $20
- * - Features continue working
- */
 test.concurrent(`${chalk.yellowBright("trial-conversion 1: trial ends naturally - first charge")}`, async () => {
 	const customerId = "trial-conv-natural-end";
 
@@ -58,13 +32,12 @@ test.concurrent(`${chalk.yellowBright("trial-conversion 1: trial ends naturally 
 		],
 		actions: [
 			s.billing.attach({ productId: proTrial.id }),
-			s.advanceTestClock({ toNextInvoice: true }), // Advance past trial
+			s.advanceTestClock({ toNextInvoice: true }),
 		],
 	});
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Verify product is active and NOT trialing
 	await expectProductActive({
 		customer,
 		productId: proTrial.id,
@@ -76,24 +49,21 @@ test.concurrent(`${chalk.yellowBright("trial-conversion 1: trial ends naturally 
 		nowMs: advancedTo,
 	});
 
-	// Verify first charge invoice
 	await expectCustomerInvoiceCorrect({
 		customer,
 		count: 2,
-		latestTotal: 20, // Pro base price
+		latestTotal: 20,
 		latestInvoiceProductId: proTrial.id,
 	});
 
-	// Verify features still available with resetsAt aligned to monthly billing cycle
 	expectCustomerFeatureCorrect({
 		customer,
 		featureId: TestFeature.Messages,
 		includedUsage: 500,
-		balance: 500, // Reset after trial end
+		balance: 500,
 		usage: 0,
 	});
 
-	// Verify Stripe subscription state
 	await expectSubToBeCorrect({
 		db: ctx.db,
 		customerId,
@@ -103,18 +73,6 @@ test.concurrent(`${chalk.yellowBright("trial-conversion 1: trial ends naturally 
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 4: Trial ends with add-on - both products charged
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Customer has proWithTrial (trialing) + add-on (inheriting trial)
- * - Trial ends
- *
- * Expected Result:
- * - Both products charged: pro ($20) + add-on ($20) = $40
- */
 test.concurrent(`${chalk.yellowBright("trial-conversion 4: trial ends with add-on - both charged")}`, async () => {
 	const customerId = "trial-conv-with-addon";
 
@@ -173,7 +131,6 @@ test.concurrent(`${chalk.yellowBright("trial-conversion 4: trial ends with add-o
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Verify both products are NOT trialing
 	await expectProductNotTrialing({
 		customer,
 		productId: proTrial.id,
@@ -186,14 +143,12 @@ test.concurrent(`${chalk.yellowBright("trial-conversion 4: trial ends with add-o
 		nowMs: advancedTo,
 	});
 
-	// Verify first charge includes both products
 	await expectCustomerInvoiceCorrect({
 		customer,
 		count: 3,
-		latestTotal: 40, // Pro ($20) + Add-on ($20)
+		latestTotal: 40,
 	});
 
-	// Verify Stripe subscription state
 	await expectSubToBeCorrect({
 		db: ctx.db,
 		customerId,
@@ -203,20 +158,6 @@ test.concurrent(`${chalk.yellowBright("trial-conversion 4: trial ends with add-o
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 5: Scheduled downgrade activates after trial ends
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Customer has premiumWithTrial (trialing)
- * - Downgrade to pro (scheduled for trial end)
- * - Trial ends
- *
- * Expected Result:
- * - Pro becomes active (not premium)
- * - Pro price charged ($20, not $50)
- */
 test.concurrent(`${chalk.yellowBright("trial-conversion 5: scheduled downgrade activates after trial")}`, async () => {
 	const customerId = "trial-conv-scheduled-downgrade";
 
@@ -242,39 +183,34 @@ test.concurrent(`${chalk.yellowBright("trial-conversion 5: scheduled downgrade a
 		],
 		actions: [
 			s.billing.attach({ productId: premiumTrial.id }),
-			s.billing.attach({ productId: pro.id }), // Downgrade - scheduled
+			s.billing.attach({ productId: pro.id }),
 			s.advanceTestClock({ toNextInvoice: true }),
 		],
 	});
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Verify pro is active (not premium)
 	await expectProductActive({
 		customer,
 		productId: pro.id,
 	});
 
-	// Verify premium is no longer present
 	const hasPremium = customer.products.some((p) => p.id === premiumTrial.id);
 	expect(hasPremium).toBe(false);
 
-	// Verify pro is NOT trialing
 	await expectProductNotTrialing({
 		customer,
 		productId: pro.id,
 		nowMs: advancedTo,
 	});
 
-	// Verify pro price charged (not premium)
 	await expectCustomerInvoiceCorrect({
 		customer,
 		count: 2,
-		latestTotal: 20, // Pro price, not premium
+		latestTotal: 20,
 		latestInvoiceProductId: pro.id,
 	});
 
-	// Verify feature balance is pro's balance with resetsAt aligned to monthly billing cycle
 	expectCustomerFeatureCorrect({
 		customer,
 		featureId: TestFeature.Messages,
@@ -285,7 +221,6 @@ test.concurrent(`${chalk.yellowBright("trial-conversion 5: scheduled downgrade a
 		toleranceMs: ms.hours(1) + ms.minutes(10),
 	});
 
-	// Verify Stripe subscription state
 	await expectSubToBeCorrect({
 		db: ctx.db,
 		customerId,

@@ -1,4 +1,3 @@
-/** Verifies built-CLI constant IDs and separate reset/billing intervals. */
 import { expect, test } from "bun:test";
 import { readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";

@@ -1,6 +1,3 @@
-// Svix files run on a separate pool with an application per worker.
-// Normal workers never receive Svix credentials or application bindings.
-
 import { AppEnv } from "@autumn/shared";
 import {
 	createSvixApp as serverCreateSvixApp,
@@ -10,11 +7,9 @@ import { createSvixCli } from "@server/external/svix/svixUtils.js";
 import { TEST_ORG_CONFIG } from "../../setupTestUtils/createTestOrg.ts";
 import { detectCapabilities } from "./testCapabilities.ts";
 
-/** Whether a test file belongs on the Svix shard; detection lives in the capability registry. */
 export const needsSvix = async (file: string): Promise<boolean> =>
 	(await detectCapabilities(file)).includes("svix");
 
-// Record each application before its worker boots so provisioning failures remain cleanable.
 export const createSvixApp = async (orgId: string): Promise<string> => {
 	if (!process.env.SVIX_API_KEY) {
 		throw new Error(
@@ -37,20 +32,6 @@ export const createSvixApp = async (orgId: string): Promise<string> => {
 	return app.id;
 };
 
-/**
- * Orphan sweep for the dedicated svix-shard app (plan §9a `kill --orphans`),
- * mirroring the Stripe sub-account + Vercel sandbox sweeps: deletes test Svix
- * apps left behind by runs that SIGKILLed before recording `entry.svixAppId`.
- *
- * IMPORTANT: unlike Stripe/Vercel orphans, Svix test apps carry NO per-owner
- * tag today — every run names its app `<slug>_<env>` and tags it
- * `{ org_id, env }` for the SHARED unit-test org. So we cannot scope by owner;
- * the AGE CUTOFF is the only thing preventing us from nuking an in-flight run's
- * app. Keep `olderThanMs` aligned with the other sweeps' cutoff.
- *
- * No-ops (returns 0) when `SVIX_API_KEY` is unset so non-Svix users never error.
- * Per-app delete failures are logged and skipped. Returns the count deleted.
- */
 export const sweepOrphanSvixApps = async ({
 	olderThanMs,
 }: {
@@ -63,8 +44,6 @@ export const sweepOrphanSvixApps = async ({
 	const svix = createSvixCli();
 	const cutoff = Date.now() - olderThanMs;
 
-	// Collect every application across all pages first (paginate via the
-	// `iterator`/`done` cursor the SDK returns), then delete the test orphans.
 	const apps: Awaited<ReturnType<typeof svix.application.list>>["data"] = [];
 	let iterator: string | null | undefined;
 	do {

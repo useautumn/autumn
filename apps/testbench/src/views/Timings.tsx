@@ -2,10 +2,8 @@ import { useMemo } from "react";
 import type { Snapshot } from "../types";
 import { FileStatusBadge } from "../widgets";
 
-// Literal hex — theme chart vars proved unreliable in this standalone app.
 const BAR_COLOR = "#27a7ff";
 
-/** Bucket edges in seconds — log-ish steps so both 5s and 5min files read well. */
 const BUCKETS_S = [10, 20, 30, 45, 60, 90, 120, 180, 240, 360, 600];
 
 const bucketLabel = (index: number): string => {
@@ -20,7 +18,6 @@ const bucketLabel = (index: number): string => {
 	return hi >= 120 ? `${lo / 60}-${hi / 60}m` : `${lo}-${hi}s`;
 };
 
-/** Plain-div bar chart — no chart library, so it cannot render blank. */
 function DurationHistogram({
 	histogram,
 }: {
@@ -62,10 +59,6 @@ function DurationHistogram({
 	);
 }
 
-/**
- * Live distribution of per-file wall durations (dispatch → verdict) plus the
- * slowest-files leaderboard — the "which tests are worth remaking" view.
- */
 export function Timings({ snap }: { snap: Snapshot }) {
 	const timed = useMemo(
 		() =>

@@ -1,10 +1,6 @@
 import type { StripeDiscountWithCoupon } from "@autumn/shared";
 import type Stripe from "stripe";
 
-// ═══════════════════════════════════════════════════════════════════
-// PERCENT-OFF DISCOUNTS
-// ═══════════════════════════════════════════════════════════════════
-
 const percentOff = ({
 	percentOff,
 	appliesToProducts,
@@ -60,10 +56,6 @@ const hundredPercentOff = ({
 	couponId?: string;
 } = {}): StripeDiscountWithCoupon =>
 	percentOff({ percentOff: 100, appliesToProducts, couponId });
-
-// ═══════════════════════════════════════════════════════════════════
-// AMOUNT-OFF DISCOUNTS
-// ═══════════════════════════════════════════════════════════════════
 
 const amountOff = ({
 	amountOffCents,
@@ -123,11 +115,6 @@ const fiftyDollarsOff = ({
 } = {}): StripeDiscountWithCoupon =>
 	amountOff({ amountOffCents: 5000, appliesToProducts, couponId });
 
-// ═══════════════════════════════════════════════════════════════════
-// HELPERS
-// ═══════════════════════════════════════════════════════════════════
-
-/** Builds a partial Stripe.Coupon with only the fields used by the discount system. */
 const buildCoupon = ({
 	couponId,
 	percent_off,
@@ -153,22 +140,15 @@ const buildCoupon = ({
 		valid: true,
 	}) as Stripe.Coupon;
 
-// ═══════════════════════════════════════════════════════════════════
-// EXPORT
-// ═══════════════════════════════════════════════════════════════════
-
 export const discounts = {
-	// Generic builders
 	percentOff,
 	amountOff,
 
-	// Percent-off presets
 	tenPercentOff,
 	twentyPercentOff,
 	fiftyPercentOff,
 	hundredPercentOff,
 
-	// Amount-off presets
 	fiveDollarsOff,
 	tenDollarsOff,
 	twentyDollarsOff,

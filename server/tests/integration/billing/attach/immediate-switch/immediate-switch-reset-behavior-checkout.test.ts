@@ -1,6 +1,3 @@
-// Immediate switch reset behavior (attach V2): consumable/prepaid usage resets, allocated
-// usage carries over, and the reset_at anchor is preserved across upgrades.
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3 } from "@autumn/shared";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
@@ -13,12 +10,6 @@ import { timeout } from "@tests/utils/genUtils";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-/**
- * Free (1 included workflow) → track 1 → Pro (3 prepaid workflows) via Stripe Checkout.
- * Expected: balance = 2, usage = 1 (the used workflow carries over).
- * Bug: usage resets and balance = 3 — surfaces in the checkout-session flow,
- * not the direct-attach flow.
- */
 test(`${chalk.yellowBright("immediate-switch-reset 7: free→prepaid via checkout carries usage over")}`, async () => {
 	const customerId = "reset-free-to-prepaid-carry-checkout";
 
@@ -40,7 +31,6 @@ test(`${chalk.yellowBright("immediate-switch-reset 7: free→prepaid via checkou
 		],
 	});
 
-	// No payment method — upgrade must go via Stripe Checkout.
 	const { autumnV1 } = await initScenario({
 		customerId,
 		setup: [
@@ -70,7 +60,6 @@ test(`${chalk.yellowBright("immediate-switch-reset 7: free→prepaid via checkou
 	expect(upgradeResult.payment_url).toBeDefined();
 
 	await completeStripeCheckoutFormV2({ url: upgradeResult.payment_url });
-	// Wait for checkout.session.completed → customer.products.updated webhook chain.
 	await timeout(12000);
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);

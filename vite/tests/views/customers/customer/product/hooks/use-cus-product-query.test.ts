@@ -1,5 +1,3 @@
-/** Red: the inline editor fetched `/product/undefined`; green: route-dependent fetching waits for both IDs. */
-
 import { beforeEach, expect, mock, test } from "bun:test";
 
 const get = mock(async () => ({ data: {} }));

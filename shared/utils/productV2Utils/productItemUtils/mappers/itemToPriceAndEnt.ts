@@ -68,7 +68,6 @@ const getResetUsage = ({
 	}
 	return item.reset_usage_when_enabled;
 };
-// ITEM TO PRICE AND ENTITLEMENT
 const toPrice = ({
 	item,
 	orgId,
@@ -91,7 +90,6 @@ const toPrice = ({
 		amount: notNullish(item.price) ? item.price : item.tiers![0].amount,
 		interval: itemToBillingInterval({ item }) as BillingInterval,
 		interval_count: itemToBillingIntervalCount({ item }),
-		// stripe_price_id: item.stripe_price_id ?? null,
 		stripe_product_id: null,
 		stripe_price_id: undefined,
 		feature_id: null,
@@ -262,7 +260,6 @@ const toFeatureAndPrice = ({
 		feature_override: item.config?.feature_override,
 	};
 
-	// Will only create new ent id if
 	const newEnt = !curEnt || (isCustom && !entsAreSame(curEnt, ent));
 	if ((newEnt || newVersion) && !item.entitlement_id) {
 		ent = {
@@ -397,7 +394,6 @@ const toFeatureAndPrice = ({
 			newPrice: price,
 		}) ?? null;
 
-	// Adopted V2 price: honoured as stated, existence-checked before Stripe init.
 	if (item.stripe_prepaid_price_v2_id) {
 		config.stripe_prepaid_price_v2_id = item.stripe_prepaid_price_v2_id;
 	}
@@ -475,10 +471,7 @@ export const itemToPriceAndEnt = ({
 
 		if (!curEnt || newVersion) {
 			newEnt = ent;
-		}
-
-		// Boolean features can't be updated
-		else if (!entsAreSame(curEnt, ent)) {
+		} else if (!entsAreSame(curEnt, ent)) {
 			updatedEnt = ent;
 		} else {
 			sameEnt = curEnt;
@@ -506,33 +499,19 @@ export const itemToPriceAndEnt = ({
 
 		const entSame = curEnt && entsAreSame(curEnt, ent);
 
-		// 1. If no curPrice, price is new
 		if (!curPrice || newVersion) {
 			newPrice = price;
-		}
-
-		// 2. If ent or price aren't same, price is updated
-		else if (!entSame || !pricesAreSame(curPrice, price, false)) {
+		} else if (!entSame || !pricesAreSame(curPrice, price, false)) {
 			updatedPrice = price;
-		}
-
-		// 3. price is same
-		else {
+		} else {
 			samePrice = curPrice;
 		}
 
-		// 1. If no curEnt, ent is new
 		if (!curEnt || newVersion) {
 			newEnt = ent;
-		}
-
-		// 2. If ent is different, ent is updated
-		else if (!entSame) {
+		} else if (!entSame) {
 			updatedEnt = ent;
-		}
-
-		// 3. ent is same
-		else {
+		} else {
 			sameEnt = curEnt;
 		}
 	}

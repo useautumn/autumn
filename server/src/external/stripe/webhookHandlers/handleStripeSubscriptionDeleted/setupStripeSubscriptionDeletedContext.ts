@@ -22,40 +22,18 @@ export interface StripeSubscriptionDeletedContext {
 	stripeSubscription: ExpandedStripeSubscription;
 	stripeCustomer: ExpandedStripeCustomer;
 	fullCustomer: FullCustomer;
-	/**
-	 * Mutable list of customer products on this subscription. Updated in place
-	 * by the `trackCustomerProduct{Update,Deletion,Insertion}` helpers.
-	 * Callers iterating this array while those helpers may run (directly or
-	 * transitively) must iterate over a snapshot, e.g.
-	 * `for (const cp of [...customerProducts])`, to avoid iterator invalidation.
-	 */
 	customerProducts: FullCusProduct[];
-	/** Current time in ms, respecting test clocks */
 	nowMs: number;
-	/** Customer's payment method for paying arrear invoices */
 	paymentMethod: Stripe.PaymentMethod | null;
-	/** Tracks all updates made to customer products during this handler */
 	updatedCustomerProducts: {
 		customerProduct: FullCusProduct;
 		updates: Partial<InsertCustomerProduct>;
 	}[];
-	/** Tracks all deletions made to customer products during this handler */
 	deletedCustomerProducts: FullCusProduct[];
-	/** Tracks all insertions (new customer products created) during this handler */
 	insertedCustomerProducts: FullCusProduct[];
-	/** Tags accumulated by tasks during this handler — appended to the
-	 * `billing.updated` webhook payload. */
 	billingChangeTags: Set<string>;
 }
 
-/**
- * Sets up context for the subscription deleted handler.
- *
- * Returns null if:
- * - No fullCustomer in context
- * - No customer products found for this subscription
- * - The deletion event was originated by Autumn
- */
 export const setupStripeSubscriptionDeletedContext = async ({
 	ctx,
 	event,
@@ -72,7 +50,6 @@ export const setupStripeSubscriptionDeletedContext = async ({
 
 	const stripeSubscriptionId = event.data.object.id;
 
-	// 1. Filter customer products on this subscription
 	const customerProducts = fullCustomer.customer_products.filter((cp) =>
 		isCustomerProductOnStripeSubscription({
 			customerProduct: cp,
@@ -87,7 +64,6 @@ export const setupStripeSubscriptionDeletedContext = async ({
 		return null;
 	}
 
-	// 2. Skip Autumn's own deletion echo
 	if (isAutumnOriginatedStripeEvent({ event })) {
 		logger.info(
 			`[sub.deleted] Skipping - autumn-originated deletion ${stripeSubscriptionId}`,
@@ -95,13 +71,11 @@ export const setupStripeSubscriptionDeletedContext = async ({
 		return null;
 	}
 
-	// 3. Get expanded stripe subscription
 	const stripeSubscription = await getExpandedStripeSubscription({
 		ctx,
 		subscriptionId: stripeSubscriptionId,
 	});
 
-	// 4. Get expanded stripe customer (for discount info)
 	const stripeCustomer = await getExpandedStripeCustomer({
 		ctx,
 		stripeCustomerId: stripeSubscription.customer.id,
@@ -112,13 +86,11 @@ export const setupStripeSubscriptionDeletedContext = async ({
 		return null;
 	}
 
-	// 5. Get current time (respecting test clocks)
 	const nowMs = await stripeSubscriptionToNowMs({
 		stripeSubscription,
 		stripeCli: ctx.stripeCli,
 	});
 
-	// 6. Get payment method for arrear invoices
 	const paymentMethod = await getCusPaymentMethod({
 		stripeCli: ctx.stripeCli,
 		stripeId: stripeSubscription.customer.id,

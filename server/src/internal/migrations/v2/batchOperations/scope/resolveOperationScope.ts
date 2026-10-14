@@ -18,9 +18,6 @@ const migrationPlanFilter = (
 	return customerPlanFilter as PlanFilter;
 };
 
-/** Row-decidable fields inside the MIGRATION filter's `$or` cannot reconcile
- * into the op's single AND-scope. (Op-level `$or` is fine — it expands into
- * per-disjunct patches before resolution.) */
 export const orMentionsScopeField = (
 	filter: PlanFilter | undefined,
 ): string | undefined => {
@@ -38,18 +35,12 @@ export type ResolveOperationScopeResult =
 	| { scope: OperationScope; unsupportedField?: undefined }
 	| { scope?: undefined; unsupportedField: string };
 
-/**
- * Lowers the row-level part of the plan filters (one disjunct's conjuncts +
- * the migration filter, all reconciled) into the scope a patch executes
- * against. Field-agnostic: driven entirely by OPERATION_SCOPE_FIELDS.
- */
 export const resolveOperationScope = ({
 	migration,
 	planFilters,
 	internalProductId,
 }: {
 	migration: MigrationRuntime;
-	/** The disjunct's $or-free conjunct filters, ANDed together. */
 	planFilters: PlanFilter[];
 	internalProductId: string;
 }): ResolveOperationScopeResult => {

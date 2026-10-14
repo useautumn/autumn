@@ -2,10 +2,6 @@ import { stripeRefToId } from "@autumn/shared";
 import type { TestContext } from "@tests/utils/testInitUtils/createTestContext";
 import type Stripe from "stripe";
 
-/**
- * Mutates a Stripe subscription / its schedule to drift from Autumn's expected
- * state, so that the restore action has work to do. Test-only utility.
- */
 export const corruptStripeSubscription = async ({
 	ctx,
 	subscriptionId,
@@ -22,8 +18,6 @@ export const corruptStripeSubscription = async ({
 			metadata?: Record<string, string>;
 		}>;
 		setItemQuantities?: Array<{ priceId: string; quantity: number }>;
-		/** Replaces an inline item's price amount in place, preserving item-level metadata
-		 * (e.g. `autumn_customer_price_id`) so the item's identity is unchanged. */
 		setInlineItemAmounts?: Array<{ priceId: string; unitAmount: number }>;
 		releaseSchedule?: boolean;
 	};
@@ -101,10 +95,6 @@ export const corruptStripeSubscription = async ({
 	});
 };
 
-/**
- * Returns the (single) primary Stripe subscription for a customer in the test
- * environment. Throws if there is more than one or zero.
- */
 export const getStripeSubscriptionForCustomer = async ({
 	ctx,
 	stripeCustomerId,

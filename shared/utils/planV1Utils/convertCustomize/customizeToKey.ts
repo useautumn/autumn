@@ -59,7 +59,6 @@ const upsertLicenseToKey = ({
 		`prepaid_only:${license.prepaid_only ?? ""}`,
 	].join(":");
 
-/** Stable identity of a customize payload: `price:…|add_items:…|remove_items:…|free_trial:…|upsert_licenses:…|remove_licenses:…`. */
 export const customizeToKey = ({
 	customize,
 }: {

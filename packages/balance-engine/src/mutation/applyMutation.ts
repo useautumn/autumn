@@ -9,7 +9,6 @@ import type { SubjectState } from "../models/subject/subjectState.js";
 import { isSameCustomerIdentity } from "../utils/identityUtils/classifyIdentityUtils.js";
 import { applyChanges } from "./applyChanges.js";
 
-/** Only a mutation that inserts the customer row can start a state: an initialize, or a plan that creates the customer. */
 const emptyStateFor = ({
 	mutation,
 }: {
@@ -54,8 +53,6 @@ export const applyMutation = ({
 		throw new MutationSubjectMismatchError();
 	}
 
-	// No state is revision 0: a customer initialize is the mutation that leaves it.
-	// An entity initialize inserts into whatever revision the customer is at.
 	const stateRevision = state?.revision ?? 0;
 	const reinitializesCustomer =
 		mutation.command.type === "initialize" &&

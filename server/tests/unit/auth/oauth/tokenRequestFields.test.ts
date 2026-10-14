@@ -16,7 +16,6 @@ const jsonRequest = (contentType: string, fields: Record<string, string>) =>
 		body: JSON.stringify(fields),
 	});
 
-/** The token endpoint parses the body once and threads the fields through. */
 const tokenRequestFields = async (request: Request) =>
 	getOAuthTokenRequestFields((await parseOAuthRequestFields(request)).fields);
 

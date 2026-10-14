@@ -70,8 +70,6 @@ export const runWarmFullSubjectCache = async ({
 			ctx,
 			customerId,
 			source: source ?? "warm-full-subject-cache",
-			// The warmer IS the revalidator — never serve stale here, or we'd
-			// loop on our own stale read and never rebuild.
 			staleWhileRevalidate: false,
 		});
 		warmCustomerCounter.add(1, { source: source ?? "unknown" });
@@ -115,8 +113,6 @@ export const runWarmFullSubjectCache = async ({
 			}
 		}
 
-		// Pace successive batches so DB+Redis don't see a burst when a
-		// customer has many entities.
 		if (i + ENTITY_BATCH_SIZE < entities.length) {
 			await new Promise((resolve) => setTimeout(resolve, BATCH_PAUSE_MS));
 		}
@@ -140,7 +136,6 @@ export const warmFullSubjectCacheTask = task({
 	run: async (raw: unknown, { ctx: triggerCtx }) => {
 		const { orgId, env, customerId, source } = PayloadSchema.parse(raw);
 
-		// Already-queued prod runs OOM (TASK_PROCESS_OOM_KILLED); no-op them.
 		if (process.env.NODE_ENV === "production") {
 			return { warmed_customer: 0, warmed_entities: 0, total_entities: 0 };
 		}

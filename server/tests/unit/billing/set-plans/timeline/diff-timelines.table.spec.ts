@@ -89,7 +89,6 @@ const SAVED_INTERVALS: Record<PriorState, Interval | null> = {
 	endsAtB: { startsAt: PAST, endsAt: B },
 };
 
-/** The request that lists the subject exactly as saved. */
 const KEPT_INTERVALS: Record<PriorState, Interval | null> = {
 	none: null,
 	active: { startsAt: 0, endsAt: null },
@@ -144,7 +143,6 @@ type SubjectSegment = Interval & { hash: string };
 
 const startOf = (startsAt: number) => (startsAt === 0 ? undefined : startsAt);
 
-/** What the request asks of the subject, or null when the operation means nothing for that prior state. */
 const requestedSubjectSegments = ({
 	tableCase,
 }: {
@@ -220,7 +218,6 @@ const isMeaningful = (tableCase: TableCase) => {
 	);
 };
 
-/** A one-off in a new config is another purchase beside the saved one, never a replacement. */
 const isSecondPurchase = ({
 	tableCase,
 	hash,
@@ -239,7 +236,6 @@ const SCOPE_ENTITIES: Record<Scope, string | null> = {
 	unrepresentedEntity: "entity_2",
 };
 
-/** Setup's scope filter: rows on another subscription, or on another entity of an entity-level request, stay out. */
 const inRequestScope = ({
 	tableCase,
 	rows,

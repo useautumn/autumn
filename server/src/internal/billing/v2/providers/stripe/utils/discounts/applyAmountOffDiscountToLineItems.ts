@@ -58,10 +58,6 @@ const allocateAmountOffDiscounts = ({
 	);
 };
 
-/**
- * Applies an amount_off discount to line items.
- * Only applies to charge items (not refunds) - distributes proportionally across charges.
- */
 export const applyAmountOffDiscountToLineItems = ({
 	lineItems,
 	discount,
@@ -82,8 +78,6 @@ export const applyAmountOffDiscountToLineItems = ({
 
 	const currency = coupon.currency ?? "usd";
 
-	// Filter to applicable CHARGE line items only
-	// Discounts reduce what the customer pays, so only apply to charges
 	const applicableChargeItems = lineItems.filter((item) =>
 		discountAppliesToLineItem({ discount, lineItem: item }),
 	);
@@ -97,14 +91,12 @@ export const applyAmountOffDiscountToLineItems = ({
 	);
 	if (eligibleCycleCount <= 0) return lineItems;
 
-	// Build a map of line item -> discount amount
 	const discountMap = allocateAmountOffDiscounts({
 		lineItems: applicableChargeItems,
 		amountOffMinorUnits: amountOffCents,
 		currency,
 	});
 
-	// Apply discounts to line items
 	return lineItems.map((item) => {
 		const itemDiscount = discountMap.get(item);
 
@@ -126,7 +118,7 @@ export const applyAmountOffDiscountToLineItems = ({
 			: Math.max(new Decimal(item.amount).minus(totalDiscount).toNumber(), 0);
 
 		const description = item.context.discountable
-			? item.description // if discountable, stripe applies discount, don't need our own tag
+			? item.description
 			: addDiscountTagToDescription({ description: item.description });
 
 		return {

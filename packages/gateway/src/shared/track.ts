@@ -74,12 +74,10 @@ const toWire = (params: TrackTokensParams) =>
 const envClient = (): AutumnClient => {
 	const env = typeof process === "undefined" ? undefined : process.env;
 	const secretKey = env?.AUTUMN_API_KEY ?? env?.AUTUMN_SECRET_KEY;
-	// Optional override; virtually everyone is on the default
 	const baseUrl = env?.AUTUMN_BASE_URL ?? "https://api.useautumn.com";
 
 	return {
 		trackTokens: async (params: TrackTokensParams) => {
-			// Thrown here so the miss flows through the usual swallow-and-log path
 			if (!secretKey) {
 				throw new Error(
 					"[Autumn] No autumn client was passed and AUTUMN_API_KEY is not set.",
@@ -139,7 +137,6 @@ export const trackTokenUsage = async ({
 	getParams: () => TrackTokensParams;
 }): Promise<void> => {
 	try {
-		// Bind so class-based SDK clients keep their `this` when invoked.
 		const balances = autumn.balances as TrackTokensCarrier | undefined;
 		const trackTokens =
 			balances?.trackTokens?.bind(balances) ?? autumn.trackTokens?.bind(autumn);

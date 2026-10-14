@@ -1,17 +1,3 @@
-/**
- * Writable usage-limit counters — customer scope.
- *
- * Contract:
- *   { feature_id, usage } writes the active window's counter and nothing else:
- *     - the cap keeps its limit/interval, a plan cap stays plan-sourced
- *     - check enforces against the written counter immediately
- *     - the existing window row is updated in place (no second window)
- *   A config entry without `usage` leaves the counter untouched.
- *   { feature_id, limit, interval, usage } replaces config AND sets the counter.
- *   A counter-only list never replaces the customer's config list; an explicit
- *   config list still does.
- */
-
 import { expect, test } from "bun:test";
 import { ApiVersion, ResetInterval } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";

@@ -1,7 +1,6 @@
 import type { SyncParamsV1 } from "@autumn/shared";
 import { hashKey } from "@tanstack/react-query";
 
-/** The draft changed but the debounced preview has not been asked about it yet. */
 export const hasPendingPreviewParams = ({
 	params,
 	debouncedParams,

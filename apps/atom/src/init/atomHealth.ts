@@ -6,30 +6,23 @@ import {
 import { type ContainerStats, readContainerStats } from "./containerStats.js";
 
 export type AtomHealth = {
-	/** Starting until every thread has caught up once; degraded while one that died is replaced, the others still answering. */
 	status: "alive" | "degraded" | "starting";
 	bootedAt: string;
 	restarts: number;
 	container: ContainerStats;
-	/** The volume the data folder is on: what the disk share is a part of, and how much of it is still free. */
 	disk: { totalBytes: number; availBytes: number };
 	threads: (ThreadStats & { ready: boolean })[];
 };
 
-/** What every thread's /health reports: the main thread's boot, how many threads it has replaced since, and every thread's counters. */
 export type AtomHealthSource = {
 	bootedAt: string;
-	/** One Int32 the main thread counts in. */
 	restarts: Int32Array;
-	/** One Int32 the main thread sets to 1 once every thread has started; a thread replaced later leaves it set. */
 	ready: Int32Array;
-	/** One Int32 per thread: 1 once that thread has caught up, back to 0 when it dies. */
 	threadsReady: Int32Array;
 	threadStats: SharedArrayBuffer;
 	dataDir: string;
 };
 
-/** One thread's view: the replica's health, and which thread it is. */
 export type ThreadHealthSource = AtomHealthSource & { thread: number };
 
 export const isAtomReady = ({
@@ -42,7 +35,6 @@ export const isThreadReady = ({
 }: Pick<ThreadHealthSource, "threadsReady" | "thread">): boolean =>
 	Atomics.load(threadsReady, thread) === 1;
 
-/** Whether this thread answers from its own files: the replica has started, and this thread has caught up since it last started. */
 export const isServing = (
 	health: Pick<ThreadHealthSource, "ready" | "threadsReady" | "thread">,
 ): boolean => isAtomReady(health) && isThreadReady(health);

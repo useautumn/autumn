@@ -38,7 +38,6 @@ const INFO_WARNING_TYPES: WarningType[] = [
 	"billing_starts_later",
 ];
 
-/** Unmanaged live items that the immediate phase's end state no longer holds. */
 const removedUnmanagedItems = ({
 	liveProcessorItems,
 	immediateItems,
@@ -75,7 +74,6 @@ const restartsUsage = (balanceChange: SetPlansPreviewBalanceChange) =>
 	Number(balanceChange.previous_attributes.usage ?? 0) > 0 &&
 	balanceChange.balance.usage === 0;
 
-/** One warning per feature whose usage this request restarts, wherever and however often. */
 const requestedResetFeatureIds = (
 	balanceChanges: SetPlansPreviewBalanceChange[],
 ) => [
@@ -112,7 +110,6 @@ export const setPlansPreviewToWarnings = ({
 }: {
 	phases: SetPlansPreviewPhase[];
 	liveProcessorItems: ProcessorItem[];
-	/** Saved scheduled plans the request withdraws; a re-timed or updated plan isn't one. */
 	withdrawnCustomerProducts: FullCusProduct[];
 	outgoingCustomerProducts: FullCusProduct[];
 	requestedProrationBehavior?: BillingBehavior;
@@ -123,12 +120,10 @@ export const setPlansPreviewToWarnings = ({
 	replacedOpenInvoices: Stripe.Invoice[];
 	liveOpenInvoices: Stripe.Invoice[];
 	unbilledUsageLineItems?: LineItem[];
-	/** The line items the immediate invoice bills. */
 	lineItems?: LineItem[];
 	stripeSubscriptionScope?: StripeSubscriptionScope;
 	resetsCycleNow?: boolean;
 	prorationOverride?: ProrationBehaviorOverride;
-	/** Plans live on the subscription before the request. */
 	liveCustomerProducts?: FullCusProduct[];
 }): SetPlansPreviewWarning[] => {
 	const processorItems = phases.flatMap((phase) => phase.processor_items);

@@ -1,5 +1,3 @@
-/** A later first phase bills nothing now, so it skips checkout unless an ongoing plan is charged today. */
-
 import { describe, expect, test } from "bun:test";
 import type {
 	CreateScheduleBillingContext,

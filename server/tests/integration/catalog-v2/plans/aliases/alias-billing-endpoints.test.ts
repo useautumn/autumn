@@ -1,9 +1,3 @@
-/**
- * Ingress plan-id aliases on CORE billing endpoints.
- *
- * Sending the old id after `pro → proNew` must succeed and land on proNew.
- */
-
 import { expect, test } from "bun:test";
 import {
 	type AttachParamsV1Input,

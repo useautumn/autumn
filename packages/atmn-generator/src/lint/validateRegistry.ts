@@ -4,12 +4,6 @@ import { fieldsAtPath } from "../spec/fieldsAtPath";
 import type { RegistryEntry } from "./rules/registry";
 import type { LintRule } from "./runtime/lintDocument";
 
-/**
- * A rule keyed by a path that does not exist, or naming a field that does
- * not, is silently dead — the one failure mode of a path-keyed registry.
- * This turns it into a generate-time error listing every problem at once.
- */
-
 const listOf = (paths: string | readonly string[]): string[] =>
 	typeof paths === "string" ? [paths] : [...paths];
 
@@ -90,10 +84,7 @@ export const validateRegistry = ({
 		const unknownField = (field: string, where: string) =>
 			`"${path}": ${where} names "${field}", which is not a field there. Fields: ${[...fields].sort().join(", ")}.`;
 
-		/** A dotted field names a node under `path` — a union branch, say — so
-		 * the leaf is checked against the node it actually lives on. */
 		const namesField = (field: string): boolean => {
-			// Registry paths elide array indices, so numeric and `*` segments are skipped.
 			const segments = field
 				.split(".")
 				.filter((segment) => !/^(\d+|\*)$/.test(segment));
@@ -102,8 +93,6 @@ export const validateRegistry = ({
 			const owner = fieldsAtPath({
 				schema,
 				root,
-				// Only the registry key can be empty; an empty rule segment is a
-				// typo, and joining it keeps `fieldsAtPath` rejecting the path.
 				path: (path === "" ? segments : [path, ...segments]).join("."),
 				overlay,
 			});

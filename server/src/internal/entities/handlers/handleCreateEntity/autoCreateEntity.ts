@@ -30,8 +30,6 @@ export const autoCreateEntity = async ({
 	customerId: string;
 	fullCus?: FullCustomer;
 }): Promise<Entity | undefined> => {
-	// Validate CreatEntity
-	// Failed to auto-create entity, no `feature_id` provided. Please pass in `feature_id` into the `entity_data` field of the request body",
 	if (!entityData || !entityData.feature_id) {
 		throw new RecaseError({
 			message: `Entity with id ${entityId || "unknown"} not found. To automatically create this entity, please pass in 'feature_id' into the 'entity_data' field of the request body.`,
@@ -55,7 +53,6 @@ export const autoCreateEntity = async ({
 	};
 
 	if (!fullCus) {
-		// The entities map is rewritten whole from this read, so the worker's writes must be in Postgres first.
 		if (isBalanceWorkerRolloutEnabled({ ctx, customerId }))
 			await flushBalanceWorkerCustomer({ ctx, customerId });
 		fullCus = await CusService.getFull({
@@ -65,7 +62,6 @@ export const autoCreateEntity = async ({
 			entityId,
 		});
 
-		// handle race condition?
 		if (fullCus.entity && fullCus.entity.id === entityId) {
 			return fullCus.entity;
 		}

@@ -1,6 +1,5 @@
 import { OwnedPartitionNotReadyError } from "../../runtime/runtimeErrors.js";
 
-/** The roster took this partition away, or the worker is stopping: work waiting on it is let go. */
 export class PartitionRetiredError extends Error {
 	constructor() {
 		super("Partition retired");
@@ -8,7 +7,6 @@ export class PartitionRetiredError extends Error {
 	}
 }
 
-/** The roster gave the partition back before a successor took it: the hand-off is unwound and it keeps serving. */
 export class PartitionHandoffCancelledError extends Error {
 	constructor() {
 		super("Partition handoff cancelled");
@@ -21,9 +19,6 @@ export type PartitionLifecycleEvent =
 	| "handoff_cancelled"
 	| "draining";
 
-/** A failure that is the partition lifecycle doing its job, not something wrong:
- *  a retirement letting waiting work go, a hand-off unwound, or a runtime that
- *  was draining when work reached it. Reported as information, not as an error. */
 export function partitionLifecycleEventOf({
 	cause,
 }: {

@@ -9,7 +9,6 @@ const execAsync = promisify(exec);
 
 const MCP_URL = "https://docs.useautumn.com/mcp";
 
-// Markdown content for CLAUDE.md and AGENTS.md
 const markdownContent = `
 
 # Autumn Billing Integration
@@ -34,7 +33,6 @@ Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliqu
 - [API Reference](https://docs.useautumn.com/api)
 `;
 
-// Content for .cursorrules
 const cursorRulesContent = `
 
 # Autumn Billing Rules
@@ -55,9 +53,6 @@ export interface CreateAgentFilesResult {
 	createdFiles: string[];
 }
 
-/**
- * Install MCP for the specified agents
- */
 async function installMcpForAgents(
 	agents: AgentIdentifier[],
 ): Promise<InstallMcpResult> {
@@ -70,17 +65,13 @@ async function installMcpForAgents(
 				await execAsync(`claude mcp add --transport http autumn ${MCP_URL}`);
 				installedAgents.push("claude-code");
 			} catch (err) {
-				// If it fails, it might already exist - check the error message
 				const errorMessage = err instanceof Error ? err.message : String(err);
 				if (!errorMessage.includes("already exists")) {
-					// If it's not an "already exists" error, throw it
 					throw err;
 				}
-				// Otherwise, silently continue (already installed is fine)
 				installedAgents.push("claude-code");
 			}
 		} else if (agent === "other") {
-			// Copy URL to clipboard
 			await clipboard.write(MCP_URL);
 			copiedToClipboard = true;
 		}
@@ -89,27 +80,18 @@ async function installMcpForAgents(
 	return { installedAgents, copiedToClipboard };
 }
 
-/**
- * Helper function to append to existing file or create new file
- */
 async function appendOrCreate(
 	filePath: string,
 	content: string,
 ): Promise<void> {
 	try {
-		// Try to read existing file
 		await fs.access(filePath);
-		// File exists, append content
 		await fs.appendFile(filePath, content, "utf-8");
 	} catch {
-		// File doesn't exist, create it
 		await fs.writeFile(filePath, content.trimStart(), "utf-8");
 	}
 }
 
-/**
- * Create agent configuration files based on selected options
- */
 async function createAgentFilesForOptions(
 	options: FileOption[],
 	cwd?: string,
@@ -146,10 +128,6 @@ export interface UseAgentSetupOptions {
 	cwd?: string;
 }
 
-/**
- * Hook for managing agent setup operations including MCP installation
- * and agent configuration file creation.
- */
 export function useAgentSetup(options?: UseAgentSetupOptions) {
 	const cwd = options?.cwd;
 

@@ -39,12 +39,10 @@ export function autumnHandler(options: NextAutumnHandlerOptions) {
 			raw: request,
 		});
 
-		// 204 No Content - return empty response
 		if (result.status === 204) {
 			return new NextResponse(null, { status: 204 });
 		}
 
-		// Return body directly with actual HTTP status
 		return NextResponse.json(result.body, { status: result.status });
 	};
 

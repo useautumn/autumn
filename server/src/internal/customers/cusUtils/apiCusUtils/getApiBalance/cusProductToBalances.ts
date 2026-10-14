@@ -7,10 +7,6 @@ import type {
 } from "@autumn/shared";
 import type { RequestContext } from "@/honoUtils/HonoEnv.js";
 
-/**
- * Extract balances from a FullCusProduct's customer_entitlements.
- * Used for checkout preview to show what balances will be granted.
- */
 export const cusProductToBalances = ({
 	ctx,
 	cusProduct,
@@ -22,13 +18,11 @@ export const cusProductToBalances = ({
 }): Record<string, ApiBalanceV1> => {
 	const balances: Record<string, ApiBalanceV1> = {};
 
-	// Group customer_entitlements by feature_id
 	const featureToCusEnts: Record<string, FullCusEntWithFullCusProduct[]> = {};
 
 	for (const cusEnt of cusProduct.customer_entitlements) {
 		const featureId = cusEnt.entitlement.feature.id;
 
-		// Create FullCusEntWithFullCusProduct by attaching cusProduct
 		const cusEntWithProduct: FullCusEntWithFullCusProduct = {
 			...cusEnt,
 			customer_product: cusProduct,
@@ -40,12 +34,10 @@ export const cusProductToBalances = ({
 		];
 	}
 
-	// Build ApiBalance for each feature
 	for (const featureId in featureToCusEnts) {
 		const cusEnts = featureToCusEnts[featureId];
 		const feature = cusEnts[0].entitlement.feature;
 
-		// Create a preview FullCustomer with this product's entitlements
 		const previewFullCus: FullCustomer = {
 			...fullCustomer,
 			customer_products: [cusProduct],

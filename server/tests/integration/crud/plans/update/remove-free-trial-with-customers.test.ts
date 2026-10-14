@@ -1,8 +1,3 @@
-/**
- * Removing a catalog free trial must preserve historical trial rows referenced by customer_products.
- * Red before fix: plans.update all_versions fails with the free_trials/customer_products FK violation.
- */
-
 import { expect, test } from "bun:test";
 import {
 	type ApiPlanV1,

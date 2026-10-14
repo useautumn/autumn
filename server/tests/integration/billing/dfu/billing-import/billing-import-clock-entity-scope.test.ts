@@ -1,9 +1,3 @@
-/**
- * dfu.flash (test clock) — entity scope isolation with real advancing dates.
- * Importing one scope reconciles only that scope; the other scope's product and
- * its real mid-cycle anchor stay untouched.
- */
-
 import { expect, test } from "bun:test";
 import { CusProductStatus } from "@autumn/shared";
 import {
@@ -58,7 +52,6 @@ test.concurrent(
 		});
 		const entityA = entities[0];
 
-		// Seed subs (customer-level X + entity-A Y) share one clock frozen 15d back.
 		const seed = await createRealStripeCustomerOnClock(ctx, {
 			email: `${customerId}-seed@example.com`,
 			frozenTime: Date.now() - DAY * 15,
@@ -118,7 +111,6 @@ test.concurrent(
 		});
 		expect(seededX?.billing_cycle_anchor).toBe(xAnchor);
 
-		// Reconcile sub for entity A only, on a second clock frozen 10d back.
 		const recon = await createRealStripeCustomerOnClock(ctx, {
 			email: `${customerId}-z@example.com`,
 			frozenTime: Date.now() - DAY * 10,
@@ -134,7 +126,6 @@ test.concurrent(
 		const zAnchor = await periodEndMs(ctx, subZ.subscriptionId);
 		expect(zAnchor).toBeGreaterThan(Date.now());
 
-		// Import only entity A → plan Z. Customer-level X is not addressed.
 		await callFlash(autumnV2_2 as FlashClient, {
 			customer_id: customerId,
 			processors: [{ type: "stripe", id: recon.customerId }],
@@ -154,7 +145,6 @@ test.concurrent(
 			],
 		});
 
-		// Y expired within entity A; Z active on entity A with its own real anchor.
 		const productY = await getFlashedCustomerProduct({
 			ctx,
 			customerId,
@@ -171,7 +161,6 @@ test.concurrent(
 		expect(productZ?.internal_entity_id).toBe(entityAInternalId);
 		expect(productZ?.billing_cycle_anchor).toBe(zAnchor);
 
-		// Customer-level X untouched: still active with its original anchor.
 		const productX = await getFlashedCustomerProduct({
 			ctx,
 			customerId,
@@ -277,7 +266,6 @@ test.concurrent(
 		});
 		const rAnchor = await periodEndMs(ctx, subR.subscriptionId);
 
-		// Import only customer-level plan R. Entity A is not addressed.
 		await callFlash(autumnV2_2 as FlashClient, {
 			customer_id: customerId,
 			processors: [{ type: "stripe", id: recon.customerId }],
@@ -290,7 +278,6 @@ test.concurrent(
 			],
 		});
 
-		// P expired (customer-level), R active with its own real anchor.
 		const productP = await getFlashedCustomerProduct({
 			ctx,
 			customerId,
@@ -306,7 +293,6 @@ test.concurrent(
 		expect(productR?.status).toBe(CusProductStatus.Active);
 		expect(productR?.billing_cycle_anchor).toBe(rAnchor);
 
-		// Entity-A Q untouched: still active with its original anchor.
 		const productQ = await getFlashedCustomerProduct({
 			ctx,
 			customerId,

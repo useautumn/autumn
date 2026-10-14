@@ -1,8 +1,3 @@
-/**
- * Volume where the reset interval differs from the billing interval, and volume with rollovers.
- * Usage-based volume can't split reset and price intervals (400); prepaid volume can.
- */
-
 import { expect, test } from "bun:test";
 import {
 	type ApiCustomerV3,
@@ -113,7 +108,6 @@ test.concurrent(
 			options: [{ feature_id: TestFeature.Messages, quantity: 600 }],
 		});
 
-		// 600 bought = 6 packs > 500: 6 × $5 = $30
 		const afterAttach = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 		expect(afterAttach.invoices?.[0]?.total).toBeCloseTo(30, 2);
 
@@ -121,7 +115,6 @@ test.concurrent(
 			{ customer_id: customerId, feature_id: TestFeature.Messages, value: 450 },
 			{ timeout: 3000 },
 		);
-		// Server-side resets run on real time, so force the monthly reset due now
 		await expireCusEntForReset({
 			ctx: scenario.ctx,
 			customerId,
@@ -129,7 +122,6 @@ test.concurrent(
 		});
 		await scenario.autumnV2_2.customers.get(customerId, { skip_cache: "true" });
 
-		// The monthly reset restores the 600 without invoicing
 		await expectBalanceCorrect({
 			customerId,
 			featureId: TestFeature.Messages,
@@ -147,7 +139,6 @@ test.concurrent(
 			}),
 		).toBeCloseTo(30, 2);
 
-		// The helper renews one month after `cycleStart`, so start two months in to reach the quarter end
 		const { renewalInvoice } = await expectNextInvoiceMatchesPreview({
 			ctx: scenario.ctx,
 			autumnV1,
@@ -199,7 +190,6 @@ test.concurrent(
 			],
 		});
 
-		// Cycle 1: 40 ≤ 100 included → $0, and the unused 60 rolls over
 		await expectNextInvoiceMatchesPreview({
 			ctx: scenario.ctx,
 			autumnV1: scenario.autumnV1,
@@ -224,7 +214,6 @@ test.concurrent(
 		});
 		await timeout(3000);
 
-		// 200 used − 100 included − 60 rollover = 40 overage in band 101-600: 40 × $0.10 = $4
 		await expectVolumeRenewalCorrect({
 			scenario,
 			expectedFeatureAmount: 4,

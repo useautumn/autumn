@@ -7,7 +7,6 @@ const PROC_FILES = {
 
 type ProcTable = keyof typeof PROC_FILES;
 
-/** Loss signals summed over every flow in the namespace; `outSegs` is the denominator. */
 const TCP_COUNTERS = {
 	timeouts: ["TcpExt", "TCPTimeouts"],
 	retransSegs: ["Tcp", "RetransSegs"],
@@ -19,10 +18,8 @@ const TCP_COUNTERS = {
 
 type TcpCounterName = keyof typeof TCP_COUNTERS;
 
-/** Cumulative since boot, for this process's network namespace. */
 export type TcpCounters = Record<TcpCounterName, number>;
 
-/** `/proc/net/snmp` and `/proc/net/netstat` give each table a row of names, then a row of values. */
 function procTableOf({
 	text,
 	table,
@@ -42,7 +39,6 @@ function procTableOf({
 	return new Map(names.map((name, index) => [name, Number(values[index])]));
 }
 
-/** Null where `/proc/net` is absent (macOS, dev) or a counter is missing. */
 export function readTcpCounters({
 	readFile = readCounterFile,
 }: {

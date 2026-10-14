@@ -1,8 +1,3 @@
-/**
- * TDD regression: one-off entitlements can be represented by `interval: null`.
- * Red: null intervals were treated as monthly and received a future reset date.
- */
-
 import { expect, test } from "bun:test";
 import {
 	AllowanceType,

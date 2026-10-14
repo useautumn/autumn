@@ -123,7 +123,7 @@ describe("computeEntitlementPricesPlan", () => {
 			},
 		});
 
-		expect(plan.prices.new.length).toBeGreaterThanOrEqual(2); // base + seats price
+		expect(plan.prices.new.length).toBeGreaterThanOrEqual(2);
 		expect(plan.entitlements.new.length).toBe(2);
 		expect(plan.prices.same).toEqual([]);
 		expect(plan.prices.deleted).toEqual([]);

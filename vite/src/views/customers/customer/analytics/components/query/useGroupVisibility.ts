@@ -1,7 +1,6 @@
 import { useAnalyticsContext } from "../../AnalyticsContext";
 import { groupValueLabel } from "../../utils/displayLabels";
 
-/** Which groups the chart hides, plus the labels to list them by. */
 export const useGroupVisibility = ({ groupBy }: { groupBy: string }) => {
 	const {
 		availableGroupValues,

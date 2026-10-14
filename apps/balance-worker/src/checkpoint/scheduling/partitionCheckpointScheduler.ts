@@ -126,7 +126,6 @@ export const createPartitionCheckpointScheduler = ({
 			const entry = entries.get(plan.generation);
 			if (entry && isCurrent(entry)) {
 				exportInFlight = true;
-				// Register the job before callbacks can re-enter shutdown.
 				exportJob = Promise.resolve()
 					.then(async () => {
 						if (!isCurrent(entry)) return;

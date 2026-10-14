@@ -10,7 +10,6 @@ import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
 import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
 
-// UNCOMMENT FROM HERE
 const pro = constructProduct({
 	type: "free",
 	isDefault: false,

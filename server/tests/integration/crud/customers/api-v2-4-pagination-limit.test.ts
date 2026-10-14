@@ -1,10 +1,3 @@
-/**
- * API v2.4 caps customers.list and entities.list at 200.
- *
- * limit <= 200 succeeds; limit > 200 is InvalidRequest naming the max.
- * V2.3 still accepts 201.
- */
-
 import { expect, test } from "bun:test";
 import { ErrCode, V2_4_MAX_PAGINATION_LIMIT } from "@autumn/shared";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils.js";

@@ -29,7 +29,6 @@ export const handleDeleteEntity = createRoute({
 
 		const { db, org, env, features, logger } = ctx;
 
-		// The entities map is rewritten whole from this read, so the worker's writes must be in Postgres first.
 		if (isBalanceWorkerRolloutEnabled({ ctx, customerId: customer_id }))
 			await flushBalanceWorkerCustomer({ ctx, customerId: customer_id });
 		const fullCus = await CusService.getFull({
@@ -92,7 +91,6 @@ export const handleDeleteEntity = createRoute({
 				});
 			}
 
-			// Update linked cus ents with replaceables...
 			for (const linkedCusEnt of linkedCusEnts) {
 				let newEntities: {
 					[key: string]: EntityBalance;
@@ -132,7 +130,6 @@ export const handleDeleteEntity = createRoute({
 			}
 		}
 
-		// Cancel any subs
 		await cancelSubsForEntity({
 			ctx,
 			fullCustomer: fullCus,

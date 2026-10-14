@@ -1,16 +1,3 @@
-/**
- * Legacy Attach V1 Invoice Mode Advanced Tests
- *
- * Migrated from:
- * - server/tests/attach/checkout/checkout6.test.ts (invoice via /checkout endpoint)
- * - server/tests/attach/checkout/checkout7.test.ts (invoice with one-off add-on + quantity)
- *
- * Tests V1 invoice mode scenarios using the /checkout endpoint:
- * - New subscription via /checkout with invoice: true
- * - Upgrade with enable_product_immediately and draft invoice
- * - One-off add-on with quantity options via /checkout
- */
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3 } from "@autumn/shared";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
@@ -30,20 +17,6 @@ import ctx from "@tests/utils/testInitUtils/createTestContext";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { CusService } from "@/internal/customers/CusService";
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 1: Invoice checkout via /checkout endpoint
-// (from checkout6 - first test)
-//
-// Scenario:
-// - Pro product ($20/month) with Messages (100 included)
-// - Attach via /checkout endpoint with invoice: true
-//
-// Expected:
-// - Returns checkout URL
-// - Product attached after invoice payment
-// - Features correct
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(`${chalk.yellowBright("legacy-inv-mode-adv 1: /checkout endpoint new subscription")}`, async () => {
 	const customerId = "legacy-inv-mode-adv-1";
@@ -95,23 +68,6 @@ test.concurrent(`${chalk.yellowBright("legacy-inv-mode-adv 1: /checkout endpoint
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 2: Upgrade with enable_product_immediately and draft invoice
-// (from checkout6 - second test)
-//
-// Scenario:
-// - Pro product ($20/month) attached normally
-// - Upgrade to Premium ($50/month) with:
-//   - invoice: true
-//   - enable_product_immediately: true
-//   - finalize_invoice: false
-//
-// Expected:
-// - No checkout URL (auto-charged or draft)
-// - Premium stays pending while the invoice is a draft
-// - Finalizing the $30 proration invoice activates premium before payment
-// ═══════════════════════════════════════════════════════════════════════════════
-
 test.concurrent(`${chalk.yellowBright("legacy-inv-mode-adv 2: upgrade with enable_product_immediately draft invoice")}`, async () => {
 	const customerId = "legacy-inv-mode-adv-2";
 
@@ -144,10 +100,8 @@ test.concurrent(`${chalk.yellowBright("legacy-inv-mode-adv 2: upgrade with enabl
 		finalize_invoice: false,
 	});
 
-	// No checkout URL when finalize_invoice: false
 	expect(res.checkout_url).toBeFalsy();
 
-	// Draft invoice: premium stays pending until the invoice is finalized
 	const customerBefore = await autumnV1.customers.get<ApiCustomerV3>(
 		customerId,
 		{ skip_cache: "true" },
@@ -161,7 +115,7 @@ test.concurrent(`${chalk.yellowBright("legacy-inv-mode-adv 2: upgrade with enabl
 		customer: customerBefore,
 		count: 2,
 		invoiceIndex: 0,
-		latestTotal: 30, // Premium $50 - Pro $20 proration
+		latestTotal: 30,
 		latestStatus: "draft",
 	});
 
@@ -191,7 +145,6 @@ test.concurrent(`${chalk.yellowBright("legacy-inv-mode-adv 2: upgrade with enabl
 		usage: 0,
 	});
 
-	// 2 invoices: pro $20 (paid) + premium upgrade proration $30 (finalized, unpaid)
 	await expectCustomerInvoiceCorrect({
 		autumn: autumnV1,
 		customerId,
@@ -202,21 +155,6 @@ test.concurrent(`${chalk.yellowBright("legacy-inv-mode-adv 2: upgrade with enabl
 		latestStatus: "open",
 	});
 });
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 3: One-off add-on with quantity via /checkout
-// (from checkout7)
-//
-// Scenario:
-// - Pro product ($20/month) with Messages (100 included)
-// - One-off add-on with prepaid Messages ($10/100 units)
-// - Attach pro, then add-on via /checkout with quantity 200
-//
-// Expected:
-// - Returns checkout URL
-// - Add-on attached after payment
-// - Messages balance = 100 (pro) + 200 (add-on) = 300
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(`${chalk.yellowBright("legacy-inv-mode-adv 3: one-off add-on with quantity via /checkout")}`, async () => {
 	const customerId = "legacy-inv-mode-adv-3";
@@ -271,7 +209,6 @@ test.concurrent(`${chalk.yellowBright("legacy-inv-mode-adv 3: one-off add-on wit
 		active: [pro.id, addOn.id],
 	});
 
-	// Messages: 100 (pro monthly) + 200 (one-off add-on) = 300
 	expectCustomerFeatureCorrect({
 		customer,
 		featureId: TestFeature.Messages,
@@ -279,30 +216,14 @@ test.concurrent(`${chalk.yellowBright("legacy-inv-mode-adv 3: one-off add-on wit
 		usage: 0,
 	});
 
-	// 2 invoices: pro $20 + add-on $20 (2 packs x $10)
 	await expectCustomerInvoiceCorrect({
 		customer,
 		count: 2,
 		invoiceIndex: 0,
-		latestTotal: 20, // 2 packs x $10
+		latestTotal: 20,
 		latestStatus: "paid",
 	});
 });
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 4: Separate subscriptions due to invoice checkout (per entity)
-// (from separate1)
-//
-// Scenario:
-// - Pro product ($20/month) with Messages (100 included)
-// - Premium product ($50/month) with Messages (100 included)
-// - 2 entities, attach Pro to each with invoice: true (separate checkouts)
-// - Upgrade both to Premium
-//
-// Expected:
-// - Each entity gets a separate subscription (not merged)
-// - Upgrades work correctly on separate subs
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(`${chalk.yellowBright("legacy-inv-mode-adv 4: separate subs due to invoice checkout")}`, async () => {
 	const customerId = "legacy-inv-mode-adv-4";
@@ -323,7 +244,6 @@ test.concurrent(`${chalk.yellowBright("legacy-inv-mode-adv 4: separate subs due 
 
 	const { db, org, env } = ctx;
 
-	// Attach Pro to each entity with invoice checkout (creates separate subs)
 	for (const entity of entities) {
 		const res = await autumnV1.attach({
 			customer_id: customerId,
@@ -339,7 +259,6 @@ test.concurrent(`${chalk.yellowBright("legacy-inv-mode-adv 4: separate subs due 
 		});
 	}
 
-	// Verify separate subscriptions
 	const fullCus = await CusService.getFull({
 		ctx,
 		idOrInternalId: customerId,
@@ -362,7 +281,6 @@ test.concurrent(`${chalk.yellowBright("legacy-inv-mode-adv 4: separate subs due 
 		subId: entity1SubId,
 	});
 
-	// Upgrade both entities to Premium
 	await autumnV1.attach({
 		customer_id: customerId,
 		product_id: premium.id,
@@ -375,7 +293,6 @@ test.concurrent(`${chalk.yellowBright("legacy-inv-mode-adv 4: separate subs due 
 		entity_id: entities[1].id,
 	});
 
-	// Verify subs still correct after upgrades
 	await expectSubToBeCorrect({
 		db,
 		customerId,
@@ -392,7 +309,6 @@ test.concurrent(`${chalk.yellowBright("legacy-inv-mode-adv 4: separate subs due 
 		subId: entity2SubId,
 	});
 
-	// Verify entities have Premium
 	const entity1 = await autumnV1.entities.get(customerId, entities[0].id);
 	expectProductAttached({ customer: entity1, productId: premium.id });
 

@@ -1,17 +1,3 @@
-/**
- * /migrations.filter.preview with `source: "item_runs"` — the frozen list a
- * migration shows once it has run.
- *
- * Contract:
- *   source defaults to "filter" (live filter, unchanged behaviour).
- *   source "item_runs" requires migrationId, ignores `filter`, and pages the
- *   customers that have a live item run for the migration — so customers who
- *   newly match the filter are absent until the migration runs again.
- *   search and executionStatuses carry over; "queued" / "not_run" are dropped.
- *   count follows the same source. Each row still carries migration_item_run.
- *   Cursor paging and customer list filters apply to the frozen list too.
- */
-
 import { expect, test } from "bun:test";
 import { ErrCode } from "@autumn/shared";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils";

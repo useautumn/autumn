@@ -1,11 +1,6 @@
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { CusService } from "@/internal/customers/CusService.js";
 
-/**
- * Stable JSON view of a customer's billing state for byte-for-byte before/after
- * comparison. Excludes timestamps / surrogate ids that churn on any write and
- * keeps only what proves an existing customer's plan was left untouched.
- */
 export const snapshotCustomerState = async ({
 	ctx,
 	customerId,

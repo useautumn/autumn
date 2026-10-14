@@ -20,10 +20,6 @@ interface PushViewProps {
 	onComplete?: () => void;
 }
 
-/**
- * Beautiful push command UI with progressive rendering
- * Pure rendering component - all logic is in usePush hook
- */
 export function PushView({
 	environment = AppEnv.Sandbox,
 	allVersions = false,
@@ -33,12 +29,10 @@ export function PushView({
 	const push = usePush({ environment, allVersions, yes, onComplete });
 	const duration = ((Date.now() - push.startTime) / 1000).toFixed(1);
 
-	// Error state
 	if (push.error) {
 		return <ErrorCard error={push.error} />;
 	}
 
-	// Build all plans list for display
 	const allPlans = [
 		...(push.analysis?.plansToCreate ?? []),
 		...(push.analysis?.plansToUpdate?.map((p) => p.plan) ?? []),
@@ -48,17 +42,14 @@ export function PushView({
 	return (
 		<CardWidthProvider>
 			<Box flexDirection="column" marginBottom={1}>
-				{/* Header */}
 				<Card title="🍂 Pushing to Autumn" />
 
-				{/* Loading Config */}
 				{push.phase === "loading_config" && (
 					<Card title="📂 Config">
 						<LoadingText text="Loading autumn.config.ts..." />
 					</Card>
 				)}
 
-				{/* Organization Card */}
 				{push.phase !== "loading_config" && (
 					<OrgCard
 						orgInfo={push.orgInfo}
@@ -66,7 +57,6 @@ export function PushView({
 					/>
 				)}
 
-				{/* Overview Card - show during/after analysis (but not for no_changes) */}
 				{push.phase !== "loading_config" &&
 					push.phase !== "loading_org" &&
 					push.phase !== "no_changes" && (
@@ -76,10 +66,8 @@ export function PushView({
 						/>
 					)}
 
-				{/* No Changes Card */}
 				{push.phase === "no_changes" && <NoChangesCard />}
 
-				{/* Current Prompt - if any */}
 				{push.currentPrompt && (
 					<PushPromptCard
 						onBack={push.goBackPrompt}
@@ -88,7 +76,6 @@ export function PushView({
 					/>
 				)}
 
-				{/* Features Card - show during/after push (includes deletions) */}
 				{(push.phase === "pushing_features" ||
 					push.phase === "pushing_plans" ||
 					push.phase === "deleting" ||
@@ -101,7 +88,6 @@ export function PushView({
 					/>
 				)}
 
-				{/* Plans Card (includes deletions) */}
 				{(push.phase === "pushing_plans" ||
 					push.phase === "deleting" ||
 					push.phase === "complete") && (
@@ -112,12 +98,10 @@ export function PushView({
 					/>
 				)}
 
-				{/* Completion Message */}
 				{push.phase === "complete" && (
 					<CompletionMessage duration={duration} environment={environment} />
 				)}
 
-				{/* No Changes Completion */}
 				{push.phase === "no_changes" && (
 					<Box marginTop={1}>
 						<Text color="green">✨ Already in sync</Text>

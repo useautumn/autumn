@@ -3,8 +3,6 @@ import { useCreateInvoiceFormContext } from "../context/CreateInvoiceFormProvide
 import type { FormInvoicePlan } from "../createInvoiceFormSchema";
 import { newInvoiceLicense } from "../createInvoiceFormSchema";
 
-/** Licenses live in a per-plan array (one invoice can bill the same plan
- * twice), so a seat edit appends the plan's slot before binding to it. */
 export function useInvoiceLicenseQuantityEditor({
 	plan,
 	planIndex,

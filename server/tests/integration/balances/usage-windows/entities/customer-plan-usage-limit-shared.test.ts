@@ -1,23 +1,3 @@
-/**
- * Confirms that a usage_limit set at the CUSTOMER tier — and at the PLAN tier
- * (plan-default on the product) — is ONE SHARED aggregate cap across the customer and
- * every entity beneath it, NOT a per-entity cap.
- *
- * Verified by enforcement: with a cap of 5 and three entities, usage tracked
- * across DIFFERENT entities sums into one pool. After 5 total is consumed, ANY
- * entity is rejected — including an entity that only spent 2 (which, under a
- * per-entity cap, would still have 3 of its own headroom).
- *
- * Mechanism: for a customer/plan-tier limit (the entity has no own usage_limits
- * entry), fullSubjectToUsageWindowLimits passes entityScope = null → the window
- * key is customer-scoped (entity segment "_") → every entity increments the same
- * counter. A limit set ON an entity is carved out into its own per-entity
- * counter instead (see entity-usage-window-inheritance.test.ts).
- *
- * We assert via the deterministic reject contract rather than the Postgres
- * usage_windows rows, which sync asynchronously after the Redis enforcement.
- */
-
 import { test } from "bun:test";
 import {
 	ApiVersion,
@@ -87,13 +67,10 @@ test.concurrent(
 			await autumnV2_3.entities.get(customerId, entity.id);
 		}
 
-		// 2 + 2 + 1 = 5 across THREE different entities exhausts the shared cap.
 		await trackOnEntity(customerId, entities[0].id, 2);
 		await trackOnEntity(customerId, entities[1].id, 2);
 		await trackOnEntity(customerId, entities[2].id, 1);
 
-		// e0 only consumed 2; under a per-entity cap of 5 it would still have 3
-		// headroom. Shared cap is exhausted -> it is rejected.
 		await expectAutumnError({
 			errCode: ErrCode.InsufficientBalance,
 			func: () =>
@@ -128,9 +105,6 @@ test.concurrent(
 			await autumnV2_3.entities.get(customerId, entity.id);
 		}
 
-		// No usage_limit at all. Each entity has 100 included, so well past the
-		// "5" of the cap tests there is ample balance — every reject-mode track
-		// succeeds. This isolates the cap (not balance) as the blocker above.
 		for (const value of [2, 2, 1, 5, 5, 5]) {
 			await autumnV2_3.track({
 				customer_id: customerId,
@@ -158,7 +132,6 @@ test.concurrent(
 			actions: [s.billing.attach({ productId: prod.id })],
 		});
 
-		// Customer cap 5 (shared); entity[0] also gets its OWN cap 5 (carved out).
 		await setCustomerUsageLimit({
 			autumn: autumnV2_3,
 			customerId,
@@ -178,10 +151,7 @@ test.concurrent(
 			await autumnV2_3.entities.get(customerId, entity.id);
 		}
 
-		// entity[0] spends its OWN 5 — into its carved-out window, NOT the
-		// customer aggregate.
 		await trackOnEntity(customerId, entities[0].id, 5);
-		// entity[0] is now at its own cap -> rejects.
 		await expectAutumnError({
 			errCode: ErrCode.InsufficientBalance,
 			func: () =>
@@ -194,8 +164,6 @@ test.concurrent(
 				}),
 		});
 
-		// entity[1] (no own cap) still has the FULL shared customer cap of 5 —
-		// proving entity[0]'s 5 never touched the customer aggregate window.
 		await trackOnEntity(customerId, entities[1].id, 5);
 		await expectAutumnError({
 			errCode: ErrCode.InsufficientBalance,
@@ -240,7 +208,6 @@ test.concurrent(
 			await autumnV2_3.entities.get(customerId, entity.id);
 		}
 
-		// Same shape: plan-default cap of 5 pooled across all three entities.
 		await trackOnEntity(customerId, entities[0].id, 2);
 		await trackOnEntity(customerId, entities[1].id, 2);
 		await trackOnEntity(customerId, entities[2].id, 1);

@@ -10,7 +10,6 @@ const CHARS_RUN_LEVEL = 5_000_000;
 
 type Pending = { file: string | null; worker: string | null; chunk: string };
 
-/** Buffers a run's log chunks and bulk-inserts them every second. */
 export const createRunLogWriter = ({
 	ctx,
 	runId,

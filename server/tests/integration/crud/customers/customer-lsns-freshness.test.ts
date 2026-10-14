@@ -1,14 +1,3 @@
-/**
- * customer_lsns freshness ledger: structural write flows must stamp the ledger.
- *
- * Contract under test:
- *   - customers.create (createWithDefaults) upserts a customer_lsns row keyed
- *     (org_id, env, customer_id) with internal_customer_id resolved
- *   - customers.update moves updated_at forward (Postgres now(), upsert not insert)
- *   - marks make isCustomerRecentlyUpdated true (primary-routing signal)
- *   - customers.delete still marks (deleted customers read fresh 404s)
- */
-
 import { expect, test } from "bun:test";
 import { AppEnv } from "@autumn/shared";
 import chalk from "chalk";
@@ -53,9 +42,7 @@ test.concurrent(
 
 		try {
 			await autumn.customers.delete(customerId);
-		} catch {
-			// ignore missing
-		}
+		} catch {}
 
 		await autumn.customers.create({
 			id: customerId,
@@ -84,8 +71,6 @@ test.concurrent(
 			new Date(afterCreate!.updated_at).getTime(),
 		);
 
-		// Batch mark resolves (org, env, id) through customers by internal id —
-		// the path entity/cusProduct/cusEnt service chokepoints use.
 		await new Promise((resolve) => setTimeout(resolve, 50));
 		await markCustomersUpdatedAtByInternalIds({
 			db,

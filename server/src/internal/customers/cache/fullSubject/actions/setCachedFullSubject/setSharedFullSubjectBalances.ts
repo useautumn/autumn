@@ -46,16 +46,12 @@ export const buildSharedBalanceWrites = ({
 		aggregatedByFeatureId.set(aggregated.feature_id, aggregated);
 	}
 
-	// Capped features get a `_usage_windows` field even with no rows and no
-	// entitlements: a present-but-empty field means "fresh counter", a missing
-	// field means "stale cache" and the deduction script fails closed on it.
 	const usageWindowsByFeatureId = new Map<string, UsageWindow[]>();
 	for (const featureId of usageWindowFeatureIds) {
 		usageWindowsByFeatureId.set(featureId, []);
 	}
 	for (const usageWindow of usageWindows) {
 		const existingWindows = usageWindowsByFeatureId.get(usageWindow.feature_id);
-		// Rows for features whose cap is no longer armed are not re-cached.
 		if (!existingWindows) continue;
 		existingWindows.push(usageWindow);
 	}

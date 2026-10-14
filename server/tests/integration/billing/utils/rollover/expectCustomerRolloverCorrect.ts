@@ -1,9 +1,6 @@
 import { expect } from "bun:test";
 import type { ApiCustomerV3, ApiEntityV0 } from "@autumn/shared";
 
-/**
- * Verify customer feature rollover state
- */
 export const expectCustomerRolloverCorrect = ({
 	customer,
 	featureId,
@@ -36,9 +33,6 @@ export const expectCustomerRolloverCorrect = ({
 	}
 };
 
-/**
- * Verify customer feature has NO rollovers
- */
 export const expectNoRollovers = ({
 	customer,
 	featureId,

@@ -5,10 +5,6 @@ import { useAxiosInstance } from "@/services/useAxiosInstance";
 
 const EMPTY_VERSIONS: ProductV2[] = [];
 
-/**
- * All version rows for one productId. Not on the plan page's primary query —
- * enable after the page is interactive (typically on dropdown open).
- */
 export const useProductVersionsQuery = ({
 	productId,
 	enabled = false,

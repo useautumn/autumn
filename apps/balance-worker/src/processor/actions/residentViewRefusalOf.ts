@@ -3,13 +3,11 @@ import { viewHasEntity } from "../subject/actions/ensureSubject/ensureSubjectSta
 import type { PartitionProcessorScope } from "../types/partitionProcessor.js";
 import { resetMayBeDue } from "./ensureSubjectCurrent/earliestResetAt.js";
 
-/** Why a command can't be decided without the asynchronous ensure. */
 export type ResidentViewRefusal =
 	| "not_resident"
 	| "reset_due"
 	| "catalog_stale";
 
-/** The ensure's own view, checked without awaiting: the rows (an entity's included), current resets and catalog. */
 export function residentViewRefusalOf({
 	scope,
 	identity,

@@ -28,12 +28,7 @@ const oneOffCredits = ({
 		isOneOff: true,
 	}) as LimitedItem;
 
-/** Wait time for SQS auto top-up processing */
 const AUTO_TOPUP_WAIT_MS = 40000;
-
-// ═══════════════════════════════════════════════════════════════════
-// CS1: Action track depletes credits below threshold → auto top-up fires
-// ═══════════════════════════════════════════════════════════════════
 
 test.concurrent(`${chalk.yellowBright("auto-topup cs1: action track depletes credits → auto top-up fires")}`, async () => {
 	const creditsItem = oneOffCredits({ billingUnits: 1, price: 0.1 });
@@ -58,8 +53,6 @@ test.concurrent(`${chalk.yellowBright("auto-topup cs1: action track depletes cre
 
 	const creditFeature = ctx.features.find((f) => f.id === TestFeature.Credits);
 
-	// Starting balance: 200 credits
-	// Configure auto top-up on credits feature: threshold=30, quantity=100
 	await autumnV2_1.customers.update(customerId, {
 		billing_controls: {
 			auto_topups: [
@@ -73,10 +66,6 @@ test.concurrent(`${chalk.yellowBright("auto-topup cs1: action track depletes cre
 		},
 	});
 
-	// Action1 costs 0.2 credits per unit
-	// Track 845 units → 845 × 0.2 = 169 credits deducted
-	// Balance: 200 - 169 = 31 → strictly above threshold (30) → does NOT trigger
-	// (exact threshold uses <= in code, so landing on 30 would fire auto top-up)
 	const action1Cost = getCreditCost({
 		featureId: TestFeature.Action1,
 		creditSystem: creditFeature!,
@@ -94,10 +83,7 @@ test.concurrent(`${chalk.yellowBright("auto-topup cs1: action track depletes cre
 	const mid = await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
 	const midCredits = mid.balances[TestFeature.Credits]?.remaining;
 	const expectedMid = new Decimal(200).sub(action1Cost).toNumber();
-	expect(midCredits).toBe(expectedMid); // 31, no top-up
-
-	// Track 10 units of action1 → 10 × 0.2 = 2 credits
-	// Balance: 31 - 2 = 29 → 29 <= threshold → auto top-up fires → 29 + 100 = 129
+	expect(midCredits).toBe(expectedMid);
 	const action1CostSmall = getCreditCost({
 		featureId: TestFeature.Action1,
 		creditSystem: creditFeature!,
@@ -124,9 +110,6 @@ test.concurrent(`${chalk.yellowBright("auto-topup cs1: action track depletes cre
 		remaining: expectedAfter,
 	});
 });
-// ═══════════════════════════════════════════════════════════════════
-// CS2: Action track depletes credits below threshold → auto top-up fires
-// ═══════════════════════════════════════════════════════════════════
 
 test.concurrent(`${chalk.yellowBright("auto-topup cs2: action track depletes credits at one go → auto top-up fires")}`, async () => {
 	const creditsItem = oneOffCredits({ billingUnits: 1, price: 0.1 });
@@ -151,8 +134,6 @@ test.concurrent(`${chalk.yellowBright("auto-topup cs2: action track depletes cre
 
 	const creditFeature = ctx.features.find((f) => f.id === TestFeature.Credits);
 
-	// Starting balance: 200 credits
-	// Configure auto top-up on credits feature: threshold=30, quantity=100
 	await autumnV2_1.customers.update(customerId, {
 		billing_controls: {
 			auto_topups: [
@@ -166,9 +147,6 @@ test.concurrent(`${chalk.yellowBright("auto-topup cs2: action track depletes cre
 		},
 	});
 
-	// Action1 costs 0.2 credits per unit
-	// Track 900 units of action1 → 900 × 0.2 = 180 credits deducted
-	// Balance: 200 - 180 = 20 → auto top-up fires
 	const action1Cost = getCreditCost({
 		featureId: TestFeature.Action1,
 		creditSystem: creditFeature!,
@@ -186,7 +164,7 @@ test.concurrent(`${chalk.yellowBright("auto-topup cs2: action track depletes cre
 	const mid = await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
 	const midCredits = mid.balances[TestFeature.Credits]?.remaining;
 	const expectedMid = new Decimal(200).sub(action1Cost).add(100).toNumber();
-	expect(midCredits).toBe(expectedMid); // 20, auto top-up fires
+	expect(midCredits).toBe(expectedMid);
 
 	await expectCustomerInvoiceCorrect({
 		customerId: customerId,

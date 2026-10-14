@@ -3,7 +3,6 @@ import { resolveRevenueCatCustomer } from "@/external/revenueCat/misc/resolveRev
 import { loadCustomerWithAllProducts } from "@/external/revenueCat/transfer/loadCustomerWithAllProducts";
 import type { RevenueCatWebhookContext } from "@/external/revenueCat/webhookMiddlewares/revenuecatWebhookContext";
 
-/** Autumn customers behind the RC users purchases were taken from; ids Autumn never saw (e.g. anonymous) drop out. */
 export const findSourceCustomers = async ({
 	ctx,
 	appUserIds,

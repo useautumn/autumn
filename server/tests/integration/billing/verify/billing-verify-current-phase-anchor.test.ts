@@ -1,16 +1,3 @@
-/**
- * Billing Verify: billing-cycle-anchor drift on the current phase
- *
- * Contract under test (billingActions.verify):
- *   - Anchor drift on the schedule's CURRENT phase is reported without a
- *     phase_starts_at stamp — it is the live phase, not a future one.
- *   - Anchor drift on a LATER phase carries that phase's start.
- *
- * Red (current): phase 0 is stamped with the current phase start, so the
- * message reads "(in future phase starting <months ago>)".
- * Green (after): phase 0 carries no stamp; later phases keep theirs.
- */
-
 import { expect, test } from "bun:test";
 import {
 	type CreateScheduleParamsV0Input,
@@ -50,7 +37,6 @@ const scheduleIdFor = async ({
 	return scheduleId;
 };
 
-/** Flips one phase's billing_cycle_anchor to phase_start, leaving the rest as is. */
 const driftPhaseAnchor = async ({
 	ctx,
 	scheduleId,

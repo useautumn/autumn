@@ -14,7 +14,6 @@ import { updateInvoiceFromStripe } from "./updateFromStripe";
 
 const ALREADY_FINALIZED_STRIPE_STATUSES = new Set(["open", "paid"]);
 
-/** Finalizes a draft Stripe invoice and hands collection to Stripe. */
 export const finalizeInvoice = async ({
 	ctx,
 	invoiceId,
@@ -65,7 +64,6 @@ export const finalizeInvoice = async ({
 		});
 	}
 
-	// Invoice-mode drafts are parked with auto_advance off, and finalize alone does not turn it back on.
 	await updateStripeInvoice({
 		stripeCli,
 		invoiceId: stripeInvoice.id,

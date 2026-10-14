@@ -6,7 +6,6 @@ import { receiveDeleteAtom } from "./receiveDeleteAtom.js";
 import { receiveGetAtom } from "./receiveGetAtom.js";
 import { receivePutAtom } from "./receivePutAtom.js";
 
-/** Routes only a multi-tenant Atom has: the admin adds and removes the orgs it holds. */
 export const mountMultiTenantRoutes = ({
 	app,
 	ctx,
@@ -14,7 +13,6 @@ export const mountMultiTenantRoutes = ({
 	app: Hono<AtomHttpEnv>;
 	ctx: MultiTenantContext & Pick<AtomHttpContext, "replication">;
 }): void => {
-	// Per route, not on a sub-app: mounted at /v1, a sub-app's middleware would also guard the org routes.
 	const adminOnly = adminTokenMiddleware({ ctx });
 	app.post("/v1/atoms.put", adminOnly, receivePutAtom({ ctx }));
 	app.post("/v1/atoms.get", adminOnly, receiveGetAtom({ ctx }));

@@ -52,7 +52,6 @@ function getActiveRowEntitlements(
 	return ents.filter((ent) => !isCusEntDisplayExpired({ cusEnt: ent }));
 }
 
-/** Computes balance values from a single entitlement (for sub-rows) */
 function getIndividualEntValues({
 	ent,
 	entityId,
@@ -82,13 +81,9 @@ function getIndividualEntValues({
 			?.balance ?? 0;
 
 	const quantity = ent.customer_product?.quantity || 1;
-	// grantedBalance/prepaidAllowance already account for per-entity multiplication
-	// at customer level; the manual sum here dropped it, undercounting to one entity.
 	const allowance = grantedBalance + prepaidAllowance;
 	return { balance, allowance, quantity, rolloverBalance };
 }
-
-// --- Usage cells ---
 
 function ParentUsageCell({
 	ent,
@@ -229,8 +224,6 @@ function UsageCell({
 	);
 }
 
-// --- Bar cells ---
-
 const formatChipDate = (timestamp: number | null | undefined) => {
 	if (!timestamp) return "";
 	const { date, time } = formatUnixToDateTime(timestamp, { withYear: true });
@@ -242,7 +235,6 @@ function BalanceExpiryIcon({
 	forceExpired = false,
 }: {
 	expiresAt: number | null | undefined;
-	/** A churned plan's row is dead even if its own expires_at is in the future. */
 	forceExpired?: boolean;
 }) {
 	const expiredByClock = expiresAt != null && expiresAt <= Date.now();
@@ -452,7 +444,6 @@ function BalanceActionsCell({
 			: [row.original]
 	).filter((ent) => !isCusEntDisplayExpired({ cusEnt: ent }));
 
-	// Reserve the slot, or the column edge goes ragged.
 	if (!canDelete && !canRecordUsage && !canCheckBalance && !canRecalculate)
 		return (
 			<div className="flex justify-end" aria-hidden>
@@ -619,8 +610,6 @@ function MobileUsageWithBar({
 		</div>
 	);
 }
-
-// --- Column definitions ---
 
 export const CustomerBalanceTableColumns = ({
 	fullCustomer,

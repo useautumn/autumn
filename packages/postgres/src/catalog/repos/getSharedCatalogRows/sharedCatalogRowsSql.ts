@@ -2,10 +2,6 @@ import { type SQL, sql } from "drizzle-orm";
 import type { PostgresContext } from "../../../types/postgresClient.js";
 import { planLicenseCatalogRowsSql } from "../getCatalogRows/planLicenseCatalogRowsSql.js";
 
-/**
- * Every catalog row of one org in one env that is not one customer's own, in one statement.
- * Entitlements, prices and free trials carry no env, so they are scoped by the product they belong to.
- */
 export const sharedCatalogRowsSql = ({
 	ctx,
 }: {

@@ -262,7 +262,6 @@ describe("Real ownership admission", () => {
 				processor.track({ command }),
 			);
 			const stopping = worker.stop();
-			// No successor announces itself, so the route stays up until the ready wait times out.
 			await waitFor(
 				() => worker.findRuntime(owner as PartitionOwner) === undefined,
 			);
@@ -366,7 +365,6 @@ describe("Real ownership admission", () => {
 	});
 });
 
-/** Two workers in one group, each with its own listener, store and ownership link, the way a fleet runs. */
 describe("Partition handoff under load", () => {
 	const partitionCount = 3;
 	type LiveWorker = Awaited<ReturnType<typeof startWorker>>;
@@ -391,7 +389,6 @@ describe("Partition handoff under load", () => {
 		owners: string;
 		events: string[];
 		errors: unknown[];
-		/** Its own group makes the worker a member of another fleet. */
 		groupId?: string;
 		awaitReadyAnnouncement?: PartitionsDependencies["awaitReadyAnnouncement"];
 	}) {
@@ -532,7 +529,6 @@ describe("Partition handoff under load", () => {
 		return { name, endpoint, partitions, stop, ownedPartitions };
 	}
 
-	/** One customer per partition, initialized on the log so any worker can rebuild it. */
 	async function seedCustomers({
 		kafka,
 		topic,
@@ -588,7 +584,6 @@ describe("Partition handoff under load", () => {
 		return customers;
 	}
 
-	/** An S3 with one object per key, so the record a test writes is what the store reads. */
 	function createMemoryS3Client(): EdgeConfigS3Client {
 		const objects = new Map<string, string>();
 		return {
@@ -713,7 +708,6 @@ describe("Partition handoff under load", () => {
 		let hammering = false;
 		const hammers: Promise<void>[] = [];
 		const workerContext = { kafka, admin, id, topic, owners, events, errors };
-		// The groups createBalanceWorker would derive: one per fleet, from the service ARN alone.
 		const blue = await startWorker({
 			name: "A",
 			...workerContext,
@@ -741,7 +735,6 @@ describe("Partition handoff under load", () => {
 				);
 			await Bun.sleep(300);
 
-			// Green joins its own group, prepares everything and holds: nothing on the ownership log, blue keeps serving.
 			const blueClaims = events.length;
 			green = await startWorker({
 				name: "B",
@@ -762,7 +755,6 @@ describe("Partition handoff under load", () => {
 			expect(events.slice(blueClaims)).toEqual([]);
 			expect(blue.ownedPartitions().length).toBe(partitionCount);
 
-			// The flip: every partition moves by handoff, blue names green, green never claims for itself.
 			await activeSlot.writeToSource({ config: slotRecord(arns.green) });
 			await waitFor(
 				() =>
@@ -842,7 +834,6 @@ describe("Partition handoff under load", () => {
 				},
 			],
 		});
-		// One customer per partition, initialized on the log so any worker can rebuild it.
 		const customers = new Map<number, ReturnType<typeof createSubjectState>>();
 		for (let index = 0; customers.size < partitionCount; index++) {
 			const identity = {
@@ -971,7 +962,6 @@ describe("Partition handoff under load", () => {
 			startHammer();
 			await Bun.sleep(500);
 
-			// JOIN: B takes some partitions from A; each moves by handoff, never by release.
 			B = await startWorker({ name: "B", ...workerContext });
 			const joined = B;
 			await waitFor(
@@ -988,7 +978,6 @@ describe("Partition handoff under load", () => {
 			}
 			await Bun.sleep(1_000);
 
-			// GRACEFUL LEAVE: B leaves the group and hands its partitions back to A.
 			await joined.stop();
 			await waitFor(() => A.ownedPartitions().length === partitionCount);
 			for (const partition of moved) {
@@ -1003,7 +992,6 @@ describe("Partition handoff under load", () => {
 			const failures = outcomes.filter(({ outcome }) => outcome !== "200");
 			expect(failures).toEqual([]);
 			expect(outcomes.length).toBeGreaterThan(60);
-			// Applied exactly once: the balance dropped by one per 200, no more, no less.
 			for (const [partition, state] of customers) {
 				const reply = await client.readSubjectState({
 					command: parseReadSubjectStateCommand({

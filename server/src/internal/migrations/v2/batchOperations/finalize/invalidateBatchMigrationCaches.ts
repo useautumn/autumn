@@ -4,17 +4,9 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { batchInvalidateCachedFullSubjects } from "@/internal/customers/cache/fullSubject/actions/invalidate/batchInvalidateCachedFullSubjects.js";
 import type { BatchMigrationPageResult } from "../execute/types/batchMigrationExecutionTypes.js";
 
-/** Migration writes are already committed when this runs, so a dropped
- *  invalidation is unrecoverable staleness rather than a retryable request. */
 const MIGRATION_INVALIDATE_MAX_ATTEMPTS = 5;
 const MIGRATION_REDIS_COMMAND_TIMEOUT_MS = 10_000;
 
-/**
- * Busts caches for the page's mutated customers — skipped customers received
- * no writes. Covers fullCustomer plus the FullSubject keys (subject manifest,
- * shared balances, view epoch); redis failures fail open inside after the
- * retries are spent.
- */
 export const invalidateBatchMigrationCaches = async ({
 	ctx,
 	pageResult,
@@ -24,7 +16,6 @@ export const invalidateBatchMigrationCaches = async ({
 	pageResult: BatchMigrationPageResult;
 	includeSkipped?: boolean;
 }): Promise<number> => {
-	// Org-scoped, so the per-customer callback below can return a fixed list.
 	const redisTargets = getRedisTargetsForCustomer({ org: ctx.org });
 	const customers = includeSkipped
 		? [...pageResult.succeeded, ...pageResult.skipped]
@@ -51,8 +42,6 @@ export const invalidateBatchMigrationCaches = async ({
 		logger: ctx.logger,
 	});
 
-	// One line per page: the split says whether a future stall sat in the
-	// Postgres freshness marks or in Redis.
 	ctx.logger.info("batch-migration: page caches invalidated", {
 		data: {
 			customers: invalidated,

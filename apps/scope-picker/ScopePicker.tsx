@@ -89,10 +89,8 @@ const RESOURCE_KEYS: Record<string, Resource> = {
 	"0": "platform",
 };
 
-/** Guess a sensible default resource based on the route path. */
 function guessResource(r: RouteRow): Resource | null {
 	const p = r.path.toLowerCase();
-	// Platform API takes precedence over organisation / customers prefix matches.
 	if (p.includes("/platform/") || p.startsWith("/v1/platform") || p.includes("platform.")) return "platform";
 	if (p.includes("/customers") || p.includes("customers.") || p.includes("/entities") || p.includes("entities."))
 		return "customers";
@@ -112,12 +110,10 @@ function guessResource(r: RouteRow): Resource | null {
 	return null;
 }
 
-/** Guess a sensible default action based on HTTP method + path hints. */
 function guessAction(r: RouteRow): Action {
 	const m = r.method.toUpperCase();
 	if (m === "GET") return "read";
 	const p = r.path.toLowerCase();
-	// RPC read-ish
 	if (p.endsWith(".list") || p.endsWith(".get") || p.includes(".preview") || p.endsWith("/preview"))
 		return "read";
 	return "write";
@@ -129,7 +125,6 @@ export function ScopePicker() {
 		() =>
 			(data.routes as RouteRow[]).filter((r) => {
 				if (r.isWebhookExempt) return false;
-				// Keep rows where needsScopes is undefined (older snapshot) OR true.
 				if (r.needsScopes === false) return false;
 				return true;
 			}),
@@ -160,7 +155,6 @@ export function ScopePicker() {
 
 	const searchRef = useRef<HTMLInputElement | null>(null);
 
-	// Load decisions from disk on mount
 	useEffect(() => {
 		(async () => {
 			try {
@@ -169,19 +163,16 @@ export function ScopePicker() {
 				const d = (payload?.decisions ?? {}) as Record<string, Decision>;
 				setDecisions(d);
 			} catch {
-				// Fallback to localStorage
 				try {
 					const raw = localStorage.getItem(STORAGE_LOCAL_KEY);
 					if (raw) setDecisions(JSON.parse(raw));
 				} catch {
-					/* noop */
 				}
 			}
 			setLoadedFromDisk(true);
 		})();
 	}, []);
 
-	// Persist (debounced via microtask per change is fine — tiny payload)
 	const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 	useEffect(() => {
 		if (!loadedFromDisk) return;
@@ -201,29 +192,24 @@ export function ScopePicker() {
 				try {
 					localStorage.setItem(STORAGE_LOCAL_KEY, JSON.stringify(decisions));
 				} catch {
-					/* noop */
 				}
 				setSaveState("error");
 			}
 		}, 120);
 	}, [decisions, loadedFromDisk]);
 
-	// Groups list (sorted, "all" first)
 	const groups = useMemo(() => {
 		return ["all", ...Array.from(new Set(allRoutes.map((r) => r.group))).sort()];
 	}, [allRoutes]);
 
-	// Filtered routes
 	const filtered = useMemo(() => {
 		const q = filterQ.trim().toLowerCase();
 		return allRoutes.filter((r) => {
 			if (filterGroup !== "all" && r.group !== filterGroup) return false;
 			if (filterResource !== "all") {
 				const d = decisions[rowKey(r)];
-				// Pick the first resource-flavoured scope (skip meta-only entries).
 				const resourceScopes = d?.scopes?.filter((s) => s.includes(":")) ?? [];
 				const resource = resourceScopes[0]?.split(":")[0] as Resource | undefined;
-				// If no decision yet, use heuristic guess for filter
 				const guess = resource ?? guessResource(r);
 				if (guess !== filterResource) return false;
 			}
@@ -236,14 +222,12 @@ export function ScopePicker() {
 		});
 	}, [allRoutes, decisions, filterGroup, filterResource, filterQ, showDecided]);
 
-	// Clamp index when filter changes
 	useEffect(() => {
 		if (index >= filtered.length) setIndex(Math.max(0, filtered.length - 1));
 	}, [filtered.length, index]);
 
 	const current = filtered[index];
 
-	// Prefill draft when current changes
 	useEffect(() => {
 		if (!current) return;
 		const existing = decisions[rowKey(current)];
@@ -272,8 +256,6 @@ export function ScopePicker() {
 		} else {
 			const guessRes = guessResource(current);
 			const guessAct = guessAction(current);
-			// Heuristic: routes under /admin are Autumn-staff-only and should
-			// default to `superuser` rather than an R/W scope.
 			const isAdminRoute = current.group === "admin" || current.path.startsWith("/admin/") || current.path.startsWith("/sandbox/admin/");
 			setDraft({
 				resource: isAdminRoute ? null : guessRes,
@@ -287,7 +269,6 @@ export function ScopePicker() {
 
 	const setResource = useCallback((res: Resource) => {
 		setDraft((d) => {
-			// analytics cannot be write; auto-downgrade
 			const actions = new Set(d.actions);
 			if (res === "analytics") actions.delete("write");
 			return { ...d, resource: res, actions };
@@ -313,18 +294,6 @@ export function ScopePicker() {
 		});
 	}, []);
 
-	/**
-	 * Save the current draft to the decisions map.
-	 *
-	 * `kind`:
-	 *   - "decided"  → persist current draft scopes
-	 *   - "skip"     → mark as skipped (no scopes)
-	 *   - "unknown"  → mark as unknown (no scopes)
-	 *
-	 * `advance` controls whether we move to the next card. Set to `false`
-	 * for "save but stay" flows (e.g. Cmd+Enter when you want to keep
-	 * editing the same route, e.g. to add ANY-group scopes iteratively).
-	 */
 	const commit = useCallback(
 		(
 			kind: "decided" | "skip" | "unknown" = "decided",
@@ -346,9 +315,7 @@ export function ScopePicker() {
 				}));
 			} else {
 				const scopes: ScopeString[] = [];
-				// Meta scopes (superuser / admin) — route-standalone ok
 				for (const m of draft.meta) scopes.push(m);
-				// Resource R/W scopes
 				if (draft.resource && draft.actions.size > 0) {
 					for (const a of draft.actions) {
 						if (draft.resource === "analytics" && a === "write") continue;
@@ -384,7 +351,6 @@ export function ScopePicker() {
 		});
 	}, [current]);
 
-	// Keyboard handlers
 	useEffect(() => {
 		const onKey = (e: KeyboardEvent) => {
 			const tgt = e.target as HTMLElement;
@@ -395,15 +361,12 @@ export function ScopePicker() {
 				}
 				return;
 			}
-			// Cmd/Ctrl+Enter: save but stay on the same card (useful for
-			// iteratively adding extra scopes to the same route).
 			if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
 				commit("decided", false);
 				e.preventDefault();
 				return;
 			}
 			if (e.metaKey || e.ctrlKey || e.altKey) return;
-			// Resource keys 1-9
 			if (RESOURCE_KEYS[e.key]) {
 				setResource(RESOURCE_KEYS[e.key]);
 				e.preventDefault();
@@ -418,7 +381,6 @@ export function ScopePicker() {
 					toggleAction("write");
 					e.preventDefault();
 					break;
-				// Meta-scopes — uppercase to distinguish from `s` (skip) / `a` (unused)
 				case "S":
 					toggleMeta("superuser");
 					e.preventDefault();
@@ -497,7 +459,6 @@ export function ScopePicker() {
 				boxSizing: "border-box",
 			}}
 		>
-			{/* Top bar */}
 			<div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "12px", flexWrap: "wrap" }}>
 				<div style={{ fontWeight: 700, fontSize: "16px" }}>Scope Picker</div>
 				<div style={{ opacity: 0.65, fontSize: "12px" }}>
@@ -527,7 +488,6 @@ export function ScopePicker() {
 				</button>
 			</div>
 
-			{/* Filter bar */}
 			<div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "12px", flexWrap: "wrap" }}>
 				<input
 					ref={searchRef}
@@ -581,7 +541,6 @@ export function ScopePicker() {
 				</div>
 			</div>
 
-			{/* Card */}
 			{current ? (
 				<Card
 					route={current}
@@ -600,7 +559,6 @@ export function ScopePicker() {
 				</div>
 			)}
 
-			{/* Context: surrounding siblings (parent group) */}
 			{current && <ParentGroup current={current} decisions={decisions} filtered={filtered} setIndex={setIndex} index={index} />}
 		</div>
 	);

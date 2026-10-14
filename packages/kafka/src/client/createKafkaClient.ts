@@ -50,7 +50,6 @@ export function createKafkaClient({
 	return {
 		clientId,
 		brokers,
-		// Routine broker refusals are lowered from ERROR; a transport may bring its own creator.
 		logCreator: createKafkaLogCreator(),
 		...transport,
 		connectionTimeout: limits.connectionTimeoutMs,

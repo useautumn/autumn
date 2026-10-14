@@ -1,6 +1,3 @@
-// The server zero-fills every period in the window, so the count of periods it
-// returns is the x-axis the chart must render — dropping zeros must not shrink it.
-
 import { expect, test } from "bun:test";
 import { dropZeroRowsKeepingPeriods } from "@/views/customers/customer/analytics/utils/dropZeroRowsKeepingPeriods";
 

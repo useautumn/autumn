@@ -20,7 +20,6 @@ import { getManagingRoleArn } from "./managingRoleArn.js";
 import { revokeSetupLinksOnceDeleted } from "./setupLinks.js";
 import { getAwsTemplateUrl } from "./templateUrls.js";
 
-/** The local manager has no setup links; deploying straight away stands in for the customer running the setup. */
 const startLocalSetup = async ({
 	api,
 	name,
@@ -52,12 +51,9 @@ const startLocalSetup = async ({
 	return { deploymentGroupId: group.id, setupUrl: null };
 };
 
-/** A link nobody runs stops working after this, so one we could not revoke never stays open. */
 const SETUP_LINK_TTL_MS = 7 * 24 * 60 * 60 * 1000;
-/** One Atom per group: a stale link can't start a second deployment beside it. Alien applies it to groups it creates. */
 const MAX_DEPLOYMENTS_PER_GROUP = 1;
 
-/** Same external id reuses the customer's deployment group. Older links are revoked first unless a stack launched from one is still up. */
 const startHostedSetup = async ({
 	ctx,
 	config,
@@ -121,7 +117,6 @@ const startHostedSetup = async ({
 					},
 					environmentVariables,
 				},
-				// Without a setup item the portal has nothing to run and reports setup complete.
 				setupItems: [{ item: "deployment", required: true }],
 			},
 			schema: z.object({
@@ -145,7 +140,6 @@ const startHostedSetup = async ({
 	};
 };
 
-/** The local manager runs no machines or networks, so only a hosted setup takes `region`, `pools`, `containers` and `network`. */
 export const startSetup = ({
 	ctx,
 	externalId,

@@ -18,9 +18,6 @@ import { computeRetainedCustomerEntitlementUpdates } from "@/internal/billing/v2
 import { addStripeSubscriptionIdToBillingPlan } from "@/internal/billing/v2/execute/addStripeSubscriptionIdToBillingPlan";
 import { computeFieldUpdates } from "./computeFieldUpdates";
 
-/**
- * Compute the subscription update plan
- */
 export const computeUpdateSubscriptionPlan = async ({
 	ctx,
 	billingContext,
@@ -81,7 +78,6 @@ export const computeUpdateSubscriptionPlan = async ({
 		};
 	}
 
-	// Apply cancel plan if cancelAction is set in context
 	plan = computeCancelPlan({ ctx, billingContext, plan });
 
 	plan = await finalizeUpdateSubscriptionPlan({
@@ -91,8 +87,6 @@ export const computeUpdateSubscriptionPlan = async ({
 		params,
 	});
 
-	// When skipBillingChanges is true, Stripe is never called, so the post-Stripe
-	// sub-id linkage in executeStripeSubscriptionAction never runs.
 	const linkedSubscriptionId =
 		params.processor_subscription_id !== undefined
 			? params.processor_subscription_id
@@ -108,7 +102,6 @@ export const computeUpdateSubscriptionPlan = async ({
 	return plan;
 };
 
-/** Computes refund + charge line items when billing cycle anchor is being reset. */
 const computeAnchorResetLineItems = ({
 	ctx,
 	billingContext,

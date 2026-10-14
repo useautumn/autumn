@@ -6,10 +6,6 @@ import type { StripeWebhookContext } from "../webhookMiddlewares/stripeWebhookCo
 export const getStripeWebhookReplayQueueUrl = () =>
 	process.env.STRIPE_WEBHOOK_SQS_QUEUE_URL;
 
-/**
- * Queues a failed early-acked webhook for replay. Never throws — the caller
- * is a background failure path and enqueue is best-effort.
- */
 export const enqueueStripeWebhookReplay = async ({
 	ctx,
 	failureReason,

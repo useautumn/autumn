@@ -5,7 +5,6 @@ import {
 import type { AutumnBillingPlan, FullCusProduct } from "@autumn/shared";
 import { customerEntitlementToPlanOps } from "../customerEntitlements/customerEntitlementToPlanOps.js";
 
-/** The product row first, then the prices and grants that reference it. License pools are not the worker's. */
 const customerProductToPlanOps = ({
 	customerProduct,
 }: {

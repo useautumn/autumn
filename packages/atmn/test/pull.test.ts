@@ -6,19 +6,12 @@ import { runPull } from "../src/actions/pull";
 import { AutumnApiError, type AutumnClient } from "../src/generated/client";
 import { createPrompter } from "../src/prompt/prompt";
 
-/**
- * Pull against a fake client: preview and catalog responses are canned
- * camelCase objects shaped like the generated response types, so the whole
- * reversal runs without a server.
- */
-
 const tempDir = ({ name }: { name: string }): string => {
 	const dir = join(import.meta.dir, ".tmp", `pull-${name}`);
 	mkdirSync(dir, { recursive: true });
 	return dir;
 };
 
-/** Its own git toplevel, so the monorepo's root `atmn` marker stays out of reach. */
 const isolateFromRepo = ({ dir }: { dir: string }): void => {
 	execFileSync("git", ["init", "-q"], { cwd: dir });
 };
@@ -43,7 +36,6 @@ const fakeClient = ({
 		get: async () => catalog,
 	}) as unknown as AutumnClient;
 
-/** A terminal that answers every question with `answer`. */
 const answering = (answer: string) =>
 	createPrompter({
 		interactive: true,
@@ -418,8 +410,6 @@ test("a create-action removes the export, the import and the array entry", async
 	expect(readFileSync(path, "utf8")).toBe(
 		[
 			'import { atmn } from "../../../src/generated/wire";',
-			// removeSpecifierEdit drops the specifier plus one comma, so the
-			// remaining one keeps its original leading space.
 			'import { seats } from "./features";',
 			"",
 			"export default atmn({",
@@ -708,7 +698,6 @@ test("a first pull scaffolds the config and fills it from the server", async () 
 
 	expect(result.appended.sort()).toEqual(["messages", "seats"]);
 	expect(printed[0]).toStartWith("Scaffolded ");
-	// One file per surface; the root only imports and states settings.
 	for (const file of ["features.ts", "plans.ts", "rewards.ts"])
 		expect(existsSync(`${dir}/${file}`)).toBe(true);
 	expect(existsSync(`${dir}/planVersions`)).toBe(false);
@@ -719,7 +708,6 @@ test("a first pull scaffolds the config and fills it from the server", async () 
 		'import { rewards, referralPrograms } from "./rewards";',
 	);
 	expect(root).not.toContain("feature(");
-	// The rows landed in the collection file the root imports.
 	const featuresFile = readFileSync(`${dir}/features.ts`, "utf8");
 	expect(featuresFile).toContain('featureId: "seats"');
 	expect(featuresFile).toContain('featureId: "messages"');
@@ -779,7 +767,6 @@ test("--overwrite without --yes warns and changes nothing", async () => {
 
 test("--overwrite --yes rewrites the config and its collection files, then pulls fresh; other files stay", async () => {
 	const dir = tempDir({ name: "overwrite" });
-	// A config for some other org, plus a file that is not atmn's.
 	const configPath = writeConfig({
 		dir,
 		text: [
@@ -796,7 +783,6 @@ test("--overwrite --yes rewrites the config and its collection files, then pulls
 	});
 	writeFileSync(join(dir, "old.ts"), "export const old = 1;\n");
 
-	// The fake never sees the stale rows: a diff of the empty shell only.
 	let diffed: unknown;
 	const client = {
 		previewUpdateOrganization: async () => ({ config: { changes: [] } }),
@@ -843,7 +829,6 @@ test("--overwrite --yes leaves a collection file alone when it is not atmn's, an
 			"",
 		].join("\n"),
 	});
-	// The user's own plans.ts: no atmn import, so it is not ours to rewrite.
 	const usersPlans = 'export const plans = ["mine"];\n';
 	writeFileSync(join(dir, "plans.ts"), usersPlans);
 
@@ -1012,7 +997,6 @@ test("a reward naming an archived plan is pulled without it, and the drop is sai
 			internalId: "rew_launch",
 			name: "Launch",
 			duration: { type: "forever", length: null },
-			// `retired` is archived: the catalog no longer surfaces it.
 			planIds: ["pro", "retired"],
 			promoCodes: [{ code: "LAUNCH" }],
 			type: "percentage_discount",
@@ -1067,7 +1051,6 @@ test("a reward naming an archived plan is pulled without it, and the drop is sai
 	expect(output).toContain(
 		'↳ referral program "friends" no longer names plan "retired": not in the catalog (archived), so not in the config',
 	);
-	// The pulled config lints clean and pushes what it declares.
 	// biome-ignore lint/suspicious/noExplicitAny: the executed wire
 	const wire = (await import(`${path}?v=${Date.now()}`)).default as any;
 	expect(wire.rewards[0].coupon.plan_ids).toEqual(["pro"]);

@@ -8,7 +8,6 @@ import type {
 import chalk from "chalk";
 import { computeScopeForScheduledProduct } from "@/internal/billing/v2/actions/setPlans/utils/computeScopeForScheduledProduct";
 
-// prices: [] keeps isOneOffProduct's price scan from tripping on a bare stub.
 const product = ({
 	id,
 	group,
@@ -49,7 +48,6 @@ const immediatePlan = ({
 
 type ComputeScopeArgs = Parameters<typeof computeScopeForScheduledProduct>[0];
 
-/** Defaults the customer to one holding both test entities. */
 const computeScope = (
 	args: Omit<ComputeScopeArgs, "fullCustomer"> & {
 		fullCustomer?: FullCustomer;
@@ -86,7 +84,6 @@ describe(chalk.yellowBright("computeScopeForScheduledProduct"), () => {
 				immediatePhaseProductContexts: [
 					immediatePlan({ id: "pro", group: "main" }),
 				],
-				// Would otherwise leak the request scope onto a customer-level slot.
 				fallbackEntity: entity("ent_1"),
 			}),
 		).toBeUndefined();

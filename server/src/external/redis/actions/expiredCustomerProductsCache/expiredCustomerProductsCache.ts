@@ -3,8 +3,6 @@ import { getFromMiscRedisTargets } from "@/external/redis/miscCache/getFromMiscR
 import { setOnMiscRedisTargets } from "@/external/redis/miscCache/setOnMiscRedisTargets.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 
-/** Cross-request handoff (subscription.deleted writes, invoice.created reads),
- *  so it dual-writes and reads from every live instance during a ramp. */
 const EXPIRED_CUSTOMER_PRODUCTS_TTL_SECONDS = 300;
 
 export const buildExpiredCustomerProductsCacheKey = (

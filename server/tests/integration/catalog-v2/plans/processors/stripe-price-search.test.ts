@@ -1,15 +1,3 @@
-/**
- * GET /organization/stripe/prices/search — the picker's only two lookups.
- *
- * Stripe cannot match price ids by substring, so free text is not a query.
- *
- * Contract:
- *   E1  a `price_` id returns exactly that price, with its product resolved
- *   E2  a `prod_` id returns every active price under that product
- *   E3  anything else returns nothing and never reaches Stripe
- *   E4  an unknown id is empty, not an error — the picker says "not found"
- */
-
 import { expect, test } from "bun:test";
 import type { StripePriceSearchResponse } from "@autumn/shared";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
@@ -47,7 +35,6 @@ test.concurrent(
 			recurring: { interval: "year" },
 		});
 
-		// E1: an exact price id, with the product expanded for the subtext.
 		const byPrice = await searchPrices({
 			autumn: autumnV2_3,
 			search: monthly.id,
@@ -60,7 +47,6 @@ test.concurrent(
 		expect(byPrice.stripe_prices[0]?.unit_amount, "amount").toBe(2000);
 		expect(byPrice.stripe_prices[0]?.interval, "interval").toBe("month");
 
-		// E2: every active price under the product, so a product id is pickable.
 		const byProduct = await searchPrices({
 			autumn: autumnV2_3,
 			search: product.id,
@@ -76,11 +62,9 @@ test.concurrent(
 	async () => {
 		const { autumnV2_3 } = await initScenario({ setup: [], actions: [] });
 
-		// E3: not a lookup — substring search over price ids does not exist.
 		const freeText = await searchPrices({ autumn: autumnV2_3, search: "pro" });
 		expect(freeText.stripe_prices, "free text is not a lookup").toEqual([]);
 
-		// E4: a well-formed id Stripe does not know is empty, not a 500.
 		const unknown = await searchPrices({
 			autumn: autumnV2_3,
 			search: "price_1NoSuchPriceForSearch",

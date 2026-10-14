@@ -1,6 +1,4 @@
 const GREETING_PREFIX = /^(?:hey|hi)\s+/i;
-// Slack raw mentions (<@U…>), the chat SDK's normalized form (@U…), the bot's
-// display names, and "the bot" — anything a user prefixes when addressing us.
 const MENTION_PREFIX =
 	/^(?:<@[^>]+>|@[UW][A-Z0-9]{4,}|@?autumn(?:\s+chat(?:\s+local)?)?|(?:this|the)\s+bot)[,:\s-]*/i;
 const POLITE_PREFIX =
@@ -29,8 +27,6 @@ export const stripAddressing = (text: string) =>
 
 export type ControlMessage = "opt_out" | "stop";
 
-/** Classifies a message as a control command after stripping how the user
- * addressed the bot; every Slack entry path must consult this first. */
 export const controlMessageFrom = (text: string): ControlMessage | null => {
 	const stripped = stripAddressing(text);
 	if (explicitOptOutPattern.test(stripped)) return "opt_out";

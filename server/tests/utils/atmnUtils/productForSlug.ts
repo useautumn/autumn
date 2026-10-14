@@ -2,7 +2,6 @@ import type { FullProduct } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 
-/** The row a config addresses: version numbers follow creation order, slugs are what the fixture states. */
 export const productForSlug = async ({
 	ctx,
 	planId,

@@ -7,17 +7,6 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-/**
- * Refund Behavior: Error Tests
- *
- * Tests that verify refund_behavior: 'refund_payment_method' is rejected
- * in scenarios where refunds cannot be issued:
- *
- * 1. Combined with billing_behavior: 'next_cycle_only' (incompatible)
- * 2. When invoice total is positive (no credit to refund)
- */
-
-// ═══════════════════════════════════════════════════════════════════════════════
 // INCOMPATIBLE BEHAVIOR COMBINATIONS
 // ═══════════════════════════════════════════════════════════════════════════════
 
@@ -35,7 +24,6 @@ test.skip(`${chalk.yellowBright("refund_behavior error: refund_payment_method + 
 		actions: [s.attach({ productId: "pro" })],
 	});
 
-	// Try to combine refund_payment_method with next_cycle_only - should fail
 	const newPriceItem = items.monthlyPrice({ price: 20 });
 	await expectAutumnError({
 		errCode: ErrCode.InvalidRequest,
@@ -51,7 +39,6 @@ test.skip(`${chalk.yellowBright("refund_behavior error: refund_payment_method + 
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
 // POSITIVE INVOICE ERRORS
 // ═══════════════════════════════════════════════════════════════════════════════
 
@@ -69,8 +56,7 @@ test.skip(`${chalk.yellowBright("refund_behavior error: refund_payment_method on
 		actions: [s.attach({ productId: "pro" })],
 	});
 
-	// Try to request refund on an upgrade (positive invoice) - should fail
-	const newPriceItem = items.monthlyPrice({ price: 30 }); // Upgrade from $20 to $30
+	const newPriceItem = items.monthlyPrice({ price: 30 });
 	await expectAutumnError({
 		errCode: ErrCode.InvalidRequest,
 		func: async () => {
@@ -109,21 +95,19 @@ test.skip(`${chalk.yellowBright("refund_behavior error: refund_payment_method on
 		],
 	});
 
-	// Try to request refund on quantity increase - should fail
 	await expectAutumnError({
 		errCode: ErrCode.InvalidRequest,
 		func: async () => {
 			await autumnV1.subscriptions.update({
 				customer_id: customerId,
 				product_id: pro.id,
-				options: [{ feature_id: TestFeature.Messages, quantity: 10 }], // Increase from 5 to 10
+				options: [{ feature_id: TestFeature.Messages, quantity: 10 }],
 				refund_behavior: "refund_payment_method",
 			});
 		},
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
 // ZERO-CHANGE SCENARIO
 // ═══════════════════════════════════════════════════════════════════════════════
 
@@ -141,21 +125,19 @@ test.skip(`${chalk.yellowBright("refund_behavior error: refund_payment_method wi
 		actions: [s.attach({ productId: "pro" })],
 	});
 
-	// Update with same price (zero invoice total)
 	await expectAutumnError({
 		errCode: ErrCode.InvalidRequest,
 		func: async () => {
 			await autumnV1.subscriptions.update({
 				customer_id: customerId,
 				product_id: pro.id,
-				items: [messagesItem, priceItem], // Same items, no change
+				items: [messagesItem, priceItem],
 				refund_behavior: "refund_payment_method",
 			});
 		},
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
 // FREE PRODUCT SCENARIO
 // ═══════════════════════════════════════════════════════════════════════════════
 
@@ -173,7 +155,6 @@ test.skip(`${chalk.yellowBright("refund_behavior error: refund_payment_method on
 		actions: [s.attach({ productId: "free" })],
 	});
 
-	// Update free product - total is $0, can't request refund
 	const reducedMessagesItem = items.monthlyMessages({ includedUsage: 50 });
 	await expectAutumnError({
 		errCode: ErrCode.InvalidRequest,
@@ -188,7 +169,6 @@ test.skip(`${chalk.yellowBright("refund_behavior error: refund_payment_method on
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
 // VALID COMBINATION: grant_invoice_credits + next_cycle_only
 // ═══════════════════════════════════════════════════════════════════════════════
 
@@ -206,8 +186,6 @@ test.skip(`${chalk.yellowBright("refund_behavior: grant_invoice_credits with nex
 		actions: [s.attach({ productId: "pro" })],
 	});
 
-	// grant_invoice_credits + next_cycle_only should work
-	// This combination is valid because grant_invoice_credits doesn't require immediate payment processing
 	const newPriceItem = items.monthlyPrice({ price: 20 });
 	await autumnV1.subscriptions.update({
 		customer_id: customerId,

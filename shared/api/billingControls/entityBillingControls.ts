@@ -51,7 +51,6 @@ export const ApiEntityBillingControlsParamsSchema =
 		rejectDuplicateBillingControls,
 	);
 
-/** Update-request variant: usage limits may also be counter-only writes. */
 export const ApiEntityBillingControlsUpdateSchema =
 	ApiEntityBillingControlsParamsBaseSchema.extend(
 		WritableUsageLimitsShape,

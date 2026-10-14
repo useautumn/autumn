@@ -9,14 +9,12 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAtomApi } from "@/contexts/AtomApiContext";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 
-/** Opened inside the click so the browser allows it; the setup link is loaded into it once the server returns one. */
 const openSetupTab = (): Window | null => {
 	const setupTab = window.open("", "_blank");
 	if (setupTab) setupTab.opener = null;
 	return setupTab;
 };
 
-/** Every Atom write: each lands its result in the query cache, so the page advances without waiting on a poll. */
 export const useAtomActions = () => {
 	const axiosInstance = useAxiosInstance();
 	const queryClient = useQueryClient();
@@ -63,14 +61,12 @@ export const useAtomActions = () => {
 		onSuccess: setCache,
 	});
 
-	// A delete keeps the record while the stack is torn down, so read where it landed.
 	const remove = useMutation({
 		mutationFn: ({ atomId }: { atomId?: string } = {}) =>
 			postAtom("delete_atom", { atom_id: atomId }),
 		onSuccess: refetchCache,
 	});
 
-	/** Creates the setup, then opens its AWS link in a new tab; with no link to open (local dev) the tab closes again. */
 	const startSetup = async (params: CreateByocCacheParams): Promise<void> => {
 		const setupTab = openSetupTab();
 		try {

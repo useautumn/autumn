@@ -1,10 +1,3 @@
-/**
- * Usage-reset config change between versions: v1 sets
- * reset_usage_when_enabled false (carry_from_previous true); the v2 API item
- * shape cannot express the field, so the target falls to the single-use
- * default (reset on enable, carry_from_previous false). Pins that the version
- * diff swaps the definition while the balance is untouched (no reset fires).
- */
 import { expect, test } from "bun:test";
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
@@ -13,7 +6,6 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-// version-only is per-customer until definition execute is restored
 import {
 	expectVersionRepointedOnce,
 	mintPlanVersion,
@@ -92,8 +84,6 @@ test.skip(
 			result,
 		});
 
-		// The claim moves to the target definition (carry flag flipped) while
-		// the migration itself neither resets nor re-grants: balance stays 70.
 		const [rowAfter] = await readFeatureRowsWithDefinition({
 			ctx,
 			customerId,

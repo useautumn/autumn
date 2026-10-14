@@ -12,7 +12,6 @@ type NumericDraftInputProps = Omit<
 	allowUndefined?: boolean;
 };
 
-// Keeps the raw text while focused so "-" and "1." survive until they parse.
 export function NumericDraftInput({
 	value,
 	onCommit,

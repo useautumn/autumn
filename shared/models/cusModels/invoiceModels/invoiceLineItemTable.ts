@@ -21,64 +21,52 @@ export const invoiceLineItems = pgTable(
 	{
 		id: text("id").primaryKey(),
 		created_at: numeric({ mode: "number" }).notNull().default(sqlNow),
-		invoice_id: text("invoice_id"), // Nullable for deferred/pending line items
-
-		// Stripe identifiers
-		stripe_id: text("stripe_id"), // Stripe invoice line item ID (il_xxx)
-		stripe_invoice_id: text("stripe_invoice_id"), // Stripe invoice ID
-		stripe_invoice_item_id: text("stripe_invoice_item_id"), // Original Stripe invoice item ID (ii_xxx) for linking deferred items
-		stripe_subscription_item_id: text("stripe_subscription_item_id"), // Groups tiered line items
+		invoice_id: text("invoice_id"),
+		stripe_id: text("stripe_id"),
+		stripe_invoice_id: text("stripe_invoice_id"),
+		stripe_invoice_item_id: text("stripe_invoice_item_id"),
+		stripe_subscription_item_id: text("stripe_subscription_item_id"),
 		stripe_product_id: text("stripe_product_id"),
 		stripe_price_id: text("stripe_price_id"),
 		stripe_discountable: boolean("stripe_discountable").notNull().default(true),
 
-		// Amounts
-		amount: numeric({ mode: "number" }).notNull(), // Pre-discount amount
-		amount_after_discounts: numeric({ mode: "number" }).notNull(), // Post-discount amount
+		amount: numeric({ mode: "number" }).notNull(),
+		amount_after_discounts: numeric({ mode: "number" }).notNull(),
 		currency: text("currency").notNull().default("usd"),
 
-		// Quantities
-		stripe_quantity: numeric({ mode: "number" }), // Raw Stripe quantity
-		total_quantity: numeric({ mode: "number" }), // Total usage (stripe_quantity * billing_units)
-		paid_quantity: numeric({ mode: "number" }), // Quantity being charged (overage)
-
-		// Description & metadata
+		stripe_quantity: numeric({ mode: "number" }),
+		total_quantity: numeric({ mode: "number" }),
+		paid_quantity: numeric({ mode: "number" }),
 		description: text("description").notNull(),
-		description_source: text("description_source"), // "stripe" or "autumn" - where description came from
-		direction: text("direction").notNull(), // "charge" or "refund"
-		billing_timing: text("billing_timing"), // "in_advance" or "in_arrear"
+		description_source: text("description_source"),
+		direction: text("direction").notNull(),
+		billing_timing: text("billing_timing"),
 		prorated: boolean("prorated").notNull().default(false),
 
-		// Autumn entity relationships
-		price_id: text("price_id"), // External Autumn price ID
+		price_id: text("price_id"),
 		customer_product_ids: jsonb("customer_product_ids")
 			.$type<string[]>()
 			.notNull()
-			.default([]), // Array of customer_product IDs (multi-entity support)
+			.default([]),
 		customer_price_ids: jsonb("customer_price_ids")
 			.$type<string[]>()
 			.notNull()
-			.default([]), // Array of customer_price IDs (multi-entity support)
+			.default([]),
 		customer_entitlement_ids: jsonb("customer_entitlement_ids")
 			.$type<string[]>()
 			.notNull()
-			.default([]), // Array of customer_entitlement IDs (multi-entity support)
-		internal_product_id: text("internal_product_id"), // Internal product ID
-		product_id: text("product_id"), // External product ID
-		internal_feature_id: text("internal_feature_id"), // Internal feature ID
-		feature_id: text("feature_id"), // External feature ID
-
-		// Billing periods
-		effective_period_start: numeric({ mode: "number" }), // Billing period start (ms)
-		effective_period_end: numeric({ mode: "number" }), // Billing period end (ms)
-
-		// Discounts
+			.default([]),
+		internal_product_id: text("internal_product_id"),
+		product_id: text("product_id"),
+		internal_feature_id: text("internal_feature_id"),
+		feature_id: text("feature_id"),
+		effective_period_start: numeric({ mode: "number" }),
+		effective_period_end: numeric({ mode: "number" }),
 		discounts: jsonb("discounts")
 			.$type<InvoiceLineItemDiscount>()
 			.array()
 			.default([]),
 
-		// Per-entity attribution: { entity_id, quantity, amount }[]
 		entities: jsonb("entities")
 			.$type<InvoiceLineItemEntity[]>()
 			.notNull()
@@ -90,9 +78,7 @@ export const invoiceLineItems = pgTable(
 			foreignColumns: [invoices.id],
 			name: "invoice_line_items_invoice_id_fkey",
 		}).onDelete("cascade"),
-		// Unique partial index on stripe_id for upsert support
 		unique("invoice_line_items_stripe_id_unique").on(table.stripe_id),
-		// GIN index for jsonb containment / array-overlap lookups by customer product
 		index("idx_invoice_line_items_customer_product_ids").using(
 			"gin",
 			table.customer_product_ids,

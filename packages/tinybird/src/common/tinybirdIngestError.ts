@@ -1,4 +1,3 @@
-/** A request failed after the ones before it wrote `writtenRows` rows; resending from there skips what landed. */
 export class TinybirdIngestError extends Error {
 	readonly writtenRows: number;
 

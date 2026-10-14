@@ -43,7 +43,6 @@ export const handleGetInvoiceLineItems = createRoute({
 			);
 			const stripeInvoices = [];
 			for (const invoice of autumnInvoices) {
-				// Throttle to avoid Stripe rate limits.
 				await new Promise((res) => setTimeout(res, 20));
 				stripeInvoices.push({
 					autumnInvoiceId: invoice.id,

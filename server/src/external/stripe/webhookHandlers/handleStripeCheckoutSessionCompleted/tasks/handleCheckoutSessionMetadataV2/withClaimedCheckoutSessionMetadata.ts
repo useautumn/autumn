@@ -8,12 +8,6 @@ import type { CheckoutSessionCompletedContext } from "@/external/stripe/webhookH
 import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/stripeWebhookContext";
 import { MetadataService } from "@/internal/metadata/MetadataService";
 
-/**
- * Runs `execute` exactly once across concurrent executors of the same deferred
- * plan. The subscription lock marks the resulting subscription.updated events
- * as Autumn-initiated; the checkout session lock is cleared even on failure
- * since the Stripe session is already paid.
- */
 export const withClaimedCheckoutSessionMetadata = async ({
 	ctx,
 	checkoutContext,
@@ -28,7 +22,6 @@ export const withClaimedCheckoutSessionMetadata = async ({
 	const deferredData = metadata.data as DeferredAutumnBillingPlanData;
 
 	// Only the initiating org sends the webhook — handles when multiple Stripe
-	// orgs are linked to the same account and both receive this event.
 	const owningOrgId = deferredData?.billingContext?.fullCustomer?.org_id;
 	if (owningOrgId && owningOrgId !== ctx.org.id) return;
 
@@ -53,9 +46,6 @@ export const withClaimedCheckoutSessionMetadata = async ({
 	});
 
 	if (!claimed) {
-		// Only a deleted row proves materialization finished with nobody left to
-		// clear. Any surviving row is still owned — by a peer mid-execute, or by
-		// a webhook retry once that peer reverts its claim.
 		const current = await MetadataService.get({ db: ctx.db, id: metadata.id });
 		if (current) {
 			ctx.logger.info(

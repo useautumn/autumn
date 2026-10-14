@@ -1,8 +1,3 @@
-/**
- * A path-keyed registry has one failure mode: a rule that never runs because
- * its path or a field name is wrong. Generation must refuse, not shrug.
- */
-
 import { expect, test } from "bun:test";
 import type { JsonSchema } from "../src/casing/schemaKeyCasing";
 import { SYNCED_LISTS } from "../src/collections";

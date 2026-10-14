@@ -1,13 +1,3 @@
-/**
- * Version identity — catalogV2.update omit-version vs sequence (r3–r5).
- *
- * Contract under test:
- *   r3  v1 forced active → omit catalogV2.update patches v1
- *   r4  v1 forced active → new_version clones v1 into max+1
- *   r5  v1 forced active → explicit version: 2 still edits v2
- *   Lockstep (v2 active) omit-update still patches v2.
- */
-
 import { expect, test } from "bun:test";
 import { ResetInterval } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";

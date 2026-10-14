@@ -7,8 +7,6 @@ import { cn } from "@/lib/utils";
 import { getFeatureIconConfig } from "@/views/products/features/utils/getFeatureIcon";
 import { PlanItemSheet } from "./PlanItemSheet";
 
-/** Item/price changes to overlay on the card as status dots. `added_items`
- * are new-or-changed item snapshots; `removed_items` render struck-through. */
 export type PlanPreviewDiff = {
 	added_items?: ApiPlanItemV1[];
 	removed_items?: ApiPlanItemV1[];
@@ -29,8 +27,6 @@ const itemPrimaryText = (item: ApiPlanItemV1, feature: Feature | undefined) => {
 	return `${primaryText.trim()} ${featureDisplayName(feature, item.feature_id)}`;
 };
 
-/** One plan item row: feature icon + truncated primary text with the secondary
- * on its own line, and a trailing green/red status dot when it changed. */
 const PlanItemRow = ({
 	feature,
 	item,
@@ -54,7 +50,6 @@ const PlanItemRow = ({
 				onClick={() => setOpen(true)}
 				className="flex items-start gap-2 text-left text-xs hover:opacity-80"
 			>
-				{/* h-4 matches the primary line height so the icon centers on line 1. */}
 				<span
 					className={cn(
 						"flex h-4 shrink-0 items-center",
@@ -102,8 +97,6 @@ const PlanItemRow = ({
 	);
 };
 
-/** Dotted backdrop the pricing cards sit on — shared by the catalog + billing
- * previews. */
 export const PlansBackdrop = ({ children }: { children: ReactNode }) => (
 	<div
 		className="flex flex-wrap justify-center gap-2 rounded-xl border border-border/50 bg-card p-3 [--dot-color:rgba(0,0,0,0.15)] dark:[--dot-color:rgba(255,255,255,0.12)]"
@@ -117,9 +110,6 @@ export const PlansBackdrop = ({ children }: { children: ReactNode }) => (
 	</div>
 );
 
-/** A pricing card rendered directly off ApiPlanV1 — the server already resolves
- * each item's display text and the base price. Pass `diff` (from a catalog
- * preview) to mark changed/removed items with status dots. */
 export const PlanPreviewCard = ({
 	featuresById,
 	plan,
@@ -134,8 +124,6 @@ export const PlanPreviewCard = ({
 		plan.price?.display?.secondary_text ??
 		(plan.price?.interval ? `per ${plan.price.interval}` : null);
 
-	// Anything in added_items is new or changed (diffPlanV1 models a change as
-	// remove-old + add-new); removed_items are full current-plan items for display.
 	const addedKeys = new Set((diff?.added_items ?? []).map(composeMatchKey));
 	const removed = diff?.removed_items ?? [];
 	const priceChanged = diff != null && diff.price !== undefined;

@@ -31,7 +31,6 @@ const Y_UNIT_LABEL = {
 	dy: 40,
 };
 
-/** The usage chart's box, grid and axes. The loaded chart and its skeleton both render through it, so the swap cannot move them. */
 export const UsageChartFrame = ({
 	config,
 	data,
@@ -89,7 +88,6 @@ export const UsageChartFrame = ({
 				ticks={ticks}
 				domain={ticks ? [0, ticks[ticks.length - 1]] : undefined}
 				tick={Y_TICK}
-				// Blank labels, not tick={false}, which also drops the ticks the gridlines are drawn on.
 				tickFormatter={showYTicks ? formatCompactNumber : NO_LABEL}
 				label={yUnit ? { ...Y_UNIT_LABEL, value: yUnit } : undefined}
 			/>

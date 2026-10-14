@@ -35,7 +35,6 @@ const isManualBillingUpdateInvoice = (invoice: {
 const getInvoiceId = (invoice: string | { id?: string } | null | undefined) =>
 	stripeRefToId(invoice);
 
-/** Manual billing-update invoices should not make an otherwise-active subscription past_due. */
 const handleFalsePositivePastDue = async ({
 	ctx,
 	stripeSubscription,
@@ -88,16 +87,6 @@ const handleFalsePositivePastDue = async ({
 	return CusProductStatus.Active;
 };
 
-/**
- * Syncs customer product status, trial_ends_at, and collection_method from Stripe subscription.
- *
- * This function:
- * 1. Iterates through customer products on the stripe subscription
- * 2. Updates status to match Stripe (SKIPPING Scheduled products)
- * 3. Updates trial_ends_at and collection_method
- * 4. Sends PastDue webhook if status transitions to PastDue
- * 5. Does a cursory DB update for any customer products with unexpected statuses (safety net)
- */
 export const syncCustomerProductStatus = async ({
 	ctx,
 	subscriptionUpdatedContext,
@@ -113,7 +102,6 @@ export const syncCustomerProductStatus = async ({
 		previousAttributes,
 	} = subscriptionUpdatedContext;
 
-	// Map Stripe status to Autumn status
 	let autumnStatus = stripeSubscriptionToAutumnStatus({
 		stripeStatus: stripeSubscription.status,
 	});
@@ -126,15 +114,11 @@ export const syncCustomerProductStatus = async ({
 		customerProducts,
 	});
 
-	// Get trial_ends_at and collection_method from Stripe
 	const trialEndsAt = stripeSubscriptionToTrialEndsAtMs({ stripeSubscription });
 	const collectionMethod =
 		stripeSubscription.collection_method as CollectionMethod;
 
-	// Update customer products on this subscription
 	for (const customerProduct of customerProducts) {
-		// Skip if not on this subscription
-
 		const { valid } = cp(customerProduct)
 			.recurring()
 			.hasActiveStatus()
@@ -142,15 +126,12 @@ export const syncCustomerProductStatus = async ({
 
 		if (!valid) continue;
 
-		// Build updates
 		const updates: Partial<InsertCustomerProduct> = {};
 
-		// Update status if changed
 		if (customerProduct.status !== autumnStatus) {
 			updates.status = autumnStatus;
 		}
 
-		// Sync trial_ends_at / collection_method only when Stripe changed them
 		Object.assign(
 			updates,
 			getStripeOwnedFieldUpdates({
@@ -164,7 +145,6 @@ export const syncCustomerProductStatus = async ({
 			}),
 		);
 
-		// Skip if nothing to update
 		if (Object.keys(updates).length === 0) continue;
 
 		logger.debug(
@@ -186,7 +166,6 @@ export const syncCustomerProductStatus = async ({
 			updates,
 		});
 
-		// Send PastDue webhook if transitioning to PastDue
 		const isTransitioningToPastDue =
 			updates.status === CusProductStatus.PastDue;
 
@@ -203,7 +182,6 @@ export const syncCustomerProductStatus = async ({
 		}
 	}
 
-	// Safety net: fix any customer products with unexpected statuses
 	subscriptionUpdatedContext.results.repairedCustomerProducts =
 		await fixUnexpectedStatuses({
 			ctx,

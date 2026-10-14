@@ -32,7 +32,6 @@ const highlightJson = (json: string | undefined): React.ReactNode[] => {
     }
 
     if (match[1]) {
-      // Key
       parts.push(
         <span key={i++} className="text-zinc-600 dark:text-zinc-400">
           {match[1]}
@@ -44,28 +43,24 @@ const highlightJson = (json: string | undefined): React.ReactNode[] => {
         </span>,
       );
     } else if (match[2]) {
-      // String value
       parts.push(
         <span key={i++} className="text-emerald-600 dark:text-emerald-400">
           {match[2]}
         </span>,
       );
     } else if (match[3]) {
-      // Number
       parts.push(
         <span key={i++} className="text-blue-600 dark:text-blue-400">
           {match[3]}
         </span>,
       );
     } else if (match[4]) {
-      // Boolean
       parts.push(
         <span key={i++} className="text-amber-600 dark:text-amber-400">
           {match[4]}
         </span>,
       );
     } else if (match[5]) {
-      // Null
       parts.push(
         <span key={i++} className="text-zinc-500">
           {match[5]}

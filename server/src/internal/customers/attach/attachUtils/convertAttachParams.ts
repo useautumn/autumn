@@ -25,7 +25,6 @@ export const attachParamsToCurCusProduct = ({
 		return curSameProduct;
 	}
 
-	// 2. If main product, then return main product
 	if (!product.is_add_on && curMainProduct) {
 		return curMainProduct;
 	}
@@ -138,28 +137,24 @@ export const getCustomerSub = async ({
 			if (b.subscription_ids && b.subscription_ids.includes(targetSubId))
 				return 1;
 		}
-		// 1. Check same group
 		const aGroupMatches = a.product.group === targetGroup;
 		const bGroupMatches = b.product.group === targetGroup;
 
 		if (aGroupMatches && !bGroupMatches) return -1;
 		if (!aGroupMatches && bGroupMatches) return 1;
 
-		// 2. Check main product
 		const aMain = !a.product.is_add_on;
 		const bMain = !b.product.is_add_on;
 
 		if (aMain && !bMain) return -1;
 		if (!aMain && bMain) return 1;
 
-		// 3. Check same product
 		const aProductIdMatches = a.product.id === targetProductId;
 		const bProductIdMatches = b.product.id === targetProductId;
 
 		if (aProductIdMatches && !bProductIdMatches) return -1;
 		if (!aProductIdMatches && bProductIdMatches) return 1;
 
-		// 4. Check same entity
 		const aEntityIdMatches = (a.internal_entity_id || null) === targetEntityId;
 		const bEntityIdMatches = (b.internal_entity_id || null) === targetEntityId;
 
@@ -169,7 +164,6 @@ export const getCustomerSub = async ({
 		return 0;
 	});
 
-	// const subId = cusProducts.flatMap((cp) => cp.subscription_ids || [])?.[0];
 	const cusProduct = filteredCusProducts.find(
 		(cp) => cp.subscription_ids && cp.subscription_ids.length > 0,
 	);
@@ -186,7 +180,6 @@ export const getCustomerSub = async ({
 			"items.data.price.tiers",
 			"discounts.source.coupon",
 			"discounts.source.coupon.applies_to",
-			// "discounts.coupon.applies_to",
 			"latest_invoice",
 		],
 	});
@@ -212,28 +205,24 @@ export const getCustomerSchedule = async ({
 	const targetProductId = attachParams.products[0].id;
 
 	cusProducts.sort((a, b) => {
-		// 1. Check same group
 		const aGroupMatches = a.product.group === targetGroup;
 		const bGroupMatches = b.product.group === targetGroup;
 
 		if (aGroupMatches && !bGroupMatches) return -1;
 		if (!aGroupMatches && bGroupMatches) return 1;
 
-		// 2. Check main product
 		const aMain = !a.product.is_add_on;
 		const bMain = !b.product.is_add_on;
 
 		if (aMain && !bMain) return -1;
 		if (!aMain && bMain) return 1;
 
-		// 3. Check same product
 		const aProductIdMatches = a.product.id === targetProductId;
 		const bProductIdMatches = b.product.id === targetProductId;
 
 		if (aProductIdMatches && !bProductIdMatches) return -1;
 		if (!aProductIdMatches && bProductIdMatches) return 1;
 
-		// 4. Check same entity
 		const aEntityIdMatches = (a.internal_entity_id || null) === targetEntityId;
 		const bEntityIdMatches = (b.internal_entity_id || null) === targetEntityId;
 
@@ -243,7 +232,6 @@ export const getCustomerSchedule = async ({
 		return 0;
 	});
 
-	// const subId = cusProducts.flatMap((cp) => cp.subscription_ids || [])?.[0];
 	const scheduleIds = cusProducts.flatMap((cp) => cp.scheduled_ids || []);
 	if (scheduleIds.length === 0) return { schedule: undefined };
 
@@ -286,7 +274,6 @@ export const paramsToCurSub = async ({
 		expand: [
 			"items.data.price.tiers",
 			"latest_invoice",
-			// "discounts.coupon.applies_to",
 			"discounts.source.coupon",
 			"discounts.source.coupon.applies_to",
 		],

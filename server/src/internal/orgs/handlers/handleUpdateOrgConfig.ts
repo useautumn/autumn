@@ -13,8 +13,6 @@ import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { clearOrgCache } from "../orgUtils/clearOrgCache.js";
 
 const validKeys = new Set(Object.keys(OrgConfigSchema.shape));
-// Not `OrgConfigSchema.partial()`: its `.default()`s expand a single-field
-// request into the full object, clobbering other flags on merge.
 const bodySchema = z.record(z.string(), z.unknown());
 
 export const handleUpdateOrgConfig = createRoute({
@@ -24,9 +22,7 @@ export const handleUpdateOrgConfig = createRoute({
 		const { db, org } = c.get("ctx");
 		const raw = c.req.valid("json");
 
-		// Known config keys present in the request body.
 		const sentKeys = Object.keys(raw).filter((k) => validKeys.has(k));
-		// idempotency_config is its own column (org-wide, not an OrgConfig flag).
 		const idempotencySent = "idempotency_config" in raw;
 
 		if (sentKeys.length === 0 && !idempotencySent) {
@@ -36,8 +32,6 @@ export const handleUpdateOrgConfig = createRoute({
 			});
 		}
 
-		// Validate BEFORE any writes so a bad TTL never partially applies a
-		// request that also carries config flags.
 		const parsedIdempotency = idempotencySent
 			? IdempotencyConfigSchema.nullable().safeParse(raw.idempotency_config)
 			: null;
@@ -51,8 +45,6 @@ export const handleUpdateOrgConfig = createRoute({
 			});
 		}
 
-		// Validate sent values, then read back only the sent keys so the
-		// defaults `.partial()` fills for omitted keys are never merged.
 		const validated = OrgConfigSchema.partial().parse(raw) as Record<
 			string,
 			unknown
@@ -67,8 +59,6 @@ export const handleUpdateOrgConfig = createRoute({
 			updates.block_overdue_entitlements = !updates.include_past_due;
 		}
 
-		// One atomic UPDATE for both columns — a mixed request can never
-		// partially commit.
 		const [row] = await db
 			.update(organizations)
 			.set({

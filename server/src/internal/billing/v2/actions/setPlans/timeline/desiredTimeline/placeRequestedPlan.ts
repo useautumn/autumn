@@ -8,7 +8,6 @@ import type { RequestedPhase, RequestedPlan } from "./types/requestedPhase";
 
 const INCLUDED_ONLY: LicenseConfig = { type: "includedOnly" };
 
-/** The opening phase keeps the seats a running instance holds unless it names new totals. */
 const omittedLicensesFor = ({
 	slot,
 	isOpeningPhase,
@@ -41,7 +40,6 @@ const isOccupiedAt = ({
 
 type SlotRule = (slot: InstanceSlot) => boolean;
 
-/** Chooses the instance a requested plan continues, preferring the one it leaves unchanged. */
 export const placeRequestedPlan = ({
 	plan,
 	phase,

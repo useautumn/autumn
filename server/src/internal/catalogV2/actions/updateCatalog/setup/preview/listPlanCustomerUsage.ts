@@ -27,10 +27,6 @@ export type PlanCustomerUsageCandidate = {
 	internalProductIds: string[];
 };
 
-/**
- * One round-trip: capped distinct-customer counts and name samples per
- * remove_plans group. Expired rows are omitted so they don't appear in dialog copy.
- */
 export const buildPlanCustomerUsageQuery = ({
 	candidates,
 	orgId,

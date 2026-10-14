@@ -19,15 +19,12 @@ export const cusEntsToUnlimitedUsage = ({
 		const isEntityScoped = Boolean(cusEnt.entitlement.entity_feature_id);
 
 		if (entityId && isEntityScoped) {
-			// Entity view: only this entity's slice of an entity-scoped cusEnt
 			totalBalance = totalBalance.add(
 				cusEnt.entities?.[entityId]?.balance ?? 0,
 			);
 			continue;
 		}
 
-		// Customer view (or a customer-level pool seen from an entity view):
-		// top-level balance plus every per-entity balance
 		totalBalance = totalBalance.add(cusEnt.balance ?? 0);
 		if (!entityId) {
 			for (const entityBalance of Object.values(cusEnt.entities ?? {})) {
@@ -36,7 +33,5 @@ export const cusEntsToUnlimitedUsage = ({
 		}
 	}
 
-	// Usage is the negated balance; no clamping so refund overshoot
-	// (positive balance) reports negative usage faithfully
 	return totalBalance.neg().toNumber();
 };

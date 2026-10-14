@@ -1,13 +1,3 @@
-/**
- * invoices.create — entity scope.
- *
- * Contract:
- *   - `entity_id` scopes every plan; `plans[].entity_id` overrides it, and null is customer-level.
- *   - An unknown entity is a 400, preview or not, and is never auto-created.
- *   - Entity lines say so: preview `entity_id`, a "— <entity>" description suffix and items[].entities.
- *   - The invoice is tagged with an entity only when every plan line resolves to it.
- */
-
 import { expect, test } from "bun:test";
 import {
 	type ApiListInvoiceV1,
@@ -124,7 +114,6 @@ test.concurrent(
 			},
 		]);
 
-		// Mixed entities: the invoice carries no entity tag.
 		const forEntity = await listInvoices({
 			autumnV2_3,
 			params: { customer_id: customerId, entity_id: "ent-1" },
@@ -282,7 +271,6 @@ test.concurrent(
 			actions: [],
 		});
 
-		// A full customer hydrates the 300 entities with the highest internal_id; take the one left out.
 		const [oldest] = await ctx.db
 			.select({ id: entities.id })
 			.from(entities)

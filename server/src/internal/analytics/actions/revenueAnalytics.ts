@@ -4,8 +4,6 @@ import { getTinybirdPipes } from "@/external/tinybird/initTinybird.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getConversionRatesJson } from "../currencyConversion.js";
 
-// ── Exported row types ───────────────────────────────────────────────
-
 export type RevenueByProductRow = {
 	period_label: string;
 	product_name: string;
@@ -48,13 +46,9 @@ export type CustomerLeaderboardResult = {
 	total_revenue: number;
 };
 
-// ── Helpers ──────────────────────────────────────────────────────────
-
-/** SQL expression to convert an invoice amount to the org's base currency */
 const CONVERTED_TOTAL =
 	"i.total * coalesce(JSONExtractFloat({rates:String}, lower(i.currency)), 1)";
 
-/** Same but split across multi-product invoices */
 const CONVERTED_TOTAL_SPLIT = `(${CONVERTED_TOTAL}) / length(i.internal_product_ids)`;
 
 const GRANULARITY_FORMAT: Record<string, string> = {
@@ -62,8 +56,6 @@ const GRANULARITY_FORMAT: Record<string, string> = {
 	month: "%Y-%m",
 	year: "%Y",
 };
-
-// ── 1. Revenue by product over time ─────────────────────────────────
 
 export const getRevenueByProduct = async ({
 	ctx,
@@ -137,8 +129,6 @@ export const getRevenueByProduct = async ({
 	})) as RevenueByProductRow[];
 };
 
-// ── 2. All-time revenue share per product ───────────────────────────
-
 export const getRevenueProductShare = async ({
 	ctx,
 }: {
@@ -191,8 +181,6 @@ export const getRevenueProductShare = async ({
 	})) as ProductShareRow[];
 };
 
-// ── 3. Average revenue per customer (monthly) ──────────────────────
-
 export const getArpc = async ({ ctx }: { ctx: AutumnContext }) => {
 	const ch = getClickhouseClient();
 	const { org } = ctx;
@@ -239,8 +227,6 @@ export const getArpc = async ({ ctx }: { ctx: AutumnContext }) => {
 	})) as ArpcRow[];
 };
 
-// ── 4. Invoice status breakdown ─────────────────────────────────────
-
 export const getInvoiceStatus = async ({ ctx }: { ctx: AutumnContext }) => {
 	const ch = getClickhouseClient();
 	const { org } = ctx;
@@ -286,8 +272,6 @@ export const getInvoiceStatus = async ({ ctx }: { ctx: AutumnContext }) => {
 		currency: row.currency,
 	})) as InvoiceStatusRow[];
 };
-
-// ── 5. Top 10 customers by paid volume ──────────────────────────────
 
 export const getCustomerLeaderboard = async ({
 	ctx,
@@ -377,8 +361,6 @@ export const getCustomerLeaderboard = async ({
 		total_revenue: Number(totalJson.data[0]?.total_revenue ?? 0),
 	} as CustomerLeaderboardResult;
 };
-
-// ── 6. Estimated MRR (current snapshot) ─────────────────────────────
 
 export type EstimatedMrrResult = {
 	estimated_mrr: number;

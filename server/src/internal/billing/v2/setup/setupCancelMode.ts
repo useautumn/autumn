@@ -6,7 +6,6 @@ import type {
 } from "@autumn/shared";
 import { CusProductStatus } from "@autumn/shared";
 
-// past_due end-of-cycle resolves to immediate: no paid period left to honor.
 const shouldForcePastDueImmediateCancel = ({
 	params,
 	org,
@@ -33,7 +32,6 @@ export const setupCancelAction = ({
 		? "cancel_immediately"
 		: params.cancel_action;
 
-// No refund for a past_due immediate cancel: the customer never paid the cycle being voided.
 export const shouldSuppressUnpaidCycleCredit = ({
 	cancelAction,
 	org,

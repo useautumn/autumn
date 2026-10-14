@@ -2,7 +2,6 @@ import type { RunSummary } from "../../../src/api/contract.ts";
 import { cn, sha7 } from "../lib/format.ts";
 import { Tooltip } from "./ui.tsx";
 
-/** Branch runs read as the branch (sha secondary); pinned runs read as the commit "on <branch>". */
 export const RunLabel = ({
 	run,
 	className,
@@ -12,7 +11,6 @@ export const RunLabel = ({
 	run: Pick<RunSummary, "branch" | "sha" | "pinnedSha">;
 	className?: string;
 	primaryClassName?: string;
-	/** Off where the sha is already shown nearby (run header). */
 	showSha?: boolean;
 }) => {
 	if (run.pinnedSha)
@@ -43,7 +41,6 @@ export const RunLabel = ({
 		</Tooltip>
 	);
 	if (!showSha) return branch;
-	// The sha wraps onto a clipped second line when the branch needs the room.
 	return (
 		<span
 			className={cn(

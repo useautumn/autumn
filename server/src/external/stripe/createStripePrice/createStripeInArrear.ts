@@ -41,7 +41,6 @@ const searchStripeMeter = async ({
 	let startingAfter: string | undefined;
 
 	const start = performance.now();
-	// Get max 200 meters
 	while (hasMore) {
 		const response: any = await stripeCli.billing.meters.list({
 			limit: 100,
@@ -183,34 +182,12 @@ export const createStripeInArrearPrice = async ({
 		orgDefault
 	).toLowerCase();
 
-	// 1. Create meter
 	const relatedEnt = priceToEnt({
 		price,
 		entitlements,
 	});
 	const feature = relatedEnt?.feature;
 
-	// // 1. If internal entity ID and not curStripe product, create product
-	// if (internalEntityId && !useCheckout) {
-	// 	if (!curStripeProduct) {
-	// 		logger.info(
-	// 			`Creating stripe in arrear product for ${relatedEnt?.feature.name} (internal entity ID exists!)`,
-	// 		);
-	// 		const stripeProduct = await stripeCli.products.create({
-	// 			name: `${product.name} - ${feature!.name}`,
-	// 		});
-	// 		config.stripe_product_id = stripeProduct.id;
-
-	// 		await PriceService.update({
-	// 			db,
-	// 			id: price.id,
-	// 			update: { config },
-	// 		});
-	// 	}
-	// 	return;
-	// }
-
-	// 2. If no internal entity ID, create Stripe price if not exists...
 	if (curStripePrice) {
 		return;
 	}
@@ -227,7 +204,6 @@ export const createStripeInArrearPrice = async ({
 		});
 	}
 
-	// 1. Get meter by event_name
 	const meter = await getStripeMeter({
 		product,
 		feature,
@@ -244,7 +220,6 @@ export const createStripeInArrearPrice = async ({
 		entitlement: relatedEnt,
 		org,
 		currency,
-		// Metered quantity stays 0, so a volume flat fee would bill every cycle.
 		skipFlatFees: isVolumePrice(price),
 	});
 

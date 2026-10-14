@@ -1,11 +1,3 @@
-/**
- * catalogV2.update — Stripe id carry onto variant_link creates.
- *
- * A declared variant clones the folded base, so its processor and matching
- * price rows must carry the base's Stripe ids (compute-phase stamp, no
- * Stripe IO). Reuse levels follow getPriceStripeReuseLevel.
- */
-
 import { expect, test } from "bun:test";
 import {
 	BillingInterval,
@@ -224,8 +216,6 @@ test.concurrent(
 				product: variant,
 				processorId: base.processor?.id,
 			});
-			// Allowance is part of the paired entitlement, so full reuse is off
-			// the table — only the per-feature Stripe Product/meter carries.
 			expectPriceStripeReuseCorrect({
 				before: findFeaturePrice({
 					product: base,
@@ -331,7 +321,6 @@ test.concurrent(
 		try {
 			const base = await seedTeamWithStripe({ autumnV2_3, ctx, baseId });
 
-			// EU drifts: its prepaid amount differs, so init mints EU its own price.
 			await autumnV2_3.catalogV2.update({
 				plans: [
 					{
@@ -360,8 +349,6 @@ test.concurrent(
 				featureId: TestFeature.Messages,
 			})!;
 
-			// Follow overwrite: EU's new row is priced like Team's, but carry must
-			// run against EU's CURRENT rows — amount 15 → 10 is productOnly.
 			await autumnV2_3.catalogV2.update({
 				plans: [
 					{
@@ -424,8 +411,6 @@ test.concurrent(
 				product: variant,
 				processorId: base.processor?.id,
 			});
-			// No carry for a changed fixed price — init mints a FRESH Stripe
-			// Price (under the shared family product), never the base's.
 			expect(
 				stripeConfigValue({
 					price: findBasePrice({ product: variant }),

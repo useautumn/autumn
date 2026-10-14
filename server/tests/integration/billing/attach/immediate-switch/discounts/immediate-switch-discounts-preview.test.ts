@@ -1,10 +1,3 @@
-/**
- * Immediate Switch Discount Preview Tests
- *
- * Verifies that next_cycle preview line items and totals include only
- * discounts that should still be active at the next renewal.
- */
-
 import { expect, test } from "bun:test";
 import { ms } from "@autumn/shared";
 import {

@@ -4,8 +4,6 @@ import {
 	isCustomerProductOnStripeSubscriptionSchedule,
 } from "@autumn/shared";
 
-/** Scheduled rows this sync replaces. Imported rows can sit on the Stripe
- * schedule with no Autumn schedule listing them, so either link counts. */
 export const findQueuedCustomerProducts = ({
 	customerProducts,
 	autumnScheduledCustomerProductIds,

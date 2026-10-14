@@ -19,7 +19,6 @@ import { handleVariantSharedAcrossVersionsErrors } from "@/internal/catalogV2/ac
 import type { UpdateCatalogContext } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext";
 import type { UpdateCatalogPlan } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogPlan";
 
-/** Throws on anything that should fail the whole batch before any write. */
 export const handleUpdateCatalogErrors = async ({
 	ctx,
 	catalogContext,

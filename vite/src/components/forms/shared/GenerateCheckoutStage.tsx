@@ -24,7 +24,6 @@ type GenerateCheckoutSubmitParams = {
 	longLivedCheckout?: boolean;
 };
 
-/** Owned by each flow's form, so the value survives navigating back and forth. */
 export type PlanActivationControls = {
 	enablePlanImmediately: boolean;
 	onEnablePlanImmediatelyChange: (value: boolean) => void;

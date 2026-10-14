@@ -44,9 +44,6 @@ const approvalSummary = (approval: LeafApprovalData): string => {
 	return `Apply ${toolName}?`;
 };
 
-/** The plan-write approval, rendered inline in the thread. The card stays put
- * after a decision — pending shows Apply/Discard, resolved shows the outcome.
- * Icon buttons open the summary, params, and raw JSON in sheets. */
 export function ApprovalCard({
 	approval,
 	onApprove,

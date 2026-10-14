@@ -21,22 +21,15 @@ const read = (): ActiveSandbox | null => {
 
 let current: ActiveSandbox | null = read();
 
-/** Select (or clear) the active sandbox sub-org. Persists across reloads and
- *  notifies subscribers (the axios layer + the switcher) so requests start
- *  carrying the `x-sandbox-org-id` resolver tag. */
 export const setActiveSandbox = (sandbox: ActiveSandbox | null) => {
 	current = sandbox;
-	// Persistence is best-effort: storage can be unavailable (private mode,
-	// disabled, quota). Always apply in-memory + notify regardless.
 	try {
 		if (sandbox) {
 			localStorage.setItem(STORAGE_KEY, JSON.stringify(sandbox));
 		} else {
 			localStorage.removeItem(STORAGE_KEY);
 		}
-	} catch {
-		// best-effort
-	}
+	} catch {}
 	for (const listener of listeners) {
 		listener();
 	}

@@ -44,7 +44,6 @@ const findStoredOverride = ({
 		? orgs[draft.org.key]?.endpoints?.[draft.endpoint]
 		: undefined;
 
-/** One org, one endpoint, one cap counted on top of the endpoint's group limits. */
 export const RateLimitEndpointOverrideSheet = ({
 	open,
 	onOpenChange,
@@ -72,7 +71,6 @@ export const RateLimitEndpointOverrideSheet = ({
 	const [valueText, setValueText] = useState("");
 	const [windowMs, setWindowMs] = useState(DEFAULT_WINDOW_MS);
 
-	// The form always shows what is stored for the selected org and endpoint.
 	const selectDraft = (next: RateLimitEndpointDraft) => {
 		const stored = findStoredOverride({ orgs, draft: next });
 		setDraft(next);

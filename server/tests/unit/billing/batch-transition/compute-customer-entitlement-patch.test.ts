@@ -1,13 +1,3 @@
-/**
- * Contract: batch transition replaces RESET usage by default — the balance patch
- * is `set toGranted` unless the feature is carried. A feature carries when:
- * - carryOverUsages.enabled and the feature is listed (or no feature_ids filter), or
- * - the feature is allocated (continuous_use) — allocated usage always carries, or
- * - the incoming entitlement has carry_from_previous set.
- * Carried patches keep today's increment-by-delta math. Boolean/unlimited
- * boundary behavior and pooled delta routing are unchanged.
- */
-
 import { describe, expect, test } from "bun:test";
 import {
 	AllowanceType,
@@ -111,7 +101,6 @@ const carryAll: CarryOverUsages = { enabled: true };
 const carryNone: CarryOverUsages = { enabled: false };
 
 describe("computeCustomerEntitlementPatch", () => {
-	// u1
 	test("default (no carry config) resets the balance to the new grant", () => {
 		const patch = computeCustomerEntitlementPatch({
 			...meteredPair({ fromAllowance: 100, toAllowance: 500 }),
@@ -119,7 +108,6 @@ describe("computeCustomerEntitlementPatch", () => {
 		expect(patch.balance).toEqual({ type: "set", amount: 500 });
 	});
 
-	// u2
 	test("carryOverUsages disabled resets the balance to the new grant", () => {
 		const patch = computeCustomerEntitlementPatch({
 			...meteredPair({ fromAllowance: 100, toAllowance: 500 }),
@@ -128,7 +116,6 @@ describe("computeCustomerEntitlementPatch", () => {
 		expect(patch.balance).toEqual({ type: "set", amount: 500 });
 	});
 
-	// u3
 	test("carryOverUsages enabled increments by the allowance delta", () => {
 		const patch = computeCustomerEntitlementPatch({
 			...meteredPair({ fromAllowance: 100, toAllowance: 500 }),
@@ -137,7 +124,6 @@ describe("computeCustomerEntitlementPatch", () => {
 		expect(patch.balance).toEqual({ type: "increment", amount: 400 });
 	});
 
-	// u4
 	test("feature_ids excluding the feature resets the balance", () => {
 		const patch = computeCustomerEntitlementPatch({
 			...meteredPair({ fromAllowance: 100, toAllowance: 500 }),
@@ -146,7 +132,6 @@ describe("computeCustomerEntitlementPatch", () => {
 		expect(patch.balance).toEqual({ type: "set", amount: 500 });
 	});
 
-	// u5
 	test("feature_ids including the feature carries the usage", () => {
 		const patch = computeCustomerEntitlementPatch({
 			...meteredPair({ fromAllowance: 100, toAllowance: 500 }),
@@ -155,7 +140,6 @@ describe("computeCustomerEntitlementPatch", () => {
 		expect(patch.balance).toEqual({ type: "increment", amount: 400 });
 	});
 
-	// u6
 	test("equal allowances still reset by default — usage clears", () => {
 		const patch = computeCustomerEntitlementPatch({
 			...meteredPair({ fromAllowance: 100, toAllowance: 100 }),
@@ -163,7 +147,6 @@ describe("computeCustomerEntitlementPatch", () => {
 		expect(patch.balance).toEqual({ type: "set", amount: 100 });
 	});
 
-	// u7
 	test("equal allowances with carry enabled emit no balance patch", () => {
 		const patch = computeCustomerEntitlementPatch({
 			...meteredPair({ fromAllowance: 100, toAllowance: 100 }),
@@ -172,7 +155,6 @@ describe("computeCustomerEntitlementPatch", () => {
 		expect(patch.balance).toBeUndefined();
 	});
 
-	// u8
 	test("allocated (continuous_use) features always carry, even by default", () => {
 		const patch = computeCustomerEntitlementPatch({
 			...meteredPair({
@@ -184,7 +166,6 @@ describe("computeCustomerEntitlementPatch", () => {
 		expect(patch.balance).toEqual({ type: "increment", amount: 400 });
 	});
 
-	// u9
 	test("incoming carry_from_previous entitlement carries by default", () => {
 		const patch = computeCustomerEntitlementPatch({
 			fromEntitlement: entitlement({
@@ -202,7 +183,6 @@ describe("computeCustomerEntitlementPatch", () => {
 		expect(patch.balance).toEqual({ type: "increment", amount: 400 });
 	});
 
-	// u10
 	test("unlimited -> metered boundary sets the new grant regardless of carry", () => {
 		const fromEntitlement = entitlement({
 			id: "ent_from",
@@ -225,7 +205,6 @@ describe("computeCustomerEntitlementPatch", () => {
 		}
 	});
 
-	// u11
 	test("boolean entitlements never receive a patch", () => {
 		const patch = computeCustomerEntitlementPatch({
 			fromEntitlement: entitlement({ id: "ent_from", feature: admin }),

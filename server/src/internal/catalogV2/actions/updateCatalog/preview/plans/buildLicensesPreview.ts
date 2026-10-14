@@ -27,7 +27,6 @@ const plannedLicensesPreview = ({
 		];
 	});
 
-/** Echo declared licenses[] after the update, or the plan's current links. */
 export const buildLicensesPreview = ({
 	upsert,
 }: {

@@ -1,11 +1,3 @@
-/**
- * catalogV2.update — plan upsert error / validation surface.
- *
- * Green today: versioning guards (`new_version`, `all_versions`+explicit version)
- * and Zod item-shape rejections.
- * Red: duplicate entries, version gap, name-required, rename gates.
- */
-
 import { test } from "bun:test";
 import {
 	BillingInterval,
@@ -330,7 +322,6 @@ test.concurrent(
 test.concurrent(
 	`${chalk.yellowBright("catalogV2 plan-errors: new_plan_id blocked only for plans with Vercel installs")}`,
 	async () => {
-		// Sub-org: the gate reads org.processor_configs, which we mutate here.
 		const { autumnV2_3, ctx } = await initScenario({
 			setup: [s.platform.create({})],
 			actions: [],
@@ -384,7 +375,6 @@ test.concurrent(
 					}),
 			});
 
-			// Non-Vercel customers don't trip the gate, even on a Vercel org.
 			await autumnV2_3.catalogV2.update({
 				plans: [{ plan_id: freePlanId, new_plan_id: freeNewPlanId }],
 			});

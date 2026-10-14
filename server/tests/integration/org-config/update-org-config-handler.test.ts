@@ -1,9 +1,3 @@
-/**
- * Regression: PATCH /organization/config must merge, not replace. A prior
- * `OrgConfigSchema.partial()` body schema filled every field's default, so each
- * save overwrote previously-set flags. These tests drive the real HTTP handler.
- */
-
 import { expect, test } from "bun:test";
 import {
 	type DbUsageAlert,
@@ -78,7 +72,6 @@ test(`${chalk.yellowBright("org config handler: second save preserves first save
 	};
 
 	try {
-		// Known empty starting state.
 		await db
 			.update(organizations)
 			.set({ config: {} as OrgConfig })
@@ -86,18 +79,15 @@ test(`${chalk.yellowBright("org config handler: second save preserves first save
 
 		const autumn = new AutumnInt({ secretKey: ctx.orgSecretKey });
 
-		// First save: one toggle.
 		const firstResponse = (await autumn.patch("/organization/config", {
 			automatic_tax: true,
 		})) as { success: boolean; config: OrgConfig };
 		expect(firstResponse.config.automatic_tax).toBe(true);
 
-		// Second save: a different toggle.
 		const secondResponse = (await autumn.patch("/organization/config", {
 			cancel_on_past_due: true,
 		})) as { success: boolean; config: OrgConfig };
 
-		// The regression assertions: the first field must survive the second save.
 		expect(secondResponse.config.automatic_tax).toBe(true);
 		expect(secondResponse.config.cancel_on_past_due).toBe(true);
 
@@ -112,10 +102,6 @@ test(`${chalk.yellowBright("org config handler: second save preserves first save
 	}
 });
 
-/**
- * Guards the mixed-type path: `usage_alerts` (an array) is saved through the
- * same endpoint and must coexist with previously-set boolean flags.
- */
 test(`${chalk.yellowBright("org config handler: array field (usage_alerts) merges with boolean flags")}`, async () => {
 	const { ctx } = await initScenario({ setup: [], actions: [] });
 	const { db, org } = ctx;
@@ -145,10 +131,8 @@ test(`${chalk.yellowBright("org config handler: array field (usage_alerts) merge
 
 		const autumn = new AutumnInt({ secretKey: ctx.orgSecretKey });
 
-		// Boolean toggle first.
 		await autumn.patch("/organization/config", { automatic_tax: true });
 
-		// Then an array field through the same endpoint.
 		const response = (await autumn.patch("/organization/config", {
 			usage_alerts: [alert],
 		})) as { success: boolean; config: OrgConfig };

@@ -46,9 +46,6 @@ import {
 	type ReplaySubjectLoader,
 } from "./postgresReplayHydrationPorts.js";
 
-/** Repeatable read plus read only keeps one load on one frozen snapshot and
- *  makes any write attempt fail. Pool acquisition is bounded by the operator
- *  pool configuration, not by this statement timeout. */
 const SNAPSHOT_TRANSACTION = {
 	isolationLevel: "repeatable read",
 	accessMode: "read only",
@@ -95,8 +92,6 @@ function assertSourceLive({
 	signal.throwIfAborted();
 }
 
-/** One source serves one baseline: mixing capture times for the same org would
- *  silently blend two different frozen clocks. */
 function bindBaseline({
 	state,
 	baseline,
@@ -214,8 +209,6 @@ async function readFrozenSnapshot({
 	});
 }
 
-/** Runs only after the snapshot transaction resolved and the load is still
- *  live, so a commit failure, refusal or abort leaves no response context. */
 function publishSnapshot({
 	state,
 	identityKey,
@@ -284,8 +277,6 @@ async function loadSnapshot({
 	}
 }
 
-/** Synchronous and detached: the returned context reads through the source db,
- *  never through the snapshot transaction, and performs no I/O. */
 function readSourceContext({
 	state,
 	identity,

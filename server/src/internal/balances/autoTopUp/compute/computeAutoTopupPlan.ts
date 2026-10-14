@@ -20,7 +20,6 @@ import { buildUpdatedOptions } from "../helpers/autoTopUpUtils.js";
 import { computeRebalancedAutoTopUp } from "./computeRebalancedAutoTopUp.js";
 import { topUpQuantityToLineItem } from "./topUpQuantityToLineItem.js";
 
-/** Compute the auto top-up billing plan + stripe invoice action. Throws if line item amount is <= 0. */
 export const computeAutoTopupPlan = ({
 	ctx,
 	autoTopupContext,
@@ -39,12 +38,9 @@ export const computeAutoTopupPlan = ({
 	const cusPrice = cusEntToCusPrice({ cusEnt: customerEntitlement })!;
 	const quantity = autoTopupConfig.quantity;
 
-	// A. Convert credits to packs (billing units)
 	const priceConfig = cusPrice.price.config as UsagePriceConfig;
 	const billingUnits = priceConfig.billing_units || 1;
 	const topUpPacks = new Decimal(quantity).div(billingUnits).toNumber();
-	// Expiring items are recorded on their own loose grant, and a one-off price
-	// that loses the prepaid tie-break does not own the feature-keyed quantity.
 	const hasExpiry = Boolean(
 		entitlementToExpiry({ entitlement: customerEntitlement.entitlement }),
 	);
@@ -62,7 +58,6 @@ export const computeAutoTopupPlan = ({
 					},
 				};
 
-	// B. Build line item
 	const lineItemContext = {
 		price: cusPrice.price,
 		product: cusProduct.product,
@@ -88,8 +83,6 @@ export const computeAutoTopupPlan = ({
 		});
 	}
 
-	// C. Compute paydown + prepaid remainder deltas from the context's FullCustomer.
-	// Deltas apply atomically at execute time via `balance + delta` SQL increments.
 	const rebalance = computeRebalancedAutoTopUp({
 		fullCustomer: autoTopupContext.fullCustomer,
 		featureId: feature.id,
@@ -110,9 +103,6 @@ export const computeAutoTopupPlan = ({
 		now: Date.now(),
 	});
 
-	// D. Build autumn billing plan. `options.quantity` bumps by the FULL topUpPacks
-	// because the customer is charged for the full purchase regardless of where the
-	// balance landed.
 	const autumnBillingPlan: AutumnBillingPlan = {
 		customerId: autoTopupContext.fullCustomer?.id ?? "",
 		insertCustomerProducts: [],
@@ -132,7 +122,6 @@ export const computeAutoTopupPlan = ({
 		...(updateCustomerProduct ? { updateCustomerProduct } : {}),
 	};
 
-	// D. Build stripe invoice action (manual — bypassing evaluateStripeBillingPlan)
 	const addLineParams = lineItemsToInvoiceAddLinesParams({
 		lineItems: [lineItem],
 	});

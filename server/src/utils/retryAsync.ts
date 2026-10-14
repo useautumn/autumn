@@ -1,8 +1,6 @@
 import { backoffDelayMs } from "@/utils/backoffDelayMs.js";
 import { timeout } from "@/utils/genUtils.js";
 
-/** Retries on throw only; a resolved value is always returned as-is.
- * `maxDelayMs` switches the wait from flat to exponential with jitter. */
 export const retryAsync = async <T>({
 	attempts,
 	delayMs,

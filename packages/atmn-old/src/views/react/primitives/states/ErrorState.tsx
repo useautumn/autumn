@@ -5,9 +5,6 @@ export interface ErrorStateProps {
 	onRetry?: () => void;
 }
 
-/**
- * Generic error state with retry hint
- */
 export function ErrorState({ error, onRetry }: ErrorStateProps) {
 	return (
 		<Box

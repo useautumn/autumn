@@ -18,20 +18,11 @@ import { getUsageWindowAnchorTimestamp } from "../getUsageWindowAnchorTimestamp.
 import { getUsageWindowBounds } from "../getUsageWindowBounds.js";
 import { getUsageWindowDimension } from "./getUsageWindowDimension.js";
 
-/** Non-null = the cap is the entity's own: its counter is entity-scoped. */
 export type UsageWindowEntityScope = {
 	entityId: string | null;
 	internalEntityId: string;
 };
 
-/**
- * Resolves one stored usage-limit entry into the enforceable UsageWindowLimit
- * handed to the deduction script. The entry's ResetInterval converts to the
- * internal EntInterval here -- the single edge between the API/storage
- * vocabulary and the window internals. Under `anchor: 'billing_cycle'` bounds
- * align to the anchor entitlement's cycle when one exists, else UTC calendar;
- * `anchor: 'utc'` skips the lookup and always uses the UTC calendar.
- */
 export const usageLimitToUsageWindowLimit = <
 	CE extends CustomerEntitlementRowView,
 	CP extends PlanControlCustomerProduct & CustomerProductWithPricesView,
@@ -50,8 +41,6 @@ export const usageLimitToUsageWindowLimit = <
 	inStatuses?: CusProductStatus[];
 	entityScope?: UsageWindowEntityScope | null;
 }): UsageWindowLimit | null => {
-	// No catalog internal_id => unstorable counter row (NOT NULL FK); the cap
-	// is unenforceable, so skip it.
 	if (feature.internal_id == null) return null;
 
 	const interval = resetIntvToEntIntv({ resetIntv: usageLimit.interval });

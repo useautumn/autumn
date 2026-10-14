@@ -13,7 +13,6 @@ const trialLengthDefaults: {
 
 const NO_EDIT_HANDLER: { onEdit?: () => void } = {};
 
-/** Length and unit inputs of a free trial; `onEdit` fires on user input only. */
 export const FreeTrialLengthFields = withFieldGroup({
 	defaultValues: trialLengthDefaults,
 	props: NO_EDIT_HANDLER,

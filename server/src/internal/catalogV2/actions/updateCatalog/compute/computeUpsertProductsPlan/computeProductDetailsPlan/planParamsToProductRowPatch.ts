@@ -4,12 +4,6 @@ import {
 	type UpdateCatalogPlanParams,
 } from "@autumn/shared";
 
-/**
- * Only-provided detail columns as a row patch.
- * Owns the `is_default` ?? `auto_enable` precedence (same rule as the shared
- * planParamsV1ToProductV2 mapper). A stated `config` is the full flag set:
- * any flag it omits is off.
- */
 export const planParamsToProductRowPatch = ({
 	planParams,
 	current,
@@ -20,8 +14,6 @@ export const planParamsToProductRowPatch = ({
 	const patch: Partial<Product> = {};
 
 	if (planParams.new_plan_id !== undefined) patch.id = planParams.new_plan_id;
-	// Addressed by internal_id under a different plan_id: the row moves there.
-	// Without this the upsert writes the old id back over the rename.
 	if (
 		planParams.internal_id !== undefined &&
 		current !== null &&

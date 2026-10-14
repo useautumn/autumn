@@ -1,13 +1,3 @@
-/**
- * Plan-default spend_limit: when the customer (and entity) have no spend_limit,
- * the plan's overage_limit is enforced — overage spend is capped at the plan
- * value and further overage rejects.
- *
- * Mirrors track-customer-spend-limit1 but seeds the cap at the PLAN tier on the
- * product (billingControls), exercising the resolveBillingControl plan fallback
- * which reads from the joined product.
- */
-
 import { test } from "bun:test";
 import { ErrCode } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
@@ -50,7 +40,6 @@ test.concurrent(
 			actions: [s.billing.attach({ productId: prod.id })],
 		});
 
-		// 1000 free + 100 included + overage up to the plan's 25 spend cap.
 		await autumnV2_1.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
@@ -62,7 +51,6 @@ test.concurrent(
 			value: 10,
 		});
 
-		// Plan spend cap exhausted -> further overage rejects.
 		await expectAutumnError({
 			errCode: ErrCode.InsufficientBalance,
 			func: async () =>

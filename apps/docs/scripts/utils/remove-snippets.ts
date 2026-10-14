@@ -1,7 +1,3 @@
-/**
- * Remove code snippets for specific endpoints
- * Config format: { 'METHOD /path': ['Language1', 'Language2'] }
- */
 export function removeSnippets({
   spec,
   removals
@@ -14,13 +10,11 @@ export function removeSnippets({
   }
 
   for (const [endpointKey, languagesToRemove] of Object.entries(removals)) {
-    // Parse endpoint key: "METHOD /path"
     const [method, ...pathParts] = endpointKey.split(' ');
-    const path = pathParts.join(' '); // Rejoin in case path has spaces
+    const path = pathParts.join(' ');
 
     const lowerMethod = method.toLowerCase();
 
-    // Find the path and method in the spec
     const pathObj = spec.paths[path];
     if (!pathObj) {
       console.warn(`  ⚠ Path "${path}" not found`);
@@ -33,7 +27,6 @@ export function removeSnippets({
       continue;
     }
 
-    // Remove x-codeSamples for specified languages
     if (operation['x-codeSamples'] && Array.isArray(operation['x-codeSamples'])) {
       const originalLength = operation['x-codeSamples'].length;
 
@@ -46,7 +39,6 @@ export function removeSnippets({
         console.log(`  ✓ Removed ${removedCount} snippet(s) from ${method} ${path} (${languagesToRemove.join(', ')})`);
       }
 
-      // If no samples left, remove the array entirely
       if (operation['x-codeSamples'].length === 0) {
         delete operation['x-codeSamples'];
       }

@@ -1,6 +1,3 @@
-/** Red: equal-interval balances followed creation order, consuming the later-expiring batch first.
- * Green: the soonest-expiring balance is consumed first. */
-
 import { expect, test } from "bun:test";
 import { type CheckResponseV2, ms } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";

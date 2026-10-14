@@ -9,7 +9,6 @@ import {
 import type { ThreadedProducersScope } from "../types/threadedProducersScope.js";
 import { postToProducerThread } from "./postToProducerThread.js";
 
-/** Onto the send ring; too big for it, or the ring is full: the message port, and the thread keeps the order. */
 export function enqueueSend({
 	scope,
 	reqId,

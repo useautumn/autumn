@@ -1,7 +1,6 @@
 import type { Svix } from "svix";
 import type { SvixMessage } from "../types/svixClient.js";
 
-/** The payload every Autumn webhook has: its type beside its data, so a receiver can route on it. */
 export const sendMessage = async ({
 	ctx,
 	appId,

@@ -115,7 +115,6 @@ export const deleteStripeProduct = async ({
 				active: false,
 			});
 
-			// Delete default product
 			try {
 				await stripeCli.products.del(stripePrice.product as string);
 			} catch (_error) {
@@ -131,7 +130,6 @@ export const deleteStripeProduct = async ({
 	}
 
 	if (product.processor) {
-		// console.log("Stripe product", stripeProd.active, stripeProd.id);
 		const stripeProdId = product.processor.id;
 		try {
 			await stripeCli.products.del(stripeProdId);
@@ -191,7 +189,6 @@ export const advanceTestClock = async ({
 		startingFrom = new Date();
 	}
 
-	// Stack all time units - they accumulate from startingFrom
 	let targetDate = startingFrom;
 
 	if (numberOfMonths) {
@@ -210,7 +207,6 @@ export const advanceTestClock = async ({
 		targetDate = addHours(targetDate, numberOfHours);
 	}
 
-	// Only use calculated targetDate if we actually had time params
 	if (numberOfMonths || numberOfWeeks || numberOfDays || numberOfHours) {
 		advanceTo = targetDate.getTime();
 	}
@@ -337,7 +333,6 @@ export const advanceMonths = async ({
 	}
 };
 
-// Check billing meter event summary
 export const checkBillingMeterEventSummary = async ({
 	stripeCli,
 	startTime,
@@ -420,8 +415,4 @@ export const subItemToAutumnInterval = (item: Stripe.SubscriptionItem) => {
 		interval: item.price.recurring?.interval as BillingInterval,
 		intervalCount: item.price.recurring?.interval_count || 1,
 	};
-	// return stripeToAutumnInterval({
-	//   interval: item.price.recurring?.interval!,
-	//   intervalCount: item.price.recurring?.interval_count!,
-	// });
 };

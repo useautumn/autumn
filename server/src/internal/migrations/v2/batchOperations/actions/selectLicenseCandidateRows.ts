@@ -133,8 +133,6 @@ type BuildLicenseCandidateRowsQueryArgs = Omit<
 > &
 	({ match: "add" } | { match: "replace"; fromEntitlementIds: string[] });
 
-/** Live assignments under the page's license pool, with parent-anchor sources.
- * `add` is insert-if-absent; `replace` is rows already holding a from-definition. */
 export const buildLicenseCandidateRowsQuery = ({
 	internalCustomerIds,
 	scope,

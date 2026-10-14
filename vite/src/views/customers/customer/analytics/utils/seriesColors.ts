@@ -1,7 +1,6 @@
 import type { EventsData } from "../components/analytics-types";
 import { RESERVED_GROUP } from "./displayLabels";
 
-/** Categorical hues from the Paper "Chart palette"; themed in @autumn/ui styles. */
 const SERIES_HUES = [
 	"var(--chart-series-1)",
 	"var(--chart-series-2)",
@@ -13,24 +12,20 @@ const SERIES_HUES = [
 	"var(--chart-series-8)",
 ];
 
-/** Each hue in three shades: as-is, eased toward the page, then toward the text. Reads in both themes. */
 const SHADES = [
 	(hue: string) => hue,
 	(hue: string) => `color-mix(in oklch, ${hue} 60%, var(--background))`,
 	(hue: string) => `color-mix(in oklch, ${hue} 70%, var(--foreground))`,
 ];
 
-/** Every chart colour, base hues first; nothing in the chart is ever grey. */
 const SERIES_PALETTE = SHADES.flatMap((shade) => SERIES_HUES.map(shade));
 
 const SERIES_COLUMN_SUFFIX = "_count";
 
-/** True for the catch-all bucket the pipe folds groups beyond the top N into. */
 export function isOtherSeries({ key }: { key: string }): boolean {
 	return key.endsWith(`__${RESERVED_GROUP}`);
 }
 
-/** An event's own colour, by its place in the selection, so it holds across ranges and refetches. */
 export function eventColor({ eventIndex }: { eventIndex: number }): string {
 	return SERIES_PALETTE[eventIndex % SERIES_PALETTE.length];
 }
@@ -42,7 +37,6 @@ const hashString = (value: string) => {
 	return hash >>> 0;
 };
 
-/** A slot per value from its hash, probing past taken ones, so a value keeps its slot as the set around it changes. */
 const stableSlots = ({
 	values,
 	slotCount,
@@ -72,10 +66,6 @@ const splitSeriesKey = (key: string) => {
 	};
 };
 
-/**
- * One colour per chart series. Ungrouped series take their event's colour; grouped series take
- * their group's hue (the "Other values" bucket included), shaded per event when several are stacked.
- */
 export function assignSeriesColors({
 	events,
 	eventNames,
@@ -87,7 +77,6 @@ export function assignSeriesColors({
 		.filter(({ name }) => name !== "period")
 		.map(({ name }) => ({ key: name, ...splitSeriesKey(name) }));
 
-	// Selected events keep their selection order; anything else queues after them.
 	const eventIndex = new Map(eventNames.map((name, index) => [name, index]));
 	for (const { eventName } of series) {
 		if (!eventIndex.has(eventName)) eventIndex.set(eventName, eventIndex.size);

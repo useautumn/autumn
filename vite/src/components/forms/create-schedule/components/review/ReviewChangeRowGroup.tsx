@@ -10,7 +10,6 @@ import { ReviewChangeRowTrailing } from "./ReviewChangeRowItem";
 const itemCountLabel = (count: number) =>
 	count === 1 ? "1 item" : `${count} items`;
 
-/** A plan row that expands into the items it bills, sunk into the card colour beneath it. */
 export function ReviewChangeRowGroup({
 	row,
 	items,

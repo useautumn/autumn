@@ -35,7 +35,6 @@ type Point = {
 	current: boolean;
 };
 
-/** Every recorded run of this file over time; the dot for the open run is ringed. */
 export const FileHistoryChart = ({
 	file,
 	runId,

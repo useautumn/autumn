@@ -1,16 +1,3 @@
-/**
- * Allocated entities see their share on the shared row; customers see how much is allocated.
- *
- * Contract:
- *   entities.get (allocated): shared breakdown row keeps its id, source "customer",
- *     included_grant/remaining = own share + unallocated, usage = own usage, allocation { amount }.
- *   entities.get (not allocated): shared row shows only unallocated credits, allocation null.
- *   customers.get: balance gains allocated / unallocated; breakdown rows carry source.
- *
- * Red (before):  no source/allocation fields; entity rows show the whole pool.
- * Green (after): the fields above.
- */
-
 import { expect, test } from "bun:test";
 import {
 	type ApiBalanceBreakdownV1,

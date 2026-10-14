@@ -8,7 +8,6 @@ import { getHeraldLogger } from "./getHeraldLogger.js";
 
 let postgres: PostgresClient | undefined;
 
-/** The main database, beside the events one. */
 export function getPostgres(): PostgresClient {
 	postgres ??= createPostgresClient({
 		ctx: { logger: getHeraldLogger() },

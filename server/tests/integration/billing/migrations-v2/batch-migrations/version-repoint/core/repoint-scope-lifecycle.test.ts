@@ -8,7 +8,6 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-// version-only is per-customer until definition execute is restored
 import { eq } from "drizzle-orm";
 import {
 	expectBatchLane,
@@ -18,8 +17,6 @@ import {
 	runVersionRepointMigration,
 } from "../utils/versionRepointTestUtils";
 
-/** products.base creates through the V1 route, which silently drops V2 item
- * fields; /plans.update mints versions through the V2 route. */
 const catalogItems = [items.monthlyMessages({ includedUsage: 100 })];
 const versionItems = [itemsV2.monthlyMessages({ included: 100 })];
 

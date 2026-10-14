@@ -19,7 +19,6 @@ export type BootSummary = {
 	slowest: { worker: string; totalMs: number }[];
 };
 
-/** Per-step boot percentiles across the workers that reported a timeline, in boot order. */
 export const summariseBoot = (workers: WorkerState[]): BootSummary | null => {
 	const booted = workers.filter((w) => w.boot);
 	if (booted.length === 0) return null;

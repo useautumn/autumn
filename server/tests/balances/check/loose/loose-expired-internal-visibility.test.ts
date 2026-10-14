@@ -41,7 +41,6 @@ test.concurrent(
 
 		const expiresAt = Date.now() + 3000;
 
-		// One loose balance that expires shortly, one that never expires.
 		await autumnV1.balances.create({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
@@ -57,7 +56,6 @@ test.concurrent(
 
 		await sleepUntil(expiresAt + 1000);
 
-		// Default (public) hydration: the expired loose entitlement is dropped in SQL.
 		const publicFullCustomer = await CusService.getFull({
 			ctx,
 			idOrInternalId: customerId,
@@ -69,7 +67,6 @@ test.concurrent(
 		expect(publicLooseEnts[0]?.expires_at).toBeNull();
 		expect(publicLooseEnts[0]?.balance).toBe(100);
 
-		// Internal dashboard hydration: the expired loose entitlement is included.
 		const internalFullCustomer = await CusService.getFull({
 			ctx,
 			idOrInternalId: customerId,
@@ -87,8 +84,6 @@ test.concurrent(
 		expect(expiredLooseEnt?.expires_at).toBe(expiresAt);
 		expect(expiredLooseEnt?.balance).toBe(200);
 
-		// Even with the expired row hydrated, the TS selection layer still filters
-		// it out — public read paths stay byte-identical.
 		const selectedCustomerEntitlements = fullCustomerToCustomerEntitlements({
 			fullCustomer: internalFullCustomer,
 			featureIds: [TestFeature.Messages],

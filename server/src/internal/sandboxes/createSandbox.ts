@@ -21,10 +21,6 @@ import { deletePlatformSubOrg } from "@/internal/orgs/deleteOrg/deletePlatformSu
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import { provisionSubOrg } from "@/internal/orgs/orgUtils/provisionSubOrg.js";
 
-/**
- * Dashboard-only gate for the sandbox routes that stayed private (update, copy).
- * The public create/list/delete routes use `resolveSandboxActor` instead.
- */
 export const assertDashboardActor = ({
 	authType,
 	user,
@@ -42,11 +38,6 @@ export const assertDashboardActor = ({
 	return user;
 };
 
-/**
- * Sandboxes are managed from the main org. Reject if the request resolved into a
- * sandbox sub-org (via `x-sandbox-org-id`) — otherwise you'd create/list nested
- * sandboxes-of-a-sandbox.
- */
 export const assertNotSandboxContext = (org: {
 	is_sandbox?: boolean | null;
 }): void => {
@@ -168,7 +159,6 @@ export const createSandboxForOrg = async ({
 	name: string;
 	color?: SandboxColor;
 	icon?: SandboxIcon;
-	/** The caller's scopes: a sandbox key never reaches beyond the key that minted it. */
 	scopes?: string[] | null;
 }): Promise<{ org: Organization; secret_key: string }> => {
 	assertSandboxNameValid({ name });
@@ -209,8 +199,6 @@ export const createSandboxForOrg = async ({
 
 		return { org, secret_key };
 	} catch (error) {
-		// org is fully provisioned here (ids persisted), so the full teardown
-		// cleans it up by reading the org row.
 		await deletePlatformSubOrg({
 			db,
 			org,
@@ -221,7 +209,6 @@ export const createSandboxForOrg = async ({
 	}
 };
 
-/** A key for one sandbox, scoped no wider than the key or session that asked. */
 export const createSandboxKey = async ({
 	db,
 	sandbox,

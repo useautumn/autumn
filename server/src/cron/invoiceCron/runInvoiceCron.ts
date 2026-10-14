@@ -176,8 +176,6 @@ export const getExpiredInvoiceMetadata = async ({
 	limit: number;
 	cursor: { expiresAt: number; id: string } | null;
 }) => {
-	// Keyset over (expires_at, id) so each page is a bounded query: an
-	// unbounded SELECT * over a large expired backlog pins xmin while it ships.
 	return withStatementTimeout(db, async (tx) =>
 		tx
 			.select()

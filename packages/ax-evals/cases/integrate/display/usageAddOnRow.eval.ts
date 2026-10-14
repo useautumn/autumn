@@ -5,16 +5,6 @@ import { initIntegrationEval } from "../../../src/initIntegrationEval.ts";
 import { messagingCatalog } from "../catalogs/messagingCatalog.ts";
 import { fixtureUser, integrateScenario } from "../integrateShared.ts";
 
-/**
- * DISPLAY flow: usage-priced add-on row with an estimated accrued cost. The
- * automations add-on includes 1,000 runs/month, then bills overage on
- * graduated tiers ($0.05 first 1,000 overage runs, $0.02 after). Seeded
- * usage is 3,500 → overage 2,500 → estimated cost 1,000×0.05 + 1,500×0.02 =
- * $80. The pricing lives on the breakdown entry's `price` (tiers,
- * tierBehavior, billingUnits) — the graded trap: naive code treats the row
- * as a flat price (showing $0 or the tier rate itself) instead of computing
- * the accrued estimate from usage beyond the included grant.
- */
 const summaryRouteStub = `		// Billing page loads this to render the subscription table. TODO: hook
 		// up to our billing provider.
 		"/api/billing/summary": {

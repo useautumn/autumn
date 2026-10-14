@@ -9,7 +9,6 @@ import type {
 import { approvalDenyPlan } from "../domain/approvalRecord.js";
 import { chatApprovalWritesRepo } from "../repos/chatApprovalWritesRepo.js";
 
-/** Cancels the whole parked batch, then consumes its resumed continuation. */
 export const cancelApprovalParkAndDrain = async ({
 	approval,
 	auth,

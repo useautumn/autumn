@@ -10,7 +10,6 @@ let mirrorQueue: Promise<unknown> = Promise.resolve();
 export const getCacheDir = () =>
 	process.env.TWD_CACHE_DIR || join(homedir(), ".cache", "twd");
 
-/** Serialises git work on the shared bare mirror (fetches race on its shallow file). */
 export const withMirror = <T>(work: (mirrorDir: string) => Promise<T>) => {
 	const mirrorDir = join(getCacheDir(), "mirror.git");
 	const next = mirrorQueue.then(async () => {
@@ -31,7 +30,6 @@ const hasCommit = ({ mirrorDir, sha }: { mirrorDir: string; sha: string }) =>
 		stderr: "ignore",
 	}).exitCode === 0;
 
-/** Call inside withMirror. TwdError `sha_not_found` when the commit was never pushed. */
 export const fetchShaIntoMirror = async ({
 	mirrorDir,
 	sha,
@@ -40,7 +38,6 @@ export const fetchShaIntoMirror = async ({
 	sha: string;
 }) => {
 	if (hasCommit({ mirrorDir, sha })) return;
-	// The ref keeps the commit as a negotiation base so later fetches are incremental.
 	await runGit({
 		args: [
 			"fetch",

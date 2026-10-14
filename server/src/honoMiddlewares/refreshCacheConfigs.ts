@@ -3,9 +3,6 @@ import { matchRoute } from "./middlewareUtils.js";
 export type RefreshCacheRouteConfig = {
 	method: string;
 	url: string;
-	/** Flush cached balances to Postgres before invalidating. Only safe on
-	 *  balance-neutral routes — everywhere else Postgres was just written
-	 *  directly and the cached balances are stale. */
 	flushBalances?: boolean;
 };
 
@@ -20,7 +17,6 @@ const route = ({
 });
 
 export const REFRESH_CACHE_ROUTE_CONFIGS: RefreshCacheRouteConfig[] = [
-	// MAIN ROUTES
 	route({
 		method: "DELETE",
 		url: "/customers/:customer_id",
@@ -93,7 +89,6 @@ export const REFRESH_CACHE_ROUTE_CONFIGS: RefreshCacheRouteConfig[] = [
 		flushBalances: true,
 	}),
 
-	// RPC ROUTES
 	route({
 		method: "POST",
 		url: "/billing.attach",

@@ -31,13 +31,11 @@ import type {
 	ThreadStatus,
 } from "./types/threadMessages.js";
 
-/** One serving thread: its server, and its lines to the other threads, kept current as they come and go. */
 const openThread = ({ init }: { init: ThreadInit }) => {
 	const { env, index } = init;
 	const logger = getAtomLogger();
 	const owners = createSlotOwners({ index, threads: env.ATOM_THREADS });
 	const counters = openThreadCounters({ buffer: init.stats, index });
-	// Per thread, like secret keys: a subject's misses are all decided on its owner thread.
 	const subjectPulls = createSubjectPulls({
 		ctx: {
 			autumnClient: getAutumnClient({ env }),
@@ -60,7 +58,6 @@ const openThread = ({ init }: { init: ThreadInit }) => {
 	const folders = multiTenant
 		? createMultiTenantFolders({ auth: multiTenant.auth })
 		: createDeployedFolders({ slots: ownFolder({ auth }) });
-	// Every Atom keeps its replicas in step: an org's own over its one folder, a multi-tenant one over every tenant's.
 	const replicas = openReplicas({
 		env,
 		folders,
@@ -81,7 +78,6 @@ const openThread = ({ init }: { init: ThreadInit }) => {
 		},
 		config: {
 			env,
-			// The highest-indexed threads receive: slots go round-robin from 0, so the lowest own one more.
 			receivesPushes: index >= env.ATOM_THREADS - env.ATOM_PUSH_RECEIVERS,
 		},
 	});
@@ -98,7 +94,6 @@ const openThread = ({ init }: { init: ThreadInit }) => {
 		answerPorts.delete(peer);
 	}
 
-	/** Listens first, so peers can relay to it, then copies what it missed before it answers from its own files. */
 	async function start(): Promise<void> {
 		await server.start();
 		await replicas.sync.catchUp();
@@ -106,7 +101,6 @@ const openThread = ({ init }: { init: ThreadInit }) => {
 		void replicas.sync.runPasses();
 	}
 
-	/** Pulls stop first, so none lands in a folder as it closes. */
 	async function stop(): Promise<void> {
 		stopping = true;
 		subjectPulls.stop();
@@ -116,7 +110,6 @@ const openThread = ({ init }: { init: ThreadInit }) => {
 	return { start, stop, join, leave };
 };
 
-/** An org's own Atom opens its one folder on every thread. */
 const ownFolder = ({ auth }: { auth: Auth }): Slots => {
 	const slots = auth.slotsFor({ atomId: null });
 	if (!slots)
@@ -124,7 +117,6 @@ const ownFolder = ({ auth }: { auth: Auth }): Slots => {
 	return slots;
 };
 
-/** The pushes and tenants this thread applies, on their way to every other replica, and what this one copies back from them. */
 const openReplicas = ({
 	env,
 	folders,
@@ -154,7 +146,6 @@ const openReplicas = ({
 			logger,
 		},
 	});
-	// Built before the thread listens: the point each folder fell behind at must not move once live relays land.
 	const sync = createReplicaSync({
 		ctx: {
 			replication,
@@ -169,7 +160,6 @@ const openReplicas = ({
 	return { replication, sync };
 };
 
-/** Runs in a worker the main thread started: everything it does is told to it, in order, over its parent port. */
 export const runAtomThread = (): void => {
 	const main = parentPort;
 	if (!main) throw new Error("runAtomThread runs in a worker thread");
@@ -180,7 +170,6 @@ export const runAtomThread = (): void => {
 		if (control.type === "init") {
 			shareSqliteOpenLock({ lock: control.sqliteOpenLock });
 			thread = openThread({ init: control });
-			// Before it listens: a check it takes must reach its owner thread, not find no line to it yet.
 			for (const { index, ports } of control.peers)
 				thread.join({ peer: index, ports });
 			await thread.start();
@@ -195,7 +184,6 @@ export const runAtomThread = (): void => {
 		}
 	}
 
-	// A failure here ends the thread, so the main thread replaces it; it is logged first, whatever Bun does with the rejection.
 	main.on("message", (control: ThreadControl) =>
 		receive(control).catch((error) => {
 			getAtomLogger().error(

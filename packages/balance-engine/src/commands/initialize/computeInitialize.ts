@@ -7,10 +7,6 @@ import type { InitializeCommand } from "./types/initializeCommand.js";
 const byId = <Row extends { id: string }>(rows: Row[]): Row[] =>
 	[...rows].sort((left, right) => left.id.localeCompare(right.id));
 
-/**
- * The subject first, then its tables in referential order; row order within a table is by id.
- * An entity joins a customer already resident, whose row the worker may have moved past what this read saw.
- */
 const insertChangesOf = ({ state }: { state: SubjectState }): RowChange[] => [
 	...(state.entity
 		? [{ table: "entity", op: "insert", row: state.entity } as const]
@@ -32,7 +28,6 @@ const insertChangesOf = ({ state }: { state: SubjectState }): RowChange[] => [
 	),
 ];
 
-/** A customer initialize creates the state at revision zero; an entity initialize adds the entity's rows to the customer's current revision. */
 export const computeInitialize = ({
 	command,
 	state,

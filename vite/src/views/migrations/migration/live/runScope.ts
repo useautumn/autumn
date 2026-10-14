@@ -1,5 +1,3 @@
-/** How many customers a given run covers. A scoped run carries its own size,
- * so the progress bar reads "0 of 1" rather than the whole filter count. */
 export function runExpectedCount({
 	run,
 	filterCount,

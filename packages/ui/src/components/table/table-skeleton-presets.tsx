@@ -2,8 +2,6 @@ import type { ColumnSkeletonMeta } from "@autumn/ui/components/table/table-row-c
 import { Skeleton } from "@autumn/ui/components/ui/skeleton";
 import { cn } from "@autumn/ui/lib/utils";
 
-// Percent widths never widen a column: they resolve against the cell, and
-// count as zero in the auto table layout's min-content pass.
 const LABEL_WIDTHS = [
 	"w-1/2",
 	"w-3/5",

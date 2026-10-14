@@ -7,7 +7,6 @@ import {
 } from "@autumn/kafka";
 import type { AutumnLogger } from "@autumn/logging";
 
-/** Expires an org's cached catalog rows whenever the server says they changed. */
 export function createCatalogInvalidationConsumer({
 	ctx,
 	config,
@@ -36,7 +35,6 @@ export function createCatalogInvalidationConsumer({
 
 	return createKafkaCatalogInvalidationConsumer({
 		ctx: { kafka: ctx.kafka, handler: { apply, skip } },
-		// Every process clears its own cache, so each reads every record.
 		config: {
 			topic: config.topic,
 			group: { kind: "perProcess", idPrefix: config.groupIdPrefix },

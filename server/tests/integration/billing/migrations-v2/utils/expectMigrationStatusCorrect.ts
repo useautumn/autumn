@@ -2,9 +2,6 @@ import { expect } from "bun:test";
 import type { MigrationStatus } from "@autumn/shared";
 import type { AutumnInt } from "@/external/autumn/autumnCli.js";
 
-/** Asserts the computed status on both surfaces that expose it: the
- * migrations list row and the runs list envelope. Only passed fields are
- * checked. */
 export const expectMigrationStatusCorrect = async ({
 	autumn,
 	migrationId,

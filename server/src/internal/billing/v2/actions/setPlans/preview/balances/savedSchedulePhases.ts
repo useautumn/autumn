@@ -18,7 +18,6 @@ const startsBy = ({
 	customerProduct.starts_at < at ||
 	phaseStartsMatch({ startsAt: customerProduct.starts_at, otherStartsAt: at });
 
-/** Saved scheduled rows the request keeps or deletes; rows it never touches behave alike either way. */
 const savedScheduledCustomerProducts = ({
 	fullCustomer,
 	phases,
@@ -41,7 +40,6 @@ const savedScheduledCustomerProducts = ({
 	);
 };
 
-/** A saved row starting between two dates is a cut of its own, so one that also ends before the later date ends there. */
 const withSavedStartsBetween = ({
 	dates,
 	savedScheduled,
@@ -66,7 +64,6 @@ const withSavedStartsBetween = ({
 	);
 };
 
-/** The saved schedule cut at the given dates and at its own starts between them: each cut starts the saved rows due since the previous one. */
 export const savedSchedulePhases = ({
 	fullCustomer,
 	phases,

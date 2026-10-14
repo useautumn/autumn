@@ -1,9 +1,3 @@
-/**
- * atmn crud/plans — default plan / auto enable
- *
- * One line of plans/atmn-v3/07_tests.md. [a, b] is a matrix looped INSIDE this file.
- */
-
 import { expect, test } from "bun:test";
 import { configBody } from "@tests/utils/atmnUtils/baseConfigs.js";
 import { expectRoundTrip } from "@tests/utils/atmnUtils/expectRoundTrip.js";
@@ -47,7 +41,6 @@ test.concurrent("default plan / auto enable", async () => {
 		const pro = plans.find((plan) => plan.plan_id === "pro");
 		expect(starter).toEqual(expect.objectContaining({ auto_enable: true }));
 		expect(pro).toEqual(expect.objectContaining({ auto_enable: true }));
-		// The deprecated twin never reaches a fixture; the stated flag does.
 		const config = freshFiles.get("plans.ts") ?? "";
 		expect(config).not.toContain("isDefault");
 		expect(config.match(/autoEnable: true/g)).toHaveLength(2);

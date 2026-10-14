@@ -21,8 +21,6 @@ export class MigrationCommitUnknownError extends Error {
 	}
 }
 
-/** Runs `run` in a transaction on a client this call owns: every statement is
- * deadlined, and a failed or aborted attempt destroys its connection. */
 export const runMigrationTransaction = async <T>({
 	pool,
 	signal,
@@ -39,7 +37,6 @@ export const runMigrationTransaction = async <T>({
 	run: (query: MigrationQuery) => Promise<T>;
 }): Promise<T> => {
 	for (let attempt = 1; ; attempt++) {
-		// Backoff rides out a brief failover; the page abort still cuts it short.
 		if (attempt > 1)
 			await waitForRetry({
 				signal,
@@ -61,7 +58,6 @@ export const runMigrationTransaction = async <T>({
 			return result;
 		} catch (error) {
 			const failure = connection.discard(error);
-			// An accepted COMMIT may have lost only its reply; replaying could apply it twice.
 			if (commitSent) throw new MigrationCommitUnknownError(failure);
 			if (signal.aborted || attempt >= maxAttempts) throw failure;
 			if (!isRetryableFailure(failure)) throw failure;
@@ -95,8 +91,6 @@ const isRetryableFailure = (failure: unknown) =>
 	failure instanceof MigrationDbDeadlineError ||
 	isTransientDbError({ error: failure });
 
-/** One attempt's pg client: statements race a deadline and the page abort, and
- * the first failure destroys the socket so nothing else runs on it. */
 const createOwnedConnection = ({
 	pool,
 	signal,
@@ -159,7 +153,6 @@ const createOwnedConnection = ({
 		client = await bounded({
 			operation: async () => {
 				const acquired = await pool.connect();
-				// A connect that lands after the deadline is never handed out.
 				if (failure || signal.aborted) {
 					acquired.release(true);
 					throw failure ?? signal.reason;

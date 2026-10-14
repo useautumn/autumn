@@ -43,7 +43,6 @@ describe("equal-version guard (review round 3 of #4605)", () => {
 			readAt: 1000,
 		});
 		await processor.setSubject(subjectPushOf({ subject: whole }));
-		// Later, the customer-level plan is gone: Autumn's next entity view carries the entity's rows only.
 		const customerPlanGone = {
 			...whole,
 			readAt: 2000,

@@ -35,7 +35,6 @@ interface UpdateFeatureParams {
 	updates: Partial<Feature>;
 }
 
-/** Generic keyed-record equality check with a caller-supplied per-entry comparison. */
 const areMarkupRecordsEqual = <T>(
 	a: Record<string, T> | null | undefined,
 	b: Record<string, T> | null | undefined,
@@ -107,7 +106,6 @@ const hasAiMarkupConfigChanged = ({
 	});
 };
 
-/** Reproduce the exact error `updateFeature` historically threw for a blocker. */
 export const throwFeatureUpdateBlocker = ({
 	blocker,
 	newId,
@@ -128,15 +126,11 @@ export const throwFeatureUpdateBlocker = ({
 	});
 };
 
-/**
- * Updates an existing feature with full validation logic
- */
 export const updateFeature = async ({
 	ctx,
 	featureId,
 	updates,
 }: UpdateFeatureParams): Promise<Feature | null> => {
-	// 1. Get all features and find the one to update
 	const allFeatures = await FeatureService.list({
 		db: ctx.db,
 		orgId: ctx.org.id,
@@ -153,7 +147,6 @@ export const updateFeature = async ({
 		});
 	}
 
-	// Check if changing type, id, or usage type
 	const isChangingType =
 		notNullish(updates.type) && feature.type !== updates.type;
 
@@ -171,7 +164,6 @@ export const updateFeature = async ({
 			feature,
 		});
 
-		// Validate the whole change before any mutation so it stays atomic.
 		const [blocker] = detectFeatureUpdateBlockers({
 			feature,
 			updates,
@@ -182,7 +174,6 @@ export const updateFeature = async ({
 			throwFeatureUpdateBlocker({ blocker, newId: updates.id });
 		}
 
-		// Handle type change
 		if (isChangingType && updates.type) {
 			await handleFeatureTypeChanged({
 				ctx,
@@ -194,8 +185,6 @@ export const updateFeature = async ({
 
 		const { linkedEntitlements, entitlements, prices, creditSystems } =
 			objectsUsingFeature;
-
-		// Handle ID change
 
 		if (isChangingId && updates.id) {
 			await handleFeatureIdChanged({
@@ -209,7 +198,6 @@ export const updateFeature = async ({
 			});
 		}
 
-		// Handle usage type change
 		if (isChangingUsageType && updates.config?.usage_type) {
 			await handleFeatureUsageTypeChanged({
 				db: ctx.db,
@@ -275,7 +263,6 @@ export const updateFeature = async ({
 	const shouldClearCreditSystemCustomerCache =
 		rateCardChanged || markupsChanged || aiMarkupConfigChanged;
 
-	// Update the feature
 	const updatedFeature = await FeatureService.update({
 		db: ctx.db,
 		id: featureId,
@@ -293,7 +280,6 @@ export const updateFeature = async ({
 		},
 	});
 
-	// Queue display generation if name changed
 	if (isChangingName && updatedFeature) {
 		await workflows.triggerGenerateFeatureDisplay({
 			featureId: updatedFeature.id,

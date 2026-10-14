@@ -1,33 +1,3 @@
-/**
- * TDD test for org-level usage alerts.
- *
- * Contract under test:
- *   New types/fields:
- *     - OrgConfig.usage_alerts: DbUsageAlert[]   (org-scope alerts in organizations.config)
- *   New behaviors:
- *     - checkUsageAlerts evaluates ctx.org.config.usage_alerts in addition to
- *       customer-level and entity-level alerts.
- *     - Org alerts fire INDEPENDENTLY of customer alerts (idempotency key
- *       takes a scope segment so Svix does not dedup them).
- *     - Org alerts evaluate against the tracked subject balance, including
- *       the entity balance when the track call is entity-scoped.
- *     - Disabled org alerts (enabled: false) do not fire.
- *     - Org alert with no feature_id fires on usage of any feature (global).
- *   Side effects:
- *     - Svix `balances.usage_alert_triggered` event per customer per
- *       (scope, feature, threshold, threshold_type) per minute-bucket.
- *
- * Pre-impl red:
- *   - OrgConfig.usage_alerts type doesn't exist → TS error on the org config
- *     update payload.
- *   - checkUsageAlerts does not read ctx.org.config.usage_alerts → no webhook
- *     fires → waitForWebhook returns null → assertions fail.
- *
- * Post-impl green: all assertions pass once OrgConfigSchema includes
- * usage_alerts and checkUsageAlerts iterates ctx.org.config.usage_alerts as a
- * third scope.
- */
-
 import { afterAll, afterEach, beforeAll, expect, test } from "bun:test";
 import type { DbUsageAlert } from "@autumn/shared";
 import {
@@ -63,10 +33,6 @@ type BalancesUsageAlertTriggeredPayload = {
 	};
 };
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// SVIX PLAY SETUP
-// ═══════════════════════════════════════════════════════════════════════════════
-
 let webhook: WebhookTestSetup;
 let playToken: string;
 
@@ -81,19 +47,14 @@ beforeAll(async () => {
 
 afterAll(async () => {
 	await webhook?.cleanup();
-	// Final reset to ensure config doesn't leak to other suites.
 	await setOrgUsageAlerts([]);
 });
 
-// Each test sets the org-level alerts then clears them in afterEach so tests
-// can run sequentially without bleeding across each other.
 afterEach(async () => {
 	await setOrgUsageAlerts([]);
 });
 
 async function setOrgUsageAlerts(usageAlerts: DbUsageAlert[]) {
-	// Tests run in AppEnv.Sandbox — checkUsageAlerts reads
-	// sandbox_usage_alerts, not the live `usage_alerts` field.
 	await OrgService.update({
 		db,
 		orgId: defaultCtx.org.id,
@@ -105,10 +66,6 @@ async function setOrgUsageAlerts(usageAlerts: DbUsageAlert[]) {
 		},
 	});
 }
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 1: Org-level alert fires when customer crosses threshold
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test(`${chalk.yellowBright("org-alert1: org-level alert fires when customer crosses threshold")}`, async () => {
 	const messagesItem = items.monthlyMessages({ includedUsage: 1000 });
@@ -159,8 +116,6 @@ test(`${chalk.yellowBright("org-alert1: org-level alert fires when customer cros
 	expect(data.usage_alert.name).toBe("org-threshold-750");
 });
 
-// Red: org/global alerts used the customer balance and missed entity usage.
-// Green: a 100% org alert fires when an entity-scoped balance lands exactly at 100%.
 test(`${chalk.yellowBright("org-alert1b: org usage_percentage alert fires for entity balance at 100%")}`, async () => {
 	const perEntityMessages = items.monthlyMessages({
 		includedUsage: 100,
@@ -215,10 +170,6 @@ test(`${chalk.yellowBright("org-alert1b: org usage_percentage alert fires for en
 		"usage_percentage",
 	);
 });
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 2: Org alert applies to ALL customers (not customer-specific)
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test(`${chalk.yellowBright("org-alert2: org-level alert fires for multiple customers independently")}`, async () => {
 	const messagesItem = items.monthlyMessages({ includedUsage: 1000 });
@@ -286,10 +237,6 @@ test(`${chalk.yellowBright("org-alert2: org-level alert fires for multiple custo
 	expect(resultB!.payload.data.customer_id).toBe(customerIdB);
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 3: Org alert + customer alert at same threshold both fire independently
-// ═══════════════════════════════════════════════════════════════════════════════
-
 test(`${chalk.yellowBright("org-alert3: org and customer alerts at same threshold both fire")}`, async () => {
 	const messagesItem = items.monthlyMessages({ includedUsage: 1000 });
 	const prod = products.base({
@@ -351,18 +298,12 @@ test(`${chalk.yellowBright("org-alert3: org and customer alerts at same threshol
 				continue;
 			if (payload.data.usage_alert.name === "org-coexist") orgMatch++;
 			if (payload.data.usage_alert.name === "customer-coexist") customerMatch++;
-		} catch {
-			// skip unparseable
-		}
+		} catch {}
 	}
 
 	expect(orgMatch).toBe(1);
 	expect(customerMatch).toBe(1);
 });
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 4: Org alert with no feature_id (global) fires on any feature
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test(`${chalk.yellowBright("org-alert4: org-level global alert (no feature_id) fires on any feature")}`, async () => {
 	const messagesItem = items.monthlyMessages({ includedUsage: 1000 });
@@ -409,10 +350,6 @@ test(`${chalk.yellowBright("org-alert4: org-level global alert (no feature_id) f
 		"usage_percentage",
 	);
 });
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 5: Disabled org-level alert does not fire
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test(`${chalk.yellowBright("org-alert5: disabled org-level alert does not fire")}`, async () => {
 	const messagesItem = items.monthlyMessages({ includedUsage: 1000 });

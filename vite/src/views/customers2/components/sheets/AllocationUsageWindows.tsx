@@ -54,7 +54,6 @@ const Counter = ({ cache, db }: { cache: number; db: number }) => (
 	</span>
 );
 
-/** Admin-only view of the allocation counters and each entity's gate, for QA. */
 export function AllocationUsageWindows({
 	customerId,
 	featureId,

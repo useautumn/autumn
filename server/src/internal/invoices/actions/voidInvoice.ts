@@ -8,10 +8,6 @@ import { updateInvoiceFromStripe } from "./updateFromStripe";
 
 const VOIDABLE_STRIPE_STATUSES = new Set(["open", "uncollectible"]);
 
-/**
- * Voids a finalized, unpaid Stripe invoice. Stripe re-derives subscription
- * status from the remaining invoices, and the webhook mirrors that separately.
- */
 export const voidInvoice = async ({
 	ctx,
 	invoiceId,

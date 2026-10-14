@@ -115,7 +115,6 @@ export function FeatureFlagsDialog({
 		};
 	}, [axiosInstance, open]);
 
-	// Form -> JSON sync
 	useEffect(() => {
 		if (syncSource !== "form") return;
 		const {

@@ -18,13 +18,11 @@ test(`${chalk.yellowBright("referrals13: referrer on Pro, gets discount on next 
 	const mainCustomerId = "main-referral-13";
 	const redeemerId = "referral13-r1";
 
-	// Clean up redemptions before scenario
 	await redemptionRepo.resetCustomer({
 		db: ctx.db,
 		internalCustomerId: [mainCustomerId, redeemerId],
 	});
 
-	// Products
 	const freeProd = products.base({
 		id: "free",
 		isDefault: true,
@@ -36,10 +34,8 @@ test(`${chalk.yellowBright("referrals13: referrer on Pro, gets discount on next 
 		items: [items.dashboard(), items.monthlyMessages({ includedUsage: 10 })],
 	});
 
-	// Reward: 10% percentage discount (coupon-based)
 	const reward = rewards.percentageDiscount({ discountValue: 10 });
 
-	// Program: triggers immediately on customer creation, referrer only, max 10
 	const program = referralPrograms.onCustomerCreationReferrer({
 		rewardId: reward.id,
 		maxRedemptions: 10,
@@ -63,7 +59,6 @@ test(`${chalk.yellowBright("referrals13: referrer on Pro, gets discount on next 
 		],
 	});
 
-	// Advance redeemer's clock too (s.advanceTestClock only advances primary)
 	if (testClockIds[redeemerId]) {
 		await advanceTestClock({
 			testClockId: testClockIds[redeemerId],
@@ -75,13 +70,11 @@ test(`${chalk.yellowBright("referrals13: referrer on Pro, gets discount on next 
 
 	expect(referralCode!.code).toBeDefined();
 
-	// Redeem referral code
 	const redemption = await autumnV1.referrals.redeem({
 		customerId: redeemerId,
 		code: referralCode!.code,
 	});
 
-	// Try redeem again — should fail
 	try {
 		await autumnV1.referrals.redeem({
 			customerId: redeemerId,
@@ -95,9 +88,7 @@ test(`${chalk.yellowBright("referrals13: referrer on Pro, gets discount on next 
 		);
 	}
 
-	// Verify referrer has pro, redeemer has free
 	const redemptionResult = await autumnV1.redemptions.get(redemption.id);
-	// For referrer-only program: triggered + applied (referrer got discount), redeemer_applied is false (redeemer gets nothing)
 	expect(redemptionResult.triggered).toBe(true);
 	expect(redemptionResult.applied).toBe(true);
 
@@ -108,7 +99,6 @@ test(`${chalk.yellowBright("referrals13: referrer on Pro, gets discount on next 
 		status: CusProductStatus.Active,
 	});
 
-	// Advance 31 days to trigger next billing cycle
 	await Promise.all(
 		Object.values(testClockIds).map((clockId) =>
 			advanceTestClock({
@@ -120,7 +110,6 @@ test(`${chalk.yellowBright("referrals13: referrer on Pro, gets discount on next 
 		),
 	);
 
-	// Verify referrer gets discount on next Pro invoice
 	const mainCustomerWithInvoices = await autumnV1.customers.get(
 		mainCustomerId,
 		{
@@ -133,12 +122,9 @@ test(`${chalk.yellowBright("referrals13: referrer on Pro, gets discount on next 
 	);
 
 	if (proInvoice) {
-		// 10% percentage discount on $20 Pro = $2 off = $18
 		expect(proInvoice.total).toBeLessThan(20);
 	}
 
-	// Verify DB state
-	// Final verification: referrer still has active Pro after billing cycle
 	expectProductAttached({
 		customer: await autumnV1.customers.get(mainCustomerId),
 		product: proProd,

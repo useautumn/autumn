@@ -7,10 +7,6 @@ import { CustomerExportService } from "../../CustomerExportService.js";
 const MARK_COMPLETED_ATTEMPTS = 3;
 const MARK_COMPLETED_RETRY_DELAY_MS = ms.seconds(2);
 
-/**
- * The object is already published, so transient status writes are retried.
- * Returns false when the row left its active state, so callers must not report success.
- */
 export const markCompletedWithRetry = async ({
 	ctx,
 	logger,

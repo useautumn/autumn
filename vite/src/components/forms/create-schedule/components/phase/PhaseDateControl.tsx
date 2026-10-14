@@ -25,7 +25,6 @@ type PickerLimits = Pick<
 	| "fromYear"
 >;
 
-/** A started phase that can backdate may only move earlier than its saved start. */
 export function phaseDatePickerLimits({
 	nowMs,
 	hasStarted,
@@ -95,10 +94,6 @@ function PhaseDateLabel({
 	);
 }
 
-/**
- * The picker's own trigger is stretched invisibly over the compact label, so the
- * calendar and time popover are reused as-is.
- */
 function PhaseDatePicker({
 	startsAt,
 	label,

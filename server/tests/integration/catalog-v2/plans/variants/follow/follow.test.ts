@@ -1,12 +1,3 @@
-/**
- * catalogV2.update — variant propagate / pin.
- *
- * Contract:
- *   omit from propagate → frozen (keep drift, no new base items)
- *   propagate.variants → apply base diff, keep untouched slots
- *   overlapping slot → applyDiff overwrites (200 → 150)
- */
-
 import { test } from "bun:test";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";

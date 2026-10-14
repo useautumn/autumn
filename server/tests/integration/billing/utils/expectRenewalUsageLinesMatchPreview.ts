@@ -5,12 +5,9 @@ import type Stripe from "stripe";
 import type { AutumnInt } from "@/external/autumn/autumnCli.js";
 
 export type ExpectedUsageInvoiceLine = {
-	/** Matched as a prefix, since usage lines end with their billing period. */
 	description: string;
-	/** Major units, e.g. 75 for $75.00. */
 	amount: number;
 	quantity: number;
-	/** The preview's quantity when it differs from Stripe's (untiered lines report usage). */
 	previewQuantity?: number;
 };
 
@@ -50,7 +47,6 @@ const toExpectedPrefix = ({
 		? expected
 		: description;
 
-/** Asserts the lines Autumn added to a Stripe invoice; Stripe doesn't keep add-lines order. */
 export const expectStripeUsageLines = ({
 	stripeLines,
 	expectedLines,
@@ -81,10 +77,6 @@ export const expectStripeUsageLines = ({
 	return autumnLines;
 };
 
-/**
- * Advances one cycle and asserts the lines Autumn added to the renewal invoice, then that
- * the upcoming-invoice preview listed the same lines with the same amounts and quantities.
- */
 export const expectRenewalUsageLinesMatchPreview = async ({
 	ctx,
 	autumnV1,
@@ -118,7 +110,6 @@ export const expectRenewalUsageLinesMatchPreview = async ({
 	});
 	expectStripeUsageLines({ stripeLines, expectedLines });
 
-	// Usage and credit lines carry a feature; base prices don't.
 	const previewLines = preview.line_items.filter(
 		(line: PreviewLineItem) => line.feature_id !== null,
 	);

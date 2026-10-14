@@ -1,14 +1,3 @@
-/**
- * Free Trial Reattach Tests (Attach V2)
- *
- * Tests for cancel/reattach scenarios and trial prevention.
- *
- * Key behaviors:
- * - Cancel during trial cancels subscription
- * - Reattach same product gets fresh trial (based on unique_fingerprint)
- * - Scheduled switches can be cancelled
- */
-
 import { expect, test } from "bun:test";
 import { type ApiCustomerV3, ms } from "@autumn/shared";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
@@ -26,18 +15,6 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 2: Reattach same product after cancel (fresh trial)
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Customer had proWithTrial, cancelled during trial
- * - Reattach same product (unique_fingerprint: false)
- *
- * Expected Result:
- * - Gets fresh trial (unique_fingerprint not enforced)
- */
 test.concurrent(`${chalk.yellowBright("trial-reattach 2: reattach same product (fresh trial)")}`, async () => {
 	const customerId = "trial-reattach-same-product";
 
@@ -65,7 +42,6 @@ test.concurrent(`${chalk.yellowBright("trial-reattach 2: reattach same product (
 		],
 	});
 
-	// Verify product is removed after cancel
 	const customerAfterCancel =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	await expectProductNotPresent({
@@ -73,14 +49,12 @@ test.concurrent(`${chalk.yellowBright("trial-reattach 2: reattach same product (
 		productId: proTrial.id,
 	});
 
-	// 1. Preview reattach - should show $0 deduplicate trial
 	const preview = await autumnV1.billing.previewAttach({
 		customer_id: customerId,
 		product_id: proTrial.id,
 	});
 	expect(preview.total).toBe(20);
 
-	// 2. Reattach same product
 	await autumnV1.billing.attach({
 		customer_id: customerId,
 		product_id: proTrial.id,
@@ -89,26 +63,22 @@ test.concurrent(`${chalk.yellowBright("trial-reattach 2: reattach same product (
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Verify product is active
 	await expectProductActive({
 		customer,
 		productId: proTrial.id,
 	});
 
-	// Verify gets fresh 7-day trial (from current time)
 	await expectProductNotTrialing({
 		customer,
 		productId: proTrial.id,
 	});
 
-	// Verify $0 invoice during trial (Stripe creates invoice for trial subscriptions)
 	await expectCustomerInvoiceCorrect({
 		customer,
 		count: 2,
 		latestTotal: 20,
 	});
 
-	// Verify Stripe subscription state
 	await expectSubToBeCorrect({
 		db: ctx.db,
 		customerId,
@@ -118,20 +88,6 @@ test.concurrent(`${chalk.yellowBright("trial-reattach 2: reattach same product (
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 3: Downgrade during trial then cancel scheduled
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Customer has premiumWithTrial (trialing)
- * - Downgrade to pro (scheduled)
- * - Cancel the scheduled pro
- *
- * Expected Result:
- * - Premium remains active and trialing
- * - Pro scheduled attachment is cancelled
- */
 test.concurrent(`${chalk.yellowBright("trial-reattach 3: cancel scheduled downgrade during trial")}`, async () => {
 	const customerId = "trial-reattach-cancel-scheduled";
 
@@ -157,11 +113,10 @@ test.concurrent(`${chalk.yellowBright("trial-reattach 3: cancel scheduled downgr
 		],
 		actions: [
 			s.billing.attach({ productId: premiumTrial.id }),
-			s.billing.attach({ productId: pro.id }), // Downgrade - scheduled
+			s.billing.attach({ productId: pro.id }),
 		],
 	});
 
-	// Cancel the scheduled pro
 	await autumnV1.subscriptions.update({
 		customer_id: customerId,
 		product_id: premiumTrial.id,
@@ -170,7 +125,6 @@ test.concurrent(`${chalk.yellowBright("trial-reattach 3: cancel scheduled downgr
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Verify premium is active and still trialing
 	await expectProductActive({
 		customer,
 		productId: premiumTrial.id,
@@ -182,13 +136,11 @@ test.concurrent(`${chalk.yellowBright("trial-reattach 3: cancel scheduled downgr
 		trialEndsAt: advancedTo + ms.days(14),
 	});
 
-	// Verify pro scheduled is cancelled (not present)
 	await expectProductNotPresent({
 		customer,
 		productId: pro.id,
 	});
 
-	// Verify Stripe subscription state
 	await expectSubToBeCorrect({
 		db: ctx.db,
 		customerId,

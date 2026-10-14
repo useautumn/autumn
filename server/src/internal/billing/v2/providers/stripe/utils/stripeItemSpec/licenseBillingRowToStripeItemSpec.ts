@@ -5,7 +5,6 @@ import {
 	type StripeItemSpec,
 } from "@autumn/shared";
 
-/** Converts a license billing row (seat snapshot or buffer) to a StripeItemSpec. */
 export const licenseBillingRowToStripeItemSpec = ({
 	licenseBillingRow,
 }: {

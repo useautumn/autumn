@@ -21,18 +21,15 @@ export const updateApiReferralProgram = async ({
 }): Promise<ApiReferralProgramV0> => {
 	const { db, org, env } = ctx;
 
-	// 1. Load
 	const existing = await requireProgram({
 		ctx,
 		referralProgramId: params.referral_program_id,
 	});
 
-	// 2. Resolve the linked reward, if it is being changed
 	const reward = params.reward_id
 		? await requireLinkableReward({ ctx, rewardId: params.reward_id })
 		: undefined;
 
-	// 3. Merge and validate
 	const merged = mergeProgramUpdate({ existing, params });
 	validateRewardProgramTrigger({
 		when: merged.when,
@@ -40,7 +37,6 @@ export const updateApiReferralProgram = async ({
 		maxRedemptions: merged.max_redemptions,
 	});
 
-	// 4. Persist
 	const rewardProgram = await rewardProgramRepo.update({
 		db,
 		idOrInternalId: params.referral_program_id,

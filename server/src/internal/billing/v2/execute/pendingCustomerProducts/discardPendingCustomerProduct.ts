@@ -39,8 +39,6 @@ export const discardPendingCustomerProduct = async ({
 				checkoutSessionId: metadata.stripe_checkout_session_id,
 			});
 
-			// A completed session is about to materialize via webhook; discarding
-			// its metadata now would lose the paid plan.
 			if (!sessionExpired) {
 				throw new RecaseError({
 					message:

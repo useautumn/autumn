@@ -1,12 +1,5 @@
 import type { PlanSpec } from "../../../src/grading/types/planSpec.ts";
 
-/**
- * The pro/growth archetype: $20 and $50 monthly plans, metered AI messages
- * (500 / 2,000, monthly reset), SSO on growth only, no overage, no free plan
- * or trials. Cases withhold different parts of this from their opening
- * message; the simulated user knows all of it and answers when asked.
- */
-
 export const proGrowthGoal =
 	"Get Pro and Growth set up in Autumn with your AI-message limits, without touching a dashboard.";
 

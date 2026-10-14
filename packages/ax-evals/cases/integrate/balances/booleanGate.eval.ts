@@ -5,12 +5,6 @@ import { initIntegrationEval } from "../../../src/initIntegrationEval.ts";
 import { booleanGateCatalog } from "../catalogs/booleanGateCatalog.ts";
 import { fixtureUser, integrateScenario } from "../integrateShared.ts";
 
-/**
- * CHECK flow: boolean gate. custom_branding is an on/off pro feature; the
- * fresh user auto-lands on the free plan, so the branding endpoint must be
- * refused. The graded trap: boolean features are check-only — an agent that
- * also tracks usage for one fails diffAvoids.
- */
 const brandingRouteStub = `		// Branding settings save. TODO: paid-plan gating.
 		"/api/branding": {
 			POST: async (req) => {

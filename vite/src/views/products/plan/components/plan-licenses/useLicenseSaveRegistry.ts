@@ -4,12 +4,9 @@ import { create } from "zustand";
 import { CatalogV2Service } from "@/services/CatalogV2Service";
 import { runWithErrorToast } from "./runWithErrorToast";
 
-/** Collects isolated card drafts into one parent catalogV2.update. */
 interface LicenseSaveEntry {
 	dirty: boolean;
-	/** The card's licenses[] entry, or null when the card is staged for removal. */
 	getEntry: () => PlanLicenseParams | null;
-	/** Reset the card's drafts after a successful save. */
 	commit: () => void;
 	discard: () => void;
 }
@@ -38,7 +35,6 @@ export const useHasLicenseChanges = () =>
 		Object.values(s.entries).some((entry) => entry.dirty),
 	);
 
-/** Includes mounted cards and passes unmounted persisted links through. */
 const composeLicensesPayload = ({
 	persistedLinks,
 }: {
@@ -77,7 +73,6 @@ export const commitLicenseChanges = () => {
 	for (const entry of Object.values(entries)) entry.commit();
 };
 
-/** Persists all dirty card state through one parent catalogV2.update. */
 export const saveAllLicenses = async ({
 	axiosInstance,
 	parentPlanId,

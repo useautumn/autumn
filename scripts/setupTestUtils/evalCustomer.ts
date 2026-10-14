@@ -1,22 +1,4 @@
 #!/usr/bin/env bun
-/**
- * Seeds a customer inside an ax-evals throwaway org: create via API, attach a
- * Stripe test payment method, then run attach/license setup calls — so
- * integration evals can start from "existing subscriber" states.
- *
- *   bun scripts/setupTestUtils/evalCustomer.ts '<json>'
- *
- * JSON spec:
- * {
- *   "backendUrl": "http://localhost:8580",
- *   "secretKey": "am_sk_test_...",
- *   "orgId": "test-ax-eval-...",
- *   "customer": { "id": "user_123", "name": "Ada", "email": "ada@acme.dev" },
- *   "paymentMethod": true,
- *   "attach": [{ "plan_id": "team" }],
- *   "licenseAssignments": [{ "plan_id": "workspace", "entity_id": "ws_1", "name": "Workspace 1", "feature_id": "workspaces" }]
- * }
- */
 import { AppEnv, organizations } from "@autumn/shared";
 import { attachPmToCus } from "@server/external/stripe/stripeCusUtils.js";
 import { CusService } from "@server/internal/customers/CusService.js";
@@ -157,8 +139,6 @@ const main = async () => {
 	for (const track of spec.track ?? []) {
 		const featureId = track.feature_id as string;
 		const value = (track.value as number) ?? 1;
-		// Attach creates the feature balance asynchronously; a track that lands
-		// first is dropped silently. Wait for the balance, then verify usage.
 		await waitFor({
 			spec,
 			label: `balance for ${featureId}`,

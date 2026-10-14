@@ -1,11 +1,3 @@
-/**
- * Integration test for `billing.updated` webhook via update-subscription endpoint.
- *
- * Contract under test:
- *   Event type: billing.updated
- *   Scenario U1: update product items (increase included usage) → one `updated` for pro
- */
-
 import { afterAll, beforeAll, expect, test } from "bun:test";
 import type {
 	BillingChangeResponse,

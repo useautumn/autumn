@@ -7,7 +7,6 @@ const worker = (i: number) =>
 
 describe("WorkerPool at swarm width", () => {
 	test("3,000 parked acquires + 2,600 workers joining one by one stays fast", async () => {
-		// Like the swarm: the first worker is up before the runner parks every file's acquire.
 		const pool = new WorkerPool([worker(0)], 1);
 		const granted: Promise<WorkerHandle>[] = [];
 		for (let i = 0; i < 3_000; i++) granted.push(pool.acquire());

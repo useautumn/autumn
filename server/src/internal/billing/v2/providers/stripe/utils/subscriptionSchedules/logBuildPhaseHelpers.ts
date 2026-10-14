@@ -1,9 +1,6 @@
 import { type FullCusProduct, formatMs } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 
-/**
- * Logs transition points and customer products for debugging phase construction.
- */
 export const logTransitionPoints = ({
 	ctx,
 	customerProducts,
@@ -45,10 +42,6 @@ export const logTransitionPoints = ({
 	}
 };
 
-/**
- * Logs a single phase during the build process.
- * This is a flexible helper that accepts a custom format function for items.
- */
 const logPhase = <T>({
 	ctx,
 	logPrefix,

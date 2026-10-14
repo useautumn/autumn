@@ -1,12 +1,3 @@
-/**
- * POST /atom/subjects.read: an Atom pulls a subject it missed, by its token hash.
- *
- *  3.1 a subject herald pushes to this Atom, on the worker → 200, the exact subjects.set body with the worker's offset;
- *  3.4 + 3.5 (R13) off the worker, or this Atom not one of the subject's targets → 409, and the worker is never read;
- *  3.3 the worker says the customer or entity does not exist → 404; 3.8 a worker failure, or no offset → 503;
- *  3.6 no or unknown hash → 401; 3.9 an unreadable body → 400.
- */
-
 import { afterAll, afterEach, beforeAll, expect, spyOn, test } from "bun:test";
 import type { ReadSubjectStateCommand } from "@autumn/balance-engine";
 import { BalanceWorkerClientError } from "@autumn/balance-worker-client";
@@ -43,7 +34,6 @@ afterAll(() => {
 	else process.env.BALANCE_WORKER_ROLLOUT_ENABLED = previousRollout;
 });
 
-/** The org's own sandbox Atom, ready, as its cached org lists it. */
 const org = {
 	id: "org_pull",
 	is_sandbox: false,
@@ -63,7 +53,6 @@ const org = {
 const orgAtom = { env: AppEnv.Sandbox, encryptedToken: "encrypted_org_atom" };
 const logger = { warn() {}, info() {}, error() {}, debug() {} };
 
-/** A worker that answers `reply` (or throws it), recording each read it was asked for. */
 const workerAnswering = (reply: Partial<ReadSubjectStateReply> | Error) => {
 	const reads: ReadSubjectStateCommand[] = [];
 	return {
@@ -175,7 +164,6 @@ test("3.3 + 3.8 the worker's not-found is not found; any other failure, or a rep
 	});
 });
 
-/** The Atom router as the server mounts it, with the token-hash lookup and org cache stubbed. */
 const createApp = () => {
 	const app = new Hono<HonoEnv>();
 	app.use("*", async (c, next) => {

@@ -32,12 +32,10 @@ export function PathInputStep({
 		setState("creating");
 
 		try {
-			// Resolve the path relative to cwd (use cwd if empty)
 			const pathToUse = inputValue.trim() || ".";
 			const absolutePath = resolve(cwd, pathToUse);
 			setResolvedPath(absolutePath);
 
-			// Create directory if it doesn't exist (recursive)
 			await mkdir(absolutePath, { recursive: true });
 
 			setState("complete");

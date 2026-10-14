@@ -3,9 +3,6 @@ import type { MigrationFilter, Operations } from "@autumn/shared";
 import { hasActiveFilter } from "./FilterStep";
 import { toOperationsPayload } from "./useMigrationEditorForm";
 
-// `hasActiveFilter` gates the customer preview. It must recognize the
-// customer-level `$and`/`$or` shapes — not just the legacy single `plan` — or
-// multi-condition filters silently render no preview.
 test("hasActiveFilter is false for an empty or default-only filter", () => {
 	expect(hasActiveFilter({})).toBe(false);
 	expect(hasActiveFilter({ plan: { plan_id: "" } })).toBe(false);
@@ -29,9 +26,6 @@ test("hasActiveFilter is true for $and / $or compositions", () => {
 	).toBe(true);
 });
 
-// A filter-only draft (no operations yet) must persist: an empty operations
-// block is sent as null, since the `{}` shape fails the server's resource-block
-// check. A non-empty (even mid-edit) block is kept so editing isn't lost.
 const op = {
 	type: "add_plan",
 	plan_filter: { plan_id: "pro" },

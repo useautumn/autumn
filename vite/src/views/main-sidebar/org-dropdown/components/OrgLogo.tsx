@@ -4,8 +4,6 @@ import { cn } from "@/lib/utils";
 
 export const OrgLogo = ({ org }: { org: FrontendOrg }) => {
 	const firstLetter = org?.name?.charAt(0).toUpperCase() || "A";
-	// Track the specific URL that failed so the fallback self-resets when the
-	// org (or its logo) changes, instead of sticking on the letter.
 	const [failedLogoUrl, setFailedLogoUrl] = useState<string | null>(null);
 
 	const showLogo = Boolean(org?.logo) && org.logo !== failedLogoUrl;

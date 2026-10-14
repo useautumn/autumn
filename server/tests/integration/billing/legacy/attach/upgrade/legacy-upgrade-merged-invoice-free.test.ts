@@ -1,8 +1,3 @@
-/**
- * Legacy Attach V1 Upgrade - Merged Entity Tests: V1 attach (s.attach) upgrade scenarios in merged
- * entity subscriptions (migrated from server/tests/merged/upgrade/mergedUpgrade1-4.test.ts).
- */
-
 /** biome-ignore-all lint/suspicious/noExplicitAny: test file */
 
 import { expect, test } from "bun:test";
@@ -18,19 +13,6 @@ import ctx from "@tests/utils/testInitUtils/createTestContext";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import { getBasePrice } from "@tests/utils/testProductUtils/testProductUtils";
 import chalk from "chalk";
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 1: Upgrade entity in merged sub + usage invoice verification
-// (from mergedUpgrade1)
-//
-// Scenario:
-// - Pro and Premium products with consumable Words
-// - 2 entities, attach Pro to both → merged sub
-// - Track 100k words on entity 1, 300k on entity 2
-// - Advance clock 2 weeks, upgrade entity 1 from Pro to Premium
-// - Advance to next invoice
-// - Verify invoice total = Pro base + Premium base + entity 2 usage
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(
 	`${chalk.yellowBright("legacy-upgrade-merged 1: upgrade entity in merged sub + invoice")}`,
@@ -66,11 +48,9 @@ test.concurrent(
 					entityIndex: 1,
 					timeout: 3000,
 				}),
-				// s.advanceTestClock({ weeks: 2 }),
 			],
 		});
 
-		// Upgrade entity 1 from Pro to Premium
 		await autumnV1.attach({
 			customer_id: customerId,
 			product_id: premium.id,
@@ -95,14 +75,12 @@ test.concurrent(
 			latestTotal: entity1Base + entity1Overage,
 		});
 
-		// Advance to next invoice to check usage billing
 		await advanceToNextInvoice({
 			stripeCli: ctx.stripeCli,
 			testClockId: testClockId!,
 			withPause: true,
 		});
 
-		// Entity 2's usage on pro should show up on the invoice
 		const expectedUsageTotal = calculateExpectedInvoiceAmount({
 			items: pro.items,
 			usage: [{ featureId: TestFeature.Words, value: entity2Val }],
@@ -117,21 +95,6 @@ test.concurrent(
 		expect(invoice.total).toBe(basePrice + expectedUsageTotal);
 	},
 );
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 4: Upgrade cancels scheduled cancel/free
-// (from mergedUpgrade4)
-//
-// Scenario:
-// - Pro, Free, Premium products with Words feature
-// - 2 entities, attach Pro to both
-// - Downgrade entity 1 from Pro to Free (schedules cancellation)
-// - Upgrade entity 1 to Premium → cancels scheduled free, immediate switch
-//
-// Expected:
-// - Entity 1: Premium (active)
-// - Entity 2: Pro (active)
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(
 	`${chalk.yellowBright("legacy-upgrade-merged 4: upgrade cancels scheduled cancel/free")}`,
@@ -160,14 +123,12 @@ test.concurrent(
 			],
 		});
 
-		// Downgrade entity 1 from Pro to Free (schedules cancellation)
 		await autumnV1.attach({
 			customer_id: customerId,
 			product_id: free.id,
 			entity_id: entities[0].id,
 		});
 
-		// Verify entity 1 has Pro (active) + Free (scheduled)
 		let entity1 = await autumnV1.entities.get(customerId, entities[0].id);
 		expectProductAttached({
 			customer: entity1 as any,
@@ -180,7 +141,6 @@ test.concurrent(
 			status: "scheduled" as unknown as CusProductStatus,
 		});
 
-		// Upgrade entity 1 to Premium → cancels scheduled free, immediate switch
 		await autumnV1.attach({
 			customer_id: customerId,
 			product_id: premium.id,
@@ -194,7 +154,6 @@ test.concurrent(
 			status: "active" as unknown as CusProductStatus,
 		});
 
-		// Entity 2 should still have Pro
 		const entity2 = await autumnV1.entities.get(customerId, entities[1].id);
 		expectProductAttached({
 			customer: entity2 as any,

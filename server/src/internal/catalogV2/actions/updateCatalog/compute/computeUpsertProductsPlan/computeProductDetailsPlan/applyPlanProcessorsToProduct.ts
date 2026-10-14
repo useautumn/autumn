@@ -4,7 +4,6 @@ import {
 	productProcessorsAreSame,
 } from "@autumn/shared";
 
-/** Stamp `plan.processors.stripe` onto `product.processor`. Omit keeps, null unlinks. */
 export const applyPlanProcessorsToProduct = ({
 	product,
 	processors,

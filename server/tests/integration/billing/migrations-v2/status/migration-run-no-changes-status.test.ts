@@ -1,20 +1,3 @@
-/**
- * A live run that completed but changed nothing was reported as `succeeded`,
- * so a mis-targeted migration was indistinguishable from one that really
- * migrated customers.
- *
- * Contract:
- *   every item skipped                  → run.status "no_changes"
- *   at least one item succeeded         → run.status "succeeded"
- *   a run that claimed no items at all  → run.status "succeeded"
- *
- * Runs go through /migrations.run so the run row is claimed and tracked the
- * way production does it; the direct in-process runner never inserts one.
- *
- * Red (current):  every case settles `succeeded`.
- * Green (after):  the all-skipped run settles `no_changes`.
- */
-
 import { expect, test } from "bun:test";
 import {
 	isTerminalMigrationRunStatus,
@@ -31,7 +14,6 @@ import { waitForMigrationResult } from "../utils/runUpdatePlanMigration.js";
 
 type ScenarioCtx = Awaited<ReturnType<typeof initScenario>>["ctx"];
 
-/** Runs the migration through the API and returns the settled run status. */
 const runAndSettle = async ({
 	ctx,
 	migrationClient,
@@ -92,7 +74,6 @@ test.concurrent(
 			customerId,
 			setup: [s.customer(), s.products({ list: [targetPlan] })],
 			actions: [
-				// Already has the dashboard, so the operation has nothing to change.
 				s.billing.attach({
 					productId: targetPlan.id,
 					items: [items.dashboard()],

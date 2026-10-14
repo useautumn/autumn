@@ -9,14 +9,7 @@ const monthly = (featureId: string, included: number): ItemSpec => ({
 
 const boolean = (featureId: string): ItemSpec => ({ featureId, boolean: true });
 
-/**
- * One row per end-to-end case, across both op families and every feature shape
- * the lanes have to tell apart. Rejection rows matter as much as the rest: they
- * pin which shapes the set-based lane refuses, which the throughput benchmarks
- * cannot express because they exit when the lane declines.
- */
 export const MIGRATION_SCENARIOS: MigrationScenario[] = [
-	// ── Plan items ────────────────────────────────────────────────────
 	{
 		name: "plan-add-metered",
 		description: "Adding a free metered item to a plan lands on every holder.",
@@ -161,7 +154,6 @@ export const MIGRATION_SCENARIOS: MigrationScenario[] = [
 		},
 	},
 
-	// ── License items: all three verbs are batch-lowered ──────────────
 	{
 		name: "license-add-metered",
 		description: "A license add fans out to every live seat assignment.",

@@ -1,11 +1,3 @@
-/**
- * catalogV2.update — same-call feature creates/renames resolving into plan items.
- *
- * Plan compute resolves items against the projected feature set (post
- * update/insert), so same-call creates and renames are visible and stale ids
- * are a 404 `feature_not_found`.
- */
-
 import { expect, test } from "bun:test";
 import { FeatureType, FeatureUsageType, ResetInterval } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";

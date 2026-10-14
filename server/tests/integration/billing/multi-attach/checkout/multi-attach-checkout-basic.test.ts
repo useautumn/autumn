@@ -15,9 +15,6 @@ import { timeout } from "@tests/utils/genUtils";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-// ═══════════════════════════════════════════════════════════════════
-// Test 1: One-off add-on + main recurring via checkout
-// ═══════════════════════════════════════════════════════════════════
 test.concurrent(`${chalk.yellowBright("multi-attach checkout: one-off add-on + main recurring")}`, async () => {
 	const messagesItem = items.monthlyMessages({ includedUsage: 200 });
 	const dashboardItem = items.dashboard();
@@ -34,20 +31,17 @@ test.concurrent(`${chalk.yellowBright("multi-attach checkout: one-off add-on + m
 	const { customerId, autumnV1, ctx } = await initScenario({
 		customerId: "ma-co-oneoff-recurring",
 		setup: [
-			s.customer({ testClock: true }), // No payment method
+			s.customer({ testClock: true }),
 			s.products({ list: [recurring, oneOffAddon] }),
 		],
 		actions: [],
 	});
 
-	// Preview should show combined total
 	const preview = await autumnV1.billing.previewMultiAttach({
 		customer_id: customerId,
 		plans: [{ plan_id: recurring.id }, { plan_id: oneOffAddon.id }],
 	});
-	expect(preview.total).toBeCloseTo(30, 0); // $20 + $10
-
-	// Multi-attach should return checkout URL
+	expect(preview.total).toBeCloseTo(30, 0);
 	const result = await autumnV1.billing.multiAttach(
 		{
 			customer_id: customerId,
@@ -59,11 +53,9 @@ test.concurrent(`${chalk.yellowBright("multi-attach checkout: one-off add-on + m
 	expect(result.payment_url).toBeDefined();
 	expect(result.payment_url).toContain("checkout.stripe.com");
 
-	// Complete checkout form
 	await completeStripeCheckoutForm({ url: result.payment_url });
 	await timeout(12000);
 
-	// Verify both products attached
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
 	await expectCustomerProducts({
@@ -96,9 +88,6 @@ test.concurrent(`${chalk.yellowBright("multi-attach checkout: one-off add-on + m
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════
-// Test 2: Two main recurrings (different groups) via checkout
-// ═══════════════════════════════════════════════════════════════════
 test.concurrent(`${chalk.yellowBright("multi-attach checkout: two recurrings in different groups")}`, async () => {
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
 	const usersItem = items.monthlyUsers({ includedUsage: 5 });
@@ -116,7 +105,7 @@ test.concurrent(`${chalk.yellowBright("multi-attach checkout: two recurrings in 
 	const { customerId, autumnV1, ctx } = await initScenario({
 		customerId: "ma-co-two-recurrings",
 		setup: [
-			s.customer({ testClock: true }), // No payment method
+			s.customer({ testClock: true }),
 			s.products({ list: [planA, planB] }),
 		],
 		actions: [],
@@ -154,7 +143,6 @@ test.concurrent(`${chalk.yellowBright("multi-attach checkout: two recurrings in 
 		balance: 5,
 	});
 
-	// Invoice: $20 + $30 = $50
 	await expectCustomerInvoiceCorrect({
 		customer,
 		count: 1,
@@ -169,9 +157,6 @@ test.concurrent(`${chalk.yellowBright("multi-attach checkout: two recurrings in 
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════
-// Test 3: Two plans with prepaid features via checkout
-// ═══════════════════════════════════════════════════════════════════
 test.concurrent(`${chalk.yellowBright("multi-attach checkout: two plans with prepaid features")}`, async () => {
 	const prepaidMsgs = items.prepaidMessages({
 		includedUsage: 0,
@@ -198,7 +183,7 @@ test.concurrent(`${chalk.yellowBright("multi-attach checkout: two plans with pre
 	const { customerId, autumnV1, ctx } = await initScenario({
 		customerId: "ma-co-prepaid",
 		setup: [
-			s.customer({ testClock: true }), // No payment method
+			s.customer({ testClock: true }),
 			s.products({ list: [planA, planB] }),
 		],
 		actions: [],
@@ -256,7 +241,6 @@ test.concurrent(`${chalk.yellowBright("multi-attach checkout: two plans with pre
 		balance: 300,
 	});
 
-	// Invoice: $20 (planA base) + $40 (400/100 * $10 msgs) + $10 (planB base) + $15 (300/100 * $5 words) = $65
 	await expectCustomerInvoiceCorrect({
 		customer,
 		count: 1,

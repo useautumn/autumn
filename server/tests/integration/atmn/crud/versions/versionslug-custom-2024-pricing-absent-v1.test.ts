@@ -1,9 +1,3 @@
-/**
- * atmn crud/versions — versionSlug [custom "2024-pricing", absent = v1]
- *
- * One line of plans/atmn-v3/07_tests.md. [a, b] is a matrix looped INSIDE this file.
- */
-
 import { expect, test } from "bun:test";
 import { configBody, paidMonthly } from "@tests/utils/atmnUtils/baseConfigs.js";
 import { expectRoundTrip } from "@tests/utils/atmnUtils/expectRoundTrip.js";

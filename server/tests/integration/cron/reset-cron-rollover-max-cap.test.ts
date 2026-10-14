@@ -1,20 +1,3 @@
-/**
- * TDD test for rollover `max` not being enforced on the reset-cron path.
- *
- * The V1 cron loader mapped every cusEnt with a
- * hardcoded `rollovers: []`. RolloverService.clearExcessRollovers then computes
- * `[...fullCusEnt.rollovers, ...newRows]`, so it only ever sees the single new
- * row and never the previously-accumulated forever-expiry rows — the cap never
- * fires. With an hourly reset + forever rollover this compounds every cycle.
- *
- * Red-failure mode (current behavior):
- *  - After N cron resets, total rollover balance grows ~N * included, far past `max`.
- *
- * Green-success criteria (after fix):
- *  - clearExcessRollovers sources the authoritative rollover set from the DB, so
- *    total rollover balance is capped at `max` regardless of caller-supplied state.
- */
-
 import { expect, test } from "bun:test";
 import {
 	customerEntitlements,
@@ -80,7 +63,6 @@ test.concurrent(
 			throw new Error(`Expected messages entitlement for ${customerId}`);
 		}
 
-		// Force the reset to be overdue so the cron loader picks it up.
 		const now = Date.now();
 		await ctx.db
 			.update(customerEntitlements)
@@ -92,8 +74,6 @@ test.concurrent(
 			"cusEnt should be selected by the reset scan",
 		).not.toBeNull();
 
-		// Drive several reset cycles through the V2 cron's lane; each banks the
-		// unused INCLUDED balance as a rollover.
 		for (let cycle = 0; cycle < RESET_CYCLES; cycle++) {
 			await runResetOnCustomerEntitlement({
 				ctx,
@@ -117,8 +97,6 @@ test.concurrent(
 			`total rollover balance ${totalRolloverBalance} exceeded max ${ROLLOVER_MAX} after ${RESET_CYCLES} hourly resets`,
 		).toBeLessThanOrEqual(ROLLOVER_MAX);
 
-		// Guard against passing the cap by accumulating many small uncleared rows:
-		// trimming should keep the row count bounded too.
 		const maxExpectedRows = Math.ceil(ROLLOVER_MAX / INCLUDED) + 1;
 		expect(
 			rolloverRows.length,

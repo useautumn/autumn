@@ -23,7 +23,6 @@ const SHORT: Record<RelistProration, string> = {
 	bill_difference: "bd",
 };
 
-/** Each change is pinned to Stripe, and any Stripe bills like the unchanged baseline is compared to it field by field. */
 export const defineRelistSuite = ({
 	name,
 	stripeState,

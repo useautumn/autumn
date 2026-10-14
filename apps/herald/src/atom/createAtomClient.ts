@@ -24,7 +24,6 @@ type AtomClientContext = {
 	catalog: AtomDelivery;
 };
 
-/** A refusal (4xx) will be refused again; a timeout, a dropped connection or a 5xx can recover. */
 const isRecoverable = (error: unknown): boolean =>
 	!(error instanceof AtomRequestError) || error.status >= 500;
 
@@ -56,7 +55,6 @@ const postOnce = async ({
 		throw new AtomRequestError({ url, status: response.status });
 };
 
-/** The one way anything reaches an Atom: what differs per push is only how hard it is tried. */
 const postToAtom = ({
 	ctx,
 	path,
@@ -80,7 +78,6 @@ const postToAtom = ({
 	});
 };
 
-/** The token is opened once, here; a connection whose token cannot be opened throws. */
 export const createAtomClient = ({
 	connection,
 	config,

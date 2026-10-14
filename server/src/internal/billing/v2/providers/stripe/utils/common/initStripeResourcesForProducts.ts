@@ -43,9 +43,7 @@ export const initStripeResourcesForProducts = async ({
 	products: FullProduct[];
 	candidateProducts?: FullProduct[];
 	internalEntityId?: string;
-	/** Live is reuse-only unless set — catalog edits must not mint Stripe prices. */
 	allowLiveCreate?: boolean;
-	/** False when the caller already passed the family as candidateProducts. */
 	lookupVariantFamilies?: boolean;
 }) => {
 	const { db, org, env, logger } = ctx;
@@ -61,8 +59,6 @@ export const initStripeResourcesForProducts = async ({
 
 	if (env === AppEnv.Live && !allowLiveCreate) return;
 	if (orgDisableStripeWrites({ ctx, includeSandbox: true })) return;
-	// No Stripe account (e.g. fresh sandbox sub-orgs) — resources are
-	// created lazily once one is connected.
 	if (!isStripeConnected({ org, env })) return;
 
 	const customLicenseProducts = products.flatMap((parentProduct) =>
@@ -201,7 +197,6 @@ export const initStripeResourcesForBillingPlan = async ({
 			(product) => nullish(product.processor?.id) || product.prices.length > 0,
 		);
 
-	// Definitions can share a child product id while carrying distinct custom rows.
 	const licenseProductsByDefinition = new Map<string, FullProduct>();
 	for (const customerProduct of [
 		...insertCustomerProducts,
@@ -216,7 +211,6 @@ export const initStripeResourcesForBillingPlan = async ({
 			);
 		}
 	}
-	// Transitions carry incoming definitions no persisted row references yet.
 	for (const transition of autumnBillingPlan.customerLicenseTransitions ?? []) {
 		const planLicense = transition.incomingCustomerLicense.planLicense;
 		if (!planLicense) continue;

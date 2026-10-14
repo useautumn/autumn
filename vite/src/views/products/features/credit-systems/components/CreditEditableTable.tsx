@@ -12,8 +12,6 @@ interface CreditEditableTableProps<T> {
 	footer: ReactNode;
 }
 
-/** A titled, bordered table the credit tables share, with its add control beneath.
- * With no rows only that control shows, so an empty table is just its "add" line. */
 export function CreditEditableTable<T>({
 	title,
 	hint,

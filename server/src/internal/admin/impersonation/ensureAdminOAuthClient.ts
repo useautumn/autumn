@@ -5,7 +5,6 @@ import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { oauthClientRepo } from "@/internal/auth/repos/index.js";
 import { generateId } from "@/utils/genUtils.js";
 
-/** Values match leaf's `ensureMcpOAuthClient` for the admin client so the two writers never flip-flop the row. */
 const ADMIN_OAUTH_CLIENT_NAME = "Slack Admin";
 const ADMIN_REDIRECT_URIS = ["slack://autumn-chat"];
 const ADMIN_CLIENT_METADATA = {

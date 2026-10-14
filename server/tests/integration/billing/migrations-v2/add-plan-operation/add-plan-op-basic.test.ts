@@ -1,13 +1,3 @@
-/**
- * Integration tests for the add_plan migration operation — basic cases.
- *
- * Contract under test:
- *   - add_plan attaches a new plan to a customer who doesn't have it.
- *   - add_plan is idempotent: skipped if the customer already has the plan active.
- *   - add_plan runs before update_plan so a later update_plan can target the new plan.
- *   - add_plan with a non-existent plan_id fails the item.
- */
-
 import { expect, test } from "bun:test";
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";

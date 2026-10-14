@@ -5,15 +5,6 @@ import { initIntegrationEval } from "../../../src/initIntegrationEval.ts";
 import { messagingCatalog } from "../catalogs/messagingCatalog.ts";
 import { fixtureUser, integrateScenario } from "../integrateShared.ts";
 
-/**
- * DISPLAY flow: per-plan rows from the balance BREAKDOWN. The customer holds
- * two product groups (Transactional Pro, Marketing Pro) plus an add-on that
- * grants MORE emails on top of the base plan — so customer-level
- * `balances.emails.granted` is 60,000 (50k plan + 10k add-on) while the
- * Transactional Pro row's included amount is 50,000, found only in the
- * breakdown entry whose planId matches. The graded trap: naive code shows
- * the merged 60,000 on the plan row.
- */
 const summaryRouteStub = `		// Billing page loads this to render the subscription table. TODO: hook
 		// up to our billing provider.
 		"/api/billing/summary": {

@@ -59,7 +59,6 @@ export const initCustomerProduct = ({
 	const initCustomerProductStatus = () => {
 		if (initOptions?.status) return initOptions?.status;
 
-		// 1 minute tolerance to determine if customer product should be scheduled. (for test clock time frozen issues)
 		const TOLERANCE_MS = ms.minutes(1);
 		const effectiveAccessStartsAt = accessStartsAt ?? startsAt;
 		if (
@@ -105,8 +104,6 @@ export const initCustomerProduct = ({
 
 		status,
 
-		// Only stamp `processor` when one was supplied (e.g. RevenueCat origin or a
-		// carried-over RevenueCat plan); `cusProductToProcessorType` defaults to Stripe.
 		...(processor !== undefined
 			? { processor }
 			: processorType
@@ -133,8 +130,6 @@ export const initCustomerProduct = ({
 
 		quantity: 1,
 
-		// Placeholder: derived from the resulting item set in
-		// applyDerivedCustomerProductIsCustom before this row is written.
 		is_custom: false,
 		customer_license_link_id: initOptions?.customerLicenseLinkId ?? null,
 		released_at: null,
@@ -151,15 +146,3 @@ export const initCustomerProduct = ({
 		on_trial_end: onTrialEnd ?? null,
 	};
 };
-
-// ? subscriptionStatus
-// 			: isFuture
-// 				? CusProductStatus.Scheduled
-// 				: CusProductStatus.Active
-
-// {
-//   type: ProcessorType.Stripe,
-//   // subscription_id: subscriptionId,
-//   // subscription_schedule_id: subscriptionScheduleId,
-//   // last_invoice_id: lastInvoiceId,
-// },

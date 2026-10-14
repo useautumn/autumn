@@ -1,11 +1,3 @@
-/**
- * Splits a deduped daily NDJSON file into per-hour files.
- * Streams line by line - O(1) memory.
- *
- * Usage: bun run scripts/firecrawl-split-hours.ts 2026-03-01
- * Run from: sirtenzin-autumn/server/tinybird/
- */
-
 import { createReadStream, createWriteStream, statSync } from "node:fs";
 import { mkdir } from "node:fs/promises";
 import { createInterface } from "node:readline";
@@ -22,7 +14,6 @@ await mkdir(OUT_DIR, { recursive: true });
 const fileSize = statSync(INPUT).size;
 const fileSizeMB = (fileSize / 1e6).toFixed(0);
 
-// Open all 24 write streams upfront
 const streams: Record<string, ReturnType<typeof createWriteStream>> = {};
 const counts: Record<string, number> = {};
 for (let h = 0; h < 24; h++) {
@@ -65,7 +56,6 @@ for await (const line of rl) {
   }
 }
 
-// Close all streams
 await Promise.all(Object.values(streams).map((s) => new Promise<void>((res, rej) => s.end((e: Error | null | undefined) => e ? rej(e) : res()))));
 
 const totalSec = ((Date.now() - start) / 1000).toFixed(1);

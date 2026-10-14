@@ -1,18 +1,3 @@
-/**
- * Preview attach with explicit `tax_rate_id`: the preview response must
- * populate `tax` and reflect the rate in `total`, mirroring how
- * `automatic-tax-preview-attach-immediate.test.ts` validates the
- * `automatic_tax` branch.
- *
- * Three cases:
- *  - exclusive 10% rate → preview.tax.amount_exclusive > 0,
- *    preview.total = subtotal + tax.total
- *  - inclusive 10% rate → preview.tax.amount_inclusive > 0,
- *    preview.total = subtotal (tax does not inflate the charge)
- *  - no tax_rate_id, automatic_tax off → preview.tax === undefined
- *    (regression guard for the existing branch)
- */
-
 import { expect, test } from "bun:test";
 import type { AttachPreviewResponse } from "@autumn/shared";
 import { stripeRefToId } from "@autumn/shared";

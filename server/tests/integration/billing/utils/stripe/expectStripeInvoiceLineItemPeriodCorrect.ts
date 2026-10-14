@@ -9,10 +9,6 @@ import { CusService } from "@/internal/customers/CusService.js";
 import { ProductService } from "@/internal/products/ProductService";
 import { findPriceFromStripeId } from "@/internal/products/prices/priceUtils/findPriceUtils";
 
-/**
- * Check that Stripe invoice line items have correct billing period (start -> end).
- * Verifies that the period spans approximately 1 month.
- */
 export const expectStripeInvoiceLineItemPeriodCorrect = async ({
 	customerId,
 	productId,

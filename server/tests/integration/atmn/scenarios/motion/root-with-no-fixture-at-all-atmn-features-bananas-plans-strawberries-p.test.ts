@@ -1,11 +1,3 @@
-/**
- * atmn scenarios/motion — root with no fixture at all: `atmn({ features: bananas, plans: strawberries, planVersions: [...poo, ...pee] })` over `bananas.ts`, `strawberries.ts`, `poo.ts`, `pee.ts` → a remote-only feature → `bananas.ts` becomes `[...bananas, feature(...)]`; a remote-only plan → `strawberries.ts`; a remote-only version → the last spread's array (`pee.ts`); the root is byte-identical
- *
- * code in motion: the config's shape is the user's; pull edits the AST, never rewrites a file
- *
- * One line of plans/atmn-v3/07_tests.md. [a, b] is a matrix looped INSIDE this file.
- */
-
 import { expect, test } from "bun:test";
 import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 import {
@@ -70,11 +62,6 @@ export const pee: Plan[] = [];
 			const features = (wire.features as Record<string, unknown>[]) ?? [];
 			const plans = (wire.plans as Record<string, unknown>[]) ?? [];
 
-			// A remote-only version: mint `pro` a v2 the config never mentioned
-			// and restate v1 inactive with a changed price (a genuine diff, not a
-			// no-op) — the shape a second config directory uses to push a new
-			// version. The server demotes the existing v1 row rather than
-			// creating a new one.
 			await scenario.client.update({
 				...wire,
 				features: [
@@ -115,13 +102,10 @@ export const pee: Plan[] = [];
 			expect(after.get("bananas.ts")).toContain(
 				`featureId: "${remoteFeatureId}"`,
 			);
-			// The row the config already holds is edited where it is: pro's v1
-			// flips to inactive in strawberries.ts.
 			expect(after.get("strawberries.ts")).not.toBe(
 				before.get("strawberries.ts"),
 			);
 			expect(after.get("strawberries.ts")).toContain("active: false");
-			// New rows append to the LAST spread in `[...strawberries, ...poo, ...pee]`.
 			expect(after.get("poo.ts")).toBe(before.get("poo.ts"));
 			expect(after.get("pee.ts")).not.toBe(before.get("pee.ts"));
 			expect(after.get("pee.ts")).toContain(`planId: "${remotePlanId}"`);

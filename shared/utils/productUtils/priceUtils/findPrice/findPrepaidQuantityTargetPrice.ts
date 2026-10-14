@@ -3,8 +3,6 @@ import type { Price } from "@models/productModels/priceModels/priceModels";
 import { intervalToValue } from "@utils/intervalUtils";
 import { isOneOffPrice, isPrepaidPrice } from "../classifyPriceUtils";
 
-/** Tie-breaker for feature-keyed prepaid quantities: when a feature has both
- * recurring and one-off prepaid prices, recurring wins (shortest interval first). */
 export const findPrepaidQuantityTargetPrice = ({
 	prices,
 	featureId,
@@ -35,8 +33,6 @@ export const findPrepaidQuantityTargetPrice = ({
 	return recurringPrepaidPrices[0] ?? prepaidPrices[0];
 };
 
-/** True when `price` is a prepaid price that loses the feature-quantity
- * tie-break to a sibling prepaid price of the same feature. */
 export const isLosingPrepaidQuantityPrice = ({
 	price,
 	prices,

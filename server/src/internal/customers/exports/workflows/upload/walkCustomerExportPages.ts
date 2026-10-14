@@ -9,7 +9,6 @@ import {
 } from "../../queries/getCustomerExportScalars.js";
 import { retryExportDbRead } from "../../verify/retryExportDbRead.js";
 
-/** Keyset walk over the export's frozen population, one page of customers at a time. */
 export const walkCustomerExportPages = async function* ({
 	ctx,
 	snapshot,

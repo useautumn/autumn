@@ -23,11 +23,6 @@ export const expectLicenseAttachPreviewCorrect = ({
 	expectPreviewNextCycleCorrect({ preview });
 };
 
-/** Quantity updates bill previous vs new picture as a refund/charge pair;
- * a pair that nets to zero is dropped entirely, and a zero-quantity side
- * emits no line at all. Charges are synthesized from the catalog and read
- * "<qty>x <name> (from ... to ...)"; refunds mirror the stored
- * invoice line they credit, so only their quantity is pinned. */
 export const expectQuantityLineItemPairCorrect = ({
 	preview,
 	proratedOldTotal,
@@ -46,7 +41,6 @@ export const expectQuantityLineItemPairCorrect = ({
 		return;
 	}
 
-	// Line item totals are unrounded server-side; match to the cent.
 	const findByTotal = (total: number) =>
 		preview.line_items.find(
 			(lineItem) => Math.abs(lineItem.total - total) <= 0.01,
@@ -99,12 +93,9 @@ export const expectLicenseUpdatePreviewCorrect = async ({
 	advancedTo: number;
 	oldRecurringTotal: number;
 	newRecurringTotal: number;
-	/** On for license_quantities updates: asserts the previous/new pair.
-	 * Pass quantities to also pin the line descriptions. */
 	expectQuantityLineItemPair?:
 		| boolean
 		| { oldQuantity?: number; newQuantity?: number };
-	/** Combined updates bill more than one refund/charge pair. */
 	expectLineItemCount?: number;
 }) => {
 	const [expectedTotal, { billingPeriod }] = await Promise.all([

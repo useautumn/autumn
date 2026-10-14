@@ -3,7 +3,6 @@ import type { InlineReply } from "../../workerThreads/types/inlineHandler.js";
 import { receiveCommandInline } from "./receiveCommandInline.js";
 import type { InlineHandlerContext } from "./types/inlineHandlerContext.js";
 
-/** `/v1/track` decided inline; its reply is held until the log has the write. */
 export function receiveTrackInline({
 	ctx,
 	body,

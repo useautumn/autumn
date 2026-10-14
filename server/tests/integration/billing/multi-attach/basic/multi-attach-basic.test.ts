@@ -17,10 +17,6 @@ import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 
-// ═══════════════════════════════════════════════════════════════════
-// Test 1: Two recurring plans in different groups
-// Checks: preview total, post-attach products, features, invoice, sub
-// ═══════════════════════════════════════════════════════════════════
 test.concurrent(`${chalk.yellowBright("multi-attach basic: two recurring plans in different groups")}`, async () => {
 	const messagesItem = items.monthlyMessages({ includedUsage: 500 });
 	const usersItem = items.monthlyUsers({ includedUsage: 10 });
@@ -46,15 +42,12 @@ test.concurrent(`${chalk.yellowBright("multi-attach basic: two recurring plans i
 		plans: [{ plan_id: planA.id }, { plan_id: planB.id }],
 	};
 
-	// 1. Preview — $20 (planA) + $30 (planB) = $50
 	const preview = await autumnV1.billing.previewMultiAttach(multiAttachParams);
 	console.log("preview", preview);
 	expect(preview.total).toEqual(50);
 
-	// 2. Attach
 	await autumnV1.billing.multiAttach(multiAttachParams);
 
-	// 3. Verify
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
 	await expectCustomerProducts({
@@ -88,10 +81,6 @@ test.concurrent(`${chalk.yellowBright("multi-attach basic: two recurring plans i
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════
-// Test 2: One-off add-on + main recurring
-// Checks: preview total, post-attach products, features, invoice, sub
-// ═══════════════════════════════════════════════════════════════════
 test.concurrent(`${chalk.yellowBright("multi-attach basic: one-off add-on + main recurring")}`, async () => {
 	const messagesItem = items.monthlyMessages({ includedUsage: 200 });
 	const dashboardItem = items.dashboard();
@@ -119,14 +108,11 @@ test.concurrent(`${chalk.yellowBright("multi-attach basic: one-off add-on + main
 		plans: [{ plan_id: recurring.id }, { plan_id: oneOffAddon.id }],
 	};
 
-	// 1. Preview — $20 (recurring) + $10 (one-off addon) = $30
 	const preview = await autumnV1.billing.previewMultiAttach(multiAttachParams);
 	expect(preview.total).toBeCloseTo(30, 0);
 
-	// 2. Attach
 	await autumnV1.billing.multiAttach(multiAttachParams);
 
-	// 3. Verify
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
 	await expectCustomerProducts({
@@ -160,11 +146,6 @@ test.concurrent(`${chalk.yellowBright("multi-attach basic: one-off add-on + main
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════
-// Test 3: Free → Pro + recurring add-on (single transition)
-// Customer starts on free plan, multi-attach pro + addon.
-// Free should expire, pro + addon should be active.
-// ═══════════════════════════════════════════════════════════════════
 test.concurrent(`${chalk.yellowBright("multi-attach basic: free → pro + recurring add-on")}`, async () => {
 	const freeMessages = items.monthlyMessages({ includedUsage: 50 });
 	const proMessages = items.monthlyMessages({ includedUsage: 200 });
@@ -198,14 +179,11 @@ test.concurrent(`${chalk.yellowBright("multi-attach basic: free → pro + recurr
 		plans: [{ plan_id: pro.id }, { plan_id: addon.id }],
 	};
 
-	// 1. Preview — $20 (pro) + $20 (addon) = $40
 	const preview = await autumnV1.billing.previewMultiAttach(multiAttachParams);
 	expect(preview.total).toBeCloseTo(40, 0);
 
-	// 2. Attach
 	await autumnV1.billing.multiAttach(multiAttachParams);
 
-	// 3. Verify
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
 	await expectCustomerProducts({
@@ -225,7 +203,6 @@ test.concurrent(`${chalk.yellowBright("multi-attach basic: free → pro + recurr
 		balance: 100,
 	});
 
-	// Free plan had no invoice, so only 1 invoice from multi-attach ($40)
 	await expectCustomerInvoiceCorrect({
 		customer,
 		count: 1,
@@ -241,12 +218,6 @@ test.concurrent(`${chalk.yellowBright("multi-attach basic: free → pro + recurr
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════
-// Test 4: Pro → Premium + recurring add-on (paid transition)
-// Customer starts on pro ($20), multi-attach premium ($50) + addon ($20).
-// Pro should expire (notPresent), premium + addon should be active.
-// Invoice 1 = initial pro attach ($20), Invoice 2 = upgrade diff + addon ($50)
-// ═══════════════════════════════════════════════════════════════════
 test.concurrent(`${chalk.yellowBright("multi-attach basic: pro → premium + recurring add-on")}`, async () => {
 	const proMessages = items.monthlyMessages({ includedUsage: 200 });
 	const premiumMessages = items.monthlyMessages({ includedUsage: 500 });
@@ -279,14 +250,11 @@ test.concurrent(`${chalk.yellowBright("multi-attach basic: pro → premium + rec
 		plans: [{ plan_id: premium.id }, { plan_id: addon.id }],
 	};
 
-	// 1. Preview — ($50 - $20 refund) + $20 addon = $50
 	const preview = await autumnV1.billing.previewMultiAttach(multiAttachParams);
 	expect(preview.total).toBeCloseTo(50, 0);
 
-	// 2. Attach
 	await autumnV1.billing.multiAttach(multiAttachParams);
 
-	// 3. Verify
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
 	await expectCustomerProducts({
@@ -306,7 +274,6 @@ test.concurrent(`${chalk.yellowBright("multi-attach basic: pro → premium + rec
 		balance: 100,
 	});
 
-	// Invoice 1 = initial pro ($20), Invoice 2 = upgrade ($50)
 	await expectCustomerInvoiceCorrect({
 		customer,
 		count: 2,
@@ -322,12 +289,6 @@ test.concurrent(`${chalk.yellowBright("multi-attach basic: pro → premium + rec
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════
-// Test 5: Pro → scheduled downgrade to Free → multi-attach Premium + addon
-// Customer on pro ($20), downgrades to free (scheduled).
-// Then multi-attach premium ($50) + addon ($20).
-// Pro expires, scheduled free is deleted, premium + addon active.
-// ═══════════════════════════════════════════════════════════════════
 test.concurrent(`${chalk.yellowBright("multi-attach basic: pro → scheduled free → multi-attach premium + addon")}`, async () => {
 	const proMessages = items.monthlyMessages({ includedUsage: 200 });
 	const freeMessages = items.monthlyMessages({ includedUsage: 50 });
@@ -360,11 +321,10 @@ test.concurrent(`${chalk.yellowBright("multi-attach basic: pro → scheduled fre
 		],
 		actions: [
 			s.billing.attach({ productId: pro.id }),
-			s.billing.attach({ productId: free.id }), // downgrade → scheduled
+			s.billing.attach({ productId: free.id }),
 		],
 	});
 
-	// Verify intermediate state: pro canceling, free scheduled
 	const customerBefore =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	await expectProductCanceling({ customer: customerBefore, productId: pro.id });
@@ -378,14 +338,11 @@ test.concurrent(`${chalk.yellowBright("multi-attach basic: pro → scheduled fre
 		plans: [{ plan_id: premium.id }, { plan_id: addon.id }],
 	};
 
-	// 1. Preview — ($50 - $20 refund) + $20 addon = $50
 	const preview = await autumnV1.billing.previewMultiAttach(multiAttachParams);
 	expect(preview.total).toEqual(50);
 
-	// 2. Attach
 	await autumnV1.billing.multiAttach(multiAttachParams);
 
-	// 3. Verify
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
 	await expectCustomerProducts({
@@ -405,7 +362,6 @@ test.concurrent(`${chalk.yellowBright("multi-attach basic: pro → scheduled fre
 		balance: 100,
 	});
 
-	// Invoice 1 = initial pro ($20), Invoice 2 = upgrade ($50)
 	await expectCustomerInvoiceCorrect({
 		customer,
 		count: 2,

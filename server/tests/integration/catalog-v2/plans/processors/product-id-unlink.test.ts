@@ -1,20 +1,3 @@
-/**
- * catalogV2.update — an explicit null unlinks a Stripe mapping.
- *
- * Setting a mapping fans out to every row of the plan, so clearing one has to
- * travel the same path: `omitted = unchanged, null = unlink` is the annotation
- * rule mappings ride (wire/08, envelope rule 4).
- *
- * Contract:
- *   B5  `processors: { stripe: null }` clears the mapping from every version
- *       of the plan and from its variants
- *   B6  preview reports the unlink, carrying the previous id
- *
- * Red (current):  `stripe` is optional but not nullable — null is rejected by
- *   the schema, or read as "omitted" and the mapping survives.
- * Green (after):  every row's processor is cleared; preview names the change.
- */
-
 import { expect, test } from "bun:test";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
@@ -71,7 +54,6 @@ test.concurrent(
 					plans: [{ plan_id: baseId, processors: { stripe: null } }],
 				});
 
-				// B5: cleared on the addressed row, its history, and the variant.
 				await expectVersionProcessorCorrect({
 					ctx,
 					planId: baseId,
@@ -124,7 +106,6 @@ test.concurrent(
 				);
 				expect(row, `preview row for ${planId}`).toBeDefined();
 
-				// B6: the unlink is named, carrying the id being dropped.
 				const previous = row?.plan_change?.previous_attributes;
 				expect(previous, "previous_attributes present").toBeTruthy();
 				expect(

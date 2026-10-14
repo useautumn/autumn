@@ -1,9 +1,3 @@
-/**
- * atmn scenarios/features — omit the `features` key → server untouched; `features: []` → everything deleted
- *
- * One line of plans/atmn-v3/07_tests.md. [a, b] is a matrix looped INSIDE this file.
- */
-
 import { expect, test } from "bun:test";
 import { configBody } from "@tests/utils/atmnUtils/baseConfigs.js";
 import {
@@ -38,7 +32,6 @@ test.concurrent(
 				),
 			).toContain(featureId);
 
-			// No `features` key at all: not this config's collection, untouched.
 			scenario.writeConfig(atmnConfigSource({ body: configBody({}) }));
 			const untouched = await scenario.push({ dryRun: true });
 			expect(untouched.output).toContain("No changes");
@@ -49,7 +42,6 @@ test.concurrent(
 				),
 			).toContain(featureId);
 
-			// `features: []`: mine, and empty — every feature this config owns goes.
 			scenario.writeConfig(
 				atmnConfigSource({ body: configBody({ features: "" }) }),
 			);

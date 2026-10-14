@@ -1,40 +1,3 @@
-/**
- * TDD: a discount that was active for the period being credited must also
- * reduce the outgoing plan's proration credit on upgrade.
- *
- * User report: a customer is genuinely on a DISCOUNTED plan (they renew at
- * the discounted price each cycle). When they upgrade mid-cycle:
- *  - previewAttach shows the discount only on the previewed (new) plan in
- *    line_items, never on the current plan.
- *  - the current plan is credited at FULL list price — more than the customer
- *    actually paid — so the upgrade over-refunds.
- *
- * Root cause: proration credits (`direction: "refund"`) were never discounted.
- *   - server/src/internal/billing/v2/providers/stripe/utils/discounts/discountAppliesToLineItem.ts
- *   - server/src/internal/billing/v2/providers/stripe/utils/discounts/applyPercentOffDiscountToLineItems.ts
- *
- * The credit must be discounted ONLY when the discount was active for the
- * period being credited. A discount applied mid-cycle (after the period was
- * paid at full price) correctly leaves the credit at full price — that case
- * is covered by attach-discounts-stacking.test.ts and must stay green.
- *
- * Scenario (genuine discounted plan):
- *  - Attach Pro ($20/mo) WITH a 20% forever coupon → customer pays $16/cycle.
- *  - Renew once at the discounted price, then advance ~15 days into the cycle.
- *  - Preview the upgrade to Premium ($50/mo) WITHOUT a discounts param — the
- *    discount carries over from the existing subscription.
- *
- * Expected (green, after fix):
- *  - Premium charge carries the 20% discount  (already correct today)
- *  - Pro credit ALSO carries the 20% discount (smaller magnitude than the
- *    full-price credit)
- *  - preview.total = discounted credit + discounted charge
- *
- * Current buggy behavior (red, before fix):
- *  - Pro credit has zero discounts and stays at the full-price amount,
- *    over-refunding the customer.
- */
-
 import { expect, test } from "bun:test";
 import type { AttachPreviewResponse } from "@autumn/shared";
 import { items } from "@tests/utils/fixtures/items.js";
@@ -129,20 +92,15 @@ test.concurrent(
 		expect(proLine?.subtotal).toBeLessThan(0);
 		expect(premiumLine?.subtotal).toBeGreaterThan(0);
 
-		// New plan charge is discounted — already correct today.
 		expect(premiumLine?.discounts.length).toBeGreaterThan(0);
 
-		// The credit is sourced from the stored discounted renewal charge, so its
-		// subtotal is already net of the discount.
 		expect(proLine?.discounts.length).toBe(1);
-		// Discount metadata retains the full-cycle amount: 20% of $20 = $4.
 		expect(proLine?.discounts[0]?.amount_off).toBe(20 * DISCOUNT_RATE);
 
 		expect(proLine?.total).toBe(proLine?.subtotal);
 		expect(proLine?.total).toBeGreaterThan(-8.3);
 		expect(proLine?.total).toBeLessThan(-7.4);
 
-		// Total is the sum of the discounted credit and the discounted charge.
 		expect(preview.total).toBeCloseTo(
 			(proLine?.total ?? 0) + (premiumLine?.total ?? 0),
 			1,

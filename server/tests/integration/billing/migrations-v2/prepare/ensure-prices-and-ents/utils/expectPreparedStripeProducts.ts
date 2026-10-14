@@ -53,10 +53,6 @@ export const expectPreparedStripeProductCount = async ({
 	return stripeProductIds;
 };
 
-/**
- * Asserts every prepared V2 prepaid price row for `priceIds` shares the SAME
- * Stripe v2 prepaid price and Stripe product, not one per matched version.
- */
 export const expectPreparedStripePriceReused = async ({
 	ctx,
 	priceIds,

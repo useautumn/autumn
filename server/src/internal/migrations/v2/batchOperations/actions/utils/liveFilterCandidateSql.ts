@@ -21,7 +21,6 @@ export const nullableNumeric = z.preprocess(
 	z.number().nullable(),
 );
 
-/** Shared projection for live unpaid rows matching a compiled filter. */
 export const LiveFilterCandidateCoreSchema = z.object({
 	customerEntitlementId: z.string(),
 	customerProductId: z.string(),
@@ -90,7 +89,6 @@ const liveFilterCandidateWhereSql = ({
 		${entitlementPriceFilterSql({ filter })}
 `;
 
-/** Live unpaid scoped rows matching a compiled filter, plus caller extras. */
 export const buildLiveFilterCandidateQuery = ({
 	internalCustomerIds,
 	scope,

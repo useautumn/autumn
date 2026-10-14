@@ -1,7 +1,6 @@
 const VISIBLE_SUFFIX_LENGTH = 4;
 const VISIBLE_BODY_PREFIX_LENGTH = 4;
 
-/** `sub_1QxAbcdefgh8aKd` → `sub_1QxA…8aKd`, keeping the type prefix whole. */
 export const formatStripeObjectId = (stripeObjectId: string): string => {
 	const bodyStart = stripeObjectId.lastIndexOf("_") + 1;
 	const visibleLength =

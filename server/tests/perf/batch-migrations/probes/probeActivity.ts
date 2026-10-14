@@ -1,4 +1,3 @@
-/** Read-only: show active queries + waits on the bench DB. */
 import { sql } from "drizzle-orm";
 import { initDrizzle } from "@/db/initDrizzle.js";
 import { assertBenchDatabaseSafe } from "../utils/benchContext.js";

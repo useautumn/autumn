@@ -34,7 +34,6 @@ const BEHAVIOR_LABELS: Record<BillingMethod, string> = {
 	[BillingMethod.UsageBased]: "Usage-based",
 };
 
-/** Which of the plan's prices the dates apply to, then the dates themselves. */
 export function PlanServicePeriodEditor({
 	plan,
 	items,

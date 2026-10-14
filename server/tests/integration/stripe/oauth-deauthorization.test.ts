@@ -19,8 +19,6 @@ import {
 	expectRevokedOAuthConfigCorrect,
 } from "./utils/expectOAuthConnectionCorrect.js";
 
-/** Red: real Stripe revocation leaves the API reporting OAuth connected.
- * Green: the cached API and stored config lose only the revoked OAuth link. */
 for (const scenario of [
 	{
 		name: "Platform OAuth-only",
@@ -126,8 +124,6 @@ for (const scenario of [
 		WEBHOOK_TEST_TIMEOUT_MS,
 	);
 
-/** Red: legacy rows sharing one revoked OAuth account are only partly cleared.
- * Green: every unmanaged row in the environment is cleared; managed rows are untouched. */
 test(
 	"OAuth deauthorization clears every legacy row sharing the account and skips managed rows",
 	async () => {
@@ -202,8 +198,6 @@ test(
 	WEBHOOK_TEST_TIMEOUT_MS,
 );
 
-/** Dashboard OAuth disconnect saves the local change before deauthorizing, so the
- * real deauthorization webhook finds nothing left to rewrite. */
 test(
 	"dashboard OAuth disconnect revokes Stripe access and settles with its webhook",
 	async () => {

@@ -1,8 +1,6 @@
 import { createStripeCli } from "@/external/connect/createStripeCli";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 
-/** Expires a checkout session at Stripe. False = the session is NOT expired —
- *  it's completing/completed (won the race) or could not be verified. */
 export const expireStripeCheckoutSession = async ({
 	ctx,
 	checkoutSessionId,

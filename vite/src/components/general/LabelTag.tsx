@@ -1,6 +1,5 @@
 import { cn } from "@/lib/utils";
 
-/** A small uppercase tag beside a name, e.g. BETA or PREVIEW. */
 export const LabelTag = ({
 	label,
 	className,

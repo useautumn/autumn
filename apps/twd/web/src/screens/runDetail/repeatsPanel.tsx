@@ -1,7 +1,6 @@
 import type { RepeatStat } from "../../../../src/api/contract.ts";
 import { cn, num } from "../../lib/format.ts";
 
-/** Per file X/N first-attempt passes of a repeat run; clicking a file filters the table to its repetitions. */
 export const RepeatsPanel = ({
 	repeats,
 	onOpenFile,

@@ -12,8 +12,6 @@ import {
 	runVersionRepointMigration,
 } from "../utils/versionRepointTestUtils";
 
-// Plan versions accumulate across runs, so every test mints its own plan id to
-// keep `version: 2` deterministic.
 const uniqueStem = (name: string) =>
 	`${name}-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
 

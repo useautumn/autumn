@@ -1,7 +1,6 @@
 import type { FullCusProduct } from "@models/cusProductModels/cusProductModels.js";
 import { cp } from "../classifyCustomerProduct/cpBuilder.js";
 
-/** Finds the incoming main recurring product in the source's group and entity scope. */
 export const findCustomerProductSuccessor = ({
 	sourceCustomerProduct,
 	candidateCustomerProducts,

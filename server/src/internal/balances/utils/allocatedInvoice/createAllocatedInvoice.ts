@@ -62,7 +62,6 @@ export const createAllocatedInvoice = async ({
 
 	logAutumnBillingPlan({ ctx, plan, billingContext });
 
-	// Evaluate stripe billing plan
 	const stripeBillingPlan = await evaluateStripeBillingPlan({
 		ctx,
 		billingContext,
@@ -71,7 +70,6 @@ export const createAllocatedInvoice = async ({
 
 	logStripeBillingPlan({ ctx, stripeBillingPlan, billingContext });
 
-	// Execute stripe billing plan
 	const billingResult = await executeBillingPlan({
 		ctx,
 		billingContext,
@@ -80,8 +78,6 @@ export const createAllocatedInvoice = async ({
 
 	logStripeBillingResult({ ctx, result: billingResult.stripe });
 
-	// Mutate the update object so applyDeductionUpdateToFullCustomer
-	// sees the replaceables and balance changes made by the billing plan.
 	refreshDeductionUpdate({ update, plan });
 
 	const stripeInvoice = billingResult.stripe.stripeInvoice;

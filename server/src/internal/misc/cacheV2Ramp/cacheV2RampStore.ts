@@ -20,10 +20,6 @@ export const getCacheV2RampConfig = (): CacheV2RampConfig => store.get();
 
 export const getCacheV2RampStatus = () => store.getStatus();
 
-/** Create-or-update the connection details. Preserves migration state if a
- *  config already exists; initializes with migrationPercent=0 otherwise.
- *  Invariant check (refuse while migrationPercent > 0) runs AFTER readFromSource
- *  to avoid the multi-instance race where a handler's polled snapshot lags S3. */
 export const upsertCacheV2RampConnection = async ({
 	connectionString,
 	url,
@@ -88,7 +84,6 @@ export const removeCacheV2RampConfig = async () => {
 	await store.writeToSource({ config: null });
 };
 
-/** Test-only: override the in-memory config without writing to S3. */
 export const _setCacheV2RampConfigForTesting = (config: CacheV2RampConfig) => {
 	store._setRuntimeConfigForTesting(config);
 };

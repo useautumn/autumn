@@ -1,14 +1,3 @@
-/**
- * Immediate Switch Entity Tests (Attach V2)
- *
- * Tests for upgrade scenarios involving multiple entities (multi-tenant).
- *
- * Key behaviors:
- * - Each entity has independent subscription/products
- * - Upgrading one entity doesn't affect others
- * - Scheduled downgrades can be cancelled by upgrades
- */
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3, ApiEntityV0 } from "@autumn/shared";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
@@ -23,19 +12,6 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 1: Entity 1 free, entity 2 free, upgrade entity 2 to pro
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Two entities on free
- * - Upgrade entity 2 to pro
- *
- * Expected Result:
- * - Entity 2 has pro, entity 1 still has free
- * - Independent states
- */
 test.concurrent(
 	`${chalk.yellowBright("immediate-switch-entities 1: entity free, upgrade one to pro")}`,
 	async () => {
@@ -66,7 +42,6 @@ test.concurrent(
 			],
 		});
 
-		// 1. Preview upgrade entity 2 to pro
 		const preview = await autumnV1.billing.previewAttach({
 			customer_id: customerId,
 			product_id: pro.id,
@@ -74,7 +49,6 @@ test.concurrent(
 		});
 		expect(preview.total).toBe(20);
 
-		// 2. Upgrade entity 2
 		await autumnV1.billing.attach({
 			customer_id: customerId,
 			product_id: pro.id,
@@ -82,7 +56,6 @@ test.concurrent(
 			redirect_mode: "if_required",
 		});
 
-		// Get both entities
 		const entity1 = await autumnV1.entities.get<ApiEntityV0>(
 			customerId,
 			entities[0].id,
@@ -92,7 +65,6 @@ test.concurrent(
 			entities[1].id,
 		);
 
-		// Entity 1 still has free
 		await expectProductActive({
 			customer: entity1,
 			productId: free.id,
@@ -105,7 +77,6 @@ test.concurrent(
 			usage: 0,
 		});
 
-		// Entity 2 now has pro
 		await expectCustomerProducts({
 			customer: entity2,
 			active: [pro.id],
@@ -119,7 +90,6 @@ test.concurrent(
 			usage: 0,
 		});
 
-		// Verify invoice on customer
 		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 		await expectCustomerInvoiceCorrect({
 			customer,

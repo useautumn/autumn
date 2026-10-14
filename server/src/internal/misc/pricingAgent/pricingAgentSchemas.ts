@@ -6,7 +6,6 @@ import {
 } from "@autumn/shared";
 import { z } from "zod/v4";
 
-// ============ VALIDATION HELPERS ============
 const validateOneDefaultPerGroup = ({
 	products,
 }: {
@@ -27,7 +26,6 @@ const validateOneDefaultPerGroup = ({
 	}
 
 	for (const [_, groupProducts] of productsByGroup) {
-		// Count products with is_default that DON'T have card-not-required free trials
 		const defaultWithoutCardlessTrialCount = groupProducts.filter(
 			(p) =>
 				p.is_default && !(p.free_trial && p.free_trial.card_required === false),
@@ -41,7 +39,6 @@ const validateOneDefaultPerGroup = ({
 	return true;
 };
 
-// ============ SCHEMAS ============
 const ApiFeatureType = z.enum([
 	"static",
 	"boolean",
@@ -218,7 +215,6 @@ const ProductSchema = z
 					.filter((item) => item.feature_id != null && item.usage_model != null)
 					.map((item) => item.feature_id),
 			);
-			// Check if any other items reference the same feature_id
 			return !data.items.some(
 				(item) =>
 					item.feature_id != null &&

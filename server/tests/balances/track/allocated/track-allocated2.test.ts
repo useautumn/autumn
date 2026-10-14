@@ -13,14 +13,12 @@ import { timeout } from "../../../utils/genUtils.js";
 const testCase = "track-allocated2";
 const customerId = testCase;
 
-// Continuous use feature (Postgres track)
 const usersItem = constructFeatureItem({
 	featureId: TestFeature.Users,
 	includedUsage: 10,
 	featureType: ProductItemFeatureType.ContinuousUse,
 });
 
-// Single use feature (Redis track)
 const messagesItem = constructFeatureItem({
 	featureId: TestFeature.Messages,
 	includedUsage: 50,
@@ -51,7 +49,6 @@ describe(`${chalk.yellowBright(
 			prefix: testCase,
 		});
 
-		// Attach product to customer
 		await autumnV1.attach({
 			customer_id: customerId,
 			product_id: pro.id,
@@ -68,7 +65,6 @@ describe(`${chalk.yellowBright(
 	});
 
 	test("should handle concurrent tracks for both single_use and continuous_use features", async () => {
-		// Track 5 users (continuous_use via Postgres)
 		const usersTracks = Array.from({ length: 5 }, () =>
 			autumnV1.track({
 				customer_id: customerId,
@@ -77,7 +73,6 @@ describe(`${chalk.yellowBright(
 			}),
 		);
 
-		// Track 20 messages (single_use via Redis)
 		const messagesTracks = Array.from({ length: 20 }, () =>
 			autumnV1.track({
 				customer_id: customerId,
@@ -86,22 +81,17 @@ describe(`${chalk.yellowBright(
 			}),
 		);
 
-		// Send all tracks concurrently
 		await Promise.all([...usersTracks, ...messagesTracks]);
 
-		// Wait for sync to complete
 		await new Promise((resolve) => setTimeout(resolve, 1000));
 
-		// Verify balances via /customers/:id
 		const customer = await autumnV1.customers.get(customerId);
 
 		const usersBalance = customer.features[TestFeature.Users].balance;
 		const messagesBalance = customer.features[TestFeature.Messages].balance;
 
-		expect(usersBalance).toBe(5); // 10 - 5 = 5
-		expect(messagesBalance).toBe(30); // 50 - 20 = 30
-
-		// Verify balances via /check
+		expect(usersBalance).toBe(5);
+		expect(messagesBalance).toBe(30);
 		const usersCheck = await autumnV1.check({
 			customer_id: customerId,
 			feature_id: TestFeature.Users,
@@ -114,9 +104,7 @@ describe(`${chalk.yellowBright(
 		expect(usersCheck.balance).toBe(5);
 		expect(messagesCheck.balance).toBe(30);
 
-		// Wait for sync to complete
 		await timeout(2000);
-		// Check non-cached customer
 		const nonCachedCustomer = await autumnV1.customers.get(customerId, {
 			skip_cache: "true",
 		});
@@ -130,7 +118,6 @@ describe(`${chalk.yellowBright(
 	});
 
 	test("should handle more concurrent mixed tracks", async () => {
-		// Track 3 more users (Postgres)
 		const usersTracks = Array.from({ length: 3 }, () =>
 			autumnV1.track({
 				customer_id: customerId,
@@ -139,7 +126,6 @@ describe(`${chalk.yellowBright(
 			}),
 		);
 
-		// Track 15 more messages (Redis)
 		const messagesTracks = Array.from({ length: 15 }, () =>
 			autumnV1.track({
 				customer_id: customerId,
@@ -148,21 +134,16 @@ describe(`${chalk.yellowBright(
 			}),
 		);
 
-		// Send all tracks concurrently
 		await Promise.all([...usersTracks, ...messagesTracks]);
 
-		// Wait for sync to complete
 		await new Promise((resolve) => setTimeout(resolve, 1000));
 
-		// Verify final balances
 		const customer = await autumnV1.customers.get(customerId);
 		const usersBalance = customer.features[TestFeature.Users].balance;
 		const messagesBalance = customer.features[TestFeature.Messages].balance;
 
-		expect(usersBalance).toBe(2); // 5 - 3 = 2
-		expect(messagesBalance).toBe(15); // 30 - 15 = 15
-
-		// Double-check with /check
+		expect(usersBalance).toBe(2);
+		expect(messagesBalance).toBe(15);
 		const usersCheck = await autumnV1.check({
 			customer_id: customerId,
 			feature_id: TestFeature.Users,
@@ -175,9 +156,7 @@ describe(`${chalk.yellowBright(
 		expect(usersCheck.balance).toBe(2);
 		expect(messagesCheck.balance).toBe(15);
 
-		// Wait for sync to complete
 		await timeout(2000);
-		// Check non-cached customer
 		const nonCachedCustomer = await autumnV1.customers.get(customerId, {
 			skip_cache: "true",
 		});
@@ -191,7 +170,6 @@ describe(`${chalk.yellowBright(
 	});
 
 	test("should maintain consistency across multiple concurrent batches", async () => {
-		// Create multiple waves of concurrent tracks
 		const wave1 = [
 			...Array.from({ length: 2 }, () =>
 				autumnV1.track({
@@ -212,15 +190,12 @@ describe(`${chalk.yellowBright(
 		await Promise.all(wave1);
 		await timeout(7000);
 
-		// Verify final state
 		const customer = await autumnV1.customers.get(customerId);
 		const usersBalance = customer.features[TestFeature.Users].balance;
 		const messagesBalance = customer.features[TestFeature.Messages].balance;
 
-		expect(usersBalance).toBe(0); // 2 - 2 = 0
-		expect(messagesBalance).toBe(5); // 15 - 10 = 5
-
-		// Verify via check
+		expect(usersBalance).toBe(0);
+		expect(messagesBalance).toBe(5);
 		const usersCheck = await autumnV1.check({
 			customer_id: customerId,
 			feature_id: TestFeature.Users,

@@ -3,8 +3,6 @@ import { after, NextResponse, type NextRequest } from "next/server";
 import { negotiate } from "@/lib/contentNegotiation";
 import { markdownTargetFor } from "@/lib/markdownRoutes";
 
-// Bydefault tracking is disabled when no token is set (e.g. local dev), so the
-// proxy is a no-op instead of throwing at module load.
 const token = process.env.BYDEFAULT_TOKEN;
 const tracker = token ? new Tracker({ token, exclude: ["/api"] }) : null;
 
@@ -40,9 +38,6 @@ async function negotiateMarkdown(
 	return serveMarkdown(request, markdownTarget);
 }
 
-// Return the markdown body in this response rather than rewriting to the .md
-// route: a rewrite lets the framework overwrite Vary with its own rsc value and
-// drop Accept, whereas a response we own keeps a clean Vary: Accept.
 async function serveMarkdown(
 	request: NextRequest,
 	markdownTarget: string,
@@ -66,8 +61,6 @@ async function serveMarkdown(
 }
 
 export async function proxy(request: NextRequest) {
-	// The internal markdown sub-request must not be tracked or re-negotiated;
-	// return before track() so analytics counts the user request only once.
 	if (request.headers.get("x-markdown-proxy")) {
 		return NextResponse.next();
 	}
@@ -86,7 +79,6 @@ export const config = {
 			source: "/((?!_next/|api(?:/|$)|favicon.ico|.*\\..*).*)",
 			missing: [{ type: "header", key: "next-router-prefetch" }],
 		},
-		// AI/agent text routes are dotted paths excluded above; track them explicitly.
 		{ source: "/llms.txt" },
 		{ source: "/llms-full.txt" },
 		{ source: "/alog.md" },

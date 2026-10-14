@@ -20,8 +20,6 @@ import {
 } from "../utils/fetchApprovalPreview.js";
 import { publicToolArgs, toolRequestFromArgs } from "../utils/toolRequest.js";
 
-/** Previews are N MCP round trips — the card posts first and re-renders when
- * they land; pending-guarded so a resolved approval keeps what it showed. */
 const createStepPreviewBackfill =
 	({
 		approvalId,

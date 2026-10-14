@@ -10,14 +10,10 @@ export type PartitionOwners = {
 };
 export type RoutingContext = {
 	owners: PartitionOwners;
-	/** Routes a worker named in its NOT_OWNER answer, tried ahead of a refresh. */
 	hints?: RouteHints;
 	http: HttpClient;
 	partitionCount: number;
 	timeoutMs: number;
-	/** Slice of the request budget an ownership refresh may spend before the
-	 *  request gives up on it. Keeps a rebalance from costing callers the whole
-	 *  deadline. Unset means the refresh may use whatever budget is left. */
 	routeRefreshTimeoutMs?: number;
 };
 export type RoutedCommand = { identity: MeteringIdentity };

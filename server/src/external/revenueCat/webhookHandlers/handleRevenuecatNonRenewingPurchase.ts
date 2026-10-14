@@ -33,7 +33,6 @@ export const handleNonRenewingPurchase = async ({
 		overrideCustomerId: getRevenueCatOverrideCustomerId(event),
 		customerEmail: getRevenueCatCustomerEmail(event),
 		customerFingerprint: getRevenueCatCustomerFingerprint(event),
-		// A purchase is valid for a customer we have not seen yet.
 		autoCreateCustomer: true,
 		validateProduct: (product) => {
 			if (!oneOffOrAddOn({ product })) {

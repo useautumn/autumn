@@ -15,11 +15,7 @@ type RegisteredMdPool = {
 	pool: DuckDBConnectionPool;
 	name: string;
 	max: number;
-	/** Leased connections (acquired − released). Idle-open connections are
-	 * invisible: the pool's internal counters are closure-private. */
 	busyCount: number;
-	/** Acquire calls in flight; sampled every 30s ≈ queued waiters, since
-	 * fast-path acquires settle within the same tick. */
 	waitingCount: number;
 };
 
@@ -45,7 +41,6 @@ const recordAcquire = ({
 		} else {
 			stats.errors++;
 			// The DuckDB pool has no error emitter — the acquire failure path is
-			// the only place to surface non-timeout errors.
 			logger.warn("md_pool_error", {
 				type: "md_pool_error",
 				pool: name,
@@ -150,8 +145,6 @@ const emitSnapshot = (): void => {
 		const { name, max, busyCount, waitingCount } = entry;
 		const stats = acquireStats.get(name);
 		const sorted = stats ? [...stats.samples].sort((a, b) => a - b) : [];
-		// totalCount = leased connections only; idle-open connections are not
-		// observable, so idleCount is always 0 and utilization = busy / max.
 		logger.info("md_pool_stats", {
 			type: "md_pool_stats",
 			pool: name,
@@ -184,7 +177,6 @@ const emitSnapshot = (): void => {
 
 export const startMdPoolMonitor = (intervalMs = 30_000): void => {
 	if (snapshotInterval) return;
-	// Pool snapshots are an ops signal; locally they just flood the console.
 	if (process.env.NODE_ENV === "development") return;
 	// Not unref'd for the same Bun reason as pgPoolMonitor.
 	snapshotInterval = setInterval(emitSnapshot, intervalMs);

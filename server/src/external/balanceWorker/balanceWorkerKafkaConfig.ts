@@ -1,7 +1,6 @@
 import type { BalanceWorkerKafkaConfig } from "@autumn/balance-worker-client";
 import { getBalanceWorkerClientEnv } from "@autumn/env/balanceWorkerClient";
 
-/** Env to connection settings; the client package owns everything after this. */
 export function readBalanceWorkerKafkaConfig({
 	clientId,
 }: {

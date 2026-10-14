@@ -15,7 +15,6 @@ type SubscriptionEventContext =
 	| StripeSubscriptionUpdatedContext
 	| StripeSubscriptionDeletedContext;
 
-/** Expires a product, activates its free successor, and records both transitions. */
 export const expireAndActivateWithTracking = async ({
 	ctx,
 	eventContext,

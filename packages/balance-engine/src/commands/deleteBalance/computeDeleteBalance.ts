@@ -8,7 +8,6 @@ import { deleteRows, markProductsCustom } from "./steps/deleteRows.js";
 import { recalculateUsage } from "./steps/recalculateUsage.js";
 import type { DeleteBalanceCommand } from "./types/deleteBalanceCommand.js";
 
-/** The matching grants removed in one mutation, their usage kept when asked. */
 export const computeDeleteBalance = ({
 	fullSubject,
 	command,

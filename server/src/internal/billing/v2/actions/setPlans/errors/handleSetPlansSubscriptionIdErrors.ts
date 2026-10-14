@@ -28,7 +28,6 @@ const sourceExternalId = ({
 	return requestedPhases[phaseIndex]?.plans[source.planIndex]?.externalId;
 };
 
-/** Every id the phases folded into this segment ask for, not just the first. */
 const segmentExternalIds = ({
 	segment,
 	requestedPhases,
@@ -43,7 +42,6 @@ const segmentExternalIds = ({
 	);
 };
 
-/** An existing row keeps its subscription id while it runs; another instance may only claim it once it ends. */
 export const claimsRunningSubscriptionId = ({
 	customerProductId,
 	externalId,
@@ -74,10 +72,6 @@ export const claimsRunningSubscriptionId = ({
 	);
 };
 
-/**
- * subscription_id is unique within a phase; later phases may reuse it. An id on an
- * existing row conflicts unless this request ends that row before another plan claims it.
- */
 export const handleSetPlansSubscriptionIdErrors = async ({
 	ctx,
 	billingContext,

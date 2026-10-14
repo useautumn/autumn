@@ -48,7 +48,7 @@ const TierToInput = ({ index }: { index: number }) => {
 			className="w-full"
 			placeholder={isInfinite ? "∞" : "100"}
 			inputMode="decimal"
-			disabled={isInfinite || (tiers.length === 2 && index === 1)} // Disable infinity or 2nd tier in 2-tier setup
+			disabled={isInfinite || (tiers.length === 2 && index === 1)}
 		/>
 	);
 };
@@ -67,12 +67,10 @@ export function PriceTiers({
 	const tiers = item.tiers || [];
 	const includedUsage = item.included_usage || 0;
 
-	// Only show pricing UI if billing type is "priced" (has tiers)
 	if (!tiers || tiers.length === 0) {
 		return null;
 	}
 
-	// Simple single tier UI - just amount input with billing units
 	if (tiers.length === 1) {
 		const firstTier = tiers[0];
 
@@ -135,11 +133,9 @@ export function PriceTiers({
 		);
 	}
 
-	// Multi-tier UI - full tier management
 	const isFlatMode = volumePricingMode === "flat";
 	const amountField = isFlatMode ? "flat_amount" : "amount";
 
-	// Volume bills every unit at one tier, so graduated "then" wording doesn't apply.
 	const tierLabel = (index: number) => {
 		if (item.tier_behavior === TierBehavior.VolumeBased) return "usage up to";
 		if (Number(includedUsage) === 0 && index === 0) return "first";

@@ -2,7 +2,6 @@ import type { FullCusProduct } from "@autumn/shared";
 import { pairCustomerProducts } from "@/internal/billing/v2/compute/pairCustomerProducts";
 import type { TimelineDiff } from "../timeline/types/timelineDiff";
 
-/** Rows a plan starting now replaces, by instance or by group: the only rows usage can carry from. */
 export const nowReplacedCustomerProducts = ({
 	diff,
 	outgoingCustomerProducts,

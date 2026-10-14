@@ -6,9 +6,7 @@ import type {
 	CommandPublisherContext,
 } from "./types/commandPublisher.js";
 
-/** Most commands are ~0.6 KB, so a full send of them stays well inside the broker's 1 MB message limit. */
 const MAX_RECORDS_PER_SEND = 500;
-/** A track's properties are the caller's, so bytes bound a send too: gzip saves only about a quarter on commands. */
 const MAX_BYTES_PER_SEND = 800_000;
 
 type CommandMessage = { key: Buffer; value: Buffer; partition: number };
@@ -20,8 +18,6 @@ type WaitingAppend = {
 	reject: (cause: unknown) => void;
 };
 
-/** The idempotent producer has one request in flight per broker, so appends that arrive during a send
- *  go out together in the next one instead of queueing one request each behind it. */
 export function createCommandPublisher({
 	ctx,
 }: {

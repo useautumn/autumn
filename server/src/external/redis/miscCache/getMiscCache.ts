@@ -7,7 +7,6 @@ import { onRedisClientCreated } from "../initUtils/onRedisClientCreated.js";
 
 let miscCache: MiscCache | undefined;
 
-/** The server's misc cache: its env, its polled edge config, its secret decryption, and otel on every client. */
 export const getMiscCache = (): MiscCache => {
 	if (miscCache) return miscCache;
 	const env = getCacheEnv();

@@ -18,11 +18,6 @@ const baseSentVariantsArray = ({
 			upsert.declaredVariants !== undefined,
 	);
 
-/**
- * A variant and its base cannot both be top-level content edits.
- * Hierarchical membership (`base.variants[]`, including `[]` to unlink) is
- * the only legal same-call pair.
- */
 export const handleDirectBaseAndVariantPairErrors = ({
 	directPlanIds,
 	upsertProducts,

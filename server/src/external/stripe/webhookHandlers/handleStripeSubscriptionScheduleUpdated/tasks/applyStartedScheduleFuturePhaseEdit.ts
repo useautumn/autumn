@@ -12,12 +12,6 @@ import type { StripeScheduleUpdatedContext } from "../setupScheduleUpdatedContex
 const scheduleSubscriptionId = (schedule: Stripe.SubscriptionSchedule) =>
 	stripeRefToId(schedule.subscription) ?? null;
 
-/**
- * A scheduled row carries the future phase as it was at import. Once the phase
- * is edited in Stripe that row is stale: a quantity-only step is detached (the
- * subscription webhook applies it when the phase turns); anything else is
- * warned about, since Autumn cannot rebuild the phase from the event alone.
- */
 export const applyStartedScheduleFuturePhaseEdit = async ({
 	ctx,
 	eventContext,

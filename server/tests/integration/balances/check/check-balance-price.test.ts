@@ -11,15 +11,7 @@ import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 
-// ═══════════════════════════════════════════════════════════════════
-// CHECK: Balance price field verification
-// Tests that balance.breakdown[].price returns correct structure:
-// - Single tier: returns { amount } instead of { tiers }
-// - Multiple tiers: returns { tiers } array
-// ═══════════════════════════════════════════════════════════════════
-
 test.concurrent(`${chalk.yellowBright("check-balance-price: verify price field in balance breakdown")}`, async () => {
-	// Messages: single price (no tiers) - should return amount
 	const messagesItem: ProductItem = {
 		feature_id: TestFeature.Messages,
 		usage_model: UsageModel.PayPerUse,
@@ -29,7 +21,6 @@ test.concurrent(`${chalk.yellowBright("check-balance-price: verify price field i
 		interval: ProductItemInterval.Month,
 	};
 
-	// Words: multiple tiers - should return tiers array
 	const wordsItem: ProductItem = {
 		feature_id: TestFeature.Words,
 		usage_model: UsageModel.PayPerUse,
@@ -57,10 +48,6 @@ test.concurrent(`${chalk.yellowBright("check-balance-price: verify price field i
 		actions: [s.attach({ productId: proProd.id })],
 	});
 
-	// ─────────────────────────────────────────────────────────────────
-	// Check messages (single price) - should have amount, no tiers
-	// ─────────────────────────────────────────────────────────────────
-
 	const messagesRes = (await autumnV2_1.check({
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
@@ -79,10 +66,6 @@ test.concurrent(`${chalk.yellowBright("check-balance-price: verify price field i
 	});
 	expect(messagesBreakdown?.price?.tiers).toBeUndefined();
 
-	// ─────────────────────────────────────────────────────────────────
-	// Check words (multiple tiers) - should have tiers, no amount
-	// ─────────────────────────────────────────────────────────────────
-
 	const wordsRes = (await autumnV2_1.check({
 		customer_id: customerId,
 		feature_id: TestFeature.Words,
@@ -99,9 +82,6 @@ test.concurrent(`${chalk.yellowBright("check-balance-price: verify price field i
 		max_purchase: null,
 	});
 	expect(wordsBreakdown?.price?.amount).toBeUndefined();
-	// Tiers in user-facing response INCLUDE included_usage (50)
-	// Internal tiers: [{to:100}, {to:500}, {to:"inf"}]
-	// User-facing: [{to:150}, {to:550}, {to:"inf"}]
 	expect(wordsBreakdown?.price?.tiers).toEqual([
 		{ to: 150, amount: 0.1 },
 		{ to: 550, amount: 0.05 },

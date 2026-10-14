@@ -4,20 +4,11 @@ import { homedir, platform } from "node:os";
 import { join } from "node:path";
 import { chromium } from "playwright-core";
 
-// ============================================================================
-// Browser test configuration — toggle these for local development / debugging
-// ============================================================================
-
-/** Use Kernel cloud browsers instead of local Chromium */
 export const USE_KERNEL = !!process.env.USE_KERNEL_BROWSER;
-// export const USE_KERNEL = false;
-
-/** Run browsers in headless mode (set false to watch the browser) */
 export const HEADLESS = true;
 
 const PLAYWRIGHT_BROWSER_DIR_REGEX = /^chromium(?:_headless_shell)?-(\d+)$/;
 
-/** Binary layouts Playwright uses inside a `chromium*-<revision>` cache dir. */
 const PLAYWRIGHT_BINARY_SUFFIXES = [
 	"chrome-linux/chrome",
 	"chrome-linux/headless_shell",
@@ -52,13 +43,11 @@ const playwrightCacheDirs = (): string[] => {
 			? join(home, "Library", "Caches", "ms-playwright")
 			: undefined,
 		join(home, ".cache", "ms-playwright"),
-		// The tw µVM bakes browsers as root; HOME may differ for the test process.
 		"/root/.cache/ms-playwright",
 	].filter((dir): dir is string => !!dir && dir !== "0");
 	return [...new Set(candidates)];
 };
 
-/** Newest-revision-first chromium binaries found in the Playwright caches. */
 const scanPlaywrightCaches = (): string[] => {
 	const found: { revision: number; path: string }[] = [];
 	for (const dir of playwrightCacheDirs()) {
@@ -85,12 +74,6 @@ const playwrightExecutablePath = (): string | undefined => {
 	}
 };
 
-/**
- * Resolve a launchable Chromium: env → playwright-core's expected revision →
- * any revision in the Playwright caches → system Chrome. Throws (never guesses)
- * so a µVM with a mis-baked browser fails with the paths it probed.
- * The env path is machine-specific (shared Infisical) — honored only if it exists.
- */
 const resolveChromiumPath = (): string => {
 	const probed: string[] = [];
 	const push = (path: string | undefined): string | undefined => {
@@ -117,15 +100,11 @@ const resolveChromiumPath = (): string => {
 
 let cachedChromiumPath: string | undefined;
 
-/** Memoized local Chromium path. Lazy: importing this module must not throw
- * when the run uses Kernel browsers instead. */
 export const getChromiumPath = (): string => {
 	cachedChromiumPath ??= resolveChromiumPath();
 	return cachedChromiumPath;
 };
 
-/** Kernel browser session timeout in seconds */
 export const KERNEL_TIMEOUT_SECONDS = 30;
 
-/** Kernel Playwright execution timeout in seconds */
 export const KERNEL_EXECUTE_TIMEOUT_SEC = 120;

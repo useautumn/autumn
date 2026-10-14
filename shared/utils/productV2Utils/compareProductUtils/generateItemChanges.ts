@@ -10,23 +10,21 @@ import {
 } from "../productItemUtils/itemIntervalUtils.js";
 import type { ItemEdit } from "./itemEditTypes.js";
 
-/** Keys that are internal/metadata and should not trigger change detection */
 const INTERNAL_KEYS = new Set([
-	"feature_id", // Used as identifier, not for change detection
-	"feature_type", // Internal - derived from feature
-	"feature", // Internal - full feature object
-	"display", // Internal - UI display text
-	"usage_limit", // Internal - hidden from users
-	"created_at", // Internal - timestamp metadata
-	"entitlement_id", // Internal - backend identifier
-	"price_id", // Internal - backend identifier
-	"price_config", // Internal - backend config
-	"isPrice", // Frontend-only extension
-	"isVariable", // Frontend-only extension
-	"_uid", // Frontend-only editor handle
+	"feature_id",
+	"feature_type",
+	"feature",
+	"display",
+	"usage_limit",
+	"created_at",
+	"entitlement_id",
+	"price_id",
+	"price_config",
+	"isPrice",
+	"isVariable",
+	"_uid",
 ]);
 
-/** Recursively sorts object keys and normalizes undefined to null for consistent comparison */
 function sortAndNormalize(value: unknown): unknown {
 	if (value === undefined || value === null) return null;
 	if (Array.isArray(value)) {
@@ -42,7 +40,6 @@ function sortAndNormalize(value: unknown): unknown {
 	return value;
 }
 
-/** Creates a normalized string representation of a ProductItem excluding internal keys */
 function normalizeForComparison(item: ProductItem): string {
 	const sanitized: Record<string, unknown> = {};
 
@@ -103,7 +100,6 @@ function formatTierPricing({
 	return perUnit;
 }
 
-/** Generates edit items for product item additions, removals, and modifications */
 export function generateItemChanges({
 	originalItems,
 	updatedItems,

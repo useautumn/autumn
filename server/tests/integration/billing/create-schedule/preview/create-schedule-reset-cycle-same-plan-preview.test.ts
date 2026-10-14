@@ -1,6 +1,3 @@
-// A same-plan phase transition with a billing-cycle reset previews a fresh full
-// cycle: the plan is charged in full with no unused-time credit netted against it.
-
 import { expect, test } from "bun:test";
 import {
 	type AttachPreviewResponse,
@@ -32,8 +29,6 @@ test.concurrent(
 		const currentPlanEndsAt = truncateMsToSecondPrecision(
 			addMonths(advancedTo, 1).getTime(),
 		);
-		// Transition a sliver before the natural period end, which previously left
-		// a small unused-current-plan credit despite the reset.
 		const transitionAt = currentPlanEndsAt - ms.hours(16);
 
 		const phases: CreateScheduleParamsV0Input["phases"] = [

@@ -79,7 +79,6 @@ export const chatApprovals = pgTable(
 		provider_user_id: text("provider_user_id").notNull(),
 		env: text("env").$type<AppEnv>().notNull(),
 		run_id: text("run_id"),
-		// Which harness owns this approval's resume path; null = pre-column rows.
 		harness: text("harness"),
 		tool_call_id: text("tool_call_id"),
 		tool_name: text("tool_name").notNull(),
@@ -111,8 +110,6 @@ export type ChatApprovalWriteStatus =
 	| "skipped"
 	| "unknown";
 
-/** One gated write within an approval; position 0 is the primary write the
- * parent row mirrors, later positions are the grouped siblings. */
 export const chatApprovalWrites = pgTable(
 	"chat_approval_writes",
 	{
@@ -148,8 +145,6 @@ export const chatOAuthCredentials = pgTable(
 		id: text().primaryKey().notNull(),
 		chat_installation_id: text("chat_installation_id").notNull(),
 		org_id: text("org_id").notNull(),
-		// The dashboard user this credential is scoped to (web chat). Null on
-		// legacy/Slack rows, which are installation-scoped rather than per-user.
 		user_id: text("user_id"),
 		env: text("env").$type<AppEnv>().notNull(),
 		oauth_client_id: text("oauth_client_id").notNull(),
@@ -159,8 +154,6 @@ export const chatOAuthCredentials = pgTable(
 		access_token_expires_at: numeric("access_token_expires_at", {
 			mode: "number",
 		}).notNull(),
-		// When the refresh token dies; past this, a new mint must come from the
-		// user's better-auth cookie. Null on legacy rows (treated as expired).
 		refresh_token_expires_at: numeric("refresh_token_expires_at", {
 			mode: "number",
 		}),

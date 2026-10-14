@@ -24,8 +24,6 @@ export const createAndFinalizeInvoice = async ({
 	automaticTax?: boolean;
 	logger?: any;
 }) => {
-	// Skip auto_tax in send_invoice mode: no address-collection UI.
-	// Enforced here regardless of caller input.
 	const wantsAutoTax = automaticTax && chargeAutomatically;
 
 	const invoice = await stripeCli.invoices.create({

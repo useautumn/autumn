@@ -1,17 +1,3 @@
-/**
- * "Last used" for secret API keys, read from request logs in Axiom (no DB writes).
- *
- * Contract:
- *   1. getApiKeyVerificationData returns the key's row id as `apiKeyId`,
- *      so the auth middleware can log it on every request.
- *   2. buildApiKeysLastUsedQuery scopes to org + env + last 7 days and
- *      returns max(_time) per `context.api_key_id`.
- *   3. getApiKeysLastUsed maps Axiom rows to { [apiKeyId]: epochMs }.
- *   4. getApiKeysLastUsed reports available: false when Axiom isn't configured,
- *      so the UI never shows "not used" for missing telemetry.
- *   5. queryAxiomTabular flattens tabular tables into row records.
- */
-
 import { afterAll, beforeEach, describe, expect, mock, test } from "bun:test";
 
 const realInitAxiom = { ...(await import("@/external/axiom/initAxiom.js")) };

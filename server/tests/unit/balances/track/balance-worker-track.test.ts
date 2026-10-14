@@ -37,7 +37,6 @@ const execution = {
 	commands: [] as TrackCommand[],
 	failure: undefined as Error | undefined,
 	postgresResponse: undefined as TrackResponseV3 | undefined,
-	/** The Postgres lane's steps in the order they ran: evict, read, postgres, evict. */
 	postgresLane: [] as string[],
 	postgresBodies: [] as TrackParams[],
 	fullSubject: undefined as FullSubject | undefined,
@@ -153,7 +152,6 @@ function unexpectedServerWork(): never {
 	throw new Error("Worker tracking must not insert events");
 }
 
-/** One customer with a 100 grant, adjustment 10 and balance 72; tracks of 3 read against it. */
 function fixture({ balance = 72 }: { balance?: number } = {}) {
 	const customer = createCustomerFixture();
 	customer.customerEntitlement.balance = balance;
@@ -212,7 +210,6 @@ function commandContract() {
 		properties: { model: "model" },
 		overageBehavior: "reject",
 		occurredAt: 500,
-		// The event row carries the caller's key as sent, as legacy's does.
 		usageEvent: { name: "messages", idempotencyKey: "stable", id: null },
 	});
 	expect(
@@ -259,7 +256,6 @@ async function successContract() {
 }
 
 async function outcomeContract() {
-	// Capping at an exhausted, then a partial, balance: the reply is the row after the track.
 	for (const [balance, remaining] of [
 		[0, 0],
 		[2, 0],
@@ -331,7 +327,6 @@ async function errorContract() {
 	}
 }
 
-/** The fixture customer, whose catalog also has a `words` feature it holds no grant for, both under event `chat`. */
 function unheldFeatureFixture() {
 	const customer = fixture();
 	const { ctx, feature } = customer;
@@ -436,7 +431,6 @@ async function failureContract() {
 	expect(execution.commands).toHaveLength(1);
 }
 
-/** What the worker replies for this customer's track: the logged result and the rows after it. A retry replies the same. */
 function trackReplyOf({
 	customer,
 	body = customer.body,
@@ -466,12 +460,10 @@ function trackReplyOf({
 		result: mutation.result,
 		changes: mutation.changes,
 		state: applyMutation({ state, mutation }),
-		// The catalog the track was decided against, as the worker returns it.
 		catalog,
 	};
 }
 
-/** What the Redis path would answer for the same row at `balance`. */
 function expectedBalance({
 	customer,
 	balance,
@@ -519,7 +511,6 @@ async function claimContract() {
 		expect(claims).toEqual(["track:key_1"]);
 		expect(releases).toEqual([]);
 
-		// May have applied: the claim goes so the retry reaches the worker's own dedup.
 		execution.failure = new BalanceWorkerClientError({
 			code: "DEADLINE",
 			outcome: "unknown",
@@ -584,7 +575,6 @@ async function paidAllocatedContract() {
 		balance: postgresBalance,
 		deductions,
 	});
-	// The worker was asked once; Postgres ran this one feature between two evicts.
 	expect(execution.commands).toHaveLength(1);
 	expect(execution.postgresLane).toEqual([
 		"evict",

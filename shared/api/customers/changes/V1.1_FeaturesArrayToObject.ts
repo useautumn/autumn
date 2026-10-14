@@ -13,22 +13,8 @@ import {
 import type { ApiCusFeatureV3BreakdownSchema } from "../cusFeatures/previousVersions/apiCusFeatureV3";
 import { ApiCustomerV3Schema } from "../previousVersions/apiCustomerV3";
 
-/**
- * V1_2: Features changed from array to object AND merged multi-interval features
- *
- * V1_2+ format:
- *   - Features as object keyed by feature_id
- *   - Multi-interval features merged with breakdown array
- *
- * V1_1 format:
- *   - Features as array
- *   - Multi-interval features as separate array entries (no breakdown)
- */
-
-// V1_2+ customer schema (features as object with breakdown)
 const V1_2_CustomerSchema = ApiCustomerV3Schema;
 
-// V1_1 customer schema (features as array without breakdown)
 const V1_1_CustomerSchema = ApiCustomerV3Schema.extend({
 	features: z.array(ApiCusFeatureV2Schema),
 });
@@ -44,14 +30,6 @@ type MergedBreakdownItem = {
 	overage_allowed: boolean;
 };
 
-/**
- * Merges breakdown items by legacy breakdown key.
- * Items with the same key (interval:interval_count:overage_allowed) are merged:
- * - Numeric fields are summed
- * - next_reset_at takes the earliest value
- * - usage_limit is summed
- * - overage_allowed prioritizes true (if any item has true, result is true)
- */
 function mergeBreakdownItems({
 	breakdown,
 }: {
@@ -64,7 +42,6 @@ function mergeBreakdownItems({
 
 		const existing = mergedBreakdownMap.get(legacyBreakdownKey);
 		if (existing) {
-			// Merge: sum numeric fields, take earliest next_reset_at, sum usage_limit
 			existing.balance = (existing.balance ?? 0) + (breakdownItem.balance ?? 0);
 			existing.usage = (existing.usage ?? 0) + (breakdownItem.usage ?? 0);
 			existing.included_usage =
@@ -83,19 +60,16 @@ function mergeBreakdownItems({
 				}
 			}
 
-			// Sum usage_limit (use included_usage as fallback if usage_limit is null/undefined)
 			const itemUsageLimit =
 				breakdownItem.usage_limit ?? breakdownItem.included_usage ?? 0;
 			const existingUsageLimit =
 				existing.usage_limit ?? existing.included_usage ?? 0;
 			existing.usage_limit = existingUsageLimit + itemUsageLimit;
 
-			// overage_allowed: true takes priority
 			if (breakdownItem.overage_allowed === true) {
 				existing.overage_allowed = true;
 			}
 		} else {
-			// First item with this key
 			mergedBreakdownMap.set(legacyBreakdownKey, {
 				interval: breakdownItem.interval ?? null,
 				interval_count: breakdownItem.interval_count ?? null,
@@ -130,9 +104,6 @@ export const V1_1_FeaturesArrayToObject = defineVersionChange({
 	affectsResponse: true,
 	hasSideEffects: false,
 
-	// Response: V1_2 Customer → V1_1 Customer
-	// 1. Expand features with breakdown into separate entries
-	// 2. Convert object to array
 	transformResponse: ({
 		input,
 	}: {
@@ -141,13 +112,11 @@ export const V1_1_FeaturesArrayToObject = defineVersionChange({
 		const v1_1_features: ApiCusFeatureV2[] = [];
 
 		for (const [_featureId, feature] of Object.entries(input.features)) {
-			// If feature has breakdown, expand into separate entries
 			if (feature.breakdown && feature.breakdown.length > 0) {
 				const mergedBreakdownItems = mergeBreakdownItems({
 					breakdown: feature.breakdown,
 				});
 
-				// Expand merged breakdown items into separate entries
 				for (const mergedItem of mergedBreakdownItems) {
 					v1_1_features.push({
 						feature_id: feature.id,
@@ -158,7 +127,7 @@ export const V1_1_FeaturesArrayToObject = defineVersionChange({
 						included_usage: mergedItem.included_usage,
 						next_reset_at: mergedItem.next_reset_at,
 						usage_limit: mergedItem.usage_limit,
-						unlimited: feature.unlimited, // inherit from parent
+						unlimited: feature.unlimited,
 						overage_allowed: mergedItem.overage_allowed,
 					} satisfies ApiCusFeatureV2);
 				}
@@ -175,7 +144,6 @@ export const V1_1_FeaturesArrayToObject = defineVersionChange({
 					});
 					continue;
 				}
-				// No breakdown - just remove the breakdown field
 				v1_1_features.push({
 					feature_id: feature.id,
 					interval: feature.interval === "multiple" ? null : feature.interval,
@@ -188,14 +156,10 @@ export const V1_1_FeaturesArrayToObject = defineVersionChange({
 					rollovers: feature.rollovers,
 					unlimited: feature.unlimited,
 					overage_allowed: feature.overage_allowed,
-					// credit_schema: feature.credit_schema,
 				} satisfies ApiCusFeatureV2);
 			}
 		}
 
-		// Boolean / unlimited features don't have the rest of the fields
-
-		// Validation happens automatically in VersionChange base class
 		return {
 			...input,
 			features: v1_1_features,

@@ -29,7 +29,6 @@ export type ComputedCreditCost = {
 
 export type CreditCostLookup = (entitlementId: string) => ComputedCreditCost;
 
-/** Per-entitlement credit cost lookup. Pure schema math — no I/O. */
 export const computeCreditCosts = ({
 	cusEnts,
 	deduction,
@@ -44,7 +43,6 @@ export const computeCreditCosts = ({
 	const costMap = new Map<string, ComputedCreditCost>();
 
 	for (const ce of cusEnts) {
-		// Token cost is USD: 1:1 on its own ent; parents apply their ratio to it.
 		if (
 			deduction.tokens &&
 			ce.entitlement.feature.id === deduction.feature.id
@@ -53,7 +51,6 @@ export const computeCreditCosts = ({
 			continue;
 		}
 
-		// Plan-item feature_override supersedes the catalog config for this cusEnt.
 		const creditSystem = entitlementToCreditSystem({
 			entitlement: ce.entitlement,
 		});
@@ -107,9 +104,6 @@ export const computeCreditCosts = ({
 				...(rateCard ? { rateCard } : {}),
 			});
 		} catch (error) {
-			// A configured rate that cannot be evaluated must fail closed. An item
-			// override rides the same cached row as the balance, so the staleness
-			// fallback below never applies to it — the override is authoritative.
 			if (
 				rateCard ||
 				ce.entitlement.feature_override?.schema ||
@@ -153,8 +147,6 @@ export const computeCreditCosts = ({
 				});
 			}
 
-			// Cached cusEnt schemas can briefly trail a feature update; deduct at
-			// 1:1 rather than failing the track.
 			logger.warn("[computeCreditCosts] falling back to credit cost 1", {
 				feature_id: deduction.feature.id,
 				credit_system_id: ce.entitlement.feature.id,

@@ -123,11 +123,6 @@ const buildLog = (overrides: Partial<MutationLogItem>): MutationLogItem => ({
 	...overrides,
 });
 
-// Cus-ents built by `buildCustomerEntitlement` flow through
-// `fullSubjectToCustomerEntitlements` as `extra_customer_entitlements`, which
-// stamps `customer_product: null` — so `cusEntsToPlanId` always returns null
-// in this fixture. The entitlement interval is "month" with count 1, so
-// `cusEntsToReset` returns this shape consistently.
 const expectedReset = {
 	interval: ResetInterval.Month,
 	interval_count: undefined,

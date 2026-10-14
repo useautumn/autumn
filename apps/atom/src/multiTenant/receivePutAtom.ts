@@ -4,7 +4,6 @@ import type { MultiTenantContext } from "./multiTenantContext.js";
 import { putAtomBodyToTenantAtom } from "./multiTenantContracts.js";
 import { ATOM_PUT, atomKeyOf } from "./replicateAtoms.js";
 
-/** Applied here, then passed on to the other replicas unless it came from one. */
 export const receivePutAtom = ({
 	ctx,
 }: {

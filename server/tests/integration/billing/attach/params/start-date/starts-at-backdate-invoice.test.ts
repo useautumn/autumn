@@ -1,14 +1,3 @@
-/**
- * TDD test for backdated starts_at with invoice mode.
- *
- * Contract under test:
- *   New behaviors:
- *     - A paid recurring attach with invoice_mode and past starts_at creates a backdated Stripe subscription
- *     - Stripe owns the first invoice for the elapsed time and returns the hosted invoice URL when finalized
- *   Side effects:
- *     - Autumn customer_product is active, stores the past starts_at, and links to the created Stripe subscription
- */
-
 import { expect, test } from "bun:test";
 import { type AttachParamsV1Input, ms } from "@autumn/shared";
 import { items } from "@tests/utils/fixtures/items";

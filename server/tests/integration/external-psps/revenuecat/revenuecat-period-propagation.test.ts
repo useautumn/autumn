@@ -1,14 +1,3 @@
-/**
- * RevenueCat period and processor id must reach every copy of the plan, not just Postgres.
- *
- * Renewal webhook — Red (before): billing.updated for a renewal carried null current_period_start/end.
- *                   Green (after): it carries the renewed store period (ms).
- * Cached id — Red (before): the async processor id merge updated Postgres but not a cache built before it landed.
- *             Green (after): the id merge invalidates the cache, so the next read carries the id.
- * Cache race — Red (before): the id store's whole-processor cache patch landed after a renewal's, regressing the cached period.
- *              Green (after): processor writers invalidate instead of patching, so reads rebuild from Postgres.
- */
-
 import { afterAll, beforeAll, expect, test } from "bun:test";
 import type { ApiCustomerV5 } from "@autumn/shared";
 import { waitForBillingUpdatedWebhook } from "@tests/integration/billing/autumn-webhooks/utils/expectBillingUpdatedWebhook";
@@ -159,7 +148,6 @@ test.concurrent(
 			storeId: RC_STORE_ID,
 		});
 
-		// No mock RC client on the webhook, so the id lookup skips and the plan has no id yet.
 		expectWebhookSuccess(
 			await newRcClient().initialPurchase({
 				productId: RC_STORE_ID,
@@ -173,7 +161,6 @@ test.concurrent(
 		);
 		expect(cusProduct?.processor?.id).toBeFalsy();
 
-		// Build the cache while the id is still missing.
 		await autumnV2_2.customers.get(customerId);
 
 		const mock = mockRcCatalog({
@@ -199,9 +186,7 @@ test.concurrent(
 			appUserId: customerId,
 		});
 
-		// A normal read rebuilds the cache; it must now carry the id.
 		await autumnV2_2.customers.get(customerId);
-		// A routed customer is served from the worker's copy, never Redis; invalidation evicts that copy.
 		const cached = isBalanceWorkerRoute()
 			? await readBalanceWorkerSubject({ ctx, customerId })
 			: (
@@ -219,7 +204,6 @@ test.concurrent(
 	},
 );
 
-/** A ctx whose cusProduct cache patch parks until released, to force a late cache write. */
 const withParkedCachePatch = () => {
 	let markReached: () => void = () => {};
 	let release: () => void = () => {};
@@ -287,7 +271,6 @@ test.concurrent(
 		});
 		const parked = withParkedCachePatch();
 
-		// Id store merges {id, Jan} in Postgres, then parks before its cache write.
 		const idStore = storeRevenueCatProcessorId({
 			ctx: {
 				...ctx,
@@ -308,7 +291,6 @@ test.concurrent(
 		});
 		await Promise.race([parked.reached, idStore]);
 
-		// The renewal lands in between and moves the period to Feb.
 		await storeRevenueCatPeriod({
 			ctx,
 			customerProduct: cusProduct!,

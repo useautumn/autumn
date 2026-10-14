@@ -1,7 +1,6 @@
 import type { StreamRecord } from "../../../stream/types/streamConsumer.js";
 import type { CacheSubjectRef } from "../types/cacheSubjectRef.js";
 
-/** The subjects one record moved, at its offset: its entity if it has one, and always its customer, whose balances any change moves. */
 export const recordToCacheSubjects = ({
 	position,
 	record,
@@ -10,7 +9,6 @@ export const recordToCacheSubjects = ({
 		logOffset: position.offset,
 		oldestOccurredAt: record.command.occurredAt,
 	};
-	// An evict names no rows, so it may have replaced any entity's: the customer's version moves to its offset.
 	const isEvict = record.command.type === "evict";
 	const customer: CacheSubjectRef = {
 		...at,

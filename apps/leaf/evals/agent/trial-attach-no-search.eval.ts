@@ -22,8 +22,6 @@ export default defineEval({
 			"can u attach scale with a 2 week free trial to this customer",
 		);
 
-		// Turn 2 names a billing action against the customer the thread already
-		// identified, so it must reuse that id rather than re-find them.
 		attach.calledTool("autumn__attach", { status: "pending" });
 		attach.eventsSatisfy(
 			"the customer is never re-found by listing customers",

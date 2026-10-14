@@ -78,10 +78,8 @@ describe("F2: a write held by one replica alone is repaired", () => {
 			now: () => now,
 		});
 		connect({ replicas: [a, b] });
-		// Stored on a with its relay never sent (the process died before the outbox ran).
 		await storeOnly({ replica: a, customerId: "cus_1", readAt: 5_000 });
 
-		// a restarts on its volume a minute later; b's next pass pulls the row a alone holds.
 		now = 65_000;
 		await a.sync().catchUp();
 		await b.sync().pass();
@@ -134,7 +132,6 @@ describe("a replica cut off from a peer longer than the repair window", () => {
 			now: () => now,
 		});
 		const sync = b.sync();
-		// b sees only itself: a is cut off from it.
 		connect({ replicas: [b] });
 		now = 10_000;
 		await storeOnly({ replica: a, customerId: "cus_1", readAt: 10_000 });
@@ -142,7 +139,6 @@ describe("a replica cut off from a peer longer than the repair window", () => {
 		await sync.pass();
 		expect(await heldEverywhere(b)).toEqual([]);
 
-		// Back after longer than the repair window: a's write is older than any fixed window now.
 		now = 10_000 + ANTI_ENTROPY_WINDOW_MS + 5 * 60_000;
 		disconnect();
 		connect({ replicas: [a, b] });
@@ -263,7 +259,6 @@ describe("F8: the catch-up window is in apply time, not Autumn's read time", () 
 			now: () => now,
 		});
 		connect({ replicas: [a, b] });
-		// b holds a read at 100 s; a applies, later, a push Autumn read at 10 s (delayed > 60 s on its way).
 		await storeOnly({ replica: b, customerId: kept, readAt: 100_000 });
 		await storeOnly({ replica: a, customerId: kept, readAt: 100_000 });
 		now = 130_000;
@@ -335,7 +330,6 @@ describe("F11: what waits for a peer is bounded in bytes", () => {
 				path: "/v1/subjects.set",
 			});
 
-		// Four in flight, the rest waiting: 12 × 10 MB queued against a 64 MB budget drops the oldest waiting ones.
 		expect(counts.relayDropped).toBeGreaterThan(0);
 	});
 });
@@ -356,7 +350,6 @@ describe("catch-up window edge", () => {
 		connect({ replicas: [a, b] });
 		await storeOnly({ replica: b, customerId: kept, readAt: 100_000 });
 		await storeOnly({ replica: a, customerId: kept, readAt: 100_000 });
-		// b asks for the peer's writes in its last (downtime + hold + margin) ms; this one sits exactly on that edge.
 		now = 200_000;
 		const sync = b.sync();
 		const windowStart = 200_000 - (200_000 - 100_000 + 5 * 60_000 + 60_000);

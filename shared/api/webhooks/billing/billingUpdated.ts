@@ -1,10 +1,5 @@
 import { BillingChangeResponseSchema } from "../../billing/common/billingChangeResponse.js";
 
-/**
- * Webhook payload schema for `billing.updated`. Re-exports
- * `BillingChangeResponseSchema` so the public webhook contract stays
- * coupled to the same response shape the action layer produces.
- */
 export const BillingUpdatedSchema = BillingChangeResponseSchema.meta({
 	examples: [
 		{

@@ -43,8 +43,6 @@ export const pooledBalances = pgTable(
 		rollover_signature: text().notNull().default("none"),
 		customer_entitlement_id: text().notNull(),
 		last_applied_reset_at: numeric({ mode: "number" }),
-		/** Mirrors the synthetic cusEnt's expiry. Scopes uniqueness to live pools
-		 * so the same identity can be attached again afterwards. */
 		expires_at: numeric({ mode: "number" }),
 
 		created_at: numeric({ mode: "number" }).notNull().default(sqlNow),
@@ -66,9 +64,6 @@ export const pooledBalances = pgTable(
 			foreignColumns: [customerEntitlements.id],
 			name: "pooled_balances_customer_entitlement_fkey",
 		}).onDelete("restrict"),
-		// expires_at is part of the identity so an expired pool stops occupying the
-		// slot: NULLS NOT DISTINCT makes two live pools collide but never a live
-		// one with an expired one.
 		unique("unique_pooled_balance")
 			.on(
 				table.internal_customer_id,
@@ -160,7 +155,6 @@ export const pooledBalanceContributions = pgTable(
 		index("idx_pooled_balance_contributions_source_customer_entitlement")
 			.on(table.source_customer_entitlement_id)
 			.concurrently(),
-		// Shares with a change pending are few; the promote at reset updates only those.
 		index("idx_pooled_balance_contributions_pending")
 			.on(table.pooled_balance_id)
 			.where(sql`${table.effective_at} IS NOT NULL`)

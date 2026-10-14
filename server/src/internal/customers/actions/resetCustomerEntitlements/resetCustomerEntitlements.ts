@@ -8,12 +8,6 @@ import { getCusEntsNeedingReset } from "./getCusEntsNeedingReset.js";
 import { type ProcessResetResult, processReset } from "./processReset.js";
 import { processResetResultToResetCusEntParam } from "./processResetResultToResetCusEntParam.js";
 
-/**
- * Lazily resets customer entitlements that have passed their next_reset_at.
- * Uses an atomic Postgres function with per-row locking to prevent double-resets.
- * Mutates the FullCustomer in-memory using the latest DB state from applied resets.
- * Returns true if any entitlements were reset.
- */
 export const resetCustomerEntitlements = async ({
 	ctx,
 	fullCus,
@@ -28,8 +22,6 @@ export const resetCustomerEntitlements = async ({
 
 	const cusEntsNeedingReset = getCusEntsNeedingReset({ fullCus, now });
 
-	// cusEntsNeedingReset = [];
-
 	if (cusEntsNeedingReset.length === 0) return false;
 
 	try {
@@ -37,7 +29,6 @@ export const resetCustomerEntitlements = async ({
 			`[resetCustomerEntitlements] customer=${customerId}, cusEnts needing reset: ${cusEntsNeedingReset.length}`,
 		);
 
-		// 1. Compute all resets (pure computation, no DB writes)
 		const computed: Array<{
 			cusEntId: string;
 			result: ProcessResetResult;
@@ -51,7 +42,6 @@ export const resetCustomerEntitlements = async ({
 
 		if (computed.length === 0) return false;
 
-		// 2. Execute atomic DB writes via Postgres function
 		const resets = computed.map(({ cusEntId, result }) =>
 			processResetResultToResetCusEntParam({
 				customerEntitlementId: cusEntId,
@@ -65,10 +55,6 @@ export const resetCustomerEntitlements = async ({
 			`[resetCustomerEntitlements] customer=${customerId}, applied: ${Object.keys(applied).length}, skipped: ${skipped.length}`,
 		);
 
-		// 3. Apply computed reset values to in-memory FullCustomer.
-		// Both DB-applied and DB-skipped cusEnts get their in-memory state updated
-		// (skipped means another request already wrote the same values to DB).
-		// Rollover clearing only runs for DB-applied entries.
 		const clearingMap = await applyResetResults({
 			ctx,
 			fullCus,
@@ -76,9 +62,6 @@ export const resetCustomerEntitlements = async ({
 			skipped,
 		});
 
-		// 4. Update Redis cache atomically (fire-and-forget)
-		// Only needed when we actually wrote to DB — skipped means cache was
-		// already updated by the winning request.
 		if (Object.keys(applied).length > 0) {
 			const oldNextResetAts: Record<string, number> = {};
 			const customerEntitlementFeatureIds: Record<string, string> = {};
@@ -102,7 +85,6 @@ export const resetCustomerEntitlements = async ({
 				`[resetCustomerEntitlements] customer=${customerId}, Redis cache updated`,
 			);
 
-			// A new cycle may let reduced shares grow back; this request reads the re-fit shares too.
 			if (fullCus.balance_allocations) {
 				const { written } = await refreshAllocationScaleAfterWrite({
 					ctx,

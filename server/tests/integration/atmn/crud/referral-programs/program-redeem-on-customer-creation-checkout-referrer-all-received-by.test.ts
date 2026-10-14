@@ -1,9 +1,3 @@
-/**
- * atmn crud/referral programs — program [redeem_on: customer_creation, checkout, referrer, all] × [received_by: referrer, all]
- *
- * BLOCKED: no server piece in catalogV2.update yet. Leave as todo.
- */
-
 import { expect, test } from "bun:test";
 import {
 	configBody,

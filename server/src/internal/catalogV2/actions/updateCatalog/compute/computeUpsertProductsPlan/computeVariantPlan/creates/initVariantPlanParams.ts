@@ -32,7 +32,6 @@ const clonedLicenses = ({
 		removeLicenses: customize?.remove_licenses,
 	});
 
-/** Clone the folded base into a v1 create, then apply variants[].customize. */
 export const initVariantPlanParams = ({
 	variant,
 	baseFullProduct,
@@ -53,7 +52,6 @@ export const initVariantPlanParams = ({
 				items: basePlan.items,
 				free_trial: basePlan.free_trial,
 			};
-	// The overlay's billing controls win over the base's columns.
 	const billingControls =
 		variant.customize?.billing_controls ??
 		billingControlsFromColumns(baseFullProduct);

@@ -3,7 +3,6 @@ import { StatusCodes } from "http-status-codes";
 import type { InternalIdRefs } from "@/internal/catalogV2/actions/updateCatalog/setup/resolveInternalIdRefs";
 import type { ProductStatesContext } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext";
 
-/** The plan id each stated row of a family would carry after this update. */
 const statedIdsByFamily = ({
 	params,
 	internalIdRefs,
@@ -26,11 +25,6 @@ const statedIdsByFamily = ({
 	return byFamily;
 };
 
-/**
- * A plan id is a family name: every version carries it, and a rename moves
- * them all. One stated row leaving for a new id while any sibling — stated or
- * not — keeps the old one would split the family, which no write can express.
- */
 export const handlePlanFamilyErrors = ({
 	params,
 	internalIdRefs,

@@ -40,11 +40,6 @@ const parseRedisConnectionString = (raw: string): URL => {
 	return redisUrl;
 };
 
-/**
- * GET /admin/misc-redis-config
- * Full config in frontend-safe shape — never echoes encrypted connection
- * strings.
- */
 export const handleGetAdminMiscRedisConfig = createRoute({
 	scopes: [Scopes.Superuser],
 	handler: async (c) => {
@@ -72,11 +67,6 @@ export const handleGetAdminMiscRedisConfig = createRoute({
 	},
 });
 
-/**
- * POST /admin/misc-redis-config/ramp  body: { percent? }
- * Start the ramp toward the non-active instance (default 0% — invalidation
- * fan-out begins before traffic moves), or update the existing ramp's percent.
- */
 export const handleSetAdminMiscRedisRamp = createRoute({
 	scopes: [Scopes.Superuser],
 	body: z.object({
@@ -100,7 +90,6 @@ export const handleSetAdminMiscRedisRamp = createRoute({
 	},
 });
 
-/** DELETE /admin/misc-redis-config/ramp — instant rollback to activeInstance. */
 export const handleClearAdminMiscRedisRamp = createRoute({
 	scopes: [Scopes.Superuser],
 	handler: async (c) => {
@@ -111,13 +100,6 @@ export const handleClearAdminMiscRedisRamp = createRoute({
 	},
 });
 
-/**
- * PATCH /admin/misc-redis-config/backup
- * body: { publicConnectionString, privateConnectionString? }
- * Accepts PLAINTEXT redis:// or rediss:// URIs — the always-reachable public
- * endpoint plus an optional private/VPC endpoint ECS prefers. Validates,
- * encrypts, persists. Refused while the backup instance is live.
- */
 export const handleUpsertAdminMiscRedisBackup = createRoute({
 	scopes: [Scopes.Superuser],
 	body: z.object({
@@ -147,7 +129,6 @@ export const handleUpsertAdminMiscRedisBackup = createRoute({
 	},
 });
 
-/** DELETE /admin/misc-redis-config/backup */
 export const handleDeleteAdminMiscRedisBackup = createRoute({
 	scopes: [Scopes.Superuser],
 	handler: async (c) => {

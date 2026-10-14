@@ -25,7 +25,6 @@ export const fetchStripeSubscriptionScheduleForBilling = async ({
 
 	const product: Product | undefined = products[0];
 
-	// 1. If we have a subscription schedule ID, just retrieve that
 	if (subscriptionScheduleId) {
 		const schedule = await getStripeActiveSubscriptionSchedule({
 			stripeClient: stripeCli,
@@ -34,7 +33,6 @@ export const fetchStripeSubscriptionScheduleForBilling = async ({
 		return schedule;
 	}
 
-	// 2. If we have a target cus product ID, get the subscription ID from that
 	const cusProductWithSchedule = getTargetSubscriptionScheduleCusProduct({
 		fullCus,
 		productId: product?.id,

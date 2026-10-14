@@ -57,7 +57,6 @@ const result = (
 	minute = 0,
 ) => ({ run_id, file, status, attempt, created_at: at(minute) });
 
-/** Minimal pre-0011 tables in a throwaway schema; the 0011 migration file then runs against them. */
 const withSchema = async (
 	fn: (client: postgres.Sql) => Promise<void>,
 ): Promise<void> => {
@@ -111,7 +110,6 @@ test.skipIf(!testDatabaseUrl)(
 				{ sha: D2, branch: "dev", created_at: at(20) },
 			])}`;
 			await client`insert into runs ${client([
-				// Scheduled baseline; nothing finished before it, so its 1 failure has no reference.
 				run({
 					id: "b1_scheduled",
 					status: "failed",
@@ -120,7 +118,6 @@ test.skipIf(!testDatabaseUrl)(
 					created_at: at(1),
 					finished_at: at(5),
 				}),
-				// Manual full suite at dev HEAD (D1 newest at t10): a baseline; `a` newly fails.
 				run({
 					id: "m1_full_head",
 					status: "failed",
@@ -128,7 +125,6 @@ test.skipIf(!testDatabaseUrl)(
 					created_at: at(10),
 					finished_at: at(15),
 				}),
-				// Pinned to D1 after D2 landed: not HEAD, not a baseline.
 				run({
 					id: "m2_full_stale",
 					pinned_sha: true,
@@ -137,7 +133,6 @@ test.skipIf(!testDatabaseUrl)(
 					created_at: at(25),
 					finished_at: at(30),
 				}),
-				// A subset of dev at HEAD: not a baseline.
 				run({
 					id: "m3_subset",
 					selection: { groups: ["core"] },
@@ -147,7 +142,6 @@ test.skipIf(!testDatabaseUrl)(
 					created_at: at(11),
 					finished_at: at(12),
 				}),
-				// Grep over everything is still a subset.
 				run({
 					id: "m4_grep",
 					selection: { groups: ["all"], grep: "attach" },
@@ -219,10 +213,8 @@ test.skipIf(!testDatabaseUrl)(
 			expect(await flags(client)).toEqual({
 				b1_scheduled: [true, null],
 				f0_before_any: [false, null],
-				// vs m1: `a` was already failing there; `d` is new.
 				f1_branch: [false, 1],
 				f2_green: [false, 0],
-				// vs b1: `a` passed there, `b` already failed.
 				m1_full_head: [true, 1],
 				m2_full_stale: [false, 0],
 				m3_subset: [false, 0],
@@ -293,7 +285,6 @@ test.skipIf(!testDatabaseUrl)(
 
 			await recordNewFailures({ ctx, runId: "branch_run" });
 
-			// `b` already failed in `baseline`; `a` and `e` are new. later_baseline finished after the run.
 			expect((await flags(client)).branch_run).toEqual([false, 2]);
 		});
 	},

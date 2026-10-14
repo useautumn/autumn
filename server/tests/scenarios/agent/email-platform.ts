@@ -31,17 +31,11 @@ import {
 	seedCustomersWithEntities,
 } from "../seedUtils";
 
-// ── Email platform seed config ──
-// Modeled loosely on Resend's pricing with deliberately tweaked numbers and
-// renamed feature flags so it is NOT an accurate mirror. Transactional plans have
-// NO base price: email volume is a prepaid item (volume-priced tiers) plus a
-// consumable overage. AI credits are a credit system.
-// Defaults for `bun scenario ep`; CLI flags override (e.g. `--count 1000`).
 const EP_SEED = {
-	customerCount: 0, // 0 = catalog only (features + plans, no customers)
+	customerCount: 0,
 	concurrency: 10,
 	attachPlan: null as "free" | "enterprise" | null,
-	clear: true, // wipe org before seeding; --skip-clear keeps existing
+	clear: true,
 };
 
 export const emailPlatformFeatureIds = {
@@ -77,7 +71,6 @@ export const emailPlatformPlanIds = {
 	scale: "scale",
 } as const;
 
-// Boolean flags shared by every plan ("all plans include ...").
 const sharedBooleanFeatureIds = [
 	emailPlatformFeatureIds.sending_receiving,
 	emailPlatformFeatureIds.smtp_relay,
@@ -89,7 +82,6 @@ const sharedBooleanFeatureIds = [
 	emailPlatformFeatureIds.scoped_api_keys,
 ] as const;
 
-// Tier-specific boolean flags.
 const tieredBooleanFeatureIds = [
 	emailPlatformFeatureIds.ticket_support,
 	emailPlatformFeatureIds.slack_support,
@@ -148,8 +140,6 @@ const booleanItems = (featureIds: readonly EmailPlatformFeatureId[]) =>
 
 type VolumeTier = { amount: number; to: number | "inf"; flat_amount: number };
 
-// Prepaid email volume (whole purchased quantity billed at the tier flat amount)
-// plus a per-1k consumable overage for sends beyond the purchased volume.
 const emailItems = ({
 	tiers,
 	overagePerThousand,
@@ -171,7 +161,6 @@ const emailItems = ({
 	}),
 ];
 
-// 10k automation runs included, then per-run overage.
 const automationItems = () => [
 	items.consumable({
 		featureId: emailPlatformFeatureIds.automation_runs,
@@ -197,7 +186,6 @@ const scaleEmailTiers: VolumeTier[] = [
 	{ amount: 0, to: "inf", flat_amount: 1_500 },
 ];
 
-// Marketing is capped by contacts, not emails: prepaid contact tiers, no overage.
 const marketingContactTiers: VolumeTier[] = [
 	{ amount: 0, to: 5_000, flat_amount: 40 },
 	{ amount: 0, to: 10_000, flat_amount: 80 },
@@ -362,7 +350,6 @@ export const buildEmailPlatformProducts = () => {
 	] as const;
 
 	const plans = {
-		// Free: fixed allowances, daily-limited, no overage on automations.
 		free: products.base({
 			id: p.free,
 			items: [
@@ -373,7 +360,6 @@ export const buildEmailPlatformProducts = () => {
 				...booleanItems(freeBooleans),
 			],
 		}),
-		// Pro/Scale: NO base price — email volume is the prepaid item.
 		pro: products.base({
 			id: p.pro,
 			items: [
@@ -394,7 +380,6 @@ export const buildEmailPlatformProducts = () => {
 				...booleanItems(scaleBooleans),
 			],
 		}),
-		// Marketing: capped by contacts (prepaid tiers), not email volume.
 		proMarketing: products.base({
 			id: p.proMarketing,
 			items: [
@@ -409,7 +394,6 @@ export const buildEmailPlatformProducts = () => {
 				...booleanItems([...sharedBooleanFeatureIds, f.no_daily_limit]),
 			],
 		}),
-		// Enterprise: custom, no base price, flexible everything.
 		enterprise: products.base({
 			id: p.enterprise,
 			items: [
@@ -497,7 +481,6 @@ export const initEmailPlatformScenario = async ({
 	};
 };
 
-/** Return a copy of a plan with a card-required free trial, for trialing-state scenarios. */
 export const withFreeTrial = ({
 	product,
 	trialDays,
@@ -604,9 +587,6 @@ export const runEmailPlatformSeed = async () => {
 		await clearOrg({
 			orgSlug: process.env.TESTS_ORG,
 			env: AppEnv.Sandbox,
-			// Reset the Stripe account by default so stale usage meters don't
-			// collide on re-seed; pass --skip-stripe-reset to keep them (faster).
-			// skipStripeReset: process.argv.includes("--skip-stripe-reset"),
 			skipStripeReset: true,
 		});
 	}

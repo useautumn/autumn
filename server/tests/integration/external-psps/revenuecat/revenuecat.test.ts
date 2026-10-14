@@ -1,17 +1,3 @@
-/**
- * RevenueCat Integration Tests
- *
- * Migrated from:
- * - server/tests/integration/external-psps/revenuecat/revenuecat-webhooks.test.ts
- * - server/tests/integration/external-psps/revenuecat/revenuecat-migration.test.ts
- *
- * Tests RevenueCat webhook handling and customer migration:
- * - Initial purchase, renewal, upgrade/downgrade
- * - Cancellation, uncancellation, billing issues, expiration
- * - Non-renewing (one-off) purchases
- * - Product version migration
- */
-
 import { expect, test } from "bun:test";
 import {
 	type ApiCustomerV3,
@@ -89,11 +75,6 @@ const setupRevenueCatOrg = async () => {
 	}
 };
 
-// This test reuses fixed customer + transaction ids. RC invoices upsert by stripe_id
-// WITHOUT repointing internal_customer_id, so a prior run leaves orphaned invoice rows
-// that make the freshly-created customer read 0 invoices. Clear those by stripe_id, and
-// bust the customers' cached full-customer entries so the re-created customers are clean
-// (s.deleteCustomer + s.customer in setup handle the DB rows).
 const INVOICE_TEST_CUSTOMER_IDS = [
 	"rc-invoices-1",
 	"rc-invoices-nonrenewing-1",
@@ -118,26 +99,15 @@ const clearInvoiceTestData = async () => {
 	}
 };
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 1: RevenueCat webhook lifecycle (purchase, upgrade, cancel, expire, add-on)
-// (from revenuecat-webhooks.test.ts)
-//
-// Scenario:
-// - Pro Monthly, Pro Yearly, and Add-on products
-// - Initial purchase → upgrade → downgrade → cancel → uncancel → billing issue → expire → add-on
-// ═══════════════════════════════════════════════════════════════════════════════
-
 test.concurrent(
 	`${chalk.yellowBright("revenuecat 1: webhook lifecycle")}`,
 	async () => {
 		const customerId = "rc-webhook-1";
 
-		// RevenueCat product IDs
 		const RC_PRO_MONTHLY_ID = "com.app.rc1_pro_monthly";
 		const RC_PRO_YEARLY_ID = "com.app.rc1_pro_yearly";
 		const RC_ADD_ON_ID = "com.app.rc1_add_on_pack";
 
-		// Autumn products
 		const proMonthly = rcProMonthly();
 		const proYearly = rcProYearly();
 		const addOnPack = products.base({
@@ -146,10 +116,8 @@ test.concurrent(
 			isAddOn: true,
 		});
 
-		// Setup org with RevenueCat config
 		await setupRevenueCatOrg();
 
-		// Initialize scenario
 		const { autumnV1 } = await initScenario({
 			customerId,
 			setup: [
@@ -159,7 +127,6 @@ test.concurrent(
 			actions: [],
 		});
 
-		// Create RC mappings
 		await Promise.all([
 			RCMappingService.upsert({
 				db: ctx.db,
@@ -196,14 +163,12 @@ test.concurrent(
 			webhookSecret: RC_WEBHOOK_SECRET,
 		});
 
-		// Get internal customer ID
 		const dbCustomer = await ctx.db.query.customers.findFirst({
 			where: eq(customers.id, customerId),
 		});
 		expect(dbCustomer).toBeDefined();
 		const internalCustomerId = dbCustomer!.internal_id;
 
-		// Helper to fetch latest active cus_product
 		const fetchLatestActiveCusProductId = async () => {
 			const cusProducts = await CusProductService.list({
 				db: ctx.db,
@@ -217,7 +182,6 @@ test.concurrent(
 			return sorted[sorted.length - 1]!.id;
 		};
 
-		// 1. Initial Purchase - Pro Monthly
 		let result = await rcClient.initialPurchase({
 			productId: RC_PRO_MONTHLY_ID,
 			appUserId: customerId,
@@ -230,7 +194,6 @@ test.concurrent(
 		expect(customer.products[0].id).toBe(proMonthly.id);
 		let baselineCusProductId = await fetchLatestActiveCusProductId();
 
-		// 2. Upgrade to Pro Yearly (via renewal)
 		result = await rcClient.renewal({
 			productId: RC_PRO_YEARLY_ID,
 			appUserId: customerId,
@@ -242,7 +205,6 @@ test.concurrent(
 		expect(customer.products).toHaveLength(1);
 		expect(customer.products[0].id).toBe(proYearly.id);
 
-		// 3. Downgrade to Pro Monthly (via initial purchase)
 		result = await rcClient.initialPurchase({
 			productId: RC_PRO_MONTHLY_ID,
 			appUserId: customerId,
@@ -258,7 +220,6 @@ test.concurrent(
 		expect(newCusProductId).not.toBe(baselineCusProductId);
 		baselineCusProductId = newCusProductId;
 
-		// 4. Cancellation
 		result = await rcClient.cancellation({
 			productId: RC_PRO_MONTHLY_ID,
 			appUserId: customerId,
@@ -275,7 +236,6 @@ test.concurrent(
 			Math.abs(Date.now() - (customer.products[0].canceled_at ?? 0)),
 		).toBeLessThanOrEqual(3000);
 
-		// 5. Uncancellation
 		result = await rcClient.uncancellation({
 			productId: RC_PRO_MONTHLY_ID,
 			appUserId: customerId,
@@ -286,7 +246,6 @@ test.concurrent(
 		expect(customer.products).toHaveLength(1);
 		expect(customer.products[0].canceled_at).toBeNull();
 
-		// 6. Billing Issue
 		result = await rcClient.billingIssue({
 			productId: RC_PRO_MONTHLY_ID,
 			appUserId: customerId,
@@ -298,7 +257,6 @@ test.concurrent(
 		expect(customer.products).toHaveLength(1);
 		expect(String(customer.products[0].status)).toBe("past_due");
 
-		// 7. Expiration
 		result = await rcClient.expiration({
 			productId: RC_PRO_MONTHLY_ID,
 			appUserId: customerId,
@@ -309,7 +267,6 @@ test.concurrent(
 		customer = await autumnV1.customers.get(customerId);
 		expect(customer.products).toHaveLength(0);
 
-		// 8. Non-renewing purchase (add-on after expiration)
 		result = await rcClient.nonRenewingPurchase({
 			productId: RC_ADD_ON_ID,
 			appUserId: customerId,
@@ -323,34 +280,20 @@ test.concurrent(
 	},
 );
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 2: RevenueCat customer migration (v1 to v2 product version)
-// (from revenuecat-migration.test.ts)
-//
-// Scenario:
-// - Customer purchases Pro Monthly v1 via RevenueCat
-// - Product is updated to v2 with increased usage
-// - Customer is migrated from v1 to v2 via a v2 update_plan migration,
-//   preserving usage and the RevenueCat processor
-// ═══════════════════════════════════════════════════════════════════════════════
-
 test.concurrent(
 	`${chalk.yellowBright("revenuecat 2: customer migration v1 to v2")}`,
 	async () => {
 		const customerId = "rc-migration-1";
 		const RC_PRO_MONTHLY_ID = "com.app.rc_migration_pro_monthly";
 
-		// Pro Monthly v1
 		const messagesItem = items.monthlyMessages({ includedUsage: 1000 });
 		const proMonthly = products.pro({
 			id: "pro-monthly",
 			items: [messagesItem],
 		});
 
-		// Setup org with RevenueCat config
 		await setupRevenueCatOrg();
 
-		// Initialize scenario
 		const { autumnV1, autumnV2_2 } = await initScenario({
 			customerId,
 			setup: [
@@ -360,7 +303,6 @@ test.concurrent(
 			actions: [],
 		});
 
-		// Create RC mapping
 		await RCMappingService.upsert({
 			db: ctx.db,
 			data: {
@@ -377,14 +319,12 @@ test.concurrent(
 			webhookSecret: RC_WEBHOOK_SECRET,
 		});
 
-		// Get internal customer ID
 		const dbCustomer = await ctx.db.query.customers.findFirst({
 			where: eq(customers.id, customerId),
 		});
 		expect(dbCustomer).toBeDefined();
 		const internalCustomerId = dbCustomer!.internal_id;
 
-		// 1. Initial purchase via RevenueCat
 		const result = await rcClient.initialPurchase({
 			productId: RC_PRO_MONTHLY_ID,
 			appUserId: customerId,
@@ -396,7 +336,6 @@ test.concurrent(
 		expect(customer.products).toHaveLength(1);
 		expect(customer.products[0].id).toBe(proMonthly.id);
 
-		// Verify cus_product has RevenueCat processor
 		const cusProducts = await CusProductService.list({
 			db: ctx.db,
 			internalCustomerId,
@@ -404,10 +343,8 @@ test.concurrent(
 		});
 		expect(cusProducts).toHaveLength(1);
 		expect(cusProducts[0].processor?.type).toBe(ProcessorType.RevenueCat);
-		// An uncustomized RC purchase must stay eligible for version migrations
 		expect(cusProducts[0].is_custom).toBe(false);
 
-		// 2. Update product to v2 with increased usage
 		await autumnV1.products.update(proMonthly.id, {
 			items: [
 				items.monthlyMessages({ includedUsage: 2000 }),
@@ -415,7 +352,6 @@ test.concurrent(
 			],
 		});
 
-		// 3. Track some usage before migration
 		await autumnV1.track({
 			customer_id: customerId,
 			value: 500,
@@ -423,7 +359,6 @@ test.concurrent(
 		});
 		await timeout(2000);
 
-		// 4. Run migration
 		await runUpdatePlanMigration({
 			ctx,
 			migrationClient: autumnV2_2,
@@ -450,7 +385,6 @@ test.concurrent(
 			},
 		});
 
-		// 5. Verify migration succeeded
 		customer = await autumnV1.customers.get(customerId);
 		expect(customer.products).toHaveLength(1);
 		expect(customer.products[0].id).toBe(proMonthly.id);
@@ -467,7 +401,6 @@ test.concurrent(
 		);
 		expect(migratedCusProducts[0].processor).toEqual(cusProducts[0].processor);
 
-		// Verify features reflect v2 (2000 included) with 500 usage
 		const proMonthlyV2 = {
 			...proMonthly,
 			version: 2,
@@ -490,38 +423,9 @@ test.concurrent(
 	},
 );
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 3: RevenueCat invoice rows
-//
-// Contract under test:
-//   New behaviors:
-//     - INITIAL_PURCHASE event ⇒ INSERT invoices row with
-//         { stripe_id: transaction_id, processor_type: "revenuecat",
-//           status: "paid", total: price, amount_paid: price,
-//           refunded_amount: 0, currency, items: [], discounts: [] }
-//     - RENEWAL with new transaction_id ⇒ INSERT another row
-//     - NON_RENEWING_PURCHASE ⇒ INSERT same shape as INITIAL_PURCHASE
-//     - CANCELLATION + cancel_reason="CUSTOMER_SUPPORT" (or price<0) ⇒
-//         UPDATE matching row SET refunded_amount = total
-//     - CANCELLATION without refund signal ⇒ existing row unchanged
-//   Side effects:
-//     - DB: invoices rows
-//     - Cache: invalidated (deleteCachedFullCustomer + invalidateCachedFullSubject)
-//     - NO Stripe API calls; NO Lua patch
-//   Wire round-trip:
-//     - autumnV1.customers.get<ApiCustomerV3>(id).invoices contains the RC invoice
-//       with stripe_id == transaction_id, total == price, currency, status=paid.
-//     - autumnV2_1.customers.get<ApiCustomerV5>(id, { expand:["invoices"] }).invoices
-//       additionally exposes processor_type === "revenuecat".
-//     - Direct DB read (CusService.getFull with expand=invoices) confirms
-//       processor_type stored as "revenuecat".
-// ═══════════════════════════════════════════════════════════════════════════════
-
 test.concurrent(
 	`${chalk.yellowBright("revenuecat 3: writes invoice rows for INITIAL_PURCHASE / RENEWAL / NON_RENEWING_PURCHASE, refunds existing invoice for CANCELLATION-as-refund")}`,
 	async () => {
-		// Clear stale invoices/customers from prior runs (fixed ids + invoice
-		// upsert-by-stripe_id leave orphans that otherwise make this read 0 invoices).
 		await clearInvoiceTestData();
 
 		const customerId = "rc-invoices-1";
@@ -552,7 +456,6 @@ test.concurrent(
 			actions: [],
 		});
 
-		// Initialize the second (non-renewing) customer in the same scenario context
 		await initScenario({
 			customerId: nonRenewingCustomerId,
 			setup: [
@@ -589,12 +492,8 @@ test.concurrent(
 			webhookSecret: RC_WEBHOOK_SECRET,
 		});
 
-		// ─── Assertion 1: INITIAL_PURCHASE writes an invoice row ────────────────
 		const initialTxId = "rc3_tx_initial_001";
 		const initialPrice = 9.99;
-		// RevenueCat's `price` is normalized to USD; `currency` describes the
-		// purchase currency only. A non-USD purchase must still record total in
-		// USD with currency "usd" (regression: INR-labeled USD amounts).
 		const initialCurrency = "inr";
 		const initialPurchasedAt = Date.now();
 
@@ -620,7 +519,6 @@ test.concurrent(
 		expect(initialInvoiceV1.currency).toBe("usd");
 		expect(initialInvoiceV1.status).toBe("paid");
 
-		// V5 fetch exposes processor_type
 		const v5Customer = await autumnV2_1.customers.get<ApiCustomerV5>(
 			customerId,
 			{
@@ -642,7 +540,6 @@ test.concurrent(
 			.where(eq(invoices.stripe_id, initialTxId));
 		expect(initialInvoiceRow?.paidAt).toBe(initialPurchasedAt);
 
-		// ─── Assertion 2: RENEWAL with new transaction_id writes a second row ──
 		const renewalTxId = "rc3_tx_renewal_002";
 		const renewalPrice = 9.99;
 
@@ -667,7 +564,6 @@ test.concurrent(
 		expect(renewalInvoice!.total).toBe(renewalPrice);
 		expect(renewalInvoice!.status).toBe("paid");
 
-		// ─── Assertion 3: NON_RENEWING_PURCHASE on a different customer ────────
 		const nonRenewingTxId = "rc3_tx_nonrenewing_001";
 		const nonRenewingPrice = 4.99;
 
@@ -693,7 +589,6 @@ test.concurrent(
 		expect(nrInvoice.total).toBe(nonRenewingPrice);
 		expect(nrInvoice.status).toBe("paid");
 
-		// ─── Assertion 4: CANCELLATION without refund signal — invoice unchanged
 		expectWebhookSuccess(
 			await rcClient.cancellation({
 				productId: RC_PRO_MONTHLY_ID,
@@ -712,8 +607,6 @@ test.concurrent(
 		expect(renewalRowAfterPlainCancel).toBeDefined();
 		expect(Number(renewalRowAfterPlainCancel!.refunded_amount)).toBe(0);
 
-		// Also reactivate the cus_product so a second cancellation refund can fire
-		// (the previous CANCELLATION marked it cancelled; uncancellation reactivates).
 		expectWebhookSuccess(
 			await rcClient.uncancellation({
 				productId: RC_PRO_MONTHLY_ID,
@@ -722,7 +615,6 @@ test.concurrent(
 			}),
 		);
 
-		// ─── Assertion 5: CANCELLATION with cancel_reason CUSTOMER_SUPPORT bumps refund
 		expectWebhookSuccess(
 			await rcClient.cancellation({
 				productId: RC_PRO_MONTHLY_ID,
@@ -742,13 +634,11 @@ test.concurrent(
 		expect(Number(renewalRowAfterRefund!.refunded_amount)).toBe(renewalPrice);
 		expect(Number(renewalRowAfterRefund!.total)).toBe(renewalPrice);
 
-		// ─── Assertion 6: V1 fetch returns RC invoices with stripe_id populated ─
 		v1Customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 		const v1TxIds = v1Customer.invoices!.map((inv) => inv.stripe_id).sort();
 		expect(v1TxIds).toContain(initialTxId);
 		expect(v1TxIds).toContain(renewalTxId);
 
-		// ─── Assertion 7: Direct DB read confirms processor_type = "revenuecat"
 		const fullCustomer = await CusService.getFull({
 			ctx,
 			idOrInternalId: customerId,
@@ -769,15 +659,6 @@ test.concurrent(
 		await clearInvoiceTestData();
 	},
 );
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 4: RENEWAL on a product that is BOTH cancelled AND past due
-//
-// handleRenewal branches on status and only one branch runs, so PastDue matches
-// before the reactivation branch and a cancelled + past-due product took
-// markActive (status only), keeping canceled/canceled_at/ended_at from the
-// earlier CANCELLATION.
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(
 	`${chalk.yellowBright("revenuecat 4: renewal on cancelled + past due product clears cancellation")}`,
@@ -839,7 +720,6 @@ test.concurrent(
 			return customerProduct!;
 		};
 
-		// ─── 1. Initial purchase establishes the cus_product ───────────────────
 		expectWebhookSuccess(
 			await rcClient.initialPurchase({
 				productId: RC_PRO_MONTHLY_ID,
@@ -848,7 +728,6 @@ test.concurrent(
 			}),
 		);
 
-		// ─── 2. Cancellation sets canceled + a future ended_at ─────────────────
 		const expirationAtMs = Date.now() + 1000 * 60 * 60 * 24 * 30;
 
 		expectWebhookSuccess(
@@ -865,7 +744,6 @@ test.concurrent(
 		expect(afterCancellation.canceled_at).not.toBeNull();
 		expect(afterCancellation.ended_at).toBe(expirationAtMs);
 
-		// ─── 3. Billing issue flips it past due; cancellation fields survive ───
 		expectWebhookSuccess(
 			await rcClient.billingIssue({
 				productId: RC_PRO_MONTHLY_ID,
@@ -878,7 +756,6 @@ test.concurrent(
 		expect(afterBillingIssue.status).toBe(CusProductStatus.PastDue);
 		expect(afterBillingIssue.canceled).toBe(true);
 
-		// ─── 4. Renewal must recover the status AND clear the cancellation ─────
 		expectWebhookSuccess(
 			await rcClient.renewal({
 				productId: RC_PRO_MONTHLY_ID,

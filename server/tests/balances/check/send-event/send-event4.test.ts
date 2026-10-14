@@ -10,7 +10,6 @@ import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js"
 import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
 import { getCreditCost } from "../../../../src/internal/features/creditSystemUtils";
 
-// UNCOMMENT FROM HERE
 const pro = constructProduct({
 	type: "free",
 	isDefault: false,

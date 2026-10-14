@@ -22,12 +22,6 @@ const CancelMigrationRunBody = z.object({
 	id: z.string(),
 });
 
-/** POST /migrations.cancel_run — request cancellation of the active
- *  migration_run for a migration, if any. Sets a cache token so in-flight
- *  items finish but no new items start. Lazy runs are marked `canceled`
- *  immediately (and the org cache cleared) so no further per-customer tasks
- *  are enqueued; batch runs settle to `canceled` once their runner drains.
- *  Errors if no active run exists. */
 export const handleCancelMigrationRun = createRoute({
 	scopes: [Scopes.Migrations.Write],
 	body: CancelMigrationRunBody,
@@ -57,10 +51,6 @@ export const handleCancelMigrationRun = createRoute({
 			migrationRunId: activeRun.internal_id,
 		});
 
-		// Trigger-dispatched runs: kill the task, then settle the row — but only
-		// once the platform confirms it stopped (a settled row releases the run
-		// claim, so a still-live task must never be left behind it). Runs with
-		// no trigger handle keep the cooperative flag-only behavior.
 		if (
 			!activeRun.lazy_run &&
 			activeRun.trigger_run_id &&
@@ -87,8 +77,6 @@ export const handleCancelMigrationRun = createRoute({
 						finished_at: Date.now(),
 					},
 				});
-				// A stopped task will never drain its claims; release them so
-				// the live-item mutex stops blocking other migrations.
 				await settleLeftoverClaims({
 					ctx,
 					migrationRunId: activeRun.internal_id,
@@ -96,11 +84,6 @@ export const handleCancelMigrationRun = createRoute({
 			}
 		}
 
-		// Lazy runs have no batch loop to drain. Mark them canceled now and clear
-		// the org cache so `pendingMigrations` drops this run and the customer
-		// hot path stops enqueuing per-customer tasks. Batch runs are settled to
-		// `canceled` by their own runner (withMigrationRunTracking) after the
-		// in-flight items finish.
 		if (activeRun.lazy_run) {
 			await migrationRunRepo.update({
 				ctx,

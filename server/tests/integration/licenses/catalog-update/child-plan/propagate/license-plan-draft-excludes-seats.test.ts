@@ -1,19 +1,3 @@
-/**
- * A license plan's own migration must not target seat assignments.
- *
- * Seats live on the license plan as customer products, so the versioning usage
- * query counts them as its customers and a draft is built scoped directly at
- * the plan. But operationScopeSql excludes any row carrying a
- * customer_license_link_id — seats are reached through the parent's
- * upsert_licenses instead — so that op matches nothing and the run reports
- * "No changes".
- *
- * Red-failure mode (current behavior):
- *  - two drafts are created; the license-plan one runs and skips every customer
- *
- * Green-success criteria (after fix):
- *  - only the parent draft is created, and running it moves the assignments
- */
 import { expect, test } from "bun:test";
 import { customerEntitlements, migrationItemRuns } from "@autumn/shared";
 import { setupLicenseUpdateScenario } from "@tests/integration/licenses/billing/update/setupLicenseUpdateScenario";
@@ -54,8 +38,6 @@ test(`${chalk.yellowBright("plans.update: a license plan drafts no migration for
 	);
 	expect(liveAssignments).toHaveLength(2);
 
-	// Drop messages and shrink words in one edit — the shape that produced both
-	// a delete and an update on the same migration.
 	const response = await autumnV2_3.post("/plans.update", {
 		plan_id: devSeat.id,
 		items: [itemsV2.monthlyWords({ included: NEW_WORDS })],
@@ -64,7 +46,6 @@ test(`${chalk.yellowBright("plans.update: a license plan drafts no migration for
 		migration: { draft: true },
 	});
 
-	// ── Only the parent is worth migrating ─────────────────────────────
 	const drafts = response.migrations ?? [];
 	const planIdsOf = (filter: unknown): string[] => {
 		const matcher = (filter as { plan_id?: unknown })?.plan_id;
@@ -83,7 +64,6 @@ test(`${chalk.yellowBright("plans.update: a license plan drafts no migration for
 	expect(targeted).not.toContain(devSeat.id);
 	expect(targeted).toContain(parent.id);
 
-	// ── Running every draft actually moves the assignments ─────────────
 	for (const entry of drafts as { id: string }[]) {
 		const [row] = await migrationRepo.get({ ctx, id: entry.id });
 		if (!row) continue;
@@ -114,7 +94,6 @@ test(`${chalk.yellowBright("plans.update: a license plan drafts no migration for
 			),
 		);
 
-	// messages was dropped; words shrank to the new allowance.
 	expect(
 		rows.filter((row) => row.featureId === TestFeature.Messages),
 	).toHaveLength(0);

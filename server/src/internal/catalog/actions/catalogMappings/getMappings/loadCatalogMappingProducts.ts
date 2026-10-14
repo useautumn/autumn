@@ -2,10 +2,6 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { getActiveProducts } from "@/internal/products/productUtils.js";
 
-// Derives the latest versions from the all-versions read rather than calling
-// listFull again: that second call hits the 24h products cache, which serves a
-// stale `processor` (and so drops Stripe product aliases) after any write that
-// bypasses invalidateProductsCache.
 export const loadCatalogMappingProducts = async ({
 	ctx,
 }: {
@@ -20,8 +16,6 @@ export const loadCatalogMappingProducts = async ({
 		returnAll: true,
 	});
 
-	// Archived is filtered AFTER picking the latest version, matching
-	// listFull({ archived: false }).
 	const latestProducts = getActiveProducts(everyVersion).filter(
 		(product) => !product.archived,
 	);

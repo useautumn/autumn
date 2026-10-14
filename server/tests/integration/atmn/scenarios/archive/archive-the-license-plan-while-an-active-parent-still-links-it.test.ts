@@ -1,11 +1,3 @@
-/**
- * atmn scenarios/archive — archive the license plan while an active parent still links it → server refuses, error surfaced
- *
- * one push carries the whole batch, so restore order must not matter
- *
- * One line of plans/atmn-v3/07_tests.md. [a, b] is a matrix looped INSIDE this file.
- */
-
 import { expect, test } from "bun:test";
 import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 import {
@@ -33,11 +25,6 @@ test.concurrent(
 		try {
 			await scenario.push();
 
-			// A push states the whole plans collection, so the still-active parent
-			// must be restated too or it is removed outright rather than left
-			// alone; restating its license link while seat archives in the same
-			// call trips the link-time guard first — still the server refusing an
-			// active plan pointing at an archived license plan.
 			scenario.writeConfig(
 				atmnConfigSource({
 					body: `{

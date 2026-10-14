@@ -14,22 +14,13 @@ import {
 
 interface PullViewProps {
 	onComplete?: () => void;
-	/** Environment to pull from */
 	environment?: AppEnv;
-	/** Force overwrite config (skip in-place update) */
 	forceOverwrite?: boolean;
-	/** Working directory for file operations */
 	cwd?: string;
-	/** Skip generating @useautumn-sdk.d.ts */
 	noDeclarationFile?: boolean;
-	/** Pull every historical plan version */
 	allVersions?: boolean;
 }
 
-/**
- * Beautiful pull command UI with progressive rendering
- * Pure rendering component - all logic is in usePull hook
- */
 export function PullView({
 	onComplete,
 	environment = AppEnv.Sandbox,
@@ -75,10 +66,8 @@ export function PullView({
 	return (
 		<CardWidthProvider>
 			<Box flexDirection="column" marginBottom={1}>
-				{/* Header */}
 				<Card title="🍂 Pulling from Autumn" />
 
-				{/* Organization Card */}
 				{isOrgLoading ? (
 					<Card title="📦 Organization">
 						<LoadingText text="Fetching..." />
@@ -90,7 +79,6 @@ export function PullView({
 					</Card>
 				) : null}
 
-				{/* Features Card */}
 				{!isOrgLoading && (
 					<Card
 						title={`🎯 Features${features.length > 0 ? ` (${features.length})` : ""}`}
@@ -110,7 +98,6 @@ export function PullView({
 					</Card>
 				)}
 
-				{/* Plans Card */}
 				{!isOrgLoading && (
 					<Card
 						title={`📋 Plans${plans.length > 0 ? ` (${plans.length})` : ""}`}
@@ -133,7 +120,6 @@ export function PullView({
 					</Card>
 				)}
 
-				{/* Generated Files Card */}
 				{!isOrgLoading && (
 					<Card title="📝 Generated">
 						{files.length > 0 ? (
@@ -151,7 +137,6 @@ export function PullView({
 					</Card>
 				)}
 
-				{/* Completion Message */}
 				{isSuccess && (
 					<Box marginTop={1} flexDirection="column">
 						<Text color="green">✨ Done in {duration}s</Text>

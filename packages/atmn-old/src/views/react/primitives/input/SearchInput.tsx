@@ -3,19 +3,12 @@ import TextInput from "ink-text-input";
 import { useState } from "react";
 
 export interface SearchInputProps {
-	/** Initial search value */
 	initialValue?: string;
-	/** Placeholder text */
 	placeholder?: string;
-	/** Called when search is submitted (Enter pressed) */
 	onSubmit: (query: string) => void;
-	/** Called when search is cancelled (Escape pressed) */
 	onCancel: () => void;
 }
 
-/**
- * Inline search input with submit/cancel keyboard handling
- */
 export function SearchInput({
 	initialValue = "",
 	placeholder = "Search...",

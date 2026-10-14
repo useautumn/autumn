@@ -1,18 +1,3 @@
-/**
- * atmn push — an in-place plan change drafts a migration for whoever is on it.
- *
- * Every push carries request-level `migration: { draft: true }` (a constant,
- * not a decision — see plans/atmn-v3/02_flow.md). The server decides which
- * rows actually warrant a draft: an in-place change to a plan with customers
- * on it gets one, a plan with nobody on it doesn't.
- *
- * Contract:
- *   M1  an in-place price change on a customered plan drafts a migration —
- *       preview carries it, the applied result names it, and the row
- *       persists as an undrafted (non-archived) migration
- *   M2  the same change on a plan with no customers drafts nothing
- */
-
 import { expect, test } from "bun:test";
 import {
 	atmnConfigSource,
@@ -26,7 +11,6 @@ import { createClient } from "../../../../packages/atmn/src/generated/client";
 import { seedVersionableCustomer } from "../catalog-v2/plans/migrations/utils/seedVersionableCustomer.js";
 import { uniqueTestId } from "../catalog-v2/utils/uniqueTestId.js";
 
-/** A feature plus a paid `pro` plan, one item, base price parameterized. */
 const catalogConfig = ({
 	featureId,
 	planId,
@@ -75,8 +59,6 @@ test.concurrent(
 				}),
 			);
 
-			// Called directly (not through scenario.push) to read the preview's
-			// migrations array, which the scenario harness doesn't surface.
 			const client = createClient({
 				secretKey: scenario.ctx.orgSecretKey,
 				baseUrl: scenario.baseUrl,
@@ -91,8 +73,6 @@ test.concurrent(
 				id: result.migrationIds[0],
 			});
 			expect(migration).toBeDefined();
-			// A migration row has no explicit status column — `archived: false` is
-			// what a freshly persisted draft looks like before anyone runs it.
 			expect(migration.archived).toBe(false);
 		} finally {
 			scenario.cleanup();

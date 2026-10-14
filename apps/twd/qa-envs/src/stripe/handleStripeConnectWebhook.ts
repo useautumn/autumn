@@ -2,7 +2,6 @@ import { qaEnvStub, routerStub } from "../qaEnv/stubs";
 import type { Env } from "../types";
 import { isValidStripeSignature } from "./isValidStripeSignature";
 
-/** One Stripe Connect endpoint for every env: verify, then queue on the envs that own the event's account. */
 export async function handleStripeConnectWebhook({
 	req,
 	env,

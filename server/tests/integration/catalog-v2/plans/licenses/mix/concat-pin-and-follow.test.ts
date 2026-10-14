@@ -1,7 +1,3 @@
-/**
- * catalogV2.update — pin and propagate concat on one parent (split by child)
- * or one child (split by parent).
- */
 import { test } from "bun:test";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";

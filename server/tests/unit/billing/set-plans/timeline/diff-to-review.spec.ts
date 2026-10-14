@@ -1,5 +1,3 @@
-/** Each request phase is compared with itself: its saved self, or the phase before it when new. */
-
 import { describe, expect, test } from "bun:test";
 import {
 	type CreateScheduleBillingContext,
@@ -103,7 +101,6 @@ const versionOf = ({
 const scheduled = (input: Parameters<typeof running>[0]) =>
 	running({ ...input, status: CusProductStatus.Scheduled });
 
-/** Now [Pro, Bonus] → B [Premium, Bonus] → C [Growth]. */
 const threePhaseSchedule = () => [
 	running({ product: pro, endedAt: PHASE_B }),
 	running({ product: bonus, endedAt: PHASE_C }),

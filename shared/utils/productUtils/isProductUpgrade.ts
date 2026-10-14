@@ -14,7 +14,6 @@ import {
 } from "./classifyProduct/classifyProductUtils";
 import { isConsumablePrice } from "./priceUtils/classifyPriceUtils";
 
-/** Gets the raw amount from a price (fixed amount or first usage tier amount). */
 const getPriceAmount = ({ price }: { price: Price }): number => {
 	if ("usage_tiers" in price.config) {
 		const tiers = price.config.usage_tiers;
@@ -24,7 +23,6 @@ const getPriceAmount = ({ price }: { price: Price }): number => {
 	return price.config.amount;
 };
 
-/** Normalizes a price to a monthly rate using Decimal.js for precision. */
 const normalizeToMonthlyRate = ({ price }: { price: Price }): Decimal => {
 	const amount = new Decimal(getPriceAmount({ price }));
 	const months = intervalToValue(
@@ -35,7 +33,6 @@ const normalizeToMonthlyRate = ({ price }: { price: Price }): Decimal => {
 	return amount.div(months);
 };
 
-/** Sums normalized monthly rates for all non-consumable prices. */
 const getNormalizedTotal = ({ prices }: { prices: Price[] }): Decimal => {
 	let total = new Decimal(0);
 	for (const price of prices) {

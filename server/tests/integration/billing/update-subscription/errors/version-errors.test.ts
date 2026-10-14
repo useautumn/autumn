@@ -8,11 +8,6 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// VERSION ERRORS: Error handling for version update edge cases
-// ═══════════════════════════════════════════════════════════════════════════════
-
-// 3.1 Invalid version: version 99 doesn't exist
 test.concurrent(`${chalk.yellowBright("version-errors: invalid version 404")}`, async () => {
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
 	const priceItem = items.monthlyPrice({ price: 20 });
@@ -27,7 +22,6 @@ test.concurrent(`${chalk.yellowBright("version-errors: invalid version 404")}`, 
 		actions: [s.attach({ productId: "pro" })],
 	});
 
-	// Try to update to version 99 (doesn't exist)
 	await expectAutumnError({
 		errCode: ErrCode.ProductNotFound,
 		func: async () => {
@@ -40,7 +34,6 @@ test.concurrent(`${chalk.yellowBright("version-errors: invalid version 404")}`, 
 	});
 });
 
-// 3.2 Preview with invalid version also returns 404
 test.concurrent(`${chalk.yellowBright("version-errors: preview invalid version 404")}`, async () => {
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
 	const priceItem = items.monthlyPrice({ price: 20 });
@@ -55,7 +48,6 @@ test.concurrent(`${chalk.yellowBright("version-errors: preview invalid version 4
 		actions: [s.attach({ productId: "pro" })],
 	});
 
-	// Try to preview with version 99 (doesn't exist)
 	await expectAutumnError({
 		errCode: ErrCode.ProductNotFound,
 		func: async () => {
@@ -68,7 +60,6 @@ test.concurrent(`${chalk.yellowBright("version-errors: preview invalid version 4
 	});
 });
 
-// 3.3 Negative version is invalid
 test.concurrent(`${chalk.yellowBright("version-errors: negative version invalid")}`, async () => {
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
 	const priceItem = items.monthlyPrice({ price: 20 });
@@ -83,7 +74,6 @@ test.concurrent(`${chalk.yellowBright("version-errors: negative version invalid"
 		actions: [s.attach({ productId: "pro" })],
 	});
 
-	// Try to update to version -1 (invalid)
 	await expectAutumnError({
 		errCode: ErrCode.ProductNotFound,
 		func: async () => {
@@ -96,7 +86,6 @@ test.concurrent(`${chalk.yellowBright("version-errors: negative version invalid"
 	});
 });
 
-// 3.4 Update version for non-existent customer
 test.concurrent(`${chalk.yellowBright("version-errors: non-existent customer")}`, async () => {
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
 	const priceItem = items.monthlyPrice({ price: 20 });
@@ -108,7 +97,6 @@ test.concurrent(`${chalk.yellowBright("version-errors: non-existent customer")}`
 		actions: [],
 	});
 
-	// Try to update version for customer that doesn't exist
 	await expectAutumnError({
 		errCode: ErrCode.CustomerNotFound,
 		func: async () => {
@@ -121,7 +109,6 @@ test.concurrent(`${chalk.yellowBright("version-errors: non-existent customer")}`
 	});
 });
 
-// 3.5 Version downgrade (v2 -> v1) is allowed
 test.concurrent(`${chalk.yellowBright("version-errors: downgrade v2 to v1 valid")}`, async () => {
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
 	const priceItem = items.monthlyPrice({ price: 20 });
@@ -136,20 +123,17 @@ test.concurrent(`${chalk.yellowBright("version-errors: downgrade v2 to v1 valid"
 		actions: [s.attach({ productId: "pro" })],
 	});
 
-	// Create v2 with higher price
 	const priceItemV2 = items.monthlyPrice({ price: 30 });
 	await autumnV1.products.update(pro.id, {
 		items: [messagesItem, priceItemV2],
 	});
 
-	// Update to v2 first
 	await autumnV1.subscriptions.update({
 		customer_id: customerId,
 		product_id: pro.id,
 		version: 2,
 	});
 
-	// Now downgrade back to v1
 	const updateParams = {
 		customer_id: customerId,
 		product_id: pro.id,
@@ -158,14 +142,13 @@ test.concurrent(`${chalk.yellowBright("version-errors: downgrade v2 to v1 valid"
 
 	const preview = await autumnV1.subscriptions.previewUpdate(updateParams);
 
-	// Should credit $10 difference ($20 - $30)
 	expect(preview.total).toBe(-10);
 
 	await autumnV1.subscriptions.update(updateParams);
 
 	await expectCustomerInvoiceCorrect({
 		customerId,
-		count: 3, // Initial + upgrade to v2 + downgrade to v1
+		count: 3,
 		latestTotal: preview.total,
 	});
 
@@ -177,7 +160,6 @@ test.concurrent(`${chalk.yellowBright("version-errors: downgrade v2 to v1 valid"
 	});
 });
 
-// 3.6 Same version update processes normally (no special case)
 test.concurrent(`${chalk.yellowBright("version-errors: same version processes normally")}`, async () => {
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
 	const priceItem = items.monthlyPrice({ price: 20 });
@@ -192,7 +174,6 @@ test.concurrent(`${chalk.yellowBright("version-errors: same version processes no
 		actions: [s.attach({ productId: "pro" })],
 	});
 
-	// Update to version 1 (current version) - processes normally
 	const updateParams = {
 		customer_id: customerId,
 		product_id: pro.id,
@@ -201,12 +182,10 @@ test.concurrent(`${chalk.yellowBright("version-errors: same version processes no
 
 	const preview = await autumnV1.subscriptions.previewUpdate(updateParams);
 
-	// No price change for same version
 	expect(preview.total).toBe(0);
 
 	await autumnV1.subscriptions.update(updateParams);
 
-	// No second invoice created for same version (no price change)
 	await expectCustomerInvoiceCorrect({
 		customerId,
 		count: 1,

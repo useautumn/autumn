@@ -13,13 +13,6 @@ import type { UsageWindowUpdate } from "@/internal/balances/utils/types/usageWin
 import { buildSharedFullSubjectBalanceKey } from "@/internal/customers/cache/fullSubject/builders/buildSharedFullSubjectBalanceKey.js";
 import { setCustomerUsageLimit } from "../utils/usage-limit-utils/customerUsageLimitUtils.js";
 
-// Usage-window SYNC & STORAGE: infrastructure state, not track responses.
-// Where the counter lives in Redis (the reserved '_usage_windows' field), how
-// it writes through to the customer-scoped usage_windows Postgres table, and
-// the race-safety contract of that mirror (upsert on the logical key).
-
-// initScenario only exposes clients up to V2_2; build the latest-version client
-// directly (same pattern as the v2.2-vs-v2.3 parity tests).
 const autumnV2_3 = new AutumnInt({ version: ApiVersion.V2_3 });
 
 // biome-ignore lint/suspicious/noExplicitAny: raw SQL rows are untyped
@@ -29,10 +22,6 @@ const queryRows = (result: unknown): any[] =>
 
 const HOUR_MS = 60 * 60 * 1000;
 
-// Storage shape: the counter lives in the capped feature's balance hash under
-// the reserved '_usage_windows' field (customer-scoped rows), NOT inside any
-// customer-entitlement blob.
-// Exercises the legacy Redis balance path, which worker-routed customers never use.
 test.concurrent.skipIf(isBalanceWorkerRoute())(
 	`${chalk.yellowBright("usage-window-sync1: counter lives in the _usage_windows hash field, not the cus-ent blob")}`,
 	async () => {
@@ -81,8 +70,6 @@ test.concurrent.skipIf(isBalanceWorkerRoute())(
 			featureId: TestFeature.Credits,
 		});
 
-		// Counter: one customer-scoped row in the reserved field, in credits units
-		// (1 action1 = 0.2 credits).
 		const usageWindowsJson = await ctx.redisV2.hget(
 			balanceKey,
 			"_usage_windows",
@@ -96,21 +83,16 @@ test.concurrent.skipIf(isBalanceWorkerRoute())(
 		expect(typeof usageWindows[0].id).toBe("string");
 		expect(Number(usageWindows[0].usage)).toBe(0.2);
 
-		// The cus-ent blob no longer embeds windows.
 		const blobJson = await ctx.redisV2.hget(balanceKey, creditsEnt.id);
 		expect(blobJson).toBeTruthy();
 		const blob = JSON.parse(blobJson as string);
 		expect(blob.usage_windows).toBeUndefined();
 
-		// The hash must carry a TTL (counters never outlive the cache contract).
 		const ttl = await ctx.redisV2.ttl(balanceKey);
 		expect(ttl).toBeGreaterThan(0);
 	},
 );
 
-// Write-through: the Redis counter must reach the customer-scoped
-// usage_windows table via the shared sync.
-// Exercises the legacy Redis balance path, which worker-routed customers never use.
 test.concurrent.skipIf(isBalanceWorkerRoute())(
 	`${chalk.yellowBright("usage-window-sync2: window counter writes through to the usage_windows table")}`,
 	async () => {
@@ -137,8 +119,6 @@ test.concurrent.skipIf(isBalanceWorkerRoute())(
 			interval: ResetInterval.Day,
 		});
 
-		// 5 action1 = 1 credit; under the 5-credit/day cap. The counter is a
-		// customer-scoped row on the credits feature (balance dimension).
 		await autumnV2_3.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Action1,
@@ -163,8 +143,6 @@ test.concurrent.skipIf(isBalanceWorkerRoute())(
 		)[0];
 		expect(creditsEnt?.id).toBeTruthy();
 
-		// Build the typed update from the live counter field (production hands
-		// this down from the Lua result), then drive the write-through.
 		const usageWindowsJson = await ctx.redisV2.hget(
 			buildSharedFullSubjectBalanceKey({
 				orgId: ctx.org.id,
@@ -210,29 +188,12 @@ test.concurrent.skipIf(isBalanceWorkerRoute())(
 		expect(windowRows[0].internal_feature_id).toBe(
 			creditsEnt.internal_feature_id,
 		);
-		// Customer scope (no entity) with bounds provenance from the credits ent.
 		expect(windowRows[0].internal_entity_id).toBeNull();
 		expect(windowRows[0].anchor_customer_entitlement_id).toBe(creditsEnt.id);
 		expect(Number(windowRows[0].usage)).toBe(1);
 	},
 );
 
-/**
- * Race-safety contract of the PG mirror (sync_balances_v2 STEP 4):
- *   - CREATE: syncing a snapshot for a scope with no existing row inserts it
- *     with the snapshot's id.
- *   - CONCURRENT CREATE: two parallel syncs for the same scope key
- *     (internal_customer_id, feature_id, entity-nullsafe) with DIFFERENT
- *     candidate ids both succeed -- no unique-violation abort -- and exactly
- *     one row exists, id = one of the candidates.
- *   - LAST-WRITE-WINS: the row's usage ends at the snapshot with the highest
- *     updated_at; a stale snapshot synced later never clobbers a newer value.
- *   - ID STABILITY: a newer snapshot with a different id updates the row but
- *     never changes the stored id (DO UPDATE excludes id).
- *   - ROLL FORWARD: a snapshot with advanced bounds moves the SAME row's
- *     window_start_at/window_end_at in place (one mutable row per scope).
- */
-// Exercises the legacy Redis balance path, which worker-routed customers never use.
 test.concurrent.skipIf(isBalanceWorkerRoute())(
 	`${chalk.yellowBright("usage-window-sync3: PG mirror upserts on the scope key, race-safe on create")}`,
 	async () => {
@@ -326,10 +287,6 @@ test.concurrent.skipIf(isBalanceWorkerRoute())(
 				`),
 			);
 
-		// ── CONCURRENT CREATE ────────────────────────────────────────────────
-		// Two parallel syncs race to create the same logical window with
-		// different candidate ids: no unique-violation abort; one row, id from
-		// whichever inserted first.
 		const candidateA = buildWindowRow({
 			id: "uw_test_a",
 			usage: 5,
@@ -348,12 +305,8 @@ test.concurrent.skipIf(isBalanceWorkerRoute())(
 		expect(["uw_test_a", "uw_test_b"]).toContain(windowRows[0].id);
 		const createdId = windowRows[0].id as string;
 
-		// ── LAST-WRITE-WINS across orderings ─────────────────────────────────
-		// Whichever commit order the race produced, the surviving usage must be
-		// the snapshot with the HIGHEST updated_at (candidateB: 7).
 		expect(Number(windowRows[0].usage)).toBe(7);
 
-		// A stale snapshot (older updated_at) synced afterwards must not clobber.
 		await syncSnapshot([
 			buildWindowRow({ id: "uw_test_stale", usage: 6, updatedAt: now - 5000 }),
 		]);
@@ -361,10 +314,6 @@ test.concurrent.skipIf(isBalanceWorkerRoute())(
 		expect(windowRows).toHaveLength(1);
 		expect(Number(windowRows[0].usage)).toBe(7);
 
-		// ── ID STABILITY ─────────────────────────────────────────────────────
-		// A newer snapshot carrying a DIFFERENT candidate id (e.g. a fail-open
-		// counter restart minted a fresh ksuid) updates usage on the logical key
-		// but never replaces the stored id.
 		await syncSnapshot([
 			buildWindowRow({ id: "uw_test_c", usage: 9, updatedAt: now }),
 		]);
@@ -373,9 +322,6 @@ test.concurrent.skipIf(isBalanceWorkerRoute())(
 		expect(Number(windowRows[0].usage)).toBe(9);
 		expect(windowRows[0].id).toBe(createdId);
 
-		// ── ROLL FORWARD ─────────────────────────────────────────────────────
-		// A newer snapshot with ADVANCED bounds moves the same row in place:
-		// still exactly one row per scope, same id, new window.
 		const rolledStart = now + HOUR_MS;
 		const rolledEnd = now + 2 * HOUR_MS;
 		await syncSnapshot([

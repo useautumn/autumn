@@ -9,7 +9,6 @@ const DB_STATUSES: Record<SubscriptionListStatus, CusProductStatus[]> = {
 	expired: [CusProductStatus.Expired],
 };
 
-/** past_due is a subset of active: filtering by it narrows, the row still reads as active. */
 export const subscriptionListStatusesToDb = ({
 	statuses,
 }: {

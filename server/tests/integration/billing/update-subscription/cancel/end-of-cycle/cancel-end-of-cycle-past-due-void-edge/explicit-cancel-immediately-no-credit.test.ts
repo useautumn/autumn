@@ -1,6 +1,3 @@
-// tw:solo: withVoidFlag mutates the shared org.config, so this file can't share a worker.
-// A past_due cancel must never credit the unpaid cycle on an explicit cancel_immediately.
-
 import { test } from "bun:test";
 import type { ApiCustomerV3 } from "@autumn/shared";
 import { driveProductPastDue } from "@tests/integration/billing/utils/driveProductPastDue";

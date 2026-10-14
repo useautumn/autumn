@@ -7,7 +7,6 @@ import type { Organization } from "@autumn/shared";
 import { pollUntilAsserted } from "@tests/utils/genUtils.js";
 import { getBalanceWorkerClient } from "@/external/balanceWorker/getBalanceWorkerClient.js";
 
-/** Polls until the subject's worker answers that it holds no such customer (or entity): nothing resident, nothing in Postgres. */
 export const expectWorkerHoldsNoSubject = async ({
 	org,
 	env,

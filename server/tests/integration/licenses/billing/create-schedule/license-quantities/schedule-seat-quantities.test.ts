@@ -1,17 +1,3 @@
-/**
- * Contract: billing.create_schedule accepts `license_quantities` on each phase
- * plan, with attach's meaning (total seats, inclusive of the included count).
- *
- *  - Ramp-up: each phase bills its own paid seats; the later phase takes over
- *    at its start without another API call, and the preview's next cycle
- *    already prices it.
- *  - Omission: the opening phase keeps the customer's current seats (attach
- *    parity); a later phase gets included seats only (feature_quantities parity).
- *  - A license the phase plan doesn't offer is rejected.
- *
- * Red (before): the phase schema stripped license_quantities, so scheduled
- * pools were always included-only and the opening phase dropped paid seats.
- */
 import { test } from "bun:test";
 import {
 	type ApiCustomerV5,
@@ -87,7 +73,6 @@ test.concurrent(
 			],
 		};
 
-		// Preview prices the opening phase now and the ramped phase next cycle.
 		const preview = await previewCreateSchedule({ autumnV1, params });
 		expectPreviewNextCycleCorrect({
 			preview,
@@ -99,7 +84,6 @@ test.concurrent(
 			params,
 		);
 
-		// Phase 1 is live with 3 paid seats; phase 2 waits with 6.
 		const customer = await autumnV2_3.customers.get<ApiCustomerV5>(customerId);
 		expectCustomerLicenses({
 			customer,
@@ -127,7 +111,6 @@ test.concurrent(
 		});
 		await expectStripeSubscriptionCorrect({ ctx, customerId });
 
-		// Phase 2 takes over on its own and bills 6 paid seats.
 		await advanceToNextPhase({ scenario });
 
 		const rampedCustomer =
@@ -192,7 +175,6 @@ test.concurrent(
 			],
 		});
 
-		// Opening phase: attach parity — the 3 paid seats carry over.
 		const customer = await autumnV2_3.customers.get<ApiCustomerV5>(customerId);
 		expectCustomerLicenses({
 			customer,
@@ -207,7 +189,6 @@ test.concurrent(
 			],
 		});
 
-		// Later phase: feature_quantities parity — included seats only.
 		await expectScheduledLicensePools({
 			ctx,
 			customerId,

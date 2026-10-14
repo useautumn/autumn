@@ -1,15 +1,3 @@
-/**
- * billing.import — `customer_data` must update an EXISTING customer's identity
- * fields (name, email, fingerprint), and invalid emails must be rejected with
- * the same validation as the normal customer paths, not persisted.
- *
- * Red (pre-fix): upsertFullCustomer only read customer_data on the create path,
- * so fields sent for an existing customer were silently dropped; any string was
- * accepted as an email and written through to the customer.
- * Green: all three fields reflect the imported customer_data; a malformed
- * email fails validation and leaves the stored email untouched.
- */
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV5 } from "@autumn/shared";
 import {
@@ -188,12 +176,10 @@ test.concurrent(
 			actions: [],
 		});
 
-		// First, verify customer has no RevenueCat processor
 		const customerBefore =
 			await autumnV2_3.customers.get<ApiCustomerV5>(customerId);
 		expect(customerBefore.processors?.revenuecat?.id).toBeUndefined();
 
-		// Try to add RevenueCat processor in dry_run mode
 		const flashRes = await callFlash(autumnV2_2 as FlashClient, {
 			...freePlanPayload({
 				customerId,
@@ -205,7 +191,6 @@ test.concurrent(
 		});
 		expect(flashRes.errorCode).toBeNull();
 
-		// Verify processor was NOT persisted
 		const customerAfter =
 			await autumnV2_3.customers.get<ApiCustomerV5>(customerId);
 		expect(customerAfter.processors?.revenuecat?.id).toBeUndefined();

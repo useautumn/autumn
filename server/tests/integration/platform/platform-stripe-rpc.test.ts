@@ -45,7 +45,6 @@ test("platform Stripe RPC rejects shared and managed accounts without revocation
 			const accountId = await target.createAccount();
 			await bind({ fixture: target, accountId });
 
-			// Legacy shared rows predate OAuth uniqueness, so they are seeded directly.
 			await peer.update({
 				test_stripe_connect: {
 					...peer.ctx.org.test_stripe_connect,
@@ -122,7 +121,6 @@ test("Stripe OAuth cleanup leaves managed replacements and reconnects alone", as
 					accountId,
 				});
 
-			// A managed link replaced the OAuth connection after cleanup read the org.
 			const managedConnect = {
 				...staleOrg.test_stripe_connect,
 				master_org_id: defaultCtx.org.id,
@@ -133,7 +131,6 @@ test("Stripe OAuth cleanup leaves managed replacements and reconnects alone", as
 				managedConnect,
 			);
 
-			// A reconnect of the same account after cleanup read the org.
 			await bind({ fixture, accountId });
 			expect(await clearStale()).toBe(false);
 			expect((await fixture.load()).test_stripe_connect?.account_id).toBe(
@@ -184,7 +181,6 @@ test("platform Stripe RPC validates authentication scopes ownership and environm
 				});
 				await expectStripeRpcCorrect({ operation, slug: "", status: 400 });
 
-				// A tenant's own key cannot address itself through the master's API.
 				await expectStripeRpcCorrect({
 					operation,
 					slug: ctx.org.slug,
@@ -254,7 +250,6 @@ test("platform Stripe RPC really deauthorizes and synchronously preserves unrela
 						body: { success: true },
 					});
 
-				// Disconnecting with nothing connected is a no-op success.
 				await disconnect();
 
 				const accountId = await fixture.createAccount();

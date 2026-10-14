@@ -6,15 +6,6 @@ import {
 	oauthConsentRepo,
 } from "@/internal/auth/repos/index.js";
 
-/**
- * Get API keys linked to a specific OAuth consent.
- * Used to preview which keys will be deleted when revoking consent.
- *
- * GET /consents/:consent_id/api-keys
- * Auth: Session (from internalRouter middleware)
- *
- * Returns: Array of { id, prefix, env, name }
- */
 export const handleGetConsentApiKeys = createRoute({
 	scopes: [Scopes.ApiKeys.Read],
 	params: z.object({

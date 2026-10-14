@@ -9,7 +9,6 @@ import {
 } from "@/internal/migrations/v2/batchOperations/scope/operationScope.js";
 import type { EntitlementPriceFilter } from "@/internal/migrations/v2/batchOperations/types/entitlementPriceFilter.js";
 
-/** Renders a compiled filter over `entitlements AS definition`. */
 export const entitlementPriceFilterSql = ({
 	filter,
 }: {
@@ -35,8 +34,6 @@ export const entitlementPriceFilterSql = ({
 	return sql`${featureId} ${interval} ${intervalCount} ${included}`;
 };
 
-/** Distinct live entitlement ids whose compiled filter matches.
- * Execute then deletes/replaces by those ids. No PlanItemFilter parsing. */
 export const resolveFilterEntitlementIds = async ({
 	db,
 	internalCustomerIds,

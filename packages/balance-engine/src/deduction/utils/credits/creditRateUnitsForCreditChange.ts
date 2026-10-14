@@ -8,7 +8,6 @@ const tiersOf = ({ rateCard }: { rateCard: CreditRateCard }): CreditTier[] =>
 		? rateCard.tiers
 		: [{ to: "inf", credit_amount: rateCard.credit_amount }];
 
-/** `credit_rate_units_for_credit_change`: how many of `requestedUnits` the allowed credits pay for, walking the tiers from `currentUnits`. */
 export const creditRateUnitsForCreditChange = ({
 	rateCard,
 	currentUnits,

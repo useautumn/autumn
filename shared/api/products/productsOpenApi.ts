@@ -9,9 +9,7 @@ import {
 	UpdateProductV2ParamsSchema,
 } from "./productOpModels.js";
 
-// Register schema with .meta() for OpenAPI spec generation
 export const ApiProductWithMeta = ApiProductSchema.meta({
-	// id: "Product",
 	examples: [PRODUCT_EXAMPLE],
 });
 
@@ -20,11 +18,6 @@ export const productOps = {
 		get: {
 			summary: "List Products",
 			tags: ["products"],
-			// requestParams: {
-			// 	query: z.object({
-			// 		customer_id: z.string().optional(),
-			// 	}),
-			// },
 			responses: {
 				"200": {
 					description: "",

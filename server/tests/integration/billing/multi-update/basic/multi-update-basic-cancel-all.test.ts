@@ -1,6 +1,3 @@
-/** multiUpdate billing action: cancel multiple plans in one call. All updates fold into ONE
- * billing plan: one Stripe evaluation per subscription, one combined proration invoice. */
-
 import { test } from "bun:test";
 import type { ApiCustomerV5, MultiUpdateParamsV0Input } from "@autumn/shared";
 import { expectMultiUpdatePreviewCorrect } from "@tests/integration/billing/multi-update/utils/expectMultiUpdatePreviewCorrect";
@@ -15,21 +12,6 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 2: Cancel ALL plans immediately in one call — whole-sub cancel + preview parity
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Pro A (group a, $20/mo) + Pro B (group b, $20/mo) on one subscription
- * - previewMultiUpdate both cancels, then multiUpdate with the same params
- *
- * Expected Result:
- * - Preview total = combined prorated credit for both plans (negative)
- * - Execution: both plans removed, Stripe subscription canceled entirely,
- *   ONE credit invoice whose total matches the preview exactly and whose
- *   product_ids cover BOTH plans
- */
 test.concurrent(
 	`${chalk.yellowBright("multi update basic: cancel all plans immediately, whole sub canceled, preview parity")}`,
 	async () => {
@@ -66,7 +48,6 @@ test.concurrent(
 			],
 		};
 
-		// ── Contract: preview = exact combined credit; nothing renews next cycle ─
 		const preview = await expectMultiUpdatePreviewCorrect({
 			autumn: autumnV2_3,
 			params: multiUpdateParams,
@@ -76,7 +57,6 @@ test.concurrent(
 			],
 		});
 
-		// ── Contract: execution matches preview, one credit invoice ──────────────
 		await autumnV2_3.billing.multiUpdate<MultiUpdateParamsV0Input>(
 			multiUpdateParams,
 		);
@@ -89,7 +69,6 @@ test.concurrent(
 			notPresent: [proA.id, proB.id],
 		});
 
-		// Attach invoices (2) + single combined credit invoice (1) carrying BOTH plans
 		await expectCustomerInvoiceCorrect({
 			customerId,
 			count: 3,
@@ -97,7 +76,6 @@ test.concurrent(
 			latestInvoiceProductIds: [proA.id, proB.id],
 		});
 
-		// ── Contract: whole-sub Stripe cancel when nothing survives ──────────────
 		await expectNoStripeSubscription({
 			db: ctx.db,
 			customerId,
@@ -107,18 +85,6 @@ test.concurrent(
 	},
 );
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 4: proration_behavior "none" on both cancels — no new invoice
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Pro A + Pro B attached (2 attach invoices)
- * - ONE multiUpdate: cancel both immediately with proration_behavior: "none"
- *
- * Expected Result:
- * - Both plans removed, subscription canceled, NO credit invoice created
- */
 test.concurrent(
 	`${chalk.yellowBright("multi update basic: proration none, cancel immediately creates no invoice")}`,
 	async () => {
@@ -147,7 +113,6 @@ test.concurrent(
 			],
 		});
 
-		// Sanity: both plans active, 2 attach invoices
 		const customerBeforeCancel =
 			await autumnV2_3.customers.get<ApiCustomerV5>(customerId);
 		await expectProductActive({
@@ -180,7 +145,6 @@ test.concurrent(
 			notPresent: [proA.id, proB.id],
 		});
 
-		// ── Contract: no charge artifacts when proration is none ─────────────────
 		await expectCustomerInvoiceCorrect({ customerId, count: 2 });
 
 		await expectNoStripeSubscription({

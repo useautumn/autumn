@@ -1,15 +1,3 @@
-/**
- * Customize A then B: same diverging usage price shares one Stripe Price.
- *
- * Catalog reuse already ran. This path fires when the attach-currency
- * slot is still empty (catalog $1/msg → customize $2/msg).
- *
- * Contract:
- *   A $2 then B $2 consumable → same stripe_price_id + product + meter, not catalog
- *   A $2 then B $3 → different stripe_price_ids
- *   A allocated-v2 $20 then B $20 → same stripe_price_id + product, not catalog
- */
-
 import { expect, test } from "bun:test";
 import type { AttachParamsV1Input } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";

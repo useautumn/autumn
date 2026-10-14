@@ -16,7 +16,6 @@ async function finishWorkerStop({
 		try {
 			await state.startup;
 		} catch {
-			// Startup owns reporting its failure and attempting cleanup.
 		}
 	}
 	if (state.status !== "stopped") await completeWorkerShutdown({ ctx, state });

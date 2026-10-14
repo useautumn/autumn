@@ -22,11 +22,6 @@ import { getVersionCounts } from "@/utils/productUtils";
 
 const MAX_VISIBLE_CHIPS = 3;
 
-/**
- * Multi-select plan picker. A selection is either a whole plan (any version,
- * key `"<id>"`) or a specific version (key `"<id>:<v>"`). Whole-plan and
- * specific-version picks are mutually exclusive per plan.
- */
 export function PlanVersionPicker({
 	values,
 	onChange,

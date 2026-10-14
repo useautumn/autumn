@@ -1,6 +1,3 @@
-/** Pre-fix, each matched product computes from the same stale pool state and inserts another pool.
- * Post-fix, every product computes from the projection produced by the previous product. */
-
 import { beforeEach, expect, test } from "bun:test";
 import type {
 	AutumnBillingPlan,

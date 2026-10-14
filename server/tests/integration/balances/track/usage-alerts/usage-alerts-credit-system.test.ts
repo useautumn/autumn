@@ -1,7 +1,3 @@
-/**
- * Usage alert webhooks when tracking metered features that deduct a shared credit pool.
- */
-
 import { afterAll, beforeAll, expect, test } from "bun:test";
 import type { LimitedItem } from "@autumn/shared";
 import {
@@ -81,7 +77,6 @@ test(`${chalk.yellowBright("usage-alert credit system: track action1 triggers al
 		],
 	});
 
-	// action1 credit_cost 0.2 → 160 units => 32 credits usage (crosses 30)
 	await autumnV2_1.track({
 		customer_id: customerId,
 		feature_id: TestFeature.Action1,
@@ -126,7 +121,6 @@ test(`${chalk.yellowBright("usage-alert credit system: track action2 triggers al
 		],
 	});
 
-	// action2 credit_cost 0.6 → 50 units => 30 credits usage (crosses threshold)
 	await autumnV2_1.track({
 		customer_id: customerId,
 		feature_id: TestFeature.Action2,
@@ -171,7 +165,6 @@ test(`${chalk.yellowBright("usage-alert credit system: remaining threshold on cr
 		],
 	});
 
-	// action1 credit_cost 0.2 → 405 units => 81 credits used, 19 remaining (crosses below threshold of 20)
 	await autumnV2_1.track({
 		customer_id: customerId,
 		feature_id: TestFeature.Action1,
@@ -216,7 +209,6 @@ test(`${chalk.yellowBright("usage-alert credit system: remaining_percentage thre
 		],
 	});
 
-	// action1 credit_cost 0.2 → 405 units => 81 credits used, 19 remaining = 19% (crosses below 25% threshold)
 	await autumnV2_1.track({
 		customer_id: customerId,
 		feature_id: TestFeature.Action1,

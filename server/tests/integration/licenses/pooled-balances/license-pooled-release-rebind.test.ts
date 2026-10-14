@@ -1,10 +1,3 @@
-/**
- * Contract: release and re-bind do not touch the pool. Spares keep
- * contributing; entity delete rides the release path.
- *
- * Cases: 10, 11, 12
- */
-
 import { expect, test } from "bun:test";
 import { expectPooledBalanceCorrect } from "@tests/integration/billing/pooled-balances/utils/expectPooledBalanceCorrect.js";
 import { getPooledBalanceDbState } from "@tests/integration/billing/pooled-balances/utils/getPooledBalanceDbState.js";

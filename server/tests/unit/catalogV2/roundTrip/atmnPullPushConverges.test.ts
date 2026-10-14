@@ -8,15 +8,6 @@ import { previewIsEmpty } from "../../../../../packages/atmn/src/render/renderPr
 import { featureCases, planCaseGroups } from "./catalogRoundTripCases";
 import { inMemoryCatalogClient } from "./inMemoryCatalogClient";
 
-/**
- * The CLI end of the invariant, over real files: `pull --overwrite` writes
- * the catalog, a second `pull` finds nothing, `push` previews nothing. The
- * same cases as the model suite, now through the emitter, the config loader,
- * and the fixture files pull writes beside the config.
- */
-
-// The package's own import surface; absolute so the scaffolded config resolves
-// it regardless of how deep the workspace sits.
 const ATMN = join(
 	import.meta.dir,
 	"../../../../../packages/atmn/src/index",
@@ -30,7 +21,6 @@ const workspace = ({ name }: { name: string }): string => {
 	return dir;
 };
 
-/** Every file under the workspace, by relative path, so byte-identity is total. */
 const snapshot = (dir: string): Record<string, string> => {
 	const out: Record<string, string> = {};
 	const walk = (sub: string) => {

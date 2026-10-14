@@ -11,7 +11,6 @@ const isBrowserPageLoad = (req: Request) => {
 	);
 };
 
-/** A sleeping env starts only for a person's page load or its own waking page; scanners get a 503. */
 export const wakesEnv = ({ req, url }: { req: Request; url: URL }) =>
 	req.headers.get("sec-fetch-mode") === "navigate" ||
 	isBrowserPageLoad(req) ||

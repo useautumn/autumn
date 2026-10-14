@@ -13,8 +13,6 @@ export const handleGetRevenueCatOAuthUrl = createRoute({
 		redirect_url: z.string().optional(),
 	}),
 	handler: async (c) => {
-		// Read `migrate` from the raw query — the validated query layer coerces
-		// "true"/"false" to booleans, which a z.string() field would reject.
 		const { redirect_url, migrate } = c.req.query();
 		const ctx = c.get("ctx");
 		const { org, env } = ctx;

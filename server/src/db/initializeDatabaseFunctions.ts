@@ -6,21 +6,13 @@ import { db } from "./initDrizzle.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-/**
- * Initialize all database functions (stored procedures)
- * Loads SQL files in dependency order: helpers first, then main functions
- */
 export const initializeDatabaseFunctions = async () => {
 	try {
 		console.log("Initializing database functions...");
 
 		const sqlPath = join(__dirname, "../internal/balances/utils/sql");
 
-		// Load SQL files in dependency order:
-		// 1. Helper functions (used by main functions)
-		// 2. Main functions (depend on helpers)
 		const sqlFiles = [
-			// Helper functions
 			"deductFromMainBalance.sql",
 			"creditRateUtils.sql",
 			"deductFromRollovers.sql",

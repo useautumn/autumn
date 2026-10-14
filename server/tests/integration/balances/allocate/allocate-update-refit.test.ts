@@ -1,8 +1,3 @@
-/**
- * A routed customer's balances.update lands on the worker at Kafka ack; the allocation refit after it
- * reads Postgres, so the worker must land the update first or the shares are solved from the old pot.
- */
-
 import { test } from "bun:test";
 import { ApiVersion, ResetInterval } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";

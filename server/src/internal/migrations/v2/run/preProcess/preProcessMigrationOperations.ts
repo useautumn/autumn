@@ -38,15 +38,6 @@ const filterTargetsCustom = (filter: MigrationFilter | null | undefined) => {
 	return planTargetsCustom(customer.plan);
 };
 
-/**
- * Op-level guard. Any `update_plan` op that bumps `version` automatically
- * gets `plan_filter.custom: false` so admin-customized customer_products
- * are never silently migrated. Explicit `plan_filter.custom` on the op
- * overrides the default — callers opting into migrating custom plans
- * have to say so.
- *
- * Pure transform: returns a new `Operations` object, never mutates input.
- */
 export const preProcessMigrationOperations = ({
 	operations,
 	filter,

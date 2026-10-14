@@ -1,12 +1,3 @@
-/**
- * catalogV2 stripe family reuse — omit-version reuse copies from the active base.
- *
- * Contract:
- *   v2 active → new variant reuses v2 stripe product
- *   v1 forced active → new variant reuses v1 stripe product
- *   sibling versions share one plan-level Stripe Product (processor.id)
- */
-
 import { expect, test } from "bun:test";
 import { BillingInterval, BillingMethod, type FullProduct } from "@autumn/shared";
 import { forceActiveVersion } from "@tests/integration/utils/forceActiveVersion.js";

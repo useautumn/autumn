@@ -1,12 +1,3 @@
-/**
- * Unit tests for discounting proration credits (refund-direction line items).
- *
- * A discount must reduce an outgoing plan's proration credit only when it was
- * active for the period being credited (the customer paid the discounted price
- * for that period). A discount applied mid-cycle, after the period was paid at
- * full price, must leave the credit untouched.
- */
-
 import { describe, expect, test } from "bun:test";
 import {
 	type LineItem,

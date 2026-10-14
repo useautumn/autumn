@@ -18,7 +18,6 @@ export const publishBillingTransition = async ({
 	billingPlan: BillingPlan;
 	executionDeferred?: boolean;
 }): Promise<void> => {
-	// The worker holds the live balances and the plan carries usage itself: nothing to rebase in Redis.
 	const externalCustomerId = billingContext.fullCustomer.id;
 	if (
 		externalCustomerId &&
@@ -26,7 +25,6 @@ export const publishBillingTransition = async ({
 	)
 		return;
 
-	// 1. Decide whether this plan has a supported runtime transition
 	const decision = shouldPublishBillingTransition({
 		billingPlan,
 		executionDeferred,
@@ -45,7 +43,6 @@ export const publishBillingTransition = async ({
 		billingContext.fullCustomer.id ?? billingContext.fullCustomer.internal_id;
 
 	try {
-		// 2. Load the final Postgres subject written by the billing plan
 		const finalSubject = await getFullSubjectNormalized({
 			ctx,
 			customerId,
@@ -61,7 +58,6 @@ export const publishBillingTransition = async ({
 			return;
 		}
 
-		// 3. Atomically rebase live A usage onto B and publish the new view
 		const publishResult = await publishCachedFullSubject({
 			ctx,
 			normalized: finalSubject.normalized,
@@ -76,9 +72,7 @@ export const publishBillingTransition = async ({
 		}
 		if (publishResult.status !== "OK") return;
 
-		// 4. Preserve the atomically published subject view
 		preserveSubjectCache({ ctx });
-		// 5. Persist its exact balance to Postgres or queue a guarded retry
 		await persistOrQueuePublishedBalanceTransitions({
 			ctx,
 			customerId,

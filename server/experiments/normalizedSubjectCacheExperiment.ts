@@ -27,8 +27,6 @@ import {
 	type CachedFullSubject,
 } from "@/internal/customers/cache/fullSubject/fullSubjectCacheModel.js";
 
-// Run with: bun run experiments/normalizedSubjectCacheExperiment.ts
-
 const NUM_CUSTOMER_PRODUCTS = 1_000;
 const METERED_CES_PER_PRODUCT = 3;
 const NUM_METERED_FEATURES = 3;

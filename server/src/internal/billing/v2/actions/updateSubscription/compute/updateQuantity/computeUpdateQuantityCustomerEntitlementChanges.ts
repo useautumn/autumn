@@ -27,7 +27,6 @@ export const computeUpdateQuantityCustomerEntitlementChanges = ({
 	applyImmediately?: boolean;
 }): UpdateCustomerEntitlement[] => {
 	const { fullCustomer, recalculateBalances } = updateSubscriptionContext;
-	// The pooled transition owns the grant delta; its source balance stays zero.
 	if (
 		applyImmediately &&
 		isPooledBalanceSourceCustomerEntitlement({ customerEntitlement })
@@ -52,12 +51,10 @@ export const computeUpdateQuantityCustomerEntitlementChanges = ({
 		isUpgrade,
 	});
 
-	// If downgrade and no proration, don't change entitlement balance THIS cycle
 	if (!applyImmediately && !isUpgrade && !shouldApplyProration) {
 		return [];
 	}
 
-	// 1. Create cloned
 	const cusEnts = recalculateBalances
 		? fullCustomerToCustomerEntitlements({
 				fullCustomer,

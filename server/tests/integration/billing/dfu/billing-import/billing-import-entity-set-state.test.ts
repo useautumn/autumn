@@ -1,9 +1,3 @@
-/**
- * dfu.flash — entity set-state: importing a new plan for entity A expires
- * entity A's prior plan while leaving the customer-level scope and a second
- * entity B untouched.
- */
-
 import { expect, test } from "bun:test";
 import { CusProductStatus } from "@autumn/shared";
 import {
@@ -85,7 +79,6 @@ test.concurrent(
 			],
 		});
 
-		// Seed: customer-level C, entity-A Y, entity-B B.
 		await callFlash(autumnV2_2 as FlashClient, {
 			customer_id: customerId,
 			processors: [{ type: "stripe", id: subC.customerId }],
@@ -116,7 +109,6 @@ test.concurrent(
 			(e) => e.id === entityA.id,
 		)?.internal_id;
 
-		// Import entity A → plan W only. Customer-level and entity B are not addressed.
 		const secondFlash = await callFlash(autumnV2_2 as FlashClient, {
 			customer_id: customerId,
 			processors: [{ type: "stripe", id: subW.customerId }],
@@ -124,7 +116,6 @@ test.concurrent(
 			entities: [entityBillable(entityA.id, subW.subscriptionId, planW.id)],
 		});
 
-		// Y (entity A prior plan) expired within A.
 		const expiredY = secondFlash.result?.flashed?.find(
 			(f) => f.plan_id === planY.id,
 		);
@@ -138,7 +129,6 @@ test.concurrent(
 		});
 		expect(productY?.status).toBe(CusProductStatus.Expired);
 
-		// W active and scoped to entity A.
 		const productW = await getFlashedCustomerProduct({
 			ctx,
 			customerId,
@@ -147,7 +137,6 @@ test.concurrent(
 		expect(productW?.status).toBe(CusProductStatus.Active);
 		expect(productW?.internal_entity_id).toBe(entityAInternalId);
 
-		// Customer-level C untouched.
 		const productC = await getFlashedCustomerProduct({
 			ctx,
 			customerId,
@@ -155,7 +144,6 @@ test.concurrent(
 		});
 		expect(productC?.status).toBe(CusProductStatus.Active);
 
-		// Entity B untouched.
 		const productB = await getFlashedCustomerProduct({
 			ctx,
 			customerId,

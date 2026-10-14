@@ -1,24 +1,3 @@
-/**
- * catalogV2.update — a payload that mentions one field changes one field.
- *
- * Every field in the upsert path is gated on `!== undefined`, so omission means
- * "unchanged". That is a convention held up by every writer choosing to follow
- * it, and the schema test can only see the schema half: someone writing
- * `bomboclart: planParams.bomboclart ?? []` inside a resolver would wipe the
- * field with a perfectly clean schema.
- *
- * This is the other half of that net. It states nothing but a name against a
- * fully-loaded plan and asserts everything else survived, so it fails for any
- * field anyone adds later that reads absence as "empty" — including fields
- * that do not exist yet, which is the entire point.
- *
- * Contract:
- *   H1  items survive a push that never mentions them
- *   H2  the base price survives
- *   H3  the free trial survives
- *   H4  the stated field does change, so the push was real
- */
-
 import { expect, test } from "bun:test";
 import {
 	BillingInterval,
@@ -62,8 +41,6 @@ test.concurrent(
 				],
 			});
 
-			// Everything except the name is absent. Under "omission is unchanged"
-			// this is a rename and nothing else.
 			await autumnV2_3.catalogV2.update({
 				plans: [{ plan_id: planId, name: "Renamed" }],
 			});

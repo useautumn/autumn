@@ -4,7 +4,6 @@ import { createMockTransport } from "../mock/mockTransport.ts";
 
 export type ApiErrorBody = z.infer<typeof ApiError>["error"];
 
-/** Every failed call surfaces as this, carrying the contract's error envelope. */
 export class ApiRequestError extends Error {
 	readonly status: number;
 	readonly body: ApiErrorBody;
@@ -33,17 +32,14 @@ export type Transport = {
 		path: string;
 		body?: unknown;
 	}) => Promise<{ status: number; contentType: string; data: unknown }>;
-	/** Opens the live socket (GET /ws); messages are raw JSON text either way. */
 	openLive: (handlers: LiveHandlers) => LiveConnection;
 	signInUrl: string;
 };
 
-/** Opt-in only; the served build always talks to the real twd on its own origin. */
 export const isMock = import.meta.env.VITE_TWD_MOCK === "1";
 
 const apiBase = import.meta.env.VITE_TWD_API_BASE ?? "/api";
 
-/** Public origin agents and curl should call (the twd server, not this dev server). */
 export const twdOrigin = (
 	import.meta.env.VITE_TWD_URL || window.location.origin
 ).replace(/\/$/, "");
@@ -113,7 +109,6 @@ const toApiError = ({ status, data }: { status: number; data: unknown }) => {
 	});
 };
 
-/** Calls one contract route and validates the response with its zod schema. */
 export const api = async <S extends z.ZodTypeAny>({
 	method = "GET",
 	path,
@@ -141,7 +136,6 @@ export const api = async <S extends z.ZodTypeAny>({
 	});
 };
 
-/** Plain-text routes (file logs). */
 export const apiText = async ({ path }: { path: string }) => {
 	const res = await send({ method: "GET", path });
 	if (res.status === 0 || res.status >= 400) throw toApiError(res);

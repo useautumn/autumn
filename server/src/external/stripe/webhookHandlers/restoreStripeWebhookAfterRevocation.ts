@@ -28,7 +28,6 @@ const isPendingRevocation = ({
 	return !connect?.account_id && connect?.revoked_account_id === accountId;
 };
 
-/** Clears the pending marker (and stores a new webhook secret) only if nothing changed meanwhile. */
 const completeRevocation = async ({
 	ctx,
 	org,
@@ -132,7 +131,6 @@ export const restoreStripeWebhookAfterRevocation = async ({
 			{ cause: error },
 		);
 	} finally {
-		// Never leave an endpoint behind whose secret we failed to store.
 		if (endpoint && stripe && !persisted) {
 			await stripe.webhookEndpoints.del(endpoint.id);
 		}

@@ -30,17 +30,14 @@ const APP_PORT = 3000;
 const DEFAULT_TTL_MS = 3 * 24 * 60 * 60_000;
 const IDLE_MS = 5 * 60_000;
 const IDLE_CHECK_MS = 60_000;
-// 4 vCPU: the server and balance worker boot in parallel instead of contending for 2 (~$0.22/env vs ~$0.15).
 const RUN_INSTANCE = "standard-4";
 const TOMBSTONE_MS = 7 * 24 * 60 * 60_000;
-/** Tabs report ms since the user last interacted; past this their polling stops counting as activity. */
 const BACKGROUND_POLL_MS = 10 * 60_000;
 const READY_WAIT_MS = 90_000;
 const BUILD_IDLE_MS = 30 * 60_000;
 const BUILD_POLL_MS = 5_000;
 const BUILDER_RETENTION_MS = 60 * 60_000;
 const PATH = "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin";
-// OAuth-connected orgs keep their account in account_id, platform-created ones in default_account_id.
 const ACCOUNTS_QUERY =
 	"select distinct a from organizations, lateral (values (test_stripe_connect->>'account_id'), (test_stripe_connect->>'default_account_id')) v(a) where a is not null";
 
@@ -52,10 +49,6 @@ type BuilderConfig = {
 };
 type BuilderState = "uploading" | "building" | "succeeded" | "failed";
 
-/**
- * One instance per QA env (name = env name) or per build (name = `build:<env>:<buildId>`).
- * Builds run in their own instance so a re-ship keeps serving the old snapshot until the new one is ready.
- */
 export class QaEnv extends DurableObject<Env> {
 	private ready = false;
 	private lastActiveWrite = 0;
@@ -104,8 +97,6 @@ export class QaEnv extends DurableObject<Env> {
 			.filter((l) => l.startsWith("acct_"));
 	}
 
-	// ---------------------------------------------------------------- builder role
-
 	async startBuilder(builder: Omit<BuilderConfig, "startedAt">) {
 		await this.ctx.storage.put("builder", {
 			...builder,
@@ -141,7 +132,6 @@ export class QaEnv extends DurableObject<Env> {
 		});
 	}
 
-	/** prepare.sh runs detached and the alarm polls it: a waitUntil holding it would be cut off. */
 	async runBuild() {
 		const builder = await this.ctx.storage.get<BuilderConfig>("builder");
 		if (!builder) throw new Error("not a builder");
@@ -197,7 +187,6 @@ export class QaEnv extends DurableObject<Env> {
 		};
 	}
 
-	/** prepare.sh's step lines; never blocks a status read on a busy or still-starting container. */
 	private async readBuildLog() {
 		const read = this.exec({
 			cmd: [
@@ -273,8 +262,6 @@ export class QaEnv extends DurableObject<Env> {
 		await this.ctx.storage.setAlarm(Date.now() + BUILDER_RETENTION_MS);
 	}
 
-	// ---------------------------------------------------------------- env role
-
 	private config() {
 		return this.ctx.storage.get<EnvConfig>("config");
 	}
@@ -287,7 +274,6 @@ export class QaEnv extends DurableObject<Env> {
 		return qaEnvStub({ env: this.env, name: `build:${name}:${buildId}` });
 	}
 
-	/** Creates the env or re-ships it: the old snapshot, data and URL stay live until the new build is adopted. */
 	async begin({
 		name,
 		publicUrl,
@@ -315,13 +301,10 @@ export class QaEnv extends DurableObject<Env> {
 				name: tinybirdHostLabel(name),
 				script: WORKER_SCRIPT,
 			});
-			// Even if this build never gets adopted, deletion must remove the hostname it created.
 			await this.ctx.storage.put("tinybirdHost", true);
 		}
-		// A live build keeps its config (database, secrets, expiry) until the new one is adopted.
 		const hasLiveBuild = Boolean(await this.ctx.storage.get("snapshot"));
 		const live = await this.config();
-		// The new lifetime applies now; database and secrets switch only with the build.
 		await this.ctx.storage.put(
 			"config",
 			hasLiveBuild && live ? { ...live, expiresAt: config.expiresAt } : config,
@@ -334,9 +317,7 @@ export class QaEnv extends DurableObject<Env> {
 		});
 		if (!hasLiveBuild)
 			await this.ctx.storage.put("state", "building" satisfies EnvState);
-		// Only now has the env left the expired state, so the tombstone deadline can go.
 		await this.ctx.storage.delete("tombstoneUntil");
-		// The alarm reschedules itself: idle checks while awake, else the live expiry.
 		await this.ctx.storage.setAlarm(Date.now() + IDLE_CHECK_MS);
 		await this.builderStub(buildId, name).startBuilder({
 			envName: name,
@@ -346,7 +327,6 @@ export class QaEnv extends DurableObject<Env> {
 		return { buildId, publicUrl, expiresAt: config.expiresAt };
 	}
 
-	/** Stops a pending build so it can never be adopted, e.g. after its database was dropped. */
 	async cancelBuild({ buildId }: { buildId: string }) {
 		const config = await this.config();
 		const pending = await this.ctx.storage.get<{ buildId: string }>(
@@ -392,7 +372,6 @@ export class QaEnv extends DurableObject<Env> {
 		if (accounts) await this.registerAccounts(accounts);
 		if (this.container.running) await this.container.destroy("re-shipped");
 		this.ready = false;
-		// Boot the new build now, so the link the agent already shared is warm by the time it's opened.
 		const config = await this.config();
 		if (config) await this.wake(config);
 	}
@@ -446,7 +425,6 @@ export class QaEnv extends DurableObject<Env> {
 		};
 	}
 
-	/** Idle sleep is ours: a pending monitor() keeps the DO active, so the inactivity timeout alone never fires. */
 	private async markActive() {
 		const now = Date.now();
 		if (now - this.lastActiveWrite < 15_000) return;
@@ -493,7 +471,6 @@ export class QaEnv extends DurableObject<Env> {
 	private async probeReady(): Promise<boolean> {
 		if (!this.container.running) return false;
 		if (this.ready) return true;
-		// A container still restoring holds connections open; never let that delay the waking page.
 		this.ready = await Promise.race([
 			this.container
 				.getTcpPort(APP_PORT)
@@ -525,7 +502,6 @@ export class QaEnv extends DurableObject<Env> {
 			return new Response("This QA env has expired", { status: 410 });
 
 		const url = new URL(req.url);
-		// Webhooks arrive only through the signed hooks.<domain> router; the server here skips verification.
 		if (url.pathname.startsWith("/webhooks/"))
 			return new Response("Not found", { status: 404 });
 		if (url.pathname === "/__qa_progress")
@@ -621,7 +597,6 @@ export class QaEnv extends DurableObject<Env> {
 			await this.ctx.storage.setAlarm(Date.now());
 	}
 
-	/** Wakes the env if needed and posts queued webhooks in order; failures stay queued for the next alarm. */
 	private async deliverWebhooks(config: EnvConfig) {
 		const queued = await this.ctx.storage.list<QueuedWebhook>({
 			prefix: "webhook:",
@@ -645,7 +620,6 @@ export class QaEnv extends DurableObject<Env> {
 		return true;
 	}
 
-	/** Agent debugging: last lines of one service's log, from a woken env. */
 	async logs({ service, lines }: { service: string; lines: number }) {
 		const config = await this.config();
 		if (!config) throw new Error("no such env");
@@ -661,7 +635,6 @@ export class QaEnv extends DurableObject<Env> {
 		});
 	}
 
-	/** Agent debugging: one shell command in the env, with the env's runtime variables (DATABASE_URL for psql). */
 	async run({ command }: { command: string }) {
 		const config = await this.config();
 		if (!config) throw new Error("no such env");
@@ -678,7 +651,6 @@ export class QaEnv extends DurableObject<Env> {
 		return { exitCode, output: output.slice(-20_000) };
 	}
 
-	/** Restarts the stack from the snapshot (fresh Dragonfly/Kafka/fakecloud); data in Neon is kept. */
 	async restart() {
 		const config = await this.config();
 		if (!config) throw new Error("no such env");
@@ -688,7 +660,6 @@ export class QaEnv extends DurableObject<Env> {
 		return { ready: await this.waitReady(Date.now() + READY_WAIT_MS) };
 	}
 
-	/** Runs a command on the env's stopped filesystem and keeps the result as the env's snapshot. */
 	async patch({ command }: { command: string }) {
 		const config = await this.config();
 		const snapshot = await this.ctx.storage.get<ContainerSnapshot>("snapshot");
@@ -727,7 +698,6 @@ export class QaEnv extends DurableObject<Env> {
 			throw new Error("env did not become ready");
 	}
 
-	/** Keeps webhook routing current while QA connects or swaps Stripe accounts. */
 	private async refreshStripeAccounts(config: EnvConfig) {
 		const accounts = await this.stripeAccounts({
 			databaseUrl: config.runtimeEnv.DATABASE_URL ?? "",
@@ -766,17 +736,14 @@ export class QaEnv extends DurableObject<Env> {
 			"pendingConfig",
 		]);
 		await this.ctx.storage.put("state", "expired" satisfies EnvState);
-		// The hostname stays for a week so old links answer 410 instead of a Cloudflare DNS error.
 		const tombstoneUntil = Date.now() + TOMBSTONE_MS;
 		await this.ctx.storage.put("tombstoneUntil", tombstoneUntil);
 		await this.ctx.storage.setAlarm(tombstoneUntil);
 	}
 
-	/** Blocks other calls so a re-create can't land between the hostname delete and the wipe. */
 	private removeTombstone(config: EnvConfig) {
 		return this.ctx.blockConcurrencyWhile(async () => {
 			if ((await this.envState()) !== "expired") return;
-			// Another alarm may fire early (e.g. an idle check rescheduled during destroy).
 			const tombstoneUntil =
 				(await this.ctx.storage.get<number>("tombstoneUntil")) ?? 0;
 			if (Date.now() < tombstoneUntil)
@@ -818,8 +785,6 @@ export class QaEnv extends DurableObject<Env> {
 		);
 	}
 
-	// ---------------------------------------------------------------- tinybird
-
 	private tinybird(config: EnvConfig) {
 		return tinybirdStub({ env: this.env, name: config.name });
 	}
@@ -828,7 +793,6 @@ export class QaEnv extends DurableObject<Env> {
 		return `https://${tinybirdHostLabel(config.name)}.${this.env.QA_DOMAIN}`;
 	}
 
-	/** The server, workers and Herald reach Tinybird through its public hostname; the token there is swapped. */
 	private tinybirdEnv(config: EnvConfig): Record<string, string> {
 		if (!config.tinybird) return {};
 		const url = this.tinybirdUrl(config);

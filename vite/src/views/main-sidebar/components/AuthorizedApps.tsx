@@ -169,7 +169,6 @@ export const AuthorizedApps = () => {
 				setLinkedApiKeys(data.apiKeys || []);
 			}
 		} catch {
-			// Silent — dialog still usable without API key preview
 		} finally {
 			setLoadingApiKeys(false);
 		}

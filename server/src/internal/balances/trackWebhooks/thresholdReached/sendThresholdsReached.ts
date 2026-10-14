@@ -12,7 +12,6 @@ import { sendSvixEvent } from "@/external/svix/svixHelpers.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getApiCustomerBaseV2 } from "@/internal/customers/cusUtils/getApiCustomerV2/getApiCustomerBaseV2.js";
 
-/** The customer at the caller's API version, without the autumn id or invoices the event never carried. */
 const renderCustomer = async ({
 	ctx,
 	fullSubject,
@@ -34,7 +33,6 @@ const renderCustomer = async ({
 	});
 };
 
-/** One `customer.threshold_reached` per crossing, all carrying the customer rendered once. */
 export const sendThresholdsReached = async ({
 	ctx,
 	fullSubject,

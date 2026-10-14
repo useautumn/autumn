@@ -1,33 +1,3 @@
-/**
- * Contract coverage for the `plans` filter on the CURSOR entities.list path
- * (API 2.3.0, start_cursor pagination).
- *
- * Sibling of list-entities-plan-filter.test.ts, which covers the same filter on
- * the 2.2.0 offset path. The two paths are separate query builders, so neither
- * test covers the other.
- *
- * Contract (behaviour-preserving — this exists to pin behaviour while
- * getCursorPaginatedEntitySubjectsQuery moves from a per-entity EXISTS to the
- * plan_scopes join):
- *   Endpoint:
- *     - POST /v1/entities.list @ 2.3.0 -> { list, next_cursor }
- *   Behaviors:
- *     - plans:[X] -> entities whose customer holds X (inherited) or that hold X
- *     - a plan nobody holds -> empty list, next_cursor null
- *     - union across plans, an entity matching BOTH ways appearing exactly once
- *     - versions:[matching] included; versions:[absent] excluded
- *     - plans + customer_id -> intersection, never another customer's entities
- *     - plans + search -> intersection
- *     - paging with start_cursor under a plan filter -> every entity exactly
- *       once across pages, and the same set as a single large page
- *   Side effects:
- *     - none; read-only.
- *
- * The paging assertion is the one the offset sibling cannot make: the cursor
- * predicate and the plan join have to compose, and a mistake there shows up as
- * a duplicated or skipped entity at a page boundary rather than a wrong count.
- */
-
 import { expect, test } from "bun:test";
 import type { ApiEntityV2, CursorPaginatedResponse } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
@@ -72,7 +42,6 @@ test.concurrent(
 			actions: [s.billing.attach({ productId: inheritedProduct.id })],
 		});
 
-		// Three entities so a limit of 1 produces real page boundaries.
 		for (const entityId of [alphaEntityId, betaEntityId, gammaEntityId]) {
 			await autumnV2_1.entitiesV2.create({
 				customer_id: customerId,
@@ -82,17 +51,12 @@ test.concurrent(
 			});
 		}
 
-		// alpha matches inheritedProduct (via its customer) AND entityProduct
-		// (directly) — the dedup case.
 		await autumnV1.billing.attach({
 			customer_id: customerId,
 			product_id: entityProduct.id,
 			entity_id: alphaEntityId,
 		});
 
-		// Second customer on the SAME inherited plan, so scope isolation is
-		// exercised rather than assumed. Not owned by initScenario, so clear it
-		// or a re-run collides on the deterministic id.
 		await autumnV2_1.customers.delete(otherCustomerId).catch(() => {});
 		await autumnV2_1.customers.create({ id: otherCustomerId });
 		await autumnV1.billing.attach({
@@ -106,8 +70,6 @@ test.concurrent(
 			name: otherEntityId,
 		});
 
-		// entities.list sits under the ListCustomers rate limiter and this test
-		// makes ~10 calls — space them or the run dies mid-suite.
 		const list = async (body: Record<string, unknown>) => {
 			await timeout(1200);
 			return autumnV2_3.entitiesV2.list<CursorPaginatedResponse<ApiEntityV2>>({
@@ -117,7 +79,6 @@ test.concurrent(
 			});
 		};
 
-		// ── A plan nobody holds returns nothing ───────────────────────────
 		const unattached = await list({
 			search: entityPrefix,
 			plans: [{ id: unattachedProduct.id }],
@@ -125,7 +86,6 @@ test.concurrent(
 		expect(unattached.list).toHaveLength(0);
 		expect(unattached.next_cursor).toBeNull();
 
-		// ── Union across plans, alpha matching both ways exactly once ─────
 		const union = await list({
 			search: entityPrefix,
 			plans: [{ id: inheritedProduct.id }, { id: entityProduct.id }],
@@ -136,7 +96,6 @@ test.concurrent(
 		);
 		expect(new Set(unionIds).size).toBe(unionIds.length);
 
-		// ── Version filter ────────────────────────────────────────────────
 		const matchingVersion = await list({
 			search: entityPrefix,
 			plans: [{ id: entityProduct.id, versions: [1] }],
@@ -151,7 +110,6 @@ test.concurrent(
 		});
 		expect(absentVersion.list).toHaveLength(0);
 
-		// ── plans + customer_id: never another customer's entities ────────
 		const scopedToCustomer = await list({
 			plans: [{ id: inheritedProduct.id }],
 			customer_id: customerId,
@@ -170,7 +128,6 @@ test.concurrent(
 			otherEntityId,
 		]);
 
-		// ── plans + search intersect ──────────────────────────────────────
 		const planAndSearch = await list({
 			plans: [{ id: inheritedProduct.id }],
 			search: betaEntityId,
@@ -179,9 +136,6 @@ test.concurrent(
 			betaEntityId,
 		]);
 
-		// ── Paging under a plan filter: every entity exactly once ─────────
-		// The cursor predicate and the plan join must compose; a mistake shows up
-		// as a duplicate or a skip at a page boundary.
 		const paged: (string | null)[] = [];
 		let cursor: string | null = null;
 		for (let page = 0; page < 6; page++) {

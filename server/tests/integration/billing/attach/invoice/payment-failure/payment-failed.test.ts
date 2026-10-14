@@ -1,10 +1,3 @@
-/**
- * Attach Payment Failure Tests - Payment Failed
- *
- * Tests for attach when customer's card is declined.
- * Expected: required_action.code = "payment_failed"
- */
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3 } from "@autumn/shared";
 import { getStripeSubscription } from "@tests/integration/billing/utils/discounts/discountTestUtils";
@@ -17,10 +10,6 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { SubService } from "@/internal/subscriptions/SubService";
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// NEW PLAN - Payment Failed
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(`${chalk.yellowBright("payment-failed 1: new plan")}`, async () => {
 	const customerId = "attach-fail-new-fail";
@@ -68,10 +57,6 @@ test.concurrent(`${chalk.yellowBright("payment-failed 1: new plan")}`, async () 
 	expect(dbSubscription).toBeDefined();
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// UPGRADE - Payment Failed
-// ═══════════════════════════════════════════════════════════════════════════════
-
 test.concurrent(`${chalk.yellowBright("payment-failed 2: upgrade")}`, async () => {
 	const customerId = "attach-fail-upgrade-fail";
 
@@ -116,7 +101,6 @@ test.concurrent(`${chalk.yellowBright("payment-failed 2: upgrade")}`, async () =
 		state: "active",
 	});
 
-	// Should still have pro's balance (upgrade not applied)
 	expectCustomerFeatureCorrect({
 		customer,
 		featureId: TestFeature.Messages,
@@ -125,10 +109,6 @@ test.concurrent(`${chalk.yellowBright("payment-failed 2: upgrade")}`, async () =
 		usage: 0,
 	});
 });
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// ONE-OFF - Payment Failed
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(`${chalk.yellowBright("payment-failed 3: one-off")}`, async () => {
 	const customerId = "attach-fail-oneoff-fail";

@@ -17,9 +17,6 @@ export type MigrationItemEvents = TinybirdMigrationItemEvent[];
 const INGEST_POLL_ATTEMPTS = 15;
 const INGEST_POLL_INTERVAL_MS = 2000;
 
-/** Tinybird ingest is async (`wait: false`), so read back with polling rather
- * than once. Returns null when Tinybird isn't configured — callers skip their
- * assertions, but an empty read while configured stays a failure. */
 export const getMigrationItemEvents = async ({
 	ctx,
 	migrationInternalId,
@@ -118,7 +115,6 @@ export const expectMigrationEventBillingPlanChangesEqual = async ({
 	expect(planChanges).toHaveLength(preview.plan_changes.length);
 	for (const [index, expectedChange] of preview.plan_changes.entries()) {
 		const actualChange = planChanges![index];
-		// Omitted and null entity IDs both represent customer scope.
 		expect({
 			...actualChange,
 			entity_id: actualChange.entity_id ?? null,
@@ -130,10 +126,6 @@ export const expectMigrationEventBillingPlanChangesEqual = async ({
 	return preview;
 };
 
-/**
- * Asserts one customer's audit event. Only the fields you pass are checked,
- * mirroring `expectBalanceCorrect`'s style.
- */
 export const expectMigrationItemEventCorrect = async ({
 	ctx,
 	events,
@@ -154,29 +146,19 @@ export const expectMigrationItemEventCorrect = async ({
 	events: MigrationItemEvents;
 	customerId: string;
 	status: "succeeded" | "skipped";
-	/** Defaults to "batch"; pass null for per-customer events, which carry no lane. */
 	lane?: string | null;
-	/** Skip reason, for skipped events. */
 	reason?: string;
-	/** Structured skip reason (no_updates_needed | ineligible). */
 	skipReason?: MigrationItemRunSkipReason;
-	/** Actions on the synthesized plan changes, in order. */
 	planChangeActions?: CustomerPlanChange["action"][];
-	/** subscription/purchase plan_id per plan change, in order. */
 	planChangePlanIds?: string[];
-	/** Items added across the first plan change. */
 	itemChangeCount?: number;
-	/** Ordered item changes across the first plan change. */
 	itemChanges?: {
 		action: "created" | "deleted";
 		featureId: string;
 		included?: number;
 	}[];
-	/** Features expected to carry a balance change, in order. */
 	balanceFeatureIds?: string[];
-	/** Boolean features expected to be flagged as created, in order. */
 	createdFlagFeatureIds?: string[];
-	/** Exact ordered boolean flag changes. */
 	flagChanges?: {
 		action: "created" | "deleted";
 		featureId: string;

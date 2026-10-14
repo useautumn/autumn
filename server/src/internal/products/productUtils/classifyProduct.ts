@@ -53,7 +53,6 @@ export const isDefaultTrialFullProduct = ({
 	product: FullProduct;
 	skipDefault?: boolean;
 }) => {
-	// If it's free + trial, also consider it default trial
 	if (isFreeProduct({ product }) && product.free_trial) return true;
 
 	return (

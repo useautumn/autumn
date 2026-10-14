@@ -1,6 +1,3 @@
-// Expiring prepaid one-off plan items: each purchase lands in a loose, expiring grant beside a
-// 0-balance keystone row; grants outlive plan changes and churn.
-
 import { expect, test } from "bun:test";
 import {
 	BillingInterval,

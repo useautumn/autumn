@@ -1,15 +1,3 @@
-/**
- * Contract: ramping seats down through billing.create_schedule.
- *
- *  - Booking a later phase below today's assignments is accepted. When it
- *    starts, it bills the phase's seat count even if more seats were assigned
- *    after booking; everyone keeps their seat, the pool goes negative, and new
- *    assignments fail until enough are released.
- *  - The opening phase still rejects a seat count below today's assignments.
- *
- * Red (before): license_quantities was stripped, so the opening phase dropped
- * the customer's paid seats and rejected the booking outright.
- */
 import { test } from "bun:test";
 import {
 	type ApiCustomerV5,
@@ -62,7 +50,6 @@ test.concurrent(
 		});
 		const { ctx, autumnV1, autumnV2_3, entities } = scenario;
 
-		// Year 2 at 2 seats while 3 are assigned today: accepted, not rejected.
 		await autumnV2_3.billing.createSchedule<CreateScheduleParamsV0Input>({
 			customer_id: customerId,
 			phases: [
@@ -88,7 +75,6 @@ test.concurrent(
 			licenses: [{ licensePlanId: seat.id, granted: 2, paidQuantity: 1 }],
 		});
 
-		// The team keeps growing after booking.
 		await autumnV2_3.licenses.attach({
 			customer_id: customerId,
 			plan_id: seat.id,
@@ -97,7 +83,6 @@ test.concurrent(
 
 		await advanceToNextPhase({ scenario });
 
-		// Everyone keeps their seat; billing stays at the phase's 1 paid seat.
 		const customer = await autumnV2_3.customers.get<ApiCustomerV5>(customerId);
 		expectCustomerLicenses({
 			customer,

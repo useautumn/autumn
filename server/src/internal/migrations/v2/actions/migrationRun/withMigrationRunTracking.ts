@@ -9,8 +9,6 @@ import { classifyMigrationRunError } from "./classifyMigrationRunError.js";
 import { resolveRunOutcomeStatus } from "./resolveRunOutcomeStatus.js";
 import { settleLeftoverClaims } from "./settleLeftoverClaims.js";
 
-/** Counts are advisory: a lookup failure must not turn a run that completed
- * into a failed one, so it falls back to the historical `succeeded`. */
 const resolveCompletedRunStatus = async ({
 	ctx,
 	migrationRunId,
@@ -39,8 +37,6 @@ const resolveCompletedRunStatus = async ({
 	}
 };
 
-/** Owns the run lifecycle: status transitions AND their logs. `logData` adds
- * caller context; an object-shaped run result is spread into the final log. */
 export const withMigrationRunTracking = async <T>({
 	ctx,
 	migrationRunId,
@@ -70,8 +66,6 @@ export const withMigrationRunTracking = async <T>({
 	try {
 		const result = await run();
 
-		// In-flight items have drained. If cancellation was requested mid-run,
-		// settle as `canceled` rather than `succeeded`.
 		const cancelRequested = await isMigrationCancelRequested({
 			migrationRunId,
 		});

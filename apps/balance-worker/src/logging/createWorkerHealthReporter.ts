@@ -89,7 +89,6 @@ export function createWorkerHealthReporter({
 					"Balance worker health report unavailable",
 				);
 			} catch {
-				// Telemetry failure must not enter the partition recovery path.
 			}
 		}
 	}

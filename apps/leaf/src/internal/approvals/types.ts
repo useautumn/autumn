@@ -9,21 +9,16 @@ export type ActionMessageContent = Parameters<
 	NonNullable<ActionEvent["adapter"]["editMessage"]>
 >[2];
 
-/** Outcome of one write on a grouped card, in apply order. */
 export type ApprovalWriteOutcome = {
 	status: "applied" | "failed" | "pending" | "skipped" | "unknown";
 	toolName: string;
 };
 
 export type ApprovalRunResult =
-	// The money facts changed since the card was shown; nothing executed and
-	// the refreshed card must be re-approved.
 	| {
 			drifted: true;
 			message: string;
 	  }
-	// `retryable` means the write never ran to completion (a session crash /
-	// interruption), so the approval stays pending and the user can re-apply.
 	| {
 			error: true;
 			message: string;

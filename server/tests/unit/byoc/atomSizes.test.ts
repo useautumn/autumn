@@ -17,7 +17,6 @@ const toBytes = (memory: string) => {
 	return Number(amount) * (unit === "Gi" ? GIB : MIB);
 };
 
-/** alien-core 3.3.32 `instance_catalog::allocatable_cpu` / `allocatable_memory_bytes`: what a pinned machine leaves a container. */
 const alienAllocatable = ({ cpu, memory }: { cpu: number; memory: number }) => {
 	const bytes = memory * GIB;
 	const reserve =
@@ -25,7 +24,6 @@ const alienAllocatable = ({ cpu, memory }: { cpu: number; memory: number }) => {
 	return { cpu: Math.max(cpu - 0.5, 0.25), memory: bytes - reserve };
 };
 
-/** GKE's documented node memory reserve (plan-node-sizes), the largest of the published ones up to 16 GiB. */
 const gkeMemoryReserve = ({ memory }: { memory: number }) =>
 	(0.25 * Math.min(memory, 4) +
 		0.2 * Math.min(Math.max(memory - 4, 0), 4) +

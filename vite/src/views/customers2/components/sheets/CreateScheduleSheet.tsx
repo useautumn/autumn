@@ -77,7 +77,6 @@ const resetsBillingCycleAt = ({
 			) === truncateMsToSecondPrecision(startsAt),
 	);
 
-/** The proration a later phase was saved with, from the schedule phase starting with it. */
 const prorationBehaviorAt = ({
 	schedules,
 	startsAt,
@@ -93,8 +92,6 @@ const prorationBehaviorAt = ({
 				truncateMsToSecondPrecision(startsAt),
 		)?.proration_behavior ?? null;
 
-/** When today's phase began: its earliest live plan that ends at a scheduled
- * phase. Ongoing plans aren't part of it, so their start doesn't count. */
 const findCurrentPhaseStart = ({
 	customerProducts,
 }: {
@@ -113,8 +110,6 @@ const findCurrentPhaseStart = ({
 		: undefined;
 };
 
-/** Built from the customer's plans alone, scoped the same way Sync from Stripe
- * scopes them; scheduled plans mean the customer is already on a schedule. */
 export function buildInitialValues({
 	customer,
 	products,
@@ -193,8 +188,6 @@ export function buildInitialValues({
 	};
 }
 
-/** The live plans are today's phase; each scheduled start, and each scheduled
- * end of a live plan that isn't a cancellation, is its own later phase. */
 function customerProductsToSetPlansState({
 	customerProducts,
 	entities,
@@ -269,7 +262,6 @@ function ScheduleCheckoutContent() {
 			isPending={isPending}
 			onSubmit={handleCheckoutSubmit}
 			onBack={() => setSheet({ type: "create-schedule-review" })}
-			// create_schedule has no long_lived_checkout param.
 			showLongLivedCheckout={false}
 			enablePlanImmediately={formValues.enablePlanImmediately}
 			onEnablePlanImmediatelyChange={(value) =>
@@ -302,7 +294,6 @@ function CreateScheduleSheetBody() {
 export function CreateScheduleSheet() {
 	const { closeSheet } = useSheetStore();
 	const sheetData = useSheetStore((s) => s.data);
-	// Later stages replace the sheet data, so the target is read once on open.
 	const [subscriptionTarget] = useState(() =>
 		subscriptionTargetFromSheetData(sheetData),
 	);
@@ -330,8 +321,6 @@ export function CreateScheduleSheet() {
 			schedules,
 			nowMs: testClockFrozenTimeMs,
 		});
-		// An approval seed is the proposed schedule itself — it replaces the
-		// customer's current schedule as the starting point.
 		return seedOverrides?.phases ? { ...base, ...seedOverrides } : base;
 	}, [
 		fullCustomer,
@@ -347,7 +336,6 @@ export function CreateScheduleSheet() {
 		[fullCustomer, products],
 	);
 
-	// The form seeds once, so it waits for the saved schedule's phase settings.
 	if (isLoading) return null;
 
 	return (

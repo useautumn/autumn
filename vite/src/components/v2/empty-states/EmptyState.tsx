@@ -82,7 +82,6 @@ export const EmptyState = ({
 					title: "Migrations",
 					description:
 						"Define filters and operations to migrate sets of customers in bulk",
-					// Reuses plans illustration for now — replace once we have a dedicated svg.
 					svg: plansSvg,
 				};
 		}

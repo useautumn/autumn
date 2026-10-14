@@ -17,7 +17,6 @@ import type {
 } from "./types/atomDeployer.js";
 import type { MultiTenantAtomAddress } from "./types/multiTenantAtom.js";
 
-/** A dev stack has no machines, so each Atom's is only remembered here; a restart resets it to the default. */
 type StackContext = {
 	atom: MultiTenantAtomAddress;
 	machineById: Map<string, ByocCacheMachine>;
@@ -76,7 +75,6 @@ const findStackAtom = async ({
 		endpointUrl: ctx.atom.atomUrl,
 		machine: ctx.machineById.get(atom.id) ?? DEFAULT_BYOC_CACHE_MACHINE,
 		region: null,
-		// The stack's Atom process just answered, so every step is done.
 		doneStages: Object.values(ByocCacheStage),
 		removedStages: [],
 		error: null,
@@ -111,7 +109,6 @@ const deleteStackAtom = async ({
 	ctx.machineById.delete(deploymentGroupId);
 };
 
-/** A dev stack runs one multi-tenant Atom process; every org's Atom is a token and a folder inside it. */
 export const createStackAtomDeployer = ({
 	atom,
 }: {
@@ -120,14 +117,11 @@ export const createStackAtomDeployer = ({
 	const ctx = { atom, machineById: new Map<string, ByocCacheMachine>() };
 	return {
 		start: (params) => startStackAtom({ ctx, ...params }),
-		// A dev stack's Atoms are folders in one process, with no groups to outlive them.
 		hasGroup: () => Promise.resolve(false),
 		find: (params) => findStackAtom({ ctx, ...params }),
 		resize: (params) => resizeStackAtom({ ctx, ...params }),
-		// Nothing deploys on a dev stack, so nothing can fail to.
 		retry: () => Promise.resolve(),
 		delete: (params) => deleteStackAtom({ ctx, ...params }),
-		// A dev stack's Atoms start without setup links.
 		closeSetup: () => Promise.resolve(),
 	};
 };

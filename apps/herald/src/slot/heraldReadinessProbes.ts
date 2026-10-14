@@ -1,7 +1,6 @@
 import type { MiscCache } from "@autumn/cache";
 import type { Admin } from "kafkajs";
 
-/** What "ready to be promoted" means: the log and each job's group answer, and both stores herald writes to. */
 export type HeraldReadinessProbes = {
 	kafka(): Promise<void>;
 	eventsDb(): Promise<void>;
@@ -19,7 +18,6 @@ export function createHeraldReadinessProbes({
 	};
 	config: { topic: string; groupIds: string[] };
 }): HeraldReadinessProbes {
-	/** The topic exists and every job's committed place can be read: the task can reach the group it is about to join. */
 	async function kafka(): Promise<void> {
 		await ctx.admin.fetchTopicMetadata({ topics: [config.topic] });
 		for (const groupId of config.groupIds)

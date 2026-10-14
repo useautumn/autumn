@@ -64,7 +64,6 @@ const Duration = ({ ms, p90 }: { ms: number | null; p90: number | null }) => {
 	);
 };
 
-/** Every file in the run, filterable by status (plus drift and repeats), scrolling inside its card. */
 export const FilesCard = ({
 	run,
 	live,

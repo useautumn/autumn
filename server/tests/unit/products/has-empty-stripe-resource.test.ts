@@ -1,12 +1,3 @@
-/**
- * hasEmptyStripeResource
- *
- * Contract:
- *   paid fixed / consumable / allocated v2 with empty attach slot → true
- *   prepaid V2 empty → true (V1 filled does not fill V2)
- *   filled slot, $0 fixed, one-off prepaid, allocated v1 → false
- */
-
 import { describe, expect, test } from "bun:test";
 import {
 	AllocatedBillingBehavior,

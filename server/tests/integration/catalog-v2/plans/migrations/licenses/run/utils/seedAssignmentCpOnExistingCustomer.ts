@@ -4,7 +4,6 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { generateId } from "@/utils/genUtils.js";
 import { getFullPlan } from "../../../../licenses/utils/seedLicensePlans.js";
 
-/** Seat-assignment CP on an already-attached parent customer. */
 export const seedAssignmentCpOnExistingCustomer = async ({
 	ctx,
 	customerId,

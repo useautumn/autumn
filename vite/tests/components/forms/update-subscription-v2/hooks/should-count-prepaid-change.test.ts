@@ -4,8 +4,6 @@ import { shouldCountPrepaidChange } from "@/components/forms/update-subscription
 
 describe("shouldCountPrepaidChange", () => {
 	test("counts a decrease on a non-consumable (continuous use) one-off item", () => {
-		// Non-consumables are continuous-use levels with interval null. Lowering the
-		// quantity (300 -> 200) is a real change and must trigger the update call.
 		const result = shouldCountPrepaidChange({
 			item: {
 				interval: null,
@@ -20,7 +18,6 @@ describe("shouldCountPrepaidChange", () => {
 	});
 
 	test("does NOT count a decrease on a consumable one-off top-up", () => {
-		// Consumable top-ups can only be increased — a lower total is not a purchase.
 		const result = shouldCountPrepaidChange({
 			item: {
 				interval: null,

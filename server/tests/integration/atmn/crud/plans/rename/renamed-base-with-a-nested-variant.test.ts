@@ -1,11 +1,3 @@
-/**
- * atmn crud/plans/rename — renamed base with a nested variant → variant keeps its own id, attach by the base's old id still resolves
- *
- * a rename is a changed planId on a row that carries internalId; aliases per catalog-v2/plans/aliases
- *
- * One line of plans/atmn-v3/07_tests.md. [a, b] is a matrix looped INSIDE this file.
- */
-
 import { expect, test } from "bun:test";
 import { expectCustomerProducts } from "@tests/integration/billing/utils/expectCustomerProductCorrect.js";
 import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
@@ -65,11 +57,6 @@ test.concurrent(
 				idOrInternalId: "addon",
 			});
 
-			// Only the base is renamed. A push is the whole desired catalog
-			// (skip_deletions: false), so the nested variant has to be restated
-			// too — an omitted `variants` array reads as "remove them", not
-			// "leave them alone" — while restating it unchanged leaves the link
-			// itself untouched.
 			scenario.writeConfig(
 				atmnConfigSource({
 					body: `{

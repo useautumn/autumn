@@ -31,7 +31,6 @@ const initOrgSvixApps = async ({ id, slug }: { id: string; slug: string }) => {
 	return { sandboxApp, liveApp };
 };
 
-// Best-effort, ordered rollback; the delete helpers swallow their own errors.
 const rollbackOrgResources = async (created: CreatedResources) => {
 	if (!created.stripeAccountId && created.svixAppIds.length === 0) {
 		return;
@@ -51,10 +50,6 @@ const rollbackOrgResources = async (created: CreatedResources) => {
 	}
 };
 
-/** Provision an org's external resources (Stripe account, svix apps, pkeys).
- *  `strict` (sub-org create) fails if svix is configured-but-unprovisioned and
- *  rolls back everything it created on any error, so nothing orphans. Default is
- *  best-effort (legacy self-service signup): write what succeeds, never roll back. */
 export const provisionOrgResources = async ({
 	org,
 	user,
@@ -64,7 +59,6 @@ export const provisionOrgResources = async ({
 	strict = false,
 }: {
 	org: Organization | BetterAuthOrganization;
-	/** Only the contact email is used, so ownerless orgs can pass a stand-in. */
 	user: Pick<User, "email">;
 	createStripeAccount?: boolean;
 	pkey?: string;
@@ -83,8 +77,6 @@ export const provisionOrgResources = async ({
 			},
 		});
 
-		// 1. Add stripe connect config (track the account id before the DB write
-		// so a failed write can still roll the external account back).
 		if (createStripeAccount) {
 			const stripeConnectAccount = await createConnectAccount({ org, user });
 			created.stripeAccountId = stripeConnectAccount.id;
@@ -101,7 +93,6 @@ export const provisionOrgResources = async ({
 			});
 		}
 
-		// 2. Create svix webhooks
 		const { sandboxApp, liveApp } = await initOrgSvixApps({ slug, id });
 		if (sandboxApp?.id) {
 			created.svixAppIds.push(sandboxApp.id);
@@ -110,8 +101,6 @@ export const provisionOrgResources = async ({
 			created.svixAppIds.push(liveApp.id);
 		}
 
-		// Svix is skipped when unconfigured (dev/test); under strict provisioning a
-		// configured failure must not silently leave a sandbox with broken webhooks.
 		if (
 			strict &&
 			process.env.SVIX_API_KEY &&
@@ -135,7 +124,6 @@ export const provisionOrgResources = async ({
 
 		logger.info(`Initialized resources for org ${id} (${slug})`);
 
-		// Only track analytics for self-service signups, not platform-created orgs
 		const orgHasCreatedBy = "created_by" in org && org.created_by;
 		if (!orgHasCreatedBy) {
 			await captureOrgEvent({
@@ -154,8 +142,6 @@ export const provisionOrgResources = async ({
 	}
 };
 
-/** Best-effort wrapper around `provisionOrgResources`: swallows failures so a
- *  provisioning hiccup never blocks org creation (e.g. self-service signup). */
 export const afterOrgCreated = async ({
 	org,
 	user,

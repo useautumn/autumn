@@ -23,6 +23,5 @@ export const ATOM_NETWORKS: Record<
 	},
 };
 
-/** An Atom set up without a network gets a new VPC. */
 export const atomNetwork = (cache: ApiByocCache) =>
 	ATOM_NETWORKS[cache.network?.type ?? "new_vpc"];

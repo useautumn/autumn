@@ -45,8 +45,6 @@ const typeRankSql = sql`(
 	END
 )`;
 
-// Status-first ordering: active (including add-ons and canceling plans), then
-// scheduled, then one-off, then everything else (expired/past_due/paused).
 const statusRankSql = sql`(
 	CASE
 		WHEN cp.status = 'scheduled' THEN 1
@@ -56,8 +54,6 @@ const statusRankSql = sql`(
 	END
 )`;
 
-// Inert (0) outside the scheduled bucket, so scheduled rows sort by start date
-// without disturbing the rest of the ordering.
 const scheduledStartSql = sql`(
 	CASE
 		WHEN cp.status = 'scheduled' THEN COALESCE(cp.starts_at, cp.created_at, 0)
@@ -82,8 +78,6 @@ const customerProductsOrderExpr = sql`${statusRankSql} ASC, ${scheduledStartSql}
 
 const customerProductsOrderBy = sql`ORDER BY ${customerProductsOrderExpr}`;
 
-// Per-product JSON aggregates, joined laterally so each customer_products row
-// carries its fully-hydrated prices / entitlements / free trial.
 export const customerPricesLateral = sql`
 	LEFT JOIN LATERAL (
 		SELECT COALESCE(
@@ -239,12 +233,6 @@ export const getCustomerProductsCountQuery = ({
 	`;
 };
 
-/**
- * CTE that ranks each customer's first products page (matching the page-1
- * ordering of {@link getCustomerProductsPageQuery}) over an existing customer
- * set CTE named `cr` (with an `internal_id` column). Pair with
- * {@link customerProductsSeedSelect} to emit one `products_page` per customer.
- */
 export const customerProductsSeedCte = ({
 	inStatuses,
 	limit,
@@ -296,7 +284,6 @@ export const customerProductsSeedCte = ({
 		)`;
 };
 
-/** Per-customer `products_seed` rows, keyed by internal_customer_id. */
 export const customerProductsSeedSelect = sql`
 	(SELECT COALESCE(
 		json_object_agg(internal_customer_id, rows),

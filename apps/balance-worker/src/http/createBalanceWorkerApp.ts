@@ -32,9 +32,7 @@ export function createBalanceWorkerApp({
 	app.use(requestLoggingMiddleware({ ctx }));
 	app.onError(createWorkerErrorHandler());
 	app.get("/health", receiveHealth);
-	// Parses its own envelope and checks ownership once, so it sits outside the per-command middleware.
 	app.post("/v1/track-batch", receiveTrackBatch({ ctx }));
-	// Every command shares one entry: parse the envelope, then route it to the partition's runtime.
 	const commands = new Hono<BalanceWorkerHttpEnv>();
 	commands.use(requestValidationMiddleware, runtimeRoutingMiddleware({ ctx }));
 	commands.post("/initialize", receiveInitialize);

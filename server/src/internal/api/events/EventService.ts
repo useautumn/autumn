@@ -5,7 +5,6 @@ import type { Logger } from "pino";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 
 export class EventService {
-	/** Insert event(s) into Postgres (Tinybird publishing is handled by EventBatchingManager) */
 	static async insert({
 		db,
 		event,
@@ -15,8 +14,6 @@ export class EventService {
 		logger?: Logger;
 	}) {
 		try {
-			// Delivery is at-least-once, so a replayed id must skip its own row
-			// rather than abort the statement and drop the batch's other events.
 			const results = await db
 				.insert(events)
 				.values(event as any)

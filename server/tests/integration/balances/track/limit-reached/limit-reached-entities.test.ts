@@ -1,11 +1,3 @@
-/**
- * Integration tests for the `balances.limit_reached` webhook at the entity level.
- *
- * `checkLimitReached` fires exactly once: entity-level when `entityId` is
- * provided, customer-level otherwise. These tests verify that entity-scoped
- * tracking only produces an entity-scoped webhook (no extra customer-level fire).
- */
-
 import { afterAll, beforeAll, expect, test } from "bun:test";
 import type { EntityBillingControls } from "@autumn/shared";
 import {
@@ -34,10 +26,6 @@ type BalancesLimitReachedPayload = {
 	};
 };
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// SVIX PLAY SETUP
-// ═══════════════════════════════════════════════════════════════════════════════
-
 let webhook: WebhookTestSetup;
 let playToken: string;
 
@@ -53,10 +41,6 @@ beforeAll(async () => {
 afterAll(async () => {
 	await webhook?.cleanup();
 });
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 1: entity included — per-entity allowance exhausted
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(`${chalk.yellowBright("limit-reached-ent1: per-entity included allowance exhausted fires webhook")}`, async () => {
 	const perEntityMessages = items.monthlyMessages({
@@ -102,7 +86,6 @@ test.concurrent(`${chalk.yellowBright("limit-reached-ent1: per-entity included a
 	expect(data.feature_id).toBe(TestFeature.Messages);
 	expect(data.limit_type).toBe("included");
 
-	// Single-fire: no customer-level webhook (without entity_id) should exist
 	await timeout(3000);
 	let customerLevelFired = false;
 	const history = await getPlayHistory({ token: playToken });
@@ -117,15 +100,10 @@ test.concurrent(`${chalk.yellowBright("limit-reached-ent1: per-entity included a
 				customerLevelFired = true;
 			}
 		} catch {
-			// Skip
 		}
 	}
 	expect(customerLevelFired).toBe(false);
 });
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 2: entity max_purchase — per-entity consumable cap reached
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(`${chalk.yellowBright("limit-reached-ent2: per-entity max_purchase cap reached fires webhook")}`, async () => {
 	const consumableMsg = items.consumableMessages({
@@ -170,10 +148,6 @@ test.concurrent(`${chalk.yellowBright("limit-reached-ent2: per-entity max_purcha
 	expect(data.entity_id).toBe(entities[0].id);
 	expect(data.limit_type).toBe("max_purchase");
 });
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 3: entity spend_limit — per-entity spend limit reached
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(`${chalk.yellowBright("limit-reached-ent3: per-entity spend_limit reached fires webhook")}`, async () => {
 	const consumableMsg = items.consumableMessages({
@@ -231,10 +205,6 @@ test.concurrent(`${chalk.yellowBright("limit-reached-ent3: per-entity spend_limi
 	expect(data.limit_type).toBe("spend_limit");
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 4: two entities — only the entity that hits limit fires webhook
-// ═══════════════════════════════════════════════════════════════════════════════
-
 test.concurrent(`${chalk.yellowBright("limit-reached-ent4: two entities, only entity hitting limit fires webhook")}`, async () => {
 	const perEntityMessages = items.monthlyMessages({
 		includedUsage: 100,
@@ -290,7 +260,6 @@ test.concurrent(`${chalk.yellowBright("limit-reached-ent4: two entities, only en
 				if (!payload.data?.entity_id) customerLevelFired = true;
 			}
 		} catch {
-			// Skip
 		}
 	}
 	expect(entity2Fired).toBe(false);

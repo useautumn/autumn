@@ -83,17 +83,12 @@ const TABLES: TableDef[] = [
 	},
 ];
 
-// Anchor points (approximate edge midpoints) for the FK connectors.
 const CONNECTORS = [
-	// customers.plan_id → plans.id
 	{ from: { x: 336, y: 102 }, to: { x: 360, y: 102 } },
-	// entitlements → customers (left column, vertical)
 	{ from: { x: 176, y: 232 }, to: { x: 176, y: 165 } },
-	// schedules → plans (right column, vertical)
 	{ from: { x: 512, y: 232 }, to: { x: 512, y: 181 } },
 ];
 
-// Cells that periodically mutate, to convey an ever-evolving billing system.
 const MUTATIONS: { key: string; values: string[] }[] = [
 	{ key: "plans-2-2", values: ["400", "500", "600", "400"] },
 	{ key: "plans-1-1", values: ["$20", "$25", "$20"] },

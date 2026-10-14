@@ -35,15 +35,12 @@ export const ResetJobV2ConfigSchema = z.object({
 		.min(RESET_JOB_V2_CONFIG_LIMITS.scanIntervalMs.min)
 		.max(RESET_JOB_V2_CONFIG_LIMITS.scanIntervalMs.max)
 		.default(1_000),
-	// Scanner backpressure: pause scanning while the batch reset queue holds
-	// more than this many messages (visible + in-flight).
 	queueHighWaterMessages: z
 		.number()
 		.int()
 		.min(RESET_JOB_V2_CONFIG_LIMITS.queueHighWaterMessages.min)
 		.max(RESET_JOB_V2_CONFIG_LIMITS.queueHighWaterMessages.max)
 		.default(20),
-	// How often the scan gates re-check queue depth while waiting.
 	queueDepthPollMs: z
 		.number()
 		.int()

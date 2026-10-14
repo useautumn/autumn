@@ -18,7 +18,6 @@ import { deleteOrgStripeWebhooks } from "./deleteOrgStripeWebhooks";
 import { deleteOrgSvixApps } from "./deleteOrgSvixApps";
 import { deletePlatformSubOrg } from "./deletePlatformSubOrg";
 
-/** Named sandboxes are separate sub-orgs owned by their master org. */
 export const listOrgSandboxes = async ({
 	db,
 	orgIds,
@@ -48,7 +47,6 @@ export const deleteOrg = async ({
 	logger: Logger;
 	deleteOrgFromDb?: boolean;
 }) => {
-	// 1. Check if any customers
 	const hasCustomers = await db.query.customers.findFirst({
 		where: and(eq(customers.org_id, org.id), eq(customers.env, AppEnv.Live)),
 	});
@@ -58,7 +56,6 @@ export const deleteOrg = async ({
 			message: "Cannot delete org with production mode customers",
 		});
 
-	// Sandboxes would otherwise be orphaned once the master org is gone.
 	const sandboxes = await listOrgSandboxes({ db, orgIds: [org.id] });
 	for (const sandbox of sandboxes) {
 		await deletePlatformSubOrg({ db, org: sandbox, logger });
@@ -85,8 +82,6 @@ export const deleteOrg = async ({
 
 	if (deleteOrgFromDb) {
 		await OrgService.delete({ db, orgId: org.id });
-		// Workers resolve orgs through a 60s cache; without this a deleted org
-		// keeps resolving and teardown-time jobs run on stale config.
 		await clearOrgWithFeaturesCache({
 			ctx: getMiscCacheContext(),
 			orgId: org.id,

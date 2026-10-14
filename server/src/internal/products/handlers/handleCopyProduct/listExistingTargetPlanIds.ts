@@ -1,7 +1,6 @@
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 
-/** Plan ids from the given set that already exist in the target (org, env). */
 export const listExistingTargetPlanIds = async ({
 	toContext,
 	planIds,

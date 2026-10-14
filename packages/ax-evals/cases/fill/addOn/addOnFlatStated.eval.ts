@@ -5,12 +5,6 @@ import { conduct } from "../../../src/grading/expectations/conductExpectations.t
 import { judge } from "../../../src/grading/expectations/judgeExpectations.ts";
 import { initAxEval } from "../../../src/initAxEval.ts";
 
-/**
- * FILL / add-on shape, stated twin: the flat nature is explicit ("one flat
- * fee, unlocks the feature"), so probing per-unit-vs-flat again is a
- * failure. The flat shape = base price on the add-on plan granting a boolean
- * feature — NOT a per-unit prepaid item.
- */
 export const addOnFlatStated = defineCase({
 	name: "fill-add-on-flat-stated",
 	prompt: [

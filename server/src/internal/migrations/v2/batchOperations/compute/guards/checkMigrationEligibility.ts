@@ -7,12 +7,6 @@ export type EligibleUpdatePlanOp = {
 	op: UpdatePlanOp;
 };
 
-/**
- * Migration-level gate for batch lowering. The batch lane never evaluates
- * Stripe, so the migration must explicitly declare `no_billing_changes` —
- * inferring DB-only from the computed output would let a compute phase gap turn
- * into a silent billing skip.
- */
 export const checkMigrationEligibility = ({
 	migration,
 }: {

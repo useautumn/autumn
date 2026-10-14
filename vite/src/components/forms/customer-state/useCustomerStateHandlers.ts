@@ -60,7 +60,6 @@ export function useCustomerStateHandlers({
 	);
 
 	const lastSelectedEntityId = useRef<string | null>(null);
-	// Pickers present at mount wait for the sheet to settle; user-added ones open at once.
 	const hasAddedEmptyPlan = useRef(false);
 	const newEmptyPlan = useCallback((): CustomerStatePlan => {
 		hasAddedEmptyPlan.current = true;
@@ -125,7 +124,6 @@ export function useCustomerStateHandlers({
 		[form],
 	);
 
-	// The row becomes a copy of the same plan in the phase before.
 	const handleCopyFromPreviousPhase = useCallback(
 		({ phaseIndex, planIndex }: { phaseIndex: number; planIndex: number }) => {
 			if (phaseIndex < 1 || isPhaseLocked({ phaseIndex })) return;
@@ -144,7 +142,6 @@ export function useCustomerStateHandlers({
 		[form, isPhaseLocked],
 	);
 
-	// One open-ended plan replaces its copy in every phase that hasn't started.
 	const handleMakeUnscheduled = useCallback(
 		({ phaseIndex, planIndex }: { phaseIndex: number; planIndex: number }) => {
 			if (isPhaseLocked({ phaseIndex })) return;
@@ -176,7 +173,6 @@ export function useCustomerStateHandlers({
 		[form, isPhaseLocked],
 	);
 
-	// Copies into the row that asked, so only that row's scope is pulled in.
 	const handleCopyExistingPlans = useCallback(
 		({
 			planIndex,
@@ -220,7 +216,6 @@ export function useCustomerStateHandlers({
 		[form],
 	);
 
-	// Quantities and customizations belong to the old plan, so they reset with it.
 	const handleSelectPlanProduct = useCallback(
 		({
 			location,

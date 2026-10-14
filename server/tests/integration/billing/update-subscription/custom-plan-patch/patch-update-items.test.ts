@@ -1,13 +1,3 @@
-/**
- * TDD coverage for patch-style custom plan item updates.
- *
- * Red-failure mode (current behavior):
- *  - add_items/remove_items can build an incomplete patch plan or lose usage while replacing feature items.
- *
- * Green-success criteria (after fix):
- *  - Patch updates add/remove only the requested feature items, and existing usage carries into matching replacements.
- */
-
 import { expect, test } from "bun:test";
 import type {
 	ApiCustomerV5,

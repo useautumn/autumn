@@ -11,13 +11,6 @@ const GetOAuthUrlSchema = z.object({
 	redirect_url: z.string(),
 });
 
-/**
- * POST /oauth_url
- * Generates Stripe OAuth URL for platform organizations
- * - Validates organization ownership
- * - Generates secure state key stored in Redis
- * - Returns OAuth URL with state
- */
 export const handleGetPlatformOAuth = createRoute({
 	scopes: [Scopes.Platform.Write],
 	body: GetOAuthUrlSchema,
@@ -27,14 +20,12 @@ export const handleGetPlatformOAuth = createRoute({
 
 		const { organization_slug, env, redirect_url } = c.req.valid("json");
 
-		// Verify the organization exists and was created by this master org
 		const org = await validatePlatformOrg({
 			db,
 			organizationSlug: organization_slug,
 			masterOrg,
 		});
 
-		// Generate OAuth state and store in Redis
 		const stateKey = await generateOAuthState({
 			organizationSlug: org.slug,
 			env: env === "live" ? AppEnv.Live : AppEnv.Sandbox,
@@ -42,7 +33,6 @@ export const handleGetPlatformOAuth = createRoute({
 			masterOrgId: masterOrg.id,
 		});
 
-		// Get appropriate Stripe client ID based on environment
 		const clientId =
 			env === "live"
 				? process.env.STRIPE_LIVE_CLIENT_ID
@@ -56,7 +46,6 @@ export const handleGetPlatformOAuth = createRoute({
 			});
 		}
 
-		// Build OAuth URL
 		const oauthUrl = new URL("https://connect.stripe.com/oauth/v2/authorize");
 		oauthUrl.searchParams.set("response_type", "code");
 		oauthUrl.searchParams.set("client_id", clientId);

@@ -1,12 +1,3 @@
-/**
- * FullSubject replay hydration may evaluate expiry predicates at one captured
- * historical instant without changing ordinary request-time DB-now behavior.
- *
- * Red (current): the as-of option is ignored and every expiry predicate uses now().
- * Green (after): every expiry predicate binds the supplied instant, while omission
- * keeps now() and malformed instants are rejected before SQL is produced.
- */
-
 import { describe, expect, test } from "bun:test";
 import { AppEnv } from "@autumn/shared";
 import { PgDialect } from "drizzle-orm/pg-core";

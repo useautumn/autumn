@@ -1,7 +1,6 @@
 import { expect, test } from "bun:test";
 import { UpdateSubscriptionV1ParamsSchema } from "@autumn/shared";
 
-// Custom invoice lines must survive validation, including when they are the only update.
 test("update accepts custom_line_items as the only update field", () => {
 	const params = {
 		customer_id: "custom-lines-customer",

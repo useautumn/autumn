@@ -1,7 +1,6 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
-/** Project ref from trigger.config.ts (avoid importing the full config). */
 export function readTriggerProjectRef({
 	projectRoot,
 }: {

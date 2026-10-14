@@ -4,11 +4,6 @@ import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { InvoiceService } from "../InvoiceService.js";
 
-/**
- * Redirect to Stripe hosted invoice URL
- * Public route - no authentication required. Authorisation comes from
- * possession of the opaque invoice ID in the URL.
- */
 export const handleRedirectToInvoice = createRoute({
 	scopes: [Scopes.Public],
 	handler: async (c) => {

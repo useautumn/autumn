@@ -1,13 +1,3 @@
-/**
- * Regression for deferred direct-billing upgrades with minimum-amount promo codes.
- *
- * Red-failure mode: attach accepts the promo, creates a payable invoice, then
- * deferred replay later fails on the subscription update.
- *
- * Green-success criteria: preview and attach reject before any new invoice or
- * plan transition side effect.
- */
-
 import { type ApiCustomerV3, type AttachParamsV1Input } from "@autumn/shared";
 import { createPercentCoupon } from "@tests/integration/billing/utils/discounts/discountTestUtils";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";

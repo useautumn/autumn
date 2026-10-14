@@ -88,8 +88,6 @@ export const getAttachConfig = async ({
 		branch === AttachBranch.SameCustom ||
 		branch === AttachBranch.NewVersion;
 
-	// Disable trial if doing a merge sub or something else...
-	// Is merge sub...
 	const willMerge = await willMergeSub({ attachParams, branch });
 
 	const disableTrial =
@@ -130,7 +128,6 @@ export const getAttachConfig = async ({
 
 	const disableMerge = branch === AttachBranch.MainIsTrial || onlyCheckout;
 
-	// Require payment method...
 	let paymentMethodRequired = true;
 	if (
 		!disableTrial &&

@@ -1,7 +1,6 @@
 import type { SubjectReadFrom } from "@/db/resolveSubjectReadDb.js";
 import { buildFullSubjectKey } from "./buildFullSubjectKey.js";
 
-/** In-memory singleflight key — Redis subject key + modes that change the result. */
 export const buildSubjectReadFlightKey = ({
 	orgId,
 	env,

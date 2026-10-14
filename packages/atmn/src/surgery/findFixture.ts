@@ -73,8 +73,6 @@ const candidateFixtures = ({
 				key: builder.arrayProperty,
 			});
 			if (array === null || array.kind() !== "array") return [];
-			// An element is a bare literal or a builder call around one:
-			// `variants: [{...}]` and `variants: [variant({...})]` both count.
 			return array.namedChildren().flatMap((element) => {
 				const object = fixtureObjectOf(element);
 				return object === null ? [] : [{ node: element, object }];
@@ -101,8 +99,6 @@ export const findFixtures = ({
 }): SgNode[] => {
 	const root = parse(Lang.TypeScript, source).root();
 	const matches: SgNode[] = [];
-	// A rule walk rather than a pattern: a pattern misses an object whose id
-	// pair follows a spread, and the fixture must be found to be refused.
 	for (const { node, object } of candidateFixtures({ root, builder })) {
 		const idValue = topLevelPairValue({ object, key: idField });
 		if (idValue === null || stringLiteralValue(idValue) !== id) continue;

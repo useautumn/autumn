@@ -1,9 +1,3 @@
-/**
- * dfu.flash — Stripe recurring plan applies mid-cycle usage (contract 1,2,3):
- * route resolves, a full v1 payload validates, and an active cusProduct is
- * inserted with balance = allowance - usage.
- */
-
 import { expect, test } from "bun:test";
 import { type ApiCustomerV5 } from "@autumn/shared";
 import {
@@ -62,15 +56,12 @@ test.concurrent(
 
 		const flashRes = await callFlash(autumnV2_2 as FlashClient, payload);
 
-		// ── Contract 1: route resolves (not 404). Green now (stub 501) & post-impl (200). ──
 		expect(flashRes.errorCode).not.toBe("not_found");
 		expect(flashRes.errorMessage ?? "").not.toContain("status 404");
 
-		// ── Contract 2: full v1 payload validates (no 400 / zod reject). ──
 		expect(flashRes.errorCode).not.toBe("invalid_request");
 		expect(flashRes.errorCode).not.toBe("invalid_inputs");
 
-		// ── Contract 3: active cusProduct inserted; balance = allowance - usage. ──
 		const customer = await autumnV2_3.customers.get<ApiCustomerV5>(customerId);
 		await expectCustomerProducts({ customer, active: [pro.id] });
 		expectBalanceCorrect({

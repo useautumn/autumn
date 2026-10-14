@@ -12,7 +12,6 @@ import { and, eq } from "drizzle-orm";
 import { flushBalanceWorkerCustomer } from "@/internal/balances/balanceWorker/flushBalanceWorkerCustomer.js";
 import { runLockSweepBatch } from "@/internal/balances/lockSweep/runLockSweepBatch.js";
 
-// Only the worker writes balance_locks; legacy locks live in Redis and expire on their own path.
 test.skipIf(!isBalanceWorkerRoute())(
 	`${chalk.yellowBright("lock-sweep-confirm: a lock past its 24 hour default is confirmed, and its id is free again")}`,
 	async () => {
@@ -45,24 +44,20 @@ test.skipIf(!isBalanceWorkerRoute())(
 		);
 
 		await takeLock();
-		// Age the lock past its expiry rather than waiting a day for it.
 		await ctx.db.update(balanceLocks).set({ expires_at: 1 }).where(thisLock);
 
 		await runLockSweepBatch({ ctx });
-		// The worker answers once its log has the delete; Postgres takes it just after.
 		await flushBalanceWorkerCustomer({ ctx, customerId });
 
 		expect(await ctx.db.select().from(balanceLocks).where(thisLock)).toEqual(
 			[],
 		);
-		// Confirmed, not released: the 5 the lock took stay taken.
 		const customer = await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
 		expectBalanceCorrect({
 			customer,
 			featureId: TestFeature.Messages,
 			remaining: 15,
 		});
-		// The worker forgot the id too, so the same lock id can be taken again.
 		await takeLock();
 	},
 );

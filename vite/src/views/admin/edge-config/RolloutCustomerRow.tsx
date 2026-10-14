@@ -66,7 +66,6 @@ const PinStatusLabel = ({
 	);
 };
 
-/** One pinned customer: its org, its id, where its last add or removal stands, and remove. */
 export const RolloutCustomerRow = ({
 	orgId,
 	org,

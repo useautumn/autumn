@@ -1,6 +1,3 @@
-// Archived plans stay pinned; migration drafts skip archived rows.
-// Declaring an unchanged variant preserves its archive state unless explicitly restored.
-
 import { expect, test } from "bun:test";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils.js";

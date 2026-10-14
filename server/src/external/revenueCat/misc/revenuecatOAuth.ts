@@ -30,8 +30,6 @@ const parseScope = (scope: string) => {
 	return { domain, resource, access };
 };
 
-// RevenueCat collapses broad grants into wildcards (e.g. "*:*:read_write");
-// read_write also satisfies a read requirement.
 const grantSatisfies = (granted: string, required: string): boolean => {
 	const g = parseScope(granted);
 	const r = parseScope(required);
@@ -95,8 +93,6 @@ export const exchangeRcCode = async ({
 
 export const refreshRcTokens = async ({
 	refreshToken,
-	// Omit scopes on refresh — re-requesting the full set triggers RC `invalid_scope`.
-	// An empty list reuses the originally-granted scopes (OAuth2 §6).
 	scopes = [],
 }: {
 	refreshToken: string;

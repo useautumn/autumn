@@ -8,7 +8,6 @@ import type {
 } from "./types/billingOptionSectionTypes";
 import { toVisibleBillingOptionSections } from "./utils/toVisibleBillingOptionSections";
 
-/** Collapsible billing option sections; a section with no visible option is not rendered. */
 export function BillingOptionSections({
 	sections,
 }: {

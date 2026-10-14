@@ -3,7 +3,6 @@ import { Alert, AlertDescription } from "@autumn/ui";
 import { WarningCircleIcon } from "@phosphor-icons/react";
 import { SetPlansTextLine } from "@/components/forms/shared/errors/SetPlansTextLine";
 
-/** Every Set Plans error: what's wrong on line 1, what to do on line 2. */
 export function SetPlansErrorAlert({
 	copy,
 	onAction,

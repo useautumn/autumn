@@ -2,7 +2,6 @@ import { productToProductKey } from "@autumn/shared";
 import type { ProductStatesContext } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext";
 import { productKeyToState } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/productKeyToState";
 
-/** Customer-bearing versions per plan — input to filter collapse. */
 export const versionsWithCustomersByPlanId = ({
 	productStatesContext,
 }: {

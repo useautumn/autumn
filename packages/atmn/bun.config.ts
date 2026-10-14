@@ -2,8 +2,6 @@ import * as Bun from "bun";
 
 const packageJson = await Bun.file("./package.json").json();
 const version: string = packageJson.version;
-// Dependencies stay external: npm installs them per platform (ast-grep ships
-// a native binary per OS, which must never be baked into one tarball).
 const external = Object.keys(packageJson.dependencies ?? {});
 
 console.time(`Building atmn v${version}`);

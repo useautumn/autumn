@@ -14,11 +14,6 @@ export type ProbeResult = {
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-/**
- * Boots the (agent-edited) fixture app in the workspace and replays a list of
- * requests against it, capturing statuses and bodies for the graders. The
- * server is killed afterward; the workspace is untouched.
- */
 export const probeFixtureApp = async ({
 	workspaceDir,
 	port,
@@ -41,7 +36,6 @@ export const probeFixtureApp = async ({
 	});
 
 	try {
-		// Poll /health until the app is up (or give up).
 		let booted = false;
 		for (let attempt = 0; attempt < 30; attempt++) {
 			try {
@@ -51,7 +45,6 @@ export const probeFixtureApp = async ({
 					break;
 				}
 			} catch {
-				// not up yet
 			}
 			await wait(200);
 		}
@@ -74,7 +67,6 @@ export const probeFixtureApp = async ({
 				try {
 					body = JSON.parse(text);
 				} catch {
-					// keep raw text
 				}
 				calls.push({ path: request.path, status: res.status, body });
 			} catch (error) {

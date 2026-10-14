@@ -1,4 +1,3 @@
-// import { CustomerExpand } from "@useautumn/sdk";
 import { z } from "zod/v4";
 import {
 	attachParamsSchema,
@@ -32,22 +31,19 @@ export const routeConfigs: RouteDefinition<RouteName>[] = [
 	{
 		route: "getOrCreateCustomer",
 		sdkMethod: (autumn, args) => autumn.customers.getOrCreate(args),
-		requireCustomer: false, // customHandler handles auth logic for errorOnNotFound
+		requireCustomer: false,
 		bodySchema: z.object({
 			errorOnNotFound: z.boolean().optional().default(true),
-			// expand: z.array(z.enum(CustomerExpand)).optional(),
 			expand: z.array(z.string()).optional(),
 		}),
 		protectedBodyFields: CUSTOMER_PROTECTED_BODY_FIELDS,
 		customHandler: async ({ autumn, identity, body }) => {
 			const sanitizedBody = sanitizeBody(body, CUSTOMER_PROTECTED_BODY_FIELDS);
 
-			// Special case: if no customer and errorOnNotFound is false, return 204
 			if (!identity?.customerId && sanitizedBody.errorOnNotFound === false) {
 				return backendSuccess({ statusCode: 204, body: null });
 			}
 
-			// Otherwise require customerId
 			if (!identity?.customerId) {
 				return backendError({
 					message: "customerId not found",
@@ -56,7 +52,6 @@ export const routeConfigs: RouteDefinition<RouteName>[] = [
 				});
 			}
 
-			// Build args and call SDK
 			const existingExpand = Array.isArray(sanitizedBody.expand)
 				? sanitizedBody.expand
 				: [];

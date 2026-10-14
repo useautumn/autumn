@@ -1,9 +1,3 @@
-/**
- * atmn scenarios/pull — after dashboard changes [plan edited, plan archived, new plan, draft created] → config reflects each
- *
- * One line of plans/atmn-v3/07_tests.md. [a, b] is a matrix looped INSIDE this file.
- */
-
 import { expect, test } from "bun:test";
 import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 import { expectPreviewNone } from "@tests/utils/atmnUtils/expectRoundTrip.js";
@@ -62,10 +56,6 @@ test.concurrent(
 test.concurrent(
 	"after dashboard changes [plan archived] → the archive takes; pull does not choke on the row it can no longer see",
 	async () => {
-		// Decision pending: applyPreview treats archived catalog rows as server
-		// history and never writes them into a fixture, so the shape pull leaves
-		// the config in here is the open question — the only claim this asserts
-		// with confidence is that the archive lands server-side and pull survives it.
 		const planId = uniqueTestId("atmn_dash_archive");
 		const scenario = await initAtmnScenario({
 			setup: [
@@ -108,8 +98,6 @@ test.concurrent(
 
 		try {
 			await scenario.push();
-			// skip_deletions: true — this call only states the new plan; the
-			// existing one must survive untouched, not be read as absentee.
 			await scenario.client.update({
 				plans: [
 					{
@@ -151,8 +139,6 @@ test.concurrent(
 		try {
 			await scenario.push();
 
-			// Minting a draft alongside the still-active row, the same shape push
-			// uses for a v3 draft: the live row restated, plus the new inactive one.
 			await scenario.client.update({
 				plans: [
 					{

@@ -9,10 +9,6 @@ import { scheduleDefaultProduct } from "@/internal/customers/cusProducts/cusProd
 import { ProductService } from "@/internal/products/ProductService";
 import type { StripeSubscriptionUpdatedContext } from "../../stripeSubscriptionUpdatedContext";
 
-/**
- * Schedules default products for customer product groups that are being canceled.
- * Returns a map of product group -> scheduled customer product.
- */
 export const scheduleDefaultProducts = async ({
 	ctx,
 	subscriptionUpdatedContext,
@@ -27,7 +23,6 @@ export const scheduleDefaultProducts = async ({
 
 	const scheduledByGroup = new Map<string, FullCusProduct>();
 
-	// Fetch default products upfront (optimization)
 	const defaultProducts = await ProductService.listDefault({
 		db,
 		orgId: org.id,
@@ -36,7 +31,6 @@ export const scheduleDefaultProducts = async ({
 
 	const scheduleAtMs = getLatestPeriodEnd({ sub: stripeSubscription }) * 1000;
 
-	// Schedule default for each canceled non-entity product group
 	for (const canceledProduct of canceledCustomerProducts) {
 		const eligibleForDefaultProduct = customerProductEligibleForDefaultProduct({
 			ctx,

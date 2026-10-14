@@ -8,7 +8,6 @@ const licensesByPlanId = ({
 }): Map<string, NonNullable<FullProduct["licenses"]>[number]> =>
 	new Map((product.licenses ?? []).map((link) => [link.product.id, link]));
 
-/** Same detector as the plan body, once per shared license link. Stamps `license_plan_id`. */
 export const detectLicenseSlotConflicts = ({
 	current,
 	next,

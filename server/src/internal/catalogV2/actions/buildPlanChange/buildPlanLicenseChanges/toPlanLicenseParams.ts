@@ -21,7 +21,6 @@ export const fullPlanLicenseToParams = ({
 	};
 };
 
-/** Remove first; upsert can add the id back. */
 export const applyLicenseParamsPatch = ({
 	licenses,
 	upsertLicenses = [],

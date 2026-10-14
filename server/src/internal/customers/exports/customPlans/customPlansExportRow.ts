@@ -49,7 +49,6 @@ export const customerProductToCustomPlansExportRow = ({
 	customer_id: scalar.id,
 	name: scalar.name,
 	email: scalar.email,
-	// The stored id first: getFull caps how many entities it loads.
 	entity_id:
 		customerProduct.entity_id ??
 		customerProductToEntity({

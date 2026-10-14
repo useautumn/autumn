@@ -5,7 +5,6 @@ import {
 	isBooleanFeature,
 } from "@autumn/shared";
 
-/** Usage carry_over_usages moves onto the replacing plan, so the switch must not also bill it. */
 export const carriesOverUsage = ({
 	carryOverUsages,
 	sourceCustomerProductIds,

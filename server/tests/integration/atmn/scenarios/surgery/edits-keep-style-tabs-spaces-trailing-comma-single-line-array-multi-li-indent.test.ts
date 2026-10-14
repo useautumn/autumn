@@ -1,8 +1,3 @@
-/**
- * atmn scenarios/surgery — edits keep style [tabs, spaces]
- * Slice of one line of plans/atmn-v3/07_tests.md; the shared style cases live in utils/editsKeepStyle.ts.
- */
-
 import { expect, test } from "bun:test";
 import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 import { initAtmnScenario } from "@tests/utils/atmnUtils/initAtmnScenario.js";
@@ -26,15 +21,11 @@ for (const [style, { raw }] of Object.entries(STYLES).filter(([name]) =>
 		try {
 			await scenario.push();
 
-			// `keep`'s block already carries the internalId push backfilled into
-			// it; that — not the internalId-less source — is what must survive.
 			const keepBeforeEdit = extractPlanBlock(
 				scenario.files().get("autumn.config.ts") ?? "",
 				keepId,
 			);
 
-			// Dashboard-style price edit of `edit` only; `keep` rides along in the
-			// full-state payload unchanged so it is not deleted server-side.
 			await scenario.client.update({
 				plans: [
 					{ plan_id: editId, price: { amount: 30, interval: "month" } },

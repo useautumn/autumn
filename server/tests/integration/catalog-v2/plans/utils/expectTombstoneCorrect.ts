@@ -5,7 +5,6 @@ import type { AutumnInt } from "@/external/autumn/autumnCli.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 
-/** A tombstoned version is hidden, slug-free, and keeps expired customer_products. */
 export const expectTombstoneCorrect = async ({
 	ctx,
 	autumn,

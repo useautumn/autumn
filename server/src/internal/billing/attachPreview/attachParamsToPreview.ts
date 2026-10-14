@@ -28,7 +28,6 @@ export const attachParamsToPreview = async ({
 	withPrepaid?: boolean;
 }) => {
 	const { logger } = ctx;
-	// Handle existing product
 
 	const branch = await getAttachBranch({
 		ctx,

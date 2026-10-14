@@ -4,10 +4,8 @@ import { SelectOptionLabel } from "@/views/customers/customer/analytics/componen
 
 export type FilterOption = { id: string; name: string };
 
-/** Option id standing for "no filter", kept out of the URL. */
 export const ALL_OPTION_ID = "__all__";
 
-/** SearchableSelect for the Logs toolbar: one id/name option shape and the shared row. */
 export const FilterSelect = ({
 	trigger,
 	...props

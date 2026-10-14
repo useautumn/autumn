@@ -3,7 +3,6 @@ const EXPECTED_ERROR_KIND = "expected";
 const isClientErrorStatus = (statusCode: unknown) =>
 	typeof statusCode === "number" && statusCode >= 400 && statusCode < 500;
 
-/** Expected failures and 4xx request lines are routine traffic, not something Sazabi should investigate. */
 export const isRoutineWarning = (record: Record<string, unknown>): boolean => {
 	if (isClientErrorStatus(record.statusCode)) return true;
 	const { error } = record;

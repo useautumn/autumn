@@ -1,15 +1,5 @@
-/**
- * The scalar-constraint algebra the operation scope is built from: lowering
- * plan-filter matcher forms into provable scalars, and reconciling the two
- * filter levels (migration filter + operation plan_filter).
- */
-
-/** `true`/`false` narrow the scope; `null` means "no constraint"; anything
- * the batch lane cannot prove is `unsupported` → per-customer lane. */
 export type ScalarConstraint = boolean | null | "unsupported";
 
-/** Boolean matcher → scalar. `{ $eq }` is handled defensively even though
- * BooleanMatcherSchema is currently a bare boolean. */
 export const lowerBooleanMatcher = (raw: unknown): ScalarConstraint => {
 	if (raw === undefined) return null;
 	if (typeof raw === "boolean") return raw;
@@ -20,8 +10,6 @@ export const lowerBooleanMatcher = (raw: unknown): ScalarConstraint => {
 	return "unsupported";
 };
 
-/** Null-existence matcher (`price`) → scalar: `null` / `{ $eq: null }` mean
- * "absent" (false), `{ $ne: null }` means "present" (true). */
 export const lowerNullExistenceMatcher = (raw: unknown): ScalarConstraint => {
 	if (raw === undefined) return null;
 	if (raw === null) return false;
@@ -33,8 +21,6 @@ export const lowerNullExistenceMatcher = (raw: unknown): ScalarConstraint => {
 	return "unsupported";
 };
 
-/** Both filter levels describe the same rows: null defers to the other
- * level, both-set must agree, disagreement is unprovable. */
 export const reconcileConstraints = (
 	fromOp: ScalarConstraint,
 	fromMigration: ScalarConstraint,

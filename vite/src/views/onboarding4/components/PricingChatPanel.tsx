@@ -32,9 +32,7 @@ interface PricingChatPanelProps {
 	placeholder?: string;
 	className?: string;
 	inputClassName?: string;
-	/** Per-surface overrides for the message bubble (e.g. tighter chat styling). */
 	messageContentClassName?: string;
-	/** Status shown while the agent is working before any reply text streams. */
 	thinkingLabel?: string;
 }
 
@@ -44,10 +42,6 @@ const hasAssistantText = (message?: UIMessage) =>
 		(part) => part.type === "text" && part.text.trim().length > 0,
 	);
 
-/**
- * Reusable chat panel for pricing agent conversations.
- * Renders messages list and prompt input.
- */
 export function PricingChatPanel({
 	messages,
 	input,

@@ -7,7 +7,6 @@ export type SelectFieldOption<T extends string | number = string> = {
 	label: string;
 	value: T;
 	disabledValue?: string;
-	/** Shows a badge without disabling the option */
 	badgeValue?: string;
 };
 

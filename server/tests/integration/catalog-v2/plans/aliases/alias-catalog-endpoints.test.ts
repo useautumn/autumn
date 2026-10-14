@@ -1,10 +1,3 @@
-/**
- * Ingress plan-id aliases on CORE catalog read/write endpoints.
- *
- * Path `:product_id` and body `plan_id` rewrite to the canonical id.
- * `new_plan_id` and create-plan identity fields are not rewritten.
- */
-
 import { expect, test } from "bun:test";
 import { type ApiPlanV1 } from "@autumn/shared";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils.js";

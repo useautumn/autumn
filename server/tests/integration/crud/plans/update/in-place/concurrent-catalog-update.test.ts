@@ -1,6 +1,3 @@
-// Concurrent item updates must reload the catalog state protected by the product lock.
-// Otherwise, both stale callers insert a replacement and leave duplicate active rows.
-
 import { expect, test } from "bun:test";
 import { entitlements } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";

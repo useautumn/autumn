@@ -1,7 +1,6 @@
 import { Tooltip, TooltipContent, TooltipTrigger } from "@autumn/ui";
 import { CopySimpleIcon, InfoIcon } from "@phosphor-icons/react";
 
-/** The picker's "Copy existing plans" header row; the tooltip names where it copies from. */
 export function CopyExistingPlansRow({
 	tooltip,
 	onCopy,
@@ -34,7 +33,6 @@ export function CopyExistingPlansRow({
 	);
 }
 
-/** Tooltip copy shared by every sheet that offers the row. */
 export const copyExistingPlansTooltip = ({
 	isFallback,
 	scopeLabel,

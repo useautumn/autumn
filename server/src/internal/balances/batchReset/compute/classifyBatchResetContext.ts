@@ -7,19 +7,10 @@ import type {
 import { classifyResetCandidate } from "./classifyResetCandidate.js";
 
 export type ClassifiedBatchResetContext = {
-	/** Groups containing only customer entitlements that should be reset. */
 	resetGroups: BatchResetGroup[];
-	/** All non-reset outcomes, flattened for one later bulk write. */
 	verdicts: ResetVerdict[];
 };
 
-/**
- * Pure classification stage for one hydrated SQS batch.
- *
- * Org contexts stay attached to resettable entitlements because reset
- * computation depends on org configuration. Verdicts are tenant-independent
- * row updates, so they are flattened for the later persistence stage.
- */
 export const classifyBatchResetContext = ({
 	batchResetContext,
 }: {

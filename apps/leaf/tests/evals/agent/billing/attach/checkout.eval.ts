@@ -16,8 +16,6 @@ type EvalMetadata = {
 
 const experimentName = "attach-checkout-link";
 
-// User explicitly wants a checkout link to send the customer: checkout mode
-// omits invoice_mode and forces a payment URL with redirect_mode "always".
 const setup = withCustomers({
 	setup: orgSetups.knowledgePlatform(),
 	customers: ({ customers }) => ({
@@ -82,7 +80,6 @@ initEval<EvalMetadata>({
 						toolName: "attach",
 					},
 				}),
-				// Checkout flow: no draft invoice should be created.
 				api.bodyExcludes({
 					fields: ["invoice_mode"],
 					toolName: "previewAttach",

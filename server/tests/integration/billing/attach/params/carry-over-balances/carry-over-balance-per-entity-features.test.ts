@@ -1,6 +1,3 @@
-/** Regression: carry_over_balances must preserve each entity's non-zero balance independently.
- * Negative balances remain debts on their originating entity. */
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3, ApiEntityV0 } from "@autumn/shared";
 import { findCustomerEntitlement } from "@tests/balances/utils/findCustomerEntitlement";

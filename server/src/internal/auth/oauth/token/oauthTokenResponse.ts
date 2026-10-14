@@ -1,4 +1,3 @@
-/** Null when better-auth answered with a non-JSON body, which callers pass through untouched. */
 export const parseOAuthTokenResponseBody = async (response: Response) => {
 	try {
 		return (await response.clone().json()) as Record<string, unknown>;
@@ -7,7 +6,6 @@ export const parseOAuthTokenResponseBody = async (response: Response) => {
 	}
 };
 
-/** `response` seeds the headers so better-auth's own headers (cookies, etc.) survive. */
 export const jsonOAuthTokenResponse = ({
 	body,
 	response,

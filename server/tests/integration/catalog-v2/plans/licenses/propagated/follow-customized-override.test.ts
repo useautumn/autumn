@@ -1,8 +1,3 @@
-/**
- * catalogV2.update — customized adopt: keep the override, let new child
- * items through, collapse when the child catches up. Child new_version
- * re-points the catalog link at v2 on the same path.
- */
 import { expect, test } from "bun:test";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";

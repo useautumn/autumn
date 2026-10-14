@@ -89,7 +89,6 @@ export const createState = ({
 		],
 	});
 
-/** The catalog rows every fixture state references. */
 export const testCatalogRows: CatalogRow[] = [
 	{
 		table: "entitlements",

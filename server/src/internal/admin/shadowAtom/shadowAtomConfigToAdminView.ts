@@ -1,6 +1,5 @@
 import type { ShadowAtomConfig } from "@autumn/edge-config";
 
-/** What staff see: no token, not even encrypted, ever leaves the server. */
 export const shadowAtomConfigToAdminView = ({
 	config,
 }: {

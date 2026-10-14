@@ -44,7 +44,6 @@ test.concurrent(
 			}),
 		});
 
-		// Track exactly 100 → balance = 0 → 0 < 20 → should trigger top-up
 		await autumnV2_1.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
@@ -85,7 +84,6 @@ test.concurrent(
 			],
 		});
 
-		// threshold=100, quantity=50 → after top-up, balance will still be below threshold
 		await autumnV2_1.customers.update(customerId, {
 			billing_controls: makeAutoTopupConfig({
 				threshold: 130,
@@ -93,7 +91,6 @@ test.concurrent(
 			}),
 		});
 
-		// Round 1: Track 170 → balance=30 → top-up fires → balance=80
 		await autumnV2_1.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
@@ -107,7 +104,6 @@ test.concurrent(
 		const expectedMid = new Decimal(200).sub(170).add(100).toNumber();
 		expect(midBalance).toBe(expectedMid);
 
-		// Round 2: Track just 1 → balance=79 → still below threshold 100 → ANOTHER top-up fires
 		await autumnV2_1.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,

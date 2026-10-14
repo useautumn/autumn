@@ -81,22 +81,18 @@ test("clearing keeps the rest of the item config", () => {
 test("an item edited out of eligibility drops its stale threshold", () => {
 	const enabled = withThresholdBilling({ item: payPerUse, threshold: 20 });
 
-	// Still eligible → untouched, same reference so save stays a no-op.
 	expect(reconcileThresholdBilling({ item: enabled })).toBe(enabled);
 
-	// Switched to prepaid → the API would reject the leftover threshold.
 	const prepaid = { ...enabled, usage_model: UsageModel.Prepaid };
 	expect(
 		itemThreshold({ item: reconcileThresholdBilling({ item: prepaid }) }),
 	).toBeNull();
 
-	// Made unlimited → same.
 	const unlimited = { ...enabled, included_usage: Infinite };
 	expect(
 		itemThreshold({ item: reconcileThresholdBilling({ item: unlimited }) }),
 	).toBeNull();
 
-	// Given a second tier → same.
 	const tiered = { ...enabled, price: undefined, tiers };
 	expect(
 		itemThreshold({ item: reconcileThresholdBilling({ item: tiered }) }),

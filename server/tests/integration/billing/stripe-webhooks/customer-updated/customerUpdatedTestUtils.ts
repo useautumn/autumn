@@ -5,10 +5,8 @@ import type Stripe from "stripe";
 import type { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { timeout } from "@/utils/genUtils.js";
 
-/** Default time to wait for a `customer.updated` webhook to round-trip and process. */
 export const CUSTOMER_UPDATED_WAIT_MS = 8000;
 
-/** Stripe customer id for a customer created via initScenario. */
 export const getStripeCustomerId = (customer: {
 	processor?: { id?: string } | null;
 } | null): string => {
@@ -19,7 +17,6 @@ export const getStripeCustomerId = (customer: {
 	return stripeId;
 };
 
-/** Update a Stripe customer, then wait for the `customer.updated` webhook to process. */
 export const updateStripeCustomerAndWait = async ({
 	ctx,
 	stripeCustomerId,
@@ -35,11 +32,6 @@ export const updateStripeCustomerAndWait = async ({
 	await timeout(waitMs);
 };
 
-/**
- * Assert the Autumn customer's `name` and/or `email`. Only the fields you pass are
- * checked, so a caller can assert one field changed while the other stayed put.
- * Returns the fetched customer.
- */
 export const expectCustomerDetails = async ({
 	autumn,
 	customerId,

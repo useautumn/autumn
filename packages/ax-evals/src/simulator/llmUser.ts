@@ -1,10 +1,6 @@
 import { type ChatMessage, completeChat } from "../llm/completeChat.ts";
 import type { TurnSource } from "./types/turnSource.ts";
 
-/** Pinned separately from the agent model: the user is measurement apparatus,
- * so don't skimp — tau-bench runs its user sim at the agents' own tier, and
- * weak sims approve summaries that contradict their brief. Cost is ~$0.01/run.
- * Override per-run with AX_EVALS_USER_MODEL. */
 const USER_MODEL = process.env.AX_EVALS_USER_MODEL ?? "openai/gpt-5.4-mini";
 
 const DONE_TOKEN = "<<DONE>>";
@@ -38,11 +34,6 @@ ${
 - Keep replies short — one or two sentences, like a busy founder on Slack.
 - When the agent has finished the job (or is only waiting on things you can't do), reply with exactly ${DONE_TOKEN}`;
 
-/**
- * A tau-style LLM-simulated user: an opening message, then a cheap pinned
- * model answers the agent from a private facts brief — withholding what
- * wasn't asked, pushing back when the agent stalls, ending with DONE.
- */
 export const llmUser = ({
 	prompt,
 	goal,
@@ -50,14 +41,10 @@ export const llmUser = ({
 	maxUserTurns = 8,
 	approvesPush = false,
 }: {
-	/** the fixed opening message (kept deterministic for comparability) */
 	prompt: string;
-	/** what this user is trying to get done */
 	goal: string;
-	/** the private brief, one fact per line */
 	facts: string;
 	maxUserTurns?: number;
-	/** say yes when the agent asks to push; the default user declines */
 	approvesPush?: boolean;
 }): TurnSource => {
 	const history: ChatMessage[] = [
@@ -74,8 +61,6 @@ export const llmUser = ({
 				return prompt;
 			}
 			if (!lastAgentText.trim()) return null;
-			// In this chat the simulated user is the "assistant" speaker and the
-			// coding agent's messages arrive as "user" turns.
 			history.push({ role: "user", content: lastAgentText });
 			const reply = await completeChat({
 				model: USER_MODEL,

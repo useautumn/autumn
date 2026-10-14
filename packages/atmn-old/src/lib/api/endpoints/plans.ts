@@ -2,9 +2,6 @@ import type { ApiPlanParams } from "../../transforms/sdkToApi/index.js";
 import { request } from "../client.js";
 import type { ApiPlan } from "../types/index.js";
 
-/**
- * Fetch plans from API
- */
 export interface FetchPlansOptions {
 	secretKey: string;
 	includeArchived?: boolean;
@@ -33,9 +30,6 @@ export async function fetchPlans(
 	return response.list;
 }
 
-/**
- * Create a new plan
- */
 export async function createPlan(options: {
 	secretKey: string;
 	plan: Record<string, unknown>;
@@ -50,9 +44,6 @@ export async function createPlan(options: {
 	});
 }
 
-/**
- * Update an existing plan
- */
 export async function updatePlan(options: {
 	secretKey: string;
 	planId: string;
@@ -68,9 +59,6 @@ export async function updatePlan(options: {
 	});
 }
 
-/**
- * Delete a single plan
- */
 export async function deletePlan(options: {
 	secretKey: string;
 	planId: string;
@@ -88,9 +76,6 @@ export async function deletePlan(options: {
 	});
 }
 
-/**
- * Archive a plan
- */
 export async function archivePlan(options: {
 	secretKey: string;
 	planId: string;
@@ -105,9 +90,6 @@ export async function archivePlan(options: {
 	});
 }
 
-/**
- * Unarchive a plan
- */
 export async function unarchivePlan(options: {
 	secretKey: string;
 	planId: string;
@@ -122,9 +104,6 @@ export async function unarchivePlan(options: {
 	});
 }
 
-/**
- * Get deletion info for a plan (check if it can be deleted)
- */
 export interface PlanDeletionInfo {
 	totalCount: number;
 	customerName?: string;
@@ -143,9 +122,6 @@ export async function getPlanDeletionInfo(options: {
 	});
 }
 
-/**
- * Migrate customers between product versions
- */
 export async function migrateProduct(options: {
 	secretKey: string;
 	fromProductId: string;
@@ -169,10 +145,6 @@ export async function migrateProduct(options: {
 	});
 }
 
-/**
- * Check if a plan has customers (for versioning check)
- * Sends the plan data to compare against the current version
- */
 export interface PlanHasCustomersInfo {
 	will_version: boolean;
 	archived: boolean;

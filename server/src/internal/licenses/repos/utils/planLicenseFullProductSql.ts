@@ -1,11 +1,5 @@
 import { sql } from "drizzle-orm";
 
-/**
- * jsonb fragment building a plan license's effective FullProduct: the link's
- * license_entitlements/license_prices item overlay when `customized`, else
- * the product's base (non-custom) items. Aliases must be trusted literals
- * and not collide with lp/pr/le/e/f.
- */
 export const planLicenseFullProductJson = ({
 	planLicenseAlias,
 	productAlias,

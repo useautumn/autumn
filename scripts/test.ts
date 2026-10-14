@@ -7,9 +7,6 @@ import chalk from "chalk";
 
 loadLocalEnv();
 
-/**
- * Recursively finds all test files in a directory
- */
 function findTestFiles({ dir }: { dir: string }): string[] {
 	const files: string[] = [];
 	const entries = readdirSync(dir);
@@ -32,9 +29,6 @@ function findTestFiles({ dir }: { dir: string }): string[] {
 	return files;
 }
 
-/**
- * Fuzzy matches a search term against test file paths and returns a score
- */
 function fuzzyMatchScore({
 	search,
 	filePath,
@@ -46,27 +40,22 @@ function fuzzyMatchScore({
 	const pathLower = filePath.toLowerCase();
 	const fileName = pathLower.split("/").pop() || "";
 
-	// Check if path ends with the exact search pattern (highest priority for path-based searches)
 	if (pathLower.endsWith(`${searchLower}.ts`)) {
 		return 10000;
 	}
 
-	// Check if search matches exactly in filename
 	if (fileName === `${searchLower}.ts`) {
 		return 1000;
 	}
 
-	// Check if filename starts with search (high priority)
 	if (fileName.startsWith(searchLower)) {
 		return 500;
 	}
 
-	// Check if search is contained in filename
 	if (fileName.includes(searchLower)) {
 		return 100;
 	}
 
-	// Simple fuzzy match - check if all characters appear in order
 	let searchIndex = 0;
 	let score = 0;
 	for (
@@ -80,7 +69,6 @@ function fuzzyMatchScore({
 		}
 	}
 
-	// Return 0 if not all characters matched
 	if (searchIndex !== searchLower.length) {
 		return 0;
 	}
@@ -88,9 +76,6 @@ function fuzzyMatchScore({
 	return score;
 }
 
-/**
- * Detects whether a test file uses Bun or Mocha framework
- */
 function detectTestFramework({
 	filePath,
 }: {
@@ -99,7 +84,6 @@ function detectTestFramework({
 	try {
 		const { readFileSync } = require("node:fs");
 		const content = readFileSync(filePath, "utf-8");
-		// Check first 20 lines for bun:test import
 		const lines = content.split("\n").slice(0, 20);
 		const hasBunTest = lines.some(
 			(line: string) =>
@@ -107,14 +91,10 @@ function detectTestFramework({
 		);
 		return hasBunTest ? "bun" : "mocha";
 	} catch (_error) {
-		// Default to mocha if we can't read the file
 		return "mocha";
 	}
 }
 
-/**
- * Runs shell test scripts from server/shell/ directory or individual test files
- */
 async function runTest() {
 	const scriptName = process.argv[2];
 	const additionalArgs = process.argv.slice(3);
@@ -141,7 +121,6 @@ async function runTest() {
 		process.exit(1);
 	}
 
-	// Detect if we're already in the server directory (e.g., when run via server/run.sh)
 	const cwd = process.cwd();
 	const projectRoot =
 		cwd.endsWith("/server") || cwd.endsWith("\\server")
@@ -149,7 +128,6 @@ async function runTest() {
 			: cwd;
 	const serverDir = resolve(projectRoot, "server");
 
-	// Handle special "setup" command
 	if (scriptName === "setup") {
 		const setupScript = resolve(serverDir, "tests", "setupMain.ts");
 		console.log(chalk.cyan("🏗️  Running test setup...\n"));
@@ -183,7 +161,6 @@ async function runTest() {
 		`${scriptName}.sh`,
 	);
 
-	// First try to find a shell script
 	if (existsSync(shellScript)) {
 		const argsDisplay =
 			additionalArgs.length > 0 ? ` ${additionalArgs.join(" ")}` : "";
@@ -197,7 +174,6 @@ async function runTest() {
 			env: { ...process.env, NODE_ENV: "production" },
 		});
 
-		// Forward termination signals to child process
 		process.on("SIGINT", () => {
 			console.log(chalk.yellow("\n⚠️  Received SIGINT, stopping tests...\n"));
 			child.kill("SIGINT");
@@ -230,7 +206,6 @@ async function runTest() {
 		return;
 	}
 
-	// If not a shell script, try fuzzy matching test files
 	console.log(
 		chalk.cyan(`🔍 Searching for test file matching: ${scriptName}\n`),
 	);
@@ -238,7 +213,6 @@ async function runTest() {
 	const testsDir = resolve(serverDir, "tests");
 	const allTestFiles = findTestFiles({ dir: testsDir });
 
-	// Find matches with scores
 	const matches = allTestFiles
 		.map((file) => ({
 			path: file,
@@ -271,31 +245,22 @@ async function runTest() {
 	const testFile = bestMatch;
 	console.log(chalk.green(`✓ Found: ${testFile.relative}\n`));
 
-	// Detect test framework
-
 	const frameworkLabel = "Bun";
 	console.log(chalk.cyan(`🧪 Running test file with ${frameworkLabel}...\n`));
 
-	// Run the test file with the appropriate framework, wrapped with Infisical
-	// Respect NODE_ENV from parent process (e.g., development for logging)
 	const child = spawn("bun", ["test", "--timeout", "0", testFile.relative], {
 		cwd: serverDir,
 		stdio: "inherit",
 		env: process.env,
 	});
 
-	// Store the process group ID
 	const pgid = child.pid;
 
-	// Forward termination signals to entire process group
 	const killProcessGroup = () => {
 		if (pgid) {
 			try {
-				// Kill the entire process group with SIGKILL (force kill)
 				process.kill(-pgid, "SIGKILL");
-			} catch (_err) {
-				// Process group might already be dead
-			}
+			} catch (_err) {}
 		}
 	};
 
@@ -339,25 +304,3 @@ async function runTest() {
 }
 
 runTest();
-
-// framework === "bun"
-// ?
-// : spawn(
-// 		"infisical",
-// 		[
-// 			"run",
-// 			"--env=dev",
-// 			"--",
-// 			"npx",
-// 			"mocha",
-// 			"--bail",
-// 			"--timeout",
-// 			"10000000",
-// 			testFile.relative,
-// 		],
-// 		{
-// 			cwd: serverDir,
-// 			stdio: "inherit",
-// 			env: { ...process.env, NODE_ENV: "production" },
-// 		},
-// 	);

@@ -26,8 +26,6 @@ const withoutRetainedCurrentCustomerProduct = ({
 	return { ...productContext, currentCustomerProduct: undefined };
 };
 
-/** Plans starting now keep the customer-wide free row they repeat unchanged. A row a
- * later phase repeats or replaces is re-inserted instead, so it ends at that phase. */
 export const retainUnchangedFreeCustomerProducts = ({
 	ctx,
 	fullCustomer,

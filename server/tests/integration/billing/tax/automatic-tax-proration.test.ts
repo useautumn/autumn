@@ -1,13 +1,3 @@
-/**
- * `automatic_tax` on proration invoices (mid-cycle plan changes).
- * Stripe prorates with negative credit + positive charge lines; both must
- * be taxed for totals to balance.
- *
- * Covers v1 upgrade, v2 upgrade, and v2 immediate downgrade. (v1 downgrade
- * omitted: legacy attach auto-schedules to end-of-cycle, so no immediate
- * proration invoice to assert.)
- */
-
 import { expect, test } from "bun:test";
 import chalk from "chalk";
 import type Stripe from "stripe";

@@ -10,8 +10,6 @@ import {
 } from "@autumn/shared";
 import { z } from "zod/v4";
 
-/** Customize subset the dashboard sheets can seed — billing_controls,
- * update_items and remove_licenses have no sheet representation. */
 const GenerationCustomizeSchema = refineCustomizePlanV1Schema(
 	CustomizePlanV1BaseSchema.omit({
 		billing_controls: true,

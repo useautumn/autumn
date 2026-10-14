@@ -1,22 +1,3 @@
-/**
- * Integration test for the migration `$and` / `$or` customer-level quantifiers,
- * end-to-end against real data.
- *
- * Contract under test (raw filter is parsed through CustomerFilterSchema first —
- * that parse layer is where unknown keys get stripped):
- *   - parse({ $and: [{ plan: A }, { plan: B }] }) -> only customers on BOTH A and B
- *   - parse({ $or:  [{ plan: A }, { plan: B }] }) -> customers on A OR B
- *
- * Regression: `$and`/`$or` are independent existence checks. Two plan conditions
- * in one group used to collapse into a single `$some` plan (which a single plan
- * can't satisfy), and before the schema gained `$and`/`$or`, CustomerFilterSchema
- * stripped them to `{}` — the preview then returned 0. Both failures make the
- * `$and` assertion below count the wrong set.
- *
- * Free base products in distinct groups let one customer hold two active plans
- * without any payment setup.
- */
-
 import { expect, test } from "bun:test";
 import { CustomerFilterSchema } from "@autumn/shared/api/migrations/filters/customerFilter.js";
 import { items } from "@tests/utils/fixtures/items";
@@ -48,7 +29,6 @@ test.concurrent(
 		const proOnly = `${pfx}-pro`;
 		const other = `${pfx}-other`;
 
-		// Distinct groups so a customer can hold two active base plans at once.
 		const planFree = products.base({
 			id: `${pfx}-pfree`,
 			group: `${pfx}-g1`,
@@ -94,7 +74,6 @@ test.concurrent(
 			],
 		});
 
-		// ── $and -> only the customer holding BOTH plans ───────────────────────
 		expect(await countCustomers({ ctx, filter: andFilter, search: pfx })).toBe(
 			1,
 		);
@@ -106,7 +85,6 @@ test.concurrent(
 		expect(andIds.has(proOnly)).toBe(false);
 		expect(andIds.has(other)).toBe(false);
 
-		// ── $or -> customers on either plan, excluding the unrelated plan ──────
 		expect(await countCustomers({ ctx, filter: orFilter, search: pfx })).toBe(
 			3,
 		);

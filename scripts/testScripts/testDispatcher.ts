@@ -1,12 +1,5 @@
 #!/usr/bin/env bun
 
-/**
- * Unified test dispatcher. Resolves the argument to one of:
- * 1. A test group/suite from server/tests/_groups/
- * 2. A legacy shell script from scripts/testGroups/
- * 3. A pattern-match fallback passed to runTestsV2.tsx
- */
-
 import { existsSync } from "node:fs";
 import { readdir, stat } from "node:fs/promises";
 import { join, resolve } from "node:path";
@@ -26,10 +19,6 @@ const LEAF_EVALS_DIR = join(PROJECT_ROOT, "apps/leaf/tests/evals");
 const BRAINTRUST_BIN = join(PROJECT_ROOT, "node_modules/.bin/braintrust");
 const BRAINTRUST_EXTERNAL_PACKAGES = ["@mastra/mcp", "@mastra/core"];
 
-// Worktree .env.local loading happens in scripts/preload-env.ts, which Bun
-// auto-runs via bunfig.toml `preload` for every `bun` and `bun test` invocation.
-
-/** Recursively find a file under baseDir whose relative path ends with the given suffix. */
 async function findFileByPath({
 	baseDir,
 	pathSuffix,
@@ -53,22 +42,18 @@ async function findFileByPath({
 					return fullPath;
 				}
 			}
-		} catch {
-			// ignore
-		}
+		} catch {}
 		return null;
 	};
 
 	return walk({ dir: baseDir });
 }
 
-/** Resolve a group path (relative to server/tests/) into absolute file paths. */
 async function resolveGroupPath({
 	groupPath,
 }: {
 	groupPath: string;
 }): Promise<string[]> {
-	// Try exact path under server/tests/
 	const exactPath = join(TESTS_DIR, groupPath);
 
 	if (existsSync(exactPath)) {
@@ -81,7 +66,6 @@ async function resolveGroupPath({
 		}
 	}
 
-	// Try searching under server/tests/ for a matching file or folder
 	if (groupPath.endsWith(".test.ts")) {
 		const found = await findFileByPath({
 			baseDir: TESTS_DIR,
@@ -89,7 +73,6 @@ async function resolveGroupPath({
 		});
 		if (found) return [found];
 	} else {
-		// Search for a matching directory
 		const found = await findFolderByPath({
 			baseDir: TESTS_DIR,
 			pathSuffix: groupPath,
@@ -100,7 +83,6 @@ async function resolveGroupPath({
 	return [];
 }
 
-/** Recursively find a folder whose path ends with the given suffix. */
 async function findFolderByPath({
 	baseDir,
 	pathSuffix,
@@ -125,16 +107,13 @@ async function findFolderByPath({
 					if (found) return found;
 				}
 			}
-		} catch {
-			// ignore
-		}
+		} catch {}
 		return null;
 	};
 
 	return walk({ dir: baseDir });
 }
 
-/** Recursively collect all *.test.ts files from a directory. */
 async function collectTestFilesFromDir({
 	dir,
 }: {
@@ -231,7 +210,6 @@ async function main() {
 		process.exit(0);
 	}
 
-	// Separate options from positional args
 	const options: string[] = [];
 	const positionalArgs: string[] = [];
 	let userMaxConcurrency: number | null = null;
@@ -256,7 +234,6 @@ async function main() {
 	const resolvedFiles: string[] = [];
 	const evalTargets: string[] = [];
 	const fallbackArgs: string[] = [];
-	// Track the max concurrency from matched groups (use lowest if multiple)
 	let groupMaxConcurrency: number | null = null;
 
 	for (const arg of positionalArgs) {
@@ -266,14 +243,12 @@ async function main() {
 			continue;
 		}
 
-		// Priority 1: Test group or suite from _groups/
 		const groupPaths = resolveTestPaths({ name: arg });
 		if (groupPaths) {
 			console.log(
 				`Matched test group/suite: "${arg}" (${groupPaths.length} path(s))`,
 			);
 
-			// Check for group-level maxConcurrency override
 			const group = getGroup({ name: arg });
 			if (group?.maxConcurrency) {
 				groupMaxConcurrency =
@@ -282,7 +257,6 @@ async function main() {
 						: Math.min(groupMaxConcurrency, group.maxConcurrency);
 			}
 
-			// If it's a suite, check all constituent groups for the lowest maxConcurrency
 			const suiteGroups = resolveSuite({ name: arg });
 			if (suiteGroups) {
 				for (const g of suiteGroups) {
@@ -307,7 +281,6 @@ async function main() {
 			continue;
 		}
 
-		// Priority 2: Legacy shell script
 		const scriptPath = join(LEGACY_SCRIPTS_DIR, `${arg}.sh`);
 		if (existsSync(scriptPath)) {
 			console.log(`Running legacy test script: scripts/testGroups/${arg}.sh\n`);
@@ -323,17 +296,14 @@ async function main() {
 			process.exit(exitCode);
 		}
 
-		// Priority 3: Fallback — pass to runTestsV2.tsx for pattern matching
 		fallbackArgs.push(arg);
 	}
 
-	// Determine concurrency: user flag > group override > config default
 	const concurrency =
 		userMaxConcurrency ??
 		groupMaxConcurrency ??
 		testRunConfig.defaultConcurrency;
 
-	// Build final options — inject --max if not already set by user
 	const finalOptions =
 		userMaxConcurrency !== null
 			? options
@@ -370,7 +340,6 @@ async function main() {
 	}
 }
 
-/** Capy machines boot without the app; integration tests need the server, unit tests don't. */
 async function warnIfCapyServerDown() {
 	if (!process.env.CAPY_MACHINE_CONFIG) return;
 	const port = process.env.SERVER_PORT ?? "8080";

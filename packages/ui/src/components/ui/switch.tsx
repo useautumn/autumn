@@ -19,7 +19,6 @@ type SwitchSize = keyof typeof SWITCH_SIZE_CLASSES;
 
 const SwitchSizeContext = createContext<SwitchSize>("default");
 
-/** Sets the default size for every Switch rendered inside it. */
 function SwitchSizeProvider({
 	size,
 	children,
@@ -45,8 +44,6 @@ function Switch({
 	const sizeClasses = SWITCH_SIZE_CLASSES[useContext(SwitchSizeContext)];
 
 	const handleKeyDown: SwitchPrimitive.Root.Props["onKeyDown"] = (event) => {
-		// Stop base-ui's Enter activation so cmd/ctrl+enter only triggers
-		// sheet-level submit shortcuts instead of also toggling the switch
 		if (event.key === "Enter" && hasSubmitShortcutModifier(event)) {
 			event.preventBaseUIHandler();
 		}

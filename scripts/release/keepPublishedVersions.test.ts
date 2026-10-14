@@ -36,7 +36,6 @@ const planned = [
 	},
 ];
 
-// The regenerated tree as the publish patch leaves it: every planned package bumped.
 const createTree = async () => {
 	const root = mkdtempSync(join(tmpdir(), "keep-published-"));
 	dirs.push(root);

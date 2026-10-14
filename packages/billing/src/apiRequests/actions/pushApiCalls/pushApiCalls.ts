@@ -4,7 +4,6 @@ import { pushTrackItems } from "../../../utils/pushTrackItems";
 import type { ApiCallCount } from "../../types/apiCallCount";
 import { apiCallCountToTrackItem } from "./apiCallCountToTrackItem";
 
-/** Tracks counted API calls against `api_call`, one item per (org, hour, endpoint). */
 export const pushApiCalls = async ({
 	ctx,
 	counts,

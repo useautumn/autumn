@@ -28,9 +28,6 @@ export const CustomDotIcon = () => (
 	<div className="w-[2px] h-[2px] mx-0.5 bg-current rounded-full" />
 );
 
-/** The left/dot/right feature icon trio. Shared so every item row renders the
- * same glyphs, including non-label rows like the migration filter rows.
- * `leftIcon` overrides the feature-type glyph for synthetic rows (e.g. a license). */
 export const FeatureIconCluster = ({
 	item,
 	leftIcon,
@@ -47,7 +44,6 @@ export const FeatureIconCluster = ({
 
 const NARROW_SYMBOL = { currencyDisplay: "narrowSymbol" } as const;
 
-/** Subtle chip around the price amount. */
 const PRICE_CHIP_CLASS =
 	"bg-muted px-1.5 py-0.5 rounded-md text-muted-foreground";
 
@@ -56,8 +52,6 @@ const TIER_TOOLTIP_DELAY_MS = 100;
 const isTieredPrice = (item: ProductItem): boolean =>
 	(item.tiers?.length ?? 0) > 1;
 
-/** A rollover config can sit on any item of a feature; only items with a
- * resetting included/prepaid balance actually roll anything over. */
 const itemCanRollOver = (item: ProductItem): boolean => {
 	if (!item.feature_id) return false;
 	if (intervalIsNone(item.interval)) return false;
@@ -66,8 +60,6 @@ const itemCanRollOver = (item: ProductItem): boolean => {
 	return includedUsage > 0 || item.usage_model === UsageModel.Prepaid;
 };
 
-/** The exact price substring the shared display embeds in `secondary_text`,
- * for both tiered and flat per-unit prices. */
 const priceString = (
 	item: ProductItem,
 	currency: string,
@@ -140,7 +132,6 @@ function KeyValueRow({ label, value }: { label: string; value: string }) {
 	);
 }
 
-/** The price amount as a chip that reveals the full tier breakdown on hover. */
 function TierBreakdownChip({
 	item,
 	currency,
@@ -154,8 +145,6 @@ function TierBreakdownChip({
 	return (
 		<Tooltip delayDuration={TIER_TOOLTIP_DELAY_MS}>
 			<TooltipTrigger asChild>
-				{/* pointer-events-auto: read-only rows disable pointer events, which
-				 * would otherwise swallow the hover that opens this tooltip. */}
 				<span
 					className={cn(PRICE_CHIP_CLASS, "cursor-help pointer-events-auto")}
 				>
@@ -193,8 +182,6 @@ function TierBreakdownChip({
 	);
 }
 
-/** Splits `text` around the embedded price substring and renders that portion
- * via `renderPrice`. Returns null when the price isn't present in `text`. */
 function highlightPrice({
 	item,
 	currency,
@@ -219,8 +206,6 @@ function highlightPrice({
 	);
 }
 
-/** Embeds the tier-breakdown chip in place of the price. Null unless the item
- * is tiered and its price string appears in `text`. */
 function tieredPriceChip(args: {
 	item: ProductItem;
 	currency: string;
@@ -239,8 +224,6 @@ function tieredPriceChip(args: {
 	});
 }
 
-/** Renders the price secondary text with the price amount as a chip.
- * Tiered prices also reveal the full tier breakdown on hover. */
 function PriceText({
 	item,
 	currency,
@@ -273,24 +256,15 @@ function PriceText({
 
 interface PlanItemLabelProps {
 	item: ProductItem;
-	/** Wraps the feature icon cluster, e.g. with AdminHover in the plan editor. */
 	wrapIcons?: (icons: ReactNode) => ReactNode;
-	/** Text shown when the feature has no name yet. */
 	unnamedText?: string;
 	compact?: boolean;
-	/** Display currency for amounts; defaults to the org default. */
 	currency?: string;
-	/** Resolve the item against this feature instead of the features query — for
-	 * synthetic rows (e.g. a license) whose "feature" isn't in the catalog. */
 	feature?: Feature;
-	/** Overrides the left feature-type glyph in the icon cluster. */
 	featureIcon?: ReactNode;
-	/** Off on compact rows where the glyphs are noise. */
 	showFeatureIcons?: boolean;
 }
 
-/** Feature icon cluster + label text + rollover indicator. Shared by the plan
- * editor card row and the read-only subscription/diff rows so they read the same. */
 export function PlanItemLabel({
 	item,
 	wrapIcons,

@@ -7,7 +7,7 @@ import type {
 
 export interface AutoTopupContext extends BillingContext {
 	autoTopupConfig: AutoTopup;
-	customerEntitlement: FullCusEntWithFullCusProduct; // The one-off prepaid cusEnt being topped up
+	customerEntitlement: FullCusEntWithFullCusProduct;
 
 	limitState: AutoTopupLimitState;
 }

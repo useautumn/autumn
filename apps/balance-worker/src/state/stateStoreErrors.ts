@@ -26,7 +26,6 @@ export class ConflictingPartitionInitializationError extends Error {
 	}
 }
 
-/** The same mutation id was reused for a different request. */
 export class ConflictingMutationReceiptError extends Error {
 	constructor({
 		partitionKey,

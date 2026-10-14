@@ -1,26 +1,3 @@
-/**
- * Contract for replica-vs-primary routing of list endpoints.
- *
- * Customers reported a read-after-write race: they create an entity, receive the
- * customer.products.updated webhook, call entities.list, and the entity is missing
- * because the request was served by a lagging read replica. Customer-scoped list
- * requests must therefore read the primary; unscoped org-wide enumeration (the
- * expensive query the replica routing exists to shed) stays on the replica.
- *
- * Contract under test:
- *   Behaviors:
- *     - POST /v1/customers/list          -> replica (default lane), body never read
- *     - POST /v1/customers.list          -> replica (default lane), body never read
- *     - POST /v1/entities.list, no customer_id -> replica (default lane)
- *     - POST /v1/entities.list, customer_id    -> primary
- *     - POST /v1/entities.list, unreadable body -> primary (fail safe)
- *     - POST /migrations.filter.preview  -> replica slow lane (long-query pool)
- *     - any non-listed route/method      -> primary
- *   Invariants:
- *     - The body is only read for routes whose decision depends on it.
- *     - A body that cannot be parsed never routes to the replica.
- */
-
 import { describe, expect, test } from "bun:test";
 import { resolveReplicaDbLane } from "@/internal/misc/replicaDb/replicaDbConfigs.js";
 
@@ -96,9 +73,6 @@ describe("resolveReplicaDbLane", () => {
 	});
 
 	test("treats a blank or non-string customer_id as unscoped", async () => {
-		// The route schema is `z.string().trim().min(1).optional()`, so these are
-		// rejected with a 400 before any query runs. Pinning the routing keeps the
-		// decision aligned with what the schema considers a real scope.
 		for (const customerId of ["", "   ", 123, null]) {
 			expect(
 				await resolveReplicaDbLane({

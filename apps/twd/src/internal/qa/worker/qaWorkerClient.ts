@@ -83,7 +83,6 @@ const call = async <T>({
 	return (await res.json()) as T;
 };
 
-/** Thin client for the qa-envs Worker's `/__admin` API (apps/twd/qa-envs). */
 export const qaWorker = {
 	begin: ({
 		ctx,

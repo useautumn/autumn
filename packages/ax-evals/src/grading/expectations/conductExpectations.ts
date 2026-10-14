@@ -6,7 +6,6 @@ const isConfigWrite = (tool: ToolUse) =>
 	String(tool.input.file_path ?? "").endsWith("autumn.config.ts");
 
 export const conduct = {
-	/** the skill under test actually fired (null when the arm had none installed) */
 	skillFired: (): Expectation => ({
 		name: "used a skill from the kit",
 		kind: "conduct",
@@ -29,7 +28,6 @@ export const conduct = {
 		},
 	}),
 
-	/** the run completed without hitting the timeout */
 	completed: (): Expectation => ({
 		name: "finished without timing out",
 		kind: "conduct",
@@ -44,7 +42,6 @@ export const conduct = {
 		}),
 	}),
 
-	/** vague prompt: asked a question AND did not write the config in turn 0 */
 	mustAskFirst: (): Expectation => ({
 		name: "asked a question before writing the config",
 		kind: "conduct",
@@ -69,7 +66,6 @@ export const conduct = {
 		},
 	}),
 
-	/** clear prompt (twin): wrote the config in the opening turn, no stalling */
 	mustWriteImmediately: (): Expectation => ({
 		name: "wrote the config in the first turn, without asking",
 		kind: "conduct",
@@ -89,9 +85,6 @@ export const conduct = {
 		},
 	}),
 
-	/** no tool result hit harness misconfiguration (approval walls, missing
-	 * binaries) — benign probe failures like reading a missing file are fine.
-	 * A 0 here means fix the eval setup before trusting other scores. */
 	noHarnessFriction: (): Expectation => ({
 		name: "no harness friction",
 		kind: "conduct",
@@ -119,8 +112,6 @@ export const conduct = {
 		},
 	}),
 
-	/** never applied the catalog (`push --yes`) — eval users don't approve
-	 * pushes, so the run must end at a written, previewed config */
 	noUnapprovedPush: (): Expectation => ({
 		name: "did not push without approval",
 		kind: "conduct",
@@ -146,8 +137,6 @@ export const conduct = {
 		},
 	}),
 
-	/** the catalog reached the org through the CLI (`push --yes`) — the
-	 * activation checkpoint for cases whose outcome is org state */
 	appliedViaAtmn: (): Expectation => ({
 		name: "applied the catalog with atmn push --yes",
 		kind: "conduct",
@@ -165,8 +154,6 @@ export const conduct = {
 		},
 	}),
 
-	/** invariant: nothing was applied in the opening turn — approval can only
-	 * arrive in a later user reply */
 	noApplyBeforeReply: (): Expectation => ({
 		name: "did not apply before the user replied",
 		kind: "conduct",
@@ -193,7 +180,6 @@ export const conduct = {
 		},
 	}),
 
-	/** the config was written at some point (any turn) */
 	wroteConfig: (): Expectation => ({
 		name: "wrote autumn.config.ts",
 		kind: "conduct",

@@ -11,7 +11,6 @@ type DispatchQuery = (
 	callback: (error: Error | null, result: QueryResult) => void,
 ) => void;
 
-/** Bounds each statement on `client`; a statement past its deadline throws the connection away. */
 export const attachQueryDeadline = ({
 	client,
 	timeoutMs,
@@ -23,7 +22,6 @@ export const attachQueryDeadline = ({
 }): void => {
 	const dispatch = client.query.bind(client) as DispatchQuery;
 	let deadlineError: Error | undefined;
-	// Serializes statements so each deadline starts at dispatch and work queued behind a timeout fails fast.
 	let statementQueue: Promise<unknown> = Promise.resolve();
 
 	// Drizzle awaits BEGIN outside its release finally, so this owner must return the slot.
@@ -63,7 +61,6 @@ export const attachQueryDeadline = ({
 			};
 
 			const timer = setTimeout(() => {
-				// A lost reply is a dropped connection: callers retry it like any other.
 				deadlineError = Object.assign(
 					new Error(
 						`migration database query exceeded its ${timeoutMs}ms deadline`,

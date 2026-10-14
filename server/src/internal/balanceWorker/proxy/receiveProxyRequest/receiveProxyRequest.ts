@@ -11,7 +11,6 @@ import { runProxyCall } from "./runProxyCall.js";
 
 export type ProxyReceiverContext = {
 	client: BalanceWorkerClient;
-	/** Null on an API with no secret configured, which refuses every call. */
 	secret: string | null;
 	logger: ClientLogger;
 };
@@ -36,7 +35,6 @@ function rejectProxyRequest({
 	};
 }
 
-/** Runs one signed call on the API's client and answers with its reply or its error. */
 export async function receiveProxyRequest({
 	ctx,
 	rawBody,
@@ -74,10 +72,8 @@ export async function receiveProxyRequest({
 	);
 	try {
 		const reply = await runProxyCall({ client: ctx.client, call: request });
-		// A void call's `undefined` would vanish from the JSON, leaving no `reply` key.
 		return { status: 200, body: { reply: reply ?? null } };
 	} catch (error) {
-		// The call ran, so its error is the answer; the sender rethrows it as its own.
 		return { status: 200, body: { error: errorToProxyError({ error }) } };
 	}
 }

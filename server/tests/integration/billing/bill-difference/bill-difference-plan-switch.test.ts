@@ -1,12 +1,3 @@
-/**
- * proration_behavior: "bill_difference" on a mid-cycle plan switch.
- *
- * Contract:
- *   Pro ($20) -> Premium ($50) on day 14 charges Premium's full price and credits only
- *   Pro's unused time, grants Premium's full balance, and keeps the renewal date.
- *   When Pro was paid for only part of the cycle, the credit is the unused part of what was paid.
- */
-
 import { expect, test } from "bun:test";
 import type {
 	ApiCustomerV3,

@@ -22,7 +22,6 @@ export const staysAs = (text: string): BillingOptionSummary => ({
 const countLabel = ({ count, noun }: { count: number; noun: string }) =>
 	`${count} ${noun}${count === 1 ? "" : "s"}`;
 
-/** A switch that reads `changedText` when on and `defaultText` (if any) when off. */
 export const switchSummary = ({
 	enabled,
 	changedText,
@@ -133,7 +132,6 @@ export const editedTrialSummary = ({
 	return edited ? changedTo(text) : staysAs(text);
 };
 
-/** A trial compared with the plan's catalog trial. */
 export function catalogTrialSummary({
 	enabled,
 	length,

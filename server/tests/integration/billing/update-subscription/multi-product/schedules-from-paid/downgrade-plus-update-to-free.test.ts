@@ -12,13 +12,11 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 
-// Entity 1 downgrades, Entity 2 updates to free (replaces both sub + schedule items)
 test.concurrent(`${chalk.yellowBright("schedules-p2p: downgrade + update to free replaces sub + schedule")}`, async () => {
 	const customerId = "sched-p2p-downgrade-free";
 
 	const consumableItem = items.consumableMessages({ includedUsage: 50 });
 
-	// Premium monthly ($50/mo)
 	const premium = constructProduct({
 		id: "premium",
 		items: [consumableItem],
@@ -26,7 +24,6 @@ test.concurrent(`${chalk.yellowBright("schedules-p2p: downgrade + update to free
 		isDefault: false,
 	});
 
-	// Pro monthly ($20/mo)
 	const pro = products.pro({
 		id: "pro",
 		items: [consumableItem],
@@ -45,28 +42,24 @@ test.concurrent(`${chalk.yellowBright("schedules-p2p: downgrade + update to free
 		],
 	});
 
-	// Entity 1 downgrades from Premium to Pro (scheduled)
 	await autumnV1.attach({
 		customer_id: customerId,
 		product_id: pro.id,
 		entity_id: entities[0].id,
 	});
 
-	// Verify entity 1 has scheduled downgrade
 	const entity1AfterDowngrade = await autumnV1.entities.get(
 		customerId,
 		entities[0].id,
 	);
 
-	// Entity 2 updates Premium to be free (no price, only feature item)
 	await autumnV1.subscriptions.update({
 		customer_id: customerId,
 		entity_id: entities[1].id,
 		product_id: premium.id,
-		items: [consumableItem], // Only consumable, no base price - makes it free
+		items: [consumableItem],
 	});
 
-	// Entity 2's subscription should now be free
 	const entity2Data = await autumnV1.entities.get(customerId, entities[1].id);
 	await expectProductActive({
 		customer: entity2Data,
@@ -82,14 +75,11 @@ test.concurrent(`${chalk.yellowBright("schedules-p2p: downgrade + update to free
 		subCount: 1,
 	});
 
-	// Advance to next billing cycle
 	await advanceToNextInvoice({
 		stripeCli: ctx.stripeCli,
 		testClockId: testClockId!,
 	});
 
-	// Entity 1: Premium gone, Pro active
-	// Entity 2: Premium still active but free
 	const entity1AfterCycle = await autumnV1.entities.get(
 		customerId,
 		entities[0].id,
@@ -109,7 +99,7 @@ test.concurrent(`${chalk.yellowBright("schedules-p2p: downgrade + update to free
 	});
 	await expectProductActive({
 		customer: entity2AfterCycle,
-		productId: premium.id, // still active, but now it's free
+		productId: premium.id,
 	});
 
 	await expectSubToBeCorrect({

@@ -7,8 +7,6 @@ import {
 	getMiscRedisConfigStatus,
 } from "@/internal/misc/miscRedisConfig/miscRedisConfigStore.js";
 
-/** Legacy route kept for the current admin UI — reports instance names in the
- *  old primary/fallback vocabulary. New tooling uses /misc-redis-config. */
 export const handleGetAdminMainRedisCacheConfig = createRoute({
 	scopes: [Scopes.Superuser],
 	handler: async (c) => {

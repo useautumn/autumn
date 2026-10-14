@@ -1,13 +1,3 @@
-/**
- * Looking up one invoice by its Stripe ID.
- *
- * Contract:
- *   invoices.list { stripe_id }             → only that invoice (with or without customer_id)
- *   invoices.list { stripe_id: unknown }    → empty list
- *   invoices.list { invoice_id }            → only that invoice
- *   GET /invoices/:stripe_id/stripe         → payments expanded to their payment intents
- */
-
 import { expect, test } from "bun:test";
 import { type ApiListInvoiceV1, invoices } from "@autumn/shared";
 import { items } from "@tests/utils/fixtures/items";
@@ -40,7 +30,6 @@ test.concurrent(
 		expect(attachInvoices).toHaveLength(1);
 		const [attachInvoice] = attachInvoices;
 
-		// A second invoice for the same customer that the filter must exclude.
 		const customerRow = await ctx.db.query.customers.findFirst({
 			where: (customer, { and, eq }) =>
 				and(

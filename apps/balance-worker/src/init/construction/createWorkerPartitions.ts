@@ -51,18 +51,15 @@ export function createWorkerPartitions({
 		throw new Error("A command topic needs its own commandTopicOffsets admin");
 	const { commandTopicOffsets } = ctx;
 	const positionTracker = createProgressTracker();
-	// Resolved per record: the partitions are built further down, once the consumer exists.
 	function findOwnedRuntime({ partition }: { partition: number }) {
 		return partitions.findOwnedRuntime({ partition });
 	}
-	// Both bookmarks sit on the metering topic's progress row.
 	function readCommandNextOffset({ partition }: { partition: number }) {
 		return ctx.stateStore.readCommandNextOffset({
 			topic: config.topic,
 			partition,
 		});
 	}
-	// The current runtime's park hook per partition, set when the runtime is built below.
 	const unavailableByPartition = new Map<
 		number,
 		(failure: PartitionFailure) => void
@@ -114,14 +111,11 @@ export function createWorkerPartitions({
 		topic: string;
 		partition: number;
 	}): PartitionRuntimeResources {
-		// One per partition: the writer and the log replay both remember into it, decide reads it.
 		const recentCommands = createRecentCommands({
 			windowMs: BALANCE_WORKER_DEDUP_WINDOW_MS,
 			now: Date.now,
 		});
-		// Also one per runtime: the writer remembers what it produced, the replay passes those records unread.
 		const producedOffsets = createProducedOffsets();
-		// The claim's epoch, written by the runtime, read by its follower to spot a fence from a later owner.
 		const ownerEpoch = createOwnerEpochCell();
 		const follower = meteringConsumer.createReplay({
 			partition,
@@ -314,7 +308,6 @@ export function createWorkerPartitions({
 		config,
 	});
 
-	/** Each served partition's command lag beside its log progress: the bookmark says what is decided, the topic what is queued. */
 	function withCommandLag(health: OwnedPartitionHealth): OwnedPartitionHealth {
 		const { commandTopic } = config;
 		if (!commandTopic) return health;

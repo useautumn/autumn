@@ -1,7 +1,3 @@
-/** A new message detaches the card before steering Eve into a normal turn.
- * Cancelling the parked turn here was tried and reverted: it left the session
- * unable to park again, so the next gated write hung silently. */
-
 import { beforeEach, describe, expect, mock, test } from "bun:test";
 import { AppEnv } from "@autumn/shared";
 import type { EveSessionRef } from "../../../src/internal/agentRuntime/eve/types.js";

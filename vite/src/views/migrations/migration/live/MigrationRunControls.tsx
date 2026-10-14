@@ -36,20 +36,13 @@ export function MigrationRunControls({
 	onChange: (value: MigrationRunControlsState) => void;
 	hasFailedItems?: boolean;
 	hasSkippedItems?: boolean;
-	/** Server's default for this scope — large runs default off. */
 	webhooksOnByDefault: boolean;
-	/** Only batch-lane runs deliver through these controls; the per-customer
-	 * lane sends its webhooks inline regardless. */
 	batchEligible: boolean;
 }) {
 	const sendWebhooks = value.sendWebhooks ?? webhooksOnByDefault;
-	// The run itself skips delivery for unsubscribed orgs, so the toggle would
-	// promise something that never happens.
 	const { isSubscribed } = useWebhookSubscriptionsQuery({
 		eventTypes: MIGRATION_WEBHOOK_EVENT_TYPES,
 	});
-	// Retry runs are batch-ineligible by definition, so the controls hide as
-	// soon as a retry toggle flips on.
 	const retrying = value.retryErrored || value.retrySkipped;
 	const showWebhookControls = isSubscribed && batchEligible && !retrying;
 

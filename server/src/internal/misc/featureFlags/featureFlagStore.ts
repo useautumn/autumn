@@ -18,7 +18,6 @@ export const getRuntimeFeatureFlagStatus = () => store.getStatus();
 
 export const getRuntimeFeatureFlags = (): FeatureFlagConfig => store.get();
 
-/** Check a single boolean flag by dot-path. Fail-open (false) if path missing. */
 export const getRuntimeFeatureFlag = ({ path }: { path: string }): boolean => {
 	const config = store.get();
 	const value = path.split(".").reduce<unknown>((node, key) => {
@@ -51,7 +50,6 @@ export const updateFullFeatureFlagConfig = async ({
 	await store.writeToSource({ config });
 };
 
-/** Sets in-memory feature flag config without S3. For testing only. */
 export const _setFeatureFlagConfigForTesting = ({
 	config,
 }: {

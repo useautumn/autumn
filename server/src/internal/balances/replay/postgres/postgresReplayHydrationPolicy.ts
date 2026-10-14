@@ -34,8 +34,6 @@ export function refuseUnsupported({
 	return { kind: "refused", category: "unsupported", reason };
 }
 
-/** The logical run end must stay representable, so both the baseline and the
- *  end of the replay window have to be safe integers. */
 export function isSupportedBaseline({
 	capturedAtMs,
 	replayWindowMs,
@@ -50,7 +48,6 @@ export function isSupportedBaseline({
 	);
 }
 
-/** A copied production row keeps its logical env, so live is legitimate here. */
 export function toReplayAppEnv({ env }: { env: string }): AppEnv | undefined {
 	for (const candidate of Object.values(AppEnv))
 		if (candidate === env) return candidate;
@@ -104,9 +101,6 @@ function collectSelectableEntitlements({
 	];
 }
 
-/** Raw row lifecycle. The converter already refuses rows that are invalid at
- *  the baseline; this refuses rows whose reset or expiry lands at or before the
- *  logical run end, because the frozen snapshot cannot serve them. */
 export function hasLifecycleWindowViolation({
 	fullSubject,
 	featureIds,
@@ -138,8 +132,6 @@ function converterReasonOf({
 	return typeof reason === "string" ? reason : UNKNOWN_CONVERTER_REASON;
 }
 
-/** Only the existing converter refusals become source refusals. Real SQL or
- *  programming failures keep propagating as failures. */
 export function refusalFromConverterError({
 	cause,
 }: {

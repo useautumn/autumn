@@ -25,12 +25,6 @@ const renameTargetsFromParams = ({
 		),
 	]);
 
-/**
- * Ids a rename may not take: every id in the projected catalog and every
- * persisted id, minus this plan's own rows. Persisted ids stay taken even
- * when this batch renames them away, so execute never depends on op order.
- * Reserved aliases are not taken — catalog execute claims them.
- */
 const takenPlanIdsForRename = ({
 	fromId,
 	renameTargets,
@@ -48,7 +42,6 @@ const takenPlanIdsForRename = ({
 		...(productStatesContext.versionsByPlanId[fromId] ?? []).map(
 			(product) => product.internal_id,
 		),
-		// new_version mints a new internal_id already stamped with toId
 		...updateCatalogPlan.upsertProducts
 			.filter((upsert) => upsert.row.planId === fromId)
 			.map((upsert) => upsert.row.nextFullProduct.internal_id),
@@ -75,10 +68,6 @@ const takenPlanIdsForRename = ({
 	]);
 };
 
-/**
- * Block new_plan_id when the target id is a live plan id, or when a
- * Vercel-installed customer is live on the plan (its id is their billing id).
- */
 export const handleUpsertProductRenameErrors = async ({
 	ctx,
 	params,

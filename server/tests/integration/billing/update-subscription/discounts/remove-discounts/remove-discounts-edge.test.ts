@@ -1,15 +1,3 @@
-/**
- * Edge cases for `remove_discounts: [{ reward_id }]` on `billing.update`.
- *
- * Contract:
- *   4. Removing a coupon already removed in Stripe is a no-op; the rest of the update applies.
- *   5. Preview reflects the removal: the next cycle is billed at full price.
- *   6. With a scheduled downgrade, the removal survives the phase transition.
- *
- * Red (before):  `remove_discounts` is stripped, so nothing is removed.
- * Green (after): removals are resolved against the live subscription and schedule.
- */
-
 import { expect, test } from "bun:test";
 import type {
 	ApiCustomerV3,
@@ -74,7 +62,6 @@ test.concurrent(
 			subscriptionId: subscription.id,
 			couponIds: [launch.id],
 		});
-		// A teammate removes it directly in Stripe; an empty array would be a no-op.
 		await stripeCli.subscriptions.update(subscription.id, { discounts: "" });
 		await expectSubscriptionDiscountsCorrect({ customerId, couponIds: [] });
 

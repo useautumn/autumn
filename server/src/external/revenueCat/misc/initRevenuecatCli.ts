@@ -36,7 +36,6 @@ export const initRevenuecatCli = ({
 	projectId,
 	apiKey,
 	accessToken,
-	// Injected so unit tests can supply a fake transport instead of touching global fetch.
 	fetchImpl = fetch,
 }: {
 	projectId?: string;
@@ -232,14 +231,12 @@ export const initRevenuecatCli = ({
 			);
 			const response = await fetchImpl(url, { headers: authHeaders });
 			await checkOk(response);
-			// RC returns a bare array here, not the usual { items } envelope.
 			const data = (await response.json()) as
 				| RevenueCatPrice[]
 				| { items?: RevenueCatPrice[] };
 			return Array.isArray(data) ? data : (data.items ?? []);
 		},
 
-		// Test-store prices can't be set over the REST API — only via RC's MCP server.
 		setTestStoreProductPrice: async (
 			revenuecatProductId: string,
 			{ amountMicros, currency }: { amountMicros: number; currency: string },
@@ -247,8 +244,6 @@ export const initRevenuecatCli = ({
 			callRcMcpTool({
 				accessToken: resolvedAccessToken,
 				name: "create-product-prices",
-				// RC's tool requires `prices` nested under `body`; top-level fields are
-				// rejected (additionalProperties:false) and surface as a generic 500.
 				arguments: {
 					project_id: projectId,
 					product_id: revenuecatProductId,
@@ -326,7 +321,6 @@ export const initRevenuecatCli = ({
 				nextPage = data.next_page;
 			}
 
-			// Resolve each app's store type so products can be labelled by platform.
 			const appsUrl = new URL(
 				`https://api.revenuecat.com/v2/projects/${projectId}/apps`,
 			);
@@ -338,7 +332,6 @@ export const initRevenuecatCli = ({
 				(appsData.items ?? []).map((app) => [app.id, app.type]),
 			);
 
-			// Group products by store_identifier, combining names and platforms.
 			const productMap = new Map<
 				string,
 				{ names: string[]; platforms: Set<string> }

@@ -35,21 +35,16 @@ export function CustomerUsageAnalyticsTable() {
 		parseAsInteger.withDefault(7),
 	);
 
-	// Map selectedDays to interval for API
 	const interval = useMemo(() => {
 		if (selectedDays <= 7) return "7d" as const;
 		return "30d" as const;
 	}, [selectedDays]);
 
-	// Fetch raw events for the table via API - use same interval as chart.
-	// Pass the external customer ID (customer.id) since the API expects that,
-	// not the internal UUID that lives in the URL param.
 	const { events: rawEvents, isLoading: rawEventsLoading } = useCusEventsQuery({
 		interval,
 		customerId: customer.id ?? undefined,
 	});
 
-	// Picks its own top event names, so the chart loads independently of the table.
 	const {
 		timeseriesEvents,
 		totals,
@@ -59,7 +54,6 @@ export function CustomerUsageAnalyticsTable() {
 		customerId: customer.id ?? undefined,
 	});
 
-	// Generate dynamic columns from event properties
 	const columns = useMemo(() => {
 		const propertyColumns = generatePropertyColumns({
 			events: rawEvents ?? [],
@@ -67,7 +61,6 @@ export function CustomerUsageAnalyticsTable() {
 		return [...CustomerUsageAnalyticsColumns, ...propertyColumns];
 	}, [rawEvents]);
 
-	// Manage column visibility with base columns visible by default
 	const { columnVisibility, setColumnVisibility } = useColumnVisibility({
 		columns,
 		defaultVisibleColumnIds: BASE_COLUMN_IDS,

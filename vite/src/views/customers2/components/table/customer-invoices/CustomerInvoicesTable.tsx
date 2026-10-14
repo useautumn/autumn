@@ -118,8 +118,6 @@ export function CustomerInvoicesTable() {
 		},
 	});
 
-	// const hasInvoices = invoices.length > 0;
-
 	return (
 		<Table.Provider
 			config={{
@@ -157,18 +155,9 @@ export function CustomerInvoicesTable() {
 					</>
 				)}
 
-				{/* {hasInvoices ? ( */}
-
 				<Table.Content>
 					<Table.Body />
 				</Table.Content>
-				{/* <Table.Pagination /> */}
-
-				{/* ) : (
-						!isLoading && (
-							<EmptyState text="Invoices will display when a customer makes a payment" />
-						)
-					)} */}
 			</Table.Container>
 		</Table.Provider>
 	);

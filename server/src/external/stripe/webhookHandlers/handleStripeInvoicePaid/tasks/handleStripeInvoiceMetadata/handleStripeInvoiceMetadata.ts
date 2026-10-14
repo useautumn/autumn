@@ -27,7 +27,6 @@ export const handleStripeInvoiceMetadata = async ({
 
 	if (!metadata) return;
 
-	// Handle deferred billing plan (v2 flow)
 	if (metadata.type === MetadataType.DeferredInvoice) {
 		await executeClaimedDeferredBillingPlan({
 			ctx,
@@ -40,7 +39,6 @@ export const handleStripeInvoiceMetadata = async ({
 		return;
 	}
 
-	// Legacy v1 flows below
 	const data = metadata.data as unknown as AttachParams;
 	const reqMatch =
 		data.org?.id === ctx.org.id && data.customer?.env === ctx.env;

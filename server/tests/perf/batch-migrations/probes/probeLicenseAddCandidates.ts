@@ -1,12 +1,3 @@
-/**
- * Compares the two shapes of the license `add` candidate select — today's
- * license_entitlements/entitlements/features join tree vs projecting the
- * entitlement the op already holds as literals — against a candidate-bearing
- * state, then rolls back.
- *
- *   infisical run --env=dev --recursive -- bun tests/perf/batch-migrations/probes/probeLicenseAddCandidates.ts
- */
-
 import { EntInterval, MIGRATABLE_STATUSES } from "@autumn/shared";
 import { sql } from "drizzle-orm";
 import { sqlList } from "@/internal/billing/v2/actions/batchTransition/execute/sql/batchTransitionSqlUtils.js";
@@ -111,7 +102,6 @@ const main = async () => {
 				AND COALESCE(existing_definition.interval_count, 1) = 1
 		)`;
 
-	// Today: three joins re-derive the entitlement, then filter on e.id.
 	const joinedVariant = {
 		label: "current — license_entitlements → entitlements → features joins",
 		join: sql`
@@ -125,8 +115,6 @@ const main = async () => {
 		where: sql`AND e.id = ${resolved.entitlementId} ${dedupe}`,
 	};
 
-	// Proposed: literals like the replace branch, guard demoted to an EXISTS on
-	// the unique (plan_license_id, entitlement_id) index.
 	const literalVariant = {
 		label: "proposed — literals + EXISTS guard",
 		join: sql``,
@@ -174,8 +162,6 @@ const main = async () => {
 		LIMIT 10000
 	`;
 
-	// How many rows the dedupe's idx_ce_internal_feature_id scan can walk per
-	// candidate — the arithmetic that decides whether an index is the fix.
 	const [featureRows] = await db.execute<{ count: string }>(sql`
 		SELECT count(*) AS count FROM customer_entitlements
 		WHERE internal_feature_id = ${resolved.internalFeatureId}
@@ -185,8 +171,6 @@ const main = async () => {
 	);
 
 	await db.transaction(async (tx) => {
-		// The prior run repointed parents to v2, so the operation scope matches
-		// nothing; put them back on v1 to recreate the pre-migration state.
 		const restored = await tx.execute(sql`
 			UPDATE customer_products
 			SET internal_product_id = ${catalog.v1InternalProductId}
@@ -194,7 +178,6 @@ const main = async () => {
 				AND internal_entity_id IS NULL
 			RETURNING id
 		`);
-		// Make every seat a candidate, the state the real add op selects against.
 		const cleared = await tx.execute(sql`
 			DELETE FROM customer_entitlements AS existing
 			USING customer_products AS assignment

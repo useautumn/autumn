@@ -39,7 +39,6 @@ const toPoint = (run: RunSummary): Point => {
 	};
 };
 
-/** Passed/total files of recent completed baseline runs, oldest first; cancelled runs are skipped. */
 export const BaselinePassRateChart = ({ branch }: { branch?: string }) => {
 	const baselines = useRuns({
 		status: "finished",

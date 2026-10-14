@@ -19,7 +19,6 @@ export const uploadCustomerExportCsvStream = async ({
 	const { bucket, region, key } = destination;
 	let byteCount = 0;
 
-	// A paused-mode Transform counts bytes; a "data" listener would starve Upload.
 	const countedCsvBytes = new Transform({
 		transform(chunk, _encoding, callback) {
 			const bytes = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
@@ -45,7 +44,6 @@ export const uploadCustomerExportCsvStream = async ({
 	await Promise.all([
 		csvPipeline,
 		upload.done().catch((error: unknown) => {
-			// Tear the pipeline down so a dead upload can't leave it awaiting drain.
 			countedCsvBytes.destroy(
 				error instanceof Error ? error : new Error(String(error)),
 			);

@@ -1,15 +1,3 @@
-/**
- * Deferred invoice plans are only given up when the invoice has no payment at all.
- *
- * Contract:
- *   cron, open + unpaid             → void, expire pending, cancel created sub, delete metadata
- *   cron, open + partially paid     → untouched, expires_at cleared so the cron stops re-picking it
- *   cron, void + partially paid     → untouched, expires_at cleared
- *   void webhook, partially paid    → pending plan untouched
- *   sub cancel fails                → metadata kept so the next cron run retries
- *   sub already canceled / expired  → not canceled again, metadata deleted
- */
-
 import { expect, test } from "bun:test";
 import { AppEnv, type Metadata, MetadataType } from "@autumn/shared";
 

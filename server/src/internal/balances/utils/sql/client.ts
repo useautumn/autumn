@@ -36,7 +36,6 @@ type ResetCusEntsResult = {
 	skipped: string[];
 };
 
-/** Calls the `reset_customer_entitlements` PL/pgSQL function atomically. Uses dbGeneral to avoid consuming critical pool connections. */
 export const resetCusEnts = async ({
 	ctx,
 	resets,

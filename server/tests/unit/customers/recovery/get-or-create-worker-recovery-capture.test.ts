@@ -1,14 +1,3 @@
-/**
- * TDD contract for wiring the balance worker's get-or-create failures to recovery.
- *
- * Contract under test:
- * - A worker fail-open error (unreachable, deadline, stale route, no verdict) is captured
- *   with the stage the create reached, and still surfaces as the worker's own 503.
- * - A transient Postgres error under the worker path is captured and shed as the usual 503.
- * - A 4xx verdict is never captured.
- * - Recovery replays can disable capture to prevent recursive enqueue.
- */
-
 import { afterAll, beforeEach, describe, expect, mock, test } from "bun:test";
 import { BalanceWorkerClientError } from "@autumn/balance-worker-client";
 import {
@@ -51,7 +40,6 @@ mock.module(
 	}),
 );
 
-// The create reached its plan write before failing, as a real worker outage leaves it.
 mock.module("@/internal/balanceWorker/subject/withCreateIfMissing.js", () => ({
 	withCreateIfMissing: async ({ ctx }: { ctx: AutumnContext }) => {
 		setCustomerCreationRecoveryStage({ ctx, stage: "pre_commit" });
@@ -97,7 +85,6 @@ const params = {
 	customer_data: { email: "customer@example.com", create_in_stripe: true },
 };
 
-/** The 503 the server raises when the client gave up before any worker answered. */
 const workerUnavailableError = (): unknown => {
 	try {
 		rethrowBalanceWorkerError({

@@ -9,7 +9,6 @@ import { setPlansResultToResponse } from "@/internal/billing/v2/actions/setPlans
 import { buildBillingLockKey } from "@/internal/billing/v2/utils/billingLock/buildBillingLockKey";
 import { createRoute } from "../../../../honoMiddlewares/routeHandler";
 
-/** Handle the internal create-schedule RPC route. */
 export const handleCreateSchedule = createRoute({
 	scopes: [Scopes.Billing.Write],
 	body: CreateScheduleParamsV0Schema,

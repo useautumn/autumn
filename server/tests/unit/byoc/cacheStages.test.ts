@@ -20,7 +20,6 @@ describe("an Atom's deploy steps", () => {
 	});
 
 	test("run the step after the furthest one done, and count every earlier one done", () => {
-		// alien reports the machine before the volume; the table still only moves forward.
 		expect(
 			toCacheStages({
 				doneStages: [ByocCacheStage.Stack, ByocCacheStage.Machine],

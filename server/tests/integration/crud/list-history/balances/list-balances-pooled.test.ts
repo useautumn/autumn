@@ -1,17 +1,3 @@
-/**
- * balances.list — pooled balances read as one row per pool, live or expired.
- *
- * Contract:
- *   - a pool's contributing source customer_entitlements are never listed; the synthetic pool row is
- *   - the pool row's grant comes from pooled_balances.granted and matches customers.get
- *   - a pool whose last contributor expired lists as expired, and its expired plan adds no source row
- *   - a license pool whose parent plan is gone lists as expired, not active
- *   - a pool's rollovers ride on the pool row, capped against the full pool grant
- *
- * Red (before): sources listed beside the pool, pool included_grant 0, license pool still active.
- * Green (after): every assertion below holds.
- */
-
 import { expect, test } from "bun:test";
 import {
 	type ApiCustomerV5,
@@ -90,7 +76,6 @@ test.concurrent(
 		expect(poolRow.remaining).toBe(POOL_GRANT * 2 - 700);
 		expect(poolRow.status).toBe("active");
 
-		// Sources stay hidden however the list is filtered
 		const everything = await listBalances({
 			autumn: autumnV2_4,
 			params: { customer_id: customerId, statuses: ["active", "expired"] },
@@ -289,7 +274,6 @@ test.concurrent(
 		expect(extraRows).toHaveLength(0);
 		expect(poolRow.included_grant).toBe(grant * 2);
 		expect(poolRow.usage).toBe(0);
-		// Pool grant 400 at 50% caps the rollover at 200; the 200 source grant would cap it at 100
 		expect(poolRow.rollovers.map((rollover) => rollover.balance)).toEqual([
 			200,
 		]);

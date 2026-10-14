@@ -9,7 +9,6 @@ const serverLog = (
 ) =>
 	`${ESC}[90m2026-10-06 ${time}${ESC}[0m ${ESC}[${level === "INFO" ? 32 : 33}m${ESC}[1m${level}${ESC}[0m ${text}`;
 
-/** A timed-out probe's attempt as the sandbox streamed it (org id replaced). */
 const timedOutAttempt = [
 	"bun test v1.4.2 (744846f84)",
 	"--- Setup integration tests ---",

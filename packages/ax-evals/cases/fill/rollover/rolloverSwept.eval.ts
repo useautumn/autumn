@@ -5,13 +5,6 @@ import { conduct } from "../../../src/grading/expectations/conductExpectations.t
 import { judge } from "../../../src/grading/expectations/judgeExpectations.ts";
 import { initAxEval } from "../../../src/initAxEval.ts";
 
-/**
- * FILL / rollover, unstated: the brief never mentions carry-over — the
- * agent's option sweep must raise it, and the user's answer (cap at the
- * monthly amount, expire after 1 month) must land as exact config. Catches
- * both failure modes: never asking (no rollover configured) and configuring
- * without the details (wrong cap/expiry).
- */
 export const rolloverSwept = defineCase({
 	name: "fill-rollover-swept",
 	prompt:

@@ -86,8 +86,6 @@ const requestPlanFields = (plan: Record<string, unknown>) => {
 	};
 };
 
-/** Inverse of buildAttachMultiRequestBody: plans[0] seeds the primary plan
- * fields, the rest become additionalPlans rows. */
 const multiAttachOverridesFromRequestBody = (
 	request: Record<string, unknown>,
 ): Partial<AttachForm> => {
@@ -138,10 +136,6 @@ const multiAttachOverridesFromRequestBody = (
 	};
 };
 
-/** Inverse of buildAttachRequestBody (or buildAttachMultiRequestBody when the
- * request carries `plans`). Stage-scoped keys (invoice*, redirect, checkout
- * params) are intentionally skipped — the review stage re-collects them;
- * billing_controls has no form control and gates linkability instead. */
 export const attachFormOverridesFromRequestBody = (
 	request: Record<string, unknown>,
 ): Partial<AttachForm> =>

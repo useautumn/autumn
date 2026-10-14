@@ -1,11 +1,3 @@
-/**
- * catalogV2.update — propagate.variants target guards.
- *
- * Unknown / self / a plan that is not this base's variant → 400.
- * Seat.propagate.variants naming Team-EU is the same miss (EU is not a
- * variant of Seat).
- */
-
 import { test } from "bun:test";
 import { ErrCode } from "@autumn/shared";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils.js";

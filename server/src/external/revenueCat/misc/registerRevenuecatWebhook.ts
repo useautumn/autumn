@@ -11,14 +11,9 @@ export const getRevenuecatWebhookUrl = ({
 	orgId: string;
 	env: AppEnv;
 }): string => {
-	// `:env` segment is the AppEnv value ("sandbox"/"live") — revenueCatMiddleware reads it verbatim.
 	return `${getAutumnEnv().AUTUMN_PUBLIC_API_URL}/webhooks/revenuecat/${orgId}/${env}`;
 };
 
-/**
- * Idempotently register the org's RevenueCat webhook for an env: one integration per
- * environment, matched by URL, with the org's webhook secret as the Authorization header.
- */
 export const registerRevenuecatWebhook = async ({
 	rcCli,
 	orgId,
@@ -40,7 +35,6 @@ export const registerRevenuecatWebhook = async ({
 		url,
 		authorization_header: secret,
 		environment: env === AppEnv.Live ? "production" : "sandbox",
-		// no event_types / app_id → all events, all apps for this environment
 	});
 	return "created";
 };

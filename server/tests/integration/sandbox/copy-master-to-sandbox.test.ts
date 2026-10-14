@@ -20,11 +20,6 @@ import { deletePlatformSubOrg } from "@/internal/orgs/deleteOrg/deletePlatformSu
 import { ProductService } from "@/internal/products/ProductService.js";
 import { copySandboxForOrg } from "@/internal/sandboxes/copySandbox.js";
 
-// Copying from the master org (default sandbox = master@Sandbox, production =
-// master@Live) INTO a named sandbox. Exercises copySandboxForOrg's fromMaster
-// source branch (fromOrg + fromEnv instead of a source sandbox), which the
-// dashboard "Copy to <sandbox>" menu uses from the default sandbox / production.
-
 const { db } = initDrizzle();
 const suffix = crypto.randomUUID().slice(0, 8);
 

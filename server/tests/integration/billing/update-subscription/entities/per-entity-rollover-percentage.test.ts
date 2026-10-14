@@ -33,8 +33,6 @@ import {
 } from "@/utils/scriptUtils/constructItem";
 import { entityRolloverBalances } from "./entityRolloverBalances";
 
-// Prepaid volume with 50% max_percentage rollover; overage deliberately has
-// NO rollover config.
 const buildPctItems = ({
 	entityScoped = true,
 }: {
@@ -97,8 +95,6 @@ test.concurrent(
 			],
 		});
 
-		// Snapshot per-entity rollovers after the cycle reset. Exactly one
-		// positive rollover per entity is expected (prepaid bucket only).
 		const rolloversBefore: Record<string, number[]> = {};
 		for (const entity of entities) {
 			const entityBefore = await autumnV1.entities.get<ApiEntityV0>(
@@ -120,7 +116,6 @@ test.concurrent(
 		const remainingBefore =
 			customerBefore.balances[TestFeature.Messages].remaining;
 
-		// v2 keeps BOTH feature items identical; only the base price changes.
 		await autumnV1.products.update(pro.id, {
 			items: [
 				prepaidVolumeMessages,
@@ -218,10 +213,6 @@ test.concurrent(
 		const remainingBefore =
 			customerBefore.balances[TestFeature.Messages].remaining;
 
-		// Mirror the migration-script flow: load state, build a customize that
-		// copies the current prepaid/overage items + base price verbatim, then
-		// call updateSubscription directly with a productContext override
-		// selecting the premium plan.
 		const fullCustomer = await CusService.getFull({
 			ctx,
 			idOrInternalId: customerId,
@@ -352,7 +343,6 @@ test.concurrent(
 	async () => {
 		const customerId = "ent-rollover-carry-entity-owned";
 
-		// Plain (non-entity-scoped) items: each entity owns its own cusProduct.
 		const proItems = buildPctItems({ entityScoped: false });
 		const premiumItems = buildPctItems({ entityScoped: false });
 
@@ -535,9 +525,6 @@ test.concurrent(
 	},
 );
 
-// Mirrors the real Mintlify growth shape: the zero-allowance overage item ALSO
-// carries a max_percentage rollover config, so its cap is 50% of 0 = 0. If the
-// carried prepaid rollover lands on it, clearExcessRollovers wipes the balance.
 test.concurrent(
 	`${chalk.yellowBright("entity rollover carry: prepaid pct rollover + ZERO-allowance overage with pct rollover survives version update")}`,
 	async () => {
@@ -549,7 +536,6 @@ test.concurrent(
 			duration: RolloverExpiryDurationType.Month,
 		};
 
-		// Overage listed FIRST so its cusEnt is the first same-feature match.
 		const overageZeroAllowance = constructArrearItem({
 			featureId: TestFeature.Messages,
 			includedUsage: 0,
@@ -612,7 +598,6 @@ test.concurrent(
 			"expected a positive prepaid rollover before update — test setup issue, not the bug",
 		).toBeGreaterThanOrEqual(1);
 
-		// v2 keeps both feature items identical; only the base price changes.
 		await autumnV1.products.update(pro.id, {
 			items: [
 				overageZeroAllowance,

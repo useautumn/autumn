@@ -16,7 +16,6 @@ const getMetadata = async (path: string) => {
 
 describe("OAuth discovery metadata", () => {
 	// Codex CLI rejects our iss-less callback whenever discovery claims RFC 9207,
-	// and it reads whichever document it finds first.
 	test.each(DISCOVERY_PATHS)(
 		"%s does not advertise iss parameter support",
 		async (path) => {

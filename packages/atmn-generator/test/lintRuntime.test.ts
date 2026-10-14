@@ -1,8 +1,3 @@
-/**
- * The walker, driven with hand-built rules. It is a real file here, so it is
- * tested directly; the generated copy is exercised from atmn.
- */
-
 import { expect, test } from "bun:test";
 import {
 	type LintHints,
@@ -152,8 +147,6 @@ test("requiredWhen fires only when the selector matches", () => {
 	]);
 });
 
-// --- the rule vocabulary: each kind fires, and stays quiet when satisfied ---
-
 const messagesWith = ({
 	rules,
 	entry,
@@ -251,7 +244,6 @@ test("exists checks a present collection and skips an absent one", () => {
 			document: { features: [{ featureId: "other" }] },
 		}),
 	).toEqual(['featureId "seats" is not in features. E.']);
-	// Omitted means "not mine": the feature may well exist on the server.
 	expect(messagesWith({ rules, entry, document: {} })).toEqual([]);
 });
 
@@ -310,7 +302,6 @@ test("targetHas checks a present collection, skips an absent one or an unmatched
 			document: { features: [{ featureId: "seats", type: "credit_system" }] },
 		}),
 	).toEqual([]);
-	// Omitted means "not mine": the exists rule owns unmatched references.
 	expect(messagesWith({ rules, entry, document: {} })).toEqual([]);
 	expect(
 		messagesWith({
@@ -368,18 +359,15 @@ test("targetLacks checks a present collection, skips a guarded parent or an unma
 	).toEqual([
 		'Feature "seats" is archived. Unarchive it, or archive plan "pro". Because.',
 	]);
-	// The referenced feature is not archived: nothing to flag.
 	expect(
 		lint({ document: { features: [{ featureId: "seats", archived: false }] } }),
 	).toEqual([]);
-	// An archived plan may reference an archived feature freely.
 	expect(
 		lint({
 			document: { features: [{ featureId: "seats", archived: true }] },
 			parentEntry: { archived: true },
 		}),
 	).toEqual([]);
-	// Omitted means "not mine": the exists rule owns unmatched references.
 	expect(lint({ document: {} })).toEqual([]);
 });
 

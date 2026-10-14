@@ -1,10 +1,3 @@
-/**
- * Pure Bun-test-output parsers for the opentui swarm TUI. Deliberately a small
- * COPY of the equivalents in `scripts/testScripts/runTestsV2.tsx` rather than a
- * shared import — `bun t`'s Ink runner must stay byte-for-byte untouched, so the
- * swarm front-end carries its own copy. No JSX / framework deps.
- */
-
 import { stripAnsi } from "../helpers/logSink.ts";
 
 export type ParsedTest = {
@@ -24,11 +17,9 @@ const FAILURE_TEXT =
 	/error|expect|timed out|not found|mismatch|failed|throw|invalid|unable/i;
 const STACK_LINE = /at\s+.*?\(([^)]+\.ts):(\d+):(\d+)\)/;
 const TIMEOUT_AFTER = /this test timed out after (\d+(?:\.\d+)?m?s)/;
-/** The in-sandbox server's own log records (pretty or JSON), interleaved with bun's output. */
 const SERVER_LOG_LINE =
 	/^\s*(?:\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}(?:\.\d+)?Z?\s+(?:TRACE|DEBUG|INFO|WARN|ERROR|FATAL)\b|\{"level":)/;
 
-/** Drops server log records, including a pretty record's multi-line `{ ... }` payload. */
 const withoutServerLogs = (lines: string[]): string[] => {
 	const kept: string[] = [];
 	let inPayload = false;
@@ -74,14 +65,10 @@ const parseErrorFromLines = (
 		}
 	}
 
-	// Bun does not always emit an "error:" line (thrown non-Errors, failures
-	// raised inside helpers). Fall back to the first line that carries meaning
-	// rather than reporting a useless "Test failed".
 	if (!errorMessage) {
 		const meaningful = errorLines.find(
 			(line) =>
 				line.trim() &&
-				// `[prefix]` lines are the tests' own console.log noise, not failures.
 				!/^\s*\[/.test(line) &&
 				!/^\s*at\s/.test(line) &&
 				!/^\s*\d+\s*\|/.test(line) &&
@@ -92,8 +79,6 @@ const parseErrorFromLines = (
 		if (meaningful) errorMessage = meaningful.trim().slice(0, 300);
 	}
 
-	// Expected/Received is the best summary of a bare matcher failure, but it
-	// must not clobber a thrown message that carries real diagnostic context.
 	const isGenericMatcherMessage =
 		!errorMessage || /^expect\(/.test(errorMessage);
 	const expectedMatch = errorText.match(EXPECTED_LINE);
@@ -161,9 +146,6 @@ export const parseTestOutput = (
 				duration: parseDuration(failMatch[2] ?? "0ms"),
 			};
 			parseErrorFromLines(test, lines.slice(lastTestEndIndex + 1, i), filePath);
-			// Concurrent tests print their error block AFTER the (fail) line, so a
-			// backwards-only slice reports a useless "Test failed". Retry forwards,
-			// up to the next test result, when nothing was found behind us.
 			if (test.error?.message === "Test failed") {
 				const nextResult = lines.findIndex(
 					(candidate, index) =>
@@ -176,8 +158,6 @@ export const parseTestOutput = (
 					filePath,
 				);
 			}
-			// Last resort: bun prints some failures in a trailing summary, past the
-			// next test result. Better a possibly-misattributed message than none.
 			if (test.error?.message === "Test failed") {
 				parseErrorFromLines(test, lines.slice(i + 1), filePath);
 			}

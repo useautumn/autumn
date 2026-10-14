@@ -77,8 +77,6 @@ const jsonOAuthError = ({
 	status: number;
 }) =>
 	// `message` duplicates `error_description` because better-auth's client reads
-	// the body's `message`, and the consent view toasts that; without it the
-	// reason a consent was refused never reaches the person who submitted it.
 	new Response(
 		JSON.stringify({
 			error: code,
@@ -93,7 +91,6 @@ const jsonOAuthError = ({
 
 type ConsentPrincipal = { orgId: string; userId: string };
 
-/** Only a session with an active organization can narrow or persist a grant. */
 const resolveConsentPrincipal = async (
 	headers: Headers,
 ): Promise<ConsentPrincipal | null> => {
@@ -135,11 +132,6 @@ const narrowConsentScopes = async ({
 	};
 };
 
-/**
- * Only atmn clients may consent without an environment: every other client
- * exchanges its grant for an env-scoped api key, so an env-less consent issues
- * a code that mints a token no request can use.
- */
 export const resolveOAuthConsentEnv = async ({
 	clientId,
 	db,
@@ -159,7 +151,6 @@ export const handleOAuthConsentWithEnv = async (c: Context) => {
 	const { fields, isJson } = await parseOAuthRequestFields(c.req.raw.clone());
 	const clientId = getClientIdFromFields(fields);
 
-	// A denial (or a request that names no client) carries no scopes or env to
 	// narrow and persist — better-auth turns it straight into a redirect.
 	if (!acceptedConsent(fields.accept) || !clientId) {
 		return runBetterAuthHandler({
@@ -170,7 +161,6 @@ export const handleOAuthConsentWithEnv = async (c: Context) => {
 	}
 
 	// better-auth's consent endpoint only requires a session, not an active
-	// organization, so forwarding an accept we cannot narrow would let it record
 	// the client's full requested scopes and issue a code.
 	const principal = await resolveConsentPrincipal(c.req.raw.headers);
 	if (!principal) {

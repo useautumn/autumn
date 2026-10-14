@@ -1,6 +1,5 @@
 import { ErrCode, RecaseError, type SyncParamsV1 } from "@autumn/shared";
 
-/** A phase after the one starting now must start later, or the live phase would end before it starts. */
 export const assertSyncPhasesStartAfterNow = ({
 	phases,
 	currentEpochMs,

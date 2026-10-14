@@ -1,26 +1,3 @@
-/**
- * subscriptionToSyncParams — schedule cases
- *
- * Exercises detection against Stripe subscription schedules where the live
- * subscription (phase 0) plus future phases get folded into a multi-phase
- * `SyncParamsV1`. Each test:
- *   1. Sets up Autumn customer + product(s)
- *   2. Creates a Stripe subscription schedule with multiple phases
- *   3. Calls `subscriptionToSyncParams({ subscription, schedule })`
- *   4. Asserts on `params.phases` + match-side `phaseMatches`
- *
- * Cases:
- *   A) One product (Pro), 3 phases, base price doubles each phase. Phase 0
- *      uses Pro's catalog Stripe price (matched), phases 1+2 use custom
- *      Stripe prices under Pro's stripe_product_id.
- *
- *   B) Two products. Phase 0 uses Pro's catalog price; phase 1 uses
- *      Premium's catalog price.
- *
- *   C) Two products. Phase 0 uses Pro's catalog price; phase 1 uses a
- *      CUSTOM Stripe price under Premium's stripe_product_id.
- */
-
 import { test } from "bun:test";
 import { ms } from "@autumn/shared";
 import { expectSubscriptionMatchCorrect } from "@tests/integration/billing/utils/sync/expectSubscriptionMatch";
@@ -91,10 +68,6 @@ test.concurrent(`${chalk.yellowBright("to-sync-params: schedule-only future Pro"
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// CASE A: Pro, 3 phases, base price doubles each phase ($20 → $40 → $80)
-// ═══════════════════════════════════════════════════════════════════════════════
-
 test.concurrent(`${chalk.yellowBright("to-sync-params: schedule A — Pro, 3 phases doubling base")}`, async () => {
 	const customerId = "to-sync-params-sched-a";
 	const pro = products.pro({ id: "pro", items: [] });
@@ -114,16 +87,15 @@ test.concurrent(`${chalk.yellowBright("to-sync-params: schedule A — Pro, 3 pha
 		fullProduct: proFull,
 	});
 
-	// Custom Stripe prices under Pro's stripe product for phases 1 and 2
 	const phase1Price = await createStripeFixedPriceUnderProduct({
 		ctx,
 		stripeProductId: proStripeProductId,
-		unitAmount: 4000, // $40
+		unitAmount: 4000,
 	});
 	const phase2Price = await createStripeFixedPriceUnderProduct({
 		ctx,
 		stripeProductId: proStripeProductId,
-		unitAmount: 8000, // $80
+		unitAmount: 8000,
 	});
 
 	const { subscription, schedule } = await createStripeSubscriptionSchedule({
@@ -206,10 +178,6 @@ test.concurrent(`${chalk.yellowBright("to-sync-params: schedule A — Pro, 3 pha
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// CASE B: schedule with phase 0 = Pro standard, phase 1 = Premium standard
-// ═══════════════════════════════════════════════════════════════════════════════
-
 test.concurrent(`${chalk.yellowBright("to-sync-params: schedule B — Pro then Premium, both standard prices")}`, async () => {
 	const customerId = "to-sync-params-sched-b";
 	const pro = products.pro({ id: "pro", items: [] });
@@ -281,10 +249,6 @@ test.concurrent(`${chalk.yellowBright("to-sync-params: schedule B — Pro then P
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// CASE C: phase 0 = Pro standard, phase 1 = custom price under Premium stripe product
-// ═══════════════════════════════════════════════════════════════════════════════
-
 test.concurrent(`${chalk.yellowBright("to-sync-params: schedule C — Pro then custom-base under Premium")}`, async () => {
 	const customerId = "to-sync-params-sched-c";
 	const pro = products.pro({ id: "pro", items: [] });
@@ -309,11 +273,10 @@ test.concurrent(`${chalk.yellowBright("to-sync-params: schedule C — Pro then c
 		fullProduct: premiumFull,
 	});
 
-	// Custom Stripe price under Premium's stripe product (priority-3 match)
 	const customPremiumPrice = await createStripeFixedPriceUnderProduct({
 		ctx,
 		stripeProductId: premiumStripeProductId,
-		unitAmount: 12000, // $120 — distinct from premium's catalog price
+		unitAmount: 12000,
 	});
 
 	const { subscription, schedule } = await createStripeSubscriptionSchedule({

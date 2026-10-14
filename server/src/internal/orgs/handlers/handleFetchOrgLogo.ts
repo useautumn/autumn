@@ -29,7 +29,6 @@ const invalidDomainError = () =>
 		statusCode: 400,
 	});
 
-/** Accepts "stripe.com", "https://www.stripe.com/pricing", etc. and returns "stripe.com". */
 const toDomain = (input: string) => {
 	const withProtocol = /^[a-z][a-z0-9+.-]*:\/\//i.test(input)
 		? input
@@ -54,8 +53,6 @@ const getAspectRatio = (logo: ContextDevLogo) => {
 	return 1;
 };
 
-// The org logo renders as a small square, so prefer square icons (favicons /
-// app icons) over wide wordmarks, then prefer the highest resolution.
 const pickBestLogo = (logos: ContextDevLogo[]) => {
 	const scoreLogo = (logo: ContextDevLogo) => {
 		const isIcon = logo.type === "icon" ? 1 : 0;
@@ -77,9 +74,6 @@ const pickBestLogo = (logos: ContextDevLogo[]) => {
 		})[0];
 };
 
-// Logo URLs come from Context.dev's own CDN. Only download from there, and
-// never follow redirects, so a logo URL can't steer this server-side fetch at
-// an internal address (SSRF) whose response would land in a public bucket.
 const isAllowedLogoHost = (hostname: string) =>
 	LOGO_CDN_HOST_SUFFIXES.some(
 		(suffix) => hostname === suffix.slice(1) || hostname.endsWith(suffix),
@@ -108,7 +102,6 @@ const logoTooLargeError = () =>
 		statusCode: 400,
 	});
 
-/** Reads the body but aborts as soon as it exceeds MAX_LOGO_BYTES. */
 const readBodyWithLimit = async (response: Response) => {
 	const reader = response.body?.getReader();
 	if (!reader) throw logoDownloadFailedError();
@@ -163,11 +156,6 @@ const downloadLogo = async (url: string) => {
 	return { bytes, contentType };
 };
 
-/**
- * Looks up the brand for a website via Context.dev, then re-hosts its logo in
- * our public assets bucket (same key as manual uploads) so org.logo never
- * depends on a third-party CDN URL.
- */
 export const handleFetchOrgLogo = createRoute({
 	scopes: [Scopes.Organisation.Write],
 	body: bodySchema,

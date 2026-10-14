@@ -1,15 +1,3 @@
-/**
- * Integration test: `billing.updated` webhook fires from the productCron
- * when a trial expires. Tagged `trial_ended`.
- *
- * Setup: attach a paid product, then attach an enterprise product with a
- * revert trial. Manually backdate `trial_ends_at` and invoke
- * `runProductCron`. The cron picks up the trial row (matched on
- * `on_trial_end = "revert"`), `tryProcessRevertExpiry` expires the trial
- * and unpauses the prior plan, and `processExpiredTrialRow` fires the
- * webhook tagged `trial_ended`.
- */
-
 import { afterAll, beforeAll, expect, test } from "bun:test";
 import {
 	type AttachParamsV1Input,
@@ -92,8 +80,6 @@ test(`${chalk.yellowBright("billing.updated: productCron revert-trial expiry →
 		actions: [s.billing.attach({ productId: pro.id })],
 	});
 
-	// Attach enterprise with a revert trial — pro gets paused, enterprise
-	// is now trialing with on_trial_end="revert".
 	const params: AttachParamsV1Input = {
 		customer_id: customerId,
 		plan_id: enterprise.id,
@@ -109,7 +95,6 @@ test(`${chalk.yellowBright("billing.updated: productCron revert-trial expiry →
 	};
 	await autumnV2.billing.attach<AttachParamsV1Input>(params);
 
-	// Backdate trial_ends_at so the cron picks the enterprise row up.
 	const fullCustomer = await CusService.getFull({
 		ctx: scenarioCtx,
 		idOrInternalId: customerId,
@@ -135,7 +120,6 @@ test(`${chalk.yellowBright("billing.updated: productCron revert-trial expiry →
 	const { data } = result!.payload;
 	expect(data.tags).toContain("trial_ended");
 
-	// Enterprise (the trial) expires; pro (was paused) goes back to active.
 	const expired = findChange(data.plan_changes, {
 		action: "expired",
 		planId: enterprise.id,

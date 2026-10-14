@@ -1,9 +1,3 @@
-/**
- * `atmn api` is a thin wrapper over the public spec: the only things that
- * can go wrong are the body it builds and the request it sends, so these
- * pin both without touching the network.
- */
-
 import { expect, test } from "bun:test";
 import {
 	ApiResponseError,
@@ -28,7 +22,6 @@ test("every route is an RPC path under its group and method", () => {
 	for (const route of API_ROUTES) {
 		expect(route.path).toBe(`/v1/${route.group}.${route.method}`);
 	}
-	// Internal routes never reach the public spec, so they never become commands.
 	expect(
 		findApiRoute({ group: "catalogV2", method: "update" }),
 	).toBeUndefined();
@@ -201,7 +194,6 @@ test("--curl prints the request with the key's env var in place of the key", asy
 		secretKeyName: "AUTUMN_PROD_SECRET_KEY",
 	});
 	expect(curl).not.toContain("sk_secret");
-	// Single-quoted on purpose: the output names the variable rather than expanding it.
 	expect(curl).toContain("-H 'authorization: Bearer $AUTUMN_PROD_SECRET_KEY'");
 	expect(curl).toContain("'https://api.useautumn.com/v1/balances.check'");
 	expect(curl).toContain(`-d '{"customer_id":"it'\\''s"}'`);

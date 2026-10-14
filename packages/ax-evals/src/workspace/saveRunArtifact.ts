@@ -5,11 +5,6 @@ import { AX_EVALS_DIR } from "./workspacePaths.ts";
 const ARTIFACTS_ROOT = join(AX_EVALS_DIR, ".artifacts");
 const KEEP_RUNS_PER_CASE = 10;
 
-/**
- * Persists the config a run produced (workspaces are deleted at cleanup) so a
- * failing scorecard can be diffed against the actual file. Keeps the last
- * KEEP_RUNS_PER_CASE runs per case and prunes the rest.
- */
 export const saveRunArtifact = async ({
 	caseName,
 	arm,

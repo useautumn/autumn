@@ -1,10 +1,3 @@
-/**
- * catalogV2.update — create FREE plan item shapes (no price on the item):
- * boolean, metered included/reset, unlimited, pooled, rollover, entity scope.
- *
- * Contract: each item field round-trips through catalogV2.get after create.
- */
-
 import { expect, test } from "bun:test";
 import {
 	ResetInterval,
@@ -84,7 +77,6 @@ test.concurrent(
 	`${chalk.yellowBright("catalogV2 create items: non-resetting consumable (omit reset)")}`,
 	async () => {
 		const planId = uniqueTestId("cv2_noreset");
-		// interval:null in → ResetInterval.OneOff out on the API response
 		await createAndAssert({
 			planId,
 			name: "Non-Resetting",
@@ -157,8 +149,6 @@ test.concurrent(
 				response,
 				plans: [{ id: planId, action: "create" }],
 			});
-			// Unlimited metered pooled round-trips via catalogV2.get; boolean pooled
-			// is persisted but omitted by toFeatureItem's boolean branch — assert DB.
 			await expectCatalogPlansCorrect({
 				autumn: autumnV2_3,
 				expected: [

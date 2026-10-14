@@ -34,7 +34,6 @@ const ManageEnvironmentsPanel = ({
 	const currentSelection = useCurrentEnvironmentSelection();
 	const [selection, setSelection] =
 		useState<EnvironmentSelection>(currentSelection);
-	// Drafts outlive the selected form so switching sandboxes keeps unsaved edits.
 	const [drafts, setDrafts] = useState<Record<string, SandboxDraft>>({});
 
 	const updateDraft = ({
@@ -51,7 +50,6 @@ const ManageEnvironmentsPanel = ({
 				: rest;
 		});
 
-	// Only drop the draft if nothing was typed while the save was in flight.
 	const clearSavedDraft = ({
 		sandboxId,
 		saved,

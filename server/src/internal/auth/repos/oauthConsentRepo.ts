@@ -31,8 +31,6 @@ export const listOAuthConsentsByReferenceId = async ({
 	env?: AppEnv;
 	includeInternal?: boolean;
 }) => {
-	// The dashboard/CMA reaches the Autumn MCP through these first-party clients;
-	// hide them from a user's authorized apps alongside admin/slack-admin consents.
 	const hiddenClientIds = [
 		...HIDDEN_OAUTH_CONSENT_CLIENT_IDS,
 		...internalMcpOAuthClientIds(),

@@ -109,10 +109,6 @@ const featureRemovalReason = async ({
 	return null;
 };
 
-/**
- * Resolve a single proposed feature change without persisting: the resulting
- * feature plus any conditions that would block `updateFeature` from applying it.
- */
 export const previewFeature = async ({
 	ctx,
 	dbFeature,

@@ -38,8 +38,6 @@ const makePlan = ({
 		},
 	});
 
-// Multi-attach of two eur-priced plans must total and bill in the customer's
-// locked currency (eur), not the usd amounts.
 test.concurrent(
 	`${chalk.yellowBright("multi-currency e2e: eur multi-attach totals in eur and bills eur")}`,
 	async () => {
@@ -72,7 +70,6 @@ test.concurrent(
 			plans: [{ plan_id: mainId }, { plan_id: addonId }],
 		};
 
-		// eur sum (18 + 27), NOT the usd sum (50).
 		const preview =
 			await autumnV1.billing.previewMultiAttach(multiAttachParams);
 		expect(preview.total).toBe(45);

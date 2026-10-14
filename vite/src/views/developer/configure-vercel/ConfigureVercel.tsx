@@ -159,7 +159,6 @@ export const ConfigureVercel = () => {
 			if (res.status === 200) {
 				toast.success("Vercel config updated successfully");
 				await mutate();
-				// Clear credential fields, keep product filters
 				setVercelConfig((prev) => ({
 					...prev,
 					client_integration_id: "",

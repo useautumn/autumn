@@ -1,9 +1,3 @@
-/**
- * Customer usage_limit overrides the plan-default for the same feature: the
- * customer-tier entry wins the resolveBillingControl waterfall before the plan
- * fallback is consulted, so the cap is the customer's 100 — NOT the plan's 5.
- */
-
 import { test } from "bun:test";
 import { ApiVersion, ErrCode, ResetInterval } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
@@ -26,7 +20,6 @@ test(
 		const prod = products.base({
 			id: "customer-overrides-plan-usage-limit",
 			items: [items.monthlyMessages({ includedUsage: 1000 })],
-			// Plan default usage_limit: 5.
 			billingControls: {
 				usage_limits: [
 					{
@@ -49,7 +42,6 @@ test(
 			actions: [s.billing.attach({ productId: prod.id })],
 		});
 
-		// Customer overrides with a looser cap of 100.
 		await setCustomerUsageLimit({
 			autumn: autumnV2_3,
 			customerId,
@@ -59,8 +51,6 @@ test(
 
 		await autumnV2_3.customers.get(customerId);
 
-		// Track 50 — far past the plan's 5, but within the customer's 100. The
-		// customer cap takes priority, so this must NOT be rejected.
 		await autumnV2_3.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
@@ -76,7 +66,6 @@ test(
 			limit: 100,
 		});
 
-		// Track 50 more -> 100 total, hitting the customer cap. The 101st rejects.
 		await autumnV2_3.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,

@@ -11,7 +11,6 @@ export const useTab = () => {
 	if (path.startsWith("/admin")) {
 		return "admin";
 	}
-	// Logs is a tab inside the Usage page.
 	if (path.startsWith("/analytics") || path.startsWith("/logs")) {
 		return "analytics";
 	}

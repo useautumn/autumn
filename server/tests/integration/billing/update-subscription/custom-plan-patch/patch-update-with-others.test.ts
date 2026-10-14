@@ -1,27 +1,3 @@
-/**
- * TDD coverage for patch-style updates combined with other update params.
- *
- * Contract under test:
- *   New behaviors:
- *     - Patch customizations compose with adding and removing free trials, including
- *       correct preview totals, next_cycle previews, and final invoices.
- *     - Patch customizations while updating product version create a new customer
- *       product and apply the patch to that new version snapshot.
- *     - Patch customizations can update a canceling product without clearing its
- *       canceling state, and the patched state survives uncancel.
- *     - PUT-style custom update followed by PATCH-style custom update leaves the
- *       final plan state correct.
- *   Side effects:
- *     - Existing-mode patch updates do not expire or replace the customer product.
- *     - New-version patch updates do expire the original customer product.
- *     - Stripe subscription state stays consistent with the patched customer product.
- *
- * Pre-impl red: patchContext may not compose with trial, version, canceling, or
- * post-PUT update flows.
- * Post-impl green: setup derives the right patch mode/context and compute/execute
- * apply the patch through the same billing plan path as normal updates.
- */
-
 import { expect, test } from "bun:test";
 import {
 	type ApiCustomerV3,

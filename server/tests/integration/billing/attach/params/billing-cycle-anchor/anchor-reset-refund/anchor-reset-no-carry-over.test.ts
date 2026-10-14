@@ -11,13 +11,6 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { addMonths } from "date-fns";
 
-/**
- * Anchor Reset Refund -- No Carry Over
- *
- * When `billing_cycle_anchor: "now"` + `proration_behavior: "none"` WITHOUT carry_over_balances:
- * All refund items are stripped. Customer pays the full new plan amount with no credit.
- */
-
 test.concurrent(`${chalk.yellowBright("anchor-reset-no-carry-over 1: monthly -> monthly (no refund)")}`, async () => {
 	const customerId = "anchor-no-partial-m2m";
 	const pro = products.pro({

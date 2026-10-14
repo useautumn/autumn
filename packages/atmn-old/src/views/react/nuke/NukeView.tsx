@@ -31,10 +31,6 @@ type NukeState =
 	| "explosion"
 	| "final";
 
-/**
- * Main nuke flow orchestrator for standalone nuke command
- * Manages state transitions through the confirmation and deletion process
- */
 export function NukeView() {
 	const { exit } = useApp();
 	const [state, setState] = useState<NukeState>(() => {
@@ -58,10 +54,8 @@ export function NukeView() {
 		}
 	});
 
-	// Fetch org and counts
 	const { data: nukeData, isLoading, error: fetchError } = useNukeData();
 
-	// Nuke mutation
 	const {
 		nuke,
 		phases,
@@ -79,7 +73,6 @@ export function NukeView() {
 		},
 	});
 
-	// After data loads, validate customer limit
 	useEffect(() => {
 		if (state === "loading" && nukeData) {
 			try {
@@ -115,7 +108,6 @@ export function NukeView() {
 
 	const handleFinalConfirm = () => {
 		setState("deleting");
-		// Start the nuke operation
 		nuke();
 	};
 
@@ -131,7 +123,6 @@ export function NukeView() {
 		setState("final");
 	};
 
-	// Auto-exit after showing final summary for 2 seconds
 	useEffect(() => {
 		if (state === "final") {
 			const timer = setTimeout(() => {
@@ -142,7 +133,6 @@ export function NukeView() {
 		return undefined;
 	}, [state, exit]);
 
-	// Render current state
 	if (state === "loading") {
 		if (isLoading) {
 			return (
@@ -186,7 +176,6 @@ export function NukeView() {
 		return null;
 	}
 
-	// Wrap all nuke screens in CardWidthProvider for consistent widths
 	const renderContent = () => {
 		switch (state) {
 			case "warning":

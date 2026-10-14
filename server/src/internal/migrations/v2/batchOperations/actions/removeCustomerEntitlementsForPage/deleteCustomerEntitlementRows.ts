@@ -7,8 +7,6 @@ import {
 	operationScopeSql,
 } from "@/internal/migrations/v2/batchOperations/scope/operationScope.js";
 
-/** Re-asserts row-level pooled, rollover, paid, and operation scope after
- * candidate selection's snapshot. One DELETE for the whole page of row ids. */
 export const deleteCustomerEntitlementRows = async ({
 	db,
 	customerEntitlementIds,

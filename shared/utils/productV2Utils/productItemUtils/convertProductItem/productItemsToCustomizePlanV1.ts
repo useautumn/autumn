@@ -16,7 +16,7 @@ export const productItemsToCustomizePlanV1 = ({
 
 	const basePriceParams = priceItem
 		? productItemToBasePriceParams({ item: priceItem })
-		: null; // needs to be null to remove the base price
+		: null;
 
 	const featureItems = items.filter((item) => !isPriceItem(item));
 

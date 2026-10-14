@@ -1,6 +1,5 @@
 import { timeout } from "@tests/utils/genUtils.js";
 
-/** Calls `send` from `lanes` loops at once, each `everyMs` apart, until stopped; `stop` resolves with every result. */
 export const startTraffic = <T>({
 	send,
 	everyMs,

@@ -7,7 +7,6 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { applyBillingCycleAnchorToSharedSubscription } from "@/internal/billing/v2/compute/computeAutumnUtils/applyBillingCycleAnchorToSharedSubscription";
 import { computeImmediateMultiProductPlan } from "../../common/immediateMultiProduct/computeImmediateMultiProductPlan";
 
-/** Computes the atomic Autumn plan for every requested product. */
 export const computeMultiAttachPlan = ({
 	ctx,
 	multiAttachBillingContext,
@@ -30,8 +29,6 @@ export const computeMultiAttachPlan = ({
 			)?.currentCustomerProduct?.subscription_ids?.[0],
 	});
 
-	// Lock the customer's currency on the first paid multi-attach (only when they
-	// have none yet). Free attaches don't commit a currency. Applied conditionally at execute.
 	const {
 		fullCustomer,
 		fullProducts,

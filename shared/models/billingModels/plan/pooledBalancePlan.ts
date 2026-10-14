@@ -11,8 +11,6 @@ export const PooledBalanceUpdateSchema = z.object({
 	grantedDelta: z.number(),
 });
 
-/** License pools expire when their grant is removed; other pools expire only
- * when the DB confirms no contributions remain. */
 export const PooledBalanceExpiryCandidateSchema = z.object({
 	pooledCustomerEntitlement: z.custom<FullCustomerEntitlement>(),
 	expiresAt: z.number(),
@@ -22,15 +20,12 @@ export const PooledBalancePlanSchema = z.object({
 	insertPoolBalances: z.array(z.custom<FullCustomerEntitlement>()),
 	updatePoolBalances: z.array(PooledBalanceUpdateSchema),
 	expirePoolBalanceCandidates: z.array(PooledBalanceExpiryCandidateSchema),
-	/** Rollovers copied off a contributing source onto the pool, the same way the
-	 * source's balance is carried. The source's own rows are left to expire. */
 	insertPoolRollovers: z.array(
 		z.custom<FullCustomerEntitlement["rollovers"][number]>(),
 	),
 	insertPoolContributions: z.array(z.custom<InsertPooledBalanceContribution>()),
 	updatePoolContributions: z.array(z.custom<DbPooledBalanceContribution>()),
 	deletePoolContributions: z.array(z.custom<DbPooledBalanceContribution>()),
-	// Removes the pool graph (pooled_balances row, synthetic cusEnt + entitlement).
 	deletePoolBalances: z.array(z.custom<FullCustomerEntitlement>()).optional(),
 });
 

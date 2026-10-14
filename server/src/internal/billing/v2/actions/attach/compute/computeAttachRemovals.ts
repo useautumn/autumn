@@ -10,11 +10,6 @@ import {
 	RecaseError,
 } from "@autumn/shared";
 
-/**
- * Expires the extra plans named in `remove_plan_ids` alongside the attach.
- * Removal flows to Stripe declaratively: the expired plans drop out of the
- * final customer state, so this only reconciles the attach's own subscription.
- */
 export const computeAttachRemovals = ({
 	attachBillingContext,
 	params,
@@ -30,8 +25,6 @@ export const computeAttachRemovals = ({
 		planTiming,
 	} = attachBillingContext;
 
-	// The current product is already expired via the transition update. Repeats
-	// are collapsed so one plan cannot be credited or settled twice.
 	const removePlanIds = [
 		...new Set(
 			(params.remove_plan_ids ?? []).filter(
@@ -41,9 +34,6 @@ export const computeAttachRemovals = ({
 	];
 	if (removePlanIds.length === 0) return [];
 
-	// Removals expire now, but a scheduled attach (end of cycle, or a future
-	// starts_at without immediate access) only starts the new plan later, so the
-	// customer would lose access in between, uncredited.
 	const newPlanStartsLater =
 		planTiming !== "immediate" ||
 		(isFutureStartDate(params.starts_at, currentEpochMs) &&
@@ -57,8 +47,6 @@ export const computeAttachRemovals = ({
 		});
 	}
 
-	// Carry-over reads a single source. With no same-group product to carry from,
-	// removing multiple plans is ambiguous — there is no merge rule.
 	const carryOverRequested = Boolean(
 		params.carry_over_usages?.enabled || params.carry_over_balances?.enabled,
 	);
@@ -119,8 +107,6 @@ const computeRemovalUpdate = ({
 		});
 	}
 
-	// Removal only cancels the attach's own subscription, so a plan billed on a
-	// separate subscription would be expired in Autumn but left live in Stripe.
 	const removableInThisAttach = cp(customerProduct)
 		.free()
 		.or.onStripeSubscription({

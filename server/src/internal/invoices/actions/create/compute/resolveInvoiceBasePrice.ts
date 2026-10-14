@@ -13,7 +13,6 @@ type InvoiceBasePriceParams = NonNullable<InvoiceCustomize["price"]>;
 
 export type ResolvedInvoiceBasePrice = { price: Price; amount: number };
 
-/** In-memory fixed price for this invoice; never written to the catalog. */
 export const buildInvoiceFixedPrice = ({
 	template,
 	params,
@@ -50,10 +49,6 @@ export const buildInvoiceFixedPrice = ({
 	};
 };
 
-/**
- * The base price to bill for a plan on this invoice. `customize.price` null or
- * a zero amount omits the line entirely.
- */
 export const resolveInvoiceBasePrice = ({
 	product,
 	customize,

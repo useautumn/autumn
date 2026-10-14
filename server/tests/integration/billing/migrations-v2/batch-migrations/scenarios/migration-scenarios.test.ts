@@ -1,17 +1,8 @@
-/**
- * Every scenario in the table, run end to end against the production migration
- * path. A new edge case is a row in MIGRATION_SCENARIOS, not a new file.
- *
- * Rejection rows are as load-bearing as the rest: they pin which shapes the
- * set-based lane refuses, so a guard cannot quietly stop firing.
- */
 import { expect, test } from "bun:test";
 import { MIGRATION_SCENARIOS } from "@tests/perf/batch-migrations/scenarios/migrationScenarios";
 import chalk from "chalk";
 import { runMigrationScenario } from "./runMigrationScenario";
 
-// Plans persist between runs, so a stable id would re-use the previous run's
-// shape rather than the one the scenario declares.
 const RUN_SUFFIX = Date.now().toString(36);
 
 for (const scenario of MIGRATION_SCENARIOS) {

@@ -1,19 +1,3 @@
-/**
- * Keyless onboarding, end to end: the real CLI in a fresh process, headless,
- * against the real server. An agent with no account gets an org and a key,
- * then creates a browser claim link for the intended owner.
- *
- * Contract:
- *   K1  init with no key prints the two ways in (--login / --keyless), writes
- *       nothing, and exits 0
- *   K2  login --keyless creates a sandbox org named after the package and
- *       writes AUTUMN_SECRET_KEY
- *   K3  env reports the org as unclaimed, in the table and in --json
- *   K4  login --claim <email> returns a short-lived browser link and emails
- *       the same link; the org remains unclaimed until browser confirmation
- *   K5  init --keyless does K2 and then carries on: config, pull, skills
- */
-
 import { afterAll, beforeAll, expect, test } from "bun:test";
 import {
 	existsSync,
@@ -105,7 +89,6 @@ const uniqueEmail = () =>
 test(`${chalk.yellowBright("atmn keyless: init hints, login --keyless provisions, login --claim links")}`, async () => {
 	const root = makeRepo({ name: "keyless-app" });
 	try {
-		// K1
 		const asked = runCliHeadless({ cwd: root, args: ["init"] });
 		expect(asked.exitCode).toBe(0);
 		expect(asked.output).toContain("→ How do you want to connect to Autumn?");
@@ -114,7 +97,6 @@ test(`${chalk.yellowBright("atmn keyless: init hints, login --keyless provisions
 		expect(existsSync(join(root, ".env"))).toBe(false);
 		expect(existsSync(join(root, "autumn/autumn.config.ts"))).toBe(false);
 
-		// K2
 		const keyless = runCliHeadless({ cwd: root, args: ["login", "--keyless"] });
 		expect(keyless.exitCode).toBe(0);
 		expect(keyless.output).toContain("✓ Created sandbox org keyless-app");
@@ -123,7 +105,6 @@ test(`${chalk.yellowBright("atmn keyless: init hints, login --keyless provisions
 		const key = envValue({ cwd: root, key: "AUTUMN_SECRET_KEY" });
 		expect(key).toMatch(/^am_sk_test_/);
 
-		// K3
 		const env = JSON.parse(
 			runCliHeadless({ cwd: root, args: ["env", "--json"] }).output,
 		);
@@ -135,7 +116,6 @@ test(`${chalk.yellowBright("atmn keyless: init hints, login --keyless provisions
 			"Owner         unclaimed",
 		);
 
-		// K4
 		const email = uniqueEmail();
 		const sent = runCliHeadless({
 			cwd: root,

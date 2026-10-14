@@ -33,7 +33,6 @@ interface VirtualRowProps<T> {
 	visibleColumnKey?: string;
 }
 
-/** Memoized row component - only re-renders when row data changes */
 const VirtualRowInner = <T,>({
 	row,
 	virtualRow,
@@ -78,11 +77,7 @@ const VirtualRowInner = <T,>({
 	);
 };
 
-// Memoize with custom comparator for optimal performance
 const VirtualRow = memo(VirtualRowInner, (prevProps, nextProps) => {
-	// Only re-render if essential data changed
-	// Check row.original identity to handle data changes with keepPreviousData
-	// Check visibleColumnKey to handle column visibility changes (not just length)
 	return (
 		prevProps.row.id === nextProps.row.id &&
 		prevProps.row.original === nextProps.row.original &&
@@ -126,8 +121,6 @@ export function TableBodyVirtualized() {
 	const showSkeleton =
 		isLoading || !!isTransitioning || (!hasRows && !hasLoadedRef.current);
 
-	// Don't initialize virtualizer until scroll container is ready
-	// This prevents incorrect virtual item calculations on initial render
 	const virtualizer = useVirtualizer({
 		count: rows.length,
 		getScrollElement: () => scrollContainer ?? null,
@@ -136,14 +129,11 @@ export function TableBodyVirtualized() {
 		enabled: !!scrollContainer,
 	});
 
-	// Memoize virtual items to prevent unnecessary recalculations
 	const virtualRows = virtualizer.getVirtualItems();
 
 	// Mobile browsers can measure the scroll container at 0 height on init,
-	// leaving zero virtual items despite having rows — render them all instead.
 	const useFallbackRender = hasRows && virtualRows.length === 0;
 
-	// Memoize padding calculations
 	const { paddingTop, paddingBottom } = useMemo(() => {
 		const top = virtualRows[0]?.start ?? 0;
 		const bottom =
@@ -152,7 +142,6 @@ export function TableBodyVirtualized() {
 		return { paddingTop: top, paddingBottom: bottom };
 	}, [virtualRows, virtualizer]);
 
-	// Memoize the onRowClick handler
 	const memoizedOnRowClick = useCallback(
 		(original: unknown) => {
 			onRowClick?.(original);
@@ -167,7 +156,6 @@ export function TableBodyVirtualized() {
 		[onRowDoubleClick],
 	);
 
-	// Compute visible column key on every render - table reference is stable so useMemo won't work
 	const visibleColumnKey = table
 		.getVisibleLeafColumns()
 		.map((col) => col.id)
@@ -181,7 +169,6 @@ export function TableBodyVirtualized() {
 	}));
 
 	// Spanning more columns than are rendered makes the browser invent extra ones,
-	// which steal width from the real columns and break header alignment.
 	const spannedColumnCount = columns.length + (enableSelection ? 1 : 0);
 
 	const configuredSkeletonRows = virtualization?.skeletonRowCount;

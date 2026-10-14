@@ -108,8 +108,6 @@ test("fixture not found returns null", () => {
 	).toBeNull();
 });
 
-/** A later spread overrides an earlier key at runtime, so a pair inserted
- * before one is silently discarded and the backfill never takes effect. */
 test("a leading spread pushes the new property after it", () => {
 	const source = `export const pro = plan({ ...base, planId: "pro" });\n`;
 	expect(

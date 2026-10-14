@@ -1,8 +1,3 @@
-/**
- * dfu.flash RevenueCat hydration — explicit payload status wins over the mock RC
- * subscription status (payload active despite an expired mock sub).
- */
-
 import { expect, test } from "bun:test";
 import { type ApiCustomerV5, AppEnv, CusProductStatus } from "@autumn/shared";
 import {
@@ -46,7 +41,6 @@ test.concurrent(
 			},
 		});
 
-		// Mock sub is expired; payload says active → payload must win.
 		const mock: RevenueCatMockFixtures = {
 			products: [mockProduct({ internalId, storeId })],
 			subscriptions: [
@@ -78,7 +72,6 @@ test.concurrent(
 
 		await callFlash(autumnV2_2 as FlashClient, payload, mock);
 
-		// Payload active wins despite the hydrated Expired.
 		const cusProduct = await getFlashedCustomerProduct({
 			ctx,
 			customerId,

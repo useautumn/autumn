@@ -11,7 +11,6 @@ import RecaseError from "@/utils/errorUtils.js";
 
 export type { EdgeConfigStatus } from "@autumn/edge-config";
 
-/** The server's binding of the shared store: its admin bucket, and a 503 when a write has nowhere to go. */
 export const createEdgeConfigStore = <T>({
 	s3Key,
 	schema,

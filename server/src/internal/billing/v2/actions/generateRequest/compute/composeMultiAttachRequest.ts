@@ -7,8 +7,6 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { resolveCustomizedPlan } from "@/internal/billing/v2/actions/resolveBillingRequest";
 import type { AttachGenerationParams } from "../generationSchemas";
 
-/** The composed multi-attach dialect the sheet seeds: MultiAttach params with
- * the free trial already converted to its V0 shape. */
 export type GeneratedMultiAttachRequestV0 = Omit<
 	MultiAttachParamsV0Input,
 	"free_trial"
@@ -26,9 +24,6 @@ const SINGLE_ATTACH_ONLY_FIELDS = [
 	"remove_plan_ids",
 ] as const satisfies readonly (keyof AttachGenerationParams)[];
 
-/** Maps a generated attach with `additional_plans` into the resolved
- * multi-attach dialect: `plans[]` with customize resolved to concrete items,
- * single-attach-only fields reported as unrepresentable. */
 export const composeMultiAttachRequest = async ({
 	ctx,
 	generated,

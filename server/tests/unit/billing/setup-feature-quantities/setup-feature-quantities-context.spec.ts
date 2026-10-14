@@ -9,8 +9,6 @@ import { products } from "@tests/utils/fixtures/db/products";
 import chalk from "chalk";
 import { setupFeatureQuantitiesContext } from "@/internal/billing/v2/setup/setupFeatureQuantitiesContext";
 
-// ============ TESTS ============
-
 describe(chalk.yellowBright("setupFeatureQuantitiesContext"), () => {
 	describe("basic quantity inheritance", () => {
 		test("1. current has quantity, new params has none → uses current", () => {
@@ -50,7 +48,6 @@ describe(chalk.yellowBright("setupFeatureQuantitiesContext"), () => {
 			const params: UpdateSubscriptionV1Params = {
 				customer_id: "cus_test",
 				plan_id: "prod_test",
-				// No options provided
 			};
 
 			const ctx = contexts.create({ features: [feature] });
@@ -249,7 +246,7 @@ describe(chalk.yellowBright("setupFeatureQuantitiesContext"), () => {
 			const params: UpdateSubscriptionV1Params = {
 				customer_id: "cus_test",
 				plan_id: "prod_test",
-				feature_quantities: [{ feature_id: "seats", quantity: 10 }], // Only updating seats
+				feature_quantities: [{ feature_id: "seats", quantity: 10 }],
 			};
 
 			const ctx = contexts.create({
@@ -269,9 +266,9 @@ describe(chalk.yellowBright("setupFeatureQuantitiesContext"), () => {
 			const seats = result.find((r) => r.feature_id === "seats");
 			const storage = result.find((r) => r.feature_id === "storage");
 
-			expect(credits?.quantity).toBe(100); // Unchanged
-			expect(seats?.quantity).toBe(10); // Updated
-			expect(storage?.quantity).toBe(50); // Unchanged
+			expect(credits?.quantity).toBe(100);
+			expect(seats?.quantity).toBe(10);
+			expect(storage?.quantity).toBe(50);
 		});
 	});
 
@@ -293,7 +290,7 @@ describe(chalk.yellowBright("setupFeatureQuantitiesContext"), () => {
 				id: "price_credits",
 				featureId: "credits",
 				entitlementId: "ent_credits",
-				billingUnits: 100, // Billing in units of 100
+				billingUnits: 100,
 			});
 
 			const fullProduct = products.createFull({
@@ -305,7 +302,7 @@ describe(chalk.yellowBright("setupFeatureQuantitiesContext"), () => {
 			const params: UpdateSubscriptionV1Params = {
 				customer_id: "cus_test",
 				plan_id: "prod_test",
-				feature_quantities: [{ feature_id: "credits", quantity: 150 }], // Should round up to 200
+				feature_quantities: [{ feature_id: "credits", quantity: 150 }],
 			};
 
 			const ctx = contexts.create({ features: [feature] });
@@ -319,7 +316,6 @@ describe(chalk.yellowBright("setupFeatureQuantitiesContext"), () => {
 
 			expect(result).toHaveLength(1);
 			expect(result[0].feature_id).toBe("credits");
-			// 150 rounded up to 200, then divided by billingUnits (100) = 2
 			expect(result[0].quantity).toBe(2);
 		});
 
@@ -352,7 +348,7 @@ describe(chalk.yellowBright("setupFeatureQuantitiesContext"), () => {
 			const params: UpdateSubscriptionV1Params = {
 				customer_id: "cus_test",
 				plan_id: "prod_test",
-				feature_quantities: [{ feature_id: "credits", quantity: 200 }], // Exact multiple
+				feature_quantities: [{ feature_id: "credits", quantity: 200 }],
 			};
 
 			const ctx = contexts.create({ features: [feature] });
@@ -365,7 +361,6 @@ describe(chalk.yellowBright("setupFeatureQuantitiesContext"), () => {
 			});
 
 			expect(result).toHaveLength(1);
-			// 200 / 50 = 4
 			expect(result[0].quantity).toBe(4);
 		});
 
@@ -398,7 +393,7 @@ describe(chalk.yellowBright("setupFeatureQuantitiesContext"), () => {
 			const params: UpdateSubscriptionV1Params = {
 				customer_id: "cus_test",
 				plan_id: "prod_test",
-				feature_quantities: [{ feature_id: "credits", quantity: 1 }], // Should round to 1000
+				feature_quantities: [{ feature_id: "credits", quantity: 1 }],
 			};
 
 			const ctx = contexts.create({ features: [feature] });
@@ -411,14 +406,10 @@ describe(chalk.yellowBright("setupFeatureQuantitiesContext"), () => {
 			});
 
 			expect(result).toHaveLength(1);
-			// 1 rounded to 1000, then divided by billingUnits (1000) = 1
 			expect(result[0].quantity).toBe(1);
 		});
 
 		test("converts current quantity from old billing units to new billing units", () => {
-			// Scenario: Customer has 5 packs of 100 credits (500 actual credits)
-			// New price uses packs of 250
-			// Expected: 500 credits → rounds to 500 (nearest 250) → 2 packs
 			const feature = features.create({
 				id: "credits",
 				name: "Credits",
@@ -431,7 +422,6 @@ describe(chalk.yellowBright("setupFeatureQuantitiesContext"), () => {
 				allowance: 0,
 			});
 
-			// Old price: billing units of 100
 			const oldPrice = prices.createPrepaid({
 				id: "price_credits_old",
 				featureId: "credits",
@@ -439,7 +429,6 @@ describe(chalk.yellowBright("setupFeatureQuantitiesContext"), () => {
 				billingUnits: 100,
 			});
 
-			// New price: billing units of 250
 			const newPrice = prices.createPrepaid({
 				id: "price_credits_new",
 				featureId: "credits",
@@ -457,7 +446,7 @@ describe(chalk.yellowBright("setupFeatureQuantitiesContext"), () => {
 					{
 						feature_id: "credits",
 						internal_feature_id: "internal_credits",
-						quantity: 5, // 5 packs of 100 = 500 actual credits
+						quantity: 5,
 					},
 				],
 				customerPrices: [prices.createCustomer({ price: oldPrice })],
@@ -466,7 +455,6 @@ describe(chalk.yellowBright("setupFeatureQuantitiesContext"), () => {
 			const params: UpdateSubscriptionV1Params = {
 				customer_id: "cus_test",
 				plan_id: "prod_test",
-				// No options - should inherit from current
 			};
 
 			const ctx = contexts.create({ features: [feature] });
@@ -480,16 +468,10 @@ describe(chalk.yellowBright("setupFeatureQuantitiesContext"), () => {
 
 			expect(result).toHaveLength(1);
 			expect(result[0].feature_id).toBe("credits");
-			// Old: 5 packs * 100 = 500 credits
-			// Round 500 to nearest 250 = 500
-			// New: 500 / 250 = 2 packs
 			expect(result[0].quantity).toBe(2);
 		});
 
 		test("converts and rounds up when not exact multiple of new billing units", () => {
-			// Scenario: Customer has 3 packs of 100 credits (300 actual credits)
-			// New price uses packs of 250
-			// Expected: 300 credits → rounds to 500 (nearest 250) → 2 packs
 			const feature = features.create({
 				id: "credits",
 				name: "Credits",
@@ -526,7 +508,7 @@ describe(chalk.yellowBright("setupFeatureQuantitiesContext"), () => {
 					{
 						feature_id: "credits",
 						internal_feature_id: "internal_credits",
-						quantity: 3, // 3 packs of 100 = 300 actual credits
+						quantity: 3,
 					},
 				],
 				customerPrices: [prices.createCustomer({ price: oldPrice })],
@@ -547,15 +529,10 @@ describe(chalk.yellowBright("setupFeatureQuantitiesContext"), () => {
 			});
 
 			expect(result).toHaveLength(1);
-			// Old: 3 packs * 100 = 300 credits
-			// Round 300 to nearest 250 (ceiling) = 500
-			// New: 500 / 250 = 2 packs
 			expect(result[0].quantity).toBe(2);
 		});
 
 		test("no old customer price returns undefined (no quantity inherited)", () => {
-			// Scenario: No old price found - can't interpret the stored quantity
-			// Should return empty result (no feature quantities)
 			const feature = features.create({
 				id: "credits",
 				name: "Credits",
@@ -588,7 +565,6 @@ describe(chalk.yellowBright("setupFeatureQuantitiesContext"), () => {
 						quantity: 500,
 					},
 				],
-				// No customerPrices - can't interpret stored quantity
 			});
 
 			const params: UpdateSubscriptionV1Params = {
@@ -605,8 +581,6 @@ describe(chalk.yellowBright("setupFeatureQuantitiesContext"), () => {
 				currentCustomerProduct: cusProduct,
 			});
 
-			// No old price means we can't interpret the stored quantity
-			// So no feature quantity is inherited
 			expect(result).toHaveLength(0);
 		});
 	});
@@ -654,7 +628,6 @@ describe(chalk.yellowBright("setupFeatureQuantitiesContext"), () => {
 				currentCustomerProduct: cusProduct,
 			});
 
-			// Only the prepaid price should be processed
 			expect(result).toHaveLength(1);
 			expect(result[0].feature_id).toBe("credits");
 		});
@@ -689,7 +662,6 @@ describe(chalk.yellowBright("setupFeatureQuantitiesContext"), () => {
 				entitlementId: "ent_credits",
 			});
 
-			// No entitlements provided - entitlement won't be found
 			const fullProduct = products.createFull({
 				prices: [price],
 				entitlements: [],
@@ -736,12 +708,11 @@ describe(chalk.yellowBright("setupFeatureQuantitiesContext"), () => {
 				prices: [price],
 				entitlements: [entitlement],
 			});
-			const cusProduct = customerProducts.create({ options: [] }); // No current options
+			const cusProduct = customerProducts.create({ options: [] });
 
 			const params: UpdateSubscriptionV1Params = {
 				customer_id: "cus_test",
 				plan_id: "prod_test",
-				// No feature_quantities in params either
 			};
 
 			const ctx = contexts.create({ features: [feature] });
@@ -753,7 +724,6 @@ describe(chalk.yellowBright("setupFeatureQuantitiesContext"), () => {
 				currentCustomerProduct: cusProduct,
 			});
 
-			// Since neither current nor new has quantity, nothing should be included
 			expect(result).toHaveLength(0);
 		});
 
@@ -794,7 +764,7 @@ describe(chalk.yellowBright("setupFeatureQuantitiesContext"), () => {
 			const params: UpdateSubscriptionV1Params = {
 				customer_id: "cus_test",
 				plan_id: "prod_test",
-				feature_quantities: [], // Explicitly empty
+				feature_quantities: [],
 			};
 
 			const ctx = contexts.create({ features: [feature] });
@@ -808,7 +778,7 @@ describe(chalk.yellowBright("setupFeatureQuantitiesContext"), () => {
 
 			expect(result).toHaveLength(1);
 			expect(result[0].feature_id).toBe("credits");
-			expect(result[0].quantity).toBe(100); // Falls back to current
+			expect(result[0].quantity).toBe(100);
 		});
 
 		test("new quantity of 0 is valid and replaces current", () => {
@@ -893,8 +863,8 @@ describe(chalk.yellowBright("setupFeatureQuantitiesContext"), () => {
 			const cusProduct = customerProducts.create({
 				options: [
 					{
-						feature_id: "old_credits_id", // Different feature_id
-						internal_feature_id: "internal_credits_v2", // Matches by internal_id
+						feature_id: "old_credits_id",
+						internal_feature_id: "internal_credits_v2",
 						quantity: 75,
 					},
 				],
@@ -956,7 +926,6 @@ describe(chalk.yellowBright("setupFeatureQuantitiesContext"), () => {
 			const params: UpdateSubscriptionV1Params = {
 				customer_id: "cus_test",
 				plan_id: "prod_test",
-				// No options provided - should carry over from current
 			};
 
 			const ctx = contexts.create({ features: [feature] });

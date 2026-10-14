@@ -1,7 +1,3 @@
-/**
- * Minimal free-tier catalog for gating/metering flow cases: one metered
- * feature, one auto-enable free plan with a small monthly allowance.
- */
 export const freeTierCatalog = `import { atmn, feature, plan } from "atmn";
 
 export default atmn({

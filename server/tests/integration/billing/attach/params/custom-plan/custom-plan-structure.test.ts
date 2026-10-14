@@ -1,15 +1,3 @@
-/**
- * Custom Plan Structure Tests (Attach V2)
- *
- * Tests for the `items` parameter in billing.attach that changes
- * the fundamental structure of the product.
- *
- * Key behaviors:
- * - Upgrade/downgrade inversion via price changes
- * - Billing type changes (recurring <-> one-off <-> free)
- * - Billing interval changes (monthly <-> annual)
- */
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3 } from "@autumn/shared";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
@@ -31,23 +19,6 @@ import chalk from "chalk";
 import { addMonths } from "date-fns";
 import { constructPriceItem } from "@/internal/products/product-items/productItemUtils";
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// UPGRADE/DOWNGRADE INVERSION
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Test 1: Downgrade becomes upgrade via price increase
- *
- * Scenario:
- * - Customer on Premium ($50/mo)
- * - Pro product is normally $20/mo (would be downgrade)
- * - Attach Pro with custom price $60/mo
- *
- * Expected:
- * - Treated as upgrade (immediate)
- * - Customer charged prorated difference (Premium → custom Pro)
- * - Premium replaced by Pro immediately
- */
 test.concurrent(`${chalk.yellowBright("custom-plan-structure 1: downgrade becomes upgrade via price increase")}`, async () => {
 	const customerId = "custom-plan-downgrade-to-upgrade";
 
@@ -70,7 +41,6 @@ test.concurrent(`${chalk.yellowBright("custom-plan-structure 1: downgrade become
 		actions: [s.billing.attach({ productId: premium.id })],
 	});
 
-	// Verify customer is on Premium
 	const customerBefore =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	await expectProductActive({
@@ -78,7 +48,6 @@ test.concurrent(`${chalk.yellowBright("custom-plan-structure 1: downgrade become
 		productId: premium.id,
 	});
 
-	// Attach Pro with custom price $60 (higher than Premium's $50)
 	const higherPrice = items.monthlyPrice({ price: 60 });
 
 	const preview = await autumnV1.billing.previewAttach({
@@ -87,7 +56,6 @@ test.concurrent(`${chalk.yellowBright("custom-plan-structure 1: downgrade become
 		items: [messagesItem, higherPrice],
 	});
 
-	// Should be immediate charge (upgrade), $60 - $50 = $10 difference
 	expect(preview.total).toBe(10);
 
 	await autumnV1.billing.attach({
@@ -99,7 +67,6 @@ test.concurrent(`${chalk.yellowBright("custom-plan-structure 1: downgrade become
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Pro should be active, Premium should be gone (immediate switch)
 	await expectCustomerProducts({
 		customer,
 		active: [pro.id],
@@ -108,7 +75,7 @@ test.concurrent(`${chalk.yellowBright("custom-plan-structure 1: downgrade become
 
 	await expectCustomerInvoiceCorrect({
 		customer,
-		count: 2, // Initial Premium + upgrade to Pro
+		count: 2,
 		latestTotal: 10,
 	});
 
@@ -120,19 +87,6 @@ test.concurrent(`${chalk.yellowBright("custom-plan-structure 1: downgrade become
 	});
 });
 
-/**
- * Test 2: Upgrade becomes downgrade via price decrease
- *
- * Scenario:
- * - Customer on Pro ($20/mo)
- * - Premium product is normally $50/mo (would be upgrade)
- * - Attach Premium with custom price $15/mo
- *
- * Expected:
- * - Treated as downgrade (scheduled)
- * - No immediate charge
- * - Pro canceling, Premium scheduled
- */
 test.concurrent(`${chalk.yellowBright("custom-plan-structure 2: upgrade becomes downgrade via price decrease")}`, async () => {
 	const customerId = "custom-plan-upgrade-to-downgrade";
 
@@ -155,12 +109,10 @@ test.concurrent(`${chalk.yellowBright("custom-plan-structure 2: upgrade becomes 
 		actions: [s.billing.attach({ productId: pro.id })],
 	});
 
-	// Verify customer is on Pro
 	const customerBefore =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	await expectProductActive({ customer: customerBefore, productId: pro.id });
 
-	// Attach Premium with custom price $15 (lower than Pro's $20)
 	const lowerPrice = items.monthlyPrice({ price: 15 });
 
 	const preview = await autumnV1.billing.previewAttach({
@@ -169,7 +121,6 @@ test.concurrent(`${chalk.yellowBright("custom-plan-structure 2: upgrade becomes 
 		items: [messagesItem, lowerPrice],
 	});
 
-	// Should be scheduled (downgrade), no immediate charge
 	expect(preview.total).toBe(0);
 	expectPreviewNextCycleCorrect({
 		preview,
@@ -186,7 +137,6 @@ test.concurrent(`${chalk.yellowBright("custom-plan-structure 2: upgrade becomes 
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Pro should be canceling, Premium should be scheduled
 	await expectProductCanceling({ customer, productId: pro.id });
 	await expectProductScheduled({
 		customer,
@@ -194,10 +144,9 @@ test.concurrent(`${chalk.yellowBright("custom-plan-structure 2: upgrade becomes 
 		startsAt: addMonths(advancedTo, 1).getTime(),
 	});
 
-	// No new invoice (scheduled switch)
 	await expectCustomerInvoiceCorrect({
 		customer,
-		count: 1, // Only initial Pro
+		count: 1,
 		latestTotal: 20,
 	});
 
@@ -209,21 +158,6 @@ test.concurrent(`${chalk.yellowBright("custom-plan-structure 2: upgrade becomes 
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// BILLING TYPE CHANGES
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Test 3: Recurring to one-off
- *
- * Scenario:
- * - Pro product is $20/mo recurring
- * - Attach with custom items that make it one-off ($50)
- *
- * Expected:
- * - One-time $50 charge
- * - No recurring subscription
- */
 test.concurrent(`${chalk.yellowBright("custom-plan-structure 3: recurring to one-off")}`, async () => {
 	const customerId = "custom-plan-recurring-to-oneoff";
 
@@ -240,7 +174,6 @@ test.concurrent(`${chalk.yellowBright("custom-plan-structure 3: recurring to one
 		actions: [],
 	});
 
-	// Attach with one-off price instead of recurring
 	const oneOffPrice = constructPriceItem({ price: 50, interval: null });
 
 	const preview = await autumnV1.billing.previewAttach({
@@ -276,7 +209,6 @@ test.concurrent(`${chalk.yellowBright("custom-plan-structure 3: recurring to one
 		latestTotal: 50,
 	});
 
-	// One-off products don't create recurring subscriptions
 	await expectNoStripeSubscription({
 		db: ctx.db,
 		customerId,
@@ -285,17 +217,6 @@ test.concurrent(`${chalk.yellowBright("custom-plan-structure 3: recurring to one
 	});
 });
 
-/**
- * Test 4: One-off to recurring
- *
- * Scenario:
- * - One-off product is $50 one-time
- * - Attach with custom items that make it recurring ($20/mo)
- *
- * Expected:
- * - $20 charged
- * - Recurring subscription created
- */
 test.concurrent(`${chalk.yellowBright("custom-plan-structure 4: one-off to recurring")}`, async () => {
 	const customerId = "custom-plan-oneoff-to-recurring";
 
@@ -311,7 +232,6 @@ test.concurrent(`${chalk.yellowBright("custom-plan-structure 4: one-off to recur
 		actions: [],
 	});
 
-	// Attach with recurring price instead of one-off
 	const monthlyPrice = items.monthlyPrice({ price: 20 });
 
 	const preview = await autumnV1.billing.previewAttach({
@@ -347,7 +267,6 @@ test.concurrent(`${chalk.yellowBright("custom-plan-structure 4: one-off to recur
 		latestTotal: 20,
 	});
 
-	// Should have recurring subscription now
 	await expectSubToBeCorrect({
 		db: ctx.db,
 		customerId,
@@ -356,17 +275,6 @@ test.concurrent(`${chalk.yellowBright("custom-plan-structure 4: one-off to recur
 	});
 });
 
-/**
- * Test 5: Free to recurring
- *
- * Scenario:
- * - Free product has no price
- * - Attach with custom items that add recurring price
- *
- * Expected:
- * - $20 charged
- * - Subscription created
- */
 test.concurrent(`${chalk.yellowBright("custom-plan-structure 5: free to recurring")}`, async () => {
 	const customerId = "custom-plan-free-to-recurring";
 
@@ -382,7 +290,6 @@ test.concurrent(`${chalk.yellowBright("custom-plan-structure 5: free to recurrin
 		actions: [],
 	});
 
-	// Attach with monthly price
 	const monthlyPrice = items.monthlyPrice({ price: 20 });
 
 	const preview = await autumnV1.billing.previewAttach({
@@ -418,17 +325,6 @@ test.concurrent(`${chalk.yellowBright("custom-plan-structure 5: free to recurrin
 	});
 });
 
-/**
- * Test 6: Recurring to free
- *
- * Scenario:
- * - Pro product is $20/mo
- * - Attach with custom items that remove the price
- *
- * Expected:
- * - No charge
- * - No subscription
- */
 test.concurrent(`${chalk.yellowBright("custom-plan-structure 6: recurring to free")}`, async () => {
 	const customerId = "custom-plan-recurring-to-free";
 
@@ -445,11 +341,10 @@ test.concurrent(`${chalk.yellowBright("custom-plan-structure 6: recurring to fre
 		actions: [],
 	});
 
-	// Attach with no price (free)
 	const preview = await autumnV1.billing.previewAttach({
 		customer_id: customerId,
 		product_id: pro.id,
-		items: [messagesItem], // No price item
+		items: [messagesItem],
 	});
 
 	expect(preview.total).toBe(0);
@@ -457,7 +352,7 @@ test.concurrent(`${chalk.yellowBright("custom-plan-structure 6: recurring to fre
 	await autumnV1.billing.attach({
 		customer_id: customerId,
 		product_id: pro.id,
-		items: [messagesItem], // No price item
+		items: [messagesItem],
 		redirect_mode: "if_required",
 	});
 
@@ -478,21 +373,6 @@ test.concurrent(`${chalk.yellowBright("custom-plan-structure 6: recurring to fre
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// BILLING INTERVAL CHANGES
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Test 7: Monthly to annual on attach
- *
- * Scenario:
- * - Pro product is normally $20/mo
- * - Attach with annual price $200/year
- *
- * Expected:
- * - $200 charged
- * - Annual billing cycle
- */
 test.concurrent(`${chalk.yellowBright("custom-plan-structure 7: monthly to annual on attach")}`, async () => {
 	const customerId = "custom-plan-monthly-to-annual";
 
@@ -509,7 +389,6 @@ test.concurrent(`${chalk.yellowBright("custom-plan-structure 7: monthly to annua
 		actions: [],
 	});
 
-	// Attach with annual price
 	const annualPrice = items.annualPrice({ price: 200 });
 
 	const preview = await autumnV1.billing.previewAttach({
@@ -545,17 +424,6 @@ test.concurrent(`${chalk.yellowBright("custom-plan-structure 7: monthly to annua
 	});
 });
 
-/**
- * Test 8: Annual to monthly on attach
- *
- * Scenario:
- * - Pro product is normally $200/year
- * - Attach with monthly price $20/mo
- *
- * Expected:
- * - $20 charged
- * - Monthly billing cycle
- */
 test.concurrent(`${chalk.yellowBright("custom-plan-structure 8: annual to monthly on attach")}`, async () => {
 	const customerId = "custom-plan-annual-to-monthly";
 
@@ -572,7 +440,6 @@ test.concurrent(`${chalk.yellowBright("custom-plan-structure 8: annual to monthl
 		actions: [],
 	});
 
-	// Attach with monthly price
 	const monthlyPrice = items.monthlyPrice({ price: 20 });
 
 	const preview = await autumnV1.billing.previewAttach({

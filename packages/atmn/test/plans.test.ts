@@ -1,9 +1,3 @@
-/**
- * Plans ride the same `atmn()` as features. What is new: every version is a
- * row in `plans` and says whether it is live, an omitted key stays omitted,
- * and a plan item must name a declared feature.
- */
-
 import { expect, test } from "bun:test";
 import { feature } from "../src/generated/features";
 import { ConfigError } from "../src/generated/lintRuntime";
@@ -37,7 +31,6 @@ test("every version is one wire row, active as the config states it", () => {
 		{ plan_id: "pro", name: "Pro", version_slug: "v2", active: true },
 		{ plan_id: "pro", name: "Pro", version_slug: "v1", active: false },
 	]);
-	// Stated plans are every version: the ones omitted are removed.
 	expect(wire.skip_version_deletions).toBe(false);
 });
 
@@ -414,8 +407,6 @@ test("versioning the variant alongside its base lints clean", () => {
 });
 
 test("a field the CLI hides is refused when a config still states it", () => {
-	// A config pulled by an older release can carry baseVariantId; the server
-	// would read it as a variant link, so lint refuses it before anything is sent.
 	const issues = issuesOf(() =>
 		atmn({
 			features: [],

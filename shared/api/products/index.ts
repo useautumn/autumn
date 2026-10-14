@@ -22,9 +22,6 @@ export * from "./utils/compare";
 export * from "./utils/convert";
 export * from "./utils/display";
 
-// Note: V1.2_ProductChanges.js is NOT exported here to avoid circular deps
-// It's only imported directly by versionChangeRegistry.ts
-
 export const apiPlan = {
 	map: {
 		v0ToProductItems: planV0ToProductItems,

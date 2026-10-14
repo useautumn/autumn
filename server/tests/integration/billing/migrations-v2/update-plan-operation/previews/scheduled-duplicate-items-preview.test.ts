@@ -1,8 +1,3 @@
-/**
- * Active and scheduled rows for the same plan must stay separate in previews.
- * Merging them duplicates boolean item_changes and hides the scheduled scope.
- */
-
 import { expect, test } from "bun:test";
 import { ms } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features";
@@ -58,8 +53,6 @@ test(`${chalk.yellowBright("migrations preview scheduled: same-plan active and s
 		actions: [],
 	});
 
-	// An unchanged plan across phases merges into one row, so phase 2 changes
-	// the seat quantity to keep a separate scheduled row.
 	const now = Date.now();
 	await autumnV1.billing.createSchedule({
 		customer_id: customerId,

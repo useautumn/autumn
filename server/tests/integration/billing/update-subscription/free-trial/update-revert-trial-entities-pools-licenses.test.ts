@@ -1,14 +1,3 @@
-/**
- * billing.update on a revert trial across entities, pooled balances and licenses.
- * Extending the trial must leave the shared Stripe subscription and sibling state
- * untouched, and trial expiry must still revert the replacement customer product.
- *
- * Contract:
- *   entities:  entity 0 trial extended → entity 1's Pro stays active; expiry restores entity 0's Pro
- *   pooled:    extended trial keeps the Enterprise pool grant; expiry restores the Pro grant
- *   licenses:  assignments follow the replacement trial parent; expiry reparents them to Pro
- */
-
 import { expect, test } from "bun:test";
 import {
 	CusProductStatus,

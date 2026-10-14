@@ -14,10 +14,8 @@ export type OAuthTokenRequestContext = {
 	clientId: string | null;
 	isMcpClient: boolean;
 	normalizedRequest: Request;
-	/** Non-null only for MCP refreshes, the one grant whose replays must agree. */
 	refreshReplayKey: string | null;
 	refreshTokenRecord: typeof oauthRefreshToken.$inferSelect | null;
-	/** Canonical audience this grant is stamped with, already resolved for refreshes. */
 	resource: string | null;
 };
 
@@ -29,8 +27,6 @@ const buildReplayKeyForRequest = async ({
 	resource: string | null;
 }) => {
 	const authorization = request.headers.get("authorization") ?? "";
-	// Read off the normalized request so the fingerprint covers the exact bytes
-	// better-auth will see, not the body they were rewritten from.
 	const rawBody = await request.clone().text();
 
 	return buildOAuthRefreshReplayKey(
@@ -38,7 +34,6 @@ const buildReplayKeyForRequest = async ({
 	);
 };
 
-/** Resolves the grant being refreshed and rewrites the request better-auth will handle. */
 export const setupOAuthTokenRequest = async ({
 	db,
 	request,

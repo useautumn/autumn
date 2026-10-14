@@ -13,19 +13,14 @@ export const releaseLicense = async ({
 	ctx: AutumnContext;
 	params: ReleaseLicenseParamsV0;
 }) => {
-	// 1. Setup
 	const context = await setupReleaseLicenseContext({ ctx, params });
 
-	// 2. Errors
 	handleReleaseLicenseErrors({ context });
 
-	// 3. Compute: entity unlinks + pool returns ride the shared plan
 	const plan = computeReleaseLicensePlan({ context });
 	logReleaseLicensePlan({ ctx, context });
 
-	// 4. Execute
 	await executeAutumnBillingPlan({ ctx, autumnBillingPlan: plan.billingPlan });
 
-	// Response shape is undecided; callers only get an acknowledgement.
 	return { success: true as const };
 };

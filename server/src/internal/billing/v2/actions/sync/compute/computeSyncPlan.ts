@@ -25,11 +25,6 @@ export type { ComputedSchedulePhase } from "./computeSyncFuturePhases";
 
 export type ComputedSyncPlan = {
 	autumnBillingPlan: AutumnBillingPlan;
-	/**
-	 * Phase descriptors for `persistSyncPhases` to write. Empty when the
-	 * sync is single-phase (immediate-only or schedule-only with one phase) —
-	 * in that case no Autumn schedule is created.
-	 */
 	phases: ComputedSchedulePhase[];
 };
 
@@ -58,7 +53,6 @@ const expiredCustomerProducts = (
 		status === CusProductStatus.Expired ? [customerProduct] : [],
 	);
 
-/** Compose the AutumnBillingPlan from the immediate + future phase computations. */
 export const computeSyncPlan = ({
 	ctx,
 	syncContext,
@@ -67,7 +61,6 @@ export const computeSyncPlan = ({
 	syncContext: SyncBillingContext;
 }): ComputedSyncPlan => {
 	const immediatePhase = computeSyncImmediatePhase({ ctx, syncContext });
-	// Unscheduled plans start now too, but sit outside every schedule phase.
 	const immediate = combineStartingNowResults([
 		immediatePhase,
 		computeSyncUnscheduledPlans({ ctx, syncContext }),
@@ -83,7 +76,6 @@ export const computeSyncPlan = ({
 		...immediateOutgoingCustomerProducts,
 		...expiredCustomerProducts(future.updateCustomerProducts),
 	];
-	// Replacements start now, so seat pools and their assignments move over now.
 	const customerLicenseTransitions = computeCustomerLicenseTransitions({
 		outgoingCustomerProducts: immediateOutgoingCustomerProducts,
 		incomingCustomerProducts: immediate.insertCustomerProducts,
@@ -141,8 +133,6 @@ export const computeSyncPlan = ({
 			customerLicenseTransitions.length > 0
 				? customerLicenseTransitions
 				: undefined,
-		// Saving the new schedule replaces the old one and the plans it had queued,
-		// so the old schedule's phases must not be re-pointed at this sync's plans.
 		...(hasMultiplePhases({ syncContext })
 			? {
 					deleteCustomerProducts: syncContext.queuedCustomerProducts,
@@ -154,7 +144,6 @@ export const computeSyncPlan = ({
 		pooledBalancePlan,
 	};
 
-	// Single-phase sync (no schedule) → don't materialize any Autumn schedule.
 	if (!hasMultiplePhases({ syncContext })) {
 		return { autumnBillingPlan, phases: [] };
 	}

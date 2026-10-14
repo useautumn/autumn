@@ -1,6 +1,5 @@
 import { z } from "zod/v4";
 
-/** Stripe connection on a feature — the shared Product and optional Meter. */
 export const ApiStripeFeatureProcessorSchema = z.object({
 	product_id: z.string().optional().meta({
 		description: "Stripe product ID this feature's usage prices bill under.",

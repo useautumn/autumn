@@ -13,10 +13,6 @@ import {
 	entitlementPricesPlanHasWrites,
 } from "@/internal/products/actions/computeEntitlementPricesPlan";
 
-/**
- * Catalog facet: planParams.price/items → EntitlementPricesPlan.
- * Thin adapter over the shared products planner.
- */
 export const computeCatalogEntitlementPricesPlan = ({
 	ctx,
 	product,
@@ -49,7 +45,6 @@ export const computeCatalogEntitlementPricesPlan = ({
 	const hasCustomize =
 		planParams.price !== undefined || planParams.items !== undefined;
 
-	// Version mint always runs so omitted items/price expand from base.
 	if (!hasCustomize && mode.type !== "version") {
 		return undefined;
 	}

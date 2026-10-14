@@ -12,7 +12,6 @@ import { billingLineItemsToDbEntities } from "@/internal/billing/v2/providers/st
 import { invoiceLineItemRepo } from "@/internal/invoices/lineItems/repos";
 import type { StoreDeferredInvoiceLineItemsPayload } from "@/queue/workflows";
 
-/** Minimal shape of a Stripe InvoiceItem after SQS serialization */
 type StripeInvoiceItemLike = {
 	id: string;
 	amount: number;
@@ -33,17 +32,6 @@ type StripeInvoiceItemLike = {
 	};
 };
 
-/**
- * Workflow handler for storing deferred invoice line items (ProrateNextCycle).
- *
- * When a ProrateNextCycle quantity change creates pending Stripe invoice items,
- * there's no Stripe invoice yet — the charges are deferred to the next billing cycle.
- * This workflow stores those line items immediately with full Autumn context
- * and `invoice_id = null`.
- *
- * When the renewal invoice arrives, `storeInvoiceLineItems` will detect these
- * rows by `stripe_invoice_item_id` and update them with the real invoice info.
- */
 export const storeDeferredInvoiceLineItems = async ({
 	ctx,
 	payload,
@@ -60,7 +48,6 @@ export const storeDeferredInvoiceLineItems = async ({
 			return;
 		}
 
-		// Parse billing line items and filter to deferred ones (chargeImmediately === false)
 		const deferredLineItems = billingLineItems
 			.map((item) => {
 				const result = LineItemSchema.safeParse(item);
@@ -90,14 +77,6 @@ export const storeDeferredInvoiceLineItems = async ({
 	}
 };
 
-/**
- * Converts deferred Stripe invoice items to DB line items and stores them.
- *
- * We have both the Stripe response (with invoice item IDs) and the Autumn
- * billing line items (with full context). We match them via
- * `metadata.autumn_line_item_id` and store with `invoice_id = null` since
- * the items aren't attached to any invoice yet.
- */
 const storeDeferredLineItems = async ({
 	ctx,
 	stripeInvoiceItems,
@@ -109,7 +88,6 @@ const storeDeferredLineItems = async ({
 }) => {
 	const items = stripeInvoiceItems as StripeInvoiceItemLike[];
 
-	// Build a lookup map: autumn_line_item_id -> Autumn LineItem
 	const lineItemById = new Map<string, LineItem>();
 	for (const li of deferredLineItems) {
 		lineItemById.set(li.id, li);
@@ -131,7 +109,6 @@ const storeDeferredLineItems = async ({
 				}),
 			);
 		} else {
-			// No match — store with Stripe-only context (fallback)
 			dbLineItems.push(
 				deferredInvoiceItemToDbLineItemStripeOnly({ stripeItem }),
 			);
@@ -150,9 +127,6 @@ const storeDeferredLineItems = async ({
 	}
 };
 
-/**
- * Converts a deferred Stripe invoice item to a DB line item with full Autumn context.
- */
 const deferredInvoiceItemToDbLineItem = ({
 	stripeItem,
 	billingLineItem,
@@ -163,7 +137,6 @@ const deferredInvoiceItemToDbLineItem = ({
 	const { context } = billingLineItem;
 	const priceDetails = stripeItem.pricing?.price_details;
 
-	// Determine amounts and discounts using the same logic as mergeStripeAndBillingLineItems
 	const autumnDiscountable = context.discountable ?? true;
 	const hasAutumnDiscounts =
 		!autumnDiscountable && billingLineItem.discounts.length > 0;
@@ -185,17 +158,15 @@ const deferredInvoiceItemToDbLineItem = ({
 			amount: stripeItem.amount,
 			currency: stripeItem.currency,
 		});
-		amountAfterDiscounts = amount; // No discount_amounts on invoice items at creation time
+		amountAfterDiscounts = amount;
 		discounts = [];
 	}
 
 	const stripeQuantity = stripeItem.quantity ?? null;
 
-	// Use Autumn quantities
 	const totalQuantity = billingLineItem.totalQuantity ?? null;
 	const paidQuantity = billingLineItem.paidQuantity ?? null;
 
-	// Collect entity IDs from the billing line item
 	const customerProductIds = context.customerProduct?.id
 		? [context.customerProduct.id]
 		: [];
@@ -210,7 +181,6 @@ const deferredInvoiceItemToDbLineItem = ({
 		id: billingLineItem.id,
 		invoice_id: null,
 
-		// Stripe identifiers — use invoice item ID for both stripe_id and stripe_invoice_item_id
 		stripe_id: stripeItem.id,
 		stripe_invoice_id: null,
 		stripe_invoice_item_id: stripeItem.id,
@@ -253,9 +223,6 @@ const deferredInvoiceItemToDbLineItem = ({
 	};
 };
 
-/**
- * Fallback: converts a deferred Stripe invoice item to DB line item with Stripe-only context.
- */
 const deferredInvoiceItemToDbLineItemStripeOnly = ({
 	stripeItem,
 }: {

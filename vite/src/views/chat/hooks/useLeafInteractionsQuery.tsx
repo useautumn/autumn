@@ -3,8 +3,6 @@ import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import type { LeafApproval } from "../chatTypes";
 
-/** Pending plan-write approvals for a thread, fetched beside the text stream.
- * Manually refetched once a turn settles (a suspended write records an approval). */
 export const useLeafInteractionsQuery = ({
 	threadId,
 }: {

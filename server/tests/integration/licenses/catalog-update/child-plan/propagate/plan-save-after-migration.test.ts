@@ -1,15 +1,3 @@
-/**
- * Editing a license plan after a batch migration has customized its link.
- *
- * The migration mints its own link and replaces that link's item set, moving the
- * catalog entitlement's only license reference off the catalog link. The next
- * plan save therefore deletes and re-creates that entitlement, while the link
- * rebase still resolves the target item against the pre-save plan and re-inserts
- * the id that was just dropped.
- *
- * Red: plans.update fails with license_entitlements_entitlement_fkey.
- * Green: the save succeeds and the link resolves to the live entitlement.
- */
 import { expect, test } from "bun:test";
 import {
 	BillingInterval,
@@ -84,7 +72,6 @@ test(`${chalk.yellowBright("plans.update: saving a license plan after a migratio
 		update_license_parents: [{ plan_id: parent.id, version: 1 }],
 	});
 
-	// Every link the seat plan is referenced by must resolve to a live row.
 	const [seatProduct] = await ctx.db
 		.select({ internalId: products.internal_id })
 		.from(products)

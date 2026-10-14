@@ -83,7 +83,6 @@ export const StatusDot = ({ tone, pulse }: { tone: Tone; pulse?: boolean }) => (
 
 const label = (s: string) => s.replace(/_/g, " ");
 
-/** Autumn's plan status chip: bordered, tone-coloured icon + label. */
 export const RunStatusBadge = ({
 	status,
 }: {
@@ -168,7 +167,6 @@ export const Pill = ({
 	</span>
 );
 
-/** Segmented bar: passed · failed · running over total. */
 export const RunProgress = ({
 	passed,
 	failed,
@@ -249,7 +247,6 @@ export const Actor = ({
 	);
 };
 
-/** Renders any thrown error; ApiRequestError shows message, next and escalate. */
 export const ErrorCallout = ({
 	error,
 	className,

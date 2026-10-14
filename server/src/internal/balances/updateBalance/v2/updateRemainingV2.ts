@@ -12,7 +12,6 @@ import { buildCustomerEntitlementFilters } from "../../utils/buildCustomerEntitl
 import type { FeatureDeduction } from "../../utils/types/featureDeduction.js";
 import { handleUpdateBalanceDeductionErrorV2 } from "./handleUpdateBalanceDeductionErrorV2.js";
 
-/** Updates remaining balance using the FullSubject cache path. */
 export const updateRemainingV2 = async ({
 	ctx,
 	fullSubject,

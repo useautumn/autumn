@@ -2,7 +2,6 @@ import type { CatalogConflictPreview, FullProduct } from "@autumn/shared";
 import { detectCatalogConflictsFromProducts } from "./detectCatalogConflictsFromProducts";
 import { detectLicenseSlotConflicts } from "./detectLicenseSlotConflicts";
 
-/** Plan-body clashes, then per-link license clashes (`license_plan_id` set). */
 export const withVariantConflicts = <T extends object>({
 	preview,
 	current,

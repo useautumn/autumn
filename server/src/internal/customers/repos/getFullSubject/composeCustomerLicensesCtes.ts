@@ -1,12 +1,6 @@
 import { sql } from "drizzle-orm";
 import { planLicenseFullProductJson } from "@/internal/licenses/repos/utils/planLicenseFullProductSql.js";
 
-/**
- * CTE pair for the subject query's `customer_licenses` column: one row per
- * customer license on a live parent (with its effective plan license and
- * product), then packed into one JSON array per subject. Expects the
- * `cus_products` and `subject_records` CTEs in scope.
- */
 export const composeCustomerLicensesCtes = () => sql`
 		customer_license_rows AS (
 			SELECT

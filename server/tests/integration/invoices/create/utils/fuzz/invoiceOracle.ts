@@ -1,8 +1,3 @@
-/**
- * Independent expectation for invoices.create amounts. Plain arithmetic only:
- * deliberately shares no pricing code with the server.
- */
-
 export type OracleTier = {
 	to: number | "inf";
 	amount: number;
@@ -33,7 +28,6 @@ export const roundToCents = (amount: number) =>
 const tierCeiling = (tier: OracleTier) =>
 	tier.to === "inf" ? Number.POSITIVE_INFINITY : tier.to;
 
-/** Feature units → money: round up to whole billing units, then graduated or volume tiers. */
 export const oracleQuantityToAmount = ({
 	price,
 	quantity,
@@ -82,7 +76,6 @@ const addIntervalUtc = ({
 	);
 };
 
-/** Whole intervals from period.start bill in full; the trailing partial interval by time fraction. */
 export const oracleProrate = ({
 	amount,
 	interval,

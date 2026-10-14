@@ -160,7 +160,6 @@ describeDb("customer export jobs", () => {
 	});
 
 	test("each export kind has its own active slot and its own list", async () => {
-		// The other env keeps these active rows clear of suites that run real exports.
 		const scope = { db: ctx.db, orgId: ctx.org.id, env: otherEnv };
 		const customersExport = await CustomerExportService.createIfNoneActive({
 			...scope,
@@ -310,7 +309,6 @@ describeDb("customer export jobs", () => {
 			filters: snapshot.filters,
 		});
 
-		// A page size of 2 forces the keyset cursor to advance across pages.
 		const pageSize = 2;
 		const createdAtCutoff = Date.now();
 		const upperBoundInternalId = await getCustomerExportUpperBound({
@@ -417,7 +415,6 @@ describeDb("customer export jobs", () => {
 			filters: snapshot.filters,
 		});
 
-		// A page size of 1 forces the keyset cursor through the filtered walk.
 		const pageSize = 1;
 		const createdAtCutoff = Date.now();
 		const upperBoundInternalId = await getCustomerExportUpperBound({

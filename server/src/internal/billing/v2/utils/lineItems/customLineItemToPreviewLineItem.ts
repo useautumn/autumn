@@ -1,6 +1,5 @@
 import type { CustomLineItem, LineItem, PreviewLineItem } from "@autumn/shared";
 
-/** Transforms a CustomLineItem to a PreviewLineItem for API responses. */
 export const customLineItemToPreviewLineItem = (
 	item: CustomLineItem,
 	lineItem?: LineItem,

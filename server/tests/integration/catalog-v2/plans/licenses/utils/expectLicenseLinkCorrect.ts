@@ -20,7 +20,6 @@ type ExpectedPrice = {
 	interval: BillingInterval;
 };
 
-/** Catalog license link — only fields passed are checked. */
 export const expectLicenseLinkCorrect = async ({
 	ctx,
 	parentPlanId,

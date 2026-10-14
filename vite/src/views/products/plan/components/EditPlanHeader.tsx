@@ -240,7 +240,6 @@ export const EditPlanHeader = () => {
 					</div>
 
 					<div className="flex flex-row gap-2 items-center">
-						{/* Left of the selectors so showing it never shifts them. */}
 						<PromoteToActiveButton />
 						<VariantSelect />
 						{product.id && (
@@ -273,8 +272,6 @@ const VariantSelect = () => {
 	const { setQueryStates } = useProductQueryState();
 	const showAllVariants = useAllVariantsView();
 
-	// base_id is only populated on products-list entries, not the store product,
-	// so resolve it from the list. A base plan is its own base.
 	const baseId = useMemo(() => {
 		const current = products.find((p) => p.id === product.id);
 		return current?.base_id ?? product.id;
@@ -370,10 +367,8 @@ const CustomerBreadcrumbs = () => {
 	const [{ entity_id }] = useQueryStates({
 		entity_id: parseAsString,
 	});
-	//find entity name
 	const entity = customer.entities.find((e: any) => e.id === entity_id);
 
-	// Use store product if cusProductQuery doesn't have it (e.g., in inline editor)
 	const productName = cusProductQueryProduct?.name || storeProduct?.name || "";
 
 	return (

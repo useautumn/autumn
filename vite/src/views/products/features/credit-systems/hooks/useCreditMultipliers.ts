@@ -8,7 +8,6 @@ import {
 } from "../utils/creditDimensionUtils";
 import { removeAt, replaceAt } from "../utils/listUtils";
 
-/** Multipliers have no draft state: they are saved as typed, so names stay unique. */
 export function useCreditMultipliers({
 	item,
 	onChange,

@@ -5,16 +5,11 @@ import {
 } from "@autumn/shared";
 import type Stripe from "stripe";
 
-/** Expanded discount amount type (discount is always expanded) */
 type ExpandedDiscountAmount = {
 	amount: number;
 	discount: Stripe.Discount;
 };
 
-/**
- * Converts expanded Stripe discount amounts to Autumn DB discount format.
- * Extracts stripe_discount_id and stripe_coupon_id from the expanded discount object.
- */
 export const stripeDiscountsToDbDiscounts = ({
 	discountAmounts,
 	discounts,
@@ -33,7 +28,6 @@ export const stripeDiscountsToDbDiscounts = ({
 		const discount = discountsById.get(da.discount.id) ?? da.discount;
 		const coupon = discount.source?.coupon;
 
-		// Get coupon ID from source.coupon (can be string or expanded Coupon object)
 		const couponId = coupon ? stripeRefToId(coupon) : null;
 		const percentOff =
 			coupon && typeof coupon !== "string"

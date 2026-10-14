@@ -25,8 +25,6 @@ const INTERRUPTED_TRIGGER_CODES = [
 	"DISK_SPACE_EXCEEDED",
 ];
 
-/** Keyed by name: errors crossing a trigger subtask arrive as plain Errors
- * keeping only `name` (trigger's internal failures use their code as `name`). */
 const NAMED_ERROR_CODES: Record<string, MigrationRunErrorCode> = {
 	[BatchMigrationErrorName.CacheInvalidation]:
 		MigrationRunErrorCode.CacheInvalidationIncomplete,
@@ -55,7 +53,6 @@ const classifyOne = (error: Error): MigrationRunErrorCode | null => {
 	return NAMED_ERROR_CODES[error.name] ?? null;
 };
 
-/** Walks the error and its causes (a subtask's error is the unwrap's cause). */
 export const classifyMigrationRunError = ({
 	error,
 }: {

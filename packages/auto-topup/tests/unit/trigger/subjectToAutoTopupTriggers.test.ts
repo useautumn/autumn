@@ -23,7 +23,6 @@ import {
 import { fullCustomerToAutoTopupObjects } from "./legacy/fullCustomerToAutoTopupObjects.js";
 import { resolveThresholdSettlement } from "./legacy/resolveThresholdSettlement.js";
 
-/** The loop `triggerAutoTopUp` ran on the server, over the verbatim legacy functions. */
 const legacyTriggers = (fullSubject: AutoTopupSubject, featureId: string) => {
 	const fullCustomer = legacyCustomerOf(fullSubject);
 	const featureIds = deduplicateArray([
@@ -61,7 +60,6 @@ const triggersOf = (fullSubject: AutoTopupSubject, featureId = FEATURE) => {
 	return next;
 };
 
-/** A credits plan whose balance funds the tracked feature. */
 const creditsPlan = ({
 	balance,
 	expiresAt = null,
@@ -178,7 +176,6 @@ describe("subjectToAutoTopupTriggers", () => {
 	});
 
 	test("G7 threshold settlement with a config above threshold carries the config", () => {
-		// The overage row is a row of the same feature, so the summed balance is 50 - 140; the threshold sits under it.
 		const s = subject({
 			autoTopups: [autoTopupFor({ threshold: -200 })],
 			plans: [

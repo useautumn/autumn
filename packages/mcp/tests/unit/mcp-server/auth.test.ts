@@ -32,7 +32,6 @@ describe("Autumn MCP auth client", () => {
 			}).headers as HeadersInit,
 		);
 
-		// The audience travels in the token itself, never in a request header.
 		expect(headers.get("authorization")).toBe("Bearer am_oauth_test");
 		expect(headers.get("x-autumn-environment")).toBeNull();
 	});

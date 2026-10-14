@@ -1,8 +1,3 @@
-/**
- * Remove specific properties from fields in the OpenAPI spec
- * Config format: { 'METHOD /path': { 'fieldName': ['property1', 'property2'] } }
- * Example: { 'POST /products': { 'group': ['default'] } }
- */
 export function removeFieldProperties({
   spec,
   removals
@@ -15,7 +10,6 @@ export function removeFieldProperties({
   }
 
   for (const [endpointKey, fieldRemovals] of Object.entries(removals)) {
-    // Parse endpoint key: "METHOD /path"
     const [method, ...pathParts] = endpointKey.split(' ');
     const path = pathParts.join(' ');
     const lowerMethod = method.toLowerCase();
@@ -32,14 +26,12 @@ export function removeFieldProperties({
       continue;
     }
 
-    // Navigate to request body schema properties
     const schema = operation.requestBody?.content?.['application/json']?.schema;
     if (!schema?.properties) {
       console.warn(`  ⚠ No schema properties found for ${method} ${path}`);
       continue;
     }
 
-    // Remove specified properties from each field
     for (const [fieldName, propertiesToRemove] of Object.entries(fieldRemovals)) {
       const field = schema.properties[fieldName];
       if (!field) {

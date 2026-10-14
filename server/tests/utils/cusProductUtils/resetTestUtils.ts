@@ -35,7 +35,6 @@ const getRoutedRedisForCustomer = async ({
 	return routedCtx.redisV2;
 };
 
-/** Patch next_reset_at on a SubjectBalance in the V2 shared balance hash. */
 export const setCachedSubjectBalanceField = async ({
 	ctx,
 	orgId,
@@ -83,10 +82,6 @@ export const setCachedSubjectBalanceField = async ({
 	);
 };
 
-/**
- * Expire a cusEnt's next_reset_at in Postgres and the V2 subject balance hash,
- * so the next read triggers a lazy reset. Returns the cusEnt for assertions.
- */
 export const expireCusEntForReset = async ({
 	ctx,
 	customerId,
@@ -113,13 +108,11 @@ export const expireCusEntForReset = async ({
 	const pastTime = pastTimeMs ?? Date.now() - 1000;
 	const routedRedisV2 = await getRoutedRedisForCustomer({ ctx, customerId });
 
-	// Update Postgres
 	await ctx.db
 		.update(customerEntitlements)
 		.set({ next_reset_at: pastTime })
 		.where(eq(customerEntitlements.id, cusEnt.id));
 
-	// Update V2 subject balance hash
 	await setCachedSubjectBalanceField({
 		orgId: ctx.org.id,
 		env: ctx.env,
@@ -130,16 +123,11 @@ export const expireCusEntForReset = async ({
 		value: pastTime,
 		redisV2: routedRedisV2,
 	});
-	// Written behind the worker's back: it re-hydrates on the next command.
 	await evictBalanceWorkerCustomer({ ctx, customerId });
 
 	return cusEnt;
 };
 
-/**
- * Expire ALL cusEnts for a given feature in Postgres and the V2 balance hash.
- * Use this for entity-level features where multiple cusEnts share the same feature_id.
- */
 export const expireAllCusEntsForReset = async ({
 	ctx,
 	customerId,
@@ -156,8 +144,6 @@ export const expireAllCusEntsForReset = async ({
 		idOrInternalId: customerId,
 	});
 
-	// cusProductsToCusEnts skips the entity scoping filter — "ALL" here
-	// includes entity-scoped products' entitlements.
 	const cusEnts = cusProductsToCusEnts({
 		cusProducts: fullCustomer.customer_products,
 		featureIds: [featureId],
@@ -190,13 +176,11 @@ export const expireAllCusEntsForReset = async ({
 			redisV2: routedRedisV2,
 		});
 	}
-	// Written behind the worker's back: it re-hydrates on the next command.
 	await evictBalanceWorkerCustomer({ ctx, customerId });
 
 	return cusEnts;
 };
 
-/** One reset interval back from `reset`, the inverse of `getNextEntitlementReset`. */
 const previousEntitlementReset = ({
 	reset,
 	interval,
@@ -229,7 +213,6 @@ const previousEntitlementReset = ({
 	}
 };
 
-/** The row as the V2 cron's scan would select it, or null when the scan skips it. */
 export const findResetEligibleRow = async ({
 	ctx,
 	customerEntitlementId,
@@ -256,7 +239,6 @@ export const findResetEligibleRow = async ({
 	return rows[0] ?? null;
 };
 
-/** Runs the V2 batch reset (the cron's SQL lane) on exactly these rows, as the SQS consumer would. */
 export const runBatchResetOnCustomerEntitlements = ({
 	ctx,
 	customerEntitlementIds,
@@ -270,11 +252,6 @@ export const runBatchResetOnCustomerEntitlements = ({
 		payload: { customerEntitlementIds },
 	});
 
-/**
- * Forces one reset cycle on a row through the V2 cron's SQL lane. A row that is not due yet is
- * stepped back whole intervals until it is, so the reset lands on the row's own schedule.
- * Invalidates the customer's caches afterwards (Redis view and worker copy) unless told not to.
- */
 export const runResetOnCustomerEntitlement = async ({
 	ctx,
 	customerId,
@@ -293,7 +270,6 @@ export const runResetOnCustomerEntitlement = async ({
 		});
 	const row = await readRow();
 	if (!row) throw new Error(`cusEnt ${customerEntitlementId} not found`);
-	// Lifetime: nothing to reset, as the cron.
 	if (row.next_reset_at === null) return row;
 
 	const now = Date.now();

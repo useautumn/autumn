@@ -1,12 +1,3 @@
-/**
- * Dedicated DEV-DB org for the catalogV2 plan-rename execute CTE.
- *
- *   bun tests/perf/catalog-v2/benchExecuteRenamePlans.ts
- *
- * Loads server/.env.local (worktree / local DEV) — never staging/prod.
- * Org slug is ephemeral (`bench-rename-txn-*`) and deleted after the run.
- */
-
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -86,7 +77,6 @@ export const describeDatabaseUrl = (url: string): SafeDatabaseTarget => {
 	}
 };
 
-/** Print host/db (no password) and abort unless this is the DEV/local Neon. */
 export const assertBenchDatabaseSafe = (): SafeDatabaseTarget => {
 	loadWorktreeDevEnv();
 	const target = describeDatabaseUrl(process.env.DATABASE_URL ?? "");
@@ -175,7 +165,6 @@ export const createPlanRenameBenchContext = async ({
 	return { ctx, org };
 };
 
-/** customer_products → products has no ON DELETE CASCADE. */
 export const deletePlanRenameBenchOrg = async ({
 	db,
 	orgId,
@@ -219,7 +208,6 @@ export const hasProductAliasesTable = async ({
 	return Boolean(row?.exists);
 };
 
-/** Apply 0068 on this already-verified DEV connection only. */
 export const ensureProductAliasesTable = async ({
 	db,
 }: {

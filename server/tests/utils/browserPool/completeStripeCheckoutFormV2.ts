@@ -9,16 +9,8 @@ import { playwrightPool } from "./playwrightPool.js";
 
 export type { StripeCheckoutBillingAddress };
 
-/** Where the browser ended up. Undefined on the Kernel path, which discards
- * the function's return value. */
 export type CheckoutPageState = { url: string; text: string };
 
-/**
- * Complete a Stripe Checkout session form (Kernel VM or local Playwright).
- * Pass `billingAddress` when the session was created with
- * `customer_update: { address: "auto" }` (full address form). Defaults to
- * US / 10001 (postal-code-only sessions).
- */
 export const completeStripeCheckoutFormV2 = async ({
 	url,
 	overrideQuantity,
@@ -30,7 +22,6 @@ export const completeStripeCheckoutFormV2 = async ({
 	overrideQuantity?: number;
 	promoCode?: string;
 	billingAddress?: StripeCheckoutBillingAddress;
-	/** Click "Add" on the first Stripe Checkout optional item. */
 	addOptionalItem?: boolean;
 }): Promise<CheckoutPageState | undefined> => {
 	const concurrency = Number(process.env.TEST_FILE_CONCURRENCY || "0");

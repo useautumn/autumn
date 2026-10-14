@@ -1,15 +1,3 @@
-/**
- * Carry Over Usages - Basic Tests
- *
- * Tests for carry_over_usages: { enabled: true } on immediate plan upgrades.
- *
- * Key behaviors:
- * - Existing usage is deducted from the new plan's allowance on upgrade
- * - Zero usage is a silent no-op (new plan starts at full allowance)
- * - Carried usage above the new allowance goes negative — usage never changes
- *   on a plan transition (no clamping to zero)
- */
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3 } from "@autumn/shared";
 import { findCustomerEntitlement } from "@tests/balances/utils/findCustomerEntitlement.js";
@@ -19,14 +7,6 @@ import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 1: Basic usage carry over (deduction)
-//
-// Pro: 50 messages, 40 used (balance=10)
-// Upgrade to Premium (200) with carry_over_usages: { enabled: true }
-// Expected: balance = 160 (200 - 40 carried usage), usage = 40
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(
 	`${chalk.yellowBright("carry-over-usage 1: existing usage is deducted from new plan allowance on upgrade")}`,
@@ -49,17 +29,14 @@ test.concurrent(
 			actions: [s.attach({ productId: pro.id, timeout: 4000 })],
 		});
 
-		// Track 40 units (balance: 50 → 10)
 		await autumnV2_1.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
 			value: 40,
 		});
 
-		// Wait for Redis → Postgres sync
 		await new Promise((resolve) => setTimeout(resolve, 2000));
 
-		// Upgrade to Premium with carry_over_usages enabled
 		await autumnV2_1.billing.attach({
 			customer_id: customerId,
 			plan_id: premium.id,
@@ -70,7 +47,6 @@ test.concurrent(
 
 		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-		// Balance = 200 (Premium allowance) - 40 (carried usage) = 160
 		expectCustomerFeatureCorrect({
 			customer,
 			featureId: TestFeature.Messages,
@@ -142,14 +118,6 @@ test.concurrent(
 	{ timeout: 120_000 },
 );
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 2: Zero usage — nothing to carry
-//
-// Pro: 50 messages, 0 used (balance=50, nothing consumed)
-// Upgrade to Premium (200) with carry_over_usages: { enabled: true }
-// Expected: balance = 200 (no deduction — usage was zero)
-// ═══════════════════════════════════════════════════════════════════════════════
-
 test.concurrent(
 	`${chalk.yellowBright("carry-over-usage 2: zero usage is a no-op — new plan starts at full allowance")}`,
 	async () => {
@@ -171,9 +139,6 @@ test.concurrent(
 			actions: [s.attach({ productId: pro.id, timeout: 4000 })],
 		});
 
-		// No tracking — usage stays at 0
-
-		// Upgrade with carry_over_usages — zero usage is a silent no-op
 		await autumnV2_1.billing.attach({
 			customer_id: customerId,
 			plan_id: premium.id,
@@ -184,7 +149,6 @@ test.concurrent(
 
 		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-		// Balance = 200 only (no deduction — nothing was used)
 		expectCustomerFeatureCorrect({
 			customer,
 			featureId: TestFeature.Messages,
@@ -193,14 +157,6 @@ test.concurrent(
 		});
 	},
 );
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 3: No floor — usage exceeds new plan allowance
-//
-// Pro: 50 messages, 50 used (balance=0, all used)
-// Upgrade to Premium (30 messages) with carry_over_usages: { enabled: true }
-// Expected: balance = -20 (50 usage > 30 new allowance — carried exactly, negative)
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(
 	`${chalk.yellowBright("carry-over-usage 3: balance goes negative when carried usage exceeds new plan allowance")}`,
@@ -223,17 +179,14 @@ test.concurrent(
 			actions: [s.attach({ productId: pro.id, timeout: 4000 })],
 		});
 
-		// Exhaust all 50 allowance (balance: 50 → 0)
 		await autumnV2_1.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
 			value: 50,
 		});
 
-		// Wait for Redis → Postgres sync
 		await new Promise((resolve) => setTimeout(resolve, 2000));
 
-		// Upgrade with carry_over_usages — 50 usage > 30 new allowance, carries negative
 		await autumnV2_1.billing.attach({
 			customer_id: customerId,
 			plan_id: premium.id,
@@ -244,7 +197,6 @@ test.concurrent(
 
 		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-		// Balance = -20 (usage carried exactly, no clamp)
 		expectCustomerFeatureCorrect({
 			customer,
 			featureId: TestFeature.Messages,

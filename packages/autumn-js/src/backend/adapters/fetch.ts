@@ -41,12 +41,10 @@ export function autumnHandler(
 			raw: request,
 		});
 
-		// 204 No Content - return empty response
 		if (result.status === 204) {
 			return new Response(null, { status: 204 });
 		}
 
-		// Return body directly with actual HTTP status
 		return new Response(JSON.stringify(result.body), {
 			status: result.status,
 			headers: { "Content-Type": "application/json" },

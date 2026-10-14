@@ -9,13 +9,6 @@ type AgentModel = {
 
 const AGENTS: Record<LeafAgentConnection, AgentModel> = {
 	catalog: { reasoning: "low" },
-	// Routed through OpenRouter, not the direct Anthropic provider: turns on the
-	// direct path stalled silently after tool results.
-	// Opus: the Slack agent is low-volume and moves real money, and its
-	// failures were judgement calls (hedging on an inconsistent preview,
-	// answering a message meant for someone else), where the tier matters.
-	// Medium: on "low" the model reasoned out loud in its reply instead of
-	// resolving it in thought.
 	leaf: {
 		model: "openrouter/anthropic/claude-opus-5.5",
 		reasoning: "medium",
@@ -33,15 +26,12 @@ const FAMILIES: Record<string, ModelFamily> = {
 		cacheControlOnSystem: true,
 		openrouterProviders: ["google-vertex", "google-ai-studio"],
 	},
-	// xAI serves grok itself; adding a breakpoint measured worse.
 	"x-ai": {},
 };
 
 const familyOf = (model: string): ModelFamily | undefined =>
 	FAMILIES[model.replace(/^openrouter\//, "").split("/")[0] ?? ""];
 
-// The per-agent variable is an override for trying a model without a deploy;
-// the shared EVE_MODEL only fills in where the table leaves the model unset.
 const modelFor = (agent: LeafAgentConnection) =>
 	process.env[`EVE_MODEL_${agent.toUpperCase()}`] ??
 	AGENTS[agent].model ??
@@ -62,11 +52,9 @@ const markSystemForCaching = (body: ChatBody) => {
 			type: "text",
 		},
 	];
-	// OpenRouter omits token accounting unless asked, which reads as a dead cache.
 	body.usage = { include: true };
 };
 
-// Eve has no passthrough for OpenRouter's vendor fields, so they go on the wire.
 const openrouterFetch = (family: ModelFamily): typeof fetch => {
 	const tuned: typeof fetch = (input, init) => {
 		if (!init?.body) return fetch(input, init);
@@ -84,7 +72,6 @@ const openrouterFetch = (family: ModelFamily): typeof fetch => {
 	return tuned;
 };
 
-// .chat pins chat-completions — OpenRouter does not serve the responses API.
 const openrouter = (model: string) => {
 	const family = familyOf(model);
 	return createOpenAI({
@@ -101,7 +88,6 @@ const resolveModel = (value: string | undefined) => {
 	if (provider === "openai" && model) return openai(model);
 	if (provider === "anthropic" && model) return anthropic(model);
 	if (provider === "openrouter" && model) return openrouter(model);
-	// Any other prefix is treated as a Vercel AI Gateway model id string.
 	return value;
 };
 
@@ -131,7 +117,6 @@ export const leafReasoning = (agent: LeafAgentConnection) =>
 
 const DEFAULT_OPENROUTER_CONTEXT_WINDOW_TOKENS = 1_000_000;
 
-// The gateway catalog has no OpenRouter entries; without a window eve throws.
 export const leafModelContextWindowTokens = (agent: LeafAgentConnection) => {
 	if (!modelFor(agent)?.startsWith("openrouter/")) return undefined;
 	const configured = Number(process.env.EVE_MODEL_CONTEXT_WINDOW ?? "");

@@ -1,23 +1,3 @@
-/**
- * catalogV2.update — changing a plan's Stripe product moves its base price.
- *
- * A plan is billed under the Stripe product its base price belongs to. The
- * legacy mappings endpoint moved the price whenever the product changed;
- * `processors` only stamped product.processor, so the mapping was cosmetic and
- * checkout kept charging the old product's price.
- *
- * Contract:
- *   D1  a matching price already under the new product is reused, not duplicated
- *   D2  with nothing to match, the stale ids are cleared and a price is minted
- *       under the new product
- *   D3  a request that restates the price id itself wins — the re-point leaves
- *       it alone rather than overwriting a stated mapping
- *
- * Red (current): applyPlanProcessorsToProduct never touches price configs, and
- *   init skips the price because every slot is still filled.
- * Green (after): the base price's product follows the plan's.
- */
-
 import { expect, test } from "bun:test";
 import { BillingInterval, type FullProduct } from "@autumn/shared";
 import {
@@ -111,8 +91,6 @@ test.concurrent(
 					],
 				});
 
-				// D1: the existing $20/mo price under the new product is adopted,
-				// rather than a second identical price being created.
 				const slots = baseSlots({ product: await getFull({ ctx, planId }) });
 				expect(slots.productId, "price product follows the plan").toBe(
 					externalProduct.id,
@@ -133,7 +111,6 @@ test.concurrent(
 		const externalProduct = await ctx.stripeCli.products.create({
 			name: `Repoint Mint ${planId}`,
 		});
-		// Deliberately a different amount, so nothing under the product matches.
 		await ctx.stripeCli.prices.create({
 			product: externalProduct.id,
 			currency: "usd",
@@ -161,8 +138,6 @@ test.concurrent(
 					],
 				});
 
-				// D2: the old id must not survive — it belongs to a product this
-				// plan no longer maps to.
 				const slots = baseSlots({ product: await getFull({ ctx, planId }) });
 				expect(slots.productId, "price product follows the plan").toBe(
 					externalProduct.id,
@@ -201,8 +176,6 @@ test.concurrent(
 					name: "Repoint Stated",
 				});
 
-				// Both change at once: the plan moves to one product while the price
-				// is stated under another.
 				await autumnV2_3.catalogV2.update({
 					plans: [
 						{
@@ -217,8 +190,6 @@ test.concurrent(
 					],
 				});
 
-				// D3: feature prices already live under their own products, so a
-				// stated price is honoured rather than dragged to the plan's.
 				const slots = baseSlots({ product: await getFull({ ctx, planId }) });
 				expect(slots.priceId, "stated price kept").toBe(statedPrice.id);
 				expect(slots.productId, "stated price's own product kept").toBe(

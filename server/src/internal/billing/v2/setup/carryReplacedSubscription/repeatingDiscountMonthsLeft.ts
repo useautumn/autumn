@@ -23,7 +23,6 @@ const subscriptionRenewal = (
 		: DEFAULT_RENEWAL;
 };
 
-/** Months a repeating discount on this subscription carries to a recreated one; the set_plans preview shows the same count. */
 export const repeatingDiscountMonthsLeft = ({
 	discount,
 	subscription,

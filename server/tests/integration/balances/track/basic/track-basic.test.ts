@@ -9,10 +9,6 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { Decimal } from "decimal.js";
 
-// ═══════════════════════════════════════════════════════════════════
-// TRACK-BASIC1: Track with no value provided (defaults to 1)
-// ═══════════════════════════════════════════════════════════════════
-
 test.concurrent(
 	`${chalk.yellowBright("track-basic1: track with no value provided defaults to 1")}`,
 	async () => {
@@ -60,10 +56,6 @@ test.concurrent(
 		});
 	},
 );
-
-// ═══════════════════════════════════════════════════════════════════
-// TRACK-BASIC2: Track with explicit value provided
-// ═══════════════════════════════════════════════════════════════════
 
 test.concurrent(
 	`${chalk.yellowBright("track-basic2: track with explicit value provided")}`,
@@ -120,10 +112,6 @@ test.concurrent(
 		});
 	},
 );
-
-// ═══════════════════════════════════════════════════════════════════
-// TRACK-BASIC3: Track specific feature_id only affects that feature
-// ═══════════════════════════════════════════════════════════════════
 
 test.concurrent(
 	`${chalk.yellowBright("track-basic3: track specific feature_id only affects that feature")}`,
@@ -205,10 +193,6 @@ test.concurrent(
 	},
 );
 
-// ═══════════════════════════════════════════════════════════════════
-// TRACK-BASIC4: Track boolean feature is a no-op
-// ═══════════════════════════════════════════════════════════════════
-
 test.concurrent(
 	`${chalk.yellowBright("track-basic4: track boolean feature is a no-op")}`,
 	async () => {
@@ -276,10 +260,6 @@ test.concurrent(
 		});
 	},
 );
-
-// ═══════════════════════════════════════════════════════════════════
-// TRACK-BASIC5: Track with unlimited balance
-// ═══════════════════════════════════════════════════════════════════
 
 test.concurrent(
 	`${chalk.yellowBright("track-basic5: track with unlimited balance")}`,

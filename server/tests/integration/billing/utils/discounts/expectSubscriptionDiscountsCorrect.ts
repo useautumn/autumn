@@ -2,9 +2,6 @@ import { expect } from "bun:test";
 import { stripeRefToId } from "@autumn/shared";
 import { getStripeSubscription } from "./discountTestUtils.js";
 
-/**
- * Asserts the customer's Stripe subscription carries exactly these coupons, in any order.
- */
 export const expectSubscriptionDiscountsCorrect = async ({
 	customerId,
 	couponIds,

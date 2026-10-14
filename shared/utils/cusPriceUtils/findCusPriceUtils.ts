@@ -4,21 +4,18 @@ import {
 	type UsagePriceConfig,
 } from "@autumn/shared";
 
-// Overload: errorOnNotFound = true → guaranteed FullCustomerPrice
 export function findCusPriceByFeature(params: {
 	internalFeatureId: string;
 	cusPrices: FullCustomerPrice[];
 	errorOnNotFound: true;
 }): FullCustomerPrice;
 
-// Overload: errorOnNotFound = false/undefined → FullCustomerPrice | undefined
 export function findCusPriceByFeature(params: {
 	internalFeatureId: string;
 	cusPrices: FullCustomerPrice[];
 	errorOnNotFound?: false;
 }): FullCustomerPrice | undefined;
 
-// Implementation
 export function findCusPriceByFeature({
 	internalFeatureId,
 	cusPrices,

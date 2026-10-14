@@ -1,8 +1,3 @@
-/**
- * API Version enum (SemVer format, descending order)
- * Users send CalVer in x-api-version header (e.g., "2025-04-17")
- * Internally we use SemVer for comparison (e.g., "1.1.0")
- */
 export enum ApiVersion {
 	V2_5 = "2.5.0",
 	V2_4 = "2.4.0",

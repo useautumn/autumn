@@ -64,7 +64,6 @@ export const SheetSection = ({
 	</section>
 );
 
-/** The phase a live run is in now, named like the finished phases so the legend stays one vocabulary. */
 const currentPhase = ({
 	status,
 	warmReady,
@@ -81,7 +80,6 @@ const currentPhase = ({
 	return null;
 };
 
-/** Sequential wall-time phases; a live run's current phase grows at the end. */
 export const PhaseBar = ({
 	timing,
 	status,
@@ -250,7 +248,6 @@ export const DurationHistogram = ({ timing }: { timing: RunTiming }) => (
 	</ChartContainer>
 );
 
-/** The slowest files, which set the wall time. */
 export const LongTail = ({
 	timing,
 	onOpenFile,

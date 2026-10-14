@@ -12,10 +12,6 @@ import { mapToProductV2 } from "@/internal/products/productV2Utils";
 import { CusService } from "../CusService";
 import { ACTIVE_STATUSES } from "../cusProducts/CusProductService";
 
-/**
- * GET /customers/:customer_id/product/:product_id
- * Used by: vite/src/views/customers/customer/product/hooks/useCusProductQuery.tsx
- */
 export const handleGetCustomerProduct = createRoute({
 	scopes: [Scopes.Customers.Read],
 	query: z.object({

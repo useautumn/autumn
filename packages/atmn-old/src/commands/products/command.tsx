@@ -6,31 +6,18 @@ import { headlessProductsCommand } from "./headless.js";
 
 export interface ProductsCommandOptions {
 	prod?: boolean;
-	/** Run in headless mode (output for AI/programmatic use) */
 	headless?: boolean;
-	/** Page number */
 	page?: number;
-	/** Search query */
 	search?: string;
-	/** Get specific product by ID */
 	id?: string;
-	/** Items per page */
 	limit?: number;
-	/** Output format: text, json, csv */
 	format?: "text" | "json" | "csv";
-	/** Include archived products */
 	includeArchived?: boolean;
 }
 
-/**
- * Products command entry point
- * Renders the interactive products view or runs in headless mode
- */
 export async function productsCommand(
 	options: ProductsCommandOptions = {},
 ): Promise<void> {
-	// Headless mode - structured output for AI/programmatic use
-	// Auto-enable if not in a TTY
 	if (options.headless || !process.stdout.isTTY) {
 		await headlessProductsCommand({
 			prod: options.prod,
@@ -46,13 +33,11 @@ export async function productsCommand(
 
 	const environment = options.prod ? AppEnv.Live : AppEnv.Sandbox;
 
-	// Interactive mode - render Ink UI
 	const instance = render(
 		<QueryProvider>
 			<ProductsView
 				environment={environment}
 				onExit={() => {
-					// Clear the terminal output for a clean exit
 					instance.clear();
 					instance.unmount();
 					process.exit(0);
@@ -61,7 +46,6 @@ export async function productsCommand(
 		</QueryProvider>,
 	);
 
-	// Handle Ctrl+C - clear terminal before exit
 	process.on("SIGINT", () => {
 		instance.clear();
 		instance.unmount();

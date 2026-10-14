@@ -35,7 +35,6 @@ const isCancelling = ({
 	subscription.status !== "canceled" &&
 	(subscription.cancel_at_period_end || subscription.cancel_at !== null);
 
-/** The subscription's own status, with paused collection shown as paused. */
 export const stripeSubscriptionToStatus = ({
 	subscription,
 }: {
@@ -51,8 +50,6 @@ export const stripeSubscriptionToStatus = ({
 	);
 };
 
-/** The status Stripe reports, with a pending cancel or paused collection
- * taking precedence since they change what the next invoice does. */
 export const stripeObjectToStatus = ({
 	subscription,
 	schedule,

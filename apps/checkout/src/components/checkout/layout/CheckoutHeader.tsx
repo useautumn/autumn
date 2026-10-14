@@ -10,7 +10,6 @@ export function CheckoutHeader() {
 	const title = checkoutRouteTitle({ routeMode });
 	return (
 		<div className="flex flex-col gap-4">
-			{/* Org branding */}
 			{isLoading ? (
 				<div className="flex items-center gap-2">
 					<Skeleton className="h-6 w-6 rounded-full" />
@@ -37,7 +36,6 @@ export function CheckoutHeader() {
 				</motion.div>
 			) : null}
 
-			{/* Title and description */}
 			<div className="flex flex-col gap-2">
 				<h1 className="text-2xl text-foreground tracking-tight">{title}</h1>
 				{isLoading ? (

@@ -19,35 +19,14 @@ const maskApiKey = (apiKey: string) => {
 };
 
 const CATALOG_WRITE_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
-// Prefix match on purpose: covers `/features/:id`, `/plans.create`, `/catalogV2.update`.
 const CATALOG_PATH_REGEX = /^\/(features|products|plans|catalog)/;
 
-/**
- * Catalog writes (features, plans, products) routinely arrive back-to-back
- * from the CLI, and a plan create may reference a feature created milliseconds
- * earlier on a different worker. The feature write clears Redis on every
- * instance but only the writing worker's in-process L1, so these requests read
- * past the L1 to guarantee they see the freshest org + features.
- */
 const isCatalogWriteRequest = (c: Context<HonoEnv>) => {
 	if (!CATALOG_WRITE_METHODS.has(c.req.method)) return false;
 	const pathname = new URL(c.req.url).pathname.replace(/^\/v1/, "");
 	return CATALOG_PATH_REGEX.test(pathname);
 };
 
-/**
- * Middleware to verify secret key and populate auth context
- * Falls back to Better Auth (dashboard session) if request is from dashboard
- * Delegates to publicKeyMiddleware if key is a publishable key (am_pk)
- *
- * Steps:
- * 1. Check if Authorization header is present
- * 2. If from dashboard and no auth header, use Better Auth
- * 3. Check if it has correct Bearer format
- * 4. Handle publishable key verification if key starts with am_pk
- * 5. Verify the secret API key
- * 6. Store org, features, env, userId, authType in context
- */
 export const secretKeyMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 	const ctx = c.get("ctx");
 
@@ -57,8 +36,6 @@ export const secretKeyMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 
 	const bearerToken = getBearerToken({ headers: c.req.raw.headers });
 
-	// Step 1 & 2: Check if Authorization header exists
-	// If from dashboard and no Bearer token, use Better Auth session instead
 	if (!bearerToken) {
 		throw new RecaseError({
 			message: "Secret key not found in Authorization header",
@@ -71,12 +48,10 @@ export const secretKeyMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 		return handleOAuthMiddleware({ c, token: bearerToken, next });
 	}
 
-	// Per-customer JWT: scoped credential for self-hosted / licensed apps.
 	if (isCustomerJwt({ token: bearerToken })) {
 		return customerJwtMiddleware(c, bearerToken, next);
 	}
 
-	// Step 3: Handle publishable key verification
 	if (isPublishableKeyPrefix({ token: bearerToken })) {
 		return publicKeyMiddleware(c, bearerToken, next);
 	}
@@ -89,7 +64,6 @@ export const secretKeyMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 		});
 	}
 
-	// Step 4: Verify the API key
 	const data = await verifyKey({
 		db: ctx.db,
 		key: bearerToken,
@@ -106,7 +80,6 @@ export const secretKeyMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 		});
 	}
 
-	// Step 5: Store auth data in context
 	const { org, features, env, userId } = data;
 	const scopes = data.scopes ?? [];
 

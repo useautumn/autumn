@@ -7,7 +7,6 @@ import {
 	resolveCreditDimensionRate,
 } from "../creditDimensions/resolveCreditDimensionRate.js";
 
-/** The row for a feature, with its dimension rules applied to the event — always a plain flat or graduated rate. */
 export const findCreditSchemaItemByFeatureId = ({
 	featureId,
 	creditSystem,

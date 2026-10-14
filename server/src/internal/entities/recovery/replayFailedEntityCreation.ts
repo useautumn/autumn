@@ -13,12 +13,10 @@ import type {
 	EntityCreationRecoveryPayload,
 } from "./entityCreationRecoveryTypes.js";
 
-/** The original request landed at least one of its entities; the create refuses the whole batch on any. */
 const isEntityAlreadyExists = (error: unknown): boolean =>
 	error instanceof RecaseError &&
 	error.code === EntityErrorCode.EntityAlreadyExists;
 
-/** The requested entities the customer does not hold yet; an id-less request is held by any id-less row. */
 const listUncreatedEntities = async ({
 	ctx,
 	params,

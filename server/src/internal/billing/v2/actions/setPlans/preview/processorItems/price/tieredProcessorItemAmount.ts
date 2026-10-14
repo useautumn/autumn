@@ -20,7 +20,6 @@ const coversQuantity = ({
 	quantity: number;
 }) => tier.up_to === null || quantity <= tier.up_to;
 
-/** The whole quantity at the rate of the tier it lands in. */
 const volumeAmount = ({
 	tiers,
 	quantity,
@@ -34,7 +33,6 @@ const volumeAmount = ({
 	return tier ? tierCharge({ tier, units: quantity }) : null;
 };
 
-/** Each band of the quantity at its own tier's rate, plus the flat fee of every tier reached. */
 const graduatedAmount = ({
 	tiers,
 	quantity,
@@ -53,7 +51,6 @@ const graduatedAmount = ({
 	return amount;
 };
 
-/** What Stripe charges for a licensed quantity on a tiered price. */
 export const tieredProcessorItemAmount = ({
 	price,
 	quantity,

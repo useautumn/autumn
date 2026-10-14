@@ -22,8 +22,6 @@ export function EditPlanSheet({ isOnboarding }: { isOnboarding?: boolean }) {
 		product.planType === "paid" &&
 		!basePrice?.price &&
 		product.basePriceType !== "usage";
-	// Auto-enable/add-on and the advanced settings are plan concepts; the
-	// backend rejects them on license products.
 	const showPlanOnlySettings = !isLicenseEditor;
 
 	return (

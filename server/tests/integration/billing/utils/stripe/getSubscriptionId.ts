@@ -1,9 +1,6 @@
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { CusService } from "@/internal/customers/CusService";
 
-/**
- * Helper to get subscription ID for a customer product.
- */
 export const getSubscriptionId = async ({
 	ctx,
 	customerId,
@@ -29,9 +26,6 @@ export const getSubscriptionId = async ({
 	return customerProduct.subscription_ids[0];
 };
 
-/**
- * Helper to get subscription ID for an entity's customer product.
- */
 export const getEntitySubscriptionId = async ({
 	ctx,
 	customerId,

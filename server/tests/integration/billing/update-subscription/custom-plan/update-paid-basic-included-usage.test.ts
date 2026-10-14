@@ -9,11 +9,6 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// PAID-TO-PAID: INCLUDED USAGE CHANGES
-// ═══════════════════════════════════════════════════════════════════════════════
-
-// 2.1 Increase included usage (100 -> 200)
 test.concurrent(
 	`${chalk.yellowBright("p2p: increase included usage")}`,
 	async () => {
@@ -30,7 +25,6 @@ test.concurrent(
 			actions: [s.attach({ productId: "pro" })],
 		});
 
-		// Track some usage
 		const messagesUsage = 70;
 		await autumnV1.track(
 			{
@@ -41,7 +35,6 @@ test.concurrent(
 			{ timeout: 2000 },
 		);
 
-		// Increase included usage from 100 to 200
 		const updatedMessagesItem = items.monthlyMessages({ includedUsage: 200 });
 
 		const updateParams = {
@@ -52,14 +45,12 @@ test.concurrent(
 
 		const preview = await autumnV1.subscriptions.previewUpdate(updateParams);
 
-		// Included usage change has no price impact
 		expect(preview.total).toBe(0);
 
 		await autumnV1.subscriptions.update(updateParams);
 
 		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-		// Usage should stay, balance should increase
 		await expectCustomerFeatureCorrect({
 			autumn: autumnV1,
 			customerId,
@@ -69,7 +60,6 @@ test.concurrent(
 			usage: messagesUsage,
 		});
 
-		// Verify invoice matches preview
 		await expectCustomerInvoiceCorrect({
 			customer,
 			count: 2,
@@ -85,7 +75,6 @@ test.concurrent(
 	},
 );
 
-// 2.2 Decrease included usage (200 -> 100)
 test.concurrent(
 	`${chalk.yellowBright("p2p: decrease included usage")}`,
 	async () => {
@@ -102,7 +91,6 @@ test.concurrent(
 			actions: [s.attach({ productId: "pro" })],
 		});
 
-		// Track some usage
 		const messagesUsage = 80;
 		await autumnV1.track(
 			{
@@ -113,7 +101,6 @@ test.concurrent(
 			{ timeout: 2000 },
 		);
 
-		// Decrease included usage from 200 to 100
 		const updatedMessagesItem = items.monthlyMessages({ includedUsage: 100 });
 
 		const updateParams = {
@@ -124,14 +111,12 @@ test.concurrent(
 
 		const preview = await autumnV1.subscriptions.previewUpdate(updateParams);
 
-		// Included usage change has no price impact
 		expect(preview.total).toBe(0);
 
 		await autumnV1.subscriptions.update(updateParams);
 
 		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-		// Usage should stay, balance should decrease
 		await expectCustomerFeatureCorrect({
 			autumn: autumnV1,
 			customerId,
@@ -141,7 +126,6 @@ test.concurrent(
 			usage: messagesUsage,
 		});
 
-		// Verify invoice matches preview
 		await expectCustomerInvoiceCorrect({
 			customer,
 			count: 2,

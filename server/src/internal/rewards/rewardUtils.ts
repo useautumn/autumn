@@ -72,7 +72,6 @@ export const constructReward = ({
 				features,
 				internalId: ent.internal_feature_id,
 			});
-			// Boolean features grant on/off access, so they carry no allowance
 			const isBoolean = feature?.type === FeatureType.Boolean;
 			if (!isBoolean && (ent.allowance == null || ent.allowance < 0)) {
 				throw new RecaseError({
@@ -190,7 +189,6 @@ export const initRewardStripePrices = async ({
 		),
 	);
 
-	// initProductInStripe writes the new ids onto its own rows, not the caller's.
 	for (const price of prices) {
 		const product = products.find(
 			(p) => p.internal_id === price.internal_product_id,
@@ -346,7 +344,6 @@ const getAmountAfterStripeDiscounts = ({
 				.mul(ratio)
 				.toNumber();
 		} else if (coupon.amount_off) {
-			// must do some ratio ting here...
 			const atmnDiscountAmount = stripeToAtmnAmount({
 				amount: coupon.amount_off,
 				currency: currency,
@@ -360,7 +357,6 @@ const getAmountAfterStripeDiscounts = ({
 	return amountAfterDiscount;
 };
 
-/** Build a RewardProgram object from creation input */
 export const constructRewardProgram = ({
 	rewardProgramData,
 	orgId,
@@ -382,10 +378,6 @@ export const constructRewardProgram = ({
 	return rewardProgram;
 };
 
-// ═══════════════════════════════════════════════════════════════════
-// Referral helpers (moved from referralUtils.ts)
-// ═══════════════════════════════════════════════════════════════════
-
 export const ReferralResponseCodes = {
 	OwnsProduct: "has_product_already",
 	Success: "success",
@@ -394,7 +386,6 @@ export const ReferralResponseCodes = {
 	InternalError: "internal_error",
 };
 
-/** Generate a random 6-character alphanumeric referral code */
 export const generateReferralCode = () => {
 	const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 	const codeLength = 6;
@@ -406,7 +397,6 @@ export const generateReferralCode = () => {
 	return code;
 };
 
-/** Whether the referrer receives the reward */
 export const receivedByReferrer = (receivedBy: RewardReceivedBy) => {
 	return (
 		receivedBy === RewardReceivedBy.Referrer ||
@@ -414,7 +404,6 @@ export const receivedByReferrer = (receivedBy: RewardReceivedBy) => {
 	);
 };
 
-/** Whether the redeemer receives the reward */
 export const receivedByRedeemer = (receivedBy: RewardReceivedBy) => {
 	return receivedBy === RewardReceivedBy.All;
 };

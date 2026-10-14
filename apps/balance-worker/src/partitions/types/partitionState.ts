@@ -25,16 +25,12 @@ export interface AllocationScope extends PartitionsScope {
 export type PartitionsState = {
 	directory: PartitionDirectory;
 	entries: Map<number, PartitionEntry>;
-	/** Revoked but still serving until a successor is ready or the wait times out. */
 	handingOff: Map<number, PartitionEntry>;
 	retiringEntries: Map<number, PartitionEntry>;
-	/** Withdrawn routes whose successor is not yet named; a request meeting one waits here. */
 	handoffSettlements: Map<number, Promise<void>>;
-	/** Routes this worker claimed for successors, told to callers that still arrive here. */
 	handoffSuccessors: Map<number, PartitionSuccessor>;
 	terminalHealthByPartition: Map<number, OwnedPartitionHealth>;
 	partitionRetryTimers: Map<number, ReturnType<typeof setTimeout>>;
-	/** Refusals since the group last dealt this worker partitions, and the pending rejoin. */
 	consumerRejoin: {
 		attempts: number;
 		timer: ReturnType<typeof setTimeout> | null;
@@ -59,17 +55,11 @@ export type PartitionEntry = PartitionRuntimeResources & {
 	partition: number;
 	startupSettled: boolean;
 	startup: Promise<void> | null;
-	/** Set before the claim is published, not after it is acknowledged. The record
-	 *  is durable at the broker before the publish resolves, so a worker torn down
-	 *  mid-claim would otherwise hold a claim it has no record of making and never
-	 *  withdraw it. */
 	claimAttempted: boolean;
 	claimed: boolean;
 	publicationFailed: boolean;
 	unsubscribeUnavailable: Unsubscribe | null;
-	/** Aborts whatever the entry waits for on the ownership log: a claim, a successor's ready. */
 	handoffAbort: AbortController;
-	/** True once the entry stopped serving; a handoff cannot be cancelled past this. */
 	withdrawn: boolean;
 	retirement: Promise<void> | null;
 	drain: Promise<PartitionCleanupResult> | null;

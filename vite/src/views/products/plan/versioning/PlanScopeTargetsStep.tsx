@@ -21,10 +21,6 @@ import {
 import { PropagationConflictWarning } from "./PropagationConflictWarning";
 import { PropagationTargetRow } from "./PropagationTargetRow";
 
-/**
- * Per-plan follow rows with an all-versions / pin-versions control.
- * License parents and variants share this — only the trailing slot differs.
- */
 export function PlanScopeTargetsStep({
 	features,
 	targets,
@@ -38,7 +34,6 @@ export function PlanScopeTargetsStep({
 	selectedKeys: string[];
 	onChange: (next: string[]) => void;
 	trailing?: (target: LicenseParentTarget) => ReactNode;
-	/** False when the server resolves the row (base mint) — whole-plan checkbox only. */
 	showVersionPicker?: boolean;
 }) {
 	if (targets.length === 0) return null;

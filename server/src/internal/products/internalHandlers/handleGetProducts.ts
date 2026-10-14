@@ -17,8 +17,6 @@ const GetProductsQuerySchema = z.object({
 	product_id: z.string().optional(),
 });
 
-/** Resolve a variant's base_internal_product_id to the stable public base id
- * so the UI can group a plan's variants together. */
 const productsToV2WithBaseIds = async ({
 	db,
 	orgId,
@@ -51,12 +49,6 @@ const productsToV2WithBaseIds = async ({
 	}));
 };
 
-/**
- * GET /products/products
- * Used by:
- * - vite/src/hooks/queries/useProductsQuery.tsx
- * - vite/src/views/onboarding4/hooks/useOnboardingProgress.tsx
- */
 export const handleGetProducts = createRoute({
 	scopes: [Scopes.Plans.Read],
 	query: GetProductsQuerySchema,
@@ -72,9 +64,6 @@ export const handleGetProducts = createRoute({
 			inIds: product_id ? [product_id] : undefined,
 		});
 
-		// `groupToDefaults` only cares about the latest version of each plan; if
-		// we're returning every version, derive the latest set from the already-
-		// fetched products to avoid a second round-trip.
 		const defaultProds = all_versions
 			? Object.values(
 					products.reduce<Record<string, (typeof products)[0]>>((acc, p) => {
@@ -114,9 +103,6 @@ export const handleGetLicenseProducts = createRoute({
 			(link) => link.license_internal_product_id,
 		);
 
-		// A link points at the exact version's internal_id it was created against,
-		// which may be an older version. Resolve to public ids across all versions
-		// so versioned license plans still match the latest-version list below.
 		const linkedProducts = await planLicenseRepo.listProductsByInternalIds({
 			db,
 			orgId: org.id,

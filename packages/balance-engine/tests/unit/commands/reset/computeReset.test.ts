@@ -29,11 +29,9 @@ import {
 	trackResultOf,
 } from "../../engineFixtures.js";
 
-/** The fixture grant is 1000 a month. */
 const ALLOWANCE = 1000;
 const asOf = occurredAt;
 const MONTH_MS = 30 * 24 * 60 * 60 * 1000;
-/** What the shared stepping lands on: the first monthly boundary after asOf. */
 const nextMonthAfterAsOf = ({ from }: { from: number }) =>
 	getNextResetAt({
 		curReset: from,
@@ -288,7 +286,6 @@ describe("computeReset", () => {
 
 		const mutation = computeReset({ fullSubject, command: resetCommand() });
 		const refilled = applyMutation({ state, mutation: mutation! });
-		// 40 + 30 = 70 against a cap of 50: the oldest gives up 20, the new row keeps its 30.
 		expect(
 			refilled.rollovers.map(({ id, balance }) => ({ id, balance })),
 		).toEqual([
@@ -414,7 +411,6 @@ describe("computeReset", () => {
 			});
 		expect(poolsOf(pooledState())).toEqual([POOL_ID]);
 		expect(poolsOf(pooledState({ unlimited: true }))).toEqual([]);
-		// A license pool's grant is bought seats × the grant, never a sum of shares.
 		expect(poolsOf(pooledState({ customerLicenseLinkId: "link_1" }))).toEqual(
 			[],
 		);

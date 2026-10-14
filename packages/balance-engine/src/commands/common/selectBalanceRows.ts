@@ -8,7 +8,6 @@ import type {
 	WorkerFullSubject,
 } from "../../models/subject/workerFullSubject.js";
 
-/** The grants `customers.get` shows: a feature's (or every) row, narrowed by the filters, drained loose grants left out. Balance edits act on exactly these. */
 export const selectBalanceRows = ({
 	fullSubject,
 	featureId,

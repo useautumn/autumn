@@ -35,7 +35,6 @@ type FakeDb = {
 	// biome-ignore lint/suspicious/noExplicitAny: test double
 } & any;
 
-// $client marks the fake as a pool handle — the shape replicaDbMiddleware swaps in.
 const makeFakeDb = (
 	impl: (query: unknown) => Promise<unknown[]> = async () => [],
 ): FakeDb => ({ $client: {}, execute: mock(impl) });
@@ -44,7 +43,6 @@ const makeFakeTxDb = (
 	impl: (query: unknown) => Promise<unknown[]> = async () => [],
 ): FakeDb => ({ execute: mock(impl) });
 
-// Marks must always write through the primary pool, never the caller's handle.
 const primaryExecute = spyOn(dbGeneral, "execute");
 
 afterAll(() => {
@@ -52,7 +50,6 @@ afterAll(() => {
 });
 
 const sqlTextOf = (query: unknown): string => {
-	// Drizzle SQL objects expose their chunks via queryChunks; join string parts.
 	const chunks = (query as { queryChunks?: unknown[] }).queryChunks ?? [];
 	return chunks
 		.map((chunk) =>
@@ -90,7 +87,6 @@ describe("markCustomerUpdatedAt", () => {
 		expect(text).toContain(
 			"COALESCE(EXCLUDED.internal_customer_id, customer_lsns.internal_customer_id)",
 		);
-		// DB clock only — a JS timestamp must never be bound into the upsert.
 		expect(text).not.toContain(String(Date.now()).slice(0, 8));
 	});
 
@@ -166,12 +162,10 @@ describe("markCustomersUpdatedAtByInternalIds", () => {
 			internalCustomerIds: ["internal_1"],
 		});
 
-		// The read runs on the caller's tx (it may hold uncommitted customers)...
 		expect(db.execute).toHaveBeenCalledTimes(1);
 		const readText = sqlTextOf(db.execute.mock.calls[0][0]);
 		expect(readText).toContain("FROM customers");
 		expect(readText).not.toContain("INSERT");
-		// ...while the ledger write still lands on the primary pool.
 		expect(primaryExecute).toHaveBeenCalledTimes(1);
 		const writeText = sqlTextOf(primaryExecute.mock.calls[0][0]);
 		expect(writeText).toContain("INSERT INTO customer_lsns");

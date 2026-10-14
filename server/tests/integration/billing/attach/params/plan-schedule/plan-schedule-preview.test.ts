@@ -1,13 +1,3 @@
-/**
- * Plan Schedule Preview Tests (Attach V2)
- *
- * Tests for preview behavior with plan_schedule parameter.
- *
- * Key behaviors:
- * - Preview with plan_schedule: "end_of_cycle" on upgrade shows total=0 and next_cycle info
- * - Preview with plan_schedule: "immediate" on downgrade shows credit/negative total
- */
-
 import { expect, test } from "bun:test";
 import { expectPreviewNextCycleCorrect } from "@tests/integration/billing/utils/expectPreviewNextCycleCorrect";
 import { expectSubToBeCorrect } from "@tests/merged/mergeUtils/expectSubCorrect";
@@ -17,20 +7,6 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { addMonths } from "date-fns";
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 9: Preview scheduled upgrade
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Customer has pro ($20/mo)
- * - Preview upgrade to premium with plan_schedule: "end_of_cycle"
- *
- * Expected Result:
- * - total = 0 (no immediate charge)
- * - next_cycle.total = $50
- * - next_cycle.starts_at = renewal date
- */
 test.concurrent(`${chalk.yellowBright("plan-schedule-preview 9: preview scheduled upgrade")}`, async () => {
 	const customerId = "plan-sched-preview-upgrade";
 
@@ -55,7 +31,6 @@ test.concurrent(`${chalk.yellowBright("plan-schedule-preview 9: preview schedule
 		actions: [s.billing.attach({ productId: pro.id })],
 	});
 
-	// Verify initial subscription
 	await expectSubToBeCorrect({
 		db: ctx.db,
 		customerId,
@@ -63,17 +38,14 @@ test.concurrent(`${chalk.yellowBright("plan-schedule-preview 9: preview schedule
 		env: ctx.env,
 	});
 
-	// Preview scheduled upgrade
 	const preview = await autumnV1.billing.previewAttach({
 		customer_id: customerId,
 		product_id: premium.id,
 		plan_schedule: "end_of_cycle",
 	});
 
-	// No immediate charge
 	expect(preview.total).toBe(0);
 
-	// Next cycle should show premium price at renewal
 	expectPreviewNextCycleCorrect({
 		preview,
 		total: 50,
@@ -81,19 +53,6 @@ test.concurrent(`${chalk.yellowBright("plan-schedule-preview 9: preview schedule
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 10: Preview immediate downgrade
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Customer has premium ($50/mo)
- * - Preview downgrade to pro with plan_schedule: "immediate"
- *
- * Expected Result:
- * - total is negative or low (credit for unused premium minus pro charge)
- * - No next_cycle scheduling (immediate change)
- */
 test.concurrent(`${chalk.yellowBright("plan-schedule-preview 10: preview immediate downgrade")}`, async () => {
 	const customerId = "plan-sched-preview-downgrade";
 
@@ -118,7 +77,6 @@ test.concurrent(`${chalk.yellowBright("plan-schedule-preview 10: preview immedia
 		actions: [s.billing.attach({ productId: premium.id })],
 	});
 
-	// Verify initial subscription
 	await expectSubToBeCorrect({
 		db: ctx.db,
 		customerId,
@@ -126,20 +84,15 @@ test.concurrent(`${chalk.yellowBright("plan-schedule-preview 10: preview immedia
 		env: ctx.env,
 	});
 
-	// Preview immediate downgrade
 	const preview = await autumnV1.billing.previewAttach({
 		customer_id: customerId,
 		product_id: pro.id,
 		plan_schedule: "immediate",
 	});
 
-	// Immediate downgrade: pro charge ($20) minus credit for unused premium (~$50)
-	// Should result in negative or small total
 	expect(preview.total).toBeLessThan(20);
 
-	// For immediate changes, next_cycle should reflect the new product price
-	// (not a scheduled change, but the next regular renewal)
 	if (preview.next_cycle) {
-		expect(preview.next_cycle.total).toBe(20); // Pro price at next renewal
+		expect(preview.next_cycle.total).toBe(20);
 	}
 });

@@ -1,9 +1,5 @@
 import SelectInput from "ink-select-input";
 
-/**
- * Wrapper around ink-select-input for consistent styling
- */
-
 export interface SelectMenuItem<V = string> {
 	label: string;
 	value: V;

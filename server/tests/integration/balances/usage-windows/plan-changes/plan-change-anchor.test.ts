@@ -1,16 +1,3 @@
-/**
- * TDD tests for usage-window ANCHOR selection across plan changes.
- *
- * Contract under test:
- *   - top-up-only customers: the window anchors to the loose top-up ent and
- *     aligns to the UTC calendar (no cycle exists)
- *   - subscribing later transfers the anchor to the plan ent: the window
- *     re-keys to the plan cycle (window_end == plan ent next_reset_at) and
- *     the moved window ZEROES the counter
- *   - when both exist up front, the plan-backed ent outranks the OLDER
- *     loose top-up ent
- */
-
 import { expect, test } from "bun:test";
 import { ApiVersion, EntInterval, getUsageWindowBounds } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
@@ -30,11 +17,8 @@ import {
 	fetchUsageWindowRows,
 } from "../../utils/usage-limit-utils/usageWindowDbTestUtils.js";
 
-// initScenario only exposes clients up to V2_2; build the latest-version client
-// directly (same pattern as the v2.2-vs-v2.3 parity tests).
 const autumnV2_3 = new AutumnInt({ version: ApiVersion.V2_3 });
 
-// ── Contract: top-up-only anchors to the loose ent, calendar bounds ──
 test.concurrent(
 	`${chalk.yellowBright("uw-plan-change-anchor1: a cap with only a top-up grant anchors to it with calendar bounds")}`,
 	async () => {
@@ -71,8 +55,6 @@ test.concurrent(
 			limit: 5,
 		});
 
-		// PG: anchored to the loose top-up ent; lifetime grants have no cycle, so
-		// the window is UTC-calendar aligned.
 		await timeout(4000);
 		const topUpEnt = await fetchLooseCusEnt({
 			ctx,
@@ -98,7 +80,6 @@ test.concurrent(
 	},
 );
 
-// ── Contract: subscribing transfers the anchor to the plan cycle ──
 test.concurrent(
 	`${chalk.yellowBright("uw-plan-change-anchor2: subscribing re-anchors the window to the plan ent and restarts the counter")}`,
 	async () => {
@@ -134,12 +115,8 @@ test.concurrent(
 			value: 2,
 		});
 
-		// Flush the counter to Postgres before the cache-invalidating change
-		// (the rebuild re-seeds counters from PG).
 		await timeout(4000);
 
-		// Subscribe: the plan ent now outranks the top-up, the window re-keys to
-		// the plan cycle, and the moved window zeroes the counter.
 		await autumnV1.billing.attach({
 			customer_id: customerId,
 			product_id: pro.id,
@@ -191,7 +168,6 @@ test.concurrent(
 	},
 );
 
-// ── Contract: plan-backed ent outranks an OLDER top-up ent ──────────
 test.concurrent(
 	`${chalk.yellowBright("uw-plan-change-anchor3: the plan ent wins the anchor over an older top-up ent")}`,
 	async () => {
@@ -210,7 +186,6 @@ test.concurrent(
 			actions: [],
 		});
 
-		// Top-up FIRST (older created_at), plan second.
 		await autumnV2_3.post("/balances.create", {
 			customer_id: customerId,
 			feature_id: TestFeature.Credits,

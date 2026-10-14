@@ -10,10 +10,6 @@ import { ensureChatUserCredential } from "./ensureChatUserCredential.js";
 
 export const WEB_CHAT_PROVIDER = "web" as const;
 
-/**
- * Web chat has no Slack-style install, so we synthesize one "web" installation
- * per org (placeholder bot token; never used) to carry an MCP OAuth credential.
- */
 const ensureWebInstallation = async ({
 	orgId,
 }: {
@@ -48,7 +44,6 @@ const ensureWebInstallation = async ({
 	if (created) {
 		return created;
 	}
-	// Lost an insert race — read the row the other writer created.
 	const row = await db.query.chatInstallations.findFirst({ where });
 	if (!row) {
 		throw new Error("Failed to ensure web chat installation");
@@ -56,14 +51,6 @@ const ensureWebInstallation = async ({
 	return row;
 };
 
-/**
- * Ensure the org's web installation + a per-user MCP OAuth credential bound to
- * `userScopes` exist, then return the installation. The credential is (re)minted
- * — from the caller's already-verified better-auth cookie — only when missing,
- * scope-changed, or its refresh token has expired. Warm path is two indexed
- * lookups. `userScopes` come from the cookie's get-session (customSession), so a
- * member's chat token never exceeds their dashboard privileges.
- */
 export const ensureWebChatAuth = async ({
 	orgId,
 	userId,

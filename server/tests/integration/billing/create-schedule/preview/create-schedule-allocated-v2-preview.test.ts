@@ -18,9 +18,6 @@ import { advanceToNextInvoice } from "@tests/utils/testAttachUtils/testAttachUti
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-// Contract: createSchedule preview does not bill allocated-v2 usage immediately.
-// After the scheduled phase activates, usage carries into the next allocated-v2 plan.
-
 const previewCreateSchedule = async ({
 	autumnV2_3,
 	params,

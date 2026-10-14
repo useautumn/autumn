@@ -140,7 +140,6 @@ describe(`${chalk.yellowBright(`${testCase}: Testing migration with entities - o
 			isCanceled: true,
 		});
 
-		// Entity 2 should still be active and not cancelled
 		const entity2Res = await autumn.entities.get(customerId, entity2.id);
 
 		expectProductAttached({
@@ -170,7 +169,6 @@ describe(`${chalk.yellowBright(`${testCase}: Testing migration with entities - o
 
 		await timeout(20000);
 
-		// Entity 1 should have premium v2, still cancelling
 		const entity1Res = await autumn.entities.get(customerId, entity1.id);
 		expectProductAttached({
 			customer: entity1Res,
@@ -179,11 +177,9 @@ describe(`${chalk.yellowBright(`${testCase}: Testing migration with entities - o
 			isCanceled: true,
 		});
 
-		// Entity 1 should have updated included usage
 		const entity1Words = entity1Res.features![TestFeature.Words].balance;
 		expect(entity1Words).toBe(10000);
 
-		// Entity 2 should have premium v2, active and NOT cancelled
 		const entity2Res = await autumn.entities.get(customerId, entity2.id);
 		expectProductAttached({
 			customer: entity2Res,
@@ -192,7 +188,6 @@ describe(`${chalk.yellowBright(`${testCase}: Testing migration with entities - o
 		});
 		expect(entity2Res.products![0].canceled_at).toBeFalsy();
 
-		// Entity 2 should have updated included usage
 		const entity2Words = entity2Res.features![TestFeature.Words].balance;
 		expect(entity2Words).toBe(10000);
 

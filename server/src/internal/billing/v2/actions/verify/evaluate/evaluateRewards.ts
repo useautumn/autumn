@@ -2,7 +2,6 @@ import type { RewardMismatch } from "@autumn/shared";
 import { stripeRefToId } from "@autumn/shared";
 import type Stripe from "stripe";
 
-/** Evaluates that the subscription has exactly the expected reward coupon IDs. */
 export const evaluateRewards = ({
 	sub,
 	rewards,

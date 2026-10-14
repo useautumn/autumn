@@ -52,7 +52,6 @@ test("a landed anchor move re-phases every resetting row to the new anchor", () 
 
 	const { updateCustomerEntitlements, updateCustomerProducts } = plan.build();
 	expect(updateCustomerProducts).toHaveLength(1);
-	// The boolean row has no reset cycle, so only the daily row moves.
 	expect(updateCustomerEntitlements).toHaveLength(1);
 	expect(updateCustomerEntitlements?.[0]).toMatchObject({
 		customerEntitlement: { id: dailyCredits.id },
@@ -72,7 +71,6 @@ test("a product without a landed anchor move keeps its rows' anchors", () => {
 
 test("a landed anchor move merges with a seat-return balance change on the same row", () => {
 	const { eventContext, dailyCredits } = createScenario({ landed: true });
-	// What processAllocatedPricesForInvoiceCreated plans when a seat is returned.
 	plan.updateCustomerEntitlement({
 		customerEntitlement: dailyCredits,
 		balanceChange: 1,
@@ -87,7 +85,6 @@ test("a landed anchor move merges with a seat-return balance change on the same 
 	const forDailyCredits = (updateCustomerEntitlements ?? []).filter(
 		(update) => update.customerEntitlement.id === dailyCredits.id,
 	);
-	// build() splits the column update from the balance delta.
 	expect(forDailyCredits).toHaveLength(2);
 	expect(forDailyCredits).toEqual(
 		expect.arrayContaining([

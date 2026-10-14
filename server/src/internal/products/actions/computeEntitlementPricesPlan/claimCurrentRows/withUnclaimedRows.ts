@@ -5,7 +5,6 @@ import type {
 	ClaimResult,
 } from "../types/claimResult";
 
-/** Attach leftover desired/current rows that no claim consumed. */
 export const withUnclaimedRows = ({
 	desired,
 	current,

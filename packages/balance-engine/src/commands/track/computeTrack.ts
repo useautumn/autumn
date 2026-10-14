@@ -13,16 +13,13 @@ import { trackCommandToDeductionRequest } from "./trackCommandToDeductionRequest
 import { trackOutcomeToMutation } from "./trackOutcomeToMutation.js";
 import type { TrackCommand } from "./types/trackCommand.js";
 
-/** No grant funds the feature; an overdue block that removed every grant is a refusal instead. */
 const fundsNothing = ({ outcome }: { outcome: DeductionOutcome }): boolean =>
 	outcome.context.customerEntitlements.length === 0 &&
 	!outcome.context.overdueBlocked;
 
-/** Only a check that deducts enforces the overdue block; nothing funding it means "not attached", not usage. */
 const isDeductingCheck = ({ command }: { command: TrackCommand }): boolean =>
 	command.enforceOverdueBlock === true;
 
-/** Pure: the same subject and command always yield the same decision. Dedup is the writer's job. */
 export const computeTrackDecision = ({
 	fullSubject,
 	command,
@@ -32,7 +29,6 @@ export const computeTrackDecision = ({
 }): DeductionDecision => {
 	assertCommandSupported({ fullSubject, command });
 
-	// Checked before the deduction: a duplicate lock deducts nothing and writes nothing.
 	const lockId = command.lock?.lockId;
 	const holdsLock = fullSubject.open_locks.some(
 		(openLock) => openLock.lock_id === lockId,
@@ -43,7 +39,6 @@ export const computeTrackDecision = ({
 		fullSubject,
 		request: trackCommandToDeductionRequest({ command }),
 	});
-	// A plain track nothing funds applies as a no-op, as on legacy, so its usage event is still recorded.
 	if (fundsNothing({ outcome }) && isDeductingCheck({ command })) {
 		throw new UnsupportedCommandError({ reason: "feature_not_found" });
 	}

@@ -1,5 +1,3 @@
-/** A live schedule only counts as already running the requested phases when a requested end date matches too. */
-
 import { describe, expect, test } from "bun:test";
 import chalk from "chalk";
 import type Stripe from "stripe";

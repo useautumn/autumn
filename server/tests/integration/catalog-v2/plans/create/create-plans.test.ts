@@ -1,14 +1,3 @@
-/**
- * catalogV2.update / catalogV2.preview_update — creating plans.
- *
- * Contract:
- *   - net-new plan_ids in params.plans are inserted as version 1
- *   - preview takes the same params, reports action "create", writes nothing
- *   - shaped creates (items / price / trial / flags / metadata / config / BCs)
- *     persist on the product row
- *   - update returns the created plan on `response.plans` (request order)
- */
-
 import { test } from "bun:test";
 import {
 	BillingInterval,
@@ -192,7 +181,6 @@ test.concurrent(
 						version: 1,
 						name: "Flagged Plan",
 						isAddOn: true,
-						// auto_enable maps to is_default on the product row
 						isDefault: true,
 						freeTrial: {
 							duration_type: FreeTrialDuration.Day,

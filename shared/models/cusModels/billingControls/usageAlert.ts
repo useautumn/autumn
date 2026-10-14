@@ -48,7 +48,6 @@ export const DbUsageAlertSchema = z
 	.check((ctx) => {
 		const { feature_id, threshold_type, threshold, basis, filter } = ctx.value;
 
-		// remaining_percentage is bounded by the denominator, so > 100 can never fire.
 		if (threshold_type === "remaining_percentage" && threshold > 100) {
 			ctx.issues.push({
 				code: "custom",

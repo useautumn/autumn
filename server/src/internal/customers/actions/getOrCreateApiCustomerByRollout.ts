@@ -55,14 +55,11 @@ export const getOrCreateApiCustomerByRollout = async ({
 			}
 		: undefined;
 
-	// Over the org cap a creation cannot run: queue it for serialized replay
-	// and let the SDK retry the 429.
 	if (ctx.orgRateLimitDegraded) {
 		await queueRecovery?.();
 		throw orgRateLimitExceededError();
 	}
 
-	// The worker is keyed by customer id; an id-less customer stays on Postgres.
 	if (
 		params.customer_id &&
 		isBalanceWorkerRolloutEnabled({ ctx, customerId: params.customer_id })
@@ -96,7 +93,6 @@ export const getOrCreateApiCustomerByRollout = async ({
 
 	const lookup = ({ skipCache }: { skipCache: boolean }) =>
 		getOrCreateCachedFullSubject({
-			// Sole replica grant; writers opt out via disableReplicaRead.
 			readFrom: disableReplicaRead ? "primary" : "replica-ok",
 			ctx: skipCache ? { ...ctx, skipCache: true } : ctx,
 			params,

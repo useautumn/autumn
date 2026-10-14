@@ -54,7 +54,6 @@ export async function getPendingMigrations(
 		});
 }
 
-/** Local DBs (twd workers, docker) are built from zero by this tool, so every applied migration has a row. */
 export function isLocalDatabase(databaseUrl: string): boolean {
 	try {
 		const { hostname } = new URL(databaseUrl);
@@ -64,10 +63,6 @@ export function isLocalDatabase(databaseUrl: string): boolean {
 	}
 }
 
-/**
- * A shared DB that recorded a newer branch-only migration would skip older ones forever,
- * so local DBs apply those gaps; remote DBs keep drizzle-kit's order and only warn.
- */
 export function selectMigrationsToApply({
 	unrecorded,
 	databaseUrl,

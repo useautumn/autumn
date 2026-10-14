@@ -33,8 +33,6 @@ const REVIEW_GROUPS: {
 	},
 ];
 
-/** Skeletons hold the groups until the first preview; refetches dim the previous preview
- * in place so the banner and groups never collapse and re-expand. */
 export function SetPlansReviewChanges() {
 	const { isPreviewLoading, formValues } = useCreateScheduleFormContext();
 	const sections = useSetPlansReviewSections();

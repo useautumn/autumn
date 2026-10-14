@@ -1,16 +1,9 @@
-/**
- * CPU flood worker — connects to the DB through the same path as the app
- * (PgBouncer) and runs heavy queries to saturate DB CPU.
- * Spawned as a child process by pgFailover.test.ts.
- */
-
 import { sql } from "drizzle-orm";
 import { assertNotProductionDb } from "@/db/dbUtils.js";
 import { initDrizzle } from "@/db/initDrizzle.js";
 
 assertNotProductionDb();
 
-/** Number of concurrent connections hammering the DB. */
 const CONCURRENCY = 50;
 const CPU_ROWS = 50_000_000;
 
@@ -26,7 +19,6 @@ process.on("SIGINT", () => {
 
 const { db, client } = initDrizzle({ maxConnections: CONCURRENCY });
 
-// Verify connection
 try {
 	await db.execute(sql`SELECT 1`);
 	console.log(
@@ -45,7 +37,6 @@ const burn = async () => {
 			);
 			burnCount++;
 		} catch {
-			// statement_timeout kills it — immediately restart
 			burnCount++;
 		}
 	}

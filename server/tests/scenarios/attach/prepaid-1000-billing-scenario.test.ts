@@ -4,13 +4,6 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-/**
- * Billing Units 1000 Scenario
- *
- * Sets up a pro product ($20/mo) with prepaid messages at 1000 billing units,
- * and a customer with a payment method ready for attachment.
- */
-
 test(`${chalk.yellowBright("prepaid-1000-billing: product with 1000 billing scale + customer")}`, async () => {
 	const customerId = "billing-units-1000";
 

@@ -123,7 +123,6 @@ const importConfigModule = async ({
 		cwd: dirname(path),
 		encoding: "utf8",
 		// Bun hands a child its startup env, not process.env: without this, a
-		// config reading a value atmn loaded from .env sees undefined.
 		env: process.env,
 	});
 	if (result.status !== 0 || result.stdout.length === 0) {
@@ -146,8 +145,6 @@ export const loadConfig = async ({
 	/** `-c`: an exact file, which may be named anything. */
 	configPath?: string;
 }): Promise<{ path: string; wire: WireDocument }> => {
-	// An explicit path is the whole answer: a typo must not quietly load
-	// whichever config the search would have found instead.
 	const path =
 		configPath !== undefined
 			? existsSync(configPath)
@@ -155,17 +152,11 @@ export const loadConfig = async ({
 				: null
 			: findConfigPath({ dirs });
 	if (!path) throw new ConfigNotFoundError(configPath ? [configPath] : dirs);
-	// A 1.x config would die inside the import with "item is not exported";
-	// say what happened and how to move instead.
 	if (isLegacyConfigText({ text: readFileSync(path, "utf8") })) {
 		throw new LegacyConfigError({ path });
 	}
 
-	// Cache-busted because the module cache would otherwise pin the first read
-	// for the life of the process — irrelevant for a single `atmn push`, wrong
-	// for anything that pushes twice (tests today, a watch mode later).
 	// The query goes on the plain path: appended to a file:// href Bun
-	// normalises it away and serves the cached module.
 	let module: Record<string, unknown> & { default?: WireDocument };
 	try {
 		module = await importConfigModule({ path });
@@ -226,8 +217,6 @@ export const looksLikeV2Config = ({
 		)
 			return true;
 	}
-	// A v2 default object proves nothing on its own: the named fixtures beside
-	// it still do, so the check runs whatever the default export holds.
 	return Object.entries(module).some(
 		([name, value]) => name !== "default" && isV2Row(value),
 	);

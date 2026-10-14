@@ -34,7 +34,6 @@ export type DeductionBucket =
 	| "included"
 	| "overage";
 
-/** The floor a deduction and the ceiling a refund respect on this row in this bucket. */
 const boundsOf = ({
 	row,
 	bucket,
@@ -58,11 +57,9 @@ const boundsOf = ({
 	}
 };
 
-/** Decimal keeps a signed zero; the log should not. */
 const toNumber = (value: Decimal): number =>
 	value.isZero() ? 0 : value.toNumber();
 
-/** A delta is what was added to the column, so a deduction records the change negated. */
 const changeToDelta = ({
 	row,
 	change,
@@ -93,7 +90,6 @@ const changeToDelta = ({
 		: {}),
 });
 
-/** Credits `units` cost on this row: a flat cost, or the rate card's tiers from the units already charged to it. */
 const creditsFor = ({
 	context,
 	row,
@@ -120,7 +116,6 @@ const creditsFor = ({
 			)
 		: units.times(row.creditCost);
 
-/** The units a credit change pays for: the inverse of `creditsFor`. */
 const unitsFor = ({
 	row,
 	units,
@@ -144,7 +139,6 @@ const unitsFor = ({
 			})
 		: change.div(row.creditCost);
 
-/** One pass in order: each row gives what the bucket allows until nothing remains. */
 export const deductFromRows = ({
 	context,
 	deductionState,
@@ -162,7 +156,6 @@ export const deductFromRows = ({
 		const bounds = boundsOf({ row, bucket, deductionState });
 		const refund = isRefund({ deductionState });
 
-		// Windowed caps bound how many tracked units this row may give; a refund is never capped, overflow skips the gate but still counts.
 		const windowRow = bucket === "rollovers" ? null : row;
 		const windowHeadroom =
 			refund || allowsNegative({ deductionState })
@@ -179,8 +172,6 @@ export const deductFromRows = ({
 			? Decimal.min(deductionState.remaining, windowHeadroom)
 			: deductionState.remaining;
 
-		// Free usage moves no credits, so no floor, allocation or spend limit can hold it back.
-		// A refund has nothing to give back here: it only takes what the paid rows leave, in the last bucket.
 		if (isFreeRow({ row })) {
 			if (refund && bucket !== "overage") continue;
 			deductionState.deltas.push(
@@ -197,7 +188,6 @@ export const deductFromRows = ({
 			continue;
 		}
 
-		// A spend limit caps the overage bucket in place of the row's floor, as the Lua gate does.
 		const headroom =
 			bucket === "overage" && !refund && deductionState.terms.enforcesSpendLimit
 				? deductionRowToSpendLimitHeadroom({ context, deductionState, row })
@@ -206,7 +196,6 @@ export const deductFromRows = ({
 			row,
 			deltas: deductionState.deltas,
 		});
-		// Shared credits above zero are gated; once an entity's headroom covers them, its overage below zero is free.
 		const allocationHeadroom = refund
 			? null
 			: allocationHeadroomOf({ context, deductionState, row });
@@ -225,10 +214,8 @@ export const deductFromRows = ({
 			ceiling: bounds.ceiling,
 		});
 
-		// A rate card may hand out units for no credits (a free tier); only a draw that moved nothing is skipped.
 		const unitsGiven = unitsFor({ row, units, change, deductionState });
 		if (unitsGiven.abs().lte(CREDIT_RATE_EPSILON)) continue;
-		// Only credits above zero are shared; the counters ignore overage below it.
 		consumeAllocation({
 			context,
 			deductionState,

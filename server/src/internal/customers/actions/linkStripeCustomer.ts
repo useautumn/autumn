@@ -4,7 +4,6 @@ import type { ExpandedStripeCustomer } from "@/external/stripe/customers/operati
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan/executeAutumnBillingPlan.js";
 
-/** The customer's Stripe customer, created if missing; a new one is recorded on the customer through the billing plan executor. */
 export const linkStripeCustomer = async ({
 	ctx,
 	customer,

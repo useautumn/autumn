@@ -1,18 +1,3 @@
-/**
- * Legacy Attach V1 Separate Subscription Tests
- *
- * Migrated from:
- * - server/tests/merged/separate/separate1.test.ts (separate subs via invoice checkout)
- * - server/tests/merged/separate/separate2.test.ts (separate subs via force_checkout + add-on)
- *
- * Tests V1 attach behavior when entities get separate subscriptions (not merged).
- * Separate subs are created when:
- * - invoice: true → creates invoice checkout per entity
- * - force_checkout: true → creates Stripe checkout session per entity
- *
- * Each entity gets its own Stripe subscription ID, not shared.
- */
-
 /** biome-ignore-all lint/suspicious/noExplicitAny: test file */
 
 import { expect, test } from "bun:test";
@@ -28,24 +13,6 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { AutumnInt } from "@/external/autumn/autumnCli";
 import { CusService } from "@/internal/customers/CusService";
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 1: Separate subscriptions via invoice checkout
-// (from separate1)
-//
-// Scenario:
-// - Pro ($20) and Premium ($50) products with 100 messages
-// - 2 entities, no payment method on customer
-// - Attach Pro to entity 1 with invoice: true → get checkout_url, complete it
-// - Attach Pro to entity 2 with invoice: true → get checkout_url, complete it
-// - Verify entity 1 and entity 2 have DIFFERENT subscription IDs
-// - Upgrade both entities to Premium (normal attach, no invoice)
-// - Verify subs remain separate and correct
-//
-// Expected:
-// - Each entity gets its own subscription
-// - After upgrade, subs are still separate
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(`${chalk.yellowBright("legacy-separate 1: separate subs via invoice checkout")}`, async () => {
 	const customerId = "legacy-separate-1";
@@ -63,13 +30,11 @@ test.concurrent(`${chalk.yellowBright("legacy-separate 1: separate subs via invo
 		items: [messagesItem, premiumPrice],
 	});
 
-	// Use v1.2 client (matches original test)
 	const autumnV1_2 = new AutumnInt({ version: LegacyVersion.v1_2 });
 
 	const { entities, ctx } = await initScenario({
 		customerId,
 		setup: [
-			// No payment method — invoice checkout will provide the payment page
 			s.customer({ testClock: true }),
 			s.products({ list: [pro, premium] }),
 			s.entities({ count: 2, featureId: TestFeature.Users }),
@@ -77,9 +42,6 @@ test.concurrent(`${chalk.yellowBright("legacy-separate 1: separate subs via invo
 		actions: [],
 	});
 
-	// Note: initScenario mutates product.id in-place, so pro.id/premium.id are already prefixed
-
-	// Attach Pro to entity 1 with invoice: true
 	const res1 = await autumnV1_2.attach({
 		customer_id: customerId,
 		product_id: pro.id,
@@ -88,7 +50,6 @@ test.concurrent(`${chalk.yellowBright("legacy-separate 1: separate subs via invo
 	});
 	await completeInvoiceCheckout({ url: res1.checkout_url, ctx, customerId });
 
-	// Attach Pro to entity 2 with invoice: true
 	const res2 = await autumnV1_2.attach({
 		customer_id: customerId,
 		product_id: pro.id,
@@ -97,7 +58,6 @@ test.concurrent(`${chalk.yellowBright("legacy-separate 1: separate subs via invo
 	});
 	await completeInvoiceCheckout({ url: res2.checkout_url, ctx, customerId });
 
-	// Verify different subscription IDs per entity
 	const fullCus = await CusService.getFull({
 		ctx,
 		idOrInternalId: customerId,
@@ -121,7 +81,6 @@ test.concurrent(`${chalk.yellowBright("legacy-separate 1: separate subs via invo
 		subId: entity1SubId,
 	});
 
-	// Upgrade both entities to Premium (normal attach, not invoice mode)
 	await autumnV1_2.attach({
 		customer_id: customerId,
 		product_id: premium.id,
@@ -150,26 +109,6 @@ test.concurrent(`${chalk.yellowBright("legacy-separate 1: separate subs via invo
 		subId: entity2SubId,
 	});
 });
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 2: Separate subscriptions via force_checkout + add-on
-// (from separate2)
-//
-// Scenario:
-// - Pro ($20) and Premium ($50) products with 100 messages
-// - Credits add-on (prepaid, $10/100 credits)
-// - 2 entities, no payment method on customer
-// - Attach Pro to entity 1 with force_checkout → complete checkout form
-// - Attach Pro to entity 2 with force_checkout → complete checkout form
-// - Verify entity 1 and entity 2 have DIFFERENT subscription IDs
-// - Upgrade both entities to Premium (normal attach)
-// - Attach add-on to entity 2 → should merge into entity 2's sub
-// - Verify add-on's sub ID matches entity 2's sub ID
-//
-// Expected:
-// - Each entity gets its own subscription
-// - Add-on merges into the correct entity's subscription
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(`${chalk.yellowBright("legacy-separate 2: separate subs via force_checkout + add-on")}`, async () => {
 	const customerId = "legacy-separate-2";
@@ -201,13 +140,11 @@ test.concurrent(`${chalk.yellowBright("legacy-separate 2: separate subs via forc
 		isAddOn: true,
 	});
 
-	// Use v1.2 client (matches original test)
 	const autumnV1_2 = new AutumnInt({ version: LegacyVersion.v1_2 });
 
 	const { entities } = await initScenario({
 		customerId,
 		setup: [
-			// No payment method — force_checkout will provide the payment page
 			s.customer({ testClock: true, paymentMethod: "success" }),
 			s.products({ list: [pro, premium, addOn] }),
 			s.entities({ count: 2, featureId: TestFeature.Users }),
@@ -215,9 +152,6 @@ test.concurrent(`${chalk.yellowBright("legacy-separate 2: separate subs via forc
 		actions: [],
 	});
 
-	// Note: initScenario mutates product.id in-place, so pro.id/premium.id/addOn.id are already prefixed
-
-	// Attach Pro to entity 1 with force_checkout
 	const res1 = await autumnV1_2.attach({
 		customer_id: customerId,
 		product_id: pro.id,
@@ -227,7 +161,6 @@ test.concurrent(`${chalk.yellowBright("legacy-separate 2: separate subs via forc
 	expect(res1.checkout_url).toBeDefined();
 	await completeStripeCheckoutForm({ url: res1.checkout_url });
 
-	// Attach Pro to entity 2 with force_checkout
 	const res2 = await autumnV1_2.attach({
 		customer_id: customerId,
 		product_id: pro.id,
@@ -237,7 +170,6 @@ test.concurrent(`${chalk.yellowBright("legacy-separate 2: separate subs via forc
 	expect(res2.checkout_url).toBeDefined();
 	await completeStripeCheckoutForm({ url: res2.checkout_url });
 
-	// Verify different subscription IDs per entity
 	let fullCus = await CusService.getFull({
 		ctx,
 		idOrInternalId: customerId,
@@ -261,7 +193,6 @@ test.concurrent(`${chalk.yellowBright("legacy-separate 2: separate subs via forc
 		subId: entity1SubId,
 	});
 
-	// Upgrade both entities to Premium
 	for (const entity of entities) {
 		await autumnV1_2.attach({
 			customer_id: customerId,
@@ -286,7 +217,6 @@ test.concurrent(`${chalk.yellowBright("legacy-separate 2: separate subs via forc
 		});
 	}
 
-	// Attach add-on to entity 2 (should merge into entity 2's sub)
 	await autumnV1_2.attach({
 		customer_id: customerId,
 		product_id: addOn.id,
@@ -299,7 +229,6 @@ test.concurrent(`${chalk.yellowBright("legacy-separate 2: separate subs via forc
 		],
 	});
 
-	// Verify add-on's sub ID matches entity 2's sub ID
 	fullCus = await CusService.getFull({
 		ctx,
 		idOrInternalId: customerId,

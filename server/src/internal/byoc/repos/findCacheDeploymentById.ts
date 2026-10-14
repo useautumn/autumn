@@ -3,7 +3,6 @@ import { and, eq } from "drizzle-orm";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { isEnvRow } from "./utils/cacheDeploymentWhere.js";
 
-/** One of the env's Atoms by id, whatever its status. */
 export const findCacheDeploymentById = async ({
 	ctx,
 	id,

@@ -1,13 +1,3 @@
-/**
- * Queued commands in one consumed batch share Kafka commits: each is decided in arrival order through
- * the partition writer, and its commit settles with the batch before the batch's offset commits.
- *
- * Red (before): every queued command waited for its own commit, so N commands cost N commits.
- * Green (after): commits are shared, offsets and the bookmark still move forward in order, a refused
- * commit parks the partition without the bookmark passing it, and decides run at most
- * BALANCE_WORKER_QUEUED_COMMITS_IN_FLIGHT ahead of their commits.
- */
-
 import { describe, expect, test } from "bun:test";
 import { BALANCE_WORKER_QUEUED_COMMITS_IN_FLIGHT } from "@autumn/env/balanceWorkerConstants";
 import type { CommandRecord } from "@autumn/kafka";
@@ -37,7 +27,6 @@ const queuedTracks = ({ count }: { count: number }) =>
 		trackOf({ customerId: customerOf({ index }), commandId: `track_${index}` }),
 	);
 
-/** A customer whose balance cycle ended before the commands' clock: its reset writes a refill. */
 const dueForResetState = ({ customerId }: { customerId: string }) =>
 	createState({
 		identity: identityOf({ customerId }),

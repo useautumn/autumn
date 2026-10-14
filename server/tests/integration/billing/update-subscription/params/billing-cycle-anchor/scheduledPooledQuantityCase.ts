@@ -16,8 +16,6 @@ import {
 	setupAnchorQuantityScenario,
 } from "./setupAnchorQuantityScenario.js";
 
-// Contract: a scheduled anchor re-anchors the existing pool at the boundary, where deferred contributions
-// turn current; the next read's lazy reset refills it at its final quantity, source balances stay zero.
 export const expectScheduledPooledQuantity = async (quantity: number) => {
 	const customerId = `anchor-scheduled-pool-${quantity}`;
 	const scenario = await setupAnchorQuantityScenario({

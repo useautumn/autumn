@@ -11,11 +11,6 @@ import { countBackdatedPeriodsForPrice } from "@/internal/billing/v2/utils/backd
 
 export type InvoicePeriod = { start: number; end: number };
 
-/**
- * Charges `amount` for `period` measured against the price's own interval:
- * every whole interval from `period.start` bills in full, and the final partial
- * interval is prorated by the fraction of it the period covers.
- */
 export const prorateInvoiceLineAmount = ({
 	price,
 	amount,
@@ -39,7 +34,6 @@ export const prorateInvoiceLineAmount = ({
 	const interval = price.config.interval;
 	const intervalCount = price.config.interval_count ?? 1;
 
-	// Whole intervals strictly before the one containing period.end.
 	const cyclesTouched = countBackdatedPeriodsForPrice({
 		price,
 		startsAt: period.start,

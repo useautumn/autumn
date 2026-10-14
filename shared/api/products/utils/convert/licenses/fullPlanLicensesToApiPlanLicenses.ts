@@ -2,7 +2,6 @@ import type { ApiPlanLicenseV1 } from "@api/products/apiPlanLicenseV1";
 import type { FullProduct } from "@models/productModels/productModels";
 import { fullProductsToLicenseCustomize } from "@utils/planV1Utils/licenses/fullProductsToLicenseCustomize";
 
-/** A plan's license links as the API states them: the license plan, its terms, and its overlay when the link is customised. */
 export const fullPlanLicensesToApiPlanLicenses = ({
 	licenses,
 }: {

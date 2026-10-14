@@ -24,8 +24,6 @@ function Checkbox({
 			onKeyDown?.(e);
 			return;
 		}
-		// Suppress the native button click without toggling, so
-		// cmd/ctrl+enter only triggers sheet-level submit shortcuts
 		e.preventDefault();
 		if (!(hasSubmitShortcutModifier(e) || disabled)) {
 			(onCheckedChange as ((checked: boolean) => void) | undefined)?.(!checked);

@@ -69,7 +69,6 @@ const PolicyRoutes = ({
 	);
 };
 
-/** How each layer counts and rejects, and which routes the row covers. */
 export const RateLimitPolicyDetails = ({
 	policy,
 }: {

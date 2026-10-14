@@ -1,14 +1,3 @@
-/**
- * A monthly cap on a daily-reset grant anchors to the grant's fixed
- * `reset_cycle_anchor`, so a scheduled billing-cycle anchor must move it when
- * the new anchor lands, not when it is scheduled.
- *
- * Red (before):  the anchor lands on Stripe but `reset_cycle_anchor` keeps the
- *                attach date, so the cap keeps rolling on the old cycle.
- * Green (after): scheduling leaves the cap on the old cycle (count kept); the
- *                landing re-keys it to the new billing cycle.
- */
-
 import { expect, test } from "bun:test";
 import {
 	EntInterval,
@@ -67,7 +56,6 @@ test(`${chalk.yellowBright("uw-plan-change-scheduled-anchor1: a scheduled anchor
 		value: 3,
 	});
 
-	// Scheduling alone keeps the cap on the current cycle.
 	const scheduledAnchorMs = addDays(advancedTo, 10).getTime();
 	await autumnV2_3.subscriptions.update<UpdateSubscriptionV1ParamsInput>({
 		customer_id: customerId,
@@ -91,7 +79,6 @@ test(`${chalk.yellowBright("uw-plan-change-scheduled-anchor1: a scheduled anchor
 	});
 	await expectCustomerInvoiceCorrect({ customerId, count: 2 });
 
-	// Landed: the cap restarts on the new billing cycle.
 	const { subscription } = await getStripeSubscription({ customerId });
 	const landedAnchorMs = secondsToMs(subscription.billing_cycle_anchor);
 	expect(landedAnchorMs).toBe(Math.floor(scheduledAnchorMs / 1000) * 1000);

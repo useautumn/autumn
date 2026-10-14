@@ -6,12 +6,6 @@ import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 
-// ═══════════════════════════════════════════════════════════════════
-// UPDATE-USAGE-PREPAID1: Set usage with prepaid balance
-// Formula: targetBalance = granted + prepaid - usage
-// prepaidUsers: $10/seat, billingUnits=1
-// ═══════════════════════════════════════════════════════════════════
-
 test.concurrent(`${chalk.yellowBright("update-usage-prepaid1: set usage with prepaid balance")}`, async () => {
 	const usersItem = items.freeAllocatedUsers({ includedUsage: 3 });
 	const freeProd = products.base({ id: "free", items: [usersItem] });
@@ -42,8 +36,6 @@ test.concurrent(`${chalk.yellowBright("update-usage-prepaid1: set usage with pre
 		],
 	});
 
-	// Initial: granted=3, prepaid=5 (5 * 1), current=8, usage=0
-	// Set usage to 6: targetBalance = 3 + 5 - 6 = 2
 	await autumnV2.balances.update({
 		customer_id: customerId,
 		feature_id: TestFeature.Users,
@@ -58,7 +50,6 @@ test.concurrent(`${chalk.yellowBright("update-usage-prepaid1: set usage with pre
 		usage: 6,
 	});
 
-	// Verify DB sync
 	const customerDb = await autumnV2.customers.get<ApiCustomer>(customerId, {
 		skip_cache: "true",
 	});
@@ -69,11 +60,6 @@ test.concurrent(`${chalk.yellowBright("update-usage-prepaid1: set usage with pre
 		usage: 6,
 	});
 });
-
-// ═══════════════════════════════════════════════════════════════════
-// UPDATE-USAGE-PREPAID2: Set usage exceeding granted + prepaid (overage)
-// Overage absorbed into purchased_balance
-// ═══════════════════════════════════════════════════════════════════
 
 test.concurrent(`${chalk.yellowBright("update-usage-prepaid2: usage exceeding granted + prepaid")}`, async () => {
 	const usersItem = items.freeAllocatedUsers({ includedUsage: 3 });
@@ -105,9 +91,6 @@ test.concurrent(`${chalk.yellowBright("update-usage-prepaid2: usage exceeding gr
 		],
 	});
 
-	// Initial: granted=3, prepaid=2, current=5
-	// Set usage to 7: targetBalance = 3 + 2 - 7 = -2
-	// Overage of 2 absorbed into purchased_balance (2 + 2 = 4)
 	await autumnV2.balances.update({
 		customer_id: customerId,
 		feature_id: TestFeature.Users,
@@ -122,7 +105,6 @@ test.concurrent(`${chalk.yellowBright("update-usage-prepaid2: usage exceeding gr
 		usage: 7,
 	});
 
-	// Verify DB sync
 	const customerDb = await autumnV2.customers.get<ApiCustomer>(customerId, {
 		skip_cache: "true",
 	});
@@ -133,10 +115,6 @@ test.concurrent(`${chalk.yellowBright("update-usage-prepaid2: usage exceeding gr
 		usage: 7,
 	});
 });
-
-// ═══════════════════════════════════════════════════════════════════
-// UPDATE-USAGE-PREPAID3: Reset usage to 0 with prepaid (full restore)
-// ═══════════════════════════════════════════════════════════════════
 
 test.concurrent(`${chalk.yellowBright("update-usage-prepaid3: reset usage to 0 restores full balance")}`, async () => {
 	const usersItem = items.freeAllocatedUsers({ includedUsage: 3 });
@@ -168,8 +146,6 @@ test.concurrent(`${chalk.yellowBright("update-usage-prepaid3: reset usage to 0 r
 		],
 	});
 
-	// Initial: granted=3, prepaid=4, current=7
-	// First set usage to 5 so we have something to reset
 	await autumnV2.balances.update({
 		customer_id: customerId,
 		feature_id: TestFeature.Users,
@@ -184,7 +160,6 @@ test.concurrent(`${chalk.yellowBright("update-usage-prepaid3: reset usage to 0 r
 		usage: 5,
 	});
 
-	// Reset usage to 0: targetBalance = 3 + 4 - 0 = 7
 	await autumnV2.balances.update({
 		customer_id: customerId,
 		feature_id: TestFeature.Users,
@@ -199,7 +174,6 @@ test.concurrent(`${chalk.yellowBright("update-usage-prepaid3: reset usage to 0 r
 		usage: 0,
 	});
 
-	// Verify DB sync
 	const customerDb = await autumnV2.customers.get<ApiCustomer>(customerId, {
 		skip_cache: "true",
 	});

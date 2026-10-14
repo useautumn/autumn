@@ -1,14 +1,8 @@
 import type { TwdLogger } from "../../lib/logger.ts";
 import { REPO_ROOT } from "../catalog/repoPaths.ts";
 
-/** Grace between SIGTERM (child tears its sandboxes down) and SIGKILL. */
 const KILL_GRACE_MS = 120_000;
 
-/**
- * Run a scripts/tw child (one per swarm/warm: scripts/tw keeps module state).
- * Protocol over Bun IPC: child sends `{type:"ready"}`, parent replies with `init`.
- * `onInitSent` gets a sender for follow-up parent → child messages (only valid after init).
- */
 export const spawnTwChild = async <
 	TMessage extends { type: string },
 	TSend extends { type: string } = never,
@@ -31,8 +25,6 @@ export const spawnTwChild = async <
 }): Promise<{ exitCode: number | null }> => {
 	const child = Bun.spawn([process.execPath, entry], {
 		cwd: REPO_ROOT,
-		// scripts/tw sizes a Stripe budget from its key-pool env at import time; twd passes real
-		// per-account keys over IPC, so a placeholder only satisfies that import-time check.
 		env: {
 			STRIPE_SANDBOX_SECRET_KEY: "sk_test_twd_placeholder",
 			...process.env,

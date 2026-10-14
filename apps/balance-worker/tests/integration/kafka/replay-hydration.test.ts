@@ -36,7 +36,6 @@ import {
 
 const LOOPBACK_BROKER_PATTERN = /^(?:127\.0\.0\.1|localhost):(\d{1,5})$/;
 
-/** Integration coverage runs against a developer's local Kafka only. */
 function requireLoopbackBrokers(): string[] {
 	const configured = process.env.KAFKA_BROKERS?.trim();
 	if (!configured?.length)
@@ -147,7 +146,6 @@ function createBaselineState(): SubjectState {
 	});
 }
 
-/** Read-only fixture stand-in for the Postgres baseline loader. */
 function createRecordingReplaySource(): RecordingReplaySource {
 	let loadCount = 0;
 	function load(): Promise<ReplayHydrationSourceResult> {
@@ -165,7 +163,6 @@ function createRecordingReplaySource(): RecordingReplaySource {
 	return { source: { load }, readLoadCount };
 }
 
-/** The restarted worker must answer from its own Kafka log, never from a source. */
 function createForbiddenReplaySource(): ReplayHydrationSource {
 	function load(): Promise<ReplayHydrationSourceResult> {
 		throw new Error("Recovered replay traffic must not reload a baseline");
@@ -226,7 +223,6 @@ function createReplayCheckCommand({
 	});
 }
 
-/** Bun types the served port as optional even after a successful listen. */
 function requireReservedPort({ port }: { port: number | undefined }): number {
 	if (port === undefined)
 		throw new Error("Bun did not expose a reserved loopback port");
@@ -382,7 +378,6 @@ async function startBalanceWorkerFixture({
 	};
 }
 
-/** Waits for the endpoint of the worker under test, never a stale predecessor. */
 async function awaitCurrentOwner({
 	routing,
 	endpoint,
@@ -501,7 +496,6 @@ async function releaseReplayScope({
 	if (failure) throw failure.reason;
 }
 
-/** Cold customer, empty topic: the coordinator must initialize before it tracks. */
 async function hydrateColdCustomerFromSource({
 	scope,
 }: {
@@ -540,7 +534,6 @@ async function hydrateColdCustomerFromSource({
 	expect(worker.errors).toEqual([]);
 }
 
-/** Same topic, same deployment, empty SQLite: recovery must rebuild state and receipts. */
 async function serveReplayFromKafkaLogAfterRestart({
 	scope,
 }: {

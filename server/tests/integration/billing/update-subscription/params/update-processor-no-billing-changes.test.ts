@@ -95,7 +95,6 @@ test(`${chalk.yellowBright("update no_billing_changes: customize preserves subsc
 		actions: [s.attach({ productId: pro.id })],
 	});
 
-	// Capture original subscription_ids on the active cusProduct
 	const fullCustomerBefore = await CusService.getFull({
 		ctx,
 		idOrInternalId: customerId,
@@ -108,8 +107,6 @@ test(`${chalk.yellowBright("update no_billing_changes: customize preserves subsc
 	const originalSubIds = cusProductBefore?.subscription_ids ?? [];
 	expect(originalSubIds.length).toBeGreaterThan(0);
 
-	// Customize the plan with no_billing_changes: should NOT touch Stripe but
-	// the new (replacement) active cusProduct must still link to the live sub.
 	await autumnV2.subscriptions.update<UpdateSubscriptionV1ParamsInput>({
 		customer_id: customerId,
 		plan_id: pro.id,
@@ -137,8 +134,6 @@ test(`${chalk.yellowBright("update no_billing_changes: customize preserves subsc
 	);
 });
 
-// Red: replacement-style updates reset a past_due cusProduct to active.
-// Green: the replacement inherits status and keeps the subscription link.
 test(`${chalk.yellowBright("update no_billing_changes: replacement customize preserves past_due status")}`, async () => {
 	const customerId = "update-no-billing-preserves-past-due";
 

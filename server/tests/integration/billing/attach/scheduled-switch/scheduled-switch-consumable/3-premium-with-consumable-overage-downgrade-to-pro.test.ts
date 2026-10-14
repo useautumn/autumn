@@ -1,14 +1,3 @@
-/**
- * Scheduled Switch Consumable Tests (Attach V2)
- *
- * Tests for downgrades involving consumable (usage-in-arrear) features.
- *
- * Key behaviors:
- * - Consumable overage is charged at cycle end via invoice-created webhook
- * - These tests verify the downgrade flow works correctly with consumable usage
- * - Overage from the old product is billed when downgrade completes
- */
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3 } from "@autumn/shared";
 import { calculateExpectedInvoiceAmount } from "@tests/integration/billing/utils/calculateExpectedInvoiceAmount";
@@ -22,21 +11,6 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 3: Premium with consumable overage, downgrade to pro
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Premium ($50/mo) with consumable messages (100 included, $0.10/unit overage)
- * - Track 200 messages (100 overage = $10)
- * - Downgrade to pro ($20/mo)
- * - Advance to cycle end
- *
- * Expected Result:
- * - Overage billed to Premium ($10)
- * - Pro active with balance reset
- */
 test.concurrent(
 	`${chalk.yellowBright("scheduled-switch-consumable 3: premium with consumable overage, downgrade to pro")}`,
 	async () => {
@@ -55,7 +29,7 @@ test.concurrent(
 			items: [proConsumable],
 		});
 
-		const usageAmount = 200; // 100 overage
+		const usageAmount = 200;
 
 		const { autumnV1, ctx } = await initScenario({
 			customerId,
@@ -70,12 +44,11 @@ test.concurrent(
 					value: usageAmount,
 					timeout: 2000,
 				}),
-				s.billing.attach({ productId: pro.id }), // Schedule downgrade
+				s.billing.attach({ productId: pro.id }),
 				s.advanceToNextInvoice({ withPause: true }),
 			],
 		});
 
-		// Verify Stripe subscription after all operations
 		await expectSubToBeCorrect({
 			db: ctx.db,
 			customerId,
@@ -83,7 +56,6 @@ test.concurrent(
 			env: ctx.env,
 		});
 
-		// Calculate expected overage: 100 units * $0.10 = $10.00
 		const expectedOverage = calculateExpectedInvoiceAmount({
 			items: premium.items,
 			usage: [{ featureId: TestFeature.Messages, value: usageAmount }],
@@ -93,14 +65,12 @@ test.concurrent(
 
 		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-		// After cycle: pro active, premium removed
 		await expectCustomerProducts({
 			customer,
 			active: [pro.id],
 			notPresent: [premium.id],
 		});
 
-		// Features at pro tier (50 included), balance reset
 		expectCustomerFeatureCorrect({
 			customer,
 			featureId: TestFeature.Messages,
@@ -108,16 +78,11 @@ test.concurrent(
 			usage: 0,
 		});
 
-		// Invoices:
-		// 1. Premium ($50) + overage at cycle end ($10) = $60
-		// 2. Pro renewal ($20)
-		// Note: The exact invoice structure depends on implementation
-		// The overage line lands via the cycle-end invoice webhook, so poll.
 		await expectCustomerInvoiceCorrect({
 			autumn: autumnV1,
 			customerId,
 			count: 2,
-			latestTotal: 20 + expectedOverage, // Pro renewal + premium overage
+			latestTotal: 20 + expectedOverage,
 			latestInvoiceProductIds: [pro.id, premium.id],
 		});
 	},

@@ -40,13 +40,11 @@ describe(
 				},
 			];
 
-			// Act
 			applyExistingRollovers({
 				customerProduct: newCusProduct,
 				existingRollovers,
 			});
 
-			// Assert: rollover should NOT be applied (balance 0, all entity balances 0)
 			const updatedCusEnt = newCusProduct.customer_entitlements[0];
 			expect(updatedCusEnt.rollovers.length).toBe(0);
 		});

@@ -14,11 +14,6 @@ import { handlePrepareMigration } from "./handlers/handlePrepareMigration.js";
 import { handlePreviewMigrationFilter } from "./handlers/handlePreviewMigrationFilter.js";
 import { handleRunMigration } from "./handlers/handleRunMigration.js";
 
-/**
- * V2 user-facing migrations RPC router. Distinct from the legacy
- * `migrationRouter` (product-version migration system in
- * `internal/products/productRouter.ts`).
- */
 export const migrationRpcRouter = new Hono<HonoEnv>();
 
 migrationRpcRouter.post("/migrations.create", ...handleCreateMigration);

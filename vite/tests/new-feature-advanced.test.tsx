@@ -1,11 +1,3 @@
-/**
- * The feature sheets' Advanced section no longer offers a Stripe product;
- * feature-level Stripe products are managed through the CLI mappings.
- *
- * Red (current):  the section renders a "Stripe Product (optional)" select.
- * Green (after):  only event names remain, so non-metered features get no section.
- */
-
 import { expect, test } from "bun:test";
 import {
 	type CreateFeature,

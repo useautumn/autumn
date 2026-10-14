@@ -330,9 +330,6 @@ test.concurrent(`${chalk.yellowBright("track-consumable-overage-7: mixed free+co
 		value: 200,
 	});
 
-	// The consumable cusEnt already has native usage_allowed, so the billing
-	// control doesn't force it on the free cusEnt. Overage is capped by
-	// the consumable's max_purchase: 100 (free) + 50 (max_purchase) = 150.
 	const customer = await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
 	expectBalanceCorrect({
 		customer,

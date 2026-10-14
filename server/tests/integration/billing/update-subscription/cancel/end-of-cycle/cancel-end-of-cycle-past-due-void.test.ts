@@ -1,6 +1,3 @@
-// void-on-cancel: flag ON + past_due + cancel_end_of_cycle -> immediate cancel + voided invoice.
-// PRIMARY + 2 controls (flag off; not past_due). Serial (shared org.config, restored in finally).
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3 } from "@autumn/shared";
 import { driveProductPastDue } from "@tests/integration/billing/utils/driveProductPastDue";
@@ -21,10 +18,6 @@ import type { Stripe } from "stripe";
 import { CusService } from "@/internal/customers/CusService";
 import { OrgService } from "@/internal/orgs/OrgService";
 import { timeout } from "@/utils/genUtils";
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// PRIMARY (pre-impl RED): flag on + past_due + cancel_end_of_cycle -> immediate + void
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test(`${chalk.yellowBright("cancel eoc past_due: flag on -> cancels immediately and voids open invoice")}`, async () => {
 	const customerId = "cancel-pastdue-void-immediate";
@@ -66,7 +59,6 @@ test(`${chalk.yellowBright("cancel eoc past_due: flag on -> cancels immediately 
 			productId: pro.id,
 		});
 
-		// Precondition: product is past_due with an open (unpaid) invoice
 		const customerBeforeCancel =
 			await autumnV1.customers.get<ApiCustomerV3>(customerId);
 		await expectProductPastDue({
@@ -82,17 +74,14 @@ test(`${chalk.yellowBright("cancel eoc past_due: flag on -> cancels immediately 
 			invoicesBeforeCancel.data.filter((inv) => inv.status === "open").length,
 		).toBeGreaterThan(0);
 
-		// ── Action: cancel_end_of_cycle on a past_due sub with the flag on ──
 		await autumnV1.subscriptions.update({
 			customer_id: customerId,
 			product_id: pro.id,
 			cancel_action: "cancel_end_of_cycle",
 		});
 
-		// Read-consistency wait for the inline void (NOT a webhook wait).
 		await timeout(3000);
 
-		// ── Contract assertion 1: immediate downgrade (not scheduled) ──
 		const customerAfterCancel =
 			await autumnV1.customers.get<ApiCustomerV3>(customerId);
 		await expectCustomerProducts({
@@ -101,7 +90,6 @@ test(`${chalk.yellowBright("cancel eoc past_due: flag on -> cancels immediately 
 			active: [free.id],
 		});
 
-		// ── Contract assertion 2: Stripe subscription cancelled now ──
 		await expectNoStripeSubscription({
 			db: ctx.db,
 			customerId,
@@ -109,7 +97,6 @@ test(`${chalk.yellowBright("cancel eoc past_due: flag on -> cancels immediately 
 			env: ctx.env,
 		});
 
-		// ── Contract assertion 3: open invoice voided inline ──
 		const invoicesAfterCancel = await ctx.stripeCli.invoices.list({
 			customer: stripeCustomerId,
 			subscription: subscriptionId,
@@ -121,8 +108,6 @@ test(`${chalk.yellowBright("cancel eoc past_due: flag on -> cancels immediately 
 			invoicesAfterCancel.data.filter((inv) => inv.status === "void").length,
 		).toBeGreaterThan(0);
 
-		// ── Contract assertion 4: no proration credit issued for the unpaid cycle ──
-		// The customer never paid this cycle, so cancelling must not refund/credit them.
 		const allInvoices = await ctx.stripeCli.invoices.list({
 			customer: stripeCustomerId,
 		});
@@ -141,10 +126,6 @@ test(`${chalk.yellowBright("cancel eoc past_due: flag on -> cancels immediately 
 		});
 	}
 });
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// CONTROL A: flag OFF + past_due + cancel_end_of_cycle -> unchanged (no immediate, no void)
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test(`${chalk.yellowBright("cancel eoc past_due: flag off -> stays scheduled, invoice not voided")}`, async () => {
 	const customerId = "cancel-pastdue-void-flag-off";
@@ -194,13 +175,11 @@ test(`${chalk.yellowBright("cancel eoc past_due: flag off -> stays scheduled, in
 
 		await timeout(3000);
 
-		// Not immediately removed: a Stripe subscription still exists (cancel scheduled at period end)
 		const subsAfterCancel = await ctx.stripeCli.subscriptions.list({
 			customer: stripeCustomerId,
 		});
 		expect(subsAfterCancel.data.length).toBeGreaterThan(0);
 
-		// Open invoice is NOT voided when the flag is off
 		const invoicesAfterCancel = await ctx.stripeCli.invoices.list({
 			customer: stripeCustomerId,
 			subscription: subscriptionId,
@@ -219,10 +198,6 @@ test(`${chalk.yellowBright("cancel eoc past_due: flag off -> stays scheduled, in
 		});
 	}
 });
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// CONTROL B: flag ON + NOT past_due + cancel_end_of_cycle -> normal end-of-cycle
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test(`${chalk.yellowBright("cancel eoc not past_due: flag on -> normal end-of-cycle (no immediate)")}`, async () => {
 	const customerId = "cancel-pastdue-void-not-pastdue";
@@ -270,7 +245,6 @@ test(`${chalk.yellowBright("cancel eoc not past_due: flag on -> normal end-of-cy
 			cancel_action: "cancel_end_of_cycle",
 		});
 
-		// Active (paid) sub: flag must NOT force immediate; normal end-of-cycle applies.
 		const customerAfterCancel =
 			await autumnV1.customers.get<ApiCustomerV3>(customerId);
 		await expectProductCanceling({
@@ -282,7 +256,6 @@ test(`${chalk.yellowBright("cancel eoc not past_due: flag on -> normal end-of-cy
 			productId: free.id,
 		});
 
-		// Side-effect contract: a paid, non-past_due cancel must NOT void any invoice.
 		const customer = await CusService.get({
 			db: ctx.db,
 			idOrInternalId: customerId,

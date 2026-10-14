@@ -1,8 +1,3 @@
-/**
- * Allocated volume seats have no per-copy Stripe price, so attaching the plan to a second
- * entity would add both entities' seats into one Stripe item. That's a 400 for now.
- */
-
 import { test } from "bun:test";
 import { ErrCode } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features";

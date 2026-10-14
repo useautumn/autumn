@@ -1,15 +1,3 @@
-/**
- * Paid plans with `config.anchor_to_month_start` create their Stripe subscription
- * anchored to the next 1st (00:00 UTC).
- *
- * Contract:
- *   attach monthly  → sub anchored to the 1st; first invoice prorated to the 1st and equal
- *                     to the preview total; resets on the 1st
- *   attach annual   → sub anchored to the 1st, yearly interval
- *   multi-attach    → one sub anchored to the 1st
- *   attach via Checkout → sub anchored to the 1st once checkout completes
- */
-
 import { expect, test } from "bun:test";
 import type {
 	AttachParamsV1Input,

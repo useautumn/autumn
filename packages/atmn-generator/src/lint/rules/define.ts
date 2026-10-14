@@ -1,10 +1,5 @@
 import type { LintRule } from "../runtime/lintDocument";
 
-/**
- * Typed identity functions, like the fixture builders: autocomplete while
- * writing a rule, and `because` cannot be forgotten — it is what gets printed.
- */
-
 type RuleOf<K extends LintRule["kind"]> = Omit<
 	Extract<LintRule, { kind: K }>,
 	"kind"
@@ -20,31 +15,26 @@ export const forbiddenWhen = (rule: RuleOf<"forbiddenWhen">): LintRule => ({
 	...rule,
 });
 
-/** At most one of the fields. */
 export const mutex = (rule: RuleOf<"mutex">): LintRule => ({
 	kind: "mutex",
 	...rule,
 });
 
-/** Precisely one of the fields. */
 export const exactlyOne = (rule: RuleOf<"exactlyOne">): LintRule => ({
 	kind: "exactlyOne",
 	...rule,
 });
 
-/** No two entries of the collection share the field's value. */
 export const unique = (rule: RuleOf<"unique">): LintRule => ({
 	kind: "unique",
 	...rule,
 });
 
-/** No two entries of one group may link the same child row. */
 export const linkedOnce = (rule: RuleOf<"linkedOnce">): LintRule => ({
 	kind: "linkedOnce",
 	...rule,
 });
 
-/** Exactly one row per group carries `field: true`. */
 export const exactlyOneActive = (
 	rule: RuleOf<"exactlyOneActive">,
 ): LintRule => ({
@@ -52,7 +42,6 @@ export const exactlyOneActive = (
 	...rule,
 });
 
-/** The field names an entry of another top-level collection. */
 export const exists = (rule: RuleOf<"exists">): LintRule => ({
 	kind: "exists",
 	...rule,
@@ -63,63 +52,51 @@ export const compare = (rule: RuleOf<"compare">): LintRule => ({
 	...rule,
 });
 
-/** `field` must equal `mustBe` when `when` is `equals`. */
 export const valueWhen = (rule: RuleOf<"valueWhen">): LintRule => ({
 	kind: "valueWhen",
 	...rule,
 });
 
-/** `field` names a row of top-level collection `in`; that row's `target` must equal `equals`. */
 export const targetHas = (rule: RuleOf<"targetHas">): LintRule => ({
 	kind: "targetHas",
 	...rule,
 });
 
-/** The entry is refused when every `when*` path matches. */
 export const refusedWhen = (rule: RuleOf<"refusedWhen">): LintRule => ({
 	kind: "refusedWhen",
 	...rule,
 });
 
-/** `field` names a row of top-level collection `in`; the entry is refused when
- * that row's `target` equals `equals` and every `when*` path matches. */
 export const targetForbids = (rule: RuleOf<"targetForbids">): LintRule => ({
 	kind: "targetForbids",
 	...rule,
 });
 
-/** `field` names a row of top-level collection `in`; that row's `target` must
- * not be `true`, unless the entry's own parent already has `parentGuard` true. */
 export const targetLacks = (rule: RuleOf<"targetLacks">): LintRule => ({
 	kind: "targetLacks",
 	...rule,
 });
 
-/** A stated list field must hold at least one entry. */
 export const nonEmpty = (rule: RuleOf<"nonEmpty">): LintRule => ({
 	kind: "nonEmpty",
 	...rule,
 });
 
-/** A stated string, or each value of a stated map, must not pass the named check. */
 export const rejects = (rule: RuleOf<"rejects">): LintRule => ({
 	kind: "rejects",
 	...rule,
 });
 
-/** Names outside `values` are reported: a warning when a newer server may know them. */
 export const knownValues = (rule: RuleOf<"knownValues">): LintRule => ({
 	kind: "knownValues",
 	...rule,
 });
 
-/** A stated field is a plain value, never an object map. */
 export const notMap = (rule: RuleOf<"notMap">): LintRule => ({
 	kind: "notMap",
 	...rule,
 });
 
-/** A list holds only names with `prefix`, or none of them. */
 export const uniformPrefix = (rule: RuleOf<"uniformPrefix">): LintRule => ({
 	kind: "uniformPrefix",
 	...rule,

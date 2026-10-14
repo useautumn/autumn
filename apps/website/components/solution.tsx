@@ -45,7 +45,6 @@ export default function Solution() {
 			/>
 
 			<div className="relative z-10 max-w-[1400px] mx-auto px-4 flex flex-col items-center">
-				{/* Heading */}
 				<div className="text-center mb-16 lg:mb-4 flex flex-col items-center">
 					<h2 className="text-[30px] leading-[30px] md:text-[40px] md:leading-[40px] font-normal tracking-tight mb-6">
 						<span className="text-[#A3A3A3]">Your app's </span>

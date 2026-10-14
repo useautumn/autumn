@@ -1,24 +1,11 @@
-/**
- * Test-only mock of the subset of Vercel's marketplace API that we hit from
- * `processVercelInvoice`. Mounted at `/__test/vercel/api/*` and consumed
- * only by tests that set `ctx.testOptions.mockVercelApi`.
- *
- * Each captured call is pushed into a Redis list keyed by the integration
- * configuration id (`__test:vercel:captures:{installationId}`). Integration
- * tests in another process read that list to assert what the SDK sent.
- *
- * In production this router is not mounted (see `initHono.ts`).
- */
 import { Hono } from "hono";
 import { resolveRedisV2 } from "@/external/redis/resolveRedisV2.js";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import { logCaughtError } from "@/utils/logging/logCaughtError.js";
 
 export const VERCEL_TEST_CAPTURE_PREFIX = "__test:vercel:captures:";
-// Per-invoice refund total (dollars), accumulated by the refund action mock and
-// returned by the Get Invoice mock as `refundTotal`.
 export const VERCEL_TEST_REFUND_TOTAL_PREFIX = "__test:vercel:refundTotal:";
-const CAPTURE_TTL_SECONDS = 600; // 10 min
+const CAPTURE_TTL_SECONDS = 600;
 
 type CapturedCall = {
 	method: string;
@@ -52,7 +39,6 @@ const parseJsonOrEmpty = async (c: any, route: string) => {
 
 export const vercelTestApiRouter = new Hono<HonoEnv>();
 
-// POST /v1/installations/:integrationConfigurationId/billing
 vercelTestApiRouter.post(
 	"/v1/installations/:integrationConfigurationId/billing",
 	async (c) => {
@@ -66,15 +52,11 @@ vercelTestApiRouter.post(
 			receivedAt: Date.now(),
 		});
 		// Vercel's submitBillingData returns 201 with an empty body (the SDK
-		// matches `M.nil(201, z.void())` — see
 		// `node_modules/@vercel/sdk/esm/funcs/marketplaceSubmitBillingData.js`).
-		// Returning anything else makes the SDK throw
-		// `Unexpected Status or Content-Type`.
 		return c.body(null, 201);
 	},
 );
 
-// POST /v1/installations/:integrationConfigurationId/billing/invoices
 vercelTestApiRouter.post(
 	"/v1/installations/:integrationConfigurationId/billing/invoices",
 	async (c) => {
@@ -88,7 +70,6 @@ vercelTestApiRouter.post(
 			body,
 			receivedAt: Date.now(),
 		});
-		// Vercel's submitInvoice returns the created invoice id + price.
 		return c.json(
 			{
 				invoiceId: `vi_test_${Date.now()}`,
@@ -104,8 +85,6 @@ vercelTestApiRouter.post(
 	},
 );
 
-// GET /v1/installations/:integrationConfigurationId/billing/invoices/:invoiceId
-// Mirrors Vercel's Get Invoice response (see @vercel/sdk getinvoiceop.ts).
 vercelTestApiRouter.get(
 	"/v1/installations/:integrationConfigurationId/billing/invoices/:invoiceId",
 	async (c) => {
@@ -118,7 +97,6 @@ vercelTestApiRouter.get(
 			body: null,
 			receivedAt: Date.now(),
 		});
-		// `vi_flaky_*` simulates a transient Vercel outage on Get Invoice.
 		if (invoiceId.startsWith("vi_flaky_")) {
 			return c.json({ error: { code: "internal", message: "flaky" } }, 503);
 		}
@@ -144,8 +122,6 @@ vercelTestApiRouter.get(
 	},
 );
 
-// POST /v1/installations/:integrationConfigurationId/billing/invoices/:invoiceId/actions
-// Vercel's Invoice Actions (refund) returns 204 with no body.
 vercelTestApiRouter.post(
 	"/v1/installations/:integrationConfigurationId/billing/invoices/:invoiceId/actions",
 	async (c) => {
@@ -159,8 +135,6 @@ vercelTestApiRouter.post(
 			body,
 			receivedAt: Date.now(),
 		});
-		// Tests encode the desired failure in the invoice id: `vi_reject_*` → 409
-		// (Vercel's response when the invoice is already `refund_requested`).
 		if (invoiceId.startsWith("vi_reject_")) {
 			return c.json(
 				{ error: { code: "bad_request", message: "rejected" } },
@@ -178,9 +152,6 @@ vercelTestApiRouter.post(
 	},
 );
 
-// Inspector endpoints used by tests --------------------------------------
-
-// GET /__captures/:installationId → recorded calls in insertion order
 vercelTestApiRouter.get("/__captures/:installationId", async (c) => {
 	const installationId = c.req.param("installationId");
 	const redis = resolveRedisV2();
@@ -206,7 +177,6 @@ vercelTestApiRouter.get("/__captures/:installationId", async (c) => {
 	return c.json({ captures: captures.filter(Boolean) }, 200);
 });
 
-// DELETE /__captures/:installationId → clear (per-test teardown)
 vercelTestApiRouter.delete("/__captures/:installationId", async (c) => {
 	const installationId = c.req.param("installationId");
 	const redis = resolveRedisV2();
@@ -214,15 +184,12 @@ vercelTestApiRouter.delete("/__captures/:installationId", async (c) => {
 	return c.json({ cleared: true }, 200);
 });
 
-// DELETE /__refund-total/:invoiceId → clear the mocked refund total
 vercelTestApiRouter.delete("/__refund-total/:invoiceId", async (c) => {
 	const invoiceId = c.req.param("invoiceId");
 	await resolveRedisV2().del(`${VERCEL_TEST_REFUND_TOTAL_PREFIX}${invoiceId}`);
 	return c.json({ cleared: true }, 200);
 });
 
-// Anything else → 404 with a clear message so the SDK error surfaces
-// instead of silently passing.
 vercelTestApiRouter.all("*", (c) => {
 	return c.json(
 		{

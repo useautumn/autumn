@@ -118,7 +118,6 @@ describe(`${chalk.yellowBright(`${testCase}: Testing migration for premium v1 ->
 
 		await timeout(20000);
 
-		// Check that premium v2 is active but still cancelling
 		const customer = await autumn.customers.get(customerId);
 		expectProductAttached({
 			customer,
@@ -127,7 +126,6 @@ describe(`${chalk.yellowBright(`${testCase}: Testing migration for premium v1 ->
 			isCanceled: true,
 		});
 
-		// Subscription should be cancelled at period end
 		await expectSubToBeCorrect({
 			db,
 			customerId,
@@ -136,7 +134,6 @@ describe(`${chalk.yellowBright(`${testCase}: Testing migration for premium v1 ->
 			shouldBeCanceled: true,
 		});
 
-		// Should have updated included usage
 		const wordsBalance = customer.features[TestFeature.Words].balance;
 		expect(wordsBalance).toBe(10000);
 	});

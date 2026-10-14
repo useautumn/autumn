@@ -4,7 +4,6 @@ import {
 	type MeteringIdentity,
 } from "@autumn/balance-engine";
 
-/** The rows were cached when the subject was ensured and evicted before the decision read them. */
 export class SubjectCatalogEvictedError extends Error {
 	readonly keys: CatalogKey[];
 
@@ -16,7 +15,6 @@ export class SubjectCatalogEvictedError extends Error {
 	}
 }
 
-/** No local state and the source of truth has no such customer, or entity of it, in this org and env. */
 export class SubjectNotFoundError extends Error {
 	readonly identity: MeteringIdentity;
 
@@ -30,7 +28,6 @@ export class SubjectNotFoundError extends Error {
 	}
 }
 
-/** Postgres no longer holds the rows the decision was made on; the subject is evicted and the caller retries. */
 export class SubjectStaleError extends Error {
 	readonly identity: MeteringIdentity;
 
@@ -50,7 +47,6 @@ export class SubjectStaleError extends Error {
 	}
 }
 
-/** Every read of the subject was overtaken by an evict, so nothing was kept; the caller retries. */
 export class SubjectLoadOvertakenError extends Error {
 	readonly identity: MeteringIdentity;
 

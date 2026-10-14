@@ -15,7 +15,6 @@ describe(
 			test("monthly cusEnt is deducted before lifetime cusEnt", () => {
 				const internalFeatureId = "internal_feature_a";
 
-				// Lifetime cusEnt with balance 5
 				const lifetimeCusEnt = customerEntitlements.create({
 					internalFeatureId,
 					featureId: "feature_a",
@@ -25,7 +24,6 @@ describe(
 					interval: EntInterval.Lifetime,
 				});
 
-				// Monthly cusEnt with balance 5
 				const monthlyCusEnt = customerEntitlements.create({
 					internalFeatureId,
 					featureId: "feature_a",
@@ -33,19 +31,17 @@ describe(
 					allowance: 5,
 					balance: 5,
 					interval: EntInterval.Month,
-					nextResetAt: Date.now() + 30 * 24 * 60 * 60 * 1000, // 30 days from now
+					nextResetAt: Date.now() + 30 * 24 * 60 * 60 * 1000,
 				});
 
 				const cusProduct = customerProducts.create({
-					customerEntitlements: [monthlyCusEnt, lifetimeCusEnt], // Monthly first in array
+					customerEntitlements: [monthlyCusEnt, lifetimeCusEnt],
 				});
 
-				// Apply 7 usage (should deplete lifetime first, then take 2 from monthly)
 				const existingUsages: ExistingUsages = {
 					[internalFeatureId]: { usage: 7, entityUsages: {} },
 				};
 
-				// Act
 				applyExistingUsages({
 					ctx,
 					customerProduct: cusProduct,
@@ -53,7 +49,6 @@ describe(
 					entities: [],
 				});
 
-				// Assert: Lifetime should be depleted first (0), then monthly should have 3 remaining
 				const updatedLifetime = cusProduct.customer_entitlements.find(
 					(ce) => ce.entitlement.interval === EntInterval.Lifetime,
 				);
@@ -70,7 +65,6 @@ describe(
 			test("prepaid cusEnt (usage_allowed=false) is deducted before pay-per-use cusEnt (usage_allowed=true)", () => {
 				const internalFeatureId = "internal_feature_a";
 
-				// Prepaid cusEnt (usage_allowed = false) with balance 5
 				const prepaidCusEnt = customerEntitlements.create({
 					internalFeatureId,
 					featureId: "feature_a",
@@ -80,7 +74,6 @@ describe(
 					usageAllowed: false,
 				});
 
-				// Pay-per-use cusEnt (usage_allowed = true) with balance 5
 				const payPerUseCusEnt = customerEntitlements.create({
 					internalFeatureId,
 					featureId: "feature_a",
@@ -91,15 +84,13 @@ describe(
 				});
 
 				const customerProduct = customerProducts.create({
-					customerEntitlements: [payPerUseCusEnt, prepaidCusEnt], // Pay-per-use first in array
+					customerEntitlements: [payPerUseCusEnt, prepaidCusEnt],
 				});
 
-				// Apply 7 usage (should deplete prepaid first, then take 2 from pay-per-use)
 				const existingUsages: ExistingUsages = {
 					[internalFeatureId]: { usage: 7, entityUsages: {} },
 				};
 
-				// Act
 				applyExistingUsages({
 					ctx,
 					customerProduct,
@@ -107,7 +98,6 @@ describe(
 					entities: [],
 				});
 
-				// Assert: Prepaid should be depleted first (0), then pay-per-use should have 3 remaining
 				const updatedPrepaid = customerProduct.customer_entitlements.find(
 					(ce) => ce.usage_allowed === false,
 				);
@@ -124,7 +114,6 @@ describe(
 			test("prepaid monthly is deducted to 0, pay-per-use monthly goes negative", () => {
 				const internalFeatureId = "internal_feature_a";
 
-				// Prepaid monthly (usage_allowed = false, cannot go negative)
 				const prepaidMonthly = customerEntitlements.create({
 					internalFeatureId,
 					featureId: "feature_a",
@@ -136,7 +125,6 @@ describe(
 					nextResetAt: Date.now() + 30 * 24 * 60 * 60 * 1000,
 				});
 
-				// Pay-per-use monthly (usage_allowed = true, can go negative)
 				const payPerUseMonthly = customerEntitlements.create({
 					internalFeatureId,
 					featureId: "feature_a",
@@ -149,15 +137,13 @@ describe(
 				});
 
 				const customerProduct = customerProducts.create({
-					customerEntitlements: [payPerUseMonthly, prepaidMonthly], // Random order
+					customerEntitlements: [payPerUseMonthly, prepaidMonthly],
 				});
 
-				// Apply 12 usage (5 from prepaid, 7 from pay-per-use -> goes to -2)
 				const existingUsages: ExistingUsages = {
 					[internalFeatureId]: { usage: 12, entityUsages: {} },
 				};
 
-				// Act
 				applyExistingUsages({
 					ctx,
 					customerProduct,
@@ -172,9 +158,7 @@ describe(
 					(ce) => ce.usage_allowed === true,
 				);
 
-				// Prepaid should be at 0 (cannot go negative)
 				expect(updatedPrepaid?.balance).toBe(0);
-				// Pay-per-use should be at -2 (5 - 7 = -2)
 				expect(updatedPayPerUse?.balance).toBe(-2);
 			});
 		});
@@ -183,7 +167,6 @@ describe(
 			test("prepaid monthly -> prepaid lifetime -> pay-per-use monthly", () => {
 				const internalFeatureId = "internal_feature_a";
 
-				// 3 cusEnts with different combinations
 				const prepaidMonthly = customerEntitlements.create({
 					internalFeatureId,
 					featureId: "feature_a",
@@ -216,7 +199,6 @@ describe(
 					nextResetAt: Date.now() + 30 * 24 * 60 * 60 * 1000,
 				});
 
-				// Add in random order
 				const customerProduct = customerProducts.create({
 					customerEntitlements: [
 						payPerUseMonthly,
@@ -225,12 +207,10 @@ describe(
 					],
 				});
 
-				// Apply 5 usage (should take 2 from prepaid monthly, 2 from prepaid lifetime, 1 from pay-per-use monthly)
 				const existingUsages: ExistingUsages = {
 					[internalFeatureId]: { usage: 5, entityUsages: {} },
 				};
 
-				// Act
 				applyExistingUsages({
 					ctx,
 					customerProduct,
@@ -238,7 +218,6 @@ describe(
 					entities: [],
 				});
 
-				// Find each cusEnt by their unique characteristics
 				const findCusEnt = (usageAllowed: boolean, interval: EntInterval) =>
 					customerProduct.customer_entitlements.find(
 						(ce) =>
@@ -250,7 +229,6 @@ describe(
 				const updatedPrepaidLifetime = findCusEnt(false, EntInterval.Lifetime);
 				const updatedPayPerUseMonthly = findCusEnt(true, EntInterval.Month);
 
-				// Expected order: prepaid monthly (0) -> prepaid lifetime (0) -> pay-per-use monthly (1)
 				expect(updatedPrepaidMonthly?.balance).toBe(0);
 				expect(updatedPayPerUseMonthly?.balance).toBe(0);
 				expect(updatedPrepaidLifetime?.balance).toBe(1);

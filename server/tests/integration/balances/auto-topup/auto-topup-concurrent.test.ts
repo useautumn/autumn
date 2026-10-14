@@ -9,7 +9,6 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { Decimal } from "decimal.js";
 
-/** Wait time for SQS auto top-up processing (concurrent needs more time) */
 const AUTO_TOPUP_WAIT_MS = 20000;
 
 const makeAutoTopupConfig = ({
@@ -54,8 +53,6 @@ test.concurrent(`${chalk.yellowBright("auto-topup concurrent: burst of concurren
 		],
 	});
 
-	// Configure auto top-up: threshold=50, quantity=100
-	// With 100 starting balance, any track of 51+ should cross threshold
 	await autumnV2_1.customers.update(customerId, {
 		billing_controls: makeAutoTopupConfig({
 			threshold: 50,
@@ -63,9 +60,6 @@ test.concurrent(`${chalk.yellowBright("auto-topup concurrent: burst of concurren
 		}),
 	});
 
-	// Fire 3 concurrent tracks of 20 each (total: 60 deducted)
-	// After all deductions: balance = 100 - 60 = 40 (below threshold 50)
-	// Multiple jobs may be enqueued, but only ONE should execute (balance re-check)
 	await Promise.all([
 		autumnV2_1.track({
 			customer_id: customerId,
@@ -96,7 +90,6 @@ test.concurrent(`${chalk.yellowBright("auto-topup concurrent: burst of concurren
 
 	await timeout(AUTO_TOPUP_WAIT_MS);
 
-	// Expected: 100 - 60 + 100 = 140 (exactly ONE top-up of 100)
 	const after = await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
 	const balance = after.balances[TestFeature.Messages].remaining;
 	const expectedBalance = new Decimal(100).sub(100).add(100).toNumber();
@@ -137,9 +130,7 @@ test.concurrent(`${chalk.yellowBright("auto-topup concurrent: 5 concurrent small
 		],
 	});
 
-	await autumnV2_1.customers.get<ApiCustomerV5>(customerId); // set customer in cache!
-
-	// Configure threshold=20, quantity=100
+	await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
 	await autumnV2_1.customers.update(customerId, {
 		billing_controls: makeAutoTopupConfig({
 			threshold: 20,
@@ -147,9 +138,6 @@ test.concurrent(`${chalk.yellowBright("auto-topup concurrent: 5 concurrent small
 		}),
 	});
 
-	// Fire 5 concurrent tracks of 18 each (total: 90 deducted)
-	// Final balance after deductions: 100 - 90 = 10 (below threshold 20)
-	// Multiple SQS jobs enqueued, but handler re-checks balance — only one should execute
 	await Promise.all(
 		Array.from({ length: 5 }, () =>
 			autumnV2_1.track({
@@ -165,7 +153,6 @@ test.concurrent(`${chalk.yellowBright("auto-topup concurrent: 5 concurrent small
 	const after = await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
 	const balance = after.balances[TestFeature.Messages].remaining;
 
-	// Expected: 100 - 90 + 100 = 110 (exactly one top-up)
 	const expectedBalance = new Decimal(20).sub(10).add(100).toNumber();
 	expect(balance).toBe(expectedBalance);
 
@@ -177,7 +164,6 @@ test.concurrent(`${chalk.yellowBright("auto-topup concurrent: 5 concurrent small
 		latestInvoiceProductId: oneOffProd.id,
 	});
 
-	// Check DB balance
 	const afterDb = await autumnV2_1.customers.get<ApiCustomerV5>(customerId, {
 		skip_cache: "true",
 	});
@@ -219,7 +205,6 @@ test.concurrent(`${chalk.yellowBright("auto-topup concurrent: sequential drain �
 
 	await timeout(2000);
 
-	// Round 1: Track 85 → balance = 15 → top-up fires → balance = 115
 	await autumnV2_1.track({
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
@@ -233,7 +218,6 @@ test.concurrent(`${chalk.yellowBright("auto-topup concurrent: sequential drain �
 	const expectedMid = new Decimal(100).sub(85).add(100).toNumber();
 	expect(midBalance).toBe(expectedMid);
 
-	// Round 2: Track 100 → balance = 15 → second top-up fires → balance = 115
 	await autumnV2_1.track({
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,

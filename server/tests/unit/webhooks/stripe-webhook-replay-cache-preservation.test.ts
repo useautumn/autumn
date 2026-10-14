@@ -1,5 +1,3 @@
-/** Replay cleanup must preserve a FullSubject atomically published by a deferred handler. */
-
 import { beforeEach, expect, mock, test } from "bun:test";
 import { AppEnv } from "@autumn/shared";
 import type Stripe from "stripe";

@@ -1,12 +1,3 @@
-/**
- * Scheduled Switch Prepaid Advanced Tests (Attach V2)
- *
- * Tests for downgrades involving products with BOTH recurring base prices
- * AND one-off prepaid prices (mixed products).
- *
- * Previously blocked by isMixedProduct check in handleScheduledSwitchOneOffErrors.
- */
-
 import { test } from "bun:test";
 import type { ApiCustomerV3 } from "@autumn/shared";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
@@ -19,19 +10,6 @@ import { advanceToNextInvoice } from "@tests/utils/testAttachUtils/testAttachUti
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 2: Mixed product downgrade, no options
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Premium ($50/mo) with one-off prepaid messages (500 units)
- * - Downgrade to Pro ($20/mo) with one-off prepaid, no options passed
- *
- * Expected:
- * - Scheduled switch succeeds
- * - Total units preserved, converted to new billing units
- */
 test.concurrent(`${chalk.yellowBright("scheduled-switch-prepaid-advanced 2: mixed product downgrade, no options")}`, async () => {
 	const customerId = "sched-switch-prepaid-adv-2";
 
@@ -70,7 +48,6 @@ test.concurrent(`${chalk.yellowBright("scheduled-switch-prepaid-advanced 2: mixe
 		],
 	});
 
-	// Downgrade with NO options
 	await autumnV1.billing.attach({
 		customer_id: customerId,
 		product_id: pro.id,

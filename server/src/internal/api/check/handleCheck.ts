@@ -29,10 +29,8 @@ import {
 import { handleProductCheck } from "./handlers/handleProductCheck.js";
 
 const DEFAULT_REQUIRED_BALANCE = 1;
-// Legacy checks fail open past this budget; worker checks use their client deadline.
 const CHECK_FAIL_OPEN_TIMEOUT_MS = 3_000;
 
-/** The allowed fallback a check answers with when it can't reach its balances. */
 const checkFailOpenResponse = ({
 	ctx,
 	params,
@@ -61,8 +59,6 @@ export const handleCheck = createRoute({
 	scopes: [Scopes.Balances.Read],
 	failOpen: {
 		timeoutMs: CHECK_FAIL_OPEN_TIMEOUT_MS,
-		// Worker checks fail open on their own, past their client deadline. Lock checks
-		// must settle their reservation; product checks return a non-feature shape.
 		skip: (c) => {
 			const body = c.req.valid("json");
 			const ctx = c.get("ctx");
@@ -96,7 +92,6 @@ export const handleCheck = createRoute({
 		const rawBody = c.req.valid("json");
 		const ctx = c.get("ctx");
 
-		// Plans, not balances, answer a product check, so it runs the same on both routes.
 		if (rawBody.product_id) {
 			const body = parseCheckParamsForLock({ params: rawBody });
 			return c.json(
@@ -111,7 +106,6 @@ export const handleCheck = createRoute({
 			isBalanceWorkerRolloutEnabled({ ctx, customerId: rawBody.customer_id })
 		) {
 			const runOnWorker = () => runBalanceWorkerCheck({ ctx, body: rawBody });
-			// A lock must settle its reservation, so a lock check never answers without the worker.
 			if (rawBody.lock?.enabled) return c.json(await runOnWorker());
 			const { result, failedOpen } =
 				await withBalanceWorkerFailOpen<CheckResponseWithPreview>({
@@ -168,7 +162,6 @@ export const handleCheck = createRoute({
 				})
 			: undefined;
 
-		// Version changes will transform V3 -> V2 -> V1 -> V0 based on target API version
 		const transformedResponse = applyResponseVersionChanges<CheckResponseV3>({
 			input: response,
 			targetVersion: ctx.apiVersion,

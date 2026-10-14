@@ -1,7 +1,3 @@
-/**
- * Identical multi-attach checkout requests reuse the reserved Stripe session.
- */
-
 import { expect, test } from "bun:test";
 import type { MultiAttachParamsV0Input } from "@autumn/shared";
 import { items } from "@tests/utils/fixtures/items.js";

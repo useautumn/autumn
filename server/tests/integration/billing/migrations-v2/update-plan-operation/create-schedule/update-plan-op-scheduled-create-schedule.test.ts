@@ -1,16 +1,3 @@
-/**
- * TDD coverage for update_plan migrations over createSchedule-managed scheduled rows.
- *
- * Contract under test:
- *   New behaviors:
- *     - Future scheduled rows created by createSchedule can be version-migrated.
- *     - Replacing one product in a multi-plan future phase rewires only that ID.
- *     - Feature quantities/options on scheduled rows survive replacement.
- *   Side effects:
- *     - `no_billing_changes: true` updates Autumn only and leaves the Stripe schedule unchanged.
- *     - Schedule phases never point at deleted customer product IDs.
- */
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3 } from "@autumn/shared";
 import { CusProductStatus, ms, stripeRefToId } from "@autumn/shared";

@@ -2,9 +2,6 @@ import { LoadingShimmerText, SectionTag } from "@autumn/ui";
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
-/** The list-view shell — same bordered card, dashed-when-empty treatment, and
- * section label the Plans and Features tables use, minus the table machinery
- * (rows here nest, which TanStack rows can't). */
 export function PanelSection({
 	label,
 	isLoading,
@@ -51,7 +48,6 @@ export function PanelSection({
 	);
 }
 
-/** One row inside a PanelSection, matching the tables' h-10 row rhythm. */
 export function PanelRow({
 	children,
 	className,

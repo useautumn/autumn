@@ -26,7 +26,6 @@ const stripeCustomerIdFor = async ({
 	return stripeCustomerId;
 };
 
-/** Every live customer product of `productId` (one per entity) stores `collectionMethod`. */
 export const expectTrialCollectionMethod = async ({
 	ctx,
 	customerId,
@@ -53,10 +52,6 @@ export const expectTrialCollectionMethod = async ({
 	}
 };
 
-/**
- * A converted invoice-mode trial: `subCount` send_invoice subs and, when `latestTotal`
- * is passed, the latest Stripe invoice is open for it with nothing charged.
- */
 export const expectTrialInvoicedCorrect = async ({
 	ctx,
 	customerId,

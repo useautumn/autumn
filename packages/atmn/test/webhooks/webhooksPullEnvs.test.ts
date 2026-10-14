@@ -1,9 +1,3 @@
-/**
- * A plain `atmn pull` reads webhooks from every env the loaded env files hold
- * a key for: the default sandbox, live, and each named sandbox by its slug,
- * one entry per endpoint per env. A skipped env keeps its entries.
- */
-
 import { expect, test } from "bun:test";
 import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -53,7 +47,6 @@ const rejected = () =>
 		path: "/v1/webhooks.list",
 	});
 
-/** Each key lists its own env's webhooks; a key mapped to an error throws it. */
 const pullWith = async ({
 	dir,
 	env,

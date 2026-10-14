@@ -12,7 +12,6 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-// 3.3 Remove base price (paid to free)
 test.concurrent(
 	`${chalk.yellowBright("p2p: remove base price (to free)")}`,
 	async () => {
@@ -29,7 +28,6 @@ test.concurrent(
 			actions: [s.attach({ productId: "pro" })],
 		});
 
-		// Track some usage
 		const messagesUsage = 50;
 		await autumnV1.track(
 			{
@@ -40,7 +38,6 @@ test.concurrent(
 			{ timeout: 2000 },
 		);
 
-		// Remove price, keep only messages
 		const updateParams = {
 			customer_id: customerId,
 			product_id: pro.id,
@@ -49,14 +46,12 @@ test.concurrent(
 
 		const preview = await autumnV1.subscriptions.previewUpdate(updateParams);
 
-		// Should credit full $20 (refund for unused portion)
 		expect(preview.total).toBe(-20);
 
 		await autumnV1.subscriptions.update(updateParams);
 
 		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-		// Usage should stay the same
 		await expectCustomerFeatureCorrect({
 			autumn: autumnV1,
 			customerId,
@@ -66,7 +61,6 @@ test.concurrent(
 			usage: messagesUsage,
 		});
 
-		// Now free, should have no Stripe subscription
 		await expectSubCount({
 			ctx,
 			customerId,
@@ -75,7 +69,6 @@ test.concurrent(
 	},
 );
 
-// 2.3 Change to unlimited
 test.concurrent(
 	`${chalk.yellowBright("p2p: change to unlimited")}`,
 	async () => {
@@ -92,7 +85,6 @@ test.concurrent(
 			actions: [s.attach({ productId: "pro" })],
 		});
 
-		// Track some usage
 		const messagesUsage = 90;
 		await autumnV1.track(
 			{
@@ -103,7 +95,6 @@ test.concurrent(
 			{ timeout: 2000 },
 		);
 
-		// Change to unlimited
 		const unlimitedMessagesItem = items.unlimitedMessages();
 
 		const updateParams = {
@@ -114,17 +105,14 @@ test.concurrent(
 
 		const preview = await autumnV1.subscriptions.previewUpdate(updateParams);
 
-		// Changing to unlimited has no price impact
 		expect(preview.total).toBe(0);
 
 		await autumnV1.subscriptions.update(updateParams);
 
 		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-		// Messages should now be unlimited
 		expect(customer.features[TestFeature.Messages].unlimited).toBe(true);
 
-		// Verify invoice matches preview
 		await expectCustomerInvoiceCorrect({
 			customer,
 			count: 2,

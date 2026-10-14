@@ -1,8 +1,3 @@
-/**
- * One-writer one-reader byte ring on a SharedArrayBuffer, the shape of Agrona's OneToOneRingBuffer.
- * Frames are `[u32 length][u8 type][payload]`; a frame that would straddle the end leaves a padding marker
- * and wraps. Positions are u32, as the shared header stores them: every step and distance is taken mod 2^32.
- */
 import type { Ring, RingFrame, RingReader, RingWriter } from "./types/ring.js";
 import type { RingSignal } from "./types/ringSignal.js";
 
@@ -40,7 +35,6 @@ export const createRingWriter = ({
 	const view = new DataView(ring.sab, HEADER_BYTES, ring.capacity);
 	const { capacity } = ring;
 	const mask = capacity - 1;
-	// Above half the ring a frame can fit neither before the end nor after a wrap, wherever the tail is.
 	const maxFrameBytes = capacity / 2 - FRAME_HEADER_BYTES;
 	let tail = Atomics.load(header, TAIL) >>> 0;
 	let cachedHead = Atomics.load(header, HEAD) >>> 0;
@@ -81,7 +75,6 @@ export const createRingWriter = ({
 		claimedAt = -1;
 	}
 
-	/** Resolves once the reader has freed `maxLength` payload bytes; the reader's release wakes it. */
 	async function waitForRoom({
 		maxLength,
 	}: {

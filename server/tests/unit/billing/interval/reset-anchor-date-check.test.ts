@@ -3,21 +3,12 @@ import { EntInterval, type FullCusProduct } from "@autumn/shared";
 import { fromUnix, toUnix } from "@tests/utils/testIntervalUtils/testUnixUtils";
 import { getResetAtUpdate } from "@/internal/customers/actions/resetCustomerEntitlements/getResetAtUpdate";
 
-/**
- * Minimal cusProduct stub with no subscription_ids.
- * Exercises the shouldCheck date logic without hitting Stripe --
- * if shouldCheck passes, the function still returns unmodified because
- * there are no subscription_ids to look up.
- */
 const emptyCusProduct = {
 	subscription_ids: [],
 } as unknown as FullCusProduct;
 
 const dummyOrg = {} as any;
 const dummyEnv = "test" as any;
-
-// All curResetAt dates are in the future so getNextResetAt returns
-// curReset + 1 interval on the first iteration (no looping).
 
 describe("reset-anchor-date-check: getResetAtUpdate", () => {
 	describe("short-duration intervals skip anchor check entirely", () => {

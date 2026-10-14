@@ -77,7 +77,6 @@ export const getOrgPaginationMaxLimit = ({
 	orgId?: string;
 	orgSlug?: string;
 	type: PaginationType;
-	/** Omit for internal callers that are not tied to a request's API version. */
 	apiVersion?: ApiVersionClass;
 }): number => {
 	const orgs = store.get().orgs;
@@ -147,10 +146,6 @@ export const updateFullOrgLimitsConfig = async ({
 	await store.writeToSource({ config });
 };
 
-/**
- * Test-only helper: override the in-memory org limits config without touching S3.
- * Use inside tests to simulate admin-configured org limits deterministically.
- */
 export const _setOrgLimitsConfigForTesting = ({
 	config,
 }: {

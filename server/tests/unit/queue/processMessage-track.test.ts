@@ -7,8 +7,6 @@ const mockState = {
 	createWorkerContextCalls: [] as Record<string, unknown>[],
 };
 
-// Snapshot (not the live namespace — its bindings retarget to the mock) so
-// afterAll can put the real module back for later files in this process.
 const realCreateWorkerContext = {
 	...(await import("@/queue/createWorkerContext.js")),
 };

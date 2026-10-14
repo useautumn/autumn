@@ -14,7 +14,6 @@ import type { WorkerFullSubject } from "../../../models/subject/workerFullSubjec
 import type { UpdateBalanceCommand } from "../types/updateBalanceCommand.js";
 import { updateBalanceCommandToDeductionRequest } from "../updateBalanceCommandToDeductionRequest.js";
 
-/** Legacy `getUpdateUsageTargetBalance`: usage is what the rows' grant and prepaid quantity no longer hold. */
 const usageToTargetBalance = ({
 	context,
 	usage,
@@ -46,7 +45,6 @@ const updateBalanceCommandToTargetBalance = ({
 	return null;
 };
 
-/** The Lua's `get_total_balance`: every drawn balance, or only the leading unlimited row's, which the target sets outright. */
 const deductionContextToCurrentBalance = ({
 	context,
 }: {
@@ -62,7 +60,6 @@ const deductionContextToCurrentBalance = ({
 	);
 };
 
-/** Moves the balance to a target, or by an amount; the gap is drawn like a track, rollovers first, so they stay out of the sum. */
 export const setBalance = ({
 	fullSubject,
 	command,

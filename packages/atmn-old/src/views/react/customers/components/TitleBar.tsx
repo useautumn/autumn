@@ -2,9 +2,6 @@ import { Box, Text } from "ink";
 import { APP_VERSION } from "../../../../lib/version.js";
 import type { TitleBarProps } from "../types.js";
 
-/**
- * Title bar showing version, command name, pagination info, and search query
- */
 export function TitleBar({
 	environment,
 	pagination,

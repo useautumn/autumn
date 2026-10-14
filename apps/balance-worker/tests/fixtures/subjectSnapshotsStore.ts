@@ -7,7 +7,6 @@ import {
 	subjectSnapshotsEdgeConfig,
 } from "@autumn/edge-config";
 
-/** An S3 with one object per key, so a write lands where the next read looks. */
 export const createMemoryS3Client = (): EdgeConfigS3Client => {
 	const objects = new Map<string, string>();
 	return {
@@ -28,7 +27,6 @@ export const createMemoryS3Client = (): EdgeConfigS3Client => {
 	};
 };
 
-/** The worker's snapshot settings store over an in-memory S3, serving `settings` until a test writes again. */
 export const createSubjectSnapshotsStore = (
 	settings: Partial<SubjectSnapshotsEdgeConfig> = {},
 ): EdgeConfigStore<SubjectSnapshotsEdgeConfig> => {

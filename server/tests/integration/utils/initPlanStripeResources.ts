@@ -1,8 +1,3 @@
-/**
- * Mint Stripe product/price ids onto every version of a plan, then re-fetch.
- * Bypasses catalog `disable_stripe_writes` so tests see real prepaid v2 slots.
- */
-
 import type { FullProduct } from "@autumn/shared";
 import { createStripePriceIFNotExist } from "@/external/stripe/createStripePrice/createStripePrice.js";
 import { invalidateProductsCache } from "@/external/redis/actions/productsCache/productsCache.js";
@@ -10,7 +5,6 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { checkStripeProductExists } from "@/internal/products/productUtils.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 
-/** Load plan → create Stripe resources → re-fetch so configs have real ids. */
 export const initPlanStripeResources = async ({
 	ctx,
 	planId,

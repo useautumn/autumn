@@ -4,8 +4,6 @@ import { JobName } from "@/queue/JobName.js";
 import { addTaskToQueue } from "@/queue/queueUtils.js";
 import { addToExtraLogs } from "@/utils/logging/addToExtraLogs.js";
 
-/** Queues a finalize-lock replay on the track queue when Redis is down.
- *  Returns the accepted response, or null when queueing is unavailable. */
 export const queueFinalizeLock = async ({
 	ctx,
 	params,

@@ -16,7 +16,6 @@ const RANGE_SECONDS: Record<AtomMetricsRange, number> = {
 	"7d": 7 * 24 * 60 * 60,
 };
 
-/** Each a whole number of the 10s windows Atom logs, so no window splits across periods. */
 const PERIOD_STEPS_SECONDS = [
 	10,
 	30,
@@ -31,7 +30,6 @@ const PERIOD_STEPS_SECONDS = [
 ];
 const MAX_POINTS = 120;
 
-/** The finest period that plots the visible span, the range or the Atom's life if shorter, in at most 120 points. */
 export const atomMetricsPeriodSeconds = ({
 	range,
 	createdAt,
@@ -48,7 +46,6 @@ export const atomMetricsPeriodSeconds = ({
 	);
 };
 
-/** Every replica's health line summed into the 10s window it landed in, the raw resolution. */
 const WINDOWS_PIPELINE = `
 	| where line contains '"atom_health"'
 	| extend data = parse_json(line).data
@@ -67,7 +64,6 @@ const WINDOWS_PIPELINE = `
 		forwardedPerSecond = forwarded / seconds,
 		pushesPerSecond = pushes / seconds`;
 
-/** Each period's totals for its average, and its busiest window, split as that window was, for its maximum. */
 const periodsPipeline = ({ periodSeconds }: { periodSeconds: number }) => `
 	${WINDOWS_PIPELINE}
 	| summarize cpu = sum(cpuSeconds) / sum(coreSeconds),
@@ -80,7 +76,6 @@ const periodsPipeline = ({ periodSeconds }: { periodSeconds: number }) => `
 		by bin(_time, ${periodSeconds}s)
 	| sort by _time asc`;
 
-/** The last minute's totals, so one quiet or still-filling window doesn't read as the current rate. */
 const LATEST_PIPELINE = `
 	${WINDOWS_PIPELINE}
 	| summarize _time = max(_time),
@@ -100,7 +95,6 @@ const windowRatesOf = (row: AxiomRow): AtomMetricsRates => ({
 	pushes: axiomNumberFrom(row.pushesPerSecond),
 });
 
-/** Rated over the seconds the replicas reported, so a period still filling isn't understated. */
 const totalRatesOf = (row: AxiomRow): AtomMetricsRates => {
 	const seconds = axiomNumberFrom(row.seconds);
 	return {
@@ -121,7 +115,6 @@ const periodToPoint = (row: AxiomRow): AtomMetricsPoint => ({
 /** Axiom adds a totals row with no _time beside the windows. */
 const isTimedRow = (row: AxiomRow) => Boolean(row._time);
 
-/** CPU, memory and traffic per period, plus the last minute's, from the health line every Atom logs every 10s with what changed since the last. */
 export const queryAtomMetrics = async ({
 	deploymentId,
 	range,
@@ -129,7 +122,6 @@ export const queryAtomMetrics = async ({
 }: {
 	deploymentId: string;
 	range: AtomMetricsRange;
-	/** When the Atom was created, so a young one's few minutes get fine periods. */
 	createdAt: number;
 }): Promise<GetAtomMetricsResponse> => {
 	const periodSeconds = atomMetricsPeriodSeconds({

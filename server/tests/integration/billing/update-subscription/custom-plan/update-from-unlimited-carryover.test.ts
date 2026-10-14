@@ -1,13 +1,3 @@
-/**
- * Editing a plan's unlimited consumable grant down to a finite allowance must
- * carry the usage recorded while unlimited onto the new finite balance.
- *
- * Red (before the fix): the finite balance starts at the full allowance and
- *   the unlimited-era usage is wiped.
- * Green (after):        usage = tracked, remaining = allowance - tracked.
- *   Usage above the allowance lands as a negative balance, no clamping.
- */
-
 import { test } from "bun:test";
 import { expectBalanceCorrect } from "@tests/integration/utils/expectBalanceCorrect";
 import { TestFeature } from "@tests/setup/v2Features.js";

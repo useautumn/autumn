@@ -42,7 +42,6 @@ export const getPricesAndEnts = async ({
 
 	const curCusProduct = curSameProduct || curMainProduct;
 
-	// Not custom
 	if (!is_custom) {
 		const prices = products.flatMap((p: FullProduct) => p.prices);
 		const entitlements = products.flatMap((p: FullProduct) => p.entitlements);

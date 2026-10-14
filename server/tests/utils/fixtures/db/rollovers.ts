@@ -1,8 +1,5 @@
 import type { EntityRolloverBalance, Rollover } from "@autumn/shared";
 
-/**
- * Create a rollover fixture
- */
 const create = ({
 	id,
 	cusEntId,
@@ -25,10 +22,6 @@ const create = ({
 	expires_at: expiresAt,
 	entities,
 });
-
-// ═══════════════════════════════════════════════════════════════════
-// EXPORT
-// ═══════════════════════════════════════════════════════════════════
 
 export const rollovers = {
 	create,

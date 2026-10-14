@@ -24,10 +24,6 @@ const invalidateCachedFullSubjectOnRedis = async ({
 	redisV2: Redis;
 	flushBalances?: boolean;
 }): Promise<void> => {
-	// No not-ready guard here: the unlink + epoch bump below queues through
-	// reconnect blips (queueIfNotReady). The balance-field flush still skips
-	// itself when the client isn't ready — its fail-fast read machinery treats
-	// a blip as "nothing to flush", same as before.
 	await invalidateSharedBalanceFields({
 		ctx,
 		customerId,
@@ -88,15 +84,10 @@ export const invalidateCachedFullSubject = async ({
 	entityId?: string;
 	ctx: AutumnContext;
 	source?: string;
-	/** Flush cached balances to Postgres before deleting them. Only safe when
-	 *  the caller has NOT just written balances to Postgres directly — the
-	 *  cached balances must still be the source of truth. */
 	flushBalances?: boolean;
 }): Promise<void> => {
 	if (!customerId) return;
 
-	// Freshness mark lives in the chokepoint so no invalidating writer can
-	// forget it; a pure DB write, deliberately not gated on any Redis state.
 	await Promise.all([
 		evictBalanceWorkerCustomer({ ctx, customerId }),
 		markCustomerUpdatedAt({

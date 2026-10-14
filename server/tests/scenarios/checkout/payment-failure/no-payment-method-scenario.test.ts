@@ -4,13 +4,6 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-/**
- * No Payment Method Checkout Scenario
- *
- * Generates an Autumn Checkout URL for a paid product where invoice payment
- * will require adding a payment method when the checkout is confirmed.
- */
-
 test(`${chalk.yellowBright("autumn-checkout: payment failure - no payment method")}`, async () => {
 	const customerId = "checkout-no-payment-method";
 
@@ -39,12 +32,4 @@ test(`${chalk.yellowBright("autumn-checkout: payment failure - no payment method
 		redirect_mode: "always",
 	});
 	console.log("no payment method checkout result:", attachResult);
-
-	// const checkoutUrl = attachResult.checkout_url;
-	// expect(checkoutUrl).toBeDefined();
-	// expect(checkoutUrl).toContain("/c/");
-
-	// const checkoutId = checkoutUrl!.split("/c/")[1];
-	// console.log("no payment method checkout ID:", checkoutId);
-	// console.log("open checkout URL and confirm to reproduce payment_method_required");
 });

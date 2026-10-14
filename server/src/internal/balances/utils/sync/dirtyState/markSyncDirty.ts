@@ -2,19 +2,8 @@ import type { Redis } from "ioredis";
 import type { UsageWindowUpdate } from "../../types/usageWindowUpdate.js";
 import { buildSyncDirtyKeys, type SyncDirtyScope } from "./syncDirtyKeys.js";
 
-/** Leak backstop: dirty state a worker never drains expires on its own.
- *  Reconciliation (sync conflicts / cache rebuild) covers anything expired. */
 const DIRTY_STATE_TTL_SECONDS = 24 * 60 * 60;
 
-/**
- * Hash-field encoding of the dirty state (single hash per customer so the
- * claim can RENAME it atomically):
- *   ce:{cusEntId}              = "1"        (selector set)
- *   ro:{rolloverId}            = "1"        (selector set)
- *   fc:{featureId}:{cusEntId}  = "1"        (feature -> cusEntIds map)
- *   uw:{featureId}             = JSON       ({ts, snapshot}, newest wins)
- *   entityId                   = string     (last write wins)
- */
 export const DIRTY_FIELD_PREFIXES = {
 	cusEnt: "ce:",
 	rollover: "ro:",
@@ -23,10 +12,6 @@ export const DIRTY_FIELD_PREFIXES = {
 	entityId: "entityId",
 } as const;
 
-// Merge fields into the dirty hash, refresh its TTL, then attempt to set the
-// signal marker (NX + TTL). shouldSignal is true when the marker was newly
-// set — i.e. no signal is believed to be in flight. A single Lua eval keeps
-// merge+decision atomic against concurrent marks and claims.
 import MARK_SCRIPT from "@/_luaScriptsV2/syncDirty/markSyncDirty.lua";
 
 export const markSyncDirty = async ({

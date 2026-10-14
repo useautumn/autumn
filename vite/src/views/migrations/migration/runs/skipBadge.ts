@@ -22,7 +22,6 @@ function isNoOpResponse(response: Record<string, unknown> | null): boolean {
 	);
 }
 
-/** Rows written before skip_reason existed fall back to an empty-preview sniff. */
 export function skipBadgeSpec({
 	skipReason,
 	response,

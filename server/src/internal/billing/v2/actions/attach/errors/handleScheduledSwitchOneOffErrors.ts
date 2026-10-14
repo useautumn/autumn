@@ -10,16 +10,6 @@ import {
 import { StatusCodes } from "http-status-codes";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 
-/**
- * Validates one-off prepaid constraints on scheduled switches.
- *
- * Throws when:
- * - planTiming is "end_of_cycle" (scheduled switch / downgrade)
- * - AND the user passed a non-zero quantity for a one-off prepaid price
- *
- * Scheduled switches don't add one-off prices to the next invoice,
- * so we block explicit one-off prepaid quantities until that's supported.
- */
 export const handleScheduledSwitchOneOffErrors = ({
 	ctx,
 	billingContext,

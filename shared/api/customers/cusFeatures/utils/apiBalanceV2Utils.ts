@@ -19,12 +19,6 @@ export const mergeAggregatedBalanceIntoApiBalanceV2 = ({
 	if (!aggregatedFeatureBalance) return apiBalance;
 
 	if (apiBalance.unlimited || aggregatedFeatureBalance.unlimited) {
-		// Unlimited cusEnts still deduct: their raw balance drifts negative as a
-		// usage counter. The aggregate row covers only entity-level cusEnts — a
-		// set disjoint from the in-memory customer-level ones — so ADD its usage
-		// to the in-memory value, and only negate the aggregate balance when the
-		// aggregate itself is unlimited (a finite aggregate balance is a
-		// remaining amount, not a usage counter).
 		const aggregatedUnlimitedUsage = aggregatedFeatureBalance.unlimited
 			? Object.values(aggregatedFeatureBalance.entities ?? {})
 					.reduce(
@@ -64,8 +58,6 @@ export const mergeAggregatedBalanceIntoApiBalanceV2 = ({
 				? apiBalance.next_reset_at
 				: Math.min(apiBalance.next_reset_at, aggregatedNextResetAt);
 
-	// Aggregate rows do not retain the full per-entity/per-product breakdown, so
-	// the top-level summary is merged from the coarse aggregate values only.
 	const baseGranted = new Decimal(aggregatedAllowance)
 		.add(aggregatedPrepaidGrantFromOptions)
 		.add(aggregatedAdjustment)
@@ -74,9 +66,6 @@ export const mergeAggregatedBalanceIntoApiBalanceV2 = ({
 		.add(aggregatedRolloverGrant)
 		.toNumber();
 
-	// Main remaining is floored at 0 (matches legacy behaviour). Rollover
-	// remaining is added on top, since rollover balances are independent of
-	// main balance sign.
 	const mainRemaining = Decimal.max(
 		0,
 		new Decimal(aggregatedBalance),
@@ -85,7 +74,6 @@ export const mergeAggregatedBalanceIntoApiBalanceV2 = ({
 		.add(aggregatedRolloverBalance)
 		.toNumber();
 
-	// Usage mirrors the entity-view formula: (granted - main balance) + rollover usage.
 	const usage = new Decimal(baseGranted)
 		.sub(aggregatedBalance)
 		.add(aggregatedRolloverUsage);

@@ -53,18 +53,15 @@ export function AttachProductSelection({
 				}),
 			)
 		: [];
-	// Removal follows the attach's own entity scope, so it's single-plan only.
 	const canRemovePlan =
 		!isMultiPlan &&
 		!!productId &&
 		!isRemovingPlan &&
 		removableProducts.length > 0;
-	// Add and remove are mutually exclusive: starting one hides the other.
 	const isAddingPlan = additionalPlanValues.some((plan) => !plan.productId);
 	const showAddAction = canAddPlan && !isRemovingPlan;
 	const showRemoveAction = canRemovePlan && !isAddingPlan;
 
-	// A plan in the attach product's group is already expired by the transition.
 	const attachGroupKey = productId
 		? getProductGroupKey({ productId, products })
 		: undefined;

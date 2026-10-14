@@ -26,7 +26,6 @@ export const getOrCreateCustomer = async ({
 	withEntities = false,
 	expand,
 
-	// Entity stuff
 	entityId,
 	entityData,
 	skipUpdate = false,
@@ -85,7 +84,6 @@ export const getOrCreateCustomer = async ({
 		});
 	}
 
-	// Customer is defined by this point!
 	customer = customer as FullCustomer;
 
 	if (entityId && !customer.entity) {

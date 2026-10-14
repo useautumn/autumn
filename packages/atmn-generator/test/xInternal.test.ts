@@ -1,8 +1,3 @@
-/**
- * `x-internal: true` fields are the server's, never the config's. The
- * generator skips them everywhere unless the overlay exposes one by name.
- */
-
 import { expect, test } from "bun:test";
 import type { JsonSchema } from "../src/casing/schemaKeyCasing";
 import { typeExpression } from "../src/emit/emitType";
@@ -25,7 +20,6 @@ test("the real spec: server-owned ids vanish, the Stripe mapping survives", () =
 			"stripePriceId",
 		),
 	).toBe(false);
-	// `processors.stripe.priceId` is a mapping the user may write, not a DB id.
 	expect(
 		fieldsAtPath({
 			schema: envelope,
@@ -33,7 +27,6 @@ test("the real spec: server-owned ids vanish, the Stripe mapping survives", () =
 			path: "plans.items.price.processors.stripe",
 		})?.has("priceId"),
 	).toBe(true);
-	// An x-internal subtree is not descended into at all.
 	expect(
 		fieldsAtPath({
 			schema: envelope,

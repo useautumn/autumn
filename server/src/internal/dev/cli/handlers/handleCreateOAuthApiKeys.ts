@@ -45,15 +45,6 @@ const parseBody = (rawBody: string): OAuthApiKeyRequestBody => {
 	});
 };
 
-/**
- * Create API keys from an OAuth access token.
- * Called by the CLI after completing the OAuth flow.
- *
- * POST /cli/api-keys
- * Authorization: Bearer <oauth_access_token>
- *
- * Returns: { sandbox_key, prod_key, org_id }
- */
 export const handleCreateOAuthApiKeys = createRoute({
 	scopes: [Scopes.Public],
 	handler: async (c) => {
@@ -64,7 +55,6 @@ export const handleCreateOAuthApiKeys = createRoute({
 		const requestedScopes = parseRequestedScopes(body.scopes);
 		const resource = typeof body.resource === "string" ? body.resource : null;
 
-		// Get Bearer token from Authorization header
 		const authHeader = c.req.header("Authorization");
 		if (!authHeader?.startsWith("Bearer ")) {
 			throw new RecaseError({
@@ -92,7 +82,6 @@ export const handleCreateOAuthApiKeys = createRoute({
 				statusCode: 401,
 			});
 		}
-		// Tokens may carry legacy CRUDL scopes (old CLI); store modern R/W on keys.
 		const apiKeyScopes = [
 			...new Set(
 				(requestedScopes ?? tokenRecord.scopes).map(
@@ -156,7 +145,6 @@ export const handleCreateOAuthApiKeys = createRoute({
 			generatedAt: new Date().toISOString(),
 		};
 
-		// Create API keys for both sandbox and production
 		const [sandboxKey, prodKey] = await Promise.all([
 			createKey({
 				db,

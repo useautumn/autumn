@@ -64,10 +64,6 @@ export const getCachedFullSubject = async ({
 		customerId,
 	});
 
-	// Subject + epoch keys share the `{customerId}` hash tag and live on the
-	// same Redis slot, so a single pipeline fetches both in one round trip.
-	// Read-only GETs — epoch TTL is refreshed on writes (setCachedFullSubject
-	// Lua) and on invalidations, not on reads, to avoid write amplification.
 	const pipelineResults = await runRedisOp({
 		operation: async (redis) =>
 			throwOnPipelineConnectionError(
@@ -88,8 +84,6 @@ export const getCachedFullSubject = async ({
 	const cachedRaw = (subjectEntry?.[1] ?? null) as string | null;
 	const epochRaw = (epochEntry?.[1] ?? null) as string | null;
 
-	// Missing epoch key is treated as 0; the next invalidation will INCR it
-	// from missing to 1, which mismatches any cached subject written at 0.
 	const parsedEpoch =
 		epochRaw !== null ? Number.parseInt(epochRaw, 10) : Number.NaN;
 	const currentSubjectViewEpoch = Number.isNaN(parsedEpoch) ? 0 : parsedEpoch;
@@ -124,9 +118,6 @@ export const getCachedFullSubject = async ({
 	}
 
 	if (cached.subjectViewEpoch !== currentSubjectViewEpoch) {
-		// Allow-listed high-cardinality customers serve the stale subject and
-		// rehydrate via the warm task, instead of rebuilding 10k+ entities
-		// inline on every reader.
 		if (staleWhileRevalidate && shouldWarmCache(customerId)) {
 			logger.warn(
 				`[getCachedFullSubject] Serving stale-while-revalidate for ${customerId}${entityId ? `:${entityId}` : ""}, cached= ${cached.subjectViewEpoch}, current= ${currentSubjectViewEpoch}, source: ${source}`,
@@ -210,8 +201,6 @@ export const getCachedFullSubject = async ({
 	}
 
 	const isCustomerSubject = !entityId;
-	// Capped features may have no entitlements, so they aren't guaranteed to be
-	// in meteredFeatures; union them in so their `_usage_windows` field is read.
 	const usageWindowFeatureIds = new Set(cached.usageWindowFeatureIds ?? []);
 	const batchFeatureIds = [
 		...new Set([...cached.meteredFeatures, ...usageWindowFeatureIds]),

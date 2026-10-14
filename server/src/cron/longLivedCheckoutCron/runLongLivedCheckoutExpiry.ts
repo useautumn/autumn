@@ -21,7 +21,6 @@ import type { CronContext } from "../utils/CronContext";
 
 const PAGE_SIZE = 100;
 
-// Served by idx_metadata_on_type_expires_at; deferred links are CheckoutSessionV2 rows tagged with the link.
 const getExpiredLongLivedCheckoutMetadata = ({
 	db,
 	now,
@@ -84,7 +83,6 @@ const expireLongLivedCheckout = async ({
 	if (sessionId) {
 		const stripeCli = createStripeCli({ org: ctx.org, env });
 		const session = await stripeCli.checkout.sessions.retrieve(sessionId);
-		// Paid but not yet linked: leave it for the completion webhook and recheck later.
 		if (session.status === "complete") {
 			await postponeExpiry({ cronContext, pendingMetadata });
 			return;

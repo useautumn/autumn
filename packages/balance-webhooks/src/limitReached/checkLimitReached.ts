@@ -13,7 +13,6 @@ import {
 import { findBlockingUsageLimit } from "./findBlockingUsageLimit.js";
 import { buildLimitReachedIdempotencyKey } from "./limitReachedIdempotencyKey.js";
 
-/** Fires when the feature went from allowed to refused: what prod's checkLimitReached sends, decided from the log alone. */
 export const checkLimitReached = ({
 	command,
 	outcome,
@@ -25,7 +24,6 @@ export const checkLimitReached = ({
 	before: WorkerFullSubject;
 	after: WorkerFullSubject;
 }): BalanceWebhookEffect[] => {
-	// Drawn on the deduction's own rows; almost every track leaves the feature allowed, so `before` is rarely read.
 	const check = checkAfterDeduction({ fullSubject: before, command, outcome });
 	const now = check.after;
 	if (now.allowed) return [];
@@ -34,7 +32,6 @@ export const checkLimitReached = ({
 	const { orgId, env, customerId, entityId } = command.identity;
 	const limitType = now.limitType ?? "included";
 
-	// A windowed cap is named in full, its live window and filter with it, so the receiver knows which one closed.
 	const blockingUsageLimit =
 		limitType === "usage_limit"
 			? findBlockingUsageLimit({ command, fullSubject: after })
@@ -62,7 +59,6 @@ export const checkLimitReached = ({
 				featureId: command.featureId,
 				limitType,
 				filter: blockingUsageLimit?.filter,
-				// The check is derived from the mutation, whose id is the command's own.
 				commandId: command.requestId,
 			}),
 		},

@@ -1,10 +1,5 @@
 import type { Page } from "playwright-core";
 
-/**
- * Self-contained Playwright function for completing a Stripe 3DS Invoice Confirmation.
- * NO external imports — this function must be serializable via fn.toString()
- * for Kernel Playwright Execution. (type imports are fine — Bun strips them)
- */
 export const invoiceConfirmation = async ({
 	page,
 	url,
@@ -15,7 +10,6 @@ export const invoiceConfirmation = async ({
 	await page.goto(url, { waitUntil: "domcontentloaded", timeout: 30000 });
 	console.log("[invoiceConfirmation] Page loaded");
 
-	// Find and click the "Confirm payment" button
 	const confirmBtn = page
 		.locator("button")
 		.filter({ hasText: /confirm payment/i })
@@ -24,16 +18,13 @@ export const invoiceConfirmation = async ({
 	await confirmBtn.click();
 	console.log("[invoiceConfirmation] Confirm payment clicked");
 
-	// Wait for the 3DS challenge iframe to appear
 	await page.waitForTimeout(3000);
 
 	let authorizeClicked = false;
 
-	// Poll for the 3DS challenge frame
 	for (let i = 0; i < 20; i++) {
 		await page.waitForTimeout(2000);
 
-		// Try the direct #test-source-authorize-3ds button in any frame
 		for (const frame of page.frames()) {
 			try {
 				const btn = frame.locator("#test-source-authorize-3ds");
@@ -45,9 +36,7 @@ export const invoiceConfirmation = async ({
 					authorizeClicked = true;
 					break;
 				}
-			} catch {
-				// Frame may not be ready yet
-			}
+			} catch {}
 		}
 		if (authorizeClicked) break;
 	}
@@ -58,7 +47,6 @@ export const invoiceConfirmation = async ({
 		);
 	}
 
-	// Wait for 3DS authentication to complete + webhook processing
 	await page.waitForTimeout(10000);
 	console.log("[invoiceConfirmation] 3DS confirmation complete");
 };

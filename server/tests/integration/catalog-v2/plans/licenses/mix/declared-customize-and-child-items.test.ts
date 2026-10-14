@@ -1,11 +1,3 @@
-/**
- * catalogV2.update — same-call child item edit × parent licenses[] customize.
- *
- * Non-overlapping slots compose: child adds a boolean, parent customizes the
- * license base price → both land on the parent's license product.
- * Same slot: both change messages → declared customize wins; the child still
- * has its own new allowance.
- */
 import { test } from "bun:test";
 import { BillingInterval } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";

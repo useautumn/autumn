@@ -4,7 +4,6 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { updateCachedCustomerData } from "@/internal/customers/cache/fullSubject/index.js";
 
-/** The columns `customer_data` fills: an empty name or email, and a changed `send_email_receipts`. */
 export const customerDataToCustomerUpdates = ({
 	ctx,
 	customer,

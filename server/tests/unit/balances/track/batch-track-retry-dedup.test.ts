@@ -1,48 +1,3 @@
-/**
- * Regression pin for cubic-dev-ai P1 (confidence 8/10) on the batch
- * async-track work. NOT a fix-and-green test — this asserts the CURRENT
- * accepted behavior and is expected to start and stay green.
- *
- * Cubic P1 (verbatim):
- *   "Using request-scoped IDs for messageDeduplicationId breaks dedup
- *   across retried partial failures, allowing duplicate track jobs."
- *
- * The dedup ID is derived as `${ctx.id}-${index}` where ctx.id is the
- * per-request ID. Two distinct HTTP requests carrying the same batch body
- * therefore generate two distinct sets of MessageDeduplicationId values,
- * so a client-driven retry of a request whose 202 was lost in transit
- * will re-enqueue every item.
- *
- * Why we accepted this trade-off (do NOT undo this pin without addressing
- * all three points):
- *
- * 1. Matches existing single-track behavior. See `addTaskToQueue` in
- *    server/src/queue/queueUtils.ts: the single-track path derives its
- *    dedup ID from a freshly generated random `generateId("dedup")`, also
- *    with no client-supplied idempotency token. Client retries on the
- *    single-track path have the same duplication risk when the client does
- *    not supply an idempotency key. Pinning no-key batch behavior here keeps
- *    the two no-key paths consistent.
- *
- * 2. Same-request retries ARE protected. The purpose `${ctx.id}-${index}`
- *    actually serves is collapsing AWS SDK auto-retries inside a single
- *    SendMessageBatch call. That ID is stable across those SDK-internal
- *    retries, so if AWS returns a 500 and the SDK retries the call, no
- *    duplicate is enqueued.
- *
- * 3. Client-supplied per-item idempotency_key is handled by Redis replay,
- *    not SQS deduplication. This pin covers queue dedup fallback behavior.
- *
- * If this test starts failing:
- *   DO NOT "fix" it by undoing the pin. The fallback behavior for items
- *   without idempotency keys is intentional.
- *
- * Layer (declared in the handoff, not re-derived):
- *   Symptom surfaces in: server/src/internal/balances/track/runBatchTrack.ts:entries.map
- *   Root cause lives in: the API contract — idempotency key is optional
- *   Fix layer: declined — no-key fallback behavior is intentional
- */
-
 import { toBatchTrackEntries } from "@/internal/balances/track/batchTrackEntries.js";
 import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
 import {
@@ -180,8 +135,6 @@ describe("runBatchTrack — retry-dedup regression pin (cubic P1)", () => {
 			"req_pin_second-2",
 		]);
 
-		// The defining symptom of the pinned trade-off: same body, two requests,
-		// zero overlap in dedup IDs. SQS would enqueue both sets.
 		const overlap = firstDedupIds.filter((id) => secondDedupIds.includes(id));
 		expect(overlap).toEqual([]);
 	});
@@ -200,9 +153,6 @@ describe("runBatchTrack — retry-dedup regression pin (cubic P1)", () => {
 			);
 		}
 
-		// Pin the derivation formula itself, not just the literal values: if a
-		// refactor changes the format, this assertion is the single line that
-		// describes the contract the SDK auto-retry guard depends on.
 		entries.forEach((entry, index) => {
 			expect(entry.MessageDeduplicationId).toBe(`${ctx.id}-${index}`);
 		});

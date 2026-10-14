@@ -6,10 +6,6 @@ import {
 	useReactTable,
 } from "@tanstack/react-table";
 
-/**
- * Custom hook for customer tables with standardized configuration.
- * Provides consistent table setup across all customer-related tables.
- */
 export function useCustomerTable<
 	TData extends { id?: string | null; internal_id?: string },
 >({
@@ -29,7 +25,6 @@ export function useCustomerTable<
 		getCoreRowModel: getCoreRowModel(),
 		getFilteredRowModel: getFilteredRowModel(),
 		enableSorting,
-		// Use stable customer ID instead of array index for row identity
 		getRowId: (row) => row.id || row.internal_id || crypto.randomUUID(),
 		...options,
 	});

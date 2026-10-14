@@ -4,8 +4,6 @@ import type { ApiCustomerLicenseV0, ApiCustomerV5 } from "@autumn/shared";
 type LicenseExpectation = Partial<ApiCustomerLicenseV0> &
 	Pick<ApiCustomerLicenseV0, "license_plan_id">;
 
-/** One entry per expectation, matched by license_plan_id (+ parent_plan_id
- * when given); only specified fields are checked. `count` pins the total. */
 export const assertLicensesMatch = ({
 	actual,
 	licenses,
@@ -35,7 +33,6 @@ export const assertLicensesMatch = ({
 	}
 };
 
-/** Asserts the customer's `licenses` array (see assertLicensesMatch). */
 export const expectCustomerLicenses = ({
 	customer,
 	licenses,

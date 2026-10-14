@@ -36,7 +36,6 @@ export const handleSetupPayment = createRoute({
 
 		const stripeCli = createStripeCli({ org, env });
 
-		// check if user already specified payment methods in their request
 		const hasUserSpecifiedPaymentMethods =
 			checkout_session_params?.payment_method_types;
 
@@ -56,7 +55,6 @@ export const handleSetupPayment = createRoute({
 				url: session.url,
 			});
 		} catch (error: any) {
-			// payment method errors
 			if (
 				error.message &&
 				(error.message.includes("payment method") ||
@@ -72,7 +70,6 @@ export const handleSetupPayment = createRoute({
 				}
 
 				try {
-					// card payment method fallback
 					const fallbackSession = await stripeCli.checkout.sessions.create({
 						...sessionParams,
 						payment_method_types: ["card"],
@@ -87,7 +84,6 @@ export const handleSetupPayment = createRoute({
 						url: fallbackSession.url,
 					});
 				} catch (fallbackError: any) {
-					// if fallback failed
 					logger.error(
 						"Failed to create checkout session even with card payment method",
 						{
@@ -105,7 +101,6 @@ export const handleSetupPayment = createRoute({
 				}
 			}
 
-			// Re-throw errors
 			throw error;
 		}
 	},

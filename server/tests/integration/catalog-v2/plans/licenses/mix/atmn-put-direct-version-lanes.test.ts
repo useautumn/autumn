@@ -1,13 +1,3 @@
-/**
- * catalogV2 — atmn PUT lanes that the four-row Dashboard compose does not cover.
- *
- * Contract:
- *   G  Dashboard only on child v2 → parent v1 unchanged; parent v2 gets it
- *   H  preview: both parents license_action explicit; license_changes add
- *      Dashboard; no unlink
- *   I  restated overlays (v1=80, v2=40) stay; Dashboard still flows
- */
-
 import { expect, test } from "bun:test";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";

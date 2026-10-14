@@ -1,27 +1,11 @@
-/**
- * Worker-side body idempotency for queued tracks.
- *
- * Contract under test:
- *   - Default (async/batch messages): the worker claims `track:${key}` before
- *     running — its only body-key dedup for messages with no accept-time claim.
- *   - validateTrackBodyIdempotencyKey: false (single-lane messages, which
- *     claimed at accept time): the worker runs WITHOUT claiming.
- *   - A duplicate claim is swallowed (message acked, no deduction, no rethrow).
- *   - Messages without a body idempotency_key never touch the claim.
- */
-
 import { afterAll, describe, expect, test } from "bun:test";
 import { AppEnv, ErrCode, RecaseError, type TrackParams } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 
-// Mocks are stateless so tests can run concurrently: behavior is driven by
-// the key itself (keys containing "-dup" claim as duplicates), and calls are
-// asserted by filtering on each test's unique ids.
 const claimCalls: Array<{ idempotencyKey: string }> = [];
 const releaseCalls: Array<{ idempotencyKey: string }> = [];
 const runTrackV3Calls: Array<{ body: TrackParams }> = [];
 
-// These cover the legacy replay; the worker case turns the rollout on itself.
 const previousRollout = process.env.BALANCE_WORKER_ROLLOUT_ENABLED;
 process.env.BALANCE_WORKER_ROLLOUT_ENABLED = "false";
 
@@ -77,8 +61,6 @@ const makeCtx = () =>
 		env: AppEnv.Sandbox,
 		logger: {
 			info: () => undefined,
-			// warn included: the idempotency path hands this logger to fire-and-forget
-			// Dynamo-mirror work that logs failures after the test completes.
 			warn: () => undefined,
 		},
 	}) as unknown as AutumnContext;

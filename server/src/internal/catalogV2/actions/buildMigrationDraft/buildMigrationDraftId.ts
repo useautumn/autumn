@@ -22,7 +22,6 @@ const planIdsFromFilter = ({
 	return [...ids].sort((left, right) => left.localeCompare(right));
 };
 
-/** Name at most two plans; a 6-variant $or must not become the URL. */
 const MAX_NAMED_PLANS = 2;
 
 const namedPlans = ({ planIds }: { planIds: string[] }): string => {
@@ -31,14 +30,12 @@ const namedPlans = ({ planIds }: { planIds: string[] }): string => {
 	return `${planIds[0]}-and-${planIds.length - 1}-more`;
 };
 
-/** Plan ids only: `pro`, `premium-and-pro`, `growth-and-5-more`. */
 export const planFilterToMigrationIdScope = ({
 	planFilter,
 }: {
 	planFilter: PlanFilter;
 }): string => namedPlans({ planIds: planIdsFromFilter({ planFilter }) });
 
-/** `{scope}-update-{uid}` — uid is the uniqueness; scope is a short label. */
 export const buildMigrationDraftId = ({
 	planFilter,
 }: {

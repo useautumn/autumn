@@ -70,7 +70,6 @@ export type CustomerExportPhase =
 
 export const CustomerExportPhaseSchema = z.enum(CustomerExportPhase);
 
-/** While scanning, processed_rows counts Stripe subscriptions found so far. */
 export const CustomerExportProgressSchema = z.object({
 	phase: CustomerExportPhaseSchema,
 	processed_rows: z.number(),
@@ -87,8 +86,6 @@ export const CUSTOMER_EXPORT_PROCESSED_ROWS_KEY = "processed_rows";
 
 export const CUSTOMER_EXPORT_PHASE_KEY = "phase";
 
-/** A retried run resets and re-counts, so processed is capped at the total
- * once exporting; the scan count has no total to cap against. */
 export const runMetadataToCustomerExportProgress = ({
 	metadata,
 }: {

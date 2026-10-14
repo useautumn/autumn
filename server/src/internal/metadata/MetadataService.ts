@@ -15,9 +15,6 @@ const hydrateMetadataRow = (row: Metadata): Metadata => {
 	return row;
 };
 
-/**
- * MetadataService handles CRUD operations for the metadata table.
- */
 export class MetadataService {
 	static async insert({ db, data }: { db: DrizzleCli; data: MetadataInsert }) {
 		const insertedMetadata = await db.insert(metadata).values(data).returning();
@@ -62,11 +59,6 @@ export class MetadataService {
 		return hydrateMetadataRow(meta as Metadata);
 	}
 
-	/**
-	 * Atomically transitions a metadata row from one type to another.
-	 * Returns true only for the caller whose update matched the `fromType`
-	 * predicate — concurrent executors racing on the same row get false.
-	 */
 	static async claim({
 		db,
 		id,
@@ -87,10 +79,6 @@ export class MetadataService {
 		return claimedRows.length > 0;
 	}
 
-	/**
-	 * Repoints a deferred row from one Stripe invoice to its replacement.
-	 * Returns false when another writer already moved (or removed) the row.
-	 */
 	static async swapStripeInvoiceId({
 		db,
 		id,

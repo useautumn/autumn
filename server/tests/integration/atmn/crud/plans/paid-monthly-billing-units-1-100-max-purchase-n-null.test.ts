@@ -1,9 +1,3 @@
-/**
- * atmn crud/plans — paid [monthly] [billing_units 1, 100] [max_purchase n, null]
- *
- * One line of plans/atmn-v3/07_tests.md. [a, b] is a matrix looped INSIDE this file.
- */
-
 import { expect, test } from "bun:test";
 import {
 	configBody,
@@ -57,12 +51,9 @@ for (const billingUnits of BILLING_UNITS) {
 					const items = pro?.items as Array<Record<string, unknown>>;
 					const item = items.find((entry) => entry.feature_id === "seats");
 					const price = item?.price as Record<string, unknown> | undefined;
-					// A pull elides the spec default: billingUnits 1 reads the same absent.
 					expect(price?.billing_units).toBe(
 						billingUnits === 1 ? undefined : billingUnits,
 					);
-					// Pull omits a null field rather than writing it explicitly, so a
-					// null max_purchase round-trips as absent, not `max_purchase: null`.
 					if (maxPurchase === null) {
 						expect(price?.max_purchase).toBeUndefined();
 					} else {

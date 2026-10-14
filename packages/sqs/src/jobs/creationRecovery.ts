@@ -10,7 +10,6 @@ import { z } from "zod/v4";
 import { job } from "../lib/job/job.js";
 import type { JobPayload } from "../lib/job/types/job.js";
 
-/** Where the request was when it failed; `autumn_committed` is past the point a replay may repeat. */
 const customerCreationRecoveryStage = z.enum([
 	"lookup",
 	"pre_commit",
@@ -27,7 +26,6 @@ const creationRecoveryBase = z.object({
 	failedAt: z.number(),
 });
 
-/** The validated get-or-create request; replay hands it back to the same action a live request uses. */
 export const customerCreationRecoveryJob = job({
 	name: "customer-creation-recovery",
 	queue: "customerCreationRecovery",
@@ -46,7 +44,6 @@ export const customerCreationRecoveryJob = job({
 	}),
 });
 
-/** The validated entities.create request, replayed in full through the same batch create. */
 export const entityCreationRecoveryJob = job({
 	name: "entity-creation-recovery",
 	queue: "customerCreationRecovery",
@@ -71,7 +68,6 @@ export type EntityCreationRecoveryJobPayload = JobPayload<
 	typeof entityCreationRecoveryJob
 >;
 
-/** One FIFO group per subject: a customer's replays land in failure order, other customers run beside it. */
 export const creationRecoveryGroupId = ({
 	orgId,
 	env,
@@ -85,7 +81,6 @@ export const creationRecoveryGroupId = ({
 const dedupeId = ({ prefix, fields }: { prefix: string; fields: unknown }) =>
 	`${prefix}-${Bun.hash(JSON.stringify(fields)).toString(16)}`;
 
-/** The same request failing at the same stage is one message, whichever attempt enqueues first. */
 export const customerCreationRecoveryDedupeId = ({
 	payload,
 }: {

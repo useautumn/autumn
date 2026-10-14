@@ -15,7 +15,6 @@ type UsageUpdate = {
 	usage: number;
 };
 
-/** Draft and save the live usage counter of a plan-inherited cap. */
 export function usePlanUsageDraft({
 	usageLimit,
 }: {

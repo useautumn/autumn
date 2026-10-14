@@ -1,11 +1,3 @@
-/**
- * atmn scenarios/archive — archived parent plan + archived license plan both restored in one push [parent listed first, license plan listed first] → both active, link intact, no order dependence
- *
- * one push carries the whole batch, so restore order must not matter
- *
- * One line of plans/atmn-v3/07_tests.md. [a, b] is a matrix looped INSIDE this file.
- */
-
 import { expect, test } from "bun:test";
 import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 import {
@@ -38,14 +30,6 @@ const catalogPlans = async ({
 	return catalog.plans;
 };
 
-/**
- * Archive/restore is a partial update — only planId and the flag need
- * restating. The parent also carries its licenses[] every time: cleared
- * alongside `archived: true` (the anchor-lifecycle guard reads the still-
- * declared link regardless of the parent's own archived state, so the unlink
- * has to be same-call), and restated alongside `archived: false` so the
- * restore re-validates the link against the child's same-call unarchive.
- */
 const row = ({
 	planId,
 	archived,

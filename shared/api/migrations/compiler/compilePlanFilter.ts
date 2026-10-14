@@ -8,10 +8,6 @@ import {
 } from "./irToSql/irToSql.js";
 import { planRegistry } from "./registry/planRegistry.js";
 
-/**
- * End-to-end: validated `PlanFilter` → parameterized SQL fragment, rooted
- * at the catalog `products` table.
- */
 export function compilePlanFilter({
 	filter,
 	ctx,

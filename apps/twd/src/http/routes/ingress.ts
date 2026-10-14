@@ -31,7 +31,6 @@ type MapWrite = {
 	map?: Record<string, string>;
 };
 
-/** Public (no session auth): map writes use TWD_INGRESS_TOKEN, connect events come from Stripe. */
 export const ingressRoutes = new Hono<TwdHono>()
 	.post("/ingress/map", async (c) => {
 		const bearer = c.req.header("authorization")?.replace(/^Bearer\s+/i, "");

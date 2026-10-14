@@ -5,7 +5,6 @@ import {
 	PlanRowActionsMenu,
 } from "@/components/forms/shared/PlanRowActionsMenu";
 
-/** Customize and the row menu joined as one split button. */
 export function PlanRowControls({
 	isCustom = false,
 	onCustomize,

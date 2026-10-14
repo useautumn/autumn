@@ -9,15 +9,6 @@ import { CusService } from "@/internal/customers/CusService.js";
 
 const billingUnits = 12;
 
-/**
- * Subscription Update - Entitlement Balance Tests
- *
- * These tests verify that subscription updates correctly update customer
- * entitlement balances at the database level. These are lower-level tests
- * that check internal state using CusService.getFull() to ensure the
- * balance increment/decrement logic works correctly.
- */
-
 test.concurrent(`${chalk.yellowBright("update-quantity: increment entitlement balance on upgrade")}`, async () => {
 	const customerId = "ent-balance-upgrade";
 
@@ -81,7 +72,6 @@ test.concurrent(`${chalk.yellowBright("update-quantity: increment entitlement ba
 	);
 	const afterBalance = afterEntitlement?.balance || 0;
 
-	// +5 units × 12 billing_units = +60 messages
 	expect(afterBalance).toBe(beforeBalance + 60);
 });
 
@@ -148,6 +138,5 @@ test.concurrent(`${chalk.yellowBright("update-quantity: decrement entitlement ba
 	);
 	const afterBalance = afterEntitlement?.balance || 0;
 
-	// -5 units × 12 billing_units = -60 messages
 	expect(afterBalance).toBe(beforeBalance - 60);
 });

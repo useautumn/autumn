@@ -3,18 +3,15 @@ import * as path from "node:path";
 import alias from "esbuild-plugin-path-alias";
 import { defineConfig, type Options } from "tsup";
 
-// Path aliases that match tsconfig.json
 const pathAliases = {
 	"@": path.resolve("./src/libraries/react"),
 	"@sdk": path.resolve("./src/sdk"),
 	"@useautumn/sdk": path.resolve("../sdk/src"),
 };
 
-// Packages to bundle (not external) - workspace packages that should be inlined
 const noExternal = ["@useautumn/sdk"];
 
 const reactConfigs: Options[] = [
-	// New Backend (src/backend)
 	{
 		entry: ["src/backend/**/*.ts"],
 		format: ["cjs", "esm"],
@@ -34,7 +31,6 @@ const reactConfigs: Options[] = [
 		},
 	},
 
-	// Better Auth Plugin (src/better-auth)
 	{
 		entry: ["src/better-auth/**/*.ts"],
 		format: ["cjs", "esm"],
@@ -54,7 +50,6 @@ const reactConfigs: Options[] = [
 		},
 	},
 
-	// New React (src/react) - TanStack Query based (bundled)
 	{
 		entry: ["src/react/**/*.{ts,tsx}"],
 		format: ["cjs", "esm"],
@@ -81,7 +76,6 @@ const reactConfigs: Options[] = [
 ];
 
 export default defineConfig([
-	// Main SDK entry point (re-exports @useautumn/sdk)
 	{
 		format: ["cjs", "esm"],
 		entry: ["./src/sdk/index.ts"],

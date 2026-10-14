@@ -3,11 +3,6 @@ import { customerProductActions } from "@/internal/customers/cusProducts/actions
 import type { StripeWebhookContext } from "../../../webhookMiddlewares/stripeWebhookContext.js";
 import type { StripeScheduleReleasedContext } from "../stripeScheduleReleasedContext.js";
 
-/**
- * Releasing a schedule leaves the subscription running on its current items
- * indefinitely, so any phase end and future phase Autumn imported from it are
- * stale. Autumn-managed schedules are left alone: restore rebuilds those.
- */
 export const detachReleasedSchedulePhases = async ({
 	ctx,
 	eventContext,

@@ -1,13 +1,3 @@
-/**
- * What a backdate recreate carries off the live subscription:
- * - a repeating coupon keeps only its remaining cycles, so the next renewals stay discounted
- *   exactly as long as they would have been;
- * - a past_due subscription's open invoice stays open and is not charged a second time;
- * - a plan canceling at period end stays canceling: the recreated subscription keeps the old
- *   period end as its cancel date;
- * - a send_invoice subscription keeps its net terms and invoice payment method types.
- */
-
 import { expect, test } from "bun:test";
 import { ms, type SetPlansParamsV0Input, stripeRefToId } from "@autumn/shared";
 import { driveProductPastDue } from "@tests/integration/billing/utils/driveProductPastDue";

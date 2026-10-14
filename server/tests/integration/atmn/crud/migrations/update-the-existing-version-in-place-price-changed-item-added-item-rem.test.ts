@@ -1,11 +1,3 @@
-/**
- * atmn crud/migrations — update the existing version in place [price changed, item added, item removed, trial changed, license included changed] with customers on it → migration drafted: preview names it, applied result names it, one undrafted migration row persists
- *
- * the `versionedPro` base config: base price, prepaid seat item, usage item, trial, seat license; every line has customers attached
- *
- * One line of plans/atmn-v3/07_tests.md. [a, b] is a matrix looped INSIDE this file.
- */
-
 import { expect, test } from "bun:test";
 import { seedVersionableCustomer } from "@tests/integration/catalog-v2/plans/migrations/utils/seedVersionableCustomer.js";
 import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
@@ -37,14 +29,12 @@ const targetsProV1 = (migrations: PreviewMigrations): boolean =>
 const TRIAL_FIELD =
 	'freeTrial: { durationLength: 14, durationType: "day", cardRequired: true, onEnd: "bill" },';
 
-/** `pro` v1 with a longer trial — `versionedPro` only parameterizes price/items. */
 const withLongerTrial = (): string =>
 	versionedPro({ versionSlug: "v1" }).replace(
 		TRIAL_FIELD,
 		'freeTrial: { durationLength: 30, durationType: "day", cardRequired: true, onEnd: "bill" },',
 	);
 
-/** `pro` v1 licensing `seat` — `versionedPro` has no `licenses` key to parameterize. */
 const withLicense = ({ included }: { included: number }): string =>
 	versionedPro({ versionSlug: "v1" }).replace(
 		"billingControls: {",
@@ -58,7 +48,6 @@ type Case = {
 	before: string;
 	after: string;
 	needsLicense?: boolean;
-	/** Set while the behavior is undecided: the cell is a todo, not a red. */
 	pending?: string;
 };
 
@@ -82,7 +71,6 @@ const cases: Case[] = [
 		name: "trial changed",
 		before: versionedPro({ versionSlug: "v1" }),
 		after: withLongerTrial(),
-		// The server strips free_trial from the migratable diff on purpose today.
 		pending: "decide whether a trial-only edit drafts a migration",
 	},
 	{
@@ -109,8 +97,6 @@ for (const { name, before, after, needsLicense = false, pending } of cases) {
 					s.platform.create({
 						userEmail: `${uniqueTestId("atmn")}@autumn.test`,
 					}),
-					// The one real billing attach in this file — every other case uses
-					// the cheap DB-only seed to keep the matrix fast.
 					...(name === "price changed"
 						? [s.customer({ paymentMethod: "success" })]
 						: []),
@@ -156,8 +142,6 @@ for (const { name, before, after, needsLicense = false, pending } of cases) {
 					id: result.migrationIds[0],
 				});
 				expect(migration).toBeDefined();
-				// A migration row has no explicit status column — `archived: false` is
-				// what a freshly persisted draft looks like before anyone runs it.
 				expect(migration.archived).toBe(false);
 			} finally {
 				scenario.cleanup();

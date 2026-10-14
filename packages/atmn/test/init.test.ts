@@ -1,27 +1,3 @@
-/**
- * `atmn init`: auth → path → pull → skills → next steps, one code path for a
- * terminal and for an agent. The network is faked; the repo on disk is real.
- *
- * Contract:
- *   auth
- *     - main key on disk and valid          → "✓ Logged in as <org> (<slug>)"
- *     - no key                              → offer login (headless: hint --login, stop)
- *     - key answers as a sub-sandbox        → "!" soft error, offer login; after login the
- *                                             sub key moves to AUTUMN_SANDBOX_<ID>_SECRET_KEY
- *                                             and AUTUMN_SANDBOX_ID is pinned
- *   path
- *     - monorepo                            → --path and --name are asked (hinted headless)
- *     - single repo                         → config in autumn/, no questions
- *     - monorepo writes package.json (dep on atmn), config + collection files,
- *       the root marker `"atmn": { "config" }` and an `"atmn"` root script
- *   pull
- *     - the pull runs against the config dir; its line count is reported
- *   skills
- *     - written to <config dir>/skills
- *   next steps
- *     - install, push, npx skills add
- */
-
 import { afterEach, beforeEach, expect, test } from "bun:test";
 import {
 	existsSync,
@@ -44,7 +20,6 @@ import { createPrompter } from "../src/prompt/prompt";
 chalk.level = 0;
 
 const dirs: string[] = [];
-/** A developer's own keys must not answer for the fakes. */
 const clearAutumnEnv = () => {
 	for (const key of Object.keys(process.env))
 		if (key.startsWith("AUTUMN_")) delete process.env[key];
@@ -99,11 +74,9 @@ const capture = () => {
 	return { lines, write: (text: string) => lines.push(text) };
 };
 
-/** Fakes that record what init asked of them. */
 const deps = ({
 	keyAnswers = {},
 }: {
-	/** secret key → what /me says for it. */
 	keyAnswers?: Record<string, typeof org | typeof sub>;
 } = {}) => {
 	const calls = {
@@ -169,7 +142,6 @@ const deps = ({
 		},
 		pull: async ({ configDir }) => {
 			calls.pull.push(configDir);
-			// Scaffolding is init's job; a pull that finds no config is a bug.
 			if (!existsSync(join(configDir, "autumn.config.ts")))
 				throw new Error("pull ran before the config was scaffolded");
 			return { appended: ["messages", "pro"], replaced: [], deleted: [] };
@@ -213,7 +185,6 @@ test("single repo, valid key: no questions, config in autumn/, skills beside it"
 	});
 
 	expect(calls.login).toBe(0);
-	// The config imports the CLI, so the root package gains the dependency.
 	expect(calls.install).toEqual(["npm"]);
 	const configDir = join(root, "autumn");
 	expect(calls.pull).toEqual([configDir]);
@@ -232,7 +203,6 @@ test("single repo, valid key: no questions, config in autumn/, skills beside it"
 	expect(text).toContain("✓ Pulled 2 entries");
 	expect(text).toContain("✓ Skills:");
 	expect(text).toContain("atmn push");
-	// A single-package repo still gets the marker so `-c` stays optional.
 	const manifest = JSON.parse(readFileSync(join(root, "package.json"), "utf8"));
 	expect(manifest.atmn).toEqual({ config: "autumn/autumn.config.ts" });
 	expect(manifest.dependencies.atmn).toBeDefined();
@@ -367,7 +337,6 @@ test("no key, --keyless: provisions an org named after the package, then continu
 	const text = lines.join("");
 	expect(text).toContain("Created sandbox org");
 	expect(text).toContain("atmn login --claim");
-	// The claim URL is for a person; headless output carries the command only.
 	expect(text).not.toContain("https://app.useautumn.com/claim");
 });
 
@@ -503,7 +472,6 @@ test("monorepo, headless: hints --path, then --name, then does everything", asyn
 	expect(rootPkg.scripts.atmn).toBe(
 		'atmn -c "packages/autumn/autumn.config.ts"',
 	);
-	// The user's other fields survive.
 	expect(rootPkg.workspaces).toEqual(["packages/*"]);
 
 	const text = third.lines.join("");
@@ -583,7 +551,6 @@ test("monorepo, --path .: the config lives at the root, in the root package", as
 	expect(existsSync(join(root, "autumn.config.ts"))).toBe(true);
 	expect(existsSync(join(root, "packages/autumn"))).toBe(false);
 	const rootPkg = JSON.parse(readFileSync(join(root, "package.json"), "utf8"));
-	// The existing root manifest is reused: the name it already has, plus the dependency.
 	expect(rootPkg.name).toBe("app");
 	expect(rootPkg.dependencies.atmn).toBeDefined();
 	expect(rootPkg.atmn).toEqual({ config: "autumn.config.ts" });

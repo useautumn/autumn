@@ -1,17 +1,8 @@
-/**
- * The `atom` dataset: every Atom's stdout, exported by alien. Alien's log normalizer lands each pino line's fields
- * as one dynamic `attributes.app` column, so no Atom field can grow the schema and nothing needs mapping. Virtual
- * fields lift them back to the names `express` uses, so `atom` is queried the same way.
- *
- *   bun axiom:staging create-atom  # staging
- *   bun axiom:prod create-atom     # prod
- */
 import {
 	type AxiomVirtualField,
 	ensureAxiomDataset,
 } from "./ensureAxiomDataset.js";
 
-/** One of the Atom's own log fields, read from where alien lands it. */
 const appField = ({
 	name,
 	as = (path: string) => path,

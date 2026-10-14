@@ -1,15 +1,3 @@
-/**
- * `billing.update` removes subscription discounts via `remove_discounts: [{ reward_id }]`.
- *
- * Contract:
- *   1. Removing one of two discounts leaves the other on the Stripe subscription.
- *   2. Removal and addition in the same request produce the combined result.
- *   3. Removing the only discount clears it in Stripe, and renewal bills full price.
- *
- * Red (before):  `remove_discounts` is stripped as an unknown key, so nothing is removed.
- * Green (after): removals drop the matching coupon; `discounts` additions still apply.
- */
-
 import { test } from "bun:test";
 import type {
 	ApiCustomerV3,

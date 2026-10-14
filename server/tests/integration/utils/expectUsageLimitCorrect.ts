@@ -21,12 +21,6 @@ const filterMatches = (
 	);
 };
 
-/**
- * Asserts the customer's `billing_controls.usage_limits` entry for a feature.
- * `filterProperties` selects among multiple entries on one feature: an object
- * matches that filter, `null` matches the unfiltered entry, `undefined` keeps
- * the legacy first-by-feature lookup.
- */
 export const expectUsageLimitCorrect = ({
 	customer,
 	featureId,
@@ -74,7 +68,6 @@ export const expectUsageLimitCorrect = ({
 	}
 };
 
-/** Asserts no `usage_limits` entry exists for the feature (e.g. after a config list replaced it). */
 export const expectUsageLimitAbsent = ({
 	customer,
 	featureId,

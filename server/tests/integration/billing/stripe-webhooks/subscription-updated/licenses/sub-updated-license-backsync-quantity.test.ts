@@ -1,6 +1,3 @@
-// customer.subscription.updated back-sync for license seat quantities: Stripe quantity
-// changes converge the single pool in place; entity seat usage survives every sync.
-
 import { test } from "bun:test";
 import chalk from "chalk";
 import {
@@ -8,10 +5,6 @@ import {
 	updateSeatQuantity,
 	waitForPoolCounters,
 } from "./utils/subUpdatedLicenseBacksync";
-
-// ═══════════════════════════════════════════════════════════════════════════
-// CASE 1: quantity 3 -> 4 increments the pool
-// ═══════════════════════════════════════════════════════════════════════════
 
 test(`${chalk.yellowBright("sub.updated license back-sync: qty 3 -> 4 increments pool paid_quantity")}`, async () => {
 	const customerId = "sub-updated-license-backsync-inc";
@@ -32,10 +25,6 @@ test(`${chalk.yellowBright("sub.updated license back-sync: qty 3 -> 4 increments
 		paidQuantity: 4,
 	});
 });
-
-// ═══════════════════════════════════════════════════════════════════════════
-// CASE 2: quantity 3 -> 2 decrements the pool
-// ═══════════════════════════════════════════════════════════════════════════
 
 test(`${chalk.yellowBright("sub.updated license back-sync: qty 3 -> 2 decrements pool paid_quantity")}`, async () => {
 	const customerId = "sub-updated-license-backsync-dec";

@@ -1,12 +1,3 @@
-/**
- * findReusableStripePrice
- *
- * Contract:
- *   attach-currency slot already filled → no query, no retrieve
- *   newest full match + live Stripe → stamp that slot
- *   query miss / dead Stripe → leave empty
- */
-
 import { afterAll, beforeEach, describe, expect, mock, test } from "bun:test";
 import {
 	AppEnv,

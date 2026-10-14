@@ -44,9 +44,6 @@ import { setupAttachSubscriptionTarget } from "./setupAttachSubscriptionTarget";
 import { setupAttachTransitionContext } from "./setupAttachTransitionContext";
 import { setupAttachTrialContext } from "./setupAttachTrialContext";
 
-/**
- * Assembles the full billing context for attaching a product.
- */
 export const setupAttachBillingContext = async ({
 	ctx,
 	params,
@@ -60,9 +57,6 @@ export const setupAttachBillingContext = async ({
 }): Promise<AttachBillingContext> => {
 	const { fullCustomer: fullCustomerOverride } = contextOverride;
 
-	// fullCustomer must resolve before the product context so patch-style customize
-	// (add_items/remove_items) routes through setupAttachPatchProductContext, matching
-	// multiAttach (setupImmediateMultiProductBillingContext) and createSchedule.
 	const postgresFullCustomer =
 		fullCustomerOverride ??
 		(await setupFullCustomerContext({
@@ -96,9 +90,6 @@ export const setupAttachBillingContext = async ({
 			planScheduleOverride: params.plan_schedule,
 		});
 
-	// No same-group product to carry from? When carry-over is explicitly
-	// requested, fall back to the single plan being removed in this attach.
-	// computeAttachRemovals throws if more than one is removed.
 	const carryOverRequested = Boolean(
 		params.carry_over_usages?.enabled || params.carry_over_balances?.enabled,
 	);
@@ -139,8 +130,6 @@ export const setupAttachBillingContext = async ({
 		notNullish(currentCustomerProduct) &&
 		isCustomerProductFree(currentCustomerProduct);
 
-	// Only respect new_billing_subscription for non-transition scenarios
-	// (add-ons, entity products). Upgrades/downgrades ignore the flag.
 	const shouldForceNewSubscription =
 		(!currentCustomerProduct && params.new_billing_subscription) ||
 		(Boolean(params.new_billing_subscription) &&
@@ -148,11 +137,6 @@ export const setupAttachBillingContext = async ({
 			isTransitionFromFree &&
 			hasPaidRecurringSubscription);
 
-	// no_billing_changes blocks WRITES but should still allow reading the
-	// existing Stripe sub when one is linked — needed so the new cusProduct
-	// inherits subscription_ids and the paid-product guard doesn't misfire.
-	// External-PSP origin callers (e.g. RevenueCat) opt out of fetching
-	// entirely via `contextOverride.skipBillingFetching`.
 	const skipBillingFetching =
 		orgDisableStripeWrites({ ctx }) ||
 		contextOverride.skipBillingFetching === true;
@@ -216,10 +200,8 @@ export const setupAttachBillingContext = async ({
 	});
 	const isCustom = hasCustomItems(params.customize);
 
-	// Timestamp context
 	const currentEpochMs = testClockFrozenTime ?? Date.now();
 
-	// Setup trial context
 	const trialContext = markAutumnManagedTrialContext({
 		trialContext: await setupAttachTrialContext({
 			ctx,
@@ -258,7 +240,6 @@ export const setupAttachBillingContext = async ({
 		billingStartsAt: params.starts_at,
 	});
 
-	// Trial ends at overrides billing cycle anchor
 	if (trialContext?.trialEndsAt) {
 		billingCycleAnchorMs = trialContext.trialEndsAt;
 	}
@@ -295,7 +276,7 @@ export const setupAttachBillingContext = async ({
 
 	const resetCycleAnchorMs = setupResetCycleAnchor({
 		billingCycleAnchorMs,
-		customerProduct: undefined, // don't pass in current customer product here (paid products should have the reset cycle anchor correctly...)
+		customerProduct: undefined,
 		newFullProduct: attachProduct,
 		billingStartsAt,
 	});

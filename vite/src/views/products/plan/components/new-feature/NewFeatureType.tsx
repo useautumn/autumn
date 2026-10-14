@@ -25,7 +25,6 @@ export function NewFeatureType({
 	const showBooleanWarning =
 		isOnboarding && feature.type === APIFeatureType.Boolean;
 
-	// Hide separator when this is the last visible section (only Boolean has nothing after it)
 	const isLastSection = feature.type === APIFeatureType.Boolean;
 
 	return (
@@ -39,9 +38,6 @@ export function NewFeatureType({
 								setFeature({
 									...feature,
 									type: APIFeatureType.Metered,
-									// Fresh config: a credit system's rate card must not survive
-									// the switch, or the create request ships a credit_schema
-									// the API rejects.
 									config: {
 										usage_type:
 											feature.config?.usage_type ?? FeatureUsageType.Single,

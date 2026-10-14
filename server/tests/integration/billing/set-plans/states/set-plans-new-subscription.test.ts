@@ -1,5 +1,3 @@
-/** A customer with no Stripe subscription gets a new one, charged now with a card or through Checkout without one. */
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3 } from "@autumn/shared";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";

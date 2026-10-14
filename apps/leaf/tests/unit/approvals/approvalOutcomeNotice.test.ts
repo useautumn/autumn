@@ -27,8 +27,6 @@ const VALIDATION_ERROR =
 	"Tool validation failed: At least one update parameter must be provided";
 
 describe("approvalOutcomeNotice", () => {
-	// 2026-09-14: both attaches applied, but the model was handed only the
-	// primary's response and reported the sibling as still pending.
 	test("lists every applied write of a grouped card", () => {
 		const notice = approvalOutcomeNotice({
 			outcome: { result: {}, text: "", toolName: "attach", writes: [] },
@@ -46,8 +44,6 @@ describe("approvalOutcomeNotice", () => {
 		expect(notice).not.toContain("approval_description");
 	});
 
-	// 2026-09-11: the first write failed validation and the rest were skipped,
-	// yet the model was told "approved and applied" and announced success.
 	test("names a failed execution and never calls it applied", () => {
 		const notice = approvalOutcomeNotice({
 			outcome: { error: true, message: VALIDATION_ERROR, retryable: false },
@@ -92,8 +88,6 @@ describe("approvalOutcomeNotice", () => {
 		expect(notice).toContain("never re-run it blindly");
 	});
 
-	// Greptile: an executor interrupted after the running marker leaves a row
-	// that must read as unknown, never as "did not apply".
 	test("treats a write left running as an unknown outcome", () => {
 		const notice = approvalOutcomeNotice({
 			outcome: {

@@ -11,7 +11,6 @@ import {
 export type IsolatedBrowser = {
 	browser: Browser;
 	sessionId: string | null;
-	/** Disconnect/close the browser and delete the Kernel session if applicable */
 	cleanup: () => Promise<void>;
 };
 
@@ -19,7 +18,6 @@ const CDP_CONNECT_MAX_ATTEMPTS = 4;
 const CDP_CONNECT_BASE_DELAY_MS = 2000;
 const KERNEL_STARTUP_DELAY_MS = 2000;
 
-/** Create a new browser instance (Kernel CDP or local Chromium) */
 const createBrowser = async (): Promise<{
 	browser: Browser;
 	sessionId: string | null;
@@ -27,10 +25,8 @@ const createBrowser = async (): Promise<{
 	if (kernel) {
 		const { sessionId, cdpWsUrl } = await createKernelBrowser();
 
-		// Give Chrome inside the Kernel container time to bind to the CDP port
 		await new Promise((r) => setTimeout(r, KERNEL_STARTUP_DELAY_MS));
 
-		// Retry CDP connection with exponential backoff
 		let browser: Browser | null = null;
 		for (let attempt = 0; attempt < CDP_CONNECT_MAX_ATTEMPTS; attempt++) {
 			try {
@@ -72,7 +68,6 @@ const createBrowser = async (): Promise<{
 	return { browser, sessionId: null };
 };
 
-/** Cleanup a browser instance — disconnect+delete for Kernel, close for local */
 const cleanupBrowser = async ({
 	browser,
 	sessionId,
@@ -93,24 +88,15 @@ const cleanupBrowser = async ({
 	}
 };
 
-/**
- * Singleton browser pool for reusing Puppeteer browser instances across tests.
- * Supports both local Chromium and Kernel cloud browsers.
- *
- * For V2 helpers using Kernel Playwright Execution, use getSessionId()
- * to get a Kernel session without establishing a CDP connection.
- */
 class BrowserPool {
 	private browser: Browser | null = null;
 	private sessionId: string | null = null;
 	private initPromise: Promise<Browser> | null = null;
 	private sessionIdPromise: Promise<string> | null = null;
 
-	/** Get a Kernel session ID (no CDP). Used by V2 Playwright execution helpers. */
 	async getSessionId(): Promise<string> {
 		if (this.sessionId) return this.sessionId;
 
-		// Coalesce concurrent callers
 		if (this.sessionIdPromise) return this.sessionIdPromise;
 
 		this.sessionIdPromise = (async () => {
@@ -123,7 +109,6 @@ class BrowserPool {
 		return this.sessionIdPromise;
 	}
 
-	/** Get or create the shared browser instance (CDP connection, used by V1 helpers) */
 	async getBrowser(): Promise<Browser> {
 		if (this.browser?.connected) return this.browser;
 
@@ -148,7 +133,6 @@ class BrowserPool {
 		return this.initPromise;
 	}
 
-	/** Create a new page (tab) in the shared browser */
 	async newPage(): Promise<Page> {
 		const browser = await this.getBrowser();
 		const page = await browser.newPage();
@@ -156,7 +140,6 @@ class BrowserPool {
 		return page;
 	}
 
-	/** Create a dedicated browser instance not shared with other callers */
 	async createIsolatedBrowser(): Promise<IsolatedBrowser> {
 		const { browser, sessionId } = await createBrowser();
 		return {
@@ -166,7 +149,6 @@ class BrowserPool {
 		};
 	}
 
-	/** Close the shared browser and clean up Kernel session */
 	async close(): Promise<void> {
 		if (this.browser) {
 			await cleanupBrowser({
@@ -178,7 +160,6 @@ class BrowserPool {
 			return;
 		}
 
-		// Session-only mode (V2 helpers — no CDP connection was made)
 		if (this.sessionId) {
 			await deleteKernelSession({ sessionId: this.sessionId });
 			this.sessionId = null;
@@ -188,7 +169,6 @@ class BrowserPool {
 
 export const browserPool = new BrowserPool();
 
-// Auto-cleanup when test file finishes — prevents Kernel browser leaks
 afterAll(async () => {
 	console.log("[BrowserPool] afterAll: cleaning up...");
 	await browserPool.close();

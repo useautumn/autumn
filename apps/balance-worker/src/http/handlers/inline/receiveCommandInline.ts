@@ -14,7 +14,6 @@ const decoder = new TextDecoder();
 
 type InlineCommand = TrackCommand | CheckCommand;
 
-/** The reply bytes, held until the commit position reaches `seq` (0 for at once); or why the ordinary route answers. */
 type InlineDecision =
 	| {
 			kind: "decided";
@@ -24,7 +23,6 @@ type InlineDecision =
 	  }
 	| { kind: "refused"; reason: string };
 
-/** The envelope of one command of `type`; anything else is the ordinary route's to answer. */
 function commandRequestOf<Command extends InlineCommand>({
 	body,
 	type,
@@ -45,10 +43,6 @@ function commandRequestOf<Command extends InlineCommand>({
 	}
 }
 
-/**
- * One command decided inline on an owned, ready runtime. Null leaves it to the ordinary route: a malformed or
- * foreign envelope, a route not owned or not ready here, or a decide that needs the asynchronous path.
- */
 export function receiveCommandInline<Command extends InlineCommand>({
 	ctx,
 	body,

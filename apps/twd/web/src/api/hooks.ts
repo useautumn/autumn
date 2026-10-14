@@ -54,7 +54,6 @@ export type RunsFilter = {
 	status: "live" | "finished" | "all";
 	outcome?: "all" | "passed" | "failed" | "cancelled";
 	purpose?: RunSummary["purpose"];
-	/** Only runs that feed (true) or don't feed (false) the dev baseline. */
 	baseline?: boolean;
 	branch?: string;
 	cursor?: string;
@@ -98,7 +97,6 @@ export const useRun = (id: string) =>
 		refetchInterval: whileDisconnected,
 	});
 
-/** Live log tail for a run; filled only by run.event log frames. */
 export const useLiveLog = (id: string) => {
 	const qc = useQueryClient();
 	return (
@@ -111,7 +109,6 @@ export const useLiveLog = (id: string) => {
 	);
 };
 
-/** Fetch-on-demand log text (for copy buttons); not cached. */
 export const fetchRunLogs = ({
 	runId,
 	failed,
@@ -207,7 +204,6 @@ export const useAccounts = () =>
 		refetchInterval: whileDisconnected,
 	});
 
-/** Seeded by GET /jobs, then kept current by the "jobs" live topic. */
 export const useJobs = () =>
 	useQuery({
 		queryKey: qk.jobs,
@@ -229,7 +225,6 @@ export const useCosts = (filter: CostsFilter) =>
 		staleTime: 60_000,
 	});
 
-/** Worker pricing only; rates change per deploy, not per window. */
 export const useCostRates = () =>
 	useQuery({
 		queryKey: ["costs", "rates"],
@@ -244,7 +239,6 @@ export const useApiKeys = () =>
 		queryFn: () => api({ path: "/api-keys", schema: z.array(ApiKey) }),
 	});
 
-/** Polls fast while any env is building, slowly otherwise. */
 export const useQaEnvs = () =>
 	useQuery({
 		queryKey: qk.qaEnvs,

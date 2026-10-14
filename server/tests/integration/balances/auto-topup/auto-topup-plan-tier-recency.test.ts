@@ -1,8 +1,3 @@
-/**
- * Plan-tier auto_topups resolution and scope. auto_topups process async via SQS,
- * so each test waits then asserts the topped up balance + the extra paid invoice.
- */
-
 import { test } from "bun:test";
 import type { ApiCustomerV5 } from "@autumn/shared";
 import { makeAutoTopupConfig } from "@tests/integration/balances/auto-topup/utils/makeAutoTopupConfig";
@@ -42,7 +37,6 @@ test(`${chalk.yellowBright("auto-topup-plan4: multi-plan collapse is recency-win
 				productId: basePlan.id,
 				options: [{ feature_id: TestFeature.Messages, quantity: 100 }],
 			}),
-			// Attached LAST -> recency wins: tops up 300.
 			s.billing.attach({
 				productId: addOnPlan.id,
 				options: [{ feature_id: TestFeature.Messages, quantity: 0 }],
@@ -50,8 +44,6 @@ test(`${chalk.yellowBright("auto-topup-plan4: multi-plan collapse is recency-win
 		],
 	});
 
-	// Attaching plans with auto_topup enabled fires on-enabled triggers that
-	// set the 30s burst-suppression key; wait it out before the real track.
 	await timeout(BURST_SUPPRESSION_TTL_MS);
 
 	await autumnV2_1.track({
@@ -61,7 +53,6 @@ test(`${chalk.yellowBright("auto-topup-plan4: multi-plan collapse is recency-win
 	});
 	await timeout(AUTO_TOPUP_WAIT_MS);
 
-	// 100 - 85 + 300 = 315 (most recent plan's quantity, not the base's 100).
 	const after = await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
 	expectBalanceCorrect({
 		customer: after,

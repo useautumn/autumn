@@ -20,7 +20,6 @@ import {
 } from "./rateLimitTableStyles";
 import type { RateLimitOverridesView } from "./rateLimitTypes";
 
-/** Per-org caps on single endpoints, in the policy table's columns so the override chips line up. */
 export const RateLimitEndpointTable = ({
 	view,
 	onOverride,

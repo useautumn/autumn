@@ -7,8 +7,6 @@ import { retryExportDbRead } from "../retryExportDbRead.js";
 import type { OrphanedStripeCustomer } from "./orphanToExportRow.js";
 import { toBatches } from "./toBatches.js";
 
-/** An Autumn customer sharing the orphan's email is usually the one whose
- * Stripe link was lost, so it is surfaced as the customer to relink. */
 export const findPossibleMatches = async ({
 	ctx,
 	orphans,

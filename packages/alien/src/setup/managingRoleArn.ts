@@ -15,7 +15,6 @@ const ManagerSchema = z.object({
 		.optional(),
 });
 
-/** The role the template lets alien assume: the project's AWS manager if it names one, else alien's own. */
 export const getManagingRoleArn = async ({
 	api,
 	project,

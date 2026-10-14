@@ -1,9 +1,3 @@
-/**
- * atmn scenarios/versions — v2 active, v1 pushed later into planVersions (server numbers it higher) → pull leaves v1 where it is, never a draft (today's bug)
- *
- * One line of plans/atmn-v3/07_tests.md. [a, b] is a matrix looped INSIDE this file.
- */
-
 import { expect, test } from "bun:test";
 import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 import { paidMonthly } from "@tests/utils/atmnUtils/baseConfigs.js";
@@ -49,8 +43,6 @@ test.concurrent(
 		try {
 			await scenario.push();
 
-			// v1 has never existed before — minting it as inactive history after
-			// v2 is already live is what makes the server number it 2, not 1.
 			scenario.writeConfig(
 				atmnConfigSource({
 					body: `{
@@ -73,14 +65,11 @@ test.concurrent(
 
 			await scenario.pull();
 
-			// Membership is state: the wire has one `plans` array, and `active`
-			// on each row is what says which version is live — not a separate key.
 			const wire = (await scenario.wireFromConfig()) as {
 				plans?: WirePlanRow[];
 			};
 			const plans = wire.plans ?? [];
 
-			// The higher-numbered-but-inactive v1 stays history, not a draft.
 			expect(plans.find((row) => row.version_slug === "v1")).toEqual(
 				expect.objectContaining({ active: false }),
 			);

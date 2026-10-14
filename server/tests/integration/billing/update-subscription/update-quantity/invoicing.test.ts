@@ -8,14 +8,6 @@ import chalk from "chalk";
 
 const billingUnits = 12;
 
-/**
- * Subscription Update - Invoice Generation Tests
- *
- * These tests verify that subscription updates correctly generate invoices
- * when required, and respect flags like finalize_invoice that control
- * invoice creation and finalization behavior.
- */
-
 test.concurrent(`${chalk.yellowBright("update-quantity: create invoice on upgrade")}`, async () => {
 	const customerId = "invoicing-upgrade";
 
@@ -59,12 +51,10 @@ test.concurrent(`${chalk.yellowBright("update-quantity: create invoice on upgrad
 	const afterUpdate = await autumnV1.customers.get<ApiCustomer>(customerId);
 	const invoiceCountAfter = afterUpdate.invoices?.length || 0;
 
-	// Should have created a new prorated invoice
 	expect(invoiceCountAfter).toBeGreaterThan(invoiceCountBefore);
 
 	const latestInvoice = afterUpdate.invoices?.[0];
 	expect(latestInvoice).toBeDefined();
 	expect(latestInvoice?.status).toBe("paid");
-	// Invoice total should be prorated amount for 10 additional units
 	expect(latestInvoice?.total).toBeGreaterThan(0);
 });

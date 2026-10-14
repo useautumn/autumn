@@ -10,7 +10,6 @@ import type { PlanRowChangeContext } from "./planRowChangeContext.js";
 import { contributionOpToRowChanges } from "./pooled/contributionOpToRowChanges.js";
 import { updateOpToRowChanges } from "./updateOpToRowChanges.js";
 
-/** An insert carries its row; later ops of the plan find the row through the context. */
 const insertOpToRowChanges = ({
 	op,
 	context,
@@ -25,7 +24,6 @@ const insertOpToRowChanges = ({
 	return [op];
 };
 
-/** One op as the row changes it makes: an insert carries its row, the rest read the rows as found. */
 export const opToRowChanges = ({
 	op,
 	context,

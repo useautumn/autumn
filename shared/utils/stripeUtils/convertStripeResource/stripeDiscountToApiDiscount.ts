@@ -17,7 +17,6 @@ const STRIPE_DURATION_TO_API: Record<
 	forever: CouponDurationType.Forever,
 };
 
-/** A subscription's Stripe discount as the API describes it; `id` is the coupon id, which `remove_discounts` takes. */
 export const stripeDiscountToApiDiscount = ({
 	discount,
 	subscriptionId,

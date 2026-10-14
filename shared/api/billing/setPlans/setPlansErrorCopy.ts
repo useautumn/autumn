@@ -21,7 +21,6 @@ export type SetPlansErrorAction =
 	| { type: "open_subscription"; stripeSubscriptionId: string }
 	| { type: "pick_subscription" };
 
-/** Line 1 says what's wrong; the hint says what to do, optionally led by one link. */
 export type SetPlansErrorCopy = {
 	line: SetPlansErrorTextPart[];
 	hint?: {
@@ -30,7 +29,6 @@ export type SetPlansErrorCopy = {
 	};
 };
 
-/** Two dates on the same day only read in order with their times. */
 const formatDatePair = ({
 	firstMs,
 	secondMs,
@@ -75,7 +73,6 @@ const BOUNDARY_COPY: Record<
 
 type StartDateConflictCopy = { subject: string; hint: string };
 
-/** A start date conflict reads as its subject, then the date, then what to do. */
 const startDateConflictCopy = ({
 	copy,
 	startsAt,
@@ -156,7 +153,6 @@ const backdateConflictCopy = (
 	});
 };
 
-/** The one place every Set Plans error is worded, for the API message and the dashboard alike. */
 export const setPlansErrorCopy = (
 	details: SetPlansErrorDetails,
 ): SetPlansErrorCopy => {
@@ -321,7 +317,6 @@ export const setPlansErrorCopy = (
 	}
 };
 
-/** The copy as one plain sentence, for API error messages. */
 export const setPlansErrorCopyToText = ({ line, hint }: SetPlansErrorCopy) =>
 	[
 		textPartsToText(line),

@@ -75,7 +75,6 @@ export const applyWebhooksPull = ({
 		if (remoteIds.has(row.id)) continue;
 		const removed = deleteWebhook({ pull, stated: row, envKey });
 		merge(result, removed);
-		// An entry left in the source (unlocated) is still the config's.
 		if (removed.lines.length === 0) next.push(row);
 	}
 	return { ...result, stated: next };

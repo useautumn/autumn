@@ -1,10 +1,3 @@
-/**
- * Contract: check, lock and finalize all price by the event's properties when
- * the balance is entity-scoped. The reservation is taken from the entity's own
- * balance at the dimensioned rate, and finalize reprices against the same
- * properties the check locked with.
- */
-
 import { expect, test } from "bun:test";
 import type { ApiEntityV2, FeatureConfigOverride } from "@autumn/shared";
 import { expectBalanceCorrect } from "@tests/integration/utils/expectBalanceCorrect.js";
@@ -105,7 +98,6 @@ test.concurrent(
 		});
 		expect(check.allowed).toBe(true);
 
-		// The reservation comes off this entity's balance, not the customer's.
 		const reserved = await autumnV2_2.entities.get<ApiEntityV2>(
 			customerId,
 			entities[0].id,
@@ -124,7 +116,6 @@ test.concurrent(
 			override_value: 5,
 		});
 
-		// Repriced at the locked properties: 5 x 16 = 80.
 		const finalized = await autumnV2_2.entities.get<ApiEntityV2>(
 			customerId,
 			entities[0].id,

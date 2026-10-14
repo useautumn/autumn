@@ -10,10 +10,6 @@ import { handleUpdateOrganizationStripe } from "./handlers/handleUpdateOrganizat
 
 const platformBetaRouter = new Hono<HonoEnv>();
 
-/**
- * Platform authentication middleware
- * Checks if the requesting organization has access to platform API
- */
 platformBetaRouter.use("*", async (c, next) => {
 	const ctx = c.get("ctx");
 	const { org, logger } = ctx;
@@ -23,12 +19,6 @@ platformBetaRouter.use("*", async (c, next) => {
 	}
 
 	try {
-		// const autumn = new Autumn();
-		// const { allowed } = await autumn.check({
-		// 	customerId: org.id,
-		// 	featureId: "platform",
-		// });
-
 		const allowed = true;
 		if (!allowed) {
 			return c.json(
@@ -56,22 +46,10 @@ platformBetaRouter.use("*", async (c, next) => {
 	}
 });
 
-/**
- * POST /organization
- * Creates a new organization for platform users
- */
 platformBetaRouter.post("/organizations", ...handleCreatePlatformOrg);
 
-/**
- * POST /oauth_url
- * Generates Stripe OAuth URL for platform organizations
- */
 platformBetaRouter.post("/oauth_url", ...handleGetPlatformOAuth);
 
-/**
- * POST /organization/stripe
- * Updates Stripe Connect configuration for platform organization
- */
 platformBetaRouter.post(
 	"/organization/stripe",
 	...handleUpdateOrganizationStripe,
@@ -85,16 +63,8 @@ platformBetaRouter.get("/users", ...listPlatformUsers);
 
 platformBetaRouter.get("/organizations", ...handleListPlatformOrgs);
 
-/**
- * DELETE /organizations
- * Deletes a platform organization by slug
- */
 platformBetaRouter.delete("/organizations", ...handleDeletePlatformOrg);
 
-/**
- * POST /exchange
- * Legacy platform exchange endpoint - creates org, user, and connects Stripe
- */
 platformBetaRouter.post("/exchange", ...handleLegacyPlatformExchange);
 
 export { platformBetaRouter };

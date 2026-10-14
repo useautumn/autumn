@@ -5,7 +5,6 @@ import type { JobRow } from "../../jobs/types/jobRow.ts";
 
 const ENQUEUE_CONCURRENCY = 16;
 
-/** One `nuke:<acct>` job per account; live ones are attached to (deduped). */
 export const enqueueNukeJobs = async ({
 	ctx,
 	accountIds,

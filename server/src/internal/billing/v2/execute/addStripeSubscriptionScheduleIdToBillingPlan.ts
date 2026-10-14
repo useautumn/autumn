@@ -27,7 +27,6 @@ export const addStripeSubscriptionScheduleIdToBillingPlan = ({
 	stripeBillingPlan: StripeBillingPlan;
 	stripeSubscriptionScheduleId: string;
 }) => {
-	// Only create_schedule puts free plans on a Stripe schedule via a $0 placeholder.
 	const linksFreePlaceholders =
 		autumnBillingPlan.ownsSchedulePersistence === true;
 
@@ -61,7 +60,6 @@ export const addStripeSubscriptionScheduleIdToBillingPlan = ({
 
 	const { subscriptionScheduleAction } = stripeBillingPlan;
 	if (subscriptionScheduleAction?.type === "update") {
-		// Get old schedule ID
 		const oldScheduleId =
 			subscriptionScheduleAction.stripeSubscriptionScheduleId;
 		const newScheduleId = stripeSubscriptionScheduleId;

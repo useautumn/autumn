@@ -1,6 +1,3 @@
-// Regression: phase-level billing_cycle_anchor must persist the phase-start
-// reset timestamp so Stripe schedule phases can reset anchors.
-
 import { expect, test } from "bun:test";
 import {
 	BillingInterval,

@@ -94,19 +94,9 @@ export const setupMultiRewardBefore = async ({
 		multiRewardPro,
 		multiRewardPremium,
 	]) {
-		// let res = await autumn.products.get(product.id);
-
-		// if (res.code === "product_not_found") {
-		//   try {
-		//     await autumn.products.create(product);
-		//   } catch (error) {}
-		// }
-
 		try {
 			await autumn.products.delete(product.id);
-		} catch (error) {
-			// console.log("Error deleting product:", error);
-		}
+		} catch (error) {}
 
 		try {
 			await autumn.products.create(product);
@@ -133,9 +123,6 @@ export const setupMultiRewardBefore = async ({
 
 	for (const reward of [proReward, premiumReward]) {
 		const rewardRes = null;
-		// try {
-		//   rewardRes = await autumn.rewards.get(reward.id);
-		// } catch (error) {}
 
 		try {
 			await autumn.rewards.delete(reward.id);

@@ -1,9 +1,6 @@
 import type { McpFormat } from "../../config/types.js";
 import type { McpResource } from "./types.js";
 
-/**
- * Build an MCP resource from a composed body: a `# Title` heading over the body.
- */
 export const toMcpResource = ({
 	title,
 	description,
@@ -15,7 +12,6 @@ export const toMcpResource = ({
 	description: string;
 	format: McpFormat;
 	body: string;
-	/** True when the body already carries its own `# Title` (template mode). */
 	ownTitle: boolean;
 }): McpResource => ({
 	name: format.uri,

@@ -10,7 +10,6 @@ import { PlanLicensesSummary } from "@/components/forms/shared/plan-items/PlanLi
 import { useCustomerDisplayCurrency } from "@/hooks/common/useCustomerDisplayCurrency";
 import { useCustomerStateContext } from "../CustomerStateProvider";
 
-/** Prepaid feature and license seat quantities under a selected plan row. */
 export function CustomerStatePlanQuantities({
 	location,
 	plan,

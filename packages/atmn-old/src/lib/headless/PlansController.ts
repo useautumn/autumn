@@ -1,11 +1,3 @@
-/**
- * Headless controller for the plans command.
- * Provides a programmatic API for AI agents to interact with plans/products.
- *
- * Key difference from CustomersController: Plans use LOCAL pagination since
- * the backend returns all plans in a single call.
- */
-
 import type { ApiPlan } from "../api/types/index.js";
 import { fetchPlans } from "../api/endpoints/plans.js";
 import type {
@@ -14,29 +6,14 @@ import type {
 	PaginationState,
 } from "./types.js";
 
-/**
- * Options for creating a PlansController
- */
 export interface PlansControllerOptions {
-	/** API secret key for authentication */
 	secretKey: string;
-	/** Page size for local pagination (default: 50) */
 	pageSize?: number;
-	/** Include archived plans (default: false) */
 	includeArchived?: boolean;
-	/** Initial search query */
 	initialSearch?: string;
-	/** Initial page */
 	initialPage?: number;
 }
 
-/**
- * Headless controller for plans.
- * Can be used by AI agents to programmatically browse and inspect plans.
- *
- * Uses LOCAL pagination: all plans are fetched once from the API,
- * then filtered and paginated in memory.
- */
 export class PlansController implements ListController<ApiPlan, ApiPlan> {
 	private allPlans: ApiPlan[] = [];
 	private filteredPlans: ApiPlan[] = [];
@@ -55,13 +32,6 @@ export class PlansController implements ListController<ApiPlan, ApiPlan> {
 		this.page = options.initialPage ?? 1;
 	}
 
-	// ─────────────────────────────────────────────────────────────────
-	// Data Fetching (internal)
-	// ─────────────────────────────────────────────────────────────────
-
-	/**
-	 * Fetch all plans from the API once
-	 */
 	private async fetchAllPlans(): Promise<void> {
 		this.allPlans = await fetchPlans({
 			secretKey: this.secretKey,
@@ -71,9 +41,6 @@ export class PlansController implements ListController<ApiPlan, ApiPlan> {
 		this.applyFilter();
 	}
 
-	/**
-	 * Apply search filter to allPlans, storing result in filteredPlans
-	 */
 	private applyFilter(): void {
 		const query = this.searchQuery.trim().toLowerCase();
 
@@ -88,25 +55,17 @@ export class PlansController implements ListController<ApiPlan, ApiPlan> {
 			});
 		}
 
-		// Reset selection if out of bounds
 		const pageItems = this.getCurrentPageItems();
 		if (this.selectedIndex >= pageItems.length) {
 			this.selectedIndex = Math.max(0, pageItems.length - 1);
 		}
 	}
 
-	/**
-	 * Get items for the current page (local pagination)
-	 */
 	private getCurrentPageItems(): ApiPlan[] {
 		const start = (this.page - 1) * this.pageSize;
 		const end = start + this.pageSize;
 		return this.filteredPlans.slice(start, end);
 	}
-
-	// ─────────────────────────────────────────────────────────────────
-	// State Queries
-	// ─────────────────────────────────────────────────────────────────
 
 	getItems(): ApiPlan[] {
 		return this.getCurrentPageItems();
@@ -144,23 +103,13 @@ export class PlansController implements ListController<ApiPlan, ApiPlan> {
 		return this.searchQuery;
 	}
 
-	/**
-	 * Get the total number of plans (after filtering)
-	 */
 	getTotalCount(): number {
 		return this.filteredPlans.length;
 	}
 
-	/**
-	 * Get the total number of pages
-	 */
 	getTotalPages(): number {
 		return Math.ceil(this.filteredPlans.length / this.pageSize);
 	}
-
-	// ─────────────────────────────────────────────────────────────────
-	// Navigation Actions
-	// ─────────────────────────────────────────────────────────────────
 
 	selectByIndex(index: number): ApiPlan | null {
 		const items = this.getCurrentPageItems();
@@ -197,10 +146,6 @@ export class PlansController implements ListController<ApiPlan, ApiPlan> {
 		}
 		return null;
 	}
-
-	// ─────────────────────────────────────────────────────────────────
-	// Data Actions (Local Pagination)
-	// ─────────────────────────────────────────────────────────────────
 
 	async nextPage(): Promise<void> {
 		if (this.hasNextPage()) {
@@ -242,22 +187,10 @@ export class PlansController implements ListController<ApiPlan, ApiPlan> {
 		await this.fetchAllPlans();
 	}
 
-	// ─────────────────────────────────────────────────────────────────
-	// Detail Data
-	// ─────────────────────────────────────────────────────────────────
-
-	/**
-	 * Get expanded details for a plan.
-	 * For plans, no additional data is needed - returns the plan as-is.
-	 */
 	async getExpandedItem(id: string): Promise<ApiPlan | null> {
 		const plan = this.allPlans.find((p) => p.id === id);
 		return plan ?? null;
 	}
-
-	// ─────────────────────────────────────────────────────────────────
-	// Output Formats
-	// ─────────────────────────────────────────────────────────────────
 
 	toJSON(): ListControllerState<ApiPlan> {
 		return {
@@ -356,9 +289,6 @@ export class PlansController implements ListController<ApiPlan, ApiPlan> {
 	}
 }
 
-/**
- * Create a new PlansController and initialize it with data
- */
 export async function createPlansController(
 	options: PlansControllerOptions,
 ): Promise<PlansController> {

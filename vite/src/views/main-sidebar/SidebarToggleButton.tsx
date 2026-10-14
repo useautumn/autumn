@@ -7,7 +7,6 @@ import {
 	SIDEBAR_ICON_STROKE,
 } from "./sidebarRowClass";
 
-/** Collapses the sidebar from the header, or reopens it from the collapsed rail. */
 export const SidebarToggleButton = () => {
 	const { expanded, setExpanded } = useSidebarContext();
 	const label = expanded ? "Collapse sidebar" : "Open sidebar";

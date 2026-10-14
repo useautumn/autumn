@@ -20,10 +20,6 @@ import {
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
 
-/**
- * Assigns a numeric priority to a customer product for auto-resolution.
- * Lower = higher priority.
- */
 const PRODUCT_PRIORITY = [
 	(cp: FullCusProduct) =>
 		isCustomerProductMain(cp) && isCustomerProductPaidRecurring(cp),
@@ -42,7 +38,6 @@ const getProductPriority = (cp: FullCusProduct): number => {
 	return index === -1 ? PRODUCT_PRIORITY.length : index;
 };
 
-/** Returns true if the customer product has prepaid options for ALL given feature IDs. */
 const cusProductHasAllPrepaidFeatures = ({
 	cp,
 	featureIds,
@@ -67,7 +62,6 @@ const cusProductHasAllPrepaidFeatures = ({
 	return true;
 };
 
-/** A paused plan (left behind by a revert trial) may be force-cancelled, but only when explicitly targeted. */
 const canCancelPausedWithoutBilling = (params: UpdateSubscriptionV1Params) =>
 	Boolean(params.cancel_action) &&
 	params.no_billing_changes === true &&
@@ -78,7 +72,6 @@ const targetableStatuses = (params: UpdateSubscriptionV1Params) =>
 		? [...ATTACH_CONFLICT_STATUSES, CusProductStatus.Paused]
 		: ATTACH_CONFLICT_STATUSES;
 
-/** Resolves the target without throwing — returns undefined if no match. */
 const resolveTargetCustomerProduct = ({
 	params,
 	candidates,
@@ -86,12 +79,10 @@ const resolveTargetCustomerProduct = ({
 	params: UpdateSubscriptionV1Params;
 	candidates: FullCusProduct[];
 }): FullCusProduct | undefined => {
-	// 1. Highest priority: customer_product_id
 	if (params.customer_product_id) {
 		return candidates.find((cp) => cp.id === params.customer_product_id);
 	}
 
-	// 2. subscription_id
 	if (params.subscription_id) {
 		return candidates.find(
 			(cp) =>
@@ -100,19 +91,16 @@ const resolveTargetCustomerProduct = ({
 		);
 	}
 
-	// 3. plan_id
 	if (params.plan_id) {
 		return candidates.find((cp) => cp.product.id === params.plan_id);
 	}
 
-	// 4. Auto-resolve: no explicit filter provided
 	const sorted = [...candidates].sort(
 		(a, b) =>
 			getProductPriority(a) - getProductPriority(b) ||
 			b.created_at - a.created_at,
 	);
 
-	// If feature_quantities provided, find a product that has ALL features as prepaid
 	const featureIds = params.feature_quantities?.map((fq) => fq.feature_id);
 	if (featureIds && featureIds.length > 0) {
 		return sorted.find((cp) =>
@@ -123,7 +111,6 @@ const resolveTargetCustomerProduct = ({
 	return sorted[0];
 };
 
-/** Builds a descriptive error message based on which filter was used. */
 const buildNotFoundMessage = ({
 	params,
 	customerId,
@@ -143,7 +130,6 @@ const buildNotFoundMessage = ({
 	return `No active subscription found for customer '${customerId}'`;
 };
 
-/** Finds the target customer product for an updateSubscription call, or throws. */
 export const findTargetCustomerProduct = async ({
 	ctx,
 	params,
@@ -167,8 +153,6 @@ export const findTargetCustomerProduct = async ({
 
 	if (target) return target;
 
-	// Explicit id provided but filtered out (e.g. entity-scoped cusProduct
-	// looked up without entity context). Resolve directly from the DB.
 	if (params.customer_product_id) {
 		const fallback = await CusProductService.getFull({
 			db: ctx.db,

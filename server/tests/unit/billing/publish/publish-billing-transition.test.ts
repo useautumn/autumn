@@ -8,7 +8,6 @@ import {
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { mockModuleWithRestore } from "../../utils/mockModuleWithRestore.js";
 
-// These cover the legacy Redis lane; the worker lane skips publishing entirely.
 const previousRollout = process.env.BALANCE_WORKER_ROLLOUT_ENABLED;
 process.env.BALANCE_WORKER_ROLLOUT_ENABLED = "false";
 

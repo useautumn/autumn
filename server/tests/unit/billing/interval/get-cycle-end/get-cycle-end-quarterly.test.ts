@@ -4,7 +4,6 @@ import { fromUnix, toUnix } from "@tests/utils/testIntervalUtils/testUnixUtils";
 
 describe("get-cycle-end: quarterly intervals", () => {
 	describe("anchor in the past", () => {
-		// Basic
 		test("anchor: Jan 15, now: Feb 20 -> Apr 15", () => {
 			const anchor = toUnix({ year: 2025, month: 1, day: 15 });
 			const now = toUnix({ year: 2025, month: 2, day: 20 });
@@ -20,7 +19,6 @@ describe("get-cycle-end: quarterly intervals", () => {
 			expect(day).toBe(15);
 		});
 
-		// intervalCount > 1
 		test("(intervalCount = 2) anchor: Jan 15, now: May 20 -> Jul 15", () => {
 			const anchor = toUnix({ year: 2025, month: 1, day: 15 });
 			const now = toUnix({ year: 2025, month: 5, day: 20 });
@@ -36,7 +34,6 @@ describe("get-cycle-end: quarterly intervals", () => {
 			expect(day).toBe(15);
 		});
 
-		// Edge cases
 		test("end of month anchor (31st): anchor: Jan 31, now: Mar 15 -> Apr 30", () => {
 			const anchor = toUnix({ year: 2025, month: 1, day: 31 });
 			const now = toUnix({ year: 2025, month: 3, day: 15 });
@@ -49,7 +46,7 @@ describe("get-cycle-end: quarterly intervals", () => {
 
 			const { month, day } = fromUnix(result);
 			expect(month).toBe(4);
-			expect(day).toBe(30); // Apr has 30 days
+			expect(day).toBe(30);
 		});
 
 		test("crossing year boundary: anchor: Nov 15, now: Dec 20 -> Feb 15", () => {
@@ -70,7 +67,6 @@ describe("get-cycle-end: quarterly intervals", () => {
 	});
 
 	describe("anchor in the future", () => {
-		// Basic
 		test("anchor: Apr 15, now: Feb 20 -> Apr 15", () => {
 			const anchor = toUnix({ year: 2025, month: 4, day: 15 });
 			const now = toUnix({ year: 2025, month: 2, day: 20 });
@@ -86,7 +82,6 @@ describe("get-cycle-end: quarterly intervals", () => {
 			expect(day).toBe(15);
 		});
 
-		// intervalCount > 1
 		test("(intervalCount = 2) anchor: Jul 15, now: Feb 20 -> Jan 15", () => {
 			const anchor = toUnix({ year: 2025, month: 7, day: 15 });
 			const now = toUnix({ year: 2025, month: 2, day: 20 });
@@ -102,7 +97,6 @@ describe("get-cycle-end: quarterly intervals", () => {
 			expect(day).toBe(15);
 		});
 
-		// Edge cases
 		test("just before anchor: anchor: Apr 15, now: Apr 14 -> Apr 15", () => {
 			const anchor = toUnix({ year: 2025, month: 4, day: 15 });
 			const now = toUnix({ year: 2025, month: 4, day: 14 });

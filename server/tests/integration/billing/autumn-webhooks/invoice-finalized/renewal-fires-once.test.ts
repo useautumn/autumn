@@ -1,16 +1,3 @@
-/**
- * `invoice.finalized` webhook: fires once per finalized Stripe invoice, after
- * line items are reconciled, with a body equal to the invoices.list row.
- *
- * Contract:
- *   type: "invoice.finalized"
- *   data: ApiListInvoiceV1 (with items[], entities[])
- *   exactly one delivery per stripe invoice (created never fires; retries dedupe)
- *
- * Red (current):  no webhook exists.
- * Green (after):  one delivery per invoice, body toEqual the list row.
- */
-
 import { afterAll, beforeAll, expect, test } from "bun:test";
 import type { ApiCustomerV3, ApiListInvoiceV1 } from "@autumn/shared";
 import { WebhookEventType } from "@autumn/shared";
@@ -116,7 +103,6 @@ test.concurrent(
 		expect(body.items!.length).toBeGreaterThan(0);
 		expect(body.items!.some((i) => i.entities.length > 0)).toBe(true);
 
-		// Exactly one delivery: invoice.created must not fire, and the finalized reconcile runs once
 		expect(await countDeliveries({ stripeId: renewalStripeId })).toBe(1);
 	},
 );

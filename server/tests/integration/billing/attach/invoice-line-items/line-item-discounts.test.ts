@@ -1,14 +1,3 @@
-/**
- * Discount Invoice Line Items Tests
- *
- * Tests for verifying that discount information is correctly persisted
- * on invoice line items across different billing flows:
- * - New plan attach with discount
- * - Upgrade with discount
- * - Stripe Checkout with discount
- * - Renewal with discount (forever duration)
- */
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3 } from "@autumn/shared";
 import { createPercentCoupon } from "@tests/integration/billing/utils/discounts/discountTestUtils";
@@ -29,22 +18,6 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { createStripeCli } from "@/external/connect/createStripeCli";
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST A: New plan with percent-off discount - verify discount info on line items
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Customer with payment method
- * - Create Pro ($20/mo) with prepaid messages (0 included, $10/100 units)
- * - Create 25% off coupon
- * - Attach Pro with 200 messages + discount
- *
- * Expected:
- * - Base price: $20 pre-discount, $15 after (25% off = $5 off)
- * - Prepaid messages: $20 (2 packs × $10), $15 after (25% off = $5 off)
- * - Each charge line item has discount entry with amount_off + stripe_coupon_id
- */
 test.concurrent(`${chalk.yellowBright("line-item-discounts A: new plan with percent-off discount")}`, async () => {
 	const customerId = "li-disc-new-plan";
 
@@ -60,10 +33,10 @@ test.concurrent(`${chalk.yellowBright("line-item-discounts A: new plan with perc
 	});
 
 	const basePrice = 20;
-	const prepaidPrice = 20; // 0 included, 200 qty → 200/100 = 2 packs × $10
+	const prepaidPrice = 20;
 	const percentOff = 25;
-	const basePriceAfterDiscount = 15; // $20 * 0.75
-	const prepaidAfterDiscount = 15; // $20 * 0.75
+	const basePriceAfterDiscount = 15;
+	const prepaidAfterDiscount = 15;
 
 	const { autumnV1 } = await initScenario({
 		customerId,
@@ -95,7 +68,7 @@ test.concurrent(`${chalk.yellowBright("line-item-discounts A: new plan with perc
 	await expectProductActive({ customer, productId: pro.id });
 
 	const expectedTotalAfterDiscount =
-		basePriceAfterDiscount + prepaidAfterDiscount; // $30
+		basePriceAfterDiscount + prepaidAfterDiscount;
 
 	await expectCustomerInvoiceCorrect({
 		customer,
@@ -103,15 +76,10 @@ test.concurrent(`${chalk.yellowBright("line-item-discounts A: new plan with perc
 		latestTotal: expectedTotalAfterDiscount,
 	});
 
-	// ═══════════════════════════════════════════════════════════════════════════════
-	// KEY TEST: Verify discount info on line items
-	// ═══════════════════════════════════════════════════════════════════════════════
-
 	await expectInvoiceLineItemsCorrect({
 		stripeInvoiceId: result.invoice!.stripe_id,
 		allCharges: true,
 		expectedLineItems: [
-			// Base price: $20 pre-discount, $15 after
 			{
 				isBasePrice: true,
 				amount: basePrice,
@@ -121,7 +89,6 @@ test.concurrent(`${chalk.yellowBright("line-item-discounts A: new plan with perc
 					couponIds: [coupon.id],
 				},
 			},
-			// Prepaid messages: $20 pre-discount (2 packs), $15 after
 			{
 				featureId: TestFeature.Messages,
 				totalAmount: prepaidPrice,
@@ -136,25 +103,6 @@ test.concurrent(`${chalk.yellowBright("line-item-discounts A: new plan with perc
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST B: Upgrade with percent-off discount - verify discount info on line items
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Customer on Pro ($20/mo) with:
- *   - Prepaid messages (100 included, $10/100 units) - buy 300 (2 packs paid)
- *   - Consumable words (50 included, $0.05/unit overage) - track 200 (150 overage)
- * - Create 20% off coupon
- * - Upgrade to Premium ($50/mo) with:
- *   - Prepaid messages (200 included, $15/100 units) - buy 500 (3 packs paid)
- *   - Consumable words (100 included, $0.05/unit overage)
- *
- * Expected:
- * - Pro refund line items: NO discount (discounts don't apply to refunds)
- * - Premium charge line items: 20% discount applied (base + prepaid)
- * - Consumable words arrear (from Pro usage): 20% discount applied
- */
 test.concurrent(`${chalk.yellowBright("line-item-discounts B: upgrade with percent-off discount")}`, async () => {
 	const customerId = "li-disc-upgrade";
 
@@ -234,14 +182,9 @@ test.concurrent(`${chalk.yellowBright("line-item-discounts B: upgrade with perce
 		notPresent: [pro.id],
 	});
 
-	// ═══════════════════════════════════════════════════════════════════════════════
-	// KEY TEST: Verify discount info on line items
-	// ═══════════════════════════════════════════════════════════════════════════════
-
 	await expectInvoiceLineItemsCorrect({
 		stripeInvoiceId: result.invoice!.stripe_id,
 		expectedLineItems: [
-			// Pro base refund: NO discount (discounts don't apply to refunds)
 			{
 				isBasePrice: true,
 				direction: "refund",
@@ -251,7 +194,6 @@ test.concurrent(`${chalk.yellowBright("line-item-discounts B: upgrade with perce
 					hasDiscounts: false,
 				},
 			},
-			// Pro prepaid messages refund: NO discount
 			{
 				featureId: TestFeature.Messages,
 				direction: "refund",
@@ -262,7 +204,6 @@ test.concurrent(`${chalk.yellowBright("line-item-discounts B: upgrade with perce
 					hasDiscounts: false,
 				},
 			},
-			// Premium base charge: has 20% discount
 			{
 				isBasePrice: true,
 				direction: "charge",
@@ -273,7 +214,6 @@ test.concurrent(`${chalk.yellowBright("line-item-discounts B: upgrade with perce
 					couponIds: [coupon.id],
 				},
 			},
-			// Premium prepaid messages charge: has 20% discount
 			{
 				featureId: TestFeature.Messages,
 				direction: "charge",
@@ -285,7 +225,6 @@ test.concurrent(`${chalk.yellowBright("line-item-discounts B: upgrade with perce
 					couponIds: [coupon.id],
 				},
 			},
-			// Consumable words arrear (from Pro usage): has 20% discount
 			{
 				featureId: TestFeature.Words,
 				direction: "charge",
@@ -300,22 +239,6 @@ test.concurrent(`${chalk.yellowBright("line-item-discounts B: upgrade with perce
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST C: Stripe Checkout with percent-off discount - verify discount on line items
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Customer with NO payment method (triggers checkout)
- * - Create Pro ($20/mo) with prepaid messages (0 included, $10/100 units)
- * - Create 25% off coupon
- * - Attach Pro with 200 messages + discount → checkout URL
- * - Complete Stripe Checkout
- *
- * Expected:
- * - Same discount structure as Test A, but via checkout flow
- * - All charge line items have discount entries with coupon ID
- */
 test.concurrent(`${chalk.yellowBright("line-item-discounts C: stripe checkout with percent-off discount")}`, async () => {
 	const customerId = "li-disc-checkout";
 
@@ -331,17 +254,17 @@ test.concurrent(`${chalk.yellowBright("line-item-discounts C: stripe checkout wi
 	});
 
 	const basePrice = 20;
-	const prepaidPrice = 20; // 2 packs (200/100 × $10)
+	const prepaidPrice = 20;
 	const percentOff = 25;
-	const basePriceAfterDiscount = 15; // $20 * 0.75
-	const prepaidAfterDiscount = 15; // $20 * 0.75
+	const basePriceAfterDiscount = 15;
+	const prepaidAfterDiscount = 15;
 	const expectedTotalAfterDiscount =
-		basePriceAfterDiscount + prepaidAfterDiscount; // $30
+		basePriceAfterDiscount + prepaidAfterDiscount;
 
 	const { autumnV1 } = await initScenario({
 		customerId,
 		setup: [
-			s.customer({ testClock: true }), // No payment method - triggers checkout
+			s.customer({ testClock: true }),
 			s.products({ list: [pro] }),
 		],
 		actions: [],
@@ -353,7 +276,6 @@ test.concurrent(`${chalk.yellowBright("line-item-discounts C: stripe checkout wi
 		percentOff,
 	});
 
-	// Attach - returns payment_url (checkout mode)
 	const result = await autumnV1.billing.attach({
 		customer_id: customerId,
 		product_id: pro.id,
@@ -364,11 +286,9 @@ test.concurrent(`${chalk.yellowBright("line-item-discounts C: stripe checkout wi
 	expect(result.payment_url).toBeDefined();
 	expect(result.payment_url).toContain("checkout.stripe.com");
 
-	// Complete checkout
 	await completeStripeCheckoutForm({ url: result.payment_url });
 	await timeout(12000);
 
-	// Verify product attached
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
 	await expectProductActive({ customer, productId: pro.id });
@@ -382,15 +302,10 @@ test.concurrent(`${chalk.yellowBright("line-item-discounts C: stripe checkout wi
 	const latestInvoice = customer.invoices?.[0];
 	expect(latestInvoice?.stripe_id).toBeDefined();
 
-	// ═══════════════════════════════════════════════════════════════════════════════
-	// KEY TEST: Verify discount info on line items via checkout flow
-	// ═══════════════════════════════════════════════════════════════════════════════
-
 	await expectInvoiceLineItemsCorrect({
 		stripeInvoiceId: latestInvoice!.stripe_id,
 		allCharges: true,
 		expectedLineItems: [
-			// Base price: $20 pre-discount, $15 after
 			{
 				isBasePrice: true,
 				amount: basePrice,
@@ -400,7 +315,6 @@ test.concurrent(`${chalk.yellowBright("line-item-discounts C: stripe checkout wi
 					couponIds: [coupon.id],
 				},
 			},
-			// Prepaid messages: $20 pre-discount, $15 after
 			{
 				featureId: TestFeature.Messages,
 				totalAmount: prepaidPrice,
@@ -415,24 +329,6 @@ test.concurrent(`${chalk.yellowBright("line-item-discounts C: stripe checkout wi
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST D: Renewal with forever discount - verify discount persists on renewal line items
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Create Pro ($20/mo) with:
- *   - Prepaid messages (0 included, $10/100 units)
- *   - Consumable words (50 included, $0.05/unit overage)
- * - Create 25% off coupon (duration: forever)
- * - Attach Pro with 200 messages + discount
- * - Track 200 words (150 overage → $7.50 arrear charge before discount)
- * - Advance to next billing cycle
- *
- * Expected:
- * - Renewal line items all have discount entries with coupon ID
- * - Base price, prepaid, and arrear all discounted
- */
 test.concurrent(`${chalk.yellowBright("line-item-discounts D: renewal with forever discount")}`, async () => {
 	const customerId = "li-disc-renewal";
 
@@ -467,7 +363,6 @@ test.concurrent(`${chalk.yellowBright("line-item-discounts D: renewal with forev
 		duration: "forever",
 	});
 
-	// Attach with discount
 	await autumnV1.billing.attach({
 		customer_id: customerId,
 		product_id: pro.id,
@@ -475,7 +370,6 @@ test.concurrent(`${chalk.yellowBright("line-item-discounts D: renewal with forev
 		discounts: [{ reward_id: coupon.id }],
 	});
 
-	// Track words into overage (200 tracked, 50 included = 150 overage)
 	await autumnV1.track({
 		customer_id: customerId,
 		feature_id: TestFeature.Words,
@@ -483,7 +377,6 @@ test.concurrent(`${chalk.yellowBright("line-item-discounts D: renewal with forev
 	});
 	await timeout(5000);
 
-	// Advance to next billing cycle
 	await advanceToNextInvoice({
 		stripeCli,
 		testClockId: testClockId!,
@@ -492,7 +385,6 @@ test.concurrent(`${chalk.yellowBright("line-item-discounts D: renewal with forev
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Should have initial + renewal invoice
 	expect(
 		customer.invoices?.length,
 		"Expected at least 2 invoices (initial + renewal)",
@@ -501,14 +393,9 @@ test.concurrent(`${chalk.yellowBright("line-item-discounts D: renewal with forev
 	const renewalInvoice = customer.invoices?.[0];
 	expect(renewalInvoice?.stripe_id).toBeDefined();
 
-	// ═══════════════════════════════════════════════════════════════════════════════
-	// KEY TEST: Verify discount info persists on renewal line items
-	// ═══════════════════════════════════════════════════════════════════════════════
-
 	await expectInvoiceLineItemsCorrect({
 		stripeInvoiceId: renewalInvoice!.stripe_id,
 		expectedLineItems: [
-			// Base price renewal: has discount
 			{
 				isBasePrice: true,
 				direction: "charge",
@@ -517,7 +404,6 @@ test.concurrent(`${chalk.yellowBright("line-item-discounts D: renewal with forev
 					couponIds: [coupon.id],
 				},
 			},
-			// Prepaid messages renewal: has discount
 			{
 				featureId: TestFeature.Messages,
 				direction: "charge",
@@ -527,7 +413,6 @@ test.concurrent(`${chalk.yellowBright("line-item-discounts D: renewal with forev
 					couponIds: [coupon.id],
 				},
 			},
-			// Consumable words arrear: has discount
 			{
 				featureId: TestFeature.Words,
 				direction: "charge",

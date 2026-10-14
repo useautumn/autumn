@@ -61,7 +61,6 @@ function CreateFeatureSheet({
 	};
 
 	const handleCreateFeature = async () => {
-		// Validate credit system specific fields first
 		if (isAnyCreditSystem(feature.type)) {
 			const validationError = validateCreditSystem(feature);
 			if (validationError) {
@@ -86,7 +85,6 @@ function CreateFeatureSheet({
 		setOpen(false);
 	};
 
-	// Reset feature state when sheet opens/closes
 	useEffect(() => {
 		if (open) {
 			reset();

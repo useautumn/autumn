@@ -19,11 +19,6 @@ import {
 	identity,
 } from "../../engineFixtures.js";
 
-/**
- * A pool is one customer-level row every entity draws from; its grant lives on pooled_balances, not
- * on its synthetic entitlement (allowance 0). Sources never reach the worker.
- */
-
 const POOL_ID = "pb_1";
 const POOL_ROW_ID = "pool_ce";
 
@@ -61,7 +56,6 @@ const pooledState = ({
 		entity: withEntity ? entity : null,
 	});
 
-/** The catalog as billing mints it for a pool: a synthetic entitlement with no product and no allowance of its own. */
 const pooledSubjectFor = ({ state }: { state: SubjectState }) =>
 	subjectStateToFullSubject({
 		state,
@@ -105,7 +99,6 @@ describe("pooled balances", () => {
 		expect(mutation.result).toMatchObject({
 			type: "track",
 			status: "applied",
-			// The pool has no plan behind it, so the deduction names none.
 			deductions: [{ balance_id: POOL_ROW_ID, plan_id: null, value: 120 }],
 			internalProductId: null,
 		});

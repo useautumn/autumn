@@ -199,7 +199,6 @@ export const replayEveThread = async ({
 			}
 		} else if (event.type === "message.completed") {
 			const text = event.message;
-			// A declined reply (empty-delivery marker) has nothing to replay.
 			if (!text || !text.trim() || isEmptyDelivery(text)) continue;
 			const assistant = assistantForTurn(event.turnId, ts);
 			if (event.finishReason === "tool-calls") {

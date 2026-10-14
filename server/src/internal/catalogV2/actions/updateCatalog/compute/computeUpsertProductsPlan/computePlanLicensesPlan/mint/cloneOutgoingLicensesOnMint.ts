@@ -12,10 +12,6 @@ import {
 	upsertProductPlanToLicenses,
 } from "../licensePlanUtils";
 
-/**
- * A minted row continues the source offering. Declared licenses[] already
- * ran exclusive; this clones leftover outgoing links from the clone source.
- */
 export const cloneOutgoingLicensesOnMint = ({
 	ctx,
 	upsert,
@@ -30,7 +26,6 @@ export const cloneOutgoingLicensesOnMint = ({
 	if (upsert.row.versioning !== "new_version") return [];
 	if (upsert.row.baseFullProduct == null) return [];
 
-	// Pin/propagate key by the child's addressed id; a rename projects it to the new one.
 	const alreadyPlannedIds = new Set(
 		alreadyPlanned.flatMap((planLicense) => [
 			planLicense.licensePlanId,

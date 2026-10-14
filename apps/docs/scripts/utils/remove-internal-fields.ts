@@ -1,6 +1,3 @@
-/**
- * Remove all fields marked with internal: true from the OpenAPI spec
- */
 export function removeInternalFields({ spec }: { spec: any }) {
   let removedCount = 0;
 
@@ -9,7 +6,6 @@ export function removeInternalFields({ spec }: { spec: any }) {
       return;
     }
 
-    // If this is a properties object, check each property for internal flag
     if (key === 'properties' && typeof obj === 'object') {
       const propertiesToRemove: string[] = [];
 
@@ -19,12 +15,10 @@ export function removeInternalFields({ spec }: { spec: any }) {
         }
       }
 
-      // Remove internal properties
       for (const propName of propertiesToRemove) {
         delete obj[propName];
         removedCount++;
 
-        // Also remove from required array in parent if it exists
         if (parent?.required && Array.isArray(parent.required)) {
           parent.required = parent.required.filter((f: string) => f !== propName);
           if (parent.required.length === 0) {
@@ -34,7 +28,6 @@ export function removeInternalFields({ spec }: { spec: any }) {
       }
     }
 
-    // Recurse into all nested objects and arrays
     for (const objKey in obj) {
       if (obj.hasOwnProperty(objKey)) {
         traverseAndRemove(obj[objKey], obj, objKey);

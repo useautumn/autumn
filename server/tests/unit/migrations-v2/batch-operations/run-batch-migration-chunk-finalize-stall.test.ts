@@ -1,6 +1,3 @@
-/** Regression: a committed page whose deferred cache invalidation never
- * settles must not park the whole chunk until trigger's maxDuration kills it. */
-
 import {
 	afterAll,
 	afterEach,
@@ -28,7 +25,6 @@ const emitEventsModulePath =
 const cancelTokenModulePath =
 	"@/external/redis/actions/migrationCancelToken/migrationCancelToken.js";
 
-// Snapshot spreads, not live namespaces — see webhook-delivery-concurrency.
 const realClaim = { ...(await import(claimModulePath)) };
 const realExecute = { ...(await import(executeModulePath)) };
 const realInvalidate = { ...(await import(invalidateModulePath)) };
@@ -57,17 +53,13 @@ const PAGE_SIZE = 5;
 
 type Scenario = {
 	pages: BatchMigrationPageCustomer[][];
-	/** Customers per page the executor reports as already converged. */
 	skippedPerPage: number;
-	/** Per page (1-based): how the deferred cache invalidation behaves. */
 	invalidation: (page: number) => Promise<number>;
-	/** Per page (1-based): resolves when the page's mutations may commit. */
 	execution: (page: number) => Promise<void>;
 	executedPages: number[];
 	invalidationStarts: number[];
 	invalidationCustomers: Map<number, string[]>;
 	revokedIds: string[];
-	/** Simulates a dead Postgres socket under the checkpoint writes. */
 	checkpointWritesHang: boolean;
 };
 
@@ -207,7 +199,6 @@ const logger = {
 	error: record("error"),
 };
 
-// withStatementTimeout wraps the checkpoint writes in a transaction.
 const fakeTransaction = { execute: async () => [] };
 const ctx = {
 	org: { id: "org_test", slug: "genie", redis_config: null },
@@ -259,7 +250,6 @@ const setScenario = ({
 	};
 };
 
-// Small budgets so a stall surfaces in milliseconds instead of minutes.
 const timeouts = {
 	deferredOperationMs: 200,
 	pageMs: 600,
@@ -324,7 +314,6 @@ beforeEach(() => {
 	process.on("unhandledRejection", onUnhandled);
 });
 afterEach(async () => {
-	// Let any late rejection from an abandoned op reach the process hook.
 	await sleep(20);
 	process.off("unhandledRejection", onUnhandled);
 	expect(unhandled).toEqual([]);
@@ -358,8 +347,6 @@ describe("runBatchMigrationChunk — deferred finalization that never settles", 
 			ms: 1_500,
 		});
 
-		// The page's marks committed (execute ran) — the caller must still get
-		// an answer, and it must name the phase that stalled.
 		expect(scenario.executedPages).toEqual([1]);
 		expect(scenario.invalidationStarts).toEqual([1]);
 		const error = expectStall({ outcome, phase: "finalize_caches" });
@@ -370,7 +357,6 @@ describe("runBatchMigrationChunk — deferred finalization that never settles", 
 			logs.some((line) => line.message === "batch-migration: chunk finished"),
 		).toBe(false);
 
-		// The stalled page's checkpoints are revoked so a retry re-claims them.
 		expect(scenario.revokedIds.sort()).toEqual(
 			[...(scenario.invalidationCustomers.get(1) ?? [])].sort(),
 		);
@@ -396,8 +382,6 @@ describe("runBatchMigrationChunk — deferred finalization that never settles", 
 			ms: 2_500,
 		});
 
-		// The settle() cap no longer blocks page 4 forever: every page commits,
-		// then the chunk fails naming the stalled finalization.
 		expect(scenario.executedPages).toEqual([1, 2, 3, 4]);
 		const error = expectStall({ outcome, phase: "finalize_caches" });
 		expect(error.message).toContain("4 page(s)");
@@ -465,7 +449,6 @@ describe("runBatchMigrationChunk — deferred finalization that never settles", 
 		expectStall({ outcome, phase: "finalize_caches" });
 
 		late.reject(new Error("redis gave up after the chunk moved on"));
-		// afterEach asserts no unhandledRejection reached the process.
 	});
 
 	test("a page whose own work stalls fails with the stalled stage and logs progress", async () => {
@@ -484,8 +467,6 @@ describe("runBatchMigrationChunk — deferred finalization that never settles", 
 		const error = expectStall({ outcome, phase: "page_execute" });
 		expect(error.message).toContain("page 2 made no progress");
 		expect(scenario.executedPages).toEqual([1]);
-		// The abandoned page's claims are failed so its late marks cannot
-		// resurrect them as succeeded behind the retry's back.
 		expect(scenario.revokedIds.sort()).toEqual(
 			[
 				...(scenario.pages[1]?.map((customer) => customer.internalId) ?? []),
@@ -538,7 +519,6 @@ describe("runBatchMigrationChunk — deferred finalization that never settles", 
 			execution: () => sleep(200),
 		});
 
-		// reserve 100 + min page budget 400 leaves room for one ~200ms page.
 		const result = await runChunk({ deadlineAt: Date.now() + 550 });
 
 		expect(result.completion).toBe("slice_complete");
@@ -560,8 +540,6 @@ describe("runBatchMigrationChunk — deferred finalization that never settles", 
 			execution: (page) => (page === 1 ? never.promise : Promise.resolve()),
 		});
 
-		// The page timeout alone (5s) would outlive the deadline; the reserve
-		// leaves this page ~500ms.
 		const startedAt = Date.now();
 		const outcome = await raceWithDeadline({
 			promise: settle(
@@ -593,7 +571,6 @@ describe("runBatchMigrationChunk — deferred finalization that never settles", 
 		expect(result.processed).toBe(2 * PAGE_SIZE);
 		expect(completed.sort()).toEqual([1, 2]);
 		expect(scenario.revokedIds).toEqual([]);
-		// "finished" is logged only once the deferred work has drained.
 		const finished = logs.find(
 			(line) => line.message === "batch-migration: chunk finished",
 		);

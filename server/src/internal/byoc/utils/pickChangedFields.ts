@@ -1,4 +1,3 @@
-/** Only what `to` changes from `from`, so a write leaves alone a field another writer set since the read. */
 export const pickChangedFields = <T extends object>({
 	from,
 	to,

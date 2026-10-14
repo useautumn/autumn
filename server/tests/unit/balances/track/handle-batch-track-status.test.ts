@@ -55,9 +55,6 @@ import { handleBatchTrackTokens } from "@/internal/balances/handlers/handleBatch
 
 import { mockModuleWithRestore } from "../../utils/mockModuleWithRestore.js";
 
-// Full logger shape: the handler's idempotency path hands this ctx logger to
-// fire-and-forget work (Dynamo mirror) that logs failures after the test —
-// a bare {} turns those into unhandled TypeErrors landing in later tests.
 const testLogger = {
 	debug: () => undefined,
 	info: () => undefined,
@@ -87,7 +84,6 @@ const createApp = ({ ctx }: { ctx: AutumnContext }) => {
 };
 
 describe("batch track handlers", () => {
-	// The rollout spy would otherwise force the worker off for later files in the same process.
 	afterEach(() => mock.restore());
 
 	beforeEach(() => {

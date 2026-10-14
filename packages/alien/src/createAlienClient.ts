@@ -22,7 +22,6 @@ const configToApi = ({ config }: { config: AlienConfig }): AlienApi => {
 	return { config, baseUrl: ALIEN_HOSTED_API_URL, apiKey: config.apiKey };
 };
 
-/** One manager behind named methods; which manager, and its key, are the caller's to read. */
 export const createAlienClient = ({
 	config,
 	logger,

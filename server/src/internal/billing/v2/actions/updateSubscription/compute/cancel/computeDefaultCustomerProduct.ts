@@ -51,12 +51,6 @@ const hasOtherEffectivePaidMainProduct = ({
 	});
 };
 
-/**
- * Creates the default customer product to insert when canceling.
- * Returns undefined for add-ons or when no default product exists.
- * For 'cancel_immediately' mode, creates an active product.
- * For 'cancel_end_of_cycle' mode, creates a scheduled product.
- */
 export const computeDefaultCustomerProduct = ({
 	ctx,
 	billingContext,
@@ -78,10 +72,8 @@ export const computeDefaultCustomerProduct = ({
 
 	const isAddOn = customerProduct.product.is_add_on;
 
-	// Add-ons don't get default products
 	if (isAddOn) return undefined;
 
-	// No default product configured
 	if (!defaultProduct) return undefined;
 
 	const startsAt =

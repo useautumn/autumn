@@ -1,8 +1,3 @@
-/**
- * A subscription taken out before a variant was split must still renew on the
- * product it was created with, and bill the same amount.
- */
-
 import { expect, test } from "bun:test";
 import {
 	type ApiCustomerV5,
@@ -82,7 +77,6 @@ test.concurrent(
 		});
 		expect(productsBefore).not.toContain(variant.processor?.id as string);
 
-		// Cross the renewal boundary.
 		await advanceTestClock({
 			stripeCli: ctx.stripeCli,
 			testClockId: testClockId as string,
@@ -99,13 +93,11 @@ test.concurrent(
 			renewed.items.data.map((item) => item.price.product as string),
 		).toEqual(productsBefore);
 
-		// The renewal invoice bills the original price, not a re-derived one.
 		const customer = await autumnV2_3.customers.get<ApiCustomerV5>(customerId);
 		const invoices = customer.invoices ?? [];
 		expect(invoices.length).toBeGreaterThanOrEqual(2);
 		expect(invoices[0].total).toBe(PRICE);
 
-		// The catalog still points new attaches at the split product.
 		expect(variant.processor?.id).toBeTruthy();
 	},
 );

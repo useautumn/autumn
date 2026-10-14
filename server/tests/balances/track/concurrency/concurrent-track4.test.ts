@@ -44,7 +44,6 @@ describe(`${chalk.yellowBright(`${testCase}: Testing usage_limits with pay_per_u
 			prefix: testCase,
 		});
 
-		// Attach product to customer
 		await autumnV1.attach({
 			customer_id: customerId,
 			product_id: pro.id,
@@ -65,7 +64,6 @@ describe(`${chalk.yellowBright(`${testCase}: Testing usage_limits with pay_per_u
 			"🚀 Starting 5 concurrent track calls (3 units each) at exact same time...",
 		);
 
-		// Try to use 3 units concurrently - with usage_limit of 10, only 3 requests can succeed (3x3=9 <= 10)
 		const promises = [
 			autumnV1.track({
 				customer_id: customerId,
@@ -107,8 +105,6 @@ describe(`${chalk.yellowBright(`${testCase}: Testing usage_limits with pay_per_u
 		expect(successCount).toBe(3);
 		expect(rejectedCount).toBe(2);
 
-		// Wait for any async processing to complete
-
 		const customer = await autumnV1.customers.get(customerId);
 
 		expect(customer.features[TestFeature.Messages]?.balance).toBe(-4);
@@ -117,10 +113,6 @@ describe(`${chalk.yellowBright(`${testCase}: Testing usage_limits with pay_per_u
 	});
 
 	test("should reflect concurrent deductions in non-cached customer after sync", async () => {
-		// Expected: 3 successful requests × 3 units each = 9 units used
-		// Starting balance: 5, usage: 9, final balance: 5 - 9 = -4
-
-		// The Redis→Postgres sync is batched + queued; poll instead of a fixed wait.
 		const customer = await pollUntil({
 			fetch: () =>
 				autumnV1.customers.get(customerId, { skip_cache: "true" }),

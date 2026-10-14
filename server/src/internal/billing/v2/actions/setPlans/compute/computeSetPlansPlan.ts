@@ -29,13 +29,10 @@ import { keptCustomerProductsOnNewAnchor } from "./keptCustomerProductsOnNewAnch
 import { keptReplacementEntitlementUpdates } from "./keptReplacementEntitlementUpdates";
 import { paidBackdateAnchorMoveLineItems } from "./paidBackdateAnchorMoveLineItems";
 
-/** The immediate phase's plan change, which the guards validate with attach's
- * immediate-timing rules. Future phases are validated at activation. */
 export type ImmediatePhaseTransition = {
 	outgoingCustomerProducts: FullCusProduct[];
 	incomingCustomerProducts: FullCusProduct[];
 	keptCustomerProducts: FullCusProduct[];
-	/** Outgoing rows a plan starting now replaces; usage carries only from these. */
 	replacedCustomerProducts: FullCusProduct[];
 };
 
@@ -46,7 +43,6 @@ export type SetPlansPlanResult = {
 	customerProductChanges: SetPlansCustomerProductChanges;
 };
 
-/** Compute the full create_schedule billing plan (immediate + scheduled phases). */
 export const computeSetPlansPlan = ({
 	ctx,
 	billingContext,
@@ -67,15 +63,12 @@ export const computeSetPlansPlan = ({
 		immediateInsertCustomerProducts: immediateCustomerProducts,
 	} = customerProductChanges;
 
-	// The immediate phase expires the changed rows and inserts fresh ones, so
-	// pools must re-parent now; future phases carry theirs at activation.
 	const customerLicenseTransitions = computeCustomerLicenseTransitions({
 		outgoingCustomerProducts,
 		incomingCustomerProducts: immediateCustomerProducts,
 		customerLicenseBillingContext: billingContext.customerLicenseBillingContext,
 		carryCustomerLicenseState: true,
 	});
-	// After transitions: pools must key on the carried link, not a fresh one.
 	const { pooledBalancePlan } = computePooledBalanceTransitionPlan({
 		ctx,
 		fullCustomer: billingContext.fullCustomer,
@@ -129,7 +122,6 @@ export const computeSetPlansPlan = ({
 			carryOverUsages: billingContext.carryOverUsages,
 			sourceCustomerProducts: replacedCustomerProducts,
 		}),
-		// A trialing plan paid nothing; once its subscription is replaced, the shared trial filter can no longer see that.
 		creditsUnusedTime: (customerProduct) =>
 			!isCustomerProductTrialing(customerProduct, {
 				nowMs: billingContext.currentEpochMs,
@@ -191,7 +183,6 @@ export const computeSetPlansPlan = ({
 	const baseAutumnBillingPlan: AutumnBillingPlan = {
 		customerId:
 			billingContext.fullCustomer.id ?? billingContext.fullCustomer.internal_id,
-		// Schedule persistence replaces phases wholesale, so nothing may rewrite them mid-flight.
 		ownsSchedulePersistence: true,
 		schedulePhases: phases,
 		insertCustomerProducts: allInsertCustomerProducts,

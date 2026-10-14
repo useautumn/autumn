@@ -1,9 +1,3 @@
-/**
- * A deleted sandbox takes its Svix app with it:
- * - its key stops authenticating at once, not after the secret-key cache TTL;
- * - an org whose Svix app is gone gets a 404 from list, never a 500 or an empty list.
- */
-
 import { afterAll, describe, expect, test } from "bun:test";
 import { organizations } from "@autumn/shared";
 import defaultCtx from "@tests/utils/testInitUtils/createTestContext.js";
@@ -41,7 +35,6 @@ const createHook = async ({ key }: { key: string }) => {
 	expect(res.status).toBe(200);
 };
 
-// A test that fails before its own teardown still leaves no Svix apps behind.
 afterAll(async () => {
 	const svix = createSvixCli();
 	for (const id of sandboxIds) {

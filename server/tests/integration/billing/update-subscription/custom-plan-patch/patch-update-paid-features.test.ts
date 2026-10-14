@@ -1,24 +1,3 @@
-/**
- * TDD coverage for patch-style paid feature item updates.
- *
- * Contract under test:
- *   New behaviors:
- *     - remove_items + add_items can replace a free metered item with prepaid
- *       messages, preserve existing usage, and bill the prepaid quantity.
- *     - remove_items + add_items can replace a free metered item with consumable
- *       messages, preserve existing usage, and avoid immediate overage billing.
- *     - Entity-scoped paid feature patches only affect the targeted entity.
- *   Side effects:
- *     - Preview total matches the invoice total when a paid patch bills now.
- *     - Existing-mode patch updates do not expire or replace the customer product.
- *     - Stripe subscription state stays consistent with the patched customer product.
- *
- * Pre-impl red: patch setup/compute may miss paid feature prices when add_items
- * contains prepaid or consumable items, or may lose carried usage.
- * Post-impl green: paid feature patch rows are initialized, invoiced, and applied
- * through patchCustomerProducts while preserving usage.
- */
-
 import { expect, test } from "bun:test";
 import type {
 	ApiCustomerV3,

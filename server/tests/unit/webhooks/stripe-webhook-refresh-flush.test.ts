@@ -1,5 +1,3 @@
-/** Webhook cache refresh must flush Redis balances before wiping the subject. */
-
 import { afterAll, describe, expect, mock, test } from "bun:test";
 import { Hono } from "hono";
 import type { StripeSubscriptionUpdatedContext } from "@/external/stripe/webhookHandlers/handleStripeSubscriptionUpdated/stripeSubscriptionUpdatedContext";

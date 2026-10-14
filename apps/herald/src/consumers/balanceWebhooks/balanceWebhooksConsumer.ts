@@ -11,7 +11,6 @@ const isBalanceWebhookEffect = (effect: {
 	type: string;
 }): effect is BalanceWebhookEffect => effect.type === "balance_webhook";
 
-/** Sends the webhooks the worker decided, one record at a time, so a customer's webhooks arrive in balance order. */
 export function createBalanceWebhooksConsumer({
 	ctx,
 }: {

@@ -13,8 +13,6 @@ export function useFlagsView({
 	booleanEnts: FullCusEntWithFullCusProduct[];
 	hasCatalog: boolean;
 }) {
-	// Expansion survives a trip through the catalog, so the two axes are
-	// independent rather than one enum.
 	const [state, setState] = useState<FlagsViewState>({
 		showingCatalog: false,
 		expanded: false,
@@ -24,8 +22,6 @@ export function useFlagsView({
 		setState({ ...state, showingCatalog: false });
 	}
 
-	// Measures a hidden layer, so it can always run — the count stays correct
-	// across every view instead of lagging a frame behind a toggle.
 	const { containerRef, measureRef, visibleCount } = useOverflowCount({
 		itemCount: booleanEnts.length,
 		gap: FLAG_PILL_GAP,
@@ -46,8 +42,6 @@ export function useFlagsView({
 		isCollapsed,
 		visibleEnts,
 		hiddenCount: booleanEnts.length - visibleEnts.length,
-		// One condition for both labels — deriving it from `hiddenCount` would drop
-		// to 0 on expand, unmounting the button and replaying its enter animation.
 		hasOverflow: !showingCatalog && visibleCount < booleanEnts.length,
 		rowHeight: measuredHeight ?? "auto",
 		containerRef,

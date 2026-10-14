@@ -1,7 +1,3 @@
-/**
- * catalogV2.update — a license child renamed in the same batch that mints its
- * parent, or renamed from one of several versions, keeps exactly one link.
- */
 import { expect, test } from "bun:test";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";

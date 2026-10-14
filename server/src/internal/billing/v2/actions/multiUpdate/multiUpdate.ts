@@ -38,13 +38,11 @@ export async function multiUpdate({
 		`=============== RUNNING MULTI UPDATE FOR ${params.customer_id} ===============`,
 	);
 
-	// 1. Setup: one customer load; per-item contexts are built inside the fold
 	const fullCustomer = await setupFullCustomerContext({
 		ctx,
 		params: { customer_id: params.customer_id },
 	});
 
-	// 2. Compute: fold every update onto one AutumnBillingPlan
 	const { autumnBillingPlan, itemResults } = await computeMultiUpdateFold({
 		ctx,
 		params,
@@ -52,7 +50,6 @@ export async function multiUpdate({
 		preview,
 	});
 
-	// 3. Evaluate once per distinct subscription, each against its own sub-scoped plan
 	const stripeBillingPlans = await evaluateMultiUpdateStripe({
 		ctx,
 		fullCustomer,
@@ -75,7 +72,6 @@ export async function multiUpdate({
 		});
 	}
 
-	// 4. Errors — per item, before any execution
 	await handleMultiUpdateErrors({ ctx, itemResults, stripeBillingPlans });
 
 	const billingPlan: BillingPlan = {
@@ -97,8 +93,6 @@ export async function multiUpdate({
 		};
 	}
 
-	// Cancels never require checkout; reject any item whose setup decided
-	// payment collection is needed rather than executing without it
 	const checkoutItem = itemResults.find(
 		(itemResult) => itemResult.billingContext.checkoutMode !== null,
 	);
@@ -110,7 +104,6 @@ export async function multiUpdate({
 		});
 	}
 
-	// 5. Execute: one Stripe execution per subscription, one Autumn execution
 	const stripeResults = await executeMultiSubscriptionBillingPlan({
 		ctx,
 		autumnBillingPlan,

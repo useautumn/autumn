@@ -1,8 +1,6 @@
 import { sql } from "drizzle-orm";
 import { initDrizzle } from "./experimentEnv";
 
-// Run with `bun run experiments/checkIndexes.ts`
-
 const main = async () => {
 	const { db } = initDrizzle();
 

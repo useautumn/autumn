@@ -8,7 +8,6 @@ import {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 
-/** Returns existing usages config overrides from carry_over_usages params. */
 export const carryOverUsagesToExistingUsagesConfig = ({
 	ctx,
 	params,

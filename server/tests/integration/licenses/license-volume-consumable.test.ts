@@ -1,10 +1,3 @@
-/**
- * Pay-per-use volume items around license (seat) plans. Seat assignments never bill
- * usage (initCustomerEntitlementUsageAllowed), so a seat's volume item caps at its
- * included amount; the parent plan's volume item bills its overage on its net tier as usual.
- * Each case checks the upcoming-invoice preview equals the renewal invoice.
- */
-
 import { expect, test } from "bun:test";
 import type { ProductItem } from "@autumn/shared";
 import { expectNextInvoiceMatchesPreview } from "@tests/integration/billing/utils/expectNextInvoiceMatchesPreview";
@@ -62,7 +55,6 @@ const setupLicenseVolume = async ({
 	});
 };
 
-// Default tiers: 0-500 @ $0.10, 501+ @ $0.05, net of 100 included → total bands 0-600 / 601+.
 test.concurrent(
 	`${chalk.yellowBright("license-volume-consumable 1: volume item on a seat plan never bills usage")}`,
 	async () => {
@@ -77,7 +69,6 @@ test.concurrent(
 			],
 		});
 
-		// Seat usage is capped at included and never billed: $0 messages
 		const { preview } = await expectNextInvoiceMatchesPreview({
 			ctx: scenario.ctx,
 			autumnV1: scenario.autumnV1,
@@ -88,7 +79,6 @@ test.concurrent(
 			featureId: TestFeature.Messages,
 			expectedFeatureAmount: 0,
 		});
-		// $20 parent base only
 		expect(preview.total).toBeCloseTo(20, 2);
 	},
 );
@@ -104,7 +94,6 @@ test.concurrent(
 			usage: [{ value: 700 }],
 		});
 
-		// 700 − 100 included = 600 over (net band 2): 600 × $0.05 = $30
 		const { preview } = await expectNextInvoiceMatchesPreview({
 			ctx: scenario.ctx,
 			autumnV1: scenario.autumnV1,
@@ -115,7 +104,6 @@ test.concurrent(
 			featureId: TestFeature.Messages,
 			expectedFeatureAmount: 30,
 		});
-		// $20 parent base + $30 usage
 		expect(preview.total).toBeCloseTo(50, 2);
 	},
 );

@@ -37,8 +37,6 @@ const removeCurrentBasePrice = ({
 	return customerPrices;
 };
 
-/** Replaces the customer product's base price in place. Callers surface the
- * returned prices on their product snapshot, as with the other patch handlers. */
 export const handleCustomizePrice = ({
 	ctx,
 	customize,

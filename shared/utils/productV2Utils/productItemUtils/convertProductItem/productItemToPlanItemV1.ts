@@ -40,7 +40,6 @@ const itemToReset = ({
 	item: ProductItem;
 	feature: Feature;
 }): ApiPlanItemV1["reset"] => {
-	// 1. If continuous use or boolean, no reset
 	if (isContUseFeature({ feature }) || isBooleanFeature({ feature })) {
 		return null;
 	}
@@ -51,7 +50,6 @@ const itemToReset = ({
 			itemToEntIntervalCount({ item }) !== 1
 				? itemToEntIntervalCount({ item })
 				: undefined,
-		// Note: reset_when_enabled is NOT in V1 schema - removed
 	};
 };
 
@@ -72,8 +70,6 @@ const itemToPlanFeaturePrice = ({
 	const price =
 		item.tiers && item.tiers.length === 1 ? item.tiers[0].amount : item.price;
 
-	// A single tier collapses to a flat price, so its currencies surface at the
-	// price level (mirroring `price` above); multi-tier currencies stay per-tier.
 	const additionalCurrencies =
 		item.tiers && item.tiers.length === 1
 			? item.tiers[0].additional_currencies?.map((c) => ({
@@ -82,8 +78,6 @@ const itemToPlanFeaturePrice = ({
 				}))
 			: (item.additional_currencies ?? undefined);
 
-	// Internal: tier `to` does NOT include included usage.
-	// V1 API: tier `to` INCLUDES included usage.
 	const tiers =
 		item.tiers && item.tiers.length > 1
 			? addIncludedToTiers({
@@ -103,7 +97,6 @@ const itemToPlanFeaturePrice = ({
 				}))
 			: undefined;
 
-	// V1 schema uses billing_method, NOT usage_model
 	const billingMethod = itemToBillingMethod({ item });
 	if (!billingMethod) {
 		throw new InternalError({
@@ -122,7 +115,6 @@ const itemToPlanFeaturePrice = ({
 		amount: price ?? undefined,
 		additional_currencies: additionalCurrencies,
 		tiers: tiers,
-		// A flat price has no tiers to behave; only a tiered one carries it.
 		tier_behavior: tiers ? (item.tier_behavior ?? undefined) : undefined,
 
 		interval: itemToBillingInterval({ item }),
@@ -139,8 +131,6 @@ const itemToPlanFeaturePrice = ({
 	};
 };
 
-/** Only one-off prepaid items can carry expiry, so a value left over from an
- * earlier pricing shape never reaches the API (where it would be rejected). */
 const itemToPlanFeatureExpiry = ({
 	item,
 }: {
@@ -224,7 +214,6 @@ export const productItemsToPlanItemsV1 = ({
 			});
 		}
 
-		// 1. Included balance (V1 uses "included", not "granted_balance")
 		const included =
 			item.included_usage === Infinite ? 0 : (item.included_usage ?? 0);
 
@@ -233,7 +222,6 @@ export const productItemsToPlanItemsV1 = ({
 		const rollover = itemToPlanFeatureRollover({ item });
 		const proration = itemToPlanFeatureProration({ item, feature });
 
-		// Convert feature to API format if expand requested
 		const apiFeature = shouldExpandFeature
 			? toApiFeature({ feature })
 			: undefined;
@@ -247,7 +235,7 @@ export const productItemsToPlanItemsV1 = ({
 			threshold_billing: item.config?.threshold_billing,
 
 			reset,
-			price, // V1: price can be null (no need for conditional spread)
+			price,
 
 			rollover,
 			proration,

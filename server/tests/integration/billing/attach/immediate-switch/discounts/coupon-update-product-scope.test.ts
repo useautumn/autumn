@@ -1,5 +1,3 @@
-/** Red: an attached coupon keeps discounting an excluded upgrade after its product scope is updated.
- * Green: the excluded plan gets no discount and the invoice matches its corrected preview. */
 import { expect, test } from "bun:test";
 import { type AttachPreviewResponse, RewardType } from "@autumn/shared";
 import { items } from "@tests/utils/fixtures/items.js";

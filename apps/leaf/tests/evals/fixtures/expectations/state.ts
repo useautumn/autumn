@@ -1,8 +1,6 @@
 import type { StateSubscriptionsExpectation } from "./types.js";
 
 export const state = {
-	/** Assert the world the writes leave behind rather than the calls that made
-	 * it — robust to how the model orders or batches them. */
 	subscriptions: ({
 		customer,
 		customerId,

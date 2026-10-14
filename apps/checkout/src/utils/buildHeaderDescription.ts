@@ -11,10 +11,6 @@ import { getCheckoutPreviewIntent } from "./getCheckoutPreviewIntent";
 type CheckoutPreview = GetCheckoutResponse["preview"];
 type CheckoutPreviewChange = CheckoutPreview["incoming"][number];
 
-/**
- * Builds the action phrase based on the checkout scenario.
- * Examples: "Upgrading from Pro to Enterprise", "Subscribing to Enterprise", "Purchasing Starter"
- */
 function buildActionPhrase({
 	scenario,
 	outgoingPlanName,
@@ -46,10 +42,6 @@ function buildActionPhrase({
 	return isRecurring ? "New subscription" : "New purchase";
 }
 
-/**
- * Formats the free trial duration into a human-readable string.
- * Examples: "14-day", "1-month", "7-day"
- */
 function formatTrialDuration(freeTrial: ApiFreeTrialV2): string {
 	const { duration_length, duration_type } = freeTrial;
 	return `${duration_length}-${duration_type}`;
@@ -70,10 +62,6 @@ function formatNextCycleAmount({
 	return hasUsage ? `${amount} + usage` : amount;
 }
 
-/**
- * Builds the header description for the checkout page.
- * Returns a natural sentence describing the checkout action, amount, and timing.
- */
 export function buildHeaderDescription({
 	preview,
 	incoming,
@@ -104,11 +92,9 @@ export function buildHeaderDescription({
 	const isRecurring = !!change?.plan?.price?.interval;
 	const entityName = entity?.name || entity?.id;
 
-	// Determine if this is a scheduled change (no immediate charges, changes next cycle)
 	const isScheduledChange =
 		line_items.length === 0 && total === 0 && next_cycle;
 
-	// Build the action phrase
 	let action = isUpdateSubscriptionPreview
 		? incomingPlanName
 			? `Update plan ${incomingPlanName}`
@@ -120,16 +106,13 @@ export function buildHeaderDescription({
 				isRecurring,
 			});
 
-	// Add entity if present
 	if (entityName && !isUpdateSubscriptionPreview) {
 		action += ` for ${entityName}`;
 	}
 
-	// Build trial phrase if applicable
 	const trialDuration =
 		hasActiveTrial && freeTrial ? formatTrialDuration(freeTrial) : null;
 
-	// Handle credit from excess refund (unused time on previous plan exceeds new charge)
 	const credit = preview.total < 0 ? Math.abs(preview.total) : 0;
 	if (credit) {
 		const creditAmount = formatAmount(credit, currency);
@@ -154,7 +137,6 @@ export function buildHeaderDescription({
 		return sentence;
 	}
 
-	// Handle free trial (no immediate payment, trial starts)
 	if (hasActiveTrial && next_cycle) {
 		const nextDate = format(new Date(next_cycle.starts_at), "do MMMM yyyy");
 		const nextAmount = formatNextCycleAmount({
@@ -164,7 +146,6 @@ export function buildHeaderDescription({
 		return `${action}. Includes a ${trialDuration} free trial, then you'll be charged ${nextAmount} on ${nextDate}.`;
 	}
 
-	// Handle scheduled changes (no immediate charges)
 	if (isScheduledChange) {
 		if (previewIntent === "update_quantity") {
 			return `${action}. ${formatAmount(total, currency)} due today.`;
@@ -174,6 +155,5 @@ export function buildHeaderDescription({
 		return `${action}. ${formatAmount(total, currency)} due today. Changes take effect ${effectiveDate}.`;
 	}
 
-	// Standard format
 	return `${action}. ${formatAmount(total, currency)} due today.`;
 }

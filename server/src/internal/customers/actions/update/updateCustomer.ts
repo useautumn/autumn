@@ -84,7 +84,6 @@ export const updateCustomer = async ({
 	}
 
 	if (notNullish(newCustomerId) && originalCustomer.id !== newCustomerId) {
-		// Fetch for existing customer
 		const existingCustomer = await CusService.get({
 			db,
 			idOrInternalId: newCustomerId,
@@ -127,8 +126,6 @@ export const updateCustomer = async ({
 			: undefined,
 	});
 
-	// Try to update stripe ID. Distinguish omitted (undefined -> leave as is)
-	// from explicitly cleared (null/"" -> unlink the Stripe customer).
 	let stripeId = originalCustomer.processor?.id;
 	const clearStripeId = newStripeId === null || newStripeId === "";
 
@@ -144,7 +141,6 @@ export const updateCustomer = async ({
 		);
 	}
 
-	// Billing details go first: Stripe is most likely to reject them (e.g. a bad VAT).
 	if (billingDetails) {
 		assertBillingDetailsWritable({ ctx });
 		if (!stripeId) {
@@ -207,7 +203,6 @@ export const updateCustomer = async ({
 		await stripeCli.customers.update(stripeId, stripeUpdate);
 	}
 
-	// Prepare update data — only include defined billing control fields
 	const billingControlUpdates: Partial<Customer> = {};
 	if (billing_controls) {
 		if (billing_controls.auto_topups !== undefined) {
@@ -224,7 +219,6 @@ export const updateCustomer = async ({
 			billingControlUpdates.overage_allowed = billing_controls.overage_allowed;
 	}
 
-	// Merge config partially so omitted keys don't clobber existing ones
 	const configUpdate = config
 		? {
 				config: {
@@ -254,7 +248,6 @@ export const updateCustomer = async ({
 	}
 
 	if (!notNullish(newCustomerId) || originalCustomer.id === newCustomerId) {
-		// Remove id from update if not changing
 		delete updateData.id;
 	}
 
@@ -286,7 +279,6 @@ export const updateCustomer = async ({
 
 		await usageWindowRepo.setWindows({ db: txCtx.db, windows: usageWindows });
 
-		// The worker keys a customer by its id: rename in Postgres first, so the plan below loads it under the new one.
 		if (renamedId !== undefined)
 			await CusService.update({
 				ctx: txCtx,
@@ -312,7 +304,6 @@ export const updateCustomer = async ({
 				});
 	}
 
-	// Through the worker when it holds the customer, so the read below and any top-up it dispatches see the new row.
 	const customer = {
 		...originalCustomer,
 		id: renamedId ?? originalCustomer.id,

@@ -2,7 +2,6 @@ import { type RewardProgram, rewardPrograms } from "@autumn/shared";
 import { and, eq } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 
-/** List all reward programs for an org/env */
 export const listRewardPrograms = async ({
 	db,
 	orgId,

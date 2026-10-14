@@ -1,8 +1,3 @@
-/**
- * Nuke command validation
- * Ensures safety checks before deletion
- */
-
 import { AppEnv, getEnvironmentFromKey } from "../../lib/env/detect.js";
 
 export class NukeValidationError extends Error {
@@ -12,10 +7,6 @@ export class NukeValidationError extends Error {
 	}
 }
 
-/**
- * Validate that the key is sandbox-only
- * Throws error if production key detected
- */
 export function validateSandboxOnly(key: string): void {
 	const env = getEnvironmentFromKey(key);
 
@@ -32,9 +23,6 @@ export function validateSandboxOnly(key: string): void {
 	}
 }
 
-/**
- * Validate customer count is within limits
- */
 export function validateCustomerLimit(
 	customerCount: number,
 	maxCustomers: number = 50,
@@ -57,9 +45,6 @@ export function validateCustomerLimit(
 	}
 }
 
-/**
- * Get max customers from environment or use default
- */
 export function getMaxCustomers(): number {
 	const envValue = process.env['ATMN_NUKE_MAX_CUSTOMERS'];
 	if (envValue) {
@@ -68,5 +53,5 @@ export function getMaxCustomers(): number {
 			return parsed;
 		}
 	}
-	return 50; // Default limit
+	return 50;
 }

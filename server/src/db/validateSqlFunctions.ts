@@ -13,9 +13,6 @@ type SqlFunction = {
 	contentHash: string;
 };
 
-/**
- * Dynamically discover SQL functions from the deductRpc folder
- */
 const discoverSqlFunctions = (): SqlFunction[] => {
 	const __filename = fileURLToPath(import.meta.url);
 	const deductRpcPath = join(
@@ -31,7 +28,6 @@ const discoverSqlFunctions = (): SqlFunction[] => {
 		const filePath = join(deductRpcPath, file);
 		const content = readFileSync(filePath, "utf-8");
 
-		// Extract function name from CREATE FUNCTION statement
 		const functionNameMatch = content.match(
 			/CREATE\s+(?:OR\s+REPLACE\s+)?FUNCTION\s+(\w+)/i,
 		);
@@ -41,10 +37,9 @@ const discoverSqlFunctions = (): SqlFunction[] => {
 			throw new Error(`Could not extract function name from ${file}`);
 		}
 
-		// Create hash of normalized content (ignore whitespace differences)
 		const normalizedContent = content
-			.replace(/--.*$/gm, "") // Remove comments
-			.replace(/\s+/g, " ") // Normalize whitespace
+			.replace(/--.*$/gm, "")
+			.replace(/\s+/g, " ")
 			.trim();
 
 		const contentHash = createHash("sha256")
@@ -70,13 +65,11 @@ export const validateSqlFunctions = async ({
 }) => {
 	const start = Date.now();
 
-	// Dynamically discover SQL functions from source files
 	const requiredFunctions = discoverSqlFunctions();
 	logger.info(
 		`Discovered ${requiredFunctions.length} SQL functions from source files`,
 	);
 
-	// Query database for existing functions and their definitions
 	const result = await db.execute<{
 		function_name: string;
 		definition: string;
@@ -95,7 +88,6 @@ export const validateSqlFunctions = async ({
 		result.map((row) => [row.function_name, row.definition]),
 	);
 
-	// Check for missing functions
 	const missingFunctions = requiredFunctions.filter(
 		(fn) => !dbFunctions.has(fn.name),
 	);
@@ -111,7 +103,6 @@ export const validateSqlFunctions = async ({
 		throw new Error(`Missing SQL functions: ${missingDetails}`);
 	}
 
-	// Optionally validate function content
 	const mismatchedFunctions: Array<{
 		name: string;
 		sourceFile: string;
@@ -123,18 +114,16 @@ export const validateSqlFunctions = async ({
 			const dbDefinition = dbFunctions.get(fn.name);
 			if (!dbDefinition) continue;
 
-			// Normalize both definitions for comparison
 			const normalizeFunc = (str: string) =>
 				str
-					.replace(/--.*$/gm, "") // Remove comments
-					.replace(/\s+/g, " ") // Normalize whitespace
+					.replace(/--.*$/gm, "")
+					.replace(/\s+/g, " ")
 					.toLowerCase()
 					.trim();
 
 			const normalizedSource = normalizeFunc(fn.content);
 			const normalizedDb = normalizeFunc(dbDefinition);
 
-			// Create hashes for comparison
 			const sourceHash = createHash("sha256")
 				.update(normalizedSource)
 				.digest("hex")

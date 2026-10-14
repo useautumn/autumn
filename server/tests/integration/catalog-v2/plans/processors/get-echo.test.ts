@@ -1,17 +1,3 @@
-/**
- * catalogV2.get echoes Stripe product/price ids as `processors.stripe`.
- *
- * Contract:
- *   New fields:  plan.processors.stripe.{product_id, additional_product_ids?}
- *                price.processors.stripe.{price_id}
- *                items[].price.processors.stripe.{price_id}
- *   Behaviors:   paid + Stripe init → GET matches product.processor / price.config
- *                free plan / create_in_stripe:false → processors omitted
- *
- * Red (current): processors is not on ApiPlanV1 / GET
- * Green (after): GET echoes existing DB stripe ids; omit when unset
- */
-
 import { expect, test } from "bun:test";
 import {
 	type ApiPlanExpandedV1,

@@ -13,7 +13,6 @@ import type {
 } from "../compute/buildStoredPriceCatalog";
 import { evaluateItems } from "./evaluateItems";
 
-/** Evaluates actual Stripe schedule phases against the expected phases for a multi_phase scenario. */
 export const evaluateSchedulePhases = async ({
 	stripeCli,
 	sub,
@@ -65,8 +64,6 @@ export const evaluateSchedulePhases = async ({
 
 	const currentPhaseStart =
 		schedule.current_phase?.start_date ?? livePhases[0]?.start_date;
-	// One expected phase claims one actual phase, so a genuine extra phase can't
-	// hide behind a sibling that already matched within the day tolerance.
 	const claimedPhases = new Set<number>();
 	for (let i = 0; i < scheduledPhases.length; i++) {
 		const expectedPhase = scheduledPhases[i];
@@ -85,7 +82,6 @@ export const evaluateSchedulePhases = async ({
 		const actualPhase =
 			actualPhaseIndex === -1 ? undefined : livePhases[actualPhaseIndex];
 		if (actualPhaseIndex !== -1) claimedPhases.add(actualPhaseIndex);
-		// Phase 0 is the live phase, so its findings carry no future start.
 		const phaseStartsAt = i === 0 ? undefined : expectedStartSeconds;
 
 		if (!actualPhase) {
@@ -108,7 +104,6 @@ export const evaluateSchedulePhases = async ({
 			});
 		}
 
-		// Phase 0's items are already checked against the live subscription items in verify.ts.
 		if (i === 0) continue;
 
 		mismatches.push(

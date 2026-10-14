@@ -1,17 +1,14 @@
 import { readFileSync } from "node:fs";
 
-/** cgroup v2 usage of the whole container; a limit is null when unset ("max") or unreadable. */
 export type ContainerStats = {
 	cpuUsageSeconds: number | null;
 	cpuLimitCores: number | null;
 	memoryBytes: number | null;
-	/** Of `memoryBytes`, what is not file cache the kernel can drop: what an OOM kill is about. */
 	memoryAnonBytes: number | null;
 	memoryLimitBytes: number | null;
 };
 
 const CGROUP_DIR = "/sys/fs/cgroup";
-/** /health is polled, so the cgroup files are read at most this often per thread. */
 const READ_EVERY_MS = 1000;
 
 const readText = (path: string): string | null => {

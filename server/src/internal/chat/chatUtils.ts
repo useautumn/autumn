@@ -15,7 +15,6 @@ export const getSlackAdminProvider = ({
 	clientId?: string;
 } = {}) => `${slackAdminProviderPrefix}:${clientId}` as const;
 
-/** Slack user resolution depends on these, even when SLACK_BOT_SCOPES overrides the defaults. */
 const REQUIRED_USER_RESOLUTION_SCOPES: readonly string[] = [
 	SLACK_USERS_READ_SCOPE,
 	SLACK_EMAIL_SCOPE,
@@ -80,7 +79,6 @@ export const createSlackInstallUrl = (
 	return `https://slack.com/oauth/v2/authorize?${params}`;
 };
 
-/** Decrypts chat tokens stored by leaf (`apps/leaf/src/lib/crypto.ts`). */
 export const decryptChatToken = ({ token }: { token: string }) => {
 	const key = crypto
 		.createHash("sha256")

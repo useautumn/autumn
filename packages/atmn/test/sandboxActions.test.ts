@@ -1,10 +1,3 @@
-/**
- * The three sandbox commands, with the API faked and a real `.env` on disk.
- * What matters here is what the user reads and what the file ends up holding:
- * the key is shown once, so losing it or scrubbing the wrong line is not
- * recoverable.
- */
-
 import { afterEach, expect, test } from "bun:test";
 import {
 	mkdirSync,
@@ -260,7 +253,6 @@ test("delete --yes removes the sandbox, its key and the pin that named it", asyn
 });
 
 test("create shows the key once when the .env cannot be written", async () => {
-	// A directory where the .env should be makes the write fail after minting.
 	const dir = makeProjectDir();
 	mkdirSync(join(dir, ".env"));
 	const output = capture();
@@ -330,7 +322,6 @@ test("an id no sandbox has is an error, not a request", async () => {
 });
 
 test("create --json keeps stdout parseable when the .env write fails", async () => {
-	// A directory where the .env should be makes the write fail after minting.
 	const dir = makeProjectDir();
 	mkdirSync(join(dir, ".env"));
 	const output = capture();
@@ -382,8 +373,6 @@ test("a failed .env scrub never reads as a failed deletion", async () => {
 });
 
 test("delete scrubs the key from a lower-precedence .env too", async () => {
-	// .env.local exists but holds nothing of this sandbox's; the effective key
-	// and pin live in .env, and both have to go.
 	const dir = makeProjectDir({
 		env: "AUTUMN_SANDBOX_ORG_2N4B_SECRET_KEY=am_sk_test_minted\nAUTUMN_SANDBOX_ID=org_2n4b\n",
 	});
@@ -427,7 +416,6 @@ test("delete scrubs every file that holds the key", async () => {
 
 	expect(result.envPaths).toEqual([join(dir, ".env.local"), join(dir, ".env")]);
 	expect(envText({ dir })).toBe("KEEP=1\n");
-	// The pin names another sandbox: it stays.
 	expect(readFileSync(join(dir, ".env.local"), "utf8")).toBe(
 		"AUTUMN_SANDBOX_ID=org_other\n",
 	);

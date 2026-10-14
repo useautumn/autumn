@@ -7,7 +7,6 @@ import {
 
 const FORWARDED_HEADERS = ["content-type", "stripe-signature", "user-agent"];
 
-/** Port of scripts/tw/ingress/server.mjs forwardConnectEvent: the worker owns the ack status. */
 export const forwardConnectEvent = async ({
 	rawBody,
 	headers,
@@ -18,7 +17,6 @@ export const forwardConnectEvent = async ({
 	rawBody: string;
 	headers: Headers;
 	env: string;
-	/** Set on a dedicated shard's webhook; its unregistered accounts go to that shard's worker. */
 	shard?: string;
 	logger: TwdLogger;
 }): Promise<number> => {
@@ -58,7 +56,6 @@ export const forwardConnectEvent = async ({
 			redirect: "manual",
 		});
 		await response.text();
-		// Successes are thousands per run and trip Railway's log rate limit; only failures are logged.
 		if (!response.ok)
 			logger.warn("ingress: forward failed", {
 				...description,

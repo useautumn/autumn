@@ -9,11 +9,6 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// INCLUDED USAGE CHANGES
-// ═══════════════════════════════════════════════════════════════════════════════
-
-// Add included usage to prepaid feature
 test.concurrent(
 	`${chalk.yellowBright("prepaid: add included usage")}`,
 	async () => {
@@ -32,7 +27,7 @@ test.concurrent(
 		});
 
 		const packs = 2;
-		const quantity = packs * billingUnits; // 200 units
+		const quantity = packs * billingUnits;
 
 		const { customerId, autumnV1, ctx } = await initScenario({
 			customerId: "prepaid-add-included",
@@ -58,7 +53,6 @@ test.concurrent(
 			{ timeout: 2000 },
 		);
 
-		// Add 50 included usage (free units)
 		const includedUsage = 100;
 		const newPrepaidItem = items.prepaidMessages({
 			includedUsage,
@@ -74,15 +68,12 @@ test.concurrent(
 
 		const preview = await autumnV1.subscriptions.previewUpdate(updateParams);
 
-		// Adding included usage doesn't change prepaid charge (same packs)
 		expect(preview.total).toBe(-10);
 
 		await autumnV1.subscriptions.update(updateParams);
 
 		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-		// Balance = includedUsage + quantity - messagesUsed = 50 + 200 - 100 = 150
-		// Customer's included_usage = item's includedUsage + quantity = 50 + 200 = 250
 		expectCustomerFeatureCorrect({
 			customer,
 			featureId: TestFeature.Messages,
@@ -106,7 +97,6 @@ test.concurrent(
 	},
 );
 
-// Remove included usage from prepaid feature
 test.concurrent(
 	`${chalk.yellowBright("prepaid: remove included usage")}`,
 	async () => {
@@ -126,7 +116,7 @@ test.concurrent(
 		});
 
 		const packs = 2;
-		const quantity = packs * billingUnits; // 200 units
+		const quantity = packs * billingUnits;
 
 		const { customerId, autumnV1, ctx } = await initScenario({
 			customerId: "prepaid-remove-included",
@@ -142,7 +132,6 @@ test.concurrent(
 			],
 		});
 
-		// Total balance = 100 (included) + 200 (prepaid) = 300
 		const messagesUsed = 150;
 		await autumnV1.track(
 			{
@@ -153,7 +142,6 @@ test.concurrent(
 			{ timeout: 2000 },
 		);
 
-		// Remove included usage
 		const newPrepaidItem = items.prepaidMessages({
 			includedUsage: 0,
 			billingUnits,
@@ -169,15 +157,12 @@ test.concurrent(
 
 		const preview = await autumnV1.subscriptions.previewUpdate(updateParams);
 
-		// Removing included usage doesn't change prepaid charge (same packs)
 		expect(preview.total).toBe(0);
 
 		await autumnV1.subscriptions.update(updateParams);
 
 		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-		// Balance = 0 (included) + 200 (prepaid) - 150 (used) = 50
-		// Customer's included_usage = 0 + 200 = 200
 		expectCustomerFeatureCorrect({
 			customer,
 			featureId: TestFeature.Messages,

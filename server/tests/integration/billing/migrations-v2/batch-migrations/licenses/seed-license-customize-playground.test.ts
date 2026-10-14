@@ -1,24 +1,3 @@
-/**
- * Seeds a license playground and LEAVES IT IN THE DB for manual testing.
- * Runs no migration and asserts nothing — it just builds the state and prints
- * the ids plus a ready-to-paste migration op.
- *
- * Run:
- *   cd server
- *   ./run.sh <abs path to this file>
- *
- * Then drive the migration yourself (dashboard or API) using the printed op,
- * and re-run this file any time to reset the playground to a clean state.
- *
- * What it builds, for customer `license-playground`:
- *   - plan `lic-play-pro`       parent, carries `words`
- *   - plan `lic-play-dev-seat`  license plan, $20/mo + 500 messages per seat
- *   - 3 seats attached (1 included + 2 paid), 2 assigned to entities
- *
- * The migration to try adds a free boolean `dashboard` to the license link.
- * Neither plan carries `dashboard` at seed time, so any appearance of it on an
- * assignment is unambiguously the migration's doing.
- */
 import { test } from "bun:test";
 import { customerEntitlements } from "@autumn/shared";
 import { setupLicenseUpdateScenario } from "@tests/integration/licenses/billing/update/setupLicenseUpdateScenario";

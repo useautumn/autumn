@@ -44,7 +44,6 @@ export const expectMigrationItemRunStatus = async ({
 	migrationRunId: string;
 	customerId: string;
 	status: MigrationItemRunStatus;
-	/** Asserted only when passed; pass `null` to require it cleared. */
 	skipReason?: MigrationItemRunSkipReason | null;
 }) => {
 	const internalCustomerId = await getInternalCustomerId({ ctx, customerId });
@@ -61,9 +60,6 @@ export const expectMigrationItemRunStatus = async ({
 	});
 };
 
-/** cusEnt rows for one feature on the customer's live products for a plan.
- * A duplicated add shows up here as a second row even when the API response
- * still reads like one balance. */
 export const expectCustomerEntitlementRowCount = async ({
 	ctx,
 	customerId,
@@ -108,8 +104,6 @@ export const expectCustomerEntitlementRowCount = async ({
 	).toHaveLength(count);
 };
 
-/** The new cusEnt's cycle fields plus its cusProduct's anchor sources — the
- * raw rows the anchor-ladder assertions run against. */
 export const getCustomerEntitlementCycle = async ({
 	ctx,
 	customerId,

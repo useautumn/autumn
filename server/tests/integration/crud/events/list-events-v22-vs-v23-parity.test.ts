@@ -49,8 +49,6 @@ const findDiff = (a: unknown, b: unknown, path = "$"): string | null => {
 
 const SEED_EVENT_COUNT = 5;
 
-// Tracked events reach events.list asynchronously (worker -> Postgres -> Tinybird);
-// 1s polls keep each customer under the 5/s events limiter.
 const waitForSeededEvents = (customerId: string) =>
 	pollUntil({
 		fetch: () =>

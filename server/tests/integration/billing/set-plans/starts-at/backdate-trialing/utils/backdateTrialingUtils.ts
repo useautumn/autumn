@@ -44,13 +44,11 @@ import {
 const INCLUDED_MESSAGES = 100;
 const TRACKED_MESSAGES = 30;
 const TRIAL_DAYS = 14;
-// A trial-off custom anchor lands after the old trial end; a kept trial's lands after the trial end, inside its month.
 const TRIAL_OFF_ANCHOR_DAYS = 20;
 const TRIAL_KEPT_ANCHOR_DAYS_AFTER_TRIAL = 6;
 
 export type BackdateTrialAnchor = "unset" | "custom" | "phase_start";
 
-/** Pro trialing for 14 days on a live Stripe subscription, with usage tracked during the trial. */
 export const initTrialingProScenario = async ({
 	customerId,
 }: {
@@ -100,11 +98,9 @@ export const initTrialingProScenario = async ({
 	};
 };
 
-/** Two months and ten days back, so Stripe bills a stub plus full months. */
 export const backdatedStartMs = ({ nowMs }: { nowMs: number }) =>
 	addDays(subMonths(new UTCDate(nowMs), 2), -10).getTime();
 
-/** The custom anchor a request names, or undefined for no anchor and phase_start. */
 export const customAnchorMs = ({
 	anchor,
 	keepsTrial,
@@ -122,12 +118,6 @@ export const customAnchorMs = ({
 		: addDays(nowMs, TRIAL_OFF_ANCHOR_DAYS).getTime();
 };
 
-/**
- * What Stripe does for each case (handoffs/ATMN-812 probe). Trial off: the recreated sub anchors on the requested
- * anchor, else the old trial end, else (phase_start) the backdated start, and bills the backdated window as
- * create_prorations unless proration is none. Trial kept: the trial stretches back, so nothing is billed until
- * the trial end, then a stub up to a later anchor if one was requested.
- */
 const expectedBilling = ({
 	keepsTrial,
 	anchor,
@@ -203,11 +193,6 @@ const expectedBilling = ({
 	};
 };
 
-/**
- * Backdates the first phase of a trialing subscription two months and ten days, turning the trial off or keeping it,
- * then checks preview == execute == Stripe, the recreated subscription, the kept row and its balance, and that
- * each renewal past the anchor bills once.
- */
 export const backdateTrialingAndExpect = async ({
 	customerId,
 	keepsTrial,
@@ -335,7 +320,6 @@ export const backdateTrialingAndExpect = async ({
 	} else {
 		await expectSubscriptionNotTrialing({ customer, productId: proTrial.id });
 	}
-	// Ending the trial is a carry point, so usage resets without carry_over_usages; a kept trial keeps it.
 	const usage = keepsTrial ? TRACKED_MESSAGES : 0;
 	await expectBalanceCorrect({
 		customerId,
@@ -344,7 +328,6 @@ export const backdateTrialingAndExpect = async ({
 		usage,
 	});
 
-	// Each renewal bills once: the full period, or a kept trial's stub up to a later anchor first.
 	const billedTotals = [...expected.createInvoiceTotals];
 	for (const renewal of expected.renewals) {
 		await advancePastCycleStart({

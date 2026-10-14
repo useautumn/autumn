@@ -55,8 +55,6 @@ export const buildStripeMapping = ({
 	stripeProductId: string | null | undefined;
 	stripeProductsById: Map<string, CatalogStripeProduct>;
 	stripeConnected: boolean;
-	// When true, skip resolving against Stripe and return `unchecked` for mapped
-	// ids so the client can resolve names/status lazily.
 	deferred?: boolean;
 }): CatalogStripeMapping => {
 	if (!stripeProductId) {

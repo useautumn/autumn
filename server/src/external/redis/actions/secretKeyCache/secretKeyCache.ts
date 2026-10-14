@@ -10,15 +10,12 @@ import type { ApiKeyVerificationData } from "@/internal/dev/repos/getApiKeyVerif
 
 export const SECRET_KEY_CACHE_TTL_SECONDS = 3600;
 
-// This TTL is the revocation window: clearSecretKeyCache only reaches the
-// calling process's L1, so every other worker serves a revoked key until it lapses.
 export const SECRET_KEY_L1_TTL_MS = 5_000;
 export const SECRET_KEY_L1_NEGATIVE_TTL_MS = 1_000;
 export const SECRET_KEY_L1_MAX_ENTRIES = 5_000;
 
 type SecretKeyL1Entry = { value: ApiKeyVerificationData | null };
 
-/** Per-process L1. Each cluster worker gets its own copy — intended. */
 const secretKeyL1 = new LRUCache<string, SecretKeyL1Entry>({
 	max: SECRET_KEY_L1_MAX_ENTRIES,
 	ttl: SECRET_KEY_L1_TTL_MS,
@@ -38,10 +35,6 @@ export const getCachedSecretKeyVerification = async ({
 }: {
 	hashedKey: string;
 	requestId?: string;
-	/** Bypass this process's L1 and read Redis directly. clearSecretKeyCache
-	 *  only evicts the calling worker's L1, so a request that must see a write
-	 *  another worker just made (e.g. a plan referencing a feature created a
-	 *  moment ago) has to skip the local layer. */
 	skipL1?: boolean;
 }): Promise<ApiKeyVerificationData | null> => {
 	const miscRedis = resolveMiscRedis({ requestId });
@@ -59,8 +52,6 @@ export const getCachedSecretKeyVerification = async ({
 		timeoutMs: REDIS_OP_TIMEOUT_MS.secretKeyGet,
 	});
 
-	// `undefined` means Redis failed, `null` means a genuine miss — only the
-	// latter is a real answer worth negative-caching.
 	if (cached === undefined) return null;
 
 	if (!cached) {
@@ -101,8 +92,6 @@ export const setCachedSecretKeyVerification = async ({
 	});
 };
 
-/** Drop the cached verification on every live instance — ramped readers must
- *  never accept a revoked key. */
 export const clearSecretKeyCache = async ({
 	hashedKey,
 }: {

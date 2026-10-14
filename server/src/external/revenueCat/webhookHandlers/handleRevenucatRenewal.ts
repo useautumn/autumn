@@ -36,8 +36,6 @@ export const handleRenewal = async ({
 		overrideCustomerId: getRevenueCatOverrideCustomerId(event),
 		customerEmail: getRevenueCatCustomerEmail(event),
 		customerFingerprint: getRevenueCatCustomerFingerprint(event),
-		// RevenueCat sends RENEWAL (not INITIAL_PURCHASE) when a lapsed user
-		// resubscribes, so the customer may legitimately not exist yet.
 		autoCreateCustomer: true,
 	});
 
@@ -46,8 +44,6 @@ export const handleRenewal = async ({
 		cusProducts,
 	});
 
-	// Same active product: store the new period and send webhooks; the cycle
-	// anchor is owned by the app store. Past-due falls through to recovery below.
 	if (curSameProduct && curSameProduct.status === CusProductStatus.Active) {
 		logger.info(
 			`Renewal for existing active product ${product.id}, sending webhook`,
@@ -76,8 +72,6 @@ export const handleRenewal = async ({
 		return { success: true };
 	}
 
-	// Past-due → active recovery. A product cancelled before it went past due
-	// needs uncancel, since markActive leaves the cancellation fields set.
 	if (curSameProduct && curSameProduct.status === CusProductStatus.PastDue) {
 		logger.info(
 			`Renewal for existing past due product ${product.id}, marking as active`,
@@ -111,7 +105,6 @@ export const handleRenewal = async ({
 		return { success: true };
 	}
 
-	// Reactivate same product (expired/canceled → active).
 	if (curSameProduct) {
 		await customerProductActions.uncancel({
 			ctx: customerCtx,
@@ -137,8 +130,6 @@ export const handleRenewal = async ({
 		return { success: true };
 	}
 
-	// Different product (upgrade or downgrade). V2 attach handles expiring the
-	// outgoing cusProduct via computeAttachPlan's transition logic.
 	await provisionRevenueCatCusProduct({
 		ctx: customerCtx,
 		customer,

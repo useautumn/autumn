@@ -4,8 +4,8 @@ type CalculateDeductionParams = {
 	currentBalance: number;
 	currentAdjustment: number;
 	amountToDeduct: number;
-	minBalance?: number; // undefined = no floor
-	maxBalance?: number; // undefined = no ceiling
+	minBalance?: number;
+	maxBalance?: number;
 	alterGrantedBalance?: boolean;
 };
 
@@ -50,7 +50,6 @@ export const calculateDeduction = ({
 
 	const remaining = new Decimal(amountToDeduct).sub(deducted).toNumber();
 
-	// Update adjustment if alterGrantedBalance is true
 	let newAdjustment = currentAdjustment;
 	if (alterGrantedBalance && deducted !== 0) {
 		newAdjustment = new Decimal(currentAdjustment).sub(deducted).toNumber();

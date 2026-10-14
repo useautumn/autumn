@@ -1,8 +1,3 @@
-/**
- * catalogV2.update — follow edges V1 ported: skipped add is gone,
- * concat pin+follow, OOTO-IWTN re-adds a stripped slot.
- */
-
 import { test } from "bun:test";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";

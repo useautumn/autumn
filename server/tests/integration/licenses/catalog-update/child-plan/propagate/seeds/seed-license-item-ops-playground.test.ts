@@ -1,22 +1,3 @@
-/**
- * Seeds a license plan with live seat assignments and LEAVES IT IN THE DB for
- * manual testing of the three batch verbs. Runs no migration and asserts
- * nothing.
- *
- * Run:
- *   cd server
- *   ./run.sh <abs path to this file>
- *
- * What it builds, for customer `lic-ops-customer`:
- *   - plan `pro_lic-ops`       parent, 1 included seat, 3 attached
- *   - plan `dev-seat_lic-ops`  the license plan, granting:
- *       messages  100/month   ← edit or delete this one
- *       words     50/month    ← the control: must survive either way
- *   - 2 seats assigned to entities, each holding both features
- *
- * One of the assignments has its messages balance spent down to 40, so an edit
- * has to credit the delta rather than reset it.
- */
 import { test } from "bun:test";
 import { customerEntitlements } from "@autumn/shared";
 import { setupLicenseUpdateScenario } from "@tests/integration/licenses/billing/update/setupLicenseUpdateScenario";
@@ -62,8 +43,6 @@ test(`${chalk.yellowBright("SEED: license item add/edit/delete playground")}`, a
 		(assignment) => assignment.internal_entity_id,
 	);
 
-	// Spend one assignment's messages down, so an edit must preserve
-	// consumption. Words is left alone as the control.
 	await ctx.db
 		.update(customerEntitlements)
 		.set({ balance: CONSUMED_TO })

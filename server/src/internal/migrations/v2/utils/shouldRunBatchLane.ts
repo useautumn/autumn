@@ -24,12 +24,6 @@ export type BatchLaneDecision =
 			rejections?: BatchMigrationRejection[];
 	  };
 
-/**
- * Catalog-only prediction of the lane a plain run would take — for surfaces
- * (dashboard run panel) that need it BEFORE prepare has run, so
- * missing_prepared_state rejections count as eligible: prepare runs at run
- * start and only materializes what compute already accepted.
- */
 export const isBatchEligibleMigrationDefinition = ({
 	migration,
 	products,
@@ -48,11 +42,6 @@ export const isBatchEligibleMigrationDefinition = ({
 	);
 };
 
-/**
- * A run is batch-eligible only in its plain form — anything that scopes,
- * previews, retries, or hooks into per-item processing keeps the
- * per-customer lane's exact semantics.
- */
 const isBatchEligibleRun = ({
 	dryRun,
 	controls,
@@ -62,19 +51,11 @@ const isBatchEligibleRun = ({
 	controls?: MigrationRunControls;
 	hasCustomHooks: boolean;
 }): boolean =>
-	// `only` / `retryItemStatuses` are claim-time controls, not lane
-	// selectors — the batch claim applies them itself.
 	!dryRun &&
 	!hasCustomHooks &&
 	controls?.limit == null &&
 	controls?.checkpoint !== false;
 
-/**
- * Single decision point for which lane a run takes. All-or-nothing: when
- * this says yes, the batch lane owns the ENTIRE run and the per-customer
- * scope iteration is skipped; when it says no, the run is per-customer
- * end-to-end. The two lanes never process the same run.
- */
 export const shouldRunBatchLane = async ({
 	ctx,
 	migration,

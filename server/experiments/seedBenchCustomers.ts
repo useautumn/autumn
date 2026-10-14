@@ -1,10 +1,3 @@
-// Seeds N fat customers on the dev DB by cloning a template customer, so the
-// planner sees prod-like row shapes. All rows use a `bench_` id prefix.
-//
-//   ENV_FILE=.env infisical run --env=dev --recursive -- \
-//     bun experiments/seedBenchCustomers.ts [count] [usageWindowsPerCustomer]
-//
-// Cleanup: bun experiments/seedBenchCustomers.ts --clean
 import pg from "pg";
 
 const TEMPLATE_CUSTOMER = "cus_3GXT6xOPn4Txwvpw5cfJA6pyJoG";
@@ -25,7 +18,6 @@ const q = async (text: string, values: unknown[] = []) => {
 	return res.rowCount ?? 0;
 };
 
-/** Clone a row set, overriding columns via a jsonb patch. Column-agnostic. */
 const cloneSql = (table: string, patch: string, from: string) =>
 	`INSERT INTO ${table}
 	 SELECT (jsonb_populate_record(NULL::${table}, to_jsonb(t) || ${patch})).*
@@ -33,7 +25,6 @@ const cloneSql = (table: string, patch: string, from: string) =>
 	 ON CONFLICT DO NOTHING`;
 
 const cleanup = async () => {
-	// Children first — FKs cascade on some paths but not all.
 	for (const [table, col] of [
 		["usage_windows", "internal_customer_id"],
 		["customer_prices", "id"],
@@ -102,7 +93,6 @@ const seed = async () => {
 	);
 	console.log(`  customer_prices: ${prices}`);
 
-	// usage_windows has no template rows — synthesise from each customer's ents.
 	const windows = await q(
 		`INSERT INTO usage_windows (
 			id, internal_customer_id, internal_entity_id, feature_id,

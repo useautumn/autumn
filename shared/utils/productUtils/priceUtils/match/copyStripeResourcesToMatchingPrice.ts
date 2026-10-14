@@ -36,23 +36,11 @@ const copyField = ({
 	return true;
 };
 
-/** Fields reused under a Stripe product when minting a new price (product-only match). */
 const stripeProductOnlyFields = [
 	"stripe_product_id",
 	"stripe_meter_id",
 ] as const satisfies readonly StripeResourceField[];
 
-/**
- * Copy Stripe resource IDs (and `stripe_event_name`) from the best-matching
- * candidate price onto `targetPrice.config`, in place. Returns the fields that
- * were copied.
- *
- * Two-pass search: a "full" match (identical config + paired entitlement) is
- * preferred over a "stripeProductOnly" match (same feature/entity scope). For
- * "full" matches every Stripe resource field is copied; for "stripeProductOnly"
- * `stripe_product_id` + `stripe_meter_id` are copied so a fresh price is later
- * minted under the existing per-feature Stripe product/meter.
- */
 export const copyStripeResourcesToMatchingPrice = ({
 	targetPrice,
 	candidatePrices,
@@ -60,7 +48,6 @@ export const copyStripeResourcesToMatchingPrice = ({
 	candidateEntitlements,
 }: {
 	targetPrice: Price;
-	// Stripe IDs are copied FROM the best-matching candidate TO targetPrice.
 	candidatePrices: Price[];
 	targetEntitlements: Entitlement[];
 	candidateEntitlements: Entitlement[];

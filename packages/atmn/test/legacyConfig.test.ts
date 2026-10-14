@@ -1,9 +1,3 @@
-/**
- * A config written for atmn 1.x (the `item` builder, no root `atmn()` export)
- * is refused before it is imported, with the two-step way forward, instead of
- * dying inside the import with "Export named 'item' not found".
- */
-
 import { expect, test } from "bun:test";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";

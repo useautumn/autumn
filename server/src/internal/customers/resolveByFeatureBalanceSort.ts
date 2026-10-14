@@ -22,27 +22,18 @@ import { withActiveSpan } from "@/utils/otel/withActiveSpan.js";
 import { buildSearchPredicates } from "./CusSearchService.js";
 import { looseEntitlementIsLiveSql } from "./looseEntitlementSql.js";
 
-/** `total` is the value of the REQUESTED basis (remaining/granted/usage) —
- * the cursor and ranking key on both the lake and PG sides. */
 export type FeatureBalanceSortRow = {
 	internalId: string;
 	isUnlimited: boolean;
 	total: number;
 };
 
-/** Lake column/expression for each basis. Mirrors PG: remaining=SUM(balance)
- * finite-only, granted≈SUM(allowance+adjustment) finite-only, usage=all-rows
- * consumption incl. unlimited deductions (prepaid quantity and legacy entity
- * multipliers are PG-verify refinements, not lake ones). */
 export const basisExprSql = (basis: FeatureBalanceSortBasis): SQL => {
 	if (basis === "granted") return sql.raw("granted_total");
 	if (basis === "usage") return sql.raw("usage_total");
 	return sql.raw("total");
 };
 
-/** ∞ > x is true, 5 < ∞ is false: `>` on remaining/granted ADMITS every
- * unlimited holder (exports must include them); `<` excludes pure-unlimited.
- * Usage is real on every row, so neither rule applies there. */
 export const unlimitedPassesThreshold = ({
 	basis,
 	op,
@@ -59,9 +50,6 @@ export const thresholdRequiresFiniteRows = ({
 	op: BalanceFilterOp;
 }): boolean => basis !== "usage" && op === "<";
 
-/** The unlimited stripe orders remaining/granted sorts (no number to rank
- * unlimited customers by); usage ranks everyone by their real number, and a
- * `<` filter passes rows on finite merit so the stripe stands down there too. */
 export const stripeSuppressed = ({
 	basis,
 	remainingFilter,
@@ -72,18 +60,12 @@ export const stripeSuppressed = ({
 	basis === "usage" ||
 	(remainingFilter !== undefined && !unlimitedPassesThreshold(remainingFilter));
 
-/** Lake nominations per top-up iteration; sized so one batch usually fills a
- * 250 page even after expired-row inflation (~12% table-wide) and filters. */
 const NOMINATION_BATCH_SIZE = 500;
 const MAX_TOPUP_ITERATIONS = 4;
 
-/** Customers whose lake total UNDER-reports (negative balances on rows the
- * lake can't filter out) would be nominated too late or never — they must be
- * considered on every page. Small set (~4k on the worst feature measured). */
 const DEFLATION_SET_CAP = 10_000;
 const DEFLATION_SET_TTL_SECONDS = 30 * 60;
 
-/** Basis-scoped: the cached rows carry exact totals in the requested basis. */
 const deflationSetCacheKey = ({
 	internalFeatureId,
 	basis,
@@ -106,8 +88,6 @@ export type BalanceThresholdFilter = {
 	basis: FeatureBalanceSortBasis;
 };
 
-/** The scalar a threshold compares in the chosen basis. Usage spans ALL rows:
- * finite consumption plus unlimited-row deductions. */
 export const basisValueOf = ({
 	basis,
 	remaining,
@@ -125,8 +105,6 @@ export const basisValueOf = ({
 			? granted - remaining + unlimitedUsage
 			: remaining;
 
-/** Remaining/granted thresholds compare finite sums (see
- * `thresholdRequiresFiniteRows`); usage thresholds compare all-rows usage. */
 export const passesBalanceFilter = ({
 	total,
 	op,
@@ -137,8 +115,6 @@ export const passesBalanceFilter = ({
 	value: number;
 }): boolean => (op === ">" ? total > value : total < value);
 
-/** SQL twin of `passesBalanceFilter`, shared by the lake nomination/candidate
- * queries and the PG dense walk. */
 export const balanceThresholdSql = ({
 	totalExpr,
 	op,
@@ -150,8 +126,6 @@ export const balanceThresholdSql = ({
 }): SQL =>
 	op === ">" ? sql`${totalExpr} > ${value}` : sql`${totalExpr} < ${value}`;
 
-/** Entity-scoped unlimited deductions land in entities[*].balance while the
- * top-level balance stays 0 — count both (mirrors cusEntsToUnlimitedUsage). */
 export const unlimitedUsedSumSql = (): SQL => sql`SUM(
 	-(COALESCE(ce.balance, 0) + CASE
 		WHEN jsonb_typeof(ce.entities) = 'object' THEN COALESCE((
@@ -162,10 +136,6 @@ export const unlimitedUsedSumSql = (): SQL => sql`SUM(
 	END)
 ) FILTER (WHERE ce.unlimited IS TRUE)`;
 
-/** "Live" must match what the Usage column sums (cusEnts of ACTIVE_STATUSES
- * products + non-drained loose rows) — NOT `ce.expired`, whose NULL→true
- * backfill lags and leaves churned-product rows looking live. Requires `cp`
- * joined on ce.customer_product_id. */
 export const liveCusEntPredicate = (): SQL => sql`
 	(ce.expires_at IS NULL OR ce.expires_at > EXTRACT(EPOCH FROM now()) * 1000)
 	AND ce.pooled_contribution_id IS NULL
@@ -175,10 +145,6 @@ export const liveCusEntPredicate = (): SQL => sql`
 	)
 `;
 
-/** Exact per-customer totals from PG for a candidate id set, with the
- * customer-level search/filter predicates applied in the same pass.
- * Candidates with no live rows come back at 0 (nominations can be stale).
- * `remainingFilter` drops rows failing a remaining-balance threshold. */
 const verifyExactBalances = async ({
 	db,
 	orgId,
@@ -288,13 +254,8 @@ const verifyExactBalances = async ({
 	return mapped;
 };
 
-/** Search/full_customers/count fire together, so a cold cache otherwise runs
- * N copies of the multi-second scan — concurrent callers share one compute. */
 const deflationInFlight = new Map<string, Promise<FeatureBalanceSortRow[]>>();
 
-/** Cached exact rows for the deflation-exception customers. Values are up to
- * TTL stale, but they only steer RANKING — displayed numbers come from
- * hydration. Recompute is a feature-index scan (~seconds on whale features). */
 export const getDeflationExceptionRows = ({
 	db,
 	orgId,
@@ -376,9 +337,6 @@ const computeDeflationExceptionRows = async ({
 			}
 			span.setAttribute("customer.balance_sort.cache_hit", false);
 
-			// Deflation sources = negative rows the lake counts but the live definition
-			// excludes: pooled contributions, and rows bound to non-active products
-			// (status-based — the lazily-backfilled `expired` flag misses churned rows).
 			const tStart = performance.now();
 			const idRows = await withActiveSpan({
 				name: "customer.balance_sort.deflation.scan",
@@ -416,8 +374,6 @@ const computeDeflationExceptionRows = async ({
 				);
 			}
 
-			// Exact values computed without search/filters: the set is feature-scoped
-			// and reused across requests; per-request predicates apply at merge time.
 			const rows = await withActiveSpan({
 				name: "customer.balance_sort.deflation.verify",
 				attributes: {
@@ -477,7 +433,6 @@ const computeDeflationExceptionRows = async ({
 		},
 	});
 
-/** Desc ranks unlimited first then largest totals; asc is the exact mirror. */
 const compareRows = (
 	a: FeatureBalanceSortRow,
 	b: FeatureBalanceSortRow,
@@ -543,9 +498,6 @@ export const nominationQuery = ({
 				}
 		`
 		: sql``;
-	// When the stripe is suppressed (verify emits u=false), the cursor/order
-	// tuple must drop is_unlimited — a (false, ...) tuple would otherwise
-	// exclude every mixed customer from later batches.
 	const suppressStripe = stripeSuppressed({ basis, remainingFilter });
 	const cursorPredicate = after
 		? suppressStripe
@@ -556,9 +508,6 @@ export const nominationQuery = ({
 				? sql`AND (is_unlimited, ${basisExpr}, internal_customer_id) > (${after.u}, ${after.b}, ${after.id})`
 				: sql`AND (is_unlimited, ${basisExpr}, internal_customer_id) < (${after.u}, ${after.b}, ${after.id})`
 		: sql``;
-	// Pre-filter approximately in the lake (verify re-checks exactly): a `< x`
-	// threshold against a desc sort otherwise burns every batch on giants that
-	// all fail verify — 0-row pages after the full top-up budget.
 	const thresholdPredicate = remainingFilter
 		? unlimitedPassesThreshold(remainingFilter)
 			? sql`AND (${balanceThresholdSql({
@@ -592,12 +541,6 @@ export const nominationQuery = ({
 	`;
 };
 
-/**
- * Balance sort resolver: MotherDuck nominates candidates from the cached
- * totals (approximate — missing `expired`, ~5min stale), PG verifies exact
- * sums and re-ranks, topping up until the page fills. Only feature HOLDERS
- * appear: the totals cache has no rows for customers without the feature.
- */
 export const resolveInternalIdsByFeatureBalanceSort = async ({
 	db,
 	orgId,
@@ -643,8 +586,6 @@ export const resolveInternalIdsByFeatureBalanceSort = async ({
 			let nominationCount = 0;
 			let verifiedCount = 0;
 
-			// Deflation exceptions ride along from page one: their lake rank is wrong
-			// by construction, so only their (cached-exact) values can place them.
 			const exceptionRows = await getDeflationExceptionRows({
 				db,
 				orgId,
@@ -736,8 +677,6 @@ export const resolveInternalIdsByFeatureBalanceSort = async ({
 				for (const row of verified) verifiedById.set(row.internalId, row);
 
 				if (iteration === 0) {
-					// Exceptions get per-request predicates applied via a verify pass too;
-					// cached values only pre-place them when no search/filters narrow the set.
 					const hasRequestPredicates = Boolean(
 						search.trim() ||
 							(filters &&
@@ -808,8 +747,6 @@ export const resolveInternalIdsByFeatureBalanceSort = async ({
 				};
 			}
 
-			// Top-up budget exhausted with a page unfilled: heavy filter attrition.
-			// Return what verified; more may exist past the nomination horizon.
 			const pageCandidates = [...verifiedById.values()]
 				.filter((row) => !cursor || isAfterCursor(row, cursor, sortOrder))
 				.sort((a, b) => compareRows(a, b, sortOrder));

@@ -1,6 +1,5 @@
 import { deterministicStringify } from "../../common/deterministicStringify.js";
 
-/** Structural equality of an item's dimension and multiplier rules; record order is not semantic. */
 export const creditDimensionRulesEqual = ({
 	left,
 	right,

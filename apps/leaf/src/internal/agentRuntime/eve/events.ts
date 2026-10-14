@@ -17,8 +17,6 @@ export const labelForResult = (result?: EveActionResult) =>
 	result?.subagentName ??
 	(result?.kind === "subagent-result" ? "agent" : "Eve tool");
 
-// Status-line phrasing: present-progressive so the line reads as live work
-// ("Looking up the customer…"), matching Slack's AI-app status conventions.
 export const displayEveToolLabel = (actionOrLabel: EveAction | string) => {
 	const label =
 		typeof actionOrLabel === "string"
@@ -71,8 +69,6 @@ export const textForInputRequests = (
 		.filter(Boolean)
 		.join("\n\n");
 
-/** Nothing more is coming on this stream: session boundaries, plus the step
- * and turn failures that poison the turn without closing the session. */
 export const isTerminalEveEventType = (eventType: string) =>
 	eventType === "session.waiting" ||
 	eventType === "session.completed" ||

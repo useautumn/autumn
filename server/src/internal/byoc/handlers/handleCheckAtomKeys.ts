@@ -3,7 +3,6 @@ import type { Context } from "hono";
 import { findInvalidAtomKeys } from "../actions/keys/findInvalidAtomKeys.js";
 import type { AtomHonoEnv } from "../types/atomHonoEnv.js";
 
-/** An org's Atom asks which secret keys it learned to drop. */
 export async function handleCheckAtomKeys(c: Context<AtomHonoEnv>) {
 	const parsed = AtomKeysRequestSchema.safeParse(
 		await c.req.json().catch(() => null),

@@ -36,7 +36,6 @@ export const handleDisconnectStripe = createRoute({
 		const accountId = connect?.account_id ?? connect?.revoked_account_id;
 		if (!accountId) return c.json({ success: true });
 
-		// A pending revocation was already revoked at Stripe; only local cleanup remains.
 		if (connect?.account_id) {
 			const oauthOrgs = await OrgService.listByDeauthorizedAccount({
 				db: ctx.db,

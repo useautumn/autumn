@@ -21,7 +21,6 @@ const volumeItem = (tiers: PriceTier[]): ProductItem =>
 		tiers,
 	}) as ProductItem;
 
-// The seeded qa-volume-usage shape: per-unit rates plus flat fees, in USD and EUR.
 const mixedTiers: PriceTier[] = [
 	{
 		to: 400,
@@ -42,10 +41,8 @@ const mixedTiers: PriceTier[] = [
 	},
 ];
 
-/** What the API receives on save: tiers as edited, currency shapes aligned. */
 const saveItem = (item: ProductItem) => alignTierCurrencyShapes(item);
 
-/** The tiers a save of `tiers` should send: unchanged, plus a 0 fee where the base has one. */
 const expectedSavedTiers = (tiers: PriceTier[]) =>
 	tiers.map((tier) => ({
 		...tier,
@@ -55,7 +52,6 @@ const expectedSavedTiers = (tiers: PriceTier[]) =>
 		})),
 	}));
 
-/** Types into one tier input the way PriceTiers does for the given mode. */
 const typeInto = ({
 	item,
 	mode,

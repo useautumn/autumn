@@ -1,9 +1,5 @@
 import type { JsonSchema } from "../casing/schemaKeyCasing";
 
-/**
- * Follows `#/components/schemas/X`. A `$ref` node has no `properties` and no
- * branches, so anything walking the schema is blind beneath one.
- */
 export const resolveRef = ({
 	schema,
 	root,

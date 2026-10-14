@@ -120,8 +120,6 @@ const variantSourceLabel = (variant: PlanUpdatePreviewVariant) => {
 	return variant.will_apply ? "Included" : "Skipped";
 };
 
-/** Split primary/secondary — `PlanPreviewCard` renders the interval itself,
- * so a combined "$50/month" primary would show "$50/month per month". */
 const basePriceDisplay = (price: {
 	amount: number;
 	interval: BillingInterval;
@@ -140,9 +138,6 @@ const basePriceDisplay = (price: {
 	}),
 });
 
-/** `catalog.preview_update` doesn't expand `plan` for a newly-created plan
- * unless asked, so reconstruct the resolved plan from the original request
- * params for `PlanPreviewCard`'s pricing-card rendering. */
 const apiPlanFromRequest = ({
 	features,
 	plan,
@@ -203,8 +198,6 @@ type RequestVariant = NonNullable<
 	NonNullable<CatalogUpdateParams["plans"]>[number]["variants"]
 >[number];
 
-/** A requested variant as its own pricing card: the base plan with the
- * variant's identity and customize patch (price override) applied. */
 const apiPlanFromRequestVariant = ({
 	basePlan,
 	variant,
@@ -256,9 +249,6 @@ const FeatureRow = ({ entry }: { entry: CatalogFeaturePreview }) => {
 	);
 };
 
-/** Only reflect what THIS request will do: the preview's `migration` field
- * means a draft *could* be created; show it only when the params ask for one.
- * In-place updates without a draft leave customers where they are — say so. */
 function MigrationSummary({
 	plan,
 	requestPlan,
@@ -275,8 +265,6 @@ function MigrationSummary({
 		requestPlan?.disable_version || requestPlan?.all_versions,
 	);
 	if (draftRequested) {
-		// The backfilled preview doesn't always include the migration block, but
-		// the request is the truth: a draft WILL be created.
 		const copy = plan.migration?.has_billing_changes
 			? "A migration draft will be created — it moves existing customers and may change billing."
 			: "A migration draft will be created — it moves existing customers onto the new plan shape.";
@@ -364,8 +352,6 @@ function VariantSummary({
 	featuresById: Map<string, Feature>;
 	variants: PlanUpdatePreviewVariant[];
 }) {
-	// Candidates the user didn't select must not render as if they'll change —
-	// `will_apply` is the truth (direct variant updates always apply).
 	const latest = uniqueLatestVariants(variants).filter(
 		(variant) => variant.will_apply || variant.update_source === "direct",
 	);
@@ -499,8 +485,6 @@ function PreviewSummary({
 	);
 }
 
-/** Compact catalog preview for chat approvals. It mirrors the update-plan flow:
- * changed fields first, then version/migration impact, then variants. */
 export function CatalogPreviewCard({
 	params,
 	preview,

@@ -1,9 +1,3 @@
-/**
- * Contract: dimensions price a track made against a license seat exactly as they
- * do a plain customer plan. The seat decides which balance is drawn from; the
- * event's properties decide the rate.
- */
-
 import { test } from "bun:test";
 import type { ApiEntityV2, FeatureConfigOverride } from "@autumn/shared";
 import { expectBalanceCorrect } from "@tests/integration/utils/expectBalanceCorrect.js";
@@ -75,7 +69,6 @@ test.concurrent(
 					licenseProductId: seat.id,
 					entityIndexes: [0],
 				}),
-				// 2 x 16 = 32, then 4 x 16 x 0.5 = 32 — both off the seat's credits.
 				s.track({
 					featureId: TestFeature.Action1,
 					value: 2,
@@ -93,7 +86,6 @@ test.concurrent(
 			],
 		});
 
-		// The seat's credits are entity-scoped, so read them from the assigned entity.
 		const seatHolder = await autumnV2_2.entities.get<ApiEntityV2>(
 			customerId,
 			entities[0].id,

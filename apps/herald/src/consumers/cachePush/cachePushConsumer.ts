@@ -9,18 +9,10 @@ import type { CachePushContext } from "./types/cachePushContext.js";
 import type { CacheSubjectRef } from "./types/cacheSubjectRef.js";
 import { recordsToCacheSubjects } from "./utils/recordsToCacheSubjects.js";
 
-/** Pushes in flight per herald task: each is a worker read plus an Atom write, so throughput is concurrency over latency. */
 export const CACHE_PUSH_CONCURRENCY = 64;
-/** How long a subject waits from its first change, so a hot customer's changes meanwhile cost its Atoms one push, not each. */
 export const CACHE_PUSH_LINGER_MS = 50;
-/** Subjects waiting before a slice blocks, so the log is not read far ahead of what reached the Atoms. */
 export const CACHE_PUSH_MAX_PENDING = 20_000;
 
-/**
- * Keeps each org's BYOC cache current: every subject a batch moved is re-read from its worker and written as it now stands.
- * A slice only queues its subjects; the pushes run on their own pool, so a slow push never holds a partition's next fetch.
- * Out-of-order pushes are safe: the Atom keeps the newest subject by read_at, then log_offset.
- */
 export function createCachePushConsumer({
 	ctx,
 }: {
@@ -40,7 +32,6 @@ export function createCachePushConsumer({
 		}),
 	});
 
-	/** A subject that fails is logged and dropped: its Atom copy stays stale until the subject next changes. */
 	async function pushAndRecord({
 		cacheSubject,
 	}: {
@@ -82,6 +73,5 @@ export function createCachePushConsumer({
 		await queue.waitForRoom();
 	}
 
-	// Each slice's offsets are committed once it is queued, so a push still queued at stop would never be read again.
 	return { name: "cache-push", handle, stop: () => queue.drain() };
 }

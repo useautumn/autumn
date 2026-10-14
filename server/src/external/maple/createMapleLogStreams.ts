@@ -19,7 +19,6 @@ type Compression = NonNullable<
 	ConstructorParameters<typeof OTLPLogExporter>[0]
 >["compression"];
 
-/** Nested objects become JSON strings so a large `extras` costs one stringify, not an attribute walk. */
 export const toMapleLogRecord = (record: PinoLogLine) => {
 	const { msg, level, time, ...attributes } = record;
 	for (const key in attributes) {
@@ -36,7 +35,6 @@ export const toMapleLogRecord = (record: PinoLogLine) => {
 	};
 };
 
-/** Pino tap that ships billing and Stripe webhook lines to Maple; empty without MAPLE_INGEST_KEY. */
 export const createMapleLogStreams = (): pino.StreamEntry[] => {
 	const ingestKey = process.env.MAPLE_INGEST_KEY;
 	if (!ingestKey) return [];
@@ -68,9 +66,7 @@ export const createMapleLogStreams = (): pino.StreamEntry[] => {
 					try {
 						const record = parseMapleLog(line);
 						if (record) mapleLogger.emit(toMapleLogRecord(record));
-					} catch {
-						// Maple is best effort: a bad line is dropped, never thrown into the request.
-					}
+					} catch {}
 				},
 			},
 		},

@@ -4,12 +4,6 @@ import type { MigrationWebhookRecord } from "../types/migrationWebhookRecord.js"
 import { prefetchFullCustomers } from "./prefetchFullCustomers.js";
 import { sendProductsUpdatedForRecord } from "./sendProductsUpdatedForRecord.js";
 
-/**
- * The `customer.products.updated` leg for one batch of records: one batched
- * full-customer prefetch, then per-record sends `concurrency` at a time.
- * Per-record failures are logged and skipped — the run's audit trail lives in
- * the item events.
- */
 export const sendBatchProductsUpdatedWebhooks = async ({
 	ctx,
 	migrationRunId,

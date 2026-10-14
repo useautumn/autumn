@@ -3,9 +3,6 @@ import type { FullCustomerEntitlement } from "../../../../models/cusProductModel
 import type { FullCusProduct } from "../../../../models/cusProductModels/cusProductModels";
 import { cusPriceToCusEnt } from "../../../cusPriceUtils/convertCusPriceUtils";
 
-/**
- * Finds the customer entitlement associated with a line item's price.
- */
 export const lineItemToCustomerEntitlement = ({
 	lineItem,
 	customerProduct,

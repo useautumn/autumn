@@ -54,7 +54,6 @@ describe("boot resend (review round 2 of #4605)", () => {
 			replicas: [a, b],
 			autumn: async () => Response.json({ forwarded: true }),
 		});
-		// Autumn pushes cus_1 viewed through its entity: the customer's 10 messages and the entity's 5.
 		const push = subjectPushOf({
 			subject: storedEntitySubjectWith({
 				customerBalance: 10,
@@ -74,7 +73,6 @@ describe("boot resend (review round 2 of #4605)", () => {
 		await settle();
 		const before = await customerMessagesOn(b);
 
-		// a restarts on its volume a minute later; what it wrote reaches the peers only through their passes, never through the push path.
 		now += 60_000;
 		await a.sync().catchUp();
 		await b.sync().pass();

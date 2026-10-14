@@ -1,7 +1,6 @@
 import { applyDiff, dedupeItemsByMatchKey } from "./applyDiff.js";
 import { type DiffablePlanV1, diffPlanV1 } from "./diffPlanV1.js";
 
-/** Replay the from→to change onto a different plan. */
 export const replayPlanDiff = ({
 	from,
 	to,

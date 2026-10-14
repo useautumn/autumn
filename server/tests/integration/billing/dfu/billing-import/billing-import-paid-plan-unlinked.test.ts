@@ -1,8 +1,3 @@
-/**
- * dfu.flash — a paid recurring plan imported with no linked subscription can't be
- * billed/managed, so it images but comes back flagged (mismatch), not blocked.
- */
-
 import { expect, test } from "bun:test";
 import {
 	type FlashClient,
@@ -19,7 +14,6 @@ test.concurrent(
 	`${chalk.yellowBright("dfu.flash: paid recurring plan with no subscription is flagged as mismatch")}`,
 	async () => {
 		const customerId = "dfu-flash-paid-unlinked";
-		// `pro` has a $20/mo base price — a paid recurring plan.
 		const pro = products.pro({
 			id: "dfu-paid-unlinked",
 			items: [items.monthlyMessages({ includedUsage: 100 })],
@@ -38,7 +32,6 @@ test.concurrent(
 		const payload = {
 			customer_id: customerId,
 			processors: [{ type: "stripe", id: stripeCustomerId }],
-			// Paid recurring plan, but NO link.subscription_id → Autumn can't manage it.
 			billables: [
 				{
 					processor: "stripe",

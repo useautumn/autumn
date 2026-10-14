@@ -9,14 +9,6 @@ import { timeout } from "@tests/utils/genUtils";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 
-// ─────────────────────────────────────────────────────────────────
-// Unlimited rollover — repeated lazy resets
-//
-// Verify that rollovers accumulate linearly, NOT exponentially.
-// Each cycle should roll over only cusEnt.balance (the main balance),
-// not the sum of main + existing rollovers.
-// ─────────────────────────────────────────────────────────────────
-
 test.concurrent(`${chalk.yellowBright("unlimited rollover: repeated lazy resets accumulate linearly")}`, async () => {
 	const includedUsage = 200;
 
@@ -42,7 +34,6 @@ test.concurrent(`${chalk.yellowBright("unlimited rollover: repeated lazy resets 
 
 	await timeout(2000);
 
-	// Cycle 0: no usage. balance = 200, rollovers = []
 	const cycle0 = await autumnV2_2.customers.get<ApiCustomerV5>(customerId, {
 		skip_cache: "true",
 	});
@@ -53,13 +44,11 @@ test.concurrent(`${chalk.yellowBright("unlimited rollover: repeated lazy resets 
 		usage: 0,
 	});
 
-	// ── Reset 1 ──────────────────────────────────────────────────
 	await expireCusEntForReset({ ctx, customerId, featureId: TestFeature.Messages });
 
 	const cycle1 = await autumnV2_2.customers.get<ApiCustomerV5>(customerId, {
 		skip_cache: "true",
 	});
-	// Rollover from main = 200, fresh grant = 200 → total = 400
 	expectBalanceCorrect({
 		customer: cycle1,
 		featureId: TestFeature.Messages,
@@ -68,15 +57,12 @@ test.concurrent(`${chalk.yellowBright("unlimited rollover: repeated lazy resets 
 		rollovers: [{ balance: 200 }],
 	});
 
-	// ── Reset 2 ──────────────────────────────────────────────────
 	await timeout(1000);
 	await expireCusEntForReset({ ctx, customerId, featureId: TestFeature.Messages });
 
 	const cycle2 = await autumnV2_2.customers.get<ApiCustomerV5>(customerId, {
 		skip_cache: "true",
 	});
-	// New rollover should be 200 (only main balance), NOT 400 (main + previous rollover)
-	// Rollovers: [200, 200], fresh grant = 200 → total = 600
 	expectBalanceCorrect({
 		customer: cycle2,
 		featureId: TestFeature.Messages,
@@ -85,15 +71,12 @@ test.concurrent(`${chalk.yellowBright("unlimited rollover: repeated lazy resets 
 		rollovers: [{ balance: 200 }, { balance: 200 }],
 	});
 
-	// ── Reset 3 ──────────────────────────────────────────────────
 	await timeout(1000);
 	await expireCusEntForReset({ ctx, customerId, featureId: TestFeature.Messages });
 
 	const cycle3 = await autumnV2_2.customers.get<ApiCustomerV5>(customerId, {
 		skip_cache: "true",
 	});
-	// New rollover should be 200 again, NOT 600
-	// Rollovers: [200, 200, 200], fresh grant = 200 → total = 800
 	expectBalanceCorrect({
 		customer: cycle3,
 		featureId: TestFeature.Messages,
@@ -102,7 +85,6 @@ test.concurrent(`${chalk.yellowBright("unlimited rollover: repeated lazy resets 
 		rollovers: [{ balance: 200 }, { balance: 200 }, { balance: 200 }],
 	});
 
-	// Also verify from cache
 	const cached = await autumnV2_2.customers.get<ApiCustomerV5>(customerId);
 	expectBalanceCorrect({
 		customer: cached,
@@ -137,7 +119,6 @@ test.concurrent(`${chalk.yellowBright("unlimited rollover: with partial usage, o
 		],
 	});
 
-	// Cycle 0: used 80, remaining = 120
 	const cycle0 = await autumnV2_2.customers.get<ApiCustomerV5>(customerId, {
 		skip_cache: "true",
 	});
@@ -148,14 +129,11 @@ test.concurrent(`${chalk.yellowBright("unlimited rollover: with partial usage, o
 		usage: 80,
 	});
 
-	// ── Reset 1 ──────────────────────────────────────────────────
 	await expireCusEntForReset({ ctx, customerId, featureId: TestFeature.Messages });
 
 	const cycle1 = await autumnV2_2.customers.get<ApiCustomerV5>(customerId, {
 		skip_cache: "true",
 	});
-	// Main balance was 120 (200 - 80 usage) → rollover = 120
-	// Fresh grant = 200 → total = 200 + 120 = 320
 	expectBalanceCorrect({
 		customer: cycle1,
 		featureId: TestFeature.Messages,
@@ -164,15 +142,12 @@ test.concurrent(`${chalk.yellowBright("unlimited rollover: with partial usage, o
 		rollovers: [{ balance: 120 }],
 	});
 
-	// ── Reset 2 (no usage in cycle 2) ────────────────────────────
 	await timeout(1000);
 	await expireCusEntForReset({ ctx, customerId, featureId: TestFeature.Messages });
 
 	const cycle2 = await autumnV2_2.customers.get<ApiCustomerV5>(customerId, {
 		skip_cache: "true",
 	});
-	// Main balance was 200 (full grant, no usage in cycle 2) → rollover = 200
-	// Rollovers: [120, 200], fresh grant = 200 → total = 200 + 120 + 200 = 520
 	expectBalanceCorrect({
 		customer: cycle2,
 		featureId: TestFeature.Messages,

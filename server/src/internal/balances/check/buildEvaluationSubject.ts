@@ -13,12 +13,6 @@ import {
 import type { RequestContext } from "@/honoUtils/HonoEnv.js";
 import { resolveCheckSpendLimits } from "./resolveCheckSpendLimits.js";
 
-/**
- * Evaluation subject for apiBalanceToAllowed, with plan-level (and, for
- * entities, customer-level) billing controls merged in and percentage spend
- * limits resolved to absolute. Shared by /v1/check and the track webhooks so
- * both gate on identical limits.
- */
 export const buildEvaluationSubject = async ({
 	ctx,
 	fullSubject,

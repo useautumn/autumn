@@ -1,11 +1,3 @@
-/**
- * Full-state variant declarations account for each variant version.
- *
- * Red (current): a nested variant version omitted from the payload produces no
- * removal, and customer-held single versions would be archived independently.
- * Green (after): omission deletes the exact unused row and rejects partial archive.
- */
-
 import { expect, test } from "bun:test";
 import { ErrCode } from "@autumn/shared";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils.js";

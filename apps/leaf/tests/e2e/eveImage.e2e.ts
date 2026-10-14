@@ -1,12 +1,3 @@
-/**
- * Image-attachment e2e for both chat surfaces against the local dev stack
- * (eve :3999, main server :8080). Slack path drives runSlackAgentTurn in-process;
- * web path drives streamWebChat with a data-URL file part.
- *
- * Run from apps/leaf:
- *   EVE_INTERNAL_AUTH_TOKEN=local-eve-internal-token \
- *     infisical run --env=dev --recursive -- bun tests/e2e/eveImage.e2e.ts
- */
 import { DEFAULT_OAUTH_RESOURCE_SCOPES } from "@autumn/shared";
 import { db } from "../../src/lib/db.js";
 import { logger } from "../../src/lib/logger.js";

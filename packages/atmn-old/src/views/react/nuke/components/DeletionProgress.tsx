@@ -8,10 +8,6 @@ interface DeletionProgressProps {
 	totalElapsed: number;
 }
 
-/**
- * Deletion progress screen with stepper timeline
- * Shows sequential deletion with live progress and sparklines
- */
 export function DeletionProgress({
 	phases,
 	activePhase,
@@ -38,7 +34,6 @@ export function DeletionProgress({
 			const filled = Math.floor(percentage / 5);
 			const progress = `${"━".repeat(filled)}●${"━".repeat(20 - filled)}`;
 
-			// Simple sparkline based on rate
 			const sparkline = generateSparkline(phase.rate);
 
 			return (
@@ -83,8 +78,6 @@ function capitalize(str: string): string {
 }
 
 function generateSparkline(rate: number): string {
-	// Generate a simple sparkline visualization
-	// Higher rate = taller bars
 	const chars = ["▁", "▂", "▃", "▄", "▅", "▆", "▇", "█"];
 	const normalized = Math.min(Math.floor(rate / 2), chars.length - 1);
 	const char = chars[normalized] || "▁";

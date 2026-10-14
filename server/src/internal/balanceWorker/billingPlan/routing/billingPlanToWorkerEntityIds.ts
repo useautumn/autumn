@@ -6,7 +6,6 @@ import {
 
 type NamedEntity = { internalId: string; id: string };
 
-/** Entities the plan can name by external id: the ones it creates, the existing ones it lists, and the ones its products are provisioned on. */
 const namedEntitiesOf = ({
 	autumnBillingPlan,
 }: {
@@ -26,7 +25,6 @@ const namedEntitiesOf = ({
 	),
 ];
 
-/** The entities whose rows the plan writes, by external id: the worker applies their parts beside the customer's. */
 export const billingPlanToWorkerEntityIds = ({
 	autumnBillingPlan,
 }: {
@@ -35,7 +33,6 @@ export const billingPlanToWorkerEntityIds = ({
 	...new Set(namedEntitiesOf({ autumnBillingPlan }).map(({ id }) => id)),
 ];
 
-/** Every entity-scoped row belongs to an entity the plan can name; any other would have no subject to land in. */
 export const billingPlanNamesItsEntities = ({
 	autumnBillingPlan,
 }: {

@@ -1,14 +1,3 @@
-/**
- * Stripe cancels a subscription at the earlier of sub.cancel_at and its
- * schedule's end. simple_cancel only consulted sub.cancel_at when there was no
- * schedule, so a cancel_at matching Autumn reported a cancel_state_mismatch
- * whenever a schedule happened to run past it.
- *
- * Red (before):  cancel_at == Autumn's ended_at still reports, because the
- *                schedule's own end is later.
- * Green (after): with no upcoming phases, a matching cancel_at is the cancel.
- */
-
 import { describe, expect, it } from "bun:test";
 import { getUnixTime } from "date-fns";
 import type Stripe from "stripe";

@@ -4,7 +4,6 @@ import { invoiceActions } from "@/internal/invoices/actions";
 
 const VOIDABLE_STATUSES: Stripe.Invoice.Status[] = ["open", "uncollectible"];
 
-// Per-invoice failures are tolerated + counted: the subscription.deleted webhook can race the
 // same invoices, and Stripe rejects voiding an already-voided one.
 export const voidOpenInvoicesForStripeSubscription = async ({
 	ctx,

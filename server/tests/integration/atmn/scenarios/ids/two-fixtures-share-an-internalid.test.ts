@@ -1,14 +1,3 @@
-/**
- * atmn scenarios/ids — two fixtures share an internalId → lint `unique`
- *
- * One line of plans/atmn-v3/07_tests.md. [a, b] is a matrix looped INSIDE this file.
- *
- * Decision pending: the generated LINT_RULES carry a `unique` rule for
- * `featureId`/`planId` but not yet for `internalId` — this asserts the
- * intended contract (caught client-side, before any request), matching the
- * task's own guidance for this line.
- */
-
 import { expect, spyOn, test } from "bun:test";
 import { configBody } from "@tests/utils/atmnUtils/baseConfigs.js";
 import { initAtmnScenario } from "@tests/utils/atmnUtils/initAtmnScenario.js";

@@ -1,6 +1,3 @@
-/** Red: canceling one paid main product creates Basic despite another effective paid main product in scope.
- * Green: preview and execution omit Basic while leaving the remaining paid product and Stripe subscription unchanged. */
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3, UpdateSubscriptionV1Params } from "@autumn/shared";
 import { expectCustomerProducts } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
@@ -119,7 +116,6 @@ for (const { cancelAction, suffix, remainingScope, expectDefault } of cases) {
 					}),
 				]);
 
-				// Simulate the confirmed overlap without reproducing historical creation races.
 				await ProductService.updateByInternalId({
 					db: ctx.db,
 					internalId: remainingProduct.internal_id,

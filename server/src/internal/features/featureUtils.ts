@@ -126,14 +126,6 @@ export const validateCreditSystem = (
 	return newConfig;
 };
 
-/**
- * Validates that every feature referenced by a credit system's schema is a
- * Metered or AiCreditSystem feature. Rejects nesting one CreditSystem inside
- * another — composition is capped at two levels (parent credit system → leaf).
- *
- * Self-references are tolerated (the create flow doesn't yet have the new id
- * in the features list, and updates simply read back as the feature itself).
- */
 export const validateCreditSystemSchemaReferences = ({
 	config,
 	allFeatures,

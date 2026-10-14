@@ -9,7 +9,6 @@ import {
 import { productItemsToCustomizePlanV1 } from "@autumn/shared/utils/productV2Utils/productItemUtils/convertProductItem/productItemsToCustomizePlanV1";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 
-// Pending rows are inserted before is_custom is derived, so read customization off the rows themselves.
 const hasCustomRows = (customerProduct: FullCusProduct) =>
 	cusProductToPrices({ cusProduct: customerProduct }).some(
 		(price) => price.is_custom,
@@ -18,7 +17,6 @@ const hasCustomRows = (customerProduct: FullCusProduct) =>
 		(entitlement) => entitlement.is_custom,
 	);
 
-/** Puts the edit on top of a custom pending plan's own price and items, as billing.update does for an active plan. */
 export const pendingPlanToReattachCustomize = ({
 	ctx,
 	customize,
@@ -28,7 +26,6 @@ export const pendingPlanToReattachCustomize = ({
 	customize: UpdateSubscriptionV1Params["customize"];
 	customerProduct: FullCusProduct;
 }): UpdateSubscriptionV1Params["customize"] => {
-	// update_items is deprecated and has no merge rule, so it keeps its catalog-based behavior.
 	if (!hasCustomRows(customerProduct) || customize?.update_items) {
 		return customize;
 	}

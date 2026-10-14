@@ -28,11 +28,6 @@ import {
 	type SubjectType,
 } from "@autumn/shared";
 
-/**
- * Convert raw DB query row into NormalizedFullSubject.
- * Partitions boolean CEs into flags and builds self-contained SubjectBalance
- * objects for metered entitlements.
- */
 export const subjectQueryRowToNormalized = ({
 	row,
 	entityIdRequested = false,
@@ -143,13 +138,6 @@ export const subjectQueryRowToNormalized = ({
 		);
 	};
 
-	// `flags` is keyed by feature_id (one slot per feature), but a customer
-	// can have multiple cus_ents for the same boolean — e.g. an active
-	// cus_product, a scheduled next-cycle cus_product, and loose extras
-	// from a prior plan. We prefer the most "currently effective" source so
-	// the API surfaces the right plan_id (and so a Scheduled flag doesn't
-	// land in `flags`, get routed to a Scheduled cus_product, and then be
-	// dropped downstream by orgToInStatuses).
 	const flagPriorityByFeatureId: Record<string, number> = {};
 	const getFlagPriority = (cusEnt: DbCustomerEntitlement): number => {
 		if (!cusEnt.customer_product_id) return 2;
@@ -232,11 +220,6 @@ export const subjectQueryRowToNormalized = ({
 		partitionCustomerEntitlement(customerEntitlement);
 	}
 
-	// Split the SQL aggregate output by feature type:
-	//   - non-boolean rows → aggregated_customer_entitlements (metered totals)
-	//   - boolean rows     → aggregated_subject_flags (identity-only)
-	// This is the single choke point for keeping booleans out of the cache
-	// writer's per-feature `_aggregated` hashes.
 	let entityAggregations: EntityAggregations | undefined;
 	if (row.entity_aggregations) {
 		const featuresByInternalId = new Map(
@@ -272,7 +255,6 @@ export const subjectQueryRowToNormalized = ({
 		};
 	}
 
-	// Same assembly as getFullCustomerLicenses: bundle → FullCustomerLicense.
 	const customerLicenses: FullCustomerLicense[] = (
 		row.customer_licenses ?? []
 	).map(({ customerLicense, planLicense, product }) => ({
@@ -309,7 +291,6 @@ export const subjectQueryRowToNormalized = ({
 	};
 };
 
-/** Convert raw DB query row to FullSubject via NormalizedFullSubject. */
 export const resultToFullSubject = ({
 	row,
 	entityIdRequested = false,

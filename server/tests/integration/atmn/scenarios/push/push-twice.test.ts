@@ -1,9 +1,3 @@
-/**
- * atmn scenarios/push — push twice → second preview is all `none`
- *
- * One line of plans/atmn-v3/07_tests.md.
- */
-
 import { expect, test } from "bun:test";
 import {
 	configBody,
@@ -32,7 +26,6 @@ test("push twice → second preview is all `none`", async () => {
 		expect(second.output).toContain("No changes.");
 		expect(second.migrationIds).toEqual([]);
 
-		// Not just the CLI's own render: the server's preview itself says none.
 		await expectPreviewNone({
 			client: scenario.client,
 			wire: await scenario.wireFromConfig(),

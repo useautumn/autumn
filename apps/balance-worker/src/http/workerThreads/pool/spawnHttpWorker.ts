@@ -1,4 +1,3 @@
-/** One HTTP worker thread, booted: its rings, its lane on this thread, and how its death is reported. */
 import {
 	createRing,
 	createRingReader,
@@ -14,7 +13,6 @@ import type {
 import { serveRequest } from "./dispatchRequests.js";
 import { reportPoolFailure } from "./reportPoolFailure.js";
 
-/** `ready` settles once the thread has bound the port, or rejects with why it could not. */
 export function spawnHttpWorker({
 	scope,
 	index,
@@ -64,7 +62,6 @@ export function spawnHttpWorker({
 	thread.onerror = function crashed(event) {
 		died(new Error(`HTTP worker ${index} failed: ${event.message}`));
 	};
-	// A thread that exits on its own (uncaught error, process.exit) closes without being asked.
 	thread.addEventListener("close", function closed(event) {
 		if (state.stopping) {
 			stopped.resolve();

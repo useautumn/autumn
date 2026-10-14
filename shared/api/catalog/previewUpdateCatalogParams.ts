@@ -11,12 +11,6 @@ export const CatalogPlanParamsSchema = UpdatePlanParamsV2Schema.extend(
 	PreviewUpdatePlanDetailParamsSchema.shape,
 );
 
-/**
- * A batch change to the org's catalog (features + plans), applied/previewed in
- * one call. Plans are upserted by `plan_id` (exists → update, else create);
- * features by `feature_id`. `disable_version` per plan controls in-place vs
- * versioned updates (same semantics as plans.update).
- */
 export const CatalogUpdateParamsSchema = z
 	.object({
 		features: z.array(CreateFeatureV2ParamsSchema).optional().default([]),

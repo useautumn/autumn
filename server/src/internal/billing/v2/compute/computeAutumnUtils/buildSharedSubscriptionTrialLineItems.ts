@@ -35,22 +35,6 @@ const logSharedSubscriptionTrialLineItems = ({
 	const formatLineItemCompact = (item: LineItem) =>
 		`  ${item.description}: ${chalk.yellow(item.amountAfterDiscounts.toFixed(2))}`;
 
-	// Structured info log
-	// logger.info(`buildSharedSubscriptionTrialLineItems data`, {
-	// 	data: {
-	// 		direction,
-	// 		sibilingCustomerProducts: siblingCustomerProducts.map(
-	// 			(customerProduct) => ({
-	// 				id: customerProduct.id,
-	// 				productId: customerProduct.product?.id,
-	// 				entityId: customerProduct.entity_id,
-	// 			}),
-	// 		),
-	// 		lineItems: lineItems.map(formatLineItem),
-	// 	},
-	// });
-
-	// Debug output
 	logger.debug("========== [buildSharedSubscriptionTrialLineItems] ==========");
 	logger.debug("");
 	logger.debug(`direction: ${direction}`);
@@ -67,7 +51,6 @@ const logSharedSubscriptionTrialLineItems = ({
 	);
 };
 
-/** Filter for sibling customer products on the same Stripe subscription. */
 const getSiblingCustomerProducts = ({
 	customerProducts,
 	autumnBillingPlan,
@@ -97,10 +80,6 @@ const getSiblingCustomerProducts = ({
 	});
 };
 
-/**
- * Builds line items for sibling customer products on a shared Stripe subscription
- * when trial state changes (trialing → no trial or no trial → trialing).
- */
 export const buildSharedSubscriptionTrialLineItems = ({
 	ctx,
 	billingContext,
@@ -119,12 +98,11 @@ export const buildSharedSubscriptionTrialLineItems = ({
 		billingContext,
 	});
 
-	// Determine direction based on trial state change
 	let direction: "charge" | "refund" | null = null;
 	if (isTrialing && !willBeTrialing) {
-		direction = "charge"; // Ending trial → charge for sibling products
+		direction = "charge";
 	} else if (!isTrialing && willBeTrialing) {
-		direction = "refund"; // Starting trial → refund sibling products
+		direction = "refund";
 	}
 
 	if (!trialContext?.appliesToBilling) return [];

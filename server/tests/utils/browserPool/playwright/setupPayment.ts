@@ -1,14 +1,5 @@
 import type { Page } from "playwright-core";
 
-/**
- * Self-contained Playwright function for completing a Stripe setup payment checkout.
- * NO external imports — this function must be serializable via fn.toString()
- * for Kernel Playwright Execution. (type imports are fine — Bun strips them)
- *
- * Handles setup mode checkout (mode: "setup") for adding payment methods.
- * Uses checkout.stripe.com direct DOM selectors, CVC is "100",
- * and unchecks the Stripe Link "Save my info" checkbox if present.
- */
 export const setupPayment = async ({
 	page,
 	url,
@@ -19,8 +10,6 @@ export const setupPayment = async ({
 	await page.goto(url, { waitUntil: "domcontentloaded", timeout: 60000 });
 	console.log("[setupPayment] Page loaded");
 
-	// The form renders only after the page's own Stripe API calls clear tw's rate-limit
-	// permits (up to 60s each), so a fixed sleep can run ahead of it.
 	const cardAccordion = page.locator(
 		'[data-testid="card-accordion-item-button"]',
 	);
@@ -30,8 +19,6 @@ export const setupPayment = async ({
 		.first()
 		.waitFor({ state: "attached", timeout: 60_000 });
 
-	// Card-only sessions render the form without an accordion; otherwise expand Card
-	// via its zero-size overlay button (re-clicking keeps Card selected).
 	if (!(await cardNumber.isVisible()) && (await cardAccordion.count()) > 0) {
 		await cardAccordion.evaluate((el) => (el as HTMLElement).click());
 		console.log("[setupPayment] Card selected via accordion button");
@@ -56,9 +43,6 @@ export const setupPayment = async ({
 	await billingName.pressSequentially("Test Customer");
 	console.log("[setupPayment] Billing name filled");
 
-	// Uncheck "Save my information for faster checkout" (Stripe Link) if checked.
-	// This must be unchecked or the submit button stays greyed out.
-	// The checkbox input is hidden behind custom styling, so use JS click directly.
 	try {
 		const wasChecked = await page.evaluate(() => {
 			const cb = document.getElementById(
@@ -74,11 +58,8 @@ export const setupPayment = async ({
 			console.log("[setupPayment] Stripe Link checkbox unchecked");
 			await page.waitForTimeout(500);
 		}
-	} catch {
-		// Stripe Link checkbox not present
-	}
+	} catch {}
 
-	// Force country to US so a postal code input is always shown
 	try {
 		const countrySelect = page.locator("#billingCountry");
 		if ((await countrySelect.count()) > 0) {
@@ -86,9 +67,7 @@ export const setupPayment = async ({
 			console.log("[setupPayment] Country set to US");
 			await page.waitForTimeout(500);
 		}
-	} catch {
-		// Country selector not present
-	}
+	} catch {}
 
 	try {
 		const postalCode = page.locator("#billingPostalCode");
@@ -96,18 +75,13 @@ export const setupPayment = async ({
 			await postalCode.pressSequentially("10001");
 			console.log("[setupPayment] Postal code filled");
 		}
-	} catch {
-		// Postal code field not present
-	}
+	} catch {}
 
-	// A click can land in a Stripe iframe while the page scrolls to Submit; Enter goes
-	// to the focused button wherever it is on screen.
 	const submit = page.locator("button[type=submit]");
 	await (await submit.elementHandle({ timeout: 30_000 }))?.waitForElementState(
 		"enabled",
 		{ timeout: 30_000 },
 	);
-	// Stripe can confirm setup while an unreachable success URL leaves the page processing.
 	const confirmationResponse = page.waitForResponse(
 		(response) =>
 			response.request().method() === "POST" &&

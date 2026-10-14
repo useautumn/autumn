@@ -23,22 +23,18 @@ import { handleUpdatePlanV2 } from "./handlers/handleUpdatePlan/handleUpdatePlan
 export const honoProductBetaRouter = new Hono<HonoEnv>();
 honoProductBetaRouter.get("", ...handleListPlans);
 
-// Create a Hono app for products
 export const honoProductRouter = new Hono<HonoEnv>();
 
-// CRUD
 honoProductRouter.get("", ...handleListPlans);
 honoProductRouter.post("", ...handleCreatePlan);
 honoProductRouter.get("/license_products", ...handleGetLicenseProducts);
 honoProductRouter.get("/:product_id", ...handleGetPlanV1);
-honoProductRouter.post("/:product_id", ...handleUpdatePlanV1); // will be deprecated
-honoProductRouter.patch("/:product_id", ...handleUpdatePlanV1); // will be deprecated
+honoProductRouter.post("/:product_id", ...handleUpdatePlanV1);
+honoProductRouter.patch("/:product_id", ...handleUpdatePlanV1);
 honoProductRouter.delete("/:product_id", ...handleDeletePlanV1);
 
-// Others
 honoProductRouter.post("/:product_id/copy", ...handleCopyProductV2);
 
-// Info before deleting plan
 honoProductRouter.get(
 	"/:product_id/has_customers",
 	...handlePlanHasCustomersV2,
@@ -49,7 +45,6 @@ honoProductRouter.post(
 );
 honoProductRouter.get("/:product_id/deletion_info", ...handleGetPlanDeleteInfo);
 
-// RPC
 export const plansRpcRouter = new Hono<HonoEnv>();
 plansRpcRouter.post("/plans.list", ...handleListPlansV2);
 plansRpcRouter.post("/plans.create", ...handleCreatePlanV2);

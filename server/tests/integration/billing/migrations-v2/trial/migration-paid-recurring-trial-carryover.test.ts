@@ -1,8 +1,3 @@
-/**
- * Regression coverage for paid recurring trials during update_plan migrations.
- * Migrations must preserve active Stripe trial state in normal and entity-scoped setups.
- */
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3, ApiEntityV0, Migration } from "@autumn/shared";
 import type { MigrationFilter } from "@autumn/shared/api/migrations/filters/migrationFilter.js";

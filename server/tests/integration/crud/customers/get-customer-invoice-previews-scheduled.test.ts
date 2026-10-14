@@ -1,15 +1,3 @@
-/**
- * A prepaid quantity downgrade scheduled for the next cycle must show in the
- * customer's upcoming invoice preview, exactly as Stripe will bill it.
- *
- * Red (before):  the preview kept only plans on the Stripe subscription, so the
- *                scheduled downgrade (linked only to the schedule) was dropped and the
- *                upcoming invoice previewed $0 with no plans.
- * Green (after): the preview includes plans on the subscription's schedule, so it
- *                bills the downgraded quantity and matches Stripe's upcoming invoice.
- *                Another subscription's scheduled plans and unlinked free plans stay out.
- */
-
 import { expect, test } from "bun:test";
 import {
 	type ApiCustomerV5,
@@ -33,7 +21,6 @@ import { CusService } from "@/internal/customers/CusService.js";
 
 const UPGRADED_QUANTITY = 500;
 const DOWNGRADED_QUANTITY = 200;
-// prepaidMessages bills $10 per 100 messages.
 const DOWNGRADED_TOTAL = 20;
 
 const setupPrepaidUpgrade = async ({ customerId }: { customerId: string }) => {
@@ -126,7 +113,6 @@ const expectDowngradedPreviewCorrect = ({
 	planId: string;
 	invoiceAt: number;
 }) => {
-	// The downgrade snaps to the cycle boundary, a few seconds before the requested start.
 	expect(timestampsMatch(preview.invoice_at, invoiceAt, ms.minutes(1))).toBe(
 		true,
 	);
@@ -166,7 +152,6 @@ test.concurrent(
 			planId: prepaid.id,
 			invoiceAt: downgradeAt,
 		});
-		// subscription_id is internal, so it's stripped from the API response.
 		const fullCustomer = await CusService.getFull({
 			ctx,
 			idOrInternalId: customerId,
@@ -277,7 +262,6 @@ test.concurrent(
 				{ starts_at: downgradeAt, plans: [prepaidPlan(DOWNGRADED_QUANTITY)] },
 			],
 		} satisfies SetPlansParamsV0Input);
-		// Attached after set_plans, which would otherwise end this customer-wide free plan.
 		await autumnV1.billing.attach<AttachParamsV0Input>({
 			customer_id: customerId,
 			product_id: freeAddOn.id,

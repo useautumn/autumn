@@ -21,7 +21,6 @@ import type {
 } from "./syncStripeTypes";
 import { hasActiveProductInGroup } from "./syncStripeUtils";
 
-/** Formats a Stripe amount (in cents) as a currency string. */
 const formatStripeCurrency = ({
 	amount,
 	currency,
@@ -42,7 +41,6 @@ const formatStripeCurrency = ({
 	}
 };
 
-/** Builds a human-readable price description for a proposal item. */
 const formatItemPrice = ({ item }: { item: SyncProposalItem }): string => {
 	const currency = item.currency ?? "usd";
 
@@ -195,7 +193,6 @@ export function SyncProposalCard({
 				!isEnabled && "opacity-50",
 			)}
 		>
-			{/* Already linked warning */}
 			{linkedProduct && (
 				<div className="flex items-center gap-1.5 text-xs text-amber-600 bg-amber-500/10 px-2 py-1.5 rounded-md">
 					<LinkIcon className="size-3.5 shrink-0" weight="bold" />
@@ -204,7 +201,6 @@ export function SyncProposalCard({
 				</div>
 			)}
 
-			{/* Header with import toggle */}
 			<div className="flex items-center justify-between">
 				<div className="flex items-center gap-2 min-w-0">
 					{hasMatch ? (
@@ -243,7 +239,6 @@ export function SyncProposalCard({
 				</button>
 			</div>
 
-			{/* Stripe prices */}
 			<div className="space-y-1.5">
 				<span className="text-xs text-tertiary-foreground font-medium">
 					Subscription items
@@ -281,7 +276,6 @@ export function SyncProposalCard({
 				})}
 			</div>
 
-			{/* Plan mappings */}
 			{isEnabled && (
 				<div className="space-y-3.5">
 					<span className="text-xs text-tertiary-foreground font-medium">

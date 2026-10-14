@@ -4,7 +4,6 @@ import type {
 } from "@autumn/shared";
 import { detectCatalogConflictsFromProducts } from "./detectCatalogConflictsFromProducts";
 
-/** Spread onto a preview row; omitted when nothing diverged. */
 export const withCatalogConflicts = <T extends object>({
 	preview,
 	current,

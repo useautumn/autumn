@@ -46,7 +46,6 @@ afterEach(() => {
 
 const tokenHash = (token: string) => hashToken({ token });
 
-/** Stores the fixture customer `cus_1`, holding 10 messages, through the token's Atom. */
 const storeCustomer = async ({
 	auth,
 	token,
@@ -176,7 +175,6 @@ describe("multi-tenant auth", () => {
 	});
 });
 
-/** Two processes over one data directory, on a clock the test moves. */
 const openTwoProcesses = () => {
 	const dataDir = newDataDir();
 	let now = 0;

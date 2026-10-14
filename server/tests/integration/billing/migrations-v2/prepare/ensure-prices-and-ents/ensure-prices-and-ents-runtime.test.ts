@@ -1,11 +1,3 @@
-/**
- * Runtime coverage for ensure_prices_and_entitlements preparation.
- *
- * These tests verify that product-version anchored prepared catalog rows can
- * feed the customer migration execution path and are reused by customer_prices
- * and customer_entitlements.
- */
-
 import { expect, test } from "bun:test";
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";

@@ -10,18 +10,9 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-/**
- * Discount Product Scenario
- *
- * Tests upgrading from one product to another with a discount applied.
- * Customer attaches starter plan, then a 20% discount is applied.
- * Upgrades to pro plan to verify the discount is reflected in pricing.
- */
-
 test(`${chalk.yellowBright("checkout: discount applied to upgrade - 20% off")}`, async () => {
 	const customerId = "checkout-discount-product";
 
-	// Starter plan ($19/mo) - basic features
 	const starter = products.base({
 		id: "starter",
 		items: [
@@ -31,7 +22,6 @@ test(`${chalk.yellowBright("checkout: discount applied to upgrade - 20% off")}`,
 		],
 	});
 
-	// Pro plan ($49/mo) - more features
 	const pro = products.base({
 		id: "pro",
 		items: [
@@ -42,7 +32,6 @@ test(`${chalk.yellowBright("checkout: discount applied to upgrade - 20% off")}`,
 		],
 	});
 
-	// Setup: customer with payment method and starter plan attached
 	const { autumnV2_1 } = await initScenario({
 		customerId,
 		setup: [
@@ -52,12 +41,10 @@ test(`${chalk.yellowBright("checkout: discount applied to upgrade - 20% off")}`,
 		actions: [s.attach({ productId: "starter" })],
 	});
 
-	// Get Stripe subscription and apply discount
 	const { stripeCli, subscription } = await getStripeSubscription({
 		customerId,
 	});
 
-	// Create 20% discount coupon and apply to subscription
 	const coupon = await createPercentCoupon({
 		stripeCli,
 		percentOff: 20,
@@ -69,7 +56,6 @@ test(`${chalk.yellowBright("checkout: discount applied to upgrade - 20% off")}`,
 		couponIds: [coupon.id],
 	});
 
-	// 1. Preview upgrade to pro (should show discounted charge)
 	const upgradePreview = await autumnV2_1.billing.previewAttach<AttachParamsV1>(
 		{
 			customer_id: customerId,
@@ -79,7 +65,6 @@ test(`${chalk.yellowBright("checkout: discount applied to upgrade - 20% off")}`,
 	);
 	console.log("upgrade with 20% discount preview:", upgradePreview);
 
-	// 2. Perform the upgrade with redirect_mode: "always" (Autumn checkout URL)
 	const upgradeResult = await autumnV2_1.billing.attach<AttachParamsV1>({
 		customer_id: customerId,
 		plan_id: `pro_${customerId}`,

@@ -1,5 +1,3 @@
-/** Contract: customized license prices use the license plan's Stripe Product.
- * Back-sync resolves exact prices first, then unambiguous license price shapes. */
 import { expect, test } from "bun:test";
 import {
 	type ApiCustomerV5,
@@ -62,7 +60,6 @@ const stampLicenseStripeViaV1Attach = async ({
 	});
 };
 
-/** Mint under the license Stripe product and write ids — V2 customize leaves them unset. */
 const expectCustomizedPriceUnderLicenseProduct = async ({
 	ctx,
 	parentPlanId,

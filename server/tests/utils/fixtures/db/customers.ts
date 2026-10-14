@@ -1,9 +1,6 @@
 import type { FullCusProduct, FullCustomer } from "@autumn/shared";
 import { AppEnv } from "@autumn/shared";
 
-/**
- * Create a full customer fixture
- */
 const create = ({
 	customerProducts = [],
 }: {
@@ -26,10 +23,6 @@ const create = ({
 	extra_customer_entitlements: [],
 	send_email_receipts: false,
 } as FullCustomer);
-
-// ═══════════════════════════════════════════════════════════════════
-// EXPORT
-// ═══════════════════════════════════════════════════════════════════
 
 export const customers = {
 	create,

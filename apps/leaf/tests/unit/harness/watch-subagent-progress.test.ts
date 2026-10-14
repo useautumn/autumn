@@ -1,9 +1,3 @@
-/**
- * The subagent progress relay streams a delegated child session's tool starts
- * and partial text onto the parent's status channel, ends on terminal child
- * events, and swallows transport errors — a dead relay never fails the turn.
- */
-
 import { beforeEach, describe, expect, mock, test } from "bun:test";
 import { AppEnv } from "@autumn/shared";
 import type { EveEvent } from "../../../src/internal/agentRuntime/eve/eveEventSchemas.js";
@@ -129,8 +123,6 @@ describe("watchSubagentProgress", () => {
 	});
 
 	test("a quiet child is reopened, not abandoned, and never throws out", async () => {
-		// A subagent can think for minutes between events; the relay reconnects
-		// through those windows so it keeps vouching for the parent turn.
 		streamedEvents = [
 			{ messageDelta: "partial", type: "message.appended" },
 		] as EveEvent[];

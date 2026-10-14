@@ -7,7 +7,6 @@ import { phaseStartsMatch } from "@/internal/billing/v2/utils/phaseStartsMatch";
 
 type PhaseWithStart = { starts_at?: number | "now" };
 
-/** Where the saved schedule changes plans: a scheduled start, or a live plan's end. */
 const savedBoundaries = ({
 	customerProducts,
 	currentEpochMs,
@@ -31,7 +30,6 @@ const savedBoundaries = ({
 		),
 ];
 
-/** Snapping must keep phase starts strictly increasing. */
 const startsStrictlyBetween = ({
 	startsAt,
 	previousStartsAt,
@@ -49,7 +47,6 @@ const startsStrictlyBetween = ({
 	return afterPrevious && beforeNext;
 };
 
-/** A phase within tolerance of a saved boundary starts exactly there, so an unchanged schedule stays unchanged. */
 export const alignPhasesToSavedBoundaries = <Phase extends PhaseWithStart>({
 	phases,
 	customerProducts,

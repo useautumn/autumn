@@ -60,7 +60,6 @@ export const eventsOpenApi: ZodOpenApiPathsObject = {
 		},
 	},
 
-	// LEGACY
 	"/query": {
 		post: {
 			summary: "Query Analytics Aggregation",

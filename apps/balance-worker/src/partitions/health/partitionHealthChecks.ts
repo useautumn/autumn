@@ -45,7 +45,6 @@ export async function refreshPartitionHighWatermarks({
 	state,
 	allocationGeneration,
 }: AllocationScope): Promise<boolean> {
-	// The commands topic too, so a partition's command lag is read while it is idle as well as under load.
 	const topics = [ctx.config.topic, ctx.config.commandTopic].filter(
 		(topic): topic is string => typeof topic === "string",
 	);
@@ -56,8 +55,6 @@ export async function refreshPartitionHighWatermarks({
 		})),
 	);
 	if (!isCurrentAllocation({ state, allocationGeneration })) return false;
-	// One topic's read failing must not hide the other's progress, so every read that
-	// succeeded is recorded before the failures are reported.
 	const failures: unknown[] = [];
 	for (const read of reads) {
 		if (read.status === "rejected") {
@@ -111,10 +108,6 @@ export function respondToPartitionFailure({
 	} catch (callbackCause) {
 		reportPartitionError({ ctx, cause: callbackCause });
 	}
-	// A partition that cannot be brought up, whose log cannot be read, or whose
-	// memory has simply fallen behind the log and the store waits alone:
-	// retired, claim released, retried. Only a failure that could recur on the
-	// worker's other partitions takes the whole service down with it.
 	const canBeParked =
 		isPartitionBootstrapBlockedCause({ cause }) ||
 		isPartitionLogUnreadableCause({ cause }) ||

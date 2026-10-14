@@ -1,18 +1,3 @@
-/**
- * Calculate the expected invoice total for `billing_cycle_anchor: "now"` +
- * `proration_behavior: "none"` with full-period-only refunds.
- *
- * Fetches the billing period from Stripe and computes:
- * - Charge: full newAmount (no proration on the incoming plan)
- * - Refund: time-based prorated credit from the snapped cycle boundary to period end
- *
- * For same-interval (monthly -> monthly), there are 0 full months remaining
- * mid-cycle, so refund = 0 and total = newAmount.
- *
- * For cross-interval (annual -> monthly with monthly entitlements), the refund
- * covers the time-proportional amount from the next cycle boundary to period end.
- */
-
 import { type EntInterval, getCycleEnd, getCycleStart } from "@autumn/shared";
 import { Decimal } from "decimal.js";
 import { calculateProrationFromPeriod } from "./calculateProration";

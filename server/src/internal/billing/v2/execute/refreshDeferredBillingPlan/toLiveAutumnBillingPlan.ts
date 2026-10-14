@@ -18,7 +18,6 @@ export const isCustomerProductLive = ({
 		(liveCustomerProduct) => liveCustomerProduct.id === customerProduct.id,
 	);
 
-/** Only a plan this billing plan replaces with a new main plan in its group may move to a successor. */
 const isReplacedByIncomingPlan = ({
 	customerProduct,
 	insertCustomerProducts,
@@ -33,7 +32,6 @@ const isReplacedByIncomingPlan = ({
 			incoming.product.group === customerProduct.product.group,
 	);
 
-/** The row now holding a replaced plan's place: the same product, else a replaced plan's group successor. */
 const findReplacementCustomerProduct = ({
 	customerProduct,
 	fullCustomer,
@@ -64,7 +62,6 @@ const findReplacementCustomerProduct = ({
 	});
 };
 
-/** A plan replaced since the invoice was created is expired through its current row instead. */
 export const toLiveCustomerProductUpdate = ({
 	update,
 	fullCustomer,
@@ -87,7 +84,6 @@ export const toLiveCustomerProductUpdate = ({
 	return { ...update, customerProduct: liveCustomerProduct };
 };
 
-/** Saved schedule phases name the rows their updates now target. */
 const toLiveSchedulePhases = ({
 	schedulePhases,
 	updatePairs,

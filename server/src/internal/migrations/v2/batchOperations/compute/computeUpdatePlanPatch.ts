@@ -155,9 +155,6 @@ const computeCustomizePatch = ({
 	});
 };
 
-/** Computes one (op, fromProduct) pair into a batch patch: resolve the target
- * product → diff items and licenses → lower → guard. No patch and no
- * rejections = no-op. */
 export const computeUpdatePlanPatch = ({
 	migration,
 	op,
@@ -171,7 +168,6 @@ export const computeUpdatePlanPatch = ({
 	op: UpdatePlanOp;
 	opIndex: number;
 	fromProduct: FullProduct;
-	/** The matched disjunct's $or-free conjunct filters. */
 	planFilters: PlanFilter[];
 	features: Feature[];
 	productsByPlanVersion: ReadonlyMap<string, FullProduct>;

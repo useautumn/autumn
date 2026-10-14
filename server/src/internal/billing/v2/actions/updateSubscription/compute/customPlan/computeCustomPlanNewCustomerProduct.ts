@@ -44,16 +44,6 @@ export const computeCustomPlanNewCustomerProduct = ({
 		currentCustomerProduct,
 	});
 
-	// const existingUsages = cusProductToExistingUsages({
-	// 	cusProduct: customerProduct,
-	// 	entityId: fullCustomer.entity?.id,
-	// });
-
-	// const existingRollovers = cusProductToExistingRollovers({
-	// 	cusProduct: customerProduct,
-	// });
-
-	// Compute the new full customer product
 	const newFullCustomerProduct = initFullCustomerProduct({
 		ctx,
 
@@ -62,8 +52,6 @@ export const computeCustomPlanNewCustomerProduct = ({
 			fullProduct,
 			featureQuantities,
 			customerLicenseQuantities,
-			// existingUsages,
-			// existingRollovers,
 			resetCycleAnchor: resetCycleAnchorMs,
 			now: currentEpochMs,
 
@@ -88,7 +76,7 @@ export const computeCustomPlanNewCustomerProduct = ({
 				requestedBillingCycleAnchor:
 					updateSubscriptionContext.requestedBillingCycleAnchor,
 			}),
-			subscriptionId: stripeSubscription?.id, // don't populate if it's starting in the future.
+			subscriptionId: stripeSubscription?.id,
 			subscriptionScheduleId:
 				stripeSubscriptionSchedule?.id ??
 				currentCustomerProduct.scheduled_ids?.[0],

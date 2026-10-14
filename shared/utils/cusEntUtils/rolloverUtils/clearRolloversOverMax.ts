@@ -2,14 +2,12 @@ import type { Rollover } from "../../../models/cusProductModels/cusEntModels/rol
 import type { RolloverMaxCustomerEntitlement } from "./cusEntToEffectiveRolloverMax.js";
 import { performMaximumClearing } from "./performMaximumClearing.js";
 
-/** The rows a reset writes once the cap is applied over the row's rollovers and the ones it just carried over. */
 export type RolloverResetWrites = {
 	inserts: Rollover[];
 	updates: Rollover[];
 	deleteIds: string[];
 };
 
-/** A carried-over row trimmed by the cap is inserted trimmed; one drained by it is never inserted. */
 export const clearRolloversOverMax = ({
 	cusEnt,
 	newRollovers,

@@ -1,11 +1,3 @@
-/**
- * Prepaid credits on a customer-level add-on are part of the pot shares divide.
- * The shape mirrors a docs platform: a pooled monthly grant per site plus a prepaid credits pack.
- *
- * Red (before):  allocating the whole 15k fails, "exceeds available by 5000", and reports granted 10k.
- * Green (after): the 5k prepaid pack counts, so 15k fits and the response reports granted 15k.
- */
-
 import { expect, test } from "bun:test";
 import { ResetInterval } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";

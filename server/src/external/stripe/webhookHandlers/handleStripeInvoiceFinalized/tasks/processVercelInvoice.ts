@@ -71,8 +71,6 @@ export const processVercelInvoice = async ({
 		},
 	});
 
-	// Lazily migrate legacy Vercel subscriptions to invoice mode. No-op if
-	// already `send_invoice` or if the subscription is canceled.
 	if (stripeSubscription) {
 		await ensureVercelInvoiceModeSubscription({
 			ctx: vercelCtx,
@@ -81,7 +79,6 @@ export const processVercelInvoice = async ({
 		});
 	}
 
-	// Get product for Vercel billing
 	const product = await ProductService.getFull({
 		db,
 		orgId: org.id,

@@ -3,7 +3,6 @@ import { and, eq, inArray } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { isCustomFingerprintSql } from "./isCustomFingerprint.js";
 
-/** Compare-and-set on the flag and the fingerprint, so a row changed since it was read is left alone. */
 export const flipCustomerProductsIsCustom = async ({
 	db,
 	customerProductIds,

@@ -9,14 +9,6 @@ import { LONG_LIVED_CHECKOUT_STRIPE_METADATA_KEY } from "@/internal/billing/v2/p
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
 import { MetadataService } from "@/internal/metadata/MetadataService";
 
-/**
- * checkout.session.expired handler — cleans up cusProduct rows that were
- * pre-inserted under the enable_plan_immediately flow but never got their
- * subscription linked because the customer abandoned the checkout.
- *
- * Identifies rows by stripe_checkout_session_id. Skips any row that has
- * subscription_ids populated (already completed via the success path).
- */
 export const handleStripeCheckoutSessionExpired = async ({
 	ctx,
 	event,
@@ -26,7 +18,6 @@ export const handleStripeCheckoutSessionExpired = async ({
 }) => {
 	const session = event.data.object;
 
-	// Long-lived links keep their granted or pending plan until the link expires (see runLongLivedCheckoutExpiry).
 	if (session.metadata?.[LONG_LIVED_CHECKOUT_STRIPE_METADATA_KEY]) return;
 
 	const cusProducts = await CusProductService.getByStripeCheckoutSessionId({
@@ -37,8 +28,6 @@ export const handleStripeCheckoutSessionExpired = async ({
 	});
 
 	if (cusProducts.length === 0) {
-		// Try to clean up the metadata row even if no cusProduct ever got created
-		// (e.g. a deferred-flow checkout that expired).
 		if (session.metadata?.autumn_metadata_id) {
 			await expirePendingCustomerProducts({
 				ctx,

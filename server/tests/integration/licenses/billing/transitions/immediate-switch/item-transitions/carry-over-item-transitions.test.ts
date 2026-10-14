@@ -1,9 +1,3 @@
-/** Contract: carry_over_usages on the upgrade attach carries seat usage through
- * a license item transition, mirroring the attach param's semantics:
- * - { enabled: true } carries every consumable feature (remaining = grant - usage)
- * - feature_ids narrows the carry — unlisted consumables reset to full grant
- * - { enabled: false } is the explicit reset (same as the default)
- */
 import { test } from "bun:test";
 import type { ApiEntityV2 } from "@autumn/shared";
 import { expectBalanceCorrect } from "@tests/integration/utils/expectBalanceCorrect";

@@ -28,7 +28,6 @@ const logUnsubscribeFailure = (error: unknown) => {
 	});
 };
 
-/** The workspace's trusted bot that wrote this message, if any. */
 const findTrustedBotAuthor = async ({ message }: { message: Message }) => {
 	const installation = await findSlackInstallationForWorkspace({
 		workspaceId: getSlackWorkspaceId(message.raw),
@@ -40,16 +39,11 @@ type MessageAdmission =
 	| { skip: true }
 	| { skip: false; trustedBot?: ChatTrustedBot };
 
-/** Slackbot posts workspace notices (e.g. "X was added to this channel by
- * @Autumn") under this user id without a `bot_id`, so the adapter reports
- * them as people; its own `isSystem` check looks for a different id. */
 const SLACKBOT_USER_ID = "USLACKBOT";
 
 export const isSlackbotNotice = (message: Message) =>
 	message.author.userId === SLACKBOT_USER_ID;
 
-/** People always get through; a bot only when the workspace trusts it, and
- * Slackbot's notices never do, even when they tag the agent. */
 const admitMessage = async ({
 	findTrustedBot,
 	message,
@@ -83,12 +77,6 @@ const admitMessage = async ({
 const unsubscribe = (thread: Thread) =>
 	thread.unsubscribe().catch(logUnsubscribeFailure);
 
-/** Whether the raw Slack message @-mentions this workspace's agent. Without
- * a known bot user id nothing counts as a mention, so an ordinary edit never
- * pulls the agent into a thread it does not follow. */
-/** Whether the message tags any copy of the agent. In a Slack Connect
- * channel a message can arrive through our own workspace's installation
- * while tagging the bot the other workspace sees. */
 export const messageTagsAnyAgent = async ({
 	isAgentBot = isAgentBotUser,
 	message,
@@ -106,8 +94,6 @@ const messageMentionsAgent = async ({ message }: { message: Message }) => {
 	return slackMessageMentionsUser({ raw: message.raw, userId: botUserId });
 };
 
-/** An edit reaches the agent as a new turn that says what changed, so it can
- * redo or correct work based on the original wording. */
 export const editedMessageText = ({
 	previousText,
 	text,
@@ -129,8 +115,6 @@ type HandlerDependencies = Readonly<{
 	shouldSkipReply: typeof shouldSkipUntaggedReply;
 }>;
 
-/** Loads the thread once per message: missed-message lookups read the
- * history `getRecentMessages` refreshed, so they wait on the same load. */
 const threadHistoryLoader = ({
 	getMessages,
 	message,
@@ -261,10 +245,6 @@ export const createSlackMessageHandlers = ({
 		});
 	};
 
-	// Every reply in a subscribed thread is answered unless the workspace is in
-	// mentions-only mode, where untagged replies are recorded and replayed to
-	// the next turn that tags the agent. "stop" and "stop replying" always get
-	// through, handled as control commands inside dispatch.
 	const replyInSubscribedThread = async ({
 		message,
 		text,
@@ -285,7 +265,6 @@ export const createSlackMessageHandlers = ({
 			return;
 		}
 		const history = threadHistoryLoader({ getMessages, message, thread });
-		// Missed replies and their files come from one lookup.
 		let loadedMissed: ReturnType<typeof loadMissedMessages> | undefined;
 		const loadMissed = history.afterRefresh(() => {
 			loadedMissed ??= loadMissedMessages(thread, message, getState());
@@ -304,9 +283,6 @@ export const createSlackMessageHandlers = ({
 			showRunPlan: false,
 			text,
 			thread,
-			// A tag reaches back for files anywhere earlier in the thread, so a
-			// re-tag can pick up a file an earlier turn could not read; skipped
-			// replies are part of that history.
 			threadAttachments: async () =>
 				(await tagsAnyAgent({ message }))
 					? await earlierAttachments()
@@ -329,10 +305,6 @@ export const createSlackMessageHandlers = ({
 		});
 	};
 
-	// A Slack edit is routed like a new message carrying the edited text: in
-	// a thread the agent already follows it goes through the subscribed-reply
-	// rules, in a DM it is answered, and elsewhere it starts a thread only
-	// when the edited message @-mentions the agent (e.g. a tag added late).
 	const handleEditedSlackMessage = async (
 		thread: Thread,
 		message: Message,
@@ -343,8 +315,6 @@ export const createSlackMessageHandlers = ({
 		if (admission.skip) return;
 		const { trustedBot } = admission;
 		if (previousMessage && previousMessage.text === message.text) return;
-		// "stop" edited in is a control command, which is only recognised as
-		// the whole message, so it goes through without the edit framing.
 		const text = controlMessageFrom(message.text)
 			? message.text
 			: editedMessageText({

@@ -1,6 +1,3 @@
-/**
- * Customer-related error codes
- */
 export const CusErrorCode = {
 	CustomerNotFound: "customer_not_found",
 	CustomerAlreadyExists: "customer_already_exists",

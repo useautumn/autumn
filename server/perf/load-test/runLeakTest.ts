@@ -1,12 +1,3 @@
-/**
- * Memory leak test orchestrator.
- *
- * Runs Artillery load, takes a snapshot before and after a GC cooldown period,
- * then prints paths for Chrome DevTools analysis.
- *
- * Usage: cd server && bun loadtest:leak
- */
-
 import { execSync } from "node:child_process";
 import { existsSync, mkdirSync, readdirSync, unlinkSync } from "node:fs";
 import { join } from "node:path";
@@ -26,7 +17,6 @@ if (!secretKey) {
 
 const authHeader = `Bearer ${secretKey}`;
 
-/** Take a heap snapshot and return the file path. */
 async function takeSnapshot({ label }: { label: string }): Promise<string> {
 	console.log(`\n[snapshot] Taking ${label} snapshot...`);
 	const res = await fetch(SNAPSHOT_ENDPOINT, {
@@ -44,7 +34,6 @@ async function takeSnapshot({ label }: { label: string }): Promise<string> {
 	return data.path;
 }
 
-/** Wait for n seconds with a countdown. */
 async function wait({ seconds, label }: { seconds: number; label: string }) {
 	for (let i = seconds; i > 0; i--) {
 		process.stdout.write(`\r[${label}] ${i}s remaining...`);
@@ -53,7 +42,6 @@ async function wait({ seconds, label }: { seconds: number; label: string }) {
 	process.stdout.write(`\r[${label}] done.                    \n`);
 }
 
-/** Clean old snapshots. */
 function cleanSnapshots() {
 	if (!existsSync(SNAPSHOTS_DIR)) {
 		mkdirSync(SNAPSHOTS_DIR, { recursive: true });
@@ -96,7 +84,6 @@ function runSnapshotSummary({
 async function main() {
 	console.log("=== Memory Leak Test ===\n");
 
-	// 0. Verify server is running
 	try {
 		await fetch(API_URL);
 	} catch {
@@ -104,13 +91,10 @@ async function main() {
 		process.exit(1);
 	}
 
-	// 1. Clean old snapshots
 	cleanSnapshots();
 
-	// 2. Take baseline snapshot (before any load)
 	const beforePath = await takeSnapshot({ label: "before-load" });
 
-	// 3. Run Artillery load test
 	console.log("\n[artillery] Starting load test...\n");
 	try {
 		execSync(`npx artillery run ${ARTILLERY_CONFIG}`, {
@@ -121,13 +105,10 @@ async function main() {
 		console.error("\n[artillery] Load test failed, continuing with snapshots...");
 	}
 
-	// 4. Cooldown — let GC clean up
 	await wait({ seconds: COOLDOWN_SECONDS, label: "cooldown" });
 
-	// 5. Take snapshot after load + GC cooldown
 	const afterPath = await takeSnapshot({ label: "after-cooldown" });
 
-	// 6. Generate terminal-friendly summary for agent/debugging workflows
 	runSnapshotSummary({ beforePath, afterPath });
 
 	console.log("\n=== Done ===");

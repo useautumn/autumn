@@ -26,11 +26,6 @@ export const atmnToStripeAmount = ({
 		.toNumber();
 };
 
-/**
- * Converts an Autumn amount to a Stripe decimal string (`unit_amount_decimal`).
- * Scales by the currency's minor-unit factor; keeps sub-unit precision, so the
- * divisible-by-ten rule (which only applies to integer amounts) is not enforced.
- */
 export const atmnToStripeAmountDecimal = ({
 	amount,
 	currency = "USD",
@@ -47,10 +42,6 @@ export const atmnToStripeAmountDecimal = ({
 		.toString();
 };
 
-/**
- * Converts a Stripe amount back to an Autumn amount by dividing out the
- * currency's minor-unit factor (100 cents -> 1.00, 1000 fils -> 1.000).
- */
 export const stripeToAtmnAmount = ({
 	amount,
 	currency = "usd",

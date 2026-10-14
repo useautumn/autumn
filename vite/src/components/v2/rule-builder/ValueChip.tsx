@@ -5,7 +5,6 @@ interface ValueChipProps {
 	label: string;
 	icon?: ReactNode;
 	onRemove: () => void;
-	/** False inside a button (a picker trigger), where nesting one is invalid HTML. */
 	interactive?: boolean;
 }
 

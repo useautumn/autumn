@@ -49,7 +49,6 @@ export function usePreviewCheckout({ checkoutId }: { checkoutId: string }) {
 		mutationFn: (body: ConfirmCheckoutParams) =>
 			checkoutApi.previewCheckout({ checkout_id: checkoutId, ...body }),
 		onSuccess: (data) => {
-			// Update the checkout query cache with new preview data
 			queryClient.setQueryData(
 				checkoutKeys.detail(checkoutId),
 				data as GetCheckoutResponse,

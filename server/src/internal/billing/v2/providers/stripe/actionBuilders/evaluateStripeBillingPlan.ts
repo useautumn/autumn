@@ -55,7 +55,6 @@ export const evaluateStripeBillingPlan = async ({
 		finalCustomerProducts: finalFullCustomer.customer_products,
 	});
 
-	// Build stripe subscription schedule action
 	const {
 		scheduleAction: stripeSubscriptionScheduleAction,
 		subscriptionCancelAt,
@@ -100,7 +99,6 @@ export const evaluateStripeBillingPlan = async ({
 		stripeSubscriptionAction,
 	});
 
-	// Build checkout session action if checkout mode is stripe_checkout
 	let stripeCheckoutSessionAction: StripeCheckoutSessionAction | undefined;
 	if (checkoutMode === "stripe_checkout") {
 		stripeCheckoutSessionAction = buildStripeCheckoutSessionAction({
@@ -125,7 +123,6 @@ export const evaluateStripeBillingPlan = async ({
 			stripeDiscounts: billingContext.stripeDiscounts ?? [],
 		});
 
-		// Invoice items only apply when using normal line items (not custom)
 		if (!customLineItems?.length && autumnBillingPlan.lineItems) {
 			stripeInvoiceItemsAction = buildStripeInvoiceItemsAction({
 				lineItems: autumnBillingPlan.lineItems,
@@ -136,7 +133,6 @@ export const evaluateStripeBillingPlan = async ({
 		!stripeCheckoutSessionAction &&
 		isSetPlansBillingContext(billingContext)
 	) {
-		// Subscription invoices only bill their own items; usage of a plan no subscription billed needs its own.
 		stripeInvoiceAction = buildStripeInvoiceAction({
 			lineItems: filterUnbilledUsageLineItems({ autumnBillingPlan }),
 			currency: billingContextToCurrency({ org: ctx.org, billingContext }),
@@ -145,8 +141,6 @@ export const evaluateStripeBillingPlan = async ({
 	}
 
 	return {
-		// If checkout session action is present, don't include subscription action
-		// (checkout will create the subscription)
 		subscriptionAction: stripeCheckoutSessionAction
 			? undefined
 			: stripeSubscriptionAction,

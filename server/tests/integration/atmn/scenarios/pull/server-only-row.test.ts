@@ -1,9 +1,3 @@
-/**
- * atmn scenarios/pull — server-only row → appended to the right array [inline, imported const, missing key inserted]
- *
- * One line of plans/atmn-v3/07_tests.md. [a, b] is a matrix looped INSIDE this file.
- */
-
 import { expect, test } from "bun:test";
 import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 import {
@@ -13,8 +7,6 @@ import {
 } from "@tests/utils/atmnUtils/initAtmnScenario.js";
 import { s } from "@tests/utils/testInitUtils/initScenario.js";
 
-/** A minimal plan row, sent directly as a wire document to simulate the
- * server moving ahead of the config (a dashboard create, in effect). */
 const serverOnlyPlanWire = ({ planId }: { planId: string }) => ({
 	plans: [
 		{

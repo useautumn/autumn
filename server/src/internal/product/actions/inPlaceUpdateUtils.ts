@@ -17,8 +17,6 @@ import { licenseItemRepo } from "@/internal/licenses/repos/licenseItemRepo.js";
 import { EntitlementService } from "@/internal/products/entitlements/EntitlementService.js";
 import { PriceService } from "@/internal/products/prices/PriceService.js";
 
-// Includes the base price: a base-price edit must retire the old shared row too,
-// not mutate it in place under existing customers.
 const currentItemsOf = ({
 	currentFullProduct,
 	features,
@@ -32,7 +30,6 @@ const currentItemsOf = ({
 		features,
 	});
 
-/** Serializes item writers before they reload the current catalog rows. */
 export const lockProductForItemUpdate = async ({
 	db,
 	internalProductId,
@@ -47,7 +44,6 @@ export const lockProductForItemUpdate = async ({
 		.for("no key update");
 };
 
-/** Locks sorted item rows so customer references cannot race item retirement. */
 export const lockProductItemsForUpdate = async ({
 	db,
 	currentFullProduct,
@@ -116,12 +112,6 @@ export const productItemsHaveCustomerReferences = async ({
 	);
 };
 
-/**
- * Callers rarely echo back entitlement_id / price_id, so without this match the
- * unchanged items look new and the old rows get deleted (cascading the
- * customers' rows). Match incoming items to the current catalog by feature +
- * interval and carry their ids forward.
- */
 const backfillExistingItemIds = ({
 	items,
 	currentFullProduct,
@@ -145,7 +135,6 @@ const backfillExistingItemIds = ({
 	});
 };
 
-/** Leave unused catalog rows in place as is_custom so deferred FKs stay valid. */
 const retireCatalogRows = async ({
 	db,
 	entitlementIds,
@@ -159,10 +148,6 @@ const retireCatalogRows = async ({
 	await EntitlementService.retireInIds({ db, ids: entitlementIds });
 };
 
-/**
- * Carry unchanged item ids forward and retire replaced catalog rows (is_custom).
- * Existing customer/license FKs keep pointing at the retired definition.
- */
 export const resolveInPlaceEdit = async ({
 	db,
 	items,
@@ -210,8 +195,6 @@ export const resolveInPlaceEdit = async ({
 	});
 
 	const retired = new Set([...retiredEntitlementIds, ...retiredPriceIds]);
-	// Updated items must mint fresh is_custom:false rows, so drop the backfilled
-	// ids that now point at retired rows.
 	const preparedItems = backfilledItems.map((item) => {
 		const retiresEnt = item.entitlement_id && retired.has(item.entitlement_id);
 		const retiresPrice = item.price_id && retired.has(item.price_id);

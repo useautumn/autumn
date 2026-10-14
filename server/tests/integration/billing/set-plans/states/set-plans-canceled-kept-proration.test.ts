@@ -1,14 +1,3 @@
-/**
- * Re-listing a plan whose Stripe subscription was canceled (webhook missed) recreates the subscription on the
- * old period end. Like Stripe's subscriptions.create with a future billing_cycle_anchor, proration_behavior
- * decides the stub until that anchor: none bills nothing, prorate_immediately (and bill_difference, which
- * Stripe has no equivalent for, by the new-subscription rule) bills the prorated stub now. phase_start resets the cycle and bills a full period.
- *
- * Red (before):  prorate_immediately and bill_difference previewed $0 while Stripe invoiced the stub; phase_start
- *                previewed a credit for the canceled period that Stripe never issues ($6.45, invoiced $20).
- * Green (after): each preview matches the invoice Stripe raises on create.
- */
-
 import { expect, test } from "bun:test";
 import type { BillingBehavior, SetPlansParamsV0Input } from "@autumn/shared";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
@@ -41,7 +30,6 @@ const PRO_PRICE = 20;
 const INCLUDED_MESSAGES = 100;
 const TRACKED_MESSAGES = 40;
 
-/** Pro with 40 messages used, 10 days into its cycle, its Stripe subscription canceled behind Autumn's back. */
 const setupCanceledPro = async ({ customerId }: { customerId: string }) => {
 	const pro = products.pro({
 		items: [items.monthlyMessages({ includedUsage: INCLUDED_MESSAGES })],
@@ -100,7 +88,6 @@ const relistParams = ({
 	],
 });
 
-/** Kept on a subscription anchored on the old period end, charged `stubTotal` now, its usage carried. */
 const relistAndExpectKeptCycle = async ({
 	customerId,
 	prorationBehavior,
@@ -169,7 +156,6 @@ const relistAndExpectKeptCycle = async ({
 		nextResetAt: oldPeriodEndMs,
 	});
 
-	// The anchor bills one full renewal, with no separate cycle reset on top.
 	await advancePastCycleStart({
 		ctx,
 		testClockId,

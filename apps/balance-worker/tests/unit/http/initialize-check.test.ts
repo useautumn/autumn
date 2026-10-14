@@ -188,7 +188,6 @@ function createFixture({
 			},
 		},
 	});
-	/** An initialize request is posted as its command plus a payload, the way the client does. */
 	const post = async ({
 		path,
 		command,
@@ -548,13 +547,11 @@ test.concurrent(
 				const response = await fixture.post({ path, command });
 				expect(response.status).toBe(200);
 				const reply = await response.json();
-				// The seats row is the customer's, but nothing about messages needs it.
 				expect(
 					reply.state.customerEntitlements.map((row: { id: string }) => row.id),
 				).toEqual(["grant"]);
 				expect(Object.keys(reply.catalog.features)).toEqual(["feat_messages"]);
 				expect(Object.keys(reply.catalog.entitlements)).toEqual(["ent_grant"]);
-				// What the server still reads off every reply stays.
 				expect(reply.state.customer.id).toBe(identity.customerId);
 				expect(reply.state.customerProducts).toEqual(
 					twoFeatureState.customerProducts,

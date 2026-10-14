@@ -1,10 +1,3 @@
-/**
- * Every `x-internal` field the server both returns on GET and accepts on
- * update is either exposed to the fixture or named as server-owned, with a
- * reason. A new one that is neither would silently make `pull` lossy: the
- * value drops from the fixture, and the next `push` reads as a change.
- */
-
 import { expect, test } from "bun:test";
 import type { JsonSchema } from "../src/casing/schemaKeyCasing";
 import { OVERLAY, type Overlay } from "../src/overlay/overlay";

@@ -1,9 +1,6 @@
 import { afterAll, beforeEach, describe, expect, mock, test } from "bun:test";
 import { SendMessageBatchCommand } from "@aws-sdk/client-sqs";
 
-// Snapshot spread, not the live namespace — after mock.module the namespace's
-// bindings retarget to the mock, which would make the afterAll restore
-// reinstall the mock instead of the real module.
 const realInitSqs = { ...(await import("@/queue/initSqs.js")) };
 
 const sentCommandNames: string[] = [];
@@ -47,10 +44,6 @@ const sendThreeTasks = ({ queueUrl }: { queueUrl: string }) =>
 		})),
 	});
 
-/**
- * goaws returns SendMessageBatch results under a key the AWS JSON protocol drops, so batched
- * sends looked entirely unsent locally and rejected every caller.
- */
 describe("SQS send path selection", () => {
 	test("sends individually against a local emulator", async () => {
 		const result = await sendThreeTasks({

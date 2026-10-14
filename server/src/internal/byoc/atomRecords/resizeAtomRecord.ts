@@ -5,7 +5,6 @@ import { refreshAtomRecord } from "./refreshAtomRecord.js";
 import type { AtomContext } from "./types/atomContext.js";
 import type { AtomRecord } from "./types/atomRecord.js";
 
-/** Moves a running Atom to another machine; its balances stay on the volume. */
 export const resizeAtomRecord = async <T extends AtomRecord>({
 	ctx,
 	record,

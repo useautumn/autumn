@@ -27,7 +27,6 @@ describe("a deployment's public endpoint", () => {
 	});
 
 	test("is the resource's only endpoint when the manager keys it by another name", () => {
-		// The hosted manager keys a container's one endpoint `default`; the local manager keys it by name.
 		const hosted = {
 			...running,
 			stackState: {

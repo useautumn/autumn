@@ -12,7 +12,6 @@ const runSafely = (name: string, fn: () => Promise<unknown>) => () =>
 		createContext().logger.warn(`${name} failed`, { error: String(error) }),
 	);
 
-/** Periodic housekeeping (FIFO account allocator, baseline scheduling); returns a stop function. */
 export const startSweepers = (): (() => void) => {
 	const ctx = createContext({ actor: SYSTEM_ACTOR });
 	const stopAllocator = startAllocator();

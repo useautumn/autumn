@@ -23,7 +23,6 @@ const samePlan = ({
 		eq(products.id, productId),
 	);
 
-/** Clear every other `active` row of this plan so a later activate cannot unique-violate. */
 export const deactivateOtherActiveProducts = async ({
 	db,
 	product,
@@ -47,10 +46,6 @@ export const deactivateOtherActiveProducts = async ({
 		);
 };
 
-/**
- * Point `active` at the highest non-archived version of this plan, if any.
- * Two statements: `unique_active_product` is not deferrable, so a one-row-flip can unique-violate.
- */
 export const activateHighestRemainingProduct = async ({
 	db,
 	orgId,

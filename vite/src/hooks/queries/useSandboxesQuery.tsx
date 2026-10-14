@@ -17,7 +17,6 @@ export type SandboxSummary = {
 	icon: string;
 };
 
-// Sandboxes are main-org-scoped, so the key is env-independent (no refetch on env switch).
 const sandboxesKey = (orgId: string | undefined) => ["sandboxes", orgId];
 
 export const useSandboxesQuery = ({
@@ -43,9 +42,6 @@ export const useSandboxesQuery = ({
 		[data],
 	);
 
-	// Drop a persisted selection only after the list has actually loaded;
-	// reconciling against a not-yet-loaded (disabled/in-flight) empty list would
-	// wipe a cold-reload restore from localStorage before the list ever arrives.
 	useEffect(() => {
 		const next = reconcileActiveSandbox({
 			activeSandbox,
@@ -97,7 +93,6 @@ export const useCreateSandbox = () => {
 			);
 			return data;
 		},
-		// Optimistically insert so the switcher shows it at once and the stale guard keeps it active.
 		onSuccess: (created) => {
 			const key = sandboxesKey(org?.id);
 			queryClient.setQueryData(
@@ -192,8 +187,6 @@ export const useCopySandbox = () => {
 	const queryClient = useQueryClient();
 
 	return useMutation({
-		// Source is exactly one of fromSandboxId / fromMaster — a union so bad
-		// combos fail to compile instead of hitting a guaranteed server 400.
 		mutationFn: async (
 			input: (
 				| { fromSandboxId: string; fromMaster?: never }
@@ -206,7 +199,6 @@ export const useCopySandbox = () => {
 		) => {
 			await axiosInstance.post("/v1/sandboxes.copy", input);
 		},
-		// Copy overwrites the target's whole catalog, so refresh any open plan/feature views.
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: ["products"] });
 			queryClient.invalidateQueries({ queryKey: ["product_counts"] });

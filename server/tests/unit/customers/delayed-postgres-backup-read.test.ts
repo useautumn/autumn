@@ -82,7 +82,6 @@ describe("runWithDelayedPostgresBackupRead", () => {
 		primary.resolve("primary");
 		expect(await resultPromise).toBe("primary");
 		expect(events).toEqual(["started", "primary_won"]);
-		// The capacity slot tracks the still-running duplicate, not the caller.
 		expect(_getActiveDelayedPostgresBackupReadsForTesting()).toBe(1);
 
 		backup.resolve("late-backup");

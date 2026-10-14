@@ -3,7 +3,6 @@ import React, { type ReactNode, useEffect, useId, useMemo } from "react";
 import { useCardWidth } from "./providers/CardWidthContext.js";
 
 const DEFAULT_WIDTH = 65;
-// Account for border (2 chars) + padding (2 chars on each side)
 const BORDER_PADDING_OVERHEAD = 6;
 
 interface CardProps {
@@ -11,11 +10,7 @@ interface CardProps {
 	children?: ReactNode;
 }
 
-/**
- * Calculate the display width of a string (accounting for ANSI codes, emojis, etc.)
- */
 function getStringWidth(str: string): number {
-	// Strip ANSI codes
 	const stripped = str.replace(
 		// biome-ignore lint/suspicious/noControlCharactersInRegex: ANSI escape codes
 		/[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g,
@@ -25,11 +20,9 @@ function getStringWidth(str: string): number {
 	let width = 0;
 	for (const char of stripped) {
 		const code = char.codePointAt(0) ?? 0;
-		// Emoji and wide characters (rough heuristic)
 		if (code > 0x1f600 || (code >= 0x2600 && code <= 0x27bf)) {
 			width += 2;
 		} else if (code >= 0x4e00 && code <= 0x9fff) {
-			// CJK characters
 			width += 2;
 		} else {
 			width += 1;
@@ -38,9 +31,6 @@ function getStringWidth(str: string): number {
 	return width;
 }
 
-/**
- * Recursively extract text content from React children to measure width
- */
 function extractTextContent(children: ReactNode): string[] {
 	const lines: string[] = [];
 
@@ -73,15 +63,10 @@ function extractTextContent(children: ReactNode): string[] {
 	return lines;
 }
 
-/**
- * Reusable card component with rounded border.
- * Coordinates width with other Cards via CardWidthContext.
- */
 export function Card({ title, children }: CardProps) {
 	const id = useId();
 	const cardWidth = useCardWidth();
 
-	// Calculate the content width needed for this card
 	const contentWidth = useMemo(() => {
 		const titleWidth = getStringWidth(title);
 
@@ -96,11 +81,9 @@ export function Card({ title, children }: CardProps) {
 			}
 		}
 
-		// Add overhead for border and padding
 		return maxLineWidth + BORDER_PADDING_OVERHEAD;
 	}, [title, children]);
 
-	// Register our width with the context
 	useEffect(() => {
 		if (cardWidth) {
 			cardWidth.registerWidth(id, contentWidth);
@@ -109,7 +92,6 @@ export function Card({ title, children }: CardProps) {
 		return undefined;
 	}, [id, contentWidth, cardWidth]);
 
-	// Use shared width from context, or fallback to default
 	const width = cardWidth?.width ?? Math.max(DEFAULT_WIDTH, contentWidth);
 
 	return (

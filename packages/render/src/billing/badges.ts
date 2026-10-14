@@ -8,11 +8,6 @@ const CANCEL_LABELS: Record<string, string> = {
 	uncancel: "Uncancel",
 };
 
-/** The billing action's notable on/off options, as fixed badges — highlighted
- * when true, dimmed (opposite) when false — plus conditional badges for
- * options that only matter when set (checkout, scheduling, cancels, resets).
- * `explicitOnly` drops the fixed badges whose params the write never set
- * (chat cards: an unset toggle on a cancel is noise, not information). */
 export const billingActionBadges = (
 	params?: Record<string, unknown> | null,
 	{ explicitOnly = false }: { explicitOnly?: boolean } = {},
@@ -73,8 +68,6 @@ export const billingActionBadges = (
 	if (asRecord(params?.recalculate_balances)?.enabled === true) {
 		badges.push({ active: true, label: "Reset usage" });
 	}
-	// A trial that collects a card behaves very differently at trial end, so
-	// the approver sees which one this is whenever a trial is set.
 	const freeTrial =
 		asRecord(asRecord(params?.customize)?.free_trial) ??
 		asRecord(params?.free_trial);

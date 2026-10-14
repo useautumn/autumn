@@ -1,9 +1,6 @@
 import type { Webhook } from "@autumn/shared";
 import type { EndpointOut } from "svix";
 
-/** Svix's endpoint as the public Webhook: our id is its `uid`, falling back to
- * the `ep_…` id for endpoints made in the dashboard. Event names are returned
- * verbatim, so a type newer than a client is never dropped. Never carries the secret. */
 export const svixEndpointToWebhook = ({
 	endpoint,
 }: {

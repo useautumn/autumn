@@ -30,7 +30,6 @@ const PresetControl = ({
 	</div>
 );
 
-/** Pick a preset or type a number, then apply; the change lands after the settle window. */
 export const RolloutPercentForm = ({
 	current,
 	onApply,

@@ -6,7 +6,6 @@ import type { AttributedBalance } from "@/internal/billing/v2/pooledBalances/att
 
 export type PhaseBalances = Record<string, AttributedBalance>;
 
-/** One feature's change within a single scope; the caller adds the scope. */
 export type PhaseBalanceDiff = Pick<
 	SetPlansPreviewBalanceChange,
 	"feature_id" | "balance" | "previous_attributes" | "behavior"
@@ -28,7 +27,6 @@ const TRACKED_FIELDS = [
 	"overage_allowed",
 ] as const satisfies ReadonlyArray<keyof SetPlansPreviewBalance>;
 
-/** A feature missing from a phase reads as an empty balance, so gaining or losing it diffs like any other change. */
 const toPreviewBalance = (
 	balance: AttributedBalance | undefined,
 ): SetPlansPreviewBalance => ({
@@ -40,11 +38,9 @@ const toPreviewBalance = (
 	overage_allowed: balance?.overage_allowed ?? false,
 });
 
-/** Pay-per-use grants access with nothing granted: its usage is billed instead. */
 const grantsAccess = (balance: SetPlansPreviewBalance) =>
 	balance.unlimited || balance.granted > 0 || balance.overage_allowed;
 
-/** Nothing granted and nothing used on either side: there is no balance to report. */
 const holdsNothing = ({ before, after }: BalanceTransition) =>
 	!grantsAccess(before) &&
 	!grantsAccess(after) &&
@@ -66,17 +62,14 @@ const keepsUsage = ({ before, after }: BalanceTransition) =>
 const keepsAllowance = ({ before, after }: BalanceTransition) =>
 	before.granted === after.granted && before.unlimited === after.unlimited;
 
-/** The same allowance starts over; a changed allowance is an update even when usage clears. */
 const resetsAllowance = (transition: BalanceTransition) =>
 	clearsUsage(transition) && keepsAllowance(transition);
 
-/** What was left survives as a fresh grant, as a one-off prepaid carry-over does. */
 const keepsRemaining = ({ before, after }: BalanceTransition) =>
 	clearsUsage({ before, after }) &&
 	!after.unlimited &&
 	after.remaining === before.remaining;
 
-/** First matching row wins: access changes outrank usage changes, which outrank a plain update. */
 const BEHAVIOR_TABLE: ReadonlyArray<
 	[BalanceBehavior, (transition: BalanceTransition) => boolean]
 > = [
@@ -98,7 +91,6 @@ const changedPreviousAttributes = ({ before, after }: BalanceTransition) =>
 		),
 	);
 
-/** Each feature whose balance differs between two phases, classified by how it changes. */
 export const diffPhaseBalances = ({
 	before,
 	after,

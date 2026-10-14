@@ -21,7 +21,6 @@ export const JOB_RUNNER_DEFAULTS = {
 	leaseMs: 30_000,
 	heartbeatMs: 10_000,
 	pollMs: 1_000,
-	/** Attempts include crashed leases; a graceful shutdown hands its attempt back. */
 	maxAttempts: 3,
 	retryBaseMs: 5_000,
 	shutdownGraceMs: 15_000,

@@ -14,11 +14,6 @@ const targetGroupKey = ({
 	group: string;
 }) => `${internalEntityId ?? "customer"}:${group}`;
 
-/**
- * Missing/blank group is itself a valid group key (the implicit "default"
- * group most catalogs use) -- it is NOT ambiguous on its own. Ambiguity only
- * exists when two non-add-on products collide on the same entity+group key.
- */
 const normalizeProductGroup = ({ group }: { group?: string | null }): string =>
 	group ?? "";
 

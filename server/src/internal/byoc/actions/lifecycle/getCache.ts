@@ -11,7 +11,6 @@ import {
 } from "../../utils/byocCacheUtils.js";
 import { refreshCacheDeployment } from "./refreshCacheDeployment.js";
 
-/** The env's Atom and any earlier ones still coming down, as alien has them now, and the stack name its Atom (or the next one) takes. */
 export const getCache = async ({
 	ctx,
 }: {

@@ -203,7 +203,6 @@ export const renderCurl = ({
 	[
 		`curl -X POST ${shellQuote(request.url)}`,
 		...Object.entries(request.headers).map(([name, value]) => {
-			// An authorization the caller overrode with -H is theirs to show.
 			const shown =
 				name === "authorization" && value === `Bearer ${secretKey}`
 					? `Bearer $${secretKeyName}`
@@ -267,7 +266,6 @@ export const callApi = async ({
 		body: request.body,
 	});
 	const text = await response.text();
-	// A proxy's HTML error page is not JSON; the status and route still matter.
 	const parsed: unknown = text ? tryParseJson({ text }) : null;
 	if (!response.ok)
 		throw new ApiResponseError({

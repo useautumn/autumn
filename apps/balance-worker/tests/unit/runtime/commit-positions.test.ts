@@ -82,7 +82,6 @@ function recordingAppender({
 	};
 }
 
-/** A partition processor whose writer publishes to `positions`, over a real state store. */
 function processorOn({
 	positions,
 	appender,

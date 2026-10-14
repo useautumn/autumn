@@ -1,16 +1,3 @@
-/**
- * Invoice mode, draft + enable_plan_immediately: the plan is pending while the
- * invoice is a draft and activates once it is finalized, before payment.
- * Stripe-side finalization is covered in attach-invoice-draft-immediate.test.ts.
- *
- * Contract:
- *   invoices.finalize           → plan active via invoice.finalized, deferred metadata deleted
- *   later invoices.pay          → no second activation (balance unchanged)
- *   credit balance covers total → finalize pays instantly; finalized + paid race, plan activates once
- *   reissued draft              → the replacement's finalize activates the plan
- *   parked reissued original    → finalizing it in Stripe never activates the plan
- */
-
 import { expect, test } from "bun:test";
 import {
 	ALL_STATUSES,
@@ -70,7 +57,6 @@ const setupDraftImmediate = async ({
 		autumnV2_4,
 		internalCustomerId: customer?.internal_id ?? "",
 		stripeCustomerId: customer?.processor?.id ?? "",
-		// initScenario prefixes the product id.
 		planId: pro.id,
 	};
 	return scenario;
@@ -223,7 +209,6 @@ test.concurrent(
 			{ amount: -5000, currency: "usd" },
 		);
 
-		// invoice.finalized and invoice.paid now fire back to back.
 		const finalized = await ctx.stripeCli.invoices.finalizeInvoice(
 			draft.stripe_id,
 		);
@@ -265,7 +250,6 @@ test.concurrent(
 			metadataId: pending.metadata_id ?? "",
 		});
 
-		// The parked original stays a draft and never activates anything on its own.
 		await pollUntilAsserted({
 			fetch: () => ctx.stripeCli.invoices.retrieve(draft.stripe_id),
 			assert: (original) => {
@@ -300,7 +284,6 @@ test.concurrent(
 
 		await ctx.stripeCli.invoices.finalizeInvoice(draft.stripe_id);
 
-		// The original's row turns open once its invoice.finalized webhook has run.
 		await pollUntilAsserted({
 			timeoutMs: WEBHOOK_SETTLE_TIMEOUT_MS,
 			fetch: async () =>

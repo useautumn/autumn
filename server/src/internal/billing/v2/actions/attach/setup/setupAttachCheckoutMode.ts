@@ -7,10 +7,6 @@ import {
 } from "@autumn/shared";
 import type Stripe from "stripe";
 
-/**
- * Determines the checkout mode for attach operations.
- *
- */
 export const setupAttachCheckoutMode = ({
 	paymentMethod,
 	redirectMode,
@@ -48,13 +44,11 @@ export const setupAttachCheckoutMode = ({
 	}
 
 	const getStripeCheckoutOrDirectBilling = () => {
-		// A. if no payment method
 		if (hasPaymentMethod) return null;
 
 		if (productIsOneOff) return "stripe_checkout";
 
 		if (!hasExistingSubscription && productIsPaidRecurring) {
-			// If trial no card required, direct billing
 			if (trialContext?.trialEndsAt && trialContext?.cardRequired === false) {
 				return null;
 			}
@@ -67,10 +61,8 @@ export const setupAttachCheckoutMode = ({
 	const checkoutMode = getStripeCheckoutOrDirectBilling();
 
 	if (checkoutMode === null && redirectMode === "always") {
-		// 1. If it's one off product, return stripe_checkout
 		if (productIsOneOff) return "stripe_checkout";
 
-		// 2. If it's paid recurring and no subscription, return autumn_checkout
 		if (productIsPaidRecurring && !hasExistingSubscription) {
 			return "stripe_checkout";
 		}

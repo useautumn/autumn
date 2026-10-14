@@ -13,7 +13,6 @@ if (existsSync(expectedBunPath)) {
 	process.exit(0);
 }
 
-// postinstall runs under `bun install`, so execPath is the live bun binary.
 const bunPath =
 	typeof globalThis.Bun !== "undefined" ? process.execPath : undefined;
 

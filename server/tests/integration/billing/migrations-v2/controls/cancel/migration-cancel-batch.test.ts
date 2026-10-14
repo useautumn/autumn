@@ -17,23 +17,6 @@ const CUSTOMER_COUNT = 10;
 test.concurrent(
 	`${chalk.yellowBright("migration cancel (batch): in-flight page finishes, run settles canceled")}`,
 	async () => {
-		/**
-		 * Contract under test:
-		 *   New behaviors:
-		 *     - Cancelling a running batch migration is honored at a PAGE
-		 *       boundary: the in-flight page finishes in full, then the loop
-		 *       exits through the cancel gate instead of running to exhaustion.
-		 *     - The run settles to `canceled` (not `succeeded`), with
-		 *       "Canceled by user".
-		 *   Side effects:
-		 *     - No item is left mid-flight (`running`) or `failed` — nothing is
-		 *       cut off part-way through its migration.
-		 *
-		 * CUSTOMER_COUNT is deliberately below BATCH_MIGRATION_PAGE_SIZE, so the
-		 * whole scope is one page and the claim upsert marks every customer
-		 * `running` in a single statement. A partial `total` is therefore not
-		 * reachable here; page-granular cancellation is what's asserted instead.
-		 */
 		const suffix = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 		const customerIds = Array.from(
 			{ length: CUSTOMER_COUNT },
@@ -77,8 +60,6 @@ test.concurrent(
 			no_billing_changes: true,
 		});
 
-		// In-process run with one page per chunk: cancel_run lands on the live
-		// run after page 1 commits, so the next chunk's cancel gate always sees it.
 		const { migrationRunId } = await withMigrationRunClaim({
 			ctx,
 			migration,
@@ -127,11 +108,8 @@ test.concurrent(
 			migrationRunId,
 		});
 
-		// The in-flight page finished in full — the run stopped at the boundary
-		// after it, not part-way through it.
 		expect(counts.total).toBe(CUSTOMER_COUNT);
 		expect(counts.succeeded).toBe(CUSTOMER_COUNT);
-		// Nothing cut off mid-migration.
 		expect(counts.running).toBe(0);
 		expect(counts.failed).toBe(0);
 	},

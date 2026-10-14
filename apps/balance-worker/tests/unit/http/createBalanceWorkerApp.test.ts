@@ -105,7 +105,6 @@ const fixture = ({
 	cause?: Error;
 	owned?: boolean;
 	actualPartition?: number;
-	/** Fails individual tracks by command id, for batches that mix outcomes. */
 	causeFor?: Record<string, Error>;
 	awaitHandoff?: BalanceWorkerHttpContext["ownership"]["awaitHandoff"];
 	findSuccessor?: BalanceWorkerHttpContext["ownership"]["findSuccessor"];
@@ -184,7 +183,6 @@ const fixture = ({
 		},
 		drain: async () => undefined,
 	};
-	/** The budget each command was run with, in order; undefined when the request carried none. */
 	const budgets: Array<number | undefined> = [];
 	const process: BalanceWorkerRequestContext["runtime"]["process"] = (
 		run,
@@ -277,7 +275,6 @@ async function logsCompletedRequest(): Promise<void> {
 			id: "req",
 			method: "POST",
 			path: "/v1/track",
-			// A success reports its outcome; the command body is logged only when the request failed.
 			body: undefined,
 		},
 		res: trackReply,
@@ -331,7 +328,6 @@ async function logsOverloadCheaply(): Promise<void> {
 	expect(response.status).toBe(429);
 	expect(logs).toHaveLength(1);
 	const [event, message] = logs[0] as [Record<string, unknown>, string];
-	// Serialising a stack per rejected request made overload collapse throughput on staging.
 	expect(event).toMatchObject({ statusCode: 429, errorCode: "OVERLOADED" });
 	expect(event.error).toBeUndefined();
 	expect(message).not.toContain("PartitionWriterCapacityError");
@@ -910,7 +906,6 @@ describe("Track batches", () => {
 		expect(submitted).toEqual(
 			ids.map((id) => ({ command: commandWithId(id) })),
 		);
-		// Ownership is checked once for the whole batch.
 		expect(lookups).toEqual([route]);
 	});
 
@@ -1076,7 +1071,6 @@ describe("Track batches", () => {
 				},
 			},
 		});
-		// Failures are counted, not serialised one stack at a time.
 		expect(event.error).toBeUndefined();
 		expect(JSON.stringify(logs)).not.toContain("never-log-this");
 	});

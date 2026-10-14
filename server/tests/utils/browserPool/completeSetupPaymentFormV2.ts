@@ -8,11 +8,6 @@ import { setupPayment } from "./playwright/setupPayment.js";
 import { playwrightPool } from "./playwrightPool.js";
 import { waitForSetupPaymentMethod } from "./waitForSetupPaymentMethod.js";
 
-/**
- * Complete a Stripe setup payment checkout form (mode: "setup").
- * Kernel mode: serializes setupPayment via fn.toString() and runs in-VM.
- * Local mode: runs setupPayment directly with a local Playwright browser.
- */
 export const completeSetupPaymentFormV2 = async ({
 	url,
 	ctx = defaultCtx,
@@ -35,7 +30,6 @@ export const completeSetupPaymentFormV2 = async ({
 		return;
 	}
 
-	// Local — run the same Playwright function with a local browser
 	console.log("[completeSetupPaymentFormV2] Using local Playwright...");
 	await playwrightPool.runInPage({ fn: setupPayment, args: { url } });
 	await waitForSetupPaymentMethod({ ctx, url });

@@ -3,7 +3,6 @@ import type { ProductItem } from "../../../models/productV2Models/productItemMod
 const isUnsetOrZero = (value: number | null | undefined): boolean =>
 	value === null || value === undefined || value === 0;
 
-/** Every configured currency prices `billing_units` units at exactly `billing_units`, with no flat fees. */
 export const isOneToOneUnitPriceItem = ({
 	item,
 }: {

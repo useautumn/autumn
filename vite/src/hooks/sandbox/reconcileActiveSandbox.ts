@@ -1,8 +1,5 @@
 import type { ActiveSandbox } from "./useActiveSandbox";
 
-/** Preserve the selection until the list loads (cold-reload restore); then drop it if
- *  absent, self-heal name/color/icon if present, keeping the same reference when nothing
- *  changed (the consumer effect guards on identity, so a fresh object every render loops). */
 export const reconcileActiveSandbox = ({
 	activeSandbox,
 	sandboxes,

@@ -10,10 +10,8 @@ export const productRelations = relations(products, ({ many, one }) => ({
 	entitlements: many(entitlements),
 	prices: many(prices),
 	licenses: many(planLicenses, { relationName: "parentProductLicenses" }),
-	// Links where this product is offered as a license under a parent plan.
 	parent_plan_licenses: many(planLicenses, { relationName: "licenseProduct" }),
 
-	// Variant ↔ base (FK: products.base_internal_product_id → products.internal_id).
 	base_product: one(products, {
 		fields: [products.base_internal_product_id],
 		references: [products.internal_id],

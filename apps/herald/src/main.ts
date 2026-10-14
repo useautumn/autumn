@@ -23,7 +23,6 @@ import { getPostgres } from "./setup/getPostgres.js";
 import { getSqsJobs } from "./setup/getSqsJobs.js";
 import { getSvixClient } from "./setup/getSvixClient.js";
 
-/** Inside the ECS stop timeout with room for the backstop to log and flush. */
 const STOP_BUDGET_MS = 20_000;
 
 async function main(): Promise<void> {
@@ -73,7 +72,6 @@ async function main(): Promise<void> {
 	await startHerald({ ctx, state });
 }
 
-/** The lifecycle has already flushed logs; queued Sentry events get the same chance. */
 function endProcess(code: number): void {
 	void flushErrorReports().finally(() => process.exit(code));
 }

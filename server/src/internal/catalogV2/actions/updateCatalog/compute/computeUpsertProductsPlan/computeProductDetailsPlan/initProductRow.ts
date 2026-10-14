@@ -8,11 +8,6 @@ import { generateId } from "@/utils/genUtils.js";
 import { applyPlanProcessorsToProduct } from "./applyPlanProcessorsToProduct";
 import { planParamsToProductRowPatch } from "./planParamsToProductRowPatch";
 
-/**
- * Mint a fresh product row for a create (constructProduct conventions:
- * `group || ""`, nullish fallbacks, generated internal_id).
- * With `base`: clone then overlay params patch (new_version / variant mint).
- */
 export const initProductRow = ({
 	ctx,
 	planParams,
@@ -25,9 +20,7 @@ export const initProductRow = ({
 	planParams: UpdateCatalogPlanParams;
 	version: number;
 	base?: Product;
-	/** Variant create: the latest base row. Omit to keep a clone's pointer. */
 	baseInternalProductId?: string | null;
-	/** Variant create: share the base's Stripe Product. */
 	baseProcessor?: Product["processor"];
 }): Product => {
 	if (base) {
@@ -40,8 +33,6 @@ export const initProductRow = ({
 			...base,
 			...patch,
 			version,
-			// Fresh slug/active — cloning the base's would collide on
-			// unique_product_version_slug / unique_active_product.
 			version_slug: planParams.new_version_slug ?? `v${version}`,
 			active: willBeActive,
 			is_default: willBeActive ? (patch.is_default ?? base.is_default) : false,

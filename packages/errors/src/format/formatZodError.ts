@@ -1,24 +1,17 @@
 import type { ZodError, ZodIssue } from "zod/v4";
 
-/**
- * Formats Zod validation errors into user-friendly messages
- */
 export function formatZodError(error: ZodError): string {
 	const formatMessage = (issue: ZodIssue): string => {
 		const path = issue.path.length ? issue.path.join(".") : "input";
 
-		// Clean up common Zod error messages
 		let message = issue.message;
 
-		// Handle common patterns and make them more user-friendly
 		if (
 			message.includes("Too small") &&
 			message.includes("expected string to have >=1 characters")
 		) {
 			message = "cannot be empty";
 		} else if (message.includes("Invalid option: expected one of")) {
-			// Clean up enum error messages
-			// Example: 'Invalid option: expected one of "a"|"b"|"c"' -> 'must be one of: a, b, c'
 			const match = message.match(/expected one of (.+)/);
 			if (match) {
 				const options = match[1]
@@ -28,7 +21,6 @@ export function formatZodError(error: ZodError): string {
 				message = `must be one of: ${options}`;
 			}
 		} else if (message.includes("Invalid string: must match pattern")) {
-			// Try to extract character class from pattern like /^[a-zA-Z0-9_:-]+$/
 			const charClassMatch = message.match(/\[([a-zA-Z0-9_:\-\\]+)\]/);
 			if (charClassMatch) {
 				const charClass = charClassMatch[1];
@@ -65,7 +57,6 @@ export function formatZodError(error: ZodError): string {
 
 	const formattedIssues = error.issues.map(formatMessage);
 
-	// If there are multiple issues, format them nicely
 	if (formattedIssues.length === 1) {
 		return formattedIssues[0];
 	}

@@ -1,17 +1,3 @@
-/**
- * catalogV2.update — child promote leaves non-propagated links untouched.
- *
- * Contract:
- *   Parent NOT in propagate → link stays version-anchored to child v1:
- *   no repoint, no manufactured overlay, same plan_license row.
- *   Parent IN propagate → follow the newly active child (new reference).
- *   Already-customized parent → leave (same row, same overlay, no retarget).
- *   Parent promote (licenses omitted) → child identity unchanged;
- *   new_version clones outgoing links onto v2; v1 keeps the existing links.
- *   Declared licenses[] on child promote is exclusive — omit version_slug
- *   keeps the existing v1 anchor; customize still applies on that row.
- */
-
 import { expect, test } from "bun:test";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";

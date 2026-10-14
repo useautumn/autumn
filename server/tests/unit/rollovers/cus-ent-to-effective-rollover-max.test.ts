@@ -308,7 +308,6 @@ describe("cusEntToEffectiveRolloverMax: max_percentage on a fixed allowance", ()
 			}),
 		});
 
-		// NOTE: current behavior; possible bug: a related price drops product quantity (100, not 200).
 		expect(max).toBe(100);
 	});
 });
@@ -450,7 +449,6 @@ describe("cusEntToEffectiveRolloverMax: max_percentage on a prepaid row", () => 
 			}),
 		});
 
-		// NOTE: current behavior; possible bug: without prices the purchased 300 is invisible, cap is 0.
 		expect(max).toBe(0);
 	});
 });

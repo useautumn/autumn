@@ -5,7 +5,6 @@ import { splitRepetitionId } from "../repeat/repetitions.ts";
 import { createRun } from "./createRun.ts";
 import { getRun } from "./getRun.ts";
 
-/** New run on the same branch + sha with only the failed, crashed and timed-out files. */
 export const rerunFailed = async ({
 	ctx,
 	runId,

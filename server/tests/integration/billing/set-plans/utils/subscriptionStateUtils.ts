@@ -53,7 +53,6 @@ export const findStripeSubscriptionByStatus = async ({
 	return subscription;
 };
 
-/** The old subscription is cancelled and the plan lives on exactly one new subscription. */
 export const expectSubscriptionReplaced = async ({
 	ctx,
 	customerId,
@@ -97,7 +96,6 @@ export const expectSubscriptionReplaced = async ({
 	expect(pendingRows).toHaveLength(0);
 };
 
-/** The customer's live subscription has collected exactly `total` (major units) so far. */
 export const expectLiveSubscriptionCharged = async ({
 	ctx,
 	customerId,
@@ -122,7 +120,6 @@ export const expectLiveSubscriptionCharged = async ({
 	expect(amountPaid / 100).toBe(total);
 };
 
-/** The preview names the warning, and its message mentions each given fragment. */
 export const expectPreviewWarning = ({
 	preview,
 	type,
@@ -142,7 +139,6 @@ export const expectPreviewWarning = ({
 	}
 };
 
-/** A card-not-required trial that Stripe pauses at trial end, since no card was added. */
 export const setupPausedPro = async ({
 	customerId,
 }: {
@@ -158,7 +154,6 @@ export const setupPausedPro = async ({
 	const scenario = await initScenario({
 		customerId,
 		setup: [s.customer({}), s.products({ list: [pro] })],
-		// v1 attach still runs no-card trials on Stripe; billing.attach keeps them Autumn-only (#4024).
 		actions: [s.attach({ productId: pro.id })],
 	});
 	const { ctx, testClockId, advancedTo } = scenario;
@@ -183,7 +178,6 @@ export const setupPausedPro = async ({
 	return { ...scenario, pro, paused };
 };
 
-/** The invoices a Stripe subscription raised, oldest first, as totals in major units. */
 export const expectSubscriptionInvoiceTotals = async ({
 	ctx,
 	subscriptionId,
@@ -206,7 +200,6 @@ export const expectSubscriptionInvoiceTotals = async ({
 	).toEqual(totals);
 };
 
-/** Stripe's own upcoming invoice for the subscription renews on `startsAt` for `total` (major units). */
 export const expectStripeUpcomingInvoiceCorrect = async ({
 	ctx,
 	subscriptionId,

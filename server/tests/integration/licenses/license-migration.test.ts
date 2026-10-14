@@ -23,7 +23,6 @@ import {
 } from "./licenseTestUtils.js";
 import { expectLiveLicensePools } from "./utils/expectLiveLicensePools.js";
 
-/** Every active plan on `fromProduct` migrated through the billing action, as the v1 migration task did; false when the action rejects. */
 const migrateCustomer = async ({
 	ctx,
 	customerId,
@@ -219,7 +218,6 @@ test.concurrent(
 			}),
 		).toBe(true);
 
-		// Seats never repoint: the target pool adopts the source link.
 		const after = await getLicenseDbState({ db: ctx.db, customerId });
 		const toSeatAnchors = (assignments: typeof before.assignments) =>
 			assignments.map(({ id, customer_license_link_id }) => ({
@@ -488,7 +486,6 @@ test.concurrent(
 			idOrInternalId: customerId,
 			inStatuses: ACTIVE_STATUSES,
 		});
-		// Version-bump migrations skip is_custom customer products.
 		const customizedParent = fullCustomer.customer_products.find(
 			(customerProduct) =>
 				customerProduct.product.internal_id === parentV1.internal_id,

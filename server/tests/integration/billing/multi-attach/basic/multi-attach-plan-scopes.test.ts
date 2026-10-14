@@ -1,5 +1,3 @@
-/** Each multi-attach plan resolves its own scope: inherit, customer, or explicit entity. */
-
 import { test } from "bun:test";
 import type { ApiCustomerV3, ApiEntityV0 } from "@autumn/shared";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect.js";
@@ -59,7 +57,6 @@ test.concurrent(
 			autumnV1.entities.get<ApiEntityV0>(customerId, entities[1].id),
 		]);
 
-		// The balance worker doesn't aggregate entity data onto the customer.
 		await expectCustomerProducts({
 			customer,
 			active: isBalanceWorkerRoute()

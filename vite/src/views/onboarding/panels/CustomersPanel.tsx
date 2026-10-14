@@ -9,7 +9,6 @@ import {
 } from "@/views/customers2/components/table/customer-list/CustomerListColumns";
 import { PanelSection } from "./PanelSection";
 
-/** Two rows of overflow before scrolling — enough to show more exist. */
 const PANEL_HEIGHT = "148px";
 const ROW_HEIGHT = 36;
 
@@ -20,8 +19,6 @@ export function CustomersPanel({
 	customers: FullCustomer[];
 	isLoading?: boolean;
 }) {
-	// The real customer list columns, minus the row toolbar — nothing on this
-	// page mutates, and its dropdown would fight the row link.
 	const columns = useMemo(
 		() =>
 			createCustomerListColumns().filter(
@@ -40,8 +37,6 @@ export function CustomersPanel({
 		getRowId: (row) => row.internal_id ?? row.id ?? "",
 	});
 
-	// Column headings over an empty table read as broken; until there's a
-	// customer this matches the dashed placeholder the other panels use.
 	if (customers.length === 0) {
 		return (
 			<PanelSection

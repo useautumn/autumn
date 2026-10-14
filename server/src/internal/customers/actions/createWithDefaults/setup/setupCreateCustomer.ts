@@ -5,13 +5,6 @@ import type { CreateCustomerContext } from "../createCustomerContext.js";
 import { setupCreateCustomerTrialContext } from "./setupCreateCustomerTrialContext.js";
 import { setupDefaultProductsContext } from "./setupDefaultProductsContext.js";
 
-/**
- * Setup step for creating a customer with defaults.
- *
- * 1. Init full customer
- * 2. Fetch default products
- * 3. Setup Stripe customer + trial context IF paid products exist
- */
 export const setupCreateCustomer = async ({
 	ctx,
 	customerId,
@@ -21,7 +14,6 @@ export const setupCreateCustomer = async ({
 	customerId: string | null;
 	customerData?: CustomerData;
 }): Promise<CreateCustomerContext> => {
-	// 1. Validate
 	if (!customerId && !customerData?.email) {
 		throw new RecaseError({
 			message: "Either customer ID or email is required",
@@ -29,22 +21,18 @@ export const setupCreateCustomer = async ({
 		});
 	}
 
-	// 2. Init full customer
 	const fullCustomer = initFullCustomer({ ctx, customerId, customerData });
 
-	// 3. Fetch default products
 	const { fullProducts, paidProducts, hasPaidProducts } =
 		await setupDefaultProductsContext({ ctx, customerData, scope: "customer" });
 
 	const currentEpochMs = Date.now();
 
-	// 6. Setup trial context
 	const trialContext = setupCreateCustomerTrialContext({
 		paidProducts,
 		currentEpochMs,
 	});
 
-	// 7. Return paid context (extends BillingContext)
 	return {
 		fullCustomer,
 		fullProducts,

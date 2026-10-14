@@ -1,13 +1,3 @@
-/**
- * atmn scenarios/motion — a license link written as `license({...})` in its own file, placed into the parent's `licenses: [...]`
- *
- * code in motion: the config's shape is the user's; pull edits the AST, never rewrites a file
- *
- * Contract: push links seat under enterprise; pull writes nothing; changing
- * `included` in the license's file and pushing again previews an update on
- * the parent (a fresh CLI process, since the config is read from disk).
- */
-
 import { expect, test } from "bun:test";
 import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 import {
@@ -90,7 +80,6 @@ export const seatLink = license({ licensePlanId: "${seat}", versionSlug: "v1", i
 			expect(pulled.deleted).toEqual([]);
 			expect([...scenario.files().entries()]).toEqual([...afterPush.entries()]);
 
-			// Edit the link where it lives; a fresh process reads the new file.
 			scenario.writeFile("licenses/seat.ts", licenseFile({ included: 30 }));
 			const dryRun = Bun.spawnSync(
 				["bun", `${CLI_PACKAGE_DIR}/src/cli.ts`, "push", "--dry-run"],

@@ -12,7 +12,6 @@ import {
 } from "@autumn/shared";
 import type { WorkerDb } from "../../src/types/workerDb.js";
 
-/** Fabricates catalog rows for whatever ids are asked, following the fixture id scheme (feat_<featureId>, ent_<id>). */
 const syntheticCatalogRows = ({
 	ids,
 }: Parameters<WorkerDb["getCatalogRows"]>[0]): CatalogRowsEnvelope => ({
@@ -67,8 +66,6 @@ const syntheticCatalogRows = ({
 	})),
 });
 
-/** A Postgres stand-in: no customers, and every catalog id resolves to a synthetic row so tests never miss. */
-/** Entity loads for a fake that only knows single-subject reads: one envelope per requested entity it can answer. */
 export const entitySubjectRowsFrom =
 	({
 		getSubjectRows,
@@ -103,7 +100,6 @@ export const createSyntheticWorkerDb = ({
 	sumPooledContributionGrants: async () => ({}),
 });
 
-/** A Postgres stand-in that knows nothing: every miss stays a miss. */
 export const createEmptyWorkerDb = (): WorkerDb => ({
 	getSubjectRows: async () => null,
 	readSubjectSnapshot: async () => null,

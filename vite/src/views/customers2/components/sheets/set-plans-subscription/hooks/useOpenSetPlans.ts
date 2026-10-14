@@ -5,8 +5,6 @@ import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { useCustomerContext } from "@/views/customers2/customer/CustomerContext";
 import { decideSetPlansEntry } from "../utils/decideSetPlansEntry";
 
-/** Opens Set Plans, going through the subscription picker when the customer
- * has several linked Stripe subscriptions. */
 export const useOpenSetPlans = () => {
 	const setSheet = useSheetStore((state) => state.setSheet);
 	const { customer } = useCusQuery();

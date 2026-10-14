@@ -13,28 +13,19 @@ import type {
 } from "../types/committer.js";
 import type { SnapshotQueues } from "./types/snapshotQueues.js";
 
-/**
- * Past this many pending entries a partition stops enqueuing refreshes: 20 statements of 500 drain in well under a
- * second, so a backlog beyond it means Postgres is the slow part, and a row not rebuilt only costs its next cold load.
- * A DELETE is never refused: a customer that left memory must not leave a row behind, and its entry is a key, not a state.
- */
 export const SNAPSHOT_LANE_MAX_PENDING = 10_000;
 
-/** One customer's refreshed subjects waiting for a tick, with each read's log offset. */
 type PendingRefreshes = {
 	states: Map<string, { state: SubjectState; logOffset: bigint }>;
 	baselineAt: number;
 };
 
-/** Settled by the tick that ran the customer's DELETE with the rows it removed: what an evict rebuilds once they are gone. */
 type Landing = ReturnType<
 	typeof Promise.withResolvers<DeletedSubjectSnapshot[]>
 >;
 
-/** A partition's writes waiting for the lane: customers to delete, subjects to refresh by customer, and whether a tick is queued. */
 type PartitionWrites = {
 	deletes: Map<string, Landing>;
-	/** Customers whose DELETE is in the statement in flight. */
 	deleting: Map<string, Landing>;
 	refreshes: Map<string, PendingRefreshes>;
 	pendingCount: number;
@@ -45,11 +36,9 @@ type PartitionWrites = {
 type SnapshotQueuesContext = {
 	committer: Pick<Committer, "apply">;
 	logger?: Pick<NonNullable<CommitterContext["logger"]>, "warn">;
-	/** Read at each tick: `dropBatch` sizes the statement, and off means no statement at all. */
 	subjectSnapshotsConfig: NonNullable<
 		CommitterContext["subjectSnapshotsConfig"]
 	>;
-	/** The partition's bookmark and claim as the store holds them: a refresh lands under both, so a stale owner's rolls back. */
 	readNextOffset(position: PartitionPosition): bigint | null;
 	claimTokenOf(position: PartitionPosition): string | undefined;
 	runInLane(params: {
@@ -58,11 +47,6 @@ type SnapshotQueuesContext = {
 	}): Promise<void>;
 };
 
-/**
- * Writes collect per partition; each lane tick lands one statement of at most `dropBatch`, one in flight per partition.
- * A tick takes deletes while any wait, else refreshes, never both: only a refresh carries the bookmark a stale owner
- * rolls back on, and a DELETE must never roll back with it. Deletes first also keeps an evict ahead of its refreshes.
- */
 export const createSnapshotQueues = ({
 	ctx,
 }: {
@@ -91,7 +75,6 @@ export const createSnapshotQueues = ({
 		scheduleTick({ position: { topic, partition }, writes });
 	}
 
-	/** The rows the customer's DELETE removed, once the tick carrying it ran; none at once when no DELETE waits or is in flight. */
 	function deleteLanded({
 		topic,
 		partition,
@@ -130,7 +113,6 @@ export const createSnapshotQueues = ({
 		});
 		const pending = writes.refreshes.get(customerKey);
 		const alreadyPending = pending?.states.has(subjectKey) ?? false;
-		// A subject already pending always takes the latest word; the ceiling is on new subjects.
 		if (!alreadyPending && !hasRoom({ writes, position: { topic, partition } }))
 			return;
 		if (!alreadyPending) writes.pendingCount += 1;
@@ -141,7 +123,6 @@ export const createSnapshotQueues = ({
 		scheduleTick({ position: { topic, partition }, writes });
 	}
 
-	/** The partition's pending writes, or nothing when the mode is off: nothing was written, so nothing is owed. */
 	function writesWhenOn({
 		position,
 	}: {
@@ -180,7 +161,6 @@ export const createSnapshotQueues = ({
 		void ctx.runInLane({ position, run: () => landTick({ position }) });
 	}
 
-	/** Never rejects: a statement that cannot land is logged, and the lane carries on. */
 	async function landTick({
 		position,
 	}: {
@@ -191,7 +171,6 @@ export const createSnapshotQueues = ({
 		if (!writes) return;
 		writes.scheduled = false;
 		const settings = ctx.subjectSnapshotsConfig.get();
-		// Flipped off since these were enqueued: what they would write is no longer served by anyone.
 		if (!writesSubjectSnapshots(settings)) {
 			for (const landing of writes.deletes.values()) landing.resolve([]);
 			byPartition.delete(key);
@@ -214,7 +193,6 @@ export const createSnapshotQueues = ({
 				`[snapshot lane] ${key} could not write ${snapshotIntent.size} customers' rows: ${cause instanceof Error ? cause.message : String(cause)}`,
 			);
 		} finally {
-			// Landed or refused, the evict is answered with what went: the lane's warning is the record of a refused one.
 			const deletedByCustomer = groupByCustomer({ deleted });
 			for (const [customerKey, landing] of writes.deleting)
 				landing.resolve(deletedByCustomer.get(customerKey) ?? []);
@@ -227,7 +205,6 @@ export const createSnapshotQueues = ({
 	return { enqueueDelete, enqueueRefresh, deleteLanded };
 };
 
-/** The rows a statement removed, under the engine's customer key, so each evict is answered with its own. */
 function groupByCustomer({
 	deleted,
 }: {
@@ -269,7 +246,6 @@ function partitionWritesOf({
 	return writes;
 }
 
-/** A refresh still pending when the customer is evicted again predates that evict: it goes, and the evict queues a fresh one. */
 function dropRefreshes({
 	writes,
 	customerKey,
@@ -283,7 +259,6 @@ function dropRefreshes({
 	writes.pendingCount -= pending.states.size;
 }
 
-/** Deletes while any wait, else refreshes, up to `batch` entries; a customer's refreshes beyond the batch wait for the next. */
 function takeWrites({
 	writes,
 	batch,

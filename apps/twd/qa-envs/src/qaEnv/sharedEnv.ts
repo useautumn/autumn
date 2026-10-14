@@ -1,6 +1,5 @@
 import type { Env } from "../types";
 
-/** Shared Capy project keys an env may receive; anything else in QA_SHARED_ENV is ignored. */
 const SHARED_ENV_KEYS = [
 	"STRIPE_SANDBOX_SECRET_KEY",
 	"STRIPE_SANDBOX_CLIENT_ID",

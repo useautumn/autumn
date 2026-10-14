@@ -25,15 +25,6 @@ import { prices } from "@tests/utils/fixtures/db/prices";
 import { products } from "@tests/utils/fixtures/db/products";
 import type { RoundTripOrg } from "./catalogRoundTrip";
 
-/**
- * Rows as they exist in real orgs — including shapes written under older
- * derivation rules. GET → preview_update on any of them must be a no-op.
- *
- * Each table below owns one field family the comparators know about
- * (`entsAreSame`, `pricesAreSame`, `diffProductDetails`, free trial). A new
- * comparator field belongs in a table here, with a legacy shape if one exists.
- */
-
 const metered = ({
 	id,
 	usageType,
@@ -155,7 +146,6 @@ export type PlanCase = {
 	org?: RoundTripOrg;
 };
 
-/** One-item plan: the common shape for a price/entitlement case. */
 const itemPlan = ({
 	name,
 	feature,
@@ -474,7 +464,6 @@ export const priceCases: PlanCase[] = [
 				},
 			}),
 	}),
-	// Prepaid lifetime rows are written with should_prorate: true.
 	itemPlan({
 		name: "prepaid seats, default proration",
 		feature: seats,
@@ -555,8 +544,6 @@ export const priceCases: PlanCase[] = [
 				config: { should_prorate: false },
 			}),
 	}),
-	// Legacy prorated rows carry their knobs on the wire; both variants must
-	// round-trip, since the knobs decide the mid-cycle charge.
 	...[
 		{
 			label: "default knobs",
@@ -692,10 +679,6 @@ export const planDetailCases: PlanCase[] = [
 	},
 ];
 
-/**
- * Several rows on one plan: pairing by feature, base price beside items, and
- * emitted order all have to survive when there is more than one of anything.
- */
 const realisticPlan = (): PlanCase => {
 	const sso = boolean({ id: "sso" });
 	const actions = consumable("actions");

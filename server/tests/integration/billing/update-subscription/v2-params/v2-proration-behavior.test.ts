@@ -12,16 +12,6 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-/**
- * Proration Behavior: V2 Params Tests (Update Subscription)
- *
- * Tests for proration_behavior param in V1 API schema:
- * - 'prorate_immediately' (default): Invoice line items are charged immediately
- * - 'none': Skip proration charges, defer to next billing cycle
- *
- * These tests use the V1 API schema directly (UpdateSubscriptionV1ParamsInput).
- */
-
 test.concurrent(`${chalk.yellowBright("v2-proration_behavior update: default prorate_immediately")}`, async () => {
 	const customerId = "v2-update-prorate-default";
 	const billingUnits = 1;
@@ -48,12 +38,10 @@ test.concurrent(`${chalk.yellowBright("v2-proration_behavior update: default pro
 		],
 	});
 
-	// Verify initial state
 	const customerBefore =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	expect(customerBefore.features?.[TestFeature.Messages]?.balance).toBe(5);
 
-	// Update without specifying proration_behavior (defaults to prorate_immediately)
 	const params: UpdateSubscriptionV1ParamsInput = {
 		customer_id: customerId,
 		plan_id: pro.id,
@@ -71,7 +59,6 @@ test.concurrent(`${chalk.yellowBright("v2-proration_behavior update: default pro
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	expect(customer.features?.[TestFeature.Messages]?.balance).toBe(10);
 
-	// Proration invoice should be created
 	await expectCustomerInvoiceCorrect({
 		customer,
 		count: 2,
@@ -104,7 +91,6 @@ test.concurrent(`${chalk.yellowBright("v2-proration_behavior update: prorate_imm
 		],
 	});
 
-	// Update with explicit proration_behavior: prorate_immediately
 	const params: UpdateSubscriptionV1ParamsInput = {
 		customer_id: customerId,
 		plan_id: pro.id,
@@ -123,7 +109,6 @@ test.concurrent(`${chalk.yellowBright("v2-proration_behavior update: prorate_imm
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	expect(customer.features?.[TestFeature.Messages]?.balance).toBe(10);
 
-	// Proration invoice should be created
 	await expectCustomerInvoiceCorrect({
 		customer,
 		count: 2,
@@ -156,7 +141,6 @@ test.concurrent(`${chalk.yellowBright("v2-proration_behavior update: none - no p
 		],
 	});
 
-	// Verify initial state
 	const customerBefore =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	expect(customerBefore.features?.[TestFeature.Messages]?.balance).toBe(5);
@@ -167,14 +151,12 @@ test.concurrent(`${chalk.yellowBright("v2-proration_behavior update: none - no p
 		feature_quantities: [{ feature_id: TestFeature.Messages, quantity: 10 }],
 	};
 
-	// Preview WITHOUT proration_behavior shows what would normally be charged
 	const previewNormal =
 		await autumnV2.subscriptions.previewUpdate<UpdateSubscriptionV1ParamsInput>(
 			baseParams,
 		);
 	expect(previewNormal.total).toBeGreaterThan(0);
 
-	// Preview WITH proration_behavior: none shows 0 (nothing charged now)
 	const previewNone =
 		await autumnV2.subscriptions.previewUpdate<UpdateSubscriptionV1ParamsInput>(
 			{
@@ -184,7 +166,6 @@ test.concurrent(`${chalk.yellowBright("v2-proration_behavior update: none - no p
 		);
 	expect(previewNone.total).toBe(0);
 
-	// Update with proration_behavior: none
 	const params: UpdateSubscriptionV1ParamsInput = {
 		...baseParams,
 		proration_behavior: "none",
@@ -194,10 +175,8 @@ test.concurrent(`${chalk.yellowBright("v2-proration_behavior update: none - no p
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Entitlements should be updated immediately
 	expect(customer.features?.[TestFeature.Messages]?.balance).toBe(10);
 
-	// NO new invoice should be created (only initial attach invoice)
 	await expectCustomerInvoiceCorrect({
 		customer,
 		count: 1,
@@ -230,7 +209,6 @@ test.concurrent(`${chalk.yellowBright("v2-proration_behavior update: none with q
 		],
 	});
 
-	// Verify initial state
 	const customerBefore =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	expect(customerBefore.features?.[TestFeature.Messages]?.balance).toBe(10);
@@ -241,14 +219,12 @@ test.concurrent(`${chalk.yellowBright("v2-proration_behavior update: none with q
 		feature_quantities: [{ feature_id: TestFeature.Messages, quantity: 5 }],
 	};
 
-	// Preview WITHOUT proration_behavior shows credit (negative total)
 	const previewNormal =
 		await autumnV2.subscriptions.previewUpdate<UpdateSubscriptionV1ParamsInput>(
 			baseParams,
 		);
 	expect(previewNormal.total).toBeLessThan(0);
 
-	// Preview WITH proration_behavior: none shows 0 (no credit applied now)
 	const previewNone =
 		await autumnV2.subscriptions.previewUpdate<UpdateSubscriptionV1ParamsInput>(
 			{
@@ -258,7 +234,6 @@ test.concurrent(`${chalk.yellowBright("v2-proration_behavior update: none with q
 		);
 	expect(previewNone.total).toBe(0);
 
-	// Update with proration_behavior: none
 	const params: UpdateSubscriptionV1ParamsInput = {
 		...baseParams,
 		proration_behavior: "none",
@@ -268,10 +243,8 @@ test.concurrent(`${chalk.yellowBright("v2-proration_behavior update: none with q
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Entitlements should be updated immediately
 	expect(customer.features?.[TestFeature.Messages]?.balance).toBe(5);
 
-	// NO new invoice should be created
 	await expectCustomerInvoiceCorrect({
 		customer,
 		count: 1,
@@ -298,7 +271,6 @@ test.concurrent(`${chalk.yellowBright("v2-proration_behavior update: none with c
 		actions: [s.billing.attach({ productId: pro.id })],
 	});
 
-	// Verify initial state
 	const customerBefore =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	expectCustomerFeatureCorrect({
@@ -309,7 +281,6 @@ test.concurrent(`${chalk.yellowBright("v2-proration_behavior update: none with c
 		usage: 0,
 	});
 
-	// Update with customize and proration_behavior: none
 	const params: UpdateSubscriptionV1ParamsInput = {
 		customer_id: customerId,
 		plan_id: pro.id,
@@ -319,7 +290,6 @@ test.concurrent(`${chalk.yellowBright("v2-proration_behavior update: none with c
 		proration_behavior: "none",
 	};
 
-	// Preview should show 0 (no proration)
 	const preview =
 		await autumnV2.subscriptions.previewUpdate<UpdateSubscriptionV1ParamsInput>(
 			params,
@@ -330,7 +300,6 @@ test.concurrent(`${chalk.yellowBright("v2-proration_behavior update: none with c
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Features should still be intact
 	expectCustomerFeatureCorrect({
 		customer,
 		featureId: TestFeature.Messages,
@@ -339,7 +308,6 @@ test.concurrent(`${chalk.yellowBright("v2-proration_behavior update: none with c
 		usage: 0,
 	});
 
-	// NO new invoice should be created
 	await expectCustomerInvoiceCorrect({
 		customer,
 		count: 1,

@@ -5,7 +5,6 @@ import {
 } from "../../../api/contract.ts";
 import { TwdError } from "../../../http/apiError.ts";
 
-/** A repeat run's total size cap: about one mid-sized group sweep, so a flake check can't swamp the pool. */
 export const MAX_REPEAT_WORK_ITEMS = 200;
 
 const REPETITION_ID = /^(.*)#(\d+)$/;
@@ -18,7 +17,6 @@ export const toRepetitionId = ({
 	repetition: number;
 }) => `${file}#${repetition}`;
 
-/** `a.test.ts#3` → `{ file: "a.test.ts", repetition: 3 }`; a plain id has no repetition. */
 export const splitRepetitionId = ({
 	id,
 }: {
@@ -30,7 +28,6 @@ export const splitRepetitionId = ({
 		: { file: id, repetition: null };
 };
 
-/** One work item per file per repetition; repeat=1 keeps plain ids so normal runs are unchanged. */
 export const planWorkItems = ({
 	files,
 	repeat,
@@ -56,7 +53,6 @@ export const planWorkItems = ({
 	);
 };
 
-/** Per file X/N: X counts first-attempt passes, so a pass on retry still reads as a flake. */
 export const summariseRepeats = ({
 	files,
 }: {

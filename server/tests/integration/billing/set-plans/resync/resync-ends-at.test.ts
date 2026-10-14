@@ -1,5 +1,3 @@
-/** Resync with ends_at ends every plan, and the subscription, on ends_at without an invoice at the anchor. */
-
 import { expect, test } from "bun:test";
 import {
 	formatMsToDate,

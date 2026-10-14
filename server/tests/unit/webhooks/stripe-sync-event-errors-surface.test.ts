@@ -1,11 +1,3 @@
-/**
- * A failed write to the Stripe mirror must never reject (the webhook path is
- * fail-open), but it must be reported so it can be logged.
- *
- * Red (before): processStripeSyncEvent swallowed every error with no report,
- *               so the mirror could lose rows with no log line at all.
- * Green (after): it still resolves, and hands the error to `onError`.
- */
 import { beforeAll, expect, mock, test } from "bun:test";
 import type Stripe from "stripe";
 
@@ -13,7 +5,6 @@ const processEvent = mock(async () => {
 	throw new Error("mirror write failed");
 });
 
-// Resolved from the package that imports it, so the mock replaces its copy.
 const syncEnginePath = Bun.resolveSync(
 	"@supabase/stripe-sync-engine",
 	new URL("../../../../packages/stripe-sync/src/", import.meta.url).pathname,

@@ -32,7 +32,6 @@ const decoder = new TextDecoder();
 
 type Sent = { config: ProducerConfig; record: ProducerRecord };
 
-/** The producer loop on this thread with a scripted client: topic "refuse" is a broker refusal, "gated" settles on `release`. */
 function loopHarness() {
 	const sent: Sent[] = [];
 	const posted: ProducerToDecideMessage[] = [];
@@ -100,7 +99,6 @@ function loopHarness() {
 		},
 	});
 
-	/** Through the decide thread's own encoding, so the loop is tested on the frames it will really get. */
 	function frameOf({
 		reqId,
 		meta: { producerId, seq, topic, acks, shared },

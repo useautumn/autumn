@@ -10,7 +10,6 @@ import { buildSearchPredicates } from "../../CusSearchService.js";
 
 export const CUSTOMER_EXPORT_PAGE_SIZE = 2000;
 
-/** Both bounds must stay fixed for an entire keyset walk, or the population shifts mid-export. */
 export type CustomerExportPopulation = {
 	upperBoundInternalId: string | null;
 	createdAtCutoff: number;
@@ -101,7 +100,6 @@ export const countCustomerExportRows = async ({
 	return Number(rows[0]?.total_count ?? 0);
 };
 
-/** Bounds are frozen by the export's cutoff, but the count reflects rows still present. */
 export const resolveCustomerExportPopulation = async ({
 	db,
 	orgId,
@@ -172,9 +170,6 @@ export const buildCustomerExportScalarsQuery = ({
 				}).whereRaw,
 				lte(customers.created_at, createdAtCutoff),
 				lte(customers.internal_id, upperBoundInternalId),
-				// Both terms are load-bearing: the row value keeps the planner off
-				// customers_pkey (which filters 7.1M other orgs' rows on the last
-				// pages), and the scalar bound is what the index can actually seek on.
 				afterInternalId
 					? and(
 							sql`(${customers.org_id}, ${customers.env}, ${customers.internal_id}) < (${orgId}, ${env}, ${afterInternalId})`,
@@ -190,7 +185,6 @@ export const buildCustomerExportScalarsQuery = ({
 		)
 		.limit(limit);
 
-/** Both snapshot bounds must remain unchanged for the entire keyset walk. */
 export const getCustomerExportScalars = async (params: {
 	db: DrizzleCli;
 	orgId: string;

@@ -20,7 +20,6 @@ import type {
 import type { CommandRecord } from "@autumn/kafka";
 
 const CALLER_PATTERN = /^[\w:.-]{1,64}$/;
-/** How far `sentAt` may sit from the API's clock; past it, a captured request is refused. */
 const MAX_CLOCK_SKEW_MS = 60_000;
 
 function readRecord({ input }: { input: unknown }): Record<string, unknown> {
@@ -35,7 +34,6 @@ function readNonEmptyString({ input }: { input: unknown }): string {
 	return input;
 }
 
-/** Only the commands the client's queue sends. */
 function parseQueuedCommand({ input }: { input: unknown }): CommandRecord {
 	switch (readRecord({ input }).type) {
 		case "track":
@@ -151,7 +149,6 @@ function parseProxyCall({
 	}
 }
 
-/** Only a body whose signature was already checked; refuses one sent outside the clock window. */
 export function parseProxyRequest({
 	rawBody,
 }: {

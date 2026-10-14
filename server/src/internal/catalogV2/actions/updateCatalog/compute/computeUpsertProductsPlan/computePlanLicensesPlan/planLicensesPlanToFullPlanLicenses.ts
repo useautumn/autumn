@@ -48,7 +48,6 @@ const planLicensePlanToFullPlanLicense = ({
 	};
 };
 
-/** After-set plan_license links for nextFullProduct. Removes are dropped. */
 export const planLicensesPlanToFullPlanLicenses = ({
 	planLicenses,
 	parentInternalProductId,

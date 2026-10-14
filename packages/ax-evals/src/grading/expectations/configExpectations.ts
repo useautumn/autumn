@@ -10,7 +10,6 @@ const planMatches = (spec: PlanSpec, plan: ApiPlanParams): boolean => {
 };
 
 export const config = {
-	/** autumn.config.ts exists, parses, and passes atmn validation */
 	valid: (): Expectation => ({
 		name: "config parses and passes validation",
 		kind: "config",
@@ -31,7 +30,6 @@ export const config = {
 		},
 	}),
 
-	/** some plan in the config structurally matches the spec */
 	plan: (label: string, spec: PlanSpec): Expectation => ({
 		name: `has plan: ${label}`,
 		kind: "config",
@@ -52,7 +50,6 @@ export const config = {
 		},
 	}),
 
-	/** a boolean feature exists and some plan grants it (id-agnostic) */
 	booleanFeatureOnPlan: (): Expectation => ({
 		name: "a plan grants a boolean (on/off) feature",
 		kind: "config",
@@ -78,9 +75,6 @@ export const config = {
 		},
 	}),
 
-	/** non-add-on plans form exactly `count` groups (names are the agent's
-	 * choice), each with one free auto-enabled default. Catches merging
-	 * independent product lines into one lineup. */
 	planGroups: ({ count }: { count: number }): Expectation => {
 		const name = `plans form ${count} groups, each with a free default`;
 		return {
@@ -126,8 +120,6 @@ export const config = {
 		};
 	},
 
-	/** at least `count` plans were written as `.variant()` of a base plan —
-	 * catches sibling tiers copy-pasted as standalone plan() declarations */
 	definedAsVariants: ({ count }: { count: number }): Expectation => {
 		const name = `at least ${count} plans defined as variants`;
 		return {
@@ -150,8 +142,6 @@ export const config = {
 		};
 	},
 
-	/** exactly one plan is handed out as a license across the catalog —
-	 * catches minting a seat plan per tier instead of reusing one */
 	oneLicensePlan: (): Expectation => ({
 		name: "exactly one license plan, reused across plans",
 		kind: "config",
@@ -177,8 +167,6 @@ export const config = {
 		},
 	}),
 
-	/** prepaid purchases live only on add-on plans — a prepaid-priced item on a
-	 * base plan means packs were wrongly duplicated into the subscriptions */
 	noPrepaidOnBasePlans: (): Expectation => ({
 		name: "base plans carry no prepaid items",
 		kind: "config",
@@ -206,7 +194,6 @@ export const config = {
 		},
 	}),
 
-	/** some history row (`active: false`) structurally matches the spec */
 	historyVersion: (label: string, spec: PlanSpec): Expectation => ({
 		name: `keeps history version: ${label}`,
 		kind: "config",
@@ -230,7 +217,6 @@ export const config = {
 		},
 	}),
 
-	/** the plan has exactly `count` version rows, active and inactive together */
 	versionsOf: ({
 		planId,
 		count,
@@ -259,8 +245,6 @@ export const config = {
 		};
 	},
 
-	/** the plan's active row still carries the server id it was pulled with —
-	 * catches a rewrite-from-scratch that would delete and recreate the plan */
 	keepsInternalId: (planId: string): Expectation => {
 		const name = `${planId} keeps its internalId`;
 		return {
@@ -287,7 +271,6 @@ export const config = {
 		};
 	},
 
-	/** exactly n plans were modeled */
 	planCount: (count: number): Expectation => ({
 		name: `modeled exactly ${count} plans`,
 		kind: "config",

@@ -35,11 +35,6 @@ interface RateTableMeta extends MatchTableMeta {
 
 const rowLabel = (row: CreditRateRow) => row.name || "new rate";
 
-/**
- * Which row wins when several match the same event: highest priority takes it,
- * and a blank ranks below any number. Only relevant when rows tie, so the
- * column is hidden until one does.
- */
 const priorityColumn: ColumnDef<RateRow, unknown> = {
 	header: "Priority",
 	id: "priority",
@@ -68,7 +63,6 @@ const priorityColumn: ColumnDef<RateRow, unknown> = {
 	},
 };
 
-/** What a matching track actually costs once multipliers stack on the rate. */
 const effectiveColumn: ColumnDef<RateRow, unknown> = {
 	header: "Effective",
 	id: "effective",
@@ -78,7 +72,6 @@ const effectiveColumn: ColumnDef<RateRow, unknown> = {
 	),
 };
 
-/** A draft row shows the cost it would inherit as its placeholder; typing one makes it a rule. */
 const creditsColumn: ColumnDef<RateRow, unknown> = {
 	header: "Credits",
 	id: "credits",
@@ -103,9 +96,6 @@ const creditsColumn: ColumnDef<RateRow, unknown> = {
 	},
 };
 
-/** One select per dimension and a credits column; the strip beneath adds a row and names the fallback.
- * Cells are components to the table, so `data` and `columns` must stay referentially
- * stable while typing: values and handlers ride on `meta`. */
 export function CreditDimensionRateTable() {
 	const {
 		values,
@@ -127,8 +117,6 @@ export function CreditDimensionRateTable() {
 	const data: RateRow[] = useMemo(
 		() =>
 			rows.map((rate, index) => ({
-				// Keyed by match, not name: typing a cost turns a draft into a named
-				// rule, and a changing id would remount the row mid-keystroke.
 				id: rate.key,
 				index,
 				label: rowLabel(rate),

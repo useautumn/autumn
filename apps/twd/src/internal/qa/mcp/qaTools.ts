@@ -30,7 +30,6 @@ const describeWarmth = ({ env, warm }: { env: QaEnv; warm: boolean }) => {
 	return `QA env is not warm yet: ${describeEnv(env)} Call qa_status with wait: true again, or give the human the URL now; it shows progress until ready.`;
 };
 
-/** qa_create / qa_status / qa_list / qa_delete: per-branch QA envs on <name>.atmn.lol. */
 export const qaTools = ({ ctx }: { ctx: TwdContext }) => [
 	defineTool({
 		name: "qa_create",

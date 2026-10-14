@@ -5,15 +5,6 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-/**
- * Migration setup: paid plan with prepaid messages across versions.
- * Each customer buys a different prepaid quantity so you can verify
- * quantity preservation when migrating.
- *
- *   v1  $20/mo · prepaid 100/pack @ $10, 0 incl   → cus migprepaid-v1 (qty 200)
- *   v2  $20/mo · prepaid 100/pack @ $8, 100 incl  → cus migprepaid-v2 (qty 300)
- *   v3  $20/mo · prepaid 100/pack @ $8, 200 incl + admin  (latest, no customer)
- */
 test(`${chalk.yellowBright("migration-setup: prepaid plan multi-version")}`, async () => {
 	const scale = products.base({
 		id: "scale",

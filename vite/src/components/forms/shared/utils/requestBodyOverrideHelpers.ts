@@ -2,14 +2,10 @@ import type { FreeTrialDuration } from "@autumn/shared";
 
 type RequestBody = Record<string, unknown>;
 
-/** One reader per form field: given the request, produce the field's value or
- * undefined to leave the form default alone. */
 export type FieldReaders<Form> = {
 	[K in keyof Form]?: (request: RequestBody) => Form[K] | undefined;
 };
 
-/** Applies a reader table, keeping only the fields a reader resolved — the
- * whole wire→form mapping reads as one declarative table per form. */
 export const overridesFromRequest = <Form>(
 	request: RequestBody,
 	readers: FieldReaders<Form>,
@@ -27,8 +23,6 @@ export const readString =
 	(request: RequestBody): string | undefined =>
 		typeof request[key] === "string" ? (request[key] as string) : undefined;
 
-/** For wire strings typed as enums/unions form-side; values come from the
- * same zod-validated request the server accepted. */
 export const readEnum =
 	<T extends string>(key: string) =>
 	(request: RequestBody): T | undefined =>
@@ -58,7 +52,6 @@ export const readStringArray =
 				)
 			: undefined;
 
-/** `[{reward_id}]` wire lists, as `remove_discounts` carries them. */
 export const readRewardIds =
 	(key: string) =>
 	(request: RequestBody): string[] | undefined =>
@@ -68,7 +61,6 @@ export const readRewardIds =
 				)
 			: undefined;
 
-/** Array entries stamped with the `_id` the form's list components key by. */
 export const readStampedArray =
 	<T extends object>(key: string, idPrefix: string) =>
 	(request: RequestBody): Array<T & { _id: string }> | undefined =>
@@ -79,7 +71,6 @@ export const readStampedArray =
 				}))
 			: undefined;
 
-/** `[{<idKey>, quantity}]` wire lists become the form's id→quantity record. */
 export const readQuantities =
 	(key: string, idKey: string) =>
 	(request: RequestBody): Record<string, number> | undefined => {
@@ -130,9 +121,6 @@ export const anchorOverridesFrom = (
 	return {};
 };
 
-/** The trial is documented at the top level of a billing request and defined
- * inside `customize`; the server honours both, so seeding a form must too.
- * `customize.free_trial` wins when both are present, matching the server. */
 export const freeTrialFromRequest = (request: Record<string, unknown>) => {
 	const customize = requestRecord(request.customize);
 	return customize?.free_trial !== undefined
@@ -140,7 +128,6 @@ export const freeTrialFromRequest = (request: Record<string, unknown>) => {
 		: request.free_trial;
 };
 
-/** V0 trial shape → trial form fields; null means the trial is removed. */
 export const trialOverridesFrom = (
 	value: unknown,
 	options: { removable?: boolean } = {},
@@ -158,7 +145,6 @@ export const trialOverridesFrom = (
 			: { trialEnabled: false };
 	}
 	const trial = requestRecord(value);
-	// V1 names these duration_length/duration_type; V0 used length/duration.
 	const length =
 		typeof trial?.duration_length === "number"
 			? trial.duration_length
@@ -181,7 +167,6 @@ export const trialOverridesFrom = (
 	};
 };
 
-/** A `carry_over_*` param as its row's switch and feature list; a disabled one leaves the form defaults. */
 export const carryOverFrom = <Form>(
 	value: unknown,
 	fields: { enabled: keyof Form; featureIds: keyof Form },

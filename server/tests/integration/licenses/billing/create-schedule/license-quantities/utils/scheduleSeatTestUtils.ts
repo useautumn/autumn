@@ -13,7 +13,6 @@ import type { AutumnInt } from "@/external/autumn/autumnCli";
 export const PARENT_PRICE = 100;
 export const SEAT_PRICE = 10;
 
-/** A priced parent plan plus the priced seat license it links. */
 export const buildSeatPlans = ({ prefix }: { prefix: string }) => {
 	const parent = products.base({
 		id: `${prefix}-parent`,
@@ -41,7 +40,6 @@ export const previewCreateSchedule = async ({
 }): Promise<BillingPreviewResponse & { total: number }> =>
 	await autumnV1.post("/billing.preview_create_schedule", params);
 
-/** Advances past the next monthly boundary and lets its invoice finalize. */
 export const advanceToNextPhase = async ({
 	scenario,
 }: {

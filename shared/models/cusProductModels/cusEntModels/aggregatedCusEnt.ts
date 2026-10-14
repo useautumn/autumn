@@ -2,9 +2,6 @@ import { z } from "zod/v4";
 import { FeatureSchema } from "../../featureModels/featureModels.js";
 import { EntityBalanceSchema } from "./cusEntModels.js";
 
-/** Per-entity slot inside AggregatedFeatureBalance.entities. Extends the
- *  main-balance EntityBalanceSchema with rollover balance/usage so the
- *  customer-level aggregate carries rollovers alongside main balances. */
 export const AggregatedEntityBalanceSchema = EntityBalanceSchema.extend({
 	rollover_balance: z.number().default(0),
 	rollover_usage: z.number().default(0),

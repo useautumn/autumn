@@ -1,14 +1,3 @@
-/**
- * A schedule imported with a quantity-only future phase leaves Autumn holding a
- * scheduled row at the quantity Stripe had at import time. When that future
- * phase is edited in Stripe, the schedule-updated handler ignores any schedule
- * that has already started, so the held row keeps the old quantity forever.
- *
- * Red (current):  after the edit, pro stays scheduled and the active pro keeps ended_at.
- * Green (after):  the held row is dropped and ended_at cleared; the phase step is
- *                 applied by the subscription webhook when the phase turns.
- */
-
 import { expect, test } from "bun:test";
 import { CusProductStatus, type SyncParamsV1 } from "@autumn/shared";
 import {

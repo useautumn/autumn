@@ -22,17 +22,12 @@ import {
 
 const ACTIVE_SLOT_POLL_INTERVAL_MS = 2_000;
 
-/** The edge configs a worker polls; one registry drives them all. */
 export type WorkerEdgeConfigs = {
 	dbControl: EdgeConfigStore<DbControlEdgeConfig>;
-	/** Read once at boot, when the threads are laid out. */
 	balanceWorkerThreads: EdgeConfigStore<BalanceWorkerThreadsEdgeConfig>;
-	/** Polled on its own 2s timer: the dashboard writes the record without the registry's timestamp. */
 	activeSlot: EdgeConfigStore<ActiveSlotEdgeConfig>;
 	subjectSnapshotsConfig: EdgeConfigStore<SubjectSnapshotsEdgeConfig>;
-	/** Staging only: a load test's request to drop every resident subject. */
 	coldStart: EdgeConfigStore<BalanceWorkerColdStartEdgeConfig> | null;
-	/** The same bucket and client the stores read, for objects the worker writes itself. */
 	adminBucket: { s3Client: EdgeConfigS3Client; location: EdgeConfigLocation };
 	start(): Promise<void>;
 	stop(): void;
@@ -73,7 +68,6 @@ export const createWorkerEdgeConfigs = ({
 		s3Key: subjectSnapshotsEdgeConfig.key,
 		schema: subjectSnapshotsEdgeConfig.schema,
 		defaultValue: subjectSnapshotsEdgeConfig.defaultValue,
-		// A read error or an object naming a mode without a read path must not flip a writing fleet back to off.
 		retainOnError: true,
 	});
 	registry.register({ store: subjectSnapshotsConfig });
@@ -83,7 +77,6 @@ export const createWorkerEdgeConfigs = ({
 				s3Key: balanceWorkerColdStartEdgeConfig.key,
 				schema: balanceWorkerColdStartEdgeConfig.schema,
 				defaultValue: balanceWorkerColdStartEdgeConfig.defaultValue,
-				// A read error must not look like a new request.
 				retainOnError: true,
 			})
 		: null;
@@ -94,7 +87,6 @@ export const createWorkerEdgeConfigs = ({
 		schema: activeSlotEdgeConfig.schema,
 		defaultValue: activeSlotEdgeConfig.defaultValue,
 		pollIntervalMs: ACTIVE_SLOT_POLL_INTERVAL_MS,
-		// The default names no service and would open the gate; a read error must keep the last record instead.
 		retainOnError: true,
 	});
 

@@ -59,7 +59,6 @@ export const findFullOrg = async ({
 
 	// Drizzle's $inferSelect types features more loosely (e.g. `type: string`,
 	// `created_at: number | null`) than the hand-written `Feature` zod shape.
-	// Same trade-off as `OrgService.getWithFeatures` — bridged with one cast.
 	const orgFeatures = (rawFeatures ?? []) as unknown as Feature[];
 	const pendingMigrations: PendingMigration[] = rawMigrationRuns ?? [];
 	const planAliases = productAliasesToPlanAliasMap({ rows: rawProductAliases });

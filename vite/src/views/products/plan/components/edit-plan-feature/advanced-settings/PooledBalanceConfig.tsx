@@ -1,7 +1,6 @@
 import { AreaCheckbox } from "@autumn/ui";
 import { useProductItemContext } from "@/views/products/product/product-item/ProductItemContext";
 
-/** Visibility is controlled by parent AdvancedSettings */
 export function PooledBalanceConfig() {
 	const { item, setItem } = useProductItemContext();
 

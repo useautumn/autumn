@@ -47,7 +47,6 @@ export const handleLegacyPlatformExchange = createRoute({
 			});
 		}
 
-		// 1. Check if user with this email already exists
 		let user = await db.query.user.findFirst({
 			where: eq(userTable.email, email),
 		});
@@ -97,7 +96,6 @@ export const handleLegacyPlatformExchange = createRoute({
 		if (!membership) {
 			logger.info(`Connected to Stripe`);
 
-			// 2. Create org
 			const orgId = generateId();
 
 			[org] = (await db
@@ -134,7 +132,6 @@ export const handleLegacyPlatformExchange = createRoute({
 		let finalStripeConfig: StripeConfig = {};
 		let defaultCurrency = org.default_currency || "usd";
 
-		// Connect stripe if not exists...
 		if (stripe_test_key) {
 			const reconnectStripe = await shouldReconnectStripe({
 				org,

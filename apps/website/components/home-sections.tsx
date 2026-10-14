@@ -6,12 +6,6 @@ import Hero from "./hero";
 import LazySection from "./lazy-section";
 import SectionDivider from "./section-divider";
 
-// All below-fold sections are code-split into separate lazy chunks so the
-// initial JS bundle only contains the hero. Framer-motion, GSAP ScrollTrigger,
-// and lottie-web are pulled into these chunks rather than the main bundle.
-// LazySection gates each component behind an IntersectionObserver so chunks
-// and their heavy assets (Lottie JSON, ScrollTrigger) only download as the
-// user scrolls toward them rather than all at once on page load.
 const CustomerStories = dynamic(() => import("./customer-stories"));
 const LogoWall = dynamic(() => import("./logo-wall"));
 const Problem = dynamic(() => import("./problem"));

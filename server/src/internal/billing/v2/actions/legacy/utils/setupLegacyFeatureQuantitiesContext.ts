@@ -6,8 +6,6 @@ export const setupLegacyTransitionContext = ({
 }: {
 	attachParams: AttachParams;
 }) => {
-	// const { optionsList } = attachParams;
-
 	const consumableFeatures = attachParams.products
 		.flatMap((product) => product.entitlements)
 		.filter((ent) => isConsumableFeature(ent.feature))
@@ -16,30 +14,4 @@ export const setupLegacyTransitionContext = ({
 	return {
 		resetAfterTrialEndFeatureIds: consumableFeatures.map((f) => f.id),
 	};
-
-	// const newOptions: FeatureOptionsParamsV0[] = [];
-	// for (const feature of consumableFeatures) {
-	// 	const option = optinsList?.find(
-	// 		(option) => option.feature_id === feature.id,
-	// 	);
-	// 	newOptions.push({
-	// 		internal_feature_id:
-	// 		feature_id: feature.id,
-	// 		reset_after_trial_end: true,
-	// 		quantity: option?.quantity || undefined,
-	// 	});
-	// }
-
-	// for (const option of body.options ?? []) {
-	// 	const newOptionsAlreadyExists = newOptions.some(
-	// 		(newOption) => newOption.feature_id === option.feature_id,
-	// 	);
-	// 	if (newOptionsAlreadyExists) {
-	// 		continue;
-	// 	}
-	// 	newOptions.push({
-	// 		feature_id: option.feature_id,
-	// 		quantity: option.quantity || undefined,
-	// 	});
-	// }
 };

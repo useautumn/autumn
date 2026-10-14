@@ -59,8 +59,6 @@ function mergePlanFilters({
 	inheritedPlanFilter: PlanFilter;
 	operationPlanFilter: PlanFilter | null;
 }): PlanFilter {
-	// An explicit operation selection replaces the inherited one wholesale —
-	// mixing `plan_id` with a leftover inherited `$or` cooks the filter.
 	if (!hasPlanSelection(operationPlanFilter)) return inheritedPlanFilter;
 	return {
 		...planProperties(inheritedPlanFilter),

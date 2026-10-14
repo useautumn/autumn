@@ -35,14 +35,12 @@ import { resolveInvoiceBasePrice } from "./resolveInvoiceBasePrice";
 import { resolveInvoiceFeaturePrice } from "./resolveInvoiceFeaturePrice";
 import { usageEntriesToCredits } from "./usageEntriesToCredits";
 
-/** A billing line plus which request entry produced it. */
 export type InvoiceLine = {
 	lineItem: LineItem;
 	planKey: string | null;
 	planId: string | null;
 	featureId: string | null;
 	quantity: number | null;
-	/** Set only when the request named a Stripe price to bill this line under. */
 	stripePriceId?: string;
 	stripeQuantity?: number;
 };
@@ -77,7 +75,6 @@ const lineContext = ({
 	discountable: false,
 });
 
-/** A fixed line's period prints from its own Stripe `period`, so the description doesn't repeat it. */
 const fixedLineDescription = ({
 	price,
 	context,
@@ -131,10 +128,8 @@ const toLine = ({
 		overage: quantity ?? undefined,
 	});
 	return {
-		// One-off prices are never prorated, whatever the request asked for.
 		lineItem: {
 			...lineItem,
-			// buildLineItem appends "(entity)"; invoices read "Pro — Workspace A".
 			description: entityLabel
 				? `${description} — ${entityLabel}`
 				: description,
@@ -179,14 +174,12 @@ const billableUnitsFor = ({
 		creditSystem,
 		entries: entry.usage ?? [],
 	});
-	// Invoice-credit systems already express credits as money.
 	return {
 		units: credits,
 		alreadyMoney: isInvoiceCreditFeature({ feature: creditSystem }),
 	};
 };
 
-/** `customizeItems` must belong to `product`'s own entry: a license is never priced by its parent's items. */
 const computeFeatureLine = ({
 	ctx,
 	invoiceContext,
@@ -446,7 +439,6 @@ const computePlanLines = ({
 	return lines;
 };
 
-/** Turns the request into billing lines. Pure: no Stripe, no DB writes. */
 export const computeInvoiceLines = ({
 	ctx,
 	invoiceContext,
@@ -465,7 +457,6 @@ export const computeInvoiceLines = ({
 		customLineItems,
 		currency: invoiceContext.currency,
 	}).map((lineItem, index) => ({
-		// A custom line prints a period only when it names its own.
 		lineItem: {
 			...lineItem,
 			context: {

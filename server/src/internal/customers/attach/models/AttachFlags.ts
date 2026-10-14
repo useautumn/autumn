@@ -16,7 +16,7 @@ export interface AttachFlags {
 
 interface AttachConfig {
 	onlyCheckout: boolean;
-	carryUsage: boolean; // Whether to carry over existing usages
+	carryUsage: boolean;
 	branch: AttachBranch;
 	proration: ProrationBehavior;
 	disableTrial: boolean;

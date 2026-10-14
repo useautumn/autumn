@@ -5,8 +5,6 @@ import { LicenseItemLabel } from "@/components/v2/LicenseItemLabel";
 import { useCustomerDisplayCurrency } from "@/hooks/common/useCustomerDisplayCurrency";
 import { getProductItemHoverTexts } from "@/views/admin/adminUtils";
 
-/** Read-only twin of the plan editor's LicensePlanRow: the license shown as
- * an item row of the parent plan ("$20 per Dev Seat per month"). */
 export function SubscriptionLicenseRow({
 	planLicense,
 	paidQuantity,
@@ -16,7 +14,6 @@ export function SubscriptionLicenseRow({
 }) {
 	const { displayCurrency } = useCustomerDisplayCurrency();
 	const license = mapToProductV2({ product: planLicense.product });
-	// Matches prepaid rows: the badge counts included + purchased seats.
 	const totalQuantity = planLicense.included + paidQuantity;
 
 	return (

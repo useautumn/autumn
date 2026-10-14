@@ -1,12 +1,3 @@
-/**
- * Contract for credit dimensions on the API surface:
- * - `credit_schema` items accept `dimensions` / `multipliers` with API naming
- *   (`credit_cost`), strict like the rest of the item;
- * - API ↔ DB converters round-trip them (credit_cost ↔ credit_amount);
- * - legacy V0 shapes cannot represent them and bail rather than emit garbage;
- * - every schema comparator notices a dimension or multiplier edit.
- */
-
 import { describe, expect, test } from "bun:test";
 import {
 	type ApiFeatureV1,

@@ -1,6 +1,3 @@
-// Contract: parent switch where the paired seat plan's pooled allowance changes (200 <-> 400)
-// patches contributions by delta and updates the pool aggregate; link_id is stable.
-
 import { test } from "bun:test";
 import type { ApiCustomerV5, AttachParamsV1Input } from "@autumn/shared";
 import { expectCustomerProducts } from "@tests/integration/billing/utils/expectCustomerProductCorrect.js";

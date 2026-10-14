@@ -6,10 +6,6 @@ const MONTHS_BY_RANGE: Record<string, number> = { "6m": 6, "12m": 12 };
 export const isMonthRange = ({ interval }: { interval: string }) =>
 	interval in MONTHS_BY_RANGE;
 
-/**
- * The public API has no month presets, so month ranges go out as a custom
- * range. Monthly bins open on the 1st so the leading bar isn't partial.
- */
 export const monthRangeWindow = ({
 	interval,
 	binSize,

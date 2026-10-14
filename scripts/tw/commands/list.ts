@@ -1,14 +1,3 @@
-/**
- * `bun tw list` — show this user's runs + orphan flags (plan §9a).
- *
- * Reads the authoritative registry, filters to the current OS owner, and prints
- * each run with its status + an orphan flag (orphan = `status != completed`, or
- * sandboxes still reported alive by Vercel). Cross-checks
- * `vercel.listSandboxesByOwner` when available to surface sandboxes the registry
- * missed (e.g. a SIGKILL'd run) — that cross-check degrades gracefully (the
- * Vercel API needs `VERCEL_PROJECT_ID`; without it we still print the registry).
- */
-
 import chalk from "chalk";
 import { getOwner } from "../helpers/owner.ts";
 import { getSvixAppIds, listRuns } from "../helpers/registry.ts";
@@ -57,8 +46,6 @@ export const list = async (): Promise<void> => {
 		return;
 	}
 
-	// Cross-check Vercel for sandboxes still alive (orphan detection beyond the
-	// registry's own status). Degrades to "registry only" when unavailable.
 	const aliveByName = new Map<string, string>();
 	try {
 		for (const sandbox of await listSandboxesByOwner(owner)) {

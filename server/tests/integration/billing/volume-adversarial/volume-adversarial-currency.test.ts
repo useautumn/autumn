@@ -1,8 +1,3 @@
-/**
- * Volume tiers carry per-currency amounts (rates and flat fees) on each tier; boundaries are
- * shared. A EUR customer's overage is billed at the EUR rate of the band it lands in.
- */
-
 import { expect, test } from "bun:test";
 import {
 	type ApiPlanV1,
@@ -21,7 +16,6 @@ import { expectVolumeRenewalCorrect } from "./utils/volumeAdversarialUtils";
 const autumnRpc = new AutumnRpcCli({ version: ApiVersion.V2_1 });
 const getSuffix = () => Math.random().toString(36).slice(2, 9);
 
-// 100 included, net tiers 0-500 / 501+ are total-usage bands 101-600 / 601+.
 const createEurVolumePlan = async ({ planId }: { planId: string }) =>
 	autumnRpc.plans.create<ApiPlanV1, CreatePlanParamsV2Input>({
 		plan_id: planId,
@@ -107,7 +101,6 @@ const runEurRenewal = async ({
 test.concurrent(
 	`${chalk.yellowBright("volume-currency 1: EUR customer, 300 used → 200 overage in band 101-600 at €0.08: €16")}`,
 	async () => {
-		// 300 used = 200 overage in band 101-600: 200 × €0.08 = €16; total €18 base + €16
 		await runEurRenewal({
 			customerId: "vol-adv-eur-band1",
 			usage: 300,
@@ -120,7 +113,6 @@ test.concurrent(
 test.concurrent(
 	`${chalk.yellowBright("volume-currency 2: EUR customer, 700 used → 600 overage in band 601+ at €0.04 + €20 flat: €44")}`,
 	async () => {
-		// 700 used = 600 overage in band 601+: 600 × €0.04 = €24 + €20 flat = €44; total €18 + €44
 		await runEurRenewal({
 			customerId: "vol-adv-eur-band2",
 			usage: 700,

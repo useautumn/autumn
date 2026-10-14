@@ -2,38 +2,27 @@ import { availableParallelism, totalmem } from "node:os";
 import { positiveInteger } from "./balanceWorker/primitives.js";
 
 const LOCAL_ATOM_PORT = 8790;
-/** Where the replicas of an org's Atom listen to each other; the stack lists it as a container port but never a public endpoint. */
 const LOCAL_ATOM_PEER_PORT = 8791;
 const AUTUMN_API_URL = "https://api.useautumn.com";
-/** Fixed per org, so more or fewer cores never moves a customer to another file; a multi-tenant Atom splits each org the same way. */
 const SLOT_COUNT = 128;
-/** Measured on staging: past five, more threads at the same load cost CPU per check and p99 (Large 7→5, XL 15→5). */
 const MAX_THREADS = 5;
 const MiB = 1024 * 1024;
-/** Measured idle on Linux with 128 slot files open per thread: the main thread, then each serving thread on top. */
 const MAIN_THREAD_BYTES = 256 * MiB;
 const SERVING_THREAD_BYTES = 160 * MiB;
-/** Each SQLite connection keeps this much of its file in memory; every thread opens one per slot. */
 export const SQLITE_PAGE_CACHE_BYTES = 256 * 1024;
 const PAGE_CACHE_PER_THREAD_BYTES = SLOT_COUNT * SQLITE_PAGE_CACHE_BYTES;
-/** Of what the threads leave, this much may hold parsed subjects; the rest is headroom for pushes in flight and the collector's lag. */
 const HELD_SHARE = 0.5;
-/** Measured: a held subject's parsed, frozen objects take 4 to 6 times the bytes of its row text in RSS. */
 const HELD_EXPANSION = 5;
 const HEALTH_LOG_EVERY_MS = 10_000;
-/** A timer past a signed 32-bit delay fires every millisecond instead; a second is the shortest worth a line. */
 const healthLogEveryMs = positiveInteger.min(1_000).max(2 ** 31 - 1);
-/** Checks far outnumber pushes, so a share of the threads also receive Autumn's pushes. */
 const RECEIVER_SHARE_OF_THREADS = 0.3;
 
-/** What the machine allows the Atom: the container's limits where it has them, not the host's totals. */
 type AtomMachine = {
 	availableCpus: number;
 	memoryLimitBytes: number;
 };
 
 const readMachine = (): AtomMachine => {
-	// Zero or absent means no limit was set, so the machine's own memory is the limit.
 	const constrainedMemory = process.constrainedMemory?.() ?? 0;
 	return {
 		availableCpus: availableParallelism(),
@@ -41,11 +30,9 @@ const readMachine = (): AtomMachine => {
 	};
 };
 
-/** What the main thread and its page caches take, and what each serving thread with its own takes on top. */
 const MAIN_BYTES = MAIN_THREAD_BYTES + PAGE_CACHE_PER_THREAD_BYTES;
 const PER_THREAD_BYTES = SERVING_THREAD_BYTES + PAGE_CACHE_PER_THREAD_BYTES;
 
-/** How many serving threads fit in memory beside the main thread, each with as much again to hold subjects in. */
 const threadsMemoryAllows = ({
 	memoryLimitBytes,
 }: {
@@ -53,7 +40,6 @@ const threadsMemoryAllows = ({
 }): number =>
 	Math.floor((memoryLimitBytes - MAIN_BYTES) / (2 * PER_THREAD_BYTES));
 
-/** Row text each thread may hold parsed: a share of what the threads leave, split between them and shrunk by the expansion. */
 const heldBytesPerThreadOf = ({
 	threads,
 	memoryLimitBytes,
@@ -75,10 +61,6 @@ const sha256Hex = ({ name, value }: { name: string; value: string }) => {
 	return value;
 };
 
-/**
- * One token opens the Atom: an org's own when ATOM_MODE is unset; with multi_tenant, the admin token that opens `atoms.*`.
- * Either way its replicas sign what they send each other with the deployment's own secret.
- */
 type AtomModeEnv = {
 	ATOM_MODE: "deployed" | "multi_tenant";
 	ATOM_TOKEN_HASH: string;
@@ -89,8 +71,6 @@ type AtomModeEnv = {
 const isLoopback = (hostname: string): boolean =>
 	hostname.startsWith("127.") || hostname === "localhost" || hostname === "::1";
 
-/** A replica set on one machine has no atom.svc to resolve, so its harness lists each replica's peers in a file.
- * Only a replica listening on a loopback address reads one, so a deployed Atom (0.0.0.0) never does. */
 const peersFileOf = ({
 	runtimeEnv,
 	hostname,
@@ -107,7 +87,6 @@ const peersFileOf = ({
 	return peersFile;
 };
 
-/** Unset is the customer's single-tenant Atom; only our shadow Atom sets ATOM_MODE, to multi_tenant. */
 const modeEnvOf = ({
 	runtimeEnv,
 	hostname,
@@ -144,7 +123,6 @@ const sqsQueueUrlOf = ({ binding }: { binding: string }): string | null => {
 	return queueUrl;
 };
 
-/** ATOM_PUSH_QUEUE_CLIENT=auto (the default) reads an SQS queue with the AWS SDK and any other with the Alien binding; binding or sdk forces one. */
 const sdkPushQueueUrlOf = ({
 	runtimeEnv,
 }: {
@@ -162,8 +140,6 @@ const sdkPushQueueUrlOf = ({
 	);
 };
 
-/** As many threads as the container's CPUs and memory allow, up to MAX_THREADS.
- * A multi-tenant Atom sizes the same way: each thread re-reads the org folders, so any of them answers any org. */
 const threadsOf = ({
 	runtimeEnv,
 	machine,
@@ -181,7 +157,6 @@ const threadsOf = ({
 	return Math.max(1, allowed);
 };
 
-/** ATOM_PUSH_RECEIVERS when set; otherwise one thread both serves and receives, and past that about a third also receive. */
 const pushReceiversOf = ({
 	runtimeEnv,
 	threads,
@@ -199,7 +174,6 @@ const pushReceiversOf = ({
 	return Math.min(Math.max(share, 1), threads - 1);
 };
 
-/** What Atom reads: where it listens, its data directory, the Autumn API it forwards to, and which tokens it answers to. */
 export function createAtomEnv(
 	runtimeEnv: Record<string, string | undefined>,
 	machine: AtomMachine = readMachine(),
@@ -207,7 +181,6 @@ export function createAtomEnv(
 	const hostname = runtimeEnv.ATOM_HOSTNAME?.trim() || "127.0.0.1";
 	const modeEnv = modeEnvOf({ runtimeEnv, hostname });
 	const threads = threadsOf({ runtimeEnv, machine });
-	// alien sets this where the `pushes` queue is linked; a multi-tenant Atom's pushes name the org's folder.
 	const receivesPushes = Boolean(runtimeEnv.ALIEN_PUSHES_BINDING?.trim());
 	return {
 		ATOM_HOSTNAME: hostname,
@@ -216,30 +189,23 @@ export function createAtomEnv(
 			runtimeEnv.ATOM_PEER_PORT ?? LOCAL_ATOM_PEER_PORT,
 		),
 		ATOM_DATA_DIR: runtimeEnv.ATOM_DATA_DIR?.trim() || ".data/atom",
-		/** Where a request Atom does not answer itself is sent. */
 		ATOM_AUTUMN_API_URL: runtimeEnv.AUTUMN_API_URL?.trim() || AUTUMN_API_URL,
-		/** How many SQLite files an org's customers are split over. Changing it empties them: Autumn sends the customers again. */
 		ATOM_SLOT_COUNT: positiveInteger.parse(
 			runtimeEnv.ATOM_SLOT_COUNT ?? SLOT_COUNT,
 		),
-		/** How many threads serve checks on the shared port. */
 		ATOM_THREADS: threads,
-		/** How many of them also read Autumn's pushes from the org's queue; 0 where no queue is linked. */
 		ATOM_PUSH_RECEIVERS: pushReceiversOf({
 			runtimeEnv,
 			threads,
 			receivesPushes,
 		}),
-		/** Bytes of row text each thread keeps parsed before it drops its least recently read subjects. */
 		ATOM_HELD_BYTES_PER_THREAD: heldBytesPerThreadOf({
 			threads,
 			memoryLimitBytes: machine.memoryLimitBytes,
 		}),
-		/** How often the main thread logs what /health reports. */
 		ATOM_HEALTH_LOG_EVERY_MS: healthLogEveryMs.parse(
 			runtimeEnv.ATOM_HEALTH_LOG_EVERY_MS ?? HEALTH_LOG_EVERY_MS,
 		),
-		/** The pushes queue's URL where the AWS SDK reads it; null where the binding reads it or no queue is linked. */
 		ATOM_SDK_PUSH_QUEUE_URL: sdkPushQueueUrlOf({ runtimeEnv }),
 		...modeEnv,
 	};

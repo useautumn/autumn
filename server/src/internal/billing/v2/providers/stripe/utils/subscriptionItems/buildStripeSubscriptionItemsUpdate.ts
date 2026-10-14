@@ -21,10 +21,6 @@ import { stripeItemSpecToSubscriptionItem } from "@/internal/billing/v2/provider
 import { getInsertedOrPatchedCustomerProductIds } from "@/internal/billing/v2/utils/billingPlan/customerProductPlanMutations";
 import { findStripeItemSpecByStripePriceId } from "./findStripeItemSpec";
 
-/**
- * Diffs desired stripe item specs against current subscription items.
- * Handles both stored-price and entity-scoped inline-price items.
- */
 const stripeItemSpecsToSubItemsUpdate = ({
 	billingContext,
 	stripeItemSpecs,
@@ -63,7 +59,6 @@ const stripeItemSpecsToSubItemsUpdate = ({
 			continue;
 		}
 
-		// Stored price — check for existing subscription item
 		if (!spec.stripePriceId) continue;
 
 		const existingItem = findStripeSubscriptionItemByStripePriceId({
@@ -92,7 +87,6 @@ const stripeItemSpecsToSubItemsUpdate = ({
 		}
 	}
 
-	// Remove subscription items that are no longer in the desired specs
 	for (const subItem of currentSubscriptionItems) {
 		if (matchedSubscriptionItemIds.has(subItem.id)) {
 			continue;
@@ -122,24 +116,16 @@ export const buildStripeSubscriptionItemsUpdate = ({
 	autumnBillingPlan: AutumnBillingPlan;
 	finalCustomerProducts: FullCusProduct[];
 }): Stripe.SubscriptionUpdateParams.Item[] => {
-	// 1. Filter customer products by stripe subscription id
 	const relatedCustomerProducts = filterCustomerProductsByStripeSubscriptionId({
 		customerProducts: finalCustomerProducts,
 		stripeSubscriptionId: billingContext.stripeSubscription?.id,
 	});
 
-	// 2. Drop customer products managed by a non-Stripe processor (e.g. RevenueCat).
-	//
-	// `filterCustomerProductsByStripeSubscriptionId` with `undefined` returns every
-	// customer product whose `subscription_ids` is empty — and RC-managed cus products
-	// have empty `subscription_ids`. Without this step, an RC product's Stripe price
-	// would leak into a brand-new Stripe subscription created for an add-on attach.
 	const stripeManagedCustomerProducts = filterCustomerProductsByProcessorType({
 		customerProducts: relatedCustomerProducts,
 		processorType: ProcessorType.Stripe,
 	});
 
-	// 2a. Exclude orphan paid-recurring cusProducts (no sub link, not freshly inserted) — their recurring prices would otherwise leak into a new sub on the next attach.
 	const mutatedCustomerProductIds = new Set([
 		...getInsertedOrPatchedCustomerProductIds({ autumnBillingPlan }),
 		...(autumnBillingPlan.customerLicenseTransitions ?? []).map(
@@ -157,19 +143,16 @@ export const buildStripeSubscriptionItemsUpdate = ({
 		},
 	);
 
-	// 3. Filter customer products by active statuses
 	const activeCustomerProducts = filterCustomerProductsByActiveStatuses({
 		customerProducts: nonOrphanCustomerProducts,
 	});
 
-	// 4. Get recurring subscription item array (doesn't include one-off items)
 	const recurringStripeItemSpecs = customerProductsToRecurringStripeItemSpecs({
 		ctx,
 		billingContext,
 		customerProducts: activeCustomerProducts,
 	});
 
-	// 5. Diff against current subscription items
 	return stripeItemSpecsToSubItemsUpdate({
 		billingContext,
 		stripeItemSpecs: recurringStripeItemSpecs,

@@ -56,10 +56,8 @@ export function usePull(options?: {
 	const noDeclarationFile = options?.noDeclarationFile ?? false;
 	const allVersions = options?.allVersions ?? false;
 
-	// Get org info using TanStack Query (this IS a query)
 	const orgQuery = useOrganization(effectiveCwd, environment);
 
-	// Use mutation for the pull operation
 	const pullMutation = useMutation({
 		mutationFn: async (params: PullParams): Promise<PullData> => {
 			const result = await pull({
@@ -98,9 +96,7 @@ export function usePull(options?: {
 			};
 		},
 		onSuccess: () => {
-			// Call onComplete callback after successful pull
 			if (onComplete) {
-				// Add a small delay to let the UI show the success state
 				setTimeout(() => {
 					onComplete();
 				}, 1000);
@@ -108,7 +104,6 @@ export function usePull(options?: {
 		},
 	});
 
-	// Auto-trigger pull when org info is ready
 	useEffect(() => {
 		if (
 			orgQuery.isSuccess &&

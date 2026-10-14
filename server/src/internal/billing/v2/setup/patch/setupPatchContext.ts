@@ -92,17 +92,12 @@ export const setupPatchContext = ({
 	customerProduct: FullCusProduct;
 	fullProduct: FullProduct;
 	reusePricesAndEntitlements?: ReusePricesAndEntitlements;
-	/** Treat upsert_licenses as patch-style: pools repoint on the same row. */
 	includeUpsertLicenses?: boolean;
 }): PatchContext | undefined => {
-	// Version changes replace the row anyway — upsert-only + version rides
-	// the expire+insert path, where transitions carry the pool across rows.
 	const upsertsLicenses =
 		includeUpsertLicenses &&
 		params.version === undefined &&
 		(params.customize?.upsert_licenses?.length ?? 0) > 0;
-	// The guard also narrows: upsert-only customize is patch-shaped too (no
-	// item fields), it just fails the classifier's presence checks.
 	const customize = isCustomizePlanPatchStyle(params.customize)
 		? params.customize
 		: upsertsLicenses
@@ -168,15 +163,10 @@ export const setupPatchContext = ({
 		reusePricesAndEntitlements,
 	});
 
-	// Snapshot only after every handler that mutates finalCustomerProduct, so it
-	// can't drift from the customer product it's derived from.
 	const patchFullProduct = cusProductToProduct({
 		cusProduct: finalCustomerProduct,
 	});
 
-	// Surface update_items' new entitlements / prices on the patched product
-	// snapshot so downstream consumers (initPatchedCustomerEntitlementsAndPrices,
-	// add_items noop check) see the updated shape.
 	for (const newEnt of updateNewEntitlements) {
 		const feature = ctx.features.find(
 			(candidate) => candidate.internal_id === newEnt.internal_feature_id,

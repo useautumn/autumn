@@ -46,7 +46,6 @@ export const DeleteOrgPopover = () => {
 
 		await axiosInstance.delete(`/organization`);
 
-		// Other org is now the active org
 		const otherOrg = organizations.find((o) => o.id !== org.id);
 		await setActiveOrg(otherOrg!.id);
 

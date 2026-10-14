@@ -11,10 +11,6 @@ interface ConfirmScreenProps {
 	onCancel: () => void;
 }
 
-/**
- * Final confirmation screen
- * User must type the organization name exactly to proceed
- */
 export function ConfirmScreen({
 	orgName,
 	customers,

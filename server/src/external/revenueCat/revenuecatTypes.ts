@@ -1,5 +1,3 @@
-// RevenueCat Webhook Event Types
-
 type RevCatExperiment = {
 	experiment_id: string;
 	experiment_variant: string;
@@ -124,8 +122,6 @@ type RevenueCatOfferingProductItem = {
 	eligibility_criteria: string;
 };
 
-// RevenueCat Products API Types
-
 type RevenueCatProductSubscription = {
 	duration: string;
 	grace_period_duration?: string;
@@ -156,7 +152,6 @@ export type RevenueCatProductsResponse = {
 	url: string;
 };
 
-// Field names + enums mirror the RevenueCat OpenAPI v2 spec (Subscription/Purchase schemas).
 export type RevenueCatStore =
 	| "amazon"
 	| "app_store"
@@ -193,7 +188,6 @@ export type RevenueCatAutoRenewalStatus =
 export type RevenueCatSubscription = {
 	object: "subscription";
 	id: string;
-	// RevenueCat-internal product id (null for promotional). Bridge to store via listAllProducts.
 	product_id: string | null;
 	store: RevenueCatStore;
 	store_subscription_identifier: string;
@@ -290,9 +284,7 @@ export type RevenueCatCreateProductBody = {
 	app_id: string;
 	type: RevenueCatProductType;
 	display_name: string;
-	// Required by Test Store apps ("user-facing title"); harmless for store apps.
 	title?: string;
-	// ISO-8601 duration (e.g. "P1M", "P1Y"). Required when type is "subscription".
 	subscription?: { duration: string };
 	one_time?: { is_consumable?: boolean };
 };
@@ -301,7 +293,6 @@ export type RevenueCatUpdateProductBody = {
 	display_name?: string;
 };
 
-// create_in_store uses an enum duration (NOT the ISO-8601 one createProduct uses).
 export type RevenueCatStoreDuration =
 	| "ONE_WEEK"
 	| "ONE_MONTH"

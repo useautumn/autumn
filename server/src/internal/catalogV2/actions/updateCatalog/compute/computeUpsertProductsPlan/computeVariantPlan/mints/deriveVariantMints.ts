@@ -10,10 +10,6 @@ import { buildVariantEditDiff } from "../editDiff/buildVariantEditDiff";
 import type { VariantEditTarget } from "../targets/variantEditTarget";
 import { baseRowMinted } from "../variantPlanUtils";
 
-/**
- * Base `new_version`: a content edit that would hit the resolved variant row
- * with customers mints the next version from it instead of editing in place.
- */
 export const deriveVariantMints = ({
 	intent,
 	upsert,
@@ -34,8 +30,6 @@ export const deriveVariantMints = ({
 		: undefined;
 
 	return targets.flatMap((target): ProductUpsertIntent[] => {
-		// A mapping-only declaration is still content: without this the edit lane
-		// writes the customer-bearing row instead of minting from it.
 		const carriesContent =
 			target.follow === true ||
 			target.customize !== undefined ||

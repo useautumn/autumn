@@ -14,7 +14,6 @@ type GithubPull = {
 	head: { ref: string; sha: string; repo: { full_name: string } | null };
 };
 
-/** Anonymous GitHub allows 60 req/h; cache the PR list so the picker stays well under it. */
 const PULLS_TTL_MS = 60_000;
 let pullsCache: { at: number; slug: string; pulls: GithubPull[] } | undefined;
 
@@ -40,7 +39,6 @@ const listOpenPullsCached = async ({
 	return pulls;
 };
 
-/** Open same-repo PRs; GITHUB_TOKEN (optional) raises the anonymous rate limit. */
 const listOpenPulls = async ({
 	ctx,
 	slug,
@@ -75,7 +73,6 @@ const listOpenPulls = async ({
 	return pulls.filter((pull) => pull.head.repo?.full_name === slug);
 };
 
-/** main + dev + every open PR head, with the warm-image state of each head sha. */
 export const listBranches = async ({
 	ctx,
 }: {
@@ -85,7 +82,6 @@ export const listBranches = async ({
 		listRemoteHeads(),
 		getRepoSlug().then((slug) => listOpenPullsCached({ ctx, slug })),
 	]);
-	// One entry per branch name (a release PR's head is dev itself).
 	const byName = new Map<
 		string,
 		{ name: string; sha: string; prNumber: number | null }
@@ -103,7 +99,6 @@ export const listBranches = async ({
 	])
 		byName.set(branch.name, {
 			...branch,
-			// dev/main only carry release PRs; their number is noise in the picker.
 			prNumber: BASE_BRANCHES.includes(branch.name) ? null : branch.prNumber,
 		});
 	const branches = [...byName.values()];

@@ -31,7 +31,6 @@ const reportDerivationFailure = ({
 	} catch {}
 };
 
-/** Biased towards custom: a false negative lets a migration overwrite real customizations. */
 export const deriveCustomerProductIsCustom = ({
 	ctx,
 	customerProduct,
@@ -43,7 +42,6 @@ export const deriveCustomerProductIsCustom = ({
 	baseProduct?: FullProduct | null;
 	features: Feature[];
 }): CustomerProductIsCustomResult => {
-	// RevenueCat purchases carry no params and can't be customised, so any diff is catalog drift.
 	if (cusProductToProcessorType(customerProduct) === ProcessorType.RevenueCat) {
 		return { isCustom: false, outcome: "revenuecat" };
 	}

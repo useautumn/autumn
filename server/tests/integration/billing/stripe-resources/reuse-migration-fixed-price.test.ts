@@ -1,13 +1,3 @@
-/**
- * In-place catalog $20 → $40 then migrate attached customers.
- *
- * Contract:
- *   A+B on $20 → catalog $40 → migrate both → same $40 stripe_price_id,
- *     not the retired $20 id
- *   A already $40 custom, B still $20 → catalog $40 → migrate → B uses
- *     one live $40 (A's or catalog's), not a third mint
- */
-
 import { expect, test } from "bun:test";
 import type {
 	AttachParamsV1Input,

@@ -5,7 +5,6 @@ import { z } from "zod/v4";
 
 const appEnvSchema = z.enum(AppEnv);
 
-/** One job per auto top-up the worker decided: the record's identity names the customer, the effect names the feature. */
 export const recordToAutoTopupPayloads = ({
 	record,
 }: {

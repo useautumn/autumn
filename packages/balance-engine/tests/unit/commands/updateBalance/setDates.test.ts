@@ -24,8 +24,6 @@ import {
 	testProductInternalId,
 } from "../../engineFixtures.js";
 
-// Mirrors server/tests/integration/balances/update/next-reset-at/, expires-at/ and update-balance-combined.
-
 const SOON = occurredAt + 1_000;
 const LATER = occurredAt + 2_000;
 const NEW_DATE = occurredAt + 9_000;

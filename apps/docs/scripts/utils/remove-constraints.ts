@@ -1,7 +1,3 @@
-/**
- * Remove specific schema constraints from all properties
- * Common constraints: minLength, maxLength, minimum, maximum, pattern, format
- */
 export function removeConstraints({
   spec,
   constraints
@@ -16,7 +12,6 @@ export function removeConstraints({
       return;
     }
 
-    // Remove constraints from this object
     for (const constraint of constraints) {
       if (constraint in obj) {
         delete obj[constraint];
@@ -24,7 +19,6 @@ export function removeConstraints({
       }
     }
 
-    // Recurse into all properties
     for (const key in obj) {
       if (obj.hasOwnProperty(key)) {
         const newPath = path ? `${path}.${key}` : key;

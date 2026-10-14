@@ -19,7 +19,6 @@ export const ATOM_NETWORK_FIELDS = {
 	subnets: "subnets",
 } as const;
 
-/** Where an Atom runs: a new VPC, or an existing one and the subnets it joins. */
 export const AtomNetworkFields = withFieldGroup({
 	defaultValues: networkToAtomNetworkValues(null),
 	render: function AtomNetworkFieldsRender({ group }) {

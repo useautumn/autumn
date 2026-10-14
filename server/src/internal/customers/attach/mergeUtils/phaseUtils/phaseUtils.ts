@@ -15,14 +15,12 @@ export const cusProductInPhase = ({
 	phaseStartMillis?: number;
 	cusProduct: FullCusProduct;
 }) => {
-	// Require customer product to start at most one day before the phase start
 	const oneDayBeforeCusProductStartsAt = subDays(
 		cusProduct.starts_at,
 		1,
 	).getTime();
 	const finalPhaseStart = phaseStartMillis ?? phaseStart! * 1000;
 
-	// Phase start should happen at after cus product starts at
 	return finalPhaseStart >= oneDayBeforeCusProductStartsAt;
 };
 
@@ -36,7 +34,6 @@ export const similarUnix = ({
 	return Math.abs(differenceInDays(unix1, unix2)) <= 1;
 };
 
-// Price quantity pair
 export const logPhaseItems = async ({
 	items,
 	db,
@@ -86,13 +83,9 @@ export const getCurrentPhaseIndex = ({
 	);
 };
 
-// Helper function to convert timestamp to milliseconds if needed
 const ensureMilliseconds = (timestamp: number | undefined): number => {
 	if (!timestamp) return 0;
 
-	// If timestamp is less than year 2001 in milliseconds (978307200000),
-	// it's likely in seconds and needs conversion
-	// This threshold works because modern timestamps in seconds are much larger
 	if (timestamp < 978307200000) {
 		return timestamp * 1000;
 	}

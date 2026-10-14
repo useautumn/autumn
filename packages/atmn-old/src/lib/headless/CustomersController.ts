@@ -1,8 +1,3 @@
-/**
- * Headless controller for the customers command.
- * Provides a programmatic API for AI agents to interact with customers.
- */
-
 import type { ApiCustomer } from "../api/endpoints/customers.js";
 import { request } from "../api/client.js";
 import { AppEnv } from "../env/detect.js";
@@ -15,9 +10,6 @@ import type {
 	PaginationState,
 } from "./types.js";
 
-/**
- * Response from POST /v1/customers/list
- */
 interface ListCustomersResponse {
 	list: ApiCustomer[];
 	has_more: boolean;
@@ -26,9 +18,6 @@ interface ListCustomersResponse {
 	total: number;
 }
 
-/**
- * All expand params for full customer data
- */
 const EXPAND_PARAMS = [
 	"invoices",
 	"rewards",
@@ -39,10 +28,6 @@ const EXPAND_PARAMS = [
 	"balances.feature",
 ].join(",");
 
-/**
- * Headless controller for customers.
- * Can be used by AI agents to programmatically browse and inspect customers.
- */
 export class CustomersController
 	implements ListController<ApiCustomer, ApiCustomerExpanded>
 {
@@ -66,10 +51,6 @@ export class CustomersController
 		this.secretKey = getKey(environment);
 	}
 
-	// ─────────────────────────────────────────────────────────────────
-	// Data Fetching (internal)
-	// ─────────────────────────────────────────────────────────────────
-
 	private async fetchCustomers(): Promise<void> {
 		const offset = (this.page - 1) * this.pageSize;
 
@@ -92,15 +73,10 @@ export class CustomersController
 		this.items = response.list;
 		this.hasMore = response.has_more;
 
-		// Reset selection if out of bounds
 		if (this.selectedIndex >= this.items.length) {
 			this.selectedIndex = Math.max(0, this.items.length - 1);
 		}
 	}
-
-	// ─────────────────────────────────────────────────────────────────
-	// State Queries
-	// ─────────────────────────────────────────────────────────────────
 
 	getItems(): ApiCustomer[] {
 		return this.items;
@@ -135,10 +111,6 @@ export class CustomersController
 		return this.searchQuery;
 	}
 
-	// ─────────────────────────────────────────────────────────────────
-	// Navigation Actions
-	// ─────────────────────────────────────────────────────────────────
-
 	selectByIndex(index: number): ApiCustomer | null {
 		if (index >= 0 && index < this.items.length) {
 			this.selectedIndex = index;
@@ -171,10 +143,6 @@ export class CustomersController
 		}
 		return null;
 	}
-
-	// ─────────────────────────────────────────────────────────────────
-	// Data Actions
-	// ─────────────────────────────────────────────────────────────────
 
 	async nextPage(): Promise<void> {
 		if (this.hasMore) {
@@ -218,10 +186,6 @@ export class CustomersController
 		await this.fetchCustomers();
 	}
 
-	// ─────────────────────────────────────────────────────────────────
-	// Detail Data
-	// ─────────────────────────────────────────────────────────────────
-
 	async getExpandedItem(id: string): Promise<ApiCustomerExpanded | null> {
 		try {
 			const response = await request<ApiCustomerExpanded>({
@@ -237,10 +201,6 @@ export class CustomersController
 			return null;
 		}
 	}
-
-	// ─────────────────────────────────────────────────────────────────
-	// Output Formats
-	// ─────────────────────────────────────────────────────────────────
 
 	toJSON(): ListControllerState<ApiCustomer> {
 		return {
@@ -317,9 +277,6 @@ export class CustomersController
 	}
 }
 
-/**
- * Create a new CustomersController and initialize it with data
- */
 export async function createCustomersController(
 	environment: AppEnv = AppEnv.Sandbox,
 	options: ListControllerOptions = {},

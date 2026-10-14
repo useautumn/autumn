@@ -5,14 +5,6 @@ import { initIntegrationEval } from "../../../../src/initIntegrationEval.ts";
 import { emailCreditsCatalog } from "../../catalogs/emailCreditsCatalog.ts";
 import { fixtureUser, integrateScenario } from "../../integrateShared.ts";
 
-/**
- * BILLING CONTROLS flow: usage alerts. "Email users at 80% of their credits"
- * maps to customers.update billing_controls.usage_alerts with
- * threshold: 80 + threshold_type: "usage_percentage" — Autumn fires the
- * webhook; the app does NOT poll balances or run its own threshold cron.
- * The graded trap: agents that meter it themselves (check-on-every-track,
- * a scheduled job) instead of arming the alert control.
- */
 const alertSettingsRouteStub = `		// Settings page: usage warning email opt-in. TODO: wire to billing provider.
 		"/api/billing/usage-alerts": {
 			POST: async (req) => {

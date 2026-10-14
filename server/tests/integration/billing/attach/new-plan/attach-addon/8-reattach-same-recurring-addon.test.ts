@@ -1,16 +1,3 @@
-/**
- * Attach Add-on Tests (Attach V2)
- *
- * Tests for attaching add-on products to customers.
- * Add-ons are additive - they never expire/cancel existing products.
- *
- * Key behaviors:
- * - Add-ons are always attached (never replace existing products)
- * - Features from add-ons combine with main product features
- * - Re-attaching same add-on creates separate customer_product records
- * - Multiple different add-ons can coexist
- */
-
 import { test } from "bun:test";
 import type { ApiCustomerV3 } from "@autumn/shared";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
@@ -22,20 +9,6 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 8: Re-attach same recurring add-on (doubles subscription items)
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Customer on Pro with recurring add-on (200 words, $20/mo)
- * - Attach same recurring add-on again
- *
- * Expected:
- * - Two separate customer_product records
- * - Double subscription items in Stripe
- * - Double balance/included usage (200 + 200 = 400 words)
- */
 test.concurrent(
 	`${chalk.yellowBright("addon 8: reattach same recurring addon")}`,
 	async () => {
@@ -59,14 +32,12 @@ test.concurrent(
 			actions: [s.billing.attach({ productId: pro.id })],
 		});
 
-		// First attach - 200 words, $20/mo
 		await autumnV1.billing.attach({
 			customer_id: customerId,
 			product_id: recurringAddon.id,
 			redirect_mode: "if_required",
 		});
 
-		// Second attach - 200 more words, another $20/mo
 		await autumnV1.billing.attach({
 			customer_id: customerId,
 			product_id: recurringAddon.id,
@@ -75,7 +46,6 @@ test.concurrent(
 
 		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-		// Messages from Pro
 		expectCustomerFeatureCorrect({
 			customer,
 			featureId: TestFeature.Messages,
@@ -84,7 +54,6 @@ test.concurrent(
 			usage: 0,
 		});
 
-		// Double words balance/included (200 + 200 = 400)
 		expectCustomerFeatureCorrect({
 			customer,
 			featureId: TestFeature.Words,
@@ -93,14 +62,12 @@ test.concurrent(
 			usage: 0,
 		});
 
-		// 3 invoices: Pro ($20) + first add-on ($20) + second add-on ($20)
 		await expectCustomerInvoiceCorrect({
 			customer,
 			count: 3,
 			latestTotal: 20,
 		});
 
-		// Verify subscription has doubled items - expectSubToBeCorrect validates this
 		await expectSubToBeCorrect({
 			db: ctx.db,
 			customerId,

@@ -161,7 +161,6 @@ export const getUpgradeProductPreview = async ({
 		logger,
 	});
 
-	// Get prorated amounts for new product
 	const newProduct = attachParamsToProduct({ attachParams });
 
 	if (config?.disableTrial) attachParams.freeTrial = null;
@@ -176,7 +175,6 @@ export const getUpgradeProductPreview = async ({
 		freeTrial = curCusProduct.free_trial;
 	}
 
-	// console.log("Anchor")
 	const newPreviewItems = await getItemsForNewProduct({
 		newProduct,
 		attachParams,

@@ -49,7 +49,7 @@ const updateLinkedCusEnt = async ({
 			};
 			delete newEntities[replaceableId];
 		} else {
-			const balance = linkedCusEnt.entitlement.allowance ?? 0; // cannot be null, must be 0 in unlimited case.
+			const balance = linkedCusEnt.entitlement.allowance ?? 0;
 			newEntities[entity.id] = {
 				id: entity.id,
 				balance,
@@ -64,7 +64,6 @@ const updateLinkedCusEnt = async ({
 		updates: { entities: newEntities },
 	});
 
-	// The create response is built from this request's customer snapshot.
 	linkedCusEnt.entities = newEntities;
 };
 
@@ -128,10 +127,8 @@ export const createEntityForCusProduct = async ({
 			}
 		}
 
-		// 1. If main cus ent:
 		let deletedReplaceables: Replaceable[] = [];
 		if (mainCusEntWithCusProduct) {
-			// Acquire lock to prevent race conditions on seat charging
 			const lockKey = `lock:create-entity:${org.id}:${env}:${customer.id}`;
 			await acquireLock({
 				lockKey,
@@ -144,9 +141,6 @@ export const createEntityForCusProduct = async ({
 				const originalBalance = mainCusEntWithCusProduct.balance || 0;
 				const newBalance = originalBalance - inputEntities.length;
 
-				// Pre-compute reps only for the usage limit check —
-				// handleProratedUpgrade applies reps itself, so we must NOT
-				// pass an already-adjusted balance to adjustAllowance.
 				const repsLength = getReps({
 					cusEnt: mainCusEntWithCusProduct,
 					prevBalance: originalBalance,

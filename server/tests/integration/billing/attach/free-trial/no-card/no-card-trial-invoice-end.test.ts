@@ -1,16 +1,3 @@
-/**
- * No-card trials attached in invoice mode, at trial end (product cron, driven by the test clock).
- *
- * Contract:
- *  - no card → one send_invoice Stripe sub, its invoice open for the plan price and unpaid,
- *    plan active and no longer trialing
- *  - a card added during the trial is never charged: the trial still converts by invoice
- *  - two entities on the same invoiced trial convert into one send_invoice sub
- *  - canceled during the trial → expires to the free default, no sub
- *  - email removed before trial end → can't be invoiced, expires to the free default, no sub
- *  - a mid-trial update keeps the invoice intent, and the trial still converts by invoice
- */
-
 import { test } from "bun:test";
 import {
 	type ApiCustomerV3,

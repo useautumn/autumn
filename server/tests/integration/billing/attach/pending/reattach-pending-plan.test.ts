@@ -1,12 +1,3 @@
-/**
- * Re-attaching a plan that is already pending replaces the pending copy.
- *
- * Red (before):  a draft-invoice pending plan blocks the attach with a 409, and a
- *                long-lived pending plan is duplicated with its old link still open.
- * Green (after): the old pending plan is discarded (draft's subscription canceled,
- *                session and link expired) and the attach goes ahead with one pending plan.
- */
-
 import { expect, test } from "bun:test";
 import {
 	type AttachParamsV1Input,

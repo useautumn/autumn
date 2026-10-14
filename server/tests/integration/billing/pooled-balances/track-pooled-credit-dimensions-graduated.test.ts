@@ -1,9 +1,3 @@
-/**
- * Contract: a graduated dimension climbs its own ladder against a pooled
- * balance. Tier progress is tracked per dimension, so usage from two entities
- * sharing the pool advances the same ladder rather than each starting at tier 1.
- */
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV5, FeatureConfigOverride } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
@@ -61,8 +55,6 @@ test.concurrent(
 			],
 			actions: [
 				s.billing.attach({ productId: product.id, entityIndex: 0 }),
-				// 3 units from one entity, 4 from the other: 7 total up one ladder,
-				// so 5 @ 10 then 2 @ 4 = 58 — not two ladders of 3 and 4.
 				s.track({
 					featureId: TestFeature.Action1,
 					value: 3,

@@ -20,7 +20,6 @@ const rcItemNowBelongsToDestination = ({
 	return destination.autumnProductIds.has(cusProduct.product.id);
 };
 
-/** Source products RevenueCat now reports on the destination; an unrecorded RC item id falls back to a product match. */
 export const selectTransferredCusProducts = ({
 	sourceCusProducts,
 	destination,

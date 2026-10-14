@@ -60,8 +60,6 @@ export const addProductsUpdatedWebhookTask = async ({
 	deletedCusProduct?: FullCusProduct;
 	scenario: string;
 }) => {
-	// Build action
-
 	try {
 		ctx?.logger.info(
 			`[addProductsUpdatedWebhookTask] Sending webhook for product ${cusProduct.product.name}, scenario: ${scenario}`,
@@ -96,8 +94,6 @@ export const handleProductsUpdated = async ({
 		reqCtx?: Partial<AutumnContext>;
 		actionDetails: ActionDetails;
 		internalCustomerId: string;
-		// org: Organization;
-		// env: AppEnv;
 		customerId: string;
 		product: FullProduct;
 		scenario: string;
@@ -191,7 +187,6 @@ export const handleProductsUpdated = async ({
 		});
 	}
 
-	// 2. Send Svix event
 	ctx.logger.info(
 		`sending customer.products.updated webhook, customer ID: ${data.customerId}, entity ID: ${fullCus.entity?.id || "none"}`,
 	);

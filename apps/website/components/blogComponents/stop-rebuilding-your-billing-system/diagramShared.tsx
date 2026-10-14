@@ -6,8 +6,6 @@ import { cn } from "@/lib/utils";
 
 export type Point = { x: number; y: number };
 
-// Cubic bezier between two points; control points follow the dominant axis so
-// horizontal and vertical connectors both curve naturally.
 function pathD(from: Point, to: Point) {
 	const dx = to.x - from.x;
 	const dy = to.y - from.y;
@@ -138,8 +136,6 @@ export function NodeCard({
 	);
 }
 
-// Horizontally-scrollable fixed-coordinate canvas: nodes are absolutely
-// positioned and an SVG overlay (same dimensions) carries the connectors.
 export function DiagramCanvas({
 	width,
 	height,

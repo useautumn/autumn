@@ -1,9 +1,3 @@
-/**
- * Reads the run's throwaway org through the dev server's API — the test
- * oracle for integration cases: what did the agent's code actually do to
- * Autumn? Captured by the task before org deletion; scorers read the capture.
- */
-
 export type OracleSpendLimit = {
 	feature_id?: string;
 	enabled?: boolean;
@@ -54,13 +48,11 @@ export type OracleCustomer = {
 	id?: string;
 	email?: string | null;
 	name?: string | null;
-	/** featureId → { granted, remaining, usage } from balances */
 	balances: Record<
 		string,
 		{ granted?: number; remaining?: number; usage?: number }
 	>;
 	planIds: string[];
-	/** effective billing controls from the customer read (2.3+ merges plan defaults, tagged by source) */
 	billing_controls?: OracleBillingControls;
 	raw?: unknown;
 };
@@ -71,8 +63,6 @@ export type OracleLicenseAssignment = {
 	ended_at?: number | null;
 };
 
-/** Active license assignments for the customer — empty on any error (the
- * expectation's metadata explains the miss). */
 export const readOracleLicenseAssignments = async ({
 	backendUrl,
 	secretKey,
@@ -146,7 +136,6 @@ export type OracleCatalogPlan = {
 	items: { feature_id?: string; included?: number }[];
 };
 
-/** Every version of every live plan, as the org holds them after the run. */
 export type OracleCatalog = { plans: OracleCatalogPlan[] };
 
 export const readOracleCatalog = async ({

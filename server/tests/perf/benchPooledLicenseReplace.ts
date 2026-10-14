@@ -1,15 +1,3 @@
-/**
- * Times pooled replace (entitlement swap + contribution/pool Δ) on an
- * isolated DEV schema. One customer, one pool, N source contributions.
- *
- *   NODE_ENV=development infisical run --env=dev --recursive -- \
- *     bun tests/perf/benchPooledLicenseReplace.ts
- *
- *   BENCHMARK_CONTRIBUTIONS=10000  (default 1_000_000)
- *
- * Does not use staging or prod. Drops the schema on exit.
- */
-
 import { EntInterval } from "@autumn/shared";
 import { sql } from "drizzle-orm";
 import { assertNotProductionDb } from "@/db/dbUtils.js";

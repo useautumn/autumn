@@ -25,7 +25,6 @@ test("rollover signatures ignore object shape and nullish optional fields", () =
 });
 
 test("explicit undefined caps match explicit null caps", () => {
-	// In-memory construction can set these to undefined rather than omitting them.
 	const undefinedCaps = rolloverConfigToSignature({
 		rollover: {
 			max: undefined,

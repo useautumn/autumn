@@ -24,7 +24,6 @@ export const CreateUser = () => {
 	});
 
 	const handleSubmit = async () => {
-		// TODO: Implement user creation logic
 		try {
 			setLoading(true);
 			const { data, error } = await authClient.admin.createUser({
@@ -47,11 +46,6 @@ export const CreateUser = () => {
 
 	return (
 		<Dialog open={open} onOpenChange={setOpen}>
-			{/* <DialogTrigger asChild>
-        <Button variant="outline" size="sm">
-          Create User
-        </Button>
-      </DialogTrigger> */}
 			<DialogContent>
 				<DialogHeader>
 					<DialogTitle>Create User</DialogTitle>

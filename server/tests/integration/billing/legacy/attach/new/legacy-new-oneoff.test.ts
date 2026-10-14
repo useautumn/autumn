@@ -1,15 +1,3 @@
-/**
- * Legacy Attach V1 One-Off Product Tests
- *
- * Migrated from:
- * - server/tests/attach/others/others2.test.ts
- *
- * Tests V1 attach behavior with one-off products:
- * - One-off products can be attached multiple times
- * - Balances accumulate across multiple attachments
- * - Payment failure returns checkout_url
- */
-
 /** biome-ignore-all lint/suspicious/noExplicitAny: test file */
 
 import { expect, test } from "bun:test";
@@ -26,20 +14,6 @@ import chalk from "chalk";
 import { AutumnInt } from "@/external/autumn/autumnCli";
 import { attachFailedPaymentMethod } from "@/external/stripe/stripeCusUtils";
 import { CusService } from "@/internal/customers/CusService";
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 1: Attach one-off product and attach again (balance accumulates)
-//
-// Scenario:
-// - One-off product with prepaid messages ($8/250 units)
-// - Customer with payment method
-// - Attach with quantity 500 → balance = 500
-// - Attach again with quantity 750 → balance = 500 + 750 = 1250
-//
-// Expected:
-// - Product attached with quantity 1 after first attach
-// - Balance accumulates after second attach
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(`${chalk.yellowBright("legacy-oneoff 1: attach and accumulate balance")}`, async () => {
 	const customerId = "legacy-oneoff-1";
@@ -65,7 +39,6 @@ test.concurrent(`${chalk.yellowBright("legacy-oneoff 1: attach and accumulate ba
 		actions: [],
 	});
 
-	// First attach: quantity 500
 	const options1 = [{ feature_id: TestFeature.Messages, quantity: 500 }];
 
 	await autumnV1.attach({
@@ -90,7 +63,6 @@ test.concurrent(`${chalk.yellowBright("legacy-oneoff 1: attach and accumulate ba
 		usage: 0,
 	});
 
-	// Second attach: quantity 750
 	const options2 = [{ feature_id: TestFeature.Messages, quantity: 750 }];
 
 	await autumnV1.attach({
@@ -102,13 +74,12 @@ test.concurrent(`${chalk.yellowBright("legacy-oneoff 1: attach and accumulate ba
 	await expectCustomerInvoiceCorrect({
 		customer: customerAfter1,
 		count: 1,
-		latestTotal: 16, // 2 packs * 8
+		latestTotal: 16,
 	});
 
 	const customerAfter2 =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Balance should accumulate: 500 + 750 = 1250
 	const totalBalance = options1[0].quantity + options2[0].quantity;
 
 	expectCustomerFeatureCorrect({
@@ -126,22 +97,9 @@ test.concurrent(`${chalk.yellowBright("legacy-oneoff 1: attach and accumulate ba
 	await expectCustomerInvoiceCorrect({
 		customer: customerAfter2,
 		count: 2,
-		latestTotal: 24, // 3 packs * 8
+		latestTotal: 24,
 	});
 });
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 2: Payment failure returns checkout_url
-//
-// Scenario:
-// - One-off product with prepaid messages
-// - Customer with success payment method initially
-// - Swap to failed payment method
-// - Attach one-off → returns checkout_url
-//
-// Expected:
-// - Response contains checkout_url when payment fails
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(`${chalk.yellowBright("legacy-oneoff 2: payment failure returns checkout_url")}`, async () => {
 	const customerId = "legacy-oneoff-2";
@@ -167,7 +125,6 @@ test.concurrent(`${chalk.yellowBright("legacy-oneoff 2: payment failure returns 
 		actions: [],
 	});
 
-	// Swap to failed payment method
 	const customer = await CusService.get({
 		db: ctx.db,
 		idOrInternalId: customerId,
@@ -180,7 +137,6 @@ test.concurrent(`${chalk.yellowBright("legacy-oneoff 2: payment failure returns 
 		customer: customer!,
 	});
 
-	// Attempt attach with failed payment method
 	const options = [{ feature_id: TestFeature.Messages, quantity: 500 }];
 
 	const res = await autumnV1.attach({

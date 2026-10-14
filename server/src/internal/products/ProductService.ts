@@ -281,8 +281,6 @@ export class ProductService {
 						: undefined,
 				inIds ? inArray(products.id, inIds) : undefined,
 			),
-			// A default plan is applied with initFullCustomerProduct, which reads its
-			// license links — a plan loaded without them applies with no seats.
 			with: composeProductWithLicensesQuery(),
 		})) as ProductWithLicenseRelations[];
 
@@ -303,8 +301,6 @@ export class ProductService {
 	}
 
 	static async insert({ db, product }: { db: DrizzleCli; product: Product }) {
-		// Dual-write version identity; omit-version reads resolve `active`.
-		// A row only self-activates when no higher version exists.
 		const row = {
 			...product,
 			version_slug: product.version_slug ?? `v${product.version}`,
@@ -434,12 +430,9 @@ export class ProductService {
 		returnAll?: boolean;
 		version?: number;
 		archived?: boolean;
-		/** Read straight from the DB — for writes deciding off the result. */
 		skipCache?: boolean;
-		/** Occupancy / mint max — include tombstoned rows. */
 		includeDeleted?: boolean;
 	}): Promise<FullProduct[]> {
-		// Use caching for simple queries (no inIds, returnAll, or version)
 		const canCache =
 			!inIds && !returnAll && !version && !skipCache && !includeDeleted;
 
@@ -656,7 +649,6 @@ export class ProductService {
 		return data[0].version;
 	}
 
-	// UPDATES
 	static async updateByInternalId({
 		db,
 		internalId,
@@ -671,8 +663,6 @@ export class ProductService {
 			.set(update)
 			.where(eq(products.internal_id, internalId));
 	}
-
-	// DELETES
 
 	static async archiveByInternalId({
 		db,
@@ -781,7 +771,6 @@ export class ProductService {
 			});
 		}
 
-		// license_entitlements/license_prices RESTRICT item rows; drop plan_license first.
 		await db
 			.delete(planLicenses)
 			.where(
@@ -794,7 +783,6 @@ export class ProductService {
 		await db.delete(products).where(inArray(products.internal_id, internalIds));
 	}
 
-	/** Junction rows RESTRICT their item rows; dropping the links first frees them. */
 	static async deletePlanLicensesByOrgId({
 		db,
 		orgId,
@@ -834,7 +822,6 @@ export class ProductService {
 			.where(and(eq(products.org_id, orgId), eq(products.env, env)));
 	}
 
-	/** Deletes products in batches to avoid locking all rows at once. */
 	static async safeDeleteByOrgId({
 		db,
 		orgId,
@@ -915,7 +902,6 @@ export class ProductService {
 				customers.id,
 				customers.email,
 			);
-		// .limit(1);
 
 		return res;
 	}

@@ -17,7 +17,6 @@ describe("ISO_COUNTRY_CODES", () => {
 
 	it("covers every country in the tax id table", () => {
 		const codes = new Set<string>(ISO_COUNTRY_CODES);
-		// eu_oss_vat is an EU-wide registration, not a country a customer lives in.
 		const missing = STRIPE_TAX_ID_OPTIONS.map(
 			(option) => option.countryCode,
 		).filter((countryCode) => countryCode !== "EU" && !codes.has(countryCode));

@@ -2,7 +2,6 @@ import { context, SpanStatusCode, trace } from "@opentelemetry/api";
 
 const tracer = trace.getTracer("autumn");
 
-/** Wraps an async function in an OTel span with automatic error recording. */
 export const withSpan = <T>({
 	name,
 	attributes,

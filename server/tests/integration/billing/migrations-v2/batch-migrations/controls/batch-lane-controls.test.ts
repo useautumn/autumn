@@ -1,23 +1,3 @@
-/**
- * Run controls are CONTROLS, not lane selectors: `only` and
- * `retry_item_statuses` must keep a batch-eligible migration on the batch
- * lane.
- *
- * Contract under test:
- *   New behaviors:
- *     - only: [ids] → batch lane; ONLY those customers are claimed — others
- *       untouched with no item runs at all;
- *     - retry skipped → batch lane; skipped rows are re-claimed and
- *       re-evaluated, succeeded rows stay excluded (no double adds);
- *     - retry failed → batch lane; a failed row is re-claimed and, now
- *       processable, succeeds with its mutation applied.
- *   Side effects:
- *     - item runs transition skipped/failed → succeeded/skipped on retry.
- *
- * Pre-impl red: isBatchEligibleRun rejects only/retryItemStatuses, so every
- * lane assertion sees "per_customer".
- */
-
 import { expect, test } from "bun:test";
 import {
 	type ApiCustomerV5,
@@ -59,8 +39,6 @@ const runWordsMigration = async ({
 		retryItemStatuses?: ("failed" | "skipped")[];
 	};
 }) => {
-	// Selection stays broad (everyone on the plan is claimed); only the OP's
-	// plan_filter narrows which rows mutate — that's what makes skips happen.
 	const run = await runChunkedMigration({
 		ctx,
 		migrationClient,
@@ -72,7 +50,6 @@ const runWordsMigration = async ({
 		noBillingChanges: true,
 		controls,
 	});
-	// The contract: controls never change the lane.
 	expect(run.result?.lane).toBe("batch");
 	return run;
 };
@@ -116,7 +93,6 @@ test.concurrent(
 			planIds: [],
 		});
 
-		// The bystander was never claimed — no item run row at all.
 		const bystanderInternalId = await getInternalCustomerId({
 			ctx,
 			customerId: bystanderId,
@@ -160,7 +136,6 @@ test.concurrent(
 			],
 		});
 
-		// First run scopes to plain rows: plain succeeds, customized skips.
 		const first = await runWordsMigration({
 			ctx,
 			migrationClient: autumnV2_2,
@@ -176,8 +151,6 @@ test.concurrent(
 			status: MigrationItemRunStatus.Skipped,
 		});
 
-		// Retry skipped: still batch lane; the customized row is re-evaluated
-		// (still custom → skipped again), the plain row is NOT double-added.
 		const retry = await runWordsMigration({
 			ctx,
 			migrationClient: autumnV2_2,
@@ -228,7 +201,6 @@ test.concurrent(
 			planIds: [plan.id],
 		});
 
-		// Manufacture a failed row (as if a prior run had errored on it).
 		const internalCustomerId = await getInternalCustomerId({ ctx, customerId });
 		await ctx.db
 			.update(migrationItemRuns)
@@ -243,8 +215,6 @@ test.concurrent(
 				),
 			);
 
-		// Retry failed: batch lane re-claims the row; Words already exist (dedup)
-		// → converged → marked skipped, and crucially NOT double-added.
 		const retry = await runWordsMigration({
 			ctx,
 			migrationClient: autumnV2_2,

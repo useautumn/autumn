@@ -14,11 +14,6 @@ const schedulePhaseBoundaries = (schedule: Stripe.SubscriptionSchedule) =>
 			.map((seconds) => fromUnixTime(seconds)),
 	);
 
-/**
- * A live plan whose end date is one of the schedule's phase boundaries. An
- * end date set for any other reason (a canceling subscription, an add-on
- * with its own ends_at) is left untouched.
- */
 export const endsOnSchedulePhase = ({
 	customerProduct,
 	schedule,

@@ -4,8 +4,6 @@ import type {
 	OwnershipReadinessContext,
 } from "./types/ownershipPublisher.js";
 
-/** Sent through the plain producer like `ready`: the owner's transactional
- *  producer is busy committing the very work this record says it is draining. */
 export async function announceDraining({
 	ctx,
 	topic,

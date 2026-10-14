@@ -26,7 +26,6 @@ export const dbLineItemsToApiInvoiceItems = ({
 			plan_id: lineItem.product_id,
 			feature_id: feature?.id ?? lineItem.feature_id,
 			feature_name: feature?.name ?? null,
-			// Fixed lines store a multiplier of 1 as paid_quantity; only feature lines carry a real quantity
 			quantity: lineItem.feature_id ? lineItem.paid_quantity : null,
 			amount: lineItem.amount,
 			entities: lineItem.entities,

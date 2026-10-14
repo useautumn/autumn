@@ -6,7 +6,6 @@ import type { PostgresExecutor } from "../../types/postgresClient.js";
 type ProgressContext = { db: PostgresExecutor };
 type PartitionPosition = { topic: string; partition: number };
 
-// int8 arrives as a string, number or bigint depending on the driver path; the boundary normalises it.
 const nextOffsetSchema = z
 	.union([
 		z.bigint(),
@@ -26,9 +25,7 @@ const progressRowSchema = z.object({
 export type PartitionProgressRow = {
 	nextOffset: bigint;
 	commandNextOffset: bigint | null;
-	/** The latest ownership fence in the partition's log, or null before any owner wrote one. */
 	ownerFence: { epoch: bigint; offset: bigint } | null;
-	/** The claim the partition's current owner stamped, or null before any owner claimed it. */
 	claimToken: string | null;
 };
 

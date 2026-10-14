@@ -4,20 +4,15 @@ import type { DeductionLimitType } from "../utils/limits/deductionStateToLimitTy
 import type { DeductionContext } from "./deductionContext.js";
 import type { DeductionDelta } from "./deductionDelta.js";
 
-/** What a deduction decided: how much moved, what is left, and the row changes that carry it. */
 export type DeductionOutcome = {
 	context: DeductionContext;
 	requestedValue: number;
 	appliedValue: number;
 	remaining: number;
-	/** The shortfall was refused under "reject": nothing in deltas or changes is written. */
 	rejected: boolean;
-	/** The limit that left it short; null when the whole value was covered, or nothing funds the feature. */
 	limitType: DeductionLimitType | null;
 	deltas: DeductionDelta[];
-	/** What each windowed cap took, by limit key, in the cap's own unit; a later draw on the same context starts from it. */
 	usageWindowConsumed: Map<string, Decimal>;
-	/** What the draw moved on allocation counters, by counter key, in credits; a later draw on the same context starts from it. */
 	allocationConsumed?: Map<string, Decimal>;
 	changes: RowChange[];
 };

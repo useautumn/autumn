@@ -10,14 +10,6 @@ import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 
-/**
- * Quantity Updates with Trial Tests
- *
- * Tests for quantity updates (prepaid, allocated) when a subscription is trialing.
- * Uses `status === "trialing"` and `current_period_end` to verify trial state.
- */
-
-// 1. Update prepaid quantity while trialing
 test.concurrent(`${chalk.yellowBright("trial-qty: update prepaid quantity while trialing")}`, async () => {
 	const prepaidItem = items.prepaidMessages({ includedUsage: 0 });
 
@@ -41,18 +33,15 @@ test.concurrent(`${chalk.yellowBright("trial-qty: update prepaid quantity while 
 		],
 	});
 
-	// Verify initially trialing
 	await expectProductTrialing({
 		customerId,
 		productId: proTrial.id,
 	});
 
-	// Initial balance should be 100 (prepaid quantity)
 	const customerBefore =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	expect(customerBefore.features[TestFeature.Messages].balance).toEqual(100);
 
-	// Update prepaid quantity to 200 while trialing
 	const updateParams = {
 		customer_id: customerId,
 		product_id: proTrial.id,
@@ -63,7 +52,6 @@ test.concurrent(`${chalk.yellowBright("trial-qty: update prepaid quantity while 
 
 	expect(preview.total).toEqual(0);
 
-	// next_cycle should align with existing 14-day trial
 	expectPreviewNextCycleCorrect({
 		preview,
 		startsAt: advancedTo + ms.days(14),
@@ -73,13 +61,11 @@ test.concurrent(`${chalk.yellowBright("trial-qty: update prepaid quantity while 
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Trial should still be active
 	await expectProductTrialing({
 		customer,
 		productId: proTrial.id,
 	});
 
-	// Balance should be updated to 200
 	expect(customer.features[TestFeature.Messages].balance).toEqual(200);
 
 	await expectStripeSubscriptionCorrect({

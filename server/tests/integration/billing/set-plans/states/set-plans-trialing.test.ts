@@ -1,8 +1,3 @@
-/**
- * set_plans on a trialing subscription keeps the trial in Stripe and Autumn. `free_trial: null` ends it in both by recreating
- * the subscription on the old trial end, billing nothing until then (the trial-end-anchor tests cover each proration).
- */
-
 import { expect, test } from "bun:test";
 import { type ApiCustomerV5, secondsToMs } from "@autumn/shared";
 import {

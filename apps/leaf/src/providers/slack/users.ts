@@ -69,14 +69,11 @@ const EMAIL_CACHE_TTL_MS = ms.minutes(10);
 const EMAIL_NEGATIVE_CACHE_TTL_MS = ms.minutes(1);
 const EMAIL_CACHE_MAX_ENTRIES = 10_000;
 
-// null is a legitimate cached value (stable "no email"), so wrap it —
-// lru-cache treats undefined/absent as a miss
 const emailCache = new LRUCache<string, { email: string | null }>({
 	max: EMAIL_CACHE_MAX_ENTRIES,
 	ttl: EMAIL_CACHE_TTL_MS,
 });
 
-/** Caches hits and stable misses (bot/deleted/no email); transient failures are not cached. */
 export const fetchSlackUserEmailCached = async ({
 	botToken,
 	installationId,
@@ -105,8 +102,6 @@ export const fetchSlackUserEmailCached = async ({
 	return lookup.email;
 };
 
-/** The Slack team a user belongs to. For an external (Slack Connect) user
- * this is their own workspace, which the installing workspace cannot set. */
 export const fetchSlackUserHomeTeamId = async ({
 	botToken,
 	slackUserId,

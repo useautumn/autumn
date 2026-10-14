@@ -1,9 +1,5 @@
 import type { ApiPlanV1 } from "@autumn/shared";
 
-/**
- * Which `?version` the editor should land on after a save. A minted row is not
- * active unless it was promoted, so an unpinned URL would resolve to the old row.
- */
 export const savedVersionPin = ({
 	plans,
 	planId,

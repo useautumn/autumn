@@ -6,7 +6,6 @@ import { shouldReportJobFailure } from "./shouldReportJobFailure.js";
 import type { RetryBudget } from "./types/retryBudget.js";
 
 export class JobTimeoutError extends Error {
-	/** Every timeout shares this file's stack, so the job name is what tells issues apart. */
 	readonly fingerprint: string[];
 
 	constructor({ jobName, timeoutMs }: { jobName: string; timeoutMs: number }) {
@@ -16,7 +15,6 @@ export class JobTimeoutError extends Error {
 	}
 }
 
-/** A stalled job is left un-ACKed for SQS to redeliver, so like any failure it is reported once SQS gives up. */
 export const reportJobTimeout = ({
 	job,
 	message,
@@ -49,7 +47,6 @@ export const reportJobTimeout = ({
 	};
 
 	if (shouldReportJobFailure({ willRetry: true, receiveCount, retryBudget })) {
-		// Not "won't be retried": a queue without a DLQ, or an unread policy, still redelivers.
 		jobLogger.error(
 			`${job.name} timed out on delivery ${receiveCount}`,
 			fields,

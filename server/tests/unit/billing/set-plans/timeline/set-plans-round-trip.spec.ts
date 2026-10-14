@@ -1,8 +1,3 @@
-/**
- * Round trip through the real billing plan: execute it on the saved rows in
- * memory, re-read the timeline, and re-sending the same request must change nothing.
- */
-
 import { describe, expect, test } from "bun:test";
 import {
 	type CreateScheduleBillingContext,
@@ -46,7 +41,6 @@ const withCustomer = ({
 	})),
 });
 
-/** Executes the request in memory, then reads the result back as a fresh request would. */
 const executeAndReread = ({
 	billingContext,
 	undeclaredPlans,
@@ -63,7 +57,6 @@ const executeAndReread = ({
 		fullCustomer: billingContext.fullCustomer,
 		autumnBillingPlan,
 	});
-	// Stripe execution links each started row to the subscription that bills it.
 	const executed = {
 		...applied,
 		customer_products: applied.customer_products.map((customerProduct) =>

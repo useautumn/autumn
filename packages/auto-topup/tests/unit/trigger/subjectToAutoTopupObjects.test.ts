@@ -1,16 +1,3 @@
-/**
- * Auto-topup price selection across plans.
- *
- * A customer-level config has no source plan, so it ranks the candidates:
- * the subscription plan the customer is on outranks a standalone top-up
- * product, and recency only breaks ties within a rank. Without the ranking a
- * top-up bought after the plan silently becomes the price source.
- *
- * Note `is_add_on` alone cannot drive this: a standalone top-up product is
- * commonly NOT flagged as an add-on, so the rank keys off whether the product
- * carries a recurring price, with the add-on flag as the secondary key.
- */
-
 import { describe, expect, test } from "bun:test";
 import {
 	BillingInterval,
@@ -52,7 +39,6 @@ const oneOffPrepaidPrice = ({
 	},
 });
 
-/** The monthly base price that marks a product as a subscription plan. */
 const recurringPrice = ({
 	priceId,
 	customerProductId,
@@ -73,7 +59,6 @@ const recurringPrice = ({
 	},
 });
 
-/** A customer_product attached at `createdAt` with a one-off prepaid price. */
 const planWithOneOff = ({
 	id,
 	createdAt,
@@ -86,7 +71,6 @@ const planWithOneOff = ({
 	createdAt: number;
 	amount: number;
 	tierBehavior?: TierBehavior;
-	/** Carries a monthly base price, i.e. a subscription plan. */
 	recurring?: boolean;
 	isAddOn?: boolean;
 }) => {
@@ -177,7 +161,6 @@ describe("subjectToAutoTopupObjects — most-recently-attached price wins", () =
 			now: NOW,
 			fullSubject: buildSubject({
 				plans: [
-					// Pricey (most recent) listed FIRST in the array.
 					{ id: "cp_pricey", createdAt: NOW - 1000, amount: 10 },
 					{ id: "cp_cheap", createdAt: NOW - 5000, amount: 5 },
 				],

@@ -4,10 +4,6 @@ const AWS_QUEUE_URL_RE =
 	/^https:\/\/sqs\.([a-z0-9-]+)\.amazonaws\.com\/(\d+)\/(.+)$/;
 const LOCAL_QUEUE_URL_RE = /^https?:\/\/[^/]+\/(\d+)\/(.+)$/;
 
-/**
- * Turns a queue URL into the ARN EventBridge Scheduler targets. A local emulator
- * URL carries no region, so it takes the same default the clients are built with.
- */
 export const deriveSqsQueueArn = ({
 	queueUrl,
 }: {

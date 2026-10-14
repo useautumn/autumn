@@ -18,15 +18,12 @@ export const cusEntToPrepaidQuantity = ({
 	sumAcrossEntities?: boolean;
 	useUpcomingQuantity?: boolean;
 }) => {
-	// 2. If cus ent is not prepaid, skip
 	const cusPrice = cusEntToCusPrice({ cusEnt });
 
 	if (!cusPrice || !isPrepaidPrice(cusPrice.price)) return 0;
 
 	if (!cusEnt.customer_product) return 0;
 
-	// Tie-break: a losing prepaid price (one-off alongside a recurring prepaid
-	// of the same feature) never owns the feature-keyed quantity.
 	const siblingPrices = cusEnt.customer_product.customer_prices.map(
 		(customerPrice) => customerPrice.price,
 	);
@@ -38,7 +35,6 @@ export const cusEntToPrepaidQuantity = ({
 	)
 		return 0;
 
-	// 3. Get quantity
 	const options = cusProductToFeatureOptions({
 		cusProduct: cusEnt.customer_product,
 		feature: cusEnt.entitlement.feature,

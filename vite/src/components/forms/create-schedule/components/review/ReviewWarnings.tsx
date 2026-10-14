@@ -2,7 +2,6 @@ import type { SetPlansPreviewWarning, SetPlansTextPart } from "@autumn/shared";
 import { Alert, StatusChipIcon } from "@autumn/ui";
 import { SetPlansTextLine } from "@/components/forms/shared/errors/SetPlansTextLine";
 
-/** Changes that remove or lose something, charge now, or move when billing starts get a banner; the review sections already show the rest. */
 const BANNER_WARNING_TYPES = new Set<SetPlansPreviewWarning["type"]>([
 	"subscription_replaced",
 	"open_invoice_not_collected",
@@ -25,7 +24,6 @@ type BannerLine = {
 	count: number;
 };
 
-/** Identical messages (e.g. one per entity) collapse into a single counted line. */
 const toBannerLines = (warnings: SetPlansPreviewWarning[]): BannerLine[] => {
 	const linesByMessage = new Map<string, BannerLine>();
 	for (const { message, parts } of warnings) {

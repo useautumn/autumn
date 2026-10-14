@@ -8,7 +8,6 @@ export type PatchedCustomerProductUpdates = NonNullable<
 	NonNullable<AutumnBillingPlan["updateCustomerProducts"]>[number]["updates"]
 >;
 
-/** Starts an explicit trial on a kept row, or ends its trial when the request removes it. */
 export const applyTrialContextToPatchedCustomerProduct = ({
 	customerProduct,
 	trialContext,

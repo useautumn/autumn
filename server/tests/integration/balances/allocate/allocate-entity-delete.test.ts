@@ -1,10 +1,3 @@
-/**
- * Deleting an allocated entity releases its share in the same request.
- *
- * Red (before):  the deleted entity's 5k stays allocated; unallocated stays 0.
- * Green (after): only B's 5k is allocated; A's unused share becomes unallocated.
- */
-
 import { test } from "bun:test";
 import { ApiVersion, ResetInterval } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
@@ -67,7 +60,6 @@ test.concurrent(
 			value: 2000,
 		});
 
-		// Delete drops the cache, so let the track reach Postgres first.
 		await waitForSharedBalanceInDb({ ctx, customerId, remainingBalance: 8000 });
 		await autumnV2_3.entities.delete(customerId, a);
 
@@ -79,7 +71,6 @@ test.concurrent(
 	},
 );
 
-/** A=5k, B=5k on 10k; A uses 2k, then A is deleted: 3k of A's share becomes unallocated. */
 const deleteUsedShare = async ({ customerId }: { customerId: string }) => {
 	const { ctx, entityIds } = await setupSharedPool({ customerId });
 	const [a, b, c] = entityIds;

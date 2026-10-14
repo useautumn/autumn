@@ -2,7 +2,6 @@ import { chatApprovals } from "@autumn/shared";
 import { and, eq } from "drizzle-orm";
 import type { ChatDb } from "../../../lib/db.js";
 
-/** Keeps pending cards attached when Eve re-homes their conversation run. */
 export const moveChatApprovalsToRun = async ({
 	db,
 	fromRunId,

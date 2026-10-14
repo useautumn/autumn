@@ -40,7 +40,6 @@ const compose = ({
 		predicates,
 	});
 
-/** The lateral walk section (between CROSS JOIN LATERAL and `) walk`). */
 const walkSection = (sql: string) => {
 	const normalized = normalize(sql);
 	const start = normalized.indexOf("CROSS JOIN LATERAL");
@@ -66,7 +65,6 @@ describe("composeCustomerPage", () => {
 		});
 		const walk = walkSection(page.sql);
 
-		// Everything filters INSIDE the walk, so LIMIT counts matches.
 		expect(walk).toContain('cp.internal_customer_id COLLATE "C" < ?');
 		expect(walk).toContain("mir.item_id = cp.internal_customer_id");
 		expect(walk).toContain("LIMIT ?");
@@ -110,8 +108,6 @@ describe("composeCustomerPage", () => {
 		expect(walk).toContain(
 			"JOIN customers c ON c.internal_id = cp.internal_customer_id",
 		);
-		// The full quantifier re-proof (EXISTS over the entitlement spine) sits
-		// inside the walk, BEFORE its ORDER BY/LIMIT — pages stay exact.
 		expect(walk).toContain("customer_entitlements ce");
 		const limitIndex = walk.indexOf("LIMIT ?");
 		const residualIndex = walk.indexOf("customer_entitlements ce");
@@ -285,15 +281,12 @@ describe("composeCustomerPage", () => {
 		});
 		const normalized = normalize(page.sql);
 
-		// Branch A: the same bounded filter walk the page query uses.
 		expect(normalized).toContain("CROSS JOIN LATERAL");
-		// Branch B: bounded mir walk in customer order, cursor inside.
 		expect(normalized).toContain(
 			'DISTINCT ON (mir.item_id COLLATE "C") mir.item_id',
 		);
 		expect(normalized).toContain('mir.item_id COLLATE "C" < ?');
 		expect(normalized).toContain("UNION");
-		// The union is re-limited, then joined for payload columns.
 		expect(normalized).toContain(
 			') u ORDER BY internal_customer_id COLLATE "C" DESC LIMIT ?',
 		);

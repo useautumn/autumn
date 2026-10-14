@@ -12,11 +12,6 @@ const sleepUntil = (epochMs: number): Promise<void> =>
 		setTimeout(resolve, Math.max(epochMs - Date.now(), 0)),
 	);
 
-/**
- * Seeds a customer with every expired-balance shape the dashboard can render,
- * so the greyed-out rows, their sort order and their disabled actions can be
- * checked by hand. Left behind on purpose.
- */
 test(
 	`${chalk.yellowBright("scenario: expired balances for dashboard QA")}`,
 	async () => {
@@ -37,8 +32,6 @@ test(
 			],
 		});
 
-		// Attaching live second replaces churned (same main group), so churned's
-		// entitlements become expired-plan balances.
 		const { ctx } = await initScenario({
 			customerId,
 			setup: [
@@ -58,7 +51,6 @@ test(
 
 		const expiresAt = Date.now() + 3_000;
 
-		// Two loose balances that will expire, on different features.
 		await autumnV1.balances.create({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
@@ -72,7 +64,6 @@ test(
 			expires_at: expiresAt,
 		});
 
-		// Live loose balances alongside them, so the table mixes both states.
 		await autumnV1.balances.create({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
@@ -84,7 +75,6 @@ test(
 			granted_balance: 250,
 		});
 
-		// Usage on the live plan, so active rows show a partially filled bar.
 		await autumnV1.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,

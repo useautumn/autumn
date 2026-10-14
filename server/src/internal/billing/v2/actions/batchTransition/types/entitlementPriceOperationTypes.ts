@@ -26,8 +26,6 @@ export type ReplaceEntitlementPriceOperation = {
 	fromEntitlementPrice: EntitlementPrice;
 	toEntitlementPrice: EntitlementPrice;
 	customerEntitlementPatch: CustomerEntitlementPatch;
-	/** Present when both sides are pooled: source balance stays 0; contributions
-	 * and the shared pool either carry by Δ or reset to the incoming grant. */
 	pooledContributionPatch?: PooledContributionPatch;
 };
 
@@ -46,7 +44,6 @@ export type PooledAddIdentity = {
 export type PooledAddSpec = {
 	contributionAmount: number;
 	identity: PooledAddIdentity;
-	/** Resolved at execution from the pool billing created for the link. */
 	pooledBalanceId?: string;
 };
 
@@ -55,7 +52,6 @@ export type AddEntitlementPriceOperation = {
 	entitlementPrice: EntitlementPrice;
 	existingEntitlementIds: string[];
 	customerEntitlement: InitCustomerEntitlementFields;
-	/** Present when the added entitlement is pooled: sources stay at 0. */
 	pooledAdd?: PooledAddSpec;
 };
 

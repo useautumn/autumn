@@ -147,7 +147,6 @@ const queryStatesConfig = {
 	balanceOp: parseAsStringLiteral(BalanceFilterOpSchema.options).withDefault(
 		">",
 	),
-	// Raw string in the URL; coerced to a number only when the payload is built.
 	balanceValue: parseAsString.withDefault(""),
 	balanceBasis: parseAsStringLiteral(
 		FeatureBalanceSortBasisSchema.options,
@@ -165,8 +164,6 @@ const BALANCE_VALUE_MULTIPLIERS: Record<string, number> = {
 	bn: 1e9,
 };
 
-/** Accepts comma-grouped digits and k/M/B/bn shorthand ("10,000", "1.5M");
- * null when the text isn't a number. */
 export function parseBalanceValueInput(raw: string): number | null {
 	const match = /^(-?[\d,]*\.?\d+)\s*(bn|k|m|b)?$/i.exec(raw.trim());
 	if (!match) return null;
@@ -183,15 +180,11 @@ export function hasActiveBalanceFilter(queryStates: QueryStates[0]) {
 	);
 }
 
-/** Query-key contribution of the balance filter: null while the filter is
- * incomplete so editing op/feature/value doesn't refetch identical results. */
 export function balanceFilterQueryKey(queryStates: QueryStates[0]) {
 	if (!hasActiveBalanceFilter(queryStates)) return null;
 	return `${queryStates.balanceFeature}:${queryStates.balanceBasis}${queryStates.balanceOp}${parseBalanceValueInput(queryStates.balanceValue)}`;
 }
 
-/** Query-key contribution of the feature sort: null unless a feature sort is
- * active so basis edits without a sorted feature don't refetch. */
 export function featureSortQueryKey(queryStates: QueryStates[0]) {
 	if (
 		queryStates.sortBy !== "feature_balance" ||
@@ -404,14 +397,6 @@ export function CustomerFiltersProvider({ children }: { children: ReactNode }) {
 	);
 }
 
-/**
- * Inside CustomerFiltersProvider (customers list page): returns the provider's
- * managed state with initialization gating, localStorage restore, and cursor stack.
- *
- * Outside the provider (customer detail pages, layout, etc.): falls back to
- * reading URL query params directly via nuqs, always treated as initialized,
- * with an inert cursor stack.
- */
 export function useCustomerFilters(): CustomerFiltersContextValue {
 	const context = useContext(CustomerFiltersContext);
 	const [queryStates, setQueryStates] = useQueryStates(queryStatesConfig, {

@@ -6,7 +6,6 @@ import {
 } from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 
-/** Insert a referral code. Throws on failure. */
 export const insertReferralCode = async ({
 	db,
 	data,

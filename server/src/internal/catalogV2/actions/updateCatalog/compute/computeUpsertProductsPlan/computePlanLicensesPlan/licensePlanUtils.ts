@@ -11,7 +11,6 @@ import type { UpsertProductPlan } from "@/internal/catalogV2/actions/updateCatal
 import { findFullProductByInternalId } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/findFullProductByInternalId";
 import { fullProductForPlanParams } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/fullProductForPlanParams";
 
-/** Current plan_license links on this row. Minted versions fall back to the clone source. */
 export const upsertProductPlanToLicenses = ({
 	upsert,
 }: {
@@ -21,7 +20,6 @@ export const upsertProductPlanToLicenses = ({
 	upsert.row.baseFullProduct?.licenses ??
 	[];
 
-/** A link's license plan id after this batch's renames — the same internal row keeps one link. */
 export const projectedLicensePlanId = ({
 	link,
 	productStatesContext,
@@ -34,7 +32,6 @@ export const projectedLicensePlanId = ({
 		productStatesContext,
 	})?.id ?? link.product.id;
 
-/** Child rows this parent may still be linked to — current, mint source, or demoted. */
 const childSourceInternalIds = ({
 	child,
 }: {
@@ -68,7 +65,6 @@ const uniqueReverseLinks = ({
 	});
 };
 
-/** Incoming links on every live version row of this child plan. */
 export const reverseLinksOnChildPlan = ({
 	planId,
 	productStatesContext,
@@ -80,7 +76,6 @@ export const reverseLinksOnChildPlan = ({
 		products: productStatesContext.versionsByPlanId[planId] ?? [],
 	});
 
-/** Incoming links on one child version row. */
 export const reverseLinksOnChildProduct = ({
 	planId,
 	childInternalId,
@@ -96,7 +91,6 @@ export const reverseLinksOnChildProduct = ({
 	return uniqueReverseLinks({ products: [childRow] });
 };
 
-/** Incoming links on the planned child row, plus the demoted pointer (promote). */
 export const reverseLinksForChild = ({
 	upsert,
 	productStatesContext,
@@ -135,8 +129,6 @@ export const parentLicenseLinkForChild = ({
 	child: UpsertProductPlan;
 }): FullPlanLicense | undefined => {
 	const licenses = upsertProductPlanToLicenses({ upsert: parent });
-	// Adopt mint clones the old row's link; pair by child plan so follow can
-	// re-anchor onto the child's active row in this batch.
 	if (parent.row.source === "license_adopt") {
 		return licenses.find((link) => link.product.id === child.row.planId);
 	}
@@ -149,7 +141,6 @@ export const parentLicenseLinkForChild = ({
 	);
 };
 
-/** True when the catalog link still points at a different child row than next. */
 export const needsRepoint = ({
 	currentPlanLicense,
 	child,
@@ -160,7 +151,6 @@ export const needsRepoint = ({
 	currentPlanLicense.license_internal_product_id !==
 	child.row.nextFullProduct.internal_id;
 
-/** True when this parent row does not yet own the catalog link (a version mint). */
 export const needsNewParentLink = ({
 	currentPlanLicense,
 	parent,
@@ -171,7 +161,6 @@ export const needsNewParentLink = ({
 	currentPlanLicense.parent_internal_product_id !==
 	parent.row.nextFullProduct.internal_id;
 
-/** Pin-only: the target names exactly this parent row. Adopt mints match their clone source. */
 const propagateTargetMatchesParent = ({
 	target,
 	parent,
@@ -213,7 +202,6 @@ export const childPropagatesToParent = ({
 		}),
 	);
 
-/** True when this row takes the unique active pointer (mint+active or existing promote). */
 export const movesActivePointer = ({
 	upsert,
 }: {
@@ -225,7 +213,6 @@ export const movesActivePointer = ({
 	return nextIsActive && (mintedNewRow || promotedExisting);
 };
 
-/** Pin-lane trigger: in-place item writes only. Mints/promotes leave anchored links alone. */
 export const childEditsItemsInPlace = ({
 	child,
 }: {
@@ -236,7 +223,6 @@ export const childEditsItemsInPlace = ({
 	return childHasItemWrites && !mintedNewRow;
 };
 
-/** Propagate-lane trigger: in-place item writes, or the child taking the pointer. */
 export const childTriggersLicenseRewrite = ({
 	child,
 }: {
@@ -244,7 +230,6 @@ export const childTriggersLicenseRewrite = ({
 }): boolean =>
 	childEditsItemsInPlace({ child }) || movesActivePointer({ upsert: child });
 
-/** In-place follow only reaches the row this link already points at. Mint/promote still move it. */
 export const propagateReachesLink = ({
 	currentPlanLicense,
 	child,
@@ -278,7 +263,6 @@ export const shouldPropagate = ({
 	return true;
 };
 
-/** Upserts that an in-batch parent currently offers as a license. */
 export const upsertProductPlansToChildPlans = ({
 	upsertProducts,
 }: {

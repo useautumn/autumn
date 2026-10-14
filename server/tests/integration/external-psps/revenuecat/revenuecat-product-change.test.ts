@@ -1,8 +1,3 @@
-/**
- * RevenueCat PRODUCT_CHANGE: a Google Play replacement ends the old subscription immediately,
- * even when the new plan is bought from another app user. The old holder must lose the plan.
- */
-
 import { expect, test } from "bun:test";
 import chalk from "chalk";
 import {

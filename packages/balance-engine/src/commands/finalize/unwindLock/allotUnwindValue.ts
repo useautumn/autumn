@@ -2,13 +2,11 @@ import { Decimal } from "decimal.js";
 import type { DeductionDelta } from "../../../deduction/types/deductionDelta.js";
 import type { WorkerFullSubject } from "../../../models/subject/workerFullSubject.js";
 
-/** The ids of every balance row the subject still holds; a lock's delta on anything else has nothing to land on. */
 const heldRowIdsOf = ({
 	fullSubject,
 }: {
 	fullSubject: WorkerFullSubject;
 }): Set<string> => {
-	// Unfiltered on purpose: a row that has expired since the lock still takes its refund.
 	const customerEntitlements = [
 		...fullSubject.customer_products.flatMap(
 			(customerProduct) => customerProduct.customer_entitlements,
@@ -24,7 +22,6 @@ const heldRowIdsOf = ({
 	);
 };
 
-/** Spreads `unwindValue` over the lock's deltas, newest first: how much of each to give back, and what no held row can take. */
 export const allotUnwindValue = ({
 	fullSubject,
 	lockDeltas,

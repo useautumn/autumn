@@ -132,7 +132,6 @@ describe("awaitReadyAnnouncement from the slot gate", () => {
 		const waiting = gate.awaitActive({ signal: new AbortController().signal });
 		expect(await settled(waiting)).toBe(false);
 
-		// A change that still names the other fleet is not a flip.
 		activeSlot._setRuntimeConfigForTesting({
 			...record({ flightcontrolBlueArn: theirs }),
 			reason: "still blue",
@@ -164,7 +163,6 @@ describe("awaitReadyAnnouncement from the slot gate", () => {
 		await expect(gate.awaitActive({ signal: already.signal })).rejects.toBe(
 			reason,
 		);
-		// Nothing left listening: a later flip wakes nobody and throws nowhere.
 		activeSlot._setRuntimeConfigForTesting(
 			record({ flightcontrolBlueArn: ours }),
 		);

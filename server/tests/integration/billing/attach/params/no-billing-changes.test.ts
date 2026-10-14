@@ -24,10 +24,6 @@ const withoutStripe = (ctx: TestContext): TestContext => ({
 	},
 });
 
-/**
- * Regression: a free plan attach with no_billing_changes should not require
- * the organization to have a Stripe account connected.
- */
 test.concurrent(
 	`${chalk.yellowBright("no_billing_changes: attaches a free plan without a Stripe connection")}`,
 	async () => {
@@ -171,10 +167,6 @@ test.concurrent(`${chalk.yellowBright("no_billing_changes: attach with no_billin
 	});
 });
 
-/**
- * Regression: a no-write transition after disconnecting Stripe must retain the
- * existing subscription and schedule linkage stored in Autumn.
- */
 test.concurrent(`${chalk.yellowBright("no_billing_changes: carries billing linkage forward after Stripe disconnect")}`, async () => {
 	const customerId = "no-billing-changes-paid-current";
 

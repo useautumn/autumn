@@ -101,7 +101,6 @@ describe("chooseFilesPerWorker", () => {
 		});
 		expect(choice.packable.has(heavy)).toBe(false);
 		expect(choice.packable.has(orgMutating)).toBe(false);
-		// overhead 1,200 MiB + k × 600 ≤ 0.65 × 4,096 → k = 2
 		expect(choice.filesPerWorker).toBe(2);
 		expect(choice.binding).toBe("memoryMib");
 	});
@@ -121,7 +120,6 @@ describe("chooseFilesPerWorker", () => {
 });
 
 test("real worker stats: vCPU-seconds become Modal cores and the idle stack is overhead, not load", () => {
-	// Shapes from run_fd3c4b2b8bcb4ac1: ~2.4 vCPU busy, 3.4-3.9 GiB worker peak, ~540 MiB test RSS.
 	const files = ids("real", 40);
 	const choice = chooseFilesPerWorker({
 		files,
@@ -148,7 +146,6 @@ test("real worker stats: vCPU-seconds become Modal cores and the idle stack is o
 
 describe("sizeShardWorkers", () => {
 	test("fewest workers whose longest-first makespan fits the target, ×1.3 for safety", () => {
-		// 1×100 s + 10×10 s: two slots finish in 100 s, one slot needs 200 s; ceil(2 × 1.3) = 3.
 		const durations = [100_000, ...Array(10).fill(10_000)];
 		expect(
 			sizeShardWorkers({
@@ -252,7 +249,6 @@ describe("planRunSizing", () => {
 			targetWallMs: 315_000,
 		});
 		expect(plan.swarm.soloFiles).toEqual([orgMutating]);
-		// 39 files: one 300 s + 38 × 30 s fit two 4-slot workers inside 315 s; ×1.3 → 3.
 		expect(plan.swarm.shardWorkers).toEqual({ main: 3, solo: 1, svix: 2 });
 		expect(plan.sizing.workers).toBe(6);
 		expect(plan.sizing.predictedWallMs).toBeLessThanOrEqual(315_000);

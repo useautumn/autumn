@@ -4,7 +4,6 @@ import { RELEVANT_STATUSES } from "../src/internal/customers/cusProducts/CusProd
 import { getPaginatedFullCusQuery } from "../src/internal/customers/getFullCusQuery.js";
 import { initDrizzle, prodTestOrgId } from "./experimentEnv";
 
-// Run with `bun run experiments/explainListCustomersV2.ts`
 const ORG_ID = prodTestOrgId;
 const ENV = AppEnv.Live;
 const SEARCH = "jy@us";

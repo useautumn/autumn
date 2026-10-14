@@ -17,7 +17,6 @@ type EvalMetadata = {
 const experimentName = "attach-boolean-feature-removed";
 const customPrice = 2000;
 
-// approval_chains is a boolean on Scale, so withholding it is a removal.
 const setup = withCustomers({
 	setup: orgSetups.knowledgePlatform(),
 	customers: ({ customers }) => ({
@@ -69,7 +68,6 @@ initEval<EvalMetadata>({
 					body: expectedAttachRequest,
 					write: "attach",
 				}),
-				// Both wrong shapes read as "removed" but provision the opposite.
 				api.bodyExcludes({
 					fields: ["feature_quantities", "customize.add_items"],
 					toolName: "previewAttach",

@@ -8,8 +8,6 @@ import {
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { initFullCustomerProduct } from "./initFullCustomerProduct";
 
-/** An entity-scoped assignment built from the license's effective product
- * (customize already hydrated onto it), anchored to its pool by link id. */
 export const initFullCustomerProductFromCustomerLicense = ({
 	ctx,
 	fullCustomer,
@@ -38,7 +36,6 @@ export const initFullCustomerProductFromCustomerLicense = ({
 		initOptions: {
 			internalEntityId,
 			status: CusProductStatus.Active,
-			// Anchors the assignment to its pool: seats key by link, never repoint.
 			customerLicenseLinkId: customerLicense.link_id,
 		},
 	});

@@ -16,8 +16,6 @@ export const forceJsonBodyField = async (
 ) => {
 	const body = await c.req.json().catch(() => ({}) as Record<string, unknown>);
 	const forced = JSON.stringify({ ...body, [field]: value });
-	// Replace the whole cache, not just `.text`: drops any parsed/json
-	// representation so every downstream reader re-derives from the forced body.
 	(c.req as { bodyCache: Record<string, unknown> }).bodyCache = {
 		text: Promise.resolve(forced),
 	};

@@ -1,5 +1,3 @@
-/** A committed Autumn plan rolls back without touching Stripe. */
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV5, AttachParamsV1 } from "@autumn/shared";
 import { expectCustomerProducts } from "@tests/integration/billing/utils/expectCustomerProductCorrect";

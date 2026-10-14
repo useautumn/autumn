@@ -16,7 +16,6 @@ const METADATA_ATTEMPTS = 5;
 const METADATA_FIRST_BACKOFF_MS = 500;
 const METADATA_TIMEOUT_MS = 2_000;
 
-/** Fargate reports Cluster as an ARN, ECS-EC2 as a bare name; the task ARN carries region and account either way. */
 function serviceArnOf({
 	cluster,
 	taskArn,
@@ -38,7 +37,6 @@ function serviceArnOf({
 	return `arn:aws:ecs:${region}:${accountId}:service/${clusterName}/${serviceName}`;
 }
 
-/** Throws on a transport failure or a non-2xx, which are retried; a body without a cluster is final. */
 async function fetchTaskMetadata({
 	ctx,
 	metadataUri,
@@ -54,12 +52,6 @@ async function fetchTaskMetadata({
 	return (await response.json()) as TaskMetadata;
 }
 
-/**
- * Reads the ECS task metadata once at boot, retrying a slow or absent endpoint for ~10s,
- * then refuses to start: the service ARN names this task's consumer group and its fleet,
- * so a task without it would join the base group with an open gate and take partitions
- * from its healthy peers. Off ECS (no metadata URI) there is no fleet, and the gate fails open.
- */
 export async function resolveTaskIdentity({
 	ctx,
 	env,

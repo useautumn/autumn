@@ -7,12 +7,6 @@ import {
 import { customerProductToStripeItemSpecs } from "@server/internal/billing/v2/providers/stripe/utils/subscriptionItems/customerProductToStripeItemSpecs";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 
-/**
- * Converts customer products to recurring stripe item specs.
- * Deduplicates stored-price items by stripePriceId (accumulating quantities).
- * Entity-scoped inline items are never deduplicated — each entity gets its own item.
- * Duplicate add-on products use inline prices so each instance gets independent tier calculations.
- */
 export const customerProductsToRecurringStripeItemSpecs = ({
 	ctx,
 	billingContext,
@@ -39,7 +33,6 @@ export const customerProductsToRecurringStripeItemSpecs = ({
 		});
 
 		for (const item of recurringItems) {
-			// Entity-scoped inline items are never deduplicated
 			if (item.stripeInlinePrice) {
 				inlineSpecs.push(item);
 				continue;
@@ -49,11 +42,8 @@ export const customerProductsToRecurringStripeItemSpecs = ({
 			const existing = storedPriceSpecs.get(priceId);
 
 			if (existing) {
-				// Metered prices: quantity is undefined, keep undefined
 				if (item.quantity === undefined && existing.quantity === undefined) {
-					// Both metered — keep as-is
 				} else {
-					// Licensed prices — accumulate quantity
 					existing.quantity = (existing.quantity ?? 0) + (item.quantity ?? 0);
 				}
 			} else {

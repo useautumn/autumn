@@ -84,7 +84,6 @@ test.concurrent(
 			],
 		});
 
-		// One schedule per customer; entity scope lives on its customer products.
 		const dbSchedules = await ctx.db
 			.select()
 			.from(schedules)
@@ -353,8 +352,6 @@ test.concurrent(
 			],
 		});
 
-		// Stay on the frozen test clock: wall-clock Date.now() is over a minute
-		// ahead by now, which would schedule the immediate phase instead.
 		const secondResponse = await autumnV1.billing.createSchedule({
 			customer_id: customerId,
 			phases: [
@@ -423,7 +420,6 @@ test.concurrent(
 			],
 		});
 
-		// currentB is unlisted, so it is retained until secondFutureB claims group-b.
 		expect(
 			productRowsAfterReplace
 				.filter((productRow) => productRow.status === CusProductStatus.Active)

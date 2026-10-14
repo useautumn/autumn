@@ -27,7 +27,6 @@ export const DISABLED_FREE_TRIAL_FORM_VALUES: FreeTrialFormValues = {
 	trialCardRequired: true,
 };
 
-/** A row switched on with an existing trial's length, unit and card requirement. */
 export const freeTrialToFormValues = ({
 	freeTrial,
 }: {
@@ -63,7 +62,6 @@ export const isSameFreeTrialFormValues = ({
 	left.trialDuration === right.trialDuration &&
 	left.trialCardRequired === right.trialCardRequired;
 
-/** Switching on keeps a typed length, else seeds the catalog trial or the default length. */
 export const toggledFreeTrialFormValues = ({
 	enabled,
 	trialLength,
@@ -87,7 +85,6 @@ export const toggledFreeTrialFormValues = ({
 	};
 };
 
-/** The `free_trial` param shape shared by multi-plan billing requests. */
 export const freeTrialFormValuesToParams = ({
 	trialEnabled,
 	trialLength,

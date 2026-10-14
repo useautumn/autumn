@@ -24,7 +24,6 @@ const toExportResponse = async ({
 		return customerExportToResponse({ customerExport });
 	}
 
-	// Queued runs get a token before progress exists so realtime is ready at start.
 	const [progress, publicAccessToken] = await Promise.all([
 		customerExport.status === CustomerExportStatus.Running
 			? getCustomerExportProgress({ triggerRunId, logger })

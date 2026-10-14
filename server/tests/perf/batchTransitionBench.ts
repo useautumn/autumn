@@ -1,6 +1,3 @@
-/** Benchmarks the batch-transition core against an isolated dev-DB schema.
- * Run under `NODE_ENV=development infisical run --env=dev --recursive -- bun`. */
-
 import { mock } from "bun:test";
 import {
 	AllowanceType,

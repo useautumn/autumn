@@ -14,8 +14,6 @@ const flat = (value: unknown) =>
 		.replaceAll("\n", " ⏎ ")
 		.slice(0, 300);
 
-/** Failure metadata worth reading in the terminal (full copy is in
- * Braintrust): parse and validation errors and the closest-plan field diff. */
 const failureDetail = (entry: AxScore): string => {
 	if (entry.score !== 0 || !entry.metadata) return "";
 	const lines: string[] = [];
@@ -37,12 +35,6 @@ const failureDetail = (entry: AxScore): string => {
 	return lines.length > 0 ? chalk.dim(`\n${lines.join("\n")}`) : "";
 };
 
-/**
- * Collects scores as Braintrust computes them and prints one scorecard per
- * arm when it completes, plus a delta footer when every arm is in. In
- * compact mode (parallel multi-file runs) the scorecard is one verdict line
- * naming the case, expanding only the failures.
- */
 export const renderScorecard = ({
 	arms,
 	expectationCount,
@@ -62,7 +54,6 @@ export const renderScorecard = ({
 		byArm.set(arm, scores);
 		if (scores.length !== expectationCount) return;
 
-		// One expectation per line: failures in red so they pop, passes dimmed.
 		const passedCount = scores.filter((entry) => entry.score === 1).length;
 		const gradedCount = scores.filter((entry) => entry.score !== null).length;
 		if (compact) {

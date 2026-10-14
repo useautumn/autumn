@@ -44,7 +44,6 @@ const chunksOf = <Item>({
 	return chunks;
 };
 
-/** Each waiting entity gets its own rows at the batch's read time, or not-found; what to do with them is the caller's. */
 const settleFromBatch = ({
 	waiting,
 	baseline,
@@ -61,7 +60,6 @@ const settleFromBatch = ({
 	else waiting.settle.resolve({ baseline, baselineAt: occurredAt });
 };
 
-/** The batch's rows read whole, by entity id; a read that fails rejects every entity waiting on it. */
 const readEntityRows = async ({
 	scope,
 	batch,
@@ -92,10 +90,6 @@ const readEntityRows = async ({
 	);
 };
 
-/**
- * Two statements at most per batch: the probe for every entity that may take a row, then the rows for the rest. A served
- * entity settles from its row; a verified one settles from the rows and logs where its row disagreed.
- */
 const runBatch = async ({
 	scope,
 	batch,
@@ -153,7 +147,6 @@ const runBatch = async ({
 	}
 };
 
-/** Cold entity loads of one customer go out together: the first query leaves once the current event-loop turn is over, and requests arriving while it reads form the next one. */
 export const createEntityLoads = ({
 	scopeOf,
 	maxEntitiesPerLoad = SUBJECT_ROW_LIMITS.entitiesPerLoad,

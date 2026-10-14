@@ -88,7 +88,6 @@ test.concurrent(
 			commandId: "baseline",
 			client,
 		};
-		// Public remaining clamps negatives to zero; initialization must send the raw balance.
 		const balances = [-5, -0.25, 0];
 		for (const balance of balances) {
 			fixture.customerEntitlement.balance = balance;

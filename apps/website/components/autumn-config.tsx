@@ -17,8 +17,6 @@ const SyntaxHighlighter = RawSyntaxHighlighter as unknown as ((props: {
 	registerLanguage: (name: string, language: unknown) => void;
 };
 
-// useLayoutEffect runs synchronously before browser paint on the client,
-// eliminating the container-query font-size race that causes CLS on reload.
 const useIsomorphicLayoutEffect =
 	typeof window !== "undefined" ? useLayoutEffect : useEffect;
 
@@ -84,7 +82,6 @@ export default function AutumnConfig({
 	const [started, setStarted] = useState(initialDelay === 0 && !awaitEvent);
 	const done = displayed.length >= fullCode.length;
 
-	// Wait for the signal event before starting the delay countdown
 	useEffect(() => {
 		if (!awaitEvent) return;
 		const handler = () => setAwaitDone(true);
@@ -92,7 +89,6 @@ export default function AutumnConfig({
 		return () => window.removeEventListener(awaitEvent, handler);
 	}, [awaitEvent]);
 
-	// Start typing after awaitDone, respecting initialDelay
 	useEffect(() => {
 		if (!awaitDone) return;
 		const t = setTimeout(() => setStarted(true), initialDelay);

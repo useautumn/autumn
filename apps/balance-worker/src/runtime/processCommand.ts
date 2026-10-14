@@ -15,7 +15,6 @@ export type ProcessorRun<Decision> = (
 	processor: PartitionProcessor,
 ) => Promise<Decision>;
 
-/** The runtime's one gate: ready before, recovery after. Committed work still replies mid-recovery. */
 export async function processCommand<Decision>({
 	ctx,
 	state,
@@ -23,7 +22,6 @@ export async function processCommand<Decision>({
 	budgetMs,
 }: PartitionRuntimeScope & {
 	run: ProcessorRun<Decision>;
-	/** How long the caller will still wait; unset for a caller that did not say. */
 	budgetMs?: number;
 }): Promise<Decision> {
 	const answerBy = answerDeadlineOf({ budgetMs });
@@ -43,7 +41,6 @@ export async function processCommand<Decision>({
 			cause instanceof PartitionWriterRecoveryRequiredError ||
 			cause instanceof OwnedPartitionProducerFencedError
 		) {
-			// Recovery withdraws this consumer batch, so the command must reject before cleanup finishes.
 			void enterRuntimeRecovery({ ctx, state, cause });
 			throw state.terminalError;
 		}
@@ -51,8 +48,6 @@ export async function processCommand<Decision>({
 	}
 }
 
-/** The inline gate: synchronous, and only on a ready runtime, so anything else takes `processCommand`'s
- *  hold or refusal. Recovery is mapped exactly as there. */
 export function processInlineCommand<Decision>({
 	ctx,
 	state,
@@ -76,10 +71,6 @@ export function processInlineCommand<Decision>({
 	}
 }
 
-/** A request the API resent to a freshly named owner waits for its fence and catch-up: for as
- *  long as the caller said it can wait, less a margin so the answer lands first, or a fixed
- *  moment when it did not say. Holding for the caller's budget is what lets a handoff to an
- *  idle successor cost latency rather than a fail-open. */
 async function waitForActivation({
 	ctx,
 	state,
@@ -95,7 +86,6 @@ async function waitForActivation({
 		try {
 			await state.startPromise;
 		} catch {
-			// The gate below reports the failure as recovery.
 		}
 	}
 	try {

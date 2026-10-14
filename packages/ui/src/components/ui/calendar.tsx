@@ -31,7 +31,6 @@ const MONTHS = [
 	"December",
 ] as const;
 
-/** Fixed-width month and year triggers keep the popover from resizing, so the arrows never move under the cursor. */
 function CalendarCaption({ displayMonth, id }: CaptionProps) {
 	const { goToMonth, previousMonth, nextMonth } = useNavigation();
 	const { fromYear, toYear } = useDayPicker();
@@ -116,7 +115,6 @@ function Calendar({
 	return (
 		<DayPicker
 			showOutsideDays={showOutsideDays}
-			// Six rows every month, so paging never changes the popover's height.
 			fixedWeeks={fixedWeeks}
 			className={cn("p-3", className)}
 			classNames={{

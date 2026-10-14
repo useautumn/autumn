@@ -8,6 +8,5 @@ export type CatalogPushContext = {
 	db: PostgresDb;
 	getAtomClient: GetAtomClient;
 	shadowAtomConfig: Pick<EdgeConfigStore<ShadowAtomConfig>, "get">;
-	/** Production: org Atoms are pushed to through their queues only. */
 	atomPushQueueOnly: boolean;
 };

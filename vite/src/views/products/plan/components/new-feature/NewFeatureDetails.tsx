@@ -31,7 +31,6 @@ const getPlaceholders = ({
 		return { name: "eg, Seats", id: "seats" };
 	}
 
-	// Default to consumable (metered single use)
 	return { name: "eg, Chat Messages", id: "chat_messages" };
 };
 
@@ -46,7 +45,6 @@ export function NewFeatureDetails({
 }) {
 	const baseFeature = useFeatureStore((s) => s.baseFeature);
 
-	// Check if feature already exists on backend (has internal_id from database)
 	const isExistingFeature = !!baseFeature?.internal_id;
 
 	const { setSource, setTarget } = useAutoSlug({

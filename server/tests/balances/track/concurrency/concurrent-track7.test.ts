@@ -13,11 +13,10 @@ import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js"
 
 const testCase = "concurrent-track7";
 
-// Product with both lifetime and monthly Messages features
 const lifetimeMessagesItem = constructFeatureItem({
 	featureId: TestFeature.Messages,
 	includedUsage: 20000,
-	interval: null, // Lifetime
+	interval: null,
 }) as LimitedItem;
 
 const monthlyMessagesItem = constructFeatureItem({
@@ -36,12 +35,10 @@ const pro = constructProduct({
 const NUM_REQUESTS = 350;
 const NUM_CUSTOMERS = 3;
 
-// Calculate total included usage dynamically
 const TOTAL_INCLUDED_USAGE =
 	(lifetimeMessagesItem.included_usage ?? 0) +
 	(monthlyMessagesItem.included_usage ?? 0);
 
-// Helper to generate random decimal between min and max using Decimal.js
 const randomDecimal = (min: number, max: number): Decimal => {
 	const value = Math.random() * (max - min) + min;
 	return new Decimal(value).toDecimalPlaces(2);
@@ -54,11 +51,9 @@ describe(`${chalk.yellowBright(`${testCase}: Stress test with ${NUM_REQUESTS} co
 		(_, i) => `${testCase}_customer${i + 1}`,
 	);
 
-	// Store expected total usage per customer using Decimal for precision
 	const customerExpectedUsage: Record<string, Decimal> = {};
 
 	beforeAll(async () => {
-		// Initialize all customers
 		for (const customerId of customerIds) {
 			await initCustomerV3({
 				ctx,
@@ -79,7 +74,6 @@ describe(`${chalk.yellowBright(`${testCase}: Stress test with ${NUM_REQUESTS} co
 				product_id: pro.id,
 			});
 
-			// Initialize expected usage to 0
 			customerExpectedUsage[customerId] = new Decimal(0);
 		}
 	});
@@ -94,7 +88,6 @@ describe(`${chalk.yellowBright(`${testCase}: Stress test with ${NUM_REQUESTS} co
 			);
 			console.log(`  Usage: ${customer.features[TestFeature.Messages].usage}`);
 
-			// Total balance should be lifetime + monthly
 			expect(customer.features[TestFeature.Messages].balance).toBe(
 				TOTAL_INCLUDED_USAGE,
 			);
@@ -110,7 +103,6 @@ describe(`${chalk.yellowBright(`${testCase}: Stress test with ${NUM_REQUESTS} co
 
 		const allPromises: Promise<number>[] = [];
 
-		// Generate requests for each customer
 		for (const [customerIndex, customerId] of customerIds.entries()) {
 			const customerPromises: Promise<number>[] = [];
 			const requestCount =
@@ -118,15 +110,12 @@ describe(`${chalk.yellowBright(`${testCase}: Stress test with ${NUM_REQUESTS} co
 				(customerIndex < NUM_REQUESTS % NUM_CUSTOMERS ? 1 : 0);
 
 			for (let i = 0; i < requestCount; i++) {
-				// Generate random value between 0.01 and 2.00 using Decimal
 				const decimalValue = randomDecimal(0.01, 2.0);
 				const value = decimalValue.toDecimalPlaces(5).toNumber();
 
-				// Accumulate expected usage using Decimal for precision
 				customerExpectedUsage[customerId] =
 					customerExpectedUsage[customerId].plus(decimalValue);
 
-				// Create track request for Messages feature with timing
 				const requestStart = Date.now();
 				const promise = autumnV1
 					.check({
@@ -134,7 +123,7 @@ describe(`${chalk.yellowBright(`${testCase}: Stress test with ${NUM_REQUESTS} co
 						feature_id: TestFeature.Messages,
 						send_event: true,
 						required_balance: value,
-						skip_event: true, // Skip event insertion for stress test
+						skip_event: true,
 					})
 					.then(() => Date.now() - requestStart);
 
@@ -144,13 +133,11 @@ describe(`${chalk.yellowBright(`${testCase}: Stress test with ${NUM_REQUESTS} co
 			allPromises.push(...customerPromises);
 		}
 
-		// Execute all requests concurrently
 		const startTime = Date.now();
 		const durations = await Promise.all(allPromises);
 		const endTime = Date.now();
 		expect(durations).toHaveLength(NUM_REQUESTS);
 
-		// Calculate P99
 		const sortedDurations = durations.sort((a, b) => a - b);
 		const p99Index = Math.floor(sortedDurations.length * 0.99);
 		const p99 = sortedDurations[p99Index];
@@ -163,7 +150,6 @@ describe(`${chalk.yellowBright(`${testCase}: Stress test with ${NUM_REQUESTS} co
 		);
 		console.log(`   P99: ${p99.toFixed(2)}ms`);
 
-		// Log expected totals per customer
 		for (const customerId of customerIds) {
 			console.log(`\n📊 ${customerId}:`);
 			console.log(
@@ -178,7 +164,6 @@ describe(`${chalk.yellowBright(`${testCase}: Stress test with ${NUM_REQUESTS} co
 
 			const totalUsage = customerExpectedUsage[customerId];
 
-			// Balance should be capped at 0 (no negative balances without overage_allowed)
 			const expectedBalance = Decimal.max(
 				0,
 				new Decimal(TOTAL_INCLUDED_USAGE).minus(totalUsage),
@@ -191,7 +176,6 @@ describe(`${chalk.yellowBright(`${testCase}: Stress test with ${NUM_REQUESTS} co
 				.toDP(5)
 				.toNumber();
 
-			// Usage should be capped at included_usage without overage_allowed
 			const expectedUsage = Decimal.min(totalUsage, TOTAL_INCLUDED_USAGE)
 				.toDP(5)
 				.toNumber();
@@ -201,11 +185,9 @@ describe(`${chalk.yellowBright(`${testCase}: Stress test with ${NUM_REQUESTS} co
 				.toDP(5)
 				.toNumber();
 
-			// Verify balance and usage match expectations
 			expect(actualBalance).toEqual(expectedBalance);
 			expect(actualUsage).toEqual(expectedUsage);
 
-			// Verify breakdown balances sum to top-level balance
 			const breakdown = customer.features[TestFeature.Messages].breakdown;
 			if (breakdown && breakdown.length > 0) {
 				const breakdownBalance = breakdown.reduce(
@@ -234,7 +216,6 @@ describe(`${chalk.yellowBright(`${testCase}: Stress test with ${NUM_REQUESTS} co
 				for (const { customerId, customer } of customers) {
 					const totalUsage = customerExpectedUsage[customerId];
 
-					// Balance should be capped at 0 (no negative balances without overage_allowed)
 					const expectedBalance = Decimal.max(
 						0,
 						new Decimal(TOTAL_INCLUDED_USAGE).minus(totalUsage),
@@ -247,7 +228,6 @@ describe(`${chalk.yellowBright(`${testCase}: Stress test with ${NUM_REQUESTS} co
 						.toDP(5)
 						.toNumber();
 
-					// Usage should be capped at included_usage without overage_allowed
 					const expectedUsage = Decimal.min(totalUsage, TOTAL_INCLUDED_USAGE)
 						.toDP(5)
 						.toNumber();
@@ -257,13 +237,10 @@ describe(`${chalk.yellowBright(`${testCase}: Stress test with ${NUM_REQUESTS} co
 						.toDP(5)
 						.toNumber();
 
-					// Use Decimal for precise comparisons - expect exact match
 					expect(actualBalance).toEqual(expectedBalance);
 
-					// Verify usage matches - expect exact match
 					expect(actualUsage).toEqual(expectedUsage);
 
-					// Verify breakdown balances match top-level (lifetime + monthly)
 					const breakdown = customer.features[TestFeature.Messages].breakdown;
 					if (breakdown && breakdown.length > 0) {
 						const breakdownBalance = breakdown.reduce(

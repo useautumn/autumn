@@ -87,7 +87,6 @@ export async function consumePartitionRange({
 		)
 			return;
 		try {
-			// Only consumed filtered records prove progress; a high watermark does not.
 			const consumedNextOffset =
 				parseKafkaOffset({ offset: payload.lastOffset }) + 1n;
 			if (consumedNextOffset > nextOffset) nextOffset = consumedNextOffset;

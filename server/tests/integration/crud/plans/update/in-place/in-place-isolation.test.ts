@@ -1,12 +1,3 @@
-/**
- * In-place plan edits must not touch ANY other customer. Each case captures the
- * full state of a customer that should NOT change, performs an in-place edit on
- * an UNRELATED plan/feature, and asserts that customer's snapshot is identical.
- *
- * Dimensions: many customers (same plan), different plans sharing a feature,
- * different versions, trials, entities.
- */
-
 import { expect, test } from "bun:test";
 import {
 	type ApiPlanV1,
@@ -108,8 +99,6 @@ test(`${chalk.yellowBright("in-place isolation: different plans sharing a featur
 
 	const beforeB = await snapshotCustomerState({ ctx, customerId: cusB });
 
-	// UPDATE plan A's Messages allowance — plan B grants the same feature via a
-	// SEPARATE catalog ent, so its customer must be untouched.
 	await rpcFor(ctx).plans.update<ApiPlanV1, RpcInput>(planA.id, {
 		disable_version: true,
 		price: monthPrice,
@@ -137,7 +126,6 @@ test(`${chalk.yellowBright("in-place isolation: editing latest version leaves ol
 		actions: [s.billing.attach({ productId: pro.id })],
 	});
 
-	// Bump to v2 (cusV1 stays on v1), attach cusV2 to v2.
 	await autumnV1.products.update(pro.id, {
 		items: [items.monthlyMessages({ includedUsage: 200 })],
 	});
@@ -145,8 +133,6 @@ test(`${chalk.yellowBright("in-place isolation: editing latest version leaves ol
 
 	const beforeV1 = await snapshotCustomerState({ ctx, customerId: cusV1 });
 
-	// In-place edit resolves to the latest (v2). v1's customer + v1's catalog
-	// ents are different rows → unaffected.
 	await rpcFor(ctx).plans.update<ApiPlanV1, RpcInput>(pro.id, {
 		disable_version: true,
 		price: monthPrice,
@@ -258,13 +244,6 @@ test(`${chalk.yellowBright("in-place isolation: an entity-scoped customer on ano
 	);
 });
 
-// NOTE: a "scheduled customer" isolation case is intentionally omitted — the
-// downgrade/cancel path that creates a scheduled cus_product currently errors at
-// setup in this environment (`malformed array literal`, also breaks
-// migrate-states.test.ts), unrelated to in-place edits. Scheduled cusProducts
-// carry normal customer_entitlements, so the reference check retires (not
-// deletes) any ent they hold — the same guarantee the other cases prove.
-
 test(`${chalk.yellowBright("in-place isolation: no-customer plan retires replaced rows")}`, async () => {
 	const owner = "iso-nocus-owner";
 	const pro = products.pro({
@@ -281,7 +260,6 @@ test(`${chalk.yellowBright("in-place isolation: no-customer plan retires replace
 		actions: [],
 	});
 
-	// Replaced catalog rows stay as is_custom so deferred FKs stay valid.
 	await rpcFor(ctx).plans.update<ApiPlanV1, RpcInput>(pro.id, {
 		disable_version: true,
 		price: monthPrice,

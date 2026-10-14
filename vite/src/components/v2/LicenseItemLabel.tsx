@@ -13,8 +13,6 @@ import {
 } from "@/views/products/plan/components/plan-licenses/licenseItemDisplay";
 import { productItemsForCurrency } from "@/views/products/plan/utils/currencyUtils";
 
-/** A license rendered as a plan-item label ("$10 per Dev Seat per month") —
- * shared by the subscription detail sheet and the attach/update forms. */
 export function LicenseItemLabel({
 	license,
 	included,
@@ -25,7 +23,6 @@ export function LicenseItemLabel({
 	license: ProductV2;
 	included: number;
 	currency?: string;
-	/** Effective items (e.g. with a customize applied); stock items otherwise. */
 	items?: ProductItem[];
 	wrapIcons?: (icons: ReactNode, basePrice: ProductItem | null) => ReactNode;
 }) {

@@ -6,7 +6,6 @@ import { AdvancedMoreOptions } from "./AdvancedMoreOptions";
 import { AdvancedSectionHeader } from "./AdvancedSectionHeader";
 import { AdvancedTray } from "./AdvancedTray";
 
-// Hidden until the tray layout is ready to release; the plain layout is what ships today.
 const SHOW_BILLING_OPTIONS_TRAY = false;
 
 function PlainAdvancedSection({
@@ -48,7 +47,6 @@ function PlainAdvancedSection({
 	);
 }
 
-/** Titled tray of option rows; `moreOptions` fold into the bottom of the same tray. */
 export function AdvancedSection({
 	title = "Billing",
 	collapsible = false,

@@ -8,11 +8,9 @@ import { CreditDimensionRateTable } from "./CreditDimensionRateTable";
 interface CreditDimensionPriceListProps {
 	item: CreditSchemaItem;
 	onChange: (item: CreditSchemaItem) => void;
-	/** Rendered beside the Dimensions title, e.g. a remove action. */
 	fieldsAction?: ReactNode;
 }
 
-/** Three tables: the dimensions and their values, then rates and multipliers with a column per dimension. */
 export function CreditDimensionPriceList({
 	item,
 	onChange,

@@ -1,9 +1,3 @@
-/**
- * A backdate over a live subscription bills the time before that subscription started per
- * proration_behavior, never the time it already paid for, and can restart the cycle on the
- * backdated start: the unused paid time is credited and the new cycle charged on one invoice.
- */
-
 import { describe, expect, test } from "bun:test";
 import {
 	addInterval,
@@ -54,7 +48,6 @@ const monthsBefore = ({ from, months }: { from: number; months: number }) =>
 		intervalCount: -months,
 	});
 
-/** The pro rata share of `cycles` monthly cycles ending at the live start that the gap covers. */
 const proRataGapCharge = ({
 	backdatedStart,
 	cycles,

@@ -42,8 +42,6 @@ const PROD_DB_REGION = "us-east-2";
 const DEV_DB_REGION = "eu-west-2";
 const LOCAL_DB_HOSTS = ["localhost", "127.0.0.1"];
 
-/** Benches seed millions of rows and run VACUUM, so they must positively
- * prove they are on the dev DB — a prod blocklist alone is too weak. */
 export const assertBenchDatabaseSafe = () => {
 	let hostname: string;
 	try {
@@ -69,11 +67,8 @@ export const assertBenchDatabaseSafe = () => {
 };
 
 export type BenchProducts = {
-	/** Free plan WITH a monthly Messages entitlement (sibling-anchor rung). */
 	free: { internalId: string; entitlementId: string };
-	/** Free plan with no entitlements (starts_at / cp-anchor rungs). */
 	freeBare: { internalId: string };
-	/** $20/mo base-price plan, no entitlements (sub-anchor / paid-now rungs). */
 	paid: { internalId: string; priceId: string };
 	messagesInternalFeatureId: string;
 };
@@ -84,8 +79,6 @@ export type BenchContext = {
 	benchProducts: BenchProducts;
 };
 
-/** The dashboard's org list is membership-driven; make the bench org
- * browsable by adding every dev-DB user as an owner. */
 const ensureAllUsersAreMembers = async ({
 	db,
 	org,
@@ -251,8 +244,6 @@ const ensureBenchProducts = async ({
 	};
 };
 
-/** Resolve-or-create the dedicated bench org (never the shared test org),
- * its features, and the three bench plans covering every anchor-ladder rung. */
 export const getBenchContext = async (): Promise<BenchContext> => {
 	assertBenchDatabaseSafe();
 	const { db } = initDrizzle();

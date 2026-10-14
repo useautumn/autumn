@@ -1,12 +1,3 @@
-/**
- * Unused assignment CPs (license link set, entity null) are part of
- * entitlement add / replace / delete. The candidate WHERE must not
- * require internal_entity_id.
- *
- * Red (current): replace and delete still filter entity IS NOT NULL.
- * Green (after): replace and delete candidate WHERE matches add — link + status only.
- */
-
 import { describe, expect, test } from "bun:test";
 import {
 	AllowanceType,

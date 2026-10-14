@@ -1,15 +1,3 @@
-/**
- * TDD coverage for update_items + rollover.
- *
- * Contract under test:
- *   New behaviors:
- *     - When an entitlement with an active rollover is updated via update_items,
- *       the rollover is carried over onto the new entitlement.
- *     - The updated entitlement keeps the same rollover configuration that
- *       was already in place (no need to redeclare it when only bumping
- *       `included`).
- */
-
 import { test } from "bun:test";
 import {
 	type ApiCustomerV3,
@@ -73,7 +61,6 @@ test.concurrent(`${chalk.yellowBright("migrations update_items: rollover from ol
 	});
 
 	const customer = await autumnV2_2.customers.get<ApiCustomerV5>(customerId);
-	// 500 new included + 150 unused that rolled over = 650 available.
 	expectBalanceCorrect({
 		customer,
 		featureId: TestFeature.Messages,

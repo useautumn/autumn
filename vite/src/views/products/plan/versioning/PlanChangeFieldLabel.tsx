@@ -1,4 +1,3 @@
-/** Section label inside a PlanChangeDialog step. */
 export function PlanChangeFieldLabel({
 	children,
 }: {

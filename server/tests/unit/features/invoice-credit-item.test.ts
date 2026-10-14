@@ -1,19 +1,3 @@
-/**
- * A plan item itemizes credits on the invoice when, and only when, it is a
- * classic credit system priced pay-per-use at exactly one currency unit per
- * credit and not pooled. Nothing else decides it.
- *
- * P1 pay-per-use $1/credit                     → itemize
- * P2 pay-per-use $100 per 100 credits          → itemize
- * P3 pay-per-use $0.002/credit                 → plain
- * P4 prepaid credits                           → plain
- * P5 included-only                             → plain
- * P6 pooled $1/credit                          → plain
- * P7 graduated tiers all $1/credit, no flat    → itemize; any tier off → plain
- * P8 feature is not a classic credit system    → plain
- * P9 additional currency not 1:1               → plain
- */
-
 import { describe, expect, test } from "bun:test";
 import {
 	FeatureType,

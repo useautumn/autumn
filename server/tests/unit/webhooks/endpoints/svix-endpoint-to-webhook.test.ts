@@ -1,8 +1,3 @@
-/**
- * An event type this server version doesn't know is still what Svix stores:
- * responses carry every name verbatim, so an older CLI never drops one.
- */
-
 import { expect, test } from "bun:test";
 import { svixEndpointToWebhook } from "@/external/svix/endpoints/svixEndpointToWebhook.js";
 

@@ -113,7 +113,6 @@ export const SaveChangesBar = ({
 				const preview = await fetchPreviewUpdateCatalog({
 					plans,
 				});
-				// A link save puts the base row first; the dialog is about this plan.
 				const ownPreview =
 					preview.plans.find((row) => row.plan_id === product.id) ??
 					preview.plans[0];

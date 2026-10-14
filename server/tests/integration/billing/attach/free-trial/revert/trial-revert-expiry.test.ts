@@ -1,13 +1,3 @@
-/**
- * Trial Revert — Expiry Tests
- *
- * Verifies the product cron correctly handles expired revert trials:
- * - Expires the trial cusProduct
- * - Unpauses the previous cusProduct (back to Active)
- * - Does NOT activate a free default product (revert skips that path)
- * - Regular (non-revert) trial expiry still works normally alongside
- */
-
 import { expect, test } from "bun:test";
 import {
 	ALL_STATUSES,
@@ -29,21 +19,6 @@ import { logger } from "@/external/logtail/logtailUtils";
 import { CusService } from "@/internal/customers/CusService";
 
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 1: Revert trial expires → previous plan unpaused
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Customer on pro plan → attach enterprise with on_end: "revert"
- * - Manually set trial_ends_at to the past
- * - Run product cron
- *
- * Expected:
- * - Enterprise cusProduct → Expired
- * - Pro cusProduct → Active (unpaused)
- * - Pro retains its subscription_ids
- */
 test(
 	`${chalk.yellowBright("trial-revert-expiry 1: cron expires trial and unpauses previous plan")}`,
 	async () => {
@@ -68,7 +43,6 @@ test(
 			actions: [s.billing.attach({ productId: pro.id })],
 		});
 
-		// Attach enterprise with revert trial
 		const params: AttachParamsV1Input = {
 			customer_id: customerId,
 			plan_id: enterprise.id,
@@ -85,7 +59,6 @@ test(
 
 		await autumnV2.billing.attach<AttachParamsV1Input>(params);
 
-		// Verify initial state — enterprise trialing, pro paused
 		const beforeCron = await CusService.getFull({
 			ctx,
 			idOrInternalId: customerId,
@@ -106,17 +79,14 @@ test(
 
 		const proSubscriptionIds = pausedCusProduct!.subscription_ids;
 
-		// Set trial_ends_at to the past to simulate expiry
 		const pastTrialEnd = Date.now() - 60_000;
 		await db
 			.update(customerProducts)
 			.set({ trial_ends_at: pastTrialEnd })
 			.where(eq(customerProducts.id, trialCusProduct!.id));
 
-		// Run the product cron
 		await runProductCron({ ctx: { db, logger } });
 
-		// Verify after cron — enterprise expired, pro active
 		const afterCron = await CusService.getFull({
 			ctx,
 			idOrInternalId: customerId,
@@ -133,33 +103,16 @@ test(
 		expect(expiredTrialCp).toBeDefined();
 		expect(restoredProCp).toBeDefined();
 
-		// Trial cusProduct should be expired
 		expect(expiredTrialCp!.status).toBe(CusProductStatus.Expired);
 
-		// Pro cusProduct should be restored to active
 		expect(restoredProCp!.status).toBe(CusProductStatus.Active);
 		expect(restoredProCp!.canceled).toBe(false);
 		expect(restoredProCp!.ended_at).toBeNull();
 
-		// Stripe subscription should still be intact
 		expect(restoredProCp!.subscription_ids).toEqual(proSubscriptionIds);
 	},
 );
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 2: Non-revert trial still expires normally (regression)
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Customer on free plan → attach free trial product (on_end: "bill" / default)
- * - Manually expire trial
- * - Run product cron
- *
- * Expected:
- * - Trial product → Expired
- * - Free default product activated (existing behavior, not revert)
- */
 test(
 	`${chalk.yellowBright("trial-revert-expiry 2: non-revert trial expires normally (regression)")}`,
 	async () => {
@@ -189,7 +142,6 @@ test(
 			actions: [s.billing.attach({ productId: trialProduct.id })],
 		});
 
-		// Find the trial cusProduct
 		const beforeCron = await CusService.getFull({
 			ctx,
 			idOrInternalId: customerId,
@@ -202,7 +154,6 @@ test(
 		expect(trialCp).toBeDefined();
 		expect(trialCp!.on_trial_end).toBeNull();
 
-		// Set trial_ends_at to past
 		const pastTrialEnd = Date.now() - 60_000;
 		await db
 			.update(customerProducts)
@@ -211,7 +162,6 @@ test(
 
 		await runProductCron({ ctx: { db, logger } });
 
-		// Verify — trial expired, free default activated
 		const afterCron = await CusService.getFull({
 			ctx,
 			idOrInternalId: customerId,
@@ -233,21 +183,6 @@ test(
 	},
 );
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 3: Revert trial does NOT activate free default product
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Org has a free default product
- * - Customer on pro → enterprise revert trial
- * - Trial expires via cron
- *
- * Expected:
- * - Pro is unpaused (Active)
- * - Enterprise is Expired
- * - Free default is NOT activated (revert takes precedence)
- */
 test(
 	`${chalk.yellowBright("trial-revert-expiry 3: revert does NOT activate free default")}`,
 	async () => {
@@ -279,7 +214,6 @@ test(
 			actions: [s.billing.attach({ productId: pro.id })],
 		});
 
-		// Attach enterprise with revert trial
 		const params: AttachParamsV1Input = {
 			customer_id: customerId,
 			plan_id: enterprise.id,
@@ -296,7 +230,6 @@ test(
 
 		await autumnV2.billing.attach<AttachParamsV1Input>(params);
 
-		// Find trial cusProduct and set trial_ends_at to past
 		const beforeCron = await CusService.getFull({
 			ctx,
 			idOrInternalId: customerId,
@@ -316,7 +249,6 @@ test(
 
 		await runProductCron({ ctx: { db, logger } });
 
-		// Verify — pro restored, enterprise expired, free default NOT activated
 		const afterCron = await CusService.getFull({
 			ctx,
 			idOrInternalId: customerId,
@@ -339,26 +271,10 @@ test(
 		expect(expiredEnterprise).toBeDefined();
 		expect(expiredEnterprise!.status).toBe(CusProductStatus.Expired);
 
-		// Free default should NOT have been activated since we reverted to pro
 		expect(freeDefault).toBeUndefined();
 	},
 );
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 4: Revert skips restore if previous plan was expired during trial
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Customer on pro → enterprise revert trial
- * - During trial, the paused pro product's status is changed to Expired
- *   (simulating a Stripe webhook cancelling the underlying subscription)
- * - Trial expires via cron
- *
- * Expected:
- * - Enterprise trial is Expired
- * - Pro stays Expired (NOT reactivated — the Paused guard prevents it)
- */
 test(
 	`${chalk.yellowBright("trial-revert-expiry 4: skips restore if previous plan expired during trial")}`,
 	async () => {
@@ -399,7 +315,6 @@ test(
 
 		await autumnV2.billing.attach<AttachParamsV1Input>(params);
 
-		// Find the paused pro product and simulate a Stripe webhook expiring it
 		const beforeCron = await CusService.getFull({
 			ctx,
 			idOrInternalId: customerId,
@@ -417,13 +332,11 @@ test(
 		expect(pausedPro!.status).toBe(CusProductStatus.Paused);
 		expect(trialEnterprise).toBeDefined();
 
-		// Simulate: Stripe webhook expired the paused plan during the trial
 		await db
 			.update(customerProducts)
 			.set({ status: CusProductStatus.Expired })
 			.where(eq(customerProducts.id, pausedPro!.id));
 
-		// Set trial_ends_at to past to trigger cron
 		const pastTrialEnd = Date.now() - 60_000;
 		await db
 			.update(customerProducts)
@@ -432,7 +345,6 @@ test(
 
 		await runProductCron({ ctx: { db, logger } });
 
-		// Verify: trial expired, pro stays expired (NOT reactivated)
 		const afterCron = await CusService.getFull({
 			ctx,
 			idOrInternalId: customerId,
@@ -454,19 +366,6 @@ test(
 	},
 );
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 5: Cancelling revert trial unpauses previous plan
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Customer on pro → enterprise revert trial
- * - User cancels the enterprise trial immediately
- *
- * Expected:
- * - Enterprise cusProduct → Expired
- * - Pro cusProduct → Active (unpaused)
- */
 test(
 	`${chalk.yellowBright("trial-revert-expiry 5: cancel trial immediately unpauses previous plan")}`,
 	async () => {
@@ -491,7 +390,6 @@ test(
 			actions: [s.billing.attach({ productId: pro.id })],
 		});
 
-		// Attach enterprise with revert trial
 		const params: AttachParamsV1Input = {
 			customer_id: customerId,
 			plan_id: enterprise.id,
@@ -508,7 +406,6 @@ test(
 
 		await autumnV2.billing.attach<AttachParamsV1Input>(params);
 
-		// Verify initial state
 		const beforeCancel = await CusService.getFull({
 			ctx,
 			idOrInternalId: customerId,
@@ -528,7 +425,6 @@ test(
 		expect(pausedCp).toBeDefined();
 		expect(pausedCp!.status).toBe(CusProductStatus.Paused);
 
-		// Cancel the trial immediately
 		await autumnV1.subscriptions.update(
 			{
 				customer_id: customerId,
@@ -538,7 +434,6 @@ test(
 			{ timeout: 2000 },
 		);
 
-		// Verify: enterprise expired, pro unpaused
 		const afterCancel = await CusService.getFull({
 			ctx,
 			idOrInternalId: customerId,
@@ -560,20 +455,6 @@ test(
 	},
 );
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 6: Cancel trial when previous plan was expired during trial
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Customer on pro → enterprise revert trial
- * - During trial, the paused pro is expired (simulating Stripe subscription.deleted)
- * - User cancels the enterprise trial immediately
- *
- * Expected:
- * - Enterprise → Expired
- * - Pro stays Expired (NOT reactivated — the Paused guard prevents it)
- */
 test(
 	`${chalk.yellowBright("trial-revert-expiry 6: cancel trial does not restore expired previous plan")}`,
 	async () => {
@@ -598,7 +479,6 @@ test(
 			actions: [s.billing.attach({ productId: pro.id })],
 		});
 
-		// Attach enterprise with revert trial
 		const params: AttachParamsV1Input = {
 			customer_id: customerId,
 			plan_id: enterprise.id,
@@ -615,7 +495,6 @@ test(
 
 		await autumnV2.billing.attach<AttachParamsV1Input>(params);
 
-		// Simulate: Stripe webhook expired the paused plan during the trial
 		const beforeCancel = await CusService.getFull({
 			ctx,
 			idOrInternalId: customerId,
@@ -633,7 +512,6 @@ test(
 			.set({ status: CusProductStatus.Expired })
 			.where(eq(customerProducts.id, pausedPro!.id));
 
-		// Cancel the trial immediately
 		await autumnV1.subscriptions.update(
 			{
 				customer_id: customerId,
@@ -643,7 +521,6 @@ test(
 			{ timeout: 2000 },
 		);
 
-		// Verify: enterprise expired, pro stays expired (NOT reactivated)
 		const afterCancel = await CusService.getFull({
 			ctx,
 			idOrInternalId: customerId,

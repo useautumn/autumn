@@ -8,17 +8,6 @@ import {
 	PooledBalanceResetMode,
 } from "@autumn/shared";
 
-/**
- * Filters customer entitlements to those needing reset:
- *   - `next_reset_at` is set and overdue (`< now`)
- *   - not price-backed (metered paid entitlements are billed, not reset)
- *   - past-due cusEnts are skipped unless the owning product opts in via
- *     `product.config.ignore_past_due === true`
- *
- * Callers must fetch `[Active, PastDue]` cusEnts upstream for the past-due
- * gate to apply; narrower fetches are still correct (past-due cusEnts simply
- * never enter the candidate set).
- */
 export const getResettableCustomerEntitlements = ({
 	customerEntitlements,
 	now,
@@ -37,8 +26,6 @@ export const getResettableCustomerEntitlements = ({
 		) {
 			continue;
 		}
-		// Subscription pools reset here too — invoice.created is a redundant
-		// fast path, guarded against double-apply by the reset CAS.
 		if (
 			isSyntheticPooledBalanceCustomerEntitlement({
 				customerEntitlement: cusEnt,

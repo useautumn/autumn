@@ -1,8 +1,6 @@
 import { TZDate } from "@date-fns/tz";
 import { UTCDate } from "@date-fns/utc";
 
-/** Epoch ms of a pipe's "%F %T" bucket start. Hour buckets are always UTC;
- * day/week/month buckets are wall-clock times in `timezone`. */
 export const periodToEpoch = ({
 	period,
 	timezone,
@@ -30,7 +28,6 @@ export const periodToEpoch = ({
 	).getTime();
 };
 
-/** Convert event periods from pipe strings to epoch timestamps, in place. */
 export function convertPeriodsToEpoch({
 	events,
 	timezone,
@@ -49,11 +46,6 @@ export function convertPeriodsToEpoch({
 	}
 }
 
-/**
- * Normalize a group value to a string. For `plan_id`, an empty string is a
- * meaningful bucket ("no plan") and is preserved; for other fields, empty is
- * treated as missing.
- */
 function normalizeGroupValue(
 	value: unknown,
 	groupByField?: string,
@@ -63,12 +55,6 @@ function normalizeGroupValue(
 	return String(value);
 }
 
-/**
- * Collect grouping metadata from a list of rows.
- * @param rows - The rows to collect metadata from.
- * @param groupByField - The field to group by.
- * @returns The group values and feature names.
- */
 export function collectGroupingMetadata(
 	rows: Array<Record<string, string | number>>,
 	groupByField: string,
@@ -91,12 +77,6 @@ export function collectGroupingMetadata(
 	return { groupValues, featureNames };
 }
 
-/**
- * Build a grouped timeseries from a list of rows.
- * @param rows - The rows to build the grouped timeseries from.
- * @param groupByField - The field to group by.
- * @returns The grouped timeseries.
- */
 export function buildGroupedTimeseries(
 	rows: Array<Record<string, string | number>>,
 	groupByField: string,
@@ -130,12 +110,6 @@ export function buildGroupedTimeseries(
 	return grouped;
 }
 
-/**
- * Backfill missing group values in a grouped timeseries.
- * @param grouped - The grouped timeseries to backfill.
- * @param groupValues - The group values to backfill.
- * @param featureNames - The feature names to backfill.
- */
 export function backfillMissingGroupValues(
 	grouped: Map<number, Record<string, number | Record<string, number>>>,
 	groupValues: Set<string>,

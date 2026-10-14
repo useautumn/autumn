@@ -10,16 +10,6 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { InvoiceService } from "@/internal/invoices/InvoiceService";
 
-/**
- * Mimics the dashboard "already cancelling → cancel immediately" flow.
- *
- * Repro for the UI gap: when a sub is already scheduled to cancel
- * (canceled_at set), the dashboard only exposes prorate/none refund
- * behavior, not a refund to payment method. This proves the BACKEND
- * already supports refund_last_payment on an already-cancelling sub —
- * so the limitation is purely the UI not rendering RefundBehaviorSection.
- */
-
 const getLatestInvoice = ({ customer }: { customer: ApiCustomerV3 }) => {
 	const invoice = customer.invoices?.[0];
 	if (!invoice) {
@@ -39,11 +29,7 @@ test(`${chalk.yellowBright("cancel already-canceling: full refund to payment met
 			s.customer({ paymentMethod: "success" }),
 			s.products({ list: [pro] }),
 		],
-		actions: [
-			s.attach({ productId: pro.id }),
-			// Dashboard "Cancel Subscription" → end of cycle: sub becomes canceling.
-			s.cancel({ productId: pro.id }),
-		],
+		actions: [s.attach({ productId: pro.id }), s.cancel({ productId: pro.id })],
 	});
 
 	const customerWhileCanceling =
@@ -60,8 +46,6 @@ test(`${chalk.yellowBright("cancel already-canceling: full refund to payment met
 
 	const initialInvoice = getLatestInvoice({ customer: customerWhileCanceling });
 
-	// Dashboard "Manage Cancellation" → cancel immediately + refund to card.
-	// This is what the UI does NOT currently expose for an already-canceling sub.
 	const cancelImmediatelyParams = {
 		customer_id: customerId,
 		product_id: pro.id,

@@ -21,13 +21,6 @@ import {
 	productV2ToFeatureItems,
 } from "@utils/productV3Utils/productItemUtils/productV3ItemUtils.js";
 
-/**
- * Convert a ProductV2 (items-based) into the latest plan API response shape.
- * Shared by the persisted plan response, the catalog preview (params resolved
- * with no DB write), and the migration-draft builder. Pure: callers fill any
- * DB-only meta (version/env/created_at) on the ProductV2 before calling.
- * `currency` enables display strings; omit it for diff-only callers.
- */
 export const productV2ToApiPlanV1 = ({
 	product,
 	features,
@@ -44,9 +37,7 @@ export const productV2ToApiPlanV1 = ({
 	expand?: string[];
 	customerEligibility?: ApiPlanV1["customer_eligibility"];
 	licenses?: ApiPlanLicenseV1[];
-	/** Stripe and RevenueCat ids, on the plan and its base price. Off for plans that get rebuilt into items, which would adopt those ids. */
 	includeProcessors?: boolean;
-	/** RevenueCat mappings live in their own table, so the row is read in. */
 	revenuecatMapping?: RevenueCatPlanMapping | null;
 }): ApiPlanV1 & { licenses?: ApiPlanLicenseV1[] } => {
 	const sortedItems = sortProductItems(product.items, features);

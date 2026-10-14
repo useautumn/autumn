@@ -1,10 +1,3 @@
-/**
- * A plan-default overage_allowed:true enables overage on a free feature when the
- * customer/entity have no control of their own. The plan-level control on the
- * product resolves through resolveBillingControl and overrides usage_allowed at
- * deduction-prep, so the balance may go negative.
- */
-
 import { test } from "bun:test";
 import type { ApiCustomerV5 } from "@autumn/shared";
 import { expectBalanceCorrect } from "@tests/integration/utils/expectBalanceCorrect.js";
@@ -35,7 +28,6 @@ test.concurrent(
 			],
 		});
 
-		// Without the plan control a free feature caps at 100; here it goes past.
 		await autumnV2_1.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,

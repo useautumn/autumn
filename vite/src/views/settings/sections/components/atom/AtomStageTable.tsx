@@ -8,11 +8,9 @@ export type AtomStageRow = {
 	label: string;
 	detail: string;
 	chip: AtomChipDisplay;
-	/** Steps not reached yet read quieter than the ones under way or done. */
 	isReached: boolean;
 };
 
-/** Each step Atom goes through, what it stands up, and where it is. */
 export const AtomStageTable = ({ rows }: { rows: AtomStageRow[] }) => (
 	<ul className="border-t border-table-row-divider">
 		{rows.map((row) => (

@@ -42,7 +42,6 @@ export const handleRefundInvoice = createRoute({
 
 		const stripeCli = createStripeCli({ org: ctx.org, env: ctx.env });
 
-		// 1. Retrieve the Stripe invoice with payments expanded
 		let stripeInvoice: Stripe.Invoice;
 		try {
 			stripeInvoice = await stripeCli.invoices.retrieve(stripe_invoice_id, {
@@ -113,7 +112,6 @@ export const handleRefundInvoice = createRoute({
 			});
 		}
 
-		// 3. Resolve the charge from the invoice's payments
 		const charge = await resolveChargeFromInvoice({
 			stripeCli,
 			stripeInvoice,
@@ -127,7 +125,6 @@ export const handleRefundInvoice = createRoute({
 			});
 		}
 
-		// 4. Validate and calculate
 		const refundableAmountInCents = validateChargeRefundable({ charge });
 		const refundAmountInCents = calculateRefundAmountInCents({
 			mode,
@@ -136,7 +133,6 @@ export const handleRefundInvoice = createRoute({
 			currency: charge.currency,
 		});
 
-		// 5. Issue the refund and update the DB
 		const stripeRefund = await createRefundAndUpdateInvoice({
 			stripeCli,
 			db: ctx.db,

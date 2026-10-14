@@ -1,9 +1,3 @@
-/**
- * What the spec harvest produces. The first block reads the REAL spec: a test
- * against an invented schema passes while the real shape differs, which has
- * already produced two bad tests in this package.
- */
-
 import { expect, test } from "bun:test";
 import type { JsonSchema } from "../src/casing/schemaKeyCasing";
 import { nodeRulesFromSpec } from "../src/lint/specRules/nodeRulesFromSpec";
@@ -53,8 +47,6 @@ test("bounds survive from zod: minItems on tiers, exclusiveMinimum on to", () =>
 		rules["features.creditSchema.tiers"]?.fields?.to?.exclusiveMinimum,
 	).toBe(0);
 });
-
-// --- synthetic edges the real spec does not isolate cleanly ---
 
 const harvest = (schema: JsonSchema) =>
 	nodeRulesFromSpec({

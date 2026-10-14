@@ -16,7 +16,6 @@ const retry = {
 };
 const DROP_BATCH = 500;
 
-/** A Postgres stand-in that counts statements and how many run at once; `gate` holds every flush until it resolves. */
 const createCountingDb = ({
 	gate = Promise.resolve(),
 	failDeletes = false,
@@ -83,7 +82,6 @@ const createStore = ({
 	});
 	const deletes = store.snapshotQueues;
 	if (!deletes) throw new Error("expected snapshot writes");
-	/** Lane ticks hand the committer one DELETE at a time, so quiet means every tick has run and landed. */
 	const drained = async () => {
 		for (let quiet = 0; quiet < 3; ) {
 			await committer.drain();
@@ -96,7 +94,6 @@ const createStore = ({
 	return { store, deletes, drained };
 };
 
-/** A deleted customer comes back as the customer part of its identity: what the engine's key names. */
 const customerOf = (index: number) => ({
 	orgId: "org_1",
 	env: "sandbox",
@@ -180,7 +177,6 @@ describe("snapshot lane writes: evict deletes", () => {
 		held.resolve();
 		await drained();
 
-		// 2,500 per partition: ceil(2,500 / 500) each.
 		expect(deleteStatements()).toHaveLength(4 * 5);
 		expect(maxInFlight()).toBe(4);
 	});
@@ -207,7 +203,6 @@ describe("snapshot lane writes: evict deletes", () => {
 		deletes.enqueueDelete({ topic, partition: 4, customerKey: keyOf(99) });
 		await Bun.sleep(5);
 
-		// Only the apply's flush has reached Postgres; the DELETE waits for it to settle.
 		expect(requests).toHaveLength(1);
 		expect(requests[0]?.snapshots?.deletes ?? []).not.toContainEqual(
 			customerOf(99),
@@ -252,12 +247,10 @@ describe("snapshot lane writes: evict deletes", () => {
 			warnings,
 		});
 
-		// One synchronous burst: no tick runs between enqueues, so the ceiling is what one tick can find waiting.
 		const offered = SNAPSHOT_LANE_MAX_PENDING + 50;
 		for (let index = 0; index < offered; index++)
 			deletes.enqueueDelete({ topic, partition: 4, customerKey: keyOf(index) });
 		expect(warnings).toHaveLength(0);
-		// An evict past the ceiling is still answered by its own tick, never settled early as "no rows".
 		let landed = false;
 		const landing = deletes
 			.deleteLanded({ topic, partition: 4, customerKey: keyOf(offered - 1) })
@@ -508,7 +501,6 @@ describe("snapshot lane writes: refreshes", () => {
 			requestCount: () => requests.length,
 		});
 		await store.initializePartition({ topic, partition: 4, nextOffset: 0n });
-		// A tick is in flight for cus_9, so what follows waits in the pending map.
 		deletes.enqueueDelete({ topic, partition: 4, customerKey: keyOf(9) });
 		await Bun.sleep(2);
 		deletes.enqueueRefresh({
@@ -694,7 +686,6 @@ describe("snapshot lane writes: refreshes", () => {
 				baselineAt: 1,
 				logOffset: 0n,
 			});
-		// Full: a new customer is refused, a pending one is replaced.
 		deletes.enqueueRefresh({
 			topic,
 			partition: 4,

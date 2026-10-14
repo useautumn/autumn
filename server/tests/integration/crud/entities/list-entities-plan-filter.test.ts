@@ -1,29 +1,3 @@
-/**
- * Contract coverage for the `plans` filter on entities.list.
- *
- * Complements list-entities.test.ts, which covers the two basic matches
- * (inherited customer-level, and entity-level). This file covers the edges that
- * the plan_scopes rewrite in getPaginatedEntitySubjectsQuery /
- * countEntitiesMatchingPlans could plausibly break:
- *
- *   Behaviors:
- *     - a plan nobody holds -> empty page, total_filtered_count 0
- *     - multiple plans -> union (OR), each entity appearing exactly ONCE even
- *       when it matches via BOTH a customer-level and an entity-level product
- *     - versions:[matching] -> included; versions:[absent] -> excluded
- *     - plans + customer_id -> intersection, never another customer's entities
- *     - plans + search -> intersection
- *     - total_filtered_count agrees with the number of entities actually listed
- *
- * The dedup case is the important one: plan_scopes emits a customer-level row
- * for a matching customer and drops that customer's entity-level rows, so the
- * join stays 1:1. If that collapses wrongly, an entity that matches two ways
- * comes back duplicated and total_filtered_count disagrees with the list.
- *
- * The isolation case is the second: plan_scopes joins on internal_customer_id,
- * so a scoping mistake there leaks a different customer's entities into the page.
- */
-
 import { expect, test } from "bun:test";
 import type { ApiEntityV2, PagePaginatedResponse } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
@@ -48,17 +22,14 @@ test.concurrent(
 		const betaEntityId = `${entityPrefix}-beta`;
 		const otherEntityId = `${entityPrefix}-other`;
 
-		// Attached to the CUSTOMER, so it covers every one of their entities.
 		const inheritedProduct = products.base({
 			id: "plan-filter-inherited",
 			items: [items.dashboard(), items.monthlyMessages({ includedUsage: 100 })],
 		});
-		// Attached to a single ENTITY.
 		const entityProduct = products.base({
 			id: "plan-filter-entity",
 			items: [items.monthlyCredits({ includedUsage: 50 })],
 		});
-		// Created but never attached to anyone.
 		const unattachedProduct = products.base({
 			id: "plan-filter-unattached",
 			items: [items.monthlyCredits({ includedUsage: 10 })],
@@ -84,18 +55,12 @@ test.concurrent(
 			});
 		}
 
-		// alpha now matches inheritedProduct (via customer) AND entityProduct
-		// (directly) — the dedup case.
 		await autumnV1.billing.attach({
 			customer_id: customerId,
 			product_id: entityProduct.id,
 			entity_id: alphaEntityId,
 		});
 
-		// A second customer holding the SAME inherited plan, to prove scope
-		// isolation rather than assuming it. initScenario only owns customerId,
-		// so this one has to be cleared explicitly or a re-run collides on the
-		// deterministic id.
 		await autumnV2_1.customers.delete(otherCustomerId).catch(() => {});
 		await autumnV2_1.customers.create({ id: otherCustomerId });
 		await autumnV1.billing.attach({
@@ -109,8 +74,6 @@ test.concurrent(
 			name: otherEntityId,
 		});
 
-		// entities.list sits under the ListCustomers rate limiter, and this test
-		// makes ~8 calls back to back — space them or the run dies mid-suite.
 		const list = async (body: Record<string, unknown>) => {
 			await timeout(1200);
 			return autumnV2_1.entitiesV2.list<ListEntitiesResponse<ApiEntityV2>>({
@@ -120,7 +83,6 @@ test.concurrent(
 			});
 		};
 
-		// ── A plan nobody holds returns nothing ───────────────────────────
 		const unattached = await list({
 			search: entityPrefix,
 			plans: [{ id: unattachedProduct.id }],
@@ -128,7 +90,6 @@ test.concurrent(
 		expect(unattached.list).toHaveLength(0);
 		expect(unattached.total_filtered_count).toBe(0);
 
-		// ── Union across plans, with alpha matching BOTH ways exactly once ─
 		const union = await list({
 			search: entityPrefix,
 			plans: [{ id: inheritedProduct.id }, { id: entityProduct.id }],
@@ -137,11 +98,9 @@ test.concurrent(
 		expect(unionIds).toEqual(
 			[alphaEntityId, betaEntityId, otherEntityId].sort(),
 		);
-		// The dedup assertion: no entity repeated despite alpha matching twice.
 		expect(new Set(unionIds).size).toBe(unionIds.length);
 		expect(union.total_filtered_count).toBe(unionIds.length);
 
-		// ── Version filter ────────────────────────────────────────────────
 		const matchingVersion = await list({
 			search: entityPrefix,
 			plans: [{ id: entityProduct.id, versions: [1] }],
@@ -158,7 +117,6 @@ test.concurrent(
 		expect(absentVersion.list).toHaveLength(0);
 		expect(absentVersion.total_filtered_count).toBe(0);
 
-		// ── plans + customer_id: never another customer's entities ────────
 		const scopedToCustomer = await list({
 			plans: [{ id: inheritedProduct.id }],
 			customer_id: customerId,
@@ -177,7 +135,6 @@ test.concurrent(
 		]);
 		expect(scopedToOther.total_filtered_count).toBe(1);
 
-		// ── plans + search intersect rather than either winning ───────────
 		const planAndSearch = await list({
 			plans: [{ id: inheritedProduct.id }],
 			search: betaEntityId,
@@ -187,7 +144,6 @@ test.concurrent(
 		]);
 		expect(planAndSearch.total_filtered_count).toBe(1);
 
-		// A search that excludes every plan match must win, not be ignored.
 		const planAndImpossibleSearch = await list({
 			plans: [{ id: entityProduct.id }],
 			search: betaEntityId,

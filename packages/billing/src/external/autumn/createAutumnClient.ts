@@ -6,9 +6,7 @@ const SANDBOX_KEY_PREFIX = "am_sk_test_";
 
 export type AutumnClientConfig = {
 	secretKey: string;
-	/** Defaults to the SDK's production URL. */
 	serverUrl?: string;
-	/** Off by default: a live key is refused so metering can't reach the real org by accident. */
 	allowLiveKey?: boolean;
 };
 
@@ -21,7 +19,6 @@ const trackItemToBatchTrackItem = (item: TrackItem) => ({
 	properties: item.properties,
 });
 
-/** Autumn's own org, through the public SDK, exactly as a customer would call it. */
 export const createAutumnClient = ({
 	config,
 }: {
@@ -38,7 +35,6 @@ export const createAutumnClient = ({
 	const sdk = new Autumn({
 		secretKey: config.secretKey,
 		serverURL: config.serverUrl,
-		// `edge.check` asks this Atom first and falls back to the Autumn API when it's down.
 		edgeURL: process.env.AUTUMN_EDGE_URL || undefined,
 	});
 

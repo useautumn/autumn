@@ -16,7 +16,6 @@ type RequestedPlan = Pick<
 	"fullProduct" | "featureQuantities" | "customerLicenseQuantities"
 >;
 
-/** The requested plan is exactly this customer product: same scope, and the one config equality set_plans uses. */
 export const isUnchangedCustomerProduct = ({
 	ctx,
 	customerProduct,

@@ -5,7 +5,6 @@ import {
 } from "@autumn/shared";
 import { getLargestInterval } from "@/internal/products/prices/priceUtils/priceIntervalUtils";
 
-/** Where the row's period would end if its cycle restarted now; null when it has no cycle. */
 export const periodEndsAtAfterReset = ({
 	customerProduct,
 	now,

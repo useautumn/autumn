@@ -6,11 +6,6 @@ import { resolveDeclaredPlanLicenses } from "@/internal/catalogV2/actions/update
 import { computePlanLicenseRowPlan } from "@/internal/catalogV2/actions/updateCatalog/compute/computeUpsertProductsPlan/computePlanLicensesPlan/row/computePlanLicenseRowPlan";
 import { buildProductStatesContext } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/buildProductStatesContext";
 
-/**
- * A license plan renamed by internalId keeps its internal row, so the
- * parent's link to it is the same (parent, license) pair: never add + remove.
- */
-
 const seat = products.createFull({ id: "seat", name: "Seat" });
 const seatNew: FullProduct = { ...seat, id: "seatNew" };
 const enterprise = products.createFull({ id: "enterprise", name: "Ent" });

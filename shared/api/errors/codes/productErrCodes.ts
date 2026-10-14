@@ -1,6 +1,3 @@
-/**
- * Product-related error codes
- */
 export const ProductErrorCode = {
 	ProductNotFound: "product_not_found",
 	ProductAlreadyExists: "product_already_exists",

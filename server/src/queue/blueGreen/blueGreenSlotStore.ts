@@ -12,11 +12,6 @@ import {
 
 export type BlueGreenServiceName = "workers" | "cron";
 
-/**
- * Each blue-green service (workers, cron) has its own S3 active-slot record
- * so they can be swapped independently. Both stores poll every 2s — cheap
- * S3 GETs, sub-2s swap latency.
- */
 const createSlotStore = ({ s3Key }: { s3Key: string }) =>
 	createEdgeConfigStore<ActiveSlotConfig>({
 		s3Key,
@@ -76,7 +71,6 @@ export const writeActiveSlotToS3 = ({
 	config: ActiveSlotConfig;
 }) => getStore(serviceName).writeToSource({ config });
 
-/** Test-only escape hatch matching the edge config store interface. */
 export const _setActiveSlotForTesting = ({
 	serviceName,
 	config,

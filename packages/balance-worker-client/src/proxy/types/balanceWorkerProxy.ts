@@ -6,7 +6,6 @@ import type {
 	WorkerRequestOutcome,
 } from "../../types/balanceWorkerClientErrors.js";
 
-/** The client's calls as the proxy names them; the catalog's one call is flattened. */
 type ProxiedCalls = Omit<
 	BalanceWorkerClient,
 	"queue" | "catalog" | "start" | "stop"
@@ -17,7 +16,6 @@ type ProxiedCalls = Omit<
 export type BalanceWorkerProxyMethod = keyof ProxiedCalls;
 export type BalanceWorkerProxyCallParams<M extends BalanceWorkerProxyMethod> =
 	Parameters<ProxiedCalls[M]>[0];
-/** What crosses the wire: a call's params without its abort signal. */
 export type BalanceWorkerProxyParams<M extends BalanceWorkerProxyMethod> = Omit<
 	BalanceWorkerProxyCallParams<M>,
 	"signal"
@@ -32,13 +30,11 @@ export type BalanceWorkerProxyCall = {
 	};
 }[BalanceWorkerProxyMethod];
 
-/** The signed body: the call, who sent it, and when, so a captured request expires. */
 export type BalanceWorkerProxyRequest = BalanceWorkerProxyCall & {
 	caller: string;
 	sentAt: number;
 };
 
-/** A `BalanceWorkerClientError` as JSON, so the caller rethrows the error the API's client threw. */
 export type BalanceWorkerProxyError = {
 	code: BalanceWorkerClientErrorCode;
 	outcome: WorkerRequestOutcome;
@@ -53,10 +49,8 @@ export type BalanceWorkerProxyResponse = {
 };
 
 export type ProxyBalanceWorkerClientConfig = {
-	/** The API's origin, e.g. `https://api.useautumn.com`. */
 	url: string;
 	secret: string;
-	/** Who is calling, e.g. the host's name; the API logs it with each call. */
 	caller: string;
 };
 

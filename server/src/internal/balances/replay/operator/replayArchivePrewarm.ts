@@ -52,8 +52,6 @@ export function buildReplaySelection({
 	};
 }
 
-/** Only a freshly initialized baseline admits a customer; every other verdict
- *  leaves the replayed numbers unverifiable. */
 const admitPrewarmResult = ({
 	result,
 }: {
@@ -142,8 +140,6 @@ const runPrewarmLaneItem = async ({
 	});
 };
 
-/** Every prewarm settles before the caller measures anything, so hydration work
- *  never lands inside a measured request. */
 export async function prewarmReplayCohorts({
 	cohorts,
 	baseline,

@@ -12,7 +12,6 @@ import { useNow } from "./useNow";
 
 const QUERY_KEY = ["admin-rollouts"];
 
-/** Pins still on the worker or on their way off; a landed removal only lingers for cache staleness. */
 const toVisibleCustomerPins = ({
 	entry,
 	settleMs,
@@ -32,7 +31,6 @@ const toVisibleCustomerPins = ({
 			.map(([customerId, customer]) => ({ orgId, customerId, customer })),
 	);
 
-/** When the last removal still on its way lands; 0 when none is. */
 const toLastRemovalLandsAt = ({
 	entry,
 	settleMs,
@@ -50,7 +48,6 @@ const toLastRemovalLandsAt = ({
 			0,
 		);
 
-/** Server state for the balance-worker rollout: the config as S3 holds it, plus the mutations that move it. */
 export const useBalanceWorkerRollout = () => {
 	const axiosInstance = useAxiosInstance();
 	const queryClient = useQueryClient();
@@ -163,7 +160,6 @@ export const useBalanceWorkerRollout = () => {
 
 	const entry = rolloutId ? query.data?.rollouts[rolloutId] : undefined;
 	const settleMs = query.data?.settleMs ?? 0;
-	// Ticks only while a removal is landing, so its row drops off without waiting for a refetch.
 	const tickingNow = useNow({
 		active: Date.now() < toLastRemovalLandsAt({ entry, settleMs }),
 	});

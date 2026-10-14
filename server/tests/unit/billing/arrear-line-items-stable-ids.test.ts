@@ -1,12 +1,3 @@
-/**
- * Usage (in-arrear) line items get random ids by default, which makes it
- * impossible to tell on a webhook retry whether a line is already on the
- * Stripe invoice. When a scope (the Stripe invoice id) is provided, the id
- * must be a pure function of scope + customer price so a retry
- * regenerates the same id and can be matched against
- * metadata.autumn_line_item_id.
- */
-
 import { describe, expect, test } from "bun:test";
 import { BillingVersion, EntInterval } from "@autumn/shared";
 import { contexts } from "@tests/utils/fixtures/db/contexts.js";

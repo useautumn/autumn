@@ -6,7 +6,6 @@ import {
 } from "../../types/catalogRowsEnvelope.js";
 import { sharedCatalogRowsSql } from "./sharedCatalogRowsSql.js";
 
-/** The org's whole shared catalog in this env: every row a customer can reference that is not that customer's own. */
 export const getSharedCatalogRows = async ({
 	ctx,
 }: {

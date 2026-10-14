@@ -11,11 +11,6 @@ const HTTP_METHODS = [
 	"trace",
 ] as const;
 
-/**
- * Injects the `x-api-version` header parameter into all operations in the OpenAPI document.
- * This ensures every endpoint has the version header for SDK generation.
- * Skips operations that already have the parameter defined.
- */
 export function injectGlobalHeaderParameters({
 	openApiDocument,
 	version = LATEST_VERSION,

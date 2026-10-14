@@ -9,9 +9,6 @@ import {
 	proPlanSpec,
 } from "./proGrowthSetup.ts";
 
-/** Everything stated up front, told to proceed. The twin that keeps the
- * missing-X cases honest — an agent that always asks passes those and fails
- * this. */
 export const clear = defineCase({
 	name: "basics-pro-growth-clear",
 	prompt: [

@@ -1,14 +1,3 @@
-/**
- * Version identity read path — product fetching (r1, r2).
- *
- * Contract under test:
- *   r1  v1+v2, v2 active (lockstep) → omit get/list/catalog.get returns v2
- *   r2  v1 forced active → omit get/list/catalog.get returns v1
- *   Explicit version lookups are unchanged.
- *   GET product/plan includes version_slug and active on the active row
- *   and on every all_versions row.
- */
-
 import { expect, test } from "bun:test";
 import { type ApiPlanV1, ResetInterval } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features";

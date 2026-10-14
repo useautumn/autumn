@@ -1,5 +1,3 @@
-/** Omitted license_quantities keep the running seats in the opening phase and grant included seats only later. */
-
 import { describe, expect, test } from "bun:test";
 import type {
 	CustomerLicenseQuantity,

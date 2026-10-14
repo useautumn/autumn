@@ -11,9 +11,6 @@ import { StatusCodes } from "http-status-codes";
 import { assertFutureBillingCycleAnchor } from "@/internal/billing/v2/common/errors/assertFutureBillingCycleAnchor";
 import { assertNoBillingCycleAnchorWithTrial } from "@/internal/billing/v2/common/errors/assertNoBillingCycleAnchorWithTrial";
 
-/**
- * Validates billing cycle anchor constraints for attach.
- */
 export const handleBillingCycleAnchorErrors = ({
 	billingContext,
 	params,
@@ -71,7 +68,6 @@ export const handleBillingCycleAnchorErrors = ({
 
 	assertNoBillingCycleAnchorWithTrial({ billingContext });
 
-	// Cannot use billing_cycle_anchor on one-off products
 	if (isOneOffProduct({ product: billingContext.attachProduct })) {
 		throw new RecaseError({
 			message:
@@ -81,7 +77,6 @@ export const handleBillingCycleAnchorErrors = ({
 		});
 	}
 
-	// Resets are not supported for scheduled switches (downgrades)
 	if (
 		requestedBillingCycleAnchor === "now" &&
 		billingContext.planTiming === "end_of_cycle"

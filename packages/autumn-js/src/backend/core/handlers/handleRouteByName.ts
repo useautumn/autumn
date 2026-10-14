@@ -30,7 +30,6 @@ export const handleRouteByName = async ({
 	secretKey,
 	autumnURL,
 }: HandleRouteByNameOptions): Promise<HandleRouteByNameResult> => {
-	// 1. Secret key check
 	const keyCheck = secretKeyCheck(secretKey);
 	if (!keyCheck.found) {
 		return {
@@ -39,7 +38,6 @@ export const handleRouteByName = async ({
 		};
 	}
 
-	// 2. Find route definition
 	const route = routeConfigs.find((r) => r.route === routeName);
 	if (!route) {
 		return {
@@ -48,13 +46,11 @@ export const handleRouteByName = async ({
 		};
 	}
 
-	// 3. Create Autumn SDK client
 	const autumn = new Autumn({
 		secretKey: secretKey || process.env.AUTUMN_SECRET_KEY,
 		...(autumnURL && { serverURL: autumnURL }),
 	});
 
-	// 4. Execute route
 	const result = await executeRoute({
 		autumn,
 		route,

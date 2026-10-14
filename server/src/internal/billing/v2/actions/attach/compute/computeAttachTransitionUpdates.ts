@@ -6,12 +6,6 @@ import type {
 import { CusProductStatus, isFutureStartDate } from "@autumn/shared";
 import { isRevertTrialContext } from "@/internal/billing/v2/setup/trialContext/isRevertTrialContext";
 
-/**
- * Computes the updates to apply to the current customer product during an attach transition.
- *
- * - Upgrade (immediate): Expire the current product
- * - Downgrade (end_of_cycle): Mark as canceling at end of cycle
- */
 export const computeAttachTransitionUpdates = ({
 	attachBillingContext,
 	params = {} as AttachParamsV1,
@@ -60,7 +54,6 @@ export const computeAttachTransitionUpdates = ({
 		? startsAt
 		: endOfCycleMs;
 
-	// Downgrade: mark as canceling when the scheduled replacement starts.
 	return {
 		customerProduct: currentCustomerProduct,
 		updates: {

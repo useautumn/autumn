@@ -24,8 +24,6 @@ const FAILED_PAYMENT_STATUSES: Stripe.Subscription.Status[] = [
 const isCancelling = (subscription: Stripe.Subscription) =>
 	subscription.cancel_at_period_end || subscription.cancel_at != null;
 
-/** What happens next on the subscription's billing date; a failed payment
- * outranks a pending cancel since it needs attention first. */
 export const stripeSubscriptionToRenewal = ({
 	subscription,
 }: {
@@ -101,7 +99,6 @@ const RENEWAL_PHRASE_VERBS: Record<
 	starts: "starts",
 };
 
-/** The renewal as it reads mid-sentence, e.g. "renews Nov 1, 2026". */
 export const subscriptionRenewalPhrase = ({
 	renewal,
 }: {

@@ -51,7 +51,6 @@ export const appendToFixtureArray = ({
 				member.namedChildren()[0]?.text() === property,
 		);
 	if (pair === undefined) {
-		// Seed the key, then re-find: the edit shifts every node position.
 		const seeded = root.commitEdits([
 			appendPropertyEdit({ source, object, pair: `${property}: []` }),
 		]);

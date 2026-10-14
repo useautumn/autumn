@@ -119,7 +119,6 @@ export const previewPlanLicenseSync = async (
 	return { licenses: current, changes, prepared };
 };
 
-/** Resolves and validates one link without writing it. */
 const resolveLink = async ({
 	ctx,
 	parentProduct,
@@ -199,8 +198,6 @@ const resolveLink = async ({
 	};
 };
 
-/** Nesting is not supported: a plan offered as a license under other plans
- * cannot offer licenses of its own. Clearing (`licenses: []`) stays allowed. */
 const assertParentNotLicensed = ({
 	parentProduct,
 	licenses,
@@ -221,7 +218,6 @@ const assertParentNotLicensed = ({
 	});
 };
 
-/** A plan cannot drop below what customers are already using. */
 const assertCapacityAllowed = async ({
 	ctx,
 	parentInternalProductId,
@@ -249,7 +245,6 @@ const assertCapacityAllowed = async ({
 	}
 };
 
-/** Resolves and validates the complete desired license list without writing. */
 export const preparePlanLicenseSync = async ({
 	ctx,
 	parentProduct,
@@ -313,7 +308,6 @@ export const preparePlanLicenseSync = async ({
 		resolved.map((link) => link.licenseProduct.internal_id),
 	);
 
-	// Removals + capacity reductions must clear the active-assignment guard.
 	const existingLinks = newParentVersion ? [] : sourceLinks;
 	const resolvedPublicIds = new Set(
 		resolved.map((link) => link.licenseProduct.id),

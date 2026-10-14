@@ -10,7 +10,6 @@ import {
 	StepHeader,
 } from "../../components/index.js";
 
-// System prompt for AI integration - will be copied to clipboard
 const SYSTEM_PROMPT = `You are an expert AI assistant that helps users set up Autumn, a billing and entitlements layer over Stripe. The user has already installed Autumn Skills ready for you to use the load skill tool.
 
 The user's business structure in terms of its billing, pricing, plans and features are set out in a file called 'autumn.config.ts'.
@@ -59,7 +58,6 @@ export function HandoffStep({
 }: HandoffStepProps) {
 	const { exit } = useApp();
 	const { copy, showingFeedback } = useClipboard();
-	// Start with ai_choice if no customers, otherwise complete
 	const [state, setState] = useState<HandoffState>(
 		hasCustomers ? "complete_with_customers" : "ai_choice",
 	);
@@ -86,44 +84,36 @@ export function HandoffStep({
 
 	const handleAiChoice = (value: string) => {
 		if (value === "no") {
-			// Skip to next_steps
 			setState("next_steps");
 			return;
 		}
-		// Show location selector
 		setState("location_choice");
 	};
 
 	const handleLocationSubmit = async (values: string[]) => {
 		if (values.length === 0) {
-			// Nothing selected, go to next_steps
 			setState("next_steps");
 			return;
 		}
 
-		// Store selections
 		setSelectedLocations(values);
 
-		// Check if custom path was selected
 		if (values.includes("custom")) {
 			setState("custom_path_input");
 			return;
 		}
 
-		// No custom path needed, create skills directly
 		await createSkillsInLocations(values);
 	};
 
 	const handleCustomPathSubmit = async (value: string) => {
 		const trimmedPath = value.trim();
 
-		// Replace "custom" with actual path (or remove if empty)
 		const locations = selectedLocations
 			.filter((loc) => loc !== "custom")
 			.concat(trimmedPath ? [trimmedPath] : []);
 
 		if (locations.length === 0) {
-			// No locations, go to next_steps
 			setState("next_steps");
 			return;
 		}
@@ -134,13 +124,11 @@ export function HandoffStep({
 	const createSkillsInLocations = async (locations: string[]) => {
 		setState("creating");
 
-		// Create skills in all selected locations
 		for (const location of locations) {
 			await create(location, { saveAll: true, hasPricing });
 		}
 
 		setAllCreatedDirs(locations);
-		// After creating skills, go to next_steps
 		setState("next_steps");
 	};
 
@@ -153,14 +141,12 @@ export function HandoffStep({
 			await copy(SYSTEM_PROMPT);
 		}
 
-		// All options exit the app
 		setState("manual_exit");
 		setTimeout(() => {
 			exit();
 		}, 900);
 	};
 
-	// User already has customers - they're all set!
 	if (state === "complete_with_customers") {
 		setTimeout(() => {
 			exit();
@@ -192,7 +178,6 @@ export function HandoffStep({
 		);
 	}
 
-	// First question: Would you like AI skills?
 	if (state === "ai_choice") {
 		return (
 			<Box flexDirection="column" marginBottom={1}>
@@ -213,7 +198,6 @@ export function HandoffStep({
 		);
 	}
 
-	// Multi-select for skill locations
 	if (state === "location_choice") {
 		return (
 			<Box flexDirection="column" marginBottom={1}>
@@ -233,7 +217,6 @@ export function HandoffStep({
 		);
 	}
 
-	// Custom path input
 	if (state === "custom_path_input") {
 		return (
 			<Box flexDirection="column" marginBottom={1}>
@@ -254,7 +237,6 @@ export function HandoffStep({
 		);
 	}
 
-	// Creating skills
 	if (state === "creating") {
 		return (
 			<Box flexDirection="column" marginBottom={1}>
@@ -264,13 +246,11 @@ export function HandoffStep({
 		);
 	}
 
-	// Next steps menu (shown after skills created or skipped)
 	if (state === "next_steps") {
 		return (
 			<Box flexDirection="column" marginBottom={1}>
 				<StepHeader step={step} totalSteps={totalSteps} title="Next Steps" />
 				<Box flexDirection="column">
-					{/* Show created skills if any */}
 					{allCreatedDirs.length > 0 && (
 						<Box marginBottom={1} flexDirection="column">
 							<StatusLine status="success" message="Skills created!" />
@@ -307,7 +287,6 @@ export function HandoffStep({
 		);
 	}
 
-	// Manual exit
 	if (state === "manual_exit") {
 		const finalMessage =
 			lastNextStepChoice === "docs" ? (

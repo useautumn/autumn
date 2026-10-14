@@ -1,8 +1,3 @@
-/**
- * `automatic_tax` on recurring subs, both v1 (createStripeSub2) and v2
- * (executeStripeSubscriptionOperation). Pro is $20/mo + 10% AU GST = $22 (2200 cents).
- */
-
 import { expect, test } from "bun:test";
 import chalk from "chalk";
 import type Stripe from "stripe";

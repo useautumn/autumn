@@ -1,8 +1,3 @@
-/**
- * dfu.flash — set-state expire unrelated: importing only plan B expires an
- * existing customer-level plan A that the new desired state no longer declares.
- */
-
 import { expect, test } from "bun:test";
 import { CusProductStatus } from "@autumn/shared";
 import {
@@ -75,7 +70,6 @@ test.concurrent(
 			buildPayload(planB.id, subB.customerId, subB.subscriptionId),
 		);
 
-		// ── Plan A declared away → expired; plan B → active. ──
 		const expiredA = secondFlash.result?.flashed?.find(
 			(f) => f.plan_id === planA.id,
 		);

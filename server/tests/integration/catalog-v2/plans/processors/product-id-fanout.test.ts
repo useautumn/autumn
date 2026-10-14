@@ -1,23 +1,3 @@
-/**
- * catalogV2.update — a plan's Stripe product id fans out across the whole plan.
- *
- * Every version of a plan bills under one Stripe product (a mint clones the
- * previous row's processor), so a later correction must reach the versions
- * that already exist — that is the import case.
- *
- * Contract:
- *   B2  processors on a plan reach EVERY version of that plan, unconditionally,
- *       replacing whatever id each version held
- *   B3  the fan-out reaches variants and their own version histories
- *   B4  a mapping-only change is visible in preview_update previous_attributes
- *
- * Red (current):  deriveVersionSiblingIntents bails unless all_versions /
- *   unlink / pointer-change, so only the addressed row is stamped; and
- *   previousAttributeKeys omits `processors`, so preview reports no change.
- * Green (after):  every version + variant version carries the id, and preview
- *   names the mapping change.
- */
-
 import { expect, test } from "bun:test";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
@@ -50,7 +30,6 @@ test.concurrent(
 						},
 					],
 				});
-				// v2 takes the pointer; v1 becomes history.
 				await autumnV2_3.catalogV2.update({
 					plans: [
 						{
@@ -62,7 +41,6 @@ test.concurrent(
 					],
 				});
 
-				// Mapping-only edit, addressing the active row.
 				await autumnV2_3.catalogV2.update({
 					plans: [
 						{
@@ -78,7 +56,6 @@ test.concurrent(
 					version: 2,
 					productId: IMPORTED_PRODUCT_ID,
 				});
-				// B2: history follows the active row's mapping.
 				await expectVersionProcessorCorrect({
 					ctx,
 					planId,
@@ -86,7 +63,6 @@ test.concurrent(
 					productId: IMPORTED_PRODUCT_ID,
 				});
 
-				// B2: a second mapping replaces the id on every version.
 				await autumnV2_3.catalogV2.update({
 					plans: [
 						{
@@ -127,7 +103,6 @@ test.concurrent(
 					baseId,
 					variantId,
 				});
-				// Give the variant its own history: v2 takes the pointer.
 				await autumnV2_3.catalogV2.update({
 					plans: [
 						{
@@ -153,14 +128,12 @@ test.concurrent(
 					version: 1,
 					productId: IMPORTED_PRODUCT_ID,
 				});
-				// B3: the variant's active row follows the base.
 				await expectVersionProcessorCorrect({
 					ctx,
 					planId: variantId,
 					version: 2,
 					productId: IMPORTED_PRODUCT_ID,
 				});
-				// B3: so does the variant's own history.
 				await expectVersionProcessorCorrect({
 					ctx,
 					planId: variantId,
@@ -206,7 +179,6 @@ test.concurrent(
 				);
 				expect(row, `preview row for ${planId}`).toBeDefined();
 
-				// B4: the mapping change is named, carrying the previous id.
 				const previous = row?.plan_change?.previous_attributes;
 				expect(previous, "previous_attributes present").toBeTruthy();
 				expect(

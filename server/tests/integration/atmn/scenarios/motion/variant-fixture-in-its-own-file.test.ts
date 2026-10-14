@@ -1,12 +1,3 @@
-/**
- * atmn scenarios/motion — a variant written as `variant({...})` in its own file, placed into the base's `variants: [...]`
- *
- * code in motion: the config's shape is the user's; pull edits the AST, never rewrites a file
- *
- * Contract: push creates the variant; backfill writes `internalId` into
- * variants/proAnnual.ts only; a second push previews nothing; pull writes nothing.
- */
-
 import { expect, test } from "bun:test";
 import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 import { expectPreviewNone } from "@tests/utils/atmnUtils/expectRoundTrip.js";
@@ -70,7 +61,6 @@ export const proAnnual = variant({
 			const pushed = await scenario.push();
 			expect(pushed.output).toContain(`+ ${pro}@v1`);
 
-			// The variant exists under its base, with its own stable id.
 			const catalog = (await scenario.client.get({
 				include_versions: true,
 			})) as {
@@ -88,20 +78,17 @@ export const proAnnual = variant({
 			);
 			expect(edge?.plan?.internalId).toBeTruthy();
 
-			// Backfill wrote the id into the variant's own file, first property.
 			const after = scenario.files();
 			const variantText = after.get("variants/proAnnual.ts") ?? "";
 			expect(variantText).toContain(
 				`variant({\n\tinternalId: ${JSON.stringify(edge?.plan?.internalId)},\n\tvariantPlanId: "${proAnnual}",`,
 			);
-			// The root gained the plan's own id and nothing about the variant.
 			const rootText = after.get("autumn.config.ts") ?? "";
 			expect(rootText).toContain(`internalId: "prod_`);
 			expect(rootText).not.toContain(edge?.plan?.internalId ?? "never");
 			expect(rootText).toContain("variants: [proAnnual]");
 			expect(before.get("autumn.config.ts")).not.toBe(rootText);
 
-			// Stated again as it is, there is nothing to apply, and nothing to pull.
 			await expectPreviewNone({
 				client: scenario.client,
 				wire: await scenario.wireFromConfig(),

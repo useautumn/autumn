@@ -14,7 +14,6 @@ export {
 	type AutoTopUpPendingClaim as AutoTopupPendingClaim,
 } from "@autumn/cache";
 
-/** The server's binding of the shared action: the request's org, env, and logger over the misc cache. */
 const suppressionContext = ({
 	ctx,
 }: {

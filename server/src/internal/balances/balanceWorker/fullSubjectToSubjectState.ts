@@ -56,7 +56,6 @@ const assertSupportedSubject = ({
 	}
 };
 
-/** The rows the worker will own for these features, after every shape gate. */
 export function selectMeteringRows({
 	ctx,
 	fullSubject,
@@ -142,7 +141,6 @@ export function fullSubjectToSubjectState({
 	});
 }
 
-/** The catalog rows that state references, taken from the FullSubject the server already holds. */
 export function fullSubjectToCatalogRows({
 	ctx,
 	fullSubject,
@@ -180,7 +178,6 @@ export function fullSubjectToCatalogRows({
 			}),
 		),
 	);
-	// The trial carries no org or env of its own; its product scopes it for invalidation.
 	const freeTrialRows = rows.customerProducts.flatMap(
 		(customerProduct): CatalogRow[] =>
 			customerProduct.free_trial

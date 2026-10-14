@@ -1,14 +1,3 @@
-/**
- * Phase 3 — persist the RevenueCat subscription/purchase id on
- * `cusProduct.processor.id` when an RC product is inserted.
- *
- * The server-side RC read client is served from mock fixtures via
- * `testOptions.revenueCat` (sent as a request header by the webhook client),
- * so these tests NEVER touch api.revenuecat.com. The id-store is best-effort:
- * a no-match / failure must still insert the product with no processor.id and
- * surface no error.
- */
-
 import { expect, test } from "bun:test";
 import { AppEnv, CusProductStatus, customers } from "@autumn/shared";
 import { items } from "@tests/utils/fixtures/items";
@@ -190,10 +179,6 @@ const mockPurchase = ({
 	status: "owned",
 });
 
-// ═══════════════════════════════════════════════════════════════════
-// TEST 1: INITIAL_PURCHASE subscription → processor.id == mock sub id
-// ═══════════════════════════════════════════════════════════════════
-
 test.concurrent(
 	`${chalk.yellowBright("rc processor-id: stores subscription id on cusProduct.processor.id after INITIAL_PURCHASE")}`,
 	async () => {
@@ -255,10 +240,6 @@ test.concurrent(
 		expect(cusProduct?.processor?.id).toBe(SUB_ID);
 	},
 );
-
-// ═══════════════════════════════════════════════════════════════════
-// TEST 2: NON_RENEWING_PURCHASE one-off → processor.id == mock purchase id
-// ═══════════════════════════════════════════════════════════════════
 
 test.concurrent(
 	`${chalk.yellowBright("rc processor-id: stores purchase id on cusProduct.processor.id after NON_RENEWING_PURCHASE")}`,
@@ -326,11 +307,6 @@ test.concurrent(
 	},
 );
 
-// ═══════════════════════════════════════════════════════════════════
-// TEST 3: Best-effort — no matching RC item ⇒ product inserted,
-// processor.id absent, no error surfaced.
-// ═══════════════════════════════════════════════════════════════════
-
 test.concurrent(
 	`${chalk.yellowBright("rc processor-id: best-effort — no matching RC item still inserts product without processor.id")}`,
 	async () => {
@@ -356,8 +332,6 @@ test.concurrent(
 			revenuecatProductId: RC_STORE_ID,
 		});
 
-		// Subscription references an RC-internal product id that is NOT in the
-		// catalog fixture, so it maps to no Autumn product → no match.
 		const mock: RevenueCatMockFixtures = {
 			products: [
 				mockProduct({ internalId: RC_INTERNAL_ID, storeId: RC_STORE_ID }),
@@ -383,7 +357,6 @@ test.concurrent(
 		const dbCustomer = await getCustomerByCustomerId(customerId);
 		expect(dbCustomer).toBeTruthy();
 
-		// Product is inserted (the point of the flow); wait for it.
 		const cusProduct = await pollUntil(
 			() =>
 				rcCusProduct({
@@ -394,7 +367,6 @@ test.concurrent(
 		);
 		expect(cusProduct).toBeTruthy();
 
-		// Give any (incorrect) best-effort write a chance to land, then assert absent.
 		await new Promise((r) => setTimeout(r, 1500));
 		const after = await rcCusProduct({
 			internalCustomerId: dbCustomer!.internal_id,

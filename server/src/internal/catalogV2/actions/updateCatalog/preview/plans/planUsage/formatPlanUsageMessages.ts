@@ -93,7 +93,6 @@ const formatCustomerMessage = ({
 	return `Attached to customer ${quoteName(first.name)} and ${otherCount} more.`;
 };
 
-/** Pure: usage buckets → dialog-ready reason messages (non-empty only). */
 export const formatPlanUsageMessages = ({
 	usage,
 	willArchive,

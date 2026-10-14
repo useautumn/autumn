@@ -6,17 +6,6 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-/**
- * Dashboard fixture for QAing dimensioned plan-item feature_overrides.
- *
- * DimensionCredits catalog rate card for DimensionAction:
- *   base 1 credit · size=large 16 · size=large+region=eu 20
- *   size=xl graduated (first 5 @ 2, then 1) · lifecycle=spot ×0.3
- *
- * Each plan below overrides that card differently so every dashboard state —
- * inherited, changed, added, missing-vs-catalog — is visible on one screen.
- */
-
 const withOverride = (
 	item: ReturnType<typeof items.consumable>,
 	featureOverride: FeatureConfigOverride,
@@ -25,7 +14,6 @@ const withOverride = (
 	config: { ...item.config, feature_override: featureOverride },
 });
 
-// DimensionCredits carries invoice_credit, which requires usage-based pricing.
 const dimensionItem = () =>
 	items.consumable({
 		featureId: TestFeature.DimensionCredits,
@@ -36,14 +24,11 @@ const dimensionItem = () =>
 test(
 	`${chalk.yellowBright("scenario: credit override dimensions (dashboard QA)")}`,
 	async () => {
-		// Control: no override. The catalog card applies in full.
 		const standard = products.pro({
 			id: "qa-dim-standard",
 			items: [dimensionItem()],
 		});
 
-		// Every dimension re-priced, and the spot multiplier flipped to a
-		// surcharge. Dashboard should mark all rows "changed".
 		const repriced = products.pro({
 			id: "qa-dim-repriced",
 			items: [
@@ -76,9 +61,6 @@ test(
 			],
 		});
 
-		// Flat override: every dimension and multiplier dropped. Total
-		// replacement means size=large must bill the base rate, not 16.
-		// Dashboard should show three rows as missing-vs-catalog.
 		const flattened = products.pro({
 			id: "qa-dim-flat",
 			items: [
@@ -93,8 +75,6 @@ test(
 			],
 		});
 
-		// A dimension the catalog does not have, keeping one catalog dimension
-		// untouched. Dashboard: one inherited, one added, two missing.
 		const extended = products.pro({
 			id: "qa-dim-extended",
 			items: [
@@ -103,7 +83,6 @@ test(
 						{
 							metered_feature_id: TestFeature.DimensionAction,
 							credit_amount: 1,
-							// size=large wins an event that is also region=apac.
 							dimensions: {
 								size_large: {
 									match: { size: "large" },
@@ -122,9 +101,6 @@ test(
 			],
 		});
 
-		// One customer per plan, so the dashboard shows all four states side by
-		// side. Each needs its own payment method — these plans are paid, and an
-		// attach without one returns a checkout URL instead of granting credits.
 		const repricedId = "qa-dim-repriced";
 		const flatId = "qa-dim-flat";
 		const extendedId = "qa-dim-extended";
@@ -133,7 +109,6 @@ test(
 			customerId: "qa-dim-standard",
 			setup: [
 				s.customer({ paymentMethod: "success" }),
-				// Stripe caps a test clock at 3 customers, and this scenario needs 4.
 				s.otherCustomers([
 					{ id: repricedId, paymentMethod: "success" },
 					{ id: flatId, paymentMethod: "success", distinctTestClock: true },
@@ -176,7 +151,6 @@ test(
 			return customer.balances?.[TestFeature.DimensionCredits]?.remaining;
 		};
 
-		// One large event per plan — the clearest cross-plan comparison.
 		await trackDimension({
 			customer: customerId,
 			properties: { size: "large" },
@@ -187,7 +161,6 @@ test(
 		});
 		await trackDimension({ customer: flatId, properties: { size: "large" } });
 
-		// Catalog dimension kept by the override, plus its added one.
 		await trackDimension({
 			customer: extendedId,
 			properties: { size: "large" },

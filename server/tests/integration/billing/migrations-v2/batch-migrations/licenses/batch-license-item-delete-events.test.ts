@@ -1,14 +1,3 @@
-/**
- * A license item delete must describe itself in the migration item event.
- *
- * Both finalize builders are driven off insertedItems, and a removal inserts
- * nothing, so the customer is reported as changed with an empty preview: no
- * plan change, no item change, nothing naming the dropped feature.
- *
- * Red: the event carries zero plan changes.
- * Green: one `updated` plan change carrying a `deleted` item change for the
- * feature the migration dropped.
- */
 import { expect, test } from "bun:test";
 import { MigrationItemRunStatus } from "@autumn/shared";
 import { runChunkedMigration } from "@tests/integration/billing/migrations-v2/utils/runChunkedMigration";
@@ -81,8 +70,6 @@ test(`${chalk.yellowBright("batch-license-customize: a delete describes itself i
 	});
 	if (!events) return;
 
-	// One plan change per assignment: each seat is its own customer product,
-	// grouped the same way an insert is.
 	await expectMigrationItemEventCorrect({
 		ctx,
 		events,

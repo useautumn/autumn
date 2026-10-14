@@ -7,10 +7,6 @@ import type {
 } from "@autumn/shared";
 import { itemToPriceAndEnt } from "@/internal/products/product-items/productItemUtils/itemToPriceAndEnt.js";
 
-/**
- * V1 product format with entitlements as a record.
- * Different from FullProduct which has entitlements as an array.
- */
 type ProductV1 = {
 	id: string;
 	name: string;
@@ -22,12 +18,6 @@ type ProductV1 = {
 	group: string;
 };
 
-/**
- * Converts ProductV2 (items-based) to V1 format (entitlements + prices) via the
- * production itemToPriceAndEnt converter, so the derived prices/entitlements
- * match what gets persisted. Used in tests and in version-time license link
- * validation (handleVersionProduct) to build the new version's prices in memory.
- */
 export const convertProductV2ToV1 = ({
 	productV2,
 	orgId,
@@ -43,7 +33,6 @@ export const convertProductV2ToV1 = ({
 	for (const item of productV2.items) {
 		const feature = features.find((f) => f.id === item.feature_id);
 
-		// Use production conversion utilities
 		const { newEnt, newPrice, sameEnt, samePrice } = itemToPriceAndEnt({
 			item,
 			orgId,
@@ -64,7 +53,6 @@ export const convertProductV2ToV1 = ({
 		}
 	}
 
-	// Convert entitlements array to record keyed by feature_id
 	const entitlementsRecord: Record<string, Entitlement> = {};
 	for (const ent of entitlements) {
 		if (ent.feature_id) {

@@ -10,7 +10,6 @@ import type Stripe from "stripe";
 const invalidRequest = (message: string) =>
 	new RecaseError({ message, code: ErrCode.InvalidRequest, statusCode: 400 });
 
-/** Validates amount/lines and maps Autumn line ids onto the Stripe lines they mirror. */
 export const buildCreditNoteParams = ({
 	params,
 	invoiceId,

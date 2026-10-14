@@ -56,7 +56,6 @@ export const handleInvoiceCheckoutPaid = async ({
 		id: metadata.id,
 	});
 
-	// Fetch customer by internal ID
 	let customerId = attachParams.customer.id;
 
 	if (!customerId) {

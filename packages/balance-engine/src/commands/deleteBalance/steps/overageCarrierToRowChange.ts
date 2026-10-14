@@ -6,10 +6,6 @@ import {
 import type { RowChange } from "../../../models/mutation/rowChange.js";
 import type { WorkerFullCustomerEntitlementWithProduct } from "../../../models/subject/workerFullSubject.js";
 
-/**
- * Legacy `getOverageCusEntUpdates`: the kept row only carries the deleted usage as overage, so its own grant is
- * cancelled (granted 0), its balance is the negated usage, and it never resets. Per entity on a map row.
- */
 export const overageCarrierToRowChange = ({
 	carrier,
 	deletedRows,

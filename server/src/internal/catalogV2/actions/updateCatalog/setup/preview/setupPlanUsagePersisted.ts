@@ -47,7 +47,6 @@ const uniqueCandidates = (
 	return [...byKey.values()];
 };
 
-/** Capped customer samples for preview/UI only. Ids come from product states. */
 export const setupPlanUsagePersisted = async ({
 	ctx,
 	params,

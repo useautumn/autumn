@@ -25,7 +25,6 @@ export const ATOM_STAGE_LABELS: Record<ByocCacheStage, string> = {
 	connected: "Connected",
 };
 
-/** What each step stands up, shown beside it. */
 export const atomStageDetail = ({
 	stage,
 	stackName,
@@ -96,7 +95,6 @@ export const ATOM_RECEIVING_CHECKS_CHIP: AtomChipDisplay = {
 	glyph: "check",
 };
 
-/** Who answered a check: Atom on its own, or the Autumn API it forwarded to. */
 export const ATOM_CHECK_ANSWERED_BY_CHIPS: Record<
 	AtomCheck["answered_by"],
 	AtomChipDisplay
@@ -134,11 +132,9 @@ export const isAtomStageDone = ({
 export const isAtomConnected = (cache: ApiByocCache) =>
 	isAtomStageDone({ cache, stage: "connected" });
 
-/** The org finished setup, so its page shows the Atom rather than the setup steps. */
 export const isAtomSetUp = (cache: ApiByocCache | null) =>
 	Boolean(cache?.first_check_at);
 
-/** The stack is in the org's cloud, so cloud, size and network can no longer change. */
 export const hasAtomStack = (cache: ApiByocCache | null) =>
 	cache !== null && cache.status !== ByocCacheStatus.AwaitingSetup;
 
@@ -146,7 +142,6 @@ export const isAtomBeingRemoved = (cache: ApiByocCache | null) =>
 	cache?.status === ByocCacheStatus.Removing ||
 	cache?.status === ByocCacheStatus.TeardownRequired;
 
-/** The first step not done yet; null once Atom is connected. */
 export const atomCurrentStage = (cache: ApiByocCache): ByocCacheStage | null =>
 	BYOC_CACHE_STAGES.find((stage) => !isAtomStageDone({ cache, stage })) ?? null;
 
@@ -157,7 +152,6 @@ export const atomDeployPercent = (cache: ApiByocCache) => {
 	return Math.round((doneCount / BYOC_CACHE_STAGES.length) * 100);
 };
 
-/** A delete waits on the org: to delete its stack in AWS, or to retry once what stopped it is fixed. */
 export const isAtomRemovalWaitingOnYou = (cache: ApiByocCache) =>
 	cache.status === ByocCacheStatus.TeardownRequired || Boolean(cache.error);
 
@@ -168,7 +162,6 @@ export const atomRemovalPercent = (cache: ApiByocCache) => {
 	return Math.round((removedCount / BYOC_CACHE_REMOVAL_STAGES.length) * 100);
 };
 
-/** Where to delete the org's stack: the CloudFormation console, filtered to it. */
 export const awsStackConsoleUrl = ({
 	stackName,
 	region,

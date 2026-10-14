@@ -1,8 +1,3 @@
-/**
- * set_plans with stripe_subscription_id edits only that subscription: plans
- * billed on another subscription keep their row and subscription.
- */
-
 import { expect, test } from "bun:test";
 import { expectStripeSubscriptionCorrect } from "@tests/integration/billing/utils/expectStripeSubCorrect";
 import chalk from "chalk";

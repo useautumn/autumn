@@ -4,7 +4,6 @@ import type { DrizzleCli } from "@/db/initDrizzle.js";
 
 const STATEMENT_TIMEOUT_MS = 5_000;
 
-/** Where the last page ended; the next one starts strictly after it. */
 export type DueLockCursor = { expiresAt: number; id: string };
 
 export type DueBalanceLock = {
@@ -18,10 +17,6 @@ export type DueBalanceLock = {
 
 const CONFIRM_ON_EXPIRY = "confirm";
 
-/**
- * One page of due locks that expire by confirming, oldest first, keyset-paged on (expires_at, id).
- * Locks that release on expiry belong to their EventBridge timer. Bounded by its own statement timeout.
- */
 export async function getDueConfirmLocks({
 	db,
 	dueBefore,

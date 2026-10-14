@@ -2,7 +2,6 @@ import { expect, test } from "bun:test";
 import crypto from "node:crypto";
 import { createAesCipher } from "../../src/encryption.js";
 
-/** The scheme the server wrote secrets with before this package existed. */
 const legacyEncrypt = ({
 	password,
 	data,

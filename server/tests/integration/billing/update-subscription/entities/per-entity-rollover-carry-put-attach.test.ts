@@ -1,6 +1,3 @@
-// updateSubscription must carry rollovers bucket-for-bucket (prepaid -> prepaid, overage -> overage)
-// when one feature has both a prepaid (volume) and an overage item with per-entity balances.
-
 import { expect, test } from "bun:test";
 import {
 	type ApiEntityV0,
@@ -29,7 +26,6 @@ test.concurrent(
 
 		const apiItems = buildApiItems();
 
-		// PUT-style: replace the full item list; both feature items stay identical.
 		await autumnV2_2.subscriptions.update<UpdateSubscriptionV1ParamsInput>({
 			customer_id: customerId,
 			plan_id: pro.id,
@@ -71,8 +67,6 @@ test.concurrent(
 				extraProducts: [pro2],
 			});
 
-		// Plan switch via attach: a brand-new customer product replaces the old
-		// one; both plans contain the same prepaid + overage items.
 		await autumnV2_2.billing.attach({
 			customer_id: customerId,
 			plan_id: pro2.id,

@@ -13,21 +13,8 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { constructArrearProratedItem } from "@/utils/scriptUtils/constructItem.js";
 
-// ═══════════════════════════════════════════════════════════════════
-// Allocated Invoice — Payment Failure Tests
-//
-// Verifies that when a payment fails:
-// 1. The track request returns an error
-// 2. The invoice is voided
-// 3. The balance is unchanged (rollback)
-// ═══════════════════════════════════════════════════════════════════
-
 const PRICE_PER_SEAT = 50;
 const INCLUDED_USAGE = 1;
-
-// ═══════════════════════════════════════════════════════════════════
-// pay-fail1: BillImmediately payment failure — error + rollback
-// ═══════════════════════════════════════════════════════════════════
 
 test(`${chalk.yellowBright("allocated-invoice-pay-fail1: BillImmediately payment failure returns error and rolls back balance")}`, async () => {
 	const userItem = constructArrearProratedItem({
@@ -64,7 +51,6 @@ test(`${chalk.yellowBright("allocated-invoice-pay-fail1: BillImmediately payment
 		},
 	});
 
-	// Balance unchanged — still at included amount
 	await expectFeatureCachedAndDb({
 		autumn: autumnV1,
 		customerId,
@@ -82,10 +68,6 @@ test(`${chalk.yellowBright("allocated-invoice-pay-fail1: BillImmediately payment
 
 	await expectStripeSubscriptionCorrect({ ctx, customerId });
 });
-
-// ═══════════════════════════════════════════════════════════════════
-// pay-fail2: ProrateImmediately payment failure — error + rollback
-// ═══════════════════════════════════════════════════════════════════
 
 test(`${chalk.yellowBright("allocated-invoice-pay-fail2: ProrateImmediately payment failure returns error and rolls back balance")}`, async () => {
 	const userItem = constructArrearProratedItem({
@@ -124,7 +106,6 @@ test(`${chalk.yellowBright("allocated-invoice-pay-fail2: ProrateImmediately paym
 
 	await timeout(4000);
 
-	// Balance unchanged — still at included amount
 	await expectFeatureCachedAndDb({
 		autumn: autumnV1,
 		customerId,

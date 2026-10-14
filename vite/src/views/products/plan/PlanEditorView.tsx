@@ -30,14 +30,12 @@ export default function PlanEditorView() {
 
 	const { isLoading: featuresLoading } = useFeaturesQuery();
 
-	// Sync store with backend data
 	useProductSync({ product: originalProduct });
 
 	const [showNewVersionDialog, setShowNewVersionDialog] = useState(false);
 	const openAddFeatureSheet = useOpenAddFeatureSheet();
 	const hasAutoOpenedAddFeatureRef = useRef(false);
 
-	// Auto-open add feature sheet when plan has no features (e.g., newly created plan)
 	useEffect(() => {
 		if (!originalProduct || hasAutoOpenedAddFeatureRef.current) return;
 
@@ -50,19 +48,15 @@ export default function PlanEditorView() {
 		}
 	}, [originalProduct, openAddFeatureSheet]);
 
-	// Custom close handler that discards item changes before closing
 	const discardAndClose = useDiscardItemAndClose();
 
-	// Handle Escape key to close sheet and unfocus (with discard)
 	useSheetEscapeHandler({ onClose: discardAndClose });
 
-	// Close sheet when navigating away from this view
 	useSheetCleanup();
 
 	if (featuresLoading || productLoading) return <LoadingScreen />;
 
 	if (error || !originalProduct) {
-		// Handle 500 errors from backend when product doesn't exist
 		let errorMessage = `Plan ${product_id} not found`;
 
 		if (error instanceof AxiosError && error.response?.status === 500) {

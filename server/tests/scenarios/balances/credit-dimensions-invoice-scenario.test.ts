@@ -7,11 +7,6 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-/**
- * A dimensioned rate card exercised end to end: several dimensions on one
- * feature, a graduated one, a stacking multiplier, and enough usage to run past
- * the included credits into overage — then printed as the invoice sees it.
- */
 const dimensionedCredits: FeatureConfigOverride = {
 	schema: [
 		{
@@ -64,9 +59,6 @@ test(
 			items: [creditItem],
 		});
 
-		// 3 small @2 = 6 · 4 large @16 = 64 · 2 large/eu @20 = 40
-		// 6 xl graduated (5@10 + 1@4) = 54 · 4 large spot @16 x0.25 = 16
-		// = 180 credits against 100 included -> 80 of overage.
 		const { autumnV2_3 } = await initScenario({
 			customerId,
 			setup: [

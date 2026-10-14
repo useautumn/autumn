@@ -14,8 +14,6 @@ import { SubscriptionDetailItems } from "./SubscriptionDetailItems";
 
 const ID_CHIP_INNER_CLASS = "max-w-40 text-tiny-id truncate !font-normal";
 
-/** Detail sheet for a customer-level license pool (itemId = license plan id):
- * the license's items, pool inventory, and every entity holding a seat. */
 export function LicensePoolDetailSheet() {
 	const licensePlanId = useSheetStore((s) => s.itemId);
 	const { customer } = useCustomerContext();

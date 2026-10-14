@@ -14,10 +14,6 @@ const rowHasUsage = ({
 	return false;
 };
 
-/**
- * Drops all-zero rows before the pivot, keeping one placeholder per period so an
- * idle day still gets an x-axis slot. A wholly empty range returns no rows at all.
- */
 export function dropZeroRowsKeepingPeriods({
 	events,
 	groupColumn,

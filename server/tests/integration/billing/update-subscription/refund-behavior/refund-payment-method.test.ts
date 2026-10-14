@@ -9,19 +9,6 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { createStripeCli } from "@/external/connect/createStripeCli";
 
-/**
- * Refund Behavior: refund_payment_method Tests
- *
- * Tests for refund_behavior: 'refund_payment_method' which issues a refund
- * to the customer's payment method when the invoice total is negative.
- *
- * Key behaviors:
- * - Only applies when invoice total is negative (downgrade scenarios)
- * - Refund is issued via Stripe to the original payment method
- * - Default behavior (grant_invoice_credits) applies credits to customer balance instead
- */
-
-// ═══════════════════════════════════════════════════════════════════════════════
 // REFUND ON DOWNGRADE
 // ═══════════════════════════════════════════════════════════════════════════════
 
@@ -44,7 +31,6 @@ test.skip(`${chalk.yellowBright("refund_payment_method: price decrease issues re
 
 	const stripeCli = createStripeCli({ org: ctx.org, env: ctx.env });
 
-	// Decrease price from $30 to $20 (should create negative invoice / refund)
 	const newPriceItem = items.monthlyPrice({ price: 20 });
 	const updateParams = {
 		customer_id: customerId,
@@ -53,22 +39,16 @@ test.skip(`${chalk.yellowBright("refund_payment_method: price decrease issues re
 		refund_behavior: "refund_payment_method" as const,
 	};
 
-	// Preview shows negative total (credit)
 	const preview = await autumnV1.subscriptions.previewUpdate(updateParams);
-	expect(preview.total).toBe(-10); // $20 - $30 = -$10
-
-	// Execute update with refund_payment_method
+	expect(preview.total).toBe(-10);
 	await autumnV1.subscriptions.update(updateParams);
 
-	// Wait for Stripe to process
 	await new Promise((resolve) => setTimeout(resolve, 1000));
 
-	// Get refunds to verify refund was issued
 	const refunds = await stripeCli.refunds.list({
 		limit: 10,
 	});
 
-	// Find the refund we just created (should be $10 = 1000 cents)
 	const ourRefund = refunds.data.find(
 		(r: { amount: number }) => r.amount === 1000,
 	);
@@ -116,7 +96,6 @@ test.skip(`${chalk.yellowBright("refund_payment_method: quantity decrease issues
 		],
 	});
 
-	// Decrease quantity from 10 to 5 (should create negative invoice)
 	const updateParams = {
 		customer_id: customerId,
 		product_id: pro.id,
@@ -124,16 +103,12 @@ test.skip(`${chalk.yellowBright("refund_payment_method: quantity decrease issues
 		refund_behavior: "refund_payment_method" as const,
 	};
 
-	// Preview shows negative total (credit)
 	const preview = await autumnV1.subscriptions.previewUpdate(updateParams);
-	expect(preview.total).toBeLessThan(0); // Should be negative
-
-	// Execute update with refund_payment_method
+	expect(preview.total).toBeLessThan(0);
 	await autumnV1.subscriptions.update(updateParams);
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Entitlements should be updated to 5
 	expect(customer.features?.[TestFeature.Messages]?.balance).toBe(5);
 
 	await expectSubToBeCorrect({
@@ -144,7 +119,6 @@ test.skip(`${chalk.yellowBright("refund_payment_method: quantity decrease issues
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
 // DEFAULT BEHAVIOR: grant_invoice_credits
 // ═══════════════════════════════════════════════════════════════════════════════
 
@@ -162,20 +136,16 @@ test.skip(`${chalk.yellowBright("grant_invoice_credits: default behavior on down
 		actions: [s.attach({ productId: "pro" })],
 	});
 
-	// Decrease price from $30 to $20
 	const newPriceItem = items.monthlyPrice({ price: 20 });
 	const updateParams = {
 		customer_id: customerId,
 		product_id: pro.id,
 		items: [messagesItem, newPriceItem],
-		// No refund_behavior specified - defaults to grant_invoice_credits
 	};
 
-	// Preview shows negative total
 	const preview = await autumnV1.subscriptions.previewUpdate(updateParams);
 	expect(preview.total).toBe(-10);
 
-	// Execute update (default: grant_invoice_credits)
 	await autumnV1.subscriptions.update(updateParams);
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);

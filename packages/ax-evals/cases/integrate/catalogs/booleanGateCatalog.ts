@@ -1,7 +1,3 @@
-/**
- * Boolean-gate catalog: a paid-only on/off feature. The auto-enable free
- * plan carries nothing; Pro carries the boolean custom_branding item.
- */
 export const booleanGateCatalog = `import { atmn, feature, plan } from "atmn";
 
 export default atmn({

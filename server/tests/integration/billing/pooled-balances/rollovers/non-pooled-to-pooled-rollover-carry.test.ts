@@ -1,23 +1,3 @@
-/**
- * TDD contract: rollovers survive a move from a NON-POOLED balance to a POOLED one.
- *
- * Contract under test:
- *   New behaviors:
- *     - updating a subscription so feature F's non-pooled cusEnt is replaced by a
- *       pooled one carries the outgoing rollover onto the POOLED balance
- *   Side effects:
- *     - the carried rollovers row belongs to the cusEnt that actually holds the
- *       pooled balance (the synthetic pooled cusEnt), not the incoming source
- *       cusEnt, which executePooledBalancePlan zeroes and hides from reads
- *     - the customer's readable balance = pooled granted + carried rollover
- *
- * Pre-impl red: applyExistingRollovers is pooled-unaware — it scores candidates by
- * billing kind / interval / capacity and pushes onto the winning cusEnt, which for
- * a pooled item is the source. The source is then normalised to balance 0 and
- * hidden, stranding the carried rollover.
- * Post-impl green: the carry retargets onto the pooled cusEnt.
- */
-
 import { expect, test } from "bun:test";
 import {
 	type ApiCustomerV5,
@@ -39,8 +19,6 @@ const GRANT = 100;
 const USAGE = 40;
 const POOLED_GRANT = 200;
 
-// 50% of GRANT = 50, BELOW the 60 left after usage, so the cap binds and only
-// 50 carries — the clamp is what makes this a meaningful carry to assert on.
 const CARRIED = GRANT * 0.5;
 const rolloverConfig = {
 	max_percentage: 50,
@@ -95,8 +73,6 @@ test(
 			],
 		});
 
-		// Force the reset that mints the rollover on the NON-pooled cusEnt. The
-		// reset is cron-driven, not lazy, so the worker has to be run explicitly.
 		const nonPooledCusEnt = await findCustomerEntitlement({
 			ctx,
 			customerId,
@@ -113,14 +89,11 @@ test(
 			ctx,
 			customerEntitlementIds: [nonPooledCusEnt.id],
 		});
-		// skip_cache forces the lazy reset to run off Postgres rather than
-		// returning the pre-reset cached balance.
 		const customerAfterReset = await autumnV2_3.customers.get<ApiCustomerV5>(
 			customerId,
 			{ skip_cache: "true" },
 		);
 		const carriedRollover = CARRIED;
-		// The balance worker doesn't aggregate entity data onto the customer.
 		if (!isBalanceWorkerRoute()) {
 			expect(
 				customerAfterReset.balances?.[TestFeature.Messages]?.remaining,
@@ -133,7 +106,6 @@ test(
 		});
 		expect(beforeMove.pools).toHaveLength(0);
 
-		// ── Move the feature onto a pooled balance ───────────────────────
 		await autumnV2_3.billing.attach<AttachParamsV1Input>({
 			customer_id: customerId,
 			entity_id: entities[0].id,
@@ -145,13 +117,11 @@ test(
 		expect(afterMove.pools).toHaveLength(1);
 		expect(afterMove.pools[0].granted).toBe(POOLED_GRANT);
 
-		// ── Contract: the rollover lands on the POOLED cusEnt ────────────
 		const pooledCustomerEntitlement = afterMove.poolCustomerEntitlements[0];
 		const pooledRollovers = pooledCustomerEntitlement.rollovers ?? [];
 		expect(pooledRollovers).toHaveLength(1);
 		expect(pooledRollovers[0].balance).toBe(carriedRollover);
 
-		// ── Contract: it is readable, not stranded on the zeroed source ──
 		const customerAfterMove = await autumnV2_3.customers.get<ApiCustomerV5>(
 			customerId,
 			{ skip_cache: "true" },

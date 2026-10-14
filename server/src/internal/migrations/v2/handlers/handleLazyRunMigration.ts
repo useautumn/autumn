@@ -10,9 +10,6 @@ const LazyRunMigrationBody = z.object({
 	id: z.string(),
 });
 
-/** POST /migrations.lazy_run — start a migration in lazy mode.
- *  Reuses `withMigrationRunClaim` so the partial unique index enforces one
- *  active run per (org, env), and prepare rolls back the claim on failure. */
 export const handleLazyRunMigration = createRoute({
 	scopes: [Scopes.Migrations.Write],
 	body: LazyRunMigrationBody,

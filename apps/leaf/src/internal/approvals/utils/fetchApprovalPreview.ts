@@ -17,8 +17,6 @@ import { isErrorResult } from "./approvalErrors.js";
 import { writeToPreviewTool } from "./toolRegistry.js";
 import { toolRequestFromArgs } from "./toolRequest.js";
 
-/** A preview the write has but Leaf could not compute — distinct from a write
- * that has no preview tool at all. */
 export const FAILED_APPROVAL_PREVIEW = { failed: true } as const;
 
 export const isFailedApprovalPreview = (preview: unknown) =>
@@ -55,7 +53,6 @@ const previewRequestForWrite = ({
 		...catalogRequest,
 	});
 	const name = normalizeToolName(toolName);
-	// getInvoice is strict, and updateInvoice also carries payment_method_types.
 	if (writeToPreviewTool(name) === "getInvoice") {
 		return { invoice_id: request.invoice_id };
 	}
@@ -79,8 +76,6 @@ const previewRequestForWrite = ({
 			skip_deletions: true,
 		});
 	}
-	// Catalog updates need the variant/version previews for the decision gate,
-	// and the model rarely passes the flags itself.
 	if (name === "updateCatalog" && Array.isArray(request.plans)) {
 		const expand = Array.isArray(request.expand) ? request.expand : [];
 		return withCatalogDefaults({
@@ -90,8 +85,6 @@ const previewRequestForWrite = ({
 				...plan,
 				include_variants: true,
 				include_versions: true,
-				// The MCP input schema requires `variants` once include flags are
-				// set; an empty list is a no-op for preview purposes.
 				variants: plan.variants ?? [],
 			})),
 		});
@@ -99,8 +92,6 @@ const previewRequestForWrite = ({
 	return request;
 };
 
-// The agent may suspend on a write whose preview wasn't captured this run —
-// backfill the money facts so the card never loses them.
 export const fetchApprovalPreview = async ({
 	env,
 	executeTool = executeAutumnMcpTool,
@@ -125,9 +116,7 @@ export const fetchApprovalPreview = async ({
 			toolName: previewTool,
 			args: { request: previewRequestForWrite({ request, toolName }) },
 		});
-		// A failed preview must not replace the card's params-only fallback.
 		if (isErrorResult(result)) {
-			// executeAutumnMcpTool already warned with the error detail.
 			logger.debug("Approval preview returned an error result", {
 				data: { env },
 				event: "leaf.approval_preview_failed",
@@ -189,8 +178,6 @@ export const resolveApprovalPreview = async ({
 	}
 };
 
-/** Fetches each grouped write's preview with the same parse + display
- * treatment as the primary, so every write renders with the standard body. */
 export const withWritePreviews = async ({
 	env,
 	executeTool,
@@ -207,8 +194,6 @@ export const withWritePreviews = async ({
 	Promise.all(
 		writes.map(async (write) => {
 			const request = toolRequestFromArgs(write.input);
-			// The primary write's preview is parsed at capture time; a backfilled
-			// one arrives as the raw MCP envelope and needs the same treatment.
 			const preview = parsePreviewPayload(
 				await resolveApprovalPreview({
 					env,

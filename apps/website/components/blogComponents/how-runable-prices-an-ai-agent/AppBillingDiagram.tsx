@@ -85,7 +85,6 @@ function ArrowHead({ className }: { className: string }) {
 	);
 }
 
-// Column centers with a 16px gap: 1/6, 1/2 and 5/6 of the row, nudged by the gap.
 const BRANCH_POINTS = [
 	"left-[calc(16.667%-5.33px)]",
 	"left-1/2",

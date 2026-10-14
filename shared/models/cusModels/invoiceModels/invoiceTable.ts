@@ -24,7 +24,6 @@ export const invoices = pgTable(
 
 		internal_customer_id: text("internal_customer_id").notNull(),
 		internal_entity_id: text("internal_entity_id"),
-		// Copied from the owning customer; nullable until the backfill is verified.
 		org_id: text("org_id"),
 		env: text("env").$type<AppEnv>(),
 
@@ -57,12 +56,10 @@ export const invoices = pgTable(
 			sql`${table.created_at} DESC`,
 			sql`${table.id} DESC`,
 		),
-		// Paid rows only: collected-volume metering scans an hour of paid_at.
 		index("idx_invoices_paid_at")
 			.on(table.paid_at)
 			.where(sql`${table.paid_at} IS NOT NULL`)
 			.concurrently(),
-		// Serves org-wide invoices.list pages and the org_id backfill cursor.
 		index("idx_invoices_org_env_created")
 			.on(
 				table.org_id,
@@ -71,7 +68,6 @@ export const invoices = pgTable(
 				sql`${table.id} DESC`,
 			)
 			.concurrently(),
-		// Serves the entities.internal_id delete cascade (both default collation).
 		index("idx_invoices_internal_entity_id")
 			.on(table.internal_entity_id)
 			.where(sql`${table.internal_entity_id} IS NOT NULL`)
@@ -82,7 +78,6 @@ export const invoices = pgTable(
 collatePgColumn(invoices.id, "C");
 
 export type InvoiceRow = InferSelectModel<typeof invoices>;
-/** Every writer must stamp the owning customer's org/env; the columns stay nullable only until the backfill. */
 export type InsertInvoice = InferInsertModel<typeof invoices> & {
 	org_id: string;
 	env: AppEnv;

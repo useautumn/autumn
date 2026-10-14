@@ -19,8 +19,6 @@ export const PHOSPHOR_ICON_NAMES = Array.from(loaderByName.keys()).sort();
 
 export const DEFAULT_PHOSPHOR_ICON = "Link";
 
-/** Shown in the picker before the user searches, so opening loads only a
- *  handful of icon chunks instead of the full result set. */
 export const STARTER_PHOSPHOR_ICONS = [
 	"Link",
 	"ArrowSquareOut",

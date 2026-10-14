@@ -81,7 +81,6 @@ export const createStripeMeteredPrice = async ({
 		entitlement: ent,
 		org,
 		currency,
-		// Metered quantity stays 0, so a volume flat fee would bill every cycle.
 		skipFlatFees: isVolumePrice(price),
 	});
 
@@ -213,7 +212,6 @@ export const createStripeArrearProrated = async ({
 		});
 	}
 
-	// let tiers = arrearProratedToStripeTiers(price, relatedEnt);
 	const tiers = priceToStripeUnitTiers({
 		price,
 		entitlement: relatedEnt,

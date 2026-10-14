@@ -18,8 +18,6 @@ import { and, eq, isNull } from "drizzle-orm";
 import { generateId } from "@/utils/genUtils.js";
 import type { ScenarioCtx } from "./batchTestUtils";
 
-/** Org/env-scoped: unscoped customer_id reads can hit stale twins left by
- * earlier runs in other test orgs. */
 export const readScopedFeatureRow = async ({
 	ctx,
 	customerId,
@@ -65,8 +63,6 @@ export const readScopedFeatureRow = async ({
 	return result.row;
 };
 
-/** Points the customer's row at a custom copy of its catalog definition.
- * Empty overrides mean an exact copy — entsAreSame treats it as the same item. */
 export const repointToCustomEntitlement = async ({
 	ctx,
 	customerId,
@@ -100,9 +96,6 @@ export const repointToCustomEntitlement = async ({
 	return customId;
 };
 
-/** Hangs a paid price off whatever definition the customer's row currently
- * points at — the shape a free→paid customization leaves behind. The price
- * config is cloned from a catalog template plan so it parses everywhere. */
 export const attachCustomerPaidPrice = async ({
 	ctx,
 	customerId,
@@ -165,8 +158,6 @@ export const attachCustomerPaidPrice = async ({
 	return { priceId, customerPriceId };
 };
 
-/** Hangs a DB-only usage price off the live row so rowIsUnpaidSql treats it
- * as paid, without minting a Stripe-priced catalog template. */
 export const attachSyntheticPaidPrice = async ({
 	ctx,
 	customerId,

@@ -10,7 +10,6 @@ let requests: Recorded[] = [];
 let warnings: { message: string; data: Record<string, unknown> }[] = [];
 let revokeStatus = 204;
 let existingGroup = false;
-/** The group's deployments as alien lists them; a stack is still up until one reads `deleted`. */
 let groupDeploymentStatuses: string[] = [];
 const realFetch = globalThis.fetch;
 
@@ -20,7 +19,6 @@ const json = (body: unknown, status = 200) =>
 		headers: { "Content-Type": "application/json" },
 	});
 
-/** The hosted manager as each call of a setup or revoke sees it. */
 const answer = ({ method, path }: Recorded): Response => {
 	if (path.startsWith("/v1/deployment-groups/by-external-id"))
 		return existingGroup

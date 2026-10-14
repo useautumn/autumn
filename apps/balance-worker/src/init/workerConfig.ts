@@ -25,13 +25,11 @@ import type {
 } from "./types/partitionRuntimeFactory.js";
 import { workerCheckpointLimits } from "./workerCheckpointConfig.js";
 
-/** A leader election or a replica rejoining the ISR lasts seconds; an append waits it out rather than end unknown. */
 export const PRODUCER_RETRY_BUDGET_MS = 5_000;
 
 /** kafkajs stretches each backoff by up to this fraction. */
 const PRODUCER_RETRY_JITTER = 0.2;
 
-/** A drain that ends while an append still retries disposes the writer under it, and the append can land after a successor's fence. */
 export function assertRecoveryDrainOutlastsProducerRetries({
 	producerLimits,
 	timings,
@@ -85,10 +83,6 @@ export function assertKafkaBalanceWorkerTimings({
 	}
 }
 
-/**
- * Each ECS fleet consumes in its own group, so a green boot never rebalances blue's
- * partitions away; off ECS (local, tests) the base group is the whole fleet.
- */
 export function workerConsumerGroupIdOf({
 	env,
 	fleetId,
@@ -108,14 +102,10 @@ export function createWorkerConsumerConfig({
 }: {
 	groupId: string;
 	timings: KafkaBalanceWorkerTimings;
-	/** When given, partitions are dealt by the load the workers report rather than by number. */
 	partitionLoad?: PartitionLoadSource;
 }): ConsumerConfig {
 	assertKafkaBalanceWorkerTimings({ timings });
-	// Both topics share the membership; either assigner keeps partition n of each on one worker.
-	// The plain assigner stays advertised so a rollout can mix old and new workers in one group:
 	// Kafka only admits a member whose protocols overlap the group's, picks the one every member
-	// supports, and moves to the load-aware one on the first rebalance after the old workers leave.
 	return {
 		...createConsumerGroupConfig({ groupId, timings }),
 		partitionAssigners: partitionLoad
@@ -159,7 +149,6 @@ export function balanceWorkerEnvToRuntimeConfig({
 }: {
 	env: BalanceWorkerEnv;
 	endpoint: string;
-	/** The group the worker consumes in; command offsets are committed under it. */
 	groupId: string;
 }): PartitionRuntimeFactoryConfig {
 	return {
@@ -180,9 +169,7 @@ export function balanceWorkerEnvToRuntimeConfig({
 			maxBackoffMs: 1000,
 		},
 		writerLimits: {
-			// One append is in flight per partition, so records/s ≤ batch ÷ commit latency; the 800 KB byte cap binds near here.
 			maxBatchSize: 500,
-			// Sized for one customer bursting 500 parallel tracks, the largest the balance suites send.
 			maxPendingCommands: 4000,
 			maxPendingCommandsPerCustomer: 1000,
 			subjectMapBudget: createSubjectMapBudget({
@@ -192,23 +179,12 @@ export function balanceWorkerEnvToRuntimeConfig({
 				}),
 			}),
 			subjectIdleExpiryMs: BALANCE_WORKER_SUBJECT_IDLE_EXPIRY_MS,
-			// A busy partition carries several tracks per commit instead of one; a quiet one never waits.
 			commitLingerMs: 5,
-			// Up to a full flush of commits lands as one Postgres flush; a reader of the store cuts it short. DB control's applyLingerMs overrides it live.
 			applyLingerMs: 500,
 		},
 		trackReceiptRetentionMs: env.BALANCE_WORKER_RECEIPT_RETENTION_MS,
 		producerLimits: {
-			// How long the coordinator lets a transaction stay open before it aborts
-			// it and fences the producer. Callers fail open in a couple of seconds
-			// regardless; this decides what a stalled thread costs afterwards. At
-			// 10 s a partition thread pinned by a hot customer came back fenced and
-			// took its task down; at 30 s the same stall commits late and nothing
-			// dies. A live owner's open transaction only holds its followers back,
-			// and a dead owner's is aborted the moment its successor initialises.
 			transactionTimeoutMs: 30_000,
-			// CONCURRENT_TRANSACTIONS clears in a few ms, so backoff starts at 10 ms; ten doublings
-			// capped at 2.5 s wait ~7.5 s in all, past PRODUCER_RETRY_BUDGET_MS.
 			retryCount: 10,
 			initialRetryTimeMs: 10,
 			maxRetryTimeMs: 2_500,

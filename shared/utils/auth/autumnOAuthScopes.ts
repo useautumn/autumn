@@ -22,7 +22,6 @@ export const DEFAULT_OAUTH_RESOURCE_SCOPES = [
 	Scopes.Analytics.Read,
 ] as const satisfies readonly ScopeString[];
 
-/** Scopes atmn-minted keys need when used as an app's AUTUMN_SECRET_KEY. */
 export const ATMN_APP_KEY_SCOPES = [
 	Scopes.Analytics.Read,
 	Scopes.Balances.Read,

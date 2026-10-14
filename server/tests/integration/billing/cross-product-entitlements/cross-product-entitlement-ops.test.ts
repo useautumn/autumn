@@ -1,22 +1,3 @@
-/**
- * Contract: a customer product may carry entitlement rows owned by a DIFFERENT
- * product than the one it points at — grandfathered rows survive a plan version
- * bump, and a regenerated custom price is stamped with the customer product's
- * own `internal_product_id`. Every billing operation must still resolve the
- * price → entitlement pair and leave Stripe consistent with Autumn.
- *
- * Shape reproduced here (from a reported production customer):
- *  - a custom customer product on the current plan,
- *  - a pay-per-use in-arrear item whose price AND entitlement are both owned by
- *    a superseded plan (they agree with each other; only the customer product
- *    has moved on),
- *  - a fixed monthly price owned by the current plan.
- *
- * Before the `priceToEnt` fix, `update` 404'd with
- * `createStripeInArrearPrice: feature not found for price pr_...`. These cases
- * cover the other operations that walk the same resolution path.
- */
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3 } from "@autumn/shared";
 import { queryRows } from "@tests/integration/balances/utils/usage-limit-utils/usageWindowDbTestUtils";
@@ -41,8 +22,6 @@ const creditsItem = ({ price }: { price: number }) =>
 		price,
 	});
 
-/** Pay-per-use credits + a fixed base price — the priced pair that has to
- * resolve across the product boundary. */
 const planItems = () => [
 	creditsItem({ price: CREDITS_PRICE_PER_UNIT }),
 	items.monthlyPrice({ price: BASE_PRICE }),
@@ -50,7 +29,6 @@ const planItems = () => [
 
 const buildPlans = ({ suffix }: { suffix: string }) => ({
 	plan: products.base({ id: `plan-${suffix}`, items: planItems() }),
-	// Stands in for the superseded version that still owns the grandfathered rows.
 	supersededPlan: products.base({
 		id: `superseded-${suffix}`,
 		items: [items.monthlyCredits({ includedUsage: 10_000 })],
@@ -111,14 +89,6 @@ const activeCreditsRow = async ({
 		`),
 	)[0];
 
-/**
- * Attach the plan as a custom subscription, then hand its priced credits pair
- * over to the superseded plan so the customer product straddles two products —
- * the reported production shape.
- *
- * `initScenario` prefixes product ids in place, so `plan.id` and friends are
- * already fully qualified once it resolves.
- */
 const initCrossProductScenario = async ({
 	customerId,
 	suffix,
@@ -158,7 +128,6 @@ const initCrossProductScenario = async ({
 		WHERE id = ${creditsRow.price_id}
 	`);
 
-	// The straddle is real before any operation runs.
 	const straddled = await activeCreditsRow({ ctx, customerId });
 	expect(straddled.entitlement_internal_product_id).toBe(supersededInternalId);
 	expect(straddled.entitlement_internal_product_id).not.toBe(
@@ -168,9 +137,6 @@ const initCrossProductScenario = async ({
 	return { ...scenario, plan, supersededPlan, upgradePlan, creditsRow };
 };
 
-/** Runs the production `/billing.verify` action: every Stripe subscription must
- * match the state derived from the customer's products. The strongest
- * "no billing errors" signal available. */
 const expectBillingConsistent = async ({
 	ctx,
 	customerId,
@@ -188,8 +154,6 @@ test.concurrent(
 			suffix: "update",
 		});
 
-		// Repricing the usage item is what regenerates its custom price; the
-		// unchanged entitlement is carried over still owned by the superseded plan.
 		await autumnV1.subscriptions.update({
 			customer_id: customerId,
 			product_id: plan.id,
@@ -293,10 +257,6 @@ test.concurrent(
 			],
 		});
 
-		// Deliberately not asserting expectStripeSubscriptionCorrect here: this
-		// flow reports an `unexpected_schedule` mismatch even with no cross-product
-		// rows at all (verified against a plain plan), so it would assert a
-		// pre-existing gap rather than anything this contract covers.
 		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 		expect(
 			customer.products?.some((product) => product.id === upgradePlan.id),

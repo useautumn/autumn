@@ -39,10 +39,6 @@ export type RunBatchMigrationChunkRunner = (
 	payload: RunBatchMigrationChunkPayload,
 ) => Promise<BatchMigrationChunkResult>;
 
-/** The batch lane: budgeted chunks (PAGES_PER_CHUNK pages each) dispatched
- * through `runBatchChunk` — the trigger path shares migrationTaskQueue so
- * concurrent migrations interleave fairly; in-process runs use the same
- * budget loop. */
 const runBatchMigrationLane = async ({
 	ctx,
 	migrationRunId,
@@ -97,8 +93,6 @@ const runBatchMigrationLane = async ({
 	};
 };
 
-/** Top-level migration run (successor of runMigration): track the run,
- * prepare once, snapshot, then drive per-chunk workloads until done. */
 export const runMigrationInChunks = async ({
 	ctx,
 	migration,
@@ -146,8 +140,6 @@ export const runMigrationInChunks = async ({
 				const migrationSnapshot =
 					PreparedMigrationSnapshotSchema.parse(preparedMigration);
 
-				// Lane decision is all-or-nothing: batch (set-based pages) or
-				// per-customer — never both. Lazy runs stay per-customer.
 				const batchLane = lazyRun
 					? undefined
 					: await shouldRunBatchLane({

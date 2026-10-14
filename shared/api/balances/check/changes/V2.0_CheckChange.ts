@@ -9,14 +9,6 @@ import { balanceV1ToV0 } from "../../../customers/cusFeatures/mappers/balanceV1T
 import { CheckResponseV2Schema } from "../checkResponseV2.js";
 import { CheckResponseV3Schema } from "../checkResponseV3.js";
 
-/**
- * V2_0_CheckChange: Transforms check response from V3 (V2.1) to V2 (V2.0) format
- *
- * Applied when: targetVersion <= V2.0
- *
- * Changes:
- * - Transforms balance from ApiBalanceV1 to ApiBalance (V0 format)
- */
 export const V2_0_CheckChange = defineVersionChange({
 	name: "V2_0 Check Change",
 	newVersion: ApiVersion.V2_1,

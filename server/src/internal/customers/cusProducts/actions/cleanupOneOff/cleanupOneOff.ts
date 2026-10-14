@@ -11,15 +11,6 @@ export type CleanupOneOffResult = {
 	results: OneOffCustomerProductResult[];
 };
 
-/**
- * Cleanup one-off customer products by expiring those that:
- * 1. Have all one_off interval prices
- * 2. Have all entitlements either boolean or depleted (balance=0, usage_allowed=false)
- *    and a newer active customer product for the same product
- *
- * This prevents the FullCustomer object from growing unboundedly when
- * customers purchase one-time products multiple times.
- */
 export const cleanupOneOffCustomerProducts = async ({
 	ctx,
 }: {
@@ -27,7 +18,6 @@ export const cleanupOneOffCustomerProducts = async ({
 }): Promise<CleanupOneOffResult> => {
 	const { logger } = ctx;
 
-	// 1. Get customer products eligible for cleanup
 	const toCleanup = await getOneOffCustomerProductsToCleanup({ ctx });
 
 	if (toCleanup.length === 0) {
@@ -35,7 +25,6 @@ export const cleanupOneOffCustomerProducts = async ({
 		return { cleanedUp: 0, results: [] };
 	}
 
-	// 2. Log what we're about to cleanup
 	logOneOffCustomerProductResults({
 		logger,
 		results: toCleanup,

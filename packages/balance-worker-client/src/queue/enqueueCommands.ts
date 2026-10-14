@@ -4,7 +4,6 @@ import { withAppendDeadline } from "../append/withAppendDeadline.js";
 import { BalanceWorkerClientError } from "../types/balanceWorkerClientErrors.js";
 import type { EnqueueParams, QueueContext } from "./types/queue.js";
 
-/** One append for the whole batch; each command goes to the partition `resolveCommandRoute` would send it to. */
 export async function enqueueCommands({
 	ctx,
 	commands,

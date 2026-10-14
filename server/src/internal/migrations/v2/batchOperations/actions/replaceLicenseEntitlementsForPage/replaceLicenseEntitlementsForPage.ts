@@ -81,8 +81,6 @@ const toInsertedItem = ({
 	trialEndsAt: row.trialEndsAt,
 });
 
-/** The from-half of the replace: the definition the row held plus its
- * pre-write balance state, so finalize can diff before → after honestly. */
 const toRemovedItem = ({
 	row,
 	operation,
@@ -114,10 +112,6 @@ const toRemovedItem = ({
 	};
 };
 
-/**
- * Replaces live assignment entitlements whose definition matches the catalog
- * from-row. Same path as add — the rowset is the finalize payload.
- */
 export const replaceLicenseEntitlementsForPage = async ({
 	db,
 	features,
@@ -171,8 +165,6 @@ export const replaceLicenseEntitlementsForPage = async ({
 		return emptyResult({ distinctEntitlements: distinct.length });
 	}
 
-	// Migration edits amend the definition in place — usage always carries;
-	// the delta credit is the migration's contract, unlike plan transitions.
 	const customerEntitlementPatch = computeCustomerEntitlementPatch({
 		fromEntitlement,
 		toEntitlement,

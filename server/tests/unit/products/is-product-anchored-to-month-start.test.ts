@@ -1,12 +1,3 @@
-/**
- * `anchor_to_month_start` needs a monthly-or-longer cycle to anchor.
- *
- * Red (current):  a free plan whose only cycle is a weekly allowance is treated as
- *                 anchored, so its resets move off their weekday onto the 1st's grid.
- * Green (after):  paid plans decide by billing interval, free plans by reset interval;
- *                 weekly-only plans keep their own day.
- */
-
 import { describe, expect, test } from "bun:test";
 import {
 	BillingInterval,

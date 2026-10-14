@@ -53,9 +53,6 @@ import { injectWebhooks } from "./webhooks/injectWebhooks.js";
 const OPENAPI_MAX_STRUCTURE_DEPTH = 20;
 
 const generator = new OpenAPIGenerator({
-	// oRPC emits `{}` (any) for nodes deeper than maxStructureDepth (default 10).
-	// Customer responses nest plan → item → feature_override → credit_schema →
-	// dimensions → tiers past that, which degraded SDK types and tripped a
 	// Speakeasy Python ordering bug, so the limit is raised.
 	schemaConverters: [
 		new ZodToJsonSchemaConverter({
@@ -66,17 +63,6 @@ const generator = new OpenAPIGenerator({
 
 const OPENAPI_DOC_VERSION = LATEST_VERSION;
 
-/**
- * Generates the OpenAPI document with all transformations applied.
- * Internal helper used by both latest OpenAPI writers.
- */
-/**
- * `router` and `stripInternal` are the only things that vary: the published
- * outputs use the public router and strip internal fields, while
- * `openapi-internal.yml` uses the internal router and keeps them, because the
- * atmn generator needs `internal_id`, `variants`, `licenses` and
- * `base_variant_id` to build the CLI's fixtures.
- */
 async function generateOpenApiDocument({
 	router = v2_3ContractRouter,
 	stripInternal = true,
@@ -86,8 +72,6 @@ async function generateOpenApiDocument({
 	stripInternal?: boolean;
 	includeWebhooks?: boolean;
 } = {}): Promise<Record<string, unknown>> {
-	// Register internal schemas before generation so they get x-internal: true
-	// in the OpenAPI output, which removeInternalFields() will then strip
 	registerInternalSchemas(BaseApiCustomerSchema);
 	registerInternalSchemas(CreateCustomerParamsV1Schema);
 	registerInternalSchemas(GetCustomerParamsV1Schema);
@@ -153,14 +137,12 @@ async function generateOpenApiDocument({
 		},
 		servers: [
 			{
-				// url: "http://localhost:8080",
 				url: "https://api.useautumn.com",
 				description: "Production server",
 			},
 		],
 	})) as Record<string, unknown>;
 
-	// Mintlify only supports OpenAPI 3.0 and 3.1.0; @orpc/openapi defaults to 3.1.1.
 	openApiDocument.openapi = "3.1.0";
 
 	applySpeakeasySettings({
@@ -171,8 +153,6 @@ async function generateOpenApiDocument({
 		openApiDocument,
 		version: OPENAPI_DOC_VERSION,
 	});
-	// Webhooks first: injectWebhooks builds its own schemas, so injecting after
-	// the sanitiser left that whole subtree carrying internal fields.
 	if (includeWebhooks) injectWebhooks({ openApiDocument });
 	if (stripInternal) removeInternalFields({ openApiDocument });
 	applyPaginationExtensions({ openApiDocument });
@@ -180,14 +160,9 @@ async function generateOpenApiDocument({
 	return openApiDocument;
 }
 
-// Shared objects would otherwise become anchors/aliases, which strict parsers (yaml's maxAliasCount) reject.
 const stringifySpec = (document: unknown) =>
 	yaml.stringify(document, { aliasDuplicateObjects: false });
 
-/**
- * Generates and writes the full OpenAPI spec (with TypeScript JSDoc examples).
- * Used for the TypeScript SDK generation.
- */
 export const writeLatestOpenApi = async ({
 	outputFilePath,
 }: {
@@ -198,11 +173,6 @@ export const writeLatestOpenApi = async ({
 	writeFileSync(outputFilePath, yamlContent, "utf8");
 };
 
-/**
- * Generates and writes the stripped OpenAPI spec (JSDoc examples removed).
- * Used for non-TypeScript SDK generation (Python, etc.) where TS examples
- * in descriptions would be confusing.
- */
 export const writeLatestOpenApiStripped = async ({
 	outputFilePath,
 }: {
@@ -210,7 +180,6 @@ export const writeLatestOpenApiStripped = async ({
 }) => {
 	const openApiDocument = await generateOpenApiDocument();
 
-	// Strip JSDoc tags (@example, @param, etc.) from descriptions
 	const schemas = (openApiDocument.components as Record<string, unknown>)
 		?.schemas as Record<string, unknown> | undefined;
 	transformNode(openApiDocument, schemas);
@@ -219,11 +188,6 @@ export const writeLatestOpenApiStripped = async ({
 	writeFileSync(outputFilePath, yamlContent, "utf8");
 };
 
-/**
- * Generates and writes the INTERNAL OpenAPI spec: the public surface plus
- * catalogV2, with internal fields intact. Read by the atmn generator, never
- * published — not fed to the SDKs and not merged into the docs spec.
- */
 export const writeLatestOpenApiInternal = async ({
 	outputFilePath,
 }: {
@@ -232,8 +196,6 @@ export const writeLatestOpenApiInternal = async ({
 	const openApiDocument = await generateOpenApiDocument({
 		router: v2_3InternalContractRouter,
 		stripInternal: false,
-		// Webhooks are not part of the CLI's surface, and this spec skips
-		// sanitising, so including them would carry internal fields for nothing.
 		includeWebhooks: false,
 	});
 	const yamlContent = stringifySpec(openApiDocument);

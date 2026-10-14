@@ -1,8 +1,3 @@
-/**
- * A backdated plan with a one-off setup fee, billed as Stripe bills it: prorate_immediately charges every
- * cycle plus the fee now; none charges nothing now and leaves the fee pending on the first renewal invoice.
- */
-
 import { test } from "bun:test";
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";

@@ -43,7 +43,6 @@ export const customers = pgTable(
 			.$type<ExternalProcessors>()
 			.default({} as ExternalProcessors),
 		send_email_receipts: boolean("send_email_receipts").default(false),
-		// null = not yet locked; resolves to org.default_currency at use-time
 		currency: text(),
 		...billingControlColumns(),
 		balance_allocations: jsonb(
@@ -58,7 +57,6 @@ export const customers = pgTable(
 			foreignColumns: [organizations.id],
 			name: "customers_org_id_fkey",
 		}).onDelete("cascade"),
-		// Ensure only ONE customer per (org, env, email) can have id = NULL
 		uniqueIndex("customers_email_null_id_unique")
 			.on(table.org_id, table.env, sql`lower(${table.email})`)
 			.where(
@@ -115,9 +113,6 @@ export const customers = pgTable(
 ).enableRLS();
 
 collatePgColumn(customers.internal_id, "C");
-
-// CREATE INDEX idx_customers_org_env_internal_id
-// ON customers (org_id, env, internal_id DESC);
 
 export type DbCustomer = typeof customers.$inferSelect;
 export type InsertDbCustomer = typeof customers.$inferInsert;

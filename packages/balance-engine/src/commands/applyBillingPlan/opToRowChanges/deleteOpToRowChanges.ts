@@ -25,7 +25,6 @@ const rolloversOf = ({
 		.filter(({ cus_ent_id }) => cus_ent_id === customerEntitlementId)
 		.map(({ id }) => ({ table: "rollovers", id }));
 
-/** Children first, as Postgres cascades them: a product's prices and grants, a grant's rollovers. */
 const cascadeOf = ({
 	state,
 	row,
@@ -51,7 +50,6 @@ const cascadeOf = ({
 const holdsRow = ({ state, row }: { state: SubjectState; row: DeletedRow }) =>
 	state[row.table].some(({ id }) => id === row.id);
 
-/** A plan deletes rows it found, and each once: a row an earlier op already took with its parent is skipped. */
 export const deleteOpToRowChanges = ({
 	op,
 	context,

@@ -12,16 +12,13 @@ export const useCustomerTimeseriesEvents = ({
 }: {
 	interval?: "24h" | "7d" | "30d" | "90d";
 	eventNames?: string[];
-	/** Prevent the timeseries fetch from firing until prerequisites are ready */
 	enabled?: boolean;
-	/** External customer ID override. Falls back to the `customer_id` URL param. */
 	customerId?: string;
 }) => {
 	const { customer_id } = useParams();
 	const customerIdToUse = providedCustomerId ?? customer_id;
 	const hasProvidedEventNames = Boolean(providedEventNames?.length);
 
-	// The customer's busiest events in the window, so the chart needn't wait on the event list.
 	const { eventNames: topEventNames, isLoading: eventNamesLoading } =
 		useEventNames({
 			customerId: customerIdToUse,
@@ -40,7 +37,6 @@ export const useCustomerTimeseriesEvents = ({
 		enabled,
 	});
 
-	// A window with no usage keeps the chart's empty state instead of flat zero bars.
 	const hasUsage = Object.values(timeseries.totals ?? {}).some(
 		({ sum }) => sum !== 0,
 	);

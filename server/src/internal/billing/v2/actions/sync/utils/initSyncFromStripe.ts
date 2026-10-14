@@ -23,7 +23,6 @@ const getAnchorPeriodEndMs = ({
 	});
 };
 
-/** Inherit trialEndsAt from the Stripe subscription if trialing. */
 export const getTrialEndsAtFromStripe = ({
 	stripeSubscription,
 }: {
@@ -33,7 +32,6 @@ export const getTrialEndsAtFromStripe = ({
 	return secondsToMs(stripeSubscription.trial_end);
 };
 
-/** Derive cancel/end timestamps from the Stripe subscription. */
 export const getCancelFieldsFromStripe = ({
 	stripeSubscription,
 }: {

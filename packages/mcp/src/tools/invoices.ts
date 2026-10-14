@@ -17,9 +17,6 @@ import { createDomainTools } from "./utils/builders.js";
 import { callAutumn } from "./utils/client.js";
 import type { OperationToolConfig, ToolDomain } from "./utils/types.js";
 
-// Create and reissue preview through a `preview` flag on the write endpoint.
-// The tools own that flag, so the preview and the write take one identical
-// request (the server still validates the full schema, refinements included).
 const createInvoiceRequestSchema = CreateInvoiceParamsSchema.omit({
 	preview: true,
 });
@@ -76,9 +73,6 @@ const withFixedFields = (
 const asRecord = (value: unknown): Record<string, unknown> =>
 	value && typeof value === "object" ? (value as Record<string, unknown>) : {};
 
-/** Keeps only invoices matching the ID filters. An API build that predates a
- * filter silently drops it and returns unrelated invoices; this turns that into
- * an empty result instead of a wrong match. */
 export const keepInvoicesMatchingIdFilters = ({
 	request,
 	result,
@@ -200,8 +194,6 @@ const getInvoiceSchema = z
 
 const invoiceListSchema = z.object({ list: z.array(z.unknown()) });
 
-/** One invoice by its Autumn ID. It takes the same request as voidInvoice,
- * payInvoice, finalizeInvoice and updateInvoice, so it doubles as their approval preview. */
 const getInvoice = async ({
 	auth,
 	invoiceId,
@@ -225,7 +217,6 @@ const getInvoice = async ({
 	return invoice;
 };
 
-/** Built per toolset: the intent and analytics layers mutate tools in place. */
 export const createInvoiceTools = () => ({
 	getInvoice: createTool({
 		id: "getInvoice",

@@ -4,10 +4,6 @@ import type {
 	PartitionReplayState,
 } from "../types/partitionReplay.js";
 
-/**
- * Where a starting replay seeks: the offset from one window ago, held within the log and
- * never past the bookmark. Best effort: any failure or delay means the bookmark, as before.
- */
 export async function readReplayFloor({
 	ctx,
 	state,
@@ -37,7 +33,6 @@ export async function readReplayFloor({
 	}
 }
 
-/** Null when the broker cannot answer (an admin without the call, or nothing that recent on the partition). */
 async function readWindowStartOffset({
 	ctx,
 	topic,

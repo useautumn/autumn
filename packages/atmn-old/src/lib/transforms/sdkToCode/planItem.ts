@@ -39,13 +39,6 @@ const isSimpleItem = ({
 	!planItem.proration &&
 	!planItem.rollover;
 
-/**
- * Generate TypeScript code for a plan item configuration
- *
- * @param planItem The plan item to generate code for
- * @param features List of features (used for future variable name lookup)
- * @param featureVarMap Optional map of feature ID -> variable name for preserving local names
- */
 export function buildPlanItemCode({
 	planItem,
 	features,
@@ -57,8 +50,6 @@ export function buildPlanItemCode({
 	featureVarMap?: Map<string, string>;
 	itemIndent?: string;
 }): string {
-	// Use the variable map if provided, otherwise use string literal
-	// This ensures generated code always works, even if variable names differ
 	const featureVarName = featureVarMap?.get(planItem.featureId);
 	const featureIdCode = featureVarName
 		? `${featureVarName}.id`
@@ -74,29 +65,24 @@ export function buildPlanItemCode({
 	lines.push(`${itemIndent}item({`);
 	lines.push(`${fieldIndent}featureId: ${featureIdCode},`);
 
-	// Add entityFeatureId
 	if (planItem.entityFeatureId != null) {
 		lines.push(
 			`${fieldIndent}entityFeatureId: '${escapeString(planItem.entityFeatureId)}',`,
 		);
 	}
 
-	// Add included (granted_balance)
 	if (shouldEmitIncluded({ planItem, features })) {
 		lines.push(`${fieldIndent}included: ${planItem.included},`);
 	}
 
-	// Add unlimited
 	if (planItem.unlimited === true) {
 		lines.push(`${fieldIndent}unlimited: true,`);
 	}
 
-	// Add pooled
 	if (planItem.pooled === true) {
 		lines.push(`${fieldIndent}pooled: true,`);
 	}
 
-	// Add reset object (nested)
 	if (planItem.reset) {
 		lines.push(`${fieldIndent}reset: {`);
 		if (planItem.reset.interval) {
@@ -110,7 +96,6 @@ export function buildPlanItemCode({
 		lines.push(`${fieldIndent}},`);
 	}
 
-	// Add price
 	if (planItem.price) {
 		lines.push(`${fieldIndent}price: {`);
 
@@ -160,7 +145,6 @@ export function buildPlanItemCode({
 			);
 		}
 
-		// Handle price.interval and price.intervalCount (from PriceWithInterval type)
 		const priceWithInterval = planItem.price as {
 			interval?: string;
 			intervalCount?: number;
@@ -179,12 +163,10 @@ export function buildPlanItemCode({
 		lines.push(`${fieldIndent}},`);
 	}
 
-	// Add proration
 	if (planItem.proration) {
 		lines.push(`${fieldIndent}proration: ${formatValue(planItem.proration)},`);
 	}
 
-	// Add rollover
 	if (planItem.rollover) {
 		lines.push(`${fieldIndent}rollover: ${formatValue(planItem.rollover)},`);
 	}

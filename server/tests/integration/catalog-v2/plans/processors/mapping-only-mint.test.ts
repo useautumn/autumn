@@ -1,24 +1,3 @@
-/**
- * catalogV2.update — a mapping-only variant declaration counts as a change.
- *
- * Under a base `new_version`, a variant whose active row has customers must
- * mint its own row rather than being edited in place. The mint gate asks
- * whether the variant declared a change, but only counts `customize` — so a
- * variant carrying nothing but a Stripe mapping is skipped, never mints, and
- * the mapping lands on the row customers are attached to.
- *
- * Contract:
- *   B1  base new_version + variant declared with ONLY processors mints the
- *       variant, so its lineage keeps following the base
- *
- * The mapping itself is plan-wide (every version bills under one Stripe
- * product), so both rows carry it — what the mint buys is the row, not a
- * version-specific id.
- *
- * Red (current):  no v2 for the variant at all; the mapping only reaches v1.
- * Green (after):  v2 exists, and both versions carry the mapping.
- */
-
 import { test } from "bun:test";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
@@ -46,7 +25,6 @@ test.concurrent(
 					baseId,
 					variantId,
 				});
-				// Customers on the variant's active row make it mint-worthy.
 				await seedVersionableCustomer({ ctx, planId: variantId, version: 1 });
 
 				await autumnV2_3.catalogV2.update({
@@ -66,7 +44,6 @@ test.concurrent(
 					],
 				});
 
-				// B1: the variant minted rather than being edited in place.
 				await expectVersionIdentityCorrect({
 					ctx,
 					planId: variantId,
@@ -78,7 +55,6 @@ test.concurrent(
 					version: 2,
 					productId: MAPPED_PRODUCT_ID,
 				});
-				// The mapping is plan-wide, so the older row carries it too.
 				await expectVersionProcessorCorrect({
 					ctx,
 					planId: variantId,

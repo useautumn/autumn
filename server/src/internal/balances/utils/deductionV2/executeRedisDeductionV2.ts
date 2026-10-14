@@ -112,8 +112,6 @@ export const executeRedisDeductionV2 = async ({
 	let allMutationLogs: MutationLogItem[] = [];
 	let allUsageWindowMutations: UsageWindowMutation[] = [];
 	const allModifiedCusEntIdsByFeatureId: Record<string, string[]> = {};
-	// Keyed by feature id: each Lua result carries the COMPLETE post-deduction
-	// counter array per capped feature, so last write wins across deductions.
 	const allUsageWindowUpdates: Record<string, UsageWindowUpdate> = {};
 
 	const customerId = fullSubject.customerId;
@@ -124,8 +122,6 @@ export const executeRedisDeductionV2 = async ({
 		entityId: fullSubject.entityId,
 	});
 
-	// One timestamp for the whole operation: the resolver keys windows from it
-	// and Lua receives the same value, so they never disagree on the window.
 	const usageWindowNow = ctx.timestamp;
 
 	const duplicateFeatureIds: string[] = [];
@@ -187,8 +183,6 @@ export const executeRedisDeductionV2 = async ({
 				usageWindowFeatureIds,
 			});
 
-		// Usage windows are enforced/incremented only for real positive
-		// consumption, never for target_balance set-downs or granted-balance edits.
 		const isConsumption =
 			notNullish(toDeduct) &&
 			(toDeduct as number) > 0 &&
@@ -286,8 +280,6 @@ export const executeRedisDeductionV2 = async ({
 				continue;
 			}
 
-			// This feature already applied on a prior delivery (replay) — skip
-			// it and continue with the remaining features instead of aborting.
 			if (
 				resultJson.error === RedisDeductionErrorCode.DuplicateIdempotencyKey
 			) {
@@ -336,8 +328,6 @@ export const executeRedisDeductionV2 = async ({
 			...allUsageWindowMutations,
 			...usageWindowMutations,
 		];
-		// Typed handoff for the PG mirror; empty arrays kept (prune-to-empty
-		// must still full-replace).
 		for (const [featureId, usageWindows] of Object.entries(
 			usageWindowsByFeatureId,
 		)) {
@@ -400,9 +390,6 @@ export const executeRedisDeductionV2 = async ({
 				});
 			}
 		} catch (error) {
-			// if (error.message?.includes("declined")) {
-			// 	return;
-			// }
 			if (error instanceof Error && !error?.message?.includes("declined")) {
 				ctx.logger.error(
 					`[executeRedisDeductionV2] Attempting rollback due to error: ${error}`,
@@ -481,8 +468,6 @@ export const executeRedisDeductionV2 = async ({
 		);
 	}
 
-	// EVERY feature was a replay — surface the duplicate (sync callers 409;
-	// runQueuedTrack swallows it so the message is acked, not requeued).
 	if (
 		deductions.length > 0 &&
 		duplicateFeatureIds.length === deductions.length

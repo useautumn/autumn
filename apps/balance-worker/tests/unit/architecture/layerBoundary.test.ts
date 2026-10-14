@@ -1,7 +1,3 @@
-/**
- * Plumbing (threads, rings, frames, producers, commit positions) moves bytes and positions and never reaches
- * into business code; business code reaches it through one narrow interface. This scan keeps it that way.
- */
 import { describe, expect, test } from "bun:test";
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
@@ -10,7 +6,6 @@ import ts from "typescript";
 
 const SRC = new URL("../../../src/", import.meta.url).pathname;
 
-/** Every plumbing folder, as each slice of the ring stack adds one. */
 const PLUMBING = [
 	"threads",
 	"http/workerThreads",
@@ -28,7 +23,6 @@ const BUSINESS_FOLDERS = [
 	"http/replies/",
 	"http/commands/",
 ];
-/** The writer's own port, which the commit positions implement. */
 const ALLOWED = ["processor/writer/types/commitPositionSink"];
 
 function importsOf({ file, text }: { file: string; text: string }): string[] {
@@ -55,7 +49,6 @@ function importsOf({ file, text }: { file: string; text: string }): string[] {
 	return specifiers;
 }
 
-/** The business imports of one plumbing file, as `file -> import`. */
 function violationsOf({
 	file,
 	text,

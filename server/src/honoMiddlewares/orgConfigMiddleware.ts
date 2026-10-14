@@ -1,10 +1,6 @@
 import type { Context, Next } from "hono";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 
-/**
- * Middleware to handle org-config header and merge with org config
- * Allows overriding org config via header for testing/debugging
- */
 export const orgConfigMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 	const ctx = c.get("ctx");
 	const orgConfigHeader = c.req.header("org-config");
@@ -13,7 +9,6 @@ export const orgConfigMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 		try {
 			const newConfigFields = JSON.parse(orgConfigHeader);
 
-			// Merge with existing org config
 			ctx.org.config = {
 				...ctx.org.config,
 				...newConfigFields,
@@ -24,7 +19,6 @@ export const orgConfigMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 			});
 		} catch (error) {
 			ctx.logger.warn("Failed to parse org-config header", { error });
-			// Don't throw - just log and continue
 		}
 	}
 

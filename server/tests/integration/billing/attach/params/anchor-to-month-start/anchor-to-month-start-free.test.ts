@@ -1,12 +1,3 @@
-/**
- * Free plans with `config.anchor_to_month_start` reset on the 1st of the month (00:00 UTC).
- *
- * Contract:
- *   default plan attached at customer creation → next_reset_at = next 1st
- *   free plan attached                          → next_reset_at = next 1st
- *   free (flag off) → free (flagged)            → next_reset_at moves to the next 1st
- */
-
 import { test } from "bun:test";
 import type { AttachParamsV1Input } from "@autumn/shared";
 import { expectBalanceCorrect } from "@tests/integration/utils/expectBalanceCorrect";

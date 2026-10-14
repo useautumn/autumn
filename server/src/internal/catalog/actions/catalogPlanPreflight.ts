@@ -164,7 +164,6 @@ export const preflightCatalogPlans = async ({
 			licenses: plan.licenses,
 		});
 	}
-	// Validate cycles without disturbing plan/previews index alignment.
 	sortCatalogPlansByDependencies(plans);
 	await preflightCatalogLicenses({ ctx, plans, previews });
 };

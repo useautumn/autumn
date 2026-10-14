@@ -30,8 +30,6 @@ export const licenseInvoiceCreditFromStoredLineItems = ({
 		direction: "refund",
 	});
 
-	// Assignments can hold distinct price rows that resolve to the same stored
-	// charge, so each charge row may only be credited once.
 	const consumedChargeRowIds = new Set<string>();
 
 	const credits = catalogCredits.map((catalogCredit) => ({

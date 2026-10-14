@@ -15,14 +15,11 @@ import {
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { cacheDeploymentToAtomToken } from "./atomTokenUtils.js";
 
-/** A dev stack's name goes in front, so two worktrees can hold the same org on alien at once; only `scripts/dev.ts` sets it. */
 const cacheNamePrefix = (): string | null =>
 	process.env.ATOM_DEPLOYMENT_PREFIX?.trim() || null;
 
-/** What alien accepts as a deployment group's external id. */
 const ALIEN_EXTERNAL_ID = /^[A-Za-z0-9][A-Za-z0-9._~-]*$/;
 
-/** Joins an external id from its parts and refuses one alien would reject, so a bad id fails here and not as a 503. */
 export const toAlienExternalId = ({ parts }: { parts: string[] }): string => {
 	const externalId = [cacheNamePrefix(), ...parts].filter(Boolean).join(".");
 	if (!ALIEN_EXTERNAL_ID.test(externalId))
@@ -30,7 +27,6 @@ export const toAlienExternalId = ({ parts }: { parts: string[] }): string => {
 	return externalId;
 };
 
-/** Whose Atoms these are: an org's env, or our shadow Atom. Its parts start every Atom's external id, and its base every default stack name. */
 export type AtomOwner = { idParts: string[]; stackNameBase: string };
 
 export const cacheOwner = ({
@@ -44,13 +40,11 @@ export const cacheOwner = ({
 	stackNameBase: `atom-${org.slug}-${env}`,
 });
 
-/** An org's external id always holds `.<env>` after its id, so no org's Atom can take the shadow Atom's group. */
 export const SHADOW_ATOM_OWNER: AtomOwner = {
 	idParts: [SHADOW_ATOM_EXTERNAL_ID],
 	stackNameBase: "atom-shadow",
 };
 
-/** One Atom, as its deployer knows it: one deployment group each, so an Atom being removed never shares a group with its replacement. Records from before Atom ids keep the owner's bare id. */
 export const atomExternalId = ({
 	owner,
 	atomId,
@@ -62,7 +56,6 @@ export const atomExternalId = ({
 		parts: [...owner.idParts, atomId].filter((part) => part !== undefined),
 	});
 
-/** The id the owner's next Atom takes, fixed by the Atoms it has, so the page can show its stack name before it exists. */
 export const nextAtomId = ({
 	owner,
 	existingAtomIds,
@@ -75,7 +68,6 @@ export const nextAtomId = ({
 		.digest("hex")
 		.slice(0, 24)}`;
 
-/** Six hex chars of the external id, so every Atom, and every dev stack, names its stack apart. */
 export const atomStackNameSuffix = ({
 	owner,
 	atomId,
@@ -88,7 +80,6 @@ export const atomStackNameSuffix = ({
 		.digest("hex")
 		.slice(0, 6);
 
-/** The stack's name in the owner's cloud, which is also its deployment group's: the chosen base, or the owner's, then the suffix. */
 export const atomStackName = ({
 	owner,
 	atomId,
@@ -102,7 +93,6 @@ export const atomStackName = ({
 		label: [base, atomStackNameSuffix({ owner, atomId })].join("-"),
 	});
 
-/** An Atom's names, as its deployer starts it. */
 export const atomNames = ({
 	owner,
 	atomId,
@@ -116,7 +106,6 @@ export const atomNames = ({
 	label: stackName,
 });
 
-/** The label records made before stack names could be chosen were set up under. */
 export const cacheGroupLabel = ({
 	org,
 	env,
@@ -126,7 +115,6 @@ export const cacheGroupLabel = ({
 }) =>
 	[cacheNamePrefix(), "autumn-byoc", org.slug, env].filter(Boolean).join("-");
 
-/** A record from before stack names were stored keeps the name it was set up under. */
 export const cacheDeploymentStackName = ({
 	cacheDeployment,
 	org,
@@ -139,16 +127,13 @@ export const cacheDeploymentStackName = ({
 		label: cacheGroupLabel({ org, env: cacheDeployment.env }),
 	});
 
-/** The names our shadow Atom was set up under before it took Atom ids like an org's. */
 export const legacyShadowAtomNames = () => ({
 	externalId: atomExternalId({ owner: SHADOW_ATOM_OWNER }),
 	label: [cacheNamePrefix(), SHADOW_ATOM_EXTERNAL_ID].filter(Boolean).join("-"),
 });
 
-/** Outlasts the few alien calls a setup makes; a crashed holder frees the env after this. */
 export const CACHE_LOCK_TTL_MS = 30_000;
 
-/** The request schemas only let offered pairs through, so a miss here is a contract bug. */
 export const resourcesToMachine = ({
 	cpu,
 	memory,
@@ -175,7 +160,6 @@ export const cacheDeploymentToMachine = ({
 	return findByocCacheMachine({ cpu, memory }) ?? null;
 };
 
-/** A resize moves a running cache; one still being set up takes its machine from `create_atom`. */
 export const cacheNotRunning = () =>
 	new RecaseError({
 		message: "Atom is not running yet, so it cannot be resized.",
@@ -183,7 +167,6 @@ export const cacheNotRunning = () =>
 		statusCode: 409,
 	});
 
-/** Setup finishes on the first checks, which only reach a connected Atom. */
 export const cacheNotConnected = () =>
 	new RecaseError({
 		message: "Atom is not connected yet, so its setup cannot be finished.",
@@ -191,7 +174,6 @@ export const cacheNotConnected = () =>
 		statusCode: 409,
 	});
 
-/** Only a deploy that stopped can be resumed. */
 export const cacheNotFailed = () =>
 	new RecaseError({
 		message: "Atom's deploy has not failed, so there is nothing to retry.",
@@ -199,7 +181,6 @@ export const cacheNotFailed = () =>
 		statusCode: 409,
 	});
 
-/** One cache change per env at a time. */
 export const cacheLockKey = ({ ctx }: { ctx: AutumnContext }) =>
 	`lock:byoc-cache:${ctx.org.id}:${ctx.env}`;
 
@@ -226,7 +207,6 @@ export const cacheDeploymentToApiCache = ({
 	error: cacheDeployment.error,
 });
 
-/** Only a create hands out the token, so reading a cache never reveals it. */
 export const cacheDeploymentToCreateResponse = ({
 	cacheDeployment,
 	org,

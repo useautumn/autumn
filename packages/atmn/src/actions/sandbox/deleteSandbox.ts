@@ -53,8 +53,6 @@ export const runSandboxDelete = async ({
 	write = (text) => process.stdout.write(text),
 	writeError = (text) => process.stderr.write(text),
 }: SandboxDeleteOptions): Promise<SandboxDeleteResult> => {
-	// Listing first names the sandbox in the copy, and turns a typo into an
-	// error instead of a request the server has to refuse.
 	const { list } = await client.listSandboxes({});
 	const sandbox = list.find((entry) => entry.id === id);
 	if (sandbox === undefined) {
@@ -69,8 +67,6 @@ export const runSandboxDelete = async ({
 	}
 
 	await client.deleteSandbox({ id: sandbox.id });
-	// The remote delete is done and cannot be undone: say so before anything
-	// local can fail, so a .env error never reads as a failed deletion.
 	write(
 		`Deleted sandbox ${stripTerminalControls(sandbox.name)} (${sandbox.id}).\n`,
 	);

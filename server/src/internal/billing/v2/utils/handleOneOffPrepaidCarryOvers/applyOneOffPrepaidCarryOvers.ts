@@ -10,11 +10,6 @@ import {
 	oneOffPrepaidCusEntsByFeatureId,
 } from "./cusProductToOneOffPrepaidCarryOvers";
 
-/**
- * billing.update variant: merges preserved balance into the new cusProduct's
- * matching one-off slot when one exists; lifetime fallback otherwise.
- * MUTATES `newCustomerProduct.customer_entitlements` in place.
- */
 export const applyOneOffPrepaidCarryOvers = ({
 	oldCustomerProduct,
 	newCustomerProduct,
@@ -47,8 +42,6 @@ export const applyOneOffPrepaidCarryOvers = ({
 		}
 
 		const addedBalance = carryOverRow.balance ?? 0;
-		// Bump `adjustment` in lockstep with `balance` — grantedBalance picks
-		// up the preserved amount so usage stays at 0 instead of going negative.
 		newSlot.balance = new Decimal(newSlot.balance ?? 0)
 			.add(addedBalance)
 			.toNumber();

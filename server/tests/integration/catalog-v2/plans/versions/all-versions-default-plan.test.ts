@@ -1,11 +1,3 @@
-/**
- * catalogV2.update — versioning: "all_versions" on a default (auto_enable) plan.
- *
- * Red (current):  the dashboard restates is_default: true; the sibling fan-out copies it
- *                 onto v1, which handleDefaultFlagErrors rejects as a historical default.
- * Green (after):  the item removal lands on every version; only the latest stays default.
- */
-
 import { test } from "bun:test";
 import { ResetInterval } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
@@ -55,7 +47,6 @@ test.concurrent(
 				],
 			});
 
-			// Dashboard save: full restatement of the latest row, including is_default.
 			await autumnV2_3.catalogV2.update({
 				plans: [
 					{

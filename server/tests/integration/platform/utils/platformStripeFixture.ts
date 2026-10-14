@@ -87,7 +87,6 @@ export type PlatformStripeFixture = Awaited<
 	ReturnType<typeof createPlatformStripeFixture>
 >;
 
-/** Runs against a fresh platform sub-org and always removes it and its Stripe accounts. */
 export const withPlatformStripeFixtures = async ({
 	names,
 	run,

@@ -1,18 +1,3 @@
-/**
- * Regression: attach with PATCH-style customize (add_items / remove_items).
- *
- * Red-failure mode (pre-fix):
- *  - setupAttachBillingContext called setupAttachProductContext WITHOUT fullCustomer,
- *    so the patch pipeline (setupAttachPatchProductContext -> setupPatchContext) was
- *    never reached. Patch-style customize fell back to customizePlanV1ToV0, which only
- *    understands PUT-style {price, items} — it dropped EVERY feature item, leaving the
- *    customer on the plan's base price with no entitlements at all.
- *
- * Green-success criteria (post-fix):
- *  - Base items are retained, remove_items are dropped, add_items are present, and
- *    feature_quantities apply — matching multiAttach / createSchedule patch behavior.
- */
-
 import { expect, test } from "bun:test";
 import {
 	type ApiCustomerV5,
@@ -35,15 +20,13 @@ import chalk from "chalk";
 test.concurrent(`${chalk.yellowBright("attach patch customize: add_items/remove_items keep base items")}`, async () => {
 	const customerId = "attach-patch-customize-basic";
 
-	// Mirrors the reported payload: base price + several feature items, a boolean
-	// flag to remove, and a prepaid item whose quantity comes from feature_quantities.
 	const scale = products.base({
 		id: "scale",
 		items: [
 			items.monthlyPrice({ price: 500 }),
-			items.monthlyMessages({ includedUsage: 100 }), // retained canary
-			items.adminRights(), // boolean flag to remove
-			items.prepaidUsers({ billingUnits: 1 }), // quantity via feature_quantities
+			items.monthlyMessages({ includedUsage: 100 }),
+			items.adminRights(),
+			items.prepaidUsers({ billingUnits: 1 }),
 		],
 	});
 
@@ -68,7 +51,6 @@ test.concurrent(`${chalk.yellowBright("attach patch customize: add_items/remove_
 		enable_plan_immediately: true,
 	});
 
-	// Draft invoice keeps the plan pending; finalizing it activates the plan before payment.
 	await ctx.stripeCli.invoices.finalizeInvoice(result.invoice!.stripe_id);
 	await expectCustomerProducts({
 		autumn: autumnV2_2,
@@ -80,7 +62,6 @@ test.concurrent(`${chalk.yellowBright("attach patch customize: add_items/remove_
 	const customer = await autumnV2_2.customers.get<ApiCustomerV5>(customerId);
 	await expectProductActive({ customer, productId: scale.id });
 
-	// Base feature item retained (the bug dropped this entirely).
 	expectBalanceCorrect({
 		customer,
 		featureId: TestFeature.Messages,
@@ -89,17 +70,14 @@ test.concurrent(`${chalk.yellowBright("attach patch customize: add_items/remove_
 		planId: scale.id,
 	});
 
-	// add_items applied.
 	expectFlagCorrect({
 		customer,
 		featureId: TestFeature.Dashboard,
 		planId: scale.id,
 	});
 
-	// remove_items applied.
 	expect(customer.flags?.[TestFeature.AdminRights]).toBeUndefined();
 
-	// feature_quantities applied to the prepaid item.
 	expectBalanceCorrect({
 		customer,
 		featureId: TestFeature.Users,

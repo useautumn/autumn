@@ -148,7 +148,6 @@ test("a worker that reports partition load gets the load-aware assigner", () => 
 	const [assigner, fallback] = config.partitionAssigners ?? [];
 	expect(assigner).toBeDefined();
 	expect(assigner).not.toBe(coPartitionedAssigner);
-	// Still advertised, so old and new workers can share a group mid-rollout.
 	expect(fallback).toBe(coPartitionedAssigner);
 	expect(
 		assigner?.({

@@ -13,7 +13,6 @@ type RewardEntitlementRow = Entitlement & {
 	expiry?: { duration: EntitlementDuration; length: number } | null;
 };
 
-/** Public expiry for an entitlement row — handles both column form and an `expiry` object. */
 const getGrantExpiry = (
 	entitlement: RewardEntitlementRow,
 ): ApiGrantV0["expiry"] => {
@@ -32,7 +31,6 @@ const getGrantExpiry = (
 	return null;
 };
 
-/** Maps a feature_grant reward row to the V0 feature-grant shape (features supplied by caller). */
 export const getApiFeatureGrant = ({
 	reward,
 	features,

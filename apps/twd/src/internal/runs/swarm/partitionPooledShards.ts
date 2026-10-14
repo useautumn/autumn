@@ -11,7 +11,6 @@ import {
 	shardKeyOf,
 } from "../sizing/types/sizingShard.ts";
 
-/** Test ids grouped the way the swarm child shards them; the stripe-connect shard brings its own account, so it's left out. */
 export const partitionPooledShards = async ({
 	testIds,
 	testsDirAtSha,

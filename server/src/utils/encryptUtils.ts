@@ -20,7 +20,6 @@ export function encryptData(data: string) {
 		cipher.final(),
 	]);
 
-	// Combine IV and encrypted data
 	const result = Buffer.concat([iv, encrypted]);
 	return result.toString("base64");
 }
@@ -28,7 +27,6 @@ export function encryptData(data: string) {
 export function decryptData(encryptedData: string) {
 	const buffer = Buffer.from(encryptedData, "base64");
 
-	// Extract IV and encrypted data
 	const iv = buffer.slice(0, 16);
 	const encrypted = buffer.slice(16);
 
@@ -44,12 +42,6 @@ export function decryptData(encryptedData: string) {
 }
 
 export const generatePublishableKey = (env: string) => {
-	// let rand = crypto
-	//   .randomBytes(75) // 75 bytes will give ~100 characters in base64
-	//   .toString("base64")
-	//   .replace(/[+/=]/g, "") // Remove non-URL safe characters
-	//   .slice(0, 100); // Ensure exactly 100 characters
-
 	const envString = env === AppEnv.Sandbox ? "test_" : "live_";
 	return `am_pk_${envString}${KSUID.randomSync().string}`;
 };

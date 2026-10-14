@@ -64,8 +64,6 @@ export const runCheckWithTrackV2 = async ({
 		});
 	}
 
-	// No entitlement means the Lua deduction script no-ops successfully,
-	// which would incorrectly surface as allowed: true.
 	if (
 		!checkData.evaluationApiBalance &&
 		(requiredBalance > 0 || checkData.apiBalance)

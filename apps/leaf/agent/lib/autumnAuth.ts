@@ -22,8 +22,6 @@ const stringAttr = (
 	return typeof value === "string" && value.length > 0 ? value : undefined;
 };
 
-/** The stable identity behind a session principal — the fields token minting
- * (and its cache key) depend on. */
 export const autumnPrincipalFrom = ({
 	attributes,
 	principalId,
@@ -37,9 +35,6 @@ export const autumnPrincipalFrom = ({
 	const workspaceId = stringAttr(attributes, "workspaceId") ?? orgId;
 	const providerUserId =
 		stringAttr(attributes, "providerUserId") ?? principalId;
-	// Credentials are keyed by Autumn user id. Web principals carry it as
-	// providerUserId; Slack callers resolve it via email (autumnUserId) or
-	// fall back to the installer's credential when unset.
 	const credentialUserId =
 		provider === "web"
 			? providerUserId
@@ -47,8 +42,6 @@ export const autumnPrincipalFrom = ({
 	return { appEnv, credentialUserId, orgId, provider, workspaceId };
 };
 
-/** Mints the same Autumn access token the MCP connection would, from the
- * session principal's attributes. */
 export const mintAutumnAccessToken = async ({
 	attributes,
 	principalId,
@@ -71,9 +64,6 @@ type MintedAutumnToken = Awaited<ReturnType<typeof mintAutumnAccessToken>>;
 
 const tokenCache = createTtlCache<MintedAutumnToken>({ ttlMs: ms.seconds(30) });
 
-/** "Minting" is a stored-credential lookup (2 DB reads, refresh only on
- * expiry); the principal is derived without I/O so the cache key costs
- * nothing and repeat steps skip the lookups entirely. */
 export const mintCachedAutumnToken = (
 	attributes: LeafPrincipalAttributes | undefined,
 ) => {

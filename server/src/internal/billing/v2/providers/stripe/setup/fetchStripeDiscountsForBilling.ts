@@ -77,11 +77,6 @@ export const filterDeletedCouponDiscounts = async ({
 	return discounts.filter((_, i) => couponExists[i]);
 };
 
-/**
- * Fetches discounts for billing: existing Stripe discounts, minus param removals, plus param additions.
- * Deduplicates by coupon ID — logs and skips param discounts already on the subscription.
- * Filters out discounts with deleted coupons.
- */
 export const fetchStripeDiscountsForBilling = async ({
 	ctx,
 	stripeSubscription,
@@ -108,10 +103,6 @@ export const fetchStripeDiscountsForBilling = async ({
 
 	if (!paramDiscounts?.length) {
 		return existingDiscounts;
-		// return filterDeletedCouponDiscounts({
-		// 	stripeCli,
-		// 	discounts: existingDiscounts,
-		// });
 	}
 
 	const resolvedParamDiscounts = await resolveParamDiscounts({
@@ -119,7 +110,6 @@ export const fetchStripeDiscountsForBilling = async ({
 		discounts: paramDiscounts,
 	});
 
-	// Re-sent codes already on the subscription are deduped below, not re-redeemed
 	const existingRewardIds = new Set(
 		existingDiscounts.map((discount) =>
 			stripeCouponToRewardId(discount.source.coupon),
@@ -136,10 +126,6 @@ export const fetchStripeDiscountsForBilling = async ({
 		stripeCustomerId: stripeCustomer?.id,
 	});
 
-	// Merge existing + param discounts, deduplicating by coupon ID.
-	// When there's a conflict, prefer the discount that has a Stripe discount ID
-	// (di_xxx) so stripeDiscountsToParams uses { discount: id } and preserves
-	// the original start/end dates rather than creating a fresh one.
 	const discountByCouponId = new Map<string, StripeDiscountWithCoupon>();
 
 	for (const d of [...resolvedParamDiscounts, ...existingDiscounts]) {

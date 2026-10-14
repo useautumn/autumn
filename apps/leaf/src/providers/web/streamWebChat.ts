@@ -38,7 +38,6 @@ const withCors = (response: Response, origin?: string) => {
 	});
 };
 
-/** Runs Eve and emits the dashboard's native AI SDK stream. */
 export const streamWebChat = async ({
 	auth,
 	origin,
@@ -64,8 +63,6 @@ export const streamWebChat = async ({
 	}
 
 	const { orgId, userId, scopes } = auth;
-	// Scope the session + vault + OAuth credential to the dashboard's active env,
-	// forwarded as the `app_env` header (server chat proxy passes it through).
 	const env = resolveDashboardEnv(request.headers.get("app_env"));
 	const logger = rootLogger;
 	const chatThreadId = buildWebChatThreadId({ conversationId, orgId, userId });
@@ -129,7 +126,6 @@ export const streamWebChat = async ({
 						type: "data-step",
 					});
 				},
-				// Thinking closes the active tool step while the model reasons.
 				onThinking: () => finishLastStep(),
 				onReasoning: ({ id, text }) => {
 					finishLastStep();
@@ -192,8 +188,6 @@ export const streamWebChat = async ({
 					workspaceId: orgId,
 				});
 				if (!approval) return;
-				// The dashboard renders from the stored row on poll; the grouped
-				// step previews land right after the pending event is streamed.
 				void approval.backfillGroupedPreviews?.().catch((error) => {
 					logger.warn("Could not backfill grouped previews", {
 						event: "leaf.approval_group_preview_backfill_failed",

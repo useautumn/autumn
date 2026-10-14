@@ -19,7 +19,6 @@ const preview = {
 	],
 } as CatalogPreviewUpdateResponse;
 
-/** Before: only deletions prompted; after: every config-resource change requires one grouped confirmation. */
 test("reward and referral program changes require confirmation", () => {
 	const prompts = buildPromptQueueFromPreview(
 		preview,

@@ -1,10 +1,3 @@
-/**
- * The webhook idempotency middleware fails open when Redis is unavailable so
- * an outage does not stall every Stripe event. Cycle invoice.created events
- * write usage lines to Stripe, so two overlapping deliveries could bill twice;
- * without the lock they must be 500ed so Stripe retries once Redis is back.
- */
-
 import { afterAll, beforeEach, describe, expect, mock, test } from "bun:test";
 import { Hono } from "hono";
 import type Stripe from "stripe";

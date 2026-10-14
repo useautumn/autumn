@@ -16,14 +16,6 @@ import { applyStripeDiscountsToLineItems } from "@/internal/billing/v2/providers
 import { customerProductToArrearLineItems } from "@/internal/billing/v2/utils/lineItems/customerProductToArrearLineItems.js";
 import { lineItemToPreviewLineItem } from "@/internal/billing/v2/utils/lineItems/lineItemToPreviewLineItem.js";
 
-/**
- * The usage-only invoice a subscription still receives when nothing recurs past
- * the upcoming boundary — a plan cancelling at period end is billed for what it
- * consumed even though there is no next cycle to preview.
- *
- * Returns null when nothing is owed, which is also the answer for subscriptions
- * that simply carry no consumable prices.
- */
 export const getFinalUsageInvoicePreview = ({
 	ctx,
 	billingContext,
@@ -42,8 +34,6 @@ export const getFinalUsageInvoicePreview = ({
 		getEarliestPeriodEnd({ sub: stripeSubscription }),
 	);
 
-	// Sit just inside the closing cycle so the cycle math bills what was used,
-	// rather than rolling forward into a cycle that never happens.
 	const arrearBillingContext: BillingContext = {
 		...billingContext,
 		currentEpochMs: periodEndMs - ms.minutes(30),

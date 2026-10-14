@@ -2,7 +2,6 @@ import { Scopes } from "@autumn/shared";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 
-/** Reads a Stripe subscription live, so the dashboard sees its real collection method. */
 export const handleGetStripeSubscription = createRoute({
 	scopes: [Scopes.Billing.Read],
 	handler: async (c) => {

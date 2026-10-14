@@ -17,7 +17,6 @@ type OwnerContext = {
 	health: Pick<ThreadHealthSource, "threadsReady" | "thread">;
 };
 
-/** Answered from this thread's files, so refused until it has caught up: what it missed while it was down is not there yet. */
 const READS = new Set<OwnerCall["type"]>([
 	"check",
 	"listSince",
@@ -25,7 +24,6 @@ const READS = new Set<OwnerCall["type"]>([
 	"fetchSubjects",
 ]);
 
-/** The call run on the slots this thread owns: the same processor a request arriving here would use. */
 const runOwnerCall = async ({
 	ctx,
 	call,
@@ -75,7 +73,6 @@ const runOwnerCall = async ({
 		.check({ request });
 };
 
-/** Answers another thread's calls for the customers this thread owns, each as soon as it is done. */
 export const answerOwnerCalls = ({
 	ctx,
 	port,

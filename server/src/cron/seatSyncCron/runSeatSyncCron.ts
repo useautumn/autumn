@@ -23,11 +23,6 @@ type MismatchedSeatRow = {
 	env: AppEnv;
 };
 
-/**
- * Seats whose lifecycle drifted from their pool parent, keyset-paged by seat
- * id. Walks idx_customer_products_seat_sync (partial on seats), one indexed
- * probe per seat for pool + parent. Reads ride the replica in production.
- */
 const getMismatchedSeatsPage = async ({
 	ctx,
 	cursor,
@@ -79,11 +74,6 @@ const getMismatchedSeatsPage = async ({
 	return result as unknown as MismatchedSeatRow[];
 };
 
-/**
- * One set-based UPDATE converging candidate seats onto their parent. The
- * parent is re-read on MAIN here (the page may come from a lagged replica),
- * and the mismatch predicate re-checks so already-converged rows no-op.
- */
 const syncSeats = async ({
 	ctx,
 	rows,
@@ -125,7 +115,6 @@ const syncSeats = async ({
 	`);
 };
 
-/** Drops FullCustomer + fullSubject caches for every affected customer. */
 const invalidateAffectedCustomers = async ({
 	ctx,
 	rows,
@@ -148,7 +137,6 @@ const invalidateAffectedCustomers = async ({
 			logger: ctx.logger,
 			redisV2: resolveRedisV2(),
 		};
-		// The worker evict is a command: it needs a request id and a clock the repo context lacks.
 		const evictionContext = {
 			...repoContext,
 			id: generateId("cron"),
@@ -157,7 +145,6 @@ const invalidateAffectedCustomers = async ({
 		const customerIds = [
 			...new Set(orgRows.map((row) => row.customer_id as string)),
 		];
-		// Bounded fan-out: at most INVALIDATION_CONCURRENCY in flight.
 		for (
 			let index = 0;
 			index < customerIds.length;
@@ -178,11 +165,6 @@ const invalidateAffectedCustomers = async ({
 	}
 };
 
-/**
- * Converges seat (license assignment) lifecycle onto the pool parent's:
- * status, subscription_ids, scheduled_ids. Backstop for parent transitions
- * the write paths miss; read-time inheritance covers the window in between.
- */
 export const runSeatSyncCron = async ({ ctx }: { ctx: CronContext }) => {
 	const { logger } = ctx;
 	const startTime = Date.now();

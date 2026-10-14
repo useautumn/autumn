@@ -2,7 +2,6 @@ import { rewardRedemptions } from "@autumn/shared";
 import { inArray } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 
-/** Delete all redemptions for one or more customers (used in tests) */
 export const resetCustomerRedemptions = async ({
 	db,
 	internalCustomerId,

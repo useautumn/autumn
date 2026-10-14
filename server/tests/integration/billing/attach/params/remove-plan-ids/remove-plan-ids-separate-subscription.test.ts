@@ -1,26 +1,3 @@
-/**
- * remove_plan_ids - Separate Subscription Tests
- *
- * With no same-group plan to replace, attach used to merge into whichever paid
- * subscription ranked first for the customer. Among equally ranked plans that
- * is the OLDEST one, so a customer whose other plan (here "transactional") was
- * attached before the plan being swapped out had the attach land on the wrong
- * subscription. When the plan named in
- * remove_plan_ids was billed on a DIFFERENT subscription, the attach was
- * rejected ("billed on a separate subscription and cannot be removed"), even
- * though the caller's intent is plainly to swap that plan for the new one.
- *
- * The removed plan's subscription is now the attach's target, so the new plan
- * takes over the removed plan's Stripe subscription and the other subscription
- * is left alone.
- *
- * Key behaviors:
- * - The attached plan lands on the removed plan's subscription.
- * - The other subscription (and its plan) is untouched.
- * - A plan that shares the removed plan's subscription stays on it.
- * - Removing two paid plans on different subscriptions is still rejected.
- */
-
 import { expect, test } from "bun:test";
 import {
 	type ApiCustomerV3,
@@ -70,17 +47,6 @@ const enterprisePlan = () =>
 			items.monthlyMessages({ includedUsage: 500 }),
 		],
 	});
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 1: Attached plan takes over the removed plan's subscription
-//
-// Transactional ($20/mo) on sub A, then Marketing ($30/mo) on sub B (new sub).
-// Advance 15 days. Attach Enterprise ($50/mo, its own group) with
-// remove_plan_ids: [marketing].
-// Expected: Enterprise on sub B, Transactional still on sub A, 2 subs total,
-// invoice = ($50 - $30) x remaining ratio.
-// Before the fix: 400 "billed on a separate subscription".
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(
 	`${chalk.yellowBright("remove-plan-ids separate sub 1: attached plan takes over the removed plan's subscription")}`,
@@ -169,7 +135,6 @@ test.concurrent(
 			options: { subCount: 2 },
 		});
 
-		// Invoices: transactional ($20), marketing ($30), then the netted switch.
 		await expectCustomerInvoiceCorrect({
 			customerId,
 			count: 3,
@@ -177,15 +142,6 @@ test.concurrent(
 		});
 	},
 );
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 2: Custom-priced swap with carry-over (the shape of a real support request)
-//
-// Same subscriptions as test 1. Attach Enterprise with a custom $80/mo price,
-// carry_over_usages, prorate_immediately and remove_plan_ids: [marketing].
-// Expected: Enterprise on sub B at $80, marketing's usage carried over,
-// invoice = ($80 - $30) x remaining ratio.
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(
 	`${chalk.yellowBright("remove-plan-ids separate sub 2: custom price + carry-over swap onto the removed plan's subscription")}`,
@@ -268,15 +224,6 @@ test.concurrent(
 	},
 );
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 3: A plan sharing the removed plan's subscription stays on it
-//
-// Transactional ($20/mo) on sub A. Marketing ($30/mo) + recurring add-on
-// ($20/mo) multi-attached together onto sub B. Attach Enterprise with
-// remove_plan_ids: [marketing].
-// Expected: Enterprise and the add-on both on sub B, Transactional on sub A.
-// ═══════════════════════════════════════════════════════════════════════════════
-
 test.concurrent(
 	`${chalk.yellowBright("remove-plan-ids separate sub 3: a plan sharing the removed plan's subscription stays on it")}`,
 	async () => {
@@ -355,13 +302,6 @@ test.concurrent(
 	},
 );
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 4: Removing two paid plans on different subscriptions is still rejected
-//
-// Only one subscription can be the attach's target, so the second removed plan
-// would be expired in Autumn but left billing in Stripe.
-// ═══════════════════════════════════════════════════════════════════════════════
-
 test.concurrent(
 	`${chalk.yellowBright("remove-plan-ids separate sub 4: two removed plans on different subscriptions are rejected")}`,
 	async () => {
@@ -404,14 +344,6 @@ test.concurrent(
 		});
 	},
 );
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 5: A scheduled swap cannot remove plans
-//
-// Removals expire immediately, but an end_of_cycle attach only starts the new
-// plan at the end of the cycle — the customer would lose the removed plan's
-// access in between, with no credit. The combination is rejected.
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(
 	`${chalk.yellowBright("remove-plan-ids separate sub 5: an end_of_cycle swap cannot remove plans")}`,
@@ -456,13 +388,6 @@ test.concurrent(
 		});
 	},
 );
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 6: A future starts_at swap cannot remove plans
-//
-// Plan timing stays "immediate", but the new plan only starts at starts_at, so
-// the removed plan would expire now and leave a gap. Rejected like test 5.
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(
 	`${chalk.yellowBright("remove-plan-ids separate sub 6: a future starts_at swap cannot remove plans")}`,

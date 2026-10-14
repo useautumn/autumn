@@ -1,5 +1,3 @@
-/** Red: lock contention clears suppression and emits failure. Green: it keeps suppression and retries silently. */
-
 import { beforeEach, expect, mock, test } from "bun:test";
 import { AppEnv, ErrCode } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";

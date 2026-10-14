@@ -1,14 +1,3 @@
-/**
- * TDD contract for wiring entities.create failures to recovery.
- *
- * Contract under test:
- * - A worker fail-open failure is captured with the validated create params and still
- *   surfaces as the worker's own 503.
- * - A transient Postgres failure is captured and shed as the usual 503.
- * - A 4xx verdict is never captured.
- * - Recovery replays can disable capture to prevent recursive enqueue.
- */
-
 import { beforeEach, describe, expect, mock, test } from "bun:test";
 import { BalanceWorkerClientError } from "@autumn/balance-worker-client";
 import {
@@ -76,7 +65,6 @@ const params = {
 	withAutumnId: true,
 };
 
-/** The 503 the server raises when the client gave up before any worker answered. */
 const workerUnavailableError = (): unknown => {
 	try {
 		rethrowBalanceWorkerError({

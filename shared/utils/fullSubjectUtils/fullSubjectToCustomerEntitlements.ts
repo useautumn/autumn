@@ -15,12 +15,6 @@ import { sortCusEntsForDeduction } from "../cusEntUtils/sortCusEntsForDeduction.
 import { notNullish } from "../utils.js";
 import { memoOnFullSubject } from "./fullSubjectRowsMemo.js";
 
-/**
- * Every row the subject holds with the product that granted it, loose and
- * pooled rows with none, in product order: the one flatten every selection
- * filters from. A view marked immutable keeps it, so the row copies are made
- * once per view rather than once per selection.
- */
 export const fullSubjectToRowsWithProduct = <
 	CE extends FullCustomerEntitlementView,
 	CP extends FullCusProductView,
@@ -51,8 +45,6 @@ export const fullSubjectToRowsWithProduct = <
 			for (const customerEntitlement of fullSubject.extra_customer_entitlements) {
 				rows.push({ ...customerEntitlement, customer_product: null });
 			}
-			// Guarded for subjects built without going through the schema, which fills
-			// this in via .default([]).
 			for (const customerEntitlement of fullSubject.pooled_customer_entitlements ??
 				[]) {
 				rows.push({ ...customerEntitlement, customer_product: null });
@@ -61,7 +53,6 @@ export const fullSubjectToRowsWithProduct = <
 		},
 	});
 
-/** Generic over the row shape so the same selection serves a FullSubject and the balance worker's leaner view. */
 export const fullSubjectToCustomerEntitlements = <
 	CE extends FullCustomerEntitlementView,
 	CP extends FullCusProductView,
@@ -78,18 +69,14 @@ export const fullSubjectToCustomerEntitlements = <
 	inStatuses?: CusProductStatus[];
 	reverseOrder?: boolean;
 	featureIds?: string[];
-	/** Membership by EFFECTIVE credit schema (plan-item feature_override,
-	 * else catalog) — per cusEnt, unlike the per-feature featureIds filter. */
 	fundsFeatureId?: string;
 	customerEntitlementFilters?: CustomerEntitlementFilters;
-	/** Expiry is judged against this instant; a replayed command passes its own. */
 	now?: number;
 }) => {
 	type Selected = FullCusEntWithFullCusProductView<
 		CE,
 		CP & { customer_entitlements: CE[] }
 	>;
-	// The kept rows are only filtered here, never edited; a loose or pooled row has no product to judge by status.
 	let customerEntitlements: Selected[] = fullSubjectToRowsWithProduct({
 		fullSubject,
 	}).filter(

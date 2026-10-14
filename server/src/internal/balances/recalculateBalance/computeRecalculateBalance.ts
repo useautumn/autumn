@@ -51,13 +51,6 @@ const cusEntsToRecalculateUsage = ({
 	return usage.toNumber();
 };
 
-/**
- * Computes (without persisting) the result of recalculating a customer's
- * balances for a feature: every matching entitlement is reset to its starting
- * balance and the total usage is re-applied across them in priority order
- * (allowing overage). Returns the original entitlements (`before`) and the
- * recalculated clones (`after`) so callers can persist them or preview the diff.
- */
 export const computeRecalculateBalance = async ({
 	ctx,
 	params,

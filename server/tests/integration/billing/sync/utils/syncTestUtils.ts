@@ -6,12 +6,6 @@ import type Stripe from "stripe";
 import { CusService } from "@/internal/customers/CusService";
 import { ProductService } from "@/internal/products/ProductService";
 
-/**
- * Creates a Stripe subscription using the REAL Stripe price IDs stored on
- * the Autumn product's prices (fixed or usage). This mirrors what a real
- * customer's Stripe subscription would look like — the price IDs will
- * reverse-match through PriceService.getByStripeIds during sync proposals.
- */
 export const createStripeSubscriptionFromProduct = async ({
 	ctx,
 	customerId,
@@ -31,11 +25,6 @@ export const createStripeSubscriptionFromProduct = async ({
 	});
 };
 
-/**
- * Creates a single Stripe subscription from multiple Autumn products.
- * Gathers all Stripe price IDs across the given products and creates
- * one subscription with all items.
- */
 export const createStripeSubscriptionFromProducts = async ({
 	ctx,
 	customerId,
@@ -84,10 +73,6 @@ export const createStripeSubscriptionFromProducts = async ({
 	});
 };
 
-/**
- * Extracts each price's V2 billing Stripe price id (prepaid reads stripe_prepaid_price_v2_id).
- * Falls back to stripe_empty_price_id if the main one is missing.
- */
 export const getAllStripePriceIds = ({
 	fullProduct,
 }: {
@@ -105,9 +90,6 @@ export const getAllStripePriceIds = ({
 	return priceIds;
 };
 
-/**
- * Extracts stripe_price_id values from fixed prices only.
- */
 export const getStripePriceIdsFromProduct = ({
 	fullProduct,
 }: {
@@ -126,10 +108,6 @@ export const getStripePriceIdsFromProduct = ({
 	return priceIds;
 };
 
-/**
- * Gets the first fixed-price stripe_price_id from a product.
- * Useful when you just need one ID for assertions.
- */
 export const getFirstStripePriceId = ({
 	fullProduct,
 }: {

@@ -108,7 +108,6 @@ export const productItemToPlanItemParamsV1 = ({
 		feature_override: planItemV1.feature_override,
 		expiry: planItemV1.expiry ?? undefined,
 
-		// Add internal fields
 		entity_feature_id: item.entity_feature_id ?? undefined,
 		entitlement_id: item.entitlement_id ?? undefined,
 		price_id: item.price_id ?? undefined,

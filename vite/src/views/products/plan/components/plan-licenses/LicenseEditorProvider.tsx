@@ -4,13 +4,6 @@ import { ProductProvider } from "@/components/v2/inline-custom-plan-editor/PlanE
 import { useInlineProductEditor } from "@/components/v2/inline-custom-plan-editor/useInlineProductEditor";
 import { useLicenseSheetStore } from "./useLicenseSheetStore";
 
-/**
- * Editor context for an inline license card. Same as InlineEditorProvider (local
- * draft + local sheet state, so each license edits independently and its sheet
- * never collides with the page's), but it mirrors its sheet open/close to the
- * page so PlanEditor can shift content for a license sheet exactly as for the
- * plan's own.
- */
 export function LicenseEditorProvider({
 	children,
 	initialProduct,
@@ -34,8 +27,6 @@ export function LicenseEditorProvider({
 		[reportOpen, reportClosed],
 	);
 
-	// The ref-counted store leaks a count if this editor unmounts while its
-	// sheet is still open, so release it on unmount.
 	useEffect(
 		() => () => {
 			if (hasReportedOpenRef.current) {

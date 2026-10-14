@@ -20,12 +20,6 @@ export const billing = {
 		write: ExpectedApiCall;
 	}): ApiCalledInOrderExpectation =>
 		api.calledInOrder({ calls: [preview, write] }),
-	/**
-	 * Standard preview-then-write contract for a billing write: the preview tool
-	 * runs first with the same body, the write only fires after approval, and
-	 * optional paths (e.g. real-time phase starts) are asserted as numbers on
-	 * both calls. Spread into `expect: []`.
-	 */
 	previewThenWrite: ({
 		body,
 		numberFields,

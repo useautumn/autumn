@@ -27,7 +27,6 @@ const mergeVariantTargets = ({
 	return [...byInternalId.values()];
 };
 
-/** Every existing variant row this base upsert touches, one merged target per row. */
 export const resolveVariantEditTargets = ({
 	upsert,
 	productStatesContext,

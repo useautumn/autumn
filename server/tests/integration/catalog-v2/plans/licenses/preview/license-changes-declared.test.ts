@@ -1,12 +1,3 @@
-/**
- * catalogV2.preview_update — declared licenses[] → plan_change.license_changes.
- *
- * Contract:
- *   - licenses: [] → removed + remove_licenses
- *   - included-only → updated, previous_attributes.included, no nested plan_change
- *   - identical re-declare → no license_changes
- */
-
 import { test } from "bun:test";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";

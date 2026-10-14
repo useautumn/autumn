@@ -1,10 +1,3 @@
-/**
- * Unit tests for sendEmailReceipt function.
- *
- * Tests the logic that sets receipt_email on PaymentIntent
- * based on customer's send_email_receipts flag.
- */
-
 import { describe, expect, test } from "bun:test";
 import { AppEnv, type FullCustomer } from "@autumn/shared";
 import { stripeClients } from "@tests/utils/fixtures/stripe/clients";
@@ -13,8 +6,6 @@ import type Stripe from "stripe";
 import type { StripeInvoicePaidContext } from "@/external/stripe/webhookHandlers/handleStripeInvoicePaid/setupStripeInvoicePaidContext";
 import { sendEmailReceipt } from "@/external/stripe/webhookHandlers/handleStripeInvoicePaid/tasks/sendEmailReceipt";
 import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/stripeWebhookContext";
-
-// ============ MOCK HELPERS ============
 
 const createMockLogger = () => ({
 	debug: () => {},
@@ -61,8 +52,6 @@ const createMockInvoicePaidContext = (
 				: { data: [] },
 		},
 	}) as unknown as StripeInvoicePaidContext;
-
-// ============ TESTS ============
 
 describe(chalk.yellowBright("sendEmailReceipt"), () => {
 	describe(chalk.cyan("Early returns - no Stripe API calls"), () => {

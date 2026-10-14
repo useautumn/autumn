@@ -1,10 +1,3 @@
-/**
- * A backdate over a healthy live subscription recreates it, so anything the recreate would
- * lose or rebill is rejected with structured details: a trial added to a paid one, Stripe
- * Checkout, a paid period already over, a start too far back, or a plan it doesn't cover.
- * Any anchor is taken; a trialing subscription paid nothing, so it is recreated freely.
- */
-
 import { describe, expect, test } from "bun:test";
 import {
 	addInterval,

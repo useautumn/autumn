@@ -1,7 +1,6 @@
 import type { BaseCommand } from "@autumn/balance-engine";
 import type { BalanceWorkerRequestContext } from "./balanceWorkerRequestContext.js";
 
-/** What every command carries from the request: who asked, for which subject, and when. */
 export function requestContextToCommandBase({
 	ctx,
 	customerId,

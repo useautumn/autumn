@@ -1,17 +1,3 @@
-/**
- * Candidate-row pagination for license assignments. Pages are sized in
- * customers, but assignments are read + inserted in id-keyset batches.
- *
- * Driven with candidateRowBatchSize: 1 so every batch boundary — and its
- * per-batch transaction — is crossed.
- *
- * Contract under test:
- *   - Every assignment is visited exactly once across batches: none skipped
- *     by the cursor, none duplicated by re-reading a mutated row.
- *   - The pool repoint (whole-page, before pagination) is applied once.
- *   - Replaying over the paginated path inserts nothing.
- */
-
 import { expect, test } from "bun:test";
 import { customerEntitlements } from "@autumn/shared";
 import { setupLicenseUpdateScenario } from "@tests/integration/licenses/billing/update/setupLicenseUpdateScenario";
@@ -108,7 +94,6 @@ test.concurrent(
 			await getInternalCustomerId({ ctx, customerId }),
 		];
 
-		// One assignment per batch: every boundary crossed.
 		const repointOperation = patch.licenseEntitlementOps.find(
 			(candidate) => candidate.type === "repoint_license_pool",
 		);
@@ -137,7 +122,6 @@ test.concurrent(
 			...new Set(result.insertedItems.map((item) => item.customerProductId)),
 		]).toHaveLength(ASSIGNED_SEATS);
 
-		// Exactly one row per assignment — the cursor neither skipped nor doubled.
 		const countDashboardRows = async () => {
 			const rows = await ctx.db
 				.select({ featureId: customerEntitlements.feature_id })
@@ -153,7 +137,6 @@ test.concurrent(
 		};
 		expect(await countDashboardRows()).toBe(ASSIGNED_SEATS);
 
-		// Replay over the paginated path: per-batch dedup still holds.
 		const replayRepoint = await repointLicensePoolForPage({
 			db: ctx.db,
 			scope: patch.scope,

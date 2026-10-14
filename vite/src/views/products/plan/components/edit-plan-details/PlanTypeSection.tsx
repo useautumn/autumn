@@ -38,7 +38,6 @@ export const PlanTypeSection = () => {
 						<div className="flex-1">
 							<div className="text-body-highlight mb-1 flex-row flex items-center gap-1">
 								Free
-								{/* <InfoIcon size={8} weight="regular" color="#888888" /> */}
 							</div>
 							<div className="text-body-secondary leading-tight">
 								A plan without pricing that customers can use for free
@@ -55,7 +54,6 @@ export const PlanTypeSection = () => {
 						<div className="flex-1">
 							<div className="text-body-highlight mb-1 flex-row flex items-center gap-1">
 								Paid
-								{/* <InfoIcon size={8} weight="regular" color="#888888" /> */}
 							</div>
 							<div className="text-body-secondary leading-tight">
 								A plan with fixed or usage-based pricing that customers may

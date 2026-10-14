@@ -1,19 +1,4 @@
 /** @jsxImportSource @opentui/react */
-/**
- * Mount/unmount the opentui swarm TUI and bridge orchestrator logs into Pane B.
- *
- * Lifecycle:
- *   - `mountTui()` creates the renderer (we OWN signal handling: `exitSignals:[]`
- *     + `exitOnCtrlC:false`, so the orchestrator's existing SIGINT teardown stays
- *     in charge), renders <App/>, and registers the log-sink subscriber so every
- *     `sink`/`sinkLine` line flows into the logs pane.
- *   - `unmountTui()` clears the subscriber and `destroy()`s the renderer (restores
- *     the terminal). Idempotent and never throws — teardown must not be blocked by
- *     a render-teardown hiccup.
- *
- * Only mounted for an interactive TTY; non-TTY callers (CI, piped output) skip the
- * TUI and let the sink write to stdout as before.
- */
 
 import { createCliRenderer } from "@opentui/core";
 import { createRoot } from "@opentui/react";
@@ -27,10 +12,6 @@ type Root = ReturnType<typeof createRoot>;
 let renderer: Renderer | undefined;
 let root: Root | undefined;
 
-// Stray `console.*` calls (the @vercel/sandbox SDK, server modules, Stripe retry
-// warnings) would otherwise corrupt the TUI or get swallowed by opentui's debug
-// console overlay. While mounted, redirect them through the log sink so they land
-// (ANSI-stripped) in the logs pane. Restored on unmount.
 const CONSOLE_METHODS = ["log", "info", "warn", "error", "debug"] as const;
 type ConsoleMethod = (typeof CONSOLE_METHODS)[number];
 const savedConsole: Partial<
@@ -73,7 +54,6 @@ const restoreConsole = (): void => {
 	}
 };
 
-/** Whether an interactive TUI can be mounted (an actual TTY is attached). */
 export const canUseTui = (): boolean => Boolean(process.stdout.isTTY);
 
 export const mountTui = async (): Promise<void> => {
@@ -84,8 +64,6 @@ export const mountTui = async (): Promise<void> => {
 		exitOnCtrlC: false,
 		exitSignals: [],
 		targetFps: 30,
-		// We own the terminal: never let opentui's debug console overlay take over
-		// (it was hijacking the screen on stray console.* + errors).
 		consoleMode: "disabled",
 		openConsoleOnError: false,
 	});
@@ -100,9 +78,7 @@ export const unmountTui = (): void => {
 	setLogSubscriber(undefined);
 	try {
 		renderer?.destroy();
-	} catch {
-		// best-effort terminal restore
-	}
+	} catch {}
 	renderer = undefined;
 	root = undefined;
 };

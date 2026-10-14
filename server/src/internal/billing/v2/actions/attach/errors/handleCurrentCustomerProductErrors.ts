@@ -28,13 +28,6 @@ export const handleCurrentCustomerProductErrors = ({
 		});
 	}
 
-	// The "paid but no Stripe sub" guard catches broken Stripe linkage.
-	// External-PSP origin callers (e.g. RevenueCat) legitimately have paid
-	// current products with no Stripe subscription — they opt out via
-	// `skipExternalPSPGuard`. Stripe-origin cus_products with `processor: null`
-	// must still be checked, so this is gated on the explicit flag rather than
-	// on `cusProductToProcessorType`. A subscription that is linked but canceled
-	// is explained linkage, not broken linkage, and neither is an Autumn-managed trial.
 	if (
 		!skipBillingChanges &&
 		!skipExternalPSPGuard &&

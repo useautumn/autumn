@@ -10,16 +10,12 @@ import { customerLicenseRepo } from "@/internal/licenses/repos/customerLicenseRe
 import { shouldRunTriggerTasksInline } from "@/trigger/utils/shouldRunTriggerTasksInline";
 import { generateId } from "@/utils/genUtils";
 
-/** A seat transition whose pool row is written, waiting to converge its seats. */
 export type PendingBatchTransition = {
 	transition: CustomerLicenseTransition;
 	executionScope: { batchTransitionId: string; assignmentCutoffMs: number };
 	runSynchronously: boolean;
 };
 
-/** Converges license pools and their assigned seat definitions.
- * Persists pre-existing successor pools during scheduled activation.
- * Writes the pool rows only; the seat convergence is started by `startBatchTransitions` once they commit. */
 export const executeCustomerLicenseTransitions = async ({
 	ctx,
 	customerLicenseTransitions,
@@ -29,8 +25,6 @@ export const executeCustomerLicenseTransitions = async ({
 }): Promise<PendingBatchTransition[]> => {
 	const pending: PendingBatchTransition[] = [];
 	const hasTransitions = (customerLicenseTransitions ?? []).length > 0;
-	// Small customers get their transition awaited in-request so upgrades are
-	// synchronous; the capped count keeps this probe O(threshold) for whales.
 	const customerEntityCount = hasTransitions
 		? await countEntitiesByInternalCustomerId({
 				db: ctx.db,
@@ -92,7 +86,6 @@ export const executeCustomerLicenseTransitions = async ({
 	return pending;
 };
 
-/** Converges each written pool's seats: awaited for small customers, backgrounded for large ones. */
 export const startBatchTransitions = async ({
 	ctx,
 	pending,

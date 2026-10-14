@@ -1,20 +1,3 @@
-/**
- * TDD test for org-level usage_percentage alerts with thresholds > 100%.
- *
- * Red-failure mode (pre-fix):
- *  - DbUsageAlertSchema.check() in shared/models/cusModels/billingControls/usageAlert.ts
- *    rejected threshold > 100 for usage_percentage (and remaining_percentage),
- *    so OrgConfigSchema.parse on next ctx.org read would throw and no
- *    track request would even reach checkUsageAlerts.
- *
- * Green-success criteria (post-fix):
- *  - usage_percentage thresholds > 100 (e.g. 200, 300) are accepted.
- *  - With overage_allowed enabled on a consumable feature, usage can exceed
- *    granted; when it crosses N% the org-level alert at N% fires.
- *  - remaining_percentage stays capped at 100 (semantically remaining cannot
- *    exceed granted).
- */
-
 import { afterAll, afterEach, beforeAll, expect, test } from "bun:test";
 import type { DbUsageAlert } from "@autumn/shared";
 import { setCustomerOverageAllowed } from "@tests/integration/balances/utils/overage-allowed-utils/customerOverageAllowedUtils.js";
@@ -68,8 +51,6 @@ afterEach(async () => {
 });
 
 async function setOrgUsageAlerts(usageAlerts: DbUsageAlert[]) {
-	// Tests run in AppEnv.Sandbox — checkUsageAlerts reads
-	// sandbox_usage_alerts, not the live `usage_alerts` field.
 	await OrgService.update({
 		db,
 		orgId: defaultCtx.org.id,
@@ -115,7 +96,6 @@ test(`${chalk.yellowBright("org-pct-200: usage_percentage threshold of 200% fire
 		enabled: true,
 	});
 
-	// 2500 of 1000 allowance = 250% usage → crosses 200% threshold
 	await autumnV2_1.track({
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
@@ -171,7 +151,6 @@ test(`${chalk.yellowBright("org-pct-300: usage_percentage threshold of 300% fire
 		enabled: true,
 	});
 
-	// 3500 of 1000 allowance = 350% usage → crosses 300% threshold
 	await autumnV2_1.track({
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
@@ -227,7 +206,6 @@ test(`${chalk.yellowBright("org-pct-200-not-yet: usage_percentage threshold of 2
 		enabled: true,
 	});
 
-	// 1500 of 1000 allowance = 150% — below 200% threshold
 	await autumnV2_1.track({
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,

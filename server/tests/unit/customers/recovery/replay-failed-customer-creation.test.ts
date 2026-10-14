@@ -1,13 +1,3 @@
-/**
- * TDD contract for customer creation recovery replay.
- *
- * Contract under test:
- * - Safe failures replay the original normalized get-or-create operation.
- * - Replays preserve the original API version and cannot enqueue themselves again.
- * - Replays log whether they created or fetched the customer.
- * - Failures after the Autumn commit stop for manual billing review.
- */
-
 import { beforeEach, describe, expect, mock, test } from "bun:test";
 import { ApiVersion, ApiVersionClass, AppEnv } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";

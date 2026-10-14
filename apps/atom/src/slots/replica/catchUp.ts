@@ -6,7 +6,6 @@ import type { SqliteStore } from "../../state/types/sqliteStore.js";
 import type { CatalogRows, SubjectSource } from "../types/slots.js";
 import type { ReplicaSlotsContext } from "./types/replicaSlotsContext.js";
 
-/** Digests or rows asked of a peer per request, and rows fetched per request once their digests say they are newer. */
 const CATCH_UP_PAGE = 500;
 const FETCH_BATCH = 100;
 
@@ -15,7 +14,6 @@ type Version = { readAt: number; logOffset: bigint };
 const isNewer = (a: Version, b: Version) =>
 	a.readAt > b.readAt || (a.readAt === b.readAt && a.logOffset > b.logOffset);
 
-/** Only what is newer than the row held is written, so a pass over what is already held rewrites nothing. */
 const writeNewer = ({
 	store,
 	page,
@@ -44,7 +42,6 @@ type SlotCopy = {
 	slotCount: number;
 };
 
-/** Every row the source wrote since `window`, page by page, each page starting past the last row of the one before: a fresh volume takes everything. */
 const copyRows = async ({
 	store,
 	source,
@@ -79,7 +76,6 @@ const copyRows = async ({
 	return written;
 };
 
-/** The digests of what the source wrote since `window`, then only the rows whose version beats the one held. */
 const copyNewerRows = async ({
 	store,
 	source,
@@ -129,10 +125,6 @@ const copyNewerRows = async ({
 	return written;
 };
 
-/**
- * Copies into the slots this thread owns what `source` holds newer than they do, the catalog included: every row
- * with `window` null (a fresh volume); else only the rows whose digest is newer than the one held.
- */
 export const catchUp = async ({
 	ctx,
 	source,

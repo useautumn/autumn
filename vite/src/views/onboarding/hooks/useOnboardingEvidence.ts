@@ -27,11 +27,6 @@ export interface OnboardingEvidence {
 	isEventsLoading: boolean;
 }
 
-/**
- * The rows the expanded panels show. Deliberately separate from progress:
- * these are heavier, only matter on the onboarding page, and arriving late
- * changes a panel's contents rather than the checklist's shape.
- */
 export const useOnboardingEvidence = (): OnboardingEvidence => {
 	const axiosInstance = useAxiosInstance();
 	const latestAxiosInstance = useAxiosInstance({ version: LATEST_VERSION });

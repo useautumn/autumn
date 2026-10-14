@@ -5,17 +5,9 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-/**
- * Downgrade to Plan with Prepaid Items Scenario
- *
- * Tests downgrading from a premium plan WITHOUT prepaid items to a cheaper plan
- * that HAS prepaid items.
- */
-
 test(`${chalk.yellowBright("attach: downgrade - no prepaid to plan with prepaid items")}`, async () => {
 	const customerId = "attach-downgrade-to-prepaid";
 
-	// Enterprise plan ($149/mo) - expensive but NO prepaid items
 	const enterprise = products.base({
 		id: "enterprise",
 		items: [
@@ -27,7 +19,6 @@ test(`${chalk.yellowBright("attach: downgrade - no prepaid to plan with prepaid 
 		],
 	});
 
-	// Pro plan ($49/mo) - cheaper with prepaid users
 	const pro = products.base({
 		id: "pro",
 		items: [
@@ -38,7 +29,6 @@ test(`${chalk.yellowBright("attach: downgrade - no prepaid to plan with prepaid 
 		],
 	});
 
-	// Setup: customer with payment method and enterprise plan (no prepaid) already attached
 	const { autumnV1 } = await initScenario({
 		customerId,
 		setup: [
@@ -48,10 +38,8 @@ test(`${chalk.yellowBright("attach: downgrade - no prepaid to plan with prepaid 
 		actions: [s.attach({ productId: "enterprise" })],
 	});
 
-	// Options for prepaid features in pro plan
 	const proOptions = [{ feature_id: TestFeature.Users, quantity: 5 }];
 
-	// 1. Preview the downgrade
 	const downgradePreview = await autumnV1.billing.previewAttach({
 		customer_id: customerId,
 		product_id: `pro_${customerId}`,
@@ -60,7 +48,6 @@ test(`${chalk.yellowBright("attach: downgrade - no prepaid to plan with prepaid 
 	});
 	console.log("downgrade preview:", downgradePreview);
 
-	// 2. Perform the downgrade
 	const downgradeResult = await autumnV1.billing.attach({
 		customer_id: customerId,
 		product_id: `pro_${customerId}`,

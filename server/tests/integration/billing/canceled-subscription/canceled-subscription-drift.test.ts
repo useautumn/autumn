@@ -1,36 +1,3 @@
-/**
- * TDD test for: a customer product linked to a Stripe subscription that is
- * already `canceled` must stop 400-ing every billing call, without ever
- * turning into a duplicate subscription or a duplicate charge.
- *
- * Contract under test:
- *   New types/fields:
- *     - BillingContext.canceledStripeSubscriptionId?: string
- *     - fetchStripeSubscriptionForBilling -> { stripeSubscription, canceledStripeSubscriptionId }
- *   New behaviors:
- *     - updateSubscription (feature_quantities) on a canceled sub
- *         -> 200, no new Stripe sub, no new invoice, subscription_ids preserved,
- *            Autumn-side quantity still applied
- *     - updateSubscription cancel_immediately on a canceled sub
- *         -> 200, product expired, default activated, no new sub, no new invoice
- *     - updateSubscription cancel_end_of_cycle on a canceled sub
- *         -> 400 naming the canceled sub and cancel_immediately
- *     - updateSubscription uncancel on a canceled sub
- *         -> 400; resuming would leave the plan active and permanently unbilled
- *     - attach a different plan on a canceled sub
- *         -> 200, a NEW active Stripe sub, charged full price, no credit from the dead sub
- *   Side effects:
- *     - no additional Stripe subscription on the customer for update/cancel paths
- *     - no additional Autumn invoice row for update/cancel paths
- *
- * Pre-impl red: every case fails in `fetchStripeSubscriptionForBilling`, which
- * throws `Subscription <id> is canceled` (400).
- * Post-impl green: the fetch reports the canceled id instead of throwing. Each
- * action then decides what that means — updateSubscription turns it into
- * skipBillingChanges (which `evaluateStripeBillingPlan` already honours), while
- * attach abandons the dead sub and buys fresh.
- */
-
 import { expect, test } from "bun:test";
 import type {
 	ApiCustomerV3,
@@ -51,10 +18,6 @@ import {
 	linkCustomerProductToCanceledSubscription,
 	listStripeSubscriptions,
 } from "./utils/canceledSubscriptionUtils";
-
-// ═══════════════════════════════════════════════════════════════════════════
-// Behavior 2: update quantity on a canceled sub — no error, no charge, no sub
-// ═══════════════════════════════════════════════════════════════════════════
 
 test(`${chalk.yellowBright("canceled sub: update feature_quantities succeeds without a new sub or charge")}`, async () => {
 	const customerId = "canceled-sub-update-qty";
@@ -89,7 +52,6 @@ test(`${chalk.yellowBright("canceled sub: update feature_quantities succeeds wit
 		stripeCustomerId,
 	});
 
-	// ── Contract assertion 1: no longer throws `Subscription <id> is canceled` ──
 	await autumnV2_2.billing.update<UpdateSubscriptionV1ParamsInput>({
 		customer_id: customerId,
 		plan_id: pro.id,
@@ -98,7 +60,6 @@ test(`${chalk.yellowBright("canceled sub: update feature_quantities succeeds wit
 		],
 	});
 
-	// ── Contract assertion 2: no replacement Stripe subscription ──────────────
 	const subscriptionsAfter = await listStripeSubscriptions({
 		ctx,
 		stripeCustomerId,
@@ -111,28 +72,21 @@ test(`${chalk.yellowBright("canceled sub: update feature_quantities succeeds wit
 		"every stripe subscription should still be canceled",
 	).toBe(true);
 
-	// ── Contract assertion 3: no new invoice (attach invoice only) ────────────
 	await expectCustomerInvoiceCorrect({
 		customer: await autumnV1.customers.get<ApiCustomerV3>(customerId),
 		count: 1,
 	});
 
-	// ── Contract assertion 4: subscription link preserved ─────────────────────
 	expect(
 		await getSubscriptionIdsForProduct({ ctx, customerId, productId: pro.id }),
 	).toEqual([subscriptionId]);
 
-	// ── Contract assertion 5: the Autumn-side update still landed ─────────────
 	await expectBalanceCorrect({
 		customer: await autumnV2_2.customers.get<ApiCustomerV5>(customerId),
 		featureId: TestFeature.Messages,
 		remaining: billingUnits * 2,
 	});
 });
-
-// ═══════════════════════════════════════════════════════════════════════════
-// Behavior 3: cancel_immediately still works
-// ═══════════════════════════════════════════════════════════════════════════
 
 test(`${chalk.yellowBright("canceled sub: cancel_immediately expires the plan and activates the default")}`, async () => {
 	const customerId = "canceled-sub-cancel-now";
@@ -165,21 +119,18 @@ test(`${chalk.yellowBright("canceled sub: cancel_immediately expires the plan an
 		stripeCustomerId,
 	});
 
-	// ── Contract assertion 1: cancel_immediately does not 400 ─────────────────
 	await autumnV2_2.billing.update<UpdateSubscriptionV1ParamsInput>({
 		customer_id: customerId,
 		plan_id: pro.id,
 		cancel_action: "cancel_immediately",
 	});
 
-	// ── Contract assertion 2: pro gone, default active ────────────────────────
 	await expectCustomerProducts({
 		customer: await autumnV1.customers.get<ApiCustomerV3>(customerId),
 		notPresent: [pro.id],
 		active: [free.id],
 	});
 
-	// ── Contract assertion 3: no new sub, no new invoice ──────────────────────
 	const subscriptionsAfter = await listStripeSubscriptions({
 		ctx,
 		stripeCustomerId,
@@ -191,10 +142,6 @@ test(`${chalk.yellowBright("canceled sub: cancel_immediately expires the plan an
 		count: 1,
 	});
 });
-
-// ═══════════════════════════════════════════════════════════════════════════
-// Behavior 4: cancel_end_of_cycle is blocked
-// ═══════════════════════════════════════════════════════════════════════════
 
 test(`${chalk.yellowBright("canceled sub: cancel_end_of_cycle is rejected with a remedy")}`, async () => {
 	const customerId = "canceled-sub-cancel-eoc";
@@ -222,7 +169,6 @@ test(`${chalk.yellowBright("canceled sub: cancel_end_of_cycle is rejected with a
 		productId: pro.id,
 	});
 
-	// ── Contract assertion 1: explicit 400 naming the sub and the remedy ──────
 	await expectAutumnError({
 		errMessage: subscriptionId,
 		func: () =>
@@ -243,16 +189,11 @@ test(`${chalk.yellowBright("canceled sub: cancel_end_of_cycle is rejected with a
 			}),
 	});
 
-	// ── Contract assertion 2: state untouched by the rejected call ────────────
 	await expectCustomerProducts({
 		customer: await autumnV1.customers.get<ApiCustomerV3>(customerId),
 		active: [pro.id],
 	});
 });
-
-// ═══════════════════════════════════════════════════════════════════════════
-// Behavior 4b: uncancel cannot resurrect a plan onto a dead subscription
-// ═══════════════════════════════════════════════════════════════════════════
 
 test(`${chalk.yellowBright("canceled sub: uncancel is rejected rather than reviving an unbilled plan")}`, async () => {
 	const customerId = "canceled-sub-uncancel";
@@ -271,7 +212,6 @@ test(`${chalk.yellowBright("canceled sub: uncancel is rejected rather than reviv
 			s.customer({ paymentMethod: "success" }),
 			s.products({ list: [free, pro] }),
 		],
-		// Cancel at end of cycle first: pro is canceling, so uncancel is meaningful.
 		actions: [s.attach({ productId: pro.id }), s.cancel({ productId: pro.id })],
 	});
 
@@ -281,7 +221,6 @@ test(`${chalk.yellowBright("canceled sub: uncancel is rejected rather than reviv
 		productId: pro.id,
 	});
 
-	// ── Contract assertion 1: uncancel refuses, naming the dead sub ───────────
 	await expectAutumnError({
 		errMessage: subscriptionId,
 		func: () =>
@@ -292,16 +231,11 @@ test(`${chalk.yellowBright("canceled sub: uncancel is rejected rather than reviv
 			}),
 	});
 
-	// ── Contract assertion 2: the plan is still canceling, not revived ────────
 	await expectCustomerProducts({
 		customer: await autumnV1.customers.get<ApiCustomerV3>(customerId),
 		canceling: [pro.id],
 	});
 });
-
-// ═══════════════════════════════════════════════════════════════════════════
-// Behavior 5: attach is a fresh purchase, not a resurrection
-// ═══════════════════════════════════════════════════════════════════════════
 
 test(`${chalk.yellowBright("canceled sub: attaching another plan creates a fresh sub and charges full price")}`, async () => {
 	const customerId = "canceled-sub-attach-fresh";
@@ -326,13 +260,11 @@ test(`${chalk.yellowBright("canceled sub: attaching another plan creates a fresh
 			productId: pro.id,
 		});
 
-	// ── Contract assertion 1: attach does not 400 ─────────────────────────────
 	await autumnV2_2.billing.attach({
 		customer_id: customerId,
 		plan_id: premium.id,
 	});
 
-	// ── Contract assertion 2: exactly one NEW, non-canceled subscription ──────
 	const subscriptionsAfter = await listStripeSubscriptions({
 		ctx,
 		stripeCustomerId,
@@ -343,14 +275,12 @@ test(`${chalk.yellowBright("canceled sub: attaching another plan creates a fresh
 	expect(liveSubscriptions.length).toBe(1);
 	expect(liveSubscriptions[0].id).not.toBe(subscriptionId);
 
-	// ── Contract assertion 3: full price, no credit from the dead sub ─────────
 	await expectCustomerInvoiceCorrect({
 		customer: await autumnV1.customers.get<ApiCustomerV3>(customerId),
 		count: 2,
 		latestTotal: 50,
 	});
 
-	// ── Contract assertion 4: premium replaces pro ────────────────────────────
 	await expectCustomerProducts({
 		customer: await autumnV1.customers.get<ApiCustomerV3>(customerId),
 		active: [premium.id],

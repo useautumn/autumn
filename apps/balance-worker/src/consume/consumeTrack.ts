@@ -8,7 +8,6 @@ import { classifyQueuedFailure } from "./settleQueuedFailure.js";
 import type { ConsumeContext } from "./types/consume.js";
 import type { QueuedCommand } from "./types/queuedCommand.js";
 
-/** The item owns its claim: its fan-out commands and redeliveries resume it, any other item is a duplicate. */
 const claimOf = ({
 	command,
 }: {
@@ -30,7 +29,6 @@ const claimOf = ({
 const isRefusal = (cause: unknown): boolean =>
 	classifyQueuedFailure({ cause }) === "refused";
 
-/** A queued track: claim the item's key, then decide it in arrival order. Null when another item holds the key. */
 export async function consumeTrack({
 	ctx,
 	command,
@@ -55,7 +53,6 @@ export async function consumeTrack({
 		});
 		return null;
 	}
-	/** A commit the store refused is consumed, never retried: free the key so the item can be sent again. */
 	async function releaseClaim(): Promise<void> {
 		if (claim) await ctx.idempotencyKeys.release(claim);
 	}

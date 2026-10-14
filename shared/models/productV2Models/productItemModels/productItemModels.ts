@@ -85,11 +85,7 @@ const ProductItemConfigSchema = z.object({
 	on_increase: z.enum(OnIncrease).nullish(),
 	on_decrease: z.enum(OnDecrease).nullish(),
 	rollover: RolloverConfigSchema.nullish(),
-	/** Purchased balance expires this long after each purchase. One-off prepaid
-	 * consumable items only — the cadence of recurring items already bounds them. */
 	expiry: ItemExpiryConfigSchema.nullish(),
-	/** Partial override of the feature's config, keyed like the feature
-	 * config itself in DB shape (schema is a full replacement when present). */
 	feature_override: FeatureConfigOverrideSchema.nullish(),
 });
 
@@ -98,7 +94,6 @@ export const ProductItemSchema = z.object({
 		description: "The type of the product item.",
 	}),
 
-	// Feature stuff
 	feature_id: z.string().nullish().meta({
 		description:
 			"The feature ID of the product item. Should be null for fixed price items.",
@@ -145,7 +140,6 @@ export const ProductItemSchema = z.object({
 			"Whether entity-level grants contribute to a shared customer balance.",
 	}),
 
-	// Price config
 	usage_model: z.enum(UsageModel).nullish().meta({
 		description:
 			"Whether the feature should be prepaid upfront or billed for how much they use end of billing period.",
@@ -161,8 +155,6 @@ export const ProductItemSchema = z.object({
 			"Tiered pricing for the product item. Not applicable for fixed price items.",
 	}),
 
-	// Multi-currency: the flat `price` above is in `base_currency`;
-	// `additional_currencies` holds the same flat price in other currencies.
 	base_currency: z.string().nullish().meta({
 		internal: true,
 	}),
@@ -180,8 +172,6 @@ export const ProductItemSchema = z.object({
 		description: "The type of tiered pricing: graduated or volume-based.",
 	}),
 
-	// Others
-	// carry_over_usage: z.boolean().nullish(),
 	reset_usage_when_enabled: z.boolean().nullish().meta({
 		description:
 			"Whether the usage should be reset when the product is enabled.",
@@ -197,7 +187,6 @@ export const ProductItemSchema = z.object({
 			internal: true,
 		}),
 
-	// Hidden from users for now.
 	usage_limit: z.number().nullish().meta({
 		internal: true,
 	}),
@@ -206,7 +195,6 @@ export const ProductItemSchema = z.object({
 		internal: true,
 	}),
 
-	// Stored in backend
 	created_at: z.number().nullish().meta({
 		internal: true,
 	}),
@@ -216,12 +204,9 @@ export const ProductItemSchema = z.object({
 	price_id: z.string().nullish().meta({
 		internal: true,
 	}),
-	/** Set only by producers that know the item corresponds to an existing
-	 * Stripe price of the same shape. Flows into Price.config when rebuilt. */
 	stripe_price_id: z.string().nullish().meta({
 		internal: true,
 	}),
-	/** Caller-adopted Stripe price. Validated to exist before it is honoured. */
 	stripe_prepaid_price_v2_id: z.string().nullish().meta({
 		internal: true,
 	}),
@@ -231,13 +216,9 @@ export const ProductItemSchema = z.object({
 	price_interval_count: z.number().nullish().meta({
 		internal: true,
 	}),
-	/** One-way Price → ProductItem display context. Never read this back when
-	 * rebuilding a price because an edited item may carry stale Stripe IDs. */
 	price_config: z.any().nullish().meta({
 		internal: true,
 	}),
-	/** Editor-only handle for items with no persisted entitlement/price id yet,
-	 * so two unsaved items for one feature stay individually addressable. */
 	_uid: z.string().nullish().meta({
 		internal: true,
 	}),

@@ -3,7 +3,6 @@ import { formatAmount } from "../../common/formatUtils/formatAmount.js";
 import { getPrepaidDisplayQuantity } from "../productItemUtils/productItemUtils.js";
 import type { ItemEdit } from "./itemEditTypes.js";
 
-/** Generates edit items for prepaid quantity changes */
 export function generatePrepaidChanges({
 	prepaidItems,
 	originalOptions,

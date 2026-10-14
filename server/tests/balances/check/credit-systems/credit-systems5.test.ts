@@ -9,10 +9,6 @@ import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
 import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
 
-// const creditsFeature = constructFeatureItem({
-// 	featureId: TestFeature.Credits,
-// 	includedUsage: 1000,
-// });
 const actionFeature = constructArrearItem({
 	featureId: TestFeature.Action1,
 	includedUsage: 0,

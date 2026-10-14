@@ -101,8 +101,6 @@ const preparedAddsKey = buildPrepareModuleKey({
 	parts: ["update_plan"],
 });
 
-/** Mirrors prepare's artifact addressing so injected minted rows resolve
- * through the real prepared-state path. */
 const migrationWithPreparedAdds = ({
 	op,
 	addEntitlements,
@@ -375,9 +373,6 @@ describe("plain plan item replace lowering", () => {
 	});
 
 	test("a remove with an unrelated-cadence add still deletes rather than replacing a survivor", () => {
-		// Remove monthly and add a NEW quarterly next to an existing quarterly:
-		// the existing quarterly must claim itself, monthly transitions to the
-		// minted row only if unclaimed — here the minted row IS monthly's match.
 		const monthly = messagesEnt({ id: "ent_monthly" });
 		const minted = messagesEnt({
 			id: "ent_quarterly_new",
@@ -391,7 +386,6 @@ describe("plain plan item replace lowering", () => {
 			addEntitlements: [minted],
 		});
 
-		// A cadence change is still a transition — same rule as batchTransition.
 		expect(rejections).toHaveLength(0);
 		expect(operations.replaceEntitlements).toHaveLength(1);
 		expect(

@@ -1,18 +1,3 @@
-/**
- * Regression: carry-over for PREPAID features across two entities
- * (default_applies_to_entities = true).
- *
- * Two entities X and Y both on Pro (prepaid 5000 credits each) on one Stripe
- * sub. Delink X (cancel no_billing → Free auto-reattaches on X). Use 500 on Y
- * and 40 on X, then sync both entities back to Pro (the dashboard submits a
- * rolled-up qty-2 plan on Y plus an operator-added qty-1 plan on X), expire +
- * carry on.
- *
- * Prepaid stores its included amount in the prepaid quantity, not
- * entitlement.allowance — so the carry must use real usage:
- *   Y stays Pro 4500/5000 (500 carried), X returns to Pro 4960/5000 (40 carried).
- */
-
 import { afterAll, beforeAll, expect, test } from "bun:test";
 import {
 	CusProductStatus,
@@ -73,8 +58,6 @@ const activeProductsOnEntity = async ({
 	);
 };
 
-// The included/prepaid component carries the largest balance; the pay-per-use
-// overage component sits at 0 / negative. Pick the max to read the included one.
 const messagesBalance = (cusProduct: FullCusProduct): number | undefined => {
 	const balances = cusProduct.customer_entitlements
 		.filter((ce) => ce.entitlement?.feature?.id === MESSAGES)
@@ -138,7 +121,6 @@ test(
 		)?.subscription_ids?.[0];
 		if (!proSubId) throw new Error("no Pro sub id");
 
-		// Delink X → Free auto-reattaches on X.
 		await autumnV1.subscriptions.update({
 			customer_id: customerId,
 			product_id: pro.id,
@@ -148,7 +130,6 @@ test(
 		});
 		await new Promise((r) => setTimeout(r, 1500));
 
-		// Use 500 on Y (Pro) and 40 on X (Free).
 		await autumnV1.track({
 			customer_id: customerId,
 			entity_id: entityY.id ?? undefined,
@@ -163,8 +144,6 @@ test(
 		});
 		await new Promise((r) => setTimeout(r, 2000));
 
-		// Mirror the dashboard submission: rolled-up qty-2 plan stamped to Y +
-		// operator-added qty-1 plan on X. Expire + carry default on.
 		await autumnV1.post("/billing.sync_v2", {
 			customer_id: customerId,
 			stripe_subscription_id: proSubId,
@@ -191,7 +170,6 @@ test(
 			],
 		} satisfies SyncParamsV1);
 
-		// Y: single active Pro, 500 carried → 4500.
 		const proY = await activeProductsOnEntity({
 			customerId,
 			productId: pro.id,
@@ -200,7 +178,6 @@ test(
 		expect(proY.length).toBe(1);
 		expect(messagesBalance(proY[0])).toBe(4500);
 
-		// X: single active Pro, 40 carried from Free → 4960.
 		const proX = await activeProductsOnEntity({
 			customerId,
 			productId: pro.id,
@@ -209,7 +186,6 @@ test(
 		expect(proX.length).toBe(1);
 		expect(messagesBalance(proX[0])).toBe(4960);
 
-		// Free expired off X.
 		const fullAfter = await CusService.getFull({
 			ctx,
 			idOrInternalId: customerId,
@@ -221,13 +197,6 @@ test(
 		expect(activeFree.length).toBe(0);
 	},
 );
-
-// ═══════════════════════════════════════════════════════════════════════════
-// Multi-component feature: AI Credits as an included allowance (5000) PLUS a
-// pay-per-use overage ($/credit) — two cusEnts under the same feature id, like
-// prod. The carry must match the included component (not collide with the
-// overage row) and leave the meter-billed overage alone.
-// ═══════════════════════════════════════════════════════════════════════════
 
 test(
 	chalk.yellowBright(
@@ -278,7 +247,6 @@ test(
 		)?.subscription_ids?.[0];
 		if (!proSubId) throw new Error("no Pro sub id");
 
-		// Delink X → Free auto-reattaches on X.
 		await autumnV1.subscriptions.update({
 			customer_id: customerId,
 			product_id: pro.id,
@@ -324,7 +292,6 @@ test(
 			],
 		} satisfies SyncParamsV1);
 
-		// Included component carries on both entities; X from Free (40 used).
 		const proY = await activeProductsOnEntity({
 			customerId,
 			productId: pro.id,

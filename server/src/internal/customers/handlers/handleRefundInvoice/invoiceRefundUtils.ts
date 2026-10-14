@@ -10,7 +10,6 @@ import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { autumnStripeRequestOptions } from "@/external/stripe/common/autumnStripeIdempotency.js";
 import { InvoiceService } from "@/internal/invoices/InvoiceService.js";
 
-/** Resolve the Stripe charge from an invoice's payments list */
 export const resolveChargeFromInvoice = async ({
 	stripeCli,
 	stripeInvoice,
@@ -57,7 +56,6 @@ export const resolveChargeFromInvoice = async ({
 	return null;
 };
 
-/** Validate that the charge is refundable and return the refundable amount in cents */
 export const validateChargeRefundable = ({
 	charge,
 }: {
@@ -84,7 +82,6 @@ export const validateChargeRefundable = ({
 	return refundableAmountInCents;
 };
 
-/** Calculate the refund amount in cents based on mode and optional user-provided amount */
 export const calculateRefundAmountInCents = ({
 	mode,
 	amount,
@@ -131,7 +128,6 @@ export const calculateRefundAmountInCents = ({
 	return refundAmountInCents;
 };
 
-/** Issue a Stripe refund and atomically increment refunded_amount on the Autumn invoice */
 export const createRefundAndUpdateInvoice = async ({
 	stripeCli,
 	db,

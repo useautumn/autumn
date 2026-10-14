@@ -13,14 +13,12 @@ import { transformResponsePattern } from "./utils/transform-response-pattern";
 const SCHEMA_FIELD_REMOVALS: Record<string, string[]> = {
 	ProductItem: ["feature"],
 	Product: ["properties"],
-	// CustomerData: ["fingerprint", "metadata", "stripe_id", "disable_default"],
 };
 
 const SNIPPET_REMOVALS: Record<string, string[]> = {
 	"POST /products/{product_id}": ["TypeScript", "Python"],
 	"GET /products": ["Python"],
 
-	// Missing create, update and delete for features
 	"GET /features": ["Python"],
 	"GET /features/{feature_id}": ["Python"],
 	"POST /features": ["TypeScript", "Python"],
@@ -31,16 +29,8 @@ const SNIPPET_REMOVALS: Record<string, string[]> = {
 	"POST /customers/{customer_id}/balances": ["Python"],
 };
 
-/**
- * Schema constraints to remove
- * Common options: minLength, maxLength, minimum, maximum, pattern, format
- */
 const CONSTRAINT_REMOVALS: string[] = ["minLength", "minimum", "maximum"];
 
-/**
- * Remove specific properties from fields in endpoints
- * Format: { 'METHOD /path': { 'fieldName': ['property1', 'property2'] } }
- */
 const FIELD_PROPERTY_REMOVALS: Record<string, Record<string, string[]>> = {
 	"POST /products": {
 		group: ["default"],
@@ -50,9 +40,6 @@ const FIELD_PROPERTY_REMOVALS: Record<string, Record<string, string[]>> = {
 	},
 };
 
-/**
- * Remove specified fields from schemas in the OpenAPI spec
- */
 function removeSchemaFields({
 	spec,
 	removals,
@@ -75,7 +62,6 @@ function removeSchemaFields({
 			if (field in schema.properties) {
 				delete schema.properties[field];
 
-				// Also remove from required array if present
 				if (Array.isArray(schema.required)) {
 					schema.required = schema.required.filter((f: string) => f !== field);
 					if (schema.required.length === 0) {
@@ -104,11 +90,9 @@ async function pull() {
 	);
 	const data = await response.text();
 
-	// Parse the OpenAPI spec
 	const spec = parse(data);
 	const version = spec.info?.version || "unknown";
 
-	// Define the transformation pipeline
 	const transformations: Transformation[] = [
 		{ name: "Stripping JSDoc from descriptions", fn: stripJsDoc },
 		{
@@ -147,14 +131,12 @@ async function pull() {
 		},
 	];
 
-	// Run the pipeline
 	const finalSpec = transformations.reduce((currentSpec, { name, fn }) => {
 		console.log(`${name}...`);
 		const result = fn({ spec: currentSpec });
-		return result ?? currentSpec; // Handle functions that mutate and return undefined
+		return result ?? currentSpec;
 	}, spec);
 
-	// Write the modified spec
 	const filename = `./mintlify/api/openapi-${version}.yml`;
 	await Bun.write(filename, stringify(finalSpec));
 

@@ -1,5 +1,3 @@
-/** set_plans re-lists Pro set to cancel at period end: the cancellation stays, so the end bills only kept usage. */
-
 import { cancelAtPeriodEndState } from "../utils/relistStates";
 import { defineRelistSuite } from "../utils/relistSuite";
 

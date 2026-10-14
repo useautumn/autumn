@@ -3,7 +3,6 @@ import { and, inArray } from "drizzle-orm";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { isEnvRow, REMOVING_STATUSES } from "./utils/cacheDeploymentWhere.js";
 
-/** Earlier Atoms still coming down, oldest first. */
 export const findRemovingCacheDeployments = ({
 	ctx,
 }: {

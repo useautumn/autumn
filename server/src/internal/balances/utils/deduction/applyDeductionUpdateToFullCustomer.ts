@@ -10,7 +10,6 @@ export const applyDeductionUpdateToFullCustomer = ({
 	cusEntId: string;
 	update: DeductionUpdate;
 }) => {
-	// Search in customer_products first
 	for (let i = 0; i < fullCus.customer_products.length; i++) {
 		for (
 			let j = 0;
@@ -46,12 +45,11 @@ export const applyDeductionUpdateToFullCustomer = ({
 					usage_attribution: update.usage_attribution ?? ce.usage_attribution,
 					replaceables,
 				};
-				return; // Found and updated, exit early
+				return;
 			}
 		}
 	}
 
-	// Search in extra_customer_entitlements (loose entitlements)
 	const extraCusEnts = fullCus.extra_customer_entitlements || [];
 	for (let i = 0; i < extraCusEnts.length; i++) {
 		const ce = extraCusEnts[i];
@@ -83,7 +81,7 @@ export const applyDeductionUpdateToFullCustomer = ({
 				usage_attribution: update.usage_attribution ?? ce.usage_attribution,
 				replaceables,
 			};
-			return; // Found and updated, exit early
+			return;
 		}
 	}
 };

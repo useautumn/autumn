@@ -17,11 +17,9 @@ export interface ReadOnlyPlanItemsProps {
 	prepaidDisplayQuantities?: Record<string, number>;
 	adminIds?: AdminPlanIds;
 	currency?: string;
-	/** Off when the price is displayed elsewhere (e.g. a license's item row). */
 	showBasePrice?: boolean;
 }
 
-/** Section-less read-only price + feature rows; callers own the layout. */
 export function ReadOnlyPlanItems({
 	items,
 	product,

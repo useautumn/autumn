@@ -11,7 +11,6 @@ export const willStripeSubscriptionInvoiceEndOfCycle = ({
 	ctx,
 	billingContext,
 	autumnBillingPlan,
-	// customerProducts,
 }: {
 	ctx: AutumnContext;
 	billingContext: BillingContext;

@@ -1,9 +1,5 @@
 const ALPHABET = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 
-/**
- * Encode a Uint8Array as a base62 string, zero-padded to `padTo` length.
- * Uses big-integer division over the byte array.
- */
 export const base62Encode = ({
 	bytes,
 	padTo,
@@ -13,8 +9,6 @@ export const base62Encode = ({
 }): string => {
 	const digits: number[] = [];
 
-	// Convert byte array to base62 via repeated divmod
-	// Work on a copy so we don't mutate the input
 	const working = new Uint8Array(bytes);
 
 	let allZero = false;
@@ -30,10 +24,8 @@ export const base62Encode = ({
 		digits.push(remainder);
 	}
 
-	// digits are in reverse order
 	digits.reverse();
 
-	// Pad with leading zeros
 	while (digits.length < padTo) {
 		digits.unshift(0);
 	}

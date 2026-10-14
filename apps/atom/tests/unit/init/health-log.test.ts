@@ -21,7 +21,6 @@ const source: AtomHealthSource = {
 	threadStats: createThreadStatsBuffer({ threads: 2 }),
 	dataDir: tmpdir(),
 };
-/** `Atomics.load` on a plain object throws, so reading this one's health fails. */
 const unreadable = {
 	...source,
 	restarts: {} as Int32Array,

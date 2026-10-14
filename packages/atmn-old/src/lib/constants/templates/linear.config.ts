@@ -1,8 +1,3 @@
-/**
- * Linear - Project management with per-seat pricing
- * Free (2 teams, 250 issues) / Basic ($12/seat/mo) / Business ($18/seat/mo)
- */
-
 import type { Feature, Plan } from "../../../compose/models/index.js";
 
 export const features: Feature[] = [

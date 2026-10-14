@@ -113,7 +113,6 @@ export const createStripePrepaid = async ({
 		});
 	}
 
-	// 2. If billing interval is one off
 	let stripePrice = null;
 	if (price.config!.interval === BillingInterval.OneOff) {
 		const amount = currencyTiers[0].amount;
@@ -181,7 +180,6 @@ export const createStripePrepaid = async ({
 		id: stripePrice.id,
 	});
 
-	// New config
 	price.config = config;
 	await PriceService.update({
 		db,

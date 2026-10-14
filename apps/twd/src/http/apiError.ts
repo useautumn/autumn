@@ -1,7 +1,6 @@
 import type { Context } from "hono";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
 
-/** Throw from any handler/action; the app's onError renders it as the ApiError envelope. */
 export class TwdError extends Error {
 	readonly status: ContentfulStatusCode;
 	readonly code: string;

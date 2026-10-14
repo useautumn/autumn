@@ -8,8 +8,6 @@ import { runMigrationInChunks } from "@/internal/migrations/v2/run/runMigrationI
 import { generateId } from "@/utils/genUtils.js";
 import { waitForMigrationResult } from "./runUpdatePlanMigration";
 
-/** Reruns reuse readable migration ids; the delete guard blocks ids with run
- * history, so tests clear their own previous history first. */
 export const clearMigrationRunHistory = async ({
 	ctx,
 	migrationId,
@@ -51,8 +49,6 @@ type MigrationClient = {
 	};
 };
 
-/** Creates + runs a migration through the real chunked runner. Direct mode
- * (default) awaits runMigrationInChunks in-process; runOnServer goes via API. */
 export const runChunkedMigration = async ({
 	ctx,
 	migrationClient,
@@ -76,9 +72,6 @@ export const runChunkedMigration = async ({
 	waitFor?: () => Promise<unknown>;
 	timeoutMs?: number;
 	pollIntervalMs?: number;
-	/** Direct mode only. `only` narrows the run's scope in either lane;
-	 * `limit` keeps the run on the per-customer lane (batch-ineligible);
-	 * `webhooks` are the run's delivery params. */
 	controls?: {
 		only?: string[];
 		limit?: number;
@@ -87,7 +80,6 @@ export const runChunkedMigration = async ({
 }): Promise<{
 	migration: Migration;
 	migrationRunId: string;
-	/** Direct mode only — carries the executed lane for assertions. */
 	result?: MigrationChunkRunResult;
 }> => {
 	await clearMigrationRunHistory({ ctx, migrationId });

@@ -18,7 +18,6 @@ import {
 const MCP_NAME = "autumn";
 const MCP_URL = "https://mcp.useautumn.com/mcp";
 
-// Web-redirect deeplinks the editors register to one-click install a remote server.
 const cursorDeeplink = `https://cursor.com/en/install-mcp?name=${MCP_NAME}&config=${btoa(
 	JSON.stringify({ name: MCP_NAME, type: "http", url: MCP_URL }),
 )}`;

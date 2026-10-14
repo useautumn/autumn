@@ -1,6 +1,3 @@
-// Contract: pooled entity grants compose with customer prepaid and overage balances.
-// Mid-cycle contribution changes and free-to-Pro replacement preserve aggregate usage.
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV5, TrackResponseV3 } from "@autumn/shared";
 import {

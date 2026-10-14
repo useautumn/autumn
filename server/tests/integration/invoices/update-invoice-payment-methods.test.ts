@@ -1,13 +1,3 @@
-/**
- * invoices.update: change which payment methods a Stripe invoice accepts.
- *
- * Contract:
- *   POST /invoices.update { invoice_id, payment_method_types } -> { invoice: ApiListInvoiceV1 }
- *   open invoice   → Stripe payment_settings.payment_method_types replaced
- *   draft invoice  → same
- *   paid invoice   → 400
- */
-
 import { expect, test } from "bun:test";
 import { type ApiListInvoiceV1, ErrCode } from "@autumn/shared";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils";

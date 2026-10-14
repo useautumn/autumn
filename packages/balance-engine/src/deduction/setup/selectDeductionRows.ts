@@ -12,7 +12,6 @@ import type {
 } from "../../models/subject/workerFullSubject.js";
 import type { DeductionSelection } from "../types/deductionRequest.js";
 
-/** The sort prefers unlimited only within a tier; the sink contract needs it first outright. */
 const hoistUnlimited = ({
 	customerEntitlements,
 }: {
@@ -28,12 +27,10 @@ const hoistUnlimited = ({
 	];
 };
 
-/** Soonest-expiring first; rollovers without an expiry drain last. */
 const byExpiresAt = (left: WorkerRollover, right: WorkerRollover): number =>
 	(left.expires_at ?? Number.POSITIVE_INFINITY) -
 	(right.expires_at ?? Number.POSITIVE_INFINITY);
 
-/** `getCheckSubject`: a past-due product stops funding when the selection blocks overdue usage, or when it bills by threshold. */
 const isOverdueBlocked = ({
 	customerProduct,
 	selection,
@@ -46,7 +43,6 @@ const isOverdueBlocked = ({
 	(selection.blocksOverdue ||
 		isThresholdBillingCustomerProduct({ customerProduct }));
 
-/** Which rows the selection draws from, in draw order, and their rollovers: the same selection and sort the Lua path uses. */
 export const selectDeductionRows = ({
 	fullSubject,
 	selection,
@@ -61,7 +57,6 @@ export const selectDeductionRows = ({
 	const blockedProducts = fullSubject.customer_products.filter(
 		(customerProduct) => isOverdueBlocked({ customerProduct, selection }),
 	);
-	// Only a blocked product calls for a narrowed copy; the view itself keeps the rows it has already flattened.
 	const fundingSubject =
 		blockedProducts.length === 0
 			? fullSubject
@@ -83,7 +78,6 @@ export const selectDeductionRows = ({
 			now: selection.now,
 		}),
 	});
-	// State outlives a rollover's expiry; the hydration query drops these, the draw must too.
 	const rollovers = customerEntitlements
 		.flatMap((customerEntitlement) => customerEntitlement.rollovers)
 		.filter(

@@ -1,10 +1,3 @@
-/**
- * Integration tests for percent-off discounts in update subscription flow.
- *
- * Tests various percent-off discount scenarios including edge cases
- * like minimum (1%), maximum (99%), 100% (free), and duration variants.
- */
-
 import { expect, test } from "bun:test";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { items } from "@tests/utils/fixtures/items.js";
@@ -19,10 +12,6 @@ import {
 
 const billingUnits = 12;
 const pricePerUnit = 10;
-
-// =============================================================================
-// MIGRATED TESTS FROM subscription-discounts.test.ts
-// =============================================================================
 
 test.concurrent(`${chalk.yellowBright("percent-off: 20% discount applied to upgrade")}`, async () => {
 	const customerId = "pct-20-upgrade";
@@ -77,10 +66,6 @@ test.concurrent(`${chalk.yellowBright("percent-off: 20% discount applied to upgr
 		],
 	});
 
-	// Upgrade generates: refund (-$50) + charge ($100)
-	// Discounts only apply to charges, not refunds
-	// Charge with 20% off: $100 * 0.8 = $80
-	// Total: -$50 + $80 = $30
 	const refundAmount = -50;
 	const discountedCharge = Math.round(100 * 0.8);
 	const expectedAmount = refundAmount + discountedCharge;
@@ -141,10 +126,6 @@ test.concurrent(`${chalk.yellowBright("percent-off: 50% discount applied to upgr
 		],
 	});
 
-	// Upgrade generates: refund (-$50) + charge ($100)
-	// Discounts only apply to charges, not refunds
-	// Charge with 50% off: $100 * 0.5 = $50
-	// Total: -$50 + $50 = $0
 	const refundAmount = -50;
 	const discountedCharge = Math.round(100 * 0.5);
 	const expectedAmount = refundAmount + discountedCharge;
@@ -205,10 +186,6 @@ test.concurrent(`${chalk.yellowBright("percent-off: 100% discount (free upgrade)
 		],
 	});
 
-	// Upgrade generates: refund (-$50) + charge ($100)
-	// Discounts only apply to charges, not refunds
-	// Charge with 100% off: $100 * 0 = $0
-	// Total: -$50 + $0 = -$50
 	expect(preview.total).toBe(-50);
 });
 
@@ -246,7 +223,6 @@ test.concurrent(`${chalk.yellowBright("percent-off: promotion code applied to su
 		customerId,
 	});
 
-	// Create a coupon and promotion code
 	const coupon = await createPercentCoupon({
 		stripeCli,
 		percentOff: 25,
@@ -260,7 +236,6 @@ test.concurrent(`${chalk.yellowBright("percent-off: promotion code applied to su
 		code: `SAVE25-${customerId}-${Date.now()}`,
 	});
 
-	// Apply via promotion code
 	await stripeCli.subscriptions.update(subscription.id, {
 		discounts: [{ promotion_code: promotionCode.id }],
 	});
@@ -273,20 +248,12 @@ test.concurrent(`${chalk.yellowBright("percent-off: promotion code applied to su
 		],
 	});
 
-	// Upgrade generates: refund (-$50) + charge ($100)
-	// Discounts only apply to charges, not refunds
-	// Charge with 25% off: $100 * 0.75 = $75
-	// Total: -$50 + $75 = $25
 	const refundAmount = -50;
 	const discountedCharge = Math.round(100 * 0.75);
 	const expectedAmount = refundAmount + discountedCharge;
 
 	expect(preview.total).toBe(expectedAmount);
 });
-
-// =============================================================================
-// NEW EDGE CASE TESTS
-// =============================================================================
 
 test.concurrent(`${chalk.yellowBright("percent-off: 1% discount (minimum)")}`, async () => {
 	const customerId = "pct-1-minimum";
@@ -341,10 +308,6 @@ test.concurrent(`${chalk.yellowBright("percent-off: 1% discount (minimum)")}`, a
 		],
 	});
 
-	// Upgrade generates: refund (-$50) + charge ($100)
-	// Discounts only apply to charges, not refunds
-	// Charge with 1% off: $100 * 0.99 = $99
-	// Total: -$50 + $99 = $49
 	const refundAmount = -50;
 	const discountedCharge = Math.round(100 * 0.99);
 	const expectedAmount = refundAmount + discountedCharge;
@@ -405,10 +368,6 @@ test.concurrent(`${chalk.yellowBright("percent-off: 99% discount (near-free)")}`
 		],
 	});
 
-	// Upgrade generates: refund (-$50) + charge ($100)
-	// Discounts only apply to charges, not refunds
-	// Charge with 99% off: $100 * 0.01 = $1
-	// Total: -$50 + $1 = -$49
 	const refundAmount = -50;
 	const discountedCharge = Math.round(100 * 0.01);
 	const expectedAmount = refundAmount + discountedCharge;
@@ -440,7 +399,6 @@ test.concurrent(`${chalk.yellowBright("percent-off: discount on quantity decreas
 			s.attach({
 				productId: product.id,
 				options: [
-					// Start with 10 units
 					{ feature_id: TestFeature.Messages, quantity: 10 * billingUnits },
 				],
 			}),
@@ -462,16 +420,11 @@ test.concurrent(`${chalk.yellowBright("percent-off: discount on quantity decreas
 		couponIds: [coupon.id],
 	});
 
-	// Preview decrease from 10 to 5 units (removing 5 units)
 	const preview = await autumnV1.subscriptions.previewUpdate({
 		customer_id: customerId,
 		product_id: product.id,
 		options: [{ feature_id: TestFeature.Messages, quantity: 5 * billingUnits }],
 	});
 
-	// Downgrade generates: refund (-$100 for 10 units) + charge ($50 for 5 units)
-	// Discounts only apply to charges, not refunds
-	// Charge with 50% off: $50 * 0.5 = $25
-	// Total: -$100 + $25 = -$75
 	expect(preview.total).toBe(-75);
 });

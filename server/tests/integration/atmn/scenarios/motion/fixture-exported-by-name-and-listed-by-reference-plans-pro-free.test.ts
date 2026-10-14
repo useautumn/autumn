@@ -1,11 +1,3 @@
-/**
- * atmn scenarios/motion — fixture exported by name and listed by reference (`plans: [pro, free]`) → remote delete removes the literal, its export, its import, and the reference; remote update rewrites the literal where it is
- *
- * code in motion: the config's shape is the user's; pull edits the AST, never rewrites a file
- *
- * One line of plans/atmn-v3/07_tests.md. [a, b] is a matrix looped INSIDE this file.
- */
-
 import { expect, test } from "bun:test";
 import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 import {
@@ -50,8 +42,6 @@ export const free = plan({ active: true, planId: "${freeId}", name: "Free", vers
 			const plans = (wire.plans as Record<string, unknown>[]) ?? [];
 			const proWire = plans.find((row) => row.plan_id === proId);
 
-			// `free` is dropped from the desired state entirely (a delete); `pro`
-			// is restated with a changed price (an update).
 			await scenario.client.update({
 				...wire,
 				plans: [{ ...proWire, price: { amount: 89, interval: "month" } }],

@@ -71,7 +71,6 @@ export const runRedisFinalizeLockV2 = async ({
 			modifiedCusEntIdsByFeatureId,
 			usageWindowUpdates,
 			coalesce: ctx.testOptions?.syncCoalesce ?? isSyncCoalesceEnabled(),
-			// The drain resolves via worker ctx, so the mark must use the same routing.
 			coalesceRedis: ctx.redisV2,
 		});
 	}

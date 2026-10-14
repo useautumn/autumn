@@ -120,7 +120,6 @@ test.concurrent(
 		const listed = ApiRewardsListV0Schema.parse(
 			await autumnV2_2.post("/rewards.list", {}),
 		);
-		// Grants are keyed by feature, not ordered: the list reads them in DB order.
 		const sortGrants = <T extends { grants: { feature_id: string }[] }>(
 			featureGrant: T,
 		) => ({

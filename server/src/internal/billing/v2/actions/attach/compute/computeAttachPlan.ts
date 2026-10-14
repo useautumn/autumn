@@ -21,7 +21,6 @@ import { computeOneOffPurchaseRebalance } from "./computeOneOffPurchaseRebalance
 import { finalizeAttachPlan } from "./finalizeAttachPlan";
 import { shouldBuildImmediateLineItems } from "./shouldBuildImmediateLineItems";
 
-/** Computes new attachments and immediate or scheduled product transitions. */
 export const computeAttachPlan = ({
 	ctx,
 	attachBillingContext,
@@ -52,9 +51,6 @@ export const computeAttachPlan = ({
 		attachBillingContext,
 		params,
 	});
-	// Expiring items keep their product row as a 0-balance price anchor; the
-	// purchase itself becomes a loose grant whose clock starts at access.
-	// Runs BEFORE the overage rebalance, which zeroes one-off rows it claims.
 	const expiringGrants = splitExpiringPurchaseGrants({
 		customerProduct: newCustomerProduct,
 		orgId: ctx.org.id,
@@ -83,10 +79,6 @@ export const computeAttachPlan = ({
 		params,
 	});
 
-	// Customer licenses follow the incoming definitions on immediate swaps;
-	// scheduled swaps transition at activation instead. A cross-group source
-	// (a plan removed via remove_plan_ids) is paired explicitly, since
-	// same-group successor pairing would never match it.
 	const computedCustomerLicenseTransitions =
 		licenseTransitionSourceCustomerProduct
 			? computeCustomerLicenseTransitions({
@@ -119,10 +111,6 @@ export const computeAttachPlan = ({
 		newCustomerProduct,
 	});
 
-	// Auto-preserve one-off prepaid balances on immediate transitions so the
-	// credits the customer already paid for don't vanish when the cusProduct
-	// expires. Skipped on scheduled transitions — the outgoing product remains
-	// active until end-of-cycle and the preservation runs at activation time.
 	const oneOffPrepaidCarryOvers =
 		planTiming === "immediate" && carryOverSourceCustomerProduct
 			? cusProductToOneOffPrepaidCarryOvers({
@@ -144,8 +132,6 @@ export const computeAttachPlan = ({
 					ctx,
 					newCustomerProducts: [newCustomerProduct],
 					deletedCustomerProduct: currentCustomerProduct,
-					// Plans dropped via `remove_plan_ids` are expired mid-cycle, so they
-					// owe the same unused-time credit as a same-group replacement.
 					deletedCustomerProducts: removeCustomerProducts.map(
 						(update) => update.customerProduct,
 					),
@@ -162,8 +148,6 @@ export const computeAttachPlan = ({
 			customerLicenseTransitions,
 		});
 
-	// Lock the customer's currency on the first paid attach (only when they have
-	// none yet). Free attaches don't commit a currency. Applied conditionally at execute.
 	const {
 		fullCustomer,
 		attachProduct,

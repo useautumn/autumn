@@ -7,7 +7,6 @@ type TrialingSubscriptionFields = Pick<
 	"stripeSubscription" | "replacedStripeSubscription"
 >;
 
-/** The live Stripe subscription, whether kept or already moved aside to be replaced. */
 export const trialingStripeSubscription = ({
 	billingContext,
 }: {
@@ -16,7 +15,6 @@ export const trialingStripeSubscription = ({
 	billingContext.stripeSubscription ??
 	billingContext.replacedStripeSubscription;
 
-/** The request removes the trial the live Stripe subscription runs from a first phase starting now or backdated. */
 export const endsLiveTrial = ({
 	billingContext,
 }: {

@@ -68,8 +68,6 @@ export const provisionAgentOrg = async ({
 			return { organization, apiKey };
 		});
 
-	// Slugs come from package names, so two agents on "app" collide; each retry
-	// gets a fresh suffix, the same way a signup does.
 	const { organization, apiKey } = await (async () => {
 		for (let attempt = 0; ; attempt++) {
 			try {
@@ -83,9 +81,6 @@ export const provisionAgentOrg = async ({
 		}
 	})();
 
-	// Stripe account, svix apps and pkeys — the same bring-up a signed-up org
-	// gets. Strict so a partial failure rolls back rather than handing the agent
-	// a key to an org that can never bill.
 	try {
 		await provisionOrgResources({
 			org: organization,
@@ -97,7 +92,6 @@ export const provisionAgentOrg = async ({
 			`Failed to provision resources for agent org ${organization.id}; removing it`,
 			{ error },
 		);
-		// The api_keys FK cascades, so deleting the org clears the key too.
 		await db.delete(organizations).where(eq(organizations.id, organization.id));
 		await clearOrgWithFeaturesCache({
 			ctx: getMiscCacheContext(),
@@ -106,7 +100,6 @@ export const provisionAgentOrg = async ({
 		throw error;
 	}
 
-	// Re-read so callers see the provisioned external ids, not the bare insert.
 	const provisioned = await OrgService.get({ db, orgId: organization.id });
 
 	return {

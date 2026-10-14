@@ -1,8 +1,3 @@
-/**
- * Unit tests for resolveFlashStatus — the pure rule behind dfu.flash status.
- * Payload `plan.status` always wins; Stripe hydration only fills gaps. No DB.
- */
-
 import { describe, expect, test } from "bun:test";
 import { CusProductStatus, type FlashPlan } from "@autumn/shared";
 import { resolveFlashStatus } from "@/internal/billing/v2/actions/dfu/compute/resolvers/statusResolver.js";

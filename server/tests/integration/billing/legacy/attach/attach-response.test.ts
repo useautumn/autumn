@@ -1,17 +1,3 @@
-/**
- * Legacy Attach Response Format Tests
- *
- * Migrated from:
- * - server/tests/attach/response/attach-response1.test.ts (new, no card → checkout_url)
- * - server/tests/attach/response/attach-response2.test.ts (upgrade response)
- * - server/tests/attach/response/attach-response3.test.ts (downgrade response)
- * - server/tests/attach/response/attach-response4.test.ts (new, card on file)
- * - server/tests/attach/response/attach-response5.test.ts (one-off, card on file)
- *
- * Tests that attach responses have the correct shape for v0.2 and v1.2 API versions
- * across different attach scenarios (new, upgrade, downgrade, one-off).
- */
-
 /** biome-ignore-all lint/suspicious/noExplicitAny: test file */
 
 import { expect, test } from "bun:test";
@@ -21,17 +7,6 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { AutumnInt } from "@/external/autumn/autumnCli";
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 1: New attach with no card on file → returns checkout_url
-// (from attach-response1)
-//
-// Scenario:
-// - Pro product ($20/month) with consumable Words (1000 included)
-// - Customer with NO payment method
-// - v0.2: attach returns only { checkout_url }
-// - v1.2: attach returns { customer_id, product_ids, checkout_url, code, message }
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(`${chalk.yellowBright("attach-response 1: new attach, no card → checkout_url")}`, async () => {
 	const customerId = "attach-response-1";
@@ -50,7 +25,6 @@ test.concurrent(`${chalk.yellowBright("attach-response 1: new attach, no card �
 	const autumnV0 = new AutumnInt({ version: ApiVersion.V0_2 });
 	const autumnV1 = new AutumnInt({ version: ApiVersion.V1_2 });
 
-	// v0.2 response: only checkout_url
 	const v0Response = await autumnV0.attach({
 		customer_id: customerId,
 		product_id: pro.id,
@@ -59,7 +33,6 @@ test.concurrent(`${chalk.yellowBright("attach-response 1: new attach, no card �
 	expect(v0Response.checkout_url).toBeDefined();
 	expect(Object.keys(v0Response)).toEqual(["checkout_url"]);
 
-	// v1.2 response: richer object
 	const v1Response = await autumnV1.attach({
 		customer_id: customerId,
 		product_id: pro.id,
@@ -73,19 +46,6 @@ test.concurrent(`${chalk.yellowBright("attach-response 1: new attach, no card �
 	expect(v1Response.code).toBeDefined();
 	expect(v1Response.message).toBeDefined();
 });
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 2: Upgrade response
-// (from attach-response2)
-//
-// Scenario:
-// - Pro ($20/month) and Premium ($50/month) with Words (1000 included)
-// - Customer with payment method, attach Pro first
-// - Upgrade to Premium
-// - v0.2: returns { success, message }
-// - v1.2: cancel Premium, re-attach Pro, then upgrade to Premium →
-//         returns { customer_id, product_ids, code, message }
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(`${chalk.yellowBright("attach-response 2: upgrade response")}`, async () => {
 	const customerId1 = "attach-response-2-1";
@@ -107,7 +67,6 @@ test.concurrent(`${chalk.yellowBright("attach-response 2: upgrade response")}`, 
 
 	const autumnV0 = new AutumnInt({ version: ApiVersion.V0_2 });
 
-	// v0.2 upgrade response
 	const v0Response = await autumnV0.attach({
 		customer_id: customerId1,
 		product_id: premium.id,
@@ -120,7 +79,6 @@ test.concurrent(`${chalk.yellowBright("attach-response 2: upgrade response")}`, 
 		product_id: pro.id,
 	});
 
-	// v1.2 upgrade response
 	const v1Response = await autumnV1.attach({
 		customer_id: customerId2,
 		product_id: premium.id,
@@ -133,19 +91,6 @@ test.concurrent(`${chalk.yellowBright("attach-response 2: upgrade response")}`, 
 		message: expect.any(String),
 	});
 });
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 3: Downgrade response
-// (from attach-response3)
-//
-// Scenario:
-// - Pro ($20/month) and Premium ($50/month) with Words (1000 included)
-// - Customer with payment method, attach Premium first
-// - Downgrade to Pro
-// - v0.2: returns { success, message }
-// - v1.2: uncancel Premium, then downgrade to Pro →
-//         returns { customer_id, product_ids, code, message }
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(`${chalk.yellowBright("attach-response 3: downgrade response")}`, async () => {
 	const customerId = "attach-response-3";
@@ -165,7 +110,6 @@ test.concurrent(`${chalk.yellowBright("attach-response 3: downgrade response")}`
 
 	const autumnV0 = new AutumnInt({ version: ApiVersion.V0_2 });
 
-	// v0.2 downgrade response
 	const v0Response = await autumnV0.attach({
 		customer_id: customerId,
 		product_id: pro.id,
@@ -173,14 +117,12 @@ test.concurrent(`${chalk.yellowBright("attach-response 3: downgrade response")}`
 
 	expect(Object.keys(v0Response)).toEqual(["success", "message"]);
 
-	// Reset: uncancel Premium for v1.2 test
 	await autumnV1.subscriptions.update({
 		customer_id: customerId,
 		product_id: premium.id,
 		cancel_action: "uncancel",
 	});
 
-	// v1.2 downgrade response
 	const v1Response = await autumnV1.attach({
 		customer_id: customerId,
 		product_id: pro.id,
@@ -193,18 +135,6 @@ test.concurrent(`${chalk.yellowBright("attach-response 3: downgrade response")}`
 		message: expect.any(String),
 	});
 });
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 4: New attach with card on file → immediate success
-// (from attach-response4)
-//
-// Scenario:
-// - Pro ($20/month) with Words (1000 included)
-// - Customer with payment method
-// - v0.2: attach returns { success, message }
-// - v1.2: cancel Pro, re-attach →
-//         returns { customer_id, product_ids, code, message }
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(`${chalk.yellowBright("attach-response 4: new attach, card on file")}`, async () => {
 	const customerId = "attach-response-4";
@@ -225,7 +155,6 @@ test.concurrent(`${chalk.yellowBright("attach-response 4: new attach, card on fi
 
 	const autumnV0 = new AutumnInt({ version: ApiVersion.V0_2 });
 
-	// v0.2 response
 	const v0Response = await autumnV0.attach({
 		customer_id: customerId,
 		product_id: pro.id,
@@ -233,14 +162,12 @@ test.concurrent(`${chalk.yellowBright("attach-response 4: new attach, card on fi
 
 	expect(Object.keys(v0Response)).toEqual(["success", "message"]);
 
-	// Reset: cancel Pro for v1.2 test
 	await autumnV1.cancel({
 		customer_id: customerId,
 		product_id: pro.id,
 		cancel_immediately: true,
 	});
 
-	// v1.2 response
 	const v1Response = await autumnV1.attach({
 		customer_id: customerId,
 		product_id: pro.id,
@@ -253,18 +180,6 @@ test.concurrent(`${chalk.yellowBright("attach-response 4: new attach, card on fi
 		message: expect.any(String),
 	});
 });
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 5: One-off attach with card on file
-// (from attach-response5)
-//
-// Scenario:
-// - One-off product ($10) with lifetime Words (1000 included)
-// - Customer with payment method
-// - v0.2: attach returns { success, message }
-// - v1.2: attach again (one-off can be attached multiple times) →
-//         returns { success, customer_id, product_ids, code, message }
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(`${chalk.yellowBright("attach-response 5: one-off attach, card on file")}`, async () => {
 	const customerId = "attach-response-5";
@@ -286,7 +201,6 @@ test.concurrent(`${chalk.yellowBright("attach-response 5: one-off attach, card o
 	const autumnV0 = new AutumnInt({ version: ApiVersion.V0_2 });
 	const autumnV1 = new AutumnInt({ version: ApiVersion.V1_2 });
 
-	// v0.2 response
 	const v0Response = await autumnV0.attach({
 		customer_id: customerId,
 		product_id: oneOff.id,
@@ -297,7 +211,6 @@ test.concurrent(`${chalk.yellowBright("attach-response 5: one-off attach, card o
 		message: expect.any(String),
 	});
 
-	// v1.2 response (attach again — one-off can accumulate)
 	const v1Response = await autumnV1.attach({
 		customer_id: customerId,
 		product_id: oneOff.id,

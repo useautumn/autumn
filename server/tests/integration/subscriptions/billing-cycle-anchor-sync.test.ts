@@ -1,34 +1,3 @@
-/**
- * TDD test for syncing Stripe's billing_cycle_anchor onto the subscriptions
- * table at every write point.
- *
- * Contract under test:
- *   New types/fields:
- *     - subscriptions.billing_cycle_anchor_seconds: nullable numeric, unix
- *       SECONDS (same unit as current_period_start/current_period_end),
- *       mirroring Stripe.Subscription.billing_cycle_anchor.
- *   New behaviors:
- *     - billing.attach creating a Stripe subscription -> row created with the
- *       Stripe subscription's anchor.
- *     - Manual Stripe-side anchor change (subscriptions.update with
- *       billing_cycle_anchor: "now", e.g. via the Stripe CLI) -> row re-synced
- *       through the customer.subscription.updated webhook.
- *     - billing.attach upgrade with billing_cycle_anchor: "now" (cycle reset
- *       through the attach flow) -> row reflects the new anchor.
- *     - Subscription schedule phase with billing_cycle_anchor: "phase_start"
- *       -> row reflects the reset anchor once the phase starts.
- *   Side effects:
- *     - DB only (subscriptions.billing_cycle_anchor_seconds). No API response
- *       changes.
- *     - Rows created without Stripe data keep the column null (nullable, no
- *       default) — covered by the schema, not asserted here.
- *
- * Pre-impl red: the column exists (migration 0053) but no write path
- * populates it, so every row assertion below reads null.
- * Post-impl green: initSubscription/initSubscriptionFromStripe carry the
- * anchor and SubService.updateFromStripe/upsertByStripeId persist it.
- */
-
 import { expect, test } from "bun:test";
 import {
 	type AttachParamsV1Input,
@@ -74,9 +43,6 @@ test.concurrent(
 			await ctx.stripeCli.subscriptions.retrieve(subscriptionId);
 		expect(typeof stripeSubscription.billing_cycle_anchor).toBe("number");
 
-		// ── Contract assertion: attach writes the anchor ─────────────────────
-		// Pre-fix: row.billing_cycle_anchor is null (column never written).
-		// Post-fix: equals the Stripe subscription's anchor (unix seconds).
 		const row = await SubService.getByStripeId({
 			db: ctx.db,
 			stripeId: subscriptionId,
@@ -118,8 +84,6 @@ test.concurrent(
 			await ctx.stripeCli.subscriptions.retrieve(subscriptionId);
 		const originalAnchor = subscriptionBefore.billing_cycle_anchor;
 
-		// Simulates `stripe subscriptions update <id> --billing-cycle-anchor=now`
-		// — a change made outside Autumn entirely.
 		await ctx.stripeCli.subscriptions.update(subscriptionId, {
 			billing_cycle_anchor: "now",
 			proration_behavior: "none",
@@ -130,10 +94,6 @@ test.concurrent(
 		const newAnchor = subscriptionAfter.billing_cycle_anchor;
 		expect(newAnchor).toBeGreaterThan(originalAnchor);
 
-		// ── Contract assertion: webhook re-syncs the anchor ──────────────────
-		// Pre-fix: row.billing_cycle_anchor stays null forever.
-		// Post-fix: subscription.updated -> SubService.updateFromStripe lands
-		// the new anchor.
 		const row = await pollUntil({
 			fetch: () =>
 				SubService.getByStripeId({ db: ctx.db, stripeId: subscriptionId }),
@@ -191,9 +151,6 @@ test.concurrent(
 		const newAnchor = subscriptionAfter.billing_cycle_anchor;
 		expect(newAnchor).toBeGreaterThan(originalAnchor);
 
-		// ── Contract assertion: attach flow persists the reset anchor ────────
-		// Pre-fix: null. Post-fix: the billing plan execution upserts the row
-		// with the new anchor (webhook sync would also land it).
 		const row = await pollUntil({
 			fetch: () =>
 				SubService.getByStripeId({ db: ctx.db, stripeId: subscriptionId }),
@@ -264,9 +221,6 @@ test.concurrent(
 		);
 		const originalAnchor = subscriptionBefore.billing_cycle_anchor;
 
-		// ── Contract assertion: createSchedule writes the initial anchor ─────
-		// Pre-fix: null. Post-fix: matches Stripe from the moment the
-		// subscription row is created.
 		const rowBefore = await SubService.getByStripeId({
 			db: ctx.db,
 			stripeId: subscriptionId!,
@@ -286,9 +240,6 @@ test.concurrent(
 		const newAnchor = subscriptionAfter.billing_cycle_anchor;
 		expect(newAnchor).toBeGreaterThan(originalAnchor);
 
-		// ── Contract assertion: phase transition re-syncs the anchor ─────────
-		// Pre-fix: null. Post-fix: the subscription.updated webhook fired by
-		// the schedule's phase change lands the phase_start anchor.
 		const row = await pollUntil({
 			fetch: () =>
 				SubService.getByStripeId({ db: ctx.db, stripeId: subscriptionId! }),

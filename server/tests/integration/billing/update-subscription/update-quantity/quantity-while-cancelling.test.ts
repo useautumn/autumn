@@ -15,32 +15,6 @@ import {
 	constructRawProduct,
 } from "@/utils/scriptUtils/createTestProducts";
 
-/**
- * Subscription Update Quantity - While Canceling Tests
- *
- * Tests for updating prepaid quantity on a subscription that is in the process
- * of being canceled or is scheduled to downgrade.
- *
- * Expected behavior: Canceling state and scheduled products should be preserved
- * after quantity updates.
- */
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST CASE 1: Update quantity while product is canceling (free default scheduled)
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - User is on Prepaid product
- * - Free default product exists
- * - User cancels Prepaid → free default is scheduled
- * - User updates prepaid quantity
- *
- * Expected Result:
- * - Prepaid should remain canceling (canceling state preserved)
- * - Scheduled free product should remain scheduled
- * - Stripe subscription is correct (still set to cancel at period end)
- */
 test.concurrent(`${chalk.yellowBright("quantity-while-cancelling: active canceling product")}`, async () => {
 	const customerId = "qty-cancel-active";
 	const billingUnits = 10;
@@ -70,11 +44,10 @@ test.concurrent(`${chalk.yellowBright("quantity-while-cancelling: active canceli
 					{ feature_id: TestFeature.Messages, quantity: 10 * billingUnits },
 				],
 			}),
-			s.cancel({ productId: prepaid.id }), // Cancel prepaid → free scheduled
+			s.cancel({ productId: prepaid.id }),
 		],
 	});
 
-	// Verify prepaid is canceled and free is scheduled
 	const customerAfterCancel =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	await expectProductCanceling({
@@ -82,7 +55,6 @@ test.concurrent(`${chalk.yellowBright("quantity-while-cancelling: active canceli
 		productId: prepaid.id,
 	});
 
-	// Now update prepaid's quantity while it's canceling (10 → 20 units)
 	await autumnV1.subscriptions.update({
 		customer_id: customerId,
 		product_id: prepaid.id,
@@ -91,22 +63,18 @@ test.concurrent(`${chalk.yellowBright("quantity-while-cancelling: active canceli
 		],
 	});
 
-	// Verify state after update
 	const customerAfterUpdate =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Prepaid should remain canceling (canceling state preserved)
 	await expectProductCanceling({
 		customer: customerAfterUpdate,
 		productId: prepaid.id,
 	});
 
-	// Balance should be updated to 200 (20 units × 10 billing_units)
 	expect(customerAfterUpdate.features?.[TestFeature.Messages]?.balance).toBe(
 		200,
 	);
 
-	// Verify Stripe subscription is correct (still set to cancel at period end)
 	await expectStripeSubscriptionCorrect({
 		ctx,
 		customerId,
@@ -114,20 +82,6 @@ test.concurrent(`${chalk.yellowBright("quantity-while-cancelling: active canceli
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST CASE 2: Update quantity on scheduled product during downgrade
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - User is on Premium
- * - User downgrades from Premium → Prepaid (Prepaid is scheduled)
- * - User updates the scheduled Prepaid product's quantity
- *
- * Expected Result:
- * - Scheduled Prepaid product should remain scheduled (with updated quantity)
- * - Premium product should remain canceling
- */
 test.concurrent(`${chalk.yellowBright("quantity-while-cancelling: scheduled product")}`, async () => {
 	const customerId = "qty-cancel-sched";
 	const billingUnits = 10;
@@ -139,7 +93,6 @@ test.concurrent(`${chalk.yellowBright("quantity-while-cancelling: scheduled prod
 		price: pricePerUnit,
 	});
 
-	// Premium product ($50/mo)
 	const premium = constructProduct({
 		id: "premium",
 		items: [prepaidItem],
@@ -147,7 +100,6 @@ test.concurrent(`${chalk.yellowBright("quantity-while-cancelling: scheduled prod
 		isDefault: false,
 	});
 
-	// Prepaid product
 	const prepaid = constructRawProduct({
 		id: "prepaid",
 		items: [prepaidItem],
@@ -169,14 +121,12 @@ test.concurrent(`${chalk.yellowBright("quantity-while-cancelling: scheduled prod
 		],
 	});
 
-	// User downgrades from premium to prepaid (prepaid is scheduled)
 	await autumnV1.attach({
 		customer_id: customerId,
 		product_id: prepaid.id,
 		options: [{ feature_id: TestFeature.Messages, quantity: 5 * billingUnits }],
 	});
 
-	// Verify premium is canceled and prepaid is scheduled
 	const customerAfterDowngrade =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	await expectProductCanceling({
@@ -188,7 +138,6 @@ test.concurrent(`${chalk.yellowBright("quantity-while-cancelling: scheduled prod
 		productId: prepaid.id,
 	});
 
-	// Now update the scheduled prepaid's quantity (5 → 15 units)
 	await expectAutumnError({
 		func: async () => {
 			await autumnV1.subscriptions.update({
@@ -202,22 +151,6 @@ test.concurrent(`${chalk.yellowBright("quantity-while-cancelling: scheduled prod
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST CASE 3: Update quantity while canceling with usage tracked
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - User is on Prepaid with some usage tracked
- * - User cancels Prepaid → free default is scheduled
- * - User updates prepaid quantity
- *
- * Expected Result:
- * - Prepaid should remain canceling (canceling state preserved)
- * - Scheduled free product should remain scheduled
- * - Usage should be preserved
- * - Stripe subscription is correct (still set to cancel at period end)
- */
 test.concurrent(`${chalk.yellowBright("quantity-while-cancelling: preserves usage")}`, async () => {
 	const customerId = "qty-cancel-usage";
 	const billingUnits = 10;
@@ -250,7 +183,6 @@ test.concurrent(`${chalk.yellowBright("quantity-while-cancelling: preserves usag
 		],
 	});
 
-	// Track some usage
 	const messagesUsage = 30;
 	await autumnV1.track(
 		{
@@ -261,7 +193,6 @@ test.concurrent(`${chalk.yellowBright("quantity-while-cancelling: preserves usag
 		{ timeout: 2000 },
 	);
 
-	// Verify usage tracked (balance = 100 - 30 = 70)
 	const customerWithUsage =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	expect(customerWithUsage.features?.[TestFeature.Messages]?.usage).toBe(
@@ -269,13 +200,11 @@ test.concurrent(`${chalk.yellowBright("quantity-while-cancelling: preserves usag
 	);
 	expect(customerWithUsage.features?.[TestFeature.Messages]?.balance).toBe(70);
 
-	// Cancel prepaid → free scheduled
 	await autumnV1.cancel({
 		customer_id: customerId,
 		product_id: prepaid.id,
 	});
 
-	// Verify prepaid is canceled and free is scheduled
 	const customerAfterCancel =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	await expectProductCanceling({
@@ -283,7 +212,6 @@ test.concurrent(`${chalk.yellowBright("quantity-while-cancelling: preserves usag
 		productId: prepaid.id,
 	});
 
-	// Now update prepaid's quantity while it's canceling (10 → 20 units)
 	await autumnV1.subscriptions.update({
 		customer_id: customerId,
 		product_id: prepaid.id,
@@ -292,27 +220,22 @@ test.concurrent(`${chalk.yellowBright("quantity-while-cancelling: preserves usag
 		],
 	});
 
-	// Verify state after update
 	const customerAfterUpdate =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Prepaid should remain canceling (canceling state preserved)
 	await expectProductCanceling({
 		customer: customerAfterUpdate,
 		productId: prepaid.id,
 	});
 
-	// Usage should be preserved
 	expect(customerAfterUpdate.features?.[TestFeature.Messages]?.usage).toBe(
 		messagesUsage,
 	);
 
-	// Balance should be updated: 200 (new quantity) - 30 (usage) = 170
 	expect(customerAfterUpdate.features?.[TestFeature.Messages]?.balance).toBe(
 		170,
 	);
 
-	// Verify Stripe subscription is correct (still set to cancel at period end)
 	await expectStripeSubscriptionCorrect({
 		ctx,
 		customerId,

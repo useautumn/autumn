@@ -14,16 +14,6 @@ import type { StripeSubscriptionUpdatedContext } from "../../stripeSubscriptionU
 import { isStripeSubscriptionCanceledEvent } from "./isStripeSubscriptionCanceledEvent";
 import { scheduleDefaultProducts } from "./scheduleDefaultProducts";
 
-/**
- * Handles external subscription cancellations (from Stripe dashboard/portal).
- *
- * This task:
- * 1. Detects if subscription was just canceled
- * 2. Skips if Autumn initiated the cancellation
- * 3. Marks active customer products as canceled
- * 4. Schedules default products for non-add-on groups
- * 5. Sends cancel webhooks (after defaults are scheduled)
- */
 export const handleStripeSubscriptionCanceled = async ({
 	ctx,
 	subscriptionUpdatedContext,
@@ -39,7 +29,6 @@ export const handleStripeSubscriptionCanceled = async ({
 		fullCustomer,
 	} = subscriptionUpdatedContext;
 
-	// 1. Check if this is actually a cancellation event
 	const { canceled, canceledAtMs, cancelsAtMs } =
 		isStripeSubscriptionCanceledEvent({
 			stripeSubscription,
@@ -60,7 +49,6 @@ export const handleStripeSubscriptionCanceled = async ({
 		return;
 	}
 
-	// PASS 1: Update cancellation status
 	const allCanceledProducts: FullCusProduct[] = [];
 	const canceledNonAddonProducts: FullCusProduct[] = [];
 
@@ -72,7 +60,6 @@ export const handleStripeSubscriptionCanceled = async ({
 
 		if (!isActiveRecurringAndOnSub) continue;
 
-		// attach-set ends_at, not an external cancellation
 		const endedAtMatchesCancelAt =
 			notNullish(customerProduct.ended_at) &&
 			notNullish(cancelsAtMs) &&
@@ -108,7 +95,6 @@ export const handleStripeSubscriptionCanceled = async ({
 		}
 	}
 
-	// PASS 2: Schedule default products
 	let scheduledByGroup = new Map<string, FullCusProduct>();
 	if (org.config.sync_status && canceledNonAddonProducts.length > 0) {
 		scheduledByGroup = await scheduleDefaultProducts({
@@ -118,7 +104,6 @@ export const handleStripeSubscriptionCanceled = async ({
 		});
 	}
 
-	// PASS 3: Send cancel webhooks (after defaults are scheduled)
 	for (const customerProduct of allCanceledProducts) {
 		const scheduledCusProduct = scheduledByGroup.get(
 			customerProduct.product.group,

@@ -1,15 +1,3 @@
-/**
- * License customize replace with included: 100 rewrites catalog-shaped seat
- * grants and leaves a customized 1k seat alone.
- *
- * Contract (L1 execute): assignment at 100 → 200 with consumption carried;
- * assignment at 1k untouched.
- * Unmatched 100→200 + leftover boolean: 1k seat spared, dashboard lands.
- *
- * Catalog draft stamp for the same delta lives in
- * catalog-v2/plans/migrations/licenses/included-filter-drafts.test.ts.
- */
-
 import { expect, test } from "bun:test";
 import {
 	BillingInterval,

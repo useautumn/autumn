@@ -46,7 +46,6 @@ const entitlementsMatchAtPrecision = ({
 	);
 };
 
-/** Finds the best unclaimed candidate from most to least precise. */
 export const findEntitlementSuccessor = <T extends Entitlement>({
 	sourceEntitlement,
 	candidateEntitlements,

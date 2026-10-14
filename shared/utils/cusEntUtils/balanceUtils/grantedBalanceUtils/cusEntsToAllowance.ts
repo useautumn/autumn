@@ -4,7 +4,6 @@ import { sumValues } from "../../../utils";
 import { getCusEntBalance } from "../../balanceUtils";
 import { getRolloverFields } from "../../getRolloverFields";
 
-// NEW CUS ENT UTILS
 export const cusEntsToAllowance = ({
 	cusEnts,
 	entityId,

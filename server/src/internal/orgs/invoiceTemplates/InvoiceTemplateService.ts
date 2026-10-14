@@ -38,7 +38,6 @@ export class InvoiceTemplateService {
 		return rows.map(toApi);
 	}
 
-	/** One page of templates, newest first, plus whether another page exists. */
 	static async listPage({
 		db,
 		orgId,

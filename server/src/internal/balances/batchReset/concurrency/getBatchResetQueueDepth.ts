@@ -7,12 +7,6 @@ export type BatchResetQueueDepth = {
 	total: number;
 };
 
-/**
- * Depth of the dedicated batch reset queue: visible (waiting) plus in-flight
- * (being processed) messages. Returns null when no dedicated queue is
- * configured — the primary-queue fallback carries unrelated jobs, so its
- * counts are meaningless for scan gating.
- */
 export const getBatchResetQueueDepth =
 	async (): Promise<BatchResetQueueDepth | null> => {
 		const queueUrl = process.env.BATCH_RESET_SQS_QUEUE_URL;

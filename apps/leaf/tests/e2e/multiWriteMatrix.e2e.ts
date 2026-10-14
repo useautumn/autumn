@@ -1,11 +1,3 @@
-/**
- * Multi-write scenario matrix. Each case sends one message, approves whatever
- * card(s) result, and verifies the outcome against REAL customer state — never
- * against card text, which has misled this flow before.
- *
- *   bun tests/e2e/multiWriteMatrix.e2e.ts            # all cases
- *   bun tests/e2e/multiWriteMatrix.e2e.ts customize  # cases whose name matches
- */
 import { AppEnv, type ChatApproval } from "@autumn/shared";
 import { resolveApproval } from "../../src/internal/approvals/actions/resolveApproval.js";
 import { chatApprovalRepo } from "../../src/internal/approvals/repos/chatApprovalRepo.js";
@@ -40,7 +32,6 @@ type Customer = {
 type Case = {
 	name: string;
 	message: string;
-	/** Runs before the turn so each case starts from known state. */
 	reset?: (tools: Tools) => Promise<void>;
 	verify: (
 		state: Record<string, Customer>,
@@ -105,7 +96,6 @@ const makeTarget = () => ({
 		};
 		if (postable?.kind === "stream" && postable.getPostData) {
 			for await (const _chunk of postable.getPostData().stream) {
-				// drain
 			}
 		}
 		return { id: "msg-1" };
@@ -113,8 +103,6 @@ const makeTarget = () => ({
 	startTyping: async () => {},
 });
 
-/** Runs the message, then approves every card that appears until the session
- * settles — grouped or sequential, all requested writes must land. */
 const runAndApproveAll = async ({
 	message,
 	threadId,
@@ -151,7 +139,6 @@ const runAndApproveAll = async ({
 		};
 	}
 
-	// Approve the first card, then keep approving chained cards.
 	const { createApproval } = await import(
 		"../../src/internal/approvals/actions/createApproval.js"
 	);
@@ -215,9 +202,6 @@ const runAndApproveAll = async ({
 	return { approvedTools, groupedCounts, kind: "approval", requests };
 };
 
-/** Every case gets brand-new customers, so nothing bleeds between cases and
- * no detach is needed — subscriptions created against a previous seed cannot
- * be updated (Autumn rejects them as not-Autumn-created). */
 const createFreshCustomers = async (ids: string[]) => {
 	for (const [index, id] of ids.entries()) {
 		await tools.call("getOrCreateCustomer", {
@@ -234,7 +218,6 @@ const planOn = (customer: Customer, planId: string) =>
 	(customer.subscriptions ?? []).find((sub) => sub.plan_id === planId);
 
 let caseIndex = 0;
-/** Each case gets its own id block so no state bleeds between cases. */
 const freshFor = (n: number) => {
 	caseIndex += 1;
 	return Array.from(

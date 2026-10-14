@@ -3,13 +3,6 @@ import { loadLocalEnv } from "@/utils/envUtils";
 import type { TestContext } from "./utils/testInitUtils/createTestContext";
 
 const loadInfisicalSecrets = async () => {
-	// `bun test:integration` wraps the run in `infisical run --env=dev`, which
-	// already injects every secret into the parent process. Workers inherit
-	// those, so re-running the infisical CLI per worker is redundant churn
-	// (and a flake source). Skip when env is clearly already populated.
-	// CI never has the infisical CLI; this fetch is a local-dev convenience only.
-	// Unit lanes (UNIT_TESTS=1) are hermetic and never need secrets — the
-	// infisical shell-out costs ~2s per process, so skip it there too.
 	if (
 		process.env.CI ||
 		process.env.UNIT_TESTS ||
@@ -38,34 +31,11 @@ const loadInfisicalSecrets = async () => {
 	}
 };
 
-/**
- * Bun test preload — runs once per `bun test` before any test file evaluates.
- * Loads env vars and eagerly creates the master-org `TestContext`, stashing
- * it on `globalThis.__autumnTestContext`. `createTestContext.ts`'s default
- * export is a Proxy that reads the stash lazily, sidestepping import-order
- * races and top-level-await TDZ.
- *
- * Unit-only lanes (no TESTS_ORG) skip init entirely — unit tests don't read
- * the default ctx. Integration lanes let any init error throw so the worker
- * dies loudly instead of every test reporting the opaque Proxy error.
- */
-
 declare global {
 	// biome-ignore lint/style/noVar: required for global declaration in TS
 	var __autumnTestContext: TestContext | null | undefined;
 }
 
-/**
- * Unit lane only: pre-import every module that any unit test mock.module()s.
- *
- * bun's mock.module MERGES into a module that is already in the registry but
- * fully REPLACES one that is not — so a partial factory (most of ours) breaks
- * every export it omits for all later files in the process. Whether the real
- * module loaded first depends on file execution order, and bun test runs
- * files in filesystem-discovery order, which differs across OSes (APFS is
- * sorted, ext4 is not) — green on macOS, red in CI. Seeding the registry up
- * front makes every mock a merge regardless of order.
- */
 const seedMockedModulesForUnitLane = async () => {
 	const { readdirSync, readFileSync, statSync } = await import("node:fs");
 	const { join } = await import("node:path");
@@ -85,9 +55,6 @@ const seedMockedModulesForUnitLane = async () => {
 		}
 	};
 
-	// The sharded runner passes its shard's file list so each shard only pays
-	// the import graphs its own files can mock; plain `bun test` runs (no
-	// list) seed from the whole tree.
 	const shardFiles = process.env.UNIT_TEST_FILES?.split("\n").filter(Boolean);
 	if (shardFiles && shardFiles.length > 0) {
 		const serverRoot = join(import.meta.dir, "..");
@@ -96,7 +63,6 @@ const seedMockedModulesForUnitLane = async () => {
 		walk(join(import.meta.dir, "unit"));
 	}
 
-	// Relative specifiers are file-local; everything else is importable here.
 	const importable = [...specifiers].filter(
 		(specifier) => !specifier.startsWith("."),
 	);
@@ -133,20 +99,12 @@ if (process.env.TW_TEST_FILE && !process.env.UNIT_TESTS) {
 
 if (process.env.UNIT_TESTS) await seedMockedModulesForUnitLane();
 
-// Unit-only lanes don't set TESTS_ORG; silently skip there. Anything else
-// must succeed — a swallowed init failure here resurfaces as the opaque
-// "Default TestContext is not initialized" Proxy error from every test
-// scheduled on this worker.
 if (process.env.TESTS_ORG && !process.env.UNIT_TESTS) {
-	// Dynamic import: createTestContext drags in the server init graph (db,
-	// redis, stripe), which unit-only lanes must never load or connect to.
 	const { createTestContext } = await import(
 		"./utils/testInitUtils/createTestContext"
 	);
 	const testContext = await createTestContext();
 
-	// Availability defaults to degraded until primed (normally at server boot);
-	// unprimed, in-process finalize/track calls silently fail open to SQS replays.
 	const { primeRedisMonitor } = await import(
 		"@/external/redis/availabilityMonitor/redisAvailability.js"
 	);
@@ -155,14 +113,11 @@ if (process.env.TESTS_ORG && !process.env.UNIT_TESTS) {
 	);
 	await Promise.all([primeRedisMonitor(), primeRedisV2Monitor()]);
 
-	// In-process evicts and expiries reach the balance worker only once this process knows who owns each partition.
 	const { startBalanceWorkerClient } = await import(
 		"@/external/balanceWorker/getBalanceWorkerClient.js"
 	);
 	await startBalanceWorkerClient();
 
-	// Cache clears fan out to the instances the edge config names; without it
-	// the test process only clears "main" while the server may read elsewhere.
 	await import("@/internal/misc/miscRedisConfig/miscRedisConfigStore.js");
 	const { startAllEdgeConfigPolling } = await import(
 		"@/internal/misc/edgeConfig/edgeConfigRegistry.js"

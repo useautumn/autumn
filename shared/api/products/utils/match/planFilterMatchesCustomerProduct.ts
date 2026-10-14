@@ -9,14 +9,6 @@ import { stringMatcherMatches } from "../../../migrations/filters/match/index.js
 import { numberMatcherMatches } from "../../../migrations/filters/match/numberMatcherMatches.js";
 import type { PlanFilter } from "../../../migrations/filters/planFilter.js";
 
-/**
- * Predicate: does `filter` match `cusProduct`?
- *
- * JS-side mirror of `compilePlanFilter` for callers that already have
- * the cusproduct in memory (migration runner, scripts). Today supports
- * `plan_id`, `addon`, `paid`, `recurring`, `custom`, and `$or`; `price`
- * and `item` throw to make the gap explicit.
- */
 export const planFilterMatchesCustomerProduct = ({
 	filter,
 	cusProduct,
@@ -81,8 +73,6 @@ export const planFilterMatchesCustomerProduct = ({
 		return false;
 	}
 
-	// Null-existence forms only: `price` asks whether a BASE customer price
-	// (price with entitlement_id null) exists — mirrors the compiler's SQL.
 	if (filter.price !== undefined) {
 		const hasBasePrice = cusProductToPrices({ cusProduct }).some(
 			(price) => price.entitlement_id == null,

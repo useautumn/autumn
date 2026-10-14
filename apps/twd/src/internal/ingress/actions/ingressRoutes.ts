@@ -1,7 +1,3 @@
-/**
- * In-memory Stripe connected-account → worker URL map served by /ingress/connect.
- * Frozen cross-task API. OWNED BY THE KEYS TASK.
- */
 const routes = new Map<string, string>();
 
 export const setIngressRoute = ({
@@ -20,7 +16,6 @@ export const deleteIngressRoute = ({
 }): void => {
 	routes.delete(accountId);
 };
-/** Accounts of finished stripe-connect runs: their late events are acked, never sent to a later run's worker. */
 const dropped = new Set<string>();
 export const dropIngressAccounts = ({
 	accountIds,
@@ -41,7 +36,6 @@ export const getIngressRoute = ({
 }): string | undefined => routes.get(accountId);
 export const ingressRouteCount = (): number => routes.size;
 
-/** Dedicated-shard fallback: events on that shard's webhook whose account no worker registered. */
 const shardRoutes = new Map<string, { workerUrl: string; runId: string }>();
 
 export const setShardRoute = ({
@@ -60,7 +54,6 @@ export const getShardRoute = ({
 }: {
 	shard: string;
 }): string | undefined => shardRoutes.get(shard)?.workerUrl;
-/** Only drops routes the run still owns, so a later run's worker keeps its route. */
 export const clearShardRoutesForRun = ({ runId }: { runId: string }): void => {
 	for (const [shard, route] of shardRoutes) {
 		if (route.runId === runId) shardRoutes.delete(shard);

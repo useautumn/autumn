@@ -8,9 +8,6 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 
-/**
- * Builds the deterministic preview org slug for a user
- */
 export function buildPreviewOrgSlug({
 	userId,
 	masterOrgId,
@@ -21,12 +18,6 @@ export function buildPreviewOrgSlug({
 	return `preview|${userId}|${masterOrgId}`;
 }
 
-/**
- * Resolves the preview sandbox org that belongs to the session user.
- *
- * The preview org is derived from the session (user + active org), never from
- * request input, so a caller can only ever reach their own sandbox.
- */
 export async function getSessionPreviewOrg({
 	ctx,
 }: {
@@ -59,10 +50,6 @@ export async function getSessionPreviewOrg({
 	return previewOrg;
 }
 
-/**
- * Builds a request context scoped to the preview sandbox org, so preview
- * operations run against the sandbox instead of the user's real org.
- */
 export async function buildPreviewContext({
 	ctx,
 	previewOrg,
@@ -85,8 +72,6 @@ export async function buildPreviewContext({
 		org: previewOrg,
 		env: AppEnv.Sandbox,
 		features,
-		// The preview org is its own tenant: resolve its API version from its
-		// own creation date rather than inheriting the dashboard's header.
 		apiVersion: createdAtToVersion({
 			createdAt: previewOrg.created_at ?? undefined,
 		}),

@@ -1,19 +1,3 @@
-/**
- * Benchmarks the license-customize batch path end to end against the bench org,
- * driving the production path page by page:
- * seed pools + assignments → prepareMigration → shouldRunBatchLane →
- * runBatchMigrationChunk(maxPages: 1).
- *
- *   ./run.sh <abs path> --customers 20000 --assignments 3 --pages all
- *   ./run.sh <abs path> --cleanup
- *
- * --customers must cover a real share of the bench org or the rate measures
- * empty-page scan rather than the fan-out; the run warns when it does not.
- *
- * Correctness is asserted after the run: every live assignment under a
- * repointed pool must carry exactly one row for the added feature.
- */
-
 import { type Migration, migrations } from "@autumn/shared";
 import { MigrationFilterSchema } from "@autumn/shared/api/migrations/filters/migrationFilter.js";
 import { OperationsSchema } from "@autumn/shared/api/migrations/operations/operations.js";
@@ -78,8 +62,6 @@ const main = async () => {
 	console.log(`bench: cleanup done in ${Date.now() - cleanupStarted}ms`);
 	if (cleanup) process.exit(0);
 
-	// The bench org's catalog link for the license plan — pools start here so
-	// the run measures the real repoint, not a pre-pointed shortcut.
 	const [link]: Array<{
 		id: string;
 		license_internal_product_id: string;
@@ -230,7 +212,6 @@ const main = async () => {
 	const totalMs = Date.now() - runStarted;
 	const expectedAssignments = customers * assignmentsPerCustomer;
 
-	// Correctness: every live assignment gained exactly one row for the feature.
 	const [counts]: Array<{
 		assignments: string;
 		with_feature: string;
@@ -270,8 +251,6 @@ const main = async () => {
 	console.log(
 		`bench: ${totalMs > 0 ? Math.round((expectedAssignments / totalMs) * 1000).toLocaleString() : 0} assignments/s`,
 	);
-	// Pages with no seeded pool still cost a scan, so a small seed against a
-	// large org measures empty-page throughput rather than the fan-out.
 	const seededShare = totalProcessed > 0 ? customers / totalProcessed : 0;
 	if (seededShare < 0.5) {
 		console.log(

@@ -4,7 +4,6 @@ import type { RepoContext } from "@/db/repoContext";
 import { MetadataService } from "@/internal/metadata/MetadataService";
 import { cancelCreatedStripeSubscription } from "./cancelCreatedStripeSubscription";
 
-/** Metadata is deleted last: if the cancel throws, it survives for the cron to retry. */
 export const releaseExpiredPendingPlan = async ({
 	ctx,
 	stripeCli,

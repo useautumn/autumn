@@ -4,7 +4,6 @@ import { planetScaleTag } from "@/db/dbUtils.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { customerWalkStartSql } from "./customerWalkSql.js";
 
-/** The last customer this page may walk, or null when the walk ends within the cap. */
 export const findCustomerWalkBoundary = async ({
 	ctx,
 	cursor,

@@ -1,11 +1,3 @@
-/**
- * Contract: invoice credits generated from an overridden schema are correct.
- * The plan item's feature_override reprices InvoiceCredits' members (Action1
- * 0.2→0.5, Action2 0.6→1); the renewal invoice's per-source charge lines and
- * "Credits applied" refund reflect the override-priced usage_attribution,
- * the funded total stays unchanged, and attribution resets after billing.
- */
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV5, FeatureConfigOverride } from "@autumn/shared";
 import { findCustomerEntitlement } from "@tests/balances/utils/findCustomerEntitlement.js";
@@ -27,8 +19,6 @@ const withFeatureOverride = (
 test.concurrent(
 	`${chalk.yellowBright("invoice.created feature-override: invoice credits bill at the override rate")}`,
 	async () => {
-		// Catalog InvoiceCredits schema: Action1 at 0.2, Action2 at 0.6.
-		// Override: Action1 at 0.5, Action2 at 1.
 		const invoiceCreditItem = withFeatureOverride(
 			items.consumable({
 				featureId: TestFeature.InvoiceCredits,
@@ -55,8 +45,6 @@ test.concurrent(
 			],
 			actions: [
 				s.billing.attach({ productId: product.id }),
-				// 50 * 0.5 = 25 credits; 50 * 1 = 50 credits. Total 75 < 100
-				// included, so the invoice total stays the $20 base price.
 				s.track({ featureId: TestFeature.Action1, value: 50 }),
 				s.track({ featureId: TestFeature.Action2, value: 50 }),
 				s.advanceToNextInvoice({ withPause: true }),
@@ -68,8 +56,6 @@ test.concurrent(
 		expect(renewalInvoice?.stripe_id).toBeDefined();
 		expect(renewalInvoice?.total).toBe(20);
 
-		// Charge lines carry override-priced credits (25 + 50), fully offset by
-		// the "Credits applied" refund — catalog pricing would read 10 + 30.
 		const storedLineItems = await expectInvoiceLineItemsCorrect({
 			stripeInvoiceId: renewalInvoice!.stripe_id,
 			expectedCount: 4,
@@ -102,7 +88,6 @@ test.concurrent(
 			)?.description,
 		).toBe("Credits applied");
 
-		// Balance resets and attribution clears after the renewal bills it.
 		expect(customer.balances[TestFeature.InvoiceCredits].remaining).toBe(100);
 		const resetCustomerEntitlement = await findCustomerEntitlement({
 			ctx,

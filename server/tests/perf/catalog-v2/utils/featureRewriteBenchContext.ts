@@ -1,10 +1,3 @@
-/**
- * Dedicated DEV-DB org for catalogV2 feature-rewrite execute benches.
- *
- *   bun tests/perf/catalog-v2/seedFeatureRewriteBench.ts
- *   bun tests/perf/catalog-v2/benchExecuteFeatureRewrites.ts
- */
-
 import {
 	ApiVersionClass,
 	AppEnv,
@@ -26,7 +19,6 @@ export const FEATURE_REWRITE_BENCH_FEATURE_ID = "cv2_rw_bench_feat";
 export const FEATURE_REWRITE_BENCH_PRODUCT_ID = "cv2_rw_bench_prod";
 export const FEATURE_REWRITE_BENCH_ROW_COUNT = FEATURE_REWRITE_ROW_LIMIT;
 
-/** Refuse to run against anything that smells like prod. */
 export const assertBenchDatabaseSafe = () => {
 	const url = process.env.DATABASE_URL ?? "";
 	if (url.includes("us-east-2")) {

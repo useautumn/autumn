@@ -21,13 +21,6 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { addDays, addMonths } from "date-fns";
 
-/**
- * Billing Cycle Anchor — New Plan Entity Tests
- *
- * Entity 1 already has pro. We attach pro to entity 2 with billing_cycle_anchor
- * in various configurations (free->pro scheduled, no-plan->pro, free->pro now).
- */
-
 test(`${chalk.yellowBright("billing-cycle-anchor-new-plan-entities 1: ent2 free -> pro, scheduled anchor")}`, async () => {
 	const customerId = "anchor-new-ent-free-pro-sched";
 

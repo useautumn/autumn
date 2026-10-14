@@ -87,10 +87,6 @@ const EventAggregateTotalItemSchema = z.object({
 	sum: z.number().meta({ description: "Sum of event values for this feature" }),
 });
 
-/**
- * One balance that a tracked feature drew from. `entity_id` is null for a
- * customer-level balance shared across every entity.
- */
 const DeductionBalanceSchema = z.object({
 	balance_id: z.string().meta({
 		description:
@@ -119,7 +115,6 @@ const DeductionBalanceSchema = z.object({
 	events: z.number(),
 });
 
-/** Everything one feature's balances absorbed in this period. */
 const DeductionFeatureSchema = z.object({
 	feature_type: z.enum(["metered", "credit_system"]).meta({
 		description:

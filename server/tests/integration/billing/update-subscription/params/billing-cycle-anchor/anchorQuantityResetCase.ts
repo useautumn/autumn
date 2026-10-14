@@ -27,8 +27,6 @@ export type AnchorQuantityVariant = {
 	resetUsage?: boolean;
 };
 
-// Contract: reset invoices use old recurring refunds and full new quantities; identity, usage policy,
-// one-off state, unrelated pending quantities and renewal timing survive. Before implementation, the quantity/anchor guard rejects.
 export const expectAnchorQuantityReset = async (
 	variant: AnchorQuantityVariant,
 ) => {

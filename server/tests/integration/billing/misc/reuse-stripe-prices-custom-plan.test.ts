@@ -1,36 +1,3 @@
-/**
- * Custom plans reuse the base plan's Stripe resources where possible.
- *
- * When a customer attaches a plan with `customize.items` (or `customize.price`),
- * a new `is_custom: true` price row is written for each affected price. The
- * carry-forward path in handleNewProductItems.carryForwardStripeResources
- * (which calls copyStripeResourcesToMatchingPrice) MUST populate the new row's
- * `stripe_*_id` fields from the matching catalog price so we don't mint
- * duplicate Stripe Price objects.
- *
- * Contract under test:
- *   - Adding an unrelated boolean entitlement (dashboard) keeps every existing
- *     price's Stripe IDs intact.
- *   - Same for the paid feature shapes prepaid / consumable / allocated.
- *   - Negative: swapping prepaid → consumable on the same feature does NOT
- *     reuse stripe_price_id (different price.config.type / billing_method).
- *   - Negative: changing the price amount on a prepaid item does NOT reuse
- *     stripe_price_id (config differs → pricesAreSame=false → reuse level
- *     drops below "full").
- *   - Negative: changing tier amounts on a tiered prepaid item does NOT reuse
- *     stripe_price_id.
- *
- * Implementation surface:
- *   server/src/internal/products/product-items/productItemUtils/
- *     handleNewProductItems.ts — calls carryForwardStripeResources before
- *     persisting new prices.
- *   shared/utils/productUtils/priceUtils/match/
- *     copyStripeResourcesToMatchingPrice.ts + getPriceStripeReuseLevel.ts —
- *     the actual matching + copy logic.
- *   shared/utils/productUtils/priceUtils/match/priceStripeObjectsMatch.ts —
- *     boolean predicate used by the test helpers.
- */
-
 import { test } from "bun:test";
 import {
 	type AttachParamsV1Input,
@@ -51,10 +18,6 @@ import { itemsV2 } from "@tests/utils/fixtures/itemsV2";
 import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 1: custom plan adds a boolean entitlement, base price reused
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(
 	`${chalk.yellowBright("custom plan: add boolean entitlement → base price Stripe IDs reused")}`,
@@ -99,10 +62,6 @@ test.concurrent(
 	},
 );
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 2: custom plan keeps prepaid/consumable/allocated items → all reused
-// ═══════════════════════════════════════════════════════════════════════════════
-
 test.concurrent(
 	`${chalk.yellowBright("custom plan: paid feature shapes unchanged → all Stripe IDs reused")}`,
 	async () => {
@@ -114,7 +73,6 @@ test.concurrent(
 				items.monthlyMessages({ includedUsage: 100 }),
 				items.prepaidUsers({ billingUnits: 1 }),
 				items.consumableWords({ includedUsage: 0 }),
-				// V2 UsageBased forbids top-level proration; catalog must be arrear to match.
 				items.allocatedV2Workflows({ includedUsage: 0 }),
 			],
 		});
@@ -154,10 +112,6 @@ test.concurrent(
 		expectAllStripeIdsReused({ pairs, catalogProduct });
 	},
 );
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 3 (negative): swap prepaid → consumable on same feature → no reuse
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(
 	`${chalk.yellowBright("custom plan: prepaid → consumable on same feature → stripe_price_id NOT reused")}`,
@@ -206,10 +160,6 @@ test.concurrent(
 	},
 );
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 4 (negative): change prepaid price amount → stripe_price_id not reused
-// ═══════════════════════════════════════════════════════════════════════════════
-
 test.concurrent(
 	`${chalk.yellowBright("custom plan: prepaid amount change → stripe_price_id NOT reused")}`,
 	async () => {
@@ -253,10 +203,6 @@ test.concurrent(
 		});
 	},
 );
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 5 (negative): change tier amounts on tiered prepaid → not reused
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(
 	`${chalk.yellowBright("custom plan: tier amount change → stripe_price_id NOT reused")}`,
@@ -308,10 +254,6 @@ test.concurrent(
 		});
 	},
 );
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 6 (negative): graduated → volume tier_behavior → stripe_price_id not reused
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(
 	`${chalk.yellowBright("custom plan: graduated → volume tier_behavior → stripe_price_id NOT reused")}`,
@@ -372,10 +314,6 @@ test.concurrent(
 	},
 );
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 7 (negative): add flat_amount to a tier → stripe_price_id not reused
-// ═══════════════════════════════════════════════════════════════════════════════
-
 test.concurrent(
 	`${chalk.yellowBright("custom plan: add flat_amount to tier → stripe_price_id NOT reused")}`,
 	async () => {
@@ -435,12 +373,6 @@ test.concurrent(
 	},
 );
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 8 (negative): prorated allocated catalog → arrear V2 customize → not reused
-// Public V2 rejects proration on UsageBased; the allowed shape flip is V1 prorated
-// catalog → V2 UsageBased without proration (arrear).
-// ═══════════════════════════════════════════════════════════════════════════════
-
 test.concurrent(
 	`${chalk.yellowBright("custom plan: prorated allocated → arrear customize → stripe_price_id NOT reused")}`,
 	async () => {
@@ -485,10 +417,6 @@ test.concurrent(
 	},
 );
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 9 (negative): change billing_units → stripe_price_id not reused
-// ═══════════════════════════════════════════════════════════════════════════════
-
 test.concurrent(
 	`${chalk.yellowBright("custom plan: change prepaid billing_units → stripe_price_id NOT reused")}`,
 	async () => {
@@ -532,14 +460,6 @@ test.concurrent(
 		});
 	},
 );
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 10 (positive): change rollover config on ent (base price unaffected)
-// Rollover lives on the entitlement. monthlyMessagesWithRollover has no price,
-// so the only paid line on this plan is the $20 base — which has no paired ent
-// and thus is unaffected by ent rollover diffs. Asserts the base price still
-// reuses all Stripe IDs across the customize.
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(
 	`${chalk.yellowBright("custom plan: change rollover config → base price Stripe IDs still reused")}`,
@@ -599,10 +519,6 @@ test.concurrent(
 		expectAllStripeIdsReused({ pairs, catalogProduct });
 	},
 );
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 11 (positive): prepaid + consumable pair on same feature → both reused
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(
 	`${chalk.yellowBright("custom plan: prepaid + consumable pair on same feature → both Stripe IDs reused")}`,

@@ -32,23 +32,13 @@ import {
 	CustomerEligibilitySchema,
 } from "../../products/components/customerEligibility";
 
-/**
- * Extract the object literal type from a schema with an `object` field.
- */
 type ExtractObjectType<T> = T extends { object: infer O } ? O : never;
 
-/**
- * A filter config entry that maps an object type to fields to omit.
- */
 type FilterConfigEntry<T> = {
 	objectType: ExtractObjectType<T>;
 	omitFields: (keyof T)[];
 };
 
-/**
- * Creates a strongly-typed filter config entry.
- * Ensures the object type and fields match the schema.
- */
 function createFilterConfig<T extends { object?: string }>({
 	schema,
 	omitFields,
@@ -56,11 +46,9 @@ function createFilterConfig<T extends { object?: string }>({
 	schema: z.ZodType<T>;
 	omitFields: (keyof T)[];
 }): FilterConfigEntry<T> {
-	// Parse just to extract the object type from the schema's shape
 	const shape = (schema as z.ZodObject<z.ZodRawShape>).shape;
 	let objectField = shape.object;
 
-	// Unwrap ZodOptional if the object field is optional
 	if (objectField instanceof z.ZodOptional) {
 		objectField = objectField.unwrap();
 	}
@@ -74,10 +62,6 @@ function createFilterConfig<T extends { object?: string }>({
 	};
 }
 
-/**
- * Filter configurations for each object type.
- * Use createFilterConfig for type safety.
- */
 const filterConfigs = [
 	createFilterConfig<ApiBalanceBreakdownV1>({
 		schema: ApiBalanceBreakdownV1Schema,
@@ -111,18 +95,12 @@ const filterConfigs = [
 		schema: CustomerEligibilitySchema,
 		omitFields: ["object", "scenario"],
 	}),
-	// The Stripe subscription id stays internal: the dashboard keys previews and
-	// deep links off it, but it isn't part of the public contract.
 	createFilterConfig<ApiInvoicePreviewV0>({
 		schema: ApiInvoicePreviewV0Schema,
 		omitFields: ["subscription_id", "object"],
 	}),
 ];
 
-/**
- * Runtime config mapping object type to fields to omit.
- * Built from the typed filterConfigs array.
- */
 export const responseFilterConfig: Record<string, string[]> =
 	Object.fromEntries(
 		filterConfigs.map((config) => [

@@ -1,9 +1,3 @@
-/**
- * Contract: dimensions price an entity-scoped track the same as a customer-level
- * one. The entity decides whose balance is drawn from; the event's properties
- * decide the rate — the two mechanisms are orthogonal.
- */
-
 import { test } from "bun:test";
 import type { ApiEntityV2, FeatureConfigOverride } from "@autumn/shared";
 import { expectBalanceCorrect } from "@tests/integration/utils/expectBalanceCorrect.js";
@@ -62,7 +56,6 @@ test.concurrent(
 			],
 			actions: [
 				s.billing.attach({ productId: product.id }),
-				// Entity 0 pays the dimensioned rate, entity 1 the multiplied one.
 				s.track({
 					featureId: TestFeature.Action1,
 					value: 2,
@@ -85,7 +78,6 @@ test.concurrent(
 			autumnV2_2.entities.get<ApiEntityV2>(customerId, entities[1].id),
 		]);
 
-		// 2 x 16 = 32 off entity one; 4 x 16 x 0.5 = 32 off entity two.
 		expectBalanceCorrect({
 			customer: entityOne,
 			featureId: TestFeature.Credits,

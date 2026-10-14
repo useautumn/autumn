@@ -41,8 +41,6 @@ import { unpackSubjectEnvelope } from "./unpackSubjectEnvelope.js";
 
 const BACKUP_READ_STATEMENT_TIMEOUT_MS = 2_000;
 
-/** Runs the hydration on the resolved pool. A replica DB failure retries ONCE
- *  on primary via normal gate admission; a gate shed propagates untouched. */
 const runRoutedHydration = async ({
 	ctx,
 	customerId,
@@ -168,7 +166,6 @@ const runRoutedHydration = async ({
 			result = await runHydration({ db: resolved.db, lane: resolved.source });
 		} catch (error) {
 			if (resolved.source !== "replica") throw error;
-			// A gate shed is load protection — re-admitting it on primary defeats it.
 			if (isFullSubjectGateRejection(error)) throw error;
 			source = "primary";
 			ctx.logger.warn(
@@ -202,7 +199,6 @@ const runRoutedHydration = async ({
 	return { rows: unpackSubjectEnvelope({ rows: result ?? [] }), source };
 };
 
-/** Fetch full subject from DB and return as FullSubject. Runs lazy reset. */
 export async function getFullSubject({
 	ctx,
 	customerId,
@@ -245,8 +241,6 @@ export async function getFullSubject({
 	if (ctx.subjectReadTrace) ctx.subjectReadTrace.source = source;
 
 	if (source === "replica") {
-		// Pure read: replica-sourced subjects serve unreset balances and never
-		// trigger primary writes; the brand keeps them out of the Redis cache.
 		markReplicaSourced(fullSubject);
 		return fullSubject;
 	}
@@ -261,8 +255,6 @@ export async function getFullSubject({
 	return fullSubject;
 }
 
-/** Fetch full subject from DB, run lazy resets by default, return normalized + fullSubject.
- *  Both normalized and fullSubject are kept in sync after reset. */
 export async function getFullSubjectNormalized({
 	ctx,
 	customerId,
@@ -284,7 +276,6 @@ export async function getFullSubjectNormalized({
 	readFrom?: SubjectReadFrom;
 	routeSource?: string;
 	useDelayedPostgresBackupRead?: boolean;
-	/** Replay-only expiry clock; this does not provide historical row time travel. */
 	asOfTimestampMs?: number;
 }): Promise<
 	{ normalized: NormalizedFullSubject; fullSubject: FullSubject } | undefined
@@ -313,8 +304,6 @@ export async function getFullSubjectNormalized({
 	if (ctx.subjectReadTrace) ctx.subjectReadTrace.source = source;
 
 	if (source === "replica") {
-		// Pure read: replica-sourced subjects serve unreset balances and never
-		// trigger primary writes; the brand keeps them out of the Redis cache.
 		markReplicaSourced(normalized);
 		markReplicaSourced(fullSubject);
 	} else if (runLazyResets) {

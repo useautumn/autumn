@@ -4,7 +4,6 @@ import type { DeductionRow } from "../../types/deductionRow.js";
 import type { DeductionState } from "../../types/deductionState.js";
 import { deductionRowToCurrentBalance } from "../convertDeductionUtils.js";
 
-/** `get_available_overage_from_spend_limit`: the feature's cap minus what its rows already carry below zero; null when the feature has no limit. */
 export const deductionRowToSpendLimitHeadroom = ({
 	context,
 	deductionState,

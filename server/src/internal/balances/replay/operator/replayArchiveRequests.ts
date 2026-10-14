@@ -22,23 +22,18 @@ export type ReplayRequestRecord = Readonly<{
 	outcome: ReplayRequestOutcome;
 }>;
 
-/** Cancelled requests stay terminal and never reached the worker, so they are
- *  counted against setup rather than execution. */
 const CANCELLED_OUTCOME: ReplayRequestOutcome = Object.freeze({
 	kind: "failed",
 	reason: REPLAY_CANCELLED_REASON,
 	stage: "setup",
 });
 
-/** A blocked request is classified by shape alone, so any org settings do. */
 const REVIEW_ORG_CONFIG: CommandOrg["config"] = {
 	reverse_deduction_order: false,
 	block_overdue_entitlements: false,
 	include_past_due: true,
 };
 
-/** Shape is classified before the setup verdict, so an unsupported request
- *  stays visible even when its customer never hydrated. */
 const classifyBlockedRequest = ({
 	request,
 	admission,
@@ -193,8 +188,6 @@ const runReplayLaneItem = async ({
 	});
 };
 
-/** Cohorts replay in manifest order with a bounded number of customers in
- *  flight; each customer's own requests stay strictly sequential. */
 export async function replayCohorts({
 	plans,
 	coordinator,

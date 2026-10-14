@@ -12,7 +12,6 @@ import {
 
 const BASIC_CONFIG_PATH = join(FIXTURES_PATH, "basic-config");
 
-// Quote the CLI_PATH for shell execution (cli-testing-library uses shell: true)
 const QUOTED_CLI_PATH = `"${CLI_PATH}"`;
 
 describe("push command", () => {
@@ -26,7 +25,6 @@ describe("push command", () => {
 			spawnOpts,
 		});
 
-		// Wait for push to complete
 		await waitFor(
 			() => {
 				const exit = instance.hasExit();
@@ -36,7 +34,6 @@ describe("push command", () => {
 			{ timeout: 30000 },
 		);
 
-		// Verify actual state via API
 		const features = await getFeatures();
 		const plans = await getAllPlans();
 
@@ -50,7 +47,6 @@ describe("push command", () => {
 			spawnOpts,
 		});
 
-		// Wait for process to exit
 		await waitFor(
 			() => {
 				const exit = instance.hasExit();
@@ -59,14 +55,12 @@ describe("push command", () => {
 			{ timeout: 30000 },
 		);
 
-		// Check stdout contains feature info
 		const stdout = instance.stdoutArr
 			.map((s) => s.contents.toString())
 			.join("");
 		expect(stdout).toMatch(/Features pushed:/i);
 		expect(stdout).toMatch(/messages/i);
 
-		// Verify feature exists in API with correct properties
 		const features = await getFeatures();
 		const messagesFeature = features.find((f: Feature) => f.id === "messages");
 
@@ -81,7 +75,6 @@ describe("push command", () => {
 			spawnOpts,
 		});
 
-		// Wait for process to exit
 		await waitFor(
 			() => {
 				const exit = instance.hasExit();
@@ -90,22 +83,18 @@ describe("push command", () => {
 			{ timeout: 30000 },
 		);
 
-		// Check stdout contains plan info
 		const stdout = instance.stdoutArr
 			.map((s) => s.contents.toString())
 			.join("");
 		expect(stdout).toMatch(/Plans pushed:/i);
 		expect(stdout).toMatch(/pro/i);
 
-		// Verify plan exists in API with correct properties
 		const plans = await getAllPlans();
 		const proPlan = plans.find((p: { id: string }) => p.id === "pro");
 
 		expect(proPlan).toBeDefined();
 		expect(proPlan?.name).toBe("Pro");
 
-		// Verify plan has the messages feature configured
-		// Note: API returns 'features' array with 'granted_balance' (SDK uses 'included')
 		const planFeatures = (
 			proPlan as {
 				features: {
@@ -122,9 +111,7 @@ describe("push command", () => {
 			(f: { feature_id: string }) => f.feature_id === "messages",
 		);
 		expect(messagesFeature).toBeDefined();
-		// The reset interval should be set to 'month' as per the fixture
 		expect(messagesFeature?.reset?.interval).toBe("month");
-		// The granted_balance should be 10 (from fixture's included: 10)
 		expect(messagesFeature?.granted_balance).toBe(10);
 	});
 });

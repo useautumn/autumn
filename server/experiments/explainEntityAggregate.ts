@@ -11,8 +11,6 @@ const { getEntityAggregateForSync } = await import(
 	"../src/internal/customers/repos/getFullSubject/getEntityAggregateForSync"
 );
 
-// Run with `bun run experiments/explainEntityAggregate.ts`
-
 const main = async () => {
 	const orgId = prodTestOrgId;
 	const env = AppEnv.Live;
@@ -42,7 +40,6 @@ const main = async () => {
 	console.log(`Rows (after schema parse): ${parsedResult.length}`);
 	console.log(`Wall-clock time: ${elapsed.toFixed(2)}ms\n`);
 
-	// Also fetch raw rows so we can see the output even if schema parse fails
 	const { getEntityAggregateFragments } = await import(
 		"../src/internal/customers/repos/getFullSubject/getEntityAggregateFragments"
 	);

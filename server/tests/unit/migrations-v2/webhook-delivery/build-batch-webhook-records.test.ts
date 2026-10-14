@@ -1,15 +1,3 @@
-/**
- * Contract: the delivery records a finalized page produces.
- *
- *   - one record per SUCCEEDED customer that actually changed, with one
- *     `updated` plan change PER customer product that changed items;
- *   - every plan change carries the real subscription/purchase snapshot
- *     (plan_id lives there — a payload without it can't say which plan),
- *     built from the inserted rows' lifecycle fields with no re-read;
- *   - one-off products snapshot as `purchase`, recurring as `subscription`;
- *   - customers with no changed rows and skipped customers produce nothing.
- */
-
 import { describe, expect, test } from "bun:test";
 import {
 	BillingInterval,

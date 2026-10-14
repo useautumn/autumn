@@ -93,6 +93,5 @@ async function teardownEntry(entry: RegistryEntry): Promise<void> {
 		killTmuxSession(tmuxSessionName(entry.worktreeNum));
 	}
 	removeComposeStack(entry.worktreeNum, entry.branchName);
-	// The dev stack's Atom keeps each deployed org's folder here.
 	rmSync(join(entry.path, ".data", "atom"), { recursive: true, force: true });
 }

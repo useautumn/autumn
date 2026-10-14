@@ -55,7 +55,6 @@ export const isV4Usage = ({
 	);
 };
 
-// export const
 const onIncreaseToStripeProration = ({
 	onIncrease,
 }: {

@@ -15,8 +15,6 @@ import { setCustomerSpendLimit } from "../../balances/utils/spend-limit-utils/cu
 
 const testCase = "rollout-track-overflow";
 
-// overage_behavior "overflow" on the LEGACY (pre-fullSubject) deduction path:
-// balance goes negative, and a customer spend limit still clamps.
 test(
 	`${chalk.yellowBright(`${testCase}: overflow works on the v1 rollout path`)}`,
 	async () => {
@@ -59,7 +57,6 @@ test(
 				usage: 150,
 			});
 
-			// Cap mode on the legacy path still floors at the negative balance.
 			await autumnV2_2.track({
 				customer_id: customerId,
 				feature_id: TestFeature.Messages,
@@ -120,7 +117,6 @@ test(
 		try {
 			await setOrgRolloutPercent({ orgId, percent: 0 });
 
-			// 1100 granted + 20 overage consumed: 5 units of headroom left.
 			await autumnV2_1.track(
 				{
 					customer_id: customerId,

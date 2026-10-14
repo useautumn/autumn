@@ -13,12 +13,6 @@ import {
 	resolveBillingControl,
 } from "./planBillingControlUtils.js";
 
-/**
- * Extract enabled spend limits for the requested features from a FullSubject.
- *
- * Entity inherits from the customer per feature_id: entity's entry wins when
- * present, customer's entry fills any gaps.
- */
 export const fullSubjectToSpendLimitByFeatureId = <
 	CE extends CustomerEntitlementRowView,
 	CP extends PlanControlCustomerProduct & CustomerProductWithPricesView,
@@ -79,7 +73,6 @@ export const fullSubjectToSpendLimitByFeatureId = <
 				additionalAllowance,
 			});
 
-			// Resolve to absolute so Lua deduction reads overage_limit as absolute units.
 			if (resolved !== undefined) {
 				spendLimitByFeatureId[featureId] = {
 					...spendLimit,
@@ -107,8 +100,6 @@ export const fullSubjectToUsageBasedCusEntsByFeatureId = <
 		fullSubject,
 		featureIds,
 	});
-	// Every ent for the feature counts toward the overage limit: control-based
-	// (overage_allowed) overage has no price, so it isn't pay-per-use.
 	const overageCusEntsByFeatureId: Record<string, string[]> = {};
 
 	for (const customerEntitlement of customerEntitlements) {

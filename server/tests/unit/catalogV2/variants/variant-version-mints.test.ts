@@ -49,7 +49,6 @@ const teamEuV1 = {
 	base_internal_product_id: teamV1.internal_id,
 };
 
-/** The new base row is a from-scratch create: no clone source, so no baseFullProduct. */
 const newBaseUpsert = ({
 	declaredVariants,
 }: {
@@ -107,7 +106,6 @@ describe("variants[] naming a version the catalog does not have", () => {
 		expect(mint.productKey).toEqual({ planId: "team-eu", version: 2 });
 		expect(mint.planParams.new_version_slug).toBe("v2");
 		expect(mint.baseInternalProductId).toBe(teamV2.internal_id);
-		// Silent entry keys inherit from the variant plan's latest row / the base.
 		expect(mint.planParams.name).toBe("Team EU");
 		expect(mint.planParams.active).toBe(true);
 	});

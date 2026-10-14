@@ -1,9 +1,3 @@
-/**
- * The dashboard's "Trusted bots" list: PATCH .../settings saves the bots whose
- * @-mentions the Slack agent answers, each running as an org member, and
- * GET /organization/chat reports them back.
- */
-
 import { afterAll, beforeAll, expect, test } from "bun:test";
 import { AppEnv, type ChatTrustedBot, chatInstallations } from "@autumn/shared";
 import defaultCtx from "@tests/utils/testInitUtils/createTestContext.js";
@@ -90,7 +84,6 @@ test("a trusted bot runs as an org member and remembers who added it", async () 
 	const addedAt = bill?.added_at;
 	expect(addedAt).toBeGreaterThan(0);
 
-	// Renaming keeps when it was first added; the reply mode is untouched.
 	await patchSettings({
 		trusted_bots: [
 			{

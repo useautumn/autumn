@@ -96,8 +96,6 @@ const expectedMonthlyProrationDiff = ({
 	transitionAt: number;
 	billingPeriod: { start: number; end: number };
 }) =>
-	// Each invoice line is rounded to cents independently, so round each
-	// prorated leg before differencing (matches atmnToStripeAmount).
 	new Decimal(
 		applyProration({
 			now: transitionAt,

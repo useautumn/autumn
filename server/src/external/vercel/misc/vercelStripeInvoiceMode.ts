@@ -2,20 +2,6 @@ import type Stripe from "stripe";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { logCaughtError } from "@/utils/logging/logCaughtError.js";
 
-/**
- * Vercel-specific Stripe invoice-mode helpers.
- *
- * Vercel marketplace customers can't use Stripe's third-party payment
- * processing (Custom Payment Methods + Payment Records) on every Stripe plan.
- * Instead, Vercel subscriptions/invoices use Stripe as the ledger
- * (`collection_method: "send_invoice"`) while Vercel itself moves money.
- *
- * These helpers are idempotent and safe to call from webhooks.
- */
-
-/**
- * Detect whether a Stripe subscription belongs to a Vercel installation.
- */
 export const isVercelStripeSubscription = (
 	subscription: Stripe.Subscription | null | undefined,
 ): boolean => {
@@ -23,16 +9,6 @@ export const isVercelStripeSubscription = (
 	return Boolean(subscription.metadata?.vercel_installation_id);
 };
 
-/**
- * Ensure a Vercel-owned Stripe subscription is in invoice mode
- * (`send_invoice` + `days_until_due: 30`).
- *
- * - No-op if already `send_invoice`.
- * - Best-effort clears `default_payment_method` (`default_payment_method`
- *   is not typed as nullable on `SubscriptionUpdateParams`, so we cast to
- *   `unknown` and treat any rejection as non-fatal).
- * - Skips silently if the subscription is canceled.
- */
 export const ensureVercelInvoiceModeSubscription = async ({
 	ctx,
 	stripeCli,
@@ -60,9 +36,7 @@ export const ensureVercelInvoiceModeSubscription = async ({
 	}
 
 	try {
-		// `default_payment_method` is not typed as nullable on the update
 		// params, but Stripe accepts null at runtime to clear it. Failure to
-		// clear is non-fatal — invoice mode itself is the durable fix.
 		const updated = await stripeCli.subscriptions.update(subscription.id, {
 			collection_method: "send_invoice",
 			days_until_due: 30,
@@ -87,8 +61,6 @@ export const ensureVercelInvoiceModeSubscription = async ({
 			level: "warn",
 		});
 
-		// Retry without clearing default_payment_method if Stripe rejected it.
-		// The collection_method flip is the important part.
 		try {
 			const updated = await stripeCli.subscriptions.update(subscription.id, {
 				collection_method: "send_invoice",
@@ -181,14 +153,6 @@ export const ensureVercelInvoiceModeCustomer = async ({
 	}
 };
 
-/**
- * Mark a Stripe invoice paid out of band (Vercel handled the money movement).
- *
- * Idempotent:
- * - Skips if the invoice is already `paid`.
- * - Skips if the invoice is `void`/`voided`/`uncollectible`/`deleted`.
- * - Logs and continues for known race/already-paid states.
- */
 export const markVercelInvoicePaidOutOfBand = async ({
 	ctx,
 	stripeCli,
@@ -221,7 +185,6 @@ export const markVercelInvoicePaidOutOfBand = async ({
 	if (invoice.status === "draft") {
 		// `invoices.pay` requires a finalized invoice. The finalize webhook is
 		// what triggers Vercel submission; by the time `marketplace.invoice.paid`
-		// lands, the invoice should be `open`. If it's still `draft`, log and
 		// skip — finalization will happen in a separate webhook.
 		logger.warn(
 			"[vercelInvoiceMode] invoice still draft when paid webhook arrived",

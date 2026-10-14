@@ -1,11 +1,3 @@
-/**
- * Contract: license pools do not coalesce across link_ids. Two links granting
- * the same feature are two pools. A customer-level pooled item (null link)
- * stays a third identity.
- *
- * Cases: 2, 3, 4, 5
- */
-
 import { test } from "bun:test";
 import { expectPooledBalanceCorrect } from "@tests/integration/billing/pooled-balances/utils/expectPooledBalanceCorrect.js";
 import { TestFeature } from "@tests/setup/v2Features.js";

@@ -20,8 +20,6 @@ function durationValue(rollover: RolloverConfig): string {
 	return `${rollover.length} ${months}`;
 }
 
-/** Small icon shown at the end of an item row when the item rolls over unused
- * usage. Hover reveals the rollover config fields. */
 export function RolloverIndicator({ rollover }: { rollover: RolloverConfig }) {
 	const rows = [
 		{ label: "Max", value: maxValue(rollover) },
@@ -31,8 +29,6 @@ export function RolloverIndicator({ rollover }: { rollover: RolloverConfig }) {
 	return (
 		<Tooltip delayDuration={TOOLTIP_DELAY_MS}>
 			<TooltipTrigger asChild>
-				{/* pointer-events-auto: read-only rows disable pointer events, which
-				 * would otherwise swallow the hover that opens this tooltip. */}
 				<CircleHalfTiltIcon
 					className="size-3.5 shrink-0 text-tertiary-foreground pointer-events-auto"
 					aria-label="Rolls over"

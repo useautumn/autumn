@@ -4,7 +4,6 @@ import type { TestContext } from "@tests/utils/testInitUtils/createTestContext";
 import { cusProductToCusEnt } from "@/internal/customers/cusProducts/cusProductUtils/convertCusProduct.js";
 import { getMainCusProduct } from "@/internal/customers/cusProducts/cusProductUtils.js";
 
-/** Forces one reset cycle on the customer's main plan row for `featureId` (V2 cron, SQL lane) and returns the row after it. */
 export const resetAndGetCusEnt = async ({
 	ctx,
 	customer,

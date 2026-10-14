@@ -23,13 +23,9 @@ const fetchExecutorKey = async ({
 	const fromEnv = (process.env.EXECUTOR_API_KEY ?? "").trim();
 	if (fromEnv) return fromEnv;
 
-	// The CLI ships in node_modules, so a bare "infisical" only resolves when the
-	// caller already put node_modules/.bin on PATH.
 	const localCli = join(PROJECT_ROOT, "node_modules/.bin/infisical");
 	const cli = (await Bun.file(localCli).exists()) ? localCli : "infisical";
 
-	// Only a login shell picks the token up from shellrc, and this runs from
-	// plain ones too, where infisical would prompt for a hosting option.
 	const env = { ...process.env };
 	if (!env.INFISICAL_TOKEN) {
 		const cached = Bun.file(
@@ -56,10 +52,7 @@ const fetchExecutorKey = async ({
 	return result.exitCode === 0 ? result.stdout.toString().trim() : "";
 };
 
-/** Swap Claude's `${EXECUTOR_API_KEY}` placeholder for the real key. */
 const writeResolvedKey = async ({ key }: { key: string }): Promise<boolean> => {
-	// .mcp.json is written by `bun ai sync`, which needs the private ai submodule
-	// a Conductor setup script cannot clone. Absent is expected, not an error.
 	if (!(await Bun.file(MCP_PATH).exists())) {
 		log(`${MCP_PATH} not written yet — run \`bun ai/src/cli.ts sync\` first`);
 		return false;

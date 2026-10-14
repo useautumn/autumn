@@ -177,8 +177,6 @@ export function InvoicePreviewDocument({
 								isFirst ? "mt-[1.6em]" : "mt-[2.4em]",
 							)}
 						>
-							{/* Stripe sizes the numeric columns to their content and
-							    right-aligns them; description absorbs the rest. */}
 							<colgroup>
 								<col className="w-full" />
 								<col className="w-px" />

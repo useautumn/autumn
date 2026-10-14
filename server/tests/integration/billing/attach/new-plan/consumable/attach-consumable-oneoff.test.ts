@@ -63,7 +63,7 @@ test.concurrent(`${chalk.yellowBright("consumable-oneoff 1: attach one off base 
 	await expectCustomerInvoiceCorrect({
 		customer: customerAfterAdvance,
 		count: 2,
-		latestTotal: 50, // only charged for overage (not base price)
+		latestTotal: 50,
 	});
 });
 
@@ -126,7 +126,7 @@ test.concurrent(`${chalk.yellowBright("consumable-oneoff 2: checkout one off bas
 	await expectCustomerInvoiceCorrect({
 		customer: customerAfterAdvance,
 		count: 2,
-		latestTotal: 50, // only charged for overage (not base price)
+		latestTotal: 50,
 		latestInvoiceProductId: pro.id,
 	});
 });

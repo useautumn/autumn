@@ -1,5 +1,3 @@
-/** Released seats receive no rows, but the pool definition still changes for
- * future assignments, so the customer migration succeeds. */
 import { expect, test } from "bun:test";
 import { customerEntitlements, migrationItemRuns } from "@autumn/shared";
 import { runChunkedMigration } from "@tests/integration/billing/migrations-v2/utils/runChunkedMigration";

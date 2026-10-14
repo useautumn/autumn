@@ -1,12 +1,3 @@
-/**
- * atmn scenarios/lint — a plan with no active version, or two
- *
- * Every version sits in `plans`, so `active` is the only thing saying which
- * row customers can buy. Lint refuses either mistake with the exact message
- * and sends nothing; the same wire sent raw gets the server's own guidance,
- * so API users are told the same thing.
- */
-
 import { expect, test } from "bun:test";
 import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 import { paidMonthly } from "@tests/utils/atmnUtils/baseConfigs.js";
@@ -74,7 +65,6 @@ test.concurrent(
 			};
 			expect(catalog.plans.find((row) => row.id === pro)).toBeUndefined();
 
-			// The wire `atmn()` would have built for the first config, sent raw.
 			const raw = await scenario.client
 				.update({
 					plans: [

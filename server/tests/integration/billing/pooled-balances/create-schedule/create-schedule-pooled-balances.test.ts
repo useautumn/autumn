@@ -1,6 +1,3 @@
-/** Entity schedules reconcile immediate in-scope products; future products and unrelated pools or prepaid remain untouched.
- * Customer schedules leave every entity-scoped pooled contribution unchanged. */
-
 import { expect, test } from "bun:test";
 import {
 	type ApiCustomerV5,

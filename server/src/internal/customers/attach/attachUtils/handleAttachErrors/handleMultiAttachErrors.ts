@@ -21,13 +21,10 @@ export const handleMultiAttachErrors = async ({
 }) => {
 	const { products, prices, productsList } = attachParams;
 
-	// MultiAttach must stay fully blocked for cross-processor customers — even
-	// for one-off products, because the batch may include recurring main products.
 	handleExternalPSPErrors({ attachParams, strict: true });
 
 	const usagePrice = prices.find((p: Price) => isUsagePrice({ price: p }));
 
-	// 1. Don't support usage prices just yet...
 	if (usagePrice) {
 		const product = products.find(
 			(p) => p.internal_id === usagePrice.internal_product_id,
@@ -39,7 +36,6 @@ export const handleMultiAttachErrors = async ({
 		});
 	}
 
-	// If there are multiple products...
 	const cusProducts = attachParams.customer.customer_products;
 	for (const prodOptions of productsList!) {
 		const newQuantity = prodOptions.quantity || 1;

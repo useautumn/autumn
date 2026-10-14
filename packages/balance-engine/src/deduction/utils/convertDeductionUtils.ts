@@ -21,7 +21,6 @@ const deltasOn = ({
 const sumOf = (values: number[]): Decimal =>
 	values.reduce((total, value) => total.plus(value), new Decimal(0));
 
-/** The row's balance as the buckets so far have left it: stored plus every delta on it. */
 export const deductionRowToCurrentBalance = ({
 	row,
 	deltas,
@@ -33,7 +32,6 @@ export const deductionRowToCurrentBalance = ({
 		sumOf(deltasOn({ row, deltas }).map((delta) => delta.balanceDelta)),
 	);
 
-/** Units charged to the row's rate card so far: stored attribution plus every attribution delta on the owner. */
 export const deductionRowToRateUnits = ({
 	row,
 	deltas,
@@ -55,7 +53,6 @@ export const deductionRowToRateUnits = ({
 		),
 	);
 
-/** Every delta on the row, whichever balance on it moved. */
 const rowDeltasOn = ({
 	table,
 	id,
@@ -67,7 +64,6 @@ const rowDeltasOn = ({
 }): DeductionDelta[] =>
 	deltas.filter((delta) => delta.table === table && delta.id === id);
 
-/** Deltas summed by the map key they moved; a key that nets to zero is left out. */
 const sumByEntityKey = ({
 	deltas,
 	amountOf,
@@ -97,7 +93,6 @@ const definedEntries = <Value>(record: Record<string, Value | undefined>) =>
 		Object.entries(record).filter(([, value]) => value !== undefined),
 	);
 
-/** Attribution moved on the owning row, by key: units and credits together. */
 const attributionIncrementsOn = ({
 	id,
 	deltas,
@@ -131,10 +126,6 @@ const attributionIncrementsOn = ({
 	);
 };
 
-/**
- * The rows to emit changes for: the selection in draw order, then any other row a delta names. A finalize's unwind
- * can land on a row the current selection leaves out (a past-due product, an expired rollover); it must not be dropped.
- */
 const rowIdsToChange = ({
 	table,
 	selectedIds,
@@ -150,7 +141,6 @@ const rowIdsToChange = ({
 	]),
 ];
 
-/** Deltas are the log; a row change adds what every delta on one row moved. Nothing is set, so the change composes with any other writer of the row. */
 export const deltasToRowChanges = ({
 	context,
 	deltas,

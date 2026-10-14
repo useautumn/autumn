@@ -14,7 +14,6 @@ export function useCustomerExportRealtime({
 }): { progress: CustomerExportProgress | null } {
 	const triggerRunId = customerExport?.trigger_run_id ?? undefined;
 	const publicAccessToken = customerExport?.public_access_token ?? undefined;
-	// Without a token the underlying api client throws, so it must stay disabled.
 	const enabled = Boolean(triggerRunId && publicAccessToken);
 
 	const { run, error } = useRealtimeRun(triggerRunId, {
@@ -24,8 +23,6 @@ export function useCustomerExportRealtime({
 		onComplete,
 	});
 
-	// Polling still reports status, so a dead subscription only costs smoothness.
-	// Its last frame must not be merged over the poll, or the bar sticks there.
 	if (error || !run) return { progress: null };
 
 	return {

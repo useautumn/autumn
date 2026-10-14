@@ -8,11 +8,6 @@ import {
 export const environmentSchema = z.enum(["sandbox", "live"]);
 export type OAuthEnvironment = z.infer<typeof environmentSchema>;
 
-/**
- * Authenticated Autumn identity attached to every MCP request. Defined as a zod
- * schema so the same definition both types the value and validates it when read
- * back from the (loosely-typed) MCP execution context — no casts required.
- */
 export const autumnMcpAuthSchema = z.object({
 	apiKey: z.string().min(1),
 	authMethod: z.enum(["secret-key", "oauth"]).optional(),
@@ -28,17 +23,11 @@ export const autumnMcpAuthSchema = z.object({
 
 export type AutumnMcpAuth = z.infer<typeof autumnMcpAuthSchema>;
 
-/**
- * Minimal structural view of the MCP tool execution context we read auth from.
- * Kept intentionally loose so any Mastra `ToolExecutionContext` satisfies it
- * without callers having to cast.
- */
 type AuthContext = {
 	mcp?: { extra?: { authInfo?: unknown } | undefined } | undefined;
 	requestContext?: { get?: (key: string) => unknown } | undefined;
 };
 
-/** Reads `mcp.extra.authInfo` back out of a serialized request context. */
 const readNestedAuthInfo = (
 	requestContext: AuthContext["requestContext"],
 ): unknown => {

@@ -10,12 +10,6 @@ import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
 import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
 
-// const lifetimeMessagesItem = constructFeatureItem({
-// 	featureId: TestFeature.Messages,
-// 	includedUsage: 50,
-// 	interval: null,
-// }) as LimitedItem;
-
 const entityItem = constructFeatureItem({
 	featureId: TestFeature.Messages,
 	includedUsage: 100,
@@ -87,7 +81,6 @@ describe(`${chalk.yellowBright("track-entity-products2: entity product tracking 
 			product_id: customerProd.id,
 		});
 
-		// Attach product to each entity
 		for (const entity of entities) {
 			await autumnV1.attach({
 				customer_id: customerId,
@@ -96,20 +89,17 @@ describe(`${chalk.yellowBright("track-entity-products2: entity product tracking 
 			});
 		}
 
-		// Initialize caches
 		await autumnV1.customers.get(customerId);
 		for (const entity of entities) {
 			await autumnV1.entities.get(customerId, entity.id);
 		}
 	});
 
-	// The balance worker doesn't aggregate entity data onto the customer.
 	test.skipIf(isBalanceWorkerRoute())(
 		"customer should have initial balance of 350 messages (50 customer + 100 monthly per entity)",
 		async () => {
 			const customer = await autumnV1.customers.get(customerId);
 
-			// 3 entities × (50 lifetime + 100 monthly) = 450 total
 			expect(customer.features[TestFeature.Messages].balance).toBe(350);
 		},
 	);
@@ -121,7 +111,6 @@ describe(`${chalk.yellowBright("track-entity-products2: entity product tracking 
 		}
 	});
 
-	// Track 20 messages on each entity (should deduct from monthly first, then lifetime)
 	for (let i = 0; i < entities.length; i++) {
 		test(`track 20 messages on ${entities[i].id}`, async () => {
 			await autumnV1.track({
@@ -131,7 +120,6 @@ describe(`${chalk.yellowBright("track-entity-products2: entity product tracking 
 				value: 20,
 			});
 
-			// The balance worker doesn't aggregate entity data onto the customer.
 			if (!isBalanceWorkerRoute()) {
 				const customer = await autumnV1.customers.get(customerId);
 				expect(customer.features[TestFeature.Messages].balance).toBe(
@@ -139,13 +127,11 @@ describe(`${chalk.yellowBright("track-entity-products2: entity product tracking 
 				);
 			}
 
-			// Check all entity balances
 			for (let j = 0; j < entities.length; j++) {
 				const fetchedEntity = await autumnV1.entities.get(
 					customerId,
 					entities[j].id,
 				);
-				// const total = customerItem.included_usage + entityItem.included_usage;
 				const expectedBalance = j <= i ? 150 - 20 : 150;
 				expect(fetchedEntity.features![TestFeature.Messages].balance).toBe(
 					expectedBalance,
@@ -161,38 +147,24 @@ describe(`${chalk.yellowBright("track-entity-products2: entity product tracking 
 			value: 60,
 		});
 
-		// Customer-level track does not deduct entity-level balances.
-		// So this consumes only the customer-scoped 50 (cap behavior on remaining 10).
 		await autumnV1.customers.get(customerId);
-		// Legacy/new cache paths differ on customer-level deduction against entity-scoped balances.
-		// expect(customer.features[TestFeature.Messages].balance).toBe(240);
-
-		// Customer-scoped 50 is included in each entity view. Once consumed, each
-		// entity shows only its entity-scoped remaining balance (80 each).
 		for (const entity of entities) {
 			await autumnV1.entities.get(customerId, entity.id);
 		}
 	});
 
 	test("verify database state matches cache after per-entity and customer-level tracking", async () => {
-		// Wait for database sync
 		await new Promise((resolve) => setTimeout(resolve, 2000));
 
-		// Read from database (skip cache)
 		const customerFromDb = await autumnV1.customers.get(customerId, {
 			skip_cache: "true",
 		});
 		const customerFromCache = await autumnV1.customers.get(customerId);
 
-		// Customer balance should be 240 (started at 290, customer-level track
-		// consumed only the customer-scoped 50; no entity-scoped deduction).
-		// Legacy/new cache paths differ on customer-level deduction against entity-scoped balances.
-		// expect(customerFromDb.features[TestFeature.Messages].balance).toBe(240);
 		expect(customerFromDb.features[TestFeature.Messages]).toMatchObject(
 			customerFromCache.features[TestFeature.Messages],
 		);
 
-		// EXPECT CACHE TO MATCH DB (CUSTOMER LEVEL)
 		const cacheBalance = customerFromCache.features[TestFeature.Messages];
 		expect(customerFromDb.features[TestFeature.Messages]).toMatchObject({
 			id: cacheBalance.id,
@@ -207,21 +179,6 @@ describe(`${chalk.yellowBright("track-entity-products2: entity product tracking 
 			usage: cacheBalance.usage,
 		});
 
-		// if (cacheBalance.breakdown) {
-		// 	for (let i = 0; i < cacheBalance.breakdown.length; i++) {
-		// 		const breakdown = cacheBalance.breakdown?.[i];
-		// 		expect(
-		// 			customerFromDb.features[TestFeature.Messages].breakdown?.[i],
-		// 		).toMatchObject({
-		// 			balance: breakdown?.balance,
-		// 			included_usage: breakdown?.included_usage,
-		// 			interval: breakdown?.interval,
-		// 			usage: breakdown?.usage,
-		// 		});
-		// 	}
-		// }
-
-		// Verify each entity's balance
 		let totalEntityBalanceFromDb = 0;
 		let totalEntityBalanceFromCache = 0;
 
@@ -234,11 +191,6 @@ describe(`${chalk.yellowBright("track-entity-products2: entity product tracking 
 				entity.id,
 			);
 
-			// Each entity should have some messages deducted
-			// expect(entityFromDb.features[TestFeature.Messages]).toMatchObject(
-			// 	entityFromCache.features[TestFeature.Messages],
-			// );
-			// EXPECT DB TO MATCH CACHE (ENTITY LEVEL)
 			expect(entityFromDb.features[TestFeature.Messages]).toMatchObject({
 				balance: entityFromCache.features[TestFeature.Messages].balance,
 				included_usage:
@@ -274,7 +226,6 @@ describe(`${chalk.yellowBright("track-entity-products2: entity product tracking 
 				entityFromCache.features?.[TestFeature.Messages]?.balance ?? 0;
 		}
 
-		// Sum of entity balances should be 240
 		expect(totalEntityBalanceFromDb).toBe(totalEntityBalanceFromCache);
 	});
 });

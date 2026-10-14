@@ -43,12 +43,6 @@ export type LiveChat = {
 	footer: (meta: { turns: number; wallMs: number; costUsd: number }) => void;
 };
 
-/**
- * Streams the conversation as it happens — each user turn, tool call, and
- * agent reply is printed the moment the SDK emits it, like watching a live
- * session. Only used when a single arm runs (concurrent arms would
- * interleave; they use the atomic per-turn blocks instead).
- */
 export const createLiveChat = ({
 	arm,
 	workspaceDir,
@@ -60,8 +54,6 @@ export const createLiveChat = ({
 }): LiveChat => {
 	const color = arm.endsWith("without") ? chalk.yellow : chalk.cyan;
 	let headerPrinted = false;
-	// The opening user turn is enqueued before the SDK's init event carries
-	// the header metadata, so it waits here until the header goes out.
 	let pendingUser: string | null = null;
 
 	const speech = (
@@ -74,8 +66,6 @@ export const createLiveChat = ({
 		write(block);
 	};
 
-	// Exploration calls (reads, greps, ls…) are batched onto shared dim lines;
-	// key calls (skills, writes) and errors get their own line.
 	let pendingExploration: string[] = [];
 	const flushExploration = () => {
 		if (pendingExploration.length === 0) return;
@@ -86,7 +76,6 @@ export const createLiveChat = ({
 
 	return {
 		header: ({ skillLoaded, authSource, model }) => {
-			// The SDK re-emits init (e.g. per streamed user message); one header.
 			if (headerPrinted) return;
 			const skillNote =
 				skillLoaded === undefined
@@ -126,7 +115,6 @@ export const createLiveChat = ({
 		},
 		toolResult: (tool) => {
 			const { result } = tool;
-			// Success output is noise at this zoom level; surface only failures.
 			if (!result?.isError) return;
 			const flat = result.text.replaceAll("\n", " ").trim();
 			if (!flat) return;

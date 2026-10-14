@@ -1,7 +1,3 @@
-/**
- * Contract: child-plan previews expose selected parent versions and their effective license diffs.
- * Parent versioning is based on parent customers, while the target license version follows the child update.
- */
 import { expect, test } from "bun:test";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { items } from "@tests/utils/fixtures/items.js";

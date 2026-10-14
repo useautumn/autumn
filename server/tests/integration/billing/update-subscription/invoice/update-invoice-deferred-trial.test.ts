@@ -11,17 +11,6 @@ import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 
-/**
- * Invoice Mode Tests - Deferred Plan Activation: Trial Removal
- *
- * - Case 4: Remove trial (finalized, deferred) — browser checkout
- * - Case 4B: Remove trial (draft, deferred) — browser checkout
- */
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// CASE 4: TRIAL REMOVAL - FINALIZED INVOICE, DEFERRED ACTIVATION
-// ═══════════════════════════════════════════════════════════════════════════════
-
 test.concurrent(`${chalk.yellowBright("invoice-deferred: remove trial (finalized, deferred)")}`, async () => {
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
 	const priceItem = items.monthlyPrice({ price: 20 });
@@ -40,7 +29,6 @@ test.concurrent(`${chalk.yellowBright("invoice-deferred: remove trial (finalized
 		actions: [s.attach({ productId: proTrial.id })],
 	});
 
-	// Remove trial by passing free_trial: null
 	const updateParams = {
 		customer_id: customerId,
 		product_id: proTrial.id,
@@ -52,7 +40,6 @@ test.concurrent(`${chalk.yellowBright("invoice-deferred: remove trial (finalized
 
 	const preview = await autumnV1.subscriptions.previewUpdate(updateParams);
 
-	// Should charge full price ($20) since trial is being removed
 	expect(preview.total).toBe(20);
 
 	const result = await autumnV1.subscriptions.update(updateParams);
@@ -80,12 +67,11 @@ test.concurrent(`${chalk.yellowBright("invoice-deferred: remove trial (finalized
 
 	await expectCustomerInvoiceCorrect({
 		customer,
-		count: 2, // Initial trial attach ($0) + update
+		count: 2,
 		latestTotal: preview.total,
 		latestStatus: "open",
 	});
 
-	// Before payment - balance should be 100 (trial)
 	expectCustomerFeatureCorrect({
 		customer,
 		featureId: TestFeature.Messages,
@@ -106,17 +92,12 @@ test.concurrent(`${chalk.yellowBright("invoice-deferred: remove trial (finalized
 		productId: proTrial.id,
 	});
 
-	// After payment - balance should still be 100 (now paid, no longer trial)
 	expectCustomerFeatureCorrect({
 		customer: customerAfterPayment,
 		featureId: TestFeature.Messages,
 		balance: 100,
 	});
 });
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// CASE 4B: TRIAL REMOVAL - DRAFT INVOICE, DEFERRED ACTIVATION
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(`${chalk.yellowBright("invoice-deferred: remove trial (draft, deferred)")}`, async () => {
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
@@ -136,7 +117,6 @@ test.concurrent(`${chalk.yellowBright("invoice-deferred: remove trial (draft, de
 		actions: [s.attach({ productId: proTrial.id })],
 	});
 
-	// Remove trial AND update items - increase messages to 200, price to $30
 	const newMessagesItem = items.monthlyMessages({ includedUsage: 200 });
 	const newPriceItem = items.monthlyPrice({ price: 30 });
 
@@ -152,7 +132,6 @@ test.concurrent(`${chalk.yellowBright("invoice-deferred: remove trial (draft, de
 
 	const preview = await autumnV1.subscriptions.previewUpdate(updateParams);
 
-	// Should charge full new price ($30) since trial is being removed
 	expect(preview.total).toBe(30);
 
 	const result = await autumnV1.subscriptions.update(updateParams);
@@ -178,32 +157,27 @@ test.concurrent(`${chalk.yellowBright("invoice-deferred: remove trial (draft, de
 
 	await expectCustomerInvoiceCorrect({
 		customer,
-		count: 2, // Initial trial attach ($0) + update
+		count: 2,
 		latestTotal: preview.total,
 		latestStatus: "draft",
 	});
 
-	// Before payment - features should NOT have changed yet (deferred activation)
-	// Product should still be trialing
 	const productBeforePayment = customer.products?.find(
 		(p) => p.id === proTrial.id,
 	);
 	expect(productBeforePayment?.status).toBe("trialing");
-	// Balance should still be 100 (original trial value, NOT the new 200)
 	expectCustomerFeatureCorrect({
 		customer,
 		featureId: TestFeature.Messages,
 		balance: 100,
 	});
 
-	// Finalize the invoice
 	const finalizedInvoice = await ctx.stripeCli.invoices.finalizeInvoice(
 		result.invoice!.stripe_id,
 	);
 	expect(finalizedInvoice.status).toBe("open");
 	expect(finalizedInvoice.hosted_invoice_url).toBeDefined();
 
-	// Complete payment
 	await completeInvoiceCheckout({
 		url: finalizedInvoice.hosted_invoice_url!,
 		ctx,
@@ -218,13 +192,11 @@ test.concurrent(`${chalk.yellowBright("invoice-deferred: remove trial (draft, de
 		productId: proTrial.id,
 	});
 
-	// After payment - product should no longer be trialing
 	const productAfterPayment = customerAfterPayment.products?.find(
 		(p) => p.id === proTrial.id,
 	);
 	expect(productAfterPayment?.status).toBe("active");
 
-	// Balance should now be 200 (new plan activated after payment)
 	expectCustomerFeatureCorrect({
 		customer: customerAfterPayment,
 		featureId: TestFeature.Messages,

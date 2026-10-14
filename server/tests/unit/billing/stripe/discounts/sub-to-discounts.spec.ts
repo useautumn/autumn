@@ -1,13 +1,3 @@
-/**
- * Unit tests for subToDiscounts function.
- *
- * Tests conversion of Stripe subscription discounts to internal format:
- * - Handles undefined/null subscriptions
- * - Filters out string references (non-expanded discounts)
- * - Extracts expanded coupon objects correctly
- * - Handles multiple discounts
- */
-
 import { describe, expect, test } from "bun:test";
 import { contexts } from "@tests/utils/fixtures/db/contexts";
 import { discounts } from "@tests/utils/fixtures/db/discounts";
@@ -16,8 +6,6 @@ import chalk from "chalk";
 import { subToDiscounts } from "@/internal/billing/v2/providers/stripe/utils/discounts/subToDiscounts";
 
 const ctx = contexts.create({});
-
-// ============ TESTS ============
 
 describe(chalk.yellowBright("subToDiscounts"), () => {
 	describe(chalk.cyan("Empty/undefined inputs"), () => {
@@ -65,7 +53,7 @@ describe(chalk.yellowBright("subToDiscounts"), () => {
 				object: "discount",
 				start: Date.now() / 1000,
 				source: {
-					coupon: "coupon_string_ref", // Not expanded
+					coupon: "coupon_string_ref",
 					type: "coupon",
 				},
 			};

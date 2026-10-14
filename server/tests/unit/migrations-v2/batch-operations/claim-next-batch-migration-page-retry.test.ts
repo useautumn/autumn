@@ -36,7 +36,6 @@ const captureClaimQuery = async ({
 		migrationInternalId: "mig_internal_test",
 		migrationRunId: "mrun_retry",
 		limit: 5000,
-		// `only` gives the planner a non-empty customer filter without a DB.
 		controls: { only: ["cus_scoped"], retryItemStatuses },
 	});
 
@@ -46,7 +45,6 @@ const captureClaimQuery = async ({
 
 const arrayParams = (params: unknown[]): string[][] =>
 	params.filter((param): param is string[] => Array.isArray(param));
-// The checkpoint anti-join binds each excluded status as its own scalar.
 const scalarParams = (params: unknown[]): string[] =>
 	params.filter((param): param is string => typeof param === "string");
 

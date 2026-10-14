@@ -10,7 +10,6 @@ import {
 import { mergePooledBalancePlans } from "../billingPlan/mergePooledBalancePlans";
 import { pooledBalancePlanHasChanges } from "../billingPlan/pooledBalancePlan";
 
-/** Later columns win and deltas add up; build splits compatible replacements and deltas for the executors. */
 const mergeCustomerEntitlementUpdates = ({
 	base,
 	incoming,
@@ -77,11 +76,6 @@ export type AutumnBillingPlanBuilder = ReturnType<
 	typeof createAutumnBillingPlanBuilder
 >;
 
-/**
- * Gathers a handler's writes into one AutumnBillingPlan so they land as one step (one worker mutation
- * on the rollout) instead of one statement per task. Tasks stay pure: they read the snapshot, or a
- * row as the plan so far leaves it, and append.
- */
 export const createAutumnBillingPlanBuilder = ({
 	customerId,
 }: {
@@ -150,7 +144,6 @@ export const createAutumnBillingPlanBuilder = ({
 			);
 		},
 
-		/** Planned column replacements before deltas, for a task that refines an earlier replacement. */
 		projectedCustomerEntitlement: <T extends FullCustomerEntitlement>(
 			customerEntitlement: T,
 		): T => ({

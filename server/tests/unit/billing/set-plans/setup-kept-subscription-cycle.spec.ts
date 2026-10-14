@@ -1,5 +1,3 @@
-/** A cancelled subscription rebuilt around a kept plan continues that plan's cycle, charging nothing before it. */
-
 import { describe, expect, test } from "bun:test";
 import {
 	BillingInterval,

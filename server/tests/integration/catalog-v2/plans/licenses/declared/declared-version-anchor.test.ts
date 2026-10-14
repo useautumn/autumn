@@ -1,12 +1,3 @@
-/**
- * catalogV2.update — declared licenses[] version anchor (`version_slug`).
- *
- * Contract:
- *   Stated slug → that child row.
- *   Omitted on an existing link → keep license_internal_product_id (no move).
- *   Omitted on a new link → child's active row (create-default, not a repoint).
- *   Unknown slug → 400.
- */
 import { expect, test } from "bun:test";
 import { ErrCode } from "@autumn/shared";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils.js";
@@ -23,7 +14,6 @@ import {
 	withCatalogPlans,
 } from "../utils/seedLicensePlans.js";
 
-/** Child v1 (10) + active v2 (50), no parents yet. */
 const seedChildWithTwoVersions = async ({
 	autumn,
 	childId,

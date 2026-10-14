@@ -21,7 +21,6 @@ function formatDaysAsReadable(totalDays: number): string {
 	});
 }
 
-/** Generates edit items for trial period changes */
 export function generateTrialChanges({
 	customerProduct,
 	removeTrial,
@@ -58,7 +57,6 @@ export function generateTrialChanges({
 		return changes;
 	}
 
-	// If trial is not enabled (collapsed), don't generate changes for new trials
 	if (!trialEnabled && !isCurrentlyTrialing) {
 		return changes;
 	}

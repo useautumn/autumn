@@ -80,7 +80,6 @@ export const shouldRetrySqsJobError = ({
 	switch (jobName) {
 		case JobName.PersistPublishedBalanceTransitions:
 			return true;
-		// A replay may hit the balance worker's own outage; that is the same transient the request did.
 		case JobName.CustomerCreationRecovery:
 		case JobName.EntityCreationRecovery:
 			return (
@@ -92,22 +91,16 @@ export const shouldRetrySqsJobError = ({
 		case JobName.SyncBalanceBatchV4:
 		case JobName.RefreshEntityAggregate:
 			return isTransientDbError({ error });
-		// Signal jobs are meaningless without Redis: an unreachable Redis must
-		// leave the message in SQS for redelivery, not swallow-and-ack.
 		case JobName.SyncCustomerDirty:
 		case JobName.Track:
 		case JobName.UpdateBalance:
 			return isTransientDbError({ error }) || isTransientRedisError({ error });
-		// Finalize replays also redeliver while a dying attempt's claim marker
-		// clears — dropping one leaks the customer's reserved balance.
 		case JobName.FinalizeLock:
 			return (
 				isTransientDbError({ error }) ||
 				isTransientRedisError({ error }) ||
 				isClaimContestedError({ error })
 			);
-		// Top-up shares the customer billing lock — retry on collision with attach or
-		// checkout, safe only while AUTO_TOPUP_RETRY_SUPPRESSION_MS outlasts the chain.
 		case JobName.AutoTopUp:
 			return (
 				error instanceof RecaseError && error.code === ErrCode.LockAlreadyExists
@@ -165,7 +158,6 @@ export const processMessage = async ({
 			return;
 		}
 
-		// Reset-ID payload (no orgId/env): builds its own per-org contexts.
 		if (job.name === JobName.BatchResetCustomerEntitlementsV2) {
 			await batchResetCustomerEntitlementsV2({
 				db,
@@ -202,7 +194,6 @@ export const processMessage = async ({
 			return;
 		}
 
-		// Jobs below need worker context
 		const usesCustomerCache =
 			job.name === JobName.Track ||
 			job.name === JobName.UpdateBalance ||
@@ -275,8 +266,6 @@ export const processMessage = async ({
 		}
 
 		if (actionHandlers.includes(job.name as JobName)) {
-			// Note: action handlers need BullMQ queue for nested jobs
-			// This will need to be refactored when migrating action handlers to SQS
 			await runActionHandlerTask({
 				ctx,
 				jobName: job.name as JobName,
@@ -468,7 +457,6 @@ export const processMessage = async ({
 	};
 
 	// Queue dwell = SQS SentTimestamp → processing start. Total message age:
-	// includes prior delivery attempts on retry (SentTimestamp never resets).
 	const sentAtMs = Number(message.Attributes?.SentTimestamp);
 	const receiveCount = Number(message.Attributes?.ApproximateReceiveCount);
 
@@ -493,9 +481,6 @@ export const processMessage = async ({
 		});
 	} catch (error) {
 		const ctx = workerCtx ?? { logger: workerLogger };
-		// Sync jobs: re-throw infrastructure errors so the message stays in SQS.
-		// Application errors (RecaseError, InternalError) are swallowed — they
-		// won't fix on retry. DB errors (connection, timeout) will.
 		const willRetry = shouldRetrySqsJobError({ jobName: job.name, error });
 
 		if (shouldReportJobFailure({ willRetry, receiveCount, retryBudget })) {

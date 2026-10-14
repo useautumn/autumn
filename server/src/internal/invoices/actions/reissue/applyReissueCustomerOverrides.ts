@@ -7,10 +7,6 @@ import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCust
 const taxIdKey = ({ type, value }: { type: string; value: string }) =>
 	`${type}:${value}`;
 
-/**
- * Makes the customer's registrations equal the given set. New ones are created
- * before anything is deleted, so a rejected number leaves the old set intact.
- */
 const replaceCustomerTaxIds = async ({
 	stripeCli,
 	stripeCustomerId,
@@ -59,11 +55,6 @@ const replaceCustomerTaxIds = async ({
 	);
 };
 
-/**
- * Writes the customer-level corrections. These persist whether or not the
- * reissue completes: an address or tax number fixed here is meant to hold for
- * this invoice and every later one.
- */
 export const applyReissueCustomerOverrides = async ({
 	ctx,
 	stripeCli,
@@ -105,8 +96,6 @@ export const applyReissueCustomerOverrides = async ({
 		});
 	}
 
-	// Autumn is the source of truth the next getOrCreateStripeCustomer pushes to
-	// Stripe, so an email fixed only in Stripe would come straight back.
 	if (resolvedEmail || overrides?.name) {
 		await CusService.update({
 			ctx,

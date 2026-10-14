@@ -1,10 +1,3 @@
-/**
- * pickStricterUsageLimit: the multi-plan collapse comparator for usage_limits.
- * Same interval -> lower limit wins. Different intervals -> lower per-day rate
- * wins (the resolver enforces a single window per feature, so the genuinely
- * stricter effective cap must be chosen, not the lower raw number).
- */
-
 import { describe, expect, test } from "bun:test";
 import {
 	type DbUsageLimit,
@@ -45,8 +38,6 @@ describe("pickStricterUsageLimit", () => {
 	});
 
 	test("different intervals: lower per-day RATE wins, not lower raw limit", () => {
-		// 100/day = 100/day rate; 2000/month ≈ 66.7/day rate. The monthly cap is
-		// stricter despite the larger raw number — raw comparison would be wrong.
 		const perDay = limit(100, ResetInterval.Day);
 		const perMonth = limit(2000, ResetInterval.Month);
 		expect(pickStricterUsageLimit(perDay, perMonth)).toBe(perMonth);
@@ -54,14 +45,12 @@ describe("pickStricterUsageLimit", () => {
 	});
 
 	test("different intervals: the genuinely stricter daily cap wins", () => {
-		// 10/day = 10/day; 2000/month ≈ 66.7/day -> the daily cap is stricter.
 		const perDay = limit(10, ResetInterval.Day);
 		const perMonth = limit(2000, ResetInterval.Month);
 		expect(pickStricterUsageLimit(perDay, perMonth)).toBe(perDay);
 	});
 
 	test("week vs year normalize correctly", () => {
-		// 70/week = 10/day; 100/year ≈ 0.27/day -> yearly is far stricter.
 		const perWeek = limit(70, ResetInterval.Week);
 		const perYear = limit(100, ResetInterval.Year);
 		expect(pickStricterUsageLimit(perWeek, perYear)).toBe(perYear);
@@ -75,8 +64,6 @@ describe("pickStricterUsageLimit", () => {
 	});
 
 	test("equal rate across DIFFERENT intervals: utc still wins", () => {
-		// 100/day and 700/week are both 100/day, so the rate comparison ties and
-		// the anchor tiebreak decides.
 		const utcWeekly = limit(700, ResetInterval.Week, true, "utc");
 		const cycleDaily = limit(100, ResetInterval.Day, true, "billing_cycle");
 		expect(pickStricterUsageLimit(utcWeekly, cycleDaily)).toBe(utcWeekly);
@@ -84,7 +71,6 @@ describe("pickStricterUsageLimit", () => {
 	});
 
 	test("a stricter rate beats a utc anchor", () => {
-		// The anchor is only a tiebreak: it must never override a lower rate.
 		const utcLoose = limit(1000, ResetInterval.Day, true, "utc");
 		const cycleTight = limit(5, ResetInterval.Day, true, "billing_cycle");
 		expect(pickStricterUsageLimit(utcLoose, cycleTight)).toBe(cycleTight);
@@ -103,8 +89,6 @@ describe("pickStricterUsageLimit", () => {
 	});
 
 	test("legacy rows without an anchor read as billing_cycle", () => {
-		// Stored rows are jsonb cast with drizzle's $type; nothing parses them on
-		// read, so pre-field rows arrive with `anchor` absent.
 		const legacy = { ...limit(200, ResetInterval.Day) } as DbUsageLimit;
 		delete (legacy as Partial<DbUsageLimit>).anchor;
 		const utc = limit(200, ResetInterval.Day, true, "utc");

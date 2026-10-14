@@ -6,7 +6,6 @@ import {
 } from "@autumn/balance-engine";
 import type { PartitionProcessorScope } from "../types/partitionProcessor.js";
 
-/** After the drop: an empty record telling the log's readers another writer changed the customer, and which entity when the evict named one. */
 export const logEvict = async ({
 	scope,
 	command,

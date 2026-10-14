@@ -2,16 +2,10 @@ import type { SkillFile } from "./formats/types.js";
 import { parseFrontmatter } from "./ingest/frontmatter.js";
 import { publishedSkillName } from "./publishedSkillName.js";
 
-// Inline a docs page into the SKILL.md body.
 const DOCS_TAG = /<docs\s+([^>]*?)\/>/g;
-// Split a docs page into references/<slug>.md, leaving a pointer in the body.
 const REFERENCE_TAG = /<reference\s+([^>]*?)\/>/g;
-// Split a sibling content file into references/<slug>.md, leaving a pointer.
 const PART_TAG = /<part\s+([^>]*?)\/>/g;
-// Point at another skill's reference file WITHOUT copying it — the target is
-// resolved at generate time so deleting/moving it breaks the build.
 const POINTER_TAG = /<pointer\s+([^>]*?)\/>/g;
-// Point at a prerequisite skill the agent should load first.
 const SKILL_TAG = /<skill\s+([^>]*?)\/>/g;
 const ATTR = /(\w+)="([^"]*)"/g;
 
@@ -40,13 +34,6 @@ const slugFromUrl = (url: string): string => {
 	return anchor ? `${page}-${anchor}` : page;
 };
 
-/**
- * Compose a skill from its mdx: read the frontmatter (name/description) and
- * resolve insertion tags. `<docs url="…" />` inlines a translated docs page;
- * `<reference url="…" when="…" />` splits it into a `references/<slug>.md` file
- * (progressive disclosure) and leaves a pointer in the body. `resolveDocs` is
- * injected so this stays filesystem-free.
- */
 export const composeSkill = ({
 	path,
 	text,
@@ -69,7 +56,6 @@ export const composeSkill = ({
 	const references: SkillFile[] = [];
 	const requires: string[] = [];
 
-	// MDX comments are authoring-only; strip first so commented-out tags never execute.
 	const withoutComments = body.replace(/\{\/\*[\s\S]*?\*\/\}/g, "");
 
 	const withSkillRefs = withoutComments.replace(
@@ -83,7 +69,6 @@ export const composeSkill = ({
 			if (!requires.includes(published)) {
 				requires.push(published);
 			}
-			// `text` renders verbatim, for prose that already names the prerequisite.
 			if (text) {
 				return text;
 			}
@@ -124,7 +109,6 @@ export const composeSkill = ({
 			if (!when) {
 				throw new Error(`<pointer file="${file}"> in ${path} is missing "when"`);
 			}
-			// Validation only — a deleted or moved target fails the build here.
 			resolveContentFile(file);
 			const owner = /\.\.\/([\w-]+)\//.exec(file)?.[1];
 			const slug = file.split("/").pop()?.replace(/\.[^.]+$/, "");
@@ -144,16 +128,12 @@ export const composeSkill = ({
 			throw new Error(`<part> in ${path} is missing a file`);
 		}
 		const contents = resolveContentFile(file).trim();
-		// `inline="true"` keeps the part top-level in SKILL.md (always loaded)
-		// instead of splitting it into a progressively-disclosed references/ file.
 		if (inline === "true") {
 			return contents;
 		}
 		if (!when) {
 			throw new Error(`<part file="${file}"> in ${path} is missing "when"`);
 		}
-		// Output is always references/<basename>.md, so the source file may live
-		// alongside the skill or under its own references/ folder.
 		const slug = file
 			.split("/")
 			.pop()

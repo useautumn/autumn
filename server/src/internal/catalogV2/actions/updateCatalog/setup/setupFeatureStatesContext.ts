@@ -32,10 +32,6 @@ const emptyFeatureState = ({
 	pricesOverflow: false,
 });
 
-/**
- * Existence flags for every touched feature + rewrite COUNTs for entries that
- * may rewrite references. One DB round-trip — no current→next, no row bags.
- */
 export const setupFeatureStatesContext = async ({
 	ctx,
 	params,
@@ -46,7 +42,6 @@ export const setupFeatureStatesContext = async ({
 	const { db, org, env, features } = ctx;
 	const touchedFeatures = paramsToTouchedFeatures({ ctx, params });
 
-	// Keyed by the CURRENT id: an internal_id rename states the new id.
 	const entryByFeatureId = new Map(
 		(params.features ?? []).map((entry) => [
 			resolveCurrentFeature({ features, entry })?.id ?? entry.feature_id,

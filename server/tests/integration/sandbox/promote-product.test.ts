@@ -33,11 +33,6 @@ import { generatePublishableKey } from "@/utils/encryptUtils.js";
 import { generateId } from "@/utils/genUtils.js";
 import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
 
-// Exercises the promote path: from inside a named sandbox sub-org, copying a
-// plan to Production/Sandbox must land in the MASTER org's env, never the
-// sub-org's own (unviewable) Live env. Drives copyProductForOrgs directly with
-// explicit from/to orgs (the handler owns the auth gate that decides these).
-
 const { db } = initDrizzle();
 const suffix = crypto.randomUUID().slice(0, 8);
 
@@ -148,8 +143,6 @@ const seedSub = async (sourceOrg: Organization) => {
 		}) as unknown as CreateProductV2Params,
 	});
 
-	// A variant plan (base_internal_product_id set) to prove cross-org promote
-	// of a variant is refused.
 	await createProduct({
 		ctx: { ...seedCtx, features: allFeatures },
 		data: products.base({
@@ -241,7 +234,6 @@ describe("promote product from a named sandbox to the master org", () => {
 
 		expect(masterLiveProducts.map((p) => p.id)).toContain(PLAN);
 		expect(masterLiveFeatures.map((f) => f.id)).toContain(DASH);
-		// The sub-org's own Live env stays empty — the old void target.
 		expect(subLiveProducts.length).toBe(0);
 	});
 
@@ -287,7 +279,6 @@ describe("promote product from a named sandbox to the master org", () => {
 			env: AppEnv.Live,
 		});
 		const ids = masterLiveFeatures.map((f) => f.id);
-		// The credit system AND the metered feature its schema references.
 		expect(ids).toContain(CREDIT);
 		expect(ids).toContain(MSG);
 	});

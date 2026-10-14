@@ -1,5 +1,3 @@
-/** When the new subscription's first payment needs authentication, set_plans finishes once it is paid and retires the replaced subscription's Pending rows. */
-
 import { expect, test } from "bun:test";
 import {
 	expectSubscriptionReplaced,
@@ -15,7 +13,6 @@ import chalk from "chalk";
 
 const SUCCESS_PAYMENT_METHOD = "pm_card_visa";
 
-/** Pays the first invoice of the incomplete subscription that isn't the replaced one. */
 const payNewSubscriptionInvoice = async ({
 	ctx,
 	replacedSubscriptionId,

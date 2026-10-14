@@ -1,6 +1,3 @@
-// tw:solo: withVoidFlag mutates the shared org.config, so this file can't share a worker.
-// Only void when the WHOLE subscription is cancelled: a surviving add-on keeps its invoice.
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3 } from "@autumn/shared";
 import { driveProductPastDue } from "@tests/integration/billing/utils/driveProductPastDue";
@@ -35,7 +32,6 @@ test(`${chalk.yellowBright("edge: shared sub - cancelling past_due main does NOT
 				customerIdsToDelete: [customerId],
 			}),
 		],
-		// Add-on attaches onto the SAME Stripe subscription as pro (no new_billing_subscription).
 		actions: [
 			s.attach({ productId: pro.id }),
 			s.attach({ productId: addon.id }),
@@ -49,7 +45,6 @@ test(`${chalk.yellowBright("edge: shared sub - cancelling past_due main does NOT
 			const customerBefore =
 				await autumnV1.customers.get<ApiCustomerV3>(customerId);
 			const stripeCustomerId = customerBefore.stripe_id;
-			// Precondition: a single shared Stripe subscription carrying both products' items.
 			const subs = await ctx.stripeCli.subscriptions.list({
 				customer: stripeCustomerId!,
 			});
@@ -57,7 +52,6 @@ test(`${chalk.yellowBright("edge: shared sub - cancelling past_due main does NOT
 			expect(subs.data[0].items.data.length).toBeGreaterThanOrEqual(2);
 			const subscriptionId = subs.data[0].id;
 
-			// Force ONLY the main product past_due; the add-on stays on the live subscription.
 			await driveProductPastDue({
 				ctx,
 				testClockId: testClockId!,
@@ -78,7 +72,6 @@ test(`${chalk.yellowBright("edge: shared sub - cancelling past_due main does NOT
 			});
 
 			const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
-			// Main gone; add-on survives -> the Stripe op was an "update", not a whole-sub cancel.
 			await expectCustomerProducts({ customer, notPresent: [pro.id] });
 			expect(customer.products.some((p) => p.id === addon.id)).toBe(true);
 
@@ -87,7 +80,6 @@ test(`${chalk.yellowBright("edge: shared sub - cancelling past_due main does NOT
 			});
 			expect(subsAfter.data.length).toBeGreaterThan(0);
 
-			// The shared sub's open invoice must NOT be voided (it covers the surviving add-on).
 			const invoices = await ctx.stripeCli.invoices.list({
 				customer: stripeCustomerId!,
 				subscription: subscriptionId,

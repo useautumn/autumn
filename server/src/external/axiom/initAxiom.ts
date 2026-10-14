@@ -26,7 +26,6 @@ export const isAxiomConfigured = (): boolean =>
 
 let atomAxiomClient: Axiom | undefined;
 
-/** Reads only the dataset every Atom's logs are exported to; null where its token is unset. */
 export const getAtomAxiomClient = (): Axiom | null => {
 	const { AXIOM_ATOM_ADMIN_TOKEN, AXIOM_ORG_ID } = getAxiomEnv();
 	if (!AXIOM_ATOM_ADMIN_TOKEN) return null;

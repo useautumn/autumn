@@ -1,10 +1,3 @@
-/**
- * A check expands `balance.feature` only when asked for by that name, on both balance routes.
- *
- * Red (before): the balance worker route also expanded it for a bare `feature`; legacy did not.
- * Green (after): both expand it for `balance.feature` alone.
- */
-
 import { expect, test } from "bun:test";
 import { ApiVersion, CheckExpand, type CheckResponseV3 } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
@@ -33,7 +26,6 @@ test.concurrent(
 			autumnV2_3.check<CheckResponseV3>({
 				customer_id: customerId,
 				feature_id: TestFeature.Messages,
-				// A bare `feature` is not a documented expand; the body carries it unvalidated.
 				expand: expand as CheckExpand[],
 			});
 

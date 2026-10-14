@@ -1,10 +1,3 @@
-/**
- * Grader proofs for the existing-catalog and push cases: each golden passes every
- * config verdict, an empty workspace fails them all, and the near-misses the
- * cases exist to catch (v1 repriced in place; the row recreated without its
- * server id) fail exactly the verdict that guards them. Org verdicts need a
- * live org and are not proved here.
- */
 import { expect, test } from "bun:test";
 import { mintVersion } from "../../cases/misc/existingCatalog/mintVersion.eval.ts";
 import {

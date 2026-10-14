@@ -8,21 +8,6 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-/**
- * Billing Behavior: next_cycle_only Error Tests
- *
- * Tests that verify billing_behavior: 'next_cycle_only' is rejected
- * in scenarios where deferring charges is not allowed:
- *
- * 1. Removing a free trial (must charge for the full plan)
- *
- * Free -> Paid creates a new subscription, where 'none' is a no-op, so it succeeds.
- */
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// FREE -> PAID TRANSITION
-// ═══════════════════════════════════════════════════════════════════════════════
-
 test.concurrent(`${chalk.yellowBright("next_cycle_only: free to paid upgrade creates the subscription and charges")}`, async () => {
 	const freeMessagesItem = items.monthlyMessages({ includedUsage: 50 });
 	const freeProduct = products.base({
@@ -66,10 +51,6 @@ test.concurrent(`${chalk.yellowBright("next_cycle_only: free to paid upgrade cre
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// REMOVING TRIAL ERRORS
-// ═══════════════════════════════════════════════════════════════════════════════
-
 test.concurrent(`${chalk.yellowBright("next_cycle_only error: removing free trial")}`, async () => {
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
 	const priceItem = items.monthlyPrice({ price: 20 });
@@ -88,7 +69,6 @@ test.concurrent(`${chalk.yellowBright("next_cycle_only error: removing free tria
 		actions: [s.attach({ productId: proTrial.id })],
 	});
 
-	// Try to remove trial with next_cycle_only - should fail
 	await expectAutumnError({
 		errCode: ErrCode.InvalidRequest,
 		func: async () => {
@@ -101,10 +81,6 @@ test.concurrent(`${chalk.yellowBright("next_cycle_only error: removing free tria
 		},
 	});
 });
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// VALID CASES (should NOT error)
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(`${chalk.yellowBright("next_cycle_only: paid to paid upgrade is allowed")}`, async () => {
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
@@ -120,7 +96,6 @@ test.concurrent(`${chalk.yellowBright("next_cycle_only: paid to paid upgrade is 
 		actions: [s.attach({ productId: "pro" })],
 	});
 
-	// Paid to paid upgrade with next_cycle_only should work
 	const newPriceItem = items.monthlyPrice({ price: 30 });
 	await autumnV1.subscriptions.update({
 		customer_id: customerId,
@@ -128,8 +103,6 @@ test.concurrent(`${chalk.yellowBright("next_cycle_only: paid to paid upgrade is 
 		items: [messagesItem, newPriceItem],
 		billing_behavior: "none",
 	});
-
-	// If we get here without error, test passes
 });
 
 test.concurrent(`${chalk.yellowBright("next_cycle_only: extending trial is allowed")}`, async () => {
@@ -150,7 +123,6 @@ test.concurrent(`${chalk.yellowBright("next_cycle_only: extending trial is allow
 		actions: [s.attach({ productId: proTrial.id })],
 	});
 
-	// Extending trial with next_cycle_only should work (no charge needed)
 	await autumnV1.subscriptions.update({
 		customer_id: customerId,
 		product_id: proTrial.id,
@@ -161,6 +133,4 @@ test.concurrent(`${chalk.yellowBright("next_cycle_only: extending trial is allow
 		},
 		billing_behavior: "none",
 	});
-
-	// If we get here without error, test passes
 });

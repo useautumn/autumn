@@ -135,7 +135,6 @@ describe("repo install settings", () => {
 		for (const dir of dirs.splice(0)) rmSync(dir, { recursive: true });
 	});
 
-	// On main the autumn-js workspace carries the same version as the pin; it must still come from npm.
 	test("an exact pin equal to a workspace's version installs from npm", async () => {
 		const bunfig = await Bun.file(join(root, "bunfig.toml")).text();
 		const installSection = bunfig.slice(bunfig.indexOf("[install]"));

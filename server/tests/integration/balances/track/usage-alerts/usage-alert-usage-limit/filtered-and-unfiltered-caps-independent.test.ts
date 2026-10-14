@@ -30,7 +30,6 @@ afterAll(async () => {
 	await webhook?.cleanup();
 });
 
-// ── B13: filtered and unfiltered caps alert independently ───────────────────
 test(`${chalk.yellowBright("ul-alert12: filtered and unfiltered caps alert independently")}`, async () => {
 	const customerId = "ul-alert-two-caps-1";
 	await setupCustomer({ customerId, planId: "ul-alert-two-caps" });
@@ -66,7 +65,6 @@ test(`${chalk.yellowBright("ul-alert12: filtered and unfiltered caps alert indep
 		],
 	});
 
-	// 40 / 50 = 80% of the filtered cap, 20% of the unfiltered one.
 	await track({ customerId, value: 40, properties: { apiKeyId: "key-a" } });
 	const filtered = await waitForUsageAlert({
 		token: playToken,
@@ -82,7 +80,6 @@ test(`${chalk.yellowBright("ul-alert12: filtered and unfiltered caps alert indep
 		filterKey: "",
 	});
 
-	// 160 / 200 = 80% of the unfiltered cap; the filtered counter is untouched.
 	await track({ customerId, value: 120, properties: { apiKeyId: "key-b" } });
 	const unfiltered = await waitForUsageAlert({
 		token: playToken,

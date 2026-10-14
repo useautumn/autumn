@@ -49,7 +49,6 @@ export const matchesPlanItemFilter = ({
 	if (
 		filter.interval_count !== undefined &&
 		itemToBillingIntervalCount({ item }) !== filter.interval_count
-		// itemToEntIntervalCount({ item }) !== filter.interval_count
 	)
 		return false;
 

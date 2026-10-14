@@ -10,16 +10,6 @@ import { advanceTestClock } from "@tests/utils/stripeUtils";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// FREE-TO-FREE: ANCHOR DRIFT BUG REGRESSION
-//
-// The bug: setupResetCycleAnchor uses customerProduct.created_at instead of
-// customerProduct.starts_at. On the FIRST update this is harmless because both
-// values are ~equal. On the SECOND update, the intermediate CusProduct's
-// created_at has drifted forward (it's Date.now() at creation), causing
-// next_reset_at to shift away from the original anchor.
-// ═══════════════════════════════════════════════════════════════════════════════
-
 test.concurrent(`${chalk.yellowBright("free-to-free: anchor drifts after multiple updates (regression)")}`, async () => {
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
 	const free = products.base({ items: [messagesItem] });
@@ -30,7 +20,6 @@ test.concurrent(`${chalk.yellowBright("free-to-free: anchor drifts after multipl
 		actions: [s.attach({ productId: "base" })],
 	});
 
-	// Track some usage
 	const messagesUsage = 20;
 	await autumnV1.track(
 		{
@@ -41,7 +30,6 @@ test.concurrent(`${chalk.yellowBright("free-to-free: anchor drifts after multipl
 		{ timeout: 2000 },
 	);
 
-	// Record the original reset time and started_at
 	const customerInitial =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	const originalResetAt =
@@ -51,7 +39,6 @@ test.concurrent(`${chalk.yellowBright("free-to-free: anchor drifts after multipl
 	const originalStartedAt = customerInitial.products[0].started_at;
 	expect(originalStartedAt).toBeDefined();
 
-	// ─── Step 1: Advance 3 days, do first free-to-free update ─────────
 	await advanceTestClock({
 		stripeCli: ctx.stripeCli,
 		testClockId: testClockId!,
@@ -73,7 +60,6 @@ test.concurrent(`${chalk.yellowBright("free-to-free: anchor drifts after multipl
 	const customerAfter1 =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// After first update: anchor should be preserved (bug is latent here)
 	expectCustomerFeatureCorrect({
 		customer: customerAfter1,
 		featureId: TestFeature.Messages,
@@ -83,7 +69,6 @@ test.concurrent(`${chalk.yellowBright("free-to-free: anchor drifts after multipl
 		resetsAt: originalResetAt!,
 	});
 
-	// started_at should be preserved from the original product
 	expect(customerAfter1.products[0].started_at).toEqual(originalStartedAt);
 
 	expectCustomerInvoiceCorrect({
@@ -91,7 +76,6 @@ test.concurrent(`${chalk.yellowBright("free-to-free: anchor drifts after multipl
 		count: 0,
 	});
 
-	// ─── Step 2: Advance 3 more days (T+6), do second free-to-free update ─
 	await advanceTestClock({
 		stripeCli: ctx.stripeCli,
 		testClockId: testClockId!,
@@ -113,10 +97,6 @@ test.concurrent(`${chalk.yellowBright("free-to-free: anchor drifts after multipl
 	const customerAfter2 =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// After second update: THIS IS WHERE THE BUG MANIFESTS
-	// With the bug, the anchor drifts to the intermediate CusProduct's
-	// created_at (T+3 days), causing next_reset_at to shift ~3 days forward.
-	// The correct behavior is to preserve the original anchor from starts_at.
 	expectCustomerFeatureCorrect({
 		customer: customerAfter2,
 		featureId: TestFeature.Messages,
@@ -126,7 +106,6 @@ test.concurrent(`${chalk.yellowBright("free-to-free: anchor drifts after multipl
 		resetsAt: originalResetAt!,
 	});
 
-	// started_at should still match the original
 	expect(customerAfter2.products[0].started_at).toEqual(originalStartedAt);
 
 	expectCustomerInvoiceCorrect({

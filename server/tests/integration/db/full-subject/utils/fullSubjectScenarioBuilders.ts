@@ -549,8 +549,6 @@ export const buildCustomerMeteredScenario = ({
 	};
 };
 
-/** Two independently-metered features (Messages + Users) on one product —
- *  for multi-feature deduction tests (per-feature queue idempotency keys). */
 export const buildCustomerTwoMeteredScenario = ({
 	ctx,
 	name,

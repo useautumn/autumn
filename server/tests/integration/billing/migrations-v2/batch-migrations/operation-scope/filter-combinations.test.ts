@@ -1,14 +1,3 @@
-/**
- * Filter COMBINATIONS on multi-product customers:
- *
- *   - catalog matcher forms combine ($in + $nin on plan_id);
- *   - catalog + row constraints AND together (plan_id $in + recurring);
- *   - $or expands per branch: each matched product gets ITS branch's row
- *     scope, on the batch lane;
- *   - $or branches landing on the SAME product (an OR of row predicates)
- *     route to the per-customer lane — and still produce the right rows.
- */
-
 import { test } from "bun:test";
 import type { ApiCustomerV5 } from "@autumn/shared";
 import { items } from "@tests/utils/fixtures/items";
@@ -97,8 +86,6 @@ test.concurrent(
 			],
 		});
 
-		// paid AND recurring: excludes the free row (not paid) AND the one-off
-		// row (paid but not recurring).
 		await runScopedMigration({
 			ctx,
 			migrationClient: autumnV2_2,
@@ -149,7 +136,6 @@ test.concurrent(
 			],
 		});
 
-		// Branch 1: plan A, plain rows only. Branch 2: plan B, any row.
 		await runScopedMigration({
 			ctx,
 			migrationClient: autumnV2_2,
@@ -160,12 +146,10 @@ test.concurrent(
 			customerFilter: { plan_id: { $in: [planA.id, planB.id] } },
 		});
 
-		// Plain customer: A row (custom: false branch) + B row both gain.
 		expectWordsOnPlans({
 			customer: await autumnV2_2.customers.get<ApiCustomerV5>(plainId),
 			planIds: [planA.id, planB.id],
 		});
-		// Customized customer's A row fails branch 1's custom: false — untouched.
 		expectWordsOnPlans({
 			customer: await autumnV2_2.customers.get<ApiCustomerV5>(customizedId),
 			planIds: [],
@@ -185,8 +169,6 @@ test.concurrent(
 			actions: [s.billing.attach({ productId: plan.id })],
 		});
 
-		// Both branches match the same product → OR of row predicates on one
-		// product → not expressible as one scope → per-customer lane.
 		await runScopedMigration({
 			ctx,
 			migrationClient: autumnV2_2,
@@ -201,8 +183,6 @@ test.concurrent(
 			expectedLane: "per_customer",
 		});
 
-		// The plain free row matches both branches — it must gain Words exactly
-		// once.
 		expectWordsOnPlans({
 			customer: await autumnV2_2.customers.get<ApiCustomerV5>(customerId),
 			planIds: [plan.id],

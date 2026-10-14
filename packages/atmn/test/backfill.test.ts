@@ -1,8 +1,3 @@
-/**
- * After a push applies, the minted internal ids land in the fixtures that
- * created them — the config-side half of addressing rows by identity.
- */
-
 import { expect, test } from "bun:test";
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { runPush } from "../src/actions/push";
@@ -75,15 +70,12 @@ test("a push writes the minted internalId into each created fixture, once", asyn
 	);
 	expect(printed.join("")).toContain("Wrote internalId into 2 fixtures.");
 
-	// A second apply reporting the same creates must not write a second id.
 	const before = readFileSync(`${dir}/features.ts`, "utf8");
 	// biome-ignore lint/suspicious/noExplicitAny: a fake client
 	await runPush({ client: client as any, cwd: dir, write: () => {} });
 	expect(readFileSync(`${dir}/features.ts`, "utf8")).toBe(before);
 });
 
-/** A dynamic value is the fixture's own choice, and it wins at runtime: a
- * second pair beside it would be dead text that hides the mismatch. */
 test("a fixture whose internalId is an expression is left alone", () => {
 	const dynamicDir = `${import.meta.dir}/.tmp/backfill-dynamic`;
 	rmSync(dynamicDir, { recursive: true, force: true });

@@ -12,7 +12,6 @@ const phaseHasItems = (
 	return phase.items !== undefined && phase.items.length > 0;
 };
 
-/** Strips empty phases from both ends (mirrors production filterEmptyPhases). */
 const filterEmptyPhases = (
 	phases: Stripe.SubscriptionScheduleUpdateParams.Phase[],
 ): Stripe.SubscriptionScheduleUpdateParams.Phase[] => {
@@ -27,10 +26,6 @@ const filterEmptyPhases = (
 	return phases.slice(firstNonEmptyIndex, lastNonEmptyIndex + 1);
 };
 
-/**
- * Classifies raw phases into one of 4 scenarios.
- * Returns the scenario, non-empty phases, and the expected cancel_at (in seconds) if applicable.
- */
 export const classifyPhaseScenario = ({
 	rawPhases,
 }: {

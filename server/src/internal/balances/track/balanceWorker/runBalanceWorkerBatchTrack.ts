@@ -11,10 +11,6 @@ import { trackParamsToTrackCommands } from "./balanceWorkerTrackRequest.js";
 
 type QueueClient = Pick<BalanceWorkerClient, "queue">;
 
-/**
- * One item's commands. The item's request id seeds their command ids, so identical items never collide,
- * and its body key rides along for the consumer to claim: the API claims nothing for a batch.
- */
 const batchEntryToCommands = ({
 	ctx,
 	entry: { item, index, tokens },
@@ -36,7 +32,6 @@ const batchEntryToCommands = ({
 	}));
 };
 
-/** Every item is checked before any is queued, so a malformed item fails the whole batch as it does today. */
 export async function runBalanceWorkerBatchTrack({
 	ctx,
 	entries,

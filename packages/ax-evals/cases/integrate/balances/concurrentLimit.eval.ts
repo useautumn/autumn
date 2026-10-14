@@ -5,12 +5,6 @@ import { initIntegrationEval } from "../../../src/initIntegrationEval.ts";
 import { concurrentWorkflowsCatalog } from "../catalogs/concurrentWorkflowsCatalog.ts";
 import { fixtureUser, integrateScenario } from "../integrateShared.ts";
 
-/**
- * TRACK flow: non-consumable level. workflows counts slots IN USE, so usage
- * must move up on start and back down on stop. The graded trap: a
- * track-and-forget integration never frees a slot — the third start after a
- * stop stays blocked, and final usage drifts above 2.
- */
 export const concurrentLimit: IntegrationCase = {
 	name: "integrate-concurrent-limit",
 	fixture: "notes-api",

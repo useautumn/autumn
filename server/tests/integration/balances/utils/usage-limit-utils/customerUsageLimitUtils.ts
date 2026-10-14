@@ -14,10 +14,6 @@ import { pollUntilAsserted } from "@tests/utils/genUtils.js";
 import type { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { timeout } from "@/utils/genUtils.js";
 
-/**
- * Arms a windowed hard usage cap via the customer's `usage_limits` billing
- * control; `interval` sets the window.
- */
 export const setCustomerUsageLimit = async ({
 	autumn,
 	customerId,
@@ -52,7 +48,6 @@ export const setCustomerUsageLimit = async ({
 	await timeout(3000);
 };
 
-/** Fetches the customer (cached read) and asserts a feature balance. */
 export const expectCustomerBalance = async ({
 	autumn,
 	customerId,
@@ -72,12 +67,6 @@ export const expectCustomerBalance = async ({
 	expectBalanceCorrect({ customer, featureId, granted, remaining, usage });
 };
 
-/**
- * Fetches the customer and asserts the usage_limits entry's current window
- * `usage` (and optionally the configured limit). `skipCache` reads through to
- * Postgres, verifying the synced counter rather than the Redis one. Polls until
- * the assertion holds, since counters sync from Redis lazily.
- */
 export const expectCustomerUsageLimit = async ({
 	autumn,
 	customerId,
@@ -115,7 +104,6 @@ export const expectCustomerUsageLimit = async ({
 	});
 };
 
-/** Fetches the customer through to Postgres and asserts the feature has no usage_limits entry. */
 export const expectCustomerUsageLimitAbsent = async ({
 	autumn,
 	customerId,

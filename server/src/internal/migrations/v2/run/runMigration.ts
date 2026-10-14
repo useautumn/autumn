@@ -106,7 +106,6 @@ export const runPreparedMigration = async ({
 	return { processed, completion: "exhausted", cursor };
 };
 
-/** Top-level migration run: prepare -> per-scope filter+iterate -> per-item ops. */
 export const runMigration = async ({
 	ctx,
 	migration,

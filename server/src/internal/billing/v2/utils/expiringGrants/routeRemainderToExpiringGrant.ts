@@ -8,11 +8,6 @@ import type { AutoTopupRebalanceDelta } from "@/internal/balances/autoTopUp/comp
 import { buildExpiringGrant } from "./buildExpiringGrant";
 import { entitlementToExpiry } from "./entitlementExpiry";
 
-/**
- * For an expiring item, the remainder of a purchase becomes its own loose
- * grant rather than topping up the shared balance. Paydown deltas against
- * sibling overage are left untouched — healing debt is not a purchase.
- */
 export const routeRemainderToExpiringGrant = ({
 	deltas,
 	customerEntitlement,
@@ -29,7 +24,6 @@ export const routeRemainderToExpiringGrant = ({
 	deltas: AutoTopupRebalanceDelta[];
 	customEntitlements: Entitlement[];
 	insertCustomerEntitlements: InsertCustomerEntitlement[];
-	/** Where the remainder lands: the purchased cusEnt, its expiring grant, or null when paydown took it all. */
 	creditedCustomerEntitlementId: string | null;
 } => {
 	if (!entitlementToExpiry({ entitlement: customerEntitlement.entitlement })) {

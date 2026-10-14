@@ -26,7 +26,6 @@ const featurePricesOf = ({
 	featureId: string;
 }) => prices.filter((price) => price.config.feature_id === featureId);
 
-/** The plan price that bills `featureId` with the requested behavior, if any. */
 export const findOptionalInvoiceFeaturePrice = ({
 	prices,
 	featureId,
@@ -40,7 +39,6 @@ export const findOptionalInvoiceFeaturePrice = ({
 		matchesBehavior({ price, billingBehavior }),
 	);
 
-/** The plan price that bills `featureId` with the requested behavior. */
 export const findInvoiceFeaturePrice = ({
 	prices,
 	featureId,

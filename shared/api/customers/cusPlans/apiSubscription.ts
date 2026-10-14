@@ -8,7 +8,6 @@ export const ApiSubscriptionSchema = z.object({
 	default: z.boolean(),
 	add_on: z.boolean(),
 
-	// Flags / timestamps
 	status: z.enum(["active", "scheduled", "expired"]),
 	past_due: z.boolean(),
 	canceled_at: z.number().nullable(),

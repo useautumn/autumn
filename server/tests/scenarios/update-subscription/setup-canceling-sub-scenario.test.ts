@@ -4,13 +4,6 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-/**
- * Setup-only scenario: leaves a customer with a sub in the `canceling`
- * state (canceled_at set, end-of-cycle) in the unit-test org so the UI
- * gap can be inspected live in the dashboard:
- *   Manage Cancellation → Cancel immediately → no refund-to-card option.
- */
-
 test(`${chalk.yellowBright("setup: customer with canceling sub for dashboard UI repro")}`, async () => {
 	const customerId = "ui-repro-canceling-sub";
 

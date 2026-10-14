@@ -5,8 +5,6 @@ import { promisify } from "node:util";
 
 const run = promisify(execFile);
 
-/** Push a config into the run org before the agent starts. The file stays in
- * the workspace — with the ids push wrote back — as the agent's starting point. */
 export const seedCatalog = async ({
 	workspaceDir,
 	config,

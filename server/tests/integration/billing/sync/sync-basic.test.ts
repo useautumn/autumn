@@ -1,28 +1,3 @@
-/**
- * Sync Basic Tests
- *
- * Tests the Stripe → Autumn sync flow: fetching proposals from Stripe
- * subscriptions and executing sync to create Autumn customer products.
- *
- * Test A: Customer has no product. Create a Stripe sub using Pro's real
- *         Stripe price ID, then sync it → Pro should be active.
- *
- * Test B: Customer starts on Free. Create a Stripe sub for Pro, sync
- *         with expire_previous → Free should be expired, Pro active.
- *
- * Test C: Pro + add-on in a single Stripe subscription → sync both.
- *
- * Test D: Two separate Stripe subscriptions for the same customer.
- *
- * Test E: Sync after advancing test clock by 2 weeks (reset anchoring).
- *
- * Test F: Sync a trialing Stripe subscription — customer product should be
- *         Trialing with trial_ends_at matching Stripe's trial_end.
- *
- * Test G: Stripe subscription with an inline (ad-hoc) price that doesn't
- *         exist in Autumn — proposals should still list it with price metadata.
- */
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3 } from "@autumn/shared";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
@@ -48,10 +23,6 @@ import {
 	getAllStripePriceIds,
 } from "./utils/syncTestUtils";
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST A: Sync Pro subscription onto a customer with no existing product
-// ═══════════════════════════════════════════════════════════════════════════════
-
 test.concurrent(`${chalk.yellowBright("sync-basic: sync Pro onto empty customer")}`, async () => {
 	const customerId = "sync-basic-empty";
 
@@ -67,7 +38,6 @@ test.concurrent(`${chalk.yellowBright("sync-basic: sync Pro onto empty customer"
 		actions: [],
 	});
 
-	// 1. Create a Stripe subscription using the real Stripe price ID
 	const stripeSubscription = await createStripeSubscriptionFromProduct({
 		ctx,
 		customerId,
@@ -76,7 +46,6 @@ test.concurrent(`${chalk.yellowBright("sync-basic: sync Pro onto empty customer"
 	expect(stripeSubscription.id).toBeDefined();
 	expect(stripeSubscription.status).toBe("active");
 
-	// 2. Fetch sync proposals — should find the subscription and auto-match
 	const proposalsResponse: SyncProposalsResponse = await autumnV1.post(
 		"/billing.sync_proposals",
 		{ customer_id: customerId },
@@ -90,13 +59,11 @@ test.concurrent(`${chalk.yellowBright("sync-basic: sync Pro onto empty customer"
 	expect(matchedProposal).toBeDefined();
 	expect(matchedProposal!.stripe_subscription_status).toBe("active");
 
-	// Verify at least one item was auto-matched to our product
 	const matchedItem = matchedProposal!.items.find(
 		(item) => item.matched_plan_id === pro.id,
 	);
 	expect(matchedItem).toBeDefined();
 
-	// 3. Execute sync
 	const syncResult = await autumnV1.post("/billing.sync", {
 		customer_id: customerId,
 		mappings: [
@@ -110,7 +77,6 @@ test.concurrent(`${chalk.yellowBright("sync-basic: sync Pro onto empty customer"
 	expect(syncResult.results).toBeDefined();
 	expect(syncResult.results[0].success).toBe(true);
 
-	// 4. Verify customer now has the Pro product active
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
 	await expectProductActive({
@@ -126,13 +92,8 @@ test.concurrent(`${chalk.yellowBright("sync-basic: sync Pro onto empty customer"
 		usage: 0,
 	});
 
-	// 5. Clean up: cancel the Stripe subscription we created directly
 	await ctx.stripeCli.subscriptions.cancel(stripeSubscription.id);
 });
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST B: Sync Pro subscription onto a customer that starts with Free
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(`${chalk.yellowBright("sync-basic: sync Pro onto customer with Free, expire previous")}`, async () => {
 	const customerId = "sync-basic-free-to-pro";
@@ -160,7 +121,6 @@ test.concurrent(`${chalk.yellowBright("sync-basic: sync Pro onto customer with F
 		actions: [s.attach({ productId: free.id })],
 	});
 
-	// Verify customer starts with Free active
 	const customerBefore =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	await expectProductActive({
@@ -168,7 +128,6 @@ test.concurrent(`${chalk.yellowBright("sync-basic: sync Pro onto customer with F
 		productId: free.id,
 	});
 
-	// 1. Create a Stripe subscription using Pro's real Stripe price ID
 	const stripeSubscription = await createStripeSubscriptionFromProduct({
 		ctx,
 		customerId,
@@ -176,7 +135,6 @@ test.concurrent(`${chalk.yellowBright("sync-basic: sync Pro onto customer with F
 	});
 	expect(stripeSubscription.status).toBe("active");
 
-	// 2. Fetch sync proposals
 	const proposalsResponse: SyncProposalsResponse = await autumnV1.post(
 		"/billing.sync_proposals",
 		{ customer_id: customerId },
@@ -187,7 +145,6 @@ test.concurrent(`${chalk.yellowBright("sync-basic: sync Pro onto customer with F
 	);
 	expect(matchedProposal).toBeDefined();
 
-	// 3. Execute sync with expire_previous: true
 	const syncResult = await autumnV1.post("/billing.sync", {
 		customer_id: customerId,
 		mappings: [
@@ -201,7 +158,6 @@ test.concurrent(`${chalk.yellowBright("sync-basic: sync Pro onto customer with F
 
 	expect(syncResult.results[0].success).toBe(true);
 
-	// 4. Verify Pro is active, Free is expired (no longer in active products)
 	const customerAfter = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
 	await expectProductActive({
@@ -209,7 +165,6 @@ test.concurrent(`${chalk.yellowBright("sync-basic: sync Pro onto customer with F
 		productId: pro.id,
 	});
 
-	// Free should no longer be in the active products list
 	const freeProduct = (customerAfter.products ?? []).find(
 		(p: { id?: string }) => p.id === free.id,
 	);
@@ -217,7 +172,6 @@ test.concurrent(`${chalk.yellowBright("sync-basic: sync Pro onto customer with F
 		true,
 	);
 
-	// Verify messages feature now reflects Pro's allowance
 	expectCustomerFeatureCorrect({
 		customer: customerAfter,
 		featureId: TestFeature.Messages,
@@ -226,10 +180,6 @@ test.concurrent(`${chalk.yellowBright("sync-basic: sync Pro onto customer with F
 		usage: 0,
 	});
 });
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST C: Pro + add-on in a single Stripe subscription
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(`${chalk.yellowBright("sync-basic: pro + add-on in single Stripe subscription")}`, async () => {
 	const customerId = "sync-basic-pro-addon";
@@ -252,7 +202,6 @@ test.concurrent(`${chalk.yellowBright("sync-basic: pro + add-on in single Stripe
 		actions: [],
 	});
 
-	// 1. Create a single Stripe subscription with items from both products
 	const stripeSubscription = await createStripeSubscriptionFromProducts({
 		ctx,
 		customerId,
@@ -262,7 +211,6 @@ test.concurrent(`${chalk.yellowBright("sync-basic: pro + add-on in single Stripe
 	expect(stripeSubscription.status).toBe("active");
 	expect(stripeSubscription.items.data.length).toBeGreaterThanOrEqual(2);
 
-	// 2. Fetch sync proposals
 	const proposalsResponse: SyncProposalsResponse = await autumnV1.post(
 		"/billing.sync_proposals",
 		{ customer_id: customerId },
@@ -274,7 +222,6 @@ test.concurrent(`${chalk.yellowBright("sync-basic: pro + add-on in single Stripe
 	expect(matchedProposal).toBeDefined();
 	expect(matchedProposal!.items.length).toBeGreaterThanOrEqual(2);
 
-	// 3. Execute sync — map to both Pro and Add-on
 	const syncResult = await autumnV1.post("/billing.sync", {
 		customer_id: customerId,
 		mappings: [
@@ -292,19 +239,13 @@ test.concurrent(`${chalk.yellowBright("sync-basic: pro + add-on in single Stripe
 	expect(syncResult.results).toBeDefined();
 	expect(syncResult.results.length).toBe(2);
 
-	// 4. Verify both products are active
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
 	await expectProductActive({ customer, productId: pro.id });
 	await expectProductActive({ customer, productId: addon.id });
 
-	// 5. Clean up
 	await ctx.stripeCli.subscriptions.cancel(stripeSubscription.id);
 });
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST D: Two separate Stripe subscriptions for the same customer
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(`${chalk.yellowBright("sync-basic: two separate Stripe subscriptions")}`, async () => {
 	const customerId = "sync-basic-two-subs";
@@ -331,7 +272,6 @@ test.concurrent(`${chalk.yellowBright("sync-basic: two separate Stripe subscript
 		actions: [],
 	});
 
-	// 1. Create two separate Stripe subscriptions
 	const [stripeSub1, stripeSub2] = await Promise.all([
 		createStripeSubscriptionFromProduct({
 			ctx,
@@ -349,7 +289,6 @@ test.concurrent(`${chalk.yellowBright("sync-basic: two separate Stripe subscript
 	expect(stripeSub2.id).toBeDefined();
 	expect(stripeSub1.id).not.toBe(stripeSub2.id);
 
-	// 2. Fetch sync proposals — should see both subscriptions
 	const proposalsResponse: SyncProposalsResponse = await autumnV1.post(
 		"/billing.sync_proposals",
 		{ customer_id: customerId },
@@ -364,7 +303,6 @@ test.concurrent(`${chalk.yellowBright("sync-basic: two separate Stripe subscript
 	expect(proposal1).toBeDefined();
 	expect(proposal2).toBeDefined();
 
-	// 3. Execute sync — each subscription maps to its own plan
 	const syncResult = await autumnV1.post("/billing.sync", {
 		customer_id: customerId,
 		mappings: [
@@ -382,22 +320,16 @@ test.concurrent(`${chalk.yellowBright("sync-basic: two separate Stripe subscript
 	expect(syncResult.results).toBeDefined();
 	expect(syncResult.results.length).toBe(2);
 
-	// 4. Verify both products are active
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
 	await expectProductActive({ customer, productId: pro.id });
 	await expectProductActive({ customer, productId: premium.id });
 
-	// 5. Clean up
 	await Promise.all([
 		ctx.stripeCli.subscriptions.cancel(stripeSub1.id),
 		ctx.stripeCli.subscriptions.cancel(stripeSub2.id),
 	]);
 });
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST E: Sync after advancing test clock by 2 weeks (reset anchoring)
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(`${chalk.yellowBright("sync-basic: sync after advancing test clock 2 weeks")}`, async () => {
 	const customerId = "sync-basic-clock-advance";
@@ -416,7 +348,6 @@ test.concurrent(`${chalk.yellowBright("sync-basic: sync after advancing test clo
 
 	expect(testClockId).toBeDefined();
 
-	// 1. Create a Stripe subscription (automatically on the test clock)
 	const stripeSubscription = await createStripeSubscriptionFromProduct({
 		ctx,
 		customerId,
@@ -424,7 +355,6 @@ test.concurrent(`${chalk.yellowBright("sync-basic: sync after advancing test clo
 	});
 	expect(stripeSubscription.status).toBe("active");
 
-	// 2. Advance test clock by 2 weeks
 	await advanceTestClock({
 		stripeCli: ctx.stripeCli,
 		testClockId: testClockId!,
@@ -432,7 +362,6 @@ test.concurrent(`${chalk.yellowBright("sync-basic: sync after advancing test clo
 		waitForSeconds: 15,
 	});
 
-	// 3. Fetch sync proposals — subscription should still be active
 	const proposalsResponse: SyncProposalsResponse = await autumnV1.post(
 		"/billing.sync_proposals",
 		{ customer_id: customerId },
@@ -444,7 +373,6 @@ test.concurrent(`${chalk.yellowBright("sync-basic: sync after advancing test clo
 	expect(matchedProposal).toBeDefined();
 	expect(matchedProposal!.stripe_subscription_status).toBe("active");
 
-	// 4. Execute sync
 	const syncResult = await autumnV1.post("/billing.sync", {
 		customer_id: customerId,
 		mappings: [
@@ -458,7 +386,6 @@ test.concurrent(`${chalk.yellowBright("sync-basic: sync after advancing test clo
 	expect(syncResult.results).toBeDefined();
 	expect(syncResult.results[0].success).toBe(true);
 
-	// 5. Verify customer has Pro active with correct features
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
 	await expectProductActive({ customer, productId: pro.id });
@@ -471,10 +398,6 @@ test.concurrent(`${chalk.yellowBright("sync-basic: sync after advancing test clo
 		usage: 0,
 	});
 });
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST F: Sync a trialing Stripe subscription (trial_ends_at alignment)
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(`${chalk.yellowBright("sync-basic: sync trialing Stripe subscription")}`, async () => {
 	const customerId = "sync-basic-trial";
@@ -493,7 +416,6 @@ test.concurrent(`${chalk.yellowBright("sync-basic: sync trialing Stripe subscrip
 
 	expect(testClockId).toBeDefined();
 
-	// 1. Get the Stripe customer ID and price IDs for manual sub creation with trial
 	const [fullCustomer, fullProduct] = await Promise.all([
 		CusService.getFull({ ctx, idOrInternalId: customerId }),
 		ProductService.getFull({
@@ -507,7 +429,6 @@ test.concurrent(`${chalk.yellowBright("sync-basic: sync trialing Stripe subscrip
 	const stripeCustomerId = fullCustomer.processor!.id!;
 	const stripePriceIds = getAllStripePriceIds({ fullProduct });
 
-	// 2. Create a Stripe subscription with a 14-day trial
 	const trialDays = 14;
 	const trialParams: Stripe.SubscriptionCreateParams = {
 		customer: stripeCustomerId,
@@ -521,7 +442,6 @@ test.concurrent(`${chalk.yellowBright("sync-basic: sync trialing Stripe subscrip
 
 	const trialEndMs = stripeSubscription.trial_end! * 1000;
 
-	// 3. Advance test clock by 3 days (subscription should still be trialing)
 	await advanceTestClock({
 		stripeCli: ctx.stripeCli,
 		testClockId: testClockId!,
@@ -529,7 +449,6 @@ test.concurrent(`${chalk.yellowBright("sync-basic: sync trialing Stripe subscrip
 		waitForSeconds: 15,
 	});
 
-	// 4. Fetch sync proposals
 	const proposalsResponse: SyncProposalsResponse = await autumnV1.post(
 		"/billing.sync_proposals",
 		{ customer_id: customerId },
@@ -541,7 +460,6 @@ test.concurrent(`${chalk.yellowBright("sync-basic: sync trialing Stripe subscrip
 	expect(matchedProposal).toBeDefined();
 	expect(matchedProposal!.stripe_subscription_status).toBe("trialing");
 
-	// 5. Execute sync
 	const syncResult = await autumnV1.post("/billing.sync", {
 		customer_id: customerId,
 		mappings: [
@@ -554,7 +472,6 @@ test.concurrent(`${chalk.yellowBright("sync-basic: sync trialing Stripe subscrip
 
 	expect(syncResult.results[0].success).toBe(true);
 
-	// 6. Verify customer product is trialing with correct trial_ends_at
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
 	await expectProductTrialing({
@@ -563,10 +480,6 @@ test.concurrent(`${chalk.yellowBright("sync-basic: sync trialing Stripe subscrip
 		trialEndsAt: trialEndMs,
 	});
 });
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST G: Stripe subscription with an ad-hoc inline price (no Autumn match)
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(`${chalk.yellowBright("sync-basic: Stripe sub with inline ad-hoc price")}`, async () => {
 	const customerId = "sync-basic-adhoc-price";
@@ -583,14 +496,12 @@ test.concurrent(`${chalk.yellowBright("sync-basic: Stripe sub with inline ad-hoc
 		actions: [],
 	});
 
-	// 1. Get the Stripe customer ID
 	const fullCustomer = await CusService.getFull({
 		ctx,
 		idOrInternalId: customerId,
 	});
 	const stripeCustomerId = fullCustomer.processor!.id!;
 
-	// 2. Create a Stripe subscription with an inline price (no matching Autumn product)
 	const adHocProduct = await ctx.stripeCli.products.create({
 		name: "Ad-Hoc Service",
 	});
@@ -611,7 +522,6 @@ test.concurrent(`${chalk.yellowBright("sync-basic: Stripe sub with inline ad-hoc
 		await ctx.stripeCli.subscriptions.create(adHocParams);
 	expect(stripeSubscription.status).toBe("active");
 
-	// 3. Fetch sync proposals — should list the subscription with price metadata
 	const proposalsResponse: SyncProposalsResponse = await autumnV1.post(
 		"/billing.sync_proposals",
 		{ customer_id: customerId },
@@ -625,17 +535,14 @@ test.concurrent(`${chalk.yellowBright("sync-basic: Stripe sub with inline ad-hoc
 
 	const item = matchedProposal!.items[0];
 
-	// Price metadata should be populated even without an Autumn match
 	expect(item.unit_amount).toBe(4999);
 	expect(item.currency).toBe("usd");
 	expect(item.billing_scheme).toBe("per_unit");
 	expect(item.stripe_product_name).toBe("Ad-Hoc Service");
 
-	// No Autumn match expected
 	expect(item.matched_plan_id).toBeNull();
 	expect(item.match_method).toBeNull();
 
-	// 4. Sync it to Pro anyway (user manually picks a plan)
 	const syncResult = await autumnV1.post("/billing.sync", {
 		customer_id: customerId,
 		mappings: [
@@ -651,6 +558,5 @@ test.concurrent(`${chalk.yellowBright("sync-basic: Stripe sub with inline ad-hoc
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	await expectProductActive({ customer, productId: pro.id });
 
-	// 5. Clean up
 	await ctx.stripeCli.subscriptions.cancel(stripeSubscription.id);
 });

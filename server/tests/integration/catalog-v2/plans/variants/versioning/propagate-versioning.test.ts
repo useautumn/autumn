@@ -1,17 +1,3 @@
-/**
- * catalogV2.update — propagate.variants write semantics from the source.
- * existing/all_versions targets pin rows; new_version targets are plan-level
- * ({ plan_id } only) and the server resolves active-else-latest anchored row.
- *
- * Contract:
- *   existing + pin latest → latest only
- *   pin every version → each pinned row gets ITS OWN anchor's diff
- *   new_version + plan-level target, resolved row w/ customers → mint max+1 (named by new_version_slug)
- *   new_version + latest-but-inactive resolved row w/ customers → mint (not 400)
- *   new_version + plan-level target, resolved row w/o customers → edit in place + repoint
- *   pin historical only → that row follows; latest frozen
- */
-
 import { expect, test } from "bun:test";
 import { ResetInterval } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";

@@ -26,12 +26,6 @@ import type { InvoiceCreatedContext } from "../setupInvoiceCreatedContext";
 
 const STRIPE_ADD_LINES_MAX_PER_REQUEST = 100;
 
-/**
- * Checks if the subscription's trial just ended.
- * When a trial ends, Stripe creates the first real billing period where
- * `current_period_start` equals `trial_end`. In this case, we should skip
- * billing for consumable usage since trial usage is free.
- */
 const hasTrialJustEnded = ({
 	stripeSubscription,
 }: {
@@ -58,8 +52,6 @@ type ExistingAutumnLine = {
 const lineDiscountPercentOffFactor = (
 	stripeLineItem: Awaited<ReturnType<typeof getStripeInvoiceLineItems>>[number],
 ): number => {
-	// The line listing expands `discounts.source.coupon`; the coupon under
-	// `discount_amounts` stays an unexpanded id, so read the terms from here.
 	let factor = 1;
 	for (const discount of stripeLineItem.discounts ?? []) {
 		const coupon = discount?.source?.coupon;
@@ -72,7 +64,6 @@ const lineDiscountPercentOffFactor = (
 
 type ExistingAutumnLines = {
 	byLineItemId: Map<string, ExistingAutumnLine>;
-	/** Usage lines written before ids were invoice-scoped, keyed by customer price. */
 	legacyByCustomerPriceId: Map<string, ExistingAutumnLine[]>;
 };
 
@@ -183,14 +174,6 @@ const findPendingCarryItem = async ({
 	return undefined;
 };
 
-/**
- * The invoice is finalized, so the difference between what it billed and
- * what the line is worth now becomes a pending invoice item for the next
- * invoice. Percent coupons from the finalized invoice still apply to the
- * delta, fixed-amount coupons were already consumed, and the item is not
- * discountable again so next cycle's coupons cannot touch it. Negative
- * deltas (a credit line that grew) are carried the same way.
- */
 const carryUnbilledDeltaForward = async ({
 	ctx,
 	eventContext,
@@ -213,8 +196,6 @@ const carryUnbilledDeltaForward = async ({
 	const { currency } = lineItem.context;
 	const deltaAmount = stripeToAtmnAmount({ amount: deltaMinor, currency });
 	const carryId = carryLineItemId(lineItem);
-	// Only the carry id and amount: price and customer-price ids would let the
-	// next invoice's line storage mistake this item for that cycle's usage line.
 	const metadata = {
 		autumn_line_item_id: carryId,
 		autumn_line_amount: String(deltaAmount),
@@ -262,12 +243,6 @@ const carryUnbilledDeltaForward = async ({
 	});
 };
 
-/**
- * A retry can find a line that was written by an earlier attempt whose reset
- * never ran; usage tracked since then changed the amount. On a draft the line
- * is updated so the reset stays correct; on a finalized invoice the delta is
- * carried to the next invoice as a pending item before the reset proceeds.
- */
 const reconcileStaleExistingLines = async ({
 	ctx,
 	eventContext,
@@ -401,21 +376,6 @@ const addPendingLineItemsToInvoice = async ({
 	}
 };
 
-/**
- * Processes consumable (usage-in-arrear) prices for an invoice.
- * Adds usage line items to the invoice for the billing period, then plans the
- * cycle reset of the grants those lines billed.
- *
- * Returns the generated arrear line items so they can be used for matching
- * during line item storage.
- *
- * TODO: Handle conflict with entity consumable prices (Case B)
- * When a customer cancels end-of-cycle with entity-level consumables:
- * - subscription.deleted fires → creates arrear invoice via createInvoiceForArrearPrices
- * - invoice.created also fires → may try to add line items here
- * Risk: Double billing for entity-level consumables
- * Need to coordinate between the two handlers to prevent this.
- */
 export const processConsumablePricesForInvoiceCreated = async ({
 	ctx,
 	eventContext,
@@ -500,7 +460,6 @@ export const processConsumablePricesForInvoiceCreated = async ({
 	});
 
 	for (const update of updateCustomerEntitlements) {
-		// The rollover cap reads this row without its product, as this reset always has.
 		const { customer_product: _, ...customerEntitlement } =
 			update.customerEntitlement as FullCusEntWithFullCusProduct;
 		plan.updateCustomerEntitlement({

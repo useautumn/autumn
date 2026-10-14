@@ -7,7 +7,6 @@ import {
 	usageAlertIdentity,
 } from "@autumn/shared";
 
-// Stored alerts stay dormant when their cap goes away; only newly written alerts must resolve one.
 export const assertUsageLimitAlertsResolvable = ({
 	usageAlerts,
 	storedUsageAlerts,

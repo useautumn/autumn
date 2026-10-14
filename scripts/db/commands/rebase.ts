@@ -21,7 +21,6 @@ type Journal = {
 const REMOTE_REF = "origin/dev";
 
 export async function cmdRebase(): Promise<void> {
-	// 1. Bail on unresolved schema conflicts.
 	const unmerged = await run("git", ["diff", "--name-only", "--diff-filter=U"], {
 		cwd: REPO_ROOT,
 		stdio: "pipe",
@@ -40,7 +39,6 @@ export async function cmdRebase(): Promise<void> {
 		process.exit(1);
 	}
 
-	// 2. Read local + remote journals.
 	const localJournal = readLocalJournal();
 	const remoteJournal = await readRemoteJournal();
 
@@ -49,7 +47,6 @@ export async function cmdRebase(): Promise<void> {
 		return;
 	}
 
-	// 3. Find orphaned local entries — same idx as remote, but different tag/when.
 	const remoteByIdx = new Map<number, JournalEntry>();
 	for (const entry of remoteJournal.entries) remoteByIdx.set(entry.idx, entry);
 
@@ -72,7 +69,6 @@ export async function cmdRebase(): Promise<void> {
 		console.log(`  idx=${orphan.idx} tag=${orphan.tag}`);
 	}
 
-	// 4. Back up the orphaned files.
 	const backupDir = mkdtempSync(join(tmpdir(), "autumn-db-rebase-"));
 	console.log(`backup dir: ${backupDir}`);
 
@@ -88,7 +84,6 @@ export async function cmdRebase(): Promise<void> {
 		}
 	}
 
-	// 5. Delete orphans, then restore canonical journal + snapshots from origin/dev.
 	for (const orphan of orphans) {
 		const sql = join(MIGRATIONS_DIR, `${orphan.tag}.sql`);
 		const snapshot = join(META_DIR, `${formatIdx(orphan.idx)}_snapshot.json`);
@@ -118,7 +113,6 @@ export async function cmdRebase(): Promise<void> {
 	}
 
 	// 6. Regenerate non-interactively. drizzle-kit reads stdin for rename prompts;
-	// closing stdin makes it fail fast rather than hang.
 	const generate = await run("bun", ["-F", "@autumn/shared", "db:generate"], {
 		cwd: REPO_ROOT,
 		stdio: "pipe",
@@ -140,7 +134,6 @@ export async function cmdRebase(): Promise<void> {
 
 	console.log(generate.stdout);
 
-	// 7. Stage everything for the engineer.
 	await run("git", ["add", "shared/drizzle/"], { cwd: REPO_ROOT });
 
 	console.log("");
@@ -170,7 +163,6 @@ function restoreBackups(backups: Array<{ src: string; backup: string }>): void {
 		try {
 			copyFileSync(backup, src);
 		} catch {
-			// best-effort restore
 		}
 	}
 }

@@ -53,7 +53,6 @@ describe(`${chalk.yellowBright(`${testCase}: Testing per-entity track with concu
 			prefix: testCase,
 		});
 
-		// Attach product to customer
 		await autumnV1.attach({
 			customer_id: customerId,
 			product_id: pro.id,
@@ -65,7 +64,6 @@ describe(`${chalk.yellowBright(`${testCase}: Testing per-entity track with concu
 		const seatBalance = customer.features[TestFeature.Users].balance;
 		expect(seatBalance).toBe(5);
 
-		// Create 5 entities (seats)
 		const entities = [
 			{ id: "seat1", name: "Seat 1" },
 			{ id: "seat2", name: "Seat 2" },
@@ -82,13 +80,11 @@ describe(`${chalk.yellowBright(`${testCase}: Testing per-entity track with concu
 			});
 		}
 
-		// Verify each seat has 500 messages
 		for (const entity of entities) {
 			const entityRes = await autumnV1.entities.get(customerId, entity.id);
 			expect(entityRes.features![TestFeature.Messages].balance).toBe(500);
 		}
 
-		// Verify customer has 500 * 5 = 2500 messages
 		const customerRes = await autumnV1.customers.get(customerId);
 
 		expect(customerRes.features[TestFeature.Messages]).toBeDefined();
@@ -100,7 +96,6 @@ describe(`${chalk.yellowBright(`${testCase}: Testing per-entity track with concu
 	test("should enforce usage_limit of 600 per seat with concurrent 200-unit requests", async () => {
 		const entityId = "seat1";
 
-		// Verify seat1 has 500 included messages with 600 usage_limit
 		const entityRes = await autumnV1.entities.get(customerId, entityId);
 		expect(entityRes.features![TestFeature.Messages].balance).toBe(500);
 
@@ -111,8 +106,6 @@ describe(`${chalk.yellowBright(`${testCase}: Testing per-entity track with concu
 			`   Initial state: balance=${entityRes.features![TestFeature.Messages].balance}, usage_limit=${entityRes.features![TestFeature.Messages].usage_limit}`,
 		);
 
-		// Try 5 concurrent 200-unit sends to seat1
-		// With usage_limit of 600, only 3 should succeed (3×200=600 <= 600)
 		const promises = [
 			autumnV1.track({
 				customer_id: customerId,
@@ -162,7 +155,6 @@ describe(`${chalk.yellowBright(`${testCase}: Testing per-entity track with concu
 		expect(successCount).toBe(3);
 		expect(rejectedCount).toBe(2);
 
-		// Get final state
 		const finalEntityRes = await autumnV1.entities.get(customerId, entityId);
 		console.log(`\n📦 Final state for ${entityId}:`);
 		console.log(
@@ -178,7 +170,6 @@ describe(`${chalk.yellowBright(`${testCase}: Testing per-entity track with concu
 		expect(finalEntityRes.features![TestFeature.Messages].balance).toBe(-100);
 		expect(finalEntityRes.features![TestFeature.Messages].usage).toBe(600);
 
-		// Verify other seats remain untouched at 500
 		for (const seatId of ["seat2", "seat3", "seat4", "seat5"]) {
 			const otherSeatRes = await autumnV1.entities.get(customerId, seatId);
 			expect(otherSeatRes.features![TestFeature.Messages].balance).toBe(500);
@@ -188,10 +179,6 @@ describe(`${chalk.yellowBright(`${testCase}: Testing per-entity track with concu
 	test("should reflect concurrent per-entity deductions in non-cached customer after sync", async () => {
 		const entityId = "seat1";
 
-		// Expected: 3 successful requests × 200 units each = 600 units used
-		// Starting balance: 500, usage: 600, final balance: 500 - 600 = -100
-
-		// The Redis→Postgres sync is batched + queued; poll instead of a fixed wait.
 		const finalEntityRes = await pollUntil({
 			fetch: () =>
 				autumnV1.entities.get(customerId, entityId, { skip_cache: "true" }),
@@ -205,7 +192,6 @@ describe(`${chalk.yellowBright(`${testCase}: Testing per-entity track with concu
 			600,
 		);
 
-		// Verify other seats still at 500 in database
 		for (const seatId of ["seat2", "seat3", "seat4", "seat5"]) {
 			const otherSeatRes = await autumnV1.entities.get(customerId, seatId, {
 				skip_cache: "true",

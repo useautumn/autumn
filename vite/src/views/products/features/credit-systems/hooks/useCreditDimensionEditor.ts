@@ -5,12 +5,6 @@ import { useCreditRateRows } from "./useCreditRateRows";
 
 export type CreditDimensionEditor = ReturnType<typeof useCreditDimensionEditor>;
 
-/**
- * One rate-card row's dimension config, as three tables edit it: the dimensions
- * and their values, the rates keyed on those values, and the multipliers that
- * scale them. Dropping a dimension or value cascades into the rate drafts, which
- * is the only coupling between them.
- */
 export function useCreditDimensionEditor({
 	item,
 	onChange,

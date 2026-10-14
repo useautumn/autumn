@@ -38,7 +38,6 @@ export const getAttachScenario = ({
 		!isFreeProduct({ product: fullProduct }) &&
 		!isOneOffProduct({ product: fullProduct })
 	) {
-		// 1. If current same product is add on, and it's canceled
 		if (
 			curSameProduct &&
 			curSameProduct.product.id !== curScheduledProduct?.product.id
@@ -57,7 +56,6 @@ export const getAttachScenario = ({
 
 	if (!curMainProduct) return AttachScenario.New;
 
-	// 1. If current product is the same as the product, return active
 	if (curMainProduct?.product.id === fullProduct.id) {
 		if (isCustomerProductCanceling(curMainProduct)) {
 			return AttachScenario.Renew;

@@ -6,7 +6,6 @@ import type { FileProfile } from "../types/fileProfile.ts";
 
 const UPSERT_BATCH = 500;
 
-/** Every profile of a worker class, or only the named files'. */
 export const listFileProfiles = ({
 	db,
 	workerClass,

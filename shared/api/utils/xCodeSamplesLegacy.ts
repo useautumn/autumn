@@ -1,8 +1,3 @@
-/**
- * Generates x-codeSamples for OpenAPI specs (legacy format).
- * @param methodPath - The SDK method path (e.g., "balances.create")
- * @param example - The example params object
- */
 export const xCodeSamplesLegacy = ({
 	methodPath,
 	example,

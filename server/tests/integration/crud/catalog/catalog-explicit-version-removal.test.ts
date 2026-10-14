@@ -1,5 +1,3 @@
-/** Red either left omitted versions behind or hard-deleted referenced plans; green removes or archives safely. */
-
 import { expect, test } from "bun:test";
 import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";

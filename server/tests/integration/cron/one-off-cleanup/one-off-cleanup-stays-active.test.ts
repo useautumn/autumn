@@ -1,15 +1,3 @@
-/**
- * One-Off Customer Product Cleanup Tests - Stays Active
- *
- * Tests for scenarios where the cleanup cron job does NOT expire one-off
- * customer products because the conditions for expiration are not met.
- *
- * Key behaviors tested:
- * - Single product (no newer product exists) = stays active
- * - Product not depleted = stays active
- * - All products depleted (no "newer active" product) = all stay active
- */
-
 import { test } from "bun:test";
 import { CusProductStatus } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
@@ -26,10 +14,6 @@ import {
 	oneOffCleanupCustomer,
 	trackUsageForCleanup,
 } from "./utils/oneOffCleanupTestUtils.js";
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 1: Single one-time prepaid, track to 0, cleanup - should stay active
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(
 	`${chalk.yellowBright("cleanup: single-oneoff-no-newer")}`,
@@ -53,7 +37,6 @@ test.concurrent(
 			actions: [],
 		});
 
-		// Attach and track to 0
 		await autumnV1.billing.attach(
 			{
 				customer_id: customerId,
@@ -71,10 +54,8 @@ test.concurrent(
 
 		await timeout(2000);
 
-		// Run cleanup
 		await cleanupOneOffCustomerProducts({ ctx });
 
-		// Verify: product should still be active (no newer product exists)
 		const fullCus = await getFullCustomerWithExpired(customerId);
 		expectProductStatusesByOrder({
 			fullCus,
@@ -83,10 +64,6 @@ test.concurrent(
 		});
 	},
 );
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 2: Don't track to 0, attach again, cleanup - both active
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(
 	`${chalk.yellowBright("cleanup: oneoff-not-depleted-both-active")}`,
@@ -110,7 +87,6 @@ test.concurrent(
 			actions: [],
 		});
 
-		// Attach first (don't track to 0)
 		await autumnV1.billing.attach({
 			customer_id: customerId,
 			product_id: oneOff.id,
@@ -119,7 +95,6 @@ test.concurrent(
 
 		await timeout(2000);
 
-		// Attach second
 		await autumnV1.billing.attach({
 			customer_id: customerId,
 			product_id: oneOff.id,
@@ -128,10 +103,8 @@ test.concurrent(
 
 		await timeout(2000);
 
-		// Run cleanup
 		await cleanupOneOffCustomerProducts({ ctx });
 
-		// Verify: both should still be active (first not depleted)
 		const fullCus = await getFullCustomerWithExpired(customerId);
 		expectProductStatusesByOrder({
 			fullCus,
@@ -140,10 +113,6 @@ test.concurrent(
 		});
 	},
 );
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 3: Three purchases, middle depleted, cleanup - first expires
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(
 	`${chalk.yellowBright("cleanup: three-oneoff-all-depleted")}`,
@@ -167,7 +136,6 @@ test.concurrent(
 			actions: [],
 		});
 
-		// Attach first
 		await autumnV1.billing.attach({
 			customer_id: customerId,
 			product_id: oneOff.id,
@@ -176,7 +144,6 @@ test.concurrent(
 
 		await timeout(2000);
 
-		// Attach second
 		await autumnV1.billing.attach(
 			{
 				customer_id: customerId,
@@ -186,7 +153,6 @@ test.concurrent(
 			{ timeout: 2000 },
 		);
 
-		// Track 100 to deplete the oldest active balance.
 		await trackUsageForCleanup(autumnV1, {
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
@@ -195,7 +161,6 @@ test.concurrent(
 
 		await timeout(2000);
 
-		// Attach third
 		await autumnV1.billing.attach(
 			{
 				customer_id: customerId,
@@ -205,18 +170,10 @@ test.concurrent(
 			{ timeout: 2000 },
 		);
 
-		// await autumnV1.track({
-		// 	customer_id: customerId,
-		// 	feature_id: TestFeature.Messages,
-		// 	value: 100,
-		// });
-
 		await timeout(2000);
 
-		// Run cleanup
 		await cleanupOneOffCustomerProducts({ ctx });
 
-		// Verify: first product expires, later purchases stay active.
 		const fullCus = await getFullCustomerWithExpired(customerId);
 		expectProductStatusesByOrder({
 			fullCus,
@@ -229,10 +186,6 @@ test.concurrent(
 		});
 	},
 );
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 4: Attach one-time product TWICE (no tracking), cleanup - both active
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(
 	`${chalk.yellowBright("cleanup: attach-twice-no-depletion")}`,
@@ -256,7 +209,6 @@ test.concurrent(
 			actions: [],
 		});
 
-		// Attach twice without any tracking
 		await autumnV1.billing.attach({
 			customer_id: customerId,
 			product_id: oneOff.id,
@@ -273,10 +225,8 @@ test.concurrent(
 
 		await timeout(2000);
 
-		// Run cleanup
 		await cleanupOneOffCustomerProducts({ ctx });
 
-		// Verify: both still active (neither is depleted)
 		const fullCus = await getFullCustomerWithExpired(customerId);
 		expectProductStatusesByOrder({
 			fullCus,

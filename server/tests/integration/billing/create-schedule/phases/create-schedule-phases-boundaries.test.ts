@@ -105,8 +105,6 @@ test.concurrent(
 			.filter((productRow) => productRow.status === CusProductStatus.Scheduled)
 			.sort((a, b) => a.productId!.localeCompare(b.productId!));
 
-		// The add-on keys on its own id, so no phase claims its slot and the
-		// schedule leaves it alone.
 		expect(activeRows).toEqual(
 			[
 				{ productId: currentAddon.id, status: CusProductStatus.Active },

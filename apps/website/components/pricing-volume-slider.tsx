@@ -15,7 +15,6 @@ export type VolumeTier = (typeof volumeTiers)[number];
 
 export const defaultVolumeTierIndex = 1;
 
-// Matches the thumb in globals.css (12px box + 1px border each side).
 const THUMB_SIZE = 14;
 
 export default function VolumeSlider({

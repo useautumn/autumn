@@ -61,8 +61,6 @@ const matchedPlanIds = (matcher: PlanFilter["plan_id"]): string[] => {
 
 const previousPriceKey = (price: PreviousBasePrice) => JSON.stringify(price);
 
-// An op covering plans with differing previous prices is left unstamped rather
-// than showing the base plan's history for a variant.
 const withPreviousPrice = <T extends { operations: Operations }>({
 	draft,
 	previousPriceByPlanId,
@@ -190,8 +188,6 @@ export const validateNoDirectVariantMigrationDrafts = ({
 	}
 };
 
-/** A parent's bill changes only if the license customize it receives carries a
- * price — the child's own diff says nothing about the parent's invoice. */
 const licenseParentsHaveBillingChanges = (
 	parents: LicenseParentMigrationTarget[],
 ) =>
@@ -201,8 +197,6 @@ const licenseParentsHaveBillingChanges = (
 			parent.customize?.add_items?.some((item) => item.price != null),
 	);
 
-/** Always version-scoped, including in all_versions mode: a link pins a version,
- * and a bare plan_id would let each op match the other version's customers. */
 const licenseParentTargets = ({
 	planId,
 	parents,
@@ -211,7 +205,6 @@ const licenseParentTargets = ({
 	parents: LicenseParentMigrationTarget[];
 }) =>
 	parents
-		// An entry without a customize resets the link to catalog inheritance.
 		.filter((parent) => parent.customize !== undefined)
 		.map((parent) => ({
 			id: parent.planId,
@@ -247,7 +240,6 @@ export const createPlanMigrationDraft = async ({
 	variantsBefore?: VariantMigrationSnapshot[];
 }): Promise<string[]> => {
 	const baseDiff = diffPlanV1({ from: fromPlan, to: toPlan });
-	// Parents can need migrating even when the child's own diff is empty.
 	if (Object.keys(baseDiff).length === 0 && licenseParents.length === 0) {
 		return [];
 	}
@@ -259,8 +251,6 @@ export const createPlanMigrationDraft = async ({
 					variantIds: selectedVariantIds,
 				});
 
-	// Sequential: the ids are returned in draft order, and the child migration
-	// should exist before the parent one that follows it.
 	const insertDrafts = async (drafts: (MigrationDraft | null)[]) => {
 		const ids: string[] = [];
 		const itemsByPlanId = new Map([
@@ -290,8 +280,6 @@ export const createPlanMigrationDraft = async ({
 		return ids;
 	};
 
-	// Parents move a different customer population by a different operation, so
-	// they get their own migration — runnable and cancellable on its own.
 	const parentDraft = buildCombinedVariantMigrationDraft({
 		targets: licenseParentTargets({ planId, parents: licenseParents }),
 		hasBillingChanges: licenseParentsHaveBillingChanges(licenseParents),

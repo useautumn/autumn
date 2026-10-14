@@ -10,7 +10,5 @@ const constraintOf = (error: unknown): string | null => {
 	return constraintOf((error as { cause?: unknown }).cause ?? null);
 };
 
-/** The item is RUNNING in another live migration — the claim lost the
- * select→insert race that the exclusivity index backstops. */
 export const isLiveItemExclusiveViolation = (error: unknown): boolean =>
 	constraintOf(error) === LIVE_ITEM_EXCLUSIVE_INDEX;

@@ -10,7 +10,6 @@ export const EnvironmentMenuSearch = ({
 	query: string;
 	onQueryChange: (query: string) => void;
 }) => {
-	// Typed characters must reach the input, not the menu's typeahead.
 	const keepTypingInInput = (event: KeyboardEvent<HTMLInputElement>) => {
 		if (!MENU_NAVIGATION_KEYS.has(event.key)) {
 			event.stopPropagation();

@@ -21,7 +21,6 @@ function limitOf({ text }: { text: string | null }): number | null {
 	return value;
 }
 
-/** The memory this process may use: the cgroup limit when the container has one, never more than the host holds. */
 export function readContainerMemoryBytes({
 	readFile = readLimitFile,
 	totalMemory = totalmem,

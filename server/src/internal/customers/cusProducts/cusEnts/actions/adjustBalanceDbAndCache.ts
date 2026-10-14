@@ -2,10 +2,6 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { CusEntService } from "../CusEntitlementService.js";
 import { adjustSubjectBalanceCache } from "./cache/adjustSubjectBalanceCache.js";
 
-/**
- * Adjusts a cusEnt balance in both Postgres and the Redis FullCustomer cache.
- * Positive delta increments, negative delta decrements.
- */
 export const adjustBalanceDbAndCache = async ({
 	ctx,
 	customerId,

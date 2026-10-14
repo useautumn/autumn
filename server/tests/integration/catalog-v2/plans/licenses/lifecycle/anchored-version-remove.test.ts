@@ -1,10 +1,3 @@
-/**
- * catalogV2.update — cannot archive or remove a child version that catalog
- * links still point at. The error names the parent plans.
- *
- * Same-call unlink (licenses: []) then remove is allowed.
- */
-
 import { expect, test } from "bun:test";
 import { ErrCode } from "@autumn/shared";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils.js";

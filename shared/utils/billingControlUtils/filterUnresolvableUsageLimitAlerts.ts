@@ -4,7 +4,6 @@ import { usageLimitIdentity } from "../../models/cusModels/billingControls/ident
 import type { DbUsageAlertLike } from "../../models/cusModels/billingControls/usageAlert.js";
 import type { DbUsageLimitLike } from "../../models/cusModels/billingControls/usageLimit.js";
 
-// Disabled limits still count: disabling a cap makes its alert dormant, not invalid.
 export const filterUnresolvableUsageLimitAlerts = ({
 	usageAlerts,
 	usageLimitLists,

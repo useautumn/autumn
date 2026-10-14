@@ -23,8 +23,6 @@ import { createStripeInArrearPrice } from "@/external/stripe/createStripePrice/c
 
 import { mockModuleWithRestore } from "../utils/mockModuleWithRestore.js";
 
-// Stored tiers are net of the 3 included seats: public bands 4–8 @ $10
-// (flat $5) and 9+ @ $6 (flat $2) store as 0–5 and 5+.
 const NET_TIERS: UsageTier[] = [
 	{ to: 5, amount: 10, flat_amount: 5 },
 	{ to: -1, amount: 6, flat_amount: 2 },
@@ -123,8 +121,6 @@ describe("allocated Stripe price tiers", () => {
 			},
 			{ up_to: "inf", unit_amount_decimal: "600", flat_amount_decimal: "200" },
 		]);
-		// The metered placeholder never receives usage, so it carries no flat fees
-		// (Stripe would bill tier 1's at quantity 0 every cycle).
 		expect(placeholderPrice.tiers_mode).toBe("volume");
 		expect(placeholderPrice.tiers).toEqual([
 			{ up_to: 5, unit_amount_decimal: "1000" },

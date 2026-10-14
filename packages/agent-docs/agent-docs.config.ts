@@ -1,11 +1,6 @@
 import { defineConfig } from "./src/config/define.js";
 import type { AgentDefinition } from "./src/config/types.js";
 
-/**
- * The Eve agents: each gets a composed prompt from its instructions mdx, and a
- * skill bundle resolved from the entry keys below. `leaf` is the only live one;
- * `catalog` is prepared but wired to no agent (see apps/leaf/agent/lib).
- */
 export const agents = {
 	leaf: {
 		instructions: "instructions/leaf.md",
@@ -24,14 +19,6 @@ export const agents = {
 	},
 } satisfies Record<string, AgentDefinition>;
 
-/**
- * The single place to declare what docs content becomes agent-facing, and in
- * which formats. Humans edit this file + the composition mdx under content/;
- * src/ is machinery.
- *
- * - mcp:   resource = its `sources` concatenated as normal.
- * - skill: composed from a `content/` mdx (frontmatter + framing + insert tags).
- */
 export default defineConfig({
 	concepts: {
 		title: "Concepts",

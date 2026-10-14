@@ -43,8 +43,6 @@ import {
 
 export type WorkerErrorStatus = 400 | 404 | 409 | 422 | 429 | 503 | 500;
 
-/** How any failure is answered: the status and error body a caller branches on. Pure, so a
- *  single request and each command of a batch are answered the same way. */
 export function workerErrorOf({ cause }: { cause: unknown }): {
 	status: WorkerErrorStatus;
 	error: WorkerErrorResponse["error"];
@@ -118,7 +116,6 @@ export function workerErrorOf({ cause }: { cause: unknown }): {
 					message: "Customer does not exist in this org and env",
 				};
 	} else if (cause instanceof FlushRecordRefusedError) {
-		// Skipped for good, so nothing landed; unlike INTERNAL the caller knows a retry will fail the same way.
 		status = 500;
 		error = {
 			code: "RECORD_REFUSED",

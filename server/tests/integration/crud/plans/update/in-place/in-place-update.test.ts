@@ -1,17 +1,3 @@
-/**
- * In-place plan update (disable_version) — UPDATE an existing entitlement
- * (allowance change) on a plan with existing customers. The old catalog ent is
- * retired (is_custom:true), a new is_custom:false ent carries the new
- * definition; existing customers keep referencing the retired ent (unchanged);
- * future customers get the new one.
- *
- * Contract:
- *   - Catalog: old ent absent from getFull, new ent present with new allowance.
- *   - Existing customer: snapshot byte-identical (same entitlement_id + balance),
- *     no extra invoice.
- *   - New customer attaching after gets the new allowance.
- */
-
 import { expect, test } from "bun:test";
 import {
 	type ApiCustomerV3,
@@ -84,7 +70,6 @@ test(`${chalk.yellowBright("plans.update disable_version: UPDATE retires old ent
 	expect(oldEnt?.allowance).toBe(100);
 	const before = await snapshotCustomerState({ ctx, customerId });
 
-	// UPDATE allowance 100 -> 200 in place.
 	await autumnRpc.plans.update<
 		ApiPlanV1,
 		Omit<UpdatePlanParamsV2Input, "plan_id">
@@ -100,13 +85,11 @@ test(`${chalk.yellowBright("plans.update disable_version: UPDATE retires old ent
 		],
 	});
 
-	// Catalog: a single is_custom:false Messages ent with the NEW allowance.
 	const newEnt = await messagesEnt({ ctx, planId: pro.id });
 	expect(newEnt?.allowance).toBe(200);
 	expect(newEnt?.is_custom).toBe(false);
 	expect(newEnt?.id).not.toBe(oldEnt?.id);
 
-	// Existing customer: byte-identical (still references the retired ent), no charge.
 	const after = await snapshotCustomerState({ ctx, customerId });
 	expect(after).toBe(before);
 	await expectCustomerInvoiceCorrect({
@@ -114,7 +97,6 @@ test(`${chalk.yellowBright("plans.update disable_version: UPDATE retires old ent
 		count: 1,
 	});
 
-	// New customer gets the new allowance.
 	await autumnV2_2.billing.attach({
 		customer_id: newCustomerId,
 		plan_id: pro.id,

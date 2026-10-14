@@ -11,10 +11,6 @@ import { CusService } from "@/internal/customers/CusService.js";
 
 type TrackParams = Parameters<AutumnInt["track"]>[0];
 
-/**
- * Cleanup reads balances from Postgres, so setup tracks must write there
- * directly instead of relying on async cache sync.
- */
 export const trackUsageForCleanup = async (
 	autumnV1: Pick<AutumnInt, "track">,
 	params: TrackParams,
@@ -22,14 +18,9 @@ export const trackUsageForCleanup = async (
 	await autumnV1.track(params, { skipCache: true });
 };
 
-/**
- * A test clock would stamp every attach's created_at with its frozen time, tying repeat
- * purchases so the cron's strictly-newer product check never matches; skip it.
- */
 export const oneOffCleanupCustomer = () =>
 	s.customer({ paymentMethod: "success", testClock: false });
 
-/** Gets full customer including expired products. */
 export const getFullCustomerWithExpired = async (
 	customerId: string,
 ): Promise<FullCustomer> => {
@@ -40,12 +31,6 @@ export const getFullCustomerWithExpired = async (
 	});
 };
 
-/**
- * Verify customer products have expected statuses in creation order.
- * @param fullCus - Full customer object
- * @param productId - Product ID to filter by
- * @param expectedStatuses - Array of expected statuses in order (index 0 = oldest product)
- */
 export const expectProductStatusesByOrder = ({
 	fullCus,
 	productId,

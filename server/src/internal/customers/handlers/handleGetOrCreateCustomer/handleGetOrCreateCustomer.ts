@@ -29,7 +29,6 @@ export const handlePostCustomer = createRoute({
 		const { expand = [], with_autumn_id } = c.req.valid("query");
 		const createCusParams = c.req.valid("json");
 
-		// SIDE EFFECT
 		if (
 			backwardsChangeActive({
 				apiVersion: ctx.apiVersion,
@@ -39,7 +38,6 @@ export const handlePostCustomer = createRoute({
 			expand.push(CustomerExpand.Invoices);
 		}
 
-		// SECOND SIDE EFFECT
 		if (ctx.apiVersion.lte(ApiVersion.V1_2)) {
 			ctx = addToExpand({
 				ctx,

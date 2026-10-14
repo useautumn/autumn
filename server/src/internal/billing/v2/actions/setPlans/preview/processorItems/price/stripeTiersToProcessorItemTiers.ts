@@ -1,7 +1,6 @@
 import type { ProcessorItemPriceTier } from "@autumn/shared";
 import { stripeUnitAmountToMajorUnits } from "./stripeUnitAmountToMajorUnits";
 
-/** A tier as Stripe returns it on a price, or as Autumn sends it when creating one. */
 type StripeTier = {
 	up_to?: number | "inf" | null;
 	unit_amount?: number | null;

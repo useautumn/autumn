@@ -1,6 +1,5 @@
 export type CreditTierBoundary = number | "inf";
 
-/** One broken tier rule: which tier, and why. */
 export type CreditTierViolation = {
 	index: number;
 	reason: "non_final_infinity" | "not_increasing" | "final_not_infinity";
@@ -13,10 +12,6 @@ const VIOLATION_MESSAGES: Record<CreditTierViolation["reason"], string> = {
 	final_not_infinity: "The final tier must use an 'inf' boundary.",
 };
 
-/**
- * The graduated tier ladder rules, in one place: boundaries strictly increase,
- * only the final tier may use an "inf" boundary, and the final tier must use one.
- */
 export const findCreditTierViolations = (
 	boundaries: CreditTierBoundary[],
 ): CreditTierViolation[] => {

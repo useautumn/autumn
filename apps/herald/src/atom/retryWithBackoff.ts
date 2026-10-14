@@ -1,8 +1,5 @@
-/** Bounded on both sides: at most `attempts` tries, and no wait longer than `maxDelayMs`. */
 export type RetryPolicy = {
-	/** Tries in total, the first included. */
 	attempts: number;
-	/** The first wait; each later one doubles, up to `maxDelayMs`. */
 	baseDelayMs: number;
 	maxDelayMs: number;
 };
@@ -10,7 +7,6 @@ export type RetryPolicy = {
 const sleepFor = (ms: number): Promise<void> =>
 	new Promise((resolve) => setTimeout(resolve, ms));
 
-/** Equal jitter: half the wait is always served, the rest is spread so pushes that failed together do not return in step. */
 const delayBeforeRetry = ({
 	policy,
 	attempt,
@@ -25,7 +21,6 @@ const delayBeforeRetry = ({
 	return ceiling / 2 + (Math.random() * ceiling) / 2;
 };
 
-/** Tries again after a failure that can recover, waiting longer each time; throws the last error once the attempts are spent. */
 export const retryWithBackoff = async <Result>({
 	policy,
 	run,

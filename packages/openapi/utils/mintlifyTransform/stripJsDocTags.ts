@@ -1,9 +1,4 @@
-/**
- * Strips JSDoc tags from a description string.
- * Returns content up to the first @ tag (trimmed).
- */
 export function stripJsDocTags(description: string): string {
-	// Find the first @ tag that starts a line (common JSDoc tags)
 	const tagPatterns = [
 		/@example\b/,
 		/@param\b/,

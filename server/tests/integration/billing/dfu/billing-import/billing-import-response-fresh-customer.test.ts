@@ -1,8 +1,3 @@
-/**
- * dfu.flash — response returns the freshly-imaged customer: the flash response
- * carries a fresh customer reflecting the just-imaged plan + balance (not stale).
- */
-
 import { expect, test } from "bun:test";
 import { type ApiCustomerV5 } from "@autumn/shared";
 import {
@@ -63,7 +58,6 @@ test.concurrent(
 
 		const flashRes = await callFlash(autumnV2_3 as FlashClient, payload);
 
-		// Response carries a fresh customer reflecting the just-imaged plan + balance.
 		const customer = flashRes.result?.customer as ApiCustomerV5 | null;
 		expect(customer).toBeTruthy();
 		await expectCustomerProducts({

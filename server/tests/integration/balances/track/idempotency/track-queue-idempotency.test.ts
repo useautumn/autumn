@@ -28,13 +28,9 @@ import {
 } from "../../../db/full-subject/utils/fullSubjectScenarioBuilders.js";
 import { withInsertedScenario } from "../../../db/full-subject/utils/withInsertedScenario.js";
 
-// In-process calls drive the legacy Redis lane (Lua replay keys, runTrackV3 409s); HTTP cases still hit the worker.
 const previousRollout = process.env.BALANCE_WORKER_ROLLOUT_ENABLED;
 process.env.BALANCE_WORKER_ROLLOUT_ENABLED = "false";
 
-// Scenario tests all run on V2_1 — pinned once at module scope (restored
-// in afterAll) so tests can run concurrently without racing per-test
-// mutation of the shared ctx.
 const originalApiVersion = ctx.apiVersion;
 ctx.apiVersion = new ApiVersionClass(ApiVersion.V2_1);
 afterAll(() => {
@@ -105,12 +101,6 @@ test.concurrent(
 	},
 );
 
-// ── End-to-end: async tracks validate the body key at accept time ────────────
-//
-// The body idempotency key is claimed on the request path for async tracks
-// too: the first request is accepted and enqueued, the duplicate is rejected
-// with 409 at accept (never reaching SQS), and exactly one deduction lands.
-
 test.concurrent(
 	`${chalk.yellowBright("track queue: duplicate async body idempotency key rejects at accept, deducts once")}`,
 	async () => {
@@ -140,7 +130,6 @@ test.concurrent(
 
 		await trackAsync();
 
-		// Accept-time claim: the duplicate is rejected before it reaches SQS.
 		await expectAutumnError({
 			errCode: ErrCode.DuplicateIdempotencyKey,
 			func: trackAsync,
@@ -164,8 +153,6 @@ test.concurrent(
 			}
 		};
 
-		// Wait for the worker to drain the message, then a short grace window to
-		// catch any stray second deduction before the final assert.
 		const deadline = Date.now() + 20_000;
 		while (Date.now() < deadline && !(await balanceMatches(17))) {
 			await sleep(500);
@@ -180,8 +167,6 @@ test.concurrent(
 		});
 	},
 );
-
-// ── Queue replay dedup (the Lua key layer), redelivery-shaped ────────────────
 
 test.concurrent(
 	"worker redelivery with the same request id deducts once",
@@ -200,14 +185,12 @@ test.concurrent(
 			ctx,
 			scenario,
 			run: async () => {
-				// First delivery — deducts 87 → 77.
 				await runQueuedTrack({
 					ctx,
 					body,
 					validateTrackBodyIdempotencyKey: false,
 				});
 
-				// SQS redelivery: same message, same ctx.id → silent no-op.
 				await expect(
 					runQueuedTrack({
 						ctx,
@@ -216,7 +199,6 @@ test.concurrent(
 					}),
 				).resolves.toBeUndefined();
 
-				// A fresh request id sees exactly ONE prior deduction: 77 - 1 = 76.
 				const verifyCtx = {
 					...ctx,
 					id: `${ctx.id}-redelivery-verify`,
@@ -305,8 +287,6 @@ test.concurrent("the same request id is scoped per customer", async () => {
 				ctx,
 				scenario: scenarioB,
 				run: async () => {
-					// Same ctx.id for both customers — keys are customer-scoped,
-					// so neither deduction blocks the other.
 					const trackFor = async (customerId: string) => {
 						const body = {
 							customer_id: customerId,
@@ -334,14 +314,6 @@ test.concurrent("the same request id is scoped per customer", async () => {
 		},
 	});
 });
-
-// ── Multi-feature deduction: per-feature keys, skip-and-continue ─────────────
-//
-// Contract (agreed 2026-08-03):
-//   A. A duplicate feature is SKIPPED and the remaining features still deduct
-//      (partial replays resume instead of aborting).
-//   B. A fully-duplicate replay surfaces DuplicateIdempotencyKey, which
-//      runQueuedTrack swallows — the job is acked, never requeued.
 
 test.concurrent(
 	"multi-feature: duplicate features are skipped, remaining features still deduct",
@@ -377,7 +349,6 @@ test.concurrent(
 					}),
 				];
 
-				// 1. Full multi-feature deduction: messages 87→77, users 50→45.
 				const ctxA = { ...ctx, id: `${ctx.id}-multi-a` } as typeof ctx;
 				await runTrackV3({
 					ctx: ctxA,
@@ -386,9 +357,6 @@ test.concurrent(
 					apiVersion: ApiVersion.V2_1,
 				});
 
-				// 2. PARTIAL replay (contract A): a fresh request id whose messages
-				//    key is already set — messages is skipped, users still deducts
-				//    (users 45→40), and the call resolves instead of aborting.
 				const ctxB = { ...ctx, id: `${ctx.id}-multi-b` } as typeof ctx;
 				const { redisKey: appliedMessagesKey } =
 					getRedisTrackFeatureIdempotencyKey({
@@ -412,7 +380,6 @@ test.concurrent(
 					}),
 				).resolves.toBeDefined();
 
-				// 3. FULL replay of ctxB (every key set) → DuplicateIdempotencyKey…
 				await expect(
 					runTrackV3({
 						ctx: ctxB,
@@ -425,7 +392,6 @@ test.concurrent(
 					statusCode: 409,
 				});
 
-				// …which the worker swallows (contract B): resolves → acked, not requeued.
 				await expect(
 					runQueuedTrack({
 						ctx: ctxB,
@@ -434,8 +400,6 @@ test.concurrent(
 					}),
 				).resolves.toBeUndefined();
 
-				// 4. Balance proof via fresh request ids: messages deducted ONCE
-				//    (77 - 1 = 76), users deducted TWICE (40 - 1 = 39).
 				const verifyCtx = {
 					...ctx,
 					id: `${ctx.id}-multi-verify`,

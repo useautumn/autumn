@@ -17,8 +17,6 @@ import { customers } from "@tests/utils/fixtures/db/customers";
 import { prices } from "@tests/utils/fixtures/db/prices";
 import { products } from "@tests/utils/fixtures/db/products";
 
-/** How a customer's plans and license pools read in the API, from the customer's rows alone. */
-
 const STARTED_AT = 1_700_000_000_000;
 const FAR_FUTURE = 4_000_000_000_000;
 
@@ -174,7 +172,6 @@ describe("status", () => {
 		);
 	});
 
-	// Anything that is not active reads as scheduled, an expired plan included.
 	test("an expired plan reads as scheduled", async () => {
 		expect((await statusOf(CusProductStatus.Expired)).status).toBe("scheduled");
 	});

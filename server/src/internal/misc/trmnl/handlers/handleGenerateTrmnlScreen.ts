@@ -6,9 +6,6 @@ function numberWithCommas(x: number | string) {
 	return x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 }
 
-/**
- * Generate TRMNL screen data for the device
- */
 export const handleGenerateTrmnlScreen = createRoute({
 	scopes: [Scopes.Analytics.Read],
 	handler: async (c) => {
@@ -38,7 +35,6 @@ export const handleGenerateTrmnlScreen = createRoute({
 			plural: true,
 		});
 
-		// Get total event count for the top event
 		const countAndSum = await eventActions.getCountAndSum({
 			ctx,
 			params: {
@@ -54,13 +50,11 @@ export const handleGenerateTrmnlScreen = createRoute({
 			totalEvents = "Unknown";
 		}
 
-		// Revenue: stubbed to 0 for now (Tinybird only stores events today)
 		const monthlyRevenue = {
 			total_payment_volume: 0,
 			label: "N/A",
 		};
 
-		// Get timeseries data for the chart
 		const { formatted: results } = await eventActions.aggregate({
 			ctx,
 			params: {
@@ -71,12 +65,10 @@ export const handleGenerateTrmnlScreen = createRoute({
 			},
 		});
 
-		// Total customers: stubbed to 0 for now (Tinybird only stores events today)
 		const totalCustomers: number | string = 0;
 
 		const data = results?.data ?? [];
 
-		// Access hideRevenue from the trmnl context set by middleware
 		const hideRevenue = (org as any).hideRevenue ?? false;
 
 		return c.json({

@@ -2,7 +2,6 @@ import type Stripe from "stripe";
 
 const AUTUMN_METADATA_PREFIX = "autumn_";
 
-/** Merges user-provided metadata with Autumn's internal metadata, filtering reserved `autumn_*` keys. */
 export const mergeStripeMetadata = ({
 	userMetadata,
 	autumnMetadata,

@@ -5,9 +5,7 @@ import {
 	UsageModel,
 } from "@autumn/shared";
 
-/** Threshold billing needs a finite pay-per-use price, the same rule the API enforces. */
 export const showsThresholdBilling = ({ item }: { item: ProductItem }) => {
-	// Each threshold charge restarts the tier count, so tiered prices would be mis-priced.
 	const hasMultipleTiers = (item.tiers?.length ?? 0) > 1;
 
 	return (
@@ -21,7 +19,6 @@ export const showsThresholdBilling = ({ item }: { item: ProductItem }) => {
 export const itemThreshold = ({ item }: { item: ProductItem }) =>
 	item.config?.threshold_billing?.threshold ?? null;
 
-/** An ineligible item must not keep a stale threshold: the API rejects it on save. */
 export const reconcileThresholdBilling = ({
 	item,
 }: {

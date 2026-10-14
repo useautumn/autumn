@@ -16,7 +16,6 @@ type DevRow = {
 	created_at: Date | string;
 };
 
-/** Per file: passed / failing / flaky / no_data on dev, from the final attempt of its latest `limit` whole-file dev results (swarm and CI; grep runs excluded). */
 export const getDevStatus = async ({
 	ctx,
 	files,

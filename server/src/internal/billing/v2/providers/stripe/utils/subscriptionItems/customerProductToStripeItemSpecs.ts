@@ -12,10 +12,6 @@ import { cusPriceToStripeItemSpec } from "@/internal/billing/v2/providers/stripe
 import { isInvoiceCreditCustomerEntitlement } from "@/internal/features/invoiceCredits/isInvoiceCreditCustomerEntitlement.js";
 import { customerLicenseToStripeItemSpecs } from "./customerLicenseToStripeItemSpecs";
 
-/**
- * Converts a customer product to stripe item specs (recurring + one-off).
- * Delegates each cusPrice to cusPriceToStripeItemSpec.
- */
 export const customerProductToStripeItemSpecs = ({
 	ctx,
 	customerProduct,
@@ -77,7 +73,6 @@ export const customerProductToStripeItemSpecs = ({
 		recurringItems: recurringItems.filter((item) => {
 			if (!invoiceCreditItems.has(item)) return true;
 			const creditConfig = item.autumnPrice!.config;
-			// Source debits settle credits; retain the meter only when it supplies the renewal cadence.
 			return !recurringItems.some((candidate) => {
 				const price = candidate.autumnPrice;
 				return (

@@ -8,7 +8,6 @@ const listPatchFiles = ({ dir }: { dir: string }): string[] =>
 		.filter((file) => file.endsWith(".patch"))
 		.map((file) => path.join(dir, file));
 
-/** The lines one patch adds, by the file it targets. */
 const addedLinesOf = ({ patch }: { patch: string }) => {
 	const target = patch.match(/^\+\+\+ b\/(.+)$/m)?.[1];
 	const added = patch
@@ -19,10 +18,6 @@ const addedLinesOf = ({ patch }: { patch: string }) => {
 	return { target, added };
 };
 
-/**
- * Throws unless every line a Speakeasy patch file adds is in the regenerated SDK.
- * Speakeasy only warns when a patch's target is no longer generated, so a dropped patch would otherwise ship.
- */
 export function assertSdkPatches({
 	sdkDir,
 	label,

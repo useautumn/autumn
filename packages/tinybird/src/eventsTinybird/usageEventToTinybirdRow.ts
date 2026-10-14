@@ -1,6 +1,5 @@
 import type { EventInsert } from "@autumn/shared";
 
-/** The `events` datasource's columns: JSON travels as strings, and deductions are wrapped the way the API server wraps them. */
 export const usageEventToTinybirdRow = ({ event }: { event: EventInsert }) => ({
 	id: event.id,
 	org_id: event.org_id,

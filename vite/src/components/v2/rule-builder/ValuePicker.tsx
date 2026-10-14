@@ -19,7 +19,6 @@ import { ValueChip } from "./ValueChip";
 const MAX_VISIBLE_CHIPS = 3;
 const POPUP_MAX_HEIGHT = 340;
 const SIDE_OFFSET = 4;
-// Base UI's default collisionPadding, which --available-height subtracts.
 const COLLISION_PADDING = 5;
 const POPUP_FOOTPRINT = POPUP_MAX_HEIGHT + SIDE_OFFSET + COLLISION_PADDING;
 

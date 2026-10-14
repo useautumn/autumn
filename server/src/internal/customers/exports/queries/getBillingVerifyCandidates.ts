@@ -2,7 +2,6 @@ import { type AppEnv, customerProducts, customers } from "@autumn/shared";
 import { and, eq, gt, inArray, min, or, sql } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 
-/** The oldest customer bounds how far back the Stripe sweep must reach. */
 export const getEarliestCustomerCreatedAt = async ({
 	db,
 	orgId,
@@ -20,7 +19,6 @@ export const getEarliestCustomerCreatedAt = async ({
 	return rows[0]?.createdAt ?? null;
 };
 
-/** Customers holding a plan tied to a Stripe subscription or schedule. */
 export const getStripeLinkedCustomerIds = async ({
 	db,
 	internalCustomerIds,
@@ -48,7 +46,6 @@ export const getStripeLinkedCustomerIds = async ({
 	return new Set(rows.map((row) => row.internalCustomerId));
 };
 
-/** Stripe customer ids that more than one Autumn customer points at. */
 export const getSharedStripeCustomerIds = async ({
 	db,
 	orgId,
@@ -79,7 +76,6 @@ export const getSharedStripeCustomerIds = async ({
 	return new Set(rows.map((row) => row.stripeCustomerId));
 };
 
-/** The subset of these Stripe customer ids any Autumn customer points at. */
 export const getLinkedStripeCustomerIds = async ({
 	db,
 	orgId,
@@ -108,7 +104,6 @@ export const getLinkedStripeCustomerIds = async ({
 	return new Set(rows.map((row) => row.stripeCustomerId));
 };
 
-/** Autumn customer ids keyed by lowercased email. */
 export const getCustomerIdsByEmail = async ({
 	db,
 	orgId,

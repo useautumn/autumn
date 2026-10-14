@@ -63,7 +63,6 @@ const factorColumn: ColumnDef<MultiplierRow, unknown> = {
 	},
 };
 
-/** One select per dimension and a factor column; every matching multiplier stacks on the rate. */
 export function CreditDimensionMultiplierTable() {
 	const {
 		values,
@@ -76,7 +75,6 @@ export function CreditDimensionMultiplierTable() {
 	const data: MultiplierRow[] = useMemo(
 		() =>
 			multipliers.map((rule, index) => ({
-				// Multipliers are saved as typed, so their names are already unique.
 				id: rule.name,
 				index,
 				label: ruleLabel(rule),

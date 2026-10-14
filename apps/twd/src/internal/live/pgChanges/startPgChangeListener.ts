@@ -3,12 +3,10 @@ import { createContext, SYSTEM_ACTOR } from "../../../lib/createContext.ts";
 import { publishTableChange } from "./publishTableChange.ts";
 
 export const PG_CHANGES_CHANNEL = "twd_changes";
-/** Coalesces bursts (e.g. per-file progress writes) into one publish per row. */
 const COALESCE_MS = 150;
 
 type TableChange = { t: string; id: string };
 
-/** LISTENs for the row-change triggers so every DB mutation reaches live clients, whatever wrote it. */
 export const startPgChangeListener = async (): Promise<() => Promise<void>> => {
 	const ctx = createContext({ actor: SYSTEM_ACTOR });
 	const sql = postgres(ctx.env.TWD_DATABASE_URL, { max: 1 });

@@ -48,7 +48,6 @@ const executeAddition = async ({
 	operation: AddEntitlementPriceOperation;
 }) => {
 	const pooledBalanceId = operation.pooledAdd?.pooledBalanceId;
-	// The license no longer holds this pool (stale transition): no seat to add.
 	if (operation.pooledAdd && !pooledBalanceId) return 0;
 
 	return executeBatchedMutation({

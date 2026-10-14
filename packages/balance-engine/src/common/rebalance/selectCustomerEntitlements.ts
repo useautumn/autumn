@@ -13,7 +13,6 @@ import type { RebalanceRequest } from "./types/rebalanceRequest.js";
 
 type CustomerEntitlement = WorkerFullCustomerEntitlementWithProduct;
 
-/** The entity that owns the row, or null for a customer-level one: the same test the server's paydown uses. */
 const ownerEntityOf = (customerEntitlement: CustomerEntitlement) =>
 	customerEntitlement.internal_entity_id ??
 	customerEntitlement.customer_product?.internal_entity_id ??
@@ -21,7 +20,6 @@ const ownerEntityOf = (customerEntitlement: CustomerEntitlement) =>
 
 const REBALANCE_STATUSES = [CusProductStatus.Active, CusProductStatus.PastDue];
 
-/** The feature's rows as the server's rebalance reads them: fixed statuses and order, license seats left out. */
 export const selectFeatureCustomerEntitlements = ({
 	fullSubject,
 	request,
@@ -41,7 +39,6 @@ export const selectFeatureCustomerEntitlements = ({
 			),
 	);
 
-/** The rows brought up to 0 first: in overage, at the purchased row's level, in paydown order. */
 export const selectCustomerEntitlementsInOverage = ({
 	featureCustomerEntitlements,
 	purchased,
@@ -63,7 +60,6 @@ export const selectCustomerEntitlementsInOverage = ({
 	});
 };
 
-/** The row credited with what is left; with none named, the first row brought up to 0 takes it uncapped, as the server's fixed deltas would. */
 export const selectCreditedCustomerEntitlement = ({
 	featureCustomerEntitlements,
 	inOverage,

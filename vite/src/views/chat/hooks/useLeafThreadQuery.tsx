@@ -3,8 +3,6 @@ import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import type { LeafUIMessage } from "../chatTypes";
 
-/** Hydrate a dashboard thread's history (text + tool steps + approval cards)
- * from the broker. Fetched once — the live useChat store owns it afterwards. */
 export const useLeafThreadQuery = ({
 	enabled,
 	threadId,

@@ -15,28 +15,6 @@ import { ApiEntityV1Schema } from "../apiEntity.js";
 import { EntityLegacyDataSchema } from "../entityLegacyData.js";
 import { ApiEntityV0Schema } from "../prevVersions/apiEntityV0.js";
 
-/**
- * V1_2_EntityChange: Transforms entity response TO V0 format (pre-V2.0)
- *
- * Applied when: targetVersion <= V1_2
- *
- * Breaking changes introduced in V2.0:
- *
- * 1. Products renamed to Plans:
- *    - V1+: "subscriptions" field contains ApiSubscription objects
- *    - V0: "products" field contains ApiCusProductV3 objects
- *
- * 2. Simplified feature schema:
- *    - V1+: "balances" field with minimal fields + optional feature object
- *    - V0: "features" field with verbose fields and all metadata
- *
- * 3. Features remain as record (no change from V1.1):
- *    - Both V1 and V0: Record<string, ApiCusFeature>
- *
- * Input: ApiEntityV1 (V2.0+ format)
- * Output: ApiEntityV0 (V1.2 format)
- */
-
 export const V1_2_EntityChange = defineVersionChange({
 	newVersion: ApiVersion.V2_0,
 	oldVersion: ApiVersion.V1_Beta,
@@ -50,9 +28,7 @@ export const V1_2_EntityChange = defineVersionChange({
 	oldSchema: ApiEntityV0Schema,
 	legacyDataSchema: EntityLegacyDataSchema,
 
-	// Response: V1 → V0
 	transformResponse: ({ input, legacyData, ctx }) => {
-		// Step 1: Transform plans V1 → V0 (products)
 		const v0CusProducts: ApiCusProductV3[] | undefined = input.subscriptions
 			? input.subscriptions.map((subscription: ApiSubscription) => {
 					const cusPlanLegacyData = legacyData?.cusProductLegacyData[
@@ -97,7 +73,6 @@ export const V1_2_EntityChange = defineVersionChange({
 			...(scheduledCusProducts || []),
 		];
 
-		// Step 2: Transform features V1 → V0
 		let v0_features: Record<string, ApiCusFeatureV3> | undefined;
 		if (input.balances) {
 			v0_features = {};
@@ -108,7 +83,6 @@ export const V1_2_EntityChange = defineVersionChange({
 			}
 		}
 
-		// Step 3: Return V0 entity format
 		return {
 			autumn_id: input.autumn_id,
 			id: input.id,

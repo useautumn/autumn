@@ -29,35 +29,6 @@ export const isEntityCusEnt = ({
 	);
 };
 
-// export const cusEntMatchesEntity = ({
-// 	cusEnt,
-// 	entity,
-// }: {
-// 	cusEnt: FullCusEntWithFullCusProduct;
-// 	entity?: Entity;
-// }) => {
-// 	if (!entity) return true;
-
-// 	let cusProductMatch = true;
-
-// 	if (notNullish(cusEnt.customer_product?.internal_entity_id)) {
-// 		cusProductMatch =
-// 			cusEnt.customer_product.internal_entity_id === entity.internal_id;
-// 	}
-
-// 	let entityFeatureIdMatch = true;
-// 	// let feature = features?.find(
-// 	//   (f) => f.id == cusEnt.entitlement.entity_feature_id,
-// 	// );
-
-// 	if (notNullish(cusEnt.entitlement.entity_feature_id)) {
-// 		entityFeatureIdMatch =
-// 			cusEnt.entitlement.entity_feature_id === entity.feature_id;
-// 	}
-
-// 	return cusProductMatch && entityFeatureIdMatch;
-// };
-
 export const isPrepaidCusEnt = ({
 	cusEnt,
 }: {
@@ -68,7 +39,6 @@ export const isPrepaidCusEnt = ({
 
 	if (!cusEnt.customer_product) return false;
 
-	// 3. Get quantity
 	const options = cusEnt.customer_product?.options?.find(
 		(option) =>
 			option.internal_feature_id === cusEnt.entitlement.internal_feature_id,
@@ -92,10 +62,6 @@ export const addCusProductToCusEnt = <TCusEnt extends object, TCusProduct>({
 	};
 };
 
-/**
- * Clones a customer entitlement and updates the quantity in its options.
- * Needed because usagePriceToLineItem reads quantity from customer_product.options.
- */
 export const cloneEntitlementWithUpdatedQuantity = ({
 	customerEntitlement,
 	feature,

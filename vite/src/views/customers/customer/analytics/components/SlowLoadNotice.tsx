@@ -8,7 +8,6 @@ import { useTimeRange } from "./query/useTimeRange";
 const FAST_FALLBACK_INTERVAL = "30d";
 const LONG_INTERVALS = new Set(["90d", "3bc", "6m", "12m", "custom"]);
 
-/** Over the stubs once a load turns slow; its spinner is the only motion left, and it offers a shorter range. */
 export const SlowLoadNotice = ({ seconds }: { seconds: number }) => {
 	const { interval, selectPreset } = useTimeRange();
 	const canShortenRange = LONG_INTERVALS.has(interval);

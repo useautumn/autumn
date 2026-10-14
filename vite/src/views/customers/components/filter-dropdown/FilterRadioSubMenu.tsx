@@ -8,11 +8,6 @@ import {
 
 export type FilterRadioOption<T> = { value: T; label: string };
 
-/**
- * Single-select filter sub-menu: a labelled trigger (with an optional active
- * badge) over a list of exclusive choices. Mirrors FilterCheckboxSubMenu's
- * styling but for one-of-N filters (e.g. status: Active / Show archived).
- */
 export function FilterRadioSubMenu<T extends string | boolean>({
 	label,
 	options,
@@ -24,7 +19,6 @@ export function FilterRadioSubMenu<T extends string | boolean>({
 	options: FilterRadioOption<T>[];
 	value: T;
 	onChange: (value: T) => void;
-	/** Shown next to the trigger label when a non-default filter is active. */
 	activeBadge?: string;
 }) {
 	return (

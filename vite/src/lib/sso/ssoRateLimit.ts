@@ -11,7 +11,6 @@ const toSeconds = (value: unknown): number | null => {
 		return Math.min(Math.ceil(numeric), MAX_COOLDOWN_SECONDS);
 	}
 
-	// `Retry-After` may also be an HTTP date.
 	const date = Date.parse(value);
 	if (Number.isNaN(date)) return null;
 	const diff = Math.ceil((date - Date.now()) / 1000);
@@ -19,11 +18,6 @@ const toSeconds = (value: unknown): number | null => {
 	return Math.min(diff, MAX_COOLDOWN_SECONDS);
 };
 
-/**
- * Reads retry information from a rate-limited domain verification response.
- * Duck-typed rather than keyed off AxiosError so it works for any transport and
- * for both header- and body-carried retry hints.
- */
 export const getSsoRetryAfterSeconds = (error: unknown): number | null => {
 	const response = (error as { response?: unknown } | null | undefined)
 		?.response as

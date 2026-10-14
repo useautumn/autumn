@@ -15,7 +15,6 @@ export const ProductOptionsSchema = z.object({
 
 export const ExtAttachBodyV0Schema = z
 	.object({
-		// Customer / Entity Info
 		customer_id: z.string(),
 		product_id: z.string().nullish(),
 		entity_id: z.string().nullish(),
@@ -29,14 +28,12 @@ export const ExtAttachBodyV0Schema = z
 
 		free_trial: z.boolean().optional(),
 
-		// Others
 		success_url: z.string().optional(),
 		force_checkout: z.boolean().optional(),
 		checkout_session_params: z.any().optional(),
 		reward: z.string().or(z.array(z.string())).optional(),
 		invoice: z.boolean().optional(),
 
-		// Checkout params
 		setup_payment: z.boolean().optional(),
 		new_billing_subscription: z.boolean().optional(),
 	})
@@ -48,20 +45,14 @@ export const ExtAttachBodyV0Schema = z
 	});
 
 export const AttachBodyV0Schema = ExtAttachBodyV0Schema.extend({
-	// products: z.array(ProductOptions).nullish(),
-	customer_data: CustomerDataSchema.nullish(), // For safety
-
-	// Custom Product
+	customer_data: CustomerDataSchema.nullish(),
 	is_custom: z.boolean().optional(),
 	items: z.array(ProductItemSchema).optional(),
 
-	// Override free_trial to support CreateFreeTrialSchema
 	free_trial: CreateFreeTrialSchema.or(z.boolean()).optional(),
 
-	// New Version
 	version: z.number().optional(),
 
-	// Others
 	invoice_only: z.boolean().optional(),
 	metadata: z.any().optional(),
 	billing_cycle_anchor: z.number().optional(),

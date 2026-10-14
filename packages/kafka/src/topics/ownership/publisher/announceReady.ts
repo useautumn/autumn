@@ -4,9 +4,6 @@ import type {
 	OwnershipReadinessContext,
 } from "./types/ownershipPublisher.js";
 
-/** Sent outside any transaction: the successor's own producer must not fence the
- *  predecessor's until the handoff says so, and a fence is what its first
- *  transaction would be. */
 export async function announceReady({
 	ctx,
 	topic,

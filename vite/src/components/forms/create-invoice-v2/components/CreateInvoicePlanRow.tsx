@@ -16,7 +16,6 @@ import { CreateInvoiceQuantityFields } from "./CreateInvoiceQuantityFields";
 import { PlanServicePeriodChip } from "./PlanServicePeriodChip";
 import { PlanServicePeriodEditor } from "./PlanServicePeriodEditor";
 
-/** One tray row: the plan picker until a plan is chosen, then the plan with its quantities. */
 export function CreateInvoicePlanRow({ planIndex }: { planIndex: number }) {
 	const {
 		formValues,

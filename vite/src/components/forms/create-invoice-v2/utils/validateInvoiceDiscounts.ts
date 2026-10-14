@@ -8,7 +8,6 @@ const rewardIdsOf = ({ discounts }: { discounts: FormDiscount[] }) =>
 		"reward_id" in discount && discount.reward_id ? [discount.reward_id] : [],
 	);
 
-/** Surfaces what invoices.create would refuse, instead of a raw 400. */
 export function findBlockingDiscount({
 	form,
 	rewardsById,

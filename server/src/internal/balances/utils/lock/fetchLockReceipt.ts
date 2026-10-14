@@ -40,11 +40,6 @@ const fetchAndClaimLockReceiptV2FromCandidates = async ({
 	return { found: false as const };
 };
 
-/**
- * Fetch+claim a lock receipt (pipelined GET + SET NX on a marker key) so the
- * dispatcher can route to runFinalizeLockV2 without a follow-up claim RT.
- * During org Redis migrations, checks both shared and dedicated Redis.
- */
 export const fetchLockReceipt = async ({
 	ctx,
 	lockId,

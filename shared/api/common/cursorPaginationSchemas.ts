@@ -129,7 +129,6 @@ export const StandardCursor = defineCursor({
 const BasePriceCursorFieldsSchema = z.object({
 	v: z.literal(CURRENT_CURSOR_VERSION),
 	id: z.string().min(1),
-	// Monthly-normalized base price total; fractional (e.g. yearly / 12).
 	p: z.number().nonnegative(),
 });
 
@@ -141,11 +140,8 @@ export const BasePriceCursor = defineCursor({
 
 const FeatureBalanceCursorFieldsSchema = z.object({
 	v: z.literal(CURRENT_CURSOR_VERSION),
-	/** internal_customer_id (not the public id) — balance sort keys on it. */
 	id: z.string().min(1),
-	/** Exact feature-balance total; fractional, negative when overage is allowed. */
 	b: z.number(),
-	/** Unlimited stripe: unlimited customers rank above all totals in desc. */
 	u: z.boolean(),
 });
 

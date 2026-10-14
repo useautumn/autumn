@@ -36,11 +36,6 @@ const hasCustomersAnywhere = (plan: CatalogPlanPreview) =>
 		(variant: PlanUpdatePreviewVariant) => variant.has_customers,
 	);
 
-/** Versioning/variant-propagation/migration decisions for a previewed plan
- * update, sourced entirely from the `previewUpdateCatalog` result — same
- * fields the dashboard's `PlanChangeDialog` reads. "Continue" doesn't apply
- * anything itself; it hands the decision back to the agent as the next
- * turn's structured context. */
 export function CatalogDecisionCard({
 	onSubmit,
 	plan,

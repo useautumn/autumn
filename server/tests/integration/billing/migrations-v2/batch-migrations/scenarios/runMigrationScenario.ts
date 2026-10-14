@@ -47,8 +47,6 @@ export type ScenarioRunOutcome = {
 	entitlementIdByFeature: Record<string, string>;
 };
 
-/** Seeds a scenario through the real API, runs its migration, and reads back the
- * state the expectation is written against. */
 export const runMigrationScenario = async ({
 	scenario,
 	idPrefix,
@@ -88,8 +86,6 @@ export const runMigrationScenario = async ({
 		db: ctx.db,
 		customerId,
 	});
-	// A license op writes to the seat assignments; a plan op writes to the
-	// customer product for the plan itself, which carries no link id.
 	const targetIds = targetsLicense
 		? assignments
 				.filter((assignment) => assignment.internal_entity_id)

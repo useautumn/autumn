@@ -5,7 +5,6 @@ import {
 	shadowAtomConfigStore,
 } from "../shadowAtomConfigStore.js";
 
-/** Re-reads the file right before writing, so a slow alien call never writes back a stale snapshot. */
 export const patchShadowAtomConfig = ({
 	patch,
 }: {

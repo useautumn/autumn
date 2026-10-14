@@ -1,19 +1,3 @@
-/**
- * Contract for accumulating independent SQS sends into bounded batches.
- *
- * Contract under test:
- *   - up to 10 independent queue entries share one send-batch call
- *   - the tenth entry flushes immediately and a short window flushes partial batches
- *   - each caller resolves or rejects from its own SQS entry result
- *   - transport failures reject every caller in the affected batch
- *   - shutdown rejects new entries and drains pending plus in-flight sends
- *   - each entry preserves its job body, FIFO identifiers, and delay
- *   - the combined message bodies in one batch never exceed SQS's 1 MiB limit
- *
- * The generic accumulator owns timing, bounds, per-entry results, and shutdown;
- * queue-specific code supplies the entry shape and batch sender.
- */
-
 import { describe, expect, test } from "bun:test";
 import {
 	type SendSqsAccumulatorBatchArgs,

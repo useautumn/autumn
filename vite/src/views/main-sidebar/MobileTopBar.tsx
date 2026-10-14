@@ -1,6 +1,5 @@
 import { ListIcon } from "@phosphor-icons/react";
 
-/** Thin sticky bar shown only on mobile with hamburger menu trigger. */
 export function MobileTopBar({ onMenuClick }: { onMenuClick: () => void }) {
 	return (
 		<div className="sticky top-0 z-50 flex items-center h-11 px-3 bg-background border-b border-border/40 sm:hidden">

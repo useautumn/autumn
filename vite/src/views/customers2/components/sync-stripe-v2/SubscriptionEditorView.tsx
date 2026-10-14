@@ -30,7 +30,6 @@ type SubscriptionEditorProps = {
 	isSubmitting: boolean;
 };
 
-/** The draft is seeded once off the customer's saved plans, so wait for them. */
 export function SubscriptionEditorView(props: SubscriptionEditorProps) {
 	const { isLoading } = useCusQuery();
 	if (isLoading) {
@@ -82,7 +81,6 @@ function SubscriptionEditor({
 			const plan = isUnscheduled
 				? formValues.unscheduledPlans[location.planIndex]
 				: formValues.phases[location.phaseIndex]?.plans[location.planIndex];
-			// Unscheduled plans bill alongside the first phase.
 			const phase = proposal.phases[isUnscheduled ? 0 : location.phaseIndex];
 			if (!plan?.productId || !phase) return [];
 			return findMissingPlanPrices({
@@ -105,7 +103,6 @@ function SubscriptionEditor({
 		<CustomerStateProvider
 			form={form}
 			nowMs={nowMs}
-			// Unscheduled plans ride on a live subscription across its phases.
 			canMakeUnscheduled={
 				isMultiPhase && Boolean(proposal.stripe_subscription_id)
 			}

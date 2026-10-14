@@ -1,14 +1,3 @@
-/**
- * One-Off Customer Product Cleanup Tests - Expires
- *
- * Tests for scenarios where the cleanup cron job DOES expire one-off customer
- * products when they are depleted and a newer active product exists.
- *
- * Key behaviors tested:
- * - Depleted product + newer active product = older product expires
- * - Works with one-off prepaid, lifetime messages, and base products
- */
-
 import { test } from "bun:test";
 import { CusProductStatus } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
@@ -48,7 +37,6 @@ test.concurrent(
 			actions: [],
 		});
 
-		// Attach first, track to 0
 		await autumnV1.billing.attach(
 			{
 				customer_id: customerId,
@@ -66,7 +54,6 @@ test.concurrent(
 
 		await timeout(2000);
 
-		// Attach second, track to 0
 		await autumnV1.billing.attach(
 			{
 				customer_id: customerId,
@@ -84,11 +71,8 @@ test.concurrent(
 
 		await timeout(2000);
 
-		// Run cleanup
 		await cleanupOneOffCustomerProducts({ ctx });
 
-		// Verify: first should be expired (depleted + has newer active product)
-		// Second stays active (depleted but no newer active product)
 		const fullCus = await getFullCustomerWithExpired(customerId);
 		expectProductStatusesByOrder({
 			fullCus,
@@ -97,10 +81,6 @@ test.concurrent(
 		});
 	},
 );
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 2: Track to 0, attach again (don't track), cleanup - only latest active
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(
 	`${chalk.yellowBright("cleanup: oneoff-depleted-newer-active")}`,
@@ -124,7 +104,6 @@ test.concurrent(
 			actions: [],
 		});
 
-		// Attach first, track to 0
 		await autumnV1.billing.attach(
 			{
 				customer_id: customerId,
@@ -142,7 +121,6 @@ test.concurrent(
 
 		await timeout(2000);
 
-		// Attach second (don't track)
 		await autumnV1.billing.attach({
 			customer_id: customerId,
 			product_id: oneOff.id,
@@ -151,10 +129,8 @@ test.concurrent(
 
 		await timeout(2000);
 
-		// Run cleanup
 		await cleanupOneOffCustomerProducts({ ctx });
 
-		// Verify: first should be expired, second should be active
 		const fullCus = await getFullCustomerWithExpired(customerId);
 		expectProductStatusesByOrder({
 			fullCus,
@@ -163,10 +139,6 @@ test.concurrent(
 		});
 	},
 );
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 3: One-time product with lifetime messages, track to 0, attach again - only latest active
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(
 	`${chalk.yellowBright("cleanup: oneoff-lifetime-messages-only-latest")}`,
@@ -186,7 +158,6 @@ test.concurrent(
 			actions: [],
 		});
 
-		// Attach first, track to 0
 		await autumnV1.billing.attach(
 			{ customer_id: customerId, product_id: oneOff.id },
 			{ timeout: 2000 },
@@ -200,7 +171,6 @@ test.concurrent(
 
 		await timeout(2000);
 
-		// Attach second
 		await autumnV1.billing.attach({
 			customer_id: customerId,
 			product_id: oneOff.id,
@@ -208,11 +178,8 @@ test.concurrent(
 
 		await timeout(2000);
 
-		// Run cleanup
 		await cleanupOneOffCustomerProducts({ ctx });
 
-		// Verify: first should be expired, second should be active
-		// Note: lifetime messages are single_use consumables, so they qualify for cleanup
 		const fullCus = await getFullCustomerWithExpired(customerId);
 		expectProductStatusesByOrder({
 			fullCus,
@@ -221,10 +188,6 @@ test.concurrent(
 		});
 	},
 );
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 4: One-off prepaid, track to 0, attach again - only latest active
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(
 	`${chalk.yellowBright("cleanup: oneoff-prepaid-then-attach-again")}`,
@@ -248,7 +211,6 @@ test.concurrent(
 			actions: [],
 		});
 
-		// Attach first with prepaid, track to 0
 		await autumnV1.billing.attach(
 			{
 				customer_id: customerId,
@@ -266,7 +228,6 @@ test.concurrent(
 
 		await timeout(2000);
 
-		// Attach second (same product)
 		await autumnV1.billing.attach({
 			customer_id: customerId,
 			product_id: oneOff.id,
@@ -275,10 +236,8 @@ test.concurrent(
 
 		await timeout(2000);
 
-		// Run cleanup
 		await cleanupOneOffCustomerProducts({ ctx });
 
-		// Verify: first should be expired, second should be active
 		const fullCus = await getFullCustomerWithExpired(customerId);
 		expectProductStatusesByOrder({
 			fullCus,
@@ -287,10 +246,6 @@ test.concurrent(
 		});
 	},
 );
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 5: Base product with one-off prepaid credits - use up, attach again, cleanup - first expired
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(
 	`${chalk.yellowBright("cleanup: base-oneoff-prepaid-depleted")}`,
@@ -314,7 +269,6 @@ test.concurrent(
 			actions: [],
 		});
 
-		// 1. Attach base product with one-off prepaid credits
 		await autumnV1.billing.attach(
 			{
 				customer_id: customerId,
@@ -324,7 +278,6 @@ test.concurrent(
 			{ timeout: 2000 },
 		);
 
-		// 2. Use up credits
 		await trackUsageForCleanup(autumnV1, {
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
@@ -333,7 +286,6 @@ test.concurrent(
 
 		await timeout(2000);
 
-		// 3. Attach again
 		await autumnV1.billing.attach({
 			customer_id: customerId,
 			product_id: baseProduct.id,
@@ -342,10 +294,8 @@ test.concurrent(
 
 		await timeout(2000);
 
-		// 4. Cleanup
 		await cleanupOneOffCustomerProducts({ ctx });
 
-		// 5. First product expired, second active
 		const fullCus = await getFullCustomerWithExpired(customerId);
 		expectProductStatusesByOrder({
 			fullCus,

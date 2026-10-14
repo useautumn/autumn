@@ -7,7 +7,6 @@ import {
 import { and, eq, or } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 
-/** Fetch one reward program by ID or internal_id */
 export const getRewardProgram = async ({
 	db,
 	idOrInternalId,

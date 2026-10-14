@@ -1,12 +1,3 @@
-/**
- * Version + customize is customize-on-from plus a product/version repoint.
- * Catalog v2 reminting Autumn price rows (same Stripe/amount) is not a
- * base-price billing change and must not reject the batch lane.
- *
- * Red (current):  v1 vs v2 reminted $20 prices reject as base_price_transition.
- * Green (after):  computable; domains replace + product repoint; no reject.
- */
-
 import { describe, expect, test } from "bun:test";
 import {
 	AllowanceType,

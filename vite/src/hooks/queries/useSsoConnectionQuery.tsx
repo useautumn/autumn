@@ -5,10 +5,6 @@ import type { SsoConnectionResponse } from "@/lib/sso/ssoTypes";
 import { OrgService } from "@/services/OrgService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 
-/**
- * Fetches the organization's single OIDC SSO connection, if any. `setup` comes
- * back either way so the callback URL is available before setup starts.
- */
 export const useSsoConnectionQuery = ({ enabled = true } = {}) => {
 	const axiosInstance = useAxiosInstance();
 	const buildKey = useQueryKeyFactory();

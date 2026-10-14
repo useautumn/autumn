@@ -10,8 +10,6 @@ import {
 
 const APPROVAL_TTL_MINUTES = 120;
 
-/** The primary write (position 0) is derived from the top-level tool fields;
- * `groupedWrites` carries only the withheld rest, in execution order. */
 export type InsertChatApprovalData = {
 	approveOptionId?: string;
 	channelId: string;

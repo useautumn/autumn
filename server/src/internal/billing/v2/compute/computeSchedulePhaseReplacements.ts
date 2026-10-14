@@ -9,11 +9,6 @@ import {
 	getExpiredUpdatedCustomerProducts,
 } from "@/internal/billing/v2/utils/billingPlan/customerProductPlanMutations";
 
-// Two customer products share a schedule slot when one can stand in for the
-// other on the customer: same entity scope, same group, add-ons keyed on their
-// own product so they never absorb a main plan's slot. Timing is part of the
-// slot — a plan starting now never stands in for one a future phase is waiting
-// on, so retiring that future plan drops its phase instead of rewriting it.
 const scheduleSlotKey = (customerProduct: FullCusProduct) =>
 	[
 		customerProduct.internal_entity_id ?? "customer",
@@ -39,12 +34,6 @@ const findSuccessorsBySlot = ({
 	return successorsBySlot;
 };
 
-/**
- * Schedule phases store raw customer product ids, so any plan that replaces a
- * product has to hand its phases the successor. Expiring without a successor is
- * left alone — the row still resolves, so the phase keeps its history; a deleted
- * row leaves nothing to point at and is dropped from the phase.
- */
 export const computeSchedulePhaseReplacements = ({
 	autumnBillingPlan,
 }: {

@@ -84,7 +84,6 @@ test("splitting a view and merging its parts is a round trip, however often it i
 	const expected = countsOf(full);
 
 	let { customer, entity: entityPart } = splitSubjectState({ state: full });
-	// The windows follow their owner like every other row: one each side, never both.
 	expect(customer.usageWindows.map((row) => row.id)).toEqual(["uw_customer"]);
 	expect(entityPart?.usageWindows.map((row) => row.id)).toEqual(["uw_entity"]);
 

@@ -72,7 +72,6 @@ export const PurchaseSnapshotSchema = z.object({
 /** @deprecated Use PlanItemChangeV0Schema. */
 export const CustomerPlanItemChangeSchema = PlanItemChangeV0Schema;
 
-/** Sparse lifecycle scalars that changed, holding their previous values. */
 export const CustomerPlanPreviousAttributesSchema =
 	SubscriptionSnapshotSchema.pick({
 		status: true,

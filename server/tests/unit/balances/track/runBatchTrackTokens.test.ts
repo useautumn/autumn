@@ -18,7 +18,6 @@ import type { SQSClient } from "@aws-sdk/client-sqs";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getSqsClient } from "@/queue/initSqs.js";
 
-// The legacy lane is what the queue cases cover; the worker case turns the rollout on itself.
 const previousRollout = process.env.BALANCE_WORKER_ROLLOUT_ENABLED;
 process.env.BALANCE_WORKER_ROLLOUT_ENABLED = "false";
 

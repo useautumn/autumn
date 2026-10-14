@@ -27,7 +27,6 @@ afterAll(async () => {
 	await webhook?.cleanup();
 });
 
-// ── B7: entity-owned limit → entity counter, entity_id in payload ───────────
 test(`${chalk.yellowBright("ul-alert6: entity-owned cap alerts on the entity counter")}`, async () => {
 	const customerId = "ul-alert-entity-own-1";
 	const plan = products.base({

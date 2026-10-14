@@ -52,8 +52,6 @@ export const setupThresholdBillingContext = async ({
 	const { stripeCus, paymentMethod, testClockFrozenTime } =
 		await fetchStripeCustomerForBilling({ ctx, fullCus: fullCustomer });
 
-	// Debt is already incurred, so an uncollectable charge still has to leave an
-	// invoice behind rather than be skipped the way a prepaid grant would be.
 	const invoiceMode = paymentMethod
 		? undefined
 		: { finalizeInvoice: true, enableProductImmediately: true };
@@ -72,8 +70,6 @@ export const setupThresholdBillingContext = async ({
 			paymentMethod,
 			billingVersion: BillingVersion.V2,
 			actionSource: "threshold_billing",
-			// Names the product this invoice settles, so paying it unblocks only
-			// that product and not every threshold plan the customer holds.
 			actionCustomerProductId: customerProduct.id,
 			customerEntitlement: settlement.customerEntitlement,
 			customerProduct,

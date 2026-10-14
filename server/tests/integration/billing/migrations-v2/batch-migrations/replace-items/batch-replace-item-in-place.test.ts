@@ -1,14 +1,3 @@
-/**
- * Filter-replace uses the live row's grant, not a catalog from→to diff.
- *
- * Contract:
- *   C14: catalog already 30, customer still on retired 10, consumed 3
- *        → remaining 27 (not left at 7, not reset to 30)
- *   C1b: already on the minted 30 id, consumed 3 → remaining 27, no extra credits
- *   C8 / C1b': live definition already matches incoming 200, different id
- *        → repoint, remaining stays 140 (consumed 60 of 200)
- */
-
 import { expect, test } from "bun:test";
 import { ResetInterval } from "@autumn/shared";
 import { runChunkedMigration } from "@tests/integration/billing/migrations-v2/utils/runChunkedMigration";

@@ -28,15 +28,6 @@ const renameIfExisting = ({
 	];
 };
 
-/**
- * One rename per existing plan with a differing new_plan_id. Creates carry
- * the new id on the row itself — no references exist yet, nothing to move.
- */
-/**
- * A row addressed by internal_id under a different plan_id IS a rename — the
- * config states where the row should live now, and does not have to remember
- * the name it used to use.
- */
 const renameFromInternalId = ({
 	planParams,
 	internalIdRefs,

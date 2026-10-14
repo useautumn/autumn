@@ -39,8 +39,6 @@ export const callRcMcpTool = async ({
 		throw new Error(`RevenueCat MCP error (${response.status})`);
 	}
 
-	// Streamable-HTTP MCP replies as SSE and may emit preamble frames (ping,
-	// progress) before the result — pick the frame that carries result/error.
 	const text = await response.text();
 	const candidates = text
 		.split("\n")

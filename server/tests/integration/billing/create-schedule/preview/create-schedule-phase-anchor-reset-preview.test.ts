@@ -1,6 +1,3 @@
-// A future phase anchor reset previews a fresh full cycle with no proration:
-// the new plan is charged in full and the old plan's leftover time isn't credited.
-
 import { expect, test } from "bun:test";
 import {
 	type AttachPreviewResponse,
@@ -65,7 +62,6 @@ test.concurrent(
 
 		expect(preview.total).toBe(0);
 		expect(positiveTotal).toBeCloseTo(50, 2);
-		// Reset = fresh full cycle, no unused-current-plan credit netted in.
 		expect(preview.next_cycle?.total).toBeCloseTo(50, 2);
 		expect(preview.next_cycle?.starts_at).toBe(transitionAt);
 	},

@@ -8,21 +8,6 @@ import { customerProductActions } from "@/internal/customers/cusProducts/actions
 import { customerProductRepo } from "@/internal/customers/cusProducts/repos";
 import { logCaughtError } from "@/utils/logging/logCaughtError.js";
 
-/**
- * Handles Vercel's `marketplace.invoice.notpaid` webhook.
- *
- * Replaces the legacy Custom Payment Method + Payment Records "report failed
- * payment" flow. Vercel marketplace already failed to collect; we just clean
- * up Autumn-side and cancel the Stripe subscription so the customer loses
- * access. The invoice itself is left in its current Stripe status (not paid)
- * — the Stripe ledger reflects the failure naturally.
- *
- * - Does NOT call `stripeCli.paymentRecords.reportPayment`.
- * - Does NOT call `stripeCli.invoices.attachPayment`.
- * - Sets the Vercel resource to `suspended`.
- * - Expires the Autumn customer product and activates the default fallback.
- * - Cancels the Stripe subscription.
- */
 export const handleMarketplaceInvoiceNotPaid = async ({
 	ctx,
 	payload,
@@ -46,7 +31,6 @@ export const handleMarketplaceInvoiceNotPaid = async ({
 		expand: ["subscription"],
 	});
 
-	// If the paid webhook already won the race, do nothing destructive.
 	if (invoice.status === "paid") {
 		logger.info("Invoice already marked as paid; skipping notpaid cleanup", {
 			data: { externalInvoiceId },
@@ -66,17 +50,12 @@ export const handleMarketplaceInvoiceNotPaid = async ({
 
 	const subscription = await stripeCli.subscriptions.retrieve(subscriptionId);
 
-	// Lazy migration before destructive ops — keeps state consistent for any
-	// downstream observers that read collection_method.
 	await ensureVercelInvoiceModeSubscription({
 		ctx,
 		stripeCli,
 		subscription,
 	});
 
-	// Resolve customer for cus_product cleanup. Failure is logged but doesn't
-	// block the destructive cleanup below (we still want the resource
-	// suspended + sub canceled even if our DB lookup misfires).
 	let customerInternalId: string | undefined;
 	try {
 		const partialCustomer = await CusService.getByStripeId({
@@ -99,7 +78,6 @@ export const handleMarketplaceInvoiceNotPaid = async ({
 		});
 	}
 
-	// Suspend the Vercel resource so the end user loses access in Vercel's UI.
 	const vercelResourceId = subscription.metadata?.vercel_resource_id;
 	if (vercelResourceId?.startsWith("vre_")) {
 		try {
@@ -123,10 +101,6 @@ export const handleMarketplaceInvoiceNotPaid = async ({
 		}
 	}
 
-	// Expire the Autumn cus_product and activate the default fallback. This
-	// mirrors the legacy first-invoice failure path but runs for renewals
-	// too — payment failed at any point means the customer should lose paid
-	// access.
 	if (customerInternalId) {
 		try {
 			const fullCustomer = await CusService.getFull({
@@ -169,13 +143,9 @@ export const handleMarketplaceInvoiceNotPaid = async ({
 		}
 	}
 
-	// Cancel the Stripe subscription. We deliberately do NOT mark the invoice
-	// paid — Vercel reported it as unpaid, so the Stripe ledger should keep
-	// reflecting that.
 	try {
 		await stripeCli.subscriptions.cancel(subscription.id);
 	} catch (error: any) {
-		// `resource_missing` means the sub is already gone — fine, idempotent.
 		if (error?.code === "resource_missing") {
 			logger.info(
 				"[handleMarketplaceInvoiceNotPaid] Subscription already canceled",

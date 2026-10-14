@@ -37,8 +37,6 @@ const makePlan = ({
 		},
 	});
 
-// Attaching a recurring add-on to an eur-locked customer must bill the add-on
-// at its eur price.
 test.concurrent(
 	`${chalk.yellowBright("multi-currency e2e: eur recurring add-on bills the eur price")}`,
 	async () => {
@@ -71,7 +69,6 @@ test.concurrent(
 		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 		await expectCustomerProducts({ customer, active: [mainId, addonId] });
 
-		// The add-on charge (latest invoice) must be the eur price (9), not usd (10).
 		const stripeInvoices = await ctx.stripeCli.invoices.list({
 			customer: customer.stripe_id as string,
 		});

@@ -44,7 +44,6 @@ test.concurrent(
 			}),
 		});
 
-		// Round 1: Track 180 → balance=20 → top-up fires → balance=120
 		await autumnV2_1.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
@@ -58,12 +57,10 @@ test.concurrent(
 		const expectedMid = new Decimal(200).sub(180).add(100).toNumber();
 		expect(midBalance).toBe(expectedMid);
 
-		// Disable auto top-up between rounds
 		await autumnV2_1.customers.update(customerId, {
 			billing_controls: makeAutoTopupConfig({ enabled: false }),
 		});
 
-		// Round 2: Track 100 → balance=20 → below threshold, but config is disabled → no top-up
 		await autumnV2_1.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
@@ -104,7 +101,6 @@ test.concurrent(
 			],
 		});
 
-		// Start with threshold=50
 		await autumnV2_1.customers.update(customerId, {
 			billing_controls: makeAutoTopupConfig({
 				threshold: 50,
@@ -112,7 +108,6 @@ test.concurrent(
 			}),
 		});
 
-		// Round 1: Track 160 → balance=40 → 40 < 50 → top-up fires → balance=140
 		await autumnV2_1.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
@@ -126,7 +121,6 @@ test.concurrent(
 		const expectedMid = new Decimal(200).sub(160).add(100).toNumber();
 		expect(midBalance).toBe(expectedMid);
 
-		// Lower threshold to 10 between rounds
 		await autumnV2_1.customers.update(customerId, {
 			billing_controls: makeAutoTopupConfig({
 				threshold: 10,
@@ -134,7 +128,6 @@ test.concurrent(
 			}),
 		});
 
-		// Round 2: Track 105 → balance=35 → above new threshold (10) → no top-up
 		await autumnV2_1.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,

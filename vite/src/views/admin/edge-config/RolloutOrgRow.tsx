@@ -14,7 +14,6 @@ import type { RolloutOrg, RolloutPercent } from "./rolloutTypes";
 
 export const ORG_ROW_COLUMNS = "md:grid-cols-[minmax(0,1fr)_160px_200px_72px]";
 
-/** One override: the org, its percent, where its last change stands, and edit / remove. */
 export const RolloutOrgRow = ({
 	orgId,
 	org,

@@ -52,8 +52,6 @@ export const usagePriceToLineItem = ({
 
 	const price = cusPrice.price;
 
-	// 1. Get overage
-	// don't use upcoming quantity for prepaid prices by default. THe price that users have paid currently is quantity.
 	const isPrepaid = isPrepaidPrice(price);
 	const isUsageBasedVolume = isVolumePrice(price) && !isPrepaid;
 	const allowance = cusEntsToAllowance({ cusEnts: [cusEnt] });
@@ -62,7 +60,6 @@ export const usagePriceToLineItem = ({
 	if (isPrepaid) {
 		overage = cusEntToPrepaidInvoiceOverage({ cusEnt });
 	} else if (isUsageBasedVolume) {
-		// Usage-based volume bills the customer's total usage past the included amount.
 		const totalUsage = cusEntToVolumeInvoiceQuantity({
 			cusEnt,
 			paidQuantity: cusEntToInvoiceOverage({ cusEnt }),
@@ -72,7 +69,6 @@ export const usagePriceToLineItem = ({
 		overage = cusEntToInvoiceOverage({ cusEnt });
 	}
 
-	// 2. Get usage
 	let usage = 0;
 	if (isPrepaid) {
 		const prepaidQuantity = cusEntsToPrepaidQuantity({
@@ -94,10 +90,8 @@ export const usagePriceToLineItem = ({
 		customerEntitlement: cusEnt,
 	};
 
-	// Pay-per-use at or below the included amount bills nothing, tier 1's flat fee included.
 	const isWithinIncluded = !isPrepaid && overage === 0;
 
-	// 3. Generate description
 	let description = usagePriceToLineDescription({
 		usage,
 		context: lineItemContext,
@@ -119,8 +113,6 @@ export const usagePriceToLineItem = ({
 		}
 	}
 
-	// 4. Get amount
-	// Only prepaid overage includes the allowance, so only prepaid tiers shift by it.
 	let tierShift = 0;
 	if (isPrepaid) tierShift = allowance;
 	let amount = 0;
@@ -133,13 +125,11 @@ export const usagePriceToLineItem = ({
 		});
 	}
 
-	// 5. Get stripe price / product IDs
 	const { stripePriceId, stripeProductId } = cusEntToStripeIds({
 		cusEnt,
 		currency: context.currency,
 	});
 
-	// 6. Should prorate: don't if consumable price (unless override provided)
 	const shouldProrate =
 		options.shouldProrateOverride ?? !isConsumablePrice(price);
 

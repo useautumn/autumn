@@ -1,13 +1,3 @@
-/**
- * Contract: `webhook_concurrency` is a real ceiling on deliveries in flight.
- *
- * This is the guarantee the setting exists for — it bounds concurrent Svix
- * calls and, more importantly, the DB reads each `customer.products.updated`
- * performs, which is what competes with the hot path during a migration.
- * Trigger.dev caps BATCHES per run (concurrencyKey + limit 1); this covers
- * the fan-out inside one batch.
- */
-
 import { afterAll, beforeEach, describe, expect, mock, test } from "bun:test";
 import { AppEnv } from "@autumn/shared";
 import type { MigrationWebhookRecord } from "@/internal/migrations/v2/webhookDelivery/types/migrationWebhookRecord.js";
@@ -16,9 +6,6 @@ const svixModulePath = "@/external/svix/svixHelpers.js";
 const productsModulePath =
 	"@/internal/billing/v2/workflows/sendProductsUpdated/sendProductsUpdated.js";
 const cusBatchModulePath = "@/internal/customers/CusBatchService.js";
-// Snapshot spreads, not live namespaces — after mock.module a namespace's
-// bindings retarget to the mock, which would make the afterAll restore
-// reinstall the mock instead of the real module.
 const realSvix = { ...(await import(svixModulePath)) };
 const realProducts = { ...(await import(productsModulePath)) };
 const realCusBatch = { ...(await import(cusBatchModulePath)) };
@@ -44,8 +31,6 @@ mock.module(svixModulePath, () => ({
 mock.module(productsModulePath, () => ({
 	sendProductsUpdated: trackedSend,
 }));
-// Unit tests never touch the DB — the prefetch returns no customers, so the
-// products sender exercises its fetch-fallback path (mocked above).
 mock.module(cusBatchModulePath, () => ({
 	CusBatchService: { getByInternalIds: async () => [] },
 }));
@@ -138,7 +123,6 @@ describe("sendMigrationWebhooks", () => {
 			}),
 		});
 
-		// billing.updated is the only sender that records customer ids.
 		expect(deliveredTo).toEqual([]);
 	});
 });

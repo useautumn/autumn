@@ -1,5 +1,3 @@
-/** A turn is alive while ANY of its sessions produces events — the idle
- * decision reads this shared clock, never one socket's silence. */
 export type TurnActivity = {
 	activeChildren: () => number;
 	childFinished: () => void;

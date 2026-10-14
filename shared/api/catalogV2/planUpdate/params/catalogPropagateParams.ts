@@ -1,10 +1,6 @@
 import { idRegex } from "@utils/utils.js";
 import { z } from "zod/v4";
 
-/**
- * One follow target. Pins a row via `version`/`version_slug` under
- * `existing`/`all_versions`; plan-level (no pin) under `new_version`.
- */
 export const CatalogPropagateTargetParamsSchema = z
 	.object({
 		plan_id: z.string().nonempty().regex(idRegex).meta({
@@ -32,10 +28,6 @@ export const CatalogPropagateTargetParamsSchema = z
 		},
 	);
 
-/**
- * Who follows this plan's content change. Omitted relatives are frozen.
- * Nested hops (`variants[].propagate`) are out of scope.
- */
 export const CatalogPropagateParamsSchema = z.object({
 	variants: z.array(CatalogPropagateTargetParamsSchema).optional().meta({
 		internal: true,

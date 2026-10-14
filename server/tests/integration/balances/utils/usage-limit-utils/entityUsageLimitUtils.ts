@@ -9,10 +9,6 @@ import { pollUntilAsserted } from "@tests/utils/genUtils.js";
 import type { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { timeout } from "@/utils/genUtils.js";
 
-/**
- * Arms a windowed hard usage cap via the ENTITY's `usage_limits` billing
- * control (sibling of setCustomerUsageLimit / setEntitySpendLimit).
- */
 export const setEntityUsageLimit = async ({
 	autumn,
 	customerId,
@@ -46,11 +42,6 @@ export const setEntityUsageLimit = async ({
 	await timeout(3000);
 };
 
-/**
- * Fetches the entity and asserts its own `billing_controls.usage_limits`
- * entry: configured `limit` and the current window's `usage`. Polls until the
- * assertion holds, since counters sync from Redis lazily.
- */
 export const expectEntityUsageLimit = async ({
 	autumn,
 	customerId,

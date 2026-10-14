@@ -1,14 +1,3 @@
-/**
- * Benchmarks a Fanout-shaped batch migration against the DEV bench org:
- * one free plan, six monthly metered replaces, page size 5,000.
- *
- * Infisical can scrub env, so --op-concurrency is written onto
- * BATCH_MIGRATION_FEATURE_OP_CONCURRENCY before migration modules load.
- *
- *   infisical run --env=dev --recursive -- bun <path> --customers 20000 --op-concurrency 1
- *   infisical run --env=dev --recursive -- bun <path> --cleanup
- */
-
 const parseArgs = () => {
 	const args = process.argv.slice(2);
 	const get = (flag: string) => {

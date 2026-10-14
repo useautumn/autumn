@@ -22,7 +22,6 @@ export const sortProductItems = (items: ProductItem[], features: Feature[]) => {
 			return 1;
 		}
 
-		// 2. Put feature price next
 		const aIsFeatureItem = isFeaturePriceItem(a);
 		const bIsFeatureItem = isFeaturePriceItem(b);
 
@@ -34,7 +33,6 @@ export const sortProductItems = (items: ProductItem[], features: Feature[]) => {
 			return 1;
 		}
 
-		// 3. Put feature price items in alphabetical order
 		const feature = features.find((f) => f.id === a.feature_id);
 		const aFeatureName = feature?.name;
 		const bFeatureName = features.find((f) => f.id === b.feature_id)?.name;

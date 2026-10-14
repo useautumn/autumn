@@ -17,11 +17,6 @@ import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
 import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
 
-/**
- * Test: Free product with monthly messages + One-off top-up product for messages
- * Expected: breakdown array with 2 items (monthly + one_off/lifetime)
- */
-
 const freeMonthlyMessages = constructFeatureItem({
 	featureId: TestFeature.Messages,
 	includedUsage: 500,
@@ -32,7 +27,7 @@ const topUpMessages = constructPrepaidItem({
 	featureId: TestFeature.Messages,
 	billingUnits: 100,
 	price: 10,
-	isOneOff: true, // One-off top-up
+	isOneOff: true,
 });
 
 const freeProd = constructProduct({
@@ -61,7 +56,7 @@ describe(`${chalk.yellowBright("check-breakdown7: free monthly messages + one-of
 		await initCustomerV3({
 			ctx,
 			customerId,
-			attachPm: "success", // Required for prepaid
+			attachPm: "success",
 			withTestClock: false,
 		});
 
@@ -71,21 +66,18 @@ describe(`${chalk.yellowBright("check-breakdown7: free monthly messages + one-of
 			prefix: testCase,
 		});
 
-		// Attach free product first
 		await autumnV2.attach({
 			customer_id: customerId,
 			product_id: freeProd.id,
 		});
 
-		// Attach top-up product with quantity
-		// Note: quantity is the actual number of messages, NOT multiplied by billing_units
 		await autumnV2.attach({
 			customer_id: customerId,
 			product_id: topUpProd.id,
 			options: [
 				{
 					feature_id: TestFeature.Messages,
-					quantity: 200, // 200 messages directly
+					quantity: 200,
 				},
 			],
 		});
@@ -97,16 +89,14 @@ describe(`${chalk.yellowBright("check-breakdown7: free monthly messages + one-of
 			feature_id: TestFeature.Messages,
 		})) as unknown as CheckResponseV2;
 
-		// Parent balance should sum both products: 500 (free) + 200 (top-up)
 		expect(res.balance).toMatchObject({
 			granted_balance: 500,
 			current_balance: 700,
 			purchased_balance: 200,
 			usage: 0,
-			plan_id: null, // null when multiple products
+			plan_id: null,
 		});
 
-		// Should have 2 breakdown items with unique IDs
 		const breakdown = res.balance?.breakdown;
 		expect(breakdown).toHaveLength(2);
 		expect(new Set(breakdown?.map((b) => b.id)).size).toBe(2);
@@ -154,12 +144,10 @@ describe(`${chalk.yellowBright("check-breakdown7: free monthly messages + one-of
 			feature_id: TestFeature.Messages,
 		})) as unknown as CheckResponseV1;
 
-		// Parent balance should sum both products
-		expect(res.included_usage).toBe(700); // 500 + 200
+		expect(res.included_usage).toBe(700);
 		expect(res.balance).toBe(700);
 		expect(res.usage).toBe(0);
 
-		// Should have 2 breakdown items
 		expect(res.breakdown).toHaveLength(2);
 	});
 
@@ -183,7 +171,7 @@ describe(`${chalk.yellowBright("check-breakdown7: free monthly messages + one-of
 			included_usage: 200,
 			balance: 200,
 			usage: 0,
-			interval: "lifetime", // one_off becomes lifetime in v1.2
+			interval: "lifetime",
 		});
 	});
 });

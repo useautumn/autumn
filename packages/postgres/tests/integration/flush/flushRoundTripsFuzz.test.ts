@@ -9,11 +9,6 @@ import type { FlushRequest } from "../../../src/flush/types/flush.js";
 import type { SubjectRowChange } from "../../../src/subjects/types/subjectRowChange.js";
 import type { PostgresClient } from "../../../src/types/postgresClient.js";
 
-/**
- * Fuzz equivalence: the single round-trip flush must land exactly the rows, and answer exactly the outcome, the
- * four-round-trip transaction does, for random requests carrying adversarial strings and numbers across every range.
- * Run with FLUSH_TEST_DATABASE_URL=postgres://... FLUSH_FUZZ_CASES=300 FLUSH_FUZZ_SEED=1
- */
 const databaseUrl = process.env.FLUSH_TEST_DATABASE_URL;
 const CASES = Number(process.env.FLUSH_FUZZ_CASES ?? 300);
 const SEED = Number(process.env.FLUSH_FUZZ_SEED ?? 1);
@@ -61,7 +56,6 @@ const SEED_SQL = `
 	INSERT INTO pooled_balance_contributions (id, pooled_balance_id, current_contribution, next_cycle_contribution, effective_at) VALUES
 		('pc_1', 'pb_1', 5, 8, 1000);`;
 
-/** mulberry32: a seeded PRNG so any divergence replays from its case number. */
 const prng = (seed: number) => () => {
 	seed = (seed + 0x6d2b79f5) | 0;
 	let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
@@ -103,10 +97,6 @@ const ADVERSARIAL_STRINGS = [
 	"true",
 ];
 
-/**
- * Bun binds an integer in [2^51, 2^53] as float8 (15 significant digits into numeric) while the inliner emits an exact
- * int8: a known divergence where the single path is the precise one. Set FLUSH_FUZZ_BIG_INTS=1 to include that band.
- */
 const includeBigInts = process.env.FLUSH_FUZZ_BIG_INTS === "1";
 const NUMBERS = [
 	0,

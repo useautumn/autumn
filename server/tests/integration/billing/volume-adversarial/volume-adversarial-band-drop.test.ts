@@ -1,9 +1,3 @@
-/**
- * A band drop: crossing into a cheaper band lowers the bill as usage rises. With 5 included
- * and net tiers 0-5 @ $1 / 6+ @ $0.80, 10 used bills 5 overage = $5.00 and 11 used bills
- * 6 overage = $4.80. The shown balance and every preview total stay non-negative.
- */
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3 } from "@autumn/shared";
 import { calculateProratedDiff } from "@tests/integration/billing/utils/proration";
@@ -25,7 +19,6 @@ import {
 
 const INCLUDED = 5;
 const USAGE = 11;
-// 11 used = 6 overage in net tier 6+: 6 × $0.80 = $4.80 (10 used = 5 × $1 = $5)
 const BAND_DROP_AMOUNT = 4.8;
 
 const bandDropItem = () =>
@@ -79,7 +72,6 @@ const expectPreviewNonNegative = async ({
 	});
 };
 
-/** Asserts a switch invoice equals its preview, line by line, and bills the band-drop usage. */
 const expectSwitchInvoiceMatchesPreview = async ({
 	scenario,
 	preview,
@@ -137,7 +129,6 @@ test.concurrent(
 			],
 		});
 
-		// 10 used = 5 overage in net tier 0-5: 5 × $1 = $5
 		await expectPreviewNonNegative({
 			scenario,
 			expectedFeatureAmount: 5,
@@ -162,7 +153,6 @@ test.concurrent(
 			scenario,
 			expectedFeatureAmount: BAND_DROP_AMOUNT,
 		});
-		// $20 base + $4.80 usage
 		expect(renewalInvoice.total).toBeCloseTo(24.8, 2);
 	},
 );
@@ -203,7 +193,6 @@ test.concurrent(
 		expect(previewUsageSubtotal(preview)).toBeCloseTo(BAND_DROP_AMOUNT, 2);
 		expect(preview.total).toBeGreaterThanOrEqual(0);
 
-		// Prorated $20 → $50 base for the rest of the cycle + $4.80 usage, not prorated
 		const proratedBaseDiff = await calculateProratedDiff({
 			customerId,
 			advancedTo,
@@ -271,7 +260,6 @@ test.concurrent(
 				priceItem,
 			],
 		};
-		// Same-plan updates don't bill consumable overage at the switch, so nothing is due
 		const preview =
 			await scenario.autumnV1.subscriptions.previewUpdate(updateParams);
 		expect(preview.total).toBe(0);
@@ -288,7 +276,6 @@ test.concurrent(
 			usage: USAGE,
 		});
 
-		// 10 included: 11 used = 1 overage in net tier 0-5 (total 11-15): 1 × $1 = $1
 		await expectVolumeRenewalCorrect({ scenario, expectedFeatureAmount: 1 });
 	},
 );

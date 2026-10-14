@@ -29,8 +29,6 @@ export const fullCustomerToCustomerEntitlements = ({
 	reverseOrder?: boolean;
 	featureId?: string;
 	featureIds?: string[];
-	/** Membership by EFFECTIVE credit schema (plan-item feature_override,
-	 * else catalog) — per cusEnt, unlike the per-feature featureIds filter. */
 	fundsFeatureId?: string;
 	entity?: Entity;
 	customerEntitlementFilters?: CustomerEntitlementFilters;
@@ -99,8 +97,6 @@ export const fullCustomerToCustomerEntitlements = ({
 			}),
 		);
 	} else {
-		// License seat assignments stay invisible at the customer level — the
-		// pool parent already reports them. Other entity-scoped cusEnts pool up.
 		cusEnts = cusEnts.filter(
 			(cusEnt) =>
 				!isCustomerProductLicenseAssignment(
@@ -145,10 +141,6 @@ export const fullCustomerToCustomerEntitlements = ({
 		);
 	}
 
-	// When disable_pooled_balance is enabled and we're scoped to an entity, drop
-	// customer-level (shared pool) cusEnts so the returned balances reflect
-	// only the entity's own pool. Matches the filter in prepareFeatureDeduction
-	// so the deduction path and reporting stay consistent.
 	if (fullCustomer.entity?.id && fullCustomer.config?.disable_pooled_balance) {
 		cusEnts = cusEnts.filter((ce) => isEntityCusEnt({ cusEnt: ce }));
 	}

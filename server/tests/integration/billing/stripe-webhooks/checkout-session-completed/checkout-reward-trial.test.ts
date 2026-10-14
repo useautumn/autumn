@@ -1,5 +1,3 @@
-/** Red: trial checkout left referral reward unapplied; green: exclude_trial=false applies at trial start. */
-
 import { expect, test } from "bun:test";
 import { completeStripeCheckoutFormV2 } from "@tests/utils/browserPool/completeStripeCheckoutFormV2";
 import { items } from "@tests/utils/fixtures/items";

@@ -1,22 +1,3 @@
-/**
- * TDD tests for pooled balances never being minted when a plan is applied as a
- * DEFAULT rather than attached. Reported externally: a free parent linked to an
- * unpriced license plan (included: 1) carrying a pooled credit item works under
- * billing.attach, but not as a default.
- *
- * Red-failure mode (before the fix):
- *  - The customer gets its customer_licenses row with no pooled balance behind
- *    it, so the credit feature is absent from balances entirely and check is
- *    denied. Nothing repairs it afterwards.
- *
- * Green-success criteria:
- *  - Every path that applies a default plan computes the pooled balance
- *    transition, so the pool is minted exactly as billing.attach mints it.
- *
- * The plan builders own this: executeAutumnBillingPlan already calls
- * executePooledBalancePlan, which no-ops on an undefined pooledBalancePlan.
- */
-
 import { expect, test } from "bun:test";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { items } from "@tests/utils/fixtures/items.js";
@@ -31,15 +12,9 @@ import {
 	seatLinkId,
 } from "./utils/licensePooledBalanceTestUtils.js";
 
-// The reported shape: one included seat granting a 600-credit monthly pool.
 const POOLED_GRANT = 600;
 const INCLUDED_SEATS = 1;
 
-/**
- * Free parent carrying no credit item, linked to the license plan holding the
- * pool. The link has to exist before the customer under test is created, so the
- * scenario's own customer only seeds the catalog and the real one comes after.
- */
 const seedDefaultPlan = async ({ prefix }: { prefix: string }) => {
 	const seatPlan = pooledSeatPlan({
 		id: `${prefix}-seat`,
@@ -71,7 +46,6 @@ const seedDefaultPlan = async ({ prefix }: { prefix: string }) => {
 	return { autumnV2_3, ctx, parent, seatPlan, defaultGroup: seedCustomerId };
 };
 
-/** Deterministic ids survive a failed run; a stale row would mask the default path. */
 const resetCustomer = async ({
 	autumn,
 	customerId,
@@ -100,8 +74,6 @@ const expectDefaultedPool = async ({
 		customerId,
 		licenseProductId: seatPlanId,
 	});
-	// No seat is assigned yet, so the pool has its grant but no contribution
-	// sources — the same state billing.attach leaves behind.
 	await expectLicensePooledGrant({
 		autumn,
 		ctx,
@@ -123,7 +95,6 @@ test.concurrent(
 			prefix,
 		});
 
-		// The reported reproduction: no attach call, the plan is named as a default.
 		await resetCustomer({ autumn: autumnV2_3, customerId });
 		await autumnV2_3.customers.create({
 			id: customerId,
@@ -143,8 +114,6 @@ test.concurrent(
 		});
 		expect(allowed).toBe(true);
 
-		// The attached path is the reference the report compared against; the
-		// same assertions passing on both is what proves the default matches it.
 		const attachedCustomerId = `${prefix}-attached`;
 		await resetCustomer({ autumn: autumnV2_3, customerId: attachedCustomerId });
 		await autumnV2_3.customers.create({ id: attachedCustomerId });
@@ -171,7 +140,6 @@ test.concurrent(
 			prefix,
 		});
 
-		// Same builder as auto_enable_plan_id, reached through the group default.
 		await resetCustomer({ autumn: autumnV2_3, customerId });
 		await autumnV2_3.customers.create({
 			id: customerId,

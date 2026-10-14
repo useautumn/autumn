@@ -1,8 +1,5 @@
 import { useEffect, useState } from "react";
 
-/**
- * Debounce any value change by a configurable delay.
- */
 export function useDebounce<T>({
 	value,
 	delayMs,

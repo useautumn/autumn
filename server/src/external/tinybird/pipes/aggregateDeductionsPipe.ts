@@ -1,13 +1,6 @@
 import type { Tinybird } from "@chronark/zod-bird";
 import { z } from "../tinybirdZod.js";
 
-/**
- * Response schema for the aggregate_deductions pipe.
- *
- * One row per (period, balance, group_value) — the finest grain the response needs.
- * `balances[]` in the API response is the sum across group_value; `grouped_values`
- * is the split. Both are derived from these rows in aggregateDeductions.
- */
 export const aggregateDeductionsPipeResponseSchema = z.object({
 	period: z.string(),
 	balance_feature_id: z.string(),
@@ -27,16 +20,6 @@ export type AggregateDeductionsPipeRow = z.infer<
 	typeof aggregateDeductionsPipeResponseSchema
 >;
 
-/**
- * Parameters for the aggregate_deductions pipe.
- *
- * customer_id is required, not optional: it leads the sorting key on
- * events_deductions_hourly_mv, so pinning it keeps the query on the key prefix
- * rather than scanning the org. The handler rejects the request before we get here.
- *
- * feature_ids matches EITHER side of the edge — a deduction is included if the
- * tracked feature is in the list OR the balance's feature is.
- */
 export const aggregateDeductionsPipeParamsSchema = z.object({
 	org_id: z.string(),
 	env: z.string(),
@@ -50,13 +33,10 @@ export const aggregateDeductionsPipeParamsSchema = z.object({
 	group_column: z
 		.enum(["entity_id", "source_feature_id", "plan_id"])
 		.optional(),
-	// Property grouping reads raw `events` instead of the MV (which carries no
-	// properties by design). Mutually exclusive with group_column.
 	property_key: z.string().optional(),
 	max_groups: z.number().int().min(1).max(250).optional(),
 });
 
-/** The pipe silently prefers the property branch — reject ambiguity instead. */
 export const assertDeductionGroupingUnambiguous = (params: {
 	group_column?: string;
 	property_key?: string;
@@ -72,7 +52,6 @@ export type AggregateDeductionsPipeParams = z.infer<
 	typeof aggregateDeductionsPipeParamsSchema
 >;
 
-/** Creates the aggregate_deductions pipe caller */
 export const createAggregateDeductionsPipe = (tb: Tinybird) =>
 	tb.buildPipe({
 		pipe: "aggregate_deductions",

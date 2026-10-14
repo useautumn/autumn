@@ -20,7 +20,6 @@ export type TestPlan = {
 	isAddOn: boolean;
 };
 
-/** Add-on status is separate from pricing, so a free plan can be an add-on. */
 export const plan = ({
 	planId,
 	kind = "main",

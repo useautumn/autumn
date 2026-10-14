@@ -88,7 +88,6 @@ export const autumnConsumablePriceToStripePriceShape = ({
 }): StripePriceShape | null => {
 	if (!isConsumablePrice(price)) return null;
 
-	// Sync-back doesn't encode flat tier charges on graduated consumables, even a 0 one.
 	const isVolume = isVolumePrice(price);
 	const hasFlatAmountKey = price.config.usage_tiers.some(
 		(tier) => tier.flat_amount != null,
@@ -98,7 +97,6 @@ export const autumnConsumablePriceToStripePriceShape = ({
 	const recurring = priceToStripeRecurringParams({ price });
 	if (!recurring) return null;
 
-	// Mirrors createStripeInArrearPrice: metered volume prices are created without flat fees.
 	const tiers = priceToStripeUnitTiers({
 		price,
 		entitlement,
@@ -137,7 +135,6 @@ export const autumnConsumablePriceToStripePriceShape = ({
 	});
 };
 
-/** Allocated v2 main price is licensed/tiered, not metered. */
 export const autumnAllocatedPriceToStripePriceShape = ({
 	price,
 	entitlement,
@@ -186,11 +183,6 @@ export const autumnAllocatedPriceToStripePriceShape = ({
 	});
 };
 
-/**
- * Total (allowance-inclusive) shape of a prepaid price — what Autumn's V2
- * prepaid Stripe price looks like, so Stripe-native licensed prices (e.g.
- * imported catalogs) can be recognized as prepaid by shape.
- */
 export const autumnPrepaidPriceToStripePriceShape = ({
 	price,
 	entitlement,

@@ -4,7 +4,6 @@ import type { CronContext } from "@/cron/utils/CronContext.js";
 import { getBalanceWorkerClient } from "@/external/balanceWorker/getBalanceWorkerClient.js";
 import type { DueBalanceLock } from "../repos/balanceLocks.js";
 
-/** Keyed on the lock's row id, so a lock still open on the next pass retries as the same command. */
 export const dueLockToConfirmExpiredLockCommand = ({
 	lock,
 	now,
@@ -26,15 +25,10 @@ export const dueLockToConfirmExpiredLockCommand = ({
 	lock: { id: lock.id, lock_id: lock.lock_id },
 });
 
-/** Finalized between the sweep's read and its command: already closed, which is all the sweep wanted. */
 const isAlreadyClosed = (reason: unknown): boolean =>
 	reason instanceof BalanceWorkerClientError &&
 	reason.workerCode === "LOCK_NOT_FOUND";
 
-/**
- * A lock that confirms on expiry keeps what it took, so closing it moves no balance. The worker owns the
- * table and the lock ids in memory, so it does the deleting; one that fails is simply due again next pass.
- */
 export const confirmExpiredLocks = async ({
 	ctx,
 	locks,

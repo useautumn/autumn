@@ -28,8 +28,8 @@ describe("poolsFromParts", () => {
 				MODEL,
 			),
 		).toEqual({
-			inputTokens: 65, // 100 − 20 − 5 − 10
-			outputTokens: 20, // 50 − 30
+			inputTokens: 65,
+			outputTokens: 20,
 			cacheReadTokens: 20,
 			cacheWriteTokens: 5,
 			reasoningTokens: 30,
@@ -100,7 +100,6 @@ describe("poolsFromParts", () => {
 		);
 		expect(pools.inputTokens).toBe(0);
 		expect(pools.outputTokens).toBe(0);
-		// Detail pools still report what the provider claimed
 		expect(pools.cacheReadTokens).toBe(8);
 		expect(pools.reasoningTokens).toBe(9);
 	});

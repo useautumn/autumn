@@ -5,16 +5,6 @@ import { addAllowanceToTiers } from "@utils/productV2Utils/productItemUtils/tier
 import { nullish } from "@utils/utils";
 import { Decimal } from "decimal.js";
 
-/**
- * Volume-based tier pricing: the ENTIRE usage is charged at the rate of
- * whichever single tier it falls into (unlike graduated, which splits across bands).
- *
- * When `allowance` > 0, a free $0 tier is prepended and paid-tier boundaries
- * are shifted up. If usage <= allowance, cost is $0. If usage exceeds the
- * allowance, the ENTIRE usage (including the free portion) is charged at the
- * matching paid tier's rate. This is intentional — volume pricing does not
- * subtract included usage before applying the rate.
- */
 export const volumeTiersToLineAmount = ({
 	tiers,
 	usage,
@@ -53,16 +43,12 @@ export const volumeTiersToLineAmount = ({
 		const isFinalTier = tier.to === Infinite || tier.to === -1;
 		const tierBoundary = isFinalTier ? Infinity : (tier.to as number);
 
-		// If the usage is within this current tier,
 		if (roundedUsage <= tierBoundary) {
-			// Assume the total amount is THIS tier's cost * the usage
 			const rate = new Decimal(tier.amount).div(billingUnits);
 			amount = rate.mul(roundedUsage);
-			// Add the flat fee for this tier if present
 			if (tier.flat_amount) {
 				amount = amount.plus(tier.flat_amount);
 			}
-			// Do not consider each tier individually, just use the total amount for this tier.
 			break;
 		}
 	}

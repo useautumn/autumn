@@ -1,14 +1,5 @@
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { expectAllocatedMessages } from "./utils/allocateTestUtils.js";
-/**
- * Lowering a share below what the entity already used is allowed: usage stays, the share is
- * spent, and only the part of the old share the entity didn't use becomes unallocated.
- *
- * Contract: A=5k, B=5k on 10k; A uses 4k; A→1k.
- *   A's share: granted 1k, usage 4k, remaining 0. Shared: remaining 6k, allocated 6k, unallocated 1k.
- *   A's balance adds the 1k unallocated it may spend: granted 2k, remaining 1k.
- *   A may then draw only unallocated credits; B's share is untouched.
- */
 
 import { expect, test } from "bun:test";
 import chalk from "chalk";

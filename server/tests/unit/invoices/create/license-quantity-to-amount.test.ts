@@ -10,7 +10,7 @@ import { prices } from "@tests/utils/fixtures/db/prices";
 import { products } from "@tests/utils/fixtures/db/products";
 import { licenseQuantityToAmount } from "@/internal/invoices/actions/create/compute/licenseQuantityToAmount";
 
-const seatPrice = prices.createFixed({ id: "seat_price" }); // $100 / month
+const seatPrice = prices.createFixed({ id: "seat_price" });
 const seatPlan = products.createFull({ id: "seat", prices: [seatPrice] });
 
 const link = ({

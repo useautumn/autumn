@@ -11,11 +11,6 @@ import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 
-// ═══════════════════════════════════════════════════════════════════
-// CHECK: Feature with usage limits (initial state, no tracking)
-// Migrated from: check-basic.test.ts / check-usage-limits
-// ═══════════════════════════════════════════════════════════════════
-
 test.concurrent(`${chalk.yellowBright("check-max-purchase-initial: /check on feature with usage limits")}`, async () => {
 	const maxPurchase = 400;
 	const messagesFeature = items.consumableMessages({
@@ -40,10 +35,6 @@ test.concurrent(`${chalk.yellowBright("check-max-purchase-initial: /check on fea
 
 	const usageLimit = maxPurchase + messagesFeature.included_usage;
 
-	// ─────────────────────────────────────────────────────────────────
-	// Check with required_balance = usageLimit (should be allowed)
-	// ─────────────────────────────────────────────────────────────────
-
 	const resV2Allowed = (await autumnV2.check({
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
@@ -52,11 +43,6 @@ test.concurrent(`${chalk.yellowBright("check-max-purchase-initial: /check on fea
 
 	expect(resV2Allowed.allowed).toBe(true);
 
-	// ─────────────────────────────────────────────────────────────────
-	// Check with required_balance > usageLimit (should NOT be allowed)
-	// ─────────────────────────────────────────────────────────────────
-
-	// v2 response
 	const resV2 = (await autumnV2.check({
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
@@ -82,7 +68,6 @@ test.concurrent(`${chalk.yellowBright("check-max-purchase-initial: /check on fea
 		},
 	});
 
-	// v1 response
 	const resV1 = (await autumnV1.check({
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
@@ -106,7 +91,6 @@ test.concurrent(`${chalk.yellowBright("check-max-purchase-initial: /check on fea
 	});
 	expect(resV1.next_reset_at).toBeDefined();
 
-	// v0 response
 	const resV0 = (await autumnV0.check({
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
@@ -122,24 +106,6 @@ test.concurrent(`${chalk.yellowBright("check-max-purchase-initial: /check on fea
 		feature_id: TestFeature.Messages,
 	});
 });
-
-// ═══════════════════════════════════════════════════════════════════
-// CHECK: Prepaid + pay-per-use feature with usage limits (with tracking)
-// Migrated from: server/tests/balances/check/prepaid/check-prepaid2.test.ts
-//
-// Setup:
-// - Prepaid item: includedUsage=100, billingUnits=100, price=8.5
-// - Usage item: includedUsage=200, price=0.5, maxPurchase=300
-// - Attach with prepaidQuantity=500
-//
-// Total granted_balance = 100 + 200 = 300
-// Total initial balance = 300 (granted) + 500 (prepaid) = 800
-//
-// Tracking sequence:
-// 1. Track 500 → all goes to prepaid first
-// 2. Track 500 → 100 from prepaid, 200 from usage granted, 200 paid overage
-// 3. Track 200 → only 100 used due to usage limit cap
-// ═══════════════════════════════════════════════════════════════════
 
 test.concurrent(`${chalk.yellowBright("check-max-purchase-prepaid-consumable: /check on prepaid + pay-per-use with usage limits")}`, async () => {
 	const prepaidItem = items.prepaidMessages({
@@ -161,7 +127,7 @@ test.concurrent(`${chalk.yellowBright("check-max-purchase-prepaid-consumable: /c
 	});
 
 	const prepaidQuantity = 500;
-	const grantedBalance = prepaidItem.included_usage + usageItem.included_usage; // 300
+	const grantedBalance = prepaidItem.included_usage + usageItem.included_usage;
 
 	const { customerId, autumnV1, autumnV2 } = await initScenario({
 		customerId: "check-max-purchase-prepaid-consumable",
@@ -182,10 +148,6 @@ test.concurrent(`${chalk.yellowBright("check-max-purchase-prepaid-consumable: /c
 		],
 	});
 
-	// ─────────────────────────────────────────────────────────────────
-	// Initial state (no usage)
-	// ─────────────────────────────────────────────────────────────────
-
 	const resV2Initial = (await autumnV2.check({
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
@@ -202,7 +164,7 @@ test.concurrent(`${chalk.yellowBright("check-max-purchase-prepaid-consumable: /c
 			purchased_balance: prepaidQuantity,
 			current_balance: prepaidQuantity + grantedBalance,
 			usage: 0,
-			max_purchase: null, // Aggregated is null since prepaid has no limit
+			max_purchase: null,
 			overage_allowed: true,
 			reset: {
 				interval: prepaidItem.interval,
@@ -211,7 +173,6 @@ test.concurrent(`${chalk.yellowBright("check-max-purchase-prepaid-consumable: /c
 	});
 	expect(resV2Initial.balance?.reset?.resets_at).toBeDefined();
 
-	// Verify breakdowns
 	expect(resV2Initial.balance?.breakdown).toHaveLength(2);
 	expect(resV2Initial.balance?.breakdown).toContainEqual(
 		expect.objectContaining({
@@ -234,7 +195,6 @@ test.concurrent(`${chalk.yellowBright("check-max-purchase-prepaid-consumable: /c
 		}),
 	);
 
-	// V1 response for initial state
 	const resV1Initial = (await autumnV1.check({
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
@@ -251,10 +211,6 @@ test.concurrent(`${chalk.yellowBright("check-max-purchase-prepaid-consumable: /c
 		balance: prepaidQuantity + grantedBalance,
 		usage: 0,
 	});
-
-	// ─────────────────────────────────────────────────────────────────
-	// Track 600: All usage goes to prepaid balance first
-	// ─────────────────────────────────────────────────────────────────
 
 	await autumnV2.track({
 		customer_id: customerId,
@@ -283,10 +239,6 @@ test.concurrent(`${chalk.yellowBright("check-max-purchase-prepaid-consumable: /c
 			overage_allowed: false,
 		}),
 	);
-
-	// ─────────────────────────────────────────────────────────────────
-	// Track another 400: 200 from usage granted, 200 paid
-	// ─────────────────────────────────────────────────────────────────
 
 	await autumnV2.track({
 		customer_id: customerId,
@@ -327,11 +279,6 @@ test.concurrent(`${chalk.yellowBright("check-max-purchase-prepaid-consumable: /c
 		}),
 	);
 
-	// ─────────────────────────────────────────────────────────────────
-	// Track another 200: Only 100 actually used due to usage limit
-	// Usage-based has max_purchase=300, already purchased 200, so only 100 more
-	// ─────────────────────────────────────────────────────────────────
-
 	await autumnV2.track({
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
@@ -344,7 +291,7 @@ test.concurrent(`${chalk.yellowBright("check-max-purchase-prepaid-consumable: /c
 	})) as unknown as CheckResponseV2;
 
 	expect(resAfterTrack1200.balance).toMatchObject({
-		usage: 1100, // Only 100 actually used due to cap
+		usage: 1100,
 		purchased_balance: prepaidQuantity + 300,
 	});
 
@@ -359,10 +306,6 @@ test.concurrent(`${chalk.yellowBright("check-max-purchase-prepaid-consumable: /c
 		}),
 	);
 
-	// ─────────────────────────────────────────────────────────────────
-	// Verify skip_cache returns correct response (tests postgres sync)
-	// ─────────────────────────────────────────────────────────────────
-
 	await new Promise((resolve) => setTimeout(resolve, 4000));
 
 	const resSkipCache = (await autumnV2.check({
@@ -371,8 +314,6 @@ test.concurrent(`${chalk.yellowBright("check-max-purchase-prepaid-consumable: /c
 		skip_cache: true,
 	})) as unknown as CheckResponseV2;
 
-	// Note: not asserting `allowed` here - the skip_cache test is primarily
-	// verifying that postgres sync returns correct balance data
 	expect(resSkipCache.balance).toMatchObject({
 		granted_balance: grantedBalance,
 		current_balance: 0,

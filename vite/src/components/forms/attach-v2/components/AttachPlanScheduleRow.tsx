@@ -8,7 +8,6 @@ import {
 import { ConfigRow } from "@/components/forms/shared/ConfigRow";
 import { cn } from "@/lib/utils";
 
-/** Immediately / End of cycle; `locked` pins it to Immediately while the anchor resets now. */
 export function AttachPlanScheduleRow({
 	isImmediateSelected,
 	isEndOfCycleSelected,

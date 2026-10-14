@@ -4,12 +4,10 @@ import {
 	splitOAuthScopeString,
 } from "@autumn/shared/utils/auth/oauthScopeUtils";
 
-/** Distinguishes a bad scope string from the grant failures the catch maps to invalid_grant. */
 export class OAuthTokenScopeError extends Error {
 	name = "OAuthTokenScopeError";
 }
 
-/** A scope this server no longer defines makes the grant unusable, so it throws. */
 export const parseOAuthTokenResponseScopes = ({
 	scope,
 }: {

@@ -12,17 +12,6 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { constructArrearProratedItem } from "@/utils/scriptUtils/constructItem.js";
 
-// ═══════════════════════════════════════════════════════════════════
-// Allocated Invoice — BillImmediately / OnDecrease.None (Replaceables)
-//
-// Product: 1 included seat, $50/seat
-// on_increase: BillImmediately
-// on_decrease: None (creates replaceables — balance kept till next cycle)
-//
-// These tests focus on the REPLACEABLE lifecycle — creation on decrease,
-// partial consumption on increase, and cleanup at cycle boundary.
-// ═══════════════════════════════════════════════════════════════════
-
 const PRICE_PER_SEAT = 50;
 const INCLUDED_USAGE = 1;
 
@@ -35,12 +24,6 @@ const userItem = constructArrearProratedItem({
 		on_decrease: OnDecrease.None,
 	},
 });
-
-// ═══════════════════════════════════════════════════════════════════
-// create-rep1: Replaceable creation and charging past included boundary
-//
-// Flow: +3 → -3 (creates 3 replaceables)
-// ═══════════════════════════════════════════════════════════════════
 
 test(`${chalk.yellowBright("create-rep1: replaceable creation and charging past included boundary")}`, async () => {
 	const pro = products.pro({ id: "pro", items: [userItem] });
@@ -57,7 +40,6 @@ test(`${chalk.yellowBright("create-rep1: replaceable creation and charging past 
 		],
 	});
 
-	// Step 2: Track -3 (creates 3 replaceables, no refund)
 	const trackRes2: TrackResponseV2 = await autumnV2.track({
 		customer_id: customerId,
 		feature_id: TestFeature.Users,
@@ -79,10 +61,8 @@ test(`${chalk.yellowBright("create-rep1: replaceable creation and charging past 
 		usage: 0,
 	});
 
-	// No new invoice — OnDecrease.None means no refund
 	await expectCustomerInvoiceCorrect({ customerId, count: 2 });
 
-	// Step 3: Track +1 (consumes 1 replaceable, 1 still left)
 	const trackRes3: TrackResponseV2 = await autumnV2.track({
 		customer_id: customerId,
 		feature_id: TestFeature.Users,
@@ -104,18 +84,10 @@ test(`${chalk.yellowBright("create-rep1: replaceable creation and charging past 
 		usage: 1,
 	});
 
-	// Still no new invoice — replaceable consumed, not billed
 	await expectCustomerInvoiceCorrect({ customerId, count: 2 });
 
 	await expectStripeSubscriptionCorrect({ ctx, customerId });
 });
-
-// ═══════════════════════════════════════════════════════════════════
-// create-rep2: Replaceable creation, partial consumption, and charging past replaceables
-// replaceables, then partially consume them
-//
-// Flow: +3 → -2 (creates 2 reps) → +1 (consumes 1) → +2 (consumes 1 + charges 1)
-// ═══════════════════════════════════════════════════════════════════
 
 test(`${chalk.yellowBright("create-rep2: replaceable creation, partial consumption, and charging past replaceables")}`, async () => {
 	const pro = products.pro({ id: "pro", items: [userItem] });
@@ -132,7 +104,6 @@ test(`${chalk.yellowBright("create-rep2: replaceable creation, partial consumpti
 		],
 	});
 
-	// Step 2: Track -2 (creates 2 replaceables, no refund)
 	const trackRes2: TrackResponseV2 = await autumnV2.track({
 		customer_id: customerId,
 		feature_id: TestFeature.Users,
@@ -154,10 +125,8 @@ test(`${chalk.yellowBright("create-rep2: replaceable creation, partial consumpti
 		usage: 1,
 	});
 
-	// No new invoice — OnDecrease.None means no refund
 	await expectCustomerInvoiceCorrect({ customerId, count: 2 });
 
-	// Step 3: Track +1 (consumes 1 replaceable, 1 still left)
 	const trackRes3: TrackResponseV2 = await autumnV2.track({
 		customer_id: customerId,
 		feature_id: TestFeature.Users,
@@ -179,10 +148,8 @@ test(`${chalk.yellowBright("create-rep2: replaceable creation, partial consumpti
 		usage: 2,
 	});
 
-	// Still no new invoice — replaceable consumed, not billed
 	await expectCustomerInvoiceCorrect({ customerId, count: 2 });
 
-	// Step 4: Track +2 (consumes 1 remaining rep + charges for 1 new seat)
 	const trackRes4: TrackResponseV2 = await autumnV2.track({
 		customer_id: customerId,
 		feature_id: TestFeature.Users,
@@ -204,7 +171,6 @@ test(`${chalk.yellowBright("create-rep2: replaceable creation, partial consumpti
 		usage: 4,
 	});
 
-	// New invoice for 1 seat (the second seat was covered by the replaceable)
 	await expectCustomerInvoiceCorrect({
 		customerId,
 		count: 3,
@@ -214,13 +180,6 @@ test(`${chalk.yellowBright("create-rep2: replaceable creation, partial consumpti
 
 	await expectStripeSubscriptionCorrect({ ctx, customerId });
 });
-
-// ═══════════════════════════════════════════════════════════════════
-// create-rep3: Replaceables cleaned up at cycle boundary
-//
-// Flow: +3 → -3 (creates 2 reps with delete_next_cycle) →
-//       advance to next cycle → replaceables deleted, balance resets
-// ═══════════════════════════════════════════════════════════════════
 
 test(`${chalk.yellowBright("create-rep3: replaceables with delete_next_cycle are cleaned up at renewal")}`, async () => {
 	const pro = products.pro({ id: "pro", items: [userItem] });
@@ -243,7 +202,6 @@ test(`${chalk.yellowBright("create-rep3: replaceables with delete_next_cycle are
 		latestTotal: PRICE_PER_SEAT * 2,
 	});
 
-	// Track -3: back to 0 usage, creates 2 replaceables (overage portion)
 	const trackRes: TrackResponseV2 = await autumnV2.track({
 		customer_id: customerId,
 		feature_id: TestFeature.Users,
@@ -265,13 +223,11 @@ test(`${chalk.yellowBright("create-rep3: replaceables with delete_next_cycle are
 		usage: 0,
 	});
 
-	// Advance to next billing cycle
 	await advanceToNextInvoice({
 		stripeCli: ctx.stripeCli,
 		testClockId: testClockId!,
 	});
 
-	// After renewal: replaceables with delete_next_cycle should be cleaned
 	await expectFeatureCachedAndDb({
 		autumn: autumnV1,
 		customerId,

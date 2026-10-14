@@ -1,9 +1,3 @@
-/**
- * Invoice mode with an Autumn-managed no-card trial is accepted with default
- * invoice options and rejected with custom ones (they can't reach the invoice
- * sent at trial end). Stripe-run and revert trials are unaffected.
- */
-
 import { expect, test } from "bun:test";
 import type {
 	AttachBillingContext,

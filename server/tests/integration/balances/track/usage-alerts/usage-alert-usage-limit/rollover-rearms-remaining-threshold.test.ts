@@ -33,7 +33,6 @@ afterAll(async () => {
 	await webhook?.cleanup();
 });
 
-// ── B11: a rolled-over window re-arms remaining thresholds ──────────────────
 test(`${chalk.yellowBright("ul-alert10: a rolled-over window measures a fresh cap so remaining re-arms")}`, async () => {
 	const customerId = "ul-alert-rollover-1";
 	await setupCustomer({ customerId, planId: "ul-alert-rollover" });
@@ -46,7 +45,6 @@ test(`${chalk.yellowBright("ul-alert10: a rolled-over window measures a fresh ca
 		],
 	});
 
-	// 200 → 100 remaining crosses 150 on the way down.
 	await track({ customerId, value: 100 });
 	await waitForUsageAlert({ token: playToken, customerId, threshold: 150 });
 
@@ -59,7 +57,6 @@ test(`${chalk.yellowBright("ul-alert10: a rolled-over window measures a fresh ca
 	});
 	await waitForNextMinuteBucket();
 
-	// A stale "before" of 100 remaining would already sit under 150 and suppress this.
 	await track({ customerId, value: 60 });
 	await waitForUsageAlertCount({
 		token: playToken,

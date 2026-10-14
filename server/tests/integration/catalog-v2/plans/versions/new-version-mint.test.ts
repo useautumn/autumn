@@ -1,10 +1,3 @@
-/**
- * catalogV2.update — versioning: "new_version", active: true mint mechanics.
- *
- * Clones latest (same id, version max+1, new internal_id), copies ents/prices
- * with fresh row ids, applies param changes on top. Old version is untouched.
- */
-
 import { expect, test } from "bun:test";
 import {
 	BillingInterval,
@@ -330,7 +323,6 @@ test.concurrent(
 	},
 );
 
-// spec decision pending: mint without customers
 test.concurrent(
 	`${chalk.yellowBright("catalogV2 new_version: mint with no customers is allowed")}`,
 	async () => {
@@ -373,7 +365,6 @@ test.concurrent(
 	},
 );
 
-// spec decision pending: mint anyway vs no-op on zero diff
 test.concurrent(
 	`${chalk.yellowBright("catalogV2 new_version: identical params still mint a new version")}`,
 	async () => {

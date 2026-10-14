@@ -18,17 +18,14 @@ import { linkStripeCustomer } from "@/internal/customers/actions/linkStripeCusto
 import { customerDataToCustomerUpdates } from "@/internal/customers/actions/updateCustomerData.js";
 import { createEntitiesV2 } from "@/internal/entities/actions/createEntitiesV2/createEntitiesV2.js";
 
-/** What `run` hands back: its result, and the customer row it ran against. */
 export type RunWithCustomer<Result> = {
 	result: Result;
 	customer: WorkerCustomer | Customer | null;
 };
 
-/** By code, not class: the balance worker's mapped errors are plain RecaseErrors with the same codes. */
 const hasErrorCode = (error: unknown, code: string): boolean =>
 	error instanceof RecaseError && error.code === code;
 
-/** Auto-creation never charges: a paid feature is refused, as legacy `autoCreateEntity` did. */
 const createMissingEntity = async ({
 	ctx,
 	customerId,
@@ -63,19 +60,16 @@ const createMissingEntity = async ({
 			},
 		});
 	} catch (error) {
-		// A concurrent request created it first; the re-run reads it.
 		if (!hasErrorCode(error, EntityErrorCode.EntityAlreadyExists)) throw error;
 	}
 };
 
-/** Below API 2.1 check and track create a missing customer; from 2.1 a missing customer is a 404. */
 export const apiVersionCreatesCustomer = ({
 	ctx,
 }: {
 	ctx: AutumnContext;
 }): boolean => !ctx.apiVersion.gte(ApiVersion.V2_1);
 
-/** Fill empty name/email, and create the Stripe customer on `create_in_stripe` or billing details, then write the billing details to it. */
 const applyCustomerData = async ({
 	ctx,
 	customer,
@@ -104,7 +98,6 @@ const applyCustomerData = async ({
 				updateCustomer: { customer: customerRow, updates },
 			},
 		});
-	// Callers render the row `run` read, so mirror each write onto it, as the legacy path does.
 	Object.assign(customer, updates);
 
 	const needsStripeCustomer =
@@ -120,7 +113,6 @@ const applyCustomerData = async ({
 		await updateStripeBillingDetails({ ctx, stripeCustomerId, billingDetails });
 };
 
-/** A missing customer implies its entity is missing too, so one miss says everything a run needs created. */
 const createMissing = async ({
 	ctx,
 	error,
@@ -180,7 +172,6 @@ const runOrCreate = async <Result>({
 	return run();
 };
 
-/** The one place `customer_data` and `entity_data` take effect: run, create what a miss names, then apply `customer_data` to the row `run` read. */
 export const withCreateIfMissing = async <Result>({
 	ctx,
 	customerId,

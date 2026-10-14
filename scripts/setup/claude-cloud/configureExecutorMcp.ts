@@ -33,7 +33,6 @@ export const configureExecutorMcp = ({
 		headersHelper: `bash ${quoteShellArgument(helperPath)} ${quoteShellArgument(workspaceId)}`,
 	});
 
-	// User scope supports cloud sessions without granting repository-wide workspace trust.
 	spawnSync("claude", ["mcp", "remove", "--scope", "user", "executor-cloud"], {
 		cwd: root,
 		stdio: "ignore",

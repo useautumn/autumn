@@ -40,7 +40,6 @@ const describeRepeats = (run: RunDetail) => {
 	return ` Repeat ×${run.repeat}: ${shown.join("; ")}${more > 0 ? `; ${more} more file(s) in data.repeats` : ""}.`;
 };
 
-/** Agent-sized run view: counts, failures and drift only (never the full file list). */
 const summariseRun = (run: RunDetail) => {
 	const failures = run.files
 		.filter((f) => isFailedFileStatus(f.status))
@@ -111,7 +110,6 @@ const describeDevStatus = (f: FileDevStatus) => {
 	return `${f.file}: ${verdict} (${rate}; ${latest})`;
 };
 
-/** A fresh MCP server per request (stateless); every tool calls the same actions as REST. */
 export const createTwdMcpServer = ({ ctx }: { ctx: TwdContext }) =>
 	serveTools([
 		defineTool({

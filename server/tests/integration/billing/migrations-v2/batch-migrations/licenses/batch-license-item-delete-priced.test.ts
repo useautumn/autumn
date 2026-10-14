@@ -1,14 +1,3 @@
-/**
- * Deleting a paid license item must not run on the charge-free batch lane.
- *
- * A removal names a PlanItemFilter, which carries no price, so the op-level
- * guard cannot tell a free item from a paid one. Left unguarded the batch lane
- * drops the assignments' customer_prices with no Stripe write, so Autumn stops
- * modelling a charge the subscription still bills.
- *
- * Red: the op runs on the batch lane and deletes the paired prices.
- * Green: the op is rejected to the per-customer lane.
- */
 import { expect, test } from "bun:test";
 import { customerPrices } from "@autumn/shared";
 import { runChunkedMigration } from "@tests/integration/billing/migrations-v2/utils/runChunkedMigration";

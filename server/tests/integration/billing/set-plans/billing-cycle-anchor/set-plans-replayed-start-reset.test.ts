@@ -1,10 +1,3 @@
-/**
- * A cancelling plan with Free scheduled after it: the dashboard reopens its saved first phase on the plan's start.
- *
- * Red (before):  phase_start on that saved start resolved to the current anchor and reset nothing, silently.
- * Green (after): the preview warns the reset does nothing; the same change starting now moves the next cycle.
- */
-
 import { expect, test } from "bun:test";
 import { BillingInterval, type SetPlansParamsV0Input } from "@autumn/shared";
 import { items } from "@tests/utils/fixtures/items";

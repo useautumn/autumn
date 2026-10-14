@@ -1,7 +1,3 @@
-/**
- * Base error class for all Autumn API errors
- * This should match the RecaseError interface from the server
- */
 export class InternalError extends Error {
 	code: string;
 	statusCode: number;

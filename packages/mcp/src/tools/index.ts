@@ -35,7 +35,6 @@ export {
 	epochMillisecondsToDateTool,
 } from "./utils/dates.js";
 
-/** Endpoint each tool calls, keyed by tool id (preview tools use their preview path). */
 export const endpointByTool = {
 	...agent.endpoints,
 	...customers.endpoints,
@@ -51,7 +50,6 @@ export const endpointByTool = {
 	...stripe.endpoints,
 } as const;
 
-/** Request schema each tool validates against, keyed by tool id. */
 export const schemaByTool = {
 	...agent.schemas,
 	...customers.schemas,
@@ -70,8 +68,6 @@ export const schemaByTool = {
 	z.ZodType
 >;
 
-/** A preview's changed plans carry the terms a customize is diffed against, so
- * every surface can render the diff from the preview alone. */
 const BILLING_PREVIEW_EXPAND = ["incoming.plan", "outgoing.plan"];
 
 const operations = toolDomains.flatMap((domain) => domain.operations ?? []);
@@ -87,10 +83,6 @@ const confirmedWrites = toolDomains.flatMap(
 
 type ToolRecord = Record<string, ReturnType<typeof createTool>>;
 
-/**
- * Public MCP toolset: previews call Autumn's preview endpoints directly and
- * writes apply immediately (external clients gate destructive calls themselves).
- */
 const createRawAutumnOperationToolset = ({
 	requireIntent,
 }: {
@@ -117,12 +109,6 @@ const createRawAutumnOperationToolset = ({
 	};
 };
 
-/**
- * Build the Autumn MCP toolset. `requireIntent` (default true) forces a
- * one-sentence `intent` on every external tool call for analytics — disable it
- * for our own internal agent, which would otherwise fail when it omits it. Every
- * tool still accepts an intent either way.
- */
 export const createRawAutumnOperationTools = ({
 	requireIntent = true,
 }: {

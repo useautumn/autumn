@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 
-/** Whole seconds since `active` last turned true; 0 while inactive. */
 export const useElapsedSeconds = ({ active }: { active: boolean }) => {
 	const [seconds, setSeconds] = useState(0);
 

@@ -7,14 +7,12 @@ import type { ShadowAtomRecord } from "@/internal/misc/shadowAtom/types/shadowAt
 const B55EE = "atom_b55ee51c6af650dd1aefc172";
 const DD3D20BD = "atom_dd3d20bd53fb6cf8c54e4865";
 
-/** A deployer whose alien still has a group for each of these external ids. */
 const withGroups = (externalIds: string[]) => ({
 	hasGroup: async ({ externalId }: { externalId: string }) =>
 		externalIds.includes(externalId),
 });
 
 describe("the next Atom id apart from leftover groups", () => {
-	// These are the shadow Atom's real ids, which carry no dev stack prefix.
 	const originalPrefix = process.env.ATOM_DEPLOYMENT_PREFIX;
 	beforeEach(() => {
 		delete process.env.ATOM_DEPLOYMENT_PREFIX;

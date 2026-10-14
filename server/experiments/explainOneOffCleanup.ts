@@ -8,10 +8,6 @@ import {
 import { sql } from "drizzle-orm";
 import { initDrizzle } from "./experimentEnv";
 
-// Run with `bun run experiments/explainOneOffCleanup.ts`
-// Source: getOneOffCustomerProductsToCleanup
-// File: server/src/internal/customers/cusProducts/actions/cleanupOneOff/getOneOffToCleanup.ts:48
-
 const RELEVANT_TABLES = [
 	"customer_products",
 	"customer_prices",
@@ -157,7 +153,6 @@ const main = async () => {
 		WHERE cp.id IN (SELECT id FROM cus_products_with_newer_active_product)
 	`;
 
-	// Run the actual query to measure wall-clock time
 	console.log("--- Running getOneOffCustomerProductsToCleanup query ---");
 	const start = performance.now();
 	const result = await db.execute(rawQuery);
@@ -165,7 +160,6 @@ const main = async () => {
 	console.log(`Rows returned: ${result.length}`);
 	console.log(`Wall-clock time: ${elapsed.toFixed(2)}ms\n`);
 
-	// Run EXPLAIN ANALYZE
 	console.log("--- EXPLAIN (ANALYZE, BUFFERS) ---\n");
 	const explainQuery = sql`EXPLAIN (ANALYZE, BUFFERS, FORMAT TEXT) ${rawQuery}`;
 	const explainResult = await db.execute(explainQuery);

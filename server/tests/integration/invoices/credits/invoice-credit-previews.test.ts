@@ -1,14 +1,3 @@
-/**
- * Invoice credit on previews: the server decides how much of the customer's
- * Stripe credit balance an invoice consumes, and what is left to pay.
- *
- * Contract:
- *   invoices.create preview -> invoice_credits { balance, applied }, amount_due = total - applied
- *   credit above the total  -> applied capped at the total, amount_due 0
- *   no credit               -> applied 0, amount_due = total
- *   billing.attach preview  -> invoice_credits.applied, with total already net
- */
-
 import { expect, test } from "bun:test";
 import type {
 	AttachParamsV1Input,
@@ -91,7 +80,6 @@ test(`${chalk.yellowBright("invoice credits: create preview nets the customer's 
 		plans: [{ plan_id: pro.id }],
 	})) as CreateInvoiceResponse;
 
-	// $5 of credit against a $20 invoice: all of it applies, $15 left to pay.
 	expect(partial.preview.invoice_credits).toMatchObject({
 		balance: 5,
 		applied: 5,
@@ -112,7 +100,6 @@ test(`${chalk.yellowBright("invoice credits: create preview nets the customer's 
 		plans: [{ plan_id: pro.id }],
 	})) as CreateInvoiceResponse;
 
-	// $55 of credit against a $20 invoice: only $20 applies, nothing is due.
 	expect(covered.preview.invoice_credits).toMatchObject({
 		balance: 55,
 		applied: PRO_BASE,
@@ -143,8 +130,6 @@ test(`${chalk.yellowBright("invoice credits: attach preview reports the same app
 		plan_id: pro.id,
 	});
 
-	// Attach previews report a total that already nets the credit off, so
-	// `applied` is what explains the gap from pro's $20 base.
 	expect(preview.invoice_credits).toMatchObject({ balance: 12, applied: 12 });
 	expect(preview.total).toEqual(8);
 });

@@ -31,7 +31,6 @@ function isWorkerErrorCode(value: unknown): value is WorkerErrorCode {
 	return workerErrorCodes.has(value);
 }
 
-/** Anything else the API's client throws is a failure after the call may have reached the worker. */
 export function errorToProxyError({
 	error,
 }: {
@@ -48,7 +47,6 @@ export function errorToProxyError({
 	return { code, outcome, message, workerCode, workerReason };
 }
 
-/** Undefined when `error` isn't one the proxy sent. */
 export function proxyErrorToClientError({
 	error,
 }: {

@@ -42,8 +42,6 @@ export const ConfigureStripe = () => {
 		null,
 	);
 
-	// One banner for both flows: OAuth reports the mismatch via redirect params,
-	// the secret key via the connect-dialog error callback.
 	const oauthMismatchMessage =
 		params.error === "account_mismatch"
 			? `The OAuth account ${params.account_id} is different from your connected secret key account ${params.secret_key_account_id}. Both must be the same Stripe account, so OAuth was not connected.`

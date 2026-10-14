@@ -1,7 +1,3 @@
-/**
- * `/usage` on a feature the customer holds no balance for is a no-op success on both routes: a 404 makes clients retry.
- */
-
 import { expect, test } from "bun:test";
 import { ApiVersion } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";

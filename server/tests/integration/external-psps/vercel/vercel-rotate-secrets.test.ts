@@ -1,6 +1,3 @@
-/** Vercel rotate-secrets must accept any verified OIDC token.
- * Vercel sends `ADMIN` uppercase for user auth and no role at all for system auth. */
-
 import { expect, test } from "bun:test";
 import ctx from "@tests/utils/testInitUtils/createTestContext";
 import chalk from "chalk";

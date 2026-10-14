@@ -16,16 +16,6 @@ export const GetCustomerQuerySchema = z.object({
 	}),
 });
 
-// // Update Customer Params (based on handleUpdateCustomer logic)
-// export const UpdateCustomerParamsSchema = z
-// 	.object({
-// 		id: CustomerIdSchema.optional().meta({
-// 			description: "New unique identifier for the customer",
-// 		}),
-// 	})
-// 	.extend(CustomerDataSchema.shape);
-
-// List Customers Query (based on the docs)
 export const ListCustomersQuerySchema = z.object({
 	limit: z.coerce.number().int().min(10).max(100).default(10).meta({
 		description: "Maximum number of customers to return",
@@ -35,7 +25,6 @@ export const ListCustomersQuerySchema = z.object({
 	}),
 });
 
-// List Customers Response
 export const ListCustomersResponseSchema = z.object({
 	list: z.array(z.any()).meta({
 		description: "List of customers",
@@ -59,7 +48,6 @@ export const ListCustomersResponseSchema = z.object({
 	}),
 });
 
-// Get Billing Portal Query
 export const GetBillingPortalQuerySchema = z.object({
 	return_url: z.string().optional().meta({
 		description:
@@ -67,7 +55,6 @@ export const GetBillingPortalQuerySchema = z.object({
 	}),
 });
 
-// Get Billing Portal Body
 export const GetBillingPortalBodySchema = z
 	.object({
 		configuration_id: z.string().optional().meta({
@@ -81,7 +68,6 @@ export const GetBillingPortalBodySchema = z
 	})
 	.optional();
 
-// Get Billing Portal Response
 export const GetBillingPortalResponseSchema = z.object({
 	customer_id: z.string().nullable().meta({
 		description: "The ID of the customer",

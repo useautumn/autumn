@@ -6,9 +6,6 @@ import type { FilterGroupData, FilterRule } from "./filterRowTypes";
 const group = (...rules: FilterRule[]): FilterGroupData[] => [{ rules }];
 const planOf = (filter: MigrationFilter) => filter.customer?.plan;
 
-// "Plan is not free" must mean "customer has no free plan" ($none), not
-// "customer has some non-free plan" ($some ... <> free) — otherwise a
-// Free+Pro customer leaks through via the Pro plan.
 test("plan_id is_not compiles to a $none quantifier", () => {
 	const filter = groupsToMigrationFilter(
 		group({ field: "plan_id", operator: "is_not", values: ["free"] }),
@@ -47,8 +44,6 @@ test("plan_id is_not round-trips back to the is_not operator", () => {
 	});
 });
 
-// Two plan rows in one group = "has BOTH" — independent $and quantifiers, not
-// a single plan that is both (which silently dropped the first condition).
 test("two plan rows in a group compile to customer-level $and", () => {
 	const filter = groupsToMigrationFilter(
 		group(

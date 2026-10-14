@@ -1,14 +1,3 @@
-/**
- * Shared Stripe resource assertions for plan / variant / license tests.
- *
- * Reuse levels match `PriceStripeReuseLevel` in shared:
- *   - full              — stripe_price_id + stripe_product_id (+ meter) carried
- *   - stripeProductOnly — stripe_product_id (+ meter) carried; price id NOT reused
- *   - none              — no stripe ids carried
- *
- * Every field is optional — omit to skip. Pass `null` to assert absent.
- */
-
 import { expect } from "bun:test";
 import {
 	BillingVersion,
@@ -48,7 +37,6 @@ export const stripeConfigValue = ({
 		null) ||
 	null;
 
-/** The Stripe price id V2 billing subscribes with: prepaid's v2 slot, else stripe_price_id. */
 export const v2BillingStripePriceId = ({
 	price,
 	product,
@@ -67,7 +55,6 @@ export const v2BillingStripePriceId = ({
 };
 
 type ExpectedStripeIds = {
-	/** Omit to skip. Pass null to assert absent. */
 	stripeProductId?: string | null;
 	stripePriceId?: string | null;
 	stripeMeterId?: string | null;
@@ -75,7 +62,6 @@ type ExpectedStripeIds = {
 	stripeEventName?: string | null;
 };
 
-/** Assert absolute stripe_* fields on a single price row. */
 export const expectPriceStripeResourcesCorrect = ({
 	price,
 	stripeProductId,
@@ -124,7 +110,6 @@ export const expectPriceStripeResourcesCorrect = ({
 	}
 };
 
-/** Assert a price has at least the core stripe ids (product + price). */
 export const expectPriceStripeResourcesPresent = ({
 	price,
 	requireMeter = false,
@@ -148,7 +133,6 @@ export const expectPriceStripeResourcesPresent = ({
 		`${prefix}${priceSlot} present`,
 	).toBeTruthy();
 
-	// Fixed base prices often only have stripe_price_id (no per-feature product).
 	if (!isFixedPrice(price)) {
 		expect(
 			stripeConfigValue({ price, field: "stripe_product_id" }),
@@ -170,7 +154,6 @@ export const expectPriceStripeResourcesPresent = ({
 	}
 };
 
-/** Assert a price has no stripe resource ids stamped. */
 export const expectPriceStripeResourcesAbsent = ({
 	price,
 	label,
@@ -190,13 +173,6 @@ export const expectPriceStripeResourcesAbsent = ({
 	}
 };
 
-/**
- * Assert `after` carried stripe resources from `before` at the given reuse level.
- *
- * - full: product + price (+ meter if present on before) match
- * - stripeProductOnly: product (+ meter) match; price id must NOT match before
- * - none: product / price / meter must not match before's values
- */
 export const expectPriceStripeReuseCorrect = ({
 	before,
 	after,
@@ -274,7 +250,6 @@ export const expectPriceStripeReuseCorrect = ({
 		return;
 	}
 
-	// none
 	if (beforeProduct) {
 		expect(afterProduct, `${prefix}none: stripe_product_id`).not.toBe(
 			beforeProduct,
@@ -288,7 +263,6 @@ export const expectPriceStripeReuseCorrect = ({
 	}
 };
 
-/** Assert product.processor Stripe id. */
 export const expectProductProcessorCorrect = ({
 	product,
 	processorId,

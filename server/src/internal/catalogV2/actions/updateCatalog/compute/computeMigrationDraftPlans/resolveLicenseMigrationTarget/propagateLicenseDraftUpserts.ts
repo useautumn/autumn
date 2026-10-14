@@ -17,7 +17,6 @@ import {
 import type { ProductStatesContext } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext";
 import type { UpsertProductPlan } from "@/internal/catalogV2/actions/updateCatalog/types/upsertProductPlan";
 
-/** Link deltas for children that follow this parent. */
 export const propagateLicenseDraftUpserts = ({
 	parent,
 	upsertProductPlans,

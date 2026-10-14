@@ -1,20 +1,3 @@
-/**
- * Regression coverage for org-level `allowed_payment_methods` on invoice-mode
- * subscriptions (PRD: "Choose payment methods on Autumn invoices").
- *
- * Contract under test:
- *   - `org.config.allowed_payment_methods` is applied as
- *     `payment_settings.payment_method_types` on invoice-mode (send_invoice)
- *     subscription creation.
- *   - The next-cycle (renewal/overage) invoice inherits the list from the
- *     subscription — usage tracked at $0.01/unit lands as a $10 cycle invoice
- *     offering the configured methods.
- *   - Unset config sends no payment_method_types, so Stripe's own account
- *     invoice settings keep applying (no behavior change for existing orgs).
- *   - A request-level `invoice_mode.payment_method_types` overrides the org
- *     list on both the subscription and its first invoice.
- */
-
 import { expect, test } from "bun:test";
 import {
 	type AttachParamsV1Input,
@@ -29,8 +12,6 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import type Stripe from "stripe";
 
-// USD-compatible subset of the org config enum. Currency-restricted methods
-// (sepa_debit, bacs_debit, acss_debit) are left out of the probe.
 const CANDIDATE_PAYMENT_METHODS: InvoicePaymentMethod[] = [
 	"card",
 	"customer_balance",
@@ -41,8 +22,6 @@ const CANDIDATE_PAYMENT_METHODS: InvoicePaymentMethod[] = [
 const sorted = (values: string[] | null | undefined) =>
 	[...(values ?? [])].sort();
 
-/** Escape hatch for accounts whose payment method configuration under-reports
- *  what invoices accept, e.g. `TEST_INVOICE_PAYMENT_METHODS=card,link`. */
 const paymentMethodsOverride = () => {
 	const raw = process.env.TEST_INVOICE_PAYMENT_METHODS;
 	if (!raw) return undefined;
@@ -57,8 +36,6 @@ const paymentMethodsOverride = () => {
 	return parsed.data;
 };
 
-/** Stripe rejects a subscription that lists a method the account has not
- *  activated, so assert only on what this account actually offers. */
 const resolveActivatedPaymentMethods = async ({
 	stripeCli,
 }: {
@@ -104,10 +81,6 @@ const findCycleInvoice = async ({
 	return undefined;
 };
 
-// ═══════════════════════════════════════════════════════════════════
-// TEST 1: configured methods reach the sub and its next-cycle invoice
-// ═══════════════════════════════════════════════════════════════════
-
 test.concurrent(
 	`${chalk.yellowBright("invoice-mode payment methods: cycle invoice inherits the org's allowed list")}`,
 	async () => {
@@ -123,9 +96,6 @@ test.concurrent(
 			items: [usageItem],
 		});
 
-		// The sub-org's own Stripe account decides which methods are configurable,
-		// and the org config has to be in place before the attach — so provision
-		// it first, probe it, then run the scenario against the same sub-org.
 		const subOrgSlug = `invoice-pm-${Math.random().toString(36).slice(2, 8)}`;
 		const { ctx: probeCtx } = await initScenario({
 			setup: [s.platform.create({ slug: subOrgSlug })],
@@ -188,17 +158,12 @@ test.concurrent(
 		});
 
 		expect(cycleInvoice).toBeDefined();
-		// 1000 tracked units × $0.01 = $10.00
 		expect(cycleInvoice!.total).toBe(1000);
 		expect(
 			sorted(cycleInvoice!.payment_settings?.payment_method_types),
 		).toEqual(sorted(allowedPaymentMethods));
 	},
 );
-
-// ═══════════════════════════════════════════════════════════════════
-// TEST 2: unset config leaves Stripe's own invoice settings in charge
-// ═══════════════════════════════════════════════════════════════════
 
 test.concurrent(
 	`${chalk.yellowBright("invoice-mode payment methods: unset org config sends no payment_method_types")}`,
@@ -232,10 +197,6 @@ test.concurrent(
 		expect(subscription.payment_settings?.payment_method_types).toBeNull();
 	},
 );
-
-// ═══════════════════════════════════════════════════════════════════
-// TEST 3: request-level payment_method_types overrides the org list
-// ═══════════════════════════════════════════════════════════════════
 
 test.concurrent(
 	`${chalk.yellowBright("invoice-mode payment methods: request payment_method_types overrides the org list")}`,
@@ -291,10 +252,6 @@ test.concurrent(
 		expect(invoice.payment_settings.payment_method_types).toEqual(["card"]);
 	},
 );
-
-// ═══════════════════════════════════════════════════════════════════
-// TEST 4: the dashboard's V0 attach body carries payment_method_types
-// ═══════════════════════════════════════════════════════════════════
 
 test.concurrent(
 	`${chalk.yellowBright("invoice-mode payment methods: V0 payment_method_types overrides the org list")}`,

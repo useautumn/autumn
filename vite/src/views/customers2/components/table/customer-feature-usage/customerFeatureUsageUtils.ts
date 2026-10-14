@@ -8,9 +8,6 @@ import type {
 import { FeatureType, isCusEntDisplayExpired } from "@autumn/shared";
 import type { FullCusEntWithSubRows } from "./customerFeatureUsageTypes";
 
-/**
- * Flattens customer products to get all entitlements
- */
 export function flattenCustomerEntitlements({
 	customerProducts,
 }: {
@@ -35,9 +32,6 @@ export function flattenStandaloneCustomerEntitlements({
 	}));
 }
 
-/**
- * Creates a features lookup map
- */
 export function createFeaturesMap({
 	features,
 }: {
@@ -46,19 +40,11 @@ export function createFeaturesMap({
 	return new Map(features.map((f) => [f.id, f]));
 }
 
-/**
- * Result of deduplicating entitlements, including the mapping of aggregated entitlements
- */
 export interface DeduplicatedEntitlementsResult {
-	/** Combined entitlements (one per feature) */
 	entitlements: FullCusEntWithFullCusProduct[];
-	/** Mapping of featureId -> array of original entitlements that were aggregated */
 	aggregatedMap: Map<string, FullCusEntWithFullCusProduct[]>;
 }
 
-/**
- * Deduplicates entitlements by combining multiple entitlements for the same feature
- */
 export function deduplicateEntitlements({
 	entitlements,
 	entityId,
@@ -81,7 +67,6 @@ export function deduplicateEntitlements({
 
 	for (const [featureId, ents] of featureMap.entries()) {
 		if (ents.length === 1) {
-			// No duplicates, use as-is but use entity-specific balance if available
 			const ent = ents[0];
 			if (entityId && ent.entities?.[entityId]) {
 				combined.push({
@@ -99,13 +84,11 @@ export function deduplicateEntitlements({
 				isCusEntDisplayExpired({ cusEnt: ent }),
 			);
 
-			// An all-expired feature mirrors its values rather than showing zero.
 			const mathEnts = activeEnts.length > 0 ? activeEnts : expiredEnts;
 			const first = mathEnts[0];
 
 			aggregatedMap.set(featureId, [...activeEnts, ...expiredEnts]);
 
-			// When entityId is present, use entity-specific balances
 			let summedBalance: number;
 			if (entityId) {
 				summedBalance = mathEnts.reduce((sum, e) => {
@@ -157,9 +140,6 @@ export function deduplicateEntitlements({
 	};
 }
 
-/**
- * Processes non-boolean entitlements and adds subRows for credit systems
- */
 export function processNonBooleanEntitlements({
 	entitlements,
 	cusEnts,
@@ -169,7 +149,6 @@ export function processNonBooleanEntitlements({
 	cusEnts: FullCusEntWithFullCusProduct[];
 	featuresMap: Map<string, Feature>;
 }): FullCusEntWithSubRows[] {
-	// Create a map of feature id to customer entitlements for quick lookup
 	const featureIdToCusEnt = new Map(
 		cusEnts.map((ent: FullCusEntWithFullCusProduct) => [
 			ent.entitlement.feature.id,
@@ -209,9 +188,6 @@ export function processNonBooleanEntitlements({
 		});
 }
 
-/**
- * Boolean features in the org catalog the customer has not been granted.
- */
 export function getAvailableBooleanFeatures({
 	features,
 	grantedEnts,
@@ -231,9 +207,6 @@ export function getAvailableBooleanFeatures({
 	);
 }
 
-/**
- * Filters entitlements to only boolean features
- */
 function filterBooleanEntitlements({
 	entitlements,
 }: {

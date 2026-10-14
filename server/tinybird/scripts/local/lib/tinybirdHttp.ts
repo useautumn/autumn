@@ -6,7 +6,6 @@ const authHeaders = ({ target }: { target: TinybirdTarget }) => ({
 	Authorization: `Bearer ${target.token}`,
 });
 
-/** Runs a read query through /v0/sql (Local caps these at 10s). */
 export const querySql = async <T extends SqlRow = SqlRow>({
 	target,
 	sql,
@@ -67,7 +66,6 @@ export const truncateDatasource = async ({
 		throw new Error(`truncate ${name}: ${res.status} ${await res.text()}`);
 };
 
-/** Sends one NDJSON batch through the Events API (the production ingest path), gzipped for tunnels. */
 export const ingestNdjson = async ({
 	target,
 	datasource,

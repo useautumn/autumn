@@ -11,8 +11,6 @@ import { waitForFailedRenewalWebhookEffects } from "./waitForFailedRenewalWebhoo
 
 type ScenarioCtx = Awaited<ReturnType<typeof initScenario>>["ctx"];
 
-// Fails the renewal (real open invoice), then forces only this product to past_due in Postgres
-// (webhook sync is unreliable locally; mirrors balances/cron/past-due-reset.test.ts).
 export const driveProductPastDue = async ({
 	ctx,
 	testClockId,
@@ -24,7 +22,6 @@ export const driveProductPastDue = async ({
 	testClockId: string;
 	customerId: string;
 	productId: string;
-	/** Poll for the failed renewal's webhook effects instead of the fixed ~34s of waits. */
 	pollWebhookEffects?: boolean;
 }): Promise<{
 	subscriptionId: string;

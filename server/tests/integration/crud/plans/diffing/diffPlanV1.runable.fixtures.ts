@@ -5,7 +5,6 @@ import runableDump from "./runable-plans.json" with { type: "json" };
 
 const items = runableDump.items as ApiPlanV1[];
 
-// Group 1 — Credit packs (base = runable_pro_25_monthly)
 export const creditPackBase = findById(items, "runable_pro_25_monthly");
 export const creditPackVariants: ApiPlanV1[] = [
 	findById(items, "runable_pro_50_monthly"),
@@ -39,19 +38,15 @@ export const creditPackVariants: ApiPlanV1[] = [
 	findById(items, "runable_pro_20000_yearly"),
 ];
 
-// Group 2 — Plus tier
 export const plusBase = findById(items, "runable_plus_monthly");
 export const plusVariants: ApiPlanV1[] = [findById(items, "runable_plus_yearly")];
 
-// Group 3 — Pro tier
 export const proBase = findById(items, "runable_pro_monthly");
 export const proVariants: ApiPlanV1[] = [findById(items, "runable_pro_yearly")];
 
-// Group 4 — Unlimited tier
 export const unlimitedBase = findById(items, "runable_unlimited_monthly");
 export const unlimitedVariants: ApiPlanV1[] = [findById(items, "runable_unlimited_yearly")];
 
-// Group 5 — Free/starter
 export const freeStarterBase = findById(items, "runable_go");
 export const freeStarterVariants: ApiPlanV1[] = [
 	findById(items, "runable_basic"),
@@ -59,6 +54,5 @@ export const freeStarterVariants: ApiPlanV1[] = [
 	findById(items, "runable_starter_yearly"),
 ];
 
-// Group 6 — Max tier
 export const maxBase = findById(items, "runable_max_monthly");
 export const maxVariants: ApiPlanV1[] = [findById(items, "runable_max_yearly")];

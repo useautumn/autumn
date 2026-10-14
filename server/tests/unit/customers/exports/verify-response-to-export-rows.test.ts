@@ -125,7 +125,6 @@ describe("sweepStripeSubscriptions", () => {
 					if (test_clock) {
 						return page([{ id: `sub_${test_clock}`, customer: "cus_clock" }]);
 					}
-					// The open-ended first window holds everything in this fake org.
 					return page(
 						created && "gte" in created
 							? []

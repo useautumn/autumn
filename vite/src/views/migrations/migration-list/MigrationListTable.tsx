@@ -110,7 +110,6 @@ export function MigrationListTableView({
 			queryParams: { step: row.status === "draft" ? undefined : "live" },
 		});
 
-	// Stay out of the way until there is more than one page's worth to page through.
 	const showPagination =
 		filteredMigrations.length > MIGRATION_LIST_PAGE_SIZE_OPTIONS[0];
 

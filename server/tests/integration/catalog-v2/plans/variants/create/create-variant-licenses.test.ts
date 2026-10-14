@@ -1,10 +1,3 @@
-/**
- * catalogV2.update — create a variant from a parent that already has licenses.
- *
- * Red (current):  variant is created with no plan_license links
- * Green (after):  seat + admin links clone onto the variant (included + items)
- */
-
 import { test } from "bun:test";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";

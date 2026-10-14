@@ -58,10 +58,6 @@ type Delivered = {
 	timestamp?: string;
 };
 
-/**
- * The slice of kafkajs herald touches, over the real package consumer: run config captured, resolves,
- * heartbeats and commits recorded, and the group events reachable so a crash can be staged.
- */
 const createFakeKafka = ({
 	heartbeatFailsAfter,
 	committed = {},
@@ -265,7 +261,6 @@ const startConsumer = async ({
 	recordsPerSlice?: number;
 	heartbeatFailsAfter?: number;
 	committed?: Record<number, string>;
-	/** What partition_progress holds for the partition; undefined leaves the store out entirely. */
 	storedFence?: { epoch: bigint; offset: bigint } | null;
 	now?: () => number;
 }) => {

@@ -6,11 +6,6 @@ import { warnSnapshotUnreadable } from "./actions/warnSnapshotUnreadable.js";
 import { snapshotProbeOf } from "./rules/snapshotProbeOf.js";
 import { snapshotStateOf } from "./rules/snapshotStateOf.js";
 
-/**
- * The subject's rows at `occurredAt`: one probe for its snapshot when the worker reads snapshots and the read is for
- * now. Serving answers from a row that stands (parses); verifying reads the rows anyway and logs where the row
- * disagrees. Nothing becomes resident here.
- */
 export const loadSubjectBaseline = async ({
 	scope,
 	identity,

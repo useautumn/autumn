@@ -5,27 +5,7 @@ import { z } from "zod/v4";
 import { ApiTrialsUsedV0Schema } from "../components/apiTrialsUsed/prevVersions/apiTrialsUsedV0";
 import { ApiCusProductV1Schema } from "../cusPlans/previousVersions/apiCusProductV1";
 
-/**
- * ApiCustomerV1Schema - Customer response format for API V0_2/V1_0/V1_1 (pre V1_2)
- *
- * Structure: Split into separate objects
- * - customer: Core customer fields
- * - products: Array of non-add-on products
- * - add_ons: Array of add-on products
- * - entitlements: Array of customer features (V1 format)
- * - invoices: Array of customer invoices
- *
- * Key differences from V2:
- * - Split structure instead of merged
- * - Uses "entitlements" instead of "features"
- * - Features are ApiCusFeatureV1 (with used/allowance fields)
- * - Products are ApiCusProductV2 (same as V2, with items/period tracking)
- * - Invoices always included (no expand parameter)
- */
-
-// Core customer object (without products/features/invoices)
 const ApiCustomerV1CoreSchema = z.object({
-	// Internal fields
 	id: z.string().nullable(),
 	name: z.string().nullable(),
 	email: z.string().nullable(),
@@ -44,7 +24,6 @@ const ApiCustomerV1CoreSchema = z.object({
 	metadata: z.record(z.any(), z.any()).default({}),
 });
 
-// Split response structure
 export const ApiCustomerV1Schema = z.object({
 	customer: ApiCustomerV1CoreSchema,
 	products: z.array(ApiCusProductV1Schema),

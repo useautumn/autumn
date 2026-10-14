@@ -153,11 +153,6 @@ const isUnrestrictedChatGrant = async ({
 	return isUnrestrictedChatOAuthConsent({ metadata: consent?.metadata });
 };
 
-/**
- * Liveness is checked against the shared token store, the same check the api
- * server's OAuth middleware applies, so an expired token gets a transport-level
- * 401 challenge here instead of surfacing as a tool error.
- */
 const resolveOAuthPrincipal = async ({
 	bearer,
 	db,
@@ -198,9 +193,6 @@ const resolveOAuthPrincipal = async ({
 
 	const scopes = getRequestedOAuthResourceScopes(accessToken.scopes);
 
-	// A grant that names scopes must expose at least one this resource serves; an
-	// empty grant is admin-equivalent, so re-derive the right to hold one from the
-	// consent instead of trusting the token row.
 	const hasUsableGrant =
 		accessToken.scopes.length > 0
 			? scopes.length > 0
@@ -303,7 +295,6 @@ export const buildAuthForRequest = async ({
 	}
 
 	// Neither branch below answers a presented credential, so RFC 6750 §3.1
-	// leaves both without an error code — in the body as well as the header.
 	if (flags["oauth-enabled"]) {
 		throw new OAuthHttpError({
 			message: "Missing Autumn API key bearer token",

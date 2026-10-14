@@ -20,7 +20,6 @@ export type AcquireStats = {
 	samples: number[];
 };
 
-/** Caps per-interval percentile memory; `count` keeps counting past it. */
 export const MAX_ACQUIRE_SAMPLES = 5_000;
 
 const registry = new Map<string, RegisteredPool>();
@@ -35,7 +34,6 @@ export const emptyAcquireStats = (): AcquireStats => ({
 	samples: [],
 });
 
-/** Algorithm R reservoir insert: `samples` stays a uniform sample of all `observed` values. */
 export const reservoirInsert = ({
 	samples,
 	observed,
@@ -57,7 +55,6 @@ export const reservoirInsert = ({
 	}
 };
 
-/** Busy fraction of the pool; idle clients don't count as utilized. */
 export const computeUtilization = ({
 	totalCount,
 	idleCount,
@@ -172,8 +169,6 @@ const emitSnapshot = (): void => {
 		const waitingCount = pool.waitingCount;
 		const stats = acquireStats.get(name);
 		const sorted = stats ? [...stats.samples].sort((a, b) => a - b) : [];
-		// info, not debug: prod runs above debug level, and waitingCount is the
-		// only direct signal of pool-checkout starvation.
 		logger.info("pg_pool_stats", {
 			type: "pg_pool_stats",
 			pool: name,
@@ -202,10 +197,8 @@ const emitSnapshot = (): void => {
 
 export const startPgPoolMonitor = (intervalMs = 30_000): void => {
 	if (snapshotInterval) return;
-	// Pool snapshots are an ops signal; locally they just flood the console.
 	if (process.env.NODE_ENV === "development") return;
 	// Not unref'd: under Bun an unref'd interval was never observed to fire, and
-	// the server keeps the loop alive anyway — stopPgPoolMonitor clears it.
 	snapshotInterval = setInterval(emitSnapshot, intervalMs);
 	startSlowReadProbe();
 	emitSnapshot();

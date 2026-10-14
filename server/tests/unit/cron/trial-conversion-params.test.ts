@@ -1,8 +1,3 @@
-/**
- * A lapsed Autumn-managed trial attached in invoice mode converts by a finalized
- * invoice with the plan enabled immediately; any other trial charges the card.
- */
-
 import { expect, test } from "bun:test";
 import { CollectionMethod } from "@autumn/shared";
 import { customerProducts } from "@tests/utils/fixtures/db/customerProducts";

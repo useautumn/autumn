@@ -54,8 +54,6 @@ export const ProductListRowToolbar = ({
 	const axiosInstance = useAxiosInstance();
 	const activeSandbox = useActiveSandbox();
 	const env = useEnv();
-	// Only a Sandbox-env view with an active sandbox is a real named-sandbox
-	// context; activeSandbox can be stale on a production route (no header sent).
 	const inNamedSandbox = env === AppEnv.Sandbox && !!activeSandbox;
 	const copySandbox = useCopySandbox();
 

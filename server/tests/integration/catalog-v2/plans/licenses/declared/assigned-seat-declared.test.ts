@@ -1,7 +1,3 @@
-/**
- * catalogV2.update — assigned seat × declared licenses[] PUT.
- * Customize retires the referenced row; licenses: [] retires, not deletes.
- */
 import { expect, test } from "bun:test";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";

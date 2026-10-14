@@ -17,7 +17,6 @@ import {
 import type { ListedCustomerProduct } from "./customerProductToListRow.js";
 import { subscriptionListStatusesToDb } from "./subscriptionListStatusesToDb.js";
 
-/** A page of hydrated customer_products for subscriptions.list / purchases.list. */
 export const listCustomerProducts = async ({
 	ctx,
 	params,
@@ -75,7 +74,6 @@ export const listCustomerProducts = async ({
 	});
 };
 
-/** Stripe-backed period data for the page's subscriptions, in one read. */
 export const loadPageSubscriptions = async ({
 	ctx,
 	customerProducts,

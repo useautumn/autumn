@@ -1,9 +1,3 @@
-/**
- * A target version that re-mints identical definitions still repoints the
- * customer_entitlements' catalog claims: entitlement_id moves to the target's
- * rows while row identity and balances stay put — multi-item version of the
- * single-item test in core/basic-version-repoint, mixed with one changed item.
- */
 import { expect, test } from "bun:test";
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
@@ -12,7 +6,6 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-// version-only is per-customer until definition execute is restored
 import { readScopedFeatureRow } from "../../paidRowTestUtils";
 import {
 	expectVersionRepointedOnce,
@@ -48,7 +41,6 @@ test.skip(
 				}),
 			],
 		});
-		// Messages/Words identical across versions; Credits is the changed item.
 		await mintPlanVersion({
 			client: autumnV2_3,
 			planId: plan.id,
@@ -104,7 +96,6 @@ test.skip(
 			result,
 		});
 
-		// Identical items: claim moves, row id and balance stable.
 		const messagesAfter = await readScopedFeatureRow({
 			ctx,
 			customerId,
@@ -124,7 +115,6 @@ test.skip(
 		expect(wordsAfter.entitlement_id).not.toBe(wordsBefore.entitlement_id);
 		expect(wordsAfter.balance).toBe(50);
 
-		// The changed item still transitions normally alongside the repoints.
 		const creditsAfter = await readScopedFeatureRow({
 			ctx,
 			customerId,

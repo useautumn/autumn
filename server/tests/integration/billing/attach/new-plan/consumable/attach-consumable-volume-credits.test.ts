@@ -1,8 +1,3 @@
-/**
- * Pay-per-use volume on a credit system bills credits (not action units) past included, at the net
- * tier the overage lands in. Each case checks the upcoming-invoice preview equals the renewal invoice.
- */
-
 import { test } from "bun:test";
 import { expectNextInvoiceMatchesPreview } from "@tests/integration/billing/utils/expectNextInvoiceMatchesPreview";
 import { TestFeature } from "@tests/setup/v2Features";
@@ -11,7 +6,6 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-// Credits schema: action1 costs 0.2 credits, action2 costs 0.6. Default tiers: 0-500 @ $0.10, 501+ @ $0.05.
 const runCreditsVolumeRenewal = async ({
 	customerId,
 	includedUsage,
@@ -59,7 +53,6 @@ const runCreditsVolumeRenewal = async ({
 test.concurrent(
 	`${chalk.yellowBright("consumable-volume-credits 1: no included, 800 credits from two actions → band 2: 800 × $0.05 = $40")}`,
 	async () => {
-		// 1000 × 0.2 + 1000 × 0.6 = 800 credits; all 800 at $0.05 (graduated would be $65).
 		await runCreditsVolumeRenewal({
 			customerId: "cons-volume-credits-band2",
 			includedUsage: 0,
@@ -75,7 +68,6 @@ test.concurrent(
 test.concurrent(
 	`${chalk.yellowBright("consumable-volume-credits 2: 100 included, 150 credits → only the 50 over: 50 × $0.10 = $5")}`,
 	async () => {
-		// 250 × 0.6 = 150 credits, 50 past the 100 included: 50 × $0.10 = $5.
 		await runCreditsVolumeRenewal({
 			customerId: "cons-volume-credits-included",
 			includedUsage: 100,

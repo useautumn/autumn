@@ -1,12 +1,3 @@
-/**
- * catalogV2.update — base new_version does not auto-repoint variants.
- *
- * Contract:
- *   no propagate → pointer stays on the mint source; items frozen
- *   propagate + no customers → pointer moves + item DIFF
- *   historical variant version stays on the old base row
- */
-
 import { test } from "bun:test";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";

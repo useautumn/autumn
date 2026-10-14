@@ -48,7 +48,6 @@ describe("console json stream", () => {
 				minWriteBytes: 0,
 				dropReportIntervalMs: 5,
 			});
-			// One synchronous burst: the first write goes out on the thread pool, the rest queue behind it.
 			for (let index = 0; index < 200; index++)
 				stream.write(`{"n":${index},"pad":"${"x".repeat(40)}"}\n`);
 			expect(stream.dropped()).toBeGreaterThan(0);

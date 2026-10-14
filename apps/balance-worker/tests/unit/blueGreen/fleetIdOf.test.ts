@@ -11,7 +11,6 @@ describe("fleet id", () => {
 		const id = fleetIdOf({ serviceArn: blue });
 		expect(id).toMatch(/^[0-9a-f]{8}$/);
 		expect(fleetIdOf({ serviceArn: blue })).toBe(id);
-		// sha256 of the ARN, first 8 hex: the value a dashboard can recompute from the heartbeat's serviceArn.
 		expect(id).toBe(
 			new Bun.CryptoHasher("sha256").update(blue).digest("hex").slice(0, 8),
 		);

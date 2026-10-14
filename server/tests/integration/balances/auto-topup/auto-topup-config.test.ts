@@ -47,14 +47,11 @@ test.concurrent(`${chalk.yellowBright("auto-topup config: update customer with b
 		],
 	});
 
-	await autumnV2_1.customers.get<ApiCustomerV5>(customerId); // set customer in cache!
-
-	// Update customer with billing_controls
+	await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
 	await autumnV2_1.customers.update(customerId, {
 		billing_controls: autoTopupConfig,
 	});
 
-	// Verify config is persisted in customer response
 	const customer = await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
 
 	expect(customer.billing_controls).toBeDefined();
@@ -92,14 +89,11 @@ test.concurrent(`${chalk.yellowBright("auto-topup config: disable auto_topup")}`
 		],
 	});
 
-	await autumnV2_1.customers.get<ApiCustomerV5>(customerId); // set customer in cache!
-
-	// Set enabled config first
+	await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
 	await autumnV2_1.customers.update(customerId, {
 		billing_controls: autoTopupConfig,
 	});
 
-	// Now disable it
 	await autumnV2_1.customers.update(customerId, {
 		billing_controls: {
 			auto_topups: [
@@ -143,20 +137,17 @@ test.concurrent(`${chalk.yellowBright("auto-topup config: remove auto_topup with
 		],
 	});
 
-	await autumnV2_1.customers.get<ApiCustomerV5>(customerId); // set customer in cache!
-	// Set config
+	await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
 	await autumnV2_1.customers.update(customerId, {
 		billing_controls: autoTopupConfig,
 	});
 
-	// Remove by setting empty array
 	await autumnV2_1.customers.update(customerId, {
 		billing_controls: { auto_topups: [] },
 	});
 
 	const customer = await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
 
-	// Either undefined/null or empty array — both are acceptable
 	const topups = customer.billing_controls?.auto_topups;
 	expect(!topups || topups.length === 0).toBe(true);
 });

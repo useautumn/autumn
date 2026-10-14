@@ -8,8 +8,6 @@ interface TemplatePromptsProps {
 export function TemplatePrompts({ onSelectTemplate }: TemplatePromptsProps) {
 	return (
 		<div className="flex flex-col items-center gap-3 relative z-10 rounded-2xl pt-2 pb-4 px-4 border-border/50">
-			{/* Header with decorative lines */}
-
 			<div className="flex items-center gap-3 w-full justify-center">
 				<div className="h-px w-8 bg-border border-border/50" />
 				<span className=" text-subtle font-normal text-xs">
@@ -18,7 +16,6 @@ export function TemplatePrompts({ onSelectTemplate }: TemplatePromptsProps) {
 				<div className="h-px w-8 bg-border border-border/50" />
 			</div>
 
-			{/* Template cards */}
 			<div className="flex items-center justify-center gap-3 flex-wrap">
 				{PRICING_TEMPLATE_PROMPTS.map((template) => (
 					<Button

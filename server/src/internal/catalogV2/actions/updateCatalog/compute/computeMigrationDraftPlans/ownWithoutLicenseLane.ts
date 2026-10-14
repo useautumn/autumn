@@ -1,6 +1,5 @@
 import type { MigrationTarget } from "@/internal/catalogV2/actions/buildMigrationDraft/types";
 
-/** License lane owns `upsert_licenses`; own keeps price/items when both fire. */
 export const ownWithoutLicenseLane = ({
 	own,
 	license,

@@ -11,7 +11,6 @@ type MetadataFetch = (
 	init: { signal: AbortSignal },
 ) => Promise<Response>;
 
-/** The env a process reads its identity from; each app's env object carries these verbatim. */
 export type TaskIdentityEnv = {
 	ECS_CONTAINER_METADATA_URI_V4?: string;
 	FC_GIT_COMMIT_SHA?: string;
@@ -22,7 +21,6 @@ const METADATA_ATTEMPTS = 5;
 const METADATA_FIRST_BACKOFF_MS = 500;
 const METADATA_TIMEOUT_MS = 2_000;
 
-/** Fargate reports Cluster as an ARN, ECS-EC2 as a bare name; the task ARN carries region and account either way. */
 function serviceArnOf({
 	cluster,
 	taskArn,
@@ -44,7 +42,6 @@ function serviceArnOf({
 	return `arn:aws:ecs:${region}:${accountId}:service/${clusterName}/${serviceName}`;
 }
 
-/** Throws on a transport failure or a non-2xx, which are retried; a body without a cluster is final. */
 async function fetchTaskMetadata({
 	ctx,
 	metadataUri,
@@ -60,12 +57,6 @@ async function fetchTaskMetadata({
 	return (await response.json()) as TaskMetadata;
 }
 
-/**
- * Reads the ECS task metadata once at boot, retrying a slow or absent endpoint for ~10s,
- * then refuses to start: the service ARN names this task's fleet, and a task without it
- * would run with an open gate beside its healthy peers. Off ECS (no metadata URI) there
- * is no fleet, and the gate fails open.
- */
 export async function resolveTaskIdentity({
 	ctx,
 	env,

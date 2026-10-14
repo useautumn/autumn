@@ -15,7 +15,6 @@ const ROUNDS = 40;
 const ROW =
 	"INSERT INTO subject_states (customer_id, entity_id, log_offset, read_at, applied_at, state_json, slice_hash) VALUES ('cus_1', '', 1, 1, 1, '{}', 'h')";
 
-/** Opens the file on `threads` workers that start together, as the threads of a fresh replica do. */
 const openOnWorkers = async ({
 	path,
 	threads,
@@ -67,7 +66,6 @@ test("a thread opening a file while another is creating it keeps what the other 
 	const path = join(root, "racing.sqlite");
 	const templatePath = join(root, "template.sqlite");
 	openSlotDatabase({ databasePath: templatePath }).close();
-	// Another thread's first open, caught mid-transaction: tables made, a row written, the version set, not yet committed.
 	const other = new Database(path, { create: true, safeIntegers: true });
 	other.run("PRAGMA journal_mode = WAL");
 	other.run("BEGIN EXCLUSIVE");
@@ -83,7 +81,6 @@ test("a thread opening a file while another is creating it keeps what the other 
 	other.run("PRAGMA user_version = 7");
 
 	const opened = openOnWorkers({ path, threads: 1 });
-	// The opener reads the file and waits on the lock; then the other thread commits.
 	await Bun.sleep(300);
 	other.run("COMMIT");
 	other.close();

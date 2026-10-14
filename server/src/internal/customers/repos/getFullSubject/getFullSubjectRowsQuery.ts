@@ -33,7 +33,6 @@ export const EXTRA_CUSTOMER_ENTITLEMENT_LIMIT = 200;
  * predicate pushdown does not apply, and the single-subject getFullSubject path
  * measured neutral — 585ms vs 570ms, byte-identical output.
  */
-/** Per-subject aggregate CTE → key in the subject object. Each exposes (subject_key, items). */
 const SUBJECT_AGGREGATES = [
 	{ cte: "cus_products_agg", column: "customer_products" },
 	{ cte: "cus_entitlements_agg", column: "customer_entitlements" },
@@ -46,8 +45,6 @@ const SUBJECT_AGGREGATES = [
 	{ cte: "subscriptions_agg", column: "subscriptions" },
 ] as const;
 
-/** Org catalog. Identical for every subject, so these are built once per page
- *  and returned once alongside the subject array, never per subject. */
 const CATALOG_AGGREGATES = [
 	{ cte: "products_agg", column: "products" },
 	{ cte: "entitlements_agg", column: "entitlements" },
@@ -117,10 +114,8 @@ export const getFullSubjectRowsQuery = ({
 	inStatuses: CusProductStatus[];
 	includeInvoices: boolean;
 	includeEntityAggregations: boolean;
-	/** Only hydrate rows scoped to the subject's entity (requires non-null internal_entity_id on every subject). Customer-level rows must be merged back in separately. */
 	entityScopedOnly?: boolean;
 	queryTag?: string;
-	/** Evaluate expiry predicates at a captured instant; omitted keeps DB-now semantics. */
 	asOfTimestampMs?: number;
 }) => {
 	const expiryTimestampSql = getExpiryTimestampSql({ asOfTimestampMs });
@@ -128,18 +123,11 @@ export const getFullSubjectRowsQuery = ({
 		inStatuses.length > 0
 			? ACTIVE_STATUSES.filter((status) => inStatuses.includes(status))
 			: ACTIVE_STATUSES;
-	// Status lists bind as a single array parameter rather than one placeholder
-	// per element. This keeps the generated SQL text identical regardless of how
-	// many statuses a caller passes, which is what lets the statement be reused
-	// as a named prepared statement instead of re-planned on every execution.
 	const entityAggregationStatusFilter =
 		entityAggregationStatuses.length > 0
 			? sql`AND cp.status = ANY(${sql.param(entityAggregationStatuses)}::text[])`
 			: sql`AND FALSE`;
 
-	// Seats own no lifecycle: their raw status column lags until the seat-sync
-	// cron converges it, so the candidate filter/rank must check the pool
-	// parent's LIVE status (via pcp_early) instead of cp.status for those rows.
 	const effectiveStatusFilter =
 		inStatuses.length > 0
 			? sql`AND COALESCE(pcp_early.status, cp.status) = ANY(${sql.param(inStatuses)}::text[])`

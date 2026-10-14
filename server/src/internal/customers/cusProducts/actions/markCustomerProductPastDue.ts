@@ -9,16 +9,6 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { dispatchCustomerProductUpdatedWebhooks } from "@/internal/customers/cusProducts/actions/dispatchCustomerProductUpdatedWebhooks";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
 
-/**
- * Marks a customer product as past due (billing issue).
- *
- * This action:
- * 1. Sets status to PastDue on the customer product
- * 2. Updates the FullCustomer in memory
- * 3. Sends products_updated + billing.updated webhooks
- *
- * Used by RevenueCat billing issue webhooks and any external billing issue flow.
- */
 export const markCustomerProductPastDue = async ({
 	ctx,
 	customerProduct,
@@ -30,7 +20,6 @@ export const markCustomerProductPastDue = async ({
 }): Promise<{ updates: Partial<InsertCustomerProduct> }> => {
 	const originalFullCustomer = structuredClone(fullCustomer);
 
-	// 1. Mark as past due
 	const updates: Partial<InsertCustomerProduct> = {
 		status: CusProductStatus.PastDue,
 	};
@@ -45,14 +34,12 @@ export const markCustomerProductPastDue = async ({
 		`[markCustomerProductPastDue]: marking ${customerProduct.product.name} as past due`,
 	);
 
-	// 2. Update full customer in memory
 	fullCustomer.customer_products = fullCustomer.customer_products.map((cp) =>
 		cp.id === customerProduct.id
 			? ({ ...cp, ...updates } as FullCusProduct)
 			: cp,
 	);
 
-	// 3. Send webhooks
 	await dispatchCustomerProductUpdatedWebhooks({
 		ctx,
 		customerProduct,

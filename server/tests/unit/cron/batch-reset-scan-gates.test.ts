@@ -1,24 +1,3 @@
-/**
- * Unit tests for the V2 reset scan gates (queue-depth backpressure).
- *
- * The gates import getBatchResetQueueDepth directly, so queue depth is
- * simulated with mock.module; poll cadence comes from the resetJobV2 edge
- * config via its testing setter.
- *
- * Contract under test:
- *   Gate A (waitForQueueBelowHighWater):
- *     - passes immediately when depth <= high water
- *     - blocks while depth > high water, resumes once it drains
- *     - fails open when no dedicated queue is configured (null depth)
- *     - fails open when the depth check throws
- *   Gate B (waitForQueueDrained):
- *     - requires TWO consecutive zero reads before returning (approximate
- *       SQS counts)
- *     - a non-zero read resets the consecutive-zero counter
- *     - fails open on null depth
- *     - respects an aborted signal
- */
-
 import { beforeEach, describe, expect, spyOn, test } from "bun:test";
 import type { BatchResetQueueDepth } from "@/internal/balances/batchReset/concurrency/getBatchResetQueueDepth.js";
 import { ResetJobV2ConfigSchema } from "@/internal/misc/resetJobV2/resetJobV2Schemas.js";
@@ -26,8 +5,6 @@ import { setResetJobV2ConfigForTesting } from "@/internal/misc/resetJobV2/resetJ
 
 import { mockModuleWithRestore } from "../utils/mockModuleWithRestore.js";
 
-// Queue of depth results the mocked getBatchResetQueueDepth serves in order,
-// repeating the last entry. `null` = no dedicated queue; "error" = SQS throw.
 let depthResults: (number | null | "error")[] = [];
 let depthCalls = 0;
 
@@ -61,9 +38,6 @@ beforeEach(() => {
 	setResetJobV2ConfigForTesting({
 		config: {
 			...ResetJobV2ConfigSchema.parse({ queueHighWaterMessages: 20 }),
-			// The gates sleep for real between polls; the schema minimum (1s)
-			// would cost multiple wall-clock seconds per blocked-gate test, so
-			// bypass the parse floor for the poll cadence only.
 			queueDepthPollMs: 1,
 		},
 	});
@@ -128,7 +102,6 @@ describe("waitForQueueDrained (gate B)", () => {
 	});
 
 	test("a non-zero read resets the consecutive-zero counter", async () => {
-		// zero, blip back to non-zero, then two zeros required again
 		setDepthSequence([0, 2, 0, 0]);
 		await waitForQueueDrained({ logger, signal: liveSignal() });
 		expect(depthCalls).toBe(4);

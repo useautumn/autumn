@@ -2,7 +2,6 @@ import type { CustomerStatePhase } from "@/components/forms/customer-state/custo
 import { formatOptionDate } from "@/components/forms/shared/billing-option-sections/utils/billingOptionSummaries";
 import { firstPhaseStartsLater } from "./schedulePhaseTiming";
 
-/** "Starts now", "Starts Oct 20", "Backdated to Oct 1", or "Started Oct 1" for a running schedule. */
 export function firstPhaseStartText({
 	phases,
 	nowMs,

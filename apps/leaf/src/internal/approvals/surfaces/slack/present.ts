@@ -24,7 +24,6 @@ import { editSupersededApprovalCards } from "./superseded.js";
 const SUPERSEDED_EVE_NOTE =
 	"A newer approval now represents the user's request. Do not re-issue or explain this superseded write.";
 
-/** URL only for cards the dashboard sheet can actually open. */
 export const dashboardUrlFor = ({
 	approvalId,
 	env,
@@ -138,8 +137,6 @@ export const postApprovalCardForRow = async ({
 	});
 };
 
-/** Re-renders the card once backfilled previews persist — unless the approval
- * resolved meanwhile, whose card must not be overwritten. */
 const renderBackfilledGroupCard = async ({
 	backfill,
 	channelId,

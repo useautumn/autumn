@@ -17,10 +17,8 @@ export const tinybirdConfig: TinybirdConfig | null =
 			}
 		: null;
 
-/** Check if Tinybird is configured. */
 export const isTinybirdConfigured = (): boolean => tinybirdConfig !== null;
 
-/** Throws SERVICE_UNAVAILABLE if Tinybird is not configured. */
 export const assertTinybirdAvailable = () => {
 	if (!isTinybirdConfigured()) {
 		throw new RecaseError({

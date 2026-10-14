@@ -9,7 +9,6 @@ import {
 	getPlanBillingControlProducts,
 } from "@autumn/shared";
 
-// Plan alerts are a fallback at customer scope, used only when the customer has none for the feature.
 export const resolveCustomerScopeAlerts = ({
 	fullCustomer,
 	feature,

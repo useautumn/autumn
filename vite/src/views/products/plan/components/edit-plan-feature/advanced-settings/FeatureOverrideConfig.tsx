@@ -16,7 +16,6 @@ export function FeatureOverrideConfig() {
 	} = useFeatureOverride();
 
 	if (!item) return null;
-	// The markup form seeds once, so a different credit system needs a new one.
 	if (isAi) return <AiMarkupsOverride key={creditSystem?.internal_id} />;
 
 	return (

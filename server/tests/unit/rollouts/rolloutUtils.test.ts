@@ -276,7 +276,6 @@ describe("isRolloutCacheStale", () => {
 		};
 		const afterBoth = CHANGED_AT + day + ROLLOUT_SETTLE_MS;
 		const rebuiltAfterDayOne = CHANGED_AT + ROLLOUT_SETTLE_MS;
-		// bucket 70 left on day one: a view from before is stale, one rebuilt after day one is not.
 		expect(
 			staleFor({
 				customerId: bucket70s,
@@ -293,7 +292,6 @@ describe("isRolloutCacheStale", () => {
 				config,
 			}),
 		).toBe(false);
-		// bucket 10 left on day two: a view rebuilt after day one is still stale.
 		expect(
 			staleFor({
 				customerId: bucket10s,

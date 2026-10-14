@@ -22,7 +22,6 @@ const manifest = JSON.stringify({
 	usageWindowFeatureIds: [],
 });
 
-/** Just enough Redis to tell a GETDEL flush from a blind HDEL. */
 const createFakeRedis = () => {
 	const hdel = mock(() => undefined);
 	const exec = mock(async () => []);

@@ -1,13 +1,3 @@
-/**
- * Update subscription on a no-card trial Autumn runs without Stripe (on_trial_end "bill", no sub).
- *
- * Contract:
- *  - extending it with another no-card trial keeps it Autumn-only and keeps the bill marker
- *  - removing the trial (free_trial: null) bills the plan now into a Stripe sub
- *  - invoice mode on it is rejected: invoice mode is chosen when attaching the trial
- *  - canceling it at end of cycle expires it at trial end without billing
- */
-
 import { expect, test } from "bun:test";
 import {
 	type ApiCustomerV3,

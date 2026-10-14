@@ -1,17 +1,3 @@
-/**
- * RevenueCat store periods: INITIAL_PURCHASE / RENEWAL stamp the store's
- * current period on `cusProduct.processor`, and the customer API returns it as
- * `current_period_start` / `current_period_end` (ms), like the Stripe path.
- *
- * The RC read client is served from mock fixtures, so these tests never touch
- * api.revenuecat.com.
- *
- * Stale renewal — Red (before): a redelivered older RENEWAL moved the period backward.
- *                 Green (after): the period only moves forward.
- * Stale snapshot — Red (before): a period write rebuilt `processor` from an old copy and wiped `processor.id`.
- *                  Green (after): the period merges into `processor`, keeping the id.
- */
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV5 } from "@autumn/shared";
 import ctx from "@tests/utils/testInitUtils/createTestContext";
@@ -87,7 +73,6 @@ test.concurrent(
 			}),
 		);
 
-		// Wait for the fire-and-forget processor id store, which must merge, not replace.
 		const cusProduct = await pollUntil(
 			() => getRcCusProduct({ customerId, autumnProductId: proMonthly.id }),
 			(cp) => Boolean(cp?.processor?.id),
@@ -240,7 +225,6 @@ test.concurrent(
 		);
 		expect(snapshot?.processor?.id).toBeFalsy();
 
-		// The background id lookup lands after the snapshot was read.
 		await customerProductRepo.mergeProcessor({
 			db: ctx.db,
 			cusProductId: snapshot!.id,

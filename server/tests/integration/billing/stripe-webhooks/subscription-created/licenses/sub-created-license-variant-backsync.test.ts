@@ -1,5 +1,3 @@
-// TDD contract: seat plan variants share one Stripe product; the base license
-// plan links to each parent with a matching customized price shape.
 import { expect, test } from "bun:test";
 import {
 	type ApiCustomerV3,

@@ -11,7 +11,6 @@ import { useSession } from "./lib/auth-client";
 import { SSO_CALLBACK_PATH } from "./lib/sso/ssoCallback";
 import { identifyUser } from "./utils/posthogTracking";
 import LoadingScreen from "./views/general/LoadingScreen";
-// Eager: the command bar already bundles it, so lazy only added a fallback frame on load.
 import { SettingsView } from "./views/settings/SettingsView";
 
 const AdminView = React.lazy(() =>
@@ -194,7 +193,6 @@ export default function App() {
 						element={<Navigate replace to="products" />}
 					/>
 
-					{/* Onboarding routes without sidebar */}
 					<Route element={<OnboardingLayout />}>
 						<Route path="/sandbox/quickstart" element={<QuickstartView />} />
 					</Route>

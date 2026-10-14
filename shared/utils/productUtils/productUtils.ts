@@ -33,9 +33,6 @@ export const isDefaultTrialV2 = ({
 	);
 };
 
-/** A plan can bill for something a customer actually uses. A priced plan with
- * no features, or features with no price, is half-built — which is what
- * onboarding means by "your plans exist". */
 export const isBillablePlanV2 = ({ items }: { items: ProductItem[] }) =>
 	items.some((item) => item.price != null || item.tiers != null) &&
 	items.some((item) => item.feature_id != null);
@@ -77,7 +74,6 @@ export const isProductUpgradeV2 = ({
 		(item) => isFeaturePriceItem(item) || isPriceItem(item),
 	);
 
-	// 2. Get total price for each product
 	const getTotalPrice = (items: ProductItem[]) => {
 		let totalPrice = new Decimal(0);
 		for (const item of items) {
@@ -93,8 +89,6 @@ export const isProductUpgradeV2 = ({
 		return totalPrice.toNumber();
 	};
 
-	// Return interval...?
-
 	return getTotalPrice(prices1) < getTotalPrice(prices2);
 };
 
@@ -108,12 +102,10 @@ export const sortProductsV2 = ({ products }: { products: ProductV2[] }) => {
 	});
 
 	return products.sort((a, b) => {
-		// Secondary sort: by add-on status (non-add-ons first)
 		if (a.is_add_on !== b.is_add_on) {
 			return a.is_add_on ? 1 : -1;
 		}
 
-		// Primary sort: by price (using upgrade logic)
 		const isUpgrade = isProductUpgradeV2({
 			items1: a.items,
 			items2: b.items,

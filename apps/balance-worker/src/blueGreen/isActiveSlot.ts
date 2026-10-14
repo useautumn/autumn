@@ -8,7 +8,6 @@ export type SlotGateDescription =
 	  }
 	| { active: false; reason: "idle"; expectedServiceArn: string };
 
-/** Fail-open everywhere except an explicit service ARN mismatch, the same rules as the server's gate. */
 export function describeSlotGate({
 	identity,
 	config,

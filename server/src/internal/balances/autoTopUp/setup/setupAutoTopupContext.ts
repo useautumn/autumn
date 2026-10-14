@@ -37,7 +37,6 @@ export type SetupAutoTopupContextResult =
 	| { ok: true; autoTopupContext: AutoTopupContext }
 	| { ok: false; failure?: AutoTopupSetupFailure };
 
-/** Fetch full customer, auto-topup config, cusEnt, and Stripe context. */
 export const setupAutoTopupContext = async ({
 	ctx,
 	payload,
@@ -48,9 +47,6 @@ export const setupAutoTopupContext = async ({
 	const { logger } = ctx;
 	const { customerId, featureId } = payload;
 
-	// 1. Fetch FullCustomer with rollout-aware cache source:
-	//    - FullSubject cache when rollout is enabled for this customer bucket.
-	//    - Legacy FullCustomer cache otherwise.
 	const fullCustomer = await getBillableFullCustomer({
 		ctx,
 		customerId,
@@ -70,7 +66,6 @@ export const setupAutoTopupContext = async ({
 		};
 	}
 
-	// 2. Extract auto-topup objects (config, cusEnt) from fullCustomer
 	const resolved = subjectToAutoTopupObjects({
 		fullSubject: fullCustomerToFullSubject({ fullCustomer }),
 		featureId,
@@ -144,7 +139,6 @@ export const setupAutoTopupContext = async ({
 	const shouldUseInvoiceMode =
 		autoTopupConfig.invoice_mode === true || Boolean(vercelInstallationId);
 
-	// Vercel moves the money itself, so org payment settings don't apply there.
 	const invoiceMode = shouldUseInvoiceMode
 		? {
 				finalizeInvoice: true,
@@ -160,8 +154,6 @@ export const setupAutoTopupContext = async ({
 			}
 		: undefined;
 
-	// Fetched before the preflight because the circuit breaker needs the current
-	// payment method to tell "same declining card" from "new payment info".
 	const { stripeCus, paymentMethod, testClockFrozenTime } =
 		await fetchStripeCustomerForBilling({ ctx, fullCus: fullCustomer });
 
@@ -216,8 +208,6 @@ export const setupAutoTopupContext = async ({
 		const message = `Preflight blocked for feature ${featureId}, customer ${customerId}, reason: ${reason}`;
 		logger.info(`[setupAutoTopupContext] ${message}`);
 
-		// Suspension has no window to expire, so key the suppression off when the
-		// breaker tripped — one webhook a day rather than one per deduction.
 		if (reason === "suspended_after_failures") {
 			return {
 				ok: false,
@@ -289,7 +279,6 @@ export const setupAutoTopupContext = async ({
 	return {
 		ok: true,
 		autoTopupContext: {
-			// BillingContext fields
 			fullCustomer,
 			fullProducts: [cusProductToProduct({ cusProduct })],
 			featureQuantities: [],
@@ -301,7 +290,6 @@ export const setupAutoTopupContext = async ({
 			paymentMethod,
 			billingVersion: BillingVersion.V2,
 
-			// Auto top-up specific fields
 			autoTopupConfig: normalizedAutoTopupConfig,
 			customerEntitlement,
 

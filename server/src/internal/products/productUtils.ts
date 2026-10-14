@@ -69,7 +69,6 @@ const getProductVersionCounts = (products: FullProduct[]) => {
 	return versionCounts;
 };
 
-// Construct product
 export const constructProduct = ({
 	productData,
 	version = 1,
@@ -96,8 +95,6 @@ export const constructProduct = ({
 		is_default: productData.is_default,
 		version: version,
 		version_slug: `v${version}`,
-		// "Activate if this is the plan's max version" — ProductService.insert
-		// gates the actual flip.
 		active: true,
 		group: productData.group || "",
 
@@ -137,61 +134,6 @@ export const isProductUpgrade = ({
 		prices2,
 		usageAlwaysUpgrade,
 	});
-	// if (isFreeProduct(prices1) && !isFreeProduct(prices2)) {
-	// 	return true;
-	// }
-
-	// if (!isFreeProduct(prices1) && isFreeProduct(prices2)) {
-	// 	return false;
-	// }
-
-	// if (
-	// 	prices1.every(
-	// 		(p) => getBillingType(p.config!) === BillingType.UsageInArrear,
-	// 	) &&
-	// 	prices2.every(
-	// 		(p) => getBillingType(p.config!) === BillingType.UsageInArrear,
-	// 	) &&
-	// 	usageAlwaysUpgrade
-	// ) {
-	// 	return true;
-	// }
-
-	// const billingInterval1 = getBillingInterval(prices1); // pro quarter
-	// const billingInterval2 = getBillingInterval(prices2); // premium
-
-	// // 2. Get total price for each product
-	// const getTotalPrice = (prices: Price[]) => {
-	// 	let totalPrice = new Decimal(0);
-	// 	for (const price of prices) {
-	// 		if ("usage_tiers" in price.config!) {
-	// 			const tiers = price.config!.usage_tiers;
-	// 			if (nullish(tiers) || tiers.length === 0) continue;
-	// 			totalPrice = totalPrice.plus(tiers[0].amount);
-	// 		} else {
-	// 			totalPrice = totalPrice.plus(price.config!.amount);
-	// 		}
-	// 	}
-	// 	return totalPrice.toNumber();
-	// };
-
-	// // 3. Compare prices
-
-	// if (
-	// 	intervalsSame({
-	// 		intervalA: billingInterval1,
-	// 		intervalB: billingInterval2,
-	// 	})
-	// ) {
-	// 	return getTotalPrice(prices1) < getTotalPrice(prices2);
-	// } else {
-	// 	return (
-	// 		compareBillingIntervals({
-	// 			configA: billingInterval1,
-	// 			configB: billingInterval2,
-	// 		}) > 0
-	// 	);
-	// }
 };
 
 export const isFreeProduct = (prices: Price[]) => {
@@ -220,7 +162,6 @@ const getOptionsFromPrices = (prices: Price[], features: Feature[]) => {
 		}
 
 		const config = price.config! as UsagePriceConfig;
-		// get billing tyoe
 		const billingType = getBillingType(price.config!);
 		const feature = features.find(
 			(f) => f.internal_id === config.internal_feature_id,
@@ -328,7 +269,6 @@ export const attachToInsertParams = (
 	product: FullProduct,
 	entityId?: string,
 ) => {
-	// Get entity
 	let { internalEntityId, entityId: attachEntityId } = attachParams;
 	if (notNullish(entityId)) {
 		const entity = attachParams.customer.entities.find(
@@ -351,9 +291,6 @@ export const attachToInsertParams = (
 	} as InsertCusProductParams;
 };
 
-// COPY PRODUCT
-
-/** The (org, env) a plan family is read from, plus that env's feature catalog. */
 export type PlanCopySource = {
 	org: Organization;
 	env: AppEnv;
@@ -379,8 +316,6 @@ export const copyProduct = async ({
 	const { features: fromFeatures } = source;
 	const toOrgId = ctx.org.id;
 
-	// A base variant id resolves within its own (org, env), so only a same-org
-	// cross-env copy can carry it over.
 	const keepsBaseVariantLink =
 		source.env !== toEnv && source.org.id === ctx.org.id;
 
@@ -394,8 +329,6 @@ export const copyProduct = async ({
 		processor: null,
 		is_default: false,
 		base_variant_id: keepsBaseVariantLink ? product.base_variant_id : null,
-		// The source link points at a product in the source (org, env); only an
-		// explicitly remapped target base is safe to persist here.
 		base_internal_product_id: baseInternalProductId,
 	};
 
@@ -403,12 +336,10 @@ export const copyProduct = async ({
 	const newEntIds: Record<string, string> = {};
 
 	for (const entitlement of product.entitlements) {
-		// 1. Get from feature
 		const fromFeature = fromFeatures.find(
 			(f) => f.internal_id === entitlement.internal_feature_id,
 		);
 
-		// 2. Get to feature
 		const toFeature = toFeatures.find((f) => f.id === fromFeature?.id);
 
 		if (!toFeature) {
@@ -437,12 +368,10 @@ export const copyProduct = async ({
 
 	const newPrices: Price[] = [];
 	for (const price of product.prices) {
-		// 1. Copy price
 		const newPrice = structuredClone(price);
 
 		const config = newPrice.config as UsagePriceConfig;
 
-		// Clear Stripe IDs
 		config.stripe_meter_id = undefined;
 		config.stripe_product_id = undefined;
 		config.stripe_placeholder_price_id = undefined;
@@ -466,7 +395,6 @@ export const copyProduct = async ({
 			config.internal_feature_id = toFeature.internal_id!;
 			config.feature_id = toFeature.id;
 
-			// Update entitlement id
 			const entitlementId = newEntIds[price.entitlement_id!];
 			if (!entitlementId) {
 				throw new RecaseError({
@@ -494,9 +422,6 @@ export const copyProduct = async ({
 		db,
 		product: {
 			...ProductSchema.parse(newProduct),
-			// group: newProduct.group || "",
-			// Fresh v1 in the target org/env: the source row's version identity
-			// (slug, active) must not ride along on the spread.
 			version: 1,
 			version_slug: "v1",
 			active: true,

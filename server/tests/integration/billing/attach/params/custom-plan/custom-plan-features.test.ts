@@ -1,16 +1,3 @@
-/**
- * Custom Plan Features Tests (Attach V2)
- *
- * Tests for the `items` parameter in billing.attach that allows
- * overriding product configuration at attach time.
- *
- * Key behaviors:
- * - Adding/removing/changing base prices
- * - Adding/removing features
- * - Changing included usage
- * - Changing price configurations (consumable, prepaid)
- */
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3 } from "@autumn/shared";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
@@ -24,22 +11,6 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// BASE PRICE CHANGES
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Test 1: Add base price to free product
- *
- * Scenario:
- * - Free product has only messages (no price)
- * - Attach with items that add a monthly base price
- *
- * Expected:
- * - Customer charged $20
- * - Stripe subscription created
- * - Features remain available
- */
 test.concurrent(`${chalk.yellowBright("custom-plan 1: add base price to free product")}`, async () => {
 	const customerId = "custom-plan-add-base-price";
 
@@ -55,7 +26,6 @@ test.concurrent(`${chalk.yellowBright("custom-plan 1: add base price to free pro
 		actions: [],
 	});
 
-	// Attach with custom items that add a base price
 	const priceItem = items.monthlyPrice({ price: 20 });
 
 	const preview = await autumnV1.billing.previewAttach({
@@ -99,17 +69,6 @@ test.concurrent(`${chalk.yellowBright("custom-plan 1: add base price to free pro
 	});
 });
 
-/**
- * Test 2: Increase base price on attach
- *
- * Scenario:
- * - Pro product has $20/mo base price
- * - Attach with items that increase price to $30
- *
- * Expected:
- * - Customer charged $30 (not $20)
- * - Subscription at new price
- */
 test.concurrent(`${chalk.yellowBright("custom-plan 2: increase base price on attach")}`, async () => {
 	const customerId = "custom-plan-increase-price";
 
@@ -126,7 +85,6 @@ test.concurrent(`${chalk.yellowBright("custom-plan 2: increase base price on att
 		actions: [],
 	});
 
-	// Attach with custom items that increase price
 	const higherPriceItem = items.monthlyPrice({ price: 30 });
 
 	const preview = await autumnV1.billing.previewAttach({
@@ -170,18 +128,6 @@ test.concurrent(`${chalk.yellowBright("custom-plan 2: increase base price on att
 	});
 });
 
-/**
- * Test 3: Remove base price from paid product
- *
- * Scenario:
- * - Pro product has $20/mo base price
- * - Attach with items that remove the price (only features)
- *
- * Expected:
- * - No charge
- * - No Stripe subscription
- * - Features still available (free product)
- */
 test.concurrent(`${chalk.yellowBright("custom-plan 3: remove base price from paid product")}`, async () => {
 	const customerId = "custom-plan-remove-price";
 
@@ -198,11 +144,10 @@ test.concurrent(`${chalk.yellowBright("custom-plan 3: remove base price from pai
 		actions: [],
 	});
 
-	// Attach with custom items that remove the price
 	const preview = await autumnV1.billing.previewAttach({
 		customer_id: customerId,
 		product_id: pro.id,
-		items: [messagesItem], // No price item
+		items: [messagesItem],
 	});
 
 	expect(preview.total).toBe(0);
@@ -210,7 +155,7 @@ test.concurrent(`${chalk.yellowBright("custom-plan 3: remove base price from pai
 	await autumnV1.billing.attach({
 		customer_id: customerId,
 		product_id: pro.id,
-		items: [messagesItem], // No price item
+		items: [messagesItem],
 		redirect_mode: "if_required",
 	});
 
@@ -239,21 +184,6 @@ test.concurrent(`${chalk.yellowBright("custom-plan 3: remove base price from pai
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// FEATURE CHANGES
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Test 4: Add feature on attach
- *
- * Scenario:
- * - Pro product has only messages
- * - Attach with items that add dashboard feature
- *
- * Expected:
- * - Both messages and dashboard available
- * - Price unchanged
- */
 test.concurrent(`${chalk.yellowBright("custom-plan 4: add feature on attach")}`, async () => {
 	const customerId = "custom-plan-add-feature";
 
@@ -270,7 +200,6 @@ test.concurrent(`${chalk.yellowBright("custom-plan 4: add feature on attach")}`,
 		actions: [],
 	});
 
-	// Attach with custom items that add dashboard
 	const dashboardItem = items.dashboard();
 
 	const preview = await autumnV1.billing.previewAttach({
@@ -279,7 +208,7 @@ test.concurrent(`${chalk.yellowBright("custom-plan 4: add feature on attach")}`,
 		items: [messagesItem, priceItem, dashboardItem],
 	});
 
-	expect(preview.total).toBe(20); // Price unchanged
+	expect(preview.total).toBe(20);
 
 	await autumnV1.billing.attach({
 		customer_id: customerId,
@@ -292,7 +221,6 @@ test.concurrent(`${chalk.yellowBright("custom-plan 4: add feature on attach")}`,
 
 	await expectProductActive({ customer, productId: pro.id });
 
-	// Messages available
 	expectCustomerFeatureCorrect({
 		customer,
 		featureId: TestFeature.Messages,
@@ -301,7 +229,6 @@ test.concurrent(`${chalk.yellowBright("custom-plan 4: add feature on attach")}`,
 		usage: 0,
 	});
 
-	// Dashboard available (boolean feature)
 	expect(customer.features[TestFeature.Dashboard]).toBeDefined();
 
 	await expectCustomerInvoiceCorrect({
@@ -318,17 +245,6 @@ test.concurrent(`${chalk.yellowBright("custom-plan 4: add feature on attach")}`,
 	});
 });
 
-/**
- * Test 5: Remove feature on attach
- *
- * Scenario:
- * - Pro product has messages + dashboard
- * - Attach with items that remove dashboard
- *
- * Expected:
- * - Only messages available
- * - Dashboard not available
- */
 test.concurrent(`${chalk.yellowBright("custom-plan 5: remove feature on attach")}`, async () => {
 	const customerId = "custom-plan-remove-feature";
 
@@ -349,11 +265,10 @@ test.concurrent(`${chalk.yellowBright("custom-plan 5: remove feature on attach")
 		actions: [],
 	});
 
-	// Attach with custom items that remove dashboard
 	const preview = await autumnV1.billing.previewAttach({
 		customer_id: customerId,
 		product_id: pro.id,
-		items: [messagesItem, priceItem], // No dashboard
+		items: [messagesItem, priceItem],
 	});
 
 	expect(preview.total).toBe(20);
@@ -361,7 +276,7 @@ test.concurrent(`${chalk.yellowBright("custom-plan 5: remove feature on attach")
 	await autumnV1.billing.attach({
 		customer_id: customerId,
 		product_id: pro.id,
-		items: [messagesItem, priceItem], // No dashboard
+		items: [messagesItem, priceItem],
 		redirect_mode: "if_required",
 	});
 
@@ -369,7 +284,6 @@ test.concurrent(`${chalk.yellowBright("custom-plan 5: remove feature on attach")
 
 	await expectProductActive({ customer, productId: pro.id });
 
-	// Messages available
 	expectCustomerFeatureCorrect({
 		customer,
 		featureId: TestFeature.Messages,
@@ -378,7 +292,6 @@ test.concurrent(`${chalk.yellowBright("custom-plan 5: remove feature on attach")
 		usage: 0,
 	});
 
-	// Dashboard NOT available
 	expect(customer.features[TestFeature.Dashboard]).toBeUndefined();
 
 	await expectCustomerInvoiceCorrect({
@@ -395,17 +308,6 @@ test.concurrent(`${chalk.yellowBright("custom-plan 5: remove feature on attach")
 	});
 });
 
-/**
- * Test 6: Change included usage on attach
- *
- * Scenario:
- * - Pro product has 100 messages included
- * - Attach with items that increase to 500 messages
- *
- * Expected:
- * - 500 messages included
- * - Balance is 500
- */
 test.concurrent(`${chalk.yellowBright("custom-plan 6: change included usage on attach")}`, async () => {
 	const customerId = "custom-plan-change-usage";
 
@@ -422,7 +324,6 @@ test.concurrent(`${chalk.yellowBright("custom-plan 6: change included usage on a
 		actions: [],
 	});
 
-	// Attach with custom items that increase included usage
 	const higherUsageItem = items.monthlyMessages({ includedUsage: 500 });
 
 	const preview = await autumnV1.billing.previewAttach({
@@ -431,7 +332,7 @@ test.concurrent(`${chalk.yellowBright("custom-plan 6: change included usage on a
 		items: [higherUsageItem, priceItem],
 	});
 
-	expect(preview.total).toBe(20); // Price unchanged
+	expect(preview.total).toBe(20);
 
 	await autumnV1.billing.attach({
 		customer_id: customerId,
@@ -444,7 +345,6 @@ test.concurrent(`${chalk.yellowBright("custom-plan 6: change included usage on a
 
 	await expectProductActive({ customer, productId: pro.id });
 
-	// 500 messages included
 	expectCustomerFeatureCorrect({
 		customer,
 		featureId: TestFeature.Messages,
@@ -467,21 +367,6 @@ test.concurrent(`${chalk.yellowBright("custom-plan 6: change included usage on a
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// PRICE CONFIGURATION CHANGES
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Test 7: Add consumable overage price
- *
- * Scenario:
- * - Pro product has free messages (100 included, no overage)
- * - Attach with consumable that has overage pricing
- *
- * Expected:
- * - 100 messages included
- * - Overage billing enabled after 100
- */
 test.concurrent(`${chalk.yellowBright("custom-plan 7: add consumable overage price")}`, async () => {
 	const customerId = "custom-plan-add-overage";
 
@@ -498,7 +383,6 @@ test.concurrent(`${chalk.yellowBright("custom-plan 7: add consumable overage pri
 		actions: [],
 	});
 
-	// Attach with consumable that has overage pricing ($0.10/message after 100)
 	const consumableItem = items.consumableMessages({ includedUsage: 100 });
 
 	const preview = await autumnV1.billing.previewAttach({
@@ -507,7 +391,7 @@ test.concurrent(`${chalk.yellowBright("custom-plan 7: add consumable overage pri
 		items: [consumableItem, priceItem],
 	});
 
-	expect(preview.total).toBe(20); // Base price only
+	expect(preview.total).toBe(20);
 
 	await autumnV1.billing.attach({
 		customer_id: customerId,
@@ -520,7 +404,6 @@ test.concurrent(`${chalk.yellowBright("custom-plan 7: add consumable overage pri
 
 	await expectProductActive({ customer, productId: pro.id });
 
-	// 100 messages included with consumable overage
 	expectCustomerFeatureCorrect({
 		customer,
 		featureId: TestFeature.Messages,
@@ -543,16 +426,6 @@ test.concurrent(`${chalk.yellowBright("custom-plan 7: add consumable overage pri
 	});
 });
 
-/**
- * Test 8: Change prepaid price
- *
- * Scenario:
- * - Pro product has prepaid at $10/100 messages
- * - Attach with prepaid at $15/100 messages
- *
- * Expected:
- * - Customer charged at new price ($15/100)
- */
 test.concurrent(`${chalk.yellowBright("custom-plan 8: change prepaid price")}`, async () => {
 	const customerId = "custom-plan-change-prepaid";
 
@@ -572,14 +445,13 @@ test.concurrent(`${chalk.yellowBright("custom-plan 8: change prepaid price")}`, 
 		actions: [],
 	});
 
-	// Attach with custom prepaid at higher price
 	const higherPricePrepaid = items.prepaidMessages({
 		includedUsage: 0,
 		billingUnits: 100,
 		price: 15,
 	});
 
-	const quantity = 200; // 2 packs
+	const quantity = 200;
 
 	const preview = await autumnV1.billing.previewAttach({
 		customer_id: customerId,
@@ -588,7 +460,6 @@ test.concurrent(`${chalk.yellowBright("custom-plan 8: change prepaid price")}`, 
 		options: [{ feature_id: TestFeature.Messages, quantity }],
 	});
 
-	// 2 packs * $15 = $30
 	expect(preview.total).toBe(30);
 
 	await autumnV1.billing.attach({
@@ -603,7 +474,6 @@ test.concurrent(`${chalk.yellowBright("custom-plan 8: change prepaid price")}`, 
 
 	await expectProductActive({ customer, productId: pro.id });
 
-	// 200 messages (2 packs)
 	expectCustomerFeatureCorrect({
 		customer,
 		featureId: TestFeature.Messages,

@@ -1,19 +1,3 @@
-/**
- * TDD test for usage windows across a SCHEDULED downgrade (premium -> pro at
- * cycle end, triggered by advancing the test clock past the next invoice).
- *
- * Contract under test (WINDOW-IDENTITY rule):
- *   - while the downgrade is only scheduled, the cap keeps binding on the
- *     premium cycle (counter untouched by scheduling)
- *   - the scheduled switch preserves the billing cycle, so the pro-anchored
- *     bracket equals the premium one: anchor-only re-point, count KEPT.
- *
- * NOTE: in production the switch fires exactly when the old window closes by
- * WALL clock, so the count zeroes there via natural expiry. Test clocks
- * can't show that (windows live on server wall time); this test pins the
- * re-anchor + carry half of the contract.
- */
-
 import { expect, test } from "bun:test";
 import { ApiVersion, EntInterval, getUsageWindowBounds } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
@@ -35,8 +19,6 @@ import {
 	fetchUsageWindowRows,
 } from "../../utils/usage-limit-utils/usageWindowDbTestUtils.js";
 
-// initScenario only exposes clients up to V2_2; build the latest-version client
-// directly (same pattern as the v2.2-vs-v2.3 parity tests).
 const autumnV2_3 = new AutumnInt({ version: ApiVersion.V2_3 });
 
 test.concurrent(
@@ -79,8 +61,6 @@ test.concurrent(
 			value: 3,
 		});
 
-		// Schedule the downgrade: premium keeps running (canceling), pro is
-		// scheduled. The cap is untouched by the scheduling itself.
 		await autumnV1.billing.attach({
 			customer_id: customerId,
 			product_id: pro.id,
@@ -94,7 +74,6 @@ test.concurrent(
 			limit: 5,
 		});
 
-		// Flush the counter, then turn the cycle: premium ends, pro activates.
 		await timeout(4000);
 		const testClockId = maybeTestClockId as string;
 		expect(testClockId).toBeTruthy();
@@ -112,7 +91,6 @@ test.concurrent(
 			waitForSeconds: 30,
 		});
 
-		// Cycle preserved across the switch: anchor re-points, count carried.
 		await expectCustomerUsageLimit({
 			autumn: autumnV2_3,
 			customerId,
@@ -134,8 +112,6 @@ test.concurrent(
 			limit: 5,
 		});
 
-		// PG: the live row anchors to the pro ent; bounds derive from its
-		// next_reset_at (computed, since the test clock runs ahead of wall time).
 		await timeout(4000);
 		const proEnt = await fetchActivePlanCusEnt({
 			ctx,
@@ -159,8 +135,6 @@ test.concurrent(
 		);
 		expect(currentRow).toBeDefined();
 		expect(Number(currentRow.usage)).toBe(5);
-		// Bounds (above) prove pro-cycle alignment; the anchor id itself depends
-		// on which of the plan's ents the resolver tie-breaks to post-switch.
 		expect(currentRow.anchor_customer_entitlement_id).not.toBeNull();
 		expect(Number(currentRow.window_start_at)).toBe(
 			expectedBounds.windowStartAt,

@@ -19,10 +19,6 @@ const fromProduct = ({
 	priceIds: prices.map((price) => price.id),
 });
 
-/**
- * Overlay → effective ids. Clear → empty in place. Preserve → copy current
- * overlay ids onto a mint. Undefined leaves the license's items untouched.
- */
 export const computeLicensePricesAndEntitlements = ({
 	planLicense,
 	writesFreshRow,

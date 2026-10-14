@@ -4,21 +4,15 @@ import type { ReadThroughCacheContext } from "../misc/types/readThroughCacheCont
 import { REDIS_OP_TIMEOUT_MS } from "../ops/redisOpTimeouts.js";
 import { runRedisOp, tryRedisOp } from "../ops/runRedisOp.js";
 
-/** Short by design: org config changes are also pushed through clearOrgCache, so
- *  this only has to bound the staleness window for anything that misses that. */
 export const ORG_WITH_FEATURES_CACHE_TTL_SECONDS = 60;
 
-// This TTL is the invalidation window: a clear only reaches the calling process's
-// L1, so every other process serves stale org config until it lapses.
 export const ORG_WITH_FEATURES_L1_TTL_MS = 5_000;
-/** An org payload carries every feature, so this holds only the handful of orgs a process is hot on. */
 export const ORG_WITH_FEATURES_L1_MAX_ENTRIES = 500;
 
 type OrgWithFeaturesL1Entry = { value: unknown };
 
 let orgWithFeaturesL1: LRUCache<string, OrgWithFeaturesL1Entry> | undefined;
 
-/** Per-process L1. Each process gets its own copy — intended. */
 const getOrgWithFeaturesL1 = () => {
 	orgWithFeaturesL1 ??= new LRUCache<string, OrgWithFeaturesL1Entry>({
 		max: ORG_WITH_FEATURES_L1_MAX_ENTRIES,
@@ -27,7 +21,6 @@ const getOrgWithFeaturesL1 = () => {
 	return orgWithFeaturesL1;
 };
 
-/** One lookup per key at a time: a burst on a cold L1 joins it instead of repeating it. */
 const inFlightLookups = new Map<string, Promise<unknown>>();
 
 export const _resetOrgWithFeaturesL1ForTesting = () => {
@@ -59,8 +52,6 @@ export const getCachedOrgWithFeatures = async <T>({
 	const redis = ctx.miscCache.resolve({ requestId });
 	const cacheKey = buildOrgWithFeaturesCacheKey({ orgId, env });
 
-	// Hands back the cached reference, not a copy — callers must treat the org
-	// and its features as read-only, or the write leaks into every later hit.
 	const local = getOrgWithFeaturesL1().get(cacheKey);
 	if (local) return local.value as T;
 
@@ -105,7 +96,6 @@ export const setCachedOrgWithFeatures = async ({
 	});
 };
 
-/** L1, then Redis, then `load` (written back to both); concurrent callers for one org share a single lookup. */
 export const readThroughOrgWithFeatures = <T>({
 	ctx,
 	orgId,
@@ -150,7 +140,6 @@ export const readThroughOrgWithFeatures = <T>({
 	return lookup;
 };
 
-/** Drop the cached org on every live instance — ramped readers must never see stale org config. */
 export const clearOrgWithFeaturesCache = async ({
 	ctx,
 	orgId,
@@ -158,7 +147,6 @@ export const clearOrgWithFeaturesCache = async ({
 }: {
 	ctx: ReadThroughCacheContext;
 	orgId: string;
-	/** Omit to clear every env. */
 	env?: AppEnv;
 }) => {
 	const envs = env ? [env] : [AppEnv.Live, AppEnv.Sandbox];
@@ -169,8 +157,6 @@ export const clearOrgWithFeaturesCache = async ({
 	for (const cacheKey of cacheKeys) getOrgWithFeaturesL1().delete(cacheKey);
 
 	await ctx.miscCache.forEachTarget({
-		// One DEL per key: these keys have no hash tag, so a multi-key DEL is
-		// rejected with CROSSSLOT on a clustered instance and nothing is deleted.
 		operation: ({ redis }) =>
 			Promise.all(
 				cacheKeys.map((cacheKey) =>

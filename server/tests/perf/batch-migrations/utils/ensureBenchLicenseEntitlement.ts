@@ -10,12 +10,6 @@ export const BENCH_LICENSE_ENTITLEMENT_ID = "ent_bench_license_words";
 export const BENCH_LICENSE_ALLOWANCE = 100;
 export const BENCH_LICENSE_FEATURE_ID = TestFeature.Words;
 
-/**
- * Gives the bench license plan a metered entitlement and links it to every
- * catalog link that offers the plan. The bench org is seeded with raw inserts
- * rather than the API, so a hand-inserted plan_license starts with no junction
- * rows — leaving the supersede path nothing to repoint.
- */
 export const ensureBenchLicenseEntitlement = async ({
 	ctx,
 }: {

@@ -41,7 +41,6 @@ export function DiscountRewardConfig({
 	return (
 		<SheetSection title="Discount Configuration" withSeparator={false}>
 			<div className="flex flex-col gap-4">
-				{/* Row 1: Discount Type and Amount */}
 				<div className="grid grid-cols-2 gap-2">
 					<div className="flex flex-col">
 						<FormLabel>Discount Type</FormLabel>
@@ -98,7 +97,6 @@ export function DiscountRewardConfig({
 					</div>
 				</div>
 
-				{/* Row 2: Duration */}
 				<div className="grid grid-cols-2 gap-2">
 					<div>
 						<FormLabel>Duration</FormLabel>
@@ -152,7 +150,6 @@ export function DiscountRewardConfig({
 
 				<PromoCodeField reward={reward} setReward={setReward} />
 
-				{/* Products */}
 				<div className="w-full">
 					<span className="flex items-center gap-1.5">
 						<FormLabel>Products</FormLabel>

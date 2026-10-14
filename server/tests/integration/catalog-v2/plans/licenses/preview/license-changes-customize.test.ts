@@ -1,14 +1,3 @@
-/**
- * catalogV2.preview_update — customize and mixed parent+license edits.
- *
- * Contract:
- *   - customize on an existing link → updated + nested core plan_change
- *   - new link with customize → created, no nested plan_change
- *   - parent name + included compose onto one plan_change
- *   - after new_version + license customize, a later preview_update parses
- *     and echoes the overlay (Dashboard) on latest
- */
-
 import { test } from "bun:test";
 import { BillingInterval } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
@@ -280,7 +269,6 @@ test.concurrent(
 								version_slug: "v1",
 								included: 2,
 								prepaid_only: true,
-								// The link's own overlay rides the row now, so a pull can restate it.
 								customize: {
 									add_items: [
 										{

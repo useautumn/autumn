@@ -27,7 +27,6 @@ export const billingResultToResponse = ({
 	const stripeCheckoutSession = billingResult.stripe.stripeCheckoutSession;
 	const autumnCheckout = billingResult.autumn?.checkout;
 
-	// Autumn checkout URL takes priority, then Stripe checkout session, then invoice hosted URL
 	const paymentUrl = autumnCheckout
 		? checkoutToUrl({
 				action: autumnCheckout.action,

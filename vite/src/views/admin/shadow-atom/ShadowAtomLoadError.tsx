@@ -1,6 +1,5 @@
 import { Button } from "@autumn/ui";
 
-/** A section whose data failed to load: say so and offer a retry instead of a skeleton forever. */
 export const ShadowAtomLoadError = ({
 	what,
 	onRetry,

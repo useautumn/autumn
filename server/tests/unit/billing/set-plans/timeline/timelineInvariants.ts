@@ -28,7 +28,6 @@ export type TimelineCase = {
 	policies: SetPlansPolicies;
 };
 
-/** A request's phases start now and wherever one of its declared plans starts or ends. */
 const requestPhaseStarts = (desired: DesiredTimeline) => [
 	NOW,
 	...[
@@ -71,7 +70,6 @@ const segmentRow = (segment: ResolvedSegment): TimelineRow => ({
 	externalId: null,
 });
 
-/** The saved rows after the diff's row writes, the way execution would leave them. */
 export const applyTimelineOperations = ({
 	rows,
 	diff,
@@ -152,7 +150,6 @@ const toComparable = (
 		.sort();
 };
 
-/** I6: executing the operations and re-reading the rows yields exactly the resolved timeline. */
 export const expectRoundTrip = ({
 	rows,
 	diff,
@@ -172,7 +169,6 @@ const isChange = (operation: TimelineOperation) => operation.type !== "keep";
 const rowKey = (row: ReviewPlanRow) =>
 	"after" in row ? row.after.segment.key : row.before.segment.key;
 
-/** I1: a request equal to the saved state writes nothing and shows every plan unchanged. */
 export const expectIdempotent = ({
 	diff,
 	review,
@@ -189,7 +185,6 @@ export const expectIdempotent = ({
 	expect(review.removedPhases).toEqual([]);
 };
 
-/** R1: a row's plan is in its phase, or, when removed, in what the phase is compared with. */
 export const expectRowsInTheirPhase = ({
 	diff,
 	review,
@@ -227,7 +222,6 @@ const startsNowOperationKeys = (diff: TimelineDiff) =>
 			: [],
 	);
 
-/** The plan is ended and inserted again now in the same config, as a recreate policy does. */
 const isRecreatedNow = ({
 	saved,
 	diff,
@@ -252,7 +246,6 @@ const isRecreatedNow = ({
 	return insertedNow && expired?.configHash === resolvedNow?.configHash;
 };
 
-/** R3: every write that takes effect now has a matching opening-phase change, and the reverse. */
 export const expectOpeningPhaseOneToOne = ({
 	saved,
 	diff,
@@ -294,7 +287,6 @@ const rowsByPhaseStart = (review: ReviewRows) =>
 		review.phases.map(({ at, rows }) => [at, rows.map(describeReviewRow)]),
 	);
 
-/** The same request with one more phase that adds a short-lived add-on. */
 const withExtraPhase = (timelineCase: TimelineCase): TimelineCase => ({
 	...timelineCase,
 	desired: {
@@ -312,7 +304,6 @@ const withExtraPhase = (timelineCase: TimelineCase): TimelineCase => ({
 	},
 });
 
-/** R2: adding or deleting one phase never changes the rows of any other phase. */
 export const expectPhaseIndependence = (timelineCase: TimelineCase) => {
 	const without = rowsByPhaseStart(runTimelineCase(timelineCase).review);
 	const withExtra = rowsByPhaseStart(
@@ -324,7 +315,6 @@ export const expectPhaseIndependence = (timelineCase: TimelineCase) => {
 	}
 };
 
-/** R5: no later phase repeats the row the phase before it shows for the same plan. */
 export const expectNoCarriedOverRows = ({ review }: { review: ReviewRows }) => {
 	for (const [phaseIndex, phase] of review.phases.entries()) {
 		const previousRows = new Set(
@@ -337,7 +327,6 @@ export const expectNoCarriedOverRows = ({ review }: { review: ReviewRows }) => {
 	}
 };
 
-/** R4: a new phase never shows a plan as removed. */
 export const expectNewPhasesHaveNoEnds = ({
 	review,
 }: {
@@ -352,7 +341,6 @@ export const expectNewPhasesHaveNoEnds = ({
 	}
 };
 
-/** I4: the resolved timeline holds every declared segment; an open-ended one carrying or replacing it now keeps its cancel date, moved by a reset-now. */
 export const expectProjection = ({
 	saved,
 	desired,
@@ -404,7 +392,6 @@ export const expectProjection = ({
 	}
 };
 
-/** I5: in retain mode no undeclared live plan ends, unless a declared plan claims its group. */
 export const expectRetained = ({
 	saved,
 	desired,

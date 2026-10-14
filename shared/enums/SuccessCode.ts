@@ -1,9 +1,6 @@
 export enum SuccessCode {
 	InvoiceActionRequired = "invoice_action_required",
-	// Track
-	// Entitlements
 	FeatureFound = "feature_found",
-	// Attach
 	FeaturesUpdated = "features_updated",
 	UpgradedToNewProduct = "upgraded_to_new_product",
 	DowngradeScheduled = "downgrade_scheduled",

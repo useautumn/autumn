@@ -1,16 +1,3 @@
-/**
- * Every invoice write stamps the owning customer's org_id + env.
- *
- * Contract:
- *   billing attach (initInvoiceFromStripe → upsert)  → row has org_id/env
- *   invoices.insert (upsertMany)                     → row has org_id/env
- *   invoices.insert over a legacy unstamped row      → conflict update stamps it
- *   webhook upsert over a legacy unstamped row       → conflict update stamps it
- *   upsert from a different customer over that row   → stays unstamped (owner fields never disagree)
- *   legacy attach (createInvoiceFromStripe)          → row has org_id/env
- *   RevenueCat (recordRevenueCatInvoice → upsert)    → row has org_id/env
- */
-
 import { expect, test } from "bun:test";
 import { InvoiceStatus, invoices, ProcessorType } from "@autumn/shared";
 import { items } from "@tests/utils/fixtures/items";
@@ -90,7 +77,6 @@ test.concurrent(
 		});
 		const internalCustomerId = await getInternalCustomerId({ customerId });
 
-		// A row written before the columns existed has no org_id/env.
 		await ctx.db.insert(invoices).values({
 			id: `inv_org_env_legacy_${runTag}`,
 			internal_customer_id: internalCustomerId,
@@ -203,7 +189,6 @@ test.concurrent(
 			currency: "usd",
 		});
 
-		// Same Stripe invoice reported for a customer in another org: the row keeps its owner and no foreign stamp.
 		await InvoiceService.upsert({
 			db: ctx.db,
 			invoice: {

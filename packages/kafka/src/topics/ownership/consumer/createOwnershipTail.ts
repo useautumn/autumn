@@ -22,7 +22,6 @@ const DEFAULT_TAIL_TIMINGS: KafkaConsumerGroupTimings = {
 	rebalanceTimeoutMs: 60_000,
 };
 
-/** Connect, join and one fetch that may wait its full idle allowance before the position settles at the log end. */
 const TAIL_START_ALLOWANCE_MS = 10_000;
 
 export function ownershipTailStartTimeoutMs({
@@ -66,8 +65,6 @@ export function createOwnershipTail({
 		ctx.onError?.({ cause });
 	}
 
-	/** A drain counts only while its author still owns the partition; a claim or release ends it.
-	 *  A preparation counts until its author is named, the partition is released, or it announces ready. */
 	function remember({ record }: Parameters<OwnershipTailListener>[0]): void {
 		const view = state.viewByPartition.get(record.partition);
 		if (record.type === "claimed") {
@@ -131,7 +128,6 @@ export function createOwnershipTail({
 				record: ownershipTopic.parse(message),
 			};
 		} catch (cause) {
-			// One bad record must not stall every handoff on the worker; the listener's timeout covers it.
 			report({ cause });
 			return;
 		}
@@ -178,14 +174,10 @@ export function createOwnershipTail({
 		function onStartTimeout(): void {
 			firstFetch.reject(new Error("Ownership tail did not fetch in time"));
 		}
-		// The timeout can fire while connect or subscribe is still pending, before
-		// the promise is awaited; without an observer that is an unhandled rejection.
 		async function observeFirstFetch(): Promise<void> {
 			try {
 				await firstFetch.promise;
-			} catch {
-				// Surfaces where start awaits it.
-			}
+			} catch {}
 		}
 		void observeFirstFetch();
 		state.removeListeners
@@ -194,14 +186,12 @@ export function createOwnershipTail({
 		const timer = setTimeout(onStartTimeout, startTimeoutMs);
 		try {
 			await consumer.connect();
-			// From the log end: a listener is always registered before the record it waits for exists.
 			await consumer.subscribe({
 				topics: [config.topic],
 				fromBeginning: false,
 			});
 			await consumer.run({ autoCommit: false, eachBatch });
 			await firstFetch.promise;
-			// A stop that landed meanwhile wins; started must not overwrite it.
 			if (state.status === "starting") state.status = "started";
 		} catch (cause) {
 			await stop();
@@ -235,7 +225,6 @@ export function createOwnershipTail({
 			if (listeners.size === 0) state.listenersByPartition.delete(partition);
 		}
 		signal.addEventListener("abort", remove);
-		// Tracked so stop() detaches from the caller's signal, which may outlive the tail.
 		state.removeListeners.add(remove);
 	}
 

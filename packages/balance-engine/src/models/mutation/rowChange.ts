@@ -61,7 +61,6 @@ export type TableRowChange<Table extends string, Row> =
 	  }
 	| { table: Table; op: "delete"; id: string };
 
-/** Row schemas carry no defaults, so a partial names exactly the columns a change touches. */
 const tableRowChangeOptions = <
 	Table extends string,
 	RowSchema extends z.ZodObject,
@@ -105,7 +104,6 @@ const tableRowChangeSchema = <
 	rowSchema: RowSchema;
 }) => z.discriminatedUnion("op", tableRowChangeOptions(params));
 
-/** A balance table's rows also move by increment. */
 const balanceRowChangeSchema = <
 	Table extends string,
 	RowSchema extends z.ZodObject,
@@ -146,7 +144,6 @@ export type UsageWindowIncrement = RowIncrement<
 	z.infer<typeof usageWindowIncrementParts.entries>
 >;
 
-/** The entity's own row: inserted once by the initialize that names it, never updated by a mutation. */
 export type SubjectRowChange<Table extends string, Row> = {
 	table: Table;
 	op: "insert";
@@ -171,7 +168,6 @@ const subjectRowChangeSchema = <
 		})
 		.loose();
 
-/** A table whose rows are written once and removed once, never edited: the general row change without its update. */
 export type WriteOnceRowChange<Table extends string, Row> = Exclude<
 	TableRowChange<Table, Row>,
 	{ op: "update" }
@@ -188,10 +184,8 @@ const writeOnceRowChangeSchema = <
 	return z.discriminatedUnion("op", [insert, remove]);
 };
 
-/** Nothing edits a lock row, which is what lets finalize trust the copy it is handed. */
 export type LockRowChange = WriteOnceRowChange<"locks", WorkerLock>;
 
-/** A reset moved a pool's due shares to their next value: one set-based statement for the committer, however many rows. */
 export type PooledContributionPromote = {
 	table: "pooledContributions";
 	op: "promote";
@@ -199,7 +193,6 @@ export type PooledContributionPromote = {
 	dueBy: number;
 };
 
-/** A pool's share from one source: carried by the record for the committer, never a state row. */
 export type PooledContributionRowChange =
 	| TableRowChange<"pooledContributions", WorkerPooledContribution>
 	| PooledContributionPromote;
@@ -220,7 +213,6 @@ const pooledContributionRowChangeSchema = () =>
 			.loose(),
 	]);
 
-/** The customer row: inserted by the command that creates the subject, updated by a billing plan. Its id is `internal_id`. */
 export type CustomerRowChange = Exclude<
 	TableRowChange<"customer", WorkerCustomer>,
 	{ op: "delete" }
@@ -234,7 +226,6 @@ const customerRowChangeSchema = () => {
 	return z.discriminatedUnion("op", [insert, update]);
 };
 
-/** One change to one row of the subject's state; a mutation applies a list of these in order. */
 export type RowChange =
 	| CustomerRowChange
 	| SubjectRowChange<"entity", WorkerEntity>
@@ -286,7 +277,6 @@ export const rowChangeSchema = z.discriminatedUnion("table", [
 	writeOnceRowChangeSchema({ table: "locks", rowSchema: workerLockSchema }),
 ]);
 
-/** Whether the changes create the subject: only a customer insert starts a state. */
 export const changesInsertCustomer = ({
 	changes,
 }: {
@@ -299,7 +289,6 @@ export const changesInsertCustomer = ({
 const isObject = (value: unknown): value is Record<string, unknown> =>
 	typeof value === "object" && value !== null;
 
-/** Every `table:op` this build can apply, read off the schema so the two never drift. */
 const knownRowChangeKinds: ReadonlySet<string> = new Set(
 	rowChangeSchema.options.flatMap((byTable) =>
 		("options" in byTable ? byTable.options : [byTable]).map((option) => {
@@ -309,11 +298,9 @@ const knownRowChangeKinds: ReadonlySet<string> = new Set(
 	),
 );
 
-/** Before a mutation parses: a newer writer's change of a kind this build cannot apply is skipped and reported once per kind, the rest apply. */
 export const skipUnknownRowChanges = (input: unknown): unknown => {
 	if (!isObject(input) || !Array.isArray(input.changes)) return input;
 	const changes = input.changes.filter((change) => {
-		// Only a well-formed discriminator names a kind; anything else is left for the schema to refuse.
 		if (!isObject(change)) return true;
 		const { table, op } = change;
 		if (typeof table !== "string" || typeof op !== "string") return true;

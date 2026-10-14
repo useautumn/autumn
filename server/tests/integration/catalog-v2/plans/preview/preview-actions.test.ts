@@ -1,11 +1,3 @@
-/**
- * catalogV2.preview_update — action correctness for plans.
- *
- * Asserts create / update / none / archive / multi-plan / pinned-version /
- * preview↔update parity. Always schema-parses the response and checks
- * preview writes nothing.
- */
-
 import { expect, test } from "bun:test";
 import {
 	BillingInterval,
@@ -399,7 +391,6 @@ test.concurrent(
 				plans: [{ plan_id: planId, version: 2, name: "V2 Name" }],
 			});
 
-			// Re-send v1's current name → none against v1; latest stays V2.
 			const nonePreview = parsePlanPreview(
 				await autumnV2_3.catalogV2.previewUpdate({
 					plans: [{ plan_id: planId, version: 1, name: "V1 Name" }],

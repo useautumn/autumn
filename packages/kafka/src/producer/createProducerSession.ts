@@ -20,7 +20,6 @@ export function createProducerSession({
 }: {
 	ctx: {
 		kafka: KafkaProducerFactory;
-		/** Called for every broker request this producer makes. Must not throw. */
 		onRequest?: (timing: KafkaRequestTiming) => void;
 	};
 	config: KafkaProducerSessionConfig;
@@ -75,12 +74,10 @@ export function createProducerSession({
 		if (state.initialized)
 			throw new Error("Producer session was already initialized");
 		if (mode === "idempotent") {
-			// Nothing at the broker to bump: readers judge a stale owner by the epoch in its records.
 			state.initialized = true;
 			return;
 		}
 		try {
-			// Only startup initializes the epoch; cleanup must never fence a successor.
 			const current = await transaction();
 			await current.abort();
 			state.initialized = true;
@@ -119,9 +116,7 @@ function observeRequests({
 				durationMs: payload.duration,
 				pendingMs: payload.pendingDuration,
 			});
-		} catch {
-			// Timing is telemetry; it must never fail a produce.
-		}
+		} catch {}
 	}
 	producer.on(producer.events.REQUEST, report);
 }

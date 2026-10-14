@@ -1,34 +1,3 @@
-/**
- * invoices.create — the PRD's headline request, end to end, with every amount
- * worked out by hand.
- *
- * Catalog:
- *   pro           $20 / month base
- *     users       $10 per seat, prepaid
- *     credits     $0.01 per credit (Action1 = 0.2 credits, Action2 = 0.6)
- *     messages    $0.10 per message, usage-based
- *   editor        license linked to pro, $25 / seat in the catalog
- *     words       $0.05 per word, usage-based
- *   pro-annual    $200 / year base
- *
- * Request                                    Line
- *   pro base                                 $20.00
- *   5 seats × $10                            $50.00
- *   10000 Action1 × 0.2 + 2000 Action2 × 0.6
- *     = 3200 credits × $0.01                 $32.00
- *   2500 messages × $0.10                    $250.00
- *   3 editor seats × $15 (customized)        $45.00
- *   100 words × $0.05 (through the license)  $5.00
- *   pro-annual base                          $200.00
- *   Implementation services (custom)         $500.00
- *                                            ────────
- *   subtotal                                 $1102.00
- *   −10% on pro's lines only (402 → 361.80)  −$40.20
- *   −10% promotion code on the invoice       −$106.18
- *                                            ────────
- *   total                                    $955.62
- */
-
 import { expect, test } from "bun:test";
 import { BillingInterval, BillingMethod, RewardType } from "@autumn/shared";
 import { createPercentCoupon } from "@tests/integration/billing/utils/discounts/discountTestUtils";

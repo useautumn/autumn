@@ -108,7 +108,6 @@ describe(`${chalk.yellowBright(`${testCase}: Testing migration for premium v1 ->
 			env,
 		});
 
-		// Customer should still have premium active (with scheduled pro)
 		const customer = await autumn.customers.get(customerId);
 		const wordsBalance = customer.features[TestFeature.Words].balance;
 		expect(wordsBalance).toBe(5000);
@@ -130,13 +129,11 @@ describe(`${chalk.yellowBright(`${testCase}: Testing migration for premium v1 ->
 
 		await timeout(4000);
 
-		// Verify usage was tracked correctly before migration
 		const customerBeforeMigration = await autumn.customers.get(customerId);
 		expect(customerBeforeMigration.features[TestFeature.Words].balance).toBe(
 			5000 - wordsUsage,
 		);
 
-		// Create updated premium with version 2
 		const premiumV2 = { ...premium, version: 2 };
 		premiumV2.items = [updatedPremiumWordsItem];
 
@@ -149,7 +146,6 @@ describe(`${chalk.yellowBright(`${testCase}: Testing migration for premium v1 ->
 
 		await timeout(10000);
 
-		// 1. Check that premium v2 active, pro scheduled
 		const customer = await autumn.customers.get(customerId);
 		expectProductAttached({
 			customer,
@@ -169,9 +165,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing migration for premium v1 ->
 			env,
 		});
 
-		// After migration, customer should have premium v2 with new included usage
 		const wordsBalance = customer.features[TestFeature.Words].balance;
-		// New included usage is 10000, minus 2000 used = 8000
 		expect(wordsBalance).toBe(10000 - wordsUsage);
 	});
 });

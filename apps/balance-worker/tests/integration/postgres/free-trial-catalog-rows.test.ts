@@ -9,7 +9,6 @@ import {
 
 const databaseUrl = readWorktreeDatabaseUrl();
 
-/** One org's trials in two envs, plus one in another org. Ids sort in the order the lookup must return them. */
 const seedFreeTrials = async ({ postgres }: { postgres: PostgresClient }) => {
 	const { db } = postgres;
 	const suffix = crypto.randomUUID().slice(0, 8);
@@ -78,7 +77,6 @@ const seedFreeTrials = async ({ postgres }: { postgres: PostgresClient }) => {
 
 	const cleanup = async () => {
 		for (const org of [orgId, otherOrgId]) {
-			// free_trials cascade away with their product.
 			await db.execute(sql`DELETE FROM products WHERE org_id = ${org}`);
 			await db.execute(sql`DELETE FROM organizations WHERE id = ${org}`);
 		}

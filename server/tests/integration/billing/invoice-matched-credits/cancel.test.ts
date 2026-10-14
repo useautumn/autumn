@@ -1,14 +1,3 @@
-/**
- * Invoice-Matched Proration Credits — Cancel Tests
- *
- * Verifies that cancellation credits and refunds source amounts from stored
- * invoice line items rather than catalog prices.
- *
- * - cancel_immediately with discount: credit reflects discounted charge ($16)
- * - cancel_end_of_cycle: no immediate credit line items
- * - refund_last_payment prorated with discount: refund based on discounted invoice
- */
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3 } from "@autumn/shared";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
@@ -25,10 +14,6 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { createStripeCli } from "@/external/connect/createStripeCli";
 import { createPercentCoupon } from "../utils/discounts/discountTestUtils";
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 1: Cancel immediately prorated with discount — credit from stored charge
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(
 	`${chalk.yellowBright("invoice-matched-credits cancel 1: cancel immediately with discount — credit reflects stored charge")}`,
@@ -102,7 +87,6 @@ test.concurrent(
 		const preview = await autumnV1.subscriptions.previewUpdate(cancelParams);
 
 		expect(preview.total).toBeLessThan(0);
-		// Stored $16 renewal charge, with 4d invoice finalization + 15d elapsed.
 		expect(preview.total).toBeGreaterThan(-6.5);
 		expect(preview.total).toBeLessThanOrEqual(-5);
 
@@ -123,10 +107,6 @@ test.concurrent(
 	},
 	300_000,
 );
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 2: Cancel end_of_cycle — no immediate credit lines
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(
 	`${chalk.yellowBright("invoice-matched-credits cancel 2: cancel end_of_cycle — no immediate credit line items")}`,
@@ -183,10 +163,6 @@ test.concurrent(
 	},
 	300_000,
 );
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 3: Cancel discounted plan refund_last_payment prorated — refund based on discounted invoice
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(
 	`${chalk.yellowBright("invoice-matched-credits cancel 3: cancel with refund_last_payment prorated — refund reflects discounted invoice")}`,
@@ -258,7 +234,6 @@ test.concurrent(
 		const refundAmount = preview.refund!.amount;
 		expect(refundAmount).toBeGreaterThan(0);
 		expect(refundAmount).toBeLessThanOrEqual(16);
-		// Stored $16 renewal charge, with 4d invoice finalization + 15d elapsed.
 		expect(refundAmount).toBeGreaterThanOrEqual(5);
 
 		expect(preview.refund!.invoice.total).toBe(16);

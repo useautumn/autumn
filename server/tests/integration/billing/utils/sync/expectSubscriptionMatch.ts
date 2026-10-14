@@ -12,13 +12,11 @@ export type ExpectedMatchedPlan = {
 export type ExpectedPhaseMatch = {
 	plans: ExpectedMatchedPlan[];
 	is_current?: boolean;
-	/** When true, asserts no Stripe items in this phase are unmatched. */
 	noUnmatchedItems?: boolean;
 };
 
 export type ExpectedCurrentPhase = {
 	plans: ExpectedMatchedPlan[];
-	/** When set, asserts no Stripe items in the current phase are unmatched. */
 	noUnmatchedItems?: boolean;
 };
 
@@ -51,14 +49,6 @@ const expectPhaseMatchCorrect = ({
 	}
 };
 
-/**
- * Match-side counterpart to `expectSyncParamsCorrect` — asserts on the
- * detection result (`SubscriptionMatch`).
- *
- * Pass `currentPhase` to assert against the current phase only. Pass
- * `phaseMatches` to assert against every phase by index (the order matches
- * `match.phaseMatches`).
- */
 export const expectSubscriptionMatchCorrect = ({
 	match,
 	currentPhase,

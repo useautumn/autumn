@@ -4,7 +4,6 @@ import { itemThreshold, withThresholdBilling } from "./thresholdBillingItem";
 
 const DEFAULT_THRESHOLD = 100;
 
-/** Visibility is controlled by parent AdvancedSettings */
 export function ThresholdBillingConfig() {
 	const { item, setItem } = useProductItemContext();
 

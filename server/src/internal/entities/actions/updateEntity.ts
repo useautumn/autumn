@@ -99,7 +99,6 @@ export const updateEntity = async ({
 		});
 	}
 	if (isBalanceWorkerRolloutEnabled({ ctx, customerId })) {
-		// The worker holds the entity's controls and usage windows, so it reloads them.
 		if (hasConfigUpdates || usageWindows.length > 0)
 			await evictBalanceWorkerCustomer({ ctx, customerId });
 		return entity.id ?? entity.internal_id;

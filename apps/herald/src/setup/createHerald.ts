@@ -37,10 +37,8 @@ export type Herald = { start(): Promise<void>; stop(): Promise<void> };
 
 type Stoppable = { stop(): Promise<void> };
 
-/** How long a task on ECS waits for its first read of the slot record; the heartbeat reports the wait meanwhile. */
 const FIRST_RECORD_RETRY_MS = 2_000;
 
-/** Wiring only: one Kafka client, the slot herald follows, and the jobs the slot starts and stops. */
 export function createHerald({
 	ctx,
 	config,
@@ -63,9 +61,7 @@ export function createHerald({
 			"start" | "stop" | "readSubjectState"
 		>;
 		getAtomClient: GetAtomClient;
-		/** A job's consumer died for good; the caller ends the process so the task is replaced. */
 		onConsumerCrashed: (params: { job: string; cause: unknown }) => void;
-		/** Tests only: the identity ECS would have given this task. */
 		identity?: TaskIdentity;
 	};
 	config: { env: HeraldEnv };
@@ -107,9 +103,7 @@ export function createHerald({
 			groupIdPrefix: `${env.HERALD_GROUP_ID}-catalog`,
 		},
 	});
-	/** The jobs of the current activation; empty while idle. A stopped consumer is single-use, so each activation builds anew. */
 	let jobs: RunningStreamConsumer[] = [];
-	/** The current activation's catalog push to each org's Atom; null while idle, and single-use like the jobs. */
 	let catalogPush: CatalogInvalidationConsumer | null = null;
 	let heartbeat: { start(): Promise<void>; stop(): void } | null = null;
 	let follower: ReturnType<typeof createSlotFollower> | null = null;
@@ -150,7 +144,6 @@ export function createHerald({
 		});
 	}
 
-	/** Every job and the catalog push join; one that fails to start takes the others back out, so the slot is never half in. */
 	async function startJobs(): Promise<void> {
 		jobs = buildJobs();
 		catalogPush = buildCatalogPush();
@@ -168,7 +161,6 @@ export function createHerald({
 		}
 	}
 
-	/** Every job and the catalog push leave, in parallel; one that fails to stop does not keep the others in their groups. */
 	async function stopJobs(): Promise<void> {
 		const stopping: Stoppable[] = catalogPush ? [...jobs, catalogPush] : jobs;
 		jobs = [];
@@ -197,7 +189,6 @@ export function createHerald({
 		}));
 	}
 
-	/** The misc client connects on first use, and a claim on a connecting client is refused: open it before the log is read. */
 	async function openMiscCache(): Promise<void> {
 		try {
 			await ctx.miscCache.getActive().ping();
@@ -209,7 +200,6 @@ export function createHerald({
 		}
 	}
 
-	/** In the background: only cache-push reads subjects, so its catch-up never holds the other jobs back. */
 	function startBalanceWorkerClient(): void {
 		ctx.balanceWorkerClient
 			.start()
@@ -221,7 +211,6 @@ export function createHerald({
 			);
 	}
 
-	/** On ECS the default record names no service and would open the gate; the first real read decides instead. */
 	async function awaitFirstRecord({
 		identity,
 	}: {
@@ -241,7 +230,6 @@ export function createHerald({
 		}
 	}
 
-	/** A start that fails part way stops what it started, so a half-started herald never holds partitions. */
 	async function start(): Promise<void> {
 		try {
 			const identity =
@@ -314,7 +302,6 @@ export function createHerald({
 		}
 	}
 
-	/** In reverse order of starting: the follower (and its jobs) first, the edge configs last. */
 	async function stopStarted(): Promise<unknown[]> {
 		const errors: unknown[] = [];
 		for (const stopOne of started.splice(0).reverse()) {

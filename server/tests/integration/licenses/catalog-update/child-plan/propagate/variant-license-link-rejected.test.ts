@@ -1,5 +1,3 @@
-/** A variant linked as a seat plan mints no pools, so its seats could never be
- * assigned; the link is refused. Variant parents may link licenses. */
 import { expect, test } from "bun:test";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
@@ -42,7 +40,6 @@ test(`${chalk.yellowBright("licenses: a variant cannot be used as a seat plan")}
 	expect(parentVariant).toBeDefined();
 	expect(seatVariant).toBeDefined();
 
-	// A variant as the seat plan mints no pools, so its seats can never be assigned.
 	const linkVariantSeat = autumnV2_3.post("/plans.update", {
 		plan_id: parent.id,
 		licenses: [

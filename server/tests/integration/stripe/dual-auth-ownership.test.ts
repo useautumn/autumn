@@ -1,19 +1,3 @@
-/**
- * TDD test for Stripe dual-auth: subscription ownership validation must be
- * SKIPPED once a secret key exists (secret key grants access to ANY sub on the
- * account, not just Autumn-created ones).
- *
- * Contract under test:
- *   validateStripeSubscriptionActionOwnership:
- *     - secret key present (even with account_id also set) -> gate skipped -> does NOT throw
- *       on a mismatched application id
- *     - account_id present, NO secret key -> gate active -> throws on mismatched application id
- *
- * Pre-impl red: current logic already has `&& !throughSecretKey`, so the skip case should
- * pass; this test pins the behavior so a future refactor cannot silently re-enable the gate
- * for dual-auth orgs.
- */
-
 import { describe, expect, test } from "bun:test";
 import { AppEnv, type Organization } from "@autumn/shared";
 import { validateStripeSubscriptionActionOwnership } from "@/internal/billing/v2/providers/stripe/utils/connect/validateStripeSubscriptionActionOwnership.js";

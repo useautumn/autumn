@@ -4,12 +4,6 @@ import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { getAdjustableFeatureIds } from "../utils/getAdjustableFeatureIds";
 import { previewCheckoutAction } from "../utils/previewCheckoutAction/previewCheckoutAction";
 
-/**
- * GET /checkouts/:checkout_id
- *
- * Returns checkout preview data for the UI to render.
- * The checkout is already fetched and validated by the middleware.
- */
 export const handleGetCheckout = createRoute({
 	scopes: [Scopes.Public],
 	handler: async (c) => {

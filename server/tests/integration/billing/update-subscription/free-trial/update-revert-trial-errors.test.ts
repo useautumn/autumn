@@ -1,11 +1,3 @@
-/**
- * billing.update can only adjust a revert trial in place. Starting, converting or
- * removing one changes which plan owns the Stripe subscription, so it is rejected.
- *
- * Red (before):  each request is accepted and writes to the shared subscription.
- * Green (after): each request is rejected and the subscription is untouched.
- */
-
 import { test } from "bun:test";
 import {
 	ErrCode,

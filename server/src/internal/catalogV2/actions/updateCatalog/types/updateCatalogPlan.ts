@@ -12,53 +12,35 @@ import type { UpsertProductPlan } from "@/internal/catalogV2/actions/updateCatal
 
 export type RemoveFeaturePlan = {
 	featureId: string;
-	/** Null when the id is unknown — errors throws FeatureNotFound. */
 	current: Feature | null;
-	/** Archive instead of hard delete — some reference survives the batch. */
 	willArchive: boolean;
-	/** Absent from a full-state config rather than named in remove_features. */
 	byOmission?: boolean;
 	hasCustomerEntitlements: boolean;
-	/** A reference this push leaves standing: a plan outside the push, or a
-	 * credit system that survives it — unlike customer history, clearable here. */
 	hasSurvivingCatalogReference: boolean;
 };
 
 export type RemovePlanPlan = {
 	planId: string;
 	version: number;
-	/** Null when the id/version is unknown — errors throws ProductNotFound. */
 	current: FullProduct | null;
-	/** Archive instead of hard delete — some reference survives the batch. */
 	willArchive: boolean;
-	/** Hide the row (`deleted_at`) — expired-only customers on a non-live pin. */
 	willTombstone: boolean;
 	hasCustomers: boolean;
-	/** True when the request omitted version (every version of this plan_id). */
 	allVersions: boolean;
 };
 
-/**
- * The desired catalog state change — pure Autumn intent, no writes.
- * Preview renders it; execute persists it. Every DB write execute makes is
- * declared on an insert / update / remove / upsert entry.
- */
 export type UpdateCatalogPlan = {
 	insertFeatures: Feature[];
 	updateFeatures: UpdateFeaturePlan[];
 	removeFeatures: RemoveFeaturePlan[];
-	/** Ordered product-row ops — create / update / none (execute order). */
 	upsertProducts: UpsertProductPlan[];
-	/** Plan-id changes — executed first so every later write sees the new id. */
 	renamePlans: RenameProductPlan[];
 	removePlans: RemovePlanPlan[];
-	/** At most one draft covering every requesting plan; empty when none qualify. */
 	migrationDrafts: CatalogMigration[];
 	upsertRewards: UpsertRewardPlan[];
 	removeRewards: RemoveRewardPlan[];
 	upsertReferralPrograms: UpsertReferralProgramPlan[];
 	removeReferralPrograms: RemoveReferralProgramPlan[];
 
-	/** Catalog after the fold's last advance — original + cumulative plan. */
 	projected: ProjectedCatalog;
 };

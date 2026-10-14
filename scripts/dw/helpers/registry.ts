@@ -77,7 +77,6 @@ export function wantsCanonicalProvision(
 	return cwd === canonical;
 }
 
-/** Keep canonical registry in sync with the current git branch. */
 export function refreshCanonicalEntry(
 	entry: RegistryEntry,
 	cwd: string,
@@ -209,7 +208,6 @@ export function resolveAgentEntryOrFatal(action: string): RegistryEntry {
 	return entry;
 }
 
-/** Any registered worktree, including canonical / headless #1. */
 export function resolveCurrentEntryOrFatal(
 	action: string,
 	opts: { touch?: boolean } = {},

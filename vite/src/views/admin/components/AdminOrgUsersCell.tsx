@@ -7,7 +7,6 @@ import {
 import type { User } from "better-auth";
 import { AdminEmailWithDomainLink } from "./AdminEmailWithDomainLink";
 
-/** Shows the first email in full plus a hover-expandable count for the rest. */
 export const AdminOrgUsersCell = ({ users }: { users: User[] }) => {
 	const [firstUser, ...otherUsers] = users;
 

@@ -13,7 +13,6 @@ const SCHEDULER_ROLE_ARN = process.env.AWS_EVENTBRIDGE_SCHEDULER_ROLE_ARN || "";
 const getSqsQueueArn = (): string =>
 	deriveSqsQueueArn({ queueUrl: process.env.SQS_QUEUE_URL_V2 || "" });
 
-/** Creates a one-shot EventBridge schedule that delivers an SQS message at scheduleAt */
 export const createSchedule = async ({
 	scheduleName,
 	scheduleAt,
@@ -25,7 +24,6 @@ export const createSchedule = async ({
 	sqsMessageBody: string;
 	messageGroupId: string;
 }) => {
-	// EventBridge at-expression: at(yyyy-mm-ddThh:mm:ss)
 	const pad = (n: number) => String(n).padStart(2, "0");
 	const d = scheduleAt;
 	const atExpression = `at(${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}T${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}:${pad(d.getUTCSeconds())})`;
@@ -50,13 +48,11 @@ export const createSchedule = async ({
 					MessageGroupId: messageGroupId,
 				},
 			},
-			// Auto-delete after firing so schedules don't accumulate
 			ActionAfterCompletion: "DELETE",
 		}),
 	);
 };
 
-/** Deletes an EventBridge schedule by name. Silently ignores not-found errors. */
 export const deleteSchedule = async ({
 	scheduleName,
 }: {

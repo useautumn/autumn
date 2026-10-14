@@ -26,7 +26,6 @@ export const useOrgSearch = ({ search }: { search: string }) => {
 	};
 };
 
-/** Admin org search by name, id or slug; the picked org is highlighted. */
 export const OrgSearchResults = ({
 	search,
 	selectedOrgId,

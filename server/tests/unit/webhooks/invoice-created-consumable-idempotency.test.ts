@@ -1,33 +1,3 @@
-/**
- * TDD test for invoice.created line creation surviving Stripe webhook retries.
- *
- * Incident (Surge sandbox, 2026-09-14): a subscription_cycle invoice.created
- * handler fired usage + invoice-credit lines as one parallel burst of
- * invoiceItems.create calls. A 429 crashed the handler, Stripe retried, and
- * the retry re-created the 5 usage lines (random idempotency keys, no
- * existing-line check) while the credit lines replayed a cached 429 under their
- * deterministic keys and never landed. The customer was over-billed ~$1.7k.
- *
- * Red-failure mode (current behavior):
- *  - usage lines are created via createStripeInvoiceItems with no dedupe
- *  - credit lines are created in a second burst with per-line stable keys
- *  - a retry against a finalized invoice throws and skips balance resets
- *
- * Green-success criteria (after fix):
- *  - every pending line (usage + credit) goes out via invoices.addLines
- *  - lines already on the invoice (matched by metadata.autumn_line_item_id) are
- *    skipped for usage lines too, so usage line ids must be scoped to the invoice
- *  - a non-draft invoice with missing lines throws BEFORE any balance mutation
- *  - a non-draft invoice with every line present continues with balance resets
- *  - if Stripe's addLines response lacks a requested line, throw before resets
- *  - more than 100 pending lines are sent in batches
- *  - a line already on a draft invoice whose amount is stale (usage grew
- *    between attempts) is updated so the reset stays correct; on a finalized
- *    invoice the delta is carried to the next invoice as a pending item
- *  - usage lines written before ids were invoice-scoped are recognised by
- *    their customer price, so a retry across the deploy does not re-add them
- */
-
 import {
 	afterAll,
 	afterEach,
@@ -115,8 +85,6 @@ let addLinesShouldDropLastLine = false;
 const liveLineFor = (lineItemId: string) => ({
 	id: `il_${lineItemId}`,
 	amount: liveStripeLineMinorAmounts[lineItemId],
-	// Mirrors the real listing: discount_amounts carries an unexpanded coupon id,
-	// discounts carries the expanded coupon.
 	discount_amounts: liveStripeLineCoupons[lineItemId]
 		? [{ amount: 0, discount: { source: { coupon: "coupon_id" } } }]
 		: [],

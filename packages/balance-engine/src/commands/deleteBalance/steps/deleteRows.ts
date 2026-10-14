@@ -1,7 +1,6 @@
 import type { RowChange } from "../../../models/mutation/rowChange.js";
 import type { WorkerFullCustomerEntitlementWithProduct } from "../../../models/subject/workerFullSubject.js";
 
-/** Each grant with its rollovers, as Postgres cascades them. */
 export const deleteRows = ({
 	customerEntitlements,
 }: {
@@ -18,7 +17,6 @@ export const deleteRows = ({
 		{ table: "customerEntitlements", op: "delete", id },
 	]);
 
-/** A product that loses a grant is no longer its plan as sold; each is marked custom once. */
 export const markProductsCustom = ({
 	customerEntitlements,
 }: {

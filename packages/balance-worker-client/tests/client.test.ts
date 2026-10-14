@@ -86,7 +86,6 @@ const stale = {
 	status: 409,
 	body: { error: { code: "NOT_OWNER", message: "Stale route" } },
 };
-/** The old owner has finished its handoff and names where the partition went. */
 function staleNaming(successor: {
 	partition: number;
 	routeEpoch: string;
@@ -99,7 +98,6 @@ function staleNaming(successor: {
 		},
 	};
 }
-/** The named successor holds the request for its activation wait, then gives up first. */
 const notReady = {
 	status: 503,
 	body: {
@@ -144,7 +142,6 @@ function createFixture({
 	let currentOwner = owner;
 	let refreshes = 0;
 	const requests: Array<{ url: string; body: unknown }> = [];
-	/** The budget header of each send, in order. */
 	const budgets: string[] = [];
 	const refreshed = Promise.withResolvers<void>();
 	function findOwner(): PartitionOwner | undefined {
@@ -205,7 +202,6 @@ async function reroutesOnce(): Promise<void> {
 		url: "http://worker-b:8080/v1/track",
 		body: { route: { partition: 0, routeEpoch: "2" }, command },
 	});
-	// A partition mid-handoff can answer NOT_OWNER more than once; the client keeps refreshing within its budget.
 	const settles = createFixture({ responses: [stale, stale, success] });
 	expect(await settles.client.track({ command })).toEqual(trackReply);
 	expect(settles.stats().requests).toHaveLength(3);
@@ -214,7 +210,6 @@ async function reroutesOnce(): Promise<void> {
 	await expect(stillStale.client.track({ command })).rejects.toMatchObject({
 		code: "ROUTE_STILL_STALE",
 		outcome: "not_submitted",
-		// The error says how far the request got: four sends, three refreshes between them.
 		routing: {
 			sends: 4,
 			refreshes: 3,
@@ -250,7 +245,6 @@ async function refreshesMissingOwner(): Promise<void> {
 	await expect(staleAfterMiss.client.track({ command })).rejects.toMatchObject({
 		code: "ROUTE_STILL_STALE",
 	});
-	// The first refresh found the owner and used up the first attempt; the stale answers spent the other three.
 	expect(staleAfterMiss.stats().refreshes).toBe(3);
 	expect(staleAfterMiss.stats().requests).toHaveLength(3);
 }
@@ -644,7 +638,6 @@ test(
 );
 
 async function boundsTheRouteRefreshBelowTheDeadline(): Promise<void> {
-	// A partition mid-move: nothing owns it, and ownership never settles.
 	const stuck = Promise.withResolvers<void>();
 	const fixture = createFixture({
 		owner: null,
@@ -660,8 +653,6 @@ async function boundsTheRouteRefreshBelowTheDeadline(): Promise<void> {
 		code: "NO_OWNER",
 		outcome: "not_submitted",
 	});
-	// The point of the bound: the caller is released in its own slice, not the
-	// whole request budget, so a rebalance cannot hold customer traffic open.
 	expect(performance.now() - startedAt).toBeLessThan(500);
 	stuck.resolve();
 }
@@ -672,10 +663,6 @@ test(
 );
 
 async function retriesARefreshThatOutrunsItsBudget(): Promise<void> {
-	// A fleet swap: the old owner answers NOT_OWNER, and ownership takes longer
-	// to settle than one refresh slice. The refresh keeps running past its
-	// slice, and the route is tried again as soon as it has settled, so the
-	// request lands on the successor instead of failing open with budget left.
 	const settles = Promise.withResolvers<void>();
 	const fixture = createFixture({
 		responses: [stale, stale, success],
@@ -699,7 +686,6 @@ test(
 );
 
 async function followsTheSuccessorWithoutARefresh(): Promise<void> {
-	// The claim the old owner wrote is exactly what a refresh would read; naming it saves the read.
 	const fixture = createFixture({
 		responses: [staleNaming(replacement), success],
 	});
@@ -710,7 +696,6 @@ async function followsTheSuccessorWithoutARefresh(): Promise<void> {
 		url: "http://worker-b:8080/v1/track",
 		body: { route: { partition: 0, routeEpoch: "2" }, command },
 	});
-	// The hint outlives the request: the next one goes straight to the successor.
 	expect(await fixture.client.track({ command })).toEqual(trackReply);
 	expect(fixture.stats().requests[2]?.url).toBe(
 		"http://worker-b:8080/v1/track",
@@ -724,8 +709,6 @@ test(
 );
 
 async function retriesASuccessorThatIsNotReadyYet(): Promise<void> {
-	// Run 56 on staging: the redirect landed, but the successor was still activating and the
-	// request failed open with half its budget unspent. The same owner is tried again instead.
 	const fixture = createFixture({
 		responses: [staleNaming(replacement), notReady, success],
 	});
@@ -744,7 +727,6 @@ test(
 );
 
 async function givesUpOnAnOwnerThatStaysNotReady(): Promise<void> {
-	// The retries are bounded apart from the deadline, and the failure is the one a single NOT_READY raised before.
 	const fixture = createFixture({
 		responses: [notReady, notReady, notReady, notReady, success],
 	});
@@ -764,8 +746,6 @@ async function givesUpOnAnOwnerThatStaysNotReady(): Promise<void> {
 }
 
 async function recordsAFollowedHintOnTheFailure(): Promise<void> {
-	// Staging shrink, worst case: redirected to the successor, which never became ready. The error
-	// records the hint and every send, so the fail-open line can tell this apart from a route with no owner.
 	const fixture = createFixture({
 		responses: [
 			staleNaming(replacement),
@@ -792,7 +772,6 @@ test(
 );
 
 async function recordsRoutingOnADeadline(): Promise<void> {
-	// A refresh that never settles runs the request out of budget; the error still says nothing was sent.
 	const fixture = createFixture({
 		owner: null,
 		timeoutMs: 30,
@@ -821,7 +800,6 @@ test(
 );
 
 async function tellsTheWorkerHowLongItCanWait(): Promise<void> {
-	// An owner still activating holds the request for this long instead of a fixed moment.
 	const fixture = createFixture({ timeoutMs: 1000 });
 	expect(await fixture.client.track({ command })).toEqual(trackReply);
 	const [budget] = fixture.budgets;
@@ -836,8 +814,6 @@ test(
 );
 
 async function doesNotRetryNotReadyWithoutBudget(): Promise<void> {
-	// The owner held the request for the budget it was told; what is left is the margin, so a
-	// resend could only run the deadline out mid-flight. The clean NOT_READY stands.
 	const fixture = createFixture({
 		timeoutMs: 150,
 		responses: [notReady, success],
@@ -857,7 +833,6 @@ test(
 );
 
 async function ignoresAHintOlderThanKnownOwnership(): Promise<void> {
-	// A late answer from a past owner can name a route older than the one already known.
 	const fixture = createFixture({
 		responses: [
 			staleNaming({
@@ -881,7 +856,6 @@ test(
 );
 
 async function dropsAHintTheSuccessorDeclines(): Promise<void> {
-	// The named successor moved on too: its plain NOT_OWNER drops the hint and ownership is read as before.
 	const fixture = createFixture({
 		responses: [
 			staleNaming({

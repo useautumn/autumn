@@ -1,9 +1,7 @@
-/** Every production ECS task runs here with AWS_REGION set; staging runs in us-east-1. */
 const PRODUCTION_REGION = "us-east-2";
 
 let warnedRegionUnknown = false;
 
-/** Staging runs production images, so `NODE_ENV` alone cannot tell it from production; a production region never counts as staging. */
 export const isStagingEnv = ({
 	runtimeEnv,
 }: {

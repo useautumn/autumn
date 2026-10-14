@@ -2,8 +2,6 @@ import { Input } from "@autumn/ui";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 
-/** Free-text input with an app-styled suggestion panel (native datalist
- *  renders with browser chrome, which clashes with the design system). */
 export function SuggestionInput({
 	value,
 	onChange,

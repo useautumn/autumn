@@ -67,7 +67,6 @@ export const getPendingDeferredInvoice = async ({
 	};
 };
 
-/** Asserts the unpaid deferred plan was expired and its invoice/metadata cleaned up. */
 export const expectUnpaidDeferredInvoiceCleanedUp = async ({
 	ctx,
 	customer,

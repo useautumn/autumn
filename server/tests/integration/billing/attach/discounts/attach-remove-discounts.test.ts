@@ -1,16 +1,3 @@
-/**
- * `billing.attach` removes existing subscription discounts via `remove_discounts: [{ reward_id }]`.
- *
- * Contract:
- *   1. Upgrading onto a discounted subscription drops the removed coupon and keeps the rest.
- *   2. An add-on merging into a discounted subscription drops the removed coupon.
- *   3. Adding and removing the same reward in one request is rejected.
- *   4. Removing discounts with no_billing_changes is rejected, since no Stripe write happens.
- *
- * Red (before):  `remove_discounts` is stripped as an unknown key, so the coupon carries over.
- * Green (after): removals drop the matching coupon from the subscription the plan lands on.
- */
-
 import { test } from "bun:test";
 import { type AttachParamsV1Input, ErrCode } from "@autumn/shared";
 import {

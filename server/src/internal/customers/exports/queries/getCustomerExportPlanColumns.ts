@@ -68,10 +68,6 @@ export const bucketCustomerExportPlanRows = ({
 	return byCustomer;
 };
 
-/**
- * Cell membership rules live here only: live (`active`/`past_due`) status as in
- * the dashboard list, customer-level (no entity), seats excluded.
- */
 export const getCustomerExportPlanRows = async ({
 	db,
 	internalCustomerIds,

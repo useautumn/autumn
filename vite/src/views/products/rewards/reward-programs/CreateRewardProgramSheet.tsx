@@ -45,13 +45,11 @@ export function CreateRewardProgramSheet({
 	const [loading, setLoading] = useState(false);
 	const [internalOpen, setInternalOpen] = useState(false);
 
-	// Use controlled state if provided, otherwise use internal state
 	const open = controlledOpen ?? internalOpen;
 	const setOpen = controlledOnOpenChange ?? setInternalOpen;
 
 	const [rewardProgram, setRewardProgram] = useState(defaultRewardProgram);
 
-	// Reset state when sheet opens
 	useEffect(() => {
 		if (open) {
 			setRewardProgram(defaultRewardProgram);
@@ -59,7 +57,6 @@ export function CreateRewardProgramSheet({
 	}, [open]);
 
 	const handleCreate = async () => {
-		// Validation
 		if (!rewardProgram.id) {
 			toast.error("Program ID is required");
 			return;
@@ -84,7 +81,6 @@ export function CreateRewardProgramSheet({
 				return;
 			}
 
-			// Checkout rewards skip when redemption count >= max, so 0 blocks every grant
 			if (!rewardProgram.max_redemptions) {
 				toast.error("Max redemptions must be greater than 0");
 				return;

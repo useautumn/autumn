@@ -1,15 +1,3 @@
-/**
- * Attach Entity-Level Product Tests (Attach V2)
- *
- * Tests for attaching products to entities (sub-accounts) rather than customers.
- * Entities have their own subscriptions and balances.
- *
- * Key behaviors:
- * - Products attached to entities are independent from customer-level products
- * - Each entity can have its own subscription
- * - Mid-cycle attaches are prorated
- */
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3, ApiEntityV0 } from "@autumn/shared";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
@@ -22,19 +10,6 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 2: Create 2 entities, attach pro to each
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Create 2 entities
- * - Attach pro to each
- *
- * Expected Result:
- * - Independent balances
- * - 2 separate subscriptions
- */
 test.concurrent(
 	`${chalk.yellowBright("new-plan: create 2 entities, attach pro to each")}`,
 	async () => {
@@ -56,7 +31,6 @@ test.concurrent(
 			actions: [s.billing.attach({ productId: pro.id, entityIndex: 0 })],
 		});
 
-		// 2. Preview and attach to entity 2 - $20
 		const preview2 = await autumnV1.billing.previewAttach({
 			customer_id: customerId,
 			product_id: pro.id,
@@ -71,7 +45,6 @@ test.concurrent(
 			redirect_mode: "if_required",
 		});
 
-		// Get both entities and verify independent balances
 		const entity1 = await autumnV1.entities.get<ApiEntityV0>(
 			customerId,
 			entities[0].id,
@@ -81,7 +54,6 @@ test.concurrent(
 			entities[1].id,
 		);
 
-		// Both entities should have the product
 		await expectProductActive({
 			customer: entity1,
 			productId: pro.id,
@@ -91,7 +63,6 @@ test.concurrent(
 			productId: pro.id,
 		});
 
-		// Both should have independent balances
 		expectCustomerFeatureCorrect({
 			customer: entity1,
 			featureId: TestFeature.Messages,
@@ -107,7 +78,6 @@ test.concurrent(
 			usage: 0,
 		});
 
-		// Verify 2 invoices, each $20
 		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 		await expectCustomerInvoiceCorrect({
 			customer,

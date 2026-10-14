@@ -27,7 +27,6 @@ import {
 
 const topic = "commands-pipeline";
 const partition = 0;
-/** One broker round trip: long enough that records decided meanwhile can share the next commit. */
 export const APPEND_MS = 3;
 export const STARTING_BALANCE = 1_000;
 export const customers = ["cus_1", "cus_2", "cus_3"];
@@ -43,21 +42,15 @@ export const identityOf = ({
 	entityId: null,
 });
 
-/** One partition as production wires it: the real processor and writer, a store whose applies
- *  move the command bookmark from each record's source, and a broker round trip per commit. */
 export const createCommandPipeline = ({
 	failAppendAt,
 	unknownAppendAt,
 	heldAppend,
 	states = [],
 }: {
-	/** Subjects resident beside the default customers. */
 	states?: SubjectState[];
-	/** The nth commit (0-based) the broker refuses outright. */
 	failAppendAt?: number;
-	/** The nth commit (0-based) lands in the log, but its retries run out first: its outcome is unknown. */
 	unknownAppendAt?: number;
-	/** The nth commit (0-based) stays in flight until `until` resolves. */
 	heldAppend?: { at: number; until: Promise<void> };
 } = {}) => {
 	const directory = mkdtempSync(join(tmpdir(), "autumn-command-pipeline-"));
@@ -81,7 +74,6 @@ export const createCommandPipeline = ({
 	});
 
 	const commits: MeteringRecord[][] = [];
-	/** Every bookmark advance asked of the store, in order, including ones it already passed. */
 	const bookmarks: bigint[] = [];
 	const parked: { partition: number; cause: unknown }[] = [];
 	const logs: string[] = [];
@@ -108,7 +100,6 @@ export const createCommandPipeline = ({
 			advanceBookmark({ to: commandNextOffset }),
 	};
 
-	/** One owner's runtime over the partition's store: the processor, and the handler the command consumer feeds. */
 	function openPartition() {
 		const processor = createPartitionProcessor({
 			ctx: {
@@ -173,7 +164,6 @@ export const createCommandPipeline = ({
 	}
 	let current = openPartition();
 
-	/** A parked partition coming back: the log past the store's bookmark is replayed into it, then a fresh runtime takes over. */
 	function restart(): void {
 		const replayFrom = Number(store.readNextOffset({ topic, partition }) ?? 0n);
 		const log = commits.flat();
@@ -187,7 +177,6 @@ export const createCommandPipeline = ({
 		current = openPartition();
 	}
 
-	/** What the topic consumer does with one fetched batch: each record in order, then the batch settles before its offset commits. */
 	async function consumeBatch({
 		commands,
 		firstOffset = 0,
@@ -195,7 +184,6 @@ export const createCommandPipeline = ({
 	}: {
 		commands: CommandRecord[];
 		firstOffset?: number;
-		/** Runs before each record is handed over, as another request arriving on the partition would. */
 		beforeEach?: (params: { index: number }) => void;
 	}): Promise<void> {
 		for (const [index, record] of commands.entries()) {
@@ -209,7 +197,6 @@ export const createCommandPipeline = ({
 				},
 			});
 			if (parked.length > 0) return;
-			// The consumer's heartbeat between records is where the writer's commit loop gets its turn.
 			await new Promise<void>((resolve) => setImmediate(resolve));
 		}
 		await current.handler.settleBatch?.({ topic, partition });
@@ -227,7 +214,6 @@ export const createCommandPipeline = ({
 		},
 		consumeBatch,
 		restart,
-		/** Waits for every commit and store apply, as a handoff does. */
 		drain: () => current.processor.drain(),
 		close,
 		commits,
@@ -238,7 +224,6 @@ export const createCommandPipeline = ({
 			store.readState({ identity: identityOf({ customerId }) }),
 		readBookmark: () => bookmark,
 		readDecides: () => decides,
-		/** Command offsets in the order Kafka took their records. */
 		committedSources: () =>
 			commits
 				.flat()
@@ -248,7 +233,6 @@ export const createCommandPipeline = ({
 	};
 };
 
-/** What kafkajs throws when a leader election outlasts the producer's retries; the append may have landed. */
 function retriesRanOut(): KafkaTransactionStateUnknownError {
 	const election = new KafkaJSProtocolError(
 		Object.assign(new Error("There is no leader for this topic-partition"), {

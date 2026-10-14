@@ -169,7 +169,6 @@ export function LockAndReleaseDiagram() {
 					×500
 				</div>
 
-				{/* Redis node */}
 				<div
 					style={{
 						position: "absolute",
@@ -225,7 +224,6 @@ export function LockAndReleaseDiagram() {
 					</div>
 				</div>
 
-				{/* ClickHouse node */}
 				<div
 					style={{
 						position: "absolute",
@@ -262,7 +260,6 @@ export function LockAndReleaseDiagram() {
 					</div>
 				</div>
 
-				{/* Postgres node */}
 				<div
 					style={{
 						position: "absolute",
@@ -299,7 +296,6 @@ export function LockAndReleaseDiagram() {
 					</div>
 				</div>
 
-				{/* rejected chip */}
 				<div
 					style={{
 						position: "absolute",
@@ -320,7 +316,6 @@ export function LockAndReleaseDiagram() {
 					</div>
 				</div>
 
-				{/* moving dots */}
 				<div
 					style={{
 						position: "absolute",

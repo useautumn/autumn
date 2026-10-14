@@ -16,7 +16,6 @@ export const CreateCustomerQuerySchema = z.object({
 	}),
 });
 
-// Create Customer Params (based on handlePostCustomer logic)
 export const CreateCustomerParamsV0Schema = z
 	.object({
 		id: CustomerIdSchema.nullable(),

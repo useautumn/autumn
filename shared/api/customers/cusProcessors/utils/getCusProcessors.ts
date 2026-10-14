@@ -7,18 +7,6 @@ import {
 	ProcessorType,
 } from "@autumn/shared";
 
-/**
- * Project the public-safe `processors` view for a customer's V5 API response.
- *
- * Pure synchronous projection — no DB or Stripe calls. Returns `undefined`
- * (omit-when-empty) when the customer has no processor signals at all.
- *
- * Vercel: only the public-safe subset (`installation_id`, `account_id`).
- * NEVER include `access_token` or `custom_payment_method_id`.
- *
- * RevenueCat: surfaces only when the customer has at least one ACTIVE
- * customer_product whose processor type is RevenueCat.
- */
 export const getCusProcessors = ({
 	customer,
 	customer_products,

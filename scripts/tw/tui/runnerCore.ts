@@ -1,14 +1,3 @@
-/**
- * Headless swarm test runner — the pLimit sliding-window + two-phase-retry +
- * worker-death reschedule loop, decoupled from any UI. It writes per-file results
- * into the TUI store (store.ts); the opentui App renders that state. This is a
- * deliberate, small re-implementation of the loop embedded in `bun t`'s Ink
- * `runTestsV2.tsx` so that file stays byte-for-byte unchanged.
- *
- * Reuses the canonical executor seam (`TestExecutor` / `WorkerDeathError`) and
- * the swarm-local pure parsers.
- */
-
 import pLimit from "p-limit";
 import {
 	type TestExecutor,
@@ -31,7 +20,6 @@ import {
 	parseTestOutput,
 } from "./testParse.ts";
 
-/** Cap on attempt-preserving reschedules after worker death (mirrors the Ink runner). */
 const MAX_WORKER_DEATH_RESCHEDULES = 5;
 
 type InternalStatus =
@@ -62,7 +50,6 @@ const toFailedTests = (tests: ParsedTest[]): TuiTestFile["failedTests"] =>
 			message: test.error?.message,
 		}));
 
-/** Feed the dashboard's live errors tab, mirroring the terminal failure report. */
 const emitFailureFeed = (result: InternalResult, willRetry: boolean): void => {
 	const failures = toFailedTests(result.tests);
 	const parts: string[] = [
@@ -88,8 +75,6 @@ const emitFailureFeed = (result: InternalResult, willRetry: boolean): void => {
 		}
 	}
 	if (failures.length === 0 && !result.crashError) {
-		// No parsed verdicts and no crash detail — the last output lines are the
-		// only evidence of what happened (e.g. the run died mid-file).
 		const tail = getFileOutput(result.file)
 			.trimEnd()
 			.split("\n")
@@ -105,7 +90,6 @@ const emitFailureFeed = (result: InternalResult, willRetry: boolean): void => {
 	appendErrorsOutput(parts.join(""));
 };
 
-/** Note a retry recovery in the errors feed so earlier failure entries resolve. */
 const emitRetryOutcomeFeed = (result: InternalResult): void => {
 	if (result.passedOnRetry) {
 		appendErrorsOutput(
@@ -114,13 +98,9 @@ const emitRetryOutcomeFeed = (result: InternalResult): void => {
 	}
 };
 
-/** Project an internal result into the store's display shape. */
 const emit = (result: InternalResult, willRetry: boolean): void => {
 	const status: TuiTestFile["status"] =
 		result.status === "retry_queued" ? "retrying" : result.status;
-	// Failed tests to surface: the latest attempt's failures, or — if the file
-	// recovered on retry — what originally failed. (Don't merge both, or a retried
-	// file double-counts the same failure.)
 	const failures = result.passedOnRetry
 		? (result.firstAttemptFailures ?? [])
 		: result.tests;
@@ -139,7 +119,6 @@ const emit = (result: InternalResult, willRetry: boolean): void => {
 	});
 };
 
-/** Run one file through the injected executor; never throws except WorkerDeathError. */
 const runOneFile = async (params: {
 	file: string;
 	attempt: number;
@@ -147,8 +126,6 @@ const runOneFile = async (params: {
 	executor: TestExecutor;
 }): Promise<InternalResult> => {
 	const { file, attempt, failedTestNames, executor } = params;
-	// Dashboard-requested skip: honored when the slot opens and the file hasn't
-	// started yet (first attempt only — a retry is already half-run work).
 	if (attempt === 1 && isSkipRequested(file)) {
 		return {
 			file,
@@ -195,7 +172,6 @@ const runOneFile = async (params: {
 			tests,
 			attempt,
 			passedOnRetry: false,
-			// Zero tests + exit 0 is an empty/skipped file, not a crash.
 			crashError:
 				tests.length === 0 && exitCode !== 0 && stderr.trim()
 					? stderr.trim().slice(0, 1000)
@@ -216,7 +192,6 @@ const runOneFile = async (params: {
 	}
 };
 
-/** Run a file with attempt-preserving reschedule on worker death (§8.4). */
 const runWithReschedule = async (params: {
 	limit: ReturnType<typeof pLimit>;
 	file: string;
@@ -276,13 +251,6 @@ const runWithReschedule = async (params: {
 	return capped;
 };
 
-/**
- * Run all `files` through `executor` in a single `maxParallel` sliding window.
- * A file that fails attempt 1 is retried IMMEDIATELY (attempt 2) on a free worker
- * — we don't wait for the whole first pass to finish before retrying (the executor
- * prefers a DIFFERENT worker for the rerun, §8.4/§8.7). Writes live state into the
- * TUI store; resolves when every file has a terminal verdict.
- */
 export const runSwarmTests = async (
 	files: string[],
 	executor: TestExecutor,
@@ -303,17 +271,12 @@ export const runSwarmTests = async (
 			return;
 		}
 
-		// Failed → re-enqueue the retry into the SAME window right away (no phase-2
-		// wait). It competes for a slot with the still-running first attempts and
-		// lands on a free worker as soon as one frees up.
 		const firstAttemptFailures = first.tests.filter(
 			(test) => test.status === "failed",
 		);
 
 		emit({ ...first, status: "retrying", firstAttemptFailures }, false);
 
-		// Whole-file retry (no --test-name-pattern): files are stateful sequences,
-		// so a filtered retry of a later test lacks earlier tests' state and can't pass.
 		const retryResult = await runWithReschedule({
 			limit,
 			file,

@@ -38,9 +38,6 @@ export const computeCustomPlan = async ({
 
 	const customFullProduct = updateSubscriptionContext.fullProducts[0];
 
-	// Compute the new customer product. One-off prepaid cusEnts are auto-skipped
-	// from existingUsage carry inside cusProductToExistingUsages (per-cusEnt
-	// defense), so callers don't need to plumb anything for the one-off case.
 	const newFullCustomerProduct = computeCustomPlanNewCustomerProduct({
 		ctx,
 		params,
@@ -49,10 +46,6 @@ export const computeCustomPlan = async ({
 		currentCustomerProduct: customerProduct,
 	});
 
-	// Merges any preserved one-off balance into the matching slot on the new
-	// cusProduct (mutating its cusEnt) when one exists; otherwise emits a
-	// lifetime carryover row. Keeps customers from accumulating orphan
-	// lifetime cusEnts on item-list updates that retain the same one-off item.
 	const oneOffPrepaidCarryOvers = applyOneOffPrepaidCarryOvers({
 		oldCustomerProduct: customerProduct,
 		newCustomerProduct: newFullCustomerProduct,
@@ -61,8 +54,6 @@ export const computeCustomPlan = async ({
 	const isUpdatingScheduledProduct =
 		customerProduct.status === CusProductStatus.Scheduled;
 
-	// Expire+insert: the replanted pool adopts the outgoing link + counters,
-	// so seats never strand. Scheduled swaps transition at activation.
 	const customerLicenseTransitions = isUpdatingScheduledProduct
 		? []
 		: computeCustomerLicenseTransitions({
@@ -73,9 +64,6 @@ export const computeCustomPlan = async ({
 				carryOverUsages: updateSubscriptionContext.carryOverUsages,
 			});
 
-	// A scheduled cusProduct hasn't started billing yet, so there's nothing to
-	// prorate — its future phase item swap is applied wholesale via
-	// schedulePhaseCustomerProductReplacements, not an immediate invoice line.
 	const { allLineItems } = isUpdatingScheduledProduct
 		? { allLineItems: [] }
 		: buildAutumnLineItems({
@@ -88,7 +76,6 @@ export const computeCustomPlan = async ({
 					updateSubscriptionContext.chargeExistingOverages === true,
 			});
 
-	// If customer product is canceling, compute the scheduled product to delete
 	const deleteCustomerProduct = computeDeleteCustomerProduct({
 		fullCustomer,
 		customerProduct,

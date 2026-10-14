@@ -37,7 +37,6 @@ test(`${chalk.yellowBright("catalog-qa: EU v1+v2 on Team v1 (licensed), EU v3 on
 			{ plan_id: seatId, name: "QA Split Seat" },
 		],
 	});
-	// EU v2 stays on Team v1 and keeps Seat.
 	await autumnV2_3.catalogV2.update({
 		plans: [
 			{
@@ -59,7 +58,6 @@ test(`${chalk.yellowBright("catalog-qa: EU v1+v2 on Team v1 (licensed), EU v3 on
 			},
 		],
 	});
-	// EU v3 inherits Team v1, then we pin only v3 onto Team v2.
 	await autumnV2_3.catalogV2.update({
 		plans: [
 			{

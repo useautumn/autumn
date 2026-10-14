@@ -1,8 +1,3 @@
-/**
- * License seats bill as one customer-level line on the parent plan.
- * Included seats are a pool, so there is no per-entity share: entities: [].
- */
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3, AttachParamsV1Input } from "@autumn/shared";
 import { waitForInvoiceLineItems } from "@tests/integration/billing/utils/expectInvoiceLineItemsCorrect";

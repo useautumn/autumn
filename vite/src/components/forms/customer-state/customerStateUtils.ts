@@ -50,8 +50,6 @@ export function getSiblingProductIds({
 	);
 }
 
-/** The same plan in the phase before, preferring one at the same scope. Its
- * scope is copied along with the rest of the row. */
 export function findPreviousPhasePlan({
 	phases,
 	phaseIndex,
@@ -77,7 +75,6 @@ export function findPreviousPhasePlan({
 
 type ScopedPlan = Pick<CustomerStatePlan, "productId" | "entityId">;
 
-/** Plans sitting at exactly one scope — null is customer-level. */
 export function filterPlansByScope<T extends ScopedPlan>({
 	plans,
 	entityId,
@@ -90,7 +87,6 @@ export function filterPlansByScope<T extends ScopedPlan>({
 	);
 }
 
-/** Scoped plans the phase doesn't already hold at that same scope. */
 function unheldPlansAtScope<T extends ScopedPlan>({
 	existingPlans,
 	phasePlans,
@@ -110,11 +106,6 @@ function unheldPlansAtScope<T extends ScopedPlan>({
 	);
 }
 
-/**
- * What "copy existing plans" pulls in, or null when the phase already holds it
- * all. Customer level falls back to the first entity holding plans, so the offer
- * stands even for a customer whose plans all sit on entities.
- */
 export function resolveCopySourceScope<T extends ScopedPlan>({
 	existingPlans,
 	phasePlans,
@@ -152,10 +143,6 @@ export function resolveCopySourceScope<T extends ScopedPlan>({
 	return { entityId: fallbackEntityId, plans: fallbackPlans, isFallback: true };
 }
 
-/**
- * An unscheduled plan conflicts with any phase that claims its group and scope,
- * so every phase counts as used.
- */
 export function getUnscheduledUsedGroupKeys({
 	phases,
 	unscheduledPlans,
@@ -192,7 +179,6 @@ const priceItemToIntervalConfig = ({
 	return { interval, intervalCount: itemToBillingIntervalCount({ item }) };
 };
 
-/** The longest period a phase's plans bill on, or null when nothing recurs. */
 function findPhaseBillingInterval({
 	plans,
 	products,
@@ -223,11 +209,6 @@ function findPhaseBillingInterval({
 	return longest;
 }
 
-/**
- * Default start for a phase added after `afterIndex`: one billing period of the
- * preceding phase's longest-running plan. Null when nothing there recurs, the
- * date lands in the past, or it would overrun the following phase.
- */
 export function resolveNextPhaseStartsAt({
 	phases,
 	afterIndex,
@@ -242,7 +223,6 @@ export function resolveNextPhaseStartsAt({
 	const previousPhase = phases[afterIndex];
 	if (!previousPhase) return null;
 
-	// Only the opening phase runs from now when it carries no date of its own.
 	const startsAt = previousPhase.startsAt ?? (afterIndex === 0 ? nowMs : null);
 	if (startsAt === null) return null;
 
@@ -266,10 +246,6 @@ export function resolveNextPhaseStartsAt({
 	return nextStartsAt;
 }
 
-/**
- * Group conflicts are per scope: the same plan may sit at customer level and on
- * an entity within one phase, so only same-scope plans count as used.
- */
 export function getUsedGroupKeys({
 	plans,
 	products,
@@ -292,7 +268,6 @@ export function getUsedGroupKeys({
 	});
 }
 
-/** Every unarchived plan's group is already claimed at customer level. */
 export function areAllPlansAdded({
 	plans,
 	products,

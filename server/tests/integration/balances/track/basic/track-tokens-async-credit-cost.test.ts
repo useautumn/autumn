@@ -8,9 +8,6 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import type { AutumnInt } from "@/external/autumn/autumnCli.js";
 
-// A queued track_tokens event must record the same credit_cost as a synchronous one.
-// Pre-fix: the queue message dropped the token cost, so the replayed event had no credit_cost.
-
 const OVERFLOW_TO_ORBS = { [TestFeature.Orbs]: 20_000 };
 
 const trackOverflowingTokens = async ({
@@ -36,7 +33,6 @@ const trackOverflowingTokens = async ({
 		actions: [s.attach({ productId: freeProd.id })],
 	});
 
-	// $120 of usage against a $100 AI balance: $20 overflows to orbs at 1000 per $1.
 	await select(clients).post("/track_tokens", {
 		customer_id: customerId,
 		feature_id: TestFeature.AiCredits,

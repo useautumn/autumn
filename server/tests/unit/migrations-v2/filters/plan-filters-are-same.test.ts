@@ -1,8 +1,3 @@
-/**
- * planFiltersAreSame: field-by-field. Key order, omitted vs false, and
- * bare vs `$eq` are the cases JSON.stringify gets wrong.
- */
-
 import { describe, expect, test } from "bun:test";
 import {
 	collectPlanFilterPlanIds,

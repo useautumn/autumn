@@ -231,8 +231,6 @@ describe("compileFilter — customer.item shortcut", () => {
 			ambient,
 		});
 
-		// Two separate plan-EXISTS clauses — one for `plan_id`, one wrapping
-		// the item shortcut. AND'd at customer scope.
 		expect(normalize(result.sql)).toContain("p.id = ?");
 		expect(normalize(result.sql)).toContain("e.internal_feature_id = ?");
 		expect(result.params).toEqual([

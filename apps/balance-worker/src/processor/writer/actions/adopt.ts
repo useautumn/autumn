@@ -5,7 +5,6 @@ import {
 } from "@autumn/balance-engine";
 import type { PartitionWriterScope } from "../types/partitionWriter.js";
 
-/** Synchronous: fetched rows become the subject's resident state only if nothing fresher is already there. */
 export function adopt({
 	scope,
 	state,

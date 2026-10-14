@@ -10,7 +10,6 @@ import { applyInvoicePlanEditorItems } from "../utils/applyInvoicePlanEditorItem
 import { clearInvoiceIncludedUsage } from "../utils/clearInvoiceIncludedUsage";
 import type { CreateInvoiceFormApi } from "./useCreateInvoiceForm";
 
-/** A standalone invoice never grants a trial, so the plan's own trial is left alone. */
 const NO_TRIAL_EDITS = {
 	trialLength: null,
 	trialDuration: FreeTrialDuration.Day,
@@ -18,7 +17,6 @@ const NO_TRIAL_EDITS = {
 	trialCardRequired: false,
 } as const;
 
-/** Only items and version are carried back; trials and licenses are out of scope. */
 export function useCreateInvoicePlanEditor({
 	form,
 	formValues,

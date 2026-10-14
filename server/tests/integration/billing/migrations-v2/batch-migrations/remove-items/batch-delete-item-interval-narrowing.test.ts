@@ -1,7 +1,3 @@
-/**
- * A remove filter narrowed by interval and interval_count must delete only the
- * matching same-feature row, even when that row has already been consumed.
- */
 import { expect, test } from "bun:test";
 import {
 	customerEntitlements,

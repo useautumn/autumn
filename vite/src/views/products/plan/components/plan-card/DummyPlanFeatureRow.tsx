@@ -9,10 +9,6 @@ import { useFeatureStore } from "@/hooks/stores/useFeatureStore";
 import { cn } from "@/lib/utils";
 import { getFeatureIconConfig } from "@/views/products/features/utils/getFeatureIcon";
 
-/**
- * Displays a preview row in the plan card for a feature being created.
- * Updates dynamically as the user types in the feature name field.
- */
 export const DummyPlanFeatureRow = () => {
 	const feature = useFeatureStore((s) => s.feature);
 
@@ -21,26 +17,22 @@ export const DummyPlanFeatureRow = () => {
 	const featureType = feature.type;
 	const usageType = feature.config?.usage_type;
 
-	// Get left icon based on feature type using shared config
 	const iconConfig = getFeatureIconConfig(featureType, usageType);
 	const getLeftIcon = () => {
 		return <span className={iconConfig.color}>{iconConfig.icon}</span>;
 	};
 
-	// Right icon is always "included" since new features have no pricing
 	const getRightIcon = () => {
 		return (
 			<BoxArrowDownIcon size={16} weight="duotone" className="text-green-500" />
 		);
 	};
 
-	// Determine feature type for placeholder logic
 	const isBoolean = featureType === FeatureType.Boolean;
 	const isNonConsumable =
 		featureType === FeatureType.Metered &&
 		usageType === FeatureUsageType.Continuous;
 
-	// Get placeholder name based on feature type
 	const getPlaceholderName = () => {
 		if (isAnyCreditSystem(featureType)) return "Credits";
 		if (isBoolean) return "Premium Analytics";
@@ -48,7 +40,6 @@ export const DummyPlanFeatureRow = () => {
 		return "Chat Messages";
 	};
 
-	// Build display text based on feature type
 	const getDisplayText = () => {
 		const name = hasName ? featureName : getPlaceholderName();
 
@@ -64,7 +55,6 @@ export const DummyPlanFeatureRow = () => {
 			return { primary: `10 ${name}`, secondary: "" };
 		}
 
-		// Default to consumable format (metered single use)
 		return { primary: `10 ${name}`, secondary: "per month" };
 	};
 
@@ -80,7 +70,6 @@ export const DummyPlanFeatureRow = () => {
 				"relative z-60",
 			)}
 		>
-			{/* Left side - Icons and text */}
 			<div className="flex flex-row items-center flex-1 gap-2 min-w-0 overflow-hidden">
 				<div className="flex flex-row items-center gap-1 shrink-0">
 					{getLeftIcon()}

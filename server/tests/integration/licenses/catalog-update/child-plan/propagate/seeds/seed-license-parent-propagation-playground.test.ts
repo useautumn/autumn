@@ -1,24 +1,3 @@
-/**
- * Seeds a license plan shared by THREE parent plans, each with live customers,
- * and LEAVES IT IN THE DB for manual testing. Runs no update and asserts nothing.
- *
- * Run:
- *   cd server
- *   ./run.sh <abs path to this file>
- *
- * What it builds:
- *   - plan `dev-seat_lic-prop`  the shared license plan, $20/mo + 500 messages
- *   - `pro_lic-prop`     1 seat included, link NOT customized, 1 customer
- *   - `scale_lic-prop`   2 seats included, link NOT customized, 1 customer
- *   - `ent_lic-prop`     3 seats included, link CUSTOMIZED to 900 messages,
- *                        1 customer with 2 seats assigned to entities
- *
- * The customized parent is the interesting one: its link overrides messages, so
- * editing the child rebases that override rather than overwriting it. It
- * therefore yields a DIFFERENT customize from the two plain parents — which is
- * exactly what splits it into its own migration op while pro + scale collapse
- * into one via $in.
- */
 import { test } from "bun:test";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { items } from "@tests/utils/fixtures/items.js";
@@ -42,7 +21,6 @@ const heading = (label: string) =>
 	);
 
 test(`${chalk.yellowBright("SEED: license parent propagation playground (3 parents)")}`, async () => {
-	// Bare names — s.products stamps ID_PREFIX onto them.
 	const devSeat = products.base({
 		id: "dev-seat",
 		items: [
@@ -70,8 +48,6 @@ test(`${chalk.yellowBright("SEED: license parent propagation playground (3 paren
 				{ id: ENT_CUSTOMER_ID, paymentMethod: "success" },
 				{ id: DIRECT_CUSTOMER_ID, paymentMethod: "success" },
 			]),
-			// Pinned so the seeded plan ids stay short and predictable in the
-			// dashboard; the default prefix is the customer id.
 			s.products({ list: [pro, scale, ent, devSeat], prefix: ID_PREFIX }),
 		],
 		actions: [
@@ -85,7 +61,6 @@ test(`${chalk.yellowBright("SEED: license parent propagation playground (3 paren
 				licenseProductId: devSeat.id,
 				included: 2,
 			}),
-			// Customized link: overrides the seat's message grant.
 			s.licenses.link({
 				parentProductId: ent.id,
 				licenseProductId: devSeat.id,
@@ -104,8 +79,6 @@ test(`${chalk.yellowBright("SEED: license parent propagation playground (3 paren
 				productId: scale.id,
 				licenseQuantities: [{ licenseProductId: devSeat.id, quantity: 3 }],
 			}),
-			// Straight onto the license plan, so the child has its OWN customers
-			// and the update drafts a child migration as well as a parent one.
 			s.billing.attach({
 				customerId: DIRECT_CUSTOMER_ID,
 				productId: devSeat.id,
@@ -118,7 +91,6 @@ test(`${chalk.yellowBright("SEED: license parent propagation playground (3 paren
 		],
 	});
 
-	// initScenario prefixes the ids in place, so these are the real ones.
 	heading("SEEDED");
 	console.log(`license plan   ${devSeat.id}   (edit THIS one)`);
 	console.log(`parent A       ${pro.id}   customer ${PRO_CUSTOMER_ID}`);

@@ -1,7 +1,3 @@
-/**
- * catalogV2.preview_update — projected credit_systems usage (batch-aware).
- */
-
 import { test } from "bun:test";
 import { FeatureType } from "@autumn/shared";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";

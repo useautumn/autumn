@@ -4,8 +4,6 @@ import { SheetSection } from "@/components/v2/sheets/InlineSheet";
 import { useAutoSlug } from "@/hooks/common/useAutoSlug";
 
 export const CreateProductMainDetails = () => {
-	// Context-first (the create sheet's local draft); falls back to the store
-	// on pages without a ProductProvider.
 	const { product, setProduct } = useProduct();
 
 	const { setSource, setTarget } = useAutoSlug({

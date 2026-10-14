@@ -1,20 +1,3 @@
-/**
- * Billing Verify: Mismatch Severity
- *
- * Contract under test (billingActions.verify):
- *   New types/fields:
- *     - SubscriptionMismatch.severity: "error" | "warning" — stamped by the
- *       action; "stripe_sub_not_in_autumn" is warning-level, all other
- *       mismatch types default to error.
- *     - "subscription_not_linked" renamed to "stripe_sub_not_in_autumn"
- *       (explicit about WHICH side is missing).
- *   New behaviors:
- *     - An extra Stripe-only sub (no Autumn products linked) -> mismatch
- *       { type: "stripe_sub_not_in_autumn", severity: "warning" }.
- *     - A removed base price item -> base_price_mismatch with
- *       severity: "error".
- */
-
 import { expect, test } from "bun:test";
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
@@ -97,7 +80,6 @@ test.concurrent(
 		});
 		const stripeCustomerId = await stripeCustomerIdFor({ ctx, customerId });
 
-		// A second, Stripe-only subscription Autumn knows nothing about.
 		const extraSub = await ctx.stripeCli.subscriptions.create({
 			customer: stripeCustomerId,
 			items: [{ price: addonPriceId, quantity: 1 }],
@@ -105,7 +87,6 @@ test.concurrent(
 
 		const result = await verify({ ctx, params: { customer_id: customerId } });
 
-		// ── Contract: warning-level stripe_sub_not_in_autumn ──────────────
 		const extra = result.subscriptions.find(
 			(subscription) => subscription.stripe_subscription_id === extraSub.id,
 		);
@@ -114,7 +95,6 @@ test.concurrent(
 			{ type: "stripe_sub_not_in_autumn", severity: "warning" },
 		]);
 
-		// ── Contract: the linked sub stays correct ────────────────────────
 		const linked = result.subscriptions.find(
 			(subscription) => subscription.stripe_subscription_id !== extraSub.id,
 		);
@@ -168,7 +148,6 @@ test.concurrent(
 
 		const result = await verify({ ctx, params: { customer_id: customerId } });
 
-		// ── Contract: drift mismatches carry error severity ───────────────
 		expect(result.subscriptions[0].status).toBe("mismatched");
 		expect(result.subscriptions[0].mismatches).toMatchObject([
 			{ type: "base_price_mismatch", reason: "missing", severity: "error" },

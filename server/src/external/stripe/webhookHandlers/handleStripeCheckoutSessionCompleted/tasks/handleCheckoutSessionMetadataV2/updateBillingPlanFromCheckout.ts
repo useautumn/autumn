@@ -6,14 +6,6 @@ import { initInvoiceFromStripe } from "@/internal/invoices/utils/initInvoiceFrom
 import { initSubscriptionFromStripe } from "@/internal/subscriptions/utils/initSubscriptionFromStripe";
 import type { CheckoutSessionCompletedContext } from "../../setupCheckoutSessionCompletedContext";
 
-/**
- * Updates the billing plan with checkout-specific data:
- * 1. Adds upsertSubscriptions from Stripe subscription
- * 2. Adds upsertInvoice from Stripe invoice
- * 3. (Future) Captures prepaid quantities from checkout line items
- *
- * Returns a new copy of the billing plan data with updates applied.
- */
 export const updateBillingPlanFromCheckout = async ({
 	ctx,
 	checkoutContext,
@@ -26,10 +18,8 @@ export const updateBillingPlanFromCheckout = async ({
 	const { stripeSubscription, stripeInvoice } = checkoutContext;
 	const { billingPlan, billingContext } = deferredData;
 
-	// Create a shallow copy of the autumn billing plan
 	const updatedAutumnPlan = { ...billingPlan.autumn };
 
-	// 1. Build upsertSubscriptions from Stripe subscription
 	if (stripeSubscription) {
 		const subscription = initSubscriptionFromStripe({
 			ctx,
@@ -41,7 +31,6 @@ export const updateBillingPlanFromCheckout = async ({
 		);
 	}
 
-	// 2. Build upsertInvoice from Stripe invoice
 	if (stripeInvoice) {
 		const invoice = await initInvoiceFromStripe({
 			ctx,
@@ -56,7 +45,6 @@ export const updateBillingPlanFromCheckout = async ({
 		);
 	}
 
-	// 3. Update subscription ID
 	if (stripeSubscription) {
 		addStripeSubscriptionIdToBillingPlan({
 			autumnBillingPlan: updatedAutumnPlan,
@@ -64,13 +52,11 @@ export const updateBillingPlanFromCheckout = async ({
 		});
 	}
 
-	// 3. TODO: Capture prepaid quantities from checkout line items
 	await updateOptionsFromStripeCheckoutSession({
 		checkoutContext,
 		deferredData,
 	});
 
-	// Return updated billing plan data (new copy)
 	return {
 		...deferredData,
 		billingPlan: {

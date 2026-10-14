@@ -7,11 +7,6 @@ import type {
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { isStripeConnected } from "@/internal/orgs/orgUtils.js";
 
-/**
- * Sync a plan rename onto its owned Stripe Product.
- * Callers guard variant rows — a variant shares its base's Stripe Product.
- * Per-feature Stripe Products are renamed from the feature, not the plan.
- */
 export const updateStripeProductNames = async ({
 	org,
 	curProduct,

@@ -6,7 +6,6 @@ import {
 } from "@autumn/ui/table";
 import { Link } from "react-router";
 
-// Forward everything from the package table; Table is overridden below to inject Link.
 export * from "@autumn/ui/table";
 
 function TableProvider<T>({

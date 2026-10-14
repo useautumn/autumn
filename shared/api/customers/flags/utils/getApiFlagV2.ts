@@ -31,8 +31,6 @@ export const getApiFlagV2 = ({
 		return data;
 	}
 
-	// Fallback: no rehydrated cus_ent (e.g. partial cache where booleans
-	// weren't materialized). Build a minimal flag from the aggregated view.
 	if (!aggregatedSubjectFlag) return undefined;
 
 	const featureCtx = scopeExpandForCtx({ ctx, prefix: "feature" });

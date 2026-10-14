@@ -17,7 +17,6 @@ import { createRedisClient } from "@/external/redis/initRedis.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { buildSharedBalanceWrites } from "@/internal/customers/cache/fullSubject/actions/setCachedFullSubject/setSharedFullSubjectBalances.js";
 
-/** Runs the real Lua deduction scripts against a local Redis, like the other Redis-only suites. */
 export const createZeroCreditCostRedis = ({ region }: { region: string }) =>
 	createRedisClient({
 		cacheUrl: process.env.HANDOFF_TEST_REDIS_URL ?? "redis://127.0.0.1:6379",
@@ -31,10 +30,6 @@ export const messagesFeature = features.create({
 	name: "Messages",
 });
 
-/**
- * The catalog prices messages at `creditAmount` credits; a plan item's
- * `featureOverride` replaces that schema for this balance only.
- */
 export const creditRow = ({
 	balance,
 	unlimited = false,
@@ -69,7 +64,6 @@ export const creditRow = ({
 	return row;
 };
 
-/** A plan item override pricing messages at `creditAmount` credits. */
 export const messagesOverride = ({
 	creditAmount,
 }: {
@@ -116,7 +110,6 @@ const rowsToBalanceWrites = ({
 		aggregatedCustomerEntitlements: [],
 	});
 
-/** A customer holding `rows`, with their balances seeded into Redis the way the subject cache stores them. */
 export const setupZeroCreditCostSubject = async ({
 	redis,
 	rows,
@@ -150,7 +143,6 @@ export const setupZeroCreditCostSubject = async ({
 	return { ctx, fullSubject };
 };
 
-/** The cached balance of a row after the script ran, or of a rollover on it. */
 export const cachedBalance = async ({
 	redis,
 	ctx,

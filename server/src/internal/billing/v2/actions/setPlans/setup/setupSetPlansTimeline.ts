@@ -22,7 +22,6 @@ import { rowsToSavedTimeline } from "../timeline/savedTimeline/rowsToSavedTimeli
 import type { SetPlansTimeline } from "../types/setPlansTimeline";
 import { setupSetPlansPolicies } from "./setupSetPlansPolicies";
 
-/** A customer-level request declares every entity's plans; an entity request only its own and those it names. */
 const requestEntityScopeOf = ({
 	billingContext,
 	requestedPhases,
@@ -62,7 +61,6 @@ const scopedCustomerProducts = ({
 	);
 };
 
-/** Reads the saved and desired timelines once, then diffs them under the request's policies. */
 export const setupSetPlansTimeline = ({
 	ctx,
 	billingContext,

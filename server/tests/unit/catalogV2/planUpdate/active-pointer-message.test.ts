@@ -1,9 +1,3 @@
-/**
- * `active: false` with no same-call successor is a plan nobody can buy. The
- * refusal names the plan and says where its rows belong, so an API caller
- * gets the same guidance the CLI's lint gives.
- */
-
 import { expect, test } from "bun:test";
 import type { RecaseError, UpdateCatalogParams } from "@autumn/shared";
 import { handleUpsertProductActiveErrors } from "@/internal/catalogV2/actions/updateCatalog/errors/handleUpsertProductActiveErrors";

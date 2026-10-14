@@ -116,7 +116,6 @@ describe("analytics billing-cycle ranges", () => {
 			},
 		});
 
-		// The subscriptions row holds the widest item period, as billing v2 writes it.
 		const halfYearCustomer = (customerEntitlements: unknown[]) =>
 			({
 				customer_products: [

@@ -1,7 +1,3 @@
-/**
- * The production producer loop over a real kafkajs client whose sockets the test can cut: a "drop" on the
- * `producer-thread-chaos` channel destroys every open broker socket, as a broker restart or network blip would.
- */
 import { connect, type Socket } from "node:net";
 import { createKafkaClient } from "@autumn/kafka";
 import { Kafka, logLevel } from "kafkajs";

@@ -1,4 +1,3 @@
-/** Thrown, not skipped: the record stays unresolved and Kafka redelivers it once the partition is admitted again. */
 export class CommandPartitionUnavailableError extends Error {
 	readonly retriable = true;
 	readonly topic: string;

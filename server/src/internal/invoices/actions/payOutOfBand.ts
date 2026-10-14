@@ -7,7 +7,6 @@ import { type InvoiceListRow, InvoiceService } from "../InvoiceService";
 import { assertInvoiceNotReissued } from "../invoiceUtils/assertInvoiceNotReissued";
 import { updateInvoiceFromStripe } from "./updateFromStripe";
 
-/** Marks a Stripe invoice paid without charging, then mirrors the result to our row. */
 export const payInvoiceOutOfBand = async ({
 	ctx,
 	invoiceId,

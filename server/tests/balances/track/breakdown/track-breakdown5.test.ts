@@ -18,15 +18,6 @@ import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
 import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
 
-/**
- * Test: Prepaid monthly messages + Pay-per-use monthly messages
- * Both have same interval (monthly), but different overage_allowed.
- * Expected deduction order:
- * 1. Prepaid monthly (overage_allowed = false) first
- * 2. Pay-per-use monthly prepaid balance (overage_allowed = true)
- * 3. Pay-per-use monthly overage (after all prepaid exhausted)
- */
-
 const prepaidMonthlyMessages = constructFeatureItem({
 	featureId: TestFeature.Messages,
 	includedUsage: 1000,
@@ -64,7 +55,7 @@ describe(`${chalk.yellowBright("track-breakdown5: prepaid + pay-per-use monthly 
 		await initCustomerV3({
 			ctx,
 			customerId,
-			attachPm: "success", // Required for pay-per-use
+			attachPm: "success",
 			withTestClock: false,
 		});
 
@@ -74,7 +65,6 @@ describe(`${chalk.yellowBright("track-breakdown5: prepaid + pay-per-use monthly 
 			prefix: testCase,
 		});
 
-		// Attach both products
 		await autumnV2.attach({
 			customer_id: customerId,
 			product_id: prepaidProd.id,
@@ -96,7 +86,7 @@ describe(`${chalk.yellowBright("track-breakdown5: prepaid + pay-per-use monthly 
 			granted_balance: 1500,
 			current_balance: 1500,
 			usage: 0,
-			overage_allowed: true, // true because pay-per-use allows overage
+			overage_allowed: true,
 			plan_id: null,
 		});
 
@@ -112,7 +102,6 @@ describe(`${chalk.yellowBright("track-breakdown5: prepaid + pay-per-use monthly 
 			value: deductValue,
 		});
 
-		// Parent balance
 		expect(trackRes.balance).toMatchObject({
 			granted_balance: 1500,
 			current_balance: 1000,
@@ -120,7 +109,6 @@ describe(`${chalk.yellowBright("track-breakdown5: prepaid + pay-per-use monthly 
 			purchased_balance: 0,
 		});
 
-		// Check breakdowns
 		const breakdown = trackRes.balance?.breakdown;
 		expect(breakdown).toHaveLength(2);
 
@@ -131,7 +119,6 @@ describe(`${chalk.yellowBright("track-breakdown5: prepaid + pay-per-use monthly 
 			(b) => b.overage_allowed === true,
 		);
 
-		// Prepaid should have 500 deducted
 		expect(prepaidBreakdown).toMatchObject({
 			granted_balance: 1000,
 			current_balance: 500,
@@ -140,7 +127,6 @@ describe(`${chalk.yellowBright("track-breakdown5: prepaid + pay-per-use monthly 
 			plan_id: prepaidProd.id,
 		});
 
-		// Pay-per-use should be untouched
 		expect(payPerUseBreakdown).toMatchObject({
 			granted_balance: 500,
 			current_balance: 500,
@@ -159,13 +145,9 @@ describe(`${chalk.yellowBright("track-breakdown5: prepaid + pay-per-use monthly 
 			value: deductValue,
 		});
 
-		// After first test: prepaid = 500 current, pay-per-use = 500 current
-		// Deduct 700: prepaid covers 500, pay-per-use covers 200
-		// Total usage: 500 + 700 = 1200
-
 		expect(trackRes.balance).toMatchObject({
 			granted_balance: 1500,
-			current_balance: 300, // 1500 - 1200 = 300
+			current_balance: 300,
 			usage: 1200,
 			purchased_balance: 0,
 		});
@@ -178,7 +160,6 @@ describe(`${chalk.yellowBright("track-breakdown5: prepaid + pay-per-use monthly 
 			(b) => b.overage_allowed === true,
 		);
 
-		// Prepaid should be exhausted
 		expect(prepaidBreakdown).toMatchObject({
 			granted_balance: 1000,
 			current_balance: 0,
@@ -186,7 +167,6 @@ describe(`${chalk.yellowBright("track-breakdown5: prepaid + pay-per-use monthly 
 			purchased_balance: 0,
 		});
 
-		// Pay-per-use should have 200 deducted from prepaid
 		expect(payPerUseBreakdown).toMatchObject({
 			granted_balance: 500,
 			current_balance: 300,
@@ -204,15 +184,11 @@ describe(`${chalk.yellowBright("track-breakdown5: prepaid + pay-per-use monthly 
 			value: deductValue,
 		});
 
-		// After previous test: prepaid = 0 current, pay-per-use = 300 current
-		// Deduct 500: pay-per-use prepaid covers 300, then 200 goes to overage
-		// Total usage: 1200 + 500 = 1700
-
 		expect(trackRes.balance).toMatchObject({
 			granted_balance: 1500,
 			current_balance: 0,
 			usage: 1700,
-			purchased_balance: 200, // overage
+			purchased_balance: 200,
 		});
 
 		const breakdown = trackRes.balance?.breakdown;
@@ -223,7 +199,6 @@ describe(`${chalk.yellowBright("track-breakdown5: prepaid + pay-per-use monthly 
 			(b) => b.overage_allowed === true,
 		);
 
-		// Prepaid should still be exhausted
 		expect(prepaidBreakdown).toMatchObject({
 			granted_balance: 1000,
 			current_balance: 0,
@@ -231,11 +206,10 @@ describe(`${chalk.yellowBright("track-breakdown5: prepaid + pay-per-use monthly 
 			purchased_balance: 0,
 		});
 
-		// Pay-per-use should be exhausted with overage
 		expect(payPerUseBreakdown).toMatchObject({
 			granted_balance: 500,
 			current_balance: 0,
-			usage: 700, // 500 prepaid + 200 overage
+			usage: 700,
 			purchased_balance: 200,
 		});
 	});
@@ -249,7 +223,6 @@ describe(`${chalk.yellowBright("track-breakdown5: prepaid + pay-per-use monthly 
 
 		const balance = customer.balances[TestFeature.Messages];
 
-		// Should match cached values
 		expect(balance).toMatchObject({
 			granted_balance: 1500,
 			current_balance: 0,
@@ -257,7 +230,6 @@ describe(`${chalk.yellowBright("track-breakdown5: prepaid + pay-per-use monthly 
 			purchased_balance: 200,
 		});
 
-		// Check breakdowns
 		const breakdown = balance.breakdown;
 		expect(breakdown).toHaveLength(2);
 

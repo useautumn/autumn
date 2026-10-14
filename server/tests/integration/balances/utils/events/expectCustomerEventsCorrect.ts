@@ -3,9 +3,7 @@ import type { CreateEvent } from "@autumn/shared";
 import { pollUntilAsserted, timeout } from "@tests/utils/genUtils.js";
 import { getCustomerEvents } from "./getCustomerEvents.js";
 
-/** Long enough for a late extra event to show up before the first matching read. */
 const EVENTS_SETTLE_MS = 3000;
-/** Herald writes worker events to Tinybird before Postgres, so under load they land seconds late. */
 export const EVENTS_ARRIVAL_TIMEOUT_MS = 30_000;
 
 type ExpectedEvent = {
@@ -14,10 +12,6 @@ type ExpectedEvent = {
 	idempotencyKey?: string;
 };
 
-/**
- * Waits for events to land, then asserts them newest-first.
- * For a check + confirm flow, events[0] = finalize delta (finalValue - lockValue), events[1] = the lock's value.
- */
 export const expectCustomerEventsCorrect = async ({
 	customerId,
 	events: expectedEvents,

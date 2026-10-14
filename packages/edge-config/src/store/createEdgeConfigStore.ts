@@ -17,11 +17,6 @@ const TEN_SECONDS_MS = 10_000;
 
 const nowIso = () => new Date().toISOString();
 
-/**
- * Test-environment override: isolated µVMs have no AWS creds, so the S3 poll would fail every
- * interval. `AUTUMN_EDGE_CONFIG_OVERRIDE_B64` = base64(JSON) of a `{ [s3Key]: config }` map makes
- * every store serve its entry (or its default) from memory and skip S3. Decoded once per process.
- */
 let cachedOverride: Record<string, unknown> | null | undefined;
 const getEdgeConfigOverride = (): Record<string, unknown> | null => {
 	if (cachedOverride !== undefined) return cachedOverride;
@@ -37,16 +32,11 @@ const getEdgeConfigOverride = (): Record<string, unknown> | null => {
 				? (parsed as Record<string, unknown>)
 				: {};
 	} catch {
-		// Malformed override: still skip S3 (no creds is the whole point), serve defaults.
 		cachedOverride = {};
 	}
 	return cachedOverride;
 };
 
-/**
- * A typed, poll-based config backed by one S3 object. Fails open: on any S3 failure the store
- * serves `defaultValue()` again unless `retainOnError` keeps the last good value.
- */
 export const createEdgeConfigStore = <T>({
 	ctx,
 	s3Key,
@@ -73,7 +63,6 @@ export const createEdgeConfigStore = <T>({
 	let pollTimer: ReturnType<typeof setInterval> | null = null;
 	const listeners = new Set<(config: T) => void>();
 
-	// Listeners hear a new value, not every poll: a fleet re-checking on each tick is noise.
 	const setRuntimeConfig = (next: T) => {
 		const changed = JSON.stringify(next) !== JSON.stringify(runtimeConfig);
 		runtimeConfig = next;
@@ -81,7 +70,6 @@ export const createEdgeConfigStore = <T>({
 		for (const listener of [...listeners]) listener(next);
 	};
 
-	// Override mode seeds the config once and never touches S3.
 	const override = getEdgeConfigOverride();
 	if (override) {
 		const raw = override[s3Key];
@@ -155,7 +143,6 @@ export const createEdgeConfigStore = <T>({
 				ContentType: "application/json",
 			}),
 		);
-		// The config object is durable by now; a lost signal must not fail the write, the backstop refresh catches it.
 		try {
 			await writeEdgeConfigTimestamp({ ctx: { ...ctx, s3Client: client } });
 		} catch (error) {
@@ -208,7 +195,6 @@ export const createEdgeConfigStore = <T>({
 				lastSuccessAt: runtimeStatus.lastSuccessAt,
 				error: message,
 			};
-			// First failure or a new error only: the poll loop would otherwise log every interval.
 			if (previouslyHealthy || !sameError) {
 				logger?.warn(`Failed to refresh edge config "${s3Key}": ${error}`);
 			}
@@ -247,9 +233,7 @@ export const createEdgeConfigStore = <T>({
 		stopPolling,
 		readFromSource,
 		writeToSource,
-		/** Called with each new value the store starts serving; returns the unsubscribe. */
 		subscribe,
-		/** Sets in-memory config without writing to S3. For testing only. */
 		_setRuntimeConfigForTesting: setRuntimeConfig,
 	};
 };

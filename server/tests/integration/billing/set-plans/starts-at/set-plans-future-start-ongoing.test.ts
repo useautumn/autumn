@@ -1,10 +1,3 @@
-/**
- * set_plans unscheduled_plans with a future phases[0].starts_at run from now, not from the start:
- * - a running add-on keeps its row and subscription while the main plan ends now and its successor waits;
- * - a new add-on is attached and invoiced now while the phase plan waits for the start;
- * - without a card, that new add-on still goes through Checkout.
- */
-
 import { expect, test } from "bun:test";
 import { CusProductStatus, type SetPlansParamsV0Input } from "@autumn/shared";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";

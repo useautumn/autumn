@@ -40,7 +40,6 @@ const baseForm = (): CreateInvoiceForm => ({
 	issueDay: null,
 });
 
-/** Quantity fields mount on keys that do not exist yet, so writes must not need an intermediate. */
 describe("quantity field paths", () => {
 	test("writes a quantity for a feature with no entry yet", () => {
 		const form = new FormApi({ defaultValues: baseForm() });

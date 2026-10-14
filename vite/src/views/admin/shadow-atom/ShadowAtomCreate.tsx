@@ -26,7 +26,6 @@ import {
 } from "@/views/settings/sections/components/atom/atomNetworkForm";
 import type { AtomActions } from "@/views/settings/sections/components/atom/useAtomActions";
 
-/** Our staging VPC (the one the staging server and herald run in) and its private subnets, so the shadow Atom is reached privately by default. */
 const STAGING_VPC_NETWORK: ByocCacheNetwork = {
 	type: "existing_vpc",
 	vpc_id: "vpc-0dbbff047f93713f0",
@@ -45,7 +44,6 @@ const DEFAULT_VALUES: z.infer<typeof ShadowAtomCreateValuesSchema> = {
 	...networkToAtomNetworkValues(STAGING_VPC_NETWORK),
 };
 
-/** Nothing deployed: pick its size and network, and creating it opens the quick-create link for our own AWS account. */
 export const ShadowAtomCreate = ({ actions }: { actions: AtomActions }) => {
 	const form = useAppForm({
 		defaultValues: DEFAULT_VALUES,

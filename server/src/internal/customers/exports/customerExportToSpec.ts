@@ -6,8 +6,6 @@ import {
 	type DbCustomerExport,
 } from "@autumn/shared";
 
-/** The row's jsonb columns are untyped by kind; parsing narrows them and fills
- * defaults for options older rows were written without. */
 export const customerExportToSpec = ({
 	customerExport,
 }: {
@@ -24,7 +22,6 @@ export const createParamsToCustomerExportSpec = ({
 }: {
 	params: CreateCustomerExportParams;
 }): CustomerExportSpec => {
-	// The dashboard trims client-side; trimming here keeps direct API callers consistent.
 	const scope = { search: params.search.trim(), filters: params.filters };
 
 	if (params.kind === CustomerExportKind.Customers) {

@@ -1,13 +1,3 @@
-/**
- * proration_behavior: "bill_difference" on mid-cycle quantity increases.
- *
- * Contract (each on day 14 of a monthly cycle):
- *   credit packs 300 -> 500 ($10 / 100) charges $20, seats 5 -> 8 ($10 each) charges $30,
- *   licenses 3 -> 5 ($20 each) charges $40. Balances are granted as today; renewal date unchanged.
- *   A decrease credits only the unused time of the removed packs and lowers the quantity now,
- *   even when the price's on_decrease would defer it (packs 500 -> 300, balance 300).
- */
-
 import { test } from "bun:test";
 import {
 	type BillingPreviewResponse,

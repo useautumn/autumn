@@ -22,7 +22,6 @@ export default function DevScreen() {
 	const tab = queryStates.tab;
 	const { webhooks } = useAutumnFlags();
 
-	// Integrations moved to settings; old links and OAuth callbacks still land here.
 	const requestedTab = new URLSearchParams(location.search).get("tab");
 	if (requestedTab && INTEGRATION_TABS.includes(requestedTab)) {
 		const settingsPath = location.pathname.replace(/\/dev\/?$/, "/settings");

@@ -17,28 +17,6 @@ import { CusService } from "@/internal/customers/CusService";
 import { OrgService } from "@/internal/orgs/OrgService";
 import { timeout } from "@/utils/genUtils";
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 5: Void open invoices when subscription cancelled after payment failure
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Init pro ($20/mo) and free (default) products
- * - Attach pro to customer with successful payment
- * - Switch to a failing payment method
- * - Advance test clock to next billing cycle (payment fails, invoice goes to 'open')
- * - Cancel subscription via Stripe (simulating Stripe's eventual cancellation via dunning)
- *
- * Expected Result:
- * - Open invoices from the failed payment are voided by our webhook handler
- * - Pro is removed
- * - Free default becomes active
- *
- * This tests the void_invoices_on_subscription_deletion org config feature.
- * Note: Stripe doesn't auto-cancel subscriptions on payment failure - it marks them as
- * past_due. This test simulates what happens when the subscription is eventually cancelled
- * (either by Stripe's dunning rules, or manually) and verifies open invoices are voided.
- */
 test(`${chalk.yellowBright("sub.deleted: void open invoices on subscription cancel after payment failure")}`, async () => {
 	const customerId = "sub-deleted-void-invoices";
 
@@ -55,7 +33,6 @@ test(`${chalk.yellowBright("sub.deleted: void open invoices on subscription canc
 		items: [messagesItem],
 	});
 
-	// Initialize scenario with test clock enabled
 	const { ctx, testClockId } = await initScenario({
 		customerId,
 		setup: [
@@ -65,8 +42,6 @@ test(`${chalk.yellowBright("sub.deleted: void open invoices on subscription canc
 		actions: [s.attach({ productId: pro.id })],
 	});
 
-	// Save original org config and enable void_invoices_on_subscription_deletion
-	// This must be set in the database because webhooks read config from DB, not request headers
 	const originalOrgConfig = ctx.org.config;
 	await OrgService.update({
 		db: ctx.db,
@@ -85,7 +60,6 @@ test(`${chalk.yellowBright("sub.deleted: void open invoices on subscription canc
 			secretKey: ctx.orgSecretKey,
 		});
 
-		// Verify pro is active after initial attach
 		const customerAfterAttach =
 			await autumnV1.customers.get<ApiCustomerV3>(customerId);
 		await expectProductActive({
@@ -93,14 +67,12 @@ test(`${chalk.yellowBright("sub.deleted: void open invoices on subscription canc
 			productId: pro.id,
 		});
 
-		// Get subscription ID
 		const subscriptionId = await getSubscriptionId({
 			ctx,
 			customerId,
 			productId: pro.id,
 		});
 
-		// Get the customer record to access Stripe customer ID
 		const customer = await CusService.get({
 			db: ctx.db,
 			idOrInternalId: customerId,
@@ -108,14 +80,11 @@ test(`${chalk.yellowBright("sub.deleted: void open invoices on subscription canc
 			env: ctx.env,
 		});
 
-		// Switch to a failing payment method
 		await attachFailedPaymentMethod({
 			stripeCli: ctx.stripeCli,
 			customer: customer!,
 		});
 
-		// Get the failing payment method and set it on the subscription
-		// (subscription has its own default_payment_method which takes precedence over customer's)
 		const paymentMethods = await ctx.stripeCli.paymentMethods.list({
 			customer: customer!.processor?.id,
 		});
@@ -130,7 +99,6 @@ test(`${chalk.yellowBright("sub.deleted: void open invoices on subscription canc
 			testClockId: testClockId!,
 		});
 
-		// Verify that an open invoice exists (payment failed)
 		const invoicesBeforeCancel = await ctx.stripeCli.invoices.list({
 			customer: customer!.processor?.id,
 			subscription: subscriptionId,
@@ -141,32 +109,25 @@ test(`${chalk.yellowBright("sub.deleted: void open invoices on subscription canc
 		);
 		expect(openInvoicesBeforeCancel.length).toBeGreaterThan(0);
 
-		// Cancel subscription via Stripe (simulating Stripe's eventual cancellation via dunning)
-		// This triggers subscription.deleted webhook which should void open invoices
 		await ctx.stripeCli.subscriptions.cancel(subscriptionId);
 
-		// Wait for webhook to process
 		await timeout(8000);
 
-		// Verify that open invoices are now voided
 		const invoicesAfterCancel = await ctx.stripeCli.invoices.list({
 			customer: customer!.processor?.id,
 			subscription: subscriptionId,
 		});
 
-		// Check that there are no 'open' invoices remaining (they should be voided)
 		const openInvoicesAfterCancel = invoicesAfterCancel.data.filter(
 			(inv) => inv.status === "open",
 		);
 		expect(openInvoicesAfterCancel.length).toBe(0);
 
-		// Verify voided invoices exist (proving voiding happened)
 		const voidedInvoices = invoicesAfterCancel.data.filter(
 			(inv) => inv.status === "void",
 		);
 		expect(voidedInvoices.length).toBeGreaterThan(0);
 
-		// Verify pro is gone and free is active
 		const customerAfterCancel =
 			await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
@@ -176,7 +137,6 @@ test(`${chalk.yellowBright("sub.deleted: void open invoices on subscription canc
 			active: [free.id],
 		});
 
-		// Verify no Stripe subscription exists
 		await expectNoStripeSubscription({
 			db: ctx.db,
 			customerId,
@@ -184,7 +144,6 @@ test(`${chalk.yellowBright("sub.deleted: void open invoices on subscription canc
 			env: ctx.env,
 		});
 	} finally {
-		// Restore original org config
 		await OrgService.update({
 			db: ctx.db,
 			orgId: ctx.org.id,

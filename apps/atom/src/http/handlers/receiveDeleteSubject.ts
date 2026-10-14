@@ -4,7 +4,6 @@ import { InvalidPushError } from "../../lib/contracts/invalidPushError.js";
 import { applyDeletePush } from "../../pushes/applyPushes.js";
 import type { AtomHttpContext, AtomHttpEnv } from "../types/atomHttp.js";
 
-/** Routed by the customer id sent beside it, like a subjects.set push; its owner thread parses it. */
 export const receiveDeleteSubject = ({
 	ctx,
 }: {

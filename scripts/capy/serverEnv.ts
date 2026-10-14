@@ -3,8 +3,6 @@ import {
 	FAKECLOUD_SCHEDULER_ROLE_ARN,
 } from "../dw/helpers/fakecloud.ts";
 
-// Capy v2 discovers listening HTTP services automatically. Its desktop
-// service moved off :8080, so Autumn can use its standard local ports again.
 export const SERVER_PORT = 8080;
 export const VITE_PORT = 3000;
 export const DRAGONFLY_PORT = 6379;
@@ -37,7 +35,6 @@ export function capyEnvFiles({
 	machineId: string;
 	databaseUrl: string;
 	secrets: CapySecrets;
-	/** Absent when Trigger.dev is not opted in, so the server builds no Trigger client. */
 	trigger?: { secretKey: string; accessToken: string };
 }): {
 	server: Record<string, string>;
@@ -52,19 +49,13 @@ export function capyEnvFiles({
 	const sqsBase = `http://localhost:${FAKECLOUD_PORT}/${FAKECLOUD_ACCOUNT_ID}`;
 
 	const serverEnv: Record<string, string> = {
-		// scripts/preload-env.ts ignores these files on any other machine.
 		CAPY_MACHINE_ID: machineId,
 		SERVER_PORT: String(SERVER_PORT),
-		// server/src/utils/initUtils.ts::checkEnvVars exits if any of these are
-		// missing; legacy writeAgentEnv.ts handled the same set. Re-minted only
-		// on first run — the values live in $CAPY_PREFIX/state.json.
 		BETTER_AUTH_SECRET: secrets.betterAuthSecret,
 		ENCRYPTION_IV: secrets.encryptionIv,
 		ENCRYPTION_PASSWORD: secrets.encryptionPassword,
 		DATABASE_URL: dbUrl,
 		DATABASE_CRITICAL_URL: dbUrl,
-		// Dragonfly serves the redis-protocol clients for every cache slot
-		// (misc + v2). Matches dw env-files.ts.
 		REDIS_URL: redisUrl,
 		MISC_CACHE_DRAGONFLY_PUBLIC_URL: redisUrl,
 		CACHE_V2_DRAGONFLY_URL: redisUrl,
@@ -78,7 +69,6 @@ export function capyEnvFiles({
 		TRACK_ASYNC_STANDARD_SQS_QUEUE_URL: `${sqsBase}/autumn-track-async`,
 		STRIPE_WEBHOOK_SQS_QUEUE_URL: `${sqsBase}/autumn-stripe-webhook.fifo`,
 		AWS_EVENTBRIDGE_SCHEDULER_ROLE_ARN: FAKECLOUD_SCHEDULER_ROLE_ARN,
-		// Blank rather than absent so an opt-out overwrites keys left by an earlier opt-in.
 		TRIGGER_API_URL: trigger ? `http://localhost:${TRIGGER_PORT}` : "",
 		TRIGGER_ACCESS_TOKEN: trigger?.accessToken ?? "",
 		TRIGGER_SERVER_SECRET_KEY: trigger?.secretKey ?? "",
@@ -94,8 +84,6 @@ export function capyEnvFiles({
 		GOOGLE_CLIENT_ID: "capy-emulate",
 		GOOGLE_CLIENT_SECRET: "capy-emulate",
 		STRIPE_WEBHOOK_SKIP_VERIFY: "true",
-		// Login flow that works without external services: dev `sendOTPEmail`
-		// prints the OTP to the server log. The README documents this path.
 		NODE_ENV: "development",
 		TESTS_ORG: "unit-test-org",
 		TESTS_ORG_ID: "org_2sWv2S8LJ9iaTjLI6UtNsfL88Kt",

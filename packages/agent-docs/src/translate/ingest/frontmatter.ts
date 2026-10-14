@@ -1,7 +1,6 @@
 const BLOCK = /^---\n([\s\S]*?)\n---\n?([\s\S]*)$/;
 const FIELD = /^([A-Za-z0-9_-]+):\s*(.*)$/;
 
-/** Parse simple `key: value` frontmatter plus the remaining body. */
 export const parseFrontmatter = ({
 	path,
 	text,

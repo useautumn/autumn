@@ -1,10 +1,3 @@
-/**
- * OrgConfigSchema must declare `automatic_tax: z.boolean().default(false)`.
- * Without this, Zod strips the field on parse and downstream tests using
- * `s.platform.create({ configOverrides: { automatic_tax: true } })` silently
- * lose the override.
- */
-
 import { describe, expect, test } from "bun:test";
 import { OrgConfigSchema } from "@autumn/shared";
 

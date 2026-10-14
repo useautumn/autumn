@@ -1,29 +1,3 @@
-/**
- * TDD test for POST /v1/invoices.insert — batched legacy invoice upserts.
- *
- * Contract under test:
- *   New types/fields:
- *     - InsertInvoicesParams: { invoices: InsertInvoiceParams[] } with max 500
- *     - entity_id is accepted by the server but hidden from public docs/output
- *   New endpoint:
- *     - POST /v1/invoices.insert -> { invoices: ApiInsertedInvoice[] }
- *   New behaviors:
- *     - response order matches request order
- *     - customer_id, entity_id, and active plan versions resolve in batched queries
- *     - currency defaults to org.default_currency
- *     - hosted_invoice_url is optional, persisted, and echoed directly
- *     - existing stripe_id rows are fully updated while retaining their Autumn IDs
- *     - all affected customer caches are invalidated; no invoice cache write occurs
- *     - invalid customer/entity/plan references reject the batch before any writes
- *   Side effects:
- *     - invoices are upserted in Postgres only
- *     - affected customer caches are cleared after the upsert
- *     - no processor resources are read or mutated
- *
- * Pre-implementation red: the route and request/response schemas do not exist.
- * Post-implementation green: every batch, resolution, upsert, and validation assertion passes.
- */
-
 import { expect, test } from "bun:test";
 import { CustomerExpand, invoices, products } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features";
@@ -124,7 +98,6 @@ test.concurrent(
 			}),
 		]);
 
-		// ── Contract assertion 1: heterogeneous batch and response ordering ──
 		const inserted = await autumnV2_2.post("/invoices.insert", {
 			invoices: [
 				{
@@ -185,7 +158,6 @@ test.concurrent(
 			hosted_invoice_url: null,
 		});
 
-		// ── Contract assertion 2: external IDs resolve to internal IDs ───────
 		const firstStored = await ctx.db.query.invoices.findFirst({
 			where: eq(invoices.stripe_id, firstStripeId),
 		});
@@ -207,7 +179,6 @@ test.concurrent(
 			internal_product_ids: [freePlan!.internal_id],
 		});
 
-		// ── Contract assertion 3: upsert fully replaces submitted fields ─────
 		const updatedCreatedAt = originalCreatedAt + 10_000;
 		const updated = await autumnV2_2.post("/invoices.insert", {
 			invoices: [
@@ -273,7 +244,6 @@ test.concurrent(
 			hosted_invoice_url: "https://billing.example.com/invoices/updated",
 		});
 
-		// ── Contract assertion 4: caches are invalidated, not invoice-upserted ─
 		const refreshedOtherCustomer = await autumnV2_2.customers.get(
 			otherCustomerId,
 			{
@@ -286,7 +256,6 @@ test.concurrent(
 			),
 		).toBe(true);
 
-		// ── Contract assertion 5: invalid references reject before writes ─────
 		const invalidStripeId = `in_invalid_${runTag}`;
 		expect(
 			autumnV2_2.post("/invoices.insert", {
@@ -319,7 +288,6 @@ test.concurrent(
 		});
 		expect(invalidRows).toHaveLength(0);
 
-		// ── Contract assertion 6: request size is capped at 500 ──────────────
 		expect(
 			autumnV2_2.post("/invoices.insert", {
 				invoices: Array.from({ length: 501 }, (_, index) => ({

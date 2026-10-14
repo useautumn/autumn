@@ -10,9 +10,6 @@ import {
 	VercelWebhooks,
 } from "../../misc/vercelWebhookTypes.js";
 
-/**
- * DELETE /v1/installations/{integrationConfigurationId}/resources/{resourceId}
- */
 export const handleDeleteResource = createRoute({
 	scopes: [Scopes.Public],
 	handler: async (c) => {
@@ -68,8 +65,6 @@ export const handleDeleteResource = createRoute({
 			});
 		}
 
-		// Constructing the Stripe client itself throws when the org has no
-		// Stripe connection — must be inside the guard, not above it.
 		let stripeCli: Stripe | null = null;
 		try {
 			stripeCli = createStripeCli({ org, env: env as AppEnv });

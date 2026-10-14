@@ -1,11 +1,3 @@
-/**
- * Helper functions for SDK → Code generation
- */
-
-/**
- * Convert ID to camelCase tokens for JavaScript variable names.
- * Examples: "pro-plan" → ["pro", "plan"], "api_calls" → ["api", "calls"]
- */
 function idToTokens(id: string): string[] {
 	return id
 		.split(/[^a-zA-Z0-9]+/)
@@ -24,15 +16,10 @@ function toCamelCase(id: string): string {
 	);
 }
 
-/**
- * Convert ID to valid variable name with context-specific prefix
- * Generic version - kept for backwards compatibility
- */
 export function idToVarName(id: string, prefix = 'item_'): string {
 	const sanitized = toCamelCase(id);
 	const normalizedPrefix = prefix.replace(/_+$/, '');
 
-	// JavaScript identifiers can't start with a number
 	if (!sanitized || /^[0-9]/.test(sanitized)) {
 		return `${normalizedPrefix}${upperFirst(sanitized)}`;
 	}
@@ -40,18 +27,10 @@ export function idToVarName(id: string, prefix = 'item_'): string {
 	return sanitized;
 }
 
-/**
- * Convert plan ID to valid variable name
- * Examples: "pro-plan" → "proPlan", "123" → "plan123"
- */
 export function planIdToVarName(id: string): string {
 	return idToVarName(id, 'plan');
 }
 
-/**
- * Convert feature ID to valid variable name
- * Examples: "api-calls" → "apiCalls", "123" → "feature123"
- */
 export function featureIdToVarName(id: string): string {
 	return idToVarName(id, 'feature');
 }
@@ -105,7 +84,6 @@ const allocateVarNames = ({
 		]),
 	);
 
-/** Allocates unique variable names in declaration order. */
 export function resolveVarNames(
 	featureIds: string[],
 	planIds: string[],
@@ -165,9 +143,6 @@ export function resolveVarNames(
 	};
 }
 
-/**
- * Escape string for TypeScript string literal
- */
 export function escapeString(str: string): string {
 	return str
 		.replace(/\\/g, '\\\\')
@@ -178,9 +153,6 @@ export function escapeString(str: string): string {
 		.replace(/\t/g, '\\t');
 }
 
-/**
- * Indent code by given number of tabs
- */
 export function indentCode(code: string, tabs: number): string {
 	const indent = '\t'.repeat(tabs);
 	return code
@@ -192,9 +164,6 @@ export function indentCode(code: string, tabs: number): string {
 const formatObjectKey = (key: string): string =>
 	/^[A-Za-z_$][A-Za-z0-9_$]*$/.test(key) ? key : `'${escapeString(key)}'`;
 
-/**
- * Format a value for TypeScript code
- */
 export function formatValue(value: unknown): string {
 	if (value === null) {
 		return 'null';

@@ -105,9 +105,7 @@ export const OrgUsageAlertsSubsection = () => {
 					? "Usage alert updated"
 					: "Usage alert added",
 			);
-		} catch {
-			// onError handles toast + invalidate
-		}
+		} catch {}
 	};
 
 	const handleDelete = async (index: number) => {
@@ -115,9 +113,7 @@ export const OrgUsageAlertsSubsection = () => {
 		try {
 			await mutateAsync(next);
 			toast.success("Usage alert removed");
-		} catch {
-			// onError handles toast + invalidate
-		}
+		} catch {}
 	};
 
 	const editingAlert =

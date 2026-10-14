@@ -1,33 +1,3 @@
-/**
- * Stripe Connect webhook INGRESS for `bun tw` (plan §6a / §9 / §9a).
- *
- * Stripe caps webhook endpoints at 16/account, so the per-worker Connect-webhook
- * model tops out at ~16 workers. This ingress replaces it: the orchestrator
- * registers ONE shared platform Connect webhook pointed here, and this server
- * fans each event to exactly the owning worker by `event.account` — full
- * per-worker delivery isolation AND no 16-worker cap.
- *
- * It is a self-contained Node ESM http server using only built-ins (`node:http`,
- * the global `fetch`/`URL`, available in node24). It runs in its own lightweight
- * ingress sandbox (no build-base — it only runs this http server) launched
- * detached by the orchestrator (scripts/tw/helpers/ingress.ts).
- *
- * Env:
- *   - INGRESS_PORT  — the port to listen on (default 8080).
- *   - INGRESS_TOKEN — shared secret the orchestrator authenticates map writes with.
- *   - TW_ENV        — the env path segment for the forwarded connect route
- *                     (`/webhooks/connect/<env>`); default "sandbox".
- *
- * Routes:
- *   - GET  /health               → 200 "ok".
- *   - POST /ingress/map          → token-authed; merge `{ accountId, workerUrl }`
- *                                  and/or `{ map: { [acct]: url } }`; → `{ size }`.
- *   - GET  /ingress/map          → the current map as JSON (debug).
- *   - POST /ingress/connect[/:env] → forward to the owning worker and preserve
- *                                  its acknowledgement status.
- *   - 404 otherwise.
- */
-
 import { createServer } from "node:http";
 
 const LOG_PREFIX = "[tw-ingress]";
@@ -44,7 +14,6 @@ const port = Number(process.env.INGRESS_PORT) || DEFAULT_PORT;
 const token = process.env.INGRESS_TOKEN ?? "";
 const defaultEnv = process.env.TW_ENV ?? "sandbox";
 
-/** In-memory routing table: Stripe connected account id → worker public URL. */
 const routes = new Map();
 
 const logInfo = (message) => {
@@ -59,7 +28,6 @@ const logError = (message) => {
 	console.error(`${LOG_PREFIX} ${message}`);
 };
 
-/** Read a request's raw body as a UTF-8 string. */
 const readBody = (req) =>
 	new Promise((resolve, reject) => {
 		const chunks = [];
@@ -79,7 +47,6 @@ const sendText = (res, status, text) => {
 	res.end(text);
 };
 
-// The worker owns early-vs-sync acknowledgement; the relay must not override it.
 const forwardConnectEvent = async ({ rawBody, env }) => {
 	let event;
 	try {
@@ -98,8 +65,6 @@ const forwardConnectEvent = async ({ rawBody, env }) => {
 	const workerUrl = routes.get(accountId);
 	if (!workerUrl) {
 		// Silently drop: after teardown, Stripe retries webhooks for deleted
-		// sub-accounts for a while — there's no worker to route them to and it's
-		// expected, so logging each one just spams the run output.
 		return HTTP_OK;
 	}
 
@@ -113,7 +78,6 @@ const forwardConnectEvent = async ({ rawBody, env }) => {
 			body: rawBody,
 			redirect: "manual",
 		});
-		// Drain the response so concurrent forwards can reuse their connections.
 		await response.text();
 		const outcome = `${description} status=${response.status} elapsedMs=${Date.now() - startedAt}`;
 		if (!response.ok) {
@@ -130,7 +94,6 @@ const forwardConnectEvent = async ({ rawBody, env }) => {
 	}
 };
 
-/** POST /ingress/map — token-authed map write (single and/or bulk). */
 const handleMapWrite = async (req, res) => {
 	if (req.headers["x-ingress-token"] !== token) {
 		sendJson(res, HTTP_UNAUTHORIZED, { error: "invalid ingress token" });
@@ -185,7 +148,6 @@ const handleMapWrite = async (req, res) => {
 	sendJson(res, HTTP_OK, { size: routes.size });
 };
 
-/** GET /ingress/map — dump the current routing table (debug). */
 const handleMapRead = (res) => {
 	sendJson(res, HTTP_OK, {
 		map: Object.fromEntries(routes),
@@ -222,8 +184,6 @@ export const server = createServer((req, res) => {
 			}
 
 			if (method === "POST" && path.startsWith("/ingress/connect")) {
-				// `/ingress/connect/<env>` → use the segment; bare `/ingress/connect`
-				// → fall back to TW_ENV.
 				const rest = path.slice("/ingress/connect".length).replace(/^\//, "");
 				const env = rest || defaultEnv;
 				await handleConnect(req, res, env);

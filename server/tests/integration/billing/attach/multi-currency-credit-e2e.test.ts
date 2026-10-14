@@ -14,9 +14,6 @@ import { AutumnRpcCli } from "@/external/autumn/autumnRpcCli.js";
 const autumnRpc = new AutumnRpcCli({ version: ApiVersion.V2_1 });
 const getSuffix = () => Math.random().toString(36).slice(2, 9);
 
-// A prepaid quantity DECREASE must credit at the eur pack price — exercising the
-// refund/credit line-item currency resolution deterministically (no async
-// Stripe refund, which is flaky and skipped suite-wide).
 test.concurrent(
 	`${chalk.yellowBright("multi-currency e2e: eur prepaid decrease credits in eur")}`,
 	async () => {
@@ -66,7 +63,6 @@ test.concurrent(
 			],
 		});
 
-		// Decrease 20 → 10 packs: credit is -10 packs at the eur price (7), not usd (8).
 		const preview = await autumnV1.subscriptions.previewUpdate({
 			customer_id: customerId,
 			product_id: planId,

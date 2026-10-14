@@ -9,8 +9,6 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { addMonths } from "date-fns";
 
-/** Same-plan resets update retained billing state without changing entitlement
- * lifecycle semantics or using stale patch inputs. */
 test.concurrent(
 	`${chalk.yellowBright("update-sub combined reset: same-plan customization resets cycle and usage")}`,
 	async () => {

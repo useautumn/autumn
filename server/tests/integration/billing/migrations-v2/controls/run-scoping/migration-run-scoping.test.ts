@@ -215,16 +215,6 @@ test.concurrent(
 test.concurrent(
 	`${chalk.yellowBright("migration run scoping: retry_item_statuses reruns skipped customer rows")}`,
 	async () => {
-		/**
-		 * Contract under test:
-		 *   New request field:
-		 *     - retry_item_statuses?: ("failed" | "skipped")[] on migrations.run.
-		 *   New behaviors:
-		 *     - A normal rerun continues to checkpoint-exclude skipped item rows.
-		 *     - retry_item_statuses: ["skipped"] reselects and reclaims skipped rows.
-		 *   Side effects:
-		 *     - The reclaimed migration_item_runs row finishes succeeded on the new run.
-		 */
 		const suffix = uniqueSuffix();
 		const customerId = `run-scope-retry-skipped-${suffix}`;
 		const attachedPlan = products.base({
@@ -336,17 +326,6 @@ test.concurrent(
 // Skipped while LAZY_MIGRATION_RUNS_DISABLED is on: `lazy_run: true` is
 // rejected with a 400, so this can't run. Unskip if lazy runs come back.
 test.skip(`${chalk.yellowBright("migration run scoping: limit caps live lazy sample runs")}`, async () => {
-	/**
-	 * TDD regression for sample-by-count live runs.
-	 *
-	 * Red-failure mode:
-	 *  - migrations.run({ limit, lazy_run: true }) persists target_limit but
-	 *    still claims every matching customer in migration_item_runs.
-	 *
-	 * Green-success criteria:
-	 *  - The run record keeps target_limit, and the current run only creates
-	 *    item-run rows for the requested limit.
-	 */
 	const suffix = uniqueSuffix();
 	const customerIds = Array.from(
 		{ length: 5 },

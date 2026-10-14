@@ -2,7 +2,6 @@ import { Decimal } from "decimal.js";
 import type { CreditTier } from "../../../models/featureModels/featureConfig/creditConfig.js";
 import { invalidCreditRateCard } from "./invalidCreditRateCard.js";
 
-/** A rate as either a schema row or a rate card carries it: flat credits per feature amount, or graduated tiers. */
 export type CreditRate = { feature_amount?: number } & (
 	| { credit_amount: number; tier_behavior?: never; tiers?: never }
 	| { credit_amount?: never; tier_behavior: "graduated"; tiers: CreditTier[] }
@@ -101,7 +100,6 @@ const getGraduatedCreditCostAtUsage = ({
 	});
 };
 
-/** Credits `amount` units cost at this rate, from `currentUsage` on for graduated tiers. */
 export const creditRateToCost = ({
 	featureId,
 	creditSystemId,

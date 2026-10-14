@@ -1,7 +1,6 @@
 import type { PreviewUpdateCatalogResponse } from "@autumn/shared";
 import type { UpdateCatalogPlan } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogPlan";
 
-/** Pure map: computed plan → preview response rewards + referral programs. */
 export const buildRewardsPreview = ({
 	updateCatalogPlan,
 }: {

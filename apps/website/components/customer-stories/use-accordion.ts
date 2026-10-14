@@ -16,8 +16,6 @@ type Accordion = {
 	cardLayout: (index: number) => CardLayout;
 };
 
-// Signed nearest-direction offset on a ring, e.g. for count 4 the card before
-// the active one is -1 even when it wraps from the end of the list.
 function ringOffset(index: number, active: number, count: number) {
 	const forward = (index - active + count) % count;
 	return forward > count / 2 ? forward - count : forward;
@@ -36,8 +34,6 @@ export function useAccordion(count: number): Accordion {
 			if (current !== index) {
 				setPrevActiveIndex(current);
 				setRevealKey((k) => k + 1);
-				// Sweep from the side the new slide was clicked on: +1 reveals
-				// right→left (clicked the right spine), -1 reveals left→right.
 				setDissolveDir(Math.sign(ringOffset(index, current, count)) || 1);
 			}
 			return index;
@@ -62,7 +58,6 @@ export function useAccordion(count: number): Accordion {
 		return { state, order: offset };
 	};
 
-	// With wrap, the active card always has two circular neighbors.
 	const neighborCount = count >= 3 ? 2 : count - 1;
 	const contentWidth = trackWidth
 		? trackWidth - neighborCount * (SPINE_WIDTH + TRACK_GAP)

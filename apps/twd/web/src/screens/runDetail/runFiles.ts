@@ -10,10 +10,8 @@ export const isFailure = (f: RunFile) => isFailedFileStatus(f.status);
 
 export const baseName = (file: string) => file.split("/").at(-1) ?? file;
 
-/** Real workers are `<run>-w<n>`; the grid and lists show only the tail. */
 export const shortWorker = (name: string) => name.split("-").at(-1) ?? name;
 
-/** When each running file started: its worker's previous finish, else when the worker came up. */
 export const runningSince = (run: RunDetail) => {
 	const freeAt = new Map<string, number>();
 	const bump = (worker: string | null | undefined, iso?: string | null) => {

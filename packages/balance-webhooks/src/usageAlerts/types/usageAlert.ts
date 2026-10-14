@@ -8,7 +8,6 @@ import type {
 
 export type BeforeAfter<T> = { before: T; after: T };
 
-/** The subject as the mutation found it and as it left it. */
 export type TrackedSubjects = BeforeAfter<WorkerFullSubject>;
 
 export type AlertScope = "customer" | "entity" | "org" | "plan";

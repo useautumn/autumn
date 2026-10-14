@@ -62,7 +62,6 @@ const handleAllowanceUsed = async ({
 	oldFullCus: FullCustomer;
 	newFullCus: FullCustomer;
 }) => {
-	// Both sides without overage, so only the track that empties the allowance crosses.
 	const clonedNewFullCus = withoutUsageAllowed({ fullCus: newFullCus });
 
 	const { apiCustomer: prevApiCustomer } = await getApiCustomerBase({
@@ -129,7 +128,6 @@ export const handleThresholdReached = async ({
 }) => {
 	if (ctx.apiVersion.gte(ApiVersion.V2_1)) return;
 
-	// Alter ctx expand if needed.
 	if (ctx.apiVersion.lte(ApiVersion.V1_2)) {
 		ctx = addToExpand({
 			ctx,

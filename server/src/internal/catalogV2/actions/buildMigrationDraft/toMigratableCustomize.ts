@@ -1,6 +1,5 @@
 import type { DiffedCustomizePlanV1 } from "@autumn/shared";
 
-/** Drop non-migratable lanes (free trial, remove_licenses) from a plan diff. */
 export const toMigratableCustomize = ({
 	customize,
 }: {

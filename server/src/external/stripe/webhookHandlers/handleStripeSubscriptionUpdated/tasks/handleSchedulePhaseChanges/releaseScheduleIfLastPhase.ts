@@ -5,10 +5,6 @@ import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
 import type { StripeSubscriptionUpdatedContext } from "../../stripeSubscriptionUpdatedContext";
 
-/**
- * Releases the subscription schedule if it's in its last phase.
- * This allows the subscription to continue without a schedule.
- */
 export const releaseScheduleIfLastPhase = async ({
 	ctx,
 	eventContext,
@@ -38,7 +34,6 @@ export const releaseScheduleIfLastPhase = async ({
 	});
 	const currentPhase = stripeSubscriptionSchedule.phases[currentPhaseIndex];
 
-	// Skip release only for that temporary single-phase shape while its future end date shows the real schedule has not settled yet.
 	const isSingleFuturePhase =
 		stripeSubscriptionSchedule.phases.length === 1 &&
 		typeof currentPhase?.end_date === "number" &&

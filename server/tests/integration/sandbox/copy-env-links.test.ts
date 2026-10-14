@@ -14,9 +14,6 @@ import { deletePlatformSubOrg } from "@/internal/orgs/deleteOrg/deletePlatformSu
 import { handleCopyProducts } from "@/internal/products/handlers/handleCopyEnvironment/handleCopyProducts.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 
-// Copying an env (sandbox -> live, as "deploy to production" does) must carry
-// variant -> base links and plan license links, remapped to the target env.
-
 const { db } = initDrizzle();
 const suffix = crypto.randomUUID().slice(0, 8);
 
@@ -73,7 +70,6 @@ const seedLinkedPair = async ({
 		parentInternalProductId: parent.internal_id,
 		licenseInternalProductId: license.internal_id,
 		included,
-		// prepaid_only: false is rejected by syncPlanLicenses; only seed valid links.
 		prepaidOnly: true,
 		metadata,
 	});
@@ -154,8 +150,6 @@ describe("copying an env preserves variant base plan links", () => {
 	});
 
 	test("a same-id target variant leaves the copied variant unlinked and untouched", async () => {
-		// Live already uses the base's id for a variant of another plan; the copy
-		// must neither nest under it nor rewrite it.
 		const liveOther = await seedPlan({
 			env: AppEnv.Live,
 			planId: COLLIDE_OTHER_PLAN,
@@ -199,7 +193,6 @@ describe("copying an env preserves variant base plan links", () => {
 			baseInternalProductId: repairBase.internal_id,
 		});
 
-		// A pre-fix copy landed both plans in live without the link.
 		await seedPlan({ env: AppEnv.Live, planId: REPAIR_BASE_PLAN });
 		const disconnected = await seedPlan({
 			env: AppEnv.Live,
@@ -286,7 +279,6 @@ describe("copying an env carries plan license links", () => {
 			parentId: RELINK_PARENT,
 			licenseId: RELINK_LICENSE,
 		});
-		// A pre-fix copy landed both plans in live without the link.
 		for (const planId of [RELINK_PARENT, RELINK_LICENSE]) {
 			await seedPlan({ env: AppEnv.Live, planId });
 		}

@@ -49,21 +49,18 @@ export const V2_0_CustomerChange = defineVersionChange({
 			input: input.subscriptions ?? [],
 		});
 
-		// Merge purchases as subscriptions
 		const purchasesAsSubscriptions: ApiSubscription[] =
 			apiPurchasesV0ToSubscriptionsV0({
 				ctx,
 				purchases: input.purchases ?? [],
 			});
 
-		// Transform and split by status
 		const transformedSubscriptions: ApiSubscription[] =
 			mergedSubscriptions.filter((sub) => sub.status !== "scheduled");
 
 		const transformedScheduledSubscriptions: ApiSubscription[] =
 			mergedSubscriptions.filter((sub) => sub.status === "scheduled");
 
-		// Return V0 customer format (without purchases field)
 		const { purchases: _purchases, ...rest } = input;
 
 		return {

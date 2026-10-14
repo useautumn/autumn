@@ -1,23 +1,11 @@
 #!/usr/bin/env bun
 
-/**
- * Shared utilities and config for all epoch-ms-chunked Tinybird backfill scripts.
- */
-
 import { execSync } from "child_process";
-
-// ============================================================================
-// CONSTANTS
-// ============================================================================
 
 export const MAX_RETRIES = 3;
 export const RETRY_DELAY_MS = 5000;
 export const DELAY_BETWEEN_CHUNKS_MS = 2000;
 export const DEFAULT_CHUNK_DAYS = 30;
-
-// ============================================================================
-// TYPES
-// ============================================================================
 
 export interface Chunk {
 	startEpochMs: number;
@@ -25,19 +13,11 @@ export interface Chunk {
 }
 
 export interface TableConfig {
-	/** Human-readable label, e.g. "Customers" */
 	label: string;
-	/** Tinybird copy pipe name, e.g. "customers_backfill" */
 	copyPipeName: string;
-	/** Tinybird datasource table name, e.g. "customers" */
 	datasource: string;
-	/** Epoch ms of the earliest known row in Postgres */
 	startEpochMs: number;
 }
-
-// ============================================================================
-// UTILITIES
-// ============================================================================
 
 export function execCapture({ cmd }: { cmd: string }): string {
 	try {
@@ -55,7 +35,6 @@ if (!TB_TOKEN) {
 	process.exit(1);
 }
 
-/** Query Tinybird SQL API directly — returns parsed rows as an array of objects. */
 export async function tbSql({ query }: { query: string }): Promise<Record<string, unknown>[]> {
 	const queryWithFormat = `${query.trimEnd()} FORMAT JSONEachRow`;
 	const url = `${TB_API_URL}/v0/sql?q=${encodeURIComponent(queryWithFormat)}`;
@@ -67,7 +46,6 @@ export async function tbSql({ query }: { query: string }): Promise<Record<string
 		throw new Error(`Tinybird SQL API error ${res.status}: ${body}`);
 	}
 	const text = await res.text();
-	// JSONEachRow returns one JSON object per line
 	return text
 		.split("\n")
 		.map((l) => l.trim())
@@ -83,7 +61,6 @@ export async function sleep({ ms }: { ms: number }): Promise<void> {
 	return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-/** Extract a single numeric value from the first row/column of a tbSql result. */
 export function extractNumber({ rows, col }: { rows: Record<string, unknown>[]; col: string }): number | null {
 	const val = rows[0]?.[col];
 	if (val === null || val === undefined) return null;
@@ -95,11 +72,6 @@ export function formatEpochMs({ epochMs }: { epochMs: number }): string {
 	return new Date(epochMs).toISOString();
 }
 
-// ============================================================================
-// TINYBIRD HELPERS
-// ============================================================================
-
-/** Returns the MAX created_at among backfill ('read') rows, or null if none. */
 export async function getMaxCreatedAt({ datasource }: { datasource: string }): Promise<number | null> {
 	const rows = await tbSql({
 		query: `SELECT max(created_at) AS val FROM ${datasource} WHERE __action = 'read'`,
@@ -108,17 +80,12 @@ export async function getMaxCreatedAt({ datasource }: { datasource: string }): P
 	return num && num > 0 ? num : null;
 }
 
-/** Returns count of non-deleted rows in the datasource. */
 export async function getRowCount({ datasource }: { datasource: string }): Promise<number> {
 	const rows = await tbSql({
 		query: `SELECT count() AS val FROM ${datasource} FINAL WHERE __action != 'delete'`,
 	});
 	return extractNumber({ rows, col: "val" }) ?? 0;
 }
-
-// ============================================================================
-// CHUNK GENERATION (FORWARD — oldest → newest)
-// ============================================================================
 
 export function generateChunksForward({
 	startEpochMs,
@@ -141,10 +108,6 @@ export function generateChunksForward({
 
 	return chunks;
 }
-
-// ============================================================================
-// COPY JOB EXECUTION
-// ============================================================================
 
 export async function waitForCopyJobs(): Promise<void> {
 	const maxAttempts = 60;
@@ -201,14 +164,6 @@ export async function runCopyJob({
 	return false;
 }
 
-// ============================================================================
-// CORE BACKFILL RUNNER
-// ============================================================================
-
-/**
- * Runs a complete forward (oldest → newest) backfill for a single table config.
- * Idempotent: resumes from MAX(created_at) of existing 'read' rows.
- */
 export async function runTableBackfill({
 	config,
 	chunkDays,

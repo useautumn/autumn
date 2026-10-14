@@ -4,16 +4,12 @@ import type { UpdateCatalogPlan } from "@/internal/catalogV2/actions/updateCatal
 import { handlePartialPlanArchiveErrors } from "./handlePartialPlanArchiveErrors";
 import { handleRemovePlanVariantErrors } from "./handleRemovePlanVariantErrors";
 
-/** Throws when a removal is unknown, or contradicted by the same request. */
 export const handleRemovePlanErrors = ({
 	updateCatalogPlan,
 }: {
 	updateCatalogPlan: UpdateCatalogPlan;
 	productStatesContext: ProductStatesContext;
 }): void => {
-	// A row demoted because an older version is stated active may also be
-	// removed by the same full-state config: the demotion runs first, then
-	// the removal takes the row, so the two do not contradict each other.
 	const contradicting = updateCatalogPlan.upsertProducts.filter(
 		(upsert) => upsert.row.source !== "demoted_product",
 	);
@@ -31,8 +27,6 @@ export const handleRemovePlanErrors = ({
 				version: removePlan.allVersions ? undefined : removePlan.version,
 			});
 		}
-		// Removing one version beside an upsert of another is a version-level
-		// full-state edit; only the same row cannot be both.
 		const collides = removePlan.allVersions
 			? upsertedPlanIds.has(removePlan.planId)
 			: upsertedVersions.has(`${removePlan.planId}@${removePlan.version}`);

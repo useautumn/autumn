@@ -11,16 +11,8 @@ export const handleExternalPSPErrors = ({
 	strict = false,
 }: {
 	attachParams: AttachParams;
-	/**
-	 * When true, never bypass the cross-processor guard. Use for MultiAttach
-	 * where the customer's whole subscription state could change.
-	 */
 	strict?: boolean;
 }) => {
-	// Safe path: a single-product attach for a true one-off product can mix
-	// across processors. One-offs create a parallel cus_product and never
-	// replace an existing subscription, so a customer with an active RC sub
-	// can still buy a Stripe-billed top-up (and vice versa).
 	const oneOffEscape =
 		!strict &&
 		attachParams.products.length === 1 &&

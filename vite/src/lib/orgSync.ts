@@ -24,9 +24,6 @@ export const clearLastSwitchedOrgId = (id?: string) => {
 	} catch {}
 };
 
-// Single source of truth for changing the active org: always mirrors the
-// server-side switch into localStorage so DashboardGate can't read a stale
-// lastOrgId and bounce back. Use this instead of authClient.organization.setActive.
 export const setActiveOrg = async (orgId: string) => {
 	const result = await authClient.organization.setActive({
 		organizationId: orgId,

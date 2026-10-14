@@ -1,12 +1,3 @@
-/**
- * Pre-fix: a non-add-on linked product with no `product.group` set made
- * `linkedCustomerProductsToTargetGroupMap` bail with `{ ok: false }` even when
- * it was the only linked product -- blocking Stripe-portal downgrades from
- * auto-syncing for any catalog that doesn't configure product groups (the
- * common case). Post-fix: missing/blank group is itself a valid group key;
- * ambiguity now only fires on an actual collision between two non-add-on
- * products sharing the same entity+group key.
- */
 import { describe, expect, test } from "bun:test";
 import type {
 	FeatureOptions,
@@ -468,8 +459,6 @@ describe("buildIncrementalSyncParams", () => {
 		expect(result.shouldSync).toBe(true);
 		if (!result.shouldSync) throw new Error(result.reason);
 		if (!result.params) throw new Error("expected incremental params");
-		// Adding instances must not expire the ones already linked — add-on
-		// expire_previous now replaces the linked same-product instance.
 		expect(result.params.phases?.[0]?.plans).toEqual([
 			{ expire_previous: false, plan_id: "addon", quantity: 2 },
 		]);
@@ -477,10 +466,6 @@ describe("buildIncrementalSyncParams", () => {
 
 	test("does not expire a linked add-on whose Stripe item merely failed to match (detection miss, not removal)", () => {
 		const addOn = product({ id: "addon", isAddOn: true });
-		// No matched plans at all for this phase — simulates a detection miss
-		// (e.g. the tiered-prepaid enrichment gap) rather than a true removal:
-		// the add-on's Stripe item is still on the subscription as an
-		// unmatched item_diff, not absent from it.
 		const { match, params } = draft({
 			matchedPlans: [],
 			syncPlans: [],

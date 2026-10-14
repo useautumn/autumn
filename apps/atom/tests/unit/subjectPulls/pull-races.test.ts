@@ -1,13 +1,3 @@
-/**
- * Pulls against a real slot folder, each race forced step by step: Autumn's answer is a deferred the test settles,
- * herald's push is applied at the chosen step, and the clock is the test's.
- *
- *  R11  a pull in flight loses to a newer push that lands first: the push is kept, no fill, no further pull;
- *  R5   an evict lands between a pull's read and its store: the entity is stored but stale, and is pulled again and answered;
- *  R14  a subject Autumn does not have: forwarded, one pull, then held;
- *  5.13 + 5.16 the miss is still forwarded while its pull is in flight; a check left to the API by its own rules pulls nothing.
- */
-
 import { afterEach, expect, test } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -33,7 +23,6 @@ import {
 	subjectPushOf,
 } from "../utils/atomFixtures.js";
 
-/** Every promise continuation already queued runs before a macrotask: a settled pull is fully stored after this. */
 const drainMicrotasks = () =>
 	new Promise<void>((resolve) => setImmediate(resolve));
 
@@ -47,7 +36,6 @@ afterEach(() => {
 		rmSync(folder, { recursive: true, force: true });
 });
 
-/** One folder whose misses pull through a deferred Autumn, on a clock the test moves. */
 const openPullingFolder = () => {
 	let now = 0;
 	const counted: Partial<Record<ThreadStatField, number>> = {};
@@ -99,7 +87,6 @@ const openPullingFolder = () => {
 		advance: (ms: number) => {
 			now += ms;
 		},
-		/** Herald's push, or a pulled body as Autumn returns it: the same text into the same apply. */
 		bodyOf: (subject: StoredSubject) => subjectPushOf({ subject }).body,
 		push: (subject: StoredSubject) =>
 			processor.setSubject(subjectPushOf({ subject })),
@@ -158,7 +145,6 @@ test("R11 a pull in flight loses to a newer push that lands first: the push is k
 	expect(await atom.check()).toMatchObject({ balance: { remaining: 7 } });
 	expect(atom.counted.subjectFills).toBeUndefined();
 
-	// The kept copy answers every later check here, so nothing misses and nothing pulls again.
 	expect(await atom.forwardOf()).toBeNull();
 	expect(atom.calls).toHaveLength(1);
 });
@@ -167,7 +153,6 @@ test("R5 an evict lands between a pull's read and its store: the entity is store
 	const atom = openPullingFolder();
 	await atom.push(customerAt({ balance: 0, logOffset: 90n, readAt: 5 }));
 
-	// The pull reads the entity at offset 130; before it lands, herald pushes the customer evicted at 140.
 	expect(await atom.forwardOf(ENTITY_CHECK)).toBe("entity_not_stored");
 	const pulled = atom.bodyOf(
 		entityAt({ entityBalance: 4, logOffset: 130n, readAt: 30 }),
@@ -184,7 +169,6 @@ test("R5 an evict lands between a pull's read and its store: the entity is store
 	).toBe(true);
 	await atom.calls[0]?.answer(pulled);
 
-	// The entity's own part is stored (a fill), its customer part refused as older, and 130 < 140 makes it stale.
 	expect(atom.counted.subjectFills).toBe(1);
 	expect(await atom.forwardOf(ENTITY_CHECK)).toBe("entity_stale");
 	expect(atom.calls).toHaveLength(1);

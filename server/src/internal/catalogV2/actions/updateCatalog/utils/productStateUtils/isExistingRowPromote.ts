@@ -1,4 +1,3 @@
-/** True when an existing row takes the active pointer (not a mint). */
 export const isExistingRowPromote = ({
 	current,
 	next,

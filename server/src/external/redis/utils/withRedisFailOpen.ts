@@ -3,8 +3,6 @@ import { shouldUseRedisV2 } from "@/external/redis/availabilityMonitor/redisV2Av
 import { RedisUnavailableError } from "./errors.js";
 import { isTransientRedisError } from "./isTransientRedisError.js";
 
-/** Runs `run`. If Redis is unavailable, a transient DB error occurs, or
- *  `alsoFailOpen` matches, calls `fallback`. Any other error propagates. */
 export const withRedisFailOpen = async <T>({
 	source,
 	run,

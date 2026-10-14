@@ -15,9 +15,6 @@ import {
 } from "@phosphor-icons/react";
 import type React from "react";
 
-/**
- * Icon configuration with icon component, color class, and optional label
- */
 interface FeatureIconConfig {
 	icon: React.ReactNode;
 	color: string;
@@ -33,10 +30,6 @@ type FeatureTypeInput =
 	| null
 	| undefined;
 
-/**
- * Maps feature type to icon configuration.
- * This is the single source of truth for feature type icons across the app.
- */
 export const getFeatureIconConfig = (
 	featureType: FeatureTypeInput,
 	usageType?: FeatureUsageType | null,
@@ -44,7 +37,6 @@ export const getFeatureIconConfig = (
 ): FeatureIconConfig => {
 	const typeStr = featureType as string;
 	const weight = "duotone";
-	// Handle continuous use (non-consumable) first
 	if (
 		typeStr === ProductItemFeatureType.ContinuousUse ||
 		typeStr === "continuous_use" ||
@@ -60,7 +52,6 @@ export const getFeatureIconConfig = (
 		};
 	}
 
-	// Handle boolean types
 	if (
 		typeStr === FeatureType.Boolean ||
 		typeStr === ProductItemFeatureType.Boolean ||
@@ -77,7 +68,6 @@ export const getFeatureIconConfig = (
 		};
 	}
 
-	// Handle AI credit system
 	if (isAiCreditSystem(typeStr) || typeStr === "ai_credit_system") {
 		return {
 			icon: <CpuIcon size={size} weight={weight} />,
@@ -88,7 +78,6 @@ export const getFeatureIconConfig = (
 		};
 	}
 
-	// Handle credit system
 	if (typeStr === FeatureType.CreditSystem || typeStr === "credit_system") {
 		return {
 			icon: <CoinsIcon size={size} weight={weight} />,
@@ -99,7 +88,6 @@ export const getFeatureIconConfig = (
 		};
 	}
 
-	// Handle single use (consumable) - including metered and explicit single use
 	if (
 		typeStr === FeatureType.Metered ||
 		typeStr === "metered" ||
@@ -115,7 +103,6 @@ export const getFeatureIconConfig = (
 		};
 	}
 
-	// Default fallback
 	return {
 		icon: <BatteryHighIcon size={size} weight={weight} />,
 		color: "text-fuchsia-500",
@@ -125,10 +112,6 @@ export const getFeatureIconConfig = (
 	};
 };
 
-/**
- * Returns the appropriate icon component for a given feature.
- * Uses getFeatureIconConfig as the single source of truth.
- */
 export const getFeatureIcon = ({
 	feature,
 	size = 16,
@@ -144,10 +127,6 @@ export const getFeatureIcon = ({
 	return <span className={config.color}>{config.icon}</span>;
 };
 
-/**
- * Returns the appropriate icon component for a product item.
- * Uses getFeatureIconConfig as the single source of truth.
- */
 const getProductItemFeatureIcon = ({ item }: { item: ProductItem }) => {
 	const config = getFeatureIconConfig(item.feature_type);
 	return <span className={config.color}>{config.icon}</span>;

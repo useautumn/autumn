@@ -8,7 +8,6 @@ export async function receiveDeleteBalance(
 	context: Context<BalanceWorkerHttpEnv>,
 ) {
 	const { runtime } = context.get("ctx");
-	// Our server builds and validates this command; re-parsing it here is pure cost.
 	const command = context.get("request").command as DeleteBalanceCommand;
 	const requestLog = context.get("requestLog");
 	requestLog.command = command;

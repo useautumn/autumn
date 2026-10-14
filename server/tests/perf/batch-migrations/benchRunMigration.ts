@@ -1,24 +1,3 @@
-/**
- * Benchmarks the batch migration lane end to end against the seeded bench org,
- * driving the production path page by page for per-page timings:
- * prepareMigration → shouldRunBatchLane → runBatchMigrationChunk(maxPages: 1).
- *
- *   bun tests/perf/batch-migrations/benchRunMigration.ts --plan bench-free --item words --pages 1
- *   bun tests/perf/batch-migrations/benchRunMigration.ts --plan bench-free --item words --pages all
- *   bun tests/perf/batch-migrations/benchRunMigration.ts --cleanup --item words
- *
- * --cleanup removes previously bench-added entitlement rows + bench item runs
- * so a rerun measures fresh inserts instead of dedup no-ops.
- *
- * --filter "custom=false,recurring=true,base_price=true" puts scope
- * constraints on BOTH the migration filter and the op plan_filter, so the
- * claim select AND the lowered OperationScope carry them (keys: custom, paid,
- * recurring as booleans; base_price=true|false → price: {$ne: null} | null).
- *
- * --webhooks build times finalize's webhook record build + queue chunking with
- * delivery no-oped (eventTypes: [] — every event type reads as unsubscribed).
- */
-
 import { type Migration, migrations } from "@autumn/shared";
 import { MigrationFilterSchema } from "@autumn/shared/api/migrations/filters/migrationFilter.js";
 import { OperationsSchema } from "@autumn/shared/api/migrations/operations/operations.js";
@@ -53,7 +32,6 @@ const parseArgs = () => {
 	};
 };
 
-/** "custom=false,recurring=true,base_price=true" → PlanFilter scope fields. */
 const parseScopeFilterFields = (
 	raw: string | undefined,
 ): Record<string, unknown> => {
@@ -92,13 +70,9 @@ const main = async () => {
 		);
 	const webhookControls =
 		webhooks === "build"
-			? // eventTypes: [] → inline sender treats every type as unsubscribed,
-				// so records are built + chunked but nothing is delivered.
-				{ sendWebhooks: true, webhookConcurrency: 0, eventTypes: [] }
+			? { sendWebhooks: true, webhookConcurrency: 0, eventTypes: [] }
 			: undefined;
 
-	// Every run starts from a clean slate: remove prior bench-added rows so
-	// the run measures fresh inserts, never dedup no-ops.
 	const cleanupStarted = Date.now();
 	await db.execute(sql`
 		DELETE FROM customer_entitlements
@@ -115,9 +89,6 @@ const main = async () => {
 	);
 	if (cleanup) process.exit(0);
 
-	// Fresh migration row per run: a new internal_id means claims start clean,
-	// while the feature-level dedup still suppresses already-added rows.
-	// Scoped runs get their own id so the dashboard-seeded defs stay untouched.
 	const migrationId = `bench-mig-${plan}-${item}${filter ? "-scoped" : ""}`;
 	await db.execute(
 		sql`DELETE FROM migrations WHERE org_id = ${org.id} AND env = ${ctx.env} AND id = ${migrationId}`,

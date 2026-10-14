@@ -1,11 +1,3 @@
-/**
- * Version identity — billing.attach omit-version uses the active catalog row.
- *
- * Contract under test:
- *   v2 active (lockstep) → omit attach lands on v2
- *   v1 forced active → omit attach lands on v1
- */
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3, AttachParamsV1Input } from "@autumn/shared";
 import { ResetInterval } from "@autumn/shared";

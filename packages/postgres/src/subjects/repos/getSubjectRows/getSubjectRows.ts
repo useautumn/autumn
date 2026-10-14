@@ -7,7 +7,6 @@ import {
 } from "../../types/subjectRowsEnvelope.js";
 import { subjectRowsSql } from "./subjectRowsSql.js";
 
-/** Null when the customer, or the named entity of it, does not exist in this org and env. */
 export const getSubjectRows = async ({
 	ctx,
 	customerId,

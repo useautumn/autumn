@@ -26,9 +26,7 @@ export const createStripeCli = ({
 	throughSecretKey?: boolean;
 	skipInstrumentation?: boolean;
 }) => {
-	// Try secret key first.
 	if (isStripeConnected({ org, env, throughSecretKey: true })) {
-		// Secret key flow
 		const encrypted =
 			env === AppEnv.Sandbox
 				? org.stripe_config?.test_api_key
@@ -64,7 +62,6 @@ export const createStripeCli = ({
 		});
 	}
 
-	// Then try account ID
 	const accountId = orgToAccountId({ org, env });
 
 	if (accountId && !throughSecretKey) {

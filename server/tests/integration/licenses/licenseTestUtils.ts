@@ -27,10 +27,8 @@ export const assignLicense = async ({
 	customerId: string;
 	entityId: string;
 	licensePlanId: string;
-	/** Ignored — the redesigned API resolves the parent by link. */
 	parentPlanId?: string;
 }) => {
-	// The attach response carries no assignment — fetch it back via list_assignments.
 	await autumn.post("/licenses.attach", {
 		customer_id: customerId,
 		plan_id: licensePlanId,

@@ -39,7 +39,6 @@ const formatCouponDuration = (coupon: Stripe.Coupon): string => {
 
 type CouponTooltipRow = { label: string; value: string };
 
-/** A bulk code drop can attach hundreds of codes; the tooltip shows a few. */
 const MAX_CODES_SHOWN = 3;
 
 const formatPromoCodes = (codes: string[]): string => {
@@ -93,15 +92,12 @@ export const AppliedCouponChip = ({ className }: { className?: string }) => {
 	const discount = stripeCus?.discount as Stripe.Discount | null | undefined;
 	const couponId = getAppliedCouponId(discount);
 
-	// The customer's discount only carries the coupon id; the details come
-	// from the org's coupon list, which is only fetched while a chip shows.
 	const { stripeCoupons, isLoading: couponsLoading } = useStripeCouponsQuery({
 		enabled: Boolean(couponId),
 	});
 
 	if (!discount || !couponId) return null;
 
-	// Rollover coupons are per-customer copies named after the original.
 	const originalCouponId = getOriginalCouponId(couponId);
 	const coupon =
 		stripeCoupons.find((candidate) => candidate.id === couponId) ??

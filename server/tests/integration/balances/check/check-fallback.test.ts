@@ -8,27 +8,20 @@ import chalk from "chalk";
 import { createHonoApp } from "@/initHono.js";
 import type { getFullSubjectNormalized } from "@/internal/customers/repos/getFullSubject/index.js";
 
-// The in-process app injects hydration failures the worker route never reaches; its fail-open is not built yet.
 const previousRollout = process.env.BALANCE_WORKER_ROLLOUT_ENABLED;
 process.env.BALANCE_WORKER_ROLLOUT_ENABLED = "false";
 
 const GET_FULL_SUBJECT_MODULE =
 	"@/internal/customers/repos/getFullSubject/index.js";
 
-// Dynamic import so the real implementation stays reachable after mock.module
-// swaps the module's exports.
 const realGetFullSubjectModule: {
 	getFullSubjectNormalized: typeof getFullSubjectNormalized;
 } & Record<string, unknown> = await import(GET_FULL_SUBJECT_MODULE);
 
-/** Customers whose DB hydration must throw a retryable driver error. */
 const outageCustomerIds = new Set<string>();
-/** Customers whose hydration must throw a deterministic application error. */
 const fatalCustomerIds = new Set<string>();
 const observedBackupReadOptIn = new Map<string, boolean | undefined>();
 
-// Both /check hydration paths (V2_1 partial + legacy) load the subject through
-// this module, so it is the only seam where a DB outage can be injected.
 mock.module(GET_FULL_SUBJECT_MODULE, () => ({
 	...realGetFullSubjectModule,
 	getFullSubjectNormalized: async (
@@ -193,7 +186,6 @@ test(`${chalk.yellowBright("check-fallback-legacy: /check fallback applies respo
 		);
 
 		expect(response.status).toBe(202);
-		// Fail-open stays allowed: true through the V1_Beta converter.
 		expect(await response.json()).toEqual({
 			allowed: true,
 			code: "feature_found",

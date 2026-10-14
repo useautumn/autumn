@@ -1,33 +1,3 @@
-/**
- * TDD coverage for patch-style item replacement rollover carry.
- *
- * Contract under test:
- *   New behaviors:
- *     - remove_items + add_items carries active rollovers from the deleted
- *       customer entitlement into the newly added matching entitlement.
- *     - A 50% max_percentage rollover on prepaid + consumable messages survives
- *       a prepaid item patch without replacing the customer product.
- *     - A volume-tiered (flat_amount bracket) prepaid item — the shape used by
- *       credit-ladder migrations like mintlify/migrate-tiers — also carries
- *       rollover, as long as the new item declares a matching `rollover` config.
- *   Side effects:
- *     - Existing-mode patch updates do not expire or replace the customer product.
- *     - Stripe subscription state stays consistent with the patched customer product.
- *
- * Pre-impl red: patch init may initialize the added customer entitlement without
- * the rollovers attached to the deleted entitlement.
- * Post-impl green: patch init scopes rollover carry to deleted patch items and
- * applies it to the corresponding inserted customer entitlement.
- *
- * The volume-tier case documents a real production bug: mintlify/migrate-tiers'
- * `buildAiCreditsItem()` omitted `rollover` on its `add_items` payload, so this
- * carry mechanism correctly (by design) treated the new item as non-rollover
- * -eligible and dropped the customer's accumulated balance. Confirmed red with
- * `rollover` stripped from `add_items` (remaining fell from 2250 to 1500 — the
- * rollover vanished); green once `rollover` is included, matching the fix in
- * `buildAiCreditsItem()`.
- */
-
 import { test } from "bun:test";
 import {
 	type ApiCustomerV5,

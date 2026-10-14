@@ -28,11 +28,6 @@ export type PreflightItem = {
 	rc_price: PreflightPrice | null;
 };
 
-/**
- * Pure assembly of the preflight diff: match each plan to its minted RC product and
- * surface Autumn's base price alongside RC's. `listPrices` is injected so this stays
- * free of network/DB — the handler wires in `rcCli.listProductPrices`.
- */
 export const buildRcPreflightItems = async ({
 	products,
 	rcProducts,
@@ -46,7 +41,6 @@ export const buildRcPreflightItems = async ({
 	env: AppEnv;
 	listPrices: (rcProductId: string) => Promise<RevenueCatPrice[]>;
 }): Promise<PreflightItem[]> => {
-	// One RC product per store_identifier is enough to read the name + price.
 	const rcByStoreId = new Map<string, RevenueCatProduct>();
 	for (const rcProduct of rcProducts) {
 		if (!rcByStoreId.has(rcProduct.store_identifier)) {
@@ -95,7 +89,6 @@ export const buildRcPreflightItems = async ({
 	);
 };
 
-/** Read-only preview of what a sync would do per plan (create/rename) + Autumn-vs-RC price divergence. */
 export const handlePreflightRevenueCatSync = createRoute({
 	scopes: [Scopes.Organisation.Read],
 	handler: async (c) => {

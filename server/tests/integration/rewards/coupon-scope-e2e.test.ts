@@ -1,5 +1,3 @@
-/** End-to-end coupon scoping: split, unrelated plans, and versioned plans. */
-
 import { expect, test } from "bun:test";
 import {
 	BillingInterval,
@@ -104,7 +102,6 @@ test.concurrent(
 			variantIds: [variantId],
 		});
 
-		// Before the split the two share a product, so a variant-only coupon fails.
 		await expect(
 			autumnV2_2.post(
 				"/rewards.create",
@@ -118,7 +115,6 @@ test.concurrent(
 		const variant = await getPlan({ ctx, planId: variantId });
 		expect(variant.processor?.id).not.toBe(base.processor?.id);
 
-		// After the split each plan is its own group.
 		const variantCouponId = `e2e_var_${stamp}`;
 		await autumnV2_2.post(
 			"/rewards.create",
@@ -259,8 +255,6 @@ test.concurrent(
 			],
 		});
 
-		// Scope the coupon to v1's prices while v2 is the live version; both
-		// versions share one Stripe product, so neither should be reported missing.
 		const v1 = await ProductService.getFull({
 			db: ctx.db,
 			idOrInternalId: planId,

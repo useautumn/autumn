@@ -9,22 +9,6 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { constructPriceItem } from "@/internal/products/product-items/productItemUtils";
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// ONE-OFF PRODUCT UPDATES
-//
-// These tests cover updates to one-off products (products with interval: null).
-// One-off products are purchased once and do not have recurring charges.
-//
-// Test scenarios:
-// - Updating included usage on one-off message features
-// - One-off products with prepaid items
-// ═══════════════════════════════════════════════════════════════════════════════
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// ONE-OFF PRODUCT WITH FREE MESSAGES
-// ═══════════════════════════════════════════════════════════════════════════════
-
-// Update included usage on one-off product with free messages
 test.concurrent(`${chalk.yellowBright("one-off: update included usage on free messages")}`, async () => {
 	const oldIncludedUsage = 100;
 	const messagesItem = items.monthlyMessages({
@@ -44,7 +28,6 @@ test.concurrent(`${chalk.yellowBright("one-off: update included usage on free me
 		actions: [s.attach({ productId: oneOffProduct.id, timeout: 3000 })],
 	});
 
-	// Track some usage
 	const messagesUsed = 30;
 	await autumnV1.track(
 		{
@@ -55,13 +38,11 @@ test.concurrent(`${chalk.yellowBright("one-off: update included usage on free me
 		{ timeout: 2000 },
 	);
 
-	// Update to increase included usage
 	const newIncludedUsage = 200;
 	const updatedMessagesItem = items.monthlyMessages({
 		includedUsage: newIncludedUsage,
 	});
 
-	// Must include one-off price item to prevent transition to free product
 	const oneOffPriceItem = constructPriceItem({ price: 10, interval: null });
 
 	const updateParams = {
@@ -72,14 +53,12 @@ test.concurrent(`${chalk.yellowBright("one-off: update included usage on free me
 
 	const preview = await autumnV1.subscriptions.previewUpdate(updateParams);
 
-	// No charge for updating included usage on one-off product
 	expect(preview.total).toBe(0);
 
 	await autumnV1.subscriptions.update(updateParams);
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Updated included usage, usage preserved
 	expectCustomerFeatureCorrect({
 		customer,
 		featureId: TestFeature.Messages,
@@ -90,16 +69,11 @@ test.concurrent(`${chalk.yellowBright("one-off: update included usage on free me
 
 	await expectCustomerInvoiceCorrect({
 		customer,
-		count: 1, // Only initial one-off invoice
-		latestTotal: 10, // One-off product price
+		count: 1,
+		latestTotal: 10,
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// ONE-OFF PRODUCT WITH BOOLEAN FEATURES
-// ═══════════════════════════════════════════════════════════════════════════════
-
-// Add boolean feature to one-off product
 test.concurrent(`${chalk.yellowBright("one-off: add boolean feature")}`, async () => {
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
 	const oneOffProduct = products.oneOff({
@@ -116,7 +90,6 @@ test.concurrent(`${chalk.yellowBright("one-off: add boolean feature")}`, async (
 		actions: [s.attach({ productId: oneOffProduct.id })],
 	});
 
-	// Update to add dashboard boolean feature
 	const dashboardItem = items.dashboard();
 	const oneOffPriceItem = constructPriceItem({ price: 10, interval: null });
 
@@ -128,14 +101,12 @@ test.concurrent(`${chalk.yellowBright("one-off: add boolean feature")}`, async (
 
 	const preview = await autumnV1.subscriptions.previewUpdate(updateParams);
 
-	// No charge for adding boolean feature
 	expect(preview.total).toBe(0);
 
 	await autumnV1.subscriptions.update(updateParams);
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Verify dashboard feature is now enabled
 	expectCustomerFeatureCorrect({
 		customer,
 		featureId: TestFeature.Dashboard,
@@ -143,12 +114,11 @@ test.concurrent(`${chalk.yellowBright("one-off: add boolean feature")}`, async (
 
 	await expectCustomerInvoiceCorrect({
 		customer,
-		count: 1, // Only initial one-off invoice
+		count: 1,
 		latestTotal: 10,
 	});
 });
 
-// Remove boolean feature from one-off product
 test.concurrent(`${chalk.yellowBright("one-off: remove boolean feature")}`, async () => {
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
 	const dashboardItem = items.dashboard();
@@ -166,7 +136,6 @@ test.concurrent(`${chalk.yellowBright("one-off: remove boolean feature")}`, asyn
 		actions: [s.attach({ productId: oneOffProduct.id })],
 	});
 
-	// Update to remove dashboard boolean feature
 	const oneOffPriceItem = constructPriceItem({ price: 10, interval: null });
 
 	const updateParams = {
@@ -177,19 +146,17 @@ test.concurrent(`${chalk.yellowBright("one-off: remove boolean feature")}`, asyn
 
 	const preview = await autumnV1.subscriptions.previewUpdate(updateParams);
 
-	// No charge for removing boolean feature
 	expect(preview.total).toBe(0);
 
 	await autumnV1.subscriptions.update(updateParams);
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Verify dashboard feature is removed
 	expect(customer.features[TestFeature.Dashboard]).toBeUndefined();
 
 	await expectCustomerInvoiceCorrect({
 		customer,
-		count: 1, // Only initial one-off invoice
+		count: 1,
 		latestTotal: 10,
 	});
 });

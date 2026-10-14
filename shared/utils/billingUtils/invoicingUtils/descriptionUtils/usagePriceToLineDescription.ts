@@ -22,7 +22,6 @@ export const usagePriceToLineDescription = ({
 		});
 	}
 
-	// 1. Get feature usage description (eg. "3 x 150 credits")
 	const featureUsageDescription = featureUsageToDescription({
 		feature,
 		usage,

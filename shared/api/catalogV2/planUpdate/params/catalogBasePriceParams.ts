@@ -2,13 +2,6 @@ import { BasePriceParamsSchema } from "@api/products/components/basePrice/basePr
 import { ApiPriceProcessorsSchema } from "@api/products/components/processors.js";
 import type { z } from "zod/v4";
 
-/**
- * The base price params plus Stripe price adoption. Adoption is scoped to the
- * catalog path: `validateAdoptedStripePrices` only runs in the catalogV2 init
- * flow, so a stated price id on attach/customize/migration would be persisted
- * unchecked and only surface as a Stripe error at checkout. Keep `processors`
- * here rather than on `BasePriceParamsSchema`.
- */
 export const CatalogBasePriceParamsSchema = BasePriceParamsSchema.extend({
 	processors: ApiPriceProcessorsSchema.optional().meta({
 		description:

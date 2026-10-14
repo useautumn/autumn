@@ -4,15 +4,6 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-/**
- * Uncancel Tests (cancel_action: "uncancel")
- *
- * Tests the uncancel functionality which removes a scheduled cancellation
- * from a subscription via the update subscription API.
- *
- * Usage: subscriptions.update({ customer_id, product_id, cancel_action: "uncancel" })
- */
-
 test(`${chalk.yellowBright("uncancel: basic - canceling product → uncancel → active")}`, async () => {
 	const customerId = "uncancel-basic";
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
@@ -26,11 +17,4 @@ test(`${chalk.yellowBright("uncancel: basic - canceling product → uncancel →
 		],
 		actions: [s.attach({ productId: pro.id }), s.cancel({ productId: pro.id })],
 	});
-
-	// Uncancel via subscriptions.update with cancel_action: "uncancel"
-	// await autumnV1.subscriptions.update({
-	// 	customer_id: customerId,
-	// 	product_id: pro.id,
-	// 	cancel_action: "uncancel",
-	// });
 });

@@ -108,9 +108,7 @@ export const handleListAdminOrgs = createRoute({
 
 		try {
 			requestBlockConfig = await getRequestBlockConfigFromSource();
-		} catch {
-			// Admin list should still render even if S3 is unavailable.
-		}
+		} catch {}
 
 		const memberships = await db
 			.select()
@@ -120,8 +118,6 @@ export const handleListAdminOrgs = createRoute({
 
 		return c.json({
 			rows: orgs.slice(0, 20).map((org) => {
-				// claim_token_hash never leaves the server — the admin list only needs
-				// claim_state to flag orgs an agent provisioned but nobody claimed yet.
 				const {
 					redis_config: rawRedisConfig,
 					claim_token_hash: _claimTokenHash,
@@ -129,8 +125,6 @@ export const handleListAdminOrgs = createRoute({
 				} = org;
 				return {
 					...rest,
-					// Redact encrypted connection string from admin list — UI only
-					// needs host + percent for the table column.
 					redis_config: rawRedisConfig
 						? {
 								url: rawRedisConfig.url,

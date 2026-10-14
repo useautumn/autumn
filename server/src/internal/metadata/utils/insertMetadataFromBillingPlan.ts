@@ -11,9 +11,6 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { generateId } from "@/utils/genUtils";
 import { MetadataService } from "../MetadataService";
 
-/**
- * Creates metadata from a billing plan and optionally links it to a Stripe invoice or checkout session.
- */
 export const insertMetadataFromBillingPlan = async ({
 	ctx,
 	billingPlan,
@@ -31,7 +28,6 @@ export const insertMetadataFromBillingPlan = async ({
 	stripeCheckoutSession?: Stripe.Checkout.Session;
 	resumeAfter?: StripeBillingStage;
 	expiresAt: number | null;
-	/** Override the auto-detected metadata type. Used by the enable_plan_immediately checkout flow. */
 	typeOverride?: MetadataType;
 }) => {
 	const id = generateId("meta");
@@ -73,7 +69,6 @@ export const insertMetadataFromBillingPlan = async ({
 		});
 	}
 
-	// If stripeInvoice, update stripeInvoice with metadata id
 	if (stripeInvoice) {
 		const stripeCli = createStripeCli({ org: ctx.org, env: ctx.env });
 		await stripeCli.invoices.update(stripeInvoice.id, {
@@ -86,9 +81,6 @@ export const insertMetadataFromBillingPlan = async ({
 	return metadata;
 };
 
-/**
- * Updates metadata with checkout session ID after checkout is created.
- */
 export const updateMetadataWithCheckoutSession = async ({
 	ctx,
 	metadataId,

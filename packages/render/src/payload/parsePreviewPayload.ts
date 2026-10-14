@@ -8,8 +8,6 @@ const parseJson = (text: string): unknown => {
 	}
 };
 
-// Unwraps MCP transport shapes around a preview payload: JSON strings,
-// [{text}] content arrays, {content} results, and the {preview, pending} wrapper.
 export const parsePreviewPayload = (preview: unknown): LooseRecord | null => {
 	if (typeof preview === "string") {
 		const parsed = parseJson(preview.trim());

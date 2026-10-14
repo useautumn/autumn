@@ -15,7 +15,6 @@ import {
 import type { TrackDeduction } from "../../api/balances/track/trackResponseV3.js";
 import { customers } from "../cusModels/cusTable.js";
 
-// Factory: fresh builders per call (sharing one builder object across pgTable calls is buggy).
 export const eventColumns = () => ({
 	id: text().primaryKey().notNull(),
 	org_id: text("org_id").notNull(),
@@ -33,11 +32,9 @@ export const eventColumns = () => ({
 	internal_entity_id: text("internal_entity_id"),
 	internal_product_id: text("internal_product_id"),
 
-	// Optional stuff...
 	customer_id: text("customer_id").notNull(),
 	properties: jsonb().$type<Record<string, any>>(),
 	deductions: jsonb().$type<TrackDeduction[]>(),
-	/** When Tinybird confirmed this row; null until then, so a retry sends only what Tinybird has not got. */
 	sent_to_tinybird_at: timestamp("sent_to_tinybird_at", {
 		mode: "date",
 		withTimezone: true,

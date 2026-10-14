@@ -39,9 +39,6 @@ export const createBillingVerifyExportRowStream: CustomerExportRowStreamFactory<
 				sharedStripeCustomerIds: Set<string>;
 			}> = [];
 
-			// Candidates cluster heavily in the oldest customers, so batching the
-			// pool per page would leave it idle for most of the walk and then
-			// bottleneck on the tail.
 			const candidateBatches = async function* () {
 				for await (const scalars of pages) {
 					const { candidates, sharedStripeCustomerIds } =

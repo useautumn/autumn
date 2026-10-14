@@ -17,7 +17,6 @@ type ContributionOp =
 	| Extract<BillingPlanUpdateOp, { table: "pooledContributions" }>
 	| Extract<BillingPlanDeleteOp, { table: "pooledContributions" }>;
 
-/** A source holds no balance of its own once it contributes; the pool's row does. */
 const zeroedSourceColumns = {
 	balance: 0,
 	adjustment: 0,
@@ -37,7 +36,6 @@ const sourceBefore = ({
 	pooled_contribution_id: source.pooled_contribution_id,
 });
 
-/** A new share: the row for the committer, its source zeroed. A source the plan cannot see, or one already contributing, means the worker's copy is behind. */
 const insertContribution = ({
 	op,
 	context,
@@ -67,7 +65,6 @@ const insertContribution = ({
 	];
 };
 
-/** A share removed: its source is released, unless the plan already deleted it with its product. */
 const deleteContribution = ({
 	op,
 	context,
@@ -90,7 +87,6 @@ const deleteContribution = ({
 		table: "customerEntitlements",
 		id: sourceId,
 	});
-	// The share must be the one its source points at; anything else means the worker's copy is behind.
 	if (source?.pooled_contribution_id !== op.id)
 		throw new StaleMutationError({ subject: sourceId });
 	return [
@@ -105,7 +101,6 @@ const deleteContribution = ({
 	];
 };
 
-/** Share rows are never state: the record carries them for the committer, and the pool's totals move by the plan's own deltas. */
 export const contributionOpToRowChanges = ({
 	op,
 	context,

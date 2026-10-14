@@ -6,8 +6,6 @@ import { tryRedisOp } from "@/external/redis/utils/runRedisOp.js";
 const MIGRATION_FILTER_COUNT_PREFIX = "migration_filter_count";
 const MIGRATION_FILTER_COUNT_VERSION = "1";
 
-/** Dashboard tolerance: the filter∪processed count moves slowly, and the
- * exact COUNT costs seconds of DB CPU on multi-million-customer orgs. */
 export const MIGRATION_FILTER_COUNT_TTL_SECONDS = 60;
 
 export const buildMigrationFilterCountCacheKey = ({

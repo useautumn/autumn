@@ -3,11 +3,9 @@ import type { PostgresContext } from "../../../types/postgresClient.js";
 import type { CatalogRowIds } from "../../types/catalogRowsEnvelope.js";
 import { planLicenseCatalogRowsSql } from "./planLicenseCatalogRowsSql.js";
 
-/** The list travels as one jsonb text parameter, so the statement's text never grows with it. */
 const idList = (ids: readonly string[]): SQL =>
 	sql`(SELECT jsonb_array_elements_text(${JSON.stringify(ids)}::text::jsonb))`;
 
-/** One by-key lookup per table in one statement. Entitlements and prices carry no env column, so the org scope is their safety net. */
 export const catalogRowsSql = ({
 	ctx,
 	ids,

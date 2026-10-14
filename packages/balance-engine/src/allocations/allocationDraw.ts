@@ -32,7 +32,6 @@ const counterUsage = ({
 		consumedOf({ deductionState, key: counter.key }),
 	);
 
-/** The shared credits drawn so far in this deduction, by anyone. */
 const sharedDrawn = ({
 	deductionState,
 	gate,
@@ -89,7 +88,6 @@ const distinctGates = ({ context }: { context: DeductionContext }) => [
 	...new Set(context.allocationGates.values()),
 ];
 
-/** Credits a shared row may still give this subject: its own unused share, then credits nobody holds. Null when the row isn't gated. */
 export const allocationHeadroomOf = ({
 	context,
 	deductionState,
@@ -119,7 +117,6 @@ const addConsumed = ({
 	consumed.set(key, (consumed.get(key) ?? new Decimal(0)).plus(amount));
 };
 
-/** Gives `credits` back: the entity's counter drops, and claimed drops only by what falls back under its share. */
 const releaseAllocation = ({
 	context,
 	deductionState,
@@ -154,7 +151,6 @@ const releaseAllocation = ({
 	});
 };
 
-/** Records a shared draw (all of it against the entity, its own-share part as claimed); a negative draw is a refund. */
 export const consumeAllocation = ({
 	context,
 	deductionState,
@@ -186,7 +182,6 @@ export const consumeAllocation = ({
 	});
 };
 
-/** What a lock unwind frees on the allocation counters, in the shape a forward draw starts from. */
 export const deltasToFreedAllocation = ({
 	context,
 	deltas,
@@ -203,7 +198,6 @@ export const deltasToFreedAllocation = ({
 			(sum, delta) => sum.plus(delta.balanceDelta),
 			new Decimal(0),
 		);
-		// Unwinding a draw gives credits back; unwinding a refund takes them again.
 		if (net.gt(0))
 			releaseAllocation({ context, deductionState: state, gate, credits: net });
 		const row = context.rows.find((candidate) => candidate.id === gated[0]?.id);
@@ -218,7 +212,6 @@ export const deltasToFreedAllocation = ({
 	return state.allocationConsumed;
 };
 
-/** Counter rows the draw moved, created on first use and restarted when their cycle rolled. */
 export const allocationCountersToRowChanges = ({
 	context,
 	deductionState,

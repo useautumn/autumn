@@ -7,10 +7,6 @@ import { stripeRefToId } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { InvoiceService } from "@/internal/invoices/InvoiceService.js";
 
-/**
- * Filters refund-direction line items out of the plan and computes
- * the refund amount (full or prorated) against the last invoice.
- */
 export const computeRefundPlan = async ({
 	ctx,
 	billingContext,
@@ -63,7 +59,6 @@ export const computeRefundPlan = async ({
 	if (billingContext.refundLastPayment === "full") {
 		refundAmount = remainingRefundable;
 	} else {
-		// Prorated: sum the refund line items (they're negative amounts representing credits)
 		const proratedTotal = refundLineItems.reduce(
 			(sum, li) => sum + (li.amount ?? 0),
 			0,

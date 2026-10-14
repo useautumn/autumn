@@ -1,10 +1,3 @@
-/**
- * End-to-end read pipeline at 50k page size: claim select → partition →
- * candidate select, timed with plan-scan summaries. Read-only.
- *
- *   bun tests/perf/batch-migrations/probes/probe50kReadPipeline.ts
- */
-
 import type { EntitlementWithFeature } from "@autumn/shared";
 import { EntInterval, MigrationItemRunStatus } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
@@ -86,7 +79,6 @@ const main = async () => {
 			`\n═══ ${scenario.key} — page size ${PAGE_SIZE.toLocaleString()} ═══`,
 		);
 
-		// 1. claim select
 		const claimQuery = () =>
 			buildCustomerSelect({
 				orgId: ctx.org.id,
@@ -114,7 +106,6 @@ const main = async () => {
 		);
 		const ids = claimed.map((row) => row.internal_id);
 
-		// 3. candidate select
 		const candidateQuery = buildAddCandidateRowsQuery({
 			internalCustomerIds: ids,
 			scope: buildOperationScope({

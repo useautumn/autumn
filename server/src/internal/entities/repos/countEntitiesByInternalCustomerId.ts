@@ -2,8 +2,6 @@ import { entities } from "@autumn/shared";
 import { and, eq, sql } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 
-/** Capped count of a customer's live entities. The inner LIMIT stops the scan
- * at `cap` rows, so huge customers cost O(cap) instead of a full count. */
 export const countEntitiesByInternalCustomerId = async ({
 	db,
 	internalCustomerId,

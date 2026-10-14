@@ -28,7 +28,6 @@ const getDbFeature = async ({
 	return feature;
 };
 
-/** Nullable fields: pass null to assert null, omit to skip. Applies to EVERY row. */
 export const expectDbEntitlementsCorrect = async ({
 	ctx,
 	featureId,
@@ -64,7 +63,6 @@ export const expectDbEntitlementsCorrect = async ({
 	}
 };
 
-/** Nullable fields: pass null to assert null, omit to skip. Applies to EVERY row. */
 export const expectDbPricesCorrect = async ({
 	ctx,
 	featureId,
@@ -103,7 +101,6 @@ export const expectDbPricesCorrect = async ({
 	}
 };
 
-/** The credit system's schema references exactly these metered feature ids. */
 export const expectDbCreditSchemaCorrect = async ({
 	ctx,
 	creditSystemId,
@@ -122,7 +119,6 @@ export const expectDbCreditSchemaCorrect = async ({
 	).toEqual([...meteredFeatureIds].sort());
 };
 
-/** Feature row exists and is archived. */
 export const expectDbFeatureArchived = async ({
 	ctx,
 	featureId,

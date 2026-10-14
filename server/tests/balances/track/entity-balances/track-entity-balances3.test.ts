@@ -12,7 +12,7 @@ import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js"
 const messagesItem = constructFeatureItem({
 	featureId: TestFeature.Messages,
 	includedUsage: 100,
-	entityFeatureId: TestFeature.Users, // Makes this PER entity
+	entityFeatureId: TestFeature.Users,
 });
 
 const freeProd = constructProduct({
@@ -65,7 +65,6 @@ describe(`${chalk.yellowBright("track-entity-balances3: per-entity balance track
 
 		await autumnV1.entities.create(customerId, entities);
 
-		// Initialize caches
 		await autumnV1.customers.get(customerId);
 		for (const entity of entities) {
 			await autumnV1.entities.get(customerId, entity.id);
@@ -77,7 +76,6 @@ describe(`${chalk.yellowBright("track-entity-balances3: per-entity balance track
 
 		const balance = customer.features[TestFeature.Messages]?.balance;
 
-		// 3 entities × 100 messages each = 300 total
 		expect(balance).toBe(300);
 	});
 
@@ -90,7 +88,6 @@ describe(`${chalk.yellowBright("track-entity-balances3: per-entity balance track
 		}
 	});
 
-	// Track 10 messages on each entity
 	for (let i = 0; i < entities.length; i++) {
 		test(`track 10 messages on ${entities[i].id}`, async () => {
 			await autumnV1.track({
@@ -100,14 +97,12 @@ describe(`${chalk.yellowBright("track-entity-balances3: per-entity balance track
 				value: 10,
 			});
 
-			// Customer should have 10 less
 			const expectedCustomerBalance = 300 - (i + 1) * 10;
 			const customer = await autumnV1.customers.get(customerId);
 			expect(customer.features[TestFeature.Messages].balance).toBe(
 				expectedCustomerBalance,
 			);
 
-			// Check all entity balances
 			for (let j = 0; j < entities.length; j++) {
 				const fetchedEntity = await autumnV1.entities.get(
 					customerId,
@@ -128,11 +123,9 @@ describe(`${chalk.yellowBright("track-entity-balances3: per-entity balance track
 			value: 10,
 		});
 
-		// Customer should have 10 less (now 260)
 		const customer = await autumnV1.customers.get(customerId);
 		expect(customer.features[TestFeature.Messages].balance).toBe(260);
 
-		// Sum of entity balances should be 10 less (was 270, now 260)
 		let totalEntityBalance = 0;
 		for (const entity of entities) {
 			const fetchedEntity = await autumnV1.entities.get(customerId, entity.id);
@@ -143,22 +136,18 @@ describe(`${chalk.yellowBright("track-entity-balances3: per-entity balance track
 	});
 
 	test("verify database state matches cache after per-entity and customer-level tracking", async () => {
-		// Wait for database sync
 		await new Promise((resolve) => setTimeout(resolve, 2000));
 
-		// Read from database (skip cache)
 		const customerFromDb = await autumnV1.customers.get(customerId, {
 			skip_cache: "true",
 		});
 		const customerFromCache = await autumnV1.customers.get(customerId);
 
-		// Customer balance should be 260 (started at 300, deducted 30 for entity tracking + 10 for customer tracking)
 		expect(customerFromDb.features[TestFeature.Messages].balance).toBe(260);
 		expect(customerFromDb.features[TestFeature.Messages]).toMatchObject(
 			customerFromCache.features[TestFeature.Messages],
 		);
 
-		// Verify each entity's balance
 		let totalEntityBalanceFromDb = 0;
 		let totalEntityBalanceFromCache = 0;
 
@@ -171,7 +160,6 @@ describe(`${chalk.yellowBright("track-entity-balances3: per-entity balance track
 				entity.id,
 			);
 
-			// Each entity should have some messages deducted
 			expect(entityFromDb.features[TestFeature.Messages]).toEqual(
 				entityFromCache.features[TestFeature.Messages],
 			);
@@ -182,7 +170,6 @@ describe(`${chalk.yellowBright("track-entity-balances3: per-entity balance track
 				entityFromCache.features?.[TestFeature.Messages]?.balance ?? 0;
 		}
 
-		// Sum of entity balances should be 260
 		expect(totalEntityBalanceFromDb).toBe(260);
 		expect(totalEntityBalanceFromCache).toBe(260);
 	});

@@ -40,7 +40,6 @@ export const handleUpdateSubscriptionErrors = async ({
 
 	const { autumn: autumnBillingPlan } = billingPlan;
 
-	// 1. External PSP errors (RevenueCat)
 	handleExternalPSPErrors({
 		customerProduct,
 		action: "update",
@@ -50,7 +49,6 @@ export const handleUpdateSubscriptionErrors = async ({
 		hasFieldUpdates: Object.keys(computeFieldUpdates({ params })).length > 0,
 	});
 
-	// 1. Current customer product errors
 	handleCurrentCustomerProductErrors({ billingContext });
 
 	handleRevertTrialErrors({
@@ -60,25 +58,15 @@ export const handleUpdateSubscriptionErrors = async ({
 
 	handleAutumnManagedTrialInvoiceModeErrors({ billingContext });
 
-	// 2. Product type transition errors
 	handleProductTypeTransitionErrors({ billingContext, autumnBillingPlan });
 
-	// // 3. Feature quantity errors (recurring prepaid prices must have options)
-	// handleFeatureQuantityErrors({
-	// 	autumnBillingPlan,
-	// });
-
-	// 4. Custom plan errors
 	handleCustomPlanErrors({ ctx, billingContext, autumnBillingPlan, params });
 
-	// 4b. License errors (quantity converge + plan restructure guards)
 	handleUpdateSubscriptionLicenseErrors({
 		billingContext,
 		params,
 	});
 
-	// 4b. Manual top-up strict-shape gate (must run before one-off check so it
-	// owns the "Update too complex" message for ManualTopUp requests).
 	handleManualTopUpErrors({ billingContext, params });
 	handleUpdateSubscriptionCustomLineItemsErrors({
 		billingContext,
@@ -86,30 +74,22 @@ export const handleUpdateSubscriptionErrors = async ({
 		params,
 	});
 
-	// 5. One-off errors
 	handleOneOffErrors({ ctx, billingContext, autumnBillingPlan, params });
 
-	// 6. Trial removal with one-off items
 	checkTrialRemovalWithOneOffItems({ billingContext, autumnBillingPlan });
 
-	// 7. Cancel end of cycle errors
 	handleCancelEndOfCycleErrors({ billingContext, billingPlan });
 
-	// 8. Uncancel validation errors
 	handleUncancelErrors({ billingContext });
 
-	// 9. Proration behavior errors
 	handleProrationBehaviorErrors({
 		billingContext,
 		billingPlan,
 	});
 
-	// 10. Billing cycle anchor errors
 	handleUpdateSubscriptionBillingCycleAnchorErrors({ billingContext });
 
-	// 11. Update checkout errors
 	handleUpdateCheckoutErrors({ billingContext });
 
-	// 12. Stripe billing plan errors (validate Stripe resources)
 	handleStripeBillingPlanErrors({ ctx, billingContext, billingPlan });
 };

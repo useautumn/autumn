@@ -19,26 +19,16 @@ const writeCachedScopes = (scopes: string[]) => {
 	} catch {}
 };
 
-/** Call on sign-out so the next user doesn't briefly inherit these scopes. */
 export const clearCachedScopes = () => {
 	try {
 		window.localStorage.removeItem(CACHED_SCOPES_KEY);
 	} catch {}
 };
 
-/**
- * React wrapper around `makeScopeChecker` that reads scopes from the
- * current dashboard session. Scopes are injected onto the session by the
- * `customSession` better-auth plugin (see `server/src/utils/auth.ts`).
- *
- * Returns the same shape as `makeScopeChecker`:
- *   `{ expanded, isAdmin, isSuperuser, has, hasAny, hasAll, check }`
- */
 export function useScopes() {
 	const { data: session, isPending } = useSession();
 	const sessionScopes = (session as any)?.scopes as string[] | undefined;
 
-	// Last known scopes let gated UI render instantly while the session loads.
 	useEffect(() => {
 		if (!isPending) writeCachedScopes(sessionScopes ?? []);
 	}, [isPending, sessionScopes]);

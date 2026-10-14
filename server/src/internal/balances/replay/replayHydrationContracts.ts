@@ -60,7 +60,6 @@ export type ReplayHydrationClock = Readonly<{
 	clearTimeout: (timer: unknown) => void;
 }>;
 
-/** `initialized` is a fresh write; `duplicate` a retry of one; `already_initialized` found state; `already_ready` never needed to initialize. */
 export type ReplayHydrationOutcome =
 	| "initialized"
 	| "duplicate"

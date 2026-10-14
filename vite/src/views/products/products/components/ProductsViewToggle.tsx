@@ -9,9 +9,6 @@ interface ProductsViewToggleProps {
 	className?: string;
 }
 
-/**
- * Icon toggle to switch between list view and AI chat view
- */
 export function ProductsViewToggle({
 	value,
 	onValueChange,

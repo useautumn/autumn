@@ -42,7 +42,6 @@ export const workerPostgresClientConfig = ({
 	...getPostgresPools().balanceWorker,
 });
 
-/** One pool per worker, closed with it; its size counts against the fleet's PgBouncer client budget. */
 export const createWorkerPostgresClient = ({
 	ctx,
 	env,
@@ -59,14 +58,12 @@ type WorkerDbContext = {
 		DatabaseTimings,
 		"queryStarted" | "queryFinished" | "recordSubjectSnapshots"
 	>;
-	/** Read at each probe for `writtenAfter`; absent, every row of this build's version answers. */
 	subjectSnapshotsConfig?: Pick<
 		EdgeConfigStore<SubjectSnapshotsEdgeConfig>,
 		"get"
 	>;
 };
 
-/** Which rows a snapshot probe may answer with, as the config stands when it runs. */
 const snapshotProbeOf = ({ ctx }: { ctx: WorkerDbContext }) => ({
 	stateVersion: BALANCE_WORKER_SUBJECT_SNAPSHOT_VERSION,
 	writtenAfter: ctx.subjectSnapshotsConfig?.get().writtenAfter ?? 0,
@@ -280,7 +277,6 @@ export const createCommitterDb = ({
 				}),
 		});
 		const { snapshots } = result;
-		// A rolled-back flush answers zero counts: nothing to put on the database line.
 		if (snapshots && snapshots.upserted + snapshots.deleted.length > 0)
 			ctx.timings.recordSubjectSnapshots({
 				upserted: snapshots.upserted,
@@ -290,7 +286,6 @@ export const createCommitterDb = ({
 	},
 });
 
-/** The flush's synchronous work shows up in the stall sections beside the request path's. */
 function timeFlushSection<Value>(label: string, run: () => Value): Value {
 	return timeSync({ label }, run);
 }

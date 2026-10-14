@@ -6,13 +6,8 @@ import {
 	nextAtomId,
 } from "./byocCacheUtils.js";
 
-/** More leftover groups than this for one owner means something else is wrong; refuse instead of looping. */
 const MAX_LEFTOVER_GROUPS = 8;
 
-/**
- * The owner's next Atom id that names no existing deployment group. A removed Atom's group can outlive
- * its record, and a start by that external id would reuse it, so each one found is taken as an id too.
- */
 export const nextFreeAtomId = async ({
 	owner,
 	existingAtomIds,

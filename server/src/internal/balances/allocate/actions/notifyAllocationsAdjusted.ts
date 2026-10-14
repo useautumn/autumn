@@ -3,7 +3,6 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { sendBillingUpdatedWebhook } from "@/internal/billing/v2/workflows/sendBillingUpdatedWebhook/sendBillingUpdatedWebhook.js";
 import { getFullSubject } from "@/internal/customers/repos/getFullSubject/getFullSubject.js";
 
-/** One billing.updated tagged allocations_adjusted, for changes no plan event already carries. */
 export const notifyAllocationsAdjusted = async ({
 	ctx,
 	customerId,
@@ -12,7 +11,6 @@ export const notifyAllocationsAdjusted = async ({
 	customerId: string;
 }): Promise<void> => {
 	try {
-		// Read from primary: this runs right after the allocation write.
 		const fullSubject = await getFullSubject({
 			ctx,
 			customerId,

@@ -9,11 +9,6 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// PAID-TO-PAID: BOOLEAN FEATURE ADD/REMOVE
-// ═══════════════════════════════════════════════════════════════════════════════
-
-// 1.1 Add boolean feature to paid plan
 test.concurrent(
 	`${chalk.yellowBright("p2p: add boolean feature")}`,
 	async () => {
@@ -30,7 +25,6 @@ test.concurrent(
 			actions: [s.attach({ productId: "pro" })],
 		});
 
-		// Track some usage before update
 		const messagesUsage = 35;
 		await autumnV1.track(
 			{
@@ -41,14 +35,12 @@ test.concurrent(
 			{ timeout: 2000 },
 		);
 
-		// Get original reset time
 		const customerBefore =
 			await autumnV1.customers.get<ApiCustomerV3>(customerId);
 		const originalResetAt =
 			customerBefore.features[TestFeature.Messages].next_reset_at;
 		expect(originalResetAt).toBeDefined();
 
-		// Add boolean dashboard feature
 		const dashboardItem = items.dashboard();
 
 		const updateParams = {
@@ -59,14 +51,12 @@ test.concurrent(
 
 		const preview = await autumnV1.subscriptions.previewUpdate(updateParams);
 
-		// Boolean features have no price impact
 		expect(preview.total).toBe(0);
 
 		await autumnV1.subscriptions.update(updateParams);
 
 		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-		// Messages usage should stay the same
 		await expectCustomerFeatureCorrect({
 			autumn: autumnV1,
 			customerId,
@@ -77,10 +67,8 @@ test.concurrent(
 			resetsAt: originalResetAt!,
 		});
 
-		// Dashboard should be accessible (boolean feature)
 		expect(customer.features[TestFeature.Dashboard]).toBeDefined();
 
-		// Verify invoice matches preview
 		await expectCustomerInvoiceCorrect({
 			customer,
 			count: 2,
@@ -96,7 +84,6 @@ test.concurrent(
 	},
 );
 
-// 1.2 Remove boolean feature from paid plan
 test.concurrent(
 	`${chalk.yellowBright("p2p: remove boolean feature")}`,
 	async () => {
@@ -117,7 +104,6 @@ test.concurrent(
 			actions: [s.attach({ productId: "pro" })],
 		});
 
-		// Track some usage before update
 		const messagesUsage = 60;
 		await autumnV1.track(
 			{
@@ -128,16 +114,13 @@ test.concurrent(
 			{ timeout: 2000 },
 		);
 
-		// Get original reset time
 		const customerBefore =
 			await autumnV1.customers.get<ApiCustomerV3>(customerId);
 		const originalResetAt =
 			customerBefore.features[TestFeature.Messages].next_reset_at;
 
-		// Verify dashboard is accessible before
 		expect(customerBefore.features[TestFeature.Dashboard]).toBeDefined();
 
-		// Remove dashboard feature
 		const updateParams = {
 			customer_id: customerId,
 			product_id: pro.id,
@@ -146,14 +129,12 @@ test.concurrent(
 
 		const preview = await autumnV1.subscriptions.previewUpdate(updateParams);
 
-		// Boolean features have no price impact
 		expect(preview.total).toBe(0);
 
 		await autumnV1.subscriptions.update(updateParams);
 
 		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-		// Messages usage should stay the same
 		await expectCustomerFeatureCorrect({
 			autumn: autumnV1,
 			customerId,
@@ -164,10 +145,8 @@ test.concurrent(
 			resetsAt: originalResetAt!,
 		});
 
-		// Dashboard should no longer be accessible
 		expect(customer.features[TestFeature.Dashboard]).toBeUndefined();
 
-		// Verify invoice matches preview
 		await expectCustomerInvoiceCorrect({
 			customer,
 			count: 2,

@@ -44,13 +44,9 @@ export const CopyProductDialog = ({
 	const { refetch } = useProductsQuery();
 	const navigate = useNavigate();
 
-	// Inside a named sandbox, "Copy to Sandbox/Production" promotes into the
-	// master org (a different org), so a same-env same-id copy isn't a collision.
 	const inNamedSandbox = env === AppEnv.Sandbox && !!activeSandbox;
 
-	// A variant's base only exists in its own env, so it can only be copied there.
 	const isVariant = !!product.base_internal_product_id;
-	// Variants are never promoted, so their copy stays in the current org.
 	const copiesIntoCurrentOrg = isVariant || !inNamedSandbox;
 	const otherEnv = env === AppEnv.Live ? AppEnv.Sandbox : AppEnv.Live;
 
@@ -59,7 +55,6 @@ export const CopyProductDialog = ({
 	const [id, setId] = useState(product.id);
 	const [toEnv, setToEnv] = useState<AppEnv>(otherEnv);
 
-	// The plan can load after mount, so prefill from the latest plan on open.
 	useEffect(() => {
 		if (!open) return;
 		setName(product.name);
@@ -70,14 +65,11 @@ export const CopyProductDialog = ({
 	const envLabel = effectiveEnv === AppEnv.Sandbox ? "Sandbox" : "Production";
 
 	const handleCopy = async () => {
-		// 1. If Name and Id is empty, throw error
 		if (!name || !id) {
 			if (!name) toast.error("Name cannot be empty");
 			else toast.error("ID cannot be empty");
 			return;
 		}
-		// 2. Same-org same-env copy with an unchanged id would collide (skip this
-		// when promoting from a named sandbox — the target is the master org).
 		if (copiesIntoCurrentOrg && env === effectiveEnv && id === product.id) {
 			toast.error("Plan ID already exists");
 			return;
@@ -95,7 +87,6 @@ export const CopyProductDialog = ({
 			toast.success(`Successfully copied plan to ${envLabel}`);
 			setOpen(false);
 
-			// Construct the copied product with the new ID
 			const copiedProduct: ProductV2 = {
 				...product,
 				id: id,
@@ -105,8 +96,6 @@ export const CopyProductDialog = ({
 			if (onSuccess) {
 				await onSuccess(copiedProduct);
 			} else if (copiesIntoCurrentOrg && env === effectiveEnv) {
-				// Same-org duplicate lands in this view; a promote goes to another
-				// org, so don't navigate to a same-id plan in the current context.
 				navigateTo(`/products/${id}`, navigate);
 			}
 		} catch (error: unknown) {

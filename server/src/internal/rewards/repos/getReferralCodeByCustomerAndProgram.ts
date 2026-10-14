@@ -2,7 +2,6 @@ import { type ReferralCode, referralCodes } from "@autumn/shared";
 import { and, eq } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 
-/** Find a referral code for a specific customer + reward program */
 export const getReferralCodeByCustomerAndProgram = async ({
 	db,
 	orgId,

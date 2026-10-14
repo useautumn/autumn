@@ -10,10 +10,6 @@ import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { EntitlementService } from "@/internal/products/entitlements/EntitlementService.js";
 import { PriceService } from "@/internal/products/prices/PriceService.js";
 
-/**
- * Re-shape entitlements and prices for a usage-type change. Blocking conditions
- * are validated upstream by detectFeatureUpdateBlockers.
- */
 export const handleFeatureUsageTypeChanged = async ({
 	db,
 	newUsageType,

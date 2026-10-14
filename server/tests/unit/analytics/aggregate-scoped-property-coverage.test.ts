@@ -1,19 +1,3 @@
-/**
- * Drives the real `aggregate()` with mocked Tinybird pipes to pin the
- * completeness routing for customer/entity-scoped property groups.
- *
- * Red-failure mode (pre-fix):
- *  - A scoped group-by never calls the coverage pipe; it reconciles against
- *    `getCountAndSum` (every event in scope), so one event without the property
- *    reads as gate loss and the query reruns ungated over raw events.
- *
- * Green-success criteria:
- *  - The coverage pipe is called with the same customer/entity scope as the
- *    grouped read, `getCountAndSum` is never consulted, and a grouped count that
- *    matches coverage produces no ungated retry.
- *  - Nested keys still reconcile against all-event totals, because the coverage
- *    rollups only index top-level keys.
- */
 import { afterAll, beforeEach, expect, mock, test } from "bun:test";
 import chalk from "chalk";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
@@ -115,8 +99,6 @@ const callsNamed = (name: string) => calls.filter((call) => call.name === name);
 test(`${chalk.yellowBright(
 	"aggregate scoped coverage: a customer/entity group-by reconciles against coverage in the same scope",
 )}`, async () => {
-	// 100 events carry apiKeyId, 1 does not; the grouped rollup reports 99 because
-	// one value was gate-dropped. Coverage in scope says 100, so this is real loss.
 	coverageRows = [{ event_name: "scrape", event_count: 100 }];
 
 	await aggregate({
@@ -131,7 +113,6 @@ test(`${chalk.yellowBright(
 	expect(coverageCall.params.property_key).toBe("apiKeyId");
 	expect(callsNamed("getCountAndSum")).toHaveLength(0);
 
-	// Real gate loss still retries ungated.
 	const grouped = callsNamed("aggregateGroupable");
 	expect(grouped).toHaveLength(2);
 	expect(grouped[1].params.skip_property_rollup).toBe("1");
@@ -140,8 +121,6 @@ test(`${chalk.yellowBright(
 test(`${chalk.yellowBright(
 	"aggregate scoped coverage: events without the property never trigger the ungated retry",
 )}`, async () => {
-	// The reported shape: the grouped count equals the number of events that carry
-	// apiKeyId. The extra event without it is invisible to coverage, so no retry.
 	coverageRows = [{ event_name: "scrape", event_count: 99 }];
 
 	await aggregate({
@@ -166,17 +145,12 @@ test(`${chalk.yellowBright(
 
 	expect(callsNamed("propertyRollupCoverage")).toHaveLength(0);
 	expect(callsNamed("getCountAndSum")).toHaveLength(1);
-	// The rollup can't serve a nested key, so the shortfall forces the retry that
-	// actually answers the query.
 	expect(callsNamed("aggregateGroupable")).toHaveLength(2);
 });
 
 test(`${chalk.yellowBright(
 	"aggregate scoped coverage: coverage below the grouped count means an unpopulated rollup, so fall back to all-event totals",
 )}`, async () => {
-	// Every grouped event carries the key, so a populated coverage rollup can never
-	// report fewer than the grouped count. Seeing that means the coverage MV is
-	// empty or mid-backfill, and trusting it would hide real gate loss.
 	coverageRows = [{ event_name: "scrape", event_count: 40 }];
 	countAndSumTotals = { scrape: { count: 120, sum: 120 } };
 
@@ -210,8 +184,6 @@ test(`${chalk.yellowBright(
 test(`${chalk.yellowBright(
 	"aggregate scoped coverage: a small count shortfall defers to the value-aware totals check",
 )}`, async () => {
-	// One gate-dropped event out of a million by count, but it carries most of
-	// the usage: the count tolerance alone would skip it, the totals sum catches it.
 	groupedRows.length = 0;
 	groupedRows.push({
 		period: "2026-08-25 00:00:00",
@@ -258,9 +230,6 @@ test(`${chalk.yellowBright(
 test(`${chalk.yellowBright(
 	"aggregate scoped coverage: propertyless events never turn a minor seam into a retry",
 )}`, async () => {
-	// Ninety events short of coverage (a seam) plus a thousand events that lack
-	// the key entirely: the all-events count exceeds the grouped count, but the
-	// missing value is nil, so there is nothing an ungated scan could recover.
 	groupedRows.length = 0;
 	groupedRows.push({
 		period: "2026-08-25 00:00:00",

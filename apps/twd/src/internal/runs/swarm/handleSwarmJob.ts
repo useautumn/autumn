@@ -76,15 +76,12 @@ const ACCRUE_MS = 10_000;
 const LOG_TAIL_CHARS = 8_000;
 const ETA_MS = 5_000;
 
-/** `committed`: accounts may be claimed / sandboxes may exist for this run. */
 type SwarmJobState = {
 	committed?: boolean;
 	sandboxIds?: string[];
-	/** Set once the run holds the stripe-connect lease; recovery sweeps that run's sub-accounts. */
 	shardAccountIds?: string[];
 };
 
-/** Before the lease goes, so the next run's fallback route never meets this run's accounts. */
 const deleteRunShardAccounts = async ({
 	ctx,
 	runId,
@@ -124,7 +121,6 @@ const sleep = ({ ms, signal }: { ms: number; signal: AbortSignal }) =>
 		);
 	});
 
-/** Block until tw-warm:<sha12> is ready; (re)enqueues warm:<sha> if nothing live builds it. */
 const waitForWarm = async ({
 	ctx,
 	run,
@@ -167,7 +163,6 @@ const toSwarmAccount = ({ accountId, secretKey }: ClaimedAccount) => ({
 	secretKey,
 });
 
-/** A resumed job whose child already ran: the daemon died mid-run. Clean up, never re-run. */
 const recoverCrashedSwarm = async ({
 	ctx,
 	run,
@@ -203,10 +198,6 @@ const recoverCrashedSwarm = async ({
 	});
 };
 
-/**
- * payload: { runId }. Warm → wait in the FIFO account queue → start the child on the first
- * account(s) → feed it more as the allocator frees them → persist + fan out events.
- */
 export const handleSwarmJob: JobHandler = async ({
 	ctx: jobCtx,
 	job,
@@ -313,7 +304,6 @@ export const handleSwarmJob: JobHandler = async ({
 			ctx.logger.warn("accrueRunCost failed", { runId, error: String(error) }),
 		);
 
-	// Accounts from the FIFO allocator: parked until the child exists, then sent over IPC.
 	let closed = false;
 	let delivered = 0;
 	let sendToChild: ((message: SwarmParentMessage) => void) | undefined;
@@ -445,9 +435,7 @@ export const handleSwarmJob: JobHandler = async ({
 		if (abort.signal.aborted) return;
 		milestones.warmReadyAt = new Date().toISOString();
 
-		// From here a crash-resume must clean up (accounts, sandboxes), never re-run.
 		await checkpoint({ committed: true, sandboxIds: [] });
-		// A run of only stripe-connect files brings its own account, so it never queues for the pool.
 		if (workersWanted > 0) {
 			setStatus({ status: "queued", phase: "waiting for a free account" });
 			demand.wants = workersWanted;
@@ -546,7 +534,6 @@ export const handleSwarmJob: JobHandler = async ({
 					void acquireStripeConnectLease().then(async (release) => {
 						releaseShardLease = release;
 						shardLeaseHeld = true;
-						// Recovery must know to sweep before the child can create anything.
 						await writes;
 						await checkpoint({
 							committed: true,
@@ -630,7 +617,6 @@ export const handleSwarmJob: JobHandler = async ({
 							worker: event.worker,
 							chunk: event.text,
 						});
-						// Worker server output is stored for /logs?worker= but too chatty to stream live.
 						if (event.worker && !event.file) return;
 					}
 					publishRunEvent({ runId, event });

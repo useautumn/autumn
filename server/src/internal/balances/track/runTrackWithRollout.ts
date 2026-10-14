@@ -30,9 +30,6 @@ export const runTrackWithRollout = async ({
 	featureDeductions: FeatureDeduction[];
 	apiVersion?: ApiVersion;
 }): Promise<TrackResponseV3> => {
-	// The body key is claimed at accept time and KEPT — even when the track is
-	// queued for replay, the claim already happened, so the worker skips it
-	// (queueTrack marks the message validateTrackBodyIdempotencyKey: false).
 	return withIdempotencyKey({
 		ctx,
 		idempotencyKey: getTrackBodyIdempotencyKey({ body }),

@@ -9,10 +9,6 @@ import type {
 	PendingApprovalNote,
 } from "../../../domain/agentTurnContext.js";
 
-/** The cards still awaiting a decision on this session, echoed to the model
- * on every steer turn so a follow-up that changes the request has the exact
- * body to adjust. Best effort: a lookup failure costs the note, never the
- * turn. */
 export const loadPendingApprovals = async ({
 	env,
 	orgId,

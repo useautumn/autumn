@@ -9,12 +9,6 @@ import type {
 	OveragePriority,
 } from "../types/deductionTypes.js";
 
-/**
- * Whether a row may go below zero, and where it sits in the overage pass.
- * A row with its own overage (a usage price, a plan or customer control) takes
- * overage before a free allocated grant, so a priced add-on bills the units a
- * free plan's grant would otherwise absorb.
- */
 export const resolveOverageAllowance = ({
 	customerEntitlement,
 	overageBehaviour,

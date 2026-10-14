@@ -9,7 +9,6 @@ export type SelectorChip = {
 	onRemove?: () => void;
 };
 
-/** Dropdown trigger showing selected items as chips, collapsing the rest into a +N count */
 export function ChipSelectTrigger({
 	chips,
 	placeholder,

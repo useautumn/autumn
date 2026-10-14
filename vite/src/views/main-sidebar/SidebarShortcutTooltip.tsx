@@ -9,7 +9,6 @@ import type { ReactElement } from "react";
 
 const SHORTCUT_TOOLTIP_DELAY_MS = 400;
 
-/** Label plus ⌘/Ctrl + key chips, shown after a short hover delay. */
 export const SidebarShortcutTooltip = ({
 	label,
 	shortcutKey,

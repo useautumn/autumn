@@ -3,7 +3,6 @@ import { computeVersioningOptions } from "@/internal/catalogV2/actions/updateCat
 import type { ProductStatesContext } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext";
 import type { UpsertProductPlan } from "@/internal/catalogV2/actions/updateCatalog/types/upsertProductPlan";
 
-/** Pickable strategies for this update row. */
 export const buildPlanVersioning = ({
 	upsert,
 	versionsForPlan,

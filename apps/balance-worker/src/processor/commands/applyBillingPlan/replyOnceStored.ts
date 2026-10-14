@@ -2,7 +2,6 @@ import type { ApplyBillingPlanReply } from "@autumn/balance-worker-client/protoc
 import type { PartitionProcessorScope } from "../../types/partitionProcessor.js";
 import type { DecidedMutation } from "../../writer/types/mutation.js";
 
-/** A written plan answers once stored; one that wrote nothing still waits, since the caller reads Postgres next. */
 export const replyOnceStored = async ({
 	scope,
 	decided,

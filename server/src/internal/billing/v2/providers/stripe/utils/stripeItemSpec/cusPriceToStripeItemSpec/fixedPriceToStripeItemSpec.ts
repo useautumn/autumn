@@ -10,7 +10,6 @@ import {
 } from "@autumn/shared";
 import { fixedPriceToInlineStripePrice } from "./fixedPriceToInlineStripePrice";
 
-/** Converts a fixed-cycle or one-off price to a StripeItemSpec. */
 export const fixedPriceToStripeItemSpec = ({
 	cusPrice,
 	cusProduct,

@@ -18,7 +18,6 @@ const formatStripeCurrency = ({
 	});
 };
 
-/** "/mo", "/yr", or "/3 mo" for multi-period prices; empty for one-off. */
 const formatIntervalSuffix = ({ price }: { price: Stripe.Price }): string => {
 	const recurring = price.recurring;
 	if (!recurring) return "";
@@ -28,7 +27,6 @@ const formatIntervalSuffix = ({ price }: { price: Stripe.Price }): string => {
 	});
 };
 
-/** A Stripe item's price as billed: "$30,000/yr", "$0.01/unit/mo (metered)". */
 export const formatStripeItemPrice = ({
 	price,
 }: {

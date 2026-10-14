@@ -2,7 +2,6 @@ import { createBalanceWorkerEnv } from "@autumn/env/balanceWorker";
 import { Kafka } from "kafkajs";
 import { validateBalanceWorkerTopics } from "../src/init/workerConfig.js";
 
-/** One partition keeps invalidations in order; an hour outlives any cache TTL, so nothing older matters. */
 const CATALOG_INVALIDATION_PARTITIONS = 1;
 const CATALOG_INVALIDATION_RETENTION_MS = "3600000";
 

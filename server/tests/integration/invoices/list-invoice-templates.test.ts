@@ -1,8 +1,3 @@
-/**
- * invoices.listTemplates: offset-paginated list of the org's invoice templates,
- * whose ids are what `invoice_template_id` takes.
- */
-
 import { expect, test } from "bun:test";
 import type { ListInvoiceTemplatesResponse } from "@autumn/shared";
 import ctx from "@tests/utils/testInitUtils/createTestContext";
@@ -64,7 +59,6 @@ test(`${chalk.yellowBright("invoices.listTemplates: newest first, with offset pa
 	expect(secondPage.offset).toBe(1);
 	expect(secondPage.list[0].id).toBe(ids[1]);
 
-	// Past the end of the list, nothing is returned and nothing follows.
 	const emptyPage = (await autumnV2_3.post("/invoices.listTemplates", {
 		limit: 1,
 		offset: all.list.length,

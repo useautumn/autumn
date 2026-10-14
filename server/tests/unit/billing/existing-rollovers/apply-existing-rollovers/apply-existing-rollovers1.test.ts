@@ -42,13 +42,11 @@ describe(chalk.yellowBright("applyExistingRollovers"), () => {
 				},
 			];
 
-			// Act
 			applyExistingRollovers({
 				customerProduct: newCusProduct,
 				existingRollovers,
 			});
 
-			// Assert: rollover should be added to the cusEnt
 			const updatedCusEnt = newCusProduct.customer_entitlements.find(
 				(ce) => ce.feature_id === "words",
 			);

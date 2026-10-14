@@ -1,5 +1,3 @@
-/** set_plans re-lists an entity's Pro, with and without a live Stripe sub: same Stripe outcomes as the customer level. */
-
 import { activeState, noSubState } from "../utils/relistStates";
 import { defineRelistSuite } from "../utils/relistSuite";
 

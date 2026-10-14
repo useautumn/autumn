@@ -7,13 +7,6 @@ import { timeout } from "@tests/utils/genUtils";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-/**
- * Tests distributed lock preventing race conditions on paid-allocated features.
- *
- * The lock ensures that concurrent track requests for paid-allocated features
- * (which may trigger billing operations) are serialized to prevent race conditions.
- */
-
 test(
 	`${chalk.yellowBright("paid-allocated-lock: concurrent track requests are serialized by distributed lock")}`,
 	async () => {
@@ -34,13 +27,11 @@ test(
 			actions: [s.attach({ productId: pro.id })],
 		});
 
-		// Verify initial balance
 		const customerBefore = (await autumnV2.customers.get(
 			customerId,
 		)) as ApiCustomer;
 		expect(customerBefore.balances[TestFeature.Users].current_balance).toBe(0);
 
-		// 1. Send concurrent requests - lock should serialize them
 		console.log("🚀 Starting 5 concurrent track calls (2 users each)...");
 
 		const promises = Array(5)
@@ -61,10 +52,8 @@ test(
 			`✅ Successful: ${successCount}, ❌ Rejected (lock): ${rejectedCount}`,
 		);
 
-		// At least one should succeed
 		expect(successCount).toEqual(1);
 
-		// 2. Verify balance is mathematically correct
 		await timeout(2000);
 		const customerAfter = (await autumnV2.customers.get(
 			customerId,
@@ -77,12 +66,10 @@ test(
 
 		expect(customerAfter.invoices?.length).toBe(2);
 
-		// Balance equation: granted + purchased - usage = current
 		const expectedCurrentBalance =
 			balance.granted_balance + balance.purchased_balance - balance.usage;
 		expect(balance.current_balance).toBe(expectedCurrentBalance);
 
-		// 3. Sequential track after concurrent burst should work
 		console.log("📊 Executing sequential track after burst...");
 		await autumnV2.track({
 			customer_id: customerId,
@@ -97,7 +84,6 @@ test(
 			expectedUsage + 1,
 		);
 
-		// 4. Verify DB consistency
 		await new Promise((r) => setTimeout(r, 3000));
 
 		const dbCustomer = (await autumnV2.customers.get(customerId, {

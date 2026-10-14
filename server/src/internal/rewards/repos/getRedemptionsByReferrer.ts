@@ -7,7 +7,6 @@ import {
 import { eq } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 
-/** Find redemptions where the given customer is the referrer */
 export const getRedemptionsByReferrer = async ({
 	db,
 	internalCustomerId,

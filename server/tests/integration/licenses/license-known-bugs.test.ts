@@ -162,16 +162,12 @@ test.concurrent(
 			({ id }) => id === assignment.id,
 		);
 		expect(assignmentRow).toMatchObject({ status: "active" });
-		// The ended trial keeps its (hidden) row; check the restored parent's.
 		const restoredPool = dbState.pools.find(
 			(pool) => pool.parent_customer_product_id === activePrevious?.id,
 		);
 		expect(restoredPool).toMatchObject({ granted: 1, remaining: 0 });
-		// Assignments anchor to their pool via the plan-license link.
 		expect(assignmentRow?.customer_license_link_id).toBe(restoredPool?.link_id);
 
-		// Capacity reads the stored remaining: the only seat is taken, so a
-		// second attach (before any licenses.list reconcile) must be rejected.
 		await expectAutumnError({
 			errMessage: "No available licenses",
 			func: () =>

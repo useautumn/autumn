@@ -1,5 +1,3 @@
-/** set_plans cancels an incomplete or paused subscription and moves its plans onto one new subscription billed in full now, through Checkout when there is no card. */
-
 import { expect, test } from "bun:test";
 import { CusProductStatus } from "@autumn/shared";
 import {
@@ -115,7 +113,6 @@ test.concurrent(
 	},
 );
 
-/** Stripe's session list can lag behind an expire, so poll until it settles. */
 const expectCheckoutSessionStatuses = async ({
 	ctx,
 	stripeCustomerId,
@@ -217,7 +214,6 @@ test.concurrent(
 	},
 );
 
-/** A declined first payment leaves pro Pending on an incomplete subscription. */
 const setupIncompletePro = async ({ customerId }: { customerId: string }) => {
 	const pro = products.pro({
 		items: [items.monthlyMessages({ includedUsage: 100 })],

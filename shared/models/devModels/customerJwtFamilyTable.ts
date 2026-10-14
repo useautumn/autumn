@@ -9,12 +9,6 @@ import {
 } from "drizzle-orm/pg-core";
 import { customers } from "../cusModels/cusTable.js";
 
-/**
- * Source of truth for per-customer JWT revocation/rotation state. One row per
- * customer (keyed by the immutable internal_customer_id). Redis is only a cache
- * over this table. The FK cascade deletes the family when the customer is
- * deleted, so churned customers can't leave outstanding tokens.
- */
 export const customerJwtFamilies = pgTable(
 	"customer_jwt_families",
 	{

@@ -1,14 +1,3 @@
-/**
- * A per-customer migration whose license customize carries a base price change.
- *
- * setupCustomPlanLicenses mints a plan_license row for the customized link and
- * returns it as insertPlanLicenses for execute to persist. The migration's
- * product context dropped that field, so the row was never inserted while the
- * customer's pool was still repointed onto its id.
- *
- * Red: the run fails on customer_licenses_plan_license_fkey.
- * Green: the run completes and the pool resolves to a live link.
- */
 import { expect, test } from "bun:test";
 import { BillingInterval, planLicenses } from "@autumn/shared";
 import { runChunkedMigration } from "@tests/integration/billing/migrations-v2/utils/runChunkedMigration";
@@ -72,7 +61,6 @@ test(`${chalk.yellowBright("migration: a license base price change persists its 
 
 	expect(result).toBeDefined();
 
-	// Every pool must resolve to a link that exists.
 	const { pools } = await getLicenseDbState({ db: ctx.db, customerId });
 
 	const linkIds = pools

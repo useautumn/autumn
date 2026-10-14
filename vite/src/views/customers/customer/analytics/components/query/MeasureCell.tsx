@@ -33,7 +33,6 @@ const MEASURES = [
 
 export const MeasureCell = () => {
 	const { mode, changeMode, customerId } = useBreakdown();
-	// Deductions are tracked per customer, so they need one picked.
 	const measures = customerId
 		? MEASURES
 		: MEASURES.filter((measure) => measure.value !== DEDUCTIONS_MODE);

@@ -10,27 +10,16 @@ import chalk from "chalk";
 import { Decimal } from "decimal.js";
 import { runQueuedTrack } from "@/internal/balances/track/runQueuedTrack.js";
 
-// ═══════════════════════════════════════════════════════════════════
-// TRACK-TOKENS-REPLAY: queued replay + plain value tracks on AI credit features
-//
-// When Redis fails open, track_tokens queues only the TrackParams body — the
-// token context (FeatureDeduction.tokens) is not serialized. The
-// replay worker rebuilds deductions from {feature_id, value}, so the USD value
-// must deduct 1:1 from the AI credit balance, exactly like the original token
-// track would have. Parent credit systems are overflow pools: untouched while
-// the AI balance covers the deduction (same as live track_tokens behavior).
-// ═══════════════════════════════════════════════════════════════════
-
 test.concurrent(
 	`${chalk.yellowBright("track-tokens-replay-1: queued replay body deducts AI credits 1:1")}`,
 	async () => {
 		const aiCreditsItem = items.free({
 			featureId: TestFeature.AiCredits,
-			includedUsage: 100, // $100 of AI usage
+			includedUsage: 100,
 		});
 		const orbsItem = items.free({
 			featureId: TestFeature.Orbs,
-			includedUsage: 50_000, // orbs schema: 1000 orbs per $1 of AI usage
+			includedUsage: 50_000,
 		});
 		const freeProd = products.base({
 			id: "free",
@@ -46,8 +35,6 @@ test.concurrent(
 			actions: [s.attach({ productId: freeProd.id })],
 		});
 
-		// The USD cost computed by the original track_tokens call; only this
-		// survives in the queued body.
 		const usdCost = 0.125;
 
 		await runQueuedTrack({

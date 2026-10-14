@@ -8,11 +8,9 @@ export const useGlobalErrorHandler = () => {
 
 	const handleOrganizationRemoval = async (orgId: string) => {
 		try {
-			// Get user's organizations
 			const { data: organizations } = await authClient.organization.list();
 
 			if (organizations && organizations.length > 0) {
-				// User has other organizations, switch to the first available one
 				const nextOrg = organizations.find((org) => org.id !== orgId);
 				if (nextOrg) {
 					await switchActiveOrg(nextOrg.id);
@@ -21,7 +19,6 @@ export const useGlobalErrorHandler = () => {
 				}
 			}
 
-			// User has no organizations left, redirect to sign-in
 			navigate("/sign-in");
 			return false;
 		} catch (error) {

@@ -37,8 +37,6 @@ const toApiFlag = ({ item }: { item: ChangedItem }): ApiFlagV0 => ({
 	expires_at: null,
 });
 
-/** Deleted rows describe the pre-migration state, created rows the post
- * state — a replace contributes one of each, so the diff carries real usage. */
 export const toCustomerItemChanges = ({
 	items,
 	entitlementLookup,

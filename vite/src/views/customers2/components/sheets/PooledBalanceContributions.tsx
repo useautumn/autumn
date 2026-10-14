@@ -22,7 +22,6 @@ import {
 import { useDebounce } from "@/hooks/useDebounce";
 import { useGoToEntity } from "../../customer/hooks/useGoToEntity";
 
-/** The plans feeding a pooled balance, labelled by source (entity or customer) and plan. */
 export function PooledBalanceContributions({
 	pooledBalance,
 }: {
@@ -44,7 +43,6 @@ export function PooledBalanceContributions({
 	const pageStart = page * CONTRIBUTIONS_PAGE_SIZE;
 	const pageCount = Math.ceil(totalFilteredCount / CONTRIBUTIONS_PAGE_SIZE);
 
-	/** Customer-scoped contributions have no entity to name. */
 	const sourceLabel = (contribution: ApiPooledBalanceContributionV0) =>
 		contribution.entity_name ?? contribution.entity_id ?? "Customer";
 
@@ -150,8 +148,6 @@ function Subheading({ children }: { children: ReactNode }) {
 	);
 }
 
-/** A pool only merges balances that share its feature plus every property below,
- * so surface this pool's actual values as the match criteria. */
 function PoolingCriteria({
 	pooledBalance,
 }: {
@@ -206,8 +202,6 @@ function resetLabel({
 	return `Every ${interval}`;
 }
 
-/** Reverses rolloverConfigToSignature so the card reads back the same terms the
- * pool matched on. */
 function rolloverSignatureToLabel(signature: string): string {
 	if (signature === "none") return "None";
 

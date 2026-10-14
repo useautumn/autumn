@@ -97,7 +97,6 @@ const planOf = ({
 	expiringPooledBalanceIds,
 });
 
-/** The customer holds a product with one grant and nothing pooled yet. */
 const heldState = (): SubjectState =>
 	createSubjectState({
 		identity,
@@ -106,7 +105,6 @@ const heldState = (): SubjectState =>
 		customerEntitlements: [sourceRow()],
 	});
 
-/** The customer already holds a pool of 100 fed by source_1. */
 const pooledState = ({
 	customerLicenseLinkId = null,
 }: {

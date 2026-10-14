@@ -8,7 +8,6 @@ const prodDefaults = {
 	replicaPoolMax: 9,
 };
 
-// Historical 30-task x 3-fork fleet — keeps the boundary arithmetic exact.
 const NINETY = { fleetProcesses: 90 };
 
 describe("computePoolBudgetWarnings", () => {
@@ -21,7 +20,6 @@ describe("computePoolBudgetWarnings", () => {
 	});
 
 	test("oversized primary pools trip only the primary guard", () => {
-		// 90 x (60 + 60 + 4) + 362 = 11,522 > 0.85 x 12,000 = 10,200
 		const warnings = computePoolBudgetWarnings({
 			...prodDefaults,
 			...NINETY,
@@ -33,7 +31,6 @@ describe("computePoolBudgetWarnings", () => {
 	});
 
 	test("oversized replica pool trips only the replica guard", () => {
-		// 90 x 12 = 1,080 > 0.85 x 1,000 = 850
 		const warnings = computePoolBudgetWarnings({
 			...prodDefaults,
 			...NINETY,
@@ -44,7 +41,6 @@ describe("computePoolBudgetWarnings", () => {
 	});
 
 	test("replica budget boundary: 9 per process fits, 10 does not", () => {
-		// 90 x 9 = 810 <= 850, but 90 x 10 = 900 > 850
 		expect(
 			computePoolBudgetWarnings({
 				...prodDefaults,

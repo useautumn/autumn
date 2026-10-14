@@ -17,7 +17,6 @@ const SERIES: AtomMetricsSeries[] = [
 
 const PERCENT_TICKS = [0, 0.25, 0.5, 0.75, 1];
 
-/** CPU and memory as shares of the machine's limits, each ending on a dot at its latest reading. */
 export const AtomUtilizationChart = ({
 	machine,
 	chartData,

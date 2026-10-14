@@ -54,8 +54,6 @@ const unwrapOutcome = <T>(outcome: ReadOutcome<T>): T => {
 	throw outcome.reason;
 };
 
-/** Starts one capped, delayed backup; the first successful read wins.
- * Losing queries retain their slot until they settle because they cannot be cancelled safely. */
 export const runWithDelayedPostgresBackupRead = async <T>({
 	primaryFn,
 	backupFn,
@@ -74,9 +72,7 @@ export const runWithDelayedPostgresBackupRead = async <T>({
 	const emit = (event: DelayedPostgresBackupReadEvent) => {
 		try {
 			onEvent?.(event);
-		} catch {
-			// Observability must never alter the read outcome.
-		}
+		} catch {}
 	};
 
 	const primaryOutcomePromise = settleRead({

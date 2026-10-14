@@ -7,13 +7,6 @@ import {
 } from "../utils/attachDiffUtils";
 import type { UseAttachPreviewReturn } from "./useAttachPreview";
 
-/**
- * Derives outgoing ProductItems from preview_attach data and tracks
- * whether the diff is loading independently from the pricing preview.
- *
- * The diff only reloads when plan config changes (productId, items, version).
- * Billing param changes (schedule, proration, etc.) do not trigger diff loading.
- */
 export function usePreviewDiff({
 	previewQuery,
 	productId,

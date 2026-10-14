@@ -10,11 +10,6 @@ import {
 } from "@/internal/products/productUtils.js";
 import { listExistingTargetPlanIds } from "./listExistingTargetPlanIds.js";
 
-/**
- * Recreates the copied base's and variants' license links in the target,
- * copying over license plans the target lacks and translating the base's plan
- * id when the copy renamed it.
- */
 export const copyLicenseLinksForPlanCopy = async ({
 	source,
 	toContext,
@@ -75,7 +70,6 @@ export const copyLicenseLinksForPlanCopy = async ({
 	const copiedLicensePlanIds = new Set(
 		licensePlansToCopy.map((licensePlan) => licensePlan.id),
 	);
-	// inIds bypasses the stale products cache; requested ids must exist.
 	const toProducts = await ProductService.listFull({
 		db,
 		orgId: toOrg.id,

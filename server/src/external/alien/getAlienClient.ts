@@ -9,11 +9,9 @@ import { alienErrorToByocUnavailable } from "./alienErrorToByocUnavailable.js";
 
 let alienClient: AlienClient | null | undefined;
 
-/** Hosted alien when its key is set; a local `alien dev` manager only when its URL is given. */
 const envToAlienConfig = (): AlienConfig | null => {
 	const { ALIEN_API_KEY, ALIEN_PROJECT, ALIEN_MANAGER_URL } = process.env;
 	if (ALIEN_API_KEY) {
-		// Each environment has its own project; defaulting one would point staging at prod's deployments.
 		if (!ALIEN_PROJECT)
 			throw new Error("ALIEN_PROJECT is required when ALIEN_API_KEY is set");
 		return {
@@ -27,7 +25,6 @@ const envToAlienConfig = (): AlienConfig | null => {
 	return null;
 };
 
-/** An unanswered or refused alien call reaches API callers as a 503, never a 500. */
 const withByocErrors =
 	<Params, Result>(call: (params: Params) => Promise<Result>) =>
 	async (params: Params): Promise<Result> => {
@@ -56,7 +53,6 @@ const createServerAlienClient = (): AlienClient | null => {
 	};
 };
 
-/** The server's one client; null where no alien manager is configured. */
 export const getAlienClient = (): AlienClient | null => {
 	if (alienClient === undefined) alienClient = createServerAlienClient();
 	return alienClient;

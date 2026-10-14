@@ -6,10 +6,8 @@ import {
 	requestBodySchema,
 } from "./loadSpec";
 
-/** Marks an enum list a newer server may extend: typed as the enum or any string. */
 export const OPEN_ENUM_MARKER = "x-open-enum";
 
-/** `live`, `sandbox`, or a sandbox's slug: lowercase, digits, `_` and `-`, never a space. */
 export const ENV_KEY_PATTERN = "^[a-z0-9_-]+$";
 
 const envSchema = (): JsonSchema => ({
@@ -19,7 +17,6 @@ const envSchema = (): JsonSchema => ({
 		"The environment this webhook is registered in: `live` (`atmn push -p`), `sandbox` (the default sandbox), or a named sandbox's slug (its name lowercased, e.g. `qa-team`).",
 });
 
-/** One item as a fixture states it: the sync body's item, with its env after the id. */
 export const syncedListItemSchema = ({
 	spec,
 	meta,
@@ -55,7 +52,6 @@ export const syncedListItemSchema = ({
 	};
 };
 
-/** Every synced list under its config key, shaped like the catalog envelope. */
 export const syncedListsEnvelope = ({
 	spec,
 	lists,
@@ -72,7 +68,6 @@ export const syncedListsEnvelope = ({
 	),
 });
 
-/** The names an open-enum list field knows today, read off the sync body. */
 export const openEnumValues = ({
 	spec,
 	meta,
@@ -92,7 +87,6 @@ export const openEnumValues = ({
 	return values as string[];
 };
 
-/** Everything a config states, for lint: the catalog envelope plus every synced list. */
 export const lintEnvelope = ({
 	spec,
 	lists,

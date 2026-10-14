@@ -164,8 +164,6 @@ export const handleDeleteRedisConfig = createRoute({
 			});
 		}
 
-		// Intended for use after migrationPercent has settled at 0; in-flight
-		// requests may still hold the old org config for a short window.
 		await OrgService.update({
 			db,
 			orgId: org.id,

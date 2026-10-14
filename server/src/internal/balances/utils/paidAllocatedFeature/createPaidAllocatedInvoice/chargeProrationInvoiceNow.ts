@@ -3,7 +3,6 @@ import { getCusPaymentMethod } from "@/external/stripe/stripeCusUtils.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { createAndFinalizeInvoice } from "@/internal/invoices/invoiceUtils/createAndFinalizeInvoice.js";
 
-/** Invoices the subscription's pending seat proration now, paid with the customer's payment method. */
 export const chargeProrationInvoiceNow = async ({
 	ctx,
 	stripeCli,

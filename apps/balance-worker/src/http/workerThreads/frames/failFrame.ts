@@ -1,7 +1,3 @@
-/**
- * Every held reply of a partition in (`aboveSeq`, `lastSeq`] is answered with this failure:
- * `[u16 partition][f64 aboveSeq][f64 lastSeq][u16 status][body]`. It travels behind the replies it covers.
- */
 import type {
 	RingFrame,
 	RingReader,
@@ -22,7 +18,6 @@ export type FailFrame = {
 export const failFrameLength = ({ body }: { body: Uint8Array }): number =>
 	HEADER_BYTES + body.length;
 
-/** False when the ring has no room for it now. */
 export const writeFailFrame = ({
 	writer,
 	fail,
@@ -42,7 +37,6 @@ export const writeFailFrame = ({
 	return true;
 };
 
-/** The body is copied out, so the frame can be advanced past at once. */
 export const readFailFrame = ({
 	reader,
 	frame,

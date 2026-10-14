@@ -1,8 +1,3 @@
-/**
- * catalogV2.preview_update + update — create and delete each billing-control
- * lane from a plan that had none. Preview must parse (no null arrays).
- */
-
 import { expect, test } from "bun:test";
 import {
 	type CustomerBillingControls,
@@ -83,7 +78,6 @@ test.concurrent(
 					expected: {
 						planId,
 						action: "update",
-						// A lane that did not exist previews as added: its previous is null.
 						previousAttributes: { billing_controls: { [key]: null } },
 						customize: null,
 						itemChanges: [],
@@ -163,7 +157,6 @@ test.concurrent(
 			const billingControls =
 				preview.plans[0]?.plan_change?.previous_attributes?.billing_controls ??
 				{};
-			// The added lane is the only key, and its previous value is null.
 			expect(Object.keys(billingControls)).toEqual(["spend_limits"]);
 			expect(billingControls.spend_limits).toBeNull();
 			PreviewUpdateCatalogResponseSchema.parse(preview);

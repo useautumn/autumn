@@ -13,13 +13,6 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { AutumnRpcCli } from "@/external/autumn/autumnRpcCli.js";
 
-/**
- * Referrals9: Full CRUD over rewards and referral programs on the public API
- *
- * Covers get/list/update/delete for both resources, plus the guard that a
- * reward linked to a referral program cannot be deleted.
- */
-
 test(`${chalk.yellowBright("referrals9: rewards + referral_programs CRUD")}`, async () => {
 	const customerId = "main-referral-9";
 	const stamp = Date.now();
@@ -63,13 +56,11 @@ test(`${chalk.yellowBright("referrals9: rewards + referral_programs CRUD")}`, as
 		baseUrl: process.env.AUTUMN_TEST_RPC_URL,
 	});
 
-	// --- rewards.get ---
 	const fetched = await rpc.post("/rewards.get", { reward_id: rewardId });
 	expect(fetched.feature_grant?.id).toBe(rewardId);
 	expect(fetched.feature_grant?.grants[0].included).toBe(100);
 	expect(fetched.coupon).toBeUndefined();
 
-	// --- rewards.update (partial: name only, grants preserved) ---
 	const renamed = await rpc.post("/rewards.update", {
 		reward_id: rewardId,
 		feature_grant: { name: "Renamed Grant" },
@@ -77,7 +68,6 @@ test(`${chalk.yellowBright("referrals9: rewards + referral_programs CRUD")}`, as
 	expect(renamed.feature_grant?.name).toBe("Renamed Grant");
 	expect(renamed.feature_grant?.grants[0].included).toBe(100);
 
-	// --- rewards.update (grants replaced) ---
 	const regranted = await rpc.post("/rewards.update", {
 		reward_id: rewardId,
 		feature_grant: {
@@ -89,7 +79,6 @@ test(`${chalk.yellowBright("referrals9: rewards + referral_programs CRUD")}`, as
 	expect(regranted.feature_grant?.grants[0].included).toBe(250);
 	expect(regranted.feature_grant?.name).toBe("Renamed Grant");
 
-	// --- referral_programs.create ---
 	const created = await rpc.post("/referral_programs.create", {
 		id: programId,
 		reward_id: rewardId,
@@ -99,20 +88,17 @@ test(`${chalk.yellowBright("referrals9: rewards + referral_programs CRUD")}`, as
 	});
 	expect(created.id).toBe(programId);
 
-	// --- referral_programs.get ---
 	const gotProgram = await rpc.post("/referral_programs.get", {
 		referral_program_id: programId,
 	});
 	expect(gotProgram.reward_id).toBe(rewardId);
 	expect(gotProgram.max_redemptions).toBe(5);
 
-	// --- referral_programs.list ---
 	const listed = await rpc.post("/referral_programs.list", {});
 	expect(
 		listed.list.some((program: { id: string }) => program.id === programId),
 	).toBe(true);
 
-	// --- referral_programs.update (partial) ---
 	const updatedProgram = await rpc.post("/referral_programs.update", {
 		referral_program_id: programId,
 		received_by: RewardReceivedBy.All,
@@ -121,12 +107,10 @@ test(`${chalk.yellowBright("referrals9: rewards + referral_programs CRUD")}`, as
 	expect(updatedProgram.max_redemptions).toBe(5);
 	expect(updatedProgram.reward_id).toBe(rewardId);
 
-	// --- rewards.delete is blocked while a program links the reward ---
 	await expect(
 		rpc.post("/rewards.delete", { reward_id: rewardId }),
 	).rejects.toThrow();
 
-	// --- referral_programs.delete ---
 	const deletedProgram = await rpc.post("/referral_programs.delete", {
 		referral_program_id: programId,
 	});
@@ -136,7 +120,6 @@ test(`${chalk.yellowBright("referrals9: rewards + referral_programs CRUD")}`, as
 		rpc.post("/referral_programs.get", { referral_program_id: programId }),
 	).rejects.toThrow();
 
-	// --- rewards.delete now succeeds ---
 	const deletedReward = await rpc.post("/rewards.delete", {
 		reward_id: rewardId,
 	});

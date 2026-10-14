@@ -1,13 +1,3 @@
-/**
- * Invoice-Matched Proration Credits — Downgrade Tests
- *
- * Verifies that scheduled downgrade previews source outgoing credits from
- * stored invoice line items (actual charged amounts) rather than catalog prices.
- *
- * - With discount: outgoing credit reflects the discounted charge ($40, not $50)
- * - Without discount: outgoing credit reflects the full catalog charge ($50)
- */
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3 } from "@autumn/shared";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
@@ -21,10 +11,6 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { createStripeCli } from "@/external/connect/createStripeCli";
 import { createPercentCoupon } from "../utils/discounts/discountTestUtils";
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 1: Scheduled downgrade with discount — outgoing credit reflects discounted price
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(
 	`${chalk.yellowBright("invoice-matched-credits downgrade 1: scheduled downgrade with discount — next_cycle outgoing credit reflects discounted price")}`,
@@ -111,10 +97,6 @@ test.concurrent(
 	},
 	300_000,
 );
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 2: Scheduled downgrade without discount — outgoing credit reflects full price
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(
 	`${chalk.yellowBright("invoice-matched-credits downgrade 2: scheduled downgrade without discount — next_cycle outgoing credit reflects full price")}`,

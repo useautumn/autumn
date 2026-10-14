@@ -121,7 +121,6 @@ describe("rewardToOption", () => {
 		});
 		const option = rewardToOption(reward);
 		expect(option.sublabel).toBe("SAVE20");
-		// every code is searchable, not just the one on show
 		expect(option.searchTerms).toEqual(["SAVE20", "SAVE30"]);
 	});
 });
@@ -259,10 +258,8 @@ describe("buildDiscountOptions", () => {
 			productId: undefined,
 		});
 		expect(result).toHaveLength(2);
-		// First should be the Autumn reward version
 		expect(result[0].id).toBe("shared_id");
 		expect(result[0].source).toBe("autumn");
-		// Second should be the stripe-only coupon
 		expect(result[1].id).toBe("stripe_only");
 		expect(result[1].source).toBe("stripe");
 	});
@@ -359,7 +356,6 @@ describe("buildDiscountOptions", () => {
 			stripeCoupons: [],
 			productId: "prod_target",
 		});
-		// Only the apply_to_all reward should pass; the specific one is linked to prod_other
 		expect(result).toHaveLength(1);
 		expect(result[0].id).toBe("all_products");
 	});

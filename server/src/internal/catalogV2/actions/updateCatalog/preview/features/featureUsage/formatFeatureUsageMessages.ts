@@ -10,7 +10,6 @@ const formatCount = ({
 
 const quoteName = (name: string) => `"${name}"`;
 
-/** Plan / credit-system lines that have sample names. */
 const formatNamedBucketMessage = ({
 	singular,
 	plural,
@@ -94,7 +93,6 @@ const formatCustomerMessage = ({
 	return `Attached to customer ${quoteName(first.name)} and ${otherCount} more.`;
 };
 
-/** Pure: usage buckets → dialog-ready reason messages (non-empty only). */
 export const formatFeatureUsageMessages = ({
 	usage,
 }: {

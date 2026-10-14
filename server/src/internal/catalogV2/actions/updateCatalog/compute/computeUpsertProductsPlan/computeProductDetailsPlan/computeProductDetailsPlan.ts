@@ -13,10 +13,6 @@ import { diffProductDetails } from "./diffProductDetails";
 import { initProductRow } from "./initProductRow";
 import { planParamsToProductRowPatch } from "./planParamsToProductRowPatch";
 
-/**
- * Product-row facet — always returns the row stamp.
- * `previousAttributes` present only when an update changes detail columns.
- */
 export const computeProductDetailsPlan = ({
 	ctx,
 	planParams,
@@ -32,13 +28,9 @@ export const computeProductDetailsPlan = ({
 	planParams: UpdateCatalogPlanParams;
 	currentFullProduct: FullProduct | null;
 	version: number;
-	/** Content baseline — clone source when minting (ignored when current set). */
 	baseFullProduct?: FullProduct | null;
-	/** Variant pointer. Compute-owned — not a request field. */
 	baseInternalProductId?: string | null;
-	/** Variant create: share the base's Stripe Product. */
 	baseProcessor?: Product["processor"];
-	/** Pre-fold pointer — default follows only when this row is eligible. */
 	currentActive?: FullProduct | null;
 	latestExistingVersion?: number;
 }): ProductDetailsPlan => {

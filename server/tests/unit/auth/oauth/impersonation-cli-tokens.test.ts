@@ -16,7 +16,6 @@ import {
 
 type Row = Record<string, unknown>;
 
-/** Records every insert per table, no real db. */
 const createFakeDb = () => {
 	const rows = new Map<unknown, Row[]>();
 	const insert = (table: unknown) => ({
@@ -61,7 +60,6 @@ describe("createImpersonationCliTokens", () => {
 			});
 		}
 
-		// Stored hashed; the caller gets the prefixed raw token.
 		expect(result.sandboxToken).toStartWith("am_sk_test_oauth_");
 		expect(result.liveToken).toStartWith("am_sk_live_oauth_");
 		expect(tokens[0]?.token).toBe(

@@ -6,11 +6,6 @@ import { cn } from "@/lib/utils";
 const LINE_HEIGHT = 21;
 const OVERSCAN = 20;
 
-/**
- * Renders large JSON fast by virtualizing lines — only the visible ~30 lines
- * are highlighted and mounted, keeping DOM node count constant regardless of
- * payload size. A single <pre> with thousands of spans stalls layout/paint.
- */
 export function VirtualizedJson({
 	json,
 	className,

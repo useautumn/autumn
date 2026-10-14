@@ -13,8 +13,6 @@ type EvalMetadata = {
 	flow: "updateEmail";
 };
 
-// The world: one org, one customer. The agent knows none of this up front —
-// it discovers the customer by calling tools against the mock API.
 const setup = withCustomers({
 	setup: orgSetups.knowledgePlatform(),
 	customers: ({ customers }) => ({
@@ -35,7 +33,6 @@ initEval<EvalMetadata>({
 	metadata: { domain: "customers", flow: "updateEmail" },
 	cases: [
 		{
-			// The happy path: one gated write, approved once, applied once.
 			name: "updates the email after a single approval",
 			conversation: [
 				user({ message: `Change ${acme.name}'s email to ${newEmail}.` }),
@@ -56,8 +53,6 @@ initEval<EvalMetadata>({
 			],
 		},
 		{
-			// A question is not a write. Asking about the email must never
-			// reach updateCustomer — refraining matters as much as acting.
 			name: "answers a read-only question without writing",
 			conversation: [user({ message: `What email is ${acme.name} on?` })],
 			expect: [
@@ -67,8 +62,6 @@ initEval<EvalMetadata>({
 			],
 		},
 		{
-			// An unknown customer must not be invented. The agent should ask or
-			// say it cannot find them, not create one or write to a guess.
 			name: "does not write when the customer does not exist",
 			conversation: [
 				user({ message: `Change Nonexistent Co's email to ${newEmail}.` }),

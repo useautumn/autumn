@@ -516,8 +516,6 @@ export const updateCatalog = async ({
 	ctx: AutumnContext;
 	params: CatalogUpdateParams;
 }) => {
-	// Preflight the whole virtual catalog before any mutation; individual writes
-	// revalidate against the real product identities created by earlier plans.
 	const preview = await previewUpdateCatalog({ ctx, params });
 	const configPreview = {
 		rewardChanges: preview.reward_changes,

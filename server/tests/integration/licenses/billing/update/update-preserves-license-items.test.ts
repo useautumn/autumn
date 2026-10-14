@@ -1,13 +1,3 @@
-/**
- * TDD contract (U1): billing.update on a license-bearing plan must not
- * strip seat items from the Stripe subscription.
- *
- * Pre-impl red: updateSubscription rebuilds Stripe sub items without
- * customerLicenseBillingContext -> desired specs carry no seat rows -> the
- * item diff deletes the seat item (under-billing).
- * Post-impl green: the update's Stripe item set still carries the seat
- * item; pool counters and assignments are untouched.
- */
 import { test } from "bun:test";
 import type {
 	ApiCustomerV3,
@@ -56,8 +46,6 @@ test.concurrent(
 			attachedSeats: ATTACHED_SEATS,
 		});
 
-		// 2 of 3 seats assigned: 1 rides free, 1 bills as a seat snapshot,
-		// buffer 1 — the update must preserve both billed units on Stripe.
 		await assignSeats({ count: ASSIGNED_SEATS });
 
 		const updateParams: UpdateSubscriptionV1ParamsInput = {
@@ -83,7 +71,6 @@ test.concurrent(
 			updateParams,
 		);
 
-		// ── Pool untouched ────────────────────────────────────────────────
 		const customer = await autumnV2_3.customers.get<ApiCustomerV5>(customerId);
 		expectCustomerLicenses({
 			customer,
@@ -100,7 +87,6 @@ test.concurrent(
 			],
 		});
 
-		// ── DB: seats still anchor to the live parent's pool ──────────────
 		await expectAssignmentsAnchoredToParent({
 			ctx,
 			customerId,
@@ -108,7 +94,6 @@ test.concurrent(
 			count: ASSIGNED_SEATS,
 		});
 
-		// ── Invoice: only the base price delta bills ──────────────────────
 		const customerV3 = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 		await expectCustomerInvoiceCorrect({
 			customer: customerV3,
@@ -116,7 +101,6 @@ test.concurrent(
 			latestTotal: UPDATED_BASE_PRICE - BASE_PRICE,
 		});
 
-		// ── Stripe: seat items survive the rebuild ────────────────────────
 		await expectStripeSubscriptionCorrect({ ctx, customerId });
 	},
 );

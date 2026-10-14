@@ -5,9 +5,6 @@ interface KeyValueProps {
 	value: string;
 }
 
-/**
- * Displays a key-value pair with styled label
- */
 export function KeyValue({ label, value }: KeyValueProps) {
 	return (
 		<Text>

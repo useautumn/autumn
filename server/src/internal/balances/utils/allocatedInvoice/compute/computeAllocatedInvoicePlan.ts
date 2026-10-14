@@ -9,10 +9,6 @@ import type { AllocatedInvoiceContext } from "../allocatedInvoiceContext";
 import { computeAllocatedInvoiceLineItems } from "./computeAllocatedInvoiceLineItems";
 import { computeUpdateCustomerEntitlementPlan } from "./computeUpdateCustomerEntitlementPlan";
 
-/**
- * Applies the replaceable/balance changes from the entitlement plan
- * to produce the final post-replaceable customer entitlement snapshot.
- */
 const applyEntitlementPlanToCusEnt = ({
 	cusEnt,
 	plan,
@@ -54,7 +50,6 @@ export const computeAllocatedInvoicePlan = ({
 	ctx: AutumnContext;
 	billingContext: AllocatedInvoiceContext;
 }): AutumnBillingPlan | undefined => {
-	// 1. Compute replaceable / balance changes
 	const updateCustomerEntitlementPlan = computeUpdateCustomerEntitlementPlan({
 		billingContext,
 	});
@@ -66,13 +61,11 @@ export const computeAllocatedInvoicePlan = ({
 		plan: updateCustomerEntitlementPlan,
 	});
 
-	// 3. Compute line items using the post-replaceable entitlement
 	let lineItems = computeAllocatedInvoiceLineItems({
 		ctx,
 		billingContext,
 	});
 
-	// 4. Apply Stripe discounts if present
 	if (billingContext.stripeDiscounts?.length) {
 		lineItems = applyStripeDiscountsToLineItems({
 			lineItems,

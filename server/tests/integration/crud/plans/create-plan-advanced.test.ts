@@ -24,10 +24,6 @@ const autumnV2_1 = new AutumnInt({ version: ApiVersion.V2_1 });
 const autumnV2 = new AutumnInt({ version: ApiVersion.V2_0 });
 const autumnV1_2 = new AutumnInt({ version: ApiVersion.V1_2 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// METERED & USAGE FEATURES
-// ═══════════════════════════════════════════════════════════════════════════════
-
 test.concurrent(`${chalk.yellowBright("create: metered feature with monthly reset")}`, async () => {
 	const productId = "metered_monthly";
 	try {
@@ -100,10 +96,6 @@ test.concurrent(`${chalk.yellowBright("create: usage pricing (pay-per-use)")}`, 
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TIERED PRICING
-// ═══════════════════════════════════════════════════════════════════════════════
-
 test.concurrent(`${chalk.yellowBright("create: feature with tiered pricing")}`, async () => {
 	const productId = "tiered_pricing";
 	try {
@@ -133,7 +125,6 @@ test.concurrent(`${chalk.yellowBright("create: feature with tiered pricing")}`, 
 		],
 	});
 
-	// V2.1: ApiPlanV1 — no included, so tiers are same across all versions
 	const item = created.items[0];
 	expect(item.price!.tiers).toHaveLength(3);
 	expect(item.price!.tiers).toEqual([
@@ -143,7 +134,6 @@ test.concurrent(`${chalk.yellowBright("create: feature with tiered pricing")}`, 
 	]);
 	expect(item.price!.billing_method).toBe(BillingMethod.UsageBased);
 
-	// V2.0: ApiPlan — same tiers (no included to subtract)
 	const v2 = await autumnV2.products.get<ApiPlan>(productId);
 	expect(v2.features[0].price!.tiers).toEqual([
 		{ to: 100, amount: 0.1 },
@@ -151,7 +141,6 @@ test.concurrent(`${chalk.yellowBright("create: feature with tiered pricing")}`, 
 		{ to: TierInfinite, amount: 0.05 },
 	]);
 
-	// V1.2: ApiProduct — same tiers
 	const v1_2 = await autumnV1_2.products.get<ApiProduct>(productId);
 	expect(v1_2.items[0].tiers).toHaveLength(3);
 	expect(v1_2.items[0].tiers).toEqual([
@@ -164,10 +153,6 @@ test.concurrent(`${chalk.yellowBright("create: feature with tiered pricing")}`, 
 		interval: ProductItemInterval.Month,
 	});
 });
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// CROSS-VERSION CONSISTENCY
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(`${chalk.yellowBright("cross-version: V2 CREATE → V1.2 GET field transformations")}`, async () => {
 	const productId = "cross_v2";
@@ -196,7 +181,7 @@ test.concurrent(`${chalk.yellowBright("cross-version: V2 CREATE → V1.2 GET fie
 		is_add_on: true,
 		is_default: false,
 	});
-	expect(v1_2.items).toHaveLength(2); // base price + feature
+	expect(v1_2.items).toHaveLength(2);
 
 	const basePrice = v1_2.items.find((i) => !i.feature_id);
 	expect(basePrice).toMatchObject({ price: 1000 });
@@ -328,9 +313,6 @@ test.concurrent(`${chalk.yellowBright("create: tiered pricing with included usag
 		await autumnV2_1.products.delete(productId);
 	} catch (_error) {}
 
-	// User-facing API: tier `to` INCLUDES included usage.
-	// included=200, tiers=[{to:700}, {to:1200}, {to:inf}]
-	// Internally stored as tiers=[{to:500}, {to:1000}, {to:inf}] (without included)
 	const created = await autumnV2_1.products.create<
 		ApiPlanV1,
 		CreatePlanParamsInput
@@ -355,7 +337,6 @@ test.concurrent(`${chalk.yellowBright("create: tiered pricing with included usag
 		],
 	});
 
-	// V2.1: ApiPlanV1 — tiers INCLUDE included usage
 	const item = created.items[0];
 	expect(item.price!.tiers).toHaveLength(3);
 	expect(item.price!.tiers).toEqual([
@@ -365,7 +346,6 @@ test.concurrent(`${chalk.yellowBright("create: tiered pricing with included usag
 	]);
 	expect(item.included).toBe(200);
 
-	// V2.0: ApiPlan — tiers do NOT include included usage (subtracted in V2.1→V2.0 conversion)
 	const v2 = await autumnV2.products.get<ApiPlan>(productId);
 	expect(v2.features[0].price!.tiers).toEqual([
 		{ to: 500, amount: 10 },
@@ -374,7 +354,6 @@ test.concurrent(`${chalk.yellowBright("create: tiered pricing with included usag
 	]);
 	expect(v2.features[0].granted_balance).toBe(200);
 
-	// V1.2: ApiProduct — internal tiers do NOT include included usage
 	const v1_2 = await autumnV1_2.products.get<ApiProduct>(productId);
 	expect(v1_2.items[0].tiers).toHaveLength(3);
 	expect(v1_2.items[0].tiers).toEqual([
@@ -415,7 +394,6 @@ test.concurrent(`${chalk.yellowBright("create: volume tiered pricing with includ
 		],
 	});
 
-	// V2.1: ApiPlanV1 — tiers INCLUDE included
 	const item = created.items[0];
 	expect(item.price!.tiers).toEqual([
 		{ to: 600, amount: 10 },
@@ -423,7 +401,6 @@ test.concurrent(`${chalk.yellowBright("create: volume tiered pricing with includ
 	]);
 	expect(item.included).toBe(100);
 
-	// V2.0: ApiPlan — tiers do NOT include included (subtracted in V2.1→V2.0 conversion)
 	const v2 = await autumnV2.products.get<ApiPlan>(productId);
 	expect(v2.features[0].price!.tiers).toEqual([
 		{ to: 500, amount: 10 },
@@ -431,17 +408,12 @@ test.concurrent(`${chalk.yellowBright("create: volume tiered pricing with includ
 	]);
 	expect(v2.features[0].granted_balance).toBe(100);
 
-	// V1.2: ApiProduct — internal tiers do NOT include included
 	const v1_2 = await autumnV1_2.products.get<ApiProduct>(productId);
 	expect(v1_2.items[0].tiers).toEqual([
 		{ to: 500, amount: 10 },
 		{ to: TierInfinite, amount: 5 },
 	]);
 });
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// VALIDATION / REJECTION TESTS
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(`${chalk.yellowBright("validation: REJECT reset.interval + price.interval mismatch")}`, async () => {
 	const productId = "invalid_both";

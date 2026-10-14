@@ -27,7 +27,6 @@ type TtlUnit = "hours" | "days";
 
 const MAX_TTL_HOURS = 24 * 30;
 
-// Hidden until the DynamoDB idempotency store is fully rolled out.
 const IDEMPOTENCY_TTL_CONFIG_ENABLED: boolean = false;
 
 const toHours = ({ value, unit }: { value: number; unit: TtlUnit }) =>
@@ -38,8 +37,6 @@ const fromHours = (hours: number): { value: number; unit: TtlUnit } =>
 		? { value: hours / 24, unit: "days" }
 		: { value: hours, unit: "hours" };
 
-/** A flag the CLI's `settings` block can state takes its label from shared,
- * so the dashboard and atmn never disagree on what a flag is called. */
 const BILLING_TOGGLES = [
 	{
 		key: "cancel_on_past_due",

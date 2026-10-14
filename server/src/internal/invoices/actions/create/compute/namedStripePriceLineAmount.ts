@@ -5,11 +5,6 @@ import type { NamedStripePrices } from "../setup/fetchNamedStripePrices";
 
 export type NamedStripePriceLine = { amount: number; stripeQuantity: number };
 
-/**
- * What a named Stripe price bills for these units. The amount comes from the
- * Stripe price itself so the preview cannot disagree with the invoice, which
- * also means proration cannot apply to the line.
- */
 export const namedStripePriceLineAmount = ({
 	namedStripePrices,
 	stripePriceId,

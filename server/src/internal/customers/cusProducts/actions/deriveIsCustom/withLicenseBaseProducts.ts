@@ -13,7 +13,6 @@ const needsBaseProduct = (
 			!customerLicense.planLicense.base_product,
 	);
 
-/** Stored licenses carry only their effective product, so a customised one needs its catalog product to compare. */
 export const withLicenseBaseProducts = async ({
 	ctx,
 	customerProduct,

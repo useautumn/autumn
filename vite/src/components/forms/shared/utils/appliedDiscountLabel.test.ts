@@ -23,7 +23,6 @@ const discount = (
 
 describe("appliedDiscountLabel", () => {
 	test("shows the months the server carries, counted to cover the remaining discounted renewals", () => {
-		// Today Oct 2, renewal Oct 14, discount ends Dec 17: renewals Oct 14, Nov 14 and Dec 14 are still discounted.
 		const monthsLeft = remainingDiscountMonths({
 			currentEpochMs: Date.UTC(2026, 9, 2),
 			billingCycleAnchorMs: Date.UTC(2026, 8, 14),

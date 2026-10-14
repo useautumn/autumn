@@ -1,6 +1,5 @@
 import type { HttpWorkerPoolScope } from "../types/httpWorkerPoolScope.js";
 
-/** A crash raises both `error` and `close`; the first cause is the one worth reporting. */
 export function reportPoolFailure({
 	scope,
 	cause,

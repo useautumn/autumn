@@ -34,9 +34,7 @@ const finalizeSpan = ({ span, error }: { span: Span; error?: unknown }) => {
 			span.setStatus({ code: SpanStatusCode.OK });
 		}
 		span.end();
-	} catch {
-		// Fail-open: never let tracing affect Stripe client behavior
-	}
+	} catch {}
 };
 
 const getStripeHttpClient = ({ client }: { client: Stripe }) => {
@@ -90,9 +88,7 @@ export const instrumentStripe = ({ client }: { client: Stripe }): Stripe => {
 		let activeContext = context.active();
 		try {
 			activeContext = trace.setSpan(activeContext, span);
-		} catch {
-			// Fall through — execute the request without context propagation
-		}
+		} catch {}
 
 		try {
 			const response = await context.with(activeContext, () =>
@@ -104,9 +100,7 @@ export const instrumentStripe = ({ client }: { client: Stripe }): Stripe => {
 					"http.response.status_code",
 					response.getStatusCode(),
 				);
-			} catch {
-				// Ignore response inspection failures
-			}
+			} catch {}
 
 			finalizeSpan({ span });
 			return response;

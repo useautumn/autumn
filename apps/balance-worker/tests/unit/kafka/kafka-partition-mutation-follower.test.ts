@@ -374,7 +374,6 @@ describe("Kafka partition outcome follower", () => {
 				);
 			expect(failure).toBeInstanceOf(StateAheadOfKafkaLogEndError);
 			expect((failure as StateAheadOfKafkaLogEndError).logEndOffset).toBe(10n);
-			// Every re-read still saw the stale log end before the state was judged ahead of it.
 			expect(partitionOffsets.calls).toEqual([topic, topic, topic]);
 		} finally {
 			closeStoreFixture(aheadFixture);
@@ -398,7 +397,6 @@ describe("Kafka partition outcome follower", () => {
 				} as never,
 			});
 
-			// The owner's latest record reaches the high watermark before the first re-read.
 			partitionOffsets.setHigh("12");
 			const catchUp = follower.startAndCatchUp({
 				topic,

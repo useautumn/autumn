@@ -4,7 +4,6 @@ import { AlienRequestError } from "../common/alienRequestError.js";
 import { hostedQuery } from "../common/hostedQuery.js";
 import type { AlienApi } from "../types/alienApi.js";
 
-/** The project's CloudFormation template: public, and the same for every setup link. */
 export const getAwsTemplateUrl = async ({
 	api,
 	project,

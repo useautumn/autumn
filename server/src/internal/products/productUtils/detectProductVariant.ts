@@ -42,14 +42,11 @@ export const detectBaseVariant = async ({
 		env: curProduct.env,
 	})) as FullProduct[];
 
-	// if (product.base_variant_id == baseVariantId) {
 	const curPrices = curProduct.prices;
 	const intervals = curPrices.map((price) => price.config.interval);
 
-	// 1. Return null if add on
 	if (curProduct.is_add_on) return null;
 
-	// 2. Return null if only one off or monthly price
 	const oneOffOrMonthly = [BillingInterval.OneOff, BillingInterval.Month];
 	if (intervals.every((i: BillingInterval) => oneOffOrMonthly.includes(i))) {
 		logger.info(`Is one off or monthly, skipping`);

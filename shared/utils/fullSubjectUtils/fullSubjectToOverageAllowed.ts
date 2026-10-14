@@ -10,12 +10,6 @@ import {
 	resolveBillingControl,
 } from "./planBillingControlUtils.js";
 
-/**
- * Extract overage_allowed entries for the requested features from a FullSubject.
- *
- * Entity inherits from the customer per feature_id: entity's entry wins when
- * present, customer's entry fills any gaps.
- */
 export const fullSubjectToOverageAllowedByFeatureId = <
 	CE extends CustomerEntitlementRowView,
 	CP extends PlanControlCustomerProduct & CustomerProductWithPricesView,

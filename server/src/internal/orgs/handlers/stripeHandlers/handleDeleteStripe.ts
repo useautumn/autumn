@@ -120,10 +120,6 @@ const deauthorizeOauth = async ({
 	}
 };
 
-/**
- * Registers the direct webhook for a remaining secret key whose webhook was
- * skipped while OAuth covered the org. Returns the encrypted secret, or null.
- */
 export const reRegisterDirectWebhook = async ({
 	org,
 	env,
@@ -167,11 +163,6 @@ const disconnectSecretKey = async ({
 	}
 };
 
-/**
- * Before OAuth is removed: if a secret key is kept whose direct webhook was skipped
- * under OAuth (and none is already stored — that would mean a live webhook predates
- * OAuth), registers one so the org keeps receiving events. Returns its secret.
- */
 const disconnectOauth = async ({
 	org,
 	env,
@@ -204,7 +195,6 @@ const disconnectOauth = async ({
 	}
 };
 
-/** Writes only the keys this disconnect owns, so concurrent config changes survive. */
 const persistDisconnect = async ({
 	db,
 	org,
@@ -242,7 +232,6 @@ const persistDisconnect = async ({
 				...(hasConfigPatch && {
 					stripe_config: sql`coalesce(${organizations.stripe_config}, '{}'::jsonb) || ${JSON.stringify(configPatch)}::jsonb`,
 				}),
-				// Leaves a replacement connection made since this request read the org alone.
 				...(oauthAccountId && {
 					[fields.connect]: sql`case when ${connect}->>'account_id' = ${oauthAccountId} then ${connect} - 'account_id' - 'connected_at' else ${connect} end`,
 				}),
@@ -273,7 +262,6 @@ export const handleDeleteStripe = createRoute({
 
 		await clearOrgCache({ db, orgId: org.id, logger });
 
-		// 1. Resolve which channels to disconnect
 		const { clearSecretKey, clearOauth, clearCatalogMappings } =
 			resolveDisconnectChannels({
 				org,
@@ -281,7 +269,6 @@ export const handleDeleteStripe = createRoute({
 				channel,
 			});
 
-		// 2. Run each channel's Stripe side effects
 		if (clearSecretKey) await disconnectSecretKey({ org, env, logger });
 		const directWebhookSecret = clearOauth
 			? await disconnectOauth({
@@ -292,7 +279,6 @@ export const handleDeleteStripe = createRoute({
 				})
 			: undefined;
 
-		// 3. Persist (nothing to clear if neither channel was connected for this env)
 		const oauthAccountId = clearOauth
 			? orgToAccountId({ org, env, noDefaultAccount: true })
 			: undefined;
@@ -308,8 +294,6 @@ export const handleDeleteStripe = createRoute({
 			});
 		}
 
-		// 4. Deauthorize only after the local disconnect is saved, so the revocation
-		// webhook finds nothing left to clear and cannot race this write.
 		if (oauthAccountId)
 			await deauthorizeOauth({ accountId: oauthAccountId, env, logger });
 

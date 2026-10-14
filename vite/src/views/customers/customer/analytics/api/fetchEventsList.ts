@@ -6,10 +6,8 @@ import type {
 import type { AxiosInstance } from "axios";
 import { monthRangeWindow } from "../utils/monthRangeWindow";
 
-/** Default page size, matching the row cap the tables were built around. */
 export const EVENTS_LIST_PAGE_SIZE = 1000;
 
-/** Keeps list consumers on the raw-event row shape they already render. */
 const listItemToRawEvent = (
 	item: ApiEventsListItem,
 ): RawEventFromClickHouse => ({
@@ -21,7 +19,6 @@ const listItemToRawEvent = (
 	properties: JSON.stringify(item.properties ?? {}),
 });
 
-/** Callers pass an axios instance pinned to LATEST_VERSION for cursor paging. */
 export const fetchEventsList = async ({
 	axiosInstance,
 	customerId,

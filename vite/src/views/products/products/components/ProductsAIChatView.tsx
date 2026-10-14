@@ -11,21 +11,15 @@ import { convertToAgentConfig } from "@/views/onboarding4/utils/convertToAgentCo
 import { usePricingConfigSave } from "../hooks/usePricingConfigSave";
 import { ConfirmBatchVersionDialog } from "./ConfirmBatchVersionDialog";
 
-/**
- * AI chat view for the products page.
- * Similar to the onboarding AIChatView but starts with existing plans loaded.
- */
 export function ProductsAIChatView() {
 	const { products } = useProductsQuery();
 	const { features } = useFeaturesQuery();
 
-	// Filter out archived products
 	const activeProducts = useMemo(
 		() => products.filter((p) => !p.archived),
 		[products],
 	);
 
-	// Convert existing products/features to initial config
 	const initialConfig = useMemo(() => {
 		if (activeProducts.length === 0 && features.length === 0) {
 			return null;
@@ -56,16 +50,13 @@ export function ProductsAIChatView() {
 		handleConfirmSave,
 	} = usePricingConfigSave({ initialConfig });
 
-	// Track if chat has started (has any messages)
 	const chatStarted = messages.length > 0;
 
-	// Use the AI-generated config if available, otherwise fall back to initial
 	const displayConfig = pricingConfig ?? initialConfig;
 
 	return (
 		<div className="w-full h-[calc(100vh-200px)] flex flex-col">
 			<div className="flex-1 flex min-h-0 relative">
-				{/* Left: Chat - width animates from 0 */}
 				<div
 					className="flex flex-col overflow-hidden transition-all duration-300 ease-out"
 					style={{ width: chatStarted ? "33.333%" : "0%" }}
@@ -85,7 +76,6 @@ export function ProductsAIChatView() {
 					)}
 				</div>
 
-				{/* Right: Pricing Preview - shrinks as chat expands */}
 				<div className="flex-1 flex flex-col transition-all duration-300 ease-out">
 					<PricingPreview
 						config={displayConfig}
@@ -117,7 +107,6 @@ export function ProductsAIChatView() {
 						}
 					/>
 
-					{/* Floating input when chat hasn't started */}
 					{!chatStarted && (
 						<div className="absolute inset-0 flex items-end justify-center pb-16 pointer-events-none">
 							<div className="pointer-events-auto w-full max-w-md">

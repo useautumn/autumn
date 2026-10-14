@@ -36,7 +36,6 @@ function DateFieldButton({
 	);
 }
 
-/** One day, defaulting to today; backdating is allowed, the future is not. */
 export function CreateInvoiceIssueDateField() {
 	const { form, formValues } = useCreateInvoiceFormContext();
 	const [open, setOpen] = useState(false);
@@ -84,7 +83,6 @@ function ServicePeriodLabel({
 	);
 }
 
-/** The invoice's service period: printed under, and prorating, every plan line without its own. */
 export function CreateInvoiceServicePeriodField() {
 	const { form, formValues } = useCreateInvoiceFormContext();
 	const [open, setOpen] = useState(false);

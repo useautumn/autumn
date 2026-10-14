@@ -81,7 +81,6 @@ const expireEntityCusEntForReset = async ({
 		field: "next_reset_at",
 		value: pastTime,
 	});
-	// Written behind the worker's back: it re-hydrates on the next command.
 	await evictBalanceWorkerCustomer({ ctx, customerId });
 
 	return cusEnt;
@@ -105,8 +104,6 @@ test.concurrent(
 			actions: [],
 		});
 
-		// One batched call: entity creation takes a per-customer lock that fails
-		// fast, so parallel single creates race each other.
 		await autumnV1.entities.create(
 			CUSTOMER_ID,
 			ENTITY_IDS.map((entityId) => ({
@@ -136,8 +133,6 @@ test.concurrent(
 				}),
 			),
 		);
-		// The tracks must land in Postgres before the resets are queued, otherwise
-		// a late deduction would be applied on top of the freshly reset balance.
 		for (const entityId of ENTITY_IDS) {
 			await expectBalanceCorrect({
 				autumn: autumnV2_1,
@@ -175,8 +170,6 @@ test.concurrent(
 			).toBeDefined();
 		}
 
-		// The list queues the stale resets through the workflow queue; on a
-		// contended runner the workers drain well after the response returns.
 		for (const entityId of STALE_IDS) {
 			await expectBalanceCorrect({
 				autumn: autumnV2_1,

@@ -13,12 +13,10 @@ type EntityOption = { id: string; name: string };
 export const SelectEntityDropdown = ({
 	renderTrigger,
 }: {
-	/** Draws the button that opens the picker, given the chosen entity's name. */
 	renderTrigger: (label: string) => ReactNode;
 }) => {
 	const { filterStates, setFilterStates } = useAnalyticsFilterState();
 	const { customer } = useAnalyticsContext();
-	// Shown as soon as a customer is picked, so the row never reflows when their record lands.
 	if (!filterStates.customer_id) return null;
 
 	const entities: Entity[] = customer?.entities ?? [];

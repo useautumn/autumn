@@ -1,5 +1,3 @@
-/** Customers with several subscriptions and real usage, for hand QA of the Set Plans balance changes. */
-
 import { test } from "bun:test";
 import { RolloverExpiryDurationType } from "@autumn/shared";
 import { driveProductPastDue } from "@tests/integration/billing/utils/driveProductPastDue";

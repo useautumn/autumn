@@ -1,21 +1,3 @@
-/**
- * Stripe price adoption (`price.processors`) is scoped to the catalog path.
- *
- * `validateAdoptedStripePrices` only runs in the catalogV2 init flow, so any
- * other path that persists a stated Stripe price id skips price creation
- * (`hasUsableStripeId` sees a non-null string) and fails much later as a Stripe
- * error at checkout instead of the documented hard error. Both price schemas
- * are therefore split the same way: `CreatePlanItemParamsV1Schema` and
- * `BasePriceParamsSchema` (attach / customize / migrations / licenses) have no
- * `processors`, and `CatalogPlanItemParamsV1Schema` /
- * `CatalogBasePriceParamsSchema` add it back for catalogV2 only.
- *
- * Red (before):  CreatePlanItemParamsV1Schema and BasePriceParamsSchema carried
- *                `processors`, so customize / multi-attach / updatePlanOp
- *                persisted the id.
- * Green (after): only the catalog schemas keep it; every other path strips it.
- */
-
 import { describe, expect, test } from "bun:test";
 import { BillingInterval, BillingMethod, ResetInterval } from "@autumn/shared";
 import { MultiAttachParamsV0Schema } from "@autumn/shared/api/billing/attachV2/multiAttachParamsV0.js";
@@ -103,8 +85,6 @@ describe("price.processors is catalog-only", () => {
 });
 
 describe("the catalog item schema keeps the shared cross-field checks", () => {
-	// `.extend()` drops zod checks, so the catalog variant re-runs
-	// `planItemParamsIssues` rather than extending the finished schema.
 	test("amount and tiers cannot both be set", () => {
 		const result = CatalogPlanItemParamsV1Schema.safeParse({
 			feature_id: "seats",

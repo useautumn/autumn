@@ -115,7 +115,6 @@ export const toSubjectSnapshotsFormValues = (
 	refreshMaxPending: config.refreshMaxPending,
 });
 
-/** A cleared limit falls back to its default; writtenAfter is carried, never typed. */
 export const toSubjectSnapshotsConfig = ({
 	values,
 	writtenAfter,

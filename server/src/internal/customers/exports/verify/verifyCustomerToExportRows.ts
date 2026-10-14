@@ -17,9 +17,6 @@ import {
 	verifyResponseToExportRow,
 } from "./verifyResponseToExportRows.js";
 
-/** The swept subscriptions only screen; a flagged customer is re-verified live
- * so a sweep gone stale mid-run can never reach the file. A read that never
- * settles is retried on a fresh connection before the customer is failed. */
 export const verifyCustomerToExportRows = async ({
 	ctx,
 	scalar,

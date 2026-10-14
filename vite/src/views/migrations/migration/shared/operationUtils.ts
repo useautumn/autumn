@@ -26,8 +26,6 @@ function hasCustomizations(customize: UpdatePlanOp["customize"]): boolean {
 
 type CustomerOperation = NonNullable<Operations["customer"]>[number];
 
-/** A version without customize swaps every customer item for the target
- * version's catalog, overriding customized plans. */
 export function needsVersionOnlyWarning(op: CustomerOperation): boolean {
 	return (
 		op.type === "update_plan" &&

@@ -8,7 +8,6 @@ import {
 
 const toMs = (iso: string | null | undefined) => (iso ? Date.parse(iso) : null);
 
-/** Remembers when each file's current attempt landed on its worker, which RunFile doesn't carry. */
 export const createRunEtaTracker = ({
 	priors,
 	plannedFiles,

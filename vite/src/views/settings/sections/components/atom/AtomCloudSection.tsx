@@ -30,7 +30,6 @@ const PROVIDER_OPTIONS = [
 	},
 ];
 
-/** Step 1: the cloud, its region and Atom's size. */
 export const AtomCloudSection = ({
 	form,
 	onContinue,

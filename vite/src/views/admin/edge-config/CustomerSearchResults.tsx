@@ -33,7 +33,6 @@ const useCustomerSearch = ({
 	};
 };
 
-/** Search results plus the raw term, so a customer that does not exist yet can still be pinned by id. */
 const withTypedId = ({
 	term,
 	rows,
@@ -57,7 +56,6 @@ const searchMessage = ({
 	return null;
 };
 
-/** Customers of the picked org matching the search; clicking one toggles it in the selection. */
 export const CustomerSearchResults = ({
 	orgId,
 	search,

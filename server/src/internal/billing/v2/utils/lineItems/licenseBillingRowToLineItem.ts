@@ -16,8 +16,6 @@ import { augmentBillingContextForAnchorResetRefund } from "./augmentBillingConte
 import { getBackdatedLineItemContext } from "./getBackdatedLineItemContext.js";
 import { getLineItemBillingPeriod } from "./getLineItemBillingPeriod.js";
 
-/** refund = prorated credit for the PRE licenseBillingRow, charge = prorated for POST.
- * buildLineItem flips the sign on refunds. */
 export const licenseBillingRowToLineItem = ({
 	ctx,
 	billingContext,
@@ -61,7 +59,6 @@ export const licenseBillingRowToLineItem = ({
 		if (action.type === "skip") return undefined;
 		if (action.type === "use_snapped_now") effectiveNow = action.snappedNow;
 	}
-	// Seats outside a backdate gap keep billing their own current cycle, even on a backdated subscription.
 	const backdateGapLineItemContext =
 		backdateGapRun &&
 		getBackdatedLineItemContext({

@@ -1,11 +1,3 @@
-/**
- * Integration tests for Stripe discounts in update subscription flow.
- *
- * These tests verify that discounts applied at subscription or customer level
- * are correctly reflected in preview totals, and that discount identity/duration
- * is preserved through cancel/uncancel operations.
- */
-
 import { expect, test } from "bun:test";
 import {
 	applySubscriptionDiscount,
@@ -21,10 +13,6 @@ import chalk from "chalk";
 
 const billingUnits = 12;
 const pricePerUnit = 10;
-
-// =============================================================================
-// PERCENT-OFF DISCOUNT TESTS
-// =============================================================================
 
 test.concurrent(`${chalk.yellowBright("discount: 20% off subscription discount applied to upgrade")}`, async () => {
 	const customerId = "discount-20pct-upgrade";
@@ -60,7 +48,6 @@ test.concurrent(`${chalk.yellowBright("discount: 20% off subscription discount a
 		customerId,
 	});
 
-	// Create a 20% off coupon and apply to subscription
 	const coupon = await stripeCli.coupons.create({
 		percent_off: 20,
 		duration: "forever",
@@ -70,7 +57,6 @@ test.concurrent(`${chalk.yellowBright("discount: 20% off subscription discount a
 		discounts: [{ coupon: coupon.id }],
 	});
 
-	// Preview upgrade from 5 to 10 units (adding 5 units)
 	const preview = await autumnV1.subscriptions.previewUpdate({
 		customer_id: customerId,
 		product_id: product.id,
@@ -79,10 +65,6 @@ test.concurrent(`${chalk.yellowBright("discount: 20% off subscription discount a
 		],
 	});
 
-	// Upgrade generates: refund (-$50) + charge ($100)
-	// Discounts only apply to charges, not refunds
-	// Charge with 20% off: $100 * 0.8 = $80
-	// Total: -$50 + $80 = $30
 	const refundAmount = -50;
 	const discountedCharge = Math.round(100 * 0.8);
 	const expectedAmount = refundAmount + discountedCharge;
@@ -141,10 +123,6 @@ test.concurrent(`${chalk.yellowBright("discount: 50% off subscription discount")
 		],
 	});
 
-	// Upgrade generates: refund (-$50) + charge ($100)
-	// Discounts only apply to charges, not refunds
-	// Charge with 50% off: $100 * 0.5 = $50
-	// Total: -$50 + $50 = $0
 	const refundAmount = -50;
 	const discountedCharge = Math.round(100 * 0.5);
 	const expectedAmount = refundAmount + discountedCharge;
@@ -203,16 +181,8 @@ test.concurrent(`${chalk.yellowBright("discount: 100% off subscription discount 
 		],
 	});
 
-	// Upgrade generates: refund (-$50) + charge ($100)
-	// Discounts only apply to charges, not refunds
-	// Charge with 100% off: $100 * 0 = $0
-	// Total: -$50 + $0 = -$50
 	expect(preview.total).toBe(-50);
 });
-
-// =============================================================================
-// AMOUNT-OFF DISCOUNT TESTS
-// =============================================================================
 
 test.concurrent(`${chalk.yellowBright("discount: $10 off amount discount applied to upgrade")}`, async () => {
 	const customerId = "discount-10dollars-upgrade";
@@ -248,7 +218,6 @@ test.concurrent(`${chalk.yellowBright("discount: $10 off amount discount applied
 		customerId,
 	});
 
-	// $10 off coupon (1000 cents) - amount_off requires repeating duration
 	const coupon = await stripeCli.coupons.create({
 		amount_off: 1000,
 		currency: "usd",
@@ -268,10 +237,6 @@ test.concurrent(`${chalk.yellowBright("discount: $10 off amount discount applied
 		],
 	});
 
-	// Upgrade generates: refund (-$50) + charge ($100)
-	// Discounts only apply to charges, not refunds
-	// Charge with $10 off: $100 - $10 = $90
-	// Total: -$50 + $90 = $40
 	const refundAmount = -50;
 	const discountedCharge = 100 - 10;
 	const expectedAmount = refundAmount + discountedCharge;
@@ -313,8 +278,6 @@ test.concurrent(`${chalk.yellowBright("discount: charge capped at zero when disc
 		customerId,
 	});
 
-	// $100 off coupon (10000 cents) - more than the $100 new charge
-	// amount_off requires repeating duration
 	const coupon = await stripeCli.coupons.create({
 		amount_off: 10000,
 		currency: "usd",
@@ -334,14 +297,8 @@ test.concurrent(`${chalk.yellowBright("discount: charge capped at zero when disc
 		],
 	});
 
-	// Charge is capped at 0 (100 - 100 = 0), but refund for unused still applies
-	// Net = -$50 (refund) + $0 (discounted charge) = -$50
 	expect(preview.total).toBe(-50);
 });
-
-// =============================================================================
-// MULTIPLE DISCOUNT TESTS
-// =============================================================================
 
 test.concurrent(`${chalk.yellowBright("discount: multiple discounts stack (20% + 10%)")}`, async () => {
 	const customerId = "discount-multiple-stack";
@@ -377,7 +334,6 @@ test.concurrent(`${chalk.yellowBright("discount: multiple discounts stack (20% +
 		customerId,
 	});
 
-	// Create two coupons: 20% and 10%
 	const coupon1 = await stripeCli.coupons.create({
 		percent_off: 20,
 		duration: "forever",
@@ -388,7 +344,6 @@ test.concurrent(`${chalk.yellowBright("discount: multiple discounts stack (20% +
 		duration: "forever",
 	});
 
-	// Apply both discounts to subscription
 	await stripeCli.subscriptions.update(subscription.id, {
 		discounts: [{ coupon: coupon1.id }, { coupon: coupon2.id }],
 	});
@@ -401,10 +356,6 @@ test.concurrent(`${chalk.yellowBright("discount: multiple discounts stack (20% +
 		],
 	});
 
-	// Upgrade generates: refund (-$50) + charge ($100)
-	// Discounts only apply to charges, not refunds
-	// Charge: $100, 20% off = $80, then 10% off = $72
-	// Total: -$50 + $72 = $22
 	const refundAmount = -50;
 	const afterFirstDiscount = Math.round(100 * 0.8);
 	const discountedCharge = Math.round(afterFirstDiscount * 0.9);
@@ -447,7 +398,6 @@ test.concurrent(`${chalk.yellowBright("discount: promotion code applied to subsc
 		customerId,
 	});
 
-	// Create a coupon and promotion code
 	const coupon = await stripeCli.coupons.create({
 		percent_off: 25,
 		duration: "forever",
@@ -461,7 +411,6 @@ test.concurrent(`${chalk.yellowBright("discount: promotion code applied to subsc
 		code: `SAVE25-${customerId}-${Date.now()}`,
 	});
 
-	// Apply via promotion code
 	await stripeCli.subscriptions.update(subscription.id, {
 		discounts: [{ promotion_code: promotionCode.id }],
 	});
@@ -474,10 +423,6 @@ test.concurrent(`${chalk.yellowBright("discount: promotion code applied to subsc
 		],
 	});
 
-	// Upgrade generates: refund (-$50) + charge ($100)
-	// Discounts only apply to charges, not refunds
-	// Charge with 25% off: $100 * 0.75 = $75
-	// Total: -$50 + $75 = $25
 	const refundAmount = -50;
 	const discountedCharge = Math.round(100 * 0.75);
 	const expectedAmount = refundAmount + discountedCharge;
@@ -485,21 +430,6 @@ test.concurrent(`${chalk.yellowBright("discount: promotion code applied to subsc
 	expect(preview.total).toBe(expectedAmount);
 });
 
-// =============================================================================
-// DISCOUNT PRESERVATION: CANCEL / UNCANCEL
-// =============================================================================
-
-/**
- * Scenario:
- * - Customer has pro ($20/mo) with 2-month repeating 20% off coupon
- * - Advance 2 weeks (mid-cycle)
- * - Cancel at end of cycle
- * - Uncancel
- *
- * Expected:
- * - Discount ID unchanged (same di_xxx)
- * - Discount end timestamp unchanged (duration not reset)
- */
 test.concurrent(`${chalk.yellowBright("discount: cancel then uncancel preserves discount identity and duration")}`, async () => {
 	const customerId = "discount-cancel-uncancel";
 
@@ -517,7 +447,6 @@ test.concurrent(`${chalk.yellowBright("discount: cancel then uncancel preserves 
 		actions: [s.billing.attach({ productId: pro.id })],
 	});
 
-	// Apply 2-month repeating 20% off coupon
 	const { stripeCli, subscription: sub } = await getStripeSubscription({
 		customerId,
 	});
@@ -535,7 +464,6 @@ test.concurrent(`${chalk.yellowBright("discount: cancel then uncancel preserves 
 		couponIds: [coupon.id],
 	});
 
-	// Record discount before any changes
 	const subWithDiscount = await stripeCli.subscriptions.retrieve(sub.id, {
 		expand: ["discounts.source.coupon"],
 	});
@@ -549,28 +477,24 @@ test.concurrent(`${chalk.yellowBright("discount: cancel then uncancel preserves 
 	expect(discountIdBefore).not.toBeNull();
 	expect(discountEndBefore).not.toBeNull();
 
-	// Advance 2 weeks
 	await advanceTestClock({
 		stripeCli: ctx.stripeCli,
 		testClockId: testClockId!,
 		numberOfDays: 14,
 	});
 
-	// Cancel at end of cycle
 	await autumnV1.subscriptions.update({
 		customer_id: customerId,
 		product_id: pro.id,
 		cancel_action: "cancel_end_of_cycle",
 	});
 
-	// Uncancel
 	await autumnV1.subscriptions.update({
 		customer_id: customerId,
 		product_id: pro.id,
 		cancel_action: "uncancel",
 	});
 
-	// Verify discount is preserved
 	const subAfter = await stripeCli.subscriptions.retrieve(sub.id, {
 		expand: ["discounts.source.coupon"],
 	});
@@ -582,9 +506,7 @@ test.concurrent(`${chalk.yellowBright("discount: cancel then uncancel preserves 
 	const discountEndAfter =
 		typeof discountAfter !== "string" ? discountAfter.end : null;
 
-	// Discount ID must be the same (not re-created)
 	expect(discountIdAfter).toBe(discountIdBefore);
 
-	// Discount end must be the same (duration not reset)
 	expect(discountEndAfter).toBe(discountEndBefore);
 });

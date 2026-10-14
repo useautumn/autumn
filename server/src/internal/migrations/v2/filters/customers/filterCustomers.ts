@@ -62,10 +62,6 @@ const buildRowsSelect = ({
 			})
 		: buildCustomerSelect({ ...args, limit, afterInternalId });
 
-/**
- * Pure inner: takes a CustomerFilter directly. Used by `runFilter` shim
- * (Migration-fed) and reusable from scripts that don't have a Migration.
- */
 export const filterCustomers = ({
 	ctx,
 	filter,
@@ -146,7 +142,6 @@ export const getCustomerPage = async ({
 	};
 };
 
-/** Count of customers matching `filter`. */
 export const countCustomers = async ({
 	ctx,
 	filter,

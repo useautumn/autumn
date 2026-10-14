@@ -9,7 +9,6 @@ const CreditDimensionContext = createContext<CreditDimensionEditor | null>(
 	null,
 );
 
-/** The three tables all edit one rate-card row, so they share one editor. */
 export function CreditDimensionProvider({
 	item,
 	onChange,

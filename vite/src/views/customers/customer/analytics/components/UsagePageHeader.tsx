@@ -16,7 +16,6 @@ const USAGE_TAB_PATHS: Record<UsageTab, string> = {
 	logs: "/logs",
 };
 
-/** Shared by both Usage tabs so the title and tabs never move between them. */
 export const UsagePageHeader = ({
 	activeTab,
 	children,
@@ -36,7 +35,6 @@ export const UsagePageHeader = ({
 			</PageHeader>
 			<Tabs
 				value={activeTab}
-				// Each tab keeps its own filters in the URL, so don't carry them across.
 				onValueChange={(value: UsageTab) =>
 					navigate(
 						pushPage({ path: USAGE_TAB_PATHS[value], preserveParams: false }),

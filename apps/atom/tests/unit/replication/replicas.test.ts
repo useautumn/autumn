@@ -140,7 +140,6 @@ describe("a push one replica receives", () => {
 		expect(await remainingOn(b)).toBe(10);
 		expect(await remainingOn(c)).toBe(10);
 		expect(a.stats()).toMatchObject({ relayed: 2, relayFailed: 0 });
-		// Applied as relayed: passed on no further, or the three would relay to each other forever.
 		expect(b.stats()).toMatchObject({ relayed: 0 });
 		expect(c.stats()).toMatchObject({ relayed: 0 });
 	});
@@ -164,7 +163,6 @@ describe("a push one replica receives", () => {
 		expect(await late.json()).toEqual({ stored: false });
 		expect(await remainingOn(a)).toBe(7);
 		expect(await remainingOn(b)).toBe(7);
-		// An ignored push goes nowhere: the other replica has the newer read already.
 		expect(a.stats()).toMatchObject({ relayed: 0 });
 	});
 
@@ -184,7 +182,6 @@ describe("a push one replica receives", () => {
 
 		expect(await set.json()).toEqual({ stored: true });
 		expect(a.stats()).toMatchObject({ relayed: 1 });
-		// b holds the read a relayed: an older one is ignored there now.
 		expect(b.slots.installCatalog({ rows: [], readAt: 1699 })).toBe(false);
 	});
 });
@@ -218,7 +215,6 @@ describe("a replica that starts", () => {
 			"cus_3",
 		]);
 
-		// Later: one newer read on the peer, and a pass copies just that.
 		now = 2_000;
 		await a.app.request(
 			"/v1/subjects.set",
@@ -310,7 +306,6 @@ describe("a replica that starts", () => {
 		expect(ours.status).toBe(200);
 		expect(await ours.json()).toEqual({ after: null, subjects: [] });
 		expect(otherSplit.status).toBe(409);
-		// The window becomes an absolute point by this replica's clock, so later pages continue from it.
 		expect(await windowed.json()).toEqual({
 			after: 1_000_000 - 60_000,
 			subjects: [],
@@ -329,7 +324,6 @@ describe("a replica not ready yet", () => {
 		connect({ replicas: [a, b] });
 		await a.app.request("/v1/subjects.set", setSubject({ balance: 10 }));
 		await settle();
-		// What b holds differs, so the answer tells who answered.
 		await b.slots.processorFor({ customerId: "cus_1" }).setSubject({
 			customerId: "cus_1",
 			body: JSON.stringify({ ...subjectBody({ balance: 4 }), read_at: 1800 }),

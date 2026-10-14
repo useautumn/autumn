@@ -1,11 +1,3 @@
-/**
- * Rename + price change must rewrite execute-plan public ids to the new id.
- * Reward migration looks up via ProductService.getFull (no alias resolve).
- *
- * Red (current): results.plans[].id stays the old id after pro → proNew.
- * Green (after): results.plans[].id is proNew; getFull(proNew) finds the row.
- */
-
 import { expect, test } from "bun:test";
 import { isFixedPrice } from "@autumn/shared";
 import { expectCatalogResultsCorrect } from "@tests/integration/catalog-v2/utils/expectCatalogUpdate.js";

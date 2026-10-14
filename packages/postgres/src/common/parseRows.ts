@@ -1,6 +1,5 @@
 import type { z } from "zod/v4";
 
-/** Postgres returned a row the shared schema does not accept; nothing is guessed. */
 export class RowsInvalidError extends Error {
 	readonly issues: z.core.$ZodIssue[];
 
@@ -18,7 +17,6 @@ export class RowsInvalidError extends Error {
 	}
 }
 
-/** Every repo parses at the boundary the same way. */
 export const parseRows = <Schema extends z.ZodType>({
 	table,
 	schema,

@@ -1,10 +1,3 @@
-/**
- * catalogV2 — credit dimensions on a rate-card row: create, edit one
- * dimension in place, convert back to a plain row, reject ambiguous cards
- * through both write surfaces, and carry a dimensioned row inside a plan-item
- * feature_override.
- */
-
 import { expect, test } from "bun:test";
 import {
 	ErrCode,

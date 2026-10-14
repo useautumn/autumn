@@ -3,9 +3,6 @@ import { customerProductToStripeItemSpecs } from "@server/internal/billing/v2/pr
 import type { FullCusProduct } from "@shared/models/cusProductModels/cusProductModels";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 
-/**
- * Convert customer products to one-off stripe item specs.
- */
 export const customerProductsToOneOffStripeItemSpecs = ({
 	ctx,
 	billingContext,

@@ -8,7 +8,6 @@ import type { ReviewChangeValue } from "./types/reviewChange";
 
 const ONE_OFF_SUFFIX = "one-off";
 
-/** "/mo", "/3 mo", or "one-off" for a price without a recurring interval. */
 export const priceIntervalSuffix = (price: ProcessorItemPrice) => {
 	if (!price.interval) return ONE_OFF_SUFFIX;
 	return intervalSuffix({
@@ -32,7 +31,6 @@ const currencyFractionDigits = (currency: string) =>
 		currency,
 	}).resolvedOptions().maximumFractionDigits ?? 0;
 
-/** Stripe's amount format: a disambiguated currency prefix such as "US$37,500.00". */
 const stripeMoney = ({
 	amount,
 	currency,
@@ -52,7 +50,6 @@ const stripeMoney = ({
 	}).format(amount);
 };
 
-/** "year", "3 months", or undefined for a one-time price. */
 const billingPeriod = (price: ProcessorItemPrice) => {
 	if (!price.interval) return undefined;
 	return price.interval_count > 1
@@ -63,7 +60,6 @@ const billingPeriod = (price: ProcessorItemPrice) => {
 const unitsPerQuantity = (price: ProcessorItemPrice) =>
 	price.units_per_quantity ?? 1;
 
-/** "per unit" or "per 100 units" for usage-billed prices. */
 const perUnitLabel = (price: ProcessorItemPrice) =>
 	unitsPerQuantity(price) > 1
 		? `per ${numberWithCommas(unitsPerQuantity(price))} units`
@@ -72,7 +68,6 @@ const perUnitLabel = (price: ProcessorItemPrice) =>
 const isBilledPerUnit = (price: ProcessorItemPrice) =>
 	price.usage_type === "metered" || unitsPerQuantity(price) > 1;
 
-/** "US$37,500.00 / year", or "US$37,500.00 one-time" without an interval. */
 const withBillingPeriod = ({
 	label,
 	price,
@@ -97,7 +92,6 @@ const chargeLabel = (price: ProcessorItemPrice) => {
 		: unitAmount;
 };
 
-/** The price line under a product, as Stripe writes it: "US$37,500.00 / year" or "US$0.01 per unit / month". */
 export const pricingTableUnitPrice = (price: ProcessorItemPrice) => {
 	const label = chargeLabel(price);
 	return label ? withBillingPeriod({ label, price }) : undefined;
@@ -108,7 +102,6 @@ export const pricingTableQuantity = (item: ProcessorItem) =>
 		? NO_QUANTITY
 		: numberWithCommas(item.quantity);
 
-/** The Total column: "US$37,500.00 / year", or how it varies when usage decides it. */
 export const pricingTableTotal = (
 	item: ProcessorItem,
 ): ReviewChangeValue | undefined => {

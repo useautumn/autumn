@@ -17,29 +17,10 @@ import {
 import { ApiCustomerV1Schema } from "../previousVersions/apiCustomerV1";
 import { ApiCustomerV2Schema } from "../previousVersions/apiCustomerV2";
 
-/**
- * V0_2_CustomerChange: Transforms customer response TO V0_2 format
- *
- * Applied when: targetVersion <= V0_2
- *
- * Breaking changes introduced in V1.1 (that we reverse here):
- *
- * 1. Structure: Merged customer object → Split structure
- *    - V1.1+: Single merged object with all fields
- *    - V0_2: Split into {customer, products, add_ons, entitlements, invoices}
- *
- * 2. Features: Renamed and transformed
- *    - V1.1+: "features" with usage/included_usage/interval_count fields
- *    - V0_2: "entitlements" with used/allowance fields
- *
- * Input: ApiCustomerV2 (V1.1+ merged format)
- * Output: ApiCustomerV1 (V0_2 split format)
- */
-
 export const V0_2_CustomerChange = defineVersionChange({
 	name: "V0_2_CustomerChange",
-	newVersion: ApiVersion.V1_1, // Breaking change introduced in V1_1
-	oldVersion: ApiVersion.V0_2, // Applied when targetVersion <= V0_2
+	newVersion: ApiVersion.V1_1,
+	oldVersion: ApiVersion.V0_2,
 	description: [
 		"Customer response split into separate objects (customer, products, add_ons, entitlements, invoices)",
 		"Features renamed to entitlements",
@@ -51,7 +32,6 @@ export const V0_2_CustomerChange = defineVersionChange({
 
 	legacyDataSchema: CustomerLegacyDataSchema,
 
-	// Response: V1.1+ (V2) → V0_2 (V1)
 	transformResponse: ({
 		input,
 		legacyData,
@@ -59,12 +39,10 @@ export const V0_2_CustomerChange = defineVersionChange({
 		input: z.infer<typeof ApiCustomerV2Schema>;
 		legacyData?: CustomerLegacyData;
 	}) => {
-		// Step 1: Transform features V2 → V1
 		const v1_features: ApiCusFeatureV1[] = transformFeaturesV2ToV1({
 			features: input.features,
 		});
 
-		// Step 2: Split merged structure
 		const {
 			features: _features,
 			products = [],
@@ -115,14 +93,6 @@ export const V0_2_CustomerChange = defineVersionChange({
 	},
 });
 
-/**
- * Transform features from V2 format to V1 format
- *
- * V2 → V1 field mappings:
- * - usage → used
- * - included_usage → allowance
- * - Remove: interval_count, overage_allowed, rollovers
- */
 function transformFeaturesV2ToV1({
 	features,
 }: {
@@ -131,7 +101,6 @@ function transformFeaturesV2ToV1({
 	const v1_features: ApiCusFeatureV1[] = [];
 
 	for (const feature of features) {
-		// Unlimited features
 		if (feature.unlimited) {
 			const v1Feature = ApiCusFeatureV1Schema.parse({
 				feature_id: feature.feature_id,
@@ -144,7 +113,6 @@ function transformFeaturesV2ToV1({
 			continue;
 		}
 
-		// Boolean/Static features (only have feature_id, no other fields)
 		if (
 			!feature.interval &&
 			!feature.balance &&
@@ -159,17 +127,15 @@ function transformFeaturesV2ToV1({
 			continue;
 		}
 
-		// Regular/Metered features
 		const v1Feature = ApiCusFeatureV1Schema.parse({
 			feature_id: feature.feature_id,
 			unlimited: feature.unlimited || false,
 			interval: feature.interval,
 			balance: feature.balance,
-			used: feature.usage, // usage → used
+			used: feature.usage,
 			next_reset_at: feature.next_reset_at,
-			allowance: feature.included_usage, // included_usage → allowance
+			allowance: feature.included_usage,
 			usage_limit: feature.usage_limit,
-			// Remove: interval_count, overage_allowed, rollovers
 		});
 		v1_features.push(v1Feature);
 	}

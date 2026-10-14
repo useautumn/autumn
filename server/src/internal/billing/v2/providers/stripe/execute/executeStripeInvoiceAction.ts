@@ -40,8 +40,6 @@ export const executeStripeInvoiceAction = async ({
 		stripeInvoiceAction,
 	});
 
-	// Insert metadata into DB
-
 	const deferBillingPlan = shouldDeferBillingPlan({
 		billingContext,
 		latestStripeInvoice: invoice,
@@ -68,12 +66,6 @@ export const executeStripeInvoiceAction = async ({
 			resumeAfter: StripeBillingStage.InvoiceAction,
 		});
 
-		// autumnInvoice = await upsertInvoiceFromBilling({
-		// 	ctx,
-		// 	stripeInvoice: invoice,
-		// 	fullProducts: billingContext.fullProducts,
-		// 	fullCustomer: billingContext.fullCustomer,
-		// });
 		const invoiceResult = await invoiceActions.upsertFromStripe({
 			ctx,
 			stripeInvoice: invoice,
@@ -100,12 +92,6 @@ export const executeStripeInvoiceAction = async ({
 			fullProducts: billingContext.fullProducts,
 		});
 		autumnInvoice = invoiceResult.invoice;
-		// autumnInvoice = await upsertInvoiceFromBilling({
-		// 	ctx,
-		// 	stripeInvoice: invoice,
-		// 	fullProducts: billingContext.fullProducts,
-		// 	fullCustomer: billingContext.fullCustomer,
-		// });
 	}
 
 	logger.debug(

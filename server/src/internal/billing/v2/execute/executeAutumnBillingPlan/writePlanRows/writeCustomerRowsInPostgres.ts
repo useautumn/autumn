@@ -14,7 +14,6 @@ import { CusService } from "@/internal/customers/CusService";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService";
 
-/** The rows the balance worker holds, pools included, written to Postgres in plan order. A customer insert that finds the row taken stops here. */
 export const writeCustomerRowsInPostgres = async ({
 	ctx,
 	autumnBillingPlan,
@@ -59,7 +58,6 @@ export const writeCustomerRowsInPostgres = async ({
 		await CusEntService.insert({ ctx, data: insertCustomerEntitlements });
 	}
 
-	// Custom prices/entitlements from the catalog step must exist before customer rows reference them.
 	if (patchCustomerProducts) {
 		await executePatchCustomerProducts({ ctx, patchCustomerProducts });
 	}
@@ -81,7 +79,6 @@ export const writeCustomerRowsInPostgres = async ({
 		customerProducts: insertCustomerProducts,
 	});
 
-	// Lock / relock customer currency. No-op when already the target currency.
 	if (lockCustomerCurrency) {
 		await CusService.lockOrRelockCurrency({
 			ctx,
@@ -93,7 +90,6 @@ export const writeCustomerRowsInPostgres = async ({
 	for (const { customerProduct, updates } of getUpdateCustomerProducts({
 		autumnBillingPlan,
 	})) {
-		// Drizzle throws "No values to set" on an empty SET (e.g. discount-only flows register an empty entry).
 		if (!updates || Object.keys(updates).length === 0) continue;
 		await CusProductService.update({
 			ctx,

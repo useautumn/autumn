@@ -15,7 +15,6 @@ const executeSlackAgentTurn = async (
 	if (setup.kind === "blocked") return setup;
 	const isFollowUp =
 		params.recentMessages?.some((message) => message.isBot) ?? false;
-	// The thread facts a presenter needs live in setup, not in the turn result.
 	const presentable = (result: AgentTurnResult): SlackAgentTurnResult => ({
 		...result,
 		env: setup.context.env,

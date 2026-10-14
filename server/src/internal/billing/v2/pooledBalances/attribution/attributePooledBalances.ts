@@ -22,14 +22,12 @@ export type PoolTotals = Pick<
 	"granted" | "remaining" | "usage" | "unlimited" | "overage_allowed"
 >;
 
-/** What one scope feeds into one pool; `poolId` is null until billing links the source. */
 export type PooledContribution = {
 	poolId: string | null;
 	contribution: number;
 	nextResetAt: number | null;
 };
 
-/** Billing's recorded contribution, else what billing records when it links the source. */
 const contributionOf = ({
 	customerEntitlement,
 	customerProduct,
@@ -64,7 +62,6 @@ const mergeContribution = ({
 	),
 });
 
-/** What the given plans pool into the customer's shared balances, per feature and pool. */
 export const customerProductsToPooledContributions = ({
 	customerProducts,
 	inStatuses,
@@ -113,10 +110,6 @@ export const customerProductsToPooledContributions = ({
 	);
 };
 
-/**
- * A contributor's slice of a pool: its contribution as granted, with the pool's remaining and
- * usage split by its share of all contributions, so rollovers in the pool are shared out too.
- */
 export const attributePooledBalance = ({
 	own,
 	contribution,

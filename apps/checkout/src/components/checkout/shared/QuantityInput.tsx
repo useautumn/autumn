@@ -49,11 +49,9 @@ export function QuantityInput({
 	};
 
 	const handleBlur = () => {
-		// On blur, sync input value with actual value
 		setInputValue(value.toString());
 	};
 
-	// Sync external value changes
 	if (
 		value.toString() !== inputValue &&
 		document.activeElement?.tagName !== "INPUT"
@@ -72,7 +70,6 @@ export function QuantityInput({
 			}}
 			transition={FAST_TRANSITION}
 		>
-			{/* Decrement button */}
 			<motion.button
 				type="button"
 				className="h-6 w-6 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors border-r border-border"
@@ -84,7 +81,6 @@ export function QuantityInput({
 				<Minus className="h-2.5 w-2.5" weight="bold" />
 			</motion.button>
 
-			{/* Number display */}
 			<div className="w-10 h-6 flex items-center justify-center overflow-hidden relative">
 				<input
 					type="text"
@@ -98,7 +94,6 @@ export function QuantityInput({
 				/>
 			</div>
 
-			{/* Increment button */}
 			<motion.button
 				type="button"
 				className="h-6 w-6 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors border-l border-border"

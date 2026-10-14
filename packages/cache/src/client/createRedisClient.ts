@@ -15,7 +15,6 @@ const formatRedisEndpoint = ({ url }: { url: string }): string => {
 	}
 };
 
-/** One ioredis connection, configured the way every Autumn process connects; a `get*` accessor owns the instance. */
 export const createRedisClient = ({
 	ctx,
 	config,
@@ -41,13 +40,11 @@ export const createRedisClient = ({
 		keepAlive: 10000,
 		commandTimeout: commandTimeoutMs,
 		// null leaves commandTimeout as the sole bound: ioredis's default flushes the offline
-		// queue after N reconnect attempts, which aborts commands on a minor handshake blip.
 		maxRetriesPerRequest,
 		autoResendUnfulfilledCommands,
 	});
 
 	if (ctx.logger) rememberClientLogger({ redis, logger: ctx.logger });
-	// Tracing must patch the instance before a process registers its commands on it.
 	ctx.onClientCreated?.({ redis, label });
 	return redis;
 };

@@ -8,8 +8,6 @@ import {
 import type { TwdContext } from "../../../lib/types/twdContext.ts";
 import { splitRepetitionId } from "../../runs/repeat/repetitions.ts";
 
-/** Frozen cross-task API for results. OWNED BY THE RESULTS TASK. */
-
 const FINAL_STATUSES: FileResultStatus[] = [
 	"passed",
 	"failed",
@@ -18,7 +16,6 @@ const FINAL_STATUSES: FileResultStatus[] = [
 	"skipped",
 ];
 
-/** Append one finished-file row to test_results. */
 export const recordFileResult = async ({
 	ctx,
 	runId,
@@ -60,7 +57,6 @@ export const recordFileResult = async ({
 	});
 };
 
-/** Longest-first by baseline p90; files without history first. Repetitions sort with their file. */
 export const orderFilesLongestFirst = async ({
 	ctx,
 	files,

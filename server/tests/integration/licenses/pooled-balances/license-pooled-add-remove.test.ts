@@ -1,13 +1,3 @@
-/**
- * Contract: parent switch that adds or removes a pooled seat item mints or
- * expires that feature's license pool in batch SQL. Existing pools on the
- * link stay put. Source balances stay 0. link_id is stable.
- *
- *   immediate add → new words pool, granted = N × 100
- *   spare seats are in scope (release does not drop the new contribution)
- *   scheduled remove → words pool unchanged until activation, then expires
- */
-
 import { test } from "bun:test";
 import type { ApiCustomerV5, AttachParamsV1Input } from "@autumn/shared";
 import { expectCustomerProducts } from "@tests/integration/billing/utils/expectCustomerProductCorrect.js";

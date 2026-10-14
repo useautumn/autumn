@@ -1,6 +1,5 @@
 import { CursorPagination } from "@/components/general/table";
 
-/** Compact "start–end of total" pager for sheet lists; pageIndex is zero-based. */
 export function SheetPaginationControls({
 	rangeStart,
 	rangeEnd,

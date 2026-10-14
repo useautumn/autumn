@@ -9,8 +9,6 @@ import { queryReplicaLag } from "./probes/replicaLagQuery.js";
 export const REPLICA_ROUTING_PROBE_INTERVAL_MS = 3_000;
 export const REPLICA_ROUTING_STALENESS_MS = 10_000;
 
-/** A tick in flight this long is presumed wedged; the guard self-heals so one
- *  stuck query can't disable replica routing forever. */
 export const REPLICA_ROUTING_TICK_STUCK_MS =
 	REPLICA_ROUTING_PROBE_INTERVAL_MS * 5;
 
@@ -25,7 +23,6 @@ export type ReplicaRoutingState = {
 	eligible: boolean;
 	replicaCount: number;
 	maxReplayLagMs: number;
-	/** Epoch ms of the last completed probe; 0 = never probed. */
 	updatedAt: number;
 };
 
@@ -69,7 +66,6 @@ const evaluate = (): { eligible: boolean; reason: ReplicaRoutingReason } => {
 	return { eligible: true, reason: "recovered" };
 };
 
-// Once per eligible<->ineligible flip — never per tick, never per request.
 const logIfTransitioned = (): boolean => {
 	const { eligible, reason } = evaluate();
 	if (eligible === lastLoggedEligible) return eligible;
@@ -132,7 +128,6 @@ const probeTick = async ({ db }: { db: DrizzleCli }): Promise<void> => {
 			errorMessage: error instanceof Error ? error.message : String(error),
 		};
 	}
-	// A reclaimed-over tick may still settle later; its snapshot is stale.
 	if (generation !== tickGeneration) return;
 	tickInFlight = false;
 	lastProbe = result;
@@ -204,7 +199,6 @@ export const _resetReplicaRoutingStateForTesting = (): void => {
 	lastLoggedEligible = false;
 	tickInFlight = false;
 	tickStartedAt = 0;
-	// Invalidate any tick still in flight so it can't settle into fresh state.
 	tickGeneration += 1;
 	stuckTickLogged = false;
 };

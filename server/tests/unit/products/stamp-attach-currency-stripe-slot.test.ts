@@ -1,15 +1,3 @@
-/**
- * stampAttachCurrencyStripeSlot
- *
- * Full usage reuse must persist stripe_product_id (+ meter for consumable)
- * with the Price slot. createStripePriceIFNotExist sees an empty product
- * slot and mints a new feature Product while the borrowed Price stays
- * on the donor.
- *
- * Red (current):  stamp copies stripe_price_id + meter, not stripe_product_id
- * Green (after):  same persist writes the donor feature Product id
- */
-
 import { afterAll, beforeEach, describe, expect, mock, test } from "bun:test";
 import {
 	AppEnv,

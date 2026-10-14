@@ -146,13 +146,6 @@ describe("normalizeFromSchema (core walker)", () => {
 		).not.toThrow();
 	});
 
-	// processor_type cache safety: confirms `.default()` fires symmetrically
-	// through both walkers. This is the core guarantee Option A relies on —
-	// Upstash cjson strips the field for old cached entries and the walker
-	// must hydrate it back to ProcessorType.Stripe so consumers see a defined
-	// value. The explicit-null case is documented as walker passthrough; the
-	// `?? ProcessorType.Stripe` consumer mask is what handles that.
-
 	test("ZodDefault fires for ProcessorType enum on undefined (FullSubject walker)", () => {
 		const schema = z.object({
 			processor_type: z.enum(ProcessorType).default(ProcessorType.Stripe),
@@ -174,25 +167,10 @@ describe("normalizeFromSchema (core walker)", () => {
 			schema,
 			data: { processor_type: null },
 		});
-		// Documents Option A's known limitation: `.default()` only fires for
-		// undefined. The consumer-side `?? ProcessorType.Stripe` (in
-		// processInvoice / latent breakage filters) covers this case.
 		expect(result.processor_type).toBeNull();
 	});
 
 	test("ZodDefault does NOT fire on primitive leaves in cacheUtils walker (documented limitation)", () => {
-		// The FullCustomer / cacheUtils walker has no leaf-level ZodDefault
-		// application — for primitive types like ZodEnum, it returns `data`
-		// unchanged (see normalizeFromSchema.ts:139). This is a known
-		// asymmetry vs the FullSubject walker (which DOES handle ZodDefault
-		// at primitive leaves). Out of scope to fix in this stage; tracked as
-		// follow-up in the invoice-schema-rename-plan.
-		//
-		// Why this is OK for processor_type: the consumer-side
-		// `?? ProcessorType.Stripe` mask in `processInvoice` and the latent
-		// breakage filters covers the undefined case from this walker just
-		// as it covers the null case from the FullSubject walker. The wire
-		// always emits a defined value.
 		const schema = z.object({
 			processor_type: z.enum(ProcessorType).default(ProcessorType.Stripe),
 		});
@@ -202,7 +180,6 @@ describe("normalizeFromSchema (core walker)", () => {
 			schema: schema as unknown as z.ZodTypeAny,
 			data: {},
 		});
-		// Walker returns the field undefined. Consumer `??` is what masks it.
 		expect(result.processor_type).toBeUndefined();
 	});
 });
@@ -252,7 +229,6 @@ describe("sanitizeCachedSubjectBalance", () => {
 
 	test("fills dropped nullable scalars (Upstash null-drop repair)", () => {
 		const malformed = buildSubjectBalance() as Record<string, unknown>;
-		// Remove fields that Upstash Lua cjson would have dropped when they were null
 		delete malformed.expires_at;
 		delete malformed.next_reset_at;
 		delete malformed.unlimited;
@@ -269,7 +245,6 @@ describe("sanitizeCachedSubjectBalance", () => {
 		expect(result.unlimited).toBeNull();
 		expect(result.usage_allowed).toBeNull();
 		expect(result.external_id).toBeNull();
-		// cache_version has .default(0) in CustomerEntitlementSchema; default wins
 		expect(result.cache_version).toBe(0);
 	});
 
@@ -391,7 +366,6 @@ describe("sanitizeCachedFullSubject", () => {
 				entitlementId: "e_seat",
 				customerEntitlementId: "ce_seat",
 				internalCustomerId: "cus_int_1",
-				// customerProductId, internalEntityId, expiresAt, externalId all dropped
 			},
 		};
 		const result = sanitizeCachedFullSubject({
@@ -426,8 +400,6 @@ describe("sanitizeCachedFullSubject", () => {
 				is_custom: false,
 				billing_version: "v1",
 				external_id: null,
-				// trial_ends_at / canceled_at / ended_at / billing_cycle_anchor_resets_at
-				// / free_trial_id dropped
 			},
 		];
 		const result = sanitizeCachedFullSubject({
@@ -456,7 +428,6 @@ describe("sanitizeCachedFullSubject", () => {
 				usage_features: [],
 				org_id: "org_1",
 				env: "live",
-				// stripe_id, stripe_schedule_id, current_period_start/end dropped
 			},
 		];
 		const result = sanitizeCachedFullSubject({
@@ -485,7 +456,6 @@ describe("sanitizeCachedFullSubject", () => {
 				currency: "usd",
 				discounts: [],
 				items: [],
-				// hosted_invoice_url, internal_entity_id dropped
 			},
 		];
 		const result = sanitizeCachedFullSubject({
@@ -516,16 +486,6 @@ describe("sanitizeCachedFullSubject", () => {
 		expect(result.subjectViewEpoch).toBe(1);
 	});
 });
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// processor_type — multi-processor invoice scaffolding
-//
-// Locks in the Option A contract: the schema's `.default(ProcessorType.Stripe)`
-// fires through the walker for `undefined` (covers cjson-stripped fields on
-// pre-deploy cached entries), `null` is passed through unchanged (consumers
-// mask via `?? ProcessorType.Stripe`), and explicit `"stripe"` / `"revenuecat"`
-// values round-trip cleanly without over-correction.
-// ═══════════════════════════════════════════════════════════════════════════════
 
 describe("sanitizeCachedFullSubject — processor_type (Option A walker behavior)", () => {
 	const buildCachedFullSubject = (): unknown => ({
@@ -569,13 +529,11 @@ describe("sanitizeCachedFullSubject — processor_type (Option A walker behavior
 	});
 
 	test("walker fills missing processor_type via ZodDefault → stripe", () => {
-		// Pre-deploy cache entries don't have the field at all (cjson stripped
-		// or never written).
 		const malformed = buildCachedFullSubject() as unknown as Record<
 			string,
 			unknown
 		>;
-		malformed.invoices = [buildInvoice()]; // no processor_type key
+		malformed.invoices = [buildInvoice()];
 		const result = sanitizeCachedFullSubject({
 			cachedFullSubject: malformed as unknown as CachedFullSubject,
 		});
@@ -583,12 +541,6 @@ describe("sanitizeCachedFullSubject — processor_type (Option A walker behavior
 	});
 
 	test("walker passes through explicit null processor_type unchanged", () => {
-		// Documents the Option A limitation: `.default()` only fires for
-		// undefined. Consumers (processInvoice, latent breakage filters)
-		// handle the null case via `?? ProcessorType.Stripe`. This test
-		// guards against any future "convenience" change that silently
-		// coerces null at the walker level — consumer code relies on the
-		// passthrough semantics.
 		const malformed = buildCachedFullSubject() as unknown as Record<
 			string,
 			unknown
@@ -629,9 +581,6 @@ describe("sanitizeCachedFullSubject — processor_type (Option A walker behavior
 	});
 
 	test("end-to-end: walker null + processInvoice consumer → wire stripe", async () => {
-		// Composite contract: walker leaves null, consumer masks. Documents the
-		// agreed Option A pattern as runnable code so a future regression in
-		// either the walker OR the consumer trips this test.
 		const malformed = buildCachedFullSubject() as unknown as Record<
 			string,
 			unknown
@@ -652,16 +601,6 @@ describe("sanitizeCachedFullSubject — processor_type (Option A walker behavior
 	});
 
 	test("end-to-end pre-update rollover: cache JSON missing field → JSON.parse → walker → processInvoice → wire stripe", async () => {
-		// Simulates the deploy-boundary rollover scenario:
-		//   1. An invoice was cached BEFORE this Phase shipped (no
-		//      `processor_type` key in the JSON).
-		//   2. After deploy, `getCachedFullSubject` reads that JSON, parses
-		//      it, and sanitizes via the walker.
-		//   3. `processInvoice` then maps the sanitized row to the V5 wire
-		//      shape.
-		// The wire MUST emit `processor_type === "stripe"` for the row to
-		// remain valid in V5 consumers. Any regression in the walker's
-		// ZodDefault handling OR the consumer-side `??` mask trips this test.
 		const preUpdateInvoice = buildInvoice();
 		delete (preUpdateInvoice as Record<string, unknown>).processor_type;
 
@@ -690,11 +629,6 @@ describe("sanitizeCachedFullSubject — processor_type (Option A walker behavior
 	});
 
 	test("end-to-end post-update revenuecat row: cache JSON with revenuecat → roundtrip → wire revenuecat", async () => {
-		// Mirror of the rollover test for the post-deploy path: an RC invoice
-		// is written with `processor_type: "revenuecat"`, cached as JSON,
-		// then read back. The wire MUST surface "revenuecat" intact (no
-		// over-correction to "stripe" by the walker, the consumer mask, or
-		// processInvoice).
 		const postUpdateInvoice = buildInvoice({
 			processor_type: ProcessorType.RevenueCat,
 			stripe_id: "rc_txn_42",
@@ -726,24 +660,6 @@ describe("sanitizeCachedFullSubject — processor_type (Option A walker behavior
 		expect(wire.stripe_id).toBe("rc_txn_42");
 	});
 });
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// processor_type — FullCustomer (v1) cache rollover
-//
-// The legacy FullCustomer cache read path (now deleted) used the cacheUtils walker
-// at `server/src/utils/cacheUtils/normalizeFromSchema.ts`, NOT the FullSubject
-// sanitize walker. The cacheUtils walker has a known asymmetry: it does not
-// apply leaf-level ZodDefault for primitives (documented limitation; the
-// "ZodDefault does NOT fire on primitive leaves in cacheUtils walker" test
-// in the core walker block proves this). For pre-update cached invoices
-// missing `processor_type`, the walker leaves the field undefined and the
-// consumer-side `?? ProcessorType.Stripe` mask in `processInvoice` is what
-// makes the rollover safe.
-//
-// These tests exercise the v1 cache path end-to-end through JSON roundtrip
-// + cacheUtils walker + processInvoice, mirroring the FullSubject (v2)
-// rollover tests above.
-// ═══════════════════════════════════════════════════════════════════════════════
 
 describe("FullCustomer v1 cache — processor_type rollover", () => {
 	const buildFullCustomer = (
@@ -795,11 +711,6 @@ describe("FullCustomer v1 cache — processor_type rollover", () => {
 	});
 
 	test("pre-update rollover: cache JSON missing processor_type → cacheUtils walker → processInvoice → wire stripe", async () => {
-		// Pre-deploy FullCustomer cache entry: invoice has no `processor_type`
-		// key. The cacheUtils walker does NOT fill the default (orthogonal
-		// bug); it leaves the field undefined. The consumer mask in
-		// processInvoice converts undefined → ProcessorType.Stripe on the
-		// wire. End-to-end safety relies on this two-layer behavior.
 		const preUpdateInvoice = buildInvoice();
 		delete (preUpdateInvoice as Record<string, unknown>).processor_type;
 
@@ -832,9 +743,6 @@ describe("FullCustomer v1 cache — processor_type rollover", () => {
 	});
 
 	test("explicit null processor_type → cacheUtils walker passthrough → processInvoice → wire stripe", async () => {
-		// Post-deploy DB row with NULL processor_type cached as JSON. The
-		// cacheUtils walker passes null through unchanged. Consumer mask
-		// converts null → ProcessorType.Stripe.
 		const cachedJson = JSON.stringify(
 			buildFullCustomer({
 				invoices: [buildInvoice({ processor_type: null })],
@@ -858,8 +766,6 @@ describe("FullCustomer v1 cache — processor_type rollover", () => {
 	});
 
 	test("post-update revenuecat row → cacheUtils walker preserves → wire revenuecat", async () => {
-		// RC invoice cached after Phase 3 deploys. Walker passes the value
-		// through unchanged; consumer mask is a no-op for defined values.
 		const cachedJson = JSON.stringify(
 			buildFullCustomer({
 				invoices: [
@@ -891,10 +797,6 @@ describe("FullCustomer v1 cache — processor_type rollover", () => {
 	});
 
 	test("post-update stripe row with explicit processor_type → cacheUtils walker preserves → wire stripe", async () => {
-		// Post-Phase-2 stripe writes set processor_type explicitly via
-		// initInvoiceFromStripe. New cached entries have the field present.
-		// Walker preserves; consumer mask is a no-op. Sanity check that
-		// nothing over-corrects.
 		const cachedJson = JSON.stringify(
 			buildFullCustomer({
 				invoices: [
@@ -924,8 +826,6 @@ describe("FullCustomer v1 cache — processor_type rollover", () => {
 
 describe("sanitizeCachedAggregatedFeatureBalance", () => {
 	test("fills undefined at nullable positions for AggregatedFeatureBalance", () => {
-		// AggregatedFeatureBalance entities is .nullish() — undefined should
-		// become null after walker pass.
 		const malformed = {
 			api_id: "f1",
 			internal_feature_id: "if_1",
@@ -938,7 +838,6 @@ describe("sanitizeCachedAggregatedFeatureBalance", () => {
 			unlimited: false,
 			usage_allowed: false,
 			entity_count: 0,
-			// entities dropped by Upstash null-strip
 		};
 		const result = sanitizeCachedAggregatedFeatureBalance({
 			aggregated: malformed as unknown as z.infer<
@@ -968,27 +867,11 @@ describe("sanitizeCachedAggregatedFeatureBalance", () => {
 				typeof AggregatedFeatureBalanceSchema
 			>,
 		});
-		// rollover_balance has .default(0)
 		expect(result.rollover_balance).toBe(0);
 		expect(result.rollover_usage).toBe(0);
 		expect(result.prepaid_grant_from_options).toBe(0);
 	});
 });
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// Cache sanitization regression — commit ce100dbf
-//
-// Upstash's Lua cjson collapses empty `{}` to `[]`, and pre-existing cache
-// entries that pre-date a new schema field will be missing it entirely. The
-// sanitizer must:
-//   1. coerce empty arrays back to objects when the schema says "object"
-//      (so nested defaults like `ProductConfigSchema.ignore_past_due=false`
-//      are re-applied),
-//   2. defensively coerce `product.config` to `{}` when it's an array or
-//      missing (belt-and-suspenders for downstream consumers),
-//   3. never throw "Expected object, received array" for any nested object
-//      shape regardless of what fields are added in the future.
-// ═══════════════════════════════════════════════════════════════════════════════
 
 const buildBaseCachedFullSubjectForSanitize = (): CachedFullSubject =>
 	({
@@ -1017,8 +900,6 @@ const buildBaseCachedFullSubjectForSanitize = (): CachedFullSubject =>
 
 const buildBaseProductForSanitize = (planId = "plan_sanitize") =>
 	({
-		// Just enough fields to look like a Product; the sanitizer only
-		// inspects `config` for this regression.
 		id: planId,
 		internal_id: `ip_${planId}`,
 		name: planId,
@@ -1034,9 +915,6 @@ const buildBaseProductForSanitize = (planId = "plan_sanitize") =>
 
 describe("sanitizeCachedFullSubject — product.config (commit ce100dbf)", () => {
 	test("coerces product.config: [] -> {} and re-applies ignore_past_due default", () => {
-		// Simulates what Upstash hands back: ignore_past_due defaulted to {},
-		// cjson encoded it as [], so on read we get `config: []`. The walker
-		// must rebuild it as `{ ignore_past_due: false }`.
 		const malformed = buildBaseCachedFullSubjectForSanitize() as unknown as Record<
 			string,
 			unknown
@@ -1056,20 +934,14 @@ describe("sanitizeCachedFullSubject — product.config (commit ce100dbf)", () =>
 			config: { ignore_past_due?: boolean };
 		};
 
-		// Layer 1 (walker): config is an object, not an array.
 		expect(Array.isArray(product.config)).toBe(false);
 		expect(product.config).toBeDefined();
 		expect(typeof product.config).toBe("object");
 
-		// Layer 2 (walker default-application): nested ZodDefault hydrated.
-		// If this fails the walker isn't recursing into the rebuilt object.
 		expect(product.config.ignore_past_due).toBe(false);
 	});
 
 	test("fills missing product.config entirely (pre-field-existed cache entries)", () => {
-		// Pre-existing cache entries written before `config` existed simply
-		// don't have the field — the belt-and-suspenders block in
-		// sanitizeCachedFullSubject must inject {}.
 		const malformed = buildBaseCachedFullSubjectForSanitize() as unknown as Record<
 			string,
 			unknown
@@ -1089,8 +961,6 @@ describe("sanitizeCachedFullSubject — product.config (commit ce100dbf)", () =>
 	});
 
 	test("preserves explicit ignore_past_due=true (no over-correction)", () => {
-		// If Upstash cjson encoded `{ ignore_past_due: true }` faithfully (only
-		// fully-empty objects collapse), the value must survive untouched.
 		const malformed = buildBaseCachedFullSubjectForSanitize() as unknown as Record<
 			string,
 			unknown
@@ -1115,11 +985,6 @@ describe("sanitizeCachedFullSubject — product.config (commit ce100dbf)", () =>
 
 describe("normalizeFromSchema — empty-array-as-object regression (commit ce100dbf)", () => {
 	test("cacheUtils walker rebuilds ZodObject from empty array on nested products", () => {
-		// Direct exercise of the cacheUtils walker. The structural fix from
-		// commit ce100dbf:
-		// nested `config: []` must become `config: {}` so downstream
-		// "Expected object, received array" errors stop firing. (This walker
-		// does NOT re-apply ZodDefault values.)
 		const TestSchema = z.object({
 			products: z.array(ProductSchema),
 		});
@@ -1169,18 +1034,6 @@ describe("normalizeFromSchema — empty-array-as-object regression (commit ce100
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// version_slug / active — version-identity cache backfill
-//
-// Entries cached before the version-identity migration lack both fields.
-// The backfill runs BEFORE the walker (version_slug is nullable, so the
-// walker would turn a missing key into null and destroy the "absent"
-// signal) and fills ONLY absent keys: slug → `v{version}` (same rule as the
-// DB backfill), active → false (a cached subject can't know the plan's
-// active version). Real cached values — including explicit null slug and
-// active=false — must always pass through untouched.
-// ═══════════════════════════════════════════════════════════════════════════════
-
 describe("sanitizeCachedFullSubject — version identity backfill", () => {
 	const subjectWithProduct = (
 		productOverrides: Record<string, unknown>,
@@ -1201,7 +1054,6 @@ describe("sanitizeCachedFullSubject — version identity backfill", () => {
 
 	test("fills absent version_slug and active (pre-migration cache entry)", () => {
 		const result = sanitizeCachedFullSubject({
-			// buildBaseProductForSanitize has version: 1 and neither new field.
 			cachedFullSubject: subjectWithProduct({}),
 		});
 		expect(result.products[0].version_slug).toBe("v1");
@@ -1237,10 +1089,6 @@ describe("sanitizeCachedFullSubject — version identity backfill", () => {
 	});
 
 	test("passes through explicit null version_slug unchanged (only undefined is filled)", () => {
-		// Note: through real Upstash, an explicit null is cjson-dropped and
-		// comes back absent — indistinguishable from a pre-migration entry, so
-		// it would be filled. This test documents the sanitizer's own contract
-		// for a null that survives serialization (e.g. plain JSON caches).
 		const result = sanitizeCachedFullSubject({
 			cachedFullSubject: subjectWithProduct({
 				version_slug: null,
@@ -1281,15 +1129,6 @@ describe("sanitizeCachedFullSubject — version identity backfill", () => {
 	});
 });
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Generic fuzz: mutate every field of a sample subject across multiple
-// "Upstash-style" corruption modes and assert sanitization always returns a
-// stable, downstream-consumable shape (no thrown errors, no array-shaped
-// values at object positions). This is the regression net for any future
-// field added to ProductSchema or peer schemas — new fields get fuzzed for
-// free on the next test run.
-// ─────────────────────────────────────────────────────────────────────────────
-
 type SanitizerCorruptionMode =
 	| "object_to_empty_array"
 	| "array_to_empty_object"
@@ -1311,7 +1150,6 @@ const corruptValueForSanitizer = (
 ): unknown => {
 	switch (mode) {
 		case "object_to_empty_array":
-			// Only objects can collapse to [] in Upstash cjson.
 			return value && typeof value === "object" && !Array.isArray(value)
 				? []
 				: value;
@@ -1326,18 +1164,12 @@ const corruptValueForSanitizer = (
 	}
 };
 
-/**
- * Walk `data` shape-blind and return a new structure where every leaf has had
- * `corruptValueForSanitizer(_, mode)` applied. Recurses into objects and
- * arrays so nested fields (like `products[*].config`) get hit. Generic — never
- * references `config` or `ignore_past_due` directly.
- */
 const corruptAllFieldsForSanitizer = (
 	data: unknown,
 	mode: SanitizerCorruptionMode,
 	depth = 0,
 ): unknown => {
-	if (depth > 4) return data; // safety against pathological cycles
+	if (depth > 4) return data;
 	if (Array.isArray(data)) {
 		return data.map((item) =>
 			corruptAllFieldsForSanitizer(item, mode, depth + 1),
@@ -1359,7 +1191,6 @@ const assertNoArrayShapedObjects = (
 	schema: z.ZodTypeAny,
 	path = "$",
 ): void => {
-	// Unwrap optional/nullable/default chains to the inner shape-bearing schema.
 	let unwrapped: z.ZodTypeAny = schema;
 	while (
 		unwrapped instanceof z.ZodOptional ||
@@ -1371,9 +1202,6 @@ const assertNoArrayShapedObjects = (
 	}
 
 	if (unwrapped instanceof z.ZodObject) {
-		// Critical assertion: the object position must NOT carry an Array
-		// payload — that's exactly the "Expected object, received array"
-		// breakage commit ce100dbf is fixing.
 		if (Array.isArray(value)) {
 			throw new Error(
 				`Sanitizer left an array at object position ${path} (caller would see "Expected object, received array")`,
@@ -1405,9 +1233,6 @@ const assertNoArrayShapedObjects = (
 
 describe("sanitizeCachedFullSubject — generic fuzz (regression net for new fields)", () => {
 	test("every Upstash corruption mode is recovered without leaving array payloads at object positions", () => {
-		// Build a "fully-populated" subject so the walker has every nested
-		// shape to traverse. New fields on any nested schema get fuzzed for
-		// free on the next test run.
 		const populated = buildBaseCachedFullSubjectForSanitize() as unknown as Record<
 			string,
 			unknown
@@ -1424,13 +1249,6 @@ describe("sanitizeCachedFullSubject — generic fuzz (regression net for new fie
 		];
 
 		for (const mode of ALL_SANITIZER_CORRUPTION_MODES) {
-			// We corrupt only the *interior* of products[i] — the field-shape
-			// bug commit ce100dbf addresses. The top-level container shape
-			// (products is an array, the subject is an object, etc.) is what
-			// the cache layer guarantees on write, so corrupting it is
-			// outside the bug class. Mutating each product's interior is
-			// sufficient to fuzz every nested field of ProductSchema —
-			// including `config` and any future field added to it.
 			const corruptedProducts = (
 				populated.products as Array<Record<string, unknown>>
 			).map((p, i) => {
@@ -1438,9 +1256,6 @@ describe("sanitizeCachedFullSubject — generic fuzz (regression net for new fie
 					p,
 					mode,
 				) as Record<string, unknown>;
-				// Restore the structural identifier fields so the sanitizer
-				// has a stable record to work on. (The bug isn't about
-				// missing IDs.)
 				return {
 					...corruptedProduct,
 					id: `plan_sanitize_fuzz_${i + 1}_${mode}`,
@@ -1460,8 +1275,6 @@ describe("sanitizeCachedFullSubject — generic fuzz (regression net for new fie
 				});
 			}).not.toThrow();
 
-			// Walk the full schema and prove no object position is left holding
-			// an array payload (the exact symptom of the bug).
 			expect(() =>
 				assertNoArrayShapedObjects(
 					sanitized!,
@@ -1469,9 +1282,6 @@ describe("sanitizeCachedFullSubject — generic fuzz (regression net for new fie
 				),
 			).not.toThrow();
 
-			// Spot-check the specific known target of commit ce100dbf:
-			// `product.config` is always an object after sanitization,
-			// regardless of corruption mode.
 			for (const product of (sanitized!.products ?? []) as Array<{
 				config: unknown;
 			}>) {

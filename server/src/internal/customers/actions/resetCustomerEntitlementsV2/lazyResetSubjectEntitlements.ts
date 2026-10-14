@@ -19,12 +19,6 @@ import {
 import { getResettableCustomerEntitlements } from "./getResettableCustomerEntitlements.js";
 import { resetSubjectCache } from "./resetSubjectCache.js";
 
-/**
- * Lazily resets overdue customer entitlements from a FullSubject.
- * Same DB semantics as resetCustomerEntitlements but works on FullSubject.
- * Mutates the FullSubject in-memory and patches shared balance hashes.
- * Returns true if any entitlements were reset.
- */
 export const lazyResetSubjectEntitlements = async ({
 	ctx,
 	fullSubject,
@@ -129,8 +123,6 @@ export const lazyResetSubjectEntitlements = async ({
 				pooledGrantedByCusEntId,
 			});
 
-			// Reset wrote new balances — pin this customer to the primary for
-			// 60s so a replica can't serve the pre-reset state.
 			await markCustomerUpdatedAt({
 				db: ctx.db,
 				orgId: ctx.org.id,
@@ -142,7 +134,6 @@ export const lazyResetSubjectEntitlements = async ({
 				`[lazyResetSubjectEntitlements] customer: ${customerId}, subject cache updated`,
 			);
 
-			// A new cycle may let reduced shares grow back; this request reads the re-fit shares too.
 			if (fullSubject.customer.balance_allocations) {
 				const { written } = await refreshAllocationScaleAfterWrite({
 					ctx,

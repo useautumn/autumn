@@ -1,7 +1,5 @@
 import type { Edit, SgNode } from "@ast-grep/napi";
 
-// Kinds that make an object literal's value dynamic, so a fixture built from it
-// cannot be rewritten as bytes. `property_identifier` (keys) is a different kind.
 export const dynamicValueKinds = [
 	"identifier",
 	"member_expression",
@@ -112,7 +110,6 @@ export const removeArrayElementEdits = ({
 		];
 	}
 	if (hasTrailingComma) {
-		// Inline siblings: take the comma and the spacing before the next one.
 		const afterComma = end + commaIndex + 1;
 		const spacing = /^[ \t]*/.exec(source.slice(afterComma))?.[0].length ?? 0;
 		return [
@@ -142,7 +139,6 @@ export const removeSpecifierEdit = ({
 	const after = source.slice(end);
 	const commaAfter = after.indexOf(",");
 	if (commaAfter !== -1 && after.slice(0, commaAfter).trim() === "") {
-		// Take the space after the comma too, or `{ a, b }` becomes `{  b }`.
 		const afterComma = end + commaAfter + 1;
 		const spaces = /^[ \t]*/.exec(source.slice(afterComma))?.[0].length ?? 0;
 		return { startPos: start, endPos: afterComma + spaces, insertedText: "" };

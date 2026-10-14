@@ -1,11 +1,3 @@
-/**
- * Braintrust evals for the billing-request generation endpoint's LLM core.
- * Runs `computeGeneratedParams` directly (no server, no DB) against fixture
- * contexts, scoring schema validity and expected-field extraction.
- *
- * Run: bun eval:generation  (needs ANTHROPIC_API_KEY + BRAINTRUST_API_KEY)
- */
-
 import { isDeepStrictEqual } from "node:util";
 import {
 	type ApiPlanV1,
@@ -59,8 +51,6 @@ type EvalCase = {
 	expected: Record<string, unknown>;
 };
 
-/** Every expected key must match; arrays match when each expected element
- * subset-matches some output element. */
 const subsetMatches = (
 	expected: unknown,
 	actual: unknown,

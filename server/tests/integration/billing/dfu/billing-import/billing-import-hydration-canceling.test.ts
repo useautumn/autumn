@@ -1,8 +1,3 @@
-/**
- * dfu.flash hydration — omitted status hydrated from a canceling Stripe sub:
- * cancel_at_period_end → still active, canceled=true, ended_at in the future.
- */
-
 import { expect, test } from "bun:test";
 import { CusProductStatus } from "@autumn/shared";
 import { createStripeSubscriptionFromProduct } from "@tests/integration/billing/sync/utils/syncTestUtils.js";
@@ -62,7 +57,6 @@ test.concurrent(
 			customerId,
 			productId: pro.id,
 		});
-		// Canceling-at-period-end: still active, canceled=true, ended_at in the future.
 		expect(cusProduct?.status).toBe(CusProductStatus.Active);
 		expect(cusProduct?.canceled).toBe(true);
 		expect(cusProduct?.ended_at ?? 0).toBeGreaterThan(Date.now());

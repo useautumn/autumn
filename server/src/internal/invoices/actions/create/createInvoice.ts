@@ -15,10 +15,6 @@ export type CreateInvoiceResult = {
 	preview: CreateInvoicePreview;
 };
 
-/**
- * Bills catalog pricing and custom charges as a standalone send-invoice invoice.
- * Touches no customer product, balance or subscription.
- */
 export const createInvoice = async ({
 	ctx,
 	params,
@@ -29,17 +25,14 @@ export const createInvoice = async ({
 	const preview = params.preview === true;
 	const nowMs = Date.now();
 
-	// 1. Setup
 	const invoiceContext = await setupCreateInvoiceContext({
 		ctx,
 		params,
 		preview,
 	});
 
-	// 2. Compute Autumn lines
 	const lines = computeInvoiceLines({ ctx, invoiceContext, nowMs });
 
-	// 3. Evaluate the Stripe projection
 	const stripePlan = evaluateStripeInvoicePlan({
 		invoiceContext,
 		lines,
@@ -49,7 +42,6 @@ export const createInvoice = async ({
 
 	if (preview) return { invoice: null, preview: stripePlan.preview };
 
-	// 4. Execute
 	const { invoice, issueDateMs, dueDateMs } = await executeStripeInvoicePlan({
 		ctx,
 		invoiceContext,

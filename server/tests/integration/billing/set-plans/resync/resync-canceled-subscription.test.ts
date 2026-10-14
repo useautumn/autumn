@@ -1,5 +1,3 @@
-/** A subscription cancelled in Stripe is rebuilt on its old start, anchored on its old period end, with no charge now. */
-
 import { test } from "bun:test";
 import type { SetPlansParamsV0Input } from "@autumn/shared";
 import { advanceToAnchor } from "@tests/integration/billing/utils/advanceUtils/advanceToAnchor";

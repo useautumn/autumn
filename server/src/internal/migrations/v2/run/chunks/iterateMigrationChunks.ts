@@ -13,9 +13,7 @@ export type MigrationChunkRunResult = {
 	processed: number;
 	chunks: number;
 	canceled: boolean;
-	/** Stamped by runMigrationInChunks after the lane decision. */
 	lane?: MigrationRunLane;
-	/** Why the batch lane declined, when it did. */
 	rejections?: BatchMigrationRejection[];
 };
 

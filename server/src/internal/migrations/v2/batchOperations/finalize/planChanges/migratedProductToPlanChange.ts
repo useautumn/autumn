@@ -77,8 +77,6 @@ const toUpdatedCustomerPlanChange = ({
 	...(planChange ? { plan_change: planChange } : {}),
 });
 
-/** One customer product's applied rows + optional version repoint → one
- * `updated` change. Item diffs live on plan_change; the top-level list is empty. */
 export const migratedProductToPlanChange = ({
 	planId,
 	isOneOff,

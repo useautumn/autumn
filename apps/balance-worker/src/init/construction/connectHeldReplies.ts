@@ -1,7 +1,6 @@
 import type { HttpWorkerListener } from "../../http/workerThreads/types/httpWorkerPool.js";
 import type { CommitPositions } from "../../runtime/commitPositions/types/commitPositions.js";
 
-/** Every commit wakes the threads holding replies, and every published failure reaches them, rendered; the result stops both. */
 export function connectHeldReplies({
 	positions,
 	http,

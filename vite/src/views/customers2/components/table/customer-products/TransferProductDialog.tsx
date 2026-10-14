@@ -43,7 +43,6 @@ export const TransferProductDialog = ({
 			: entity.id !== cusProduct.entity_id,
 	);
 
-	// Check if product is currently on an entity
 	const isOnEntity = !!cusProduct.entity_id || !!cusProduct.internal_entity_id;
 
 	useEffect(() => {
@@ -131,14 +130,12 @@ export const TransferProductDialog = ({
 							<SelectValue placeholder="Select destination" />
 						</SelectTrigger>
 						<SelectContent>
-							{/* Move to Customer option - only show if product is currently on an entity */}
 							{isOnEntity && (
 								<SelectItem value={CUSTOMER_LEVEL_VALUE}>
 									<span className="font-medium">Move to Customer</span>
 								</SelectItem>
 							)}
 
-							{/* Entity options */}
 							{filteredEntities.map((entity: Entity) => (
 								<SelectItem
 									key={entity.id || entity.internal_id}

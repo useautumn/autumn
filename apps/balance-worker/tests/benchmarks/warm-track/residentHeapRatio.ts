@@ -3,7 +3,6 @@ import { parseSubjectState } from "@autumn/balance-engine";
 import { testIdentity } from "../../fixtures/mutations.js";
 import { buildScenario } from "../track-throughput/scenarios.js";
 
-/** Heap held per byte of a resident state's JSON weight: what the subject map's byte bound means in container memory. */
 const shapes: [number, number][] = [
 	[1, 2],
 	[4, 15],

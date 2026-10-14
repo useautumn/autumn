@@ -3,7 +3,6 @@ import { sendToOwner } from "../routing/sendToOwner.js";
 import type { RoutingContext } from "../routing/types/routing.js";
 import type { ApplyBillingPlanParams } from "../types/balanceWorkerClient.js";
 
-/** The reply waits for Postgres, so it gets longer than the metered commands' deadline. */
 const APPLY_BILLING_PLAN_TIMEOUT_MS = 5_000;
 
 export async function sendApplyBillingPlan({

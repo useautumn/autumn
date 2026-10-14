@@ -29,7 +29,6 @@ const WEBHOOK_SETTLE_POLL_MS = ms.seconds(1);
 
 type ScenarioActions = Parameters<typeof initScenario>[0]["actions"];
 
-/** A customer with pro on a live subscription, attached per entity when it has entities, then aged by advanceDays. */
 export const initLiveProScenario = async ({
 	customerId,
 	entityCount = 0,
@@ -69,7 +68,6 @@ export const initLiveProScenario = async ({
 	return { ...scenario, pro };
 };
 
-/** The live subscription a backdate recreates, with the dates its paid period runs between. */
 export const liveSubscriptionPeriod = async ({
 	ctx,
 	customerId,
@@ -147,10 +145,6 @@ export type BackdateProrationBehavior =
 	| "prorate_immediately"
 	| "bill_difference";
 
-/**
- * What a backdate bills for the cycles before the live start that it reaches: nothing for none,
- * each in full for bill_difference, otherwise pro rata for the time it covers.
- */
 export const expectedBackdateGapCharge = ({
 	cyclePrice,
 	interval = BillingInterval.Month,
@@ -188,7 +182,6 @@ export const expectedBackdateGapCharge = ({
 		.toNumber();
 };
 
-/** The proration of a monthly price over the rest of a cycle from now. */
 export const expectedRestOfCycle = ({
 	monthlyPrice,
 	nowMs,
@@ -205,10 +198,6 @@ export const expectedRestOfCycle = ({
 		.div(cycleEndMs - cycleStartMs)
 		.toNumber();
 
-/**
- * Across every invoice the customer has, on the replaced and the recreated subscription alike,
- * each service period is invoiced exactly its expected total: never twice, never skipped.
- */
 export const expectEachPeriodBilledOnce = async ({
 	ctx,
 	customerId,
@@ -235,7 +224,6 @@ export const expectEachPeriodBilledOnce = async ({
 	expect(billedTotals).toEqual(periods.map(({ total }) => total));
 };
 
-/** The replaced subscription ended with no final invoice, so nothing it already billed is billed again. */
 export const expectReplacedSubscriptionCancelledQuietly = async ({
 	ctx,
 	subscriptionId,
@@ -253,10 +241,6 @@ export const expectReplacedSubscriptionCancelledQuietly = async ({
 	expect(invoices).toHaveLength(invoiceCountBefore);
 };
 
-/**
- * The recreated subscription starts on the backdated date and renews on the old period end for the
- * full price; given cancelAtMs it keeps the replaced subscription's cancel date instead of renewing.
- */
 export const expectRecreatedSubscriptionCorrect = async ({
 	ctx,
 	customerId,
@@ -299,7 +283,6 @@ export const expectRecreatedSubscriptionCorrect = async ({
 	return subscription;
 };
 
-/** The replaced subscription's webhooks land after set_plans returns, so a row must hold its state across them, not just once. */
 export const expectCustomerProductHoldsAcrossWebhooks = async ({
 	ctx,
 	customerId,
@@ -325,7 +308,6 @@ export const expectCustomerProductHoldsAcrossWebhooks = async ({
 	return customerProduct;
 };
 
-/** The scheduled plan rides the recreated subscription's new schedule, whose phase on its start date bills it. */
 export const expectScheduledOnRecreatedSchedule = async ({
 	ctx,
 	customerId,

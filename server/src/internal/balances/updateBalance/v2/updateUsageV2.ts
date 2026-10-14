@@ -49,7 +49,6 @@ const getUpdateUsageTargetBalance = ({
 	return new Decimal(grantedBalance).add(prepaidQuantity).sub(usage).toNumber();
 };
 
-/** Updates balance by setting usage to an exact value, using the FullSubject cache path. */
 export const updateUsageV2 = async ({
 	ctx,
 	fullSubject,

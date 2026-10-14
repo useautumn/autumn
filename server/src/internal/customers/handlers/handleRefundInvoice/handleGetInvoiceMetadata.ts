@@ -6,10 +6,6 @@ import { resolveVercelInstallationId } from "@/external/vercel/misc/vercelInvoic
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { InvoiceService } from "@/internal/invoices/InvoiceService.js";
 
-/**
- * Dashboard-only: exposes Stripe invoice metadata (e.g. `vercel_invoice_id`)
- * so the invoice sheet can gate actions without a per-row Stripe call.
- */
 export const handleGetInvoiceMetadata = createRoute({
 	scopes: [Scopes.Customers.Read],
 	params: z.object({

@@ -1,5 +1,3 @@
-/** Contract: attach discounts cover eligible license charges, product restrictions isolate custom seat types, fresh upgrade discounts skip old credits, and carried discounts cover both sides. */
-/** Pre-change, custom seat prices use the parent Stripe product; post-change they use the child product and every assertion below follows that identity. */
 import { test } from "bun:test";
 import type {
 	ApiCustomerV3,

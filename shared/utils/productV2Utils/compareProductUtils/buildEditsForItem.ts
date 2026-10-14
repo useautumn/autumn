@@ -8,7 +8,6 @@ function formatTierValue(value: string | number | "inf"): string {
 	return value === "inf" ? "Infinite" : String(value);
 }
 
-/** Builds a list of granular edits for a single product item comparison */
 export function buildEditsForItem({
 	originalItem,
 	updatedItem,
@@ -57,7 +56,6 @@ export function buildEditsForItem({
 			const tierLabel = `${formatTierValue(newTier.to)} units`;
 
 			if (!oldTier) {
-				// Use the previous NEW tier's `to` value as the starting point for this tier
 				const prevTierTo = i === 0 ? "0" : (newTiers[i - 1]?.to ?? "0");
 				const prevLabel = formatTierValue(prevTierTo);
 				edits.push({

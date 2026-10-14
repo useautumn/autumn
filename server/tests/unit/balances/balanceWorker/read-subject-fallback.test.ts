@@ -13,7 +13,6 @@ function createHarness({ failure }: { failure: BalanceWorkerClientError }) {
 	const warnings: unknown[][] = [];
 	const ctx = {
 		...contexts.create({}),
-		// The command carries the request id and time; the fixture context sets neither.
 		id: "req_read_fallback",
 		timestamp: 1_700_000_000_000,
 		logger: {

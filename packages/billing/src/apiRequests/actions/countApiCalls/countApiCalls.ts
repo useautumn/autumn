@@ -32,7 +32,6 @@ const rowToApiCallCount = (row: unknown): ApiCallCount => {
 	};
 };
 
-/** Requests per (org, hour, endpoint) from the request log, for the given hours. */
 export const countApiCalls = async ({
 	ctx,
 	windows,

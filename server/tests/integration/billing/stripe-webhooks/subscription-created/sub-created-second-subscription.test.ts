@@ -1,14 +1,3 @@
-/**
- * A second Stripe subscription must not take over a plan that belongs to a
- * different, still-active Stripe subscription.
- *
- * Red (current):  customer.subscription.created for sub B expires the plan on
- *                 sub A and re-creates it on sub B; when B ends the customer
- *                 drops to the default plan while sub A keeps billing.
- * Green (after):  the plan stays active and linked to sub A, sub B stays
- *                 unlinked, and canceling sub B changes nothing.
- */
-
 import { expect, test } from "bun:test";
 import {
 	createStripeSubscriptionFromProduct,

@@ -1,19 +1,3 @@
-/**
- * Times the new filter-replace hot path against the DEV DB: candidate SELECT
- * (join entitlements AS definition) + N applyReplacePatches groups per page.
- *
- * Average = 1 grant-delta group (everyone on the same live def).
- * Limit    = many groups on one 5k-customer page (concurrency 50).
- * Also times filter-delete (one-shot) and mixed (delete then replace).
- *
- * Writes run inside a rolled-back transaction. Seed is isolated (plangrp).
- *
- *   infisical run --env=dev --recursive -- bun tests/perf/batch-migrations/probes/probeReplaceGroupFanout.ts
- *   infisical run --env=dev --recursive -- bun tests/perf/batch-migrations/probes/probeReplaceGroupFanout.ts --groups 1,100,1000
- *   infisical run --env=dev --recursive -- bun tests/perf/batch-migrations/probes/probeReplaceGroupFanout.ts --explain
- *   infisical run --env=dev --recursive -- bun tests/perf/batch-migrations/probes/probeReplaceGroupFanout.ts --cleanup
- */
-
 import {
 	AllowanceType,
 	CusProductStatus,

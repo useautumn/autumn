@@ -28,7 +28,6 @@ export const coreBilling: TestGroup = {
 		...coreLicensesBilling.paths,
 		...corePlansCrud.paths,
 
-		// ── Pooled balances ──
 		"integration/billing/pooled-balances",
 		"integration/billing/migrations-v2/update-plan-operation/pooled-balances",
 		...coreBatchReset.paths,

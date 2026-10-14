@@ -1,10 +1,3 @@
-/**
- * catalogV2.update — propagate.license_parents pins a specific parent row.
- * Parent absent from plans[]. Parent has v1+v2, both linked.
- *
- * pin v2 → latest follows, v1 frozen
- * pin v1 → v1 follows, latest frozen
- */
 import { expect, test } from "bun:test";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";

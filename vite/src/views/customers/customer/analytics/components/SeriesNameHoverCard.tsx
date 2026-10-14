@@ -35,7 +35,6 @@ const seriesSubject = ({
 	return undefined;
 };
 
-/** Wraps a customer or entity series name with a card showing who it is. */
 export const SeriesNameHoverCard = ({
 	series,
 	children,

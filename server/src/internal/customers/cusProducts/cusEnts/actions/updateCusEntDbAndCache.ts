@@ -3,9 +3,6 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { updateSubjectBalanceCache } from "@/internal/customers/cusProducts/cusEnts/actions/cache/updateSubjectBalanceCache.js";
 import { CusEntService } from "../CusEntitlementService.js";
 
-/**
- * Updates a cusEnt in both Postgres and the FullSubject balance cache.
- */
 export const updateCusEntDbAndCache = async ({
 	ctx,
 	customerId,

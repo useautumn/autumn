@@ -1,16 +1,3 @@
-/**
- * Billing Verify: Item Mismatches
- *
- * Contract under test (billingActions.verify):
- *   New behaviors:
- *     - Removing a fixed base-price Stripe item (drift) -> mismatch
- *       { type: "base_price_mismatch", reason: "missing" }.
- *     - Removing a plain (non-prepaid) usage item -> mismatch
- *       { type: "item_mismatch", reason: "missing" }.
- *     - Adding an unrelated Stripe item Autumn doesn't expect -> mismatch
- *       { type: "item_mismatch", reason: "unexpected" }.
- */
-
 import { expect, test } from "bun:test";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
@@ -42,7 +29,6 @@ const stripeCustomerIdFor = async ({
 	return stripeCustomerId;
 };
 
-/** Finds the fixed base (non-feature) recurring price's Stripe id for a product. */
 const basePriceIdFor = async ({
 	ctx,
 	productId,
@@ -65,7 +51,6 @@ const basePriceIdFor = async ({
 	throw new Error(`No base Stripe price id on product ${productId}`);
 };
 
-/** Finds a feature-linked price's Stripe id for a product (first match). */
 const firstStripePriceIdFor = async ({
 	ctx,
 	productId,
@@ -171,8 +156,6 @@ test.concurrent(
 			mutations: { removeItemPriceIds: [messagesPriceItem.price.id] },
 		});
 
-		// strict: non-strict verify tolerates missing usage items when another
-		// item invoices at the same interval (covered in billing-verify-strict).
 		const result = await verify({
 			ctx,
 			params: { customer_id: customerId, strict: true },

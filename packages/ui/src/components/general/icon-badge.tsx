@@ -5,20 +5,17 @@ import { cn } from "@autumn/ui/lib/utils";
 import { cva, type VariantProps } from "class-variance-authority";
 import * as React from "react";
 
-const iconBadgeVariants = cva(
-	"flex-row justify-center gap-[3px] min-w-10", // Gap is handled in position variants
-	{
-		variants: {
-			position: {
-				left: "flex-row",
-				right: "flex-row-reverse",
-			},
-		},
-		defaultVariants: {
-			position: "left",
+const iconBadgeVariants = cva("flex-row justify-center gap-[3px] min-w-10", {
+	variants: {
+		position: {
+			left: "flex-row",
+			right: "flex-row-reverse",
 		},
 	},
-);
+	defaultVariants: {
+		position: "left",
+	},
+});
 
 interface IconBadgeProps
 	extends Omit<
@@ -53,7 +50,7 @@ const IconBadge = React.forwardRef<HTMLSpanElement, IconBadgeProps>(
 				case "default":
 					return "text-zinc-50";
 				default:
-					return "text-subtle"; // Default fallback
+					return "text-subtle";
 			}
 		};
 

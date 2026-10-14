@@ -22,7 +22,6 @@ const LOADING_ROWS = 3;
 
 const compactNumber = new Intl.NumberFormat("en", { notation: "compact" });
 
-/** The header sits under the search row, above the events. */
 export const EventsChecklist = ({ header }: { header?: ReactNode }) => {
 	const { features, eventColors } = useAnalyticsContext();
 	const { queryStates } = useAnalyticsQueryState();
@@ -98,7 +97,6 @@ export const EventsChecklist = ({ header }: { header?: ReactNode }) => {
 					<CheckRow
 						key={event.event_name}
 						checked={selectedNames.has(event.event_name)}
-						// The feature name reads better; the raw event name stays on hover.
 						label={eventDisplayName({ eventName: event.event_name, features })}
 						title={event.event_name}
 						trailing={compactNumber.format(event.event_count)}

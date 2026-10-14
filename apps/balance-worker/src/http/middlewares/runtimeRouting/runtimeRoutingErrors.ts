@@ -8,7 +8,6 @@ export class PartitionRouteMismatchError extends Error {
 }
 
 export class PartitionRouteNotOwnedError extends Error {
-	/** Named once the handoff has claimed a route for the successor; absent while it is still unnamed or released. */
 	readonly successor: WorkerRouteSuccessor | undefined;
 
 	constructor({ successor }: { successor?: WorkerRouteSuccessor } = {}) {

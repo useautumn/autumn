@@ -1,12 +1,3 @@
-/**
- * End-to-end coverage combining multiple real Mintlify dimensions AT ONCE
- * (not in isolation), per explicit request — a customer with multi-entity AND
- * an active+scheduled pair, verifying ALL of: invoice, feature quantity,
- * customer_products (both immediate and scheduled), and usage carry-forward
- * in a single migration run. Isolated single-dimension tests wouldn't catch
- * bugs that only show up when these interact.
- */
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3, ApiCustomerV5, CreatePlanItemParamsV1 } from "@autumn/shared";
 import { BillingInterval, BillingMethod, ResetInterval, TierBehavior } from "@autumn/shared";
@@ -66,7 +57,6 @@ test.concurrent(
 				s.entities({ count: 2, featureId: TestFeature.Users }),
 			],
 			actions: [
-				// Entity 0: single active cusProduct, no schedule.
 				s.billing.attach({
 					productId: pro.id,
 					entityIndex: 0,
@@ -78,8 +68,6 @@ test.concurrent(
 					entityIndex: 0,
 					timeout: 2000,
 				}),
-				// Entity 1: active premium, usage tracked, THEN a scheduled downgrade
-				// to pro queued behind it (both share one Stripe subscription).
 				s.billing.attach({
 					productId: premium.id,
 					entityIndex: 1,
@@ -141,12 +129,10 @@ test.concurrent(
 			},
 		});
 
-		// ── 1. Feature quantity + usage carry-forward, per entity ──────────
 		const entity0 = await autumnV2_2.entities.get<ApiCustomerV5>(
 			customerId,
 			entities[0].id,
 		);
-		// 300 -> $20 old tier -> new 200/$10 tier. Usage (50) must carry forward.
 		expectBalanceCorrect({
 			customer: entity0,
 			featureId: TestFeature.Messages,
@@ -160,8 +146,6 @@ test.concurrent(
 			customerId,
 			entities[1].id,
 		);
-		// Active (premium) side: 700 -> $50 old tier -> new 1000/$40 tier.
-		// Usage (200) tracked against the active premium cusProduct must carry forward.
 		expectBalanceCorrect({
 			customer: entity1,
 			featureId: TestFeature.Messages,
@@ -171,24 +155,12 @@ test.concurrent(
 			planId: premium.id,
 		});
 
-		// ── 2. customer_products: both immediate (canceling->new) and scheduled ──
-		// `pro.id` is active on entity0 but simultaneously scheduled on entity1 —
-		// a customer-level `expectCustomerProducts` check can't express that split,
-		// so each entity is asserted against its own cusProduct state.
 		await expectProductActive({ customer: entity0, productId: pro.id });
 		await expectProductCanceling({ customer: entity1, productId: premium.id });
 		await expectProductScheduled({ customer: entity1, productId: pro.id });
 
-		// ── 3. Whole Stripe state (both the active sub items AND the scheduled
-		// phase) must match Autumn in one shot — this is exactly what
-		// `migrateCustomer` restoring the full customer state in one go buys us.
 		await expectStripeSubscriptionCorrect({ ctx, customerId });
 
-		// ── 4. Invoice: net proration across BOTH entities' AI_CREDITS swap.
-		// Entity 0: -$20 (credit unused 300) + $10 (charge 200) = -$10.
-		// Entity 1 (active premium only — the scheduled pro phase doesn't bill
-		// immediately): -$50 (credit unused 700) + $40 (charge 1000) = -$10.
-		// Net migration invoice: -$20.
 		const customerV3 = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 		await expectCustomerInvoiceCorrect({
 			customer: customerV3,

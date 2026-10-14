@@ -29,7 +29,6 @@ export const shouldDeferBillingPlan = ({
 		return true;
 	}
 
-	// set_plans declares the state Stripe should hold: on a sub already in dunning it applies now and the invoice stays open.
 	const appliesInDunning =
 		isSetPlansBillingContext(billingContext) &&
 		billingContext.stripeSubscription?.status === "past_due";

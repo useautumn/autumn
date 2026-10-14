@@ -6,16 +6,6 @@ export type SkipSubscriptionSyncResult =
 	| { skip: false }
 	| { skip: true; reason: string };
 
-/**
- * Decides whether a Stripe subscription webhook (created/updated) should be
- * auto-synced back to Autumn or skipped because Autumn already owns the change.
- *
- * Skip when:
- *   1. The subscription metadata is flagged Autumn-managed (`autumn_managed=true`),
- *      or has a recent `autumn_managed_at` timestamp inside the action window.
- *   2. The customer already has an Autumn customerProduct linked to this Stripe
- *      subscription (defensive check against the metadata-not-yet-written race).
- */
 export const shouldSkipSubscriptionSync = ({
 	subscription,
 	fullCustomer,
@@ -23,9 +13,6 @@ export const shouldSkipSubscriptionSync = ({
 }: {
 	subscription: Stripe.Subscription;
 	fullCustomer: FullCustomer;
-	/** For sub.created, pass false: any prior Autumn management is enough to
-	 * skip. For sub.updated (default), only a recent stamp suppresses sync so
-	 * later genuine changes still get picked up. */
 	requireRecent?: boolean;
 }): SkipSubscriptionSyncResult => {
 	const alreadyLinked = fullCustomer.customer_products?.some(

@@ -14,7 +14,6 @@ import {
 
 const licenseCatalogProduct = planLicense().product;
 
-/** A license link whose terms add credits on top of its license plan. */
 const customizedLicense = ({
 	withBaseProduct,
 }: {

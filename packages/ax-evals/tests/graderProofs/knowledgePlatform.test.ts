@@ -1,9 +1,3 @@
-/**
- * Grader proofs for the knowledge-platform suite: the shared golden passes
- * every config verdict of each case; an empty workspace fails them all. The
- * packs-fork mutation proof is the point — packs duplicated onto base plans
- * must fail the negative anchor.
- */
 import { expect, test } from "bun:test";
 import { askAnnualReset } from "../../cases/suites/knowledgePlatform/askAnnualReset.eval.ts";
 import { clearAnnualReset } from "../../cases/suites/knowledgePlatform/clearAnnualReset.eval.ts";

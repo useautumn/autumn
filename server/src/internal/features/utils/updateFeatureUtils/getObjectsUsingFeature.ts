@@ -26,7 +26,6 @@ export const getObjectsUsingFeature = async ({
 }: {
 	ctx: AutumnContext;
 	feature: Feature;
-	// Pre-fetched catalog; skips the listFull when the caller already has it.
 	products?: FullProduct[];
 }): Promise<ObjectsUsingFeature> => {
 	const { db, org, env } = ctx;

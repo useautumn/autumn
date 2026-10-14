@@ -19,8 +19,6 @@ const toDeletableContribution = (
 	updated_at: contribution.updated_at ?? 0,
 });
 
-/** Inverts inserted pools/contributions and delta updates; sections that
- * destroyed unrecorded state are rejected upstream by the rollback guard. */
 export const invertPooledBalancePlan = ({
 	pooledBalancePlan,
 }: {
@@ -39,7 +37,6 @@ export const invertPooledBalancePlan = ({
 
 	return {
 		...emptyPooledBalancePlan(),
-		// Lifecycle fields on pooled_balance re-write the same values; only deltas invert.
 		updatePoolBalances: pooledBalancePlan.updatePoolBalances
 			.filter(
 				({ pooledCustomerEntitlement }) =>

@@ -12,7 +12,6 @@ const countOrgOverrides = ({
 		policy.overrides.some((override) => override.orgKey === orgKey),
 	).length + Object.keys(view.orgs[orgKey]?.endpoints ?? {}).length;
 
-/** Orgs with overrides, most overridden first; unresolved keys show as themselves. */
 export const listOverrideOrgs = ({
 	view,
 }: {
@@ -31,7 +30,6 @@ export const listOverrideOrgs = ({
 		})
 		.sort((a, b) => b.overrideCount - a.overrideCount);
 
-/** A searched org reuses its override entry when it has one, so edits land on the stored key. */
 export const toRateLimitOrg = ({
 	org,
 	overrideOrgs,

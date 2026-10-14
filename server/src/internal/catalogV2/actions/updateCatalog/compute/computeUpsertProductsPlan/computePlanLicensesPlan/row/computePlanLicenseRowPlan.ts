@@ -7,7 +7,6 @@ import { generateId } from "@/utils/genUtils.js";
 import { computeLicensePricesAndEntitlements } from "./computeLicensePricesAndEntitlements";
 import { initPlanLicenseRow } from "./initPlanLicenseRow";
 
-/** Current link only if it lives on this parent row — a version mint leaves the old row's links behind. */
 const planLicenseOnThisParent = ({
 	planLicense,
 	parentInternalProductId,
@@ -33,11 +32,6 @@ const computeRemovePlanLicenseRow = ({
 	return { deletePlanLicenseId: currentPlanLicense.id };
 };
 
-/**
- * One link's row write: mint a fresh plan_license row or update the existing
- * one. A customer-referenced current row is immutable — retire it, mint a
- * successor. Execute replays the result verbatim.
- */
 export const computePlanLicenseRowPlan = ({
 	planLicense,
 	parentInternalProductId,

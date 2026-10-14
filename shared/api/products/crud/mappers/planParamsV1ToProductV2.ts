@@ -22,14 +22,12 @@ export function planParamsV1ToProductV2({
 	params: CreatePlanParams | UpdatePlanParams;
 	currentFullProduct?: FullProduct;
 
-	// Here to enforce type checking, probably not used but just to be sure.
 	overrides?: {
 		version: number;
 		env: AppEnv;
 		created_at: number;
 	};
 }): ProductV2UpdateParams {
-	// Convert plan to items using shared utility
 	const items = planParamsV1ToProductItems({
 		ctx,
 		params: {
@@ -39,7 +37,6 @@ export function planParamsV1ToProductV2({
 		currentFullProduct,
 	});
 
-	// Check if archived field exists on plan (it's on ApiPlan, not CreatePlanParams)
 	const archived =
 		"archived" in params && params.archived !== undefined
 			? params.archived

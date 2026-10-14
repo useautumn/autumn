@@ -17,7 +17,6 @@ import type {
 import { getProductGroupKey } from "@/components/forms/shared/utils/planGroupUtils";
 import { firstPhaseStartsLater } from "./schedulePhaseTiming";
 
-/** Mirrors set_plans' isUnbilledByStripe: a running paid plan no Stripe subscription bills. */
 const isUnbilledByStripe = ({
 	customerProduct,
 	nowMs,
@@ -29,7 +28,6 @@ const isUnbilledByStripe = ({
 	!customerProduct.subscription_ids?.length &&
 	!isCustomerProductTrialing(customerProduct, { nowMs });
 
-/** A re-listed plan whose items, version or prepaid quantities differ recreates its row. */
 const relistRecreatesRow = ({
 	plan,
 	customerProduct,
@@ -76,8 +74,6 @@ const replacesCustomerProduct = ({
 	);
 };
 
-/** Mirrors set_plans' carry-over gate: a first phase starting now replaces a live plan in its scope,
- * by taking its slot, re-listing it changed, or re-listing a plan no Stripe subscription bills. */
 export const firstPhaseReplacesPlanNow = ({
 	phases,
 	customerProducts,

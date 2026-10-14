@@ -6,13 +6,6 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-/**
- * Update Subscription — Billing Cycle Anchor Error Tests
- *
- * Validates that billing_cycle_anchor: "now" is rejected for
- * one-off products, active trials, cancel actions, and past timestamps.
- */
-
 test.concurrent(
 	`${chalk.yellowBright("update-sub anchor-reset-errors 1: one-off product is blocked")}`,
 	async () => {

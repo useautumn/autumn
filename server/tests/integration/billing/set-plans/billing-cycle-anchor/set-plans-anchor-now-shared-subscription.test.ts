@@ -1,8 +1,3 @@
-/**
- * Resetting the cycle now restarts every item on the Stripe subscription, so plans the request
- * didn't change (other entities' plans, retained undeclared plans) are re-billed the way Stripe would.
- */
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3, SetPlansParamsV0Input } from "@autumn/shared";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
@@ -145,14 +140,12 @@ test.concurrent(
 			});
 
 		const renewalAt = addMonths(advancedTo, 1).getTime();
-		// Stripe moves an unchanged item's period under none without invoicing it.
 		const stripeUnchangedItemsTotal = await previewStripeTwinResetNowTotal({
 			ctx,
 			customerId,
 			advancedTo,
 			prorationBehavior: "none",
 		});
-		// Entity 1's full new period without credit is Autumn's existing `none` rule for the changed plan.
 		const expectedTotal = new Decimal(50)
 			.plus(stripeUnchangedItemsTotal)
 			.toNumber();
@@ -226,7 +219,6 @@ test.concurrent(
 			advancedTo,
 			changes: [{ removeUnitAmount: 20, addUnitAmount: 50 }],
 		});
-		// Stripe closes the metered period at the reset; the usage itself is Autumn's: 100 words × $0.05.
 		const expectedTotal = new Decimal(stripeTotal).plus(5).toNumber();
 		const params: SetPlansParamsV0Input = {
 			customer_id: customerId,
@@ -240,7 +232,6 @@ test.concurrent(
 
 		await autumnV2_4.billing.setPlans(params);
 
-		// Stripe closes the metered item's period with its own $0 invoice; the usage is billed once, by Autumn.
 		await expectCustomerInvoiceCorrect({ customerId, count: 4 });
 		const { invoices } =
 			await autumnV1.customers.get<ApiCustomerV3>(customerId);
@@ -308,7 +299,6 @@ test.concurrent(
 			prorationBehavior: "none",
 			changes: [{ removeUnitAmount: 20, addUnitAmount: 50 }],
 		});
-		// Stripe closes the metered period under none too; the usage itself is Autumn's: 100 words × $0.05.
 		const expectedTotal = new Decimal(stripeFlatTotal).plus(5).toNumber();
 		expect(expectedTotal).toBe(55);
 		const params: SetPlansParamsV0Input = {

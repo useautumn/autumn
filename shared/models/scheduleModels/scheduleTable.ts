@@ -67,7 +67,6 @@ export const schedulePhases = pgTable(
 			.array()
 			.default([])
 			.notNull(),
-		// How Stripe bills this phase's start; null keeps the default rule.
 		proration_behavior: text("proration_behavior").$type<PhaseProrationBehavior>(),
 		created_at: numeric({ mode: "number" }).notNull(),
 	},

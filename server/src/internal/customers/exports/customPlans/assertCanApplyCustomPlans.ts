@@ -17,7 +17,6 @@ export const assertCanApplyCustomPlans = ({
 }) => {
 	const isApplyRun =
 		params.kind === CustomerExportKind.CustomPlans && params.apply;
-	// Unscoped keys and sessions pass every route, matching the route-level check.
 	const isScoped = ctx.scopes.length > 0;
 	if (!isApplyRun || !isScoped) return;
 

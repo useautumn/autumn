@@ -14,7 +14,6 @@ export const cusEntsToMaxPurchase = ({
 	cusEnts: CustomerEntitlementWithPricesView[];
 	entityId?: string;
 }): number | null => {
-	// 1. If there's usage-based cus ent, return undefined
 	if (
 		cusEnts.some(
 			(cusEnt) =>
@@ -31,13 +30,10 @@ export const cusEntsToMaxPurchase = ({
 	const hasPrepaid = cusEnts.some((ce) => isPrepaidCusEnt({ cusEnt: ce }));
 	const hasUsageBased = cusEnts.some((ce) => ce.usage_allowed);
 
-	// 2. If there's usage-based cus ent, and prepaid no limit
 	if (hasUsageBased && hasPrepaidNoLimit) return null;
 
-	// 3. If there's prepaid
 	if (hasPrepaidNoLimit) return null;
 
-	// 3. If there's no prepaid and no usage-based, return undefined (free feature)
 	if (!hasPrepaid && !hasUsageBased) return null;
 
 	let maxPurchase = new Decimal(0);

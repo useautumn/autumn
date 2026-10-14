@@ -2,12 +2,6 @@ import type { AttachBillingContext } from "@autumn/shared";
 import { featureUtils, RecaseError } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 
-/**
- * Validates transition configs in the attach request.
- *
- * - reset_after_trial_end is not allowed on allocated features (continuous_use)
- *   because allocated features don't have next_reset_at (they never reset)
- */
 export const handleTransitionConfigErrors = ({
 	ctx,
 	billingContext,

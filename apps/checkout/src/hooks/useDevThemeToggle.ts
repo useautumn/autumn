@@ -1,10 +1,6 @@
 import { useEffect } from "react";
 import { useTheme } from "@/components/theme-provider";
 
-/**
- * Dev-only hook that toggles dark/light mode when "t" is pressed.
- * Only active when NODE_ENV is "development".
- */
 export function useDevThemeToggle() {
 	const { theme, setTheme } = useTheme();
 
@@ -12,7 +8,6 @@ export function useDevThemeToggle() {
 		if (import.meta.env.MODE !== "development") return;
 
 		const handleKeyDown = (e: KeyboardEvent) => {
-			// Ignore if typing in an input
 			if (
 				e.target instanceof HTMLInputElement ||
 				e.target instanceof HTMLTextAreaElement
@@ -21,7 +16,6 @@ export function useDevThemeToggle() {
 			}
 
 			if (e.key === "t") {
-				// Get the actual applied theme (resolve "system" to actual value)
 				const currentTheme =
 					theme === "system"
 						? window.matchMedia("(prefers-color-scheme: dark)").matches
@@ -29,7 +23,6 @@ export function useDevThemeToggle() {
 							: "light"
 						: theme;
 
-				// Toggle to the opposite
 				setTheme(currentTheme === "dark" ? "light" : "dark");
 			}
 		};

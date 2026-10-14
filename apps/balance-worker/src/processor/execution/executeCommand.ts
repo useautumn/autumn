@@ -19,7 +19,6 @@ export async function executeCommand<Decision>({
 	let wroteMutation = false;
 	let precedingWrites = scope.ctx.writer.snapshotStore();
 	function decide<Reply>(submission: MutationSubmission<Reply>) {
-		// Refusals can throw before returning a decision, but still depend on preceding writes.
 		precedingWrites = scope.ctx.writer.snapshotStore();
 		const decided = scope.ctx.writer.decide({ ...submission, source });
 		wroteMutation ||= decided.kind === "write";
@@ -44,11 +43,9 @@ export async function executeCommand<Decision>({
 			writer: { ...scope.ctx.writer, decide, log },
 		},
 	});
-	// Joined and skipped commands have no new mutation to carry their offset.
 	if (!wroteMutation) {
 		await precedingWrites();
 		await scope.ctx.writer.flushDeferredLogs();
-		// An earlier queued command whose commit failed is a gap this bookmark must not pass.
 		scope.ctx.writer.assertCommitsHealthy();
 		await completeCommand({ scope, source });
 	}

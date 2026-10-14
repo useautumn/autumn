@@ -21,29 +21,6 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts";
 
-/**
- * Uncancel Combined Tests
- *
- * Tests for uncancel combined with other update operations.
- * Tests: cancel_action: "uncancel" + options, cancel_action: "uncancel" + items, cancel_action: "uncancel" + trialing
- */
-
-// ===============================================================================
-// TEST 1: Uncancel + update quantity
-// ===============================================================================
-
-/**
- * Scenario:
- * - User is on Pro with some usage tracked
- * - User cancels Pro -> free default is scheduled
- * - User uncancels AND updates quantity in the same request
- *
- * Expected Result:
- * - Pro should be active (not canceling)
- * - Scheduled free product should be deleted
- * - Quantity should be updated
- * - Usage should be preserved
- */
 test.concurrent(`${chalk.yellowBright("uncancel + update quantity")}`, async () => {
 	const customerId = "uncancel-plus-qty";
 	const prepaidItem = items.prepaidMessages({ includedUsage: 0 });
@@ -71,7 +48,6 @@ test.concurrent(`${chalk.yellowBright("uncancel + update quantity")}`, async () 
 		],
 	});
 
-	// Billing reads Postgres, so usage must finish syncing before cancellation.
 	const messagesUsage = 40;
 	await autumnV1.track({
 		customer_id: customerId,
@@ -87,14 +63,12 @@ test.concurrent(`${chalk.yellowBright("uncancel + update quantity")}`, async () 
 		settleTimeoutMs: 10_000,
 	});
 
-	// Cancel pro via subscriptions.update
 	await autumnV1.subscriptions.update({
 		customer_id: customerId,
 		product_id: pro.id,
 		cancel_action: "cancel_end_of_cycle",
 	});
 
-	// Verify pro is canceling and free is scheduled
 	const customerAfterCancel =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	await expectProductCanceling({
@@ -106,7 +80,6 @@ test.concurrent(`${chalk.yellowBright("uncancel + update quantity")}`, async () 
 		productId: free.id,
 	});
 
-	// Uncancel AND update quantity in the same request
 	const newQuantity = 200;
 	const preview = await autumnV1.subscriptions.previewUpdate({
 		customer_id: customerId,
@@ -122,7 +95,6 @@ test.concurrent(`${chalk.yellowBright("uncancel + update quantity")}`, async () 
 		options: [{ feature_id: TestFeature.Messages, quantity: newQuantity }],
 	});
 
-	// Verify pro is now active (not canceling)
 	const customerAfterUncancel =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	await expectProductActive({
@@ -130,51 +102,32 @@ test.concurrent(`${chalk.yellowBright("uncancel + update quantity")}`, async () 
 		productId: pro.id,
 	});
 
-	// Scheduled free product should be deleted
 	await expectProductNotPresent({
 		customer: customerAfterUncancel,
 		productId: free.id,
 	});
 
-	// Balance should be updated (new quantity minus usage)
 	expect(customerAfterUncancel.features?.[TestFeature.Messages]?.balance).toBe(
 		newQuantity - messagesUsage,
 	);
 
-	// Usage should be preserved
 	expect(customerAfterUncancel.features?.[TestFeature.Messages]?.usage).toBe(
 		messagesUsage,
 	);
 
-	// Verify Stripe subscription is correct
 	await expectStripeSubscriptionCorrect({
 		ctx,
 		customerId,
 		options: { shouldBeCanceling: false },
 	});
 
-	// Verify invoices
 	expectCustomerInvoiceCorrect({
 		customer: customerAfterUncancel,
-		count: 2, // Initial attach + update
+		count: 2,
 		latestTotal: preview.total,
 	});
 });
 
-// ===============================================================================
-// TEST 2: Uncancel + custom plan (items)
-// ===============================================================================
-
-/**
- * Scenario:
- * - User is on Pro
- * - User cancels Pro -> free default is scheduled
- * - User uncancels AND provides custom items in the same request
- *
- * Expected Result:
- * - Pro should be active with custom items
- * - Scheduled free product should be deleted
- */
 test.concurrent(`${chalk.yellowBright("uncancel + custom plan (items)")}`, async () => {
 	const customerId = "uncancel-plus-items";
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
@@ -197,14 +150,12 @@ test.concurrent(`${chalk.yellowBright("uncancel + custom plan (items)")}`, async
 		actions: [s.attach({ productId: pro.id })],
 	});
 
-	// Cancel pro via subscriptions.update
 	await autumnV1.subscriptions.update({
 		customer_id: customerId,
 		product_id: pro.id,
 		cancel_action: "cancel_end_of_cycle",
 	});
 
-	// Verify pro is canceling and free is scheduled
 	const customerAfterCancel =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	await expectProductCanceling({
@@ -216,7 +167,6 @@ test.concurrent(`${chalk.yellowBright("uncancel + custom plan (items)")}`, async
 		productId: free.id,
 	});
 
-	// Uncancel AND provide custom items in the same request
 	const updatedMessagesItem = items.monthlyMessages({ includedUsage: 200 });
 	const newPriceItem = items.monthlyPrice({ price: 30 });
 
@@ -234,7 +184,6 @@ test.concurrent(`${chalk.yellowBright("uncancel + custom plan (items)")}`, async
 		items: [updatedMessagesItem, newPriceItem],
 	});
 
-	// Verify pro is now active (not canceling)
 	const customerAfterUncancel =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	await expectProductActive({
@@ -242,18 +191,15 @@ test.concurrent(`${chalk.yellowBright("uncancel + custom plan (items)")}`, async
 		productId: pro.id,
 	});
 
-	// Scheduled free product should be deleted
 	await expectProductNotPresent({
 		customer: customerAfterUncancel,
 		productId: free.id,
 	});
 
-	// Balance should reflect the custom plan (200 messages)
 	expect(customerAfterUncancel.features?.[TestFeature.Messages]?.balance).toBe(
 		200,
 	);
 
-	// Verify Stripe subscription is correct
 	await expectSubToBeCorrect({
 		db: ctx.db,
 		customerId,
@@ -262,29 +208,13 @@ test.concurrent(`${chalk.yellowBright("uncancel + custom plan (items)")}`, async
 		shouldBeCanceled: false,
 	});
 
-	// Verify invoices
 	expectCustomerInvoiceCorrect({
 		customer: customerAfterUncancel,
-		count: 2, // Initial attach + update
+		count: 2,
 		latestTotal: preview.total,
 	});
 });
 
-// ===============================================================================
-// TEST 3: Uncancel trialing product
-// ===============================================================================
-
-/**
- * Scenario:
- * - User is on Pro with trial (14 days)
- * - User cancels Pro while trialing -> product becomes trialing + canceling
- * - User uncancels
- *
- * Expected Result:
- * - Pro should be trialing (still in trial period)
- * - Trial end time should be unchanged
- * - Product should no longer be canceling
- */
 test.concurrent(`${chalk.yellowBright("uncancel trialing product")}`, async () => {
 	const customerId = "uncancel-trialing";
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
@@ -304,7 +234,6 @@ test.concurrent(`${chalk.yellowBright("uncancel trialing product")}`, async () =
 		actions: [s.attach({ productId: proTrial.id })],
 	});
 
-	// Verify initially trialing
 	const customerAfterAttach =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	await expectProductTrialing({
@@ -312,21 +241,18 @@ test.concurrent(`${chalk.yellowBright("uncancel trialing product")}`, async () =
 		productId: proTrial.id,
 	});
 
-	// Get the trial end time before cancel
 	const trialEndsAtBefore = await getTrialEndsAt({
 		customer: customerAfterAttach,
 		productId: proTrial.id,
 	});
 	expect(trialEndsAtBefore).toBeDefined();
 
-	// Cancel the trialing product via subscriptions.update
 	await autumnV1.subscriptions.update({
 		customer_id: customerId,
 		product_id: proTrial.id,
 		cancel_action: "cancel_end_of_cycle",
 	});
 
-	// Verify product is canceling (canceled flag set, but still trialing)
 	const customerAfterCancel =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	await expectProductCanceling({
@@ -334,41 +260,34 @@ test.concurrent(`${chalk.yellowBright("uncancel trialing product")}`, async () =
 		productId: proTrial.id,
 	});
 
-	// Uncancel
 	await autumnV1.subscriptions.update({
 		customer_id: customerId,
 		product_id: proTrial.id,
 		cancel_action: "uncancel",
 	});
 
-	// Verify product is still trialing and no longer canceling
 	const customerAfterUncancel =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Should be trialing (active with trial status)
 	await expectProductTrialing({
 		customer: customerAfterUncancel,
 		productId: proTrial.id,
 	});
 
-	// Get the trial end time after uncancel
 	const trialEndsAtAfter = await getTrialEndsAt({
 		customer: customerAfterUncancel,
 		productId: proTrial.id,
 	});
 
-	// Trial end time should be unchanged (within tolerance)
 	expect(trialEndsAtAfter).toBeDefined();
 	expect(
 		Math.abs(trialEndsAtAfter! - trialEndsAtBefore!) < ms.minutes(10),
 	).toBe(true);
 
-	// Balance should be unchanged
 	expect(customerAfterUncancel.features?.[TestFeature.Messages]?.balance).toBe(
 		100,
 	);
 
-	// Verify Stripe subscription is correct (not set to cancel)
 	await expectSubToBeCorrect({
 		db: ctx.db,
 		customerId,

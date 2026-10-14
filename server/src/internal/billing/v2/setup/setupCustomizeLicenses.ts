@@ -16,9 +16,6 @@ export type ProductContextWithLicenses = {
 	insertPlanLicenses?: InsertPlanLicenseSpec[];
 };
 
-/** Overlays the customize license fields (upsert_licenses today) onto a
- * resolved product context so pool init, billing, and seat provisioning all
- * see the effective definitions. Action-agnostic. */
 export const setupCustomizeLicenses = async ({
 	ctx,
 	customize,

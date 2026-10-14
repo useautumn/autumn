@@ -45,7 +45,6 @@ const sortProductItems = (items: ProductItem[], features: Feature[]) => {
 			return 1;
 		}
 
-		// 2. Put feature price next
 		const aIsFeatureItem = isFeaturePriceItem(a);
 		const bIsFeatureItem = isFeaturePriceItem(b);
 
@@ -57,7 +56,6 @@ const sortProductItems = (items: ProductItem[], features: Feature[]) => {
 			return 1;
 		}
 
-		// 3. Put feature price items in alphabetical order
 		const feature = features.find((f) => f.id === a.feature_id);
 		const aFeatureName = feature?.name;
 		const bFeatureName = features.find((f) => f.id === b.feature_id)?.name;
@@ -119,7 +117,6 @@ const getBillingIntervalText = (item: ProductItem) => {
 		: `per ${interval}`;
 };
 
-// Deprecate
 export const getPricecnPrice = ({
 	org,
 	items,
@@ -180,7 +177,6 @@ const featureToPricecnItem = ({
 			statusCode: 404,
 		});
 	}
-	// 1. If feature
 	if (item.feature_type === ProductItemFeatureType.Static) {
 		return {
 			primaryText: feature.name,
@@ -225,7 +221,6 @@ const featurePricetoPricecnItem = ({
 		});
 	}
 
-	// 1. Get included usage
 	const includedFeatureName = getIncludedFeatureName({
 		feature,
 		item,
@@ -286,7 +281,6 @@ const getAttachScenario = ({
 		return AttachScenario.New;
 	}
 
-	// 1. If current product is the same as the product, return active
 	if (curMainProduct?.product.id === fullProduct.id) {
 		if (curMainProduct.canceled_at != null) {
 			return AttachScenario.Renew;
@@ -370,7 +364,6 @@ export const toPricecnProduct = async ({
 			primary_text: data?.primaryText,
 			secondary_text: data?.secondaryText,
 
-			// To deprecate
 			...data,
 		};
 	});
@@ -441,7 +434,6 @@ export const toPricecnProduct = async ({
 					primary_text: price.primaryText,
 					secondary_text: price.secondaryText,
 
-					// To deprecate
 					...price,
 				}
 			: null,

@@ -43,7 +43,6 @@ export async function appendMeteringRecords({
 		messages,
 		ownerEpoch,
 	});
-	// No longer atomic with the batch: a crash between the two redelivers the command, and its id makes the replay a no-op.
 	if (offsets) {
 		if (!ctx.commandOffsets)
 			throw new Error("Idempotent commits need a command offset committer");

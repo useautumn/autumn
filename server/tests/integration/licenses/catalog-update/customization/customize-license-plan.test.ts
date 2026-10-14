@@ -1,5 +1,3 @@
-/** Contract: plans.update persists independent, junction-backed license customizations per parent.
- * Unchanged rows are reused and the shared base license stays unchanged. */
 import { expect, test } from "bun:test";
 import { type ApiPlanExpandedV1, BillingInterval } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
@@ -88,7 +86,6 @@ test.concurrent(
 		]);
 		const [stockEntitlement] = baseLicenseProduct.entitlements;
 
-		// Each catalog link owns its effective definition and capacity.
 		expect(monthly.planLicense).toMatchObject({
 			is_custom: false,
 			customized: true,
@@ -116,7 +113,6 @@ test.concurrent(
 			}),
 		);
 
-		// The monthly link adds an item without changing the annual link.
 		expect(monthly.fullLicenseProduct.entitlements).toContainEqual(
 			expect.objectContaining({ feature_id: TestFeature.Words }),
 		);
@@ -124,7 +120,6 @@ test.concurrent(
 			expect.objectContaining({ feature_id: TestFeature.Words }),
 		);
 
-		// Unchanged items reuse the license plan's stock rows in both junctions.
 		expect(monthly.items.entitlements).toContainEqual(
 			expect.objectContaining({ id: stockEntitlement.id }),
 		);
@@ -136,7 +131,6 @@ test.concurrent(
 		expect(monthly.items.prices[0].is_custom).toBe(true);
 		expect(annual.items.prices[0].is_custom).toBe(true);
 
-		// Parent customization never mutates the shared base license plan.
 		expect(baseLicenseProduct.prices).toHaveLength(0);
 		expect(baseLicenseProduct.entitlements).toHaveLength(1);
 

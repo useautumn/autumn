@@ -5,7 +5,6 @@ import type { MultiTenantContext } from "./multiTenantContext.js";
 
 const ADMIN_TOKEN_HEADER = "x-atom-admin-token";
 
-/** Only the admin token adds, reads or removes an org's Atom; an org's own token opens only its customers. */
 export function adminTokenMiddleware({
 	ctx,
 }: {

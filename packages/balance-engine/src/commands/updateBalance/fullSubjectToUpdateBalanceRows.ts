@@ -5,7 +5,6 @@ import {
 import type { WorkerFullSubject } from "../../models/subject/workerFullSubject.js";
 import type { UpdateBalanceCommand } from "./types/updateBalanceCommand.js";
 
-/** The rows an update reads, as legacy selects them: the feature's own, or with the credit systems that fund it. */
 export const fullSubjectToUpdateBalanceRows = ({
 	fullSubject,
 	command,
@@ -25,7 +24,6 @@ export const fullSubjectToUpdateBalanceRows = ({
 		now: command.occurredAt,
 	});
 
-/** The row whose date comes first, rows without one last: legacy's target for a reset or expiry edit. */
 export const findCustomerEntitlementBySoonest = <
 	Row extends { next_reset_at: number | null; expires_at: number | null },
 >({

@@ -7,7 +7,6 @@ import {
 } from "@autumn/shared";
 import type { EntitiesByFeature } from "../types/entitiesByFeature.js";
 
-/** Inserted entities use the feature's balance (−N); inserted and claimed ones are granted its per-entity balances. */
 export const computeEntityBalancesPlan = ({
 	customerEntitlements,
 	entitiesByFeature,

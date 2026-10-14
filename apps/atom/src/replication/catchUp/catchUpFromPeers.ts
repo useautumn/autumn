@@ -7,9 +7,7 @@ import {
 	PeerNotReadyError,
 } from "./fetchSince.js";
 
-/** Before serving: a peer that fails to answer is tried this many times, then the replica serves from what it has. */
 const BOOT_ATTEMPTS = 3;
-/** After the first catch-up: waits before each further pass, while the other replicas learn this one's address. */
 export const SETTLE_CATCH_UPS_MS = [10_000, 30_000, 60_000];
 
 export type CatchUpContext = {
@@ -29,10 +27,6 @@ type CatchUpResult = {
 	ms: number;
 };
 
-/**
- * Copies from one peer, folder by folder, what each lacks: first the tenants the peer holds that this replica does
- * not, so a folder registered on the peer alone exists here before its rows are asked for.
- */
 const catchUpFrom = async ({
 	ctx,
 	folders,
@@ -71,11 +65,6 @@ const catchUpFrom = async ({
 const describe = (result: CatchUpResult) =>
 	`Caught up from ${result.peer}: ${result.written} subjects written across ${result.slots} slots in ${result.folders} folders`;
 
-/**
- * Before this replica serves: copies from the first ready peer that answers what its folders lack, everything on a fresh
- * volume. With no peer there is nothing to copy; with none ready or answering it gives up after a few tries, so two
- * replicas restarting at once cannot wait on each other.
- */
 export const catchUpBeforeServing = async ({
 	ctx,
 	folders,
@@ -122,10 +111,6 @@ export const catchUpBeforeServing = async ({
 	);
 };
 
-/**
- * After serving: copies from every ready peer what it wrote in its last `windowFor(peer)` ms, so what one of them
- * alone holds reaches here. Resolves to the peers caught up from; one not ready or unreachable is not among them.
- */
 export const catchUpFromEveryPeer = async ({
 	ctx,
 	folders,

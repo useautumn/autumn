@@ -37,23 +37,13 @@ export interface InitFullCustomerProductContext {
 	featureQuantities: FeatureOptions[];
 	customerLicenseQuantities?: CustomerLicenseQuantity[];
 
-	/**
-	 * Per-call override for the entity the resulting cusProduct should bind to.
-	 * Wins over `fullCustomer.entity`. Used by flows (e.g. sync) where the
-	 * entity is plan-specific rather than request-wide.
-	 */
 	entity?: Entity;
 
-	// For customer entitlements
 	billingCycleAnchor?: number | "now";
-	resetCycleAnchor: number | "now"; // Unix timestamp of the next
-	// existingUsages?: ExistingUsages;
-	// existingRollovers?: ExistingRollover[];
-
-	// Others
+	resetCycleAnchor: number | "now";
 	freeTrial: FreeTrial | null;
 	trialEndsAt?: number;
-	now: number; // milliseconds since epoch
+	now: number;
 	billingVersion?: BillingVersion;
 
 	existingUsagesConfig?: ExistingUsagesConfig;
@@ -79,40 +69,25 @@ export interface InitFullCustomerProductOptions {
 	subscriptionId?: string;
 	subscriptionScheduleId?: string;
 	canceledAt?: number;
-	status?: CusProductStatus; // Used for scheduling product
-	startsAt?: number; // Used for scheduling product
+	status?: CusProductStatus;
+	startsAt?: number;
 	accessStartsAt?: number;
-	endedAt?: number; // Used for scheduling product
-
-	// Optional + random
+	endedAt?: number;
 	apiSemver?: ApiVersion;
 	collectionMethod?: CollectionMethod;
 	externalId?: string;
 	billingCycleAnchorResetsAt?: number | null;
 
-	/** When true, preserve subscription_ids even for non-paid-recurring products (used by sync). */
 	keepSubscriptionIds?: boolean;
 
-	/** Anchors the product to a license pool as an assignment: entitlements are
-	 * entity-stamped and usage_allowed must not derive from prices —
-	 * assignments never bill. */
 	customerLicenseLinkId?: string;
 
-	/** Override the entity the customer product is bound to. Used by sync to honor `plan.internal_entity_id` instead of falling back to `fullCustomer.entity`. */
 	internalEntityId?: string;
 
 	previousCustomerProductId?: string;
 	onTrialEnd?: TrialOnEnd;
 
-	/**
-	 * Tags the customer_product's `processor.type` field. When omitted, the
-	 * processor column is left unwritten (defaults to null in the DB, which
-	 * `cusProductToProcessorType` resolves to Stripe). Used by non-Stripe
-	 * origin flows (e.g. RevenueCat) to mark cus_products explicitly.
-	 */
 	processorType?: ProcessorType;
 
-	/** Full processor carried from the customer product being replaced, so a
-	 * RevenueCat plan keeps its type, id and store period. Wins over `processorType`. */
 	processor?: CusProduct["processor"];
 }

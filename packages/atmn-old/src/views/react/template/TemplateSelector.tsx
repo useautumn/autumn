@@ -7,33 +7,28 @@ interface TemplateSelectorProps {
 	onCancel?: () => void;
 }
 
-// Total width of all 3 cards + gaps
 const CARDS_TOTAL_WIDTH = 84;
 
 export const TemplateSelector: React.FC<TemplateSelectorProps> = ({
 	onSelect,
 	onCancel,
 }) => {
-	const [activeIndex, setActiveIndex] = useState(1); // Start on RatGPT (middle)
+	const [activeIndex, setActiveIndex] = useState(1);
 
 	const activeTemplate = templates[activeIndex];
 
 	useInput((_input, key) => {
 		if (key.tab || key.rightArrow) {
-			// Next template
 			setActiveIndex((prev) => (prev + 1) % templates.length);
 		} else if (key.leftArrow) {
-			// Previous template
 			setActiveIndex(
 				(prev) => (prev - 1 + templates.length) % templates.length,
 			);
 		} else if (key.return) {
-			// Confirm selection
 			if (activeTemplate) {
 				onSelect?.(activeTemplate);
 			}
 		} else if (key.escape) {
-			// Cancel
 			onCancel?.();
 		}
 	});
@@ -54,7 +49,6 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({
 
 	return (
 		<Box flexDirection="column" paddingX={2} paddingY={1}>
-			{/* Template Tabs - single box spanning all cards */}
 			<Box
 				flexDirection="row"
 				borderStyle="round"
@@ -78,14 +72,12 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({
 				<Text color="magenta">→</Text>
 			</Box>
 
-			{/* Plan Cards - 3 columns, centered within fixed width */}
 			<Box
 				flexDirection="row"
 				width={CARDS_TOTAL_WIDTH}
 				justifyContent="center"
 			>
 				<Box flexDirection="row" gap={1} alignItems="center">
-					{/* Left Card */}
 					<Box
 						borderStyle="round"
 						borderColor="magenta"
@@ -109,7 +101,6 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({
 						</Box>
 					</Box>
 
-					{/* Center Card */}
 					<Box
 						borderStyle="round"
 						borderColor="magenta"
@@ -138,7 +129,6 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({
 						</Box>
 					</Box>
 
-					{/* Right Card */}
 					<Box
 						borderStyle="round"
 						borderColor="magenta"
@@ -164,7 +154,6 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({
 				</Box>
 			</Box>
 
-			{/* Hint for controls */}
 			<Box marginTop={1}>
 				<Text dimColor>
 					← → switch templates • Enter to confirm • Esc to cancel

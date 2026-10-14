@@ -1,9 +1,3 @@
-/**
- * Contract: the seat batch never writes a license pool. If the pool a seat
- * addition needs is missing (a stale transition), the addition is skipped —
- * no pool is created and no seat rows point at a 0-granted duplicate.
- */
-
 import { expect, test } from "bun:test";
 import {
 	type AttachParamsV1Input,
@@ -32,7 +26,6 @@ import {
 
 const SEAT_COUNT = 3;
 
-/** Same license, minus the words item — replaying it re-adds words to seats. */
 const withoutFeature = ({
 	customerLicense,
 	featureId,
@@ -131,7 +124,6 @@ test.concurrent(
 			redirect_mode: "if_required",
 		});
 
-		// ── Break it: expire the words pool and strip words from every seat ──
 		const [wordsPool] = await ctx.db
 			.select({ id: pooledBalances.id })
 			.from(pooledBalances)
@@ -169,7 +161,6 @@ test.concurrent(
 			source: "license-pooled-batch-missing-pool-test",
 		});
 
-		// ── Replay the seat batch directly: words is an add with no pool ──
 		const fullCustomer = await CusService.getFull({
 			ctx,
 			idOrInternalId: customerId,
@@ -204,7 +195,6 @@ test.concurrent(
 			},
 		});
 
-		// Skipped: no live words pool on the link, and no seat got a words row.
 		const wordsFeature = ctx.features.find(
 			(feature) => feature.id === TestFeature.Words,
 		);

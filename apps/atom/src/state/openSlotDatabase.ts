@@ -1,20 +1,15 @@
 import type { Database } from "bun:sqlite";
 import { openSqliteDatabase } from "./openSqliteDatabase.js";
 
-/** Lower numbers were used by Atoms already deployed, so a file of one is emptied, never read as this schema.
- * 7: the same tables, rebuilt with auto_vacuum on, so dropped customers' pages go back to the volume. */
 const SLOT_SCHEMA_VERSION = 7;
 
 const dropSlotSchema = ({ database }: { database: Database }) => {
 	database.run("DROP TABLE IF EXISTS subject_states");
 	database.run("DROP TABLE IF EXISTS subject_slices");
-	// Left by an earlier schema.
 	database.run("DROP TABLE IF EXISTS shared_texts");
 };
 
 const createSlotSchema = ({ database }: { database: Database }) => {
-	// entity_id is '' for the customer's own rows, so the pair is always a full key. Each subject has its own catalog
-	// slice and org, beside its state under the same key, so a push that leaves the slice unchanged rewrites only the state.
 	database.run(`
 		CREATE TABLE IF NOT EXISTS subject_states (
 			customer_id TEXT NOT NULL,
@@ -44,7 +39,6 @@ const createSlotSchema = ({ database }: { database: Database }) => {
 	`);
 };
 
-/** A slot is one SQLite file holding the subjects whose customer hashes to it. */
 export const openSlotDatabase = ({
 	databasePath,
 }: {

@@ -22,7 +22,6 @@ import { EventJsonDialog } from "./EventJsonDialog";
 
 const COPIED_RESET_MS = 1_500;
 
-// Inline so the layout never depends on arbitrary-value classes being generated.
 const PANE_STYLE: CSSProperties = { width: 380 };
 const KEY_COLUMN_STYLE: CSSProperties = { width: 96, flexShrink: 0 };
 
@@ -32,7 +31,6 @@ const ICON_BUTTON =
 	"flex items-center justify-center size-6 rounded-md text-subtle hover:bg-muted hover:text-foreground";
 const SECTION_LABEL = "px-5 pt-2.5 pb-1.5 text-xs font-medium text-subtle";
 
-/** filter_by matches the literal `"key":"value"` text, so only string values can match. */
 const isFilterableValue = (value: unknown): value is string =>
 	typeof value === "string";
 
@@ -205,7 +203,6 @@ export const LogDetailPane = ({
 								</GridRow>
 							))
 						) : (
-							// Nothing was deducted (a free feature, or no balance to draw from): say so rather than hide the row.
 							<GridRow label="Balance">
 								<span className="flex-1 min-w-0 truncate text-subtle tabular-nums">
 									0

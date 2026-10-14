@@ -9,7 +9,6 @@ export type RewardBranch =
 	| { kind: "coupon"; body: CatalogCouponParams }
 	| { kind: "feature_grant"; body: CatalogFeatureGrantParams };
 
-/** Which branch of the union an entry states, with its body. */
 export const rewardBranchOf = (
 	entry: UpdateCatalogRewardParams,
 ): RewardBranch =>

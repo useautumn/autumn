@@ -1,6 +1,5 @@
 import type { EventInsert } from "@autumn/shared";
 
-/** Tinybird event schema (matches events.datasource) */
 export type TinybirdEvent = {
 	id: string;
 	org_id: string;
@@ -21,7 +20,6 @@ export type TinybirdEvent = {
 	deductions: string | null;
 };
 
-/** Convert EventInsert to Tinybird schema */
 export const mapToTinybirdEvent = (event: EventInsert): TinybirdEvent => {
 	let timestampStr: string;
 	if (event.timestamp instanceof Date) {

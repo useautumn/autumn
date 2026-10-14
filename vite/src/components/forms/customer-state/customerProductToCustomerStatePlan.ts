@@ -7,7 +7,6 @@ import {
 	EMPTY_CUSTOMER_STATE_PLAN,
 } from "./customerStateSchema";
 
-/** A saved plan as a customer-state row, keeping its customizations. */
 export function customerProductToCustomerStatePlan({
 	cusProduct,
 	products,
@@ -23,7 +22,6 @@ export function customerProductToCustomerStatePlan({
 		cusProduct.customer_entitlements.some((ce) => ce.entitlement.is_custom);
 	const items = isCustom ? reconstructCustomItems({ cusProduct }) : null;
 
-	// A custom plan can sell a different pack size than the catalog.
 	const prepaidItems = (items ?? product?.items ?? []).filter(
 		(item) => item.feature_id && item.usage_model === "prepaid",
 	);
@@ -45,7 +43,6 @@ export function customerProductToCustomerStatePlan({
 		}),
 		items,
 		isCustom,
-		// Plans span entities, so each row carries its own scope.
 		entityId: cusProduct.entity_id ?? null,
 	};
 }

@@ -1,15 +1,3 @@
-/**
- * Trial Revert — Error & Edge Case Tests
- *
- * Verifies all invalid combinations of on_end: "revert" are rejected:
- * - card_required: true + on_end: "revert" (card collected but never used)
- * - No existing customer product (nothing to revert to)
- * - Existing free plan with no Stripe subscription (can't revert without sub)
- *
- * Also verifies edge cases:
- * - Downgrade with on_end: "revert" does NOT pause the current plan prematurely
- */
-
 import { expect, test } from "bun:test";
 import {
 	ALL_STATUSES,
@@ -22,10 +10,6 @@ import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 1: No existing plan → error
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(
 	`${chalk.yellowBright("trial-revert-errors 1: no existing plan throws")}`,
@@ -66,10 +50,6 @@ test.concurrent(
 		).rejects.toThrow();
 	},
 );
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 3: Free plan (no Stripe subscription) → error
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(
 	`${chalk.yellowBright("trial-revert-errors 2: free plan no subscription throws")}`,
@@ -114,19 +94,6 @@ test.concurrent(
 	},
 );
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 4: Downgrade with on_end: "revert" does NOT pause current plan
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Customer is on enterprise ($50/mo)
- * - Attach cheaper pro ($20/mo) with on_end: "revert" trial
- * - This is a downgrade, so planTiming = "end_of_cycle"
- *
- * Expected:
- * - Enterprise is NOT paused (revert only applies to immediate transitions)
- */
 test.concurrent(
 	`${chalk.yellowBright("trial-revert-errors 3: downgrade revert does not pause current plan")}`,
 	async () => {

@@ -1,14 +1,3 @@
-/**
- * catalogV2 promote — preview identity + no mint + idempotent.
- *
- * Contract:
- *   preview: promoted row active:true; sibling (old pointer) active:false
- *   preview includes promotion_details with the previous pointer's slug
- *   preview back-promote: v1 active:true while v2 is live; sibling v2 inactive
- *   promote does not mint — still exactly versions [1, 2]
- *   active:true on the already-active row is a no-op (v1 draft case and live v2)
- */
-
 import { test } from "bun:test";
 import { ResetInterval } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";

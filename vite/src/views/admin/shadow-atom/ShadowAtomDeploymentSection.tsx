@@ -19,7 +19,6 @@ import { RolloutSection } from "../edge-config/RolloutSection";
 import { ShadowAtomCreate } from "./ShadowAtomCreate";
 import { ShadowAtomSectionBody } from "./ShadowAtomSectionBody";
 
-/** The shadow Atom answers the org Atom's `byoc.*` calls under the admin routes. */
 const SHADOW_ATOM_API = {
 	basePath: "/admin/shadow-atom",
 	queryKey: ["admin-shadow-atom"],
@@ -28,7 +27,6 @@ const SHADOW_ATOM_API = {
 const showError = (fallback: string) => (error: unknown) =>
 	toast.error(getBackendErr(error, fallback));
 
-/** The org's Atom components, each where an org's Atom page shows it: deploying or connected; earlier ones sit under Previous Atoms. */
 const ShadowAtomDeployment = () => {
 	const { cache, stackName, isLoading, error, refetch } = useAtomQuery();
 	const actions = useAtomActions();
@@ -41,7 +39,6 @@ const ShadowAtomDeployment = () => {
 	});
 
 	return (
-		// A failed read must not look like nothing deployed, which offers Create.
 		<ShadowAtomSectionBody
 			isError={Boolean(error)}
 			isPending={isLoading}

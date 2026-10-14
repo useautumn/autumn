@@ -5,7 +5,6 @@ import {
 } from "@server/external/stripe/subscriptionSchedules/utils/convertStripeSubscriptionScheduleUtils";
 import type Stripe from "stripe";
 
-/** The previous schedule's phases from its current one onward; completed phases cannot be replayed. */
 const previousPhasesStillAhead = (
 	previousSchedule: Stripe.SubscriptionSchedule,
 ): Stripe.SubscriptionSchedule.Phase[] => {
@@ -16,11 +15,6 @@ const previousPhasesStillAhead = (
 	return previousSchedule.phases.slice(Math.max(currentIndex, 0));
 };
 
-/**
- * A `from_subscription` schedule whose phase update was rejected is a bare,
- * release-on-end schedule: it changes nothing at period end and blocks any
- * later schedule. Put the previous phases back on it, or release it.
- */
 export const discardFailedScheduleRecreate = async ({
 	stripeCli,
 	bareSchedule,

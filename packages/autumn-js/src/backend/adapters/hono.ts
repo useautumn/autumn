@@ -41,7 +41,6 @@ export function autumnHandler<ContextType extends Context = Context>(
 			raw: c,
 		});
 
-		// If route not found (404), pass to next middleware
 		if (
 			result.status === 404 &&
 			(result.body as { code?: string })?.code === "not_found"
@@ -49,12 +48,10 @@ export function autumnHandler<ContextType extends Context = Context>(
 			return next();
 		}
 
-		// 204 No Content
 		if (result.status === 204) {
 			return c.body(null, 204);
 		}
 
-		// Return body directly with actual HTTP status
 		return c.json(result.body, result.status as 200);
 	};
 }

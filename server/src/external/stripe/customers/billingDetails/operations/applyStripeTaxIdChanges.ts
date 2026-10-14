@@ -3,10 +3,6 @@ import type Stripe from "stripe";
 import { computeTaxIdChanges } from "../utils/computeTaxIdChanges.js";
 import { listStripeTaxIds } from "./listStripeTaxIds.js";
 
-/**
- * Creates before deleting, so a rejected tax ID never leaves the customer with none.
- * Returns an undo so a later failed billing write leaves tax IDs as they were.
- */
 export const applyStripeTaxIdChanges = async ({
 	stripeCli,
 	stripeCustomerId,

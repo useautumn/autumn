@@ -1,6 +1,5 @@
 import type { ThreadCounters } from "../../../threads/stats/threadStats.js";
 
-/** What the thread counts for /health, by route. */
 const COUNTED_PATHS = {
 	"/v1/balances.check": "checks",
 	"/v1/subjects.set": "pushes",
@@ -10,7 +9,6 @@ const COUNTED_PATHS = {
 const isAuthenticated = ({ statusCode }: { statusCode: number }) =>
 	statusCode !== 401 && statusCode !== 403;
 
-/** Every check and push is counted; a check its key got through is also the org's traffic, and forwarded when the API answered it. */
 export const countRequest = ({
 	counters,
 	path,

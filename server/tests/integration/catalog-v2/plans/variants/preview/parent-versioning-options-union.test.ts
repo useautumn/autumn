@@ -1,9 +1,3 @@
-/**
- * catalogV2.preview_update — parent's versioning.options unions every child
- * variant, not only `variants[]` / `propagate.variants` on this request.
- *
- * Parent v1, no customers. Team-EU v1+v2, customers on latest.
- */
 import { test } from "bun:test";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";

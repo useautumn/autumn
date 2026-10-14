@@ -17,10 +17,6 @@ import { applyDeductionUpdateToFullCustomer } from "../deduction/applyDeductionU
 import type { DeductionUpdate } from "../types/deductionUpdate.js";
 import type { AllocatedInvoiceContext } from "./allocatedInvoiceContext.js";
 
-/**
- * Gathers all state needed for the allocated invoice flow.
- * Returns null if the flow should be skipped (no subscription / no sub item).
- */
 export const setupAllocatedInvoiceContext = async ({
 	ctx,
 	oldFullCustomer,
@@ -32,10 +28,8 @@ export const setupAllocatedInvoiceContext = async ({
 	oldFullCustomer: FullCustomer;
 	customerEntitlement: FullCusEntWithFullCusProduct;
 	update: DeductionUpdate;
-	/** False when the plan itself writes the deduction: evaluate projects the plan, so the context must hold the state before it. */
 	deductionPersisted?: boolean;
 }): Promise<AllocatedInvoiceContext | null> => {
-	// Fetch full customer again just in case...
 	const fullCustomer = await setupFullCustomerContext({
 		ctx,
 		params: {
@@ -44,7 +38,6 @@ export const setupAllocatedInvoiceContext = async ({
 		},
 	});
 
-	// Need to have the "latest" full customer so that when we apply the new updates, the state is correct, and stripe subscription state is correct too.
 	if (deductionPersisted) {
 		applyDeductionUpdateToFullCustomer({
 			fullCus: fullCustomer,
@@ -62,7 +55,6 @@ export const setupAllocatedInvoiceContext = async ({
 		return null;
 	}
 
-	// Fetch Stripe context (subscription, customer, discounts, payment method)
 	const {
 		stripeSubscription,
 		stripeSubscriptionSchedule,
@@ -81,7 +73,6 @@ export const setupAllocatedInvoiceContext = async ({
 		return null;
 	}
 
-	// Find the subscription item for this price
 	const cusPrice = cusEntToCusPrice({ cusEnt: customerEntitlement });
 
 	if (!cusPrice) {
@@ -121,7 +112,6 @@ export const setupAllocatedInvoiceContext = async ({
 		});
 
 	return {
-		// BillingContext fields
 		fullCustomer,
 		fullProducts: [cusProductToProduct({ cusProduct })],
 		featureQuantities: [],
@@ -137,7 +127,6 @@ export const setupAllocatedInvoiceContext = async ({
 		paymentMethod,
 		billingVersion: BillingVersion.V2,
 
-		// Allocated invoice specific fields
 		customerEntitlement,
 		updatedCustomerEntitlement: applyDeductionUpdateToCustomerEntitlement({
 			customerEntitlement,

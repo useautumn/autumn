@@ -1,16 +1,3 @@
-/**
- * A license customize adding a free METERED entitlement must reach live
- * assignments with a real reset cycle, not a balance that never resets.
- *
- * Contract under test:
- *   New behaviors:
- *     - a resetting entitlement is batch-lowered (not rejected to per-customer)
- *     - each assignment's customer_entitlement carries the granted balance
- *     - reset_cycle_anchor / next_reset_at are populated, anchored to the
- *       parent the seat bills with — matching what attaching a seat produces
- *   Side effects:
- *     - no invoice: a free metered entitlement is not a billing change
- */
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3 } from "@autumn/shared";
 import { customerEntitlements } from "@autumn/shared";
@@ -129,7 +116,6 @@ test.concurrent(
 		});
 		expect(convergedRows).toHaveLength(ASSIGNED_SEATS);
 
-		// The whole point: a metered row must track a balance AND reset.
 		const { products } = await getLicenseDbState({ db: ctx.db, customerId });
 		const parentProduct = products.find(
 			(product) => !product.customer_license_link_id,
@@ -147,8 +133,6 @@ test.concurrent(
 			expect(Number(row.resetCycleAnchor)).toBe(Number(parentAnchor));
 		}
 
-		// Replay: the migration must be idempotent. pollUntil returns on FIRST
-		// convergence, so a duplicate row needs an exact count after re-running.
 		await runChunkedMigration({
 			ctx,
 			migrationClient: autumnV2_2,

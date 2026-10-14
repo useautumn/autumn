@@ -16,7 +16,7 @@ import { CollectionMethod, CusProductStatus } from "./cusProductEnums.js";
 
 export const FeatureOptionsSchema = z.object({
 	feature_id: z.string(),
-	quantity: z.number(), // same as prepaid
+	quantity: z.number(),
 	upcoming_quantity: z.number().nullish(),
 
 	adjustable_quantity: z.boolean().nullish(),
@@ -45,7 +45,6 @@ export const CusProductSchema = z.object({
 	created_at: z.number(),
 	updated_at: z.number().nullable(),
 
-	// Useful for event-driven subscriptions (and usage-based to check limits)
 	status: z.nativeEnum(CusProductStatus),
 	canceled: z.boolean().default(false),
 
@@ -61,27 +60,19 @@ export const CusProductSchema = z.object({
 	free_trial_id: z.string().optional().nullable(),
 	collection_method: z.nativeEnum(CollectionMethod),
 
-	// Fixed-cycle configuration
 	subscription_ids: z.array(z.string()).nullish(),
 	scheduled_ids: z.array(z.string()).nullish(),
 	processor: z
 		.object({
 			type: z.enum(ProcessorType),
-			// Processor-native id for the cus_product (e.g. RevenueCat sub/purchase id).
 			id: z.string().nullish(),
-			// Store-owned billing period (ms); only set for RevenueCat plans.
 			current_period_start: z.number().nullish(),
 			current_period_end: z.number().nullish(),
-			// Store purchase this plan came from; only set for RevenueCat plans.
 			original_transaction_id: z.string().nullish(),
-			// subscription_id: z.string().optional().nullable(),
-			// subscription_schedule_id: z.string().optional().nullable(),
-			// last_invoice_id: z.string().optional().nullable(),
 		})
 		.nullish(),
 
 	quantity: z.number().default(1),
-	// Older rows hold pre-normalisation values like "1.2"; unknown versions read as null.
 	api_semver: z.preprocess(
 		(value) =>
 			typeof value === "string" ? parseVersion({ versionStr: value }) : value,
@@ -89,11 +80,7 @@ export const CusProductSchema = z.object({
 	),
 
 	is_custom: z.boolean().default(false),
-	// Seat rows anchor to their pool's stable link (customer_licenses.link_id);
-	// successor pool rows copy the link, so transitions never touch seats.
 	customer_license_link_id: z.string().nullish(),
-	// Seat rows only: the pool row this seat is anchored to, plus the pool
-	// parent's lifecycle snapshot (fetched status-filter-free at subject read).
 	parent_customer_license: DbCustomerLicenseSchema.nullish(),
 	parent_customer_product: z
 		.object({
@@ -102,7 +89,6 @@ export const CusProductSchema = z.object({
 			canceled_at: z.number().nullable(),
 		})
 		.nullish(),
-	// When the seat was released back to its pool (entity unlinked).
 	released_at: z.number().nullish(),
 
 	billing_version: z.enum(BillingVersion).default(BillingVersion.V1),
@@ -124,9 +110,6 @@ export const FullCusProductSchema = CusProductSchema.extend({
 	product: ProductSchema,
 	free_trial: FreeTrialSchema.nullish(),
 
-	// The product's customer licenses — same hierarchy as customer_prices.
-	// Stitched at hydration for DB rows, set by init for planned rows; only
-	// hand-built products (tests, cache converters) may omit it.
 	customer_licenses: z.array(FullCustomerLicenseSchema).optional(),
 });
 

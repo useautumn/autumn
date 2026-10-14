@@ -21,13 +21,6 @@ const { rewardToEntitlementRows } = await import(
 	"../src/internal/rewards/repos/rewardEntitlementRows"
 );
 
-// Temporary stress test for rewards.list — DB-side EXPLAIN ANALYZE of the
-// rewards findMany (with entitlements join) that backs rewardRepo.listApiRewards.
-// Compares the LIMIT 100 (shipped) query against an UNLIMITED variant.
-//
-//   bun run experiments/stressListRewards.ts
-//   STRESS_NS="1,100,1000,5000" bun run experiments/stressListRewards.ts
-
 const SEED_PREFIX = "stress-rew-";
 const FEATURE_GRANTS_PER_BUCKET = 20;
 const SCOPED_COUPONS = 10;
@@ -43,8 +36,6 @@ const NS = (process.env.STRESS_NS ?? "1,10,50,100,250,500,1000")
 const median = (xs: number[]) =>
 	[...xs].sort((a, b) => a - b)[Math.floor(xs.length / 2)];
 
-// Capture the exact SQL Drizzle emits for the relational findMany (org/env +
-// entitlements join + order by), optionally with a LIMIT.
 const captureFindManySql = async ({
 	pool,
 	orgId,
@@ -73,8 +64,6 @@ const captureFindManySql = async ({
 	return hit;
 };
 
-// Run EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON) and pull execution/planning time
-// plus the scan node used on the `rewards` table.
 const explainAnalyze = async ({
 	pool,
 	query,
@@ -150,7 +139,6 @@ const main = async () => {
 		`org=${orgId} env=${env} | baseline=${baseline} | realPrices=${realPriceIds.length}\n`,
 	);
 
-	// Capture both SQL variants once (params/shape don't change across N).
 	const cappedSql = await captureFindManySql({ pool, orgId, env, limit: CAP });
 	const unlimitedSql = await captureFindManySql({ pool, orgId, env });
 

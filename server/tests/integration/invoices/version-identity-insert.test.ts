@@ -1,11 +1,3 @@
-/**
- * invoices.insert — omit-version plan_ids resolve to the active product row.
- *
- * Contract:
- *   v2 active (lockstep) → internal_product_ids is v2
- *   v1 forced active → internal_product_ids is v1
- */
-
 import { expect, test } from "bun:test";
 import { invoices } from "@autumn/shared";
 import { forceActiveVersion } from "@tests/integration/utils/forceActiveVersion.js";

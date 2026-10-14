@@ -1,10 +1,6 @@
 import type { FullCustomer } from "@models/cusModels/fullCusModel";
 import { cp } from "@utils/cusProductUtils/classifyCustomerProduct/cpBuilder";
 
-/**
- * Finds the active main (not add-on, not one-off) customer product in a given group for a customer.
- * Filters by product group, entity, active status, non-add-on, and non-one-off products.
- */
 export const findMainActiveCustomerProductByGroup = ({
 	fullCus,
 	productGroup,

@@ -3,11 +3,6 @@ import { billingContextToCurrency } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { stripeCustomerToInvoiceCredits } from "./stripeCustomerToInvoiceCredits";
 
-/**
- * Build-stage helper that surfaces the Stripe customer's credit balance on
- * the attach preview so sales/dashboard users can see how much credit will
- * offset the next invoice.
- */
 export const computeAttachInvoiceCreditPreview = ({
 	ctx,
 	billingContext,

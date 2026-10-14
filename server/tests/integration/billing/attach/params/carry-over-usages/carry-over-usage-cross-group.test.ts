@@ -1,16 +1,3 @@
-/**
- * Carry Over Usages - Cross-Group Tests
- *
- * carry_over_usages carries from the single same-group product being replaced.
- * When there is NO same-group product, but the attach expires a DIFFERENT-group
- * plan via remove_plan_ids, that removed plan becomes the carry-over source.
- *
- * Key behaviors:
- * - One removed cross-group plan → its usage carries onto the attached plan.
- * - Two removed plans that both hold usage → ambiguous (no merge rule), so the
- *   attach is rejected with InvalidRequest.
- */
-
 import { test } from "bun:test";
 import {
 	type ApiCustomerV3,
@@ -25,16 +12,6 @@ import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 1: Usage carries from a removed cross-group plan
-//
-// Old plan (group "legacy"): 50 messages, 40 used (balance=10)
-// Attach New plan (group "current", 200 messages) with
-//   carry_over_usages: { enabled: true } and remove_plan_ids: [old]
-// Expected: New plan active, old plan gone, balance = 160 (200 - 40), usage = 40
-// Before the fix: balance = 200 (removed plan is never a carry source cross-group)
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(
 	`${chalk.yellowBright("carry-over-usage cross-group 1: usage carries from a removed different-group plan")}`,
@@ -61,7 +38,6 @@ test.concurrent(
 			},
 		);
 
-		// Track 40 units on the old plan (balance: 50 → 10)
 		await autumnV2_1.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
@@ -69,7 +45,6 @@ test.concurrent(
 		});
 		await new Promise((resolve) => setTimeout(resolve, 2000));
 
-		// Attach the new plan, expiring the old (different-group) plan in the same go
 		await autumnV2_2.billing.attach<AttachParamsV1Input>({
 			customer_id: customerId,
 			plan_id: newPlan.id,
@@ -86,7 +61,6 @@ test.concurrent(
 			notPresent: [oldPlan.id],
 		});
 
-		// Balance = 200 (new allowance) - 40 (carried usage) = 160
 		expectCustomerFeatureCorrect({
 			customer,
 			featureId: TestFeature.Messages,
@@ -95,14 +69,6 @@ test.concurrent(
 		});
 	},
 );
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 2: Two carryable removed plans is ambiguous → InvalidRequest
-//
-// Two active plans in different groups, both holding usage. Attaching a third
-// plan that removes BOTH has no single carry source and no merge rule.
-// Expected: InvalidRequest.
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(
 	`${chalk.yellowBright("carry-over-usage cross-group 2: two carryable removed plans throws InvalidRequest")}`,

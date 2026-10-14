@@ -1,13 +1,3 @@
-/**
- * catalogV2.update — billing_controls always fan out to every latest variant.
- *
- * Contract:
- *   omit from propagate → still copy billing_controls; items stay drifted
- *   sparse lane merge / clear → variant matches base next
- *   two variants → both latest rows get the same controls
- *   historical variant version → unchanged
- */
-
 import { test } from "bun:test";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";

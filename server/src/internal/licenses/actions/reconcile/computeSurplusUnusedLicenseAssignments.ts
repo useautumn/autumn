@@ -1,4 +1,3 @@
-/** Oldest-released unused seats beyond the spare budget (`remaining`). */
 export const computeSurplusUnusedLicenseAssignments = <
 	TAssignment extends { id: string },
 >({

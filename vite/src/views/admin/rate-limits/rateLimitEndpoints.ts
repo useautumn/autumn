@@ -3,17 +3,14 @@ import type {
 	RateLimitOverridesView,
 } from "./rateLimitTypes";
 
-// The server's check on endpoint keys; it rejects anything else with a 400.
 const ENDPOINT_PATTERN = /^(GET|POST|PUT|PATCH|DELETE) \/v1(\/[\w.:-]+)+$/;
 
-/** "post  /v1/entities.delete" → "POST /v1/entities.delete", or null when it is not an endpoint. */
 export const toEndpointKey = (text: string) => {
 	const [method = "", ...path] = text.trim().split(/\s+/);
 	const endpoint = `${method.toUpperCase()} ${path.join("")}`;
 	return ENDPOINT_PATTERN.test(endpoint) ? endpoint : null;
 };
 
-/** Known endpoints matching the search; a typed `METHOD /v1/path` they lack is offered first. */
 export const listEndpointMatches = ({
 	endpoints,
 	search,
@@ -34,7 +31,6 @@ export const splitEndpoint = (endpoint: string) => {
 	return { method, path };
 };
 
-/** Each overridden endpoint with the orgs that cap it, sorted by path. */
 export const listEndpointPolicies = ({
 	view,
 }: {
@@ -55,7 +51,6 @@ export const listEndpointPolicies = ({
 	);
 };
 
-/** Known API endpoints plus any stored one the API no longer lists. */
 export const listEndpointOptions = ({
 	view,
 }: {

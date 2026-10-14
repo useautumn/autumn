@@ -3,8 +3,6 @@ import { CusProductStatus } from "@autumn/shared";
 import { getLicenseDbState } from "@tests/integration/licenses/licenseTestUtils";
 import type { TestContext } from "@tests/utils/testInitUtils/createTestContext";
 
-/** DB-level anchor check: every live seat's link resolves to a pool owned by
- * the customer's ACTIVE parent customer product for the given plan. */
 export const expectAssignmentsAnchoredToParent = async ({
 	ctx,
 	customerId,
@@ -37,8 +35,6 @@ export const expectAssignmentsAnchoredToParent = async ({
 	expect(liveAssignments).toHaveLength(count);
 
 	for (const assignment of liveAssignments) {
-		// Predecessor pools linger on expired parents and share the link —
-		// the anchor contract is that A pool on the ACTIVE parent carries it.
 		const linkPools = pools.filter(
 			(candidate) => candidate.link_id === assignment.customer_license_link_id,
 		);

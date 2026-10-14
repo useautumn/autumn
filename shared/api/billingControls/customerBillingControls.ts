@@ -8,12 +8,6 @@ import { ApiSpendLimitSchema } from "./spendLimit.js";
 import { ApiUsageAlertSchema } from "./usageAlert.js";
 import { ApiUsageLimitSchema, WritableUsageLimitsShape } from "./usageLimit.js";
 
-/**
- * Response-only variant of CustomerBillingControlsSchema: `auto_topups` may
- * carry the expanded runtime purchase-limit shape, and `usage_limits` carry
- * the current window `usage`. Input/params validation continues to use
- * `CustomerBillingControlsParamsSchema` (models), which remains strict.
- */
 export const CustomerBillingControlsResponseSchema = z.object({
 	balance_allocations: BalanceAllocationControlsSchema.optional().meta({
 		description:
@@ -43,7 +37,6 @@ export type CustomerBillingControlsResponse = z.infer<
 	typeof CustomerBillingControlsResponseSchema
 >;
 
-/** Update-request variant: usage limits may also be counter-only writes. */
 export const CustomerBillingControlsUpdateSchema =
 	CustomerBillingControlsParamsSchema.extend({
 		...WritableUsageLimitsShape,

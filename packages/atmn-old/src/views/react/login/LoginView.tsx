@@ -3,21 +3,16 @@ import SelectInput from "ink-select-input";
 import { useLogin } from "../../../lib/hooks/useLogin.js";
 import { Card, CardWidthProvider, LoadingText } from "../components/index.js";
 
-// Auth URL for fallback display
 const _AUTH_URL = "https://app.useautumn.com/cli-auth";
 
 interface LoginViewProps {
 	onComplete?: () => void;
 }
 
-/**
- * Beautiful login UI with progressive rendering
- */
 export function LoginView({ onComplete }: LoginViewProps) {
 	const login = useLogin({ onComplete });
 	const _duration = ((Date.now() - login.startTime) / 1000).toFixed(1);
 
-	// Re-auth confirmation options
 	const reauthOptions = [
 		{ label: "Yes, re-authenticate", value: "yes" },
 		{ label: "No, keep current keys", value: "no" },
@@ -34,17 +29,14 @@ export function LoginView({ onComplete }: LoginViewProps) {
 	return (
 		<CardWidthProvider>
 			<Box flexDirection="column" marginBottom={1}>
-				{/* Header */}
 				<Card title="🍂 Logging into Autumn" />
 
-				{/* Checking phase */}
 				{login.phase === "checking" && (
 					<Card title="🔍 Checking">
 						<LoadingText text="Checking existing authentication..." />
 					</Card>
 				)}
 
-				{/* Re-auth confirmation */}
 				{login.phase === "confirm_reauth" && (
 					<Card title="🔑 Already Authenticated">
 						<Text>You already have API keys configured.</Text>
@@ -58,7 +50,6 @@ export function LoginView({ onComplete }: LoginViewProps) {
 					</Card>
 				)}
 
-				{/* Browser phases */}
 				{(login.phase === "opening_browser" ||
 					login.phase === "waiting_auth") && (
 					<Card title="🌐 Browser">
@@ -77,21 +68,18 @@ export function LoginView({ onComplete }: LoginViewProps) {
 					</Card>
 				)}
 
-				{/* Creating keys */}
 				{login.phase === "creating_keys" && (
 					<Card title="🔑 API Keys">
 						<LoadingText text="Creating API keys..." />
 					</Card>
 				)}
 
-				{/* Saving keys */}
 				{login.phase === "saving_keys" && (
 					<Card title="🔑 API Keys">
 						<LoadingText text="Saving keys to .env..." />
 					</Card>
 				)}
 
-				{/* Complete */}
 				{login.phase === "complete" && login.orgInfo && (
 					<>
 						<Card title="🏢 Organization">
@@ -122,14 +110,12 @@ export function LoginView({ onComplete }: LoginViewProps) {
 					</>
 				)}
 
-				{/* Complete but cancelled reauth */}
 				{login.phase === "complete" && !login.orgInfo && (
 					<Box marginTop={1}>
 						<Text color="gray">Keeping existing authentication.</Text>
 					</Box>
 				)}
 
-				{/* Error */}
 				{login.phase === "error" && (
 					<Card title="✗ Authentication Failed">
 						<Text color="red">

@@ -104,7 +104,6 @@ function SheetContent({
 	hideCloseButton?: boolean;
 	overlayClassName?: string;
 	portalContainer?: HTMLElement | null;
-	/** Keep the content mounted (hidden) while closed, so reopening skips the mount. */
 	keepMounted?: boolean;
 }) {
 	return (
@@ -114,7 +113,6 @@ function SheetContent({
 				data-slot="sheet-content"
 				className={cn(
 					"bg-card fixed z-[150] flex flex-col gap-0 overflow-hidden transition-transform duration-300 ease-in-out",
-					// Base UI skips a nested dialog's backdrop, so dim the sheet itself.
 					"after:pointer-events-none after:absolute after:inset-0 after:z-10 after:bg-black/50 after:opacity-0 after:transition-opacity after:duration-200 after:content-[''] data-nested-dialog-open:after:opacity-100 dark:after:bg-black/60",
 					SIDE_STYLES[side],
 					className,

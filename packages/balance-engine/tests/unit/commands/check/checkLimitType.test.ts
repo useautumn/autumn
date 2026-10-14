@@ -16,8 +16,6 @@ import {
 	identity,
 } from "../../engineFixtures.js";
 
-/** Which limit a refused check ran into, named the way the limit_reached webhook names it. */
-
 const ALLOWANCE = 1000;
 
 const withOverage = (
@@ -36,7 +34,6 @@ const checkOn = ({
 	customer?: WorkerCustomer;
 	customerEntitlements: WorkerCustomerEntitlement[];
 	requiredBalance?: number;
-	/** The most the plan lets usage run to, in total: the allowance plus the overage it sells. */
 	overageCap?: number;
 }) => {
 	const state = createSubjectState({

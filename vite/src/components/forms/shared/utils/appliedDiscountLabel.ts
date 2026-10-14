@@ -1,7 +1,6 @@
 import type { ApiDiscount } from "@autumn/shared";
 import { formatDiscountLabel } from "@/views/customers2/components/sheets/subscriptionDetailUtils";
 
-/** A discount on the subscription; `months_left` is the server's carried count when it sent one. */
 export type AppliedDiscount = ApiDiscount & { months_left?: number | null };
 
 const monthsLeftText = (monthsLeft: number) => {

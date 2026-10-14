@@ -1,18 +1,3 @@
-/**
- * findNewestReusableUsagePrice
- *
- * SQL is a coarse filter. The winner is the catalog-first, then newest
- * row that pricesAreSame accepts — including 0 / null / undefined / inf vs -1.
- *
- * Contract:
- *   catalog beats a newer custom; among customs, newest matching wins
- *   amount 0 is a real tier; flat_amount unset equals 0
- *   last-tier `to` inf aliases -1; mid-tier `to` is compared
- *   billing_units null / undefined / 1 are equivalent
- *   feature_id, prepaid, preview, self, other product.id → no
- *   catalog cannot reuse custom; custom can reuse catalog
- */
-
 import { expect, test } from "bun:test";
 import {
 	BillingInterval,

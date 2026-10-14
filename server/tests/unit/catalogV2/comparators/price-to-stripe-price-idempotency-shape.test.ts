@@ -1,18 +1,3 @@
-/**
- * Stripe Price idempotency shape — fields that change prices.create
- * for THIS currency. Same normalizations as pricesAreSame for those fields.
- *
- * In:  amount (this currency), usage_tiers (this currency), interval,
- *      interval_count, billing_units (usage), tier_behavior (usage),
- *      bill_when, should_prorate, allocated_billing_behavior
- * Out: entitlement, feature ids, proration, other-currency overlays,
- *      stripe ids
- *
- * Red (current):  bill_when / should_prorate collide so allocated→arrear remint
- *                 reuses autumn:price:{id}:stripe_price_id:{ccy}:{hash}
- * Green (after):  those config fields change the hash
- */
-
 import { describe, expect, test } from "bun:test";
 import {
 	AllocatedBillingBehavior,

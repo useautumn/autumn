@@ -6,7 +6,6 @@ export type LicenseDefinition = Pick<
 	"license_internal_product_id" | "id" | "included"
 >;
 
-/** Minimal assignment shape shared by raw rows and FullCusProduct. */
 export type LicenseAssignmentCustomerProduct = Pick<
 	DbLicenseAssignment,
 	"id" | "created_at" | "internal_product_id"

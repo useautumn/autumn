@@ -11,7 +11,6 @@ export function balanceWorkerDevConfig({
 		runtimeEnv.BALANCE_WORKER_PORT ?? String(balanceWorkerPortFor(worktreeNum));
 	return {
 		...(runtimeEnv.DATABASE_URL && { DATABASE_URL: runtimeEnv.DATABASE_URL }),
-		// Edge configs poll the same admin bucket the server does; absent, the worker serves defaults.
 		...(runtimeEnv.S3_BUCKET && { S3_BUCKET: runtimeEnv.S3_BUCKET }),
 		...(runtimeEnv.S3_REGION && { S3_REGION: runtimeEnv.S3_REGION }),
 		KAFKA_BROKERS: runtimeEnv.KAFKA_BROKERS ?? "127.0.0.1:19092",

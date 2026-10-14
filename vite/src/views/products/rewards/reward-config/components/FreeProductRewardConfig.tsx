@@ -31,7 +31,6 @@ export function FreeProductRewardConfig({
 
 	return (
 		<SheetSection title="Free Plan Configuration" withSeparator={false}>
-			{/* Product Selection */}
 			<div>
 				<FormLabel>Plan</FormLabel>
 				<Select

@@ -1,19 +1,3 @@
-/**
- * subscriptionToSyncParams — basic detection cases
- *
- * Exercises the canonical "Stripe sub → SyncParamsV1" pipeline against a
- * variety of subscription shapes. Each test:
- *   1. Sets up an Autumn customer + a single Pro product
- *   2. Creates a Stripe subscription with specific items
- *   3. Calls `subscriptionToSyncParams` directly with the test ctx
- *   4. Asserts via `expectSyncParamsCorrect` + `expectSubscriptionMatchCorrect`
- *
- * NOTE: Cases 3, 4, 5 codify desired contract — they exercise
- * `feature_quantities` / custom-stripe-price-id propagation that may not be
- * fully wired through `subscriptionToSyncParams` yet. Failures here are the
- * spec for the next implementation pass.
- */
-
 import { test } from "bun:test";
 import { expectSubscriptionMatchCorrect } from "@tests/integration/billing/utils/sync/expectSubscriptionMatch";
 import { expectSyncParamsCorrect } from "@tests/integration/billing/utils/sync/expectSyncParams";
@@ -34,10 +18,6 @@ import {
 	getProductStripeProductId,
 	getStripeCustomerId,
 } from "../utils/syncProductHelpers";
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// CASE 1: simple plan with base price, exact stripe_price_id match
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(`${chalk.yellowBright("to-sync-params: case 1 — base price exact match")}`, async () => {
 	const customerId = "to-sync-params-1-base";
@@ -84,10 +64,6 @@ test.concurrent(`${chalk.yellowBright("to-sync-params: case 1 — base price exa
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// CASE 2: simple plan with custom base price under the same Stripe product
-// ═══════════════════════════════════════════════════════════════════════════════
-
 test.concurrent(`${chalk.yellowBright("to-sync-params: case 2 — custom base price under same stripe product")}`, async () => {
 	const customerId = "to-sync-params-2-custom-base";
 	const pro = products.pro({ id: "pro", items: [] });
@@ -105,7 +81,6 @@ test.concurrent(`${chalk.yellowBright("to-sync-params: case 2 — custom base pr
 	const stripeProductId = getProductStripeProductId({ fullProduct });
 	const stripeCustomerId = await getStripeCustomerId({ ctx, customerId });
 
-	// Build a custom Stripe price ($50/mo) under Pro's Stripe product.
 	const customPrice = await createStripeFixedPriceUnderProduct({
 		ctx,
 		stripeProductId,
@@ -154,10 +129,6 @@ test.concurrent(`${chalk.yellowBright("to-sync-params: case 2 — custom base pr
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// CASE 3: plan with prepaid messages; sub omits the prepaid item → quantity 0
-// ═══════════════════════════════════════════════════════════════════════════════
-
 test.concurrent(`${chalk.yellowBright("to-sync-params: case 3 — prepaid messages initialized to quantity 0")}`, async () => {
 	const customerId = "to-sync-params-3-prepaid-zero";
 	const pro = products.pro({
@@ -174,7 +145,6 @@ test.concurrent(`${chalk.yellowBright("to-sync-params: case 3 — prepaid messag
 		actions: [],
 	});
 
-	// Build a sub that ONLY uses Pro's base price — omit the prepaid item.
 	const fullProduct = await fetchFullProduct({ ctx, productId: pro.id });
 	const baseStripePriceId = getBaseStripePriceId({ fullProduct });
 	const stripeCustomerId = await getStripeCustomerId({ ctx, customerId });
@@ -211,11 +181,6 @@ test.concurrent(`${chalk.yellowBright("to-sync-params: case 3 — prepaid messag
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// CASE 4: plan with prepaid messages; sub has base + custom fixed price
-//         under prepaid Messages's stripe_product_id
-// ═══════════════════════════════════════════════════════════════════════════════
-
 test.concurrent(`${chalk.yellowBright("to-sync-params: case 4 — custom fixed price under prepaid Messages stripe product")}`, async () => {
 	const customerId = "to-sync-params-4-prepaid-custom-fixed";
 	const pro = products.pro({
@@ -237,11 +202,10 @@ test.concurrent(`${chalk.yellowBright("to-sync-params: case 4 — custom fixed p
 	const prepaidStripeProductId = getPrepaidStripeProductId({ fullProduct });
 	const stripeCustomerId = await getStripeCustomerId({ ctx, customerId });
 
-	// Custom fixed Stripe price under the prepaid Messages product
 	const customPrepaidPrice = await createStripeFixedPriceUnderProduct({
 		ctx,
 		stripeProductId: prepaidStripeProductId,
-		unitAmount: 1500, // $15/mo (vs. Autumn's $10 default)
+		unitAmount: 1500,
 	});
 
 	const subscription = await ctx.stripeCli.subscriptions.create({
@@ -286,11 +250,6 @@ test.concurrent(`${chalk.yellowBright("to-sync-params: case 4 — custom fixed p
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// CASE 5: plan with prepaid messages; sub has base + tiered Stripe price
-//         under prepaid Messages's stripe_product_id
-// ═══════════════════════════════════════════════════════════════════════════════
-
 test.concurrent(`${chalk.yellowBright("to-sync-params: case 5 — tiered price under prepaid Messages stripe product")}`, async () => {
 	const customerId = "to-sync-params-5-prepaid-tiered";
 	const pro = products.pro({
@@ -312,7 +271,6 @@ test.concurrent(`${chalk.yellowBright("to-sync-params: case 5 — tiered price u
 	const prepaidStripeProductId = getPrepaidStripeProductId({ fullProduct });
 	const stripeCustomerId = await getStripeCustomerId({ ctx, customerId });
 
-	// Custom tiered Stripe price under the prepaid Messages product
 	const customTieredPrice = await createStripeTieredPriceUnderProduct({
 		ctx,
 		stripeProductId: prepaidStripeProductId,
@@ -365,10 +323,6 @@ test.concurrent(`${chalk.yellowBright("to-sync-params: case 5 — tiered price u
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// CASE 6: Pro + add-on; add-on Stripe item has quantity 2
-// ═══════════════════════════════════════════════════════════════════════════════
-
 test.concurrent(`${chalk.yellowBright("to-sync-params: case 6 — add-on with stripe quantity 2")}`, async () => {
 	const customerId = "to-sync-params-6-addon-quantity";
 	const pro = products.pro({ id: "pro", items: [] });
@@ -391,7 +345,6 @@ test.concurrent(`${chalk.yellowBright("to-sync-params: case 6 — add-on with st
 	});
 	const stripeCustomerId = await getStripeCustomerId({ ctx, customerId });
 
-	// Subscribe to Pro (qty 1) + the add-on at quantity 2.
 	const subscription = await ctx.stripeCli.subscriptions.create({
 		customer: stripeCustomerId,
 		items: [

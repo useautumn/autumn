@@ -2,7 +2,6 @@ import { z } from "zod/v4";
 import { EntInterval } from "../productModels/intervals/entitlementInterval.js";
 import { PooledBalanceResetMode } from "./pooledBalanceTable.js";
 
-/** A pooled_balances row as Postgres returns it; the columns mirror the table one for one. */
 export const PooledBalanceSchema = z.object({
 	id: z.string(),
 	org_id: z.string(),

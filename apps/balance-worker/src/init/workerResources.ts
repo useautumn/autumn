@@ -55,7 +55,6 @@ export type WorkerBootstrapConfig = {
 	checkpointSource?: PartitionCheckpointSource;
 };
 
-/** The client limits the worker's consumers and admin client use. */
 export const WORKER_KAFKA_CLIENT_LIMITS = {
 	connectionTimeoutMs: 5000,
 	requestTimeoutMs: 30000,
@@ -70,7 +69,6 @@ export const WORKER_KAFKA_PRODUCER_LIMITS = {
 	retryCount: 2,
 };
 
-/** Every token a client presents, so a broker's refusal can be read against the key and lifetime it was shown. */
 export function logWorkerKafkaToken({
 	logger,
 	info,
@@ -92,7 +90,6 @@ export async function openWorkerResources({
 }: {
 	ctx?: {
 		logger?: Pick<AutumnLogger, "info" | "warn" | "error">;
-		/** Stands in for the admin bucket; the benchmark polls a directory through it. */
 		edgeConfigS3Client?: EdgeConfigS3Client;
 	};
 	config: BalanceWorkerConfig;

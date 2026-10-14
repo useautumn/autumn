@@ -28,7 +28,6 @@ const RunMigrationBody = z.object({
 	dry_run: z.boolean().default(false),
 	limit: z.number().int().min(1).optional(),
 	only: z.array(z.string()).optional(),
-	/** Accepted for backward compatibility; migration concurrency is fleet-managed. */
 	concurrency: z
 		.number()
 		.int()
@@ -39,10 +38,7 @@ const RunMigrationBody = z.object({
 	retry_item_statuses: z
 		.array(z.enum(RETRYABLE_MIGRATION_ITEM_RUN_STATUSES))
 		.optional(),
-	/** Lazy runs share one run row with the sweeper and enqueue request-path customer work.
-	 * Targeted `only` is incompatible because lazy matching happens on customer reads. */
 	lazy_run: z.boolean().default(false),
-	/** Omitted → resolved from scope size (bulk runs default off). */
 	send_webhooks: z.boolean().optional(),
 	webhook_concurrency: z
 		.number()
@@ -129,8 +125,6 @@ export const handleRunMigration = createRoute({
 				const handle = await runMigrationTask.trigger(payload, {
 					...getMigrationTriggerOptions({ isDev }),
 					tags: [migrationRunTag({ migrationRunId })],
-					// One live run per key: a second migration in the same org
-					// queues behind the first instead of racing it.
 					concurrencyKey: migrationRunConcurrencyKey({
 						orgId: ctx.org.id,
 						env: ctx.env,

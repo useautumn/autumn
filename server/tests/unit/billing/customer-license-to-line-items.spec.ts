@@ -1,5 +1,3 @@
-/** Seat lines outside a backdate gap bill their own current cycle, whatever the subscription's backdate. */
-
 import { describe, expect, test } from "bun:test";
 import {
 	addInterval,

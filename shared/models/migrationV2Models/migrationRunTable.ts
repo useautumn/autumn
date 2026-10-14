@@ -15,7 +15,6 @@ export const MigrationRunStatus = {
 	Queued: "queued",
 	Running: "running",
 	Succeeded: "succeeded",
-	/** Completed items, none of which changed anything. */
 	NoChanges: "no_changes",
 	Failed: "failed",
 	Canceled: "canceled",
@@ -24,7 +23,6 @@ export const MigrationRunStatus = {
 export type MigrationRunStatus =
 	(typeof MigrationRunStatus)[keyof typeof MigrationRunStatus];
 
-/** Stable failure kind of a run, classified where the error is recorded. */
 export const MigrationRunErrorCode = {
 	CacheInvalidationIncomplete: "cache_invalidation_incomplete",
 	StripeError: "stripe_error",
@@ -44,7 +42,6 @@ export const ACTIVE_MIGRATION_RUN_STATUSES = [
 	MigrationRunStatus.Running,
 ] as const;
 
-/** A run that will never change status again. */
 export const isTerminalMigrationRunStatus = (
 	status: MigrationRunStatus,
 ): boolean =>
@@ -78,10 +75,6 @@ export const migrationRuns = pgTable(
 		trigger_run_id: text(),
 		error_message: text(),
 		error_code: text().$type<MigrationRunErrorCode>(),
-		/** When set, the run only processes items with these IDs (the `only`
-		 *  param on /migrations.run). Item kind matches the operation scope
-		 *  — typically customer IDs for customer ops, plan IDs for plan
-		 *  ops, etc. Null = unscoped run-all. */
 		only_ids: text("only_ids").array(),
 		target_limit: numeric({ mode: "number" }),
 		created_at: numeric({ mode: "number" }).notNull(),
@@ -100,9 +93,6 @@ export const migrationRuns = pgTable(
 			foreignColumns: [organizations.id],
 			name: "migration_runs_org_id_fkey",
 		}).onDelete("cascade"),
-		// One queued/running run per migration definition. Org-level ordering
-		// (one live run per org) is trigger.dev's job: the run task queues on
-		// migrationRunQueue with a per-(org, env) concurrencyKey.
 		uniqueIndex("migration_runs_active_per_migration_unique")
 			.on(table.migration_internal_id)
 			.where(sql`${table.status} IN ('queued', 'running')`),

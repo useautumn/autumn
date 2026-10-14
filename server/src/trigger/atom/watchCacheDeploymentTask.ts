@@ -18,7 +18,6 @@ type WatchCacheDeploymentPayload = z.infer<
 
 const WATCH_CACHE_DEPLOYMENT_TASK_ID = "watch-cache-deployment";
 
-/** Follows an org's Atom from setup to connected (or failed, or removed); its waits are checkpointed, so they cost no compute. */
 export const watchCacheDeploymentTask = task({
 	id: WATCH_CACHE_DEPLOYMENT_TASK_ID,
 	run: async (raw: WatchCacheDeploymentPayload, { ctx: triggerCtx }) => {
@@ -35,7 +34,6 @@ export const watchCacheDeploymentTask = task({
 					waitFor,
 				}),
 		});
-		// A finished watch frees its group's key, so the next create, retry or delete starts a new one.
 		await idempotencyKeys.reset(
 			WATCH_CACHE_DEPLOYMENT_TASK_ID,
 			await atomWatchIdempotencyKey({ deploymentGroupId }),

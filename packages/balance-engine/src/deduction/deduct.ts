@@ -11,7 +11,6 @@ import { deductFromBucket } from "./utils/draw/deductFromBucket.js";
 import { deductionStateToLimitType } from "./utils/limits/deductionStateToLimitType.js";
 import { usageWindowsToRowChanges } from "./utils/limits/usageWindows.js";
 
-/** The forward draw: takes `deductionState.remaining` from the buckets in order, on top of whatever has already moved. */
 export const deductFromBuckets = ({
 	context,
 	deductionState,
@@ -25,7 +24,6 @@ export const deductFromBuckets = ({
 	deductFromBucket({ context, deductionState, bucket: "overage" });
 };
 
-/** Everything that moved becomes row changes once, unless what is left over refuses the whole value. */
 export const deductionStateToOutcome = ({
 	context,
 	deductionState,
@@ -36,7 +34,6 @@ export const deductionStateToOutcome = ({
 	request: DeductionRequest;
 }): DeductionOutcome => {
 	const { remaining, deltas } = deductionState;
-	// Overdue-blocked with nothing left to draw from refuses the value whatever the behaviour.
 	const refusedAsOverdue =
 		context.overdueBlocked && context.rows.length === 0 && remaining.gt(0);
 	const rejected =
@@ -64,7 +61,6 @@ export const deductionStateToOutcome = ({
 	};
 };
 
-/** Take the requested units from the subject; negative values refund. Pure: same inputs, same outcome. */
 export const deduct = ({
 	fullSubject,
 	request,

@@ -27,7 +27,6 @@ type PrepaidItemInput = {
 	feature_type?: ProductItemFeatureType | null;
 };
 
-/** Pure function to build update subscription options from prepaid form values. Extracted for testability. */
 export function buildUpdateSubscriptionOptions({
 	prepaidItems,
 	prepaidOptions,
@@ -92,8 +91,6 @@ export function buildUpdateSubscriptionOptions({
 				includedUsage: currentIncludedUsage,
 			});
 
-			// Only consumable (single-use) items top up by delta. Non-consumables
-			// are continuous-use levels with interval === null — always absolute.
 			const isOneOffTopUp =
 				item.interval === null &&
 				item.feature_type !== ProductItemFeatureType.ContinuousUse;
@@ -208,7 +205,6 @@ export function useUpdateSubscriptionRequestBody({
 				customer_product_id: customerProductId,
 			};
 
-			// For cancel actions, only include cancellation-related fields
 			if (cancelAction) {
 				const isRefund = refundBehavior === "refund";
 				return {
@@ -233,8 +229,6 @@ export function useUpdateSubscriptionRequestBody({
 				initialBackendQuantities,
 			});
 
-			// Only send totals the user actually changed; omitted licenses keep
-			// their current paid quantity server-side.
 			const changedLicenseQuantities = Object.fromEntries(
 				Object.entries(licenseQuantities ?? {}).filter(
 					([licenseId, quantity]) =>
@@ -286,7 +280,6 @@ export function useUpdateSubscriptionRequestBody({
 							invoice_template_id: invoiceTemplateId,
 							net_terms_days: netTermsDays,
 							payment_method_types: paymentMethodTypes,
-							// Deferred activation can't be charged inline, so force checkout.
 							...(enableProductImmediately === false
 								? { force_checkout: true }
 								: {}),

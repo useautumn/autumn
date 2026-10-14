@@ -1,12 +1,3 @@
-/**
- * U0 baseline matrix: every migration read-query shape (claim page, dashboard
- * preview page, count, execution view) probed read-only against the 4M bench
- * org. Prints per-scenario timings + plan offenders (seq scans, >=100k-row
- * nodes, disk spills); full EXPLAIN JSON saved under results/.
- *
- *   bun tests/perf/batch-migrations/probeShapeMatrix.ts
- */
-
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type { CustomerFilter } from "@autumn/shared";

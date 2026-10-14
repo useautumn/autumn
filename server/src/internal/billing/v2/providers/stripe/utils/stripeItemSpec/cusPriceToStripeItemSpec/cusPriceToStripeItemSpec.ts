@@ -21,10 +21,6 @@ import { consumableToStripeItemSpec } from "./consumableToStripeItemSpec";
 import { fixedPriceToStripeItemSpec } from "./fixedPriceToStripeItemSpec";
 import { prepaidToStripeItemSpec } from "./prepaidToStripeItemSpec";
 
-/**
- * Converts a single customer price to a StripeItemSpec.
- * Resolves the associated cusEnt, then dispatches to the appropriate handler.
- */
 export const cusPriceToStripeItemSpec = ({
 	ctx,
 	cusPrice,
@@ -46,7 +42,6 @@ export const cusPriceToStripeItemSpec = ({
 		: orgDefault;
 
 	const buildSpec = (mode?: StripeItemSpecMode): StripeItemSpec | null => {
-		// 1. Fixed / one-off price (no entitlement needed)
 		if (isFixedPrice(price)) {
 			const config = price.config as FixedPriceConfig;
 			if ((config.amount ?? 0) <= 0) return null;
@@ -60,7 +55,6 @@ export const cusPriceToStripeItemSpec = ({
 			});
 		}
 
-		// Resolve cusEntWithCusProduct for usage-based prices
 		const cusEntWithCusProduct = cusPriceToCusEntWithCusProduct({
 			cusProduct,
 			cusPrice,
@@ -71,7 +65,6 @@ export const cusPriceToStripeItemSpec = ({
 			return null;
 		}
 
-		// 2. Prepaid (usage-in-advance)
 		if (isPrepaidPrice(price)) {
 			return prepaidToStripeItemSpec({
 				ctx,
@@ -86,7 +79,6 @@ export const cusPriceToStripeItemSpec = ({
 			});
 		}
 
-		// 3. Consumable (usage-in-arrear)
 		if (isConsumablePrice(price)) {
 			return consumableToStripeItemSpec({
 				cusEntWithCusProduct,
@@ -95,7 +87,6 @@ export const cusPriceToStripeItemSpec = ({
 			});
 		}
 
-		// 4. Allocated (in-arrear prorated)
 		if (isAllocatedPrice(price)) {
 			return allocatedToStripeItemSpec({
 				cusEntWithCusProduct,
@@ -111,8 +102,6 @@ export const cusPriceToStripeItemSpec = ({
 	try {
 		spec = buildSpec();
 	} catch (error) {
-		// Read-only rendering (verify): a fixed/prepaid price that can't render
-		// its stored Stripe id is re-rendered in inline mode instead of failing.
 		const canRetryInline =
 			billingContext?.actionSource === "verify" &&
 			(isFixedPrice(price) || isPrepaidPrice(price));
@@ -123,8 +112,6 @@ export const cusPriceToStripeItemSpec = ({
 			error instanceof InternalError &&
 			error.code === ErrCode.StripePriceNotLinked
 		) {
-			// Usage prices have no inline render; their Stripe prices are created
-			// lazily at attach, so an unlinked one is expected state, not drift.
 			return null;
 		} else {
 			throw error;
@@ -135,7 +122,6 @@ export const cusPriceToStripeItemSpec = ({
 		return null;
 	}
 
-	// Correlate Stripe-generated invoice lines back to Autumn billing context.
 	spec.metadata = {
 		autumn_product_id: cusProduct.product.id,
 		autumn_price_id: price.id,

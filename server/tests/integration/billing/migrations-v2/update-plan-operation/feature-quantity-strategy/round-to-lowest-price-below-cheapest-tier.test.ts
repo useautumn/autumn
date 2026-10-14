@@ -1,11 +1,3 @@
-/**
- * Regression coverage for `round_to_lowest_price` when a customer's current
- * spend doesn't clear even the new ladder's cheapest paid tier (e.g. they're
- * sitting entirely within their old included allowance, paying $0). Before this
- * fix, `pickLowestPriceTier` threw in this case; it should instead resolve to
- * the new item's `included` amount only — no purchase.
- */
-
 import { test } from "bun:test";
 import type { ApiCustomerV5, CreatePlanItemParamsV1 } from "@autumn/shared";
 import {
@@ -22,7 +14,6 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { runUpdatePlanMigration } from "../../utils/runUpdatePlanMigration";
 
-/** New tier ladder — cheapest paid tier is $10, above the customer's current $0 spend. */
 const NEW_TIER_ITEM: CreatePlanItemParamsV1 = {
 	feature_id: TestFeature.Messages,
 	reset: { interval: ResetInterval.Month },
@@ -62,8 +53,6 @@ test.concurrent(
 				s.customer({ paymentMethod: "success" }),
 				s.products({ list: [pro] }),
 			],
-			// No prepaid options → 0 purchased beyond the 100 included, so current
-			// spend is $0 — below the new ladder's cheapest paid tier ($10).
 			actions: [s.billing.attach({ productId: pro.id })],
 		});
 

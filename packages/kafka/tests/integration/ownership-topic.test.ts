@@ -228,7 +228,6 @@ describe("ownership tail", () => {
 			config: { topic },
 		});
 		try {
-			// Written before the tail starts: a tail follows from the log end, never the history.
 			await ownershipPublisher.claim({
 				partition,
 				endpoint: "http://10.0.0.4:8080",

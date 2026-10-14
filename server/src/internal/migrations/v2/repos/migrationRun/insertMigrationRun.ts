@@ -8,10 +8,6 @@ import { sql } from "drizzle-orm";
 import type { RepoContext } from "@/db/repoContext.js";
 import { generateId } from "@/utils/genUtils.js";
 
-/** Insert a new `migration_runs` row in `queued` status. The partial unique
- *  index on `(migration_internal_id) WHERE status IN ('queued','running')`
- *  blocks a second live run of the SAME migration. Returns `null` on
- *  conflict. Org-level ordering lives in trigger (migrationRunQueue). */
 export const insertMigrationRun = async ({
 	ctx,
 	insert,

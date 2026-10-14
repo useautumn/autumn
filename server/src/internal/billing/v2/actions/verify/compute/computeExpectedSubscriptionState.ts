@@ -27,11 +27,6 @@ export type ExpectedSubscriptionState = {
 	cusPriceCatalog: CusPriceCatalog;
 };
 
-/**
- * Builds the expected Stripe subscription state from Autumn's customer_products alone —
- * mirrors what `evaluateStripeBillingPlan` does for a computed AutumnBillingPlan, except
- * here the "plan" is a read-only expected-state snapshot rather than a set of DB writes.
- */
 export const computeExpectedSubscriptionState = ({
 	ctx,
 	fullCustomer,

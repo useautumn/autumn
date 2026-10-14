@@ -7,7 +7,6 @@ import { paidInvoiceToTrackItem } from "./paidInvoiceToTrackItem";
 
 export type PaymentVolumeReport = PushResult & {
 	invoices: number;
-	/** Invoices with nothing collected (credit-note settled, zero total); never sent. */
 	skipped: number;
 };
 
@@ -16,7 +15,6 @@ const utcDateOf = (epochMs: number): string =>
 
 const collectedMoney = (invoice: PaidInvoice): boolean => invoice.amount > 0;
 
-/** Every paid_at day's table is resolved up front, so a missing rate fails the run before anything is sent. */
 const rateTablesByDate = async ({
 	ctx,
 	invoices,
@@ -33,7 +31,6 @@ const rateTablesByDate = async ({
 	return new Map(dates.map((date, index) => [date, tables[index]]));
 };
 
-/** Tracks each paid invoice against `usd_volume`, converted at its paid_at date. */
 export const pushPaymentVolume = async ({
 	ctx,
 	invoices,

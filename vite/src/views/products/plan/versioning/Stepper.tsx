@@ -7,10 +7,6 @@ export interface StepperStep {
 	icon: Icon;
 }
 
-/**
- * Horizontal icon stepper — current step highlighted, completed steps
- * clickable to navigate back, upcoming steps dimmed.
- */
 export function Stepper({
 	steps,
 	currentKey,

@@ -57,9 +57,6 @@ export const expectPooledBalanceCorrect = async ({
 	const fullState = await getPooledBalanceDbState({ db, customerId });
 	const poolCount = pool.count ?? 1;
 
-	// Expired pools are historical rows kept for audit: a cancel expires the pool
-	// and a later re-attach mints a fresh one, so both linger. "The pool" here
-	// always means the live one — use getPooledBalanceDbState for the history.
 	const isLive = (expiresAt: number | null) =>
 		expiresAt === null || expiresAt > Date.now();
 	const matchesFilter = (candidate: (typeof fullState.pools)[number]) => {
@@ -114,7 +111,6 @@ export const expectPooledBalanceCorrect = async ({
 			customer_product_id: null,
 			balance: pool.balance,
 			adjustment: pool.adjustment,
-			// cache_version guards the legacy Redis sync; the balance worker never writes it.
 			...(pool.cacheVersion === undefined || isBalanceWorkerRoute()
 				? {}
 				: { cache_version: pool.cacheVersion }),
@@ -124,8 +120,6 @@ export const expectPooledBalanceCorrect = async ({
 		} else {
 			expect(pooledCustomerEntitlement.next_reset_at).toBeNull();
 		}
-		// Pools reset through the lazy/cron paths regardless of mode, so they
-		// are never stamped out of the batch-reset scan.
 		expect(pooledCustomerEntitlement.reset_by_invoice).not.toBe(true);
 		if (pool.rollovers) {
 			expect(pooledCustomerEntitlement.rollovers).toHaveLength(

@@ -10,13 +10,6 @@ import type {
 	ProcessOperationResult,
 } from "@/internal/migrations/v2/operations/types/index.js";
 
-/**
- * Fold ordered customer operations onto one AutumnBillingPlan.
- *
- * Operations are sorted by execution order (add_plan → update_plan),
- * preserving original array order within the same type. Each op sees
- * the projected customer state from all previous ops.
- */
 export const processOperations = async ({
 	ctx,
 	context,

@@ -16,7 +16,6 @@ export const FetchLogoPopover = ({
 	onFetched,
 	disabled,
 }: {
-	/** Saves the fetched logo; resolves false if the save failed. */
 	onFetched: (publicUrl: string) => Promise<boolean>;
 	disabled?: boolean;
 }) => {
@@ -24,16 +23,11 @@ export const FetchLogoPopover = ({
 	const [open, setOpen] = useState(false);
 	const [url, setUrl] = useState("");
 	const [fetching, setFetching] = useState(false);
-	// A logo already fetched (and stored in S3) for `url` whose save failed.
-	// Retrying reuses it instead of paying for another Context.dev lookup.
 	const [unsavedLogo, setUnsavedLogo] = useState<{
 		url: string;
 		publicUrl: string;
 	} | null>(null);
 
-	// Forget the unsaved logo whenever the popover closes: removing, uploading
-	// or pasting a logo (all outside the popover) replace or delete the stored
-	// object, so the remembered URL would no longer be this fetched image.
 	const handleOpenChange = (nextOpen: boolean) => {
 		setOpen(nextOpen);
 		if (!nextOpen) setUnsavedLogo(null);
@@ -53,7 +47,6 @@ export const FetchLogoPopover = ({
 				publicUrl = data.publicUrl as string;
 			}
 
-			// Keep the popover (and the typed URL) open so a failed save can be retried.
 			const saved = await onFetched(publicUrl);
 			if (!saved) {
 				setUnsavedLogo({ url, publicUrl });

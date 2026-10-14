@@ -37,7 +37,6 @@ export const PlanEditor = () => {
 					}}
 					transition={SHEET_ANIMATION}
 				>
-					{/* pb matches PlanEditorBar's h-40 so the last card scrolls clear of it */}
 					<div className="flex flex-col justify-start h-full w-full overflow-x-hidden overflow-y-auto pb-40">
 						<div onClick={(e) => e.stopPropagation()}>
 							<EditPlanHeader />
@@ -47,8 +46,6 @@ export const PlanEditor = () => {
 							<div className="relative w-full flex justify-center">
 								<PlanCard />
 							</div>
-							{/* Link License lives in the plan toolbar (top right); the
-								inline button is customize-editor-only. */}
 							{!isCusPlanEditor && <LicensePlanCards />}
 							<VariantPlanCards />
 						</div>

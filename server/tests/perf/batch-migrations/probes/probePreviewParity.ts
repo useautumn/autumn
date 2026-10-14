@@ -1,11 +1,3 @@
-/**
- * U4 verification: execution-view (mode "all") union — membership parity vs
- * legacy semantics (filter-set ∪ processed⋈customers), plus page/count
- * timings. Includes the disjoint case: processed ids OUTSIDE the filter set.
- *
- *   bun tests/perf/batch-migrations/probes/probePreviewParity.ts
- */
-
 import type { CustomerFilter } from "@autumn/shared";
 import { sql } from "drizzle-orm";
 import {
@@ -49,7 +41,6 @@ const main = async () => {
 			includeProcessed: { migrationInternalId: MID_MIGRATION_ID },
 		};
 
-		// Ground truth: legacy filter select (no limit) ∪ processed⋈customers.
 		const legacyFilterSelect = buildCustomerSelect({
 			orgId: ctx.org.id,
 			env: ctx.env,

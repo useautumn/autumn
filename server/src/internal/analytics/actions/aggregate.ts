@@ -44,7 +44,6 @@ import {
 } from "./propertyRollupCompleteness.js";
 import { rankTopGroups } from "./rankTopGroups.js";
 
-/** Flattens filter_by into indexed filter_key_N / filter_value_N params for Tinybird pipes */
 const buildFilterParams = ({
 	filter_by,
 }: {
@@ -65,7 +64,6 @@ const buildFilterParams = ({
 
 const DATE_FORMAT = "yyyy-MM-dd HH:mm:ss";
 
-/** Validates and sanitizes timezone string to prevent injection */
 export const sanitizeTimezone = ({
 	timezone,
 }: {
@@ -77,7 +75,6 @@ export const sanitizeTimezone = ({
 	return timezone;
 };
 
-/** Maps interval type to number of days */
 const intervalToDays = ({
 	interval,
 	billingCycleGap,
@@ -97,7 +94,6 @@ const intervalToDays = ({
 	return map[interval] ?? 7;
 };
 
-/** Calculates start and end dates for the query */
 export const calculateDateRange = async ({
 	ctx,
 	params,
@@ -108,7 +104,6 @@ export const calculateDateRange = async ({
 	const { db } = ctx;
 	const intervalType = params.interval ?? "24h";
 
-	// Custom range takes precedence
 	if (params.custom_range) {
 		return {
 			startDate: format(new UTCDate(params.custom_range.start), DATE_FORMAT),
@@ -116,7 +111,6 @@ export const calculateDateRange = async ({
 		};
 	}
 
-	// Billing cycle intervals require looking up customer's billing cycle
 	const isBillingCycle = BILLING_CYCLE_INTERVALS.includes(
 		intervalType as BillingCycleIntervalEnum,
 	);
@@ -138,7 +132,6 @@ export const calculateDateRange = async ({
 		}
 	}
 
-	// Standard intervals: calculate from now
 	const now = new UTCDate();
 	const days = intervalToDays({ interval: intervalType });
 	const startDate = sub(now, { days });
@@ -149,8 +142,6 @@ export const calculateDateRange = async ({
 	};
 };
 
-// Grid must match the pipe's buckets for the string join: hour buckets are UTC,
-// day/month buckets are in the viewer's timezone. startDate/endDate are UTC.
 export const generateAllPeriods = ({
 	startDate,
 	endDate,
@@ -164,7 +155,6 @@ export const generateAllPeriods = ({
 }): string[] => {
 	const periods: string[] = [];
 
-	// Hour buckets stay on UTC to match the pipe's raw `hour` column.
 	if (binSize === "hour") {
 		const end = new UTCDate(endDate);
 		let current = new UTCDate(startDate);
@@ -184,7 +174,6 @@ export const generateAllPeriods = ({
 		return periods;
 	}
 
-	// Day/week/month: build the grid in the viewer's zone ("UTC" = old behavior).
 	const tz = timezone ?? "UTC";
 	const startInViewerTz = new TZDate(new UTCDate(startDate).getTime(), tz);
 	const end = new TZDate(new UTCDate(endDate).getTime(), tz);
@@ -205,7 +194,6 @@ export const generateAllPeriods = ({
 			tz,
 		);
 	} else if (binSize === "week") {
-		// Monday-aligned to match the pipe's toStartOfWeek(hour, 1, tz) (mode 1).
 		current = startOfWeek(startOfDayInViewerTz, { weekStartsOn: 1 });
 	} else {
 		current = startOfDayInViewerTz;
@@ -225,7 +213,6 @@ export const generateAllPeriods = ({
 	return periods;
 };
 
-/** Builds column name based on event name, group value, and noCount flag */
 const buildColumnName = ({
 	eventName,
 	noCount,
@@ -236,7 +223,6 @@ const buildColumnName = ({
 	return noCount ? eventName : `${eventName}_count`;
 };
 
-/** A row's value for the requested measure: summed event value, or number of events. */
 const rowMeasureValue = ({
 	row,
 	measure,
@@ -251,7 +237,6 @@ const rowMeasureValue = ({
 	return row.event_count;
 };
 
-/** Formats simple pipe results (no grouping) into pivoted format */
 const formatSimpleResults = ({
 	rows,
 	eventNames,
@@ -278,7 +263,6 @@ const formatSimpleResults = ({
 		timezone,
 	});
 
-	// Initialize with all periods and all event columns set to 0
 	const periodMap = new Map<string, Record<string, number>>();
 	for (const period of allPeriods) {
 		const record: Record<string, number> = {};
@@ -288,7 +272,6 @@ const formatSimpleResults = ({
 		periodMap.set(period, record);
 	}
 
-	// Fill in actual data
 	for (const row of rows) {
 		const periodData = periodMap.get(row.period);
 		if (!periodData) continue;
@@ -313,10 +296,6 @@ const formatSimpleResults = ({
 	return { meta, rows: data.length, data };
 };
 
-/**
- * Formats groupable pipe results, trusting the pipe's ranking and AUTUMN_RESERVED bucket.
- * Per-bin ranking (the default) lets different bins show different groups.
- */
 const formatGroupableResults = ({
 	rows,
 	eventNames,
@@ -347,9 +326,6 @@ const formatGroupableResults = ({
 	});
 	const groupByColumn = groupBy;
 
-	// Collect all unique group values across all bins (for backfilling zeros).
-	// Each bin may have a different set of top-N groups, so the union can exceed N.
-	// `""` is a meaningful bucket for plan_id (means "no plan"), so don't drop it.
 	const allGroupValues = new Set<string>();
 	for (const row of rows) {
 		if (row.group_value !== undefined && row.group_value !== null) {
@@ -357,10 +333,8 @@ const formatGroupableResults = ({
 		}
 	}
 
-	// Build a map of (period, groupValue) -> { event_name: value }
 	const dataMap = new Map<string, Map<string, Record<string, number>>>();
 
-	// Initialize all (period, groupValue) combinations with zeros
 	for (const period of allPeriods) {
 		const groupMap = new Map<string, Record<string, number>>();
 		for (const groupValue of allGroupValues) {
@@ -373,7 +347,6 @@ const formatGroupableResults = ({
 		dataMap.set(period, groupMap);
 	}
 
-	// Fill in actual data directly from the pipe output
 	for (const row of rows) {
 		if (row.group_value === undefined || row.group_value === null) continue;
 
@@ -395,7 +368,6 @@ const formatGroupableResults = ({
 		}
 	}
 
-	// Flatten to array of rows with properties.{groupBy} column
 	const data: Record<string, string | number>[] = [];
 	for (const [period, groupMap] of dataMap) {
 		for (const [groupValue, values] of groupMap) {
@@ -407,7 +379,6 @@ const formatGroupableResults = ({
 		}
 	}
 
-	// Sort by period then group value (put AUTUMN_RESERVED last within each period)
 	data.sort((a, b) => {
 		const periodCompare = String(a.period).localeCompare(String(b.period));
 		if (periodCompare !== 0) return periodCompare;
@@ -420,7 +391,6 @@ const formatGroupableResults = ({
 		return String(a[groupByColumn]).localeCompare(String(b[groupByColumn]));
 	});
 
-	// Build meta with properties.{groupBy} column
 	const columnNames = eventNames.map((name) =>
 		buildColumnName({ eventName: name, noCount }),
 	);
@@ -433,7 +403,6 @@ const formatGroupableResults = ({
 	return { meta, rows: data.length, data };
 };
 
-/** Aggregates events into time-bucketed timeseries data */
 export const aggregate = async ({
 	ctx,
 	params,
@@ -454,30 +423,23 @@ export const aggregate = async ({
 	let formatted: ClickHouseResult;
 	let truncated = false;
 
-	// Route to appropriate pipe based on whether grouping is requested
 	if (params.group_by) {
-		// Use aggregate_groupable pipe for grouped queries
-		// Determine group_column and property_key based on group_by value
 		let groupColumn: "property" | "customer_id" | "entity_id" | "plan_id";
 		let propertyKey: string;
 
 		if (params.group_by === "customer_id") {
-			// Special case: group by customer_id column directly
 			groupColumn = "customer_id";
 			propertyKey = "";
 		} else if (params.group_by === "entity_id") {
-			// Special case: group by entity_id column directly
 			groupColumn = "entity_id";
 			propertyKey = "";
 		} else if (params.group_by === "plan_id") {
 			groupColumn = "plan_id";
 			propertyKey = "";
 		} else if (params.group_by.startsWith("properties.")) {
-			// Standard case: group by a property value
 			groupColumn = "property";
 			propertyKey = params.group_by.slice("properties.".length);
 		} else {
-			// Fallback: treat as property key (legacy behavior)
 			groupColumn = "property";
 			propertyKey = params.group_by;
 		}
@@ -561,7 +523,6 @@ export const aggregate = async ({
 					propertyKey: groupColumn === "property" ? propertyKey : undefined,
 					rankBy,
 				}).catch((error: unknown) => {
-					// Ranking is an optimization; fall back to the single-query path if it fails.
 					ctx.logger.warn("Top-group ranking failed; using full grouping", {
 						orgId: org.id,
 						error: error instanceof Error ? error.message : String(error),
@@ -575,7 +536,6 @@ export const aggregate = async ({
 			...topGroupParams,
 		});
 
-		// Only this query shape reads the gated property rollup.
 		const readsGatedRollup =
 			groupColumn === "property" && Object.keys(filterParams).length === 0;
 
@@ -649,7 +609,6 @@ export const aggregate = async ({
 
 			if (rollupIsIncomplete) {
 				// The raw-events scan can exceed Tinybird's query timeout on long
-				// windows; the gated result is the better answer than a failed request.
 				const ungated = await pipes
 					.aggregateGroupable({ ...pipeParams, skip_property_rollup: "1" })
 					.catch((error: unknown) => {
@@ -668,8 +627,6 @@ export const aggregate = async ({
 						return null;
 					});
 
-				// A shortfall means gate loss OR events without the property; only the
-				// first is recoverable, and only the retry can tell them apart.
 				if (
 					ungated &&
 					reportsMoreThan({ candidate: ungated.data, current: result.data })
@@ -679,8 +636,6 @@ export const aggregate = async ({
 			}
 		}
 
-		// For external API (enforceGroupLimit), truncated is always false
-		// For internal API, return the actual truncation status from the pipe
 		truncated = params.enforceGroupLimit
 			? false
 			: result.data.some((row) => row._truncated === true);
@@ -698,7 +653,6 @@ export const aggregate = async ({
 			maxGroups: params.max_groups,
 		});
 	} else {
-		// Use aggregate_simple pipe for ungrouped queries
 		const filterParams = buildFilterParams({ filter_by: params.filter_by });
 		const pipeParams = {
 			org_id: org.id,

@@ -3,14 +3,6 @@ import { join } from "node:path";
 import { sh, shInherit, fatal, log } from "./shell.ts";
 import { PROJECT_ROOT } from "../constants.ts";
 
-/**
- * Brings a freshly-provisioned Neon branch up to the canonical schema.
- *
- * Strategy: invoke the shared `bun db migrate --bootstrap` CLI with the new
- * branch's DATABASE_URL injected directly (bypassing infisical). `--bootstrap`
- * skips the index-DDL safety check, which is safe here because the DB is empty
- * and has no concurrent traffic.
- */
 export function applyCommittedMigrations(
 	branchName: string,
 	databaseUrl: string,

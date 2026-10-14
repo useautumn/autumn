@@ -1,14 +1,3 @@
-/**
- * Index audit for the candidate select + entitlement insert: EXPLAIN
- * (ANALYZE, BUFFERS) the exact production SQL — unconstrained AND
- * operation-scope-constrained — and print EVERY scan node with its index,
- * flagging any Seq Scan on real tables (prod tables are unbounded — every
- * per-row probe must be an index scan). Insert explains run inside a
- * rolled-back transaction, so no rows persist.
- *
- *   bun tests/perf/batch-migrations/probes/probePhaseIndexAudit.ts
- */
-
 import type { EntitlementWithFeature } from "@autumn/shared";
 import { EntInterval, entitlements } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
@@ -153,7 +142,6 @@ const main = async () => {
 		}),
 	);
 
-	// ── operation-scope constraint variants ────────────────────────────────
 	const customRangeIds = await resolvePage({
 		planId: BENCH_FREE_PRODUCT_ID,
 		cursor: "cus_bench_4000001",
@@ -190,9 +178,6 @@ const main = async () => {
 		}),
 	);
 
-	// ── insert (scope re-assertion join) — rolled back, nothing persists ───
-	// Needs the prepared words entitlement rows a benchRunMigration run
-	// materializes; refuse loudly rather than explain against fake FK ids.
 	const preparedEntitlement = async ({
 		internalProductId,
 	}: {

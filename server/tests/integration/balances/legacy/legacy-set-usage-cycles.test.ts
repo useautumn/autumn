@@ -19,12 +19,6 @@ import { calculateProrationAmount } from "@/internal/invoices/prorationUtils.js"
 import { constructArrearProratedItem } from "@/utils/scriptUtils/constructItem.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 
-// =============================================================================
-// MIGRATED FROM: set-usage1.test.ts
-// Tests /usage endpoint with arrear prorated seats (ProrateNextCycle)
-// Simulates full billing cycles with random clock advances and verifies invoices
-// =============================================================================
-
 test.concurrent(
 	`${chalk.yellowBright("legacy-set-usage1: proration cycle simulation with /usage")}`,
 	async () => {
@@ -55,7 +49,6 @@ test.concurrent(
 			actions: [s.attach({ productId: seatsProduct.id })],
 		});
 
-		// --- Helper: simulate one billing cycle ---
 		const simulateOneCycle = async ({
 			curUnix,
 			usageValues,
@@ -147,16 +140,14 @@ test.concurrent(
 			return { curUnix };
 		};
 
-		// Cycle 1: usage fluctuates [8, 2]
 		const { curUnix } = await simulateOneCycle({
 			curUnix: Date.now(),
 			usageValues: [8, 2],
 		});
 
-		// Cycle 2: usage fluctuates [12, 3]
 		await simulateOneCycle({
 			curUnix,
 			usageValues: [12, 3],
 		});
 	},
-); // Longer timeout for Stripe test clock operations
+);

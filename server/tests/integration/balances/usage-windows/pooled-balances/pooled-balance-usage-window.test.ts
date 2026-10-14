@@ -1,6 +1,3 @@
-// Contract: a customer usage window gates tracks across entities sharing pooled grants.
-// Existing balance usage is preserved while only post-limit tracks consume window headroom.
-
 import { expect, test } from "bun:test";
 import { ErrCode, type TrackResponseV3 } from "@autumn/shared";
 import {

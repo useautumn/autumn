@@ -90,14 +90,6 @@ const buildMutationLogs = ({
 	];
 };
 
-/**
- * Runs a single deduction pass over customer entitlements, tracking updates and mutation logs.
- * Extracted to avoid duplicating the per-cusEnt loop logic across passes.
- *
- * Also exported for reuse by callers that need the "paydown primitive" — e.g. the auto
- * top-up rebalancer uses a single pass with `maxBalance: 0` and a negative `amountToDeduct`
- * to heal overage'd cusEnts up to (but not past) zero.
- */
 export const runDeductionPass = ({
 	cusEnts,
 	amountToDeduct,
@@ -184,9 +176,6 @@ export const deductFromCusEntsTypescript = ({
 	const mutationLogs: MutationLogItem[] = [];
 	const isRefund = amountToDeduct < 0;
 
-	// Pass 1:
-	//   Deductions: floor at 0 (deduct as much as possible without going negative)
-	//   Refunds:    ceiling at 0 (only refund from negative up to 0)
 	const pass1Result = runDeductionPass({
 		cusEnts,
 		amountToDeduct,
@@ -203,7 +192,6 @@ export const deductFromCusEntsTypescript = ({
 		return { updates, mutationLogs, remaining: amountToDeduct };
 	}
 
-	// Sort usage_allowed entitlements first so overage hits them before regular ones
 	if (amountToDeduct > 0 && allowOverage) {
 		cusEnts.sort((a, b) => {
 			const leftUsageAllowed = a.usage_allowed ?? false;
@@ -214,9 +202,6 @@ export const deductFromCusEntsTypescript = ({
 		});
 	}
 
-	// Pass 2:
-	//   Deductions: floor at minBalance (can go below 0 if usage_allowed / allowOverage)
-	//   Refunds:    ceiling at maxBalance (can go above 0 up to max, or uncapped if allowOverage)
 	const pass2Result = runDeductionPass({
 		cusEnts,
 		amountToDeduct,

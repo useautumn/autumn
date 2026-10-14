@@ -36,9 +36,9 @@ await track(
 );
 await track("sk_live_0001", 10, "total cap exhausted: applies 0");
 
-await check("sk_live_1050"); // filtered has room, total does not -> false
-await check("sk_live_0001"); // total exhausted -> false
-await check(); // total exhausted -> false
+await check("sk_live_1050");
+await check("sk_live_0001");
+await check();
 
 const customer = (await autumn.customers.get(customerId)) as {
 	billing_controls?: {

@@ -29,7 +29,6 @@ export const shouldUseOrgDimensionRollup = ({
 	!hasEntityId &&
 	!hasPropertyFilters;
 
-// Whole-window ranking only needs per-period series for the winners.
 export const shouldRankGroupsFirst = ({
 	groupColumn,
 	useOrgDimensionRollup,
@@ -68,9 +67,6 @@ export const shouldUseOrgPropertyRollup = ({
 	!propertyKey.includes(".") &&
 	!skipPropertyRollup;
 
-// Property coverage counts events that carry the key, so events that simply
-// lack it never read as gate loss. Nested keys are not indexed by the coverage
-// rollups and fall back to all-event totals, which still forces the retry.
 export const shouldUsePropertyCoverageCheck = ({
 	groupColumn,
 	hasPropertyFilters,
@@ -144,10 +140,6 @@ export const hasCompleteUtcMonth = ({
 	return firstFullMonth < startOfUtcMonth({ timestamp: endTimestamp });
 };
 
-/**
- * Monthly rollups are keyed on UTC month starts, so a non-UTC viewer's months
- * never line up with them and keep the hourly path.
- */
 export const shouldUseMonthlyRollup = ({
 	binSize,
 	endDate,

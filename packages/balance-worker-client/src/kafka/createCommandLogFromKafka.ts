@@ -7,12 +7,10 @@ import type { CommandLog } from "../queue/types/queue.js";
 import type { BalanceWorkerKafka } from "./types/kafkaBalanceWorkerClient.js";
 
 export type CommandLogFromKafka = CommandLog & {
-	/** Pays the producer connect now, so the first append does not. */
 	connect(): Promise<void>;
 	stop(): Promise<void>;
 };
 
-/** Connects on the first append, never before: a process that queues nothing owns no producer. */
 export function createCommandLogFromKafka({
 	ctx,
 	config,
@@ -30,7 +28,6 @@ export function createCommandLogFromKafka({
 	});
 	let connecting: Promise<void> | undefined;
 
-	/** A failed connect is forgotten so the next append tries again. */
 	async function connect(): Promise<void> {
 		connecting ??= producer.connect();
 		try {

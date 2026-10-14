@@ -31,7 +31,6 @@ import { workerUsageWindowSchema } from "../../models/subject/rows/workerUsageWi
 import type { SubjectState } from "../../models/subject/subjectState.js";
 import { createSubjectState } from "./createSubjectState.js";
 
-/** Keeps only the schema's columns, so a full Postgres row parses against a strict pick. */
 export const pickColumns = <Schema extends z.ZodObject>({
 	schema,
 	row,
@@ -47,7 +46,6 @@ export const pickColumns = <Schema extends z.ZodObject>({
 		),
 	);
 
-/** The one definition of "a customer's state from its rows"; the server's initialize and the worker's hydration both call it. */
 export const customerRowsToSubjectState = ({
 	identity,
 	customer,
@@ -72,21 +70,16 @@ export const customerRowsToSubjectState = ({
 		| "overage_allowed"
 		| "usage_limits"
 	>;
-	/** `api_semver` as stored: a row a newer API version stamped still loads. */
 	customerProducts: (Omit<CusProduct, "api_semver"> & {
 		api_semver: string | null;
 	})[];
 	customerPrices: CustomerPrice[];
 	customerEntitlements: CustomerEntitlement[];
 	rollovers: Rollover[];
-	/** A v1 allocated grant's replaceable seats; absent from rows that never had them. */
 	replaceables?: WorkerReplaceableInput[];
 	usageWindows: UsageWindow[];
-	/** Absent when the rows come from the server's FullSubject, which does not carry locks. */
 	openLocks?: OpenLock[];
-	/** The pools behind the customer's pooled rows, as Postgres returns them. */
 	pooledBalances?: PooledBalance[];
-	/** The license pools on the customer's products; absent from a FullSubject built without them. */
 	customerLicenses?: DbCustomerLicense[];
 	entity: Entity | null;
 }): SubjectState =>
@@ -123,7 +116,6 @@ export const customerRowsToSubjectState = ({
 			: null,
 	});
 
-/** A grant's owner is its own `internal_entity_id`, else its product's: an entity plan's grants carry none of their own. */
 export const grantOwnerOf = ({
 	state,
 	row,
@@ -138,7 +130,6 @@ export const grantOwnerOf = ({
 	return product?.internal_entity_id ?? null;
 };
 
-/** The rows one owner holds in a view: its products and grants, prices and rollovers following them. */
 const rowsOwnedBy = ({
 	state,
 	internalEntityId,
@@ -146,7 +137,6 @@ const rowsOwnedBy = ({
 	state: SubjectState;
 	internalEntityId: string | null;
 }) => {
-	// A plan-inserted row may omit the column; absent means customer-level, as in Postgres.
 	const customerProducts = state.customerProducts.filter(
 		(row) => (row.internal_entity_id ?? null) === internalEntityId,
 	);
@@ -164,8 +154,6 @@ const rowsOwnedBy = ({
 	const replaceables = state.replaceables.filter((replaceable) =>
 		entitlementIds.has(replaceable.cus_ent_id),
 	);
-	// A window counts for its own entity or for the customer; left out of the split, both parts
-	// kept every window and each merge doubled them, so a windowed entity's state grew by 2^writes.
 	const usageWindows = state.usageWindows.filter(
 		(row) => (row.internal_entity_id ?? null) === internalEntityId,
 	);
@@ -186,7 +174,6 @@ const customerPartOf = ({ state }: { state: SubjectState }): SubjectState => ({
 	entity: null,
 });
 
-/** An entity's part of a view: its own rows at the view's revision. A lock id or a pool belongs to the customer. */
 const entityPartOf = ({
 	state,
 	entity,
@@ -203,10 +190,6 @@ const entityPartOf = ({
 	customerLicenses: [],
 });
 
-/**
- * A customer's own view holding nothing its customer part would leave out: no entity, no entity-owned row,
- * no price, rollover or replaceable whose owner row is gone. For such a view the split is the identity.
- */
 const isOwnCustomerPart = ({ state }: { state: SubjectState }): boolean => {
 	if (state.entity !== null || state.identity.entityId !== null) return false;
 	const hasProduct = (id: string) =>
@@ -227,11 +210,6 @@ const isOwnCustomerPart = ({ state }: { state: SubjectState }): boolean => {
 	);
 };
 
-/**
- * The rows a subject view is stored as: customer-level rows under the customer's identity,
- * and the entity with its own rows under its identity. Rollovers follow their customer entitlement.
- * A view with nothing to split out is returned as is, so a cache keyed on the state object still finds it.
- */
 export const splitSubjectState = ({
 	state,
 }: {
@@ -244,7 +222,6 @@ export const splitSubjectState = ({
 	};
 };
 
-/** A view spanning the customer and several entities, as each owner stores it. */
 export const splitCustomerAndEntities = ({
 	state,
 	entities,
@@ -256,7 +233,6 @@ export const splitCustomerAndEntities = ({
 	entities: entities.map((entity) => entityPartOf({ state, entity })),
 });
 
-/** What a billing plan computes against: the customer's state with every named entity's own rows beside it. */
 export const mergeCustomerAndEntities = ({
 	customer,
 	entities,
@@ -291,7 +267,6 @@ export const mergeCustomerAndEntities = ({
 	],
 });
 
-/** What an entity command computes against: the customer's state plus the entity's own, as one SubjectState. */
 export const mergeSubjectStates = ({
 	customer,
 	entity = null,

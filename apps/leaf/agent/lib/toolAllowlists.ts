@@ -1,5 +1,3 @@
-/** Which Autumn MCP tools each agent may discover. */
-
 const ORG_CONTEXT_READS = [
 	"getAgentRules",
 	"listFeatures",

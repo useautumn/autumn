@@ -10,18 +10,11 @@ import { stripeItemToCustomBasePrice } from "./stripeItemToCustomBasePrice";
 export type PlanBaseDecision = {
 	base: PlanBase;
 	customize?: CustomizePlanV1;
-	/** The winning Stripe item — drives the plan's instance quantity. */
 	baseStripeItem: StripeItemSnapshot | null;
-	/** Base-ish items that lost the election — unexplained under this plan. */
 	extraDiffs: ItemDiff[];
 	warnings: PlanWarning[];
 };
 
-/**
- * Elect the plan's base item. Priority: identity hit on the plan's base
- * price > first convertible base-shaped item > none (dropped/absent).
- * Losing candidates become extras.
- */
 export const decidePlanBase = ({
 	diffs,
 	basePrice,
@@ -67,7 +60,6 @@ export const decidePlanBase = ({
 		};
 	}
 
-	// No electable base (an unconvertible candidate stays unexplained).
 	return {
 		...missingBaseVerdict({ basePrice }),
 		baseStripeItem: null,
@@ -75,8 +67,6 @@ export const decidePlanBase = ({
 	};
 };
 
-/** No base item on the sub: a plan that should have one had it dropped;
- * a plan without one (e.g. free) simply has it absent. */
 const missingBaseVerdict = ({
 	basePrice,
 }: {

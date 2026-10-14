@@ -1,7 +1,3 @@
-/**
- * catalogV2.update — parent not listed in propagate freezes the license
- * when the child items change in place.
- */
 import { test } from "bun:test";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";

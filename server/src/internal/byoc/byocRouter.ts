@@ -13,7 +13,6 @@ import { handleRetryCache } from "./handlers/handleRetryCache.js";
 
 export const byocRpcRouter = new Hono<HonoEnv>();
 
-// Scoped to byoc.* paths: this router mounts at "", so "*" would also gate every rpc route mounted after it.
 byocRpcRouter.use(
 	"/:rpc{byoc\\..+}",
 	billingFeatureMiddleware({

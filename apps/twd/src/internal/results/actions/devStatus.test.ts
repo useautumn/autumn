@@ -17,7 +17,6 @@ const MIGRATIONS_DIR = join(import.meta.dir, "../../../db/migrations");
 const SHA1 = "1".repeat(40);
 const SHA2 = "2".repeat(40);
 
-/** Every migration in order, inside a throwaway schema. */
 const migrationSql = () =>
 	readdirSync(MIGRATIONS_DIR)
 		.filter((name) => name.endsWith(".sql"))
@@ -93,7 +92,6 @@ test.skipIf(!testDatabaseUrl)(
 				duration_ms: 60_000,
 			})}`;
 
-			// A grep run only ran some of a file's tests, so it never counts as a whole-file result.
 			await client`insert into runs ${client({
 				id: "run_grep",
 				branch: "dev",
@@ -131,7 +129,6 @@ test.skipIf(!testDatabaseUrl)(
 				"tests/unit/flaky.test.ts": "passed",
 			});
 			await ingestResults({ ctx, body: second });
-			// Re-posting the same CI run replaces its rows instead of doubling them.
 			const again = await ingestResults({ ctx, body: second });
 			expect(again).toEqual({
 				runId: "ci_gh-2-1",
@@ -184,7 +181,6 @@ test.skipIf(!testDatabaseUrl)(
 				["unit/ok.test.ts", "ci", 2, 1],
 			]);
 
-			// A corrected re-post that drops a file's only result drops its CI baseline too.
 			await ingestResults({
 				ctx,
 				body: ciUpload(SHA1, "gh-1-1", {
@@ -204,7 +200,6 @@ test.skipIf(!testDatabaseUrl)(
 				"unit/ok.test.ts",
 			]);
 
-			// CI timings never steer swarm scheduling or ETA, and CI rows never become profiles.
 			expect(
 				await orderFilesLongestFirst({
 					ctx,

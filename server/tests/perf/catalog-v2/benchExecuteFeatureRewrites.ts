@@ -1,15 +1,3 @@
-/**
- * Worst-case timing for catalogV2 feature reference rewrites on the seeded
- * DEV bench org (FEATURE_REWRITE_ROW_LIMIT granting + entity ents + prices).
- *
- *   bun tests/perf/catalog-v2/seedFeatureRewriteBench.ts --reset
- *   bun tests/perf/catalog-v2/benchExecuteFeatureRewrites.ts
- *
- * Budget: executeFeatureReferenceRewrites (one multi-CTE stmt) < 500ms.
- * Also times FeatureService.update (id flip) so the full executeUpdateFeatures
- * hot path is visible.
- */
-
 import {
 	type Feature,
 	FeatureType,
@@ -162,7 +150,6 @@ const main = async () => {
 		loadBenchFeature({ db, orgId: org.id, featureId: RENAMED_ID }),
 	);
 
-	// Normalize to the stable public id so the bench is idempotent
 	if (feature.id === RENAMED_ID) {
 		console.log("restoring renamed feature id before bench…");
 		await restorePublicIds({
@@ -230,7 +217,6 @@ const main = async () => {
 		},
 	};
 
-	// Warm connection / plans
 	await db.execute(sql`SELECT 1`);
 
 	const { ms: rewriteMs } = await time(
@@ -250,7 +236,6 @@ const main = async () => {
 			}),
 	);
 
-	// Spot-check a price actually flipped
 	const [samplePrice] = await db
 		.select()
 		.from(prices)

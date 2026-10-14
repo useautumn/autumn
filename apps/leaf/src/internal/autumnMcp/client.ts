@@ -66,9 +66,6 @@ const disconnectPooledClient = (pooled: PooledAutumnClient) => {
 	void pooled.mcpClient.disconnect().catch(() => undefined);
 };
 
-/** One connected client (and its toolset listing) per caller: the previous
- * connect → list → execute → disconnect paid a full MCP handshake per call.
- * Eviction defers disconnect until in-flight executions release the entry. */
 const clientPool = createTtlCache<PooledAutumnClient>({
 	onEvict: (pooled) => {
 		pooled.then(disconnectPooledClient).catch(() => undefined);

@@ -29,10 +29,8 @@ import { startShadowAtomWatch } from "../startShadowAtomWatch.js";
 import { withShadowAtomLock } from "../withShadowAtomLock.js";
 import { patchShadowAtomConfig } from "./patchShadowAtomConfig.js";
 
-/** The admin token never leaves the server, so a start hands back only the setup link. */
 type StartShadowAtomResponse = Omit<CreateByocCacheResponse, "token">;
 
-/** Starts a shadow Atom multi-tenant under a new admin token, or hands back a fresh setup link while it still waits; one past setup is returned as is. */
 export const startShadowAtom = ({
 	ctx,
 	machine,
@@ -63,13 +61,11 @@ const startShadowAtomSetup = async ({
 			setup_url: null,
 		};
 
-	// A setup that is still waiting keeps its admin token and names, so a fresh link starts the same Atom.
 	const { adminEncryptedToken } = await shadowAtomConfigStore.readFromSource();
 	const adminToken =
 		existing && adminEncryptedToken
 			? decryptData(adminEncryptedToken)
 			: generateAtomToken();
-	// As an org's setup: a named network wins, and a fresh link for a waiting setup keeps the one it asked for.
 	const network = askedNetwork ?? existing?.network ?? null;
 	const deployer = getShadowAtomDeployer();
 	const names = existing

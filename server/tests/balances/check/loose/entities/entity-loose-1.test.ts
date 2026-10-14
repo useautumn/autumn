@@ -22,7 +22,6 @@ describe(`${chalk.yellowBright(`${testCase}: basic entity loose entitlement chec
 			withTestClock: false,
 		});
 
-		// Create entity
 		await autumnV1.entities.create(customerId, [
 			{
 				id: entityId,
@@ -31,7 +30,6 @@ describe(`${chalk.yellowBright(`${testCase}: basic entity loose entitlement chec
 			},
 		]);
 
-		// Create loose entitlement on entity
 		await autumnV1.balances.create({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
@@ -84,17 +82,14 @@ describe(`${chalk.yellowBright(`${testCase}: basic entity loose entitlement chec
 		expect(res.balance?.current_balance).toBe(500);
 	});
 
-	// The balance worker doesn't aggregate entity data onto the customer.
 	test.skipIf(isBalanceWorkerRoute())(
 		"v2: customer-level check should see merged entity balance",
 		async () => {
 			const res = (await autumnV2.check({
 				customer_id: customerId,
 				feature_id: TestFeature.Messages,
-				// No entity_id - checking at customer level
 			})) as unknown as CheckResponseV2;
 
-			// Customer should see merged entity balances
 			expect(res.balance?.current_balance).toBe(500);
 		},
 	);

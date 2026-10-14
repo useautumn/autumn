@@ -91,9 +91,6 @@ export function negotiate(acceptHeader: string | null): Negotiation {
 	if (!markdownAcceptable) return "html";
 	if (!htmlAcceptable) return "markdown";
 
-	// A bare `*/*` matches both at equal (full-wildcard) specificity — that is no
-	// preference, so default to HTML. Serve markdown only when it is asked for
-	// more specifically, or at equal specificity with strictly higher quality.
 	if (
 		markdown.specificity > html.specificity ||
 		(markdown.specificity === html.specificity &&

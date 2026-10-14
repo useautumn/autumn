@@ -23,7 +23,6 @@ const retry = {
 	maxBackoffMs: 1,
 };
 
-/** A Postgres stand-in whose flushes wait on a gate, so they can be observed mid-flight. */
 function createGatedDb({
 	failWhen,
 	staleIds = new Set<string>(),
@@ -36,13 +35,9 @@ function createGatedDb({
 	progress = async () => null,
 }: {
 	failWhen?: (updates: readonly SubjectRowChange[]) => Error | null;
-	/** Rows whose guard no longer matches: the flush rolls back and reports them unapplied. */
 	staleIds?: Set<string>;
-	/** How many leading flushes fail with a retryable SQLSTATE before Postgres "recovers". */
 	transientFailures?: number;
-	/** What each of those leading failures throws. */
 	transientError?: () => Error;
-	/** What the stored bookmark says when the committer reads it back. */
 	progress?: CommitterDb["readPartitionProgress"];
 } = {}) {
 	let remainingTransient = transientFailures;
@@ -269,8 +264,6 @@ describe("committer", () => {
 		expect(poisoned.failure?.record).toBe(poison);
 		expect(poisoned.failure?.cause).toBeInstanceOf(FlushBookmarkConflictError);
 		expect(poisoned.rejections).toEqual([]);
-		// Partition 0's batch (the lane was free, so it went alone) fails, then record a lands,
-		// then the poison record fails alone and c is not attempted; partition 1 follows untouched.
 		expect(
 			fake.transactions.map((transaction) => transaction.partitions),
 		).toEqual([[0], [0], [0], [1]]);
@@ -317,14 +310,12 @@ describe("committer", () => {
 			],
 		});
 
-		// The bookmark moves past the poison record, so a replay after a restart never meets it again.
 		expect(outcome.nextOffset).toBe(3n);
 		expect(outcome.failure).toBeUndefined();
 		expect(outcome.rejections?.map(({ record }) => record)).toEqual([poison]);
 		expect(outcome.rejections?.[0]?.cause).toBeInstanceOf(
 			FlushRecordRefusedError,
 		);
-		// A skip that is not a stale subject lost a write to a bug, so it is loud.
 		expect(errors.some((message) => message.includes("skipped"))).toBe(true);
 		expect(warnings.some((message) => message.includes("skipped"))).toBe(false);
 		await committer.drain();
@@ -370,7 +361,6 @@ describe("committer", () => {
 		expect((cause as SubjectStaleError).identity).toEqual(
 			stale.mutation.identity,
 		);
-		// One more flush lands the rest together; nothing of the stale decision reaches Postgres.
 		expect(fake.transactions).toHaveLength(2);
 		expect(
 			fake.transactions[1]?.updates.map((change) => subjectRowIdOf(change)),
@@ -396,7 +386,6 @@ describe("committer", () => {
 			...change,
 			id: "poison",
 		}));
-		// The lane is busy with a held flush while both calls queue, so they land in one flush together.
 		const held = committer.apply({
 			topic,
 			partition: 9,
@@ -430,7 +419,6 @@ describe("committer", () => {
 		expect(withStale.failure).toBeUndefined();
 		expect(withStale.rejections?.map(({ record }) => record)).toEqual([stale]);
 		expect(withStale.rejections?.[0]?.cause).toBeInstanceOf(SubjectStaleError);
-		// The held flush, the shared flush the stale row rolled back, and one retry carrying both calls.
 		expect(
 			fake.transactions.map((transaction) => transaction.partitions),
 		).toEqual([[9], [0, 1], [0, 1]]);
@@ -476,7 +464,6 @@ describe("committer", () => {
 		expect(outcome.failure).toBeUndefined();
 		expect(outcome.rejections?.map(({ record }) => record)).toEqual([stale]);
 		expect(outcome.rejections?.[0]?.cause).toBeInstanceOf(SubjectStaleError);
-		// The flush, its failed retry, then a, the stale record, its bookmark-only skip, and c.
 		expect(fake.transactions).toHaveLength(6);
 		expect(fake.transactions.at(-2)?.updates).toEqual([]);
 		await committer.drain();
@@ -529,14 +516,12 @@ describe("committer", () => {
 			],
 		});
 
-		// Every record is settled: a and c landed, the locked one was refused and skipped.
 		expect(outcome.nextOffset).toBe(3n);
 		expect(outcome.failure).toBeUndefined();
 		expect(outcome.rejections?.map(({ record }) => record)).toEqual([locked]);
 		expect(outcome.rejections?.[0]?.cause).toBeInstanceOf(
 			LockAlreadyExistsError,
 		);
-		// The skip carried no row changes, so neither the deduction nor the lock row reached Postgres.
 		const lockAttempts = fake.transactions
 			.map((transaction, index) =>
 				insertsLock(transaction.updates) ? index : -1,
@@ -585,7 +570,6 @@ describe("committer", () => {
 		expect(landed).toEqual({ nextOffset: 1n });
 		expect(fake.transactions).toHaveLength(7);
 		expect(delays).toEqual([50, 200, 800, 800, 800, 800]);
-		// Reported at the threshold and every threshold after, then once when the store answers.
 		expect(warnings.map((message) => message.slice(0, 40))).toEqual([
 			"[committer] Postgres has refused 3 flush",
 			"[committer] Postgres has refused 6 flush",
@@ -772,7 +756,6 @@ describe("committer", () => {
 			},
 			config: { concurrency: 1, maxRowsPerFlush: 500, retry },
 		});
-		// Caught up front: the queued call rejects synchronously inside stop().
 		const settledName = (settled: Promise<unknown>) =>
 			settled.then(
 				() => "resolved",
@@ -810,7 +793,6 @@ describe("committer", () => {
 				}),
 			),
 		).toBe("CommitterStoppedError");
-		// One attempt was in flight; the store never saw a skip or a bookmark for any of them.
 		expect(stubborn.transactions).toHaveLength(1);
 		expect(stubborn.transactions[0]?.updates).not.toEqual([]);
 		await committer.drain();
@@ -865,14 +847,12 @@ describe("committer", () => {
 				}),
 			);
 
-		// null → the boot value: three lanes start at once.
 		let calls = applyAll();
 		expect(fake.transactions).toHaveLength(3);
 		fake.openGate();
 		await Promise.all(calls);
 		await committer.drain();
 
-		// 1 → one lane; 99 → clamped to the ceiling of 3.
 		concurrency = 1;
 		const before = fake.transactions.length;
 		calls = applyAll();

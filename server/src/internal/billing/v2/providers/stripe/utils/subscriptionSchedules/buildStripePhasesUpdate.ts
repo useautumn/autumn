@@ -20,11 +20,6 @@ import { logTransitionPoints } from "./logBuildPhaseHelpers";
 import { normalizeCustomerProductTimestamps } from "./normalizeCustomerProductTimestamps";
 import { resolveStripePhaseProrationBehavior } from "./resolveStripePhaseProrationBehavior";
 
-/**
- * Converts customer products to Stripe schedule phase items.
- * Merges quantities for duplicate stored price IDs.
- * Entity-scoped inline items are kept separate (never merged).
- */
 const customerProductsToPhaseItems = ({
 	ctx,
 	billingContext,
@@ -51,7 +46,6 @@ const customerProductsToPhaseItems = ({
 		});
 
 		for (const item of recurringItems) {
-			// Entity-scoped inline prices — never merge
 			if (item.stripeInlinePrice) {
 				inlineItems.push(stripeItemSpecToPhaseItem({ spec: item }));
 				continue;
@@ -245,12 +239,6 @@ export const getBillingCycleAnchorResetAt = ({
 	return resetTimestamps[0];
 };
 
-/**
- * Builds Stripe subscription schedule phases.
- *
- * Takes add/remove customer products and computes phases based on
- * when products start or end (transition points).
- */
 export const buildStripePhasesUpdate = ({
 	ctx,
 	billingContext,
@@ -263,12 +251,9 @@ export const buildStripePhasesUpdate = ({
 	billingContext: BillingContext;
 	customerProducts: FullCusProduct[];
 	trialEndsAt?: number;
-	/** Only create_schedule places free-phase placeholders on the free plan's own product. */
 	useFreePhaseStripeProduct?: boolean;
 	phaseProrations?: SchedulePhaseProration[];
 }): Stripe.SubscriptionScheduleUpdateParams.Phase[] => {
-	// Normalize all timestamps to second-level precision for Stripe compatibility.
-	// This is done once at the entry point so downstream functions work with clean data.
 	const nowMs = truncateMsToSecondPrecision(billingContext.currentEpochMs);
 	const normalizedTrialEndsAt = trialEndsAt
 		? truncateMsToSecondPrecision(trialEndsAt)
@@ -281,7 +266,6 @@ export const buildStripePhasesUpdate = ({
 		nowMs,
 	});
 
-	// Find all transition points
 	const transitionPoints = buildTransitionPoints({
 		customerProducts: normalizedCustomerProducts,
 		nowMs,
@@ -291,7 +275,6 @@ export const buildStripePhasesUpdate = ({
 
 	const debugLogs = false;
 
-	// Log customer products and transition points
 	if (debugLogs) {
 		logTransitionPoints({
 			ctx,
@@ -310,7 +293,6 @@ export const buildStripePhasesUpdate = ({
 		const endMs = transitionPoint;
 		const phaseIndex = i;
 
-		// 1. Get customer products from now -> transition point
 		const activeCustomerProducts = normalizedCustomerProducts.filter(
 			(customerProduct) =>
 				isCustomerProductActiveDuringPeriod({
@@ -334,7 +316,6 @@ export const buildStripePhasesUpdate = ({
 			}
 		}
 
-		// 2. Build phase items
 		const phaseItems = customerProductsToPhaseItems({
 			ctx,
 			billingContext,
@@ -367,21 +348,15 @@ export const buildStripePhasesUpdate = ({
 			if (placeholderItem) phaseItems.push(placeholderItem);
 		}
 
-		// Only set trial_end if trial extends into this phase
-		// Constraint: trial_end must be ≤ phase end_date
 		const computePhaseTrialEndsAt = (): number | undefined => {
-			// No trial configured
 			if (!normalizedTrialEndsAt) return undefined;
 
-			// Trial already ended before this phase starts
 			if (normalizedTrialEndsAt <= startMs) return undefined;
 
-			// Trial extends beyond this phase - whole phase is on trial
 			if (endMs && normalizedTrialEndsAt > endMs) {
 				return msToSeconds(endMs);
 			}
 
-			// Trial ends within this phase
 			return msToSeconds(normalizedTrialEndsAt);
 		};
 
@@ -419,7 +394,6 @@ export const buildStripePhasesUpdate = ({
 			}),
 		};
 
-		// Log phase details
 		if (debugLogs) {
 			logPhase({
 				ctx,

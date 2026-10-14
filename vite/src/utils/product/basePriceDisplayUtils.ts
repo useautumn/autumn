@@ -7,7 +7,6 @@ import {
 } from "@autumn/shared";
 import { notNullish } from "@/utils/genUtils";
 
-/** Editor label for a paid plan with no base price. */
 export const PRICE_VARIES_LABEL = "Price varies";
 
 export type BasePriceDisplayType =
@@ -24,9 +23,6 @@ export type BasePriceDisplayResult = {
 	additionalCurrencies?: AdditionalCurrencyPrice[];
 };
 
-/**
- * Get base price display information for a product
- */
 export const getBasePriceDisplay = ({
 	product,
 	currency = "USD",
@@ -38,7 +34,6 @@ export const getBasePriceDisplay = ({
 }): BasePriceDisplayResult => {
 	const basePrice = productV2ToBasePrice({ product });
 
-	// Check if it's a free plan
 	if (product.planType === "free") {
 		return {
 			type: "free",
@@ -46,7 +41,6 @@ export const getBasePriceDisplay = ({
 		};
 	}
 
-	// Check if there's a valid base price (including $0)
 	const priceExists = notNullish(basePrice) && basePrice.price >= 0;
 	if (priceExists && basePrice) {
 		const formattedAmount = formatAmount({
@@ -74,7 +68,6 @@ export const getBasePriceDisplay = ({
 		};
 	}
 
-	// Check if it's a usage-based (variable) price
 	if (product.basePriceType === "usage") {
 		return {
 			type: "variable",
@@ -82,7 +75,6 @@ export const getBasePriceDisplay = ({
 		};
 	}
 
-	// Placeholder for empty state (editing context)
 	if (showPlaceholder) {
 		return {
 			type: "placeholder",
@@ -90,7 +82,6 @@ export const getBasePriceDisplay = ({
 		};
 	}
 
-	// Fallback - no base price means free
 	return {
 		type: "free",
 		displayText: "Free",

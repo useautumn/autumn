@@ -1,9 +1,3 @@
-/**
- * Every version of a plan sits in one `plans` array and says whether it is
- * the live one. Exactly one row per planId carries `active: true`: none means
- * nobody can buy the plan, two means the server cannot tell which to sell.
- */
-
 import { expect, test } from "bun:test";
 import { LINT_REGISTRY } from "../src/lint/rules/registry";
 import {
@@ -71,8 +65,6 @@ test("a single-version plan still has to say active: true", () => {
 });
 
 test("known rows with no active version read as a half-done rename", () => {
-	// Every row of "pro_new" came from the server, and none is live: the live
-	// one is still under the old id. The lint says so rather than "add one".
 	expect(
 		issuesFor([
 			{

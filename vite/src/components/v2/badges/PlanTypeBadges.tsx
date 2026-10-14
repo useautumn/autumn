@@ -11,7 +11,6 @@ interface PlanTypeBadgesProps {
 	className?: string;
 	iconOnly?: boolean;
 	noIcon?: boolean;
-	/** "sm" for dense surfaces like cards; defaults to the list/editor size. */
 	size?: "default" | "sm";
 }
 
@@ -24,7 +23,6 @@ export const PlanTypeBadges = ({
 }: PlanTypeBadgesProps) => {
 	const badges = [];
 
-	// If both auto-enabled and free trial, show combined "Auto trial" badge
 	if (product.is_default && product.free_trial) {
 		badges.push(
 			<PlanTypeBadge
@@ -37,7 +35,6 @@ export const PlanTypeBadges = ({
 			/>,
 		);
 	} else {
-		// Otherwise, show individual badges
 		if (product.is_default) {
 			badges.push(
 				<PlanTypeBadge

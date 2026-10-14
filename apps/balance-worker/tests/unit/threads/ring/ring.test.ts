@@ -1,7 +1,3 @@
-/**
- * The SAB ring's framing over long runs. Positions are 32-bit in the shared header, so a ring that has carried
- * 4 GiB must keep producer and consumer agreeing on where frames start and end, wraps and padding included.
- */
 import { describe, expect, test } from "bun:test";
 import {
 	createRing,
@@ -19,7 +15,6 @@ const CAPACITY = 1 << 20;
 const MAX_FRAME = CAPACITY >>> 3;
 const POSITION_WRAP = 2 ** 32;
 
-/** Moves both positions to `until` bytes short of 2^32 with empty frames, as ~4 GiB of replies would. */
 function carryBytes({
 	producer,
 	consumer,
@@ -46,7 +41,6 @@ function carryBytes({
 	}
 }
 
-/** Deterministic sizes from tiny to an eighth of the ring, so frames land on every offset and wrap often. */
 function sizes({ count, seed }: { count: number; seed: number }): number[] {
 	let state = seed;
 	return Array.from({ length: count }, () => {
@@ -55,7 +49,6 @@ function sizes({ count, seed }: { count: number; seed: number }): number[] {
 	});
 }
 
-/** `[u32 index][bytes (index + at) & 0xff]`: each frame says which it is and carries checkable bytes. */
 function frameOf({ index, size }: { index: number; size: number }): Uint8Array {
 	const bytes = new Uint8Array(size);
 	for (let at = 4; at < size; at++) bytes[at] = (index + at) & 0xff;
@@ -74,7 +67,6 @@ describe("SAB ring framing", () => {
 		let written = 0;
 		let read = 0;
 		while (read < planned.length) {
-			// Fill what fits, publish, then drain part of it, so the two sides chase each other around the ring.
 			while (written < planned.length) {
 				const payload = frameOf({
 					index: written,
@@ -150,7 +142,6 @@ describe("SAB ring framing", () => {
 			const ring = createRing({ capacity });
 			const producer = createRingWriter({ ring, signal: createRingSignal() });
 			const consumer = createRingReader({ ring });
-			// Frames no larger than the maximum carry the tail to about `tail`, then are read.
 			for (let moved = 0; tail - moved >= 5; ) {
 				const length = Math.min(producer.maxFrameBytes, tail - moved - 5);
 				producer.claim({ type: 9, maxLength: length });

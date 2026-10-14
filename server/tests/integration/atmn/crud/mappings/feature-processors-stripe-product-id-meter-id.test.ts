@@ -1,11 +1,3 @@
-/**
- * atmn crud/mappings — feature processors [stripe product_id, meter_id]
- *
- * `--include-mappings`
- *
- * One line of plans/atmn-v3/07_tests.md. [a, b] is a matrix looped INSIDE this file.
- */
-
 import { expect, test } from "bun:test";
 import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 import { configBody } from "@tests/utils/atmnUtils/baseConfigs.js";
@@ -21,9 +13,6 @@ type CatalogFeatureRow = {
 	processors?: { stripe?: { productId?: string; meterId?: string } };
 };
 
-// meter_id IS checked against real Stripe (fillFeatureStripeMeterEventName
-// retrieves it), so this needs a real test-mode meter rather than a made-up
-// id — unlike product_id, which is stamped through with no existence check.
 const apiCallsFeature = ({
 	productId,
 	meterId,

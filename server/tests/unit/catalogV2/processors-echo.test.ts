@@ -1,15 +1,3 @@
-/**
- * productToPlanProcessors / priceConfigToPriceProcessors — GET echo mappers.
- *
- * Contract:
- *   plan processor.id → processors.stripe.product_id
- *   prepaid V2 id wins over V1 for price_id
- *   omit the object when no stripe price id is set
- *
- * Red (current): mappers do not exist
- * Green (after): mapping table above
- */
-
 import { describe, expect, test } from "bun:test";
 import {
 	priceConfigToPriceProcessors,

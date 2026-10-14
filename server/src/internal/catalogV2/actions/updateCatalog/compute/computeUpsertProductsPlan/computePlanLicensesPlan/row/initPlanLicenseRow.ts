@@ -13,7 +13,6 @@ export const resolveCustomizedFlag = ({
 	return planLicense.currentPlanLicense?.customized ?? false;
 };
 
-/** Stamp one plan_license row — id is minted by the caller when the row is new. */
 export const initPlanLicenseRow = ({
 	rowId,
 	planLicense,

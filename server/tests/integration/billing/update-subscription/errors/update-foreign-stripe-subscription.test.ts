@@ -1,13 +1,3 @@
-/**
- * TDD test for Connect subscriptions created by another application.
- *
- * Red-failure mode (current behavior):
- *  - Autumn can create and pay a manual update invoice before Stripe rejects the subscription update.
- *
- * Green-success criteria (after fix):
- *  - The update throws before creating another invoice.
- */
-
 import { expect, test } from "bun:test";
 import { type ApiCustomerV3, BillingInterval, ErrCode } from "@autumn/shared";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
@@ -60,7 +50,6 @@ test.concurrent(
 			limit: 1,
 		});
 
-		// The ownership gate only runs for OAuth-connected orgs; reuse the bound account so Stripe routing is unchanged.
 		const connectedAccountId =
 			ctx.org.test_stripe_connect?.account_id ??
 			ctx.org.test_stripe_connect?.default_account_id;

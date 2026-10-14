@@ -1,9 +1,3 @@
-/**
- * atmn crud/variants — one variant nested under its base [customize: each key of VariantCustomizeSchema]
- *
- * One line of plans/atmn-v3/07_tests.md. [a, b] is a matrix looped INSIDE this file.
- */
-
 import { expect, test } from "bun:test";
 import type { ApiPlanV1 } from "@autumn/shared";
 import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
@@ -12,11 +6,6 @@ import { s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { ProductService } from "@/internal/products/ProductService.js";
 
-/**
- * The base every case nests its variant under: a metered feature and an
- * "extra" feature to add, a seats item, a free trial, and a license link —
- * one thing to override per VariantCustomizeSchema key.
- */
 const baseConfig = ({
 	variantCustomize,
 }: {

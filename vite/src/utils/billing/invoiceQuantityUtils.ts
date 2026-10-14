@@ -16,10 +16,6 @@ export function usageModelToBillingMethod({
 		: BillingMethod.UsageBased;
 }
 
-/**
- * quantity and usage are mutually exclusive on a feature entry. A feature priced both
- * ways bills `quantities` as its prepaid line and `overageQuantities` as its usage line.
- */
 export function convertToInvoiceFeatureQuantities({
 	quantities,
 	overageQuantities = {},

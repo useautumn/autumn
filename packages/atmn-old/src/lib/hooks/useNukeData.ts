@@ -1,7 +1,3 @@
-/**
- * useNukeData hook - Fetch data needed for nuke UI
- */
-
 import { useQuery } from "@tanstack/react-query";
 import { fetchAllCustomers } from "../api/endpoints/customers.js";
 import { fetchFeatures } from "../api/endpoints/features.js";
@@ -18,16 +14,12 @@ export interface NukeData {
 	featuresCount: number;
 }
 
-/**
- * Fetch organization info and counts for nuke UI
- */
 export function useNukeData() {
 	return useQuery({
 		queryKey: ["nuke-data"],
 		queryFn: async (): Promise<NukeData> => {
 			const secretKey = getKey(AppEnv.Sandbox);
 
-			// Fetch all data in parallel
 			const [org, customers, plans, features] = await Promise.all([
 				fetchOrganizationMe({ secretKey }),
 				fetchAllCustomers({ secretKey }),
@@ -43,7 +35,7 @@ export function useNukeData() {
 				featuresCount: features.length,
 			};
 		},
-		staleTime: 0, // Always fetch fresh data
+		staleTime: 0,
 		retry: 1,
 	});
 }

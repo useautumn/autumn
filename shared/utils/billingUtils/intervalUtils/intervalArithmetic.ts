@@ -11,10 +11,8 @@ import {
 	getDate,
 } from "date-fns";
 
-// Union type for all intervals
 type Interval = BillingInterval | EntInterval;
 
-// Intervals that support end-of-month preservation
 const MONTH_BASED_INTERVALS = [
 	BillingInterval.Month,
 	BillingInterval.Quarter,
@@ -26,15 +24,6 @@ const MONTH_BASED_INTERVALS = [
 	EntInterval.Year,
 ] as const;
 
-/**
- * Adds an interval to a timestamp.
- * For month-based intervals, preserves the anchor day (Stripe-compatible end-of-month behavior).
- *
- * @param from - Unix timestamp in milliseconds
- * @param interval - BillingInterval or EntInterval
- * @param intervalCount - Number of intervals to add (default: 1)
- * @returns Unix timestamp in milliseconds
- */
 export const addInterval = ({
 	from,
 	interval,
@@ -54,7 +43,6 @@ export const addInterval = ({
 	let result: UTCDate;
 
 	switch (interval) {
-		// Fine-grained intervals (EntInterval only)
 		case EntInterval.Minute:
 			return addMinutes(fromDate, intervalCount).getTime();
 		case EntInterval.Hour:
@@ -62,12 +50,10 @@ export const addInterval = ({
 		case EntInterval.Day:
 			return addDays(fromDate, intervalCount).getTime();
 
-		// Week (no end-of-month handling needed)
 		case BillingInterval.Week:
 		case EntInterval.Week:
 			return addWeeks(fromDate, intervalCount).getTime();
 
-		// Month-based intervals (with end-of-month preservation)
 		case BillingInterval.Month:
 		case EntInterval.Month:
 			result = new UTCDate(addMonths(fromDate, intervalCount).getTime());
@@ -88,10 +74,9 @@ export const addInterval = ({
 			result = new UTCDate(addYears(fromDate, intervalCount).getTime());
 			break;
 
-		// Non-recurring intervals
 		case BillingInterval.OneOff:
 		case EntInterval.Lifetime:
-			return from; // No change for non-recurring
+			return from;
 
 		default:
 			throw new Error(`Invalid interval: ${interval}`);

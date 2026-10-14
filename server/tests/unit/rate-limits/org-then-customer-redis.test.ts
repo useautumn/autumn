@@ -13,10 +13,8 @@ import { Hono, type Next } from "hono";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import { mockModuleWithRestore } from "../utils/mockModuleWithRestore.js";
 
-// Loaded scripts outlive a counter reset, as they do on a long-lived Redis.
 const scripts = new Map<string, string>();
 
-/** An in-process Redis that runs the limiter's increment script and records each script's key count. */
 const createFakeRedis = () => {
 	const counters = new Map<string, { hits: number; expiresAt: number }>();
 	const scriptKeyCounts: number[] = [];
@@ -92,7 +90,6 @@ const ORG_KEY = `hrl:sync_balance_write_org:${ORG_ID}:live`;
 const customerKey = (customerId: string) =>
 	`hrl:sync_balance_write:${ORG_ID}:live:${customerId}`;
 
-/** The middleware's org-wraps-customer composition with a degrading org cap, which no Redis pair route uses yet. */
 const degradingOrgMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 	const type = RateLimitType.SyncBalanceWrite;
 	const orgLimit = getOrgLimiterFor({ type, overLimit: "degrade" });
@@ -155,7 +152,6 @@ const runRequests = async ({
 const hitsByKey = () =>
 	new Map([...fakeRedis.counters].map(([key, { hits }]) => [key, hits]));
 
-// Org cap 3 across customers, customer cap 2: covers both 429s and an over-cap org.
 const CUSTOMERS = ["cus_a", "cus_a", "cus_a", "cus_b", "cus_b", "cus_c"];
 
 beforeEach(() => {
@@ -190,7 +186,6 @@ describe("org then customer Redis limiters", () => {
 		]);
 	});
 
-	// A customer 429 un-counts the org hit (hono-rate-limiter decrements an unfinalized context).
 	test("the customer is only counted while the org is under its cap", async () => {
 		await runRequests({
 			middleware: (c, next) => rateLimitMiddleware(c, next),
@@ -204,7 +199,6 @@ describe("org then customer Redis limiters", () => {
 		expect(hits.has(customerKey("cus_c"))).toBe(false);
 	});
 
-	// A script over two keys is a multi-shard transaction on a multi-threaded Dragonfly.
 	test("every Redis script touches a single key", async () => {
 		await runRequests({
 			middleware: (c, next) => rateLimitMiddleware(c, next),

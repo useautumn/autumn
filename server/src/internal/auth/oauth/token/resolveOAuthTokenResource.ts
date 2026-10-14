@@ -9,15 +9,6 @@ export class OAuthTokenResourceError extends Error {
 	name = "OAuthTokenResourceError";
 }
 
-/**
- * Resolves the canonical audience to stamp on the grant being issued.
- *
- * The refresh chain owns its audience: clients routinely omit `resource` on
- * refresh, and a rotated token must never widen or drop what it was granted.
- * Anything else the request names is stamped, so an audience this server does
- * not serve is refused as `invalid_target` — an MCP client only ever calls an
- * `/mcp` endpoint, so the bare API origin is a misdirected grant there.
- */
 export const resolveOAuthTokenResource = ({
 	grantResource,
 	isMcpClient,

@@ -12,9 +12,6 @@ const KIND_MATCH_SCORE = 4;
 const INTERVAL_MATCH_SCORE = 2;
 const CAPACITY_SCORE = 1;
 
-// Ranks same-feature candidates by item identity (billing kind, then reset
-// interval — the same dimensions as item keys/filters), then by whether the
-// bucket's effective max can actually hold a carried balance.
 const scoreRolloverCandidate = ({
 	customerProduct,
 	cusEnt,

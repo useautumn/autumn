@@ -10,9 +10,6 @@ import { invoicesToResponse } from "@/internal/invoices/invoiceUtils.js";
 import { getApiCustomerExpandV2 } from "../apiCusUtils/getApiCustomerExpandV2.js";
 import { fullSubjectToApiCustomerV5 } from "./fullSubjectToApiCustomerV5.js";
 
-/**
- * Transform FullSubject to ApiCustomer with expand fields and version changes applied.
- */
 export const getApiCustomerV2 = async ({
 	ctx,
 	fullSubject,
@@ -22,7 +19,6 @@ export const getApiCustomerV2 = async ({
 	fullSubject: FullSubject;
 	withAutumnId?: boolean;
 }): Promise<ApiCustomerV5> => {
-	// An invoice's hosted URL is built from this server's address, so invoices are rendered here and handed in.
 	const shouldExpandInvoices = ctx.expand.includes(CustomerExpand.Invoices);
 	const invoices = shouldExpandInvoices
 		? invoicesToResponse({ invoices: fullSubject.invoices ?? [] })

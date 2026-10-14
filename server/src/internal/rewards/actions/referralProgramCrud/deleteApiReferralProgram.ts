@@ -14,7 +14,6 @@ export const deleteApiReferralProgram = async ({
 }): Promise<DeleteReferralProgramResponse> => {
 	const { db, org, env } = ctx;
 
-	// The repo throws RewardNotFound when no row matches
 	await rewardProgramRepo.delete({
 		db,
 		idOrInternalId: params.referral_program_id,

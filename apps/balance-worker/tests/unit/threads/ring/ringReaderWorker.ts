@@ -1,7 +1,3 @@
-/**
- * The consuming end of the ring stress test: reads frames on its own thread as an HTTP worker reads replies,
- * checks each one's sequence number and bytes, and reports how many it read or the first frame that was wrong.
- */
 import { createRingReader } from "../../../../src/threads/ring/createRing.js";
 import { createRingSignal } from "../../../../src/threads/ring/ringSignal.js";
 import type { Ring } from "../../../../src/threads/ring/types/ring.js";

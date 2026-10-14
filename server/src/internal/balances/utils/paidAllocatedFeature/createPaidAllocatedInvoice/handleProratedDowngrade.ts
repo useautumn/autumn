@@ -114,7 +114,6 @@ const createDowngradeProrationInvoice = async ({
 			onDecrease,
 		})
 	) {
-		// Volume seats can cost more after a decrease, so the invoice may need paying.
 		const finalInvoice = await chargeProrationInvoiceNow({
 			ctx,
 			stripeCli,

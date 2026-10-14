@@ -43,7 +43,6 @@ export function CreateRewardSheet({
 	const [loading, setLoading] = useState(false);
 	const [internalOpen, setInternalOpen] = useState(false);
 
-	// Use controlled state if provided, otherwise use internal state
 	const open = controlledOpen ?? internalOpen;
 	const setOpen = controlledOnOpenChange ?? setInternalOpen;
 
@@ -51,7 +50,6 @@ export function CreateRewardSheet({
 	const setReward = useRewardStore((s) => s.setReward);
 	const reset = useRewardStore((s) => s.reset);
 
-	// Reset state when sheet opens
 	useEffect(() => {
 		if (open) {
 			reset();
@@ -95,7 +93,6 @@ export function CreateRewardSheet({
 				return false;
 			if (
 				reward.featureGrantEntitlements.some((e) => {
-					// Boolean features grant on/off access with no allowance
 					const isBoolean =
 						features.find((f) => f.id === e.feature_id)?.type ===
 						FeatureType.Boolean;

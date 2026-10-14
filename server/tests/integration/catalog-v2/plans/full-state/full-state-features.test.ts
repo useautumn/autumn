@@ -1,23 +1,3 @@
-/**
- * catalogV2.update — full state removes features the config no longer names.
- *
- * Same rule as plans, with one difference that matters: a feature something
- * still uses cannot just go. A config that drops a feature while a plan or a
- * credit system still references it contradicts itself, and the useful
- * response is to say which reference is in the way — not to quietly archive
- * the feature and leave the config believing it is gone.
- *
- * Contract:
- *   D1  an unreferenced feature missing from the config is removed
- *   D2  a referenced one errors, naming what to do about it
- *   D3  skip_feature_ids exempts a feature
- *   D4  the default is unchanged: a patch never removes a feature
- *
- * Red (current): absentee features are uncomputable — remove_features is the
- *   only way a feature leaves, so every assertion below no-ops.
- * Green (after): omission removes, and a live reference is a hard error.
- */
-
 import { expect, test } from "bun:test";
 import { FeatureType } from "@autumn/shared";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
@@ -52,7 +32,6 @@ const featureExists = async ({
 test.concurrent(
 	`${chalk.yellowBright("catalogV2 full-state features: an unreferenced absentee is removed, a skipped one is not")}`,
 	async () => {
-		// Full state speaks for the whole org, so it needs an org of its own.
 		const { autumnV2_3, ctx } = await initScenario({
 			setup: [
 				s.platform.create({
@@ -73,8 +52,6 @@ test.concurrent(
 			],
 		});
 
-		// D1 + D3: only `kept` is stated. `dropped` is unreferenced so it goes;
-		// `skipped` was named as out of scope rather than deleted.
 		await autumnV2_3.catalogV2.update({
 			skip_deletions: false,
 			skip_feature_ids: [skippedId],
@@ -121,9 +98,6 @@ test.concurrent(
 			],
 		});
 
-		// D2: the config drops the feature but keeps the plan that needs it. That
-		// is a contradiction, and archiving it silently would leave the config
-		// describing something that is not true.
 		const contradiction = autumnV2_3.catalogV2.update({
 			skip_deletions: false,
 			features: [],
@@ -162,7 +136,6 @@ test.concurrent(
 			features: [booleanFeature(statedId), booleanFeature(untouchedId)],
 		});
 
-		// D4: every existing caller omits skip_deletions.
 		await autumnV2_3.catalogV2.update({
 			features: [booleanFeature(statedId)],
 		});

@@ -1,6 +1,3 @@
-// Allocated Invoice — ProrateNextCycle / ProrateNextCycle: 1 included seat, $50/seat; increases
-// and decreases are deferred to the next cycle (no immediate invoice or refund).
-
 import { expect, test } from "bun:test";
 
 import type { TrackResponseV2 } from "@autumn/shared";
@@ -17,14 +14,6 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { PRICE_PER_SEAT, userItem } from "./utils/prorateNextCycle.js";
 
-// ═══════════════════════════════════════════════════════════════════
-// prorate-nc3: Track +3 then -1 — verify pending invoice items
-//
-// Checks that each track creates correct prorated pending invoice
-// items on the Stripe subscription. A decrease creates two items
-// (credit for old allocation + charge for new allocation).
-// ═══════════════════════════════════════════════════════════════════
-
 test(`${chalk.yellowBright("prorate-nc3: pending invoice items match prorated amounts after increase and decrease")}`, async () => {
 	const pro = products.pro({ id: "pro", items: [userItem] });
 
@@ -40,8 +29,6 @@ test(`${chalk.yellowBright("prorate-nc3: pending invoice items match prorated am
 				s.advanceTestClock({ weeks: 2 }),
 			],
 		});
-
-	// ─── Step 1: Track +3 (1 included + 2 overage) ───
 
 	const trackRes1: TrackResponseV2 = await autumnV2.track({
 		customer_id: customerId,
@@ -87,8 +74,6 @@ test(`${chalk.yellowBright("prorate-nc3: pending invoice items match prorated am
 		Math.round(proratedOverage * 100),
 	);
 
-	// ─── Step 2: Advance 1 week, then track -1 ───
-
 	const advancedTo2 = await advanceTestClock({
 		stripeCli: ctx.stripeCli,
 		testClockId: testClockId!,
@@ -132,10 +117,8 @@ test(`${chalk.yellowBright("prorate-nc3: pending invoice items match prorated am
 		customer: stripeCustomerId,
 	});
 
-	// 3 total: 1 from the increase + 2 from the decrease (credit + charge)
 	expect(itemsAfterDecrease.data.length).toBe(3);
 
-	// Newest 2 items are from the decrease (Stripe returns newest first)
 	const decreaseItems = itemsAfterDecrease.data.slice(0, 2);
 	const hasCredit = decreaseItems.some((item) => item.amount < 0);
 	const hasCharge = decreaseItems.some((item) => item.amount > 0);

@@ -1,4 +1,3 @@
-/** Verbatim copy of the server function this package replaces; the parity tests run it beside the new one. */
 import {
 	cusEntToCusPrice,
 	cusEntToInvoiceOverage,
@@ -27,7 +26,6 @@ export type ThresholdSettlement =
 			charge: ThresholdCharge;
 	  };
 
-/** The pay-per-use price carrying a threshold, with the threshold it declares. */
 const thresholdPrice = (
 	customerEntitlement: FullCusEntWithFullCusProduct,
 ): { customerPrice: FullCustomerPrice; threshold: number } | undefined => {

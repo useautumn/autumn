@@ -13,16 +13,8 @@ import {
 	workspaceSeatsGoal,
 } from "./workspaceSeatsPricing.ts";
 
-/**
- * KIND B (manufactured twin): the workspace-grants fact is withheld from
- * the opening — and it's the fact that TRIGGERS the license fork. Without
- * it, a per-unit workspaces item would be correct; the agent must ask what
- * a workspace comes with before deriving. Passing = the question surfaced
- * AND the license structure landed.
- */
 export const askSeatGrants = defineCase({
 	name: "workspace-seats-ask-seat-grants",
-	// The full brief minus ONE fact: what a workspace comes with (its grant).
 	prompt: [
 		"hey, setting up billing for our integration platform. everything runs on credits — 1 action call costs 1 credit.",
 		"Starter has no base fee, Team is $600/month. nobody starts on a plan automatically — customers pick one.",

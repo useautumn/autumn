@@ -22,7 +22,6 @@ type PendingInvoiceCandidate = {
 	customerProduct: FullCusProduct;
 	metadataId: string;
 	stripeInvoiceId: string;
-	/** Undefined when Stripe reports the invoice missing (stale pending row). */
 	stripeInvoice?: Stripe.Invoice;
 };
 
@@ -48,7 +47,6 @@ const unpayableInvoiceMessage = ({
 	return `The pending plan '${customerProduct.product.name}' cannot be paid (${reason}). Cancel or review the pending plan before attaching another plan.`;
 };
 
-/** Uncapped: fullCustomer.customer_products is limited and orders pending rows last. */
 export const listPendingCustomerProducts = ({
 	ctx,
 	fullCustomer,
@@ -62,8 +60,6 @@ export const listPendingCustomerProducts = ({
 		inStatuses: [CusProductStatus.Pending],
 	});
 
-/** Invoice-backed pending main plans in the same entity/group, each with a fresh
- * Stripe invoice (checkout-backed rows stay with checkCheckoutSessionLock). */
 const listPendingInvoiceCandidates = async ({
 	ctx,
 	fullCustomer,
@@ -106,7 +102,6 @@ const listPendingInvoiceCandidates = async ({
 			customerProduct,
 			metadataId: metadata.id,
 			stripeInvoiceId: metadata.stripe_invoice_id,
-			// Only a confirmed-missing invoice is skipped; any other failure must fail closed.
 			stripeInvoice: await getStripeInvoice({
 				stripeClient: stripeCli,
 				invoiceId: metadata.stripe_invoice_id,
@@ -119,8 +114,6 @@ const listPendingInvoiceCandidates = async ({
 	return candidates.sort(byEarliestCreated);
 };
 
-/** Resumes the earliest open pending invoice for this transition instead of minting
- * another; a paid one blocks until promoted, and no payable one throws 409. */
 export const findPendingInvoiceConflict = async ({
 	ctx,
 	fullCustomer,

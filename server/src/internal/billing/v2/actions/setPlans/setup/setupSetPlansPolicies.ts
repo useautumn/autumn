@@ -8,10 +8,6 @@ import { replacementCarriesKeptPlans } from "../utils/replacementCarriesKeptPlan
 import { restartsCycleAtBackdatedStart } from "../utils/restartsCycleAtBackdatedStart";
 import { firstPhaseStartsInFuture } from "./classifyFirstPhaseStart";
 
-/**
- * Live rows carry, with a requested trial patched onto them, unless the cycle resets now. A replacement that carries kept
- * plans to a date keeps them unless a new paid plan restarts billing; a backdate keeps them unless it restarts the cycle.
- */
 const liveRowsPolicy = ({
 	billingContext,
 }: {
@@ -19,7 +15,6 @@ const liveRowsPolicy = ({
 }): SetPlansPolicies["liveRows"] => {
 	const { replacedStripeSubscription, requestedBillingCycleAnchor } =
 		billingContext;
-	// Resetting the cycle now restarts every renewing plan's period, so kept plans are re-billed like changed ones.
 	if (requestedBillingCycleAnchor === "now") return "recreateRenewing";
 	if (!replacedStripeSubscription) return "carry";
 	if (isBackdateRecreate({ billingContext })) {
@@ -40,7 +35,6 @@ export const setupSetPlansPolicies = ({
 	billingContext: CreateScheduleBillingContext;
 	params: Pick<SetPlansParamsV0, "undeclared_plans">;
 }): SetPlansPolicies => ({
-	// A later start ends the live plans now, so none is left to retain.
 	undeclared: firstPhaseStartsInFuture({ billingContext })
 		? "end"
 		: (params.undeclared_plans ?? "end"),

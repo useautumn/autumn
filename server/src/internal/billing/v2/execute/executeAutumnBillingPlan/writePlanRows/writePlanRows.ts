@@ -14,13 +14,10 @@ import {
 } from "./writePostgresOnlyRows";
 
 export type WrittenPlanRows = AutumnBillingPlanResult & {
-	/** Seat transitions whose pool rows committed; empty when nothing was written. */
 	pendingBatchTransitions: PendingBatchTransition[];
-	/** The worker sized the plan's purchases with its rows; otherwise Postgres applies them after. */
 	rebalancesApplied: boolean;
 };
 
-/** Rollout off: both steps in one transaction, as the plan always landed. */
 const writePlanRowsInPostgres = async ({
 	ctx,
 	autumnBillingPlan,
@@ -55,7 +52,6 @@ const writePlanRowsInPostgres = async ({
 		}),
 	);
 	if (!error) return data;
-	// A concurrent insert of the same customer committed first.
 	if (autumnBillingPlan.insertCustomer && isUniqueConstraintError(error))
 		return {
 			status: "customer_exists",
@@ -65,7 +61,6 @@ const writePlanRowsInPostgres = async ({
 	throw error;
 };
 
-/** Through the worker: its rows first, then the Postgres-only rows as a second write. */
 const writePlanRowsThroughWorker = async ({
 	ctx,
 	autumnBillingPlan,
@@ -89,7 +84,6 @@ const writePlanRowsThroughWorker = async ({
 	return { ...customerRows, pendingBatchTransitions };
 };
 
-/** The customer's rows, then the rows only Postgres holds: through the worker when it holds the customer, else one transaction. */
 export const writePlanRows = ({
 	ctx,
 	autumnBillingPlan,

@@ -41,8 +41,6 @@ const CHILD_SESSION_IDS_KEY = "_eveChildSessionIds";
 const SIBLING_REQUEST_IDS_KEY = "_eveSiblingRequestIds";
 export const WITHHELD_WRITES_KEY = "_eveWithheldWrites";
 
-/** Leaf smuggles runtime facts to the approval card inside tool_args under
- * `_eve*` marker keys; every reader shares this one shape. */
 const markerArrayFromToolArgs = <Entry>({
 	isEntry,
 	key,
@@ -167,7 +165,6 @@ type GatedParkShape = {
 	withheld: ReadonlyArray<{ denyOptionId?: string; requestId: string }>;
 };
 
-/** Every request in a gated batch with the option that releases it. */
 export const pendingGatedRequests = (
 	parked: GatedParkShape,
 ): EvePendingRequest[] =>

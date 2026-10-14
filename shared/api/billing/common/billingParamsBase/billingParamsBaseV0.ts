@@ -16,12 +16,10 @@ export const BillingParamsBaseV0Schema = z.object({
 	customer_data: CustomerDataSchema.optional(),
 	entity_data: EntityDataSchema.optional(),
 
-	// Used for both update and attach
 	options: z.array(FeatureQuantityParamsV0Schema).optional(),
 	version: z.number().optional(),
 	free_trial: FreeTrialParamsV0Schema.nullable().optional(),
 	items: z.array(ProductItemSchema).optional(),
-	// Upserts license links for this subscription, keyed by license_plan_id
 	upsert_licenses: z.array(CustomizePlanLicenseSchema).optional(),
 	billing_controls: CustomerBillingControlsParamsSchema.optional(),
 
@@ -30,7 +28,6 @@ export const BillingParamsBaseV0Schema = z.object({
 
 	custom_line_items: z.array(CustomLineItemSchema).optional(),
 
-	// Checkout behavior
 	redirect_mode: RedirectModeSchema.default("if_required"),
 });
 

@@ -7,10 +7,6 @@ import type Stripe from "stripe";
 import type { ExpandedStripeSubscription } from "@/external/stripe/subscriptions/operations/getExpandedStripeSubscription";
 import type { StripeSubscriptionUpdateResults } from "./types/stripeSubscriptionUpdateResults";
 
-/**
- * Previous attributes from Stripe subscription.updated event.
- * Only contains fields that changed - all fields are optional.
- */
 export interface SubscriptionPreviousAttributes {
 	status?: Stripe.Subscription.Status;
 	latest_invoice?: string | Stripe.Invoice | null;
@@ -26,16 +22,7 @@ export interface StripeSubscriptionUpdatedContext {
 	stripeSubscription: ExpandedStripeSubscription;
 	previousAttributes: SubscriptionPreviousAttributes;
 	fullCustomer: FullCustomer;
-	/**
-	 * Mutable list of customer products. Updated in place by the
-	 * `trackCustomerProduct{Update,Deletion,Insertion}` helpers so subsequent
-	 * tasks see the current state. Callers iterating this array while those
-	 * helpers may run (directly or transitively) must iterate over a snapshot,
-	 * e.g. `for (const cp of [...customerProducts])`, to avoid iterator
-	 * invalidation.
-	 */
 	customerProducts: FullCusProduct[];
-	/** Current time in ms, respecting test clocks */
 	nowMs: number;
 	results: StripeSubscriptionUpdateResults;
 
@@ -43,26 +30,13 @@ export interface StripeSubscriptionUpdatedContext {
 		customerProduct: FullCusProduct;
 		updates: Partial<InsertCustomerProduct>;
 	}[];
-	/** Tracks all deletions made to customer products during this handler */
 	deletedCustomerProducts: FullCusProduct[];
-	/** Tracks all insertions (new customer products created) during this handler */
 	insertedCustomerProducts: FullCusProduct[];
-	/**
-	 * Tracks one-off prepaid lifetime cusEnts persisted by
-	 * `customerProductActions.preserveOneOffPrepaid` as each outgoing cusProduct
-	 * is expired. Surfaced in the structured summary by logCustomerProductUpdates.
-	 */
 	oneOffPrepaidCarryOvers: {
 		customerProductId: string;
 		productName: string;
 		preservedCount: number;
 		preservedFeatureIds: string[];
 	}[];
-	/**
-	 * Tags accumulated by tasks during this handler — appended to the
-	 * `billing.updated` webhook payload. Tasks call
-	 * `addBillingChangeTag` to push their own signal (e.g. "trial_ended",
-	 * "phase_changed") when their condition is detected.
-	 */
 	billingChangeTags: Set<string>;
 }

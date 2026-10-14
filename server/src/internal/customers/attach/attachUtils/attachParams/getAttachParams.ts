@@ -50,7 +50,6 @@ export const getAttachParams = async ({
 		freeTrial,
 		replaceables: [],
 		rewards,
-		// From req
 		req: ctx,
 
 		org: ctx.org,
@@ -62,8 +61,6 @@ export const getAttachParams = async ({
 
 		successUrl: attachBody.success_url,
 		invoiceOnly: attachBody.invoice,
-		// productsList: attachBody.products || undefined,
-		// || attachBody.invoice_only
 
 		billingAnchor: attachBody.billing_cycle_anchor,
 		metadata: attachBody.metadata,
@@ -72,7 +69,6 @@ export const getAttachParams = async ({
 		isCustom: attachBody.is_custom,
 		setupPayment: attachBody.setup_payment,
 
-		// Others
 		apiVersion: ctx.apiVersion.value,
 		finalizeInvoice: attachBody.finalize_invoice,
 		enableProductImmediately: attachBody.enable_product_immediately ?? false,

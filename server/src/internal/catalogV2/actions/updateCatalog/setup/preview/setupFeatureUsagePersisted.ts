@@ -36,10 +36,6 @@ const toCappedBucket = ({
 	};
 };
 
-/**
- * Capped plan/customer usage for touched features — preview/UI only.
- * Credit-system buckets are composed later from the projected catalog.
- */
 export const setupFeatureUsagePersisted = async ({
 	ctx,
 	params,

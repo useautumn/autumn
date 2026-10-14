@@ -13,7 +13,6 @@ type Client = Awaited<ReturnType<typeof initScenario>>["autumnV2_3"];
 
 const CENT_TOLERANCE = 0.0051;
 
-/** Pricing state of a catalog plan that an invoice must never change. */
 export const catalogPricingSnapshot = async ({
 	ctx,
 	productId,
@@ -40,7 +39,6 @@ type InvoiceOutcome =
 	| { ok: true; response: CreateInvoiceResponse }
 	| { ok: false; status: number; code: string; message: string };
 
-/** Posts invoices.create keeping the HTTP status, which the test client drops; any 5xx fails. */
 export const postInvoiceCreate = async ({
 	autumnV2_3,
 	params,
@@ -67,7 +65,6 @@ export const postInvoiceCreate = async ({
 	};
 };
 
-/** Compares the API outcome with the oracle; amounts must agree to the cent. */
 export const expectInvoiceMatchesOracle = ({
 	outcome,
 	expected,
@@ -117,7 +114,6 @@ export const expectInvoiceMatchesOracle = ({
 	).toBeLessThan(CENT_TOLERANCE);
 };
 
-/** A created invoice must bill in Stripe exactly what its preview showed, line by line. */
 export const expectStripeInvoiceMatchesPreview = async ({
 	ctx,
 	response,

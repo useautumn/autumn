@@ -28,8 +28,6 @@ import {
 	unlimitedUsedSumSql,
 } from "./resolveByFeatureBalanceSort.js";
 
-/** Above this many lake matches the candidate IN-list stops being viable and
- * the dense lazy walk (cheap when matches are plentiful) takes over. */
 const SPARSE_CANDIDATE_CAP = 25_000;
 const PAGE_SCAN_BATCH = 200;
 const MAX_TOPUP_ITERATIONS = 4;
@@ -42,9 +40,6 @@ const rowsOf = <T>(result: unknown): T[] => {
 	return [];
 };
 
-/** Exact remaining balance per candidate (live definition); absent = no live
- * rows. Request-level predicates are NOT applied here — the paging query owns
- * them. */
 const exactRemainingByCustomer = async ({
 	db,
 	internalFeatureId,
@@ -113,15 +108,10 @@ const exactRemainingByCustomer = async ({
 };
 
 type LakeMatch = {
-	/** Lake-side match count for the threshold (approximate: 5-min staleness). */
 	matchCount: number;
-	/** Full candidate id set, or null when the match set is too large for the
-	 * IN-list path. */
 	candidateIds: string[] | null;
 };
 
-/** Lake match count + candidate ids for the threshold, or null when the lake
- * is unavailable. */
 const getLakeMatch = async ({
 	db,
 	orgId,
@@ -178,8 +168,6 @@ const getLakeMatch = async ({
 		);
 		const candidateIds = new Set(idRows.map((row) => row.internal_customer_id));
 
-		// Deflated customers (lake under-reports) can truly pass a ">" threshold
-		// the lake missed — always in the candidate room, verified exactly below.
 		if (balance.op === ">") {
 			const exceptionRows = await getDeflationExceptionRows({
 				db,
@@ -200,8 +188,6 @@ const getLakeMatch = async ({
 	}
 };
 
-/** LATERAL computing the customer's exact live sums for one feature; exposes
- * bal.total / bal.granted / bal.live_rows to the outer query. */
 const exactBalanceLateralSql = (internalFeatureId: string): SQL => sql`
 	JOIN LATERAL (
 		SELECT
@@ -229,8 +215,6 @@ const exactBalanceBasisExpr = (basis: BalanceFilter["basis"]): SQL =>
 			? sql.raw("(bal.granted - bal.total + bal.unlimited_used)")
 			: sql.raw("bal.total");
 
-/** Exact-side threshold: basis comparison plus the per-op unlimited rules
- * (see `unlimitedPassesThreshold` / `thresholdRequiresFiniteRows`). */
 const exactThresholdSql = (balance: BalanceFilter): SQL => {
 	const thresholdSql = balanceThresholdSql({
 		totalExpr: exactBalanceBasisExpr(balance.basis),
@@ -246,12 +230,6 @@ const exactThresholdSql = (balance: BalanceFilter): SQL => {
 			}`;
 };
 
-/**
- * Header count for a balance-filtered list. Sparse thresholds count exactly in
- * PG over the lake candidate set; dense thresholds return the lake count
- * (approximate, and an over-count when other filters/search narrow further).
- * Null when the lake is unavailable — there is no affordable count then.
- */
 export const countCustomersByBalanceFilter = async ({
 	db,
 	orgId,
@@ -301,12 +279,6 @@ export const countCustomersByBalanceFilter = async ({
 	return { totalCount: Number(rows[0]?.n ?? 0), approximate: false };
 };
 
-/**
- * Balance-threshold filter resolver (created_at sort). Sparse thresholds page
- * a lake-nominated candidate set with exact PG verification; dense thresholds
- * (or no MotherDuck) lazy-walk the cursor index with a per-candidate probe.
- * Feature HOLDERS only, in both paths.
- */
 export const resolveInternalIdsByBalanceFilter = async ({
 	db,
 	orgId,
@@ -387,7 +359,6 @@ export const resolveInternalIdsByBalanceFilter = async ({
 			});
 			for (const row of pageRows) {
 				const exactRow = exact.get(row.internal_customer_id);
-				// Absent = no live rows → non-holder → excluded by definition.
 				if (exactRow === undefined) continue;
 				const admittedAsUnlimited =
 					exactRow.isUnlimited && unlimitedPassesThreshold(balance);
@@ -432,8 +403,6 @@ export const resolveInternalIdsByBalanceFilter = async ({
 		return { internalIds: internalIds.slice(0, limit), hasMore: true };
 	}
 
-	// Dense walk: benchmarked sub-ms when matches are plentiful; the sparse
-	// case is normally caught by the lake path above.
 	const rows = await db.execute<{ internal_customer_id: string }>(sql`
 		SELECT ${customers.internal_id} AS internal_customer_id
 		FROM customers

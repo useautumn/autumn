@@ -12,11 +12,6 @@ const INSPECT_SCRIPT = join(
 	"src/grading/inspectWorkspaceConfigScript.ts",
 );
 
-/**
- * Spawns the inspection as a bun subprocess: atmn internals (jiti,
- * import.meta) never enter the braintrust CLI's CJS eval bundle, and this
- * wrapper itself runs fine under node.
- */
 export const inspectWorkspaceConfig = async (
 	workspaceDir: string,
 ): Promise<InspectedConfig> => {

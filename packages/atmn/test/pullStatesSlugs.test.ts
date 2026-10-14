@@ -1,8 +1,3 @@
-/**
- * A pull writes identity onto plan and variant fixtures that already state
- * versionSlug (inline objects and `variant({...})` calls alike).
- */
-
 import { expect, test } from "bun:test";
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";

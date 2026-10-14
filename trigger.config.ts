@@ -8,7 +8,6 @@ import { defineConfig } from "@trigger.dev/sdk/v3";
 import { fetchInfisicalSecretsFromEnv } from "./server/src/external/infisical/fetchInfisicalSecrets.js";
 
 // Bun requires every configured workspace to contain a package.json, even
-// though Trigger bundles workspace code and only installs external packages.
 const rootPackageJson = JSON.parse(readFileSync("package.json", "utf-8")) as {
 	workspaces: string[] | { packages: string[] };
 };
@@ -55,7 +54,6 @@ const listFilesRecursive = ({ dir }: { dir: string }): string[] => {
 	});
 };
 
-// Trigger copies patchedDependencies in package.json but only COPY package.json
 // before bun install, so the patch files must already exist in the base image.
 const bunPatchInstallCommands = listFilesRecursive({ dir: "patches" }).map(
 	(path) => {
@@ -84,9 +82,7 @@ export default defineConfig({
 		"server/src/internal/billing/v2/actions/batchTransition/tasks",
 	],
 	build: {
-		// @useautumn/sdk ships from gitignored dist/; resolve the workspace copy from source.
 		conditions: ["@useautumn/sdk/source"],
-		// Native / heavy deps stay external — bundling them inflates the deploy
 		// and breaks platform-specific binaries (pg, ioredis, etc.).
 		external: [
 			"@aws-sdk/client-s3",
@@ -134,8 +130,6 @@ export default defineConfig({
 				},
 			},
 			// Server runtime imports `*.lua` as raw text via Bun's loader. esbuild
-			// (used by the trigger build) doesn't see bunfig — register a plugin
-			// that reads .lua files as text so the same imports work post-bundle.
 			{
 				name: "lua-text-loader",
 				onBuildStart: async (context) => {
@@ -165,9 +159,6 @@ export default defineConfig({
 					"zod",
 				],
 			}),
-			// In DEV: `bun d` / `bun dw` run `bunx trigger.dev dev --branch <user-git>`
-			// under Infisical, with TRIGGER_DEV_BRANCH set so the server SDK and
-			// CLI share an isolated queue. `syncEnvVars` only runs at DEPLOY time.
 			syncEnvVars(async (ctx) => fetchInfisicalSecretsFromEnv(ctx.env)),
 		],
 	},

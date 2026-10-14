@@ -159,7 +159,6 @@ type FakeDb = Pick<CatalogRowsSource, "getCatalogRows"> & {
 	release(): void;
 };
 
-/** Serves the rows whose ids were asked for, once released; records every request. */
 const createFakeDb = ({ rows }: { rows: CatalogRow[] }): FakeDb => {
 	const calls: CatalogRowIds[] = [];
 	let release: () => void = () => {};
@@ -345,7 +344,6 @@ describe("catalog cache", () => {
 				entitlementRow({ id: "ent_3" }),
 			],
 		});
-		// ent_1 was evicted: the org names two rows, not three.
 		expect(cache.invalidate({ orgId: "org_1", env: "sandbox" })).toEqual({
 			expiredCount: 2,
 		});
@@ -386,11 +384,6 @@ describe("catalog cache", () => {
 });
 
 test("an expired row is hidden from a strict read and still available to a stale one", async () => {
-	// Entitlements are set with no expiry, so this only concerns the row types
-	// that do age out. The decision runs after `ensure` has refreshed whatever
-	// was due, so a row crossing its ttl in that gap is still the row just
-	// fetched, and failing the request over that timing was costing traffic.
-	// A strict read must still miss it, or `ensure` would never refresh it.
 	const feature = featureRow({ internalId: "feat_stale" });
 	const db = createFakeDb({ rows: [feature] });
 	db.release();
@@ -403,7 +396,6 @@ test("an expired row is hidden from a strict read and still available to a stale
 	await new Promise((resolve) => setTimeout(resolve, 40));
 
 	expect(cache.read({ keys }).features).toEqual({});
-	// Readable more than once: the first stale read must not drop the row.
 	expect(Object.keys(cache.read({ keys, allowStale: true }).features)).toEqual([
 		"feat_stale",
 	]);
@@ -422,7 +414,6 @@ test("a cached row is validated once, not on every read", () => {
 	const first = cache.read({ keys });
 	const second = cache.read({ keys });
 
-	// Every track reads the catalog, so re-parsing each read cost ~10% of a saturated worker's CPU.
 	expect(second.entitlements.ent_1).toBe(first.entitlements.ent_1);
 	expect(second.features.feat_internal_1).toBe(first.features.feat_internal_1);
 	expect(second).toEqual(first);
@@ -516,7 +507,6 @@ describe("a read catalog stays current until one of its own rows moves", () => {
 	});
 });
 
-/** Serves the next edit of one free trial per read; `duringRead` runs while that read is in flight. */
 const createEditedTrialSource = ({
 	lengths,
 	duringRead = () => {},

@@ -12,10 +12,6 @@ import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// DEFAULT FREE PRODUCT TESTS
-// ═══════════════════════════════════════════════════════════════════════════════
-
 test.concurrent(`${chalk.yellowBright("defaults: single free product")}`, async () => {
 	const customerId = "defaults-single-free";
 
@@ -45,10 +41,6 @@ test.concurrent(`${chalk.yellowBright("defaults: single free product")}`, async 
 	expect(customer.features[TestFeature.Messages].balance).toBe(100);
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// FREE PRODUCT WITH TRIAL TESTS
-// ═══════════════════════════════════════════════════════════════════════════════
-
 test.concurrent(`${chalk.yellowBright("defaults: free product with 7-day trial")}`, async () => {
 	const customerId = "defaults-free-trial";
 
@@ -71,20 +63,14 @@ test.concurrent(`${chalk.yellowBright("defaults: free product with 7-day trial")
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Product should be attached and in trialing status
 	await expectProductTrialing({
 		customer,
 		productId: `free-trial_${customerId}`,
 		trialEndsAt: calculateTrialEndMs({ trialDays: 7 }),
 	});
 
-	// Verify feature balance is still available during trial
 	expect(customer.features[TestFeature.Messages].balance).toBe(100);
 });
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// AUTO-ENABLE PLAN OVERRIDE TESTS
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(`${chalk.yellowBright("defaults: auto-enable plan override")}`, async () => {
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });

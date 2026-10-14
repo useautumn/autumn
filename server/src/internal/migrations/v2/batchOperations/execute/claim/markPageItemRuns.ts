@@ -2,10 +2,6 @@ import { MigrationItemRunSkipReason } from "@autumn/shared";
 import { sql } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 
-/** Set-based settle of the page's `running` claims: flips them to succeeded or
- * skipped in one statement, inside the page transaction (visible only with
- * mutations). Only settles claims held by this run — a concurrent run sharing
- * the migration must never flip another run's claims. */
 export const markPageItemRuns = async ({
 	db,
 	migrationInternalId,

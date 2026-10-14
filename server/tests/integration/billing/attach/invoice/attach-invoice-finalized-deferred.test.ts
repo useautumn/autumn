@@ -1,22 +1,3 @@
-/**
- * Attach Invoice Mode Tests - Finalized + Deferred
- *
- * Tests for invoice mode with:
- * - invoice: true
- * - finalize_invoice: true (invoice is finalized/open)
- * - enable_product_immediately: false (product waits for payment)
- *
- * Use case: Most "invoice-like" behavior. Invoice is sent, product only activates after payment.
- * Common for prepaid/credit purchases and enterprise upgrades.
- *
- * Scenarios:
- * 1. New plan (no product → pro)
- * 2. Upgrade (pro → premium)
- * 3. Free to paid
- * 4. One-off credits purchase
- * 5. One-off add-on on existing subscription
- */
-
 import { expect, test } from "bun:test";
 import { type ApiCustomerV3, atmnToStripeAmount } from "@autumn/shared";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
@@ -34,20 +15,6 @@ import ctx from "@tests/utils/testInitUtils/createTestContext";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 1: New plan (finalized, deferred)
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Customer has no existing product
- * - Attach pro with invoice mode (finalized, deferred)
- *
- * Expected Result:
- * - Open invoice created (with payment_url)
- * - Product NOT activated until payment
- * - After payment: product activates
- */
 test.concurrent(`${chalk.yellowBright("attach-invoice-fin-def 1: new plan")}`, async () => {
 	const customerId = "attach-inv-fin-def-new-plan";
 
@@ -67,16 +34,12 @@ test.concurrent(`${chalk.yellowBright("attach-invoice-fin-def 1: new plan")}`, a
 		actions: [],
 	});
 
-	// After initScenario, pro.id is mutated to include the prefix
-
-	// Preview attach
 	const preview = await autumnV1.billing.previewAttach({
 		customer_id: customerId,
 		product_id: pro.id,
 	});
 	expect(preview.total).toBe(20);
 
-	// Attach with invoice mode (finalized, deferred)
 	const result = await autumnV1.billing.attach({
 		customer_id: customerId,
 		product_id: pro.id,
@@ -86,7 +49,6 @@ test.concurrent(`${chalk.yellowBright("attach-invoice-fin-def 1: new plan")}`, a
 		redirect_mode: "if_required",
 	});
 
-	// Verify invoice is open and payment_url is provided
 	expect(result.invoice).toBeDefined();
 	expect(result.invoice!.status).toBe("open");
 	expect(result.invoice!.stripe_id).toBeDefined();
@@ -105,10 +67,8 @@ test.concurrent(`${chalk.yellowBright("attach-invoice-fin-def 1: new plan")}`, a
 	const customerBefore =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Before payment - product should NOT be activated (deferred)
 	expect(customerBefore.features?.[TestFeature.Messages]).toBeUndefined();
 
-	// Verify invoice status in customer
 	await expectCustomerInvoiceCorrect({
 		customer: customerBefore,
 		count: 1,
@@ -116,7 +76,6 @@ test.concurrent(`${chalk.yellowBright("attach-invoice-fin-def 1: new plan")}`, a
 		latestStatus: "open",
 	});
 
-	// Complete payment
 	await completeInvoiceCheckout({
 		url: result.payment_url!,
 		ctx: testCtx,
@@ -125,13 +84,11 @@ test.concurrent(`${chalk.yellowBright("attach-invoice-fin-def 1: new plan")}`, a
 
 	const customerAfter = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// After payment - product should be active
 	await expectProductActive({
 		customer: customerAfter,
 		productId: pro.id,
 	});
 
-	// Verify balance is correct
 	expectCustomerFeatureCorrect({
 		customer: customerAfter,
 		featureId: TestFeature.Messages,
@@ -140,7 +97,6 @@ test.concurrent(`${chalk.yellowBright("attach-invoice-fin-def 1: new plan")}`, a
 		usage: 0,
 	});
 
-	// Verify invoice is now paid
 	await expectCustomerInvoiceCorrect({
 		customer: customerAfter,
 		count: 1,
@@ -149,20 +105,6 @@ test.concurrent(`${chalk.yellowBright("attach-invoice-fin-def 1: new plan")}`, a
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 2: Upgrade (finalized, deferred)
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Customer has pro ($20/mo)
- * - Upgrade to premium ($50/mo) with invoice mode (finalized, deferred)
- *
- * Expected Result:
- * - Open invoice for prorated difference
- * - Product NOT switched until payment
- * - After payment: premium active
- */
 test.concurrent(`${chalk.yellowBright("attach-invoice-fin-def 2: upgrade")}`, async () => {
 	const customerId = "attach-inv-fin-def-upgrade";
 
@@ -187,16 +129,11 @@ test.concurrent(`${chalk.yellowBright("attach-invoice-fin-def 2: upgrade")}`, as
 		actions: [s.billing.attach({ productId: "pro" })],
 	});
 
-	// After initScenario, pro.id and premium.id are mutated to include the prefix
-
-	// Preview upgrade
 	const preview = await autumnV1.billing.previewAttach({
 		customer_id: customerId,
 		product_id: premium.id,
 	});
-	expect(preview.total).toBe(30); // $50 - $20
-
-	// Attach premium with invoice mode (finalized, deferred)
+	expect(preview.total).toBe(30);
 	const result = await autumnV1.billing.attach({
 		customer_id: customerId,
 		product_id: premium.id,
@@ -206,7 +143,6 @@ test.concurrent(`${chalk.yellowBright("attach-invoice-fin-def 2: upgrade")}`, as
 		redirect_mode: "if_required",
 	});
 
-	// Verify invoice is open
 	expect(result.invoice).toBeDefined();
 	expect(result.invoice!.status).toBe("open");
 	expect(result.invoice!.stripe_id).toBeDefined();
@@ -217,7 +153,6 @@ test.concurrent(`${chalk.yellowBright("attach-invoice-fin-def 2: upgrade")}`, as
 	const customerBefore =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Before payment - should still have pro's balance (500)
 	expectCustomerFeatureCorrect({
 		customer: customerBefore,
 		featureId: TestFeature.Messages,
@@ -226,7 +161,6 @@ test.concurrent(`${chalk.yellowBright("attach-invoice-fin-def 2: upgrade")}`, as
 		usage: 0,
 	});
 
-	// Complete payment
 	await completeInvoiceCheckout({
 		url: result.payment_url!,
 		ctx: testCtx,
@@ -235,14 +169,12 @@ test.concurrent(`${chalk.yellowBright("attach-invoice-fin-def 2: upgrade")}`, as
 
 	const customerAfter = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// After payment - premium active, pro removed
 	await expectCustomerProducts({
 		customer: customerAfter,
 		active: [premium.id],
 		notPresent: [pro.id],
 	});
 
-	// Verify balance is premium's balance
 	expectCustomerFeatureCorrect({
 		customer: customerAfter,
 		featureId: TestFeature.Messages,
@@ -251,7 +183,6 @@ test.concurrent(`${chalk.yellowBright("attach-invoice-fin-def 2: upgrade")}`, as
 		usage: 0,
 	});
 
-	// Verify Stripe subscription is correct
 	await expectSubToBeCorrect({
 		db: testCtx.db,
 		customerId,
@@ -260,20 +191,6 @@ test.concurrent(`${chalk.yellowBright("attach-invoice-fin-def 2: upgrade")}`, as
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 3: Free to paid (finalized, deferred)
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Customer has free product
- * - Upgrade to pro ($20/mo) with invoice mode (finalized, deferred)
- *
- * Expected Result:
- * - Open invoice for full price
- * - Product stays free until payment
- * - After payment: pro active
- */
 test.concurrent(`${chalk.yellowBright("attach-invoice-fin-def 3: free to paid")}`, async () => {
 	const customerId = "attach-inv-fin-def-free-to-paid";
 
@@ -298,16 +215,11 @@ test.concurrent(`${chalk.yellowBright("attach-invoice-fin-def 3: free to paid")}
 		actions: [s.billing.attach({ productId: "free" })],
 	});
 
-	// After initScenario, free.id and pro.id are mutated to include the prefix
-
-	// Preview upgrade
 	const preview = await autumnV1.billing.previewAttach({
 		customer_id: customerId,
 		product_id: pro.id,
 	});
-	expect(preview.total).toBe(20); // Full pro price
-
-	// Attach pro with invoice mode (finalized, deferred)
+	expect(preview.total).toBe(20);
 	const result = await autumnV1.billing.attach({
 		customer_id: customerId,
 		product_id: pro.id,
@@ -317,7 +229,6 @@ test.concurrent(`${chalk.yellowBright("attach-invoice-fin-def 3: free to paid")}
 		redirect_mode: "if_required",
 	});
 
-	// Verify invoice is open
 	expect(result.invoice).toBeDefined();
 	expect(result.invoice!.status).toBe("open");
 	expect(result.invoice!.stripe_id).toBeDefined();
@@ -328,7 +239,6 @@ test.concurrent(`${chalk.yellowBright("attach-invoice-fin-def 3: free to paid")}
 	const customerBefore =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Before payment - should still have free's balance (50)
 	expectCustomerFeatureCorrect({
 		customer: customerBefore,
 		featureId: TestFeature.Messages,
@@ -337,7 +247,6 @@ test.concurrent(`${chalk.yellowBright("attach-invoice-fin-def 3: free to paid")}
 		usage: 0,
 	});
 
-	// Complete payment
 	await completeInvoiceCheckout({
 		url: result.payment_url!,
 		ctx: testCtx,
@@ -346,14 +255,12 @@ test.concurrent(`${chalk.yellowBright("attach-invoice-fin-def 3: free to paid")}
 
 	const customerAfter = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// After payment - pro active, free removed
 	await expectCustomerProducts({
 		customer: customerAfter,
 		active: [pro.id],
 		notPresent: [free.id],
 	});
 
-	// Verify balance is pro's balance
 	expectCustomerFeatureCorrect({
 		customer: customerAfter,
 		featureId: TestFeature.Messages,
@@ -362,7 +269,6 @@ test.concurrent(`${chalk.yellowBright("attach-invoice-fin-def 3: free to paid")}
 		usage: 0,
 	});
 
-	// Verify Stripe subscription is correct
 	await expectSubToBeCorrect({
 		db: testCtx.db,
 		customerId,
@@ -371,20 +277,6 @@ test.concurrent(`${chalk.yellowBright("attach-invoice-fin-def 3: free to paid")}
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 4: One-off (finalized, deferred)
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Customer has no existing product
- * - Attach one-off credits with invoice mode (finalized, deferred)
- *
- * Expected Result:
- * - Open invoice created
- * - Credits NOT granted until payment
- * - After payment: credits granted
- */
 test.concurrent(`${chalk.yellowBright("attach-invoice-fin-def 4: one-off")}`, async () => {
 	const customerId = "attach-inv-fin-def-oneoff";
 
@@ -408,9 +300,6 @@ test.concurrent(`${chalk.yellowBright("attach-invoice-fin-def 4: one-off")}`, as
 		actions: [],
 	});
 
-	// After initScenario, oneOff.id is mutated to include the prefix
-
-	// Preview attach - base ($10) + prepaid ($10) = $20
 	const preview = await autumnV1.billing.previewAttach({
 		customer_id: customerId,
 		product_id: oneOff.id,
@@ -418,7 +307,6 @@ test.concurrent(`${chalk.yellowBright("attach-invoice-fin-def 4: one-off")}`, as
 	});
 	expect(preview.total).toBe(20);
 
-	// Attach with invoice mode (finalized, deferred)
 	const result = await autumnV1.billing.attach({
 		customer_id: customerId,
 		product_id: oneOff.id,
@@ -429,7 +317,6 @@ test.concurrent(`${chalk.yellowBright("attach-invoice-fin-def 4: one-off")}`, as
 		redirect_mode: "if_required",
 	});
 
-	// Verify invoice is open
 	expect(result.invoice).toBeDefined();
 	expect(result.invoice!.status).toBe("open");
 	expect(result.invoice!.stripe_id).toBeDefined();
@@ -440,10 +327,8 @@ test.concurrent(`${chalk.yellowBright("attach-invoice-fin-def 4: one-off")}`, as
 	const customerBefore =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Before payment - credits should NOT be granted
 	expect(customerBefore.features?.[TestFeature.Messages]).toBeUndefined();
 
-	// Complete payment
 	await completeInvoiceCheckout({
 		url: result.payment_url!,
 		ctx: testCtx,
@@ -452,7 +337,6 @@ test.concurrent(`${chalk.yellowBright("attach-invoice-fin-def 4: one-off")}`, as
 
 	const customerAfter = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// After payment - product active and credits granted
 	await expectProductActive({
 		customer: customerAfter,
 		productId: oneOff.id,
@@ -465,7 +349,6 @@ test.concurrent(`${chalk.yellowBright("attach-invoice-fin-def 4: one-off")}`, as
 		usage: 0,
 	});
 
-	// Verify invoice is paid
 	await expectCustomerInvoiceCorrect({
 		customer: customerAfter,
 		count: 1,
@@ -474,21 +357,6 @@ test.concurrent(`${chalk.yellowBright("attach-invoice-fin-def 4: one-off")}`, as
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 5: One-off add-on on existing subscription (finalized, deferred)
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Customer has pro ($20/mo)
- * - Purchase one-off credits add-on with invoice mode (finalized, deferred)
- *
- * Expected Result:
- * - Pro still active
- * - Open invoice for one-off only
- * - Credits NOT granted until payment
- * - After payment: both products active, credits granted
- */
 test.concurrent(`${chalk.yellowBright("attach-invoice-fin-def 5: one-off addon")}`, async () => {
 	const customerId = "attach-inv-fin-def-oneoff-addon";
 
@@ -518,9 +386,6 @@ test.concurrent(`${chalk.yellowBright("attach-invoice-fin-def 5: one-off addon")
 		actions: [s.billing.attach({ productId: "pro" })],
 	});
 
-	// After initScenario, pro.id and oneOffAddon.id are mutated to include the prefix
-
-	// Verify pro is attached with correct balance
 	const customerInit = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	expectCustomerFeatureCorrect({
 		customer: customerInit,
@@ -530,7 +395,6 @@ test.concurrent(`${chalk.yellowBright("attach-invoice-fin-def 5: one-off addon")
 		usage: 0,
 	});
 
-	// Preview one-off add-on - base ($10) + prepaid ($5) = $15
 	const preview = await autumnV1.billing.previewAttach({
 		customer_id: customerId,
 		product_id: oneOffAddon.id,
@@ -538,7 +402,6 @@ test.concurrent(`${chalk.yellowBright("attach-invoice-fin-def 5: one-off addon")
 	});
 	expect(preview.total).toBe(15);
 
-	// Attach one-off with invoice mode (finalized, deferred)
 	const result = await autumnV1.billing.attach({
 		customer_id: customerId,
 		product_id: oneOffAddon.id,
@@ -549,7 +412,6 @@ test.concurrent(`${chalk.yellowBright("attach-invoice-fin-def 5: one-off addon")
 		redirect_mode: "if_required",
 	});
 
-	// Verify invoice is open
 	expect(result.invoice).toBeDefined();
 	expect(result.invoice!.status).toBe("open");
 	expect(result.invoice!.stripe_id).toBeDefined();
@@ -560,7 +422,6 @@ test.concurrent(`${chalk.yellowBright("attach-invoice-fin-def 5: one-off addon")
 	const customerBefore =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Before payment - pro still active, balance still 100 (add-on credits not granted)
 	await expectProductActive({
 		customer: customerBefore,
 		productId: pro.id,
@@ -569,11 +430,10 @@ test.concurrent(`${chalk.yellowBright("attach-invoice-fin-def 5: one-off addon")
 	expectCustomerFeatureCorrect({
 		customer: customerBefore,
 		featureId: TestFeature.Messages,
-		balance: 100, // Still just pro's balance
+		balance: 100,
 		usage: 0,
 	});
 
-	// Complete payment
 	await completeInvoiceCheckout({
 		url: result.payment_url!,
 		ctx: testCtx,
@@ -582,13 +442,11 @@ test.concurrent(`${chalk.yellowBright("attach-invoice-fin-def 5: one-off addon")
 
 	const customerAfter = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// After payment - both products active
 	await expectCustomerProducts({
 		customer: customerAfter,
 		active: [pro.id, oneOffAddon.id],
 	});
 
-	// Verify combined balance (100 from pro + 50 from one-off = 150)
 	expectCustomerFeatureCorrect({
 		customer: customerAfter,
 		featureId: TestFeature.Messages,
@@ -596,7 +454,6 @@ test.concurrent(`${chalk.yellowBright("attach-invoice-fin-def 5: one-off addon")
 		usage: 0,
 	});
 
-	// Verify invoices: pro ($20 paid) + one-off ($15 paid)
 	await expectCustomerInvoiceCorrect({
 		customer: customerAfter,
 		count: 2,

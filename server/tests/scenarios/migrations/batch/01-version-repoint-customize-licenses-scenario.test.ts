@@ -1,9 +1,3 @@
-/**
- * Seeds the most complex batch-migration shape and leaves it in the DB: a
- * two-version parent plan linked to a seat license plan, held by five customers
- * in five different states. Runs no migration and asserts nothing — drive the
- * printed op yourself, then re-read with SEED=0.
- */
 import { test } from "bun:test";
 import { TestFeature } from "@tests/setup/v2Features";
 import { itemsV2 } from "@tests/utils/fixtures/itemsV2";

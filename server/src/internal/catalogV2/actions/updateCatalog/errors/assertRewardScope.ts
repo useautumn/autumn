@@ -7,11 +7,6 @@ import {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 
-/**
- * The catalog routes carry plan and feature scopes; rewards are only demanded
- * of a payload that speaks for them, so an existing plans-only key keeps
- * working. Keys with no scopes at all fail open, as everywhere else.
- */
 export const assertRewardScope = ({
 	ctx,
 	params,

@@ -5,9 +5,6 @@ import { request } from "../api/client.js";
 import { AppEnv } from "../env/detect.js";
 import { getKey } from "../env/keys.js";
 
-/**
- * All expand params for full customer data (comma-separated for query string)
- */
 const EXPAND_PARAMS = [
 	"invoices",
 	"rewards",
@@ -19,19 +16,12 @@ const EXPAND_PARAMS = [
 ].join(",");
 
 export interface UseCustomerExpandedOptions {
-	/** Customer ID to fetch */
 	customerId: string | null;
-	/** Environment (sandbox/live) */
 	environment?: AppEnv;
-	/** Whether to enable the query */
 	enabled?: boolean;
-	/** Debounce delay in ms (default: 150ms) */
 	debounceMs?: number;
 }
 
-/**
- * Custom hook to debounce a value
- */
 function useDebouncedValue<T>(value: T, delay: number): T {
 	const [debouncedValue, setDebouncedValue] = useState(value);
 
@@ -48,19 +38,12 @@ function useDebouncedValue<T>(value: T, delay: number): T {
 	return debouncedValue;
 }
 
-/**
- * TanStack Query hook for fetching a single customer with all expand params.
- * Use this to lazily load full customer details when the sheet opens.
- *
- * Includes debouncing to prevent excessive API calls during rapid navigation.
- */
 export function useCustomerExpanded({
 	customerId,
 	environment = AppEnv.Sandbox,
 	enabled = true,
 	debounceMs = 150,
 }: UseCustomerExpandedOptions) {
-	// Debounce the customer ID to prevent rapid API calls while scrolling
 	const debouncedCustomerId = useDebouncedValue(customerId, debounceMs);
 
 	return useQuery({
@@ -85,7 +68,6 @@ export function useCustomerExpanded({
 		},
 		enabled: enabled && !!debouncedCustomerId,
 		staleTime: 30_000,
-		// Don't refetch on window focus for detail views
 		refetchOnWindowFocus: false,
 	});
 }

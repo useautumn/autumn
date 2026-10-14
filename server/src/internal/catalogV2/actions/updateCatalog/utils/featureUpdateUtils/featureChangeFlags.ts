@@ -1,6 +1,5 @@
 import { type Feature, FeatureType } from "@autumn/shared";
 
-/** Which blockable dimensions a resolved current → next update touches. */
 export const featureChangeFlags = ({
 	current,
 	next,

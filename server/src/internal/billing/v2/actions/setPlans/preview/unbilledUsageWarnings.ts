@@ -9,7 +9,6 @@ import {
 import { Decimal } from "decimal.js";
 import { warningText } from "./warningText";
 
-/** Arrear usage on the cancelled subscription is dropped, so the preview shows what is lost. */
 export const unbilledUsageWarnings = (
 	lineItems: LineItem[],
 ): Omit<SetPlansPreviewWarning, "severity">[] => {

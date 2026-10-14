@@ -30,7 +30,6 @@ export const updateActiveRedisV2Instance = async ({
 	await store.writeToSource({ config: { activeInstance } });
 };
 
-/** Test-only: override the in-memory active instance without writing to S3. */
 export const _setActiveRedisV2InstanceForTesting = ({
 	activeInstance,
 }: {

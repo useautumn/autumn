@@ -14,7 +14,6 @@ import { timeout } from "../../../utils/genUtils.js";
 const testCase = "track-allocated3";
 const customerId = testCase;
 
-// Continuous use feature (Postgres track)
 const cusUserItem = constructFeatureItem({
 	featureId: TestFeature.Workflows,
 	includedUsage: 10,
@@ -74,7 +73,6 @@ describe(`${chalk.yellowBright(
 			prefix: testCase,
 		});
 
-		// Attach product to customer
 		await autumnV1.attach({
 			customer_id: customerId,
 			product_id: customerProd.id,
@@ -92,28 +90,24 @@ describe(`${chalk.yellowBright(
 	});
 
 	test("Initial balances after attach", async () => {
-		// Wait for cache to populate
 		await timeout(1000);
 
 		const customer = await autumnV1.customers.get(customerId);
 
-		// The balance worker doesn't aggregate entity data onto the customer.
 		if (!isBalanceWorkerRoute()) {
-			expect(customer.features[TestFeature.Workflows].balance).toBe(20); // 10 + 5 * 2
+			expect(customer.features[TestFeature.Workflows].balance).toBe(20);
 		}
 
-		// Verify entity balances
 		for (const entity of entities) {
 			const _entity = await autumnV1.entities.get(customerId, entity.id);
-			expect(_entity.features![TestFeature.Workflows].balance).toBe(10 + 5); // 3 + 10
+			expect(_entity.features![TestFeature.Workflows].balance).toBe(10 + 5);
 		}
 	});
 
 	test("Random concurrent tracks across all 6 feature combinations", async () => {
-		// Generate random track amounts for all 6 combinations
-		const numCustomerWorkflows = Math.floor(Math.random() * 3) + 2; // 1-3
-		const numEntity1Workflows = Math.floor(Math.random() * 2) + 1; // 1-2
-		const numEntity2Workflows = Math.floor(Math.random() * 2) + 1; // 1-2
+		const numCustomerWorkflows = Math.floor(Math.random() * 3) + 2;
+		const numEntity1Workflows = Math.floor(Math.random() * 2) + 1;
+		const numEntity2Workflows = Math.floor(Math.random() * 2) + 1;
 
 		console.log(`
 Table of initial workflow balances and usage to track:
@@ -127,14 +121,12 @@ Table of initial workflow balances and usage to track:
 Total workflows to use: ${numCustomerWorkflows + numEntity1Workflows + numEntity2Workflows}
 `);
 
-		// Initial balances (from setup)
-		const initialCusWorkflows = 10; // Customer-level workflows
-		const initialEnt1Workflows = 5; // Entity1-level workflows
-		const initialEnt2Workflows = 5; // Entity2-level workflows
+		const initialCusWorkflows = 10;
+		const initialEnt1Workflows = 5;
+		const initialEnt2Workflows = 5;
 
 		const trackPromises = [];
 
-		// 2. Customer workflows (Postgres/continuous_use → syncCacheBalance)
 		for (let i = 0; i < numCustomerWorkflows; i++) {
 			trackPromises.push(
 				autumnV1.track({
@@ -145,7 +137,6 @@ Total workflows to use: ${numCustomerWorkflows + numEntity1Workflows + numEntity
 			);
 		}
 
-		// 4. Entity1 workflows (Postgres/continuous_use → syncCacheBalance)
 		for (let i = 0; i < numEntity1Workflows; i++) {
 			trackPromises.push(
 				autumnV1.track({
@@ -157,7 +148,6 @@ Total workflows to use: ${numCustomerWorkflows + numEntity1Workflows + numEntity
 			);
 		}
 
-		// 6. Entity2 workflows (Postgres/continuous_use → syncCacheBalance)
 		for (let i = 0; i < numEntity2Workflows; i++) {
 			trackPromises.push(
 				autumnV1.track({
@@ -171,27 +161,19 @@ Total workflows to use: ${numCustomerWorkflows + numEntity1Workflows + numEntity
 
 		await Promise.all(trackPromises);
 
-		// Wait for sync to complete
 		await timeout(2000);
 
-		// Calculate expected balances after tracking
 		const expectedCusWorkflows = initialCusWorkflows - numCustomerWorkflows;
 		const expectedEnt1Workflows = initialEnt1Workflows - numEntity1Workflows;
 		const expectedEnt2Workflows = initialEnt2Workflows - numEntity2Workflows;
 
-		// Verify customer-level balances
 		const customer = await autumnV1.customers.get(customerId);
-		// expect(customer.features[TestFeature.Messages].balance).toBe(
-		// 	expectedCustomerTotalMessages,
-		// );
-		// The balance worker doesn't aggregate entity data onto the customer.
 		if (!isBalanceWorkerRoute()) {
 			expect(customer.features[TestFeature.Workflows].balance).toBe(
 				expectedCusWorkflows + expectedEnt1Workflows + expectedEnt2Workflows,
 			);
 		}
 
-		// Check entity balances
 		const entity1 = await autumnV1.entities.get(customerId, entity1Id);
 		const entity2 = await autumnV1.entities.get(customerId, entity2Id);
 		expect(entity1.features![TestFeature.Workflows].balance).toBe(
@@ -201,7 +183,6 @@ Total workflows to use: ${numCustomerWorkflows + numEntity1Workflows + numEntity
 			expectedEnt2Workflows + expectedCusWorkflows,
 		);
 
-		// Non cached
 		const nonCachedCustomer = await autumnV1.customers.get(customerId, {
 			skip_cache: "true",
 		});

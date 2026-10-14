@@ -125,7 +125,6 @@ const FeatureMappingDetailForm = ({
 			rows: {
 				...current.rows,
 				[row.priceId]: {
-					// Picking the default product by name is the same as following it.
 					product_id:
 						productId === current.default_product_id &&
 						productId !== CREATE_STRIPE_PRODUCT

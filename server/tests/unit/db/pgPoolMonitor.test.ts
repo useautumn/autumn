@@ -42,8 +42,6 @@ describe("reservoirInsert", () => {
 		for (let observed = 1; observed <= total; observed++) {
 			reservoirInsert({ samples, observed, value: observed, capacity });
 		}
-		// First-N sampling would keep only values <= capacity; a uniform
-		// reservoir keeps ~half above the midpoint (P(none) ~ 2^-100).
 		const fromSecondHalf = samples.filter((value) => value > total / 2);
 		expect(fromSecondHalf.length).toBeGreaterThan(0);
 	});

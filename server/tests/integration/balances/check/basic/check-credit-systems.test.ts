@@ -7,10 +7,6 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { Decimal } from "decimal.js";
 
-// ═══════════════════════════════════════════════════════════════════
-// CHECK: Credit systems
-// ═══════════════════════════════════════════════════════════════════
-
 test.concurrent(`${chalk.yellowBright("check-credit-system1: attach free, check action1 allowed, credits not allowed")}`, async () => {
 	const action1Item = items.free({
 		featureId: TestFeature.Action1,

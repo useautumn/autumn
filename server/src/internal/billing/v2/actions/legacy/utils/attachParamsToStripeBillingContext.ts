@@ -20,9 +20,6 @@ export const attachParamsToStripeBillingContext = async ({
 	attachParams: AttachParams;
 	fullProduct: FullProduct;
 }): Promise<StripeBillingContextOverride> => {
-	// The unusable-subscription markers must survive: this override
-	// short-circuits setupStripeBillingContext, so dropping one leaves the legacy
-	// paths unable to tell "no subscription" from "subscription we can't bill".
 	const {
 		stripeSubscription,
 		canceledStripeSubscriptionId,

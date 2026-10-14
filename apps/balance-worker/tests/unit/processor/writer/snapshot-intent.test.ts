@@ -58,7 +58,6 @@ const decideTrack = ({
 	};
 };
 
-/** The writer over a store with nothing resident; the store records the intent handed in with each apply. */
 const createWriter = ({
 	mode = "write",
 	maxBytes,
@@ -208,7 +207,6 @@ describe("the writer's snapshot intent", () => {
 		const held = Promise.withResolvers<void>();
 		applyGate.held = held.promise;
 		await track("t0").waitForCommit();
-		// t1 queues behind t0's held apply, so its intent is decided only after the flip.
 		const tracked = track("t1");
 		await tracked.waitForCommit();
 		setMode("write");
@@ -314,7 +312,6 @@ describe("the writer's snapshot intent", () => {
 		held.resolve();
 		await before.waitForStore();
 		await evicted;
-		// t1's flush took its intent before the evict; the evict's DELETE follows it on the lane.
 		expect(balanceOf(intents[0])).toEqual([99]);
 
 		readWhole({ balance: 50, baselineAt: 2 });
@@ -337,7 +334,6 @@ describe("the writer's snapshot intent", () => {
 		held.resolve();
 		await meanwhile.waitForStore();
 
-		// Memory the refusal invalidated is never written as a row.
 		expect(balanceOf(intents[1])).toBe("delete");
 		expect(writer.readFreshestState({ identity })).toBeNull();
 		readWhole({ balance: 100, baselineAt: 3 });

@@ -1,16 +1,3 @@
-/**
- * catalogV2.update — variant create guards.
- *
- * Contract:
- *   - variant of a variant → nested_variant_not_allowed
- *   - occupied id that is another base's variant → relink
- *   - new id without name → 400
- *   - is_default on a variant → variant_cannot_be_default
- *   - variant_plan_id === plan_id → 400
- *   - duplicate variant_plan_id → 400
- *   - already-linked variant listed top-level and in variants[] → 400
- */
-
 import { test } from "bun:test";
 import { ErrCode } from "@autumn/shared";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils.js";

@@ -35,7 +35,6 @@ export const executeStripeSubscriptionAction = async ({
 	billingPlan: BillingPlan;
 	billingContext: BillingContext;
 }): Promise<StripeBillingPlanResult> => {
-	// 1. Perform stripe subscription operation
 	const { subscriptionAction } = billingPlan.stripe;
 
 	if (!subscriptionAction) return {};
@@ -44,7 +43,6 @@ export const executeStripeSubscriptionAction = async ({
 	const { logger } = ctx;
 	const stripeCli = createStripeCli({ org: ctx.org, env: ctx.env });
 
-	// 2. Lock stripe subscription
 	if (stripeSubscription) {
 		await setStripeSubscriptionLock({
 			ctx,
@@ -80,17 +78,12 @@ export const executeStripeSubscriptionAction = async ({
 		memo: billingContext.invoiceMode?.memo,
 	});
 
-	// Honor either the new internal flag (set by attach via setupFinalizeFirstInvoice)
-	// or the public invoice_mode.finalize for the other actions (updateSubscription,
-	// multiAttach, createSchedule) that don't wire setupFinalizeFirstInvoice.
 	const shouldFinalize =
 		billingContext.shouldFinalizeFirstInvoice ??
 		billingContext.invoiceMode?.finalizeInvoice ??
 		false;
 
-	// Invoice-mode drafts (finalize: false) must stay in draft for manual
 	// review. Stripe creates subscription invoices with auto_advance on and
-	// would otherwise finalize and email them ~1 hour later.
 	const shouldKeepDraft =
 		Boolean(billingContext.invoiceMode) &&
 		!shouldFinalize &&
@@ -115,12 +108,10 @@ export const executeStripeSubscriptionAction = async ({
 		latestStripeInvoice = await finalizeStripeInvoice({
 			stripeCli,
 			invoiceId: latestStripeInvoice.id,
-			// Invoice mode: let Stripe email the finalized invoice (fires invoice.sent).
 			autoAdvance: Boolean(billingContext.invoiceMode),
 		});
 	}
 
-	// Determine required action from invoice payment intent status (only if open)
 	const requiredAction =
 		latestStripeInvoice?.status === "open"
 			? await getRequiredActionFromSubscriptionInvoice({
@@ -157,7 +148,6 @@ export const executeStripeSubscriptionAction = async ({
 		stripeSubscription,
 	});
 
-	// Add subscription to DB
 	logger.debug(`[execSubAction] Upserting subscription from billing`);
 	await upsertSubscriptionFromBilling({
 		ctx,
@@ -167,7 +157,6 @@ export const executeStripeSubscriptionAction = async ({
 	if (deferBillingPlan) {
 		logger.debug(`[execSubAction] Inserting metadata from billing plan`);
 
-		// Required if we resume after and carry out subscription schedule action
 		const deferredBillingContext = {
 			...billingContext,
 			stripeSubscription,
@@ -200,7 +189,6 @@ export const executeStripeSubscriptionAction = async ({
 		};
 	}
 
-	// If the stripe subscription is canceled, remove the subscription from the billing plan
 	if (isStripeSubscriptionCanceled(stripeSubscription)) {
 		logger.debug(`[execSubAction] removing subscription from billing plan`);
 		removeStripeSubscriptionIdFromBillingPlan({

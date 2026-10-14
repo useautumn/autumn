@@ -18,7 +18,6 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { readBalanceWorkerSubject } from "@/internal/balanceWorker/subject/readBalanceWorkerSubject.js";
 import { sendThresholdsReached } from "./sendThresholdsReached.js";
 
-/** Versions up to 1.2 rendered the event's customer with these expanded. */
 const expandForApiVersion = ({
 	ctx,
 }: {
@@ -35,7 +34,6 @@ const expandForApiVersion = ({
 	});
 };
 
-/** What one reply crossed, judged on the funding balance at the tracked identity. */
 const replyToThresholdsReached = ({
 	ctx,
 	body,
@@ -65,7 +63,6 @@ const replyToThresholdsReached = ({
 	});
 };
 
-/** The deprecated `customer.threshold_reached` for a worker track: only callers below API 2.1 still receive it. */
 export const fireThresholdsReached = async ({
 	ctx,
 	body,
@@ -81,7 +78,6 @@ export const fireThresholdsReached = async ({
 	);
 	if (thresholdsReached.length === 0) return;
 
-	// The reply only holds the tracked feature's rows; the event renders the whole customer.
 	const renderCtx = expandForApiVersion({ ctx });
 	const fullSubject = await readBalanceWorkerSubject({
 		ctx: renderCtx,

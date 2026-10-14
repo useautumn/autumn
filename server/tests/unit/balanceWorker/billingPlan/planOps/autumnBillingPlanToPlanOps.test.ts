@@ -21,7 +21,6 @@ const described = (ops: BillingPlanOp[]) =>
 			: `${op.op}:${op.table}:${op.id}`,
 	);
 
-/** One of every facet the worker holds, each on its own rows. */
 const everyFacetPlan = () => {
 	const patched = product({ id: "cp_patched" });
 	const [patchedPrice] = patched.customer_prices;

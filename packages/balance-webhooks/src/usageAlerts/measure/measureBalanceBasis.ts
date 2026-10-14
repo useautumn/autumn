@@ -16,9 +16,6 @@ import type {
 	UsageAlertMeasurement,
 } from "../types/usageAlert.js";
 
-/** Balance bases (balance, included, recurring): what an alert reads off the scope's API balance. */
-
-/** The balance a scope measures: the tracked entity's when the scope names one, else the customer's. */
 const subjectToApiBalance = ({
 	fullSubject,
 	feature,
@@ -82,7 +79,6 @@ const basisToDenominator = ({
 	return apiBalance.granted;
 };
 
-// Unlimited masks usage, so no threshold can be read off it.
 export const apiBalanceToUsageAlertMeasurement = ({
 	basis,
 	apiBalance,

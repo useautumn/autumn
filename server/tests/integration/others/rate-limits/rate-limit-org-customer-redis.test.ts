@@ -1,8 +1,3 @@
-/**
- * Runs the org and customer limiters against the real misc Redis: a sync track
- * counts both keys with their windows, and an over-cap org leaves the customer key alone.
- */
-
 import { afterEach, expect, test } from "bun:test";
 import { ApiVersion } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";

@@ -144,7 +144,6 @@ export const customerUsageForPreview = ({
 	}),
 });
 
-/** Compose remove-plan usage from persisted customers + setup relatives. */
 export const buildPlanUsage = ({
 	rows,
 	previewContext,

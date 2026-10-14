@@ -1,14 +1,3 @@
-/**
- * TDD tests for usage windows across plan REPLACEMENT and expiry.
- *
- * Contract under test (windows follow the anchor ent's reset cycle):
- *   - replacing a free plan re-anchors the window to the new ent (new
- *     bounds, window_end == its next_reset_at) and the moved window ZEROES
- *     the counter (moved from persistence3)
- *   - cancelling to NOTHING re-aligns the cap to the UTC calendar, zeroing
- *     the counter with the moved window
- */
-
 import { expect, test } from "bun:test";
 import { ApiVersion, EntInterval, getUsageWindowBounds } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
@@ -28,8 +17,6 @@ import {
 	fetchUsageWindowRows,
 } from "../../utils/usage-limit-utils/usageWindowDbTestUtils.js";
 
-// initScenario only exposes clients up to V2_2; build the latest-version client
-// directly (same pattern as the v2.2-vs-v2.3 parity tests).
 const autumnV2_3 = new AutumnInt({ version: ApiVersion.V2_3 });
 
 // ── Contract: replacement restarts the cap with the new cycle ───────
@@ -63,7 +50,6 @@ test.concurrent.skip(
 			limit: 5,
 		});
 
-		// Exhaust the cap on plan A.
 		await autumnV2_3.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
@@ -71,8 +57,6 @@ test.concurrent.skip(
 		});
 		await timeout(4000);
 
-		// Replace plan A with plan B: plan A's ents (incl. the anchor) expire and
-		// plan B's ent starts a fresh cycle -- the window restarts with it.
 		await autumnV2_1.attach({
 			customer_id: customerId,
 			product_id: planB.id,
@@ -87,7 +71,6 @@ test.concurrent.skip(
 			limit: 5,
 		});
 
-		// Fresh headroom on the new cycle.
 		await autumnV2_3.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
@@ -131,7 +114,6 @@ test.concurrent.skip(
 	},
 );
 
-// ── Contract: cancel-to-nothing re-aligns the cap to the calendar ───
 test.concurrent(
 	`${chalk.yellowBright("uw-plan-change-replacement2: cancelling the plan re-aligns the cap to calendar bounds, counter zeroed")}`,
 	async () => {
@@ -162,19 +144,14 @@ test.concurrent(
 			value: 2,
 		});
 
-		// Flush the counter to Postgres before the cache-invalidating change
-		// (the rebuild re-seeds counters from PG).
 		await timeout(4000);
 
-		// Cancel the plan immediately: no ents remain for the feature.
 		await autumnV2_3.subscriptions.update({
 			customer_id: customerId,
 			plan_id: freePlan.id,
 			cancel_action: "cancel_immediately",
 		});
 
-		// The cap entry survives on billing_controls with no anchor: the window
-		// re-aligns to the UTC calendar, zeroing the counter with the move.
 		const customer = await autumnV2_3.customers.get(customerId);
 		// biome-ignore lint/suspicious/noExplicitAny: response inspected loosely
 		const limit = (customer as any).billing_controls?.usage_limits?.find(
@@ -185,7 +162,6 @@ test.concurrent(
 		expect(limit.limit).toBe(5);
 		expect(limit.usage ?? 0).toBe(0);
 
-		// Sanity: the calendar window the cap now lives on is derivable.
 		const calendar = getUsageWindowBounds({
 			interval: EntInterval.Month,
 			now: Date.now(),

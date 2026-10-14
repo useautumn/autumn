@@ -27,13 +27,6 @@ type DeductFromMainBalanceResult = {
 	remaining: number;
 };
 
-/**
- * Deducts from the main balance of a customer entitlement.
- * Handles three cases:
- * 1. Entity-scoped, all entities - loops through all entities
- * 2. Entity-scoped, single entity - deducts from specific entity
- * 3. Top-level balance - deducts from cusEnt.balance
- */
 export const deductFromMainBalance = ({
 	cusEnt,
 	amountToDeduct,
@@ -56,7 +49,6 @@ export const deductFromMainBalance = ({
 	const baseMaxBalance = cusEntToStartingBalance({ cusEnt });
 
 	if (targetEntityId || isEntityScopedCusEnt(cusEnt)) {
-		// CASE 1: ENTITY SCOPED, SINGLE ENTITY
 		if (targetEntityId) {
 			const entity = currentEntities?.[targetEntityId];
 			if (entity) {
@@ -105,7 +97,6 @@ export const deductFromMainBalance = ({
 			};
 		}
 
-		// CASE 2: ENTITY SCOPED, ALL ENTITIES
 		const originalAmountToDeduct = amountToDeduct;
 		const newEntities: Record<string, EntityBalance> = { ...currentEntities };
 		for (const entityId in currentEntities) {
@@ -150,7 +141,6 @@ export const deductFromMainBalance = ({
 		};
 	}
 
-	// CASE 3: TOP-LEVEL BALANCE
 	const resolvedMaxBalance = allowOverage
 		? undefined
 		: (maxBalance ??

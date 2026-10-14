@@ -1,7 +1,6 @@
 import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
 import { AppEnv, ErrCode, type Migration, RecaseError } from "@autumn/shared";
 
-/** Every delete the reset performs, in the order it performed them. */
 const calls: string[] = [];
 
 await mockModuleWithRestore(
@@ -39,7 +38,6 @@ import { mockModuleWithRestore } from "../utils/mockModuleWithRestore.js";
 
 const draft = ({ id }: { id: string }): Migration => ({ id }) as Migration;
 
-/** The reset runs its deletes in one transaction; the stub just runs the body. */
 const contextFor = ({ env }: { env: AppEnv }): AutumnContext =>
 	({
 		db: {

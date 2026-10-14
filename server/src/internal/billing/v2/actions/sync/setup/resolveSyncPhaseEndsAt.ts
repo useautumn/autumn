@@ -1,5 +1,3 @@
-/** A phase ends where the next starts; the last one ends at Stripe's release tail,
- * where its plans stop billing, so a plan's end date isn't dropped on sync. */
 export const resolveSyncPhaseEndsAt = ({
 	startsAt,
 	nextPhaseStartsAt,

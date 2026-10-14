@@ -8,7 +8,6 @@ type FutureStartTiming = Partial<
 	Pick<CreateScheduleBillingContext, "resetCycleAnchorMs" | "accessStartsAt">
 >;
 
-/** A later first phase anchors billing on its start; early access opens its plans now. */
 export const setupFutureStartTiming = ({
 	billingContext,
 	params,

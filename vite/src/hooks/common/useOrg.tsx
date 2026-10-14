@@ -30,9 +30,6 @@ export const useSwitchActiveOrg = () => {
 	return useCallback(
 		async (orgId: string) => {
 			await setActiveOrg(orgId);
-			// The org query is keyed on activeOrgId, so refreshing the session
-			// (which updates activeOrgId) is enough to refetch the new org. An extra
-			// invalidate would force a redundant refetch and flash a skeleton.
 			await refetchSession();
 		},
 		[refetchSession],

@@ -13,10 +13,6 @@ import { CatalogVariantPreviewSchema } from "./catalogVariantPreview.js";
 import { CatalogPlanVersioningSchema } from "./catalogVersioningPreview.js";
 import { PlanAliasReplacementSchema } from "./planAliasReplacement.js";
 
-/**
- * One direct `plans[]` entry from the request.
- * Related versions nest under `sibling_versions`.
- */
 export const CatalogPlanUpdatePreviewSchema = CatalogCorePreviewSchema.extend({
 	name: z.string().optional(),
 	action: CatalogActionSchema,

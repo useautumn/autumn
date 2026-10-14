@@ -42,11 +42,6 @@ const getEntityListFilterSql = ({
 		filters.push(sql`AND c.id = ${trimmedCustomerId}`);
 	}
 
-	// Plans are NOT a filter here. As a correlated EXISTS this re-probed
-	// customer_products for every entity in the org — 197M buffer reads and 176s
-	// to return 20 rows on mintlify, because the LIMIT can't push through a
-	// per-row subquery. Callers join plan_scopes instead (see buildPlanScopeCte).
-
 	const trimmedSearch = search?.trim();
 	if (trimmedSearch) {
 		const pattern = `%${trimmedSearch}%`;
@@ -160,13 +155,6 @@ export const getPaginatedEntitySubjectsQuery = ({
 	});
 };
 
-/**
- * Counting with a plan filter can't reuse the page query's EXISTS: a COUNT has
- * no LIMIT to stop it, so the subquery re-probes customer_products for every
- * entity in the org — 197M buffer reads / 150s on mintlify. Resolving the
- * matching (customer, entity-scope) pairs once from the plan side instead is
- * 0.33s / 458k buffers for the same answer.
- */
 const countEntitiesMatchingPlans = async ({
 	ctx,
 	plans,
@@ -267,8 +255,6 @@ export const countFilteredEntitiesByOrgIdAndEnv = async ({
 		return countEntitiesByOrgIdAndEnv({ ctx });
 	}
 
-	// Plans are applied by countEntitiesMatchingPlans' driving CTE, not as an
-	// EXISTS, so they're deliberately left out of this filter.
 	const nonPlanFilterSql = getEntityListFilterSql({
 		processors: query.processors,
 		search: query.search,

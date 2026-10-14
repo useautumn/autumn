@@ -1,9 +1,3 @@
-/**
- * Candidate ordering for rollover carry: same-feature candidates are ranked by
- * billing kind, then reset interval/interval_count, then whether the bucket's
- * effective max can hold a balance (zero-cap buckets rank last).
- */
-
 import { describe, expect, test } from "bun:test";
 import {
 	BillingType,
@@ -90,8 +84,6 @@ const buildCusProduct = ({
 
 describe("applyExistingRollovers candidate ordering", () => {
 	test("prepaid rollover skips zero-cap overage bucket listed first (kind match wins)", () => {
-		// Mirrors the Mintlify growth shape: zero-allowance overage with a pct
-		// rollover config (effective max 0) sits before the prepaid bucket.
 		const overage = buildCusEnt({ entitlementId: "ent_overage", allowance: 0 });
 		const prepaid = buildCusEnt({
 			entitlementId: "ent_prepaid",
@@ -176,7 +168,6 @@ describe("applyExistingRollovers candidate ordering", () => {
 	});
 
 	test("capacity breaks ties between identical candidates", () => {
-		// Both prepaid + monthly; the zero-cap one is listed first.
 		const zeroCapPrepaid = buildCusEnt({
 			entitlementId: "ent_prepaid_zero",
 			allowance: 0,

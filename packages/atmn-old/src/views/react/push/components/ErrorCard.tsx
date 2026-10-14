@@ -4,9 +4,6 @@ interface ErrorCardProps {
 	error: string;
 }
 
-/**
- * Error display card
- */
 export function ErrorCard({ error }: ErrorCardProps) {
 	return (
 		<Box flexDirection="column" padding={1}>

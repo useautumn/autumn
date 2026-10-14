@@ -35,7 +35,6 @@ function buildAttempts(): TestAttempt[] {
 	}
 	const failed = attempts.find((attempt) => attempt.fails);
 	if (!failed) throw new Error("Missing illustrative failure");
-	// Retry on another worker after its current assignments have drained.
 	const retryLane = available.reduce((best, time, lane) => {
 		if (Math.floor(lane / 3) === failed.worker) return best;
 		if (best === -1 || time < available[best]) return lane;

@@ -1,9 +1,3 @@
-/**
- * Cancel Error Tests
- *
- * Tests for error cases when using cancel functionality in update subscription.
- */
-
 import { expect, test } from "bun:test";
 import { type ApiCustomerV3, FreeTrialDuration } from "@autumn/shared";
 import {
@@ -19,20 +13,6 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 1: Cancel a scheduled product
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - User is on Premium ($50/mo)
- * - User downgrades to Pro ($20/mo) → Premium is canceling, Pro is scheduled
- * - User cancels Pro (the scheduled product)
- *
- * Expected Result:
- * - Pro scheduled attachment is removed
- * - Premium is uncanceled and remains active
- */
 test.concurrent(`${chalk.yellowBright("cancel: scheduled product removes pending schedule")}`, async () => {
 	const customerId = "cancel-scheduled-product";
 
@@ -57,11 +37,10 @@ test.concurrent(`${chalk.yellowBright("cancel: scheduled product removes pending
 		],
 		actions: [
 			s.attach({ productId: premium.id }),
-			s.attach({ productId: pro.id }), // Downgrade: premium canceling, pro scheduled
+			s.attach({ productId: pro.id }),
 		],
 	});
 
-	// Verify pro is scheduled
 	const customerAfterDowngrade =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	await expectProductCanceling({
@@ -94,20 +73,6 @@ test.concurrent(`${chalk.yellowBright("cancel: scheduled product removes pending
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 2: Cancel immediately twice - second cancel is a no-op
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - User is on Pro ($20/mo)
- * - User cancels Pro immediately
- * - User tries to cancel Pro again
- *
- * Expected Result:
- * - First cancel removes the product
- * - Second cancel should fail because product doesn't exist
- */
 test.concurrent(`${chalk.yellowBright("error: cancel non-existent product")}`, async () => {
 	const customerId = "err-cancel-twice";
 
@@ -127,14 +92,12 @@ test.concurrent(`${chalk.yellowBright("error: cancel non-existent product")}`, a
 		actions: [s.attach({ productId: pro.id })],
 	});
 
-	// Cancel pro immediately
 	await autumnV1.subscriptions.update({
 		customer_id: customerId,
 		product_id: pro.id,
 		cancel_action: "cancel_immediately",
 	});
 
-	// Verify pro is gone
 	const customerAfterCancel =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	await expectProductNotPresent({
@@ -143,7 +106,6 @@ test.concurrent(`${chalk.yellowBright("error: cancel non-existent product")}`, a
 	});
 	expect(customerAfterCancel.products.length).toBe(0);
 
-	// Try to cancel again - should fail because product doesn't exist
 	await expectAutumnError({
 		func: async () => {
 			await autumnV1.subscriptions.update({
@@ -155,18 +117,6 @@ test.concurrent(`${chalk.yellowBright("error: cancel non-existent product")}`, a
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 3: Cannot combine cancel_action with other update params
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - User is on Pro ($20/mo)
- * - User tries to cancel while also passing options, version, items, or free_trial
- *
- * Expected Result:
- * - Should return an error for each invalid combination
- */
 test.concurrent(`${chalk.yellowBright("error: cancel_action with other params")}`, async () => {
 	const customerId = "err-cancel-with-params";
 
@@ -186,7 +136,6 @@ test.concurrent(`${chalk.yellowBright("error: cancel_action with other params")}
 		actions: [s.attach({ productId: pro.id })],
 	});
 
-	// Cannot combine cancel with options
 	await expectAutumnError({
 		func: async () => {
 			await autumnV1.subscriptions.update({
@@ -198,7 +147,6 @@ test.concurrent(`${chalk.yellowBright("error: cancel_action with other params")}
 		},
 	});
 
-	// Cannot combine cancel with version
 	await expectAutumnError({
 		func: async () => {
 			await autumnV1.subscriptions.update({
@@ -210,7 +158,6 @@ test.concurrent(`${chalk.yellowBright("error: cancel_action with other params")}
 		},
 	});
 
-	// Cannot combine cancel with items
 	await expectAutumnError({
 		func: async () => {
 			await autumnV1.subscriptions.update({
@@ -222,7 +169,6 @@ test.concurrent(`${chalk.yellowBright("error: cancel_action with other params")}
 		},
 	});
 
-	// Cannot combine cancel with free_trial
 	await expectAutumnError({
 		func: async () => {
 			await autumnV1.subscriptions.update({
@@ -239,18 +185,6 @@ test.concurrent(`${chalk.yellowBright("error: cancel_action with other params")}
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 4: Cannot cancel free product with end_of_cycle
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - User has a free product (no subscription)
- * - User tries to cancel with end_of_cycle
- *
- * Expected Result:
- * - Should return an error - free products can only be canceled immediately
- */
 test.concurrent(`${chalk.yellowBright("error: cannot cancel free product with end_of_cycle")}`, async () => {
 	const customerId = "err-cancel-free-eoc";
 
@@ -268,7 +202,6 @@ test.concurrent(`${chalk.yellowBright("error: cannot cancel free product with en
 		actions: [s.attach({ productId: free.id })],
 	});
 
-	// Try to cancel free product with end_of_cycle - should fail
 	await expectAutumnError({
 		func: async () => {
 			await autumnV1.subscriptions.update({
@@ -280,18 +213,6 @@ test.concurrent(`${chalk.yellowBright("error: cannot cancel free product with en
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 5: Cannot cancel one-time product with end_of_cycle
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - User has a one-time product (no recurring subscription)
- * - User tries to cancel with end_of_cycle
- *
- * Expected Result:
- * - Should return an error - one-time products can only be canceled immediately
- */
 test.concurrent(`${chalk.yellowBright("error: cannot cancel one-time product with end_of_cycle")}`, async () => {
 	const customerId = "err-cancel-onetime-eoc";
 
@@ -311,7 +232,6 @@ test.concurrent(`${chalk.yellowBright("error: cannot cancel one-time product wit
 		actions: [s.attach({ productId: oneTime.id })],
 	});
 
-	// Try to cancel one-time product with end_of_cycle - should fail
 	await expectAutumnError({
 		func: async () => {
 			await autumnV1.subscriptions.update({
@@ -323,18 +243,6 @@ test.concurrent(`${chalk.yellowBright("error: cannot cancel one-time product wit
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 6: Cannot pass items when cancel is end_of_cycle
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - User is on Pro ($20/mo)
- * - User tries to cancel at end of cycle while also passing items
- *
- * Expected Result:
- * - Should return an error - cannot combine cancel_end_of_cycle with items
- */
 test.concurrent(`${chalk.yellowBright("error: cannot pass items when cancel is end_of_cycle")}`, async () => {
 	const customerId = "err-cancel-eoc-with-items";
 
@@ -354,7 +262,6 @@ test.concurrent(`${chalk.yellowBright("error: cannot pass items when cancel is e
 		actions: [s.attach({ productId: pro.id })],
 	});
 
-	// Try to cancel end_of_cycle while also passing items - should fail
 	await expectAutumnError({
 		func: async () => {
 			await autumnV1.subscriptions.update({
@@ -367,18 +274,6 @@ test.concurrent(`${chalk.yellowBright("error: cannot pass items when cancel is e
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 7: Cannot pass options when cancel is end_of_cycle
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - User is on Pro with prepaid messages
- * - User tries to cancel at end of cycle while also passing options
- *
- * Expected Result:
- * - Should return an error - cannot combine cancel_end_of_cycle with options
- */
 test.concurrent(`${chalk.yellowBright("error: cannot pass options when cancel is end_of_cycle")}`, async () => {
 	const customerId = "err-cancel-eoc-with-options";
 
@@ -407,7 +302,6 @@ test.concurrent(`${chalk.yellowBright("error: cannot pass options when cancel is
 		],
 	});
 
-	// Try to cancel end_of_cycle while also passing options - should fail
 	await expectAutumnError({
 		func: async () => {
 			await autumnV1.subscriptions.update({
@@ -420,18 +314,6 @@ test.concurrent(`${chalk.yellowBright("error: cannot pass options when cancel is
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 8: Cannot pass free_trial when cancel is end_of_cycle
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - User is on Pro with trial
- * - User tries to cancel at end of cycle while also passing free_trial
- *
- * Expected Result:
- * - Should return an error - cannot combine cancel: 'end_of_cycle' with free_trial
- */
 test.concurrent(`${chalk.yellowBright("error: cannot pass free_trial when cancel is end_of_cycle")}`, async () => {
 	const customerId = "err-cancel-eoc-with-trial";
 
@@ -452,7 +334,6 @@ test.concurrent(`${chalk.yellowBright("error: cannot pass free_trial when cancel
 		actions: [s.attach({ productId: proTrial.id })],
 	});
 
-	// Try to cancel end_of_cycle while also passing free_trial - should fail
 	await expectAutumnError({
 		func: async () => {
 			await autumnV1.subscriptions.update({

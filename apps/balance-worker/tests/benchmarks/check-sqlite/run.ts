@@ -13,7 +13,6 @@ import { Hono } from "hono";
 import { testIdentity, testOrg } from "../../fixtures/mutations.js";
 import { scenarios } from "../track-throughput/scenarios.js";
 
-/** A check answered straight off a SQLite file: one row read, one engine check, nothing resident between requests. */
 const args = Object.fromEntries(
 	process.argv.slice(2).map((arg) => {
 		const [key, value] = arg.replace(/^--/, "").split("=");
@@ -26,7 +25,6 @@ const customers = Number(args.customers ?? 20_000);
 const total = Number(args.total ?? 100_000);
 const warmup = Number(args.warmup ?? 5_000);
 const file = args.file ?? "/tmp/byoc-check-bench/slot-000.sqlite";
-/** core: read + engine only; hono: the same behind a Hono route, JSON in and out, no socket. */
 const mode = args.mode ?? "core";
 
 mkdirSync(dirname(file), { recursive: true });
@@ -54,7 +52,6 @@ db.transaction(() => {
 	}
 })();
 
-// The catalog is the org's, not a customer's: one parsed copy serves every check.
 const catalog = catalogRowsToCatalog({ rows: scenario.catalogRows });
 const select = db.prepare<{ state: string }, [string]>(
 	"SELECT state FROM subject_states WHERE customer_id = ?",

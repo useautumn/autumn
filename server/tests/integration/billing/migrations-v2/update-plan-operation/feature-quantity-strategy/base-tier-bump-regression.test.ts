@@ -1,18 +1,3 @@
-/**
- * Documents Mintlify's base-tier bump behavior — see
- * `scripts-v2/runs/mintlify/migrate-tiers/`.
- *
- * Customers on the OLD base tier pay $0/month for 5,000 credits. The NEW
- * ladder's own tier 1 is ALSO a real $0/month tier, for 10,000 credits (not a
- * zero-credit floor — that was an earlier mistranscription of the tier
- * table). Because both cost $0, `round_to_lowest_price` naturally lands a
- * base-tier customer on the new tier-1 (10,000 credits) — the exact bump
- * Kyle asked for, with NO separate migration or special-case rule required.
- * This test locks in that the general rule alone produces the correct
- * result, so a future edit to the tier table (or the resolver) can't
- * silently regress this cohort back down.
- */
-
 import type { ApiCustomerV5, CreatePlanItemParamsV1 } from "@autumn/shared";
 import { test } from "bun:test";
 import {
@@ -31,7 +16,6 @@ import { runUpdatePlanMigration } from "../../utils/runUpdatePlanMigration";
 
 const OLD_BASE_TIER_CREDITS = 5000;
 
-/** Old base tier: $0/month for up to 5,000 credits. */
 const oldBaseTierItem = () =>
 	items.volumePrepaidMessages({
 		includedUsage: 0,
@@ -42,7 +26,6 @@ const oldBaseTierItem = () =>
 		],
 	});
 
-/** New ladder's real tier 1: $0/month for 10,000 credits. */
 const NEW_LADDER_ITEM: CreatePlanItemParamsV1 = {
 	feature_id: TestFeature.Messages,
 	reset: { interval: ResetInterval.Month },
@@ -80,9 +63,6 @@ test.concurrent(
 			],
 		});
 
-		// Old amount at 5,000 credits is $0 — the highest new tier with
-		// flat_amount <= $0 is tier 1 itself (10,000 credits, $0), so the
-		// general rule alone produces exactly Kyle's promotional bump.
 		await runUpdatePlanMigration({
 			ctx,
 			migrationClient: autumnV2_2,

@@ -27,7 +27,6 @@ import {
 
 const HOUR = 3_600_000;
 const DAY = 24 * HOUR;
-/** A subject of the fixture shape takes about this much on disk, log included; the tests size caps from it. */
 const ROW_BYTES = 6_000;
 
 const customer = ({ id, readAt }: { id: string; readAt: number }) => {
@@ -59,7 +58,6 @@ const openFolder = () => {
 	const warnings: string[] = [];
 	const dataBytes = () =>
 		auth.slots.ownedStores().reduce((sum, store) => sum + store.dataBytes(), 0);
-	/** A volume whose 80% share is `shareBytes`, with the folder's files on it: what the files hold stands in for what the volume sees. */
 	const volumeWithShare = (shareBytes: number): VolumeBytes => {
 		const totalBytes =
 			shareBytes === Number.MAX_SAFE_INTEGER
@@ -215,12 +213,10 @@ describe("the disk evictor", () => {
 				})
 			).length;
 		const before = [await countIn(0), await countIn(1)];
-		// One file's batch frees more than the deficit each tick.
 		const evictor = folder.evictorOf({ shareBytes: Math.floor(full * 0.999) });
 
 		await evictor.tick();
 		const afterFirst = [await countIn(0), await countIn(1)];
-		// A few more pushes put the volume over again by less than one batch: the next pass takes it from the other file.
 		folder.push({ ids: ids("s", 6) });
 		folder.advance(HOUR);
 		await evictor.tick();
@@ -258,7 +254,6 @@ describe("the disk evictor", () => {
 		await evictor.tick();
 
 		expect(afterFirstDrop).toBeGreaterThan(0);
-		// Every pass under the same pressure drops, and the warning is not repeated.
 		expect(folder.stats().diskEvicted).toBeGreaterThan(afterFirstDrop);
 		expect(folder.warnings).toEqual([
 			"Over the disk share with nothing older than the relay window: dropping recent customers",
@@ -361,7 +356,6 @@ describe("the disk evictor", () => {
 
 		await folder.evictorOf({ shareBytes: Number.MAX_SAFE_INTEGER }).tick();
 
-		// Two slot files, one batch each.
 		expect(folder.stats().diskExpired).toBeLessThanOrEqual(
 			DISK_EVICT_BATCH * 2,
 		);

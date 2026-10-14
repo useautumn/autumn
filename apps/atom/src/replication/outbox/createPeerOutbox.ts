@@ -4,23 +4,17 @@ import type { PeerResolver } from "../discovery/createPeerResolver.js";
 import type { PeerSender } from "../transport/sendToPeer.js";
 import type { ReplicatedOperation } from "../types/replicatedOperation.js";
 
-/** Deliveries in flight per peer; the rest wait, newest copy per key, so a slow peer never holds up a receive. */
 const DELIVERIES_PER_PEER = 4;
-/** A peer that is restarting is back within this; after it a waiting copy is dropped, and the peer's catch-up covers it. */
 export const HOLD_MS = 5 * 60_000;
-/** Bytes of body waiting across all peers; past this the oldest is dropped, counted, so memory stays bounded under a long outage. */
 const MAX_WAITING_BYTES = 64 * 1024 * 1024;
 const RETRY_DELAY_MS = 1_000;
-/** On stop: how long the copies still waiting get to reach their peers before they are dropped. */
 const STOP_FLUSH_MS = 5_000;
 
 export type PeerOutbox = {
-	/** Queues the operation for every peer known now. */
 	enqueue(params: {
 		operation: ReplicatedOperation;
 		path: string;
 	}): Promise<void>;
-	/** Takes nothing more; resolves once what was waiting is delivered or the flush window passes, dropping the rest. */
 	stop(): Promise<void>;
 };
 
@@ -35,7 +29,6 @@ type OutboxContext = {
 
 type Waiting = { operation: ReplicatedOperation; path: string; since: number };
 
-/** Per thread: what this thread applied, on its way to each other replica, one queue per peer in arrival order. */
 export const createPeerOutbox = ({
 	ctx,
 }: {
@@ -47,7 +40,6 @@ export const createPeerOutbox = ({
 	const workers = new Map<string, number>();
 	let waitingBytes = 0;
 	let inFlight = 0;
-	/** Copies whose peers are still being resolved: queued on none yet, but owed to the flush on stop. */
 	let resolving = 0;
 	let stopped = false;
 	let flushed = false;
@@ -114,7 +106,6 @@ export const createPeerOutbox = ({
 		}
 	}
 
-	/** A peer that left the service name was replaced; its new address gets the rest through catch-up. Emptied in place, so a worker still on it finds nothing. */
 	function discardQueue(peer: string): void {
 		const queue = queues.get(peer);
 		if (!queue) return;
@@ -151,7 +142,6 @@ export const createPeerOutbox = ({
 				drop({ peer, reason: stopped ? "stopping" : "peer_unreachable" });
 				continue;
 			}
-			// Back at the front with its original age; a newer copy that arrived meanwhile wins over it.
 			const current = queues.get(peer);
 			if (current && !current.has(key)) put({ queue: current, key, entry });
 			await sleep(RETRY_DELAY_MS);
@@ -206,7 +196,6 @@ export const createPeerOutbox = ({
 		}
 	}
 
-	/** What is still waiting gets one flush window; a peer that is down by then loses those copies to its own catch-up. */
 	async function stop(): Promise<void> {
 		stopped = true;
 		if (resolving > 0 || waiting() > 0 || inFlight > 0)

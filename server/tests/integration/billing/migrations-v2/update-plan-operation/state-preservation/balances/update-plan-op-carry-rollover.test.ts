@@ -1,13 +1,3 @@
-/**
- * TDD coverage for update_plan item patch migrations.
- *
- * Contract under test:
- *   - update_plan reuses update-subscription patch semantics for add_items,
- *     remove_items, usage carry, and rollover carry.
- *   - Migration execution does not create extra invoices.
- *   - Existing customer products are patched, not replaced or expired.
- */
-
 import { test } from "bun:test";
 import type { ApiCustomerV3, ApiCustomerV5 } from "@autumn/shared";
 import {

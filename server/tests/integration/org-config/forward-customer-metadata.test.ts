@@ -46,10 +46,6 @@ describe("forward_customer_metadata", () => {
 		});
 	});
 
-	// ═══════════════════════════════════════════════════════════════════
-	// CREATE: metadata forwarded when Stripe customer created via attach
-	// ═══════════════════════════════════════════════════════════════════
-
 	test.concurrent(`${chalk.yellowBright("create: metadata forwarded to Stripe via attach (handleAttachV2)")}`, async () => {
 		const customerId = "create-fwd-meta-attach";
 		const messagesItem = items.monthlyMessages({ includedUsage: 100 });
@@ -173,10 +169,6 @@ describe("forward_customer_metadata", () => {
 		expect(stripeCustomer.metadata.bool_val).toBe("true");
 		expect(stripeCustomer.metadata.object_val).toBe('{"nested":"data"}');
 	});
-
-	// ═══════════════════════════════════════════════════════════════════
-	// UPDATE: metadata forwarded to existing Stripe customer
-	// ═══════════════════════════════════════════════════════════════════
 
 	test.concurrent(`${chalk.yellowBright("update: metadata forwarded to Stripe")}`, async () => {
 		const customerId = "update-fwd-meta";

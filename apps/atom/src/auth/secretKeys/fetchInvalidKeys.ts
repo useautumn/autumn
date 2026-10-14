@@ -1,7 +1,6 @@
 import type { AutumnLogger } from "@autumn/logging";
 import type { AutumnClient } from "../../autumnClient/types/autumnClient.js";
 
-/** Null for any reply that is not a clear answer, so a failed or slow call never drops a key. */
 export const fetchInvalidKeys = async ({
 	ctx,
 	keyHashes,

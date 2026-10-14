@@ -15,7 +15,6 @@ export const findSkill = (name: string): Skill => {
 	return skill;
 };
 
-/** The given names plus their transitive `requires`, first-encountered order, deduped. */
 export const expandRequires = (names: string[]): string[] => {
 	const expanded = [...names];
 	for (const name of expanded) {
@@ -28,14 +27,9 @@ export const expandRequires = (names: string[]): string[] => {
 	return expanded;
 };
 
-/** One skill plus everything it requires — the set to install together. */
 export const skillBundleFor = ({ name }: { name: string }): Skill[] =>
 	expandRequires([name]).map(findSkill);
 
-/**
- * Write each skill to `<targetDir>/<name>/` (the Agent Skills layout): SKILL.md
- * plus any bundled references/. Used by atmn init (future).
- */
 export const writeSkills = ({ targetDir }: { targetDir: string }): void => {
 	for (const skill of skills) {
 		const skillDir = join(targetDir, skill.name);

@@ -30,7 +30,6 @@ import {
 	preserveBalanceAsOverage,
 } from "./deleteBalanceUtils";
 
-/** Deleting shared credits can shrink what allocations divide, so shares re-fit after every delete. */
 export const deleteBalance = async ({
 	ctx,
 	params,
@@ -65,7 +64,6 @@ const deleteBalanceRows = async ({
 		});
 	}
 
-	// The worker holds no expired grant, and only the dashboard deletes one.
 	const routed = isBalanceWorkerRolloutEnabled({
 		ctx,
 		customerId: customer_id,
@@ -74,11 +72,9 @@ const deleteBalanceRows = async ({
 		await runBalanceWorkerDeleteBalance({ ctx, params });
 		return;
 	}
-	// Recalculated usage is read from these rows, so the worker's writes must be in Postgres first.
 	if (routed)
 		await flushBalanceWorkerCustomer({ ctx, customerId: customer_id });
 
-	// 1. Get full customer
 	const fullCustomer = await CusService.getFull({
 		ctx,
 		idOrInternalId: customer_id,
@@ -110,8 +106,6 @@ const deleteBalanceRows = async ({
 			throw paidBalanceNotDeletableError({ params });
 		}
 
-		// Deleting either half orphans the other: the pool would keep granted for a
-		// source that no longer exists, or contributions would point at nothing.
 		if (
 			isSyntheticPooledBalanceCustomerEntitlement({
 				customerEntitlement: cusEnt,
@@ -122,7 +116,6 @@ const deleteBalanceRows = async ({
 		}
 	}
 
-	// Expired usage must never be redistributed onto live balances.
 	const usageToRecalculate = recalculate_balances
 		? cusEntsToUsage({
 				cusEnts: customerEntitlements.filter(

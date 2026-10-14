@@ -8,7 +8,6 @@ export const LineItemDiscountSchema = z.object({
 	couponName: z.string().optional(),
 });
 
-// Will be renamed to BillingLineItemSchema (used in the billing actions, different)
 export const LineItemSchema = z
 	.object({
 		id: z.string(),
@@ -16,10 +15,6 @@ export const LineItemSchema = z
 
 		discounts: z.array(LineItemDiscountSchema).default([]),
 		amountAfterDiscounts: z.number().optional(),
-		/**
-		 * `amountAfterDiscounts` comes from a finalized source, such as a stored
-		 * invoice row, and must not be recomputed. `discounts` remains provenance.
-		 */
 		amountAfterDiscountsFinalized: z.boolean().optional(),
 
 		description: z.string(),
@@ -29,14 +24,10 @@ export const LineItemSchema = z
 		stripePriceId: z.string().optional(),
 		stripeProductId: z.string().optional(),
 
-		// Quantity tracking
-		totalQuantity: z.number().optional(), // Total usage (e.g., 500 messages used)
-		paidQuantity: z.number().optional(), // Quantity being charged (overage)
-
-		// Optional - for testing
+		totalQuantity: z.number().optional(),
+		paidQuantity: z.number().optional(),
 		chargeImmediately: z.boolean().default(true),
 
-		// Whether this line item was prorated (mid-cycle change)
 		prorated: z.boolean().default(false),
 	})
 	.transform((data) => {

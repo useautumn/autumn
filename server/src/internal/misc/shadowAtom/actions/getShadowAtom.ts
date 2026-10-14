@@ -21,7 +21,6 @@ const refreshShadowAtomRecord = (record: ShadowAtomRecord | null) =>
 		record,
 	});
 
-/** The current shadow Atom's names, or the ones the next one takes; only a named Atom has a suffix to show. */
 const shadowAtomStackName = ({
 	current,
 	previous,
@@ -40,7 +39,6 @@ const shadowAtomStackName = ({
 	};
 };
 
-/** The shadow Atom and earlier ones still coming down, as alien has them now, in the shape `getCache` gives an org's. */
 export const getShadowAtom = async (): Promise<GetByocCacheResponse> => {
 	const stored = await findShadowAtomRecords();
 	const [refreshed, ...previous] = await Promise.all(

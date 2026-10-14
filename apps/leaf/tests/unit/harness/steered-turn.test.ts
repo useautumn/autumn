@@ -1,10 +1,3 @@
-/** A message that lands mid-turn steers eve: the active turn is cancelled,
- * the session parks for a moment, and a replacement turn restarts with every
- * buffered message in context. The reader must read through that boundary.
- * Prod incidents 2026-09-16 (Slack C0B3S1ML7JP, 20:28Z) and 2026-09-17
- * (17:48Z): the cancel was unknown to leaf, `session.waiting` read as the
- * end, and the thread got two empty-reply warnings plus a stray "Appl". */
-
 import { beforeEach, describe, expect, mock, test } from "bun:test";
 import { AppEnv } from "@autumn/shared";
 import type { EveEvent } from "../../../src/internal/agentRuntime/eve/eveEventSchemas.js";

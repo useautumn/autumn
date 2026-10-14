@@ -17,13 +17,6 @@ export type StrandedCustomerLicense = {
 	licensePlanId: string;
 };
 
-/**
- * Rows stranded by a parent transition: parent expired with ended_at inside
- * the live parents' phase-adjacency window (a switch ends the old parent the
- * moment a live one starts). The time bound is what keeps this read bounded —
- * long-dead rows are never fetched; set-based sweeps handle them without
- * reads. Returned oldest-first so slot contention resolves deterministically.
- */
 export const listAdoptableStrandedCustomerLicenses = async ({
 	db,
 	internalCustomerId,

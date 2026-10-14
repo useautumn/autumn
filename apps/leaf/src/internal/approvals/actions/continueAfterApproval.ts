@@ -47,7 +47,6 @@ const runFollowUpTurn = async ({
 			text: notice,
 			threadId,
 		});
-		// Neither is presentable, and neither can happen on a turn nobody drives.
 		if (output.kind === "blocked" || output.kind === "stopped") {
 			rootLogger.info("Approval follow-up turn did not run", {
 				event: "leaf.approval_continue_skipped",
@@ -71,8 +70,6 @@ const runFollowUpTurn = async ({
 	}
 };
 
-/** A fresh turn confirms the applied change and finishes any remaining steps
- * of a multi-step request. */
 export const continueAfterApproval = async ({
 	approval,
 	outcome,
@@ -87,18 +84,12 @@ export const continueAfterApproval = async ({
 	threadId: string;
 }) => {
 	try {
-		// The writes ran outside the agent's turn, so every outcome — grouped
-		// siblings and failures included — has to be handed back explicitly.
 		const writes = await chatApprovalWritesRepo.list({
 			approvalId: approval.id,
 			db,
 		});
 		const notice = approvalOutcomeNotice({ outcome, writes });
 		if (!notice) return;
-		// Provider + workspace identify the installation. The approval's org is
-		// the org acted on, which for the internal admin install differs from
-		// the installation's own org — matching on it found nothing, so admin
-		// approvals never got a follow-up turn.
 		const installation = await findInstallation(
 			approval.provider,
 			approval.workspace_id,
@@ -114,9 +105,6 @@ export const continueAfterApproval = async ({
 			});
 			return;
 		}
-		// The same per-thread door every Slack message goes through: a live run
-		// absorbs the notice into its turn, otherwise the follow-up waits its
-		// turn and registers itself so messages arriving during it queue too.
 		const runKey = runKeyForThread({
 			channelId: approval.channel_id,
 			provider: "slack",

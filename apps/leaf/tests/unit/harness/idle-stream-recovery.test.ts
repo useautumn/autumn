@@ -1,7 +1,3 @@
-/** An idle parent stream reconnects at its cursor, and a turn with a live
- * child session is never abandoned — only quiet across ALL sessions fails.
- * Prod incident 2026-08-25 (Slack thread C0BCAQQK0KS, 10:30Z/10:48Z). */
-
 import { beforeEach, describe, expect, mock, test } from "bun:test";
 import { AppEnv } from "@autumn/shared";
 import type { EveEvent } from "../../../src/internal/agentRuntime/eve/eveEventSchemas.js";
@@ -54,11 +50,7 @@ await mockLeafModule({
 					yield event;
 					await new Promise((resolve) => setTimeout(resolve, 1));
 				}
-				// A real child relay ENDS when its own idle window expires; only a
-				// child still streaming holds the parent open.
 				if (childKeepsStreaming) await new Promise(() => undefined);
-				// An idle window costs real time, so a dying child still vouches
-				// for the parent across a pass rather than expiring in one tick.
 				await new Promise((resolve) => setTimeout(resolve, 1));
 				throw new MockEveStreamIdleTimeoutError("child idle");
 			}
@@ -173,9 +165,6 @@ describe("a delegated child keeps the parent turn alive", () => {
 	});
 
 	test("a long delegation outlasting the parent budget is still not abandoned", async () => {
-		// The child never reports (its relay died) and the parent stays quiet for
-		// MORE passes than MAX_IDLE_RESYNCS: today this fails the turn even though
-		// eve is still working on the child session.
 		childEvents = [];
 		childKeepsStreaming = false;
 		streamPasses = [
@@ -208,8 +197,6 @@ describe("a delegated child keeps the parent turn alive", () => {
 	});
 
 	test("a child that goes quiet mid-work still vouches until its own budget", async () => {
-		// The child emits nothing for longer than the watcher's idle window: its
-		// relay ends, and the parent must not immediately read as dead.
 		childEvents = [];
 		childKeepsStreaming = false;
 		streamPasses = [
@@ -240,8 +227,6 @@ describe("a delegated child keeps the parent turn alive", () => {
 	});
 
 	test("a parent quiet while its child works is not abandoned", async () => {
-		// The parent delegates, then emits nothing at all: every later pass is
-		// an idle timeout. The child relay keeps reporting activity throughout.
 		streamPasses = [
 			{
 				events: [

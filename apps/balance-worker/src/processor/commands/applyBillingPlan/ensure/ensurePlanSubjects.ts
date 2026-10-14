@@ -8,7 +8,6 @@ import { SubjectNotFoundError } from "../../../subject/subjectErrors.js";
 import type { PartitionProcessorScope } from "../../../types/partitionProcessor.js";
 import { ensureCustomerToCreate } from "./ensureCustomerToCreate.js";
 
-/** The customer and every named entity resident before the decision; an entity the plan creates is absent unless it already exists. */
 export const ensurePlanSubjects = async ({
 	scope,
 	command,

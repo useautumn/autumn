@@ -1,10 +1,3 @@
-/**
- * Fixed price line descriptions when the line carries no period.
- *
- * Red (before):  invoices.create without a period rendered "Test Product - Base Price ()"
- * Green (after): the period suffix is omitted when there is no period
- */
-
 import { expect, test } from "bun:test";
 import type { LineItemContext } from "@autumn/shared";
 import { fixedPriceToDescription } from "@shared/utils/billingUtils/invoicingUtils/descriptionUtils/fixedPriceToLineDescription";

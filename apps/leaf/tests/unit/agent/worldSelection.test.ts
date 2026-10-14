@@ -1,9 +1,3 @@
-/**
- * The chat database is the one durable workflow world: eve selects the
- * Postgres world from CHAT_DATABASE_URL alone (build and runtime alike) and
- * namespaces its queue per machine outside production.
- */
-
 import { afterEach, describe, expect, test } from "bun:test";
 
 const AGENT_MODULE = "../../../agent/agent.js";

@@ -14,7 +14,6 @@ import {
 	assertBalanceMutable,
 } from "./updateBalanceGuards.js";
 
-/** Every field of a balance update in one mutation; null when nothing moves, so nothing is written. */
 export const computeUpdateBalance = ({
 	fullSubject,
 	command,
@@ -27,7 +26,6 @@ export const computeUpdateBalance = ({
 		command.remaining !== undefined ||
 		command.usage !== undefined ||
 		command.addToBalance !== undefined;
-	// Legacy counts a grant edit as a balance change; date edits skip both guards.
 	const changesBalance = movesBalance || command.includedGrant !== undefined;
 	if (changesBalance) {
 		assertBalanceMutable({ fullSubject, command });
@@ -42,7 +40,6 @@ export const computeUpdateBalance = ({
 			reason: "paid_allocated_not_supported",
 		});
 
-	// Any refusal above or below throws, so the fields land together or not at all.
 	const changes = [
 		...(balanceOutcome?.changes ?? []),
 		...setIncludedGrant({ fullSubject, command }),

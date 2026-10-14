@@ -6,7 +6,6 @@ import { setUpStripeConnectAccount } from "./setUpStripeConnectAccount.ts";
 const url = "https://twd.example/ingress/connect/sandbox?shard=stripe-connect";
 const events = ["account.application.deauthorized"];
 
-/** One Stripe account's endpoints; listing is slow so unserialized callers both see it empty. */
 const fakeShardStripe = () => {
 	const endpoints: {
 		id: string;
@@ -42,7 +41,6 @@ const fakeShardStripe = () => {
 	};
 };
 
-/** What one run does: lease, then lazy webhook, then its sub-account; the lease is held until the run ends. */
 const runSetup = async ({
 	stripe,
 	runId,

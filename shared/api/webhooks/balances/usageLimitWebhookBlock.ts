@@ -4,7 +4,6 @@ import {
 	UsageLimitAnchorSchema,
 } from "../../../models/cusModels/billingControls/usageLimit.js";
 
-/** The usage limit a balances webhook measured against, with its live window. */
 export const UsageLimitWebhookBlockSchema = z.object({
 	limit: z
 		.number()

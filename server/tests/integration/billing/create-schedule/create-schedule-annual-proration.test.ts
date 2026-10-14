@@ -1,8 +1,3 @@
-/**
- * Contract: a mid-year phase swap creates the exact annual proration delta.
- * Removed monthly prepaid items must net to zero across invoice and pending items.
- */
-
 import { expect, test } from "bun:test";
 import {
 	type ApiCustomerV3,

@@ -1,8 +1,3 @@
-/**
- * Red: scheduled subscriptions with no auto-matched Autumn plans expose one fallback phase.
- * Green: proposals preserve every Stripe schedule phase so the dashboard can attach plans.
- */
-
 import { expect, test } from "bun:test";
 import type { SyncProposalsV2Response } from "@autumn/shared";
 import { products } from "@tests/utils/fixtures/products";

@@ -66,7 +66,6 @@ export const itemToPriceOrTiers = ({
 	}
 };
 
-// FOR TESTS?
 export const constructFeatureItem = ({
 	feature_id,
 	included_usage,

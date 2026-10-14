@@ -4,19 +4,9 @@ import { loadLocalEnv } from "../src/utils/envUtils";
 
 loadLocalEnv();
 
-// Validates that idx_rewards_org_id_env (org_id, env) is usable + helpful when
-// org_id is SELECTIVE — i.e. the org owns a small fraction of a multi-tenant
-// rewards table. The dev DB only has 3 orgs, so we clone the real table
-// (LIKE rewards INCLUDING INDEXES → carries the (org_id, env) btree) into a
-// throwaway probe table with no FK, populate realistic cardinality, ANALYZE,
-// then compare the planner's natural plan vs forced seq-scan vs forced index.
-//
-//   bun run experiments/validateRewardsIndex.ts
-//   PROBE_TOTALS="1000,50000,200000" bun run experiments/validateRewardsIndex.ts
-
 const PROBE = "rewards_idx_probe";
 const TARGET_ORG = "org_TARGET";
-const TARGET_ROWS = 50; // the org under test: constant; its fraction shrinks as total grows
+const TARGET_ROWS = 50;
 const REPS = 6;
 
 const TOTALS = (process.env.PROBE_TOTALS ?? "100,1000,10000,50000,200000")
@@ -70,8 +60,6 @@ const main = async () => {
 	const client = await pool.connect();
 
 	await client.query(`DROP TABLE IF EXISTS ${PROBE}`);
-	// Clone real rewards table shape + its (org_id, env) index. FKs are NOT
-	// copied by LIKE, so we can insert arbitrary fake org_ids.
 	await client.query(
 		`CREATE TABLE ${PROBE} (LIKE rewards INCLUDING DEFAULTS INCLUDING INDEXES)`,
 	);
@@ -86,7 +74,6 @@ const main = async () => {
 			await client.query(`TRUNCATE ${PROBE}`);
 			const numOrgs = Math.max(2, Math.floor(total / 20));
 
-			// Background rows spread across many fake orgs.
 			await client.query(
 				`INSERT INTO ${PROBE} (internal_id, id, org_id, env, type, created_at, discount_config, promo_codes)
 				 SELECT 'probe-' || g, 'id-' || g, 'org_' || (g % ${numOrgs}), 'sandbox',
@@ -95,7 +82,6 @@ const main = async () => {
 				        ARRAY['{"code":"X"}'::jsonb]
 				 FROM generate_series(1, ${total}) g`,
 			);
-			// Target org rows.
 			await client.query(
 				`INSERT INTO ${PROBE} (internal_id, id, org_id, env, type, created_at, discount_config, promo_codes)
 				 SELECT 'probe-t-' || g, 'idt-' || g, '${TARGET_ORG}', 'sandbox',

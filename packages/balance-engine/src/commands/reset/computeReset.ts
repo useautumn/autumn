@@ -7,7 +7,6 @@ import { customerEntitlementToResetChanges } from "./customerEntitlementToResetC
 import type { ResetCommand } from "./types/resetCommand.js";
 import { usageWindowRollChanges } from "./usageWindowRollChanges.js";
 
-/** Refills every row due by `occurredAt` and rolls the counters it moves, in one mutation; null when nothing changes. */
 export const computeReset = ({
 	fullSubject,
 	command,

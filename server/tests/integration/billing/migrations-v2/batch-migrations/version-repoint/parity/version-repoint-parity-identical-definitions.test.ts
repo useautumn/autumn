@@ -1,8 +1,3 @@
-/**
- * v2 re-mints identical rows: batch repoints claims in place, per-customer
- * re-inserts rows — both lanes must project the same feature access and
- * balances afterwards.
- */
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3, ApiCustomerV5 } from "@autumn/shared";
 import { expectBalanceCorrect } from "@tests/integration/utils/expectBalanceCorrect";
@@ -14,7 +9,6 @@ import { pollUntil } from "@tests/utils/genUtils";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-// version-only is per-customer until definition execute is restored
 import { readScopedFeatureRow } from "../../paidRowTestUtils";
 import {
 	expectActivePlanVersion,
@@ -28,7 +22,6 @@ const planItems = () => [
 	items.monthlyMessages({ includedUsage: 100 }),
 	items.dashboard(),
 ];
-// v2 re-mint of the same definitions, in the shape /plans.update accepts.
 const planItemsV2 = () => [
 	itemsV2.monthlyMessages({ included: 100 }),
 	itemsV2.dashboard(),

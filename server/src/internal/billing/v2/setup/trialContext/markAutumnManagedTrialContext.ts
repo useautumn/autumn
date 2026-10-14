@@ -14,7 +14,6 @@ const isNoCardTrialWithoutSubscription = ({
 	trialContext.trialEndsAt !== null &&
 	!stripeSubscription;
 
-/** Marks trials Autumn settles itself (revert, or no-card without a subscription), unless billing is already off. */
 export const markAutumnManagedTrialContext = ({
 	trialContext,
 	stripeSubscription,

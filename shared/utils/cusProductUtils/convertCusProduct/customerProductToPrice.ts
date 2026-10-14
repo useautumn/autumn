@@ -10,19 +10,16 @@ import {
 } from "../../productUtils/priceUtils/classifyPriceUtils";
 import { cusProductToPrices } from "../convertCusProduct";
 
-// Overload: errorOnNotFound = true → guaranteed Price
 export function customerProductToBasePrice(params: {
 	customerProduct: FullCusProduct;
 	errorOnNotFound: true;
 }): Price;
 
-// Overload: errorOnNotFound = false/undefined → Price | undefined
 export function customerProductToBasePrice(params: {
 	customerProduct: FullCusProduct;
 	errorOnNotFound?: false;
 }): Price | undefined;
 
-// Implementation
 export function customerProductToBasePrice({
 	customerProduct,
 	errorOnNotFound,
@@ -42,21 +39,18 @@ export function customerProductToBasePrice({
 	return result;
 }
 
-// Overload: errorOnNotFound = true → guaranteed Price
 export function customerProductToPrepaidPrice(params: {
 	customerProduct: FullCusProduct;
 	feature?: Feature;
 	errorOnNotFound: true;
 }): Price;
 
-// Overload: errorOnNotFound = false/undefined → Price | undefined
 export function customerProductToPrepaidPrice(params: {
 	customerProduct: FullCusProduct;
 	feature?: Feature;
 	errorOnNotFound?: false;
 }): Price | undefined;
 
-// Implementation
 export function customerProductToPrepaidPrice({
 	customerProduct,
 	feature,

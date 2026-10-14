@@ -30,8 +30,6 @@ type CatalogDecisionButtonPayload = z.infer<
 	typeof catalogDecisionButtonPayloadSchema
 >;
 
-/** A malformed button value makes the click a silent no-op — Slack caps
- * action values at 255 chars, so truncation is a live risk. */
 const logInvalidPayload = ({
 	detail,
 	value,

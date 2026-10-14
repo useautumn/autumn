@@ -10,10 +10,6 @@ import { deriveVariantEdits } from "./edits/deriveVariantEdits";
 import { deriveVariantMints } from "./mints/deriveVariantMints";
 import { resolveVariantEditTargets } from "./targets/resolveVariantEditTargets";
 
-/**
- * Creates, then one intent per targeted variant row — minted when the
- * resolved row has customers on a base `new_version`, edited in place otherwise.
- */
 export const computeVariantPlan = ({
 	intent,
 	upsert,
@@ -23,7 +19,6 @@ export const computeVariantPlan = ({
 	intent: ProductUpsertIntent;
 	upsert: UpsertProductPlan;
 	projectedProductStatesContext: ProductStatesContext;
-	/** Rows earlier intents already spoke for, folded or still pending. */
 	claimedProductKeys?: Set<string>;
 }): ProductUpsertIntent[] => {
 	const settingsPatch = variantSettingsPlanParams({
@@ -43,7 +38,6 @@ export const computeVariantPlan = ({
 		settingsPatch,
 		projectedProductStatesContext,
 	});
-	// One mint per plan under new_version — drop that plan's in-place edit.
 	const mintedPlanIds = new Set(mints.map((mint) => mint.productKey.planId));
 	const edits = deriveVariantEdits({
 		upsert,

@@ -13,15 +13,8 @@ import {
 	messagingApiUserFacts,
 } from "./messagingApiPricing.ts";
 
-/**
- * KIND B (manufactured twin): the "both lines held simultaneously" fact is
- * deleted. Four plans across two product lines is ambiguous — one lineup
- * where Campaigns Pro replaces API Pro, or two independent groups? Passing =
- * surfacing how the lines relate before deriving, then landing two groups.
- */
 export const askBothLines = defineCase({
 	name: "messaging-api-ask-both-lines",
-	// oneShot's brief minus ONE fact: how the two lines relate.
 	prompt: [
 		"hey, setting up billing. we sell a sending API and also Campaigns (bulk sends to contact lists).",
 		"API has a free plan with 3,000 messages a month and Pro at $25/month with 50,000.",

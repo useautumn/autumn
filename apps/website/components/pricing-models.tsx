@@ -194,7 +194,6 @@ export default function PricingModels() {
 										isActive && "bg-[#0f0f0f] lg:bg-transparent",
 									)}
 								>
-									{/* Mobile Accordion Image */}
 									<AnimatePresence>
 										{isActive && (
 											<motion.div
@@ -238,7 +237,6 @@ export default function PricingModels() {
 										{item.label}
 									</div>
 
-									{/* Mobile Accordion Description */}
 									<AnimatePresence>
 										{isActive && (
 											<motion.div

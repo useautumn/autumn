@@ -13,7 +13,6 @@ import { findStripeSubscriptionByStatus } from "./subscriptionStateUtils";
 
 const WEBHOOK_SETTLE_MS = 12_000;
 
-/** Cancels the customer's live subscription in Stripe, returning the dates a resync rebuilds it on. */
 export const cancelSubscriptionForResync = async ({
 	ctx,
 	customerId,
@@ -39,7 +38,6 @@ export const cancelSubscriptionForResync = async ({
 	};
 };
 
-/** Cancels in Stripe while Autumn's rows are unlinked, as if the webhook never arrived. */
 export const cancelSubscriptionMissingWebhook = async ({
 	ctx,
 	customerId,
@@ -69,7 +67,6 @@ export const cancelSubscriptionMissingWebhook = async ({
 	return cancelled;
 };
 
-/** The rebuilt subscription anchors on the old period end, starts on startMs when given, and charged nothing. */
 export const expectResyncedSubscriptionCorrect = async ({
 	ctx,
 	customerId,
@@ -105,7 +102,6 @@ export const expectResyncedSubscriptionCorrect = async ({
 	return subscription;
 };
 
-/** The same customer product row is still active, linked to exactly the given subscription. */
 export const expectPlanKept = async ({
 	ctx,
 	customerId,
@@ -153,7 +149,6 @@ export const expectPlanStartsAt = async ({
 	expect(customerProduct?.starts_at).toBe(startsAt);
 };
 
-/** The live subscription's schedule restarts the cycle with a phase that starts on the anchor. */
 export const expectCycleResetPhase = async ({
 	ctx,
 	customerId,
@@ -206,7 +201,6 @@ export const expectPlansEndAt = async ({
 	);
 };
 
-/** The live subscription stops billing on endsAt, through cancel_at or a schedule that cancels. */
 export const expectLiveSubscriptionEndsAt = async ({
 	ctx,
 	customerId,

@@ -171,8 +171,6 @@ test.concurrent(`${chalk.yellowBright("update-quantity-prepaid-overage: increase
 		],
 	});
 
-	// The tracked usage must be settled before the recalculating update
-	// reads it back.
 	await expectBalanceCorrect({
 		autumn: autumnV2_1,
 		customerId,
@@ -350,8 +348,6 @@ test.concurrent(`${chalk.yellowBright("update-quantity-prepaid-overage: decrease
 		],
 	});
 
-	// The tracked usage must be settled before the recalculating update
-	// reads it back.
 	await expectBalanceCorrect({
 		autumn: autumnV2_1,
 		customerId,
@@ -414,8 +410,6 @@ test.concurrent(`${chalk.yellowBright("update-quantity-prepaid-overage: increase
 		],
 	});
 
-	// The tracked usage must be settled before the recalculating update
-	// reads it back.
 	await expectBalanceCorrect({
 		autumn: autumnV2_1,
 		customerId,
@@ -479,8 +473,6 @@ test.concurrent(`${chalk.yellowBright("update-quantity-prepaid-overage: no-prora
 		],
 	});
 
-	// The tracked usage must be settled before the recalculating update
-	// reads it back.
 	await expectBalanceCorrect({
 		autumn: autumnV2_1,
 		customerId,
@@ -553,8 +545,6 @@ test.concurrent(`${chalk.yellowBright("update-quantity-prepaid-overage: recalcul
 		],
 	});
 
-	// The tracked usage must be settled before the recalculating update
-	// reads it back.
 	await expectBalanceCorrect({
 		autumn: autumnV2_1,
 		customerId,
@@ -667,8 +657,6 @@ test.concurrent(`${chalk.yellowBright("update-quantity-prepaid-overage: updating
 		],
 	});
 
-	// The tracked usage must be settled before the recalculating update
-	// reads it back.
 	await expectBalanceCorrect({
 		autumn: autumnV2_1,
 		customerId,
@@ -779,8 +767,6 @@ test.concurrent(`${chalk.yellowBright("update-quantity-prepaid-overage: recalcul
 		],
 	});
 
-	// The tracked usage must be settled before the recalculating update
-	// reads it back.
 	await expectBalanceCorrect({
 		autumn: autumnV2_1,
 		customerId,

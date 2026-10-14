@@ -1,18 +1,3 @@
-/**
- * TDD test for sync.ts's alreadyLinked guard blocking the V0 repair flow.
- *
- * Red-failure mode (current behavior):
- *  - Once a Stripe subscription is linked to an active product instance,
- *    ANY later /billing.sync call for that same product silently no-ops —
- *    even when the caller passes expire_previous: true with corrected items
- *    to intentionally expire-and-replace the existing (wrong) attach. The
- *    endpoint still reports success: true.
- *
- * Green-success criteria (after fix):
- *  - A repair sync with expire_previous: true expires the existing linked
- *    product and inserts the corrected replacement.
- */
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3 } from "@autumn/shared";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
@@ -49,8 +34,6 @@ test.concurrent(
 			productId: pro.id,
 		});
 
-		// 1. First sync links the subscription to Pro (simulates the
-		// already-linked state left behind by an auto-sync race).
 		const firstSync = await autumnV1.post("/billing.sync", {
 			customer_id: customerId,
 			mappings: [
@@ -69,8 +52,6 @@ test.concurrent(
 			usage: 0,
 		});
 
-		// 2. Repair sync: same subscription/plan, but with expire_previous: true
-		// and corrected items — should expire the wrong attach and replace it.
 		const repairSync = await autumnV1.post("/billing.sync", {
 			customer_id: customerId,
 			mappings: [
@@ -89,7 +70,6 @@ test.concurrent(
 		const customerAfterRepair =
 			await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-		// The repair must actually apply — not silently no-op at 100.
 		expectCustomerFeatureCorrect({
 			customer: customerAfterRepair,
 			featureId: TestFeature.Messages,
@@ -98,8 +78,6 @@ test.concurrent(
 			usage: 0,
 		});
 
-		// Only one active instance in the group — the old one was expired,
-		// not left behind as a duplicate.
 		const activeProInstances = customerAfterRepair.products.filter(
 			(p) => p.id === pro.id && p.status === "active",
 		);

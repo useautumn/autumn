@@ -19,7 +19,6 @@ import {
 	org,
 } from "../../engineFixtures.js";
 
-/** Messages are paid in credits: the first 2 units cost 1 credit each, every unit after costs 3. */
 const graduatedSubjectFor = ({
 	state,
 }: {
@@ -85,7 +84,6 @@ test.concurrent(
 				}),
 			],
 		});
-		// The lock takes unit 1 at 1 credit; the track after it takes units 2-4 for 1 + 3 + 3.
 		const locked = track({ state: initial, value: 1, locks: true });
 		const tracked = track({ state: locked.state, value: 3, locks: false });
 		expect(tracked.state.customerEntitlements[0]?.balance).toBe(92);
@@ -116,7 +114,6 @@ test.concurrent(
 			mutation,
 		}).customerEntitlements;
 
-		// Unit 4 cost 3 credits, so 3 come back and the 3 units left still cost 1 + 1 + 3.
 		expect(row?.balance).toBe(95);
 		expect(row?.usage_attribution).toMatchObject({
 			feat_messages: { units: 3, credits: 5 },

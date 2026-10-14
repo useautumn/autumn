@@ -5,7 +5,6 @@ import { isValidPercent } from "../edge-config/rolloutTypes";
 import { ShadowAtomOrgPicker } from "./ShadowAtomOrgPicker";
 import { ShadowAtomPercentField } from "./ShadowAtomPercentField";
 
-/** Pick an org by name or slug and its percent: one action registers it on the shadow Atom at that percent. */
 export const ShadowAtomAddOrgForm = ({
 	onAdd,
 	isSaving,

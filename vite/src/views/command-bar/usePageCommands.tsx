@@ -17,20 +17,12 @@ import {
 
 export interface PageCommand {
 	title: string;
-	/** Groups the row under its parent page, e.g. "Settings · Members". */
 	section: string;
 	icon: ReactNode;
-	/** In-app route; mutually exclusive with `href`. */
 	path?: string;
-	/** External destination, opened in a new tab. */
 	href?: string;
 }
 
-/**
- * Every sub-page reachable from the sidebar, flattened for search. Both lists
- * come from the components that render them, so a new tab is searchable without
- * being registered anywhere else.
- */
 export const usePageCommands = (): PageCommand[] => {
 	const { has } = useScopes();
 	const { isAdmin } = useAdmin();

@@ -16,7 +16,6 @@ const isCatalogPlan = (
 	entry: NonNullable<ReissueLineEdits["add"]>[number],
 ): entry is InvoicePlanParams => "plan_id" in entry;
 
-/** Autumn line item id -> the Stripe line it was copied from. */
 const stripeIdsByLineId = ({
 	storedLines,
 }: {
@@ -28,11 +27,6 @@ const stripeIdsByLineId = ({
 			.map((line) => [line.id, line.stripe_id as string]),
 	);
 
-/**
- * Applies the request's line edits to the lines copied off the original.
- * Edits address Autumn's line item ids, which map onto the Stripe lines the
- * copies came from via `autumn_reissued_from_line`.
- */
 export const applyReissueLineEdits = async ({
 	ctx,
 	customerId,

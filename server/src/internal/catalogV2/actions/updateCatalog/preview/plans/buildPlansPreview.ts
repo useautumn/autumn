@@ -20,7 +20,6 @@ import { upsertToCatalogAction } from "@/internal/catalogV2/actions/updateCatalo
 
 type PlanPreview = PreviewUpdateCatalogResponse["plans"][number];
 
-/** Pure map: direct upsertProducts + removePlans → preview plan rows. */
 export const buildPlansPreview = ({
 	updateCatalogPlan,
 	catalogContext,

@@ -10,11 +10,6 @@ import { buildBatchMigrationItemResponses } from "./buildBatchMigrationItemRespo
 
 const SKIP_REASON = "no_batch_changes";
 
-/**
- * One audit event per claimed customer, ingested as a single batch per page.
- * Replaying a page after a crash re-emits its events — at-least-once, same as
- * the per-customer lane's per-item emission.
- */
 export const emitBatchMigrationItemEvents = async ({
 	ctx,
 	migrationInternalId,

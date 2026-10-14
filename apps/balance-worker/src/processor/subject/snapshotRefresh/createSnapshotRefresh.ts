@@ -6,7 +6,6 @@ import { writeSubjectRefresh } from "./actions/writeSubjectRefresh.js";
 import { createSnapshotRefreshQueue } from "./createSnapshotRefreshQueue.js";
 import type { SnapshotRefreshQueue } from "./types/snapshotRefreshQueue.js";
 
-/** The partition's refresh queue over its hydrator: reads share the loads in flight, writes go through the lane, counts go to the worker's database line. */
 export const createSnapshotRefresh = ({
 	ctx,
 	scopeOf,
@@ -19,7 +18,6 @@ export const createSnapshotRefresh = ({
 			read: ({ identity }) =>
 				readSubjectForRefresh({ scope: scopeOf(), identity }),
 			write: ({ read }) => writeSubjectRefresh({ scope: scopeOf(), read }),
-			// Without the settings nothing is ever queued; the defaults only type the bounds.
 			subjectSnapshotsConfig: ctx.subjectSnapshotsConfig ?? {
 				get: defaultSubjectSnapshotsEdgeConfig,
 			},

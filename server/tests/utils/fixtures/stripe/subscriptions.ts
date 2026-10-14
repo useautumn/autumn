@@ -1,9 +1,6 @@
 import type { StripeDiscountWithCoupon } from "@autumn/shared";
 import type Stripe from "stripe";
 
-/**
- * Create a Stripe subscription item fixture
- */
 const createItem = ({
 	id,
 	priceId,
@@ -27,9 +24,6 @@ const createItem = ({
 		} as Stripe.Price,
 	}) as Stripe.SubscriptionItem;
 
-/**
- * Create a Stripe subscription fixture
- */
 const create = ({
 	id,
 	items = [],
@@ -60,10 +54,6 @@ const create = ({
 		discounts,
 	} as Stripe.Subscription;
 };
-
-// ═══════════════════════════════════════════════════════════════════
-// EXPORT
-// ═══════════════════════════════════════════════════════════════════
 
 export const stripeSubscriptions = {
 	create,

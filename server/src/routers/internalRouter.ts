@@ -29,7 +29,6 @@ import { workbenchRouter } from "../internal/workbench/workbenchRouter";
 
 export const internalRouter = new Hono<HonoEnv>();
 
-// Internal/dashboard routes - use betterAuthMiddleware for session auth
 internalRouter.use("*", betterAuthMiddleware);
 internalRouter.use("*", orgConfigMiddleware);
 internalRouter.use("*", apiVersionMiddleware);
@@ -58,7 +57,6 @@ internalRouter.route("/query", internalAnalyticsRouter);
 internalRouter.route("", migrationRpcRouter);
 internalRouter.route("/workbench", workbenchRouter);
 
-// Autumn SDK handler (requires session auth)
 if (process.env.AUTUMN_SECRET_KEY) {
 	internalRouter.use(
 		"/api/autumn/*",
@@ -77,32 +75,3 @@ if (process.env.AUTUMN_SECRET_KEY) {
 		}),
 	);
 }
-
-// mainRouter.use(
-// 	"/demo/api/autumn",
-// 	withOrgAuth,
-// 	autumnHandler({
-// 		autumn: (req: any) => {
-// 			const client = new Autumn({
-// 				url: "http://localhost:8080/v1",
-// 				headers: {
-// 					cookie: req.headers.cookie,
-// 					"Content-Type": "application/json",
-// 					origin: req.get("origin"),
-// 					"x-client-type": "dashboard",
-// 					app_env: req.env || req.headers.app_env,
-// 				},
-// 			});
-// 			return client as any;
-// 		},
-// 		identify: async (req: any) => {
-// 			return {
-// 				customerId: "onboarding_demo_user",
-// 				customerData: {
-// 					name: "Demo User",
-// 					email: "demo@useautumn.com",
-// 				},
-// 			};
-// 		},
-// 	}),
-// );

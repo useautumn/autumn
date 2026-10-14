@@ -11,7 +11,6 @@ type PatchCustomerProduct = NonNullable<
 	AutumnBillingPlan["patchCustomerProducts"]
 >[number];
 
-/** A product's items rewritten in place: new grants and prices in, old ones out, as `executePatchCustomerProducts` writes them. */
 const patchToPlanOps = ({
 	patch,
 }: {

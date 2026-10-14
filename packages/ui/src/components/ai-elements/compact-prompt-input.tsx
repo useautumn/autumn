@@ -3,10 +3,6 @@ import { cn } from "@autumn/ui/lib/utils";
 import { CornerDownLeftIcon, Loader2Icon } from "lucide-react";
 import type { FormEvent, KeyboardEvent } from "react";
 
-/**
- * Compact inline prompt input with submit button on the same line.
- * Designed for simple text input without attachments.
- */
 export function CompactPromptInput({
 	value,
 	onChange,

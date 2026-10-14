@@ -13,7 +13,6 @@ import { getCachedFullSubject } from "@/internal/customers/cache/fullSubject/act
 import { getFullSubjectNormalized } from "@/internal/customers/repos/getFullSubject/index.js";
 import { isBalanceWorkerRolloutEnabled } from "@/internal/misc/rollouts/isBalanceWorkerRolloutEnabled.js";
 
-/** The worker's live view of the customer; one it cannot find is undefined. Fails open to Postgres, which throws if it fails too. */
 const readBillableFullCustomerFromWorker = async ({
 	ctx,
 	customerId,
@@ -41,7 +40,6 @@ const readBillableFullCustomerFromWorker = async ({
 	});
 };
 
-/** The worker's view when it holds the balances; otherwise cache first, then the subject query, then the customer table. */
 export const getBillableFullCustomer = async ({
 	ctx,
 	customerId,
@@ -51,11 +49,9 @@ export const getBillableFullCustomer = async ({
 	customerId: string;
 	source: string;
 }): Promise<FullCustomer | undefined> => {
-	// The worker holds the live balances, so read them there rather than landing its writes and reading Postgres.
 	if (isBalanceWorkerRolloutEnabled({ ctx, customerId }))
 		return readBillableFullCustomerFromWorker({ ctx, customerId });
 
-	// A Redis failure is just a cache miss here — the DB paths below cover it.
 	const cachedFullSubject = await getCachedFullSubject({
 		ctx,
 		customerId,

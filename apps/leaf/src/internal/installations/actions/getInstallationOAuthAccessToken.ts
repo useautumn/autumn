@@ -46,8 +46,6 @@ export const getInstallationOAuthAccessToken = async ({
 	installation: ChatInstallation;
 	env: AppEnv;
 	orgId?: string;
-	// Web/per-user chat passes the caller. Installer-scoped installs fall back to
-	// the installer so credential lookup never drops the user_id predicate.
 	userId?: string;
 }) => {
 	const credentialUserId = resolveCredentialUserId({ installation, userId });

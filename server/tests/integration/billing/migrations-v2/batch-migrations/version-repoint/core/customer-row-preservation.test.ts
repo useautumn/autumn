@@ -14,7 +14,6 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-// version-only is per-customer until definition execute is restored
 import { and, eq, inArray } from "drizzle-orm";
 import { generateId } from "@/utils/genUtils.js";
 import {
@@ -325,8 +324,6 @@ test.skip(
 			codes: ["pooled_add_item"],
 		});
 
-		// The pool anchor hangs off no customer product, so no batch write may
-		// reach it; the fallback re-sources the contribution onto its new row.
 		const after = await getPooledBalanceDbState({ db: ctx.db, customerId });
 		expect(after.pools).toEqual(before.pools);
 		const productAfter = await readRepointableCustomerPlanRow({
@@ -488,8 +485,6 @@ test.skip(
 			codes: ["entity_scoped_entitlement"],
 		});
 
-		// No in-place batch write may touch the entity-scoped rows; the fallback
-		// expires them and re-inserts on the target version with balances carried.
 		const after = await readEntitlementRows();
 		const beforeIds = new Set(before.map(({ id }) => id));
 		expect(after.filter(({ id }) => beforeIds.has(id))).toEqual(before);

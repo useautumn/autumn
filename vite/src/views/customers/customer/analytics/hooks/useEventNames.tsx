@@ -26,7 +26,6 @@ export const useEventNames = ({
 	start?: number | null;
 	end?: number | null;
 	enabled?: boolean;
-	/** Show the last list while a new window loads, instead of an empty one. */
 	keepPrevious?: boolean;
 } = {}) => {
 	const axiosInstance = useAxiosInstance();

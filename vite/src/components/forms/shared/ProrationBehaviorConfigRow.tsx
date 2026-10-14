@@ -21,7 +21,6 @@ const BACKDATED_GAP_MODE_DESCRIPTIONS: Record<
 	bill_difference: "Charge every billing cycle the backdated time reaches",
 };
 
-/** Proration on/off, with a Prorated / Full difference choice when on. */
 export function ProrationBehaviorConfigRow({
 	rule,
 	value,
@@ -31,7 +30,6 @@ export function ProrationBehaviorConfigRow({
 	rule: BillingOptionRule;
 	value: BillingBehavior;
 	onChange: (value: BillingBehavior) => void;
-	/** The first phase is backdated before the live subscription started, so proration bills that time. */
 	billsBackdatedGap?: boolean;
 }) {
 	const enabled = value !== "none";

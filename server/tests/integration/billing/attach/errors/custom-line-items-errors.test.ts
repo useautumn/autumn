@@ -1,12 +1,3 @@
-/**
- * Custom Line Items Error Tests (Attach V2)
- *
- * Tests that custom_line_items is rejected in invalid scenarios:
- * 1. Creating a new subscription (free → paid)
- * 2. Scheduled switch / downgrade
- * 3. Removing a trial (Stripe-managed invoice)
- */
-
 import { test } from "bun:test";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils";
 import { items } from "@tests/utils/fixtures/items";
@@ -14,22 +5,6 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 1: custom_line_items on subscription create should fail
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Customer has free product
- * - Attach pro ($20/mo) with custom_line_items
- *
- * Expected Result:
- * - Error: custom_line_items only valid for subscription updates
- *
- * Why:
- * - Creating a new subscription generates its own Stripe invoice.
- *   Custom line items can't override that.
- */
 test.concurrent(`${chalk.yellowBright("error: custom_line_items on subscription create")}`, async () => {
 	const customerId = "cli-err-create-sub";
 
@@ -68,22 +43,6 @@ test.concurrent(`${chalk.yellowBright("error: custom_line_items on subscription 
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 2: custom_line_items on downgrade (scheduled switch) should fail
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Customer has premium ($50/mo)
- * - Downgrade to pro ($20/mo) with custom_line_items
- *
- * Expected Result:
- * - Error: custom_line_items only valid for subscription updates
- *
- * Why:
- * - Downgrades are scheduled for end of cycle. There is no immediate invoice
- *   to override with custom line items.
- */
 test.concurrent(`${chalk.yellowBright("error: custom_line_items on downgrade (scheduled switch)")}`, async () => {
 	const customerId = "cli-err-downgrade";
 
@@ -122,22 +81,6 @@ test.concurrent(`${chalk.yellowBright("error: custom_line_items on downgrade (sc
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 3: custom_line_items on trial removal should fail
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Customer has proWithTrial (7-day trial, currently trialing)
- * - Upgrade to premium (no trial) with custom_line_items
- *
- * Expected Result:
- * - Error: custom_line_items cannot be used when creating Stripe-managed invoice
- *
- * Why:
- * - When a trial is removed (trialing → non-trialing), Stripe automatically
- *   generates an invoice. Custom line items can't override Stripe's invoice.
- */
 test.concurrent(`${chalk.yellowBright("error: custom_line_items on trial removal")}`, async () => {
 	const customerId = "cli-err-trial-removal";
 

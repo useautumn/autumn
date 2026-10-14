@@ -5,7 +5,6 @@ import type { CusProductStatus } from "../../models/cusProductModels/cusProductE
 import type { Feature } from "../../models/featureModels/featureModels.js";
 import { fullSubjectToCustomerEntitlements } from "./fullSubjectToCustomerEntitlements.js";
 
-/** Checks if a FullSubject has any usage-based allocated (continuous + allocated) pricing for the given features. */
 export const fullSubjectHasUsageBasedAllocated = ({
 	fullSubject,
 	features,

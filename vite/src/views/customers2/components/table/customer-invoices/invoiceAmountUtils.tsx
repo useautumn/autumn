@@ -1,4 +1,3 @@
-/** Table cells: compact and column-aligned, e.g. "4000.00 USD". */
 export const formatInvoiceAmount = ({
 	amount,
 	currency,
@@ -7,7 +6,6 @@ export const formatInvoiceAmount = ({
 	currency: string;
 }) => `${amount.toFixed(2)} ${currency.toUpperCase()}`;
 
-/** The shared Total cell: amount, with any discount as a muted suffix. */
 export function InvoiceTotalCell({
 	total,
 	currency,
@@ -30,7 +28,6 @@ export function InvoiceTotalCell({
 	);
 }
 
-/** Sheets: full currency formatting, e.g. "$4,000.00". */
 export const formatInvoiceCurrency = (amount: number, currency: string) =>
 	new Intl.NumberFormat("en-US", {
 		style: "currency",

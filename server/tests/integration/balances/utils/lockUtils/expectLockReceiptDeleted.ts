@@ -4,7 +4,6 @@ import { getMiscRedis } from "@/external/redis/initRedis.js";
 import { getRedisV2OrgCleanupCandidates } from "@/external/redis/orgRedisUtils/orgRedisMigrationUtils.js";
 import { buildLockReceiptKey } from "@/internal/balances/utils/lock/buildLockReceiptKey.js";
 
-/** Asserts that the lock receipt for the given ID no longer exists in Redis. */
 export const expectLockReceiptDeleted = async ({
 	ctx,
 	lockId,

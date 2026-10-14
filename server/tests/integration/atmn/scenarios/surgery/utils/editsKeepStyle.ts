@@ -1,12 +1,9 @@
 import { atmnImports } from "@tests/utils/atmnUtils/initAtmnScenario.js";
 
 export type StyleCase = {
-	/** The whole config, with a `keep` plan the pull must never touch. */
 	raw: (editId: string, keepId: string) => string;
 };
 
-/** The `plan({ active: true,...})` call naming `planId`, verbatim — balances parens rather
- * than assuming a shape, since push backfills `internalId` into it first. */
 export const extractPlanBlock = (text: string, planId: string): string => {
 	const markerIndex = text.indexOf(`planId: "${planId}"`);
 	if (markerIndex === -1) throw new Error(`planId ${planId} not found`);

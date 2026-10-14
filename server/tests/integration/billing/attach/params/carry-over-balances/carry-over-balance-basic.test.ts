@@ -1,6 +1,3 @@
-/** Regression: carry_over_balances previously dropped negative balances during immediate plan attachments.
- * It must preserve overage so the incoming allowance is reduced by the carried debt. */
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3, CheckResponseV2 } from "@autumn/shared";
 import { findCustomerEntitlement } from "@tests/balances/utils/findCustomerEntitlement";
@@ -11,14 +8,6 @@ import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 1: Basic balance carry over
-//
-// Pro: 100 messages, 30 used (balance=70)
-// Upgrade to Premium (500) with carry_over_balances: { enabled: true }
-// Expected: balance = 570 (500 + 70 loose), usage = 0
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(
 	`${chalk.yellowBright("carry-over-balance 1: remaining balance carried as loose entitlement on immediate upgrade")}`,
@@ -41,17 +30,14 @@ test.concurrent(
 			actions: [s.attach({ productId: pro.id, timeout: 4000 })],
 		});
 
-		// Track 30 units (balance: 100 → 70)
 		await autumnV2_1.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
 			value: 30,
 		});
 
-		// Wait for Redis → Postgres sync
 		await new Promise((resolve) => setTimeout(resolve, 2000));
 
-		// Upgrade to Premium with carry_over_balances enabled
 		await autumnV2_1.billing.attach({
 			customer_id: customerId,
 			plan_id: premium.id,
@@ -62,7 +48,6 @@ test.concurrent(
 
 		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-		// Balance = 500 (Premium grant) + 70 (loose carried entitlement)
 		expectCustomerFeatureCorrect({
 			customer,
 			featureId: TestFeature.Messages,
@@ -71,14 +56,6 @@ test.concurrent(
 		});
 	},
 );
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 2: Zero balance — nothing to carry
-//
-// Pro: 100 messages, 100 used (balance=0)
-// Upgrade to Premium (500) with carry_over_balances: { enabled: true }
-// Expected: balance = 500 (no loose entitlement created)
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(
 	`${chalk.yellowBright("carry-over-balance 2: zero balance is a no-op — new plan starts at full allowance")}`,
@@ -101,17 +78,14 @@ test.concurrent(
 			actions: [s.attach({ productId: pro.id, timeout: 4000 })],
 		});
 
-		// Exhaust the full 100 allowance (balance: 100 → 0)
 		await autumnV2_1.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
 			value: 100,
 		});
 
-		// Wait for Redis → Postgres sync
 		await new Promise((resolve) => setTimeout(resolve, 2000));
 
-		// Upgrade with carry_over_balances — zero balance is a silent no-op
 		await autumnV2_1.billing.attach({
 			customer_id: customerId,
 			plan_id: premium.id,
@@ -122,7 +96,6 @@ test.concurrent(
 
 		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-		// Balance = 500 only (no loose entitlement — nothing to carry)
 		expectCustomerFeatureCorrect({
 			customer,
 			featureId: TestFeature.Messages,
@@ -132,12 +105,9 @@ test.concurrent(
 	},
 );
 
-// Pro has -20 messages; carrying that over to Premium's 500 leaves 480.
-
 test.concurrent(
 	`${chalk.yellowBright("carry-over-balance 3: negative balance carries over to the new plan")}`,
 	async () => {
-		// Use a consumable item to allow overage past the included usage
 		const proMessages = items.consumableMessages({ includedUsage: 100 });
 		const premiumMessages = items.monthlyMessages({ includedUsage: 500 });
 
@@ -157,7 +127,6 @@ test.concurrent(
 				actions: [s.attach({ productId: pro.id, timeout: 4000 })],
 			});
 
-		// Track 120 — 20 over the 100 allowance (balance: 100 → -20)
 		await autumnV2_1.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
@@ -194,15 +163,6 @@ test.concurrent(
 		});
 	},
 );
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 4: Free overage (unpriced debt) is paid down from the new plan's grant
-//
-// Pro: 100 included messages, balance set to -20 (no overage price, so the debt
-// is never invoiced). Upgrade to Premium (500) with carry_over_balances.
-// Expected: Premium's own row absorbs the debt → current_balance = 480, and no
-// negative row is left behind (which API balances clamp to 0 → 500).
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(
 	`${chalk.yellowBright("carry-over-balance 4: free overage is paid down from the new plan's grant")}`,

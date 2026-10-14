@@ -41,8 +41,6 @@ export const buildStripeSubscriptionUpdateAction = ({
 		stripeDiscounts,
 	});
 
-	// When a schedule manages the sub, leave trial_end/cancel alone — the
-	// schedule sets those via phase-level settings.
 	const scheduleManagesSubscription = !!stripeSubscriptionScheduleAction;
 
 	const appliesToBilling = trialContext?.appliesToBilling;
@@ -57,7 +55,6 @@ export const buildStripeSubscriptionUpdateAction = ({
 		shouldUnsetTrialEnd = !scheduleManagesSubscription && trialEndsAt === null;
 	}
 
-	// cancel_at: null = clear, number = set, undefined = unchanged.
 	const currentCancelAt = stripeSubscription.cancel_at;
 	const shouldClearCancelAt =
 		subscriptionCancelAt === null && currentCancelAt !== null;
@@ -67,7 +64,6 @@ export const buildStripeSubscriptionUpdateAction = ({
 		typeof subscriptionCancelAt === "number" &&
 		subscriptionCancelAt !== currentCancelAt;
 
-	// Configure trial settings off
 	const shouldUpdateEndBehavior =
 		shouldUnsetTrialEnd &&
 		stripeSubscription.trial_settings?.end_behavior.missing_payment_method !==
@@ -76,7 +72,7 @@ export const buildStripeSubscriptionUpdateAction = ({
 	const params: Stripe.SubscriptionUpdateParams = {
 		items: subItemsUpdate.length > 0 ? subItemsUpdate : undefined,
 		trial_end: shouldSetTrialEnd
-			? msToSeconds(trialEndsAt!) // safe to unwrap because we checked notNullish above
+			? msToSeconds(trialEndsAt!)
 			: shouldUnsetTrialEnd
 				? "now"
 				: undefined,
@@ -98,17 +94,11 @@ export const buildStripeSubscriptionUpdateAction = ({
 			},
 		}),
 
-		// Propagate auto_tax onto every sub.update so existing subs catch up
-		// when the org flag flips. Baked in here for log self-description;
-		// execute re-applies the same preflight before writing to Stripe.
 		...(shouldEnableStripeAutomaticTax({ ctx, billingContext })
 			? { automatic_tax: { enabled: true } }
 			: {}),
 	};
 
-	// `automatic_tax` is excluded from this check: we only ride along on
-	// updates that have a real reason to fire, never trigger one just to
-	// propagate the flag.
 	const hasNoUpdates = [
 		params.items,
 		params.trial_end,
@@ -116,7 +106,6 @@ export const buildStripeSubscriptionUpdateAction = ({
 		params.discounts,
 	].every((field) => field === undefined);
 
-	// Anchor resets and custom invoices still need an update action when subscription items stay unchanged.
 	if (
 		hasNoUpdates &&
 		billingContext.requestedBillingCycleAnchor !== "now" &&

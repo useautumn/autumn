@@ -61,7 +61,6 @@ export const handleUpsertInstallation = createRoute({
 				},
 			});
 
-			// Create test clock for sandbox/development environments
 			const stripeCli = createStripeCli({ org: ctx.org, env: ctx.env });
 			let testClockId: string | undefined;
 			if (ctx.env === AppEnv.Sandbox) {
@@ -77,7 +76,6 @@ export const handleUpsertInstallation = createRoute({
 				options: { testClockId },
 			});
 
-			// Add vercel-specific metadata
 			await stripeCli.customers.update(stripeCustomer.id, {
 				metadata: {
 					vercel_installation_id: integrationConfigurationId,
@@ -86,7 +84,6 @@ export const handleUpsertInstallation = createRoute({
 
 			if (stripeCustomer) {
 				// Vercel customers settle through `marketplace.invoice.paid` +
-				// `invoices.pay({ paid_out_of_band: true })`. Attaching a Custom
 				// Payment Method here would make Stripe reject the out-of-band
 				// call, so we leave the Stripe customer without a default PM.
 				await CusService.update({

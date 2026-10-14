@@ -7,10 +7,6 @@ import {
 } from "../../repos/planLicenseRepo.js";
 import { validateLicenseLink } from "./validateLicenseLink.js";
 
-/**
- * Recreates plan_license links in a copy target, translated through external
- * plan ids. Absent-end links are skipped; validation failures warn and skip.
- */
 export const copyPlanLicenseLinks = async ({
 	ctx,
 	links,

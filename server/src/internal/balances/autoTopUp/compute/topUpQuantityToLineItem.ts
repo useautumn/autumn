@@ -9,8 +9,6 @@ import {
 	usagePriceToLineDescription,
 } from "@autumn/shared";
 
-/** Price a top-up by its quantity alone: the charge never reads the
- * feature-keyed options entry, which a sibling recurring prepaid may own. */
 export const topUpQuantityToLineItem = ({
 	cusEnt,
 	quantity,

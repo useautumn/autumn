@@ -4,11 +4,6 @@ import { schemaPaths } from "../src/fuzz/schemaPaths";
 import { OVERLAY } from "../src/overlay/overlay";
 import { catalogUpdateSchema, loadSpec } from "../src/spec/loadSpec";
 
-/**
- * What `emitEmitModule` ships as `CollectionSpec.paths`: every schema path
- * under one collection, collection-relative. Mirrors the emitter's own
- * filter + strip so a drift between the two shows up here.
- */
 const collectionPaths = ({
 	schema,
 	collection,
@@ -40,10 +35,8 @@ test("plans paths carry the fields a config may state", () => {
 });
 
 test("plans paths exclude server-only and overlay-hidden fields", () => {
-	// x-internal: server-owned ids, never a fixture field.
 	expect(plansPaths).not.toContain("items.entitlementId");
 	expect(plansPaths).not.toContain("items.priceId");
-	// Overlay-hidden: the server derives it, or it is deprecated.
 	expect(plansPaths).not.toContain("versioning");
 	expect(plansPaths).not.toContain("version");
 });

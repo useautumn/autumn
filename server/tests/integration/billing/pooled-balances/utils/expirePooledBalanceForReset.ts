@@ -61,7 +61,6 @@ export const expirePooledBalanceForReset = async ({
 		field: "next_reset_at",
 		value: pastTimeMs,
 	});
-	// Written behind the worker's back: it re-hydrates on the next command.
 	await evictBalanceWorkerCustomer({ ctx, customerId });
 
 	return { pool, pooledCustomerEntitlement, pastTimeMs };

@@ -20,8 +20,6 @@ import type {
 import type Stripe from "stripe";
 import type { AutumnContext } from "../../../honoUtils/HonoEnv";
 
-// Get misc
-
 export type AttachParams = {
 	stripeCli: Stripe;
 	stripeCus?: Stripe.Customer;
@@ -30,9 +28,8 @@ export type AttachParams = {
 	rewards?: Reward[];
 
 	org: Organization;
-	// customer: Customer;
 	customer: FullCustomer;
-	cusProduct?: FullCusProduct; // cus product to expire or cancel...
+	cusProduct?: FullCusProduct;
 	products: FullProduct[];
 
 	prices: Price[];
@@ -46,7 +43,6 @@ export type AttachParams = {
 	itemSets?: any[];
 	cusProducts: FullCusProduct[];
 
-	// Options to update
 	optionsToUpdate?: {
 		old: FeatureOptions;
 		new: FeatureOptions;
@@ -54,7 +50,6 @@ export type AttachParams = {
 
 	replaceables: AttachReplaceable[];
 
-	// CONFIGS
 	invoiceOnly?: boolean | undefined;
 	billingAnchor?: number | undefined;
 	metadata?: Record<string, string> | undefined;
@@ -79,12 +74,10 @@ export type AttachParams = {
 	fromCancel?: boolean;
 	setupPayment?: boolean;
 
-	// For invoice checkout...
 	anchorToUnix?: number;
 	subId?: string;
 	config?: AttachConfig;
 
-	// Invoice action required
 	stripeInvoiceId?: string;
 	cusEntIds?: string[];
 
@@ -112,7 +105,6 @@ export type InsertCusProductParams = {
 	cusProducts?: FullCusProduct[];
 	replaceables: AttachReplaceable[];
 
-	// CONFIGS
 	invoiceOnly?: boolean | undefined;
 	entities: Entity[];
 	isCustom?: boolean;

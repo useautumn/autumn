@@ -7,10 +7,8 @@ import {
 	withMirror,
 } from "../../catalog/mirror/gitMirror.ts";
 
-/** Large static assets the QA stack never serves. */
 const EXCLUDED_PATHS = ["apps/website/public", "apps/docs/mintlify/images"];
 
-/** `git archive` of `sha` as a gzipped tarball (~40 MB), streamed to the Worker as the env's source. */
 export const archiveSourceAtSha = async ({ sha }: { sha: string }) => {
 	const dir = await mkdtemp(join(tmpdir(), "twd-qa-src-"));
 	const output = join(dir, "src.tar.gz");

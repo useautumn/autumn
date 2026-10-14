@@ -3,7 +3,6 @@ import { StatusCodes } from "http-status-codes";
 import type { ProductStatesContext } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext";
 import { activeFullProductForPlan } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/activeFullProductForPlan";
 
-/** API `base_variant_id` → internal pointer. Omit = no write; `null` = detach. */
 export const resolveBaseVariantIdPointer = ({
 	baseVariantId,
 	productStatesContext,

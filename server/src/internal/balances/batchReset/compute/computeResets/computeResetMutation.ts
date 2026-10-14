@@ -11,8 +11,6 @@ export const computeResetMutation = async ({
 	ctx: AutumnContext;
 	customerEntitlement: ResetContextCustomerEntitlement;
 }): Promise<ResetMutation | null> => {
-	// Guaranteed non-null by the not_due classification; re-checked for the
-	// optimistic guard the execute UPDATE compares against.
 	const expectedNextResetAt = customerEntitlement.next_reset_at;
 	if (expectedNextResetAt == null) return null;
 

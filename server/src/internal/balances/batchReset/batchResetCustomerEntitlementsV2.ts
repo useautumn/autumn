@@ -10,11 +10,6 @@ import { logBatchCustomerEntitlementsV2 } from "./logs/logBatchCustomerEntitleme
 import { setupBatchResetContext } from "./setup/setupBatchResetContext.js";
 import type { BatchResetCustomerEntitlementsV2Payload } from "./types.js";
 
-/**
- * SQS handler: hydrates scanned customer entitlement IDs, builds one context
- * per org+env, classifies every candidate, then computes and persists batched
- * verdict and reset mutations.
- */
 export const batchResetCustomerEntitlementsV2 = async ({
 	db,
 	logger,
@@ -56,8 +51,6 @@ export const batchResetCustomerEntitlementsV2 = async ({
 		await executeResetMutations({ db, resetMutations });
 
 	if (staleSkippedCount > 0) {
-		// A concurrent reset (usually a lazy reset racing this worker) won —
-		// the guarded UPDATE skipped those rows instead of double-applying.
 		logger.info("[batchReset] stale mutations skipped", {
 			jobName: "reset-cus-ents-v2",
 			data: { staleSkippedCount },
@@ -69,8 +62,6 @@ export const batchResetCustomerEntitlementsV2 = async ({
 			appliedCustomerEntitlementIds.has(customerEntitlementId),
 	);
 
-	// Postgres is authoritative now — drop the stale Redis state so the next
-	// read rehydrates instead of serving pre-reset balances.
 	await invalidateResetCaches({
 		resetGroups: classifiedBatchResetContext.resetGroups,
 		resetMutations: appliedResetMutations,

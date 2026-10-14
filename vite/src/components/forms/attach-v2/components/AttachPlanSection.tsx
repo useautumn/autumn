@@ -36,7 +36,6 @@ export function AttachPlanSection({
 	const hideEditButton = readOnly || formValues.grantFree;
 	const { prepaidOptions, licenseQuantities } = formValues;
 
-	// Review keeps the staged totals visible read-only; grant-free hides them.
 	const licenseQuantityEditor: LicenseQuantityEditor | undefined =
 		formValues.grantFree
 			? undefined

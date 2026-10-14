@@ -1,6 +1,3 @@
-// Scheduled switch prepaid (Attach V2): downgrades keep the total prepaid quantity, converted and
-// rounded to the new plan's billing units when no options are passed.
-
 import { test } from "bun:test";
 import type { ApiCustomerV3 } from "@autumn/shared";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
@@ -17,18 +14,6 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 5: Prepaid to product without prepaid feature
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Premium with prepaid (500 units)
- * - Downgrade to free (no prepaid feature)
- *
- * Expected Result:
- * - Balance lost at cycle end (free has no prepaid)
- */
 test.concurrent(
 	`${chalk.yellowBright("scheduled-switch-prepaid 5: to product without prepaid feature")}`,
 	async () => {
@@ -64,7 +49,6 @@ test.concurrent(
 			],
 		});
 
-		// Verify Stripe subscription after initial attach
 		await expectSubToBeCorrect({
 			db: ctx.db,
 			customerId,
@@ -72,7 +56,6 @@ test.concurrent(
 			env: ctx.env,
 		});
 
-		// Downgrade to free
 		await autumnV1.billing.attach({
 			customer_id: customerId,
 			product_id: free.id,
@@ -81,7 +64,6 @@ test.concurrent(
 
 		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-		// Verify states
 		await expectProductCanceling({
 			customer,
 			productId: premium.id,
@@ -91,7 +73,6 @@ test.concurrent(
 			productId: free.id,
 		});
 
-		// Balance still at premium's 500 until cycle end
 		expectCustomerFeatureCorrect({
 			customer,
 			featureId: TestFeature.Messages,
@@ -99,7 +80,6 @@ test.concurrent(
 			usage: 0,
 		});
 
-		// Verify Stripe subscription after scheduling downgrade (scheduled to free)
 		await expectSubToBeCorrect({
 			db: ctx.db,
 			customerId,
@@ -109,18 +89,6 @@ test.concurrent(
 	},
 );
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 6: Prepaid with different price per pack
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Premium with prepaid ($15/pack)
- * - Downgrade to pro with prepaid ($10/pack)
- *
- * Expected Result:
- * - Next cycle uses new price ($10/pack)
- */
 test.concurrent(
 	`${chalk.yellowBright("scheduled-switch-prepaid 6: different price per pack")}`,
 	async () => {
@@ -160,12 +128,11 @@ test.concurrent(
 				s.billing.attach({
 					productId: pro.id,
 					options: [{ feature_id: TestFeature.Messages, quantity: 500 }],
-				}), // Downgrade with same quantity
+				}),
 				s.advanceToNextInvoice(),
 			],
 		});
 
-		// Verify Stripe subscription after all operations
 		await expectSubToBeCorrect({
 			db: ctx.db,
 			customerId,
@@ -175,14 +142,12 @@ test.concurrent(
 
 		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-		// After cycle: pro active
 		await expectCustomerProducts({
 			customer,
 			active: [pro.id],
 			notPresent: [premium.id],
 		});
 
-		// Pro with 500 units active
 		expectCustomerFeatureCorrect({
 			customer,
 			featureId: TestFeature.Messages,
@@ -190,9 +155,6 @@ test.concurrent(
 			usage: 0,
 		});
 
-		// Invoices:
-		// 1. Premium ($50 base + 5 packs * $15 = $125)
-		// 2. Pro ($20 base + 5 packs * $10 = $70)
 		await expectCustomerInvoiceCorrect({
 			customer,
 			count: 2,

@@ -6,7 +6,6 @@ import {
 } from "@autumn/shared";
 import { getResettableCustomerEntitlements } from "../resetCustomerEntitlementsV2/getResettableCustomerEntitlements.js";
 
-/** Collects cusEnts from a FullCustomer that need resetting (next_reset_at < now). */
 export const getCusEntsNeedingReset = ({
 	fullCus,
 	now,

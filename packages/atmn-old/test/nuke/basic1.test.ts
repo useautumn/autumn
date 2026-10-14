@@ -9,7 +9,6 @@ import {
 	spawnOpts,
 } from "../setup";
 
-// Quote the CLI_PATH for shell execution (cli-testing-library uses shell: true)
 const QUOTED_CLI_PATH = `"${CLI_PATH}"`;
 const BASIC_CONFIG_PATH = join(FIXTURES_PATH, "basic-config");
 
@@ -19,7 +18,6 @@ describe("nuke command", () => {
 	});
 
 	test("prompts for confirmation and nukes sandbox", async () => {
-		// First push some data so we have something to nuke
 		const pushInstance = await render("node", [QUOTED_CLI_PATH, "push", "-y"], {
 			cwd: BASIC_CONFIG_PATH,
 			spawnOpts,
@@ -33,18 +31,15 @@ describe("nuke command", () => {
 		);
 		await cleanup();
 
-		// Verify data exists before nuke
 		const featuresBefore = await getFeatures();
 		const plansBefore = await getAllPlans();
 		expect(featuresBefore.length).toBeGreaterThan(0);
 		expect(plansBefore.length).toBeGreaterThan(0);
 
-		// Now nuke
 		const instance = await render("node", [QUOTED_CLI_PATH, "nuke"], {
 			spawnOpts,
 		});
 
-		// Wait for backup prompt (comes first now) then answer
 		await waitFor(
 			() => {
 				const stdout = instance.stdoutArr
@@ -55,10 +50,8 @@ describe("nuke command", () => {
 			{ timeout: 10000 },
 		);
 
-		// Skip backup (n + Enter)
 		await instance.userEvent.keyboard("n[Enter]");
 
-		// Wait for first confirmation prompt then answer
 		await waitFor(
 			() => {
 				const stdout = instance.stdoutArr
@@ -69,10 +62,8 @@ describe("nuke command", () => {
 			{ timeout: 10000 },
 		);
 
-		// Confirm first prompt (y + Enter)
 		await instance.userEvent.keyboard("y[Enter]");
 
-		// Wait for final confirmation prompt then answer
 		await waitFor(
 			() => {
 				const stdout = instance.stdoutArr
@@ -83,10 +74,8 @@ describe("nuke command", () => {
 			{ timeout: 10000 },
 		);
 
-		// Confirm final prompt (y + Enter)
 		await instance.userEvent.keyboard("y[Enter]");
 
-		// Wait for process to exit
 		await waitFor(
 			() => {
 				const exit = instance.hasExit();
@@ -95,13 +84,11 @@ describe("nuke command", () => {
 			{ timeout: 30000 },
 		);
 
-		// Check for success in output
 		const stdout = instance.stdoutArr
 			.map((s) => s.contents.toString())
 			.join("");
 		expect(stdout).toMatch(/deleted|nuked|success/i);
 
-		// VERIFY ACTUAL STATE: All features and plans should be deleted
 		const featuresAfter = await getFeatures();
 		const plansAfter = await getAllPlans();
 

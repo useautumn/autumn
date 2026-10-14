@@ -16,10 +16,6 @@ import {
 import { z } from "zod/v4";
 import { getCusProcessors } from "../cusProcessors/utils/getCusProcessors.js";
 
-/**
- * Get base ApiCustomer without expand fields from FullSubject.
- * By default, it includes the autumn_id.
- */
 export const getApiCustomerBaseV2 = async ({
 	ctx,
 	fullSubject,
@@ -31,7 +27,6 @@ export const getApiCustomerBaseV2 = async ({
 	fullSubject: FullSubject;
 	withAutumnId?: boolean;
 	allocationView?: AllocationView;
-	/** Already in API form: an invoice's hosted URL is built from the server's own address, which this has no way to know. */
 	invoices?: ApiInvoiceV1[];
 }): Promise<{ apiCustomer: ApiCustomerV5; legacyData: CustomerLegacyData }> => {
 	const { balances: apiBalances, flags: apiFlags } = getApiBalancesV2({

@@ -160,7 +160,6 @@ export const invitation = pgTable(
 	],
 ).enableRLS();
 
-// OAuth Provider tables
 export const jwks = pgTable("jwks", {
 	id: text("id").primaryKey(),
 	publicKey: text("public_key").notNull(),

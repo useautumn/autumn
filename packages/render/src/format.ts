@@ -1,4 +1,3 @@
-/** Amounts are major currency units (dollars, not cents) across Autumn APIs. */
 export const formatMoney = ({
 	amount,
 	currency,

@@ -1,15 +1,3 @@
-/**
- * Agent Types - Types and converters for the AI pricing agent
- *
- * The "Agent" format is a simplified, AI-friendly format used by the pricing agent.
- * It uses string literals like "single_use" instead of enums, making it easier for
- * LLMs to generate and for users to read.
- *
- * This module provides:
- * - TypeScript interfaces for the agent format
- * - Converters: AgentFeature ↔ Feature, AgentProduct ↔ ProductV2
- */
-
 import { isAiCreditSystem } from "@utils/featureUtils/classifyFeature/isAiCreditSystem";
 import type { ApiCreditSchemaItem } from "../api/features/creditRateCard.js";
 import type {
@@ -30,8 +18,6 @@ import {
 	dbCreditSchemaItemToApi,
 } from "./featureUtils/apiFeatureToDbFeature.js";
 import { buildAiCreditSystemConfig } from "./featureUtils/buildAiCreditSystemConfig.js";
-
-// ============ INTERFACES ============
 
 export type AgentFeatureType =
 	| "static"
@@ -87,8 +73,6 @@ export interface AgentPricingConfig {
 	products: AgentProduct[];
 }
 
-// ============ AGENT → SHARED CONVERTERS ============
-
 function mapAgentTypeToFeatureType(agentType: AgentFeatureType): FeatureType {
 	switch (agentType) {
 		case "boolean":
@@ -116,7 +100,6 @@ function mapAgentTypeToUsageType(
 	}
 }
 
-/** Convert AgentFeature → Feature (shared DB type) */
 export function agentFeatureToFeature(agentFeature: AgentFeature): Feature {
 	const usageType = mapAgentTypeToUsageType(agentFeature.type);
 
@@ -156,7 +139,6 @@ export function agentFeatureToFeature(agentFeature: AgentFeature): Feature {
 	};
 }
 
-/** Convert AgentProductItem → ProductItem (shared DB type) */
 export function agentItemToProductItem(item: AgentProductItem): ProductItem {
 	return {
 		feature_id: item.feature_id ?? undefined,
@@ -175,7 +157,6 @@ export function agentItemToProductItem(item: AgentProductItem): ProductItem {
 	};
 }
 
-/** Convert AgentProduct → ProductV2 (shared DB type) */
 export function agentProductToProductV2(product: AgentProduct): ProductV2 {
 	return {
 		internal_id: product.id,
@@ -187,13 +168,11 @@ export function agentProductToProductV2(product: AgentProduct): ProductV2 {
 		version: 1,
 		group: product.group ?? null,
 		env: AppEnv.Sandbox,
-		free_trial: null, // Handled separately in preview transformations
+		free_trial: null,
 		items: (product.items ?? []).map(agentItemToProductItem),
 		created_at: Date.now(),
 	};
 }
-
-// ============ SHARED → AGENT CONVERTERS ============
 
 function mapFeatureTypeToAgentType(feature: Feature): AgentFeatureType {
 	if (isAiCreditSystem(feature.type)) {
@@ -222,7 +201,6 @@ function mapFeatureTypeToAgentType(feature: Feature): AgentFeatureType {
 	return "static";
 }
 
-/** Convert Feature → AgentFeature */
 export function featureToAgentFeature(feature: Feature): AgentFeature {
 	const agentFeature: AgentFeature = {
 		id: feature.id,
@@ -251,7 +229,6 @@ export function featureToAgentFeature(feature: Feature): AgentFeature {
 	return agentFeature;
 }
 
-/** Convert ProductItem → AgentProductItem */
 export function productItemToAgentItem(item: ProductItem): AgentProductItem {
 	const agentItem: AgentProductItem = {};
 
@@ -272,7 +249,6 @@ export function productItemToAgentItem(item: ProductItem): AgentProductItem {
 		agentItem.price = item.price;
 	}
 
-	// Copy tiers if present (tiered pricing)
 	if (item.tiers && item.tiers.length > 0) {
 		agentItem.tiers = item.tiers.map((t) => ({
 			to: t.to === Infinite ? "inf" : t.to,
@@ -291,7 +267,6 @@ export function productItemToAgentItem(item: ProductItem): AgentProductItem {
 	return agentItem;
 }
 
-/** Convert ProductV2 → AgentProduct */
 export function productV2ToAgentProduct(product: ProductV2): AgentProduct {
 	const agentProduct: AgentProduct = {
 		id: product.id,
@@ -326,7 +301,6 @@ export function productV2ToAgentProduct(product: ProductV2): AgentProduct {
 	return agentProduct;
 }
 
-/** Convert ProductV2[] and Feature[] → AgentPricingConfig */
 export function convertToAgentConfig({
 	products,
 	features,

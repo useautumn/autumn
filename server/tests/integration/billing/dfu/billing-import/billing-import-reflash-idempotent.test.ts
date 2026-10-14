@@ -1,9 +1,3 @@
-/**
- * dfu.flash — set-state idempotency (contract 7): re-flashing the identical
- * desired state keeps the existing active cusProduct, inserts nothing new, and
- * expires nothing.
- */
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3, ApiCustomerV5 } from "@autumn/shared";
 import {
@@ -62,19 +56,16 @@ test.concurrent(
 		await callFlash(autumnV2_2 as FlashClient, payload);
 		const secondFlash = await callFlash(autumnV2_2 as FlashClient, payload);
 
-		// ── Contract 7a: second flash reports the existing product as skipped. ──
 		const flashed = secondFlash.result?.flashed?.find(
 			(f) => f.plan_id === pro.id,
 		);
 		expect(flashed?.skipped).toBe(true);
 
-		// ── Contract 7b: identical desired state expires nothing. ──
 		const expiredEntries = (secondFlash.result?.flashed ?? []).filter(
 			(f) => f.expired === true,
 		);
 		expect(expiredEntries.length).toBe(0);
 
-		// ── Contract 7c: nothing duplicated — single active product remains. ──
 		const customerV5 =
 			await autumnV2_3.customers.get<ApiCustomerV5>(customerId);
 		await expectCustomerProducts({ customer: customerV5, active: [pro.id] });

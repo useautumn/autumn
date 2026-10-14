@@ -1,34 +1,3 @@
-/**
- * TDD test for invoice.created being safe to replay after a mid-handler crash.
- *
- * Incident (Surge sandbox, 2026-09-14): the handler crashed on a Stripe 429
- * after some lines had landed, Stripe retried, and the retry added the usage
- * lines a second time (random idempotency keys, no existing-line check). A
- * later retry against the finalized invoice threw invoice_not_editable, so
- * the balance resets never ran either.
- *
- * The incident state is reproduced by letting the real webhook run on the
- * draft cycle invoice (line added, balance reset), then rolling the customer
- * entitlement back to its pre-reset state and tracking more usage, which is
- * exactly what a crash between "line added" and "balance reset" followed by
- * more traffic leaves behind. Replaying the handler from that state must
- * recover: no new Stripe lines, the existing usage line updated to the grown
- * amount, balances reset. The invoice is then finalized and must bill the
- * grown amount exactly once.
- *
- * Red-failure mode (current behavior):
- *  - usage line ids are random per run, so the replay cannot see its own
- *    lines and duplicates the usage line
- *
- * Green-success criteria (after fix):
- *  - the cycle invoice carries one usage line whose Autumn id is scoped to it
- *  - the replay adds nothing, updates the stale line, and completes the reset
- *  - the finalized invoice total is base + the grown overage, billed once
- *  - a replay against the finalized invoice with yet more usage carries only
- *    the unbilled delta to the next invoice as a pending item, which that
- *    invoice then bills once
- */
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3 } from "@autumn/shared";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
@@ -112,7 +81,6 @@ test.concurrent(
 			],
 		});
 
-		// Balances live in Redis until a flush; assert usage through the API.
 		const customerBeforeCycle =
 			await autumnV1.customers.get<ApiCustomerV3>(customerId);
 		expectCustomerFeatureCorrect({
@@ -124,8 +92,6 @@ test.concurrent(
 			await getMessagesEntitlement({ ctx, customerId });
 
 		if (!testClockId) throw new Error("Scenario did not create a test clock");
-		// Stop at the cycle boundary so invoice.created runs on a draft, as in
-		// production; the invoice is finalized in a second advance below.
 		const cycleBoundaryMs = await advanceTestClock({
 			stripeCli: ctx.stripeCli,
 			testClockId,
@@ -153,7 +119,6 @@ test.concurrent(
 
 		expect(cycleInvoice.status).toBe("draft");
 
-		// ── Real run: one usage line, id scoped to this invoice ──
 		const linesAfterFirstRun = await listAutumnLines({
 			stripeCli: ctx.stripeCli,
 			invoiceId: cycleInvoice.id,
@@ -165,7 +130,6 @@ test.concurrent(
 		expect(usageLines[0]?.autumnLineItemId).toContain(cycleInvoice.id);
 		const usageLineId = usageLines[0]!.autumnLineItemId;
 
-		// ── Recreate the incident: line landed, reset never ran, more usage came in ──
 		await CusEntService.update({
 			ctx,
 			id: entitlementBeforeCycle.id,
@@ -174,7 +138,6 @@ test.concurrent(
 				next_reset_at: entitlementBeforeCycle.next_reset_at ?? undefined,
 			},
 		});
-		// Postgres was written directly, so drop the cache without flushing it back.
 		await deleteCachedFullCustomer({
 			ctx,
 			customerId,
@@ -185,7 +148,6 @@ test.concurrent(
 			feature_id: TestFeature.Messages,
 			value: EXTRA_MESSAGES_BETWEEN_ATTEMPTS,
 		});
-		// Flush the tracked usage so the replay's line amount reflects it.
 		await deleteCachedFullCustomer({
 			ctx,
 			customerId,
@@ -217,7 +179,6 @@ test.concurrent(
 			event: stripeEvent,
 		});
 
-		// ── No new lines; the usage line grew to cover the extra usage ──
 		const linesAfterReplay = await listAutumnLines({
 			stripeCli: ctx.stripeCli,
 			invoiceId: cycleInvoice.id,
@@ -234,7 +195,6 @@ test.concurrent(
 			usageLineBefore.amount + EXTRA_MESSAGES_BETWEEN_ATTEMPTS * perUnitMinor,
 		);
 
-		// ── Finalize and pay; the grown amount is billed exactly once ──
 		await advanceTestClock({
 			stripeCli: ctx.stripeCli,
 			testClockId,
@@ -269,7 +229,6 @@ test.concurrent(
 			latestInvoiceProductId: pro.id,
 		});
 
-		// ── Crash again, this time after finalization: the delta must be carried ──
 		const billedOverage = OVERAGE + EXTRA_MESSAGES_BETWEEN_ATTEMPTS;
 		await CusEntService.update({
 			ctx,
@@ -330,7 +289,6 @@ test.concurrent(
 			balance: INCLUDED_MESSAGES,
 		});
 
-		// ── Next cycle bills the carried delta exactly once ──
 		await advanceTestClock({
 			stripeCli: ctx.stripeCli,
 			testClockId,
@@ -357,7 +315,6 @@ test.concurrent(
 			nextCycleLines.filter((line) => line.autumnLineItemId === carryId),
 		).toEqual([{ autumnLineItemId: carryId, amount: carryAmountMinor }]);
 		expect(nextCycleInvoice.status).toBe("paid");
-		// Base plan line plus the carry, and nothing else: the reset left no usage.
 		const nonCarryMinor = nextCycleInvoice.total - carryAmountMinor;
 		expect(nonCarryMinor).toBe(cycleInvoice.total - usageLineBefore.amount);
 		expectCustomerInvoiceCorrect({

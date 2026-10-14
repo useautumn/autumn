@@ -1,13 +1,3 @@
-/**
- * invoices.reissue on a renewal invoice carrying Stripe automatic tax.
- *
- * A subscription migrated to send_invoice (ignore_past_due, Vercel) keeps the
- * automatic tax it was created with, so its renewals are both reissuable and
- * automatically taxed. A plain reissue lets Stripe Tax recompute the tax
- * (its auto-created rates cannot be copied by hand); `tax_rate_id: null` must
- * stop it recomputing the tax it just cleared, for that invoice only.
- */
-
 import { expect, test } from "bun:test";
 import type { ApiListInvoiceV1 } from "@autumn/shared";
 import { items } from "@tests/utils/fixtures/items";
@@ -79,7 +69,6 @@ test(`${chalk.yellowBright("invoices.reissue: automatically taxed renewal → ta
 	const subscription = subscriptions.data[0] as Stripe.Subscription;
 	expect(subscription.automatic_tax.enabled).toBe(true);
 
-	// What ignore_past_due and the Vercel flow do to a live subscription.
 	await ctx.stripeCli.subscriptions.update(subscription.id, {
 		collection_method: "send_invoice",
 		days_until_due: 14,
@@ -96,7 +85,6 @@ test(`${chalk.yellowBright("invoices.reissue: automatically taxed renewal → ta
 		waitForSeconds: 15,
 	});
 
-	// Stripe leaves a send_invoice renewal in draft for an hour of clock time.
 	await advanceTestClock({
 		stripeCli: ctx.stripeCli,
 		testClockId: testClockId!,
@@ -111,7 +99,6 @@ test(`${chalk.yellowBright("invoices.reissue: automatically taxed renewal → ta
 		excludeIds: before.map((invoice) => invoice.id),
 	});
 
-	// $20 plus 10% AU GST, computed by Stripe Tax on the renewal.
 	const renewalStripe = await ctx.stripeCli.invoices.retrieve(
 		renewal.stripe_id,
 	);
@@ -119,8 +106,6 @@ test(`${chalk.yellowBright("invoices.reissue: automatically taxed renewal → ta
 	expect(renewalStripe.collection_method).toBe("send_invoice");
 	expect(renewalStripe.total).toBe(2200);
 
-	// A plain reissue keeps the tax: Stripe Tax recomputes it on the replacement
-	// rather than the original's auto-created rate being copied by hand.
 	const { preview } = (await autumnV2_3.post("/invoices.reissue", {
 		invoice_id: renewal.id,
 		preview: true,
@@ -135,7 +120,6 @@ test(`${chalk.yellowBright("invoices.reissue: automatically taxed renewal → ta
 	expect(taxedStripe.automatic_tax.enabled).toBe(true);
 	expect(taxedStripe.total).toBe(2200);
 
-	// The taxed replacement is now the open invoice; reissue it without tax.
 	const { invoice } = (await autumnV2_3.post("/invoices.reissue", {
 		invoice_id: taxed.id,
 		invoice: { tax_rate_id: null },

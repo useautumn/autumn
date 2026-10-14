@@ -3,10 +3,6 @@ import { Hono } from "hono";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import { mockModuleWithRestore } from "../utils/mockModuleWithRestore.js";
 
-// Customer reads count against check's two counters: the per-customer
-// "check" memory bucket (one limiter instance) and the "check_org" Redis key.
-// The prod "check" / "check_org" overrides therefore size both; only the
-// reads are answered 429 by the limiter itself.
 const redisHits = new Map<string, number>();
 
 await mockModuleWithRestore("@/external/redis/initRedis", () => ({

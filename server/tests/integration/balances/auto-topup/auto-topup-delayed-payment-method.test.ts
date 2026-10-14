@@ -1,16 +1,3 @@
-/**
- * Auto top-ups must not keep charging payment methods that settle days later.
- *
- * Red (before the fix):
- *  - delay1: an ACH default is charged; no `payment_method_not_supported` webhook
- *  - delay2: a `processing` charge isn't suspended and fires `auto_topup_succeeded`;
- *    settlement (`invoice.paid`) would clear any suspension
- *  - delay3: no delayed-payment suspension exists to be lifted by a new card
- *
- * Green: delayed types are denied before charging; a charge that still comes back
- * `processing` suspends the customer+feature until a new payment method is added.
- */
-
 import { afterAll, beforeAll, expect, test } from "bun:test";
 import {
 	type ApiCustomerV5,
@@ -93,7 +80,6 @@ const countAutoTopupWebhooks = async ({
 	}).length;
 };
 
-/** Polls Svix Play: delivery lands a few seconds after the job fires it. */
 const expectAutoTopupFailedWebhook = async ({
 	customerId,
 	reason,
@@ -133,7 +119,6 @@ const getLimitState = async ({
 	return state;
 };
 
-/** Reopens the sliding attempt windows so only the suspension can block. */
 const expireAutoTopupWindows = async ({
 	ctx,
 	customerId,
@@ -159,7 +144,6 @@ const expireAutoTopupWindows = async ({
 		);
 };
 
-/** Runs the job in-process, bypassing the dispatch gate the earlier track left closed. */
 const runAutoTopupInProcess = ({
 	ctx,
 	customerId,
@@ -177,7 +161,6 @@ const runAutoTopupInProcess = ({
 		},
 	});
 
-/** Lifts the pre-charge deny list so the `processing` branch runs as for an undocumented slow type. */
 const runAutoTopupPastDenyList = async ({
 	ctx,
 	customerId,
@@ -223,7 +206,6 @@ const swapToCard = async ({
 	});
 };
 
-/** Attach with a card, then make an ACH test account the default PM. */
 const setupAchCustomer = async ({
 	id,
 	achType,
@@ -264,7 +246,6 @@ const setupAchCustomer = async ({
 	return scenario;
 };
 
-/** Drops the balance to 15 and lets the dispatched job run. */
 const dropBelowThreshold = async ({
 	autumnV2_1,
 	customerId,
@@ -303,7 +284,6 @@ test(`${chalk.yellowBright("auto-topup delay2: processing charge suspends, block
 	await dropBelowThreshold(scenario);
 	await runAutoTopupPastDenyList({ ctx, customerId });
 
-	// One charge, still processing: suspended under its own reason, no success webhook.
 	await expectCustomerInvoiceCorrect({ customerId, count: 2 });
 	const suspended = await getLimitState({ ctx, customerId });
 	expect(suspended?.suspended_at).not.toBeNull();
@@ -319,12 +299,10 @@ test(`${chalk.yellowBright("auto-topup delay2: processing charge suspends, block
 		}),
 	).toBe(0);
 
-	// The next attempt doesn't charge, even with every rate-limit window open.
 	await expireAutoTopupWindows({ ctx, customerId });
 	await runAutoTopupPastDenyList({ ctx, customerId });
 	await expectCustomerInvoiceCorrect({ customerId, count: 2 });
 
-	// Settlement grants the credits but must not lift the suspension.
 	await expectCustomerInvoiceCorrect({
 		customerId,
 		count: 2,
@@ -381,7 +359,6 @@ test(`${chalk.yellowBright("auto-topup delay4: switching to invoice mode tops up
 	const suspended = await getLimitState({ ctx, customerId });
 	expect(suspended?.suspended_reason).toBe("delayed_payment_method");
 
-	// Invoice mode never charges the saved method, so the suspension must not block it.
 	await autumnV2_1.customers.update(customerId, {
 		billing_controls: makeAutoTopupConfig({
 			threshold: 20,

@@ -9,10 +9,6 @@ import { groupSelectsTestId, isArchivedTestId } from "../repoPaths.ts";
 import { getTestTreeAtSha } from "./getTestTreeAtSha.ts";
 import { resolveBranchSha } from "./gitRemote.ts";
 
-/**
- * Every group/suite with its files, plus every test file with its baseline p90,
- * as of `sha` (else the head of `branch`, else `dev`).
- */
 export const listCatalog = async ({
 	ctx,
 	branch,

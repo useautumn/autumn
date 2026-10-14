@@ -1,14 +1,3 @@
-/**
- * Svix answers are translated at one seam:
- * - a request-validation rejection (400/422) is the caller's mistake, our 400;
- * - 404/409 keep their meaning;
- * - Svix refusing Autumn's own credential (401/403) or throttling (429) is an
- *   operational failure, never reported as the caller's 400;
- * - create reads the signing secret right after; if that read fails, the new
- *   endpoint is deleted so a retry can create it again;
- * - adoption refuses an endpoint another request claimed in the meantime.
- */
-
 import { beforeEach, expect, test } from "bun:test";
 import { ErrCode, RecaseError, type WebhookEventType } from "@autumn/shared";
 import { ApiException } from "svix";

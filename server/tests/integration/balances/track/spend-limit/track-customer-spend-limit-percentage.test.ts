@@ -13,16 +13,11 @@ import {
 	expectCustomerSendEventBlocked,
 } from "../../utils/spend-limit-utils/entitySpendLimitUtils.js";
 
-// usage_percentage spend limits: overage cap = (overage_limit/100) × Σ base
-// allowance of main recurring plans (add-ons/prepaid/rollovers excluded).
-// Resolved server-side only (no API field); D === 0 means no cap.
-
 const getSpendLimit = (customer: ApiCustomerV5, featureId: string) =>
 	customer.billing_controls?.spend_limits?.find(
 		(limit) => limit.feature_id === featureId,
 	);
 
-// (a) Response echoes limit_type + the raw percent.
 test.concurrent(
 	`${chalk.yellowBright("percentage-spend-limit-a: single main recurring plan resolves percentage to absolute cap")}`,
 	async () => {
@@ -60,7 +55,6 @@ test.concurrent(
 	},
 );
 
-// (b) Enforced floor: 100 included + 120 overage = 220, blocked beyond.
 test.concurrent(
 	`${chalk.yellowBright("percentage-spend-limit-b: percentage cap enforced at resolved absolute overage")}`,
 	async () => {
@@ -138,11 +132,9 @@ test.concurrent(
 	},
 );
 
-// (c) Denominator sums multiple main recurring plans: (100 + 50) × 1.2 = 180 overage.
 test.concurrent(
 	`${chalk.yellowBright("percentage-spend-limit-c: percentage resolves against summed main recurring allowances")}`,
 	async () => {
-		// Distinct groups so both main plans stay active instead of one replacing the other.
 		const proProduct = products.pro({
 			id: "pct-spend-limit-c-pro",
 			group: "pct-spend-limit-c-a",
@@ -177,7 +169,6 @@ test.concurrent(
 			limitType: "usage_percentage",
 		});
 
-		// Floor at 150 included + 180 overage = 330.
 		await autumnV2_1.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
@@ -213,7 +204,6 @@ test.concurrent(
 	},
 );
 
-// (d) Add-ons excluded from the denominator: main 100 → 120 overage (not 240).
 test.concurrent(
 	`${chalk.yellowBright("percentage-spend-limit-d: recurring add-on allowance excluded from denominator")}`,
 	async () => {
@@ -249,7 +239,6 @@ test.concurrent(
 			limitType: "usage_percentage",
 		});
 
-		// Granted aggregates both (200) but the cap uses main only → floor 320, not 440.
 		await autumnV2_1.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
@@ -285,7 +274,6 @@ test.concurrent(
 	},
 );
 
-// (e) No main recurring plan → denominator 0 → no cap; overage is not blocked.
 test.concurrent(
 	`${chalk.yellowBright("percentage-spend-limit-e: zero denominator imposes no cap")}`,
 	async () => {
@@ -335,8 +323,6 @@ test.concurrent(
 	},
 );
 
-// (f) Control-based overage (overage_allowed, no pay-per-use price) is capped
-// too, and accumulates across calls — regresses the per-call budget reset.
 test.concurrent(
 	`${chalk.yellowBright("percentage-spend-limit-f: overage_allowed (no price) overage capped by percentage limit")}`,
 	async () => {
@@ -369,7 +355,6 @@ test.concurrent(
 		});
 		await timeout(3000);
 
-		// 100 included + 120 overage = 220, reached across separate calls.
 		await autumnV2_1.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,

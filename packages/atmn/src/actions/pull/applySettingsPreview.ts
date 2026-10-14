@@ -78,8 +78,6 @@ export const applySettingsPreview = ({
 			serverValue === field.default ? null : JSON.stringify(serverValue);
 		return [{ key: field.key, text }];
 	});
-	// A block the config never had is seeded only when there is a value to
-	// put in it: `settings: {}` manages nothing.
 	if (edits.some((edit) => edit.text !== null)) {
 		const seeded = insertSingleton({
 			source: files.get(configPath) ?? "",
@@ -91,8 +89,6 @@ export const applySettingsPreview = ({
 	for (const edit of edits) {
 		const located = locateBlock({ singleton, configPath, files });
 		if (located === null) {
-			// A value to write needs a literal to land in; a removal from a block
-			// that cannot be found is a flag already stated by other means.
 			if (edit.text !== null) result.unlocated.push(edit.key);
 			continue;
 		}

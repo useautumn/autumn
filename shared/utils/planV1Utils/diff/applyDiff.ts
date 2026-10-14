@@ -110,8 +110,6 @@ const applyItems = (
 	return items;
 };
 
-/** applyItems in CreatePlanItemParams space — same remove/add semantics,
- * without ApiPlan normalization. */
 export const applyPlanItemParamsDiff = ({
 	items,
 	add_items,
@@ -144,8 +142,6 @@ export const applyPlanItemParamsDiff = ({
 	return next;
 };
 
-/** applyItems only guards free entitlements; replaying a diff onto a drifted
- * plan can collide priced slots too. First occurrence (the base plan's) wins. */
 export const dedupeItemsByMatchKey = (
 	items: ApiPlanV1["items"],
 ): ApiPlanV1["items"] => {
@@ -189,8 +185,6 @@ const applyLicenseUpsert = ({
 	};
 };
 
-/** Only emit `licenses` when the diff has a license lane — content-only
- * round-trips must not grow a licenses key. */
 const applyLicenses = ({
 	base,
 	diff,
@@ -249,7 +243,6 @@ export const applyDiff = ({
 	return { ...output, licenses };
 };
 
-/** Public customize (PUT `items` or PATCH add/remove) applied onto a plan. */
 export const applyCustomizeToPlan = ({
 	plan,
 	customize,

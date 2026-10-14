@@ -9,7 +9,6 @@ import { readCurrentSubject } from "../actions/readCurrentSubject.js";
 import type { Subject } from "../subject/types/subject.js";
 import type { PartitionProcessorScope } from "../types/partitionProcessor.js";
 
-/** A read of the subject, then the check decided on it. */
 export async function check({
 	scope,
 	command,
@@ -21,7 +20,6 @@ export async function check({
 	return checkReplyOf({ scope, command, subject });
 }
 
-/** The check decided on a subject already current for it. */
 export function checkReplyOf({
 	scope,
 	command,
@@ -38,7 +36,6 @@ export function checkReplyOf({
 		});
 		return computeCheck({ fullSubject, command });
 	});
-	// The caller reports this feature's balance, so the reply carries the rows that fund it, not the whole customer.
 	return {
 		result,
 		...slimSubjectForFeatures({

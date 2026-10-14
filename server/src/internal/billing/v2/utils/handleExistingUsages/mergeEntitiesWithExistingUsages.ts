@@ -7,7 +7,6 @@ export const mergeEntitiesWithExistingUsages = ({
 	entities: Entity[];
 	existingUsages: ExistingUsages;
 }): ExistingUsages => {
-	// Count entities per feature (for continuous-use features like seats)
 	const internalFeatureIdToEntityCount = new Map<string, number>();
 	for (const entity of entities) {
 		internalFeatureIdToEntityCount.set(
@@ -16,8 +15,6 @@ export const mergeEntitiesWithExistingUsages = ({
 		);
 	}
 
-	// Add entity counts as top-level usage for features that track entities
-	// Entity count takes priority over existing usage data
 	for (const [
 		internalFeatureId,
 		entityCount,
@@ -28,7 +25,6 @@ export const mergeEntitiesWithExistingUsages = ({
 				entityUsages: {},
 			};
 		} else {
-			// Entity count takes priority - override existing usage
 			existingUsages[internalFeatureId].usage = entityCount;
 		}
 	}

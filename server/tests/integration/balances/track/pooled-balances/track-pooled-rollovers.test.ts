@@ -1,6 +1,3 @@
-// Contract: a 50%-capped pooled rollover uses the aggregate grant in get/check/track.
-// Rollover credits drain before the newly reset main pooled balance.
-
 import { expect, test } from "bun:test";
 import {
 	type ApiCustomerV5,

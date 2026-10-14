@@ -1,16 +1,3 @@
-/**
- * invoices.reissue on a draft original. Stripe can't void a draft, so it is parked:
- * left as a draft with auto_advance off and stamped as reissued.
- *
- * Contract:
- *   draft original      -> stays draft, auto_advance off (even if it was on), stamped
- *                          autumn_reissued_to; voided_invoice_id is null
- *                       -> the pending plan's pointer moves to the replacement
- *   stamped original    -> invoices.finalize and invoices.pay reject it
- *   replacement fails   -> original is restored (auto_advance back, unstamped), no draft left behind
- *   issue_method        -> replacement is sent (default) or left as a draft
- */
-
 import { expect, test } from "bun:test";
 import { ALL_STATUSES, CusProductStatus, ErrCode } from "@autumn/shared";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils";
@@ -61,7 +48,6 @@ test.concurrent(
 			finalize: false,
 		});
 		expect(original.status).toBe("draft");
-		// Renewal drafts advance on their own; the reissue must stop that.
 		await ctx.stripeCli.invoices.update(original.stripe_id, {
 			auto_advance: true,
 		});
@@ -177,7 +163,6 @@ test.concurrent(
 			).data.length;
 		const draftsBefore = await countDrafts();
 
-		// Automatic tax with no customer address makes Stripe refuse to finalize.
 		await expectAutumnError({
 			func: () =>
 				autumnV2_3.post("/invoices.reissue", {

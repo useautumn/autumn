@@ -46,12 +46,6 @@ export type ProductSyncResult = {
 	message?: string;
 };
 
-/**
- * Push a single Autumn product into RevenueCat across every app: create the RC
- * product if missing (adopt on 409 via find), else patch its name; then (live only)
- * push it into the store via create_in_store. The minted store id is unioned into the
- * plan's revenuecat_mappings row — never replacing existing ids.
- */
 export const syncProductToRevenueCat = async ({
 	ctx,
 	rcCli,
@@ -111,8 +105,6 @@ export const syncProductToRevenueCat = async ({
 			let rcProductId: string;
 			let productAction: AppResult["product"];
 
-			// RC only accepts subscription params on create for the simulated test store;
-			// real store apps get a bare product, and duration is set via create_in_store.
 			const isTestStore = app.type === "test_store";
 
 			const existing = await rcCli.findProductByStoreIdentifier({
@@ -150,7 +142,6 @@ export const syncProductToRevenueCat = async ({
 				product: productAction,
 			};
 
-			// Test-store products are already usable; only push real store apps (live).
 			if (isLive && !isTestStore) {
 				try {
 					await rcCli.createInStore(
@@ -178,8 +169,6 @@ export const syncProductToRevenueCat = async ({
 				appResult.store_push = "skipped";
 			}
 
-			// Real-store prices come from Apple/Google. Only the test store needs an
-			// explicit price, set via RC's MCP server (no REST endpoint for it).
 			if (isTestStore) {
 				const basePrice = getRcBasePrice({ product, org });
 				if (basePrice) {
@@ -215,8 +204,6 @@ export const syncProductToRevenueCat = async ({
 		}
 	}
 
-	// Every app failed: don't persist a mapping or report "synced", else the plan
-	// is marked connected to an RC product that was never created.
 	if (!syncedAnyApp) {
 		return {
 			plan_id: product.id,
@@ -227,7 +214,6 @@ export const syncProductToRevenueCat = async ({
 		};
 	}
 
-	// Union the minted id into the mapping — never clobber existing manual ids.
 	const existingRows = await RCMappingService.get({
 		db,
 		orgId: org.id,
@@ -257,10 +243,6 @@ export const syncProductToRevenueCat = async ({
 	};
 };
 
-/**
- * On-demand push of selected Autumn plans into RevenueCat. Throws only if
- * RevenueCat isn't connected / has no apps; per-product issues are collected.
- */
 export const syncProductsToRevenueCat = async ({
 	ctx,
 	productIds,

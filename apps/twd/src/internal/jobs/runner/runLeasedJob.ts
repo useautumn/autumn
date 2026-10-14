@@ -15,7 +15,6 @@ export type AbortKind = "cancel" | "lease_lost" | "shutdown";
 export type LeasedJob = {
 	job: JobRow;
 	abort: (kind: AbortKind) => void;
-	/** Hand the job back to the queue without consuming an attempt. */
 	release: () => Promise<void>;
 	done: Promise<void>;
 };
@@ -25,7 +24,6 @@ const isActorVia = (via: string): via is Actor["via"] =>
 
 const secs = (ms: number) => sql`make_interval(secs => ${ms / 1000})`;
 
-/** Runs one leased job to a terminal (or re-queued) state; every write is fenced by the lease's token. */
 export const runLeasedJob = ({
 	job,
 	config = JOB_RUNNER_DEFAULTS,

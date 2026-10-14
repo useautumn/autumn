@@ -24,7 +24,6 @@ afterAll(async () => {
 	await webhook?.cleanup();
 });
 
-// ── B12: bulk track crosses 80 and 100 on the window path ───────────────────
 test(`${chalk.yellowBright("ul-alert11: one track crossing 80% and 100% of the cap fires both")}`, async () => {
 	const customerId = "ul-alert-bulk-1";
 	await setupCustomer({ customerId, planId: "ul-alert-bulk" });

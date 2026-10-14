@@ -11,7 +11,6 @@ import { computeCycleBalanceResets } from "@/internal/billing/v2/compute/compute
 import { entitlementToResetCycleAnchor } from "@/internal/billing/v2/utils/initFullCustomerProduct/cycleAnchorUtils";
 import { endsLiveTrial } from "../utils/endsLiveTrial";
 
-/** The anchor when it's ahead, unless a sooner reset runs first; a backdated anchor already passed, so its next boundary. */
 const nextResetOnAnchor = ({
 	customerEntitlement,
 	anchorMs,
@@ -33,7 +32,6 @@ const nextResetOnAnchor = ({
 	});
 };
 
-/** Kept balances reset next on the replacement's anchor, as its first renewal bills there. */
 const anchorResetUpdates = ({
 	billingContext,
 	customerProduct,
@@ -61,7 +59,6 @@ const anchorResetUpdates = ({
 			},
 		}));
 
-/** Ending a trial refills its balances now, like attach, except the usage carry_over_usages keeps. */
 const trialEndBalanceResets = ({
 	billingContext,
 	customerProduct,
@@ -81,7 +78,6 @@ const trialEndBalanceResets = ({
 			),
 	);
 
-/** The entitlement updates for plans a replacement subscription carries to its anchor. */
 export const keptReplacementEntitlementUpdates = ({
 	billingContext,
 	keptCustomerProducts,

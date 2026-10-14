@@ -1,6 +1,3 @@
-/** TDD contract: subscription-created auto-sync must select exact variants.
- * The test must create a real external Stripe sub before sync assertions. */
-
 import { expect, test } from "bun:test";
 import {
 	type ApiCustomerV3,

@@ -1,16 +1,3 @@
-/**
- * Cancel Immediately Tests
- *
- * Tests for the `cancel: 'immediately'` parameter in update subscription.
- * This cancels a subscription immediately (not at end of cycle).
- *
- * Key behaviors:
- * - Product is removed immediately
- * - Default product (if exists) becomes active immediately
- * - Stripe subscription is canceled immediately
- * - Refund invoice may be created for unused time
- */
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3 } from "@autumn/shared";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
@@ -22,20 +9,6 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 1: Cancel free product immediately
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - User is on Free product (no base price)
- * - User cancels Free immediately
- *
- * Expected Result:
- * - Free product is removed
- * - No products attached
- * - No Stripe subscription (was never created for free product)
- */
 test.concurrent(`${chalk.yellowBright("cancel immediately: free product")}`, async () => {
 	const customerId = "cancel-imm-free";
 
@@ -52,7 +25,6 @@ test.concurrent(`${chalk.yellowBright("cancel immediately: free product")}`, asy
 		actions: [s.attach({ productId: free.id })],
 	});
 
-	// Verify free is active
 	const customerAfterAttach =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	await expectCustomerProducts({
@@ -60,14 +32,12 @@ test.concurrent(`${chalk.yellowBright("cancel immediately: free product")}`, asy
 		active: [free.id],
 	});
 
-	// Cancel free immediately
 	await autumnV1.subscriptions.update({
 		customer_id: customerId,
 		product_id: free.id,
 		cancel_action: "cancel_immediately",
 	});
 
-	// Verify free is gone, no products attached
 	const customerAfterCancel =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	await expectCustomerProducts({
@@ -77,20 +47,6 @@ test.concurrent(`${chalk.yellowBright("cancel immediately: free product")}`, asy
 	expect(customerAfterCancel.products.length).toBe(0);
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 1b: Cancel default free product immediately
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - User is on Free default product (isDefault: true, no base price)
- * - User cancels Free immediately
- *
- * Expected Result:
- * - Free default product is removed
- * - No products attached (default does not re-attach itself)
- * - No Stripe subscription (was never created for free product)
- */
 test.concurrent(`${chalk.yellowBright("cancel immediately: default free product")}`, async () => {
 	const customerId = "cancel-imm-default-free";
 
@@ -108,7 +64,6 @@ test.concurrent(`${chalk.yellowBright("cancel immediately: default free product"
 		actions: [s.attach({ productId: free.id })],
 	});
 
-	// Verify free is active
 	const customerAfterAttach =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	await expectCustomerProducts({
@@ -116,14 +71,12 @@ test.concurrent(`${chalk.yellowBright("cancel immediately: default free product"
 		active: [free.id],
 	});
 
-	// Cancel free immediately
 	await autumnV1.subscriptions.update({
 		customer_id: customerId,
 		product_id: free.id,
 		cancel_action: "cancel_immediately",
 	});
 
-	// Verify free is gone, no products attached (default does not auto-reattach when canceled)
 	const customerAfterCancel =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	await expectCustomerProducts({
@@ -133,21 +86,6 @@ test.concurrent(`${chalk.yellowBright("cancel immediately: default free product"
 	expect(customerAfterCancel.products.length).toBe(0);
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 2: Cancel pro product immediately (with default free)
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - User is on Pro ($20/mo)
- * - Free default product exists
- * - User cancels Pro immediately
- *
- * Expected Result:
- * - Pro is removed immediately
- * - Free default becomes active immediately
- * - Stripe subscription is canceled
- */
 test.concurrent(`${chalk.yellowBright("cancel immediately: pro with default free")}`, async () => {
 	const customerId = "cancel-imm-pro-default";
 
@@ -173,7 +111,6 @@ test.concurrent(`${chalk.yellowBright("cancel immediately: pro with default free
 		actions: [s.attach({ productId: pro.id })],
 	});
 
-	// Verify pro is active and initial invoice
 	const customerAfterAttach =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	await expectCustomerProducts({
@@ -183,10 +120,9 @@ test.concurrent(`${chalk.yellowBright("cancel immediately: pro with default free
 	expectCustomerInvoiceCorrect({
 		customer: customerAfterAttach,
 		count: 1,
-		latestTotal: 20, // Pro base price
+		latestTotal: 20,
 	});
 
-	// Preview cancel to get expected refund
 	const cancelParams = {
 		customer_id: customerId,
 		product_id: pro.id,
@@ -194,14 +130,9 @@ test.concurrent(`${chalk.yellowBright("cancel immediately: pro with default free
 	};
 	const preview = await autumnV1.subscriptions.previewUpdate(cancelParams);
 
-	// At start of cycle, refund should be full amount (negative)
-
-	expect(preview.total).toBe(-20); // $20 refund
-
-	// Cancel pro immediately
+	expect(preview.total).toBe(-20);
 	await autumnV1.subscriptions.update(cancelParams);
 
-	// Verify pro is gone and free is active
 	const customerAfterCancel =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	await expectCustomerProducts({
@@ -210,7 +141,6 @@ test.concurrent(`${chalk.yellowBright("cancel immediately: pro with default free
 		active: [free.id],
 	});
 
-	// Verify invoice matches preview (refund invoice)
 	expectCustomerInvoiceCorrect({
 		customer: customerAfterCancel,
 		count: 2,
@@ -218,21 +148,6 @@ test.concurrent(`${chalk.yellowBright("cancel immediately: pro with default free
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 3: Cancel pro product immediately (no default)
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - User is on Pro ($20/mo)
- * - NO default product exists
- * - User cancels Pro immediately
- *
- * Expected Result:
- * - Pro is removed immediately
- * - No products attached
- * - Stripe subscription is canceled
- */
 test.concurrent(`${chalk.yellowBright("cancel immediately: pro without default")}`, async () => {
 	const customerId = "cancel-imm-pro-no-default";
 
@@ -252,7 +167,6 @@ test.concurrent(`${chalk.yellowBright("cancel immediately: pro without default")
 		actions: [s.attach({ productId: pro.id })],
 	});
 
-	// Verify pro is active and initial invoice
 	const customerAfterAttach =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	await expectCustomerProducts({
@@ -262,10 +176,9 @@ test.concurrent(`${chalk.yellowBright("cancel immediately: pro without default")
 	expectCustomerInvoiceCorrect({
 		customer: customerAfterAttach,
 		count: 1,
-		latestTotal: 20, // Pro base price
+		latestTotal: 20,
 	});
 
-	// Preview cancel to get expected refund
 	const cancelParams = {
 		customer_id: customerId,
 		product_id: pro.id,
@@ -273,13 +186,9 @@ test.concurrent(`${chalk.yellowBright("cancel immediately: pro without default")
 	};
 	const preview = await autumnV1.subscriptions.previewUpdate(cancelParams);
 
-	// At start of cycle, refund should be full amount (negative)
-	expect(preview.total).toBe(-20); // $20 refund
-
-	// Cancel pro immediately
+	expect(preview.total).toBe(-20);
 	await autumnV1.subscriptions.update(cancelParams);
 
-	// Verify pro is gone, no products attached
 	const customerAfterCancel =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	await expectCustomerProducts({
@@ -288,14 +197,12 @@ test.concurrent(`${chalk.yellowBright("cancel immediately: pro without default")
 	});
 	expect(customerAfterCancel.products.length).toBe(0);
 
-	// Verify invoice matches preview (refund invoice)
 	expectCustomerInvoiceCorrect({
 		customer: customerAfterCancel,
 		count: 2,
 		latestTotal: preview.total,
 	});
 
-	// Verify no Stripe subscription exists (canceled)
 	await expectNoStripeSubscription({
 		db: ctx.db,
 		customerId,
@@ -304,22 +211,6 @@ test.concurrent(`${chalk.yellowBright("cancel immediately: pro without default")
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 4: Downgrade then cancel immediately (no default)
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - User is on Premium ($50/mo)
- * - User downgrades to Pro ($20/mo) → Premium is canceling, Pro is scheduled
- * - User cancels Premium immediately
- *
- * Expected Result:
- * - Premium is removed immediately
- * - Pro scheduled product should also be REMOVED (downgrade cancelled)
- * - No products attached
- * - Stripe subscription is canceled
- */
 test.concurrent(`${chalk.yellowBright("cancel immediately: downgrade then cancel (no default)")}`, async () => {
 	const customerId = "cancel-imm-downgrade-no-default";
 
@@ -344,20 +235,18 @@ test.concurrent(`${chalk.yellowBright("cancel immediately: downgrade then cancel
 		],
 		actions: [
 			s.attach({ productId: premium.id }),
-			s.attach({ productId: pro.id }), // Downgrade: premium canceling, pro scheduled
+			s.attach({ productId: pro.id }),
 		],
 	});
 
-	// Verify initial invoice for premium
 	const customerAfterAttach =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	expectCustomerInvoiceCorrect({
 		customer: customerAfterAttach,
 		count: 1,
-		latestTotal: 50, // Premium base price
+		latestTotal: 50,
 	});
 
-	// Preview cancel to get expected refund
 	const cancelParams = {
 		customer_id: customerId,
 		product_id: premium.id,
@@ -365,13 +254,9 @@ test.concurrent(`${chalk.yellowBright("cancel immediately: downgrade then cancel
 	};
 	const preview = await autumnV1.subscriptions.previewUpdate(cancelParams);
 
-	// At start of cycle, refund should be full premium amount (negative)
-	expect(preview.total).toBe(-50); // $50 refund
-
-	// Cancel premium immediately
+	expect(preview.total).toBe(-50);
 	await autumnV1.subscriptions.update(cancelParams);
 
-	// Verify both premium and pro are gone
 	const customerAfterCancel =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
@@ -380,17 +265,14 @@ test.concurrent(`${chalk.yellowBright("cancel immediately: downgrade then cancel
 		notPresent: [premium.id, pro.id],
 	});
 
-	// No products should be attached
 	expect(customerAfterCancel.products.length).toBe(0);
 
-	// Verify invoice matches preview (refund invoice)
 	expectCustomerInvoiceCorrect({
 		customer: customerAfterCancel,
 		count: 2,
 		latestTotal: preview.total,
 	});
 
-	// Verify no Stripe subscription exists (canceled)
 	await expectNoStripeSubscription({
 		db: ctx.db,
 		customerId,
@@ -399,23 +281,6 @@ test.concurrent(`${chalk.yellowBright("cancel immediately: downgrade then cancel
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 5: Downgrade then cancel immediately (with default)
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - User is on Premium ($50/mo)
- * - User downgrades to Pro ($20/mo) → Premium is canceling, Pro is scheduled
- * - Free default product exists
- * - User cancels Premium immediately
- *
- * Expected Result:
- * - Premium is removed immediately
- * - Pro scheduled product should also be REMOVED
- * - Free default becomes active
- * - Stripe subscription is canceled
- */
 test.concurrent(`${chalk.yellowBright("cancel immediately: downgrade then cancel (with default)")}`, async () => {
 	const customerId = "cancel-imm-downgrade-default";
 
@@ -446,20 +311,18 @@ test.concurrent(`${chalk.yellowBright("cancel immediately: downgrade then cancel
 		],
 		actions: [
 			s.attach({ productId: premium.id }),
-			s.attach({ productId: pro.id }), // Downgrade: premium canceling, pro scheduled
+			s.attach({ productId: pro.id }),
 		],
 	});
 
-	// Verify initial invoice for premium
 	const customerAfterAttach =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	expectCustomerInvoiceCorrect({
 		customer: customerAfterAttach,
 		count: 1,
-		latestTotal: 50, // Premium base price
+		latestTotal: 50,
 	});
 
-	// Preview cancel to get expected refund
 	const cancelParams = {
 		customer_id: customerId,
 		product_id: premium.id,
@@ -467,13 +330,9 @@ test.concurrent(`${chalk.yellowBright("cancel immediately: downgrade then cancel
 	};
 	const preview = await autumnV1.subscriptions.previewUpdate(cancelParams);
 
-	// At start of cycle, refund should be full premium amount (negative)
-	expect(preview.total).toBe(-50); // $50 refund
-
-	// Cancel premium immediately
+	expect(preview.total).toBe(-50);
 	await autumnV1.subscriptions.update(cancelParams);
 
-	// Verify premium and pro are gone, free is active
 	const customerAfterCancel =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
@@ -483,14 +342,12 @@ test.concurrent(`${chalk.yellowBright("cancel immediately: downgrade then cancel
 		active: [free.id],
 	});
 
-	// Verify invoice matches preview (refund invoice)
 	expectCustomerInvoiceCorrect({
 		customer: customerAfterCancel,
 		count: 2,
 		latestTotal: preview.total,
 	});
 
-	// Verify no Stripe subscription exists (canceled, free has no price)
 	await expectNoStripeSubscription({
 		db: ctx.db,
 		customerId,
@@ -499,20 +356,6 @@ test.concurrent(`${chalk.yellowBright("cancel immediately: downgrade then cancel
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 6: Cancel pro with multi-interval items immediately
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - User is on Pro with monthly messages + annual base price (multi-interval)
- * - User cancels Pro immediately
- *
- * Expected Result:
- * - Pro is removed immediately
- * - No products attached
- * - Stripe subscription is canceled
- */
 test.concurrent(`${chalk.yellowBright("cancel immediately: multi-interval product")}`, async () => {
 	const customerId = "cancel-imm-multi-interval";
 
@@ -538,7 +381,6 @@ test.concurrent(`${chalk.yellowBright("cancel immediately: multi-interval produc
 		],
 	});
 
-	// Verify pro is active and initial invoice
 	const customerAfterAttach =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	await expectCustomerProducts({
@@ -548,10 +390,9 @@ test.concurrent(`${chalk.yellowBright("cancel immediately: multi-interval produc
 	expectCustomerInvoiceCorrect({
 		customer: customerAfterAttach,
 		count: 1,
-		latestTotal: 210, // $10 prepaid + $200 annual
+		latestTotal: 210,
 	});
 
-	// Preview cancel to get expected refund
 	const cancelParams = {
 		customer_id: customerId,
 		product_id: pro.id,
@@ -559,13 +400,9 @@ test.concurrent(`${chalk.yellowBright("cancel immediately: multi-interval produc
 	};
 	const preview = await autumnV1.subscriptions.previewUpdate(cancelParams);
 
-	// At start of cycle, refund should be full amount (negative)
-	expect(preview.total).toBe(-210); // $10 prepaid + $200 annual refund
-
-	// Cancel pro immediately
+	expect(preview.total).toBe(-210);
 	await autumnV1.subscriptions.update(cancelParams);
 
-	// Verify pro is gone, no products attached
 	const customerAfterCancel =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	await expectCustomerProducts({
@@ -574,14 +411,12 @@ test.concurrent(`${chalk.yellowBright("cancel immediately: multi-interval produc
 	});
 	expect(customerAfterCancel.products.length).toBe(0);
 
-	// Verify invoice matches preview (refund invoice)
 	expectCustomerInvoiceCorrect({
 		customer: customerAfterCancel,
 		count: 2,
 		latestTotal: preview.total,
 	});
 
-	// Verify no Stripe subscription exists (canceled)
 	await expectNoStripeSubscription({
 		db: ctx.db,
 		customerId,
@@ -590,20 +425,6 @@ test.concurrent(`${chalk.yellowBright("cancel immediately: multi-interval produc
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 7: Cancel one-off prepaid product immediately
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - User purchases one-off prepaid messages (2 packs = 200 messages)
- * - User cancels the one-off product immediately
- *
- * Expected Result:
- * - Product is removed immediately
- * - No products attached
- * - No Stripe subscription (one-off products don't create subscriptions)
- */
 test.concurrent(`${chalk.yellowBright("cancel immediately: one-off prepaid product")}`, async () => {
 	const customerId = "cancel-imm-oneoff";
 
@@ -627,12 +448,11 @@ test.concurrent(`${chalk.yellowBright("cancel immediately: one-off prepaid produ
 		actions: [
 			s.attach({
 				productId: oneOffProduct.id,
-				options: [{ feature_id: "messages", quantity: 200 }], // 2 packs
+				options: [{ feature_id: "messages", quantity: 200 }],
 			}),
 		],
 	});
 
-	// Verify one-off product is active and initial invoice
 	const customerAfterAttach =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	await expectCustomerProducts({
@@ -642,10 +462,9 @@ test.concurrent(`${chalk.yellowBright("cancel immediately: one-off prepaid produ
 	expectCustomerInvoiceCorrect({
 		customer: customerAfterAttach,
 		count: 1,
-		latestTotal: 20, // 2 packs * $10 = $20
+		latestTotal: 20,
 	});
 
-	// Preview cancel - one-off products don't get refunds
 	const cancelParams = {
 		customer_id: customerId,
 		product_id: oneOffProduct.id,
@@ -653,13 +472,10 @@ test.concurrent(`${chalk.yellowBright("cancel immediately: one-off prepaid produ
 	};
 	const preview = await autumnV1.subscriptions.previewUpdate(cancelParams);
 
-	// One-off products don't generate refund line items
 	expect(preview.total).toBe(0);
 
-	// Cancel one-off product immediately
 	await autumnV1.subscriptions.update(cancelParams);
 
-	// Verify one-off product is gone, no products attached
 	const customerAfterCancel =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	await expectCustomerProducts({
@@ -668,13 +484,11 @@ test.concurrent(`${chalk.yellowBright("cancel immediately: one-off prepaid produ
 	});
 	expect(customerAfterCancel.products.length).toBe(0);
 
-	// Verify no new invoice created (no refund for one-off)
 	expectCustomerInvoiceCorrect({
 		customer: customerAfterCancel,
-		count: 1, // Still just the original invoice
+		count: 1,
 	});
 
-	// Verify no Stripe subscription exists (one-off products don't create subscriptions)
 	await expectNoStripeSubscription({
 		db: ctx.db,
 		customerId,
@@ -683,22 +497,6 @@ test.concurrent(`${chalk.yellowBright("cancel immediately: one-off prepaid produ
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 8: Cancel one-off product immediately (with free default) - should NOT attach default
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Free default product exists
- * - User purchases one-off prepaid messages (2 packs = 200 messages)
- * - User cancels the one-off product immediately
- *
- * Expected Result:
- * - One-off product is removed immediately
- * - Free default product is NOT attached (one-off cancellation shouldn't trigger default)
- * - No products attached
- * - No Stripe subscription
- */
 test.concurrent(`${chalk.yellowBright("cancel immediately: one-off product does not create free default")}`, async () => {
 	const customerId = "cancel-imm-oneoff-no-default";
 
@@ -730,12 +528,11 @@ test.concurrent(`${chalk.yellowBright("cancel immediately: one-off product does 
 		actions: [
 			s.attach({
 				productId: oneOffProduct.id,
-				options: [{ feature_id: "messages", quantity: 200 }], // 2 packs
+				options: [{ feature_id: "messages", quantity: 200 }],
 			}),
 		],
 	});
 
-	// Verify one-off product is active and free is NOT attached
 	const customerAfterAttach =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	await expectCustomerProducts({
@@ -746,10 +543,9 @@ test.concurrent(`${chalk.yellowBright("cancel immediately: one-off product does 
 	expectCustomerInvoiceCorrect({
 		customer: customerAfterAttach,
 		count: 1,
-		latestTotal: 20, // 2 packs * $10 = $20
+		latestTotal: 20,
 	});
 
-	// Cancel one-off product immediately
 	const cancelParams = {
 		customer_id: customerId,
 		product_id: oneOffProduct.id,
@@ -757,7 +553,6 @@ test.concurrent(`${chalk.yellowBright("cancel immediately: one-off product does 
 	};
 	await autumnV1.subscriptions.update(cancelParams);
 
-	// Verify one-off product is gone and free default is NOT attached
 	const customerAfterCancel =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	await expectCustomerProducts({
@@ -765,16 +560,13 @@ test.concurrent(`${chalk.yellowBright("cancel immediately: one-off product does 
 		notPresent: [oneOffProduct.id, free.id],
 	});
 
-	// No products should be attached (default should NOT be triggered for one-off)
 	expect(customerAfterCancel.products.length).toBe(0);
 
-	// Verify no new invoice created (no refund for one-off)
 	expectCustomerInvoiceCorrect({
 		customer: customerAfterCancel,
-		count: 1, // Still just the original invoice
+		count: 1,
 	});
 
-	// Verify no Stripe subscription exists
 	await expectNoStripeSubscription({
 		db: ctx.db,
 		customerId,

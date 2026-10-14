@@ -1,36 +1,3 @@
-/**
- * TDD tests for the `granted` field on API rollover objects.
- *
- * Contract under test:
- *   New types/fields:
- *     - ApiBalanceRollover.granted: number — the amount that rolled in from the
- *       previous period, before any of it was consumed. Equals that rollover's
- *       remaining balance plus the usage already taken out of it.
- *   New behaviors:
- *     - flat (non-entity) ent: a rollover partially consumed by track keeps
- *       `granted` at the rolled-in amount while `balance` drops
- *     - entity-scoped read (GET entity): `granted` is that entity's own
- *       rolled-in amount, not the customer-wide total
- *     - entity-aggregated read (GET customer): `granted` sums every entity's
- *       rolled-in amount, including usage already consumed per entity
- *     - sum(rollovers[].granted) reconciles with the balance's top-level
- *       `granted`, which is allowance + total rollover granted
- *     - the cached full-subject read reports the same rollovers as the
- *       skip_cache read — rollover `usage` survives the cache round trip
- *   Versions:
- *     - present on 2.2 (ApiBalanceV1) and 2.0 (ApiBalance) — they share
- *       ApiBalanceRolloverSchema
- *     - absent on 1.2 and below, where the transform output is parsed against
- *       ApiCusFeatureV3RolloverSchema and the unknown key is stripped
- *   Side effects:
- *     - none; `granted` is derived from the existing rollovers.usage column
- *
- * Pre-impl red: `granted` is undefined everywhere, because cusEntsToRollovers
- * drops rolloverFields.rollovers[].usage when it builds ApiBalanceRollover.
- * Post-impl green: cusEntsToRollovers emits balance + usage as `granted` and
- * ApiBalanceRolloverSchema declares it.
- */
-
 import { expect, test } from "bun:test";
 import type {
 	ApiCustomer,
@@ -63,7 +30,6 @@ const ROLLOVER_CONFIG = {
 	duration: RolloverExpiryDurationType.Month,
 };
 
-/** Polls the cusEnt row until `predicate` sees the deduction land in Postgres. */
 const waitForEntitiesSynced = async ({
 	db,
 	customerEntitlementId,
@@ -131,7 +97,6 @@ test.concurrent(
 			expectedBalance: INCLUDED_USAGE - 70,
 		});
 
-		// Reset the period so the unused 30 rolls over.
 		await expireCusEntForReset({
 			ctx,
 			customerId,
@@ -150,8 +115,6 @@ test.concurrent(
 		expect(rolloverRows.length).toBe(1);
 		expect(rolloverRows[0].balance).toBe(30);
 
-		// Consume 10 of the rollover — deduction drains rollovers before the
-		// fresh allowance, so this leaves balance 20 / usage 10 on that row.
 		await autumnV2_2.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
@@ -159,7 +122,6 @@ test.concurrent(
 		});
 		await timeout(3000);
 
-		// ── Contract: granted is the rolled-in amount, not the remainder ──
 		const customer = await autumnV2_2.customers.get<ApiCustomerV5>(customerId, {
 			skip_cache: "true",
 		});
@@ -168,7 +130,6 @@ test.concurrent(
 		expect(messages.rollovers?.[0].granted).toBe(30);
 		expect(messages.rollovers?.[0].balance).toBe(20);
 
-		// ── Contract: rollover granted reconciles with the top-level total ──
 		const rolloverGranted = (messages.rollovers ?? []).reduce(
 			(total, rollover) => total + rollover.granted,
 			0,
@@ -177,7 +138,6 @@ test.concurrent(
 		expect(messages.remaining).toBe(INCLUDED_USAGE + 20);
 		expect(messages.usage).toBe(10);
 
-		// ── Contract: 2.0 shares the schema, so it carries granted too ──────
 		const customerV2_0 = await autumnV2.customers.get<ApiCustomer>(customerId, {
 			skip_cache: "true",
 		});
@@ -185,7 +145,6 @@ test.concurrent(
 		expect(messagesV2_0.rollovers?.[0].granted).toBe(30);
 		expect(messagesV2_0.rollovers?.[0].balance).toBe(20);
 
-		// ── Contract: 1.2 and below stay on the old shape — stripped ────────
 		const customerV1_2 = await autumnV1.customers.get<ApiCustomerV3>(
 			customerId,
 			{ skip_cache: "true" },
@@ -197,10 +156,6 @@ test.concurrent(
 		expect(legacyRollover?.balance).toBe(20);
 		expect(legacyRollover?.granted).toBeUndefined();
 
-		// ── Contract: the cached read reports granted identically ───────────
-		// The first plain read hydrates the cached full subject from Postgres;
-		// the second is served from it. Rollover rows carry `usage` through the
-		// cache, so the cached read must not degrade to balance-only.
 		await autumnV2_2.customers.get<ApiCustomerV5>(customerId);
 		const cachedCustomer =
 			await autumnV2_2.customers.get<ApiCustomerV5>(customerId);
@@ -260,7 +215,6 @@ test.concurrent(
 				),
 		});
 
-		// Reset: ent-1 rolls over 60, ent-2 rolls over the full 100.
 		await expireCusEntForReset({
 			ctx,
 			customerId,
@@ -272,7 +226,6 @@ test.concurrent(
 			customerEntitlementIds: [customerEntitlement!.id],
 		});
 
-		// Consume 10 of ent-1's rollover: ent-1 becomes balance 50 / usage 10.
 		await autumnV2_2.track({
 			customer_id: customerId,
 			entity_id: "ent-1",
@@ -281,7 +234,6 @@ test.concurrent(
 		});
 		await timeout(3000);
 
-		// ── Contract: entity read reports that entity's rolled-in amount ────
 		const entity = await autumnV2_2.entities.get<ApiEntityV2>(
 			customerId,
 			"ent-1",
@@ -293,8 +245,6 @@ test.concurrent(
 		expect(entityMessages.rollovers?.[0].balance).toBe(50);
 		expect(entityMessages.granted).toBe(INCLUDED_USAGE + 60);
 
-		// ── Contract: customer read sums rolled-in amounts across entities ──
-		// 60 (ent-1, 10 of it consumed) + 100 (ent-2, untouched) = 160.
 		const customer = await autumnV2_2.customers.get<ApiCustomerV5>(customerId, {
 			skip_cache: "true",
 		});

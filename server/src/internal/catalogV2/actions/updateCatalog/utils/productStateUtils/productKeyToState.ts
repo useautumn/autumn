@@ -14,7 +14,6 @@ export type ProductKeyState = {
 	customerUsage: CustomerProductVersioningFlags;
 };
 
-/** Lookup one productKey in productStatesContext; missing → create baseline. */
 export const productKeyToState = ({
 	productKey,
 	productStatesContext,

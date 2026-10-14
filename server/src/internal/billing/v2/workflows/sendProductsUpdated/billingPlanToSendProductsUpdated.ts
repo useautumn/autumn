@@ -1,12 +1,3 @@
-/**
- * Converts an AutumnBillingPlan to sendProductsUpdated workflow triggers.
- * Handles:
- * - New/active product inserts (scenario: "new" or "upgrade" based on expired product)
- * - Cancel updates (scenario: "cancel" or "downgrade" based on scheduled product)
- * - Uncancel updates (scenario: "renew")
- * - Filters out scheduled products from insert webhooks
- */
-
 import type { AutumnBillingPlan, FullCustomer } from "@autumn/shared";
 import {
 	AttachScenario,
@@ -24,15 +15,10 @@ import {
 } from "@/internal/billing/v2/utils/billingPlan/customerProductPlanMutations";
 import { workflows } from "@/queue/workflows.js";
 
-// ============================================================================
-// HELPERS
-// ============================================================================
-
 type UpdateCustomerProductUpdates = NonNullable<
 	NonNullable<AutumnBillingPlan["updateCustomerProduct"]>["updates"]
 >;
 
-/** Check if any scheduled product in the list is paid (not free) */
 const hasPaidScheduledProduct = ({
 	customerProducts,
 }: {
@@ -44,13 +30,6 @@ const hasPaidScheduledProduct = ({
 	);
 };
 
-/**
- * Get the webhook scenario for an updateCustomerProduct, or null if no webhook needed.
- * - Cancel: canceled=true with timestamps set → "cancel" or "downgrade"
- *   (even when status is also expired — immediate cancel must stay cancel)
- * - Expire: status=expired with no cancel timestamps → "expired"
- * - Uncancel: canceled=false with timestamps cleared → "renew"
- */
 const getUpdateScenario = ({
 	updates,
 	insertCustomerProducts,
@@ -58,7 +37,6 @@ const getUpdateScenario = ({
 	updates: UpdateCustomerProductUpdates;
 	insertCustomerProducts: FullCusProduct[];
 }): AttachScenario | null => {
-	// Cancel: canceled=true with timestamps set
 	if (
 		updates.canceled === true &&
 		updates.canceled_at != null &&
@@ -73,7 +51,6 @@ const getUpdateScenario = ({
 		return AttachScenario.Expired;
 	}
 
-	// Uncancel: canceled=false with timestamps cleared
 	if (
 		updates.canceled === false &&
 		updates.canceled_at === null &&
@@ -89,11 +66,6 @@ const getUpdateScenario = ({
 	return null;
 };
 
-/**
- * Determines the webhook scenario for an inserted customer product.
- * - "upgrade" if replacing an expired product and new product is more expensive
- * - "new" otherwise (first product, add-on, or no expired product)
- */
 const getInsertScenario = ({
 	insertedProduct,
 	expiredProduct,
@@ -101,12 +73,10 @@ const getInsertScenario = ({
 	insertedProduct: FullCusProduct;
 	expiredProduct?: FullCusProduct;
 }): AttachScenario => {
-	// No expired product means this is a new attachment (not a replacement)
 	if (!expiredProduct) {
 		return AttachScenario.New;
 	}
 
-	// Compare prices to determine if it's an upgrade
 	const expiredPrices = cusProductToPrices({ cusProduct: expiredProduct });
 	const insertedPrices = cusProductToPrices({ cusProduct: insertedProduct });
 
@@ -117,14 +87,6 @@ const getInsertScenario = ({
 
 	return isUpgrade ? AttachScenario.Upgrade : AttachScenario.New;
 };
-
-/**
- * Get the expired product from the billing plan's updateCustomerProduct.
- * Returns the customer product if it's being set to "expired" status.
- */
-// ============================================================================
-// MAIN FUNCTION
-// ============================================================================
 
 export const billingPlanToSendProductsUpdated = async ({
 	ctx,
@@ -149,7 +111,6 @@ export const billingPlanToSendProductsUpdated = async ({
 		autumnBillingPlan,
 	});
 
-	// A. Handle cancel/uncancel webhook for updateCustomerProduct
 	for (const updateCustomerProduct of updateCustomerProducts) {
 		const scenario =
 			getUpdateScenario({
@@ -178,7 +139,6 @@ export const billingPlanToSendProductsUpdated = async ({
 		}
 	}
 
-	// B. Queue webhooks for inserted products (excluding scheduled ones)
 	const activeInsertCustomerProducts = insertCustomerProducts.filter(
 		(cusProduct) => !isCustomerProductScheduled(cusProduct),
 	);

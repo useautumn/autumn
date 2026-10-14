@@ -1,9 +1,6 @@
 import { RecaseError } from "../base/RecaseError.js";
 import { CheckoutErrorCode } from "../codes/checkoutErrCodes.js";
 
-/**
- * Checkout already completed
- */
 export class CheckoutCompletedError extends RecaseError {
 	constructor(opts?: { message?: string }) {
 		super({
@@ -15,9 +12,6 @@ export class CheckoutCompletedError extends RecaseError {
 	}
 }
 
-/**
- * Checkout expired
- */
 export class CheckoutExpiredError extends RecaseError {
 	constructor(opts?: { message?: string }) {
 		super({
@@ -31,9 +25,6 @@ export class CheckoutExpiredError extends RecaseError {
 	}
 }
 
-/**
- * Checkout unavailable
- */
 export class CheckoutUnavailableError extends RecaseError {
 	constructor(opts?: { message?: string }) {
 		super({

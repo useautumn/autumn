@@ -7,7 +7,6 @@ import {
 import type { CheckRequest } from "../../processor/types/check.js";
 import { CannotAnswerError } from "../forward/cannotAnswerError.js";
 
-/** `x-api-version` as the API reads it: absent is null, unreadable is undefined. */
 const headerToApiVersion = ({
 	header,
 }: {
@@ -18,10 +17,6 @@ const headerToApiVersion = ({
 	return version ? new ApiVersionClass(version) : undefined;
 };
 
-/**
- * `POST /v1/balances.check` exactly as Autumn's API takes it, read with the API's own schemas.
- * A part that cannot be read is left to the API, which answers with its own error.
- */
 export const checkCallToRequest = ({
 	body,
 	query,

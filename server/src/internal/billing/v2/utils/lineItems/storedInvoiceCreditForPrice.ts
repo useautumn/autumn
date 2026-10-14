@@ -35,8 +35,6 @@ export const storedInvoiceCreditForPrice = ({
 		price: Price;
 		product?: FullProductWithoutLicenses;
 	};
-	/** Mutated as rows are credited, so callers resolving several prices never
-	 * refund the same stored charge twice. */
 	consumedChargeRowIds?: Set<string>;
 }): StoredInvoiceCreditForPriceResult => {
 	const { price, product } = target;

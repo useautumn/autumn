@@ -12,15 +12,6 @@ import {
 import { CheckResponseV2Schema } from "../checkResponseV2.js";
 import { CheckResponseV1Schema } from "../prevVersions/CheckResponseV1.js";
 
-/**
- * V1_2_CheckChange: Transforms check response TO V1_2 format
- *
- * Applied when: targetVersion <= V1_2
- *
- * Breaking changes introduced in V1_2 (that we reverse here):
-
- */
-
 export const V1_2_CheckChange = defineVersionChange({
 	name: "V1_2 Check Change",
 	newVersion: ApiVersion.V2_0,
@@ -32,7 +23,6 @@ export const V1_2_CheckChange = defineVersionChange({
 	legacyDataSchema: CheckLegacyDataSchema,
 	affectsResponse: true,
 
-	// Response: V1.1+ (CheckResult) → V0_2 (CheckResponseV0)
 	transformResponse: ({
 		input,
 		legacyData,
@@ -46,7 +36,6 @@ export const V1_2_CheckChange = defineVersionChange({
 
 		const { featureToUse } = legacyData;
 
-		// Preserve upstream `allowed` (e.g. fail-open returns allowed: true with a null balance)
 		if (!input.balance) {
 			return {
 				allowed: input.allowed,

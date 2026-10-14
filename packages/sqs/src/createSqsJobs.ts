@@ -18,11 +18,9 @@ import type {
 type SqsJobsScope = {
 	ctx: SqsJobsContext;
 	config: SqsJobsConfig;
-	/** One client and one queue per queue name, opened on the first send to it. */
 	opened: Map<QueueName, { client: SqsClient; queue: Queue }>;
 };
 
-/** The jobs a queue carries: what a consumer of that queue parses with. */
 export const jobsOnQueue = ({ name }: { name: QueueName }): JobDefinition[] =>
 	Object.values(jobCatalogue).filter((definition) => definition.queue === name);
 
@@ -95,7 +93,6 @@ const shutdown = async ({ scope }: { scope: SqsJobsScope }): Promise<void> => {
 	scope.opened.clear();
 };
 
-/** Every job Autumn queues, bound to this process's queues; a host keeps one of these. */
 export const createSqsJobs = ({
 	ctx,
 	config,

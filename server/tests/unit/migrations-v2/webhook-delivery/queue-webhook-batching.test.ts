@@ -1,14 +1,3 @@
-/**
- * Contract: how a page's records become queue messages.
- *
- *   - delivery OFF (or unresolved controls) → nothing queued, whatever the
- *     records — this is the operator's off-switch and must short-circuit
- *     before any send is attempted;
- *   - zero records → nothing queued;
- *   - records split into MIGRATION_WEBHOOK_RECORDS_PER_MESSAGE batches, with
- *     every record landing in exactly one.
- */
-
 import { describe, expect, spyOn, test } from "bun:test";
 import { withTimeout } from "@autumn/shared";
 import { auth } from "@trigger.dev/sdk/v3";
@@ -73,7 +62,6 @@ describe("queueMigrationWebhooks", () => {
 	test.each([false, true])(
 		"a full page fits the deadline with slow SDK requests (stream fails: %p)",
 		async (streamFails) => {
-			// Scale four-second HTTP latency and the five-minute page deadline together.
 			const timeScale = 100;
 			const requestDelayMs = 4_000 / timeScale;
 			const records = buildRecords(5_000);

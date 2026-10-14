@@ -12,13 +12,11 @@ import type { PartitionProcessorScope } from "../../types/partitionProcessor.js"
 import type { MutationResult } from "../../writer/types/mutation.js";
 import type { ResetInputs } from "./readResetInputs.js";
 
-/** What the reset borrows from the command that triggers it: whose clock, and which request to answer to. */
 export type TriggeringCommand = Pick<
 	TrackCommand,
 	"identity" | "occurredAt" | "requestId" | "org"
 > & { commandId?: string };
 
-/** The reset a command triggers, id derived from the command's own so a retry reaches the same record. */
 const triggerToResetCommand = ({
 	command,
 	inputs,
@@ -36,7 +34,6 @@ const triggerToResetCommand = ({
 	...inputs,
 });
 
-/** Runs inside the writer's critical section: no await, no I/O. Nothing due answers without a record. */
 export const mutateReset = ({
 	scope,
 	state,
@@ -66,10 +63,6 @@ export const mutateReset = ({
 	};
 };
 
-/**
- * Rows due by the command's `occurredAt` refill in their own record, so the command lands on the fresh
- * cycle. Synchronous, like the decision it precedes; nothing is written when nothing is due.
- */
 export const advanceResets = ({
 	scope,
 	command,

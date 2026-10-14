@@ -2,7 +2,6 @@ import { type AppEnv, type Reward, rewards } from "@autumn/shared";
 import { and, eq, or } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 
-/** Fetch one reward by ID or internal_id */
 export const getReward = async ({
 	db,
 	idOrInternalId,

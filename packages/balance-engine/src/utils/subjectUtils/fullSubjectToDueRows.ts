@@ -14,7 +14,6 @@ import type {
 } from "../../models/subject/workerFullSubject.js";
 import { fullSubjectToHeldRows } from "./convertSubjectUtils.js";
 
-/** A row a reset refills: selection proved it has a cycle end and an interval, so the shared reset helpers accept it as is. */
 export type DueRow = WorkerFullCustomerEntitlementWithProduct & {
 	next_reset_at: number;
 	entitlement: WorkerFullCustomerEntitlementWithProduct["entitlement"] & {
@@ -30,7 +29,6 @@ const isOverdue = ({
 	asOf: number;
 }): boolean => row.next_reset_at !== null && row.next_reset_at < asOf;
 
-/** A loose grant refills on its own; a plan's row refills while the plan is active, or past due when the product allows it. */
 const planRefills = ({
 	row,
 }: {
@@ -45,7 +43,6 @@ const planRefills = ({
 	);
 };
 
-/** A billed row is refilled by its invoice, unless it is prepaid on a reset interval of its own. */
 const invoiceRefills = ({
 	row,
 }: {
@@ -59,7 +56,6 @@ const invoiceRefills = ({
 	});
 };
 
-/** A lifetime pool is granted once and never refills, whatever its row's cycle says. */
 const poolRefills = ({
 	row,
 }: {
@@ -67,7 +63,6 @@ const poolRefills = ({
 }): boolean =>
 	row.pooled_balance?.reset_mode !== PooledBalanceResetMode.Lifetime;
 
-/** The rows a reset at `asOf` refills: overdue, on a refilling cycle, held by a plan that refills, not a lifetime pool, and not left to an invoice. */
 export const fullSubjectToDueRows = ({
 	fullSubject,
 	asOf,
@@ -84,7 +79,6 @@ export const fullSubjectToDueRows = ({
 			!invoiceRefills({ row }),
 	);
 
-/** The plans whose subscription anchor can move a reset due at `asOf`: what the sender reads anchors for. */
 export const fullSubjectToPlansNeedingBillingCycleAnchor = ({
 	fullSubject,
 	asOf,
@@ -105,14 +99,12 @@ export const fullSubjectToPlansNeedingBillingCycleAnchor = ({
 	),
 ];
 
-/** A pool whose grant is the sum of its shares; a license pool's is bought seats × the grant, an unlimited one has none. */
 const poolGrantIsSumOfShares = ({
 	pool,
 }: {
 	pool: WorkerPooledBalance;
 }): boolean => !pool.unlimited && pool.customer_license_link_id === null;
 
-/** The due pools whose grant is re-summed from their shares before the reset is decided. Every due pool is still promoted. */
 export const fullSubjectToPoolsSummingContributions = ({
 	fullSubject,
 	asOf,

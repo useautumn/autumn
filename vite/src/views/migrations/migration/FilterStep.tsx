@@ -11,7 +11,6 @@ type FormInstance = ReturnType<typeof useMigrationEditorForm>["form"];
 
 export function hasActiveFilter(filter: CustomerFilter): boolean {
 	if (filter.customer_id) return true;
-	// Multi-condition filters compose quantifiers at the customer level.
 	if (filter.$and?.length || filter.$or?.length) return true;
 	if (!filter.plan) return false;
 	const plan = filter.plan;

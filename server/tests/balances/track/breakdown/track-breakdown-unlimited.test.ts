@@ -14,16 +14,6 @@ import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
 import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
 
-/**
- * Test 12.1: One breakdown unlimited, others limited
- *
- * When one product grants unlimited access to a feature,
- * the entire feature becomes unlimited. Expected:
- * - unlimited: true at top level
- * - Only 1 breakdown item (for the unlimited feature)
- * - Breakdown has all zeros (as per apiBalanceUtils.ts)
- */
-
 const limitedMessages = constructFeatureItem({
 	featureId: TestFeature.Messages,
 	includedUsage: 100,
@@ -69,7 +59,6 @@ describe(`${chalk.yellowBright("track-breakdown-unlimited: limited + unlimited p
 			prefix: testCase,
 		});
 
-		// Attach limited product first
 		await autumnV2.attach({
 			customer_id: customerId,
 			product_id: limitedProd.id,
@@ -99,13 +88,10 @@ describe(`${chalk.yellowBright("track-breakdown-unlimited: limited + unlimited p
 			feature_id: TestFeature.Messages,
 		})) as unknown as CheckResponseV2;
 
-		// Feature should be unlimited
 		expect(res.balance?.unlimited).toBe(true);
 
-		// Should have only 1 breakdown (unlimited trumps limited)
 		expect(res.balance?.breakdown).toHaveLength(1);
 
-		// Breakdown should have all zeros (as per apiBalanceUtils.ts)
 		const breakdown = res.balance?.breakdown?.[0];
 		expect(breakdown).toMatchObject({
 			granted_balance: 0,
@@ -122,9 +108,6 @@ describe(`${chalk.yellowBright("track-breakdown-unlimited: limited + unlimited p
 			value: 1000,
 		});
 
-		// Track should succeed
-
-		// Balance should still show unlimited with zeros
 		expect(trackRes.balance?.unlimited).toBe(true);
 		expect(trackRes.balance?.breakdown).toHaveLength(1);
 	});
@@ -158,7 +141,6 @@ describe(`${chalk.yellowBright("track-breakdown-unlimited-first: unlimited attac
 			prefix: `${testCase}-first`,
 		});
 
-		// Attach unlimited product first
 		await autumnV2.attach({
 			customer_id: customerId,
 			product_id: unlimitedProd.id,
@@ -186,10 +168,8 @@ describe(`${chalk.yellowBright("track-breakdown-unlimited-first: unlimited attac
 			feature_id: TestFeature.Messages,
 		})) as unknown as CheckResponseV2;
 
-		// Should still be unlimited (unlimited wins regardless of order)
 		expect(res.balance?.unlimited).toBe(true);
 
-		// Should still have only 1 breakdown
 		expect(res.balance?.breakdown).toHaveLength(1);
 	});
 });

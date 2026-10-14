@@ -42,7 +42,6 @@ export const executeRoute = async ({
 }): Promise<BackendResult> => {
 	const requireCustomer = route.requireCustomer !== false;
 
-	// 1. Resolve identity (and validate if required)
 	const identityResult = await resolveIdentity({
 		getCustomer,
 		requireCustomer,
@@ -54,17 +53,14 @@ export const executeRoute = async ({
 
 	const { identity } = identityResult;
 
-	// 2. If customHandler exists, use it (handles special cases)
 	if (route.customHandler) {
 		try {
 			const result = await route.customHandler({ autumn, identity, body });
 
-			// If customHandler returns BackendResult, use it directly
 			if (isBackendResult(result)) {
 				return result;
 			}
 
-			// Otherwise wrap the SDK response
 			return backendSuccess({ body: result });
 		} catch (error) {
 			console.error(`[Autumn] Custom handler failed: ${route.route}`, error);
@@ -72,7 +68,6 @@ export const executeRoute = async ({
 		}
 	}
 
-	// 3. Build args and call SDK
 	const sdkArgs = buildSdkArgs({ body, identity, route });
 
 	try {

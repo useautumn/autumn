@@ -35,7 +35,6 @@ const BEHAVIOR_SUMMARY_LABELS: [
 	["updated", "updated"],
 ];
 
-/** `previous_attributes` is sparse — overlay it on the after-state for the before-state. */
 const balanceBefore = (
 	change: SetPlansPreviewBalanceChange,
 ): SetPlansPreviewBalance => ({
@@ -54,7 +53,6 @@ const describeReset = ({ before, after }: BalanceTransition) => {
 	return `resets ${formatPhaseDate({ startsAt: after.next_reset_at })}`;
 };
 
-/** Every number is labelled so the row reads as "<feature>: granted, used, left". */
 const describeBalance = ({ before, after }: BalanceTransition) => {
 	if (after.unlimited) return "Unlimited";
 	return joinDetail([

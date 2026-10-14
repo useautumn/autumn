@@ -29,8 +29,6 @@ export const planWouldVersion = ({
 	const freeTrialProvided = "free_trial" in updates;
 	const licensesProvided = updates.licenses !== undefined;
 
-	// Billing controls (like other settings) patch in place across all versions
-	// and never version on their own.
 	if (itemsExist || freeTrialProvided || licensesProvided) {
 		const { itemsSame, freeTrialsSame } = productsAreSame({
 			newProductV2: incoming,

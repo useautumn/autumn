@@ -1,6 +1,5 @@
 import { AppEnv, type Organization } from "@autumn/shared";
 
-/** Organization fields that hold one environment's Stripe connection. */
 export const stripeEnvFields = (env: AppEnv) =>
 	env === AppEnv.Sandbox
 		? ({

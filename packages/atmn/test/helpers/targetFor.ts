@@ -6,7 +6,6 @@ import {
 	type TargetFlags,
 } from "../../src/env/resolveTarget";
 
-/** Env vars the resolver reads; cleared so a developer's own .env stays out of the assertions. */
 const CLEARED = [
 	"AUTUMN_BASE_URL",
 	"AUTUMN_SANDBOX_ID",
@@ -14,7 +13,6 @@ const CLEARED = [
 	"ATMN_CLI_CLIENT_ID",
 ] as const;
 
-/** Clears the resolver's env vars for a test file; returns the restore for afterEach. */
 export const isolateTargetEnv = () => {
 	const saved = new Map<string, string | undefined>();
 	return {
@@ -34,8 +32,6 @@ export const isolateTargetEnv = () => {
 	};
 };
 
-/** The real program, with one command's action swapped for a capture so parsing
- * neither reads a .env nor talks to a server. */
 export const targetFor = async ({
 	command: name,
 	argv,

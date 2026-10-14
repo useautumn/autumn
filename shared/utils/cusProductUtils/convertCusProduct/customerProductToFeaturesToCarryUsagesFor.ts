@@ -5,12 +5,6 @@ import {
 } from "@utils/cusEntUtils";
 import { isConsumableFeature } from "@utils/featureUtils/classifyFeature/isConsumableFeature";
 
-/**
- * Get all consumable (resettable) features for a customer product.
- *
- * When THIS customer product is attached, carry usages for these entitlements.
- * That is, return customer_entitlements for features whose usage is tracked/reset periodically.
- */
 export const customerProductToFeaturesToCarryUsagesFor = ({
 	cusProduct,
 }: {

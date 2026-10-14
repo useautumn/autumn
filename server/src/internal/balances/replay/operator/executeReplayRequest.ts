@@ -86,7 +86,6 @@ async function dispatchReplayPlan({
 	};
 }
 
-/** The archive keeps the worker's decision itself; projecting an API balance would need a FullSubject the replay does not load. */
 function replayDecisionReply({
 	dispatch,
 }: {
@@ -111,7 +110,6 @@ function completeReplayDispatch({
 			durationMs,
 		};
 	} catch (cause) {
-		// A rejected balance is a business outcome, not an execution failure.
 		if (!(cause instanceof InsufficientBalanceError)) throw cause;
 		return {
 			kind: "completed",
@@ -136,7 +134,6 @@ function replayExecutionErrorOf({
 }): ReplayExecutionResult {
 	if (cause instanceof ReplayHydrationSourceRefusedError)
 		return { kind: "refused", reason: cause.reason };
-	// The engine could not decide the command: a verdict for the archive, not a failure.
 	if (
 		cause instanceof BalanceWorkerClientError &&
 		cause.workerCode === "UNSUPPORTED_COMMAND"

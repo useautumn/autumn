@@ -1,11 +1,6 @@
 import type { ChangeEvent, KeyboardEvent } from "react";
 import { useState } from "react";
 
-/**
- * A text draft that submits (trimmed, non-empty) on enter and on blur, then clears.
- * With `separators`, typed or pasted text splits on them and every piece but the
- * last submits at once — so "a, b, c" becomes three values while "c" stays editable.
- */
 export function useDraftValue({
 	onSubmit,
 	separators,
@@ -34,7 +29,6 @@ export function useDraftValue({
 	};
 
 	const onKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
-		// Enter confirms an IME composition; committing here would eat the value.
 		if (event.key !== "Enter" || event.nativeEvent.isComposing) return;
 		event.preventDefault();
 		submit();

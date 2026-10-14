@@ -1,9 +1,3 @@
-/**
- * catalogV2.update — a direct variant `new_version` mint inherits the
- * source row's anchor. A base and its variant cannot both be top-level
- * plans[] entries — that edit must go through base.variants[].
- */
-
 import { test } from "bun:test";
 import { ErrCode } from "@autumn/shared";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils.js";

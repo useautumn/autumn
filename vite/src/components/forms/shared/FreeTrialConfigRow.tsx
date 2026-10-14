@@ -5,7 +5,6 @@ import { ConfigRow } from "./ConfigRow";
 import { TrialOnEndSelect } from "./TrialOnEndSelect";
 import type { FreeTrialForm } from "./utils/freeTrialForm";
 
-/** `lengthFields` is the caller's `FreeTrialLengthFields`, bound to its own form type. */
 export function FreeTrialConfigRow({
 	form,
 	lengthFields,
@@ -26,7 +25,6 @@ export function FreeTrialConfigRow({
 	trialOnEnd?: TrialOnEnd;
 	onTrialOnEndChange?: (value: TrialOnEnd) => void;
 	onToggle: (enabled: boolean) => void;
-	/** Fires on any user change to the row's switch or options. */
 	onEdit?: () => void;
 	description?: string;
 }) {

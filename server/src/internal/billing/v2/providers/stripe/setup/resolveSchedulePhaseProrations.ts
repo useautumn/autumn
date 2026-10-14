@@ -8,7 +8,6 @@ export type SchedulePhaseProration = {
 	prorationBehavior: PhaseProrationBehavior;
 };
 
-/** The later phases' prorations a set_plans request names; undefined for any other action. */
 export const setPlansPhaseProrations = ({
 	billingContext,
 }: {
@@ -22,7 +21,6 @@ export const setPlansPhaseProrations = ({
 	);
 };
 
-/** set_plans names each later phase's proration; any other action keeps what the saved schedule holds. */
 export const resolveSchedulePhaseProrations = async ({
 	ctx,
 	billingContext,

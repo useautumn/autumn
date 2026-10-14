@@ -1,11 +1,3 @@
-/**
- * Omitting `events` means every event, the way a dashboard-made endpoint with
- * no filter works in Svix:
- * - create or sync with no `events` makes an endpoint with no filter;
- * - sync with no `events` widens a filtered endpoint, and repeating it is a no-op;
- * - update keeps the list when `events` is omitted and widens it on `[]`.
- */
-
 import { afterAll, beforeAll, expect, test } from "bun:test";
 import { createSvixCli } from "@/external/svix/svixUtils.js";
 import {

@@ -4,7 +4,6 @@ import { RUN_ALREADY_FINISHED_MESSAGE } from "../../ui/messages.js";
 import type { ActionMessageContent } from "../approvals/types.js";
 import { getRun } from "./runRegistry.js";
 
-/** Stop-button handler; action events bypass the thread lock, so this runs mid-handler. */
 export const handleStopAction = async (event: ActionEvent) => {
 	const runKey = event.value;
 	if (!runKey) return;
@@ -15,7 +14,6 @@ export const handleStopAction = async (event: ActionEvent) => {
 				markdown,
 			} as ActionMessageContent);
 		} catch {
-			// The stop card may already have been deleted by run finalization.
 		}
 	};
 

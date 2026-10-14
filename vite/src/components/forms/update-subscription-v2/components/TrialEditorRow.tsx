@@ -82,13 +82,11 @@ export function TrialEditorRow({
 	});
 
 	const handleBlur = () => {
-		// Use setTimeout to wait for focus to fully settle after portal interactions
 		setTimeout(() => {
 			const activeElement = document.activeElement;
 			const isStillInContainer =
 				containerRef.current?.contains(activeElement) ?? false;
 
-			// Check if any Radix select portal is open
 			const hasOpenSelect = document.querySelector(
 				"[data-radix-popper-content-wrapper]",
 			);
@@ -207,12 +205,10 @@ export function TrialEditorRow({
 	}
 
 	const handleClearTrial = () => {
-		// Just collapse - preserve the value so it can be restored
 		onCollapse();
 		setIsEditing(false);
 		setIsAddingNewTrial(true);
 
-		// Only mark for removal if they're currently trialing (ending an active trial)
 		if (isCurrentlyTrialing && onEndTrial) {
 			onEndTrial();
 		}

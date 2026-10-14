@@ -14,7 +14,6 @@ const CUSTOMER_CREATE_RATE_LIMITED = "customer_create_rate_limited";
 export const isCustomerCreateRateLimitError = (error: unknown) =>
 	error instanceof RecaseError && error.code === CUSTOMER_CREATE_RATE_LIMITED;
 
-/** Caps customer creations per org per fixed window; reads that find an existing customer never count. */
 export const assertCustomerCreateWithinOrgLimit = async ({
 	ctx,
 	counter,
@@ -45,7 +44,6 @@ export const assertCustomerCreateWithinOrgLimit = async ({
 			now,
 		});
 	} catch (error) {
-		// Same as the router limiter: a Redis failure never blocks a creation.
 		logger.error(`[rate-limit] customer create counter failed: ${error}`);
 		return;
 	}

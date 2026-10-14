@@ -2,11 +2,6 @@ import type { FullProduct } from "@autumn/shared";
 import type { ProductStatesContext } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext";
 import { variantRowForDeclaredEntry } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/anchoredVariantRow";
 
-/**
- * THE variant row selector for variants[] entries: `internal_id`, `version`
- * or `version_slug` → that row; omit → the row anchored to the declaring base
- * (none when the entry mints one); allVersions → every live row.
- */
 export const selectVariantRows = ({
 	planId,
 	internalId,

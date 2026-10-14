@@ -27,8 +27,6 @@ const REPLAY_KAFKA_LIMITS = {
 	maxRetryTimeMs: 5_000,
 };
 
-/** Loaded only here: every one of these modules builds pools, clients or
- *  loggers at import time, and a dry run must construct none of them. */
 async function loadReplayOperatorModules() {
 	const [
 		kafkajs,
@@ -110,8 +108,6 @@ function createReplayDatabase({
 	});
 }
 
-/** The rebased run end minus the frozen baseline is exactly the logical window
- *  the source is allowed to hydrate. */
 function resolveReplayWindowMs({
 	manifest,
 }: {
@@ -182,12 +178,6 @@ function buildReplayOperatorResources({
 	return { run, close };
 }
 
-/**
- * Composes the physical replay resources after the operator has already proven
- * the manifest, the limits and the pinned staging target. Ownership is started
- * before anything prewarms, and a startup that fails or is cancelled closes
- * whatever it already created before rethrowing.
- */
 export async function openReplayOperatorResources({
 	manifest,
 	target,

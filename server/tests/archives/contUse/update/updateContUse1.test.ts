@@ -136,8 +136,6 @@ describe(`${chalk.yellowBright(`attach/entities/${testCase}: Testing update cont
 			usage,
 			numReplaceables: extraUsage,
 		});
-
-		// Will have 1 invoice because price is replaced...
 	});
 
 	const entities = [
@@ -162,9 +160,6 @@ describe(`${chalk.yellowBright(`attach/entities/${testCase}: Testing update cont
 		});
 
 		await autumn.entities.create(customerId, entities);
-
-		// Usage won't change since using replaceables...
-		// usage += entities.length;
 
 		await expectSubQuantityCorrect({
 			stripeCli: ctx.stripeCli,

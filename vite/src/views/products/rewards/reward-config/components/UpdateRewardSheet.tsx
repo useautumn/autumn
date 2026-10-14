@@ -55,7 +55,6 @@ export function UpdateRewardSheet({
 	const setReward = useRewardStore((s) => s.setReward);
 	const setBaseReward = useRewardStore((s) => s.setBaseReward);
 
-	// Initialize reward store when selectedReward changes
 	useEffect(() => {
 		if (open && selectedReward) {
 			const frontendReward = mapApiToFrontendReward({
@@ -98,7 +97,6 @@ export function UpdateRewardSheet({
 				return false;
 			if (
 				reward.featureGrantEntitlements.some((e) => {
-					// Boolean features grant on/off access with no allowance
 					const isBoolean =
 						features.find((f) => f.id === e.feature_id)?.type ===
 						FeatureType.Boolean;

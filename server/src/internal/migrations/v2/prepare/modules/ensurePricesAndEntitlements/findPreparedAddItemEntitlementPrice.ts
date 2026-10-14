@@ -8,8 +8,6 @@ export type PreparedAddItemEntitlementPrice = {
 	price?: Price;
 };
 
-/** Follows the artifact address this module writes — (op_index, "add_item",
- * item_index, product, item hash) — to the entitlement/price rows it created. */
 export const findPreparedAddItemEntitlementPrice = ({
 	prepared,
 	opIndex,

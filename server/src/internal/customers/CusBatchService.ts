@@ -51,7 +51,6 @@ import { resolveInternalIdsByBasePriceSort } from "./resolveByBasePriceSort.js";
 import { resolveInternalIdsByFeatureBalanceSort } from "./resolveByFeatureBalanceSort.js";
 
 const DASHBOARD_LIST_PRODUCT_PREVIEW_LIMIT = 3;
-/** Balance-mode pages are verify-bounded: nominations + exact PG re-rank. */
 const FEATURE_BALANCE_PAGE_CAP = 250;
 
 export class CusBatchService {
@@ -96,7 +95,6 @@ export class CusBatchService {
 		}) as unknown as FlattenedCustomerRow;
 		const fullCustomers = reassembleFlattenedCustomer(flat);
 
-		// Fire-and-forget: queue SQS job for any stale entitlement resets
 		triggerBatchResetCustomerEntitlements({
 			ctx,
 			fullCustomers,
@@ -196,7 +194,6 @@ export class CusBatchService {
 			`[CusBatchService.getPage] limit=${limit} offset=${offset} rows=${results.length} sql=${timings.sqlMs.toFixed(0)}ms hydrate=${timings.hydrateMs.toFixed(0)}ms total=${timings.totalMs.toFixed(0)}ms`,
 		);
 
-		// Fire-and-forget: queue SQS job for any stale entitlement resets
 		triggerBatchResetCustomerEntitlements({
 			ctx,
 			fullCustomers,
@@ -447,9 +444,6 @@ export class CusBatchService {
 
 		const intervalFilters = parseDashboardIntervalFilter(filters?.interval);
 
-		// Status/none/version filter on a different table (customer_products) than
-		// the cursor (customers). Folding it into the main query forces a merge join
-		// that abandons idx_customers_cursor and degrades to seconds.
 		const requiresResolveStep =
 			statusFilters.length > 0 ||
 			productVersionFilters.length > 0 ||
@@ -488,7 +482,6 @@ export class CusBatchService {
 			withSubs: true,
 			withEntities: true,
 			includeInvoices: true,
-			// Only the dashboard renders products_page / products_total_count.
 			withProductsPage: true,
 			entitiesLimit,
 			limit: internalIds ? internalIds.length : limit,
@@ -567,8 +560,6 @@ export class CusBatchService {
 		return { fullCustomers, next_cursor: nextCursor };
 	}
 
-	/** Balance-threshold filter page (created_at sort): adaptive lake/dense
-	 * resolver, then the standard id-list hydration. */
 	private static async getBalanceFilteredPage({
 		ctx,
 		search,
@@ -665,8 +656,6 @@ export class CusBatchService {
 		return { fullCustomers, next_cursor: nextCursor };
 	}
 
-	/** Hydrate an already-ordered id list via the dashboard-shaped full-customer
-	 * query, restoring the resolver's order (hydration sorts by created_at). */
 	private static async hydrateResolvedPage({
 		ctx,
 		internalIds,
@@ -725,9 +714,6 @@ export class CusBatchService {
 		return fullCustomers;
 	}
 
-	/** Feature-balance sort page: MotherDuck nominates from the cached totals,
-	 * PG verifies exact sums and re-ranks (approximate membership/order by
-	 * design — see resolveByFeatureBalanceSort). */
 	private static async getFeatureBalanceSortedPage({
 		ctx,
 		search,
@@ -774,8 +760,6 @@ export class CusBatchService {
 			errorOnNotFound: true,
 		});
 
-		// The verify pass computes remaining for the sorted feature, so the
-		// threshold rides along only when it targets that same feature.
 		if (filters?.balance && filters.balance.feature_id !== sortFeatureId) {
 			throw new RecaseError({
 				message:
@@ -862,9 +846,6 @@ export class CusBatchService {
 		return { fullCustomers, next_cursor: nextCursor };
 	}
 
-	/** Base-price sort page: resolve ids ordered by monthly base-price total,
-	 * hydrate via the id-list path, then restore the resolver's order (the
-	 * hydration query internally orders by created_at). */
 	private static async getBasePriceSortedPage({
 		ctx,
 		search,
@@ -937,9 +918,6 @@ export class CusBatchService {
 		return { fullCustomers, next_cursor: nextCursor };
 	}
 
-	/**
-	 * Normalize customer data by converting string fields to numbers
-	 */
 	private static normalizeCustomerData(rawCustomer: any): any {
 		const normalizeTimestamp = (value: any): number => {
 			if (typeof value === "string") {
@@ -954,7 +932,6 @@ export class CusBatchService {
 			created_at: normalizeTimestamp(rawCustomer.created_at),
 		};
 
-		// Normalize customer products
 		if (
 			rawCustomer.customer_products &&
 			Array.isArray(rawCustomer.customer_products)
@@ -978,7 +955,6 @@ export class CusBatchService {
 					collection_method: cp.collection_method || "charge_automatically",
 					subscription_ids: cp.subscription_ids || [],
 					scheduled_ids: cp.scheduled_ids || [],
-					// Normalize customer entitlements
 					customer_entitlements: (cp.customer_entitlements || []).map(
 						(ce: any) => ({
 							...ce,

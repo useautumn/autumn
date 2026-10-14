@@ -1,22 +1,3 @@
-/**
- * TDD coverage for patch-style custom plan price updates.
- *
- * Contract under test:
- *   New behaviors:
- *     - customize.price + add_items updates the base price and appends items in patch mode.
- *     - customize.price: null removes the base price in patch mode.
- *     - customize.price alone updates the base price while preserving feature items.
- *     - entity-scoped patch price updates only affect the target entity.
- *   Side effects:
- *     - Existing-mode patch updates do not expire or replace the customer product.
- *     - Stripe subscription state stays consistent with the patched customer product.
- *
- * Pre-impl red: patch setup ignores customize.price, so price-only patches are rejected
- * or produce no Stripe delta.
- * Post-impl green: patch setup deletes the old base customer price, inserts the custom
- * base price when provided, and patches the existing customer product.
- */
-
 import { expect, test } from "bun:test";
 import type {
 	ApiCustomerV5,

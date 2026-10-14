@@ -5,38 +5,27 @@ import chalk from "chalk";
 import { config } from "dotenv";
 import { TEST_ORG_PUBLISHABLE_KEY } from "./createTestOrg.js";
 
-// Get the directory of this script file
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-/**
- * Find server/.env file robustly - works whether running from root or scripts dir
- */
 function findEnvPath(): string {
-	// Try from setupTestUtils directory (scripts/setupTestUtils/updateEnvFile.ts -> ../../server/.env)
 	const fromScriptDir = resolve(__dirname, "../../server/.env");
 	if (existsSync(fromScriptDir)) {
 		return fromScriptDir;
 	}
 
-	// Try from current working directory
 	const fromCwd = resolve(process.cwd(), "server/.env");
 	if (existsSync(fromCwd)) {
 		return fromCwd;
 	}
 
-	// If neither exists, return the path from script dir (will fail later with clear error)
 	return fromScriptDir;
 }
 
 export const envPath = findEnvPath();
 
-// Load existing env vars
 config({ path: envPath });
 
-/**
- * Updates server/.env with new test configuration
- */
 export function updateEnvFile({
 	testOrgSlug,
 	testOrgId,
@@ -60,7 +49,6 @@ export function updateEnvFile({
 		),
 	);
 
-	// Read existing .env file
 	let envContent = "";
 	try {
 		envContent = readFileSync(envPath, "utf-8");
@@ -73,13 +61,11 @@ export function updateEnvFile({
 		process.exit(1);
 	}
 
-	// Parse existing env vars
 	const envVars = new Map<string, string>();
 	const lines = envContent.split("\n");
 
 	for (const line of lines) {
 		const trimmed = line.trim();
-		// Skip empty lines and comments
 		if (!trimmed || trimmed.startsWith("#")) {
 			continue;
 		}
@@ -92,12 +78,10 @@ export function updateEnvFile({
 		}
 	}
 
-	// Update with new test variables
 	envVars.set("TESTS_ORG", testOrgSlug);
 	envVars.set("TESTS_ORG_ID", testOrgId);
 	envVars.set("UNIT_TEST_AUTUMN_PUBLIC_KEY", TEST_ORG_PUBLISHABLE_KEY);
 
-	// Only update the secret key if a new one was generated
 	if (autumnSecretKey) {
 		envVars.set("UNIT_TEST_AUTUMN_SECRET_KEY", autumnSecretKey);
 	}
@@ -107,7 +91,6 @@ export function updateEnvFile({
 	envVars.set("UPSTASH_REDIS_REST_TOKEN", upstashToken);
 	envVars.set("AUTUMN_PUBLIC_API_URL", tunnelUrl);
 
-	// Build new env content, preserving structure
 	const sections: string[][] = [];
 	let currentSection: string[] = [];
 	let inTestSection = false;
@@ -115,7 +98,6 @@ export function updateEnvFile({
 	for (const line of lines) {
 		const trimmed = line.trim();
 
-		// Check if this is a section header
 		if (trimmed.startsWith("#")) {
 			if (currentSection.length > 0) {
 				sections.push(currentSection);
@@ -126,7 +108,6 @@ export function updateEnvFile({
 			continue;
 		}
 
-		// Skip test-related vars from existing content - we'll add them fresh
 		if (
 			trimmed.startsWith("TESTS_ORG") ||
 			trimmed.startsWith("UNIT_TEST_AUTUMN_PUBLIC_KEY") ||
@@ -145,7 +126,6 @@ export function updateEnvFile({
 		sections.push(currentSection);
 	}
 
-	// Add test configuration section
 	const testSection = [
 		"",
 		"# Test Configuration",
@@ -154,7 +134,6 @@ export function updateEnvFile({
 		`UNIT_TEST_AUTUMN_PUBLIC_KEY=${TEST_ORG_PUBLISHABLE_KEY}`,
 	];
 
-	// Only add secret key if it was generated/updated
 	if (autumnSecretKey) {
 		testSection.push(`UNIT_TEST_AUTUMN_SECRET_KEY=${autumnSecretKey}`);
 	} else if (envVars.has("UNIT_TEST_AUTUMN_SECRET_KEY")) {
@@ -177,7 +156,6 @@ export function updateEnvFile({
 
 	sections.push(testSection);
 
-	// Write back to file
 	const newContent = sections.map((s) => s.join("\n")).join("\n");
 	writeFileSync(envPath, newContent);
 

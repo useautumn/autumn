@@ -1,6 +1,5 @@
 import type { EntitlementPrice, Price } from "@autumn/shared";
 
-/** Claim = definition match. Desired/current are interchangeable for content. */
 export type ClaimedEntitlementPrice = {
 	desired: EntitlementPrice;
 	current: EntitlementPrice;

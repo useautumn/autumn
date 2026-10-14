@@ -82,7 +82,6 @@ describe("billing controls", () => {
 				},
 			];
 
-			// b already carries 3 of the 5 allowed overage, so only 2 more may go negative.
 			const outcome = deductFrom({
 				customer,
 				customerEntitlements: rows,
@@ -91,7 +90,6 @@ describe("billing controls", () => {
 			expect(outcome).toMatchObject({ appliedValue: 12, remaining: 18 });
 			expect(balancesAfter(outcome)).toEqual([["a", { balance: -2 }]]);
 
-			// Under reject the whole value is refused once the cap binds.
 			expect(
 				deductFrom({
 					customer,
@@ -123,7 +121,6 @@ describe("billing controls", () => {
 				value: 800,
 			});
 
-			// grant 1000 × 50% = 500 of overage
 			expect(outcome).toMatchObject({ appliedValue: 500, remaining: 300 });
 		},
 	);

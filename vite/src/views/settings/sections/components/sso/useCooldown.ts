@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 
-/** Simple 1s-tick countdown used for verification retry cooldowns. */
 export const useCooldown = () => {
 	const [secondsLeft, setSecondsLeft] = useState(0);
 

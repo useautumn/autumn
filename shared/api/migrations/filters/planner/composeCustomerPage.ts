@@ -19,12 +19,8 @@ import {
 } from "./buildCustomerCandidateQuery.js";
 import { chooseCustomerAccessPath } from "./chooseCustomerAccessPath.js";
 
-/** Caller-supplied per-candidate predicate (e.g. the migration checkpoint). */
 export type CustomerPagePredicate = {
-	/** Bare predicate SQL correlated via `keyColumn` (the candidate-id column). */
 	build: (keyColumn: string) => CompiledSql;
-	/** Set when the predicate references the `c` customers alias beyond the
-	 * key column — forces the customers join inside the walk. */
 	needsCustomerAlias?: boolean;
 };
 
@@ -57,7 +53,6 @@ type CustomerScopeArgs = {
 	predicates?: CustomerPagePredicate[];
 };
 
-/** Wraps a candidate-id subquery with the payload join over customers. */
 export const wrapIdsWithCustomerColumns = ({
 	ids,
 	ambient,
@@ -74,12 +69,6 @@ export const wrapIdsWithCustomerColumns = ({
 	return query.compile();
 };
 
-/**
- * Bounded candidate-id page for ANY filter: a driver enumerates candidate ids
- * newest-first and EVERY predicate (residual filter, checkpoint, cursor) is
- * evaluated inside the driver, so LIMIT counts matches — a short page always
- * means the set is exhausted, never that rows were filtered away.
- */
 export const composeCandidateIdPage = ({
 	filter,
 	ctx,
@@ -111,7 +100,6 @@ export const composeCandidateIdPage = ({
 	});
 };
 
-/** Page-bounded customer query: bounded id page + payload join. */
 export const composeCustomerPage = ({
 	limit,
 	cursor,
@@ -125,12 +113,6 @@ export const composeCustomerPage = ({
 		ambient: scope.ambient,
 	});
 
-/**
- * Unbounded candidate-id set. Two access paths, chosen by the compiler:
- * fully plan-level filters read customer_products alone (no customers join,
- * no row payloads); anything needing the customer row keeps the batch-hash
- * shape — optimal when no LIMIT can stop the scan.
- */
 export const composeCustomerIdSet = ({
 	filter,
 	ctx,
@@ -178,7 +160,6 @@ export const composeCustomerIdSet = ({
 	return query.compile();
 };
 
-/** Full-set count over the candidate-id set. */
 export const composeCustomerCount = (args: CustomerScopeArgs): CompiledSql => {
 	const idSet = composeCustomerIdSet(args);
 	return {
@@ -187,7 +168,6 @@ export const composeCustomerCount = (args: CustomerScopeArgs): CompiledSql => {
 	};
 };
 
-/** Driver: ordered index walks of customer_products, one per plan product. */
 const composePlanWalkIdPage = ({
 	constraint,
 	residualIr,
@@ -248,8 +228,6 @@ const composePlanWalkIdPage = ({
 	return query.compile();
 };
 
-/** Driver: ordered walk of customers itself (filters with no plan access
- * path). Same shape as the legacy fallback query — LIMIT is post-filter. */
 const composeCustomersDriverIdPage = ({
 	ir,
 	ambient,

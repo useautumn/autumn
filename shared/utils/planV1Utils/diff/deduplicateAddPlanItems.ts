@@ -1,7 +1,6 @@
 import type { ApiPlanV1, CreatePlanItemParamsV1 } from "@autumn/shared";
 import { buildPlanItemKey, PlanItemMatchPrecision } from "./diffPlanV1.js";
 
-/** Adds supersede one same-cadence base item; ambiguous matches stay. */
 export const deduplicateAddPlanItems = ({
 	base,
 	addItems,

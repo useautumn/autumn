@@ -9,10 +9,6 @@ import type {
 	StripeWebhookHonoEnv,
 } from "./webhookMiddlewares/stripeWebhookContext.js";
 
-/**
- * Hono handler for Stripe webhook events
- * Context is set up by seeder middlewares (legacy or connect)
- */
 export const handleStripeWebhookEvent = async (
 	c: Context<StripeWebhookHonoEnv>,
 ) => {
@@ -53,12 +49,8 @@ export const handleStripeWebhookEvent = async (
 		}
 
 		logger.error(`Stripe webhook error: ${error}`, { error });
-		// Rethrow so the ack middleware owns the outcome: sync events 500 (Stripe
-		// retries), early events release the idempotency lock for manual replay.
 		throw error;
 	}
-
-	// Note: Cache refresh is now handled by stripeWebhookRefreshMiddleware
 
 	return c.json({ success: true }, 200);
 };

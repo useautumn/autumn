@@ -16,8 +16,6 @@ export type ScenarioMigrationResult = {
 	runMs: number;
 };
 
-/** Drives a migration through the production path and REPORTS the lane rather
- * than exiting on refusal, so a scenario can assert that a guard held. */
 export const runScenarioMigration = async ({
 	ctx,
 	migration,

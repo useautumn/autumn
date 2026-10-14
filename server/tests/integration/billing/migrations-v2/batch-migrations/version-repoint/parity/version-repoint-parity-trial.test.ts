@@ -1,9 +1,3 @@
-/**
- * Parity twin of `migration-free-trial-carryover`: a trialing customer keeps
- * their trial through a version update on both lanes. The trial CONFIG is
- * identical across v1/v2 (updateProduct carries free_trial on force_version;
- * config changes reject with free_trial_transition and belong to fallbacks/).
- */
 import { expect, test } from "bun:test";
 import type { ApiCustomerV5 } from "@autumn/shared";
 import {
@@ -19,7 +13,6 @@ import { pollUntil } from "@tests/utils/genUtils";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-// version-only is per-customer until definition execute is restored
 import { readScopedFeatureRow } from "../../paidRowTestUtils";
 import {
 	expectActivePlanVersion,
@@ -135,7 +128,6 @@ test.skip(
 			await expectActivePlanVersion({ ctx, customerId, planId, version: 2 });
 		}
 
-		// Twins attached together, so their trial ends must agree across lanes.
 		expect(
 			Math.abs(
 				(trialEndsBefore.get(batchCustomerId) as number) -

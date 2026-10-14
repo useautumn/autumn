@@ -1,19 +1,3 @@
-/**
- * Unlinking a customer's Stripe customer (`stripe_id: null`) leaves the active
- * customer product pointing at a Stripe subscription the customer no longer
- * owns. That linkage must not strand the plan: an immediate cancel detaches
- * Autumn-side state, and any other update surfaces the ownership fault.
- *
- * Red (current):  the subscription ownership check dereferences the unlinked
- *                 processor and every update — including the dashboard preview
- *                 that precedes a cancel — 500s with
- *                 "null is not an object (evaluating 'fullCus.processor.id')".
- * Green (after):  cancel_immediately succeeds and leaves the old subscription
- *                 untouched; cancel_end_of_cycle rejects with
- *                 "is not for the current customer" unless no_billing_changes
- *                 is set, in which case it cancels Autumn-only.
- */
-
 import { expect, test } from "bun:test";
 import type {
 	ApiCustomerV3,
@@ -28,10 +12,6 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-/**
- * Attaches a paid plan, then unlinks the Stripe customer so the active customer
- * product keeps a subscription id the customer no longer owns.
- */
 const setupUnlinkedStripeCustomer = async ({
 	customerId,
 }: {

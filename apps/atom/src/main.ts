@@ -6,12 +6,10 @@ import { startWalCheckpointer } from "./state/startWalCheckpointer.js";
 import { createAtomThreads } from "./threads/createAtomThreads.js";
 import { runAtomThread } from "./threads/runAtomThread.js";
 
-/** The main thread starts the serving threads, each this same program, and copies their SQLite logs back into the files. */
 function createAtom(): AtomServer {
 	const env = getAtomEnv();
 	const logger = getAtomLogger();
 	const threads = createAtomThreads({
-		// The program's entry, not this module: Alien's build wraps main.ts in a bootstrap, and a non-entry module's URL is its source path.
 		ctx: { spawnThread: () => new Worker(Bun.main), logger },
 		config: { env },
 	});
@@ -65,6 +63,5 @@ function reportError({ cause }: { cause: unknown }): void {
 	getAtomLogger().error({ error: cause, type: "atom_failed" }, "Atom failed");
 }
 
-// One program for every thread: a compiled Atom is a single file, so a serving thread is the program started again.
 if (isMainThread) void main();
 else runAtomThread();

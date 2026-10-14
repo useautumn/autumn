@@ -16,7 +16,6 @@ type BenchLatency = { appendMs: number; applyMs: number };
 const sleep = (ms: number) =>
 	ms <= 0 ? Promise.resolve() : new Promise((r) => setTimeout(r, ms));
 
-/** The production shape: map baseline (postgres committer), Kafka serialization, simulated I/O latency. */
 export const createBenchProcessor = async ({
 	scenario,
 	partition,

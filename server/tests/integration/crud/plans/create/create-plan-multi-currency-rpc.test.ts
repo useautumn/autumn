@@ -42,7 +42,6 @@ test.concurrent(
 			{ currency: "eur", amount: 9 },
 		]);
 
-		// Read back from storage.
 		const fetched = await autumnRpc.plans.get<ApiPlanV1>(productId);
 		expect(fetched.price?.additional_currencies).toEqual([
 			{ currency: "eur", amount: 9 },
@@ -100,7 +99,6 @@ test.concurrent(
 			{ currency: "eur", amount: 0.25 },
 		]);
 
-		// Read back from storage.
 		const fetched = await autumnRpc.plans.get<ApiPlanV1>(productId);
 		const fetchedTiers = fetched.items[0]?.price?.tiers;
 		expect(fetchedTiers?.[0]?.additional_currencies).toEqual([

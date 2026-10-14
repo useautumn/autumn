@@ -1,10 +1,3 @@
-/**
- * Stop must land immediately: mid-delegation the parent stream is silent, so
- * "stop" has to abort the local stream, return kind "stopped" fast, and leave
- * the typing status cleared — not cycling "Reasoning…".
- *
- *   bun tests/e2e/stopRun.e2e.ts
- */
 import {
 	registerRun,
 	runKeyForThread,

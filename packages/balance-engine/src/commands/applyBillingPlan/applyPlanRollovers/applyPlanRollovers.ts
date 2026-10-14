@@ -16,7 +16,6 @@ import { heldRowToJoinedRow } from "./heldRowToJoinedRow.js";
 const isAddRolloversOp = (op: BillingPlanOp): op is BillingPlanAddRolloversOp =>
 	op.op === "addRollovers";
 
-/** Each grant's new rollovers capped against the ones it holds, as the plan's rows and the ops before it leave them: the same cap a reset applies. */
 export const applyPlanRollovers = ({
 	command,
 	state,

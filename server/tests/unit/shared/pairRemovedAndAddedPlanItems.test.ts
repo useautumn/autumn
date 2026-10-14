@@ -1,16 +1,3 @@
-/**
- * pairRemovedAndAddedPlanItems: per-remove best unclaimed matching add.
- *
- * Algorithm: walk removes in order. For each filter, among unclaimed adds that
- * match every specified field, pick the highest-precision candidate (ties:
- * first in add-list order). Claim that add index. Unclaimed removes → removed;
- * unclaimed adds → leftoverAdds.
- *
- * Feature-only filters match every cadence of that feature; month filters do
- * not match lifetime. billing_method on the filter does not claim a free add
- * (same as planItemFilterMatchesCustomerPair / composeMatchKey).
- */
-
 import { describe, expect, test } from "bun:test";
 import {
 	BillWhen,

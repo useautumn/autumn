@@ -1,5 +1,3 @@
-/** A future first phase cancels the live subscription once every plan on it ends now; anything left on it keeps it. */
-
 import { describe, expect, test } from "bun:test";
 import {
 	type CreateScheduleBillingContext,

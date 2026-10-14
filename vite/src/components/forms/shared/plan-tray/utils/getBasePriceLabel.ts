@@ -4,8 +4,6 @@ import {
 	PRICE_VARIES_LABEL,
 } from "@/utils/product/basePriceDisplayUtils";
 
-/** The plan editor's base price label: "$20 per month", "Free", or
- * "Price varies" for a paid plan with no base price. */
 export const getBasePriceLabel = ({
 	product,
 	currency,

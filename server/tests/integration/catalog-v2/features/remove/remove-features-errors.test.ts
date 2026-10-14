@@ -1,12 +1,3 @@
-/**
- * catalogV2.update / preview_update — remove_features error cases.
- *
- * Contract: upserting and removing one feature in the same call throws, and
- * removing an unknown feature id is a 404. Both fire before any write.
- * (A same-call credit system referencing a removed feature is NOT an error —
- * it archives; see remove-features.test.ts.)
- */
-
 import { test } from "bun:test";
 import { FeatureType } from "@autumn/shared";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils.js";

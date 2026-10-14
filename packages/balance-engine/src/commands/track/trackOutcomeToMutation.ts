@@ -7,7 +7,6 @@ import type { WorkerFullSubject } from "../../models/subject/workerFullSubject.j
 import { trackLockToRowChange } from "./trackLockToRowChange.js";
 import type { TrackCommand } from "./types/trackCommand.js";
 
-/** Wraps what the deduction decided into the one mutation: command, changes, result. */
 export const trackOutcomeToMutation = ({
 	command,
 	outcome,
@@ -20,7 +19,6 @@ export const trackOutcomeToMutation = ({
 	const { rejected, changes } = outcome;
 	const revisionBefore = fullSubject.revision;
 	const fundingRow = fundingRowOf({ outcome });
-	// A rejected track deducted nothing, so there is nothing for a lock to hold.
 	const lockChanges =
 		command.lock && !rejected
 			? [

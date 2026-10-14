@@ -1,17 +1,3 @@
-/**
- * Filter-mode replace with included: 100 rewrites catalog-shaped 100/mo
- * grants and leaves a customized 1k row alone.
- *
- * Contract:
- *   B2 catalog 100 + custom 1k — 100→200 with live Δ; 1k untouched
- *   B5 two custom 100s (different ids) + 1k — both 100s rewrite; 1k spared
- *   B6 replay B2 — no extra credits; 1k still 1k
- *   unmatched replace + leftover adds: 1k monthly spared; dashboard + lifetime land
- *
- * Wildcard (omit included) stays in batch-replace-item-custom-definitions.test.ts.
- * Paid skip stays in batch-replace-item-paid-rows.test.ts.
- */
-
 import { expect, test } from "bun:test";
 import { ResetInterval } from "@autumn/shared";
 import {

@@ -1,18 +1,3 @@
-/**
- * Contract: raising a license plan's base seat price propagates to parents
- * without charging anyone at migration time.
- *
- * A seat price change touches a Stripe subscription item, so it must run on the
- * per-customer lane — the batch lane rejects a priced `upsert_licenses`
- * (checkUpdatePlanOpEligibility.ts). It must also stay charge-free:
- * `assertNoChargeArtifacts` (processUpdatePlan.ts) throws if the computed plan
- * emits line items without `proration: true`. Customers pay the new rate at
- * their next cycle, matching how a plain base-price update behaves
- * (migrate.ts sets proration_behavior "none").
- *
- * A parent whose link overrides the price is excluded: the override pins its
- * own amount, so the base change never reaches it.
- */
 import { expect, test } from "bun:test";
 import { type ApiCustomerV3, BillingInterval } from "@autumn/shared";
 import { getLicenseDbState } from "@tests/integration/licenses/licenseTestUtils";
@@ -66,7 +51,6 @@ test(`${chalk.yellowBright("plans.update: a base seat price rise propagates per-
 				licenseProductId: devSeat.id,
 				included: INCLUDED_SEATS,
 			}),
-			// This parent pins its own seat price, so the base rise must skip it.
 			s.licenses.link({
 				parentProductId: ent.id,
 				licenseProductId: devSeat.id,
@@ -107,7 +91,6 @@ test(`${chalk.yellowBright("plans.update: a base seat price rise propagates per-
 		migration: { draft: true },
 	});
 
-	// ── The draft carries the price, and admits it bills ───────────────
 	const migrationId = response.migrations?.[0]?.id;
 	expect(migrationId).toBeDefined();
 
@@ -123,11 +106,9 @@ test(`${chalk.yellowBright("plans.update: a base seat price rise propagates per-
 		amount: NEW_SEAT_PRICE,
 	});
 
-	// ── The overriding parent is not in the migration ──────────────────
 	expect(planIdsOf(op.plan_filter)).toEqual([pro.id]);
 	expect(planIdsOf(op.plan_filter)).not.toContain(ent.id);
 
-	// ── It runs per-customer, since it touches Stripe ──────────────────
 	const result = await runMigrationInChunks({
 		ctx,
 		migration,
@@ -136,11 +117,9 @@ test(`${chalk.yellowBright("plans.update: a base seat price rise propagates per-
 	});
 	expect(result.lane).toBe("per_customer");
 
-	// ── Charge-free: the new rate lands next cycle, not now ────────────
 	const after = await autumnV1.customers.get<ApiCustomerV3>(parentCustomerId);
 	expect(after.invoices?.length ?? 0).toBe(invoicesBefore);
 
-	// ── The customer's effective seat price really is the new one ──────
 	const { pools } = await getLicenseDbState({
 		db: ctx.db,
 		customerId: parentCustomerId,
@@ -153,11 +132,8 @@ test(`${chalk.yellowBright("plans.update: a base seat price rise propagates per-
 	});
 	expect(link?.is_custom).toBe(true);
 
-	// Seat quantity survives the price swap.
 	expect(pools[0]?.granted).toBe(ATTACHED_SEATS);
 
-	// ── The PAID seats reprice on Stripe, so next cycle bills the new
-	// rate. Included seats are free and must not add anything. ─────────
 	const customerRow = await ctx.db.query.customers.findFirst({
 		where: (customer, { eq }) => eq(customer.id, parentCustomerId),
 	});

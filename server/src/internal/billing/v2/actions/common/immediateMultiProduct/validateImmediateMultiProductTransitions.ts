@@ -1,7 +1,6 @@
 import { type MultiAttachProductContext, RecaseError } from "@autumn/shared";
 import { validateProductGroupsByScope } from "../validateProductGroupsByScope";
 
-/** Reject unsupported immediate multi-product transition combinations. */
 export const validateImmediateMultiProductTransitions = ({
 	productContexts,
 }: {

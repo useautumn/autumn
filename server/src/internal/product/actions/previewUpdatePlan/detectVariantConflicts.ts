@@ -51,15 +51,6 @@ const filterForItem = (item: ApiPlanItemV1): PlanItemFilter => {
 	return filter;
 };
 
-/**
- * Conflicts the variant owner should resolve manually before propagating:
- * - different_interval: variant holds the feature at an interval the edit
- *   doesn't touch — propagation adds a duplicate item.
- * - value_divergence: variant customized the feature's value relative to the
- *   base — propagation would silently overwrite it.
- * - base_price_divergence: variant customized its base price — a base price
- *   edit would overwrite it.
- */
 export const detectVariantConflicts = ({
 	currentBasePlan,
 	editedBasePlan,
@@ -89,9 +80,6 @@ export const detectVariantConflicts = ({
 		editedBasePlan.items.map((item) => [composeMatchKey(item), item]),
 	);
 
-	// Match keys whose item the edit actually changes — only these get
-	// overwritten on propagate. A customization on an untouched item (e.g. the
-	// variant's included amount when only the price changed) is left intact.
 	const changedMatchKeys = new Set<string>();
 	for (const [key, editedItem] of editedByMatchKey) {
 		const baseOld = baseOldByMatchKey.get(key);
@@ -105,13 +93,11 @@ export const detectVariantConflicts = ({
 	const conflicts: PlanUpdatePreviewVariantConflict[] = [];
 
 	for (const featureId of changedFeatureIds) {
-		// Feature removed from the base entirely — propagating the removal is
-		// clean, so it's never a conflict.
 		const editedList = editedByFeature.get(featureId) ?? [];
 		if (editedList.length === 0) continue;
 
 		const variantList = variantByFeature.get(featureId) ?? [];
-		if (variantList.length === 0) continue; // clean add into variant
+		if (variantList.length === 0) continue;
 
 		const feature = findFeatureById({ features, featureId });
 
@@ -122,8 +108,6 @@ export const detectVariantConflicts = ({
 		);
 
 		if (!sharesInterval) {
-			// Unpriced non-consumables have no real interval, so propagation maps
-			// cleanly; a priced item propagates as a duplicate at the edit's interval.
 			const hasPricedItem =
 				editedList.some((item) => item.price != null) ||
 				variantList.some((item) => item.price != null);

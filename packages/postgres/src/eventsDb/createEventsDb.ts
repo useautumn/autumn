@@ -11,7 +11,6 @@ import {
 } from "./repos/usageEvents.js";
 import type { EventsDb } from "./types/eventsDb.js";
 
-/** One pool on the events database, with its repos bound to it. The caller owns it and closes it. */
 export const createEventsDb = ({
 	ctx: { logger },
 	config,

@@ -6,13 +6,11 @@ import { updateCachedCustomerData } from "@/internal/customers/cache/fullSubject
 import { buildSharedFullSubjectBalanceKey } from "@/internal/customers/cache/fullSubject/builders/buildSharedFullSubjectBalanceKey.js";
 import { tryRedisWrite } from "@/utils/cacheUtils/cacheUtils.js";
 
-/** A counter as setAllocationCounters wrote it, and the delta it applied to a live row. */
 export type AllocationCounterPatch = {
 	counter: UsageWindow;
 	usageDelta: number;
 };
 
-/** Mirrors a committed re-fit into the caches without dropping any cached balance, so un-synced deductions survive. */
 export const patchCachedAllocations = async ({
 	ctx,
 	customerId,
@@ -24,7 +22,6 @@ export const patchCachedAllocations = async ({
 	customerId: string;
 	allocations: BalanceAllocations;
 	counterPatches: AllocationCounterPatch[];
-	/** Whether the refit started with a flush; only then are cached balances still safe to flush. */
 	flushBalances: boolean;
 }): Promise<void> => {
 	try {
@@ -50,7 +47,6 @@ export const patchCachedAllocations = async ({
 				});
 				return null;
 			});
-			// New shares over a stale counter would misgate draws; a cold cache reloads both from Postgres.
 			if (patched === null) {
 				await invalidateCachedFullSubject({
 					ctx,

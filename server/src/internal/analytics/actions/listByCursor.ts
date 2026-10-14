@@ -52,7 +52,6 @@ export const listByCursor = async ({
 		limit: params.limit,
 	});
 
-	// Build filter_by indexed params
 	const filterParams: Record<string, string> = {};
 	if (params.filter_by) {
 		const entries = Object.entries(params.filter_by).slice(0, 5);
@@ -90,15 +89,12 @@ export const listByCursor = async ({
 	let lastRowMicros: number | null = null;
 	let lastRowId: string | null = null;
 
-	// Transform to API format
 	const list: ApiEventsListItem[] = rows.map((row) => {
 		let properties = {};
 		if (row.properties) {
 			try {
 				properties = JSON.parse(row.properties);
-			} catch {
-				// Invalid JSON, use empty object
-			}
+			} catch {}
 		}
 
 		let deductions: TrackDeduction[] | null = null;
@@ -106,7 +102,6 @@ export const listByCursor = async ({
 			try {
 				const parsed = JSON.parse(row.deductions);
 				// Tinybird's JSON column re-encodes nested-object array items
-				// as strings; second parse brings them back to TrackDeduction.
 				const rawList = Array.isArray(parsed)
 					? parsed
 					: parsed && Array.isArray(parsed.list)

@@ -9,7 +9,6 @@ import {
 import { mintCachedAutumnToken } from "./autumnAuth.js";
 import { leafMcpBaseUrl } from "./autumnToolMetadata.js";
 
-/** Script name → Autumn MCP tool. Only Stripe reads run in code mode. */
 const STRIPE_SCRIPT_TOOLS = {
 	get: "stripeRead",
 	searchEndpoints: "searchStripeEndpoints",
@@ -34,7 +33,6 @@ type McpToolResult = {
 	structuredContent?: unknown;
 };
 
-/** Hands scripts the Stripe JSON itself instead of MCP's text envelope. */
 const unwrapMcpResult = (result: unknown) => {
 	const { content, isError, structuredContent } = (result ??
 		{}) as McpToolResult;
@@ -105,8 +103,6 @@ const stripeScriptEngine = ({
 	}).tools();
 };
 
-/** Stripe reads as a callscript engine. Callbacks capture only `specs`
- * (plain data) because Eve persists dynamic tool callbacks durably. */
 export const stripeCodeModeTools = ({
 	specs: rawSpecs,
 }: {

@@ -2,11 +2,6 @@ import type Stripe from "stripe";
 
 type StripeParamPolicy = "reserved" | "pass";
 
-/**
- * Every Stripe `subscriptions.update` key, classified.
- * `reserved` is Autumn-owned billing structure; `pass` is user extras.
- * Adding a Stripe field fails typecheck until it is classified here.
- */
 export const SUBSCRIPTION_UPDATE_KEY_POLICY = {
 	add_invoice_items: "reserved",
 	application_fee_percent: "pass",
@@ -47,10 +42,6 @@ export const SUBSCRIPTION_UPDATE_KEY_POLICY = {
 	StripeParamPolicy
 >;
 
-/**
- * Every Stripe `subscriptions.cancel` key, classified.
- * `invoice_now` / `prorate` stay Autumn-owned so they cannot bypass refund_last_payment.
- */
 export const SUBSCRIPTION_CANCEL_KEY_POLICY = {
 	cancellation_details: "pass",
 	expand: "reserved",

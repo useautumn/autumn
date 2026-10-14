@@ -46,7 +46,6 @@ export const handleSwitchCollectionMethodErrors = ({
 		);
 	}
 
-	// Without a Stripe subscription there's nowhere to keep net terms or payment methods.
 	if (!stripeSubscription && invoiceMode && requestedInvoiceTerms) {
 		throw invalidRequest(
 			"This plan has no Stripe subscription yet, so net_terms_days and payment_method_types can't be saved. Switch without them.",
@@ -69,7 +68,6 @@ export const handleSwitchCollectionMethodErrors = ({
 		);
 	}
 
-	// A phase that pins collection_method would silently revert the switch at its start.
 	if (scheduleHasPinnedCollectionMethod(stripeSubscription)) {
 		throw invalidRequest(
 			"This subscription's schedule sets a collection method on its phases, so the switch would be reverted. Update the schedule in Stripe instead.",

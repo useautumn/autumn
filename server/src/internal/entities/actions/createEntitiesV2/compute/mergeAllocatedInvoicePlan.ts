@@ -8,7 +8,6 @@ import type { AllocatedInvoiceContext } from "@/internal/balances/utils/allocate
 import { computeAllocatedInvoicePlan } from "@/internal/balances/utils/allocatedInvoice/compute/computeAllocatedInvoicePlan.js";
 import type { CreateEntitiesContext } from "../types/createEntitiesContext.js";
 
-/** Reused replaceables give their seat back (+1 each) and hand their parked per-entity balance to a new entity. */
 const applyReusedReplaceables = ({
 	update,
 	invoiced,
@@ -47,7 +46,6 @@ const applyReusedReplaceables = ({
 	return { ...update, moveEntityBalances, entityBalanceChanges };
 };
 
-/** Folds the allocated invoice's decisions (replaceable reuse, line items) into the create plan. */
 export const mergeAllocatedInvoicePlan = ({
 	ctx,
 	context,

@@ -31,7 +31,6 @@ const pro = products.pro({
 	items: [items.consumableWords()],
 });
 
-// Reward: InvoiceCredits, $10000, Forever, rollover, NOT apply_to_all (usage-only)
 const reward: CreateReward = {
 	id: "usage",
 	name: "usage",
@@ -52,20 +51,17 @@ test(
 	async () => {
 		const customerId = testCase;
 
-		// Init scenario: products + customer (no PM, uses checkout)
 		const { testClockId, ctx: testCtx } = await initScenario({
 			customerId,
 			setup: [s.customer({ testClock: true }), s.products({ list: [pro] })],
 			actions: [],
 		});
 
-		// Create autumn client with LegacyVersion.v1_4 (matches original test)
 		const autumn = new AutumnInt({
 			version: LegacyVersion.v1_4,
 			secretKey: testCtx.orgSecretKey,
 		});
 
-		// Create reward manually with onlyUsage: true (s.reward doesn't support this)
 		await createReward({
 			orgId: testCtx.org.id,
 			env: testCtx.env,
@@ -78,7 +74,6 @@ test(
 
 		let couponAmount = reward.discount_config?.discount_value ?? 0;
 
-		// CYCLE 0: Attach pro with promo code via checkout
 		const res = await autumn.attach({
 			customer_id: customerId,
 			product_id: pro.id,
@@ -94,7 +89,6 @@ test(
 			product: pro,
 		});
 
-		// Should have fixed price invoice (coupon only applies to usage, not base price)
 		const fixedPrice = getBasePrice({ product: pro });
 		expect(customer.invoices![0].total).toBe(fixedPrice);
 
@@ -107,8 +101,6 @@ test(
 			reward.id,
 		);
 
-		// CYCLE 1: Track usage and verify correct invoice amount
-		// Cap usage so it stays within $10k coupon at $0.05/word (max ~200k words)
 		const usage = new Decimal(Math.random() * 100000 + 10000)
 			.toDecimalPlaces(2)
 			.toNumber();

@@ -1,8 +1,3 @@
-/**
- * dfu.flash RevenueCat hydration — a one-off RC purchase hydrates only the
- * processor id + starts_at (no status inference); status stays the default active.
- */
-
 import { expect, test } from "bun:test";
 import { AppEnv, CusProductStatus } from "@autumn/shared";
 import {
@@ -82,7 +77,6 @@ test.concurrent(
 			customerId,
 			productId: oneOff.id,
 		});
-		// Purchase hydrates only id + start; status stays the default active.
 		expect(cusProduct?.processor?.id).toBe(purchaseId);
 		expect(cusProduct?.starts_at).toBe(purchasedAt);
 		expect(cusProduct?.status).toBe(CusProductStatus.Active);

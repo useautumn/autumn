@@ -1,15 +1,3 @@
-/**
- * Attach Paid Product Tests (Attach V2)
- *
- * Tests for attaching paid products when customer has no existing product.
- * Paid products have base price and various feature types (consumable, prepaid, allocated).
- *
- * Key behaviors:
- * - Invoice is created for base price + prepaid items
- * - Prepaid features require options with quantity
- * - Allocated features track entity usage
- */
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3 } from "@autumn/shared";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
@@ -21,19 +9,6 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 1: Attach pro with mixed features
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Customer has no existing product
- * - Attach pro ($20/mo) with consumable words + prepaid messages + allocated users
- *
- * Expected Result:
- * - Invoice = base ($20) + prepaid (100 messages @ $10 = $10)
- * - All features correctly configured
- */
 test.concurrent(`${chalk.yellowBright("new-plan: attach pro with mixed features")}`, async () => {
 	const customerId = "new-plan-attach-pro-mixed";
 
@@ -59,7 +34,6 @@ test.concurrent(`${chalk.yellowBright("new-plan: attach pro with mixed features"
 		actions: [],
 	});
 
-	// 1. Preview attach - verify base ($20) + prepaid ($10) = $30
 	const preview = await autumnV1.billing.previewAttach({
 		customer_id: customerId,
 		product_id: pro.id,
@@ -67,7 +41,6 @@ test.concurrent(`${chalk.yellowBright("new-plan: attach pro with mixed features"
 	});
 	expect(preview.total).toBe(30);
 
-	// 2. Attach
 	await autumnV1.billing.attach({
 		customer_id: customerId,
 		product_id: pro.id,
@@ -77,13 +50,11 @@ test.concurrent(`${chalk.yellowBright("new-plan: attach pro with mixed features"
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Verify product is active
 	await expectProductActive({
 		customer,
 		productId: pro.id,
 	});
 
-	// Verify consumable words feature (50 included, no prepaid)
 	expectCustomerFeatureCorrect({
 		customer,
 		featureId: TestFeature.Words,
@@ -92,7 +63,6 @@ test.concurrent(`${chalk.yellowBright("new-plan: attach pro with mixed features"
 		usage: 0,
 	});
 
-	// Verify prepaid messages feature (100 from 1 pack)
 	expectCustomerFeatureCorrect({
 		customer,
 		featureId: TestFeature.Messages,
@@ -100,7 +70,6 @@ test.concurrent(`${chalk.yellowBright("new-plan: attach pro with mixed features"
 		usage: 0,
 	});
 
-	// Verify allocated users feature (3 included)
 	expectCustomerFeatureCorrect({
 		customer,
 		featureId: TestFeature.Users,
@@ -109,7 +78,6 @@ test.concurrent(`${chalk.yellowBright("new-plan: attach pro with mixed features"
 		usage: 0,
 	});
 
-	// Verify invoice matches preview total: $30
 	await expectCustomerInvoiceCorrect({
 		customer,
 		count: 1,
@@ -117,19 +85,6 @@ test.concurrent(`${chalk.yellowBright("new-plan: attach pro with mixed features"
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 2: Attach pro with allocated, create entities
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Attach pro with allocated users (3 included)
- * - Create 5 user entities via track
- *
- * Expected Result:
- * - Users usage = 5
- * - Overage invoice created for 2 extra users
- */
 test.concurrent(`${chalk.yellowBright("new-plan: attach pro with allocated, create entities")}`, async () => {
 	const customerId = "new-plan-attach-pro-allocated";
 
@@ -150,14 +105,12 @@ test.concurrent(`${chalk.yellowBright("new-plan: attach pro with allocated, crea
 		actions: [],
 	});
 
-	// 1. Preview attach - verify base price ($20) + 2 overage users ($10 each) = $40
 	const preview = await autumnV1.billing.previewAttach({
 		customer_id: customerId,
 		product_id: pro.id,
 	});
 	expect(preview.total).toBe(40);
 
-	// 2. Attach
 	await autumnV1.billing.attach({
 		customer_id: customerId,
 		product_id: pro.id,
@@ -166,13 +119,11 @@ test.concurrent(`${chalk.yellowBright("new-plan: attach pro with allocated, crea
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Verify product is active
 	await expectProductActive({
 		customer,
 		productId: pro.id,
 	});
 
-	// Verify users feature: 3 included, 5 used, -2 balance (overage)
 	expectCustomerFeatureCorrect({
 		customer,
 		featureId: TestFeature.Users,
@@ -181,10 +132,9 @@ test.concurrent(`${chalk.yellowBright("new-plan: attach pro with allocated, crea
 		usage: 5,
 	});
 
-	// Verify invoices: initial ($20 matches preview) + overage (2 users @ $10 = $20)
 	await expectCustomerInvoiceCorrect({
 		customer,
 		count: 1,
-		latestTotal: 40, // Overage invoice
+		latestTotal: 40,
 	});
 });

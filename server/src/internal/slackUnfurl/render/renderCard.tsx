@@ -3,9 +3,6 @@ import type { CustomerCardData } from "../data/types.js";
 import { CARD_WIDTH, CustomerCard } from "./CustomerCard.js";
 import { theme } from "./theme.js";
 
-/**
- * data -> PNG. Width is fixed for a predictable aspect; height is content-driven.
- */
 export async function renderCustomerCardPng(
 	data: CustomerCardData,
 ): Promise<Uint8Array> {
@@ -19,10 +16,6 @@ export async function renderCustomerCardPng(
 const GAP = 24;
 const PAD = 24;
 
-/**
- * Up to N cards composited into ONE PNG, side-by-side. A single card renders
- * exactly as before (no wrapper); multiple cards sit in a padded flex row.
- */
 export async function renderCustomerCardsPng(
 	datas: CustomerCardData[],
 ): Promise<Uint8Array> {

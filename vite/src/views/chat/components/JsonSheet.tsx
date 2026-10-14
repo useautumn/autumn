@@ -8,8 +8,6 @@ import {
 } from "@/components/v2/CodeGroup";
 import { VirtualizedJson } from "@/components/v2/VirtualizedJson";
 
-/** Read-only, syntax-highlighted JSON in a sheet — used for the approval's raw
- * payload and write-tool parameters. */
 export function JsonSheet({
 	onOpenChange,
 	open,

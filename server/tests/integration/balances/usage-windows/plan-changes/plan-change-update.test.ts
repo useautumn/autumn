@@ -1,17 +1,3 @@
-/**
- * TDD tests for usage windows across SUBSCRIPTION UPDATES (customize items,
- * non-patch PUT).
- *
- * Contract under test (anchor-only re-point):
- *   - a customize that keeps the feature's reset cadence PRESERVES the
- *     cycle: the recreated main ent's next_reset_at equals the pre-update
- *     value, the usage-window anchor follows a cycle-bearing ent, the window
- *     does not move, and the counter is NOT zeroed (only the anchor
- *     re-points to the new ent id)
- *   - this holds both for a base-price-only customize and for updating the
- *     capped item itself (includedUsage bump)
- */
-
 import { expect, test } from "bun:test";
 import { ApiVersion, ResetInterval } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
@@ -29,11 +15,8 @@ import {
 	fetchActivePlanCusEnt,
 } from "../../utils/usage-limit-utils/usageWindowDbTestUtils.js";
 
-// initScenario only exposes clients up to V2_2; build the latest-version client
-// directly (same pattern as the v2.2-vs-v2.3 parity tests).
 const autumnV2_3 = new AutumnInt({ version: ApiVersion.V2_3 });
 
-// ── Contract: price-only customization never resets the counter ─────
 test.concurrent(
 	`${chalk.yellowBright("uw-plan-change-update1: a base-price-only customize preserves the cycle and the counter")}`,
 	async () => {
@@ -77,7 +60,6 @@ test.concurrent(
 		});
 		expect(entBefore?.next_reset_at).toBeTruthy();
 
-		// Customize the base price only; the messages item is untouched.
 		await autumnV2_3.subscriptions.update({
 			customer_id: customerId,
 			plan_id: pro.id,
@@ -86,7 +68,6 @@ test.concurrent(
 			},
 		});
 
-		// ── Contract: a price-only customize doesn't touch the ent at all ──
 		const entAfter = await fetchActivePlanCusEnt({
 			ctx,
 			customerId,
@@ -97,7 +78,6 @@ test.concurrent(
 			Number(entBefore.next_reset_at),
 		);
 
-		// ── Contract: same window => anchor-only re-point, count KEPT ─────
 		await expectCustomerUsageLimit({
 			autumn: autumnV2_3,
 			customerId,
@@ -106,7 +86,6 @@ test.concurrent(
 			limit: 5,
 		});
 
-		// ── Contract: the cap keeps binding (track 5 clamps to headroom 2) ─
 		await autumnV2_3.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
@@ -120,7 +99,6 @@ test.concurrent(
 			limit: 5,
 		});
 
-		// ── Contract: PG row stayed on the preserved cycle ────────────────
 		await expectUsageWindowSynced({
 			ctx,
 			customerId,
@@ -131,7 +109,6 @@ test.concurrent(
 	},
 );
 
-// ── Contract: updating the capped item preserves the cycle + counter ──
 test.concurrent(
 	`${chalk.yellowBright("uw-plan-change-update2: updating the capped item preserves the cycle and the counter")}`,
 	async () => {
@@ -169,8 +146,6 @@ test.concurrent(
 			usage: 3,
 		});
 
-		// Bump the capped item's included usage (100 -> 500): the cadence is
-		// unchanged, so the cycle is preserved and the counter survives.
 		await autumnV2_3.subscriptions.update({
 			customer_id: customerId,
 			plan_id: pro.id,
@@ -193,7 +168,6 @@ test.concurrent(
 			limit: 5,
 		});
 
-		// Still binding on the enlarged balance: track 5 clamps to 2.
 		await autumnV2_3.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,

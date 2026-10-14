@@ -1,4 +1,3 @@
-/** expected ⊆ actual; arrays: every expected element matches some actual one */
 export const subsetMatch = (expected: unknown, actual: unknown): boolean => {
 	if (expected === null || typeof expected !== "object")
 		return expected === actual;

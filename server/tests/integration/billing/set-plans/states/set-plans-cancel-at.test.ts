@@ -1,8 +1,3 @@
-/**
- * A canceling plan re-listed unchanged keeps its cancellation: set_plans never un-cancels by
- * omission. Several phases replacing it still clear cancel_at once a schedule takes over.
- */
-
 import { expect, test } from "bun:test";
 import { ms } from "@autumn/shared";
 import { findStripeSubscriptionByStatus } from "@tests/integration/billing/set-plans/utils/subscriptionStateUtils";

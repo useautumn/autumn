@@ -5,8 +5,6 @@ const SWEEP_MS = 520;
 const DEFAULT_FROM = "#0A0A0A";
 const DIRECTION_BIAS = 0.5;
 
-// Strong ease-out so the reveal lands decisively up front, then the last
-// pixels settle — entering elements should feel instant, not linear.
 function easeOut(t: number) {
 	return 1 - (1 - t) ** 3;
 }
@@ -18,11 +16,6 @@ function prefersReducedMotion() {
 	);
 }
 
-// Per-cell reveal threshold: random grain blended with a horizontal position
-// gradient so the dissolve leans in a direction. The gradient is measured in
-// track space (trackX..trackX+width over trackWidth) so several surfaces laid
-// side by side form one continuous sweep rather than each restarting locally.
-// direction +1 sweeps right→left, -1 left→right; bias 0 is pure noise, 1 a wipe.
 function buildThresholds({
 	cols,
 	rows,
@@ -59,21 +52,13 @@ export type PixelDissolveOptions = {
 	width: number;
 	height: number;
 	revealKey: number;
-	// Colour the outgoing cells dissolve away from (defaults to the dark surface).
 	fromColor?: string;
-	// +1 sweeps right→left, -1 left→right.
 	direction?: number;
-	// Decorrelates the noise pattern between surfaces sharing a revealKey.
 	seed?: number;
-	// Place this surface within a wider track so the directional gradient is one
-	// continuous sweep across neighbouring canvases instead of restarting locally.
 	trackX?: number;
 	trackWidth?: number;
 };
 
-// Paints a canvas full of fromColor square cells (the outgoing surface) that
-// dissolve away cell by cell on each revealKey change, uncovering the new slide
-// beneath — so each pixel flips old-colour → new-slide, never through black.
 export function usePixelDissolve({
 	width,
 	height,

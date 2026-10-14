@@ -14,7 +14,6 @@ import { applyPooledBalanceCustomerProductTransitions } from "@/internal/billing
 import { licenseAssignmentRepo } from "@/internal/licenses/repos/licenseAssignmentRepo";
 import { listFullCustomerProductsByIds } from "@/internal/licenses/repos/listFullCustomerProductsByIds";
 
-/** Entities stay with the source: seats on a moving pool are released, then every leftover seat row is expired so the destination never reuses them. */
 export const releaseTransferredLicenseSeats = async ({
 	ctx,
 	source,

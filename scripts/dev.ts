@@ -69,7 +69,6 @@ const EVE_PORT = process.env.EVE_PORT
 const ATOM_PORT = 8086 + portOffset;
 const ATOM_PEER_PORT = 8087 + portOffset;
 const ATOM_URL = `http://127.0.0.1:${ATOM_PORT}`;
-/** Minted per run: the dev server registers each org's Atom with it; the Atom keeps only its hash. */
 const ATOM_ADMIN_TOKEN = `atom_admin_${randomBytes(32).toString("base64url")}`;
 const LOCAL_CLIENT_URL = `http://localhost:${VITE_PORT}`;
 const LOCAL_SERVER_URL = `http://localhost:${SERVER_PORT}`;
@@ -102,8 +101,6 @@ const balanceWorkerEnv = balanceWorkerDevConfig({
 	worktreeNum,
 	runtimeEnv: process.env,
 });
-// `bun dev:services up` runs misc-cache Dragonfly on :6379 and cache-v2 on
-// :6380. Worktrees provision their own and set these in their env file.
 const LOCAL_MISC_CACHE_URL = "redis://localhost:6379";
 const LOCAL_CACHE_V2_URL = "redis://localhost:6380";
 const useLocalMiscCache =
@@ -127,9 +124,6 @@ const SLACK_REDIRECT_URI = useLocalAuthUrls
 		))
 	: (process.env.SLACK_REDIRECT_URI ?? `${SLACK_BOT_URL}/slack/oauth/callback`);
 
-/**
- * Read environment variable from .env file
- */
 function getEnvVariable(filePath: string, key: string): string | null {
 	if (!existsSync(filePath)) {
 		return null;
@@ -185,14 +179,11 @@ async function startDev() {
 		});
 	}
 
-	// Isolate local Trigger runs from coworkers sharing the Autumn DEV project.
-	// Server SDK + CLI both read TRIGGER_DEV_BRANCH (x-trigger-branch).
 	const triggerDevBranch = resolveTriggerDevBranch({
 		projectRoot,
 		worktreeNum,
 	});
 	process.env.TRIGGER_DEV_BRANCH = triggerDevBranch;
-	// The branch name keeps this stack's alien deployments apart from other branches'.
 	const atomDeploymentPrefix = resolveAtomDeploymentPrefix({ projectRoot });
 	process.env.ATOM_DEPLOYMENT_PREFIX = atomDeploymentPrefix;
 
@@ -200,7 +191,6 @@ async function startDev() {
 		if (serverOnly) {
 			console.log("Starting server and workers only (--server-only)...\n");
 		} else {
-			// Check if using remote backend (api.useautumn.com)
 			const viteEnvPath = join(projectRoot, "vite", ".env");
 			const backendUrl =
 				process.env.VITE_BACKEND_URL ||
@@ -224,15 +214,12 @@ async function startDev() {
 				});
 			}
 
-			// Clear Vite cache to prevent dep optimization issues. Capy keeps it: a cold
-			// re-optimize costs ~10s of TTFP and GBs of esbuild memory on every boot.
 			const viteCachePath = join(projectRoot, "vite", "node_modules", ".vite");
 			if (existsSync(viteCachePath) && process.env.CAPY_DEV !== "1") {
 				console.log("Clearing Vite cache...\n");
 				rmSync(viteCachePath, { recursive: true, force: true });
 			}
 
-			// Clear checkout Vite cache
 			const checkoutCachePath = join(
 				projectRoot,
 				"apps/checkout",
@@ -260,12 +247,10 @@ async function startDev() {
 		console.log(`  eve:      ${EVE_SERVER_URL}/eve/v1/info`);
 		console.log(`  mcp:      http://localhost:${CHAT_PORT}/mcp\n`);
 
-		// Use cmd on Windows, sh on Unix
 		const isWindows = process.platform === "win32";
 
 		let shellArgs: string[];
 		if (serverOnly) {
-			// Only start server and workers (for test sandboxes)
 			if (isWindows) {
 				const serverCmd = `cd server && set SERVER_PORT=${SERVER_PORT} && set TRIGGER_DEV_BRANCH=${triggerDevBranch} && set ATOM_DEPLOYMENT_PREFIX=${atomDeploymentPrefix} && bun start`;
 				const workersCmd = `cd server && set TRIGGER_DEV_BRANCH=${triggerDevBranch} && bun workers`;
@@ -286,8 +271,6 @@ async function startDev() {
 			const colors = ["green"];
 			const serverScript = isProductionMode ? "dev:prod" : "dev";
 			const workersScript = isProductionMode ? "workers:prod" : "workers:dev";
-			// Inline TRIGGER_DEV_BRANCH on the server cmd — inherited env alone
-			// is not enough (odw/ol can drop it); SDK must send x-trigger-branch.
 			const cmds = [
 				isWindows
 					? `"cd server && set SERVER_PORT=${SERVER_PORT} && set TRIGGER_DEV_BRANCH=${triggerDevBranch} && set ATOM_DEPLOYMENT_PREFIX=${atomDeploymentPrefix} && bun ${serverScript}"`
@@ -297,21 +280,18 @@ async function startDev() {
 			if (launchBalanceWorker) {
 				names.push("balance-worker");
 				colors.push("blueBright");
-				// Restarted when it exits: the worker ends its own process to be replaced, and only production has a replacer.
 				cmds.push('"cd apps/balance-worker && bun dev:restart"');
 				console.log(
 					`  balance-worker: ${balanceWorkerEnv.BALANCE_WORKER_ENDPOINT}/health (liveness only)`,
 				);
 			}
 
-			// Herald follows the balance worker's log, so it only runs where the worker does.
 			if (launchBalanceWorker) {
 				names.push("herald");
 				colors.push("magentaBright");
 				cmds.push('"cd apps/herald && bun dev"');
 			}
 
-			// Stands in for every org's Atom deployment; herald feeds it, so it runs where herald does.
 			if (launchBalanceWorker) {
 				names.push("atom");
 				colors.push("gray");
@@ -331,16 +311,12 @@ async function startDev() {
 			names.push("trigger");
 			colors.push("cyan");
 			console.log(`Trigger DEV branch: ${triggerDevBranch}\n`);
-			// Detached: archives the branch when this scripts/dev.ts pid dies
-			// (Ctrl+C, crash, kill -9). Does not survive laptop power-off.
 			spawnTriggerDevBranchReaper({
 				projectRoot,
 				branch: triggerDevBranch,
 				watchPid: process.pid,
 			});
 			// Local Trigger's Bun worker can't resolve the optional Axiom transport.
-			// --branch + TRIGGER_DEV_BRANCH keep worker + server on the same queue.
-			// Run the installed CLI, not bunx — bunx resolves latest and can
 			// mismatch the pinned @trigger.dev/* packages.
 			const triggerCmd = isWindows
 				? `set AXIOM_TOKEN= && bun run trigger dev --branch ${triggerDevBranch} --api-url "%TRIGGER_API_URL%"`
@@ -373,14 +349,12 @@ async function startDev() {
 			names.push("leaf");
 			colors.push("gray");
 			cmds.push(
-				// Harness defaults live in apps/leaf/src/lib/chatAgentConfig.ts.
 				isWindows
 					? `"cd apps/leaf && set PORT=${CHAT_PORT} && bun dev"`
 					: `"cd apps/leaf && PORT=${CHAT_PORT} bun dev"`,
 			);
 
 			// Stripe CLI webhook tunnel — skip if CLI absent.
-			// Forwards to the direct localhost port (not portless) so we avoid CA trust issues.
 			const stripeBin = existsSync("/usr/local/bin/stripe")
 				? "/usr/local/bin/stripe"
 				: Bun.spawnSync(["which", "stripe"]).exitCode === 0
@@ -389,21 +363,16 @@ async function startDev() {
 			const stripeKey = process.env.STRIPE_SANDBOX_SECRET_KEY?.trim();
 			const cloudAgent = isCloudAgent();
 			if (stripeBin) {
-				// Sandbox key only — never the live key. Passed via STRIPE_API_KEY so
-				// Cloud agents need no `stripe login`, and via env rather than argv
-				// so it never shows up in `ps`.
 				const startListen = () => {
 					const forwardUrl = `http://localhost:${SERVER_PORT}/webhooks/connect/sandbox`;
 					names.push("stripe");
 					colors.push("cyan");
-					// --forward-connect-to forwards events from connected accounts;
 					// the /webhooks/connect/* endpoint expects Connect-mode events.
 					const stripeCmd = `${stripeBin} listen --forward-connect-to ${forwardUrl} --skip-verify`;
 					cmds.push(isWindows ? `"${stripeCmd}"` : `"${stripeCmd}"`);
 					console.error(`stripe listen → ${forwardUrl}`);
 				};
 				if (stripeKey) {
-					// Key from Infisical: skip `stripe login` / customers-list preflight.
 					startListen();
 				} else {
 					const stripeEnv = {
@@ -437,7 +406,6 @@ async function startDev() {
 				);
 			}
 
-			// DEV_SERVICES (comma-separated names) launches only those services.
 			const onlyServices = process.env.DEV_SERVICES?.split(",").filter(Boolean);
 			if (onlyServices?.includes("cron")) {
 				names.push("cron");
@@ -469,8 +437,6 @@ async function startDev() {
 			...(launchBalanceWorker && balanceWorkerEnv),
 			TRIGGER_DEV_BRANCH: triggerDevBranch,
 			TRIGGER_API_URL,
-			// Sandbox key only. `stripe listen` reads STRIPE_API_KEY, so no
-			// `stripe login` is needed on a Cloud agent.
 			...(process.env.STRIPE_SANDBOX_SECRET_KEY
 				? { STRIPE_API_KEY: process.env.STRIPE_SANDBOX_SECRET_KEY }
 				: {}),
@@ -481,7 +447,6 @@ async function startDev() {
 			EVE_PORT: EVE_PORT.toString(),
 			EVE_SERVER_URL,
 			EVE_INTERNAL_AUTH_TOKEN,
-			// One multi-tenant Atom keeps each deployed org's folder under the worktree's .data/atom, in 2 slots each.
 			ATOM_MODE: "multi_tenant",
 			ATOM_TOKEN_HASH: createHash("sha256")
 				.update(ATOM_ADMIN_TOKEN)
@@ -494,8 +459,6 @@ async function startDev() {
 			ATOM_URL,
 			ATOM_ADMIN_TOKEN,
 			MCP_DEBUG_PENDING_ACTIONS: process.env.MCP_DEBUG_PENDING_ACTIONS ?? "1",
-			// CMA runs in Anthropic's cloud and can't reach localhost — prefer the
-			// public API origin (proxied to leaf's /mcp) so Slack → CMA works locally.
 			MCP_SERVER_URL: process.env.MCP_SERVER_URL ?? AUTUMN_PUBLIC_API_URL,
 			CHAT_SERVER_URL:
 				process.env.CHAT_SERVER_URL ?? `http://localhost:${CHAT_PORT}`,
@@ -575,7 +538,6 @@ async function startDev() {
 			},
 		});
 
-		// Handle termination signals
 		process.on("SIGINT", () => {
 			console.log("\n\n🛑 Shutting down development servers...");
 			concurrentlyProc.kill("SIGINT");
@@ -586,7 +548,6 @@ async function startDev() {
 			concurrentlyProc.kill("SIGTERM");
 		});
 
-		// Wait for the process to exit
 		await concurrentlyProc.exited;
 	} catch (error) {
 		console.error("Error starting development servers:", error);

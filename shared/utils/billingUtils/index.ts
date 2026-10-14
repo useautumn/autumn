@@ -4,11 +4,8 @@ export * from "./cycleUtils/getCycleEnd";
 export * from "./cycleUtils/getCycleStart";
 export * from "./cycleUtils/getNextMonthStart";
 export * from "./cycleUtils/remainingDiscountMonths";
-// Interval utils
 export * from "./intervalUtils/addDuration";
 export * from "./intervalUtils/intervalArithmetic";
-
-// Invoicing utils
 
 export * from "./invoicingUtils/backdateUtils/applyBackdatedLineItemAmount.js";
 export * from "./invoicingUtils/billingConstants.js";

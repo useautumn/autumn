@@ -1,15 +1,3 @@
-/**
- * Existing-customer-no-address scenarios after `automatic_tax` is flipped on.
- *
- * send_invoice has no address-collection UI, so an invoice-mode upgrade for a
- * customer with no location is rejected rather than invoiced untaxed.
- *
- * A — Checkout, no address: session has auto_tax + address-collection + tax_id.
- * B — Pre-flip Checkout, then charge_automatically upgrade succeeds WITH tax.
- * C — INVOICE-MODE upgrade, no address: 400; tax.automatic_tax off goes through untaxed.
- * D — INVOICE-MODE upgrade with billing_details.address: address saved, invoice taxed.
- */
-
 import { expect, test } from "bun:test";
 import { type AttachParamsV1Input, CusErrorCode } from "@autumn/shared";
 import { completeStripeCheckoutFormV2 } from "@tests/utils/browserPool/completeStripeCheckoutFormV2.js";
@@ -25,7 +13,6 @@ test.concurrent(`${chalk.yellowBright(
 	const customerId = "tax-no-addr-checkout";
 	const proProd = products.pro({ id: "pro", items: [] });
 
-	// Sub-org with auto_tax on. Fresh customer: no PM, no address.
 	const { ctx, customer, autumnV1 } = await initScenario({
 		customerId,
 		setup: [
@@ -53,10 +40,6 @@ test.concurrent(`${chalk.yellowBright(
 	})) as { checkout_url?: string };
 	expect(result.checkout_url).toBeDefined();
 
-	// Assert the session was created with the full set of
-	// address-collection params our fix injects. `customer_update` is
-	// create-only and not echoed in the retrieved Session — that path
-	// is asserted indirectly via automatic-tax-checkout-session.test.ts.
 	const sessionId = result.checkout_url!.match(
 		/cs_(test|live)_[A-Za-z0-9]+/,
 	)?.[0];
@@ -73,8 +56,6 @@ test.concurrent(`${chalk.yellowBright(
 			`tax_id_collection=${session.tax_id_collection?.enabled}`,
 	);
 
-	// Best-effort browser drive. Form fields vary by country; we warn
-	// on Playwright failure since the session contract is already asserted.
 	try {
 		await completeStripeCheckoutFormV2({
 			url: result.checkout_url!,
@@ -93,7 +74,6 @@ test.concurrent(`${chalk.yellowBright(
 		);
 	}
 
-	// Wait for Stripe webhook + back-write (best-effort).
 	await new Promise((r) => setTimeout(r, 5000));
 
 	const subs = await ctx.stripeCli.subscriptions.list({
@@ -110,8 +90,6 @@ test.concurrent(`${chalk.yellowBright(
 			`customerAddress=${JSON.stringify(addressAfter)}`,
 	);
 
-	// If Playwright form-fill succeeded and produced a sub, verify the
-	// end-to-end chain. Otherwise the session-level contract suffices.
 	if (subs.data.length > 0) {
 		expect(subs.data[0].automatic_tax.enabled).toBe(true);
 		expect(addressAfter).not.toBeNull();
@@ -126,8 +104,6 @@ test.concurrent(`${chalk.yellowBright(
 	const proProd = products.pro({ id: "pro", items: [] });
 	const premiumProd = products.premium({ id: "premium", items: [] });
 
-	// auto_tax OFF, fresh customer (no PM, no address) so attach returns
-	// a checkout URL.
 	const { ctx, customer, autumnV1, autumnV2_2 } = await initScenario({
 		customerId,
 		setup: [
@@ -147,8 +123,6 @@ test.concurrent(`${chalk.yellowBright(
 		"address" in stripeCusBefore ? stripeCusBefore.address : null;
 	expect(addressBefore).toBeNull();
 
-	// Step 1: Pro via Checkout BEFORE auto_tax flip. Checkout collects the full address and
-	// saves it on the customer; without it Stripe falls back to the runner's IP, which may not geolocate.
 	const proResult = (await autumnV1.attach({
 		customer_id: customerId,
 		product_id: `pro_${customerId}`,
@@ -170,7 +144,6 @@ test.concurrent(`${chalk.yellowBright(
 		},
 	});
 
-	// Wait for Stripe webhook + back-write to land the sub.
 	await new Promise((r) => setTimeout(r, 5000));
 
 	const proSubs = await ctx.stripeCli.subscriptions.list({
@@ -192,8 +165,6 @@ test.concurrent(`${chalk.yellowBright(
 			stripeCusAfterCheckout.tax?.location?.source,
 	).toBe("billing_address");
 
-	// Step 2: flip auto_tax on. OrgService.update invalidates the
-	// secret-key cache so the next request reads fresh config.
 	await OrgService.update({
 		db: ctx.db,
 		orgId: ctx.org.id,
@@ -201,18 +172,13 @@ test.concurrent(`${chalk.yellowBright(
 			config: { ...ctx.org.config, automatic_tax: true },
 		},
 	});
-	// Wait for multi-region Redis invalidation to settle.
 	await new Promise((r) => setTimeout(r, 500));
 
-	// Step 3: charge_automatically upgrade. Stripe's waterfall has the
-	// AU address from Checkout, so auto_tax lands cleanly.
 	await autumnV2_2.billing.attach({
 		customer_id: customerId,
 		plan_id: `premium_${customerId}`,
 	});
 
-	// Upgrade succeeded; sub has auto_tax enabled; proration invoice has
-	// tax fully resolved.
 	const upgradedSubs = await ctx.stripeCli.subscriptions.list({
 		customer: stripeCusId,
 		limit: 1,
@@ -225,7 +191,6 @@ test.concurrent(`${chalk.yellowBright(
 		customer: stripeCusId,
 		limit: 5,
 	});
-	// Most recent invoice = proration invoice from the upgrade.
 	const prorationInvoice = invoices.data[0];
 	expect(prorationInvoice).toBeDefined();
 	expect(prorationInvoice.automatic_tax.enabled).toBe(true);
@@ -239,7 +204,6 @@ test.concurrent(`${chalk.yellowBright(
 	);
 });
 
-/** Pro attached with auto_tax off (customer has a PM but no address), then auto_tax flipped on. */
 const setupInvoiceModeUpgrade = async ({
 	customerId,
 }: {
@@ -317,8 +281,6 @@ test.concurrent(
 		const { ctx, autumnV2_2, stripeCusId, premiumPlanId } =
 			await setupInvoiceModeUpgrade({ customerId });
 
-		// Use V2_2's `invoice_mode: { enabled: true }`; the legacy `invoice`
-		// alias isn't on V2_2 and would silently fall back to charge_automatically.
 		await expectAutumnError({
 			errCode: CusErrorCode.CustomerTaxLocationMissing,
 			func: () =>

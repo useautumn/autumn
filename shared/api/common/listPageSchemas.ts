@@ -54,7 +54,6 @@ export type ListPage<T> = {
 	next_cursor: string | null;
 };
 
-// `t`/`id` are null when a page stopped at its scan cap: resume after customer `c`.
 const CustomerWalkCursorFieldsSchema = z.object({
 	v: z.literal(0),
 	c: z.string().min(1),

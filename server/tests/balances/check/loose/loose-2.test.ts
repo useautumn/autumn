@@ -40,7 +40,6 @@ describe(`${chalk.yellowBright("check-loose2: unlimited loose entitlement check"
 			prefix: testCase,
 		});
 
-		// Create unlimited loose entitlement
 		await autumnV1.balances.create({
 			customer_id: customerId,
 			feature_id: TestFeature.Users,

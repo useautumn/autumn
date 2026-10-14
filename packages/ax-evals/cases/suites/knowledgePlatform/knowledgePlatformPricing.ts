@@ -1,21 +1,8 @@
 import type { PlanSpec } from "../../../src/grading/types/planSpec.ts";
 
-/**
- * Anonymized real-customer archetype: a knowledge-base/docs platform. Its
- * signature decisions — what this suite exists to test:
- *   ① plans attach per DEPLOYMENT but included credits are POOLED org-wide
- *     (`pooled: true` on the credit items)
- *   ② prepaid credit PACKS as one separate org-level attach-on-top add-on,
- *     never duplicated onto the base plans
- *   ③ annual plan twins whose credits still reset MONTHLY
- * Generic skills (trials, revision, write-from-structure) are tested in
- * basics/ on cheaper catalogs, not here.
- */
-
 export const knowledgePlatformGoal =
 	"Get your docs platform's pricing set up in Autumn without touching a dashboard.";
 
-/** The full brief. B twins are manufactured by deleting exactly one line. */
 export const knowledgePlatformFacts = [
 	"- Two paid plans: Pro at $180 a month, Growth at $500 a month.",
 	"- Both have annual options: Pro $1,800 a year, Growth $5,000 a year.",
@@ -29,17 +16,11 @@ export const knowledgePlatformFacts = [
 	"- No free plan, no trials.",
 ].join("\n");
 
-/** B twins delete a fact from the case's OPENING PROMPT only. The simulated
- * user always keeps the FULL brief — it must answer the surfaced question
- * with ground truth, not improvise. */
 export const knowledgePlatformUserFacts = [
 	knowledgePlatformFacts,
-	// Attach and pooling are different questions — answer the one asked.
 	"- If asked what a plan/subscription is bought for or attached to: per deployment. If asked whether credits are shared or separate: shared org-wide.",
 ].join("\n");
 
-/** ①'s config-invisible half: pooling isn't writable in autumn.config.ts, so
- * the conclusion is graded on what the agent SAID. Shared by oneShot + twins. */
 export const pooledConclusionChecks = {
 	"concluded plans attach per deployment":
 		"Did the agent's final structure/summary state that plans are bought/attached per deployment (each deployment on its own plan), rather than one plan for the whole customer account?",
@@ -47,14 +28,10 @@ export const pooledConclusionChecks = {
 		"Did the agent state that included credits are shared/pooled across all deployments into one org-wide balance (any phrasing), rather than each deployment keeping its own separate credits?",
 } as const;
 
-/** Overage lives ON each base plan — that's what breaks usage down per
- * entity. An overage add-on plan instead is a graded wrong. */
 const overageItem = {
 	price: { amount: 0.01, billing_method: "usage_based" },
 };
 
-/** Spec anchors — one monthly and one annual twin carries the signal.
- * ① included credits are pooled into the shared org balance. */
 export const proMonthlySpec: PlanSpec = {
 	price: { amount: 180, interval: "month" },
 	items: [
@@ -63,7 +40,6 @@ export const proMonthlySpec: PlanSpec = {
 	],
 };
 
-/** ③ the archetype's signature trap: annual price, MONTHLY credit reset. */
 export const growthAnnualSpec: PlanSpec = {
 	price: { amount: 5000, interval: "year" },
 	items: [
@@ -72,11 +48,6 @@ export const growthAnnualSpec: PlanSpec = {
 	],
 };
 
-/** Non-pooled twins for briefs that never mention deployments (the clear
- * negative control) — expecting `pooled` there would grade a fact the user
- * never stated. No explicit `reset` requirement either: a merged
- * grant+overage item resets via price.interval month, which the required
- * monthly usage price already pins. */
 export const proMonthlyNoPoolSpec: PlanSpec = {
 	price: { amount: 180, interval: "month" },
 	items: [
@@ -97,17 +68,11 @@ export const growthAnnualNoPoolSpec: PlanSpec = {
 	],
 };
 
-/** ② the extra-credit purchase lives on a separate add-on, off the base
- * plans. Shape is the agent's choice — volume tiers on one prepaid item, or
- * a priced add-on with included credits and variants per size are both
- * valid — so the spec only pins the structural decision. */
 export const creditsPackAddOnSpec: PlanSpec = {
 	add_on: true,
 	items: [{}],
 };
 
-/** withPacks=false gives the four base plans only — the seed for the packs
- * step case and the workspace the pack must be added to without nuking. */
 export const knowledgePlatformGoldenConfig = ({
 	withPacks = true,
 }: {

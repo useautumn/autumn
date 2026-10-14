@@ -72,8 +72,6 @@ test("a $ inside the appended text survives verbatim", () => {
 	expect(output).toContain('note: "costs 5$",\n\t],');
 });
 
-// Pull builds multi-line fixtures against the indent the surgery will give
-// their first line, so the closing paren lines up with the sibling.
 test("a function text is built against the indent of its first line", () => {
 	const output = appendToCollection({
 		source: configSource,

@@ -36,7 +36,6 @@ const LIVE_RUN_STATUSES = [
 ] as const;
 const DRAIN_POLL_MS = 5_000;
 const DRAIN_LOG_EVERY_MS = 60_000;
-/** ~445 keys: parallel across keys, each key is its own Stripe rate-limit bucket. */
 const KEY_CONCURRENCY = 16;
 
 const sleep = ({ ms, signal }: { ms: number; signal: AbortSignal }) =>
@@ -68,10 +67,6 @@ const countBlockers = async ({ ctx }: { ctx: TwdContext }) => {
 	return { liveRuns: liveRuns.n, liveNukes: liveNukes.n };
 };
 
-/**
- * payload: { targetPerKey? }. Gate draining → wait for live runs + nukes → wipe webhooks on every
- * stored key → one Connect webhook per usable key → discover/top-up accounts → re-probe → open.
- */
 export const handleReinitKeysJob: JobHandler = async ({
 	ctx,
 	job,
@@ -124,7 +119,6 @@ export const handleReinitKeysJob: JobHandler = async ({
 			}
 		}
 
-		// A full nuke owns its key's webhooks until it finishes.
 		const keys = (
 			await ctx.db.select().from(stripeKeys).where(eq(stripeKeys.present, true))
 		).filter((key) => !isFullNukeLockReason(key.unusableReason));
@@ -195,7 +189,6 @@ export const handleReinitKeysJob: JobHandler = async ({
 		}
 	} catch (error) {
 		if (signal.aborted) {
-			// An operator cancel: reopen rather than leave every run blocked on a dead job.
 			await setKeyGate({
 				db: ctx.db,
 				gate: { state: "open", reason: null, jobId: null },

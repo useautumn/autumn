@@ -1,16 +1,3 @@
-/**
- * A Stripe list page that never settles must not stall the org-wide sweep.
- *
- * The Stripe SDK reads a response body with `res.toJSON()`, which registers no
- * error handler, so a body interrupted after its headers arrive leaves the
- * promise pending forever and `maxNetworkRetries` never engages.
- *
- * Red (current):  sweepStripeSubscriptions awaits subscriptions.list with no
- *                 bound, so one silent page hangs the sweep and the run.
- * Green (after):  each page is bounded and retried, and the sweep throws once
- *                 the attempts are spent rather than hanging.
- */
-
 import { describe, expect, it } from "bun:test";
 import type Stripe from "stripe";
 import { sweepStripeSubscriptions } from "@/internal/customers/exports/verify/sweepStripeSubscriptions.js";

@@ -1,9 +1,3 @@
-/**
- * Headless mode for the events command.
- * Provides structured output (text/json/csv) for AI/programmatic interaction.
- * Supports both list mode (paginated events) and aggregate mode (time-series data).
- */
-
 import { AppEnv } from "../../lib/env/detect.js";
 import { getKey } from "../../lib/env/keys.js";
 import {
@@ -17,31 +11,18 @@ import { fetchFeatures } from "../../lib/api/endpoints/features.js";
 import { formatError } from "../../lib/api/client.js";
 
 export interface HeadlessEventsOptions {
-	/** Environment (sandbox/live) */
 	prod?: boolean;
-	/** Page number (1-indexed, converted to offset internally) */
 	page?: number;
-	/** Items per page */
 	limit?: number;
-	/** Output format */
 	format?: "text" | "json" | "csv";
-	/** Filter by customer ID */
 	customerId?: string;
-	/** Filter by feature ID (can be comma-separated for multiple) */
 	featureId?: string;
-	/** Time range: 24h, 7d, 30d, 90d */
 	timeRange?: "24h" | "7d" | "30d" | "90d";
-	/** View mode: list or aggregate */
 	mode?: "list" | "aggregate";
-	/** Bin size for aggregate: hour, day, month */
 	binSize?: "hour" | "day" | "month";
-	/** Group by property (for aggregate mode) */
 	groupBy?: string;
 }
 
-/**
- * Execute a headless events command
- */
 export async function headlessEventsCommand(
 	options: HeadlessEventsOptions,
 ): Promise<void> {
@@ -79,9 +60,6 @@ export async function headlessEventsCommand(
 	}
 }
 
-/**
- * Run list mode - paginated event list
- */
 async function runListMode(
 	options: HeadlessEventsOptions,
 	environment: AppEnv,
@@ -91,10 +69,8 @@ async function runListMode(
 	const limit = options.limit ?? 100;
 	const secretKey = getKey(environment);
 
-	// Convert page to offset for server-side pagination
 	const offset = (page - 1) * limit;
 
-	// Convert time range to custom_range if specified
 	let customRange: { start?: number; end?: number } | undefined;
 	if (options.timeRange) {
 		const now = Date.now();
@@ -110,7 +86,6 @@ async function runListMode(
 		}
 	}
 
-	// Fetch events with server-side pagination
 	const response = await fetchEvents({
 		secretKey,
 		customerId: options.customerId,
@@ -120,7 +95,6 @@ async function runListMode(
 		limit,
 	});
 
-	// Output the list
 	outputEventList(
 		response.list,
 		{
@@ -136,9 +110,6 @@ async function runListMode(
 	);
 }
 
-/**
- * Run aggregate mode - time-series aggregate data
- */
 async function runAggregateMode(
 	options: HeadlessEventsOptions,
 	environment: AppEnv,
@@ -146,7 +117,6 @@ async function runAggregateMode(
 ): Promise<void> {
 	const secretKey = getKey(environment);
 
-	// Aggregate mode requires customer ID
 	if (!options.customerId) {
 		if (format === "json") {
 			console.log(
@@ -166,12 +136,10 @@ async function runAggregateMode(
 		process.exit(1);
 	}
 
-	// Parse feature IDs (comma-separated)
 	let featureIds: string[] = [];
 	if (options.featureId) {
 		featureIds = options.featureId.split(",").map((f) => f.trim());
 	} else {
-		// If no features specified, fetch all available features
 		const featuresResponse = await fetchFeatures({ secretKey });
 		featureIds = featuresResponse.map((f) => f.id);
 	}
@@ -195,17 +163,14 @@ async function runAggregateMode(
 		process.exit(1);
 	}
 
-	// Map time range to API range
 	const range: AggregateRange = (options.timeRange as AggregateRange) ?? "7d";
 	const binSize: AggregateBinSize = options.binSize ?? (range === "24h" ? "hour" : "day");
 
-	// Prepare groupBy with properties. prefix if needed
 	let groupBy = options.groupBy;
 	if (groupBy && !groupBy.startsWith("properties.")) {
 		groupBy = `properties.${groupBy}`;
 	}
 
-	// Fetch aggregate data
 	const response = await fetchEventsAggregate({
 		secretKey,
 		customerId: options.customerId,
@@ -215,7 +180,6 @@ async function runAggregateMode(
 		groupBy,
 	});
 
-	// Output aggregate data
 	outputAggregateData(
 		response.list,
 		response.total,
@@ -228,9 +192,6 @@ async function runAggregateMode(
 	);
 }
 
-/**
- * Output a list of events
- */
 function outputEventList(
 	events: ApiEventsListItem[],
 	pagination: {
@@ -280,7 +241,6 @@ function outputEventList(
 		return;
 	}
 
-	// Text format
 	const startItem = (pagination.page - 1) * pagination.pageSize + 1;
 	const endItem = Math.min(startItem + events.length - 1, pagination.total);
 	console.log(
@@ -288,7 +248,6 @@ function outputEventList(
 	);
 	console.log("=".repeat(70));
 
-	// Show active filters
 	const filters: string[] = [];
 	if (customerId) filters.push(`customer: ${customerId}`);
 	if (featureId) filters.push(`feature: ${featureId}`);
@@ -310,20 +269,17 @@ function outputEventList(
 		return;
 	}
 
-	// Column widths
 	const idWidth = 20;
 	const timestampWidth = 20;
 	const customerWidth = 20;
 	const featureWidth = 16;
 	const valueWidth = 8;
 
-	// Header
 	console.log(
 		`${"ID".padEnd(idWidth)}  ${"Timestamp".padEnd(timestampWidth)}  ${"Customer".padEnd(customerWidth)}  ${"Feature".padEnd(featureWidth)}  ${"Value".padEnd(valueWidth)}`,
 	);
 	console.log("-".repeat(idWidth + timestampWidth + customerWidth + featureWidth + valueWidth + 8));
 
-	// Rows
 	for (const e of events) {
 		const id = truncate(e.id, idWidth).padEnd(idWidth);
 		const timestamp = formatDateTime(e.timestamp).padEnd(timestampWidth);
@@ -344,9 +300,6 @@ function outputEventList(
 	console.log("  --mode aggregate   Switch to aggregate view");
 }
 
-/**
- * Output aggregate data
- */
 function outputAggregateData(
 	list: Array<{ period: number; [key: string]: number | Record<string, number> }>,
 	total: Record<string, { count: number; sum: number }>,
@@ -380,7 +333,6 @@ function outputAggregateData(
 	}
 
 	if (format === "csv") {
-		// CSV for time series data
 		const featureColumns = featureIds.join(",");
 		console.log(`period,${featureColumns}`);
 		for (const bucket of list) {
@@ -398,7 +350,6 @@ function outputAggregateData(
 		return;
 	}
 
-	// Text format
 	console.log(`Aggregate Events (${range}, ${binSize})`);
 	console.log("=".repeat(60));
 	console.log(`Customer: ${customerId}`);
@@ -408,7 +359,6 @@ function outputAggregateData(
 	}
 	console.log("");
 
-	// Summary stats
 	const totalEntries = Object.entries(total);
 	const totalEvents = totalEntries.reduce((sum, [, t]) => sum + t.count, 0);
 	const totalValue = totalEntries.reduce((sum, [, t]) => sum + t.sum, 0);
@@ -419,7 +369,6 @@ function outputAggregateData(
 	console.log(`  Features:     ${totalEntries.length}`);
 	console.log("");
 
-	// Per-feature breakdown
 	if (totalEntries.length > 0) {
 		console.log("By Feature:");
 		for (const [featureId, stats] of totalEntries) {
@@ -430,7 +379,6 @@ function outputAggregateData(
 		console.log("");
 	}
 
-	// ASCII chart
 	if (list.length > 0) {
 		console.log("Time Series:");
 		renderAsciiChart(list, binSize, groupBy);
@@ -444,29 +392,21 @@ function outputAggregateData(
 	console.log("  --mode list        Switch to list view");
 }
 
-/**
- * ANSI color codes for stacked chart groups
- */
 const GROUP_COLORS = [
-	"\x1b[35m", // magenta
-	"\x1b[34m", // blue
-	"\x1b[32m", // green
-	"\x1b[33m", // yellow
-	"\x1b[36m", // cyan
-	"\x1b[31m", // red
+	"\x1b[35m",
+	"\x1b[34m",
+	"\x1b[32m",
+	"\x1b[33m",
+	"\x1b[36m",
+	"\x1b[31m",
 ];
 const RESET_COLOR = "\x1b[0m";
 
-/**
- * Render ASCII bar chart for time series data
- * Supports stacked groups when groupBy is used
- */
 function renderAsciiChart(
 	list: Array<{ period: number; [key: string]: number | Record<string, number> }>,
 	binSize: string,
 	groupBy?: string,
 ): void {
-	// Detect if we have grouped data by checking the first bucket's structure
 	const hasGroupedData = list.some((bucket) => {
 		for (const [key, value] of Object.entries(bucket)) {
 			if (key === "period") continue;
@@ -484,14 +424,10 @@ function renderAsciiChart(
 	}
 }
 
-/**
- * Render a simple (non-stacked) ASCII bar chart
- */
 function renderSimpleChart(
 	list: Array<{ period: number; [key: string]: number | Record<string, number> }>,
 	binSize: string,
 ): void {
-	// Calculate total value for each bucket
 	const buckets = list.map((bucket) => {
 		let total = 0;
 		for (const [key, value] of Object.entries(bucket)) {
@@ -505,13 +441,11 @@ function renderSimpleChart(
 		return { period: bucket.period, total };
 	});
 
-	// Take last 20 buckets for display
 	const displayBuckets = buckets.slice(-20);
 	const maxValue = Math.max(...displayBuckets.map((b) => b.total), 1);
 	const chartHeight = 8;
 	const chartWidth = displayBuckets.length;
 
-	// Render chart rows (top to bottom)
 	for (let row = chartHeight - 1; row >= 0; row--) {
 		const threshold = (row / chartHeight) * maxValue;
 		let rowStr = row === chartHeight - 1 ? `${maxValue.toString().padStart(6)} |` : "       |";
@@ -521,10 +455,8 @@ function renderSimpleChart(
 		console.log(rowStr);
 	}
 
-	// X-axis
 	console.log(`     0 |${"─".repeat(chartWidth)}`);
 
-	// Time labels
 	if (displayBuckets.length > 0) {
 		const firstLabel = formatBucketLabel(displayBuckets[0]!.period, binSize);
 		const lastLabel = formatBucketLabel(displayBuckets[displayBuckets.length - 1]!.period, binSize);
@@ -533,14 +465,10 @@ function renderSimpleChart(
 	}
 }
 
-/**
- * Render a stacked ASCII bar chart with different colors for each group
- */
 function renderStackedChart(
 	list: Array<{ period: number; [key: string]: number | Record<string, number> }>,
 	binSize: string,
 ): void {
-	// Collect all unique group keys across all buckets
 	const allGroups = new Set<string>();
 	for (const bucket of list) {
 		for (const [key, value] of Object.entries(bucket)) {
@@ -554,7 +482,6 @@ function renderStackedChart(
 	}
 	const groupKeys = Array.from(allGroups).sort();
 
-	// Parse buckets into stacked data
 	const buckets = list.map((bucket) => {
 		const groupValues: Record<string, number> = {};
 		let total = 0;
@@ -574,13 +501,11 @@ function renderStackedChart(
 		return { period: bucket.period, total, groupValues };
 	});
 
-	// Take last 20 buckets for display
 	const displayBuckets = buckets.slice(-20);
 	const maxValue = Math.max(...displayBuckets.map((b) => b.total), 1);
 	const chartHeight = 10;
 	const chartWidth = displayBuckets.length;
 
-	// For each row, determine which group's color to show based on stacked position
 	for (let row = chartHeight - 1; row >= 0; row--) {
 		const rowThresholdBottom = (row / chartHeight) * maxValue;
 		const rowThresholdTop = ((row + 1) / chartHeight) * maxValue;
@@ -589,10 +514,8 @@ function renderStackedChart(
 		
 		for (const bucket of displayBuckets) {
 			if (bucket.total <= rowThresholdBottom) {
-				// Below this row - empty
 				rowStr += " ";
 			} else {
-				// Determine which group is at this height
 				let cumulative = 0;
 				let foundGroup = false;
 				
@@ -603,7 +526,6 @@ function renderStackedChart(
 					const prevCumulative = cumulative;
 					cumulative += groupVal;
 					
-					// Check if this row falls within this group's portion
 					if (cumulative > rowThresholdBottom && prevCumulative < rowThresholdTop) {
 						const color = GROUP_COLORS[i % GROUP_COLORS.length];
 						rowStr += `${color}█${RESET_COLOR}`;
@@ -620,10 +542,8 @@ function renderStackedChart(
 		console.log(rowStr);
 	}
 
-	// X-axis
 	console.log(`     0 |${"─".repeat(chartWidth)}`);
 
-	// Time labels
 	if (displayBuckets.length > 0) {
 		const firstLabel = formatBucketLabel(displayBuckets[0]!.period, binSize);
 		const lastLabel = formatBucketLabel(displayBuckets[displayBuckets.length - 1]!.period, binSize);
@@ -631,7 +551,6 @@ function renderStackedChart(
 		console.log(`        ${firstLabel}${" ".repeat(Math.max(0, padding))}${lastLabel}`);
 	}
 
-	// Legend
 	console.log("");
 	console.log("  Groups:");
 	for (let i = 0; i < groupKeys.length && i < 6; i++) {
@@ -643,9 +562,6 @@ function renderStackedChart(
 	}
 }
 
-/**
- * Format bucket period label based on bin size
- */
 function formatBucketLabel(timestamp: number, binSize: string): string {
 	const date = new Date(timestamp);
 	switch (binSize) {
@@ -658,16 +574,10 @@ function formatBucketLabel(timestamp: number, binSize: string): string {
 	}
 }
 
-/**
- * Normalize a timestamp to milliseconds.
- */
 function normalizeTimestamp(timestamp: number): number {
 	return timestamp < 10_000_000_000 ? timestamp * 1000 : timestamp;
 }
 
-/**
- * Format a Unix timestamp as a readable date/time
- */
 function formatDateTime(timestamp: number): string {
 	const ms = normalizeTimestamp(timestamp);
 	return new Date(ms).toLocaleDateString("en-US", {
@@ -679,9 +589,6 @@ function formatDateTime(timestamp: number): string {
 	});
 }
 
-/**
- * Truncate a string to max length with ellipsis
- */
 function truncate(str: string, maxLength: number): string {
 	if (str.length <= maxLength) {
 		return str;

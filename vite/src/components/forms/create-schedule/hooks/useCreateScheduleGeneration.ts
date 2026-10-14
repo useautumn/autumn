@@ -25,8 +25,6 @@ export function useCreateScheduleGeneration({
 				toast.error("Couldn't build a schedule from that prompt");
 				return;
 			}
-			// enablePlanImmediately is owned by the checkout stage — the provider
-			// resets it outside checkout, so applying it would only fight that.
 			const { enablePlanImmediately: _ignored, ...applicable } = next;
 			for (const [key, value] of Object.entries(applicable)) {
 				form.setFieldValue(key as keyof CustomerStateForm, value as never);

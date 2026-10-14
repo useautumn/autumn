@@ -6,7 +6,6 @@ import type {
 } from "../../../atom/types/atomClient.js";
 import type { CachePushContext } from "../types/cachePushContext.js";
 
-/** An Atom that does not take the subject is logged and left behind: it never holds back the log or the subject's other Atoms. */
 export const sendSubjectToAtom = async ({
 	ctx,
 	atomConnection,

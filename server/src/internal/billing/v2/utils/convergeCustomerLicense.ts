@@ -1,19 +1,12 @@
 import type { FullCustomerLicense, FullPlanLicense } from "@autumn/shared";
 
-/**
- * The pool after converging onto a definition and/or absolute paid count —
- * in-memory twin of customerLicenseRepo.setPaidQuantity/repointDefinition.
- * Usage is untouched; remaining floors at zero.
- */
 export const convergeCustomerLicense = ({
 	customerLicense,
 	planLicense,
 	paidQuantity,
 }: {
 	customerLicense: FullCustomerLicense;
-	/** New effective definition; omitted keeps the current one. */
 	planLicense?: FullPlanLicense;
-	/** Absolute paid count; omitted keeps the current paid seats. */
 	paidQuantity?: number;
 }): FullCustomerLicense => {
 	const included = planLicense

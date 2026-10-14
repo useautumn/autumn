@@ -41,7 +41,6 @@ export async function readPartitionLogRange({
 	throw new KafkaPartitionOffsetsNotFoundError({ topic, partition });
 }
 
-/** Null when nothing on the partition is at or after `timestamp`: the broker answers "-1". */
 export async function readPartitionOffsetAtTimestamp({
 	ctx,
 	topic,

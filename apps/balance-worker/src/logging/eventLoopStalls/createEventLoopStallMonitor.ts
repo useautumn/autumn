@@ -13,13 +13,9 @@ import {
 
 type EventLoopStallMonitorConfig = {
 	deployment: string;
-	/** Which worker, so one saturated worker is not averaged away across the fleet. */
 	endpoint: string;
-	/** How often the probe timer should fire. */
 	intervalMs: number;
-	/** Lateness counted as a stall. */
 	stallThresholdMs: number;
-	/** Lateness that also gets its own log line, naming what held the thread. */
 	logStallMs: number;
 	reportEveryMs: number;
 	cpuModel?: string;
@@ -28,12 +24,6 @@ type EventLoopStallMonitorConfig = {
 const MAX_STALL_LOGS_PER_REPORT = 20;
 const MAX_SECTIONS_PER_STALL = 5;
 
-/**
- * A timer that should fire every `intervalMs`; however late it fires is how long
- * the thread was held. Each stall is matched against the timed synchronous
- * sections that finished inside it, so the log says what was running, not only
- * that something was.
- */
 export function createEventLoopStallMonitor({
 	ctx,
 	config,
@@ -43,12 +33,9 @@ export function createEventLoopStallMonitor({
 		recorder: SyncSectionRecorder;
 		now?: () => number;
 		schedule?: (params: { intervalMs: number; run(): void }) => () => void;
-		/** Read once per logged stall: a stall with nothing timed and a heap that just moved is the collector's. */
 		memory?: () => { heapUsed: number; rss: number };
 		cpu?: () => CpuCounters;
-		/** Diffed per window so a slow read or commit can be matched to retransmission timeouts in the same 10 s. */
 		tcp?: () => TcpCounters | null;
-		/** Counters the window drains into its summary line: inline answers and fallbacks, thread health. */
 		signals?: () => Record<string, unknown>;
 	};
 	config: EventLoopStallMonitorConfig;
@@ -76,7 +63,6 @@ export function createEventLoopStallMonitor({
 				report({ tickedAt });
 			}
 		} catch {
-			// Telemetry must never disturb the thread it is measuring.
 		}
 	}
 

@@ -13,7 +13,6 @@ import { updateCustomerProductsToPlanOps } from "./customerProducts/updateCustom
 import { insertEntitiesToPlanOps } from "./entities/insertEntitiesToPlanOps.js";
 import { pooledBalancePlanToPlanOps } from "./pooledBalances/pooledBalancePlanToPlanOps.js";
 
-/** Every row the worker holds that the plan writes, as ops in the order the Postgres lane writes them; purchases last, sized by the worker. */
 export const autumnBillingPlanToPlanOps = ({
 	autumnBillingPlan,
 }: {

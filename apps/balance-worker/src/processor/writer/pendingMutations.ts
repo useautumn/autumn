@@ -83,7 +83,6 @@ export function pendingKeyOf({
 
 export function createPendingSettlement(): PendingSettlement {
 	const stored = Promise.withResolvers<void>();
-	// Log-only callers may never wait for the store; failure still reaches store waiters.
 	void stored.promise.catch(() => undefined);
 	const logged = Promise.withResolvers<void>();
 	void logged.promise.catch(() => undefined);
@@ -110,7 +109,6 @@ export function createPendingSettlement(): PendingSettlement {
 		state: SubjectState | null;
 	}): void {
 		logged.resolve();
-		// A log-only record projected no rows, and only a write is ever joined for them.
 		if (!state) return;
 		for (const { kind, resolvers } of waiters) {
 			resolvers.resolve({ kind, mutation, state });
@@ -154,10 +152,8 @@ export function createPendingSettlement(): PendingSettlement {
  *  gzip only saves about a quarter on these records, so the raw budget stays
  *  well under the limit rather than counting on compression. */
 export const DEFAULT_MAX_BATCH_BYTES = 800_000;
-/** Key, envelope and Kafka's per-record framing beside the JSON payload. */
 export const RECORD_OVERHEAD_BYTES = 256;
 
-/** The record the log receives: the mutation plus its effects; the store, receipts and checkpoints hold it without them. */
 export function loggedRecordOf({
 	mutation,
 	effects,
@@ -169,8 +165,6 @@ export function loggedRecordOf({
 	return { ...mutation, effects };
 }
 
-/** Bounds how far the store may trail the log: each unapplied batch keeps its
- *  store-durability callers waiting and its milestones in memory. */
 export const DEFAULT_MAX_UNAPPLIED_BATCHES = 64;
 
 export const maxUnappliedBatchesOf = ({
@@ -179,10 +173,8 @@ export const maxUnappliedBatchesOf = ({
 	limits: PartitionWriterScope["config"]["limits"];
 }): number => limits.maxUnappliedBatches ?? DEFAULT_MAX_UNAPPLIED_BATCHES;
 
-/** Bounds one store flush; the committer writes a flush as a single statement. */
 export const DEFAULT_MAX_BATCHES_PER_FLUSH = 32;
 
-/** Read live so DB control can retune it; clamped to [1, maxUnappliedBatches] so a full queue always counts as due. */
 export const maxBatchesPerFlushOf = ({
 	ctx,
 	limits,
@@ -206,7 +198,6 @@ export const maxBatchBytesOf = ({
 export const writerNowOf = ({ scope }: { scope: PartitionWriterScope }) =>
 	scope.ctx.now?.() ?? performance.now();
 
-/** A queued mutation owns both durability milestones, even after its log reply releases its pins. */
 export function enqueueMutation({
 	scope,
 	pendingKey,
@@ -223,13 +214,11 @@ export function enqueueMutation({
 	pendingKey: string;
 	customerKey: string;
 	mutation: MutationRecord;
-	/** Null for a log-only record: it leaves no rows resident. */
 	nextState: SubjectState | null;
 	projectedStates?: SubjectState[];
 	durability: MutationDurability;
 	effects?: MutationEffect[];
 	defersCommit?: boolean;
-	/** No settlement: the reply waits on the commit position instead. */
 	held?: boolean;
 }): PendingMutation {
 	const { state, config } = scope;
@@ -241,8 +230,6 @@ export function enqueueMutation({
 	) {
 		throw new PartitionWriterCapacityError();
 	}
-	// Refused before anything is projected: a record no batch can carry would
-	// otherwise fail at commit and take the partition, and its worker, with it.
 	const loggedRecord = loggedRecordOf({ mutation, effects });
 	const encodedBytes =
 		(scope.ctx.appender.encodedBytesOf?.({ record: loggedRecord }) ??
@@ -289,25 +276,20 @@ export function enqueueMutation({
 	state.queue.push(pending);
 	if (pending.heldGroup !== undefined) state.heldGroupBytes += encodedBytes;
 	if (defersCommit) state.deferredQueued += 1;
-	// A log-only record lands no rows, so nothing that re-reads Postgres waits for it:
-	// an evict behind it enqueues its own record straight away and shares the next commit.
 	if (nextState) state.lastRowSeq = seq;
 	if (nextState && settlement)
 		state.storeCompletion = settlement.waitForStore();
-	// A lingering commit loop has what it was waiting for.
 	if (state.lingerWake && state.queue.length >= config.limits.maxBatchSize) {
 		state.lingerWake();
 	}
 	return pending;
 }
 
-/** The customer's part, and the part of the entity the state names. */
 const projectedStatesOf = ({ state }: { state: SubjectState }) => {
 	const states = splitSubjectState({ state });
 	return states.entity ? [states.customer, states.entity] : [states.customer];
 };
 
-/** Snapshot at call time: mutations enqueued later must not extend the wait. */
 export function pendingCommitsFor({
 	state,
 	customerKey,
@@ -338,7 +320,6 @@ export function removePendingMutation({
 	}
 }
 
-/** Pins hold a subject's rows resident until Postgres has them: a read taken behind an unapplied record would be stale. */
 export function releasePins({
 	state,
 	pending,
@@ -362,7 +343,6 @@ export function rejectAllPending({
 	for (const pending of state.pendingByKey.values()) {
 		pending.settlement?.reject({ error });
 	}
-	// Log-acknowledged writes have left pendingByKey but still own an unfinished store milestone.
 	for (const pending of batch) pending.settlement?.reject({ error });
 	for (const waiter of state.storeWaiters) waiter.reject(error);
 	state.storeWaiters = [];
@@ -376,7 +356,6 @@ export function rejectAllPending({
 	state.subjects.clear();
 }
 
-/** A caller that joins a held write gets a settlement after all; the commit settles it like any other. */
 export function settlementOf({
 	pending,
 }: {
@@ -386,7 +365,6 @@ export function settlementOf({
 	return pending.settlement;
 }
 
-/** Resolves once the store holds every write up to `seq`; rejects if the writer fails first. */
 export function awaitStored({
 	state,
 	seq,
@@ -398,12 +376,10 @@ export function awaitStored({
 	if (state.recoveryError) return Promise.reject(state.recoveryError);
 	const { promise, resolve, reject } = Promise.withResolvers<void>();
 	state.storeWaiters.push({ seq, resolve, reject });
-	// Somebody reads the store next: a lingering apply goes now.
 	state.applyWake?.();
 	return promise;
 }
 
-/** Snapshot: every row-landing write handed out so far, settled or held, is in the store. */
 export function allStored({
 	state,
 }: {
@@ -412,7 +388,6 @@ export function allStored({
 	return snapshotAllStored({ state })();
 }
 
-/** `allStored`'s snapshot taken now; its waiter registers only once called, so a caller that never waits wakes nothing. */
 export function snapshotAllStored({
 	state,
 }: {
@@ -428,7 +403,6 @@ export function snapshotAllStored({
 
 function nothing(): void {}
 
-/** The store now holds every write up to `seq`. */
 export function advanceStored({
 	state,
 	seq,

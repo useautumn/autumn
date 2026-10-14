@@ -1,6 +1,3 @@
-/**
- * Checkout-related error codes
- */
 export const CheckoutErrorCode = {
 	CheckoutCompleted: "checkout_completed",
 	CheckoutExpired: "checkout_expired",

@@ -1,6 +1,3 @@
-// Scheduled switch entity cross tests (attach V2): simultaneous upgrade/downgrade across
-// entities and post-cycle upgrades after scheduled downgrades complete.
-
 import { test } from "bun:test";
 import type { ApiEntityV0 } from "@autumn/shared";
 import {
@@ -14,21 +11,6 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 3: Entity 1 premium to free, entity 2 premium to pro, advance cycle, upgrade entity 1 to premium
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Entity 1: Premium → Free (scheduled)
- * - Entity 2: Premium → Pro (scheduled)
- * - Advance cycle
- * - After downgrade completes, upgrade entity 1 back to premium
- *
- * Expected Result:
- * - After cycle: Entity 1 on free, Entity 2 on pro
- * - After upgrade: Entity 1 on premium (immediate)
- */
 test.concurrent(
 	`${chalk.yellowBright("scheduled-switch-entities-cross 3: entity 1 premium to free, entity 2 premium to pro, advance cycle, upgrade entity 1 to premium")}`,
 	async () => {
@@ -62,13 +44,12 @@ test.concurrent(
 			actions: [
 				s.billing.attach({ productId: premium.id, entityIndex: 0 }),
 				s.billing.attach({ productId: premium.id, entityIndex: 1 }),
-				s.billing.attach({ productId: free.id, entityIndex: 0 }), // Downgrade entity 1
-				s.billing.attach({ productId: pro.id, entityIndex: 1 }), // Downgrade entity 2
+				s.billing.attach({ productId: free.id, entityIndex: 0 }),
+				s.billing.attach({ productId: pro.id, entityIndex: 1 }),
 				s.advanceToNextInvoice(),
 			],
 		});
 
-		// Verify state after cycle
 		const entity1Before = await autumnV1.entities.get<ApiEntityV0>(
 			customerId,
 			entities[0].id,
@@ -87,7 +68,6 @@ test.concurrent(
 			productId: pro.id,
 		});
 
-		// Verify Stripe subscription
 		await expectSubToBeCorrect({
 			db: ctx.db,
 			customerId,
@@ -95,7 +75,6 @@ test.concurrent(
 			env: ctx.env,
 		});
 
-		// Upgrade entity 1 back to premium
 		await autumnV1.billing.attach({
 			customer_id: customerId,
 			product_id: premium.id,
@@ -103,7 +82,6 @@ test.concurrent(
 			redirect_mode: "if_required",
 		});
 
-		// Verify entity 1: premium active (immediate upgrade)
 		const entity1After = await autumnV1.entities.get<ApiEntityV0>(
 			customerId,
 			entities[0].id,
@@ -117,7 +95,6 @@ test.concurrent(
 			productId: free.id,
 		});
 
-		// Verify Stripe subscription after upgrade
 		await expectSubToBeCorrect({
 			db: ctx.db,
 			customerId,
@@ -127,23 +104,6 @@ test.concurrent(
 	},
 );
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 4: Entity 1 premiumAnnual to pro, entity 2 premium to pro, advance cycle, upgrade entity 2 to premium
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Entity 1: Premium Annual → Pro (explicit immediate switch)
- * - Entity 2: Premium Monthly → Pro (scheduled, same interval)
- * - Advance 1 month (monthly cycle ends)
- * - Upgrade entity 2 back to premium
- *
- * Expected Result:
- * - Entity 1 immediately switches to pro via plan_schedule: immediate
- * - Entity 2 has premium canceling, pro scheduled (same interval = end_of_cycle)
- * - After cycle: Entity 1 on pro (renewed), Entity 2 on pro (scheduled switch completed)
- * - After upgrade: Entity 2 on premium
- */
 test.concurrent(
 	`${chalk.yellowBright("scheduled-switch-entities-cross 4: entity 1 premiumAnnual to pro, entity 2 premium to pro, advance cycle, upgrade entity 2 to premium")}`,
 	async () => {
@@ -183,12 +143,11 @@ test.concurrent(
 					entityIndex: 0,
 					planSchedule: "immediate",
 				}),
-				s.billing.attach({ productId: pro.id, entityIndex: 1 }), // Entity 2: scheduled (same interval)
-				s.advanceToNextInvoice(), // Advance 1 month
+				s.billing.attach({ productId: pro.id, entityIndex: 1 }),
+				s.advanceToNextInvoice(),
 			],
 		});
 
-		// Entity 1 already switched to pro through the explicit immediate override
 		const entity1Before = await autumnV1.entities.get<ApiEntityV0>(
 			customerId,
 			entities[0].id,
@@ -202,7 +161,6 @@ test.concurrent(
 			productId: premiumAnnual.id,
 		});
 
-		// Entity 2: now on pro (monthly cycle completed, scheduled switch took effect)
 		const entity2Before = await autumnV1.entities.get<ApiEntityV0>(
 			customerId,
 			entities[1].id,
@@ -216,7 +174,6 @@ test.concurrent(
 			productId: premium.id,
 		});
 
-		// Verify Stripe subscription
 		await expectSubToBeCorrect({
 			db: ctx.db,
 			customerId,
@@ -224,7 +181,6 @@ test.concurrent(
 			env: ctx.env,
 		});
 
-		// Upgrade entity 2 back to premium
 		await autumnV1.billing.attach({
 			customer_id: customerId,
 			product_id: premium.id,
@@ -232,7 +188,6 @@ test.concurrent(
 			redirect_mode: "if_required",
 		});
 
-		// Verify entity 2: premium active
 		const entity2After = await autumnV1.entities.get<ApiEntityV0>(
 			customerId,
 			entities[1].id,
@@ -242,7 +197,6 @@ test.concurrent(
 			productId: premium.id,
 		});
 
-		// Verify Stripe subscription after upgrade
 		await expectSubToBeCorrect({
 			db: ctx.db,
 			customerId,

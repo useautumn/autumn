@@ -1,6 +1,3 @@
-// `billing.updated` webhook via the attach V2 endpoint: plan_changes report activated / scheduled /
-// updated / expired actions per plan.
-
 import { afterAll, beforeAll, expect, test } from "bun:test";
 import type { AttachParamsV0Input, AttachParamsV1Input } from "@autumn/shared";
 import {
@@ -47,12 +44,6 @@ afterAll(async () => {
 	await webhook?.cleanup();
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// CHECKOUT: ATTACH VIA STRIPE CHECKOUT (no payment method on file)
-// ═══════════════════════════════════════════════════════════════════════════════
-
-// Red: promotion reinserts the pending custom price and crashes before webhooks.
-// Green: checkout emits both events with the activated custom-price plan.
 test(`${chalk.yellowBright("billing.updated: custom-price checkout completion → activated")}`, async () => {
 	const customerId = "billing-updated-stripe-checkout";
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
@@ -61,13 +52,12 @@ test(`${chalk.yellowBright("billing.updated: custom-price checkout completion �
 	const { autumnV2_2 } = await initScenario({
 		customerId,
 		setup: [
-			s.customer({ testClock: true, skipWebhooks: true }), // no payment method
+			s.customer({ testClock: true, skipWebhooks: true }),
 			s.products({ list: [pro] }),
 		],
 		actions: [],
 	});
 
-	// Attach returns a payment_url because there's no PM on file
 	const attachResult = await autumnV2_2.billing.attach<AttachParamsV1Input>({
 		customer_id: customerId,
 		plan_id: pro.id,
@@ -75,8 +65,6 @@ test(`${chalk.yellowBright("billing.updated: custom-price checkout completion �
 	});
 	expect(attachResult.payment_url).toContain("checkout.stripe.com");
 
-	// Complete checkout in Stripe — triggers checkout.session.completed →
-	// handleCheckoutSessionMetadataV2 → executeBillingPlan → webhook fires
 	await completeStripeCheckoutForm({ url: attachResult.payment_url });
 
 	const [productsResult, result] = await Promise.all([

@@ -2,7 +2,6 @@ import { type CreateInvoiceParams, ErrCode, RecaseError } from "@autumn/shared";
 import type Stripe from "stripe";
 import { getStripePrice } from "@/external/stripe/prices/operations/getStripePrice";
 
-/** Every Stripe price the request named, keyed by id. */
 export type NamedStripePrices = Map<string, Stripe.Price>;
 
 const namedPriceIds = ({
@@ -25,11 +24,6 @@ const namedPriceIds = ({
 	return [...new Set(ids.filter((id): id is string => Boolean(id)))];
 };
 
-/**
- * Loads the Stripe prices the request named, so the preview is computed from
- * the same configuration Stripe bills from. Tiers are expanded because a
- * tiered price's amount is unknowable without them.
- */
 export const fetchNamedStripePrices = async ({
 	stripeCli,
 	params,
@@ -42,8 +36,6 @@ export const fetchNamedStripePrices = async ({
 	const ids = namedPriceIds({ params });
 	if (ids.length === 0) return new Map();
 
-	// getStripePrice returns undefined only for a missing price; a Stripe
-	// outage propagates instead of being reported as an invalid request.
 	const prices = await Promise.all(
 		ids.map(async (id) => {
 			const price = await getStripePrice({

@@ -27,7 +27,6 @@ afterAll(async () => {
 	await webhook?.cleanup();
 });
 
-// ── B6: limit disabled → quiet, not silently rebased onto the allowance ─────
 test(`${chalk.yellowBright("ul-alert5: disabling the cap silences the alert")}`, async () => {
 	const customerId = "ul-alert-disabled-1";
 	await setupCustomer({ customerId, planId: "ul-alert-disabled" });
@@ -50,7 +49,6 @@ test(`${chalk.yellowBright("ul-alert5: disabling the cap silences the alert")}`,
 		],
 	});
 
-	// 8000 / 10000 would be 80% of the plan allowance; the alert must not rebase.
 	await track({ customerId, value: 8000 });
 	await expectNoUsageAlert({ token: playToken, customerId, threshold: 80 });
 });

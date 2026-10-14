@@ -1,9 +1,3 @@
-/**
- * Parity twin of `migration-oneoff-addon-version`: an add-on plan version adds
- * a feature with no invoice on either lane. The twin add-on is FREE (no base
- * price) — versioned base-price rows are re-minted per version, so a priced
- * addon rejects to the per-customer lane and never reaches batch parity.
- */
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3, ApiCustomerV5 } from "@autumn/shared";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
@@ -15,7 +9,6 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-// version-only is per-customer until definition execute is restored
 import { readScopedFeatureRow } from "../../paidRowTestUtils";
 import {
 	expectActivePlanVersion,
@@ -25,7 +18,6 @@ import {
 	uniqueStem,
 } from "./versionParityTestUtils";
 
-// itemsV2 has no free lifetime builder; omitting `reset` is what makes it lifetime.
 const lifetimeMessagesV2 = ({ included }: { included: number }) => ({
 	feature_id: TestFeature.Messages,
 	included,

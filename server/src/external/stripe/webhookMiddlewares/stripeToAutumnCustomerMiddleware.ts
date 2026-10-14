@@ -12,7 +12,6 @@ import type {
 const getAutumnCustomerId = async ({ ctx }: { ctx: StripeWebhookContext }) => {
 	const { stripeEvent } = ctx;
 
-	// 1. Get stripe customer ID from stripe event
 	const getStripeCustomerId = () => {
 		switch (stripeEvent.type) {
 			case "customer.subscription.created":
@@ -45,7 +44,6 @@ const getAutumnCustomerId = async ({ ctx }: { ctx: StripeWebhookContext }) => {
 
 	if (!cus) return;
 
-	// The worker holds the live balances: land its writes first, so a cycle's arrears and resets read all of the usage.
 	if (cus.id && isBalanceWorkerRolloutEnabled({ ctx, customerId: cus.id }))
 		await flushBalanceWorkerCustomer({ ctx, customerId: cus.id });
 
@@ -61,11 +59,6 @@ const getAutumnCustomerId = async ({ ctx }: { ctx: StripeWebhookContext }) => {
 	ctx.fullCustomer = fullCustomer;
 };
 
-/**
- * Resolves the event's Autumn customer onto ctx.fullCustomer and returns a
- * ctx routed to that customer's Redis. Shared by the webhook route and the
- * SQS replay worker.
- */
 export const attachStripeEventCustomer = async ({
 	ctx,
 }: {

@@ -9,7 +9,6 @@ const STATUSES: FileRow["status"][] = [
 	"retrying",
 ];
 
-/** Deterministic pseudo-random so screenshots are reproducible run-to-run. */
 const seeded = (seed: number) => {
 	let state = seed;
 	return () => {
@@ -24,7 +23,6 @@ export const buildMockSnapshot = (): Snapshot => {
 	const files: FileRow[] = [];
 	for (let index = 0; index < 60; index++) {
 		const status = STATUSES[index % STATUSES.length];
-		// Log-spread durations across 5s–400s so every histogram bucket gets hits.
 		const durationMs = Math.round(5000 * (400 / 5) ** rand()) + index * 37;
 		const done = status === "passed" || status === "failed";
 		files.push({

@@ -3,7 +3,6 @@ import { versionLabel } from "../components/versionLabel";
 
 type VersionedProduct = Pick<FrontendProduct, "version" | "version_slug">;
 
-/** productsAreSame ignores version_slug, so plan-change detection has to ask separately. */
 export const versionSlugRenamed = ({
 	product,
 	previous,
@@ -13,7 +12,6 @@ export const versionSlugRenamed = ({
 }): boolean => {
 	if (!previous) return false;
 	const next = product.version_slug?.trim();
-	// Blank is an unfinished edit, not a rename — the server requires a nonempty slug.
 	if (!next) return false;
 	return (
 		next !==
@@ -24,7 +22,6 @@ export const versionSlugRenamed = ({
 	);
 };
 
-/** Mirrors the server's `nonempty().regex(idRegex)`. Collisions stay a server error. */
 export const versionSlugError = ({ slug }: { slug: string }): string | null => {
 	if (slug.trim().length === 0) return "Enter a version slug.";
 	if (!idRegex.test(slug)) {
@@ -33,7 +30,6 @@ export const versionSlugError = ({ slug }: { slug: string }): string | null => {
 	return null;
 };
 
-/** Naming a minted row is optional — blank lets the server stamp `v{n}`. */
 export const mintVersionSlugError = ({
 	slug,
 }: {

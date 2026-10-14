@@ -58,7 +58,6 @@ export const createStripeSub2 = async ({
 		? rewards.map((reward) => ({ coupon: reward.id }))
 		: undefined;
 
-	// Custom PMs (Vercel, etc.) use external payment confirmation.
 	const isCustomPaymentMethod = paymentMethod?.type === "custom";
 
 	const paymentSettings = buildStripeSubPaymentSettings({
@@ -68,7 +67,6 @@ export const createStripeSub2 = async ({
 	});
 
 	try {
-		// Skip auto_tax in invoice mode: send_invoice has no
 		// address-collection UI so Stripe Tax rejects.
 		const wantsAutoTax =
 			!!org.config.automatic_tax &&
@@ -82,8 +80,6 @@ export const createStripeSub2 = async ({
 			...(wantsAutoTax ? { automatic_tax: { enabled: true } } : {}),
 
 			billing_mode: { type: "flexible" },
-			// Custom PMs activate the sub after external payment confirmation
-			// via the Payment Records API.
 			payment_behavior: isCustomPaymentMethod
 				? "default_incomplete"
 				: "allow_incomplete",
@@ -100,7 +96,6 @@ export const createStripeSub2 = async ({
 			discounts,
 			expand: ["latest_invoice"],
 
-			// Pass metadata from attachParams (e.g., Vercel installation/billing plan IDs)
 			metadata: {
 				...(metadata || {}),
 				...buildAutumnSubscriptionMetadata({ actionSource: "v1Attach" }),
@@ -155,11 +150,9 @@ export const createStripeSub2 = async ({
 			);
 		}
 
-		// Store
 		const earliestPeriodEnd = getEarliestPeriodEnd({ sub: subscription });
 		const currentPeriodStart = getLatestPeriodStart({ sub: subscription });
 
-		// customer.subscription.created can land before we get here and store it first.
 		await SubService.createSubIfAbsent({
 			db,
 			sub: {
@@ -185,7 +178,6 @@ export const createStripeSub2 = async ({
 		console.log("Error original stack:", error.stack);
 
 		// Stripe rejects caller-fixable params (unactivated payment method type,
-		// currency mismatch, declined card) with 4xx — don't mask those as 500.
 		const stripeStatusCode =
 			error instanceof Stripe.errors.StripeError ? error.statusCode : undefined;
 		const isClientError =

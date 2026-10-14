@@ -102,7 +102,6 @@ test.concurrent(
 		const response = await autumnV1.billing.createSchedule(params);
 
 		expect(response.phases).toHaveLength(2);
-		// The schedule never placed the add-on, so it belongs to no phase of it.
 		expect(
 			response.phases.some((phase) =>
 				phase.customer_product_ids.includes(addonBefore!.id),
@@ -225,7 +224,6 @@ test.concurrent(
 	},
 );
 
-// Regression: a preserved base must not coexist with its future replacement.
 test.concurrent(
 	`${chalk.yellowBright("create-schedule preserve add-ons: replaces the preserved base in a future phase")}`,
 	async () => {
@@ -277,7 +275,6 @@ test.concurrent(
 				phase.customer_product_ids.includes(currentBaseCustomerProduct!.id),
 			),
 		).toBe(false);
-		// The later phase claims the base's slot, so it ends when that phase starts.
 		const currentBaseAfter = await ctx.db.query.customerProducts.findFirst({
 			where: eq(customerProducts.id, currentBaseCustomerProduct!.id),
 		});

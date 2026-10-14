@@ -20,7 +20,6 @@ export type PartitionCheckpointCapture = {
 		partition: number;
 		createdAt: number;
 		limits: PartitionCheckpointLimits;
-		/** Only the current follower's fully applied read-committed position is safe here. */
 		consumedNextOffset?: bigint | null;
 	}): PreparedPartitionCheckpoint;
 };

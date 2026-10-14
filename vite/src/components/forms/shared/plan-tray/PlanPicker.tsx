@@ -4,7 +4,6 @@ import { type ComponentProps, type ReactNode, useRef, useState } from "react";
 import { PlanPickerScopeRow } from "./PlanPickerScopeRow";
 import { PlanPickerTrigger } from "./PlanPickerTrigger";
 
-/** The empty plan row: a searchable product picker with an optional "For" scope row. */
 export function PlanPicker({
 	products,
 	header,

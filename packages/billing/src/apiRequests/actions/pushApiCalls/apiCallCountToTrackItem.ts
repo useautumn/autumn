@@ -4,7 +4,6 @@ import type { ApiCallCount } from "../../types/apiCallCount";
 
 export const API_CALL_FEATURE_ID = "api_call";
 
-/** The key Autumn dedups on; the ledger stores the same one. */
 export const apiCallIdempotencyKey = ({
 	orgId,
 	hourStartMs,

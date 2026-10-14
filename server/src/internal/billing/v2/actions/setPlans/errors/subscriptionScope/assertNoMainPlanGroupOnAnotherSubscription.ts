@@ -8,7 +8,6 @@ import { outOfScopeLiveCustomerProducts } from "./outOfScopeLiveCustomerProducts
 import { requestedPlans } from "./requestedPlans";
 import { subscriptionConflictError } from "./subscriptionScopeErrors";
 
-/** A main plan would replace its group's live plan, which can't move between subscriptions. */
 export const assertNoMainPlanGroupOnAnotherSubscription = ({
 	billingContext,
 }: {

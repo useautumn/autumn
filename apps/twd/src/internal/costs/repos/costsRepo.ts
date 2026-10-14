@@ -15,7 +15,6 @@ export type CostRow = {
 	worker_seconds: number;
 };
 
-/** Run + warm-build cost per (UTC bucket, user) in [from, to). Warm builds without an owner count as "system". */
 export const selectCostRows = async ({
 	ctx,
 	from,

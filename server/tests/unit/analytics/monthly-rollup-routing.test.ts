@@ -1,7 +1,3 @@
-/**
- * Contract: UTC month bins read the monthly rollups only for the complete calendar months inside
- * the window, so a window without one stays entirely on the finer-grained path.
- */
 import { expect, test } from "bun:test";
 import {
 	hasCompleteUtcMonth,
@@ -9,7 +5,6 @@ import {
 } from "@/internal/analytics/actions/dailyRollupRouting.js";
 
 test("monthly rollups: detect a complete UTC month inside the window", () => {
-	// Tanvir's Jan 15 -> Mar 10 case: February is whole, January and March are edges.
 	expect(
 		hasCompleteUtcMonth({
 			startDate: "2026-01-15 12:00:00",
@@ -17,7 +12,6 @@ test("monthly rollups: detect a complete UTC month inside the window", () => {
 		}),
 	).toBe(true);
 
-	// Exact month boundaries on both ends: January and February are both whole.
 	expect(
 		hasCompleteUtcMonth({
 			startDate: "2026-01-01 00:00:00",
@@ -25,7 +19,6 @@ test("monthly rollups: detect a complete UTC month inside the window", () => {
 		}),
 	).toBe(true);
 
-	// Leap February is whole.
 	expect(
 		hasCompleteUtcMonth({
 			startDate: "2028-02-01 00:00:00",
@@ -33,7 +26,6 @@ test("monthly rollups: detect a complete UTC month inside the window", () => {
 		}),
 	).toBe(true);
 
-	// December is whole across the year rollover.
 	expect(
 		hasCompleteUtcMonth({
 			startDate: "2025-11-20 00:00:00",
@@ -43,7 +35,6 @@ test("monthly rollups: detect a complete UTC month inside the window", () => {
 });
 
 test("monthly rollups: a window with no complete UTC month has nothing to read", () => {
-	// One partial month.
 	expect(
 		hasCompleteUtcMonth({
 			startDate: "2026-01-15 12:00:00",
@@ -51,7 +42,6 @@ test("monthly rollups: a window with no complete UTC month has nothing to read",
 		}),
 	).toBe(false);
 
-	// Two partial months, no whole one between them.
 	expect(
 		hasCompleteUtcMonth({
 			startDate: "2026-01-15 00:00:00",
@@ -59,7 +49,6 @@ test("monthly rollups: a window with no complete UTC month has nothing to read",
 		}),
 	).toBe(false);
 
-	// A whole calendar month that never reaches the next month start.
 	expect(
 		hasCompleteUtcMonth({
 			startDate: "2026-01-01 00:00:00",
@@ -86,7 +75,6 @@ test("monthly rollups: route only UTC month bins with no property filters", () =
 	for (const binSize of ["hour", "day", "week"]) {
 		expect(shouldUseMonthlyRollup({ ...base, binSize })).toBe(false);
 	}
-	// A non-UTC month starts mid-UTC-day, so the monthly states never line up.
 	expect(
 		shouldUseMonthlyRollup({ ...base, timezone: "America/New_York" }),
 	).toBe(false);

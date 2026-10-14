@@ -2,7 +2,6 @@ import { z } from "zod/v4";
 
 const nonEmptyStringSchema = z.string().min(1);
 
-/** One org's catalog changed in one env: every cached row of it is stale from `at`. */
 export const catalogInvalidationRecordSchema = z
 	.object({
 		schemaVersion: z.literal(1),

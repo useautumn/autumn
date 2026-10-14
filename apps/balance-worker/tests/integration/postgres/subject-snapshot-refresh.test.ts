@@ -48,7 +48,6 @@ describe.skipIf(!databaseUrl)("subject snapshot refresh", () => {
 		await postgres?.close();
 	});
 
-	/** The production hydrator over the production writer, committer and lane, on real Postgres; `gate` holds every full read's answer until released. */
 	const createHydrator = async ({
 		mode = "write",
 		writtenAfter = 0,
@@ -314,7 +313,6 @@ describe.skipIf(!databaseUrl)("subject snapshot refresh", () => {
 		const refresh = Promise.withResolvers<void>();
 		gate.held = request.promise;
 		try {
-			// The request's read makes the rows resident; the refresh queued behind it reads them itself.
 			const ensured = hydrator.ensure({ identity });
 			await waitUntil(() => reads.length === 1);
 			hydrator.refreshSnapshots({ customer: identity, subjects: [identity] });
@@ -323,7 +321,6 @@ describe.skipIf(!databaseUrl)("subject snapshot refresh", () => {
 			const { state } = await ensured;
 			await waitUntil(() => reads.length === 2);
 
-			// With the refresh's answer (balance 100) still held, a track lands balance 95 in the rows and the row.
 			const catalog = await hydrator.ensureCatalog({ identity, state });
 			const command = createTrackCommand({
 				identity,
@@ -364,7 +361,6 @@ describe.skipIf(!databaseUrl)("subject snapshot refresh", () => {
 		}
 	});
 
-	/** An entity of the seeded customer, with no rows of its own: its state is the customer's with the entity attached. */
 	const seedEntity = async ({
 		seeded,
 		entityId,
@@ -387,7 +383,6 @@ describe.skipIf(!databaseUrl)("subject snapshot refresh", () => {
 		const miss = await seedEntity({ seeded, entityId: missId });
 		const writing = await createHydrator({ mode: "serve" });
 		try {
-			// The production row for en_hit: read whole once, written through the lane as a refresh would.
 			const { state } = await writing.hydrator.ensure({ identity: hit });
 			writing.stateStore.snapshotQueues?.enqueueRefresh({
 				topic: writing.topic,
@@ -438,7 +433,6 @@ describe.skipIf(!databaseUrl)("subject snapshot refresh", () => {
 		} finally {
 			writing.close();
 		}
-		// The two rows may have landed on different ticks: the newest bounds the miss, the oldest the hit.
 		const rows = (
 			await postgres.db.execute(
 				sql`SELECT min(written_at) AS oldest, max(written_at) AS newest FROM subject_snapshots WHERE org_id = ${seeded.orgId}`,

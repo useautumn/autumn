@@ -42,7 +42,6 @@ const calculateDateRange = async ({
 	const intervalType = params.interval ?? "24h";
 	const binSize = params.bin_size ?? (intervalType === "24h" ? "hour" : "day");
 
-	// Handle custom range
 	if (params.custom_range) {
 		return {
 			startDate: format(new UTCDate(params.custom_range.start), DATE_FORMAT),
@@ -50,7 +49,6 @@ const calculateDateRange = async ({
 		};
 	}
 
-	// Handle billing cycle intervals
 	const isBillingCycle = BILLING_CYCLE_INTERVALS.includes(
 		intervalType as BillingCycleIntervalEnum,
 	);
@@ -73,7 +71,6 @@ const calculateDateRange = async ({
 		};
 	}
 
-	// Calculate based on interval type
 	const daysMap = intervalTypeToDaysMap(0);
 	const days = daysMap[intervalType as keyof typeof daysMap];
 
@@ -88,7 +85,6 @@ const calculateDateRange = async ({
 	return { startDate, endDate };
 };
 
-/** Gets total count and sum per event name for a date range */
 export const getCountAndSum = async ({
 	ctx,
 	params,
@@ -96,8 +92,6 @@ export const getCountAndSum = async ({
 }: {
 	ctx: AutumnContext;
 	params: TotalEventsParams;
-	// Callers comparing these totals against another query's result must pass that
-	// query's window; resolving it here independently drifts by up to one bin.
 	dateRange?: DateRangeResult;
 }) => {
 	const ch = getClickhouseClient();
@@ -106,7 +100,6 @@ export const getCountAndSum = async ({
 	const { startDate, endDate } =
 		dateRange ?? (await calculateDateRange({ ctx, params }));
 
-	// Build dynamic filter_by clauses using native JSON sub-column access
 	let filterBySql = "";
 	const filterByParams: Record<string, string> = {};
 	if (params.filter_by) {

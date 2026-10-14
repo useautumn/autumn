@@ -23,7 +23,6 @@ const CREDIT_CONFIG_KEYS = [
 	"provider_markups",
 ] as const;
 
-/** Batch entries matching an existing feature, resolved to current → next rows. */
 export const computeUpdateFeaturesPlan = ({
 	ctx,
 	catalogContext,

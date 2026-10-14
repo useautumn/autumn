@@ -8,24 +8,20 @@ import type {
 	AtomShadowOutcome,
 } from "./types/atomShadowOutcome.js";
 
-/** A body as it leaves over the wire: internal fields stripped, undefined keys gone. */
 const toWireBody = (body: unknown): unknown =>
 	JSON.parse(JSON.stringify(stripInternalFields({ data: body }) ?? null));
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
 	typeof value === "object" && value !== null && !Array.isArray(value);
 
-/** The top balance's remaining in any version's check body; null when unlimited, boolean or absent. */
 const remainingOf = (body: unknown): number | null => {
 	if (!isRecord(body)) return null;
 	const { balance } = body;
 	if (isRecord(balance)) {
 		if (balance.unlimited === true) return null;
-		// v2.1+ names it `remaining`; v2.0 named it `current_balance`.
 		const remaining = balance.remaining ?? balance.current_balance;
 		return typeof remaining === "number" ? remaining : null;
 	}
-	// v1.x puts the number at the top; v0 lists one entry per feature.
 	if (typeof balance === "number")
 		return body.unlimited === true ? null : balance;
 	const [first] = Array.isArray(body.balances) ? body.balances : [];
@@ -36,7 +32,6 @@ const remainingOf = (body: unknown): number | null => {
 const allowedOf = (body: unknown): boolean | null =>
 	isRecord(body) && typeof body.allowed === "boolean" ? body.allowed : null;
 
-/** Both sides' allowed and remaining on every line, so a match is countable too; Atom's are null unless it answered. */
 const answerFields = ({
 	apiResponse,
 	reply,
@@ -74,7 +69,6 @@ const replyToOutcome = ({
 	return { status: "mismatch", api_response: api, atom_response: atom };
 };
 
-/** Asks our shadow Atom the check the API just answered and logs how they compare. Never throws; logs at info so nothing pages. */
 export const runAtomShadowCheck = async ({
 	ctx,
 	params,

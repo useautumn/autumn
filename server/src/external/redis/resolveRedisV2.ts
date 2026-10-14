@@ -63,18 +63,6 @@ export const getCurrentRedisV2InstanceName = (opts?: {
 		customerId: opts?.customerId,
 	});
 
-/** Returns the V2 Redis instance for this request.
- *
- *  Routing order:
- *  1. If `redis-v2-cache` edge config selects a non-dragonfly instance
- *     (`upstash`/`redis`), honor it — that's a global override / kill switch
- *     and trumps the ramp.
- *  2. Otherwise (active = dragonfly), if the ramp is enabled for this
- *     customer/org AND a destination is configured → ramp destination client.
- *  3. Otherwise → primary Dragonfly.
- *
- *  Called by every ctx-building middleware/worker — request-path code reads
- *  ctx.redisV2 rather than calling this. */
 export const resolveRedisV2 = (opts?: { customerId?: string }): Redis => {
 	const activeInstance = getActiveRedisV2Instance();
 

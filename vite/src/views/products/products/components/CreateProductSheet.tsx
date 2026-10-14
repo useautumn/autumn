@@ -39,8 +39,6 @@ type CreateProductSheetProps = {
 	open?: boolean;
 	onOpenChange?: (open: boolean) => void;
 	isAddOn?: boolean;
-	/** License variant: retitles the sheet and hides trial/add-on/settings —
-	 * licenses are plain plans offered for assignment under a parent. */
 	isLicense?: boolean;
 };
 
@@ -89,8 +87,6 @@ function CreateProductSheet({
 	return (
 		<Sheet open={open} onOpenChange={setOpen}>
 			<SheetContent className="flex flex-col overflow-hidden bg-background">
-				{/* Mounted per open so every create starts from a fresh local
-				    draft — the page's product store is never touched. */}
 				{open && (
 					<CreateProductForm
 						isAddOn={isAddOn}

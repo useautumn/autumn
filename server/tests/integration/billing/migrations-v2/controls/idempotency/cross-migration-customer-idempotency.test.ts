@@ -1,6 +1,3 @@
-/** Pre-fix, five definitions replace the same stale product into duplicates.
- * Post-fix, live migrations serialize and reload state while previews stay lock-free. */
-
 import { expect, test } from "bun:test";
 import {
 	type ApiCustomerV5,

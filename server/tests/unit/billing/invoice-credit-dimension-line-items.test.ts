@@ -1,10 +1,3 @@
-/**
- * Invoice credits with dimensions: attribution keyed per dimension renders one
- * line per (feature, dimension) without collapsing lines that share a feature,
- * names the dimension in the description, and still says "Removed feature"
- * only when the feature itself is gone.
- */
-
 import { describe, expect, test } from "bun:test";
 import {
 	BillingVersion,

@@ -6,7 +6,6 @@ import {
 } from "@autumn/shared";
 import { detectVariantConflicts } from "@/internal/product/actions/previewUpdatePlan/detectVariantConflicts";
 
-/** Lists slots where a relative plan (sibling version or customized license) diverged from the edit. */
 export const detectCatalogConflicts = ({
 	currentPlan,
 	nextPlan,

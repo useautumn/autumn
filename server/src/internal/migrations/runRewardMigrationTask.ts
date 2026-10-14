@@ -21,7 +21,6 @@ import { OrgService } from "../orgs/OrgService.js";
 import { ProductService } from "../products/ProductService.js";
 import { PriceService } from "../products/prices/PriceService.js";
 
-// Match fixed prices by amount
 const findMatchingFixedPrice = (
 	oldPrice: Price,
 	candidates: Price[],
@@ -36,7 +35,6 @@ const findMatchingFixedPrice = (
 	return possibleCandidate || candidates?.[0];
 };
 
-// Match usage prices by feature and billing characteristics
 const findMatchingUsagePrice = (
 	oldPrice: Price,
 	candidates: Price[],
@@ -47,17 +45,13 @@ const findMatchingUsagePrice = (
 		candidates.find((candidate) => {
 			const newConfig = candidate.config as UsagePriceConfig;
 
-			// Match by feature
 			if (newConfig.internal_feature_id !== oldConfig.internal_feature_id)
 				return false;
 
-			// Match by billing behavior
 			const newBillingType = getBillingType(newConfig);
 			const oldBillingType = getBillingType(oldConfig);
 			if (newBillingType !== oldBillingType) return false;
 
-			// Optionally match by tier structure
-			// if (!tiersMatch(oldConfig.usage_tiers, newConfig.usage_tiers))
 			if (!tiersAreSame(oldConfig.usage_tiers, newConfig.usage_tiers))
 				return false;
 
@@ -66,10 +60,7 @@ const findMatchingUsagePrice = (
 	);
 };
 
-// Main matching function with type-specific logic
 const findBestMatch = (oldPrice: Price, newPrices: Price[]): Price | null => {
-	// First, filter by basic characteristics
-
 	const candidates = newPrices.filter((newPrice) => {
 		if (newPrice.id === oldPrice.id) return true;
 
@@ -89,14 +80,12 @@ const findBestMatch = (oldPrice: Price, newPrices: Price[]): Price | null => {
 	if (candidates.length === 0) return null;
 	if (candidates.length === 1) return candidates[0];
 
-	// If multiple candidates, use type-specific matching
 	if (isFixedPrice(oldPrice)) {
 		return findMatchingFixedPrice(oldPrice, candidates);
 	} else if (isUsagePrice({ price: oldPrice })) {
 		return findMatchingUsagePrice(oldPrice, candidates);
 	}
 
-	// Fallback to first candidate
 	return candidates[0];
 };
 
@@ -113,12 +102,10 @@ export async function runRewardMigrationTask({
 		const {
 			oldPrices,
 			productId,
-			// newPrices,
 			orgId,
 			env,
 		}: {
 			oldPrices: Price[];
-			// newPrices: Price[];
 			productId: string;
 			orgId: string;
 			env: AppEnv;
@@ -133,7 +120,6 @@ export async function runRewardMigrationTask({
 
 		const newPrices = fullProduct.prices;
 
-		// Get organization for Stripe operations
 		const org = await OrgService.get({
 			db,
 			orgId,
@@ -171,7 +157,6 @@ export async function runRewardMigrationTask({
 				for (const priceId of reward.discount_config.price_ids) {
 					const oldPrice = oldPrices.find((p) => p.id === priceId);
 
-					// From other product
 					if (!oldPrice) {
 						newPriceIds.push(priceId);
 						continue;
@@ -196,15 +181,12 @@ export async function runRewardMigrationTask({
 				}
 			}
 
-			// Update the reward with new price IDs
 			if (shouldUpdateReward) {
 				try {
-					// Update Stripe coupon and reward if price IDs have changed
 					console.log(
 						`Updating ${reward.id}, updating reward and Stripe coupon...`,
 					);
 
-					// Update the reward in the database
 					const updatedReward = await rewardRepo.update({
 						db,
 						internalId: reward.internal_id!,
@@ -218,13 +200,11 @@ export async function runRewardMigrationTask({
 						},
 					});
 
-					// Get the price objects for the new price IDs
 					const prices = await PriceService.getInIds({
 						db,
 						ids: newPriceIds,
 					});
 
-					// Recreate the Stripe coupon with new product restrictions
 					await createStripeCoupon({
 						reward: updatedReward,
 						org,

@@ -86,7 +86,6 @@ describe(`${chalk.yellowBright("credit-systems3: test /check fallback from meter
 	});
 
 	test("after consuming Action1, check should return Credits feature", async () => {
-		// First, consume all Action1 balance
 		await autumnV1.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Action1,
@@ -94,7 +93,6 @@ describe(`${chalk.yellowBright("credit-systems3: test /check fallback from meter
 		});
 		await timeout(2000);
 
-		// Now check - should fall back to credit system
 		const requiredAction1Units = 25.5;
 		const res = (await autumnV1.check({
 			customer_id: customerId,
@@ -102,7 +100,6 @@ describe(`${chalk.yellowBright("credit-systems3: test /check fallback from meter
 			required_balance: requiredAction1Units,
 		})) as unknown as CheckResponseV1;
 
-		// Calculate the credit cost for the required Action1 units
 		const convertedCreditCost = featureToCreditSystem({
 			featureId: TestFeature.Action1,
 			creditSystem: creditFeature!,

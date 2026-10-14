@@ -13,7 +13,6 @@ const ctx = contexts.create({ features });
 const ambient = { orgId: "org_test", env: "live" };
 const RELEVANT_STATUS_PARAMS = ["active", "past_due", "scheduled"];
 
-/** Residual WHERE once the source consumed the whole plan quantifier. */
 const AMBIENT_ONLY_WHERE = "c.org_id = ? AND c.env = ? AND TRUE";
 
 const normalize = (sql: string) =>
@@ -26,8 +25,6 @@ const buildCandidate = (filter: CustomerFilter) =>
 		ambient,
 	});
 
-/** Unconsumed paths must keep the exact fallback WHERE (source is narrowing
- * only, the WHERE re-proves everything). */
 const expectFallbackWhereParity = (filter: CustomerFilter) => {
 	const candidate = buildCandidate(filter);
 	const fallback = compileFilter({
@@ -267,7 +264,6 @@ describe("customer filter planner", () => {
 		expect(normalize(candidate.source.sql)).toContain(
 			"pr.config->>'interval' <> 'one_off'",
 		);
-		// Booleans render `= ?` with the matcher value, mirroring leaf output.
 		expect(candidate.source.params).toContain(true);
 		expect(normalize(candidate.where.sql)).toBe(AMBIENT_ONLY_WHERE);
 	});

@@ -12,7 +12,6 @@ import { shadowAtomDeployerFor } from "./shadowAtomDeployerFor.js";
 
 type EnvTokens = Record<AppEnv, string>;
 
-/** Puts the org on our shadow Atom, a folder per env each under a fresh token, at `percent`; registering again rotates both tokens. */
 export const registerShadowAtomOrg = async ({
 	ctx,
 	orgId,
@@ -29,7 +28,6 @@ export const registerShadowAtomOrg = async ({
 	});
 };
 
-/** If the config write fails, the Atom already holds the new hashes: registering again heals it. */
 const putOrgAndRecordTokens = async ({
 	orgId,
 	percent,
@@ -57,7 +55,6 @@ const putOrgAndRecordTokens = async ({
 		registeredAt: now,
 		...scheduleOrgPercent({ current, percent, now }),
 	};
-	// Never mutated in place: a schema default can be one shared object.
 	await shadowAtomConfigStore.writeToSource({
 		config: { ...config, orgs: { ...config.orgs, [orgId]: registered } },
 	});

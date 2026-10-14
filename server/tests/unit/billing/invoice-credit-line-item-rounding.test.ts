@@ -69,7 +69,6 @@ const sumOf = (lineItems: { amount: number }[]) =>
 
 describe("invoiceCreditCustomerEntitlementToLineItems rounding", () => {
 	test("keeps the credit line exact and moves rounding drift onto the largest usage line", () => {
-		// 3 x 1.004 = 3.012 credits; each line rounds to 1.00 but the overage rounds to 2.01.
 		const lineItems = invoiceCreditCustomerEntitlementToLineItems({
 			customerEntitlement: creditCustomerEntitlement({
 				included: 1,

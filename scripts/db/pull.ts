@@ -8,9 +8,6 @@ const execAsync = promisify(exec);
 
 const MAX_CUSTOMER_COUNT_LIMIT = 1000;
 
-/**
- * Execute command and show live output
- */
 function execWithOutput(command: string): Promise<void> {
 	return new Promise((resolve, reject) => {
 		const child = spawn(command, {
@@ -30,9 +27,6 @@ function execWithOutput(command: string): Promise<void> {
 	});
 }
 
-/**
- * Prompt user for confirmation
- */
 function promptUser(question: string): Promise<boolean> {
 	const rl = readline.createInterface({
 		input: process.stdin,
@@ -47,16 +41,10 @@ function promptUser(question: string): Promise<boolean> {
 	});
 }
 
-/**
- * Validate PostgreSQL URL format
- */
 function validatePostgresUrl(url: string): boolean {
 	return url.startsWith("postgresql://") || url.startsWith("postgres://");
 }
 
-/**
- * Extract database name from PostgreSQL URL
- */
 function extractDbName(url: string): string {
 	try {
 		const urlObj = new URL(url);
@@ -66,14 +54,9 @@ function extractDbName(url: string): string {
 	}
 }
 
-/**
- * Build connection URL to default postgres database
- * Used for creating databases and checking if they exist
- */
 function buildDefaultDbUrl(url: string): string {
 	try {
 		const urlObj = new URL(url);
-		// Replace the database name with 'postgres' (default database)
 		urlObj.pathname = "/postgres";
 		return urlObj.toString();
 	} catch {
@@ -81,16 +64,10 @@ function buildDefaultDbUrl(url: string): string {
 	}
 }
 
-/**
- * Escape single quotes in database name for SQL queries
- */
 function escapeDbName(dbName: string): string {
 	return dbName.replace(/'/g, "''");
 }
 
-/**
- * Check if a database exists
- */
 async function databaseExists(dbUrl: string, dbName: string): Promise<boolean> {
 	try {
 		const defaultDbUrl = buildDefaultDbUrl(dbUrl);
@@ -105,9 +82,6 @@ async function databaseExists(dbUrl: string, dbName: string): Promise<boolean> {
 	}
 }
 
-/**
- * Create a database if it doesn't exist
- */
 async function ensureDatabaseExists(
 	dbUrl: string,
 	dbName: string,
@@ -135,32 +109,21 @@ async function ensureDatabaseExists(
 	}
 }
 
-/**
- * Clean up PostgreSQL URL for pg_dump/psql
- * - Removes query parameters
- * - Changes port 6432 to 5432
- */
 function cleanUrl(url: string): string {
 	try {
 		const urlObj = new URL(url);
-		// Remove query parameters
 		urlObj.search = "";
-		// Replace port 6432 with 5432
 		if (urlObj.port === "6432") {
 			urlObj.port = "5432";
 		}
 		return urlObj.toString();
 	} catch {
-		// Fallback to regex-based cleaning if URL parsing fails
 		let cleaned = url.replace(/\?.*$/, "");
 		cleaned = cleaned.replace(/:6432\//, ":5432/");
 		return cleaned;
 	}
 }
 
-/**
- * Get customer table row count
- */
 async function getCustomerCount(
 	url: string,
 ): Promise<{ count: number | null; error?: string }> {
@@ -175,7 +138,6 @@ async function getCustomerCount(
 		}
 		return { count: null, error: "Could not parse customer count" };
 	} catch (error) {
-		// Table might not exist or connection failed
 		return {
 			count: null,
 			error: error instanceof Error ? error.message : "Unknown error",
@@ -183,9 +145,6 @@ async function getCustomerCount(
 	}
 }
 
-/**
- * Read DATABASE_URL from server/.env file
- */
 function readLocalDatabaseUrl(): string | null {
 	try {
 		const envPath = join(process.cwd(), "server", ".env");
@@ -196,7 +155,6 @@ function readLocalDatabaseUrl(): string | null {
 			const trimmed = line.trim();
 			if (trimmed.startsWith("DATABASE_URL=")) {
 				const url = trimmed.replace(/^DATABASE_URL=/, "").trim();
-				// Remove quotes if present
 				return url.replace(/^["']|["']$/g, "");
 			}
 		}
@@ -207,9 +165,6 @@ function readLocalDatabaseUrl(): string | null {
 	}
 }
 
-/**
- * Pull database from remote to local
- */
 async function pullDatabase({
 	remoteUrl,
 	localUrl: providedLocalUrl,
@@ -219,7 +174,6 @@ async function pullDatabase({
 }): Promise<void> {
 	console.log("\n📥 Pulling Remote Database to Local\n");
 
-	// Validate remote URL
 	if (!validatePostgresUrl(remoteUrl)) {
 		console.error("❌ Invalid remote database URL");
 		console.error(
@@ -228,7 +182,6 @@ async function pullDatabase({
 		process.exit(1);
 	}
 
-	// Get local database URL (from argument, env var, or .env file)
 	const localUrl =
 		providedLocalUrl ||
 		process.env.LOCAL_DATABASE_URL ||
@@ -257,21 +210,17 @@ async function pullDatabase({
 	console.log(`📤 Remote:  ${remoteDbName}`);
 	console.log(`📥 Local:   ${localDbName}`);
 
-	// Ensure local database exists
 	console.log("\n🔍 Checking if local database exists...");
 	await ensureDatabaseExists(localUrl, localDbName);
 
-	// Check local database for production data
 	console.log("\n🔍 Checking local database contents...");
 	const customerResult = await getCustomerCount(localUrl);
 
 	if (customerResult.count === null) {
-		// Table doesn't exist or can't query - likely a new/empty database
 		console.log("✅ Local database appears to be empty (no customers table)");
 	} else {
 		console.log(`📊 Local database has ${customerResult.count} customers`);
 
-		// Protection: Don't allow overwriting databases with > MAX_CUSTOMER_COUNT_LIMIT customers
 		if (customerResult.count > MAX_CUSTOMER_COUNT_LIMIT) {
 			console.error("\n❌ PROTECTION: Local database has too many customers!");
 			console.error(
@@ -284,7 +233,6 @@ async function pullDatabase({
 		}
 	}
 
-	// Ask for confirmation
 	const confirmed = await promptUser(
 		"\n⚠️  This will OVERWRITE your local database. Continue? (y/n): ",
 	);
@@ -296,7 +244,6 @@ async function pullDatabase({
 
 	const tempFile = `/tmp/db_dump_${Date.now()}.sql`;
 
-	// Clean URLs
 	const cleanedRemoteUrl = cleanUrl(remoteUrl);
 	const cleanedLocalUrl = cleanUrl(localUrl);
 
@@ -304,21 +251,18 @@ async function pullDatabase({
 	console.log(`📥 Using local URL: ${cleanedLocalUrl}\n`);
 
 	try {
-		// Step 1: Dump the remote database
 		console.log("📦 Dumping remote database...");
 		await execWithOutput(
 			`pg_dump "${cleanedRemoteUrl}" --no-owner --no-privileges -f "${tempFile}" 2>&1`,
 		);
 		console.log("✅ Remote database dumped successfully");
 
-		// Step 2: Restore to local database
 		console.log("\n📥 Restoring to local database...\n");
 		await execWithOutput(
 			`psql "${cleanedLocalUrl}" -f "${tempFile}" --set ON_ERROR_STOP=off 2>&1`,
 		);
 		console.log("\n✅ Database restored successfully");
 
-		// Step 3: Clean up temp file
 		console.log("\n🧹 Cleaning up temporary files...");
 		await execAsync(`rm "${tempFile}"`);
 		console.log("✅ Cleanup complete");
@@ -330,18 +274,14 @@ async function pullDatabase({
 			console.error(`   ${error.message}\n`);
 		}
 
-		// Try to clean up temp file
 		try {
 			await execAsync(`rm "${tempFile}"`);
-		} catch {
-			// Ignore cleanup errors
-		}
+		} catch {}
 
 		process.exit(1);
 	}
 }
 
-// Parse command line arguments or environment variable
 const args = process.argv.slice(2);
 const remoteUrl =
 	args[0] || process.env.REMOTE_DATABASE_URL || process.env.DATABASE_URL_REMOTE;

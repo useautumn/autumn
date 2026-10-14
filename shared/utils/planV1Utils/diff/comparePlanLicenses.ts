@@ -11,7 +11,6 @@ import {
 	pricesEqual,
 } from "./comparePlanItems.js";
 
-/** Overlay has a real patch — price / items present. `{}` is empty. */
 export const hasLicenseCustomize = (
 	customize?: LicenseCustomize | null,
 ): boolean =>
@@ -20,8 +19,6 @@ export const hasLicenseCustomize = (
 		customize.add_items !== undefined ||
 		customize.remove_items !== undefined);
 
-/** Overlay *content*. `undefined` / `null` / `{}` are the same empty overlay.
- * `{ price: null }` is not empty — it clears the license plan's base price. */
 export const licenseCustomizesAreSame = ({
 	left,
 	right,
@@ -49,7 +46,6 @@ export const licenseCustomizesAreSame = ({
 	return !Object.values(diffs).some(Boolean);
 };
 
-/** Patch customize: `null` is "clear". Omitted / `{}` are "no overlay payload". */
 export const licenseCustomizePatchesAreSame = ({
 	left,
 	right,
@@ -62,7 +58,6 @@ export const licenseCustomizePatchesAreSame = ({
 	return licenseCustomizesAreSame({ left, right });
 };
 
-/** Omitted / `null` / `{}` are empty. Remaining keys compared shallowly. */
 const metadatasAreSame = (
 	left?: Record<string, unknown> | null,
 	right?: Record<string, unknown> | null,
@@ -76,8 +71,6 @@ const metadatasAreSame = (
 	return true;
 };
 
-/** Link snapshot (`ApiPlanLicenseV1`). Numeric `version` and expanded `plan` are
- * display; `version_slug` is the version anchor and is a compared term. */
 export const planLicensesAreSame = ({
 	left,
 	right,
@@ -99,7 +92,6 @@ export const planLicensesAreSame = ({
 	return !Object.values(diffs).some(Boolean);
 };
 
-/** Upsert patch. Omitted `included` / `prepaid_only` is not 0 / false. */
 export const customizePlanLicensesAreSame = ({
 	left,
 	right,

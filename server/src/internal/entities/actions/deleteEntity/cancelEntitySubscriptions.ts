@@ -20,8 +20,6 @@ export const cancelSubsForEntity = async ({
 }) => {
 	const customerId = fullCustomer.id || fullCustomer.internal_id;
 
-	// Provisioned license products are free (skipped by the paid-recurring loop
-	// below); release their seats back to the pool before the entity row goes.
 	await releaseLicenseAssignmentsForEntity({
 		ctx,
 		internalEntityId: entity.internal_id,

@@ -1,11 +1,3 @@
-/**
- * Attach Edge Case - Payment method exists but invoice_settings.default_payment_method is null
- *
- * Scenario: Customer has a payment method on file (card attached), but the
- * Stripe customer's invoice_settings.default_payment_method has been cleared.
- * Verifies that billing.attach still succeeds (Stripe can still charge the customer).
- */
-
 import { test } from "bun:test";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";

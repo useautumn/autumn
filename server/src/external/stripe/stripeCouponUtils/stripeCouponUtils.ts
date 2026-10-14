@@ -27,7 +27,6 @@ const couponToStripeDuration = ({
 	isOneOffProduct: boolean;
 }) => {
 	if (coupon.type === RewardType.FreeProduct) {
-		// For one-off products, the coupon should apply once, not repeat
 		if (isOneOffProduct) {
 			return {
 				duration: "once",
@@ -49,7 +48,6 @@ const couponToStripeDuration = ({
 		};
 	}
 
-	// For one-off products, always use "once" duration regardless of config
 	if (isOneOffProduct) {
 		return {
 			duration: "once",
@@ -117,7 +115,6 @@ const couponToStripeValue = ({
 	}
 };
 
-/** Usage prices resolve to the feature's Stripe product, not the plan's. */
 export const resolveStripeProductIdForPrice = ({
 	price,
 }: {
@@ -145,7 +142,6 @@ const getStripeProductIdForCoupon = ({
 	return stripeProductId;
 };
 
-/** Throws product_not_in_stripe for any plan missing in Stripe. Run before deleting an existing coupon. */
 export const resolveCouponStripeProductIds = ({
 	reward,
 	prices,
@@ -157,7 +153,6 @@ export const resolveCouponStripeProductIds = ({
 		reward.type !== RewardType.FreeProduct &&
 		!reward.discount_config!.apply_to_all;
 
-	// Prices of one plan share a product, so dedupe before Stripe sees them.
 	return appliesToSpecificProducts
 		? [
 				...new Set(
@@ -197,8 +192,6 @@ export const createStripeCoupon = async ({
 	const appliesToSpecificProducts =
 		reward.type !== RewardType.FreeProduct && !discountConfig!.apply_to_all;
 
-	// Resolve Stripe product ids before any Stripe writes so a missing
-	// plan fails cleanly instead of after the existing coupon is deleted.
 	const stripeProdIds = resolveCouponStripeProductIds({ reward, prices });
 
 	const stripeCli = createStripeCli({
@@ -231,13 +224,11 @@ export const createStripeCoupon = async ({
 		await stripeCli.coupons.del(reward.id);
 	} catch (_) {}
 
-	// Collect Autumn product IDs for metadata when coupon applies to specific products
 	const autumnProductIds = appliesToSpecificProducts
 		? [...new Set(prices.map((price) => price.product.id))]
 		: [];
 
 	const stripeCoupon = await stripeCli.coupons.create({
-		// id: reward.internal_id,
 		id: reward.id,
 		...(couponToStripeDuration({
 			coupon: reward,
@@ -258,7 +249,6 @@ export const createStripeCoupon = async ({
 			: undefined,
 	});
 
-	// Create promo codes
 	for (const promoCode of reward.promo_codes) {
 		const globalMaxRedemption = getGlobalMaxRedemption(promoCode);
 		const redeemed = redeemedByCode.get(promoCode.code) ?? 0;

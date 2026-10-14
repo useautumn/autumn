@@ -1,7 +1,6 @@
 import type { FullCustomer, ProductItem } from "@autumn/shared";
 import { mapToProductItems } from "@autumn/shared";
 
-/** The plan's items exactly as the customer holds them; a catalog item they lack would change the plan. */
 export function reconstructCustomItems({
 	cusProduct,
 }: {

@@ -24,8 +24,6 @@ const MONTHLY_PRICE = 1900;
 
 const roundToCents = (amount: number) => Math.round(amount * 100) / 100;
 
-// A prorated in-advance line the way the server computes it: the period
-// starts at server-now, so the amount decays with every re-preview.
 const previewComputedAt = (nowMs: number) => {
 	const prorated = roundToCents(
 		(MONTHLY_PRICE * (CYCLE_END - nowMs)) / (CYCLE_END - CYCLE_START),

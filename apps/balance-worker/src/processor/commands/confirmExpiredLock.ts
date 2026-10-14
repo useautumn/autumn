@@ -11,7 +11,6 @@ import { PartitionProcessorStateNotFoundError } from "../common/processorErrors.
 import type { PartitionProcessorScope } from "../types/partitionProcessor.js";
 import type { MutationResult } from "../writer/types/mutation.js";
 
-/** Decide now, reply once committed: the same path a finalize takes, with no balance to move. */
 export async function confirmExpiredLock({
 	scope,
 	command,
@@ -47,7 +46,6 @@ export async function confirmExpiredLock({
 	return { result: mutation.result };
 }
 
-/** Runs inside the writer's critical section: the open-lock check and the deletion are one step. */
 function mutateConfirmExpiredLock({
 	scope,
 	state,

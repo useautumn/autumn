@@ -1,6 +1,3 @@
-/** Pre-fix, multi-entity pooled versioning inserts duplicate pools and leaves duplicate active plans.
- * Post-fix, planning converges on one shared pool before execution. */
-
 import { test } from "bun:test";
 import {
 	type ApiCustomerV3,

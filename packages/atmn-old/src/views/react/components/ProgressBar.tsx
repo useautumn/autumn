@@ -4,7 +4,6 @@ interface ProgressBarProps {
 	value: number;
 }
 
-/** Simple progress bar for terminal display. Value is 0-100. */
 export function ProgressBar({ value }: ProgressBarProps) {
 	const clamped = Math.max(0, Math.min(100, value));
 	const width = 20;

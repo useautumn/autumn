@@ -291,11 +291,6 @@ describe("buildBillingChangeResponse — updateSubscription", () => {
 		expect(updated?.previous_attributes).toBeNull();
 	});
 
-	// Regression for the collapseSamePlanIdPairs double-match bug: an inserted
-	// `activated` paired with an expired update of the same plan_id must merge
-	// to exactly one `updated`; a SECOND expired update for the same plan_id
-	// must remain a standalone `expired` — not re-pair with the already-merged
-	// activated entry.
 	test("collapse same-plan_id pairs — only one activated+expired merges, extras stay as-is", () => {
 		const newPro = makeFullCusProduct({
 			planId: "pro",
@@ -335,8 +330,6 @@ describe("buildBillingChangeResponse — updateSubscription", () => {
 		});
 		logChangeResponse("update / triple same-plan_id collapse", response);
 
-		// Expect ONE `updated` (newPro + the first expired merged) and ONE
-		// `expired` (the second leftover) — not two `updated`.
 		expectBillingChangeResponse(response, {
 			updated: ["pro"],
 			expired: ["pro"],

@@ -5,7 +5,6 @@ export type SkeletonScope = { entityId: string | null; rowCount: number };
 
 const EMPTY_PHASE: SkeletonScope[] = [{ entityId: null, rowCount: 1 }];
 
-/** The review's plan rows as the form already knows them: one scope group per entity, one row per plan. */
 export const formPhasesToSkeletonPhases = ({
 	phases,
 }: {

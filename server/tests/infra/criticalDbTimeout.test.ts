@@ -45,8 +45,6 @@ test("pool query timeout rejects slow queries and leaves the pool usable", async
 });
 
 test("db connect timeout fails fast when postgres accepts tcp but never responds", async () => {
-	// Bun 1.4 never surfaces the peer close on the accepted socket, so
-	// server.close() would wait forever unless we destroy it ourselves.
 	const sockets = new Set<net.Socket>();
 	const server = net.createServer((socket) => {
 		sockets.add(socket);

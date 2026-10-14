@@ -32,7 +32,6 @@ import { usePendingLicenseLinks } from "./PendingLicenseLinksContext";
 import { licenseEditorQueryParams } from "./planLicenseNavigation";
 import { useLicenseDraft, useLicenseDraftStore } from "./useLicenseDraftStore";
 
-/** Staged removals stay mounted so their edited configuration survives until save. */
 export function LicensePlanCardHeader({
 	planLicense,
 	license,
@@ -97,7 +96,6 @@ export function LicensePlanCardHeader({
 	};
 
 	const removeCard = () => {
-		// A staged (unsaved) link has nothing to soft-delete — drop it outright.
 		if (isPendingLink) {
 			removePendingLink(license.id);
 			return;

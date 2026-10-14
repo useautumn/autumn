@@ -1,12 +1,3 @@
-/**
- * Integration tests for usage alert webhooks.
- *
- * Verifies that `balances.usage_alert_triggered` webhooks fire correctly when
- * customer usage crosses configured thresholds (both absolute and percentage).
- *
- * Uses Svix Play to receive and verify webhooks.
- */
-
 import { afterAll, beforeAll, expect, test } from "bun:test";
 import {
 	getPlayHistory,
@@ -38,10 +29,6 @@ type BalancesUsageAlertTriggeredPayload = {
 	};
 };
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// SVIX PLAY SETUP
-// ═══════════════════════════════════════════════════════════════════════════════
-
 let webhook: WebhookTestSetup;
 let playToken: string;
 
@@ -57,10 +44,6 @@ beforeAll(async () => {
 afterAll(async () => {
 	await webhook?.cleanup();
 });
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 1: Usage threshold crossing triggers webhook
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test(`${chalk.yellowBright("usage-alert1: usage threshold crossing triggers webhook")}`, async () => {
 	const messagesItem = items.monthlyMessages({ includedUsage: 1000 });
@@ -88,7 +71,6 @@ test(`${chalk.yellowBright("usage-alert1: usage threshold crossing triggers webh
 		],
 	});
 
-	// Track 850 usage — crosses threshold of 800
 	await autumnV2_1.track({
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
@@ -159,10 +141,6 @@ test(`${chalk.yellowBright("usage-alert1b: usage threshold fires when usage land
 	expect(result!.payload.data.usage_alert.threshold_type).toBe("usage");
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 2: Usage percentage threshold crossing triggers webhook
-// ═══════════════════════════════════════════════════════════════════════════════
-
 test(`${chalk.yellowBright("usage-alert2: usage percentage threshold crossing triggers webhook")}`, async () => {
 	const messagesItem = items.monthlyMessages({ includedUsage: 1000 });
 	const freeProd = products.base({
@@ -189,7 +167,6 @@ test(`${chalk.yellowBright("usage-alert2: usage percentage threshold crossing tr
 		],
 	});
 
-	// Track 950 usage — 95% of 1000 allowance, crosses 90% threshold
 	await autumnV2_1.track({
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
@@ -262,10 +239,6 @@ test(`${chalk.yellowBright("usage-alert2b: usage percentage threshold fires at e
 	);
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 3: Alert does not re-fire after already crossed
-// ═══════════════════════════════════════════════════════════════════════════════
-
 test(`${chalk.yellowBright("usage-alert3: alert does not re-fire after already crossed")}`, async () => {
 	const messagesItem = items.monthlyMessages({ includedUsage: 1000 });
 	const freeProd = products.base({
@@ -292,7 +265,6 @@ test(`${chalk.yellowBright("usage-alert3: alert does not re-fire after already c
 		],
 	});
 
-	// First track: 600 usage — crosses threshold of 500, expect webhook
 	await autumnV2_1.track({
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
@@ -310,14 +282,12 @@ test(`${chalk.yellowBright("usage-alert3: alert does not re-fire after already c
 
 	expect(firstResult).not.toBeNull();
 
-	// Second track: 100 more usage — already crossed, should NOT fire again
 	await autumnV2_1.track({
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
 		value: 100,
 	});
 
-	// Wait briefly, then assert no second webhook arrived
 	await waitForWebhook<BalancesUsageAlertTriggeredPayload>({
 		token: playToken,
 		predicate: (payload) =>
@@ -327,8 +297,6 @@ test(`${chalk.yellowBright("usage-alert3: alert does not re-fire after already c
 		timeoutMs: 8000,
 	});
 
-	// waitForWebhook scans all history — if it finds a match it's the same first one.
-	// Count total matches to confirm only 1 exists.
 	let matchCount = 0;
 	const history = await getPlayHistory({ token: playToken });
 	for (const event of history.data) {
@@ -341,18 +309,11 @@ test(`${chalk.yellowBright("usage-alert3: alert does not re-fire after already c
 			) {
 				matchCount++;
 			}
-		} catch {
-			// Skip unparseable events
-		}
+		} catch {}
 	}
 
-	// Should have exactly 1 webhook, not 2
 	expect(matchCount).toBe(1);
 });
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 4: Disabled alert does not fire
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test(`${chalk.yellowBright("usage-alert4: disabled alert does not fire")}`, async () => {
 	const messagesItem = items.monthlyMessages({ includedUsage: 1000 });
@@ -380,14 +341,12 @@ test(`${chalk.yellowBright("usage-alert4: disabled alert does not fire")}`, asyn
 		],
 	});
 
-	// Track 600 — crosses threshold, but alert is disabled
 	await autumnV2_1.track({
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
 		value: 600,
 	});
 
-	// Wait and verify no webhook
 	const result = await waitForWebhook<BalancesUsageAlertTriggeredPayload>({
 		token: playToken,
 		predicate: (payload) =>
@@ -399,10 +358,6 @@ test(`${chalk.yellowBright("usage-alert4: disabled alert does not fire")}`, asyn
 
 	expect(result).toBeNull();
 });
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 5: Multiple alerts fire independently
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test(`${chalk.yellowBright("usage-alert5: multiple alerts fire independently")}`, async () => {
 	const messagesItem = items.monthlyMessages({ includedUsage: 1000 });
@@ -436,7 +391,6 @@ test(`${chalk.yellowBright("usage-alert5: multiple alerts fire independently")}`
 		],
 	});
 
-	// Track 600 — crosses 500 but not 800
 	await autumnV2_1.track({
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
@@ -455,7 +409,6 @@ test(`${chalk.yellowBright("usage-alert5: multiple alerts fire independently")}`
 	expect(firstResult).not.toBeNull();
 	expect(firstResult!.payload.data.usage_alert.threshold).toBe(500);
 
-	// Verify 800 threshold has NOT fired yet
 	await timeout(3000);
 
 	let has800 = false;
@@ -470,13 +423,10 @@ test(`${chalk.yellowBright("usage-alert5: multiple alerts fire independently")}`
 			) {
 				has800 = true;
 			}
-		} catch {
-			// Skip
-		}
+		} catch {}
 	}
 	expect(has800).toBe(false);
 
-	// Track 300 more (total 900) — crosses 800 threshold
 	await autumnV2_1.track({
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
@@ -497,10 +447,6 @@ test(`${chalk.yellowBright("usage-alert5: multiple alerts fire independently")}`
 	expect(secondResult).not.toBeNull();
 	expect(secondResult!.payload.data.usage_alert.threshold).toBe(800);
 });
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 6: Remaining threshold crossing triggers webhook
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test(`${chalk.yellowBright("usage-alert6: remaining threshold crossing triggers webhook")}`, async () => {
 	const messagesItem = items.monthlyMessages({ includedUsage: 1000 });
@@ -528,7 +474,6 @@ test(`${chalk.yellowBright("usage-alert6: remaining threshold crossing triggers 
 		],
 	});
 
-	// Track 850 usage — remaining becomes 150, crosses below threshold of 200
 	await autumnV2_1.track({
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
@@ -553,10 +498,6 @@ test(`${chalk.yellowBright("usage-alert6: remaining threshold crossing triggers 
 	expect(data.usage_alert.threshold).toBe(200);
 	expect(data.usage_alert.threshold_type).toBe("remaining");
 });
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 7: Remaining percentage threshold crossing triggers webhook
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test(`${chalk.yellowBright("usage-alert7: remaining percentage threshold crossing triggers webhook")}`, async () => {
 	const messagesItem = items.monthlyMessages({ includedUsage: 1000 });
@@ -584,7 +525,6 @@ test(`${chalk.yellowBright("usage-alert7: remaining percentage threshold crossin
 		],
 	});
 
-	// Track 850 usage — remaining is 150 = 15% of 1000, crosses below 20% threshold
 	await autumnV2_1.track({
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,

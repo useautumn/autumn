@@ -1,6 +1,3 @@
-// `billing.updated` webhook via the attach V2 endpoint: plan_changes report activated / scheduled /
-// updated / expired actions per plan.
-
 import { afterAll, beforeAll, expect, test } from "bun:test";
 import {
 	getTestSvixAppId,
@@ -33,10 +30,6 @@ beforeAll(async () => {
 afterAll(async () => {
 	await webhook?.cleanup();
 });
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// A3: SCHEDULED DOWNGRADE PREMIUM → PRO
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(
 	`${chalk.yellowBright("billing.updated: A3 scheduled downgrade → updated + scheduled")}`,
@@ -97,10 +90,6 @@ test.concurrent(
 		expect(scheduled?.subscription?.status).toBe("scheduled");
 	},
 );
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// A4: CANCEL TO FREE PREMIUM → FREE
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(
 	`${chalk.yellowBright("billing.updated: A4 cancel to free → updated + scheduled")}`,

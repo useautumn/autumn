@@ -20,7 +20,6 @@ const TICK = { fontSize: 11, fill: "#666" } as const;
 
 type FormatValue = (value: number | null) => string;
 
-/** The hovered period's time window and each series' value in it, or under each statistic. */
 const MonitoringTooltip = ({
 	row,
 	series,
@@ -85,7 +84,6 @@ const MonitoringTooltip = ({
 	);
 };
 
-/** The time axis, value axis, grid and hover both monitoring charts share; the series are its children. */
 export const MonitoringPlot = ({
 	chartData,
 	series,
@@ -99,9 +97,7 @@ export const MonitoringPlot = ({
 	series: AtomMetricsSeries[];
 	yTicks: number[];
 	formatValue: FormatValue;
-	/** Shown beside the hovered window, for values the formatter leaves bare. */
 	unit?: string;
-	/** Hover shows each statistic's value, for series the statistic applies to. */
 	showStatistics?: boolean;
 	children: React.ReactNode;
 }) => {

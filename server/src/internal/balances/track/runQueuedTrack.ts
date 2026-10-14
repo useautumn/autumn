@@ -25,11 +25,7 @@ export const runQueuedTrack = async ({
 	ctx: AutumnContext;
 	body: TrackParams;
 	apiVersion?: ApiVersion;
-	/** Set for a queued track_tokens, so replay prices it like the sync path. */
 	tokens?: TokenDeduction;
-	/** Sync and async replays already claimed the body key at accept time
-	 *  (queueTrack marks them false); batch messages have no accept-time
-	 *  claim, so the worker's claim is their only body-key dedup. */
 	validateTrackBodyIdempotencyKey?: boolean;
 }) => {
 	const featureDeductions = getValidatedTrackFeatureDeductions({
@@ -48,7 +44,6 @@ export const runQueuedTrack = async ({
 				? getTrackBodyIdempotencyKey({ body })
 				: null,
 			routeGroup: RouteGroup.Balances,
-			// Claimed here, so the worker path must not claim it again.
 			run: () =>
 				isBalanceWorkerRolloutEnabled({ ctx, customerId: body.customer_id })
 					? runBalanceWorkerTrack({

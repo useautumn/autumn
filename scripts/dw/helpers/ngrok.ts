@@ -88,7 +88,6 @@ export function stopHostNgrok({
 	}
 }
 
-/** Stop leftover ngrok and release reserved domains. Safe if none exist. */
 export async function releaseNgrokIfPresent(
 	entry: RegistryEntry,
 ): Promise<void> {

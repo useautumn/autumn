@@ -1,14 +1,5 @@
 import type { ResolutionContext } from "../resolutionContext.js";
 
-/**
- * Translate a public ID (or array of public IDs) to internal IDs for the
- * fields that need it: `feature_id`. All other fields pass through
- * unchanged. Unknown IDs throw.
- *
- * Note: `plan_id` is NOT translated. A public plan_id (e.g. "pro") maps
- * to many `internal_product_id`s — one per plan version — so we resolve
- * it via a JOIN to `products` instead, filtering on `products.id`.
- */
 export function translateValue({
 	field,
 	value,

@@ -17,8 +17,6 @@ import { useCusSearchQueryV2 } from "@/views/customers/hooks/useCusSearchQuery";
 
 const MAX_VISIBLE_CHIPS = 3;
 const SEARCH_PAGE_SIZE = 50;
-// Split pasted IDs on commas, semicolons, and newlines only — not spaces, so a
-// name like "Hangzhou Short-Chain Network" stays a single search term.
 const ID_SEPARATOR = /[\n\r,;]+/;
 
 function parseIdList(text: string): string[] {
@@ -50,8 +48,6 @@ export function CustomerValuePicker({
 		page_size: SEARCH_PAGE_SIZE,
 	});
 
-	// Remember labels for customers we've seen so chips for previously selected
-	// (or pasted) ids can still resolve a name once out of the current results.
 	const labelCache = useRef<Map<string, CustomerLabel>>(new Map());
 	for (const customer of customers) {
 		if (customer.id)
@@ -100,7 +96,6 @@ export function CustomerValuePicker({
 
 	const handlePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
 		const ids = parseIdList(e.clipboardData.getData("text"));
-		// Single token: let it land in the search box so the user can search.
 		if (ids.length <= 1) return;
 		e.preventDefault();
 		addValues(ids);

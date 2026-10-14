@@ -8,16 +8,12 @@ import { fullProductForSlug } from "@/internal/catalogV2/actions/updateCatalog/u
 import { maxVersionForPlan } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/maxVersionForPlan";
 import { variantEntryMintsRow } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/variantEntryMintsRow";
 
-/** The row a variants[] entry asks this push to write, and what it inherits. */
 export type VariantCreateTarget = {
 	version: number;
-	/** Highest-numbered row of the variant plan; null when the plan is new here. */
 	previous: FullProduct | null;
 	newVersionSlug?: string;
 };
 
-// By version, not by `active`: a minted row succeeds the tip of the plan, and
-// the tip can be an inactive row the pointer has not moved to yet.
 const latestRowForPlan = ({
 	planId,
 	productStatesContext,
@@ -33,7 +29,6 @@ const latestRowForPlan = ({
 		null,
 	);
 
-/** An unpinned mint carries its base's slug when the variant plan has it free. */
 const inheritedVersionSlug = ({
 	variant,
 	baseVersionSlug,
@@ -54,10 +49,6 @@ const inheritedVersionSlug = ({
 	return taken ? undefined : baseVersionSlug;
 };
 
-/**
- * A variant plan with no rows takes v1; one whose stated pin names no row takes
- * max+1 under that name, the same rule a top-level `version_slug` follows.
- */
 export const variantCreateTarget = ({
 	variant,
 	anchorInternalIds,
@@ -67,10 +58,8 @@ export const variantCreateTarget = ({
 }: {
 	variant: CatalogVariantParams;
 	anchorInternalIds: Set<string>;
-	/** Slug of the base row the entry sits under, inherited by an unpinned mint. */
 	baseVersionSlug?: string;
 	productStatesContext: ProductStatesContext;
-	/** Rows this push already speaks for; a pending create is not in the projection yet. */
 	claimedProductKeys?: Set<string>;
 }): VariantCreateTarget | null => {
 	if (
@@ -87,8 +76,6 @@ export const variantCreateTarget = ({
 		planId: variant.variant_plan_id,
 		productStatesContext,
 	});
-	// Two bases in one push each minting their own row of the same variant plan
-	// must not land on one version number.
 	let version = maxVersion + 1;
 	while (
 		claimedProductKeys?.has(
@@ -98,8 +85,6 @@ export const variantCreateTarget = ({
 		)
 	)
 		version += 1;
-	// A brand-new variant plan has no name to inherit; a nameless entry is a 400
-	// from handleVariantErrors, and the create path falls back to the plan id.
 	if (maxVersion === 0) {
 		return {
 			version,

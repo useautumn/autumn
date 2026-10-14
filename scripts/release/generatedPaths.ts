@@ -5,7 +5,6 @@ export const GENERATED_PATHS_FILE = ".github/generated-paths.txt";
 
 const SYNC_ONLY_MARKER = "# sync-only";
 
-// "pr-check" drops everything after `# sync-only`: bot-bumped files that feature PRs may still edit.
 export type GeneratedPathsScope = "all" | "pr-check" | "sync-only";
 
 export const parseGeneratedPaths = ({
@@ -39,7 +38,6 @@ export const loadGeneratedPaths = ({
 		scope,
 	});
 
-// Root-anchored globs: `*` stays in one segment, `**` spans any depth, a trailing `/` covers the directory.
 const globToRegExp = (pattern: string) => {
 	const body = pattern
 		.replace(/\/$/, "/**")

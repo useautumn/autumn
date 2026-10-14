@@ -1,12 +1,3 @@
-/**
- * catalogV2.update — feature type changes and removals × plan upsert in one call.
- *
- * Plan compute resolves items against the projected feature set (post
- * update/remove), so type changes are visible to same-call items. Remove +
- * upsert of the same id is invalid_feature; a plan still referencing a
- * removed id is feature_not_found.
- */
-
 import { expect, test } from "bun:test";
 import { FeatureType, ResetInterval } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
@@ -23,7 +14,6 @@ import {
 	expectCatalogPlansCorrect,
 } from "../utils/expectCatalogPlans.js";
 
-// Works today: feature already exists in ctx.features; type update + plan item land.
 test.concurrent(
 	`${chalk.yellowBright("catalogV2 interplay: boolean→metered + plan item with metered config")}`,
 	async () => {
@@ -84,7 +74,6 @@ test.concurrent(
 	},
 );
 
-// Boolean items have no included/reset — planner coerces metered config away.
 test.concurrent(
 	`${chalk.yellowBright("catalogV2 interplay: metered→boolean + plan item with metered config → boolean item")}`,
 	async () => {
@@ -211,7 +200,6 @@ test.concurrent(
 	},
 );
 
-// Same-call remove + upsert of one feature_id is invalid_feature, not a 404.
 test.concurrent(
 	`${chalk.yellowBright("catalogV2 interplay: remove + recreate feature + plan referencing it → same-call conflict error")}`,
 	async () => {

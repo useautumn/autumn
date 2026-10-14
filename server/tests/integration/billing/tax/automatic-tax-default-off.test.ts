@@ -1,9 +1,3 @@
-/**
- * Regression guard: orgs without `automatic_tax` in config must NOT have
- * Stripe Tax enabled on attach (auto_tax is opt-in). Runs against the master
- * test org via both v1 `/v1/attach` and v2 `/v1/billing.attach`.
- */
-
 import { expect, test } from "bun:test";
 import chalk from "chalk";
 import { products } from "@tests/utils/fixtures/products.js";
@@ -33,7 +27,6 @@ test.concurrent(
 		const customerId = "tax-default-off-v1";
 		const proProd = products.pro({ id: "pro", items: [] });
 
-		// Master org (no s.platform.create) with automatic_tax falsy.
 		const { ctx, customer } = await initScenario({
 			customerId,
 			setup: [

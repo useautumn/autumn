@@ -1,5 +1,4 @@
 export type PartitionRoute = { partition: number; routeEpoch: string };
-/** `command` always carries the identity the route is checked against; `payload` is what rides beside it (initialize's rows). */
 export type WorkerRequest = {
 	route: PartitionRoute;
 	command: unknown;
@@ -26,14 +25,12 @@ export const WORKER_ERROR_CODES = [
 ] as const;
 export type WorkerErrorCode = (typeof WORKER_ERROR_CODES)[number];
 export const PARTITION_RECOVERY_REASON = "PARTITION_RECOVERY";
-/** Where a partition went: the route its old owner claimed for the successor, so a caller can try it without a refresh. */
 export type WorkerRouteSuccessor = PartitionRoute & { endpoint: string };
 export type WorkerErrorResponse = {
 	error: {
 		code: WorkerErrorCode;
 		message: string;
 		reason?: string;
-		/** On NOT_OWNER, once the handoff has named the successor. */
 		successor?: WorkerRouteSuccessor;
 	};
 };
@@ -54,7 +51,6 @@ export function readWorkerEnvelope({
 }): Record<string, unknown> {
 	if (typeof input !== "object" || input === null || Array.isArray(input))
 		throw new WorkerProtocolError("Worker envelope must be an object");
-	// Required keys only: a newer caller's envelope field must not make the request invalid.
 	for (const key of keys) {
 		if (!Object.hasOwn(input, key))
 			throw new WorkerProtocolError(`Worker envelope is missing ${key}`);
@@ -104,12 +100,8 @@ export function parseWorkerRequest({
 	};
 }
 
-/** How many milliseconds the caller will still wait for this request. A worker still
- *  activating the partition holds the request for that long instead of a fixed wait,
- *  so a handoff to an idle successor costs the caller latency, not a fail-open. */
 export const WORKER_REQUEST_BUDGET_HEADER = "x-request-budget-ms";
 
-/** The header's value for a request that expires at `expiresAt` (a performance.now() time). */
 export function requestBudgetHeaderValue({
 	expiresAt,
 	now = performance.now(),
@@ -120,7 +112,6 @@ export function requestBudgetHeaderValue({
 	return String(Math.max(0, Math.floor(expiresAt - now)));
 }
 
-/** Undefined for a missing or malformed header: the worker then waits its fixed default. */
 export function readRequestBudgetHeader({
 	value,
 }: {

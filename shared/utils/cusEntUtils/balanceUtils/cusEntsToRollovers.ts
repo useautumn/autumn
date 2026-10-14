@@ -10,8 +10,6 @@ export const cusEntsToRollovers = ({
 	cusEnts: CustomerEntitlementWithPricesView[];
 	entityId?: string;
 }): ApiBalanceRollover[] | undefined => {
-	// If all cus ents no rollover, return undefined
-
 	if (cusEnts.every((cusEnt) => !cusEnt.entitlement.rollover)) {
 		return undefined;
 	}

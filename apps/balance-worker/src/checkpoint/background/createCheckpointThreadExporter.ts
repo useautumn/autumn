@@ -55,7 +55,6 @@ export const createCheckpointThreadExporter = ({
 				target.worker.postMessage(request);
 			}
 		} catch {
-			// A failed thread may already have closed its message port; termination still has to finish.
 		}
 		try {
 			await target.worker.terminate();
@@ -162,7 +161,6 @@ export const createCheckpointThreadExporter = ({
 			signal.addEventListener("abort", abort, { once: true });
 			target.worker.ref();
 			try {
-				// This cursor predates the background read transaction; never resample it after the cut.
 				const request: CheckpointThreadRequest = {
 					kind: "export",
 					id,

@@ -1,9 +1,3 @@
-/**
- * atmn scenarios/features — rename featureId with internalId present → server renames, no create + delete
- *
- * One line of plans/atmn-v3/07_tests.md. [a, b] is a matrix looped INSIDE this file.
- */
-
 import { expect, test } from "bun:test";
 import { configBody } from "@tests/utils/atmnUtils/baseConfigs.js";
 import {
@@ -69,7 +63,6 @@ test.concurrent(
 				catalog.features.find((feature) => feature.id === oldId),
 			).toBeUndefined();
 
-			// Same row, not a create + delete: exactly one feature with this internalId.
 			expect(
 				catalog.features.filter((feature) => feature.internalId === internalId),
 			).toHaveLength(1);

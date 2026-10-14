@@ -10,7 +10,6 @@ import { executeClaimedDeferredBillingPlan } from "@/internal/billing/v2/execute
 import { isPlanEnabledOnFinalize } from "@/internal/billing/v2/utils/billingContext/isPlanEnabledOnFinalize";
 import { MetadataService } from "@/internal/metadata/MetadataService";
 
-/** An enable-immediately plan waits as pending while its invoice is a draft; finalizing it grants access. */
 export const enablePendingPlanOnFinalize = async ({
 	ctx,
 	stripeInvoice,
@@ -37,7 +36,6 @@ export const enablePendingPlanOnFinalize = async ({
 	await executeClaimedDeferredBillingPlan({ ctx, metadata, stripeInvoice });
 };
 
-/** Only the invoice the pending plan points at activates it; a parked reissued original never does. */
 const isReceivableForPendingPlan = async ({
 	ctx,
 	metadata,
@@ -47,7 +45,6 @@ const isReceivableForPendingPlan = async ({
 	metadata: Metadata;
 	stripeInvoice: Stripe.Invoice;
 }): Promise<boolean> => {
-	// Parked before the replacement is issued, so it can still match the pointer mid-reissue.
 	if (stripeInvoice.metadata?.autumn_reissued_to) return false;
 
 	if (metadata.stripe_invoice_id === stripeInvoice.id) return true;
@@ -56,7 +53,6 @@ const isReceivableForPendingPlan = async ({
 		stripeInvoice.metadata?.autumn_reissued_from === metadata.stripe_invoice_id;
 	if (!replacesPendingInvoice) return false;
 
-	// Reissue finalizes the replacement before repointing the plan; retry once it has moved.
 	const current = await ctx.stripeCli.invoices.retrieve(stripeInvoice.id);
 	if (current.status === "void") return false;
 

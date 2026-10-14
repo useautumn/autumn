@@ -10,12 +10,10 @@ import type {
 	KafkaBalanceWorkerClientConfig,
 } from "./types/kafkaBalanceWorkerClient.js";
 
-/** The client any process uses to reach its workers: owners read from Kafka, commands queued on Kafka. */
 export function createKafkaBalanceWorkerClient({
 	ctx,
 	config,
 }: {
-	/** `kafka` is for tests; a process lets the config build the real connection. */
 	ctx: { logger?: ClientLogger; kafka?: BalanceWorkerKafka };
 	config: KafkaBalanceWorkerClientConfig;
 }): BalanceWorkerClient {
@@ -38,7 +36,6 @@ export function createKafkaBalanceWorkerClient({
 		config: { topic: config.catalogInvalidationTopic },
 	});
 
-	/** Best effort: a producer that fails to connect now connects on its first append instead. */
 	async function connectProducers(): Promise<void> {
 		for (const [name, producer] of [
 			["command log", commandLog],

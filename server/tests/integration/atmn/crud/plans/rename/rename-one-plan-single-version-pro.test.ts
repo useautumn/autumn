@@ -1,11 +1,3 @@
-/**
- * atmn crud/plans/rename — rename one plan (single version) `pro → proNew` → same row, one alias `pro → proNew` (listAliases); real `billing.attach` with the old id lands on proNew, with the new id works; catalog get by the old id rewrites to proNew
- *
- * a rename is a changed planId on a row that carries internalId; aliases per catalog-v2/plans/aliases
- *
- * One line of plans/atmn-v3/07_tests.md. [a, b] is a matrix looped INSIDE this file.
- */
-
 import { expect, test } from "bun:test";
 import type { ApiPlanV1 } from "@autumn/shared";
 import { expectCustomerProducts } from "@tests/integration/billing/utils/expectCustomerProductCorrect.js";
@@ -20,7 +12,6 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { listAliases } from "../../../../catalog-v2/plans/utils/planAliasTestUtils.js";
 
-/** The single live row's internal_id — renames address a row by this, never by plan_id. */
 const activeInternalId = async ({
 	ctx,
 	planId,
@@ -74,7 +65,6 @@ test.concurrent(
 			);
 			await scenario.push();
 
-			// Same row: the version count under proNew is still exactly one.
 			expect(
 				await ProductService.listFull({
 					db: scenario.ctx.db,

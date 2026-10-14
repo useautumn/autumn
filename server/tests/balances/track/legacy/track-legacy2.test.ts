@@ -12,7 +12,6 @@ import { TestFeature } from "../../../setup/v2Features.js";
 import { timeout } from "../../../utils/genUtils.js";
 import { checkEntitledOnProduct } from "./trackLegacyUtils.js";
 
-// Pro with overage - matches global products.proWithOverage
 const messagesOverageItem = constructArrearItem({
 	featureId: TestFeature.Messages,
 	includedUsage: 10,
@@ -46,14 +45,13 @@ describe(`${chalk.yellowBright("track-legacy2: Testing /entitled & /events, for 
 		});
 	});
 
-	// PRO WITH OVERAGE
 	test("should attach pro (with overage)", async () => {
 		await AutumnCli.attach({
 			customerId: customerId,
 			productId: proWithOverage.id,
 		});
 
-		await autumn.customers.get(customerId); // set cache
+		await autumn.customers.get(customerId);
 	});
 
 	test("should have correct entitlements (pro with overage)", async () => {
@@ -78,7 +76,6 @@ describe(`${chalk.yellowBright("track-legacy2: Testing /entitled & /events, for 
 		expect(allowed).toBe(true);
 		expect(balanceObj!.balance).toBe(0);
 
-		// Sent 5 events
 		const batchUpdates = [];
 		for (let i = 0; i < 5; i++) {
 			batchUpdates.push(

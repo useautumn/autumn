@@ -14,8 +14,6 @@ const RESOLVE_TOOLS: Record<string, string> = {
 	updateSubscription: "update_subscription",
 };
 
-/** Resolves the approval's stored V1 request into the sheet's V0 dialect via
- * the server, which owns the billing dialects and catalog context. */
 export const useResolvedApprovalRequest = ({
 	approval,
 }: {

@@ -6,7 +6,6 @@ const posthogClient = process.env.POSTHOG_API_KEY
 		})
 	: null;
 
-// Helper for capturing events with org group
 export const captureOrgEvent = async ({
 	orgId,
 	event,
@@ -27,7 +26,5 @@ export const captureOrgEvent = async ({
 				...properties,
 			},
 		});
-	} catch (_error) {
-		// Don't let PostHog errors affect the caller
-	}
+	} catch (_error) {}
 };

@@ -62,16 +62,12 @@ const compactItem = (item: unknown) => {
 	if (Array.isArray(price.tiers) && price.tiers.length) {
 		parts.push(`tiers=${price.tiers.length}`);
 	}
-	// remove_items filters on the price interval, falling back to the reset one.
 	const interval = compactInterval(price) ?? compactInterval(record.reset);
 	if (interval) parts.push(interval);
 	if (record.rollover) parts.push("rollover");
 	return parts.join(" ");
 };
 
-/** The 30KB pretty-printed listPlans/listFeatures dump is ~89% whitespace and
- * display noise; the agent answers trivial catalog questions from this compact
- * index and calls getPlan only for detail beyond it. */
 export const compactPlans = (plans: unknown) =>
 	listOf(plans).map((plan) => ({
 		...(plan.add_on === true ? { add_on: true } : {}),

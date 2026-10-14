@@ -24,10 +24,6 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { Decimal } from "decimal.js";
 
-// ═══════════════════════════════════════════════════════════════════
-// TRACK-MISC1: Auto-create customer and entity via track
-// ═══════════════════════════════════════════════════════════════════
-
 test.concurrent(`${chalk.yellowBright("track-misc1: track auto-creates customer and entity")}`, async () => {
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
 	const freeProd = products.base({
@@ -62,7 +58,6 @@ test.concurrent(`${chalk.yellowBright("track-misc1: track auto-creates customer 
 		value: 5,
 	});
 
-	// Verify customer was created with provided data
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	expect(customer).toMatchObject({
 		id: customerId,
@@ -70,14 +65,12 @@ test.concurrent(`${chalk.yellowBright("track-misc1: track auto-creates customer 
 		email: "test@test.com",
 	});
 
-	// Verify entity was created with provided data
 	const entity = await autumnV1.entities.get<ApiEntityV0>(customerId, entityId);
 	expect(entity).toMatchObject({
 		id: entityId,
 		name: "Test Entity",
 	});
 
-	// Verify customer.entities includes the created entity
 	const customerWithEntities = await autumnV1.customers.get<ApiCustomerV3>(
 		customerId,
 		{ expand: [CustomerExpand.Entities] },
@@ -87,10 +80,6 @@ test.concurrent(`${chalk.yellowBright("track-misc1: track auto-creates customer 
 	expect(customerWithEntities.entities?.[0].id).toBe(entityId);
 	expect(customerWithEntities.entities?.[0].name).toBe("Test Entity");
 });
-
-// ═══════════════════════════════════════════════════════════════════
-// TRACK-MISC2: Track event stores properties
-// ═══════════════════════════════════════════════════════════════════
 
 test.concurrent(`${chalk.yellowBright("track-misc2: track event stores custom properties")}`, async () => {
 	const { customerId, autumnV1 } = await initScenario({
@@ -118,10 +107,6 @@ test.concurrent(`${chalk.yellowBright("track-misc2: track event stores custom pr
 		events: [{ value: 5, properties: { hello: "world", foo: "bar" } }],
 	});
 });
-
-// ═══════════════════════════════════════════════════════════════════
-// TRACK-MISC3: Track creates events when balance is empty
-// ═══════════════════════════════════════════════════════════════════
 
 test.concurrent(`${chalk.yellowBright("track-misc3: track creates events when customer has no balance")}`, async () => {
 	const { customerId, autumnV1 } = await initScenario({
@@ -157,10 +142,6 @@ test.concurrent(`${chalk.yellowBright("track-misc3: track creates events when cu
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════
-// TRACK-MISC4: Track v1.2 response format
-// ═══════════════════════════════════════════════════════════════════
-
 test.concurrent(`${chalk.yellowBright("track-misc4: track returns correct v1.2 response format")}`, async () => {
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
 	const freeProd = products.base({
@@ -188,10 +169,6 @@ test.concurrent(`${chalk.yellowBright("track-misc4: track returns correct v1.2 r
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════
-// TRACK-MISC5: V1.2 properties.value maps to value field
-// ═══════════════════════════════════════════════════════════════════
-
 test.concurrent(`${chalk.yellowBright("track-misc5: V1.2 properties.value maps to value field")}`, async () => {
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
 	const freeProd = products.base({
@@ -205,7 +182,6 @@ test.concurrent(`${chalk.yellowBright("track-misc5: V1.2 properties.value maps t
 		actions: [s.attach({ productId: freeProd.id })],
 	});
 
-	// Track using V1.2 legacy format with properties.value
 	await autumnV1.track({
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
@@ -218,7 +194,6 @@ test.concurrent(`${chalk.yellowBright("track-misc5: V1.2 properties.value maps t
 		with_autumn_id: true,
 	});
 
-	// Verify balance was deducted correctly
 	expect(customer.features[TestFeature.Messages].balance).toBe(
 		new Decimal(100).sub(42.1532).toNumber(),
 	);
@@ -230,10 +205,6 @@ test.concurrent(`${chalk.yellowBright("track-misc5: V1.2 properties.value maps t
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════
-// TRACK-MISC7: Track defaults to value: 1 when no value provided
-// ═══════════════════════════════════════════════════════════════════
-
 test.concurrent(`${chalk.yellowBright("track-misc7: track defaults to value 1 when no value provided")}`, async () => {
 	const { customerId, autumnV1 } = await initScenario({
 		customerId: "track-misc7",
@@ -241,7 +212,6 @@ test.concurrent(`${chalk.yellowBright("track-misc7: track defaults to value 1 wh
 		actions: [],
 	});
 
-	// Track without providing any value
 	await autumnV1.track({
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
@@ -250,10 +220,6 @@ test.concurrent(`${chalk.yellowBright("track-misc7: track defaults to value 1 wh
 	await expectCustomerEventsCorrect({ customerId, events: [{ value: 1 }] });
 });
 
-// ═══════════════════════════════════════════════════════════════════
-// TRACK-MISC8: V1.2 properties.value is removed from properties after extraction
-// ═══════════════════════════════════════════════════════════════════
-
 test.concurrent(`${chalk.yellowBright("track-misc8: V1.2 properties.value is removed from stored properties")}`, async () => {
 	const { customerId, autumnV1 } = await initScenario({
 		customerId: "track-misc8",
@@ -261,7 +227,6 @@ test.concurrent(`${chalk.yellowBright("track-misc8: V1.2 properties.value is rem
 		actions: [],
 	});
 
-	// Track using V1.2 legacy format with properties.value and other properties
 	await autumnV1.track({
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
@@ -272,16 +237,11 @@ test.concurrent(`${chalk.yellowBright("track-misc8: V1.2 properties.value is rem
 		},
 	});
 
-	// `value` is lifted out of the stored properties; the rest stay.
 	await expectCustomerEventsCorrect({
 		customerId,
 		events: [{ value: 25, properties: { hello: "world", foo: "bar" } }],
 	});
 });
-
-// ═══════════════════════════════════════════════════════════════════
-// TRACK-MISC9: Idempotency key prevents duplicate tracks
-// ═══════════════════════════════════════════════════════════════════
 
 test.concurrent(`${chalk.yellowBright("track-misc9: idempotency key prevents duplicate tracks")}`, async () => {
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
@@ -377,10 +337,6 @@ test.concurrent(`${chalk.yellowBright("track-misc9: idempotency key prevents dup
 	);
 });
 
-// ═══════════════════════════════════════════════════════════════════
-// TRACK-MISC6: V2.1 does not auto-create customer via track
-// ═══════════════════════════════════════════════════════════════════
-
 test.concurrent(`${chalk.yellowBright("track-misc6: v2.1 does not auto-create customer via track")}`, async () => {
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
 	const freeProd = products.base({
@@ -397,7 +353,6 @@ test.concurrent(`${chalk.yellowBright("track-misc6: v2.1 does not auto-create cu
 	});
 
 	await expectAutumnError({
-		// errCode: ErrCode.CustomerNotFound,
 		func: async () =>
 			await autumnV2_1.track({
 				customer_id: customerId,
@@ -421,13 +376,6 @@ test.concurrent(`${chalk.yellowBright("track-misc6: v2.1 does not auto-create cu
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════
-// TRACK-MISC10: Distributed lock prevents concurrent paid-allocated races
-//
-// Sends 5 concurrent track requests for a paid-allocated feature.
-// The lock ensures only 1 succeeds — others are rejected.
-// ═══════════════════════════════════════════════════════════════════
-
 test(`${chalk.yellowBright("track-misc10: paid-allocated concurrent track serialized by distributed lock")}`, async () => {
 	const allocatedUsersItem = items.allocatedUsers({ includedUsage: 0 });
 	const priceItem = items.monthlyPrice({ price: 20 });
@@ -445,11 +393,9 @@ test(`${chalk.yellowBright("track-misc10: paid-allocated concurrent track serial
 		actions: [s.attach({ productId: pro.id })],
 	});
 
-	// Verify initial balance
 	const customerBefore = await autumnV2.customers.get<ApiCustomer>(customerId);
 	expect(customerBefore.balances[TestFeature.Users].current_balance).toBe(0);
 
-	// Send 5 concurrent requests — lock should serialize, only 1 succeeds
 	const promises = Array(5)
 		.fill(null)
 		.map(() =>
@@ -465,7 +411,6 @@ test(`${chalk.yellowBright("track-misc10: paid-allocated concurrent track serial
 
 	expect(successCount).toEqual(1);
 
-	// Verify balance is mathematically correct
 	await timeout(2000);
 	const customerAfter = await autumnV2.customers.get<ApiCustomer>(customerId);
 	const balance = customerAfter.balances[TestFeature.Users];
@@ -476,12 +421,10 @@ test(`${chalk.yellowBright("track-misc10: paid-allocated concurrent track serial
 
 	expect(customerAfter.invoices?.length).toBe(2);
 
-	// Balance equation: granted + purchased - usage = current
 	const expectedCurrentBalance =
 		balance.granted_balance + balance.purchased_balance - balance.usage;
 	expect(balance.current_balance).toBe(expectedCurrentBalance);
 
-	// Sequential track after concurrent burst should work
 	await autumnV2.track({
 		customer_id: customerId,
 		feature_id: TestFeature.Users,
@@ -493,7 +436,6 @@ test(`${chalk.yellowBright("track-misc10: paid-allocated concurrent track serial
 		expectedUsage + 1,
 	);
 
-	// Verify DB consistency
 	await timeout(3000);
 	const dbCustomer = await autumnV2.customers.get<ApiCustomer>(customerId, {
 		skip_cache: "true",

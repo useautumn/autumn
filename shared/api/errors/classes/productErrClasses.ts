@@ -1,9 +1,6 @@
 import { RecaseError } from "../base/RecaseError.js";
 import { ProductErrorCode } from "../codes/productErrCodes.js";
 
-/**
- * Product not found error
- */
 export class ProductNotFoundError extends RecaseError {
 	constructor(opts: { productId: string; version?: string | number }) {
 		super({
@@ -15,9 +12,6 @@ export class ProductNotFoundError extends RecaseError {
 	}
 }
 
-/**
- * Product already exists error
- */
 export class ProductAlreadyExistsError extends RecaseError {
 	constructor(opts: { productId: string; message?: string }) {
 		super({

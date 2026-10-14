@@ -1,14 +1,3 @@
-/**
- * findNewestReusableFixedPrice
- *
- * Contract:
- *   catalog $25 beats a newer custom $25; among customs, newest wins
- *   catalog $20 / interval mismatch / preview / self / other product.id → no
- *   USD attach uses base amount + stripe_price_id
- *   EUR attach uses currencies.eur amount + slot; USD-only → no
- *   catalog cannot reuse custom; custom can reuse catalog
- */
-
 import { expect, test } from "bun:test";
 import {
 	BillingInterval,

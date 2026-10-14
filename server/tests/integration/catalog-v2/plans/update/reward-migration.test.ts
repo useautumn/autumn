@@ -1,19 +1,3 @@
-/**
- * catalogV2.update — JobName.RewardMigration queuing (legacy parity).
- *
- * Rewards hold discount_config.price_ids; when a plan update replaces price
- * rows, the queued task remaps those ids onto the new rows (and recreates the
- * Stripe coupon when stripe ids changed).
- *
- * Contract:
- *   in-place base price change → reward price_ids remap to the new price row
- *   new_version mint with price change → reward price_ids remap to v2's row
- *
- * Red (current): V2 never queues the task; price_ids keep the deleted row ids.
- * Green (after): executeUpdateCatalogPlan queues RewardMigration per upsert
- * with price writes, after Stripe init.
- */
-
 import { expect, test } from "bun:test";
 import {
 	CouponDurationType,
@@ -48,7 +32,6 @@ const getReward = async ({
 	return rewards.find((reward) => reward.id === rewardId);
 };
 
-/** Queue-driven remap lands asynchronously — poll the reward row. */
 const expectRewardPriceIdsCorrect = async ({
 	ctx,
 	rewardId,

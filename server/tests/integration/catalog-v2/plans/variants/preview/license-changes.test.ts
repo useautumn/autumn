@@ -1,11 +1,3 @@
-/**
- * catalogV2.preview_update — variants[].plan_change.license_changes is
- * Team-EU's Seat effective before→after, not Team's customize copied.
- *
- * Red (current):  missing nest / stacked Team 100 / pin emits a write
- * Green (after):  Dashboard-only item_change; 200→150 nest; pin has no license_changes
- */
-
 import { test } from "bun:test";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";

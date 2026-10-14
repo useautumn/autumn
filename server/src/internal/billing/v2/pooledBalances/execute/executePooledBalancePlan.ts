@@ -12,8 +12,6 @@ import { and, eq, inArray, notExists, sql } from "drizzle-orm";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { pooledBalancePlanHasChanges } from "@/internal/billing/v2/utils/billingPlan/pooledBalancePlan";
 
-/** Persists a computed pooled-balance plan. The one exception to "no reads" is
- * pool expiry, which must check the unbounded contribution count in the DB. */
 export const executePooledBalancePlan = async ({
 	ctx,
 	pooledBalancePlan,
@@ -90,9 +88,6 @@ export const executePooledBalancePlan = async ({
 		}
 
 		if (pooledBalancePlan.insertPoolContributions.length > 0) {
-			// A source entitlement holds at most one contribution. If a transition
-			// mis-classifies an already-contributing product as incoming, reconcile
-			// onto the existing row rather than failing the whole request.
 			const writtenContributions = await tx
 				.insert(pooledBalanceContributions)
 				.values(pooledBalancePlan.insertPoolContributions)
@@ -134,8 +129,6 @@ export const executePooledBalancePlan = async ({
 				);
 			}
 
-			// Point each source at the row that actually exists, which is the
-			// pre-existing contribution whenever the conflict path fired.
 			const contributionIdBySource = new Map(
 				writtenContributions.map((row) => [
 					row.sourceCustomerEntitlementId,
@@ -201,8 +194,6 @@ export const executePooledBalancePlan = async ({
 				.where(inArray(pooledBalanceContributions.id, contributionIds));
 		}
 
-		// Runs last: contributions are already deleted, so "no rows left" inside
-		// this transaction is the authoritative answer.
 		for (const {
 			pooledCustomerEntitlement,
 			expiresAt: plannedExpiresAt,
@@ -238,7 +229,6 @@ export const executePooledBalancePlan = async ({
 					),
 				);
 
-			// Frees the identity for a future attach — uniqueness covers live pools only.
 			await tx
 				.update(pooledBalances)
 				.set({ expires_at: expiresAt, updated_at: expiresAt })
@@ -270,8 +260,6 @@ export const executePooledBalancePlan = async ({
 					),
 				);
 
-			// Contributions cascade with the pool row; the synthetic cusEnt is
-			// restrict-protected until the pool row is gone, so this order is required.
 			await tx
 				.delete(pooledBalances)
 				.where(eq(pooledBalances.id, pooledBalance.id));

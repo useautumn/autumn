@@ -1,9 +1,3 @@
-/**
- * atmn scenarios/lint — findings name file:line for fixtures in nested files
- *
- * One line of plans/atmn-v3/07_tests.md.
- */
-
 import { expect, test } from "bun:test";
 import { join } from "node:path";
 import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
@@ -32,8 +26,6 @@ export default atmn({
 `,
 		},
 		files: {
-			// The invalid fixture (metered with no `consumable`, tripping
-			// requiredWhen) lives two folders deep, not in the root config.
 			"fixtures/nested/messages.ts": `import { feature } from "${CLI_PACKAGE_DIR}/src/generated/features";
 
 export const messages = feature({ featureId: "${featureId}", name: "Messages", type: "metered" });

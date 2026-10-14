@@ -20,8 +20,6 @@ import {
 } from "../../../balance-engine/tests/unit/engineFixtures.js";
 import { subjectsToBalanceWebhooks } from "../../src/balanceWebhooks.js";
 
-/** Which webhooks one mutation calls for, decided from the subject as it found it and as it left it. */
-
 const stateWith = ({
 	balance,
 	customer,
@@ -39,7 +37,6 @@ const stateWith = ({
 const subjectOf = ({ state }: { state: SubjectState }) =>
 	subjectStateToFullSubject({ state, catalog: createCatalogFor({ state }) });
 
-/** What the worker hands the decision: the mutation and its deduction, with the subject as it found it and as it left it. */
 const decidedOn = ({
 	state,
 	decision: { mutation, outcome },
@@ -61,7 +58,6 @@ const webhooksOf = ({
 	decision: DeductionDecision;
 }) => subjectsToBalanceWebhooks(decidedOn({ state, decision }));
 
-/** Tracks `value` against an allowance of `balance`. */
 const trackOn = ({
 	balance,
 	value,

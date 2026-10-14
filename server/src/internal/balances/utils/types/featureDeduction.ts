@@ -7,7 +7,6 @@ export type TokenUsage = {
 	outputTokens: number;
 };
 
-/** Token usage and its USD cost are priced together at the API layer — one cannot exist without the other. */
 export type TokenDeduction = {
 	usage: TokenUsage;
 	cost: number;
@@ -18,7 +17,6 @@ export type FeatureDeduction = {
 	deduction: number;
 	enforceOverdueBlock?: boolean;
 	targetBalance?: number;
-	/** Present only for track_tokens deductions; standard deductions omit it. */
 	tokens?: TokenDeduction;
 	lock?: LockParams;
 	lockReceipt?: LockReceipt;

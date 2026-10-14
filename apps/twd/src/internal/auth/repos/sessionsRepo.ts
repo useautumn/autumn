@@ -22,7 +22,6 @@ export const createSession = async ({
 	return row;
 };
 
-/** Live (unexpired) session joined with its user. */
 export const findLiveSession = async ({
 	ctx,
 	sessionId,

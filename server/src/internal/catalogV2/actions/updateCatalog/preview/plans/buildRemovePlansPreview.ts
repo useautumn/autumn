@@ -10,7 +10,6 @@ import type { RemovePlanPlan } from "@/internal/catalogV2/actions/updateCatalog/
 
 type PlanPreview = PreviewUpdateCatalogResponse["plans"][number];
 
-/** Unpinned `plan_id` → one group; pinned version → its own group. */
 const groupRemovePlans = ({
 	removePlans,
 }: {
@@ -74,7 +73,6 @@ const buildRemovePlanPreview = ({
 	};
 };
 
-/** One preview row per remove group (unpinned plan, or a pinned version). */
 export const buildRemovePlansPreview = ({
 	removePlans,
 	catalogContext,

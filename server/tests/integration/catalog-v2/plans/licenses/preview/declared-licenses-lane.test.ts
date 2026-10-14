@@ -1,13 +1,3 @@
-/**
- * catalogV2.preview_update — licenses lane on a direct parent row.
- *
- * Declared licenses[] renders the planned post-update set; omitting the key
- * echoes current links unchanged. License create/remove also lands on
- * plan_change.license_changes + customize.upsert_licenses / remove_licenses.
- * A brand-new parent has no from-product, so plan_change (and license_changes)
- * is omitted — only the licenses after-set is present.
- */
-
 import { expect, test } from "bun:test";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";

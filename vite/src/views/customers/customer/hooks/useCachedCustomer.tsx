@@ -7,13 +7,11 @@ export const useCachedCustomer = (customerId: string | undefined) => {
 	const getCachedCustomer = (): FullCustomer | null => {
 		if (!customerId) return null;
 
-		// Check all cached full customers queries
 		const queryCache = queryClient.getQueryCache();
 		const fullCustomersQueries = queryCache.findAll({
 			queryKey: ["full_customers"],
 		});
 
-		// Sort by most recently updated first to get the freshest data
 		const sortedQueries = fullCustomersQueries.sort((a, b) => {
 			const aTime = a.state.dataUpdatedAt || 0;
 			const bTime = b.state.dataUpdatedAt || 0;
@@ -21,7 +19,6 @@ export const useCachedCustomer = (customerId: string | undefined) => {
 		});
 
 		for (const query of sortedQueries) {
-			// Only use data that's not stale and has been successfully fetched
 			if (query.state.status === "success" && query.state.data) {
 				const cachedData = query.state.data as
 					| { fullCustomers: FullCustomer[] }

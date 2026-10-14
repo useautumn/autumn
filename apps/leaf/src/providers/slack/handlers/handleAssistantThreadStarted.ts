@@ -4,9 +4,6 @@ import { logger } from "../../../lib/logger.js";
 import { findSlackInstallationForWorkspace } from "../installations.js";
 import { getDefaultChatEnv } from "../setup/selectChatEnv.js";
 
-/** Fires when the user opens the assistant pane, before they type: warming
- * the installation token, org-context cache, and MCP client pool here makes
- * the first real turn's setup near-instant. */
 export const handleAssistantThreadStarted = async (event: {
 	context: { teamId?: string };
 }) => {
@@ -17,8 +14,6 @@ export const handleAssistantThreadStarted = async (event: {
 			workspaceId,
 		});
 		if (!installation) return;
-		// selectChatEnv short-circuits to the default when the message carries no
-		// env signal, so this matches the first real turn's cache key.
 		const env = getDefaultChatEnv();
 		const token = await getInstallationOAuthAccessToken({
 			env,

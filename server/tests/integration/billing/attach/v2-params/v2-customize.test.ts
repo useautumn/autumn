@@ -145,7 +145,6 @@ test.concurrent(`${chalk.yellowBright("v2-customize attach: only customize.items
 		plan_id: pro.id,
 		redirect_mode: "if_required",
 		customize: {
-			// price: null,
 			items: [itemsV2.monthlyMessages({ included: 220 })],
 		},
 	};
@@ -169,8 +168,6 @@ test.concurrent(`${chalk.yellowBright("v2-customize attach: only customize.items
 		customer,
 		count: 1,
 	});
-
-	// Verify that the original product price is still attached (price: null means keep original)
 
 	const customerProduct = customer.products.find((p) => p.id === pro.id);
 	const priceItem = customerProduct?.items?.find(isPriceItem);
@@ -218,7 +215,6 @@ test.concurrent(`${chalk.yellowBright("v2-customize attach: price null makes pro
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	await expectProductActive({ customer, productId: pro.id });
 
-	// Verify the customized feature is correct
 	expectCustomerFeatureCorrect({
 		customer,
 		featureId: TestFeature.Messages,
@@ -227,13 +223,11 @@ test.concurrent(`${chalk.yellowBright("v2-customize attach: price null makes pro
 		usage: 0,
 	});
 
-	// Verify no invoice was created (product is free)
 	await expectCustomerInvoiceCorrect({
 		customer,
 		count: 0,
 	});
 
-	// Verify no price item exists on the customer product
 	const customerProduct = customer.products.find((p) => p.id === pro.id);
 	const priceItem = customerProduct?.items?.find(isPriceItem);
 	expect(priceItem).toBeUndefined();
@@ -365,7 +359,6 @@ test.concurrent(`${chalk.yellowBright("v2-customize attach: paid feature mix (co
 	const preview =
 		await autumnV2.billing.previewAttach<AttachParamsV1Input>(params);
 
-	// Base ($40) + prepaid words ($15 for 100 units) + allocated users at included quantity
 	expect(preview.total).toBe(85);
 
 	await autumnV2.billing.attach<AttachParamsV1Input>(params);
@@ -417,9 +410,6 @@ test.concurrent(`${chalk.yellowBright("v2-customize attach: tiered prepaid with 
 		actions: [],
 	});
 
-	// Customize with tiered prepaid messages
-	// Tiers `to` INCLUDES included (200): [{to:700}, {to:"inf"}]
-	// Internally stored as [{to:500}, {to:"inf"}] (without included)
 	const params: AttachParamsV1Input = {
 		customer_id: customerId,
 		plan_id: base.id,
@@ -439,7 +429,7 @@ test.concurrent(`${chalk.yellowBright("v2-customize attach: tiered prepaid with 
 		},
 	};
 
-	const PREPAID_PRICE = 70; // 7 packs * 10
+	const PREPAID_PRICE = 70;
 	const preview =
 		await autumnV2.billing.previewAttach<AttachParamsV1Input>(params);
 	expect(preview.total).toBe(PREPAID_PRICE);
@@ -456,7 +446,6 @@ test.concurrent(`${chalk.yellowBright("v2-customize attach: tiered prepaid with 
 		usage: 0,
 	});
 
-	// Verify via V2.1 check that balance.price tiers include included
 	const checkRes = (await autumnV2_1.check({
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,

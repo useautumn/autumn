@@ -1,6 +1,5 @@
 import type { RolloverConfig } from "../../../models/productV2Models/productItemModels/productItemModels.js";
 
-/** First validation issue with a rollover config's max settings, or null if valid. */
 export const rolloverConfigToIssue = ({
 	rollover,
 }: {

@@ -6,15 +6,6 @@ import {
 	StringMatcherSchema,
 } from "./matcher.js";
 
-/**
- * Filter over plan items (the unified price + entitlement view of a feature
- * within a plan). Migration-scoped: a stable contract decoupled from the
- * public API schema so plan-side changes don't break existing migrations.
- *
- * Use `price: null` for "free" items (entitlement-only) and
- * `price: { $ne: null }` for paid items.
- */
-
 const BillingMethodSchema = enumMatcher(["prepaid", "usage_based"]);
 
 const PriceFilterInner = z.object({

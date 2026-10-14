@@ -3,8 +3,6 @@ import type { UseQueryResult } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { getBackendErr } from "@/utils/genUtils";
 
-/** Renders the load/error/ready states for a config dialog so each dialog only
- *  describes its ready state. */
 export function EdgeConfigDialogBody<TConfig>({
 	query,
 	errorMessage,
@@ -13,7 +11,6 @@ export function EdgeConfigDialogBody<TConfig>({
 }: {
 	query: UseQueryResult<TConfig>;
 	errorMessage: string;
-	/** Defaults to a two-row skeleton; pass a custom one for wider layouts. */
 	skeleton?: ReactNode;
 	children: (config: TConfig) => ReactNode;
 }) {

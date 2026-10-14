@@ -3,7 +3,6 @@ import crypto from "node:crypto";
 const IV_BYTES = 16;
 const KEY_BYTES = 32;
 
-/** Autumn's at-rest scheme for secrets in config and rows: AES-256-CBC, key = sha512(password) prefix, IV prepended. */
 export const createAesCipher = ({ password }: { password: string }) => {
 	const key = crypto
 		.createHash("sha512")

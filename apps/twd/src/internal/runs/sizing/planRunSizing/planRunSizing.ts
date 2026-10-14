@@ -57,7 +57,6 @@ const hasLearnedToRunAlone = (
 	estimate?.packedFailRate != null &&
 	estimate.packedFailRate > estimate.failRate + LEARNED_SOLO_MARGIN;
 
-/** Main shard split into packed files and files that must run alone; capability shards stay as they are. */
 const splitMainShard = ({
 	shards,
 	packable,
@@ -80,10 +79,6 @@ const splitMainShard = ({
 			: [shard],
 	);
 
-/**
- * Worker count and files per worker for a run. Manual caps keep today's one-file-per-worker
- * model; Auto packs profiled, light, non-org-mutating files and sizes each shard by LPT.
- */
 export const planRunSizing = ({
 	maxWorkers,
 	maxFilesPerWorker,
@@ -97,12 +92,9 @@ export const planRunSizing = ({
 	maxWorkers?: number | null;
 	maxFilesPerWorker?: number | null;
 	repeat: number;
-	/** Pooled shards with test ids: "main" plus one per capability set. */
 	shards: SizingShard[];
 	estimates: Map<string, FileProfileEstimate | null>;
-	/** Files whose source mutates org-wide state. */
 	staticSolo: Set<string>;
-	/** Usable keys × accounts per key, bounded by the run ceiling. */
 	workerCap: number;
 	limits: Limits;
 }): Plan => {

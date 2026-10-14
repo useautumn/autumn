@@ -68,7 +68,6 @@ export const expectSubQuantityCorrect = async ({
 		notNullish(itemQuantity) ? itemQuantity : usage,
 	);
 
-	// Check num replaceables correct
 	const cusEnts = cusProduct?.customer_entitlements;
 	const cusEnt = cusEnts?.find((ent) => ent.feature_id === TestFeature.Users);
 

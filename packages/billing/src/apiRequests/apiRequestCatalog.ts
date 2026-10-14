@@ -2,7 +2,6 @@ import type { ApiEndpoint, ApiEndpointGroup } from "./types/apiEndpoint";
 import type { ApiRoute } from "./types/apiRoute";
 import type { RequestWeight } from "./types/requestWeight";
 
-/** Property names on every `api_call` event; the rate card matches on them. */
 export const apiRequestEventProperties = {
 	endpointId: "endpoint_id",
 } as const;
@@ -14,7 +13,6 @@ export const post = (path: Path): ApiRoute => ({ method: "POST", path });
 export const patch = (path: Path): ApiRoute => ({ method: "PATCH", path });
 export const del = (path: Path): ApiRoute => ({ method: "DELETE", path });
 
-/** The group is the id's prefix, so `balances.check` belongs to `balances`. */
 export const apiEndpoint = <Id extends `${ApiEndpointGroup}.${string}`>({
 	id,
 	routes,
@@ -30,13 +28,7 @@ export const apiEndpoint = <Id extends `${ApiEndpointGroup}.${string}`>({
 	weight,
 });
 
-/**
- * Every billable endpoint, its legacy aliases, and how one call converts into
- * requests. `id` is the rate-card dimension on the `api_requests` credit system;
- * a route not listed here is never metered.
- */
 export const apiRequestCatalog = [
-	// customers
 	apiEndpoint({
 		id: "customers.get_or_create",
 		routes: [post("/v1/customers"), post("/v1/customers.get_or_create")],
@@ -46,7 +38,6 @@ export const apiRequestCatalog = [
 		routes: [get("/v1/customers/{customer_id}"), post("/v1/customers.get")],
 	}),
 
-	// entities
 	apiEndpoint({
 		id: "entities.create",
 		routes: [
@@ -63,12 +54,11 @@ export const apiRequestCatalog = [
 		],
 	}),
 
-	// balances
 	apiEndpoint({
 		id: "balances.check",
 		routes: [
 			post("/v1/check"),
-			post("/v1/entitled"), // legacy
+			post("/v1/entitled"),
 			post("/v1/balances.check"),
 		],
 	}),
@@ -76,7 +66,6 @@ export const apiRequestCatalog = [
 	apiEndpoint({
 		id: "balances.track",
 		routes: [
-			// Legacy
 			post("/v1/track"),
 			post("/v1/events"),
 			post("/v1/track_tokens"),
@@ -97,14 +86,14 @@ export const apiRequestCatalog = [
 	apiEndpoint({
 		id: "balances.update",
 		routes: [
-			post("/v1/usage"), // legacy
-			post("/v1/balances/update"), // legacy
+			post("/v1/usage"),
+			post("/v1/balances/update"),
 			post("/v1/balances.update"),
 		],
 	}),
 	apiEndpoint({
 		id: "balances.batch_update",
-		routes: [post("/v1/balances.batch_update")], // not live yet
+		routes: [post("/v1/balances.batch_update")],
 		weight: "one_per_item",
 	}),
 ];

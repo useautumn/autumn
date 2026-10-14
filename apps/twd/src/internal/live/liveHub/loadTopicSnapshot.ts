@@ -10,7 +10,6 @@ type SnapshotData = Extract<LiveServerMessage, { type: "snapshot" }>["data"];
 const RUNS_SNAPSHOT_LIMIT = 100;
 const JOBS_SNAPSHOT_LIMIT = 100;
 
-/** keys/accounts/warm snapshots are null: those topics only signal "refetch the REST route". */
 export const loadTopicSnapshot = async ({
 	ctx,
 	topic,

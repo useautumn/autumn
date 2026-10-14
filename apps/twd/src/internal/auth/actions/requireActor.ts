@@ -2,7 +2,6 @@ import { TwdError } from "../../../http/apiError.ts";
 import type { Actor } from "../../../lib/types/actor.ts";
 import type { TwdContext } from "../../../lib/types/twdContext.ts";
 
-/** The human (or their API key) behind this request; system actors don't count. */
 export const requireActor = ({ ctx }: { ctx: TwdContext }): Actor => {
 	if (ctx.actor && ctx.actor.via !== "system") return ctx.actor;
 	throw new TwdError({

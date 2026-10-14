@@ -1,14 +1,3 @@
-/**
- * Regression coverage: `proration` defaults to false/absent, which must keep
- * default migration behavior exactly charge-free — same tier-swap +
- * `feature_quantities_strategy` operation that produces a real invoice under
- * `proration: true` (see round-to-lowest-price-baseline.test.ts) must instead
- * resolve with zero charges when `proration` is omitted, proving the new
- * fields are strictly additive/opt-in and don't weaken the existing
- * `assertNoChargeArtifacts`/`assertStripePlanNoCharges` guards for every
- * migration that doesn't opt in.
- */
-
 import { test } from "bun:test";
 import type { ApiCustomerV3, CreatePlanItemParamsV1 } from "@autumn/shared";
 import {
@@ -71,7 +60,6 @@ test.concurrent(
 			],
 		});
 
-		// No `proration` field at all — default must stay exactly charge-free.
 		await runUpdatePlanMigration({
 			ctx,
 			migrationClient: autumnV2_2,
@@ -104,7 +92,6 @@ test.concurrent(
 			},
 		});
 
-		// Only the initial attach invoice exists — the migration itself charged nothing.
 		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 		await expectCustomerInvoiceCorrect({ customer, count: 1 });
 	},

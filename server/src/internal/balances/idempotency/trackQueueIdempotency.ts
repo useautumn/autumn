@@ -4,8 +4,6 @@ import { hashIdempotencyKey } from "@/internal/misc/idempotency/idempotencyKeyUt
 
 export const TRACK_V3_IDEMPOTENCY_TTL_MS = ms.days(1);
 
-/** Seed for the per-feature queue-replay keys: scopes them to one request id
- *  (an SQS replay reuses the original request's ctx.id). */
 export const getTrackQueueIdempotencyKey = ({ ctx }: { ctx: AutumnContext }) =>
 	`track:${ctx.id}`;
 

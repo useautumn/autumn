@@ -73,8 +73,6 @@ export const handleSearchStripeProducts = createRoute({
 
 		const searchProducts = async () => {
 			try {
-				// Product IDs only ever match exactly, via retrieveProduct. Listing or
-				// name-searching here would return unrelated products.
 				if (isStripeProductId(normalizedSearch)) return;
 
 				if (!normalizedSearch) {

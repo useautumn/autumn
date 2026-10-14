@@ -4,7 +4,6 @@ export function createCustomerPlans(): CustomerPlans {
 	return { tails: new Map() };
 }
 
-/** Runs once every earlier plan of the same customer has settled; one that failed does not hold the queue. */
 export async function runCustomerPlan<Result>({
 	customerPlans,
 	customerKey,

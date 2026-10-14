@@ -313,7 +313,6 @@ export function SubscriptionUpdateSheet() {
 			onPlanEditorOpen={() => setIsInlineEditorOpen(true)}
 			onPlanEditorClose={() => setIsInlineEditorOpen(false)}
 			onCheckoutRedirect={(checkoutUrl) => {
-				// A long-lived link means the edit kept the customer's link; read it off the response so a slow lookup can't misroute.
 				if (isLongLivedCheckoutUrl(checkoutUrl)) {
 					toast.success("Checkout link updated");
 					return;

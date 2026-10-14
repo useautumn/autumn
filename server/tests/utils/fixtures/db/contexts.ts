@@ -22,22 +22,15 @@ const createTestLogger = () => ({
 	child: () => createTestLogger(),
 });
 
-/**
- * Create an organization fixture
- */
 const createOrg = () => ({
 	id: "org_test",
 	name: "Test Organization",
 	slug: "test-org",
 	default_currency: "usd",
 	stripe_account_id: "acct_test",
-	// Every default, as a freshly created org has: code that reads a config flag needs the object to exist.
 	config: OrgConfigSchema.parse({}),
 });
 
-/**
- * Create an Autumn context fixture
- */
 const create = ({
 	features = [],
 	org,
@@ -53,9 +46,6 @@ const create = ({
 		logger: createTestLogger(),
 	}) as unknown as AutumnContext;
 
-/**
- * Create a billing context fixture
- */
 const createBilling = ({
 	customerProducts = [],
 	fullProducts = [],
@@ -89,10 +79,6 @@ const createBilling = ({
 	isCustom: false,
 	billingVersion,
 });
-
-// ═══════════════════════════════════════════════════════════════════
-// EXPORT
-// ═══════════════════════════════════════════════════════════════════
 
 export const contexts = {
 	create,

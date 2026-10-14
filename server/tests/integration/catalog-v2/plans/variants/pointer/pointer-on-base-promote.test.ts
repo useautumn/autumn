@@ -1,12 +1,3 @@
-/**
- * catalogV2.update — base promote does not auto-repoint variants.
- *
- * Contract:
- *   promote without propagate → pointer stays on the previous active row
- *   Historical variant versions stay on their existing base row.
- *   Active variant pinned to a non-active historical base is left.
- */
-
 import { test } from "bun:test";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";

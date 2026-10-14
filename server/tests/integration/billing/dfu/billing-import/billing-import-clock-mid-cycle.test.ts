@@ -1,9 +1,3 @@
-/**
- * dfu.flash (test clock) — a monthly sub sits mid-cycle at real now. The
- * imported plan must keep the sub's real start (past) and anchor its cycle to
- * the sub's real current_period_end (future), never drifting to import time.
- */
-
 import { expect, test } from "bun:test";
 import { CusProductStatus } from "@autumn/shared";
 import {
@@ -36,8 +30,6 @@ test.concurrent(
 			actions: [],
 		});
 
-		// Freeze 15 days in the past, create the sub, then advance to ≈ real now so
-		// the first monthly period brackets Date.now().
 		const frozenTime = Date.now() - THIRTY_DAYS_MS / 2;
 		const { customerId: stripeCustomerId, testClockId } =
 			await createRealStripeCustomerOnClock(ctx, {
@@ -62,7 +54,6 @@ test.concurrent(
 			now: new Date().toISOString(),
 		});
 
-		// Empirically confirm the period brackets real now (the flash's import now).
 		expect(sub.status).toBe("active");
 		expect(periodStartMs).toBeLessThan(Date.now());
 		expect(periodEndMs).toBeGreaterThan(Date.now());
@@ -86,11 +77,8 @@ test.concurrent(
 		});
 
 		expect(cusProduct?.status).toBe(CusProductStatus.Active);
-		// Start is the sub's real (past) start, not import time.
 		expect(cusProduct?.starts_at).toBe(startMs);
-		// created_at is back-dated to the sub's real start, not the import time.
 		expect(cusProduct?.created_at).toBe(startMs);
-		// Cycle anchor is the real future period end, not import + 1 month.
 		expect(cusProduct?.billing_cycle_anchor).toBe(periodEndMs);
 		expect(cusProduct?.starts_at).toBeLessThan(Date.now());
 		expect(cusProduct?.billing_cycle_anchor).toBeGreaterThan(Date.now());

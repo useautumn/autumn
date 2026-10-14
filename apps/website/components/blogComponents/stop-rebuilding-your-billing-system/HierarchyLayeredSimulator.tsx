@@ -54,7 +54,6 @@ export function HierarchyLayeredSimulator() {
 			</div>
 
 			<div className="min-h-[396px] overflow-hidden">
-				{/* PLANS — the single source of the default */}
 				<SectionLabel className="border-b border-[#292929]">plans</SectionLabel>
 				<table className="w-full table-fixed font-mono text-[12px] leading-[1.7]">
 					<thead>
@@ -89,7 +88,6 @@ export function HierarchyLayeredSimulator() {
 					</tbody>
 				</table>
 
-				{/* CUSTOMERS — inherit the plan default unless overridden */}
 				<SectionLabel className="border-y border-[#292929]">
 					customers
 				</SectionLabel>

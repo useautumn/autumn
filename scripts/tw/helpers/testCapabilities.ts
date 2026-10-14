@@ -1,6 +1,3 @@
-// Test files that need an extra service run on workers that have it; edit TEST_CAPABILITIES to add one.
-// Dependency-light on purpose: worker/boot.ts imports this inside the sandbox.
-
 import { readFile } from "node:fs/promises";
 
 export type TestCapabilityId =
@@ -12,38 +9,28 @@ export type TestCapabilityId =
 
 export type CapabilityService = {
 	name: string;
-	/** Repo-relative working directory. */
 	cwd: string;
 	argv: string[];
-	/** TCP port boot.ts waits on before READY. */
 	port: number;
 	env?: Record<string, string>;
 };
 
 export type TestCapability = {
 	id: TestCapabilityId;
-	/** Matched against the test file's source. */
 	matches?: RegExp;
-	/** Matched against the test file's path; either match routes the file. */
 	paths?: RegExp;
-	/** Added to the env of every worker on this capability's shard. */
 	workerEnv: Record<string, string>;
-	/** Started by worker/boot.ts on this capability's workers only. */
 	service?: CapabilityService;
-	/** Upper bound on this shard's workers, whatever the run size. */
 	maxWorkers?: number;
 };
 
 const SSO_IDP_DNS = "127.0.0.1:53535";
 
-/** The hot standby boot.ts starts on pg-replica workers; see image/start-replica.sh. */
 export const PG_REPLICA_PORT = 5433;
 
-/** A file matching several entries runs on a worker that has all of them. */
 export const TEST_CAPABILITIES: TestCapability[] = [
 	{
 		id: "svix",
-		// Svix webhook test utils, the server's Svix client, or atmn CLI test utils (every `atmn pull` lists webhooks).
 		matches:
 			/from\s+["'][^"']*\/(svixWebhookTestUtils|webhookTestUtils|external\/svix\/svixUtils|atmnUtils\/\w+)(\.js)?["']/,
 		workerEnv: { NEEDS_SVIX: "1" },
@@ -51,7 +38,6 @@ export const TEST_CAPABILITIES: TestCapability[] = [
 	{
 		id: "ssoIdp",
 		matches: /fetch\(\s*["'`]http:\/\/localhost:9090/,
-		// The server only resolves TXT records through the mock DNS when this is in its own env.
 		workerEnv: { SSO_DNS_SERVERS: SSO_IDP_DNS },
 		service: {
 			name: "SSO test IdP",
@@ -62,7 +48,6 @@ export const TEST_CAPABILITIES: TestCapability[] = [
 	},
 	{
 		id: "leaf",
-		// Requests to `${baseUrl}/mcp` or `baseUrl + "/mcp"`; the API proxies /mcp to Leaf on CHAT_SERVER_URL.
 		matches: /(\}|\+\s*["'`])\/mcp["'`?/]/,
 		workerEnv: {},
 		service: {
@@ -70,7 +55,6 @@ export const TEST_CAPABILITIES: TestCapability[] = [
 			cwd: "apps/leaf",
 			argv: ["bun", "src/index.ts"],
 			port: 3099,
-			// The /mcp route never reaches Slack, but Leaf's env schema requires these.
 			env: {
 				PORT: "3099",
 				SLACK_CLIENT_ID: "tw",
@@ -84,12 +68,10 @@ export const TEST_CAPABILITIES: TestCapability[] = [
 		// Real OAuth revocation needs the client_id of the platform that owns the worker's Stripe key.
 		matches: /\.oauth\.deauthorize\(/,
 		workerEnv: {},
-		// One dedicated platform account, so its tests never run concurrently.
 		maxWorkers: 1,
 	},
 	{
 		id: "pg-replica",
-		// By path: unit tests fake the replica pool, only these need a real standby.
 		paths: /\/integration\/replica-reads\//,
 		workerEnv: {
 			TW_PG_REPLICA: "1",
@@ -98,19 +80,15 @@ export const TEST_CAPABILITIES: TestCapability[] = [
 	},
 ];
 
-/** Max number of files read concurrently to keep file-descriptor pressure bounded. */
 const READ_CONCURRENCY = 32;
 
-/** Env var naming a worker's capabilities, comma-separated in registry order. */
 const CAPABILITIES_ENV = "TW_CAPABILITIES";
 
-/** Capabilities listed in `TW_CAPABILITIES`; unknown ids are ignored. */
 export const parseWorkerCapabilities = (
 	value: string | undefined,
 ): TestCapability[] =>
 	TEST_CAPABILITIES.filter(({ id }) => value?.split(",").includes(id));
 
-/** Every capability the file needs, in registry order. An unreadable file needs none, so a read error never moves it onto a dedicated shard. */
 export const detectCapabilities = async (
 	file: string,
 ): Promise<TestCapabilityId[]> => {
@@ -130,7 +108,6 @@ export type CapabilityShard = {
 	files: string[];
 };
 
-/** One shard per distinct capability set, in order of first appearance. */
 export const partitionByCapability = async (
 	testFiles: string[],
 ): Promise<{ normalFiles: string[]; capabilityShards: CapabilityShard[] }> => {
@@ -167,7 +144,6 @@ export const capabilityWorkerEnv = (
 	);
 };
 
-/** The tightest worker cap among `capabilities`; undefined when none is capped. */
 export const maxWorkersFor = (
 	capabilities: readonly string[],
 ): number | undefined => {
@@ -178,7 +154,6 @@ export const maxWorkersFor = (
 	return caps.length > 0 ? Math.min(...caps) : undefined;
 };
 
-/** Services boot.ts starts for the capabilities in this worker's env. */
 export const workerCapabilityServices = (
 	env: Record<string, string | undefined>,
 ): CapabilityService[] =>

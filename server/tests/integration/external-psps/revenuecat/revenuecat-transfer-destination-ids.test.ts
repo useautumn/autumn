@@ -1,8 +1,3 @@
-/**
- * TRANSFER destination: every `transferred_to` id is tried before a customer is created,
- * so an existing customer mapped only by a later id still receives the purchase.
- */
-
 import { expect, test } from "bun:test";
 import { customers } from "@autumn/shared";
 import ctx from "@tests/utils/testInitUtils/createTestContext";

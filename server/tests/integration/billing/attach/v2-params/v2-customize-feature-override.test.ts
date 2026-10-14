@@ -1,14 +1,3 @@
-/**
- * Customizing a customer's rate card from the dashboard sends the base plan's
- * credits item as remove_items + add_items carrying feature_override. That
- * override must land on the customer's plan and price their usage.
- *
- * Contract:
- *   base plan grants 1,000 credits; the catalog rate card prices action1 at 0.2
- *   customize.add_items overrides action1 to 10 credits
- *   one tracked action1 → balance 990 (not 999.8)
- */
-
 import { test } from "bun:test";
 import type { AttachParamsV1Input } from "@autumn/shared";
 import { ResetInterval } from "@autumn/shared";

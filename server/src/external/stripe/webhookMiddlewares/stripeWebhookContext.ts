@@ -4,7 +4,6 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import type { StripeWebhookAckMode } from "./classifyStripeWebhookAckMode.js";
 import type { StripeWebhookHandlerResult } from "./types/stripeWebhookHandlerResult";
 
-/** Never-throwing Redis hooks installed by the idempotency middleware. */
 export type StripeWebhookIdempotencyHooks = {
 	markCompleted: () => Promise<void>;
 	release: () => Promise<void>;

@@ -50,7 +50,6 @@ const createScheduleMcpSchema = CreateScheduleParamsV0Schema.check((ctx) => {
 	}
 });
 
-/** set_plans takes these on phases[0]; at the top level the API would drop them silently. */
 const movedToFirstPhase = (field: string) =>
 	z
 		.never({
@@ -59,11 +58,6 @@ const movedToFirstPhase = (field: string) =>
 		.optional()
 		.meta({ internal: true });
 
-// `undeclared_plans` is internal on the public API but exposed here, and
-// defaults to "retain" so plans a request leaves out keep running, as with
-// createSchedule. `extend` drops the parent's object-level checks, so they are
-// re-applied.
-// Typed loosely: its inferred type is too large for the domain exports to serialize.
 const setPlansMcpSchema: z.ZodType = SetPlansParamsV0Schema.extend({
 	undeclared_plans: z.enum(["end", "retain"]).default("retain").meta({
 		description:

@@ -1,27 +1,3 @@
-/**
- * TDD contract for free-monthly, lifetime, and paid-monthly pooled balances
- * created and removed by the attach flow.
- *
- * Contract under test:
- *   New types/fields:
- *     - customer_entitlements.is_pooled_balance identifies synthetic pool rows.
- *     - pooled_balances.granted materializes the sum of current contributions.
- *     - contributions are keyed by source_customer_entitlement_id while retaining source_customer_product_id.
- *   New behaviors:
- *     - Compatible pooled entitlements attached to entities coalesce into one synthetic balance.
- *     - Free monthly pools reset lazily without a Stripe subscription identity.
- *     - Lifetime pools do not reset.
- *     - Paid monthly pools reset with their Stripe subscription billing cycle.
- *     - Source customer entitlements are normalized and omitted from public balances.
- *     - An immediate outgoing customer product subtracts its contribution from the pool and deletes its contribution row.
- *   Side effects:
- *     - Attach inserts/updates the synthetic customer entitlement and inserts contribution rows.
- *     - Replacement updates the synthetic customer entitlement and deletes the outgoing contribution.
- *
- * Pre-implementation red: attach creates ordinary entity balances but no pooled graph.
- * Post-implementation green: the pooled graph and API balance agree for attach and removal.
- */
-
 import { test } from "bun:test";
 import {
 	type ApiCustomerV5,
@@ -184,7 +160,6 @@ const runPooledAttachCase = async ({
 		sources: { count: 2, balance: 0, adjustment: 0 },
 	});
 
-	// The balance worker doesn't aggregate entity data onto the customer.
 	if (!isBalanceWorkerRoute()) {
 		const customerAfterRemoval = await autumnV2_2.customers.get<ApiCustomerV5>(
 			customerId,

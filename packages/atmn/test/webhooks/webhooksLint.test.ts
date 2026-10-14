@@ -1,10 +1,3 @@
-/**
- * The webhooks block is linted before anything is sent. One entry is one
- * endpoint in one env. The id, https and events rules come from the sync
- * body's spec; `(env, id)` uniqueness, env-var collisions, the localhost guard
- * and the old url-map refusal are the config's own.
- */
-
 import { expect, test } from "bun:test";
 import { ConfigError, type LintIssue } from "../../src/generated/lintRuntime";
 import { type Webhook, webhook } from "../../src/generated/webhooks";
@@ -133,7 +126,6 @@ test("an event name this atmn doesn't know is a warning, never a refusal: the se
 	const document = atmn({
 		webhooks: [
 			billing({
-				// A config pulled from a newer server; the type accepts any string.
 				events: ["billing.updated", "billing.from_the_future"],
 			}),
 		],

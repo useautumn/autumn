@@ -14,7 +14,6 @@ import { RolloutOrgList } from "./RolloutOrgList";
 import { RolloutSection } from "./RolloutSection";
 import { useBalanceWorkerRollout } from "./useBalanceWorkerRollout";
 
-/** The one dialog open at a time, with what it acts on. */
 type RolloutDialog =
 	| { kind: "addOrg" }
 	| { kind: "removeOrg"; orgId: string; name: string }
@@ -34,7 +33,6 @@ const ConfigHealth = ({ healthy }: { healthy: boolean }) => (
 	</span>
 );
 
-/** The balance-worker rollout: one global percent, per-org and per-customer overrides, and where each change stands. */
 export const EdgeConfigView = () => {
 	const { isAdmin, isPending } = useAdmin();
 	const rollout = useBalanceWorkerRollout();

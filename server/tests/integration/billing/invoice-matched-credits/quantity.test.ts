@@ -42,7 +42,6 @@ test.concurrent(
 			],
 		});
 
-		// Advance a full cycle (clean renewal charge stored) then mid-cycle.
 		let advancedTo = await advanceTestClock({
 			stripeCli: ctx.stripeCli,
 			testClockId: testClockId as string,
@@ -68,7 +67,6 @@ test.concurrent(
 			options: [{ feature_id: TestFeature.Messages, quantity: 5 * BILLING_UNITS }],
 		});
 
-		// Decreasing units mid-cycle yields a prorated credit.
 		expect(preview.total).toBeLessThan(0);
 
 		await autumnV1.subscriptions.update({
@@ -83,8 +81,6 @@ test.concurrent(
 			5 * BILLING_UNITS,
 		);
 
-		// Preview must match what was actually invoiced (credit sourced from the
-		// stored renewal charge, not catalog re-synthesis).
 		expect(customer.invoices?.length ?? 0).toBe(invoiceCountBefore + 1);
 		const latestInvoice = customer.invoices?.[0];
 		expect(latestInvoice).toBeDefined();
@@ -127,7 +123,6 @@ test.concurrent(
 			],
 		});
 
-		// Renew so there is a full-period stored charge for the current cycle.
 		let advancedTo = await advanceTestClock({
 			stripeCli: ctx.stripeCli,
 			testClockId: testClockId as string,
@@ -135,7 +130,6 @@ test.concurrent(
 			waitForSeconds: 30,
 		});
 
-		// Mid-cycle increase: creates a SECOND stored charge row for this price.
 		advancedTo = await advanceTestClock({
 			stripeCli: ctx.stripeCli,
 			testClockId: testClockId as string,
@@ -184,8 +178,6 @@ test.concurrent(
 			5 * BILLING_UNITS,
 		);
 
-		// The credit must net both stored charge rows (renewal + mid-cycle increase);
-		// with single-row crediting this preview/execute parity would break.
 		expect(customer.invoices?.length ?? 0).toBe(invoiceCountBefore + 1);
 		const latestInvoice = customer.invoices?.[0];
 		expect(latestInvoice).toBeDefined();

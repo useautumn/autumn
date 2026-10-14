@@ -1,30 +1,3 @@
-/**
- * TDD contract: subscription.created auto-sync must import prepaid add-ons
- * from Stripe-native prices (the Resend dedicated_ip shape: an add-on plan
- * whose only Autumn price is prepaid, matched by product mapping + price
- * shape, with the Stripe item quantity becoming the prepaid quantity).
- *
- * Contract under test:
- *   New behaviors:
- *     - main base item + native per-unit price ($30) qty 2 under the add-on's
- *       mapped Stripe product -> main plan AND add-on active, ONE add-on
- *       instance, feature granted 2 (API-side total), DB options quantity 2
- *       (packs, exclusive of included).
- *     - native graduated two-tier price (1 free, $10 after) qty 2 on an
- *       add-on with includedUsage 1 -> feature granted 2 total, DB options
- *       quantity 1 (total minus included).
- *     - add-on-only subscription (no main plan item) -> add-on syncs alone.
- *   Side effects:
- *     - cusProducts linked to the Stripe subscription id.
- *
- * Pre-impl red: detection resolves the native price as a custom base on the
- * add-on (or canAutoSync rejects base_price_unresolvable), so the add-on
- * never activates with a prepaid quantity.
- * Post-impl green: product-level match falls through to prepaid price shape
- * matching, rollup emits feature_quantities, canAutoSync allows add-ons with
- * absent base.
- */
-
 import { expect, test } from "bun:test";
 import {
 	createExternalStripeSubscription,
@@ -55,7 +28,6 @@ const addonStripeProductId = async ({
 	return stripeProductId;
 };
 
-/** Native per-unit licensed price, e.g. the original "Dedicated IP $30". */
 const createNativePerUnitPrice = async ({
 	stripeProductId,
 	unitAmount,
@@ -70,7 +42,6 @@ const createNativePerUnitPrice = async ({
 		recurring: { interval: "month" },
 	});
 
-/** Native graduated tiered price: first `freeUnits` free, `unitAmount` after. */
 const createNativeTwoTierPrice = async ({
 	stripeProductId,
 	freeUnits,
@@ -91,10 +62,6 @@ const createNativeTwoTierPrice = async ({
 			{ up_to: "inf", unit_amount: unitAmount },
 		],
 	});
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// CASE 1: main base + single-tier prepaid add-on item, quantity 2
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test(`${chalk.yellowBright("sub.created prepaid add-on: main plan + $30 prepaid item qty 2")}`, async () => {
 	const customerId = "sub-created-prepaid-addon-1";
@@ -142,7 +109,6 @@ test(`${chalk.yellowBright("sub.created prepaid add-on: main plan + $30 prepaid 
 		],
 	});
 
-	// ── Contract: both plans active, one add-on instance ──
 	const customer = await waitForCustomerProducts({
 		autumnV1,
 		customerId,
@@ -154,7 +120,6 @@ test(`${chalk.yellowBright("sub.created prepaid add-on: main plan + $30 prepaid 
 		productIds: [pro.id, addon.id],
 	});
 
-	// ── Contract: prepaid feature granted 2 (API-side total) ──
 	expectCustomerFeatureCorrect({
 		customer,
 		featureId: TestFeature.Messages,
@@ -163,17 +128,12 @@ test(`${chalk.yellowBright("sub.created prepaid add-on: main plan + $30 prepaid 
 		usage: 0,
 	});
 
-	// ── Contract: DB-side options quantity 2 (packs, exclusive of included 0) ──
 	const addonCusProduct = linked.find((cp) => cp.product_id === addon.id);
 	const messagesOption = addonCusProduct?.options?.find(
 		(option) => option.feature_id === TestFeature.Messages,
 	);
 	expect(messagesOption?.quantity).toBe(2);
 });
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// CASE 2: two-tier native price (1 free, $10 after) on add-on with included 1
-// ═══════════════════════════════════════════════════════════════════════════════
 
 // Skipped: snapshot tier enrichment is disabled in detectSubscriptionMatch
 // (bulk-import cost), so two-tier prices cannot shape-match from webhooks.
@@ -237,7 +197,6 @@ test.skip(`${chalk.yellowBright("sub.created prepaid add-on: two-tier (1 free, $
 		productIds: [pro.id, addon.id],
 	});
 
-	// ── Contract: feature granted 2 total (1 included + 1 paid) ──
 	expectCustomerFeatureCorrect({
 		customer,
 		featureId: TestFeature.Messages,
@@ -246,17 +205,12 @@ test.skip(`${chalk.yellowBright("sub.created prepaid add-on: two-tier (1 free, $
 		usage: 0,
 	});
 
-	// ── Contract: DB options quantity 1 (total 2 minus included 1) ──
 	const addonCusProduct = linked.find((cp) => cp.product_id === addon.id);
 	const messagesOption = addonCusProduct?.options?.find(
 		(option) => option.feature_id === TestFeature.Messages,
 	);
 	expect(messagesOption?.quantity).toBe(1);
 });
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// CASE 3: add-on-only subscription (no main plan item)
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test(`${chalk.yellowBright("sub.created prepaid add-on: add-on-only subscription")}`, async () => {
 	const customerId = "sub-created-prepaid-addon-3";

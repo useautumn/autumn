@@ -1,8 +1,6 @@
 import { sql } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 
-/** Flips a page's claims to `failed` so a retry re-claims them: after a stalled
- * page (late marks then find no `running` row) or a dropped cache invalidation. */
 export const failPageItemRuns = async ({
 	db,
 	migrationInternalId,

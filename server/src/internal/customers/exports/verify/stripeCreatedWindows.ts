@@ -2,9 +2,6 @@ import { addDays, getUnixTime, isBefore } from "date-fns";
 import type Stripe from "stripe";
 import { billingVerifyExportConfig } from "./billingVerifyExportConfig.js";
 
-/** Disjoint, gap-free `created` ranges covering every subscription: one open
- * window before `sinceMs`, fixed-length windows up to `untilMs`, then one open
- * window after, so no boundary can drop a subscription. */
 export const stripeCreatedWindows = ({
 	sinceMs,
 	untilMs,

@@ -36,7 +36,6 @@ export const executeStripeBillingPlan = async ({
 		checkoutSessionAction: stripeCheckoutSessionAction,
 	} = billingPlan.stripe;
 
-	// Execute checkout session FIRST if present (returns early with deferred result)
 	if (stripeCheckoutSessionAction) {
 		return executeStripeCheckoutSessionAction({
 			ctx,
@@ -46,7 +45,6 @@ export const executeStripeBillingPlan = async ({
 		});
 	}
 
-	// Collect results from each stage
 	let invoiceResult: StripeBillingPlanResult | undefined;
 	let subscriptionResult: StripeBillingPlanResult | undefined;
 	let stripeSubscription = billingContext.stripeSubscription;
@@ -82,7 +80,6 @@ export const executeStripeBillingPlan = async ({
 		});
 	}
 
-	// For schedule release, we need to release first before updating subscription with cancel_at
 	// Otherwise Stripe rejects the cancel_at update while schedule still manages subscription
 	const isReleaseAction = stripeSubscriptionScheduleAction?.type === "release";
 
@@ -145,8 +142,6 @@ export const executeStripeBillingPlan = async ({
 		fullCustomer: billingContext.fullCustomer,
 		replacedSubscriptionAction: billingPlan.stripe.replacedSubscriptionAction,
 	});
-
-	// Execute refund action (after subscription cancel)
 
 	let stripeRefund: Stripe.Refund | undefined;
 	if (billingPlan.stripe.refundAction) {

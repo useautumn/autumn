@@ -14,8 +14,6 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { findBlockedFilterOnSubject } from "./limitReached/findBlockedFilterOnSubject.js";
 import { findBlockingUsageLimit } from "./limitReached/findBlockingUsageLimit.js";
 
-// Subjects must be built via buildEvaluationSubject, or plan-level / percentage
-// caps are invisible here and the allowed -> blocked transition never fires.
 export const checkLimitReached = async ({
 	ctx,
 	oldEvalSubject,

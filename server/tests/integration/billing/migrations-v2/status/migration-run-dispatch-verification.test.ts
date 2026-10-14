@@ -1,16 +1,3 @@
-/**
- * A dispatched run must be proven to exist on trigger.dev before the claim is
- * treated as successful. The SDK builds the run id client-side, so a handle
- * comes back even when the enqueue never reaches the platform; the run row
- * then sits `queued` forever and the dashboard reports it as Running with no
- * items, which is indistinguishable from a healthy run.
- *
- * Red (current):  an unverifiable handle leaves the row `queued`.
- * Green (after):  a definite "not found" fails the row and surfaces the error,
- *                 while an inconclusive lookup leaves the run alone — failing
- *                 it there could double-run a migration that did dispatch.
- */
-
 import { expect, test } from "bun:test";
 import { MigrationRunStatus } from "@autumn/shared";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";

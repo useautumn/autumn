@@ -1,14 +1,3 @@
-/**
- * TDD coverage for server-run migrations when Autumn scheduled rows are missing.
- *
- * Contract under test:
- *   New behaviors:
- *     - A server-run migration can still update selected non-scheduled rows when
- *       a Stripe schedule exists but its Autumn scheduled customer product was deleted.
- *   Side effects:
- *     - `no_billing_changes: true` must not mutate the existing Stripe subscription schedule.
- */
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3 } from "@autumn/shared";
 import { CusProductStatus, ms, stripeRefToId } from "@autumn/shared";

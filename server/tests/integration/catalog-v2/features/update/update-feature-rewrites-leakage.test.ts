@@ -1,9 +1,3 @@
-/**
- * catalogV2.execute — feature reference batch UPDATEs must not leak across
- * org/env. Same public feature.id in a decoy org or env must stay untouched
- * (entitlements via features join; prices via org_id + internal_feature_id).
- */
-
 import { afterAll, describe, expect, it } from "bun:test";
 import {
 	AllowanceType,
@@ -326,7 +320,6 @@ describe.skipIf(!process.env.DATABASE_URL)(
 		});
 
 		it("usage-type rewrite updates only target prices/ents", async () => {
-			// Reset target granting interval + price flags after rename test
 			await db
 				.update(entitlements)
 				.set({ interval: EntInterval.Month })
@@ -446,8 +439,6 @@ describe.skipIf(!process.env.DATABASE_URL)(
 				expect(granting?.interval).toBe(EntInterval.Month);
 			}
 
-			// entity_feature_id on decoys (and target carrier) must stay put —
-			// metered→boolean only clears entity_feature_id on *granting* rows.
 			expect(
 				(await fetchEnt(scopes.decoyOrg.entityEntId))?.entity_feature_id,
 			).toBe(publicFeatureId);

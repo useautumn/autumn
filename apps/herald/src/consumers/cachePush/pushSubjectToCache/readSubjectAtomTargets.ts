@@ -8,7 +8,6 @@ import type { SubjectAtomTargets } from "../types/subjectAtomTargets.js";
 
 const appEnvSchema = z.enum(AppEnv);
 
-/** The subject's org and every Atom that holds the subject, or null when no Atom does. */
 export const readSubjectAtomTargets = async ({
 	ctx,
 	identity,

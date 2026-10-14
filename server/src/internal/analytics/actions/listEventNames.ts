@@ -7,9 +7,6 @@ export type EventNameWithCount = {
 	event_count: number;
 };
 
-/** Lists distinct event names for the org sorted by popularity. With an
- * interval or custom range, ranks by count within that window so callers can
- * default to events that are actually active in the selected range. */
 export const listEventNames = async ({
 	ctx,
 	customerId,

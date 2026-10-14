@@ -25,10 +25,6 @@ const balanceChangeSignature = ({
 		pooled,
 	]);
 
-/**
- * Each phase's balances against what it is compared with: its saved self when given,
- * else the phase before it (the customer as it is now, for the first phase).
- */
 export const setPlansPhaseBalanceChanges = async ({
 	ctx,
 	originalFullCustomer,

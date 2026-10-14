@@ -20,8 +20,6 @@ const upsertHasPriceWrites = ({
 	);
 };
 
-/** Pre-change rows the reward's price_ids may reference: the edited row
- * in-place, or the clone source on a new_version mint. */
 const oldPricesForUpsert = ({
 	upsert,
 }: {
@@ -29,8 +27,6 @@ const oldPricesForUpsert = ({
 }): Price[] =>
 	(upsert.row.currentFullProduct ?? upsert.row.baseFullProduct)?.prices ?? [];
 
-/** Rewards hold discount_config.price_ids; remap them after price rows change
- * (legacy parity). Must run after Stripe init so coupon recreation sees new ids. */
 export const queueRewardMigrations = async ({
 	ctx,
 	updateCatalogPlan,

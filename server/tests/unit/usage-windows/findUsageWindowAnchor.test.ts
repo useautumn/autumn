@@ -1,16 +1,3 @@
-/**
- * TDD test for anchor scoping of loose (product-less) entitlements.
- *
- * Red-failure mode (current behavior):
- *  - toAnchorCandidate uses `customer_product?.internal_entity_id !== null`,
- *    which is `undefined !== null` → true for loose entitlements, so they are
- *    misclassified as entity-scoped and customer-scope anchoring returns null.
- *
- * Green-success criteria (after fix):
- *  - A customer-level loose entitlement anchors a customer-scope window.
- *  - Genuinely entity-owned grants still never anchor customer-scope windows.
- */
-
 import { describe, expect, test } from "bun:test";
 import {
 	type Feature,

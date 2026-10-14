@@ -1,7 +1,3 @@
-/**
- * Replace carries consumption by applying the grant delta, including negative
- * balances, and resets balance tracking when unlimited state changes.
- */
 import { expect, test } from "bun:test";
 import { runChunkedMigration } from "@tests/integration/billing/migrations-v2/utils/runChunkedMigration";
 import { TestFeature } from "@tests/setup/v2Features";

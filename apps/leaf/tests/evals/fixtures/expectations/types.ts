@@ -27,7 +27,6 @@ export type ApiCalledInOrderExpectation = {
 };
 
 export type ApiCalledAfterApprovalExpectation = {
-	/** 1-based approval to measure against; defaults to the first. */
 	approvalIndex?: number;
 	call: ExpectedApiCall;
 	type: "api.calledAfterApproval";
@@ -80,9 +79,6 @@ export type ResponseAskedBeforeToolExpectation = {
 	type: "response.askedBeforeTool";
 };
 
-/** The plans a scope must be left on once the conversation ends: the
- * customer's own subscriptions and, per entity id, the entity's. Cancelled or
- * expired subscriptions do not count. */
 export type StateSubscriptionsExpectation = {
 	customer: string[];
 	customerId: string;

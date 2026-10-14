@@ -14,7 +14,6 @@ import {
 import { translateKafkaProducerError } from "./workerKafkaErrors.js";
 
 export type WorkerProducer = KafkaProducerSession & {
-	/** Idempotent mode with a known epoch: writes the fence marker and returns where it landed; otherwise null. */
 	fenceOwnership(): Promise<{ offset: bigint } | null>;
 };
 
@@ -24,7 +23,6 @@ export function createWorkerProducer({
 }: {
 	ctx: {
 		session: KafkaProducerSession;
-		/** The epoch the partition's writer holds; undefined until a claim names it. */
 		ownerEpoch?: () => string | undefined;
 	};
 	config: { topic: string; partition: number };
@@ -39,7 +37,6 @@ export function createWorkerProducer({
 	}: {
 		waitForTransactions?: boolean;
 	} = {}): Promise<void> {
-		// Runtime owns the drain deadline; disposal must not wait again for an uncertain transaction.
 		return session.disconnect({ waitForTransactions });
 	}
 
@@ -57,7 +54,6 @@ export function createWorkerProducer({
 		} catch (cause) {
 			throw translateKafkaProducerError({ topic, partition, cause });
 		}
-		// A handoff names the epoch before activation: the marker goes in here and the catch-up covers it.
 		await fenceOwnership();
 	}
 	async function fenceOwnership(): Promise<{ offset: bigint } | null> {

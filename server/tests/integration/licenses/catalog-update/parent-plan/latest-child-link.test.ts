@@ -1,7 +1,3 @@
-/**
- * Contract: `plans.update({ licenses })` always resolves a license plan to its latest version.
- * Callers identify the public license plan only; no child-version request parameter exists.
- */
 import { expect, test } from "bun:test";
 import { items } from "@tests/utils/fixtures/items.js";
 import { itemsV2 } from "@tests/utils/fixtures/itemsV2.js";

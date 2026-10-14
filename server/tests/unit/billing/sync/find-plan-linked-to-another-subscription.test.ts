@@ -1,12 +1,3 @@
-/**
- * The sub.created takeover guard must cover every phase the sync processes:
- * a future-phase main plan expires the customer's current plan at sync time
- * just like a current-phase one.
- *
- * Red (before): only the current phase was checked, so an add-on now with a
- *               main plan in the next phase slipped past the guard.
- * Green (after): a main plan in any matched phase trips it.
- */
 import { describe, expect, test } from "bun:test";
 import {
 	CusProductStatus,

@@ -1,19 +1,3 @@
-/**
- * Benchmarks the license item-DELETE batch path end to end against the bench
- * org: seed pools + assignments that hold the feature → prepareMigration →
- * shouldRunBatchLane → runBatchMigrationChunk(maxPages: 1).
- *
- *   ./run.sh <abs path> --customers 20000 --assignments 3 --pages all
- *   ./run.sh <abs path> --cleanup
- *
- * The edit benchmark measures moving a feature's rows onto a minted
- * entitlement. This one measures dropping them, which is the shape a real
- * deletion takes (a bare remove_items with no matching add).
- *
- * Correctness is asserted after the run: no assignment may retain a row for
- * the deleted feature, and none may be left holding a stale one.
- */
-
 import { type Migration, migrations } from "@autumn/shared";
 import { MigrationFilterSchema } from "@autumn/shared/api/migrations/filters/migrationFilter.js";
 import { OperationsSchema } from "@autumn/shared/api/migrations/operations/operations.js";
@@ -103,11 +87,6 @@ const main = async () => {
 		process.exit(1);
 	}
 
-	// The bench org is raw-seeded, so its license plan may grant nothing. The
-	// edit needs an entitlement the plan actually issues, or the run measures a
-	// repoint that can never match.
-	// The edit targets a metered entitlement the license plan already grants,
-	// so assignments start holding it and the run must repoint rather than add.
 	const licenseProduct = await ensureBenchLicenseEntitlement({ ctx });
 	const existing = licenseProduct.entitlements.find(
 		(entitlement) => entitlement.id === BENCH_LICENSE_ENTITLEMENT_ID,

@@ -36,10 +36,8 @@ const INCLUDED_MESSAGES = 1000;
 const TRACKED_MESSAGES = 200;
 const TRIAL_DAYS = 14;
 const ANCHOR_DAYS = 8;
-// The trial's own $0 invoices: Pro starting it, then the add-on joining it.
 const TRIAL_INVOICE_TOTALS = [0, 0];
 
-/** Pro and an add-on trialing on one subscription, with usage, ended now and anchored 8 days out. */
 const setupTrialingPlans = async ({ customerId }: { customerId: string }) => {
 	const pro = products.base({
 		id: "pro540",
@@ -107,13 +105,11 @@ const carryOverMessages = ({ carriesUsage }: { carriesUsage: boolean }) =>
 			}
 		: {};
 
-/** Ending the trial refills the balance now, unless carry_over_usages keeps the trial's usage. */
 const trialEndBalance = ({ carriesUsage }: { carriesUsage: boolean }) => {
 	const usage = carriesUsage ? TRACKED_MESSAGES : 0;
 	return { remaining: INCLUDED_MESSAGES - usage, usage };
 };
 
-/** Stripe prorates and rounds each item's stub separately. */
 export const proratedStub = ({
 	advancedTo,
 	anchorMs,
@@ -131,7 +127,6 @@ export const proratedStub = ({
 		)
 		.toNumber();
 
-/** Without a requested anchor the cycle starts on the old trial end. */
 export const endTrialOnAnchorAndExpect = async ({
 	customerId,
 	anchorSource,
@@ -196,7 +191,6 @@ export const endTrialOnAnchorAndExpect = async ({
 		customerId,
 		status: "active",
 	});
-	// The stub runs from the instant Stripe created the subscription, which the preview shares.
 	const stubTotal = expectedStub({
 		advancedTo: secondsToMs(newSubscription.start_date),
 		anchorMs,
@@ -235,7 +229,6 @@ export const endTrialOnAnchorAndExpect = async ({
 		...trialEndBalance({ carriesUsage }),
 	});
 
-	// The anchor bills one full renewal, with no separate cycle reset on top, and resets usage.
 	await advancePastCycleStart({ ctx, testClockId, cycleStartsAt: anchorMs });
 	await expectBalanceCorrect({
 		customerId,
@@ -250,7 +243,6 @@ export const endTrialOnAnchorAndExpect = async ({
 	});
 };
 
-/** Ending the trial with a reset now keeps the subscription, restarts the plans' cycle and bills one full period now. */
 export const endTrialResettingNowAndExpect = async ({
 	customerId,
 	prorationBehavior,
@@ -287,7 +279,6 @@ export const endTrialResettingNowAndExpect = async ({
 
 	await autumnV2_4.billing.setPlans(params);
 
-	// Stripe's trial_end now anchors the cycle on the instant the trial ended.
 	const ended = await ctx.stripeCli.subscriptions.retrieve(trialing.id);
 	expect({ status: ended.status, trialEnd: ended.trial_end }).toEqual({
 		status: "active",
@@ -303,7 +294,6 @@ export const endTrialResettingNowAndExpect = async ({
 		startsAt: renewalAt,
 		total: MONTHLY_TOTAL,
 	});
-	// Like any reset now, the plans restart their cycle: usage resets unless carry_over_usages carries it.
 	await expectCustomerProducts({ customerId, active: [pro.id, addOn.id] });
 	await expectBalanceCorrect({
 		customerId,
@@ -321,7 +311,6 @@ export const endTrialResettingNowAndExpect = async ({
 		totals: [...TRIAL_INVOICE_TOTALS, MONTHLY_TOTAL],
 	});
 
-	// Nothing more at the old trial end; the next full period on the renewal.
 	await advancePastCycleStart({
 		ctx,
 		testClockId,

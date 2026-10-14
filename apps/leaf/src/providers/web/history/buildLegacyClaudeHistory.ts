@@ -97,7 +97,6 @@ const approvalStatus = (status: string): LeafApprovalStatus => {
 	return "rejected";
 };
 
-/** Preserves read-only access to dashboard threads created before Eve. */
 export const buildLegacyClaudeHistory = async ({
 	channelId,
 	db,

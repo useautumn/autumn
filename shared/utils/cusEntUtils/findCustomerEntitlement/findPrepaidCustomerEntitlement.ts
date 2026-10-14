@@ -10,7 +10,6 @@ export const findPrepaidCustomerEntitlement = ({
 	customerEntitlements: FullCusEntWithFullCusProduct[];
 	feature: Feature;
 }) => {
-	// 1. Get prepaid customer entitlement
 	return customerEntitlements.find(
 		(entitlement) =>
 			isPrepaidCusEnt({ cusEnt: entitlement }) &&

@@ -1,5 +1,3 @@
-// Red criterion: external cancellation would leave stale license state in customers.get.
-// Green: end-of-cycle is canceling; immediate cancel removes the parent and license pool.
 import { test } from "bun:test";
 import type { ApiCustomerV5 } from "@autumn/shared";
 import { createExternalStripeSubscription } from "@tests/integration/billing/stripe-webhooks/utils/sharedStripeProductAutoSyncUtils";

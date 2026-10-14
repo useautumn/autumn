@@ -25,7 +25,6 @@ interface PlanFeatureRowProps {
 	index: number;
 	readOnly?: boolean;
 	prepaidQuantity?: number | null;
-	/** Display currency for amounts; defaults to the org default. */
 	currency?: string;
 }
 

@@ -39,7 +39,6 @@ export function useAttachAppliedDiscounts({
 
 	const canVerifyRemovals = !isLoading && !error && !!customer && !!product;
 
-	// Stale removals (e.g. after switching plans) are only dropped once discounts have loaded.
 	const appliedRemovedRewardIds = useMemo(() => {
 		if (!enabled) return [];
 		if (!canVerifyRemovals) return removedRewardIds;

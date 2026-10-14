@@ -12,24 +12,16 @@ export interface TemplateRowProps {
 	creditSchemaWidth?: number;
 }
 
-/**
- * Calculate the width needed for a credit schema card
- */
 export function calculateCreditSchemaWidth(
 	costs: TemplateCreditCost[],
 ): number {
 	const titleWidth = "Credit Costs".length;
-	// Each row: action + gap(2) + credits
 	const maxRowWidth = Math.max(
 		...costs.map((c) => c.action.length + 2 + c.credits.length),
 	);
-	// Add padding (2 on each side) + border (2)
 	return Math.max(titleWidth, maxRowWidth) + 6;
 }
 
-/**
- * Credit schema card - shows credit costs for templates with credit systems
- */
 function CreditSchemaCard({
 	costs,
 	height,
@@ -69,9 +61,6 @@ function CreditSchemaCard({
 	);
 }
 
-/**
- * Single template row - collapsed or expanded based on selection state
- */
 export function TemplateRow({
 	template,
 	isSelected,
@@ -79,7 +68,6 @@ export function TemplateRow({
 	cardWidth,
 	creditSchemaWidth,
 }: TemplateRowProps) {
-	// Circle indicator
 	const indicator = isSelected ? (
 		<Text color="cyan" bold>
 			{"●"}
@@ -88,7 +76,6 @@ export function TemplateRow({
 		<Text dimColor>{"○"}</Text>
 	);
 
-	// Header row with name and badges
 	const header = (
 		<Box flexDirection="row" gap={1} alignItems="center">
 			{indicator}
@@ -105,7 +92,6 @@ export function TemplateRow({
 		</Box>
 	);
 
-	// Collapsed view - just the header
 	if (!isSelected) {
 		return (
 			<Box flexDirection="column" paddingY={0}>
@@ -114,8 +100,6 @@ export function TemplateRow({
 		);
 	}
 
-	// Calculate total height for credit schema card
-	// Each tier card: 2 (border) + 1 (title row) + features count
 	let tiersHeight = 0;
 	for (const tier of template.tiers) {
 		tiersHeight += 2 + 1 + tier.features.length;
@@ -124,12 +108,10 @@ export function TemplateRow({
 	const hasCreditSystem =
 		template.creditSystem && template.creditSystem.costs.length > 0;
 
-	// Expanded view - header + content with left border
 	return (
 		<Box flexDirection="column">
 			{header}
 
-			{/* Content area with left border using borderLeft */}
 			<Box
 				flexDirection="column"
 				marginLeft={1}
@@ -140,12 +122,9 @@ export function TemplateRow({
 				borderBottom={false}
 				paddingLeft={1}
 			>
-				{/* Description */}
 				<Text dimColor>{template.description}</Text>
 
-				{/* Cards area - horizontal layout with tiers on left, credit schema on right */}
 				<Box flexDirection="row" marginTop={1} gap={1}>
-					{/* Tier cards column */}
 					<Box flexDirection="column">
 						{template.tiers.map((tier, index) => (
 							<PlanCard
@@ -157,7 +136,6 @@ export function TemplateRow({
 						))}
 					</Box>
 
-					{/* Credit schema card - only show if template has credit system */}
 					{hasCreditSystem && (
 				<CreditSchemaCard
 						costs={template.creditSystem?.costs ?? []}
@@ -167,7 +145,6 @@ export function TemplateRow({
 					)}
 				</Box>
 
-				{/* Hint */}
 				<Box marginTop={1}>
 					<Text dimColor>
 						Press{" "}

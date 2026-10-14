@@ -8,7 +8,6 @@ import {
 import { and, eq, inArray, sql } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle";
 
-/** Active RevenueCat plans created by a store purchase, wherever that purchase now lives in the org/env. */
 export const listActiveRevenueCatPlansByOriginalTransaction = async ({
 	db,
 	orgId,

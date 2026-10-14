@@ -36,8 +36,6 @@ export const getOrSetCachedFullSubject = async ({
 	let fetchedSubjectViewEpoch = 0;
 
 	if (useRedis) {
-		// The pipeline inside getCachedFullSubject already fetches + refreshes
-		// the epoch, so we reuse it on miss instead of a second round trip.
 		const { fullSubject: cached, subjectViewEpoch } =
 			await getCachedFullSubject({
 				ctx,
@@ -79,7 +77,6 @@ export const getOrSetCachedFullSubject = async ({
 	const { normalized, fullSubject } = result;
 	fullSubject.subjectViewEpoch = fetchedSubjectViewEpoch;
 
-	// Replica-sourced hydrations must never fill Redis — serve them as-is.
 	if (useRedis && !isReplicaSourced(normalized)) {
 		await setCachedFullSubject({
 			ctx,
@@ -95,15 +92,10 @@ export const getOrSetCachedFullSubject = async ({
 			"FullSubject cache filled from primary hydration",
 		);
 
-		// We just wrote the subject blob ourselves, so no need to re-read it.
-		// But balance hashes use HSETNX, so any concurrent Lua deduction that
-		// patched a balance in flight survives our write — re-reading the
-		// balance hashes (1 RTT) preserves those patches.
 		const withLiveBalances = await rehydrateWithLiveBalances({
 			ctx,
 			normalized,
 		});
-		// Live balance patches can drain a grant that was still live at query time.
 		if (withLiveBalances) {
 			withLiveBalances.subjectViewEpoch = fetchedSubjectViewEpoch;
 			return filterDrainedLooseEntitlements({ fullSubject: withLiveBalances });

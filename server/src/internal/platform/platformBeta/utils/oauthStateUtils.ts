@@ -10,11 +10,10 @@ type OAuthState = {
 	organization_slug: string;
 	env: AppEnv;
 	redirect_uri: string;
-	master_org_id: string | null; // null for standard flow, string for platform flow
+	master_org_id: string | null;
 	code_verifier?: string;
 	provider?: "stripe" | "revenuecat";
 	revenuecat_project_name?: string;
-	// true for the API-key → OAuth migration flow
 	migration?: boolean;
 };
 
@@ -25,10 +24,6 @@ const signOAuthStatePayload = (payload: string) =>
 		.update(`oauth-state:${payload}`)
 		.digest("base64url");
 
-/**
- * Appends a signed copy of the return URL, so the callback can still send the
- * user back to it after the stored state has expired or been used.
- */
 const signOAuthState = ({
 	stateKey,
 	redirectUri,
@@ -42,7 +37,6 @@ const signOAuthState = ({
 	return `${stateKey}.${payload}.${signOAuthStatePayload(payload)}`;
 };
 
-/** Returns the signed return URL, or null when the state was not issued by us. */
 export const readOAuthStateReturn = ({
 	state,
 }: {
@@ -62,10 +56,6 @@ export const readOAuthStateReturn = ({
 	return { redirectUri: r, issuedAt: t };
 };
 
-/**
- * Generates a unique OAuth state key and stores it in Upstash
- * Retries up to 3 times if key already exists (race condition prevention)
- */
 export const generateOAuthState = async ({
 	organizationSlug,
 	env,
@@ -88,13 +78,11 @@ export const generateOAuthState = async ({
 	const maxAttempts = 3;
 
 	for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-		// Stored under the full signed state so instances that predate signing can still read it
 		const stateKey = signOAuthState({
 			stateKey: randomBytes(32).toString("hex"),
 			redirectUri,
 		});
 
-		// Try to set the key
 		const stateData: OAuthState = {
 			organization_slug: organizationSlug,
 			env,
@@ -108,17 +96,14 @@ export const generateOAuthState = async ({
 			...(migration ? { migration: true } : {}),
 		};
 
-		// Check if key exists first
 		const existing = await getOAuthStateData<OAuthState>({ stateKey });
 		if (!existing) {
-			// Key doesn't exist, set it with expiry
 			await setOAuthStateData({ stateKey, data: stateData });
 			return stateKey;
 		}
 
-		// Key already exists, retry
 		if (attempt < maxAttempts) {
-			await new Promise((resolve) => setTimeout(resolve, 50)); // Wait 50ms before retry
+			await new Promise((resolve) => setTimeout(resolve, 50));
 		}
 	}
 
@@ -129,10 +114,6 @@ export const generateOAuthState = async ({
 	});
 };
 
-/**
- * Retrieves and deletes OAuth state from Upstash
- * Returns null if state doesn't exist or has expired
- */
 export const consumeOAuthState = async ({
 	stateKey,
 }: {
@@ -144,7 +125,6 @@ export const consumeOAuthState = async ({
 		return null;
 	}
 
-	// Delete the key
 	await deleteOAuthStateData({ stateKey });
 
 	return stateData;

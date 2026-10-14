@@ -8,7 +8,6 @@ import {
 import { and, eq, isNotNull, ne, or } from "drizzle-orm";
 import type { RepoContext } from "@/db/repoContext.js";
 
-/** Fetch all customer_products rows with a free trial for a given customer (or matching fingerprint). */
 export const fetchCustomerProductFreeTrials = async ({
 	ctx,
 	fullCus,

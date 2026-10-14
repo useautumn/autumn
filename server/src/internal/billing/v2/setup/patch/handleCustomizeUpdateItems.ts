@@ -112,8 +112,6 @@ const applyOverridesToPrice = ({
 	entitlement_id: newEntitlementId,
 });
 
-/** Patch existing items in place by emitting matched items as delete + add buckets.
- * Existing usage and rollovers carry forward via patch carry links. */
 export const handleCustomizeUpdateItems = ({
 	customize,
 	targetCustomerProduct,
@@ -198,8 +196,6 @@ export const handleCustomizeUpdateItems = ({
 		}
 	}
 
-	// Also remove any sibling customer_prices whose price is linked to an
-	// entitlement being deleted — keeps `targetCustomerProduct` consistent.
 	for (const customerPrice of targetCustomerProduct.customer_prices) {
 		if (deleteCustomerPriceIds.has(customerPrice.id)) continue;
 		const entitlementId = customerPrice.price.entitlement_id;

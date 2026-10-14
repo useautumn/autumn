@@ -1,5 +1,3 @@
-/** Base plans are refused, and splitting twice is a no-op. */
-
 import { expect, test } from "bun:test";
 import { BillingInterval, ResetInterval } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";

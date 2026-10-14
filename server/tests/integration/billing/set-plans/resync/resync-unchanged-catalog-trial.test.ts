@@ -1,11 +1,3 @@
-/**
- * Re-saving plans whose catalog has a free trial the rows were never granted leaves everything in place.
- *
- * Red (before):  the live trial plan was expired and re-inserted, and the scheduled one deleted and re-inserted,
- *                because a row's granted trial was compared against the plan's catalog trial.
- * Green (after): the same rows, Stripe subscription and schedule, and no new invoice.
- */
-
 import { expect, test } from "bun:test";
 import {
 	CusProductStatus,

@@ -1,10 +1,3 @@
-/**
- * Pull for plans: versions share a planId, so identity is the stable id first
- * and planId plus versionSlug otherwise; every version is a row in `plans`
- * carrying the `active` the server holds; nested server extras never reach
- * the file.
- */
-
 import { expect, test } from "bun:test";
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { runPull } from "../src/actions/pull";
@@ -156,7 +149,6 @@ test("server-only versions all land in plans, each carrying its active flag", as
 	expect(text).toContain('internalId: "prod_v2"');
 	expect(text).toContain('internalId: "fe_seats"');
 	expect(text).toContain('versionSlug: "legacy-seat"');
-	// Every row spells its flag out: membership no longer implies it.
 	expect(text.match(/active: true/g)).toHaveLength(1);
 	expect(text.match(/active: false/g)).toHaveLength(2);
 
@@ -306,7 +298,6 @@ test("a nested variant is pulled nested, pruned to its fixture shape, with its i
 	expect(text).toContain("amount: 490");
 	expect(text).not.toContain("plan: {");
 	expect(text).not.toContain("baseVariantId");
-	// The pulled entry is never version-less: id and slug ride on the edge.
 	expect(text).toContain(
 		'\t\t\t\tvariant({\n\t\t\t\t\tinternalId: "prod_annual_v1",\n\t\t\t\t\tvariantPlanId: "pro_annual",',
 	);
@@ -315,8 +306,6 @@ test("a nested variant is pulled nested, pruned to its fixture shape, with its i
 
 test("a standalone plan's legacy baseVariantId grouping value is never pulled", async () => {
 	fresh(`${imports}export default atmn({\n\tfeatures: [],\n});\n`);
-	// The server still returns the old monthly/annual grouping id on every
-	// plan; pushing it back would read as a variant link the plan never had.
 	const rows = {
 		features: [],
 		plans: [
@@ -464,7 +453,6 @@ test("a missing nested variant version is restored to its parent and the second 
 		write: (text) => output.push(text),
 	});
 	expect(first.appended).toEqual(["team_eu@v2"]);
-	// Appended beside v1, whose bytes are untouched; never a rewrite of the array.
 	expect(configText()).toContain(
 		[
 			"\t\t\t\tvariant({",
@@ -493,8 +481,6 @@ test("a missing nested variant version is restored to its parent and the second 
 	expect(output.at(-1)).toBe("Nothing to pull.\n");
 });
 
-/** The scaffolded layout: `plans` is an imported binding holding every version.
- * Each case gets its own directory: bun caches the imported module. */
 const bindingImports = [
 	'import { atmn } from "../../../src/generated/wire";',
 	'import { plans } from "./plans";',
@@ -536,8 +522,6 @@ const rootTextIn = (caseDir: string) =>
 const plansTextIn = (caseDir: string) =>
 	readFileSync(`${caseDir}/plans.ts`, "utf8");
 
-/** Version numbers are creation order on the server, so a row pushed after
- * the live one is numbered higher; the slug is what the config names. */
 const numberedLaterRows = {
 	features: [],
 	plans: [
@@ -692,7 +676,6 @@ test("a row the server superseded keeps its place and flips active in the fixtur
 		write: () => {},
 	});
 	expect(result.replaced).toEqual(["pro@v1"]);
-	// The live row the config never stated arrives beside it.
 	expect(result.appended).toEqual(["pro@v2"]);
 	const text = plansTextIn(caseDir);
 	expect(text).toContain('internalId: "prod_v1"');
@@ -746,11 +729,9 @@ test("a sibling version demoted under the edited row flips active where it sits"
 	});
 	expect(result.replaced).toEqual(["pro@v1"]);
 	const text = plansTextIn(caseDir);
-	// Only the named field moves; the fixture keeps its other bytes.
 	expect(text).toContain(
 		'plan({ internalId: "prod_v1", active: false, planId: "pro", versionSlug: "v1", name: "Pro" })',
 	);
-	// The config-only v2 was a create on the server: it is dropped, not kept.
 	expect(text).not.toContain('internalId: "prod_v2"');
 });
 

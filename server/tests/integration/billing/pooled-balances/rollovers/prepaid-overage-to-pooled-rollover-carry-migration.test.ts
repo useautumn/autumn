@@ -1,8 +1,3 @@
-/**
- * TDD contract: a prepaid rollover survives a move onto a POOLED item whose rollover signature does
- * not match the one that minted it (carried amount is capped by the pooled cusEnt's rollover rules).
- */
-
 import { test } from "bun:test";
 import { runUpdatePlanMigration } from "@tests/integration/billing/migrations-v2/utils/runUpdatePlanMigration.js";
 import chalk from "chalk";
@@ -25,7 +20,6 @@ test(
 		await runUpdatePlanMigration({
 			ctx: scenario.ctx,
 			migrationClient: scenario.autumnV2_2,
-			// Migration ids are unique per org+env and outlive the test run.
 			migrationId: `${scenario.customerId}-mig-${Date.now()}`,
 			customerId: scenario.customerId,
 			filter: { customer: { plan: { plan_id: planId } } },

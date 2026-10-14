@@ -12,27 +12,19 @@ import { getAwsTaskIdentity } from "@/external/aws/ecs/awsTaskIdentity.js";
 import { createMapleLogStreams } from "@/external/maple/createMapleLogStreams.js";
 import { classifyInfraError } from "./classifyInfraError.js";
 
-/**
- * Fields that don't render in the formatted dev/local console output
- * (they still go to JSON sinks). Trim noise like trigger metadata,
- * request envelopes, and high-cardinality structured data.
- */
 const FORMATTED_LOG_EXCLUDE_FIELDS = new Set([
 	"deployment",
-	// pino housekeeping
 	"time",
 	"level",
 	"msg",
 	"pid",
 	"hostname",
-	// request / response envelopes
 	"req",
 	"res",
 	"statusCode",
 	"body",
 	"query",
 	"durationMs",
-	// app-context blocks (added via `addContextToLogs`)
 	"context",
 	"workflow",
 	"trigger",
@@ -42,9 +34,7 @@ const FORMATTED_LOG_EXCLUDE_FIELDS = new Set([
 	"worker",
 	"extras",
 	"type",
-	// structured payloads
 	"data",
-	// AWS task identity (mixin)
 	"aws",
 ]);
 
@@ -142,7 +132,6 @@ const createDevLogStream = ({
 				}
 				callback();
 			} catch (_error) {
-				// Fallback for malformed JSON
 				if (useConsoleLog) {
 					console.log(chunk.toString());
 				} else {
@@ -165,7 +154,6 @@ const createConsoleJsonStream = () =>
 
 const sazabiLogStreams: SazabiLogStream[] = [];
 
-/** Drains queued Sazabi logs and error reports; call once on shutdown, each sink is time-capped. */
 export const flushTelemetry = async (): Promise<void> => {
 	await Promise.all([
 		...sazabiLogStreams.map((stream) => stream.flush()),
@@ -173,16 +161,6 @@ export const flushTelemetry = async (): Promise<void> => {
 	]);
 };
 
-/**
- * `mode: "dual"` is opt-in only — used by trigger.dev tasks so logs hit
- * both stdout (trigger run UI) and axiom (long-term store).
- *
- * In dev/test the stdout stream uses the formatted dev sink so trigger
- * pane lines look like server lines. In prod it stays raw JSON so
- * trigger.dev's cloud UI gets structured logs.
- *
- * `mode: "default"` preserves existing prod behavior verbatim.
- */
 export type InitLoggerOptions = {
 	mode?: "default" | "dual";
 	transport?: "direct" | "firelens";
@@ -195,15 +173,12 @@ export const initLogger = (options: InitLoggerOptions = {}) => {
 	const isDev = process.env.NODE_ENV === "development";
 	const isTest = process.env.NODE_ENV === "test";
 	const isDevOrTest = isDev || isTest;
-	// FireLens is the default: the sidecar already ships stdout, so no per-process
-	// Axiom transport thread. `AXIOM_LOG_TRANSPORT=direct` reverts without a rebuild.
 	const configuredTransport =
 		transport ??
 		(process.env.AXIOM_LOG_TRANSPORT === "direct" ? "direct" : "firelens");
 	const isRunningInEcs = Boolean(process.env.ECS_CONTAINER_METADATA_URI_V4);
 	const shouldUseFirelens =
 		configuredTransport === "firelens" && !isDevOrTest && isRunningInEcs;
-	// Dev/test stays out of the prod dataset unless explicitly opted in.
 	const shipToAxiom = !isDevOrTest || process.env.AXIOM_DEV_LOGS === "1";
 	const deployment = resolveDeployment();
 
@@ -232,8 +207,6 @@ export const initLogger = (options: InitLoggerOptions = {}) => {
 			});
 		}
 	} else {
-		// DEFAULT FLOW — exact prior behavior, except dev/test no longer ships
-		// to Axiom without AXIOM_DEV_LOGS=1.
 		if (isDev || isTest) {
 			streams.push({
 				level: "debug",
@@ -291,10 +264,6 @@ export const initLogger = (options: InitLoggerOptions = {}) => {
 					classifiers: [classifyInfraError],
 				}),
 			},
-			// Tag every log line with this process's AWS task identity so Axiom
-			// can distinguish blue/green task sets. Returns {} until
-			// `resolveAwsTaskIdentity` finishes (~100ms after boot) and on
-			// non-AWS hosts (Railway, local) where identity stays null.
 			mixin: () => {
 				const identity = getAwsTaskIdentity();
 				if (!identity) return {};

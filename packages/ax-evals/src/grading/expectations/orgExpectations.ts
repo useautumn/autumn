@@ -3,7 +3,6 @@ import type { Expectation } from "../types/expectation.ts";
 import type { PlanSpec } from "../types/planSpec.ts";
 import { subsetMatch } from "./subsetMatch.ts";
 
-/** The org's plan rows read after the run — the outcome, not the file. */
 const planMatches = (spec: PlanSpec, plan: OracleCatalogPlan): boolean => {
 	const { freePlan, ...subset } = spec;
 	const price = plan.price ?? undefined;
@@ -12,7 +11,6 @@ const planMatches = (spec: PlanSpec, plan: OracleCatalogPlan): boolean => {
 };
 
 export const org = {
-	/** the org holds exactly `count` versions of the plan */
 	planVersions: ({
 		planId,
 		count,
@@ -45,7 +43,6 @@ export const org = {
 		};
 	},
 
-	/** some active plan row in the org matches the spec */
 	activePlan: (label: string, spec: PlanSpec): Expectation => {
 		const name = `org's active plan: ${label}`;
 		return {

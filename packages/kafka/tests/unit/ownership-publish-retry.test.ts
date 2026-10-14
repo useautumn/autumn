@@ -11,7 +11,6 @@ import { releasePartition } from "../../src/topics/ownership/publisher/releasePa
 const topic = "ownership";
 const partition = 3;
 
-/** A successor that announced `ready` waits this long for the predecessor's claim before claiming for itself. */
 const HANDOFF_CLAIM_TIMEOUT_MS = 3_000;
 
 function concurrentTransactions(): KafkaJSProtocolError {

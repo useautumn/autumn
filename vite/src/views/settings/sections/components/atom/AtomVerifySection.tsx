@@ -13,7 +13,6 @@ import {
 	isAtomConnected,
 } from "./atomDisplay";
 
-/** Step 4: Atom runs, Autumn reaches it, and the org's app sends its first checks; every row holds its place as they land. */
 export const AtomVerifySection = ({
 	cache,
 	onDelete,

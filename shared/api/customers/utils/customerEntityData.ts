@@ -9,7 +9,6 @@ import {
 export const shouldAggregateEntityData = ({
 	apiVersion,
 }: {
-	/** Omit for callers that are not tied to a request's API version. */
 	apiVersion?: ApiVersionClass;
 }): boolean => {
 	if (!apiVersion) return true;
@@ -20,7 +19,6 @@ export const shouldAggregateEntityData = ({
 	});
 };
 
-/** FullSubject carries entity rows as pre-computed aggregates, never as products. */
 export const subjectWithoutEntityData = ({
 	fullSubject,
 }: {
@@ -35,7 +33,6 @@ export const subjectWithoutEntityData = ({
 const isEntityScoped = (row: { internal_entity_id?: string | null }): boolean =>
 	!!row.internal_entity_id;
 
-/** FullCustomer list rows carry entity products inline, so they are dropped. */
 export const fullCustomerWithoutEntityData = ({
 	fullCustomer,
 }: {

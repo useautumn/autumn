@@ -16,21 +16,18 @@ export const LOG_RANGE_LABELS: Record<LogRange, string> = {
 	"90d": "Last 90 days",
 };
 
-/** events.list and events.aggregate reject more than this many `filter_by` keys. */
 export const MAX_PROPERTY_FILTERS = 5;
 
 const SURROUNDING_QUOTES = /^(["'])(.*)\1$/s;
 
 export type PropertyFilter = { key: string; value: string };
 
-/** URL-synced Logs filters. `customer_id` matches the Usage page's param. */
 export const useLogsFilters = () => {
 	const [filters, setFilters] = useQueryStates(
 		{
 			feature_id: parseAsString,
 			customer_id: parseAsString,
 			range: parseAsStringLiteral(LOG_RANGES).withDefault("24h"),
-			/** `key=value` property matches, sent together as `filter_by`. */
 			properties: parseAsArrayOf(parseAsString).withDefault([]),
 			live: parseAsBoolean.withDefault(false),
 		},
@@ -43,7 +40,6 @@ export const useLogsFilters = () => {
 	};
 };
 
-/** Parses `key=value` (spaces allowed around `=`); null when either side is empty. */
 export const parsePropertyFilter = ({
 	raw,
 }: {
@@ -52,7 +48,6 @@ export const parsePropertyFilter = ({
 	const separator = raw.indexOf("=");
 	if (separator <= 0) return null;
 	const key = raw.slice(0, separator).trim();
-	// Values are matched as plain text, so `"sonnet-5"` should match sonnet-5.
 	const value = raw
 		.slice(separator + 1)
 		.trim()
@@ -63,7 +58,6 @@ export const parsePropertyFilter = ({
 const formatPropertyFilter = ({ key, value }: PropertyFilter) =>
 	`${key}=${value}`;
 
-/** The URL's well-formed filters, one per key (later wins), capped at the API limit. */
 export const toPropertyFilters = ({
 	properties,
 }: {
@@ -79,7 +73,6 @@ export const toPropertyFilters = ({
 	return [...byKey.values()].slice(0, MAX_PROPERTY_FILTERS);
 };
 
-/** The parsed property filters as a `filter_by` record. */
 export const toFilterBy = ({
 	propertyFilters,
 }: {
@@ -89,7 +82,6 @@ export const toFilterBy = ({
 		? Object.fromEntries(propertyFilters.map(({ key, value }) => [key, value]))
 		: undefined;
 
-/** The URL value after adding a filter; replaces any filter on the same key and drops malformed ones. */
 export const withPropertyFilter = ({
 	propertyFilters,
 	filter,
@@ -101,7 +93,6 @@ export const withPropertyFilter = ({
 	formatPropertyFilter(filter),
 ];
 
-/** The URL value after removing the filter on `key`; drops malformed ones too. */
 export const withoutPropertyFilter = ({
 	propertyFilters,
 	key,

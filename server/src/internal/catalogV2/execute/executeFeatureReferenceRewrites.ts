@@ -102,7 +102,6 @@ const grantingEntitlementSetSql = ({
 	return sql.join(sets, sql`, `);
 };
 
-/** Build price config patch (one UPDATE — id + usage both touch prices). */
 const priceConfigSetSql = ({
 	rewrites,
 }: {
@@ -204,10 +203,6 @@ export const buildFeatureReferenceRewritesSql = ({
 	`;
 };
 
-/**
- * Entitlement/price batch UPDATEs for one feature update — one DB round-trip.
- * Entitlement targets always go through INNER JOIN features (org + env).
- */
 export const executeFeatureReferenceRewrites = async ({
 	ctx,
 	updateFeaturePlan,
@@ -223,7 +218,6 @@ export const executeFeatureReferenceRewrites = async ({
 	await ctx.db.execute(query);
 };
 
-/** Flatten per-feature credit-schema bags (last config wins). */
 export const coalesceCreditSystemSchemaRewrites = ({
 	updateFeatures,
 }: {

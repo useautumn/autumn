@@ -1,7 +1,5 @@
 import { z } from "zod/v4";
 
-// "reject" stays accepted but internal: the branch is stripped from the
-// public OpenAPI spec, so docs/SDKs only surface "cap" and "overflow".
 export const OverageBehaviorSchema = z
 	.union([
 		z.enum(["cap", "overflow"]),

@@ -1,14 +1,3 @@
-/**
- * Free Trial Merge Tests (Attach V2)
- *
- * Tests for add-on and entity scenarios where subscription trial state is inherited.
- *
- * Key behaviors:
- * - ADD-ONS: Inherit subscription's current trial state
- * - NEW ENTITIES: Inherit subscription's current trial state
- * - Product's trial config is IGNORED for merges
- */
-
 import { expect, test } from "bun:test";
 import { type ApiCustomerV3, type ApiEntityV0, ms } from "@autumn/shared";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
@@ -26,20 +15,6 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { timeout } from "@/utils/genUtils";
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 1: Add-on to trialing subscription (inherits trial)
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Customer has proWithTrial (7-day trial, currently trialing)
- * - Attach add-on product ($20/mo)
- *
- * Expected Result:
- * - Add-on inherits subscription's trial state
- * - Add-on is trialing with same trial end as main product
- * - No charge for add-on during trial
- */
 test.concurrent(`${chalk.yellowBright("trial-merge 1: add-on to trialing subscription (inherits trial)")}`, async () => {
 	const customerId = "trial-merge-addon-trialing";
 
@@ -66,7 +41,6 @@ test.concurrent(`${chalk.yellowBright("trial-merge 1: add-on to trialing subscri
 		actions: [s.billing.attach({ productId: proTrial.id })],
 	});
 
-	// Verify initial state - pro is trialing
 	const customerBefore =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	await expectProductTrialing({
@@ -75,7 +49,6 @@ test.concurrent(`${chalk.yellowBright("trial-merge 1: add-on to trialing subscri
 		trialEndsAt: advancedTo + ms.days(7),
 	});
 
-	// 1. Preview add-on - should show $0 (inherits trial), next_cycle shows combined charge
 	const preview = await autumnV1.billing.previewAttach({
 		customer_id: customerId,
 		product_id: addon.id,
@@ -87,7 +60,6 @@ test.concurrent(`${chalk.yellowBright("trial-merge 1: add-on to trialing subscri
 		total: 40,
 	});
 
-	// 2. Attach add-on
 	await autumnV1.billing.attach({
 		customer_id: customerId,
 		product_id: addon.id,
@@ -98,35 +70,29 @@ test.concurrent(`${chalk.yellowBright("trial-merge 1: add-on to trialing subscri
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Verify both products are active
 	await expectCustomerProducts({
 		customer,
 		active: [proTrial.id, addon.id],
 	});
 
-	// Verify pro is still trialing
 	await expectProductTrialing({
 		customer,
 		productId: proTrial.id,
 		trialEndsAt: advancedTo + ms.days(7),
 	});
 
-	// Verify add-on inherits trial state (same trial end)
 	await expectProductTrialing({
 		customer,
 		productId: addon.id,
 		trialEndsAt: advancedTo + ms.days(7),
 	});
 
-	// Verify $0 invoice during trial (Stripe creates invoice for trial subscriptions)
-	// Count is 2: initial trial ($0) + add addon ($0)
 	await expectCustomerInvoiceCorrect({
 		customer,
 		count: 2,
 		latestTotal: 0,
 	});
 
-	// Verify Stripe subscription state
 	await expectSubToBeCorrect({
 		db: ctx.db,
 		customerId,
@@ -136,19 +102,6 @@ test.concurrent(`${chalk.yellowBright("trial-merge 1: add-on to trialing subscri
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 2: Add-on to non-trialing subscription (no trial)
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Customer has pro ($20/mo, NOT trialing)
- * - Attach add-on with trial config ($20/mo, 7-day trial - IGNORED)
- *
- * Expected Result:
- * - Add-on does NOT get trial (inherits non-trialing state)
- * - Charged immediately for add-on ($20)
- */
 test.concurrent(`${chalk.yellowBright("trial-merge 2: add-on to non-trialing subscription (no trial)")}`, async () => {
 	const customerId = "trial-merge-addon-not-trialing";
 
@@ -158,7 +111,6 @@ test.concurrent(`${chalk.yellowBright("trial-merge 2: add-on to non-trialing sub
 		items: [proMessagesItem],
 	});
 
-	// Add-on with trial config - should be IGNORED
 	const addonItem = items.monthlyMessages({ includedUsage: 100 });
 	const addonWithTrial = products.base({
 		id: "addon-trial",
@@ -176,7 +128,6 @@ test.concurrent(`${chalk.yellowBright("trial-merge 2: add-on to non-trialing sub
 		actions: [s.billing.attach({ productId: pro.id })],
 	});
 
-	// Verify initial state - pro is NOT trialing
 	const customerBefore =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	await expectProductNotTrialing({
@@ -185,14 +136,12 @@ test.concurrent(`${chalk.yellowBright("trial-merge 2: add-on to non-trialing sub
 		nowMs: advancedTo,
 	});
 
-	// 1. Preview add-on - should show $20 (no trial, product config ignored)
 	const preview = await autumnV1.billing.previewAttach({
 		customer_id: customerId,
 		product_id: addonWithTrial.id,
 	});
 	expect(preview.total).toBe(20);
 
-	// 2. Attach add-on with trial config
 	await autumnV1.billing.attach({
 		customer_id: customerId,
 		product_id: addonWithTrial.id,
@@ -201,34 +150,29 @@ test.concurrent(`${chalk.yellowBright("trial-merge 2: add-on to non-trialing sub
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Verify both products are active
 	await expectCustomerProducts({
 		customer,
 		active: [pro.id, addonWithTrial.id],
 	});
 
-	// Verify pro is NOT trialing
 	await expectProductNotTrialing({
 		customer,
 		productId: pro.id,
 		nowMs: advancedTo,
 	});
 
-	// Verify add-on is NOT trialing (inherits non-trialing state)
 	await expectProductNotTrialing({
 		customer,
 		productId: addonWithTrial.id,
 		nowMs: advancedTo,
 	});
 
-	// Verify invoices: pro ($20) + add-on ($20)
 	await expectCustomerInvoiceCorrect({
 		customer,
 		count: 2,
 		latestTotal: 20,
 	});
 
-	// Verify Stripe subscription state
 	await expectSubToBeCorrect({
 		db: ctx.db,
 		customerId,
@@ -238,19 +182,6 @@ test.concurrent(`${chalk.yellowBright("trial-merge 2: add-on to non-trialing sub
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 3: Entity attach to trialing subscription (inherits trial)
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Customer has proWithTrial on entity-1 (7-day trial, trialing)
- * - Attach same product to entity-2
- *
- * Expected Result:
- * - Entity-2 inherits subscription's trial state
- * - Both entities have same trial end
- */
 test.concurrent(`${chalk.yellowBright("trial-merge 3: entity attach to trialing subscription (inherits trial)")}`, async () => {
 	const customerId = "trial-merge-entity-trialing";
 
@@ -275,7 +206,6 @@ test.concurrent(`${chalk.yellowBright("trial-merge 3: entity attach to trialing 
 	const entity1Id = entities[0].id;
 	const entity2Id = entities[1].id;
 
-	// Verify initial state - entity-1 is trialing
 	const entity1Before = await autumnV1.entities.get<ApiEntityV0>(
 		customerId,
 		entity1Id,
@@ -286,7 +216,6 @@ test.concurrent(`${chalk.yellowBright("trial-merge 3: entity attach to trialing 
 		trialEndsAt: advancedTo + ms.days(7),
 	});
 
-	// 1. Preview attach to entity-2 - should show $0 (inherits trial), next_cycle shows charge for both entities
 	const preview = await autumnV1.billing.previewAttach({
 		customer_id: customerId,
 		product_id: proTrial.id,
@@ -295,11 +224,10 @@ test.concurrent(`${chalk.yellowBright("trial-merge 3: entity attach to trialing 
 	expect(preview.total).toBe(0);
 	expectPreviewNextCycleCorrect({
 		preview,
-		startsAt: advancedTo + ms.days(7), // Trial end
-		total: 40, // 2 entities x $20 after trial
+		startsAt: advancedTo + ms.days(7),
+		total: 40,
 	});
 
-	// 2. Attach to entity-2
 	await autumnV1.billing.attach({
 		customer_id: customerId,
 		product_id: proTrial.id,
@@ -309,7 +237,6 @@ test.concurrent(`${chalk.yellowBright("trial-merge 3: entity attach to trialing 
 
 	await timeout(4000);
 
-	// Verify entity-1 is still trialing
 	const entity1 = await autumnV1.entities.get<ApiEntityV0>(
 		customerId,
 		entity1Id,
@@ -320,7 +247,6 @@ test.concurrent(`${chalk.yellowBright("trial-merge 3: entity attach to trialing 
 		trialEndsAt: advancedTo + ms.days(7),
 	});
 
-	// Verify entity-2 inherits trial (same trial end)
 	const entity2 = await autumnV1.entities.get<ApiEntityV0>(
 		customerId,
 		entity2Id,
@@ -331,8 +257,6 @@ test.concurrent(`${chalk.yellowBright("trial-merge 3: entity attach to trialing 
 		trialEndsAt: advancedTo + ms.days(7),
 	});
 
-	// Verify $0 invoice during trial (Stripe creates invoice for trial subscriptions)
-	// Count is 2: initial trial ($0) + add entity ($0)
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	await expectCustomerInvoiceCorrect({
 		customer,
@@ -340,7 +264,6 @@ test.concurrent(`${chalk.yellowBright("trial-merge 3: entity attach to trialing 
 		latestTotal: 0,
 	});
 
-	// Verify Stripe subscription state
 	await expectSubToBeCorrect({
 		db: ctx.db,
 		customerId,
@@ -350,19 +273,6 @@ test.concurrent(`${chalk.yellowBright("trial-merge 3: entity attach to trialing 
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 4: Entity attach to non-trialing subscription (no trial)
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Customer has pro on entity-1 (NOT trialing)
- * - Attach proWithTrial to entity-2 (trial config IGNORED)
- *
- * Expected Result:
- * - Entity-2 does NOT get trial (inherits non-trialing state)
- * - Charged immediately for entity-2
- */
 test.concurrent(`${chalk.yellowBright("trial-merge 4: entity attach to non-trialing subscription (no trial)")}`, async () => {
 	const customerId = "trial-merge-entity-not-trialing";
 
@@ -372,7 +282,6 @@ test.concurrent(`${chalk.yellowBright("trial-merge 4: entity attach to non-trial
 		items: [proMessagesItem],
 	});
 
-	// Product with trial config - should be IGNORED on entity add
 	const proTrialMessagesItem = items.monthlyMessages({ includedUsage: 500 });
 	const proTrial = products.proWithTrial({
 		id: "pro-trial",
@@ -394,7 +303,6 @@ test.concurrent(`${chalk.yellowBright("trial-merge 4: entity attach to non-trial
 	const entity1Id = entities[0].id;
 	const entity2Id = entities[1].id;
 
-	// Verify initial state - entity-1 is NOT trialing
 	const entity1Before = await autumnV1.entities.get<ApiEntityV0>(
 		customerId,
 		entity1Id,
@@ -405,7 +313,6 @@ test.concurrent(`${chalk.yellowBright("trial-merge 4: entity attach to non-trial
 		nowMs: advancedTo,
 	});
 
-	// 1. Preview attach trial product to entity-2 - should show $20 (no trial)
 	const preview = await autumnV1.billing.previewAttach({
 		customer_id: customerId,
 		product_id: proTrial.id,
@@ -413,7 +320,6 @@ test.concurrent(`${chalk.yellowBright("trial-merge 4: entity attach to non-trial
 	});
 	expect(preview.total).toBe(20);
 
-	// 2. Attach trial product to entity-2
 	await autumnV1.billing.attach({
 		customer_id: customerId,
 		product_id: proTrial.id,
@@ -421,7 +327,6 @@ test.concurrent(`${chalk.yellowBright("trial-merge 4: entity attach to non-trial
 		redirect_mode: "if_required",
 	});
 
-	// Verify entity-1 is NOT trialing
 	const entity1 = await autumnV1.entities.get<ApiEntityV0>(
 		customerId,
 		entity1Id,
@@ -432,7 +337,6 @@ test.concurrent(`${chalk.yellowBright("trial-merge 4: entity attach to non-trial
 		nowMs: advancedTo,
 	});
 
-	// Verify entity-2 is NOT trialing (trial config ignored)
 	const entity2 = await autumnV1.entities.get<ApiEntityV0>(
 		customerId,
 		entity2Id,
@@ -443,7 +347,6 @@ test.concurrent(`${chalk.yellowBright("trial-merge 4: entity attach to non-trial
 		nowMs: advancedTo,
 	});
 
-	// Verify invoices: entity-1 pro ($20) + entity-2 pro ($20)
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	await expectCustomerInvoiceCorrect({
 		customer,
@@ -451,7 +354,6 @@ test.concurrent(`${chalk.yellowBright("trial-merge 4: entity attach to non-trial
 		latestTotal: 20,
 	});
 
-	// Verify Stripe subscription state
 	await expectSubToBeCorrect({
 		db: ctx.db,
 		customerId,

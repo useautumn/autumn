@@ -13,7 +13,6 @@ import {
 import { repointSchedulePhases } from "@/internal/billing/v2/execute/executeAutumnActions/repointSchedulePhases";
 import { writeCustomerEntitlementReplaceables } from "@/internal/billing/v2/execute/executeAutumnActions/writeCustomerEntitlementReplaceables";
 
-/** The rows the balance worker does not hold yet: license pools and counters, schedule phases, replaceables. */
 export const writePostgresOnlyRows = async ({
 	ctx,
 	autumnBillingPlan,
@@ -44,7 +43,6 @@ export const writePostgresOnlyRows = async ({
 	return pendingBatchTransitions;
 };
 
-/** Most plans (a create, a link-back) have none, so the worker path skips a transaction for them. */
 export const planHasPostgresOnlyRows = ({
 	autumnBillingPlan,
 }: {

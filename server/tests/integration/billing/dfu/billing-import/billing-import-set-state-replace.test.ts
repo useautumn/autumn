@@ -1,8 +1,3 @@
-/**
- * dfu.flash — set-state replace: re-flashing the SAME customer with a different
- * plan expires the old customer-level plan (recoverable) and activates the new.
- */
-
 import { expect, test } from "bun:test";
 import { CusProductStatus } from "@autumn/shared";
 import {
@@ -75,7 +70,6 @@ test.concurrent(
 			buildPayload(planB.id, subB.customerId, subB.subscriptionId),
 		);
 
-		// ── Plan A is reported expired (recoverable), plan B inserted active. ──
 		const expiredA = secondFlash.result?.flashed?.find(
 			(f) => f.plan_id === planA.id,
 		);
@@ -89,7 +83,6 @@ test.concurrent(
 		expect(insertedB?.skipped).toBe(false);
 		expect(insertedB?.expired).toBeUndefined();
 
-		// ── A is expired-not-deleted (still queryable); B is active. ──
 		const productA = await getFlashedCustomerProduct({
 			ctx,
 			customerId,

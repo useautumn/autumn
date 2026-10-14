@@ -1,7 +1,3 @@
-/**
- * Contract: an unselected parent advances to the latest child with a preservation customize.
- * Its customer remains pinned to the retired child-v1 PlanLicense definition.
- */
 import { expect, test } from "bun:test";
 import { planLicenses } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";

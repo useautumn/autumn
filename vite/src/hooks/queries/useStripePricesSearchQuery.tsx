@@ -11,10 +11,6 @@ export const isStripeLookup = (search: string) =>
 	search.startsWith(STRIPE_PRICE_ID_PREFIX) ||
 	search.startsWith(STRIPE_PRODUCT_ID_PREFIX);
 
-/**
- * Two lookups only: an exact price id, or every price under a product id.
- * Anything else never reaches the server.
- */
 export const useStripePricesSearchQuery = ({
 	search,
 	enabled = true,

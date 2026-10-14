@@ -2,7 +2,6 @@ import { ReplaceableSchema } from "@autumn/shared";
 import { z } from "zod/v4";
 import { openSchema } from "../../common/openSchema.js";
 
-/** A v1 allocated grant's replaceable seat: Postgres writes them, the worker only renders their count. */
 export const workerReplaceableSchema = openSchema({
 	name: "workerReplaceable",
 	schema: ReplaceableSchema.pick({
@@ -12,7 +11,6 @@ export const workerReplaceableSchema = openSchema({
 		from_entity_id: true,
 		delete_next_cycle: true,
 	})
-		// Stored nullable; a row read without the column parses as none.
 		.extend({ from_entity_id: z.string().nullable().default(null) }),
 });
 

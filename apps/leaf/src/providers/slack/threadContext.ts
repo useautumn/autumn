@@ -13,24 +13,15 @@ import { logger } from "../../lib/logger.js";
 import { getSlackWorkspaceId } from "./context.js";
 
 const RECENT_MESSAGES_LIMIT = 8;
-// `thread.refresh()` fetches the latest 50 messages, so nothing older can be
-// replayed; the character budget keeps a long thread from swamping the prompt.
 const MISSED_MESSAGES_LIMIT = 50;
 const MISSED_MESSAGES_CHAR_BUDGET = 20_000;
-// One pasted log must not crowd every other missed reply out of the budget.
 const MISSED_MESSAGE_CHAR_LIMIT = 4000;
 const TRUNCATED_SUFFIX = " …[truncated]";
-// Matches the chat SDK's thread-state lifetime.
 const SKIPPED_REPLIES_TTL_MS = 30 * 24 * 60 * 60 * 1000;
-// Room for every skip in the window plus its delivery.
 const REPLY_EVENTS_LIMIT = MISSED_MESSAGES_LIMIT * 2;
 
-/** One append-only log per thread, so skips and deliveries share a single
- * TTL and trimming (newest kept) never drops a delivery whose skip survives. */
 type ReplyEvent = Readonly<{ id: string; kind: "delivered" | "skipped" }>;
 
-// A Slack Connect channel keeps its id and timestamps in every workspace it
-// is shared with, so the workspace is part of the key.
 const replyEventsKey = ({
 	message,
 	thread,
@@ -76,18 +67,13 @@ const toContextMessage = (message: Message): AgentContextMessage => ({
 	text: message.text,
 });
 
-/** A file shared earlier in the thread, with the raw Slack message it came
- * from so it can still be downloaded when the SDK dropped its fetcher. */
 export type ThreadAttachment = Readonly<{
 	attachment: Attachment;
 	author: string;
-	/** Position in the raw message's `files`, for hydrating Slack Connect stubs. */
 	fileIndex: number;
 	raw: unknown;
 }>;
 
-/** Files in these messages, newest first; the agent's own uploads are left
- * out because it already knows what it posted. */
 const threadAttachmentsOf = (
 	messages: ReadonlyArray<Message>,
 ): ThreadAttachment[] =>
@@ -108,8 +94,6 @@ const truncateText = (text: string) =>
 		? `${text.slice(0, MISSED_MESSAGE_CHAR_LIMIT)}${TRUNCATED_SUFFIX}`
 		: text;
 
-/** The newest messages that fit the limit and character budget, oldest first;
- * each message is capped first, so the newest always makes it in. */
 const fitMissedMessages = (
 	messages: ReadonlyArray<Message>,
 ): AgentMissedMessages => {
@@ -159,9 +143,6 @@ export const getRecentMessages = async (
 		.map(toContextMessage);
 };
 
-/** Remembers a reply the agent was not tagged in, so the next turn that does
- * tag it can catch up on what it skipped. The append is atomic, so replies
- * arriving together are all kept. */
 export const recordSkippedMessage = async (
 	thread: Thread,
 	message: Message,
@@ -183,15 +164,10 @@ export const recordSkippedMessage = async (
 
 export type LoadedMissedMessages = Readonly<{
 	missed?: AgentMissedMessages;
-	/** Files in the skipped replies, so a tag after them can use the files. */
 	attachments: ThreadAttachment[];
-	/** Marks these replies as seen; call once a turn has actually run with
-	 * them, so a blocked or failed turn leaves them for the next mention. */
 	markDelivered: () => Promise<void>;
 }>;
 
-/** The skipped replies not yet handed to a turn, oldest first. Call after
- * `getRecentMessages` has refreshed the thread. */
 export const loadMissedMessages = async (
 	thread: Thread,
 	currentMessage: Message,
@@ -215,7 +191,6 @@ export const loadMissedMessages = async (
 			(message) => pending.has(message.id) && message.id !== currentMessage.id,
 		);
 		const available = pendingMessages.filter(isContextMessage);
-		// Skipped ids that fell out of the fetched window can't be replayed.
 		const windowIds = new Set(thread.recentMessages.map(({ id }) => id));
 		const outOfWindow = pendingIds.filter((id) => !windowIds.has(id)).length;
 		const missed = fitMissedMessages(available);
@@ -241,9 +216,6 @@ export const loadMissedMessages = async (
 	}
 };
 
-/** On the first mention in a thread, the discussion before the recent
- * window the agent already gets, so "do the above" can reach further back.
- * Call after `getRecentMessages` has refreshed the thread. */
 export const getEarlierThreadMessages = (
 	thread: Thread,
 	currentMessage: Message,
@@ -251,15 +223,11 @@ export const getEarlierThreadMessages = (
 	const history = thread.recentMessages.filter(
 		(message) => message.id !== currentMessage.id && isContextMessage(message),
 	);
-	// The recent window holds the current message plus the 7 before it.
 	const earlier = history.slice(0, -(RECENT_MESSAGES_LIMIT - 1));
 	if (!earlier.length) return undefined;
 	return fitMissedMessages(earlier);
 };
 
-/** On the first mention in a thread, the files shared anywhere earlier in it
- * (within the fetched window), so "use the contract above" can see it.
- * Call after `getRecentMessages` has refreshed the thread. */
 export const getEarlierThreadAttachments = (
 	thread: Thread,
 	currentMessage: Message,
@@ -278,7 +246,6 @@ const deliveredFilesKey = ({
 	thread: Thread;
 }) => `leaf:delivered-files:${getSlackWorkspaceId(message.raw)}:${thread.id}`;
 
-/** The Slack file id behind a thread attachment, when Slack sent one. */
 export const threadAttachmentFileId = ({
 	fileIndex,
 	raw,
@@ -297,9 +264,6 @@ export const threadAttachmentFileId = ({
 		: undefined;
 };
 
-/** Earlier files a turn in this thread has not read yet, newest first, so a
- * tag reaches a file an earlier turn could not read without resending, or
- * being crowded out by, the ones it did. */
 export const getUndeliveredThreadAttachments = async (
 	thread: Thread,
 	currentMessage: Message,
@@ -325,7 +289,6 @@ export const getUndeliveredThreadAttachments = async (
 	}
 };
 
-/** Remembers files a turn has read, so later tags in the thread skip them. */
 export const recordDeliveredFiles = async (
 	thread: Thread,
 	message: Message,

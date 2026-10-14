@@ -23,25 +23,19 @@ import { formatWithUnit } from "./TooltipItem";
 const HEADER_ROW =
 	"flex items-center h-7 text-xs font-normal text-tertiary-foreground";
 const TOTAL_ROW = "flex items-center h-11";
-// Overlay bars framed to the body rows (past the h-7 header, above the h-11 Total, between the pinned columns), shown on hover or scroll.
 const OVERLAY_BAR =
 	"z-30 opacity-0 transition-opacity data-[hovering]:opacity-100 data-[scrolling]:opacity-100";
 const VERTICAL_BAR = cn(OVERLAY_BAR, "mt-7 mb-11 h-auto w-2");
 const HORIZONTAL_BAR = cn(OVERLAY_BAR, "mr-[112px] mb-11 ml-[220px] h-2");
-/** Each cell draws its piece of the raised surface; together the rows read as one. */
 const SURFACE_CELL = "flex h-full items-center bg-table-surface";
 const PERIOD_CELL = "w-[88px] shrink-0 px-3 text-right tabular-nums";
 const TOTAL_VALUE = "font-semibold text-foreground tabular-nums";
-// Opaque tray behind each pinned cell hides the numbers scrolling underneath.
 const PINNED_LEFT =
 	"sticky left-0 z-10 h-full w-[220px] shrink-0 bg-table-tray";
 const PINNED_RIGHT =
 	"sticky right-0 z-10 h-full w-[112px] shrink-0 bg-table-tray";
-// Negative spread keeps each cell's shadow inside its own row, so stacked rows read as one edge.
 const PINNED_LEFT_SHADOW = "shadow-[8px_0_8px_-8px_rgba(0,0,0,0.3)]";
 const PINNED_RIGHT_SHADOW = "shadow-[-8px_0_8px_-8px_rgba(0,0,0,0.3)]";
-// Varied widths so the placeholder reads like real numbers, not a uniform grid.
-// The tray is near-white in light mode, so the bars need more than the default skeleton fill.
 const SKELETON_FILL = "bg-tertiary-foreground/15";
 const SKELETON_VALUE_WIDTHS = ["w-9", "w-7", "w-10", "w-8", "w-6"];
 const SKELETON_NAME_WIDTHS = ["w-28", "w-20", "w-24", "w-16"];
@@ -58,7 +52,6 @@ interface TableRow {
 	total: TableCell;
 }
 
-/** Everything the table renders, whether from real data or a loading placeholder. */
 interface TableModel {
 	periodLabels: string[];
 	seriesRows: TableRow[];
@@ -66,19 +59,16 @@ interface TableModel {
 	isPlaceholder: boolean;
 }
 
-/** The table's shape before any data arrives; every cell renders as a skeleton bar. */
 export interface TablePlaceholder {
 	rowCount: number;
 	periodLabels: string[];
 }
 
-/** Largest series first, matching the legend; the catch-all bucket goes last. */
 const orderSeriesForTable = ({
 	chartConfig,
 }: {
 	chartConfig: ChartSeriesConfig[];
 }) => {
-	// Chart order stacks the largest last, so reverse it for reading top-down.
 	const largestFirst = [...chartConfig].reverse();
 	return [
 		...largestFirst.filter((series) => !isOtherSeries({ key: series.yKey })),
@@ -86,7 +76,6 @@ const orderSeriesForTable = ({
 	];
 };
 
-/** Grouped series read group-first on two lines; plain series keep one line. */
 const SeriesName = ({ series }: { series: ChartSeriesConfig }) => {
 	if (!series.nameParts) {
 		return (
@@ -222,7 +211,6 @@ const chartDataToModel = ({
 	};
 };
 
-/** Borders and corners for one row's piece of the raised surface. */
 const surfaceEdge = ({
 	isFirst,
 	isLast,
@@ -240,7 +228,6 @@ const surfaceEdge = ({
 	right: cn(isFirst && "rounded-tr-lg", isLast && "rounded-br-lg"),
 });
 
-/** Whether columns are scrolled out of view on either side of the pinned columns. */
 const useHiddenColumnEdges = ({ resetKey }: { resetKey: string }) => {
 	const scrollRef = useRef<HTMLDivElement>(null);
 	const [edges, setEdges] = useState({ left: false, right: false });
@@ -251,13 +238,11 @@ const useHiddenColumnEdges = ({ resetKey }: { resetKey: string }) => {
 		const maxScroll = el.scrollWidth - el.clientWidth;
 		const left = el.scrollLeft > 0;
 		const right = el.scrollLeft < maxScroll - 1;
-		// Fires per scroll frame; a fresh object would re-render every cell each time.
 		setEdges((prev) =>
 			prev.left === left && prev.right === right ? prev : { left, right },
 		);
 	}, []);
 
-	// Open on the latest bins, the ones people check first; resetKey marks a new column set.
 	useLayoutEffect(() => {
 		const el = scrollRef.current;
 		if (!el) return;
@@ -268,7 +253,6 @@ const useHiddenColumnEdges = ({ resetKey }: { resetKey: string }) => {
 	return { scrollRef, edges, updateEdges };
 };
 
-/** The chart's data as a table: one row per series, one column per bin. */
 export const UsageBreakdownTable = ({
 	chartData,
 	chartConfig,
@@ -313,7 +297,6 @@ export const UsageBreakdownTable = ({
 				"flex min-h-0 flex-col overflow-hidden text-[13px]",
 			)}
 		>
-			{/* One scroller for both axes, so header, rows and Total move together sideways and only rows scroll down. */}
 			<ScrollAreaPrimitive.Root className="relative flex min-h-0 flex-col">
 				<ScrollAreaPrimitive.Viewport
 					ref={scrollRef}
@@ -402,7 +385,6 @@ export const UsageBreakdownTable = ({
 								"sticky bottom-0 z-20 bg-table-tray text-tertiary-foreground",
 							)}
 						>
-							{/* Indented to line up with series names, past the colour swatch. */}
 							<div className={cn(pinnedLeft, "flex h-full items-center pl-9")}>
 								{totalLabel}
 							</div>

@@ -10,11 +10,9 @@ type TrialConversionParams = {
 	paymentBehaviorIntent?: PaymentBehaviorIntent;
 };
 
-/** The trial was attached in invoice mode, so it converts by invoice instead of charging a card. */
 export const isInvoicedTrial = (customerProduct: FullCusProduct): boolean =>
 	customerProduct.collection_method === CollectionMethod.SendInvoice;
 
-/** How a lapsed Autumn-managed trial is billed into Stripe. */
 export const trialConversionParams = ({
 	customerProduct,
 }: {

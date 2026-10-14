@@ -8,7 +8,6 @@ import type { BaseProductCache } from "./loadBaseProduct.js";
 import { loadFullCustomerProductsWithLicenses } from "./loadFullCustomerProductsWithLicenses.js";
 
 export type IsCustomDerivationCache = {
-	// null: the derivation only guessed, so the flag is never written.
 	flagsByFingerprint: Map<string, boolean | null>;
 	baseProducts: BaseProductCache;
 };
@@ -18,7 +17,6 @@ export const createIsCustomDerivationCache = (): IsCustomDerivationCache => ({
 	baseProducts: new Map(),
 });
 
-/** A representative changed since it was fingerprinted is skipped, so its result cannot spread. */
 const deriveFingerprints = async ({
 	ctx,
 	representatives,
@@ -121,7 +119,6 @@ export const rederiveIsCustomForCustomers = async ({
 		await deriveFingerprints({ ctx, representatives, cache });
 	}
 
-	// Sequential, so a failure never leaves the other write landing after the caller's cache drop.
 	const updated = [];
 	for (const to of [true, false]) {
 		updated.push(

@@ -96,7 +96,6 @@ export const FeatureMappingsTable = ({
 			{featureRows.map(
 				({ feature, defaultProductId, productIds, otherCount }) => {
 					const isMixed = productIds.length > 1;
-					// Without a default, a single shared product is effectively the default.
 					const shownProductId = defaultProductId ?? productIds[0] ?? null;
 					const status = isMixed
 						? { status: "conflict" as const, pending: false }
@@ -153,7 +152,6 @@ export const FeatureMappingsTable = ({
 								)}
 							</TableCell>
 							<TableCell>
-								{/* Keyboard access for the row; its click bubbles to the row handler. */}
 								<button
 									aria-label={`Open ${feature.name} mapping`}
 									className="flex rounded-sm"

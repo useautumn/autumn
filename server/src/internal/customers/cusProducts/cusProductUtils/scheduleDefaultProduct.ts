@@ -10,12 +10,6 @@ import { productToInsertParams } from "@/internal/customers/attach/attachUtils/a
 import { ProductService } from "@/internal/products/ProductService";
 import { isDefaultTrialFullProduct } from "@/internal/products/productUtils/classifyProduct";
 
-/**
- * Schedules a default product for a product group to start at a future time.
- * Used when canceling a subscription to ensure customer has a product after cancellation.
- *
- * @returns The scheduled customer product, or null if no default exists or already scheduled
- */
 export const scheduleDefaultProduct = async ({
 	ctx,
 	productGroup,
@@ -27,12 +21,10 @@ export const scheduleDefaultProduct = async ({
 	productGroup: string;
 	fullCustomer: FullCustomer;
 	scheduleAtMs: number;
-	/** Optional pre-fetched default products to avoid DB call */
 	defaultProducts?: FullProduct[];
 }): Promise<FullCusProduct | null> => {
 	const { db, org, env, logger } = ctx;
 
-	// Fetch default products if not provided
 	const defaults =
 		defaultProducts ??
 		(await ProductService.listDefault({
@@ -41,7 +33,6 @@ export const scheduleDefaultProduct = async ({
 			env,
 		}));
 
-	// Find matching default for this group (exclude trial defaults)
 	const defaultProduct = defaults.find(
 		(product) =>
 			product.group === productGroup && !isDefaultTrialFullProduct({ product }),
@@ -49,7 +40,6 @@ export const scheduleDefaultProduct = async ({
 
 	if (!defaultProduct) return null;
 
-	// Check if already scheduled for this group
 	const alreadyScheduled = fullCustomer.customer_products.some(
 		(customerProduct) =>
 			customerProduct.product.group === productGroup &&
@@ -58,7 +48,6 @@ export const scheduleDefaultProduct = async ({
 
 	if (alreadyScheduled) return null;
 
-	// Create scheduled customer product
 	const insertParams = productToInsertParams({
 		ctx,
 		fullCus: fullCustomer,

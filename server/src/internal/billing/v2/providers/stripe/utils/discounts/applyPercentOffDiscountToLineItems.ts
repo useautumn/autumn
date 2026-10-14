@@ -21,10 +21,6 @@ const roundToMinorUnits = ({
 		currency,
 	});
 
-/**
- * Applies a percent_off discount to line items.
- * Applies the percentage to each applicable line item individually.
- */
 export const applyPercentOffDiscountToLineItems = ({
 	lineItems,
 	discount,
@@ -44,7 +40,6 @@ export const applyPercentOffDiscountToLineItems = ({
 	}
 
 	return lineItems.map((item) => {
-		// Check if discount applies to this line item
 		if (!discountAppliesToLineItem({ discount, lineItem: item })) {
 			return item;
 		}
@@ -67,7 +62,6 @@ export const applyPercentOffDiscountToLineItems = ({
 					.toNumber()
 			: Math.abs(currentAmount);
 
-		// Calculate discount amount: |currentAmount| * (percentOff / 100)
 		const itemDiscount = new Decimal(discountableAmount)
 			.times(percentOff)
 			.dividedBy(100)

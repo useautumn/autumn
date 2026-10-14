@@ -1,6 +1,5 @@
 import { type FullProduct, isOneOffProduct, RecaseError } from "@autumn/shared";
 
-/** Reject conflicting main recurring plans within one group and scope. */
 export const validateProductGroupsByScope = ({
 	plans,
 	operation,

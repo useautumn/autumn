@@ -4,9 +4,6 @@ import { patchPySdkHooks } from "./patchPySdkHooks.js";
 import { patchPythonSdkGlobalDefaults } from "./patchPythonSdk.js";
 import { patchTsSdkHooks } from "./patchTsSdkHooks.js";
 
-/**
- * Generates the TypeScript SDK using Speakeasy and builds it (quiet mode for parallel).
- */
 async function generateTypeScriptSdkQuiet({
 	speakeasySdkDir,
 }: {
@@ -30,9 +27,6 @@ async function generateTypeScriptSdkQuiet({
 	});
 }
 
-/**
- * Generates the Python SDK using Speakeasy (quiet mode for parallel).
- */
 async function generatePythonSdkQuiet({
 	speakeasySdkDir,
 	pythonSdkDir,
@@ -52,9 +46,6 @@ async function generatePythonSdkQuiet({
 	assertSdkPatches({ sdkDir: pythonSdkDir, label: "PY" });
 }
 
-/**
- * Generates both TypeScript and Python SDKs in parallel.
- */
 export async function generateSdksInParallel({
 	speakeasySdkDir,
 	pythonSdkDir,
@@ -62,7 +53,6 @@ export async function generateSdksInParallel({
 	speakeasySdkDir: string;
 	pythonSdkDir: string;
 }): Promise<void> {
-	// Both `speakeasy run`s use packages/sdk/.speakeasy; parallel clobbers models.
 	console.log("Generating TypeScript and Python SDKs...");
 
 	try {

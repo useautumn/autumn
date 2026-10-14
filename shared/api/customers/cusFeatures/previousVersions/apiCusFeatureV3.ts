@@ -2,7 +2,6 @@ import { ApiFeatureType } from "@api/features/prevVersions/apiFeatureV0";
 import { EntInterval } from "@models/productModels/intervals/entitlementInterval";
 import { z } from "zod/v4";
 
-// Descriptions
 const breakdownDescriptions = {
 	interval: "The reset interval for this feature breakdown",
 	interval_count: "The number of intervals between usage resets",
@@ -53,7 +52,6 @@ export const ApiCusFeatureV3RolloverSchema = z.object({
 	}),
 });
 
-// Version 3 of cus feature response
 export const ApiCusFeatureV3BreakdownSchema = z.object({
 	interval: z.enum(EntInterval).nullable().meta({
 		description: breakdownDescriptions.interval,

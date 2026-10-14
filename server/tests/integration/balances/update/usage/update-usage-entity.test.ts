@@ -7,11 +7,6 @@ import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 
-// ═══════════════════════════════════════════════════════════════════
-// UPDATE-USAGE-ENTITY1: Set usage on per-entity balance (customer-level update)
-// entityFeatureId on item, product attached at customer level
-// ═══════════════════════════════════════════════════════════════════
-
 test.concurrent(
 	`${chalk.yellowBright("update-usage-entity1: customer-level usage update on per-entity balance")}`,
 	async () => {
@@ -31,13 +26,11 @@ test.concurrent(
 			actions: [s.attach({ productId: freeProd.id })],
 		});
 
-		// Warm caches: fetch customer + each entity
 		await autumnV2.customers.get<ApiCustomer>(customerId);
 		for (const entity of entities) {
 			await autumnV2.entities.get<ApiEntityV1>(customerId, entity.id);
 		}
 
-		// Initial: 3 entities * 100 = 300 total
 		const initial = await autumnV2.customers.get<ApiCustomer>(customerId);
 		expect(initial.balances[TestFeature.Messages]).toMatchObject({
 			granted_balance: 300,
@@ -45,7 +38,6 @@ test.concurrent(
 			usage: 0,
 		});
 
-		// Set customer-level usage to 150: targetBalance = 300 + 0 - 150 = 150
 		await autumnV2.balances.update({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
@@ -59,7 +51,6 @@ test.concurrent(
 			usage: 150,
 		});
 
-		// Verify entity-level: deductions are sequential (entity1 fully depleted first)
 		const entity1 = await autumnV2.entities.get<ApiEntityV1>(
 			customerId,
 			entities[0].id,
@@ -81,7 +72,6 @@ test.concurrent(
 		expect(entity3.balances?.[TestFeature.Messages]?.current_balance).toBe(100);
 		expect(entity3.balances?.[TestFeature.Messages]?.usage).toBe(0);
 
-		// Verify DB sync
 		const afterDb = await autumnV2.customers.get<ApiCustomer>(customerId, {
 			skip_cache: "true",
 		});
@@ -92,10 +82,6 @@ test.concurrent(
 		});
 	},
 );
-
-// ═══════════════════════════════════════════════════════════════════
-// UPDATE-USAGE-ENTITY2: Set usage on specific entity
-// ═══════════════════════════════════════════════════════════════════
 
 test.concurrent(
 	`${chalk.yellowBright("update-usage-entity2: set usage on individual entity")}`,
@@ -116,13 +102,11 @@ test.concurrent(
 			actions: [s.attach({ productId: freeProd.id })],
 		});
 
-		// Warm caches
 		await autumnV2.customers.get<ApiCustomer>(customerId);
 		for (const entity of entities) {
 			await autumnV2.entities.get<ApiEntityV1>(customerId, entity.id);
 		}
 
-		// Set usage on entity1 to 60: targetBalance = 100 + 0 - 60 = 40
 		await autumnV2.balances.update({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
@@ -140,7 +124,6 @@ test.concurrent(
 			usage: 60,
 		});
 
-		// Entity2 should be unchanged
 		const entity2After = await autumnV2.entities.get<ApiEntityV1>(
 			customerId,
 			entities[1].id,
@@ -151,7 +134,6 @@ test.concurrent(
 			usage: 0,
 		});
 
-		// Customer aggregate: 40 + 100 = 140
 		const customerAfter = await autumnV2.customers.get<ApiCustomer>(customerId);
 		expect(customerAfter.balances[TestFeature.Messages]).toMatchObject({
 			granted_balance: 200,
@@ -159,7 +141,6 @@ test.concurrent(
 			usage: 60,
 		});
 
-		// Now set usage on entity2 to 30: targetBalance = 100 + 0 - 30 = 70
 		await autumnV2.balances.update({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
@@ -177,7 +158,6 @@ test.concurrent(
 			usage: 30,
 		});
 
-		// Customer aggregate: 40 + 70 = 110
 		const customerAfter2 =
 			await autumnV2.customers.get<ApiCustomer>(customerId);
 		expect(customerAfter2.balances[TestFeature.Messages]).toMatchObject({
@@ -186,7 +166,6 @@ test.concurrent(
 			usage: 90,
 		});
 
-		// Verify DB sync
 		const customerDb = await autumnV2.customers.get<ApiCustomer>(customerId, {
 			skip_cache: "true",
 		});
@@ -197,10 +176,6 @@ test.concurrent(
 		});
 	},
 );
-
-// ═══════════════════════════════════════════════════════════════════
-// UPDATE-USAGE-ENTITY3: Entity products (product attached TO entity)
-// ═══════════════════════════════════════════════════════════════════
 
 test.concurrent(
 	`${chalk.yellowBright("update-usage-entity3: usage on entity-attached products")}`,
@@ -221,12 +196,10 @@ test.concurrent(
 			],
 		});
 
-		// Warm caches
 		for (const entity of entities) {
 			await autumnV2.entities.get<ApiEntityV1>(customerId, entity.id);
 		}
 
-		// Each entity has own product: granted=100, current=100 each
 		const entity1Init = await autumnV2.entities.get<ApiEntityV1>(
 			customerId,
 			entities[0].id,
@@ -237,7 +210,6 @@ test.concurrent(
 			usage: 0,
 		});
 
-		// Set usage on entity1 to 70: targetBalance = 100 + 0 - 70 = 30
 		await autumnV2.balances.update({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
@@ -255,7 +227,6 @@ test.concurrent(
 			usage: 70,
 		});
 
-		// Entity2 unchanged
 		const entity2After = await autumnV2.entities.get<ApiEntityV1>(
 			customerId,
 			entities[1].id,
@@ -266,9 +237,7 @@ test.concurrent(
 			usage: 0,
 		});
 
-		// The balance worker doesn't aggregate entity data onto the customer.
 		if (!isBalanceWorkerRoute()) {
-			// Customer aggregate: 30 + 100 = 130
 			const customerAfter =
 				await autumnV2.customers.get<ApiCustomer>(customerId);
 			expect(customerAfter.balances[TestFeature.Messages]).toMatchObject({
@@ -278,7 +247,6 @@ test.concurrent(
 			});
 		}
 
-		// Verify DB sync
 		const entity1Db = await autumnV2.entities.get<ApiEntityV1>(
 			customerId,
 			entities[0].id,
@@ -290,10 +258,6 @@ test.concurrent(
 		});
 	},
 );
-
-// ═══════════════════════════════════════════════════════════════════
-// UPDATE-USAGE-ENTITY4: Mixed customer + entity products with usage
-// ═══════════════════════════════════════════════════════════════════
 
 test.concurrent(
 	`${chalk.yellowBright("update-usage-entity4: mixed customer and entity products")}`,
@@ -324,16 +288,12 @@ test.concurrent(
 			],
 		});
 
-		// Warm caches
 		await autumnV2.customers.get<ApiCustomer>(customerId);
 		for (const entity of entities) {
 			await autumnV2.entities.get<ApiEntityV1>(customerId, entity.id);
 		}
 
-		// The balance worker doesn't aggregate entity data onto the customer.
 		if (!isBalanceWorkerRoute()) {
-			// Each entity sees: own 100 + inherited 50 = 150
-			// Customer aggregate: 50 + 100 + 100 = 250
 			const initial = await autumnV2.customers.get<ApiCustomer>(customerId);
 			expect(initial.balances[TestFeature.Messages]).toMatchObject({
 				granted_balance: 250,
@@ -342,7 +302,6 @@ test.concurrent(
 			});
 		}
 
-		// Set usage on entity1 to 80: entity1 has 150 total, targetBalance = 150 - 80 = 70
 		await autumnV2.balances.update({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
@@ -360,7 +319,6 @@ test.concurrent(
 			usage: 80,
 		});
 
-		// Entity2 unchanged at 150
 		const entity2After = await autumnV2.entities.get<ApiEntityV1>(
 			customerId,
 			entities[1].id,
@@ -371,8 +329,6 @@ test.concurrent(
 			usage: 0,
 		});
 
-		// Verify DB sync
-		// The balance worker doesn't aggregate entity data onto the customer, so it is read off the entity.
 		if (isBalanceWorkerRoute()) {
 			const entity1Db = await autumnV2.entities.get<ApiEntityV1>(
 				customerId,

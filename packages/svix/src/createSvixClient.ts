@@ -4,7 +4,6 @@ import { listEndpoints } from "./endpoints/listEndpoints.js";
 import { sendMessage } from "./messages/sendMessage.js";
 import type { SvixClient } from "./types/svixClient.js";
 
-/** One SDK instance behind named methods; the API key is the caller's to read, never the environment's. */
 export const createSvixClient = ({
 	config,
 }: {

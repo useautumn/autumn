@@ -1,12 +1,3 @@
-/**
- * Row-ref probes decide catalog in-place retire vs delete. Prod FK is
- * RESTRICT, so expired cus_ents still count. Versionable CP counts stay
- * live-only (`has_customers` / migrate drafts).
- *
- * Red (current):  row-ref IN-list omits expired
- * Green (after):  row-ref IN-list includes expired; versionable counts do not
- */
-
 import { expect, test } from "bun:test";
 import {
 	AppEnv,

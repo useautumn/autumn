@@ -6,14 +6,12 @@ import { oauthClientRepo } from "../repos/index.js";
 
 const ATMN_OAUTH_CLIENT_NAMES = new Set(["atmn", "autumn cli"]);
 
-/** The public client id every atmn release ships with (v1 and nightly). */
 const ATMN_OAUTH_CLIENT_ID = "hAWUopQqLnsSwuRgeRzIBzKslwXmQUSr";
 const ATMN_OAUTH_CLIENT_NAME = "atmn";
 const ATMN_REDIRECT_URIS = [31448, 31449, 31450, 31451, 31452].map(
 	(port) => `http://localhost:${port}/`,
 );
 
-/** Insert-only: a fresh DB gets the client; an existing row is left to `ensureAtmnAuthorizeScopes`. */
 export const ensureAtmnOAuthClient = async ({
 	db,
 	clientId,
@@ -45,11 +43,8 @@ export const ensureAtmnOAuthClient = async ({
 	});
 };
 
-// Fixed scope set for first-party atmn CLI releases. Self-heal is limited so
-// unauthenticated /authorize requests cannot widen the reserved client.
 const ATMN_OAUTH_SCOPES = new Set<string>([
 	"organisation:read",
-	// atmn v3 `settings` block writes org config through /v1/organization.update
 	"organisation:write",
 	"customers:create",
 	"customers:read",
@@ -74,13 +69,10 @@ const ATMN_OAUTH_SCOPES = new Set<string>([
 	"apiKeys:write",
 	"rewards:read",
 	"rewards:write",
-	// atmn v3 `reset` clears the sandbox's migration drafts alongside its catalog.
 	"migrations:read",
 	"migrations:write",
-	// atmn v3 `sandbox create|delete` mint and drop sub-orgs through /v1/sandboxes.*
 	"platform:read",
 	"platform:write",
-	// Minted keys double as an app's AUTUMN_SECRET_KEY for track, attach, and usage.
 	"analytics:read",
 	"balances:read",
 	"balances:write",
@@ -181,7 +173,6 @@ export const ensureAtmnAuthorizeScopes = async ({
 	const existing = new Set(client.scopes ?? []);
 	if (requested.every((s) => existing.has(s))) return;
 
-	// Union atomically in SQL — concurrent self-heals must not clobber each other.
 	await oauthClientRepo.addScopesByClientId({
 		db,
 		clientId,

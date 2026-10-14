@@ -1,13 +1,3 @@
-/**
- * Previewing an update to a pending (unpaid) plan.
- *
- * Red (before): the preview ran the normal update path against the unpaid row, so
- * lowering a $1,200 pending plan to $1,000 showed a proration credit.
- * Green (after): the preview matches what billing.update does for a pending plan, a
- * fresh checkout at the full new price, and that is what the replacement session charges.
- * An explicit customer_product_id still targets that plan, not the customer's pending one.
- */
-
 import { expect, test } from "bun:test";
 import {
 	type AttachParamsV1Input,

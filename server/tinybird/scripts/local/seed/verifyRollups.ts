@@ -18,7 +18,6 @@ const PROPERTY_MV_PIPE = resolve(
 	"../../../materializations/events_property_mv_pipe.pipe",
 );
 
-/** The rollup's value-shape gate, read from the datafile so the raw comparison can't drift from it. */
 const propertyGateSql = () => {
 	const text = readFileSync(PROPERTY_MV_PIPE, "utf8");
 	const match = text
@@ -58,7 +57,6 @@ const keyed = async ({
 	return out;
 };
 
-/** Raw scans run per week so each /v0/sql call stays under Local's 10s cap on big seeds. */
 const rawChunks = async ({
 	target,
 	where,
@@ -244,7 +242,6 @@ const collectChecks = async ({
 	return { rawCount, rawValue, rawEntity, gated, present, checks };
 };
 
-/** Checks every rollup the analytics pipes read against the raw events for one org/env. */
 export const verifyRollups = async ({
 	target,
 	orgId,

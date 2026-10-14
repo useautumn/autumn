@@ -2,7 +2,6 @@ import { RolloutFlipStatus } from "./RolloutFlipStatus";
 import { RolloutPercentForm } from "./RolloutPercentForm";
 import type { RolloutPercent } from "./rolloutTypes";
 
-/** The global percent as a number you can read at a glance, with its control beside it. */
 export const RolloutGlobalControl = ({
 	rollout,
 	settleMs,

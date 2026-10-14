@@ -1,17 +1,3 @@
-/**
- * TDD tests for usage-window behavior on IMMEDIATE plan upgrades.
- *
- * Contract under test (WINDOW-IDENTITY rule): the count belongs to the
- * window, not the plan. Upgrades here PRESERVE the billing cycle (same
- * window bounds; the recomputed next_reset_at is precision-corrected by
- * applyExistingNextResetAts), so an upgrade is an anchor-only re-point:
- *   - the counter SURVIVES the upgrade -- no fresh cap headroom mid-cycle
- *   - a counter AT the cap stays exhausted through the upgrade
- *   - multi-balance: the carried cap keeps binding; the top-up persists
- * A cycle-RESTARTING change would move the window and zero (see the
- * computeUsageWindowRolls unit table).
- */
-
 import { expect, test } from "bun:test";
 import { type ApiCustomerV5, ApiVersion } from "@autumn/shared";
 import { expectBalanceCorrect } from "@tests/integration/utils/expectBalanceCorrect.js";
@@ -31,11 +17,8 @@ import {
 	fetchActivePlanCusEnt,
 } from "../../utils/usage-limit-utils/usageWindowDbTestUtils.js";
 
-// initScenario only exposes clients up to V2_2; build the latest-version client
-// directly (same pattern as the v2.2-vs-v2.3 parity tests).
 const autumnV2_3 = new AutumnInt({ version: ApiVersion.V2_3 });
 
-// ── Contract: upgrade resets the window, aligned to the new cycle ──
 test.concurrent(
 	`${chalk.yellowBright("uw-plan-change-upgrade1: pro -> premium carries the counter; window_end == new ent next_reset_at")}`,
 	async () => {
@@ -85,14 +68,12 @@ test.concurrent(
 			usage: 3,
 		});
 
-		// Immediate upgrade: pro is expired, premium's cycle starts now.
 		await autumnV1.billing.attach({
 			customer_id: customerId,
 			product_id: premium.id,
 			redirect_mode: "if_required",
 		});
 
-		// Cycle preserved: anchor-only re-point, the counter SURVIVES.
 		await expectCustomerUsageLimit({
 			autumn: autumnV2_3,
 			customerId,
@@ -101,7 +82,6 @@ test.concurrent(
 			limit: 5,
 		});
 
-		// Only the remaining headroom (2) applies from a track of 5.
 		await autumnV2_3.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
@@ -123,7 +103,6 @@ test.concurrent(
 			limit: 5,
 		});
 
-		// PG: the live counter row is anchored to the premium ent's cycle.
 		const premiumEnt = await fetchActivePlanCusEnt({
 			ctx,
 			customerId,
@@ -143,7 +122,6 @@ test.concurrent(
 	},
 );
 
-// ── Contract: an exhausted cap yields fresh headroom post-upgrade ──
 test.concurrent(
 	`${chalk.yellowBright("uw-plan-change-upgrade2: a counter AT the cap stays exhausted through the upgrade")}`,
 	async () => {
@@ -173,7 +151,6 @@ test.concurrent(
 			limit: 5,
 		});
 
-		// Exhaust the cap; the next track fully clamps.
 		await autumnV2_3.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
@@ -204,7 +181,6 @@ test.concurrent(
 			redirect_mode: "if_required",
 		});
 
-		// Cycle preserved: the cap stays exhausted, a track fully clamps.
 		await autumnV2_3.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
@@ -228,7 +204,6 @@ test.concurrent(
 	},
 );
 
-// ── Contract: multi-balance — cap resets, loose top-up untouched ──
 test.concurrent(
 	`${chalk.yellowBright("uw-plan-change-upgrade3: cap on credits carries through upgrade while the top-up balance persists")}`,
 	async () => {
@@ -251,7 +226,6 @@ test.concurrent(
 			actions: [s.billing.attach({ productId: pro.id })],
 		});
 
-		// Loose lifetime top-up alongside the plan credits.
 		await autumnV2_3.post("/balances.create", {
 			customer_id: customerId,
 			feature_id: TestFeature.Credits,
@@ -265,8 +239,6 @@ test.concurrent(
 			limit: 5,
 		});
 
-		// Track 5 credits: drains the 3 monthly then 2 from the top-up; the
-		// counter sums both (cap exhausted).
 		await autumnV2_3.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Credits,
@@ -293,7 +265,6 @@ test.concurrent(
 			redirect_mode: "if_required",
 		});
 
-		// The counter carried (cap still exhausted); the top-up too.
 		await expectCustomerUsageLimit({
 			autumn: autumnV2_3,
 			customerId,
@@ -306,14 +277,11 @@ test.concurrent(
 		expectBalanceCorrect({
 			customer: postUpgrade,
 			featureId: TestFeature.Credits,
-			// premium's fresh 100 + the top-up's 50 (2 already used pre-upgrade:
-			// the loose grant carries its usage across the plan change).
 			granted: 150,
 			remaining: 148,
 			usage: 2,
 		});
 
-		// No fresh headroom: a further track fully clamps.
 		await autumnV2_3.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Credits,

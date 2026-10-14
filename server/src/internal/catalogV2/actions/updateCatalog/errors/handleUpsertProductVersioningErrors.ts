@@ -58,7 +58,6 @@ const claimPinnedVersion = ({
 	seenPinned.add(pinKey);
 };
 
-/** Two entries naming the same new slug is the same ambiguity as a double pin. */
 const claimMintedSlug = ({
 	planId,
 	versionSlug,
@@ -112,10 +111,6 @@ const rejectNewVersionOnMissingPlan = ({
 	}
 };
 
-/**
- * A numeric pin on a variants[] entry only addresses a row; version numbers are
- * contiguous, so one naming no row is refused rather than remapped to the tip.
- */
 const rejectUnknownVariantVersion = ({
 	variant,
 	productStatesContext,
@@ -148,10 +143,6 @@ const rejectUnknownVariantVersion = ({
 	});
 };
 
-/**
- * A slug pin naming no row is an error, unless a variants[] entry in this same
- * push mints that row — the follow then travels with the row it creates.
- */
 const rejectUnknownTargetSlug = ({
 	target,
 	mintedPins,
@@ -189,7 +180,6 @@ const rejectUnknownTargetSlug = ({
 	});
 };
 
-/** Reject unsupported versioning and invalid batch planParams shape. */
 export const handleUpsertProductVersioningErrors = ({
 	params,
 	productStatesContext,
@@ -201,7 +191,6 @@ export const handleUpsertProductVersioningErrors = ({
 	const seenSlugs = new Set<string>();
 	const unpinnedPlanIds = new Set<string>();
 	const mintedVersionsByPlanId = new Map<string, number>();
-	// Each entry mints relative to the base row it sits under.
 	const mintedPins = new Set(
 		(params.plans ?? []).flatMap((planParams) => {
 			const base = fullProductForPlanParams({
@@ -308,8 +297,6 @@ export const handleUpsertProductVersioningErrors = ({
 					planId: planParams.plan_id,
 					productStatesContext,
 				}),
-				// Rows minted earlier in this same request count: a full-history
-				// push states v1, v2, v3 against a catalog that holds none of them.
 				mintedVersionsByPlanId.get(planParams.plan_id) ?? 0,
 			);
 			if (planParams.version > maxVersion + 1) {
@@ -319,8 +306,6 @@ export const handleUpsertProductVersioningErrors = ({
 					statusCode: 400,
 				});
 			}
-			// Recorded only AFTER the check: an entry must not authorise its own
-			// gap, it only widens the ceiling for rows stated after it.
 			mintedVersionsByPlanId.set(
 				planParams.plan_id,
 				Math.max(
@@ -335,8 +320,6 @@ export const handleUpsertProductVersioningErrors = ({
 				productStatesContext,
 			}) !== null
 		) {
-			// A stable id pins the entry to its own row; no slug is needed and it
-			// never competes with an unpinned sibling.
 			const current = findFullProductByInternalId({
 				internalId: planParams.internal_id,
 				productStatesContext,
@@ -354,9 +337,6 @@ export const handleUpsertProductVersioningErrors = ({
 				versionSlug: planParams.version_slug,
 				productStatesContext,
 			});
-			// A slug naming no row mints one — the config states history the
-			// catalog does not have yet. Two entries claiming the same slug are
-			// still ambiguous, whether or not the row exists.
 			if (version === undefined) {
 				claimMintedSlug({
 					planId: planParams.plan_id,
@@ -380,9 +360,6 @@ export const handleUpsertProductVersioningErrors = ({
 			}
 			unpinnedPlanIds.add(planParams.plan_id);
 
-			// On a plan that does not exist yet an unpinned entry mints v1, so it
-			// collides with another entry pinning v1. Claiming the version it will
-			// take surfaces that as the duplicate it is.
 			if (existingVersions.length === 0) {
 				claimPinnedVersion({
 					planId: planParams.plan_id,

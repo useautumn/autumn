@@ -26,7 +26,6 @@ afterAll(async () => {
 	await webhook?.cleanup();
 });
 
-// ── B9: unlimited feature + usage_limit alert → never fires ─────────────────
 test(`${chalk.yellowBright("ul-alert8: unlimited feature never fires a usage_limit alert")}`, async () => {
 	const customerId = "ul-alert-unlimited-1";
 	const plan = products.base({

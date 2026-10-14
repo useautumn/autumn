@@ -1,18 +1,3 @@
-/**
- * Coverage for the custom-plan guard on `update_plan` version migrations.
- *
- * Contract under test:
- *   - `update_plan` with `version` set auto-injects `plan_filter.custom: false`
- *     via `preProcessMigrationOperations`. Customers whose customer_product
- *     has `is_custom = true` must NOT be touched by such migrations.
- *   - When a batch contains both custom and regular customers on the same
- *     plan, only the regular customers are migrated; the custom customer's
- *     version stays put and their custom feature config is preserved.
- *
- * Mirrors the legacy `migrate-custom-plans.test.ts` cases ported to the
- * migrations-v2 `update_plan` + `version` flow.
- */
-
 import { expect, test } from "bun:test";
 import {
 	type ApiCustomerV3,
@@ -204,7 +189,6 @@ test.concurrent(`${chalk.yellowBright("update_plan custom: customer with is_cust
 			s.products({ list: [pro] }),
 		],
 		actions: [
-			// Custom items at attach time → customer_product.is_custom = true.
 			s.billing.attach({
 				productId: pro.id,
 				items: [monthlyPrice, items.monthlyMessages({ includedUsage: 750 })],
@@ -212,7 +196,6 @@ test.concurrent(`${chalk.yellowBright("update_plan custom: customer with is_cust
 		],
 	});
 
-	// Sanity: custom included usage applied.
 	let customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	expectCustomerFeatureCorrect({
 		customer,
@@ -225,7 +208,6 @@ test.concurrent(`${chalk.yellowBright("update_plan custom: customer with is_cust
 		(productOnCustomer) => productOnCustomer.id === pro.id,
 	)?.version;
 
-	// Bump the product to v2 with a smaller included usage.
 	await autumnV1.products.update(pro.id, {
 		items: [monthlyPrice, items.monthlyMessages({ includedUsage: 600 })],
 	});
@@ -247,7 +229,6 @@ test.concurrent(`${chalk.yellowBright("update_plan custom: customer with is_cust
 		},
 	});
 
-	// Custom plan was SKIPPED — version unchanged, custom config preserved.
 	customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	await expectCustomerProducts({ customer, active: [pro.id] });
 
@@ -283,9 +264,7 @@ test.concurrent(`${chalk.yellowBright("update_plan custom: mix of custom + regul
 			s.products({ list: [pro] }),
 		],
 		actions: [
-			// Regular customer: default product config.
 			s.billing.attach({ productId: pro.id }),
-			// Custom customer: overridden items → is_custom = true.
 			s.billing.attach({
 				customerId: customCustomerId,
 				productId: pro.id,
@@ -294,7 +273,6 @@ test.concurrent(`${chalk.yellowBright("update_plan custom: mix of custom + regul
 		],
 	});
 
-	// Bump product to v2.
 	await autumnV1.products.update(pro.id, {
 		items: [monthlyPrice, items.monthlyMessages({ includedUsage: 600 })],
 	});
@@ -316,7 +294,6 @@ test.concurrent(`${chalk.yellowBright("update_plan custom: mix of custom + regul
 		},
 	});
 
-	// Regular: migrated to v2 included usage = 600.
 	const regularCustomer =
 		await autumnV1.customers.get<ApiCustomerV3>(regularCustomerId);
 	expectCustomerFeatureCorrect({
@@ -327,7 +304,6 @@ test.concurrent(`${chalk.yellowBright("update_plan custom: mix of custom + regul
 		usage: 0,
 	});
 
-	// Custom: untouched, still on 800.
 	const customCustomer =
 		await autumnV1.customers.get<ApiCustomerV3>(customCustomerId);
 	expectCustomerFeatureCorrect({
@@ -356,7 +332,6 @@ test.concurrent(`${chalk.yellowBright("update_plan custom: subscriptions.update 
 		actions: [s.billing.attach({ productId: pro.id })],
 	});
 
-	// Sanity: starts on default (500), no Dashboard.
 	let customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	expectCustomerFeatureCorrect({
 		customer,
@@ -369,7 +344,6 @@ test.concurrent(`${chalk.yellowBright("update_plan custom: subscriptions.update 
 		(productOnCustomer) => productOnCustomer.id === pro.id,
 	)?.version;
 
-	// PATCH-style: add Dashboard via subscriptions.update.add_items → flips is_custom = true.
 	await autumnV2_2.subscriptions.update({
 		customer_id: customerId,
 		plan_id: pro.id,
@@ -378,7 +352,6 @@ test.concurrent(`${chalk.yellowBright("update_plan custom: subscriptions.update 
 		},
 	});
 
-	// Dashboard is now present on the customer (patch landed).
 	let customerV5 = await autumnV2_2.customers.get<ApiCustomerV5>(customerId);
 	expectFlagCorrect({
 		customer: customerV5,
@@ -386,7 +359,6 @@ test.concurrent(`${chalk.yellowBright("update_plan custom: subscriptions.update 
 		present: true,
 	});
 
-	// Bump product to v2 with different Messages count (v2 still has no Dashboard).
 	await autumnV1.products.update(pro.id, {
 		items: [items.monthlyMessages({ includedUsage: 600 })],
 	});
@@ -408,8 +380,6 @@ test.concurrent(`${chalk.yellowBright("update_plan custom: subscriptions.update 
 		},
 	});
 
-	// Custom plan SKIPPED — version unchanged, custom Dashboard preserved,
-	// Messages stays on v1's 500 (NOT migrated to v2's 600).
 	customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	const versionAfter = customer.products?.find(
 		(productOnCustomer) => productOnCustomer.id === pro.id,
@@ -454,7 +424,6 @@ test.concurrent(`${chalk.yellowBright("update_plan custom: subscriptions.update 
 	).products?.find((productOnCustomer) => productOnCustomer.id === pro.id)
 		?.version;
 
-	// PUT-style customization → replaces items entirely, flips is_custom = true.
 	await autumnV2_2.subscriptions.update({
 		customer_id: customerId,
 		plan_id: pro.id,
@@ -536,8 +505,6 @@ test.concurrent(`${chalk.yellowBright("update_plan custom: explicit `custom: tru
 		items: [monthlyPrice, items.monthlyMessages({ includedUsage: 600 })],
 	});
 
-	// Explicit `plan_filter.custom: true` overrides the auto-injected guard —
-	// caller is opting in to migrate custom plans.
 	await runUpdatePlanMigration({
 		ctx,
 		migrationClient: autumnV2_2,
@@ -555,7 +522,6 @@ test.concurrent(`${chalk.yellowBright("update_plan custom: explicit `custom: tru
 		},
 	});
 
-	// Migrated — included usage reflects v2 (600).
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	expectCustomerFeatureCorrect({
 		customer,

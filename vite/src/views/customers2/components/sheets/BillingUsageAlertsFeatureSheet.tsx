@@ -89,8 +89,6 @@ export function BillingUsageAlertsFeatureSheet() {
 		planAlerts[0]?.origin?.type === "plan"
 			? planAlerts[0].origin.planName
 			: undefined;
-	// Size the threshold column to the longest label so large values like
-	// "2,500,000" don't overlap the description and rows stay aligned.
 	const longestThresholdChars = Math.max(
 		0,
 		...featureAlerts.map(({ alert }) => thresholdLabel(alert).length),
@@ -154,7 +152,6 @@ export function BillingUsageAlertsFeatureSheet() {
 		});
 	};
 
-	// Own alerts for a feature replace every plan alert for it, so copy the full set.
 	const customizePlanAlerts = () =>
 		saveUsageAlerts({
 			usageAlerts: [

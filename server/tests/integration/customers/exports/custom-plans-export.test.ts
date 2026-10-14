@@ -1,5 +1,3 @@
-/** Custom plans export: report rows, apply writes with compare-and-set, and the S3 job end to end. */
-
 import { expect, test } from "bun:test";
 import {
 	type AttachParamsV1Input,
@@ -198,9 +196,7 @@ test.concurrent(
 				readUpdatedAt,
 			});
 
-		// The flag moved since the read.
 		expect(await write({ from: false, readUpdatedAt: 1 })).toBe(false);
-		// The plan was written since the read.
 		expect(await write({ from: true, readUpdatedAt: 0 })).toBe(false);
 
 		const [row] = await ctx.db
@@ -222,7 +218,6 @@ test.concurrent(
 		});
 		expect(customerProduct.is_custom).toBe(true);
 
-		// The run's cached catalog says 250, as if the version was edited in place mid-run.
 		const catalog = await loadBaseProduct({
 			ctx,
 			internalProductId: customerProduct.internal_product_id,

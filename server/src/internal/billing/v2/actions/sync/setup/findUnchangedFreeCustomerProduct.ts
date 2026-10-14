@@ -9,8 +9,6 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { isUnchangedCustomerProduct } from "@/internal/billing/v2/actions/setPlans/utils/isUnchangedCustomerProduct";
 import { isProductFreeInSyncCurrency } from "../utils/syncContextUtils";
 
-/** The customer-wide free plan a synced plan repeats exactly, which sync then
- * leaves in place instead of re-inserting onto the subscription. */
 export const findUnchangedFreeCustomerProduct = ({
 	ctx,
 	fullCustomer,

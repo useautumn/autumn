@@ -6,7 +6,6 @@ import {
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan/executeAutumnBillingPlan";
 
-/** Expires destination plans the incoming plan replaces; no default is activated since the incoming plan fills the group. */
 export const expireSupersededCusProducts = async ({
 	ctx,
 	customerId,

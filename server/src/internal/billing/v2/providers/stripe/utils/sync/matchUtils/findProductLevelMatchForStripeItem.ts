@@ -59,16 +59,10 @@ export const stripeItemMatchesBasePrice = ({
 	return stripePriceShapesEqual(stripeItemShape, autumnBaseShape);
 };
 
-/** Autumn bills pay-as-you-go as a metered item or a $0 placeholder, never a
- * flat charge, so a flat item on the same product can't be one. */
 const itemCanBeConsumable = ({ item }: { item: StripeItemSnapshot }) =>
 	item.recurring_usage_type === "metered" ||
 	Number(item.unit_amount_decimal ?? item.unit_amount ?? 0) === 0;
 
-/**
- * A non-fixed price keyed to the item's Stripe product claims it by id alone —
- * Autumn groups its own price variants (custom amounts) under that product.
- */
 const findKeyedPrice = ({
 	item,
 	candidate,
@@ -105,11 +99,6 @@ const findMatchingBasePrice = ({
 	return basePrice;
 };
 
-/**
- * Prepaid prices are matched by their TOTAL (allowance-inclusive) shape —
- * Stripe-native licensed prices under a mapped product resolve to the plan's
- * prepaid price when amounts/tiers line up (the imported add-on case).
- */
 const findMatchingPrepaidPrice = ({
 	item,
 	candidate,
@@ -147,7 +136,6 @@ const findMatchingPrepaidPrice = ({
 	return null;
 };
 
-/** Which price on the candidate claims the item: keyed id first, then shape. */
 const resolvePriceMatch = ({
 	item,
 	candidate,
@@ -204,8 +192,6 @@ export const findProductLevelMatchForStripeItem = ({
 	item: StripeItemSnapshot;
 	candidates: ProductLevelMatchCandidate[];
 	org?: Organization;
-	/** Products already linked to the item's subscription — an unclaimed item
-	 * stays on one of these instead of swapping to a sibling plan. */
 	linkedInternalProductIds?: ReadonlySet<string>;
 }): ProductLevelMatch | null => {
 	if (candidates.length === 0) return null;
@@ -215,9 +201,6 @@ export const findProductLevelMatchForStripeItem = ({
 		priceMatch: resolvePriceMatch({ item, candidate, org }),
 	}));
 
-	// A claim-less single candidate is only a plausible custom base under the
-	// same gate multi-candidate fallback uses — a metered item must not
-	// silently become a custom base with its price stripped.
 	if (resolved.length === 1) {
 		const only = resolved[0];
 		if (!only) return null;
@@ -225,8 +208,6 @@ export const findProductLevelMatchForStripeItem = ({
 		return basePlanFallback({ item, resolved, linkedInternalProductIds });
 	}
 
-	// Ambiguous candidates resolve only via price claims, strongest kind
-	// first — a unique claim of that kind wins, a tie is unresolvable.
 	const claimPriority = [
 		"stripe_product_id",
 		"stripe_base_price_shape",
@@ -243,12 +224,6 @@ export const findProductLevelMatchForStripeItem = ({
 	return basePlanFallback({ item, resolved, linkedInternalProductIds });
 };
 
-/**
- * No price claims at all: a plausible custom base stays on the plan already
- * linked to the subscription (a custom amount is a price change, not a plan
- * swap); otherwise it falls back to the base plan (variants defer to their
- * base), first base plan winning if several.
- */
 const basePlanFallback = ({
 	item,
 	resolved,
@@ -258,8 +233,6 @@ const basePlanFallback = ({
 	resolved: ProductLevelMatch[];
 	linkedInternalProductIds?: ReadonlySet<string>;
 }): ProductLevelMatch | null => {
-	// Mirrors stripeItemToBasePrice's gate — metered/tiered items are never a
-	// custom base and must stay unmatched so the anchored rematch can claim them.
 	if (item.recurring_usage_type === "metered") return null;
 	if (item.unit_amount === null || !item.recurring_interval) return null;
 

@@ -3,11 +3,6 @@ import { WebhookEventType } from "../webhookEventType.js";
 import { isLocalWebhookUrl } from "./isLocalWebhookUrl.js";
 import { isVercelEvent } from "./webhookAppKind.js";
 
-/**
- * Webhook endpoint request/response models. Shared between the server handlers
- * (request validation), the OpenAPI contract (SDK + docs) and atmn's lint.
- */
-
 export const WEBHOOK_ID_PATTERN = /^[a-zA-Z0-9_-]+$/;
 
 export const WebhookIdSchema = z
@@ -37,8 +32,6 @@ export const WebhookRefSchema = z
 
 export const WebhookUrlSchema = z
 	.url()
-	// Spelled out rather than `/i`: the spec pattern has no flags, and atmn's
-	// lint applies it to the URL as written.
 	.regex(/^[Hh][Tt][Tt][Pp][Ss]:\/\//, "Webhook URL must use https.")
 	.refine((url) => !isLocalWebhookUrl(url), {
 		message:
@@ -65,7 +58,6 @@ export const WebhookEventsSchema = z
 		"The events sent to this webhook. Empty means every event. `vercel.*` events can't be mixed with other events.",
 	);
 
-/** Omitting `events` on create or sync means every event, the same as `[]`. */
 const statedEventsField = WebhookEventsSchema.default([]).describe(
 	"The events sent to this webhook. Leave it out to send every event. `vercel.*` events can't be mixed with other events.",
 );

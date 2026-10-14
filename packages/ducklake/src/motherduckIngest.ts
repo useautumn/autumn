@@ -1,15 +1,12 @@
 import { DuckDBInstance } from "@duckdb/node-api";
 import type { DucklakeLogger } from "./index.js";
 
-/** TRANSIENT database — see initMotherDuck.ts in the server for why. */
 export const MD_DATABASE = "lake_cache_v2";
 
 type MdConnection = Awaited<
 	ReturnType<Awaited<ReturnType<typeof DuckDBInstance.create>>["connect"]>
 >;
 
-/** One RW session per run — every extra MotherDuck touch bills a full
- * startup+cooldown window, so all swaps/status/rollup share this connection. */
 export const withMotherDuckSession = async <T>({
 	run,
 }: {
@@ -31,11 +28,6 @@ export const withMotherDuckSession = async <T>({
 	}
 };
 
-/** Single-statement atomic replace: readers observe the old table or the new
- * one, never a gap — stronger than the flights' drop+rename dance, and immune
- * to concurrent writers racing on a shared staging name. One legacy wrinkle:
- * these objects have historically been VIEWs, which CREATE OR REPLACE TABLE
- * cannot replace across object types. */
 export const swapInParquetTable = async ({
 	connection,
 	table,
@@ -58,8 +50,6 @@ export const swapInParquetTable = async ({
 			await connection.run(`DROP VIEW "${MD_DATABASE}".main."${table}"`);
 		}
 	}
-	// MotherDuck pulls the parquet from S3 itself via its lake_s3 secret —
-	// bytes never flow through this task's connection.
 	await connection.run(`
 		CREATE OR REPLACE TABLE "${MD_DATABASE}".main."${table}" AS
 		SELECT * FROM read_parquet('${parquetUrl}')
@@ -76,9 +66,6 @@ export const swapInParquetTable = async ({
 	return { rowCount };
 };
 
-/** Full-replace status table the Leaderboard freshness widget reads
- * (`max(refreshed_at)`); row_count widened to BIGINT (INTEGER was within 19x
- * of overflow at customer_entitlements' 114M). */
 export const writeRefreshStatus = async ({
 	connection,
 	statusTable,

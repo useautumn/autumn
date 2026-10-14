@@ -34,10 +34,6 @@ import {
 } from "../jsDocs/billingJsDocs";
 import { advanceTestClockDescription } from "./customersContract";
 
-/**
- * Superseded by `customers.advance_test_clock`; still served for keys minted
- * against it, but hidden from the public spec, SDKs, docs and the CLI.
- */
 export const legacyBillingAdvanceTestClockContract = oc
 	.route({
 		method: "POST",

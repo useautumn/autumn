@@ -1,11 +1,3 @@
-/**
- * catalogV2.update — execute-phase Stripe resource init.
- *
- * After DB writes, missing Stripe objects are created (sandbox) or reused
- * (variant family, license child). `create_in_stripe: false` copies ids but
- * never creates; free plans never mint a Stripe Product of their own.
- */
-
 import { expect, test } from "bun:test";
 import {
 	BillingInterval,
@@ -336,7 +328,6 @@ test.concurrent(
 				],
 			});
 
-			// Draft mint — omit active so v1 is not demoted (demotion upsert inits v1 too).
 			await autumnV2_3.catalogV2.update({
 				plans: [
 					{

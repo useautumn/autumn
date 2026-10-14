@@ -7,7 +7,6 @@ const DeleteMigrationBody = z.object({
 	id: z.string(),
 });
 
-/** POST /migrations.delete — delete by user `id`. */
 export const handleDeleteMigration = createRoute({
 	scopes: [Scopes.Migrations.Write],
 	body: DeleteMigrationBody,

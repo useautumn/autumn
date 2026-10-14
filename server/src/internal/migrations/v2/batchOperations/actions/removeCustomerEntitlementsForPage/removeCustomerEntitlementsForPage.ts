@@ -19,8 +19,6 @@ export type RemoveCustomerEntitlementsForPageResult = {
 	removedItems: BatchMigrationRemovedItem[];
 };
 
-/** Bounded per customer-product page like the add, so a customer holding many
- * customer products never balloons a statement or a transaction. */
 export const removeCustomerEntitlementsForPage = async ({
 	db,
 	features,

@@ -124,7 +124,6 @@ withFixture(
 					const completion = work.then(() => {
 						finalized = true;
 					});
-					// Bun's expect().rejects blocks until settlement, so capture the rejection instead.
 					const aborted = completion.then(
 						() => null,
 						(error: unknown) => error,

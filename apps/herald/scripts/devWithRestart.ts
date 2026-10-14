@@ -2,7 +2,6 @@ import type { Subprocess } from "bun";
 
 const RESTART_DELAY_MS = 2_000;
 
-/** Local stand-in for the orchestrator that replaces a task: herald ends its own process when a consumer dies. */
 let isStopping = false;
 let herald: Subprocess | undefined;
 

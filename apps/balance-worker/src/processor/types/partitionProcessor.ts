@@ -56,7 +56,6 @@ import type {
 import type { DeferredLogSink } from "./deferredLogSink.js";
 import type { ReceiptPolicy } from "./receiptPolicy.js";
 
-/** Processes one partition's accepted commands: track writes, check reads. */
 export type PartitionProcessor = {
 	execute<Decision>(params: {
 		source: MutationSource;
@@ -64,20 +63,15 @@ export type PartitionProcessor = {
 		deferredLogs?: DeferredLogSink;
 	}): Promise<Decision>;
 	track(params: { command: TrackCommand }): Promise<TrackReply>;
-	/** Decided now, reply held by commit position; refused hands it to `track`. */
 	trackInline(params: { command: TrackCommand }): InlineTrackDecision;
-	/** A batch decided inline whole, its reply held on its last write; refused hands it to `track` per command. */
 	trackBatchInline(params: {
 		commands: TrackCommand[];
 	}): InlineTrackBatchOutcome;
-	/** The track's deduction, enqueued in arrival order; the commit is the caller's to wait for. */
 	decideTrack(params: {
 		command: TrackCommand;
 	}): Promise<DecidedMutation<never>>;
 	check(params: { command: CheckCommand }): Promise<CheckReply>;
-	/** Decided now on a resident, current subject; refused hands it to `check`. */
 	checkInline(params: { command: CheckCommand }): InlineCheckDecision;
-	/** Releases what the partition held on the worker: its budget share and its resident rows. */
 	dispose(): void;
 	readSubjectState(params: {
 		command: ReadSubjectStateCommand;
@@ -86,12 +80,10 @@ export type PartitionProcessor = {
 	applyBillingPlan(params: {
 		request: ApplyBillingPlanRequest;
 	}): Promise<ApplyBillingPlanReply>;
-	/** Answers once the rows are gone from memory and, unless told otherwise, once the customer's snapshot DELETE has landed. */
 	evict(params: {
 		command: EvictCommand;
 		waitsForSnapshotDelete?: boolean;
 	}): Promise<EvictReply>;
-	/** Leaves the partition cold once its earlier writes are stored; Postgres keeps every row true, so nothing is logged. */
 	evictResident(params: { coldStart: ColdStartScope }): Promise<ResidentDrop>;
 	flush(params: { command: FlushCommand }): Promise<FlushReply>;
 	finalize(params: { command: FinalizeCommand }): Promise<FinalizeReply>;
@@ -117,7 +109,6 @@ export type PartitionProcessor = {
 	recalculateBalance(params: {
 		command: RecalculateBalanceCommand;
 	}): Promise<RecalculateBalanceReply>;
-	/** Settles every accepted command and the store applies behind them; the runtime awaits this before disposal. */
 	drain(): Promise<void>;
 };
 
@@ -137,7 +128,6 @@ export type PartitionProcessorDependencies = {
 	dbControl?: EdgeConfigStore<DbControlEdgeConfig>;
 	receiptPolicy: ReceiptPolicy;
 	recentCommands: RecentCommands;
-	/** Where the partition's writer publishes its commit position. */
 	commitPositions?: CommitPositionSink;
 	onRecoveryRequired?: PartitionWriterContext["onRecoveryRequired"];
 	assertCanRead(): void;
@@ -148,7 +138,6 @@ export type PartitionProcessorConfig = {
 	topic: string;
 	partition: number;
 	writerLimits: PartitionWriterLimits;
-	/** Overrides the BALANCE_WORKER_EVICTS_LOGGED constant; tests exercise both. */
 	logsEvicts?: boolean;
 };
 
@@ -159,12 +148,10 @@ export interface PartitionProcessorContext
 	subjectHydrator: SubjectHydrator;
 }
 
-/** Commands still in flight, so drain can settle them before the runtime disposes. */
 export type AcceptedCommands = {
 	active: Set<Promise<unknown>>;
 };
 
-/** Plans of one customer, queued by customer key: each one is decided and stored before the next starts. */
 export type CustomerPlans = {
 	tails: Map<string, Promise<void>>;
 };

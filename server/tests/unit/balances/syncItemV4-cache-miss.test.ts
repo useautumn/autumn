@@ -43,7 +43,6 @@ await mockModuleWithRestore(
 	}),
 );
 
-// A legacy-path test: a routed customer's sync is dropped before the cache is read.
 const previousRollout = process.env.BALANCE_WORKER_ROLLOUT_ENABLED;
 process.env.BALANCE_WORKER_ROLLOUT_ENABLED = "false";
 

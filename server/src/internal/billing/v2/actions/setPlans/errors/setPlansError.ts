@@ -7,7 +7,6 @@ import {
 } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
 
-/** Every Set Plans error the dashboard renders: worded once by the shared copy, with its details attached. */
 export const setPlansError = ({
 	details,
 	code = ErrCode.InvalidRequest,

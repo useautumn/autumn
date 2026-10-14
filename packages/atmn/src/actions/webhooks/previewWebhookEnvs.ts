@@ -151,19 +151,15 @@ export const previewWebhookEnvs = async ({
 
 	const lanes: WebhooksLane[] = [];
 	const skipped: string[] = [];
-	// Live is only read here, so its failure is a warning, never a blocked sandbox push.
 	probedResults.forEach((result, index) => {
 		if (result.status === "rejected")
 			skipped.push(
 				`⚠ webhooks: couldn't check ${probed[index]?.label ?? "live"} for changes (${messageOf(result.reason)})`,
 			);
 	});
-	// A skipped live key (rejected, deleted, another org's) leaves production unchecked too.
 	const productionUnchecked = probedResults.some(
 		(result) => result.status === "rejected" || "skipped" in result.value,
 	);
-	// Refused items (several dashboard webhooks on one URL, say) fail the lane
-	// here, beside every other lane's errors, rather than at apply.
 	const failures: WebhookEnvFailure[] = [];
 	syncedResults.forEach((result, index) => {
 		const label = synced[index]?.label ?? "";

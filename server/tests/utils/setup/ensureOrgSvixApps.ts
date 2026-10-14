@@ -14,11 +14,6 @@ const svixAppExists = async (appId: string | undefined): Promise<boolean> => {
 	}
 };
 
-/**
- * Recreates the org's Svix apps when svix_config points at apps that no
- * longer exist in Svix (they are only ever created at org signup, so a
- * deleted app otherwise 404s webhook tests forever).
- */
 export const ensureOrgSvixApps = async ({
 	db,
 	org,

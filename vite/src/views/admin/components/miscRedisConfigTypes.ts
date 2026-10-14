@@ -67,7 +67,6 @@ export const requiresHighRampConfirm = ({
 	nextPercent - currentPercent >= HIGH_RAMP_THRESHOLD ||
 	(nextPercent >= HIGH_RAMP_THRESHOLD && currentPercent < HIGH_RAMP_THRESHOLD);
 
-/** The backup connection may only be edited while nothing routes to it. */
 export const isBackupLive = (config: MiscRedisConfigResponse) =>
 	config.activeInstance === "backup" ||
 	(config.ramp !== null && config.activeInstance === "main");

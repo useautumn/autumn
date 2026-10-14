@@ -9,15 +9,6 @@ import { balanceV1ToV0 } from "../../../customers/cusFeatures/mappers/balanceV1T
 import { TrackResponseV2Schema } from "../trackResponseV2.js";
 import { TrackResponseV3Schema } from "../trackResponseV3.js";
 
-/**
- * V2_0_TrackChange: Transforms track response from V3 (V2.1) to V2 (V2.0) format
- *
- * Applied when: targetVersion <= V2.0
- *
- * Changes:
- * - Transforms balance from ApiBalanceV1 to ApiBalance (V0 format)
- * - Transforms balances record from ApiBalanceV1 to ApiBalance (V0 format)
- */
 export const V2_0_TrackChange = defineVersionChange({
 	name: "V2_0 Track Change",
 	newVersion: ApiVersion.V2_1,
@@ -33,12 +24,10 @@ export const V2_0_TrackChange = defineVersionChange({
 	}: {
 		input: z.infer<typeof TrackResponseV3Schema>;
 	}): z.infer<typeof TrackResponseV2Schema> => {
-		// Transform single balance
 		const transformedBalance = input.balance
 			? balanceV1ToV0({ input: input.balance })
 			: null;
 
-		// Transform balances record (preserve null entries)
 		let transformedBalances: Record<string, ApiBalance | null> | undefined;
 		if (input.balances) {
 			transformedBalances = {};

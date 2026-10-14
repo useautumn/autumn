@@ -14,19 +14,12 @@ export type LicenseFieldRenderer = (params: {
 
 export interface LicenseQuantityEditor {
 	quantities: Record<string, number | undefined>;
-	/** Current purchased totals per license (update flow) shown when unstaged. */
 	existingQuantities?: Record<string, number>;
-	/** Display staged totals without allowing edits (review stage). */
 	readOnly?: boolean;
-	/** Stages the total on edit-open, so the field below always renders against
-	 * a value the form already holds. */
 	onEditStart: LicenseEditStart;
-	/** Owned by the caller so each form binds its own typed field path. */
 	renderField: LicenseFieldRenderer;
 }
 
-/** Edits the total seats purchased for a license (sent as license_quantities).
- * Totals are inclusive of the included amount; extras are billed prepaid. */
 export function LicenseQuantityControl({
 	editor,
 	licensePlanId,

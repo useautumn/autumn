@@ -10,15 +10,9 @@ import { kernelExecute } from "./kernelExecute.js";
 import { invoiceCheckout } from "./playwright/invoiceCheckout.js";
 import { playwrightPool } from "./playwrightPool.js";
 
-/** Stripe marks a submitted payment paid within seconds; still open past this, the page never charged the card. */
 const STRIPE_INVOICE_PAID_TIMEOUT_MS = 20_000;
-/** Once Stripe says paid, Autumn records it as soon as our `invoice.paid` webhook runs. */
 const AUTUMN_INVOICE_PAID_TIMEOUT_MS = 15_000;
 
-/**
- * Pays the customer's open invoice on its hosted page, then waits until Autumn has handled `invoice.paid`.
- * Autumn marks its invoice paid last, after attaching the plan, so every later read sees the payment.
- */
 export const completeInvoiceCheckoutV2 = async ({
 	url,
 	ctx,
@@ -32,7 +26,6 @@ export const completeInvoiceCheckoutV2 = async ({
 	try {
 		await runInvoiceCheckout({ url });
 	} catch (error) {
-		// Only an external CAPTCHA challenge falls back to paying through the Stripe API.
 		const requiresChallenge =
 			error instanceof Error && error.name === "StripeBrowserChallengeError";
 		if (!requiresChallenge) throw error;
@@ -42,7 +35,6 @@ export const completeInvoiceCheckoutV2 = async ({
 		);
 		await payOpenInvoice({ ctx, customerId });
 	}
-	// Stripe is the truth on whether the page's payment went through, however slow the page is to say so.
 	await pollUntilAsserted({
 		fetch: () => ctx.stripeCli.invoices.retrieve(stripeInvoiceId),
 		assert: (invoice) => {
@@ -83,7 +75,6 @@ const runInvoiceCheckout = async ({ url }: { url: string }): Promise<void> => {
 		return;
 	}
 
-	// Local — run the same Playwright function with a local browser
 	console.log("[completeInvoiceCheckoutV2] Using local Playwright...");
 	await playwrightPool.runInPage({ fn: invoiceCheckout, args: { url } });
 	console.log("[completeInvoiceCheckoutV2] Done");

@@ -1,17 +1,3 @@
-/**
- * Adding a pooled license item must not run on the batch lane.
- *
- * A pooled item mints one anchor customer_entitlement (customer_product_id
- * NULL) plus a contribution row per assignment. The batch add/replace SQL
- * matches on assignment.id = target.customer_product_id, so it repoints the
- * contributions while the anchor keeps the old entitlement — forking a second
- * pool and double-granting the feature. validateLicenseLink already rejects
- * pooled license items on the per-customer lane; the batch prepare lane never
- * calls it.
- *
- * Red: the op runs on the batch lane.
- * Green: the op is rejected to the per-customer lane.
- */
 import { expect, test } from "bun:test";
 import { runChunkedMigration } from "@tests/integration/billing/migrations-v2/utils/runChunkedMigration";
 import { setupLicenseUpdateScenario } from "@tests/integration/licenses/billing/update/setupLicenseUpdateScenario";

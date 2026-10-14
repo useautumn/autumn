@@ -22,8 +22,6 @@ import { buildRedisSpanOutcomeAttributes } from "./redisSpanOutcomeAttributes.js
 const TRACER_NAME = "autumn.redis";
 const INSTRUMENTED = new WeakSet<object>();
 
-/** Stable instance identity for spans (`db.redis.type`) — unlike `region`,
- *  which encodes deploy region + ad-hoc suffixes and feeds existing metrics. */
 export type RedisClientType =
 	| "subject-primary"
 	| "subject-secondary"
@@ -31,7 +29,6 @@ export type RedisClientType =
 	| "misc-primary"
 	| "misc-secondary";
 
-/** Commands that are noisy/internal — not worth tracing. */
 const SKIP_COMMANDS = new Set([
 	"ping",
 	"auth",
@@ -46,11 +43,7 @@ const SKIP_COMMANDS = new Set([
 	"disconnect",
 	"cluster",
 	"command",
-	// SCRIPT LOAD / FLUSH / EXISTS fires rarely on connection bootstrap and
-	// can spike into 100s of ms — noise that swamps the slowlog.
 	"script",
-	// Custom Lua commands are traced via defineCommand wrapper,
-	// so skip the underlying evalsha/eval to avoid double-spanning.
 	"evalsha",
 	"eval",
 ]);
@@ -66,7 +59,6 @@ type SpanContext = {
 	key?: string;
 };
 
-/** Ends a span safely — never throws. */
 const finalizeSpan = ({
 	spanCtx,
 	error,
@@ -94,10 +86,6 @@ const finalizeSpan = ({
 		);
 
 		if (durationMs > thresholds.severeMs) {
-			// Severity, not `db.redis.slow`, gates the export-sampling bypass.
-			// At a 15ms slow bar nearly every command qualified, so ~all redis
-			// spans bypassed sampling and were exported; the span pipeline
-			// leaks native memory in proportion to spans exported.
 			span.setAttribute("db.redis.severe", true);
 			emitRedisSlowLog({
 				operation,
@@ -109,9 +97,7 @@ const finalizeSpan = ({
 				key,
 			});
 		}
-	} catch {
-		// swallow — never mask application results
-	}
+	} catch {}
 
 	try {
 		if (error) {
@@ -125,18 +111,9 @@ const finalizeSpan = ({
 			span.setStatus({ code: SpanStatusCode.OK });
 		}
 		span.end();
-	} catch {
-		// swallow — never mask application results
-	}
+	} catch {}
 };
 
-/**
- * Extracts the first key argument from a Redis command's args.
- * For most commands, args[0] is the key. Custom Lua commands registered
- * without `numberOfKeys` (e.g. `setCachedFullSubject`) pass the key count
- * as args[0] and the first real key at args[1]. Returns undefined for
- * keyless commands or evalsha (where args[0] is a SHA hash).
- */
 export const extractKey = ({
 	args,
 }: {
@@ -150,15 +127,9 @@ export const extractKey = ({
 	return undefined;
 };
 
-/** Truncates a key for `db.statement` (Axiom trace attribute size limit). */
 const truncateKey = (key: string): string =>
 	key.length > 200 ? `${key.slice(0, 200)}...` : key;
 
-/**
- * Applies SLO threshold + key-context attributes to a fresh span.
- * Isolated in a try/catch so partial-enrichment failures don't prevent
- * the command from running.
- */
 const enrichSpan = ({
 	span,
 	operation,
@@ -191,13 +162,6 @@ const enrichSpan = ({
 	return { thresholds, keyContext };
 };
 
-/**
- * Wraps the `exec()` of an ioredis Pipeline or Multi so the batched round trip
- * shows up as a single parent span (`redis.pipeline` / `redis.multi`) in
- * Axiom. Individual command spans continue to fire for each queued command;
- * this span gives us total batch latency and a command-count attribute so we
- * can tell at a glance whether a request was pipelined.
- */
 const wrapPipelineExec = ({
 	pipeline,
 	tracer,
@@ -293,7 +257,6 @@ const wrapPipelineExec = ({
 	};
 };
 
-/** Wraps a custom command method created by defineCommand with a traced version. */
 const wrapCustomCommand = ({
 	redis,
 	name,
@@ -404,7 +367,6 @@ export const instrumentRedis = ({
 
 	const tracer = trace.getTracer(TRACER_NAME);
 
-	// --- Patch sendCommand for built-in commands (GET, SET, HGET, etc.) ---
 	const originalSendCommand = redis.sendCommand;
 
 	redis.sendCommand = function patchedSendCommand(
@@ -414,7 +376,6 @@ export const instrumentRedis = ({
 	): unknown {
 		const commandName = (command?.name || "unknown").toLowerCase();
 
-		// Skip noisy/internal commands and evalsha (traced via defineCommand wrapper)
 		if (SKIP_COMMANDS.has(commandName)) {
 			return originalSendCommand.call(this, command, stream);
 		}
@@ -480,7 +441,6 @@ export const instrumentRedis = ({
 		}
 	};
 
-	// --- Patch pipeline() and multi() so batched exec gets a parent span ---
 	const originalPipeline = redis.pipeline.bind(redis);
 	redis.pipeline = function patchedPipeline(
 		this: Redis,
@@ -495,9 +455,7 @@ export const instrumentRedis = ({
 				redisType,
 				kind: "pipeline",
 			});
-		} catch {
-			// Fail-open: wrapping failed, pipeline still works
-		}
+		} catch {}
 		return pipeline;
 	} as Redis["pipeline"];
 
@@ -515,13 +473,10 @@ export const instrumentRedis = ({
 				redisType,
 				kind: "multi",
 			});
-		} catch {
-			// Fail-open: wrapping failed, multi still works
-		}
+		} catch {}
 		return multi;
 	} as Redis["multi"];
 
-	// --- Patch defineCommand so custom Lua commands get named spans ---
 	const originalDefineCommand = redis.defineCommand.bind(redis);
 
 	redis.defineCommand = function patchedDefineCommand(
@@ -531,9 +486,7 @@ export const instrumentRedis = ({
 		originalDefineCommand(name, definition);
 		try {
 			wrapCustomCommand({ redis, name, tracer, region, redisType });
-		} catch {
-			// Fail-open: wrapping failed, command still works via sendCommand
-		}
+		} catch {}
 	};
 
 	return redis;

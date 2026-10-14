@@ -1,13 +1,3 @@
-/**
- * atmn crud/plans â€” proration at its default is not written by pull; any
- * other pair survives push â†’ pull â†’ push untouched.
- *
- * The server reads an omitted proration block as
- * { on_increase: prorate_immediately, on_decrease: prorate_immediately } (the
- * pair it stores for a prepaid item that never set one), so a pull that
- * leaves the block out and a config that states that pair mean the same thing.
- */
-
 import { expect, test } from "bun:test";
 import {
 	configBody,
@@ -53,7 +43,6 @@ const setItems = (scenario: AtmnScenario, items: string): void =>
 		}),
 	);
 
-/** The server's own preview finds nothing to apply for the config on disk. */
 const expectClean = (scenario: AtmnScenario) =>
 	scenario
 		.wireFromConfig()
@@ -71,7 +60,6 @@ test("prepaid proration: default is never written, a custom pair survives push â
 	});
 
 	try {
-		// 1. An item that never touched proration: the round trip writes none.
 		const untouched = await expectRoundTrip({ scenario });
 		expect([...untouched.freshFiles.values()].join("\n")).not.toContain(
 			"proration",
@@ -80,9 +68,6 @@ test("prepaid proration: default is never written, a custom pair survives push â
 		expect(configText(scenario)).not.toContain("proration");
 		await expectClean(scenario);
 
-		// 2. The default pair stated by hand previews clean, so an in-place pull
-		// leaves the text alone (it rewrites only what differs); a fresh pull
-		// writes no block, and the config without one previews clean too.
 		setItems(scenario, prepaidSeats({ proration: DEFAULT_PAIR }));
 		await scenario.push();
 		await expectClean(scenario);
@@ -94,8 +79,6 @@ test("prepaid proration: default is never written, a custom pair survives push â
 			"proration",
 		);
 
-		// 3. A custom pair: push â†’ pull â†’ push â†’ pull, present and unchanged
-		// at every step.
 		setItems(scenario, prepaidSeats({ proration: CUSTOM_PAIR }));
 		await scenario.push();
 		await expectClean(scenario);
@@ -113,8 +96,6 @@ test("prepaid proration: default is never written, a custom pair survives push â
 		expect(fresh).toContain('onIncrease: "prorate_next_cycle"');
 		expect(fresh).toContain('onDecrease: "none"');
 
-		// 4. Removing the block by hand puts the item back on the default: the
-		// server sees a change, applies it, and the next pull writes nothing.
 		setItems(scenario, prepaidSeats());
 		await scenario.push();
 		await expectClean(scenario);

@@ -12,9 +12,6 @@ import AutumnError from "@/external/autumn/autumnCli";
 import { cusProductToSub } from "@/internal/customers/cusProducts/cusProductUtils/convertCusProduct.js";
 import { generateId, timeout } from "@/utils/genUtils.js";
 
-// ============================================================================
-// Test 1: Auto-create customer and entity via attach
-// ============================================================================
 test.concurrent(`${chalk.yellowBright("attach-misc: auto-create customer and entity via attach")}`, async () => {
 	const prefix = "attach-misc-autocreate";
 	const customerId = prefix;
@@ -23,7 +20,6 @@ test.concurrent(`${chalk.yellowBright("attach-misc: auto-create customer and ent
 	const wordsItem = items.monthlyWords({ includedUsage: 1000 });
 	const pro = products.pro({ items: [wordsItem] });
 
-	// Setup products only (no customer - we'll auto-create via attach)
 	const { autumnV1 } = await initScenario({
 		setup: [
 			s.deleteCustomer({ customerId }),
@@ -32,7 +28,6 @@ test.concurrent(`${chalk.yellowBright("attach-misc: auto-create customer and ent
 		actions: [],
 	});
 
-	// Attach with customer_data and entity_data to auto-create both
 	const attachResponse = await autumnV1.attach({
 		customer_id: customerId,
 		product_id: pro.id,
@@ -53,7 +48,6 @@ test.concurrent(`${chalk.yellowBright("attach-misc: auto-create customer and ent
 
 	expect(attachResponse).toBeDefined();
 
-	// Verify customer was auto-created
 	const customer = await autumnV1.customers.get(customerId);
 	expect(customer).toBeDefined();
 	expect(customer.id).toBe(customerId);
@@ -61,7 +55,6 @@ test.concurrent(`${chalk.yellowBright("attach-misc: auto-create customer and ent
 	expect(customer.email).toBe("autocreated@test.com");
 	expect(customer.fingerprint).toBe("test-fingerprint-123");
 
-	// Verify entity was auto-created
 	const entity = await autumnV1.entities.get(customerId, entityId);
 	expect(entity).toBeDefined();
 	expect(entity.id).toBe(entityId);
@@ -69,9 +62,6 @@ test.concurrent(`${chalk.yellowBright("attach-misc: auto-create customer and ent
 	expect(entity.customer_id).toBe(customerId);
 });
 
-// ============================================================================
-// Test 4: Convert collection method from send_invoice
-// ============================================================================
 test.concurrent(`${chalk.yellowBright("attach-misc: convert collection method from send_invoice to charge_automatically")}`, async () => {
 	const customerId = "attach-misc-collection";
 
@@ -89,7 +79,6 @@ test.concurrent(`${chalk.yellowBright("attach-misc: convert collection method fr
 
 	const { stripeCli } = ctx;
 
-	// Attach with invoice option
 	const res = await autumnV1.attach({
 		customer_id: customerId,
 		product_id: pro.id,
@@ -109,7 +98,6 @@ test.concurrent(`${chalk.yellowBright("attach-misc: convert collection method fr
 	await stripeCli.invoices.finalizeInvoice(invoiceStripeId);
 	await stripeCli.invoices.pay(invoiceStripeId);
 
-	// Wait for webhook processing
 	await timeout(10000);
 
 	const cusProduct = await getMainCusProduct({
@@ -136,14 +124,12 @@ test.skip(`${chalk.yellowBright("attach-misc: attach race condition - concurrent
 	const wordsItem = items.monthlyWords({ includedUsage: 1000 });
 	const pro = products.pro({ items: [wordsItem] });
 
-	// Setup products only (no customer - we'll auto-create via attach)
 	const { autumnV1 } = await initScenario({
 		customerId,
 		setup: [s.products({ list: [pro] })],
 		actions: [],
 	});
 
-	// Concurrent attach calls
 	const responses = await Promise.allSettled([
 		autumnV1.attach({
 			customer_id: customerId,
@@ -155,15 +141,10 @@ test.skip(`${chalk.yellowBright("attach-misc: attach race condition - concurrent
 		}),
 	]);
 
-	// At least one should succeed, both shouldn't fail
 	const successes = responses.filter((r) => r.status === "fulfilled");
 	expect(successes.length).toEqual(1);
 });
 
-// ============================================================================
-// Test 3: Idempotency key - duplicate requests rejected
-// (from others10)
-// ============================================================================
 test.concurrent(`${chalk.yellowBright("attach-misc: idempotency key duplicate rejected")}`, async () => {
 	const customerId = "attach-misc-idempotency";
 
@@ -184,7 +165,6 @@ test.concurrent(`${chalk.yellowBright("attach-misc: idempotency key duplicate re
 
 	const idempotencyKey = generateId("it");
 
-	// Send two concurrent attach requests with the same idempotency key
 	const results = await Promise.allSettled([
 		autumnV1.attach(
 			{
@@ -206,14 +186,12 @@ test.concurrent(`${chalk.yellowBright("attach-misc: idempotency key duplicate re
 		),
 	]);
 
-	// Exactly one request should succeed
 	const fulfilled = results.filter((r) => r.status === "fulfilled");
 	const rejected = results.filter((r) => r.status === "rejected");
 
 	expect(fulfilled).toHaveLength(1);
 	expect(rejected).toHaveLength(1);
 
-	// The successful request should have attached the product
 	const successResult = fulfilled[0] as PromiseFulfilledResult<
 		Awaited<ReturnType<typeof autumnV1.attach>>
 	>;
@@ -221,7 +199,6 @@ test.concurrent(`${chalk.yellowBright("attach-misc: idempotency key duplicate re
 	expect(successResult.value.customer_id).toBe(customerId);
 	expect(successResult.value.product_ids).toContain(pro.id);
 
-	// The rejected request should have the duplicate idempotency key error
 	const rejectedResult = rejected[0] as PromiseRejectedResult;
 	expect(rejectedResult.reason).toBeInstanceOf(AutumnError);
 	expect((rejectedResult.reason as AutumnError).code).toBe(

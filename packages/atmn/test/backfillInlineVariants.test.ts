@@ -1,7 +1,3 @@
-/** An inline variant object under its base plan's `variants` takes its stable
- * id and slug just like a `variant({...})` fixture; the rest of the plan's
- * text keeps its bytes. */
-
 import { expect, test } from "bun:test";
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { backfillInternalIds } from "../src/actions/push/backfillInternalIds";

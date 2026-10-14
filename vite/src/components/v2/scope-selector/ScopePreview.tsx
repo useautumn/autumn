@@ -3,16 +3,9 @@ import { StatusChip } from "@autumn/ui";
 
 export type ScopePreviewProps = {
 	scopes: string[] | null | undefined;
-	/** Render empty/null as a specific label. Default: "Full access (unrestricted)". */
 	emptyLabel?: string;
 };
 
-/**
- * Format a sorted action list into a compact badge label:
- *   ["read"]          -> "R"
- *   ["write"]         -> "W"
- *   ["read", "write"] -> "R+W"
- */
 function formatActionsCompact(actions: ScopeActionType[]): string {
 	const hasRead = actions.includes("read");
 	const hasWrite = actions.includes("write");
@@ -32,9 +25,6 @@ export function ScopePreview({
 
 	const grouped = groupAndFormatScopes(scopes);
 
-	// If the input contained only unknown/OpenID scopes, groupAndFormatScopes
-	// returns an empty list. Fall back to the empty label to avoid rendering
-	// nothing silently.
 	if (grouped.length === 0) {
 		return <StatusChip>{emptyLabel}</StatusChip>;
 	}

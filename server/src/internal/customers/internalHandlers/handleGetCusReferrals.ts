@@ -24,7 +24,6 @@ export const handleGetCusReferrals = createRoute({
 			throw new CustomerNotFoundError({ customerId: customer_id });
 		}
 
-		// Get all redemptions for this customer
 		const [referred, redeemed, stripeCus] = await Promise.all([
 			redemptionRepo.getByReferrer({
 				db,

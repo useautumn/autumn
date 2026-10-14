@@ -5,15 +5,12 @@ import { percentileOf, sampleInto } from "./sampleWindow.js";
 export type KafkaRequestSummary = {
 	api: string;
 	count: number;
-	/** Samples the percentiles come from; below `count` once the reservoir is full. */
 	sampled: number;
 	p50: number;
 	p90: number;
 	p99: number;
 	max: number;
-	/** Time queued in the client before sending, which a slow broker does not explain. */
 	pendingP99: number;
-	/** The broker with the highest median, so one bad coordinator stands out. */
 	slowestBroker?: { broker: string; count: number; p50: number };
 };
 
@@ -28,12 +25,6 @@ type ApiWindow = {
 const DEFAULT_MAX_SAMPLES_PER_API = 2_000;
 const MAX_SAMPLES_PER_BROKER = 500;
 
-/**
- * Per-API timings of every broker request the partition producers make, so the
- * commit's latency can be split into its round trips (AddPartitionsToTxn,
- * Produce, AddOffsetsToTxn, TxnOffsetCommit, EndTxn) and a slow coordinator
- * shows up by name. Reservoir-sampled so a busy window costs bounded memory.
- */
 export function createKafkaRequestTimings({
 	maxSamplesPerApi = DEFAULT_MAX_SAMPLES_PER_API,
 }: {
@@ -112,12 +103,10 @@ export function createKafkaRequestTimings({
 	return { record, drain };
 }
 
-/** The process's timings: every partition producer on this worker reports into one. */
 export const kafkaRequestTimings = createKafkaRequestTimings();
 
 const REQUEST_REPORT_INTERVAL_MS = 10_000;
 
-/** Logs one `balance_worker.kafka_requests` line per Kafka API every ten seconds. */
 export function createKafkaRequestReporter({
 	ctx,
 	config,
@@ -143,7 +132,6 @@ export function createKafkaRequestReporter({
 				);
 			}
 		} catch {
-			// Telemetry must never disturb the worker.
 		}
 	}
 

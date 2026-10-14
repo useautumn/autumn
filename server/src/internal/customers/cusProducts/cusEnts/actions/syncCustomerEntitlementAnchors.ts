@@ -29,7 +29,6 @@ import { CusEntService } from "../CusEntitlementService";
 
 type SyncedAnchor = {
 	nextResetAt: number;
-	/** Set for pooled balances, which also carry the anchor on the pool row. */
 	pooledBalanceId?: string;
 	resetCycleAnchor?: number;
 };
@@ -67,7 +66,6 @@ const getPendingAnchorResetsAt = ({
 	return pendingResets.length > 0 ? Math.min(...pendingResets) : undefined;
 };
 
-/** Free plans have no subscription, so they follow the paid plan on the same customer or entity. */
 const findPaidRecurringAnchorProduct = ({
 	fullCustomer,
 	customerProduct,
@@ -90,8 +88,6 @@ const findPaidRecurringAnchorProduct = ({
 	);
 };
 
-/** Pooled balances have no customer product, so anchor them to the pool's
- * Stripe subscription instead. */
 const getSyncedPooledAnchor = async ({
 	ctx,
 	fullCustomer,
@@ -201,7 +197,6 @@ const getSyncedNextResetAt = async ({
 		customerProducts: [anchorProduct],
 		now,
 	});
-	// No invoice webhook ever re-anchors a free follower, so it stores the anchor it follows.
 	const followsPaidPlan = anchorProduct.id !== customerProduct.id;
 
 	return {
@@ -314,8 +309,6 @@ export const syncCustomerEntitlementAnchors = async ({
 				customerEntitlement.customer.internal_id,
 		),
 	);
-	// Balance reads come from the FullSubject cache, so drop it too or the old
-	// reset date keeps being served.
 	await Promise.all(
 		[...customerIds].flatMap((customerId) => [
 			deleteCachedFullCustomer({

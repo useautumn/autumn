@@ -9,11 +9,6 @@ import {
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 import { createSharedProducts } from "@/utils/scriptUtils/testUtils/createSharedProduct.js";
 
-/**
- * Shared products for usage test group
- * Matches global products.proWithOverage
- */
-
 export const sharedProWithOverage = constructProduct({
 	id: "pro-with-overage",
 	type: "pro",
@@ -24,12 +19,11 @@ export const sharedProWithOverage = constructProduct({
 			interval: ProductItemInterval.Month,
 		}),
 		constructPriceItem({
-			price: 2000, // $20/month
+			price: 2000,
 			interval: BillingInterval.Month,
 		}),
 		constructArrearItem({
 			featureId: TestFeature.Messages,
-			// Overage pricing for usage beyond included
 		}),
 	],
 });
@@ -41,5 +35,4 @@ export const initUsageSharedProducts = async () => {
 	});
 };
 
-// Auto-init on import (backwards compat)
 await initUsageSharedProducts();

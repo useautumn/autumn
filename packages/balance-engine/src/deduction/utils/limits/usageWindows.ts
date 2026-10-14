@@ -14,8 +14,6 @@ import { isFreeRow } from "../classifyDeductionUtils.js";
 import { deductionRowToRateUnits } from "../convertDeductionUtils.js";
 import { creditRateUnitsForCreditChange } from "../credits/creditRateUnitsForCreditChange.js";
 
-/** The stored counter row for this cap, if it is still counting inside the cap's current window. */
-/** The stored counter for `limit` while its window is current; null once it rolled. */
 export const liveUsageWindowOf = ({
 	usageWindows,
 	now,
@@ -48,7 +46,6 @@ const liveWindowOf = ({
 		limit,
 	});
 
-/** A counter only counts inside its stamped window; expired or re-derived bounds read as zero. */
 export const storedUsageOf = ({
 	context,
 	limit,
@@ -73,7 +70,6 @@ const headroomOf = ({
 		0,
 	);
 
-/** Does this cap bind a draw from `row`? Metered caps count every row; balance caps only rows of the capped feature. `row` null is the rollover phase. */
 const appliesTo = ({
 	limit,
 	row,
@@ -84,7 +80,6 @@ const appliesTo = ({
 	limit.dimension_type !== "balance" ||
 	(row !== null && row.featureId === limit.feature_id);
 
-/** `get_available_from_usage_windows`: the most tracked units the caps still allow from `row`; null when unbounded. */
 export const deductionRowToUsageWindowHeadroom = ({
 	context,
 	deductionState,
@@ -97,11 +92,9 @@ export const deductionRowToUsageWindowHeadroom = ({
 	let allowed: Decimal | null = null;
 	for (const limit of context.usageWindowLimits) {
 		if (!appliesTo({ limit, row })) continue;
-		// A zero rate spends no credits, so a balance cap never binds it.
 		if (limit.dimension_type === "balance" && row && isFreeRow({ row }))
 			continue;
 		const headroom = headroomOf({ context, deductionState, limit });
-		// Balance caps are in credits; the row's rate converts them to tracked units.
 		const units =
 			limit.dimension_type === "balance" && row
 				? row.rateCard
@@ -121,7 +114,6 @@ export const deductionRowToUsageWindowHeadroom = ({
 	return allowed;
 };
 
-/** `consume_usage_window_headroom`: what a draw took, in each cap's own unit. */
 export const consumeUsageWindows = ({
 	context,
 	deductionState,
@@ -133,7 +125,6 @@ export const consumeUsageWindows = ({
 	deductionState: DeductionState;
 	row: DeductionRow | null;
 	units: Decimal;
-	/** What the draw cost in the row's balance: a rate card prices by tier, so it is not units × a flat cost. */
 	credits: Decimal;
 }): void => {
 	if (units.lte(0)) return;
@@ -150,10 +141,6 @@ export const consumeUsageWindows = ({
 	}
 };
 
-/**
- * `decrement_usage_windows_for_unwind`: what a give-back frees on each cap, as negative consumption a draw
- * can start from. Never below an empty counter, so a window that rolled since the lock forfeits its count.
- */
 export const deltasToFreedUsageWindows = ({
 	context,
 	deltas,
@@ -181,7 +168,6 @@ export const deltasToFreedUsageWindows = ({
 	return freedByLimitKey;
 };
 
-/** `update_in_memory_usage_window`: one row per cap, created on first use, zeroed when its window rolled, re-stamped with today's bounds. */
 export const usageWindowsToRowChanges = ({
 	context,
 	deductionState,
@@ -204,7 +190,6 @@ export const usageWindowsToRowChanges = ({
 			usage: consumed.toNumber(),
 			updated_at: context.selection.now,
 		};
-		// A live counter adds, guarded by the window it counts in; a rolled one is re-stamped and restarted.
 		const live = liveWindowOf({ context, limit });
 		if (live) {
 			changes.push({
@@ -239,8 +224,6 @@ export const usageWindowsToRowChanges = ({
 			continue;
 		}
 		const row: WorkerUsageWindow = {
-			// Deterministic, so a replay creates the same row. The key alone names a counter only within one
-			// customer: a calendar-aligned window starts at the same instant for everyone.
 			id: `uw_${limit.internal_customer_id}:${limit.key}`,
 			internal_customer_id: limit.internal_customer_id,
 			internal_entity_id: limit.internal_entity_id,

@@ -29,8 +29,6 @@ export const getNewProductRollovers = async ({
 			cusEnt: FullCusEntWithProduct;
 		}[] = [];
 
-		// let newRollovers: Rollover[] = [];
-
 		const oldCusEnts = curCusProduct.customer_entitlements;
 
 		for (const newCusEnt of newCusEnts) {
@@ -46,7 +44,6 @@ export const getNewProductRollovers = async ({
 
 			if (!oldCusEnt || !newEnt?.rollover) continue;
 
-			// Do not handle case where user is upgrading from non-entity to entity or vice versa
 			if (newEnt?.entity_feature_id && !oldEnt?.entity_feature_id) {
 				continue;
 			}

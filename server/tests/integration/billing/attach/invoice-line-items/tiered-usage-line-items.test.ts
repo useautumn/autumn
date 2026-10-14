@@ -1,9 +1,3 @@
-/**
- * Tiered usage is billed as one Stripe invoice line per price. A volume line names the overage and the
- * tier it lands in (total-usage positions); every line goes to Stripe as 1 × total, as on dev.
- * Every case advances one cycle and compares the renewal invoice to the preview.
- */
-
 import { expect, test } from "bun:test";
 import {
 	type ApiCustomerV5,
@@ -69,7 +63,6 @@ const runRenewal = async ({
 test.concurrent(
 	`${chalk.yellowBright("tier-lines 1: volume, 100 included, used 150 → one line, 50 over @ $0.50 = $25")}`,
 	async () => {
-		// Net tiers 0–40 / 41+ are total-usage tiers 101–140 / 141+ once 100 are included.
 		await runRenewal({
 			customerId: "tier-lines-volume",
 			item: items.volumeConsumableMessages({
@@ -177,7 +170,6 @@ test.concurrent(
 				{ featureId: TestFeature.Action2, value: 250 },
 			],
 			expectedLines: () => [
-				// The preview reports a credit source's units; Stripe bills it as 1 × amount.
 				{
 					description: "Action1, 250 units",
 					amount: 50,
@@ -199,7 +191,6 @@ test.concurrent(
 test.concurrent(
 	`${chalk.yellowBright("tier-lines 7: graduated billing units, 250 used → one line as on dev")}`,
 	async () => {
-		// 250 used rounds to 3 packs; the 150-unit tier boundary leaves 1.5 packs per band.
 		await runRenewal({
 			customerId: "tier-lines-fallback",
 			item: items.tieredConsumableMessages({

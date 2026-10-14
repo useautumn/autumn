@@ -15,12 +15,6 @@ import { licenseToFeature, licenseToItem } from "./licenseItemDisplay";
 import { useLicenseDraft } from "./useLicenseDraftStore";
 import { useLicenseRowStore, useLicenseRowSummary } from "./useLicenseRowStore";
 
-/**
- * A linked license shown as a row in the parent plan's feature list, styled like
- * a non-consumable feature ("5 team seats" / "$10 per team seat per month"). The
- * price mirrors the license card's live edit via useLicenseRowStore; clicking
- * the row opens that license's price sheet.
- */
 export function LicensePlanRow({
 	planLicense,
 	license,

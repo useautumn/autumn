@@ -1,7 +1,6 @@
 import type { WorkerCustomerProduct } from "../../models/subject/rows/workerCustomerProduct.js";
 import type { SubjectState } from "../../models/subject/subjectState.js";
 
-/** What a seat mirrors from its parent; the parent's own columns, absent ones left absent. */
 const lifecycleOf = ({
 	parent,
 }: {
@@ -17,7 +16,6 @@ const lifecycleOf = ({
 	...("canceled_at" in parent && { canceled_at: parent.canceled_at }),
 });
 
-/** The live parent behind a seat's license link, when the state holds one. */
 const findSeatParent = ({
 	row,
 	state,
@@ -35,10 +33,6 @@ const findSeatParent = ({
 	return undefined;
 };
 
-/**
- * A seat owns no lifecycle: its parent, reached through the license link, lends it status,
- * subscriptions and cancellation. No live parent in state means the seat is dead and is left out.
- */
 export const inheritParentCustomerProductLifecycle = ({
 	row,
 	state,

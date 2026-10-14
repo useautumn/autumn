@@ -4,7 +4,6 @@ import type {
 	SubjectSnapshotWrites,
 } from "../../types/subjectSnapshot.js";
 
-/** Every row of each customer goes, and the statement says which: the subjects an evict rebuilds. COLLATE "C" so the PK serves the join. */
 const deleteSubjectSnapshotsOfCustomersCte = ({
 	deletes,
 }: {
@@ -27,7 +26,6 @@ const deleteSubjectSnapshotsOfCustomersCte = ({
 		)`;
 };
 
-/** Built by hand so each state, already a JSON string, is spliced in rather than encoded a second time. */
 const upsertsDocumentOf = ({
 	upserts,
 }: {
@@ -53,10 +51,6 @@ const upsertsDocumentOf = ({
 	return `[${rows.join(",")}]`;
 };
 
-/**
- * A row whose customer or entity is already gone is skipped: an FK error would fail every row of the flush.
- * A row from an older log never replaces a newer one: a refresh read while a flush landed loses to that flush's row.
- */
 const snapshotUpsertsCte = ({
 	upserts,
 }: {
@@ -85,13 +79,11 @@ const snapshotUpsertsCte = ({
 		)`;
 };
 
-/** The flush's snapshot CTEs and their counts, so a customer's rows are replaced or removed in the same statement as its bookmark. */
 export const subjectSnapshotFlushSql = ({
 	snapshots,
 }: {
 	snapshots: SubjectSnapshotWrites;
 }): { ctes: SQL[]; upserted: SQL; deleted: SQL } => {
-	// `deleted` is the deleted subjects as a JSON array, empty when nothing was.
 	const hasDeletes = snapshots.deletes.length > 0;
 	const hasUpserts = snapshots.upserts.length > 0;
 

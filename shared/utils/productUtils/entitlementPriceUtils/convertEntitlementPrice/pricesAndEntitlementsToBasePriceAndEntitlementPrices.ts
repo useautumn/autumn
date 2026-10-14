@@ -5,7 +5,6 @@ import { entWithDerivedCarryFromPrevious } from "../../entUtils/convertEnt/entWi
 import { isFixedPrice } from "../../priceUtils/classifyPriceUtils.js";
 import type { BasePriceAndEntitlementPrices } from "../entitlementPriceTypes.js";
 
-/** Split a flat price + entitlement bag into basePrice + entitlementPrices. */
 export const pricesAndEntitlementsToBasePriceAndEntitlementPrices = ({
 	prices,
 	entitlements,

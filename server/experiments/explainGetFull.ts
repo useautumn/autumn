@@ -15,8 +15,6 @@ const RELEVANT_STATUSES = [
 	CusProductStatus.Scheduled,
 ];
 
-// Run with `bun run experiments/explainGetFull.ts`
-
 const main = async () => {
 	const orgId = prodTestOrgId;
 	const env = AppEnv.Live;
@@ -37,7 +35,6 @@ const main = async () => {
 		cusProductLimit: 10,
 	});
 
-	// Run the actual query to measure wall-clock time
 	console.log("--- Running query ---");
 	const start = performance.now();
 	const result = await db.execute(query);
@@ -45,7 +42,6 @@ const main = async () => {
 	console.log(`Rows returned: ${result.length}`);
 	console.log(`Wall-clock time: ${elapsed.toFixed(2)}ms\n`);
 
-	// Run EXPLAIN ANALYZE
 	console.log("--- EXPLAIN (ANALYZE, BUFFERS) ---\n");
 	const explainQuery = sql`EXPLAIN (ANALYZE, BUFFERS, FORMAT TEXT) ${query}`;
 	const explainResult = await db.execute(explainQuery);

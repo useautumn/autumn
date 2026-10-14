@@ -4,11 +4,6 @@ import {
 	resolveBillingControl,
 } from "../../fullSubjectUtils/planBillingControlUtils.js";
 
-/**
- * Resolve whether overage billing is skipped for a feature (entity > customer > plan).
- * The nearest entry for the feature wins wholesale; undefined skip_overage_billing
- * means billed, so only an enabled entry with an explicit true skips.
- */
 export const fullCustomerToSkipOverageBilling = ({
 	fullCustomer,
 	featureId,

@@ -6,7 +6,6 @@ import type { ReadThroughCacheContext } from "../../../src/misc/types/readThroug
 export type FakeRedis = Redis & { store: Map<string, string>; calls: string[] };
 type Reply = [Error | null, unknown];
 
-/** An in-memory client that records every command; `exec` answers each in order, like ioredis. */
 export const createFakeRedis = ({
 	status,
 }: {
@@ -70,7 +69,6 @@ export const createFakeRedis = ({
 	} as unknown as FakeRedis;
 };
 
-/** A read-through ctx over two fake targets: reads resolve to main, invalidations reach both. */
 export const createFakeReadThroughCache = () => {
 	let status = "ready";
 	const main = createFakeRedis({ status: () => status });

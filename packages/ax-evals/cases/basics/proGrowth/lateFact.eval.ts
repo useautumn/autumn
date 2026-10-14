@@ -9,12 +9,6 @@ import {
 	proPlanSpec,
 } from "./proGrowthSetup.ts";
 
-/**
- * KIND D (revision): the two paid plans already exist; the user then adds a
- * free default tier. Passing = the free plan lands (no price, auto-attached,
- * 50 messages) AND the existing paid plans survive untouched — the failure
- * this catches is rewriting the config from scratch and dropping detail.
- */
 export const lateFact = defineCase({
 	name: "basics-pro-growth-late-fact",
 	prompt: [

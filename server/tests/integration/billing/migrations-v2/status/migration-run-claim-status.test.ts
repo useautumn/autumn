@@ -1,14 +1,3 @@
-/**
- * withMigrationRunClaim: dispatch is not execution. A trigger-dispatched run
- * stays `queued` (started_at null) until withMigrationRunTracking starts it,
- * so the computed migration status can tell "waiting in the org queue" from
- * "executing". Lazy runs are live as soon as prepare completes and flip to
- * `running` at claim time.
- *
- * Red (before):  the claim flipped every run to `running` with started_at set.
- * Green (after): only lazy runs flip at claim; others stay queued.
- */
-
 import { expect, test } from "bun:test";
 import { MigrationRunStatus } from "@autumn/shared";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";

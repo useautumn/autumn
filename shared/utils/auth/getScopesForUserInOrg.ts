@@ -4,7 +4,6 @@ import { member } from "../../db/auth-schema";
 import type * as schema from "../../db/schema";
 import { ROLE_SCOPES, type Role, type ScopeString } from "../scopeDefinitions";
 
-/** Any drizzle db over the shared schema; server's instrumented db overrides `execute`. */
 type ScopeResolverDb = Pick<
 	PgDatabase<PgQueryResultHKT, typeof schema>,
 	"query"
@@ -12,7 +11,6 @@ type ScopeResolverDb = Pick<
 
 const isCanonicalRole = (role: string): role is Role => role in ROLE_SCOPES;
 
-/** Unknown roles keep their name but grant no scopes, so callers surface the denial themselves. */
 export async function getScopesForUserInOrg({
 	db,
 	userId,

@@ -30,16 +30,6 @@ interface RefreshEntry {
 	timer: NodeJS.Timeout | null;
 }
 
-/**
- * Coalesces `RefreshEntityAggregate` enqueues per (org, env, customer).
- *
- * All `schedule()` calls that arrive inside the same 5s bucket share one
- * timer aimed at the bucket's trailing edge (+ settle buffer). When the timer
- * fires, the manager emits a single SQS message with the merged
- * `internalFeatureIds`. Because we're in the same worker process that
- * consumes the customer's sync-v4 stream (FIFO MessageGroupId already
- * serializes that), this in-memory dedup is effectively per-customer global.
- */
 export class RefreshEntityAggregateBatchingManager {
 	private entries: Map<string, RefreshEntry> = new Map();
 

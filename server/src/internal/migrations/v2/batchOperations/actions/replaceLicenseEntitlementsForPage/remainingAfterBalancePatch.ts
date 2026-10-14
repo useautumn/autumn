@@ -1,7 +1,6 @@
 import { Decimal } from "decimal.js";
 import type { CustomerEntitlementPatch } from "@/internal/billing/v2/actions/batchTransition/types/entitlementPriceOperationTypes.js";
 
-/** Same arithmetic as the SQL balance assignment, so finalize remaining matches the row. */
 export const remainingAfterBalancePatch = ({
 	liveBalance,
 	patch,

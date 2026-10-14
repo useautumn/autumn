@@ -1,15 +1,3 @@
-/**
- * catalogV2.preview_update — in-batch pin / propagate on the parent row.
- *
- * The parent is a direct plans[] entry so license_changes land on its
- * plan_change. Absent-parent fan-out is license_parents (not built).
- *
- * Contract:
- *   - pin (no propagate) → updated freeze, no nested plan_change
- *   - propagate → updated + nested item plan_change
- *   - child new_version + pin → no license_changes (link stays on v1)
- */
-
 import { test } from "bun:test";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";

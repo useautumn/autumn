@@ -1,13 +1,3 @@
-/**
- * A backdate onto a customer with no subscription, anchored on the 1st, bills what Stripe bills for
- * backdate_start_date + billing_cycle_anchor:
- * - prorate_immediately: the stub up to the first 1st pro rata, then each month in full through the one running now;
- * - none: nothing now.
- *
- * Red (before):  the preview billed a full first month instead of the prorated stub.
- * Green (after):  the preview matches Stripe's invoice.
- */
-
 import { test } from "bun:test";
 import { UTCDate } from "@date-fns/utc";
 import chalk from "chalk";

@@ -1,7 +1,5 @@
 import type { ApiReferralProgramV0, RewardProgram } from "@autumn/shared";
 
-/** Maps a reward_programs row to the V0 referral program shape.
- * `product_ids` defaults to `[""]` in the column, which is not a stated plan. */
 export const getApiReferralProgram = ({
 	rewardProgram,
 	rewardId,

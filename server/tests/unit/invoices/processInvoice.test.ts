@@ -2,27 +2,6 @@ import { describe, expect, test } from "bun:test";
 import { type Invoice, ProcessorType } from "@autumn/shared";
 import { processInvoice } from "@/internal/invoices/InvoiceService.js";
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// processInvoice — processor_type wire mapping
-//
-// `processInvoice` is the single boundary between the raw Drizzle/cached
-// `Invoice` row and the public V5 `ApiInvoiceV1` wire shape. It must always
-// emit a defined `processor_type` regardless of input shape.
-//
-// Coverage matrix:
-//   • explicit "stripe"     → wire "stripe"
-//   • explicit "revenuecat" → wire "revenuecat"
-//   • null                  → wire "stripe" (consumer `??` mask, since
-//                              ZodDefault doesn't fire on explicit null)
-//   • undefined             → wire "stripe" (same `??` mask covers it; the
-//                              schema's ZodDefault would also fire through
-//                              the cache walker before reaching this point)
-//
-// Together these tests prove the wire never emits null/undefined for the new
-// optional field, regardless of where the input row came from (DB, cache,
-// pre-deploy cached entry).
-// ═══════════════════════════════════════════════════════════════════════════════
-
 const buildBaseInvoice = (overrides: Partial<Invoice> = {}): Invoice =>
 	({
 		id: "inv_test",
@@ -65,8 +44,6 @@ describe("processInvoice — processor_type wire mapping", () => {
 	});
 
 	test("null processor_type masks to stripe via consumer `??`", () => {
-		// Simulates a cached payload from a DB row with NULL processor_type
-		// that survived the cjson roundtrip without being stripped.
 		const wire = processInvoice({
 			invoice: buildBaseInvoice({
 				processor_type: null as unknown as ProcessorType,
@@ -76,8 +53,6 @@ describe("processInvoice — processor_type wire mapping", () => {
 	});
 
 	test("undefined processor_type masks to stripe via consumer `??`", () => {
-		// Simulates a raw row from the cache walker that had the field
-		// stripped by Upstash cjson (the most common pre-deploy case).
 		const raw = buildBaseInvoice();
 		delete (raw as Record<string, unknown>).processor_type;
 		const wire = processInvoice({ invoice: raw });

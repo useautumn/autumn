@@ -1,19 +1,3 @@
-/**
- * TDD test for customer-level check/track on per-entity features.
- *
- * Red-failure mode (current behavior):
- *  - cusEntMatchesEntity's no-entity branch (and fullCustomerToCustomerEntitlements'
- *    isEntityCusEnt filter) exclude cusEnts carrying per-entity balances, so a
- *    customer-level check reports allowed=false / balance=null and a
- *    customer-level track deducts nothing.
- *
- * Green-success criteria (after fix):
- *  - Customer-level check sees the pooled per-entity balance (allowed=true,
- *    remaining = sum across entities), and customer-level track deducts from it.
- *  - Entity-scoped cusProducts (e.g. provisioned licenses) stay excluded from
- *    customer-level checks — covered by license tests, unaffected here.
- */
-
 import { expect, test } from "bun:test";
 import type { CheckResponseV3 } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";

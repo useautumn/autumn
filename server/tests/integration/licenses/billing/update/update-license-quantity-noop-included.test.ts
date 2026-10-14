@@ -1,5 +1,3 @@
-// TDD contract (U3+U4): billing.update license_quantities converges the pool in place, seats stay anchored.
-// Every quantity change bills a refund/charge pair per seat price (previous vs new paid picture).
 import { expect, test } from "bun:test";
 import type {
 	ApiCustomerV3,
@@ -45,7 +43,6 @@ test.concurrent(
 			await autumnV2_3.subscriptions.previewUpdate<UpdateSubscriptionV1ParamsInput>(
 				updateParams,
 			);
-		// Identical previous/new pictures cancel out entirely.
 		await expectLicenseUpdatePreviewCorrect({
 			preview,
 			customerId,
@@ -75,7 +72,6 @@ test.concurrent(
 			],
 		});
 
-		// No billing change -> the attach invoice stays the only one.
 		const customerV3 = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 		await expectCustomerInvoiceCorrect({
 			customer: customerV3,
@@ -108,9 +104,6 @@ test.concurrent(
 			await autumnV2_3.subscriptions.previewUpdate<UpdateSubscriptionV1ParamsInput>(
 				updateParams,
 			);
-		// A fully-included attach is free (no subscription yet), so the first
-		// paid seats charge the full amount. Previous paid picture is empty ->
-		// no $0 refund line, charge only.
 		expect(preview.total).toEqual(2 * DEV_SEAT_PRICE);
 		expectQuantityLineItemPairCorrect({
 			preview,

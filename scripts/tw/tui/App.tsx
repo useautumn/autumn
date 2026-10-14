@@ -1,21 +1,4 @@
 /** @jsxImportSource @opentui/react */
-/**
- * The `bun tw` swarm TUI — a responsive two-pane opentui app.
- *
- *   Pane A — phase-driven progress + test results (warm spinner, fan-out and
- *            teardown progress bars, the live test runner, and the final summary
- *            with wall-clock + cost).
- *   Pane B — the raw log firehose (orchestrator / ingress / worker output),
- *            independently scrollable, auto-following the tail.
- *
- * A draggable divider resizes the split. The orchestrator mutates the shared
- * `store`; this app reads it live on a ~10fps tick (mutable-state + interval
- * flush) to keep updates cheap and flicker-free.
- *
- * Layout rule of thumb (opentui/yoga): every fill container sets `flexGrow:1`,
- * `flexBasis:0`, `minWidth:0`, `minHeight:0`; every fixed row sets `flexShrink:0`.
- * Without these, scrollboxes and sibling rows OVERLAP instead of stacking.
- */
 
 import { useTerminalDimensions } from "@opentui/react";
 import { useEffect, useState } from "react";
@@ -106,7 +89,6 @@ const RunningFile = ({ file }: { file: TuiTestFile }) => {
 	);
 };
 
-/** Fixed status row for the RUN phase — single line so nothing overlaps. */
 const RunStatus = ({ state }: { state: TuiState }) => {
 	const t = runTallies();
 	return (
@@ -123,10 +105,6 @@ const RunStatus = ({ state }: { state: TuiState }) => {
 	);
 };
 
-/**
- * Scrollable list of the IN-PROGRESS tests for the RUN phase. Completed files are
- * NOT shown here — they're logged to Pane B as they finish (see store.upsertTestFile).
- */
 const RunList = ({ state }: { state: TuiState }) => {
 	const running = Array.from(state.files.values()).filter(
 		(f) => f.status === "running" || f.status === "retrying",
@@ -247,8 +225,6 @@ const PaneA = ({ state }: { state: TuiState }) => (
 
 		{state.phase === "teardown" ? (
 			<box style={{ flexDirection: "column", flexShrink: 0 }}>
-				{/* Results are already known entering teardown — show them now instead
-				    of waiting for teardown to finish. */}
 				{state.summary ? <SummaryList state={state} /> : null}
 				<ProgressBar
 					color={COLOR.yellow}
@@ -313,7 +289,6 @@ export const App = () => {
 
 	const state = getTuiState();
 	const { width, height } = useTerminalDimensions();
-	// Prefer a side-by-side split on anything but a genuinely narrow terminal.
 	const wide = width >= 80;
 
 	const onDividerDrag = (event: { x: number; y: number }): void => {

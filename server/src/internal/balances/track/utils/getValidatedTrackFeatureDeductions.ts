@@ -2,7 +2,6 @@ import { ErrCode, RecaseError, type TrackParams } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getTrackFeatureDeductionsForBody } from "./getFeatureDeductions.js";
 
-/** Every track check that needs only the request context, so sync and queued tracks reject the same bodies up front. */
 export const getValidatedTrackFeatureDeductions = ({
 	ctx,
 	body,

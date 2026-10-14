@@ -46,14 +46,11 @@ cusRouter.post(
 	...handleRefundInvoice,
 );
 
-// Billing portal
 cusRouter.post("/:customer_id/billing_portal", ...handleCreateBillingPortal);
 cusRouter.get("/:customer_id/billing_portal", ...handleGetBillingPortal);
 
-// Legacy...
 cusRouter.post("/:customer_id/balances", ...handleUpdateBalancesV2);
 
-// RPC Routes
 export const customerRpcRouter = new Hono<HonoEnv>();
 customerRpcRouter.post(
 	"/customers.get_or_create",

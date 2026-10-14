@@ -17,7 +17,6 @@ const RECYCLE_ABORT = "fork-recycle:abort";
 type RecycleMessage = { type?: string };
 
 export type PrimaryForkRecycling = {
-	/** True when this exit completed a recycle — caller must not respawn. */
 	handleExit: (worker: Worker) => boolean;
 };
 
@@ -32,8 +31,6 @@ export const attachPrimaryForkRecycling = ({
 }): PrimaryForkRecycling => {
 	const workerIds = new Map<string, Worker>();
 
-	// A worker whose IPC channel just closed makes `send` raise; the exit
-	// handler reconciles that case, so the failed write must not crash us.
 	const sendSafely = (workerId: string, type: string) => {
 		try {
 			workerIds.get(workerId)?.send({ type }, (error) => {
@@ -65,8 +62,6 @@ export const attachPrimaryForkRecycling = ({
 			workerIds.set(String(worker.id), worker);
 			return String(worker.id);
 		},
-		// FireLens delivers console output reliably; the logger transport
-		// drops most lines, which hid the first prod recycle wave entirely.
 		log: (message) => console.log(message),
 	});
 
@@ -77,8 +72,6 @@ export const attachPrimaryForkRecycling = ({
 
 	clusterModule.on("message", (worker, message: RecycleMessage) => {
 		if (message?.type !== RECYCLE_REQUEST) return;
-		// Load-bearing: the coordinator clears a worker's latch on exit and has no
-		// other guard, so a post-exit request would start a cycle for a corpse.
 		if (worker.isDead?.()) return;
 		coordinator.handleRecycleRequest({ workerId: String(worker.id) });
 	});
@@ -92,9 +85,6 @@ export const attachPrimaryForkRecycling = ({
 	};
 };
 
-/** Coordinator owns respawns for every exit it sees, so the caller's exit
- *  handler must fork only when this returns false AND it wants crash respawn —
- *  see handleExit. Worker side below. */
 export const startWorkerForkRecycling = ({
 	server,
 	exitGracefully,
@@ -103,9 +93,7 @@ export const startWorkerForkRecycling = ({
 	logger,
 }: {
 	server: Parameters<typeof createWorkerDrainer>[0]["server"];
-	/** Runs the worker's normal shutdown (flushes, pool close, process.exit). */
 	exitGracefully: () => void;
-	/** Long-running requests (streams) extend the drain instead of being cut. */
 	getActiveRequestCount?: () => number;
 	onDrainStart?: () => void;
 	logger: Logger;
@@ -114,7 +102,6 @@ export const startWorkerForkRecycling = ({
 	if (!config.enabled) return;
 
 	const delayMs = rollEligibilityDelayMs(config);
-	// uptime spans transpile+eval too — the boot phases init timers can't see.
 	console.log(
 		`[ForkRecycle] Worker ${process.pid} ready in ${Math.round(process.uptime() * 1000)}ms; eligibility delay: ${Math.round(delayMs / 1000)}s`,
 	);
@@ -139,7 +126,6 @@ export const startWorkerForkRecycling = ({
 			return;
 		}
 		if (message?.type === RECYCLE_ABORT) {
-			// Replacement failed to boot; re-arm so a later check can ask again.
 			requested = false;
 			console.log(
 				`[ForkRecycle] Worker ${process.pid} recycle aborted; will re-request if still over threshold`,
@@ -164,8 +150,6 @@ export const startWorkerForkRecycling = ({
 		const now = Date.now();
 		if (requestAtMs === null) requestAtMs = now + delayMs;
 		if (now < requestAtMs) return;
-		// A boot at the hourly burst competes with the serving forks for cores;
-		// release with a fresh roll so held workers don't stampede at the exit.
 		const blackoutRemainingMs = msUntilHourlyBlackoutEnd({
 			now,
 			beforeMs: config.blackoutBeforeMs,
@@ -183,7 +167,6 @@ export const startWorkerForkRecycling = ({
 		console.log(
 			`[ForkRecycle] Worker ${process.pid} requesting recycle at rss=${Math.round(rssBytes / 1024 / 1024)}MB after ${Math.round((Date.now() - startedAt) / 60_000)}min`,
 		);
-		// Keep the structured event for the fraction the logger pipeline delivers.
 		logger.info(
 			`[ForkRecycle] Worker ${process.pid} requesting recycle at rss=${Math.round(rssBytes / 1024 / 1024)}MB after ${Math.round((Date.now() - startedAt) / 60_000)}min`,
 			{
@@ -197,19 +180,13 @@ export const startWorkerForkRecycling = ({
 		);
 		try {
 			process.send?.({ type: RECYCLE_REQUEST }, undefined, undefined, () => {});
-		} catch {
-			// Channel already closed (primary going away); the process is exiting.
-		}
+		} catch {}
 	};
 
-	// Jitter so same-boot forks never check in sync.
 	const interval = config.checkIntervalMs * (0.9 + Math.random() * 0.2);
 	const timer = setInterval(check, interval);
 	timer.unref?.();
 
-	// 1s heartbeat: a missed beat is an event-loop stall. Logs only on real
-	// stalls, with own-CPU% so a starved fork (low) reads apart from a busy
-	// one (high) — boot-vs-serving contention measured, not inferred.
 	let lastBeatMs = Date.now();
 	let lastCpu = process.cpuUsage();
 	const stallTimer = setInterval(() => {

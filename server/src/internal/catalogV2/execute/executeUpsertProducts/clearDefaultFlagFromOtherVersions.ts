@@ -2,7 +2,6 @@ import { products } from "@autumn/shared";
 import { and, eq, ne } from "drizzle-orm";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 
-/** When a version becomes default, clear is_default on siblings of the same plan id. */
 export const clearDefaultFlagFromOtherVersions = async ({
 	ctx,
 	product,

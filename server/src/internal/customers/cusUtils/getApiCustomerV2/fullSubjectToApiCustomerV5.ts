@@ -11,7 +11,6 @@ import {
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getApiCustomerBaseV2 } from "./getApiCustomerBaseV2.js";
 
-/** customers.get's body before expands and version changes: plan billing controls merged, internal fields stripped. */
 export const fullSubjectToApiCustomerV5 = async ({
 	ctx,
 	fullSubject,
@@ -23,7 +22,6 @@ export const fullSubjectToApiCustomerV5 = async ({
 	fullSubject: FullSubject;
 	apiVersion: ApiVersionClass;
 	withAutumnId?: boolean;
-	/** Rendered by the caller when invoices are expanded; undefined when not. */
 	invoices?: ApiInvoiceV1[];
 }): Promise<{ apiCustomer: ApiCustomerV5; legacyData: CustomerLegacyData }> => {
 	const subjectToUse =

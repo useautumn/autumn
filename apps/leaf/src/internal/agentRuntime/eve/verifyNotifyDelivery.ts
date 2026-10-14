@@ -4,8 +4,6 @@ import { logger } from "../../../lib/logger.js";
 
 const NOTIFY_TIMEOUT_MS = ms.seconds(3);
 
-/** The workflow world streams over LISTEN/NOTIFY, which transaction poolers
- * (PlanetScale :6432, PgBouncer) silently drop; prove delivery before use. */
 export const verifyNotifyDelivery = async ({
 	connectionString,
 }: {

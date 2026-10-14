@@ -1,6 +1,3 @@
-// Red: usage-based rollovers expired from wall-clock time.
-// Green: prepaid and usage-based one-month rollovers expire at next_reset_at.
-
 import { expect, test } from "bun:test";
 import {
 	type ApiCustomerV5,

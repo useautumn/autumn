@@ -14,9 +14,6 @@ export const customerEntitlementToOptions = ({
 	});
 	if (!options) return undefined;
 
-	// Tie-break: options are feature-keyed, so a losing prepaid price (e.g. one-off
-	// alongside a recurring prepaid of the same feature) reads a zeroed copy —
-	// never the winner's quantity, but still present so renewal resets run.
 	const cusPrice = cusEntToCusPrice({ cusEnt: customerEntitlement });
 	const siblingPrices =
 		customerEntitlement.customer_product?.customer_prices.map(

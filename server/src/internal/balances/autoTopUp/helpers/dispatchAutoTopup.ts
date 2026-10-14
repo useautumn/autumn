@@ -7,7 +7,6 @@ import { RedisUnavailableError } from "@/external/redis/utils/errors.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getSqsJobs } from "@/queue/getSqsJobs.js";
 
-/** The server's binding of the shared dispatch: the request's org, env, and logger over the misc cache and the job queue. */
 export const dispatchAutoTopup = async ({
 	ctx,
 	customerId,

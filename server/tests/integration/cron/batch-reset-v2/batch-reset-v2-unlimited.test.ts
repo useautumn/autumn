@@ -1,20 +1,3 @@
-/**
- * Unlimited entitlements can carry a reset interval. A monthly unlimited grant
- * seeds next_reset_at like any consumable, and the V2 batch reset worker
- * resets its usage counter (negative balance) back to 0 on schedule. One-off
- * unlimited stays exactly as before: no next_reset_at, never reset.
- *
- * Red (current):
- *   - attach unlimited monthly -> next_reset_at is null (isResettingEntitlement
- *     excludes unlimited)
- *   - batch reset -> verdict clear_next_reset, no mutation, usage untouched
- * Green (after):
- *   - next_reset_at seeded ~1 month out
- *   - batch reset -> one mutation, balance 0 (and every entity 0), usage 0
- *   - org.persist_free_overage never applies: the unlimited counter is not
- *     owed overage, so it still resets to 0
- */
-
 import { expect, test } from "bun:test";
 import {
 	EntInterval,

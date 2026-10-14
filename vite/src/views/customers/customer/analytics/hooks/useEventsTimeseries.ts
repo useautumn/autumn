@@ -8,7 +8,6 @@ import { aggregateListToEventsData } from "../utils/aggregateListToEventsData";
 import { isUtcBin } from "../utils/epochToPeriodString";
 import { getUserTimezone } from "../utils/getUserTimezone";
 
-/** An ungrouped usage series per event over a preset range, e.g. for small inline charts. */
 export const useEventsTimeseries = ({
 	customerId,
 	interval,

@@ -17,16 +17,6 @@ import type {
 	ApiCusFeatureV3Schema,
 } from "../previousVersions/apiCusFeatureV3";
 
-// overage_allowed: z.boolean().nullish().meta({
-// 	description: "Whether overage usage beyond the limit is allowed",
-// 	example: true,
-// }),
-
-/**
- * Transform feature from V2.0 format to V1.2 format
- * Exported so it can be reused in other transformations (e.g., V1_2_CustomerChange)
- */
-
 const resetToV3IntervalParams = ({
 	input,
 	feature,
@@ -42,7 +32,6 @@ const resetToV3IntervalParams = ({
 } => {
 	const isBoolean = feature?.type === FeatureType.Boolean;
 
-	// 1. No reset
 	if (!input.reset)
 		return {
 			interval: null,
@@ -50,7 +39,6 @@ const resetToV3IntervalParams = ({
 			next_reset_at: null,
 		};
 
-	// 2. Multiple interval
 	if (input.reset?.interval === "multiple") {
 		return {
 			interval: "multiple",
@@ -59,7 +47,6 @@ const resetToV3IntervalParams = ({
 		};
 	}
 
-	// 3. Single interval
 	return {
 		interval: resetIntvToEntIntv({ resetIntv: input.reset?.interval }),
 		interval_count: input.reset?.interval_count || 1,
@@ -132,30 +119,23 @@ const toV3BalanceParams = ({
 			.toNumber();
 	}
 
-	// 1. Get included usage
 	const includedUsage = new Decimal(input.granted_balance)
 		.add(prepaidQuantity)
 		.toNumber();
 
-	// 2. Balance
-
 	const balance = new Decimal(input.current_balance).sub(overage).toNumber();
 
-	// 3. Usage
 	const usage = new Decimal(input.usage).toNumber();
 
-	// 4. Overage allowed
 	let overageAllowed = input.overage_allowed ?? false;
 	if (overageAllowed && input.max_purchase) {
 		overageAllowed = false;
 	}
 
-	// 5. Usage limit
 	const usageLimit = input.max_purchase
 		? new Decimal(input.max_purchase).add(includedUsage).toNumber()
 		: undefined;
 
-	// 6. Expires at
 	const expiresAt =
 		"expires_at" in input ? (input as ApiBalanceBreakdown).expires_at : null;
 
@@ -174,8 +154,6 @@ export function transformBalanceToCusFeatureV3({
 }: {
 	input: z.infer<typeof ApiBalanceSchema>;
 }): z.infer<typeof ApiCusFeatureV3Schema> {
-	// 1. Is boolean feature
-
 	const feature = input.feature;
 	const isUnlimited = input.unlimited;
 
@@ -195,9 +173,6 @@ export function transformBalanceToCusFeatureV3({
 	let newBreakdown: ApiCusFeatureV3Breakdown[] | undefined;
 	if (input.breakdown && input.breakdown.length > 0) {
 		newBreakdown = input.breakdown.map((breakdown) => {
-			// const interval = resetIntvToEntIntv({
-			// 	resetIntv: breakdown.reset_interval,
-			// });
 			const { interval, interval_count, next_reset_at } =
 				resetToV3IntervalParams({
 					input: breakdown,
@@ -235,7 +210,6 @@ export function transformBalanceToCusFeatureV3({
 		});
 	}
 
-	// 1. Included usage: granted_balance, or if prepaid, granted_balance + purchased_balance (?)
 	const legacyCreditSchema = apiCreditSchemaToV0({
 		creditSchema: input.feature?.credit_schema,
 	});

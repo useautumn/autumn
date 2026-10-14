@@ -30,15 +30,8 @@ function parseMeteringPayload({
 	}
 }
 
-/** Each record object's encoding, kept for as long as the record itself is. */
 const encodings = new WeakMap<MeteringRecord, { key: Buffer; value: Buffer }>();
 
-/**
- * Encodes a record once per object. The writer measures a record's size when
- * it is queued and the publisher sends the same object later, so a record is
- * only walked once; it was validated where it entered. Records are treated as
- * immutable from the first call on.
- */
 export function serializeMeteringRecord({
 	record,
 }: {
@@ -46,7 +39,6 @@ export function serializeMeteringRecord({
 }): { key: Buffer; value: Buffer } {
 	const cached = encodings.get(record);
 	if (cached) return cached;
-	// The payload was validated where it entered; only the kind is checked here.
 	if (record.type !== "mutation") throw new InvalidRecordError();
 	const encoded = serializeTopicRecord({
 		key: meteringRecordToKey({ record }),
@@ -82,7 +74,6 @@ function isObject(value: unknown): value is Record<string, unknown> {
 	return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-/** The fields a reader leans on, checked without the full schema: the writer validated the record before appending it. */
 function isMutationShaped(payload: unknown): payload is MeteringRecord {
 	if (!isObject(payload) || payload.type !== "mutation") return false;
 	const { identity, command, result, changes } = payload;
@@ -99,7 +90,6 @@ function isMutationShaped(payload: unknown): payload is MeteringRecord {
 	);
 }
 
-/** A log record read by a trusted follower: the envelope, key and shape are checked, the full schema is not. */
 export function parseTrustedMeteringRecord({
 	key,
 	value,

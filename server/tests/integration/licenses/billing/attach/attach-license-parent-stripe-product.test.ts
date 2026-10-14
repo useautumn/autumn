@@ -1,5 +1,3 @@
-/** Contract: license prices always use the license plan's Stripe Product.
- * This holds for custom attach/update prices and shared catalog resources. */
 import { expect, test } from "bun:test";
 import {
 	type AttachParamsV1Input,

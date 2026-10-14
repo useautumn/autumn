@@ -14,11 +14,6 @@ import {
 
 export const UNRESTRICTED_CHAT_OAUTH_CONSENT_KIND = "chat_unrestricted";
 
-/**
- * A scope-less grant bypasses every route scope check, so it is only legitimate
- * when Leaf's unrestricted chat consent backs it. Both resource servers re-check
- * this, because the mint-time check cannot vouch for a row written years ago.
- */
 export const isUnrestrictedChatOAuthConsent = ({
 	metadata,
 }: {
@@ -30,7 +25,6 @@ export const isUnrestrictedChatOAuthConsent = ({
 	);
 };
 
-// Legacy rows persisted the internal-mcp kind; dynamic registration now writes mcp_client.
 const MCP_OAUTH_CLIENT_KINDS: readonly string[] = [
 	MCP_CLIENT_KIND,
 	"internal_mcp",
@@ -55,7 +49,6 @@ export const isMcpOAuthClientRecord = ({
 	);
 };
 
-/** Admin and Summer tokens stay opaque OAuth tokens instead of api keys. */
 export const returnsOAuthAccessTokenForClientId = ({
 	clientId,
 }: {
@@ -70,7 +63,6 @@ export const getResourceFromOAuthTokenRequest = ({
 	rawBody,
 }: ParsedOAuthRequest) => {
 	// RFC 8707 lets a request repeat `resource`; the first one wins, and the
-	// parsed fields only keep the last, so read the form body directly.
 	if (!isJson) {
 		return asNonEmptyString(new URLSearchParams(rawBody).getAll("resource")[0]);
 	}

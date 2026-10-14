@@ -14,11 +14,9 @@ import type { DeductionSelection } from "../types/deductionRequest.js";
 export type CreditCost = {
 	creditCost: number;
 	rateCard: CreditRateCard | null;
-	/** A zero rate is free usage: rollovers are left untouched and the main balance funds the units without moving. */
 	skipsRollovers: boolean;
 };
 
-/** `computeCreditCosts` for one row: credits per tracked unit under the row's effective schema, and the rate card if usage is attributed. */
 export const resolveCreditCost = ({
 	customerEntitlement,
 	selection,

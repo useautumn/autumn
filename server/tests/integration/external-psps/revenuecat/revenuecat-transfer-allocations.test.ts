@@ -1,8 +1,3 @@
-/**
- * Moving a plan that feeds a shared credit pot re-fits the source's entity
- * allocations to what is left, without moving entities or allocations.
- */
-
 import { test } from "bun:test";
 import {
 	allocateMessages,

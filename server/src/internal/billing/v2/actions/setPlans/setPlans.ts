@@ -29,7 +29,6 @@ import { buildReplacedSubscriptionAction } from "./utils/buildReplacedSubscripti
 import { ensureFreePhaseStripeProducts } from "./utils/ensureFreePhaseStripeProducts";
 import { persistSetPlansSchedule } from "./utils/persistSetPlansSchedule";
 
-/** Set a customer's plans: bill the immediate phase and schedule Autumn-managed future phases. */
 export const setPlans = async ({
 	ctx,
 	params,
@@ -41,7 +40,6 @@ export const setPlans = async ({
 	preview?: boolean;
 	skipAutumnCheckout?: boolean;
 }): Promise<SetPlansResult> => {
-	// Explicit, so a checkout that resumes these params keeps the same policy.
 	const resolvedParams: SetPlansParamsV0 = {
 		...params,
 		undeclared_plans: params.undeclared_plans ?? "end",
@@ -192,8 +190,6 @@ export const setPlans = async ({
 	});
 	logStripeBillingResult({ ctx, result: billingResult.stripe });
 
-	// Checkout completion owns the schedule when execution is deferred or no
-	// Stripe subscription exists yet.
 	const scheduleDeferredToCheckout =
 		billingResult.stripe.deferred ||
 		(billingContext.enablePlanImmediately &&

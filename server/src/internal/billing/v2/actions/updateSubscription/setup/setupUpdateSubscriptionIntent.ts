@@ -12,9 +12,6 @@ import {
 	type UpdateSubscriptionV1Params,
 } from "@autumn/shared";
 
-/**
- * Compute the intent for a subscription update
- */
 export const setupUpdateSubscriptionIntent = ({
 	params,
 	checkoutMode,
@@ -34,15 +31,9 @@ export const setupUpdateSubscriptionIntent = ({
 	if (itemsChanged || licensesChanged || versionChanged || freeTrialChanged)
 		return UpdateSubscriptionIntent.UpdatePlan;
 
-	// Seat-count changes converge license pools in place — no plan restructure.
-	// Same quantity intent as feature_quantities; they may ride together.
 	if (params.license_quantities?.length)
 		return UpdateSubscriptionIntent.UpdateQuantity;
 
-	// ManualTopUp wins over UpdateQuantity (and CancelAction/None): once we know
-	// this isn't a plan restructure, a feature_quantities entry whose prepaid
-	// tie-break target is a one-off price on a recurring host routes here.
-	// A recurring prepaid of the same feature wins the tie-break instead.
 	if (
 		!isCustomerProductOneOff(customerProduct) &&
 		featureQuantitiesParams.length > 0
@@ -63,7 +54,6 @@ export const setupUpdateSubscriptionIntent = ({
 		return UpdateSubscriptionIntent.UpdateQuantity;
 	}
 
-	// If no params and checkoutMode
 	if (checkoutMode === "autumn_checkout") {
 		const hasPrepaid = customerProductHasPrepaidPrice(customerProduct);
 
@@ -72,7 +62,6 @@ export const setupUpdateSubscriptionIntent = ({
 		}
 	}
 
-	// If cancel action
 	if (params.cancel_action) {
 		return UpdateSubscriptionIntent.CancelAction;
 	}

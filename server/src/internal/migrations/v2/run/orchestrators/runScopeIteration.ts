@@ -17,7 +17,6 @@ import type { MigrationRunScheduler } from "../types/migrationRunScheduler.js";
 import type { RunScopeItem, RunScopeKind } from "../types/runScope.js";
 import { iterateScope } from "./iterateScope.js";
 
-/** Runs one filtered migration scope iteration. */
 export const runScopeIteration = async ({
 	ctx,
 	migration,
@@ -61,8 +60,6 @@ export const runScopeIteration = async ({
 		controls?.checkpoint !== false &&
 		(!dryRun || controls?.checkpointDryRun === true);
 
-	// In-memory latch so we hit Redis only until the first cancel detection;
-	// every later item short-circuits without a cache roundtrip.
 	let cancelRequested = false;
 
 	const perItem = async ({

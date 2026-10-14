@@ -2,7 +2,6 @@ import { ACTIVE_STATUSES, customerProducts } from "@autumn/shared";
 import { and, eq, inArray } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle";
 
-/** Finds customer products matching any of the given external IDs for a customer. */
 export const getByExternalIds = async ({
 	db,
 	internalCustomerId,

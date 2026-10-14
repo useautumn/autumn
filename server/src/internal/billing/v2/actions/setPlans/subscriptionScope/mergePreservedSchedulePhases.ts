@@ -15,8 +15,6 @@ const customerProductIdsAt = ({
 const sortByStart = (phases: SchedulePhase[]) =>
 	[...phases].sort((first, second) => first.startsAt - second.startsAt);
 
-/** Folds the old schedule's out-of-scope plans into the new phases, so a
- * request scoped to one subscription never drops another's schedule. */
 export const mergePreservedSchedulePhases = ({
 	phases,
 	existingPhases,

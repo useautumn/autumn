@@ -1,6 +1,3 @@
-/** Channel resolution clears catalog mappings only when the last Stripe channel is removed.
- * Channel-specific config mutation must continue preserving the other channel. */
-
 import { describe, expect, test } from "bun:test";
 import { AppEnv, type Organization, type StripeConfig } from "@autumn/shared";
 import {
@@ -103,8 +100,6 @@ describe("dual-auth: channel-scoped field mutators leave the other channel intac
 		});
 
 		expect(clearedConnect.account_id ?? null).toBeNull();
-		// secret key + connect secret on stripe_config are not this helper's concern;
-		// they must remain on the org untouched.
 		expect(org.stripe_config?.test_api_key).toBeTruthy();
 		expect(org.stripe_config?.test_connect_webhook_secret).toBeTruthy();
 	});

@@ -10,18 +10,6 @@ import {
 	getOrgEntitiesLimit,
 } from "@/internal/misc/edgeConfig/orgLimitsStore.js";
 
-/**
- * These tests mutate the in-memory org limits store (a module-level singleton)
- * so they must run serially, not concurrently, to avoid leaking state into
- * unrelated tests.
- *
- * They call CusService.getFull directly (in-process) rather than going through
- * the HTTP server, because the running server has its own copy of the
- * orgLimitsStore that only refreshes from S3 every 30s. Calling in-process
- * exercises the same SQL path (getFullCusQuery -> buildEntitiesCTE) while
- * picking up the in-memory override immediately.
- */
-
 const resetOrgLimits = () => {
 	_setOrgLimitsConfigForTesting({ config: { orgs: {} } });
 };
@@ -52,7 +40,6 @@ test(`${chalk.yellowBright("maxEntities: caps entities returned by CusService.ge
 		};
 		_setOrgLimitsConfigForTesting({ config });
 
-		// Verify the accessor resolves to the override
 		expect(getOrgEntitiesLimit({ orgId: ctx.org.id })).toBe(maxEntities);
 
 		const fullCus = await CusService.getFull({
@@ -85,7 +72,6 @@ test(`${chalk.yellowBright("maxEntities: returns all entities when override is a
 
 	resetOrgLimits();
 
-	// No override for this org -> default (300) applies
 	expect(getOrgEntitiesLimit({ orgId: ctx.org.id })).toBe(
 		DEFAULT_ENTITIES_LIMIT,
 	);
@@ -116,7 +102,6 @@ test(`${chalk.yellowBright("maxEntities: raising the limit exposes previously-hi
 	expect(entities.length).toBe(entityCount);
 
 	try {
-		// Start with a tight cap
 		_setOrgLimitsConfigForTesting({
 			config: { orgs: { [ctx.org.id]: { maxEntities: 2 } } },
 		});
@@ -128,7 +113,6 @@ test(`${chalk.yellowBright("maxEntities: raising the limit exposes previously-hi
 		});
 		expect(capped.entities.length).toBe(2);
 
-		// Raise the cap above the entity count
 		_setOrgLimitsConfigForTesting({
 			config: { orgs: { [ctx.org.id]: { maxEntities: 50 } } },
 		});

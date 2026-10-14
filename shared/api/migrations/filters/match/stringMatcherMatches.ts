@@ -1,15 +1,5 @@
 import type { StringMatcher } from "../matcher.js";
 
-/**
- * Evaluate a `StringMatcher` against a value. Returns `true` when the
- * value satisfies the matcher.
- *
- * Implemented operators: bare value (equality), `null` shorthand,
- * `$eq`, `$ne`, `$in`, `$nin`. `$regex` / `$startsWith` throw — explicit
- * gap signal so callers see what's missing instead of silently passing.
- *
- * `null` and `undefined` on the value side are treated identically.
- */
 export const stringMatcherMatches = ({
 	matcher,
 	value,

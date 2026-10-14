@@ -293,7 +293,6 @@ function transactionalBatchTests(): void {
 		);
 	}
 
-	/** Refuses the first `refusals` sends with `refusal`, the way a coordinator or a moving leader does. */
 	function createRefusingProducer({
 		refusals,
 		refusal = concurrentTransactions,
@@ -332,7 +331,6 @@ function transactionalBatchTests(): void {
 		}
 		return { lifecycle, producer: { transaction } as KafkaProducer };
 	}
-	/** A clock that only advances while the retry sleeps: three ticks of deadline, one per wait. */
 	function createFastRetry() {
 		let tick = 0;
 		return {
@@ -397,7 +395,6 @@ function transactionalBatchTests(): void {
 				retry: createFastRetry(),
 			}),
 		).rejects.toBeInstanceOf(KafkaBatchNotCommittedError);
-		// Attempts at ticks 0, 1, 2 and 3; the wait after the fourth would pass the deadline.
 		expect(
 			fake.lifecycle.filter((step) => step === "transaction"),
 		).toHaveLength(4);

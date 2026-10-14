@@ -1,6 +1,5 @@
 import type { FullSubject } from "../../models/cusModels/fullSubject/fullSubjectModel.js";
 
-/** Logs a compact summary of a FullSubject without flooding the terminal. */
 export const logFullSubject = ({
 	fullSubject,
 }: {

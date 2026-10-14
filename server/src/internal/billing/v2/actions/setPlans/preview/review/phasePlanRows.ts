@@ -60,7 +60,6 @@ const rowFor = ({
 	return undefined;
 };
 
-/** A phase against what it is compared with; only a phase with a saved self shows plans it lost. */
 export const phasePlanRows = ({
 	contents,
 	comparison,

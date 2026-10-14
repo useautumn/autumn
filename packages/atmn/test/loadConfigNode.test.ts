@@ -1,8 +1,3 @@
-/**
- * Under node the config is imported through jiti, resolved from this package:
- * a user's project has no jiti of its own.
- */
-
 import { expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
@@ -26,7 +21,7 @@ test("the node loader imports through this package's jiti, not the config's fold
 
 test("node imports a .ts config from a folder with no jiti installed", () => {
 	const which = spawnSync("node", ["--version"], { encoding: "utf8" });
-	if (which.status !== 0) return; // no node on this machine; the bun path is covered elsewhere
+	if (which.status !== 0) return;
 	const dir = mkdtempSync(join(tmpdir(), "atmn-node-load-"));
 	try {
 		const path = join(dir, "autumn.config.ts");

@@ -6,18 +6,6 @@ import { applyLiveUsageWindows } from "../balances/applyLiveUsageWindows.js";
 import { getCachedFeatureBalancesBatch } from "../balances/getCachedFeatureBalances.js";
 import { normalizedToUsageWindowFeatureIds } from "../fullSubjectCacheModel.js";
 
-/**
- * After we write a subject via `setCachedFullSubject`, the balance hashes are
- * written with HSETNX — so any concurrent Lua deduction that landed between our
- * Lua script starting and finishing will have left its patched balance in place.
- * To reflect those patches we need to re-read the balance hashes. We don't need
- * to re-read the subject blob itself because we just wrote it ourselves.
- *
- * This helper does a single balance hmget batch (one RTT) and merges the live
- * values into the already-known normalized subject. Returns undefined if the
- * balance batch is incomplete — callers should fall back to the DB-derived
- * fullSubject in that case.
- */
 export const rehydrateWithLiveBalances = async ({
 	ctx,
 	normalized,

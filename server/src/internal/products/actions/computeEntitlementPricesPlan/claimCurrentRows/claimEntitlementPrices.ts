@@ -6,7 +6,6 @@ import {
 } from "@autumn/shared";
 import type { ClaimedEntitlementPrice } from "../types/claimResult";
 
-/** Each current EP claims one desired EP that matches at definition precision. */
 export const claimEntitlementPrices = ({
 	desiredEntitlementPrices,
 	currentEntitlementPrices,

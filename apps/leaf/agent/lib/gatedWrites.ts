@@ -4,17 +4,11 @@ import type { LeafAgentConnection } from "./toolAllowlists.js";
 type GatedWrite = {
 	agents: readonly LeafAgentConnection[];
 	previewTool?: string;
-	/** The preview tool takes the write's own request body, so the write is
-	 * only accepted with a request the agent previewed verbatim this session —
-	 * the card, the walkthrough and the executed write then all describe one
-	 * request. Catalog previews reshape the request and cannot be compared. */
 	previewedRequestRequired?: true;
 	scopes?: RouteScopeRequirement;
 	toolName: string;
 };
 
-/** The authoritative gated-write table: approval sets, scope requirements
- * (absent = fails closed), and write→preview mapping all derive from here. */
 export const GATED_WRITES: readonly GatedWrite[] = [
 	{
 		agents: ["leaf"],
@@ -52,8 +46,6 @@ export const GATED_WRITES: readonly GatedWrite[] = [
 		scopes: ["rewards:write"],
 		toolName: "createReward",
 	},
-	// Leaf schedules with setPlans now; createSchedule stays gated for the MCP
-	// tool it still exposes and for approvals parked before the switch.
 	{
 		agents: ["leaf"],
 		previewTool: "previewCreateSchedule",

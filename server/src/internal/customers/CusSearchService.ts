@@ -159,10 +159,6 @@ export type CustomerSearchPredicates = {
 	whereRaw: SQL;
 };
 
-/**
- * Every mode drives from customers so the keyset index orders the scan;
- * product-level filters become EXISTS semi-joins probed per customer.
- */
 export const buildSearchPredicates = ({
 	orgId,
 	env,
@@ -250,9 +246,6 @@ export const buildSearchPredicates = ({
 							case "free_trial":
 								return sql`(${customerProducts.trial_ends_at} > ${Date.now()} AND ${customerProducts.free_trial_id} IS NOT NULL AND ${customerProducts.canceled_at} IS NULL AND ${activeProdRaw})`;
 							case CusProductStatus.Expired:
-								// "Same plan" = same public product id (any version), resolved
-								// through the products join rather than the denormalized
-								// customer_products.product_id snapshot.
 								return sql`(${customerProducts.status} = ${CusProductStatus.Expired} AND ${customerProducts.canceled_at} IS NULL AND NOT EXISTS (
 									SELECT 1 FROM customer_products cp_alias
 									JOIN products p_alias ON p_alias.internal_id = cp_alias.internal_product_id

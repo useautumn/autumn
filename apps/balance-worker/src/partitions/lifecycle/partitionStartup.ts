@@ -19,7 +19,6 @@ import type { PartitionFailure } from "../types/partitions.js";
 import { watchForSuccessor } from "./handOffPartition.js";
 import { clearPartitionRetry } from "./retryPartition.js";
 
-/** Commands resume only after replay has restored their durable bookmark. */
 async function resumeCommands({
 	ctx,
 	partition,
@@ -127,7 +126,6 @@ async function prepareInTurn({
 	}
 }
 
-/** prepare → announce ready → named owner by the predecessor (or claim for itself) → activate → admit. */
 export async function startPartition({
 	ctx,
 	state,
@@ -142,8 +140,6 @@ export async function startPartition({
 		);
 	}
 	try {
-		// Best effort, not awaited: the owner that hears it keeps serving through this preparation
-		// instead of releasing at its handoff timeout; without it the old path still applies.
 		void announcePreparing({ ctx, entry });
 		await prepareInTurn({ ctx, entry });
 		if (!isStillStarting()) return;
@@ -155,12 +151,10 @@ export async function startPartition({
 
 		const handedOff = await awaitHandoffClaim({ ctx, entry });
 		if (!isStillStarting()) return;
-		// Listening from here on: a successor from another fleet may announce before this worker has even admitted.
 		watchForSuccessor({ ctx, state, entry });
 
 		const activation = entry.runtime.activate();
 		try {
-			// Named owner already: requests routed here wait at the gate while the runtime fences.
 			if (handedOff) admitPartition({ state, entry, routeEpoch: handedOff });
 			await activation;
 		} catch (cause) {
@@ -182,7 +176,6 @@ export async function startPartition({
 				throw cause;
 			}
 			if (!isStillStarting()) return;
-			// The claim names this worker; the marker written under its epoch is what fences the last one.
 			await entry.runtime.fence?.();
 			if (!isStillStarting()) return;
 			admitPartition({ state, entry, routeEpoch });
@@ -216,7 +209,6 @@ function admitPartition({
 	entry: PartitionEntry;
 	routeEpoch: string;
 }): void {
-	// Admitted here again: whoever it was handed to before is no longer where to send callers.
 	state.handoffSuccessors.delete(entry.partition);
 	state.directory.admit({
 		partition: entry.partition,
@@ -225,7 +217,6 @@ function admitPartition({
 	});
 }
 
-/** The route epoch of the predecessor's `claimed` naming this worker, or null when none came in time. */
 async function awaitHandoffClaim({
 	ctx,
 	entry,
@@ -238,7 +229,6 @@ async function awaitHandoffClaim({
 		timeout.abort(new Error("Handoff claim timed out"));
 	}
 	const signal = AbortSignal.any([entry.handoffAbort.signal, timeout.signal]);
-	// Listen before announcing: the claim can only follow the announcement, so nothing is missed.
 	const claim = entry.publication.awaitClaim({ signal });
 	const draining = entry.publication.awaitDraining({ signal });
 	const foreignClaim = entry.publication.awaitForeignClaim({ signal });
@@ -249,13 +239,9 @@ async function awaitHandoffClaim({
 		clearTimeout(timer);
 		timer = setTimeout(expire, afterMs);
 	}
-	// The timeout covers silence: a predecessor that says it is draining is alive and
-	// gets the longer cap, so its committing tracks are not fenced from under it.
 	function holdForDrain(): void {
 		rearm({ afterMs: ctx.config.handoffDrainCapMs });
 	}
-	// The owner handed to someone else (the roster moved this partition mid-drain). That
-	// worker either hands on to this one shortly or was already retired; silence decides.
 	function restartSilence(): void {
 		rearm({ afterMs: ctx.config.handoffClaimTimeoutMs });
 	}

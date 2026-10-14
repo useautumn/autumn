@@ -1,5 +1,3 @@
-/** The resync preview charges nothing now and bills the full next cycle from the anchor. */
-
 import { expect, test } from "bun:test";
 import type { SetPlansParamsV0Input } from "@autumn/shared";
 import { expectPreviewNextCycleCorrect } from "@tests/integration/billing/utils/expectPreviewNextCycleCorrect";

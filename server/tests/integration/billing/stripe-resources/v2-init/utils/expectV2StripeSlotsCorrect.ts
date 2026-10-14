@@ -1,11 +1,3 @@
-/**
- * V2 attach slot contract.
- *
- * Present / absent is the latest billing path only (no leftover empty /
- * placeholder / prepaid-v1 companion). `stripe_product_id` is not asserted —
- * that slot is changing.
- */
-
 import { expect } from "bun:test";
 import type { FullProduct, Price } from "@autumn/shared";
 import {
@@ -53,7 +45,6 @@ const expectSlotAbsent = ({
 	).toBeNull();
 };
 
-/** Assert the V2-required slots for `kind`, and that leftover slots stayed unset. */
 export const expectV2StripeSlotsCorrect = ({
 	price,
 	kind,
@@ -132,10 +123,6 @@ export const slotForV2Kind = (
 ): "stripe_price_id" | "stripe_prepaid_price_v2_id" =>
 	kind === "prepaid" ? "stripe_prepaid_price_v2_id" : "stripe_price_id";
 
-/**
- * One Autumn slot id, used by every concurrent attach's Stripe subscription.
- * Also one Autumn-nicknamed Price on the Stripe product that slot lives on.
- */
 export const expectSingleStripePriceInitialized = async ({
 	price,
 	kind,
@@ -180,8 +167,6 @@ export const expectSingleStripePriceInitialized = async ({
 		`${prefix}: one stripe price id (autumn=${autumnId}, subs=${subscriptionPriceIds.join(",")})`,
 	).toBe(1);
 
-	// Feature Stripe Products accumulate prices across the shared test org.
-	// Assert this slot's Price, not that it is the only Autumn-nicknamed one.
 	const stripePrice = await stripeCli.prices.retrieve(autumnId!);
 	expect(
 		hasAutumnPriceNickname(stripePrice.nickname),

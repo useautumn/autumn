@@ -16,29 +16,10 @@ import {
 } from "../prevVersions/CheckResponseV0.js";
 import { CheckResponseV1Schema } from "../prevVersions/CheckResponseV1.js";
 
-/**
- * V0_2_CheckChange: Transforms check response TO V0_2 format
- *
- * Applied when: targetVersion <= V0_2
- *
- * Breaking changes introduced in V0.2 (that we reverse here):
- *
- * 1. Structure: Single check result object → balances array format
- *    - V0.2+: Single object with allowed, feature_id, balance, unlimited, etc.
- *    - V0_2: { allowed, balances: [{ feature_id, required, balance, unlimited, usage_allowed }] }
- *
- * 2. Boolean features: No balance fields → balance: null
- * 3. Unlimited features: Return unlimited: true, usage_allowed based on overage_allowed
- * 4. Metered features: Return required_balance and balance
- *
- * Input: CheckResult (V0.2+ format)
- * Output: CheckResponseV0 (V0_2 balances array format)
- */
-
 export const V0_2_CheckChange = defineVersionChange({
 	name: "V0.2 Check Change",
-	newVersion: ApiVersion.V1_1, // Breaking change introduced in V1_1
-	oldVersion: ApiVersion.V0_2, // Applied when targetVersion <= V0_2
+	newVersion: ApiVersion.V1_1,
+	oldVersion: ApiVersion.V0_2,
 	description: [
 		"Check response transformed to balances array format",
 		"Single check result object → { allowed, balances: [...] }",
@@ -49,7 +30,6 @@ export const V0_2_CheckChange = defineVersionChange({
 	legacyDataSchema: CheckLegacyDataSchema,
 	affectsResponse: true,
 
-	// Response: V1.1+ (CheckResult) → V0_2 (CheckResponseV0)
 	transformResponse: ({
 		input,
 		legacyData,
@@ -72,7 +52,6 @@ export const V0_2_CheckChange = defineVersionChange({
 
 		const { noCusEnts, featureToUse } = legacyData;
 
-		// No customer entitlements
 		if (noCusEnts && !allowed) {
 			return {
 				allowed: false,
@@ -80,7 +59,6 @@ export const V0_2_CheckChange = defineVersionChange({
 			};
 		}
 
-		// Build the balance object based on feature type
 		const balanceObj: CheckResponseV0["balances"][number] = {
 			feature_id,
 		};
@@ -97,9 +75,6 @@ export const V0_2_CheckChange = defineVersionChange({
 			};
 		}
 
-		// How to tell if it's boolean...
-
-		// Case 1: Boolean/Static features (no balance, no unlimited, no overage)
 		if (
 			balance === null &&
 			!unlimited &&
@@ -113,7 +88,6 @@ export const V0_2_CheckChange = defineVersionChange({
 			};
 		}
 
-		// Case 2: Unlimited features
 		if (unlimited) {
 			balanceObj.balance = null;
 			balanceObj.unlimited = true;
@@ -125,7 +99,6 @@ export const V0_2_CheckChange = defineVersionChange({
 			};
 		}
 
-		// Case 3: Overage allowed (usage allowed but not unlimited)
 		if (overage_allowed) {
 			balanceObj.balance = balance;
 			balanceObj.unlimited = false;
@@ -137,7 +110,6 @@ export const V0_2_CheckChange = defineVersionChange({
 			};
 		}
 
-		// Case 4: Metered features with balance tracking
 		balanceObj.required = required_balance ?? null;
 		balanceObj.balance = balance;
 

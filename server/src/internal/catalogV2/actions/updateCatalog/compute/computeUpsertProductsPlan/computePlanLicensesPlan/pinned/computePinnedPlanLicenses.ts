@@ -80,10 +80,6 @@ const pinnedPlanLicense = ({
 	};
 };
 
-/**
- * Child-driven pin: an in-place child edit freezes non-following links anchored
- * to the edited row via an overlay. Mints/promotes never reach this lane.
- */
 export const computePinnedPlanLicenses = ({
 	ctx,
 	parent,

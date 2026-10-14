@@ -1,8 +1,3 @@
-/**
- * A customer already subscribed to a variant keeps the Stripe price they were
- * attached on when that variant is split onto its own Stripe product.
- */
-
 import { expect, test } from "bun:test";
 import {
 	type ApiCustomerV5,
@@ -84,10 +79,8 @@ test.concurrent(
 			env: ctx.env,
 		});
 
-		// The catalog now points at a new Stripe product.
 		expect(variantAfter.processor?.id).not.toBe(baseAfter.processor?.id);
 
-		// The live subscription is untouched, still on the original product.
 		const subscriptionAfter = await ctx.stripeCli.subscriptions.retrieve(
 			subscription.data[0].id,
 		);

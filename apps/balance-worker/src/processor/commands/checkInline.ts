@@ -8,12 +8,10 @@ import { isGoneMidRequest } from "../actions/withResidentSubject.js";
 import type { PartitionProcessorScope } from "../types/partitionProcessor.js";
 import { checkReplyOf } from "./check.js";
 
-/** Decided now; refused hands it to `check`, saying why. A check commits nothing, so its reply goes out at once. */
 export type InlineCheckDecision =
 	| { kind: "decided"; reply: CheckReply }
 	| { kind: "refused"; reason: ResidentViewRefusal };
 
-/** A check decided synchronously on a resident, current subject: the read `check` makes, minus the ensure. */
 export function checkInline({
 	scope,
 	command,
@@ -37,7 +35,6 @@ export function checkInline({
 		const reply = checkReplyOf({ scope, command, subject: { state, catalog } });
 		return { kind: "decided", reply };
 	} catch (cause) {
-		// Rows that left the cache under the read: the ordinary path hydrates them back.
 		if (isGoneMidRequest(cause))
 			return { kind: "refused", reason: "not_resident" };
 		throw cause;

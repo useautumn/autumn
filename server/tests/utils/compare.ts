@@ -10,7 +10,6 @@ import {
 } from "@autumn/shared";
 import type { ApiCustomerV1 } from "@shared/api/customers/previousVersions/apiCustomerV1.js";
 import { AutumnCli } from "@tests/cli/AutumnCli.js";
-// import { expect } from "chai";
 import { Decimal } from "decimal.js";
 
 export const checkProductIsScheduled = ({
@@ -59,12 +58,10 @@ export const compareMainProduct = ({
 
 	if (skipEntitlements) return;
 
-	// Check entitlements
 	const sentEntitlements = Object.values(sent.entitlements) as Entitlement[];
 	const recEntitlements = entitlements;
 
 	for (const entitlement of sentEntitlements) {
-		// Corresponding entitlement in received
 		const recEntitlement = recEntitlements.find(
 			(e: ApiCustomerV1["entitlements"][number]) => {
 				if (e.feature_id !== entitlement.feature_id) return false;
@@ -80,14 +77,12 @@ export const compareMainProduct = ({
 			},
 		);
 
-		// If options list provideed, and feature
 		const options = optionsList.find(
 			(o: any) => o.feature_id === entitlement.feature_id,
 		);
 
 		let expectedBalance = entitlement.allowance;
 		if (options?.quantity) {
-			// Get price from sent
 			const price = sent.prices.find(
 				(p: any) => p.config.feature_id === entitlement.feature_id,
 			);
@@ -142,15 +137,6 @@ export const checkFeatureHasCorrectBalance = async ({
 		return;
 	}
 
-	// console.log(
-	//   `     - Checking entitlement ${feature.id} has ${
-	//     entitlement.allowance_type == AllowanceType.Unlimited
-	//       ? "unlimited balance"
-	//       : `balance of ${expectedBalance}`
-	//   }`
-	// );
-
-	// Get ent from cusRes
 	const { entitlements: cusEnts }: any = cusRes;
 	const { allowed, balanceObj }: any = entitledRes;
 	const cusEnt = cusEnts.find(
@@ -161,7 +147,6 @@ export const checkFeatureHasCorrectBalance = async ({
 	expect(cusEnt, `Cus ent for ${feature.id} not found`).toBeDefined();
 
 	if (entitlement.allowance_type === AllowanceType.Unlimited) {
-		// Cus ent
 		expect(
 			cusEnt.balance,
 			`Balance for ${feature.id} is not null`,
@@ -174,7 +159,6 @@ export const checkFeatureHasCorrectBalance = async ({
 			`Unlimited for ${feature.id} is not true`,
 		).toStrictEqual(true);
 
-		// Entitled res
 		expect(allowed, `Allowed for ${feature.id} is not true`).toStrictEqual(
 			true,
 		);

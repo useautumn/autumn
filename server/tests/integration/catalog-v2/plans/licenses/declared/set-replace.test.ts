@@ -1,12 +1,3 @@
-/**
- * catalogV2.update — declared licenses[] set replace.
- *
- * Contract:
- *   replace child A with child B in one declared set
- *   two licenses; drop one, keep the other
- *   child already has v2; new licenses:[child] create-defaults to active
- */
-
 import { test } from "bun:test";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";

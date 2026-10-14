@@ -4,21 +4,9 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-/**
- * Plan Schedule: Downgrade with Immediate Override
- *
- * Demonstrates forcing a downgrade to happen immediately instead of scheduled.
- * By default, downgrades are scheduled for end of billing cycle.
- * Using plan_schedule: "immediate" forces the downgrade to happen right away
- * with prorated credit for the unused portion of the current plan.
- *
- * Customer on Premium ($50/mo) → Pro ($20/mo) with plan_schedule: "immediate"
- */
-
 test(`${chalk.yellowBright("plan_schedule: downgrade with immediate override")}`, async () => {
 	const customerId = "plan-schedule-downgrade-imm";
 
-	// Pro plan ($20/mo)
 	const pro = products.pro({
 		id: "pro",
 		items: [
@@ -28,7 +16,6 @@ test(`${chalk.yellowBright("plan_schedule: downgrade with immediate override")}`
 		],
 	});
 
-	// Premium plan ($50/mo)
 	const premium = products.premium({
 		id: "premium",
 		items: [
@@ -40,7 +27,6 @@ test(`${chalk.yellowBright("plan_schedule: downgrade with immediate override")}`
 		],
 	});
 
-	// Setup: customer with payment method and premium plan attached
 	const { autumnV1 } = await initScenario({
 		customerId,
 		setup: [
@@ -50,7 +36,6 @@ test(`${chalk.yellowBright("plan_schedule: downgrade with immediate override")}`
 		actions: [s.attach({ productId: "premium" })],
 	});
 
-	// Get customer state before downgrade
 	const customerBefore = await autumnV1.customers.get(customerId);
 	console.log("Customer before immediate downgrade:", {
 		products: customerBefore.products?.map(
@@ -61,8 +46,6 @@ test(`${chalk.yellowBright("plan_schedule: downgrade with immediate override")}`
 		),
 	});
 
-	// 1. Preview the downgrade with plan_schedule: "immediate"
-	// This forces the downgrade to happen now instead of at cycle end
 	const downgradePreview = await autumnV1.billing.previewAttach({
 		customer_id: customerId,
 		product_id: `pro_${customerId}`,
@@ -71,7 +54,6 @@ test(`${chalk.yellowBright("plan_schedule: downgrade with immediate override")}`
 	});
 	console.log("Downgrade preview (with immediate override):", downgradePreview);
 
-	// 2. Perform the downgrade with plan_schedule: "immediate" and redirect_mode: "always" (Autumn checkout URL)
 	const downgradeResult = await autumnV1.billing.attach({
 		customer_id: customerId,
 		product_id: `pro_${customerId}`,
@@ -80,7 +62,6 @@ test(`${chalk.yellowBright("plan_schedule: downgrade with immediate override")}`
 	});
 	console.log("Downgrade result (immediate with credit):", downgradeResult);
 
-	// Get customer state after - should now have Pro immediately
 	const customerAfter = await autumnV1.customers.get(customerId);
 	console.log("Customer after immediate downgrade:", {
 		products: customerAfter.products?.map(

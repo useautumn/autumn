@@ -33,10 +33,8 @@ export const priceToOneOffAndTiered = ({
 	let finalQuantity = optionsQuantity;
 
 	if (optionsQuantity === 0 && isCheckout) {
-		// 1. If quantity is 0 and is checkout, skip over line item
 		return null;
 	} else if (nullish(optionsQuantity) && isCheckout) {
-		// 2. If quantity is nullish and is checkout, default to 1
 		finalQuantity = 1;
 	} else if (nullish(optionsQuantity) || optionsQuantity === 0) {
 		return null;
@@ -101,16 +99,13 @@ export const priceToUsageInAdvance = ({
 	const optionsQuantity = options?.upcoming_quantity ?? options?.quantity;
 	let finalQuantity = optionsQuantity;
 
-	// 1. If adjustable quantity is set, use that, else if quantity is undefined, adjustable is true, else false
 	const adjustable = notNullish(options?.adjustable_quantity)
 		? options!.adjustable_quantity
 		: nullish(optionsQuantity);
 
 	if (optionsQuantity === 0 && isCheckout) {
-		// 1. If quantity is 0 and is checkout, skip over line item
 		return null;
 	} else if (nullish(optionsQuantity) && isCheckout) {
-		// 2. If quantity is nullish and is checkout, default to 1
 		finalQuantity = 1;
 	} else if (nullish(optionsQuantity) || optionsQuantity === 0) {
 		return null;

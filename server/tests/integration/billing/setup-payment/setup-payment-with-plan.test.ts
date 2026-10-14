@@ -1,19 +1,3 @@
-/**
- * Setup Payment - With Plan Tests
- *
- * Tests for setup payment with plan_id (deferred plan attachment).
- * After the customer completes the setup form, the webhook handler:
- * 1. Saves the customer's default payment method
- * 2. Calls billingActions.attach() with the stored params
- *
- * Key behaviors:
- * - plan_id is validated via preview before creating the checkout session
- * - Params are stored in metadata and survive the roundtrip to the webhook
- * - Paid plans get a Stripe subscription after setup
- * - Free plans get attached without a subscription
- * - feature_quantities pass through metadata to the attach call
- */
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3 } from "@autumn/shared";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
@@ -28,19 +12,6 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 1: Setup + paid plan
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - New customer with NO payment method
- * - Call setupPayment with plan_id for pro ($20/mo)
- *
- * Expected:
- * - Returns setup checkout URL
- * - After completing form: PM saved, pro attached, invoice paid
- */
 test.concurrent(`${chalk.yellowBright("setup-payment: attach paid plan after setup")}`, async () => {
 	const customerId = "setup-pay-paid-plan";
 
@@ -50,13 +21,12 @@ test.concurrent(`${chalk.yellowBright("setup-payment: attach paid plan after set
 	const { autumnV1, ctx } = await initScenario({
 		customerId,
 		setup: [
-			s.customer({}), // No payment method
+			s.customer({}),
 			s.products({ list: [pro] }),
 		],
 		actions: [],
 	});
 
-	// 1. Call setupPayment with plan_id
 	const res = await autumnV1.billing.setupPayment({
 		customer_id: customerId,
 		plan_id: pro.id,
@@ -66,10 +36,8 @@ test.concurrent(`${chalk.yellowBright("setup-payment: attach paid plan after set
 	expect(res.url).toBeDefined();
 	expect(res.url).toContain("checkout.stripe.com");
 
-	// 2. Complete the setup form
 	await completeSetupPaymentForm({ url: res.url });
 
-	// 3. Verify plan was attached by the webhook
 	await expectCustomerProducts({
 		autumn: autumnV1,
 		customerId,
@@ -99,20 +67,6 @@ test.concurrent(`${chalk.yellowBright("setup-payment: attach paid plan after set
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 2: Setup + free plan
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - New customer with NO payment method
- * - Call setupPayment with plan_id for a free product
- *
- * Expected:
- * - Returns setup checkout URL
- * - After completing form: PM saved, free product attached
- * - No invoice, no Stripe subscription (free product)
- */
 test.concurrent(`${chalk.yellowBright("setup-payment: attach free plan after setup")}`, async () => {
 	const customerId = "setup-pay-free-plan";
 
@@ -125,7 +79,6 @@ test.concurrent(`${chalk.yellowBright("setup-payment: attach free plan after set
 		actions: [],
 	});
 
-	// 1. Call setupPayment with free plan_id
 	const res = await autumnV1.billing.setupPayment({
 		customer_id: customerId,
 		plan_id: free.id,
@@ -133,10 +86,8 @@ test.concurrent(`${chalk.yellowBright("setup-payment: attach free plan after set
 
 	expect(res.url).toBeDefined();
 
-	// 2. Complete the setup form
 	await completeSetupPaymentForm({ url: res.url });
 
-	// 3. Verify free plan was attached
 	await expectCustomerProducts({
 		autumn: autumnV1,
 		customerId,
@@ -153,7 +104,6 @@ test.concurrent(`${chalk.yellowBright("setup-payment: attach free plan after set
 		usage: 0,
 	});
 
-	// Free product: no invoices, no Stripe subscription
 	await expectCustomerInvoiceCorrect({ customer, count: 0 });
 
 	await expectNoStripeSubscription({
@@ -164,20 +114,6 @@ test.concurrent(`${chalk.yellowBright("setup-payment: attach free plan after set
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 3: Setup + plan with feature_quantities (prepaid)
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - New customer with NO payment method
- * - Call setupPayment with plan_id for pro + prepaid messages quantity
- *
- * Expected:
- * - Returns setup checkout URL
- * - After completing form: pro attached with correct prepaid balance
- * - Invoice = base ($20) + prepaid (2 packs × $10 = $20) = $40
- */
 test.concurrent(`${chalk.yellowBright("setup-payment: attach plan with feature_quantities (prepaid)")}`, async () => {
 	const customerId = "setup-pay-prepaid";
 
@@ -198,7 +134,6 @@ test.concurrent(`${chalk.yellowBright("setup-payment: attach plan with feature_q
 		actions: [],
 	});
 
-	// 1. Call setupPayment with feature_quantities
 	const res = await autumnV1.billing.setupPayment({
 		customer_id: customerId,
 		plan_id: pro.id,
@@ -207,10 +142,8 @@ test.concurrent(`${chalk.yellowBright("setup-payment: attach plan with feature_q
 
 	expect(res.url).toBeDefined();
 
-	// 2. Complete the setup form
 	await completeSetupPaymentForm({ url: res.url });
 
-	// 3. Verify plan attached with correct prepaid balance
 	await expectCustomerProducts({
 		autumn: autumnV1,
 		customerId,
@@ -226,7 +159,6 @@ test.concurrent(`${chalk.yellowBright("setup-payment: attach plan with feature_q
 		usage: 0,
 	});
 
-	// Invoice: $20 base + $20 prepaid (200 units / 100 billingUnits × $10) = $40
 	await expectCustomerInvoiceCorrect({
 		customer,
 		count: 1,

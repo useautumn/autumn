@@ -1,11 +1,3 @@
-/**
- * Plan variants — base rename must not clobber variant names.
- *
- * Variants own their name ("Pro Annual"); renaming the base ("Pro" → "Pro
- * Plus") propagates settings but must leave every variant's name intact,
- * in both the update and preview_update paths.
- */
-
 import { expect, test } from "bun:test";
 import {
 	type ApiPlanV1,

@@ -3,7 +3,6 @@ import { readdir, rm, stat } from "node:fs/promises";
 import { join } from "node:path";
 import { STALE_AFTER_MS, WORKSPACE_ROOT } from "./workspacePaths.ts";
 
-/** Self-healing against crashed runs: removes workspaces older than a day. */
 export const sweepStaleWorkspaces = async (): Promise<void> => {
 	if (!existsSync(WORKSPACE_ROOT)) return;
 	const now = Date.now();
@@ -14,7 +13,6 @@ export const sweepStaleWorkspaces = async (): Promise<void> => {
 			if (now - info.mtimeMs > STALE_AFTER_MS)
 				await rm(path, { recursive: true, force: true });
 		} catch {
-			// already gone — another run swept it
 		}
 	}
 };

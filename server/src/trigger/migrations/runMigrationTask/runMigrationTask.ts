@@ -27,7 +27,6 @@ export const runMigrationTask = task({
 		});
 
 		// Trigger tasks start with cold Redis clients; warm them before
-		// preparation and cache work so availability checks do not short-circuit.
 		await warmupRegionalRedis().catch((error) => {
 			logger.warn("run-migration: redis warmup failed (continuing)", {
 				data: {

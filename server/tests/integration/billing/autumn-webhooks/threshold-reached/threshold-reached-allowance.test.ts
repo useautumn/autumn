@@ -1,13 +1,3 @@
-/**
- * `customer.threshold_reached` (allowance_used) for tracks decided by the balance worker.
- *
- * Contract:
- *   - The track that takes the included balance below one unit, while overage keeps the feature
- *     usable, sends one allowance_used. Tracks before it and tracks already in overage send none
- *     (the legacy path re-sent it on every overage track).
- *   - When overage later runs out, the refusal sends limit_reached as its own event.
- */
-
 import { afterAll, beforeAll, expect, test } from "bun:test";
 import {
 	getTestSvixAppId,

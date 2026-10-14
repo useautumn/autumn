@@ -6,7 +6,6 @@ interface CommandRowProps {
 	icon?: React.ReactNode;
 	title: string;
 	subtext?: string;
-	/** Digit paired with the platform meta key, e.g. "1" renders ⌘1 */
 	shortcutKey?: string;
 	customShortcuts?: string[];
 	onSelect: () => void;
@@ -14,7 +13,6 @@ interface CommandRowProps {
 	value?: string;
 }
 
-// Symbol keys read naturally together (⌘1); word keys need a separator (Ctrl+Shift+P).
 const formatShortcut = (keys: string[]) =>
 	keys.join(keys.every((key) => key.length === 1) ? "" : "+");
 

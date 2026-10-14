@@ -1,17 +1,3 @@
-/**
- * Invoice Deferred Line Items Tests
- *
- * Tests that invoice line items are correctly stored when billing is deferred
- * (payment doesn't succeed immediately). Two scenarios:
- *
- * A: Invoice mode (finalized, deferred) — invoice is created in open state,
- *    line items should be stored immediately, then still correct after payment.
- *
- * B: Payment failure (3DS required) — billing plan is deferred because card
- *    requires authentication. Line items should be stored on the open invoice,
- *    then still correct after 3DS completion.
- */
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3 } from "@autumn/shared";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
@@ -27,23 +13,6 @@ import ctx from "@tests/utils/testInitUtils/createTestContext";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST A: Invoice mode (finalized, deferred) — line items on open invoice
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Customer with payment method
- * - Pro ($20/mo) with prepaid messages ($10/100 units, 0 included)
- * - Attach with invoice mode: finalized + deferred (enable_product_immediately: false)
- *
- * Expected:
- * - Invoice created in "open" state with payment_url
- * - Line items stored immediately (before payment):
- *   - Base price: $20
- *   - Prepaid messages: $20 (200 units = 2 packs × $10)
- * - After payment: line items still correct, invoice is "paid"
- */
 test.concurrent(`${chalk.yellowBright("deferred-line-items A: invoice mode (finalized, deferred)")}`, async () => {
 	const customerId = "def-li-invoice-mode";
 
@@ -55,8 +24,8 @@ test.concurrent(`${chalk.yellowBright("deferred-line-items A: invoice mode (fina
 
 	const basePrice = 20;
 	const messagesQuantity = 200;
-	const messagesPrice = 20; // 2 packs × $10
-	const expectedTotal = basePrice + messagesPrice; // $40
+	const messagesPrice = 20;
+	const expectedTotal = basePrice + messagesPrice;
 
 	const pro = products.pro({
 		id: "pro-def-inv",
@@ -72,7 +41,6 @@ test.concurrent(`${chalk.yellowBright("deferred-line-items A: invoice mode (fina
 		actions: [],
 	});
 
-	// Attach with invoice mode (finalized, deferred)
 	const result = await autumnV1.billing.attach({
 		customer_id: customerId,
 		product_id: pro.id,
@@ -83,17 +51,12 @@ test.concurrent(`${chalk.yellowBright("deferred-line-items A: invoice mode (fina
 		redirect_mode: "if_required",
 	});
 
-	// Verify invoice is open
 	expect(result.invoice).toBeDefined();
 	expect(result.invoice!.status).toBe("open");
 	expect(result.invoice!.stripe_id).toBeDefined();
 	expect(result.payment_url).toBeDefined();
 
 	const stripeInvoiceId = result.invoice!.stripe_id;
-
-	// ═════════════════════════════════════════════════════════════════════
-	// KEY TEST: Line items should be stored BEFORE payment (open invoice)
-	// ═════════════════════════════════════════════════════════════════════
 
 	await expectInvoiceLineItemsCorrect({
 		stripeInvoiceId,
@@ -109,17 +72,14 @@ test.concurrent(`${chalk.yellowBright("deferred-line-items A: invoice mode (fina
 		],
 	});
 
-	// Complete payment
 	await completeInvoiceCheckout({
 		url: result.payment_url!,
 		ctx: testCtx,
 		customerId,
 	});
 
-	// Wait for webhook processing
 	await timeout(5000);
 
-	// Verify invoice is now paid
 	const customerAfter = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
 	await expectCustomerInvoiceCorrect({
@@ -134,7 +94,6 @@ test.concurrent(`${chalk.yellowBright("deferred-line-items A: invoice mode (fina
 		productId: pro.id,
 	});
 
-	// Line items should still be correct after payment
 	await expectInvoiceLineItemsCorrect({
 		stripeInvoiceId,
 		expectedTotal,
@@ -150,24 +109,6 @@ test.concurrent(`${chalk.yellowBright("deferred-line-items A: invoice mode (fina
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST B: Payment failure (3DS required) — line items on deferred invoice
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Customer with 3DS-requiring payment method
- * - Pro ($20/mo) with prepaid messages ($10/100 units, 0 included)
- * - Attach normally (no invoice mode flags) — triggers 3DS deferral
- *
- * Expected:
- * - required_action.code = "3ds_required", payment_url provided
- * - Invoice is in "open" state
- * - Line items stored immediately (before 3DS completion):
- *   - Base price: $20
- *   - Prepaid messages: $20 (200 units = 2 packs × $10)
- * - After 3DS: line items still correct, product is active
- */
 test.concurrent(`${chalk.yellowBright("deferred-line-items B: payment failure (3DS required)")}`, async () => {
 	const customerId = "def-li-3ds";
 
@@ -179,8 +120,8 @@ test.concurrent(`${chalk.yellowBright("deferred-line-items B: payment failure (3
 
 	const basePrice = 20;
 	const messagesQuantity = 200;
-	const messagesPrice = 20; // 2 packs × $10
-	const expectedTotal = basePrice + messagesPrice; // $40
+	const messagesPrice = 20;
+	const expectedTotal = basePrice + messagesPrice;
 
 	const pro = products.pro({
 		id: "pro-def-3ds",
@@ -196,31 +137,23 @@ test.concurrent(`${chalk.yellowBright("deferred-line-items B: payment failure (3
 		actions: [],
 	});
 
-	// Attach normally — should trigger 3DS deferral
 	const result = await autumnV1.billing.attach({
 		customer_id: customerId,
 		product_id: pro.id,
 		options: [{ feature_id: TestFeature.Messages, quantity: messagesQuantity }],
 	});
 
-	// Verify 3DS required
 	expect(result.required_action).toBeDefined();
 	expect(result.required_action?.code).toBe("3ds_required");
 	expect(result.payment_url).toBeDefined();
 
-	// Verify invoice exists and is open
 	expect(result.invoice).toBeDefined();
 	expect(result.invoice!.stripe_id).toBeDefined();
 
 	const stripeInvoiceId = result.invoice!.stripe_id;
 
-	// Verify Stripe invoice is open
 	const stripeInvoice = await ctx.stripeCli.invoices.retrieve(stripeInvoiceId);
 	expect(stripeInvoice.status).toBe("open");
-
-	// ═════════════════════════════════════════════════════════════════════
-	// KEY TEST: Line items should be stored BEFORE 3DS completion
-	// ═════════════════════════════════════════════════════════════════════
 
 	await expectInvoiceLineItemsCorrect({
 		stripeInvoiceId,
@@ -236,18 +169,14 @@ test.concurrent(`${chalk.yellowBright("deferred-line-items B: payment failure (3
 		],
 	});
 
-	// Product should NOT be active before 3DS
 	const customerBefore =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	expect(customerBefore.features?.[TestFeature.Messages]).toBeUndefined();
 
-	// Complete 3DS authentication
 	await completeInvoiceConfirmation({ url: result.payment_url! });
 
-	// Wait for webhook processing
 	await timeout(5000);
 
-	// Verify product is now active
 	const customerAfter = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
 	await expectProductActive({
@@ -262,7 +191,6 @@ test.concurrent(`${chalk.yellowBright("deferred-line-items B: payment failure (3
 		latestStatus: "paid",
 	});
 
-	// Line items should still be correct after payment
 	await expectInvoiceLineItemsCorrect({
 		stripeInvoiceId,
 		expectedTotal,

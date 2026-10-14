@@ -5,7 +5,6 @@ import type { EventProperties } from "../creditDimensions/matchesEventProperties
 import type { CreditRateCard } from "./creditRateCard.js";
 import { findCreditSchemaItemByFeatureId } from "./findCreditSchemaItemByFeatureId.js";
 
-/** The rate card a credit system charges `sourceFeature` at, when it attributes usage (invoice credits, graduated tiers). */
 export const getCreditRateCard = ({
 	sourceFeature,
 	creditSystem,
@@ -15,7 +14,6 @@ export const getCreditRateCard = ({
 	sourceFeature: Pick<Feature, "id" | "internal_id">;
 	creditSystem: Feature;
 	eventProperties?: EventProperties;
-	/** The customer entitlement's stamp; flat rows only ship a rate card when it is set. */
 	invoiceCredit: boolean;
 }): CreditRateCard | undefined => {
 	if (creditSystem.type !== FeatureType.CreditSystem) {

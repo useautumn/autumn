@@ -1,4 +1,3 @@
-/** Read-only: list indexes present on migration_item_runs. */
 import { sql } from "drizzle-orm";
 import { initDrizzle } from "@/db/initDrizzle.js";
 import { assertBenchDatabaseSafe } from "../utils/benchContext.js";

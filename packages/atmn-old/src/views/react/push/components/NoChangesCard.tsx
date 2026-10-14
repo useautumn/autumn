@@ -1,9 +1,6 @@
 import { Box, Text } from "ink";
 import { Card } from "../../components/index.js";
 
-/**
- * Card shown when local config matches remote - nothing to push
- */
 export function NoChangesCard() {
 	return (
 		<Card title="✅ No Changes">

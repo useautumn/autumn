@@ -1,29 +1,3 @@
-/**
- * TDD test for: a custom `billing.update` 404s with `feature_not_found` when the
- * customer product carries a usage entitlement row owned by a DIFFERENT product
- * than the customer product itself (grandfathered / migrated rows).
- *
- * Reported by mintlify: updating a subscription to $150/mo returned
- * `createStripeInArrearPrice: feature not found for price pr_...` on every retry
- * (a different price id each time, because the id is minted fresh and never
- * persisted). 1890 mintlify customer products are in this shape.
- *
- * Red-failure mode (current behavior):
- *  - `itemToPriceAndEnt` always mints a fresh custom price stamped with the
- *    customer product's own `internal_product_id`, while an unchanged
- *    entitlement is carried over as `sameEnt` and keeps the OTHER product's
- *    `internal_product_id` (`entsAreSame` does not compare it).
- *  - `priceToEnt` matches on `entitlement_id` AND `internal_product_id`, so it
- *    fails to resolve an entitlement that is sitting right there in the array,
- *    and `createStripeInArrearPrice` throws a 404 `feature_not_found`.
- *
- * Green-success criteria (after fix):
- *  - `priceToEnt` resolves by entitlement id alone — ids are globally unique
- *    KSUIDs, and its customer-product-scoped sibling
- *    `customerPriceToCustomerEntitlement` already matches this way — so the
- *    update succeeds and the new base price is applied.
- */
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3 } from "@autumn/shared";
 import { queryRows } from "@tests/integration/balances/utils/usage-limit-utils/usageWindowDbTestUtils";
@@ -36,8 +10,6 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { sql } from "drizzle-orm";
 
-/** The customer product's live price/entitlement ids, as the dashboard reads
- * them back before echoing them into `billing.update`. */
 const getLiveItemIds = async ({
 	ctx,
 	customerId,
@@ -86,8 +58,6 @@ test.concurrent(
 			id: "pro-cross-version",
 			items: [messagesItem, priceItem],
 		});
-		// Stands in for the older plan version the grandfathered entitlement row
-		// still belongs to after a migration.
 		const legacy = products.base({
 			id: "legacy-cross-version",
 			items: [items.monthlyWords({ includedUsage: 1 })],
@@ -110,10 +80,6 @@ test.concurrent(
 		expect(before?.entitlement_id).toBeTruthy();
 		expect(before?.price_id).toBeTruthy();
 
-		// Reproduce the grandfathered pair: the customer product still points at
-		// `pro`, but its usage price AND entitlement are both owned by the older
-		// plan. They agree with each other — only the customer product has moved
-		// on — which is what makes the regenerated custom price straddle them.
 		const legacyInternalId = sql`(
 			SELECT internal_id FROM products
 			WHERE id = ${legacy.id}
@@ -139,11 +105,6 @@ test.concurrent(
 			after.customer_product_internal_product_id,
 		);
 
-		// The dashboard echoes the customer product's live item ids back on update.
-		// Repricing the usage item (and only it) is what forces `itemToPriceAndEnt`
-		// down the `updatedPrice` branch: the entitlement is unchanged so it is
-		// carried over as `sameEnt` keeping the older product, while the price is
-		// regenerated and stamped with the customer product's product.
 		const updateParams = {
 			customer_id: customerId,
 			product_id: pro.id,

@@ -9,13 +9,6 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-// Paid-to-paid: allocated/seat-based updates.
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// USAGE EXCEEDS INCLUDED (usage > included)
-// ═══════════════════════════════════════════════════════════════════════════════
-
-// Increase seat allowance (original test moved from update-paid-features.test.ts)
 test.concurrent(
 	`${chalk.yellowBright("allocated: increase seat allowance")}`,
 	async () => {
@@ -35,7 +28,6 @@ test.concurrent(
 			actions: [s.attach({ productId: "pro" })],
 		});
 
-		// Use 2 seats (at the limit)
 		const seatsUsed = 2;
 		await autumnV1.track(
 			{
@@ -46,7 +38,6 @@ test.concurrent(
 			{ timeout: 2000 },
 		);
 
-		// Increase to 5 included seats
 		const newAllocatedUsersItem = items.allocatedUsers({ includedUsage: 5 });
 
 		const updateParams = {
@@ -57,14 +48,12 @@ test.concurrent(
 
 		const preview = await autumnV1.subscriptions.previewUpdate(updateParams);
 
-		// No price change, just seat increase
 		expect(preview.total).toBe(0);
 
 		await autumnV1.subscriptions.update(updateParams);
 
 		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-		// Usage preserved, more capacity available
 		expectCustomerFeatureCorrect({
 			customer,
 			featureId: TestFeature.Users,
@@ -88,7 +77,6 @@ test.concurrent(
 	},
 );
 
-// Decrease seat allowance below usage (original test moved from update-paid-features.test.ts)
 test.concurrent(
 	`${chalk.yellowBright("allocated: decrease seat allowance below usage")}`,
 	async () => {
@@ -108,7 +96,6 @@ test.concurrent(
 			actions: [s.attach({ productId: "pro" })],
 		});
 
-		// Use 5 seats
 		const seatsUsed = 5;
 		await autumnV1.track(
 			{
@@ -119,7 +106,6 @@ test.concurrent(
 			{ timeout: 2000 },
 		);
 
-		// Decrease to 3 included seats (using 5, so 2 extra)
 		const newAllocatedUsersItem = items.allocatedUsers({ includedUsage: 3 });
 
 		const updateParams = {
@@ -130,14 +116,12 @@ test.concurrent(
 
 		const preview = await autumnV1.subscriptions.previewUpdate(updateParams);
 
-		// Should charge $20 for 2 extra seats @ $10 each
 		expect(preview.total).toBe(20);
 
 		await autumnV1.subscriptions.update(updateParams);
 
 		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-		// Using 5 with 3 included = -2 balance
 		expectCustomerFeatureCorrect({
 			customer,
 			featureId: TestFeature.Users,

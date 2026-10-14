@@ -14,7 +14,6 @@ export interface WriteConfigParams {
 	features: Feature[];
 	plans: Plan[];
 	cwd?: string;
-	/** Force overwrite even if config exists (default: false, will use in-place update) */
 	forceOverwrite?: boolean;
 	rewards?: Reward[];
 	referralPrograms?: ReferralProgram[];
@@ -22,13 +21,10 @@ export interface WriteConfigParams {
 
 export interface WriteConfigResult {
 	configPath: string;
-	/** Whether in-place update was used */
 	inPlace: boolean;
-	/** Details if in-place update was used */
 	updateResult?: UpdateResult;
 }
 
-/** Writes the config, updating in place by default to preserve custom source. */
 export async function writeConfig({
 	features,
 	plans,
@@ -40,7 +36,6 @@ export async function writeConfig({
 	const configPath = resolveConfigPath(cwd);
 	const configExists = existsSync(configPath);
 
-	// Use in-place update if config exists and not forcing overwrite
 	if (configExists && !forceOverwrite) {
 		const updateResult = await updateConfigInPlace({
 			features,
@@ -56,7 +51,6 @@ export async function writeConfig({
 		};
 	}
 
-	// Generate new config file
 	const code = buildConfigFile(
 		features,
 		plans,
@@ -64,7 +58,6 @@ export async function writeConfig({
 		referralPrograms ?? [],
 	);
 
-	// Format with prettier
 	let formattedCode: string;
 	try {
 		formattedCode = await prettier.format(code, {
@@ -73,12 +66,10 @@ export async function writeConfig({
 			singleQuote: true,
 		});
 	} catch (error) {
-		// If formatting fails, use unformatted code
 		console.warn("Failed to format config file:", error);
 		formattedCode = code;
 	}
 
-	// Write file
 	writeFileSync(configPath, formattedCode, "utf-8");
 
 	return {
@@ -87,7 +78,6 @@ export async function writeConfig({
 	};
 }
 
-/** Legacy positional signature. */
 export async function writeConfigLegacy(
 	features: Feature[],
 	plans: Plan[],

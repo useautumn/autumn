@@ -7,8 +7,6 @@ export type BillingUpdatedPayload = {
 	data: BillingChangeResponse;
 };
 
-/** Attaches in test setup emit their own billing.updated (`activated`);
- * migration deliveries are identified by carrying an `updated` change. */
 const hasUpdatedChange = (payload: BillingUpdatedPayload): boolean =>
 	payload.data?.plan_changes?.some((change) => change.action === "updated") ??
 	false;
@@ -22,18 +20,11 @@ const findPlanChange = (
 			(change.subscription?.plan_id ?? change.purchase?.plan_id) === planId,
 	);
 
-/** Item diffs live on plan_change; top-level item_changes is always []. */
 export const getWebhookItemChanges = (
 	change: CustomerPlanChange | undefined,
 ): CustomerPlanChange["item_changes"] =>
 	change?.plan_change?.item_changes ?? [];
 
-/**
- * Polls Svix Play for a billing.updated delivery for `customerId`. Returns
- * the payload data, or null when none arrives in time (absence assertions).
- * `entityId: null` requires a customer-level delivery; a string requires that
- * entity's delivery; omitted matches either.
- */
 export const waitForBillingUpdatedWebhook = async ({
 	playToken,
 	customerId,
@@ -66,7 +57,6 @@ export const waitForBillingUpdatedWebhook = async ({
 type PlanChangeExpectation = {
 	planId: string;
 	action?: CustomerPlanChange["action"];
-	/** Snapshot flavor the change must carry. Defaults to subscription. */
 	kind?: "subscription" | "purchase";
 	status?: string;
 	itemChanges?: {
@@ -76,8 +66,6 @@ type PlanChangeExpectation = {
 	}[];
 };
 
-/** Declarative assertions over a delivered billing.updated payload. Only the
- * fields provided are checked, expectBalanceCorrect-style. */
 export const expectBillingUpdatedCorrect = ({
 	data,
 	customerId,
@@ -86,7 +74,6 @@ export const expectBillingUpdatedCorrect = ({
 }: {
 	data: BillingChangeResponse | null;
 	customerId: string;
-	/** null asserts a customer-level payload (no entity_id). */
 	entityId?: string | null;
 	planChanges?: PlanChangeExpectation[];
 }) => {

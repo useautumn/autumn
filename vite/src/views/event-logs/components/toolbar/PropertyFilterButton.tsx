@@ -16,7 +16,6 @@ import {
 	withPropertyFilter,
 } from "../../hooks/useLogsFilters";
 
-/** Adds a `key=value` property filter on Enter; Backspace on an empty draft drops the last one. */
 export const PropertyFilterButton = () => {
 	const { setFilters, propertyFilters } = useLogsFilters();
 	const [draft, setDraft] = useState("");

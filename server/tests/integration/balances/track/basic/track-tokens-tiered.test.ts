@@ -8,13 +8,6 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { Decimal } from "decimal.js";
 
-// ═══════════════════════════════════════════════════════════════════
-// TRACK-TOKENS-TIERED: per-model override vs provider markup fallback
-//
-// Uses custom/* models so pricing is deterministic (no models.dev fetch).
-// AiCreditsTiered config: defaultMarkup=10, providerMarkups.custom=30.
-// ═══════════════════════════════════════════════════════════════════
-
 test.concurrent(
 	`${chalk.yellowBright("track-tokens-tiered: per-model override wins over provider markup fallback")}`,
 	async () => {
@@ -38,14 +31,12 @@ test.concurrent(
 
 		const inputTokens = 10000;
 		const outputTokens = 5000;
-		// base = (10000 * 10 + 5000 * 20) / 1_000_000 = 0.2
 		const baseCost = new Decimal(10)
 			.mul(inputTokens)
 			.add(new Decimal(20).mul(outputTokens))
 			.div(1_000_000);
 
-		// Per-model override of 5% wins over provider (30%) and global (10%).
-		const overrideCost = baseCost.mul(1.05).toNumber(); // 0.21
+		const overrideCost = baseCost.mul(1.05).toNumber();
 		const overrideRes: TrackResponseV2 = await autumnV2.post("/track_tokens", {
 			customer_id: customerId,
 			feature_id: TestFeature.AiCreditsTiered,
@@ -55,8 +46,7 @@ test.concurrent(
 		});
 		expect(overrideRes.value).toBeCloseTo(overrideCost, 10);
 
-		// No per-model markup -> inherits the "custom" provider markup of 30%.
-		const providerCost = baseCost.mul(1.3).toNumber(); // 0.26
+		const providerCost = baseCost.mul(1.3).toNumber();
 		const providerRes: TrackResponseV2 = await autumnV2.post("/track_tokens", {
 			customer_id: customerId,
 			feature_id: TestFeature.AiCreditsTiered,

@@ -48,7 +48,6 @@ export const ExtUpdateSubscriptionV1ParamsSchema =
 		}),
 
 		no_billing_changes: z.boolean().optional().meta({
-			// internal: true,
 			description:
 				"If true, the subscription is updated internally without applying billing changes in Stripe.",
 		}),
@@ -109,7 +108,6 @@ const UPDATE_FIELDS = [
 	typeof ExtUpdateSubscriptionV1ParamsSchema
 >)[];
 
-/** Keys that target or shape the response but never change the subscription. */
 const COLLECTION_METHOD_SWITCH_KEYS = new Set([
 	"customer_id",
 	"entity_id",
@@ -122,7 +120,6 @@ const COLLECTION_METHOD_SWITCH_KEYS = new Set([
 	"invoice_mode",
 ]);
 
-/** True when invoice_mode is the request's only change: switch how the subscription is collected. */
 export const isCollectionMethodSwitch = (params: Record<string, unknown>) =>
 	params.invoice_mode !== undefined &&
 	Object.entries(params).every(
@@ -167,28 +164,3 @@ export type UpdateSubscriptionV1Params = z.infer<
 export type UpdateSubscriptionV1ParamsInput = z.input<
 	typeof UpdateSubscriptionV1ParamsSchema
 >;
-
-// Schedules (epoch milliseconds)
-// plan_custom_start_date: z.number().optional(),
-// billing_cycle_anchor: z.number().optional(),
-
-// keep_existing_plan: true, //disable_plan_switch
-// prorate_billing: true,
-// invoice_only: true,
-
-// carry_over_balance: true,
-// reset_usage: true,
-
-// billing_custom_start_date: "2025-11-04",
-// billing_custom_end_date: "2025-12-04",
-// billing_cycle_anchor: "2025-11-04",
-// billing_due_date: "2025-11-04",
-
-// new_billing_subscription: true, //fka combine_subscriptions, separate_billing_subscriptions
-// require_payment_method: true, //fka force_checkout
-// reset_balances: true
-
-// plan_schedule: "immediate", // or "next_cycle", "custom_date"
-// plan_custom_start_date: "2025-11-04",
-// plan_custom_end_date: "2025-12-04",
-// billing_schedule: "immediate", // or "next_cycle", "custom_date"

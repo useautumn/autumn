@@ -4,7 +4,6 @@ import { type ErrorLog, prepareErrorLog } from "./prepareErrorLog.js";
 
 type LogMethodHook = NonNullable<pino.LoggerOptions["hooks"]>["logMethod"];
 
-/** Installed as pino's `hooks.logMethod`. Our own logic can never break the log line or the process. */
 export const createErrorLogHook = ({
 	service,
 	captureToSentry,
@@ -13,9 +12,7 @@ export const createErrorLogHook = ({
 }: {
 	service: string;
 	captureToSentry: boolean;
-	/** The app's own logger wrapper files, so a text-only error points at the real call site. */
 	loggerFramePaths?: string[];
-	/** App-specific rules (e.g. which dependency failures are transient), tried before the built-in ones. */
 	classifiers?: ErrorClassifier[];
 }): LogMethodHook =>
 	function errorLogHook(this: pino.Logger, args, method, level) {

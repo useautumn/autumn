@@ -21,7 +21,6 @@ type SelectRemoveCandidateRowsArgs = {
 	limit: number;
 };
 
-/** Pooled/rollover rows are license-owned; product remove must not touch them. */
 const rowIsRemovableSql = sql`
 	AND definition.pooled IS NOT TRUE
 	AND NOT live.is_pooled_balance
@@ -31,7 +30,6 @@ const rowIsRemovableSql = sql`
 	)
 `;
 
-/** Selects scoped live from-rows matching the compiled filter. */
 export const buildRemoveCandidateRowsQuery = ({
 	internalCustomerIds,
 	scope,

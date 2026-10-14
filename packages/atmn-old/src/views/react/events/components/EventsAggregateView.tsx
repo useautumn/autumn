@@ -2,25 +2,16 @@ import { Box, Text, useStdout } from "ink";
 import type { FormattedTimeBucket } from "../../../../lib/hooks/useEventsAggregateApi.js";
 import type { AggregateBinSize } from "../../../../lib/api/endpoints/events.js";
 
-/**
- * Calculate chart dimensions based on terminal size
- */
 function useChartDimensions() {
 	const { stdout } = useStdout();
 	const terminalWidth = stdout?.columns ?? 80;
 	const terminalHeight = stdout?.rows ?? 24;
 
-	// Reserve space for: title bar (2), summary stats (1), chart title (1), 
-	// x-axis labels (2), "By Feature" section header (1), feature rows (up to 8), 
-	// keyboard hints (2), margins (2)
 	const reservedHeight = 19;
 	const availableHeight = Math.max(6, terminalHeight - reservedHeight);
 	
-	// Chart height: use most of available space, cap at 16 for readability
 	const maxBarHeight = Math.min(16, availableHeight);
 	
-	// Chart width: reserve space for y-axis label (6 chars) and some margin
-	// Each bucket is 1 char wide
 	const reservedWidth = 10;
 	const maxBuckets = Math.max(10, Math.min(60, terminalWidth - reservedWidth));
 
@@ -28,48 +19,27 @@ function useChartDimensions() {
 }
 
 export interface EventsAggregateViewProps {
-	/** Formatted time bucket data from API */
 	data: FormattedTimeBucket[] | undefined;
-	/** Totals per feature */
 	totals: Record<string, { count: number; sum: number }> | undefined;
-	/** Whether data is loading */
 	isLoading: boolean;
-	/** Whether there's an error */
 	isError: boolean;
-	/** Error message */
 	error: Error | null;
-	/** Whether customer ID is required but not provided */
 	requiresCustomer: boolean;
-	/** Whether features are needed but not available */
 	needsFeatures: boolean;
-	/** Current bin size for display */
 	binSize: AggregateBinSize;
-	/** Whether this view is focused */
 	isFocused: boolean;
 }
 
-/**
- * Colors for different groups/features in charts
- */
 const GROUP_COLORS = ["magenta", "blue", "green", "yellow", "cyan", "red"] as const;
 
-/**
- * Get color for a group/feature index
- */
 function getGroupColor(index: number): typeof GROUP_COLORS[number] {
 	return GROUP_COLORS[index % GROUP_COLORS.length] ?? "blue";
 }
 
-/**
- * Check if data has grouped values (i.e., groupBy was used)
- */
 function hasGroupedData(data: FormattedTimeBucket[]): boolean {
 	return data.some((bucket) => Object.keys(bucket.groupedValues).length > 0);
 }
 
-/**
- * Collect all unique group keys across all buckets
- */
 function collectAllGroupKeys(data: FormattedTimeBucket[]): string[] {
 	const allKeys = new Set<string>();
 	for (const bucket of data) {
@@ -82,10 +52,6 @@ function collectAllGroupKeys(data: FormattedTimeBucket[]): string[] {
 	return Array.from(allKeys).sort();
 }
 
-/**
- * ASCII time-series bar chart component
- * Supports stacked bars when groupBy data is present
- */
 function TimeSeriesChart({
 	data,
 	maxBarHeight = 8,
@@ -118,7 +84,6 @@ function TimeSeriesChart({
 			);
 		}
 
-		// Simple (non-stacked) chart
 		const rows: string[] = [];
 		for (let row = maxBarHeight - 1; row >= 0; row--) {
 			const threshold = (row / maxBarHeight) * maxValue;
@@ -165,9 +130,6 @@ function TimeSeriesChart({
 	}
 }
 
-/**
- * Stacked bar chart component with colored groups
- */
 function StackedChart({
 	buckets,
 	maxBarHeight,
@@ -179,7 +141,6 @@ function StackedChart({
 }) {
 	const groupKeys = collectAllGroupKeys(buckets);
 
-	// Pre-calculate stacked data for each bucket
 	const stackedBuckets = buckets.map((bucket) => {
 		const groupTotals: Record<string, number> = {};
 		for (const groupData of Object.values(bucket.groupedValues)) {
@@ -190,7 +151,6 @@ function StackedChart({
 		return { ...bucket, groupTotals };
 	});
 
-	// Render rows from top to bottom
 	const rows: Array<{ chars: Array<{ char: string; color: typeof GROUP_COLORS[number] | "gray" }> }> = [];
 	
 	for (let row = maxBarHeight - 1; row >= 0; row--) {
@@ -203,7 +163,6 @@ function StackedChart({
 			if (bucket.totalValue <= rowThresholdBottom) {
 				chars.push({ char: " ", color: "gray" });
 			} else {
-				// Find which group is at this height
 				let cumulative = 0;
 				let foundColor: typeof GROUP_COLORS[number] | "gray" = "gray";
 				
@@ -259,7 +218,6 @@ function StackedChart({
 					)}
 				</Box>
 			)}
-			{/* Legend */}
 			<Box marginTop={1} flexDirection="column">
 				<Text color="gray" bold>Groups:</Text>
 				{groupKeys.slice(0, 6).map((key, idx) => (
@@ -276,9 +234,6 @@ function StackedChart({
 	);
 }
 
-/**
- * Summary stats display
- */
 function SummaryStats({
 	totals,
 }: {
@@ -311,9 +266,6 @@ function SummaryStats({
 	}
 }
 
-/**
- * Aggregate view with time-series chart
- */
 export function EventsAggregateView({
 	data,
 	totals,
@@ -324,11 +276,9 @@ export function EventsAggregateView({
 	needsFeatures,
 	binSize,
 }: EventsAggregateViewProps) {
-	// Call hooks unconditionally at the top
 	const { maxBarHeight, maxBuckets } = useChartDimensions();
 
 	try {
-		// Customer ID required
 		if (requiresCustomer) {
 			return (
 				<Box flexDirection="column" paddingY={1}>
@@ -339,7 +289,6 @@ export function EventsAggregateView({
 			);
 		}
 
-		// No features available
 		if (needsFeatures) {
 			return (
 				<Box flexDirection="column" paddingY={1}>
@@ -350,7 +299,6 @@ export function EventsAggregateView({
 			);
 		}
 
-		// Loading state
 		if (isLoading && !data) {
 			return (
 				<Box flexDirection="column">
@@ -359,7 +307,6 @@ export function EventsAggregateView({
 			);
 		}
 
-		// Error state - THIS IS THE KEY PART
 		if (isError && error) {
 			return (
 				<Box flexDirection="column" paddingY={1}>
@@ -369,7 +316,6 @@ export function EventsAggregateView({
 			);
 		}
 
-		// Empty state
 		if (!data || data.length === 0 || !totals) {
 			return (
 				<Box flexDirection="column">
@@ -389,7 +335,6 @@ export function EventsAggregateView({
 					<Text bold color="gray">{binLabel} Events</Text>
 					<TimeSeriesChart data={data} maxBarHeight={maxBarHeight} maxBuckets={maxBuckets} />
 				</Box>
-				{/* Only show "By Feature" when not grouped (stacked chart shows its own legend) */}
 				{!isGrouped && (
 					<Box marginTop={1} flexDirection="column">
 						<Text bold color="gray">By Feature</Text>

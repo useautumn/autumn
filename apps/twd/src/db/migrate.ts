@@ -6,7 +6,6 @@ import { getLogger } from "../lib/logger.ts";
 
 const MIGRATIONS_FOLDER = join(import.meta.dir, "migrations");
 
-/** Applies drizzle migrations from src/db/migrations; a no-op until they are generated. */
 export const runMigrations = async () => {
 	const logger = getLogger();
 	if (!existsSync(join(MIGRATIONS_FOLDER, "meta", "_journal.json"))) {

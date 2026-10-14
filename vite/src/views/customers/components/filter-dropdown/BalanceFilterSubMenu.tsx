@@ -60,8 +60,6 @@ export const BalanceFilterSubMenu = ({
 	const { features } = useFeaturesQuery();
 	const [draftValue, setDraftValue] = useState(queryStates.balanceValue);
 
-	// setFilters resets pagination and (via query keys) refetches — only pay
-	// that when the change affects results; incomplete-filter edits are silent.
 	const applyBalancePatch = (patch: Partial<typeof queryStates>) => {
 		const affectsResults =
 			hasActiveBalanceFilter(queryStates) ||

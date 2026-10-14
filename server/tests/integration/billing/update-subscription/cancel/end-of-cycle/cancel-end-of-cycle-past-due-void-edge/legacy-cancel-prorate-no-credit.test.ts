@@ -1,6 +1,3 @@
-// tw:solo: withVoidFlag mutates the shared org.config, so this file can't share a worker.
-// A past_due cancel must never credit the unpaid cycle via legacy /billing/cancel with prorate=true.
-
 import { test } from "bun:test";
 import type { ApiCustomerV3 } from "@autumn/shared";
 import { driveProductPastDue } from "@tests/integration/billing/utils/driveProductPastDue";
@@ -39,7 +36,6 @@ test(`${chalk.yellowBright("edge: /billing/cancel past_due + prorate=true -> imm
 				productId: pro.id,
 				pollWebhookEffects: true,
 			});
-			// Legacy /billing/cancel hardcodes proration_behavior="prorate_immediately".
 			await autumnV1.cancel({
 				customer_id: customerId,
 				product_id: pro.id,

@@ -6,7 +6,6 @@ export type StampedCustomerEntitlement = {
 	entitlement: { feature: Feature };
 };
 
-/** The row's `invoice_credit` stamp wins; rows written before the stamp fall back to the feature's flag. */
 export const isInvoiceCreditCustomerEntitlement = ({
 	customerEntitlement,
 }: {

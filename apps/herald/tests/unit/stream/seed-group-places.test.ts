@@ -5,7 +5,6 @@ const topic = "local-events";
 const groupId = "local-herald-usage-events";
 const logger = { info: () => {} };
 
-/** A broker's view of one group: what it has committed, and where each partition ends. */
 const createFakeAdmin = ({
 	committed,
 	ends,
@@ -92,7 +91,6 @@ test("a sibling that seeded and joined first wins: the refused seed is kept, not
 		committed: { 0: "-1" },
 		ends: { 0: "100" },
 		refuseSetOffsets: () => {
-			// The sibling committed between our read and our write, and is now an active member.
 			fake.state.committed[0] = "100";
 			throw new Error("The consumer group must have no running instances");
 		},

@@ -19,7 +19,6 @@ const QA_DOMAIN = "atmn.lol";
 const TTL_MS = 3 * 24 * 60 * 60_000;
 const SHA_RE = /^[0-9a-f]{40}$/;
 
-/** `capy/fix-thing` → `capy-fix-thing`, cut to a DNS label. */
 export const defaultQaEnvName = ({ ref }: { ref: string }) =>
 	ref
 		.toLowerCase()
@@ -28,7 +27,6 @@ export const defaultQaEnvName = ({ ref }: { ref: string }) =>
 		.slice(0, 42)
 		.replace(/-+$/, "") || "qa";
 
-/** Creates `<name>.atmn.lol`, or re-ships it at the new sha keeping its QA data; the 3-day clock restarts. */
 export const createQaEnv = async ({
 	ctx,
 	body,
@@ -61,7 +59,6 @@ export const createQaEnv = async ({
 		deletedAt: null,
 	};
 	const existing = await getQaEnvRow({ ctx, name });
-	// The Worker deletes an expired env's branch on its own, so the row's branch id is stale too.
 	const isDead =
 		existing?.state === "deleted" ||
 		(existing && existing.expiresAt.getTime() < now.getTime());

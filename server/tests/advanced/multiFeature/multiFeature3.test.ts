@@ -23,7 +23,6 @@ import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
 import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
 
-// Scenario 1: lifetime + pay per use monthly -> lifetime + pay per use monthly
 const pro = constructProduct({
 	type: "pro",
 	excludeBase: true,
@@ -68,7 +67,6 @@ export const getLifetimeAndUsageCusEnts = async ({
 };
 
 const testCase = "multiFeature3";
-// UNCOMMENT FROM HERE
 describe(`${chalk.yellowBright(
 	`${testCase}: Testing lifetime + pay per use, advance test clock`,
 )}`, () => {
@@ -111,14 +109,14 @@ describe(`${chalk.yellowBright(
 			featureId: TestFeature.Messages,
 		});
 
-		expect(lifetimeCusEnt?.balance).toBe(50); // pro.items[0].includedUsage
+		expect(lifetimeCusEnt?.balance).toBe(50);
 
-		expect(usageCusEnt?.balance).toBe(0); // pro.items[1].includedUsage
+		expect(usageCusEnt?.balance).toBe(0);
 	});
 
 	const overageValue = 30;
 	test("should use lifetime allowance + overage", async () => {
-		let value = 50; // pro.items[0].includedUsage
+		let value = 50;
 		value += overageValue;
 
 		await autumn.track({

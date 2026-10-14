@@ -5,14 +5,11 @@ interface PreviewFeatureRowProps {
 	item: PreviewProductItem;
 }
 
-/** Compact dot separator between icons */
 function DotIcon() {
 	return <div className="w-[2px] h-[2px] mx-0.5 bg-current rounded-full" />;
 }
 
 export function PreviewFeatureRow({ item }: PreviewFeatureRowProps) {
-	// Use column layout when secondary text starts with "then" (indicates pricing with included usage)
-	// This handles both flat price and tiered pricing scenarios
 	const useColumnLayout =
 		item.display.secondaryText?.startsWith("then") ?? false;
 
@@ -22,7 +19,6 @@ export function PreviewFeatureRow({ item }: PreviewFeatureRowProps) {
 				className={`flex gap-1 min-w-0 overflow-hidden ${useColumnLayout ? "flex-col" : "flex-row items-center"}`}
 			>
 				<div className="flex items-center gap-1.5">
-					{/* Feature icons */}
 					<div className="flex items-center gap-0.5 shrink-0">
 						<PreviewFeatureIcon item={item} position="left" size={12} />
 						<DotIcon />

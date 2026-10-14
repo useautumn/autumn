@@ -1,8 +1,3 @@
-/**
- * Unit tests for registerRevenuecatWebhook — idempotent, one webhook per env, matched
- * by URL, secret as the Authorization header.
- */
-
 import { expect, mock, test } from "bun:test";
 import { getAutumnEnv } from "@autumn/env";
 import { AppEnv } from "@autumn/shared";

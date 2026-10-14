@@ -1,7 +1,3 @@
-/** Benchmarks pooled contribution promotion strategies at 100k and 1M
- * contributions. Seeds a synthetic pool (benchpromo_ prefix), times the
- * full-recompute and delta promotion statements, cleans up. */
-
 import { sql } from "drizzle-orm";
 import { initDrizzle } from "@/db/initDrizzle.js";
 
@@ -34,8 +30,6 @@ const rearmDueRows = () =>
 		WHERE pooled_balance_id = ${POOL_ID}
 			AND id IN (SELECT 'benchpromo_pbc_' || g.n FROM generate_series(1, ${DUE}) AS g(n))`);
 
-// Mirrors production promoteDuePooledContributions: guarded pool_update first
-// (updated_at latest vs snapshot), contribution promotion gated on it.
 const fullRecomputePromotion = () =>
 	db.execute(sql`
 		WITH totals AS (
@@ -70,7 +64,6 @@ const fullRecomputePromotion = () =>
 		SELECT pool_update.granted::float8 AS granted, pool_update.due_count::int AS due_count
 		FROM pool_update`);
 
-// Promote due rows + apply only the delta (bounded by due rows).
 const deltaPromotion = () =>
 	db.execute(sql`
 		WITH due AS (

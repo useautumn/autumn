@@ -21,7 +21,6 @@ const MAX_LINKED_OBJECTS_WITHOUT_PICKER = 1;
 const hasSeveralLinkedObjects = (linkedIds: LinkedStripeObjectIds) =>
 	countLinkedStripeObjects(linkedIds) > MAX_LINKED_OBJECTS_WITHOUT_PICKER;
 
-/** The subscription's own schedule, so its scheduled plans seed too. */
 const findScheduleIdOfSubscription = ({
 	customerProducts,
 	stripeSubscriptionId,
@@ -86,8 +85,6 @@ const onlyLinkedObjectToTarget = ({
 	};
 };
 
-/** Several linked subscriptions need a choice first; one or none opens Set
- * Plans as before. On an entity page the entity's own plans decide. */
 export const decideSetPlansEntry = ({
 	customerProducts,
 	entityId,

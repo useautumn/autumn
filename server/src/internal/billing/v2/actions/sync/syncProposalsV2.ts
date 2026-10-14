@@ -60,7 +60,6 @@ const buildScheduleProposalPhases = ({
 }): SyncPhase[] => {
 	const nowSeconds = Math.floor(Date.now() / 1000);
 
-	// The sheet can't hold a plan-less phase; sync ends the last phase at the tail.
 	const releaseTailPhase = findStripeScheduleReleaseTailPhase({
 		schedule,
 		ongoingStripePriceIds,
@@ -157,12 +156,6 @@ const buildProposal = async ({
 	};
 };
 
-/**
- * V2 sync proposals — for each Stripe subscription, runs detection +
- * `subscriptionToSyncParams` to produce a draft `SyncParamsV1` and packages
- * it with display extras. Frontend can mutate `phases` and pass straight to
- * `/billing.sync`.
- */
 export const syncProposalsV2 = async ({
 	ctx,
 	params,
@@ -205,8 +198,6 @@ export const syncProposalsV2 = async ({
 		return { customer_id: params.customer_id, proposals: [] };
 	}
 
-	// Stripe caps `expand` at 4 levels, so retrieve each subscription with
-	// `items.data.price.product` (4 levels) for the UI.
 	const subscriptionProposals = await Promise.all(
 		subscriptionList.data.map(async ({ id }) => {
 			const subscription = await stripeCli.subscriptions.retrieve(id, {

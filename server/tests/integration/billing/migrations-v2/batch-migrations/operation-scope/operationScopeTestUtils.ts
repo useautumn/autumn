@@ -5,8 +5,6 @@ import { TestFeature } from "@tests/setup/v2Features";
 import type { MigrationChunkRunResult } from "@/internal/migrations/v2/run/chunks/iterateMigrationChunks.js";
 import { runChunkedMigration } from "../../utils/runChunkedMigration";
 
-/** Words is absent from every fixture plan, so a Words balance row is exact
- * proof of "this customer product was touched by the migration". */
 export const WORDS_PER_ROW = 10;
 
 export const addWordsOperation = ({
@@ -25,8 +23,6 @@ export const addWordsOperation = ({
 	],
 });
 
-/** Runs one add-Words migration over `planFilter` and asserts the lane it
- * took — the lane IS the contract for unsupported-form tests. */
 export const runScopedMigration = async ({
 	ctx,
 	migrationClient,
@@ -41,7 +37,6 @@ export const runScopedMigration = async ({
 	migrationClient: any;
 	migrationId: string;
 	planFilter: PlanFilter;
-	/** Migration-level customer plan filter; defaults to the op's filter. */
 	customerFilter?: PlanFilter;
 	expectedLane?: MigrationChunkRunResult["lane"];
 }): Promise<{ migration: Migration; migrationRunId: string }> => {
@@ -57,12 +52,6 @@ export const runScopedMigration = async ({
 	return { migration, migrationRunId };
 };
 
-/**
- * The per-row isolation assertion: the customer's Words breakdown must carry
- * EXACTLY one entry per expected plan — a row on any other plan gaining Words
- * (or an expected plan missing it) fails. `[]` asserts the customer was
- * untouched entirely.
- */
 export const expectWordsOnPlans = ({
 	customer,
 	planIds,

@@ -1,8 +1,3 @@
-/**
- * balances.limit_reached for PLAN-level billing controls (Resend's setup:
- * spend/usage limits live on the plan, not the customer).
- */
-
 import { afterAll, beforeAll, expect, test } from "bun:test";
 import { ResetInterval } from "@autumn/shared";
 import {
@@ -34,10 +29,6 @@ beforeAll(async () => {
 afterAll(async () => {
 	await webhook?.cleanup();
 });
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 1: plan-level absolute spend limit reached fires webhook
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(
 	`${chalk.yellowBright("limit-reached-plan1: plan-level absolute spend_limit fires webhook")}`,
@@ -93,10 +84,6 @@ test.concurrent(
 	},
 );
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 2: plan-level usage_percentage spend limit reached fires webhook
-// ═══════════════════════════════════════════════════════════════════════════════
-
 test.concurrent(
 	`${chalk.yellowBright("limit-reached-plan2: plan-level usage_percentage spend_limit fires webhook")}`,
 	async () => {
@@ -104,7 +91,6 @@ test.concurrent(
 			includedUsage: 50,
 			price: 1,
 		});
-		// 120% of 50 allowance = 60 overage → total allowed 110.
 		const planProd = products.base({
 			id: "lr-plan-pct-spend-1",
 			items: [consumableMsg],
@@ -152,15 +138,9 @@ test.concurrent(
 	},
 );
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 3: plan-level windowed usage_limit reached fires webhook (type usage_limit)
-// ═══════════════════════════════════════════════════════════════════════════════
-
 test.concurrent(
 	`${chalk.yellowBright("limit-reached-plan3: plan-level usage_limit fires webhook (usage_limit)")}`,
 	async () => {
-		// Windowed cap (5/day) under the 1000 allowance; its live window `usage`
-		// only survives if the webhook evaluates the real fullSubject.
 		const planProd = products.base({
 			id: "lr-plan-usage-limit-1",
 			items: [items.monthlyMessages({ includedUsage: 1000 })],

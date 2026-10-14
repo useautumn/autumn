@@ -6,14 +6,6 @@ import { config } from "../../../src/grading/expectations/configExpectations.ts"
 import { initAxEval } from "../../../src/initAxEval.ts";
 import { messagingApiConfig } from "./messagingApiPricing.ts";
 
-/**
- * KIND C (step-seed): Scale "tiers" where the OVERAGE RATE improves per tier
- * — the forced-plans tripwire. One prepaid volume item structurally cannot
- * hold per-tier overage rates, so each tier must be its own plan. Graded on
- * each tier carrying its own overage amount; standalone plan() vs .variant()
- * is not enforced here (the line is new, so no base pre-exists — the variant
- * style assertion lives in seedTierVariants).
- */
 export const seedScaleOverage = defineCase({
 	name: "messaging-api-seed-scale-overage",
 	prompt: [

@@ -12,7 +12,6 @@ import {
 } from "../fullSubjectToUpdateBalanceRows.js";
 import type { UpdateBalanceCommand } from "../types/updateBalanceCommand.js";
 
-/** Legacy `updateExpiresAtV2`: sets the soonest expiry; a paid recurring balance lives as long as its billing cycle. */
 export const setExpiresAt = ({
 	fullSubject,
 	command,

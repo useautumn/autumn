@@ -1,5 +1,3 @@
-/** A subscription recreated for a backdate bills nothing until the old period end, so its plan changes get their own invoice. */
-
 import { describe, expect, test } from "bun:test";
 import type {
 	AutumnBillingPlan,

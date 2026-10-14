@@ -11,13 +11,6 @@ import {
 	workspaceSeatsConfig,
 } from "./workspaceSeatsPricing.ts";
 
-/**
- * KIND C (step-seed): team + workspace plan + annual + enterprise already
- * exist; the user adds Starter. The right conclusion REUSES the existing
- * workspace plan (`licenses` pointing at it, included: 1) with Starter's
- * own worse prepaid rate. Graded wrongs: minting a second workspace plan
- * (oneLicensePlan), a per-unit item on starter, or touching team/workspace.
- */
 export const seedStarterReuse = defineCase({
 	name: "workspace-seats-seed-starter-reuse",
 	prompt: [

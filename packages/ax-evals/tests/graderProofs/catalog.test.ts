@@ -1,8 +1,3 @@
-/**
- * Grader proofs for the catalog() spec grader: the shared golden passes every
- * verdict, an empty workspace fails them all, and a near-miss surfaces a
- * field diff naming the closest plan.
- */
 import { expect, test } from "bun:test";
 import { missingFeatures } from "../../cases/basics/proGrowth/missingFeatures.eval.ts";
 import { scoreConfigExpectations } from "../utils/scoreConfigExpectations.ts";

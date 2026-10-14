@@ -7,11 +7,6 @@ import type { MutationLogItem } from "@/internal/balances/utils/types/mutationLo
 import { tryRedisWrite } from "@/utils/cacheUtils/cacheUtils.js";
 import { buildClaimMarkerKey } from "./buildClaimMarkerKey.js";
 
-/**
- * Marker TTL is a crash-safety net — the marker is always DEL'd on finalize.
- * Chosen well above any realistic claim-race window and well below typical
- * receipt lifetimes so orphans clean up without sticking around forever.
- */
 const CLAIM_MARKER_TTL_SECONDS = 3600;
 
 type FetchAndClaimResult =
@@ -44,18 +39,6 @@ const normalizeLockReceiptItems = ({
 	});
 };
 
-/**
- * V2 merged fetch-and-claim. Pipelines a plain `GET <receiptKey>` and a
- * `SET <receiptKey>:claim 1 NX EX` in a single round trip. The receipt
- * payload is never mutated — claim is encoded entirely by ownership of the
- * marker key.
- *
- * Returns `{ found: false }` when the receipt key is absent on redisV2 (the
- * dispatcher uses this to fall through to the V1 finalize path). When
- * `found` is true, `claimed` reports whether this caller won the race; the
- * dispatcher throws on `found && !claimed` rather than falling through to
- * V1, because a present-but-contested receipt IS a V2 lock.
- */
 export const fetchAndClaimLockReceiptV2 = async ({
 	ctx,
 	lockId,
@@ -73,9 +56,6 @@ export const fetchAndClaimLockReceiptV2 = async ({
 	});
 	const claimMarkerKey = buildClaimMarkerKey(lockReceiptKey);
 
-	// Pipeline GET + SET NX EX as a single round trip. tryRedisWrite wraps the
-	// whole `.exec()` since any error (or unavailable redis) invalidates both
-	// results atomically from our perspective.
 	const execResult = await tryRedisWrite(
 		() =>
 			redisInstance

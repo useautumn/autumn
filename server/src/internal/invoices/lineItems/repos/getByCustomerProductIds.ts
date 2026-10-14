@@ -9,11 +9,6 @@ import type { DrizzleCli } from "@/db/initDrizzle";
 
 const ALL_DIRECTIONS = ["charge", "refund"] as const;
 
-/**
- * Fetch all line items whose customer_product_ids array overlaps any of the
- * given ids, in a single query (jsonb `?|` array-overlap, GIN-indexed).
- * Rows on a voided invoice are skipped: a reissued invoice carries its own copy.
- */
 export const getByCustomerProductIds = async ({
 	db,
 	customerProductIds,

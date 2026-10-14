@@ -10,7 +10,6 @@ import { measureUsageWindowLimit } from "@/internal/balances/utils/usageWindows/
 import { resolveUsageWindowLimits } from "@/internal/balances/utils/usageWindows/resolveUsageWindowLimits.js";
 import type { BlockingUsageLimit } from "./types/blockingUsageLimit.js";
 
-// Enforcement stops at the cap with the least headroom; report that one, filter included.
 export const findBlockingUsageLimit = ({
 	ctx,
 	fullSubject,

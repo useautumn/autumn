@@ -24,8 +24,6 @@ const setupRunsWithItemCounts = async ({
 	return { ...runState, itemRunCounts };
 };
 
-/** Every read the list needs, batched per org rather than per migration.
- * Customer counts dominate on large orgs, so callers may defer them. */
 export const setupMigrationListContext = async ({
 	ctx,
 	migrations,

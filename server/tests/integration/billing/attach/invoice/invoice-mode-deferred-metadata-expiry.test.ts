@@ -1,6 +1,3 @@
-// Contract: finalized deferred invoice metadata expires at the invoice due date; drafts are unbounded;
-// action-required upgrade metadata keeps a short expiry. Cron selection excludes null expires_at rows.
-
 import { expect, test } from "bun:test";
 import { type AttachParamsV1Input, MetadataType, ms } from "@autumn/shared";
 import { items } from "@tests/utils/fixtures/items";

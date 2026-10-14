@@ -2,8 +2,6 @@ import { describe, expect, test } from "bun:test";
 import type { FullCustomer } from "@models/cusModels/fullCusModel.js";
 import { fullCustomerToTags } from "./fullCustomerToTags";
 
-// The set fullCustomerToTags guarantees its output stays within (a subset of
-// what Svix accepts); tags outside it, or >128 chars, are rejected with HTTP 422.
 const SVIX_TAG_PATTERN = /^[a-zA-Z0-9\-_./#]+$/;
 const SVIX_TAG_MAX_LENGTH = 128;
 

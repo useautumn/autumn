@@ -11,10 +11,6 @@ export type RevenueCatPeriodEvent = {
 	expiration_at_ms?: number | null;
 };
 
-/**
- * Merges the event's store period into `processor`, only moving it forward. Returns the applied updates, or {} if skipped.
- * DB only: the RevenueCat webhook refresh middleware invalidates the cached customer afterwards.
- */
 export const storeRevenueCatPeriod = async ({
 	ctx,
 	customerProduct,
@@ -39,7 +35,6 @@ export const storeRevenueCatPeriod = async ({
 	return processor ? { processor } : {};
 };
 
-/** The store period stored on a RevenueCat customer product, in ms; null when it's not a RevenueCat plan or has none yet. */
 export const customerProductToRevenueCatPeriod = ({
 	customerProduct,
 }: {

@@ -1,17 +1,3 @@
-/**
- * Attach Prepaid to Multiple Entities
- *
- * Test 1: Attaches a prepaid product with included usage to two separate entities.
- *   Each entity gets its own independent balance.
- *   Product: base (no base price) with prepaid messages (100 included, $10 per 100 extra)
- *   Entity 1: quantity 300 → 100 included + 200 purchased (2×$10 = $20)
- *   Entity 2: quantity 500 → 100 included + 400 purchased (4×$10 = $40)
- *
- * Test 2: Customer has the same prepaid product attached, then entities also attach it.
- *   Customer balance includes entity balances only on the non-worker route.
- *   Entity balance = entity's own + customer's balance (inheritance).
- */
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3, ApiEntityV0 } from "@autumn/shared";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
@@ -71,7 +57,6 @@ test.concurrent(`${chalk.yellowBright("prepaid-entities: attach prepaid messages
 		],
 	});
 
-	// Verify entity 1: product active, balance = 300
 	const entity1 = await autumnV1.entities.get<ApiEntityV0>(
 		customerId,
 		entities[0].id,
@@ -84,7 +69,6 @@ test.concurrent(`${chalk.yellowBright("prepaid-entities: attach prepaid messages
 		usage: 0,
 	});
 
-	// Verify entity 2: product active, balance = 500
 	const entity2 = await autumnV1.entities.get<ApiEntityV0>(
 		customerId,
 		entities[1].id,
@@ -97,7 +81,6 @@ test.concurrent(`${chalk.yellowBright("prepaid-entities: attach prepaid messages
 		usage: 0,
 	});
 
-	// Verify invoices: no base price, so totals are just prepaid costs
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	await expectCustomerInvoiceCorrect({
 		customer,
@@ -111,23 +94,9 @@ test.concurrent(`${chalk.yellowBright("prepaid-entities: attach prepaid messages
 		latestTotal: prepaidCost1,
 	});
 
-	// Verify Stripe subscription matches expected state
 	await expectStripeSubscriptionCorrect({ ctx, customerId });
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 2: Customer + Entity both have same prepaid product (balance inheritance)
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Customer attaches prepaid product at customer level (qty 200 → balance 200).
- * Then entity 1 attaches same product at entity level (qty 300 → balance 300).
- *
- * Expected:
- * - Customer balance = 200 on the worker route, 500 on the non-worker route
- * - Entity 1 balance = 300 (own) + 200 (inherited from customer) = 500
- * - Invoices: 2 total (customer attach + entity attach)
- */
 test.concurrent(`${chalk.yellowBright("prepaid-entities: customer + entity both have same prepaid product")}`, async () => {
 	const customerId = "prepaid-ent-with-customer";
 	const customerQuantity = 200;
@@ -159,14 +128,12 @@ test.concurrent(`${chalk.yellowBright("prepaid-entities: customer + entity both 
 			s.entities({ count: 1, featureId: TestFeature.Users }),
 		],
 		actions: [
-			// Customer-level attach first
 			s.billing.attach({
 				productId: base.id,
 				options: [
 					{ feature_id: TestFeature.Messages, quantity: customerQuantity },
 				],
 			}),
-			// Then entity-level attach
 			s.billing.attach({
 				productId: base.id,
 				entityIndex: 0,
@@ -177,7 +144,6 @@ test.concurrent(`${chalk.yellowBright("prepaid-entities: customer + entity both 
 		],
 	});
 
-	// Verify entity 1: own balance (300) + inherited from customer (200) = 500
 	const entity1 = await autumnV1.entities.get<ApiEntityV0>(
 		customerId,
 		entities[0].id,
@@ -189,7 +155,6 @@ test.concurrent(`${chalk.yellowBright("prepaid-entities: customer + entity both 
 		balance: entityQuantity + customerQuantity,
 	});
 
-	// Worker customer reads exclude the entity-owned grant.
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	expect(customer.features?.[TestFeature.Messages]?.balance).toBe(
 		isBalanceWorkerRoute()
@@ -197,7 +162,6 @@ test.concurrent(`${chalk.yellowBright("prepaid-entities: customer + entity both 
 			: customerQuantity + entityQuantity,
 	);
 
-	// Invoices: 2 total — customer attach + entity attach
 	await expectCustomerInvoiceCorrect({
 		customer,
 		count: 2,

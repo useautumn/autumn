@@ -335,7 +335,6 @@ test.concurrent(`${chalk.yellowBright("auto-topup edge: rate limit (max_purchase
 		],
 	});
 
-	// Configure auto top-up with purchase_limit = 2 per month
 	await autumnV2_1.customers.update(customerId, {
 		billing_controls: makeAutoTopupConfig({
 			threshold: 50,
@@ -347,9 +346,6 @@ test.concurrent(`${chalk.yellowBright("auto-topup edge: rate limit (max_purchase
 		}),
 	});
 
-	// Starting balance: 300
-
-	// Round 1: Track 260 → balance = 40 → top-up fires (purchase 1) → balance = 140
 	await autumnV2_1.track({
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
@@ -360,9 +356,7 @@ test.concurrent(`${chalk.yellowBright("auto-topup edge: rate limit (max_purchase
 	const after1 = await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
 	const balance1 = after1.balances[TestFeature.Messages].remaining;
 	const expected1 = new Decimal(300).sub(260).add(100).toNumber();
-	expect(balance1).toBe(expected1); // 140
-
-	// Round 2: Track 100 → balance = 40 → top-up fires (purchase 2) → balance = 140
+	expect(balance1).toBe(expected1);
 	await autumnV2_1.track({
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
@@ -372,7 +366,7 @@ test.concurrent(`${chalk.yellowBright("auto-topup edge: rate limit (max_purchase
 
 	const after2 = await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
 	const balance2 = after2.balances[TestFeature.Messages].remaining;
-	expect(balance2).toBe(balance1 - 100); // 40
+	expect(balance2).toBe(balance1 - 100);
 
 	await expectCustomerInvoiceCorrect({
 		customerId,

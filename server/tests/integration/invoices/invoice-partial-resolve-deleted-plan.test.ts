@@ -1,12 +1,3 @@
-/**
- * Invoice plan_ids must keep a hard-deleted plan from the snapshot when
- * its sibling still resolves live. Partial array_agg is not complete.
- *
- * Red (current):  resolved_product_ids is [A]; processInvoice treats a
- *                 nonempty array as complete and drops snapshot B.
- * Green (after):  resolver merges live A + snapshot B, so fetch returns both.
- */
-
 import { test } from "bun:test";
 import { type ApiCustomerV5, CustomerExpand } from "@autumn/shared";
 import { items } from "@tests/utils/fixtures/items.js";

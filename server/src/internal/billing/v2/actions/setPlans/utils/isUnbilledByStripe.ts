@@ -5,7 +5,6 @@ import {
 	isCustomerProductTrialing,
 } from "@autumn/shared";
 
-/** A running paid plan no Stripe subscription bills, so no Stripe period is open to carry into. */
 export const isUnbilledByStripe = ({
 	customerProduct,
 	now,

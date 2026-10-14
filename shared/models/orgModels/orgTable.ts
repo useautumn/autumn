@@ -35,8 +35,6 @@ export type StripeConfig = {
 export interface VersionConfig {
 	sandbox?: string;
 	live?: string;
-	// sandbox_webhooks: string;
-	// live_webhooks: string;
 }
 
 export type StripeConnectConfig = {
@@ -48,20 +46,11 @@ export type StripeConnectConfig = {
 };
 
 export type OrgRedisConfig = {
-	/** AES-256-CBC encrypted full Redis connection string via encryptData() */
 	connectionString: string;
-	/**
-	 * AES-256-CBC encrypted public/reachable-from-outside-the-VPC connection
-	 * string, used off-AWS (local dev, trigger.dev) in place of `connectionString`.
-	 */
 	publicConnectionString?: string;
-	/** Plain domain/host only, used for pool URL-change detection */
 	url: string;
-	/** Percentage of customers routed to the dedicated Redis (0-100) */
 	migrationPercent: number;
-	/** The migrationPercent before the last change, used for staleness detection */
 	previousMigrationPercent: number;
-	/** Epoch ms when migrationPercent was last changed */
 	migrationChangedAt: number;
 };
 
@@ -86,13 +75,11 @@ export const organizations = pgTable(
 		id: text().primaryKey(),
 		slug: text().notNull().unique(),
 
-		// Better Auth
 		name: text("name").notNull(),
 		logo: text("logo"),
 		createdAt: timestamp("createdAt", { withTimezone: true }).notNull(),
 		metadata: text("metadata"),
 
-		// Stripe
 		default_currency: text("default_currency").default("usd"),
 
 		stripe_connected: boolean("stripe_connected").default(false),
@@ -105,11 +92,6 @@ export const organizations = pgTable(
 		live_stripe_connect: jsonb("live_stripe_connect")
 			.$type<StripeConnectConfig>()
 			.default({} as StripeConnectConfig),
-
-		// stripe_connect: jsonb("stripe_connect")
-		// 	.$type<StripeConnectConfig>()
-		// 	.default({} as StripeConnectConfig)
-		// 	.notNull(),
 
 		processor_configs: jsonb("processor_configs").$type<ProcessorConfigs>(),
 
@@ -159,11 +141,6 @@ export const organizations = pgTable(
 			.on(table.claim_expires_at)
 			.where(sql`${table.claim_state} = 'pending'`),
 		unique("organizations_claim_token_hash_key").on(table.claim_token_hash),
-		// Stripe Connect webhooks resolve an org by external account id. Without
-		// these, the three OR'd ->> predicates in OrgService.getByAccountId force a
-		// seq scan; Postgres turns them into a BitmapOr instead. The table is only
-		// ~531 rows but its wide jsonb columns bloat it to ~37MB, so a scan cost
-		// ~20ms per webhook.
 		index("idx_orgs_test_connect_default_account")
 			.on(sql`(${table.test_stripe_connect}->>'default_account_id')`)
 			.concurrently(),
@@ -181,15 +158,6 @@ export const organizations = pgTable(
 export type Organization = typeof organizations.$inferSelect & {
 	master: Organization | null;
 	pendingMigrations?: PendingMigration[];
-	/** alias_id → live plan id. Empty (or omitted) for orgs with no renames. */
 	planAliases?: Record<string, string>;
-	/** The env's Atoms, routing columns only; set when the org is read with its features. */
 	atomDeployments?: AtomRoute[];
 };
-
-// Multi tenancy flow <-> stripe connect...
-// Create org in Autumn, don't need stripe connect key, we create an Autumn connect account for them.
-// Connect own stripe to sandbox / prod
-// 1. OAuth to link their stripe account (?) -> need to use access token though
-// 2. Paste in their secret key
-// 3. Onboard onto Stripe connect (?)

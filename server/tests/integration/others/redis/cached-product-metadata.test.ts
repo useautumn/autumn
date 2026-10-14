@@ -8,10 +8,6 @@ import { normalizeFromSchema } from "@/utils/cacheUtils/normalizeFromSchema.js";
 
 const describeRedis = process.env.TESTS_ORG ? describe : describe.skip;
 
-// Proves a malformed product.metadata survives a real Redis round-trip and is
-// repaired to {} by the shared cache read pipeline (normalizeFromSchema + the
-// repairCachedProductCollections safeguard, both used by the fullSubject
-// cache). We replay the pipeline directly against a raw Redis key.
 describeRedis("cached product.metadata repair (redis round-trip)", () => {
 	const key = "test:plan-metadata-cache-repair";
 

@@ -5,8 +5,6 @@ import type {
 	EveSessionRef,
 } from "../../../src/internal/agentRuntime/eve/types.js";
 
-// `env` parses leaf's whole schema at import, so it is stubbed before the
-// client is loaded — only the two values the request URL and headers read.
 mock.module("../../../src/lib/env.js", () => ({
 	env: {
 		EVE_INTERNAL_AUTH_TOKEN: "internal_token",
@@ -86,8 +84,6 @@ describe("postEveInputResponse", () => {
 			siblingRequestIds,
 		});
 
-	// A single-request park is the overwhelming majority of answers and the
-	// shape stored rows predating siblings still produce.
 	test("posts exactly one answer when there are no siblings", async () => {
 		await post({ note: "(a note)" });
 
@@ -117,8 +113,6 @@ describe("postEveInputResponse", () => {
 		]);
 	});
 
-	// Eve rejects a repeated request id, and the park site can legitimately
-	// re-list the answered request among the batch.
 	test("dedupes siblings and drops the request being answered", async () => {
 		await post({ siblingRequestIds: ["req_2", "req_2", "req_1", ""] });
 
@@ -142,8 +136,6 @@ describe("postEveInputResponse", () => {
 		expect(postedBodies[0]?.clientContext).toBe(SIBLING_WITHHELD_NOTE);
 	});
 
-	// The batch answer carries the caller's own option, so approving a grouped card
-	// approves every write in it while every withdraw path still denies all of them.
 	describe("batch answers follow the caller's option", () => {
 		test("approves every request in an approved batch", async () => {
 			await post({
@@ -169,8 +161,6 @@ describe("postEveInputResponse", () => {
 			expect(postedBodies[0]?.clientContext).toBeUndefined();
 		});
 
-		// Dependent writes share a card, so the order the model issued them in is
-		// the order they must be applied in.
 		test("preserves the issued order of an approved batch", async () => {
 			await post({
 				approveSiblings: true,

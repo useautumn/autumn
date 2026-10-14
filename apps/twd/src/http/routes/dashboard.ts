@@ -3,7 +3,6 @@ import { Hono } from "hono";
 import { serveStatic } from "hono/bun";
 import type { TwdHono } from "../types/twdHono.ts";
 
-/** Built by `bun run web:build`; absent in API-only dev, where Vite serves the dashboard. */
 const DIST = resolve(import.meta.dir, "../../../web/dist");
 const INDEX = resolve(DIST, "index.html");
 

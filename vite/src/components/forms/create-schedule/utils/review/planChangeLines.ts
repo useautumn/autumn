@@ -13,7 +13,6 @@ import {
 import { formatPhaseDate } from "../schedulePhaseTiming";
 import { formatMoney } from "./formatMoney";
 
-/** One change on an updated plan: what changed, and its value before and after. */
 export type ReviewChangeLineState = "new" | "updated" | "removed";
 
 export type ReviewChangeLine = {
@@ -38,7 +37,6 @@ const suffixFor = ({
 		? ` ${intervalSuffix({ interval, intervalCount })}`
 		: "";
 
-/** The old value drops a suffix the new value repeats, so "$2,000 → $2,500 /mo" reads once. */
 const changeLine = ({
 	label,
 	before,
@@ -161,7 +159,6 @@ const unitPriceValue = ({
 const sameValue = (first?: PriceValue, second?: PriceValue) =>
 	first?.amount === second?.amount && first?.suffix === second?.suffix;
 
-/** The included amount when it changed, else the per-unit price, else nothing worth showing. */
 const itemValues = ({
 	before,
 	after,
@@ -210,7 +207,6 @@ const itemsFor = ({
 		)
 		.map((itemChange) => itemChange.item);
 
-/** Items are snapshots: a feature removed and re-added in one change is one edit, not two. */
 const itemLines = ({
 	itemChanges,
 	features,
@@ -235,7 +231,6 @@ const itemLines = ({
 		return values ? [changeLine({ label, ...values })] : [];
 	});
 
-/** What changed on an updated plan, read from the preview's plan_changes. */
 export const planChangeLines = ({
 	change,
 	features,

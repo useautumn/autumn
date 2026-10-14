@@ -156,7 +156,6 @@ test.concurrent(
 			customer: customerAfterRenewal,
 			featureId: TestFeature.Messages,
 			remaining: monthlyIncludedMessages,
-			// usage: 0,
 			breakdown: {
 				[ResetInterval.OneOff]: {
 					usage: 200,
@@ -206,10 +205,6 @@ test.concurrent(
 			],
 		});
 
-		// Initial balance: 50 included + 100 purchased = 150
-
-		// Round 1: quantity=100 → 1 pack, entirely within tier 1 (0–200)
-		// Price: 100 × ($10/100) = $10
 		await autumnV2_1.customers.update(customerId, {
 			billing_controls: makeAutoTopupConfig({
 				threshold: 30,
@@ -222,7 +217,6 @@ test.concurrent(
 			feature_id: TestFeature.Messages,
 			value: 130,
 		});
-		// balance = 150 - 130 = 20 → below threshold → auto top-up fires (100 units)
 
 		await timeout(AUTO_TOPUP_WAIT_MS);
 
@@ -230,7 +224,7 @@ test.concurrent(
 		expectBalanceCorrect({
 			customer: after1,
 			featureId: TestFeature.Messages,
-			remaining: 120, // 20 + 100
+			remaining: 120,
 		});
 
 		await expectCustomerInvoiceCorrect({
@@ -241,11 +235,6 @@ test.concurrent(
 			latestInvoiceProductId: prod.id,
 		});
 
-		// Round 2: increase quantity to 300 → 3 packs, crosses tier boundary
-		// Graduated pricing on the single 300-unit top-up:
-		//   First 200 in tier 1: 200 × ($10/100) = $20
-		//   Remaining 100 in tier 2: 100 × ($5/100) = $5
-		//   Total = $25
 		await autumnV2_1.customers.update(customerId, {
 			billing_controls: makeAutoTopupConfig({
 				threshold: 30,
@@ -258,7 +247,6 @@ test.concurrent(
 			feature_id: TestFeature.Messages,
 			value: 100,
 		});
-		// balance = 120 - 100 = 20 → below threshold → auto top-up fires (300 units)
 
 		await timeout(AUTO_TOPUP_WAIT_MS);
 
@@ -266,13 +254,13 @@ test.concurrent(
 		expectBalanceCorrect({
 			customer: after2,
 			featureId: TestFeature.Messages,
-			remaining: 320, // 20 + 300
+			remaining: 320,
 		});
 
 		await expectCustomerInvoiceCorrect({
 			customerId,
 			count: 3,
-			latestTotal: 25, // tier 1: $20 + tier 2: $5
+			latestTotal: 25,
 			latestStatus: "paid",
 			latestInvoiceProductId: prod.id,
 		});

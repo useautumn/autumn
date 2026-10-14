@@ -13,32 +13,7 @@ import chalk from "chalk";
 import { addHours, addMonths } from "date-fns";
 
 const billingUnits = 12;
-const pricePerUnit = 8; // $8 per unit = $96 for 12 units
-
-/**
- * Proration Configuration Tests
- *
- * These tests verify that the subscription update flow correctly handles
- * all proration configurations for both upgrades and downgrades.
- *
- * OnIncrease configs:
- * - BillImmediately: Bill full amount now (no proration)
- * - ProrateImmediately: Prorate and bill now (default)
- * - ProrateNextCycle: Prorate but bill next cycle
- * - BillNextCycle: Bill full amount next cycle
- *
- * OnDecrease configs:
- * - ProrateImmediately: Credit prorated amount now
- * - ProrateNextCycle: Credit next cycle
- * - None: No credit (replaceable strategy - set upcoming_quantity)
- * - NoProrations: No credit at all
- */
-
-// =============================================================================
-// UPGRADE PRORATION TESTS
-// =============================================================================
-
-// NOTE: OnIncrease.BillImmediately is not supported for prepaid items yet: 01/08/2026
+const pricePerUnit = 8;
 
 test.concurrent(`${chalk.yellowBright("update-quantity: prorate immediately on upgrade")}`, async () => {
 	const customerId = "proration-upgrade-prorate-immediately";
@@ -73,7 +48,6 @@ test.concurrent(`${chalk.yellowBright("update-quantity: prorate immediately on u
 		],
 	});
 
-	// Preview the upgrade
 	const preview = await autumnV1.subscriptions.previewUpdate({
 		customer_id: customerId,
 		product_id: product.id,
@@ -82,7 +56,6 @@ test.concurrent(`${chalk.yellowBright("update-quantity: prorate immediately on u
 		],
 	});
 
-	// Preview should show prorated amount (less than full $80)
 	const fullAmount = 10 * pricePerUnit;
 	expect(preview.total).toBeGreaterThan(0);
 	expect(preview.total).toBeLessThanOrEqual(fullAmount);
@@ -91,7 +64,6 @@ test.concurrent(`${chalk.yellowBright("update-quantity: prorate immediately on u
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	const invoiceCountBefore = beforeInvoices.invoices?.length || 0;
 
-	// Upgrade to 20 units
 	await autumnV1.subscriptions.update({
 		customer_id: customerId,
 		product_id: product.id,
@@ -102,7 +74,6 @@ test.concurrent(`${chalk.yellowBright("update-quantity: prorate immediately on u
 
 	const afterUpdate = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Should create invoice with prorated amount matching preview
 	expectCustomerInvoiceCorrect({
 		customer: afterUpdate,
 		count: invoiceCountBefore + 1,
@@ -142,11 +113,10 @@ test.concurrent(`${chalk.yellowBright("update-quantity: prorate next cycle on up
 					{ feature_id: TestFeature.Messages, quantity: 10 * billingUnits },
 				],
 			}),
-			s.advanceTestClock({ days: 15 }), // Mid-cycle
+			s.advanceTestClock({ days: 15 }),
 		],
 	});
 
-	// Preview the upgrade - should show prorated amount for next cycle
 	const preview = await autumnV1.subscriptions.previewUpdate({
 		customer_id: customerId,
 		product_id: product.id,
@@ -155,14 +125,12 @@ test.concurrent(`${chalk.yellowBright("update-quantity: prorate next cycle on up
 		],
 	});
 
-	// Preview total should be 0 (billed next cycle, not immediately)
 	expect(preview.total).toBe(0);
 
 	const beforeInvoices =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	const invoiceCountBefore = beforeInvoices.invoices?.length || 0;
 
-	// Upgrade to 20 units
 	await autumnV1.subscriptions.update({
 		customer_id: customerId,
 		product_id: product.id,
@@ -173,17 +141,14 @@ test.concurrent(`${chalk.yellowBright("update-quantity: prorate next cycle on up
 
 	const afterUpdate = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Should NOT create finalized invoice immediately
 	const finalizedInvoices = afterUpdate.invoices?.filter(
 		(inv) => inv.status === "paid" || inv.status === "open",
 	);
 	expect(finalizedInvoices?.length).toBe(invoiceCountBefore);
 
-	// But balance should be updated immediately
 	const feature = afterUpdate.features?.[TestFeature.Messages];
 	expect(feature?.balance).toBe(20 * billingUnits);
 
-	// Advance clock to next billing cycle
 	await advanceTestClock({
 		stripeCli: ctx.stripeCli,
 		testClockId: testClockId!,
@@ -196,7 +161,6 @@ test.concurrent(`${chalk.yellowBright("update-quantity: prorate next cycle on up
 
 	const afterCycle = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// NOW invoice should exist with prorated amount
 	expectCustomerInvoiceCorrect({
 		customer: afterCycle,
 		count: invoiceCountBefore + 1,
@@ -235,11 +199,10 @@ test.concurrent(`${chalk.yellowBright("update-quantity: bill next cycle on upgra
 					{ feature_id: TestFeature.Messages, quantity: 10 * billingUnits },
 				],
 			}),
-			s.advanceTestClock({ days: 15 }), // Mid-cycle
+			s.advanceTestClock({ days: 15 }),
 		],
 	});
 
-	// Preview the upgrade - should show 0 (billed next cycle)
 	const preview = await autumnV1.subscriptions.previewUpdate({
 		customer_id: customerId,
 		product_id: product.id,
@@ -248,14 +211,12 @@ test.concurrent(`${chalk.yellowBright("update-quantity: bill next cycle on upgra
 		],
 	});
 
-	// Preview total should be 0 (billed next cycle, not immediately)
 	expect(preview.total).toBe(0);
 
 	const beforeInvoices =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	const invoiceCountBefore = beforeInvoices.invoices?.length || 0;
 
-	// Upgrade to 20 units
 	await autumnV1.subscriptions.update({
 		customer_id: customerId,
 		product_id: product.id,
@@ -266,14 +227,11 @@ test.concurrent(`${chalk.yellowBright("update-quantity: bill next cycle on upgra
 
 	const afterUpdate = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Should NOT create invoice immediately
 	expect(afterUpdate.invoices?.length).toBe(invoiceCountBefore);
 
-	// But balance should be updated
 	const feature = afterUpdate.features?.[TestFeature.Messages];
 	expect(feature?.balance).toBe(20 * billingUnits);
 
-	// Advance clock to next billing cycle
 	await advanceToNextInvoice({
 		stripeCli: ctx.stripeCli,
 		testClockId: testClockId!,
@@ -281,9 +239,7 @@ test.concurrent(`${chalk.yellowBright("update-quantity: bill next cycle on upgra
 
 	const afterCycle = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Next cycle invoice is the full renewal amount for 20 units
-	// BillNextCycle defers billing - preview shows $0 for immediate charge
-	const fullRenewalAmount = 20 * pricePerUnit; // 20 units * $8 = $160
+	const fullRenewalAmount = 20 * pricePerUnit;
 	expectCustomerInvoiceCorrect({
 		customer: afterCycle,
 		count: (beforeInvoices.invoices?.length ?? 0) + 1,
@@ -291,10 +247,6 @@ test.concurrent(`${chalk.yellowBright("update-quantity: bill next cycle on upgra
 		latestStatus: "paid",
 	});
 });
-
-// =============================================================================
-// DOWNGRADE PRORATION TESTS
-// =============================================================================
 
 test.concurrent(`${chalk.yellowBright("update-quantity: prorate immediately on downgrade")}`, async () => {
 	const customerId = "proration-downgrade-prorate-immed";
@@ -330,7 +282,6 @@ test.concurrent(`${chalk.yellowBright("update-quantity: prorate immediately on d
 		],
 	});
 
-	// Preview the downgrade
 	const preview = await autumnV1.subscriptions.previewUpdate({
 		customer_id: customerId,
 		product_id: product.id,
@@ -339,14 +290,12 @@ test.concurrent(`${chalk.yellowBright("update-quantity: prorate immediately on d
 		],
 	});
 
-	// Preview should show negative (credit) prorated amount
 	expect(preview.total).toBeLessThan(0);
 
 	const beforeInvoices =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	const invoiceCountBefore = beforeInvoices.invoices?.length || 0;
 
-	// Downgrade to 10 units
 	await autumnV1.subscriptions.update({
 		customer_id: customerId,
 		product_id: product.id,
@@ -357,7 +306,6 @@ test.concurrent(`${chalk.yellowBright("update-quantity: prorate immediately on d
 
 	const afterUpdate = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Should create invoice with credit matching preview
 	expectCustomerInvoiceCorrect({
 		customer: afterUpdate,
 		count: invoiceCountBefore + 1,
@@ -365,7 +313,6 @@ test.concurrent(`${chalk.yellowBright("update-quantity: prorate immediately on d
 		latestStatus: "paid",
 	});
 
-	// Balance should be reduced
 	const feature = afterUpdate.features?.[TestFeature.Messages];
 	expect(feature?.balance).toBe(10 * billingUnits);
 });
@@ -404,7 +351,6 @@ test.concurrent(`${chalk.yellowBright("update-quantity: no prorations on downgra
 		],
 	});
 
-	// Preview the downgrade
 	const preview = await autumnV1.subscriptions.previewUpdate({
 		customer_id: customerId,
 		product_id: product.id,
@@ -413,14 +359,12 @@ test.concurrent(`${chalk.yellowBright("update-quantity: no prorations on downgra
 		],
 	});
 
-	// Preview should show 0 (no prorations = no credit)
 	expect(preview.total).toBe(0);
 
 	const beforeInvoices =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	const invoiceCountBefore = beforeInvoices.invoices?.length || 0;
 
-	// Downgrade to 10 units
 	await autumnV1.subscriptions.update({
 		customer_id: customerId,
 		product_id: product.id,
@@ -431,13 +375,11 @@ test.concurrent(`${chalk.yellowBright("update-quantity: no prorations on downgra
 
 	const afterUpdate = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Should NOT create invoice (no credit)
 	expectCustomerInvoiceCorrect({
 		customer: afterUpdate,
 		count: invoiceCountBefore,
 	});
 
-	// Balance should be reduced NEXT CYCLE
 	const feature = afterUpdate.features?.[TestFeature.Messages];
 	expect(feature?.balance).toBe(20 * billingUnits);
 });

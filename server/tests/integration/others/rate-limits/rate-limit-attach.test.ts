@@ -8,7 +8,6 @@ import AutumnError from "@/external/autumn/autumnCli.js";
 const testCase = "rate-limit-attach";
 const customerId = `test-${testCase}`;
 
-// Attach rate limit is 5 per minute per customer
 const ATTACH_RATE_LIMIT = 5;
 
 /**
@@ -19,7 +18,6 @@ const ATTACH_RATE_LIMIT = 5;
 test.skip(`${chalk.yellowBright(testCase)}`, async () => {
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
 
-	// Create multiple add-on products so we can attach them
 	const addon1 = products.base({
 		id: "addon1",
 		items: [messagesItem],
@@ -83,7 +81,6 @@ test.skip(`${chalk.yellowBright(testCase)}`, async () => {
 		actions: [s.attach({ productId: baseProduct.id })],
 	});
 
-	// Fire off more attach requests than the rate limit allows
 	const addons = [
 		addon1,
 		addon2,

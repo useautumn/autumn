@@ -6,7 +6,6 @@ import { shadowAtomRecordToApiCache } from "../shadowAtomRecordToApiCache.js";
 import { findShadowAtomRecords } from "../shadowAtomStorage.js";
 import { withShadowAtomLock } from "../withShadowAtomLock.js";
 
-/** Moves our running shadow Atom to another machine; its folders stay on the volume. */
 export const resizeShadowAtom = ({
 	machine,
 }: {

@@ -1,15 +1,3 @@
-/**
- * customers.update billing_details proxies straight to the linked Stripe customer;
- * expand=billing_details reads it back live.
- *
- * Contract:
- *   address:            replaces the whole address (as Stripe does), null clears
- *   tax_exempt:         set as-is
- *   invoice_settings:   custom_fields replace the list, null clears, land on the Stripe customer
- *   tax_ids:            add/remove only touch the listed ids; others are kept, duplicates and
- *                       missing removals are ignored
- */
-
 import { expect, test } from "bun:test";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";

@@ -14,7 +14,6 @@ const store = createEdgeConfigStore<StripeSyncConfig>({
 
 registerEdgeConfig({ store });
 
-/** Pure in-memory lookup -- zero I/O, sync. Matches on org ID or slug. */
 export const isStripeSyncEnabled = ({
 	orgId,
 	orgSlug,

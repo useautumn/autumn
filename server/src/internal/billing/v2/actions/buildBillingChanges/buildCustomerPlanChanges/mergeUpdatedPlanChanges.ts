@@ -29,9 +29,6 @@ const updatedChangeMergeKey = (
 	}
 };
 
-/** Dedupes `updated` changes that describe the same post-change snapshot
- * (e.g. a patch and a license update touching the same product). Keyed by
- * entity too, so identical plans on different entities stay separate. */
 export const mergeUpdatedPlanChanges = (
 	changes: CustomerPlanChange[],
 ): CustomerPlanChange[] => {
@@ -66,7 +63,6 @@ export const mergeUpdatedPlanChanges = (
 			...(existing.item_changes ?? []),
 			...(change.item_changes ?? []),
 		];
-		// Mergeable duplicates carry at most one content-level plan diff.
 		existing.plan_change = existing.plan_change ?? change.plan_change;
 	}
 

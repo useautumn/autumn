@@ -1,13 +1,3 @@
-/**
- * Membership-accuracy probe: for every filter shape, diffs the legacy
- * materializing query (ground truth, buildCustomerSelect without limit)
- * against the paged walk (buildCustomerSelect with a full-set limit) —
- * DB-side, EXCEPT ALL both directions, so missing rows, extra rows, and
- * duplicates all surface. Also validates page iteration integrity.
- *
- *   bun tests/perf/batch-migrations/probes/probeFilterParity.ts
- */
-
 import type { CustomerFilter } from "@autumn/shared";
 import { MigrationItemRunStatus } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
@@ -149,8 +139,6 @@ const main = async () => {
 		);
 	}
 
-	// Page-iteration integrity: full pages until the set is exhausted, ids
-	// strictly descending across page boundaries, total == full-set count.
 	console.log("── page iteration (selective, 5k pages) ─────────");
 	let cursor: string | undefined;
 	let total = 0;
@@ -181,8 +169,6 @@ const main = async () => {
 			console.log(`final page ${pages}: ${rows.length} rows`);
 			cursor = rows[rows.length - 1].internal_id;
 			previousLast = cursor;
-			// A short page must mean exhaustion — verified by the loop's next
-			// iteration returning zero rows.
 			continue;
 		}
 		cursor = rows[rows.length - 1].internal_id;

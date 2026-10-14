@@ -8,7 +8,6 @@ import type { ReactNode } from "react";
 import { TABLE_TRAY_SURFACE_ROW_CLASS } from "@/components/general/table";
 import { cn } from "@/lib/utils";
 
-/** Extra option rows folded into the bottom of the same tray surface. */
 export function AdvancedMoreOptions({ children }: { children: ReactNode }) {
 	return (
 		<Collapsible>

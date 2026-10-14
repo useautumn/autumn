@@ -1,13 +1,6 @@
-/**
- * Batch deletion logic for nuke command
- */
-
 import { DELETE_CONCURRENCY } from "../../constants.js";
 import type { DeletionProgress } from "./types.js";
 
-/**
- * Delete customers in batches with progress callbacks
- */
 export async function deleteCustomersBatch(
 	customers: { id: string }[],
 	deleteCustomerFn: (id: string) => Promise<void>,
@@ -45,10 +38,6 @@ export async function deleteCustomersBatch(
 	}
 }
 
-/**
- * Delete plans in batches with progress callbacks
- * Plans are independent of each other, so they can be deleted in parallel
- */
 export async function deletePlansBatch(
 	plans: { id: string }[],
 	deletePlanFn: (id: string, allVersions: boolean) => Promise<void>,
@@ -64,7 +53,7 @@ export async function deletePlansBatch(
 
 		await Promise.all(
 			batch.map(async (plan) => {
-				await deletePlanFn(plan.id, true); // allVersions = true
+				await deletePlanFn(plan.id, true);
 				completed++;
 
 				if (onProgress) {
@@ -88,17 +77,11 @@ export async function deletePlansBatch(
  */
 export const deletePlansSequential = deletePlansBatch;
 
-/**
- * Delete features in batches with progress callbacks
- * Credit systems are deleted first (in parallel), then remaining features (in parallel)
- * This is because credit systems can own other features
- */
 export async function deleteFeaturesBatch(
 	features: { id: string; type: string }[],
 	deleteFeatureFn: (id: string) => Promise<void>,
 	onProgress?: (progress: DeletionProgress) => void,
 ): Promise<void> {
-	// Separate credit systems from other features
 	const creditSystems = features.filter((f) => f.type === "credit_system");
 	const otherFeatures = features.filter((f) => f.type !== "credit_system");
 
@@ -120,7 +103,6 @@ export async function deleteFeaturesBatch(
 		}
 	};
 
-	// Phase 1: Delete credit systems in parallel (they depend on other features)
 	if (creditSystems.length > 0) {
 		const concurrency = Math.max(
 			1,
@@ -140,7 +122,6 @@ export async function deleteFeaturesBatch(
 		}
 	}
 
-	// Phase 2: Delete remaining features in parallel (now safe since credit systems are gone)
 	if (otherFeatures.length > 0) {
 		const concurrency = Math.max(
 			1,

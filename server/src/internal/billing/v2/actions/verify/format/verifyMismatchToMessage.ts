@@ -21,7 +21,6 @@ type PriceDisplay = {
 	price_interval_count?: number;
 };
 
-/** "Pro (Yearly) $3000/yr" — plan/price label when the mismatch carries it. */
 const planPriceLabel = (mismatch: PriceDisplay): string | null => {
 	if (mismatch.price_amount === undefined) return mismatch.plan_name ?? null;
 	const interval = mismatch.price_interval
@@ -68,7 +67,6 @@ const describeItemMismatch = (mismatch: ItemMismatch): string => {
 		: "";
 	switch (mismatch.reason) {
 		case "missing":
-			// Quantity 0 = metered item (no quantity on Stripe) — omit the noise.
 			return `Missing Stripe item for ${label}${expectedPrice}${
 				mismatch.expected_quantity
 					? ` (expected quantity ${mismatch.expected_quantity})`
@@ -163,8 +161,6 @@ const describe = (mismatch: SubscriptionMismatch): string => {
 	}
 };
 
-/** One human-readable line per mismatch — the canonical display text for the
- * dashboard, sheets, and logs. */
 export const verifyMismatchToMessage = (
 	mismatch: SubscriptionMismatch,
 ): string => `${describe(mismatch)}${phaseSuffix(mismatch)}`;

@@ -5,11 +5,6 @@ import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// CUSTOM PLAN ERRORS - Same Configuration
-// ═══════════════════════════════════════════════════════════════════════════════
-
-// 1. Cannot update with same items (free product)
 test.concurrent(`${chalk.yellowBright("error: custom plan same config (free)")}`, async () => {
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
 	const freeProd = products.base({ items: [messagesItem] });
@@ -20,7 +15,6 @@ test.concurrent(`${chalk.yellowBright("error: custom plan same config (free)")}`
 		actions: [s.attach({ productId: "base" })],
 	});
 
-	// Try to update with identical items - should fail
 	const updateParams = {
 		customer_id: customerId,
 		product_id: freeProd.id,
@@ -34,7 +28,6 @@ test.concurrent(`${chalk.yellowBright("error: custom plan same config (free)")}`
 	});
 });
 
-// 2. Cannot update with same items (paid product)
 test.concurrent(`${chalk.yellowBright("error: custom plan same config (paid)")}`, async () => {
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
 	const priceItem = items.monthlyPrice({ price: 20 });
@@ -49,7 +42,6 @@ test.concurrent(`${chalk.yellowBright("error: custom plan same config (paid)")}`
 		actions: [s.attach({ productId: pro.id })],
 	});
 
-	// Try to update with identical items - should fail
 	const updateParams = {
 		customer_id: customerId,
 		product_id: pro.id,
@@ -63,7 +55,6 @@ test.concurrent(`${chalk.yellowBright("error: custom plan same config (paid)")}`
 	});
 });
 
-// 3. Cannot update with same items (multiple features)
 test.concurrent(`${chalk.yellowBright("error: custom plan same config (multi-feature)")}`, async () => {
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
 	const creditsItem = items.monthlyCredits({ includedUsage: 50 });
@@ -78,7 +69,6 @@ test.concurrent(`${chalk.yellowBright("error: custom plan same config (multi-fea
 		actions: [s.attach({ productId: "multi-feature" })],
 	});
 
-	// Try to update with identical items - should fail
 	const updateParams = {
 		customer_id: customerId,
 		product_id: prod.id,

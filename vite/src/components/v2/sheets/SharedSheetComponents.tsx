@@ -143,7 +143,6 @@ interface SheetFooterProps {
 	className?: string;
 }
 
-/** Scrolling sheet body; the reserved gutter stops content shifting when a scrollbar appears. */
 export function SheetBody({
 	children,
 	className,
@@ -163,7 +162,6 @@ export function SheetBody({
 	);
 }
 
-/** Shared spring transition for layout animations */
 export const LAYOUT_TRANSITION = {
 	type: "spring",
 	stiffness: 500,

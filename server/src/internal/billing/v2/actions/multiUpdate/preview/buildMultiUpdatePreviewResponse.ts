@@ -9,11 +9,6 @@ import { computeAttachPreviewBillingPlan } from "@/internal/billing/v2/utils/bil
 import { billingPlanToPreviewResponse } from "@/internal/billing/v2/utils/billingPlanToPreviewResponse";
 import type { MultiUpdateStripeBillingPlan } from "../evaluate/evaluateMultiUpdateStripe";
 
-/**
- * Composes one CORE billing preview per subscription group — each built by the
- * same builders single-update previews use, from that group's sub-scoped plan
- * and context (own anchor, own tax inheritance) — and sums the totals.
- */
 export const buildMultiUpdatePreviewResponse = async ({
 	ctx,
 	customerId,

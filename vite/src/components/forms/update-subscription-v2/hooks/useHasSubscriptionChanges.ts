@@ -21,7 +21,6 @@ type PrepaidChangeItem = {
 	feature_type?: ProductItemFeatureType | null;
 };
 
-/** Whether a prepaid quantity change counts as a subscription change. Extracted for testability. */
 export function shouldCountPrepaidChange({
 	item,
 	newlyAdded,
@@ -34,8 +33,6 @@ export function shouldCountPrepaidChange({
 	updatedQuantity: number;
 }): boolean {
 	if (newlyAdded) return false;
-	// Consumable one-off top-ups only count when increasing; non-consumables
-	// (continuous use) count on any delta, including a decrease.
 	const isConsumableOneOff =
 		item?.interval == null &&
 		item?.feature_type !== ProductItemFeatureType.ContinuousUse;

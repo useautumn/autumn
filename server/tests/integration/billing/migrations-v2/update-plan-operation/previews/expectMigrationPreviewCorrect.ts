@@ -11,7 +11,6 @@ type PreviewBalanceExpectation = Partial<PreviewBalanceChange["balance"]>;
 const getPreviewPlanId = (change: PreviewPlanChange): string | undefined =>
 	change.subscription?.plan_id ?? change.purchase?.plan_id;
 
-/** Top-level item_changes is deprecated (always []); content lives on plan_change. */
 export const getPreviewItemChanges = (
 	change: PreviewPlanChange,
 ): PreviewPlanItemChange[] => {

@@ -28,12 +28,6 @@ export const IncludedUsageParamsSchema = z.number().max(10_000_000_000_000, {
 		"Included usage cannot exceed 10 trillion; use unlimited usage instead",
 });
 
-/**
- * The `price` sub-object, without any processor mapping. Adoption of an
- * existing Stripe price is deliberately scoped to the catalog path, so the
- * `processors` field is added by `CatalogPlanItemParamsV1Schema` instead of
- * living here — attach/customize/migration paths must not be able to state one.
- */
 export const PlanItemPriceParamsSchema = z.object({
 	stripe_price_id: z
 		.string()
@@ -87,11 +81,6 @@ export const PlanItemPriceParamsSchema = z.object({
 export const PLAN_ITEM_PRICE_DESCRIPTION =
 	"Pricing for usage beyond included units. Omit for free features.";
 
-/**
- * Field shape only — no cross-field checks and no `.meta()` title. The catalog
- * variant rebuilds from this so both schemas share one definition; run the
- * checks through `planItemParamsIssues`.
- */
 export const PlanItemParamsObjectSchema = z.object({
 	threshold_billing: z
 		.object({ threshold: z.number().finite().positive() })
@@ -215,11 +204,6 @@ const tiersAreAscendingToInfinity = ({
 	);
 };
 
-/**
- * Cross-field invariants for a plan item. Shared by the generic and the catalog
- * item schemas so the rules can't drift; returns issues and lets each schema
- * push them.
- */
 export const planItemParamsIssues = (
 	value: PlanItemParamsCheckValue,
 ): { message: string; input: unknown }[] => {
@@ -246,7 +230,6 @@ export const planItemParamsIssues = (
 		});
 	}
 
-	// At a minimum, if price is present, at least amount OR tiers must be defined, and not both
 	if (value.threshold_billing && (!value.price || value.unlimited)) {
 		issues.push({
 			message: "threshold_billing requires a finite usage-based price",

@@ -1,22 +1,9 @@
-/**
- * One-off accuracy check for the generated api_call query.
- *
- *   bun scripts/checkApiCallsApl.ts --hour 2026-09-27T11 [--org org_123] [--rows]
- *
- * A: the generated summarize query (what the meter would push).
- * B: Axiom groups the same hour by (org, method, url, batch size); each distinct
- *    url is classified locally with routeToEndpoint and the counts summed.
- * Prints both and every (org, endpoint) where they disagree. Read-only.
- * Needs AXIOM_ADMIN_TOKEN and AXIOM_ORG_ID in the environment.
- */
-
 import { createAxiomClient, queryApl } from "@autumn/axiom";
 import { countApiCalls } from "../src/apiRequests/actions/countApiCalls/countApiCalls";
 import { apiCallLogFields as f } from "../src/apiRequests/utils/apiCallsApl";
 import { routeToEndpoint } from "../src/apiRequests/utils/routeToEndpoint";
 import type { HourWindow } from "../src/types/hourWindow";
 
-/** Distinct (org, method, url) groups per hour; far fewer than requests. */
 const GROUP_ROW_LIMIT = 500_000;
 
 const argValue = (flag: string): string | undefined => {
@@ -41,7 +28,6 @@ const axiom = createAxiomClient({
 
 const orgWhere = orgFilter ? `| where ${f.orgId} == '${orgFilter}'` : "";
 
-// A: what the meter computes.
 const generated = await countApiCalls({ ctx: { axiom }, windows: [window] });
 const a = new Map<string, number>();
 for (const count of generated) {
@@ -49,7 +35,6 @@ for (const count of generated) {
 	a.set(`${count.orgId}\t${count.endpointId}`, count.requests);
 }
 
-// B: grouped by Axiom, classified here.
 const groupedApl = [
 	f.dataset,
 	`| where ${f.time} >= datetime(${new Date(window.startMs).toISOString()}) and ${f.time} < datetime(${new Date(window.endMs).toISOString()})`,

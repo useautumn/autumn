@@ -1,36 +1,25 @@
-/** What each thread reports since boot: work served, the held copies and their hit rate, and its event loop's health. */
 export const THREAD_STAT_FIELDS = [
 	"checks",
-	/** Checks the org's app sent with a key Atom or the API accepted: its real traffic. */
 	"requests",
-	/** Of those requests, the ones the Autumn API answered instead of Atom. */
 	"forwarded",
-	/** Requests refused at once: the thread was too far behind to answer in time, or already forwarding all it can. */
 	"shed",
 	"pushes",
-	/** Pushes that failed every try SQS gave them, dropped unapplied. */
 	"pushesDropped",
-	/** Operations this thread passed on to other replicas: delivered, failed once, and given up on. */
 	"relayed",
 	"relayFailed",
 	"relayDropped",
-	/** Checks the stored rows could not answer: no customer, no entity, or an entity read before its customer's evict. */
 	"subjectMisses",
-	/** Of those misses, the ones that sent Autumn a pull; and the pulled subjects stored. */
 	"subjectPulls",
 	"subjectFills",
 	"heldSubjects",
 	"heldBytes",
 	"heldLookups",
 	"heldMisses",
-	/** Held copies dropped for the budget, and for sitting idle. */
 	"heldEvicted",
 	"heldExpired",
-	/** What this thread's slot files take on the volume; the customers it dropped for its share, and for 7 idle days. */
 	"diskBytes",
 	"diskEvicted",
 	"diskExpired",
-	/** The last 1 s tick's lateness, and how many ticks since boot were ≥100 ms late. */
 	"loopLagMs",
 	"loopStalls",
 ] as const;
@@ -38,7 +27,6 @@ export const THREAD_STAT_FIELDS = [
 export type ThreadStatField = (typeof THREAD_STAT_FIELDS)[number];
 export type ThreadStats = Record<ThreadStatField, number> & { index: number };
 
-/** This thread's row of the shared buffer: counters it adds to and gauges it sets. */
 export type ThreadCounters = {
 	add(field: ThreadStatField, by?: number): void;
 	set(field: ThreadStatField, value: number): void;
@@ -49,7 +37,6 @@ const FIELD_INDEX = Object.fromEntries(
 ) as Record<ThreadStatField, number>;
 const ROW_BYTES = THREAD_STAT_FIELDS.length * Float64Array.BYTES_PER_ELEMENT;
 
-/** One row of doubles per thread, shared so any thread's /health reads every row. */
 export const createThreadStatsBuffer = ({
 	threads,
 }: {

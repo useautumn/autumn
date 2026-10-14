@@ -7,17 +7,6 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { logPlaybook } from "../catalog/utils/catalogScenario";
 
-/**
- * Threshold billing QA: an item with `threshold_billing` bills its overage
- * mid-cycle as soon as unbilled usage reaches the threshold, instead of
- * waiting for the cycle to end.
- *
- * Both plans below carry threshold 20 on a $1/unit usage-based monthly item.
- * They differ only in included usage, which is the variable under test:
- *   T1 included 0   → every tracked unit is overage
- *   T2 included 100 → the first 100 units are free, overage starts after
- */
-
 const THRESHOLD = 20;
 const UNIT_PRICE = 1;
 
@@ -80,7 +69,6 @@ test(
 		const customerId = "thr-scenario-zero";
 		const plan = thresholdPlan({ planId: "thr-zero-plan", included: 0 });
 
-		// 25 units of overage crosses the threshold of 20 → expect a mid-cycle charge.
 		const { autumnV2_3, ctx } = await initScenario({
 			customerId,
 			setup: [
@@ -110,7 +98,6 @@ test(
 		const customerId = "thr-scenario-included";
 		const plan = thresholdPlan({ planId: "thr-inc-plan", included: 100 });
 
-		// 130 tracked, 100 included → 30 overage, past the threshold of 20.
 		const { autumnV2_3, ctx } = await initScenario({
 			customerId,
 			setup: [

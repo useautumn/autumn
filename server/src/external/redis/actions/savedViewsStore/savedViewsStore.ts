@@ -2,8 +2,6 @@ import { getMiscRedis } from "@/external/redis/initRedis.js";
 import { tryRedisOp } from "@/external/redis/utils/runRedisOp.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 
-/** Pinned: Redis is the ONLY store for saved views (no TTL, no DB row), so
- *  they must live on a single instance. */
 export type SavedView = {
 	id: string;
 	name: string;

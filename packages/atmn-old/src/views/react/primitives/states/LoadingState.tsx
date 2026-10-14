@@ -5,9 +5,6 @@ export interface LoadingStateProps {
 	message?: string;
 }
 
-/**
- * Generic loading state with spinner
- */
 export function LoadingState({ message = "Loading..." }: LoadingStateProps) {
 	return (
 		<Box

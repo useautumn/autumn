@@ -1,15 +1,3 @@
-/**
- * invoices.finalize: finalize a draft Stripe invoice by its Autumn invoice ID.
- *
- * Contract:
- *   POST /invoices.finalize { invoice_id } -> { invoice: ApiListInvoiceV1 }
- *   draft invoice          → Stripe status open, auto_advance on, our row updated inline
- *   deferred (pending)     → pending plan now expires at the invoice's due date
- *   already open or paid   → 200, unchanged; a missing pending-plan expiry is saved
- *   void invoice           → 400
- *   non-Stripe             → 400
- */
-
 import { expect, test } from "bun:test";
 import type { ApiListInvoiceV1 } from "@autumn/shared";
 import {
@@ -127,7 +115,6 @@ test.concurrent(
 		})) as { list: ApiListInvoiceV1[] };
 		const stripeInvoiceId = list[0].stripe_id;
 
-		// Simulates a crash after Stripe finalized but before the expiry was saved.
 		const stripeInvoice = await ctx.stripeCli.invoices.finalizeInvoice(
 			stripeInvoiceId,
 			{ auto_advance: false },

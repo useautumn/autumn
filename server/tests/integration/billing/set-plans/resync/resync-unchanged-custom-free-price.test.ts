@@ -1,12 +1,3 @@
-/**
- * Re-requesting a custom plan whose base price is a stored $0/month keeps it, as the dashboard sends it.
- *
- * Red (before):  the dashboard sent its $0 base price as `price: null`, so the plan read as changed —
- *                set_plans replaced the row and moved its balance ("1 updated") though nothing changed.
- * Green (after): the stored $0 price round-trips, the plan is kept and no balance changes,
- *                and submitting it keeps the same row and its consumed balance.
- */
-
 import { expect, test } from "bun:test";
 import {
 	BillingInterval,
@@ -26,7 +17,6 @@ import { CusService } from "@/internal/customers/CusService";
 const INCLUDED_MESSAGES = 135;
 const TRACKED_MESSAGES = 35;
 
-/** The dashboard's customize for an untouched custom plan with a $0/month base price. */
 const unchangedFreeCustomize = {
 	price: { amount: 0, interval: BillingInterval.Month },
 	items: [

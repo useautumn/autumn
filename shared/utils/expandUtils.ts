@@ -39,7 +39,6 @@ export const expandIncludes = ({
 	return includes.some((i) => expand.includes(i));
 };
 
-/** Returns true when an expand path matches exactly or requests a deeper child path. */
 export const expandPathIncludes = ({
 	expand,
 	includes,
@@ -54,7 +53,6 @@ export const expandPathIncludes = ({
 	);
 };
 
-/** Returns a new context whose expand paths are scoped to the given subtree. */
 export const scopeExpandForCtx = <T extends { expand: string[] }>({
 	ctx,
 	prefix,

@@ -5,7 +5,6 @@ import { licenseItemRepo } from "@/internal/licenses/repos/licenseItemRepo.js";
 import { planLicenseRepo } from "@/internal/licenses/repos/planLicenseRepo.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 
-/** Test-only catalog license hydrator. Ask an engineer before using it in server code. */
 export const getFullLicenseProduct = async ({
 	ctx,
 	parentPlanId,

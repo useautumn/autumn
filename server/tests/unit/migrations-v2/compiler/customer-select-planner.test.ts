@@ -70,7 +70,6 @@ describe("migration customer select planner wiring", () => {
 		expect(normalized).toContain(
 			'DISTINCT ON (cp.internal_customer_id COLLATE "C")',
 		);
-		// Cursor + checkpoint live INSIDE the walk so the inner LIMIT is exact.
 		expect(normalized).toContain('cp.internal_customer_id COLLATE "C" < $');
 		expect(normalized).toContain("mir.item_id = cp.internal_customer_id");
 		expect(normalized).not.toContain("WITH plan_products AS MATERIALIZED");
@@ -87,7 +86,6 @@ describe("migration customer select planner wiring", () => {
 		});
 		const searchSql = normalize(dialect.sqlToQuery(withSearch).sql);
 		expect(searchSql).toContain("CROSS JOIN LATERAL");
-		// The search predicate must filter BEFORE the walk's LIMIT.
 		const walkEnd = searchSql.indexOf(") walk ORDER BY");
 		expect(
 			searchSql.indexOf(

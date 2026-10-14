@@ -26,9 +26,7 @@ export function useBillingPreview<
 	queryKeyPrefix: string;
 	requestBody: TRequestBody | null;
 	enabled?: boolean;
-	/** Endpoints with a strict schema reject unknown keys; pass [] to omit it. */
 	expand?: readonly string[];
-	/** Overrides the dashboard's default x-api-version for bodies in a newer shape. */
 	apiVersion?: ApiVersion;
 }) {
 	const axiosInstance = useAxiosInstance();

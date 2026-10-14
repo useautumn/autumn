@@ -1,9 +1,3 @@
-/**
- * atmn crud/plans — paid [all intervals: week, month, quarter, semi_annual, year, one_off] no items
- *
- * One line of plans/atmn-v3/07_tests.md. [a, b] is a matrix looped INSIDE this file.
- */
-
 import { expect, test } from "bun:test";
 import { configBody } from "@tests/utils/atmnUtils/baseConfigs.js";
 import { expectRoundTrip } from "@tests/utils/atmnUtils/expectRoundTrip.js";

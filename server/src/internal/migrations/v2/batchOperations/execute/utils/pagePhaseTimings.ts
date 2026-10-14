@@ -1,5 +1,3 @@
-/** Per-page phase durations in ms, keyed by phase name; repeated phases
- * (e.g. multiple add ops) accumulate. */
 export type BatchMigrationPagePhases = Record<string, number>;
 
 export const timePhase = async <T>({

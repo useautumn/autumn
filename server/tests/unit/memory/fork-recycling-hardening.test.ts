@@ -75,7 +75,6 @@ describe("drain completion deadline survives cycle churn", () => {
 		coordinator.handleWorkerListening({ workerId: forked[0] });
 		expect(drained).toEqual(["w1"]);
 
-		// Replacement crashes after it was already serving. w1 is still draining.
 		coordinator.handleWorkerExit({ workerId: forked[0] });
 		await sleep(120);
 
@@ -91,7 +90,6 @@ describe("drain completion deadline survives cycle churn", () => {
 		coordinator.handleWorkerListening({ workerId: forked[0] });
 		coordinator.handleRecycleRequest({ workerId: "w2" });
 
-		// Replacement crash pops w2's cycle while w1 is still draining.
 		coordinator.handleWorkerExit({ workerId: forked[0] });
 		await sleep(120);
 
@@ -101,18 +99,14 @@ describe("drain completion deadline survives cycle churn", () => {
 	test("a dead worker left in the pending queue gets no replacement forked", () => {
 		const { coordinator, forked } = createHarness();
 
-		// A boot fork crashes, so a respawn is booting and drains defer behind it.
 		coordinator.handleWorkerExit({ workerId: "b0" });
 
 		coordinator.handleRecycleRequest({ workerId: "w1" });
 		coordinator.handleWorkerListening({ workerId: forked[0] });
 
-		// The replacement is serving but its drain of w1 is still deferred, and it
-		// queues a recycle of its own. Then it crashes.
 		coordinator.handleRecycleRequest({ workerId: forked[0] });
 		coordinator.handleWorkerExit({ workerId: forked[0] });
 
-		// Nothing should be forked to replace a worker that is already dead.
 		expect(forked).toHaveLength(1);
 	});
 
@@ -122,12 +116,10 @@ describe("drain completion deadline survives cycle churn", () => {
 		coordinator.handleRecycleRequest({ workerId: "w1" });
 		coordinator.handleWorkerListening({ workerId: forked[0] });
 
-		// The replacement queues a recycle of its own, then dies post-drain.
 		coordinator.handleRecycleRequest({ workerId: forked[0] });
 		coordinator.handleWorkerExit({ workerId: forked[0] });
 		coordinator.handleWorkerExit({ workerId: "w1" });
 
-		// Its id must not stay latched, or a reused id could never recycle again.
 		const forkedBefore = forked.length;
 		coordinator.handleRecycleRequest({ workerId: forked[0] });
 		expect(forked.length).toBe(forkedBefore + 1);
@@ -277,13 +269,11 @@ describe("primary-side message guards", () => {
 		emitter.emit("message", worker, { type: "fork-recycle:request" });
 		const replacement = workers[0];
 
-		// Old worker's channel dies before the drain is sent.
 		worker.dead = true;
 		expect(() => emitter.emit("listening", replacement)).not.toThrow();
 	});
 });
 
-/** Deterministic PRNG so a failing trial is reproducible from its seed. */
 const mulberry32 = (seed: number) => {
 	let state = seed;
 	return () => {
@@ -300,13 +290,10 @@ type TrialResult = {
 	aliveAtEnd: number;
 	peakAlive: number;
 	converged: boolean;
-	/** Drains or kills aimed at a worker that had already exited. */
 	corpseMessages: string[];
 	history: string[];
 };
 
-/** Drives the coordinator through a random but legal event stream, then
- *  quiesces and checks the file's stated invariant: alive forks return to N. */
 const runTrial = ({
 	seed,
 	steps,
@@ -327,8 +314,6 @@ const runTrial = ({
 	const booting = new Set<string>();
 	const serving = new Set<string>();
 	const draining = new Set<string>();
-	// Mirrors the worker-side `requested` latch: a fork asks once, and only an
-	// abort re-arms it.
 	const requested = new Set<string>();
 	const listenedAt = new Map<string, number>();
 	const dead = new Set<string>();
@@ -359,10 +344,8 @@ const runTrial = ({
 				corpseMessages.push(`kill -> dead ${workerId}`);
 				return;
 			}
-			// A kill lands as an exit; the model delivers it on the next exit pick.
 			draining.add(workerId);
 		},
-		// Deadlines are driven explicitly by this model, never by wall clock.
 		replacementBootTimeoutMs: 1_000_000,
 		drainCompletionTimeoutMs: 1_000_000,
 		log: () => {},
@@ -408,9 +391,6 @@ const runTrial = ({
 			const id = pick(draining);
 			if (id) exit(id);
 		} else if (roll < 0.8) {
-			// Only a serving fork that has not asked and has outlived the age gate
-			// can ask — minAgeMs (30min) far exceeds a cycle's ~12min worst case,
-			// so a fresh replacement never requests inside its own cycle.
 			const candidates = new Set(
 				[...serving].filter(
 					(id) =>
@@ -426,14 +406,12 @@ const runTrial = ({
 				coordinator.handleRecycleRequest({ workerId: id });
 			}
 		} else if (allowCrashes) {
-			// Crash: any live process can die at any time.
 			const id = pick(serving) ?? pick(booting);
 			if (id) exit(id);
 		}
 		peakAlive = Math.max(peakAlive, booting.size + serving.size);
 	}
 
-	// Quiesce: everything that can still make progress does.
 	let converged = false;
 	for (let round = 0; round < 500; round++) {
 		if (booting.size === 0 && draining.size === 0) {
@@ -492,10 +470,6 @@ describe("coordinator fork-count invariant under random event streams", () => {
 		expect(offenders).toHaveLength(0);
 	});
 
-	// With crashes in the mix the coordinator can transiently overshoot further:
-	// a replacement dying post-drain forks both a respawn and the next cycle's
-	// replacement while the old fork is still draining. It always converges back
-	// to N, so only the crash-free ceiling is a fixed guarantee.
 	test("a crash-free recycle runs exactly one surplus fork", () => {
 		const forkCount = 3;
 		for (let seed = 1; seed <= 200; seed++) {

@@ -1,8 +1,3 @@
-/**
- * Volume seats can cost more after a seat is removed (fewer seats land in a dearer tier).
- * The prorated decrease must charge the customer's default payment method, not 400.
- */
-
 import { describe, expect, test } from "bun:test";
 import {
 	type FullCusEntWithFullCusProduct,
@@ -23,7 +18,6 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { handleProratedDowngrade } from "@/internal/balances/utils/paidAllocatedFeature/createPaidAllocatedInvoice/handleProratedDowngrade.js";
 
 const INCLUDED = 3;
-// 4–8 seats @ $10, 9+ @ $6 + $2: 9 seats bill $38, 8 seats bill $50.
 const TIERS = [
 	{ to: 5, amount: 10 },
 	{ to: "inf", amount: 6, flat_amount: 2 },
@@ -149,7 +143,6 @@ const decreaseSetup = ({
 	} as Stripe.Subscription;
 	const subItem = {
 		id: "si_1",
-		// The period starts now, so the proration is the full $12.
 		current_period_start: nowSeconds,
 		current_period_end: nowSeconds + 30 * DAY_SECONDS,
 	} as Stripe.SubscriptionItem;
@@ -200,7 +193,6 @@ describe("volume seat decrease that raises the bill", () => {
 	});
 
 	test("with packs of 5, the line names the packed seats over included, not the re-rounded total", async () => {
-		// 3 included, 11 → 6 seats: 3 over rounds up to one 5-seat pack, not 10.
 		const setup = decreaseSetup({
 			tiers: [
 				{ to: 20, amount: 50 },

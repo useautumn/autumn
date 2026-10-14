@@ -23,7 +23,6 @@ export const handleDeleteOrgLogo = createRoute({
 		}
 
 		// S3 DeleteObject is idempotent — a missing object is not an error, so
-		// this is safe to call even if the logo was never uploaded.
 		await deleteS3Object({
 			bucket,
 			region,

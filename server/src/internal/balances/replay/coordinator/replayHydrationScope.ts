@@ -21,10 +21,6 @@ export type JobSettlement = {
 	reject: (cause?: unknown) => void;
 };
 
-/**
- * `physicalPending` outlives logical settlement: an aborted job keeps its slot
- * and its identity registration until the source call it started really ends.
- */
 export type HydrationJob = {
 	identityKey: string;
 	selectionKey: string;

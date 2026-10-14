@@ -27,8 +27,6 @@ import type { ResumedAgentTurn } from "./types.js";
 
 const FAILED_ACTION_STATUSES = new Set(["error", "failed", "rejected"]);
 
-/** The MCP result text is JSON; an API failure lives inside it as a
- * `{message, code}` record even when the outer status says completed. */
 const parsedResultText = (output: unknown): unknown => {
 	const text = (output as { content?: Array<{ text?: string }> })?.content?.[0]
 		?.text;
@@ -44,8 +42,6 @@ const parsedResultText = (output: unknown): unknown => {
 	}
 };
 
-/** Eve explains a write it did not run — denied, ignored, invalid option —
- * inside the result payload; surface that or the failure is undiagnosable. */
 const rejectionDetail = (output: unknown) => {
 	const record = output as
 		| { approval?: { status?: string }; code?: string; message?: string }
@@ -68,8 +64,6 @@ const isFailedActionResult = (event: {
 	return isErrorResult(output) || isErrorResult(parsedResultText(output));
 };
 
-/** Replays a child session's stream from the start — finite for task-mode
- * children (session.completed); a live child ends at the idle timeout. */
 const applyChildStreamResults = async ({
 	auth,
 	childSessionId,
@@ -144,8 +138,6 @@ export const consumeResumedAgentTurn = async ({
 		toolName,
 	}));
 	const approvedCallIds = new Map<string, number>();
-	// Each requested call reserves the next free step of its tool, so N calls
-	// of one tool map to N distinct writes rather than all onto the first.
 	const reserveStepFor = (name?: string) => {
 		if (!name) return -1;
 		const normalized = normalizeToolName(name);
@@ -155,8 +147,6 @@ export const consumeResumedAgentTurn = async ({
 		if (index >= 0) expectedWrites[index].reserved = true;
 		return index;
 	};
-	// A result with an unknown callId (Eve executed before the stream opened,
-	// or a retry) lands on the first step of its tool that has not applied yet.
 	const unresolvedStepFor = (name?: string) => {
 		if (!name) return -1;
 		const normalized = normalizeToolName(name);
@@ -300,8 +290,6 @@ export const consumeResumedAgentTurn = async ({
 		});
 	}
 	if (sawEvent) await saveEveSessionState({ orgId, session });
-	// Writes delegated to a subagent report their results on the child's
-	// stream only; replay each child to prove the approved writes ran there.
 	for (const childSessionId of childSessionIds) {
 		if (expectedWrites.every((step) => step.status === "applied")) break;
 		try {
@@ -328,8 +316,6 @@ export const consumeResumedAgentTurn = async ({
 	}));
 	return {
 		approvedWriteFailed: writes.some((step) => step.status === "failed"),
-		// Without a result for the approved tool there is no proof it ran, so an
-		// unrelated tool or a bare reply must not read as success.
 		approvedWriteUnverified:
 			expectedWrites.length > 0 &&
 			!expectedWrites.some((step) => step.status === "applied"),

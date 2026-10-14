@@ -30,19 +30,16 @@ export default async function AuthCommand() {
 	const spinner = initSpinner("Waiting for authorization...");
 
 	try {
-		// Start OAuth flow - opens browser and waits for callback
 		const { tokens } = await startOAuthFlow(CLI_CLIENT_ID);
 
 		spinner.text = "Creating API keys...";
 
-		// Use the access token to create API keys
 		const { sandboxKey, prodKey } = await getApiKeysWithToken(
 			tokens.access_token,
 		);
 
 		spinner.stop();
 
-		// Store keys to .env
 		await storeToEnv(prodKey, sandboxKey);
 
 		console.log(

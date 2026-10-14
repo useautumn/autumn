@@ -41,7 +41,6 @@ export const ApiCusExpandSchema = z.object({
 	billing_details: ApiBillingDetailsExpandSchema,
 });
 
-// V4 base customer - adds V0 subscriptions and balances
 export const BaseApiCustomerV4Schema = BaseApiCustomerSchema.extend({
 	subscriptions: z.array(ApiSubscriptionSchema),
 	scheduled_subscriptions: z.array(ApiSubscriptionSchema),

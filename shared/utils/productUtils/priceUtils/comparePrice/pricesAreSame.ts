@@ -12,7 +12,6 @@ import {
 	type UsageTier,
 } from "@autumn/shared";
 
-/** Unset behavior follows the allocated v1 shape: derived from should_prorate. */
 export const normalizedAllocatedBillingBehavior = (
 	usageConfig: UsagePriceConfig,
 ) =>
@@ -21,7 +20,6 @@ export const normalizedAllocatedBillingBehavior = (
 		? AllocatedBillingBehavior.Prorated
 		: AllocatedBillingBehavior.Arrear);
 
-/** Last `to` is ignored; unset `flat_amount` is 0. */
 export const usageTiersToComparisonShape = (tiers: UsageTier[]) =>
 	tiers.map((tier, index) => ({
 		amount: tier.amount,
@@ -47,8 +45,6 @@ const hasCatalogCurrencies = (
 	currencies: Record<string, PriceCurrencyConfig> | null | undefined,
 ) => Object.keys(currencies ?? {}).length > 0;
 
-// Add/remove of a catalog currency is compatible (existing customers keep
-// snapshots); only amount mismatches for a currency present on both sides differ.
 const currenciesAreCompatible = (
 	currencies1: Record<string, PriceCurrencyConfig> | null | undefined,
 	currencies2: Record<string, PriceCurrencyConfig> | null | undefined,
@@ -88,8 +84,6 @@ export const priceCurrencyDefinitionsAreSame = (price1: Price, price2: Price) =>
 		price2.config.currencies,
 	);
 
-// base_currency is FX bookkeeping — it appears/disappears with the currencies
-// map. Only treat a mismatch as a change when both sides already carry FX.
 const baseCurrenciesAreCompatible = ({
 	base1,
 	base2,
@@ -181,8 +175,6 @@ export const pricesAreSame = (
 		),
 	};
 
-	// A single tier has nothing to graduate; GET collapses it to a flat amount,
-	// so its stored tier_behavior is unobservable (matches itemsAreSame).
 	const bothFlat =
 		usageConfig1.usage_tiers.length <= 1 &&
 		usageConfig2.usage_tiers.length <= 1;

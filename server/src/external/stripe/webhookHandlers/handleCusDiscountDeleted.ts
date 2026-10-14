@@ -16,10 +16,8 @@ export async function handleCusDiscountDeleted({
 		return;
 	}
 
-	// TODO: Fix this.
 	const discount = stripeEvent.data.object as any;
 
-	// Check if any redemptions available, and apply to customer if so
 	const redemptions = await redemptionRepo.getUnapplied({
 		db,
 		internalCustomerId: fullCustomer.internal_id,
@@ -42,10 +40,8 @@ export async function handleCusDiscountDeleted({
 
 		if (!paidProductRedemption) return;
 
-		// Mark reward redemption as applied / redeemer applied to true
 		const sub = await stripeCli.subscriptions.retrieve(discount.subscription);
 
-		// can't really test because it modifies subscription affected by test clock...
 		try {
 			await stripeCli.subscriptions.update(discount.subscription, {
 				discounts: [
@@ -64,7 +60,6 @@ export async function handleCusDiscountDeleted({
 			throw error;
 		}
 
-		// Mark reward redemption as applied / redeemer applied to true
 		const isReferrer =
 			paidProductRedemption.referral_code.internal_customer_id ===
 			fullCustomer.internal_id;

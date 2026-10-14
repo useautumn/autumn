@@ -4,22 +4,14 @@ import type { Expectation } from "../types/expectation.ts";
 import type { PlanSpec } from "../types/planSpec.ts";
 import { subsetMatch } from "./subsetMatch.ts";
 
-/** A feature the catalog must contain — id-agnostic, matched by type; when
- * `granted`, some plan must also grant it via an item. */
 export type FeatureSpec = {
 	type: "boolean" | "metered" | "credit_system";
 	granted?: boolean;
 };
 
-/**
- * The expected catalog, shaped like autumn.config.ts: features + plans, keyed
- * by human labels (ids are the agent's choice). One declaration expands to
- * one named verdict per part, all reading the same inspected config.
- */
 export type CatalogSpec = {
 	features?: Record<string, FeatureSpec>;
 	plans: Record<string, PlanSpec>;
-	/** when true (default), the config must contain exactly these plans */
 	exactPlans?: boolean;
 };
 
@@ -29,8 +21,6 @@ const planMatches = (spec: PlanSpec, plan: ApiPlanParams): boolean => {
 	return subsetMatch(subset, plan);
 };
 
-/** Per-field ✓/✗ against the plan that matches the most spec fields, so a
- * failed verdict says which field missed instead of "no plan matched". */
 const closestPlanDiff = (
 	spec: PlanSpec,
 	plans: ApiPlanParams[],

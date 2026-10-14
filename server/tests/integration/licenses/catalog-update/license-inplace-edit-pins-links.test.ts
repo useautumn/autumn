@@ -1,17 +1,3 @@
-/**
- * TDD test: in-place item edit on a license plan whose parent link is
- * non-customized, non-propagated, and has no customer references.
- *
- * Red-failure mode (pre-fix): the item rewrite deleted the old entitlement
- * (nothing referenced it), then the license rebase pinned the old shape by
- * inserting license_entitlements pointing at the deleted row —
- * "license_entitlements_entitlement_fkey" FK violation, the update 500s.
- *
- * Green-success criteria (post-fix): the old rows are pinned before the
- * rewrite, the update succeeds, and the non-propagated link keeps the old
- * item shape while the base plan carries the new one.
- */
-
 import { expect, test } from "bun:test";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
@@ -50,7 +36,6 @@ test.concurrent(
 			licenses: [{ license_plan_id: seatId, included: 0 }],
 		});
 
-		// Pre-fix: 500 "license_entitlements_entitlement_fkey" FK violation.
 		await autumnV2_2.post("/plans.update", {
 			plan_id: seatId,
 			items: [seatItem(true)],
@@ -70,7 +55,6 @@ test.concurrent(
 			prepaid_only: true,
 		});
 
-		// The non-propagated link keeps the OLD item shape (pinned, not adopted).
 		const parentFull = await ProductService.getFull({
 			db: ctx.db,
 			idOrInternalId: parentId,

@@ -1,13 +1,3 @@
-/**
- * balances.update must not report success when it resolves no entitlements.
- *
- * Pre-fix the route ran the mutation against an empty entitlement list and
- * returned `{ success: true }`, so an unassigned feature, a typo'd balance_id
- * and a drained one-off grant were all indistinguishable from a real update —
- * the failure mode that made the original customer report undiagnosable
- * without diffing Postgres.
- */
-
 import { beforeAll, describe, expect, test } from "bun:test";
 import { type ApiCustomer, ApiVersion, ResetInterval } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
@@ -42,10 +32,7 @@ describe(`${chalk.yellowBright("balances.update rejects a mutation that matches 
 	});
 
 	beforeAll(async () => {
-		// Re-runnable: balance_id is unique per customer.
-		await autumn.customers.delete(customerId).catch(() => {
-			/* first run — nothing to delete */
-		});
+		await autumn.customers.delete(customerId).catch(() => {});
 		await autumn.customers.create({ id: customerId, name: testCase });
 	});
 
@@ -87,7 +74,6 @@ describe(`${chalk.yellowBright("balances.update rejects a mutation that matches 
 		expect(error?.code).toBe("customer_entitlement_not_found");
 		expect(error?.message).toContain("balance_id 'startr'");
 
-		// The typo must not have moved the real balance.
 		const untouched = await autumn.customers.get<ApiCustomer>(customerId, {
 			skip_cache: "true",
 		});

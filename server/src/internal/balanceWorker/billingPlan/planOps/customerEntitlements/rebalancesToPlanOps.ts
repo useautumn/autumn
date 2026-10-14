@@ -4,7 +4,6 @@ import {
 } from "@autumn/balance-engine";
 import type { AutumnBillingPlan } from "@autumn/shared";
 
-/** A one-off purchase lands on the row it bought, after the worker refunds the overage it covers. */
 const oneOffPurchasesToPlanOps = ({
 	autumnBillingPlan,
 }: {
@@ -22,7 +21,6 @@ const oneOffPurchasesToPlanOps = ({
 
 type AutoTopupRebalance = NonNullable<AutumnBillingPlan["autoTopupRebalance"]>;
 
-/** The purchase the worker sizes; null on a top-up without its fields (saved before, or a producer not moved yet), which keeps to Postgres. */
 export const autoTopupRebalanceToPurchase = ({
 	autoTopupRebalance,
 }: {
@@ -49,7 +47,6 @@ export const autoTopupRebalanceToPurchase = ({
 	};
 };
 
-/** A top-up the worker sizes live: its overage refunded, the leftover credited. */
 const autoTopupToPlanOps = ({
 	autumnBillingPlan,
 }: {
@@ -69,7 +66,6 @@ const autoTopupToPlanOps = ({
 	];
 };
 
-/** Purchases, in the order the Postgres lane applies them: one-offs, then the top-up. */
 export const rebalancesToPlanOps = ({
 	autumnBillingPlan,
 }: {

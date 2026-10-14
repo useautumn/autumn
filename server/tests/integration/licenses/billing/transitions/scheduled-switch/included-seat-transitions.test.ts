@@ -1,5 +1,3 @@
-/** Scheduled successors rebase paid seats when they activate.
- * Red kept zero paid seats; green bills five assignments minus three included. */
 import { test } from "bun:test";
 import type { ApiCustomerV5, AttachParamsV1Input } from "@autumn/shared";
 import { expectPreviewNextCycleCorrect } from "@tests/integration/billing/utils/expectPreviewNextCycleCorrect";

@@ -56,7 +56,6 @@ test(
 			})
 			.catch(() => undefined);
 
-		// Mimic the dashboard SaveChangesBar -> updateProduct util body
 		const res = await autumnV1_2.products.update<ApiPlanV1>(planId, {
 			id: planId,
 			name: `Plan ${planId}`,

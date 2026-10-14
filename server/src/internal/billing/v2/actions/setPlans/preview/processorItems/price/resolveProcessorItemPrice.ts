@@ -8,7 +8,6 @@ import {
 } from "./inlinePriceDataToProcessorItemPrice";
 import { stripePriceToProcessorItemPrice } from "./stripePriceToProcessorItemPrice";
 
-/** Prefer what Stripe will actually bill; fall back to Autumn's config for prices not yet in Stripe. */
 export const resolveProcessorItemPrice = ({
 	stripePriceId,
 	inlinePriceData,

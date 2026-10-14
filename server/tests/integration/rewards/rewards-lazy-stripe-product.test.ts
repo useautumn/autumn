@@ -1,5 +1,3 @@
-/** Coupons on plans that were never pushed to Stripe create them on the spot. */
-
 import { expect, test } from "bun:test";
 import {
 	CouponDurationType,

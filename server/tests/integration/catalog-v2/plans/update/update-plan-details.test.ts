@@ -1,9 +1,3 @@
-/**
- * catalogV2.update — plan detail facets (name/description/group/metadata/
- * config/billing_controls/archive/rename/auto_enable). free_trial lives in
- * update-plan-free-trial.test.ts (section 14).
- */
-
 import { expect, test } from "bun:test";
 import { BillingInterval, ResetInterval } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
@@ -50,7 +44,6 @@ test.concurrent(
 					},
 				],
 			};
-			// preview.changes is always null today — previous_attributes not wired yet.
 			const preview = await autumnV2_3.catalogV2.previewUpdate(params);
 			expectCatalogPreviewCorrect({
 				preview,
@@ -295,7 +288,6 @@ test.concurrent(
 				],
 			});
 
-			// Re-sending the cleared lane is a no-op.
 			const noneResponse = await autumnV2_3.catalogV2.update({
 				plans: [{ plan_id: planId, billing_controls: { spend_limits: [] } }],
 			});

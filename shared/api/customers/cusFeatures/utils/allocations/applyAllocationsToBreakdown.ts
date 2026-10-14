@@ -24,10 +24,8 @@ type AllocationCounterView = {
 	usage: number;
 };
 
-/** A customer balance shows the whole shared pool, or only what customer-level usage may spend. */
 export type AllocationView = "pool" | "spendable";
 
-/** What rendering allocations reads of a subject; absent fields mean nothing is allocated. */
 export type AllocationSubjectView = {
 	customer?: { balance_allocations?: BalanceAllocations | null } | null;
 	entity?: { internal_id: string } | null;
@@ -71,7 +69,6 @@ const counterUsage = ({
 	return counter ? Number(counter.usage) : 0;
 };
 
-/** Shares `total` over rows in draw order, each up to its capacity; the last row takes any excess. */
 const fillInOrder = ({
 	total,
 	capacities,
@@ -88,7 +85,6 @@ const fillInOrder = ({
 	});
 };
 
-/** Marks every row's source and scopes the shared rows to what the subject may spend; a customer's "pool" view keeps them whole. */
 export const applyAllocationsToBreakdown = ({
 	subject,
 	feature,
@@ -106,7 +102,6 @@ export const applyAllocationsToBreakdown = ({
 }): {
 	breakdownItems: ApiBalanceBreakdownV1[];
 	totals: { allocated: number; unallocated: number } | null;
-	/** What check may draw beyond the displayed remaining; 0 once the rows show only spendable credits. */
 	checkRemainingOffset: number | null;
 } => {
 	const sourced = breakdownItems.map((item, index) => ({
@@ -166,7 +161,6 @@ export const applyAllocationsToBreakdown = ({
 		internalEntityId: null,
 		bounds,
 	});
-	// Matches the engines: a cut stops binding once the pot covers every unused promise.
 	const scale = requestedTotal.minus(claimed).lte(sharedRemaining)
 		? 1
 		: effectiveAllocationScale({
@@ -187,7 +181,6 @@ export const applyAllocationsToBreakdown = ({
 			Math.max(0, withSource[index].remaining),
 		),
 	});
-	// Customer-level draws and unallocated entities may only spend unallocated credits.
 	const unallocatedOnly = () => {
 		const rows = [...withSource];
 		sharedIndexes.forEach((index, position) => {

@@ -3,7 +3,6 @@ import { invalidateCachedFullSubject } from "@/internal/customers/cache/fullSubj
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
 import type { SwitchCollectionMethodContext } from "../setup/setupSwitchCollectionMethodContext";
 
-/** Customer products billed on the same Stripe subscription switch together. */
 const customerProductsOnSubscription = ({
 	switchContext,
 }: {

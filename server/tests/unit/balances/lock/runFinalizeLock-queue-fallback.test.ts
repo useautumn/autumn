@@ -1,27 +1,3 @@
-/**
- * TDD test for the finalizeLock queue fallback.
- *
- * Contract under test:
- *   New types/fields:
- *     - JobName.FinalizeLock = "finalize-lock" queued to TRACK_SQS_QUEUE_URL
- *     - payload: { orgId, env, customerId?, requestId, params }
- *     - ctx.extraLogs.finalizeLockQueuedForReplay: true when queued
- *   New behaviors (runFinalizeLock):
- *     - transient Redis/DB error or not_ready outage -> claim marker released
- *       (best-effort), job queued (group org:env:lock:<lock_id>, dedup
- *       ctx.id), returns { success: true } + queued extras flag
- *     - queue unavailable -> original error rethrown (no fake success)
- *     - non-transient errors propagate untouched, nothing queued
- *   New behaviors (runQueuedFinalizeLock):
- *     - "Lock not found" -> resolved as already-finalized success
- *     - transient errors -> rethrown (no re-queue; SQS redelivery owns retry)
- *
- * Pre-impl red: queueFinalizeLock / runQueuedFinalizeLock /
- * releaseLockClaimMarker do not exist and runFinalizeLock still returns a
- * fake { success: true } fallback.
- * Post-impl green: all assertions pass once the queue fallback ships.
- */
-
 import {
 	afterAll,
 	afterEach,
@@ -162,7 +138,6 @@ describe("runFinalizeLock queue fallback", () => {
 		if (mockState.originalSend) sqsClient.send = mockState.originalSend;
 	});
 
-	// ── Contract: transient Redis error queues the replay ───────────────────
 	test("queues the finalize replay on a transient Redis error", async () => {
 		const ctx = makeCtx();
 		mockState.v2Behaviors = [
@@ -196,7 +171,6 @@ describe("runFinalizeLock queue fallback", () => {
 		expect(mockState.releaseClaimCalls.length).toBeGreaterThanOrEqual(1);
 	});
 
-	// ── Contract: redis not ready before the first attempt -> straight to queue
 	test("queues immediately when redis is not ready, without attempting", async () => {
 		const ctx = makeCtx();
 		mockState.redisV2Ready = false;
@@ -209,7 +183,6 @@ describe("runFinalizeLock queue fallback", () => {
 		expect(mockState.queueCommands).toHaveLength(1);
 	});
 
-	// ── Contract: raw transient Redis errors also queue ─────────────────────
 	test("queues on a raw closed-connection Redis error", async () => {
 		const ctx = makeCtx();
 		mockState.v2Behaviors = [new Error("Connection is closed.")];
@@ -221,7 +194,6 @@ describe("runFinalizeLock queue fallback", () => {
 		expect(mockState.queueCommands).toHaveLength(1);
 	});
 
-	// ── Contract: transient DB error also queues ────────────────────────────
 	test("queues on a transient DB error", async () => {
 		const ctx = makeCtx();
 		mockState.v2Behaviors = [new Error("Connection terminated unexpectedly")];
@@ -233,7 +205,6 @@ describe("runFinalizeLock queue fallback", () => {
 		expect(mockState.queueCommands).toHaveLength(1);
 	});
 
-	// ── Contract: queue failure rethrows the original error ─────────────────
 	test("rethrows the original error when the queue fallback fails", async () => {
 		const ctx = makeCtx();
 		const outage = new RedisUnavailableError({
@@ -247,7 +218,6 @@ describe("runFinalizeLock queue fallback", () => {
 		expect(mockState.queueCommands).toHaveLength(0);
 	});
 
-	// ── Contract: non-transient errors propagate, nothing queued ────────────
 	test("propagates non-transient errors without retry or queueing", async () => {
 		const ctx = makeCtx();
 		mockState.v2Behaviors = [
@@ -279,7 +249,6 @@ describe("runQueuedFinalizeLock", () => {
 		mockState.redisV2Ready = true;
 	});
 
-	// ── Contract: replay treats Lock not found as already resolved ──────────
 	test("resolves without error when the lock receipt no longer exists", async () => {
 		const ctx = makeCtx();
 		mockState.fetchBehaviors = [
@@ -292,7 +261,6 @@ describe("runQueuedFinalizeLock", () => {
 		await expect(runQueuedFinalizeLock({ ctx, params })).resolves.toBeDefined();
 	});
 
-	// ── Contract: replay rethrows transient errors instead of re-queueing ───
 	test("rethrows transient errors so SQS redelivery owns the retry", async () => {
 		const ctx = makeCtx();
 		mockState.v2Behaviors = [new Error("Command timed out")];

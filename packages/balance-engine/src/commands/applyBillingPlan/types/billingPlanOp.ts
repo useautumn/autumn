@@ -42,7 +42,6 @@ const deleteOf = <Table extends string>({ table }: { table: Table }) =>
 
 const setsAColumn = (set: object): boolean => Object.keys(set).length > 0;
 
-/** Columns an update replaces: never the row's keys, and at least one. */
 const updateSetOf = <RowSchema extends z.ZodObject, Key extends string>({
 	rowSchema,
 	keys,
@@ -76,13 +75,11 @@ const customerEntitlementUpdateSetSchema = updateSetOf({
 	keys: ["id"],
 });
 
-/** A share's values, replaced whole; the row's id and pool never change. */
 const pooledContributionUpdateSetSchema = updateSetOf({
 	rowSchema: workerPooledContributionSchema,
 	keys: ["id", "pooled_balance_id"],
 });
 
-/** A pool's lifecycle columns; its grant moves by increment, its balance lives on POOL_CE. */
 const pooledBalanceLifecycleColumns = new Set([
 	"reset_cycle_anchor",
 	"stripe_subscription_id",
@@ -110,14 +107,12 @@ const insertOpSchema = z.discriminatedUnion("table", [
 	}),
 	insertOf({ table: "rollovers", rowSchema: workerRolloverSchema }),
 	insertOf({ table: "pooledBalances", rowSchema: workerPooledBalanceSchema }),
-	/** Never a state row: the engine zeroes its source and moves the pool's grant, the committer writes it. */
 	insertOf({
 		table: "pooledContributions",
 		rowSchema: workerPooledContributionSchema,
 	}),
 ]);
 
-/** A customer update names the row by `internal_id`, every other row by `id`. */
 const updateOpSchema = z.discriminatedUnion("table", [
 	z
 		.object({
@@ -125,7 +120,6 @@ const updateOpSchema = z.discriminatedUnion("table", [
 			table: z.literal("customer"),
 			id: nonEmptyStringSchema,
 			set: customerUpdateSetSchema,
-			/** Only where the row still holds null in every column it sets; otherwise the op changes nothing. */
 			whereUnset: z.literal(true).optional(),
 		})
 		.loose(),
@@ -163,14 +157,12 @@ const updateOpSchema = z.discriminatedUnion("table", [
 		.loose(),
 ]);
 
-/** A deleted product takes its prices and grants with it, and a grant its rollovers, as Postgres cascades. */
 const deleteOpSchema = z.discriminatedUnion("table", [
 	deleteOf({ table: "customerProducts" }),
 	deleteOf({ table: "customerPrices" }),
 	deleteOf({ table: "customerEntitlements" }),
 	deleteOf({ table: "rollovers" }),
 	deleteOf({ table: "pooledBalances" }),
-	/** Names its pool and source: the plan releases the source, the worker asks whether the pool keeps any share. The row itself is not state. */
 	z
 		.object({
 			op: z.literal("delete"),
@@ -182,7 +174,6 @@ const deleteOpSchema = z.discriminatedUnion("table", [
 		.loose(),
 ]);
 
-/** Counters moved by a delta, so a plan's rebalance composes with the tracks decided before it. */
 const incrementOpSchema = z.discriminatedUnion("table", [
 	z
 		.object({
@@ -203,7 +194,6 @@ const incrementOpSchema = z.discriminatedUnion("table", [
 		.loose(),
 ]);
 
-/** Per-entity entries re-keyed (`from → to`), resolved against the live map: a freed seat's balance returning to a new entity. */
 const moveEntriesOpSchema = z
 	.object({
 		op: z.literal("moveEntries"),
@@ -213,32 +203,26 @@ const moveEntriesOpSchema = z
 	})
 	.loose();
 
-/** A purchase sized against the rows as the plan's other ops leave them: rows in overage paid down to 0, the rest credited. */
 const rebalanceOpSchema = z
 	.object({
 		op: z.literal("rebalance"),
 		table: z.literal("customerEntitlements"),
-		/** The purchased row; its owner is the subject whose rows are paid down. */
 		id: nonEmptyStringSchema,
 		featureId: nonEmptyStringSchema,
 		quantity: finiteNumberSchema,
-		/** The row credited with what is left; null credits the first row paid down. */
 		creditedId: nonEmptyStringSchema.nullable(),
 	})
 	.loose();
 
-/** New rollover rows for a held grant. Not a plain insert: the grant's rollover cap may trim the rows it already holds, which needs its catalog, so it resolves after the core plan. */
 const addRolloversOpSchema = z
 	.object({
 		op: z.literal("addRollovers"),
 		table: z.literal("rollovers"),
-		/** The grant that receives them; its owner is the subject whose rows are capped. */
 		id: nonEmptyStringSchema,
 		rows: z.array(workerRolloverSchema).min(1),
 	})
 	.loose();
 
-/** One change a billing plan makes to the subject's rows. */
 export const billingPlanOpSchema = z.discriminatedUnion("op", [
 	insertOpSchema,
 	updateOpSchema,
@@ -257,7 +241,6 @@ export type BillingPlanIncrementOp = z.infer<typeof incrementOpSchema>;
 export type BillingPlanMoveEntriesOp = z.infer<typeof moveEntriesOpSchema>;
 export type BillingPlanRebalanceOp = z.infer<typeof rebalanceOpSchema>;
 export type BillingPlanAddRolloversOp = z.infer<typeof addRolloversOpSchema>;
-/** Every op but a rebalance or new rollovers: each converts on its own, against the rows as found. */
 export type BillingPlanRowOp = Exclude<
 	BillingPlanOp,
 	BillingPlanRebalanceOp | BillingPlanAddRolloversOp

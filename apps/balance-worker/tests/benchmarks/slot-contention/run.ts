@@ -5,10 +5,6 @@ import type { SubjectState } from "@autumn/balance-engine";
 import { testIdentity } from "../../fixtures/mutations.js";
 import { scenarios } from "../track-throughput/scenarios.js";
 
-/**
- * Spike: can several processes track against shared SQLite slot files, and how fast?
- * Runs N worker processes for a fixed time, then checks that not one deduction was lost.
- */
 const args = Object.fromEntries(
 	process.argv.slice(2).map((arg) => {
 		const [key, value] = arg.replace(/^--/, "").split("=");
@@ -86,7 +82,6 @@ const reports = await Promise.all(
 	}),
 );
 
-// Every track deducts exactly 1 from one balance row, so what is missing from the rows must equal the tracks made.
 let deducted = 0;
 for (let slot = 0; slot < slots; slot++) {
 	const db = new Database(join(dir, `slot-${slot}.sqlite`));

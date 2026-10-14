@@ -5,7 +5,6 @@ import {
 } from "@autumn/shared";
 import type { ClaimedBasePrice } from "../types/claimResult";
 
-/** Claim the sole base pair only when definitions match. */
 export const claimBasePrice = ({
 	desiredBasePrice,
 	currentBasePrice,

@@ -1,17 +1,3 @@
-/**
- * Candidate-row pagination: pages are sized in customers, but candidates are
- * read + inserted in cp.id-keyset batches (BATCH_MIGRATION_CANDIDATE_ROW_BATCH).
- *
- * Contract under test (driven with candidateRowBatchSize: 1 so every batch
- * boundary — and its per-batch transaction — is exercised):
- *   - The advisory pre-count matches the rows the batches then visit.
- *   - Every candidate row is visited exactly once across batches — each
- *     customer ends with exactly one added cusEnt row, none skipped, none
- *     duplicated by the pagination itself.
- *   - Replaying the same add over the paginated path inserts nothing (the
- *     per-batch dedup still holds).
- */
-
 import { expect, test } from "bun:test";
 import { TestFeature } from "@tests/setup/v2Features";
 import { itemsV2 } from "@tests/utils/fixtures/itemsV2";
@@ -98,8 +84,6 @@ test.concurrent(
 			),
 		);
 
-		// One row per batch: three customers → at least three select→insert
-		// loops, every batch boundary crossed.
 		const result = await addCustomerEntitlementsForPage({
 			db: ctx.db,
 			scope: patch.scope,
@@ -126,7 +110,6 @@ test.concurrent(
 			});
 		}
 
-		// Replay over the paginated path: dedup holds per batch — no inserts.
 		const replay = await addCustomerEntitlementsForPage({
 			db: ctx.db,
 			scope: patch.scope,

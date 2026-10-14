@@ -1,5 +1,3 @@
-/** Pooled cancellation removes a source only when cancellation becomes effective. */
-
 import { test } from "bun:test";
 import {
 	type ApiCustomerV5,

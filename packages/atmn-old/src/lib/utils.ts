@@ -38,14 +38,11 @@ export function idToVar({
 }): string {
 	const processed = id
 		.replace(/[-_](.)/g, (_, letter) => letter.toUpperCase())
-		.replace(/[^a-zA-Z0-9_$]/g, ""); // Remove invalid JavaScript identifier characters
-
-	// If the processed string starts with a number, add 'product' prefix
+		.replace(/[^a-zA-Z0-9_$]/g, "");
 	if (/^[0-9]/.test(processed)) {
 		return `${prefix}${processed}`;
 	}
 
-	// If it starts with other invalid characters, add 'product' prefix
 	if (/^[^a-zA-Z_$]/.test(processed)) {
 		return `${prefix}${processed}`;
 	}
@@ -62,7 +59,6 @@ async function upsertEnvVar(
 	const lines = content.split("\n");
 	let foundIndex = -1;
 
-	// Find the first occurrence of the variable
 	for (let i = 0; i < lines.length; i++) {
 		if (lines[i]?.startsWith(`${varName}=`)) {
 			foundIndex = i;
@@ -79,11 +75,9 @@ async function upsertEnvVar(
 			lines[foundIndex] = `${varName}=${newValue}`;
 		}
 	} else {
-		// Variable wasn't found, add it to the end
 		lines.push(`${varName}=${newValue}`);
 	}
 
-	// Write the updated content back to the file
 	fs.writeFileSync(filePath, lines.join("\n"));
 }
 
@@ -92,13 +86,11 @@ export async function storeToEnv(prodKey: string, sandboxKey: string) {
 	const envLocalPath = `${process.cwd()}/.env.local`;
 	const envVars = `AUTUMN_PROD_SECRET_KEY=${prodKey}\nAUTUMN_SECRET_KEY=${sandboxKey}\n`;
 
-	// Check if .env exists first
 	if (fs.existsSync(envPath)) {
 		await upsertEnvVar(envPath, "AUTUMN_PROD_SECRET_KEY", prodKey);
 		await upsertEnvVar(envPath, "AUTUMN_SECRET_KEY", sandboxKey);
 		console.log(chalk.green(".env file found. Updated keys."));
 	} else if (fs.existsSync(envLocalPath)) {
-		// If .env doesn't exist but .env.local does, create .env and write keys
 		fs.writeFileSync(envPath, envVars);
 		console.log(
 			chalk.green(
@@ -106,7 +98,6 @@ export async function storeToEnv(prodKey: string, sandboxKey: string) {
 			),
 		);
 	} else {
-		// Neither .env nor .env.local exists, create .env
 		fs.writeFileSync(envPath, envVars);
 		console.log(
 			chalk.green(

@@ -8,11 +8,6 @@ import { timeout } from "@tests/utils/genUtils";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 
-// ═══════════════════════════════════════════════════════════════════
-// UPDATE-USAGE-PAID1: Set usage on paid allocated (increase past included → invoice)
-// allocatedUsers: $10/seat, OnIncrease.BillImmediately, OnDecrease.None
-// ═══════════════════════════════════════════════════════════════════
-
 test.concurrent(`${chalk.yellowBright("update-usage-paid1: increase past included creates invoice")}`, async () => {
 	const usersItem = items.allocatedUsers({ includedUsage: 3 });
 	const proProd = products.pro({ id: "pro", items: [usersItem] });
@@ -26,7 +21,6 @@ test.concurrent(`${chalk.yellowBright("update-usage-paid1: increase past include
 		actions: [s.billing.attach({ productId: proProd.id })],
 	});
 
-	// Initial state: 3 included seats, no usage
 	const initial = await autumnV2.customers.get<ApiCustomer>(customerId);
 	expect(initial.balances[TestFeature.Users]).toMatchObject({
 		granted_balance: 3,
@@ -35,8 +29,6 @@ test.concurrent(`${chalk.yellowBright("update-usage-paid1: increase past include
 		usage: 0,
 	});
 
-	// Set usage to 5: targetBalance = 3 + 0 - 5 = -2
-	// 2 seats over included → should trigger BillImmediately → invoice for 2 * $10 = $20
 	await autumnV2.balances.update({
 		customer_id: customerId,
 		feature_id: TestFeature.Users,
@@ -53,7 +45,6 @@ test.concurrent(`${chalk.yellowBright("update-usage-paid1: increase past include
 		usage: 5,
 	});
 
-	// Verify invoice was created: 1 subscription invoice + 1 seat upgrade invoice
 	const customerV3 = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	await expectCustomerInvoiceCorrect({
 		customer: customerV3,
@@ -64,7 +55,6 @@ test.concurrent(`${chalk.yellowBright("update-usage-paid1: increase past include
 		latestInvoiceProductId: proProd.id,
 	});
 
-	// Verify DB sync
 	const afterUsageDb = await autumnV2.customers.get<ApiCustomer>(customerId, {
 		skip_cache: "true",
 	});
@@ -75,10 +65,6 @@ test.concurrent(`${chalk.yellowBright("update-usage-paid1: increase past include
 		usage: 5,
 	});
 });
-
-// ═══════════════════════════════════════════════════════════════════
-// UPDATE-USAGE-PAID2: Decrease usage on paid allocated (OnDecrease.None → no refund)
-// ═══════════════════════════════════════════════════════════════════
 
 test.concurrent(`${chalk.yellowBright("update-usage-paid2: decrease usage creates no new invoice")}`, async () => {
 	const usersItem = items.allocatedUsers({ includedUsage: 3 });
@@ -93,7 +79,6 @@ test.concurrent(`${chalk.yellowBright("update-usage-paid2: decrease usage create
 		actions: [s.billing.attach({ productId: proProd.id })],
 	});
 
-	// First set usage to 6 (3 over included → invoice)
 	await autumnV2.balances.update({
 		customer_id: customerId,
 		feature_id: TestFeature.Users,
@@ -110,7 +95,6 @@ test.concurrent(`${chalk.yellowBright("update-usage-paid2: decrease usage create
 
 	await timeout(4000);
 
-	// Verify 2 invoices: subscription + seat upgrade
 	const customerV3Before =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	await expectCustomerInvoiceCorrect({
@@ -121,8 +105,6 @@ test.concurrent(`${chalk.yellowBright("update-usage-paid2: decrease usage create
 		latestStatus: "paid",
 	});
 
-	// Now decrease usage to 4 (still 1 over included)
-	// OnDecrease.None → no new invoice, replaceables created instead
 	await autumnV2.balances.update({
 		customer_id: customerId,
 		feature_id: TestFeature.Users,
@@ -133,8 +115,6 @@ test.concurrent(`${chalk.yellowBright("update-usage-paid2: decrease usage create
 
 	const afterDecrease = await autumnV2.customers.get<ApiCustomer>(customerId);
 
-	// Replaceables: purchased_balance stays at 3 (no refund), current increases
-	// current = granted + purchased - usage = 3 + 3 - 4 = 2
 	expect(afterDecrease.balances[TestFeature.Users]).toMatchObject({
 		granted_balance: 3,
 		current_balance: 2,
@@ -142,7 +122,6 @@ test.concurrent(`${chalk.yellowBright("update-usage-paid2: decrease usage create
 		usage: 4,
 	});
 
-	// Invoice count should stay at 2 (no new invoice for decrease)
 	const customerV3After =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	await expectCustomerInvoiceCorrect({
@@ -150,8 +129,6 @@ test.concurrent(`${chalk.yellowBright("update-usage-paid2: decrease usage create
 		count: 2,
 	});
 
-	// Now increase usage back to 6 — replaceables should cover this, no new invoice
-	// purchased_balance was 3 (from original increase), so 6 usage = 3 included + 3 purchased → exact fit
 	await autumnV2.balances.update({
 		customer_id: customerId,
 		feature_id: TestFeature.Users,
@@ -161,7 +138,6 @@ test.concurrent(`${chalk.yellowBright("update-usage-paid2: decrease usage create
 	await timeout(4000);
 
 	const afterReIncrease = await autumnV2.customers.get<ApiCustomer>(customerId);
-	// current = granted + purchased - usage = 3 + 3 - 6 = 0
 	expect(afterReIncrease.balances[TestFeature.Users]).toMatchObject({
 		granted_balance: 3,
 		current_balance: 0,
@@ -169,7 +145,6 @@ test.concurrent(`${chalk.yellowBright("update-usage-paid2: decrease usage create
 		usage: 6,
 	});
 
-	// Invoice count should still be 2 — replaceables consumed, no new invoice
 	const customerV3ReIncrease =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	await expectCustomerInvoiceCorrect({
@@ -177,7 +152,6 @@ test.concurrent(`${chalk.yellowBright("update-usage-paid2: decrease usage create
 		count: 2,
 	});
 
-	// Verify DB sync
 	const afterDecreaseDb = await autumnV2.customers.get<ApiCustomer>(
 		customerId,
 		{
@@ -192,10 +166,6 @@ test.concurrent(`${chalk.yellowBright("update-usage-paid2: decrease usage create
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════
-// UPDATE-USAGE-PAID3: Set usage within included (no invoice beyond subscription)
-// ═══════════════════════════════════════════════════════════════════
-
 test.concurrent(`${chalk.yellowBright("update-usage-paid3: usage within included creates no extra invoice")}`, async () => {
 	const usersItem = items.allocatedUsers({ includedUsage: 5 });
 	const proProd = products.pro({ id: "pro", items: [usersItem] });
@@ -209,7 +179,6 @@ test.concurrent(`${chalk.yellowBright("update-usage-paid3: usage within included
 		actions: [s.billing.attach({ productId: proProd.id })],
 	});
 
-	// Set usage to 3 (within 5 included): targetBalance = 5 - 3 = 2
 	await autumnV2.balances.update({
 		customer_id: customerId,
 		feature_id: TestFeature.Users,
@@ -226,7 +195,6 @@ test.concurrent(`${chalk.yellowBright("update-usage-paid3: usage within included
 		usage: 3,
 	});
 
-	// Only 1 invoice (subscription), no extra seat invoice
 	const customerV3 = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	await expectCustomerInvoiceCorrect({
 		customer: customerV3,
@@ -234,7 +202,6 @@ test.concurrent(`${chalk.yellowBright("update-usage-paid3: usage within included
 		latestStatus: "paid",
 	});
 
-	// Verify DB sync
 	const afterUsageDb = await autumnV2.customers.get<ApiCustomer>(customerId, {
 		skip_cache: "true",
 	});
@@ -245,10 +212,6 @@ test.concurrent(`${chalk.yellowBright("update-usage-paid3: usage within included
 		usage: 3,
 	});
 });
-
-// ═══════════════════════════════════════════════════════════════════
-// UPDATE-USAGE-PAID4: Multiple usage updates with increasing/decreasing pattern
-// ═══════════════════════════════════════════════════════════════════
 
 test.concurrent(`${chalk.yellowBright("update-usage-paid4: multiple usage updates with invoice tracking")}`, async () => {
 	const usersItem = items.allocatedUsers({ includedUsage: 2 });
@@ -263,7 +226,6 @@ test.concurrent(`${chalk.yellowBright("update-usage-paid4: multiple usage update
 		actions: [s.billing.attach({ productId: proProd.id })],
 	});
 
-	// Step 1: Set usage to 4 (2 over included → invoice for 2 * $10 = $20)
 	await autumnV2.balances.update({
 		customer_id: customerId,
 		feature_id: TestFeature.Users,
@@ -290,7 +252,6 @@ test.concurrent(`${chalk.yellowBright("update-usage-paid4: multiple usage update
 		latestStatus: "paid",
 	});
 
-	// Step 2: Increase usage to 7 (5 over included, was 2 purchased → 3 more needed → invoice for 3 * $10 = $30)
 	await autumnV2.balances.update({
 		customer_id: customerId,
 		feature_id: TestFeature.Users,
@@ -317,8 +278,6 @@ test.concurrent(`${chalk.yellowBright("update-usage-paid4: multiple usage update
 		latestStatus: "paid",
 	});
 
-	// Step 3: Decrease usage to 3 (1 over included, was 5 purchased → decrease by 4)
-	// OnDecrease.None → no new invoice, replaceables created
 	await autumnV2.balances.update({
 		customer_id: customerId,
 		feature_id: TestFeature.Users,
@@ -328,8 +287,6 @@ test.concurrent(`${chalk.yellowBright("update-usage-paid4: multiple usage update
 	await timeout(4000);
 
 	const after3 = await autumnV2.customers.get<ApiCustomer>(customerId);
-	// Replaceables: purchased_balance stays at 5 (no refund), current increases
-	// current = granted + purchased - usage = 2 + 5 - 3 = 4
 	expect(after3.balances[TestFeature.Users]).toMatchObject({
 		granted_balance: 2,
 		current_balance: 4,
@@ -337,7 +294,6 @@ test.concurrent(`${chalk.yellowBright("update-usage-paid4: multiple usage update
 		usage: 3,
 	});
 
-	// Invoice count stays at 3 (no new invoice for decrease)
 	const customerV3Step3 =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	await expectCustomerInvoiceCorrect({
@@ -345,7 +301,6 @@ test.concurrent(`${chalk.yellowBright("update-usage-paid4: multiple usage update
 		count: 3,
 	});
 
-	// Verify DB sync
 	const afterDb = await autumnV2.customers.get<ApiCustomer>(customerId, {
 		skip_cache: "true",
 	});

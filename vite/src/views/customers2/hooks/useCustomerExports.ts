@@ -23,9 +23,6 @@ import { getBackendErr } from "@/utils/genUtils";
 
 export const CUSTOMER_EXPORTS_QUERY_KEY = "customer-exports";
 
-// Small exports finish in under a second — often before the realtime
-// subscription connects — so an active export is always polled, never left to
-// realtime alone. Realtime still drives smooth progress between polls.
 const ACTIVE_EXPORT_POLL_INTERVAL_MS = ms.seconds(2);
 
 export const useCustomerExportsQuery = ({

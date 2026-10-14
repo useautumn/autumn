@@ -41,7 +41,6 @@ const itemPriceToKey = ({
 	].join(",");
 };
 
-/** Full payload identity of a create-plan item — not the slot match key. */
 export const createPlanItemToKey = ({
 	item,
 }: {

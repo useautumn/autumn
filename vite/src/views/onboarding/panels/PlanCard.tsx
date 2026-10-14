@@ -23,7 +23,6 @@ export function PlanCard({
 	const plan = options.find((option) => option.id === selectedId) ?? card.plan;
 	const licenses = plan.licenses ?? [];
 
-	// Items follow the selection — a variant's whole point is that its terms differ.
 	const isBase = plan.id === card.plan.id;
 	const { items, hiddenItemCount } = isBase
 		? { items: card.items, hiddenItemCount: card.hiddenItemCount }
@@ -62,7 +61,6 @@ export function PlanCard({
 							<span className="text-xs text-tertiary-foreground">
 								{price.displayText}
 							</span>
-							{/* Add-on is implied by the section label, so it's suppressed here. */}
 							<PlanTypeBadges
 								product={{ ...plan, is_add_on: false }}
 								size="sm"

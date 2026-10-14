@@ -26,8 +26,6 @@ import {
 
 type LicenseRowStatus = "unchanged" | "added" | "removed" | "changed";
 
-/** Catalog a caller already holds, letting the rows render on first paint
- * instead of shifting when their own fetches land. */
 export interface LicenseCatalog {
 	links: VersionedLicenseLink[];
 	products: ProductV2[];
@@ -40,16 +38,12 @@ export interface LicenseSummaryRow {
 	status: LicenseRowStatus;
 	included: number;
 	previousIncludedQuantity?: number;
-	/** Exact license version pinned by the link; latest when absent. */
 	version?: number;
 }
 
 export interface PlanLicenseRow extends LicenseSummaryRow {
 	license?: ProductV2;
-	/** Effective items incl. base price (stock + catalog customize + staged patch). */
 	currentItems?: ProductItem[];
-	/** Diff baseline: the outgoing license's items, or the saved catalog items
-	 * when a patch is staged. Undefined when there is nothing to diff against. */
 	previousItems?: ProductItem[];
 }
 
@@ -63,11 +57,6 @@ export const LICENSE_DOT_STATE: Record<
 	unchanged: null,
 };
 
-/**
- * Diff the plan's saved license set against staged add_licenses patch entries.
- * null/undefined addLicenses means unchanged; base licenses without a patch
- * entry keep inheriting and render as unchanged.
- */
 export const diffPlanLicenses = ({
 	base,
 	addLicenses,
@@ -123,8 +112,6 @@ export const diffPlanLicenses = ({
 	return [...baseRows, ...added];
 };
 
-/** Overlays the outgoing plan's license set so rows read as a transition:
- * outgoing-only links become removed rows, included changes become updates. */
 export const diffLicensesAgainstOutgoing = ({
 	rows,
 	outgoingLicenses,
@@ -166,9 +153,6 @@ export const diffLicensesAgainstOutgoing = ({
 	return [...overlaid, ...removed];
 };
 
-/** Shared row model for the summary rows and the per-license item sections:
- * statuses plus each license's effective and baseline items, so both always
- * agree on what changed. */
 export const usePlanLicenseRows = ({
 	planId,
 	addLicenses,
@@ -272,8 +256,6 @@ export const usePlanLicenseRows = ({
 	return { rows };
 };
 
-/** Fingerprint of a priced item; entitlement-only fields are excluded so
- * included/limit edits don't read as billing changes. */
 const itemPriceKey = (item: ProductItem): string =>
 	JSON.stringify({
 		feature: item.feature_id ?? null,
@@ -285,8 +267,6 @@ const itemPriceKey = (item: ProductItem): string =>
 		usage_model: item.usage_model ?? null,
 	});
 
-/** True when the row's effective items price differently than its baseline
- * (outgoing license or saved catalog state). */
 export const licenseRowHasBillingChanges = (row: PlanLicenseRow): boolean => {
 	if (!row.previousItems || !row.currentItems) return false;
 	const pricedKeys = (items: ProductItem[]) =>
@@ -302,12 +282,6 @@ export const licenseRowHasBillingChanges = (row: PlanLicenseRow): boolean => {
 	);
 };
 
-/**
- * License rows for the plan summary shown in attach / update sheets, rendered
- * in the same style as the subscription detail sheet's license row. Renders
- * nothing when the caller doesn't support license editing
- * (`addLicenses === undefined`) or the plan grants no licenses.
- */
 export function PlanLicensesSummary({
 	planId,
 	addLicenses,
@@ -327,7 +301,6 @@ export function PlanLicensesSummary({
 	changesOnly?: boolean;
 	quantityEditor?: LicenseQuantityEditor;
 	currency?: string;
-	/** Outgoing plan's licenses (attach review) — turns rows into a transition diff. */
 	outgoingLicenses?: VersionedLicenseLink[];
 }) {
 	const { org } = useOrg();

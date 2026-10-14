@@ -1,9 +1,3 @@
-/**
- * version + customize replace (remove+add same key) swaps the FROM item's
- * definition: the customer ends on the customize's allowance, NOT the target
- * catalog's, while other FROM items keep their v1 claims and the row still
- * repoints to the target version.
- */
 import { expect, test } from "bun:test";
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
@@ -38,8 +32,6 @@ test.concurrent(
 			setup: [s.customer({ testClock: false }), s.products({ list: [plan] })],
 			actions: [s.billing.attach({ productId: plan.id })],
 		});
-		// The target's own definitions (Messages 500, Words 50) are irrelevant
-		// under item customize: the version is a pure repoint.
 		await mintPlanVersion({
 			client: autumnV2_3,
 			planId: plan.id,
@@ -93,7 +85,6 @@ test.concurrent(
 			result,
 		});
 
-		// Messages lands on the customize's 200 — not the target catalog's 500.
 		const messagesAfter = await readScopedFeatureRow({
 			ctx,
 			customerId,
@@ -105,7 +96,6 @@ test.concurrent(
 		);
 		expect(messagesAfter.balance).toBe(200);
 
-		// Untouched Words keeps its v1 claim and allowance (25, not 50).
 		const wordsAfter = await readScopedFeatureRow({
 			ctx,
 			customerId,

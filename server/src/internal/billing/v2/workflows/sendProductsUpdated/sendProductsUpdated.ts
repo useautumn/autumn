@@ -1,10 +1,3 @@
-/**
- * Workflow: SendProductsUpdated
- *
- * Sends customer.products.updated webhook when billing plan executes.
- * Uses lean payload - fetches data from DB instead of receiving full objects.
- */
-
 import {
 	AffectedResource,
 	type ApiCustomerV5,
@@ -40,8 +33,6 @@ export const sendProductsUpdated = async ({
 }: {
 	ctx: AutumnContext;
 	payload: SendProductsUpdatedPayload;
-	/** Skips the per-call fetches when the caller already batch-read the data
-	 * (set-based migrations); omitted fields fall back to the direct fetches. */
 	preloaded?: {
 		fullCustomer?: FullCustomer;
 		customerProduct?: FullCusProduct;
@@ -50,11 +41,6 @@ export const sendProductsUpdated = async ({
 	const { features, logger } = ctx;
 	const { customerProductId, scenario, customerId } = payload;
 
-	// Fetch cusProduct directly by ID — CusService.getFull filters by
-	// RELEVANT_STATUSES and applies a per-org cusProduct limit, so a cusProduct
-	// that transitioned to Expired (cancel/downgrade, or replaced by a
-	// subsequent create_schedule) between enqueue and worker pickup would be
-	// dropped before findCustomerProductById sees it.
 	const [fullCustomer, customerProduct] = await Promise.all([
 		preloaded?.fullCustomer ??
 			CusService.getFull({

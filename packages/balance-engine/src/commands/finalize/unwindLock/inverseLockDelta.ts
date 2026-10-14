@@ -6,7 +6,6 @@ import type { DeductionRow } from "../../../deduction/types/deductionRow.js";
 import { deductionRowToRateUnits } from "../../../deduction/utils/convertDeductionUtils.js";
 import { CREDIT_RATE_EPSILON } from "../../../deduction/utils/credits/creditRateUnitsForCreditChange.js";
 
-/** The inverse of `share` of one delta at the flat cost it was taken at. */
 const flatInverseOf = ({
 	delta,
 	share,
@@ -24,10 +23,6 @@ const flatInverseOf = ({
 	};
 };
 
-/**
- * `calculate_rate_card_unwind_change`: a graduated rate gives back its current marginal tail, not what the
- * lock paid, so the row's attributed credits stay equal to the cumulative cost of its units.
- */
 const rateCardInverseOf = ({
 	context,
 	row,
@@ -48,7 +43,6 @@ const rateCardInverseOf = ({
 		0,
 	);
 	const lockCharged = delta.usageAttributionDelta.units >= 0;
-	// Attribution stops at zero; units below it are net-negative usage, which a rate card does not credit.
 	const units = lockCharged ? Decimal.min(taken, currentUnits).neg() : taken;
 	const credits = new Decimal(
 		creditRateToCost({
@@ -75,7 +69,6 @@ const rateCardInverseOf = ({
 	};
 };
 
-/** Moves `taken` of one delta back, repriced when the row it sat on is still charged through a rate card. */
 export const inverseLockDelta = ({
 	context,
 	delta,

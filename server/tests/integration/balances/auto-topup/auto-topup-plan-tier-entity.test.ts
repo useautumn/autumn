@@ -1,8 +1,3 @@
-/**
- * Plan-tier auto_topups resolution and scope. auto_topups process async via SQS,
- * so each test waits then asserts the topped up balance + the extra paid invoice.
- */
-
 import { test } from "bun:test";
 import type { ApiCustomerV5 } from "@autumn/shared";
 import { makeAutoTopupConfig } from "@tests/integration/balances/auto-topup/utils/makeAutoTopupConfig";
@@ -41,19 +36,14 @@ test(`${chalk.yellowBright("auto-topup-plan3: no entity tier — an entity confi
 	});
 	const entityId = entities[0].id;
 
-	// Entity-level config (quantity 999) — auto_topups has NO entity tier, so
-	// this must be IGNORED.
 	await autumnV2_1.entities.update(customerId, entityId, {
 		billing_controls: makeAutoTopupConfig({ threshold: 20, quantity: 999 }),
 	});
-	// Customer-level config (quantity 100) — this is what resolves.
 	await autumnV2_1.customers.update(customerId, {
 		billing_controls: makeAutoTopupConfig({ threshold: 20, quantity: 100 }),
 	});
 	await timeout(BURST_SUPPRESSION_TTL_MS);
 
-	// Balance below threshold -> the customer config (100) tops up, not the
-	// ignored entity config (999).
 	await autumnV2_1.track({
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,

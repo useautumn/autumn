@@ -21,13 +21,10 @@ type SlotHeartbeatContext = {
 	location: EdgeConfigLocation;
 	gate: Pick<SlotGate, "describe">;
 	readPartitions(): OwnedPartitionHealth[];
-	/** True only for a partition this worker has claimed and admitted to its route directory. */
 	isAdmitted(params: { partition: number }): boolean;
-	/** False until the partition service is running and has been dealt its assignment. */
 	readAssignmentSettled(): boolean;
 	readStoreHealthy(): boolean;
 	probes: { kafka(): Promise<void>; postgres(): Promise<void> };
-	/** Present only where cold starts are honoured (staging); the heartbeat then always carries the latest ack. */
 	readColdStart?(): ColdStartAck | null;
 	logger?: Pick<AutumnLogger, "warn">;
 	schedule?: (params: { intervalMs: number; run(): void }) => () => void;
@@ -75,7 +72,6 @@ export function createSlotHeartbeat({
 		const health = ctx.readPartitions();
 		const gate = ctx.gate.describe();
 		const storeHealthy = ctx.readStoreHealthy();
-		// A heartbeat with no partitions would satisfy `prepared == total` vacuously.
 		const assigned = ctx.readAssignmentSettled() && health.length > 0;
 		return {
 			serviceName: "balance-workers",
@@ -88,13 +84,11 @@ export function createSlotHeartbeat({
 			declaredActive: gate.active,
 			gate: gate.reason,
 			storeHealthy,
-			// A task that cannot read the flip record is not one a swap should count on.
 			ok: kafka.ok && postgres.ok && storeHealthy && assigned,
 			checks: { kafka, postgres },
 			partitions: {
 				prepared: health.filter((p) => p.status === "prepared").length,
 				ready: health.filter((p) => p.status === "ready").length,
-				// Routable, not merely activating: the ownership topic may still name the predecessor.
 				admitted: health.filter((p) =>
 					ctx.isAdmitted({ partition: p.partition }),
 				).length,
@@ -134,7 +128,6 @@ export function createSlotHeartbeat({
 		});
 	}
 
-	/** Writes now, or right after the write in flight, which may have read the state from before. */
 	function writeSoon(): void {
 		if (!cancel) return;
 		if (writing) void writing.then(writeWhenIdle);

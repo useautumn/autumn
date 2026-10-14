@@ -1,9 +1,6 @@
 import { useCallback, useEffect, useRef } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 
-/**
- * Hook to toggle a dropdown open/closed with a keyboard shortcut
- */
 export function useDropdownShortcut({
 	shortcut,
 	isOpen,
@@ -30,10 +27,6 @@ export function useDropdownShortcut({
 
 export type ShortcutEntry = { key: string; handler: () => void };
 
-/**
- * Capture-phase keydown listener that fires registered shortcuts
- * before Base UI's typeahead can intercept them.
- */
 export function useMenuShortcuts(
 	isOpen: boolean,
 	onOpenChange: ((open: boolean, details: any) => void) | undefined,

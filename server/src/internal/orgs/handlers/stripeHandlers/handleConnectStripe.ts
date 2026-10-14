@@ -45,12 +45,6 @@ export const handleConnectStripe = createRoute({
 				org,
 			});
 
-			/**
-			 * Always mirror the result. handleStripeSecretKey deletes any stale direct
-			 * endpoint, so its returned secret is authoritative — a fresh secret, or
-			 * null when creation was skipped under OAuth. Writing null clears the dead
-			 * secret so the DB never references a deleted endpoint.
-			 */
 			if (env === AppEnv.Sandbox) {
 				configUpdates.test_api_key = result.test_api_key;
 				configUpdates.test_webhook_secret = result.test_webhook_secret ?? null;

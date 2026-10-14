@@ -95,7 +95,6 @@ type Rng = {
 	shuffle: <T>(values: readonly T[]) => T[];
 };
 
-/** mulberry32: tiny, deterministic, good enough for scenario selection. */
 const createRng = (seed: number): Rng => {
 	let state = seed >>> 0;
 	const next = () => {
@@ -110,7 +109,6 @@ const createRng = (seed: number): Rng => {
 		int: (min, max) => min + Math.floor(next() * (max - min + 1)),
 		pick: (values) => values[Math.floor(next() * values.length)],
 		chance: (probability) => next() < probability,
-		// Fisher–Yates: a fixed number of draws per shuffle, so a seed survives runtime sort changes.
 		shuffle: (values) => {
 			const shuffled = [...values];
 			for (let index = shuffled.length - 1; index > 0; index--) {
@@ -171,7 +169,6 @@ const genPriceShape = ({
 	}
 	const volume = style === "volume";
 	const tiers = genTiers({ rng, billingUnits, volume });
-	// Allocated volume rejects any tier-1 flat fee.
 	const isAllocatedUsageBased =
 		behavior === BillingMethod.UsageBased &&
 		(CONTINUOUS_FEATURES as string[]).includes(featureId);
@@ -242,7 +239,6 @@ const genCatalog = (rng: Rng): FuzzCatalog => {
 			behavior,
 			interval: "month",
 		});
-		// Volume tiers would need the allowance-shifted boundaries; keep them allowance-free.
 		const firstCeiling = price.tiers[0].to;
 		const included =
 			!price.volume && rng.chance(0.4)
@@ -307,7 +303,6 @@ const opposite = (behavior: BillingMethod) =>
 		? BillingMethod.UsageBased
 		: BillingMethod.Prepaid;
 
-/** Adds one request defect the API must reject with a 400. */
 const applyInvalidMutation = ({
 	rng,
 	catalog,
@@ -579,7 +574,6 @@ const computeExpectation = ({
 		});
 	}
 
-	// Lines preview the whole cents Stripe bills; the total adds those cents.
 	const billable = lines
 		.filter((line) => Math.abs(line.amount) > 1e-12)
 		.map((line) => ({ ...line, amount: roundToCents(line.amount) }));
@@ -636,7 +630,6 @@ const summarize = ({
 	}`;
 };
 
-/** Builds one deterministic scenario: catalog plan, invoice request and oracle expectation. */
 export const generateCustomizeScenario = ({
 	seed,
 	allowInvalid,

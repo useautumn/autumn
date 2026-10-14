@@ -9,10 +9,6 @@ export interface VersionMetadata {
 	migrateToVersion?: ApiVersion;
 }
 
-/**
- * Version Registry (descending order - newest first)
- * SemVer ↔ CalVer mappings and metadata
- */
 export const VERSION_REGISTRY: Record<ApiVersion, VersionMetadata> = {
 	[ApiVersion.V2_5]: {
 		semver: ApiVersion.V2_5,

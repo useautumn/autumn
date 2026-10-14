@@ -8,19 +8,12 @@ import {
 	validateSandboxName,
 } from "../../models/orgModels/sandboxName";
 
-/**
- * Sandbox request/response models. Shared between the server handlers (request
- * validation) and the OpenAPI contract (SDK + docs).
- */
-
 export const CreateSandboxParamsSchema = z.object({
 	name: z
 		.string()
 		.trim()
 		.min(1)
 		.max(100)
-		// The server trims before validating, which no client can see; the pattern
-		// states the no-whitespace rule for generated SDKs and atmn's lint.
 		.regex(/^\S+$/, SANDBOX_NAME_SPACES_MESSAGE)
 		.superRefine((name, ctx) => {
 			const error = validateSandboxName(name);
@@ -58,8 +51,6 @@ export const CreateSandboxResponseSchema = SandboxSchema.extend({
 		.describe(
 			"The sandbox's own secret key. Shown once, here — store it before you discard the response.",
 		)
-		// The one-time key is response-only; `.readonly()` is what the OpenAPI
-		// converter turns into `readOnly: true` (a `meta` key is dropped).
 		.readonly(),
 });
 

@@ -13,11 +13,6 @@ import {
 	getChargeReasonMessage,
 } from "@/internal/billing/v2/utils/billingPlan/billingPlanWillCharge";
 
-/**
- * Validates cancel: 'end_of_cycle' requests.
- * Throws error if trying to cancel a free or one-off product at end of cycle,
- * or if the billing plan would result in a charge.
- */
 export const handleCancelEndOfCycleErrors = ({
 	billingContext,
 	billingPlan,
@@ -30,7 +25,6 @@ export const handleCancelEndOfCycleErrors = ({
 	const { customerProduct, canceledStripeSubscriptionId } = billingContext;
 
 	// The cycle it would cancel at the end of no longer exists, and Stripe will
-	// never emit another sub.deleted to expire the plan.
 	if (canceledStripeSubscriptionId) {
 		throw new RecaseError({
 			message: `Subscription ${canceledStripeSubscriptionId} is already canceled in Stripe; use cancel: 'cancel_immediately' instead.`,
@@ -55,7 +49,6 @@ export const handleCancelEndOfCycleErrors = ({
 		});
 	}
 
-	// Block any operations that would result in a charge
 	const chargeResult = billingPlanWillCharge({ billingPlan });
 
 	if (chargeResult.willCharge) {

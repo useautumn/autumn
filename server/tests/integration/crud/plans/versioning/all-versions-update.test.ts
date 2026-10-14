@@ -1,19 +1,3 @@
-/**
- * TDD test for plan update all_versions propagation.
- *
- * Contract under test:
- *   New types/fields:
- *     - UpdatePlanParamsV2.all_versions?: boolean
- *     - PlanUpdatePreview.other_versions: same preview/change shape as variants
- *   New behaviors:
- *     - disable_version and all_versions are mutually exclusive.
- *     - all_versions updates every version of the target plan with the incoming diff.
- *     - all_versions propagates the same behavior to selected variants.
- *     - preview_update exposes historical versions that would receive the diff.
- *   Side effects:
- *     - Existing product version rows are patched in place; no new version is created.
- */
-
 import { expect, test } from "bun:test";
 import {
 	type ApiPlanV1,

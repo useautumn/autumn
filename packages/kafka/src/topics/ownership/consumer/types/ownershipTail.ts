@@ -11,27 +11,20 @@ export type OwnershipTailRecord = {
 
 export type OwnershipTailListener = (record: OwnershipTailRecord) => void;
 
-/** What the tail has seen of one partition since it started: who owns it, and
- *  whether that owner has announced a drain it has not yet concluded with a claim. */
 export type OwnershipTailView = {
 	owner: string | null;
 	activeDrain: { endpoint: string; successor: string } | null;
-	/** A worker that announced it is preparing the partition and has not yet been named, released, or announced ready. */
 	activePreparation: { endpoint: string } | null;
 };
 
-/** One consumer per worker following the ownership log from where it stood at
- *  start; a partition tail is a listener on it, never a consumer of its own. */
 export type OwnershipTail = {
 	start(): Promise<void>;
 	stop(): Promise<void>;
-	/** Delivers every record the tail reads for `partition` until `signal` aborts. */
 	tailPartition(params: {
 		partition: number;
 		onRecord: OwnershipTailListener;
 		signal: AbortSignal;
 	}): void;
-	/** Null until the tail has read a claim or release for the partition since it started. */
 	readView(params: { partition: number }): OwnershipTailView | null;
 };
 
@@ -47,8 +40,6 @@ export type OwnershipTailContext = {
 export type OwnershipTailConfig = {
 	topic: string;
 	groupIdPrefix?: string;
-	/** How long start waits for the first fetch, which is when the position settles at the log end;
-	 *  defaults to 10 s plus the fetch wait, since an idle first fetch runs the full wait. */
 	startTimeoutMs?: number;
 	timings?: KafkaConsumerGroupTimings;
 };
@@ -57,7 +48,6 @@ export type OwnershipTailState = {
 	status: "created" | "starting" | "started" | "stopped";
 	listenersByPartition: Map<number, Set<OwnershipTailListener>>;
 	viewByPartition: Map<number, OwnershipTailView>;
-	/** Consumer event listeners and abort listeners on callers' signals; every one is removed by stop. */
 	removeListeners: Set<() => void>;
 	stopping: Promise<void> | null;
 };

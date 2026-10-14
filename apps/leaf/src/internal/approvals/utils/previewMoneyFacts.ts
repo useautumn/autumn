@@ -8,8 +8,6 @@ type LineFacts = {
 	period?: LinePeriod;
 };
 
-/** An existing invoice's settlement state: what a void / pay / finalize card
- * showed about how much is still owed. */
 type InvoiceFacts = {
 	amountPaid?: number;
 	status?: string;
@@ -24,8 +22,6 @@ type MoneyFacts = {
 	total?: number;
 };
 
-// Each compute rounds to cents independently, so a decay-adjusted stored
-// amount can miss the freshly rounded one by up to a cent per line.
 const CENT_TOLERANCE = 0.011;
 
 const asRecord = (value: unknown): Record<string, unknown> | undefined =>
@@ -78,7 +74,6 @@ const byLineIdentity = (left: LineFacts, right: LineFacts): number =>
 	(left.amount ?? 0) - (right.amount ?? 0);
 
 const moneyFactsOf = (preview: unknown): MoneyFacts | undefined => {
-	// Stored previews may carry the `{_display, preview}` enrichment wrapper.
 	const unwrapped = asRecord(preview)?._display
 		? (asRecord(preview)?.preview ?? preview)
 		: preview;
@@ -103,8 +98,6 @@ const moneyFactsOf = (preview: unknown): MoneyFacts | undefined => {
 	};
 };
 
-/** The stored amount recomputed for the current preview's period — a prorated
- * line's period starts at server-now, so its amount decays between computes. */
 const decayAdjustedAmount = ({
 	current,
 	stored,
@@ -120,8 +113,6 @@ const decayAdjustedAmount = ({
 			(stored.period.end - stored.period.start)
 		: undefined;
 
-/** Total proration decay across matched lines, or undefined when the lines
- * differ in identity or beyond decay — i.e. a real change. */
 const lineDecayDelta = ({
 	current,
 	stored,
@@ -166,8 +157,6 @@ const totalWithinDecay = ({
 	return Math.abs(currentFacts.total - expected) <= tolerance;
 };
 
-/** Compares derived money facts, not raw payloads, so benign field churn and
- * proration clock-decay never block approvals. */
 export const previewMoneyFactsDrifted = ({
 	current,
 	stored,

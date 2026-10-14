@@ -76,7 +76,6 @@ test.concurrent(
 		});
 		const [customerEntitlement] = state.customerEntitlements;
 		if (!customerEntitlement) throw new Error("Expected one row");
-		// The catalog a worker reply carries, so the balance is built from the reply alone.
 		const catalog = catalogRowsToCatalog({
 			rows: fullSubjectToCatalogRows({ ...fixture, featureIds: ["messages"] }),
 		});

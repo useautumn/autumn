@@ -6,7 +6,6 @@ import { UpdateCatalogPlanParamsSchema } from "./planUpdate/params/catalogPlanPa
 import { UpdateCatalogReferralProgramParamsSchema } from "./rewardUpdate/params/catalogReferralProgramParams.js";
 import { UpdateCatalogRewardParamsSchema } from "./rewardUpdate/params/catalogRewardParams.js";
 
-// Intersection, not .extend — extend silently drops the create-schema refines.
 export const UpdateCatalogFeatureParamsSchema = z.intersection(
 	CreateFeatureV2ParamsSchema,
 	z.object({
@@ -58,9 +57,6 @@ export type RemoveCatalogPlanParams = z.infer<
 >;
 
 export const UpdateCatalogParamsSchema = z.object({
-	// No .default([]) on the desired-state collections: a default would erase the
-	// difference between "I manage features and there are none" and "I never
-	// mentioned features", which under skip_deletions:false mean opposite things.
 	features: z.array(UpdateCatalogFeatureParamsSchema).optional(),
 	remove_features: z
 		.array(RemoveCatalogFeatureParamsSchema)
@@ -101,7 +97,6 @@ export const UpdateCatalogParamsSchema = z.object({
 		description:
 			"Catalog-wide migration default, overridable per plan. draft: true asks the server to draft a migration for every row an edit leaves customers behind on.",
 	}),
-	// expand: z.array(CatalogExpandSchema).optional(),
 });
 
 export type UpdateCatalogParams = z.infer<typeof UpdateCatalogParamsSchema>;

@@ -12,13 +12,6 @@ const EXPOSE_NOTHING: Overlay = {
 	serverOwnedInternal: {},
 };
 
-/**
- * The property names an object at a fixture path can have, across every
- * branch. `undefined` when the path does not exist in the schema at all.
- * Segments are fixture-cased with array indices elided, `*` for a record's
- * values — the same convention as the hints and the lint rules.
- */
-
 const branchesOf = ({
 	schema,
 	root,
@@ -32,7 +25,6 @@ const branchesOf = ({
 		...(schema.oneOf ?? []),
 	].map((branch) => resolveRef({ schema: branch, root }) ?? branch);
 
-/** Every object node the schema can be, unwrapping arrays and branches. */
 const objectNodesOf = ({
 	schema,
 	root,

@@ -102,8 +102,6 @@ export function AttachAdvancedSection() {
 			isNoChargesAllowed,
 			hasCustomerEntitlements,
 			canChooseBillingCycle,
-			// A multi-plan attach only exposes a start date to backdate every plan
-			// onto one new subscription.
 			showStartDate:
 				isPaidRecurringProduct &&
 				!trialEnabled &&

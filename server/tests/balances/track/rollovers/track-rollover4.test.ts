@@ -113,7 +113,6 @@ describe(`${chalk.yellowBright(`${testCase}: Testing rollovers for prepaid messa
 		expect(msgesFeature?.balance).toBe(balance + rollover);
 		expect(rollovers?.[0].balance).toBe(rollover);
 
-		// Verify non-cached customer balance
 		await timeout(4000);
 		const nonCachedCustomer = await autumn.customers.get(customerId, {
 			skip_cache: "true",

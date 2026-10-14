@@ -1,8 +1,3 @@
-/**
- * Allocated v2 (arrear) volume seats: nothing bills mid-cycle; the renewal bills seats over the 3
- * included at the net tier they land in. Net tiers 0-10 / 11+ are total-seat bands 0-13 / 14+.
- */
-
 import { expect, test } from "bun:test";
 import { AllocatedBillingBehavior } from "@autumn/shared";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
@@ -103,7 +98,6 @@ const trackSeats = async ({
 	await timeout(3000);
 };
 
-/** Arrear seats never invoice mid-cycle; the renewal matches the preview and bills the overage. */
 const expectRenewalBillsSeats = async ({
 	scenario,
 	seatsAmount,
@@ -141,7 +135,6 @@ test.concurrent(
 		await advanceMidCycle(scenario);
 		await trackSeats({ scenario, value: 10 });
 
-		// 12 seats over included land in net band 2 (11+): 12 × $8 = $96
 		await expectRenewalBillsSeats({ scenario, seatsAmount: 96 });
 	},
 );
@@ -157,7 +150,6 @@ test.concurrent(
 		await advanceMidCycle(scenario);
 		await trackSeats({ scenario, value: -8 });
 
-		// 4 seats over included land in net band 1 (0-10): 4 × $10 = $40
 		await expectRenewalBillsSeats({ scenario, seatsAmount: 40 });
 	},
 );
@@ -171,7 +163,6 @@ test.concurrent(
 			tiers: FLAT_FEE_TIERS,
 		});
 
-		// 10 seats over included fill net band 1 (0-10): 10 × $10, band 2's fee not charged
 		await expectRenewalBillsSeats({ scenario, seatsAmount: 100 });
 	},
 );
@@ -185,7 +176,6 @@ test.concurrent(
 			tiers: FLAT_FEE_TIERS,
 		});
 
-		// 11 seats over included land in net band 2 (11+): 11 × $8 + $2 flat = $90
 		await expectRenewalBillsSeats({ scenario, seatsAmount: 90 });
 	},
 );
@@ -204,7 +194,6 @@ test.concurrent(
 		}
 		await timeout(3000);
 
-		// 15 → 7 seats moves from net band 2 back to net band 1: 4 over × $10 = $40
 		await expectRenewalBillsSeats({ scenario, seatsAmount: 40 });
 	},
 );

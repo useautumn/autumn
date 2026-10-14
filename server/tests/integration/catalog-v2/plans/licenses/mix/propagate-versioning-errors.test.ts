@@ -1,8 +1,3 @@
-/**
- * catalogV2.update — propagate.license_parents pin guards.
- * Missing pin is a schema 400. Off-anchor / missing plan → InvalidPropagationTarget.
- * Source new_version + historical parent with customers → 400.
- */
 import { test } from "bun:test";
 import { ErrCode } from "@autumn/shared";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils.js";

@@ -8,7 +8,6 @@ import type { SlotProbeResult } from "../types/slotProbe.js";
 
 export const HEARTBEAT_INTERVAL_MS = 20_000;
 
-/** One object per task; the dashboard lists the fleet's prefix and sums the fresh ones. */
 export function heartbeatKeyOf({
 	serviceName,
 	fleetId,
@@ -25,7 +24,6 @@ export function instanceIdOf(): string {
 	return `${process.pid}-${crypto.randomUUID().split("-")[0]}`;
 }
 
-/** Times one readiness check; a throw is a failed probe with its message, never a failed heartbeat. */
 export async function runProbe(
 	run: () => Promise<void>,
 ): Promise<SlotProbeResult> {
@@ -45,7 +43,6 @@ export async function runProbe(
 type HeartbeatWriterContext = {
 	s3Client: EdgeConfigS3Client;
 	location: EdgeConfigLocation;
-	/** The body, built fresh for every write; what it says is the service's business. */
 	build(): Promise<unknown>;
 	logger?: Pick<AutumnLogger, "warn">;
 	schedule?: (params: { intervalMs: number; run(): void }) => () => void;
@@ -53,7 +50,6 @@ type HeartbeatWriterContext = {
 
 export type HeartbeatWriter = { start(): Promise<void>; stop(): void };
 
-/** Writes the body to one key on an interval, one write in flight at a time; a failed write warns and waits for the next. */
 export function createHeartbeatWriter({
 	ctx,
 	config,

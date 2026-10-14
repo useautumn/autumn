@@ -1,19 +1,3 @@
-/**
- * Concurrent V2 attach of the same unminted plan must initialise one Stripe
- * price id — not one per customer.
- *
- * Contract (fixed / consumable / allocatedV2 / prepaidV2):
- *   product has no stripe price ids
- *   two customers attach the same plan at the same time
- *   Autumn stores one slot id
- *   both Stripe subscriptions use that id
- *
- * Red (before):  two attaches minted two Stripe Prices (consumable also raced
- *                the meter). Last write won on the Autumn row.
- * Green (after): Stripe idempotency keys on product / price / meter create —
- *                both attaches get the same Stripe id.
- */
-
 import { test } from "bun:test";
 import type { AttachParamsV1Input } from "@autumn/shared";
 import {

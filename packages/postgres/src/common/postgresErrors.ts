@@ -16,7 +16,6 @@ const SOCKET_ERROR_CODES = new Set([
 /** pg's and pg-pool's messages for a connection that failed, never answered or fell out of step; they carry no code. */
 const DRIVER_CONNECTION_FAILURE =
 	/^(Query read timeout|timeout expired|timeout exceeded when trying to connect|Connection terminated|Client has encountered a connection error and is not queryable|Client was closed and is not queryable|Received unexpected \w+ message from backend)/;
-/** SQLSTATE classes worth a retry: the connection, a concurrency abort, a cancelled statement, a full pool, a shutdown. */
 const TRANSIENT_SQLSTATE = /^(08|40001|40P01|57014|53300|57P0[123])/;
 
 export const PostgresSqlState = {
@@ -33,14 +32,12 @@ const isDatabaseError = (
 	"severity" in error &&
 	typeof (error as { code?: unknown }).code === "string";
 
-/** The SQLSTATE of an error Postgres itself raised; null for the driver's own failures and anything else. */
 export const postgresSqlStateOf = ({
 	error,
 }: {
 	error: unknown;
 }): string | null => (isDatabaseError(error) ? error.code : null);
 
-/** The connection failed, not the statement: a socket error, or one the driver raised about its own connection. */
 export const isPostgresConnectionFailure = ({
 	error,
 }: {
@@ -52,7 +49,6 @@ export const isPostgresConnectionFailure = ({
 	return DRIVER_CONNECTION_FAILURE.test(error.message);
 };
 
-/** The same statement can succeed once Postgres answers again; anything else would fail the same way on retry. */
 export const isTransientPostgresError = ({
 	error,
 }: {

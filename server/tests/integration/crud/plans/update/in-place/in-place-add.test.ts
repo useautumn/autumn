@@ -1,18 +1,3 @@
-/**
- * In-place plan update (disable_version) — ADD entitlement-only on a plan with
- * existing customers. The catalog gains the new item; existing customers are
- * left untouched; future customers inherit it.
- *
- * Contract under test:
- *   C1 catalog: getFull(planId) includes the new ent (is_custom:false), version unchanged.
- *   C2 existing customer UNCHANGED: same customer_entitlements (entitlement_id set,
- *      balances) and customer_prices; no new cusEnt for the added feature.
- *   C3 existing customer does NOT get the new flag.
- *   C4 no extra invoice for the existing customer.
- *   C5 a NEW customer attaching after the update inherits the feature.
- *   C6 disable_version is reachable via the V2 plans.update RPC.
- */
-
 import { expect, test } from "bun:test";
 import {
 	type ApiCustomerV3,
@@ -107,7 +92,6 @@ test(`${chalk.yellowBright("plans.update disable_version: ADD entitlement-only k
 		version: ApiVersion.V2_1,
 	});
 
-	// Pre: catalog lacks the added feature; snapshot existing customer.
 	expect(
 		(
 			await getCatalogEnt({
@@ -119,14 +103,12 @@ test(`${chalk.yellowBright("plans.update disable_version: ADD entitlement-only k
 	).toBeUndefined();
 	const before = await snapshotCustomerItems({ ctx, customerId });
 
-	// C6: disable_version travels through the V2 RPC body.
 	await autumnRpc.plans.update<ApiPlanV1, UpdatePlanRpcInput>(pro.id, {
 		disable_version: true,
 		price: { amount: 20, interval: BillingInterval.Month },
 		items: [itemsV2.dashboard(), adminRights],
 	});
 
-	// C1: catalog updated in place (new ent, same version).
 	const { ent: addedEnt, version: afterVersion } = await getCatalogEnt({
 		ctx,
 		planId: pro.id,
@@ -136,13 +118,11 @@ test(`${chalk.yellowBright("plans.update disable_version: ADD entitlement-only k
 	expect(addedEnt?.is_custom).toBe(false);
 	expect(afterVersion).toBe(1);
 
-	// C2: existing customer's rows are byte-identical.
 	const after = await snapshotCustomerItems({ ctx, customerId });
 	expect(after.entitlementIds).toEqual(before.entitlementIds);
 	expect(after.balances).toEqual(before.balances);
 	expect(after.priceIds).toEqual(before.priceIds);
 
-	// C3: existing customer did NOT gain the flag.
 	const existingCustomer =
 		await autumnV2_2.customers.get<ApiCustomerV5>(customerId);
 	expectFlagCorrect({
@@ -152,13 +132,11 @@ test(`${chalk.yellowBright("plans.update disable_version: ADD entitlement-only k
 		present: false,
 	});
 
-	// C4: no extra invoice for the existing customer.
 	await expectCustomerInvoiceCorrect({
 		customer: await autumnV1.customers.get<ApiCustomerV3>(customerId),
 		count: 1,
 	});
 
-	// C5: a customer attaching AFTER the update inherits the new feature.
 	await autumnV2_2.billing.attach({
 		customer_id: newCustomerId,
 		plan_id: pro.id,

@@ -55,7 +55,6 @@ export const balanceCtx = {
 	expand: [],
 } as unknown as AutumnContext;
 
-/** A balance a plan row holds, with the price that gives it its kind. */
 export type RowBalance = {
 	customerEntitlement: FullCustomerEntitlement;
 	price?: Price;
@@ -88,7 +87,6 @@ const customerEntitlementFor = ({
 		usageAllowed,
 	});
 
-/** A monthly allowance with no overage. */
 export const included =
 	({
 		featureId,
@@ -110,7 +108,6 @@ export const included =
 		}),
 	});
 
-/** Billed per unit in arrear: nothing granted, overage allowed. */
 export const payPerUse =
 	({ featureId, usage = 0 }: { featureId: BalanceFeatureId; usage?: number }) =>
 	(customerProductId: string): RowBalance => ({
@@ -129,7 +126,6 @@ export const payPerUse =
 		}),
 	});
 
-/** Credits bought once with the plan; billing keeps what is left when the plan ends. */
 export const oneOffPrepaid =
 	({
 		featureId,
@@ -198,7 +194,6 @@ export const planRow = ({
 		startsAt,
 		endedAt,
 		internalEntityId,
-		// A running paid plan is billed on a Stripe subscription.
 		subscriptionIds: status === CusProductStatus.Scheduled ? [] : ["sub_live"],
 		customerEntitlements: rowBalances.map(
 			({ customerEntitlement }) => customerEntitlement,
@@ -222,7 +217,6 @@ export type BalanceTimeline = {
 	customerEntities?: Entity[];
 };
 
-/** A request projected onto saved rows, diffed per phase against the saved schedule. */
 export const previewBalanceChanges = ({
 	current,
 	inserts = [],
@@ -278,7 +272,6 @@ export const previewBalanceChanges = ({
 	});
 };
 
-/** Future phases on a date where a saved row starts or ends match that saved phase; others are new. */
 export const exactDateMatches = ({
 	current,
 	phases,

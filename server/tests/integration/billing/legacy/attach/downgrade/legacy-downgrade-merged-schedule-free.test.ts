@@ -1,6 +1,3 @@
-// Legacy V1 attach downgrade/schedule behavior for entity-level merged subscriptions
-// (migrated from server/tests/merged/downgrade).
-
 import { expect, test } from "bun:test";
 import { CusProductStatus } from "@autumn/shared";
 import { expectSubToBeCorrect } from "@tests/merged/mergeUtils/expectSubCorrect";
@@ -11,13 +8,6 @@ import { products } from "@tests/utils/fixtures/products";
 import ctx from "@tests/utils/testInitUtils/createTestContext";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 3: Pro on 2 entities, downgrade ent1 to free, upgrade ent2 to premium
-// (from mergedDowngrade3)
-//
-// Ops: Pro(ent1), Pro(ent2), Free(ent1→sched), Premium(ent2→upgrade)
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(
 	`${chalk.yellowBright("legacy-dg-sched 2: pro entities, downgrade to free + upgrade to premium")}`,
@@ -46,7 +36,6 @@ test.concurrent(
 			],
 		});
 
-		// Entity 1: Downgrade to Free (scheduled)
 		await autumnV1.attach({
 			customer_id: customerId,
 			product_id: free.id,
@@ -71,7 +60,6 @@ test.concurrent(
 			env: ctx.env,
 		});
 
-		// Entity 2: Upgrade to Premium (immediate)
 		await autumnV1.attach({
 			customer_id: customerId,
 			product_id: premium.id,
@@ -97,14 +85,6 @@ test.concurrent(
 	},
 );
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 5: Downgrade both entities to free, then change ent2 to pro
-// (from mergedDowngrade5)
-//
-// Ops: Premium(ent1), Premium(ent2), Free(ent1→sched), Free(ent2→sched),
-//      Pro(ent2→replaces free schedule)
-// ═══════════════════════════════════════════════════════════════════════════════
-
 test.concurrent(
 	`${chalk.yellowBright("legacy-dg-sched 3: downgrade to free, then change schedule to pro")}`,
 	async () => {
@@ -128,7 +108,6 @@ test.concurrent(
 			],
 		});
 
-		// Entity 1: Downgrade to Free (scheduled)
 		await autumnV1.attach({
 			customer_id: customerId,
 			product_id: free.id,
@@ -143,7 +122,6 @@ test.concurrent(
 			status: CusProductStatus.Scheduled,
 		});
 
-		// Entity 2: Downgrade to Free (scheduled)
 		await autumnV1.attach({
 			customer_id: customerId,
 			product_id: free.id,
@@ -166,7 +144,6 @@ test.concurrent(
 			shouldBeCanceled: true,
 		});
 
-		// Entity 2: Change schedule from Free to Pro
 		await autumnV1.attach({
 			customer_id: customerId,
 			product_id: pro.id,

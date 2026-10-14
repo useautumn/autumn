@@ -12,7 +12,6 @@ export const scheduleSubscriptionId = (
 const replacesSubscription = (subscription: Stripe.Subscription) =>
 	subscriptionStateAction({ state: subscription.status }).action !== "update";
 
-/** Moves a subscription set_plans won't update aside, so a new one is created in its place. */
 export const splitReplacedStripeSubscription = ({
 	stripeSubscription,
 	stripeSubscriptionSchedule,

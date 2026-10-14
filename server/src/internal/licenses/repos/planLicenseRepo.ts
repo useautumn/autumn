@@ -67,7 +67,6 @@ const upsert = async ({
 	return planLicense;
 };
 
-/** Pure write: persist a pre-decided catalog link row by its id. */
 const upsertById = async ({
 	db,
 	id,

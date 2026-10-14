@@ -1,18 +1,3 @@
-/**
- * Legacy Add-on Attach Tests
- *
- * Migrated from:
- * - server/tests/attach/addOn/addOn1.test.ts (attach pro then free add-on)
- * - server/tests/attach/addOn/addOn2.test.ts (attach pro then free add-on with credits)
- * - server/tests/attach/basic/basic2.test.ts (attach pro then monthly prepaid add-on with quantity)
- *
- * Tests V1 attach (s.attach) behavior for:
- * - Attaching a free add-on after a base product
- * - Verifying both products appear as active
- * - Verifying feature balances after add-on attachment
- * - Attaching prepaid add-ons with quantity options
- */
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV1, ApiCustomerV3 } from "@autumn/shared";
 import { AutumnCli } from "@tests/cli/AutumnCli";
@@ -24,21 +9,6 @@ import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 1: Attach pro then free add-on with messages
-// (from addOn1)
-//
-// Scenario:
-// - Pro product ($20/month) with Messages feature (100 included)
-// - Free add-on with Messages feature (200 included)
-// - Attach Pro, then attach add-on
-//
-// Expected:
-// - Customer has both Pro and add-on active
-// - 1 invoice for $20 (Pro subscription only, add-on is free)
-// - Messages balance = 100 (Pro) + 200 (add-on) = 300
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(`${chalk.yellowBright("legacy-addon 1: attach pro then free add-on with messages")}`, async () => {
 	const customerId = "legacy-addon-1";
@@ -86,20 +56,6 @@ test.concurrent(`${chalk.yellowBright("legacy-addon 1: attach pro then free add-
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 2: Attach pro then free add-on twice
-// (from addOn2)
-//
-// Scenario:
-// - Pro product ($20/month) with no feature items
-// - Free add-on with Credits feature (100 included)
-// - Attach Pro, then attach add-on, then attach add-on again
-//
-// Expected:
-// - Customer has both Pro and add-on active after each attachment
-// - Credits feature balance remains 100 after second attach
-// ═══════════════════════════════════════════════════════════════════════════════
-
 test.concurrent(`${chalk.yellowBright("legacy-addon 2: attach pro then free add-on twice")}`, async () => {
 	const customerId = "legacy-addon-2";
 
@@ -138,7 +94,6 @@ test.concurrent(`${chalk.yellowBright("legacy-addon 2: attach pro then free add-
 		usage: 0,
 	});
 
-	// Attach the same free add-on a second time
 	await autumnV1.attach({
 		customer_id: customerId,
 		product_id: addOn.id,
@@ -158,22 +113,6 @@ test.concurrent(`${chalk.yellowBright("legacy-addon 2: attach pro then free add-
 		usage: 0,
 	});
 });
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 3: Attach pro then monthly prepaid add-on with quantity
-// (from basic2)
-//
-// Scenario:
-// - Pro product ($20/month) with Messages feature (10 included)
-// - Monthly prepaid add-on for Messages ($9/250 units, 0 included)
-// - Attach Pro, then attach add-on with quantity 500 (2 packs)
-//
-// Expected:
-// - Customer has both Pro and add-on active
-// - 2 invoices (Pro $20, add-on $18)
-// - Messages balance = 10 (Pro) + 500 (add-on) = 510
-// - /check returns correct combined balance (using V0 entitled endpoint)
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(`${chalk.yellowBright("legacy-addon 3: attach pro then monthly prepaid add-on with quantity")}`, async () => {
 	const customerId = "legacy-addon-3";
@@ -202,7 +141,6 @@ test.concurrent(`${chalk.yellowBright("legacy-addon 3: attach pro then monthly p
 		actions: [s.attach({ productId: pro.id })],
 	});
 
-	// Attach the prepaid add-on with quantity options (using AutumnCli like original)
 	await AutumnCli.attach({
 		customerId,
 		productId: addOn.id,
@@ -215,10 +153,8 @@ test.concurrent(`${chalk.yellowBright("legacy-addon 3: attach pro then monthly p
 		],
 	});
 
-	// Use AutumnCli.getCustomer for V1 response format (entitlements, add_ons)
 	const cusRes = (await AutumnCli.getCustomer(customerId)) as ApiCustomerV1;
 
-	// Pro gives 10 Messages, add-on gives 500
 	const expectedBalance = 10 + monthlyQuantity;
 
 	const monthlyMessagesBalance = cusRes.entitlements.find(
@@ -232,7 +168,6 @@ test.concurrent(`${chalk.yellowBright("legacy-addon 3: attach pro then monthly p
 
 	expect(cusRes.invoices.length).toBe(2);
 
-	// Verify /entitled returns correct balance (V0 endpoint with balances array)
 	const entitledRes = (await AutumnCli.entitled(
 		customerId,
 		TestFeature.Messages,

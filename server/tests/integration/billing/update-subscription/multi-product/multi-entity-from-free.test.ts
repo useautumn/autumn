@@ -11,7 +11,6 @@ import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 
-// 1. Entity 1 pro, Entity 2 free - Entity 2 updates free items (stays free)
 test.concurrent(`${chalk.yellowBright("multi-entity-from-free: update free items")}`, async () => {
 	const customerId = "multi-ent-update-free";
 
@@ -40,7 +39,6 @@ test.concurrent(`${chalk.yellowBright("multi-entity-from-free: update free items
 		],
 	});
 
-	// Verify entity 2 starts with 100 included usage
 	const entity2Before = await autumnV1.entities.get(customerId, entities[1].id);
 	await expectProductActive({ customer: entity2Before, productId: free.id });
 	expectCustomerFeatureCorrect({
@@ -51,7 +49,6 @@ test.concurrent(`${chalk.yellowBright("multi-entity-from-free: update free items
 		usage: 0,
 	});
 
-	// Entity 2 updates free product to have more included usage (still free)
 	const updatedMessagesItem = items.monthlyMessages({ includedUsage: 200 });
 
 	const preview = await autumnV1.subscriptions.previewUpdate({
@@ -61,7 +58,6 @@ test.concurrent(`${chalk.yellowBright("multi-entity-from-free: update free items
 		items: [updatedMessagesItem],
 	});
 
-	// Should be $0 since it's still a free product
 	expect(preview.total).toEqual(0);
 
 	await autumnV1.subscriptions.update({
@@ -71,7 +67,6 @@ test.concurrent(`${chalk.yellowBright("multi-entity-from-free: update free items
 		items: [updatedMessagesItem],
 	});
 
-	// Verify entity 2 has updated included usage
 	const entity2After = await autumnV1.entities.get(customerId, entities[1].id);
 	await expectProductActive({ customer: entity2After, productId: free.id });
 	expectCustomerFeatureCorrect({
@@ -82,15 +77,13 @@ test.concurrent(`${chalk.yellowBright("multi-entity-from-free: update free items
 		usage: 0,
 	});
 
-	// Verify only 1 invoice (from entity1's pro attachment)
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	expectCustomerInvoiceCorrect({
 		customer,
 		count: 1,
-		latestTotal: 20, // Only entity 1's pro
+		latestTotal: 20,
 	});
 
-	// Should still have 1 subscription (entity 1's pro)
 	await expectSubToBeCorrect({
 		db: ctx.db,
 		customerId,
@@ -101,11 +94,9 @@ test.concurrent(`${chalk.yellowBright("multi-entity-from-free: update free items
 	});
 });
 
-// 2. Entity 1 has paid sub, entity 2 upgrades free to paid
 test.concurrent(`${chalk.yellowBright("multi-entity-free-to-paid: entity 2 upgrades free to paid")}`, async () => {
 	const customerId = "multi-ent-free-to-paid";
 
-	// Products
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
 
 	const pro = products.pro({
@@ -131,7 +122,6 @@ test.concurrent(`${chalk.yellowBright("multi-entity-free-to-paid: entity 2 upgra
 		],
 	});
 
-	// Update entity 2's free product to have a base price
 	const priceItem = items.monthlyPrice();
 
 	const preview = await autumnV1.subscriptions.previewUpdate({
@@ -150,7 +140,6 @@ test.concurrent(`${chalk.yellowBright("multi-entity-free-to-paid: entity 2 upgra
 		items: [messagesItem, priceItem],
 	});
 
-	// Verify entity 2 has the updated product
 	const entity2Data = await autumnV1.entities.get(customerId, entities[1].id);
 
 	await expectProductActive({ customer: entity2Data, productId: free.id });
@@ -162,7 +151,6 @@ test.concurrent(`${chalk.yellowBright("multi-entity-free-to-paid: entity 2 upgra
 		usage: 0,
 	});
 
-	// Verify invoices (1 from entity1's pro, 1 from entity2's update)
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
 	expectCustomerInvoiceCorrect({
@@ -181,11 +169,9 @@ test.concurrent(`${chalk.yellowBright("multi-entity-free-to-paid: entity 2 upgra
 	});
 });
 
-// 3. Free to paid with base price + consumable + prepaid
 test.concurrent(`${chalk.yellowBright("multi-entity-free-to-paid: base + consumable + prepaid")}`, async () => {
 	const customerId = "multi-ent-f2p-combo";
 
-	// Products
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
 
 	const pro = products.pro({
@@ -205,18 +191,15 @@ test.concurrent(`${chalk.yellowBright("multi-entity-free-to-paid: base + consuma
 			s.products({ list: [pro, free] }),
 			s.entities({ count: 2, featureId: TestFeature.Users }),
 		],
-		// V2 attach: updateSubscription always runs V2 (a73cd1c2a), so a V1 pro
-		// would leave one sub with mixed billing versions.
 		actions: [
 			s.billing.attach({ productId: "pro", entityIndex: 0 }),
 			s.billing.attach({ productId: "free", entityIndex: 1 }),
 		],
 	});
 
-	// Update entity 2's free product to have base price + consumable + prepaid
-	const priceItem = items.monthlyPrice(); // $20/mo
-	const consumableItem = items.consumableMessages({ includedUsage: 50 }); // $0.10/msg overage
-	const prepaidItem = items.prepaidMessages({ includedUsage: 0 }); // $10/100 msgs
+	const priceItem = items.monthlyPrice();
+	const consumableItem = items.consumableMessages({ includedUsage: 50 });
+	const prepaidItem = items.prepaidMessages({ includedUsage: 0 });
 
 	const preview = await autumnV1.subscriptions.previewUpdate({
 		customer_id: customerId,
@@ -226,16 +209,13 @@ test.concurrent(`${chalk.yellowBright("multi-entity-free-to-paid: base + consuma
 		options: [
 			{
 				feature_id: TestFeature.Messages,
-				quantity: 100, // Prepaid quantity (inclusive of billing units)
+				quantity: 100,
 			},
 		],
 	});
 
-	// Base price ($20) + prepaid ($10 for 100 units) = $30
-	// Consumable charged on usage
 	expect(preview.total).toEqual(30);
 
-	// Prepaid quantity is inclusive of billing units (100 qty with 100 billing units = 100 credits)
 	await autumnV1.subscriptions.update({
 		customer_id: customerId,
 		entity_id: entities[1].id,
@@ -244,30 +224,28 @@ test.concurrent(`${chalk.yellowBright("multi-entity-free-to-paid: base + consuma
 		options: [
 			{
 				feature_id: TestFeature.Messages,
-				quantity: 100, // 100 credits (billing units = 100)
+				quantity: 100,
 			},
 		],
 	});
 
-	// Verify entity 2 has the updated product
 	const entity2Data = await autumnV1.entities.get(customerId, entities[1].id);
 
 	await expectProductActive({ customer: entity2Data, productId: free.id });
 	expectCustomerFeatureCorrect({
 		customer: entity2Data,
 		featureId: TestFeature.Messages,
-		includedUsage: 150, // prepaid quantity
+		includedUsage: 150,
 		balance: 150,
 		usage: 0,
 	});
 
-	// Verify invoices
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
 	expectCustomerInvoiceCorrect({
 		customer,
 		count: 2,
-		latestTotal: 30, // $20 base + $10 prepaid
+		latestTotal: 30,
 	});
 
 	await expectStripeSubscriptionCorrect({
@@ -277,11 +255,9 @@ test.concurrent(`${chalk.yellowBright("multi-entity-free-to-paid: base + consuma
 	});
 });
 
-// 4. Free to paid with annual price
 test.concurrent(`${chalk.yellowBright("multi-entity-free-to-paid: annual price")}`, async () => {
 	const customerId = "multi-ent-f2p-annual";
 
-	// Products
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
 
 	const pro = products.pro({
@@ -307,8 +283,7 @@ test.concurrent(`${chalk.yellowBright("multi-entity-free-to-paid: annual price")
 		],
 	});
 
-	// Update entity 2's free product to have annual price
-	const annualPriceItem = items.annualPrice(); // $200/yr
+	const annualPriceItem = items.annualPrice();
 
 	const preview = await autumnV1.subscriptions.previewUpdate({
 		customer_id: customerId,
@@ -326,7 +301,6 @@ test.concurrent(`${chalk.yellowBright("multi-entity-free-to-paid: annual price")
 		items: [messagesItem, annualPriceItem],
 	});
 
-	// Verify entity 2 has the updated product
 	const entity2Data = await autumnV1.entities.get(customerId, entities[1].id);
 
 	await expectProductActive({ customer: entity2Data, productId: free.id });
@@ -338,7 +312,6 @@ test.concurrent(`${chalk.yellowBright("multi-entity-free-to-paid: annual price")
 		usage: 0,
 	});
 
-	// Verify invoices
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
 	expectCustomerInvoiceCorrect({
@@ -357,11 +330,9 @@ test.concurrent(`${chalk.yellowBright("multi-entity-free-to-paid: annual price")
 	});
 });
 
-// 5. Free to paid with annual price MID-CYCLE
 test.concurrent(`${chalk.yellowBright("multi-entity-free-to-paid: annual mid-cycle")}`, async () => {
 	const customerId = "multi-ent-f2p-annual-mid";
 
-	// Products
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
 
 	const pro = products.pro({
@@ -384,12 +355,11 @@ test.concurrent(`${chalk.yellowBright("multi-entity-free-to-paid: annual mid-cyc
 		actions: [
 			s.attach({ productId: "pro", entityIndex: 0 }),
 			s.attach({ productId: "free", entityIndex: 1 }),
-			s.advanceTestClock({ days: 15 }), // Advance 15 days mid-cycle
+			s.advanceTestClock({ days: 15 }),
 		],
 	});
 
-	// Update entity 2's free product to have annual price
-	const annualPriceItem = items.annualPrice(); // $200/yr
+	const annualPriceItem = items.annualPrice();
 
 	const preview = await autumnV1.subscriptions.previewUpdate({
 		customer_id: customerId,
@@ -405,7 +375,6 @@ test.concurrent(`${chalk.yellowBright("multi-entity-free-to-paid: annual mid-cyc
 		items: [messagesItem, annualPriceItem],
 	});
 
-	// Verify entity 2 has the updated product
 	const entity2Data = await autumnV1.entities.get(customerId, entities[1].id);
 
 	await expectProductActive({ customer: entity2Data, productId: free.id });
@@ -417,7 +386,6 @@ test.concurrent(`${chalk.yellowBright("multi-entity-free-to-paid: annual mid-cyc
 		usage: 0,
 	});
 
-	// Verify invoices
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
 	expectCustomerInvoiceCorrect({
@@ -436,11 +404,9 @@ test.concurrent(`${chalk.yellowBright("multi-entity-free-to-paid: annual mid-cyc
 	});
 });
 
-// 6. Monthly price mid-cycle
 test.concurrent(`${chalk.yellowBright("multi-entity-free-to-paid: monthly mid-cycle")}`, async () => {
 	const customerId = "multi-ent-f2p-midcycle";
 
-	// Products
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
 
 	const pro = products.pro({
@@ -463,11 +429,10 @@ test.concurrent(`${chalk.yellowBright("multi-entity-free-to-paid: monthly mid-cy
 		actions: [
 			s.attach({ productId: "pro", entityIndex: 0 }),
 			s.attach({ productId: "free", entityIndex: 1 }),
-			s.advanceTestClock({ days: 15 }), // Advance 15 days mid-cycle
+			s.advanceTestClock({ days: 15 }),
 		],
 	});
 
-	// Update entity 2's free product to have a base price
 	const priceItem = items.monthlyPrice();
 
 	const preview = await autumnV1.subscriptions.previewUpdate({
@@ -484,7 +449,6 @@ test.concurrent(`${chalk.yellowBright("multi-entity-free-to-paid: monthly mid-cy
 		items: [messagesItem, priceItem],
 	});
 
-	// Verify entity 2 has the updated product
 	const entity2Data = await autumnV1.entities.get(customerId, entities[1].id);
 
 	await expectProductActive({ customer: entity2Data, productId: free.id });
@@ -496,10 +460,8 @@ test.concurrent(`${chalk.yellowBright("multi-entity-free-to-paid: monthly mid-cy
 		usage: 0,
 	});
 
-	// Verify invoices
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Preview total should be prorated (around $10 for 15 days of $20/mo)
 	expectCustomerInvoiceCorrect({
 		customer,
 		count: 2,

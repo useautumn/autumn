@@ -1,6 +1,3 @@
-// Contract: an immediate regular-to-pooled entity plan switch carries usage into the synthetic pool.
-// A 200-credit pooled grant with 40 carried usage starts at 160 before its source is normalized.
-
 import { expect, test } from "bun:test";
 import {
 	type ApiEntityV2,

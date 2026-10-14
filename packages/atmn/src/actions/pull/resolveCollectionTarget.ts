@@ -79,7 +79,6 @@ export const resolveCollectionTarget = ({
 			? { kind: "inline", file: configPath }
 			: resolveBinding({ root, name: spread, configPath, files, kind });
 	}
-	// `atmn({ plans })` names the binding without a pair.
 	const named =
 		value.kind() === "identifier" ||
 		value.kind() === "shorthand_property_identifier";

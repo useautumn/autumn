@@ -1,5 +1,3 @@
-/** Dependency free so the parser can be exercised without loading any server
- *  module. The caps mirror runReplayOperator, which re-validates them. */
 const MAX_SELECTED_REQUESTS = 1000;
 const MAX_REQUESTS_PER_SECOND = 10;
 const HELP_FLAG = "--help";
@@ -94,8 +92,6 @@ function readBoundedNumberValue({
 	return value;
 }
 
-/** Rejected arguments may carry credentials (a connection string, a
- *  --password=... flag), so the raw text is never placed in the message. */
 function describeUnsupportedArgument({ flag }: { flag: string }): string {
 	return flag.startsWith("--")
 		? "unknown flag"

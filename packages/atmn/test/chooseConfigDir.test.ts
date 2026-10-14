@@ -1,12 +1,3 @@
-/**
- * A first pull never scaffolds into cwd unasked. With no `-c`, no config
- * beside cwd and no root marker, it asks where the config should live:
- *   - plain project  → default is autumn/
- *   - workspace root → default is packages/autumn/
- *   - either way the root marker records the folder so later commands find it
- *   - headless      → the `-c` hint is printed and nothing is written
- */
-
 import { afterEach, expect, test } from "bun:test";
 import {
 	existsSync,
@@ -61,7 +52,6 @@ const imports = {
 	builders: `${import.meta.dir}/../src/generated/features`,
 };
 
-/** A terminal: `output` is everything written, the question included (readline owns it). */
 const terminal = ({ answer }: { answer: string }) => {
 	let output = "";
 	const prompter = createPrompter({
@@ -162,7 +152,6 @@ test("the marker makes the next pull land on the chosen folder from the root", a
 	});
 
 	let output = "";
-	// Headless now: the marker answers the question, so nothing is asked.
 	const second = await runPull({
 		client,
 		cwd: root,

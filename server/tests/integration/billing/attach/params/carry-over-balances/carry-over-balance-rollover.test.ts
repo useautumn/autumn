@@ -1,13 +1,3 @@
-/**
- * Carry-over balances on items that roll over.
- *
- * Without carry-over, an unused balance on a rollover item becomes a rollover at
- * the next reset. A carried-over balance must get the same expiry the rollover
- * would have had, not the old plan's reset date:
- *   - duration "forever" -> expires_at = null
- *   - duration "month"   -> expires_at = old next_reset_at + length months
- */
-
 import { expect, test } from "bun:test";
 import {
 	type ApiCustomerV3,
@@ -51,15 +41,6 @@ const getMessagesCustomerEntitlements = async ({
 
 	return { planCustomerEntitlement, carriedOverCustomerEntitlements };
 };
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 1: Forever rollover -> carried-over balance never expires
-//
-// Pro: 100 messages (rollover: forever), 30 used (balance=70)
-// Upgrade to Premium (500, rollover: forever) immediately with
-// billing_cycle_anchor: "now" + carry_over_balances
-// Expected: loose carried-over balance of 70 with expires_at = null
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(
 	`${chalk.yellowBright("carry-over-balance rollover 1: forever rollover item carries balance with no expiry")}`,
@@ -123,15 +104,6 @@ test.concurrent(
 		expect(carriedOverCustomerEntitlements[0].expires_at).toBeNull();
 	},
 );
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 2: Monthly rollover -> carried-over balance expires like a rollover would
-//
-// Pro: 100 messages (rollover: 2 months), 30 used (balance=70)
-// Upgrade to Premium immediately with carry_over_balances
-// Expected: loose carried-over balance of 70 expiring 2 months after Pro's
-// next reset (when the rollover created at that reset would have expired)
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(
 	`${chalk.yellowBright("carry-over-balance rollover 2: monthly rollover item carries balance with the rollover expiry")}`,

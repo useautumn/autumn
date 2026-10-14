@@ -46,7 +46,7 @@ export const executePostgresDeduction = async ({
 	ctx: AutumnContext;
 	customerId: string;
 	entityId?: string;
-	fullCustomer?: FullCustomer; // if provided from function above!
+	fullCustomer?: FullCustomer;
 	deductions: FeatureDeduction[];
 	eventInfo?: EventInfo;
 	options?: DeductionOptions;
@@ -68,7 +68,6 @@ export const executePostgresDeduction = async ({
 		)}`,
 	);
 
-	// Need to getOrCreateCustomer here too...
 	if (!fullCustomer) {
 		fullCustomer = await CusService.getFull({
 			ctx,
@@ -99,7 +98,6 @@ export const executePostgresDeduction = async ({
 		let allUpdates: Record<string, DeductionUpdate> = {};
 		let allMutationLogs: MutationLogItem[] = [];
 
-		// Need to deduct from customer entitlement...
 		for (const deduction of deductions) {
 			const {
 				feature,
@@ -127,7 +125,6 @@ export const executePostgresDeduction = async ({
 				continue;
 			}
 
-			// Call the stored function to deduct from entitlements with credit costs
 			const result = await db.execute(
 				sql`SELECT * FROM deduct_from_cus_ents(
 			${JSON.stringify({
@@ -150,7 +147,6 @@ export const executePostgresDeduction = async ({
 		) ${planetScaleTag({ query: "deductFromCusEnts" })}`,
 			);
 
-			// Parse the JSONB result
 			const resultJson = result[0]?.deduct_from_cus_ents as {
 				updates: Record<string, DeductionUpdate>;
 				remaining: number;

@@ -43,8 +43,6 @@ describe("dashboardLinkableApproval", () => {
 		).toBe(true);
 	});
 
-	// The schedule sheet cannot carry undeclared_plans or a first-phase anchor
-	// timestamp, so submitting it could change the approved schedule.
 	test("does not link setPlans", () => {
 		expect(
 			dashboardLinkableApproval({

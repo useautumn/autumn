@@ -5,7 +5,6 @@ import {
 import { SubjectNotFoundError } from "../../../subject/subjectErrors.js";
 import type { PartitionProcessorScope } from "../../../types/partitionProcessor.js";
 
-/** An email-only customer has no id, so no partition: the plan creating a customer with its email takes it over in Postgres. */
 const claimEmailOnlyCustomer = async ({
 	scope,
 	command,
@@ -22,7 +21,6 @@ const claimEmailOnlyCustomer = async ({
 	return claimedInternalId !== null;
 };
 
-/** The customer the plan would create, if it already exists: held, in Postgres, or an email-only customer it claims, which then loads like any other. */
 export const ensureCustomerToCreate = async ({
 	scope,
 	command,

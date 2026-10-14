@@ -112,7 +112,7 @@ test.concurrent(chalk.yellowBright(`${testCase}-product-mix: should combine prod
 	expect(resBefore).toMatchObject({
 		allowed: true,
 		balance: {
-			granted_balance: 300, // 100 from product + 200 from loose
+			granted_balance: 300,
 			current_balance: 300,
 		},
 	});
@@ -127,7 +127,7 @@ test.concurrent(chalk.yellowBright(`${testCase}-product-mix: should combine prod
 	expect(resAfter).toMatchObject({
 		allowed: true,
 		balance: {
-			granted_balance: 100, // Only product balance remains
+			granted_balance: 100,
 			current_balance: 100,
 		},
 	});
@@ -175,7 +175,7 @@ test.concurrent(chalk.yellowBright(`${testCase}-reset-mix: should combine expiri
 	expect(resBefore).toMatchObject({
 		allowed: true,
 		balance: {
-			granted_balance: 300, // 200 expiring + 100 resetting
+			granted_balance: 300,
 			current_balance: 300,
 		},
 	});
@@ -190,7 +190,7 @@ test.concurrent(chalk.yellowBright(`${testCase}-reset-mix: should combine expiri
 	expect(resAfter).toMatchObject({
 		allowed: true,
 		balance: {
-			granted_balance: 100, // Only resetting balance remains
+			granted_balance: 100,
 			current_balance: 100,
 			reset: {
 				interval: ResetInterval.Month,

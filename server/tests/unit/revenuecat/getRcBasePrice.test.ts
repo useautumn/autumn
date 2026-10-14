@@ -1,8 +1,3 @@
-/**
- * Unit tests for getRcBasePrice — extracts an Autumn plan's flat base price as
- * RevenueCat micros + uppercased currency, or null for free / usage-only plans.
- */
-
 import {
 	BillingInterval,
 	type FullProduct,

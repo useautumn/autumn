@@ -4,7 +4,6 @@ import {
 	type FullCusProduct,
 } from "@autumn/shared";
 
-/** Purchased prepaid units, priced by the customer's own version so a later catalog pack size can't rescale them. */
 export function customerProductToPaidFeatureQuantities({
 	cusProduct,
 }: {
@@ -31,7 +30,6 @@ export function customerProductToPaidFeatureQuantities({
 	);
 }
 
-/** Purchased seats per license plan, excluding the seats the license includes. */
 export function customerProductToPaidLicenseQuantities({
 	cusProduct,
 }: {

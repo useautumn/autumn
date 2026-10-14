@@ -65,9 +65,6 @@ slackRoutes.get("/oauth/callback", async (c) => {
 });
 
 slackRoutes.post("/events", (c) => {
-	// Slack retries deliveries it considers failed (non-200 or slow). Ack a retry
-	// immediately without reprocessing, so a message that errors isn't run again
-	// (no duplicate agent runs / API spend).
 	const retryNum = c.req.header("x-slack-retry-num");
 	if (retryNum) {
 		logger.debug("Acking Slack retry without reprocessing", {

@@ -16,8 +16,6 @@ const oauthErrorResponse = (c: LeafMcpContext, error: OAuthHttpError) => {
 		c.header("WWW-Authenticate", error.wwwAuthenticate);
 	}
 
-	// A challenge no credentials answered carries no code, so the body must not
-	// invent one the WWW-Authenticate header deliberately left out.
 	return c.json(
 		{
 			...(error.error ? { error: error.error } : {}),
@@ -60,7 +58,6 @@ export const createHandleMcp =
 			httpPath: path,
 			req: c.env.incoming,
 			res: c.env.outgoing,
-			// Stateful sessions live until the client sends DELETE, which most never do.
 			options: { serverless: true },
 		});
 		return RESPONSE_ALREADY_SENT;

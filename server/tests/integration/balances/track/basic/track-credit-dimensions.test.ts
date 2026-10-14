@@ -1,11 +1,3 @@
-/**
- * Contract: a dimensioned rate-card row prices a track by its properties —
- * the most specific matching dimension sets the rate, multipliers scale it,
- * no match falls back to the row's rate — on both the cached and persisted
- * paths, with per-dimension attribution and per-dimension tier progress, and
- * a finalize repricing at the properties the check locked with.
- */
-
 import { expect, test } from "bun:test";
 import {
 	type ApiCustomerV3,
@@ -47,7 +39,6 @@ const dimensionedAction1: FeatureConfigOverride = {
 	],
 };
 
-/** Long enough for the Postgres sync under load; a sync that never lands still fails well inside a minute. */
 const PERSISTED_BALANCE_TIMEOUT_MS = 15_000;
 
 const withFeatureOverride = (
@@ -72,7 +63,6 @@ const expectCreditsBalance = async ({
 		balance,
 		8,
 	);
-	// The deduction reaches Postgres asynchronously; poll rather than guess how long the sync takes.
 	await pollUntilAsserted({
 		fetch: () =>
 			autumnV1.customers.get<ApiCustomerV3>(customerId, {
@@ -219,7 +209,6 @@ test.concurrent(
 			value: 4,
 			properties: { size: "xl" },
 		});
-		// 3 @ 2 = 6, then 2 @ 2 + 2 @ 1 = 6 — the second track crosses the tier.
 		await expectCreditsBalance({ autumnV1, customerId, balance: 1_000 - 12 });
 
 		await timeout(3_000);

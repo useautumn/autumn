@@ -3,8 +3,6 @@ import { ErrCode } from "@autumn/shared";
 
 import { mockModuleWithRestore } from "../utils/mockModuleWithRestore.js";
 
-// Map-backed model-pricing-cache stub — the cache key is shared with the dev
-// server, so the real Redis must never be touched here.
 const store = new Map<string, unknown>();
 const setCalls: unknown[] = [];
 
@@ -80,7 +78,6 @@ test("cache miss fetches and populates primary + stale caches", async () => {
 	expect(result).toEqual(pricingData);
 	expect(fetchCalls).toBe(1);
 
-	// Cache writes are fire-and-forget — flush microtasks before asserting
 	await Bun.sleep(0);
 	expect(setCalls).toEqual([pricingData]);
 	expect(store.get(PRIMARY_KEY)).toEqual(pricingData);

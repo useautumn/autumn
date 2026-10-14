@@ -22,10 +22,6 @@ import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 
-// ═══════════════════════════════════════════════════════════════════
-// Multi-entity comparison tests (V2 cache baseline)
-// ═══════════════════════════════════════════════════════════════════
-
 test.concurrent(
 	`${chalk.yellowBright("get-customer: multi-entity customer returns correct balances across API versions")}`,
 	async () => {
@@ -59,7 +55,6 @@ test.concurrent(
 			],
 		});
 
-		// V1 (v1.2) -- products[] + features{} shape (ApiCustomerV3)
 		const cusV1 = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 		ApiCustomerV3Schema.parse(cusV1);
 		expect(cusV1.products.length).toBeGreaterThan(0);
@@ -78,7 +73,6 @@ test.concurrent(
 			id: TestFeature.Dashboard,
 		});
 
-		// V2.1 -- subscriptions (single array), flags split out, balances use V1 shape
 		const cusV2_1 = await autumnV2_1.customers.get<ApiCustomerV5>(customerId, {
 			keepInternalFields: true,
 		});
@@ -104,7 +98,6 @@ test.concurrent(
 		});
 		expect(cusV2_1.balances[TestFeature.Dashboard]).toBeUndefined();
 
-		// V2.2 -- same shape as v2.1
 		const cusV2_2 = await autumnV2_2.customers.get<ApiCustomerV5>(customerId, {
 			keepInternalFields: true,
 		});
@@ -130,18 +123,6 @@ test.concurrent(
 		});
 
 		const refDir = `${import.meta.dir}/../../../references`;
-		// await Bun.write(
-		// 	`${refDir}/getCustomerV1Response.json`,
-		// 	JSON.stringify(cusV1, null, 2),
-		// );
-		// await Bun.write(
-		// 	`${refDir}/getCustomerV2_1Response.json`,
-		// 	JSON.stringify(cusV2_1, null, 2),
-		// );
-		// await Bun.write(
-		// 	`${refDir}/getCustomerV2_2Response.json`,
-		// 	JSON.stringify(cusV2_2, null, 2),
-		// );
 	},
 );
 
@@ -341,14 +322,12 @@ test.concurrent(
 		);
 
 		ApiCustomerV5Schema.parse(afterAttach);
-		// The balance worker doesn't aggregate entity data onto the customer.
 		if (!isBalanceWorkerRoute()) {
 			expectBalanceCorrect({
 				customer: afterAttach,
 				featureId: TestFeature.Credits,
 				remaining: 200,
 				usage: 0,
-				// planId: null,
 			});
 		}
 	},

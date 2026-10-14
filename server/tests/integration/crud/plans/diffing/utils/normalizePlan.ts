@@ -39,7 +39,6 @@ export const normalizeItem = (item: ApiPlanItem) => {
 			if (val !== undefined && val !== null) out[k] = normalizeRollover(val);
 		} else {
 			const val = item[k];
-			// Diff omits nullish fields in create params; treat null == absent.
 			if (val !== undefined && val !== null) out[k] = val;
 		}
 	}

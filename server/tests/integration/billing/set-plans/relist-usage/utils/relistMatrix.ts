@@ -232,7 +232,6 @@ const liveSubscriptions = async ({
 		(sub) => !["canceled", "incomplete_expired"].includes(sub.status),
 	);
 
-/** Advances onto an invoice date and waits until Autumn has processed every invoice.created it produced. */
 const advanceOntoInvoice = async ({
 	scenario,
 	stripeCustomerId,
@@ -266,7 +265,6 @@ const advanceOntoInvoice = async ({
 				(event) =>
 					(event.data.object as Stripe.Invoice).customer === stripeCustomerId,
 			);
-			// A sub without a metered or changed item can cross an anchor with no invoice at all.
 			if (events.length === 0) return Date.now() - since > NO_INVOICE_GRACE_MS;
 			const statuses = await Promise.all(
 				events.map((event) =>
@@ -284,7 +282,6 @@ const advanceOntoInvoice = async ({
 	});
 };
 
-/** Tracks 150 messages, changes the plan on day 10, then follows the Stripe clock through any anchor and the renewal. */
 export const runRelistCase = async ({
 	customerId,
 	setupState,
@@ -374,7 +371,6 @@ export const runRelistCase = async ({
 	await autumnV2_4.billing.setPlans(params);
 	const execute = await takeNewInvoices();
 
-	// The sub carrying Pro's metered price, so a second sub (multi-sub state) is never mistaken for it.
 	const subs = await liveSubscriptions({ stripeCli, stripeCustomerId });
 	const sub =
 		subs.find((candidate) =>
@@ -472,7 +468,6 @@ export const runRelistCase = async ({
 
 export type RelistRun = Awaited<ReturnType<typeof runRelistCase>>;
 
-/** The same scenario twice on separate customers: the plan re-listed as-is, and with `change` applied. */
 export const runRelistPair = async ({
 	customerIdPrefix,
 	change,

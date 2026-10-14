@@ -1,16 +1,3 @@
-/**
- * TDD test: cancelling a plan that is pending on a Stripe checkout session must
- * expire that session at Stripe and let the customer start a fresh checkout.
- *
- * Red-failure mode (current behavior):
- *  - the checkout session stays "open" at Stripe after the pending plan is
- *    cancelled, and/or a re-attach hands back the stale checkout URL.
- *
- * Green-success criteria (after fix):
- *  - session.status === "expired", the pending row is expired, the metadata
- *    row is gone, and a re-attach returns a new open checkout session.
- */
-
 import { expect, test } from "bun:test";
 import {
 	ALL_STATUSES,

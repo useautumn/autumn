@@ -32,12 +32,6 @@ const isLinkShared = (
 	typeof event.unfurl_id === "string" &&
 	(event.source === "composer" || event.source === "conversations_history");
 
-/**
- * Runs AFTER the 3s ack, asynchronously. Resolves tenancy strictly by channel,
- * validates customer ownership, renders, and unfurls. Unfurling needs no channel
- * membership. Any failure is swallowed with a log — a probed/typo'd link simply
- * produces no card.
- */
 export async function handleLinkShared(
 	event: SlackEventEnvelope["event"],
 ): Promise<void> {
@@ -45,20 +39,15 @@ export async function handleLinkShared(
 
 	const orgId = resolveChannelToOrg(event.channel);
 	if (!orgId) {
-		// Unmapped channel: decline to render. Never guess a tenant.
 		console.info(`[slack-unfurl] unmapped channel ${event.channel}, skipping`);
 		return;
 	}
 
-	// Parse + dedupe customer links, cap at MAX_CARDS — they render side-by-side
-	// into ONE composite image, so beyond a few they'd be unreadable anyway.
 	const seen = new Set<string>();
 	const links: Array<{ url: string } & ParsedCustomerLink> = [];
 	for (const link of event.links) {
 		const parsed = parseCustomerLink(link.url);
 		if (!parsed) continue;
-		// Dedupe by the resolved customer, not the raw url — query-string variants
-		// of the same customer would otherwise each eat a card slot.
 		const key = `${parsed.env}:${parsed.customerId}`;
 		if (seen.has(key)) continue;
 		seen.add(key);
@@ -67,9 +56,6 @@ export async function handleLinkShared(
 	}
 	if (links.length === 0) return;
 
-	// Resolve every link concurrently; each runs on its own org+env-scoped ctx.
-	// We resolve here only to decide what to include + name the alt text; the
-	// /cards route re-resolves and renders.
 	const resolved = (
 		await Promise.all(
 			links.map(async (link) => {
@@ -94,9 +80,6 @@ export async function handleLinkShared(
 
 	if (resolved.length === 0) return;
 
-	// ONE token carries all resolved customers -> ONE composite image, attached to
-	// the first resolved link. `?v` is pinned to the top of the current UTC hour
-	// so the url is stable for an hour (Slack/CDN reuse the render).
 	const HOUR_MS = 3_600_000;
 	const hourBucket = Math.floor(Date.now() / HOUR_MS) * HOUR_MS;
 	const token = signCardToken({
@@ -109,7 +92,6 @@ export async function handleLinkShared(
 	const card: UnfurlCard = {
 		url: resolved[0].url,
 		imageUrl: `${env.AUTUMN_PUBLIC_API_URL}/slack-unfurl/cards/${token}.png?v=${hourBucket}`,
-		// Slack rejects image blocks whose alt_text exceeds 2000 chars.
 		altText: resolved
 			.map((link) => link.name)
 			.join(", ")

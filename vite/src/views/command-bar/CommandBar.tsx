@@ -93,7 +93,6 @@ const CommandBar = () => {
 	>("main");
 	const [favouritesPage, setFavouritesPage] = useState(0);
 
-	// Favourites store
 	const favourites = useImpersonationFavouritesStore((s) => s.favourites);
 	const addOrg = useImpersonationFavouritesStore((s) => s.addOrg);
 	const removeOrg = useImpersonationFavouritesStore((s) => s.removeOrg);
@@ -102,7 +101,6 @@ const CommandBar = () => {
 	const isOrgFav = useImpersonationFavouritesStore((s) => s.isOrgFav);
 	const isUserFav = useImpersonationFavouritesStore((s) => s.isUserFav);
 
-	// Refs to persist content during close animation
 	const closeTimeoutRef = useRef<NodeJS.Timeout>();
 	const lastRenderedContentRef = useRef<React.ReactNode>(null);
 	const isTransitioningRef = useRef(false);
@@ -142,20 +140,15 @@ const CommandBar = () => {
 		return "System";
 	};
 
-	// Improved close dialog function with proper timing
 	const closeDialog = useCallback(() => {
-		// Mark that we're transitioning to prevent state updates during close
 		isTransitioningRef.current = true;
 
-		// Close the dialog immediately
 		setOpen(false);
 
-		// Clear any existing timeout
 		if (closeTimeoutRef.current) {
 			clearTimeout(closeTimeoutRef.current);
 		}
 
-		// Delay state reset to after dialog animation completes (300ms typical for dialog animations)
 		closeTimeoutRef.current = setTimeout(() => {
 			setSearch("");
 			setDebouncedSearch("");
@@ -163,16 +156,11 @@ const CommandBar = () => {
 			isTransitioningRef.current = false;
 			lastRenderedContentRef.current = null;
 		}, 300);
-	}, [
-		// Close the dialog immediately
-		setOpen,
-	]);
+	}, [setOpen]);
 
-	// Helper to switch pages without causing flash
 	const switchToPage = useCallback(
 		(page: "main" | "impersonate" | "orgs" | "theme") => {
 			if (!isTransitioningRef.current) {
-				// Batch state updates to prevent multiple re-renders
 				setCurrentPage(page);
 				setSearch("");
 				setDebouncedSearch("");
@@ -187,7 +175,6 @@ const CommandBar = () => {
 	const { sandboxes } = useSandboxesQuery({ enabled: !!org });
 	const selectSandbox = useSelectSandbox();
 
-	// Debounce search for backend query
 	useEffect(() => {
 		const timer = setTimeout(() => {
 			setDebouncedSearch(search);
@@ -195,14 +182,12 @@ const CommandBar = () => {
 		return () => clearTimeout(timer);
 	}, [search]);
 
-	// Search customers from backend with debounced search term
 	const { data: searchedCustomersData, isLoading: searchCustomersLoading } =
 		useQuery<{
 			customers: Customer[];
 		}>({
 			queryKey: buildKey(["command-palette-customers-search", debouncedSearch]),
 			queryFn: async () => {
-				// Always use the search term in the backend query
 				const { data } = await axiosInstance.post(`/customers/all/search`, {
 					search: debouncedSearch,
 					filters: {},
@@ -214,7 +199,6 @@ const CommandBar = () => {
 			enabled: open && debouncedSearch.length > 0 && currentPage === "main",
 		});
 
-	// Search orgs and users for impersonation (concurrent requests)
 	const impersonateEnabled =
 		open &&
 		debouncedSearch.length > 0 &&
@@ -294,14 +278,12 @@ const CommandBar = () => {
 		(favouritesPage + 1) * FAVOURITES_PAGE_SIZE,
 	);
 
-	// Reset favourites page when search becomes non-empty or page changes away
 	useEffect(() => {
 		if (search !== "" || currentPage !== "impersonate") {
 			setFavouritesPage(0);
 		}
 	}, [search, currentPage]);
 
-	// Initialize hotkeys (only active when command bar is open)
 	useCommandBarHotkeys({
 		isOpen: open,
 		closeDialog,
@@ -318,7 +300,7 @@ const CommandBar = () => {
 		"escape",
 		(e) => {
 			if (currentPage !== "main") {
-				e.preventDefault(); // Prevent default ESC behavior (closing dialog)
+				e.preventDefault();
 				switchToPage("main");
 			}
 		},
@@ -334,7 +316,6 @@ const CommandBar = () => {
 			) as HTMLElement | null;
 			const value = selected?.getAttribute("data-value");
 			if (!value) return;
-			// value format is "org:<org_id>" or "user:<user_id>"
 			const [kind, id] = value.split(":");
 			if (!id) return;
 			if (kind === "org") {
@@ -377,9 +358,6 @@ const CommandBar = () => {
 		},
 	);
 
-	// ←/→ pagination is wired via CommandInput.onKeyDown (below) so that the
-	// browser's default caret-move on the focused input is suppressed BEFORE
-	// it fires. useHotkeys can't reliably win that race when the input is focused.
 	const handleInputKeyDown = useCallback(
 		(e: React.KeyboardEvent<HTMLInputElement>) => {
 			const paginatable =
@@ -399,7 +377,6 @@ const CommandBar = () => {
 		[open, currentPage, search, favourites.length, totalFavouritesPages],
 	);
 
-	// Clean up timeout on unmount
 	useEffect(() => {
 		return () => {
 			if (closeTimeoutRef.current) {
@@ -408,10 +385,8 @@ const CommandBar = () => {
 		};
 	}, []);
 
-	// Only reset states when dialog opens (not when it closes)
 	useEffect(() => {
 		if (open) {
-			// Reset transitioning state when opening
 			isTransitioningRef.current = false;
 			lastRenderedContentRef.current = null;
 		}
@@ -420,7 +395,6 @@ const CommandBar = () => {
 	const showResults = search.length > 0;
 	const rawCustomers = searchedCustomersData?.customers || [];
 
-	// Combine and sort all results by relevance
 	const sortedResults = useMemo(() => {
 		if (!search) return [];
 
@@ -454,7 +428,6 @@ const CommandBar = () => {
 					return { type: "product" as const, data: product, score };
 				});
 
-			// Combine and sort all results together
 			return [...customerResults, ...productResults]
 				.sort((a, b) => a.score - b.score)
 				.slice(0, 15);
@@ -506,10 +479,6 @@ const CommandBar = () => {
 		currentPage,
 	]);
 
-	// Show loading if:
-	// 1. Products are loading, OR
-	// 2. User is typing and we're waiting for debounce, OR
-	// 3. Query is actively loading
 	const isWaitingForDebounce = search !== debouncedSearch;
 	const isLoading =
 		currentPage === "main"
@@ -636,8 +605,6 @@ const CommandBar = () => {
 			)
 		: navigationItems;
 
-	// Sub-pages are search-only: listing every settings tab up front would bury
-	// the actions people open the bar for.
 	const matchedPages = useMemo(() => {
 		if (!search || currentPage !== "main") return [];
 		return pageCommands
@@ -806,7 +773,6 @@ const CommandBar = () => {
 	);
 
 	const renderImpersonatePage = () => {
-		// Favourites view: search is empty and we have favourites
 		if (search === "" && favourites.length >= 1) {
 			const heading =
 				favourites.length > FAVOURITES_PAGE_SIZE
@@ -832,10 +798,6 @@ const CommandBar = () => {
 												isCurrentlyImpersonating,
 											});
 										} catch (error) {
-											// Never delete the favourite here: impersonateUser
-											// reports a genuinely stale target by returning, so
-											// anything thrown is transient (a network blip, or a
-											// request aborted by its own page reload).
 											console.error("Failed to impersonate user:", error);
 											toast.error("Failed to impersonate — please try again");
 										}
@@ -880,7 +842,6 @@ const CommandBar = () => {
 			},
 		];
 
-		// Wait for orgs to load before showing anything so first org gets auto-selected
 		const waitingForOrgs = showResults && searchOrgsLoading;
 
 		return (
@@ -1083,8 +1044,6 @@ const CommandBar = () => {
 		);
 	};
 
-	// Memoize the current content to prevent flashes during re-renders
-	// Using a simpler approach to avoid complex dependency issues
 	const PAGE_CONTENT = {
 		main: renderMainPage,
 		impersonate: renderImpersonatePage,
@@ -1093,14 +1052,12 @@ const CommandBar = () => {
 	};
 	const currentContent = PAGE_CONTENT[currentPage]();
 
-	// Store the last rendered content when we have valid content
 	useEffect(() => {
 		if (currentContent && !isTransitioningRef.current) {
 			lastRenderedContentRef.current = currentContent;
 		}
 	}, [currentContent]);
 
-	// Handle dialog open/close with our improved logic
 	const handleOpenChange = useCallback(
 		(newOpen: boolean) => {
 			if (!newOpen) {
@@ -1121,7 +1078,6 @@ const CommandBar = () => {
 				onKeyDown={handleInputKeyDown}
 			/>
 			<CommandList>
-				{/* Use last rendered content during transition to prevent flash */}
 				{isTransitioningRef.current && lastRenderedContentRef.current
 					? lastRenderedContentRef.current
 					: currentContent}

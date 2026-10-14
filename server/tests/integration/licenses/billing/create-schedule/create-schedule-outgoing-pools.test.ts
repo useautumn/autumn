@@ -1,4 +1,3 @@
-/** Scheduling a customer who already holds license pools transitions those pools like an immediate attach. */
 import { expect, test } from "bun:test";
 import {
 	type ApiCustomerV5,
@@ -20,8 +19,6 @@ import chalk from "chalk";
 
 const INCLUDED_SEATS = 2;
 
-/** Two plans in one group so a phase plan replaces the other, plus the seat
- * license they may each link. `offersLicense` decides which parents link it. */
 const buildPlans = ({ prefix }: { prefix: string }) => {
 	const parentGroup = `${prefix}-parent`;
 
@@ -138,8 +135,6 @@ test.concurrent(
 				s.products({ list: [currentPlan, nextPlan, seat] }),
 			],
 			actions: [
-				// Both parents offer the same seat license, so the pool has a 1:1
-				// successor on every phase.
 				s.licenses.link({
 					parentProductId: currentPlan.id,
 					licenseProductId: seat.id,
@@ -166,8 +161,6 @@ test.concurrent(
 			],
 		});
 
-		// The immediate phase expired the old row and inserted a new one; the
-		// seat must follow the pool onto it.
 		await expectAssignmentsAnchoredToParent({
 			ctx,
 			customerId,
@@ -211,8 +204,6 @@ test.concurrent(
 			],
 		});
 
-		// The opening phase claims an unrelated group, so the licensed plan is
-		// only superseded by the future phase: ended_at is set, status is not.
 		await autumnV2_3.billing.createSchedule<CreateScheduleParamsV0Input>({
 			customer_id: customerId,
 			phases: [
@@ -247,7 +238,6 @@ test.concurrent(
 				s.products({ list: [currentPlan, nextPlan, seat] }),
 			],
 			actions: [
-				// Only the current plan links the seat, so nextPlan drops it.
 				s.licenses.link({
 					parentProductId: currentPlan.id,
 					licenseProductId: seat.id,
@@ -269,8 +259,6 @@ test.concurrent(
 			],
 		});
 
-		// Attach parity: the dropped pool follows its expired parent out of
-		// inventory instead of erroring, and the assignment row is preserved.
 		const pools = await listLicensePools({ autumn: autumnV2_3, customerId });
 		expect(pools).toHaveLength(0);
 

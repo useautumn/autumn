@@ -1,11 +1,3 @@
-/**
- * atmn crud/migrations — push the same config again → no second migration
- *
- * the `versionedPro` base config: base price, prepaid seat item, usage item, trial, seat license; every line has customers attached
- *
- * One line of plans/atmn-v3/07_tests.md. [a, b] is a matrix looped INSIDE this file.
- */
-
 import { expect, test } from "bun:test";
 import { migrations as migrationsTable } from "@autumn/shared";
 import { seedVersionableCustomer } from "@tests/integration/catalog-v2/plans/migrations/utils/seedVersionableCustomer.js";
@@ -81,7 +73,6 @@ test.concurrent(
 			expect(first.migrationIds.length).toBeGreaterThan(0);
 			expect(await migrationRowCount({ ctx: scenario.ctx })).toBe(1);
 
-			// Same config, unchanged — the diff is empty, so nothing drafts again.
 			const second = await runPush({ client, cwd: scenario.cwd });
 			expect(second.preview.migrations ?? []).toEqual([]);
 			expect(second.migrationIds).toEqual([]);

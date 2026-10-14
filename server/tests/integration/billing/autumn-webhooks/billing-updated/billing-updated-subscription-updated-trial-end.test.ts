@@ -1,8 +1,3 @@
-/**
- * Integration tests for `billing.updated` webhooks emitted from Stripe's
- * `customer.subscription.updated` flow — `handleStripeSubscriptionUpdated`.
- */
-
 import { afterAll, beforeAll, expect, test } from "bun:test";
 import {
 	getTestSvixAppId,
@@ -33,10 +28,6 @@ afterAll(async () => {
 	await webhook?.cleanup();
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TRIAL ENDED
-// ═══════════════════════════════════════════════════════════════════════════════
-
 test(`${chalk.yellowBright("billing.updated: trial end → tags includes trial_ended")}`, async () => {
 	const customerId = "billing-updated-trial-end";
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
@@ -53,7 +44,7 @@ test(`${chalk.yellowBright("billing.updated: trial end → tags includes trial_e
 		],
 		actions: [
 			s.attach({ productId: proTrial.id }),
-			s.advanceTestClock({ days: 16 }), // past 14-day trial
+			s.advanceTestClock({ days: 16 }),
 		],
 	});
 

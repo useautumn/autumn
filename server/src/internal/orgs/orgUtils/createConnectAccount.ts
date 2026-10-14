@@ -10,19 +10,16 @@ export const createConnectAccount = async ({
 	metadata,
 }: {
 	org: Organization;
-	/** Only the contact email is used, so ownerless orgs can pass a stand-in. */
 	user: Pick<User, "email">;
 	metadata?: Record<string, string>;
 }) => {
-	// For v2 API, need to use specific API version
 	const stripe = initMasterStripe({
 		env: AppEnv.Sandbox,
-		legacyVersion: false, // Ensure using latest API version
+		legacyVersion: false,
 	});
 
 	console.log("Creating connect account for org:", org.name);
 
-	// Stripe v2 API for connected accounts
 	const account = await stripe.v2.core.accounts.create({
 		contact_email: user.email,
 		display_name: org.name,

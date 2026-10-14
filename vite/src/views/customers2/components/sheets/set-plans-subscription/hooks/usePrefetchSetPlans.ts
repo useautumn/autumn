@@ -6,8 +6,6 @@ import { useSyncProposalsV2QueryOptions } from "@/views/customers2/components/sy
 import { useCustomerContext } from "@/views/customers2/customer/CustomerContext";
 import { decideSetPlansEntry } from "../utils/decideSetPlansEntry";
 
-/** Loads what Set Plans waits on while the customer page is open, so it opens
- * without a blank sheet: the saved schedule, and Stripe's view only for the picker. */
 export const usePrefetchSetPlans = () => {
 	const { customer } = useCusQuery();
 	const { entityId } = useCustomerContext();

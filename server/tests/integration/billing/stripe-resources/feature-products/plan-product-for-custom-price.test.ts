@@ -1,13 +1,3 @@
-/**
- * A customized usage price bills under the Stripe Product its plan already uses for
- * that feature, not the Feature default.
- *
- * Contract:
- *   attach with customize.items  → custom price lands on the plan's feature product
- *   update with remove/add_items → custom price lands on the plan's feature product
- *   a plan price never inherits a product from a different entity scope
- */
-
 import { expect, test } from "bun:test";
 import {
 	type AttachParamsV1Input,
@@ -30,7 +20,6 @@ import {
 	usagePriceForFeature,
 } from "./utils/createUnmintedFeaturePlans.js";
 
-/** Put the plan's Messages price on its own Stripe Product (e.g. "Enterprise - Emails"). */
 const mapPlanFeatureProduct = async ({
 	ctx,
 	productId,

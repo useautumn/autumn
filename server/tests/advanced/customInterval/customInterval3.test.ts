@@ -133,7 +133,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing custom interval on add on m
 		expect(invoices[0].total).toBeCloseTo(proratedPrice, 1);
 
 		const expectedAddonEnd = addMonths(new Date(), 2);
-		const approximate = 1000 * 60 * 60 * 24; // +- 1 day
+		const approximate = 1000 * 60 * 60 * 24;
 		const addOnProduct = customer.products.find((p) => p.id === addOn.id);
 
 		expect(addOnProduct?.current_period_end).toBeCloseTo(

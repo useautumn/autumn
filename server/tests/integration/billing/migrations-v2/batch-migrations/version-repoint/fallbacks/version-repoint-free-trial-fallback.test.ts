@@ -6,7 +6,6 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-// version-only is per-customer until definition execute is restored
 import {
 	expectPerCustomerLaneWithRejections,
 	readRepointableCustomerPlanRow,
@@ -42,7 +41,6 @@ test.skip(
 		});
 		expect(before.trialEndsAt).not.toBeNull();
 
-		// Identical items — only the trial length changes between versions.
 		await autumnV2_3.post("/plans.update", {
 			plan_id: plan.id,
 			force_version: true,
@@ -82,8 +80,6 @@ test.skip(
 			result?.rejections?.map((rejection) => String(rejection.code)),
 		).toEqual(["free_trial_transition"]);
 
-		// The per-customer lane still lands the version and carries the row's
-		// existing trial end rather than restarting the target's 30-day trial.
 		const after = await readRepointableCustomerPlanRow({
 			ctx,
 			customerId,
@@ -119,7 +115,6 @@ test.skip(
 			planId: plan.id,
 		});
 
-		// Items change, trial config stays the same — freeTrialsAreSame holds.
 		await autumnV2_3.post("/plans.update", {
 			plan_id: plan.id,
 			force_version: true,

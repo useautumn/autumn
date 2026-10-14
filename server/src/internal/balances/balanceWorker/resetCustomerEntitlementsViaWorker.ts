@@ -8,7 +8,6 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getCusEntsNeedingReset } from "@/internal/customers/actions/resetCustomerEntitlements/getCusEntsNeedingReset.js";
 import { requestContextToCommandBase } from "./requestContextToCommandBase.js";
 
-/** The entity a due row belongs to, by public id; null for a customer-level row. Undefined when it can't be named from what was loaded. */
 const entityIdOfRow = ({
 	row,
 	fullCus,
@@ -26,7 +25,6 @@ const entityIdOfRow = ({
 	return entityId ?? undefined;
 };
 
-/** Each subject with a due row: the customer, and every entity whose own rows are due. */
 const dueSubjectsOf = ({
 	fullCus,
 	now,
@@ -42,11 +40,6 @@ const dueSubjectsOf = ({
 	return [...subjects];
 };
 
-/**
- * The worker path's lazy reset: each due subject's owning worker refills what it holds and lands it in
- * Postgres before this returns, so the caller can read fresh rows. True when something was refilled.
- * A failure is logged and never fails the read; the rows stay as loaded.
- */
 export async function resetCustomerEntitlementsViaWorker({
 	ctx,
 	fullCus,

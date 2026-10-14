@@ -1,13 +1,3 @@
-/**
- * resolveBillingControlWithProduct reports WHICH plan a control resolved from.
- * Auto-topup price scoping relies on this: a plan-resolved config must charge
- * that plan's price, never another plan's price for the same feature.
- *
- * For auto_topups (no most-restrictive collapse) the recency winner — the most
- * recently attached plan with a matching control — must win AND be reported as
- * the source `customerProduct`.
- */
-
 import { describe, expect, test } from "bun:test";
 import {
 	CusProductStatus,
@@ -74,11 +64,10 @@ describe("resolveBillingControlWithProduct — auto_topups recency + source plan
 		const addOn = planProduct({
 			id: "cp_addon",
 			internalProductId: "prod_addon",
-			createdAt: NOW - 1000, // attached later
+			createdAt: NOW - 1000,
 			quantity: 300,
 		});
 
-		// Order in the array shouldn't matter — recency (created_at) decides.
 		const resolved = resolve([base, addOn]);
 
 		expect(resolved?.control.quantity).toBe(300);

@@ -9,7 +9,6 @@ import {
 
 const RECENT_RUNS = 10;
 
-/** Every swarm file baseline (folder and global medians need them all), plus recent boot and teardown p50. */
 export const loadEtaPriors = async ({
 	ctx,
 }: {

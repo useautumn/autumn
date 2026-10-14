@@ -23,16 +23,13 @@ export type MigrationListActivityKind =
 	| "dry_run"
 	| "sample";
 
-/** Run-level facts one migration list row needs, summarized in batch per org. */
 export type MigrationListSummary = {
 	customer_count: number | null;
-	/** The latest unscoped live Run All; its counts are migration-wide. */
 	latest_run: {
 		status: MigrationRunStatus;
 		started_at: number | null;
 		finished_at: number | null;
 		error_message: string | null;
-		/** Null when the run has not failed; `unknown` for unclassified errors. */
 		error_code: MigrationRunErrorCode | null;
 		counts: MigrationListItemCounts;
 	} | null;
@@ -43,7 +40,6 @@ export type MigrationListSummary = {
 		would_change: number;
 		would_fail: number;
 	} | null;
-	/** The latest finished scoped live run (a sample or picked customers). */
 	latest_sample: {
 		status: MigrationRunStatus;
 		size: number;

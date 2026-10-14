@@ -9,13 +9,11 @@ export type { FileStats } from "../worker/runTestFileWithStats.ts";
 const WRAPPER_SCRIPT = "scripts/tw/worker/runTestFileWithStats.ts";
 let wrapperSource: string | undefined;
 
-/** `bun -e` source that runs a test command and prints its `[tw-file-stats]` line. */
 export const fileStatsWrapperSource = () => {
 	wrapperSource ??= readInlineBunScript(WRAPPER_SCRIPT);
 	return wrapperSource;
 };
 
-/** Watches a file's output stream (chunks may split lines) for the wrapper's stats line. */
 export const createFileStatsReader = ({
 	onStats,
 }: {

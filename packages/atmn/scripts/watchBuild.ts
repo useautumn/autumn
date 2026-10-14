@@ -20,7 +20,6 @@ const build = async (): Promise<void> => {
 	);
 };
 
-// Edits arrive in bursts (save-all, formatters); one build per burst.
 let timer: ReturnType<typeof setTimeout> | undefined;
 const scheduleBuild = (): void => {
 	clearTimeout(timer);

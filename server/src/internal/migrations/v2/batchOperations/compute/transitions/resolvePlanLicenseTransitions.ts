@@ -19,8 +19,6 @@ import { hashJson } from "@/utils/hash/hashJson.js";
 import type { BatchMigrationRejection } from "../../types/index.js";
 import { resolveLicenseCustomizeTransitions } from "./resolveLicenseCustomizeTransitions.js";
 
-/** One link's diff, plus the identity and prepared traits the
- * entitlement-level transitions cannot carry on their own. */
 export type LicenseLinkTransitions = {
 	licensePlanId: string;
 	planLicenseId: string;
@@ -28,7 +26,6 @@ export type LicenseLinkTransitions = {
 	isOneOff: boolean;
 	artifacts: PreparedPlanLicenseRef[];
 	transitions: ComputedEntitlementPriceTransitions;
-	/** The seat price the pool bills on, which no entitlement transition carries. */
 	basePrice?: BasePriceTransition;
 };
 
@@ -61,10 +58,6 @@ const licenseLinkRejection = ({
 	details: { licensePlanId },
 });
 
-/** The single owner of every license transition a patch carries: pairs the
- * from-product's links with the target's, customize-minted links overriding
- * their catalog counterpart, and rejects anything the pool repoint cannot
- * express to the per-customer lane. */
 export const resolvePlanLicenseTransitions = ({
 	migration,
 	op,
@@ -129,8 +122,6 @@ export const resolvePlanLicenseTransitions = ({
 			);
 			continue;
 		}
-		// The batch lane only repoints pool definition rows; swapping the license
-		// product itself (seats, dedupe pointers) is per-customer work.
 		if (from.license_internal_product_id !== to.license_internal_product_id) {
 			reject(
 				"The target version links a different license product version; runs per-customer.",
@@ -155,8 +146,6 @@ export const resolvePlanLicenseTransitions = ({
 			continue;
 		}
 
-		// Same catalog row means nothing to repoint; a version bump mints a new
-		// plan_license row per link, so the pool must follow it.
 		if (to.id === from.id) continue;
 		links.push({
 			licensePlanId,

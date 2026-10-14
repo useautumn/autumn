@@ -1,6 +1,5 @@
 import { z } from "zod";
 
-/** GET /jobs query. Not in api/contract.ts; the integrator may promote it there. */
 export const ListJobsQuery = z.object({
 	status: z.enum(["live", "finished", "all"]).default("all"),
 	kind: z

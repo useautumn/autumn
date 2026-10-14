@@ -83,7 +83,6 @@ const orphanBatchToExportRows = async ({
 		.map((read) => ("failedRow" in read ? read.failedRow : null))
 		.filter(notNullish);
 
-	// The replica can lag a link made during the run, so the primary has the final say.
 	const unlinkedOnPrimary = new Set(
 		await findUnlinkedStripeCustomerIds({
 			ctx,
@@ -111,8 +110,6 @@ const orphanBatchToExportRows = async ({
 	];
 };
 
-/** Run after the walk: whatever the sweep still holds belongs to a Stripe
- * customer no walked Autumn customer pointed at. Yields one batch of rows at a time. */
 export const orphanedSubscriptionsToExportRows = async function* ({
 	ctx,
 	sweep,

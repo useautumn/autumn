@@ -5,31 +5,7 @@ import type { Plugin } from "vite";
 
 const PLUGIN_DIR = dirname(fileURLToPath(import.meta.url));
 
-/**
- * Dev-only Vite plugin that exposes two endpoints used by the Scope Picker
- * dashboard at /scope-picker in the UI:
- *
- *   GET  /api/scope-picker/decisions → reads scope-decisions.json from the repo root
- *   POST /api/scope-picker/decisions → overwrites scope-decisions.json
- *
- * The JSON file is intentionally stored in the repo root (one level above the
- * vite/ directory) so it survives across tooling, can be git-tracked, and is
- * the authoritative source of truth for the subsequent per-route migration.
- *
- * Payload shape is a map keyed by `${method}|${path}|${handlerName}`:
- *   {
- *     [key]: {
- *       decision: "read" | "write" | "skip" | "unknown";
- *       scopes: string[];
- *       resource: string | null;
- *       shape: "array" | "any" | "all" | "any-and-all";
- *       note?: string;
- *       decidedAt: string; // ISO timestamp
- *     }
- *   }
- */
 export function scopePickerPlugin(): Plugin {
-	// vite/ → sirtenzin-autumn/ (monorepo root)
 	const DECISIONS_PATH = resolve(PLUGIN_DIR, "..", "scope-decisions.json");
 
 	const readDecisions = (): Record<string, unknown> => {

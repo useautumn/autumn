@@ -2,7 +2,6 @@ import type { SlotGateDescription } from "../types/slotGate.js";
 import type { TaskIdentity } from "../types/taskIdentity.js";
 import type { ActiveSlotEdgeConfig } from "./activeSlotEdgeConfig.js";
 
-/** Fail-open everywhere except an explicit service ARN mismatch, the same rules as the server's gate. */
 export function describeSlotGate({
 	identity,
 	config,

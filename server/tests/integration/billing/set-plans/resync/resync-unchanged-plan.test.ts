@@ -1,10 +1,3 @@
-/**
- * Requesting the plan a customer already has leaves its row untouched: same id, usage and cycle.
- *
- * Red (before):  the row was expired and re-inserted, crediting unused time and resetting usage.
- * Green (after): the preview keeps it at $0; a cancelled subscription is rebuilt on its old period end.
- */
-
 import { expect, test } from "bun:test";
 import {
 	findActiveCustomerProductById,
@@ -51,7 +44,6 @@ const getActiveCustomerProduct = async ({
 	return customerProduct;
 };
 
-/** The only immediate plan is kept with no credit, nothing is charged, and usage is not reset. */
 const expectPreviewKeepsPlan = ({
 	preview,
 	planId,

@@ -12,8 +12,6 @@ const state = {
 	listSandboxesCalls: 0,
 };
 
-// Spread the real module so every export stays defined — a partial factory
-// poisons later files in the same process with missing-export link errors.
 const realInitDrizzle = await import("@/db/initDrizzle.js");
 await mockModuleWithRestore("@/db/initDrizzle.js", () => ({
 	...realInitDrizzle,

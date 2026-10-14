@@ -1,6 +1,5 @@
 import type { FullProduct } from "@autumn/shared";
 
-/** Group product rows by plan_id, newest version first. */
 export const groupProductsByPlanId = ({
 	products,
 }: {

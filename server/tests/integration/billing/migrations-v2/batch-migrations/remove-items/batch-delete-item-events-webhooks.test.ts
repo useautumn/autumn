@@ -1,16 +1,3 @@
-/**
- * Filter-mode batch remove stamps each customer's live from-definition onto
- * item_changes and webhooks — not catalog ids[0].
- *
- * Contract:
- *   customerA live 100/mo, customerB live 200/mo
- *   after batch remove, each customer's item_changes / billing.updated carries
- *   THAT customer's from allowance (100 vs 200)
- *   a customize-attach (custom product) is still skipped by custom: false
- *
- * Red (catalog ids[0]): customerB deleted.included = 100
- * Green: 100 vs 200
- */
 import { afterAll, beforeAll, test } from "bun:test";
 import { ResetInterval } from "@autumn/shared";
 import {

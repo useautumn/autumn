@@ -62,7 +62,6 @@ export type BatchMigrationChunkTimeouts = {
 	stallLogMs?: number;
 	finalizeReserveMs?: number;
 	minPageBudgetMs?: number;
-	/** Bounds the checkpoint writes made during recovery. */
 	recoveryWriteMs?: number;
 };
 
@@ -81,11 +80,6 @@ type ChunkProgress = {
 	lastPageFinishedAt: number;
 };
 
-/**
- * Runs one batch chunk: pages from `afterInternalId` until the filter is
- * exhausted, the `maxPages` budget is hit (slice_complete + cursor resumes
- * from the next chunk), or cancel. Unbudgeted, it runs to exhaustion.
- */
 export const runBatchMigrationChunk = async ({
 	ctx,
 	migration,
@@ -106,7 +100,6 @@ export const runBatchMigrationChunk = async ({
 	maxPages?: number;
 	webhooks?: MigrationWebhookControls;
 	controls?: MigrationRunControls;
-	/** Epoch ms by which the task is killed; pages stop early enough to drain. */
 	deadlineAt?: number;
 	timeouts?: BatchMigrationChunkTimeouts;
 }): Promise<BatchMigrationChunkResult> => {
@@ -147,8 +140,6 @@ export const runBatchMigrationChunk = async ({
 		},
 	});
 
-	// Post-commit side effects run off the page's critical path and are drained
-	// before the chunk returns.
 	const deferredLogData = { migrationRunId };
 	const events = createDeferredSideEffects({
 		phase: "finalize_events_drain",
@@ -210,8 +201,6 @@ export const runBatchMigrationChunk = async ({
 			if (maxPages !== undefined && summary.pages >= maxPages)
 				return finish("slice_complete");
 
-			// Out of time for another page: hand the cursor to the next chunk
-			// rather than start work that can only end in a kill.
 			if (remainingPageBudgetMs() < minPageBudgetMs) {
 				ctx.logger.warn("batch-migration: chunk yielding before deadline", {
 					data: {
@@ -269,7 +258,6 @@ export const runBatchMigrationChunk = async ({
 					}),
 			})
 				.catch(async (error: unknown) => {
-					// Fence the page before releasing its claims, so no late write lands after.
 					pageDb.abort(error);
 					await releaseFailedPage({
 						ctx,
@@ -305,8 +293,6 @@ export const runBatchMigrationChunk = async ({
 		}
 	};
 
-	// The bounded drain runs on every exit path: an orphaned cache invalidation
-	// is silent, unrecoverable staleness.
 	const loop = await runPages().then(
 		(result): LoopOutcome => ({ ok: true, result }),
 		(error: unknown): LoopOutcome => ({ ok: false, error }),
@@ -322,7 +308,6 @@ export const runBatchMigrationChunk = async ({
 			message: `batch-migration: cache invalidation did not complete for ${cachesDrained.failures.length} page(s) (${timedOut} timed out; ${cachesDrained.failures.map((failure) => failure.label).join(", ")}); checkpoints revoked for retry where the revoke succeeded (see per-page logs)`,
 		});
 	}
-	// "finished" means every page's side effects landed, not just the loop.
 	ctx.logger.info("batch-migration: chunk finished", {
 		data: {
 			migrationRunId,
@@ -334,8 +319,6 @@ export const runBatchMigrationChunk = async ({
 	return loop.result;
 };
 
-/** The statement timeout only starts once a connection answers; a dead
- * socket needs the client-side race too, or recovery re-creates the stall. */
 const failPageItemRunsBounded = ({
 	ctx,
 	migrationInternalId,
@@ -366,8 +349,6 @@ const failPageItemRunsBounded = ({
 		timeoutMessage: `batch-migration: failing ${internalCustomerIds.length} claims got no answer from Postgres in ${timeoutMs}ms`,
 	});
 
-/** A failed page's writes may have committed (e.g. a lost COMMIT reply), so
- * bust its customers' caches before releasing their claims for retry. */
 const releaseFailedPage = async ({
 	ctx,
 	migrationInternalId,
@@ -476,7 +457,6 @@ type NextPageOutcome =
 			pagePhases: BatchMigrationPagePhases;
 	  };
 
-/** One claim → execute → finalize. The cursor advances only on success. */
 const runNextBatchMigrationPage = async ({
 	ctx,
 	pageDb,
@@ -552,8 +532,6 @@ const runNextBatchMigrationPage = async ({
 	});
 
 	const label = `page ${pageNumber}`;
-	// A retried customer may already be converged (skipped) yet carry a stale
-	// cache from the interrupted attempt, so retries invalidate skipped too.
 	const invalidateSkipped = (controls?.retryItemStatuses?.length ?? 0) > 0;
 	let flippedSkipped: BatchMigrationPageCustomer[] = [];
 	const revokeCheckpoints = async (error: unknown) => {

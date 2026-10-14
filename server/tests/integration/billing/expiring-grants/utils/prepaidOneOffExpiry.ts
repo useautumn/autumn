@@ -27,8 +27,6 @@ export const expiringTopUpPlan = (planId: string) => ({
 	items: [expiringItem],
 });
 
-/** Manual top-up only routes on a one-off prepaid item hosted by a RECURRING
- * plan, so the top-up cases need a base price. */
 export const expiringTopUpOnRecurringPlan = (planId: string) => ({
 	plan_id: planId,
 	name: "Expiring Top-Up Host",

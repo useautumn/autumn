@@ -14,9 +14,6 @@ import { customerLicensePairToTransition } from "./customerLicensePairToTransiti
 import { isSameRowTransition } from "./isSameRowTransition.js";
 import { pairCustomerLicensesByLicensePlan } from "./pairCustomerLicensesByLicensePlan.js";
 
-/** Drops successors already converged by content; parent version bumps still transition.
- * Same-row patches diff against the pristine outgoing row: the incoming copy is
- * already converged, so comparing to it would hide every in-place resize. */
 const isNoopTransition = (transition: CustomerLicenseTransition): boolean => {
 	const { incomingCustomerLicense, outgoingCustomerLicense, updates } =
 		transition;
@@ -48,10 +45,6 @@ const isNoopTransition = (transition: CustomerLicenseTransition): boolean => {
 	);
 };
 
-/** Computes license transitions across customer products.
- * Carrying pool state is independent from billing projection.
- * Pairs default to same-group successors; pass `customerProductPairs` when the
- * caller already knows the pairing (e.g. a cross-group swap). */
 export const computeCustomerLicenseTransitions = ({
 	outgoingCustomerProducts,
 	incomingCustomerProducts,
@@ -100,7 +93,6 @@ export const computeCustomerLicenseTransitions = ({
 		}
 	}
 
-	// Billing always projects; live pool state carries only when requested.
 	applyCustomerLicenseTransitions({
 		customerProductsToMutate: carryCustomerLicenseState
 			? incomingCustomerProducts

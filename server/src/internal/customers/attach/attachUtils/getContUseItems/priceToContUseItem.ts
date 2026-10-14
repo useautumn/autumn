@@ -73,7 +73,6 @@ export const priceToContUseItem = async ({
 		? shouldProrate(price.proration_config?.on_decrease)
 		: shouldProrate(price.proration_config?.on_increase);
 
-	// 1. Get current usage
 	const curUsage = getExistingUsageFromCusProducts({
 		entitlement: ent,
 		cusProducts,
@@ -82,7 +81,6 @@ export const priceToContUseItem = async ({
 		internalEntityId,
 	});
 
-	// Case 1: Downgrade and no proration
 	let res;
 	if (isDowngrade && !willProrate) {
 		res = await getContUseDowngradeItems({
@@ -95,10 +93,7 @@ export const priceToContUseItem = async ({
 			proration,
 			logger,
 		});
-	}
-
-	// Case 2: Upgrade and no proration
-	else if (!isDowngrade && !willProrate) {
+	} else if (!isDowngrade && !willProrate) {
 		res = await getContUseUpgradeItems({
 			price,
 			ent,
@@ -109,10 +104,7 @@ export const priceToContUseItem = async ({
 			proration,
 			logger,
 		});
-	}
-
-	// Case 3: Regular...
-	else {
+	} else {
 		const newItem = priceToInvoiceItem({
 			price,
 			ent,
@@ -130,8 +122,6 @@ export const priceToContUseItem = async ({
 		};
 	}
 
-	// Clean up items
-	// 1. If old item and new item same, remove both
 	const oldAmount = res.oldItem?.amount!;
 	const newAmount = res.newItem?.amount!;
 

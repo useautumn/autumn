@@ -12,7 +12,6 @@ import { stripeLineItemsToDbLineItems } from "@/internal/billing/v2/providers/st
 import { fetchSubscriptionItemsInfo } from "@/internal/billing/v2/workflows/storeInvoiceLineItems/fetchSubscriptionItemsMetadata.js";
 import { invoiceLineItemRepo } from "@/internal/invoices/lineItems/repos/index.js";
 
-/** Mirrors a Stripe invoice's lines into Autumn, enriched with Autumn billing context. */
 export const storeLineItems = async ({
 	ctx,
 	stripeInvoiceId,
@@ -29,14 +28,11 @@ export const storeLineItems = async ({
 	const { db, org, env } = ctx;
 	const stripeCli = createStripeCli({ org, env });
 
-	// 1. Fetch line items from Stripe.
 	const stripeLineItems = await getStripeInvoiceLineItems({
 		stripeClient: stripeCli,
 		invoiceId: stripeInvoiceId,
 	});
 
-	// Subscription discounts appear in discount_amounts on each line, but their
-	// expanded coupon is only available through invoice.discounts.
 	const stripeDiscounts = stripeLineItems.some(
 		(lineItem) => (lineItem.discount_amounts?.length ?? 0) > 0,
 	)
@@ -53,7 +49,6 @@ export const storeLineItems = async ({
 		ctx.logger.debug(
 			`[storeInvoiceLineItems] No line items found for ${stripeInvoiceId}`,
 		);
-		// Still need to delete any stale items (invoice might have been emptied)
 		await invoiceLineItemRepo.deleteStaleByStripeInvoiceId({
 			db,
 			stripeInvoiceId,
@@ -62,15 +57,12 @@ export const storeLineItems = async ({
 		return;
 	}
 
-	// 2. Fetch subscription item info (metadata + isMetered flag)
 	const subscriptionItemInfo = await fetchSubscriptionItemsInfo({
 		stripeCli,
 		stripeLineItems,
 	});
 
-	// 3. Filter out $0 placeholder line items
 	// Stripe creates these for usage-based prices with zero usage, and for
-	// empty price placeholders (stripe_empty_price_id) used on entity subscriptions
 	const filteredStripeLineItems = stripeLineItems.filter((li) => {
 		if (li.amount !== 0) return true;
 		if ((li.quantity ?? 0) !== 0) return true;
@@ -78,19 +70,14 @@ export const storeLineItems = async ({
 		const subItemId = li.parent?.subscription_item_details?.subscription_item;
 		if (typeof subItemId !== "string") return true;
 
-		// Filter metered $0 placeholders (zero-usage bookkeeping entries)
 		const info = subscriptionItemInfo.get(subItemId);
 		if (info?.isMetered) return false;
 
-		// Filter $0 empty price placeholders (e.g. stripe_empty_price_id)
 		if (li.pricing?.unit_amount_decimal === "0") return false;
 
 		return true;
 	});
 
-	// 4. Update deferred line items that were stored at billing time
-	// When ProrateNextCycle creates pending invoice items, they're stored with
-	// invoice_id=null. Now that they appear on a real invoice, update them.
 	const remainingStripeLineItems = await updateDeferredLineItems({
 		ctx,
 		stripeLineItems: filteredStripeLineItems,
@@ -98,7 +85,6 @@ export const storeLineItems = async ({
 		stripeInvoiceId,
 	});
 
-	// 5. Parse billing line items if provided
 	let autumnLineItems: LineItem[] | undefined;
 	if (billingLineItems && billingLineItems.length > 0) {
 		autumnLineItems = billingLineItems
@@ -118,7 +104,6 @@ export const storeLineItems = async ({
 			.filter((item): item is LineItem => item !== null);
 	}
 
-	// 6. Convert to DB format (extract metadata for matching)
 	const subscriptionItemMetadata = new Map(
 		Array.from(subscriptionItemInfo.entries()).map(([id, info]) => [
 			id,
@@ -135,16 +120,13 @@ export const storeLineItems = async ({
 		subscriptionItemMetadata,
 	});
 
-	// 7. Write to DB
 	if (dbLineItems.length > 0) {
 		if (reconcileOnly) {
-			// Reconcile mode: only update Stripe-authoritative fields, preserve Autumn metadata
 			await invoiceLineItemRepo.reconcileMany({
 				db,
 				lineItems: dbLineItems,
 			});
 		} else {
-			// Full upsert: update all columns (used when we have full Autumn context)
 			await invoiceLineItemRepo.upsertMany({
 				db,
 				lineItems: dbLineItems,
@@ -167,8 +149,6 @@ export const storeLineItems = async ({
 		);
 	}
 
-	// 8. Delete stale line items (removed between invoice.created and invoice.finalized)
-	// Use filtered list so we also delete $0 metered placeholders from DB
 	const activeStripeIds = filteredStripeLineItems
 		.map((li) => li.id)
 		.filter((id): id is string => id != null);
@@ -180,14 +160,6 @@ export const storeLineItems = async ({
 	});
 };
 
-/**
- * Finds Stripe line items that originated from pending invoice items (deferred charges),
- * checks if we have pre-stored deferred DB rows for them, and updates those rows
- * with the real invoice info + new Stripe line item ID.
- *
- * Returns the Stripe line items that were NOT matched to deferred rows
- * (i.e., the ones that still need normal processing).
- */
 const updateDeferredLineItems = async ({
 	ctx,
 	stripeLineItems,
@@ -199,7 +171,6 @@ const updateDeferredLineItems = async ({
 	autumnInvoiceId: string;
 	stripeInvoiceId: string;
 }): Promise<ExpandedStripeInvoiceLineItem[]> => {
-	// Collect invoice_item IDs from Stripe line items with invoice_item_details parent
 	const invoiceItemMap = new Map<string, ExpandedStripeInvoiceLineItem>();
 	for (const li of stripeLineItems) {
 		const invoiceItemId = li.parent?.invoice_item_details?.invoice_item;
@@ -212,7 +183,6 @@ const updateDeferredLineItems = async ({
 		return stripeLineItems;
 	}
 
-	// Query DB for existing deferred rows
 	let deferredRows: Awaited<
 		ReturnType<typeof invoiceLineItemRepo.getDeferredByInvoiceItemIds>
 	>;
@@ -232,7 +202,6 @@ const updateDeferredLineItems = async ({
 		return stripeLineItems;
 	}
 
-	// Update each matched deferred row with invoice info
 	const matchedInvoiceItemIds = new Set<string>();
 	for (const row of deferredRows) {
 		try {
@@ -281,7 +250,6 @@ const updateDeferredLineItems = async ({
 		);
 	}
 
-	// Return only the Stripe line items that were NOT matched to deferred rows
 	return stripeLineItems.filter((li) => {
 		const invoiceItemId = li.parent?.invoice_item_details?.invoice_item;
 		if (typeof invoiceItemId !== "string") return true;

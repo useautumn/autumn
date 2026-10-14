@@ -24,7 +24,6 @@ const COUNT_FIELD: Record<AccountState, keyof AccountCounts> = {
 	broken: "broken",
 };
 
-/** Ledger tally per platform account (key). */
 export const countAccountsByKey = async ({
 	db,
 }: {
@@ -47,7 +46,6 @@ export const countAccountsByKey = async ({
 	return byKey;
 };
 
-/** in_use accounts per run. */
 export const countHeldAccountsByRun = async ({
 	db,
 }: {
@@ -65,7 +63,6 @@ export const countHeldAccountsByRun = async ({
 
 export const HELD_ACCOUNT_STATES = ["in_use"] as const;
 
-/** Accounts on one key held by a run. */
 export const countHeldAccountsOnKey = async ({
 	db,
 	platformAccountId,

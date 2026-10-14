@@ -1,5 +1,3 @@
-/** License attach and quantity changes emit activated/updated parent-plan webhooks. */
-
 import { afterAll, beforeAll, expect, test } from "bun:test";
 import type {
 	AttachParamsV1Input,

@@ -37,7 +37,6 @@ export const getItemFeatureType = ({
 	return undefined;
 };
 
-/** Converts a prepaid item's stored quantity (in packs) to total units for display. */
 export const getPrepaidDisplayQuantity = ({
 	quantity,
 	billingUnits,
@@ -80,7 +79,6 @@ export const formatItem = ({
 		item,
 		features,
 		currency: "usd",
-		// fullDisplay: true,
 		amountFormatOptions: {
 			currencyDisplay: "narrowSymbol",
 		},

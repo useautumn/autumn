@@ -1,23 +1,3 @@
-/**
- * A customer product can end up linked to a Stripe subscription that belongs to
- * a *different* Stripe customer. That is a data fault worth surfacing on most
- * operations — but it must not strand the plan: an immediate cancel only
- * detaches Autumn-side state and never touches the foreign subscription.
- *
- * Contract under test:
- *   New types/fields:
- *     - BillingContext.mismatchedStripeSubscriptionId?: string
- *   New behaviors:
- *     - cancel_immediately on a foreign-linked sub
- *         -> succeeds, plan expires, default activates, no charge
- *     - the foreign subscription and its owner are left completely untouched
- *     - any other update still rejects with "is not for the current customer"
- *
- * Pre-fix red: `fetchStripeSubscriptionForBilling` threw unconditionally on the
- * ownership check, so even the cancel — and the dashboard pricing preview that
- * precedes it — 400'd with no way out of the state.
- */
-
 import { expect, test } from "bun:test";
 import type {
 	ApiCustomerV3,
@@ -37,10 +17,6 @@ import { CusProductService } from "@/internal/customers/cusProducts/CusProductSe
 
 const OWNER_KEY = "mismatched-sub-owner";
 
-/**
- * Points the subject's active customer product at a subscription owned by a
- * different Stripe customer, reproducing the linkage fault.
- */
 const setupForeignSubscriptionLink = async ({
 	customerId,
 	productId,
@@ -98,10 +74,6 @@ const setupForeignSubscriptionLink = async ({
 	return { ...scenario, free, pro, ownerId, foreignSubscriptionId };
 };
 
-// ═══════════════════════════════════════════════════════════════════════════
-// Immediate cancel is the way out of the state
-// ═══════════════════════════════════════════════════════════════════════════
-
 test(`${chalk.yellowBright("mismatched sub: cancel_immediately succeeds and leaves the foreign sub alone")}`, async () => {
 	const customerId = "mismatched-sub-cancel-now";
 
@@ -112,7 +84,6 @@ test(`${chalk.yellowBright("mismatched sub: cancel_immediately succeeds and leav
 		(await autumnV1.customers.get<ApiCustomerV3>(customerId)).invoices
 			?.length ?? 0;
 
-	// ── Contract assertion 1: the preview no longer 400s ──────────────────────
 	await autumnV2_2.subscriptions.previewUpdate<UpdateSubscriptionV1ParamsInput>(
 		{
 			customer_id: customerId,
@@ -121,7 +92,6 @@ test(`${chalk.yellowBright("mismatched sub: cancel_immediately succeeds and leav
 		},
 	);
 
-	// ── Contract assertion 2: the cancel itself goes through ─────────────────
 	await autumnV2_2.billing.update<UpdateSubscriptionV1ParamsInput>({
 		customer_id: customerId,
 		plan_id: pro.id,
@@ -134,13 +104,11 @@ test(`${chalk.yellowBright("mismatched sub: cancel_immediately succeeds and leav
 		active: [free.id],
 	});
 
-	// ── Contract assertion 3: no charge or credit on the subject ─────────────
 	await expectCustomerInvoiceCorrect({
 		customer: await autumnV1.customers.get<ApiCustomerV3>(customerId),
 		count: invoiceCountBefore,
 	});
 
-	// ── Contract assertion 4: the foreign subscription is untouched ──────────
 	const foreignSubscription = await ctx.stripeCli.subscriptions.retrieve(
 		foreignSubscriptionId,
 	);
@@ -148,10 +116,6 @@ test(`${chalk.yellowBright("mismatched sub: cancel_immediately succeeds and leav
 	expect(foreignSubscription.cancel_at_period_end).toBe(false);
 	expect(foreignSubscription.canceled_at).toBeNull();
 });
-
-// ═══════════════════════════════════════════════════════════════════════════
-// Everything else still surfaces the fault
-// ═══════════════════════════════════════════════════════════════════════════
 
 test(`${chalk.yellowBright("mismatched sub: a non-cancel update still rejects")}`, async () => {
 	const customerId = "mismatched-sub-other-update";

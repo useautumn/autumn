@@ -1,17 +1,3 @@
-/**
- * Legacy Attach V1 Upgrade Tests
- *
- * Migrated from:
- * - server/tests/attach/upgradeOld/upgradeOld4.test.ts (upgrade with payment method validation)
- * - server/tests/interval/upgrade/interval1.test.ts (upgrade monthly to annual mid-cycle)
- * - server/tests/interval/upgrade/interval2.test.ts (upgrade monthly to annual after 1.5 cycles)
- *
- * Tests V1 attach behavior for product upgrades:
- * - Payment method validation during upgrade
- * - Billing interval changes (monthly to annual)
- * - next_cycle verification
- */
-
 import { expect, test } from "bun:test";
 import {
 	type ApiCustomerV3,
@@ -40,7 +26,6 @@ import { constructProduct } from "@/utils/scriptUtils/createTestProducts";
 import { getCusSub } from "@/utils/scriptUtils/testUtils/cusTestUtils";
 import { toMilliseconds } from "@/utils/timeUtils";
 
-/** V2 catalog skips stripe_price_id on $0 fixed prices; V1 attach still sends them. */
 const stampZeroFixedStripePrices = async ({
 	ctx,
 	productId,
@@ -83,28 +68,9 @@ const stampZeroFixedStripePrices = async ({
 	}
 };
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 1: Upgrade with payment method validation
-// (from upgradeOld4)
-//
-// Scenario:
-// - Pro product ($20/month) with Dashboard (boolean), Messages (10 included), Admin (unlimited)
-// - Premium product ($50/month) with Messages (100 included)
-// - Attach Pro without payment method
-// - Try to upgrade with force_checkout (should fail)
-// - Attach successful payment method
-// - Upgrade to Premium (should succeed)
-//
-// Expected:
-// - force_checkout fails without valid payment method
-// - Upgrade succeeds after attaching payment method
-// - Customer has Premium active with correct features
-// ═══════════════════════════════════════════════════════════════════════════════
-
 test.concurrent(`${chalk.yellowBright("legacy-upgrade 1: upgrade with payment method validation")}`, async () => {
 	const customerId = "legacy-upgrade-1";
 
-	// Pro: $20/month with Dashboard, Messages (10), Admin (unlimited)
 	const proProduct = constructProduct({
 		id: "pro",
 		type: "pro",
@@ -125,7 +91,6 @@ test.concurrent(`${chalk.yellowBright("legacy-upgrade 1: upgrade with payment me
 		],
 	});
 
-	// Premium: $50/month with Messages (100)
 	const premiumProduct = constructProduct({
 		id: "premium",
 		type: "premium",
@@ -139,17 +104,15 @@ test.concurrent(`${chalk.yellowBright("legacy-upgrade 1: upgrade with payment me
 		],
 	});
 
-	// Setup without payment method initially
 	const { autumnV1, customer } = await initScenario({
 		customerId,
 		setup: [
-			s.customer({ testClock: true, paymentMethod: "success" }), // No payment method
+			s.customer({ testClock: true, paymentMethod: "success" }),
 			s.products({ list: [proProduct, premiumProduct] }),
 		],
 		actions: [],
 	});
 
-	// Attach Pro (no payment = free/trial)
 	await autumnV1.attach({
 		customer_id: customerId,
 		product_id: proProduct.id,
@@ -171,7 +134,6 @@ test.concurrent(`${chalk.yellowBright("legacy-upgrade 1: upgrade with payment me
 		usage: 0,
 	});
 
-	// Try force_checkout without payment method - should fail
 	await expectAutumnError({
 		func: async () => {
 			await autumnV1.attach({
@@ -182,7 +144,6 @@ test.concurrent(`${chalk.yellowBright("legacy-upgrade 1: upgrade with payment me
 		},
 	});
 
-	// Attach successful payment method
 	await attachPmToCus({
 		db: ctx.db,
 		customer,
@@ -190,7 +151,6 @@ test.concurrent(`${chalk.yellowBright("legacy-upgrade 1: upgrade with payment me
 		env: ctx.env,
 	});
 
-	// Now upgrade to Premium should succeed
 	await autumnV1.attach({
 		customer_id: customerId,
 		product_id: premiumProduct.id,
@@ -212,29 +172,12 @@ test.concurrent(`${chalk.yellowBright("legacy-upgrade 1: upgrade with payment me
 		usage: 0,
 	});
 
-	// Should have invoice for upgrade
 	await expectCustomerInvoiceCorrect({
 		customer: customerAfterPremium,
-		count: 2, // Just the upgrade invoice since Pro was trial/free
-		latestTotal: 30, // Premium $50
+		count: 2,
+		latestTotal: 30,
 	});
 });
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 2: Upgrade from Pro monthly to Pro Annual mid-cycle
-// (from interval1)
-//
-// Scenario:
-// - Pro monthly ($20/month) with Words feature
-// - Pro Annual ($200/year) with Words feature
-// - Attach Pro monthly
-// - Advance clock 2 weeks (mid-cycle)
-// - Upgrade to Pro Annual
-//
-// Expected:
-// - next_cycle.starts_at ≈ 1 year from now
-// - Stripe subscription period_end matches next_cycle
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(`${chalk.yellowBright("legacy-upgrade 2: upgrade monthly to annual mid-cycle")}`, async () => {
 	const customerId = "legacy-upgrade-2";
@@ -258,7 +201,6 @@ test.concurrent(`${chalk.yellowBright("legacy-upgrade 2: upgrade monthly to annu
 		],
 	});
 
-	// Get checkout preview with next_cycle
 	const checkoutRes = await autumnV1.checkout({
 		customer_id: customerId,
 		product_id: proAnnual.id,
@@ -270,13 +212,11 @@ test.concurrent(`${chalk.yellowBright("legacy-upgrade 2: upgrade monthly to annu
 		-Math.log10(toMilliseconds.days(1)),
 	);
 
-	// Upgrade to Pro Annual
 	await autumnV1.attach({
 		customer_id: customerId,
 		product_id: proAnnual.id,
 	});
 
-	// Verify Stripe subscription period_end matches checkout preview
 	const sub = await getCusSub({
 		ctx,
 		customerId,
@@ -289,22 +229,6 @@ test.concurrent(`${chalk.yellowBright("legacy-upgrade 2: upgrade monthly to annu
 		-Math.log10(toMilliseconds.days(1)),
 	);
 });
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 3: Upgrade from Pro monthly to Pro Annual after 1.5 cycles
-// (from interval2)
-//
-// Scenario:
-// - Pro monthly ($20/month) with Words feature
-// - Pro Annual ($200/year) with Words feature
-// - Attach Pro monthly
-// - Advance clock 1 month + 2 weeks (1.5 cycles)
-// - Upgrade to Pro Annual
-//
-// Expected:
-// - next_cycle.starts_at ≈ 1 year from now
-// - Stripe subscription period_end matches next_cycle
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(`${chalk.yellowBright("legacy-upgrade 3: upgrade monthly to annual after 1.5 cycles")}`, async () => {
 	const customerId = "legacy-upgrade-3";
@@ -328,7 +252,6 @@ test.concurrent(`${chalk.yellowBright("legacy-upgrade 3: upgrade monthly to annu
 		],
 	});
 
-	// Get checkout preview with next_cycle
 	const checkoutRes = await autumnV1.checkout({
 		customer_id: customerId,
 		product_id: proAnnual.id,
@@ -340,13 +263,11 @@ test.concurrent(`${chalk.yellowBright("legacy-upgrade 3: upgrade monthly to annu
 		-Math.log10(toMilliseconds.days(1)),
 	);
 
-	// Upgrade to Pro Annual
 	await autumnV1.attach({
 		customer_id: customerId,
 		product_id: proAnnual.id,
 	});
 
-	// Verify Stripe subscription period_end matches checkout preview
 	const sub = await getCusSub({
 		ctx,
 		customerId,
@@ -359,20 +280,6 @@ test.concurrent(`${chalk.yellowBright("legacy-upgrade 3: upgrade monthly to annu
 		-Math.log10(toMilliseconds.days(1)),
 	);
 });
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 4: Upgrade from free (no prices) to $0/month with usage-based prices
-//
-// Scenario:
-// - Free product with no prices, just a feature (Messages, 50 included)
-// - Product with $0/month base + consumable messages ($0.10/unit overage)
-// - Attach free product
-// - Upgrade to $0/month + usage product
-//
-// Expected:
-// - Switch happens immediately (free → $0 usage plan is always upgrade)
-// - Customer has the new product active with correct features
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(`${chalk.yellowBright("legacy-upgrade 4: free (no prices) to $0/month with usage-based prices")}`, async () => {
 	const customerId = "legacy-upgrade-free-to-zero-usage";
@@ -414,7 +321,6 @@ test.concurrent(`${chalk.yellowBright("legacy-upgrade 4: free (no prices) to $0/
 		product_id: free.id,
 	});
 
-	// Verify on free plan
 	const customerBefore =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	await expectCustomerProducts({
@@ -422,7 +328,6 @@ test.concurrent(`${chalk.yellowBright("legacy-upgrade 4: free (no prices) to $0/
 		active: [free.id],
 	});
 
-	// Upgrade to $0/month + usage plan (should be immediate)
 	await autumnV1.attach({
 		customer_id: customerId,
 		product_id: usagePlan.id,
@@ -430,14 +335,12 @@ test.concurrent(`${chalk.yellowBright("legacy-upgrade 4: free (no prices) to $0/
 
 	const customerAfter = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// New plan should be active immediately, free should be gone
 	await expectCustomerProducts({
 		customer: customerAfter,
 		active: [usagePlan.id],
 		notPresent: [free.id],
 	});
 
-	// Verify consumable messages feature
 	expectCustomerFeatureCorrect({
 		customer: customerAfter,
 		featureId: TestFeature.Messages,

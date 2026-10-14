@@ -144,8 +144,6 @@ export class ChatService {
 		return true;
 	}
 
-	/** A bot runs as an org member, so every run-as user must belong to this
-	 * org. Bots already on the list keep who added them and when. */
 	private static async stampTrustedBots(
 		ctx: AutumnContext,
 		{

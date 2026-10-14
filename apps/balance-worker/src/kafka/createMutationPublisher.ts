@@ -24,13 +24,10 @@ export function createMutationPublisher({
 		producer: KafkaProducer;
 		producedOffsets?: ProducedOffsets;
 		partitionLoad?: PartitionLoad;
-		/** Defaults to transactional. */
 		commit?: { mode: KafkaCommitMode };
 		ownerEpoch?(): string | undefined;
-		/** The consumer group's own offset commit: every command offset lands through it, after its batch, without a transaction. */
 		commandOffsets?: { commit(offsets: KafkaOffsetCommit): Promise<void> };
 		logger?: Partial<Pick<AutumnLogger, "warn">>;
-		/** Defaults to a real timer and the settle gap constant; tests drive it by hand. */
 		settle?: CommandOffsetSettleTiming;
 	};
 	config?: { commandTopic: string; groupId: string };
@@ -104,7 +101,6 @@ export function createMutationPublisher({
 		}
 	}
 
-	/** Serialising here is not wasted: the encoding is kept on the record and reused when it is sent. */
 	function encodedBytesOf({ record }: { record: MeteringRecord }): number {
 		const { key, value } = timeSync({ label: "record.encode" }, () =>
 			serializeMeteringRecord({ record }),
@@ -112,7 +108,6 @@ export function createMutationPublisher({
 		return key.length + value.length;
 	}
 
-	/** The encodings were kept when the batch was measured, so this is a sum, not a second serialisation. */
 	function bytesOf({
 		outcomes,
 	}: {
@@ -143,8 +138,6 @@ export function createMutationPublisher({
 		};
 	}
 
-	/** Every command offset lands through the consumer group's own commit: one request, no transaction,
-	 *  so it never takes the partition's one transaction slot away from a batch. */
 	async function commitCommandOffset({
 		partition,
 		nextOffset,
@@ -178,8 +171,6 @@ export function createMutationPublisher({
 		if (cancel) cancel();
 	}
 
-	/** Never throws: the Postgres bookmark decides where a restart resumes, so a landing that
-	 *  fails costs lag telemetry and a retry, never the command. */
 	function settleCommandOffset({
 		topic,
 		partition,
@@ -196,7 +187,6 @@ export function createMutationPublisher({
 		scheduleFlush();
 	}
 
-	/** One landing at a time, and never within the gap of the last attempt: whatever settles meanwhile joins the next. */
 	function scheduleFlush(): void {
 		if (settling.closed || settling.inFlight || settling.cancelScheduled)
 			return;
@@ -213,7 +203,6 @@ export function createMutationPublisher({
 		void flushPending();
 	}
 
-	/** Resolves true once nothing is left waiting; false when the landing it ran was refused. */
 	function flushPending(): Promise<boolean> {
 		if (settling.inFlight) return settling.inFlight;
 		const target = settling.target;
@@ -228,7 +217,6 @@ export function createMutationPublisher({
 		return settling.inFlight;
 	}
 
-	/** A refused landing keeps the offset waiting for the next batch or the next gap; it is warned once per streak. */
 	async function landPending({
 		topic,
 		partition,
@@ -260,12 +248,10 @@ export function createMutationPublisher({
 		}
 	}
 
-	/** The drain's last word: lands what is waiting now, and nothing is scheduled after it. */
 	async function flushCommandOffsets(): Promise<void> {
 		settling.closed = true;
 		cancelScheduledFlush();
 		if (!(await flushPending())) throw settling.lastFailure;
-		// Offsets settled while that landing was in flight land now too.
 		cancelScheduledFlush();
 		if (!(await flushPending())) throw settling.lastFailure;
 	}
@@ -282,7 +268,6 @@ export function createMutationPublisher({
 export type CommandOffsetSettleTiming = {
 	gapMs: number;
 	now(): number;
-	/** Runs `run` after `delayMs`; the returned function cancels it. */
 	schedule(run: () => void, delayMs: number): () => void;
 };
 
@@ -290,13 +275,11 @@ type CommandOffsetSettling = {
 	target: { topic: string; partition: number } | null;
 	pending: bigint | null;
 	landed: bigint | null;
-	/** When the last landing finished, whether it landed or was refused. */
 	lastLandingAt: number | null;
 	inFlight: Promise<boolean> | null;
 	cancelScheduled: (() => void) | null;
 	lastFailure: unknown;
 	failing: boolean;
-	/** Set by the drain: nothing is scheduled after it. */
 	closed: boolean;
 };
 

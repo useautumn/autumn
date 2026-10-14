@@ -76,8 +76,6 @@ export function CustomerSheets() {
 			case "attach-checkout-session":
 			case "attach-schedule-plan":
 				return <AttachProductSheet />;
-			// case "attach-product-v2":
-			// 	return <AttachProductSheetV3 />;
 			case "subscription-detail":
 				return <SubscriptionDetailSheet />;
 			case "license-detail":
@@ -168,7 +166,6 @@ export function CustomerSheets() {
 			modal={false}
 			onOpenChange={(open, eventDetails) => {
 				if (open) return;
-				// Escape/click-out belongs to the plan editor while it's open.
 				if (isInlineEditorOpen) {
 					eventDetails.cancel();
 					return;
@@ -177,18 +174,12 @@ export function CustomerSheets() {
 			}}
 			open={!!sheetType}
 		>
-			{/* The plan editor is a full takeover launched from the sheet. Opacity
-			    only joins the transition list while it's open, so the sheet fades
-			    out under the editor but snaps back instantly behind it on close.
-			    The list must keep `translate` — that's what drives the slide. */}
 			<SheetContent
 				className={cn(
 					sheetWidthClass(sheetType),
 					isInlineEditorOpen &&
 						"transition-[opacity,transform,translate,scale,rotate] opacity-0 pointer-events-none",
 				)}
-				// Tooltips/popovers portal out of the sheet, so an invisible sheet can
-				// still surface them on hover or focus. inert kills the whole subtree.
 				inert={isInlineEditorOpen}
 				overlayClassName={cn(
 					isInlineEditorOpen && "opacity-0 pointer-events-none",

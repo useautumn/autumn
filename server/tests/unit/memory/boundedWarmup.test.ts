@@ -36,8 +36,6 @@ describe("awaitBoundedWarmup", () => {
 		expect(logs.length).toBe(1);
 	});
 
-	// The init path observes the warmup with a no-op catch, then consumes it
-	// ticks later — that must still report "failed", never unhandledRejection.
 	test("pre-observed early rejection still reports 'failed' when consumed late", async () => {
 		let unhandled = 0;
 		const onUnhandled = () => {

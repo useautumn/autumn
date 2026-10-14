@@ -1,11 +1,3 @@
-/**
- * Times batchInvalidateCachedFullSubjects for one page's worth (5k) of bench
- * customers — the finalize step's cache-bust cost. Uncached keys take the
- * all-features fallback (max unlink commands), so this is worst-case-ish.
- *
- *   bun tests/perf/batch-migrations/probes/probeFinalizeCacheBench.ts
- */
-
 import { orgToFeaturesByOrgEnv } from "@autumn/shared";
 import { getRedisTargetsForCustomer } from "@/external/redis/customerRedisRouting.js";
 import { batchInvalidateCachedFullSubjects } from "@/internal/customers/cache/fullSubject/actions/invalidate/batchInvalidateCachedFullSubjects.js";

@@ -1,14 +1,11 @@
 import { lookup } from "node:dns/promises";
 import { networkInterfaces } from "node:os";
 
-/** The deployment's service name: alien resolves it to every replica's address on the deployment network. */
 export const PEER_SERVICE_NAME = "atom.svc";
-/** Replica addresses change only when a replica is replaced, so a resolution is kept this long. */
 const RESOLVE_EVERY_MS = 5_000;
 
 export type PeerResolver = {
 	peers(): Promise<string[]>;
-	/** After a failed delivery: the peer may be gone, so the next call resolves again. */
 	forget(): void;
 };
 
@@ -22,7 +19,6 @@ export const ownAddresses = (): string[] =>
 		.map((iface) => (iface as { address: string }).address);
 
 type PeerResolverContext = {
-	/** Read in place of the service name where a replica set runs on one machine. */
 	peersFile?: string | null;
 	serviceName?: string;
 	resolve?: (name: string) => Promise<string[]>;
@@ -33,14 +29,12 @@ type PeerResolverContext = {
 const resolveWithDns = async (name: string): Promise<string[]> =>
 	(await lookup(name, { all: true })).map((record) => record.address);
 
-/** One address per line, rewritten by the harness as replicas come and go, the way the service name's records change. */
 const readPeersFile = async (path: string): Promise<string[]> =>
 	(await Bun.file(path).text())
 		.split("\n")
 		.map((line) => line.trim())
 		.filter(Boolean);
 
-/** The other replicas' addresses, resolved on demand and kept for a while; none while the name does not resolve. */
 export const createPeerResolver = ({
 	ctx = {},
 }: {

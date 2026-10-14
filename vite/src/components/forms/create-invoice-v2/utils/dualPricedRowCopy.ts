@@ -8,7 +8,6 @@ import {
 const flatPrice = (item: ProductItem) =>
 	item.price ?? (item.tiers?.length === 1 ? item.tiers[0].amount : null);
 
-/** Sales-facing copy for a feature billed as a prepaid pack plus usage beyond it; null for tiered prices. */
 export function dualPricedRowCopy({
 	prepaid,
 	usage,

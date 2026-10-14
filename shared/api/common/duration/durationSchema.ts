@@ -1,7 +1,6 @@
 import { z } from "zod/v4";
 import type { util } from "zod/v4/core";
 
-/** Reusable `{ type, length }` duration schema; `length` is null when the type carries none (e.g. one_off, forever). */
 export const makeDurationSchema = <const T extends util.EnumLike>(
 	typeEnum: T,
 ) =>

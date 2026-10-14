@@ -1,8 +1,3 @@
-/**
- * Cancel End-of-Cycle Trial Entities Tests: canceling products with free trials at end of billing
- * cycle in multi-entity scenarios with merged subscriptions.
- */
-
 import { test } from "bun:test";
 import { ms } from "@autumn/shared";
 import {
@@ -19,23 +14,6 @@ import { advanceTestClock } from "@tests/utils/stripeUtils";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 5: Cancel entity 1 EOC after trial ends (active billing period)
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Attach proTrial to entity 1 and entity 2
- * - Advance past trial end (both entities now active/paying)
- * - Cancel entity 1 at end of cycle
- * - Advance to next invoice
- *
- * Expected Result:
- * - Entity 1's product should be canceling after cancel request
- * - After advancing to next invoice:
- *   - Entity 1's product is removed
- *   - Entity 2's product is still active
- */
 test.concurrent(
 	`${chalk.yellowBright("cancel trial EOC entities: cancel entity 1 EOC after trial ends")}`,
 	async () => {
@@ -67,7 +45,6 @@ test.concurrent(
 		const entity1Id = entities[0].id;
 		const entity2Id = entities[1].id;
 
-		// Verify both entities are now active (no longer trialing)
 		const entity1AfterTrialEnd = await autumnV1.entities.get(
 			customerId,
 			entity1Id,
@@ -97,7 +74,6 @@ test.concurrent(
 			nowMs: advancedTo,
 		});
 
-		// Cancel entity 1 at end of cycle (now in active billing period)
 		await autumnV1.subscriptions.update({
 			customer_id: customerId,
 			entity_id: entity1Id,
@@ -105,7 +81,6 @@ test.concurrent(
 			cancel_action: "cancel_end_of_cycle",
 		});
 
-		// Verify entity 1 is canceling
 		const entity1AfterCancel = await autumnV1.entities.get(
 			customerId,
 			entity1Id,
@@ -115,7 +90,6 @@ test.concurrent(
 			productId: proTrial.id,
 		});
 
-		// Verify entity 2 is still active (not affected)
 		const entity2AfterCancel = await autumnV1.entities.get(
 			customerId,
 			entity2Id,
@@ -125,15 +99,12 @@ test.concurrent(
 			productId: proTrial.id,
 		});
 
-		// Advance to next invoice (from advancedTo + 7 days trial + ~23 days to complete month)
-		// Using advanceToNextInvoice to properly advance to the billing cycle end
 		await advanceTestClock({
 			stripeCli: ctx.stripeCli,
 			testClockId: testClockId!,
-			advanceTo: advancedTo + ms.days(12) + ms.days(30), // Trial end + 1 month
+			advanceTo: advancedTo + ms.days(12) + ms.days(30),
 		});
 
-		// Verify entity 1's product is removed
 		const entity1AfterAdvance = await autumnV1.entities.get(
 			customerId,
 			entity1Id,
@@ -143,7 +114,6 @@ test.concurrent(
 			productId: proTrial.id,
 		});
 
-		// Verify entity 2's product is still active
 		const entity2AfterAdvance = await autumnV1.entities.get(
 			customerId,
 			entity2Id,
@@ -153,7 +123,6 @@ test.concurrent(
 			productId: proTrial.id,
 		});
 
-		// Subscription should still exist for entity 2
 		await expectSubToBeCorrect({
 			db: ctx.db,
 			customerId,

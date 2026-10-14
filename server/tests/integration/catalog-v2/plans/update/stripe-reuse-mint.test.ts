@@ -1,10 +1,3 @@
-/**
- * catalogV2.update — Stripe id carry on versioning: "new_version", active: true mint.
- *
- * Pre-seeds real Stripe resources via initPlanStripeResources, then mints v2
- * and asserts reuse levels. Plan-level processor.id is copied onto the v2 row.
- */
-
 import { test } from "bun:test";
 import {
 	BillingInterval,

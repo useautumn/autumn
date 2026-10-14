@@ -49,7 +49,6 @@ export function OrgControls({
   return (
     <DebugCard title="Organization Controls">
       <div className="space-y-4">
-        {/* Create Org */}
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="space-y-1.5">
             <Label htmlFor="orgName">Org Name</Label>
@@ -74,7 +73,6 @@ export function OrgControls({
           Create Org
         </Button>
 
-        {/* Select & Manage Org */}
         {organizations && organizations.length > 0 && (
           <>
             <div className="border-t border-zinc-200 dark:border-zinc-800 pt-4">

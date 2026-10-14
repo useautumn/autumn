@@ -30,7 +30,6 @@ test.concurrent(
 			actions: [],
 		});
 
-		// Attach pro with alipay - should return checkout_url since alipay requires redirect
 		const res = await autumnV1.attach({
 			customer_id: customerId,
 			product_id: pro.id,
@@ -40,22 +39,6 @@ test.concurrent(
 		expect(res.checkout_url).toContain("checkout.stripe.com");
 	},
 );
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 3: Create customer and entity with null IDs (autumn_id generation)
-// (from others6)
-//
-// Scenario:
-// - Create customer with id=null → gets autumn_id
-// - Create entity with id=null → gets autumn_id
-// - Attach pro product with invoice option
-// - Then assign external ID to the same customer
-//
-// Expected:
-// - Customer and entity get autumn_id when created with null
-// - Can attach product using autumn_id
-// - Can later assign external ID to same customer
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(
 	`${chalk.yellowBright("attach-edge-case 3: null customer_id and entity_id (autumn_id generation)")}`,
@@ -69,7 +52,6 @@ test.concurrent(
 			items: [wordsItem],
 		});
 
-		// Clean up any existing customer with this email
 		const existingCustomers = await CusService.getByEmail({
 			db: ctx.db,
 			orgId: ctx.org.id,
@@ -86,7 +68,6 @@ test.concurrent(
 			await autumnV1.customers.delete(existingCustomers[0].internal_id);
 		}
 
-		// Create customer with id=null → should get autumn_id
 		const customer = await autumnV1.customers.create({
 			id: null,
 			email,
@@ -97,7 +78,6 @@ test.concurrent(
 		expect(customer.autumn_id).toBeDefined();
 		const internalCustomerId = customer.autumn_id;
 
-		// Create entity with id=null → should get autumn_id
 		const entity = await autumnV1.entities.create(internalCustomerId, {
 			id: null,
 			feature_id: TestFeature.Users,
@@ -106,7 +86,6 @@ test.concurrent(
 		expect(entity.autumn_id).toBeDefined();
 		const internalEntityId = entity.autumn_id;
 
-		// Attach pro product using autumn_ids, with invoice option
 		await autumnV1.attach({
 			customer_id: internalCustomerId,
 			entity_id: internalEntityId,
@@ -118,7 +97,6 @@ test.concurrent(
 		const customerAfterAttach =
 			await autumnV1.customers.get<ApiCustomerV3>(internalCustomerId);
 
-		// The balance worker doesn't aggregate entity data onto the customer.
 		if (!isBalanceWorkerRoute()) {
 			await expectCustomerProducts({
 				customer: customerAfterAttach,
@@ -129,20 +107,16 @@ test.concurrent(
 		expect(customerAfterAttach.invoices?.length).toBe(1);
 		expect(customerAfterAttach.invoices?.[0].status).toBe("draft");
 
-		// Now assign external ID to the same customer
 		const customerWithId = await autumnV1.customers.create({
 			id: customerId,
 			email,
 		});
 
-		// Should be the same customer (same autumn_id)
 		expect(customerWithId.autumn_id).toBe(internalCustomerId);
 
-		// Can now fetch by external ID
 		const customerById =
 			await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-		// The balance worker doesn't aggregate entity data onto the customer.
 		if (!isBalanceWorkerRoute()) {
 			await expectCustomerProducts({
 				customer: customerById,
@@ -151,20 +125,6 @@ test.concurrent(
 		}
 	},
 );
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 4: Duplicate attach error (attach same product twice)
-// (from others9)
-//
-// Scenario:
-// - Free product with Words feature
-// - Attach free product → success
-// - Attach same free product again → error
-//
-// Expected:
-// - First attach succeeds
-// - Second attach throws AutumnError
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(
 	`${chalk.yellowBright("attach-edge-case 4: duplicate attach error")}`,
@@ -186,7 +146,6 @@ test.concurrent(
 			actions: [],
 		});
 
-		// First attach should succeed
 		await autumnV1.attach({
 			customer_id: customerId,
 			product_id: free.id,
@@ -200,7 +159,6 @@ test.concurrent(
 			active: [free.id],
 		});
 
-		// Second attach should fail
 		await expectAutumnError({
 			func: async () => {
 				await autumnV1.attach({

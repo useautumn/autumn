@@ -19,9 +19,6 @@ const memoizeById = <Resource>(retrieve: (id: string) => Promise<Resource>) => {
 	};
 };
 
-/** A memoized read caches the pending promise, so an unbounded one that stalls
- * would be handed to every later customer; the deadline lets it reject and
- * evict itself in time for the customer's own retry to start a fresh read. */
 const boundedRead = <T>({
 	resource,
 	id,
@@ -44,8 +41,6 @@ const boundedRead = <T>({
 	});
 };
 
-/** A bulk run re-reads the same few prices for every customer, and verify reads
- * each schedule twice; one expanded read per id keeps it off the rate limit. */
 export const createBillingVerifyStripeReader = ({
 	stripeCli,
 }: {

@@ -12,7 +12,6 @@ import { getOrgEndpointRateLimitOverrides } from "./rateLimitOverridesStore.js";
 
 type EndpointCap = [endpoint: string, override: EndpointRateLimitOverride];
 
-/** Every override of the org matching the request, e.g. both `/customers/:id` and `/customers/clear_cache`. */
 const findMatchingEndpoints = ({
 	ctx,
 	method,
@@ -56,7 +55,6 @@ const isOverEndpointCap = async ({
 		});
 		return hits > limit;
 	} catch (error) {
-		// Like the group limiters: a Redis failure lets the request through.
 		logger.error(`[rate-limit] endpoint counter failed: ${error}`);
 		return false;
 	}
@@ -76,7 +74,6 @@ const rejectEndpoint = ({
 	return true;
 };
 
-/** Counts the request against every matching override of its org; orgs without one never touch Redis. */
 export const isOverEndpointRateLimit = async ({
 	ctx,
 	method,

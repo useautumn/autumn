@@ -13,13 +13,6 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { AutumnRpcCli } from "@/external/autumn/autumnRpcCli.js";
 
-/**
- * Referrals8: Create a referral program through the public API
- *
- * Covers referral_programs.create end to end — the created program issues a
- * code, and redeeming it grants the linked feature grant reward.
- */
-
 test(`${chalk.yellowBright("referrals8: referral_programs.create grants on redemption")}`, async () => {
 	const mainCustomerId = "main-referral-8";
 	const redeemerId = "referral8-r1";
@@ -72,7 +65,6 @@ test(`${chalk.yellowBright("referrals8: referral_programs.create grants on redem
 	expect(program.reward_id).toBe(reward.id);
 	expect(program.created_at).toBeDefined();
 
-	// The created program should behave like a dashboard-created one
 	const { code } = await autumnV1.referrals.createCode({
 		customerId: mainCustomerId,
 		referralId: programId,
@@ -91,7 +83,6 @@ test(`${chalk.yellowBright("referrals8: referral_programs.create grants on redem
 		expect(balance).toBe(grantedAllowance);
 	}
 
-	// Unknown rewards are rejected
 	await expect(
 		rpc.post("/referral_programs.create", {
 			id: `${programId}-unknown-reward`,
@@ -101,7 +92,6 @@ test(`${chalk.yellowBright("referrals8: referral_programs.create grants on redem
 		}),
 	).rejects.toThrow();
 
-	// Checkout programs need plans and a usable redemption cap
 	await expect(
 		rpc.post("/referral_programs.create", {
 			id: `${programId}-no-plans`,
@@ -123,7 +113,6 @@ test(`${chalk.yellowBright("referrals8: referral_programs.create grants on redem
 		}),
 	).rejects.toThrow();
 
-	// Duplicate program IDs are rejected
 	await expect(
 		rpc.post("/referral_programs.create", {
 			id: programId,

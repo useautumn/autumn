@@ -45,8 +45,6 @@ export const customerExports = pgTable(
 		index("idx_customer_exports_org_env_created_at")
 			.on(table.org_id, table.env, sql`${table.created_at} DESC`)
 			.concurrently(),
-		// One queued/running export per org+env+kind; the create endpoint maps
-		// the violation to a 409 carrying the active export id.
 		uniqueIndex("customer_exports_active_per_org_env_kind_unique")
 			.on(table.org_id, table.env, table.kind)
 			.where(sql`${table.status} IN ('queued', 'running')`)

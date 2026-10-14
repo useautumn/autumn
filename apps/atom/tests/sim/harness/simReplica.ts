@@ -45,7 +45,6 @@ export const SIM_SLOT_COUNT = 2;
 const AUTUMN_API_URL = "https://api.autumn.example";
 const quiet = { info: () => {}, warn: () => {}, error: () => {} };
 
-/** Volumes live where opening a SQLite file is cheapest; a seed opens dozens. */
 const VOLUME_ROOT = process.env.ATOM_SIM_VOLUMES ?? "/dev/shm";
 
 export type Volume = { folder: string };
@@ -58,7 +57,6 @@ export const destroyVolume = (volume: Volume) =>
 
 let generation = 0;
 
-/** A volume whose 80% share is `shareBytes`, `used` bytes of it taken by the files. */
 export const simVolumeOf = ({
 	shareBytes,
 	used,
@@ -80,9 +78,7 @@ export type SimReplicaContext = {
 	secret: string;
 	address: string;
 	volume: Volume;
-	/** This replica's clock runs this far ahead of the simulation's. */
 	skewMs?: number;
-	/** What the replica may hold parsed, and what its files may take of the volume; unbounded unless the scenario says. */
 	heldBudgetBytes?: number;
 	diskShareBytes?: number;
 	log?: (line: string) => void;
@@ -96,7 +92,6 @@ export type ReplicaState =
 	| "stopped"
 	| "killed";
 
-/** One replica as one process: the real apps, slots and replication layer over the simulated network and clock, booted as a thread boots. */
 export const createSimReplica = ({ ctx }: { ctx: SimReplicaContext }) => {
 	const { clock, network } = ctx;
 	const id = ++generation;
@@ -121,10 +116,8 @@ export const createSimReplica = ({ ctx }: { ctx: SimReplicaContext }) => {
 		subjectPulls: noSubjectPulls,
 	});
 	const folders = createDeployedFolders({ slots: auth.slots });
-	/** What the replica's files hold now. */
 	const diskBytes = () =>
 		auth.slots.ownedStores().reduce((sum, store) => sum + store.dataBytes(), 0);
-	// The sim has no volume of its own: what the files hold stands in for what the volume sees.
 	const diskEvictor = createDiskEvictor({
 		ctx: { folders, counters, logger: quiet, now, sleep: clock.sleep },
 		volumeOf: () =>
@@ -178,7 +171,6 @@ export const createSimReplica = ({ ctx }: { ctx: SimReplicaContext }) => {
 			dataDir: ctx.volume.folder,
 		},
 		counters,
-		// The sim runs on a virtual clock; a busy test process must never read as a loop behind.
 		loop: { lagMs: () => 0 },
 		replication,
 		peer: { port: SIM_PORT, fetch },
@@ -189,7 +181,6 @@ export const createSimReplica = ({ ctx }: { ctx: SimReplicaContext }) => {
 		ctx: httpContext,
 		secret: ctx.secret,
 	});
-	// Built before listening, as the thread does: the point this replica fell behind at is fixed here.
 	const sync = createReplicaSync({
 		ctx: {
 			replication,
@@ -204,7 +195,6 @@ export const createSimReplica = ({ ctx }: { ctx: SimReplicaContext }) => {
 		folders,
 	});
 
-	/** As the thread boots: listens, catches up, reports ready, then keeps passing and keeps its files within their share. */
 	async function start(): Promise<void> {
 		state = "starting";
 		network.bind(endpoint);
@@ -217,7 +207,6 @@ export const createSimReplica = ({ ctx }: { ctx: SimReplicaContext }) => {
 		void diskEvictor.run();
 	}
 
-	/** As the process stops: the listener closes, the outbox flushes, the files close. */
 	async function stop(): Promise<void> {
 		if (!alive()) return;
 		state = "stopping";
@@ -229,7 +218,6 @@ export const createSimReplica = ({ ctx }: { ctx: SimReplicaContext }) => {
 		ctx.log?.(`${ctx.address}#${id} stopped`);
 	}
 
-	/** The process is gone at once: nothing in flight finishes, nothing is flushed. */
 	function kill(): void {
 		if (!alive()) return;
 		network.unbind(endpoint);

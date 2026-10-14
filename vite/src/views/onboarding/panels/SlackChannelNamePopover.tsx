@@ -38,7 +38,6 @@ type SlackChannelNamePopoverProps = {
 	| { anchor: RefObject<HTMLElement | null>; trigger?: never }
 );
 
-/** Asks for the Slack channel name, prefilled from the org slug, then sends the invite. */
 export function SlackChannelNamePopover({
 	open,
 	onOpenChange,
@@ -63,7 +62,6 @@ export function SlackChannelNamePopover({
 	);
 }
 
-// Mounted only while open, so the prefill picks up the org once it has loaded.
 function SlackChannelNameForm({
 	onRequested,
 }: {
@@ -81,9 +79,7 @@ function SlackChannelNameForm({
 				channelName: `${CHANNEL_PREFIX}${suffix}`,
 			});
 			onRequested(result);
-		} catch {
-			// The hook already surfaced the error.
-		}
+		} catch {}
 	};
 
 	return (

@@ -17,7 +17,6 @@ function startDateDescription({
 	return "Schedule the plan to start on a future date";
 }
 
-/** A multi-plan attach can only backdate, so its default and bounds sit in the past. */
 export function AttachStartDateRow({
 	startDate,
 	isMultiPlan,

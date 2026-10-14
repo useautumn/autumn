@@ -16,7 +16,6 @@ import { refreshAllEdgeConfigs } from "@server/internal/misc/edgeConfig/edgeConf
 import { getRedisV2CacheStatus } from "@server/internal/misc/redisV2Cache/redisV2CacheStore.js";
 import { loadShadowOperatorContext } from "./loadShadowOperatorContext.js";
 
-/** The row keeps usage per attribution source, so the comparable total is the sum of its units. */
 const attributedUnits = ({
 	usage_attribution,
 }: {

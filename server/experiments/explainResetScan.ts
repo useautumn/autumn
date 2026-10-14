@@ -15,24 +15,6 @@ const { countResetEligibleCustomerEntitlements } = await import(
 	"../src/internal/customers/cusProducts/cusEnts/repos/countResetEligibleCustomerEntitlements"
 );
 
-// Benchmarks the REAL reset scan (the exact repo query the V2 cron runs,
-// including the reset_by_invoice + expires_at predicate):
-//   1. single page at several batch sizes (cold + warm)
-//   2. cursor walk: N pages deep, to verify keyset pagination stays flat
-//   3. EXPLAIN of the exact statement
-//
-// NOTE: requires migration 0047 (reset_by_invoice column +
-// idx_customer_entitlements_reset_scan) on the target DB. The plan should use
-// idx_customer_entitlements_reset_scan with NO Incremental Sort node.
-//
-// Run with (PW_MODE=1 skips the .env.local worktree-DB overlay):
-//   PW_MODE=1 infisical run --env=prod --recursive -- bun run experiments/explainResetScan.ts
-// Options (env vars):
-//   BATCH_SIZES=1000,10000,100000   page sizes to test
-//   WALK_PAGE_SIZE=10000            cursor-walk page size
-//   WALK_PAGES=20                   cursor-walk page count
-//   RUN_BACKLOG_COUNT=true          also run the capped backlog count
-
 const main = async () => {
 	const batchSizes = (process.env.BATCH_SIZES ?? "1000,10000,100000")
 		.split(",")
@@ -45,9 +27,6 @@ const main = async () => {
 	const dbHost = new URL(process.env.DATABASE_URL ?? "").host;
 	console.log(`DB target: ${dbHost}\n`);
 
-	// 1. Single page at each batch size. Wall-clock includes network transfer
-	// of the rows, so big batches partly measure payload size, not DB work —
-	// the EXPLAIN execution time at the end isolates the DB-side cost.
 	console.log("--- single page per batch size (cold, warm) ---");
 	for (const limit of batchSizes) {
 		for (const run of ["cold", "warm"]) {
@@ -65,7 +44,6 @@ const main = async () => {
 		}
 	}
 
-	// 2. Cursor walk: page N should cost the same as page 1.
 	console.log(
 		`\n--- cursor walk: ${walkPages} pages x ${walkPageSize} rows ---`,
 	);
@@ -90,7 +68,6 @@ const main = async () => {
 		cursor = { nextResetAt: lastRow.nextResetAt, id: lastRow.id };
 	}
 
-	// 3. DB-side cost of the biggest batch size, isolated from network.
 	const maxSize = Math.max(...batchSizes);
 	console.log(`\n--- EXPLAIN (ANALYZE, BUFFERS), size=${maxSize} ---`);
 	const explainResult = await db.execute(

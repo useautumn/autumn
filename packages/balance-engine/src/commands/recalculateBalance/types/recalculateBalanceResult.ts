@@ -4,7 +4,6 @@ import {
 	nonEmptyStringSchema,
 } from "../../../models/common/primitives.js";
 
-/** Each grant's remaining before and after; the total usage moved between them. The preview answers with it too. */
 export const recalculateBalanceResultSchema = z
 	.object({
 		type: z.literal("recalculateBalance"),

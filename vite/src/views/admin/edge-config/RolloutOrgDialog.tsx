@@ -150,7 +150,6 @@ const RolloutOrgForm = ({
 	);
 };
 
-/** Pick an org and the percent it starts at; the form resets by remounting on open. */
 export const RolloutOrgDialog = ({
 	open,
 	onOpenChange,

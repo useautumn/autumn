@@ -16,15 +16,6 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { addMonths } from "date-fns";
 
-/**
- * Free Product with Trial Tests
- *
- * Tests for scenarios starting from free products with trials.
- * Covers free-to-free updates (preserving/extending/removing trials) and free-to-paid upgrades.
- * Uses `status === "trialing"` and `current_period_end` to verify trial state.
- */
-
-// 1. Free to paid with `free_trial` param
 test.concurrent(`${chalk.yellowBright("f2p-trial: add paid with free_trial param")}`, async () => {
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
 	const free = products.base({ items: [messagesItem] });
@@ -38,7 +29,6 @@ test.concurrent(`${chalk.yellowBright("f2p-trial: add paid with free_trial param
 		actions: [s.attach({ productId: "base" })],
 	});
 
-	// Track some usage before update
 	await autumnV1.track(
 		{
 			customer_id: customerId,
@@ -64,10 +54,8 @@ test.concurrent(`${chalk.yellowBright("f2p-trial: add paid with free_trial param
 
 	const preview = await autumnV1.subscriptions.previewUpdate(updateParams);
 
-	// Preview total should be 0 during trial
 	expect(preview.total).toEqual(0);
 
-	// next_cycle should show when trial ends and what the charge will be
 	expectPreviewNextCycleCorrect({
 		preview,
 		startsAt: advancedTo + ms.days(7),
@@ -78,14 +66,12 @@ test.concurrent(`${chalk.yellowBright("f2p-trial: add paid with free_trial param
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Verify product is trialing (status = "trialing", current_period_end is trial end)
 	await expectProductTrialing({
 		customer,
 		productId: free.id,
 		trialEndsAt: advancedTo + ms.days(7),
 	});
 
-	// Usage should be preserved
 	expectCustomerFeatureCorrect({
 		customer,
 		featureId: TestFeature.Messages,
@@ -94,10 +80,9 @@ test.concurrent(`${chalk.yellowBright("f2p-trial: add paid with free_trial param
 		usage: 30,
 	});
 
-	// No immediate charge during trial
 	expectCustomerInvoiceCorrect({
 		customer,
-		count: 1, // Just the $0 trial invoice
+		count: 1,
 		latestTotal: 0,
 	});
 
@@ -109,7 +94,6 @@ test.concurrent(`${chalk.yellowBright("f2p-trial: add paid with free_trial param
 	});
 });
 
-// 2. Free product with trial, update mid-trial (no free_trial param) - trial preserved
 test.concurrent(`${chalk.yellowBright("f2p-trial: free with trial -> free, update mid-trial preserves trial")}`, async () => {
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
 
@@ -127,18 +111,16 @@ test.concurrent(`${chalk.yellowBright("f2p-trial: free with trial -> free, updat
 		],
 		actions: [
 			s.attach({ productId: freeWithTrial.id }),
-			s.advanceTestClock({ days: 5 }), // Advance 5 days (mid-trial)
+			s.advanceTestClock({ days: 5 }),
 		],
 	});
 
-	// Verify initially trialing (get the trial end time before update)
 	const customerBefore =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	const initialTrialEnd = customerBefore.products?.find(
 		(p) => p.id === freeWithTrial.id,
 	)?.current_period_end;
 
-	// Update mid-trial - change included usage (no free_trial param = keep existing trial)
 	const updatedMessagesItem = items.monthlyMessages({ includedUsage: 200 });
 
 	const updateParams = {
@@ -149,10 +131,8 @@ test.concurrent(`${chalk.yellowBright("f2p-trial: free with trial -> free, updat
 
 	const preview = await autumnV1.subscriptions.previewUpdate(updateParams);
 
-	// Should be 0 (still free product)
 	expect(preview.total).toEqual(0);
 
-	// Free-to-free updates don't have next_cycle
 	expectPreviewNextCycleCorrect({
 		preview,
 		expectDefined: false,
@@ -162,14 +142,12 @@ test.concurrent(`${chalk.yellowBright("f2p-trial: free with trial -> free, updat
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Trial should be preserved with same end date
 	await expectProductTrialing({
 		customer,
 		productId: freeWithTrial.id,
 		trialEndsAt: initialTrialEnd!,
 	});
 
-	// Feature updated, reset should align with trial end
 	expectCustomerFeatureCorrect({
 		customer,
 		featureId: TestFeature.Messages,
@@ -177,11 +155,8 @@ test.concurrent(`${chalk.yellowBright("f2p-trial: free with trial -> free, updat
 		balance: updatedMessagesItem.included_usage,
 		usage: 0,
 	});
-
-	// Note: Free-to-free tests don't need expectSubToBeCorrect (no Stripe subscription)
 });
 
-// 4. Free product with trial, update mid-trial WITH new free_trial param - trial extended
 test.concurrent(`${chalk.yellowBright("f2p-trial: free with trial, update mid-trial extends trial")}`, async () => {
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
 
@@ -199,18 +174,16 @@ test.concurrent(`${chalk.yellowBright("f2p-trial: free with trial, update mid-tr
 		],
 		actions: [
 			s.attach({ productId: freeWithTrial.id }),
-			s.advanceTestClock({ days: 5 }), // Advance 5 days (mid-trial)
+			s.advanceTestClock({ days: 5 }),
 		],
 	});
 
-	// Get the initial trial end time before update
 	const customerBefore =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	const initialTrialEnd = customerBefore.products?.find(
 		(p) => p.id === freeWithTrial.id,
 	)?.current_period_end;
 
-	// Update mid-trial WITH new free_trial param - extend to 30 days from now
 	const updatedMessagesItem = items.monthlyMessages({ includedUsage: 200 });
 
 	const updateParams = {
@@ -227,10 +200,8 @@ test.concurrent(`${chalk.yellowBright("f2p-trial: free with trial, update mid-tr
 
 	const preview = await autumnV1.subscriptions.previewUpdate(updateParams);
 
-	// Should be 0 (still free product)
 	expect(preview.total).toEqual(0);
 
-	// Free-to-free updates don't have next_cycle
 	expectPreviewNextCycleCorrect({
 		preview,
 		expectDefined: false,
@@ -247,7 +218,6 @@ test.concurrent(`${chalk.yellowBright("f2p-trial: free with trial, update mid-tr
 
 	expect(newTrialEnd!).toBeGreaterThan(initialTrialEnd!);
 
-	// Feature updated
 	expectCustomerFeatureCorrect({
 		customer,
 		featureId: TestFeature.Messages,
@@ -255,11 +225,8 @@ test.concurrent(`${chalk.yellowBright("f2p-trial: free with trial, update mid-tr
 		balance: updatedMessagesItem.included_usage,
 		usage: 0,
 	});
-
-	// Note: Free-to-free tests don't need expectSubToBeCorrect (no Stripe subscription)
 });
 
-// 5. Free product with trial, update mid-trial to PAID product
 test.concurrent(`${chalk.yellowBright("f2p-trial: free with trial, update mid-trial to paid")}`, async () => {
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
 
@@ -277,11 +244,10 @@ test.concurrent(`${chalk.yellowBright("f2p-trial: free with trial, update mid-tr
 		],
 		actions: [
 			s.attach({ productId: freeWithTrial.id }),
-			s.advanceTestClock({ days: 5 }), // Advance 5 days (mid-trial)
+			s.advanceTestClock({ days: 5 }),
 		],
 	});
 
-	// Update mid-trial to PAID product (add price item)
 	const priceItem = items.monthlyPrice();
 
 	const updateParams = {
@@ -292,10 +258,8 @@ test.concurrent(`${chalk.yellowBright("f2p-trial: free with trial, update mid-tr
 
 	const preview = await autumnV1.subscriptions.previewUpdate(updateParams);
 
-	// Should charge full price since trial doesn't carry over
 	expect(preview.total).toEqual(priceItem.price!);
 
-	// next_cycle should be ~1 month from now (regular billing cycle)
 	expectPreviewNextCycleCorrect({
 		preview,
 		startsAt: addMonths(advancedTo, 1).getTime(),
@@ -306,14 +270,12 @@ test.concurrent(`${chalk.yellowBright("f2p-trial: free with trial, update mid-tr
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Trial should NOT carry over - product should no longer be trialing
 	await expectProductNotTrialing({
 		customer,
 		productId: freeWithTrial.id,
 		nowMs: advancedTo,
 	});
 
-	// Product should be active
 	await expectProductActive({
 		customer,
 		productId: freeWithTrial.id,
@@ -327,7 +289,6 @@ test.concurrent(`${chalk.yellowBright("f2p-trial: free with trial, update mid-tr
 	});
 });
 
-// 6. Free product (no trial) → Free product with trial, items undefined
 test.concurrent(`${chalk.yellowBright("f2p-trial: free no trial -> free with trial, items undefined")}`, async () => {
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
 
@@ -345,7 +306,6 @@ test.concurrent(`${chalk.yellowBright("f2p-trial: free no trial -> free with tri
 		actions: [s.attach({ productId: free.id })],
 	});
 
-	// Verify initially NOT trialing
 	const customerBefore =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	await expectProductNotTrialing({
@@ -353,11 +313,9 @@ test.concurrent(`${chalk.yellowBright("f2p-trial: free no trial -> free with tri
 		productId: free.id,
 	});
 
-	// Add trial without passing items (items undefined)
 	const updateParams = {
 		customer_id: customerId,
 		product_id: free.id,
-		// items is NOT specified (undefined)
 		free_trial: {
 			length: 14,
 			duration: FreeTrialDuration.Day,
@@ -368,21 +326,18 @@ test.concurrent(`${chalk.yellowBright("f2p-trial: free no trial -> free with tri
 
 	const preview = await autumnV1.subscriptions.previewUpdate(updateParams);
 
-	// Should be 0 (free product)
 	expect(preview.total).toEqual(0);
 
 	await autumnV1.subscriptions.update(updateParams);
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Product should now be trialing
 	await expectProductTrialing({
 		customer,
 		productId: free.id,
 		trialEndsAt: advancedTo + ms.days(14),
 	});
 
-	// Feature should still have correct values (unchanged since items undefined)
 	expectCustomerFeatureCorrect({
 		customer,
 		featureId: TestFeature.Messages,
@@ -390,11 +345,8 @@ test.concurrent(`${chalk.yellowBright("f2p-trial: free no trial -> free with tri
 		balance: messagesItem.included_usage,
 		usage: 0,
 	});
-
-	// Note: Free-to-free tests don't need expectSubToBeCorrect (no Stripe subscription)
 });
 
-// 7. Free product with trial, update mid-trial WITH free_trial: null - trial removed
 test.concurrent(`${chalk.yellowBright("f2p-trial: free with trial, update mid-trial removes trial")}`, async () => {
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
 
@@ -412,11 +364,10 @@ test.concurrent(`${chalk.yellowBright("f2p-trial: free with trial, update mid-tr
 		],
 		actions: [
 			s.attach({ productId: freeWithTrial.id }),
-			s.advanceTestClock({ days: 5 }), // Advance 5 days (mid-trial)
+			s.advanceTestClock({ days: 5 }),
 		],
 	});
 
-	// Update mid-trial WITH free_trial: null - remove trial
 	const updatedMessagesItem = items.monthlyMessages({ includedUsage: 200 });
 
 	const updateParams = {
@@ -428,27 +379,23 @@ test.concurrent(`${chalk.yellowBright("f2p-trial: free with trial, update mid-tr
 
 	const preview = await autumnV1.subscriptions.previewUpdate(updateParams);
 
-	// Should be 0 (still free product)
 	expect(preview.total).toEqual(0);
 
 	await autumnV1.subscriptions.update(updateParams);
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Product should no longer be trialing
 	await expectProductNotTrialing({
 		customer,
 		productId: freeWithTrial.id,
 		nowMs: advancedTo,
 	});
 
-	// Product should now be active
 	await expectProductActive({
 		customer,
 		productId: freeWithTrial.id,
 	});
 
-	// Feature updated
 	expectCustomerFeatureCorrect({
 		customer,
 		featureId: TestFeature.Messages,
@@ -456,6 +403,4 @@ test.concurrent(`${chalk.yellowBright("f2p-trial: free with trial, update mid-tr
 		balance: updatedMessagesItem.included_usage,
 		usage: 0,
 	});
-
-	// Note: Free-to-free tests don't need expectSubToBeCorrect (no Stripe subscription)
 });

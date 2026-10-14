@@ -1,20 +1,3 @@
-/**
- * TDD tests for backdated first phases in create_schedule.
- *
- * Contract under test:
- *   New types/fields:
- *     - Internal BillingContext.subscriptionBackdateStartMs?: epoch milliseconds
- *   New endpoints:
- *     - Existing billing.createSchedule accepts a first phase starts_at in the past for supported new-subscription creation
- *   New behaviors:
- *     - Backdated first phase creates one Stripe subscription with start_date backdated to phase starts_at
- *     - Future phases are still materialized as scheduled Autumn customer products and Stripe subscription schedule phases
- *     - Backdated first phases can include add-ons or be scoped to an entity
- *   Side effects:
- *     - Immediate-phase customer_products are active and store the past starts_at
- *     - First invoice is created by Stripe for the backdated subscription
- */
-
 import { test } from "bun:test";
 import {
 	type CreateScheduleParamsV0Input,

@@ -8,11 +8,6 @@ import {
 } from "@/external/redis/actions/customerJwtAuthCache/customerJwtAuthCache.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 
-/**
- * Hot-path read for a customer-JWT request. Cache miss/down → reload from
- * Postgres (the source of truth). DB down → the load throws and auth fails —
- * same as the secret-key path; no fail-open special-casing.
- */
 export const getCustomerJwtAuth = async ({
 	internalCustomerId,
 	requestId,
@@ -26,8 +21,6 @@ export const getCustomerJwtAuth = async ({
 	});
 	if (cached) return cached;
 
-	// Source of truth. A missing family means the customer was deleted (FK
-	// cascade) or never minted — either way the token is no longer valid.
 	const family = await db.query.customerJwtFamilies.findFirst({
 		where: eq(customerJwtFamilies.internal_customer_id, internalCustomerId),
 	});

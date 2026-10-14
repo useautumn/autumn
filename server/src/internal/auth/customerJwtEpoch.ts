@@ -4,12 +4,6 @@ import { db } from "@/db/initDrizzle.js";
 import { invalidateCustomerJwtAuth } from "@/external/redis/actions/customerJwtAuthCache/customerJwtAuthCache.js";
 import { generateId } from "@/utils/genUtils.js";
 
-/**
- * Per-customer JWT revocation/rotation state — Postgres is the source of truth
- * (the `customer_jwt_families` table), keyed by the immutable internal_customer_id.
- * Redis is only a cache (see customerJwtAuthCache). No TTL games, no region
- * fan-out: revoke is a single atomic UPDATE.
- */
 export type JwtFamily = {
 	epoch: number;
 	refreshKid: number;
@@ -38,7 +32,6 @@ export const readFamily = async ({
 	};
 };
 
-/** Mint / refresh: upsert the family generation. */
 export const setFamily = async ({
 	internalCustomerId,
 	orgId,
@@ -75,7 +68,6 @@ export const setFamily = async ({
 	await invalidateCustomerJwtAuth({ internalCustomerId });
 };
 
-/** Revoke / reuse-detected: atomic bump of the floor — every outstanding token dies. */
 export const bumpEpoch = async ({
 	internalCustomerId,
 	orgId,

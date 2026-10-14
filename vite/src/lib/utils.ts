@@ -6,7 +6,6 @@ const isPlainObject = (value: unknown): value is Record<string, unknown> =>
 	!Array.isArray(value) &&
 	Object.prototype.toString.call(value) === "[object Object]";
 
-/** Recursively merges source into target. Arrays and primitives are replaced, not merged. */
 export const deepMerge = <T extends Record<string, unknown>>(
 	target: T,
 	source: Partial<T>,

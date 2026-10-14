@@ -21,7 +21,6 @@ import type {
 	MutationResult,
 } from "../writer/types/mutation.js";
 
-/** Every track, sync or queued, deducts here: serialized by the partition writer. */
 export async function decideTrack({
 	scope,
 	command,
@@ -33,16 +32,13 @@ export async function decideTrack({
 	const customerKey = meteringIdentityToPartitionKey({
 		identity: command.identity,
 	});
-	// Filled by the decision, the only place that knows its rows and effects; a retry never runs it.
 	const decidedAgainst: DecidedAgainst = {};
-	// Synchronous once ensured: `mutate` runs against the freshest state and the mutation is enqueued before it returns.
 	const decided = await withResidentSubject({
 		customerKey,
 		ensure: () => ensureSubjectCurrent({ scope, command }),
 		attempt: () =>
 			ctx.writer.decide<never>({
 				command,
-				// A finalize finds its lock by reading Postgres, so the caller hears of a lock only once its row is there.
 				durability: command.lock ? "store" : "log",
 				mutate: ({ state }) =>
 					timeSync({ label: "track.decide" }, () =>
@@ -59,7 +55,6 @@ export async function decideTrack({
 	return { ...decided, decidedAgainst };
 }
 
-/** Sync: decide, then answer once the deduction is committed. */
 export async function track({
 	scope,
 	command,
@@ -92,10 +87,8 @@ export function toTrackReply({
 	if (mutation.result.type !== "track") {
 		throw new Error(`Track ${mutation.id} committed a non-track record`);
 	}
-	// A duplicate or joined command never ran the decision, so it reads the committed state's catalog.
 	const catalog =
 		decidedAgainst.catalog ?? scope.ctx.subjectHydrator.readCatalog({ state });
-	// The caller reports this feature's balance, so the reply carries the rows that fund it, not the whole customer.
 	return {
 		result: mutation.result,
 		changes: mutation.changes,
@@ -113,10 +106,8 @@ export type DecidedAgainst = {
 	effects?: MutationEffect[];
 };
 
-/** The deduction, enqueued in order; what it was decided against shapes the sync reply. */
 type DecidedTrack = DecidedMutation<never> & { decidedAgainst: DecidedAgainst };
 
-/** Runs inside the writer's critical section: no await, no I/O. */
 export function mutateTrack({
 	scope,
 	state,
@@ -131,7 +122,6 @@ export function mutateTrack({
 	command: TrackCommand;
 }): MutationResult<never> {
 	if (!state) throw new PartitionProcessorStateNotFoundError({ customerKey });
-	// One catalog read serves both views: the rows a mutation adds reference catalog the state already held.
 	const catalog = scope.ctx.subjectHydrator.readCatalog({ state });
 	decidedAgainst.catalog = catalog;
 

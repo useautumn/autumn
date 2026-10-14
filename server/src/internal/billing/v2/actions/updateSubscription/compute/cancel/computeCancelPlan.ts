@@ -25,7 +25,6 @@ const computeScheduledAddOnsToDelete = ({
 }: {
 	billingContext: UpdateSubscriptionBillingContext;
 }): FullCusProduct[] => {
-	// Immediate main-plan cancellation invalidates future add-on phases in the same scope.
 	const { cancelAction, customerProduct, fullCustomer } = billingContext;
 	if (cancelAction !== "cancel_immediately") return [];
 	if (!cp(customerProduct).main().recurring().valid) return [];
@@ -66,15 +65,8 @@ const shouldDeleteCustomerProductBeforeBillingStarts = ({
 	);
 };
 
-// Schedule phases stamp the successor's start with second precision, so the two
-// timestamps can sit just under a second apart.
 const HANDOVER_TOLERANCE_MS = ms.seconds(1);
 
-/**
- * The active plan is only ending so the scheduled one can take over — either
- * cancelled into it, or handed off at a schedule phase boundary, which sets
- * ended_at without ever marking the plan cancelled.
- */
 const isEndingForHandover = ({
 	activeCustomerProduct,
 	scheduledCustomerProduct,
@@ -138,10 +130,6 @@ const computeScheduledCancelPlan = ({
 	};
 };
 
-/**
- * When cancelling a revert trial, unpause the previous plan by adding
- * an update to restore its status to Active.
- */
 const applyRevertTrialUnpause = ({
 	billingContext,
 	plan,
@@ -175,13 +163,6 @@ const applyRevertTrialUnpause = ({
 	};
 };
 
-/**
- * Computes and applies the cancel plan for a subscription.
- *
- * Handles two cancel actions:
- * - 'cancel_end_of_cycle': Schedule cancellation at cycle end, insert scheduled default product
- * - 'cancel_immediately': Cancel now, insert active default product
- */
 export const computeCancelPlan = ({
 	ctx,
 	billingContext,
@@ -212,22 +193,17 @@ export const computeCancelPlan = ({
 		});
 	}
 
-	// Step 1: Calculate when the subscription ends
 	const endOfCycleMs = computeEndOfCycleMs({ billingContext });
 
 	ctx.logger.debug(
 		`[computeCancelPlan] ${billingContext.cancelAction}: end of cycle at ${endOfCycleMs}`,
 	);
 
-	// Step 2: Build cancel updates for customer product
 	const cancelUpdates = computeCancelUpdates({ billingContext, endOfCycleMs });
 
-	// Step 3: Find existing scheduled products to delete
 	const productToDelete = computeCustomerProductToDelete({ billingContext });
 	const productsToDelete = computeScheduledAddOnsToDelete({ billingContext });
 
-	// Step 4: Create default product (if applicable)
-	// Skip when cancelling a revert trial — the previous plan will be restored instead.
 	const isRevertTrialCancel = isCustomerProductRevertingTrial(
 		billingContext.customerProduct,
 	);
@@ -247,10 +223,8 @@ export const computeCancelPlan = ({
 		`[computeCancelPlan] default customer product: ${defaultCustomerProduct?.product.name}`,
 	);
 
-	// Step 5: Compute prorated refund line items for immediate cancellation
 	const cancelLineItems = computeCancelLineItems({ ctx, billingContext });
 
-	// Apply all computed values to the plan
 	const cancelledPlan = applyCancelPlan({
 		plan,
 		cancelUpdates,
@@ -261,7 +235,6 @@ export const computeCancelPlan = ({
 		existingCustomerProduct: billingContext.customerProduct,
 	});
 
-	// If this is a revert trial being cancelled, unpause the previous plan
 	return applyRevertTrialUnpause({
 		billingContext,
 		plan: cancelledPlan,

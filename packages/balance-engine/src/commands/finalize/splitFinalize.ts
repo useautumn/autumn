@@ -1,7 +1,6 @@
 import { Decimal } from "decimal.js";
 import type { UnwoundLock } from "./unwindLock/types/unwoundLock.js";
 
-/** How a lock at `lockValue` reaches `finalValue`: how much of it to give back, and how much more to take. */
 export const splitFinalize = ({
 	lockValue,
 	finalValue,
@@ -16,7 +15,6 @@ export const splitFinalize = ({
 	if (lockValue === 0) return { unwindValue: 0, additionalValue: finalValue };
 	if (finalValue === 0)
 		return { unwindValue: lockMagnitude, additionalValue: 0 };
-	// A deduction settled as a credit, or the reverse: give it all back, then apply the final value whole.
 	if (signsDiffer)
 		return { unwindValue: lockMagnitude, additionalValue: finalValue };
 	if (finalMagnitude >= lockMagnitude)
@@ -30,7 +28,6 @@ export const splitFinalize = ({
 	};
 };
 
-/** What the forward draw takes: the value beyond the lock, plus whatever the unwind could not return to a vanished row. */
 export const unwoundLockToForwardValue = ({
 	unwound,
 	additionalValue,

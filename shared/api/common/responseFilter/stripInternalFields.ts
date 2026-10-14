@@ -1,9 +1,5 @@
 import { responseFilterConfig } from "./responseFilterConfig";
 
-/**
- * Recursively strips internal fields from response data based on object type.
- * Uses the `object` field to identify which filter rules to apply.
- */
 export function stripInternalFields({ data }: { data: unknown }): unknown {
 	if (data === null || typeof data !== "object") return data;
 
@@ -14,7 +10,6 @@ export function stripInternalFields({ data }: { data: unknown }): unknown {
 	const obj = data as Record<string, unknown>;
 	const objectType = obj.object;
 
-	// Get fields to omit for this object type
 	const fieldsToOmit =
 		typeof objectType === "string"
 			? (responseFilterConfig[objectType] ?? [])

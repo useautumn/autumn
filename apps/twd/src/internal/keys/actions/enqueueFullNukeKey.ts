@@ -11,7 +11,6 @@ import { getKeyGate } from "../repos/keyGateRepo.ts";
 
 export const DEFAULT_FULL_NUKE_TARGET_PER_KEY = 2;
 
-/** Locks the key immediately so no run claims its accounts while the job waits for a lease. */
 export const enqueueFullNukeKey = async ({
 	ctx,
 	platformAccountId,

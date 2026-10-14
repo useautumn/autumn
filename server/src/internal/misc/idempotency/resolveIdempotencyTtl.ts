@@ -5,9 +5,6 @@ import {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 
-/** The org's configured idempotency TTL for a route group (hours → ms),
- *  falling back to the 24h default. The config rides on the org row, so
- *  this is a pure read of ctx — no fetch, no cache. */
 export const resolveIdempotencyTtlMs = ({
 	ctx,
 	routeGroup,

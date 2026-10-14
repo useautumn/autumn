@@ -1,9 +1,3 @@
-/**
- * The global target flags are documented as working before or after the
- * command. The resolver tests call `resolveTarget` directly and would keep
- * passing through a Commander misconfiguration, so these parse for real.
- */
-
 import { afterEach, beforeEach, expect, test } from "bun:test";
 import {
 	isolateTargetEnv,
@@ -42,8 +36,6 @@ test("--prod reaches push from either side of the command", async () => {
 });
 
 test("--sandbox selects that sandbox's own key, not the org's", async () => {
-	// The flag is not dropped on the way through: it picks the key variable
-	// `atmn sandbox create` wrote for that sandbox.
 	const before = await targetFor({ argv: ["--sandbox", "sb_1", "push"] });
 	const after = await targetFor({ argv: ["push", "--sandbox", "sb_1"] });
 

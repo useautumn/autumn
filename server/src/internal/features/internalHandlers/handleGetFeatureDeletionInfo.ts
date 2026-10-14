@@ -32,7 +32,6 @@ export const handleGetFeatureDeletionInfo = createRoute({
 			});
 		}
 
-		// Use Drizzle query similar to ProductService.getDeletionText
 		const res_data = await ctx.db
 			.select({
 				productName: sql<string>`CASE WHEN ROW_NUMBER() OVER (ORDER BY ${products.created_at}) = 1 THEN ${products.name ?? "Product name not found"} ELSE NULL END`,
@@ -56,7 +55,6 @@ export const handleGetFeatureDeletionInfo = createRoute({
 			`Feature ${feature_id} has ${res_data.length} products. First product name: ${res_data[0]?.productName}`,
 		);
 
-		// If no products found, return explicit zero count
 		if (!res_data || res_data.length === 0) {
 			return c.json({
 				productName: null,

@@ -5,10 +5,6 @@ import {
 	type CustomerLimits,
 } from "./billingVerifyExportConfig.js";
 
-/** A page read that throws aborts the generator and restarts the whole export,
- * so these are retried on the same budget as a customer's own verification.
- * Every failure retries: a pooled connection that comes back dead rejects
- * immediately, and nothing underneath a query has already retried it. */
 export const retryExportDbRead =
 	<Params, Result>({
 		logger,

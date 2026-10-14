@@ -1,13 +1,3 @@
-/**
- * Parallel-page scaling experiment: claims 10-page batches (real claim,
- * sequential cursor) then executes them at concurrency 1/2/4/6/10 via the
- * real executeBatchMigrationPage. Sequential baseline runs FIRST and LAST to
- * bound cache-warming skew. Writes to the bench org; revert with
- * revertBenchMigrations.ts.
- *
- *   bun tests/perf/batch-migrations/probes/probeParallelPages.ts
- */
-
 import { sql } from "drizzle-orm";
 import { batchMigrationPlanToExecutionPlan } from "@/internal/migrations/v2/batchOperations/compute/index.js";
 import { claimNextBatchMigrationPage } from "@/internal/migrations/v2/batchOperations/execute/claim/index.js";
@@ -55,7 +45,6 @@ const main = async () => {
 	const { ctx, org } = bench;
 	const { db } = ctx;
 
-	// Fresh slate: remove previously added words rows + bench item runs.
 	await db.execute(sql`
 		DELETE FROM customer_entitlements
 		WHERE internal_customer_id LIKE ${`${BENCH_INTERNAL_CUSTOMER_PREFIX}%`}
@@ -97,7 +86,6 @@ const main = async () => {
 
 	let cursor: string | undefined;
 	for (const concurrency of CONCURRENCY_SCENARIOS) {
-		// Claim this scenario's pages (sequential — cursor dependency).
 		const claimStarted = Date.now();
 		const pages = [];
 		for (let i = 0; i < PAGES_PER_SCENARIO; i++) {

@@ -1,14 +1,3 @@
-/**
- * catalogV2.update — declared licenses[] is the FINAL parent op, exclusive
- * with propagate on that parent. Two parents with different customize
- * must not share an $or op.
- *
- * Contract:
- *   D1 child adds Dashboard + Team declares $20 → one Team op with both
- *   D2 Team declares $20, Scale only propagates → two parent ops
- *   D3 child 10→200, Team declares 300 → Team op is 300
- */
-
 import { test } from "bun:test";
 import { BillingInterval } from "@autumn/shared";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";

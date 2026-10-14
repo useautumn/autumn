@@ -34,7 +34,6 @@ import { handleVerify } from "./v2/handlers/handleVerify.js";
 
 export const billingRouter = new Hono<HonoEnv>();
 
-// Legacy
 billingRouter.post("/attach/preview", ...handleAttachPreview);
 billingRouter.post("/cancel", ...handleCancelV2);
 
@@ -47,7 +46,6 @@ billingRouter.post("/checkout", ...handleLegacyApiCheckout);
 billingRouter.post("/attach", ...handleAttach);
 
 export const billingRpcRouter = new Hono<HonoEnv>();
-// Deprecated: superseded by customers.advance_test_clock.
 billingRpcRouter.post(
 	"/billing.advance_test_clock",
 	...handleLegacyAdvanceTestClock,

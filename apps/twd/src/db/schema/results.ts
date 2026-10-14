@@ -15,10 +15,8 @@ export type FileResultStatus =
 	| "timed_out"
 	| "skipped";
 
-/** swarm = a twd run; ci = uploaded by CI (POST /results/ingest), never priced or profiled. */
 export type ResultSource = "swarm" | "ci";
 
-/** Append-only: one row per file per run attempt. */
 export const testResults = pgTable(
 	"test_results",
 	{
@@ -30,7 +28,6 @@ export const testResults = pgTable(
 		status: text("status").$type<FileResultStatus>().notNull(),
 		durationMs: integer("duration_ms").notNull(),
 		attempt: integer("attempt").notNull().default(1),
-		/** 1-based repetition of a repeat run; null for normal runs. */
 		repetition: integer("repetition"),
 		passedTests: integer("passed_tests").notNull().default(0),
 		failedTests: integer("failed_tests").notNull().default(0),
@@ -50,14 +47,12 @@ export const testResults = pgTable(
 	],
 );
 
-/** Materialised per-file baseline from recent dev baseline runs. */
 export const fileBaselines = pgTable("file_baselines", {
 	file: text("file").primaryKey(),
 	p50Ms: integer("p50_ms").notNull(),
 	p90Ms: integer("p90_ms").notNull(),
 	passRate: real("pass_rate").notNull(),
 	samples: integer("samples").notNull(),
-	/** ci rows come from dev CI uploads for files no swarm baseline covers; their timings are not sandbox timings. */
 	source: text("source").$type<ResultSource>().notNull().default("swarm"),
 	updatedAt: timestamp("updated_at", { withTimezone: true })
 		.notNull()

@@ -327,7 +327,6 @@ const closeStoreFixture = ({
 	rmSync(directory, { recursive: true, force: true });
 };
 
-/** Two turns: a command resolves its subject before it reaches the writer, and the writer commits on the turn after. */
 const waitForTurn = async (): Promise<void> => {
 	await new Promise<void>((resolve) => setImmediate(resolve));
 	await new Promise<void>((resolve) => setImmediate(resolve));
@@ -354,7 +353,6 @@ const createRuntime = ({
 	bootstrap?: OwnedPartitionBootstrapPort["bootstrap"];
 	partitionForIdentity?: (identity: MeteringIdentity) => number;
 	recoveryDrainTimeoutMs?: number;
-	/** Holds every store apply, the way a slow Postgres committer would. */
 	storeApplyGate?: Promise<void>;
 }) => {
 	function createProducer(): OwnedPartitionProducerPort {
@@ -753,7 +751,6 @@ describe("owned partition runtime", () => {
 
 			await waitForTurn();
 			expect(fakeProducer.lifecycle).toContain("producer:commit");
-			// The deduction is projected; the read does not pay for the commit still in flight.
 			expect(checkSettled).toBe(true);
 			await expect(checkPromise).resolves.toMatchObject({
 				result: { allowed: true },
@@ -806,7 +803,6 @@ describe("owned partition runtime", () => {
 				await waitForTurn();
 				expect(fakeProducer.lifecycle).toContain("producer:commit");
 
-				// Answered before the commit's fate was known: the one window in which a read reports a deduction that never landed.
 				expect(await check).toMatchObject({
 					result: { allowed: true },
 					state: { revision: 1, customerEntitlements: [{ balance: 5 }] },
@@ -1142,7 +1138,6 @@ describe("owned partition runtime", () => {
 				...fakeFollower.follower,
 				stop: async () => {
 					stopStarted.resolve(undefined);
-					// Consumer withdrawal waits for the batch executing this command.
 					await batchFinished.promise;
 					await cleanup.promise;
 				},
@@ -1275,7 +1270,6 @@ describe("owned partition runtime", () => {
 					command: createCheckCommand({ requestId: "req_during_abort" }),
 				}),
 			);
-			// Decided before the append failed, so this read saw a deduction the abort then rolled back; the next read does not.
 			await expect(check).resolves.toMatchObject({
 				result: { allowed: true },
 				state: { revision: 1, customerEntitlements: [{ balance: 5 }] },
@@ -1467,7 +1461,6 @@ test("drain rejects when the store refuses the apply behind a log-durability rep
 		);
 		const draining = runtime.drain();
 		storeApply.reject(new Error("postgres refused the row"));
-		// The verdict is the store's: a successor must not be named over rows that never landed.
 		await expect(draining).rejects.toBeInstanceOf(
 			PartitionWriterRecoveryRequiredError,
 		);
@@ -1533,7 +1526,6 @@ test("quiescence remains pending after recovery disposal until accepted apply se
 				command: createTrackCommand({ commandId: "quiescence" }),
 			}),
 		);
-		// Disposal answers the caller at once; quiescence still waits for its append.
 		void track.catch(() => undefined);
 		await waitForTurn();
 		follower.emitUnavailable({ cause: new Error("lost follower") });
@@ -1846,7 +1838,6 @@ describe("partitionPreparation", function partitionPreparationTests() {
 			const f = createFixture({
 				bootstrap: async () => {
 					if (refusals++ > 0) return;
-					// The owner appended and advanced its bookmark while the range was being read.
 					f.setEnd(7n);
 					throw new PartitionBootstrapRefusedError({
 						topic,
@@ -1922,7 +1913,6 @@ describe("partitionPreparation", function partitionPreparationTests() {
 				const command = f.runtime.process(async () => "served", {
 					budgetMs: 5_000,
 				});
-				// Well past the fixed wait: the command is still held, not refused.
 				await new Promise<void>((resolve) => setTimeout(resolve, 40));
 				expect(f.runtime.getStatus()).toBe("activating");
 				finishFence();

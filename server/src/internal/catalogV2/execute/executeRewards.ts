@@ -30,7 +30,6 @@ export type CatalogRewardResults = {
 	referralPrograms: CatalogAppliedResult[];
 };
 
-/** The create body: the branch minus the stable id, which the server owns. */
 const createParamsFor = ({
 	upsert,
 }: {
@@ -73,8 +72,6 @@ const programUpdateParamsFor = ({
 	exclude_trial: upsert.desired.exclude_trial,
 });
 
-/** The create response is the public V0 shape, which carries no stable id, so
- * the row is read back. Push pins the fixture with it. */
 const internalIdOfReward = async ({
 	ctx,
 	rewardId,
@@ -107,15 +104,6 @@ const internalIdOfProgram = async ({
 	return program?.internal_id ?? null;
 };
 
-/**
- * Two orderings pull against each other. A promo code is owned by exactly one
- * reward, so replacing a reward while keeping its code needs the old row gone
- * BEFORE the new one is written. A referral program cannot point at a reward
- * that does not exist, so a repoint needs the new row written BEFORE the old
- * one goes. Splitting the deletes satisfies both: everything unlinked leaves
- * first and frees its codes, and only the rows a surviving program still holds
- * wait until after the repoint.
- */
 export const executeRewards = async ({
 	ctx,
 	updateCatalogPlan,
@@ -123,7 +111,6 @@ export const executeRewards = async ({
 }: {
 	ctx: AutumnContext;
 	updateCatalogPlan: UpdateCatalogPlan;
-	/** Stable ids of rewards a program that survives this push still links. */
 	linkedInternalRewardIds: Set<string>;
 }): Promise<CatalogRewardResults> => {
 	for (const remove of updateCatalogPlan.removeReferralPrograms) {
@@ -207,7 +194,6 @@ export const executeRewards = async ({
 		});
 	}
 
-	// Last: the links that held these have been repointed just above.
 	for (const remove of deferredRemovals) {
 		await deleteApiReward({ ctx, params: { reward_id: remove.rewardId } });
 	}

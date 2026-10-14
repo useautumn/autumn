@@ -114,9 +114,6 @@ const { createApproval } = await import(
 	"../../../src/internal/approvals/actions/createApproval.js"
 );
 
-// Every card after the first post — running, resolved, superseded, and the
-// dashboard poll — renders from the stored rows, so the group must persist as
-// write rows with previews, and the stored tool_args must carry no markers.
 describe("createApproval persists the grouped writes", () => {
 	test("writes persist per write and backfill stores every preview", async () => {
 		inserted.length = 0;
@@ -184,8 +181,6 @@ describe("createApproval persists the grouped writes", () => {
 			Object.keys(data.toolArgs).filter((key) => key.startsWith("_eve")),
 		).toEqual([]);
 
-		// The card posts before the N preview round trips; the deferred backfill
-		// persists them onto the pending write rows.
 		expect(created?.backfillGroupedPreviews).toBeDefined();
 		const previewed = await created?.backfillGroupedPreviews?.();
 		expect(previewed).toHaveLength(2);

@@ -22,8 +22,6 @@ export function autumnHandler(options: ExpressAutumnHandlerOptions): RequestHand
 	});
 
 	return async (req: Request, res: Response, next: NextFunction) => {
-		// When mounted via app.use("/api/autumn", ...), Express strips the prefix
-		// so re-attach it. When mounted via bare app.use(...), the prefix is already there.
 		const path = req.path.startsWith(pathPrefix)
 			? req.path
 			: `${pathPrefix}${req.path}`;

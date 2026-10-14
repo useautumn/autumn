@@ -12,7 +12,6 @@ import type {
 	RoutingContext,
 } from "./types/routing.js";
 
-/** A request's whole budget: the client timeout, cut short by the caller's signal. */
 export function createRequestDeadline({
 	timeoutMs,
 	signal,
@@ -50,11 +49,6 @@ export function assertRequestDeadline({
 	});
 }
 
-/** Gives an ownership refresh its own slice so a request can stop waiting on it
- *  without giving up its remaining budget: the slice ending is not a failure,
- *  it hands the caller back to try the route it has while the refresh runs on.
- *  Cancelling before the timer fires means the promise never settles, so
- *  nothing is left dangling. */
 function startRefreshExpiry({ timeoutMs }: { timeoutMs: number }): {
 	expired: Promise<RouteRefreshResult>;
 	cancel(): void;
@@ -70,16 +64,8 @@ function startRefreshExpiry({ timeoutMs }: { timeoutMs: number }): {
 	return { expired: expiry.promise, cancel };
 }
 
-/** "settled" once ownership caught up; "expired" when the refresh outran its slice. */
 export type RouteRefreshResult = "settled" | "expired";
 
-/** Waits for ownership to catch up, but only for `timeoutMs` of the request's budget.
- *  A refresh that outruns that slice is not a failure: it keeps running, and the
- *  caller tries the route it has, then refreshes again if that route is still stale.
- *  During a fleet swap every server refreshes at once while a hundred-odd claims
- *  land on the ownership topic, and failing the request the moment one slice
- *  passed turned that into fail-opens with most of the request's budget unspent.
- *  A refresh that fails, or a deadline that passes, still throws. */
 export async function refreshCommandRoute({
 	owners,
 	deadline,
@@ -95,8 +81,6 @@ export async function refreshCommandRoute({
 		interrupted.reject(deadline.signal.reason);
 	}
 	deadline.signal.addEventListener("abort", abort, { once: true });
-	// Deliberately not awaited on its own: the refresh outlives a request that
-	// stops waiting, so whoever routes next finds ownership already settled.
 	const refreshing = owners.refresh();
 	async function settle(): Promise<RouteRefreshResult> {
 		await refreshing;
@@ -125,15 +109,10 @@ export function isNotOwnerResponse({
 }
 
 export type NotOwnerAnswer = {
-	/** Where the old owner says the partition went; absent while its handoff is unnamed or released. */
 	successor?: PartitionOwner;
-	/** The route was right but its owner is still activating the partition: the same route is tried again. */
 	notReady?: true;
 };
 
-/** One send, then up to three more after an ownership refresh each; the deadline cuts it short.
- *  Attempts that end at an owner still activating are counted apart, so a redirect followed
- *  by a NOT_READY still has its retries. */
 export const MAX_ROUTE_ATTEMPTS = 4;
 
 const CONNECTION_REFUSED_CODES = new Set(["ConnectionRefused", "ECONNREFUSED"]);
@@ -155,15 +134,10 @@ export function isConnectionRefused({ cause }: { cause: unknown }): boolean {
 	return false;
 }
 
-/** How many attempts in a row may end at a NOT_READY owner before the request gives up on it. */
 export const MAX_NOT_READY_RETRIES = 3;
 
-/** A NOT_READY is retried only with this much budget left: the owner already held the
- *  request for the budget it was told, so what remains is the margin it left, and a
- *  resend could only run the deadline out mid-flight. */
 export const MIN_NOT_READY_RETRY_BUDGET_MS = 200;
 
-/** True when a request still has enough of its budget to be worth resending to a not-ready owner. */
 export function canRetryNotReady({
 	deadline,
 	now = performance.now(),
@@ -174,8 +148,6 @@ export function canRetryNotReady({
 	return deadline.expiresAt - now >= MIN_NOT_READY_RETRY_BUDGET_MS;
 }
 
-/** Null for a success; the NOT_OWNER answer with any successor it names, or a NOT_READY
- *  answer from an owner still activating; throws a WORKER_ERROR for anything else, whatever its body. */
 export function readNotOwnerResponse({
 	response,
 }: {
@@ -188,11 +160,7 @@ export function readNotOwnerResponse({
 		const successor = readSuccessor({ input: error.successor });
 		return successor ? { successor } : {};
 	}
-	// A successor named a moment ago is still fencing and catching up. It held the
-	// request for its activation wait and gave up first; the activation is usually a
-	// second or so, so the request tries the same owner again while its budget lasts.
 	if (error.code === "NOT_READY") return { notReady: true };
-	// A refused record never landed, though it answers 500.
 	const mayHaveRun = response.status >= 500 && error.code !== "RECORD_REFUSED";
 	throw new BalanceWorkerClientError({
 		code: "WORKER_ERROR",
@@ -203,7 +171,6 @@ export function readNotOwnerResponse({
 	});
 }
 
-/** The owner was still activating on every retry the request had; the same error a single NOT_READY raised before retries existed. */
 export function ownerStillNotReadyError(): BalanceWorkerClientError {
 	return new BalanceWorkerClientError({
 		code: "WORKER_ERROR",
@@ -213,7 +180,6 @@ export function ownerStillNotReadyError(): BalanceWorkerClientError {
 	});
 }
 
-/** A hint that does not parse is no hint: the refresh path still works without it. */
 function readSuccessor({
 	input,
 }: {
@@ -230,9 +196,6 @@ function readSuccessor({
 	return { partition: partition as number, routeEpoch, endpoint };
 }
 
-/** True when the next attempt should go to the route already in hand: a named successor is
- *  kept for it, and an owner still activating is simply tried again. A plain NOT_OWNER
- *  forgets any hint the answering endpoint carried, so the next attempt refreshes. */
 export function followNotOwnerAnswer({
 	ctx,
 	resolved,

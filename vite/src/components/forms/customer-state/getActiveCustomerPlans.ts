@@ -7,7 +7,6 @@ import {
 import { customerProductToCustomerStatePlan } from "./customerProductToCustomerStatePlan";
 import type { CustomerStatePlan } from "./customerStateSchema";
 
-/** Active plans that aren't set to cancel, whatever their scope. */
 export function getActiveCustomerProducts({
 	customer,
 }: {
@@ -20,7 +19,6 @@ export function getActiveCustomerProducts({
 	);
 }
 
-/** Every active plan, whatever its scope — each row carries its own. */
 export function getActiveCustomerPlans({
 	customer,
 	products,

@@ -1,22 +1,3 @@
-/**
- * TDD test: update subscription must recognize a currency-only price edit for a
- * customer locked to a non-default currency (dashboard "Update Subscription").
- *
- * Red-failure mode (current behavior):
- *  - The dashboard sends V0 params (top-level `items`) at x-api-version 1.2. The
- *    V0 -> V1 transform (productItemToBasePriceParams / productItemToPlanItemParamsV1)
- *    drops `additional_currencies`, so an inr-only edit (base usd untouched)
- *    reaches compute as "base amount unchanged" — preview reports no charge and
- *    the Stripe subscription keeps billing the old inr amount.
- *
- * Green-success criteria (after fix):
- *  - Currency-only edits survive the V0 -> V1 mapping: preview reports the
- *    prorated inr difference, a prorated inr invoice is produced, the Stripe
- *    subscription item moves to a price with the new inr unit_amount, and the
- *    stored customer price config carries the new inr amount.
- *  - An update with identical amounts stays a no-op (control).
- */
-
 import { expect, test } from "bun:test";
 import {
 	type ApiCustomerV3,
@@ -125,7 +106,6 @@ test.concurrent(
 			},
 		};
 
-		// The preview must recognize the currency-only edit (dashboard preview).
 		const preview =
 			await autumnV2_2.subscriptions.previewUpdate<UpdateSubscriptionV1ParamsInput>(
 				updateParams,
@@ -141,7 +121,6 @@ test.concurrent(
 		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 		expect(customer.invoices).toHaveLength(2);
 
-		// Prorated inr difference (~100, minus a few seconds of elapsed period).
 		const stripeInvoices = await ctx.stripeCli.invoices.list({
 			customer: customer.stripe_id as string,
 		});
@@ -192,7 +171,6 @@ test.concurrent(
 			currency: "inr",
 		});
 
-		// The dashboard sends the full item list with only the inr amount edited.
 		const items: ProductItem[] = [
 			{
 				price: USD_BASE,
@@ -281,8 +259,6 @@ test.concurrent(
 			},
 		};
 
-		// The identical-plan guard (which must treat identical currency maps as
-		// unchanged) is the existing no-op semantic for both preview and update.
 		await expect(
 			autumnV2_2.subscriptions.previewUpdate<UpdateSubscriptionV1ParamsInput>(
 				noopParams,

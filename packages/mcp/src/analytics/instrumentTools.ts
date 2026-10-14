@@ -40,19 +40,6 @@ const extractRequest = (input: unknown): unknown =>
 		? (input as { request: unknown }).request
 		: input;
 
-/**
- * Wraps each tool's `execute` to emit a usage event per call. Auth/identity is
- * read from the same MCP context the tools already use, so an unauthenticated
- * call simply skips analytics (it would have failed in the tool anyway).
- *
- * Tools are wrapped once when the MCP server is created. The wrapper keeps no
- * per-request mutable state; auth/session data is read from the execution
- * context for each tool call.
- *
- * @param tools    The toolset to instrument (mutated in place and returned).
- * @param surface  Origin of the calls — `mcp` (external clients) or `agent`
- *                 (our own Autumn Ops agent).
- */
 export const instrumentToolsWithAnalytics = <
 	T extends Record<string, AnyTool>,
 >({

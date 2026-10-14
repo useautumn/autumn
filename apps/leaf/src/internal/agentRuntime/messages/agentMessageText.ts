@@ -21,9 +21,6 @@ export const extractUserMessageText = (text: string): string => {
 const PENDING_APPROVAL_GUIDANCE =
 	"If this message changes the request, re-preview and re-issue the write with the adjusted body; the old card withdraws automatically.";
 
-/** The cards still awaiting the user's decision, as the exact write bodies
- * the model issued — the same `tool: {json}` lines the Edit-details path
- * sends, so a reply that changes the request has the body to adjust. */
 const pendingApprovalsSection = (
 	pendingApprovals: ReadonlyArray<PendingApprovalNote>,
 ) => {
@@ -47,12 +44,6 @@ const CONDITIONAL_REPLY_GUIDANCE = `Delivery is conditional: several people are 
 
 const ADDRESSED_TO_OTHERS_GUIDANCE = `This message @-mentions someone else in the thread, not you. Unless it plainly asks you for something, reply with exactly ${EVE_EMPTY_DELIVERY_SENTINEL}.`;
 
-/** Every turn names its speaker: a thread has several people in it, and
- * without this the model reads a reply meant for someone else as its own.
- * A message that does not @-mention the agent also makes delivery
- * conditional, so the model can stay quiet on chatter between people. Keyed
- * on the mention, not on session age: a recovered session mid-thread is
- * still a follow-up. */
 const speakerSection = (speaker?: AgentTurnSpeaker) => {
 	if (!speaker) return null;
 	const identity = speaker.email
@@ -71,8 +62,6 @@ const contextMessageLines = (messages: ReadonlyArray<AgentContextMessage>) =>
 		.map((m) => `${m.author}${m.isBot === true ? " (bot)" : ""}: ${m.text}`)
 		.join("\n");
 
-/** Replies posted without tagging the agent never reached it; replaying them
- * lets "@agent do the above" act on the discussion it did not see. */
 const missedMessagesSection = (missed?: AgentMissedMessages) => {
 	if (!missed?.messages.length) return null;
 	const omitted = missed.omittedCount
@@ -111,12 +100,8 @@ export const buildAgentMessageText = ({
 	params: AgentTurnParams;
 	pendingApprovals?: ReadonlyArray<PendingApprovalNote>;
 }) => {
-	// The Edit-details modal already sends the exact body with its own
-	// instruction; a second copy would compete with it.
 	const approvalEdit = Boolean(params.clientContext?.approvalEdit);
 	const preamble = [
-		// The model has no clock; without this it guesses the year for date
-		// ranges (log windows, custom_range) and queries the wrong one.
 		`Current date and time (UTC): ${now.toISOString()}. Derive every date range, "today", "yesterday", and "last N days" from this, never from memory.`,
 		newSession && isAdminInstall ? adminBypassPreamble({ env, orgSlug }) : null,
 		newSession

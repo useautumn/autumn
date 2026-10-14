@@ -35,7 +35,6 @@ const entryIn = ({
 		(entry) => entry.scope.internalEntityId === scope.internalEntityId,
 	);
 
-/** The feature's pool as any contributing scope sees it; a scope that stopped pooling still reports what remains. */
 const poolIn = ({
 	scopedBalances,
 	featureId,
@@ -44,7 +43,6 @@ const poolIn = ({
 	featureId: string;
 }) => scopedBalances.find(({ pools }) => pools[featureId])?.pools[featureId];
 
-/** The shared pool behind a scope's change, when the scope pools the feature on either side. */
 const pooledBalanceChange = ({
 	before,
 	after,
@@ -73,7 +71,6 @@ const pooledBalanceChange = ({
 	};
 };
 
-/** Each scope's balance changes between two moments, tagged with the entity they belong to. */
 export const diffScopedBalances = ({
 	before,
 	after,

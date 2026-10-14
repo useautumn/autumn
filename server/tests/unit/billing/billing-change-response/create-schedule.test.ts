@@ -111,8 +111,6 @@ describe("buildBillingChangeResponse — createSchedule", () => {
 			response,
 		);
 
-		// The old scheduled product is deleted, not expired — deletes are
-		// intentionally skipped in v1.
 		expectBillingChangeResponse(response, {
 			scheduled: ["premium", "enterprise"],
 		});

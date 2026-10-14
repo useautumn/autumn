@@ -40,10 +40,6 @@ export const deriveCustomerPlanChangeAction = ({
 	return "updated";
 };
 
-/**
- * Kernel: one customer product's before/after states → one CustomerPlanChange.
- * `before: null` means newly inserted; `after: null` (deleted) is not surfaced.
- */
 export const buildCustomerPlanChange = ({
 	before,
 	after,
@@ -75,7 +71,6 @@ export const buildCustomerPlanChange = ({
 		action,
 		...snapshot,
 		previous_attributes: buildLifecyclePreviousAttributes({ before, after }),
-		// Deprecated in favor of plan_change.item_changes.
 		item_changes: [],
 		plan_change: buildPlanChangeFromFullProducts({
 			from: cusProductToProduct({ cusProduct: before }),

@@ -20,7 +20,7 @@ export const mapOptionsList = ({
 	prices,
 	curCusProduct,
 }: {
-	optionsInput?: FeatureOptions[]; // options input
+	optionsInput?: FeatureOptions[];
 	features: Feature[];
 	prices: Price[];
 	curCusProduct?: FullCusProduct;
@@ -53,8 +53,6 @@ export const mapOptionsList = ({
 			});
 		}
 
-		// const ent = getPriceEntitlement(prepaidPrice, entitlements)
-
 		const config = prepaidPrice.config as UsagePriceConfig;
 
 		const dividedQuantity = new Decimal(options.quantity!)
@@ -73,7 +71,6 @@ export const mapOptionsList = ({
 		});
 	}
 
-	// If product is one off, return
 	if (isOneOff(prices) || isFreeProduct(prices)) return newOptionsList;
 
 	const curOptionsList = curCusProduct?.options || [];

@@ -48,7 +48,6 @@ const comparisonContents = ({
 	});
 };
 
-/** A removed phase lists what stops with it; ongoing plans run on, and the first phase already shows them. */
 const isLostWithRemovedPhase = ({
 	row,
 	ongoingContext,
@@ -59,7 +58,6 @@ const isLostWithRemovedPhase = ({
 	row.status === "ends" &&
 	!isOngoingReviewSegment({ reviewSegment: row.before, ongoingContext });
 
-/** Ongoing plans run through every phase, so only the first phase lists them. */
 const continuesOngoing = ({
 	row,
 	ongoingContext,
@@ -70,7 +68,6 @@ const continuesOngoing = ({
 	"after" in row &&
 	isOngoingReviewSegment({ reviewSegment: row.after, ongoingContext });
 
-/** Each request phase against its matched saved self, or the phase before it when it is new. */
 export const timelineToReviewRows = ({
 	saved,
 	diff,

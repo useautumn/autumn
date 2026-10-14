@@ -9,7 +9,6 @@ export interface SsoFormValues {
 
 const DOMAIN_REGEX = /^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9-]+)+$/;
 
-/** Accepts pasted values like "https://Acme.com/" and stores "acme.com". */
 export const normalizeSsoDomain = (raw: string) => {
 	const trimmed = raw.trim().toLowerCase();
 	if (!trimmed) return "";
@@ -60,7 +59,6 @@ export const validateSsoClientSecret = requiredField(
 	"Enter the OIDC client secret.",
 );
 
-/** Reports at most one issue per field so the inline error stays a single line. */
 const fieldSchema = (validate: (value: string) => string | null) =>
 	z.string().superRefine((value, ctx) => {
 		const message = validate(value);

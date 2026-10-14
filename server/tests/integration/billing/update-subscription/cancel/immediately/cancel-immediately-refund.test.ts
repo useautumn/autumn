@@ -1,11 +1,3 @@
-/**
- * Cancel Immediately Refund Tests
- *
- * Tests for the `refund_last_payment` parameter when canceling subscriptions immediately.
- * Unlike the default cancel-immediately flow (which creates credit invoice line items),
- * `refund_last_payment` issues a direct Stripe refund and skips credit invoice creation.
- */
-
 import { expect, test } from "bun:test";
 import {
 	type ApiCustomerV3,
@@ -145,10 +137,6 @@ const createDirectStripeRefund = async ({
 	});
 };
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 1: Cancel with refund_last_payment: "full" (start of cycle)
-// ═══════════════════════════════════════════════════════════════════════════════
-
 test.concurrent(`${chalk.yellowBright("cancel immediately refund: full refund (start of cycle)")}`, async () => {
 	const customerId = "cancel-imm-refund-full-start";
 
@@ -228,10 +216,6 @@ test.concurrent(`${chalk.yellowBright("cancel immediately refund: full refund (s
 		env: ctx.env,
 	});
 });
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 2: Cancel with refund_last_payment: "prorated" (mid-cycle)
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(`${chalk.yellowBright("cancel immediately refund: prorated refund (mid-cycle)")}`, async () => {
 	const customerId = "cancel-imm-refund-prorated-mid";
@@ -334,10 +318,6 @@ test.concurrent(`${chalk.yellowBright("cancel immediately refund: prorated refun
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 3: Mutual exclusivity validation (proration_behavior + refund_last_payment)
-// ═══════════════════════════════════════════════════════════════════════════════
-
 test.concurrent(`${chalk.yellowBright("cancel immediately refund: mutual exclusivity (proration_behavior + refund_last_payment)")}`, async () => {
 	const customerId = "cancel-imm-refund-mutual-excl";
 
@@ -369,10 +349,6 @@ test.concurrent(`${chalk.yellowBright("cancel immediately refund: mutual exclusi
 		expect((error as AutumnError).code).toBe(ErrCode.InvalidInputs);
 	}
 });
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 4: Full refund with base + prepaid messages
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(`${chalk.yellowBright("cancel immediately refund: full refund with base + prepaid")}`, async () => {
 	const customerId = "cancel-imm-refund-full-prepaid";
@@ -473,10 +449,6 @@ test.concurrent(`${chalk.yellowBright("cancel immediately refund: full refund wi
 		env: ctx.env,
 	});
 });
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 5: Prorated refund with base + prepaid messages (mid-cycle)
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(`${chalk.yellowBright("cancel immediately refund: prorated refund with base + prepaid (mid-cycle)")}`, async () => {
 	const customerId = "cancel-imm-refund-prorated-prepaid-mid";
@@ -606,10 +578,6 @@ test.concurrent(`${chalk.yellowBright("cancel immediately refund: prorated refun
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 6: Preview and execution match exactly
-// ═══════════════════════════════════════════════════════════════════════════════
-
 test.concurrent(`${chalk.yellowBright("cancel immediately refund: preview and execution match exactly")}`, async () => {
 	const customerId = "cancel-imm-refund-preview-execution-match";
 
@@ -633,7 +601,6 @@ test.concurrent(`${chalk.yellowBright("cancel immediately refund: preview and ex
 		customer: customerBeforeCancel,
 	});
 
-	// Read DB invoice BEFORE cancel to capture pre-cancel refunded_amount
 	const autumnInvoiceBeforeCancel = await getAutumnInvoiceByStripeId({
 		ctx,
 		stripeInvoiceId: invoiceBeforeCancel.stripe_id,
@@ -688,10 +655,6 @@ test.concurrent(`${chalk.yellowBright("cancel immediately refund: preview and ex
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 7: Prior partial refund caps refund amount
-// ═══════════════════════════════════════════════════════════════════════════════
-
 test.concurrent(`${chalk.yellowBright("cancel immediately refund: prior partial refund cap")}`, async () => {
 	const customerId = "cancel-imm-refund-prior-partial-cap";
 	const priorPartialRefund = 5;
@@ -730,7 +693,6 @@ test.concurrent(`${chalk.yellowBright("cancel immediately refund: prior partial 
 		amountInCents: priorPartialRefund * 100,
 	});
 
-	// Manually sync the refunded_amount in our DB (no webhook to do this)
 	await InvoiceService.update({
 		db: ctx.db,
 		query: { stripeId: initialInvoice.stripe_id },

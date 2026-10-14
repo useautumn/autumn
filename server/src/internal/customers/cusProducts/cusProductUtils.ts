@@ -39,7 +39,6 @@ export const getFreeDefaultProductByGroup = async ({
 	return defaultProd;
 };
 
-// This function is only used in cancellation flows
 export const activateDefaultProduct = async ({
 	ctx,
 	productGroup,
@@ -52,14 +51,12 @@ export const activateDefaultProduct = async ({
 	curCusProduct?: FullCusProduct;
 }) => {
 	const { db, org, env, logger } = ctx;
-	// 1. Expire current product
 	const defaultProducts = await ProductService.listDefault({
 		db,
 		orgId: org.id,
 		env,
 	});
 
-	// Look for a paid default trial first, then fall back to free default
 	const defaultProd: FullProduct | undefined = defaultProducts.find(
 		(p) =>
 			p.group === productGroup && !isDefaultTrialFullProduct({ product: p }),
@@ -74,7 +71,6 @@ export const activateDefaultProduct = async ({
 	const stripeCli = createStripeCli({ org, env });
 	const defaultIsFree = isFreeProduct(defaultProd.prices);
 
-	// Initialize Stripe customer and products if needed (for paid non-trial products)
 	if (!defaultIsFree) {
 		await initStripeCusAndProducts({
 			ctx,
@@ -83,7 +79,6 @@ export const activateDefaultProduct = async ({
 		});
 	}
 
-	// If default is already active, skip
 	const existingDefaultProduct = fullCus.customer_products.find(
 		(cp) =>
 			cp.product.id === defaultProd?.id && ACTIVE_STATUSES.includes(cp.status),

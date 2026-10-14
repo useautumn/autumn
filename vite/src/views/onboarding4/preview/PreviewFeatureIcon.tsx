@@ -16,9 +16,6 @@ interface PreviewFeatureIconProps {
 
 type BillingType = "included" | "prepaid" | "paid";
 
-/**
- * Determine billing type from item properties
- */
 function getBillingType(item: PreviewProductItem): BillingType {
 	if (item.usageModel === "prepaid") {
 		return "prepaid";
@@ -34,9 +31,6 @@ function getBillingType(item: PreviewProductItem): BillingType {
 	return "included";
 }
 
-/**
- * Get icon for billing type (right position)
- */
 function getBillingTypeIcon({
 	billingType,
 	size,

@@ -9,15 +9,6 @@ import chalk from "chalk";
 import { and, eq } from "drizzle-orm";
 import { logPlaybook } from "../catalog/utils/catalogScenario";
 
-/**
- * Invoice credits QA: itemization is derived from the plan item's price at
- * attach (pay-per-use, exactly one currency unit per credit, not pooled) and
- * stamped on the balance. Each scenario attaches one price shape, tracks
- * Action1 (0.2 cr/unit) and Action2 (0.6 cr/unit), advances to the renewal
- * invoice and prints the stamp, the ledger and the invoice lines. Run one at a
- * time; every customer it creates stays in the test org for dashboard review.
- */
-
 const INCLUDED = 100;
 const USAGE = 250;
 
@@ -115,7 +106,6 @@ const runShape = async ({
 test(
 	`${chalk.yellowBright("scenario: $1 per credit itemizes the invoice")}`,
 	async () => {
-		// 50 + 150 = 200 credits, 100 included → overage 100 → $100.
 		await runShape({
 			customerId: "ic-stamp-one-to-one",
 			item: items.consumable({

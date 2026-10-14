@@ -25,7 +25,6 @@ import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/
 import type { AutumnBillingPlanBuilder } from "@/internal/billing/v2/utils/billingPlanBuilder/createAutumnBillingPlanBuilder";
 import { logPrepaidPriceProcessed } from "../logs/logInvoiceCreatedPriceProcessing.js";
 
-/** Plans one prepaid grant's new cycle: its promoted quantity, then its refill unless it resets on its own interval. */
 const processPrepaidPrice = ({
 	ctx,
 	eventContext,

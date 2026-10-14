@@ -5,12 +5,6 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-/**
- * Migration setup: users entitlement with existing usage.
- *
- *   v1  $20/mo · 5 included users   → cus migusers-v1 (used 4)
- *   v2  $20/mo · 10 included users  (latest, no customer)
- */
 test(`${chalk.yellowBright("migration-setup: users included with usage")}`, async () => {
 	const team = products.base({
 		id: "team-users",

@@ -207,7 +207,6 @@ const walDiff = async ({ from, to }: { from: string; to: string }) =>
 	);
 
 let offset = 0n;
-// Seed every snapshot row once so "write" measures the steady state: an update in place, not an insert.
 for (const mode of ["write", "write"] as Mode[]) {
 	await commitFlush({
 		ctx: { db: postgres.db },
@@ -227,7 +226,6 @@ for (const mode of ["write", "write"] as Mode[]) {
 	});
 	offset += 1n;
 }
-// Read after seeding, so the counters cover the measured rounds only.
 const hotBefore = (
 	await postgres.db.execute(
 		sql`SELECT n_tup_upd, n_tup_hot_upd FROM pg_stat_user_tables WHERE relname = 'subject_snapshots'`,

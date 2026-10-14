@@ -118,7 +118,6 @@ describe(`${chalk.yellowBright("check-breakdown1: 1 breakdown item always follow
 		const breakdownItem = res.balance?.breakdown?.[0];
 		expect(breakdownItem).toBeDefined();
 
-		// Breakdown should inherit parent's numeric fields
 		expect(breakdownItem).toMatchObject({
 			granted_balance: parentBalance?.granted_balance,
 			purchased_balance: parentBalance?.purchased_balance,
@@ -143,7 +142,6 @@ describe(`${chalk.yellowBright("check-breakdown1: 1 breakdown item always follow
 		const breakdownItem = res.balance?.breakdown?.[0];
 		expect(breakdownItem).toBeDefined();
 
-		// Breakdown should inherit parent's fields (all zeros for boolean)
 		expect(breakdownItem).toMatchObject({
 			granted_balance: parentBalance?.granted_balance,
 			purchased_balance: parentBalance?.purchased_balance,
@@ -166,7 +164,6 @@ describe(`${chalk.yellowBright("check-breakdown1: 1 breakdown item always follow
 		const breakdownItem = res.breakdown?.[0];
 		expect(breakdownItem).toBeDefined();
 
-		// Breakdown should inherit parent's fields
 		expect(breakdownItem).toMatchObject({
 			balance: res.balance,
 			usage: res.usage,
@@ -187,7 +184,6 @@ describe(`${chalk.yellowBright("check-breakdown1: 1 breakdown item always follow
 		const breakdownItem = res.breakdown?.[0];
 		expect(breakdownItem).toBeDefined();
 
-		// Breakdown should inherit parent's fields
 		expect(breakdownItem).toMatchObject({
 			balance: res.balance,
 			usage: res.usage,
@@ -211,7 +207,6 @@ describe(`${chalk.yellowBright("check-breakdown1: 1 breakdown item always follow
 		const breakdownItem = res.balance?.breakdown?.[0];
 		expect(breakdownItem).toBeDefined();
 
-		// Breakdown should inherit parent's fields
 		expect(breakdownItem).toMatchObject({
 			granted_balance: parentBalance?.granted_balance,
 			purchased_balance: parentBalance?.purchased_balance,
@@ -233,7 +228,6 @@ describe(`${chalk.yellowBright("check-breakdown1: 1 breakdown item always follow
 		const breakdownItem = res.breakdown?.[0];
 		expect(breakdownItem).toBeDefined();
 
-		// Breakdown should inherit parent's fields
 		expect(breakdownItem).toMatchObject({
 			balance: res.balance,
 			usage: res.usage,

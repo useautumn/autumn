@@ -1,21 +1,3 @@
-/**
- * atmn init + sandbox use, end to end against a fresh org: the real CLI in a
- * fresh process, a real .env, and the real server. Headless throughout, since
- * that is the path an agent takes and the one whose output is the contract.
- *
- * Contract:
- *   C1  init in a single-package repo with the main key: logs in from .env,
- *       scaffolds the config, pulls the catalog into it, writes the skills and
- *       the root marker; a push from the repo root then finds the config
- *   C2  init in a monorepo, headless, is hint-driven: --path, then --name, then
- *       the package is written and `atmn -c` is not needed from the root
- *   C3  sandbox use <name> mints a key through sandboxes.create_key, pins the
- *       sandbox, and a push lands in the sandbox and not on the org
- *   C4  env --json reports the pin and isMaster; sandbox use --clear unpins
- *   C5  a sub-sandbox key in AUTUMN_SECRET_KEY makes init stop with the soft
- *       error and the --login / --keyless hint, without touching the repo
- */
-
 import { afterAll, beforeAll, expect, test } from "bun:test";
 import {
 	existsSync,
@@ -51,7 +33,6 @@ afterAll(() => {
 	if (cliTarball) rmSync(dirname(cliTarball), { recursive: true, force: true });
 });
 
-/** The CLI in a fresh process, headless, with only the env the test states. */
 const runCliHeadless = ({
 	cwd,
 	args,
@@ -70,7 +51,6 @@ const runCliHeadless = ({
 			HOME: process.env.HOME ?? "",
 			GIT_CEILING_DIRECTORIES: TMP_ROOT,
 			AUTUMN_BASE_URL: baseUrl,
-			// A package init writes depends on the CLI, packed from this checkout.
 			ATMN_INIT_DEPENDENCY: `file:${cliTarball}`,
 			NO_COLOR: "1",
 			FORCE_COLOR: "0",
@@ -97,7 +77,6 @@ const envValue = ({
 		.find((line) => line.startsWith(`${key}=`))
 		?.slice(key.length + 1);
 
-/** A repo of its own: init's whole job is what it writes into one. */
 const makeRepo = ({
 	monorepo,
 	secretKey,
@@ -105,7 +84,6 @@ const makeRepo = ({
 	monorepo: boolean;
 	secretKey: string;
 }): string => {
-	// Outside the autumn checkout: `git rev-parse` must find this repo, not ours.
 	const root = mkdtempSync(join(tmpdir(), "atmn-init-"));
 	Bun.spawnSync(["git", "init", "-q"], { cwd: root });
 	writeFileSync(
@@ -152,7 +130,6 @@ test(`${chalk.yellowBright("atmn init: single repo pulls the catalog, writes ski
 		] }`,
 	});
 	const { secretKey, baseUrl } = scenario;
-	// Seed the org through the scenario's own config so init has something to pull.
 	scenario.writeFile(".env", "");
 	await scenario.push();
 
@@ -190,7 +167,6 @@ test(`${chalk.yellowBright("atmn init: single repo pulls the catalog, writes ski
 		);
 		expect(manifest.atmn).toEqual({ config: "autumn/autumn.config.ts" });
 
-		// C5 — the marker means a plain push from the root finds the config.
 		const pushed = runCliHeadless({ cwd: root, args: ["push"], baseUrl });
 		expect(pushed.exitCode).toBe(0);
 		expect(pushed.output).not.toContain("No autumn.config.ts found");
@@ -254,7 +230,6 @@ test(`${chalk.yellowBright("atmn init: a monorepo is hint-driven headless, and t
 			'atmn -c "packages/autumn/autumn.config.ts"',
 		);
 
-		// From the root, with no -c, the marker resolves the package's config.
 		const pushed = runCliHeadless({ cwd: root, args: ["push"], baseUrl });
 		expect(pushed.exitCode).toBe(0);
 		expect(pushed.output).not.toContain("No autumn.config.ts found");
@@ -283,11 +258,9 @@ test(`${chalk.yellowBright("atmn sandbox use: mints a key, pins, redirects push;
 	let createdId: string | undefined;
 
 	try {
-		// A sandbox this machine holds no key for: created through the API, not the CLI.
 		const created = await client.createSandbox({ name: sandboxName });
 		createdId = created.id;
 
-		// C3 — headless with no argument: table and hint, nothing written.
 		const listed = atmn(["sandbox", "use"]);
 		expect(listed.exitCode).toBe(0);
 		expect(listed.output).toContain(sandboxName);
@@ -305,7 +278,6 @@ test(`${chalk.yellowBright("atmn sandbox use: mints a key, pins, redirects push;
 		expect(sandboxKey?.startsWith("am_sk_test")).toBe(true);
 		expect(envValue({ cwd, key: "AUTUMN_SANDBOX_ID" })).toBe(created.id);
 
-		// The pin redirects push: the sandbox gets the feature, the org does not.
 		const pushed = atmn(["push", "--yes"]);
 		expect(pushed.exitCode).toBe(0);
 		expect(
@@ -313,14 +285,12 @@ test(`${chalk.yellowBright("atmn sandbox use: mints a key, pins, redirects push;
 		).toEqual([messages]);
 		expect(await liveFeatureIds({ secretKey, baseUrl })).toEqual([]);
 
-		// A second use does not mint again.
 		const again = atmn(["sandbox", "use", created.id, "--json"]);
 		const parsed = JSON.parse(again.output);
 		expect(parsed.keyMinted).toBe(false);
 		expect(parsed.sandbox.id).toBe(created.id);
 		expect(parsed.notes.length).toBeGreaterThan(0);
 
-		// C4 — env --json sees the pin, and says the key in use is the sandbox's own.
 		const env = JSON.parse(atmn(["env", "--json"]).output);
 		expect(env.sandbox).toEqual({
 			id: created.id,
@@ -335,7 +305,6 @@ test(`${chalk.yellowBright("atmn sandbox use: mints a key, pins, redirects push;
 		expect(envValue({ cwd, key: "AUTUMN_SANDBOX_ID" })).toBeUndefined();
 		expect(envValue({ cwd, key: keyName })).toBe(sandboxKey);
 
-		// C5 — init with the sub key in AUTUMN_SECRET_KEY: soft error, connect hint, no files.
 		const root = makeRepo({ monorepo: false, secretKey: sandboxKey ?? "" });
 		try {
 			const before = {
@@ -359,7 +328,6 @@ test(`${chalk.yellowBright("atmn sandbox use: mints a key, pins, redirects push;
 			rmSync(root, { recursive: true, force: true });
 		}
 	} finally {
-		// A failed delete is a real failure, not something to hide.
 		try {
 			if (createdId !== undefined)
 				await client.deleteSandbox({ id: createdId });

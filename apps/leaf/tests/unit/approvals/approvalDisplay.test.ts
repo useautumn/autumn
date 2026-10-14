@@ -319,9 +319,6 @@ describe("resolveApprovalDisplay", () => {
 	});
 });
 
-// remove_items is a filter; the quantity being removed is what the customer
-// currently holds. A customized subscription can differ from the catalog
-// plan, so the customer's live items must take precedence when present.
 describe("base items come from the catalog plan", () => {
 	test("resolves the catalog plan the customize is diffed against", async () => {
 		const display = await resolveApprovalDisplay({

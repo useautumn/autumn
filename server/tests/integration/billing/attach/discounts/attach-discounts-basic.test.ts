@@ -1,15 +1,3 @@
-/**
- * Integration tests for attaching products with discounts param.
- *
- * Tests basic discount scenarios:
- * - Percent-off and amount-off rewards on new subscriptions
- * - Promotion code resolution
- * - Multiple rewards stacking
- * - Duplicate reward deduplication
- * - Upgrade with discount
- * - Preview accuracy with discounts
- */
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3 } from "@autumn/shared";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect.js";
@@ -29,20 +17,6 @@ import {
 	getStripeSubscription,
 } from "../../utils/discounts/discountTestUtils.js";
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 1: Free to Pro with percent-off reward
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Customer on free product
- * - Create 20% off coupon in Stripe
- * - Attach pro ($20/mo) with discount param
- *
- * Expected:
- * - Pro active, free removed
- * - Invoice = $20 * 0.8 = $16
- */
 test.concurrent(`${chalk.yellowBright("attach-discount 1: free to pro with percent-off reward")}`, async () => {
 	const customerId = "att-disc-pct-off";
 
@@ -97,20 +71,6 @@ test.concurrent(`${chalk.yellowBright("attach-discount 1: free to pro with perce
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 2: Free to Pro with amount-off reward
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Customer on free product
- * - Create $5 off coupon in Stripe
- * - Attach pro ($20/mo) with discount param
- *
- * Expected:
- * - Pro active, free removed
- * - Invoice = $20 - $5 = $15
- */
 test.concurrent(`${chalk.yellowBright("attach-discount 2: free to pro with amount-off reward")}`, async () => {
 	const customerId = "att-disc-amt-off";
 
@@ -157,20 +117,6 @@ test.concurrent(`${chalk.yellowBright("attach-discount 2: free to pro with amoun
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 3: Free to Pro with promotion code
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Customer on free product
- * - Create 25% coupon + promotion code in Stripe
- * - Attach pro ($20/mo) with promotion_code param
- *
- * Expected:
- * - Pro active
- * - Invoice = $20 * 0.75 = $15
- */
 test.concurrent(`${chalk.yellowBright("attach-discount 3: free to pro with promotion code")}`, async () => {
 	const customerId = "att-disc-promo";
 
@@ -201,7 +147,6 @@ test.concurrent(`${chalk.yellowBright("attach-discount 3: free to pro with promo
 		code: `SAVE25-${customerId}`,
 	});
 
-	// Use the human-readable code string (not the promo code ID)
 	await autumnV1.billing.attach({
 		customer_id: customerId,
 		product_id: pro.id,
@@ -223,21 +168,6 @@ test.concurrent(`${chalk.yellowBright("attach-discount 3: free to pro with promo
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 4: Multiple rewards stack on new subscription
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Customer on free product
- * - Create 20% off + $2 off coupons
- * - Attach pro ($20/mo) with both discounts
- *
- * Expected:
- * - Percent applied first: $20 * 0.8 = $16
- * - Then amount: $16 - $2 = $14
- * - Invoice = $14
- */
 test.concurrent(`${chalk.yellowBright("attach-discount 4: multiple rewards stack on new subscription")}`, async () => {
 	const customerId = "att-disc-multi";
 
@@ -281,7 +211,6 @@ test.concurrent(`${chalk.yellowBright("attach-discount 4: multiple rewards stack
 		notPresent: [free.id],
 	});
 
-	// 20% off $20 = $16, then $2 off = $14
 	await expectCustomerInvoiceCorrect({
 		customer,
 		count: 1,
@@ -289,20 +218,6 @@ test.concurrent(`${chalk.yellowBright("attach-discount 4: multiple rewards stack
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 5: Duplicate reward deduped
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Customer on free product
- * - Create 20% off coupon
- * - Attach pro with same coupon passed twice in discounts array
- *
- * Expected:
- * - Only one discount applied (deduped by coupon ID)
- * - Invoice = $20 * 0.8 = $16 (not $20 * 0.8 * 0.8)
- */
 test.concurrent(`${chalk.yellowBright("attach-discount 5: duplicate reward deduped")}`, async () => {
 	const customerId = "att-disc-dedup";
 
@@ -342,7 +257,6 @@ test.concurrent(`${chalk.yellowBright("attach-discount 5: duplicate reward dedup
 		notPresent: [free.id],
 	});
 
-	// Only one 20% discount, not double
 	await expectCustomerInvoiceCorrect({
 		customer,
 		count: 1,
@@ -350,21 +264,6 @@ test.concurrent(`${chalk.yellowBright("attach-discount 5: duplicate reward dedup
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 6: Upgrade pro to premium with reward
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Customer on pro ($20/mo)
- * - Create 20% off coupon
- * - Upgrade to premium ($50/mo) with discount
- *
- * Expected:
- * - At start of cycle: refund -$20 (full pro), charge $50 (full premium)
- * - Discount applies to charge: $50 * 0.8 = $40
- * - Total: -$20 + $40 = $20
- */
 test.concurrent(`${chalk.yellowBright("attach-discount 6: upgrade pro to premium with reward")}`, async () => {
 	const customerId = "att-disc-upgrade";
 
@@ -390,17 +289,14 @@ test.concurrent(`${chalk.yellowBright("attach-discount 6: upgrade pro to premium
 	const { stripeCli } = await getStripeSubscription({ customerId });
 	const coupon = await createPercentCoupon({ stripeCli, percentOff: 20 });
 
-	// Preview should include discount
 	const preview = await autumnV1.billing.previewAttach({
 		customer_id: customerId,
 		product_id: premium.id,
 		discounts: [{ reward_id: coupon.id }],
 	});
 
-	// Refund -$20 + discounted charge ($50 * 0.8 = $40) = $20
 	expect(preview.total).toBe(20);
 
-	// Execute attach
 	await autumnV1.billing.attach({
 		customer_id: customerId,
 		product_id: premium.id,
@@ -423,7 +319,6 @@ test.concurrent(`${chalk.yellowBright("attach-discount 6: upgrade pro to premium
 		usage: 0,
 	});
 
-	// Invoices: pro ($20) + upgrade ($20)
 	await expectCustomerInvoiceCorrect({
 		customer,
 		count: 2,
@@ -431,21 +326,6 @@ test.concurrent(`${chalk.yellowBright("attach-discount 6: upgrade pro to premium
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 7: Preview includes discount and matches execution
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Customer on free product
- * - Create 25% off coupon
- * - Preview attach pro ($20/mo) with discount
- * - Execute attach with same discount
- *
- * Expected:
- * - Preview total = $20 * 0.75 = $15
- * - Invoice total matches preview
- */
 test.concurrent(`${chalk.yellowBright("attach-discount 7: preview matches execution with discount")}`, async () => {
 	const customerId = "att-disc-preview";
 
@@ -471,7 +351,6 @@ test.concurrent(`${chalk.yellowBright("attach-discount 7: preview matches execut
 	const stripeCli = createStripeCli({ org: ctx.org, env: ctx.env });
 	const coupon = await createPercentCoupon({ stripeCli, percentOff: 25 });
 
-	// Preview
 	const preview = await autumnV1.billing.previewAttach({
 		customer_id: customerId,
 		product_id: pro.id,
@@ -479,7 +358,6 @@ test.concurrent(`${chalk.yellowBright("attach-discount 7: preview matches execut
 	});
 	expect(preview.total).toBe(15);
 
-	// Execute
 	await autumnV1.billing.attach({
 		customer_id: customerId,
 		product_id: pro.id,
@@ -488,7 +366,6 @@ test.concurrent(`${chalk.yellowBright("attach-discount 7: preview matches execut
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Invoice total matches preview
 	await expectCustomerInvoiceCorrect({
 		customer,
 		count: 1,

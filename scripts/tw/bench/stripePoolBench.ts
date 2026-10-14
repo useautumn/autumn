@@ -1,11 +1,3 @@
-/**
- * Benchmark: current create/delete sub-account lifecycle vs the persistent pool
- * (claim + async nuke). Real Stripe sandbox accounts, round-robined across the
- * key pool exactly like a run. Results feed scripts/tw/STRIPE_POOL_BENCH.md.
- *
- * Run: infisical run --env=dev --recursive -- bun scripts/tw/bench/stripePoolBench.ts [N]
- */
-
 import { appendFileSync } from "node:fs";
 import pLimit from "p-limit";
 import { createSandboxSubAccount } from "../helpers/stripe.js";
@@ -16,7 +8,6 @@ import {
 	stripeKeyByIndex,
 	stripeKeyForWorker,
 } from "../helpers/stripeKeyPool.js";
-// Plain-JS module shared with the sandbox nuke script.
 import {
 	nukeTarget,
 	rateLimitIncidents,
@@ -70,9 +61,6 @@ const timedAll = async <T>(
 	return { totalMs: Date.now() - start, perItemMs };
 };
 
-/** Seed a used-account shape: 1 customer, 1 product, 1 price, 1 coupon.
- * (Webhook endpoints cannot be created ON a connected account — runs use the
- * platform Connect webhook via the ingress instead.) */
 const seedAccount = async (encoded: string): Promise<void> => {
 	const { accountId, keyIndex } = decodeSubAccount(encoded);
 	const stripe = stripeClientForKey(stripeKeyByIndex(keyIndex));
@@ -108,7 +96,6 @@ const main = async (): Promise<void> => {
 	const indices = Array.from({ length: N }, (_, i) => i);
 	const encoded: string[] = new Array(N);
 
-	// ---- Phase A1: CREATE (the current fan-out cost) --------------------------
 	let warns = 0;
 	const origWarn = console.warn;
 	console.warn = (...args: unknown[]) => {
@@ -135,13 +122,10 @@ const main = async (): Promise<void> => {
 		`create done: total ${createTimed.totalMs}ms, 429 retries: ${warns}`,
 	);
 
-	// ---- Seed: make the accounts genuinely dirty ------------------------------
 	progress("seeding accounts (customer+product+price+coupon each)…");
 	const seedTimed = await timedAll(encoded, TEARDOWN_CONCURRENCY, seedAccount);
 	progress(`seed done: total ${seedTimed.totalMs}ms`);
 
-	// ---- Phase B1: CLAIM cost (list clean + mark dirty) -----------------------
-	// Mark clean first so the claim path has something to find.
 	progress("marking accounts clean (pool metadata)…");
 	const markCleanTimed = await timedAll(
 		encoded,
@@ -197,7 +181,6 @@ const main = async (): Promise<void> => {
 	);
 	progress(`mark-dirty done: total ${markDirtyTimed.totalMs}ms`);
 
-	// ---- Phase B2: NUKE (what the async sandbox pays) -------------------------
 	progress("phase B2: nuking account contents…");
 	const nukeCounts: unknown[] = [];
 	const nukeTimed = await timedAll(
@@ -216,7 +199,6 @@ const main = async (): Promise<void> => {
 		`nuke done: total ${nukeTimed.totalMs}ms, 429s so far: ${rateLimitIncidents.count}`,
 	);
 
-	// ---- Verify one nuked account is actually empty ---------------------------
 	const probe = decodeSubAccount(encoded[0]);
 	const probeStripe = stripeClientForKey(stripeKeyByIndex(probe.keyIndex));
 	const scoped = { stripeAccount: probe.accountId } as const;
@@ -229,7 +211,6 @@ const main = async (): Promise<void> => {
 		`post-nuke probe ${probe.accountId}: customers=${customers.data.length} activeProducts=${products.data.length} coupons=${coupons.data.length}`,
 	);
 
-	// ---- Phase A2: DELETE (the current teardown block) ------------------------
 	progress("phase A2: deleting accounts (current teardown path)…");
 	const deleteTimed = await timedAll(
 		encoded,

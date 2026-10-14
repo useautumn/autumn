@@ -1,4 +1,3 @@
-/** The runner re-parses a file's whole output on every chunk; batching chunks keeps that linear-ish at swarm width. */
 export const coalesceChunks = ({
 	onChunk,
 	intervalMs,

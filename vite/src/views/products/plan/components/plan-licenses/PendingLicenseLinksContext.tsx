@@ -2,14 +2,6 @@ import type { PlanLicense } from "@autumn/shared";
 import { createContext, type ReactNode, useContext, useId } from "react";
 import { create } from "zustand";
 
-/**
- * Licenses linked from the toolbar but not yet persisted, bucketed by scope so
- * staged links never bleed across editors. The plan page scopes by plan id, so
- * staged links survive navigating away and back; inline customize editors scope
- * by mount instance, so theirs reset when the editor closes. The card a staged
- * link produces registers as dirty, and the link is created server-side when
- * the plan save runs (or dropped on discard).
- */
 interface PendingLicenseLinksState {
 	linksByScope: Record<string, string[]>;
 	add: (scope: string, licenseId: string) => void;
@@ -43,8 +35,6 @@ export function PendingLicenseLinksProvider({
 	scope,
 	children,
 }: {
-	/** Stable key to persist staged links across remounts (e.g. `plan:<id>`).
-	 * Omit for per-mount staging that resets when the provider unmounts. */
 	scope?: string;
 	children: ReactNode;
 }) {

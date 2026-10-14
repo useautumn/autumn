@@ -4,8 +4,6 @@ import {
 	isCustomerProductUnlinkedFree,
 } from "../classifyCustomerProduct/classifyCustomerProduct";
 
-/** The plans editing one Stripe subscription covers: those billed on it or its
- * schedule, plus the customer-wide free plans. */
 export const filterCustomerProductsByStripeSubscriptionScope = ({
 	customerProducts,
 	stripeSubscriptionId,

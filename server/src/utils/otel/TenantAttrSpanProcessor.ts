@@ -6,10 +6,6 @@ import type {
 } from "@opentelemetry/sdk-trace-base";
 import { getTenantAttrs } from "./tenantContext.js";
 
-/**
- * Reads tenant attrs from the OTel parent context at span start and stamps
- * them onto every child span. No-op when parent context has no tenant data.
- */
 export class TenantAttrSpanProcessor implements SpanProcessor {
 	onStart(span: Span, parentContext: OtelContext): void {
 		const attrs = getTenantAttrs(parentContext);

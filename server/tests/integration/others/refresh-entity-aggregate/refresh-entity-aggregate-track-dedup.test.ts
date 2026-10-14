@@ -1,9 +1,3 @@
-/**
- * Observable result of 20 tracks spread across ~3s on a per-entity balance:
- * each lands exactly once. The one-refresh-per-bucket enqueue lives in the worker
- * process, so unit/balances/syncItemV4-refresh-dedup.test.ts asserts it.
- */
-
 import { test } from "bun:test";
 import { expectBalanceCorrect } from "@tests/integration/utils/expectBalanceCorrect.js";
 import { TestFeature } from "@tests/setup/v2Features.js";
@@ -42,7 +36,7 @@ test(`${chalk.yellowBright(
 
 	await Promise.all(
 		Array.from({ length: TRACK_COUNT }, async (_, i) => {
-			await timeout(i * 150); // 20 * 150ms ≈ 3s spread
+			await timeout(i * 150);
 			return autumnV2_2.track({
 				customer_id: customerId,
 				entity_id: entities[0].id,

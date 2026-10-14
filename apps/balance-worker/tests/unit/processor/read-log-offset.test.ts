@@ -1,13 +1,3 @@
-/**
- * A read reports the log offset it covers: every record of the partition at or below it is in the state it returns.
- * Sampled in the same synchronous step as the state, from what the writer and store already hold.
- *
- *  1.1 a fresh partition reads "0"; 1.2 before its first append, the store's bookmark less one;
- *  1.3 after an append, that record's offset; 1.4 a decided track not yet appended is in the state, the offset stays;
- *  1.5 an evict dropped but not yet logged reads below the evict; 1.6 once logged, at or above it;
- *  1.7 a successor on the same store reads at or above its predecessor; 1.8 never decreasing across appends.
- */
-
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -44,14 +34,12 @@ import {
 const topic = "read-log-offset";
 const partition = 0;
 
-/** Kafka as this owner sees it: offsets continue from `nextOffset`, and an append can be held at a gate the test opens. */
 const createGatedAppender = ({ nextOffset }: { nextOffset: bigint }) => {
 	let offset = nextOffset;
 	let gate: { reached(): void; held: Promise<void> } | null = null;
 	const appended: MeteringRecord[] = [];
 	return {
 		appended,
-		/** The next append signals `reached` when it starts, then waits for `release`. */
 		holdNextAppend: () => {
 			const reached = Promise.withResolvers<void>();
 			const held = Promise.withResolvers<void>();
@@ -139,7 +127,6 @@ const evictCustomer = (processor: PartitionProcessor) =>
 let directory: string;
 let store: SqliteStateStore;
 
-/** cus_1 with 10 messages, held by a store whose bookmark is `nextOffset`. */
 const openStoreAt = ({ nextOffset }: { nextOffset: bigint }) => {
 	store.initializePartition({ topic, partition, nextOffset });
 	restoreSubjectStates({
@@ -250,7 +237,6 @@ describe("the offset a read covers", () => {
 	});
 });
 
-/** cus_1's own rows as Postgres answers a full read: empty, but a customer. */
 const customerRows: SubjectRowsEnvelope = {
 	customer: {
 		internal_id: "cus_1_internal",
@@ -279,7 +265,6 @@ const customerRows: SubjectRowsEnvelope = {
 	entity: null,
 };
 
-/** The production shape for evicts: the Postgres committer's store, whose evicts are logged, over a Postgres that counts full reads. */
 const createCommitterProcessor = async () => {
 	const committer: Committer = {
 		apply: async ({ records, expectedOffset }) => ({

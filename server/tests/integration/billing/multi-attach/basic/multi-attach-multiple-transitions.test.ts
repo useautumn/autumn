@@ -1,5 +1,3 @@
-/** Multi-attach replaces multiple product groups atomically; this was previously rejected. */
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3 } from "@autumn/shared";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect.js";

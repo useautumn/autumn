@@ -1,14 +1,3 @@
-/**
- * Scheduled Switch Entity Basic Tests (Attach V2)
- *
- * Tests for basic downgrade scenarios involving multiple entities (sub-accounts).
- *
- * Key behaviors:
- * - Each entity has independent product states
- * - Downgrades on one entity don't affect other entities
- * - Scheduled products can be replaced independently per entity
- */
-
 import { test } from "bun:test";
 import type { ApiEntityV0 } from "@autumn/shared";
 import {
@@ -23,20 +12,6 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 4: Entity 1 premium, entity 2 premium, downgrade both to pro, then downgrade entity 1 to free
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Both entities on Premium
- * - Downgrade both to Pro (scheduled)
- * - Downgrade entity 1 to Free (replaces scheduled Pro)
- *
- * Expected Result:
- * - Entity 1: Premium canceling, Free scheduled
- * - Entity 2: Premium canceling, Pro scheduled
- */
 test.concurrent(
 	`${chalk.yellowBright("scheduled-switch-entities-basic 4a: entity 1 premium, entity 2 premium, downgrade both to pro, then downgrade entity 1 to free (mid-cycle)")}`,
 	async () => {
@@ -70,12 +45,11 @@ test.concurrent(
 			actions: [
 				s.billing.attach({ productId: premium.id, entityIndex: 0 }),
 				s.billing.attach({ productId: premium.id, entityIndex: 1 }),
-				s.billing.attach({ productId: pro.id, entityIndex: 0 }), // Downgrade entity 1 to pro
-				s.billing.attach({ productId: pro.id, entityIndex: 1 }), // Downgrade entity 2 to pro
+				s.billing.attach({ productId: pro.id, entityIndex: 0 }),
+				s.billing.attach({ productId: pro.id, entityIndex: 1 }),
 			],
 		});
 
-		// Verify Stripe subscription
 		await expectSubToBeCorrect({
 			db: ctx.db,
 			customerId,
@@ -83,7 +57,6 @@ test.concurrent(
 			env: ctx.env,
 		});
 
-		// Downgrade entity 1 to free (replaces scheduled pro)
 		await autumnV1.billing.attach({
 			customer_id: customerId,
 			product_id: free.id,
@@ -91,7 +64,6 @@ test.concurrent(
 			redirect_mode: "if_required",
 		});
 
-		// Verify entity 1: premium canceling, free scheduled (pro was replaced)
 		const entity1 = await autumnV1.entities.get<ApiEntityV0>(
 			customerId,
 			entities[0].id,
@@ -109,7 +81,6 @@ test.concurrent(
 			productId: pro.id,
 		});
 
-		// Verify entity 2: premium canceling, pro still scheduled
 		const entity2 = await autumnV1.entities.get<ApiEntityV0>(
 			customerId,
 			entities[1].id,
@@ -123,7 +94,6 @@ test.concurrent(
 			productId: pro.id,
 		});
 
-		// Verify Stripe subscription
 		await expectSubToBeCorrect({
 			db: ctx.db,
 			customerId,

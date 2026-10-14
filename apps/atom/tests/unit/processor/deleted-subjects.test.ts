@@ -32,7 +32,6 @@ const slotPath = () => {
 	return join(directory, "slot-000.sqlite");
 };
 
-/** A slot over the file at `databasePath`, recording every subject its misses ask Autumn for. */
 const createProcessor = ({
 	databasePath = ":memory:",
 }: {
@@ -65,7 +64,6 @@ const createProcessor = ({
 	return { processor, sqliteStore, pulled, checkCustomer, checkEntity };
 };
 
-/** `cus_1` as Autumn sends it for its entity `entityId`, which holds 5 of its own. */
 const entityPush = ({
 	entityId = "ent_42",
 	readAt = 1000,
@@ -240,7 +238,6 @@ describe("an evict that named one entity", () => {
 		await processor.setSubject(entityPush({ entityId: "ent_42" }));
 		await processor.setSubject(entityPush({ entityId: "ent_7" }));
 
-		// Herald's customer push for an evict record naming ent_7, at the evict's offset.
 		await processor.setSubject(
 			subjectPushOf({
 				subject: {

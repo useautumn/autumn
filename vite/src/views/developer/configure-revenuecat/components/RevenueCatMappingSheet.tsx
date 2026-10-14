@@ -33,9 +33,6 @@ import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { isFeaturePriceItem } from "@/utils/product/getItemType";
 import { getPrepaidItems } from "@/utils/product/productItemUtils";
 
-// Metered / usage-based feature-price items bill at runtime, which the RC attach
-// path (no_billing_changes) can't collect. Only prepaid feature-prices are
-// supported, so exclude products carrying any non-prepaid feature-price item.
 const hasUnsupportedUsagePrice = (product: ProductV2): boolean =>
 	product.items?.some(
 		(item) =>
@@ -47,12 +44,6 @@ export type ListedRevenueCatProduct = {
 	unsupported: boolean;
 };
 
-/**
- * The unsupported filter governs CREATING mappings, not rendering them: a plan
- * that became unsupported while still owning RevenueCat ids stays listed so
- * those ids can be released. With no row, the catalog's one-plan-per-id rule
- * would leave them claimed by an invisible plan forever.
- */
 export const listRevenueCatProducts = ({
 	products,
 	existingMappings,
@@ -78,9 +69,6 @@ export const listRevenueCatProducts = ({
 const UNSUPPORTED_NOTE =
 	"This plan bills usage at runtime, which RevenueCat purchases can't collect. Release the products below to map them to another plan.";
 
-// An unsupported plan keeps its row so its ids can be released, but nothing may
-// be added to it — the catalog rejects an id claimed by two plans, so a hidden
-// claim is otherwise unbreakable without editing the plan itself.
 const UnsupportedMappingNotice = () => (
 	<div className="text-tertiary-foreground text-xs py-1">
 		{UNSUPPORTED_NOTE}
@@ -98,7 +86,6 @@ interface PrepaidFeature {
 	billingUnits: number;
 }
 
-// rcProductId -> featureId -> packs (UI holds packs; saved as feature units)
 type FeaturePacks = Record<string, Record<string, number | undefined>>;
 
 interface ProductMapping {
@@ -106,7 +93,6 @@ interface ProductMapping {
 	autumnProductName: string;
 	revenueCatProductIds: string[];
 	featurePacks: FeaturePacks;
-	/** Listed read-only: it may only release the ids it already owns. */
 	unsupported: boolean;
 }
 
@@ -121,10 +107,6 @@ interface RCProduct {
 	platforms: string[];
 }
 
-// Show the store identifier alongside the (possibly grouped, possibly empty)
-// display name, plus the platforms it spans, e.g.
-// "Annual, Annual (annual) [ios/android]". Falls back to just the id when the
-// product has no display name so the option is never blank.
 function formatRcProductLabel(product: RCProduct): string {
 	const base = product.name ? `${product.name} (${product.id})` : product.id;
 	if (product.platforms.length === 0) {
@@ -222,7 +204,6 @@ const MappingRow = memo(function MappingRow({
 				{mapping.unsupported && <UnsupportedBadge />}
 			</div>
 
-			{/* Display selected products as tags */}
 			{selectedProducts.length > 0 && (
 				<div className="flex flex-wrap gap-1">
 					{selectedProducts.map((productId) => {
@@ -263,9 +244,6 @@ const MappingRow = memo(function MappingRow({
 	);
 });
 
-// Prepaid products map each RevenueCat SKU to a fixed quantity per prepaid
-// feature. Input is in packs (1 pack = billing_units feature units); the live
-// hint and the saved value convert packs -> feature units.
 const PrepaidMappingRow = memo(function PrepaidMappingRow({
 	mapping,
 	rcProducts,
@@ -420,7 +398,6 @@ export function RevenueCatMappingSheet({
 		isLoading: isLoadingMappings,
 	} = useRCMappings();
 
-	// Latest version of each product (stable identity for effects).
 	const latestProducts = useMemo(() => {
 		const productMap = new Map<string, ProductV2>();
 		for (const product of allProducts) {
@@ -441,9 +418,6 @@ export function RevenueCatMappingSheet({
 		[latestProducts, existingMappings],
 	);
 
-	// productId -> prepaid features (featureId + billing units). Presence here
-	// switches the row to the per-SKU packs table. Unsupported plans are included
-	// so their stored packs round-trip instead of being dropped on save.
 	const prepaidInfoByProduct = useMemo(() => {
 		const map = new Map<string, PrepaidFeature[]>();
 		for (const { product } of listedProducts) {
@@ -465,16 +439,12 @@ export function RevenueCatMappingSheet({
 	const [mappings, setMappings] = useState<ProductMapping[]>([]);
 	const initializedRef = useRef(false);
 
-	// Initialize mappings only once when sheet opens
 	useEffect(() => {
 		if (!open) {
 			initializedRef.current = false;
 			return;
 		}
 
-		// Existing mappings decide which unsupported plans stay listed, and every
-		// listed plan is restated on save — snapshotting before they load would
-		// both hide those rows and read as clearing every mapping.
 		if (
 			initializedRef.current ||
 			isLoadingMappings ||
@@ -489,7 +459,6 @@ export function RevenueCatMappingSheet({
 			);
 			const prepaidFeatures = prepaidInfoByProduct.get(product.id) ?? [];
 
-			// Stored feature_quantities are in feature units; show as packs.
 			const featurePacks: FeaturePacks = {};
 			const storedFq = existingMapping?.feature_quantities;
 			if (storedFq) {
@@ -531,7 +500,6 @@ export function RevenueCatMappingSheet({
 		(autumnProductId: string, revenueCatProductId: string) => {
 			setMappings((prev) =>
 				prev.map((mapping) =>
-					// Unsupported rows can only release ids, never take new ones.
 					mapping.autumnProductId === autumnProductId && !mapping.unsupported
 						? {
 								...mapping,
@@ -574,7 +542,6 @@ export function RevenueCatMappingSheet({
 			featureId: string,
 			packs: number | undefined,
 		) => {
-			// Reject NaN / negatives so we never store an invalid prepaid quantity.
 			const safePacks =
 				packs === undefined || !Number.isFinite(packs) || packs < 0
 					? undefined
@@ -651,16 +618,13 @@ export function RevenueCatMappingSheet({
 				}),
 			);
 			onOpenChange(false);
-		} catch (_error) {
-			// Error handled by hook
-		}
+		} catch (_error) {}
 	}, [mappings, saveMappings, onOpenChange, prepaidInfoByProduct]);
 
 	const handleCancel = useCallback(() => {
 		onOpenChange(false);
 	}, [onOpenChange]);
 
-	// Compute mapped product IDs for each row - memoized per mapping
 	const getMappedIdsForProduct = useCallback(
 		(excludeAutumnProductId: string) => {
 			return mappings

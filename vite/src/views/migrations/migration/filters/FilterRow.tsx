@@ -138,7 +138,6 @@ function FilterValueInput({
 	onValuesChange: (values: string[]) => void;
 }) {
 	if (config.valueType === "none") return null;
-	// `none` (has no plans) takes no value.
 	if (rule.operator === "none") return null;
 
 	if (config.valueType === "customer")

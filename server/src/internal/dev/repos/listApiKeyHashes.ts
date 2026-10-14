@@ -2,7 +2,6 @@ import { type AppEnv, apiKeys } from "@autumn/shared";
 import { and, eq, inArray } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 
-/** Which of these hashes are the org's keys in this env. */
 export const listApiKeyHashes = async ({
 	db,
 	orgId,

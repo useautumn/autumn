@@ -26,8 +26,6 @@ export const createCustomerLicenseColumns = ({
 	entityName,
 }: {
 	onUnassign: (row: LicenseAssignmentRow) => void;
-	/** Shown in a Scope column mirroring the plans table's; omit when the
-	 * customer has no entities (the plans table drops Scope too). */
 	entityName?: string;
 }) => [
 	{

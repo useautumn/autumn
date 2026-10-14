@@ -68,14 +68,12 @@ describe(`${chalk.yellowBright("track-entity-products1: entity product tracking"
 			});
 		}
 
-		// Initialize caches
 		await autumnV1.customers.get(customerId);
 		for (const entity of entities) {
 			await autumnV1.entities.get(customerId, entity.id);
 		}
 	});
 
-	// The balance worker doesn't aggregate entity data onto the customer.
 	test.skipIf(isBalanceWorkerRoute())(
 		"customer should have initial balance of 300 messages (100 per entity)",
 		async () => {
@@ -83,7 +81,6 @@ describe(`${chalk.yellowBright("track-entity-products1: entity product tracking"
 
 			const balance = customer.features[TestFeature.Messages].balance;
 
-			// 3 entities × 100 messages each = 300 total
 			expect(balance).toBe(300);
 		},
 	);
@@ -97,7 +94,6 @@ describe(`${chalk.yellowBright("track-entity-products1: entity product tracking"
 		}
 	});
 
-	// Track 10 messages on each entity
 	for (let i = 0; i < entities.length; i++) {
 		test(`track 10 messages on ${entities[i].id}`, async () => {
 			await autumnV1.track({
@@ -107,9 +103,7 @@ describe(`${chalk.yellowBright("track-entity-products1: entity product tracking"
 				value: 10,
 			});
 
-			// Customer should have 10 less
 			const expectedCustomerBalance = 300 - (i + 1) * 10;
-			// The balance worker doesn't aggregate entity data onto the customer.
 			if (!isBalanceWorkerRoute()) {
 				const customer = await autumnV1.customers.get(customerId);
 				expect(customer.features[TestFeature.Messages].balance).toBe(
@@ -117,7 +111,6 @@ describe(`${chalk.yellowBright("track-entity-products1: entity product tracking"
 				);
 			}
 
-			// Check all entity balances
 			for (let j = 0; j < entities.length; j++) {
 				const fetchedEntity = await autumnV1.entities.get(
 					customerId,
@@ -132,30 +125,16 @@ describe(`${chalk.yellowBright("track-entity-products1: entity product tracking"
 	}
 
 	test("verify database state matches cache after per-entity and customer-level tracking", async () => {
-		// Wait for database sync
 		await new Promise((resolve) => setTimeout(resolve, 4000));
 
-		// Read from database (skip cache)
 		const customerFromDb = await autumnV1.customers.get(customerId, {
 			skip_cache: "true",
 		});
 		await autumnV1.customers.get(customerId);
 
-		// Customer balance should be 260 (started at 300, deducted 30 for entity tracking + 10 for customer tracking)
-		// const cacheCustomerFeature =
-		// 	customerFromCache.features[TestFeature.Messages];
-		// const dbCustomerFeature = customerFromDb.features[TestFeature.Messages];
-
-		// The balance worker doesn't aggregate entity data onto the customer.
 		if (!isBalanceWorkerRoute()) {
 			expect(customerFromDb.features[TestFeature.Messages].balance).toBe(270);
 		}
-		// Legacy/new cache paths can differ in non-critical feature payload shape.
-		// expect(customerFromDb.features[TestFeature.Messages]).toMatchObject(
-		// 	customerFromCache.features[TestFeature.Messages],
-		// );
-
-		// Verify each entity's balance
 		let totalEntityBalanceFromDb = 0;
 		let totalEntityBalanceFromCache = 0;
 
@@ -168,19 +147,12 @@ describe(`${chalk.yellowBright("track-entity-products1: entity product tracking"
 				entity.id,
 			);
 
-			// Each entity should have some messages deducted
-			// Legacy/new cache paths can differ in non-critical feature payload shape.
-			// expect(entityFromDb.features[TestFeature.Messages]).toEqual(
-			// 	entityFromCache.features[TestFeature.Messages],
-			// );
-
 			totalEntityBalanceFromDb +=
 				entityFromDb.features?.[TestFeature.Messages]?.balance ?? 0;
 			totalEntityBalanceFromCache +=
 				entityFromCache.features?.[TestFeature.Messages]?.balance ?? 0;
 		}
 
-		// Sum of entity balances should be 260
 		expect(totalEntityBalanceFromDb).toBe(270);
 		expect(totalEntityBalanceFromCache).toBe(270);
 	});

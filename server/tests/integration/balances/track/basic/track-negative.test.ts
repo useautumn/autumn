@@ -13,10 +13,6 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { Decimal } from "decimal.js";
 
-// ═══════════════════════════════════════════════════════════════════
-// TRACK-NEGATIVE1: Testing negative values (refunds/credits) on metered feature
-// ═══════════════════════════════════════════════════════════════════
-
 test.concurrent(`${chalk.yellowBright("track-negative1: negative values for refunds/credits")}`, async () => {
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
 	const freeProd = products.base({
@@ -102,10 +98,6 @@ test.concurrent(`${chalk.yellowBright("track-negative1: negative values for refu
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════
-// TRACK-NEGATIVE2: Negative on metered feature (deduct then refund)
-// ═══════════════════════════════════════════════════════════════════
-
 test.concurrent(`${chalk.yellowBright("track-negative2: negative on metered feature")}`, async () => {
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
 	const freeProd = products.base({
@@ -172,10 +164,6 @@ test.concurrent(`${chalk.yellowBright("track-negative2: negative on metered feat
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════
-// TRACK-NEGATIVE3: Negative on allocated feature (reduces purchased_balance first, then granted)
-// ═══════════════════════════════════════════════════════════════════
-
 test.concurrent(`${chalk.yellowBright("track-negative3: negative on allocated feature (purchased_balance first)")}`, async () => {
 	const usersItem = items.freeUsers({ includedUsage: 5 });
 	const freeProd = products.base({
@@ -241,10 +229,6 @@ test.concurrent(`${chalk.yellowBright("track-negative3: negative on allocated fe
 		usage: 4,
 	});
 });
-
-// ═══════════════════════════════════════════════════════════════════
-// TRACK-NEGATIVE4: Negative caps at granted_balance
-// ═══════════════════════════════════════════════════════════════════
 
 test.concurrent(`${chalk.yellowBright("track-negative4: negative caps at granted_balance")}`, async () => {
 	const usersItem = items.freeUsers({ includedUsage: 5 });

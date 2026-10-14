@@ -1,18 +1,3 @@
-/**
- * A license customize scoped to one plan must not leak onto customers of a
- * different plan that links the SAME license product, nor mutate the catalog
- * definition those customers still inherit.
- *
- * Two plans linking one license product hold separate plan_license rows
- * (unique_plan_license is keyed on the pair), so the isolation comes from the
- * repoint touching only the targeted plan's row — this pins that down.
- *
- * Contract under test:
- *   - only the targeted plan's pool repoints onto an is_custom definition
- *   - the untargeted plan's pool keeps pointing at its catalog definition
- *   - the untargeted plan's assignments never gain the added entitlement
- *   - the untargeted plan's catalog plan_license row is not mutated in place
- */
 import { expect, test } from "bun:test";
 import type {
 	AttachLicenseParamsV0,
@@ -70,7 +55,6 @@ const assignSeat = async ({
 test.concurrent(
 	`${chalk.yellowBright("batch-license-customize: a plan-scoped customize leaves other plans' licenses untouched")}`,
 	async () => {
-		// One catalog, both plans linking the same license product.
 		const target = await initScenario({
 			customerId: TARGET_CUSTOMER,
 			setup: [
@@ -105,7 +89,6 @@ test.concurrent(
 			entityId: `${ID_PREFIX}-target-entity`,
 		});
 
-		// Second customer on the OTHER plan, sharing the same license product.
 		await target.autumnV1.customers.create({ id: BYSTANDER_CUSTOMER });
 		await target.autumnV2_3.billing.attach<AttachParamsV1Input>({
 			customer_id: BYSTANDER_CUSTOMER,
@@ -142,14 +125,12 @@ test.concurrent(
 
 		const catalogPlanLicenseId = bystanderState.pools[0]?.plan_license_id;
 		expect(catalogPlanLicenseId).toBeTruthy();
-		// Both plans link the same license product but hold their own catalog row.
 		const catalogRowBefore = await ctx.db
 			.select()
 			.from(planLicenses)
 			.where(eq(planLicenses.id, catalogPlanLicenseId ?? ""));
 		expect(catalogRowBefore[0]?.is_custom).toBe(false);
 
-		// ── Migrate: customize the license, scoped to the TARGET plan only ──
 		await runChunkedMigration({
 			ctx,
 			migrationClient: target.autumnV2_2,
@@ -187,7 +168,6 @@ test.concurrent(
 			return rows.filter((row) => row.featureId === TestFeature.Dashboard);
 		};
 
-		// ── The target's assignments converge onto the new entitlement ──────
 		const targetRows = await pollUntil({
 			fetch: () =>
 				readDashboardRows(targetAssignments.map((assignment) => assignment.id)),
@@ -197,7 +177,6 @@ test.concurrent(
 		});
 		expect(targetRows).toHaveLength(targetAssignments.length);
 
-		// ── ISOLATION: the bystander plan is untouched ──────────────────────
 		const bystanderRows = await readDashboardRows(
 			bystanderAssignments.map((assignment) => assignment.id),
 		);
@@ -211,7 +190,6 @@ test.concurrent(
 			catalogPlanLicenseId ?? "",
 		);
 
-		// The shared catalog row must be replaced by a custom row, never edited.
 		const catalogRowAfter = await ctx.db
 			.select()
 			.from(planLicenses)

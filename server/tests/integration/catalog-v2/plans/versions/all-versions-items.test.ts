@@ -1,16 +1,3 @@
-/**
- * catalogV2.update — versioning: "all_versions" item patches.
- *
- * Item changes propagate to every historical version in place. No new version
- * is minted. A customer parked on v1 does not block the in-place patch of v2.
- *
- * Diverged siblings receive the latest current→next customize (add/remove),
- * not a PUT of the latest item list.
- *
- * Red (current):  all_versions add boolean replaces v1's 200 Messages with v2's items
- * Green (after):  v1 keeps 200 Messages and only gains Admin Rights
- */
-
 import { test } from "bun:test";
 import {
 	CusProductStatus,

@@ -7,7 +7,6 @@ import { formatFeatureUsageMessages } from "@/internal/catalogV2/actions/updateC
 import type { UpdateCatalogContext } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext";
 import type { UpdateCatalogPlan } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogPlan";
 
-/** Pure map: computed plan + previewContext facts → preview response features. */
 export const buildFeaturesPreview = ({
 	catalogContext,
 	updateCatalogPlan,
@@ -27,7 +26,6 @@ export const buildFeaturesPreview = ({
 			});
 			return {
 				feature_id: feature.id,
-				// Minted per computation: a preview's id would not be the applied one.
 				internal_id: null,
 				name: feature.name,
 				action: "create" as const,

@@ -36,7 +36,6 @@ const rejectArchivedPropagateTarget = ({
 	});
 };
 
-/** Archived relatives stay pinned — they cannot be named in propagate. */
 export const handleArchivedPropagationErrors = ({
 	upsert,
 	productStatesContext,

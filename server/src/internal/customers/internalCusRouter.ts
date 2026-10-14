@@ -31,7 +31,6 @@ internalCusRouter.post(
 	"/customer-entitlements/sync-anchor",
 	...handleSyncCustomerEntitlementAnchors,
 );
-// Registered before /:customer_id so "exports" is never read as a customer id.
 internalCusRouter.post("/exports", ...handleCreateCustomerExport);
 internalCusRouter.get("/exports", ...handleListCustomerExports);
 internalCusRouter.post(

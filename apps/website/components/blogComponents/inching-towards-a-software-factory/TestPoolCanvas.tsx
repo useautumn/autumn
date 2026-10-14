@@ -75,7 +75,6 @@ export function TestPoolCanvas({ time }: { time: number }) {
 					Results
 				</text>
 
-				{/* Connectors stop at the cards, so no line passes through their content. */}
 				<path
 					d="M168 270H206M698 270H752"
 					stroke={ready ? PURPLE : DIM}

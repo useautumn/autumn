@@ -20,13 +20,11 @@ test(`${chalk.yellowBright("referrals14: referrer on Premium (higher tier), gets
 	const mainCustomerId = "main-referral-14";
 	const redeemerId = "referral14-r1";
 
-	// Clean up redemptions before scenario
 	await redemptionRepo.resetCustomer({
 		db: ctx.db,
 		internalCustomerId: [mainCustomerId, redeemerId],
 	});
 
-	// Products
 	const freeProd = products.base({
 		id: "free",
 		isDefault: true,
@@ -50,16 +48,12 @@ test(`${chalk.yellowBright("referrals14: referrer on Premium (higher tier), gets
 		],
 	});
 
-	// Reward: 10% percentage discount (coupon-based)
 	const reward = rewards.percentageDiscount({ discountValue: 10 });
 
-	// Program: triggers immediately on customer creation, referrer only, max 10
-	// product_ids includes both pro and premium
 	const program = referralPrograms.onCustomerCreationReferrer({
 		rewardId: reward.id,
 		maxRedemptions: 10,
 	});
-	// Override product_ids to include both pro and premium
 	program.product_ids = [proProd.id, premiumProd.id];
 
 	const { autumnV1, referralCode, testClockIds } = await initScenario({
@@ -79,7 +73,6 @@ test(`${chalk.yellowBright("referrals14: referrer on Premium (higher tier), gets
 		],
 	});
 
-	// Advance redeemer's clock too (s.advanceTestClock only advances primary)
 	if (testClockIds[redeemerId]) {
 		await advanceTestClock({
 			testClockId: testClockIds[redeemerId],
@@ -91,20 +84,17 @@ test(`${chalk.yellowBright("referrals14: referrer on Premium (higher tier), gets
 
 	expect(referralCode!.code).toBeDefined();
 
-	// Creating code again should be idempotent
 	const referralCode2 = await autumnV1.referrals.createCode({
 		customerId: mainCustomerId,
 		referralId: program.id,
 	});
 	expect(referralCode2.code).toBe(referralCode!.code);
 
-	// Redeem referral code
 	const redemption = await autumnV1.referrals.redeem({
 		customerId: redeemerId,
 		code: referralCode!.code,
 	});
 
-	// Try redeem again — should fail
 	try {
 		await autumnV1.referrals.redeem({
 			customerId: redeemerId,
@@ -118,9 +108,7 @@ test(`${chalk.yellowBright("referrals14: referrer on Premium (higher tier), gets
 		);
 	}
 
-	// Verify referrer has premium, redeemer has free
 	const redemptionResult = await autumnV1.redemptions.get(redemption.id);
-	// For referrer-only program: triggered + applied (referrer got discount), redeemer_applied is false (redeemer gets nothing)
 	expect(redemptionResult.triggered).toBe(true);
 	expect(redemptionResult.applied).toBe(true);
 
@@ -132,7 +120,6 @@ test(`${chalk.yellowBright("referrals14: referrer on Premium (higher tier), gets
 		status: CusProductStatus.Active,
 	});
 
-	// Advance 31 days to trigger next billing cycle
 	await Promise.all(
 		Object.values(testClockIds).map((clockId) =>
 			advanceTestClock({
@@ -144,7 +131,6 @@ test(`${chalk.yellowBright("referrals14: referrer on Premium (higher tier), gets
 		),
 	);
 
-	// Verify referrer gets pro_amount discount on Premium invoice
 	const mainCustomerWithInvoices = await autumnV1.customers.get(
 		mainCustomerId,
 		{
@@ -157,12 +143,10 @@ test(`${chalk.yellowBright("referrals14: referrer on Premium (higher tier), gets
 	);
 
 	if (premiumInvoice) {
-		// 10% percentage discount on Premium price
 		const premiumPrice = 50;
 		expect(premiumInvoice.total).toBeLessThan(premiumPrice);
 	}
 
-	// Final verification: referrer still has active Premium after billing cycle
 	expectProductAttached({
 		customer: await autumnV1.customers.get(mainCustomerId),
 		product: premiumProd,

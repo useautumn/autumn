@@ -16,8 +16,6 @@ export type AutumnOrgContext = {
 
 type ExecuteAutumnTool = typeof executeAutumnMcpTool;
 
-// Preload results arrive as raw MCP envelopes; notes must be read off the
-// parsed body or the org instructions silently never reach any agent.
 const parsedAgentRules = (
 	value: unknown,
 ): Record<string, unknown> | undefined => {
@@ -142,8 +140,6 @@ export const loadAutumnOrgContext = async ({
 		const result = settled[index];
 		if (!result) return;
 		if (result.status === "rejected") {
-			// A throw can predate the MCP call (pool/connect), so it is not
-			// guaranteed to have been logged at the tool boundary.
 			logger.warn("Could not preload Autumn org context", {
 				event: "leaf.autumn_mcp_org_context_preload_failed",
 				data: { error: result.reason, tool: toolNames[index] },
@@ -151,7 +147,6 @@ export const loadAutumnOrgContext = async ({
 			return;
 		}
 		if (result.value.errorText) {
-			// executeAutumnMcpTool already warned with the error detail.
 			logger.debug("Skipping failed Autumn org context preload", {
 				event: "leaf.autumn_mcp_org_context_preload_failed",
 				data: { tool: toolNames[index] },
@@ -193,9 +188,6 @@ type OrgContextCacheEntry = {
 
 type OrgContextLoad = () => Promise<AutumnOrgContext | undefined>;
 
-/** Serve-stale-while-revalidate: a new thread never blocks on the four MCP
- * round trips while any snapshot under 15 min old exists; edits land on the
- * next thread after the background refresh (at most a minute behind). */
 const orgContextCache = new Map<string, OrgContextCacheEntry>();
 
 const evictExpiredOrgContext = (now: number) => {

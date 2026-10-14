@@ -1,28 +1,3 @@
-/**
- * TDD contract for pooled prepaid next-cycle contribution promotion.
- *
- * Contract under test:
- *   New behaviors:
- *     - updateSubscription quantity DECREASE (OnDecrease.NoProrations) on a
- *       pooled prepaid contributor writes the pending amount on its
- *       contribution row: current_contribution unchanged,
- *       next_cycle_contribution = new amount, effective_at = sub period end;
- *       pool granted and balance are unchanged this cycle;
- *     - a pool reset with a contribution whose effective_at has passed
- *       promotes it (current = next_cycle, effective_at cleared), recomputes
- *       pooled_balances.granted from ALL contributions in one statement, and
- *       refills the pool balance to the NEW granted;
- *     - contributions whose effective_at is still in the future are untouched
- *       (staggered boundaries promote independently);
- *     - the recompute self-heals a drifted pooled_balances.granted.
- *   Side effects:
- *     - pooled_balance_contributions and pooled_balances.granted are updated
- *       at reset time.
- *
- * Pre-impl red: the UpdateQuantity plan never touches contributions
- * (effective_at stays null) and no reset path promotes next_cycle_contribution.
- */
-
 import { expect, test } from "bun:test";
 import {
 	type ApiCustomerV5,
@@ -118,7 +93,6 @@ test.concurrent(
 		});
 		const pooledGrant = ATTACHED_QUANTITY * 2;
 
-		// ── Contract: pool cusEnts are not stamped, sources resolvable per entity ──
 		const { state: attachedState } = await sortedContributions({
 			ctx,
 			customerId,
@@ -167,7 +141,6 @@ test.concurrent(
 				redirect_mode: "if_required",
 			});
 
-		// ── Contract: downgrades write next_cycle_contribution + effective_at ──
 		await downgradeEntityQuantity({
 			entityIndex: 0,
 			quantity: DOWNGRADED_QUANTITY,
@@ -191,13 +164,11 @@ test.concurrent(
 		});
 		expect(downgradedContributions[1].effective_at).toBeGreaterThan(Date.now());
 
-		// ── Contract: pool untouched until a boundary passes ──
 		expect(downgradedState.pools[0]?.granted).toBe(pooledGrant);
 		expect(downgradedState.poolCustomerEntitlements[0]?.balance).toBe(
 			pooledGrant - 100,
 		);
 
-		// ── Staggered boundary: only entity 0's downgrade becomes due ──
 		await expirePooledBalanceForReset({
 			ctx,
 			customerId,
@@ -208,7 +179,6 @@ test.concurrent(
 			.set({ effective_at: Date.now() - 1_000 })
 			.where(eq(pooledBalanceContributions.id, downgradedContributions[0].id));
 
-		// ── Contract: reset promotes only the due contribution ──
 		const staggeredGrant = DOWNGRADED_QUANTITY + ATTACHED_QUANTITY;
 		const afterFirstReset = await autumnV2_2.customers.get<ApiCustomerV5>(
 			customerId,
@@ -243,9 +213,6 @@ test.concurrent(
 				},
 			});
 
-		// ── Contract: second boundary promotes entity 1 AND heals drifted granted ──
-		// Warm the cache first so this reset runs on the CACHE-HIT lazy path and
-		// must patch granted into the cached subject (not just the DB).
 		await autumnV2_2.customers.get<ApiCustomerV5>(customerId);
 		const poolId = staggeredState.pools[0]?.id;
 		if (!poolId) throw new Error("Expected the pooled balance to persist");
@@ -274,7 +241,6 @@ test.concurrent(
 			usage: 0,
 		});
 
-		// ── Contract: the patched granted persists on a later cached read ──
 		const cachedRead =
 			await autumnV2_2.customers.get<ApiCustomerV5>(customerId);
 		expectBalanceCorrect({

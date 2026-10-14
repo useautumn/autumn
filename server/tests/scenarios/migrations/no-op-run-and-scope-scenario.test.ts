@@ -1,23 +1,3 @@
-/**
- * QA seed for the two follow-ups: no-op run status, and the scoped progress
- * denominator. Not an assertion suite — it leaves state on the dev org to look
- * at in the dashboard.
- *
- * Seeds three migrations:
- *   qa-nochanges  every customer already converged → Run All settles
- *                 `no_changes`, footer reads "Run complete, no changes"
- *   qa-changes    one customer needs the change    → settles `succeeded`
- *   qa-scope      left as a draft with 6 matching customers, so you can Run
- *                 Sample / run a single customer and watch the progress
- *                 denominator follow the run's scope rather than reading 6
- *   qa-failed     a run that errored partway
- *   qa-abandoned  a run stranded `running` by a dead trigger task, which the
- *                 read path reconciles (the production bug)
- *
- * Run with:
- *   bun test --timeout 300000 server/tests/scenarios/migrations/no-op-run-and-scope-scenario.test.ts
- */
-
 import { test } from "bun:test";
 import {
 	isTerminalMigrationRunStatus,
@@ -123,9 +103,6 @@ const seedTerminalRun = async ({
 	return status;
 };
 
-/** Mirrors the production bug: the row says running, the task is long dead.
- * Reuses a real terminal handle so the reconcile can settle it, as it would in
- * production. */
 const seedAbandonedRun = async ({
 	ctx,
 	migrationInternalId,
@@ -172,7 +149,6 @@ test(`${chalk.yellowBright("migration-setup: no-op run status + scoped progress 
 		],
 		actions: [
 			s.parallel(
-				// Already carry the dashboard, so the operation has nothing to do.
 				...CONVERGED_IDS.map((customerId) =>
 					s.billing.attach({
 						customerId,
@@ -199,7 +175,6 @@ test(`${chalk.yellowBright("migration-setup: no-op run status + scoped progress 
 		migrationId: noChanges.id,
 	});
 
-	// The same operation over customers that do need it, for contrast.
 	const changes = await createMigration({
 		ctx,
 		autumn: autumnV2_2,
@@ -212,8 +187,6 @@ test(`${chalk.yellowBright("migration-setup: no-op run status + scoped progress 
 		migrationId: changes.id,
 	});
 
-	// Left as a draft: run a sample or a single customer from the dashboard
-	// and watch the progress denominator.
 	const scope = await createMigration({
 		ctx,
 		autumn: autumnV2_2,
@@ -234,16 +207,12 @@ test(`${chalk.yellowBright("migration-setup: no-op run status + scoped progress 
 		errorMessage: "Seeded failure: the run errored partway through",
 	});
 
-	// The production bug: a run whose task died without settling its row. It
-	// reads active until something reconciles it against trigger.dev.
 	const abandoned = await createMigration({
 		ctx,
 		autumn: autumnV2_2,
 		migrationId: "qa-abandoned",
 		planId: convergedPlan.id,
 	});
-	// A finished run's handle: the platform reports it terminal, so the
-	// reconcile settles this row the way it would in production.
 	const [deadRun] = await migrationRunRepo.list({
 		ctx,
 		migrationInternalId: changes.internal_id,

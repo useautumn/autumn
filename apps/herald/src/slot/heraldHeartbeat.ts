@@ -33,7 +33,6 @@ type HeraldHeartbeatConfig = {
 	identity: TaskIdentity;
 };
 
-/** Written in both slot states: before a flip the dashboard reads `ok` on the target; after it, `jobs.joined` on both. */
 export function createHeraldHeartbeat({
 	ctx,
 	config,
@@ -63,7 +62,6 @@ export function createHeraldHeartbeat({
 			declaredActive: gate.active,
 			gate: gate.reason,
 			storeHealthy,
-			// A task that cannot read the flip record is not one a swap should count on.
 			ok: kafka.ok && eventsDb.ok && miscCache.ok && storeHealthy,
 			checks: { kafka, eventsDb, miscCache },
 			jobs: {

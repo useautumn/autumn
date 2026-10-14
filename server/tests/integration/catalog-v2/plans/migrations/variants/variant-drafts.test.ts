@@ -1,20 +1,3 @@
-/**
- * catalogV2.update — migration drafts for following variants.
- *
- * Contract:
- *   propagated items + customers on both → one draft, collapsed op
- *   pin → no variant op
- *   variants[] declare inherits the parent's migration.draft
- *   license DIFF → variant op is upsert_licenses (customer delta only —
- *     existing overlay items must not remint)
- *   follow EU / pin UK → UK omitted
- *   follow with no customers on the variant → no variant op
- *   versioning + conflicts → versioning-drafts / conflict-drafts
- *
- * Red (pre-fix): variant license draft reminted Messages when only Dashboard changed
- * Green (after):   draft customize is Dashboard-only, matching preview plan_change
- */
-
 import { test } from "bun:test";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
@@ -330,8 +313,6 @@ test.concurrent(
 						},
 					],
 				});
-				// Only the variant has customers — assert its draft alone so we
-				// don't flake on $or collapse timing with the base.
 				await seedVersionableCustomer({ ctx, planId: variantId, version: 1 });
 
 				const variantFilter = versionPinnedFilter({ planId: variantId });

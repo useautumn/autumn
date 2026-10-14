@@ -1,7 +1,6 @@
 import { pushPage } from "@/utils/genUtils";
 import { type TooltipEntry, tooltipItemLink } from "./tooltipItemLink";
 
-/** Resolves a tooltip row's link against the current env and query params. */
 export const tooltipItemHref = ({
 	item,
 }: {

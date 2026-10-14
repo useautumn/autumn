@@ -18,9 +18,6 @@ const experimentName = "attach-messy-state";
 const HOUR_MS = 60 * 60 * 1000;
 const now = new Date("2026-08-19T12:00:00.000Z");
 
-// Modelled on a real customer: a $0 add-on at customer scope, a trial and a
-// paused plan on one entity, a past-due annual plan on another. The org
-// attaches to entities, so "put them on Enterprise" is ambiguous about scope.
 const setup = createSetup({
 	tag: "attach-messy-state",
 	agentRules: ({ agentRules }) =>
@@ -161,9 +158,6 @@ initEval<EvalMetadata>({
 			],
 		},
 		{
-			// The headline case: no single API call does this, so the agent must
-			// resolve scope, surface what "only plan" removes, then compose
-			// one attach with four immediate cancels.
 			name: "make enterprise the only plan, customer scope",
 			conversation: [
 				user({
@@ -251,8 +245,6 @@ initEval<EvalMetadata>({
 			],
 		},
 		{
-			// The counterweight: a plain attach onto a messy customer must not
-			// become a clean-up the user never asked for.
 			name: "plain attach leaves the other subscriptions alone",
 			conversation: [
 				user({

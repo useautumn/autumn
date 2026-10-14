@@ -1,14 +1,9 @@
 import { InfisicalSDK } from "@infisical/sdk";
 import { loadLocalEnv } from "@/utils/envUtils.js";
 import { mask } from "@/utils/genUtils";
-/**
- * Initialize Infisical and load secrets into process.env
- * This allows all existing code using process.env to work seamlessly
- */
 export const initInfisical = async (params?: { secretPath?: string }) => {
 	loadLocalEnv();
 
-	// Only initialize if credentials are provided
 	const clientId = process.env.INFISICAL_CLIENT_ID;
 	const clientSecret = process.env.INFISICAL_CLIENT_SECRET;
 	const projectId = process.env.INFISICAL_PROJECT_ID;
@@ -22,13 +17,11 @@ export const initInfisical = async (params?: { secretPath?: string }) => {
 	try {
 		const client = new InfisicalSDK();
 
-		// Authenticate using Universal Auth
 		await client.auth().universalAuth.login({
 			clientId,
 			clientSecret,
 		});
 
-		// Fetch all secrets from the specified environment
 		const allSecrets = await client.secrets().listSecrets({
 			environment,
 			projectId,
@@ -37,12 +30,9 @@ export const initInfisical = async (params?: { secretPath?: string }) => {
 			recursive: true,
 		});
 
-		// Load secrets into process.env
-		// Note: Existing process.env variables take precedence (won't be overridden)
 		let loadedCount = 0;
 
 		for (const secret of allSecrets.secrets) {
-			// If path is restricted log that we're seeing it
 			if (secret.secretPath?.includes("restricted") && secret.secretValue) {
 				console.log(
 					`Retrieving restricted secret: ${secret.secretKey}, Path: ${secret.secretPath}, value: ${mask(secret.secretValue, 3, 2)}`,

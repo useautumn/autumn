@@ -121,7 +121,6 @@ describe("computeReset rolls usage windows", () => {
 				},
 			},
 		]);
-		// Window rolls report no refilled rows, so no balances.reset follows.
 		expect(mutation?.result).toEqual({ type: "reset", rows: [] });
 	});
 

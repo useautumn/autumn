@@ -5,10 +5,6 @@ import {
 	roundToCurrencyPrecision,
 } from "@autumn/shared";
 
-/**
- * Per-entity attribution for a Stripe line matched to Autumn line items.
- * Only entity-scoped line items contribute; customer-level ones yield nothing.
- */
 export const billingLineItemsToDbEntities = ({
 	billingLineItems,
 }: {
@@ -18,7 +14,6 @@ export const billingLineItemsToDbEntities = ({
 		const entity = lineItem.context.entity;
 		if (!entity) return [];
 
-		// Fixed lines carry a multiplier of 1 as paidQuantity; the PRD wants null there
 		const quantity = isFixedPrice(lineItem.context.price)
 			? null
 			: (lineItem.paidQuantity ?? null);

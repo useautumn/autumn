@@ -10,13 +10,11 @@ import {
 	prodTestOrgId,
 } from "./experimentEnv";
 
-// Run with `bun run experiments/explainListEntitiesV2.ts` (flags: --explain, --skip-old)
 const ORG_ID = prodTestOrgId;
 const ENV = AppEnv.Live;
 const CUSTOMER_ID = prodTestCustomerId;
 const LIMIT = Number(process.env.LIMIT || 1000);
 
-/** Pre-split combined hydration: same page CTE, hydrated without entityScopedOnly. */
 const getCombinedEntityPageQuery = ({
 	orgId,
 	env,

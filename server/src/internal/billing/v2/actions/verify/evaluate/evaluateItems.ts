@@ -39,7 +39,6 @@ import { findIdentitySiblingIndexes } from "./matchItemIdentity";
 
 type ExpectedPhaseItem = Stripe.SubscriptionScheduleUpdateParams.Phase.Item;
 
-/** Normalizes an actual Stripe subscription item into a comparable format. */
 export const normalizeActualSubItem = ({
 	item,
 }: {
@@ -59,7 +58,6 @@ export const normalizeActualSubItem = ({
 	};
 };
 
-/** Normalizes an actual Stripe schedule phase item into a comparable format. */
 export const normalizeActualPhaseItem = ({
 	item,
 }: {
@@ -86,7 +84,6 @@ export const normalizeActualPhaseItem = ({
 	};
 };
 
-/** Normalizes an expected phase item (from buildStripePhasesUpdate) into a comparable format. */
 export const normalizeExpectedPhaseItem = ({
 	item,
 }: {
@@ -111,7 +108,6 @@ export const normalizeExpectedPhaseItem = ({
 	};
 };
 
-/** An actual Stripe item (subscription or schedule-phase), normalized just enough to match on. */
 type ActualCandidate = {
 	index: number;
 	autumnCustomerPriceId?: string;
@@ -159,8 +155,6 @@ const buildActualCandidates = ({
 	});
 };
 
-/** A scheduled item pairs as strictly as a live one: by its Stripe price when it
- * has one, never by a shared Stripe product alone. */
 const findPhaseItemForAutumnPriceStrictly = ({
 	price,
 	product,
@@ -182,27 +176,6 @@ const findPhaseItemForAutumnPriceStrictly = ({
 		}),
 	);
 
-/**
- * Finds the actual candidate that corresponds to an expected phase item, without reusing
- * a candidate another expected item already claimed.
- *
- * Tier 1 (both kinds): exact `autumn_customer_price_id` metadata match — no shape/amount
- * check, since a mismatched amount is a real discrepancy we want to report, not a reason
- * to fail to find the item in the first place.
- *
- * Tier 2 (fallback, only when metadata identity is absent or stale):
- * - Inline: match by `autumn_price_id` metadata + price-shape equality
- *   (`stripeInlinePriceMatchesStripePrice`). A candidate already tagged with some OTHER
- *   currently-valid inline cusPriceId is excluded — but a stale tag (pointing at a
- *   cusPrice that no longer exists on this customer) does not block the match.
- * - Stored: every known Stripe price id for the Autumn price
- *   (`findSubscriptionItemForAutumnPrice`/`findPhaseItemForAutumnPrice`, via
- *   `getStripePriceIdsForAutumnPrice`) — covers a V1/V2 companion id swap.
- *
- * Tier 3 (stored fixed/prepaid, non-strict only): same-shape licensed item
- * under one of the plan's Stripe product ids (`findShapeFallbackIndex`) —
- * covers imported subs billing their own historical price ids.
- */
 const findActualIndex = ({
 	expected,
 	storedPriceCatalog,
@@ -248,7 +221,6 @@ const findActualIndex = ({
 	);
 	if (exact) return { index: exact.index };
 
-	// A free phase's $0 placeholder has no Autumn price, only its own marker.
 	if (isFreePhasePlaceholderItem(expected)) {
 		const placeholder = available.find(
 			(candidate) => candidate.isFreePhasePlaceholder,
@@ -281,8 +253,6 @@ const findActualIndex = ({
 			return { index: inlineExact };
 		}
 
-		// Inline-mode rendered items additionally match untagged /
-		// stale-tagged items on economic totals.
 		const isInlineMode = metadata?.inline_mode === "true";
 		if (!isInlineMode || !shapeFallback.enabled) return undefined;
 		const totalsIndex = findInlineTotalsIndex({
@@ -297,7 +267,6 @@ const findActualIndex = ({
 			: undefined;
 	}
 
-	// Stored fallback: broaden by every known Stripe price id for the Autumn price.
 	const priceId = expected.price as string;
 	const catalogEntry = storedPriceCatalog.get(priceId);
 	const availableIndexes = new Set(
@@ -346,8 +315,6 @@ const findActualIndex = ({
 	});
 	if (shapeIndex !== undefined) return { index: shapeIndex };
 
-	// Prepaid: the Stripe price's structure is an implementation detail —
-	// match the expected total per interval as a last resort.
 	if (!catalogEntry.cusEnt) return undefined;
 	const totalsIndex = findPrepaidTotalsIndex({
 		cusEnt: catalogEntry.cusEnt,
@@ -363,9 +330,6 @@ const findActualIndex = ({
 
 type CatalogEntry = { price: Price; product: Product };
 
-/** Resolves a normalized item back to its Autumn price + product — via the
- * cusPrice-id catalog for inline items (no stable Stripe price id), or the
- * stored-price catalog (keyed by Stripe price id) otherwise. */
 const resolvePriceForItem = ({
 	item,
 	storedPriceCatalog,
@@ -383,8 +347,6 @@ const resolvePriceForItem = ({
 	return item.priceId ? storedPriceCatalog.get(item.priceId) : undefined;
 };
 
-/** Items billing nothing as they stand ($0 unit price, quantity 0, or tiers
- * resolving to $0) — non-strict treats them as inert leftovers. */
 const isZeroBillingItem = ({
 	price,
 	quantity,
@@ -397,7 +359,6 @@ const isZeroBillingItem = ({
 		stripePrice: price,
 		quantity: quantity ?? 0,
 	});
-	// Unexpanded tiers make the amount unknowable — quantity 0 bills nothing.
 	if (amount === null) return quantity === 0;
 	return amount <= 0.5;
 };
@@ -411,9 +372,6 @@ const priceTypeOf = (price?: Price): ItemMismatch["price_type"] => {
 	return undefined;
 };
 
-/** Consumable / allocated-V2 prices bill as posted invoice line items — a
- * missing Stripe item is fine as long as another item invoices at the same
- * interval. Prorated allocated prices still need their Stripe quantity item. */
 const missingUsageItemCovered = ({
 	price,
 	candidates,
@@ -435,7 +393,6 @@ const missingUsageItemCovered = ({
 	);
 };
 
-/** Major-unit display context read off an actual Stripe item's price. */
 const displayFromStripePrice = (
 	stripePrice?: Stripe.Price,
 ): Pick<
@@ -453,7 +410,6 @@ const displayFromStripePrice = (
 	};
 };
 
-/** Plan + major-unit price display context for a fixed catalog price. */
 const displayFromFixedPrice = (
 	catalogEntry?: CatalogEntry,
 ): Pick<
@@ -470,7 +426,6 @@ const displayFromFixedPrice = (
 	};
 };
 
-/** Classifies a missing/unexpected expected item into its typed mismatch. */
 const buildMissingOrUnexpectedMismatch = ({
 	expected,
 	actual,
@@ -532,11 +487,6 @@ const buildMissingOrUnexpectedMismatch = ({
 	} satisfies ItemMismatch;
 };
 
-/**
- * Compares expected phase items against actual Stripe items (subscription or schedule-phase —
- * pass exactly one of `actualSubscriptionItems` / `actualPhaseItems`). Returns typed mismatches
- * instead of throwing.
- */
 export const evaluateItems = ({
 	expectedRawItems,
 	actualSubscriptionItems,
@@ -612,8 +562,6 @@ export const evaluateItems = ({
 			cusPriceCatalog,
 		});
 
-		// A consolidated expected item can be billed across several Stripe
-		// items — claim its siblings and compare the aggregate quantity.
 		let siblingQuantity = 0;
 		const claimSiblings = (indexes: number[]) => {
 			for (const index of indexes) {
@@ -625,7 +573,6 @@ export const evaluateItems = ({
 			candidates.filter((candidate) => !claimed.has(candidate.index));
 
 		if (!expected.isInline && catalogEntry) {
-			// Identity siblings (metadata / price id) hold in strict mode too.
 			claimSiblings(
 				findIdentitySiblingIndexes({
 					expectedPriceId: expected.priceId,
@@ -688,11 +635,8 @@ export const evaluateItems = ({
 			continue;
 		}
 
-		// A totals match already proved economic equality.
 		if (totalsMatched.has(i)) continue;
 
-		// Inline-mode items carry their own quantity model (qty 1 × total) —
-		// compare economic totals instead of per-field qty/amount.
 		if (expected.inlineMode) {
 			const candidatePrice =
 				actualIndex !== undefined ? candidates[actualIndex]?.price : undefined;
@@ -798,8 +742,6 @@ export const evaluateItems = ({
 
 	for (let actualIndex = 0; actualIndex < actualItems.length; actualIndex++) {
 		if (claimed.has(actualIndex)) continue;
-		// A metered item Autumn doesn't model is real drift — Stripe is billing
-		// something we don't know about. Only genuinely $0 meters are inert.
 		if (
 			!strict &&
 			candidates[actualIndex]?.price?.recurring?.usage_type === "metered" &&

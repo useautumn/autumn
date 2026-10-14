@@ -1,10 +1,3 @@
-/**
- * Contract: an org "subscribes" to an event when it has an endpoint that
- * receives it. An endpoint with no filter types receives EVERY event, which
- * is Svix's own semantic — getting this backwards would either spam orgs
- * that filtered the event out, or silently skip orgs that listen to all.
- */
-
 import { describe, expect, test } from "bun:test";
 import { endpointReceivesEvent } from "@/external/svix/subscriptions/utils/classifySvixSubscriptionUtils.js";
 

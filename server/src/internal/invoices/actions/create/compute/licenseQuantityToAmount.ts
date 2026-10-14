@@ -15,10 +15,6 @@ export type ResolvedInvoiceLicense = {
 	licenseProduct: FullProduct;
 };
 
-/**
- * Seat charge for a license linked to `parent`. `quantity` is billable seats;
- * the link's included seats are not subtracted.
- */
 export const licenseQuantityToAmount = ({
 	parent,
 	licensePlanId,

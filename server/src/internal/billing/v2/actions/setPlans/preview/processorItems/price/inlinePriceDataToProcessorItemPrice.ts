@@ -1,7 +1,6 @@
 import type { ProcessorItemPrice } from "@autumn/shared";
 import { stripeUnitAmountToMajorUnits } from "./stripeUnitAmountToMajorUnits";
 
-/** The shared shape of `price_data` on subscription, schedule and checkout items. */
 export type InlinePriceData = {
 	currency: string;
 	unit_amount?: number | null;

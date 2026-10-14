@@ -1,13 +1,3 @@
-/**
- * A Stripe schedule imported with a future phase stamps the current plan with
- * ended_at at the phase change and creates a scheduled row for the next plan.
- * If the schedule is then released in Stripe, the subscription runs on
- * indefinitely, but Autumn keeps both: the plan expires at the stale ended_at.
- *
- * Red (current):  after release, pro still has ended_at and premium stays scheduled.
- * Green (after):  pro has no ended_at and the premium scheduled row is gone.
- */
-
 import { expect, test } from "bun:test";
 import { CusProductStatus, type SyncParamsV1 } from "@autumn/shared";
 import {

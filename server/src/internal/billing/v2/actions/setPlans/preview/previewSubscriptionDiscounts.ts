@@ -6,7 +6,6 @@ import {
 import type Stripe from "stripe";
 import { repeatingDiscountMonthsLeft } from "@/internal/billing/v2/setup/carryReplacedSubscription/repeatingDiscountMonthsLeft";
 
-/** The current discounts as the preview lists them: a customer-level coupon has no subscription, a repeating one its carried months. */
 export const previewSubscriptionDiscounts = ({
 	discounts,
 	customerDiscountId,
@@ -19,7 +18,6 @@ export const previewSubscriptionDiscounts = ({
 	currentEpochMs: number;
 }): SetPlansPreviewDiscount[] =>
 	discounts.map((discount) => {
-		// A replaced coupon's discount has no id, so only a real customer discount id can match.
 		const isCustomerDiscount =
 			customerDiscountId !== undefined && discount.id === customerDiscountId;
 		const carriesMonths =

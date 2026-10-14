@@ -14,7 +14,6 @@ import { mutationToRecord } from "../receipt/mutationToRecord.js";
 import type { PartitionWriterScope } from "../types/partitionWriter.js";
 import { scheduleCommit, scheduleDeferredCommit } from "./commit.js";
 
-/** Appends a record that leaves no rows resident; its id is fresh, so there is nothing to dedup. */
 export function log({
 	scope,
 	command,

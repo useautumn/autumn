@@ -39,7 +39,6 @@ const byVersionAscending = (
 	right: CatalogLicenseParentVersionPreview,
 ) => left.version - right.version;
 
-/** A parent version plus the plan name, which only the top-level entry keeps. */
 type NamedParentVersion = CatalogLicenseParentVersionPreview & { name: string };
 
 type ReverseChildLink = {
@@ -175,7 +174,6 @@ const parentPlanChange = ({
 			})
 		: undefined;
 
-/** This child edit will rewrite the catalog link (in-place on this row, or mint/promote). */
 const childEditRewritesLink = ({
 	link,
 	child,
@@ -266,7 +264,6 @@ const buildParentVersionPreview = ({
 	});
 };
 
-/** Collapse the per-version rows of one parent plan into a single lane entry. */
 const foldParentVersions = ({
 	versions,
 	upsertProducts,
@@ -318,7 +315,6 @@ const foldParentVersions = ({
 	});
 };
 
-/** Parents whose planLicense points at this child version row. Empty → omit. */
 export const buildLicenseParentsPreview = ({
 	directUpsert,
 	childInternalId,

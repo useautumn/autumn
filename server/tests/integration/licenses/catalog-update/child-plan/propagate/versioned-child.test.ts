@@ -1,7 +1,3 @@
-/**
- * Contract: propagating a versioned child relinks a customerless parent in place.
- * The child customer remains on v1 while the parent catalog receives child v2.
- */
 import { expect, test } from "bun:test";
 import { type ApiCustomerV5, CustomerExpand } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";

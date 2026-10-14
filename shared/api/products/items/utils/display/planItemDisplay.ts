@@ -170,7 +170,6 @@ const formatVolumeRule = (item: CreatePlanItemParamsV1Input) => {
 	const includedUsage = item.included ?? 0;
 	const isVolume = item.price?.tier_behavior === "volume";
 	const hasMultipleTiers = (tiers?.length ?? 0) > 1;
-	// A single tier still charges the included units once usage passes them.
 	const showsRule = isVolume && (hasMultipleTiers || includedUsage > 0);
 	if (!showsRule || !tiers?.length) return undefined;
 

@@ -4,14 +4,6 @@ import { catalog } from "../../../src/grading/expectations/catalogExpectations.t
 import { conduct } from "../../../src/grading/expectations/conductExpectations.ts";
 import { initAxEval } from "../../../src/initAxEval.ts";
 
-/**
- * FILL / controls, overage-off default with free buffer: the plan HAS a
- * priced overage item, but billing for it defaults OFF — instead customers
- * get a 20% unbilled buffer, then stop. Passing = a spend_limits entry with
- * skip_overage_billing + usage_percentage 20. The trap is the percentage
- * base: "20% buffer" is overage_limit 20 (overage relative to allowance),
- * never 120 — the grader pins the exact number.
- */
 export const overageToggle = defineCase({
 	name: "fill-controls-overage-toggle",
 	prompt: [

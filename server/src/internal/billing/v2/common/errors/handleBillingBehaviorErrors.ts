@@ -6,12 +6,6 @@ import {
 	getChargeReasonMessage,
 } from "@/internal/billing/v2/utils/billingPlan/billingPlanWillCharge";
 
-/**
- * Validates that proration_behavior: 'none' is not used
- * in scenarios where deferring charges is invalid:
- * 1. Trial -> Non-trial transitions (removing a trial)
- * 2. Any operation that would result in a charge
- */
 export const handleProrationBehaviorErrors = ({
 	billingContext,
 	billingPlan,
@@ -21,10 +15,8 @@ export const handleProrationBehaviorErrors = ({
 }) => {
 	if (billingContext.requestedProrationBehavior !== "none") return;
 
-	// When anchor reset + none is used, charges are expected (full new plan price)
 	if (billingContext.requestedBillingCycleAnchor === "now") return;
 
-	// Trial -> Non-trial transition (removing trial)
 	const { isTrialing, willBeTrialing } = getTrialStateTransition({
 		billingContext,
 	});
@@ -44,8 +36,6 @@ export const handleProrationBehaviorErrors = ({
 
 	const chargeResult = billingPlanWillCharge({ billingPlan });
 
-	// Proration is an update-time concept — a brand-new subscription has
-	// nothing to prorate, so 'none' is a documented no-op there, not an error.
 	if (chargeResult.reason === "subscription_create") return;
 
 	if (chargeResult.willCharge) {

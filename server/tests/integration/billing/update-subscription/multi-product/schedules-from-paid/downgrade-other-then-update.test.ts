@@ -12,7 +12,6 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 
-// Entity 1 Premium downgrades to Pro, Entity 2 updates Premium items
 test.concurrent(`${chalk.yellowBright("schedules-p2p: downgrade entity 1, update entity 2 items")}`, async () => {
 	const customerId = "sched-p2p-downgrade-update";
 
@@ -43,21 +42,18 @@ test.concurrent(`${chalk.yellowBright("schedules-p2p: downgrade entity 1, update
 		],
 	});
 
-	// Entity 1 downgrades from Premium to Pro (scheduled)
 	await autumnV1.attach({
 		customer_id: customerId,
 		product_id: pro.id,
 		entity_id: entities[0].id,
 	});
 
-	// Verify entity 1 has scheduled downgrade
 	const entity1AfterDowngrade = await autumnV1.entities.get(
 		customerId,
 		entities[0].id,
 	);
 
-	// Entity 2 updates Premium items to different price
-	const newPriceItem = items.monthlyPrice({ price: 60 }); // $60/mo
+	const newPriceItem = items.monthlyPrice({ price: 60 });
 
 	await autumnV1.subscriptions.update({
 		customer_id: customerId,
@@ -66,7 +62,6 @@ test.concurrent(`${chalk.yellowBright("schedules-p2p: downgrade entity 1, update
 		items: [consumableItem, newPriceItem],
 	});
 
-	// Verify entity 2's premium still active with new price
 	const entity2Data = await autumnV1.entities.get(customerId, entities[1].id);
 	await expectProductActive({
 		customer: entity2Data,
@@ -81,14 +76,11 @@ test.concurrent(`${chalk.yellowBright("schedules-p2p: downgrade entity 1, update
 		subCount: 1,
 	});
 
-	// Advance to next billing cycle
 	await advanceToNextInvoice({
 		stripeCli: ctx.stripeCli,
 		testClockId: testClockId!,
 	});
 
-	// Entity 1: Premium gone, Pro active
-	// Entity 2: Premium with updated items
 	const entity1AfterCycle = await autumnV1.entities.get(
 		customerId,
 		entities[0].id,

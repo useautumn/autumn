@@ -53,10 +53,6 @@ const EMPTY_IMMEDIATE_RESULT: ImmediatePhaseResult = {
 	customerLicenseUpdates: [],
 };
 
-/**
- * Build cusProducts that start now, plus the existing cusProducts they expire
- * (when `expire_previous` was set). `endsAt` null leaves them open-ended.
- */
 const computeStartingNowProductContexts = ({
 	ctx,
 	syncContext,
@@ -86,7 +82,6 @@ const computeStartingNowProductContexts = ({
 
 	for (const productContext of productContexts) {
 		const currentCustomerProduct = productContext.currentCustomerProduct;
-		// Only the exact same version resizes in place; a new version must replace it.
 		if (
 			currentCustomerProduct?.internal_product_id ===
 			productContext.fullProduct.internal_id
@@ -112,8 +107,6 @@ const computeStartingNowProductContexts = ({
 					})
 				: undefined;
 
-		// Rollovers follow the features, not the plan: each one re-homes onto a
-		// matching feature on the new plan, or is dropped when none fits.
 		const existingRolloversConfig = currentCustomerProduct
 			? { fromCustomerProduct: currentCustomerProduct }
 			: undefined;
@@ -129,8 +122,6 @@ const computeStartingNowProductContexts = ({
 			existingRolloversConfig,
 		});
 
-		// A following phase ends this one — same shape createSchedule produces.
-		// Skipped when there is none, so a canceling sub keeps its Stripe end date.
 		if (endsAt !== null) {
 			applyScheduleTimingToCustomerProductPlan({
 				result: { insertCustomerProduct: insertedCustomerProduct },
@@ -163,7 +154,6 @@ const computeStartingNowProductContexts = ({
 	};
 };
 
-/** The immediate phase's plans, each ending where the next phase starts. */
 export const computeSyncImmediatePhase = ({
 	ctx,
 	syncContext,
@@ -182,7 +172,6 @@ export const computeSyncImmediatePhase = ({
 	});
 };
 
-/** Unscheduled plans start now and run across every phase. */
 export const computeSyncUnscheduledPlans = ({
 	ctx,
 	syncContext,

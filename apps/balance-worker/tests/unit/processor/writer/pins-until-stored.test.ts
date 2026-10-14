@@ -47,7 +47,6 @@ const decideTrack = ({
 	};
 };
 
-/** A writer over a store with nothing resident and a map so small that reading one more subject evicts the last unpinned one. */
 const createWriter = ({
 	mode = "write",
 }: {
@@ -141,7 +140,6 @@ describe("a subject's rows stay resident until the store holds its record", () =
 		await first.waitForCommit();
 		writer.adopt({ state: createState({ identity: other, balance: 1 }) });
 
-		// What a cold load would see now: Postgres without t1. It only happens if the rows were dropped.
 		if (!writer.readFreshestState({ identity }))
 			writer.adopt({ state: createState({ identity, balance: 100 }) });
 		const second = track("t2");
@@ -165,7 +163,6 @@ describe("an evict while the customer's write is unapplied", () => {
 		const evicted = writer.evict({ customerKey });
 
 		expect(writer.readFreshestState({ identity })).toBeNull();
-		// The next command finds no rows to decide on; the processor would load them afresh.
 		expect(() => track("t2")).toThrow("Expected resident state");
 		held.resolve();
 		await evicted;
@@ -190,7 +187,6 @@ describe("an evict while the customer's write is unapplied", () => {
 		held.resolve();
 		await eviction;
 		expect(writer.waitForEvicted({ customerKey })).toBeNull();
-		// What a cold load reads now: Postgres holding t1 and whatever the evicting writer changed.
 		writer.adopt({ state: createState({ identity, balance: 50 }) });
 		expect(
 			writer.readFreshestState({ identity })?.customerEntitlements[0]?.balance,

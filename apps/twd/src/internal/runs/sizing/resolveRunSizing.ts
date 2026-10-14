@@ -19,7 +19,6 @@ import {
 } from "./planRunSizing/sizingConstants.ts";
 import { MAIN_SHARD } from "./types/sizingShard.ts";
 
-/** What one worker may use: its Stripe allowance (unchanged limiter budget) and its sandbox size. */
 const workerLimits = ({ usableKeys }: { usableKeys: number }) => {
 	const budget =
 		usableKeys > 0
@@ -44,7 +43,6 @@ const workerLimits = ({ usableKeys }: { usableKeys: number }) => {
 	};
 };
 
-/** Partitions the run like the swarm will, loads profiles and org-mutation flags, and plans its size. */
 export const resolveRunSizing = async ({
 	ctx,
 	run,

@@ -7,9 +7,6 @@ const LOCAL_MCP_SERVER_URL = "http://localhost:3099";
 const PRODUCTION_MCP_SERVER_URL = "https://mcp.useautumn.com";
 const PRODUCTION_CHAT_SERVER_URL = "https://chat.useautumn.com";
 
-// Reading these here rather than through @autumn/env is deliberate: the typed
-// env throws for the whole process on a bad value, and an MCP-only override is
-// not worth failing every other service's boot over.
 const getServerUrl = ({
 	configured,
 	productionUrl,
@@ -23,8 +20,6 @@ const getServerUrl = ({
 		: LOCAL_MCP_SERVER_URL;
 };
 
-// A malformed entry is dropped rather than fatal, so it has to be visible; the
-// raw value is the identity, so a stable misconfiguration warns once.
 const warnedResourceUrls = new Set<string>();
 
 const parseMcpResourceUrl = (rawUrl: string) => {
@@ -72,20 +67,10 @@ export const getMcpOAuthResourceUrls = (): string[] => {
 	];
 };
 
-/** Every resource identifier this authorization server will stamp on a grant. */
 export const getOAuthValidAudiences = (): string[] => [
 	...new Set([getAutumnEnv().AUTUMN_API_URL, ...getMcpOAuthResourceUrls()]),
 ];
 
-/**
- * Whether a grant's stamped audience is one this deployment serves at all.
- *
- * Deliberately wider than a single resource identifier: an MCP tool call reaches
- * the api carrying the client's own token, which is stamped for the `/mcp`
- * endpoint the client authorized against, never for the api origin. Narrowing
- * this to the api's own identifier would 401 every MCP tool call, so the check
- * rejects only audiences no Autumn resource server fronts.
- */
 export const isServedOAuthAudience = ({
 	grantResource,
 }: {

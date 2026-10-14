@@ -38,7 +38,6 @@ export const finalizeUpdateSubscriptionPooledBalancePlan = ({
 		});
 	}
 
-	// Quantity updates already schedule their pools in computeUpdateQuantityPlan.
 	if (
 		billingContext.intent === UpdateSubscriptionIntent.None &&
 		typeof billingContext.requestedBillingCycleAnchor === "number"
@@ -46,8 +45,6 @@ export const finalizeUpdateSubscriptionPooledBalancePlan = ({
 		return computeUpdateQuantityScheduledAnchorPlan({ plan, billingContext });
 	}
 
-	// Keyed on plan contents: any quantity update that moves license pool
-	// counters re-snapshots the same parent customer product in place.
 	const movesLicensePools = (plan.customerLicenseUpdates?.length ?? 0) > 0;
 	const transitionsImmediately =
 		movesLicensePools ||
@@ -79,7 +76,6 @@ export const finalizeUpdateSubscriptionPooledBalancePlan = ({
 	const { pooledBalancePlan } = computePooledBalanceTransitionPlan({
 		ctx,
 		fullCustomer: billingContext.fullCustomer,
-		// Quantity update keeps the same parent CP; only license counters change.
 		outgoingCustomerProducts: movesLicensePools
 			? []
 			: [billingContext.customerProduct],

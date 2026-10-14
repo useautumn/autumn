@@ -38,8 +38,6 @@ const candidateProductIdOf = (price: Stripe.Price): string | undefined => {
 	return stripeRefToId(product);
 };
 
-/** Items id-matching or tagged to a live cus price belong to id/metadata
- * matching — shape and totals tiers only consider the rest. */
 const isMatchableByShape = ({
 	candidate,
 	isKnownPriceId,
@@ -60,8 +58,6 @@ const isMatchableByShape = ({
 	return true;
 };
 
-/** All unclaimed items shape-matching a fixed price — a sub can bill one
- * logical fixed price across several items (the stored id + legacy ids). */
 export const findFixedShapeSiblingIndexes = ({
 	price,
 	product,
@@ -76,8 +72,6 @@ export const findFixedShapeSiblingIndexes = ({
 	isValidCusPriceId: (cusPriceId: string) => boolean;
 }): number[] => {
 	if (!isFixedPrice(price)) return [];
-	// Quantity-splitting stays same-product — a same-priced item from another
-	// product is a separate finding, not a missing unit of this one.
 	const productStripeIds = new Set(productToStripeIds({ product }));
 
 	return candidates
@@ -151,8 +145,6 @@ const prepaidShapeMatches = ({
 	if (!candidatePrice.active) return false;
 	const currency = candidatePrice.currency;
 
-	// Sub/phase item prices never carry `tiers` unexpanded — only per-unit
-	// shapes (V2 allowance-inclusive or V1 pack form) are comparable.
 	const expectedShapes: StripePriceShape[] = [];
 	const v2Shape = entitlement
 		? autumnPrepaidPriceToStripePriceShape({
@@ -179,11 +171,6 @@ const prepaidShapeMatches = ({
 	);
 };
 
-/**
- * Structure-agnostic prepaid match: the Stripe price's internals (tiers,
- * per-unit vs flat) are an implementation detail — match the expected total
- * per interval, computed with the same tier math the inline renderer uses.
- */
 export const findPrepaidTotalsIndex = ({
 	cusEnt,
 	org,
@@ -212,11 +199,6 @@ export const findPrepaidTotalsIndex = ({
 	});
 };
 
-/**
- * Totals-based match for an inline-rendered id-less price: a licensed item on
- * the same cycle and currency whose quantity × unit amount equals the inline
- * total. Only untagged / stale-tagged candidates; exactly-one semantics.
- */
 export const findInlineTotalsIndex = ({
 	inlinePrice,
 	expectedQuantity,
@@ -267,12 +249,6 @@ export const findInlineTotalsIndex = ({
 	return matches.length === 1 ? matches[0]?.index : undefined;
 };
 
-/**
- * Tier-3 match for a stored expected item whose Stripe price id has drifted
- * (e.g. imported orgs whose subs bill their own historical prices): a
- * same-shape licensed item under one of the plan's Stripe product ids,
- * primary included. Claims a candidate only when exactly one matches.
- */
 export const findShapeFallbackIndex = ({
 	price,
 	product,
@@ -287,9 +263,7 @@ export const findShapeFallbackIndex = ({
 	entitlement?: EntitlementWithFeature;
 	org: Organization;
 	candidates: ShapeFallbackCandidate[];
-	/** Stripe price ids Autumn already resolves by id — id matching owns them. */
 	isKnownPriceId: (priceId: string) => boolean;
-	/** Metadata tags pointing at live cus prices — tier-1 metadata matching owns them. */
 	isValidCusPriceId: (cusPriceId: string) => boolean;
 }): number | undefined => {
 	const fixed = isFixedPrice(price);
@@ -299,7 +273,6 @@ export const findShapeFallbackIndex = ({
 	if (!fixed && !prepaidConfig) return undefined;
 
 	const productStripeIds = new Set(productToStripeIds({ product }));
-	// Feature prices live on their own Stripe product, not the plan's.
 	if (prepaidConfig?.stripe_product_id) {
 		productStripeIds.add(prepaidConfig.stripe_product_id);
 	}
@@ -313,8 +286,6 @@ export const findShapeFallbackIndex = ({
 		const stripeProductId = candidateProductIdOf(candidatePrice);
 		if (!stripeProductId) return false;
 
-		// Amount + interval identify a base price — the item can live on a
-		// legacy Stripe product Autumn never linked.
 		if (fixed) {
 			return stripePriceMatchesFixedPrice({
 				stripePrice: candidatePrice,

@@ -1,13 +1,3 @@
-/**
- * catalogV2.update drafts stamp included on nested license remove filters
- * (licenseEffectiveMigratableCustomize).
- *
- * Contract:
- *   propagate child 100→200 → upsert_licenses remove included: 100
- *   two parents, same from-grant → one $or op still carries included: 100
- *   declared overlay 100→200 → nested included: 100
- */
-
 import { test } from "bun:test";
 import { ResetInterval } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";

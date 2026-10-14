@@ -7,21 +7,6 @@ import {
 	getActiveSlotConfig,
 } from "./blueGreenSlotStore.js";
 
-/**
- * True iff this process should run worker/cron work right now.
- *
- * Fail-open everywhere except an explicit serviceArn mismatch:
- *   - **Non-AWS host** (no ECS metadata) → true. Lets the same code run on
- *     Railway / local / any non-ECS host.
- *   - **ECS metadata didn't surface a service ARN** (rare) → true.
- *   - **No `flightcontrolBlueArn` in S3 record** → true.
- *   - **`flightcontrolBlueArn === identity.serviceArn`** → true.
- *   - **Otherwise** → false (the only stop case).
- *
- * Service ARN is the sole gate signal. It's stable across deploys (unlike
- * task definition revisions or image SHAs) — a fresh deploy to a service
- * doesn't desync the gate.
- */
 export const isActiveSlot = ({
 	serviceName: bgServiceName,
 }: {
@@ -38,7 +23,6 @@ export const isActiveSlot = ({
 	return identity.serviceArn === config.flightcontrolBlueArn;
 };
 
-/** Same logic as isActiveSlot, but returns a structured reason for diagnostics. */
 export const describeSlotGate = ({
 	serviceName: bgServiceName,
 }: {

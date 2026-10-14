@@ -10,8 +10,6 @@ export function createWorkerErrorHandler(): ErrorHandler<BalanceWorkerHttpEnv> {
 	) {
 		const { status, error } = workerErrorOf({ cause });
 		const requestLog = context.get("requestLog");
-		// Overload arrives in floods, and serialising a stack per rejection cost more
-		// CPU than accepting the request did, collapsing throughput on staging.
 		if (error.code !== "OVERLOADED") requestLog.error = cause;
 		requestLog.errorCode = error.code;
 		return context.json({ error } satisfies WorkerErrorResponse, status);

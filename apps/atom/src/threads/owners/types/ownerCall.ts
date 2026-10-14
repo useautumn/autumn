@@ -9,22 +9,18 @@ import type {
 	SubjectDigest,
 } from "../../../state/repos/subjectStates.js";
 
-/** A check as it crosses threads: plain data, with the API version by name. */
 export type CheckRequestOnWire = Omit<CheckRequest, "apiVersion"> & {
 	apiVersion: ApiVersion | null;
 };
 
-/** The whole shared catalog, as Autumn sent it. */
 export type CatalogUpdate = { rows: CatalogRow[]; readAt: number };
 
-/** A call to the thread that owns a customer's slot, in the folder `atomId` names (null: a deployment's one folder). */
 export type OwnerCallBody = { atomId: string | null } & (
 	| { type: "check"; request: CheckRequestOnWire }
 	| { type: "setSubject"; customerId: string; body: string }
 	| { type: "deleteSubject"; customerId: string; body: string }
 	| { type: "setCatalog"; catalog: CatalogUpdate }
 	| { type: "installCatalog"; catalog: CatalogUpdate }
-	/** The slot's subjects written at or after `after`, past `cursor`, for a replica copying what it missed. */
 	| {
 			type: "listSince";
 			slot: number;
@@ -46,13 +42,10 @@ export type OwnerCallBody = { atomId: string | null } & (
 	  }
 );
 
-/** A digest across threads or replicas: its one bigint as decimal text. */
 export type SubjectDigestOnWire = Omit<SubjectDigest, "logOffset"> & {
 	logOffset: string;
 };
 
-/** A written subject as it crosses threads or replicas: its bigints as decimal text. */
-/** Each kind of row as it crosses, its 64-bit versions as strings. */
 type SubjectOnWire<Row> = Row extends AppliedSubject["subject"]
 	? Omit<Row, "logOffset" | "customerVersion"> & {
 			logOffset: string;
@@ -65,13 +58,8 @@ export type AppliedSubjectOnWire = {
 	appliedAt: number;
 };
 
-/**
- * Numbered by the caller, which matches the reply to it. Crosses as JSON text, since a structured clone of parsed data costs
- * about 3× as much; a subject push crosses as an object, whose one large field is already text and so clones as a copy.
- */
 export type OwnerCall = OwnerCallBody & { id: number };
 
-/** The owner's answer (a check's is its JSON and verdict); one it cannot answer carries the reason, so the caller's thread forwards it. */
 export type OwnerReply =
 	| {
 			id: number;
@@ -86,9 +74,7 @@ export type OwnerReply =
 			id: number;
 			ok: false;
 			cannotAnswer: ForwardReason | null;
-			/** The push can never apply: thrown again on the caller's thread as InvalidPushError. */
 			invalid: boolean;
-			/** The owner is still catching up: thrown again as OwnerUnavailableError, a 503 the caller's API answers. */
 			unavailable: boolean;
 			message: string;
 	  };

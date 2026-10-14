@@ -1,12 +1,3 @@
-/**
- * Contract for credit-system dimensions on a rate-card row:
- * - a row keeps its own rate and optionally carries named `dimensions`
- *   (match → rate) and `multipliers` (match → factor / add);
- * - dimension entries are full rates, flat or graduated, like the row;
- * - entry names become usage-attribution keys, so they are bounded and
- *   cannot contain the key separator.
- */
-
 import { describe, expect, test } from "bun:test";
 import {
 	buildUsageAttributionKey,

@@ -6,7 +6,6 @@ import { useAttachFormContext } from "../context/AttachFormProvider";
 
 export type LicenseLossEntity = { id: string; label: string };
 
-/** Returns affected entities for complete license removal only. */
 export function useLicenseLossEntities(): LicenseLossEntity[] {
 	const { customerId, product, formValues, previewDiff } =
 		useAttachFormContext();

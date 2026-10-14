@@ -7,7 +7,6 @@ import {
 import { sql } from "drizzle-orm";
 import { initDrizzle } from "@/db/initDrizzle.js";
 
-/** The list row with a short clock, so the test proves the mechanism without waiting 10 s. */
 const QUERY_TIMEOUT_MS = 500;
 
 describe("the list pool under a read that never finishes", () => {

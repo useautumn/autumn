@@ -30,8 +30,6 @@ afterAll(async () => {
 	await webhook?.cleanup();
 });
 
-// ── B2 + B3: filtered cap, filter echoed, non-matching tracks ignored,
-// numeric vs string filter values canonicalise ──────────────────────────────
 test(`${chalk.yellowBright("ul-alert2: filtered cap alert reacts only to matching tracks and canonicalises filter values")}`, async () => {
 	const customerId = "ul-alert-filter-1";
 	await setupCustomer({ customerId, planId: "ul-alert-filter" });

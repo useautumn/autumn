@@ -16,7 +16,6 @@ describe("api calls APL", () => {
 		const positions = pathNormalizationSteps.map((step) =>
 			expression.indexOf(step.pattern.replace(/\\/g, "\\\\")),
 		);
-		// later steps wrap earlier ones, so they appear earlier in the string
 		expect([...positions].reverse()).toEqual(
 			[...positions].reverse().sort((a, b) => a - b),
 		);

@@ -3,9 +3,6 @@ import Spinner from "ink-spinner";
 import { AppEnv } from "../../../../lib/env/detect.js";
 import type { LoadingStateProps } from "../types.js";
 
-/**
- * Loading state with spinner
- */
 export function LoadingState({ environment }: LoadingStateProps) {
 	const envLabel = environment === AppEnv.Sandbox ? "sandbox" : "live";
 

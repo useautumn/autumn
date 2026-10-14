@@ -1,5 +1,3 @@
-/** set_plans re-lists Pro while its renewal payment failed (past_due): Stripe still applies the change. */
-
 import { pastDueState } from "../utils/relistStates";
 import { defineRelistSuite } from "../utils/relistSuite";
 

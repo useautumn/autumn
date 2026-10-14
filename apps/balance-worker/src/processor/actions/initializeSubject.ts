@@ -29,7 +29,6 @@ const alreadyInitialized = ({
 	return state.entity?.id === entityId;
 };
 
-/** Runs inside the writer's critical section: no await, no I/O. */
 const decideInitialize = ({
 	state,
 	request,
@@ -47,7 +46,6 @@ const decideInitialize = ({
 		};
 	}
 	const { command } = request;
-	// An entity joins its customer's log, so the customer must already be there.
 	if (command.identity.entityId && !state) {
 		throw new PartitionProcessorStateNotFoundError({
 			customerKey: meteringIdentityToPartitionKey({
@@ -67,7 +65,6 @@ const decideInitialize = ({
 	};
 };
 
-/** The baseline for a subject, whoever supplied the rows: the server's initialize request or the worker's own hydration. */
 export const initializeSubject = async ({
 	ctx,
 	request,

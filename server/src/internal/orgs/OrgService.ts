@@ -92,7 +92,6 @@ export class OrgService {
 		return results;
 	}
 
-	// Drizzle get
 	static async get({ db, orgId }: { db: DrizzleCli; orgId: string }) {
 		const result = await db.query.organizations.findFirst({
 			where: eq(organizations.id, orgId),
@@ -299,9 +298,6 @@ export class OrgService {
 		await db.insert(organizations).values(org);
 	}
 
-	/**
-	 * Create a new organization
-	 */
 	static async create({
 		db,
 		id,
@@ -472,7 +468,6 @@ export class OrgService {
 		return result as Organization;
 	}
 
-	/** OAuth rows affected by a deauthorization; managed rows belong to another platform. */
 	static async listByDeauthorizedAccount({
 		db,
 		accountId,
@@ -493,7 +488,6 @@ export class OrgService {
 		}));
 	}
 
-	/** Binds an OAuth account, clearing any managed link or pending revocation for that env. */
 	static async updateStripeConnect({
 		db,
 		orgId,
@@ -561,22 +555,18 @@ export class OrgService {
 
 	static async listPreviewOrgsForDeletion({ db }: { db: DrizzleCli }) {
 		const PREVIEW_ORG_PATTERN = "preview|%";
-		// 1. Find all preview orgs with no memberships
 		const orgs = await db
 			.select()
 			.from(organizations)
 			.where(
 				and(
-					// SAFETY: Only match preview org slug pattern
 					like(organizations.slug, PREVIEW_ORG_PATTERN),
-					// SAFETY: Only delete orgs with no members
 					notExists(
 						db
 							.select({ id: member.id })
 							.from(member)
 							.where(eq(member.organizationId, organizations.id)),
 					),
-					// SAFETY: Only delete preview organizations older than 1 day
 					lt(organizations.createdAt, addDays(new Date(), -1)),
 					isNotNull(organizations.created_by),
 				),

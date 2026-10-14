@@ -5,7 +5,6 @@ const isRestoringPlan = ({ upsert }: { upsert: UpsertProductPlan }): boolean =>
 	upsert.row.currentFullProduct?.archived === true &&
 	upsert.row.nextFullProduct.archived === false;
 
-/** A restored plan cannot keep items on a feature this push still leaves archived. */
 export const handleRestoreArchivedFeatureErrors = ({
 	upsert,
 	projectedFeatures,

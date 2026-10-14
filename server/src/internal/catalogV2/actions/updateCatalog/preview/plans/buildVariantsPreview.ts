@@ -51,7 +51,6 @@ const findVariantUpsert = ({
 		(upsert) => upsert.row.planId === planId && upsert.row.version === version,
 	);
 
-/** Mints land at max+1, which is not active+1 once a plan has an older active row. */
 const findVariantMintUpsert = ({
 	upsertProducts,
 	planId,
@@ -89,8 +88,6 @@ const resolveVariantAction = ({
 		return version === previewVersion;
 	};
 	const anchorInternalIds = editedBaseInternalIds({ upsert: base });
-	// Same rule as compute: every declared entry that resolves here is a target,
-	// whether it carries content, an archive flag, or only the link itself.
 	if (
 		base.declaredVariants?.some((declared) => {
 			if (declared.variant_plan_id !== variantPlanId) return false;
@@ -121,7 +118,6 @@ const resolveVariantAction = ({
 	return "unchanged";
 };
 
-/** The base row a variant points at, in the shape a license link reports its target. */
 type VariantBaseTarget = {
 	base_variant_id: string;
 	base_version: number;
@@ -156,11 +152,6 @@ const sameBaseTarget = (
 	left?.base_variant_id === right?.base_variant_id &&
 	left?.base_version === right?.base_version;
 
-/**
- * Content diff plus the link's own scalars: a moved pointer rides
- * `previous_attributes.base_*`, the way a license link's moved version
- * rides its `previous_attributes.version` / `version_slug`.
- */
 const variantPlanChange = ({
 	variantUpsert,
 	productStatesContext,
@@ -270,7 +261,6 @@ const variantVersioning = ({
 	};
 };
 
-/** Other rows of this variant plan anchored to the same base row. */
 const siblingVersionsForVariant = ({
 	variant,
 	anchoredRows,
@@ -337,7 +327,6 @@ const siblingVersionsForVariant = ({
 		})
 		.sort(byVersionAscending);
 
-/** Where a variant row points after this update — its upsert's next pointer, else its current one. */
 const nextBaseInternalIdFor = ({
 	row,
 	upsertProducts,
@@ -356,7 +345,6 @@ const nextBaseInternalIdFor = ({
 	);
 };
 
-/** Anchored rows per variant plan: [representative, ...other anchored rows]. */
 const anchoredRowsByVariantPlan = ({
 	upsert,
 	upsertProducts,
@@ -367,8 +355,6 @@ const anchoredRowsByVariantPlan = ({
 	productStatesContext: ProductStatesContext;
 }): Map<string, FullProduct[]> => {
 	const anchors = editedBaseInternalIds({ upsert });
-	// Anchor on the post-update pointer: a row this update moves here belongs
-	// here, and one it moves away no longer does.
 	const anchored = Object.values(productStatesContext.versionsByPlanId)
 		.flat()
 		.filter((row) => {
@@ -399,7 +385,6 @@ const anchoredRowsByVariantPlan = ({
 	return byPlan;
 };
 
-/** Declared variants that do not exist yet: `variant_link` creates anchored to this base row. */
 const variantCreatesForBase = ({
 	directUpsert,
 	upsertProducts,
@@ -419,7 +404,6 @@ const variantCreatesForBase = ({
 	});
 };
 
-/** A variant the config declares that the catalog does not have yet. */
 const variantCreatePreview = ({
 	createUpsert,
 	previewContext,
@@ -459,7 +443,6 @@ const variantCreatePreview = ({
 	};
 };
 
-/** Variant rows anchored to THIS base row. Empty → omit the lane. */
 export const buildVariantsPreview = ({
 	directUpsert,
 	upsertProducts,
@@ -564,7 +547,6 @@ export const buildVariantsPreview = ({
 				preview,
 				current: editedCurrent,
 				next: editedNext,
-				// Pre-edit variant. Follow's next already applied the diff.
 				relative: variant,
 			});
 		},

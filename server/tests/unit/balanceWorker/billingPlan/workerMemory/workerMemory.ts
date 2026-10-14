@@ -35,11 +35,9 @@ export const customerIdentity: MeteringIdentity = {
 
 type OwnedRows = {
 	customerProducts?: FullCusProduct[];
-	/** Grants outside any product. */
 	looseGrants?: FullCustomerEntitlement[];
 };
 
-/** An owner's rows as Postgres returns them: grants with their rollovers split into their own table. */
 const ownedRowsOf = ({
 	customerProducts = [],
 	looseGrants = [],
@@ -64,7 +62,6 @@ const ownedRowsOf = ({
 	};
 };
 
-/** The customer's part as hydration builds it. */
 export const customerMemory = ({
 	customer = newCustomer,
 	...rows
@@ -76,7 +73,6 @@ export const customerMemory = ({
 		entity: null,
 	});
 
-/** An entity's part as hydration builds it: its own rows, under its own identity. */
 export const entityMemory = ({
 	entity,
 	customer = newCustomer,
@@ -96,7 +92,6 @@ export const entityMemory = ({
 	return { state, entity: state.entity };
 };
 
-/** The command exactly as the server sends it, or null when the plan writes nothing the worker holds. */
 const commandSentFor = async ({
 	autumnBillingPlan,
 }: {
@@ -128,9 +123,7 @@ export type WorkerMemory = {
 
 export type AppliedWorkerMemory = {
 	customer: SubjectState;
-	/** Every entity the worker holds after the plan, by external id. */
 	entities: Map<string, SubjectState>;
-	/** Null when the plan wrote nothing the worker holds, so nothing was sent. */
 	mutation: SubjectStateMutation | null;
 };
 
@@ -139,7 +132,6 @@ const entityIdOf = (state: SubjectState): string => {
 	return state.identity.entityId;
 };
 
-/** Sends the plan the way the server does and applies it the way the worker does, reading only the entities the command names. */
 export const applyPlanToWorkerMemory = async ({
 	autumnBillingPlan,
 	memory,

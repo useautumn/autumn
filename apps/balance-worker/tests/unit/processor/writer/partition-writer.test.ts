@@ -250,7 +250,6 @@ const encodedRecordBytes = (record: MeteringRecord): number =>
 const batchKeys = (batch: MeteringRecord[] | undefined) =>
 	batch?.map((mutation) => mutation.id);
 
-/** Two turns: a command resolves its subject before it reaches the writer, and the writer commits on the turn after. */
 const waitForBatch = async (): Promise<void> => {
 	await new Promise<void>((resolve) => setImmediate(resolve));
 	await new Promise<void>((resolve) => setImmediate(resolve));
@@ -763,11 +762,6 @@ describe("partition writer", () => {
 		}
 	});
 
-	/** The log is the record; Postgres is a projection of it. Once Kafka has the
-	 *  batch the outcome is durable, so the caller can be answered then instead of
-	 *  waiting out a store apply that adds nothing to the reply. The balance the
-	 *  caller reads was computed at decide time, and the apply echoes back the very
-	 *  mutation it was handed, so nothing in the response comes from the store. */
 	test("settles the caller once Kafka has the batch, without waiting for the store", async () => {
 		const fixture = createFixture();
 		try {
@@ -843,7 +837,6 @@ describe("partition writer", () => {
 				durability: "store",
 				mutate: ({ state }) => decideForTest({ state, command: structural }),
 			});
-			// Asks for "log", but sits on rows the store has not taken yet.
 			const meteredWrite = writer.decide({
 				command: metered,
 				mutate: ({ state }) => decideForTest({ state, command: metered }),
@@ -866,11 +859,6 @@ describe("partition writer", () => {
 		}
 	});
 
-	/** The Postgres-backed store answers null to every read on purpose: Postgres
-	 *  holds the baseline, so there is no receipt table to consult. A position
-	 *  the committer has already durably applied must therefore be accepted on
-	 *  the pending mutation alone, or the first re-applied record takes the
-	 *  partition terminal and, through the partition service, the whole worker. */
 	test("accepts an already-applied position on a store that keeps no receipts", async () => {
 		const fixture = createFixture();
 		try {
@@ -1424,7 +1412,6 @@ describe("partition writer", () => {
 			const later = (ms: number) =>
 				new Promise<void>((resolve) => setTimeout(resolve, ms));
 
-			// Quiet: one at a time, each committed alone and at once.
 			await writer.submitTrack({
 				command: createCommand({ commandId: "q_1" }),
 			});
@@ -1438,7 +1425,6 @@ describe("partition writer", () => {
 			]);
 			expect(appender.batches.map((batch) => batch.length)).toEqual([1, 1, 1]);
 
-			// Busy: two together mark the partition busy, so the next commit lingers and carries both later arrivals.
 			await Promise.all([
 				writer.submitTrack({ command: createCommand({ commandId: "b_1" }) }),
 				writer.submitTrack({ command: createCommand({ commandId: "b_2" }) }),
@@ -1533,9 +1519,6 @@ describe("partition writer", () => {
 		}
 	});
 
-	/** The store is a projection of the log, so the next batch can go to Kafka
-	 *  while the previous one is still being applied. Waiting for the apply capped
-	 *  a partition at batch / (commit + apply), about 1,100/s with a 75ms store. */
 	test("commits the next batch while the previous store apply is in flight", async () => {
 		const fixture = createFixture({
 			identities: [firstIdentity, secondIdentity],
@@ -1593,8 +1576,6 @@ describe("partition writer", () => {
 		}
 	});
 
-	/** A store flush costs about the same for one row as for hundreds, so batches
-	 *  that pile up behind a slow flush go to the store together, still in order. */
 	test("batches waiting behind a flush are applied together in one call", async () => {
 		const fixture = createFixture({
 			identities: [firstIdentity, secondIdentity],
@@ -1738,7 +1719,6 @@ describe("partition writer", () => {
 			gate.resolve();
 			await waitForBatch();
 			await waitForBatch();
-			// Never applied out of order: the second batch waits for the first, then recovery.
 			expect(call).toBe(1);
 			await expect(
 				writer.submitTrack({ command: createCommand({ commandId: "cmd_3" }) }),
@@ -1749,8 +1729,6 @@ describe("partition writer", () => {
 		}
 	});
 
-	/** A partition handed to another worker must not keep writing the store after
-	 *  it has stopped: its drain waits for applies still queued behind the log. */
 	test("draining waits for committed batches to reach the store", async () => {
 		const fixture = createFixture();
 		const gate = Promise.withResolvers<void>();
@@ -1929,9 +1907,6 @@ describe("partition writer", () => {
 		}
 	});
 
-	/** Kafka refuses a batch over the topic's max.message.bytes, and on staging
-	 *  that sent a partition into recovery and took its worker down. A full batch
-	 *  of large records must split instead. */
 	test("splits a batch by its encoded size, not only its record count", async () => {
 		const measured = createFixture({
 			identities: [firstIdentity, secondIdentity],
@@ -2058,9 +2033,6 @@ describe("partition writer", () => {
 		}
 	});
 
-	/** Kafka took the batch, so the first caller already has its answer and keeps
-	 *  it; the store refusing afterwards is the partition's problem, not that
-	 *  caller's. Everything queued behind it still meets recovery. */
 	test("stops after a committed batch cannot be applied locally", async () => {
 		const fixture = createFixture();
 		try {
@@ -2115,7 +2087,6 @@ describe("partition writer", () => {
 				limits: defaultLimits,
 			});
 
-			// A deducting check nothing funds is refused; a plain track would apply as a no-op.
 			await expect(
 				writer.submitTrack({
 					command: {
@@ -2361,12 +2332,10 @@ describe("partition writer", () => {
 				status: "fulfilled",
 				value: { result: { status: "initialized", duplicate: true } },
 			});
-			// The pending projection already exists, so a competing baseline never appends.
 			expect(competing).toMatchObject({
 				status: "fulfilled",
 				value: { result: { status: "already_initialized" } },
 			});
-			// Same commandId with a different baseline is a caller bug.
 			expect(conflict).toMatchObject({
 				status: "rejected",
 				reason: expect.any(PartitionWriterCommandConflictError),
@@ -2409,7 +2378,6 @@ describe("partition writer", () => {
 			).toMatchObject({ kind: "applied", nextOffset: 1n });
 
 			appender.resolve();
-			// The submitter wrote it; who applied the position first does not change that.
 			await expect(decisionPromise).resolves.toMatchObject({
 				result: { status: "initialized" },
 				state: { revision: 1 },
@@ -2452,7 +2420,6 @@ describe("partition writer", () => {
 				settledResolved = true;
 			});
 			await waitForBatch();
-			// Enqueued after the wait began: must not extend it.
 			const second = writer.decide(submission("cmd_2"));
 
 			expect(settledResolved).toBe(false);
@@ -2501,7 +2468,6 @@ describe("partition writer", () => {
 				command,
 				mutate: ({ state }) => decideForTest({ state, command }),
 			});
-			// Kafka has the track; the store has not taken it yet.
 			await write.waitForCommit();
 
 			let evicted = false;
@@ -2554,7 +2520,6 @@ describe("partition writer", () => {
 				},
 				config: { topic, partition, writerLimits: defaultLimits },
 			});
-			// Answered on the log; the store has not taken it yet.
 			await processor.track({
 				command: createCommand({ commandId: "before_flush" }),
 			});
@@ -2582,7 +2547,6 @@ describe("partition writer", () => {
 			expect(
 				readBalance({ store: fixture.store, identity: firstIdentity }),
 			).toMatchObject({ balance: 5 });
-			// The copy is still resident: a read answers from memory without a load.
 			expect(
 				processor.readSubjectState({
 					command: {
@@ -2618,7 +2582,6 @@ test("a record is measured by the appender once and sent as the same object", as
 			partition,
 			stateStore: fixture.store,
 			appender,
-			// Room for one measured record per batch, so the appender's size is what batches by.
 			limits: { ...defaultLimits, maxBatchBytes: 150_000 },
 		});
 		await Promise.all(
@@ -2629,7 +2592,6 @@ test("a record is measured by the appender once and sent as the same object", as
 		const sent = appender.batches.flat();
 		expect(measured).toHaveLength(3);
 		expect(sent).toHaveLength(3);
-		// Identity, not equality: the publisher's encoding is keyed by the object.
 		for (const record of sent) expect(measured).toContain(record);
 		expect(appender.batches.map((batch) => batch.length)).toEqual([1, 1, 1]);
 	} finally {

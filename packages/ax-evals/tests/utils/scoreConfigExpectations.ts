@@ -5,11 +5,6 @@ import { inspectWorkspaceConfig } from "../../src/grading/inspectConfig.ts";
 import type { AxRunOutput } from "../../src/types/axRunOutput.ts";
 import { createCaseWorkspace } from "../../src/workspace/createCaseWorkspace.ts";
 
-/**
- * Runs a case's config expectations against a literal config file (or an
- * empty workspace when none is given) — no agent involved. Returns
- * { expectationName: score } for direct toEqual assertions.
- */
 export const scoreConfigExpectations = async ({
 	axCase,
 	configFile,
@@ -41,9 +36,6 @@ export const scoreConfigExpectations = async ({
 	}
 };
 
-// No skillId: config-kind expectations never read it; only conduct ones do.
-// Every checkpoint sees the same config, so afterTurn expectations are provable
-// with a single golden (subset matching makes the full golden pass early turns).
 const agentlessOutput = (config: AxRunOutput["config"]): AxRunOutput => ({
 	arm: "with",
 	config,

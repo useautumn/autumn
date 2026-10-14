@@ -12,8 +12,6 @@ import {
 	type WriteExecutionOutcome,
 } from "../utils/writeExecutionResult.js";
 
-/** Runs one gated write and classifies the result — a throw is a terminal
- * `unknown` (never blindly retried against a billing API). */
 const runWrite = async ({
 	env,
 	token,
@@ -62,8 +60,6 @@ const executeWrites = async ({
 			executed.push({ outcome: { status: "skipped" }, write });
 			continue;
 		}
-		// The durable running marker splits "never started" from "outcome
-		// unknown" if the process dies mid-call.
 		await chatApprovalWritesRepo.setStatus({
 			db,
 			status: "running",
@@ -93,8 +89,6 @@ const stepOutcomes = (
 		toolName: write.tool_name,
 	}));
 
-/** Runs the approval's stored writes in order and finalizes the row — the
- * card carries the outcome; any session resume is narration only. */
 export const executeApprovalWrites = async ({
 	approval,
 	providerUserId,
@@ -155,7 +149,6 @@ export const executeApprovalWrites = async ({
 			writes: stepOutcomes(executed),
 		};
 	}
-	// The primary write's response carries the money facts the thread links to.
 	const primaryOutcome = executed[0]?.outcome;
 	return {
 		result:

@@ -1,7 +1,3 @@
-/**
- * catalogV2.update — a license child renamed in the same update that propagates
- * to its parent keeps the parent's link and the parent follows the new items.
- */
 import { expect, test } from "bun:test";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";

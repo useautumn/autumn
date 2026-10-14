@@ -1,10 +1,3 @@
-/**
- * Adding a license item that differs from an existing one only by
- * interval_count must reach the assignments, leaving the original in place.
- *
- * Red: only the 1-monthly row survives; the 3-monthly item never lands.
- * Green: each assignment carries both rows, one per interval_count.
- */
 import { expect, test } from "bun:test";
 import {
 	customerEntitlements,
@@ -66,7 +59,6 @@ test(`${chalk.yellowBright("batch-license-customize: an add differing only by in
 
 	expect(await readMessageRows()).toHaveLength(ASSIGNED_SEATS);
 
-	// A pure add: no remove_items, so nothing here should supersede the monthly item.
 	const { result } = await runChunkedMigration({
 		ctx,
 		migrationClient: autumnV2_2,

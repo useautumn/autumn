@@ -40,8 +40,6 @@ const usage = (
 		},
 	}) as ApiPlanItemV1;
 
-// Included balance entitlement (month reset, no price) — distinct match key
-// from the one-off price item below.
 const includedMonthly = (featureId: string, included: number): ApiPlanItemV1 =>
 	({
 		feature_id: featureId,
@@ -146,7 +144,6 @@ describe("detectVariantConflicts", () => {
 				add_items: [{ feature_id: "messages" }],
 				remove_items: [{ feature_id: "messages", interval: MONTH }],
 			} as DiffedCustomizePlanV1,
-			// variant matches the base it forked from → propagation just updates it
 			variantPlan: plan([usage("messages", MONTH, 1000)]),
 			features,
 		});
@@ -174,8 +171,6 @@ describe("detectVariantConflicts", () => {
 	});
 
 	test("priced non-consumable on a different interval is a different_interval conflict", () => {
-		// Propagation would append the $12/month item next to the variant's
-		// $100/year item — a silent duplicate — so it must be flagged.
 		const conflicts = detectVariantConflicts({
 			currentBasePlan: plan([prepaid("seats", 10, BillingInterval.Month)]),
 			editedBasePlan: plan([prepaid("seats", 12, BillingInterval.Month)]),
@@ -219,7 +214,6 @@ describe("detectVariantConflicts", () => {
 				add_items: [{ feature_id: "messages" }],
 				remove_items: [{ feature_id: "messages", interval: MONTH }],
 			} as DiffedCustomizePlanV1,
-			// variant diverged from the base (5000 vs base's 1000)
 			variantPlan: plan([usage("messages", MONTH, 5000)]),
 			features,
 		});
@@ -246,8 +240,6 @@ describe("detectVariantConflicts", () => {
 				add_items: [{ feature_id: "messages" }],
 				remove_items: [{ feature_id: "messages" }],
 			} as DiffedCustomizePlanV1,
-			// variant customized its included amount (5003) but tracks the one-off
-			// price ($1) the edit touches — propagation leaves the included alone.
 			variantPlan: plan([
 				includedMonthly("messages", 5003),
 				oneOffPrepaid("messages", 1),

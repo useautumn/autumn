@@ -6,10 +6,6 @@ import type { WorkerFullSubject } from "../../../models/subject/workerFullSubjec
 import { fullSubjectToUpdateBalanceRows } from "../fullSubjectToUpdateBalanceRows.js";
 import type { UpdateBalanceCommand } from "../types/updateBalanceCommand.js";
 
-/**
- * Legacy `updateIncludedGrantV2`: the first row's adjustment becomes the target less the rows' allowance, on its
- * entity's entry when the row is per entity. The balance stays, so usage moves. An increment, so it composes with the balance draw.
- */
 export const setIncludedGrant = ({
 	fullSubject,
 	command,

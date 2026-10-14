@@ -1,15 +1,3 @@
-/**
- * billing.update on an on_end: "revert" trial must stay Autumn-only, like attach.
- * The trial cusProduct shares the paused plan's Stripe subscription, so any Stripe
- * write lands on the customer's real paid subscription.
- *
- * Red (before):  extending the trial sets trial_end on the shared subscription
- *                (paid plan goes "trialing"); other updates push the trial plan's
- *                items onto it and drop the trial.
- * Green (after): the shared subscription is untouched and the revert trial keeps
- *                its trial window, on_trial_end and previous plan link.
- */
-
 import { test } from "bun:test";
 import { ms, type UpdateSubscriptionV1ParamsInput } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features";

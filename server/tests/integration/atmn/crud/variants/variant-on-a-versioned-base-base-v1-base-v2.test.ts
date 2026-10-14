@@ -1,9 +1,3 @@
-/**
- * atmn crud/variants — variant on a versioned base [base v1, base v2] → hangs off the stated version
- *
- * One line of plans/atmn-v3/07_tests.md. [a, b] is a matrix looped INSIDE this file.
- */
-
 import { expect, test } from "bun:test";
 import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 import {
@@ -62,8 +56,6 @@ for (const targetVersion of ["v1", "v2"] as const) {
 				});
 				const target = targetVersion === "v1" ? v1 : v2;
 
-				// The variant nests under whichever specific version row is
-				// addressed — the live row or a demoted one.
 				const variantEntry = `plan({
 			active: ${targetVersion === "v2"},
 			planId: "base",

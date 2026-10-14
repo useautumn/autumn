@@ -18,7 +18,6 @@ const idsOf = ({
 	table: CatalogKey["table"];
 }): string[] => keys.filter((key) => key.table === table).map((key) => key.id);
 
-/** Postgres hands the catalog back one array per table; the engine reads rows tagged with theirs. */
 export const catalogRowsEnvelopeToCatalogRows = ({
 	envelope,
 }: {
@@ -47,7 +46,6 @@ const fetchAndPut = async ({
 	identity: MeteringIdentity;
 	keys: CatalogKey[];
 }): Promise<CatalogRow[]> => {
-	// Stamped with the versions from before the read: an invalidation during it leaves these rows stale.
 	const versionOf = snapshotCatalogVersions({
 		scope,
 		orgId: identity.orgId,
@@ -69,8 +67,6 @@ const fetchAndPut = async ({
 	return rows;
 };
 
-/** Keys with a fetch already in flight join it, so a burst of misses on one customer costs one round trip.
- *  Returns the rows read for `keys`, which answer this call even if an invalidation has since made them stale. */
 export const loadCatalogRows = async ({
 	scope,
 	identity,

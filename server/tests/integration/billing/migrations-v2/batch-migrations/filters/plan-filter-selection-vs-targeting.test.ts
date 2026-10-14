@@ -1,21 +1,3 @@
-/**
- * Plan filters act at TWO levels, and both must be respected:
- *
- *   - `migration.filter.customer.plan` = SELECTION — which customers enter
- *     the run (claimed as items);
- *   - `operations[n].plan_filter` = TARGETING — which of a claimed customer's
- *     product rows the operation mutates.
- *
- * Contract under test (version axis; the custom axis lives in
- * batch-custom-filter.test.ts):
- *   - selection broad + targeting narrow (op version: 2): every pro holder is
- *     claimed, but ONLY v2 rows gain the item; v1-only holders are skipped
- *     and untouched;
- *   - selection narrow (filter version: 1) + targeting broad: only v1 holders
- *     are claimed and mutated; v2 holders never enter the run at all, even
- *     though the op would match their rows.
- */
-
 import { expect, test } from "bun:test";
 import {
 	type ApiCustomerV5,
@@ -78,8 +60,6 @@ const expectWorkflowsAdded = ({
 	});
 };
 
-// ── Contract: op plan_filter version narrows TARGETING within a broad
-// selection — claimed v1-only holders are skipped, never mutated. ──
 test.concurrent(
 	`${chalk.yellowBright("plan filters: broad customer filter + version-targeted operation touches only v2 rows")}`,
 	async () => {
@@ -97,8 +77,6 @@ test.concurrent(
 			actions: [s.billing.attach({ productId: plan.id })],
 		});
 
-		// v2 of the plan (extra boolean item), attached by the second customer;
-		// the first customer's row stays pinned to v1.
 		await autumnV1.products.update(plan.id, { items: [items.dashboard()] });
 		await autumnV2_2.billing.attach<AttachParamsV1Input>({
 			customer_id: v2HolderId,
@@ -115,7 +93,6 @@ test.concurrent(
 		});
 		expect(result?.lane).toBe("batch");
 
-		// Targeted v2 holder: claimed, mutated, succeeded.
 		expectWorkflowsAdded({
 			customer: await autumnV2_2.customers.get<ApiCustomerV5>(v2HolderId),
 			planId: plan.id,
@@ -129,8 +106,6 @@ test.concurrent(
 			status: MigrationItemRunStatus.Succeeded,
 		});
 
-		// v1-only holder: SELECTED by the broad filter, but no row matches the
-		// op's targeting — skipped, untouched.
 		expectWorkflowsAdded({
 			customer: await autumnV2_2.customers.get<ApiCustomerV5>(v1HolderId),
 			planId: plan.id,
@@ -146,8 +121,6 @@ test.concurrent(
 	},
 );
 
-// ── Contract: migration filter version narrows SELECTION — non-matching
-// customers never enter the run, even though the op would match their rows. ──
 test.concurrent(
 	`${chalk.yellowBright("plan filters: version-narrowed customer filter + broad operation claims only v1 holders")}`,
 	async () => {
@@ -184,7 +157,6 @@ test.concurrent(
 		});
 		expect(result?.lane).toBe("batch");
 
-		// Selected v1 holder: mutated on their v1 row.
 		expectWorkflowsAdded({
 			customer: await autumnV2_2.customers.get<ApiCustomerV5>(v1HolderId),
 			planId: plan.id,
@@ -198,7 +170,6 @@ test.concurrent(
 			status: MigrationItemRunStatus.Succeeded,
 		});
 
-		// v2 holder: outside the selection — untouched, despite the broad op.
 		expectWorkflowsAdded({
 			customer: await autumnV2_2.customers.get<ApiCustomerV5>(v2HolderId),
 			planId: plan.id,

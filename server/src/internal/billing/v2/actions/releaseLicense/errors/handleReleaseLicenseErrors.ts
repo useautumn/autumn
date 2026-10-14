@@ -1,7 +1,6 @@
 import { ErrCode, findDuplicate, RecaseError } from "@autumn/shared";
 import type { ReleaseLicenseContext } from "../types.js";
 
-/** Validates the release request before the plan is computed. */
 export const handleReleaseLicenseErrors = ({
 	context,
 }: {

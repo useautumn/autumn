@@ -35,7 +35,6 @@ const unregisterFromMultiTenantAtom = async ({
 	});
 };
 
-/** Our shadow Atom (ATOM_MODE=multi_tenant): one folder and one token per org. Only the admin routes reach it. */
 export const createMultiTenantAtomDeployer = ({
 	atom,
 }: {

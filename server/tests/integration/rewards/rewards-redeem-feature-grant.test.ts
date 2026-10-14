@@ -46,7 +46,6 @@ test(`${chalk.yellowBright("feature-grant-2: promo code with max 5 redemptions a
 		actions: [],
 	});
 
-	// First 5 customers redeem successfully
 	const allCustomerIds = [mainCustomerId, ...otherIds];
 	for (let i = 0; i < 5; i++) {
 		await autumnV1.rewards.redeem({
@@ -62,7 +61,6 @@ test(`${chalk.yellowBright("feature-grant-2: promo code with max 5 redemptions a
 		expect(check.balance).toBe(10);
 	}
 
-	// 6th customer should fail — max redemptions reached
 	try {
 		await autumnV1.rewards.redeem({
 			code: "LIMITEDMSG",
@@ -131,7 +129,6 @@ test(`${chalk.yellowBright("feature-grant-4: duplicate redemption blocked")}`, a
 		actions: [s.rewards.redeem({ code: "NODUPE" })],
 	});
 
-	// First redemption worked
 	const check = await autumnV1.check({
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
@@ -139,7 +136,6 @@ test(`${chalk.yellowBright("feature-grant-4: duplicate redemption blocked")}`, a
 	expect(check.allowed).toBe(true);
 	expect(check.balance).toBe(10);
 
-	// Second redemption by same customer should fail
 	try {
 		await autumnV1.rewards.redeem({
 			code: "NODUPE",
@@ -153,7 +149,6 @@ test(`${chalk.yellowBright("feature-grant-4: duplicate redemption blocked")}`, a
 		);
 	}
 
-	// Balance should still be 10, not 20
 	const checkAfter = await autumnV1.check({
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
@@ -181,7 +176,6 @@ test(`${chalk.yellowBright("feature-grant-5: multiple promo codes on one reward"
 		actions: [],
 	});
 
-	// Customer 1 redeems CODEAAA
 	await autumnV1.rewards.redeem({ code: "CODEAAA", customerId: customer1 });
 
 	const check1 = await autumnV1.check({
@@ -191,7 +185,6 @@ test(`${chalk.yellowBright("feature-grant-5: multiple promo codes on one reward"
 	expect(check1.allowed).toBe(true);
 	expect(check1.balance).toBe(25);
 
-	// Customer 2 redeems CODEBBB (different code, same reward)
 	await autumnV1.rewards.redeem({ code: "CODEBBB", customerId: customer2 });
 
 	const check2 = await autumnV1.check({

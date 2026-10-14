@@ -1,6 +1,3 @@
-// updateSubscription must carry rollovers bucket-for-bucket (prepaid -> prepaid, overage -> overage)
-// when one feature has both a prepaid (volume) and an overage item with per-entity balances.
-
 import { expect, test } from "bun:test";
 import {
 	type ApiEntityV0,
@@ -24,8 +21,6 @@ test.concurrent(
 				customerId: "ent-rollover-carry-patch-both",
 			});
 
-		// Patch path: update BOTH same-feature items in one call so both cusEnts
-		// are rebuilt and land in the same feature carry group.
 		await autumnV2_2.subscriptions.update<UpdateSubscriptionV1ParamsInput>({
 			customer_id: customerId,
 			plan_id: pro.id,
@@ -36,8 +31,6 @@ test.concurrent(
 							feature_id: TestFeature.Messages,
 							billing_method: BillingMethod.Prepaid,
 						},
-						// Must stay a multiple of billingUnits (100) so the Stripe
-						// prepaid quantity remains an integer pack count.
 						included: 200,
 					},
 					{
@@ -74,7 +67,6 @@ test.concurrent(
 
 		const apiItems = buildApiItems();
 
-		// PATCH-style: remove both same-feature items and re-add equivalents.
 		await autumnV2_2.subscriptions.update<UpdateSubscriptionV1ParamsInput>({
 			customer_id: customerId,
 			plan_id: pro.id,

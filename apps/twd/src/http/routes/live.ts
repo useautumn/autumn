@@ -10,7 +10,6 @@ import {
 import type { LiveConnection } from "../../internal/live/types/liveConnection.ts";
 import type { TwdHono } from "../types/twdHono.ts";
 
-/** One socket per client; topics are multiplexed over it (see LiveClientMessage). */
 export const liveRoutes = new Hono<TwdHono>().get(
 	"/ws",
 	upgradeWebSocket((c) => {

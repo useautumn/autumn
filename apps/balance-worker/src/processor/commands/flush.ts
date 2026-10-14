@@ -5,7 +5,6 @@ import {
 import type { FlushReply } from "@autumn/balance-worker-client/protocol";
 import type { PartitionProcessorScope } from "../types/partitionProcessor.js";
 
-/** A reader of Postgres is next: the customer's pending writes commit, then the store takes everything queued so far. Nothing is dropped. */
 export async function flush({
 	scope,
 	command,

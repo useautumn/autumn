@@ -1,15 +1,3 @@
-/**
- * catalogV2 version identity — target by version_slug (unit 3).
- *
- * Contract:
- *   version_slug of a non-active row edits that row only (siblings untouched)
- *   omit both version keys still edits the active row
- *   two slugs same plan → both rows; no sibling auto-propagate; no leak to another plan
- *   archived slug pin matches numeric pin (row is editable)
- *   slug pin does not move active / is_default
- *   preview sibling_versions lists others unselected; all_versions stays in options
- */
-
 import { test } from "bun:test";
 import { ResetInterval } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";

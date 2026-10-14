@@ -27,7 +27,6 @@ async function main() {
 		writeLatestOpenApiStripped({
 			outputFilePath: paths.openApiStrippedOutput,
 		}),
-		// Internal only: never fed to the SDKs, never merged into the docs spec.
 		writeLatestOpenApiInternal({
 			outputFilePath: paths.openApiInternalOutput,
 		}),
@@ -43,26 +42,22 @@ async function main() {
 		pythonSdkDir: paths.pythonSdkDir,
 	});
 
-	// Merge code samples into OpenAPI for docs
 	mergeCodeSamples({
 		speakeasySdkDir: paths.tsSdkDir,
 		pythonSdkDir: paths.pythonSdkDir,
 		outputPath: paths.docsOpenApiPath,
 	});
 
-	// Generate Mintlify docs (transform OpenAPI + generate MDX)
 	await generateMintlifyDocs({
 		openApiPath: paths.docsOpenApiPath,
 		docsDir: paths.docsDir,
 	});
 
-	// Sync Slack/Discord Svix transform sources into docs snippets
 	syncSvixTransforms({
 		svixTransformsDir: paths.svixTransformsDir,
 		docsDir: paths.docsDir,
 	});
 
-	// Generate Zod schemas for autumn-js from SDK types
 	await generateZodSchemas({
 		sdkDir: paths.tsSdkDir,
 		outputDir: paths.autumnJsGeneratedDir,

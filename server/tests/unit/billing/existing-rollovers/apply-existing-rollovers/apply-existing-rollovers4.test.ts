@@ -54,13 +54,11 @@ describe(
 				},
 			];
 
-			// Act
 			applyExistingRollovers({
 				customerProduct: newCusProduct,
 				existingRollovers,
 			});
 
-			// Assert: only feature_a gets the rollover
 			const updatedCusEntA = newCusProduct.customer_entitlements.find(
 				(ce) => ce.feature_id === "feature_a",
 			);

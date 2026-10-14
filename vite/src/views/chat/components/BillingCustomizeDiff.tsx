@@ -50,14 +50,10 @@ const changeLabel = (change: CustomizeChange) => {
 	return itemLabel(change.item);
 };
 
-/** The customer-specific terms of a billing action as adds and removes against
- * the current plan. The diff itself lives in @autumn/render so Slack and the
- * dashboard render the same changes. */
 export function BillingCustomizeDiff({
 	currentPlan,
 	customize,
 }: {
-	/** The plan being replaced, when known. */
 	currentPlan?: ApiPlanV1 | null;
 	customize: CustomizePlanV1 | Record<string, unknown>;
 }) {

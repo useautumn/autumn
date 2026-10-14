@@ -58,13 +58,11 @@ describe(
 				},
 			];
 
-			// Act
 			applyExistingRollovers({
 				customerProduct: newCusProduct,
 				existingRollovers,
 			});
 
-			// Assert: only the FIRST cusEnt gets the rollover (due to .find() behavior)
 			const firstCusEnt = newCusProduct.customer_entitlements.find(
 				(ce) => ce.id === "cus_ent_first",
 			);

@@ -5,10 +5,6 @@ import type {
 	PlanChangeAction,
 } from "@autumn/shared";
 
-/**
- * Returns the plan_id of a change regardless of whether it carries a
- * `subscription` or a `purchase` snapshot.
- */
 export const getChangePlanId = (
 	change: CustomerPlanChange,
 ): string | undefined =>
@@ -54,7 +50,6 @@ export const expectPlanChange = (
 	}
 
 	if (itemChanges !== undefined) {
-		// item_changes is deprecated (always empty); content moved to plan_change.
 		expect(resolved.item_changes).toEqual([]);
 		expect(resolved.plan_change?.item_changes ?? []).toEqual(
 			expect.arrayContaining(

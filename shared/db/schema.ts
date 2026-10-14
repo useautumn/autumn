@@ -1,8 +1,4 @@
-/* TABLES */
-
-// Analytics Tables
 import { actions } from "../models/analyticsModels/actionTable.js";
-// Balance worker: open locks
 import { balanceLocks } from "../models/balanceLockModels/balanceLockTable.js";
 import {
 	chatApprovals,
@@ -14,10 +10,8 @@ import { chatResults } from "../models/chatResultModels/chatResultTable.js";
 import { checkoutsRelations } from "../models/checkouts/checkoutRelations.js";
 import { checkouts } from "../models/checkouts/checkoutTable.js";
 import { autoTopupLimitStates } from "../models/cusModels/billingControls/autoTopupLimitTable.js";
-// Customer Relations
 import { customerExports } from "../models/cusModels/cusExportTable.js";
 import { customersRelations } from "../models/cusModels/cusRelations.js";
-// Customer Tables
 import { customers } from "../models/cusModels/cusTable.js";
 import { customerLsns } from "../models/cusModels/customerLsnsTable.js";
 import { entitiesRelations } from "../models/cusModels/entityModels/entityRelations.js";
@@ -34,12 +28,9 @@ import { rollovers } from "../models/cusProductModels/cusEntModels/rolloverModel
 import { usageWindows } from "../models/cusProductModels/cusEntModels/usageWindowTable.js";
 import { customerPricesRelations } from "../models/cusProductModels/cusPriceModels/cusPriceRelations.js";
 import { customerPrices } from "../models/cusProductModels/cusPriceModels/cusPriceTable.js";
-// CusProduct Relations
 import { customerProductsRelations } from "../models/cusProductModels/cusProductRelations.js";
-// CusProduct Tables
 import { customerProducts } from "../models/cusProductModels/cusProductTable.js";
 import { apiKeyRelations } from "../models/devModels/apiKeyRelations.js";
-// Other Tables
 import { apiKeys } from "../models/devModels/apiKeyTable.js";
 import { customerJwtFamilies } from "../models/devModels/customerJwtFamilyTable.js";
 import { events } from "../models/eventModels/eventTable.js";
@@ -64,20 +55,15 @@ import {
 	licensePriceRelations,
 	planLicenseRelations,
 } from "../models/licenseModels/planLicenseRelations.js";
-// Metering log bookkeeping
 import { partitionProgress } from "../models/meteringLogModels/partitionProgressTable.js";
 import { subjectSnapshots } from "../models/meteringLogModels/subjectSnapshotTable.js";
-// Migration Relations
 import { migrationErrorRelations } from "../models/migrationModels/migrationErrorRelations.js";
 import { migrationErrors } from "../models/migrationModels/migrationErrorTable.js";
-// Migration Tables
 import { migrationJobs } from "../models/migrationModels/migrationJobTable.js";
-// Migrations V2
 import { migrationItemRuns } from "../models/migrationV2Models/migrationItemRunTable.js";
 import { migrationRunsRelations } from "../models/migrationV2Models/migrationRunRelations.js";
 import { migrationRuns } from "../models/migrationV2Models/migrationRunTable.js";
 import { migrations } from "../models/migrationV2Models/migrationTable.js";
-/* RELATIONS */
 import { agentRules } from "../models/orgModels/agent/agentRulesTable.js";
 import { atomDeploymentsRelations } from "../models/orgModels/atomDeploymentRelations.js";
 import { atomDeployments } from "../models/orgModels/atomDeploymentTable.js";
@@ -95,7 +81,6 @@ import {
 } from "../models/pooledBalanceModels/pooledBalanceTable.js";
 import { revenuecatMappings } from "../models/processorModels/revenuecatModels/revenuecatMappingsTable.js";
 import { vercelResources } from "../models/processorModels/vercelModels/vercelResourcesTable.js";
-// Product Relations
 import { entitlementsRelations } from "../models/productModels/entModels/entRelations.js";
 import { entitlements } from "../models/productModels/entModels/entTable.js";
 import { freeTrialRelations } from "../models/productModels/freeTrialModels/freeTrialRelations.js";
@@ -105,15 +90,12 @@ import { prices } from "../models/productModels/priceModels/priceTable.js";
 import { productAliasRelations } from "../models/productModels/productAliasRelations.js";
 import { productAliases } from "../models/productModels/productAliasTable.js";
 import { productRelations } from "../models/productModels/productRelations.js";
-// Product Tables
 import { products } from "../models/productModels/productTable.js";
 import { referralCodeRelations } from "../models/rewardModels/referralModels/referralCodeRelations.js";
 import { referralCodes } from "../models/rewardModels/referralModels/referralCodeTable.js";
 import { rewardRedemptionRelations } from "../models/rewardModels/referralModels/rewardRedemptionRelations.js";
 import { rewardRedemptions } from "../models/rewardModels/referralModels/rewardRedemptionTable.js";
-// Reward Relations
 import { rewardRelations } from "../models/rewardModels/rewardModels/rewardRelations.js";
-// Reward Tables
 import { rewards } from "../models/rewardModels/rewardModels/rewardTable.js";
 import { rewardProgramRelations } from "../models/rewardModels/rewardProgramModels/rewardProgramRelations.js";
 import { rewardPrograms } from "../models/rewardModels/rewardProgramModels/rewardProgramTable.js";
@@ -193,7 +175,6 @@ export {
 	customerLicenses,
 	licenseEntitlements,
 	licensePrices,
-	// OAuth Provider
 	jwks,
 	member,
 	memberRelations,
@@ -213,7 +194,6 @@ export {
 	atomDeployments,
 	atomDeploymentsRelations,
 	transitionRules,
-	// Tables
 	organizations,
 	licenseEntitlementRelations,
 	licensePriceRelations,
@@ -224,7 +204,6 @@ export {
 	pooledBalances,
 	pooledBalancesRelations,
 	passkey,
-	// Relations
 	organizationsRelations,
 	priceRelations,
 	prices,
@@ -255,9 +234,7 @@ export {
 	partitionProgress,
 	subjectSnapshots,
 	balanceLocks,
-	// Auth
 	user,
-	// Auth Relations
 	userRelations,
 	vercelResources,
 	verification,

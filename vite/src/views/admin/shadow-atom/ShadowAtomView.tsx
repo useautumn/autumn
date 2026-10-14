@@ -5,7 +5,6 @@ import LoadingScreen from "../../general/LoadingScreen";
 import { useAdmin } from "../hooks/useAdmin";
 import { ShadowAtomTab } from "./ShadowAtomTab";
 
-/** Staff-only page behind the admin bar's Shadow Atom button. */
 export const ShadowAtomView = () => {
 	const { isAdmin, isPending } = useAdmin();
 

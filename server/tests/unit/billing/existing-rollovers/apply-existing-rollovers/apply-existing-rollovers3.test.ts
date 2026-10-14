@@ -54,13 +54,11 @@ describe(
 				},
 			];
 
-			// Act
 			applyExistingRollovers({
 				customerProduct: newCusProduct,
 				existingRollovers,
 			});
 
-			// Assert: both rollovers should be added to the same cusEnt
 			const updatedCusEnt = newCusProduct.customer_entitlements[0];
 			expect(updatedCusEnt.rollovers.length).toBe(2);
 			expect(updatedCusEnt.rollovers[0].balance).toBe(1000);

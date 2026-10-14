@@ -1,30 +1,11 @@
 #!/usr/bin/env bun
 
-/**
- * Interactive CLI for backfilling Postgres tables into Tinybird.
- *
- * Multi-select which tables to backfill, then runs them sequentially.
- * All jobs are idempotent — safe to re-run, automatically resumes from progress.
- *
- * Usage:
- *   bun scripts/backfill_cli.ts
- *   bun scripts/backfill_cli.ts --chunk-days 14
- *   bun scripts/backfill_cli.ts --dry-run
- *   bun scripts/backfill_cli.ts --all
- */
-
 import * as readline from "readline";
 import {
 	DEFAULT_CHUNK_DAYS,
 	type TableConfig,
 	runTableBackfill,
 } from "./backfill_base.js";
-
-// ============================================================================
-// TABLE REGISTRY
-// NOTE: rollovers is NOT listed here — it uses cursor-based pagination.
-//       Run: bun scripts/backfill_rollovers.ts
-// ============================================================================
 
 const TABLE_CONFIGS: TableConfig[] = [
 	{
@@ -111,12 +92,7 @@ const TABLE_CONFIGS: TableConfig[] = [
 		datasource: "products",
 		startEpochMs: 1737570326143,
 	},
-	// rollovers intentionally excluded — use backfill_rollovers.ts instead
 ];
-
-// ============================================================================
-// ARGUMENT PARSING
-// ============================================================================
 
 interface Args {
 	chunkDays: number;
@@ -164,10 +140,6 @@ Note: rollovers uses cursor-based pagination — run separately:
 	return args;
 }
 
-// ============================================================================
-// MULTI-SELECT PROMPT
-// ============================================================================
-
 async function multiSelect({
 	items,
 	prompt,
@@ -177,7 +149,6 @@ async function multiSelect({
 }): Promise<number[]> {
 	const selected = new Set<number>();
 
-	// Pre-select all
 	items.forEach((_, i) => selected.add(i));
 
 	const rl = readline.createInterface({
@@ -185,8 +156,6 @@ async function multiSelect({
 		output: process.stdout,
 	});
 
-	// Keys: 1-9 for indices 0-8, then a-z for indices 9-34
-	// (a/A are reserved for select-all, n/N for select-none — skip those)
 	const KEYS = "123456789bcdefghijklmopqrstuvwxyz";
 
 	const keyForIndex = (i: number) => KEYS[i] ?? "?";
@@ -205,7 +174,6 @@ async function multiSelect({
 	return new Promise((resolve) => {
 		renderMenu();
 
-		// Use raw mode for keypress detection
 		if (process.stdin.isTTY) {
 			process.stdin.setRawMode(true);
 		}
@@ -214,7 +182,6 @@ async function multiSelect({
 			const key = chunk.toString().toLowerCase();
 
 			if (key === "\r" || key === "\n") {
-				// Enter — confirm
 				process.stdin.removeListener("data", onKeypress);
 				if (process.stdin.isTTY) {
 					process.stdin.setRawMode(false);
@@ -238,11 +205,9 @@ async function multiSelect({
 			}
 
 			if (key === "\x03") {
-				// Ctrl+C
 				process.exit(0);
 			}
 
-			// Map key to index
 			const idx = KEYS.indexOf(key);
 			if (idx !== -1 && idx < items.length) {
 				if (selected.has(idx)) {
@@ -258,10 +223,6 @@ async function multiSelect({
 		process.stdin.on("data", onKeypress);
 	});
 }
-
-// ============================================================================
-// MAIN
-// ============================================================================
 
 async function main() {
 	const args = parseArgs();

@@ -44,8 +44,6 @@ export const runSandboxCreate = async ({
 		...(icon === undefined ? {} : { icon }),
 	});
 
-	// The key is readable exactly once, in this response: it reaches disk
-	// before anything else can fail.
 	const keyName = sandboxKeyName({ sandboxId: sandbox.id });
 	let envPath: string;
 	try {
@@ -57,8 +55,6 @@ export const runSandboxCreate = async ({
 			},
 		});
 	} catch (error) {
-		// The key exists nowhere else: show it before the failure takes it, on
-		// stderr under --json so stdout stays parseable.
 		(json ? writeError : write)(
 			`Could not write your .env. Save this key yourself:\n${keyName}=${sandbox.secretKey}\n`,
 		);

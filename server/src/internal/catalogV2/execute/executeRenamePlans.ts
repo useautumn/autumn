@@ -119,8 +119,6 @@ export const executeRenamePlans = async ({
 	ctx: AutumnContext;
 	updateCatalogPlan: UpdateCatalogPlan;
 }) => {
-	// One SQL per (from, to): the statement already renames every version, and
-	// a second run for another version would re-insert the same alias.
 	const byPair = new Map<string, RenameProductPlan>();
 	for (const renamePlan of updateCatalogPlan.renamePlans)
 		byPair.set(`${renamePlan.planId}\u2192${renamePlan.toId}`, renamePlan);

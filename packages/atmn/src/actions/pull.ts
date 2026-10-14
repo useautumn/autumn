@@ -123,8 +123,6 @@ const loadOrScaffold = async ({
 		return loadConfig({ dirs: [cwd], configPath: scaffolded });
 	};
 
-	// Overwrite never deletes: with no config it is a first pull, otherwise the
-	// config and the collection files it owns are rewritten as a fresh shell.
 	if (overwrite && existingConfigPath === null) return scaffold();
 	if (overwrite && existingConfigPath !== null) {
 		const { rewritten, kept } = rewriteConfig({
@@ -248,9 +246,6 @@ export const runPull = async ({
 	const dirs = configSearchDirs({ cwd, configPath: configFlag });
 	loadEnvFiles({ dirs: project.envDirs });
 
-	// Nothing states where the config lives: ask, and never scaffold into cwd
-	// unasked. A folder other than cwd gets the root marker so later commands
-	// find it from anywhere in the repo.
 	let scaffoldDir = project.configDir;
 	let scaffoldPath = project.configPath ?? undefined;
 	if (project.configPath === null) {
@@ -279,21 +274,16 @@ export const runPull = async ({
 
 	const [preview, catalog, settingsPreview, webhooks] = await Promise.all([
 		diffOrExplain({ client, wire }),
-		// Every version: each is a row in plans, with `active` on it.
 		client.get({ include_versions: true }),
-		// Always asked, even with no `settings` stated: a non-default flag the
-		// config omits is exactly what a first pull should write.
 		client.previewUpdateOrganization(
 			singletons.settings ?? { config: {} },
 		) as Promise<SettingsPreview>,
-		// Always listed, like settings: a webhook the config never named is pulled in.
 		readWebhookEnvs({ envs: webhookEnvs?.() ?? [] }),
 	]);
 
 	const files = new Map<string, string>();
 	files.set(configPath, readFileSync(configPath, "utf8"));
 	for (const file of listSourceFiles({ directory: dirname(configPath) })) {
-		// The config is already in the map and is always tried first.
 		if (file === configPath || files.has(file)) continue;
 		files.set(file, readFileSync(file, "utf8"));
 	}
@@ -307,8 +297,6 @@ export const runPull = async ({
 	const previewRows = preview as unknown as Record<string, unknown>;
 	const catalogRows = catalog as unknown as Record<string, unknown>;
 	const featureTypes = featureTypesOf({ rows: rowsOf(catalogRows.features) });
-	// A reward may name an archived plan; the pull never writes one, and a
-	// config cannot name a plan it does not declare.
 	const pulled = pulledPlanIds({ plans: rowsOf(catalogRows.plans) });
 	const rewards = pruneUnpulledPlanIds({
 		rows: rowsOf(catalogRows.rewards),
@@ -330,7 +318,6 @@ export const runPull = async ({
 	);
 
 	for (const [collection, spec] of Object.entries(COLLECTIONS)) {
-		// Versions share an id; until internal_id lands, pull cannot address them.
 		if (!spec.pull) continue;
 		const applied = applyPreview({
 			collection,
@@ -375,7 +362,6 @@ export const runPull = async ({
 
 	const webhookWarnings = [...webhooks.skipped];
 	let stated = lists.webhooks as StatedWebhook[] | undefined;
-	// Only an env whose list succeeded may remove its entries from the config.
 	for (const { envKey, list } of webhooks.read) {
 		const applied = applyWebhooksPull({
 			pull: { configPath, files },
@@ -417,8 +403,6 @@ export const runPull = async ({
 
 	lines.push(...rewards.lines, ...referralPrograms.lines);
 
-	// A fixture that is not a plain literal cannot be edited in place; saying
-	// so before writing anything beats a half-applied pull.
 	if (unlocated.length > 0) throw new UnlocatableFixturesError({ unlocated });
 
 	for (const [file, source] of files) {
@@ -431,8 +415,6 @@ export const runPull = async ({
 		}
 	}
 
-	// Fixtures the catalog already knows get their stable id and slug, even
-	// when nothing else about them changed: no row is left slug-less.
 	const { backfilled, slugged } = backfillInternalIds({
 		rows: identityRowsFromCatalog({ catalog: catalogRows }),
 		configPath,

@@ -6,8 +6,6 @@ const titleForTool = (toolName?: string): string => {
 	return `${action.charAt(0).toUpperCase()}${action.slice(1)} parameters`;
 };
 
-/** The write tool's resolved arguments (attach params, etc.), opened from the
- * approval card. */
 export function ParamsSheet({
 	onOpenChange,
 	open,

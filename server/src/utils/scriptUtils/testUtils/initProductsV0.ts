@@ -21,7 +21,6 @@ export const initProductsV0 = async ({
 	customerIds?: string[];
 	createInStripe?: boolean;
 }) => {
-	// 1. Add prefix to products (except those in skipPrefixIds)
 	if (prefix) {
 		const productsToPrefix = products.filter(
 			(p) => !skipPrefixIds.includes(p.id),
@@ -32,7 +31,6 @@ export const initProductsV0 = async ({
 		});
 	}
 
-	// 2. Create products using the org's secret key
 	const autumn = new AutumnInt({
 		version: ApiVersion.V1_2,
 		secretKey: ctx.orgSecretKey,

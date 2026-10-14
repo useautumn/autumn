@@ -89,9 +89,6 @@ const buildProductContext = async ({
 	let currentCustomerProduct: FullCusProduct | undefined;
 	if (shouldFindCurrentCustomerProduct) {
 		if (fullProduct.is_add_on === true) {
-			// Add-ons have no group transition; a re-sync replaces the existing
-			// same-product instance linked to this Stripe subscription so
-			// quantity changes and webhook re-deliveries converge.
 			currentCustomerProduct = stripeSubscriptionId
 				? findLinkedAddOnCustomerProduct({
 						fullCustomer,
@@ -104,15 +101,11 @@ const buildProductContext = async ({
 			const transition = setupAttachTransitionContext({
 				fullCustomer,
 				attachProduct: fullProduct,
-				// Scope the "previous product to expire" lookup to the plan's entity
-				// so an entity-scoped sync replaces the existing product on that
-				// same entity rather than missing it (which would duplicate).
 				internalEntityId: entity?.internal_id,
 			});
 			currentCustomerProduct = transition.currentCustomerProduct;
 		}
 	}
-	// Seats the request leaves out keep what the replaced plan had purchased.
 	const customerLicenseQuantities = setupCustomerLicenseQuantityContext({
 		params: plan,
 		fullProduct,
@@ -148,8 +141,6 @@ const resolvePhaseStart = ({
 	currentEpochMs: number;
 }): number => (startsAt === "now" ? currentEpochMs : startsAt);
 
-/** The Stripe prices billing a phase: the live subscription's for the phase
- * starting now, the schedule's for later ones. */
 const phaseToStripePrices = ({
 	startsAt,
 	stripeSubscription,
@@ -184,7 +175,6 @@ const buildPlanProductContexts = async ({
 	plans: SyncPlanInstance[];
 	currentEpochMs: number;
 	stripeSubscriptionId?: string;
-	/** The Stripe prices billing this phase, for linking plan prices to them. */
 	stripePrices: Stripe.Price[];
 	claimedStripePriceIds: Set<string>;
 }): Promise<SyncProductContext[]> => {
@@ -194,9 +184,6 @@ const buildPlanProductContexts = async ({
 				ctx,
 				fullCustomer,
 				plan,
-				// Future phases also expire the current same-group product on
-				// expire_previous — computeSyncFuturePhases relies on it being
-				// set, not just the immediate/enable-now cases.
 				shouldFindCurrentCustomerProduct: plan.expire_previous === true,
 				accessStartsAt: plan.enable_plan_immediately
 					? currentEpochMs
@@ -212,8 +199,6 @@ const buildPlanProductContexts = async ({
 		claimedStripePriceIds,
 	});
 
-	// Expand add-on plans with quantity > 1 into N independent product contexts
-	// so the executor inserts one cusProduct per add-on instance.
 	return linkedProductContexts.flatMap((productContext) => {
 		const requested = productContext.plan.quantity ?? 1;
 		const shouldExpand =
@@ -224,11 +209,6 @@ const buildPlanProductContexts = async ({
 	});
 };
 
-/**
- * Setup the sync billing context. Mirrors createSchedule's setup but with
- * Stripe subscription/schedule as the input rather than payment-method
- * driven flow.
- */
 export const setupSyncContext = async ({
 	ctx,
 	params,
@@ -282,7 +262,6 @@ export const setupSyncContext = async ({
 			})
 		: null;
 
-	// Unscheduled plans bill alongside the immediate phase, so they share its claims.
 	const claimedImmediateStripePriceIds = new Set<string>();
 	const phaseContexts: SyncPhaseContext[] = await Promise.all(
 		inputPhases.map(async (phase, index) => {

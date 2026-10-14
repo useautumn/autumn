@@ -1,9 +1,3 @@
-/**
- * Contract: check on a feature whose credit rate is dimensioned converts
- * required_balance at the dimension the properties select, falls back to the
- * row's rate without them, and send_event deducts at the same rate.
- */
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3, FeatureConfigOverride } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
@@ -108,7 +102,6 @@ test.concurrent(
 		});
 		expect(response).toMatchObject({ allowed: true, required_balance: 160 });
 
-		// The cached view is invalidated asynchronously, so assert the persisted one.
 		await timeout(2_000);
 		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId, {
 			skip_cache: "true",

@@ -43,7 +43,6 @@ describe("raceFailOpen", () => {
 		});
 
 		expect(await result.text()).toBe("fail-open");
-		// Let the abandoned run settle; an unhandled rejection would fail the suite.
 		await Bun.sleep(80);
 		expect(settled).toBe(true);
 	});
@@ -92,8 +91,6 @@ describe("raceFailOpen", () => {
 });
 
 describe("createRoute failOpen skip", () => {
-	// Mounted under /webhooks/ so the scope-check middleware self-bypasses and
-	// only the request timestamp is needed in ctx.
 	const buildApp = ({
 		skip,
 		requestStartedAt = Date.now(),

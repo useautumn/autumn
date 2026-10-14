@@ -1,6 +1,5 @@
 import { expect } from "bun:test";
 
-/** The window the server reported must span one interval and contain the moment we observed. */
 export const expectUsageLimitWindowContains = ({
 	usageLimit,
 	at,

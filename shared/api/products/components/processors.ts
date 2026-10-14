@@ -1,6 +1,5 @@
 import { z } from "zod/v4";
 
-/** Stripe connection on a plan — the Stripe Product. */
 export const ApiStripePlanProcessorSchema = z.object({
 	product_id: z.string().meta({
 		description: "Stripe product ID this plan is billed under.",
@@ -10,7 +9,6 @@ export const ApiStripePlanProcessorSchema = z.object({
 	}),
 });
 
-/** Stripe connection on a price — the Stripe Price. Product is inferred from it. */
 export const ApiStripePriceProcessorSchema = z.object({
 	price_id: z.string().meta({
 		description:
@@ -18,10 +16,6 @@ export const ApiStripePriceProcessorSchema = z.object({
 	}),
 });
 
-/**
- * RevenueCat sells quantity as separate store products, so many RC ids map to
- * one Autumn plan and each carries the grant it represents.
- */
 export const ApiRevenueCatProductSchema = z.object({
 	product_id: z.string().meta({
 		description: "RevenueCat product ID that grants this plan when purchased.",
@@ -49,7 +43,6 @@ export const ApiRevenueCatPlanProcessorSchema = z.object({
 
 export const ApiPlanProcessorsSchema = z
 	.object({
-		/** Omit to keep the current mapping; null unlinks it. */
 		stripe: ApiStripePlanProcessorSchema.nullish(),
 		revenuecat: ApiRevenueCatPlanProcessorSchema.nullish(),
 	})
@@ -57,7 +50,6 @@ export const ApiPlanProcessorsSchema = z
 
 export const ApiPriceProcessorsSchema = z
 	.object({
-		/** Omit to keep the current mapping; null unlinks it. */
 		stripe: ApiStripePriceProcessorSchema.nullish(),
 	})
 	.meta({ "x-atmn-mapping": true });

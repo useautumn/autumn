@@ -6,15 +6,6 @@ import { RELEVANT_STATUSES } from "../../src/internal/customers/cusProducts/CusP
 import { countFilteredEntitiesByOrgIdAndEnv } from "../../src/internal/entities/repos/listEntitiesQuery.js";
 import { createWorkerContext } from "../../src/queue/createWorkerContext.js";
 
-/**
- * Exercises the real countFilteredEntitiesByOrgIdAndEnv across filter
- * combinations, so the plan-first rewrite is validated through the actual code
- * path (including the plan + other-filter combinations, which take different
- * branches).
- *
- * Run with:
- *   infisical run --env=prod --recursive -- bun run server/experiments/listObjects/verifyPlanFilterCount.ts
- */
 const requireEnv = ({ name }: { name: string }) => {
 	const value = process.env[name];
 	if (!value) {

@@ -20,8 +20,6 @@ const output = ({
 	turns: unknown[];
 }) => ({ apiCalls, finalText: "", toolCalls: [], turns }) as never;
 
-// An optional approve that found no gate used to be indistinguishable from a
-// real one, so a run that never gated could score as a passing approval flow.
 describe("approval scoring ignores skipped approve turns", () => {
 	test("a skipped approve does not count toward the approval total", () => {
 		expect(
@@ -63,7 +61,6 @@ describe("approval scoring ignores skipped approve turns", () => {
 					turns: [
 						turn({ type: "user" }),
 						turn({ type: "approve" }),
-						// attach lands here, before the second approval
 						{ apiCalls: [call], toolCalls: [], type: "user" as const },
 						turn({ type: "approve" }),
 					],

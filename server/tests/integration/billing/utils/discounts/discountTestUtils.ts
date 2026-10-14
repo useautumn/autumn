@@ -1,15 +1,8 @@
-/**
- * Shared utilities for discount integration tests.
- */
-
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import type Stripe from "stripe";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { CusService } from "@/internal/customers/CusService.js";
 
-/**
- * Get Stripe subscription and client for a customer.
- */
 export const getStripeSubscription = async ({
 	customerId,
 	expand,
@@ -48,9 +41,6 @@ export const getStripeSubscription = async ({
 	};
 };
 
-/**
- * Create a percent-off coupon.
- */
 export const createPercentCoupon = async ({
 	stripeCli,
 	percentOff,
@@ -76,10 +66,6 @@ export const createPercentCoupon = async ({
 	});
 };
 
-/**
- * Create an amount-off coupon.
- * Note: amount_off requires currency and duration "repeating" or "once".
- */
 export const createAmountCoupon = async ({
 	stripeCli,
 	amountOffCents,
@@ -104,9 +90,6 @@ export const createAmountCoupon = async ({
 	});
 };
 
-/**
- * Apply discount(s) to a subscription.
- */
 export const applySubscriptionDiscount = async ({
 	stripeCli,
 	subscriptionId,
@@ -121,13 +104,6 @@ export const applySubscriptionDiscount = async ({
 	});
 };
 
-/**
- * Apply discount to all of a customer's subscriptions.
- *
- * Note: In Stripe API 2025+, customer-level coupons via customers.update({ coupon })
- * are deprecated. Instead, we apply the discount to all customer subscriptions.
- * This achieves the same effect for testing purposes.
- */
 export const applyCustomerDiscount = async ({
 	stripeCli,
 	customerId,
@@ -137,13 +113,11 @@ export const applyCustomerDiscount = async ({
 	customerId: string;
 	couponId: string;
 }): Promise<void> => {
-	// Get all customer subscriptions
 	const subscriptions = await stripeCli.subscriptions.list({
 		customer: customerId,
 		status: "all",
 	});
 
-	// Apply discount to each subscription
 	for (const sub of subscriptions.data) {
 		await stripeCli.subscriptions.update(sub.id, {
 			discounts: [{ coupon: couponId }],
@@ -151,9 +125,6 @@ export const applyCustomerDiscount = async ({
 	}
 };
 
-/**
- * Remove discount from a subscription.
- */
 export const removeSubscriptionDiscount = async ({
 	stripeCli,
 	subscriptionId,
@@ -166,9 +137,6 @@ export const removeSubscriptionDiscount = async ({
 	});
 };
 
-/**
- * Remove discount from all of a customer's subscriptions.
- */
 export const removeCustomerDiscount = async ({
 	stripeCli,
 	customerId,
@@ -176,13 +144,11 @@ export const removeCustomerDiscount = async ({
 	stripeCli: Stripe;
 	customerId: string;
 }): Promise<void> => {
-	// Get all customer subscriptions
 	const subscriptions = await stripeCli.subscriptions.list({
 		customer: customerId,
 		status: "all",
 	});
 
-	// Remove discounts from each subscription
 	for (const sub of subscriptions.data) {
 		await stripeCli.subscriptions.update(sub.id, {
 			discounts: [],
@@ -190,10 +156,6 @@ export const removeCustomerDiscount = async ({
 	}
 };
 
-/**
- * Create a Stripe promotion code wrapping a coupon.
- * Code is made unique per-call to avoid collisions in concurrent tests.
- */
 export const createPromotionCode = async ({
 	stripeCli,
 	coupon,
@@ -217,11 +179,6 @@ export const createPromotionCode = async ({
 	});
 };
 
-/*
- * Apply a coupon directly to a Stripe customer (not a subscription).
- * Uses a legacy Stripe API version + rawRequest to mirror the exact
- * handleStripeInvoiceDiscounts rollover flow (line 28 + line 140-146).
- */
 export const applyCustomerCoupon = async ({
 	stripeCustomerId,
 	couponId,
@@ -239,11 +196,6 @@ export const applyCustomerCoupon = async ({
 	});
 };
 
-/**
- * Delete a coupon from Stripe. The discount on the subscription/customer remains,
- * but the underlying coupon object no longer exists.
- * This simulates the state created by handleStripeInvoiceDiscounts rollover.
- */
 export const deleteCoupon = async ({
 	stripeCli,
 	couponId,

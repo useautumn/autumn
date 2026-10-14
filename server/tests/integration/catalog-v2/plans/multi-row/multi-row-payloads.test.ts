@@ -1,32 +1,3 @@
-/**
- * catalogV2 — one request carries many rows of the same plan.
- *
- * A config file holds the whole pricing history, so a push states every
- * version at once: pro@1 was $10, pro@2 was $20, pro@3 is $30. Today the
- * server assumes one entry per plan and rejects the rest.
- *
- * The invariant this must not break is John's: explicitly stated rows map
- * 1:1 to intents, and the derivation that fans a change out to siblings and
- * variants must not ALSO claim a row the payload named. That is already how
- * `claimProductKeys` + `claimNewIntents` behave; these tests pin it so the
- * multi-row work cannot quietly regress it.
- *
- * Contract:
- *   B1  N rows of one plan → N intents, and derived fan-out claims none of
- *       the rows the payload named (explicit beats derived)
- *   B2  a brand-new plan can be created with its whole history in one request
- *   B3  an unknown version_slug with no internal_id mints a version, rather
- *       than being rejected as unknown
- *   B4  two entries pinning the same version is still an error
- *   B5  two unpinned entries for one plan is still an error
- *   B6  migration.draft on one entry claims that entry's row only
- *
- * Red (current): the create-with-multiple-entries guard, the unknown-slug
- *   rejection, and the version-gap check each reject a full-history push.
- * Green (after): the payload's own rows count, and the guards that remain
- *   are only the genuinely ambiguous ones.
- */
-
 import { expect, test } from "bun:test";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
@@ -70,10 +41,6 @@ test.concurrent(
 			ctx,
 			planIds: [planId],
 			run: async () => {
-				// B2 + B3: three rows of a plan that does not exist yet. Each names a
-				// slug nothing owns, which today is rejected twice over — once by the
-				// create-with-multiple-entries guard, once by the version gap check,
-				// since neither counts rows minted earlier in the same request.
 				await autumnV2_3.catalogV2.update({
 					plans: [
 						{
@@ -147,9 +114,6 @@ test.concurrent(
 					],
 				});
 
-				// B1: one entry pins v1 with its own content while another asks for
-				// `all_versions`, whose fan-out would otherwise rewrite every sibling
-				// — v1 included. The stated row must win: explicit beats derived.
 				await autumnV2_3.catalogV2.update({
 					plans: [
 						{ plan_id: planId, version: 1, items: [messagesItem(150)] },
@@ -194,7 +158,6 @@ test.concurrent(
 					],
 				});
 
-				// B4: two entries pinning the same row — which one wins is undefined.
 				const samePin = autumnV2_3.catalogV2.update({
 					plans: [
 						{ plan_id: planId, version: 1, items: [messagesItem(150)] },
@@ -203,7 +166,6 @@ test.concurrent(
 				});
 				await expect(samePin).rejects.toThrow();
 
-				// B5: two entries naming no row at all — same ambiguity.
 				const bothUnpinned = autumnV2_3.catalogV2.update({
 					plans: [
 						{ plan_id: planId, items: [messagesItem(150)] },

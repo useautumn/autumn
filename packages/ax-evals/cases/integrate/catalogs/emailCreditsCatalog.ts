@@ -1,9 +1,3 @@
-/**
- * Email-credits archetype catalog for billing-control cases: one metered
- * consumable feature with an included grant AND a usage-based overage price
- * on a paid plan — the shape where overage billing (and turning it off via
- * spend limits) actually means something.
- */
 export const emailCreditsCatalog = `import { atmn, feature, plan } from "atmn";
 
 export default atmn({

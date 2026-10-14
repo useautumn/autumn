@@ -1,10 +1,3 @@
-/**
- * set_plans with a future phases[0].starts_at only ends the plans in the request's scope:
- * - a targeted subscription is cancelled once its plans end, and another subscription is untouched;
- * - an entity's plan ends now while another entity's plan keeps the shared subscription,
- *   and the new plan joins that subscription's schedule at the start.
- */
-
 import { expect, test } from "bun:test";
 import { CusProductStatus } from "@autumn/shared";
 import { expectCustomerProducts } from "@tests/integration/billing/utils/expectCustomerProductCorrect";

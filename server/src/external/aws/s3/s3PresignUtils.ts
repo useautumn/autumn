@@ -26,7 +26,6 @@ export const getS3PresignedPutUrl = async ({
 	contentType?: string;
 	credentials?: S3Credentials;
 }) => {
-	// WHEN_REQUIRED keeps the SDK from baking a default CRC32 checksum into the
 	// presigned URL — the browser PUT can't reproduce it and S3 would reject it.
 	const client = getS3Client({
 		region,

@@ -29,10 +29,6 @@ export type CostEstimate = {
 	totalUsd: number;
 };
 
-/**
- * Estimate the cost of `workers` sandboxes, each with `vcpus` vCPUs, alive for
- * `lifetimeMs`. CPU is an upper bound (100% active); memory is exact.
- */
 export const estimateCost = ({
 	workers,
 	vcpus,
@@ -63,12 +59,10 @@ export const estimateCost = ({
 
 const usd = (n: number): string => `$${n.toFixed(2)}`;
 
-/** e.g. `~$1.71 est (cpu ≤$1.28 · mem $0.43) · 51 sandboxes × 2 vCPU · ~6min each`. */
 export const formatCost = (c: CostEstimate): string =>
 	`~${usd(c.totalUsd)} est (cpu ≤${usd(c.cpuUsd)} · mem ${usd(c.memUsd)}) · ` +
 	`${c.workers} sandboxes × ${c.vcpus} vCPU · ~${Math.round(c.lifetimeHours * 60)}min each`;
 
-/** Human wall-clock, e.g. `9m42s` or `48s`. */
 export const formatWall = (ms: number): string => {
 	const totalSec = Math.round(ms / 1000);
 	const min = Math.floor(totalSec / 60);

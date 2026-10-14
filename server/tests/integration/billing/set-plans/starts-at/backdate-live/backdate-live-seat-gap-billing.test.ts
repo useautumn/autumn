@@ -1,9 +1,3 @@
-/**
- * A backdate over a live subscription bills the plan's paid seats for the time before that
- * subscription started exactly as it bills the plan's base price: pro rata, or every cycle the
- * gap reaches in full. The seats keep their count, and the paid live period is never billed again.
- */
-
 import { expect, test } from "bun:test";
 import {
 	type ApiCustomerV5,

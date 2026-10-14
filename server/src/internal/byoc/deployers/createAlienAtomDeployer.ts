@@ -36,12 +36,10 @@ import type {
 
 type AlienContext = { alienClient: AlienClient };
 
-/** The container, its endpoint and its pool as `packages/alien/stacks/byoc/alien.json` names them. */
 const ATOM_RESOURCE_ID = "atom";
 const ATOM_ENDPOINT_NAME = "api";
 const ATOM_POOL = "stateful";
 
-/** Each Atom replica fills its own machine. */
 const machineToAtomPools = ({
 	machine,
 }: {
@@ -50,7 +48,6 @@ const machineToAtomPools = ({
 	[ATOM_POOL]: { machine: machine.instanceType, machines: BYOC_CACHE_REPLICAS },
 });
 
-/** The Atom container's share of its machine; the release's resource ranges must hold every size's. */
 const machineToAtomContainers = ({
 	machine,
 }: {
@@ -72,7 +69,6 @@ const deploymentToAtomMachine = ({
 	return findByocCacheMachineByInstanceType({ instanceType }) ?? null;
 };
 
-/** Removal states come first: a deleted deployment's last steps also read as failed. */
 const alienDeploymentToCacheStatus = ({
 	deployment,
 }: {
@@ -86,7 +82,6 @@ const alienDeploymentToCacheStatus = ({
 	return ByocCacheStatus.Provisioning;
 };
 
-/** An existing VPC keeps Atom on its private subnets, so alien gets no public ones. */
 const cacheNetworkToAlienNetwork = ({
 	network,
 }: {
@@ -109,7 +104,6 @@ const plainVariable = ({ name, value }: { name: string; value: string }) => ({
 	targetResources: null,
 });
 
-/** A customer's Atom sets no ATOM_MODE; only our shadow Atom is multi-tenant. */
 const atomAuthToVariables = ({ auth }: { auth: AtomAuth }) => [
 	...(auth.mode === "multi_tenant"
 		? [plainVariable({ name: "ATOM_MODE", value: "multi_tenant" })]
@@ -140,7 +134,6 @@ const startAlienAtom = ({
 		network: cacheNetworkToAlienNetwork({ network }),
 		environmentVariables: [
 			...atomAuthToVariables({ auth }),
-			// A check Atom forwards must reach this environment's API, not the production default.
 			plainVariable({
 				name: "AUTUMN_API_URL",
 				value: getAutumnEnv().AUTUMN_PUBLIC_API_URL,
@@ -148,7 +141,6 @@ const startAlienAtom = ({
 		],
 	});
 
-/** The deployment we know by id until alien drops it; a deleted one gives way to whatever the group runs now. */
 const findAlienDeployment = async ({
 	ctx,
 	deploymentGroupId,
@@ -244,7 +236,6 @@ const retryAlienAtom = async ({
 	if (deployment) await ctx.alienClient.retryDeployment({ deployment });
 };
 
-/** Tears down the deployment; its setup links stay, because deleting the customer's stack calls alien with them. */
 const deleteAlienAtom = async ({
 	ctx,
 	deploymentGroupId,
@@ -258,7 +249,6 @@ const deleteAlienAtom = async ({
 	if (deployment) await ctx.alienClient.deleteDeployment({ deployment });
 };
 
-/** alien deploys the Atom image into the org's own cloud. */
 export const createAlienAtomDeployer = ({
 	alienClient,
 }: {

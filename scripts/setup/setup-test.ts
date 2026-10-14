@@ -14,10 +14,6 @@ import {
 } from "../setupTestUtils/createTestOrg.js";
 import { ensureTestOrgSecretKey } from "../setupTestUtils/ensureTestOrgSecretKey.js";
 
-// Worktree .env.local loading happens in scripts/preload-env.ts (auto-run by
-// Bun via bunfig.toml's `preload`). DATABASE_URL flips to the worktree branch
-// before this module's top-level statements execute.
-
 function maskDatabaseUrl(url: string | undefined): string {
 	if (!url) return "(unset)";
 	try {
@@ -30,12 +26,6 @@ function maskDatabaseUrl(url: string | undefined): string {
 	}
 }
 
-/**
- * Pin test keys into server/.env.local when appropriate.
- * - Never invent .env.local for `bun d` (Infisical-only): skip if missing.
- * - Worktrees already have .env.local from `bun dw` → merge keys in.
- * - `bun tw` warm may mint a key with no file yet → allow create then.
- */
 function persistTestKeysToEnvLocal({
 	secretKey,
 	allowCreate,
@@ -120,8 +110,6 @@ async function runFullSetup({ yes }: { yes: boolean }): Promise<void> {
 		process.exit(0);
 	}
 
-	// If Infisical already supplied the secret, don't invent .env.local (bun d).
-	// If unset, createTestOrg mints one and tw warm needs it on disk.
 	const hadKey = Boolean(process.env.UNIT_TEST_AUTUMN_SECRET_KEY?.trim());
 	const { db } = await import("@server/db/initDrizzle.js");
 	const autumnSecretKey = await createTestOrg({ db });
@@ -136,7 +124,6 @@ async function runFullSetup({ yes }: { yes: boolean }): Promise<void> {
 	console.log(chalk.whiteBright(`  id:   ${TEST_ORG_CONFIG.id}\n`));
 }
 
-/** Create unit-test-org if missing; if present, only ensure its owner and API key. */
 async function runEnsure(): Promise<void> {
 	const { db } = await import("@server/db/initDrizzle.js");
 	const { organizations } = await import("@autumn/shared");

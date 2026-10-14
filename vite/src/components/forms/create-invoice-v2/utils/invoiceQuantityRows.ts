@@ -1,6 +1,5 @@
 import { type ProductItem, UsageModel } from "@autumn/shared";
 
-/** One feature's quantity rows: prepaid, usage-based, or both when the plan prices it both ways. */
 export type InvoiceQuantityRow = {
 	featureId: string;
 	prepaid?: ProductItem;

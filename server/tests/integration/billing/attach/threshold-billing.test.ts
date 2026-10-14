@@ -281,16 +281,6 @@ test(
 	{ timeout: 120_000 },
 );
 
-/**
- * A threshold charge settles debt the customer already incurred, so losing the
- * payment method must not discard it the way a missed auto top-up grant does.
- *
- * Red (current):  setup bails on the missing card before it knows this is a
- *                 threshold charge, so no invoice is raised, the plan stays
- *                 active, and usage keeps accruing on an uncollectable balance.
- * Green (after):  the overage lands on an open invoice, the plan goes past_due
- *                 and check returns allowed: false.
- */
 test(
 	"threshold billing invoices the overage when the payment method is gone",
 	async () => {
@@ -320,8 +310,6 @@ test(
 			value: 100,
 		});
 
-		// The metadata lands when Stripe creates the draft, before lines are added
-		// and before it is finalized, so poll on the settled status instead.
 		const findThresholdInvoice = (invoices: { data: Stripe.Invoice[] }) =>
 			invoices.data.find(
 				(invoice) =>
@@ -339,8 +327,6 @@ test(
 		expect(thresholdInvoice!.status).toBe("open");
 		expect(thresholdInvoice!.total).toBe(10_000);
 
-		// Paying this invoice must unblock only the plan it settles, so it has to
-		// name that plan — a customer can hold several threshold plans at once.
 		expect(
 			thresholdInvoice!.metadata?.autumn_action_customer_product_id,
 		).toBeTruthy();
@@ -358,8 +344,6 @@ test(
 			}),
 		).toMatchObject({ allowed: false });
 
-		// Settling the invoice must lift the block through check's own cached
-		// subject — a Postgres-only recovery leaves the customer blocked.
 		await attachPaymentMethod({
 			stripeCli: ctx.stripeCli,
 			stripeCusId: customer.stripe_id!,
@@ -399,7 +383,6 @@ test(
 			plan_id: planId,
 		});
 
-		// Action1 costs 0.2 credits per unit, so 700 units is 140 credits.
 		await autumnV2_3.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Action1,

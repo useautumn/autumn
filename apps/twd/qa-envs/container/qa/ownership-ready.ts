@@ -1,4 +1,3 @@
-// Exits once every local-ownership partition holds its preparing → ready → claimed records.
 const { Kafka, logLevel } = await import(
 	Bun.resolveSync("kafkajs", "/app/apps/balance-worker/")
 );

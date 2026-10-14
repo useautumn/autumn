@@ -1,9 +1,6 @@
 import { AppEnv } from "@autumn/shared";
 import { sql, type SQL } from "drizzle-orm";
 import { PgDialect } from "drizzle-orm/pg-core";
-// Import initDrizzle directly — avoid `experimentEnv` because its
-// `loadLocalEnv()` reads `server/.env` and clobbers env vars injected by
-// `infisical run --env=prod` (e.g. DATABASE_URL).
 import { initDrizzle } from "../src/db/initDrizzle";
 
 const prodTestOrgId = (() => {
@@ -12,17 +9,12 @@ const prodTestOrgId = (() => {
 	return v;
 })();
 
-// Mask password but show host so we can verify which DB we're hitting.
 const dbUrl = process.env.DATABASE_URL ?? "";
 console.log(
 	"DATABASE URL host:",
 	dbUrl.replace(/:\/\/[^@]+@/, "://***:***@") || "(empty)",
 );
 
-// Run with:
-//   infisical run --env=prod --recursive -- bun run server/experiments/explainFilterByBalance.ts
-
-// ─── Configuration ──────────────────────────────────────────────────
 const ORG_ID = prodTestOrgId;
 const ENV = AppEnv.Live;
 const FEATURE_IDS = ["SEARCH_CREDITS", "CREDITS"];
@@ -34,11 +26,9 @@ const PAGE_LIMIT = 50;
 const REPEATS = 5;
 const STATEMENT_TIMEOUT_MS = 30_000;
 const MATCH_COUNT_CAP = 100_000;
-// Max live cusEnt rows per (customer, feature) assumed by prefilter-verify.
 const ROW_BOUND = Number(process.env.PREFILTER_ROW_BOUND ?? 4);
 const TRUNCATE_EXPLAIN = true;
 const EXPLAIN_MAX_LINES = 30;
-// ═════════════════════════════════════════════════════════════════════
 
 type DB = ReturnType<typeof initDrizzle>["db"];
 
@@ -133,7 +123,6 @@ const measure = async ({
 	console.log(`[start ${wallClock()}]`);
 	if (printSql) printSqlQuery({ query, label });
 
-	// A timed-out cell is a result, not a crash — report and move on.
 	try {
 		await runReadOnly({ db, query });
 	} catch (err) {
@@ -167,10 +156,6 @@ const measure = async ({
 	return rows;
 };
 
-// ─── Shared fragments ────────────────────────────────────────────────
-
-// Same exclusions as the balance-sort experiment: expired cusEnts, lapsed
-// loose entitlements, pooled contributions (their balance lives on the pool).
 const liveCusEntPredicate = (): SQL => sql`
 	ce.expired IS NOT TRUE
 	AND (ce.expires_at IS NULL OR ce.expires_at > EXTRACT(EPOCH FROM now()) * 1000)
@@ -179,11 +164,6 @@ const liveCusEntPredicate = (): SQL => sql`
 
 const opSql = (op: ">" | "<"): SQL => sql.raw(op);
 
-/**
- * Shape 1: lazy keyset walk. Customers in cursor-index order, per-candidate
- * balance sum via LATERAL probe, filter, stop at page size. Customers with no
- * cusEnt for the feature count as total 0 (so "< x" includes them).
- */
 const buildLazyWalkQuery = ({
 	internalFeatureId,
 	op,
@@ -209,12 +189,6 @@ const buildLazyWalkQuery = ({
 	LIMIT ${PAGE_LIMIT + 1}
 `;
 
-/**
- * Shape 2: aggregate + HAVING. Full sum pass over the feature's cusEnts, keep
- * matching customers, then keyset-order via customers join. Flat cost
- * regardless of selectivity. NOTE: excludes customers with no cusEnt rows, so
- * "< x" results can differ from shape 1 (zero-balance customers missing).
- */
 const buildAggregateHavingQuery = ({
 	internalFeatureId,
 	op,
@@ -241,18 +215,6 @@ const buildAggregateHavingQuery = ({
 	LIMIT ${PAGE_LIMIT + 1}
 `;
 
-/**
- * Shape 3 (`>` only): prefilter-and-verify. Any customer with SUM > x and at
- * most K live rows must own a row with balance > x/K — range-filter rows,
- * dedupe customers, verify exact sums. False positives verify away; false
- * negatives only if a customer exceeds K rows for the feature (checked by
- * comparing the verified count against the aggregate's).
- * Today balance is a heap filter over the feature index; with
- *   CREATE INDEX ... ON customer_entitlements (internal_feature_id, balance)
- *     WHERE expired IS NOT TRUE AND pooled_contribution_id IS NULL
- * the prefilter becomes a small range scan. NOTE: indexing balance disables
- * HOT updates for the hottest write path — needs a write bench before DDL.
- */
 const buildPrefilterVerifyQuery = ({
 	internalFeatureId,
 	x,
@@ -354,8 +316,6 @@ const cappedMatchCount = async ({
 	});
 	return Number((rows[0] as { n: number | string }).n);
 };
-
-// ─── Main ────────────────────────────────────────────────────────────
 
 const main = async () => {
 	const replicaUrl = process.env.DATABASE_REPLICA_URL;

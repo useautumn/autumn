@@ -27,12 +27,10 @@ const topic = "sliced-topic";
 const partition = 1;
 
 type FixtureOptions = {
-	/** Thrown by the heartbeat after this many calls: what a rebalance looks like from inside a batch. */
 	heartbeatFailsAfter?: number;
 	running?: () => boolean;
 };
 
-/** The slice of kafkajs a topic consumer touches, recording what it resolved, heartbeat and committed. */
 function createConsumerFixture(options: FixtureOptions = {}) {
 	const events: string[] = [];
 	let runConfig: ConsumerRunConfig | undefined;

@@ -7,7 +7,6 @@ import {
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { customerProductToLineItems } from "@/internal/billing/v2/utils/lineItems/customerProductToLineItems";
 
-/** One subscription item: a price billed for an entity at a quantity. */
 const subscriptionItemKey = (lineItem: LineItem) =>
 	[
 		lineItem.context.price.id,
@@ -15,7 +14,6 @@ const subscriptionItemKey = (lineItem: LineItem) =>
 		lineItem.totalQuantity ?? 1,
 	].join(":");
 
-/** What the live subscription bills each period, as new-period charge lines. */
 const liveSubscriptionChargeLines = ({
 	ctx,
 	billingContext,
@@ -45,7 +43,6 @@ const liveSubscriptionChargeLines = ({
 		);
 };
 
-/** Drops new-period charges for items the live subscription already bills at the same quantity. */
 export const dropUnchangedSubscriptionItemCharges = ({
 	ctx,
 	lineItems,

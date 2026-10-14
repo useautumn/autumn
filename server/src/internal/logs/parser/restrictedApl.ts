@@ -158,7 +158,6 @@ const tokenize = (query: string): Token[] => {
 
 		const two = query.slice(i, i + 2);
 
-		// Agents habitually write C-style logical operators.
 		if (two === "&&" || two === "||") {
 			tokens.push({ kind: "identifier", value: two === "&&" ? "and" : "or" });
 			i += 2;
@@ -325,7 +324,6 @@ class Parser {
 			case "project":
 				return this.parseProject();
 			default:
-				// Bare predicates like "customer_id == 'x'" get an implicit where.
 				this.index = start;
 				return { kind: "where", expr: this.parseOrExpr() };
 		}
@@ -336,7 +334,6 @@ class Parser {
 		const usedAliases = new Set<string>();
 
 		while (this.peekIdentifierLower() !== "by" && !this.isStageBoundary()) {
-			// Anonymous aggregates ("summarize count() by x") alias to the function name.
 			if (this.peekSymbolAhead(1, "(")) {
 				const fn = this.parseSummarizeFunction();
 				const base: string = fn.kind === "numeric" ? fn.name : fn.kind;
@@ -535,7 +532,6 @@ class Parser {
 		}
 
 		if (opToken.kind === "symbol") {
-			// Lone "=" in a predicate is an unambiguous equality comparison.
 			const op = opToken.value === "=" ? "==" : opToken.value;
 			if (this.isCompareOperator(op)) {
 				return {
@@ -766,7 +762,6 @@ const fieldToSummarizeByApl = (field: RestrictedAplField): string => {
 	return `${nestedFieldAlias(field)} = tostring(${fieldToApl(field)})`;
 };
 
-// Aliased back to `timestamp` so later order/project stages keep working.
 const summarizeByColumnToApl = (column: SummarizeByColumn): string =>
 	column.kind === "bin"
 		? `timestamp = bin(timestamp, ${column.interval})`

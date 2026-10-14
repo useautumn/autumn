@@ -1,12 +1,3 @@
-/**
- * A remove aimed at one license plan must not touch a sibling license plan that
- * grants the same feature under the same parent.
- *
- * The DELETE matches on definition.feature_id and reaches assignments through
- * the canonical pool LATERAL. Whether the sibling is excluded rests entirely on
- * that LATERAL filtering by license_internal_product_id — there is no
- * plan_license_id predicate on the assignment join.
- */
 import { expect, test } from "bun:test";
 import { customerEntitlements } from "@autumn/shared";
 import { runChunkedMigration } from "@tests/integration/billing/migrations-v2/utils/runChunkedMigration";
@@ -136,6 +127,5 @@ test(`${chalk.yellowBright("batch-license-customize: removing an item spares a s
 		intervalMs: 250,
 	});
 
-	// The sibling plan's assignment keeps its own grant.
 	expect(converged.length).toBeGreaterThan(0);
 });

@@ -1,21 +1,3 @@
-/**
- * Editing an existing allowance on a license plan (100 -> 200 messages) should
- * batch-lower, the same as adding a new free entitlement.
- *
- * diffPlanV1 has no update_items — a modify-in-place is expressed as a remove
- * plus an add sharing one match key. The batch guard rejected any customize
- * carrying remove_items, so a plain allowance edit fell to the per-customer
- * lane even though nothing about it touches Stripe.
- *
- * Red-failure mode (current behavior):
- *  - the op is rejected as unsupported_upsert_licenses and runs per_customer
- *
- * Green-success criteria (after fix):
- *  - the op runs on the batch lane
- *  - each live assignment ends up with exactly one row for the feature
- *  - the allowance delta is credited, so a partly consumed balance keeps its
- *    consumption instead of being reset
- */
 import { expect, test } from "bun:test";
 import {
 	BillingInterval,
@@ -60,8 +42,6 @@ test(`${chalk.yellowBright("batch-license-customize: editing an existing allowan
 	);
 	expect(liveAssignments).toHaveLength(ASSIGNED_SEATS);
 
-	// Spend part of one assignment's allowance, so the migration has to credit
-	// the delta rather than reset the balance.
 	await ctx.db
 		.update(customerEntitlements)
 		.set({ balance: SEAT_MESSAGES - CONSUMED })
@@ -106,8 +86,6 @@ test(`${chalk.yellowBright("batch-license-customize: editing an existing allowan
 
 	expect(result?.lane).toBe("batch");
 
-	// A carried customer changed even though no assignment gained a row. Marking
-	// it skipped would skip its cache invalidation.
 	const itemRuns = await ctx.db
 		.select({ status: migrationItemRuns.status })
 		.from(migrationItemRuns)
@@ -168,8 +146,6 @@ test(`${chalk.yellowBright("batch-license-customize: editing an allowance on a P
 	);
 	expect(liveAssignments).toHaveLength(ASSIGNED_SEATS);
 
-	// Spend part of one assignment's allowance, so the migration has to credit
-	// the delta rather than reset the balance.
 	await ctx.db
 		.update(customerEntitlements)
 		.set({ balance: SEAT_MESSAGES - CONSUMED })

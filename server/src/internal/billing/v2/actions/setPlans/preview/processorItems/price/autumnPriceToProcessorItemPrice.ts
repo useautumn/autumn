@@ -22,7 +22,6 @@ const usageTiersToProcessorItemTiers = (tiers: UsageTier[]) =>
 		flat_amount: tier.flat_amount ?? 0,
 	}));
 
-/** Prepaid tiers exactly as Autumn will create them in Stripe, so the quantity prices the same way. */
 const prepaidStripeTiers = ({
 	price,
 	entitlement,
@@ -39,7 +38,6 @@ const prepaidStripeTiers = ({
 		currency,
 	});
 
-/** For prices Stripe doesn't have yet (created on confirm), describe them from Autumn's config. */
 export const autumnPriceToProcessorItemPrice = ({
 	price,
 	entitlement,

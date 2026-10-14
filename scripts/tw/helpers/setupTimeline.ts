@@ -1,8 +1,3 @@
-/**
- * Wall-clock timeline of a run's setup phases (invocation → first test). Phases
- * record start/end independently, so overlapping (parallel) phases render correctly.
- */
-
 export type PhaseTiming = {
 	name: string;
 	startMs: number;
@@ -17,10 +12,8 @@ export const resetSetupTimeline = (): void => {
 	phases = [];
 };
 
-/** Milliseconds since the run started. */
 export const elapsedMs = (): number => Date.now() - runStartedAt;
 
-/** Record `fn` as a named phase; the end is recorded even when it throws. */
 export const timePhase = async <T>({
 	name,
 	fn,
@@ -37,7 +30,6 @@ export const timePhase = async <T>({
 	}
 };
 
-/** Record an instantaneous marker (e.g. `first-test`). */
 export const markPhase = (name: string): void => {
 	const now = elapsedMs();
 	phases.push({ name, startMs: now, endMs: now });

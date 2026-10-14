@@ -23,14 +23,12 @@ import "./internal/misc/batchReset/batchResetConfigStore.js";
 import "./internal/misc/edgeConfig/orgLimitsStore.js";
 import "./internal/misc/rateLimiter/rateLimitOverridesStore.js";
 
-// WORKER_PROCESSES lets small dev machines (Capy) run a single worker.
 const NUM_PROCESSES = process.env.WORKER_PROCESSES
 	? Number(process.env.WORKER_PROCESSES)
 	: process.env.NODE_ENV === "development"
 		? 3
 		: 4;
 
-// Track if we're shutting down
 let isShuttingDown = false;
 
 import { startMemoryMonitor } from "./utils/memoryMonitor.js";
@@ -39,18 +37,13 @@ if (cluster.isPrimary) {
 	await initInfisical();
 	getAutumnEnv();
 
-	// const { initHatchetWorker } = await import("./queue/initWorkers.js");
-	// await initHatchetWorker();
-
 	console.log(`Starting ${NUM_PROCESSES} worker processes`);
 	console.log(`SQS URL: ${process.env.SQS_QUEUE_URL_V2}`);
 
-	// Fork workers
 	for (let i = 0; i < NUM_PROCESSES; i++) {
 		cluster.fork();
 	}
 
-	// Graceful shutdown handler for primary process
 	const shutdown = async () => {
 		if (isShuttingDown) return;
 		isShuttingDown = true;
@@ -59,12 +52,10 @@ if (cluster.isPrimary) {
 			"\n🛑 Received shutdown signal, gracefully shutting down workers...",
 		);
 
-		// Send SIGTERM to all workers
 		for (const id in cluster.workers) {
 			cluster.workers[id]?.kill("SIGTERM");
 		}
 
-		// Give workers 10 seconds to finish, then force exit
 		const shutdownTimeout = setTimeout(() => {
 			console.log("⚠️  Shutdown timeout reached, forcing exit");
 			process.exit(0);
@@ -74,7 +65,6 @@ if (cluster.isPrimary) {
 			shutdownTimeout.unref();
 		}
 
-		// Wait for all workers to exit gracefully
 		const checkWorkers = setInterval(() => {
 			const aliveWorkers = Object.keys(cluster.workers || {}).length;
 			if (aliveWorkers === 0) {
@@ -89,7 +79,6 @@ if (cluster.isPrimary) {
 	process.on("SIGTERM", shutdown);
 	process.on("SIGINT", shutdown);
 
-	// Handle worker exits
 	cluster.on("exit", (worker, code, signal) => {
 		if (isShuttingDown) {
 			console.log(`[Worker ${worker.process.pid}] Exited gracefully`);
@@ -108,8 +97,6 @@ if (cluster.isPrimary) {
 	});
 } else {
 	getAutumnEnv();
-	// Worker process — start OTel SDK so child spans (Stripe/Redis/Drizzle/
-	// withSpan/withWorkerSpan) export to Axiom.
 	await import("./instrumentation.js");
 
 	const startupStartedAt = Date.now();
@@ -117,7 +104,6 @@ if (cluster.isPrimary) {
 	startMemoryMonitor("worker", 60_000);
 	await startAllEdgeConfigPolling({ logger });
 	startBalanceShadow();
-	// Queue jobs reach the balance worker too (lock expiry, evicts after billing), so they need its routing table.
 	void startBalanceWorkerClient().catch((error) => {
 		logger.error(
 			{ error },
@@ -137,8 +123,6 @@ if (cluster.isPrimary) {
 		"./external/redis/orgRedisPool.js"
 	);
 
-	// Each arm catches its own failure: a regional rejection must not
-	// short-circuit the wait for healthy dedicated org connections.
 	const redisWarmup = Promise.all([
 		warmupRegionalRedis().catch((error) => {
 			console.error("[Redis] regional warmup failed -", error);
@@ -167,5 +151,4 @@ if (cluster.isPrimary) {
 
 	const { initWorkers } = await import("./queue/initWorkers.js");
 	await initWorkers({ startupStartedAt, queueImplementation });
-	// SQS implementation handles its own SIGTERM/SIGINT
 }

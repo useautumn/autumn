@@ -44,7 +44,6 @@ const read = ({
 }): ByocCacheEntry | null =>
 	ctx.store.get(storeKey({ deploymentId, key })) ?? null;
 
-/** A KV held in memory: the writer contract with a read-back for assertions. */
 export const createMemoryByocCacheWriter = (): ByocCacheWriter & {
 	read(params: { deploymentId: string; key: string }): ByocCacheEntry | null;
 } => {

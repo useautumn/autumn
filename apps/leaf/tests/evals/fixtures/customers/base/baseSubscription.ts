@@ -4,7 +4,6 @@ import type { ApiPlanV1 } from "@api/products/apiPlanV1.js";
 const defaultStartedAt = new Date("2026-01-01T00:00:00.000Z");
 const dateToEpochMs = (date: Date | null) => date?.getTime() ?? null;
 
-/** Base subscription fixture; pass plan to include the expanded plan response. */
 export const baseSubscription = ({
 	id,
 	plan,

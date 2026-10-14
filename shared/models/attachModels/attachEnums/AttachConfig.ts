@@ -9,7 +9,7 @@ export enum ProrationBehavior {
 export interface AttachConfig {
 	onlyCheckout: boolean;
 	invoiceCheckout: boolean;
-	carryUsage: boolean; // Whether to carry over existing usages
+	carryUsage: boolean;
 	branch: AttachBranch;
 	proration: ProrationBehavior;
 	disableTrial: boolean;

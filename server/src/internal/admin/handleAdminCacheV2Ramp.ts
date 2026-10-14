@@ -16,11 +16,6 @@ const REDIS_PROTOCOLS = new Set(["redis:", "rediss:"]);
 const actorString = (ctx: { user?: { email?: string }; userId?: string }) =>
 	ctx.user?.email ?? ctx.userId ?? "unknown";
 
-/**
- * GET /admin/cache-v2-ramp
- * Returns the current ramp config in frontend-safe shape (host + percent only).
- * Never echoes the encrypted connectionString.
- */
 export const handleGetAdminCacheV2Ramp = createRoute({
 	scopes: [Scopes.Superuser],
 	handler: async (c) => {
@@ -38,12 +33,6 @@ export const handleGetAdminCacheV2Ramp = createRoute({
 	},
 });
 
-/**
- * PATCH /admin/cache-v2-ramp  body: { connectionString }
- * Upsert the destination. Accepts a PLAINTEXT redis:// or rediss:// URI;
- * server validates the scheme, extracts host:port for logging, encrypts the
- * connection string, and persists. Refuses while migrationPercent > 0.
- */
 export const handleUpsertAdminCacheV2Ramp = createRoute({
 	scopes: [Scopes.Superuser],
 	body: z.object({ connectionString: z.string().min(1) }),
@@ -78,9 +67,6 @@ export const handleUpsertAdminCacheV2Ramp = createRoute({
 			});
 		}
 
-		// Store enforces "refuse while migrationPercent > 0" atomically against
-		// fresh S3 state — no separate handler-level guard against the polled
-		// snapshot (which can lag in multi-instance deployments).
 		const wasConfigured = !!getCacheV2RampConfig();
 		await upsertCacheV2RampConnection({
 			connectionString: encryptData(connectionString),
@@ -95,10 +81,6 @@ export const handleUpsertAdminCacheV2Ramp = createRoute({
 	},
 });
 
-/**
- * PATCH /admin/cache-v2-ramp/migration  body: { migrationPercent }
- * Updates the percent. Stores previous value + timestamp.
- */
 export const handleUpdateAdminCacheV2RampMigration = createRoute({
 	scopes: [Scopes.Superuser],
 	body: z.object({ migrationPercent: z.number().int().min(0).max(100) }),
@@ -107,13 +89,9 @@ export const handleUpdateAdminCacheV2RampMigration = createRoute({
 		const { logger } = ctx;
 		const { migrationPercent } = c.req.valid("json");
 
-		// Snapshot the previous percent for logging only; the store enforces
-		// "config must exist" atomically against fresh S3 state.
 		const previousSnapshot = getCacheV2RampConfig();
 		await updateCacheV2RampMigrationPercent({ migrationPercent });
 
-		// Warm the destination client on first ramp-up so the first ramped
-		// requests don't pay the connect-handshake latency.
 		if (
 			migrationPercent > 0 &&
 			(previousSnapshot?.migrationPercent ?? 0) === 0
@@ -129,17 +107,11 @@ export const handleUpdateAdminCacheV2RampMigration = createRoute({
 	},
 });
 
-/**
- * DELETE /admin/cache-v2-ramp
- * Removes the cache V2 ramp config entirely. Refuses while migrationPercent > 0.
- */
 export const handleDeleteAdminCacheV2Ramp = createRoute({
 	scopes: [Scopes.Superuser],
 	handler: async (c) => {
 		const ctx = c.get("ctx");
 		const { logger } = ctx;
-		// Store enforces "refuse while migrationPercent > 0" atomically against
-		// fresh S3 state.
 		await removeCacheV2RampConfig();
 		closeRampDestinationClient();
 

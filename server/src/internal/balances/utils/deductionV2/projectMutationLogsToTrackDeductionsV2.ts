@@ -38,9 +38,6 @@ export const projectMutationLogsToTrackDeductionsV2 = ({
 		}
 	}
 
-	// cus_ent_* and rollover_* share the same `balance_id` namespace in the
-	// public shape, but their internal types are scoped separately — qualify
-	// with the type when aggregating so the namespaces can't collide.
 	const aggregated = new Map<string, TrackDeduction>();
 
 	for (const log of mutationLogs) {
@@ -69,8 +66,6 @@ export const projectMutationLogsToTrackDeductionsV2 = ({
 
 		const key = `${typeQualifier}::${balanceId}`;
 		const existing = aggregated.get(key);
-		// Lua emits balance_delta as negative for deductions; flip so the public
-		// shape reads "amount consumed = positive".
 		const valueDelta = -log.balance_delta;
 
 		if (existing) {

@@ -39,7 +39,6 @@ describe("createPostgresClient", () => {
 		});
 	});
 
-	/** Drizzle's query is a thenable, not a promise; `expect().rejects` wants the promise. */
 	const selectOne = () => Promise.resolve(postgres.db.execute(sql`select 1`));
 
 	afterEach(async () => {

@@ -1,15 +1,3 @@
-/**
- * TDD: discarding a pending plan whose checkout session already completed at
- * Stripe must not delete the deferred metadata or expire the row, otherwise the
- * checkout.session.completed webhook finds nothing and the paid plan is lost.
- *
- * Red-failure mode (current behavior):
- *  - expireAndClearIfOwned returns false, cleanup runs anyway, no error.
- *
- * Green-success criteria (after fix):
- *  - a 423 conflict is thrown before any cleanup.
- */
-
 import { expect, test } from "bun:test";
 import {
 	AppEnv,

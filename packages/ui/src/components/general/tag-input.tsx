@@ -56,7 +56,6 @@ function TagInput({
 	const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
 		const newValue = e.target.value;
 
-		// Check if space was added at the end
 		if (newValue.endsWith(" ")) {
 			const trimmedValue = newValue.trim();
 			if (trimmedValue && !value.includes(trimmedValue)) {
@@ -72,11 +71,9 @@ function TagInput({
 	const handlePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
 		const pastedText = e.clipboardData.getData("text");
 
-		// Check if pasted text contains spaces (likely multiple tags)
 		if (pastedText.includes(" ")) {
 			e.preventDefault();
 
-			// Split by whitespace and filter out empty strings
 			const newTags = pastedText
 				.split(/\s+/)
 				.map((tag) => tag.trim())
@@ -85,7 +82,6 @@ function TagInput({
 			if (newTags.length > 0) {
 				onChange([...value, ...newTags]);
 				setInputValue("");
-				// Call onTagAdd for each tag added
 				if (onTagAdd) {
 					for (let i = 0; i < newTags.length; i++) {
 						onTagAdd();
@@ -93,7 +89,6 @@ function TagInput({
 				}
 			}
 		}
-		// If no spaces, let default paste behavior happen
 	};
 
 	useHotkeys("enter", addTag, {

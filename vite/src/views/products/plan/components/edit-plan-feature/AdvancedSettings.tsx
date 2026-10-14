@@ -41,28 +41,21 @@ export function AdvancedSettings() {
 	const showUsageLimits = isPriced;
 	const showThresholdBilling = showsThresholdBilling({ item });
 	const showRollover = hasCreditSystem || usageType === FeatureUsageType.Single;
-	// Purchased credits only: the cadence of a recurring item already bounds it.
 	const showExpiry =
 		isPriced && item.usage_model === UsageModel.Prepaid && isOneOff;
 	const showFeatureOverride = isAnyCreditSystem(
 		features.find((feature) => feature.id === item.feature_id)?.type,
 	);
-	// Deprecated in favor of licenses. Surface it whenever any item in the plan
-	// uses an entity feature, so all items in such plans keep working.
 	const showEntityFeature =
 		item.entity_feature_id != null ||
 		(product?.items?.some((planItem) => planItem?.entity_feature_id != null) ??
 			false);
-	// Proration shows for prepaid or continuous use features (not consumable + pay-per-use).
-	// One-off items have no billing cycle to prorate against.
 	const showProration =
 		isPriced &&
 		!isOneOff &&
 		(item.usage_model === UsageModel.Prepaid ||
 			usageType === FeatureUsageType.Continuous);
 
-	// Consumable prepaid features can reset their granted balance on a different
-	// cycle to billing (continuous-use balances don't reset).
 	const showResetInterval =
 		isPriced &&
 		item.usage_model === UsageModel.Prepaid &&
@@ -71,36 +64,24 @@ export function AdvancedSettings() {
 
 	return (
 		<SheetAccordion type="single" withSeparator={false} collapsible={true}>
-			<SheetAccordionItem
-				value="advanced"
-				title="Advanced"
-				// description="Additional configuration options for this feature"
-			>
+			<SheetAccordionItem value="advanced" title="Advanced">
 				<div className="flex flex-col gap-6 pt-2 pb-10 [>&_.advanced-input-width]:w-xs">
 					<PooledBalanceConfig />
 
-					{/* Usage Limits */}
 					{showUsageLimits && <UsageLimit />}
 
-					{/* Bill overage once it reaches a threshold */}
 					{showThresholdBilling && <ThresholdBillingConfig />}
 
-					{/* Rollover */}
 					{showRollover && <RolloverConfig />}
 
-					{/* Expiry on purchased credits */}
 					{showExpiry && <ExpiryConfig />}
 
-					{/* Credit rate card override */}
 					{showFeatureOverride && <FeatureOverrideConfig />}
 
-					{/* Entity Feature Config */}
 					{showEntityFeature && <EntityFeatureConfig />}
 
-					{/* Proration Config */}
 					{showProration && <ProrationConfig />}
 
-					{/* Reset Interval Config */}
 					{showResetInterval && <ResetIntervalConfig />}
 				</div>
 			</SheetAccordionItem>

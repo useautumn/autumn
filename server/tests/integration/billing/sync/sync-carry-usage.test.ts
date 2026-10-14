@@ -1,15 +1,3 @@
-/**
- * Regression coverage for syncV2 expire behaviour:
- *   - entity-scoped re-sync re-attaches on the same entity (no customer-level
- *     duplicate) and expires the existing entity-scoped product
- *   - consumed usage carries from the expired plan onto the replacement
- *     (carry_over_usage, default on) — and stays put when turned off
- *
- * Out-of-sync state is forced with `cancel_immediately` + `no_billing_changes`
- * (cancels in Autumn, leaves the live Stripe subscription), then re-synced the
- * way the dashboard does it (detection proposals → submit with expire on).
- */
-
 import { expect, test } from "bun:test";
 import {
 	CusProductStatus,
@@ -51,7 +39,6 @@ const getActiveProducts = async ({
 	);
 };
 
-// Submit a sync the same way the dashboard does: detection proposal → expire on.
 const dashboardSync = async ({
 	autumnV1,
 	customerId,
@@ -90,10 +77,6 @@ const dashboardSync = async ({
 		carry_over_usage: carryOverUsage,
 	} satisfies SyncParamsV1);
 };
-
-// ═══════════════════════════════════════════════════════════════════════════
-// Customer-level: Free (5/10 used) → re-sync Pro with expire → Pro 15/20.
-// ═══════════════════════════════════════════════════════════════════════════
 
 test(
 	chalk.yellowBright(
@@ -136,14 +119,12 @@ test(
 		)?.subscription_ids?.[0];
 		if (!proStripeSubId) throw new Error("missing Pro Stripe subscription id");
 
-		// Out of sync: cancel Pro in Autumn only; fall back to default Free.
 		await autumnV1.subscriptions.update({
 			customer_id: customerId,
 			product_id: pro.id,
 			cancel_action: "cancel_immediately",
 			no_billing_changes: true,
 		});
-		// Use 5 on the reactivated Free → 5/10.
 		await autumnV1.track({
 			customer_id: customerId,
 			feature_id: MESSAGES,
@@ -157,7 +138,6 @@ test(
 			stripeSubscriptionId: proStripeSubId,
 		});
 
-		// Free expired, exactly one active Pro carrying the 5 used → 15/20.
 		expect(result.expired_cus_product_ids.length).toBe(1);
 
 		const activeFree = await getActiveProducts({
@@ -174,10 +154,6 @@ test(
 		expect(messagesBalance(activePro[0])).toBe(15);
 	},
 );
-
-// ═══════════════════════════════════════════════════════════════════════════
-// Escape hatch: same flow with carry_over_usage:false → Pro stays 20/20.
-// ═══════════════════════════════════════════════════════════════════════════
 
 test(
 	chalk.yellowBright(
@@ -249,11 +225,6 @@ test(
 	},
 );
 
-// ═══════════════════════════════════════════════════════════════════════════
-// Entity-scoped: Premium on Entity A (21/30 used). Re-sync re-attaches on
-// Entity A (no customer-level duplicate), expires the old one, carries usage.
-// ═══════════════════════════════════════════════════════════════════════════
-
 test(
 	chalk.yellowBright(
 		"sync-v2 carry-usage: entity-scoped Premium re-syncs on Entity A, no duplicate, carries to 21/30",
@@ -297,7 +268,6 @@ test(
 		)?.subscription_ids?.[0];
 		if (!proStripeSubId) throw new Error("missing Stripe subscription id");
 
-		// Use 9 on Premium@Entity A → 21/30.
 		await autumnV1.track({
 			customer_id: customerId,
 			entity_id: entityA.id ?? undefined,
@@ -306,7 +276,6 @@ test(
 		});
 		await new Promise((r) => setTimeout(r, 2000));
 
-		// Out of sync: cancel only Pro (customer); Premium@Entity A stays.
 		await autumnV1.subscriptions.update({
 			customer_id: customerId,
 			product_id: pro.id,
@@ -320,7 +289,6 @@ test(
 			stripeSubscriptionId: proStripeSubId,
 		});
 
-		// Exactly one active Premium, bound to Entity A, carrying 9 used → 21/30.
 		const activePremium = await getActiveProducts({
 			customerId,
 			productId: premium.id,
@@ -329,7 +297,6 @@ test(
 		expect(activePremium[0].internal_entity_id).toBe(entityA.internal_id);
 		expect(messagesBalance(activePremium[0])).toBe(21);
 
-		// Pro re-attached at the customer level (fresh).
 		const activePro = await getActiveProducts({
 			customerId,
 			productId: pro.id,

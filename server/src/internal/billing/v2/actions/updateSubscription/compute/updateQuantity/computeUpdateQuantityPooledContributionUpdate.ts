@@ -7,11 +7,6 @@ import {
 } from "@autumn/shared";
 import { computePooledBalanceContributionAmounts } from "@/internal/billing/v2/pooledBalances/compute/applyIncomingPooledBalanceSources/computePooledBalanceContributionAmounts";
 
-/**
- * Deferred (next-cycle) quantity changes on a pooled prepaid contributor are
- * recorded on its contribution row and promoted at the pool's next reset.
- * Immediate quantity changes are not handled here.
- */
 export const computeUpdateQuantityPooledContributionUpdate = ({
 	customerEntitlement,
 	customerProduct,

@@ -263,7 +263,6 @@ describe("clearRolloversOverMax: non-entity merge", () => {
 			newRollovers: [newRollover],
 		});
 
-		// NOTE: current behavior; possible bug: a no-op update is written when nothing is over the cap.
 		expect(writes).toEqual({
 			inserts: [newRollover],
 			updates: [row("old", 60, FEB)],

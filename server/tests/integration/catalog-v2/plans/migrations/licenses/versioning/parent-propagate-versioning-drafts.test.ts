@@ -1,15 +1,3 @@
-/**
- * catalogV2.update — parent propagate versioning is independent of the child.
- * Parent versions without customers are omitted. Child all_versions does
- * not strip the parent version pin.
- *
- * Contract:
- *   F1 propagate latest; Team v1+v2, customers only on v1 → no parent op
- *   F2 propagate version:1, customers on v1 → parent op pinned to 1
- *   F3 all_versions: customers on v1 only → pin v1; v1+v2 same delta → collapse
- *   F4 new_version: mints parent v2; v1 customers get child + parent license ops
- */
-
 import { test } from "bun:test";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";

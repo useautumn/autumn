@@ -1,10 +1,3 @@
-/**
- * buildStripePriceIdempotencyKey
- *
- * Same Autumn price id + same mint shape → same key (retries dedupe).
- * Same id + $10 → $20 → different key (Stripe will not reject the remint).
- */
-
 import { describe, expect, test } from "bun:test";
 import {
 	BillingInterval,
@@ -64,8 +57,6 @@ describe("buildStripePriceIdempotencyKey", () => {
 	test("same price re-minted under a new product gets a new key", () => {
 		const ten = fixed({ amount: 10 });
 
-		// Re-pointing a plan's Stripe product remints this row under a different
-		// product; Stripe rejects a reused key whose parameters changed.
 		expect(key({ price: ten, stripeProductId: "prod_old" })).not.toBe(
 			key({ price: ten, stripeProductId: "prod_new" }),
 		);

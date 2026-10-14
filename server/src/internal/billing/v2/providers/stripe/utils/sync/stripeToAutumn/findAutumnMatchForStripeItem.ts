@@ -10,7 +10,6 @@ import { climbLicenseMatch } from "../matchUtils/licenseMatchUtils/climbLicenseM
 import { findLicenseMatchForStripeItem } from "../matchUtils/licenseMatchUtils/findLicenseMatchForStripeItem";
 import type { StripeItemSnapshot } from "../stripeItemSnapshot/types";
 
-/** Matches exact top-level prices, license links, then product-level identity. */
 export const findAutumnMatchForStripeItem = ({
 	item,
 	fullProducts,
@@ -20,7 +19,6 @@ export const findAutumnMatchForStripeItem = ({
 	item: StripeItemSnapshot;
 	fullProducts: FullProduct[];
 	org?: Organization;
-	/** Products already linked to the item's subscription (tie-break only). */
 	linkedInternalProductIds?: ReadonlySet<string>;
 }): ItemDiff => {
 	for (const product of fullProducts) {

@@ -7,7 +7,6 @@ import { handleGetShadowAtomMetrics } from "./handlers/handleGetShadowAtomMetric
 import { handleResizeShadowAtom } from "./handlers/handleResizeShadowAtom.js";
 import { handleRetryShadowAtom } from "./handlers/handleRetryShadowAtom.js";
 
-/** Staff-only: our shadow Atom answers an org Atom's `byoc.*` calls, so the dashboard drives it with the same code. */
 export const shadowAtomRpcRouter = new Hono<HonoEnv>();
 
 shadowAtomRpcRouter.post("/byoc.create_atom", ...handleCreateShadowAtom);

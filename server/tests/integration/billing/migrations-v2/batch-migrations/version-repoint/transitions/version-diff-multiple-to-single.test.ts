@@ -1,8 +1,3 @@
-/**
- * Multiple→single same feature (allowed per decision 1): the strongest-
- * precision row pairs and keeps its own usage; the orphaned yearly sibling is
- * deleted and its usage drops with it.
- */
 import { expect, test } from "bun:test";
 import { EntInterval, ProductItemInterval } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features";
@@ -12,7 +7,6 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-// version-only is per-customer until definition execute is restored
 import {
 	expectVersionRepointedOnce,
 	mintPlanVersion,
@@ -100,8 +94,6 @@ test.skip(
 			result,
 		});
 
-		// Only the paired monthly row survives, carrying its own usage; the
-		// yearly orphan is deleted and its usage drops (decision 1).
 		const after = await readFeatureRowsWithDefinition({
 			ctx,
 			customerId,

@@ -1,8 +1,3 @@
-/**
- * Opens the mock-served dashboard in headless Chromium, clicks a tab, and
- * screenshots it — the visual repro loop for chart-rendering bugs.
- * Usage: bun run mock-harness/screenshot.ts <out.png> [tabLabel] (server must be up).
- */
 import { existsSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { chromium } from "playwright-core";
@@ -14,7 +9,6 @@ const resolveChromium = (): string => {
 			return path;
 		}
 	} catch {
-		// fall through to cache scan
 	}
 	const cache = join(process.env.HOME || "", "Library/Caches/ms-playwright");
 	const builds = readdirSync(cache)
@@ -52,8 +46,6 @@ page.on("console", (message) => {
 page.on("pageerror", (error) => consoleErrors.push(`pageerror: ${error}`));
 
 await page.goto(url, { waitUntil: "domcontentloaded" });
-// Clicks as soon as the tab exists — with PROGRESSIVE=1 on the server this is
-// the live-run path where the chart mounts before any data arrives.
 await page.getByRole("tab", { name: tabLabel }).click({ timeout: 15_000 });
 await page.waitForTimeout(Number.parseInt(process.env.WAIT_MS || "1500", 10));
 

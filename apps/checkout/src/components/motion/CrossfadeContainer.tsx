@@ -10,10 +10,6 @@ interface CrossfadeContainerProps {
 	className?: string;
 }
 
-/**
- * Smoothly crossfades between skeleton and content with height animation.
- * Uses popLayout mode for overlapping exit/enter animations.
- */
 export function CrossfadeContainer({
 	isLoading,
 	skeleton,

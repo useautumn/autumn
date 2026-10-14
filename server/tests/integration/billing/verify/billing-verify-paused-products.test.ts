@@ -1,19 +1,3 @@
-/**
- * Billing Verify: a plan parked as Paused is still live on Stripe
- *
- * A trial attached with on_end: "revert" is Autumn-only: it parks the current
- * plan as Paused, writes nothing to Stripe (the subscription keeps billing the
- * parked plan, the trial plan never appears there), and revertTrialExpiry
- * restores the parked plan with a status flip. While the trial runs, the
- * paused plan's items are the expected Stripe state and the trialing plan
- * contributes nothing.
- *
- * Red (current): verify loads only RELEVANT_STATUSES and expects the trialing
- * plan, so it reports the trial's items as missing and the parked plan's items
- * as not in Autumn.
- * Green (after): both scenarios verify with no mismatches.
- */
-
 import { expect, test } from "bun:test";
 import {
 	type AttachParamsV1Input,

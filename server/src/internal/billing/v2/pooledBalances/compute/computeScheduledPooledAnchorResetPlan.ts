@@ -10,7 +10,6 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { emptyPooledBalancePlan } from "@/internal/billing/v2/utils/billingPlan/pooledBalancePlan.js";
 import { computePooledBalanceTransitionPlan } from "./computePooledBalanceTransitionPlan.js";
 
-/** Reconciles subscription contributions at a completed anchor before the shared balance reset. */
 export const computeScheduledPooledAnchorResetPlan = ({
 	ctx,
 	fullCustomer,
@@ -24,10 +23,6 @@ export const computeScheduledPooledAnchorResetPlan = ({
 	stripeSubscriptionId: string;
 	anchorMs: number;
 }) => {
-	// A pool is only re-anchored and reset here when one of the products whose
-	// scheduled reset actually landed contributes to it. Products still mid-cycle
-	// on the same subscription keep their pools untouched, since their
-	// contributions are not reconciled by this pass.
 	const resetContributionPoolIds = new Set(
 		customerProducts.flatMap((customerProduct) =>
 			customerProduct.customer_entitlements

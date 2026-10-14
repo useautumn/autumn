@@ -6,7 +6,6 @@ import { deleteEveSession } from "../../../eve/repo.js";
 import type { EveSessionRef } from "../../../eve/types.js";
 import type { EveTurnOutcome } from "../execute/eveTurnReducer.js";
 
-// Deleting the session also removes the dashboard thread.
 export const resolveAgentTurnOutcome = async ({
 	env,
 	logger,

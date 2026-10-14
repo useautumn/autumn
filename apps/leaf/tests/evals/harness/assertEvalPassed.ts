@@ -28,8 +28,6 @@ export const evalFailures = (
 			: [];
 	});
 
-/** Opt-in (CI) gate: a scorer below 1 or a thrown case fails the process,
- * since `Eval()` itself always resolves cleanly. */
 export const assertEvalPassed = ({
 	evaluation,
 	experimentName,
@@ -50,7 +48,6 @@ export const assertEvalPassed = ({
 	process.exitCode = 1;
 };
 
-/** The whole run failed before scoring (e.g. the evaluator timed out). */
 export const failEvalRun = ({
 	error,
 	experimentName,

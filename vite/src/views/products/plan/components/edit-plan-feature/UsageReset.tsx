@@ -34,15 +34,12 @@ export function UsageReset({ showBillingLabel = false }: UsageResetProps) {
 
 	const isFeaturePrice = isFeaturePriceItem(item);
 
-	// When a prepaid feature resets on a different cycle to billing, this dropdown
-	// drives the billing interval (price_interval); the reset lives in `interval`.
 	const isSeparateResetActive = isFeaturePrice && !nullish(item.price_interval);
 	const intervalField = isSeparateResetActive ? "price_interval" : "interval";
 	const countField = isSeparateResetActive
 		? "price_interval_count"
 		: "interval_count";
 
-	// Helper functions to reduce repetition
 	const getIntervalValue = () => {
 		return isFeaturePrice
 			? itemToBillingInterval({ item })
@@ -63,12 +60,10 @@ export function UsageReset({ showBillingLabel = false }: UsageResetProps) {
 			: entToItemInterval({ entInterval: value as EntInterval });
 	};
 
-	// Derived state
 	const intervalValue = getIntervalValue();
 	const isOneOff = intervalValue === getOneOffInterval();
 	const isSelectDisabled = isOneOff;
 
-	// Handlers
 	const handleIntervalChange = (value: BillingInterval | EntInterval) => {
 		setItem({
 			...item,
@@ -90,7 +85,6 @@ export function UsageReset({ showBillingLabel = false }: UsageResetProps) {
 		});
 	};
 
-	// Get available interval options
 	const availableIntervals = Object.values(
 		isFeaturePrice ? BillingInterval : EntInterval,
 	).filter((interval) => {
@@ -140,7 +134,6 @@ export function UsageReset({ showBillingLabel = false }: UsageResetProps) {
 
 				<IconCheckbox
 					icon={<CalendarXIcon />}
-					// iconOrientation="center"
 					iconOrientation="left"
 					variant="secondary"
 					size="default"

@@ -48,12 +48,10 @@ const handleMultiProductErrors = async ({
 				internalEntityId: attachParams.internalEntityId,
 			});
 
-		// 1. If product is add on, allow attach
 		if (product.is_add_on) {
 			continue;
 		}
 
-		// 1. If same product exists, not allowed
 		if (curSameProduct) {
 			throw new RecaseError({
 				message: `Product ${product.name} is already attached, can't attach again`,
@@ -66,7 +64,6 @@ const handleMultiProductErrors = async ({
 			curMainProduct &&
 			!isFreeProduct(cusProductToPrices({ cusProduct: curMainProduct }));
 
-		// 2. If existing paid product, not allowed
 		if (curPaidProduct) {
 			throw new RecaseError({
 				message: `Can't perform upgrade/downgrade to ${product.name} when attaching multiple products simultaneously`,
@@ -96,8 +93,6 @@ const getOptionsToUpdate = ({
 }) => {
 	const optionsToUpdate: { new: FeatureOptions; old: FeatureOptions }[] = [];
 	const prices = cusProductToPrices({ cusProduct: curSameProduct });
-	// console.log("Old options list: ", oldOptionsList);
-	// console.log("New options list: ", newOptionsList);
 
 	for (const newOptions of newOptionsList) {
 		const internalFeatureId = newOptions.internal_feature_id;
@@ -156,7 +151,6 @@ export const checkSameCustom = async ({
 			return AttachBranch.UpdatePrepaidQuantity;
 		}
 
-		// 1. If prepaid quantity changed
 		if (optionsToUpdate.length > 0) {
 			attachParams.optionsToUpdate = optionsToUpdate;
 			return AttachBranch.UpdatePrepaidQuantity;
@@ -196,8 +190,6 @@ const getSameProductBranch = async ({
 
 	curSameProduct = curSameProduct!;
 
-	// 1. If new version?
-
 	if (attachParams.newBillingSubscription) {
 		return AttachBranch.New;
 	}
@@ -215,7 +207,6 @@ const getSameProductBranch = async ({
 		curSameProduct,
 	});
 
-	// 2. Same custom?
 	if (attachParams.isCustom && curScheduledProduct?.product.id !== product.id) {
 		return await checkSameCustom({
 			attachParams,
@@ -225,13 +216,10 @@ const getSameProductBranch = async ({
 		});
 	}
 
-	// 1. If prepaid quantity changed
 	if (optionsToUpdate.length > 0) {
 		attachParams.optionsToUpdate = optionsToUpdate;
 		return AttachBranch.UpdatePrepaidQuantity;
 	}
-
-	// 3. If main product
 
 	if (curScheduledProduct && !product.is_add_on) {
 		if (curScheduledProduct.product.id === product.id) {
@@ -255,12 +243,10 @@ const getSameProductBranch = async ({
 		}
 	}
 
-	// 2. If add on product
 	if (product.is_add_on) {
 		return AttachBranch.AddOn;
 	}
 
-	// Invalid, can't attach same product
 	throw new RecaseError({
 		message: `Product ${product.name} is already attached, can't attach again`,
 		code: AttachErrCode.ProductAlreadyAttached,
@@ -279,7 +265,6 @@ const getChangeProductBranch = async ({
 		return AttachBranch.MainIsFree;
 	}
 
-	// 2. If main product is paid, check if upgrade or downgrade
 	const curPrices = cusProductToPrices({ cusProduct: curCusProduct! });
 	const newPrices = attachParams.prices;
 
@@ -287,8 +272,6 @@ const getChangeProductBranch = async ({
 		prices1: curPrices,
 		prices2: newPrices,
 	});
-
-	// Check if it's a trial first
 
 	if (isUpgrade) {
 		const isTrial = isMainTrialBranch({ attachParams });
@@ -327,7 +310,6 @@ export const getAttachBranch = async ({
 		attachParams,
 	});
 
-	// 3. Same product
 	const sameProductOneOff =
 		curSameProduct &&
 		isOneOff(cusProductToPrices({ cusProduct: curSameProduct }));
@@ -340,7 +322,6 @@ export const getAttachBranch = async ({
 		return AttachBranch.AddOn;
 	}
 
-	// 4. Main product exists
 	if (curMainProduct) {
 		return getChangeProductBranch({ attachParams });
 	}

@@ -42,7 +42,6 @@ export const CreatePlanParamsV1Schema = z.object({
 		description:
 			"Feature configurations for this plan. Each item defines included units, pricing, and reset behavior.",
 	}),
-	// internal: dashboard-only license catalog surface, not part of the public plan API yet.
 	licenses: z.array(PlanLicenseParamsSchema).optional().meta({
 		internal: true,
 		description:

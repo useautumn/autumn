@@ -8,12 +8,10 @@ import {
 import { generateId } from "@/utils/genUtils.js";
 import { allocationCycleOf, sharedRowsOf } from "../utils/allocationRows.js";
 
-/** Counters never cap by limit; the allocation gate reads their usage instead. */
 const UNBOUNDED_COUNTER_LIMIT = 1e15;
 
 export type AllocationLuaLimit = UsageWindowLimit & {
 	allocation_role: "entity" | "claimed";
-	/** The gate whose counter this is: its allocated internal feature id. */
 	allocation_key: string;
 };
 
@@ -22,12 +20,10 @@ export type AllocationLuaGate = {
 	shared_ent_ids: Record<string, true>;
 	requested: number | null;
 	requested_total: number;
-	/** The stored scale; Lua re-solves it from the pot when it belongs to another cycle. */
 	scale: number;
 	scale_is_current: boolean;
 };
 
-/** One gate per allocated feature the selection draws, keyed by internal feature id, with their counters; null when none. */
 export const resolveAllocationLuaGates = ({
 	fullSubject,
 	customerEntitlements,

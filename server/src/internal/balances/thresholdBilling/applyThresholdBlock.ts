@@ -8,11 +8,6 @@ import { updateCachedCustomerProductV2 } from "@/internal/customers/cache/fullSu
 import { customerProductActions } from "@/internal/customers/cusProducts/actions/index.js";
 import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer.js";
 
-/**
- * check reads the cached subject, so a status write that skips the cache
- * leaves the block in place after payment — or lets usage through after a
- * failure. Both transitions go through here so neither can forget.
- */
 export const applyThresholdBlock = async ({
 	ctx,
 	customerId,

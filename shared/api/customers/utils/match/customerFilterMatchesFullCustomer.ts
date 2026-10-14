@@ -7,18 +7,6 @@ import {
 } from "../../../migrations/filters/match/index.js";
 import { planFilterMatchesCustomerProduct } from "../../../products/utils/match/planFilterMatchesCustomerProduct.js";
 
-/**
- * Predicate: does `filter` match a customer with `customer_products`?
- *
- * JS-side mirror of the SQL compiler's `customerRegistry`. Used by the lazy
- * migration helper to skip non-matching customers without queueing work.
- * Mirrors the `cp.status IN RELEVANT_STATUSES` ambient predicate baked into
- * the SQL plan scope — expired/paused cusProducts are ignored.
- *
- * Supports `customer_id` and `plan` (`$some` / `$every` / `$none` and the
- * implicit-`$some` bare form). `item` sugar throws to make the gap explicit,
- * matching the convention in `planFilterMatchesCustomerProduct`.
- */
 export const customerFilterMatchesFullCustomer = ({
 	filter,
 	fullCustomer,

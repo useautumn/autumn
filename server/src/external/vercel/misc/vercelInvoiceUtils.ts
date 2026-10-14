@@ -2,11 +2,6 @@ import type Stripe from "stripe";
 
 export const VERCEL_INVOICE_ID_METADATA_KEY = "vercel_invoice_id";
 
-/**
- * Resolves the parent Stripe subscription ID for a Vercel marketplace invoice,
- * walking the line items to find the first one with a subscription parent.
- * Returns null for one-off / non-subscription invoices.
- */
 export const getInvoiceSubscriptionId = (
 	invoice: Stripe.Invoice,
 ): string | null => {
@@ -20,7 +15,6 @@ export const getInvoiceSubscriptionId = (
 	);
 };
 
-/** Vercel-side invoice id, needed for refunds via Vercel's Invoice Actions API. */
 export const getVercelInvoiceId = (invoice: Stripe.Invoice): string | null => {
 	const id = invoice.metadata?.[VERCEL_INVOICE_ID_METADATA_KEY];
 	return id ? id : null;
@@ -62,10 +56,6 @@ export const storeVercelInvoiceId = async ({
 	});
 };
 
-/**
- * Installation id from the invoice, falling back to the parent subscription.
- * Legacy subscription invoices only carry it on the subscription.
- */
 export const resolveVercelInstallationId = async ({
 	stripeCli,
 	invoice,

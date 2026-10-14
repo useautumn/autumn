@@ -1,20 +1,3 @@
-/**
- * TDD test for: cancelling an entity-scoped customer product by customer_product_id
- * fails when the request omits entity_id (e.g. dashboard cancel flow).
- *
- * Red-failure mode (current):
- *  - findTargetCustomerProduct filters fullCustomer.customer_products by
- *    isCusProductOnEntity using fullCustomer.entity?.internal_id. With no
- *    entity_id in params, internalEntityId is undefined → entity-scoped
- *    cusProducts get filtered out → throws CusProductNotFound even though
- *    the explicit customer_product_id matches a real row.
- *
- * Green-success criteria (after fix):
- *  - When an explicit customer_product_id is provided and the candidate
- *    list doesn't contain it, fall back to CusProductService.getFull and
- *    return the row directly.
- */
-
 import { expect, test } from "bun:test";
 import { CusProductStatus } from "@autumn/shared";
 import { items } from "@tests/utils/fixtures/items";
@@ -58,7 +41,6 @@ test(
 		);
 		expect(entityPro).toBeDefined();
 
-		// Mirrors the dashboard cancel: customer_product_id passed without entity_id.
 		await autumnV1.subscriptions.update({
 			customer_id: customerId,
 			customer_product_id: entityPro!.id,

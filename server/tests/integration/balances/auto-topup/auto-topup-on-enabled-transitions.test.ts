@@ -41,17 +41,14 @@ test.concurrent(
 			],
 		});
 
-		// Deplete balance to 10 (below threshold)
 		await autumnV2_1.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
 			value: 90,
 		});
 
-		// Wait for Redis → Postgres sync
 		await timeout(DB_SYNC_WAIT_MS);
 
-		// Set up DISABLED auto-topup config first
 		await autumnV2_1.customers.update(customerId, {
 			billing_controls: makeAutoTopupConfig({
 				threshold: 20,
@@ -62,7 +59,6 @@ test.concurrent(
 
 		await timeout(AUTO_TOPUP_WAIT_MS);
 
-		// Verify no top-up fired while disabled
 		const mid = await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
 		expectBalanceCorrect({
 			customer: mid,
@@ -78,7 +74,6 @@ test.concurrent(
 			latestInvoiceProductId: prod.id,
 		});
 
-		// Now transition disabled → enabled with balance (10) < threshold (20)
 		await autumnV2_1.customers.update(customerId, {
 			billing_controls: makeAutoTopupConfig({
 				threshold: 20,
@@ -89,7 +84,6 @@ test.concurrent(
 
 		await timeout(AUTO_TOPUP_WAIT_MS);
 
-		// Balance should be: 10 + 100 = 110
 		const after = await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
 		expectBalanceCorrect({
 			customer: after,
@@ -97,7 +91,6 @@ test.concurrent(
 			remaining: 110,
 		});
 
-		// 2 invoices: initial attach + auto top-up from enable transition
 		await expectCustomerInvoiceCorrect({
 			customerId,
 			count: 2,
@@ -111,8 +104,6 @@ test.concurrent(
 test.concurrent(
 	`${chalk.yellowBright("auto-topup on-enabled 6: multi-feature enable only triggers first feature (billing lock avoidance)")}`,
 	async () => {
-		// Two features: Messages (disabled→enabled) and Storage (undefined→enabled)
-		// Only the first feature in the auto_topups array should trigger a top-up
 		const messagesItem = items.oneOffMessages({
 			includedUsage: 0,
 			billingUnits: 100,
@@ -150,9 +141,6 @@ test.concurrent(
 			],
 		});
 
-		// Deplete both balances below their thresholds
-		// Messages: 100 → 10 (below threshold 20)
-		// Storage: 100 → 5 (below threshold 15)
 		await autumnV2_1.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
@@ -164,10 +152,8 @@ test.concurrent(
 			value: 95,
 		});
 
-		// Wait for Redis → Postgres sync
 		await timeout(DB_SYNC_WAIT_MS);
 
-		// Set Messages auto-topup as DISABLED (Storage has no config at all → undefined case)
 		await autumnV2_1.customers.update(customerId, {
 			billing_controls: {
 				auto_topups: [
@@ -181,10 +167,8 @@ test.concurrent(
 			},
 		});
 
-		// Wait for config to persist (no top-up expected — Messages disabled, Storage undefined)
 		await timeout(DB_SYNC_WAIT_MS);
 
-		// Verify no top-ups fired
 		const mid = await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
 		expectBalanceCorrect({
 			customer: mid,
@@ -197,10 +181,6 @@ test.concurrent(
 			remaining: 5,
 		});
 
-		// Now enable BOTH in a single update:
-		// Messages: disabled → enabled (transition)
-		// Storage: undefined → enabled (transition)
-		// Only the first feature in the array should trigger a top-up
 		await autumnV2_1.customers.update(customerId, {
 			billing_controls: {
 				auto_topups: [
@@ -222,7 +202,6 @@ test.concurrent(
 
 		await timeout(AUTO_TOPUP_WAIT_MS);
 
-		// Exactly one feature should have been topped up (non-deterministic which one)
 		const after = await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
 		const messagesBalance = after.balances[TestFeature.Messages].remaining;
 		const storageBalance = after.balances[TestFeature.Storage].remaining;
@@ -230,7 +209,6 @@ test.concurrent(
 		const messagesToppedUp = messagesBalance === 110;
 		const storageToppedUp = storageBalance === 105;
 
-		// Exactly one should have triggered, not both
 		expect(messagesToppedUp || storageToppedUp).toBe(true);
 		expect(messagesToppedUp && storageToppedUp).toBe(false);
 	},

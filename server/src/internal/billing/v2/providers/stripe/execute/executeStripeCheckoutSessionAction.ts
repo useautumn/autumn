@@ -35,8 +35,6 @@ export const createStripeCheckoutSessionFromAction = async ({
 	const { params } = checkoutSessionAction;
 	const { longLivedCheckout } = billingContext;
 
-	// Tax-related fields (automatic_tax, billing_address_collection, customer_update,
-	// tax_id_collection) are already baked into action.params by buildStripeCheckoutSessionAction.
 	const fullParams = buildCheckoutSessionParams({
 		params: longLivedCheckout
 			? {
@@ -93,7 +91,6 @@ export const executeStripeCheckoutSessionAction = async ({
 	const enablePlanImmediately = billingContext.enablePlanImmediately === true;
 	const metadataType = getCheckoutMetadataType({ billingContext });
 
-	// 1. Insert metadata FIRST (without checkout session ID)
 	const metadata = await insertMetadataFromBillingPlan({
 		ctx,
 		billingPlan,
@@ -105,7 +102,6 @@ export const executeStripeCheckoutSessionAction = async ({
 		typeOverride: metadataType,
 	});
 
-	// 2. Create checkout session with card-type fallback
 	const stripeCheckoutSession = await createStripeCheckoutSessionFromAction({
 		ctx,
 		billingContext,
@@ -117,7 +113,6 @@ export const executeStripeCheckoutSessionAction = async ({
 		`Created checkout session for customer ${fullCustomer.id ?? fullCustomer.internal_id}`,
 	);
 
-	// 3. Update metadata with checkout session ID
 	await updateMetadataWithCheckoutSession({
 		ctx,
 		metadataId: metadata.id,
@@ -125,10 +120,6 @@ export const executeStripeCheckoutSessionAction = async ({
 		type: metadataType,
 	});
 
-	// 4. When enable_plan_immediately is set, link each cusProduct row that's
-	// about to be inserted to this checkout session, and let the Autumn billing
-	// plan continue executing (deferred=false). The webhook will patch in
-	// subscription_ids on completion.
 	if (enablePlanImmediately) {
 		addStripeCheckoutSessionIdToBillingPlan({
 			autumnBillingPlan: billingPlan.autumn,
@@ -141,7 +132,6 @@ export const executeStripeCheckoutSessionAction = async ({
 		};
 	}
 
-	// 5. Default: defer Autumn billing plan execution to the webhook handler.
 	return {
 		deferred: true,
 		deferredMetadataId: metadata.id,

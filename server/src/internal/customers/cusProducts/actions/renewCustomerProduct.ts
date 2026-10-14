@@ -7,10 +7,6 @@ import {
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { dispatchCustomerProductUpdatedWebhooks } from "@/internal/customers/cusProducts/actions/dispatchCustomerProductUpdatedWebhooks";
 
-/**
- * Sends products_updated + billing.updated for a renewal of an already-active
- * customer product. `updates` describes changes the caller already persisted (e.g. the new store period).
- */
 export const renewCustomerProduct = async ({
 	ctx,
 	customerProduct,
@@ -24,7 +20,6 @@ export const renewCustomerProduct = async ({
 }): Promise<void> => {
 	const originalFullCustomer = structuredClone(fullCustomer);
 
-	// Empty updates still surface an "updated" plan change so billing.updated mirrors the legacy webhook.
 	await dispatchCustomerProductUpdatedWebhooks({
 		ctx,
 		customerProduct,

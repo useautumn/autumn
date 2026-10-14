@@ -1,25 +1,3 @@
-/**
- * Benchmarks a plain version SET — no customize, so the v2 catalog alone
- * determines the incoming product — end to end on the DEV DB:
- * seed v1 holders → prepareMigration → shouldRunBatchLane → runBatchMigrationChunk.
- *
- * The v1 → v2 diff is 3 replaces, 2 deletes, 2 adds, plus the customer-product
- * repoint and one pool repoint per license link. That covers every query this
- * branch added or reshaped: the replace candidate select and balance patch with
- * its anchor ladder, the remove select/delete with the unpaid guard, the
- * rewritten add select, repointCustomerProductRows, and repointLicensePoolRows.
- *
- * A pure version set CANNOT produce license entitlement add/delete/replace ops:
- * the v2 link points at the same license product, so the link diff is empty.
- * Pass --customize-licenses to drive those through customize.upsert_licenses.
- *
- * run.sh drops trailing args, so invoke bun directly to pass flags:
- *
- *   infisical run --env=dev --recursive -- bun <path> --customers 200000
- *   infisical run --env=dev --recursive -- bun <path> --customers 2000 --assignments 1 --customize-licenses
- *   infisical run --env=dev --recursive -- bun <path> --cleanup
- */
-
 import { type Migration, migrations } from "@autumn/shared";
 import { MigrationFilterSchema } from "@autumn/shared/api/migrations/filters/migrationFilter.js";
 import { OperationsSchema } from "@autumn/shared/api/migrations/operations/operations.js";
@@ -50,7 +28,6 @@ import {
 } from "./utils/seedBenchVersionSet.js";
 
 const STARTING_BALANCE = 40;
-/** A replace patches the balance by the allowance delta. */
 const EXPECTED_REPLACED_BALANCE =
 	STARTING_BALANCE + BENCH_VERSET_V2_ALLOWANCE - BENCH_VERSET_V1_ALLOWANCE;
 
@@ -104,7 +81,6 @@ const main = async () => {
 	);
 
 	if (!skipSeed) {
-		// Every measured row is rewritten by the run, so re-seed from scratch.
 		await deleteBenchVersionSetCustomers({ db });
 
 		const itemsPerCustomer = catalog.v1EntitlementIdsByFeature.size;
@@ -273,8 +249,6 @@ const main = async () => {
 		adds: BENCH_VERSET_ADDED_FEATURES.length,
 		repoints: 1,
 		poolRepoints: catalog.licenses.length,
-		// A pure version set links the same license product, so the link diff is
-		// empty; only customize.upsert_licenses reaches license item ops.
 		licenseItemOps: customizeLicenses
 			? catalog.licenses.length *
 				(BENCH_VERSET_REPLACED_FEATURES.length +
@@ -340,8 +314,6 @@ const main = async () => {
 	const addedIds = BENCH_VERSET_ADDED_FEATURES.map((featureId) =>
 		catalog.v2EntitlementIdsByFeature.get(featureId),
 	).filter((id): id is string => Boolean(id));
-	// Customize mints its own link rows, so the lowered ops — not the v2 catalog
-	// links — name the rows the pools must end up on.
 	const poolTargetIds = executionPlan.patches.flatMap((patch) =>
 		patch.licenseEntitlementOps
 			.filter((op) => op.type === "repoint_license_pool")

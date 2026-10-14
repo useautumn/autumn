@@ -1,4 +1,3 @@
-/** Scheduled paid license downgrades retain the Stripe subscription cycle anchor. */
 import { expect, test } from "bun:test";
 import type { AttachParamsV1Input } from "@autumn/shared";
 import { expectStripeSubscriptionCorrect } from "@tests/integration/billing/utils/expectStripeSubCorrect";

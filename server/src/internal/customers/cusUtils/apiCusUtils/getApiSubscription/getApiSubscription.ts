@@ -36,8 +36,6 @@ const handlePlanExpand = ({
 		prefix: "plan",
 	});
 
-	// Check if we should expand the plan object.
-	// Prefer scoped relative expand paths, but keep the legacy customer expand fallback.
 	const shouldExpandPlanFromScopedCtx = expandPathIncludes({
 		expand: ctx.expand,
 		includes: ["plan"],

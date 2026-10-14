@@ -51,7 +51,6 @@ const customFieldEntries = (
 	return customFields.map(({ name, value }) => ({ label: name, value }));
 };
 
-/** Flattens billing_details into one approval field per change so reviewers see real values. */
 export const billingDetailsFields = (value: unknown): BillingDetailsField[] => {
 	const parsed = BillingDetailsParamsSchema.safeParse(value);
 	if (!parsed.success) return [];

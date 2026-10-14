@@ -110,14 +110,6 @@ test.concurrent(
 	},
 );
 
-/**
- * A customer already on a plan gains a license through an in-place update.
- *
- * Red (current):  convergePatchedCustomerLicenses only maps existing pools, so
- *                 a customer with none ends the update with none; licenses.attach
- *                 then fails with "No plan on this customer offers license".
- * Green (after):  a pool is minted with granted = included; assignment succeeds.
- */
 test.concurrent(
 	`${chalk.yellowBright("licenses-patch: update upsert_licenses mints a pool for a license the customer has no pool for")}`,
 	async () => {
@@ -167,11 +159,6 @@ test.concurrent(
 	},
 );
 
-/**
- * The same update against a customer whose pool already exists (with a seat
- * assigned) must converge that pool, not replace it: link_id and the seat's
- * pointer survive, and remaining reflects the live assignment.
- */
 test.concurrent(
 	`${chalk.yellowBright("licenses-patch: update upsert_licenses keeps an existing pool's identity and assignments")}`,
 	async () => {

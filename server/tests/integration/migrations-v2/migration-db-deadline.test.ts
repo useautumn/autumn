@@ -67,7 +67,6 @@ const rowsOf = async ({
 	}
 };
 
-/** Creates `table` inside a scratch schema the test owns. */
 const withScratchTable = ({
 	table,
 	run,

@@ -31,7 +31,6 @@ export const AllowedPaymentMethodsSubsection = () => {
 		onError: () => toast.error("Failed to update invoice payment methods"),
 	});
 
-	// While a save is in flight, reflect the value being saved.
 	const allowedMethods =
 		(isPending ? variables : org?.config?.allowed_payment_methods) ?? null;
 	const selected = allowedMethods ?? [];

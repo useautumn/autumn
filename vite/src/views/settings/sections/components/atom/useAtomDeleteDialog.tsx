@@ -4,7 +4,6 @@ import { getBackendErr } from "@/utils/genUtils";
 import { AtomDeleteDialog, type AtomDeletePrompt } from "./AtomDeleteDialog";
 import type { AtomActions } from "./useAtomActions";
 
-/** An Atom with a stack is deleted only once its name is typed; with no stack yet nothing needs confirming, so `onNoStack` runs instead. */
 export const useAtomDeleteDialog = ({
 	hasStack,
 	stackName,

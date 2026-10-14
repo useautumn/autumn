@@ -5,11 +5,8 @@ import { getFeatureIcon } from "@/views/products/features/utils/getFeatureIcon";
 import { aiModelCount, creditSources } from "./catalogGrouping";
 import { catalogCardClassName, featurePagePath } from "./catalogUi";
 
-/** Cells are one line of detail; past this the names stop being readable. */
 const MAX_SOURCES = 2;
 
-/** A credit system's whole point is the conversion — what an action costs — so
- * the mapping sits under the name rather than the name standing alone. */
 export function CreditSystemCard({
 	creditSystem,
 	features,
@@ -21,8 +18,6 @@ export function CreditSystemCard({
 	const sources = creditSources({ creditSystem, features });
 	const hidden = sources.length - MAX_SOURCES;
 
-	// AI systems price models instead of mapping features, so they'd otherwise
-	// render as a bare name next to fully-described siblings.
 	const detail = isAi
 		? modelSummary({ count: aiModelCount({ creditSystem }) })
 		: sources
@@ -50,7 +45,6 @@ export function CreditSystemCard({
 			>
 				{detail}
 				{!isAi && hidden > 0 && ` +${hidden}`}
-				{/* Keeps every cell the same height whether or not it has detail. */}
 				{!detail && "\u00A0"}
 			</span>
 		</Link>

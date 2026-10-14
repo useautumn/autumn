@@ -1,8 +1,3 @@
-/**
- * Legacy nuke command for non-TTY environments
- * Uses new API infrastructure but provides inquirer-based prompts
- */
-
 import fs from "node:fs";
 import { confirm } from "@inquirer/prompts";
 import chalk from "chalk";
@@ -87,7 +82,6 @@ export default async function Nuke(options?: { skipAllPrompts?: boolean }) {
 	if (isSandbox) {
 		const secretKey = getKey(AppEnv.Sandbox);
 
-		// Validate sandbox-only
 		try {
 			validateSandboxOnly(secretKey);
 		} catch (error) {
@@ -136,7 +130,6 @@ export default async function Nuke(options?: { skipAllPrompts?: boolean }) {
 		);
 
 		try {
-			// Delete customers (parallel - independent)
 			const customerSpinner = initSpinner("Deleting customers...");
 			await deleteCustomersBatch(
 				customers.map((c: ApiCustomer) => ({ id: c.id })),
@@ -149,7 +142,6 @@ export default async function Nuke(options?: { skipAllPrompts?: boolean }) {
 			);
 			customerSpinner.success("Customers deleted successfully!");
 
-			// Delete plans (parallel - independent)
 			const planSpinner = initSpinner("Deleting plans...");
 			await deletePlansBatch(
 				plans.map((p) => ({ id: p.id })),
@@ -162,7 +154,6 @@ export default async function Nuke(options?: { skipAllPrompts?: boolean }) {
 			);
 			planSpinner.success("Plans deleted successfully!");
 
-			// Delete features (credit systems first in parallel, then rest in parallel)
 			const featureSpinner = initSpinner("Deleting features...");
 			await deleteFeaturesBatch(
 				features.map((f) => ({ id: f.id, type: f.type })),

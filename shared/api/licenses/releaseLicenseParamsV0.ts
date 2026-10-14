@@ -6,7 +6,6 @@ export const ReleaseLicenseParamsV0Schema = z.object({
 		description:
 			"Scopes the release when an entity holds licenses of multiple plans.",
 	}),
-	// Each entity's seat is unlinked back to its pool, ready for reuse.
 	entity_ids: z.array(z.string()).min(1),
 });
 

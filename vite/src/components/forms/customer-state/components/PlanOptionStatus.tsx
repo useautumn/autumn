@@ -1,7 +1,6 @@
 import type { SubscriptionConflict } from "../utils/findSubscriptionConflict";
 import { SubscriptionConflictHoverCard } from "./SubscriptionConflictHoverCard";
 
-/** Why a plan can't be picked; a subscription conflict opens a card on hover. */
 export function PlanOptionStatus({
 	isSelectedElsewhere,
 	isGroupUsed,

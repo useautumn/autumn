@@ -2,20 +2,10 @@ import type { PartitionLoadSource } from "@autumn/kafka";
 
 const DEFAULT_HALF_LIFE_MS = 5 * 60_000;
 
-/**
- * The recent cost of every partition this process has served: bytes committed
- * to the log, decaying with a five-minute half-life so a customer's burst last
- * hour does not decide where it sits now. The consumer group's assigner sends
- * it with each rejoin, and the leader deals hot partitions apart instead of by
- * number. Bytes stand in for thread time because a track's cost here is
- * building and encoding the customer's state, which is what the bytes are.
- */
 export type PartitionLoad = PartitionLoadSource & {
 	record(entry: { partition: number; bytes: number }): void;
 	forget(entry: { partition: number }): void;
-	/** This worker serves the partition now; the assigner keeps it here unless balance needs it elsewhere. */
 	claim(entry: { partition: number }): void;
-	/** The partition left this worker; its weight stays so the leader still knows its cost. */
 	release(entry: { partition: number }): void;
 	owned(): ReadonlySet<number>;
 	assign(entry: { partitions: readonly number[] }): void;

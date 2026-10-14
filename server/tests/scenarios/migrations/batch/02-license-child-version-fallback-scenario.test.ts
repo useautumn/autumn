@@ -1,12 +1,3 @@
-/**
- * Seeds the license fallback shape: the parent's v2 link points at a NEWER seat
- * plan version than v1's link does, so the repoint changes the child product.
- * That is refused by the batch lane and lands on the per-customer lane instead —
- * which should still produce the full, correct transition.
- *
- * The seeder mints the seat version before minting parent v2, which is what
- * makes v1 and v2 disagree about which seat version they link.
- */
 import { test } from "bun:test";
 import { TestFeature } from "@tests/setup/v2Features";
 import { itemsV2 } from "@tests/utils/fixtures/itemsV2";

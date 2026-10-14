@@ -13,15 +13,6 @@ import { setupCustomizeLicenses } from "@/internal/billing/v2/setup/setupCustomi
 import { convergeCustomerLicense } from "@/internal/billing/v2/utils/convergeCustomerLicense";
 import { initCustomerLicenses } from "@/internal/billing/v2/utils/initFullCustomerProduct/initCustomerLicenses/initCustomerLicenses";
 
-/**
- * Patch-path licenses handler — the upsert_licenses sibling of the
- * add/remove-items handlers. Resolves definitions through the shared core
- * (setupCustomizeLicenses), overlays them onto the patch snapshot, and
- * converges the working copy's pools onto them. The original row stays
- * pristine, so computeCustomerLicenseTransitions reads the change as a
- * SAME-ROW transition: outgoing = original, incoming = patched clone.
- * Links with no pool yet mint one, recorded on the patch for insertion.
- */
 export const handleCustomizeUpsertLicenses = async ({
 	ctx,
 	params,
@@ -62,9 +53,6 @@ export const handleCustomizeUpsertLicenses = async ({
 	return { insertPlanLicenses, customerLicenseQuantities };
 };
 
-/** Walks the effective links: an existing pool converges in place (its
- * link_id anchors assigned seats), a link without one mints a fresh pool.
- * Returns the minted pools. */
 const convergePatchedCustomerLicenses = ({
 	targetCustomerProduct,
 	fullProduct,
@@ -110,7 +98,6 @@ const convergePatchedCustomerLicenses = ({
 		];
 	});
 
-	// Pools whose link the customize dropped pass through untouched.
 	const convergedIds = new Set(convergedPools.map((pool) => pool.id));
 	targetCustomerProduct.customer_licenses = [
 		...existingPools.filter((pool) => !convergedIds.has(pool.id)),

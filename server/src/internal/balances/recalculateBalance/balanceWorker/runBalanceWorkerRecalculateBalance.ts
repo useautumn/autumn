@@ -48,7 +48,6 @@ const recalculateParamsToCommand = ({
 	preview,
 });
 
-/** The worker's refusals as legacy words them. */
 const rethrowRecalculateError = ({
 	params,
 	cause,
@@ -70,7 +69,6 @@ const rethrowRecalculateError = ({
 	return rethrowBalanceWorkerError({ cause });
 };
 
-/** Recalculates on the worker, or previews it there without writing. */
 export const runBalanceWorkerRecalculateBalance = async ({
 	ctx,
 	params,
@@ -82,7 +80,6 @@ export const runBalanceWorkerRecalculateBalance = async ({
 	preview: boolean;
 	client?: RecalculateClient;
 }): Promise<RecalculateBalanceResult> => {
-	// The worker holds the write; the route's refresh would only evict its fresh copy.
 	if (!preview)
 		ctx.testOptions = { ...ctx.testOptions, skipCacheDeletion: true };
 	try {
@@ -95,7 +92,6 @@ export const runBalanceWorkerRecalculateBalance = async ({
 	}
 };
 
-/** The preview endpoint's shape. */
 export const recalculateResultToPreview = ({
 	result,
 }: {

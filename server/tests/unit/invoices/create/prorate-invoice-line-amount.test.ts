@@ -8,7 +8,7 @@ import {
 import { prices } from "@tests/utils/fixtures/db/prices";
 import { prorateInvoiceLineAmount } from "@/internal/invoices/actions/create/compute/prorateInvoiceLineAmount";
 
-const monthly = prices.createFixed({ id: "monthly" }); // $100 / month
+const monthly = prices.createFixed({ id: "monthly" });
 const sep1 = Date.UTC(2026, 8, 1);
 const sep16 = Date.UTC(2026, 8, 16);
 const oct1 = Date.UTC(2026, 9, 1);
@@ -51,7 +51,6 @@ describe("prorateInvoiceLineAmount", () => {
 	});
 
 	test("a span over several intervals charges whole cycles plus the prorated remainder", () => {
-		// Sep 1 → Nov 15: Sep + Oct in full, then 14 of 30 November days.
 		expect(
 			prorateInvoiceLineAmount({
 				price: monthly,

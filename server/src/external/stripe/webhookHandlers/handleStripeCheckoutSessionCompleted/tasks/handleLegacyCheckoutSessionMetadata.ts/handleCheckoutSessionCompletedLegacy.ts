@@ -39,14 +39,12 @@ export const handleLegacyCheckoutSessionMetadata = async ({
 		checkoutContext;
 
 	if (!metadata) {
-		// Standalone setup checkout (setup mode without metadata) is handled at top level
 		logger.info("checkout.completed: metadata not found, skipping legacy flow");
 		return null;
 	}
 
 	if (metadata.type !== MetadataType.CheckoutSessionCompleted) return null;
 
-	// Get options
 	const stripeCli = createStripeCli({ org, env });
 	const attachParams: AttachParams = attachParamsFromMetadataData({
 		data: metadata.data,
@@ -80,8 +78,6 @@ export const handleLegacyCheckoutSessionMetadata = async ({
 		return null;
 	}
 
-	// const checkoutSub = stripeSubscription ?? null;
-
 	if (stripeSubscription) {
 		const activeCusProducts = await CusProductService.getByStripeSubId({
 			db: ctx.db,
@@ -104,7 +100,6 @@ export const handleLegacyCheckoutSessionMetadata = async ({
 		attachParams,
 	});
 
-	// Create other subscriptions
 	const { invoiceIds } = await handleRemainingSets({
 		stripeCli,
 		org,
@@ -192,7 +187,6 @@ export const handleLegacyCheckoutSessionMetadata = async ({
 	await Promise.all(batchInsertInvoice);
 	logger.info("✅ checkout.completed: successfully inserted invoices");
 
-	// Return data needed for reward and customer update tasks (handled at top level)
 	return {
 		customer: attachParams.customer,
 		products: attachParams.products,

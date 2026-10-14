@@ -6,16 +6,14 @@ const phaseAndUnixMatch = ({
 	unix,
 }: {
 	phase: Stripe.SubscriptionSchedule.Phase;
-	unix: number; // in seconds
+	unix: number;
 }) => {
-	const startDateSec = phase.start_date; // seconds
-	// Convert seconds to milliseconds for date-fns and compare absolute difference within 1 day
+	const startDateSec = phase.start_date;
 	return (
 		Math.abs(differenceInDays(unix * 1000, (startDateSec || 0) * 1000)) <= 1
 	);
 };
 
-// Helper: build phases by inserting or replacing at the target index
 export const preparePhasesForBillingPeriod = ({
 	schedule,
 	phaseIndex,

@@ -1,7 +1,6 @@
 import { ErrCode, RecaseError } from "@autumn/shared";
 import type { UpdateCatalogPlan } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogPlan";
 
-/** Remaining variants must still point at a live, unarchived base row. */
 export const handleRemovePlanVariantErrors = ({
 	updateCatalogPlan,
 }: {

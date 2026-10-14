@@ -32,7 +32,6 @@ export const waitForSetupPaymentMethod = async ({
 				"Setup checkout confirmed, but its customer still has no default payment method",
 			);
 		}
-		// Clock advancement prevents the webhook from applying the default payment method.
 		await delay(Math.min(500, remainingMs));
 		customer = await ctx.stripeCli.customers.retrieve(customer.id);
 	}

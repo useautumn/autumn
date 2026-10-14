@@ -11,10 +11,8 @@ const { db } = initDrizzle({
 	maxConnections,
 });
 
-// Check if --validate-content flag is passed
 const validateContent = process.argv.includes("--validate-content");
 
-// Each run reports independently so a main-DB failure can't mask the Neon result.
 const failures: string[] = [];
 
 console.log("═══ RUN 1/2 · MAIN DB (DATABASE_URL) ═══");

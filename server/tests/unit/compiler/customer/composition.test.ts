@@ -27,9 +27,6 @@ const planExists = (predicate: string) =>
 			AND ${predicate}
 	)`;
 
-// Customer-level `$and` / `$or` compose INDEPENDENT plan quantifiers. "has free
-// AND has pro" must be two separate EXISTS — a single plan can't be both, so
-// merging them into one quantifier would drop a condition.
 describe("compileFilter — customer / composition ($and, $or)", () => {
 	test("$and → two independent EXISTS, AND'd", () => {
 		const result = compileFilter({

@@ -10,7 +10,6 @@ import { buildPendingReattachParams } from "@/internal/billing/v2/execute/pendin
 import { getPendingPlanLongLivedCheckout } from "@/internal/billing/v2/execute/pendingCustomerProducts/getPendingPlanLongLivedCheckout";
 import { pendingPlanRebills } from "@/internal/billing/v2/execute/pendingCustomerProducts/pendingPlanRebills";
 
-/** Previews the pending plan re-attached with the edit, and whether that needs a new payment. */
 export const previewPendingReattach = async ({
 	ctx,
 	params,
@@ -29,7 +28,6 @@ export const previewPendingReattach = async ({
 		customerProduct,
 	});
 
-	// A plan opened from a long-lived link keeps the link's params (discounts, redirects) under the edit.
 	const longLivedCheckout = await getPendingPlanLongLivedCheckout({
 		ctx,
 		deferredData,

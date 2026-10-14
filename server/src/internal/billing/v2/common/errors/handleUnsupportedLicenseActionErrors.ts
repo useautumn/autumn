@@ -13,7 +13,6 @@ const throwUnsupportedLicenseAction = (actionLabel: string) => {
 	});
 };
 
-/** Rejects moving a customer off a plan whose license pools they still hold. */
 export const handleUnsupportedOutgoingLicenseErrors = ({
 	actionLabel,
 	customerProducts,
@@ -27,8 +26,6 @@ export const handleUnsupportedOutgoingLicenseErrors = ({
 	if (holdsLicensePools) throwUnsupportedLicenseAction(actionLabel);
 };
 
-/** Hard block for actions with no license support: any incoming plan
- * offering licenses, or any outgoing plan holding pools, rejects. */
 export const handleUnsupportedLicenseActionErrors = ({
 	actionLabel,
 	fullProducts,

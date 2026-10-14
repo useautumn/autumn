@@ -1,6 +1,5 @@
 export const CAPY_BRANCH_TTL_DAYS = 14;
 
-// Fixed from creation, never extended on wake, so idle capy branches self-delete.
 export function capyBranchExpiresAt({
 	createdAt,
 }: {

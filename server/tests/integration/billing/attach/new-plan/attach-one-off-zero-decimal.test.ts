@@ -1,16 +1,3 @@
-/**
- * Regression test for v2 billing.attach one-off purchases in a non-USD org:
- * createInvoiceForBilling did not pass `currency` to stripeCli.invoices.create,
- * so Stripe defaulted the invoice to the account currency (usd) and rejected
- * the org-currency (rwf) price with "price only supports rwf, expected usd".
- *
- * Pre-fix: attach fails with a Stripe currency-mismatch error.
- * Post-fix: invoice created in RWF with total 23,198 (23,188 prepaid + 10 base).
- *
- * Uses a dedicated sub-org because default_currency is org-wide state and
- * group runs execute test files in parallel against the shared master org.
- */
-
 import { test } from "bun:test";
 import type { ApiCustomerV3 } from "@autumn/shared";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect.js";
@@ -24,7 +11,6 @@ import chalk from "chalk";
 test(`${chalk.yellowBright("v2 one-off rwf: billing.attach invoices in the org currency")}`, async () => {
 	const customerId = "v2-oneoff-rwf-zero-decimal";
 
-	// Sub-org first so the currency is RWF before any Stripe prices exist.
 	const { ctx } = await initScenario({
 		setup: [s.platform.create({ setupDefaultFeatures: true })],
 		actions: [],
@@ -62,7 +48,6 @@ test(`${chalk.yellowBright("v2 one-off rwf: billing.attach invoices in the org c
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// 23,188 RWF prepaid item + 10 RWF product base price
 	await expectCustomerInvoiceCorrect({
 		customer,
 		count: 1,

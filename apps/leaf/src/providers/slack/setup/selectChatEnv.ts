@@ -20,8 +20,6 @@ export const getDefaultChatEnv = () =>
 const ENV_SIGNAL_PATTERN =
 	/\b(sandbox|live|prod|production|test env|environment)\b/i;
 
-/** Only a message that plausibly names an environment needs the model; the
- * overwhelming default is the org's default env, decided synchronously. */
 const messageHasEnvSignal = ({
 	message,
 	recentMessages = [],

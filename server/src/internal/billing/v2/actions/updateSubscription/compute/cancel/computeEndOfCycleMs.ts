@@ -2,11 +2,6 @@ import type { UpdateSubscriptionBillingContext } from "@autumn/shared";
 import { customerProductToEffectivePrices, getCycleEnd } from "@autumn/shared";
 import { getLargestInterval } from "@/internal/products/prices/priceUtils/priceIntervalUtils";
 
-/**
- * Calculates the end of cycle timestamp for cancellation.
- * For 'cancel_immediately' mode, returns currentEpochMs.
- * For 'cancel_end_of_cycle' mode, calculates the next cycle end based on billing interval.
- */
 export const computeEndOfCycleMs = ({
 	billingContext,
 }: {

@@ -127,9 +127,6 @@ describe("eventContextToAutumnBillingPlan + buildBillingChangeResponse", () => {
 		logChangeResponse("event-context / updated to past_due", response);
 
 		expectBillingChangeResponse(response, { updated: ["business"] });
-		// Active → PastDue: public `status` stays "active" both before and after
-		// (past_due is not a public status value); the flip is conveyed via the
-		// `past_due` flag in previous_attributes.
 		expectPlanChange(
 			findPlanChange(response, { action: "updated", planId: "business" }),
 			{

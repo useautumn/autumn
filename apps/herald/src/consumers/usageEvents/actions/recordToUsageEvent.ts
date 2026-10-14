@@ -11,18 +11,15 @@ import type { StreamRecord } from "../../../stream/types/streamConsumer.js";
 
 const appEnvSchema = z.enum(AppEnv);
 
-/** A record's place in the log, which no replay can change: the same record always makes the same event. */
 export const positionToUsageEventId = ({
 	position,
 }: {
 	position: StreamRecord["position"];
 }): string => `${position.topic}:${position.partition}:${position.offset}`;
 
-/** What the usage a record reports amounts to: which feature, how much, and under which properties. */
 type ReportedUsage = {
 	orgSlug: string | undefined;
 	eventName: string;
-	/** Named by the caller; otherwise the event is named by the record's place in the log. */
 	eventId: string | null;
 	idempotencyKey: string | null;
 	value: number;
@@ -31,7 +28,6 @@ type ReportedUsage = {
 	internalProductId: string | null;
 };
 
-/** A token track's properties plus what its parent credit pools were charged, as the API server writes them. */
 const trackPropertiesOf = ({
 	command,
 	deductions,
@@ -52,7 +48,6 @@ const trackPropertiesOf = ({
 		: command.properties;
 };
 
-/** Null when the record reports no usage: it was refused, records no event, or is a command that moves none. */
 const recordToReportedUsage = ({
 	record,
 }: {
@@ -61,7 +56,6 @@ const recordToReportedUsage = ({
 	const { command, result } = record;
 
 	if (command.type === "track" && result.type === "track") {
-		// A track that funds nothing still applies, deducting nothing, and records its event like legacy.
 		if (result.status !== "applied" || !command.usageEvent) return null;
 		return {
 			orgSlug: command.org.slug,
@@ -80,7 +74,6 @@ const recordToReportedUsage = ({
 
 	if (command.type === "finalize" && result.type === "finalize") {
 		if (result.status !== "applied") return null;
-		// The lock already reported what it took; a finalize reports only the difference, and none when there is none.
 		const difference = new Decimal(result.finalValue).minus(result.lockValue);
 		if (difference.isZero()) return null;
 		return {
@@ -98,7 +91,6 @@ const recordToReportedUsage = ({
 	return null;
 };
 
-/** The usage event a record stands for, or null when it stands for none or was written before it named its subject. */
 export const recordToUsageEvent = ({
 	position,
 	record,
@@ -120,7 +112,6 @@ export const recordToUsageEvent = ({
 		event_name: usage.eventName,
 		value: usage.value,
 		properties: usage.properties ?? {},
-		// The caller's instant when it gave one, so both columns agree the way the API server writes them.
 		timestamp: occurredAt,
 		created_at: occurredAt.getTime(),
 		idempotency_key: usage.idempotencyKey,

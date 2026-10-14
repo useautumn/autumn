@@ -5,12 +5,6 @@ import { initIntegrationEval } from "../../../../src/initIntegrationEval.ts";
 import { workspaceSeatsCatalog } from "../../catalogs/workspaceSeatsCatalog.ts";
 import { fixtureUser, integrateScenario } from "../../integrateShared.ts";
 
-/**
- * LICENSES flow, part 1: get on the team plan, then register workspaces.
- * Each workspace is a license assignment (licenses.attach with the entity),
- * not a bare entity insert and not a separate billing.attach of the
- * workspace plan. Team includes 10, so no quantity work yet.
- */
 export const teamThenAssign: IntegrationCase = {
 	name: "integrate-licenses-team-then-assign",
 	fixture: "notes-api",

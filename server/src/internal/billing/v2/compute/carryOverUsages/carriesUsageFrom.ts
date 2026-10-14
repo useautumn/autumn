@@ -5,7 +5,6 @@ import type {
 } from "@autumn/shared";
 import { carriesOverUsage } from "./carriesOverUsage";
 
-/** carriesOverUsage bound to the rows usage carries from, with their ids collected once. */
 export const carriesUsageFrom = ({
 	carryOverUsages,
 	sourceCustomerProducts,

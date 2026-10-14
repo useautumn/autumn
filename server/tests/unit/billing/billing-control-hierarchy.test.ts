@@ -1,22 +1,3 @@
-/**
- * Billing-control resolution precedence: entity > customer > plan.
- *
- * Plan-level controls (read from the joined product) are a FALLBACK — they must
- * NOT override a customer-level or entity-level control for the same feature.
- *
- * Covers every control type that resolves through the shared
- * `resolveBillingControl` chokepoint with the entity > customer > plan shape:
- *   - spend_limits   (fullSubjectToSpendLimitByFeatureId)
- *   - overage_allowed (fullSubjectToOverageAllowedByFeatureId)
- *
- * Control types with a different hierarchy are covered separately:
- *   - auto_topups: customer > plan (no entity) — fullCustomerToAutoTopupObjects
- *   - usage_alerts: entity > customer > plan via custom scope logic — checkUsageAlerts
- *   - usage_limits: entity > customer > plan, but resolution needs feature +
- *     cusEnt context (fullSubjectToUsageWindowLimits) — exercised by the
- *     usage-window integration suite.
- */
-
 import { describe, expect, test } from "bun:test";
 import {
 	CusProductStatus,
@@ -31,10 +12,7 @@ const NOW = Date.UTC(2026, 5, 15, 12, 0, 0);
 type ControlSpec = {
 	name: string;
 	key: "spend_limits" | "overage_allowed";
-	// Each level's control carries a `__level` sentinel so we can assert which
-	// entry actually won (object identity survives resolution).
 	makeControl: (level: string) => Record<string, unknown>;
-	// Resolve via the public resolver and return the winning entry's `__level`.
 	resolveLevel: (fullSubject: FullSubject) => string | undefined;
 };
 
@@ -47,7 +25,6 @@ const planProduct = (key: string, controls: Record<string, unknown>[]) =>
 		ended_at: null,
 		created_at: NOW - 1000,
 		customer_entitlements: [],
-		// Plan controls live on the joined product, not the customer_product.
 		product: { [key]: controls.length ? controls : null },
 	}) as unknown as FullSubject["customer_products"][number];
 

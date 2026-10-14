@@ -1,7 +1,3 @@
-/**
- * A trialing row repoints without touching trial_ends_at while the target
- * version's allowance still lands on the balance.
- */
 import { expect, test } from "bun:test";
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
@@ -10,7 +6,6 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-// version-only is per-customer until definition execute is restored
 import { readScopedFeatureRow } from "../../paidRowTestUtils";
 import { uniqueStem } from "../parity/versionParityTestUtils";
 import {

@@ -13,7 +13,6 @@ import type {
 import { measureBalanceAlert } from "./measureBalanceBasis.js";
 import { measureUsageLimitAlert } from "./measureUsageLimitBasis.js";
 
-/** What the alert reads before and after, on its basis; null when the basis cannot be read on both sides. */
 export const measureUsageAlert = ({
 	command,
 	alert,

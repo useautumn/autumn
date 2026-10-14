@@ -37,8 +37,6 @@ export const ProductSheets = () => {
 	const editorId = useId();
 	const isActiveOwner = useIsActiveSheetOwner(editorId);
 
-	// Claim the shared sheet panel while this editor's sheet is open, releasing it
-	// on close/unmount, so the one panel reflects whichever editor is active.
 	useEffect(() => {
 		if (!sheetType) return;
 		activate({ id: editorId, close: closeSheet });
@@ -187,8 +185,6 @@ export const ProductSheets = () => {
 		}
 	};
 
-	// Only the active owner portals — prevents two editors writing to the shared
-	// panel during the single render between a switch and the loser's cleanup.
 	if (!sheetType || !panelTarget || !isActiveOwner) return null;
 
 	return createPortal(renderSheet(), panelTarget);

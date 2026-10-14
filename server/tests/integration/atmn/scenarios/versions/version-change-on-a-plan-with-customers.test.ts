@@ -1,9 +1,3 @@
-/**
- * atmn scenarios/versions — version change on a plan with customers → migration draft written, customers untouched
- *
- * One line of plans/atmn-v3/07_tests.md. [a, b] is a matrix looped INSIDE this file.
- */
-
 import { expect, test } from "bun:test";
 import { CusProductStatus, customerProducts } from "@autumn/shared";
 import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
@@ -82,7 +76,6 @@ test.concurrent(
 				}),
 			).toBe(1);
 
-			// Same versionSlug, changed price — an in-place edit, not a new version.
 			scenario.writeConfig(
 				atmnConfigSource({
 					body: `{ plans: [${paidMonthly({ planId: "pro", amount: 25, extra: `\n\t\t\t\tversionSlug: "v1",` })}] }`,

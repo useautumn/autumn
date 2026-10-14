@@ -14,8 +14,6 @@ test("reads an otp action", () => {
 	expect(parseSsoResolveResponse({ action: "otp" })).toEqual({ action: "otp" });
 });
 
-// The backend owns the decision, so an unusable payload must never be coerced
-// into an OTP fallback for what could be an SSO-only domain.
 test("rejects payloads that don't state a usable action", () => {
 	expect(parseSsoResolveResponse(null)).toBeNull();
 	expect(parseSsoResolveResponse("otp")).toBeNull();

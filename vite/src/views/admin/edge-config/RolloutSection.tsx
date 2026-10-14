@@ -1,6 +1,5 @@
 import type { ReactNode } from "react";
 
-/** A compact titled block: small heading and one line of context, with an optional action on the right. */
 export const RolloutSection = ({
 	title,
 	description,

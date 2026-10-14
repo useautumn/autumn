@@ -29,8 +29,6 @@ export const STANDARD_INTERVAL_DAYS: Record<string, number> = {
 
 const CLICKHOUSE_DATE_FORMAT = "yyyy-MM-dd'T'HH:mm:ss";
 
-/** Own-property lookup: the interval is arbitrary caller input, so an inherited
- * name like "toString" must not resolve to a range length. */
 const lookupRangeLength = ({
 	lengths,
 	interval,
@@ -53,12 +51,9 @@ const monthsForRange = ({
 }): number | undefined =>
 	lookupRangeLength({ lengths: MONTH_RANGES, interval });
 
-/** True when a range is measured in months rather than days. */
 export const isMonthRange = ({ interval }: { interval?: string }): boolean =>
 	monthsForRange({ interval }) !== undefined;
 
-/** Default bin for a range when the caller didn't pick one: month ranges are
- * built for monthly bins, and 24h is too short for anything but hours. */
 export const defaultBinSizeForRange = ({
 	interval,
 }: {
@@ -68,10 +63,6 @@ export const defaultBinSizeForRange = ({
 	return monthsForRange({ interval }) === undefined ? "day" : "month";
 };
 
-/** Resolves the UTC window a standard (non billing-cycle) range covers. The
- * start is aligned down to the bin boundary so a chart's bucket filter and its
- * totals' timestamp filter select the same events. Returns undefined when the
- * range is unknown or billing-cycle based, which callers resolve per customer. */
 export const getStandardIntervalWindow = ({
 	interval,
 	binSize,
@@ -90,8 +81,6 @@ export const getStandardIntervalWindow = ({
 
 	const bin = binSize ?? defaultBinSizeForRange({ interval });
 
-	// A month range counts bins, not days: "12m" is the last 12 monthly bars, so
-	// the window opens on the 1st rather than leaving a partial leading bar.
 	if (months !== undefined && bin === "month") {
 		return { start: startOfMonth(sub(now, { months: months - 1 })), end: now };
 	}
@@ -104,12 +93,6 @@ export const getStandardIntervalWindow = ({
 	};
 };
 
-/** Resolves the start/end window the event-name ranking should query so it
- * matches the chart's visible range. A custom range takes precedence; otherwise
- * the standard range resolves with the same boundary alignment the chart uses,
- * which is why the chart's bin size belongs here too. Returns undefined when
- * neither applies (e.g. billing-cycle ranges), leaving callers on all-time
- * ranking. */
 export const getEventRankingWindow = ({
 	interval,
 	binSize,
@@ -190,7 +173,6 @@ export async function getBillingCycleStartDate({
 		? getDateRangesFromEntitlements(customer.customer_products)
 		: getDateRangesFromSubscriptions(cusProducts, subscriptions);
 
-	// If we have subscription_ids but no matching subscriptions in DB, fallback to Stripe
 	const hasMissingSubscriptions =
 		!areAllProductsFree &&
 		startDates.length === 0 &&
@@ -205,7 +187,6 @@ export async function getBillingCycleStartDate({
 			ctx,
 		});
 
-		// Re-calculate date ranges with Stripe subscriptions
 		const stripeDateRanges = getDateRangesFromStripeSubscriptions(
 			cusProducts,
 			stripeSubs,
@@ -237,7 +218,6 @@ async function fetchMissingSubscriptionsFromStripe({
 	dbSubscriptions: Subscription[];
 	ctx: AutumnContext;
 }): Promise<Stripe.Subscription[]> {
-	// Collect all subscription IDs from products that aren't in the DB
 	const missingSubIds: string[] = [];
 
 	for (const product of cusProducts) {
@@ -287,7 +267,6 @@ function getDateRangesFromStripeSubscriptions(
 			);
 
 			if (subscription) {
-				// Use utility to extract period dates from subscription items
 				const period = subToPeriodStartEnd({ sub: subscription });
 
 				startDates.push(formatDateToString(new Date(period.start * 1000)));
@@ -444,8 +423,6 @@ function calculateBillingCycleResult(
 	const gapMultiplier = 3;
 	const now = new Date();
 
-	// For analytics, we look BACKWARD from today for N billing cycles
-	// End date is today, start date is today - (gap * multiplier)
 	const adjustedStartDate = new Date(now.getTime() - gap * gapMultiplier);
 
 	return {
@@ -507,7 +484,6 @@ export function generateEventCountExpressions(
 	noCount: boolean = false,
 ): string {
 	const expressions = eventNames.map((eventName) => {
-		// Escape single quotes for SQL safety
 		const escapedEventName = eventName.replace(/'/g, "''");
 		const columnName = noCount ? eventName : `${eventName}_count`;
 		return `coalesce(sumIf(e.value, e.event_name = '${escapedEventName}'), 0) as \`${columnName}\``;

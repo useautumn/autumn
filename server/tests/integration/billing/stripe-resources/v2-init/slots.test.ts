@@ -1,18 +1,3 @@
-/**
- * V2 attach mints only the Stripe slots each price kind needs.
- *
- * Contract:
- *   fixed      → stripe_price_id
- *   prepaid    → stripe_prepaid_price_v2_id (no v1 stripe_price_id)
- *   consumable → stripe_price_id + stripe_meter_id
- *   allocated  → stripe_price_id (V2 path: no placeholder / meter)
- *                 uses allocatedUsers (InArrearProrated), not allocatedV2Users
- *                 (Arrear behavior classifies as consumable and mints a meter)
- *
- * Leftover empty + placeholder stay unset on every kind.
- * stripe_product_id is not asserted — that slot is changing.
- */
-
 import { test } from "bun:test";
 import type { AttachParamsV1Input } from "@autumn/shared";
 import {

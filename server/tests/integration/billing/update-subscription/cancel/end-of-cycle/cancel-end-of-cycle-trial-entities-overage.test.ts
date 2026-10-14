@@ -1,8 +1,3 @@
-/**
- * Cancel End-of-Cycle Trial Entities Tests: canceling products with free trials at end of billing
- * cycle in multi-entity scenarios with merged subscriptions.
- */
-
 import { test } from "bun:test";
 import { type ApiCustomerV3, ms } from "@autumn/shared";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
@@ -20,23 +15,6 @@ import { advanceTestClock } from "@tests/utils/stripeUtils";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 0: Single entity trial cancel with consumable overage - no charge
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Attach proTrial to entity 1
- * - Update entity 1 to add consumable messages
- * - Track 200 messages (100 overage)
- * - Cancel entity 1 at end of cycle
- * - Advance past trial end
- *
- * Expected Result:
- * - Entity 1 is removed after trial ends
- * - No overage charges (trial usage not billed)
- * - No subscription remains
- */
 test.concurrent(
 	`${chalk.yellowBright("cancel trial EOC entities: single entity consumable overage not charged")}`,
 	async () => {
@@ -62,7 +40,6 @@ test.concurrent(
 
 		const entityId = entities[0].id;
 
-		// Update entity to add consumable messages
 		await autumnV1.subscriptions.update(
 			{
 				customer_id: customerId,
@@ -75,7 +52,6 @@ test.concurrent(
 			},
 		);
 
-		// Track 200 messages (100 included + 100 overage)
 		await autumnV1.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
@@ -83,7 +59,6 @@ test.concurrent(
 			value: 200,
 		});
 
-		// Cancel entity at end of cycle
 		await autumnV1.subscriptions.update({
 			customer_id: customerId,
 			entity_id: entityId,
@@ -91,21 +66,18 @@ test.concurrent(
 			cancel_action: "cancel_end_of_cycle",
 		});
 
-		// Verify entity is canceling
 		const entityAfterCancel = await autumnV1.entities.get(customerId, entityId);
 		await expectProductCanceling({
 			customer: entityAfterCancel,
 			productId: proTrial.id,
 		});
 
-		// Advance past trial end
 		await advanceTestClock({
 			stripeCli: ctx.stripeCli,
 			testClockId: testClockId!,
 			numberOfDays: 14,
 		});
 
-		// Verify entity is removed
 		const entityAfterAdvance = await autumnV1.entities.get(
 			customerId,
 			entityId,
@@ -115,7 +87,6 @@ test.concurrent(
 			productId: proTrial.id,
 		});
 
-		// No subscription should exist
 		await expectNoStripeSubscription({
 			db: ctx.db,
 			customerId,
@@ -123,7 +94,6 @@ test.concurrent(
 			env: ctx.env,
 		});
 
-		// No paid invoice - only $0 invoice from update
 		const customerAfterAdvance =
 			await autumnV1.customers.get<ApiCustomerV3>(customerId);
 		await expectCustomerInvoiceCorrect({
@@ -134,22 +104,6 @@ test.concurrent(
 	},
 );
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 1b: Cancel entity with consumable overage during trial - no overage charge
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Attach proTrial to entity 1 and entity 2
- * - Update entity 1 to add consumable messages
- * - Track 200 messages on entity 1 (100 overage)
- * - Cancel entity 1 at end of cycle
- * - Advance past trial end
- *
- * Expected Result:
- * - Entity 1's overage during trial should NOT be charged
- * - Invoice should only include entity 2's base price ($20)
- */
 test.concurrent(
 	`${chalk.yellowBright("cancel trial EOC entities: consumable overage during trial not charged")}`,
 	async () => {
@@ -180,7 +134,6 @@ test.concurrent(
 		const entity1Id = entities[0].id;
 		const entity2Id = entities[1].id;
 
-		// Update entity 1 to add consumable messages
 		await autumnV1.subscriptions.update({
 			customer_id: customerId,
 			product_id: proTrial.id,
@@ -188,7 +141,6 @@ test.concurrent(
 			items: [consumableItem],
 		});
 
-		// Track 200 messages on entity 1 (100 included + 100 overage)
 		await autumnV1.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
@@ -196,7 +148,6 @@ test.concurrent(
 			value: 200,
 		});
 
-		// Cancel entity 1 at end of cycle
 		await autumnV1.subscriptions.update({
 			customer_id: customerId,
 			entity_id: entity1Id,
@@ -204,7 +155,6 @@ test.concurrent(
 			cancel_action: "cancel_end_of_cycle",
 		});
 
-		// Verify entity 1 is canceling
 		const entity1AfterCancel = await autumnV1.entities.get(
 			customerId,
 			entity1Id,
@@ -214,7 +164,6 @@ test.concurrent(
 			productId: proTrial.id,
 		});
 
-		// Verify entity 2 is still trialing
 		const entity2AfterCancel = await autumnV1.entities.get(
 			customerId,
 			entity2Id,
@@ -225,14 +174,12 @@ test.concurrent(
 			trialEndsAt: advancedTo + ms.days(7),
 		});
 
-		// Advance past trial end
 		await advanceTestClock({
 			stripeCli: ctx.stripeCli,
 			testClockId: testClockId!,
 			numberOfDays: 8,
 		});
 
-		// Verify entity 1 is removed
 		const entity1AfterAdvance = await autumnV1.entities.get(
 			customerId,
 			entity1Id,
@@ -242,7 +189,6 @@ test.concurrent(
 			productId: proTrial.id,
 		});
 
-		// Verify entity 2 is active
 		const entity2AfterAdvance = await autumnV1.entities.get(
 			customerId,
 			entity2Id,
@@ -252,16 +198,13 @@ test.concurrent(
 			productId: proTrial.id,
 		});
 
-		// Invoice should NOT include entity 1's overage charges
-		// Only entity 2's base price ($20)
 		const customerAfterAdvance =
 			await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-		// First two attaches create $0 invoice, third invoice is $0 from update, fourth is $20 for entity 2
 		await expectCustomerInvoiceCorrect({
 			customer: customerAfterAdvance,
 			count: 4,
-			latestTotal: 20, // Only entity 2's base price, NO overage from entity 1
+			latestTotal: 20,
 			latestInvoiceProductId: proTrial.id,
 		});
 	},

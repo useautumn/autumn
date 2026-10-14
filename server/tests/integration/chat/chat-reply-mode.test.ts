@@ -1,8 +1,3 @@
-/**
- * The dashboard's "Reply only when @-mentioned" toggle: GET /organization/chat
- * reports the installation's reply mode and PATCH .../settings changes it.
- */
-
 import { afterAll, beforeAll, expect, test } from "bun:test";
 import { AppEnv, chatInstallations } from "@autumn/shared";
 import defaultCtx from "@tests/utils/testInitUtils/createTestContext.js";

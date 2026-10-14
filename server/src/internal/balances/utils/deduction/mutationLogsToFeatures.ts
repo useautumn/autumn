@@ -2,7 +2,6 @@ import type { Feature, FullCustomer } from "@autumn/shared";
 import { fullCustomerToCustomerEntitlements } from "@autumn/shared";
 import type { MutationLogItem } from "../types/mutationLogItem.js";
 
-/** Maps customer entitlement and rollover mutation targets to their features (deduped by feature id). */
 export const mutationLogsToFeatures = ({
 	fullCustomer,
 	mutationLogs,

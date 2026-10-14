@@ -5,7 +5,6 @@ import {
 	getSafeNextPath,
 } from "@/utils/genUtils";
 
-// No DOM here, so `readDismissed` reads false — these cover the not-yet-dismissed path.
 describe("getDefaultOrgPath", () => {
 	test("defaults deployed orgs to production", () => {
 		expect(getDefaultOrgPath({ deployed: true })).toBe(

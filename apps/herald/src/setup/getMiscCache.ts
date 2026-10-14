@@ -10,7 +10,6 @@ const unroutableBackup = (): string => {
 	);
 };
 
-/** Herald's misc cache: the same instances, ramp, and keys the server uses. */
 export function getMiscCache(): MiscCache {
 	miscCache ??= createMiscCache({
 		ctx: {

@@ -1,11 +1,3 @@
-/**
- * Every command a queue can carry decides in one step and answers in another: the decide resolves
- * once the writer holds the record, before Kafka does, and only the sync reply waits for the commit.
- *
- * Red (before): the processor has no decide* methods; a command resolves only once committed.
- * Green (after): decide* resolve with the record still in flight; its commit yields the record.
- */
-
 import { describe, expect, test } from "bun:test";
 import {
 	APPEND_MS,

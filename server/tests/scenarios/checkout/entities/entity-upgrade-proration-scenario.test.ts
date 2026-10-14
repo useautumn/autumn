@@ -5,18 +5,9 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-/**
- * Entity Upgrade Proration Scenario
- *
- * Tests upgrading a specific entity's plan mid-billing cycle for proration.
- * Customer has pro on both entities, advances 15 days, then upgrades entity-2 to premium.
- * This tests that proration is calculated correctly when upgrading halfway through the cycle.
- */
-
 test(`${chalk.yellowBright("attach: entity - upgrade entity-2 to premium mid-cycle (proration)")}`, async () => {
 	const customerId = "entity-upgrade-proration";
 
-	// Pro plan ($20/mo) - standard features
 	const pro = products.pro({
 		id: "pro",
 		items: [
@@ -32,7 +23,6 @@ test(`${chalk.yellowBright("attach: entity - upgrade entity-2 to premium mid-cyc
 		],
 	});
 
-	// Premium plan ($50/mo) - more features, higher limits
 	const premium = products.premium({
 		id: "premium",
 		items: [
@@ -50,8 +40,6 @@ test(`${chalk.yellowBright("attach: entity - upgrade entity-2 to premium mid-cyc
 		],
 	});
 
-	// Setup: customer with test clock, payment method, 2 entities, pro attached to both
-	// Then advance 15 days (halfway through billing cycle)
 	const { autumnV1, entities, advancedTo } = await initScenario({
 		customerId,
 		setup: [
@@ -60,17 +48,14 @@ test(`${chalk.yellowBright("attach: entity - upgrade entity-2 to premium mid-cyc
 			s.entities({ count: 2, featureId: TestFeature.Users }),
 		],
 		actions: [
-			// Attach pro plan to both entities
 			s.attach({ productId: "pro", entityIndex: 0 }),
 			s.attach({ productId: "pro", entityIndex: 1 }),
-			// Advance 15 days - halfway through the billing cycle
 			s.advanceTestClock({ days: 15 }),
 		],
 	});
 
 	console.log("advanced to:", new Date(advancedTo).toISOString());
 
-	// Get customer state after initial attaches and clock advance
 	const customerBefore = await autumnV1.customers.get(customerId);
 	console.log("customer before mid-cycle upgrade:", {
 		products: customerBefore.products?.map(
@@ -82,24 +67,21 @@ test(`${chalk.yellowBright("attach: entity - upgrade entity-2 to premium mid-cyc
 		entities: entities.map((e) => ({ id: e.id, name: e.name })),
 	});
 
-	// Options for prepaid features in premium plan
 	const premiumOptions = [{ feature_id: TestFeature.Users, quantity: 10 }];
 
-	// 1. Preview upgrading entity-2 to premium (should show prorated amounts)
 	const upgradePreview = await autumnV1.billing.previewAttach({
 		customer_id: customerId,
 		product_id: `premium_${customerId}`,
-		entity_id: entities[1].id, // ent-2
+		entity_id: entities[1].id,
 		options: premiumOptions,
 		redirect_mode: "always",
 	});
 	console.log("mid-cycle entity upgrade preview (prorated):", upgradePreview);
 
-	// 2. Upgrade entity-2 to premium mid-cycle (Autumn checkout URL)
 	const upgradeResult = await autumnV1.billing.attach({
 		customer_id: customerId,
 		product_id: `premium_${customerId}`,
-		entity_id: entities[1].id, // ent-2
+		entity_id: entities[1].id,
 		redirect_mode: "always",
 		options: premiumOptions,
 	});

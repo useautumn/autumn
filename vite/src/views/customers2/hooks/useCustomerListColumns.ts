@@ -44,7 +44,6 @@ export function useCustomerListColumns({
 			);
 		}
 
-		// Build column groups for UI organization
 		const columnGroups: ColumnGroup[] = [];
 
 		if (usageColumns.length > 0) {
@@ -67,7 +66,6 @@ export function useCustomerListColumns({
 			...baseColumns.slice(insertAt),
 		];
 
-		// Insert usage columns before created_at (so created_at and actions stay at the end)
 		const createdAtIndex = columnsWithVersion.findIndex(
 			(col) => col.id === "created_at",
 		);

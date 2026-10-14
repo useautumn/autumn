@@ -50,8 +50,6 @@ export const creditSchemaItemsAreSame = ({
 			tier.credit_amount == right.tiers?.[tierIndex]?.credit_amount,
 	);
 
-/** Entries are keyed by metered_feature_id (rate lookup is a find over the
- * array), so ordering is not semantic — compare as a keyed set. */
 const creditSchemasAreSame = ({
 	schema1,
 	schema2,
@@ -106,7 +104,6 @@ const markupOverridesAreSame = ({
 	);
 };
 
-/** Field-by-field so new override keys must be added here deliberately. */
 export const featureOverridesAreSame = ({
 	override1,
 	override2,
@@ -125,11 +122,9 @@ export const featureOverridesAreSame = ({
 
 const normalizeOptionalId = (value?: string | null) => value || null;
 
-/** Unset interval means lifetime, matching isLifetimeEntitlement. */
 export const normalizedEntitlementInterval = (entitlement: Entitlement) =>
 	entitlement.interval ?? EntInterval.Lifetime;
 
-/** Interval count defaults to 1 and is meaningless for lifetime entitlements. */
 export const normalizedEntitlementIntervalCount = (entitlement: Entitlement) =>
 	normalizedEntitlementInterval(entitlement) === EntInterval.Lifetime
 		? 1
@@ -138,16 +133,13 @@ export const normalizedEntitlementIntervalCount = (entitlement: Entitlement) =>
 const hasUnlimitedAllowanceType = (entitlement: Entitlement) =>
 	entitlement.allowance_type === AllowanceType.Unlimited;
 
-/** A boolean feature's row: no allowance type and no interval (itemToPriceAndEnt). */
 const isBooleanRow = (entitlement: Entitlement) =>
 	entitlement.allowance_type == null && entitlement.interval == null;
 
-/** Nothing to carry on a boolean row, so a stored value is inert. */
 const carryFromPreviousDiffers = (ent1: Entitlement, ent2: Entitlement) =>
 	!(isBooleanRow(ent1) && isBooleanRow(ent2)) &&
 	(ent1.carry_from_previous ?? false) !== (ent2.carry_from_previous ?? false);
 
-/** No balance on a boolean row: a stored 0 and an unset allowance are the same. */
 const allowanceDiffers = (ent1: Entitlement, ent2: Entitlement) => {
 	if (isBooleanRow(ent1) && isBooleanRow(ent2)) {
 		return (ent1.allowance ?? 0) != (ent2.allowance ?? 0);
@@ -161,8 +153,6 @@ const expiriesAreSame = (ent1: Entitlement, ent2: Entitlement) =>
 
 export const entsAreSame = (ent1: Entitlement, ent2: Entitlement) => {
 	if (ent1.internal_feature_id !== ent2.internal_feature_id) return false;
-	// Unlimited-ness is the semantic boundary (matches isUnlimitedEntitlement);
-	// fixed/none/unset distinctions fall to the allowance comparison below.
 	if (hasUnlimitedAllowanceType(ent1) !== hasUnlimitedAllowanceType(ent2)) {
 		return false;
 	}

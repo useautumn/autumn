@@ -20,38 +20,31 @@ export const handleStripeCheckoutSessionCompleted = async ({
 		event,
 	});
 
-	// V2 flow (deferred — cusProducts inserted here by webhook)
 	await handleCheckoutSessionMetadataV2({
 		ctx,
 		checkoutContext,
 	});
 
-	// V2 + enable_plan_immediately (cusProducts already inserted at attach time;
-	// patch subscription_ids + reconcile Stripe sub here)
 	await handleCheckoutSessionEnabledImmediately({
 		ctx,
 		checkoutContext,
 	});
 
-	// Setup payment with metadata (plan attachment after setup)
 	await handleSetupPaymentMetadata({
 		ctx,
 		checkoutContext,
 	});
 
-	// Legacy flow
 	await handleLegacyCheckoutSessionMetadata({
 		ctx,
 		checkoutContext,
 	});
 
-	// Handle standalone setup checkout (setup mode without Autumn metadata)
 	await handleStandaloneSetupCheckout({
 		ctx,
 		checkoutContext,
 	});
 
-	// Update customer name/email from checkout details
 	await updateCustomerFromCheckout({
 		ctx,
 		checkoutSessionContext: checkoutContext,

@@ -1,13 +1,3 @@
-/** A follow-up eve has already accepted must never run with nobody reading
- * it. The accept-check and the reader's exit have to be one synchronous step,
- * because the post to eve takes time and the turn can finish during it.
- *
- * Prod 2026-09-21 (Slack C0B9L4G35U2, 13:55:26Z): the injection completed 27ms
- * AFTER the reader returned. eve had no turn left to cancel, started a fresh
- * one, and nobody was attached — it called listCustomers at 13:55:37 and leaf
- * only saw that work at 13:55:50, when the next message opened a stream and
- * replayed it. Every later reply in the thread was then one message behind. */
-
 import { beforeEach, describe, expect, mock, test } from "bun:test";
 import { AppEnv } from "@autumn/shared";
 import type { EveEvent } from "../../../src/internal/agentRuntime/eve/eveEventSchemas.js";
@@ -32,8 +22,6 @@ type StreamPass = { events: EveEvent[] };
 
 let streamPasses: StreamPass[] = [];
 let streamCallCount = 0;
-/** Runs just before the event at this index is yielded, so a test can land an
- * injection inside the window the reader is exiting through. */
 let beforeEventAt: { index: number; run: () => void } | undefined;
 
 await mockLeafModule({
@@ -54,7 +42,6 @@ await mockLeafModule({
 			for (const event of pass.events) {
 				if (beforeEventAt?.index === index) {
 					const hook = beforeEventAt;
-					// One-shot: a message is injected once, not on every reopen.
 					beforeEventAt = undefined;
 					hook.run();
 				}
@@ -98,7 +85,6 @@ const firstTurn = [
 		message: "OK, now acting as resend in live.",
 		type: "message.completed",
 	}),
-	// index 2: the reader decides here whether it may stop reading.
 	event({ type: "session.waiting" }),
 ];
 const replacementTurn = [
@@ -113,8 +99,6 @@ const replacementTurn = [
 
 let posted: string[] = [];
 
-/** A post that rejects only after the reader has reached its boundary: the
- * reservation is already counted, but eve never took the message. */
 const failingRun = (key: string) => {
 	const run = registerRun({
 		key,
@@ -137,8 +121,6 @@ const activeRun = (key: string) => {
 		kind: "message",
 		ownerProviderUserId: "U1",
 		sendUserMessage: async ({ text }) => {
-			// eve has taken the message by the time this resolves; the reply is
-			// coming on the stream whether or not anyone is still reading.
 			posted.push(text);
 		},
 	});
@@ -177,8 +159,6 @@ describe("a follow-up eve already accepted", () => {
 		const run = activeRun("handoff-1");
 		streamPasses = [{ events: [...firstTurn, ...replacementTurn] }];
 		const settled: unknown[] = [];
-		// The message is accepted while the reader is on its way out: eve has
-		// nothing left to cancel, so it starts a fresh turn instead of steering.
 		beforeEventAt = {
 			index: 2,
 			run: () => void run.injectFollowUp({ text: "find me 1 customer" }),
@@ -187,12 +167,9 @@ describe("a follow-up eve already accepted", () => {
 		const outcome = await consume({ run, settled });
 
 		expect(posted).toEqual(["find me 1 customer"]);
-		// The settling turn's own reply still reaches the thread...
 		expect(settled).toEqual([
 			{ kind: "answered", text: "OK, now acting as resend in live." },
 		]);
-		// ...and the reply to the follow-up is what this read returns, rather
-		// than being left on the stream for the next message to pick up.
 		expect(outcome).toMatchObject({
 			kind: "answered",
 			text: "GRACEX TECHNOLOGIES SRL — on Marketing Pro.",
@@ -228,7 +205,6 @@ describe("a follow-up eve already accepted", () => {
 
 		const outcome = await consume({ run, settled });
 
-		// No injection, so the first turn is the answer and the reader stops.
 		expect(settled).toEqual([]);
 		expect(outcome).toMatchObject({
 			kind: "answered",
@@ -240,8 +216,6 @@ describe("a follow-up eve already accepted", () => {
 
 	test("is not claimed when its post never reached eve", async () => {
 		const run = failingRun("handoff-5");
-		// Both turns are on the stream, so a wrong claim is visible: the reader
-		// would read past its own answer and return the second turn instead.
 		streamPasses = [{ events: [...firstTurn, ...replacementTurn] }];
 		const settled: unknown[] = [];
 		beforeEventAt = {
@@ -253,17 +227,12 @@ describe("a follow-up eve already accepted", () => {
 
 		const outcome = await consume({ run, settled });
 
-		// eve never accepted the message, so there is no replacement turn to
-		// wait for. The reader answers what it read and stops.
 		expect(settled).toEqual([]);
 		expect(outcome).toMatchObject({
 			kind: "answered",
 			text: "OK, now acting as resend in live.",
 		});
-		// The coordinator's fallback run is the one that will carry the message;
-		// this reader must be shut so the two cannot both drive the session.
 		expect(run.settling).toBe(true);
-		// A reservation released after a claim must not leave the count negative.
 		expect(run.pendingTurns).toBe(0);
 		closeRun({ key: run.key, run });
 	});
@@ -275,8 +244,6 @@ describe("a follow-up eve already accepted", () => {
 
 		await consume({ run, settled });
 
-		// The reader is gone, so a message must never be posted into eve here —
-		// it belongs to a new run that will attach and read its reply.
 		expect(run.injectFollowUp({ text: "too late" })).rejects.toThrow(
 			"Run is settling",
 		);

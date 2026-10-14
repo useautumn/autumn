@@ -11,7 +11,6 @@ import type { SlotOwners } from "../threads/owners/types/slotOwners.js";
 import { createDeployedAuth } from "./createDeployedAuth.js";
 import type { Auth } from "./types/auth.js";
 
-/** An org's deployment is given its one token hash; a multi-tenant Atom adds orgs as the admin registers them. */
 export const openAuth = ({
 	env,
 	owners,
@@ -21,7 +20,6 @@ export const openAuth = ({
 	owners: SlotOwners;
 	subjectPulls: SubjectPulls;
 }): { auth: Auth; multiTenant?: MultiTenantContext; held: HeldSubjects } => {
-	// One budget per thread: it owns its slots' subjects, in every folder a multi-tenant Atom holds.
 	const held = createHeldSubjects({
 		budgetBytes: env.ATOM_HELD_BYTES_PER_THREAD,
 		idleExpiryMs: HELD_IDLE_EXPIRY_MS,

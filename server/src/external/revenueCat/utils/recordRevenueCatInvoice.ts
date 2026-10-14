@@ -13,24 +13,11 @@ import { generateId } from "@/utils/genUtils";
 type RecordableEvent = {
 	transaction_id?: string | null;
 	original_transaction_id?: string | null;
-	// RevenueCat's `price` is always normalized to USD; `currency` describes
-	// `price_in_purchased_currency`, NOT `price`. We record `price`, so the
-	// invoice currency is always USD.
 	price?: number | null;
 	purchased_at_ms?: number | null;
 	event_timestamp_ms?: number | null;
 };
 
-/**
- * Insert (or upsert by stripe_id) an invoice row that mirrors a RevenueCat
- * webhook event, then invalidate the customer's full-customer cache so the
- * next read sees the new invoice.
- *
- * The DB column is named `stripe_id` for legacy reasons; for RevenueCat
- * invoices we store `event.transaction_id` (falling back to
- * `event.original_transaction_id`) without any prefix. Collision risk across
- * processor namespaces is treated as effectively zero.
- */
 export const recordRevenueCatInvoice = async ({
 	ctx,
 	event,
@@ -53,8 +40,6 @@ export const recordRevenueCatInvoice = async ({
 	}
 
 	const total = event.price ?? 0;
-	// `event.price` is normalized to USD by RevenueCat regardless of the
-	// purchase currency, so the recorded invoice is always denominated in USD.
 	const currency = "usd";
 	const createdAt =
 		event.purchased_at_ms ?? event.event_timestamp_ms ?? Date.now();

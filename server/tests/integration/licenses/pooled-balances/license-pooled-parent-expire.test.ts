@@ -1,14 +1,3 @@
-/**
- * Contract: canceling the license parent expires the license-keyed pool at
- * read time — same inherit-parent-liveness rule as seats.
- *
- *   cancel_immediately → Messages gone on get/check; getFull does not
- *     hydrate the pooled cusEnt for that link_id
- *   cancel one of two parents → only that link is unhydrated; remaining
- *     pool still grants
- *   re-attach → fresh link_id; expired pool stays hidden
- */
-
 import { expect, test } from "bun:test";
 import type {
 	ApiCustomerV5,

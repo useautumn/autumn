@@ -11,7 +11,6 @@ import { activateFreeDefaultProduct } from "@/internal/customers/cusProducts/act
 import type { CustomerProductActivation } from "../types/customerProductActivation";
 import { activateScheduledCustomerProduct } from "./activateScheduled";
 
-/** A scheduled free successor takes priority over inserting the default plan. */
 export const activateFreeSuccessorProduct = async ({
 	ctx,
 	fromCustomerProduct,
@@ -23,7 +22,6 @@ export const activateFreeSuccessorProduct = async ({
 	fromCustomerProduct: FullCusProduct;
 	fullCustomer: FullCustomer;
 	activatedAt: number;
-	/** The caller sends billing.updated and carries `allocationsAdjusted` on it. */
 	emitsBillingUpdated?: boolean;
 }): Promise<{
 	activation?: CustomerProductActivation;
@@ -32,7 +30,6 @@ export const activateFreeSuccessorProduct = async ({
 }> => {
 	const { logger } = ctx;
 
-	// 1. If it's add on / one off, early return
 	const { valid: isAddOnOrOneOff } = cp(fromCustomerProduct).addOn().oneOff();
 	if (isAddOnOrOneOff) {
 		logger.debug(
@@ -41,7 +38,6 @@ export const activateFreeSuccessorProduct = async ({
 		return { allocationsAdjusted: false };
 	}
 
-	// 2. Check if there's another active customer product in the same group
 	const hasActiveInGroup = findMainActiveCustomerProductByGroup({
 		fullCus: fullCustomer,
 		productGroup: fromCustomerProduct.product.group,
@@ -55,10 +51,8 @@ export const activateFreeSuccessorProduct = async ({
 		return { allocationsAdjusted: false };
 	}
 
-	// 3. Activate free scheduled customer product if exists
 	const productGroup = fromCustomerProduct.product.group;
 
-	// 1. Try to find a free scheduled customer product in the same group
 	const scheduledCustomerProduct = findMainScheduledCustomerProductByGroup({
 		fullCustomer,
 		productGroup,
@@ -95,8 +89,6 @@ export const activateFreeSuccessorProduct = async ({
 			allocationsAdjusted,
 		};
 	}
-
-	// 2. Fall back to default product (creates a new customer product)
 
 	const { insertedCustomerProduct: newCustomerProduct, allocationsAdjusted } =
 		await activateFreeDefaultProduct({

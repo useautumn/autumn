@@ -17,7 +17,6 @@ export class HandoffReadyTimeoutError extends Error {
 	}
 }
 
-/** Serving entries keep serving while a successor prepares; the rest retire the way they always did. */
 export function beginPartitionHandoffs({
 	ctx,
 	state,
@@ -54,7 +53,6 @@ async function watchHandoffRetirement({
 	}
 }
 
-/** An owner the roster left alone still hands off when another fleet's worker announces `ready` for its partition. */
 export function watchForSuccessor({
 	ctx,
 	state,
@@ -91,9 +89,6 @@ export function watchForSuccessor({
 	void entry.publication.awaitReady({ signal }).then(onReadyRecord, noop);
 }
 
-/** The roster still deals this partition here, so it is prepared again and held at the gate; a reverse
- *  flip brings it back through the normal handoff. Without a gate it would announce at once and take the
- *  partition straight back, so it stays stopped. An allocation change since the handoff owns it instead. */
 function prepareForReturn({
 	ctx,
 	state,
@@ -116,7 +111,6 @@ function prepareForReturn({
 	}).catch((cause) => reportPartitionError({ ctx, cause }));
 }
 
-/** Back into service: the roster handed the partition to this worker again before it stopped serving. */
 export function cancelPartitionHandoff({
 	state,
 	entry,
@@ -143,7 +137,6 @@ async function handOffPartition({
 	ctx: PartitionsContext;
 	state: PartitionsState;
 	entry: PartitionEntry;
-	/** Already known when a foreign `ready` started this handoff; a revoke waits for one. */
 	successor?: string;
 }): Promise<void> {
 	const { partition } = entry;
@@ -153,24 +146,19 @@ async function handOffPartition({
 	if (cancel.aborted) return;
 	entry.withdrawn = true;
 	state.directory.withdraw({ partition });
-	// The roster still assigns this partition here; without a revoke nothing else stops its commands being fetched.
 	if (announced) pauseHandedOffCommands({ ctx, partition });
 	state.retiringEntries.set(partition, entry);
 	const settlement = Promise.withResolvers<void>();
 	state.handoffSettlements.set(partition, settlement.promise);
 	closePartitionAdmission({ entry });
 	try {
-		// Tells the successor this worker is alive and working, so its claim timeout only covers silence.
-		// Not awaited: a slow send must not hold the drain past that timeout.
 		if (successor) void announceDraining({ ctx, entry, successor });
 		const drained = await entry.drain;
 		if (!drained?.ok) return;
-		// The claim is the successor's signal to fence: it must follow the drain, never precede it.
 		if (successor) {
 			const { routeEpoch } = await entry.publication.claim({
 				endpoint: successor,
 			});
-			// A caller that still arrives here is told this route, and skips reading the ownership topic for it.
 			state.handoffSuccessors.set(partition, {
 				partition,
 				endpoint: successor,
@@ -218,7 +206,6 @@ function pauseHandedOffCommands({
 
 function noop(): void {}
 
-/** Best effort: without it the successor falls back to the claim timeout, as before. */
 async function announceDraining({
 	ctx,
 	entry,
@@ -235,9 +222,6 @@ async function announceDraining({
 	}
 }
 
-/** The successor's endpoint, or null when none announced in time and the old release path applies.
- *  A running worker never gives up: it keeps serving until a successor is ready. Only a stopping one
- *  releases after silence, up to the drain cap for a successor that said it is preparing. */
 async function awaitSuccessor({
 	ctx,
 	state,

@@ -63,7 +63,6 @@ export const parseCustomerIdFromBody = async (
 				sendEvent: body?.send_event,
 			};
 		} catch (_error) {
-			// Body might not be JSON, that's okay
 			return undefined;
 		}
 	}
@@ -71,10 +70,6 @@ export const parseCustomerIdFromBody = async (
 	return undefined;
 };
 
-/**
- * Analytics middleware for Hono
- * Enriches logger context and logs responses
- */
 export const analyticsMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 	const ctx = c.get("ctx");
 	const skipUrls = ["/v1/customers/all/search"];

@@ -10,7 +10,6 @@ export const handleUpsertAdminSubjectSnapshotsConfig = createRoute({
 	scopes: [Scopes.Superuser],
 	body: SubjectSnapshotsEdgeConfigSchema,
 	handler: async (c) => {
-		// An unreadable record counts as off, so the save stamps writtenAfter rather than trusting old rows.
 		const previous = await subjectSnapshotsStore
 			.readFromSource()
 			.catch(() => null);

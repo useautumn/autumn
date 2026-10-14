@@ -4,9 +4,6 @@ import type {
 	TrialOnEnd,
 } from "@autumn/shared";
 
-/**
- * Determines the free trial configuration to be used based on the provided options.
- */
 export function getFreeTrial({
 	removeTrial,
 	trialLength,

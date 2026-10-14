@@ -1,13 +1,3 @@
-/**
- * The overage draw's order: a row with its own overage (a usage price) takes
- * overage before a free allocated grant, which may run over only when nothing
- * priced can.
- *
- * Red (before):  overage lands on the first row in deduction order, the free
- *                plan's grant, so the priced add-on never bills.
- * Green (after): overage lands on the priced add-on.
- */
-
 import { describe, expect, test } from "bun:test";
 import {
 	BillingInterval,
@@ -48,7 +38,6 @@ const pricedAddOn = ({
 	created_at: occurredAt + 1,
 });
 
-/** A prepaid-priced row without its own overage: only an overflow draw may take it below zero. It sorts first in deduction order. */
 const prepaidGrant = ({
 	balance,
 }: {

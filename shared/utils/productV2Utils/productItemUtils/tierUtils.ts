@@ -1,10 +1,6 @@
 import type { UsageTier } from "@models/productModels/priceModels/priceConfig/usagePriceConfig";
 import { Decimal } from "decimal.js";
 
-/**
- * Subtracts included usage from tier `to` values (user-facing → internal).
- * Infinite (`"inf"`) tier `to` values are left unchanged.
- */
 export const subtractIncludedFromTiers = ({
 	tiers,
 	included,
@@ -23,10 +19,6 @@ export const subtractIncludedFromTiers = ({
 	}));
 };
 
-/**
- * Adds included usage to tier `to` values (internal → user-facing).
- * Infinite (`"inf"`) tier `to` values are left unchanged.
- */
 export const addIncludedToTiers = ({
 	tiers,
 	included,

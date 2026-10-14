@@ -8,10 +8,6 @@ const GetProductCountQuerySchema = z.object({
 	version: queryInteger().optional(),
 });
 
-/**
- * GET /products/:productId/count
- * Get customer counts for a specific product version
- */
 export const handleGetProductCount = createRoute({
 	scopes: [Scopes.Plans.Read],
 	query: GetProductCountQuerySchema,
@@ -32,7 +28,6 @@ export const handleGetProductCount = createRoute({
 			throw new ProductNotFoundError({ productId, version });
 		}
 
-		// Get counts from postgres
 		const counts = await CusProdReadService.getCounts({
 			db: ctx.db,
 			internalProductId: product.internal_id,

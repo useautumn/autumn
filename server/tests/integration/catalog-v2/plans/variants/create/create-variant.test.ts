@@ -1,13 +1,3 @@
-/**
- * catalogV2.update — create a variant from `plans[].variants[]`.
- *
- * Contract:
- *   - existing base + variants[{ id, name }] → v1, pointer set, items cloned
- *   - same-call create base + variant → both exist, pointer set
- *   - customize on create → clone + overlay
- *   - preview writes nothing; results include the variant create
- */
-
 import { test } from "bun:test";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";

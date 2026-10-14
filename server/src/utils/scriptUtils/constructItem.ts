@@ -11,9 +11,6 @@ import {
 	UsageModel,
 } from "@autumn/shared";
 
-/*
- **  Only required for more complex features, consider using items in the test fixtures instead
- */
 export const constructFeatureItem = ({
 	featureId,
 	includedUsage = 150,
@@ -42,7 +39,6 @@ export const constructFeatureItem = ({
 		};
 	}
 
-	// Unlimited defaults to one-off (no reset); limited defaults to monthly.
 	const interval =
 		intervalParam === undefined
 			? unlimited

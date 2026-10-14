@@ -2,13 +2,6 @@ import { type ApiVersion, ApiVersionClass } from "@autumn/shared";
 
 export type VersionedMap<T> = { latest: T } & Partial<Record<ApiVersion, T>>;
 
-/**
- * Picks the entry whose version key is the closest match to `requested`.
- * Resolution order:
- *   1. Exact version key match
- *   2. Smallest defined version >= requested (older clients map up)
- *   3. `latest` as fallback
- */
 export const resolveVersionedEntry = <T>({
 	map,
 	requested,
@@ -34,10 +27,6 @@ export const resolveVersionedEntry = <T>({
 	return map.latest;
 };
 
-/**
- * Throws if the key sets of two versioned maps differ.
- * Used at route registration time to catch versionedBody/versionedHandler drift.
- */
 export const assertVersionedKeyParity = <A, B>({
 	a,
 	b,

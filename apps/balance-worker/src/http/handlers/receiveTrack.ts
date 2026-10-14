@@ -7,7 +7,6 @@ import type { BalanceWorkerHttpEnv } from "../types/balanceWorkerHttp.js";
 export async function receiveTrack(context: Context<BalanceWorkerHttpEnv>) {
 	const ctx = context.get("ctx");
 	const { command } = context.get("request");
-	// Our server builds and validates this command; re-parsing it here is pure cost.
 	const trackCommand = command as TrackCommand;
 	const requestLog = context.get("requestLog");
 	requestLog.command = trackCommand;

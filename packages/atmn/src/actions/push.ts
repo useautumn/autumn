@@ -310,8 +310,6 @@ const applyCatalog = async ({
 		);
 	}
 
-	// The update response has no variant edges; when the config states any,
-	// the catalog's plan rows (with each variant's resolved plan) fill them in.
 	const statesVariants = (
 		(wire as { plans?: { variants?: unknown[] }[] }).plans ?? []
 	).some((row) => Array.isArray(row.variants) && row.variants.length > 0);
@@ -360,7 +358,6 @@ export const runPush = async ({
 		dirs,
 		...(project.configPath === null ? {} : { configPath: project.configPath }),
 	});
-	// One document, three destinations: the catalog, each singleton and each synced list.
 	const { catalog: wire, singletons, lists, warnings } = splitWire(document);
 	if (warnings.length > 0) write(`${renderLintWarnings({ warnings })}\n\n`);
 
@@ -384,8 +381,6 @@ export const runPush = async ({
 		}),
 	});
 	const { settings, webhooks } = previews.values;
-	// A catalog that needs a pending setting (multi_currency, say) can only be
-	// previewed once that setting applies: its error waits for the re-preview.
 	const catalogDeferral =
 		settingsBody !== undefined && settingsHaveWork({ settings })
 			? previews.failures.find((failure) => failure.lane === "catalog")
@@ -441,8 +436,6 @@ export const runPush = async ({
 			write,
 			migrationLinkBase,
 		});
-	// A deferred catalog is unproven until settings apply: webhooks wait on its
-	// re-preview. Otherwise settings → catalog runs beside the webhooks sync.
 	const settled = catalogDeferred ? await settingsStep() : undefined;
 	const applied = await settleLanes<{
 		catalog: { applied?: unknown; migrationIds: string[] };

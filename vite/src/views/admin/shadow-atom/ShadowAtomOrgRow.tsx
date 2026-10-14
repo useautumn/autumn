@@ -9,7 +9,6 @@ import { ShadowAtomPercentInput } from "./ShadowAtomPercentInput";
 
 export const ORG_TABLE_COLUMNS = "md:grid-cols-[minmax(0,1fr)_96px_120px_40px]";
 
-/** One registered org: name · slug, its percent in place, whether its customers are pushed, and remove. */
 export const ShadowAtomOrgRow = ({
 	title,
 	subtitle,

@@ -51,20 +51,12 @@ export type CursorPaginatedFullCusQueryArgs = {
 	createdAtRangeFilter?: CreatedAtRange;
 	cusProductLimit: number;
 	customerId?: string;
-	/** Emit products_page / products_total_count. Dashboard only. */
 	withProductsPage?: boolean;
-	/** Products holding cusEnts for these features bypass the cusProductLimit
-	 * preview cap, so displayed balances sum every live row. */
 	balanceFeatureInternalIds?: string[];
 	sortOrder?: SortOrder;
-	/** V2_4+ customer-level reads exclude entity-scoped rows entirely. */
 	aggregateEntityData?: boolean;
 };
 
-/**
- * NULL-id-safe keyset predicate: a row-tuple compare is UNKNOWN for NULL ids,
- * which asc sorts after the cursor — they'd be silently dropped.
- */
 export const getCursorPredicateSql = ({
 	createdAtColumn,
 	idColumn,
@@ -80,11 +72,6 @@ export const getCursorPredicateSql = ({
 		? sql`(${createdAtColumn} >= ${cursor.t} AND (${createdAtColumn} > ${cursor.t} OR ${idColumn} > ${cursor.id} OR ${idColumn} IS NULL))`
 		: sql`(${createdAtColumn} <= ${cursor.t} AND (${createdAtColumn} < ${cursor.t} OR ${idColumn} < ${cursor.id}))`;
 
-/**
- * Set-based variant: customer_products/entitlements/prices fetched via single
- * hash joins instead of per-customer LATERAL nested loops. Top-N per customer
- * is enforced by a ROW_NUMBER() window over the joined cps.
- */
 export const getCursorPaginatedFullCusQuery = ({
 	orgId,
 	env,
@@ -130,9 +117,6 @@ export const getCursorPaginatedFullCusQuery = ({
 			)`
 		: sql`false`;
 
-	// products_page / products_total_count are only rendered by the dashboard.
-	// The public API path never reads them, and building them costs two extra
-	// CTEs over customer_products plus ~12MB of the response on a 500-row page.
 	const productsSeedCte = withProductsPage
 		? sql`, ${customerProductsSeedCte({
 				inStatuses: RELEVANT_STATUSES,
@@ -144,9 +128,6 @@ export const getCursorPaginatedFullCusQuery = ({
 		? sql`, ${customerProductsSeedSelect}`
 		: sql``;
 
-	// Full-total per page customer, unaffected by the cusProductLimit preview
-	// cap. Mirrors resolveByBasePriceSort so the displayed value matches the
-	// base_price sort key. Dashboard only.
 	const basePriceTotalsSelect = withProductsPage
 		? sql`, (
 			SELECT COALESCE(json_object_agg(bp.internal_customer_id, bp.total), '{}'::json)

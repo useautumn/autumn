@@ -120,8 +120,6 @@ describe("edge config registry", () => {
 		expect(writeTimestamp).toHaveBeenCalledTimes(1);
 	});
 
-	// Every process runs this loop, so an unbounded create-on-null retries the
-	// write on each poll across the whole fleet while the key stays missing.
 	test("creates the timestamp once while it stays missing", async () => {
 		const writeTimestamp = jest.fn(async () => "created");
 		const { refresh, registry } = createRegistry({
@@ -154,8 +152,6 @@ describe("edge config registry", () => {
 		expect(refresh).toHaveBeenCalledTimes(3);
 	});
 
-	// The timestamp is the only propagation signal, so a write that never lands
-	// would otherwise leave every process serving stale config indefinitely.
 	test("refreshes on the backstop interval even when the timestamp is unchanged", async () => {
 		const refresh = jest.fn(async () => {});
 		const registry = createEdgeConfigRegistry({

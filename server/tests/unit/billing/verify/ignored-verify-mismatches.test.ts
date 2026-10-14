@@ -1,12 +1,3 @@
-/**
- * One org runs Stripe schedules whose only future change is a quantity step;
- * the subscription webhook applies it, so Autumn holds no phase for it and
- * verify's unexpected_schedule is noise.
- *
- * The exception must be narrow: a schedule that changes a price or a plan is
- * real drift and still has to report, for that org as much as any other.
- */
-
 import { describe, expect, it } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";

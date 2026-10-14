@@ -6,8 +6,6 @@ import {
 
 export type ReplayOperatorClosePort = () => void | Promise<void>;
 
-/** Every port is optional: a startup that failed half way owns the cleanup of
- *  whatever it already created and nothing else. */
 export type ReplayOperatorClosePorts = {
 	closeCoordinator?: ReplayOperatorClosePort;
 	stopOwners?: ReplayOperatorClosePort;
@@ -32,9 +30,6 @@ async function closePort({
 	}
 }
 
-/** The coordinator drains its in-flight physical jobs first, so the source and
- *  the pool are still usable while they finish. Ownership is stopped on every
- *  path, including one where an earlier close already failed. */
 export async function closeReplayOperatorResources({
 	ports,
 }: {

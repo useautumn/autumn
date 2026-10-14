@@ -63,11 +63,6 @@ const matchesFilter = ({
 	return true;
 };
 
-/**
- * Applies imaged usage/balance onto the cusProduct's already-allowance-filled
- * cusEnts. Reuses the carryOverUsage clamp: overage stays negative only when the
- * line permits it, otherwise floors at zero.
- */
 export const applyFlashBalances = ({
 	customerProduct,
 	balances,

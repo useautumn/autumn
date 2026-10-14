@@ -1,8 +1,3 @@
-/**
- * A later phase's anchor: 'phase_start' restarts the cycle at the phase (a plan switch bills the new
- * cycle in full), while no anchor keeps the running cycle and prorates the switch.
- */
-
 import { expect, test } from "bun:test";
 import { ms, type ProductV2, type SetPlansParamsV0Input } from "@autumn/shared";
 import { expectPreviewMatchesStripeUpcomingInvoice } from "@tests/integration/billing/set-plans/phase-proration/utils/phaseProrationUtils";

@@ -1,16 +1,3 @@
-/**
- * Legacy Attach V1 Invoice Mode Tests (Finalized, Non-Deferred)
- *
- * Tests that V1 attach() with `invoice: true` (finalize_invoice defaults to true)
- * returns a checkout_url (hosted invoice URL) and defers product activation
- * until the invoice is paid.
- *
- * Scenarios:
- * 1. New subscription (non-merged)
- * 2. New subscription (merged / add-on)
- * 3. Upgrade (pro → premium)
- * 4. Update quantity (prepaid increase)
- */
 /** biome-ignore-all lint/suspicious/noExplicitAny: test file */
 
 import { expect, test } from "bun:test";
@@ -37,16 +24,6 @@ import ctx from "@tests/utils/testInitUtils/createTestContext";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 1: New subscription (non-merged) - invoice mode
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Attach pro with invoice: true (finalize_invoice defaults to true)
- * - Returns checkout_url (hosted invoice URL), product NOT active
- * - Complete checkout → product active
- */
 test.concurrent(
 	`${chalk.yellowBright("legacy-inv-mode 1: new subscription")}`,
 	async () => {
@@ -76,7 +53,6 @@ test.concurrent(
 		expect(res.code).toBe(SuccessCode.CheckoutCreated);
 		expect(res.checkout_url).toBeDefined();
 
-		// Product should NOT be attached yet
 		const customerBefore =
 			await autumnV1.customers.get<ApiCustomerV3>(customerId);
 		expect(customerBefore.features?.[TestFeature.Messages]).toBeUndefined();
@@ -87,8 +63,6 @@ test.concurrent(
 			customerId,
 		});
 
-		// The attach rides on invoice.paid, so wait on the attach itself — the
-		// invoice reaching "paid" is set by a different event.
 		const stripeCusId = await stripeCustomerId({ ctx, customerId });
 
 		await waitForStripeWebhook({
@@ -140,17 +114,6 @@ test.concurrent(
 	},
 );
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 2: New subscription (merged / add-on) - invoice mode
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Attach pro normally (no invoice mode)
- * - Attach monthly add-on with invoice: true → checkout_url
- * - Add-on NOT attached until payment completes
- * - Complete checkout → both products attached, merged sub correct
- */
 test.concurrent(
 	`${chalk.yellowBright("legacy-inv-mode 2: merged add-on")}`,
 	async () => {
@@ -187,7 +150,6 @@ test.concurrent(
 
 		expect(res.checkout_url).toBeDefined();
 
-		// Pro should still be attached, add-on should NOT be attached
 		const customerBefore =
 			await autumnV1.customers.get<ApiCustomerV3>(customerId);
 		expectProductAttached({
@@ -225,27 +187,9 @@ test.concurrent(
 		});
 
 		await expectSubCount({ ctx, customerId, count: 2 });
-		// await expectSubToBeCorrect({
-		// 	db: ctx.db,
-		// 	customerId,
-		// 	org: ctx.org,
-		// 	env: ctx.env,
-
-		// });
 	},
 );
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 3: Upgrade (pro → premium) - invoice mode
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Attach pro normally
- * - Upgrade to premium with a draft invoice and enable_product_immediately
- * - Still on pro while the invoice is a draft
- * - Finalize the invoice → premium active before payment
- */
 test.concurrent(
 	`${chalk.yellowBright("legacy-inv-mode 3: upgrade")}`,
 	async () => {
@@ -284,7 +228,6 @@ test.concurrent(
 
 		expect(res.checkout_url).toBeFalsy();
 
-		// Draft invoice: premium stays pending until the invoice is finalized
 		const customerBefore = await autumnV1.customers.get<ApiCustomerV3>(
 			customerId,
 			{ skip_cache: "true" },
@@ -387,8 +330,6 @@ test.concurrent(
 			usage: 0,
 		});
 
-		// The upgrade's own invoice posts after the attach, so it must be waited
-		// for here — asserting earlier reads the previous invoice.
 		await waitForCustomerInvoiceStatus({
 			autumn: autumnV1,
 			customerId,

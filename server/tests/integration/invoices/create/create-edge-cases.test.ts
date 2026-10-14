@@ -1,7 +1,3 @@
-/**
- * invoices.create — rejections and the hand-off to void / reissue.
- */
-
 import { expect, test } from "bun:test";
 import { BillingInterval, BillingMethod } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features";
@@ -49,7 +45,6 @@ test.concurrent(
 				createInvoice({ autumnV2_3, params: { customer_id: customerId } }),
 		});
 
-		// Base price omitted and every quantity zero is also nothing to invoice.
 		await expectAutumnError({
 			errMessage: "Nothing to invoice",
 			func: () =>
@@ -163,7 +158,6 @@ test.concurrent(
 			id: "pro-edge-malformed",
 		});
 
-		// quantity and usage are mutually exclusive.
 		await expectAutumnError({
 			func: () =>
 				createInvoice({
@@ -200,7 +194,6 @@ test.concurrent(
 				}),
 		});
 
-		// A period needs both ends.
 		await expectAutumnError({
 			func: () =>
 				createInvoice({
@@ -254,7 +247,6 @@ test.concurrent(
 		expect(reissued.invoice.total).toBeCloseTo(300, 2);
 		expect(reissued.invoice.status).toBe("open");
 
-		// Void is idempotent: re-voiding returns the same void invoice.
 		const revoided = (await autumnV2_3.post("/invoices.void", {
 			invoice_id: first.invoice!.id,
 		})) as { invoice: { id: string; status: string } };

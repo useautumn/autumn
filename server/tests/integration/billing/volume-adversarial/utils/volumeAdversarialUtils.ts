@@ -42,7 +42,6 @@ export const listStripeInvoiceLines = async ({
 	return lines;
 };
 
-/** The non-zero lines Autumn added to a Stripe invoice, as major-unit amounts. */
 export const stripeLinesToAutumnLines = (lines: Stripe.InvoiceLineItem[]) =>
 	byDescription(
 		lines
@@ -56,7 +55,6 @@ export const stripeLinesToAutumnLines = (lines: Stripe.InvoiceLineItem[]) =>
 			})),
 	);
 
-/** The non-zero preview lines for one feature, shaped like `stripeLinesToAutumnLines`. */
 export const previewLinesForFeature = ({
 	lineItems,
 	featureId,
@@ -101,10 +99,6 @@ export const sumFeatureSubtotal = ({
 		.filter((lineItem) => lineItem.feature_id === featureId)
 		.reduce((sum, lineItem) => sum + lineItem.subtotal, 0);
 
-/**
- * Advances one cycle from `cycleStart` and asserts the renewal invoice equals the
- * upcoming-invoice preview: totals, the feature's amount, and the feature's lines.
- */
 export const expectVolumeRenewalCorrect = async ({
 	scenario,
 	featureId = TestFeature.Messages,
@@ -134,7 +128,6 @@ export const expectVolumeRenewalCorrect = async ({
 		stripeCli: scenario.ctx.stripeCli,
 		invoiceId: renewalInvoice.stripe_id,
 	});
-	// Previews carry the exact amount, as on dev; Stripe bills it rounded to the currency.
 	if (compareStripeLines) {
 		const previewLines = previewLinesForFeature({
 			lineItems: preview.line_items,
@@ -149,7 +142,6 @@ export const expectVolumeRenewalCorrect = async ({
 	return { preview, renewalInvoice, stripeLines };
 };
 
-/** Attaches a $20 pro plan with `item`, tracks `usage` messages, and returns the scenario. */
 export const setupVolumeConsumable = async ({
 	customerId,
 	item,

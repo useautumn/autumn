@@ -12,10 +12,9 @@ export const fixedPriceToDescription = ({
 	context,
 	quantity,
 }: {
-	price: Price; // must be fixed price
+	price: Price;
 	currency?: string;
 	context: LineItemContext;
-	/** Quantity lines read "3x Pro". */
 	quantity?: number;
 }): string => {
 	const config = price.config as FixedPriceConfig;

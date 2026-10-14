@@ -37,7 +37,6 @@ export const handleSetupCheckout = async ({
 		});
 		return;
 	}
-	// 1. Check attach prices...
 	await handleAddProduct({
 		ctx,
 		attachParams: {

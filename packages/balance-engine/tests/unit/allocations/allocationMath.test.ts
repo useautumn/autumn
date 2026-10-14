@@ -1,8 +1,3 @@
-/**
- * Allocation maths: a deployment's granted share, the scale applied when the
- * shared pot can't cover every promise, the deduction gate, and first-call gap packing.
- */
-
 import { describe, expect, test } from "bun:test";
 import {
 	allocationGate,

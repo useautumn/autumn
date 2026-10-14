@@ -51,7 +51,6 @@ export const handleAttachV2 = createRoute({
 			});
 		}
 
-		// 7. Format response
 		const response = billingResultToResponse({
 			billingContext,
 			billingResult,

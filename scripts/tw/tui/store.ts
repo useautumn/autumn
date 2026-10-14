@@ -1,16 +1,3 @@
-/**
- * Shared, mutable UI state for the `bun tw` opentui TUI.
- *
- * The orchestrator (commands/run.ts) drives this store via the exported mutators
- * at each lifecycle hook (warm activity, stripe/worker provisioning, per-file
- * test results, teardown deletions, final summary). The React app reads the live
- * state and re-renders on a fixed ~10fps tick (see App.tsx) — the proven
- * mutable-state + interval-flush pattern, which decouples high-frequency updates
- * from render cost and avoids per-mutation reconciliation.
- *
- * Pure data + functions only (no JSX), so it's covered by the scripts tsconfig.
- */
-
 import { recordCompletion } from "../dashboard/hub.ts";
 
 export type TuiPhase = "warm" | "fanout" | "run" | "teardown" | "done";
@@ -38,7 +25,6 @@ export type TuiTestFile = {
 export type TuiSummary = {
 	passed: number;
 	failed: number;
-	/** FILE-level failures — can be nonzero while `failed` (test asserts) is 0 (exec deaths). */
 	filesFailed: number;
 	crashed: number;
 	wallMs: number;
@@ -50,56 +36,30 @@ export type TuiState = {
 	phase: TuiPhase;
 	target: string;
 	workers: number;
-	/** WARM-UP: single elided activity line + whether we're building vs reusing cache. */
 	warmActivity: string;
 	warmBuilding: boolean;
-	/**
-	 * Monotonic warm-up stage index (see {@link WARM_STAGE_PATTERNS}); -1 until the
-	 * first recognized marker. Drives the dashboard's warm-up stepper so the
-	 * snapshot/build phase shows real per-stage progress instead of looking frozen.
-	 */
 	warmStage: number;
-	/** Warm cache hit kind (exact sha / stale `:latest`) — null when building. */
 	warmHit: "exact" | "stale" | null;
-	/** Epoch-ms the CURRENT phase started — lets the UI show a live elapsed timer. */
 	phaseStartedAt: number;
-	/** Latest non-empty log line in ANY phase — the dashboard's activity ticker. */
 	lastLine: string;
-	/** FAN-OUT progress. */
 	stripeDone: number;
 	stripeTotal: number;
 	workersReady: number;
 	workersTotal: number;
-	/** Workers that failed to provision (restore/checkout/boot error before READY). */
 	workersFailed: number;
-	/** RUN: per-file results keyed by absolute path, + the total file count. */
 	files: Map<string, TuiTestFile>;
 	runTotal: number;
-	/** TEARDOWN progress. */
 	sandboxesDone: number;
 	sandboxesTotal: number;
 	accountsDone: number;
 	accountsTotal: number;
-	/** DONE. */
 	summary?: TuiSummary;
-	/** Raw logs ring buffer for Pane B. */
 	logs: string[];
-	/** Live web dashboard URL (when `--dashboard`), shown in the header. */
 	dashboardUrl?: string;
 };
 
 const MAX_LOG_LINES = 5000;
 
-/**
- * Ordered warm-up stage matchers, scoped to the actual `[tw-build-base]` /
- * `[tw-warmup]` script output (NOT the orchestrator's own `[tw]` summary lines,
- * which mention every stage at once and would jump the stepper to the end). The
- * index of the highest matching pattern becomes the (monotonic) `warmStage`.
- *
- * Labels for these indices live in the dashboard (apps/testbench Overall view) —
- * keep the two in the same order:
- *   0 base image · 1 checkout · 2 install · 3 migrate · 4 seed · 5 snapshot
- */
 const WARM_STAGE_PATTERNS: ((line: string) => boolean)[] = [
 	(l) => l.includes("[tw-build-base]"),
 	(l) =>
@@ -145,7 +105,6 @@ export const setDashboardUrl = (url: string): void => {
 	state.dashboardUrl = url;
 };
 
-/** Reset everything (a fresh run reuses the module singleton). */
 export const resetTui = (): void => {
 	state.phase = "warm";
 	state.target = "";
@@ -187,7 +146,6 @@ export const setWarmActivity = (activity: string, building: boolean): void => {
 	state.warmBuilding = building;
 };
 
-/** Mark the warm phase as a cache hit — the dashboard collapses the stepper. */
 export const setWarmHit = (kind: "exact" | "stale"): void => {
 	state.warmHit = kind;
 };
@@ -202,7 +160,6 @@ export const setWorkerProgress = (ready: number, total: number): void => {
 	state.workersTotal = total;
 };
 
-/** Set fan-out totals (Stripe accounts + workers both equal the pool size). */
 export const setFanoutTotals = (total: number): void => {
 	state.stripeTotal = total;
 	state.workersTotal = total;
@@ -235,11 +192,6 @@ export const setRunTotal = (total: number): void => {
 const isTerminal = (status: TuiTestFile["status"]): boolean =>
 	status === "passed" || status === "failed" || status === "skipped";
 
-/**
- * Insert/replace a per-file test result. When a file first reaches a terminal
- * verdict, emit a one-line completion entry into the logs (Pane B) — Pane A only
- * shows IN-PROGRESS tests, so finished results live in the log pane.
- */
 export const upsertTestFile = (result: TuiTestFile): void => {
 	const previous = state.files.get(result.file);
 	state.files.set(result.file, result);
@@ -261,8 +213,6 @@ export const upsertTestFile = (result: TuiTestFile): void => {
 			`✗ ${name} (✓${result.passed} ✗${result.failed})${result.willRetry ? " — retrying" : ""}`,
 		);
 	}
-	// Dashboard speed graph: record FINAL verdicts only (a will-retry failure
-	// isn't done yet). No-op unless the dashboard is enabled.
 	if (result.status === "passed" || !result.willRetry) {
 		recordCompletion(result.file);
 	}
@@ -282,7 +232,6 @@ export const setSummary = (summary: TuiSummary): void => {
 	state.summary = summary;
 };
 
-/** Append a raw log line for Pane B (bounded ring buffer). */
 export const appendLog = (line: string): void => {
 	state.logs.push(line);
 	if (state.logs.length > MAX_LOG_LINES) {
@@ -292,8 +241,6 @@ export const appendLog = (line: string): void => {
 	if (trimmed) {
 		state.lastLine = trimmed;
 	}
-	// During warm-up the elided activity line tracks the latest build/log line,
-	// and the monotonic stage stepper advances off recognized script markers.
 	if (state.phase === "warm" && line.trim()) {
 		state.warmActivity = line.trim();
 		state.warmBuilding = true;
@@ -308,7 +255,6 @@ export const appendLog = (line: string): void => {
 	}
 };
 
-/** Derived tallies for the RUN progress line/bar. */
 export const runTallies = (): {
 	done: number;
 	passed: number;

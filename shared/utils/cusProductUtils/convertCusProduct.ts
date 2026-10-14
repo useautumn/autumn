@@ -160,8 +160,6 @@ export const cusProductToProduct = ({
 		prices: cusProductToPrices({ cusProduct }),
 		entitlements: cusProductToEnts({ cusProduct }),
 		free_trial: cusProduct.free_trial,
-		// The pools' effective plan licenses stand in for catalog links so
-		// license customize / quantity flows resolve against the pinned rows.
 		licenses: (cusProduct.customer_licenses ?? []).flatMap((customerLicense) =>
 			customerLicense.planLicense ? [customerLicense.planLicense] : [],
 		),

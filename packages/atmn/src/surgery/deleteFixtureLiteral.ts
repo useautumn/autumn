@@ -18,8 +18,6 @@ export const deleteFixtureLiteral = ({
 	const call = findFixture({ source, builder, idField, id, where });
 	if (call === null) return null;
 	const root = call.getRoot().root();
-	// The nearer ancestor wins: an element of `export default atmn({ features: [
-	// ...] })` is still an array element, not an exported fixture statement.
 	let statement: SgNode | null = null;
 	let isArrayElement = false;
 	for (const ancestor of call.ancestors()) {

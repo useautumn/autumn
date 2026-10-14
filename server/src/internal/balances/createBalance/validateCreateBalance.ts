@@ -37,7 +37,6 @@ export const validateCreateBalanceParams = async ({
 		fullCustomer,
 	});
 
-	// Entity cannot receive a balance of its own feature type
 	const entity = fullCustomer.entity;
 	if (entity && feature.id === entity.feature_id) {
 		throw new RecaseError({
@@ -83,15 +82,12 @@ export const validateCreateBalanceParams = async ({
 		}
 	}
 
-	// An explicit next_reset_at only makes sense for a resetting balance.
 	if (params.next_reset_at !== undefined && !params.reset?.interval) {
 		throw new RecaseError({
 			message: `next_reset_at requires a reset interval to be provided`,
 		});
 	}
 
-	// An explicit first reset boundary must be in the future — a past value would
-	// immediately fire a lazy reset and cycle the balance the caller just created.
 	if (
 		params.next_reset_at !== undefined &&
 		params.next_reset_at <= Date.now()
@@ -101,7 +97,6 @@ export const validateCreateBalanceParams = async ({
 		});
 	}
 
-	// The first reset must happen before the balance expires.
 	if (
 		params.next_reset_at !== undefined &&
 		params.expires_at &&

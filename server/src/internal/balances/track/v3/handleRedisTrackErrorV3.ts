@@ -15,7 +15,6 @@ import {
 } from "../../utils/types/redisDeductionError.js";
 import { runPostgresTrackV3 } from "./runPostgresTrackV3.js";
 
-/** Handles errors from V2 Redis deduction. Falls back to Postgres V3 path. */
 export const handleRedisTrackErrorV3 = async ({
 	ctx,
 	error,

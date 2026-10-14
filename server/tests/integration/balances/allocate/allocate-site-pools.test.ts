@@ -1,15 +1,3 @@
-/**
- * A customer shape with per-site plans: every site (entity) has a plan with pooled
- * monthly credits and, when overage is on, its own priced overage row; the pooled credits form one pot.
- *
- * Contract (PRD §4 rule 2, §11 core + interval + deduction paths):
- *   Overage on:  10k pot, A=5k B=5k, A uses 8k → 5k from its share, 3k on A's own overage row; B keeps 5k.
- *   Overage off: same, no overage → A stops at 5k; B keeps 5k.
- *   Credit system: a metered feature drawing from allocated credits is held to the share after conversion.
- *   One-off credits: never count toward the pot, but any entity can use them on top of its share.
- *   After an automatic cut: lowering a share works; raising past what's left is rejected.
- */
-
 import { expect, test } from "bun:test";
 import type { ApiBalanceV1 } from "@autumn/shared";
 import { ResetInterval } from "@autumn/shared";
@@ -197,7 +185,6 @@ test.concurrent(
 			},
 		});
 
-		// 4000 action1 × 0.2 = 800 credits wanted; A's share is 600.
 		await autumnV2_3.track({
 			customer_id: customerId,
 			entity_id: a,
@@ -290,7 +277,6 @@ test.concurrent(
 		});
 
 		await trackMessages({ customerId, entityId: a, value: 6000 });
-		// A has its 5k share plus the 2k one-off; 1k of that one-off is left for anyone.
 		expect(
 			await isMessagesAllowed({
 				customerId,

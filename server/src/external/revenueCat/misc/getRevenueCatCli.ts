@@ -26,10 +26,6 @@ const listEnvelope = ({
 		{ status: 200, headers: { "Content-Type": "application/json" } },
 	);
 
-/**
- * Fetch transport that serves `testOptions.revenueCat` fixtures. Splits any
- * multi-item list across two pages so the client's real next_page loop runs.
- */
 const buildMockFetchImpl = (fixtures: {
 	subscriptions?: unknown[];
 	purchases?: unknown[];
@@ -69,14 +65,6 @@ const buildMockFetchImpl = (fixtures: {
 	}) as typeof fetch;
 };
 
-/**
- * The only construction site for RC read code that runs on the request path.
- * Returns a mock-backed client when `testOptions.mockRevenueCat` is set, a real
- * client in production when the org is RC-connected, else null (caller skips).
- *
- * The real branch is gated to production so the existing RC test suite (which
- * carries fake creds and doesn't mock) never reaches api.revenuecat.com.
- */
 export const getRevenueCatCli = async (
 	ctx: AutumnContext,
 ): Promise<RevenueCatCliHandle | null> => {

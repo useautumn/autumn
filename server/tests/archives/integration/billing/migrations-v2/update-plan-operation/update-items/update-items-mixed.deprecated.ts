@@ -1,20 +1,3 @@
-/**
- * TDD coverage for update_items mixed with add_items / remove_items in the
- * same customize.
- *
- * Contract under test:
- *   New behaviors:
- *     - update_items, remove_items, and add_items in one customize compose
- *       coherently: removes drop items, updates patch existing items, adds
- *       insert new items.
- *     - update_items runs BEFORE add_items, so a feature that already has a
- *       cusEnt is updated in place rather than skipped by add_items' noop
- *       logic, and the freshly-added items in the same migration are not
- *       eligible matches for update_items.
- *     - Items that the user targets exclusively with remove_items are not
- *       also picked up by update_items running against the same product.
- */
-
 import { test } from "bun:test";
 import type { ApiCustomerV3, ApiCustomerV5 } from "@autumn/shared";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
@@ -73,7 +56,6 @@ test.concurrent(`${chalk.yellowBright("migrations update_items: update + add + r
 
 	const customer = await autumnV2_2.customers.get<ApiCustomerV5>(customerId);
 
-	// update_items: messages updated 100 -> 250 with 20 usage carried.
 	expectBalanceCorrect({
 		customer,
 		featureId: TestFeature.Messages,
@@ -82,13 +64,11 @@ test.concurrent(`${chalk.yellowBright("migrations update_items: update + add + r
 		planId: base.id,
 	});
 
-	// remove_items: words dropped.
 	expect(
 		customer.balances[TestFeature.Words],
 		"remove_items must drop the words entitlement",
 	).toBeUndefined();
 
-	// add_items: dashboard boolean now present.
 	expectFlagCorrect({
 		customer,
 		featureId: TestFeature.Dashboard,
@@ -114,9 +94,6 @@ test.concurrent(`${chalk.yellowBright("migrations update_items: filter that over
 		actions: [s.billing.attach({ productId: base.id })],
 	});
 
-	// User asks to BOTH remove and update the same item — the operation should
-	// still succeed; resulting state mirrors "remove wins" since the item is
-	// gone before update_items can target a fresh row.
 	await runUpdatePlanMigration({
 		ctx,
 		migrationClient: autumnV2_2,

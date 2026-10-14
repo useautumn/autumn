@@ -1,18 +1,3 @@
-/**
- * Contract: check (with and without a lock) and balances.finalize treat a
- * feature its credit system prices at 0 credits as free. A check needs no
- * credits and is allowed on an empty balance; a lock holds the units without
- * moving the balance; confirming (at any override) or releasing it moves
- * none either. A plan item's feature_override decides the price both ways.
- *
- * Drives the real `runCheckV2` → Lua deduction → lock receipt →
- * `fetchAndClaimLockReceiptV2` → `runFinalizeLockV2` path against a local
- * Redis. Only the subject loader (no Postgres here), webhooks, auto top-up and
- * the event/sync batchers (which flush to Postgres) are stubbed. Writes gate on
- * the misc cache, so a bare local run needs MISC_CACHE_DRAGONFLY_PUBLIC_URL
- * pointed at that Redis too.
- */
-
 import {
 	afterAll,
 	beforeAll,
@@ -80,7 +65,6 @@ const addEvent = spyOn(globalEventBatchingManager, "addEvent");
 const addSyncItem = spyOn(globalSyncBatchingManagerV3, "addSyncItem");
 
 beforeAll(async () => {
-	// Writes are skipped until the misc cache reports ready, as on a booted server.
 	await getMiscRedis().ping();
 });
 
@@ -124,7 +108,6 @@ const check = async ({
 			...(lockId && { lock: { enabled: true as const, lock_id: lockId } }),
 		},
 	});
-	// Each check is its own request: track idempotency is keyed on the request id.
 	ctx.id = crypto.randomUUID();
 	const { response } = await runCheckV2({ ctx, body, requiredBalance });
 	return response;
@@ -162,7 +145,6 @@ const finalize = async ({
 	});
 };
 
-/** A fresh lock id per test run, so receipts and claim markers never collide. */
 const lockIdFor = (name: string) =>
 	`zero-credit-${name}-${process.pid}-${crypto.randomUUID().slice(0, 8)}`;
 
@@ -198,7 +180,6 @@ describe("zero credit cost: check, lock and finalize", () => {
 
 		await finalize({ ctx, lockId, action: "confirm", overrideValue: 3 });
 		expect(await creditsBalance({ ctx, credits })).toBe(600);
-		// The lock records 1 unit; the confirm records only the 2 on top of it.
 		expect(eventValues()).toEqual([1, 2]);
 	});
 

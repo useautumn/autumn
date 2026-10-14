@@ -33,7 +33,6 @@ export const entitlements = pgTable(
 		entity_feature_id: text("entity_feature_id").default(sql`null`),
 		pooled: boolean().notNull().default(false),
 
-		// Optional fields
 		org_id: text("org_id"),
 		feature_id: text("feature_id"),
 		usage_limit: numeric({ mode: "number" }),
@@ -42,9 +41,6 @@ export const entitlements = pgTable(
 
 		rollover: jsonb().$type<RolloverConfig>(),
 
-		// Partial override of the feature's config for customers attached
-		// through this plan item, keyed like the feature config itself
-		// (schema is a full replacement when present).
 		feature_override: jsonb().$type<FeatureConfigOverride>(),
 	},
 	(table) => [
@@ -80,9 +76,6 @@ export const entitlements = pgTable(
 		index("idx_entitlements_internal_feature_id")
 			.on(table.internal_feature_id)
 			.concurrently(),
-		// Serves joins on rewards.internal_id (collation C). The plain
-		// internal_reward_id index above is default-collation and can't be used
-		// when the join collation is C.
 		index("idx_entitlements_internal_reward_id_c_partial")
 			.on(sql`${table.internal_reward_id} COLLATE "C"`)
 			.where(sql`${table.internal_reward_id} IS NOT NULL`),

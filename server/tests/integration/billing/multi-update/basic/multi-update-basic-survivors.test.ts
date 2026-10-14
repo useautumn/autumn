@@ -1,6 +1,3 @@
-/** multiUpdate billing action: cancel multiple plans in one call. All updates fold into ONE
- * billing plan: one Stripe evaluation per subscription, one combined proration invoice. */
-
 import { test } from "bun:test";
 import type { ApiCustomerV5, MultiUpdateParamsV0Input } from "@autumn/shared";
 import { expectMultiUpdatePreviewCorrect } from "@tests/integration/billing/multi-update/utils/expectMultiUpdatePreviewCorrect";
@@ -15,23 +12,6 @@ import { advanceToNextInvoice } from "@tests/utils/testAttachUtils/testAttachUti
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 1: Cancel group A main + consumable add-on EOC in one call, group B survives
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Group A: free default + Pro A ($20/mo). Group B: Pro B ($20/mo)
- * - Add-on with consumable messages (100 included, overage billed in arrears)
- * - Attach Pro A, Pro B, add-on (all on one subscription), track 500 messages
- * - ONE multiUpdate: cancel Pro A EOC + cancel add-on EOC
- *
- * Expected Result:
- * - Pro A and add-on canceling, Pro B untouched, free A scheduled
- * - Stripe subscription verifies clean (schedule removes only the canceled items)
- * - After advance: free A + Pro B active, Pro A + add-on gone,
- *   renewal invoice = Pro B $20 + overage 400 * $0.10 = $60 (overage billed once)
- */
 test.concurrent(
 	`${chalk.yellowBright("multi update basic: cancel group A pro + addon EOC, group B survives")}`,
 	async () => {
@@ -68,13 +48,10 @@ test.concurrent(
 				s.attach({ productId: proA.id }),
 				s.attach({ productId: proB.id }),
 				s.attach({ productId: addon.id }),
-				// 400 overage on the add-on's consumable; track needs a settle before
-				// the next billing write or the deduction can lose the DB-sync race
 				s.track({ featureId: TestFeature.Messages, value: 500, timeout: 4000 }),
 			],
 		});
 
-		// ── Contract: one call cancels both plans EOC ────────────────────────────
 		await autumnV2_3.billing.multiUpdate<MultiUpdateParamsV0Input>({
 			customer_id: customerId,
 			updates: [
@@ -93,14 +70,12 @@ test.concurrent(
 			scheduled: [freeA.id],
 		});
 
-		// ── Contract: single Stripe evaluation leaves a consistent subscription ──
 		await expectStripeSubscriptionCorrect({
 			ctx,
 			customerId,
 			options: { subCount: 1 },
 		});
 
-		// ── Contract: after cycle end, defaults + survivors settle correctly ─────
 		await advanceToNextInvoice({
 			stripeCli: ctx.stripeCli,
 			testClockId: testClockId!,
@@ -115,9 +90,6 @@ test.concurrent(
 			notPresent: [proA.id, addon.id],
 		});
 
-		// Renewal invoice: Pro B $20 + 400 overage * $0.10 = $60, billed exactly once
-		// (3 attach invoices + 1 renewal). The overage lands via the async
-		// invoice.created worker — poll until it settles under concurrent load.
 		const overageDeadline = Date.now() + 60_000;
 		for (;;) {
 			try {
@@ -135,20 +107,6 @@ test.concurrent(
 	},
 );
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 3: Cancel 2 of 3 plans immediately — survivor and its sub items untouched
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Pro A ($20/mo, group a), Pro B ($20/mo, group b), Premium C ($50/mo, group c)
- * - ONE multiUpdate: cancel Pro A + Pro B immediately
- *
- * Expected Result:
- * - Pro A + Pro B removed with a combined prorated credit, Premium C stays active
- * - Subscription survives with only Premium C's items (partial item removal, not
- *   whole-sub cancel)
- */
 test.concurrent(
 	`${chalk.yellowBright("multi update basic: cancel 2 of 3 plans immediately, survivor intact")}`,
 	async () => {
@@ -191,7 +149,6 @@ test.concurrent(
 			],
 		};
 
-		// Premium C survives, so this sub's next cycle renews at exactly $50
 		const preview = await expectMultiUpdatePreviewCorrect({
 			autumn: autumnV2_3,
 			params: multiUpdateParams,
@@ -214,7 +171,6 @@ test.concurrent(
 			active: [premiumC.id],
 		});
 
-		// Combined credit for both canceled plans on one invoice (3 attaches + 1 credit)
 		await expectCustomerInvoiceCorrect({
 			customerId,
 			count: 4,
@@ -222,7 +178,6 @@ test.concurrent(
 			latestInvoiceProductIds: [proA.id, proB.id],
 		});
 
-		// ── Contract: surviving plan's subscription verifies clean ───────────────
 		await expectStripeSubscriptionCorrect({
 			ctx,
 			customerId,

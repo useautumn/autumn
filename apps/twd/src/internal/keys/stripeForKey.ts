@@ -5,13 +5,10 @@ import {
 import { STRIPE_REQUEST_OPTIONS } from "@tw/helpers/stripeRequestBudget.ts";
 import Stripe from "stripe";
 
-/** twd's own pool tags. Legacy `bun tw` claims anything tagged autumn_tw_pool, so twd never writes it. */
 export const TWD_POOL_TAG = "autumn_twd_pool";
 export const TWD_STATE_TAG = "autumn_twd_state";
-/** scripts/tw/helpers/stripePool.ts tags: discovery still adopts these, then strips them. */
 export const LEGACY_POOL_TAG = "autumn_tw_pool";
 export const LEGACY_POOL_STATE_TAG = "autumn_tw_pool_state";
-/** Same list scripts/tw registerConnectIngressWebhook subscribes to. */
 export const CONNECT_WEBHOOK_EVENTS = [
 	...MAIN_STRIPE_EVENT_TYPES,
 	...SYNC_STRIPE_EVENT_TYPES,
@@ -19,10 +16,6 @@ export const CONNECT_WEBHOOK_EVENTS = [
 
 const clients = new Map<string, Stripe>();
 
-/**
- * Plain per-key Stripe client. Not @tw/helpers/stripeKeyPool's: that one pulls the
- * server's client cache + logger graph into twd's typecheck.
- */
 export const stripeForKey = ({ secret }: { secret: string }): Stripe => {
 	let client = clients.get(secret);
 	if (!client) {

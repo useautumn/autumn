@@ -2,7 +2,6 @@ import type { IngestResult } from "@tinybirdco/sdk";
 import type { TinybirdClient } from "../types/tinybirdClient.js";
 import { TinybirdIngestError } from "./tinybirdIngestError.js";
 
-// The SDK retries only 429 and 503, where nothing was written: the Events API cannot skip a repeat.
 const MAX_RETRIES = 3;
 
 /**

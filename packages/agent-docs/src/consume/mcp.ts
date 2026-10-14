@@ -16,7 +16,6 @@ const toListItem = (doc: McpResource) => ({
 
 const byUri = new Map(mcpResources.map((doc) => [doc.uri, doc]));
 
-/** The generated agent-docs resources, ready to hand to an MCP server. */
 export const agentDocResources: MCPServerResources = {
 	listResources: async () => mcpResources.map(toListItem),
 	getResourceContent: async ({ uri }) => {

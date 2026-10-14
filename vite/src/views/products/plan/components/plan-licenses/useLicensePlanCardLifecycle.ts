@@ -20,7 +20,6 @@ import { usePendingLicenseLinks } from "./PendingLicenseLinksContext";
 import { useLicenseDraft, useLicenseDraftStore } from "./useLicenseDraftStore";
 import { useLicenseSaveRegistry } from "./useLicenseSaveRegistry";
 
-/** Registers a card with the parent save registry or customer patch collector. */
 export const useLicensePlanCardLifecycle = ({
 	planLicense,
 	license,
@@ -49,8 +48,6 @@ export const useLicensePlanCardLifecycle = ({
 	const included = draft?.included ?? seededIncluded;
 	const removed = draft?.removed ?? false;
 	const itemsChanged = useHasPlanChanges();
-	// A card seeded from a saved patch stays dirty so re-saving re-collects it
-	// instead of silently dropping the earlier customization.
 	const hasChanges =
 		isPendingLink ||
 		removed ||
@@ -79,12 +76,8 @@ export const useLicensePlanCardLifecycle = ({
 
 	const commitRef = useRef<() => void>(() => {});
 	commitRef.current = () => {
-		// Reset so the card stops reading as dirty; drafts fall back to the
-		// refetched persisted values.
 		itemDraft.commit();
 		seed(license.id, {});
-		// The refetched plan_licenses now include this link, so the staged
-		// entry can go.
 		if (isPendingLink) removePendingLink(license.id);
 	};
 
@@ -98,7 +91,6 @@ export const useLicensePlanCardLifecycle = ({
 		seed(license.id, { included: planLicense.included });
 	};
 
-	// Pending links rebuild their object every render; seed from stable values.
 	useEffect(() => {
 		seed(license.id, { included: seededIncluded });
 		return () => clear(license.id);

@@ -33,11 +33,9 @@ export const getRemainingTrialDays = ({
 	const now = Date.now();
 	if (trialEndsAt <= now) return null;
 	const remainingDays = differenceInDays(trialEndsAt, now);
-	// Return at least 1 if trial hasn't ended yet (handles sub-day remaining time)
 	return remainingDays > 0 ? remainingDays : 1;
 };
 
-/** Formats remaining trial time as a human-readable string using date-fns */
 export const formatRemainingTrialTime = ({
 	trialEndsAt,
 }: {
@@ -50,12 +48,10 @@ export const formatRemainingTrialTime = ({
 	const totalHours = differenceInHours(trialEndsAt, now);
 	if (totalHours < 1) return "< 1 hour";
 
-	// For less than 24 hours, show hours
 	if (totalHours < 24) {
 		return `${totalHours} ${totalHours === 1 ? "hour" : "hours"}`;
 	}
 
-	// For 24+ hours, use date-fns formatDuration for years/months/days
 	const duration = intervalToDuration({ start: now, end: trialEndsAt });
 	return formatDuration(duration, {
 		format: ["years", "months", "days"],
@@ -106,14 +102,5 @@ export const freeTrialsAreSame = ({
 
 	const freeTrialsAreDiff = Object.values(diffs).some((d) => d.condition);
 
-	// if (freeTrialsAreDiff) {
-	// 	console.log("Free trials different");
-	// 	console.log(
-	// 		"Differences:",
-	// 		Object.values(diffs)
-	// 			.filter((d) => d.condition)
-	// 			.map((d) => d.message),
-	// 	);
-	// }
 	return !freeTrialsAreDiff;
 };

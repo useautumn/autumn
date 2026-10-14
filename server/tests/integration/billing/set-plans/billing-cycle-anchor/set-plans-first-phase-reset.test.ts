@@ -1,5 +1,3 @@
-/** A first phase's billing_cycle_anchor 'phase_start' resets the cycle now. */
-
 import { test } from "bun:test";
 import type { ApiCustomerV5, SetPlansParamsV0Input } from "@autumn/shared";
 import { expectPreviewNextCycleCorrect } from "@tests/integration/billing/utils/expectPreviewNextCycleCorrect";

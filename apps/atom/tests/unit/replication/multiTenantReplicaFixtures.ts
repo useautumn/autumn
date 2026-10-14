@@ -39,7 +39,6 @@ import {
 
 export const ADMIN_TOKEN = "atom_admin_token_1";
 export const ADMIN_TOKEN_HASH = hashToken({ token: ADMIN_TOKEN });
-/** Two tenants an admin registers, each with its own token. */
 export const TENANT_TOKENS: Record<string, string> = {
 	org_a: "atom_token_org_a",
 	org_b: "atom_token_org_b",
@@ -57,7 +56,6 @@ export const cleanUpMultiTenantReplicas = () => {
 	for (const cleanup of cleanups.splice(0)) cleanup();
 };
 
-/** One replica of our multi-tenant Atom: a folder per tenant the admin puts, with the same apps and replication as an org's own. */
 export const createMultiTenantReplica = ({
 	address,
 	peers,
@@ -89,7 +87,6 @@ export const createMultiTenantReplica = ({
 			logger: quiet,
 			resolver: { peers: async () => peers, forget: () => {} },
 			now,
-			// Retries yield rather than spin: a relay the peer refuses is tried again until the test ends.
 			sleep: () => Bun.sleep(1),
 		},
 	});
@@ -126,7 +123,6 @@ export const createMultiTenantReplica = ({
 		auth,
 		replication,
 		dataDir,
-		/** As the thread boots: every tenant's folder, and the ones a peer holds that this replica does not yet. */
 		sync: () =>
 			createReplicaSync({
 				ctx: {
@@ -181,7 +177,6 @@ export const deleteTenant = ({
 		body: JSON.stringify({ id }),
 	});
 
-/** The customers a replica holds for one tenant, by its own folder. */
 export const heldFor = async ({
 	replica,
 	id,

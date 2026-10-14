@@ -3,7 +3,6 @@ import { useQuery } from "@tanstack/react-query";
 import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 
-/** Separate from the customer query so a Stripe failure only affects billing details. */
 export const useCusBillingDetailsQuery = ({
 	customerId,
 	enabled,

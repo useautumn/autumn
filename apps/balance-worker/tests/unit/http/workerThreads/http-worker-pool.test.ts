@@ -22,7 +22,6 @@ async function freePort(): Promise<number> {
 	return port;
 }
 
-/** Echoes what the main thread saw, so the test can check the request crossed the ring intact. */
 async function echo(request: Request): Promise<Response> {
 	const body = await request.text();
 	const headers: Record<string, string> = {};
@@ -231,7 +230,6 @@ describe("HTTP worker pool back-pressure", () => {
 		const port = await freePort();
 		const pool = createHttpWorkerPool({
 			ctx: { fetch: async () => new Response("ok"), logger, onFatal: noFatal },
-			// 16 KiB of requests: about 18 of these 700 B requests fill it while the decide thread is away.
 			config: {
 				hostname: "127.0.0.1",
 				port,
@@ -243,7 +241,6 @@ describe("HTTP worker pool back-pressure", () => {
 		});
 		const listener = await pool.listen();
 		try {
-			// A separate thread fires the requests, because this thread is about to block.
 			const client = new Worker(
 				new URL("./burstClient.ts", import.meta.url).href,
 			);
@@ -252,7 +249,6 @@ describe("HTTP worker pool back-pressure", () => {
 					resolve(event.data);
 			});
 			client.postMessage({ port, count: 60, body: "y".repeat(700) });
-			// Stall this thread as a long decide would; the burst lands on the HTTP worker meanwhile.
 			Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 700);
 			const result = await statuses;
 			client.terminate();
@@ -271,7 +267,6 @@ describe("HTTP worker pool back-pressure", () => {
 		const port = await freePort();
 		const pool = createHttpWorkerPool({
 			ctx: { fetch: async () => new Response("ok"), logger, onFatal: noFatal },
-			// An eighth of a 64 KiB ring: every 16 KiB request travels by postMessage.
 			config: {
 				hostname: "127.0.0.1",
 				port,
@@ -312,7 +307,6 @@ describe("HTTP worker pool back-pressure", () => {
 	});
 });
 
-/** Spawns the pool while `Worker` is wrapped, so the test holds each thread and the init it was handed. */
 async function listenWithSpiedWorkers({
 	onFatal,
 }: {
@@ -355,7 +349,6 @@ async function listenWithSpiedWorkers({
 	}
 }
 
-/** Collects what the pool reports as fatal; `stop()` afterwards must not throw even with a dead worker. */
 async function fatalCauses({
 	run,
 }: {
@@ -379,7 +372,6 @@ async function fatalCauses({
 describe("HTTP worker pool failures", () => {
 	test("an HTTP worker thread crashing after listen is reported once as fatal, so the task is replaced", async () => {
 		const causes = await fatalCauses({
-			// A message the worker cannot read throws inside its onmessage: an uncaught error on that thread.
 			run: ({ workers }) => workers[1]?.postMessage(null),
 		});
 		expect(causes).toHaveLength(1);

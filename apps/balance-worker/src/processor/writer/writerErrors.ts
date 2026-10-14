@@ -5,7 +5,6 @@ export class PartitionWriterCapacityError extends Error {
 	}
 }
 
-/** One record alone is bigger than a batch may be, so no batch can ever carry it. */
 export class PartitionWriterRecordTooLargeError extends Error {
 	constructor({
 		bytes,
@@ -25,8 +24,6 @@ export class PartitionWriterStateNotFoundError extends Error {
 	}
 }
 
-/** The same commandId was reused for a different request. */
-/** The same request again, but the original record is only on the log: nothing to reply with. */
 export class PartitionWriterDuplicateCommandError extends Error {
 	constructor({ commandId }: { commandId: string }) {
 		super(`Command already applied: ${commandId}`);
@@ -41,7 +38,6 @@ export class PartitionWriterCommandConflictError extends Error {
 	}
 }
 
-/** May be thrown only when the appender proves that nothing was committed. */
 export class MutationBatchNotCommittedError extends Error {
 	constructor({ cause }: { cause: unknown }) {
 		super("Mutation batch was not committed", { cause });
@@ -63,7 +59,6 @@ export class PartitionWriterRecoveryRequiredError extends Error {
 	}
 }
 
-/** The partition's writer was disposed (handoff, recovery or shutdown) before the write's append was confirmed: it may or may not be in the log. */
 export class PartitionWriterDisposedError extends Error {
 	constructor() {
 		super(

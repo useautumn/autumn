@@ -1,11 +1,3 @@
-/**
- * overage_allowed waterfall: an entity's own entry overrides the plan default; a
- * sibling without one inherits the plan. Plan-default false; entity[0] sets
- * true; entity[1] has none.
- *   - entity[0]: overage enabled (its true overrides the plan false).
- *   - entity[1]: overage disabled (inherits the plan false), caps at granted.
- */
-
 import { test } from "bun:test";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { items } from "@tests/utils/fixtures/items.js";
@@ -47,7 +39,6 @@ test.concurrent(
 			],
 		});
 
-		// entity[0] overrides the plan false with its own true.
 		await setEntityOverageAllowed({
 			autumn: autumnV2_1,
 			customerId,
@@ -56,7 +47,6 @@ test.concurrent(
 			enabled: true,
 		});
 
-		// entity[0]: overage enabled -> usage exceeds the granted 100.
 		await autumnV2_1.track({
 			customer_id: customerId,
 			entity_id: entities[0].id,
@@ -73,7 +63,6 @@ test.concurrent(
 			usage: 130,
 		});
 
-		// entity[1]: inherits plan false -> caps at the granted 100.
 		await autumnV2_1.track({
 			customer_id: customerId,
 			entity_id: entities[1].id,

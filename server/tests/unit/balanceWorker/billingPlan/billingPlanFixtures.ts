@@ -33,14 +33,12 @@ export const defaultProduct = (): FullCusProduct =>
 		],
 	});
 
-/** What `computeCreateCustomerPlan` builds for a customer with one free default. */
 export const createCustomerPlan = (): AutumnBillingPlan => ({
 	customerId: "cus_test",
 	insertCustomer: newCustomer,
 	insertCustomerProducts: [defaultProduct()],
 });
 
-/** What `finalizeCreateCustomer` builds once Stripe returns the subscription. */
 export const linkBackPlan = (): AutumnBillingPlan => ({
 	customerId: "cus_test",
 	insertCustomerProducts: [],
@@ -57,7 +55,6 @@ export const expiredDefaultUpdate = () => ({
 	updates: { status: CusProductStatus.Expired },
 });
 
-/** A plan for `cus_test` with only the facets given. */
 export const planOf = (
 	facets: Partial<Omit<AutumnBillingPlan, "customerId">>,
 ): AutumnBillingPlan => ({
@@ -113,7 +110,6 @@ export const customerPrice = ({
 	id: `cus_price_${priceId}`,
 });
 
-/** A product with one fixed price and one grant, each named after the product. */
 export const product = ({
 	id,
 	status = CusProductStatus.Active,
@@ -165,7 +161,6 @@ export const rollover = ({
 	expiresAt: number;
 }) => rollovers.create({ id, cusEntId: grantId, balance, expiresAt });
 
-/** A grant capped at `max`, carrying the rollovers given. */
 export const grantWithRollovers = ({
 	id,
 	customerProductId,
@@ -191,7 +186,6 @@ export const firstGrantOf = (
 	return customerEntitlement;
 };
 
-/** A loose grant naming only the columns an insert must; Postgres defaults the rest. */
 export const minimalLooseGrant = () =>
 	({
 		id: "grant_loose",

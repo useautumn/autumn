@@ -60,7 +60,6 @@ test("clients sharing a Stripe secret share one allowance across client cache ke
 	expect(sent[2] - sent[0]).toBeGreaterThanOrEqual(90);
 });
 
-// Connected-account traffic previously used only the faster platform allowance.
 test("connected-account clients share five requests per second across default and per-request headers", async () => {
 	const secret = `sk_test_limiter_${crypto.randomUUID()}`;
 	const account = `acct_${crypto.randomUUID()}`;

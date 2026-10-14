@@ -98,8 +98,6 @@ const validateSchemaItem = (item: CreditSchemaItem): string | null => {
 export const validateCreditSystem = (
 	creditSystem: CreateFeature,
 ): string | null => {
-	// Identity is checked last: it lives at the top of the sheet, so reporting it
-	// first hides a rate card problem the user is actually looking at.
 	const missingIdentity = !creditSystem.name?.trim()
 		? "Give this credit system a name"
 		: !creditSystem.id?.trim()
@@ -107,8 +105,6 @@ export const validateCreditSystem = (
 			: null;
 
 	if (isAiCreditSystem(creditSystem.type)) {
-		// No per-model rows is valid: such systems bill at the base cost,
-		// adjusted by any provider-level or global default markup.
 		const modelMarkups: Record<
 			string,
 			{ input_cost?: number | null; output_cost?: number | null }

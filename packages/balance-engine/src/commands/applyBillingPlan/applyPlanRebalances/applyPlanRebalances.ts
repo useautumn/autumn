@@ -16,7 +16,6 @@ import type {
 const isRebalanceOp = (op: BillingPlanOp): op is BillingPlanRebalanceOp =>
 	op.op === "rebalance";
 
-/** Each purchase sized against the rows as they stand after the plan's rows and the purchases before it. */
 export const applyPlanRebalances = ({
 	command,
 	state,

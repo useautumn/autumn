@@ -97,7 +97,6 @@ describe(`${chalk.yellowBright(`${testCase}: Testing rollovers for upgrade`)}`, 
 			featureId: TestFeature.Messages,
 		});
 
-		// Attach pro
 		await autumn.attach({
 			customer_id: customerId,
 			product_id: pro.id,
@@ -112,13 +111,11 @@ describe(`${chalk.yellowBright(`${testCase}: Testing rollovers for upgrade`)}`, 
 		expect(msgesFeature?.balance).toBe(
 			proMsges.included_usage + proRolloverBalance,
 		);
-		// Two cycles' rollovers: one full, one trimmed to the max; the order follows expiry.
 		const rollovers = msgesFeature?.rollovers;
 		expect(
 			rollovers?.map((rollover) => rollover.balance).sort((a, b) => a - b),
 		).toEqual([100, 500]);
 
-		// Verify non-cached customer balance
 		await timeout(2000);
 		const nonCachedCustomer = await autumn.customers.get(customerId, {
 			skip_cache: "true",

@@ -1,5 +1,3 @@
-// events.aggregate returns bucket starts as real instants, so a day bucket in a
-// non-UTC zone must not be read as UTC wall-clock time.
 import { expect, test } from "bun:test";
 import { periodToEpoch } from "@/internal/events/eventUtils.js";
 

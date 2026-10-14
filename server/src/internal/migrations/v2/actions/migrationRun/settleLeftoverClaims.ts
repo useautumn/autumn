@@ -1,9 +1,6 @@
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { migrationItemRunRepo } from "../../repos/index.js";
 
-/** Leftover `running` claims hold the live-item mutex; settle them whenever
- * a run is provably done executing (terminal transition, or a canceled run
- * whose trigger task is confirmed dead) so other migrations aren't blocked. */
 export const settleLeftoverClaims = async ({
 	ctx,
 	migrationRunId,

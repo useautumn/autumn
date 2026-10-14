@@ -19,7 +19,6 @@ const SEGMENT_COLORS = [
 	"bg-pink-500",
 ];
 
-/** Where worker boot time goes (account → serving): per-step p50/p90/max, plus the slowest workers. */
 export const BootBreakdown = ({
 	workers,
 	onOpenWorker,

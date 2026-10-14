@@ -7,7 +7,6 @@ import { listSvixEndpoints } from "../operations/listSvixEndpoints.js";
 
 export { endpointReceivesEvent } from "@autumn/svix";
 
-/** Whether the org has any endpoint listening for `eventType`. */
 export const isSubscribedToEvent = async ({
 	org,
 	env,
@@ -21,7 +20,6 @@ export const isSubscribedToEvent = async ({
 	return endpointsSubscribeToEvent({ endpoints, eventType });
 };
 
-/** Which of `eventTypes` the org listens for — one endpoint fetch. */
 export const isSubscribedToEvents = async ({
 	org,
 	env,

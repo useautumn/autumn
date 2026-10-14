@@ -1,13 +1,3 @@
-/**
- * Single product tests for buildStripeSubscriptionItemsUpdate.
- *
- * These cover fundamental scenarios with a single customer product containing
- * all price types (fixed, prepaid, consumable, allocated).
- *
- * For multi-product scenarios (multiple entities, customer + entity, main + add-on),
- * see build-subscription-items-update-multi-product.spec.ts
- */
-
 import { describe, expect, test } from "bun:test";
 import { BillingVersion, CusProductStatus } from "@autumn/shared";
 import { contexts } from "@tests/utils/fixtures/db/contexts";
@@ -26,8 +16,6 @@ import {
 	getExpectedNewProductItems,
 	setPrepaidStripeProductId,
 } from "../stripeSubscriptionTestHelpers";
-
-// ============ TESTS ============
 
 const stripeSubscriptionItemFromUpdate = (
 	item: Stripe.SubscriptionCreateParams.Item,
@@ -156,7 +144,6 @@ describe(
 					finalCustomerProducts: [customerProduct],
 				});
 
-				// Should create 4 items (fixed, prepaid, consumable, allocated)
 				expect(result).toHaveLength(4);
 				expectSubscriptionItemsUpdate(
 					result,
@@ -204,7 +191,6 @@ describe(
 					finalCustomerProducts: [entityCustomerProduct],
 				});
 
-				// Should create 4 items (fixed, prepaid, consumable empty, allocated)
 				expect(result).toHaveLength(4);
 				expectSubscriptionItemsUpdate(
 					result,
@@ -217,7 +203,7 @@ describe(
 					productId: "premium",
 					productName: "Premium",
 					customerProductId: "cus_prod_premium",
-					prepaidQuantity: 250, // Custom quantity
+					prepaidQuantity: 250,
 					allocatedUsage: 8,
 				});
 
@@ -252,13 +238,11 @@ describe(
 
 				expect(result).toHaveLength(4);
 
-				// Verify prepaid quantity is correct
 				const prepaidItem = result.find((item) =>
 					item.price?.includes("prepaid"),
 				);
 				expect(prepaidItem?.quantity).toBe(250);
 
-				// Verify allocated quantity is correct
 				const allocatedItem = result.find((item) =>
 					item.price?.includes("allocated"),
 				);
@@ -268,7 +252,6 @@ describe(
 
 		describe(chalk.cyan("Existing Subscription - Quantity Updates"), () => {
 			test("Update prepaid quantity (increase)", () => {
-				// Original: prepaid=100, allocated=5
 				const premiumOriginal = createProductWithAllPriceTypes({
 					productId: "premium",
 					productName: "Premium",
@@ -277,7 +260,6 @@ describe(
 					allocatedUsage: 5,
 				});
 
-				// Updated: prepaid=200, allocated=5 (same)
 				const premiumUpdated = createProductWithAllPriceTypes({
 					productId: "premium",
 					productName: "Premium",
@@ -300,8 +282,6 @@ describe(
 					subscriptionIds: ["sub_123"],
 				});
 
-				// Note: Customer-level products don't include metered consumable in stripe items
-				// because metered prices have undefined quantity and can't be meaningfully compared
 				const stripeSubscription = stripeSubscriptions.create({
 					id: "sub_123",
 					items: createStripeItemsFromProduct(premiumOriginal, {
@@ -325,7 +305,6 @@ describe(
 					finalCustomerProducts: [customerProduct],
 				});
 
-				// Should update prepaid and add metered consumable (which wasn't in existing subscription)
 				expect(result).toHaveLength(2);
 
 				const prepaidUpdate = result.find((item) =>
@@ -338,7 +317,6 @@ describe(
 					}),
 				);
 
-				// Metered consumable gets added since it wasn't in the stripe subscription
 				const consumableAdd = result.find((item) =>
 					item.price?.includes("consumable"),
 				);
@@ -346,7 +324,6 @@ describe(
 			});
 
 			test("Update allocated usage (increase)", () => {
-				// Original: prepaid=100, allocated=5
 				const premiumOriginal = createProductWithAllPriceTypes({
 					productId: "premium",
 					productName: "Premium",
@@ -355,7 +332,6 @@ describe(
 					allocatedUsage: 5,
 				});
 
-				// Updated: prepaid=100 (same), allocated=10
 				const premiumUpdated = createProductWithAllPriceTypes({
 					productId: "premium",
 					productName: "Premium",
@@ -401,7 +377,6 @@ describe(
 					finalCustomerProducts: [customerProduct],
 				});
 
-				// Should update allocated and add metered consumable
 				expect(result).toHaveLength(2);
 
 				const allocatedUpdate = result.find((item) =>
@@ -416,7 +391,6 @@ describe(
 			});
 
 			test("Update multiple quantities (prepaid and allocated)", () => {
-				// Original: prepaid=100, allocated=5
 				const premiumOriginal = createProductWithAllPriceTypes({
 					productId: "premium",
 					productName: "Premium",
@@ -425,7 +399,6 @@ describe(
 					allocatedUsage: 5,
 				});
 
-				// Updated: prepaid=150, allocated=8
 				const premiumUpdated = createProductWithAllPriceTypes({
 					productId: "premium",
 					productName: "Premium",
@@ -471,7 +444,6 @@ describe(
 					finalCustomerProducts: [customerProduct],
 				});
 
-				// Should update prepaid, allocated, and add metered consumable
 				expect(result).toHaveLength(3);
 
 				const prepaidUpdate = result.find((item) =>
@@ -486,7 +458,6 @@ describe(
 			});
 
 			test("Decrease quantity (prepaid)", () => {
-				// Original: prepaid=200
 				const premiumOriginal = createProductWithAllPriceTypes({
 					productId: "premium",
 					productName: "Premium",
@@ -495,7 +466,6 @@ describe(
 					allocatedUsage: 5,
 				});
 
-				// Updated: prepaid=50
 				const premiumUpdated = createProductWithAllPriceTypes({
 					productId: "premium",
 					productName: "Premium",
@@ -541,7 +511,6 @@ describe(
 					finalCustomerProducts: [customerProduct],
 				});
 
-				// Should update prepaid and add metered consumable
 				expect(result).toHaveLength(2);
 
 				const prepaidUpdate = result.find((item) =>
@@ -580,7 +549,6 @@ describe(
 					subscriptionIds: ["sub_123"],
 				});
 
-				// Note: Customer-level subscription doesn't include metered consumable
 				const stripeSubscription = stripeSubscriptions.create({
 					id: "sub_123",
 					items: createStripeItemsFromProduct(premium, {
@@ -604,7 +572,6 @@ describe(
 					finalCustomerProducts: [customerProduct],
 				});
 
-				// Only the metered consumable needs to be added (wasn't in existing subscription)
 				expect(result).toHaveLength(1);
 				expect(result[0].price).toBe("stripe_premium_consumable");
 			});
@@ -634,8 +601,6 @@ describe(
 					entityId: "entity_1",
 				});
 
-				// Entity-level subscription has 3 items (no metered consumable)
-				// Note: withEntity is hardcoded to false, so entity products use regular metered prices
 				const stripeSubscription = stripeSubscriptions.create({
 					id: "sub_123",
 					items: createStripeItemsFromProduct(premium, { isEntityLevel: true }),
@@ -657,7 +622,6 @@ describe(
 					finalCustomerProducts: [entityCustomerProduct],
 				});
 
-				// Only the metered consumable needs to be added (wasn't in existing subscription)
 				expect(result).toHaveLength(1);
 				expect(result[0].price).toBe("stripe_premium_consumable");
 			});
@@ -671,7 +635,6 @@ describe(
 					customerProductId: "cus_prod_premium",
 				});
 
-				// Customer-level subscription has 3 items (no metered consumable)
 				const stripeSubscription = stripeSubscriptions.create({
 					id: "sub_123",
 					items: createStripeItemsFromProduct(premium, {
@@ -695,7 +658,6 @@ describe(
 					finalCustomerProducts: [],
 				});
 
-				// Should delete all 3 items (fixed, prepaid, allocated)
 				expect(result).toHaveLength(3);
 				expectSubscriptionItemsUpdate(result, [
 					{ id: "si_premium_fixed", deleted: true },
@@ -711,7 +673,6 @@ describe(
 					customerProductId: "cus_prod_premium_entity",
 				});
 
-				// Entity-level subscription has 3 items (no metered consumable - withEntity is hardcoded to false)
 				const stripeSubscription = stripeSubscriptions.create({
 					id: "sub_123",
 					items: createStripeItemsFromProduct(premium, { isEntityLevel: true }),
@@ -733,7 +694,6 @@ describe(
 					finalCustomerProducts: [],
 				});
 
-				// Should delete all 3 items (fixed, prepaid, allocated)
 				expect(result).toHaveLength(3);
 				expectSubscriptionItemsUpdate(result, [
 					{ id: "si_premium_fixed", deleted: true },
@@ -757,7 +717,6 @@ describe(
 					customerProductId: "cus_prod_pro",
 				});
 
-				// New product (Pro) - needs subscription ID to be included in the update
 				const proCustomerProduct = customerProducts.create({
 					id: "cus_prod_pro",
 					productId: "pro",
@@ -772,7 +731,6 @@ describe(
 					subscriptionIds: ["sub_123"],
 				});
 
-				// Existing subscription has Premium (without metered consumable)
 				const stripeSubscription = stripeSubscriptions.create({
 					id: "sub_123",
 					items: createStripeItemsFromProduct(premium, {
@@ -796,21 +754,16 @@ describe(
 					finalCustomerProducts: [proCustomerProduct],
 				});
 
-				// Should delete 3 Premium items (fixed, prepaid, allocated - no metered in mock)
-				// and add 4 Pro items
 				expect(result).toHaveLength(7);
 
-				// Verify deletions (premium items)
 				const deletions = result.filter((item) => item.deleted === true);
 				expect(deletions).toHaveLength(3);
 
-				// Verify additions (pro items)
 				const additions = result.filter(
 					(item) => item.price !== undefined && !item.deleted,
 				);
 				expect(additions).toHaveLength(4);
 
-				// Verify pro items are added
 				const proItems = additions.filter((item) =>
 					item.price?.includes("pro_"),
 				);
@@ -826,7 +779,6 @@ describe(
 					customerProductId: "cus_prod_premium",
 				});
 
-				// Add a one-off price to the product
 				const oneOffPrice = prices.createOneOff({
 					id: "premium_oneoff",
 					stripePriceId: "stripe_premium_oneoff",
@@ -872,10 +824,8 @@ describe(
 					finalCustomerProducts: [customerProduct],
 				});
 
-				// Should only include the 4 recurring items, not the one-off
 				expect(result).toHaveLength(4);
 
-				// Verify one-off price is NOT included
 				const hasOneOff = result.some(
 					(item) => item.price === "stripe_premium_oneoff",
 				);
@@ -1061,13 +1011,11 @@ describe(
 					finalCustomerProducts: [entityCustomerProduct],
 				});
 
-				// Find the consumable item - now uses regular metered price (withEntity is hardcoded to false)
 				const consumableItem = result.find((item) =>
 					item.price?.includes("consumable"),
 				);
 				expect(consumableItem).toBeDefined();
 				expect(consumableItem?.price).toBe("stripe_premium_consumable");
-				// Metered prices should NOT have quantity
 				expect("quantity" in (consumableItem ?? {})).toBe(false);
 			});
 
@@ -1107,13 +1055,11 @@ describe(
 					finalCustomerProducts: [customerProduct],
 				});
 
-				// Find the consumable item
 				const consumableItem = result.find((item) =>
 					item.price?.includes("consumable"),
 				);
 				expect(consumableItem).toBeDefined();
 				expect(consumableItem?.price).toBe("stripe_premium_consumable");
-				// Metered prices should NOT have quantity
 				expect("quantity" in (consumableItem ?? {})).toBe(false);
 			});
 		});

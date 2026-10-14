@@ -22,10 +22,6 @@ type ProductWithCounts = ProductListItem & {
 	subRows?: ProductWithCounts[];
 };
 
-/**
- * Nest variants (base_id set) under their base plan as subRows. Variants whose
- * base isn't in the list fall back to top-level rows.
- */
 function nestVariants(plans: ProductWithCounts[]): ProductWithCounts[] {
 	const byId = new Map(plans.map((p) => [p.id, p]));
 	const bases: ProductWithCounts[] = [];
@@ -52,10 +48,8 @@ export function ProductListTable() {
 	const { products, counts, isCountsLoading } = useProductsQuery();
 	const { queryStates } = useProductsQueryState();
 
-	// Shared sorting state for all tables
 	const [sorting, setSorting] = useState<SortingState>([]);
 
-	// Delete dialog state - lifted here so dialog doesn't unmount when row is removed
 	const [deleteDialog, setDeleteDialog] = useState<{
 		open: boolean;
 		product: ProductV2 | null;
@@ -86,7 +80,6 @@ export function ProductListTable() {
 				queryStates.showArchivedProducts ? product.archived : !product.archived,
 			);
 
-			// Deduplicate by ID, keeping the latest version
 			const deduplicated = visibleProducts.reduce((acc, product) => {
 				const existingIndex = acc.findIndex((p) => p.id === product.id);
 
@@ -95,19 +88,14 @@ export function ProductListTable() {
 				} else {
 					const existing = acc[existingIndex];
 					if (queryStates.showArchivedProducts) {
-						// If showing archived, always keep the newest version
 						if (product.version > existing.version) {
 							acc[existingIndex] = product;
 						}
 					} else {
-						// If not showing archived, prefer non-archived versions
 						if (product.archived && !existing.archived) {
-							// Keep existing non-archived version
 						} else if (!product.archived && existing.archived) {
-							// Replace archived with non-archived
 							acc[existingIndex] = product;
 						} else if (product.version > existing.version) {
-							// Both have same archived status, keep newer version
 							acc[existingIndex] = product;
 						}
 					}
@@ -116,13 +104,11 @@ export function ProductListTable() {
 				return acc;
 			}, [] as ProductListItem[]);
 
-			// Add counts to products
 			const productsWithCounts = deduplicated?.map((product) => ({
 				...product,
 				active_count: counts[product.id]?.active || 0,
 			})) as ProductWithCounts[];
 
-			// Split by one-off vs recurring first
 			const oneTimePlans =
 				productsWithCounts?.filter((p) =>
 					isOneOffProductV2({ items: p.items }),
@@ -132,7 +118,6 @@ export function ProductListTable() {
 					(p) => !isOneOffProductV2({ items: p.items }),
 				) || [];
 
-			// Then split recurring by add-on status
 			const recurringBasePlans = nestVariants(
 				recurringPlans.filter((p) => !p.is_add_on),
 			);
@@ -141,7 +126,6 @@ export function ProductListTable() {
 			return { recurringBasePlans, recurringAddOnPlans, oneTimePlans };
 		}, [nonLicenseProducts, counts, queryStates.showArchivedProducts]);
 
-	// Check if any product has a group
 	const hasAnyGroup = useMemo(
 		() =>
 			recurringBasePlans?.some((product) => Boolean(product.group?.trim())) ||
@@ -150,8 +134,6 @@ export function ProductListTable() {
 		[recurringBasePlans, recurringAddOnPlans, oneTimePlans],
 	);
 
-	// Fetched once here (not per row) and passed into the toolbar, so a large
-	// product list doesn't spawn one sandboxes-query observer per row.
 	const { sandboxes } = useSandboxesQuery({ enabled: true });
 
 	const columns = useMemo(
@@ -215,8 +197,6 @@ export function ProductListTable() {
 	const hasOneTimePlans = oneTimePlans.length > 0;
 	const hasLicensePlans = licenseProducts.length > 0;
 
-	// For archived view, always show table structure even if empty
-	// For non-archived view, show EmptyState when no plans exist
 	const showTableStructure =
 		queryStates.showArchivedProducts ||
 		hasRecurringBasePlans ||
@@ -228,7 +208,6 @@ export function ProductListTable() {
 		<div className="flex flex-col gap-8">
 			{showTableStructure ? (
 				<>
-					{/* Plans Section */}
 					<div>
 						<Table.Provider
 							config={{
@@ -253,7 +232,6 @@ export function ProductListTable() {
 							</Table.Container>
 						</Table.Provider>
 
-						{/* Add-on Plans (only shown when add-ons exist) */}
 						{hasRecurringAddOns && (
 							<Table.Provider
 								config={{
@@ -273,7 +251,6 @@ export function ProductListTable() {
 							</Table.Provider>
 						)}
 
-						{/* One-time Plans (always shown) */}
 						<Table.Provider
 							config={{
 								table: oneTimeTable,
@@ -305,7 +282,6 @@ export function ProductListTable() {
 				<EmptyState type="plans" actionButton={<ProductListCreateButton />} />
 			)}
 
-			{/* Delete dialog rendered at table level to prevent unmounting when row is removed */}
 			{deleteDialog.product && (
 				<DeletePlanDialog
 					propProduct={deleteDialog.product}

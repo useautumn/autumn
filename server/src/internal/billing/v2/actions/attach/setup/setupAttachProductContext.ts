@@ -109,7 +109,6 @@ const resolveAttachProductContext = async ({
 }) => {
 	const { db, org, env } = ctx;
 
-	// 1. Fetch the product being attached
 	const fullProduct = await ProductService.getFull({
 		db,
 		idOrInternalId: params.plan_id,
@@ -128,7 +127,6 @@ const resolveAttachProductContext = async ({
 			})
 		: undefined;
 
-	// 2. Handle custom items if provided
 	const productContext =
 		patchProductContext ??
 		(await setupCustomFullProduct({
@@ -144,9 +142,6 @@ const resolveAttachProductContext = async ({
 	});
 };
 
-/**
- * Loads the product being attached, handling version and custom items params.
- */
 export const setupAttachProductContext = async ({
 	ctx,
 	params,

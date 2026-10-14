@@ -5,8 +5,6 @@ import type { ValidatedReplayStagingTarget } from "../targets/replayStagingTarge
 import { validateReplayStagingTarget } from "../targets/validateReplayStagingTarget.js";
 import { ReplayOperatorError } from "./replayOperatorErrors.js";
 
-/** Provisional ceilings for the first staging operator. A larger archive
- *  replay needs its own approval, not a higher flag value. */
 export const REPLAY_OPERATOR_MAX_SELECTED_REQUESTS = 1000;
 export const REPLAY_OPERATOR_MAX_REQUESTS_PER_SECOND = 10;
 export const REPLAY_OPERATOR_CUSTOMER_LANES = 4;
@@ -105,8 +103,6 @@ function assertNotCancelled({ signal }: { signal?: AbortSignal }): void {
 	}
 }
 
-/** Truncating a manifest would silently change which archived observations the
- *  run covers, so an oversized selection is refused instead. */
 function assertSelectionWithinCap({
 	manifest,
 	options,
@@ -144,8 +140,6 @@ function buildPreview({
 	};
 }
 
-/** A factory that fails to start owns its own cleanup, so the close port only
- *  covers resources the operator actually received. */
 async function executeReplay<TReport>({
 	manifest,
 	target,
@@ -172,12 +166,6 @@ async function executeReplay<TReport>({
 	}
 }
 
-/**
- * Validates the manifest, the provisional limits and the pinned staging target
- * before anything physical exists. Matching the supplied trusted policy is not
- * proof that the policy addresses staging infrastructure: the operator must
- * still verify the policy against the staging inventory before executing.
- */
 export async function runReplayOperator<TReport>({
 	manifestInput,
 	targetInput,

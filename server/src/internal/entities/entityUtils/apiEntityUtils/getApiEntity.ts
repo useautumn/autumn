@@ -9,9 +9,6 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getApiEntityBase } from "./getApiEntityBase.js";
 import { getApiEntityExpand } from "./getApiEntityExpand.js";
 
-/**
- * Get full ApiEntity with expand fields from a caller-provided FullCustomer
- */
 export const getApiEntity = async ({
 	ctx,
 	customerId,
@@ -31,7 +28,6 @@ export const getApiEntity = async ({
 		throw new EntityNotFoundError({ entityId });
 	}
 
-	// Get base entity (cacheable or direct from DB)
 	const { apiEntity: baseEntity, legacyData } = await getApiEntityBase({
 		ctx,
 		entity: fullCustomer.entity,
@@ -39,7 +35,6 @@ export const getApiEntity = async ({
 		withAutumnId,
 	});
 
-	// Clean api entity
 	const cleanedEntity = {
 		...baseEntity,
 		feature_id: baseEntity.feature_id || undefined,
@@ -53,7 +48,6 @@ export const getApiEntity = async ({
 		fullCus,
 	});
 
-	// Merge expand fields
 	const apiEntity = {
 		...cleanedEntity,
 		...apiEntityExpand,

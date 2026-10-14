@@ -6,7 +6,6 @@ import { getBillingAutumnClient } from "@/external/autumn/getBillingAutumnClient
 import { onAwsEcs } from "@/external/aws/ecs/onAwsEcs.js";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 
-/** Refuses the route unless the org's plan on Autumn's own billing includes the feature. */
 export const billingFeatureMiddleware =
 	({
 		featureId,
@@ -18,7 +17,6 @@ export const billingFeatureMiddleware =
 	async (c, next) => {
 		const ctx = c.get("ctx");
 		const override = ctx.testOptions?.billingFeatures?.[featureId];
-		// Stacks without Autumn's own key (local, dev) have nothing to check against.
 		const allowed =
 			override ??
 			(!process.env.AUTUMN_SECRET_KEY ||
@@ -26,7 +24,6 @@ export const billingFeatureMiddleware =
 					ctx: { autumn: getBillingAutumnClient(), logger: ctx.logger },
 					orgId: ctx.org.id,
 					featureId,
-					// Autumn's own Atom is private to prod's VPC, so only ECS tasks reach it.
 					useEdge: onAwsEcs() && Boolean(getAutumnEnv().AUTUMN_EDGE_URL),
 				})));
 

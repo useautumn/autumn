@@ -2,10 +2,6 @@ import { UTCDate } from "@date-fns/utc";
 import { subMonths, subYears } from "date-fns";
 import { calculateProrationFromPeriod } from "./calculateProration";
 
-/**
- * First charge of a new subscription created on a future anchor.
- * Stripe prorates the stub over the full interval that ends at the anchor.
- */
 export const calculateNewSubscriptionAnchorStub = ({
 	advancedTo,
 	anchorMs,

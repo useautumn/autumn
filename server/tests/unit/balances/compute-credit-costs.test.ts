@@ -34,7 +34,6 @@ const messages = makeFeature("messages", FeatureType.Metered);
 const credits = makeFeature("credits", FeatureType.CreditSystem, [
 	{ metered_feature_id: "messages", credit_amount: 0.2 },
 ]);
-// Simulates a stale cached snapshot whose schema no longer includes "messages".
 const staleCredits = makeFeature("credits", FeatureType.CreditSystem, [
 	{ metered_feature_id: "other_feature", credit_amount: 5 },
 ]);

@@ -16,8 +16,6 @@ import { resolveRedisV2 } from "./resolveRedisV2.js";
 
 export type OrgWithRedisConfig = {
 	id: string;
-	// Optional: routing fallbacks build orgs from rows without slug; those
-	// always have redis_config: null, so the slug-based label is never needed.
 	slug?: string;
 	redis_config?: OrgRedisConfig | null;
 };
@@ -56,12 +54,6 @@ const createOrgRedisConnection = ({
 	return instance;
 };
 
-/**
- * Orgs on a dedicated private-VPC Redis need a different connection string
- * on vs off AWS ECS — `publicConnectionString` is the mirror reachable from
- * trigger.dev/local dev. Falls back to the private string (with a warning)
- * for orgs that predate the public URL field.
- */
 const resolveOrgConnectionString = ({
 	redisConfig,
 	orgId,
@@ -118,13 +110,6 @@ export const getOrgRedis = ({ org }: { org: OrgWithRedisConfig }): Redis => {
 
 const ORG_REDIS_WARMUP_TIMEOUT_MS = 5000;
 
-/**
- * Opens and awaits readiness of a single org's dedicated connection. Trigger
- * tasks start cold, so without this the first cache op in the run races the
- * handshake — invalidations queue, but reads and status checks see a client
- * that isn't ready yet. Never throws: a failed warmup degrades to the shared
- * Redis behaviour the callers already tolerate.
- */
 export const warmOrgRedis = async ({
 	org,
 }: {
@@ -169,7 +154,5 @@ export const preWarmOrgRedisConnections = async ({
 		`[OrgRedis] Pre-warming connections for ${orgsWithRedis.length} orgs in ${currentRegion}...`,
 	);
 
-	// Await readiness (bounded per org, never throws) so callers can gate
-	// listen on it — an open-but-handshaking client still times out ops.
 	await Promise.all(orgsWithRedis.map((org) => warmOrgRedis({ org })));
 };

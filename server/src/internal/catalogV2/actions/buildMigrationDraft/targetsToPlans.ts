@@ -1,7 +1,6 @@
 import type { CatalogMigrationPlan } from "@autumn/shared";
 import type { MigrationTarget } from "./types";
 
-/** Group targets into `{ plan_id, versions }` — one entry per plan, versions sorted. */
 export const targetsToPlans = ({
 	targets,
 }: {

@@ -84,7 +84,6 @@ export const createRewardsTableColumns = (): ColumnDef<Reward, unknown>[] => {
 	];
 };
 
-// Helper component for displaying reward value
 const RewardValueCell = ({ reward }: { reward: Reward }) => {
 	const { products } = useProductsQuery();
 	const { org } = useOrg();

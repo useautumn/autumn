@@ -1,22 +1,3 @@
-/**
- * Attach Invoice Mode Tests - Draft + Immediate
- *
- * Tests for invoice mode with:
- * - invoice: true
- * - finalize_invoice: false (draft invoice)
- * - enable_product_immediately: true (product activates once the invoice is finalized, before payment)
- *
- * Use case: Merchant wants to review invoice before finalizing. The plan stays pending
- * while the invoice is a draft, and activates when it is finalized (here, directly in Stripe).
- *
- * Scenarios:
- * 1. New plan (no product → pro)
- * 2. Upgrade (pro → premium)
- * 3. Downgrade (premium → pro, scheduled)
- * 4. One-off credits purchase
- * 5. One-off on existing subscription
- */
-
 import { expect, test } from "bun:test";
 import { type ApiCustomerV3, atmnToStripeAmount } from "@autumn/shared";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
@@ -38,19 +19,6 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { addMonths } from "date-fns";
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 1: New plan (draft, immediate)
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Customer has no existing product
- * - Attach pro with invoice mode (draft, immediate)
- *
- * Expected Result:
- * - Draft invoice created, product pending
- * - Finalizing the invoice in Stripe activates the product before payment
- */
 test.concurrent(
 	`${chalk.yellowBright("attach-invoice-draft-imm 1: new plan")}`,
 	async () => {
@@ -72,16 +40,12 @@ test.concurrent(
 			actions: [],
 		});
 
-		// After initScenario, pro.id is mutated to include the prefix
-
-		// Preview attach
 		const preview = await autumnV1.billing.previewAttach({
 			customer_id: customerId,
 			product_id: pro.id,
 		});
 		expect(preview.total).toBe(20);
 
-		// Attach with invoice mode (draft, immediate)
 		const result = await autumnV1.billing.attach({
 			customer_id: customerId,
 			product_id: pro.id,
@@ -91,14 +55,12 @@ test.concurrent(
 			redirect_mode: "if_required",
 		});
 
-		// Verify invoice is returned and is draft
 		expect(result.invoice).toBeDefined();
 		expect(result.invoice!.status).toBe("draft");
 		expect(result.invoice!.stripe_id).toBeDefined();
 		expect(result.invoice!.total).toBe(preview.total);
 		expect(result.invoice!.hosted_invoice_url).toBeNull();
 
-		// Verify Stripe invoice is draft
 		const stripeInvoice = await ctx.stripeCli.invoices.retrieve(
 			result.invoice!.stripe_id,
 		);
@@ -147,19 +109,6 @@ test.concurrent(
 	},
 );
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 2: Upgrade (draft, immediate)
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Customer has pro ($20/mo)
- * - Upgrade to premium ($50/mo) with invoice mode
- *
- * Expected Result:
- * - Draft invoice for prorated difference, pro stays active and premium pending
- * - Finalizing the invoice in Stripe switches to premium before payment
- */
 test.concurrent(
 	`${chalk.yellowBright("attach-invoice-draft-imm 2: upgrade")}`,
 	async () => {
@@ -186,17 +135,12 @@ test.concurrent(
 			actions: [s.billing.attach({ productId: "pro" })],
 		});
 
-		// After initScenario, pro.id and premium.id are mutated to include the prefix
-
-		// Preview upgrade
 		const preview = await autumnV1.billing.previewAttach({
 			customer_id: customerId,
 			product_id: premium.id,
 		});
-		// At start of cycle, full price difference: $50 - $20 = $30
 		expect(preview.total).toBe(30);
 
-		// Attach premium with invoice mode (draft, immediate)
 		const result = await autumnV1.billing.attach({
 			customer_id: customerId,
 			product_id: premium.id,
@@ -206,7 +150,6 @@ test.concurrent(
 			redirect_mode: "if_required",
 		});
 
-		// Verify invoice is draft
 		expect(result.invoice).toBeDefined();
 		expect(result.invoice!.status).toBe("draft");
 		expect(result.invoice!.stripe_id).toBeDefined();
@@ -238,7 +181,6 @@ test.concurrent(
 
 		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-		// Verify balance is premium's balance
 		expectCustomerFeatureCorrect({
 			customer,
 			featureId: TestFeature.Messages,
@@ -247,7 +189,6 @@ test.concurrent(
 			usage: 0,
 		});
 
-		// Verify invoices: pro ($20) + upgrade ($30, now open)
 		await expectCustomerInvoiceCorrect({
 			autumn: autumnV1,
 			customerId,
@@ -257,7 +198,6 @@ test.concurrent(
 			latestStatus: "open",
 		});
 
-		// Verify Stripe subscription is correct
 		await expectSubToBeCorrect({
 			db: testCtx.db,
 			customerId,
@@ -267,19 +207,6 @@ test.concurrent(
 	},
 );
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 3: Downgrade (draft, immediate)
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Customer has premium ($50/mo)
- * - Downgrade to pro ($20/mo) with invoice mode
- *
- * Expected Result:
- * - Invoice total = $0 (downgrade is scheduled)
- * - Premium is canceling, pro is scheduled
- */
 test.concurrent(
 	`${chalk.yellowBright("attach-invoice-draft-imm 3: downgrade")}`,
 	async () => {
@@ -310,9 +237,6 @@ test.concurrent(
 			actions: [s.billing.attach({ productId: "premium" })],
 		});
 
-		// After initScenario, pro.id and premium.id are mutated to include the prefix
-
-		// Preview downgrade - should be $0 (scheduled)
 		const preview = await autumnV1.billing.previewAttach({
 			customer_id: customerId,
 			product_id: pro.id,
@@ -324,7 +248,6 @@ test.concurrent(
 			startsAt: addMonths(advancedTo, 1).getTime(),
 		});
 
-		// Attach pro with invoice mode (draft, immediate)
 		const result = await autumnV1.billing.attach({
 			customer_id: customerId,
 			product_id: pro.id,
@@ -334,13 +257,11 @@ test.concurrent(
 			redirect_mode: "if_required",
 		});
 
-		// invoice and payment url are NOT returned in downgrade cases
 		expect(result.invoice).toBeFalsy();
 		expect(result.payment_url).toBeFalsy();
 
 		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-		// Verify product states - premium canceling, pro scheduled
 		await expectProductCanceling({
 			customer,
 			productId: premium.id,
@@ -350,7 +271,6 @@ test.concurrent(
 			productId: pro.id,
 		});
 
-		// Verify features still have premium's balance (until cycle end)
 		expectCustomerFeatureCorrect({
 			customer,
 			featureId: TestFeature.Messages,
@@ -359,7 +279,6 @@ test.concurrent(
 			usage: 0,
 		});
 
-		// Verify Stripe subscription is correct
 		await expectSubToBeCorrect({
 			db: testCtx.db,
 			customerId,
@@ -369,19 +288,6 @@ test.concurrent(
 	},
 );
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 4: One-off (draft, immediate)
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Customer has no existing product
- * - Attach one-off credits with invoice mode
- *
- * Expected Result:
- * - Draft invoice created, credits not granted yet
- * - Finalizing the invoice in Stripe grants the credits before payment
- */
 test.concurrent(
 	`${chalk.yellowBright("attach-invoice-draft-imm 4: one-off")}`,
 	async () => {
@@ -407,9 +313,6 @@ test.concurrent(
 			actions: [],
 		});
 
-		// After initScenario, oneOff.id is mutated to include the prefix
-
-		// Preview attach - base ($10) + prepaid ($10) = $20
 		const preview = await autumnV1.billing.previewAttach({
 			customer_id: customerId,
 			product_id: oneOff.id,
@@ -417,7 +320,6 @@ test.concurrent(
 		});
 		expect(preview.total).toBe(20);
 
-		// Attach with invoice mode (draft, immediate)
 		const result = await autumnV1.billing.attach({
 			customer_id: customerId,
 			product_id: oneOff.id,
@@ -428,7 +330,6 @@ test.concurrent(
 			redirect_mode: "if_required",
 		});
 
-		// Verify invoice is draft
 		expect(result.invoice).toBeDefined();
 		expect(result.invoice!.status).toBe("draft");
 		expect(result.invoice!.stripe_id).toBeDefined();
@@ -460,7 +361,6 @@ test.concurrent(
 			usage: 0,
 		});
 
-		// Verify invoice
 		await expectCustomerInvoiceCorrect({
 			autumn: autumnV1,
 			customerId,
@@ -472,19 +372,6 @@ test.concurrent(
 	},
 );
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 5: One-off on existing subscription (draft, immediate)
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Customer has pro ($20/mo)
- * - Purchase one-off credits add-on with invoice mode
- *
- * Expected Result:
- * - Draft invoice for one-off only, add-on not granted yet
- * - Finalizing the invoice in Stripe grants the add-on before payment
- */
 test.concurrent(
 	`${chalk.yellowBright("attach-invoice-draft-imm 5: one-off on existing sub")}`,
 	async () => {
@@ -516,9 +403,6 @@ test.concurrent(
 			actions: [s.billing.attach({ productId: "pro" })],
 		});
 
-		// After initScenario, pro.id and oneOffAddon.id are mutated to include the prefix
-
-		// Preview one-off add-on - base ($10) + prepaid ($5) = $15
 		const preview = await autumnV1.billing.previewAttach({
 			customer_id: customerId,
 			product_id: oneOffAddon.id,
@@ -526,7 +410,6 @@ test.concurrent(
 		});
 		expect(preview.total).toBe(15);
 
-		// Attach one-off with invoice mode (draft, immediate)
 		const result = await autumnV1.billing.attach({
 			customer_id: customerId,
 			product_id: oneOffAddon.id,
@@ -537,7 +420,6 @@ test.concurrent(
 			redirect_mode: "if_required",
 		});
 
-		// Verify invoice is draft
 		expect(result.invoice).toBeDefined();
 		expect(result.invoice!.status).toBe("draft");
 		expect(result.invoice!.stripe_id).toBeDefined();
@@ -573,7 +455,6 @@ test.concurrent(
 
 		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-		// Verify combined balance (100 from pro + 50 from one-off = 150)
 		expectCustomerFeatureCorrect({
 			customer,
 			featureId: TestFeature.Messages,
@@ -581,7 +462,6 @@ test.concurrent(
 			usage: 0,
 		});
 
-		// Verify invoices: pro ($20 paid) + one-off ($15, now open)
 		await expectCustomerInvoiceCorrect({
 			autumn: autumnV1,
 			customerId,

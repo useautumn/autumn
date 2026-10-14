@@ -11,7 +11,6 @@ import {
 import { resolveUsageWindowLimits } from "./resolveUsageWindowLimits.js";
 import { selectDeductionRows } from "./selectDeductionRows.js";
 
-/** The selection's rows, bounded, decided once; the buckets never read the subject. */
 export const setupDeductionContext = ({
 	fullSubject,
 	selection,
@@ -32,7 +31,6 @@ export const setupDeductionContext = ({
 		selection,
 		customerEntitlements,
 	});
-	// A control that enables overage only lifts features with no natively overage-allowed row.
 	const nativeOverageFeatureIds = new Set(
 		customerEntitlements
 			.filter((customerEntitlement) => customerEntitlement.usage_allowed)

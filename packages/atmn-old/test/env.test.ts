@@ -2,7 +2,6 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { cleanup, render, waitFor } from "cli-testing-library";
 import { CLI_PATH, spawnOpts } from "./setup";
 
-// Quote the CLI_PATH for shell execution (cli-testing-library uses shell: true)
 const QUOTED_CLI_PATH = `"${CLI_PATH}"`;
 
 describe("env command", () => {
@@ -15,7 +14,6 @@ describe("env command", () => {
 			spawnOpts,
 		});
 
-		// Wait for process to exit
 		await waitFor(
 			() => {
 				const exit = instance.hasExit();
@@ -29,13 +27,10 @@ describe("env command", () => {
 			.map((s) => s.contents.toString())
 			.join("");
 
-		// Should show organization name
 		expect(stdout).toMatch(/Organization:/i);
 
-		// Should show organization slug
 		expect(stdout).toMatch(/Slug:/i);
 
-		// Should show environment (Sandbox or Production)
 		expect(stdout).toMatch(/Environment:/i);
 		expect(stdout).toMatch(/Sandbox|Production/i);
 	});

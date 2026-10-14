@@ -81,12 +81,6 @@ export const handleVersionProductV2 = async ({
 		`Updating product ${latestProduct.id} version from ${maxVersion} to ${newVersion}`,
 	);
 
-	// Deep-merge `config` so partial patches (e.g. `{ config: { ignore_past_due: true } }`)
-	// don't clobber other fields that might be added to ProductConfig later.
-	// Mirrors the same merge semantics used in the non-versioning update path
-	// (see updateProductDetails.ts). With only one field today this is a
-	// no-op in practice; the guard is here so that future fields in
-	// ProductConfig survive partial-update versioning without silent drops.
 	const mergedConfig =
 		newProductV2.config !== undefined
 			? { ...latestProduct.config, ...newProductV2.config }
@@ -112,7 +106,6 @@ export const handleVersionProductV2 = async ({
 		baseInternalProductId: effectiveBaseInternalProductId,
 	});
 
-	// Validate product items...
 	validateProductItems({
 		newItems: newProductV2.items,
 		features,
@@ -121,9 +114,6 @@ export const handleVersionProductV2 = async ({
 		multiCurrencyEnabled: orgMultiCurrencyEnabled({ org }),
 	});
 
-	// License links must satisfy the link rules against the NEW version before
-	// anything is persisted — otherwise a rejected link leaves a half-created
-	// version behind.
 	const preparedLicenseSync =
 		preparedPlanLicenseSync ??
 		(await prepareProductLicenseSync({
@@ -180,15 +170,10 @@ export const handleVersionProductV2 = async ({
 		});
 	}
 
-	// Handle new free trial (create new)
-	// newProductV2.free_trial can be:
-	// - undefined: not changed, use latestProduct.free_trial
-	// - null: explicitly unset (no free trial for new version)
-	// - FreeTrial object: set to that value
 	const freeTrialForNewVersion =
-		newProductV2.free_trial !== undefined // if the new ft is not undefined
-			? (newProductV2.free_trial ?? null) // use the new free trial value, or null to unset
-			: (latestProduct.free_trial ?? null); // use the latest product's free trial, or null to keep unset
+		newProductV2.free_trial !== undefined
+			? (newProductV2.free_trial ?? null)
+			: (latestProduct.free_trial ?? null);
 
 	await handleNewFreeTrial({
 		db,
@@ -196,7 +181,7 @@ export const handleVersionProductV2 = async ({
 		curFreeTrial: null,
 		internalProductId: newProduct.internal_id,
 		isCustom: false,
-		newVersion: true, // This is a new product version
+		newVersion: true,
 	});
 
 	if (skipStripeInit) {

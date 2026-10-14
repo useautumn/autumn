@@ -5,7 +5,6 @@ const tick = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
 
 describe("mapWithConcurrency", () => {
 	test("results keep input order regardless of completion order", async () => {
-		// Earlier items resolve later, so completion order is reversed.
 		const delays = [30, 20, 10, 0];
 		const results = await mapWithConcurrency({
 			items: delays,
@@ -56,14 +55,12 @@ describe("mapWithConcurrency", () => {
 			},
 		});
 
-		// Let the failure land while item 2 is still in flight, then release it.
 		await tick();
 		await tick();
 		releaseSlow();
 
 		expect(attempt).rejects.toThrow("item 1 failed");
 		await attempt.catch(() => {});
-		// Item 2 was already in flight and ran to completion; 3–5 never started.
 		expect(started).toEqual([1, 2]);
 		expect(finished).toEqual([2]);
 	});

@@ -14,7 +14,6 @@ export const QA_SERVICES = [
 	"proxy",
 ] as const;
 
-/** Each wakes the env if it is asleep; the env must exist in twd. */
 export const getQaEnvLogs = async ({
 	ctx,
 	name,

@@ -14,12 +14,10 @@ export const CustomerProductPrice = ({
 }) => {
 	const { displayCurrency, productForDisplay } = useCustomerDisplayCurrency();
 
-	// Convert FullCusProduct to FullProduct, then to ProductV2, then to FrontendProduct
 	const fullProduct = cusProductToProduct({ cusProduct });
 	const productV2 = mapToProductV2({ product: fullProduct });
 	const frontendProduct = productV2ToFrontendProduct({ product: productV2 });
 
-	// Handle edge case of no items
 	if (!frontendProduct.items || frontendProduct.items.length === 0) {
 		return <div className="text-tertiary-foreground">-</div>;
 	}
@@ -29,7 +27,6 @@ export const CustomerProductPrice = ({
 		currency: displayCurrency,
 	});
 
-	// Render based on the display type
 	switch (priceDisplay.type) {
 		case "price":
 			return (

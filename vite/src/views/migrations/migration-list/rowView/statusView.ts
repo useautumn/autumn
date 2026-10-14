@@ -60,7 +60,6 @@ export type StatusView = {
 type RunProgress = {
 	counts: MigrationListItemCounts;
 	fraction: number;
-	/** Undefined while an unfinished run's filter count is still loading. */
 	percent: string | undefined;
 	segments: Segment[];
 };
@@ -76,8 +75,6 @@ const EMPTY_COUNTS: MigrationListItemCounts = {
 
 const FINISHED_RUN_STATUSES: MigrationStatus[] = ["run", "no_changes"];
 
-/** Claims land page by page, so an unfinished run measures against the filter
- * count; a finished run claimed every match, so it measures against its claims. */
 const runProgress = ({
 	summary,
 	isFinished,
@@ -148,7 +145,6 @@ const previewOutcome = (summary: MigrationListSummary): string | undefined => {
 	return undefined;
 };
 
-/** `tone` overrides the status indicator tone; `cardDetail` shows only in the hover card. */
 type Pill = {
 	label: string;
 	detail?: string;
@@ -222,7 +218,6 @@ const RUN_ERROR_MESSAGES: Record<MigrationRunErrorCode, string> = {
 		"The run stopped unexpectedly. Customers already migrated keep their changes.",
 };
 
-/** Codes newer than this dashboard fall back to the generic sentence. */
 const describeRunError = (summary: MigrationListSummary): string | null => {
 	const run = summary.latest_run;
 	if (!run?.error_code && !run?.error_message) return null;
@@ -232,7 +227,6 @@ const describeRunError = (summary: MigrationListSummary): string | null => {
 	);
 };
 
-/** Terminal outcomes already read from the status chip, so they carry no verb. */
 const ACTIVITY_VERBS: Record<MigrationListActivityKind, string | null> = {
 	created: "Created",
 	edited: "Edited",
@@ -265,7 +259,6 @@ const describeWhen = ({
 	return `${verb ? `${verb} ${date}` : date}${ranFor}`;
 };
 
-/** Customers that started matching the filter after a finished run claimed its matches. */
 const laterMatchesNote = (summary: MigrationListSummary): string | null => {
 	const claimed = summary.latest_run?.counts.total ?? 0;
 	const laterMatches = (summary.customer_count ?? 0) - claimed;

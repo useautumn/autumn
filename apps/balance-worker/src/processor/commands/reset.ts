@@ -6,7 +6,6 @@ import { readResetInputs } from "../actions/ensureSubjectCurrent/readResetInputs
 import type { PartitionProcessorScope } from "../types/partitionProcessor.js";
 import type { DecidedMutation } from "../writer/types/mutation.js";
 
-/** Every explicit reset, sync or queued, refills here: what each command does implicitly first, sent on its own by the cron or a writer about to read Postgres. */
 export async function decideReset({
 	scope,
 	command,
@@ -29,7 +28,6 @@ export async function decideReset({
 	});
 }
 
-/** Sync: decide, then answer once the refill is committed. */
 export async function reset({
 	scope,
 	command,
@@ -40,7 +38,6 @@ export async function reset({
 	const decided = await decideReset({ scope, command });
 	const committed = await decided.waitForCommit();
 	if (!("mutation" in committed)) {
-		// Nothing due now, but a "store" caller reads Postgres next: earlier records must have landed first.
 		if (command.durability === "store") await decided.waitForStore();
 		return committed;
 	}

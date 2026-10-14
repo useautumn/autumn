@@ -1,10 +1,3 @@
-/**
- * Immediate Switch Prepaid No-Options Tests (Attach V2)
- *
- * Basic carry-over scenarios for upgrades involving prepaid features where
- * options are not passed on upgrade.
- */
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3 } from "@autumn/shared";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";

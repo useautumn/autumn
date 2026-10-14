@@ -3,15 +3,11 @@ import { LRUCache } from "lru-cache";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { REPLICA_LAG_MAX_MS } from "@/db/probes/replicaLagProbe.js";
 
-/** Derived from REPLICA_LAG_MAX_MS so the ledger window and the replica lag
- *  bound cannot drift apart — the ledger only covers lag inside this window. */
 export const CUSTOMER_FRESHNESS_WINDOW_S = REPLICA_LAG_MAX_MS / 1000;
 
 export const NEGATIVE_TTL_MS = 2_000;
 export const NEGATIVE_CACHE_MAX_ENTRIES = 5_000;
 
-// Negatives only: worst case a write lands mid-window and one read goes replica —
-// stale by ≤ NEGATIVE_TTL_MS + replica lag, well inside the 60s ledger window.
 const negativeCache = new LRUCache<string, true>({
 	max: NEGATIVE_CACHE_MAX_ENTRIES,
 	ttl: NEGATIVE_TTL_MS,
@@ -31,8 +27,6 @@ const buildNegativeCacheKey = ({
 	customerId: string;
 }): string => `${orgId}:${env}:${customerId}`;
 
-/** Read-your-writes in-process: marks drop their cached negative so the next
- *  check queries; other processes stay stale for at most NEGATIVE_TTL_MS. */
 export const invalidateRecentlyUpdatedNegativeCache = ({
 	orgId,
 	env,
@@ -48,8 +42,6 @@ export const invalidateRecentlyUpdatedNegativeCache = ({
 export const _recentlyUpdatedNegativeCacheSizeForTesting = (): number =>
 	negativeCache.size;
 
-/** True when the customer had a structural write inside the freshness window
- *  (DB clock only) — such reads must be routed to the primary. */
 export const isCustomerRecentlyUpdated = async ({
 	db,
 	orgId,

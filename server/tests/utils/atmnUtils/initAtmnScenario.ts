@@ -9,25 +9,11 @@ import { dirname, join } from "node:path";
 import type { AttachParamsV1Input } from "@autumn/shared";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
 import { generateId } from "@/utils/genUtils.js";
-// Relative rather than a package import: atmn publishes only its bin,
-// and exposing src through `exports` for a test's benefit would leak internals
-// into the published package.
 import {
 	type AutumnClient,
 	createClient,
 } from "../../../../packages/atmn/src/generated/client";
 import { seedVersionableCustomer } from "../../integration/catalog-v2/plans/migrations/utils/seedVersionableCustomer.js";
-
-/**
- * atmn e2e lives here rather than in the CLI package for one reason: this is
- * where a fresh org and a working key are one line. Rebuilding sub-org
- * provisioning inside atmn to avoid an import would be the tail wagging
- * the dog.
- *
- * Configs are written to real files because that is what the CLI reads, and
- * because pull's whole job is surgery on a file. They live under the workspace
- * so `import from "atmn"` resolves, and are gitignored.
- */
 
 export const CLI_PACKAGE_DIR = join(
 	import.meta.dir,
@@ -36,7 +22,6 @@ export const CLI_PACKAGE_DIR = join(
 export const TMP_ROOT = join(CLI_PACKAGE_DIR, "test/.tmp");
 const CLI_ENTRY = join(CLI_PACKAGE_DIR, "src/cli.ts");
 
-/** A scenario's working directory: its own package, so the CLI roots there. */
 export const scenarioDir = ({ id }: { id: string }): string => {
 	const dir = join(TMP_ROOT, id);
 	mkdirSync(dir, { recursive: true });
@@ -44,12 +29,6 @@ export const scenarioDir = ({ id }: { id: string }): string => {
 	return dir;
 };
 
-/**
- * The CLI finds `.env` at the git toplevel, which from under `.tmp` is this
- * repo: one test's `sandbox use` would pin the repo's own `.env` and every
- * test after it would authenticate as that sandbox. Ceiling the walk at
- * `.tmp`, so each scenario (which carries its own package.json) is its root.
- */
 export const cliProcessEnv = (): Record<string, string> => ({
 	...(process.env as Record<string, string>),
 	GIT_CEILING_DIRECTORIES: TMP_ROOT,
@@ -57,8 +36,6 @@ export const cliProcessEnv = (): Record<string, string> => ({
 	FORCE_COLOR: "0",
 });
 
-/** Async on purpose: spawnSync blocks the test process's event loop, so
- * concurrent cases starve DB connects and Kafka heartbeats until they time out. */
 const spawnOutput = async ({
 	cmd,
 	cwd,
@@ -77,11 +54,6 @@ const spawnOutput = async ({
 	return { stdout, stderr, exitCode };
 };
 
-/**
- * Every push and pull runs the real CLI in a fresh process: a config's
- * imported files are re-read each time, which an in-process import cannot
- * promise, and the output is what a user sees.
- */
 export const runCli = async ({
 	cwd,
 	args,
@@ -107,7 +79,6 @@ export const runCli = async ({
 	return output;
 };
 
-/** The wire a config evaluates to, in a fresh process so imported files are re-read. */
 export const wireOfConfig = async ({
 	configPath,
 }: {
@@ -125,8 +96,6 @@ export const wireOfConfig = async ({
 	return JSON.parse(result.stdout) as Record<string, unknown>;
 };
 
-/** Ids under the last "Draft migrations (n)" heading — the applied block; the
- * preview's block prints `?` for ids the server has not minted yet. */
 const migrationIdsIn = (output: string): string[] => {
 	const lines = output.split("\n");
 	let start = -1;
@@ -136,7 +105,6 @@ const migrationIdsIn = (output: string): string[] => {
 	if (start === -1) return [];
 	const ids: string[] = [];
 	for (const line of lines.slice(start + 1)) {
-		// The block is its indented lines; the first flush-left line ends it.
 		if (!line.startsWith("  ")) break;
 		const segments = line.trim().split("/");
 		const id = segments[segments.length - 1];
@@ -147,7 +115,6 @@ const migrationIdsIn = (output: string): string[] => {
 
 const PULL_EDIT_LINE = /^([+~-]) (\S+)$/;
 
-/** Pull prints one line per edit: `+ id`, `~ id`, `- id`. */
 const pullEditsIn = (
 	output: string,
 ): { appended: string[]; replaced: string[]; deleted: string[] } => {
@@ -169,7 +136,6 @@ const pullEditsIn = (
 
 type ScenarioSetup = Parameters<typeof initScenario>[0]["setup"];
 
-/** Resolves initScenario's with-customer overload, so the scenario type carries `customerId: string`. */
 const initScenarioWithCustomer = ({
 	setup,
 	customerId,
@@ -189,37 +155,25 @@ export type PullOutcome = {
 };
 
 export type AtmnScenario = {
-	/** Directory holding autumn.config.ts — the CLI's cwd. */
 	cwd: string;
 	configPath: string;
-	/** Base URL the scenario's client talks to — reuse for any client a test builds itself. */
 	baseUrl: string;
-	/** The org's secret key, for any CLI a helper spawns itself. */
 	secretKey: string;
-	/** The CLI client for this org: previewUpdate / update / get. */
 	client: AutumnClient;
-	/** Rewrite the config between steps. */
 	writeConfig: (source: string) => void;
-	/** Write any other file under cwd, relative path; folders are created. */
 	writeFile: (relativePath: string, source: string) => void;
-	/** Every .ts under cwd, relative path → text. Snapshot before, compare after. */
 	files: () => Map<string, string>;
 	push: (options?: { dryRun?: boolean }) => Promise<{
 		output: string;
 		migrationIds: string[];
 	}>;
 	pull: (options?: { includeMappings?: boolean }) => Promise<PullOutcome>;
-	/** The server's diff for the config as it stands — what a push would apply. */
 	preview: () => Promise<Record<string, unknown>>;
-	/** What the config currently evaluates to — the wire document. */
 	wireFromConfig: () => Promise<Record<string, unknown>>;
-	/** A real attach through the billing API: customer_products, entitlements, prices. */
 	attachCustomer: (params: {
 		planId: string;
 		customerId?: string;
 	}) => Promise<void>;
-	/** A customer on one plan version, DB only, no Stripe — cheap, counts migrations.
-	 *  Returns the seeded ids: `cleanup()` does not know about them. */
 	seedCustomer: (params: { planId: string; version?: number }) => Promise<{
 		customerId: string;
 		internalCustomerId: string;
@@ -228,17 +182,11 @@ export type AtmnScenario = {
 	cleanup: () => void;
 };
 
-/**
- * Source for a config that imports the generated builders by absolute path.
- * Absolute because a temp dir deep under the package still resolves, and it
- * keeps the fixture readable in the test.
- */
 export const atmnConfigSource = ({ body }: { body: string }): string =>
 	`${atmnImports()}
 export default atmn(${body});
 `;
 
-/** The import lines any config file under the temp dir can use. */
 export const atmnImports = (): string =>
 	`import { feature } from "${CLI_PACKAGE_DIR}/src/generated/features";
 import { plan } from "${CLI_PACKAGE_DIR}/src/generated/plans";
@@ -267,11 +215,8 @@ export const initAtmnScenario = async ({
 	baseUrl = process.env.AUTUMN_TEST_BASE_URL ?? "http://localhost:8080",
 }: {
 	setup: ScenarioSetup;
-	/** The scenario's primary customer; initScenario only creates one when given an id. */
 	customerId?: string;
-	/** Body passed to `atmn({...})`, as source; or a whole file when `raw` is set. */
 	config: string | { raw: string };
-	/** Extra files under cwd (relative path → source), written before the config. */
 	files?: Record<string, string>;
 	baseUrl?: string;
 }): Promise<AtmnScenario & ScenarioWithCustomer> => {
@@ -354,7 +299,6 @@ export const initAtmnScenario = async ({
 			await seedVersionableCustomer({ ctx: scenario.ctx, planId, version }),
 		cleanup: () => {
 			rmSync(cwd, { recursive: true, force: true });
-			// The scenario provisioned a customer; best effort, never awaited by tests.
 			if (scenario.customerId !== undefined)
 				void scenario.autumnV2_3.customers
 					.delete(scenario.customerId)

@@ -10,7 +10,6 @@ import { isAutumnManagedBillTrialContext } from "@/internal/billing/v2/setup/tri
 import { isDeferredInvoiceMode } from "@/internal/billing/v2/utils/billingContext/isDeferredInvoiceMode";
 import { DEFAULT_INVOICE_MODE_NET_TERMS_DAYS } from "@/internal/billing/v2/utils/invoiceMode/invoiceModeDefaults";
 
-/** Only the intent is stored on the trial, so options that differ from the defaults can't reach the invoice sent at trial end. */
 const hasCustomInvoiceOptions = ({
 	ctx,
 	params,
@@ -33,15 +32,6 @@ const hasCustomInvoiceOptions = ({
 	);
 };
 
-/**
- * Validates invoice mode configuration against the attach context.
- *
- * Throws when:
- * - Deferred invoice-mode activation is used for a downgrade
- *   (planTiming="end_of_cycle"): there is no immediate invoice to pay, so deferral makes no sense.
- * - A no-card trial Autumn bills at trial end is combined with custom invoice options
- *   (finalize: false, invoice_template_id, non-default net_terms_days).
- */
 export const handleAttachInvoiceModeErrors = ({
 	ctx,
 	billingContext,

@@ -1,14 +1,3 @@
-/**
- * TDD test for backdated starts_at with new_billing_subscription.
- *
- * Contract under test:
- *   New behaviors:
- *     - A backdated recurring add-on can create a separate Stripe subscription when new_billing_subscription is true
- *     - An entity-scoped backdated attach can create a separate Stripe subscription when new_billing_subscription is true
- *   Side effects:
- *     - The new customer_product rows store the past starts_at and link to their new Stripe subscriptions
- */
-
 import { test } from "bun:test";
 import { type AttachParamsV1Input, ms } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features";

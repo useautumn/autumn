@@ -24,7 +24,6 @@ const record = ({
 	updatedAt: new Date().toISOString(),
 });
 
-/** An S3 with one object per key, so a write lands where the next read looks. */
 export const createMemoryS3Client = (): EdgeConfigS3Client => {
 	const objects = new Map<string, string>();
 	return {

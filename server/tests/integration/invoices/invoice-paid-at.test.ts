@@ -1,12 +1,3 @@
-/**
- * invoices.paid_at mirrors Stripe's status_transitions.paid_at (epoch ms).
- *
- * Contract:
- *   card attach (charged now)     → paid_at = Stripe paid_at
- *   invoice-mode attach (open)    → paid_at null
- *   invoices.pay (out of band)    → paid_at = Stripe paid_at
- */
-
 import { expect, test } from "bun:test";
 import type { ApiListInvoiceV1 } from "@autumn/shared";
 import { expectInvoicePaidAtCorrect } from "@tests/integration/invoices/utils/expectInvoicePaidAtCorrect";

@@ -22,7 +22,6 @@ export const featureToItemFeatureType = ({ feature }: { feature: Feature }) => {
 			featureType = ProductItemFeatureType.SingleUse;
 		}
 	} else {
-		// Fallback
 		featureType = ProductItemFeatureType.SingleUse;
 	}
 
@@ -68,7 +67,6 @@ export const featureToOptions = ({
 	feature: Feature;
 	options: FeatureOptions[];
 }) => {
-	// Check if options has internal feature id
 	const option = options.find(
 		(o) => o.internal_feature_id === feature.internal_id,
 	);

@@ -11,34 +11,20 @@ import { loadLocalEnv } from "@server/utils/envUtils.js";
 import { generateId } from "@server/utils/genUtils.js";
 import chalk from "chalk";
 
-// Load environment variables from server/.env
 loadLocalEnv();
 
-// ============================================================================
-// CONFIGURATION - Edit these values to customize seed behavior
-// ============================================================================
-
 const CONFIG = {
-	// Default number of events to generate
 	defaultEventCount: 100,
 
-	// Time range configuration (in days)
-	// Events will be randomly distributed within this range from now
 	timeRangeDays: 30,
 
-	// Default environment
 	defaultEnv: AppEnv.Sandbox,
 
-	// Optional default properties to include in events
 	defaultProperties: {
 		source: "seed_script",
 		version: "1.0",
 	},
 } as const;
-
-// ============================================================================
-// TYPES
-// ============================================================================
 
 interface CliArgs {
 	customer_id: string;
@@ -47,10 +33,6 @@ interface CliArgs {
 	env?: AppEnv;
 	feature_ids: string;
 }
-
-// ============================================================================
-// CLI ARGUMENT PARSING
-// ============================================================================
 
 function parseArgs(): CliArgs {
 	const args = process.argv.slice(2);
@@ -124,10 +106,6 @@ function parseArgs(): CliArgs {
 	return parsed as CliArgs;
 }
 
-// ============================================================================
-// VALIDATION
-// ============================================================================
-
 async function validateOrg({
 	db,
 	orgSlug,
@@ -181,10 +159,6 @@ async function validateCustomer({
 
 	return customer;
 }
-
-// ============================================================================
-// EVENT GENERATION
-// ============================================================================
 
 function generateRandomTimestamp({ daysBack }: { daysBack: number }): Date {
 	const now = Date.now();
@@ -242,17 +216,12 @@ function generateEvents({
 		events.push(event);
 	}
 
-	// Sort events by timestamp for more realistic insertion
 	events.sort(
 		(a, b) => (a.timestamp?.getTime() || 0) - (b.timestamp?.getTime() || 0),
 	);
 
 	return events;
 }
-
-// ============================================================================
-// MAIN EXECUTION
-// ============================================================================
 
 async function main() {
 	console.log(
@@ -261,7 +230,6 @@ async function main() {
 		),
 	);
 
-	// Parse CLI arguments
 	const args = parseArgs();
 	const eventCount = args.count || CONFIG.defaultEventCount;
 	const env = args.env || CONFIG.defaultEnv;
@@ -275,11 +243,9 @@ async function main() {
 	console.log(chalk.gray(`  Feature IDs: ${featureIds.join(", ")}`));
 	console.log();
 
-	// Initialize database connection
 	const { db, client } = initDrizzle();
 
 	try {
-		// Validate organization exists
 		console.log(chalk.cyan("Validating organization..."));
 		const org = await validateOrg({
 			db,
@@ -291,7 +257,6 @@ async function main() {
 		);
 		console.log();
 
-		// Validate customer exists
 		console.log(chalk.cyan("Validating customer..."));
 		const customer = await validateCustomer({
 			db,
@@ -307,7 +272,6 @@ async function main() {
 		);
 		console.log();
 
-		// Generate events
 		console.log(chalk.cyan(`Generating ${eventCount} events...`));
 		const events = generateEvents({
 			count: eventCount,
@@ -330,12 +294,10 @@ async function main() {
 		);
 		console.log();
 
-		// Insert events
 		console.log(chalk.cyan("Inserting events into database..."));
 		let successCount = 0;
 		let errorCount = 0;
 
-		// Insert in batches to avoid overwhelming the database
 		const batchSize = 50;
 		for (let i = 0; i < events.length; i += batchSize) {
 			const batch = events.slice(i, i + batchSize);
@@ -353,7 +315,6 @@ async function main() {
 				} catch (error) {
 					errorCount++;
 					if (errorCount <= 5) {
-						// Only show first 5 errors to avoid spam
 						console.log(
 							chalk.yellow(
 								`\n   ⚠️  Error inserting event ${event.id}: ${error instanceof Error ? error.message : String(error)}`,
@@ -399,5 +360,4 @@ async function main() {
 	}
 }
 
-// Run the script
 main();

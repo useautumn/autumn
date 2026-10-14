@@ -12,7 +12,6 @@ import { autoEnsureLocalTestOrg } from "../helpers/setup.ts";
 import { fatal, log } from "../helpers/shell.ts";
 import type { RegistryEntry } from "../types.ts";
 
-/** Per-boot Cloud/Devin path: local infra + public URL. No bun install, no skill sync. */
 export async function cmdStart(): Promise<RegistryEntry> {
 	if (process.env.NODE_ENV === "production") {
 		fatal("bun dw is disabled in production");

@@ -5,7 +5,6 @@ type ValuesStore<TValues> = {
 	subscribe: (listener: () => void) => { unsubscribe: () => void };
 };
 
-// Subscribes outside render: useStore here would drop input focus on every keystroke.
 export const useFormValuesListener = <TValues>({
 	store,
 	onChange,

@@ -16,10 +16,6 @@ const catalogCache = new Map<
 
 const catalogCacheKey = (orgId: string, env: AppEnv) => `${orgId}:${env}`;
 
-/**
- * RC-internal product id -> store_identifier map, built from listAllProducts and
- * cached per org/env (RC catalogs change rarely).
- */
 export const getRevenueCatStoreIdentifierMap = async ({
 	rcCli,
 	orgId,
@@ -63,10 +59,6 @@ export const getRevenueCatStoreIdentifierMap = async ({
 	return map;
 };
 
-/**
- * Resolve a RevenueCat-internal product id to an Autumn product id, chaining
- * RC-internal id -> store_identifier -> Autumn product (pure-DB RCMappingService).
- */
 export const mapRevenueCatProductToAutumn = async ({
 	db,
 	orgId,

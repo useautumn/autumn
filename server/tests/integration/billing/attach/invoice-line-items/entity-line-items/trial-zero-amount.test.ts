@@ -1,8 +1,3 @@
-/**
- * A trial invoice is Stripe's own $0 plan line. Autumn drops the in-advance line
- * at trial start, so there is no context to attribute: plan_id from metadata, entities [].
- */
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3 } from "@autumn/shared";
 import { waitForInvoiceLineItems } from "@tests/integration/billing/utils/expectInvoiceLineItemsCorrect";

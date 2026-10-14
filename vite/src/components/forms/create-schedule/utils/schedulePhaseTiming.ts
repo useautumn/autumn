@@ -10,7 +10,6 @@ const IMMEDIATE_PHASE_INDEX = 0;
 export const isImmediatePhase = ({ phaseIndex }: { phaseIndex: number }) =>
 	phaseIndex === IMMEDIATE_PHASE_INDEX;
 
-/** The first phase starts further ahead than set_plans treats as now, so billing waits until then. */
 export const firstPhaseStartsLater = ({
 	phases,
 	nowMs,
@@ -25,7 +24,6 @@ export const firstPhaseStartsLater = ({
 	);
 };
 
-/** The first phase starts further back than set_plans treats as now, so it backdates. */
 const firstPhaseIsBackdated = ({
 	phases,
 	nowMs,
@@ -40,7 +38,6 @@ const firstPhaseIsBackdated = ({
 	);
 };
 
-/** A backdated first phase, or a started one moved before its saved start, makes set_plans recreate the live subscription. */
 export const firstPhaseBackdatesLiveSubscription = ({
 	phases,
 	nowMs,

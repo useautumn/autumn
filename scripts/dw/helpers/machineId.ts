@@ -7,7 +7,6 @@ export function agentDir({ home }: { home?: string } = {}): string {
 	return join(home ?? homedir(), ".autumn-agent");
 }
 
-/** Stable per-machine salt so reserved ngrok names do not collide on shared paths. */
 export function machineId({ home }: { home?: string } = {}): string {
 	const dir = agentDir({ home });
 	const path = join(dir, "machine-id");

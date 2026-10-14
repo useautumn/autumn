@@ -18,7 +18,6 @@ import { getRewardCat } from "@/internal/rewards/rewardUtils.js";
 import { triggerDiscount } from "./triggerDiscount.js";
 import { triggerFreeProduct } from "./triggerFreeProduct.js";
 
-/** Process checkout-triggered reward redemptions (called from job queue) */
 export const runTriggerCheckoutReward = async ({
 	ctx,
 	payload,
@@ -39,7 +38,6 @@ export const runTriggerCheckoutReward = async ({
 			env,
 		});
 
-		// Check if redemption exists
 		const redemptions = await redemptionRepo.getByCustomer({
 			db,
 			internalCustomerId: customer.internal_id,
@@ -54,7 +52,6 @@ export const runTriggerCheckoutReward = async ({
 				logger.info(
 					"No redemption found or reward program not set to checkout, skipping",
 				);
-				// BUG FIX: was `return` which exited the entire function — should be `continue`
 				continue;
 			}
 
@@ -80,12 +77,10 @@ export const runTriggerCheckoutReward = async ({
 					`Product ${product.name} (${product.id}) not included in referral program, skipping`,
 				);
 				if (reward_program.reward.free_product_id !== product.id) {
-					// BUG FIX: was `return` which exited the entire function — should be `continue`
 					continue;
 				}
 			}
 
-			// Check for trial
 			let hasTrial = false;
 			if (subId) {
 				const sub = await stripeCli.subscriptions.retrieve(subId);
@@ -94,11 +89,9 @@ export const runTriggerCheckoutReward = async ({
 
 			if (hasTrial) {
 				logger.info(`Subscription is on trial, not triggering reward`);
-				// BUG FIX: was `return` which exited the entire function — should be `continue`
 				continue;
 			}
 
-			// Get redemption count
 			const redemptionCount = await referralCodeRepo.getRedemptionCount({
 				db,
 				referralCodeId: referralCode.id,
@@ -108,7 +101,6 @@ export const runTriggerCheckoutReward = async ({
 				logger.info(
 					`Max redemptions reached, not triggering latest redemption`,
 				);
-				// BUG FIX: was `return` which exited the entire function — should be `continue`
 				continue;
 			}
 

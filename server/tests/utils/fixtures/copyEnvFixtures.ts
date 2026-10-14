@@ -107,7 +107,6 @@ export const seedCopyTestPlan = async ({
 			base_internal_product_id: baseInternalProductId ?? null,
 		},
 	});
-	// The real API invalidates via route middleware; direct calls must do it.
 	await invalidateProductsCache({ orgId: org.id, env });
 	return ProductService.getFull({
 		db,

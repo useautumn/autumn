@@ -23,25 +23,11 @@ import { selectAddCandidateRows } from "./selectAddCandidateRows.js";
 
 export type AddCustomerEntitlementsForPageResult = {
 	affected: number;
-	/** Scope-matched candidate rows visited for the page (advisory). */
 	candidateCount: number;
-	/** Customers a rung refused — the page marks them skipped. */
 	excludedInternalCustomerIds: string[];
-	/** Rows that landed (post scope re-assertion), one per customer product —
-	 * a customer can hold several on the same plan, each with its own cycle. */
 	insertedItems: BatchMigrationInsertedItem[];
 };
 
-/**
- * Adds one entitlement across a page's customer products: select candidates,
- * resolve reset cycles for consumable (resetting/credit) adds via the JS
- * anchor ladder, then a set-based insert. Non-resetting adds skip enrichment
- * and insert with null cycle fields.
- *
- * Runs through `iterateCustomerProductPages`: one bounded transaction per
- * customer-product page, so row-heavy customer pages (customers holding many
- * customer products) never balloon a statement, a transaction, or JS memory.
- */
 export const addCustomerEntitlementsForPage = async ({
 	db,
 	scope,
@@ -53,10 +39,8 @@ export const addCustomerEntitlementsForPage = async ({
 	candidateRowBatchSize = BATCH_MIGRATION_CANDIDATE_ROW_BATCH,
 }: {
 	db: DrizzleCli;
-	/** The patch's lowered row-level scope. */
 	scope: OperationScope;
 	internalCustomerIds: string[];
-	/** The patch's plan-filter-matched catalog product (id + price facts). */
 	fromProduct: FullProductWithoutLicenses;
 	add: BatchMigrationExecutionAdd;
 	now: number;
@@ -124,8 +108,6 @@ export const addCustomerEntitlementsForPage = async ({
 	};
 };
 
-/** One customer-product page through the pipeline: resolve reset cycles →
- * set-based insert → map the rows that actually landed. */
 const enrichAndInsertCandidates = async ({
 	db,
 	scope,
@@ -184,8 +166,6 @@ const enrichAndInsertCandidates = async ({
 			}),
 	});
 
-	// Keyed by row id, not customer: one customer can hold several customer
-	// products on this plan, each landing its own row and cycle.
 	const insertedIdSet = new Set(insertedIds);
 	return {
 		excludedInternalCustomerIds,

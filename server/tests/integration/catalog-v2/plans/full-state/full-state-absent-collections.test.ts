@@ -1,30 +1,3 @@
-/**
- * catalogV2.update — under full state, a collection the payload never mentions
- * is not managed by that payload.
- *
- * Full state means "what I state is the whole truth" — but only for the kinds
- * of thing the caller actually spoke about. A client that has never heard of a
- * catalog concept sends no key for it, and that must not read as "I have zero
- * of those, delete them all". Otherwise every concept Autumn adds after a CLI
- * ships turns that CLI into a deleter of things it cannot see.
- *
- * The legacy path already works this way — `catalogConfigResources.ts:233`
- * gates its sweep on `params.rewards !== undefined`, and legacy's schema leaves
- * `rewards` / `referral_programs` optional with no default. catalogV2's
- * `features` and `plans` carry `.optional().default([])`, which erases the
- * difference between "omitted" and "empty" before anyone can ask.
- *
- * Contract:
- *   G1  stating plans while omitting features leaves features alone
- *   G2  stating features while omitting plans leaves plans alone
- *   G3  an explicit empty array means "I manage this and it is empty", so it
- *       removes everything — omission and [] are not the same
- *
- * Red (current): the zod default turns an absent key into [], so the absentee
- *   sweep runs over the whole collection and G1/G2 delete.
- * Green (after): the sweep is skipped for a collection nobody stated.
- */
-
 import { expect, test } from "bun:test";
 import { FeatureType } from "@autumn/shared";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
@@ -77,7 +50,6 @@ const planExists = async ({
 test.concurrent(
 	`${chalk.yellowBright("catalogV2 full-state: a collection the payload omits is left alone")}`,
 	async () => {
-		// Full state speaks for a whole org, so it needs an org of its own.
 		const { autumnV2_3, ctx } = await initScenario({
 			setup: [
 				s.platform.create({
@@ -94,8 +66,6 @@ test.concurrent(
 			plans: [{ plan_id: planId, name: "Kept", items: [] }],
 		});
 
-		// G1: full state, but the payload only ever speaks about plans. Features
-		// were never mentioned, so this payload has no opinion about them.
 		await autumnV2_3.catalogV2.update({
 			skip_deletions: false,
 			plans: [{ plan_id: planId, name: "Kept", items: [] }],
@@ -106,7 +76,6 @@ test.concurrent(
 			"unmentioned collection survived",
 		).toBe(true);
 
-		// G2: the same, the other way round.
 		await autumnV2_3.catalogV2.update({
 			skip_deletions: false,
 			features: [booleanFeature(featureId)],
@@ -137,10 +106,6 @@ test.concurrent(
 			plans: [],
 		});
 
-		// G3: stating `features: []` is a claim — "I manage them and there are
-		// none" — so it removes them. This is the assertion that proves omission
-		// and [] are different: the test above omits the key and the feature
-		// survives; here it is stated empty and the feature goes.
 		await autumnV2_3.catalogV2.update({
 			skip_deletions: false,
 			features: [],

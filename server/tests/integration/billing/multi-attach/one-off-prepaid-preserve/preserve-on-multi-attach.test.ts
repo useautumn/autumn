@@ -1,5 +1,3 @@
-/** Multi-attach preserves prepaid balances from every replaced plan. */
-
 import { test } from "bun:test";
 import type { ApiCustomerV3 } from "@autumn/shared";
 import { findCustomerEntitlement } from "@tests/balances/utils/findCustomerEntitlement";
@@ -10,10 +8,6 @@ import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
-
-// ─────────────────────────────────────────────────────────────────────────────
-// 1. multiAttach upgrade pro+one-off-prepaid → premium preserves 150 units.
-// ─────────────────────────────────────────────────────────────────────────────
 
 test.concurrent(
 	`${chalk.yellowBright("one-off-preserve multiAttach 1: replacing pro+one-off-prepaid with premium preserves remaining balance")}`,
@@ -47,7 +41,6 @@ test.concurrent(
 			],
 		});
 
-		// Burn 50 → balance 150.
 		await autumnV2_1.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
@@ -64,7 +57,6 @@ test.concurrent(
 			expectedBalance: 150,
 		});
 
-		// multiAttach swap to premium.
 		await autumnV1.billing.multiAttach({
 			customer_id: customerId,
 			plans: [{ plan_id: premium.id }],
@@ -72,7 +64,6 @@ test.concurrent(
 
 		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-		// premium grants 500; preserved 150 lifetime carryover → 650.
 		expectCustomerFeatureCorrect({
 			customer,
 			featureId: TestFeature.Messages,

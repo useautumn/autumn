@@ -8,8 +8,6 @@ import type { ApiKeyVerificationData } from "../../repos/getApiKeyVerificationDa
 import { apiKeyRepo } from "../../repos/index.js";
 import { ApiKeyPrefix, hashApiKey } from "../apiKeyUtils.js";
 
-/** One lookup per key per process: a burst of cache misses (L1 expiry, slow Redis) waits on it
- *  instead of each caller taking a critical-pool connection for the same rows. */
 const lookupsInFlight = new Map<
 	string,
 	Promise<ApiKeyVerificationData | null>
@@ -24,7 +22,6 @@ export const verifyKey = async ({
 	db: DrizzleCli;
 	key: string;
 	requestId?: string;
-	/** Read the verification payload (org + features) past this worker's L1. */
 	skipL1?: boolean;
 }): Promise<ApiKeyVerificationData | null> => {
 	const hashedKey = hashApiKey(key);
@@ -33,8 +30,6 @@ export const verifyKey = async ({
 		: await sharedLookUp({ db, key, hashedKey, requestId });
 	if (!data) return null;
 
-	// Backfill `pendingMigrations` on payloads cached before the field
-	// existed — guarantees consumers can rely on the shape.
 	const pendingMigrations = data.pendingMigrations ?? [];
 	return {
 		...data,

@@ -1,15 +1,3 @@
-/**
- * Body-level (`body.idempotency_key`) track idempotency.
- *
- * Contract under test:
- *   - A successful track keeps the body key → an identical retry gets 409
- *     duplicate_idempotency_key.
- *   - A pre-side-effect 4xx releases the body key → the retry re-runs and
- *     returns the original error, not 409.
- *   - The header and body keys are independent claims: after a successful
- *     track with both, reusing EITHER one alone gets 409.
- */
-
 import { expect, test } from "bun:test";
 import { ErrCode } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
@@ -126,13 +114,11 @@ test.concurrent(
 
 		await track({ header: headerKey, body: bodyKey });
 
-		// Same header, fresh body key → the header claim rejects.
 		await expectAutumnError({
 			errCode: ErrCode.DuplicateIdempotencyKey,
 			func: () => track({ header: headerKey, body: `${bodyKey}-fresh` }),
 		});
 
-		// Fresh header, same body key → the body claim rejects.
 		await expectAutumnError({
 			errCode: ErrCode.DuplicateIdempotencyKey,
 			func: () => track({ header: `${headerKey}-fresh`, body: bodyKey }),

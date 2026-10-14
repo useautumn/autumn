@@ -11,7 +11,6 @@ import { subtractIncludedFromTiers } from "@utils/productV2Utils/productItemUtil
 import type { SharedContext } from "../../../../types/sharedContext";
 import type { ApiPlanItemV1 } from "../apiPlanItemV1";
 
-/** Transform ApiPlanItemV1 to ApiPlanItemV0 */
 export function planItemV1ToV0({
 	ctx,
 	item,
@@ -41,8 +40,6 @@ export function planItemV1ToV0({
 		});
 	}
 
-	// V1 API: tier `to` values INCLUDE included usage.
-	// Internal: tier `to` values do NOT include included usage.
 	const internalTiers = price?.tiers
 		? subtractIncludedFromTiers({ tiers: price.tiers, included })
 		: undefined;

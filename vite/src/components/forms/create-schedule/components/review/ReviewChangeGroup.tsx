@@ -28,7 +28,6 @@ import { ReviewValueColumnProvider } from "./ReviewValueColumnContext";
 const hasContent = (section: ReviewChangeSection) =>
 	section.phases.length > 0 || Boolean(section.stripeIds?.length);
 
-/** Renders a skeleton in the same slots until `section` resolves, so nothing shifts on load. */
 export function ReviewChangeGroup({
 	value,
 	system,

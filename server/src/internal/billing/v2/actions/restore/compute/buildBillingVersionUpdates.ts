@@ -8,8 +8,6 @@ type CustomerProductUpdate = NonNullable<
 	AutumnBillingPlan["updateCustomerProducts"]
 >[number];
 
-/** Pin every customer product on this subscription to V2 so future reads,
- *  syncs, and state checks treat them as V2. Skips rows already on V2. */
 export const buildBillingVersionUpdates = ({
 	fullCustomer,
 	stripeSubscriptionId,

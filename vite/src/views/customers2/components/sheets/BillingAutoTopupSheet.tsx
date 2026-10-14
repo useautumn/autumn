@@ -122,8 +122,6 @@ export function BillingAutoTopupSheet() {
 			isOneOffCustomerEntitlement(cusEnt) &&
 			isPrepaidCustomerEntitlement(cusEnt);
 
-		// Mirror the backend's resolution for customer-level auto-topups: the
-		// most recently attached product's one-off prepaid price is charged.
 		const prepaidCusEnt = cusEnts
 			.filter(isOneOffPrepaid)
 			.sort(

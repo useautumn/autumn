@@ -1,15 +1,4 @@
-/**
- * Mock Stripe client fixtures for unit testing.
- *
- * Provides configurable mock implementations of Stripe API methods
- * that can be used to test webhook handlers and other Stripe-dependent code.
- */
-
 import type Stripe from "stripe";
-
-// ═══════════════════════════════════════════════════════════════════
-// TYPES
-// ═══════════════════════════════════════════════════════════════════
 
 interface MockPaymentIntentsConfig {
 	retrieveResult?: Partial<Stripe.PaymentIntent>;
@@ -53,13 +42,6 @@ interface MockStripeClientCalls {
 	};
 }
 
-// ═══════════════════════════════════════════════════════════════════
-// MOCK FACTORIES
-// ═══════════════════════════════════════════════════════════════════
-
-/**
- * Create a mock Stripe client with configurable methods and call tracking.
- */
 const createMockStripeClient = (config: MockStripeClientConfig = {}) => {
 	const calls: MockStripeClientCalls = {
 		paymentIntents: {
@@ -144,13 +126,6 @@ const createMockStripeClient = (config: MockStripeClientConfig = {}) => {
 	};
 };
 
-// ═══════════════════════════════════════════════════════════════════
-// INVOICE HELPERS
-// ═══════════════════════════════════════════════════════════════════
-
-/**
- * Create a mock Stripe invoice with configurable properties.
- */
 const createMockInvoice = (
 	overrides: Partial<Stripe.Invoice> = {},
 ): Stripe.Invoice =>
@@ -162,10 +137,6 @@ const createMockInvoice = (
 		subscription: "sub_test",
 		...overrides,
 	}) as Stripe.Invoice;
-
-// ═══════════════════════════════════════════════════════════════════
-// EXPORT
-// ═══════════════════════════════════════════════════════════════════
 
 export const stripeClients = {
 	createMockStripeClient,

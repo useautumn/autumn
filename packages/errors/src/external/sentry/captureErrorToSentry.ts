@@ -4,7 +4,6 @@ import type { ErrorClassification } from "../../models/errorClassification.js";
 import type { LogContext } from "../../models/logContext.js";
 import { logContextToSentryEvent } from "./logContextToSentryEvent.js";
 
-/** An error can name its own Sentry issue, e.g. one per job, when its stack is shared. */
 const fingerprintOf = ({
 	error,
 	operation,
@@ -36,7 +35,6 @@ const fingerprintOf = ({
 	];
 };
 
-/** Context goes on this one event, never the shared scope, so concurrent jobs can't swap tags. */
 export const captureErrorToSentry = ({
 	error,
 	service,

@@ -1,34 +1,3 @@
-/**
- * TDD unit contract for the sync dirty-state primitives (sync-v4 coalescing).
- *
- * Contract under test:
- *   New modules (server/src/internal/balances/utils/sync/dirtyState/):
- *     - syncDirtyKeys.ts: buildSyncDirtyKeys({orgId, env, customerId})
- *         -> { dirtyKey, claimKey, signalKey }
- *     - markSyncDirty.ts: markSyncDirty({redis, scope, cusEntIds, rolloverIds,
- *         modifiedCusEntIdsByFeatureId, usageWindowUpdates, entityId,
- *         signalTtlSeconds})
- *         -> { shouldSignal: boolean }
- *         Behaviors:
- *           - first mark on empty state -> shouldSignal=true, signal marker set
- *           - second mark while signal marker live -> shouldSignal=false
- *           - selectors accumulate (set union) across marks
- *           - usage-window snapshots are last-write-wins per feature
- *     - claimSyncDirty.ts: claimSyncDirty({redis, scope})
- *         -> merged dirty state or null when empty
- *         Behaviors:
- *           - moves dirty -> claim atomically; dirty key gone after claim
- *           - leftover claim (crashed worker) is MERGED with new dirty state
- *             on the next claim, never lost
- *           - clearSyncClaim({redis, scope, generation}) removes the owned claim
- *   Modified:
- *     - processMessage.shouldRetrySqsJobError: transient REDIS errors on the
- *       new signal job are retryable (message must stay in SQS)
- *
- * Pre-impl red: imports fail (modules do not exist).
- * Post-impl green: all assertions pass against a real Redis (v2 cache instance).
- */
-
 import { expect, test } from "bun:test";
 import chalk from "chalk";
 import { resolveRedisV2 } from "@/external/redis/resolveRedisV2.js";
@@ -122,20 +91,17 @@ test(`${chalk.yellowBright("dirty-state: claim merges accumulated selectors and 
 
 	const claimed = await claimSyncDirty({ redis, scope });
 	expect(claimed).not.toBeNull();
-	// Set-union of selectors across both marks
 	expect(claimed!.cusEntIds.sort()).toEqual(["ce_1", "ce_2"]);
 	expect(claimed!.rolloverIds).toEqual(["ro_1"]);
 	expect(Object.keys(claimed!.modifiedCusEntIdsByFeatureId).sort()).toEqual([
 		"credits",
 		"messages",
 	]);
-	// Usage windows: LAST snapshot wins per feature
 	expect(claimed!.usageWindowUpdates).toHaveLength(1);
 	expect((claimed!.usageWindowUpdates[0] as any).usage_windows[0].usage).toBe(
 		2,
 	);
 
-	// Dirty key is empty after claim
 	const { dirtyKey } = buildSyncDirtyKeys(scope);
 	expect(await redis.exists(dirtyKey)).toBe(0);
 
@@ -145,7 +111,6 @@ test(`${chalk.yellowBright("dirty-state: claim merges accumulated selectors and 
 test(`${chalk.yellowBright("dirty-state: leftover claim from crashed worker merges into next claim")}`, async () => {
 	const redis = await wipe();
 
-	// First cycle: mark + claim, then CRASH (claim never cleared).
 	await markSyncDirty({
 		redis,
 		scope,
@@ -157,9 +122,6 @@ test(`${chalk.yellowBright("dirty-state: leftover claim from crashed worker merg
 	});
 	const firstClaim = await claimSyncDirty({ redis, scope });
 	expect(firstClaim).not.toBeNull();
-	// no clearSyncClaim: simulates a worker death mid-flush
-
-	// New write arrives, then redelivery claims again.
 	await markSyncDirty({
 		redis,
 		scope,
@@ -171,7 +133,6 @@ test(`${chalk.yellowBright("dirty-state: leftover claim from crashed worker merg
 	});
 	const secondClaim = await claimSyncDirty({ redis, scope });
 	expect(secondClaim).not.toBeNull();
-	// ce_old must survive the crash: merged, not lost
 	expect(secondClaim!.cusEntIds.sort()).toEqual(["ce_new", "ce_old"]);
 
 	await clearSyncClaim({ redis, scope, generation: secondClaim!.generation });

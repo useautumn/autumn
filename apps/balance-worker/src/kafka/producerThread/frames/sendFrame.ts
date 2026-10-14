@@ -1,8 +1,3 @@
-/**
- * One `producer.send` crossing to the producer thread:
- * `[u32 reqId][u32 metaLength][meta json][count × ([u32 keyLength][key][u32 valueLength][value])]`.
- * A length of 0xffffffff is a null key or value.
- */
 export const SEND_FRAME = 1;
 const HEADER_BYTES = 8;
 const NULL_BYTES = 0xffffffff;
@@ -16,13 +11,11 @@ export type SendMessageMeta = {
 
 export type SendMeta = {
 	producerId: number;
-	/** The producer's send order; the thread dispatches in it whichever way a payload travelled. */
 	seq: number;
 	topic: string;
 	acks?: number;
 	compression?: number;
 	timeout?: number;
-	/** Every record's partition and headers when they are all the same; otherwise `messages` lists them. */
 	shared?: SendMessageMeta;
 	messages?: SendMessageMeta[];
 	count: number;
@@ -39,7 +32,6 @@ export type SendFrame = {
 export const encodeSendMeta = ({ meta }: { meta: SendMeta }): Uint8Array =>
 	encoder.encode(JSON.stringify(meta));
 
-/** Bytes the frame takes, so a ring slot can be claimed before anything is written. */
 export const sendFrameLength = ({
 	metaBytes,
 	records,
@@ -73,7 +65,6 @@ function writeField({
 	return at + 4 + field.length;
 }
 
-/** Writes the frame at `at`, into a ring slot or a buffer of its own. */
 export const writeSendFrame = ({
 	bytes,
 	at,
@@ -115,7 +106,6 @@ function readField({
 	};
 }
 
-/** The records are copies, so a ring slot can be released at once. */
 export const readSendFrame = ({ bytes }: { bytes: Uint8Array }): SendFrame => {
 	const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
 	const reqId = view.getUint32(0, true);

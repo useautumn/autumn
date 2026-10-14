@@ -28,11 +28,6 @@ const initNewFeature = ({
 	archived: false,
 });
 
-/**
- * Inserts the selected source features the target lacks, appending them to
- * toContext.features. Unlike handleCopyFeatures, a plan copy never overwrites
- * a target feature; a same-id different-type feature is a hard conflict.
- */
 export const copyMissingFeatures = async ({
 	source,
 	toContext,
@@ -66,8 +61,6 @@ export const copyMissingFeatures = async ({
 				}),
 				logger,
 			});
-			// Must stay the same array object toContext.features points at — a later
-			// copyProduct reads ctx.features and throws on a feature missing here.
 			toFeatures.push(res![0]);
 		}
 	}

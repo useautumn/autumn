@@ -1,6 +1,5 @@
 import { feature, item, plan } from "@autumn/atmn-old";
 
-// Features
 export const messages = feature({
 	id: 'messages',
 	name: 'Messages',
@@ -8,7 +7,6 @@ export const messages = feature({
 	consumable: true,
 });
 
-// Plans
 export const free = plan({
 	id: 'free',
 	name: 'Free',

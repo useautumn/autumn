@@ -7,9 +7,6 @@ interface FileRowProps {
 	done: boolean;
 }
 
-/**
- * Displays a generated file with spinner or checkmark
- */
 export function FileRow({ name, lines, done }: FileRowProps) {
 	return (
 		<Text>

@@ -8,9 +8,6 @@ export const stripeInvoiceToStripeSubscriptionId = (
 	return subId as string | undefined;
 };
 
-/**
- * Finds the payment intent from a specific invoice.
- */
 export const stripeInvoiceIdToPaymentIntent = async ({
 	stripeClient,
 	invoiceId,

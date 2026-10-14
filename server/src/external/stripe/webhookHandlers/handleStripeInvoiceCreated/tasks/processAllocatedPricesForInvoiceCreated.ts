@@ -13,7 +13,6 @@ import { findLinkedCusEnts } from "@/internal/customers/cusProducts/cusEnts/cusE
 import { removeReplaceablesFromCusEnt } from "@/internal/customers/cusProducts/cusEnts/cusEntUtils/linkedCusEntUtils";
 import { logAllocatedPriceProcessed } from "../logs/logInvoiceCreatedPriceProcessing";
 
-/** Plans the seats freed at cycle end: their replaceables go, their entity entries leave the linked grants, and the seat grant gets them back. */
 const processAllocatedPrice = ({
 	ctx,
 	plan,
@@ -39,7 +38,6 @@ const processAllocatedPrice = ({
 	});
 
 	for (const linkedCusEnt of linkedCusEnts) {
-		// A consumable reset earlier in the plan may have rewritten these entries; build on that, not the snapshot.
 		const { newEntities } = removeReplaceablesFromCusEnt({
 			cusEnt: plan.projectedCustomerEntitlement(linkedCusEnt),
 			replaceableIds: replaceables.map((r) => r.id),

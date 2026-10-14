@@ -11,7 +11,6 @@ const errorCodeOf = async (reply: Response): Promise<string | null> =>
 		)
 		.catch(() => null);
 
-/** A successful reply, or AutumnClientError for any other answer; a network failure or timeout rejects as is. */
 export const postToAutumn = async ({
 	ctx,
 	path,

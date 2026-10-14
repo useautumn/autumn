@@ -65,7 +65,6 @@ test.concurrent(
 		const preview = await previewCreateSchedule({ autumnV1, params });
 		const response = await autumnV1.billing.createSchedule(params);
 
-		// Draft invoice keeps the schedule pending; finalizing it activates premium before payment.
 		expect(response.status).toBe("pending_payment");
 		expect(preview.total).toBe(30);
 		expect(response.invoice?.total).toBe(153.45);

@@ -11,8 +11,6 @@ const FeatureQuantitySchema = z.object({
 const MappingSchema = z.object({
 	autumn_product_id: z.string(),
 	revenuecat_product_ids: z.array(z.string()),
-	// Per-RC-id prepaid grants, keyed by revenuecat_product_id. Quantity in
-	// feature units (UI multiplies packs by billing_units before saving).
 	feature_quantities: z
 		.record(z.string(), z.array(FeatureQuantitySchema))
 		.optional(),
@@ -27,10 +25,8 @@ export const handleSaveRCMappings = createRoute({
 		const { db, org, env } = c.get("ctx");
 		const { mappings } = c.req.valid("json");
 
-		// Process each mapping
 		for (const mapping of mappings) {
 			if (mapping.revenuecat_product_ids.length > 0) {
-				// Upsert mapping if it has products
 				await RCMappingService.upsert({
 					db,
 					data: {
@@ -42,7 +38,6 @@ export const handleSaveRCMappings = createRoute({
 					},
 				});
 			} else {
-				// Delete mapping if no products assigned
 				await RCMappingService.delete({
 					db,
 					orgId: org.id,
@@ -52,7 +47,6 @@ export const handleSaveRCMappings = createRoute({
 			}
 		}
 
-		// Return updated mappings
 		const updatedMappings = await RCMappingService.getAll({
 			db,
 			orgId: org.id,

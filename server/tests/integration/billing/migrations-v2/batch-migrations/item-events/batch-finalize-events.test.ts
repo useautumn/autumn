@@ -1,19 +1,3 @@
-/**
- * Batch finalize: Tinybird item events.
- *
- * Contract:
- *   - one event per claimed customer, succeeded AND skipped;
- *   - succeeded events carry a synthesized response — `lane: "batch"` plus a
- *     migration_customer_preview whose balance/flag/plan changes describe the
- *     rows this page inserted (the dedup guarantees the pre-state was empty);
- *   - skipped events carry the skip reason and no preview.
- *
- * Customer ids are run-unique: Tinybird is shared across worktrees and dev
- * instances, so deterministic ids would read back another run's events.
- * Assertions are skipped only when Tinybird isn't configured — an empty read
- * while configured stays a failure, never a silent pass.
- */
-
 import { test } from "bun:test";
 import { MigrationItemRunStatus } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features";
@@ -47,7 +31,6 @@ test.concurrent(
 			actions: [
 				s.parallel(
 					s.billing.attach({ productId: freePlan.id }),
-					// Customized attach → batch-ineligible customer product → skipped.
 					s.billing.attach({
 						customerId: customId,
 						productId: freePlan.id,
@@ -107,7 +90,6 @@ test.concurrent(
 			customerId: plainId,
 			status: "succeeded",
 			planChangeActions: ["updated"],
-			// Regression: the dashboard names plans from this — "Unknown plan" when absent.
 			planChangePlanIds: [freePlan.id],
 			itemChangeCount: 2,
 			balanceFeatureIds: [TestFeature.Workflows],

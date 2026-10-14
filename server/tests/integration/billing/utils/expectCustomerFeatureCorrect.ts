@@ -82,10 +82,6 @@ const assertCustomerFeatureCorrect = ({
 	}
 };
 
-/**
- * Pass `customerId` (instead of a fetched `customer`) to poll until the feature
- * settles — a tracked deduction reaches Postgres via Redis then the queue.
- */
 export const expectCustomerFeatureCorrect = pollableCustomerExpect({
 	fetchCustomer: ({ customerId, autumn }: FeatureExpectParams) =>
 		(autumn ?? defaultAutumn).customers.get<ApiCustomerV3 | ApiEntityV0>(

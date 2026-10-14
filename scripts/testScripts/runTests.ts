@@ -11,7 +11,6 @@ import pLimit from "p-limit";
 
 loadLocalEnv();
 
-// Load environment variables from server/.env
 dotenv.config({ path: resolve(process.cwd(), "server", ".env") });
 
 interface TestResult {
@@ -105,11 +104,6 @@ class TestRunner {
 			return this.testFiles.length + 3;
 		}
 
-		// Compact mode: dynamically calculate based on content
-		// Base: 10 lines for headers, stats, spacing
-		// + 3 lines for recently completed
-		// + failed tests * 4 (name + 2 error lines + spacing)
-		// + running tests
 		const failedCount = Array.from(this.results.values()).filter(
 			(r) => r.status === "failed",
 		).length;
@@ -117,10 +111,7 @@ class TestRunner {
 			(r) => r.status === "running",
 		).length;
 
-		return Math.min(
-			10 + 3 + failedCount * 4 + Math.min(runningCount, 6),
-			30, // Cap at 30 lines
-		);
+		return Math.min(10 + 3 + failedCount * 4 + Math.min(runningCount, 6), 30);
 	}
 
 	private render() {
@@ -128,7 +119,6 @@ class TestRunner {
 		const spinner = this.spinnerFrames[this.spinnerIndex];
 
 		if (this.compactMode) {
-			// Compact mode: show completed, failed, running tests, then stats
 			let lineNum = this.startLine;
 
 			const completed = Array.from(this.results.values()).filter(
@@ -141,10 +131,9 @@ class TestRunner {
 				(r) => r.status === "failed",
 			).length;
 
-			// Show recently completed tests (last 3)
 			const passedTests = Array.from(this.results.entries())
 				.filter(([_, result]) => result.status === "passed")
-				.slice(-3); // Get last 3 completed
+				.slice(-3);
 
 			if (passedTests.length > 0) {
 				this.moveCursor(lineNum, 0);
@@ -164,14 +153,12 @@ class TestRunner {
 					lineNum++;
 				}
 
-				// Add blank line
 				this.moveCursor(lineNum, 0);
 				this.clearLine();
 				process.stdout.write("\n");
 				lineNum++;
 			}
 
-			// Show failed tests
 			const failedTests = Array.from(this.results.entries()).filter(
 				([_, result]) => result.status === "failed",
 			);
@@ -191,7 +178,6 @@ class TestRunner {
 					process.stdout.write(`  ${chalk.red("✗")} ${testName}\n`);
 					lineNum++;
 
-					// Show first 2 lines of error
 					if (result.error) {
 						const errorLines = result.error.split("\n").filter((l) => l.trim());
 						const displayLines = errorLines.slice(0, 2);
@@ -206,14 +192,12 @@ class TestRunner {
 					}
 				}
 
-				// Add blank line after failed tests
 				this.moveCursor(lineNum, 0);
 				this.clearLine();
 				process.stdout.write("\n");
 				lineNum++;
 			}
 
-			// Show currently running tests
 			const runningTests = Array.from(this.results.entries()).filter(
 				([_, result]) => result.status === "running",
 			);
@@ -239,14 +223,12 @@ class TestRunner {
 					lineNum++;
 				}
 
-				// Add blank line after running tests
 				this.moveCursor(lineNum, 0);
 				this.clearLine();
 				process.stdout.write("\n");
 				lineNum++;
 			}
 
-			// Show stats line
 			this.moveCursor(lineNum, 0);
 			this.clearLine();
 			process.stdout.write(
@@ -256,7 +238,6 @@ class TestRunner {
 			);
 			lineNum++;
 
-			// Clear any remaining lines from previous renders
 			const maxLines = this.getSpacesNeeded();
 			while (lineNum < maxLines) {
 				this.moveCursor(lineNum, 0);
@@ -264,10 +245,8 @@ class TestRunner {
 				lineNum++;
 			}
 
-			// Track how many lines we actually used
 			this.lastRenderedLines = lineNum - this.startLine;
 		} else {
-			// Full mode: show all tests
 			let lineNum = this.startLine;
 
 			for (const file of this.testFiles) {
@@ -308,7 +287,6 @@ class TestRunner {
 				lineNum++;
 			}
 
-			// Summary line
 			const completed = Array.from(this.results.values()).filter(
 				(r) => r.status === "passed" || r.status === "failed",
 			).length;
@@ -329,7 +307,6 @@ class TestRunner {
 				);
 			}
 
-			// Track how many lines we actually used
 			this.lastRenderedLines = lineNum + 2 - this.startLine;
 		}
 	}
@@ -337,7 +314,6 @@ class TestRunner {
 	async runTest(file: string): Promise<void> {
 		const startTime = performance.now();
 
-		// Initialize as running
 		const result: TestResult = {
 			file,
 			status: "running",
@@ -361,7 +337,6 @@ class TestRunner {
 					const text = decoder.decode(chunk);
 					output += text;
 
-					// Update last test name
 					const lastTest = this.extractLastTest(output);
 					if (lastTest) {
 						result.lastTestName = lastTest;
@@ -450,7 +425,6 @@ class TestRunner {
 	private handleInterrupt() {
 		this.cleanup();
 
-		// Move cursor past all output (use actual rendered lines in compact mode)
 		const linesToMove = this.compactMode
 			? this.lastRenderedLines
 			: this.getSpacesNeeded();
@@ -459,7 +433,6 @@ class TestRunner {
 
 		console.log(chalk.yellow.bold("\n⚠ Tests interrupted by user (Ctrl+C)\n"));
 
-		// Print summary of what we have so far
 		const failedTests = Array.from(this.results.values()).filter(
 			(t) => t.status === "failed",
 		);
@@ -508,7 +481,7 @@ class TestRunner {
 			);
 		}
 
-		process.exit(130); // Standard exit code for SIGINT
+		process.exit(130);
 	}
 
 	async run(directories: string[]): Promise<void> {
@@ -523,7 +496,6 @@ class TestRunner {
 			chalk.bold(`\nRunning ${this.testFiles.length} test file(s)...\n`),
 		);
 
-		// Initialize all tests as pending
 		for (const file of this.testFiles) {
 			this.results.set(file, {
 				file,
@@ -533,28 +505,21 @@ class TestRunner {
 			});
 		}
 
-		// Setup SIGINT handler
 		const sigintHandler = () => this.handleInterrupt();
 		process.on("SIGINT", sigintHandler);
 
-		// Hide cursor and create space for all tests
 		this.hideCursor();
-		this.startLine = 1; // Start from line 1
-
-		// Create space - less space needed in compact mode
+		this.startLine = 1;
 		const spacesNeeded = this.getSpacesNeeded();
-		this.lastRenderedLines = spacesNeeded; // Initialize to full space
+		this.lastRenderedLines = spacesNeeded;
 		for (let i = 0; i < spacesNeeded; i++) {
 			console.log();
 		}
 
-		// Move cursor back up to start rendering
 		process.stdout.write(`\x1B[${spacesNeeded}A`);
 
-		// Start rendering loop
 		this.renderInterval = setInterval(() => this.render(), 100);
 
-		// Run tests with concurrency limit
 		const limit = pLimit(this.maxParallel);
 		const promises = this.testFiles.map((file) =>
 			limit(() => this.runTest(file)),
@@ -562,21 +527,17 @@ class TestRunner {
 
 		await Promise.all(promises);
 
-		// Remove SIGINT handler
 		process.off("SIGINT", sigintHandler);
 
-		// Final render
 		this.cleanup();
 		this.render();
 
-		// Move cursor past all output (use actual rendered lines in compact mode)
 		const linesToMove = this.compactMode
 			? this.lastRenderedLines
 			: this.getSpacesNeeded();
 		process.stdout.write(`\x1B[${linesToMove}B`);
 		console.log("\n");
 
-		// Print summary
 		this.printSummary();
 	}
 
@@ -628,10 +589,8 @@ class TestRunner {
 	}
 }
 
-// Base paths for shorthand test paths (tried in order)
 const TEST_BASE_PATHS = ["server/tests/integration/billing", "server/tests"];
 
-// Parse CLI arguments
 const args = process.argv.slice(2);
 const directories: string[] = [];
 let maxParallel = 6;
@@ -649,12 +608,10 @@ for (const arg of args) {
 		);
 		process.exit(1);
 	} else {
-		// Try to resolve the path - if it doesn't exist, try prepending base paths
 		let resolvedPath = arg;
 		const fullPath = resolve(process.cwd(), arg);
 
 		if (!existsSync(fullPath)) {
-			// Try each base path in order
 			for (const basePath of TEST_BASE_PATHS) {
 				const withBase = `${basePath}/${arg}`;
 				const withBaseFull = resolve(process.cwd(), withBase);
@@ -695,6 +652,5 @@ if (directories.length === 0) {
 	process.exit(1);
 }
 
-// Run tests
 const runner = new TestRunner(maxParallel, compactMode);
 await runner.run(directories);

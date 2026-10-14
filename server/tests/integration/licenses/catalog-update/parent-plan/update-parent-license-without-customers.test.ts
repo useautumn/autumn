@@ -1,5 +1,3 @@
-/** Contract: a parent without customers updates in place for parent, license-customize, and combined edits.
- * Customers on the child do not affect parent versioning, and the child catalog/customer definition stays unchanged. */
 import { expect, test } from "bun:test";
 import {
 	type ApiCustomerV5,

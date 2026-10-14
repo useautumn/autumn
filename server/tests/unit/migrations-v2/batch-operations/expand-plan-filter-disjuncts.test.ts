@@ -1,13 +1,3 @@
-/**
- * Contract: how `$or` expands into per-patch disjuncts.
- *
- *   - no $or → one disjunct: the filter itself;
- *   - $or → one disjunct per branch, sibling fields carried as a conjunct
- *     alongside each branch (they AND with it);
- *   - nested $or expands recursively, accumulating conjuncts;
- *   - `$or: []` → no disjuncts (matches nothing).
- */
-
 import { describe, expect, test } from "bun:test";
 import { expandPlanFilterDisjuncts } from "@/internal/migrations/v2/batchOperations/scope/utils/expandPlanFilterDisjuncts.js";
 

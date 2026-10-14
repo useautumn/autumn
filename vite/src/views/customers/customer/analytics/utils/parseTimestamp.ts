@@ -11,8 +11,6 @@ export function parseUTCTimestamp(timestamp: string): Date {
 	return parseISO(timestamp);
 }
 
-// Day/month buckets are already in the viewer's local zone (the pipe uses
-// toStartOfDay(hour, tz)), so parse a bare string as local, not UTC.
 export function parseLocalTimestamp(timestamp: string): Date {
 	if (
 		!timestamp.includes("Z") &&
@@ -36,7 +34,6 @@ export function formatFullTimestamp(date: Date): string {
 	return format(date, "d MMM 'at' HH:mm:ss");
 }
 
-// Hour buckets are UTC, day/month buckets are local — parse each in its own zone.
 export function formatPeriodLabel({
 	period,
 	interval,
@@ -52,7 +49,6 @@ export function formatPeriodLabel({
 	return interval === "24h" ? formatHourMinute(date) : formatDateShort(date);
 }
 
-/** Labels a predicted bin start the way formatPeriodLabel labels the real bucket. */
 export function formatBinStartLabel({
 	binStart,
 	interval,
@@ -62,7 +58,6 @@ export function formatBinStartLabel({
 }): string {
 	const date = new Date(binStart);
 	if (interval === "24h") return formatHourMinute(date);
-	// Predicted day bins are UTC-aligned; real ones are local days with the same date.
 	return formatDateShort(
 		new Date(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()),
 	);
@@ -76,7 +71,6 @@ export function formatCompactNumber(value: number): string {
 		return `${(value / 1_000_000).toFixed(1).replace(/\.0$/, "")}M`;
 	if (absValue >= 1_000)
 		return `${(value / 1_000).toFixed(1).replace(/\.0$/, "")}K`;
-	// Fractional usage (e.g. AI cost) would otherwise print every float digit.
 	if (Number.isInteger(value)) return value.toString();
 	if (absValue < 0.01) return value > 0 ? "<0.01" : ">-0.01";
 	return value.toFixed(absValue >= 10 ? 1 : 2).replace(/\.?0+$/, "");

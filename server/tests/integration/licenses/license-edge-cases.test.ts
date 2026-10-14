@@ -337,7 +337,6 @@ test.concurrent(
 		expect(licenseCusProduct?.customer_prices).toHaveLength(0);
 		expect(licenseCusProduct?.subscription_ids).toEqual([]);
 		expect(licenseCusProduct?.scheduled_ids).toEqual([]);
-		// Seats anchor to their pool by link; entitlements scope via the product row.
 		const { pools } = await getLicenseDbState({ db: ctx.db, customerId });
 		expect(licenseCusProduct?.customer_license_link_id).toBe(pools[0]?.link_id);
 		expect(
@@ -474,7 +473,6 @@ test.concurrent(
 				entityCount: 2,
 			});
 
-		// Nothing funds messages outside the assigned entity: reject mode refuses.
 		for (const entityId of [undefined, entities[1].id]) {
 			await expectAutumnError({
 				errCode: ErrCode.InsufficientBalance,

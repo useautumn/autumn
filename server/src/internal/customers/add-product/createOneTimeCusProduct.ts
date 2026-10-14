@@ -42,7 +42,6 @@ const updateOneOffExistingEntitlement = async ({
 		return;
 	}
 
-	//  Fetch to get latest entitlement
 	const updatedCusEnt = await CusEntService.getStrict({
 		db,
 		id: cusEnt.id,
@@ -82,10 +81,8 @@ export const updateOneTimeCusProduct = async ({
 	ctx: RepoContext;
 	attachParams: InsertCusProductParams;
 }) => {
-	// 1. Sort cus products by created_at
 	attachParams.cusProducts?.sort((a, b) => b.created_at - a.created_at);
 
-	// 2. Get existing same cus product and customer entitlements
 	const existingCusProduct = attachParams.cusProducts?.find(
 		(cp) =>
 			cp.product.internal_id === attachParams.product.internal_id &&
@@ -93,17 +90,11 @@ export const updateOneTimeCusProduct = async ({
 	);
 
 	if (!existingCusProduct) {
-		// logger.warn("No existing cus product found", {
-		// 	data: {
-		// 		attachParams,
-		// 	},
-		// });
 		return;
 	}
 
 	const existingCusEnts = existingCusProduct?.customer_entitlements || [];
 
-	// 3. Update existing entitlements
 	for (const entitlement of attachParams.entitlements) {
 		const existingCusEnt = existingCusEnts.find(
 			(ce) => ce.internal_feature_id === entitlement.internal_feature_id,
@@ -143,11 +134,9 @@ export const updateOneTimeCusProduct = async ({
 		}
 	}
 
-	// Update options on full cus product
 	const newOptionsList = [...attachParams.optionsList];
 
 	for (const curOptions of existingCusProduct.options) {
-		// Find the option in the new options list
 		const newOptionIndex = newOptionsList.findIndex(
 			(o) => o.internal_feature_id === curOptions.internal_feature_id,
 		);
@@ -171,7 +160,6 @@ export const updateOneTimeCusProduct = async ({
 		},
 	});
 
-	// Send webhook
 	const { customer, org } = attachParams;
 	await addProductsUpdatedWebhookTask({
 		ctx: attachParams.req,

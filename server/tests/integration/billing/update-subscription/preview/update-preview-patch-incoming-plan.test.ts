@@ -1,17 +1,3 @@
-/**
- * Patch-style customize previews render the patched plan as `incoming`.
- *
- * Contract under test:
- *   - A PATCH-style customize (price / add_items / remove_items) keeps the
- *     existing customer product and carries the change as a patch. The
- *     preview's `incoming[0].plan` must reflect that patch, while
- *     `outgoing[0].plan` keeps the pre-patch terms.
- *
- * Pre-fix red: `billingPlanToChanges` ignored `patchCustomerProducts`, so the
- * incoming plan rendered the old price and items (identical to outgoing) even
- * though the line items already reflected the new terms.
- */
-
 import { expect, test } from "bun:test";
 import {
 	type BillingPreviewChange,

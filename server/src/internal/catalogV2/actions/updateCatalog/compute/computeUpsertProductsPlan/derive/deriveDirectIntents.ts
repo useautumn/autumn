@@ -25,7 +25,6 @@ const groupPlanParamsByPlanId = ({
 }): Map<string, UpdateCatalogPlanParams[]> => {
 	const byPlanId = new Map<string, UpdateCatalogPlanParams[]>();
 	for (const planParams of planParamsList) {
-		// Group under the row's CURRENT id: a rename states the new one.
 		const currentPlanId =
 			(planParams.internal_id
 				? internalIdRefs.get(planParams.internal_id)?.planId
@@ -37,11 +36,6 @@ const groupPlanParamsByPlanId = ({
 	return byPlanId;
 };
 
-/**
- * The stable id wins: it is the only handle a rename cannot invalidate. A slug
- * or numeric pin naming a different row alongside it is rejected in errors, so
- * by here they either agree or the request never arrives.
- */
 const resolvePinnedVersion = ({
 	planParams,
 	planId,
@@ -66,11 +60,6 @@ const resolvePinnedVersion = ({
 	});
 };
 
-/**
- * A row addressed by internal_id under a different version_slug IS a slug
- * rename — the config states the slug the row should carry now, the same way
- * a differing plan_id beside internal_id states its new id.
- */
 const slugRenameFromInternalId = ({
 	planParams,
 	planId,
@@ -94,8 +83,6 @@ const slugRenameFromInternalId = ({
 	return { new_version_slug: planParams.version_slug };
 };
 
-/** Explicit pins first (incl. resolved slugs), then omit→active / new_version max+1.
- * Unknown `version_slug` is excluded here; versioning errors reject it. */
 const resolveVersionsForPlan = ({
 	planId,
 	planParamsList,
@@ -135,8 +122,6 @@ const resolveVersionsForPlan = ({
 	const activeOrV1 =
 		activeVersionForPlan({ planId, productStatesContext }) ?? (maxVersion || 1);
 
-	// Versions this request has spoken for, so rows minted here never land on
-	// each other or on a row the payload pinned.
 	const claimedVersions = new Set(
 		withExplicitVersion.map((planParams) => planParams.version),
 	);
@@ -147,10 +132,6 @@ const resolveVersionsForPlan = ({
 		return nextFreeVersion;
 	};
 
-	/**
-	 * A slug naming no existing row is history the catalog does not have yet.
-	 * The config is the desired state, so the row is minted under that name.
-	 */
 	const mintedFromSlug = resolved
 		.filter(
 			(planParams) =>
@@ -181,10 +162,6 @@ const resolveVersionsForPlan = ({
 	return [...withExplicitVersion, ...mintedFromSlug, ...targetingLatest];
 };
 
-/**
- * Caller-asked intents: params.plans → ProductUpsertIntent[] with version set
- * and source "direct".
- */
 export const deriveDirectIntents = ({
 	params,
 	productStatesContext,
@@ -209,7 +186,6 @@ export const deriveDirectIntents = ({
 			}).map((planParams) => ({ planId, planParams })),
 		)
 		.map(({ planId, planParams }) => ({
-			// Key on the row's current id; `plan_id` may be the rename target.
 			productKey: { planId, version: planParams.version },
 			planParams,
 			source: "direct" as const,

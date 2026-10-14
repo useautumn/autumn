@@ -39,7 +39,6 @@ import { catalogPlanNeedingDecision } from "../../resolveCatalogDecision/catalog
 export type EveTurnOutcome =
 	| { kind: "answered"; catalogDecision?: CatalogPlanPreview; text: string }
 	| { kind: "parked"; question?: PendingQuestion; text: string }
-	/** `declined`: the model chose to say nothing (empty-delivery marker). */
 	| { declined?: boolean; kind: "silent" }
 	| { kind: "stopped"; stopReason: RunStopReason; text: string }
 	| { approval: AgentApprovalRequest; kind: "suspended"; text: string }
@@ -52,11 +51,8 @@ export type RecordedWrite = Readonly<{
 }>;
 
 export type EveTurnProgress = Readonly<{
-	/** The model answered with the empty-delivery marker: nothing to post. */
 	declinedReply: boolean;
 	finalText: string;
-	/** Gated writes the model called this turn; the approval is assembled from
-	 * these when the turn ends. */
 	recordedWrites: ReadonlyArray<RecordedWrite>;
 	lastPreview?: CapturedPreview;
 	pendingText: string;
@@ -119,8 +115,6 @@ const GATED_WRITE_TOOLS: ReadonlySet<string> = new Set(
 const isGatedWriteTool = (toolName?: string) =>
 	Boolean(toolName && GATED_WRITE_TOOLS.has(normalizeToolName(toolName)));
 
-/** One approval per turn: the first recorded write is the primary and the rest
- * ride as grouped writes, so a multi-change request stays one card. */
 const approvalForRecordedWrites = ({
 	writes,
 	progress,
@@ -170,8 +164,6 @@ const approvalForGatedWrite = ({
 			...(chained.input ?? {}),
 			_eveApproveOptionId: options.approve,
 			_eveDenyOptionId: options.deny,
-			// A proxied approval executes inside the delegated child session, so
-			// the resume verifies the write from the child's stream.
 			...childSessionIdsToolArgs([...progress.subagentChildSessionIds]),
 			...siblingRequestIdsToolArgs(siblingRequestIds),
 			...withheldWritesToolArgs(withheld),
@@ -240,8 +232,6 @@ const reduceActionResult = ({
 	if (!result?.callId) {
 		return { effects: [], progress: { ...progress, lastPreview } };
 	}
-	// A write the agent process refused (thrown tool error → "failed") or eve
-	// denied ("rejected") never ran, so it has nothing to approve.
 	const writeCompleted =
 		event.status === undefined || event.status === "completed";
 	const recordedWrites =
@@ -308,7 +298,6 @@ const reduceMessageDelta = ({
 			{
 				id: reasoningStreamId,
 				kind: "reasoning",
-				// The empty-delivery marker is not something to show as progress.
 				text: isEmptyDelivery(pendingText) ? "" : pendingText,
 			},
 		],
@@ -413,12 +402,6 @@ const reduceInputRequest = ({
 
 export const STEERED_TURN_STATUS = "Re-planning with your latest message";
 
-/** A steer cancelled the turn: eve discards its unfinished output and starts
- * a replacement turn that has every buffered message in context. Text the
- * cancelled turn streamed is not a reply, so it goes; writes it completed
- * stay recorded — eve does not roll side effects back. Clearing `turnStarted`
- * makes the `session.waiting` that follows a cancel a boundary to read past,
- * not a turn end; the replacement's own `turn.started` re-arms the reducer. */
 const reduceCancelledTurn = ({
 	progress,
 }: {

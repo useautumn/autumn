@@ -8,7 +8,6 @@ import {
 } from "../../utils/atomTokenUtils.js";
 import { cacheDeploymentAtomContext } from "./cacheDeploymentAtomContext.js";
 
-/** A row backfilled before token hashes gets its hash saved, so its Atom can call Autumn. */
 const withTokenHash = async ({
 	ctx,
 	cacheDeployment,
@@ -27,7 +26,6 @@ const withTokenHash = async ({
 	return hashed;
 };
 
-/** Reads the org's Atom from its deployer and saves it when it moved; null once a delete has finished. */
 export const refreshCacheDeployment = async ({
 	ctx,
 	cacheDeployment,

@@ -56,8 +56,6 @@ export async function waitForRuntimeQuiescence({
 	await state.stopFollowerPromise;
 }
 
-/** Settlement only: stop and quiescence finish whatever the store decided, while
- *  the verdict itself belongs to `drainRuntime`, whose caller names a successor on it. */
 export async function settleProcessor({
 	ctx,
 }: {

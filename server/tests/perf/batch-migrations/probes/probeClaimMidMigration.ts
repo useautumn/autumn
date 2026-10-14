@@ -1,13 +1,3 @@
-/**
- * Replicates the mid-migration claim state: half of bench-paid's 600k
- * customers already have `succeeded` item runs, then times the claim SELECT
- * both without a cursor (restart/crash-recovery path — anti-join must reject
- * all processed rows) and with the resume cursor (normal mid-run page).
- *
- *   bun tests/perf/batch-migrations/probeClaimMidMigration.ts
- *   bun tests/perf/batch-migrations/probeClaimMidMigration.ts --cleanup
- */
-
 import { MigrationItemRunStatus } from "@autumn/shared";
 import { sql } from "drizzle-orm";
 import { buildCustomerSelect } from "@/internal/migrations/v2/filters/customers/buildCustomerSelect.js";
@@ -19,8 +9,6 @@ import {
 
 const PROBE_MIGRATION_ID = "probe_mig_mid";
 const PAGE_SIZE = 5000;
-// bench-paid seed range is 3,200,001..3,800,000; the top half in claim order
-// (internal_id DESC) is 3,500,001..3,800,000.
 const PROCESSED_START = 3_500_001;
 const PROCESSED_END = 3_800_000;
 const RESUME_CURSOR = `${BENCH_INTERNAL_CUSTOMER_PREFIX}${PROCESSED_START}`;

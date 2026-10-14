@@ -74,7 +74,6 @@ export const sendHtmlEmail = async ({
 	});
 };
 
-/** Removes a contact from every Resend audience so no broadcast reaches them. */
 export const deleteResendContacts = async ({ email }: { email: string }) => {
 	if (!process.env.RESEND_API_KEY) return;
 

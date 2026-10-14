@@ -23,7 +23,6 @@ export const createPgResponseFaultProxy = async ({
 		sockets.add(upstream);
 		let pending = Buffer.alloc(0);
 		let blackholed = false;
-		// Explicit forwarding: Bun's socket pipe drops the client's Terminate/end.
 		downstream.on("data", (data: Buffer) => upstream.write(data));
 		downstream.on("end", () => upstream.end());
 		upstream.on("data", (data: Buffer) => {

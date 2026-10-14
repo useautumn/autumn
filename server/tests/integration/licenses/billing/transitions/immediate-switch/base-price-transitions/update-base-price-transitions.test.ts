@@ -1,4 +1,3 @@
-/** Base-price transitions keep assignment pricing and Stripe-linked cycles consistent. */
 import { expect, test } from "bun:test";
 import type {
 	ApiCustomerV3,
@@ -52,7 +51,6 @@ test.concurrent(
 			await scenario.autumnV2_3.subscriptions.previewUpdate<UpdateSubscriptionV1ParamsInput>(
 				params,
 			);
-		// One outgoing line at the old seat price, one incoming at the new.
 		await expectLicenseUpdatePreviewCorrect({
 			preview,
 			customerId,
@@ -117,7 +115,6 @@ test.concurrent(
 			await scenario.autumnV2_3.subscriptions.previewUpdate<UpdateSubscriptionV1ParamsInput>(
 				params,
 			);
-		// Outgoing: 2 paid @ $20. Incoming: 4 paid @ $40. Exact pair, exact total.
 		await expectLicenseUpdatePreviewCorrect({
 			preview,
 			customerId,
@@ -199,7 +196,6 @@ test.concurrent(
 			await scenario.autumnV2_3.subscriptions.previewUpdate<UpdateSubscriptionV1ParamsInput>(
 				params,
 			);
-		// Outgoing: 3 paid @ $20. Incoming: 2 paid @ $40. Exact pair, exact total.
 		await expectLicenseUpdatePreviewCorrect({
 			preview,
 			customerId,

@@ -7,7 +7,6 @@ import {
 } from "@autumn/shared";
 import { fullProductToApiPlanV1Sync } from "@/internal/catalogV2/actions/buildPlanChange/fullProductToApiPlanV1Sync";
 
-/** When editDiff is set, content comes from applyDiff on the current row. */
 export const planParamsFromEditDiff = ({
 	planParams,
 	editDiff,

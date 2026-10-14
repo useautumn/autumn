@@ -7,7 +7,6 @@ import { log, sh } from "./shell.ts";
 
 const PORTLESS_PROXY_PORT_FILE = join(homedir(), ".portless", "proxy.port");
 
-/** bun d owns 6379/6380/8000. wt-1 compose sits past slot 50. */
 const worktree1ComposeSlot = MAX_WORKTREE + 1;
 
 function composeSlot(worktreeNum: number): number {
@@ -18,14 +17,10 @@ export function dragonflyPortFor(worktreeNum: number): number {
 	return 6379 + (composeSlot(worktreeNum) - 1) * 100;
 }
 
-// fakecloud's default port. Base 4566 shares no residue mod 100 with any other
-// compose or app base, so it never collides (ngrok's 4040 is the nearest).
 export function fakecloudPortFor(worktreeNum: number): number {
 	return 4566 + (composeSlot(worktreeNum) - 1) * 100;
 }
 
-// DynamoDB Local's default port. Base 8000 never collides with the server's
-// 8080 base: 8000 + k*100 and 8080 + k*100 stay 80 apart for every worktree.
 export function dynamoDbPortFor(worktreeNum: number): number {
 	return 8000 + (composeSlot(worktreeNum) - 1) * 100;
 }
@@ -38,7 +33,6 @@ export function balanceWorkerPortFor(worktreeNum: number): number {
 	return 8082 + (worktreeNum - 1) * 100;
 }
 
-// Base 8086 shares its last two digits with no other app or compose base.
 export function atomPortFor(worktreeNum: number): number {
 	return 8086 + (worktreeNum - 1) * 100;
 }
@@ -47,8 +41,6 @@ export function serverPortFor(worktreeNum: number): number {
 	return 8080 + (worktreeNum - 1) * 100;
 }
 
-// ngrok's local web API (the per-worktree container maps this to its :4040).
-// dw polls it to read back the random tunnel URL ngrok assigned.
 export function ngrokApiPortFor(worktreeNum: number): number {
 	return 4040 + (worktreeNum - 1) * 100;
 }
@@ -65,7 +57,6 @@ export function leafPortFor(worktreeNum: number): number {
 	return 3099 + (worktreeNum - 1) * 100;
 }
 
-/** Host-wide Google OAuth emulator (headless / Cloud; no portless). */
 export const EMULATE_PORT = 4000;
 
 export function composeProjectName(worktreeNum: number): string {
@@ -101,7 +92,6 @@ export function currentPortlessProxyPort(): number | undefined {
 	return undefined;
 }
 
-/** App processes only. Path proxy + cloudflared are a sidecar — never recycle them here. */
 export function appPortsFor(worktreeNum: number): number[] {
 	return [
 		serverPortFor(worktreeNum),
@@ -124,10 +114,6 @@ function isNodemonPid(pid: number): boolean {
 	);
 }
 
-/**
- * Local `bun dw run` only. Killing the port holder without nodemon just
- * makes nodemon respawn another server — that is how leftover trees pile up.
- */
 export function killOwnPorts(worktreeNum: number): void {
 	if (process.env.NODE_ENV === "production") return;
 	const ports = appPortsFor(worktreeNum);

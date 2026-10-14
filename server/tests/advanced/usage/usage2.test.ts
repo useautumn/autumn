@@ -22,7 +22,6 @@ import { AutumnCli } from "../../cli/AutumnCli.js";
 
 const testCase = "usage2";
 
-// Find credit system feature from test context
 const creditsFeature = ctx.features.find((f) => f.id === TestFeature.Credits);
 
 if (!creditsFeature) {
@@ -33,7 +32,7 @@ const gpuSystemStarter = constructRawProduct({
 	id: "gpu-system-starter",
 	items: [
 		constructPriceItem({
-			price: 20, // $20/month
+			price: 20,
 			interval: BillingInterval.Month,
 		}),
 		{
@@ -92,7 +91,6 @@ describe(`${chalk.yellowBright("usage2: Testing basic usage product")}`, () => {
 		});
 	});
 
-	// Use up events
 	test("should send events and have correct balance (up to 10 DP)", async () => {
 		const randomValue = () =>
 			new Decimal(Math.random().toFixed(PRECISION))
@@ -128,7 +126,6 @@ describe(`${chalk.yellowBright("usage2: Testing basic usage product")}`, () => {
 		}));
 		await Promise.all(usages.map(sendEvent));
 
-		// Refunds are capped at the starting balance, so each one refunds at most an already-tracked usage.
 		const refunds = usages.slice(0, 4).map(({ featureId, value }) => ({
 			featureId,
 			value: -Math.min(randomValue(), value),
@@ -141,7 +138,6 @@ describe(`${chalk.yellowBright("usage2: Testing basic usage product")}`, () => {
 			true,
 		);
 
-		// Convert V2 product to V1 to get allowance
 		const productV1 = convertProductV2ToV1({
 			productV2: gpuSystemStarter,
 			orgId: ctx.org.id,
@@ -157,7 +153,6 @@ describe(`${chalk.yellowBright("usage2: Testing basic usage product")}`, () => {
 		);
 	});
 
-	// Check invoice.created event
 	test("should have correct invoice amount / updated meter balance", async () => {
 		await advanceClockForInvoice({
 			stripeCli,
@@ -168,10 +163,6 @@ describe(`${chalk.yellowBright("usage2: Testing basic usage product")}`, () => {
 		const cusRes = await AutumnCli.getCustomer(customerId);
 		const invoices = cusRes!.invoices;
 
-		// Calculate expected invoice total using getExpectedInvoiceTotal
-		// We need to convert credits used to the actual usage value
-		// Since credits are calculated from Action1/Action2 events, we need to track the actual usage
-		// For now, we'll use totalCreditsUsed as the value for the Credits feature
 		const expectedTotal = await getExpectedInvoiceTotal({
 			customerId,
 			productId: gpuSystemStarter.id,
@@ -187,7 +178,6 @@ describe(`${chalk.yellowBright("usage2: Testing basic usage product")}`, () => {
 			env: ctx.env,
 		});
 
-		// Find the invoice that matches our product
 		const invoice = invoices.find((inv: any) =>
 			inv.product_ids.includes(gpuSystemStarter.id),
 		);

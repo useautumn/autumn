@@ -4,7 +4,6 @@ import {
 	type ReadOnlyPlanItemsProps,
 } from "./ReadOnlyPlanItems";
 
-/** Read-only price + feature rows for detail sheets (subscription, license). */
 export function SubscriptionDetailItems(props: ReadOnlyPlanItemsProps) {
 	return (
 		<SheetSection>

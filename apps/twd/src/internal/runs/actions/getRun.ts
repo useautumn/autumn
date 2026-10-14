@@ -11,7 +11,6 @@ import {
 } from "../repos/runsRepo.ts";
 import { readRunProgress } from "../types/runProgress.ts";
 
-/** Summary + live (or last persisted) worker grid + every planned file + drift. */
 export const getRun = async ({
 	ctx,
 	runId,

@@ -21,7 +21,6 @@ const encryptionKey = () => {
 	return createHash("sha256").update(secret).digest();
 };
 
-/** `iv.tag.ciphertext`, base64url. */
 export const sealSecret = ({ plaintext }: { plaintext: string }) => {
 	const iv = randomBytes(12);
 	const cipher = createCipheriv("aes-256-gcm", encryptionKey(), iv);

@@ -1,13 +1,3 @@
-/**
- * Free-only schedules must transition at phase boundaries. Stripe webhooks are the
- * phase clock, so free phases need a $0 placeholder on the free plan's own product.
- *
- * Red (current):  Free A → Free B never transitions; B stays scheduled forever.
- * Green (after):  at B's start, A is gone and B is active. The placeholder uses the free
- *                 plan's own Stripe product, created once and reused, including when a
- *                 phase customizes the free plan into a paid one.
- */
-
 import { expect, test } from "bun:test";
 import type {
 	ApiCustomerV5,
@@ -102,10 +92,8 @@ test.concurrent(
 			actions: [],
 		});
 
-		// createInStripe: false mirrors live, where plans aren't pushed to Stripe on creation.
 		expect(await getProductStripeId({ ctx, productId: freeA.id })).toBeNull();
 
-		// Concurrent schedules must still converge on a single Stripe product.
 		const freeBStartsAt = addMonths(advancedTo, 1).getTime();
 		await Promise.all(
 			[customerId, otherCustomerId].map((id) =>
@@ -124,7 +112,6 @@ test.concurrent(
 			productId: freeA.id,
 		});
 		expect(freeAStripeId).not.toBeNull();
-		// The final free phase needs no placeholder, so it creates nothing.
 		expect(await getProductStripeId({ ctx, productId: freeB.id })).toBeNull();
 
 		for (const id of [customerId, otherCustomerId]) {
@@ -217,8 +204,6 @@ test.concurrent(
 				actions: [s.billing.attach({ productId: freeA.id })],
 			});
 
-		// Phase 1 leaves Free A's group alone, so Free A keeps running until Free B claims it,
-		// while the phase 1 plan ends at phase 2 because it isn't re-listed there.
 		const freeBStartsAt = addMonths(advancedTo, 1).getTime();
 		await autumnV2_3.billing.createSchedule<CreateScheduleParamsV0Input>({
 			customer_id: customerId,

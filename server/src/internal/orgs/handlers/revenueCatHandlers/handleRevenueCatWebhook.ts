@@ -18,7 +18,6 @@ import { OrgService } from "@/internal/orgs/OrgService.js";
 
 type WebhookStatus = "registered" | "not_registered" | "unknown";
 
-/** GET /revenuecat/webhook — does the current env's webhook exist on the RC project? + the URL/secret. */
 export const handleGetRevenueCatWebhook = createRoute({
 	scopes: [Scopes.Organisation.Read],
 	handler: async (c) => {
@@ -37,10 +36,6 @@ export const handleGetRevenueCatWebhook = createRoute({
 			try {
 				const rcCli = initRevenuecatCli({ projectId, accessToken });
 				const hooks = await rcCli.listWebhookIntegrations();
-				// Match a webhook pointing at THIS org's receiver whose scope covers this env
-				// (the specific env, or "both" = null). The host/env-suffix can drift (e.g. ngrok
-				// rotates), so key off the org receiver path + the RC `environment` scope, not the
-				// exact URL string.
 				const orgPath = `/webhooks/revenuecat/${org.id}`;
 				const targetEnv = env === AppEnv.Live ? "production" : "sandbox";
 				status = hooks.some(
@@ -51,7 +46,6 @@ export const handleGetRevenueCatWebhook = createRoute({
 					? "registered"
 					: "not_registered";
 			} catch {
-				// e.g. the OAuth client lacks the integrations scope → can't verify
 				status = "unknown";
 			}
 		}
@@ -60,7 +54,6 @@ export const handleGetRevenueCatWebhook = createRoute({
 	},
 });
 
-/** POST /revenuecat/webhook — register (idempotent) the current env's webhook on the RC project. */
 export const handleRegisterRevenueCatWebhook = createRoute({
 	scopes: [Scopes.Organisation.Write],
 	handler: async (c) => {
@@ -80,7 +73,6 @@ export const handleRegisterRevenueCatWebhook = createRoute({
 			});
 		}
 
-		// Ensure the env's webhook secret exists (generate + persist if missing).
 		let secret = getRevenuecatWebhookSecret({ org, env });
 		if (!secret) {
 			secret = generateRevenuecatWebhookSecret();

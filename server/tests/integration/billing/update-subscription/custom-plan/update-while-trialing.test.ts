@@ -12,14 +12,6 @@ import { WEBHOOK_SETTLE_TIMEOUT_MS } from "@tests/utils/pollableCustomerExpect";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 
-/**
- * Update While Trialing Tests
- *
- * Tests for scenarios where a customer updates their plan while in a trial period,
- * adding new item types (consumable, allocated, prepaid).
- */
-
-// 1. Pro with trial -> add consumable messages mid-trial
 test.concurrent(`${chalk.yellowBright("trial-update: add consumable messages while trialing")}`, async () => {
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
 
@@ -38,7 +30,6 @@ test.concurrent(`${chalk.yellowBright("trial-update: add consumable messages whi
 		actions: [s.attach({ productId: proTrial.id })],
 	});
 
-	// Verify initially trialing
 	const customerBefore =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	await expectProductTrialing({
@@ -46,7 +37,6 @@ test.concurrent(`${chalk.yellowBright("trial-update: add consumable messages whi
 		productId: proTrial.id,
 	});
 
-	// Add consumable messages to the plan while trialing
 	const consumableMessagesItem = items.consumableMessages({
 		includedUsage: 50,
 	});
@@ -60,10 +50,8 @@ test.concurrent(`${chalk.yellowBright("trial-update: add consumable messages whi
 
 	const preview = await autumnV1.subscriptions.previewUpdate(updateParams);
 
-	// Should be 0 during trial (consumable doesn't charge upfront)
 	expect(preview.total).toEqual(0);
 
-	// next_cycle should align with existing trial (~9 days remaining from 14-day trial after 5 days advanced)
 	expectPreviewNextCycleCorrect({
 		preview,
 		startsAt: advancedTo + ms.days(14),
@@ -74,13 +62,11 @@ test.concurrent(`${chalk.yellowBright("trial-update: add consumable messages whi
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Trial should be preserved
 	await expectProductTrialing({
 		customer,
 		productId: proTrial.id,
 	});
 
-	// Original messages feature should be unchanged
 	expectCustomerFeatureCorrect({
 		customer,
 		featureId: TestFeature.Messages,
@@ -89,10 +75,9 @@ test.concurrent(`${chalk.yellowBright("trial-update: add consumable messages whi
 		usage: 0,
 	});
 
-	// No charge during trial
 	expectCustomerInvoiceCorrect({
 		customer,
-		count: 1, // Just the $0 trial invoice
+		count: 1,
 		latestTotal: 0,
 	});
 
@@ -104,7 +89,6 @@ test.concurrent(`${chalk.yellowBright("trial-update: add consumable messages whi
 	});
 });
 
-// 2. Free -> add allocated users while trialing
 test.concurrent(`${chalk.yellowBright("trial-update: free to allocated users while trialing")}`, async () => {
 	const usersItem = items.monthlyUsers({ includedUsage: 5 });
 	const monthlyPriceItem = items.monthlyPrice();
@@ -127,7 +111,6 @@ test.concurrent(`${chalk.yellowBright("trial-update: free to allocated users whi
 		],
 	});
 
-	// Track some users before update
 	const usersUsage = 3;
 	await autumnV1.track(
 		{
@@ -138,7 +121,6 @@ test.concurrent(`${chalk.yellowBright("trial-update: free to allocated users whi
 		{ timeout: 2000 },
 	);
 
-	// Verify initially trialing
 	const customerBefore =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	await expectProductTrialing({
@@ -146,7 +128,6 @@ test.concurrent(`${chalk.yellowBright("trial-update: free to allocated users whi
 		productId: proTrial.id,
 	});
 
-	// Update to add allocated users (prorated seats) and a price
 	const allocatedUsersItem = items.allocatedUsers({ includedUsage: 0 });
 
 	const updateParams = {
@@ -157,14 +138,12 @@ test.concurrent(`${chalk.yellowBright("trial-update: free to allocated users whi
 
 	const preview = await autumnV1.subscriptions.previewUpdate(updateParams);
 
-	// Should be 0 during trial
 	expect(preview.total).toEqual(0);
 
-	// next_cycle should align with existing trial (~11 days remaining)
 	expectPreviewNextCycleCorrect({
 		preview,
 		startsAt: advancedTo + ms.days(11),
-		total: monthlyPriceItem.price! + 30, // base price + 3 allocated users * $10
+		total: monthlyPriceItem.price! + 30,
 	});
 
 	await autumnV1.subscriptions.update(updateParams, {
@@ -173,14 +152,11 @@ test.concurrent(`${chalk.yellowBright("trial-update: free to allocated users whi
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Trial should be preserved
 	await expectProductTrialing({
 		customer,
 		productId: proTrial.id,
 	});
 
-	// Users feature should reflect the allocated seats
-	// Balance = included (2) + quantity (5) - usage (3) = 4
 	expectCustomerFeatureCorrect({
 		customer,
 		featureId: TestFeature.Users,
@@ -189,7 +165,6 @@ test.concurrent(`${chalk.yellowBright("trial-update: free to allocated users whi
 		usage: usersUsage,
 	});
 
-	// $0 invoice from the trial update arrives by Stripe webhook only
 	await expectCustomerInvoiceCorrect({
 		customerId,
 		autumn: autumnV1,
@@ -206,7 +181,6 @@ test.concurrent(`${chalk.yellowBright("trial-update: free to allocated users whi
 	});
 });
 
-// 3. Pro with trial -> add prepaid messages mid-trial
 test.concurrent(`${chalk.yellowBright("trial-update: add prepaid messages while trialing")}`, async () => {
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
 
@@ -228,7 +202,6 @@ test.concurrent(`${chalk.yellowBright("trial-update: add prepaid messages while 
 		],
 	});
 
-	// Verify initially trialing
 	const customerBefore =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	await expectProductTrialing({
@@ -236,7 +209,6 @@ test.concurrent(`${chalk.yellowBright("trial-update: add prepaid messages while 
 		productId: proTrial.id,
 	});
 
-	// Add prepaid messages (purchase units upfront)
 	const prepaidMessagesItem = items.prepaidMessages({
 		includedUsage: 0,
 		billingUnits: 100,
@@ -248,33 +220,28 @@ test.concurrent(`${chalk.yellowBright("trial-update: add prepaid messages while 
 		customer_id: customerId,
 		product_id: proTrial.id,
 		items: [prepaidMessagesItem, priceItem],
-		options: [{ feature_id: TestFeature.Messages, quantity: 200 }], // Purchase 200 units (2 packs)
+		options: [{ feature_id: TestFeature.Messages, quantity: 200 }],
 	};
 
 	const preview = await autumnV1.subscriptions.previewUpdate(updateParams);
 
-	// Prepaid should charge upfront even during trial: 2 packs * $10 = $20
 	expect(preview.total).toEqual(0);
 
-	// next_cycle should align with existing trial (~7 days remaining)
 	expectPreviewNextCycleCorrect({
 		preview,
 		startsAt: advancedTo + ms.days(7),
-		total: priceItem.price! + 20, // base price + prepaid renewal
+		total: priceItem.price! + 20,
 	});
 
 	await autumnV1.subscriptions.update(updateParams, { timeout: 2000 });
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Trial should be preserved
 	await expectProductTrialing({
 		customer,
 		productId: proTrial.id,
 	});
 
-	// Messages feature should have original included usage + prepaid quantity
-	// Balance = included (100) + prepaid (200) = 300
 	expectCustomerFeatureCorrect({
 		customer,
 		featureId: TestFeature.Messages,
@@ -283,7 +250,6 @@ test.concurrent(`${chalk.yellowBright("trial-update: add prepaid messages while 
 		usage: 0,
 	});
 
-	// $0 invoice from the trial update arrives by Stripe webhook only
 	await expectCustomerInvoiceCorrect({
 		customerId,
 		autumn: autumnV1,

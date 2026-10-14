@@ -1,5 +1,4 @@
 #!/usr/bin/env bun
-/** `twd` thin client: pure fetch over src/api/contract.ts. Base URL from TWD_URL. */
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
@@ -107,7 +106,6 @@ const printRun = (run: z.infer<typeof RunSummary>) =>
 		`${run.id}  ${run.status.padEnd(12)} ${run.branch}@${run.sha.slice(0, 8)}  ${run.passed}✓ ${run.failed}✗  files=${run.fileCount ?? "?"}  workers=${run.workerCount ?? 0}/${run.workersWanted ?? "?"}${run.queuePosition === null ? "" : `  queue=#${run.queuePosition}`}  $${run.cost.usd.toFixed(2)}  by ${run.createdBy.email}`,
 	);
 
-/** Keeps colours (SGR) but drops every other escape/control sequence test output might carry. */
 const safeText = (text: string) =>
 	text
 		// biome-ignore lint/suspicious/noControlCharactersInRegex: stripping terminal escapes
@@ -133,7 +131,6 @@ const printEvent = (event: z.infer<typeof RunEvent>) => {
 		);
 };
 
-/** Streams SSE until a terminal status; returns that status. */
 const followRun = async ({ id }: { id: string }) => {
 	const run = await api({ path: `/runs/${id}`, schema: RunSummary });
 	printRun(run);

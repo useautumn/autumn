@@ -1,7 +1,6 @@
 import type { PartitionCheckpointV1 } from "./partitionCheckpoint.js";
 
 export type PartitionCheckpointSource = {
-	/** The checkpoint must contain states, receipts, and offset from one consistent database cut. */
 	latest({
 		topic,
 		partition,

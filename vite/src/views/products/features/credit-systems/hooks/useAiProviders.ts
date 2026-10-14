@@ -35,7 +35,6 @@ export function useAiProviders(form: CreditSystemFormInstance) {
 		() => groupByProvider(modelMarkups),
 		[modelMarkups],
 	);
-	// Custom has no provider markup input, so only its models make it active.
 	const activeProviderKeys = useMemo(
 		() =>
 			Array.from(
@@ -49,7 +48,6 @@ export function useAiProviders(form: CreditSystemFormInstance) {
 		[providerGroups, providerMarkups],
 	);
 
-	// custom has no models.dev entry, so it needs a stand-in provider.
 	const resolvedProviders = Object.fromEntries(
 		activeProviderKeys.map((providerKey) => [
 			providerKey,
@@ -107,7 +105,6 @@ export function useAiProviders(form: CreditSystemFormInstance) {
 			return updated;
 		});
 
-	// Removes the whole provider section: all its model overrides and its markup.
 	const removeProvider = (providerKey: string) => {
 		form.setFieldValue("model_markups", (prev) => {
 			const updated = { ...prev };

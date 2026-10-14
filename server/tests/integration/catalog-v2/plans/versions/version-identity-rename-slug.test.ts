@@ -1,13 +1,3 @@
-/**
- * catalogV2 version identity — new_version_slug rename on an existing row (unit 4).
- *
- * Contract:
- *   omit-target + new_version_slug renames the active row
- *   slug-target + new_version_slug renames that non-active row; active slug unchanged
- *   preview: version_slug = current, new_version_slug only when it changes
- *   rename to the slug this row already has is a no-op
- */
-
 import { test } from "bun:test";
 import { ResetInterval } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";

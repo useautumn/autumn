@@ -5,10 +5,6 @@ import {
 } from "../catalog/catalogPlanPreview";
 import { mintVersionSlugError } from "../utils/versionSlug";
 
-/**
- * What every row this save mints gets named. Targets reuse `base` until overridden,
- * so "same slug as the plan" needs no control of its own.
- */
 export type MintSlugSelection = {
 	base: string;
 	overrides: Record<string, string>;
@@ -40,10 +36,6 @@ export const withMintSlugOverride = ({
 	overrides: { ...selection.overrides, [planId]: slug },
 });
 
-/**
- * Preview slugs collapse a null slug to `v{n}`, so a match here can flag a name the
- * server would allow. Blocking is the kinder read: two rows showing `v2` is worse.
- */
 export const mintTargetSlugError = ({
 	slug,
 	takenSlugs,
@@ -60,10 +52,6 @@ export const mintTargetSlugError = ({
 	return `Another version of this plan already uses ${trimmed}.`;
 };
 
-/**
- * Selected minting targets whose slug the save would reject. Scoped to the selection
- * so a blocked step always renders the row that blocks it.
- */
 export const mintTargetSlugConflicts = ({
 	targets,
 	selectedKeys,
@@ -82,7 +70,6 @@ export const mintTargetSlugConflicts = ({
 			}) !== null,
 	);
 
-/** Save-only: naming targets in preview would surface collisions before they're editable. */
 export const propagateWithMintSlugs = ({
 	propagate,
 	selection,

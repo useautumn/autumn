@@ -1,12 +1,3 @@
-/**
- * catalogV2.update — base license DIFF onto a following variant.
- *
- * Contract:
- *   upsert_licenses, not a copy of the base licenses[]
- *   keep drifted customize; apply item-level DIFF
- *   omit from propagate.variants → license frozen
- */
-
 import { test } from "bun:test";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";

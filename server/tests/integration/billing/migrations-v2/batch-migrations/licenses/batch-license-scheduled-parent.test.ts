@@ -1,16 +1,3 @@
-/**
- * A customer with a scheduled parent change must still receive the migration on
- * the parent they are billing on today.
- *
- * The canonical pool LATERAL ranks candidate pools by
- * `pool_parent.status IN MIGRATABLE_STATUSES`, and that set contains Scheduled —
- * so an active parent and its scheduled successor score identically and the
- * created_at tie-break picks the successor. The operation scope then filters on
- * the wrong parent product and the assignment matches nothing.
- *
- * Red: the migration reports success having touched no assignment.
- * Green: the live parent's assignments gain the item.
- */
 import { expect, test } from "bun:test";
 import type { AttachParamsV1Input } from "@autumn/shared";
 import { customerEntitlements } from "@autumn/shared";
@@ -50,8 +37,6 @@ test(`${chalk.yellowBright("batch-license-customize: a scheduled parent change d
 	expect(liveAssignments.length).toBe(ITEM_TRANSITION_ENTITY_COUNT);
 	const assignmentIds = liveAssignments.map((assignment) => assignment.id);
 
-	// Schedules toParent for period end, leaving fromParent active and its
-	// successor Scheduled — both inside MIGRATABLE_STATUSES.
 	await autumnV2_3.billing.attach<AttachParamsV1Input>({
 		customer_id: customerId,
 		plan_id: toParent.id,

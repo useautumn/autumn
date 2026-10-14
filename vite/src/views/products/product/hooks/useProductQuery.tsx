@@ -27,7 +27,6 @@ type ProductQueryResponse = ProductDataResponse & {
 	>;
 };
 
-// Product query state...
 export const ALL_VARIANTS_VIEW = "all-variants" as const;
 
 export const useProductQueryState = () => {
@@ -83,8 +82,8 @@ export const useProductQuery = () => {
 	const { data, isLoading, refetch, error } = useQuery({
 		queryKey: buildKey(["product", productId, queryStates.version]),
 		queryFn: fetcher,
-		retry: false, // Don't retry on error (e.g., product not found)
-		enabled: !!productId, // Only run query if productId exists
+		retry: false,
+		enabled: !!productId,
 	});
 
 	const { refetch: refetchCounts } = useProductCountsQuery();
@@ -93,9 +92,6 @@ export const useProductQuery = () => {
 	const variants = (data?.variants || []) as PlanVariant[];
 	const isLoadingWithCache = cachedProduct ? false : isLoading;
 
-	/**
-	 * Invalidates all individual product queries across the app
-	 */
 	const invalidate = async () => {
 		await queryClient.invalidateQueries({ queryKey: ["product"] });
 		await Promise.all([

@@ -48,7 +48,6 @@ export const changedFixtureKeys = ({
 		const key = camelOf(attribute);
 		if (key === "id" || key === spec.idField || key === "internalId")
 			return true;
-		// Mappings ride include_mappings, never a diff.
 		if (key === "processors" && !includeMappings) return true;
 		if (!known.has(key)) return false;
 		keys.add(key);

@@ -16,7 +16,6 @@ test("a subject that vanished after ensure is hydrated again and the read answer
 			resident = true;
 		},
 		attempt: () => {
-			// The first read finds the rows gone: an evict landed between ensure and read.
 			if (ensures === 1) {
 				resident = false;
 				return null;

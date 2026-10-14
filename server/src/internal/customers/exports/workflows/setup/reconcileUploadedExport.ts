@@ -7,7 +7,6 @@ import { findPublishedExportObject } from "../../findPublishedExportObject.js";
 import { resolveCustomerExportPopulation } from "../../queries/getCustomerExportScalars.js";
 import { markCompletedWithRetry } from "../complete/markCompletedWithRetry.js";
 
-/** Recounting can drift below the file's rows if customers were deleted since. */
 const recountCustomers = async ({
 	ctx,
 	customerExport,
@@ -27,7 +26,6 @@ const recountCustomers = async ({
 	return totalCount;
 };
 
-/** A retry can reconcile an object published before its completion write. */
 export const reconcileUploadedExport = async ({
 	ctx,
 	logger,
@@ -51,7 +49,6 @@ export const reconcileUploadedExport = async ({
 	});
 	if (published.status !== "published") return false;
 
-	// Only a customers export has one row per customer, so other kinds leave the count unknown.
 	const rowCount =
 		customerExport.kind === CustomerExportKind.Customers
 			? await recountCustomers({ ctx, customerExport, payload })

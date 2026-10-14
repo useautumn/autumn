@@ -298,8 +298,6 @@ const createdLanes = {
 } as const;
 
 for (const key of BILLING_CONTROL_KEYS) {
-	// A lane that did not exist previews as added: its previous value is null,
-	// so the preview can say "Spend limits: added" instead of staying silent.
 	test(`billing_controls: creating ${key} from unset reads the lane as added`, () => {
 		const diff = diffPlanV1PreviewFields({
 			from: plan({ billing_controls: {} }),
@@ -357,11 +355,6 @@ for (const key of BILLING_CONTROL_KEYS) {
 	});
 }
 
-// Adding the first mapping to a plan that had none: the diff emits
-// `processors: null` (previous was undefined) so the key survives JSON, and the
-// picked schema has to accept that null the way free_trial already does.
-// Red (before): PlanPreviousAttributesV0Schema.parse throws invalid_type,
-// so handlePreviewUpdateCatalogV2 never returns for a first-time mapping.
 test("processors: first mapping on an unmapped plan parses", () => {
 	const diff = diffPlanV1PreviewFields({
 		from: plan({}),

@@ -17,8 +17,6 @@ import { customerProducts } from "@tests/utils/fixtures/db/customerProducts";
 import { customers } from "@tests/utils/fixtures/db/customers";
 import { entities } from "@tests/utils/fixtures/db/entities";
 
-/** How a customer and an entity read in the API, from the subject's rows alone. */
-
 const CREATED_AT = 1_700_000_000_000;
 
 const contextOf = ({ expand = [] }: { expand?: string[] } = {}) => ({

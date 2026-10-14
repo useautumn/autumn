@@ -1,26 +1,3 @@
-/**
- * TDD contract for pooled balances that expire at a CYCLE BOUNDARY rather than
- * immediately.
- *
- * Contract under test:
- *   New behaviors:
- *     - cancel_end_of_cycle leaves the pool live for the rest of the cycle, then
- *       expires it once the cancellation lands at the next invoice.
- *     - Scheduling a downgrade from a pooled plan to a non-pooled plan leaves the
- *       pool live while the downgrade is scheduled, then expires it when the
- *       schedule lands — the incoming plan grants a regular (unpooled) balance.
- *   Side effects:
- *     - pooled_balances: expires_at set only after the boundary, row retained
- *     - customer_entitlements: synthetic pooled row gets expires_at at the boundary
- *     - pooled_balance_contributions: outgoing source's row deleted at the boundary
- *
- * Pre-impl red: nothing expires the pool when the contribution is removed at a
- * cycle boundary, so expires_at stays null and the dead pool keeps reporting a
- * balance.
- * Post-impl green: the boundary transition removes the last contribution and
- * execution expires the emptied pool.
- */
-
 import { expect, test } from "bun:test";
 import {
 	type ApiCustomerV5,
@@ -53,7 +30,6 @@ const MONTHLY_POOL_LIFECYCLE = {
 	stripeSubscriptionId: "stripe_subscription",
 } as const;
 
-/** The boundary transition lands via webhook, so the expiry settles async. */
 const waitForPoolExpired = async ({
 	db,
 	customerId,
@@ -126,7 +102,6 @@ test(
 			cancel_action: "cancel_end_of_cycle",
 		});
 
-		// ── Contract: still live while merely scheduled to cancel ────────
 		const whileCanceling = await getPooledBalanceDbState({
 			db: ctx.db,
 			customerId,
@@ -142,16 +117,12 @@ test(
 			currentEpochMs: advancedTo,
 		});
 
-		// ── Contract: expires once the cancellation actually lands ───────
 		const afterCycle = await waitForPoolExpired({ db: ctx.db, customerId });
 		expect(afterCycle.contributions).toHaveLength(0);
 		expect(afterCycle.pools).toHaveLength(1);
 		expect(afterCycle.poolCustomerEntitlements[0].expires_at).not.toBeNull();
 		expect(afterCycle.pools[0].expires_at).not.toBeNull();
 
-		// Expiry is stamped with the test clock's simulated time, which is ahead of
-		// wall clock, so the read filters don't hide it yet. Immediate-expiry
-		// invisibility is covered by pooled-balance-expire-last-contribution.
 		const customer = await autumnV2_3.customers.get<ApiCustomerV5>(customerId);
 		expect(customer.balances?.[TestFeature.Messages]?.granted).toBe(0);
 		expect(customer.balances?.[TestFeature.Messages]?.remaining).toBe(0);
@@ -173,7 +144,6 @@ test(
 				},
 			],
 		});
-		// Incoming plan grants a REGULAR balance — nothing feeds the pool after.
 		const pro = products.pro({
 			id: "pooled-expire-downgrade-pro",
 			items: [items.monthlyMessages({ includedUsage: REGULAR_GRANT })],
@@ -203,7 +173,6 @@ test(
 			sources: { count: 1, balance: 0, adjustment: 0 },
 		});
 
-		// Downgrade schedules rather than applying immediately.
 		await autumnV2_3.billing.attach<AttachParamsV1Input>({
 			customer_id: customerId,
 			entity_id: entities[0].id,
@@ -211,7 +180,6 @@ test(
 			redirect_mode: "if_required",
 		});
 
-		// ── Contract: pool survives while the downgrade is only scheduled ─
 		const whileScheduled = await getPooledBalanceDbState({
 			db: ctx.db,
 			customerId,
@@ -227,7 +195,6 @@ test(
 			currentEpochMs: advancedTo,
 		});
 
-		// ── Contract: pool expires when the schedule lands ───────────────
 		const afterTransition = await waitForPoolExpired({
 			db: ctx.db,
 			customerId,
@@ -239,8 +206,6 @@ test(
 		).not.toBeNull();
 		expect(afterTransition.pools[0].expires_at).not.toBeNull();
 
-		// ── Contract: the regular balance from the incoming plan is visible ─
-		// The balance worker doesn't aggregate entity data onto the customer, so it is read off the entity.
 		const subject = isBalanceWorkerRoute()
 			? await autumnV2_3.entities.get<ApiEntityV2>(customerId, entities[0].id)
 			: await autumnV2_3.customers.get<ApiCustomerV5>(customerId);

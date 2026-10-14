@@ -1,6 +1,5 @@
 import type { ApiBalanceV1 } from "@autumn/shared";
 
-/** Granted and remaining of only the customer-level credits that reset on `interval`, the pot allocations split. */
 export const sharedIntervalBalanceTotals = ({
 	balance,
 	interval,

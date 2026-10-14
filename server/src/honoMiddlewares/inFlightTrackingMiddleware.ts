@@ -2,10 +2,6 @@ import type { Context, Next } from "hono";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import { registerInFlightRequest } from "@/utils/memory/inFlightRequests.js";
 
-/**
- * Records which requests a process is serving so the memory spike probe can
- * name them. Identity is resolved lazily because auth runs after this.
- */
 export const inFlightTrackingMiddleware = async (
 	c: Context<HonoEnv>,
 	next: Next,

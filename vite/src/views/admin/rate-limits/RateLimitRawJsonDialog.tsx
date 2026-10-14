@@ -11,7 +11,6 @@ import { useEffect, useState } from "react";
 import { TOUCH_TARGET_INPUT } from "./rateLimitTableStyles";
 import type { RateLimitOverrideLimits } from "./rateLimitTypes";
 
-/** The stored `orgs` config as JSON, for keys the table has no row for (e.g. auto_topup_attempts). */
 export const RateLimitRawJsonDialog = ({
 	open,
 	onOpenChange,

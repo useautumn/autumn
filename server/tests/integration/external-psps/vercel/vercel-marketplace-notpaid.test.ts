@@ -1,17 +1,3 @@
-/**
- * Vercel `marketplace.invoice.notpaid` webhook
- *
- * The notpaid handler must:
- *   1. Suspend the Vercel resource (`status = "suspended"`).
- *   2. Expire the Autumn cus_product and activate the default fallback.
- *   3. Cancel the Stripe subscription.
- *   4. NOT mark the invoice paid.
- *   5. NOT call paymentRecords.reportPayment / invoices.attachPayment.
- *
- * Race-safety: when the paid webhook has already flipped the invoice to
- * `paid`, the notpaid handler short-circuits without canceling the sub.
- */
-
 import { expect, test } from "bun:test";
 import { CusProductStatus, customerProducts, stripeRefToId } from "@autumn/shared";
 import chalk from "chalk";
@@ -107,10 +93,6 @@ const provisionForTest = async ({
 	};
 };
 
-// ─────────────────────────────────────────────────────────────────────────────
-// TEST 1: full cleanup — sub canceled, resource suspended, cus_product expired
-// ─────────────────────────────────────────────────────────────────────────────
-
 test.concurrent(
 	`${chalk.yellowBright(
 		"vercel-marketplace-notpaid: cancels subscription, suspends resource, expires cus_product, leaves invoice unpaid",
@@ -149,13 +131,11 @@ test.concurrent(
 		);
 		expectVercelWebhookSuccess(result);
 
-		// Stripe subscription canceled
 		const canceled = await ctx.stripeCli.subscriptions.retrieve(
 			subscription.id,
 		);
 		expect(canceled.status).toBe("canceled");
 
-		// Resource suspended
 		const resource = await VercelResourceService.getById({
 			db: ctx.db,
 			resourceId,
@@ -164,29 +144,18 @@ test.concurrent(
 		});
 		expect(resource?.status).toBe("suspended");
 
-		// Cus_product expired (default may have been activated). Query the
-		// table directly — CusProductService.list defaults to filtering
-		// expired rows out, and `inStatuses: undefined` falls back to that
-		// default via JS destructure semantics.
 		const rows = await ctx.db
 			.select()
 			.from(customerProducts)
 			.where(eq(customerProducts.id, cusProduct.id));
 		expect(rows.length).toBe(1);
 		expect(rows[0]!.status).toBe(CusProductStatus.Expired);
-		// Silence unused-var lint for the helper-context variables we still
-		// destructure for symmetry with other tests.
 		void internalCustomerId;
 
-		// Invoice was NOT marked paid
 		const invoice = await ctx.stripeCli.invoices.retrieve(externalInvoiceId);
 		expect(invoice.status).not.toBe("paid");
 	},
 );
-
-// ─────────────────────────────────────────────────────────────────────────────
-// TEST 2: race — paid won first; notpaid short-circuits without canceling
-// ─────────────────────────────────────────────────────────────────────────────
 
 test.concurrent(
 	`${chalk.yellowBright(
@@ -216,8 +185,6 @@ test.concurrent(
 			planId: proRaw.id,
 		});
 
-		// Simulate the "paid won the race" state: mark the invoice paid out of
-		// band first, then deliver notpaid.
 		await ctx.stripeCli.invoices.pay(externalInvoiceId, {
 			paid_out_of_band: true,
 		});
@@ -236,14 +203,9 @@ test.concurrent(
 			orgId: ctx.org.id,
 			env: ctx.env,
 		});
-		// Resource should not have been suspended since we short-circuited.
 		expect(resource?.status).toBe("ready");
 	},
 );
-
-// ─────────────────────────────────────────────────────────────────────────────
-// TEST 3: lazy migration — legacy charge_automatically sub flips before cancel
-// ─────────────────────────────────────────────────────────────────────────────
 
 test.concurrent(
 	`${chalk.yellowBright(
@@ -273,16 +235,10 @@ test.concurrent(
 			planId: proRaw.id,
 		});
 
-		// Force the sub back into legacy charge_automatically.
 		await ctx.stripeCli.subscriptions.update(subscription.id, {
 			collection_method: "charge_automatically",
 		});
 
-		// Snapshot the migration helper's effect by retrieving the sub BEFORE
-		// cancellation. We can't observe the migrated state after cancel
-		// because cancel always sets status=canceled, but the helper updates
-		// collection_method first and that change is visible in the canceled
-		// subscription too.
 		const result = await newClient().invoiceNotPaid(
 			buildPayload({ installationId, externalInvoiceId }),
 		);

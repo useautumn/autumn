@@ -1,15 +1,3 @@
-/**
- * Batch lane: skipped item runs carry a skip_reason.
- *
- * Contract:
- *   A claimed customer with a product inside the patch scope that already
- *   converged (the added item exists)           → skipped, no_updates_needed
- *   A claimed customer with no product in any
- *   patch scope (their plan is out of the op)   → skipped, ineligible
- *   A changed customer                          → succeeded, skip_reason null
- *   The Tinybird event carries skip_reason next to the legacy reason.
- */
-
 import { test } from "bun:test";
 import { MigrationItemRunStatus } from "@autumn/shared";
 import { items } from "@tests/utils/fixtures/items.js";

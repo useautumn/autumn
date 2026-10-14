@@ -8,12 +8,6 @@ import {
 } from "@/internal/auth/customerJwtEpoch.js";
 import RecaseError from "@/utils/errorUtils.js";
 
-/**
- * Tenant self-service: exchange a refresh token (verified + scoped by
- * customerJwtMiddleware) for a fresh access + refresh pair. Rotating with a
- * 1-generation grace window so retries / multi-node don't false-positive into
- * a reuse lockout.
- */
 export const handleRefreshKey = createRoute({
 	scopes: [Scopes.Public],
 	handler: async (c) => {
@@ -42,13 +36,12 @@ export const handleRefreshKey = createRoute({
 
 		let refreshKid: number;
 		if (presented === current) {
-			refreshKid = current + 1; // rotate
+			refreshKid = current + 1;
 			await setFamily({ ...writeKey, epoch, refreshKid });
 		} else if (presented === current - 1) {
-			refreshKid = current; // grace: re-issue at current generation
+			refreshKid = current;
 			await setFamily({ ...writeKey, epoch, refreshKid });
 		} else {
-			// Older than the grace window ⇒ reuse ⇒ revoke the whole family.
 			await bumpEpoch(writeKey);
 			throw new RecaseError({
 				message: "Refresh token reuse detected",

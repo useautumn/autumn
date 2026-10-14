@@ -2,7 +2,6 @@ import { type EntityDisplayInfo, entities } from "@autumn/shared";
 import { and, eq, inArray } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle";
 
-/** Looks up entity display fields by public id. Entity ids with no row are omitted. */
 export const getEntityNames = async ({
 	db,
 	entityIds,

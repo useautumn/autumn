@@ -31,7 +31,6 @@ export const isTaxExemptCustomer = ({
 	(billingContext.billingDetails?.tax_exempt ??
 		billingContext.stripeCustomer?.tax_exempt) === "exempt";
 
-/** The request should be taxed automatically, ignoring whether a tax location exists yet. */
 export const wantsStripeAutomaticTax = ({
 	ctx,
 	billingContext,
@@ -44,7 +43,6 @@ export const wantsStripeAutomaticTax = ({
 	return !billingContext.taxRateId;
 };
 
-/** Invoice mode has no address collection, so a missing location must block instead of silently skipping tax. */
 export const requiresTaxLocation = ({
 	ctx,
 	billingContext,
@@ -70,8 +68,6 @@ export const shouldEnableStripeAutomaticTax = ({
 }) => {
 	if (!wantsStripeAutomaticTax({ ctx, billingContext })) return false;
 
-	// Use only the already-fetched Stripe customer. If setup did not fetch one,
-	// do not fetch again on the write path.
 	return customerHasUsableTaxLocationForStripeTax(
 		billingContext.stripeCustomer,
 	);

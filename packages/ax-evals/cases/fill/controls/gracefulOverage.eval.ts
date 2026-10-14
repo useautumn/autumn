@@ -8,15 +8,6 @@ import {
 	gracefulOverageGolden,
 } from "./gracefulOverageSetup.ts";
 
-/**
- * FILL / controls, graceful overage stated: NO overage price exists anywhere
- * (running out hard-stops by default), and enterprise must NOT hard-stop —
- * a 10% grace allowance, never auto-billed. Because no priced overage item
- * enables overage, the combination is overage_allowed (enable) +
- * spend_limits (cap). Traps: adding a PRICED overage item (auto-bills,
- * violating "never bill them for it"), or a spend limit alone (caps nothing
- * — overage was never enabled).
- */
 export const gracefulOverage = defineCase({
 	name: "fill-controls-graceful-overage",
 	prompt: [

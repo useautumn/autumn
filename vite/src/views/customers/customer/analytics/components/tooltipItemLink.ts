@@ -15,7 +15,6 @@ export type TooltipItemLink = {
 	preserveParams?: boolean;
 };
 
-/** The page a tooltip row points at, or undefined when the row is not a link. */
 export const tooltipItemLink = ({
 	item,
 }: {

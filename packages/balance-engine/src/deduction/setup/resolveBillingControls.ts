@@ -9,12 +9,10 @@ import type {
 } from "../../models/subject/workerFullSubject.js";
 
 export type BillingControls = {
-	/** Absolute overage each feature may carry; percentage limits already resolved against the main plans' grant. */
 	spendLimitByFeatureId: Record<string, number>;
 	overageAllowedByFeatureId: Record<string, DbOverageAllowed>;
 };
 
-/** The same resolution the Redis path runs, over the tracked feature and every feature that funds it. */
 export const resolveBillingControls = ({
 	fullSubject,
 	featureId,

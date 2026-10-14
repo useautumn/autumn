@@ -7,9 +7,6 @@ export interface SubscriptionsSectionProps {
 	title?: string;
 }
 
-/**
- * Renders customer subscriptions with optional plan info
- */
 export function SubscriptionsSection({
 	subscriptions,
 	title = "Subscriptions",

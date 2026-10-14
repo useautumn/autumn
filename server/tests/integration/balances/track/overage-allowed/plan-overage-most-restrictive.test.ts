@@ -1,9 +1,3 @@
-/**
- * Multi-plan collapse for overage_allowed: with two attached plans, one
- * enabling overage and one disabling it, `false` wins — overage is disabled.
- * Proves pickStricterOverageAllowed regardless of attach order.
- */
-
 import { test } from "bun:test";
 import type { ApiCustomerV5 } from "@autumn/shared";
 import { expectBalanceCorrect } from "@tests/integration/utils/expectBalanceCorrect.js";
@@ -39,14 +33,11 @@ test.concurrent(
 				s.products({ list: [basePlan, addOnPlan] }),
 			],
 			actions: [
-				// Base ENABLES overage; add-on (attached last) DISABLES it.
 				s.billing.attach({ productId: basePlan.id }),
 				s.billing.attach({ productId: addOnPlan.id }),
 			],
 		});
 
-		// false wins -> overage disabled -> granted (200 across both free items)
-		// caps the usage. Track past it; usage stops at granted.
 		await autumnV2_1.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,

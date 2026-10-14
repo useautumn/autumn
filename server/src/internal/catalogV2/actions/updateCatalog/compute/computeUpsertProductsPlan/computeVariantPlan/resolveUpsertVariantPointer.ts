@@ -11,7 +11,6 @@ import {
 	shouldUnlinkDirectVariant,
 } from "./shouldUnlinkDirectVariant";
 
-/** Pointer to write on this upsert. `undefined` leaves the column untouched. */
 export const resolveUpsertVariantPointer = ({
 	intent,
 	source,

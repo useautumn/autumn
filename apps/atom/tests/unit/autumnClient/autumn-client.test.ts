@@ -1,8 +1,3 @@
-/**
- * The Atom's client for Autumn, against a fake Autumn: each call carries the token hash, a success is the parsed
- * answer, and any other reply rejects with AutumnClientError carrying Autumn's status and code.
- */
-
 import { afterAll, expect, test } from "bun:test";
 import {
 	ATOM_KEYS_PATH,

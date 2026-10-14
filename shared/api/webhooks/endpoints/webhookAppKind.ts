@@ -4,7 +4,6 @@ export type WebhookAppKind = "main" | "vercel";
 export const isVercelEvent = (event: string): boolean =>
 	event.startsWith("vercel.");
 
-/** Which app a webhook with these events lives in; mixed lists are refused upstream. */
 export const webhookAppKindOf = ({
 	events,
 }: {

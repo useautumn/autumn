@@ -19,7 +19,6 @@ export const GetRewardParamsSchema = z
 	.strict()
 	.meta({ title: "GetRewardParams" });
 
-/** Exactly one of coupon or feature_grant is returned, matching the reward's type */
 export const GetRewardResponseSchema = z
 	.object({
 		coupon: ApiCouponV0Schema.optional(),
@@ -90,7 +89,6 @@ const UpdateFeatureGrantSchema = z
 	.strict()
 	.meta({ title: "UpdateRewardFeatureGrantRequest" });
 
-/** Omitted fields keep their current value; the body must match the reward's type */
 export const UpdateRewardParamsSchema = z
 	.object({
 		reward_id: rewardId,

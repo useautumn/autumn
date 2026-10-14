@@ -19,8 +19,6 @@ const comparableState = (state: CatalogRewardState): Record<string, unknown> =>
 		? comparableCoupon(state.coupon)
 		: comparableFeatureGrant(state.featureGrant);
 
-/** The row an entry addresses: its stable id when this env holds it, else its
- * public id. A pulled config carries another env's stable ids. */
 const currentFor = ({
 	internalId,
 	rewardId,
@@ -48,8 +46,6 @@ export const computeUpsertRewardsPlan = ({
 			rewards: rewardStatesContext.rewards,
 		});
 
-		// A branch flip is a different kind of row entirely; errors refuses it,
-		// so nothing here tries to diff a coupon against a feature grant.
 		const previousAttributes =
 			current === undefined || current.kind !== branch.kind
 				? null
@@ -71,12 +67,6 @@ export const computeUpsertRewardsPlan = ({
 		} satisfies UpsertRewardPlan;
 	});
 
-/**
- * Under full state a reward the org holds but the config never states is a
- * removal asked for by omission. Rewards the config cannot express — free
- * products, invoice credits — are not in `rewards` at all, so they are never
- * proposed.
- */
 export const computeRemoveRewardsPlan = ({
 	params,
 	rewardStatesContext,

@@ -4,7 +4,6 @@ const toFirstPhaseBillingCycleAnchor = (
 	anchor: CreateScheduleParamsV0["billing_cycle_anchor"],
 ) => (anchor === "now" ? "phase_start" : anchor);
 
-/** create_schedule retains plans it doesn't list, and sets the first phase's billing on the request. */
 export const createScheduleParamsToSetPlansParams = ({
 	params,
 }: {

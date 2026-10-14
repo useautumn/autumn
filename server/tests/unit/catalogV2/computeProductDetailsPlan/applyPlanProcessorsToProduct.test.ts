@@ -1,9 +1,3 @@
-/**
- * applyPlanProcessorsToProduct — stamp plan.processors.stripe onto product.processor.
- *
- * Omit / processors.stripe omitted → keep. Object → set. Same id → unchanged.
- */
-
 import { describe, expect, test } from "bun:test";
 import type { Product } from "@autumn/shared";
 import { products } from "@tests/utils/fixtures/db/products";

@@ -10,8 +10,6 @@ import {
 	startPartition,
 } from "./partitionStartup.js";
 
-/** Settles one entry's startup, whatever the outcome, so the promise its caller
- *  already holds always resolves or rejects exactly once. */
 type StartOneEntry = (params: { entry: PartitionEntry }) => Promise<void>;
 
 /** Named indirectly because this package's TypeScript configuration does not expose
@@ -21,9 +19,6 @@ function createStartupSettlement() {
 }
 type StartupSettlement = ReturnType<typeof createStartupSettlement>;
 
-/** Works through the queue a few entries at a time. Several of these run side by
- *  side and share the cursor, so the number in flight never exceeds the number
- *  of runners regardless of how many partitions were assigned. */
 async function drainStartupQueue({
 	entries,
 	settlements,
@@ -50,8 +45,6 @@ async function drainStartupQueue({
 	}
 }
 
-/** Gives every entry the promise its caller will await, then starts them under a
- *  fixed ceiling. Exported for the test that holds the ceiling to account. */
 export async function runBoundedStartups({
 	entries,
 	width,
@@ -61,9 +54,6 @@ export async function runBoundedStartups({
 	width: number;
 	start: StartOneEntry;
 }): Promise<PromiseSettledResult<void>[]> {
-	// Every entry gets its promise before any of them begins. Retirement awaits
-	// entry.startup, so a partition retired while still queued must already have
-	// something to wait on rather than a null it would skip straight past.
 	const settlements: StartupSettlement[] = [];
 	const startups: Promise<void>[] = [];
 	for (const entry of entries) {
@@ -73,9 +63,6 @@ export async function runBoundedStartups({
 		startups.push(settlement.promise);
 	}
 
-	// Collect before starting anything. A startup that fails while the queue is
-	// still draining would otherwise sit rejected with nothing watching it, which
-	// the runtime reports as an unhandled rejection.
 	const settled = Promise.allSettled(startups);
 
 	const cursor = { next: 0 };

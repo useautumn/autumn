@@ -32,7 +32,6 @@ test("the settings type carries every flag the operation accepts, renamed and de
 			rename ?? wireKey.replace(/_([a-z])/g, (_, c: string) => c.toUpperCase());
 		expect(source).toContain(`${name}?: boolean;`);
 	}
-	// The default is documented so a reader knows what omission means.
 	expect(source).toContain("Defaults to false.");
 	expect(source).toContain("paydownOverages?: boolean;");
 	expect(source).not.toContain("persistFreeOverage");

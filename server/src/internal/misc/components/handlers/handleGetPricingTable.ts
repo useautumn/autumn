@@ -13,9 +13,6 @@ const GetPricingTableQuerySchema = z.object({
 	customer_id: z.string().optional(),
 });
 
-/**
- * Get pricing table with products for display in components
- */
 export const handleGetPricingTable = createRoute({
 	scopes: [Scopes.Public],
 	query: GetPricingTableQuerySchema,
@@ -37,12 +34,10 @@ export const handleGetPricingTable = createRoute({
 			})(),
 		]);
 
-		// Sort by add ons
 		products.sort((a, _b) => {
 			return a.is_add_on ? 1 : -1;
 		});
 
-		// 1. Sort products by price
 		products.sort((a, b) => {
 			const isUpgradeA = isProductUpgrade({
 				prices1: a.prices,

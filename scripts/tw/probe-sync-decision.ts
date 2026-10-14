@@ -1,4 +1,3 @@
-/** Debug: exec a sync-decision probe inside a kept tw worker sandbox. */
 import { ModalClient } from "modal";
 
 const sandboxId = process.argv[2];

@@ -13,11 +13,6 @@ export interface RawCusEntRow {
 	unlimited: boolean | null;
 }
 
-/**
- * Reads the raw `customer_entitlements` rows for a customer straight from
- * Postgres — deliberately bypassing the API, which masks unlimited balances
- * to zero. The unlimited-deduction feature asserts on this raw balance.
- */
 export const getRawCusEntRows = async ({
 	internalCustomerId,
 }: {
@@ -38,11 +33,6 @@ const POLL_INTERVAL_MS = 500;
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-/**
- * Track lands in Redis first and flushes to Postgres lazily, so poll the raw
- * cusEnt row until its balance reaches `expectedBalance` (or the timeout
- * elapses — the caller's assertion then reports the last value seen).
- */
 export const pollRawCusEntBalance = async ({
 	internalCustomerId,
 	featureId,
@@ -66,11 +56,6 @@ export const pollRawCusEntBalance = async ({
 	}
 };
 
-/**
- * Seeds the Semory-shaped unlimited entity slot: the entity key already
- * exists in both Postgres and the Redis subject-balance hash, with
- * `balance: null`. Lua `(balance or 0)` does not coerce cjson.null.
- */
 export const seedLegacyNullEntityBalance = async ({
 	ctx,
 	customerId,
@@ -92,7 +77,6 @@ export const seedLegacyNullEntityBalance = async ({
 		WHERE id = ${customerEntitlementId}
 	`);
 
-	// The worker reads Postgres when it next loads the customer; there is no Redis copy to seed.
 	if (isBalanceWorkerRoute()) {
 		await evictBalanceWorkerCustomer({ ctx, customerId });
 		return;

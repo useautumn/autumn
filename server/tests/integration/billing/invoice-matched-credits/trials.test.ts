@@ -1,14 +1,3 @@
-/**
- * Invoice-Matched Proration Credits — Trial Tests
- *
- * Verifies correct credit behavior when trials interact with the
- * invoice-matched credit system:
- *
- * - Upgrade during trial: no credit (no stored charge for a $0 trial)
- * - Paid product switched to trial sibling: paid product credited from stored charge
- * - End trial: no refund-direction line items emitted
- */
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3 } from "@autumn/shared";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
@@ -25,10 +14,6 @@ import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 1: Upgrade during trial — no credit (trial product has no stored charge)
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(
 	`${chalk.yellowBright("invoice-matched-credits trial 1: upgrade during trial — no credit for outgoing trial product")}`,
@@ -106,10 +91,6 @@ test.concurrent(
 	300_000,
 );
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 2: Paid product switched to trial sibling — sibling credited from stored charge
-// ═══════════════════════════════════════════════════════════════════════════════
-
 test.concurrent(
 	`${chalk.yellowBright("invoice-matched-credits trial 2: paid product switched to trial — credit from stored charge")}`,
 	async () => {
@@ -184,10 +165,6 @@ test.concurrent(
 	},
 	300_000,
 );
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 3: End trial — no refund lines emitted
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(
 	`${chalk.yellowBright("invoice-matched-credits trial 3: end trial — no refund-direction line items")}`,

@@ -27,7 +27,6 @@ export const createTestWait = ({
 		return Math.max(1, Math.ceil(deadline - performance.now()));
 	};
 
-	// Ending a wait doesn't undo an accepted remote write; callers must quarantine uncertain outcomes.
 	const run = async <T>(operation: () => Promise<T>): Promise<T> => {
 		remainingMs();
 		let onAbort: () => void = () => {};

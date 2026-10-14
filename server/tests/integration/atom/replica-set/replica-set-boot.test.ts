@@ -1,12 +1,3 @@
-/**
- * A replica of an org's Atom starting up: it serves nothing stale and runs no check twice while it catches up.
- *
- * Contract:
- *  1. a replica killed and replaced on an empty volume copies every subject from a peer before it reports ready;
- *  2. a replica added by scaling up does the same;
- *  3. a check that sends an event, arriving while a replica boots, is answered exactly once: the balance moves once per allowed answer.
- */
-
 import { expect, test } from "bun:test";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { items } from "@tests/utils/fixtures/items.js";
@@ -24,7 +15,6 @@ import {
 import { startTraffic } from "../utils/startTraffic.js";
 
 const replicaSet = useReplicaSet({ size: 2 });
-/** A replica boots in well under a second here, so a few tries make sure some checks land in that window. */
 const BOOT_ATTEMPTS = 5;
 
 const trackedCustomer = async ({ customerId }: { customerId: string }) => {
@@ -136,7 +126,6 @@ test.skipIf(!replicaSetRunsHere)(
 			assert: (check) => expect(check.balance.usage).toBe(allowed.length),
 		});
 		expect(answers.filter(({ status }) => status === 504)).toHaveLength(0);
-		// Some checks did land while it booted: another replica answered them.
 		expect(answers.some(({ proxied }) => proxied === "starting")).toBe(true);
 	},
 	180_000,

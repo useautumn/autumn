@@ -1,12 +1,3 @@
-/**
- * catalogV2.update — who counts as a draft population for propagate.
- *
- * Contract:
- *   B1 assigned seats are parent customers, never the child plan_id
- *   B2 direct child attach + parent customers → 1 draft, 2 disjoint ops
- *   B3 overlay on the edited slot → empty delta, that parent omitted
- */
-
 import { test } from "bun:test";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";

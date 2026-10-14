@@ -70,7 +70,6 @@ export const inviteRelations = relations(invitation, ({ one }) => ({
 	}),
 }));
 
-// OAuth Provider relations
 const oauthClientRelations = relations(oauthClient, ({ one, many }) => ({
 	user: one(user, {
 		fields: [oauthClient.userId],

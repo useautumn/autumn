@@ -41,17 +41,14 @@ test.concurrent(
 			],
 		});
 
-		// Deplete balance to 15 (below future threshold of 20)
 		await autumnV2_1.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
 			value: 85,
 		});
 
-		// Wait for Redis → Postgres sync so updateCustomer reads correct balance
 		await timeout(DB_SYNC_WAIT_MS);
 
-		// Verify pre-config balance
 		const before = await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
 		expectBalanceCorrect({
 			customer: before,
@@ -59,7 +56,6 @@ test.concurrent(
 			remaining: 15,
 		});
 
-		// Enable auto-topup: balance (15) is below threshold (20) → should trigger immediately
 		await autumnV2_1.customers.update(customerId, {
 			billing_controls: makeAutoTopupConfig({
 				threshold: 20,
@@ -70,7 +66,6 @@ test.concurrent(
 
 		await timeout(AUTO_TOPUP_WAIT_MS);
 
-		// Balance should be: 15 + 100 = 115
 		const after = await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
 		expectBalanceCorrect({
 			customer: after,
@@ -78,7 +73,6 @@ test.concurrent(
 			remaining: 115,
 		});
 
-		// 2 invoices: initial attach + auto top-up
 		await expectCustomerInvoiceCorrect({
 			customerId,
 			count: 2,
@@ -116,14 +110,12 @@ test.concurrent(
 			],
 		});
 
-		// Deplete ALL balance to 0
 		await autumnV2_1.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
 			value: 100,
 		});
 
-		// Wait for Redis → Postgres sync
 		await timeout(DB_SYNC_WAIT_MS);
 
 		const before = await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
@@ -133,7 +125,6 @@ test.concurrent(
 			remaining: 0,
 		});
 
-		// Enable auto-topup with zero balance (0 < 20) → should trigger immediately
 		await autumnV2_1.customers.update(customerId, {
 			billing_controls: makeAutoTopupConfig({
 				threshold: 20,
@@ -144,7 +135,6 @@ test.concurrent(
 
 		await timeout(AUTO_TOPUP_WAIT_MS);
 
-		// Balance should be: 0 + 100 = 100
 		const after = await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
 		expectBalanceCorrect({
 			customer: after,
@@ -152,7 +142,6 @@ test.concurrent(
 			remaining: 100,
 		});
 
-		// 2 invoices: initial attach + auto top-up
 		await expectCustomerInvoiceCorrect({
 			customerId,
 			count: 2,
@@ -190,7 +179,6 @@ test.concurrent(
 			],
 		});
 
-		// Deplete balance to 15 (below future threshold of 20)
 		await autumnV2_1.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
@@ -206,7 +194,6 @@ test.concurrent(
 			remaining: 15,
 		});
 
-		// Enable auto-topup via RPC route (POST /customers.update → handleUpdateCustomerV2)
 		await autumnV2_1.customers.updateRpc(customerId, {
 			billing_controls: makeAutoTopupConfig({
 				threshold: 20,
@@ -217,7 +204,6 @@ test.concurrent(
 
 		await timeout(AUTO_TOPUP_WAIT_MS);
 
-		// Balance should be: 15 + 100 = 115
 		const after = await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
 		expectBalanceCorrect({
 			customer: after,
@@ -225,7 +211,6 @@ test.concurrent(
 			remaining: 115,
 		});
 
-		// 2 invoices: initial attach + auto top-up
 		await expectCustomerInvoiceCorrect({
 			customerId,
 			count: 2,

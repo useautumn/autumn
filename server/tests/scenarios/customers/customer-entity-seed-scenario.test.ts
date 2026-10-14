@@ -5,13 +5,6 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-/**
- * Ten planless customers for manual testing, five of them carrying entities.
- *
- * Names come from a fixed list rather than a random generator so every run
- * seeds the same customers, and re-running the scenario overwrites them in
- * place instead of piling up new ones.
- */
 const SEED_CUSTOMERS = [
 	{ id: "seed-ava-mitchell", name: "Ava Mitchell", entityCount: 0 },
 	{ id: "seed-noah-bennett", name: "Noah Bennett", entityCount: 3 },

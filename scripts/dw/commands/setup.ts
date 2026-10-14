@@ -27,17 +27,12 @@ function ensureAiSubmoduleSynced(): void {
 		["submodule", "update", "--init", "--recursive"],
 		{ cwd: PROJECT_ROOT },
 	);
-	// ai/ carries agent config only, and it is a private repo a Conductor setup
-	// script cannot clone — GH_TOKEN is an agent-session credential. Warn so the
-	// database, infra and test org still provision; a session can sync it later.
 	if (submoduleCode !== 0) {
 		log(`WARNING: ai submodule unavailable (exit ${submoduleCode})`);
 		log("WARNING: run `bun ai/src/cli.ts sync` once the checkout succeeds");
 		return;
 	}
 
-	// No `git checkout main` here: it discarded the pinned commit for a local main
-	// ref nothing fetches, so a stale clone silently rewound ai by weeks.
 	log("ensuring ai deps installed (bun install)");
 	const installCode = shInherit("bun", ["install"], { cwd: aiDir });
 	if (installCode !== 0) {
@@ -45,12 +40,6 @@ function ensureAiSubmoduleSynced(): void {
 	}
 
 	log("syncing ai skills");
-	// Full sync everywhere: syncMcps now drops the cloud-root servers instead of
-	// aborting, so Cloud agents get .mcp.json too. `sync devin` skipped it and
-	// left cloud workspaces with skills but no MCP servers.
-	// Run from the autumn root so findRepoRoot sees workspaces and writes
-	// into .cursor/ at the repo root — not into ai/.cursor (the TTY-less
-	// fallback when cwd is ai/).
 	const syncArgs = ["ai/src/cli.ts", "sync"];
 	if (isCloudAgent()) syncArgs.push("--copy");
 	const syncCode = shInherit("bun", syncArgs, {

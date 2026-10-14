@@ -2,8 +2,6 @@ import type { PlanItemFilter } from "@api/products/items/filter/planItemFilter.j
 import type { EntitlementPrice } from "@utils/productUtils/entitlementPriceUtils/entitlementPriceTypes.js";
 import { pairRemovedAndAddedPlanItems } from "./pairRemovedAndAddedPlanItems.js";
 
-/** Drop a paired replace-add when its remove filter did not hit a live row.
- * Leftover adds (boolean, other cadence) always stay. */
 export const keepAddEntitlementPricesForLiveRemoves = ({
 	removeItems,
 	addEntitlementPrices,

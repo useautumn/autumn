@@ -13,10 +13,7 @@ type StandbyConnections = {
 };
 
 export type StandbyRedisRouter = {
-	/** Preferred connection first, then the alternate. Never empty. */
 	ordered: () => [Redis, Redis];
-	/** Ready and past its failure penalty. `status` alone says only that the
-	 *  socket is up, not that the router still trusts the connection. */
 	isUsable: (connection: Redis) => boolean;
 	recordOutcome: (args: { connection: Redis; error?: unknown }) => void;
 };
@@ -26,7 +23,6 @@ type ConnectionHealth = {
 	penalizedUntil: number;
 };
 
-/** Return a live object pinned to one connection rather than a command result. */
 const BATCH_METHODS = new Set(["pipeline", "multi"]);
 const PASSTHROUGH_METHODS = new Set(["duplicate", "defineCommand"]);
 
@@ -49,8 +45,6 @@ export const getStandbyRedisRouter = (
 	(Reflect.get(redis, STANDBY_ROUTER) as StandbyRedisRouter | undefined) ??
 	undefined;
 
-/** Per-connection status for logs — the router's own `status` hides which of
- *  the pair is degraded, which is the thing you need during an incident. */
 export const describeRedisConnections = (redis: Redis): string | undefined => {
 	const router = getStandbyRedisRouter(redis);
 	if (!router) return undefined;
@@ -80,8 +74,6 @@ export const createStandbyRedisRouter = ({
 		connection.status === "ready" &&
 		Date.now() >= (healthOf(connection)?.penalizedUntil ?? 0);
 
-	// Sticky to primary while it is usable: a request's writes should not
-	// straddle connections just because both are healthy.
 	const ordered = (): [Redis, Redis] =>
 		!isUsable(primary) && isUsable(standby)
 			? [standby, primary]
@@ -97,8 +89,6 @@ export const createStandbyRedisRouter = ({
 		const entry = healthOf(connection);
 		if (!entry) return;
 
-		// A deterministic reply (WRONGTYPE, OOM) is proof the socket round-tripped,
-		// so it clears the streak exactly like a success does.
 		if (error === undefined || !isConnectionLevelRedisError({ error })) {
 			entry.consecutiveFailures = 0;
 			return;
@@ -148,15 +138,11 @@ export const createStandbyRedisRouter = ({
 			observeOutcome({
 				result: exec(...args),
 				connection,
-				// A dead socket surfaces as `[Error, null]` tuples on a resolved
-				// exec, so the promise settling is not proof the connection works.
 				resolvedError: firstPipelineConnectionError,
 			});
 		return pipeline;
 	};
 
-	// `once` must stay one-shot across the pair while still firing for a
-	// standby-only event; the wrapper is tracked so `off(handler)` can find it.
 	const onceWrappers = new Map<
 		(...args: unknown[]) => void,
 		(...args: unknown[]) => void
@@ -233,8 +219,6 @@ export const createStandbyRedisRouter = ({
 				return value.bind(selected);
 			}
 
-			// A batch is pinned to `selected` for its whole life, so it cannot fail
-			// over; observing its `exec()` at least keeps the breaker informed.
 			if (typeof property === "string" && BATCH_METHODS.has(property)) {
 				return (...args: unknown[]) =>
 					observeBatch({

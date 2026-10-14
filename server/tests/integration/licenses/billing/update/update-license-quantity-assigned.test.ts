@@ -1,5 +1,3 @@
-// TDD contract (U3+U4): billing.update license_quantities converges the pool in place, seats stay anchored.
-// Every quantity change bills a refund/charge pair per seat price (previous vs new paid picture).
 import { test } from "bun:test";
 import type {
 	ApiCustomerV3,
@@ -50,8 +48,6 @@ test.concurrent(
 			await autumnV2_3.subscriptions.previewUpdate<UpdateSubscriptionV1ParamsInput>(
 				updateParams,
 			);
-		// Assigned-seat portions must not collapse into a delta-only line:
-		// the pair bills the full previous (3 paid) vs new (5 paid) picture.
 		await expectLicenseUpdatePreviewCorrect({
 			preview,
 			customerId,

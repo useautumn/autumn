@@ -199,15 +199,12 @@ const validateCatalogBeforeWrites = async ({
 	updateCatalogPlan: UpdateCatalogPlan;
 }) => {
 	await assertRevenueCatIdsUnclaimed({ ctx, updateCatalogPlan });
-	// The same set Stripe init walks, so a stated id is checked against exactly
-	// the rows that would have consumed it.
 	await validateAdoptedStripePrices({
 		ctx,
 		upsertProducts: stripeInitTargets({ updateCatalogPlan }),
 	});
 };
 
-/** Persist the plan — dumb writers only, every op was computed upstream. */
 export const executeUpdateCatalogPlan = async ({
 	ctx,
 	updateCatalogPlan,
@@ -217,8 +214,6 @@ export const executeUpdateCatalogPlan = async ({
 	ctx: AutumnContext;
 	updateCatalogPlan: UpdateCatalogPlan;
 	phases: CatalogPhases;
-	/** Rewards a program that survives this push still links — their deletes
-	 * wait until after the repoint. */
 	linkedInternalRewardIds: Set<string>;
 }): Promise<CatalogResult> => {
 	await timeCatalogPhase({
@@ -227,8 +222,6 @@ export const executeUpdateCatalogPlan = async ({
 		phase: "execute.validate",
 		run: () => validateCatalogBeforeWrites({ ctx, updateCatalogPlan }),
 	});
-	// Identity moves first: atomic per plan, so a later failure can never
-	// leave references split between old and new ids.
 	await timeCatalogPhase({
 		ctx,
 		phases,
@@ -278,8 +271,6 @@ export const executeUpdateCatalogPlan = async ({
 		phase: "execute.init_stripe",
 		run: () => initStripeResourcesForCatalog({ ctx, updateCatalogPlan }),
 	});
-	// A feature grant created in this same push names a feature this request's
-	// ctx was loaded before, so rewards see the post-insert catalog.
 	const rewardResults = await timeCatalogPhase({
 		ctx,
 		phases,

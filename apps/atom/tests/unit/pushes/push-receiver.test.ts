@@ -60,7 +60,6 @@ const subjectMessage = ({
 	attempt: 1,
 });
 
-/** Hands each batch out once, then stops the receiver on its next empty receive. */
 const fakeQueue = ({ batches }: { batches: PulledPush[][] }) => {
 	const acked: string[] = [];
 	let stop = () => {};
@@ -292,7 +291,6 @@ describe("push receiver under a hung or stopped queue", () => {
 	};
 
 	test("a hung ack holds up nothing else: every other push is applied and acked", async () => {
-		// One hung ack per receive loop: a loop that waited on its batch's acks would stop receiving for good.
 		const batches = Array.from({ length: 4 }, () => [
 			subjectMessage({}),
 			subjectMessage({}),
@@ -308,7 +306,6 @@ describe("push receiver under a hung or stopped queue", () => {
 						receives += 1;
 						const call = receives;
 						if (call <= batches.length) return batches[call - 1] ?? [];
-						// A real receive waits on the network; an instant empty one would never yield to timers.
 						await Bun.sleep(1);
 						return call === batches.length + 1 ? later : [];
 					},
@@ -398,7 +395,6 @@ describe("push receiver under a hung or stopped queue", () => {
 		await Bun.sleep(100);
 		receiver.stop();
 
-		// Each of the 4 loops may hold one batch past the cap before it waits.
 		expect(receives).toBeGreaterThanOrEqual(3);
 		expect(receives).toBeLessThanOrEqual(3 + 4);
 	});

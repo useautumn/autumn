@@ -27,10 +27,6 @@ export const FeatureStateRowSchema = z.object({
 
 export type FeatureStateRow = z.infer<typeof FeatureStateRowSchema>;
 
-/**
- * One round-trip: existence flags for every candidate + rewrite COUNTs when
- * count_rows is true (overflow = count > FEATURE_REWRITE_ROW_LIMIT).
- */
 export const buildFeatureStatesQuery = ({
 	features,
 	orgId,

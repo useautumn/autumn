@@ -1,25 +1,3 @@
-/**
- * TDD: the batch lane must respect `custom` in the plan filter.
- *
- * Contract under test:
- *   New behaviours:
- *     - `custom: false` → ONLY non-customized customer products are migrated;
- *       customized ones are left untouched.
- *     - `custom: true`  → ONLY customized customer products are migrated.
- *     - `custom` omitted → BOTH are migrated (no implicit exclusion).
- *     - the constraint is per customer PRODUCT, not per customer: a customer
- *       holding one customized and one plain product on the same plan has
- *       only the matching row mutated.
- *   Side effects:
- *     - every claimed customer that owns a matching row is marked succeeded.
- *
- * Pre-impl red: `customerProductsScopeFilter` hardcodes `is_custom = false`,
- * so `custom: true` migrates nothing and `custom: undefined` silently skips
- * customized products.
- * Post-impl green: the resolved constraint flows from the filter/op into the
- * page scope + partition.
- */
-
 import { expect, test } from "bun:test";
 import {
 	type ApiCustomerV5,
@@ -37,7 +15,6 @@ import { runChunkedMigration } from "../../utils/runChunkedMigration";
 import { expectMigrationItemRunStatus } from "../batchTestUtils";
 
 const ADDED_WORKFLOWS = 10;
-/** Customized attach gives this plan a non-catalog workflow allowance. */
 const CUSTOM_WORKFLOWS = 25;
 
 const addWorkflowsOperation = ({ planId }: { planId: string }) => ({
@@ -54,8 +31,6 @@ const addWorkflowsOperation = ({ planId }: { planId: string }) => ({
 	],
 });
 
-/** Words is absent from every fixture plan, so its presence after the run is
- * exactly "this customer product was migrated". */
 const expectWordsAdded = ({
 	customer,
 	planId,
@@ -273,8 +248,6 @@ test.concurrent(
 		const customerId = "batch-custom-entities";
 		const plan = products.base({ id: "batch-custom-entities-plan", items: [] });
 
-		// Same customer, same plan, two entity-scoped rows: one plain, one
-		// customized — the constraint must apply per row, not per customer.
 		const { autumnV2_2, ctx, entities } = await initScenario({
 			customerId,
 			setup: [

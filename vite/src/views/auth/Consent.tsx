@@ -178,7 +178,6 @@ const fetchImpersonationCliTokens =
 		return response.json();
 	};
 
-/** The CLI's loopback callback reads these instead of an authorization code. */
 const buildImpersonationRedirect = ({
 	redirectUri,
 	state,
@@ -220,7 +219,6 @@ export const Consent = () => {
 	const consentIconMaskId = useId();
 
 	const [isSubmitting, setIsSubmitting] = useState(false);
-	// Staff default to Impersonate; Regular shows the page exactly as a customer sees it.
 	const [adminMode, setAdminMode] = useState<AdminMode>("impersonate");
 	const [pendingRedirectUrl, setPendingRedirectUrl] = useState<string | null>(
 		null,
@@ -250,8 +248,6 @@ export const Consent = () => {
 		enabled: !!clientId,
 	});
 	const clientInfo = clientInfoQuery.data ?? null;
-	// Falling back to the first membership while the active org is still loading
-	// flashes the wrong name; wait for the session's answer first.
 	const currentOrg =
 		activeOrganization ?? (activeOrgPending ? undefined : orgs?.[0]);
 	const { sandboxes } = useSandboxesQuery({
@@ -275,7 +271,6 @@ export const Consent = () => {
 			: selectedEnvironment;
 	const isLoading = !!clientId && clientInfoQuery.isLoading;
 	const canAuthorize = selectedScopes.length > 0;
-	// atmn must not mint permanent api keys for an impersonated customer.
 	const isAtmnImpersonation =
 		clientInfo?.is_atmn === true && isCurrentlyImpersonating;
 	const showImpersonatePicker = isAdmin && adminMode === "impersonate";
@@ -378,8 +373,6 @@ export const Consent = () => {
 			return;
 		}
 
-		// Echo the app's originally-requested protocol scopes (openid,
-		// offline_access, …) so narrowing keeps the consent set a subset of
 		// the /authorize request — better-auth rejects anything it didn't see.
 		const consentScopes = clientInfo.is_atmn
 			? requestedScopes
@@ -491,7 +484,6 @@ export const Consent = () => {
 		<div className="w-screen min-h-screen bg-background flex items-center justify-center py-8 px-4">
 			<CustomToaster />
 			<div className="w-full max-w-[420px] space-y-6 max-h-full overflow-y-auto">
-				{/* Logo */}
 				<div className="flex justify-center">
 					<svg
 						width="48"
@@ -517,7 +509,6 @@ export const Consent = () => {
 					</svg>
 				</div>
 
-				{/* Header */}
 				<div className="text-center space-y-2">
 					<h1 className="text-lg font-semibold text-foreground">
 						{clientInfo.client_name}
@@ -539,7 +530,6 @@ export const Consent = () => {
 					<AdminModeTabs mode={adminMode} onModeChange={setAdminMode} />
 				)}
 
-				{/* Account context: organization + environment */}
 				{(currentOrg || showImpersonatePicker || !clientInfo.is_atmn) && (
 					<div className="border border-border rounded-xl bg-card overflow-hidden divide-y divide-border">
 						{currentOrg && !showImpersonatePicker && (
@@ -572,7 +562,6 @@ export const Consent = () => {
 							</div>
 						)}
 
-						{/* Staff pick any customer org here; the reload lands back on this consent URL. */}
 						{showImpersonatePicker && (
 							<div className="flex items-center justify-between gap-3 px-4 py-3">
 								<span className="text-sm text-muted-foreground shrink-0">
@@ -652,7 +641,6 @@ export const Consent = () => {
 					</div>
 				</div>
 
-				{/* Info Section */}
 				<div className="space-y-2 text-xs text-muted-foreground">
 					{clientInfo.client_uri && (
 						<div className="flex items-center gap-2">
@@ -709,7 +697,6 @@ export const Consent = () => {
 					</div>
 				</div>
 
-				{/* Action Buttons */}
 				{pendingRedirectUrl && !isSubmitting && (
 					<p className="text-xs text-muted-foreground text-center">
 						If {clientInfo.client_name} did not open, use the button below.

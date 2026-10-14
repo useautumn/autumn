@@ -22,7 +22,6 @@ describe(`${chalk.yellowBright(`${testCase}: customer loose + entity loose isola
 			withTestClock: false,
 		});
 
-		// Create entity
 		await autumnV1.entities.create(customerId, [
 			{
 				id: entityId,
@@ -31,15 +30,12 @@ describe(`${chalk.yellowBright(`${testCase}: customer loose + entity loose isola
 			},
 		]);
 
-		// Give CUSTOMER a loose balance of 200
 		await autumnV1.balances.create({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
-			// No entity_id - this is customer level
 			granted_balance: 200,
 		});
 
-		// Give ENTITY a loose balance of 300
 		await autumnV1.balances.create({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
@@ -52,13 +48,10 @@ describe(`${chalk.yellowBright(`${testCase}: customer loose + entity loose isola
 		const res = (await autumnV2.check({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
-			// No entity_id
 		})) as unknown as CheckResponseV2;
 
 		expect(res.allowed).toBe(true);
-		// The balance worker doesn't aggregate entity data onto the customer.
 		if (!isBalanceWorkerRoute()) {
-			// Customer should see merged: 200 (customer) + 300 (entity) = 500
 			expect(res.balance?.granted_balance).toBe(500);
 			expect(res.balance?.current_balance).toBe(500);
 		}
@@ -73,7 +66,6 @@ describe(`${chalk.yellowBright(`${testCase}: customer loose + entity loose isola
 
 		expect(res.allowed).toBe(true);
 		expect(res.entity_id).toBe(entityId);
-		// Entity should see combined: 200 (customer) + 300 (entity) = 500
 		expect(res.balance?.granted_balance).toBe(500);
 		expect(res.balance?.current_balance).toBe(500);
 	});
@@ -89,7 +81,6 @@ describe(`${chalk.yellowBright(`${testCase}: customer loose + entity loose isola
 		expect(breakdown).toBeDefined();
 		expect(breakdown).toHaveLength(2);
 
-		// Both should be loose (plan_id null)
 		const balances = breakdown
 			?.map((b) => b.granted_balance)
 			.sort((a, b) => a - b);
@@ -97,22 +88,16 @@ describe(`${chalk.yellowBright(`${testCase}: customer loose + entity loose isola
 	});
 
 	test("v2: merged balance is displayed, but customer allowed uses customer-owned balances", async () => {
-		// Customer display remains merged, but allowed should fail when required
-		// exceeds customer-owned balance (200) and would need entity-owned balance.
 		const customerRes = (await autumnV2.check({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
 			required_balance: 250,
 		})) as unknown as CheckResponseV2;
 
-		// Legacy/new cache paths differ on this allowed behavior for now.
-		// expect(customerRes.allowed).toBe(false);
-		// The balance worker doesn't aggregate entity data onto the customer.
 		if (!isBalanceWorkerRoute()) {
 			expect(customerRes.balance?.current_balance).toBe(500);
 		}
 
-		// Entity can still use merged (customer + entity) balance in its own scope.
 		const entityRes = (await autumnV2.check({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,

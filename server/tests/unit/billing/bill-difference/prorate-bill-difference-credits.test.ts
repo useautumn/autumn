@@ -1,8 +1,3 @@
-/**
- * `bill_difference` decides per price whether something was removed from the quantity,
- * not from the net amount, so a discounted stored credit cannot flip a removal into an addition.
- */
-
 import { describe, expect, test } from "bun:test";
 import { type BillingContext, type LineItem, ms } from "@autumn/shared";
 import { lineItems as lineItemFixtures } from "@tests/utils/fixtures/billing/lineItems";
@@ -19,7 +14,6 @@ const billingContext = {
 	currentEpochMs: HALFWAY_MS,
 } as unknown as BillingContext;
 
-/** Only set_plans re-lists move a quantity onto a new customer product. */
 const setPlansBillingContext = {
 	...billingContext,
 	immediatePhase: {},

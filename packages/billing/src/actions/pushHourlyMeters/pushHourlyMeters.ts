@@ -12,7 +12,6 @@ import { ensureOrgCustomers } from "./ensureOrgCustomers";
 import type { OrgCustomer } from "./types/orgCustomer";
 import type { PushResult } from "./types/pushResult";
 
-/** Each run covers the hour that just closed; missed hours are the backfill's job. */
 export const HOURS_PER_RUN = 1;
 
 export type HourlyMetersReport = {
@@ -22,7 +21,6 @@ export type HourlyMetersReport = {
 	paymentVolume: PaymentVolumeReport;
 };
 
-/** The hourly cron: read every meter, make sure its orgs exist, then push. */
 export const pushHourlyMeters = async ({
 	ctx,
 	nowMs,
@@ -30,7 +28,6 @@ export const pushHourlyMeters = async ({
 }: {
 	ctx: MeteringContext;
 	nowMs: number;
-	/** Override for backfills; defaults to the last closed hour. */
 	windows?: HourWindow[];
 }): Promise<HourlyMetersReport> => {
 	const apiCallCounts = await countApiCalls({ ctx, windows });

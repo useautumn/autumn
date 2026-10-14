@@ -68,15 +68,11 @@ export const handleUpgradeFlowSchedule = async ({
 
 	await logPhases({ phases: newItems.phases, db: ctx.db });
 
-	// Should release schedule...
 	const newCurPhaseIndex = getCurrentPhaseIndex({
 		schedule: { phases: newItems.phases } as any,
 		now: attachParams.now,
 	});
 
-	// If there are no subsequent phases, release schedule...
-	// Example: mergedUpgrade4.test.ts, mergedCancel2.test.ts
-	// pro, pro -> free, pro -> premium, pro (need to cancel initial schedule)
 	if (newCurPhaseIndex === newItems.phases.length - 1) {
 		logger.info(
 			`UPGRADE FLOW: no subsequent phases, releasing schedule ${schedule?.id}`,
@@ -92,8 +88,6 @@ export const handleUpgradeFlowSchedule = async ({
 			updates: { scheduled_ids: [] },
 		});
 
-		// Should we cancel the sub...?
-		// If all other products are canceled, and new product is free, cancel the sub...
 		const shouldCancelSub =
 			customer.customer_products
 				.filter(
@@ -119,11 +113,6 @@ export const handleUpgradeFlowSchedule = async ({
 
 		return;
 	}
-
-	// await logPhases({
-	//   phases: newItems.phases,
-	//   db: req.db,
-	// });
 
 	await updateCurSchedule({
 		ctx,

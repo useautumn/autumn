@@ -5,7 +5,6 @@ import type {
 } from "@autumn/shared";
 import { customerExportToSpec } from "./customerExportToSpec.js";
 
-/** Keeps the S3 key out of API responses; downloads use a presigned URL. */
 export const customerExportToResponse = ({
 	customerExport,
 	progress = null,

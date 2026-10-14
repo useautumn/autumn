@@ -22,10 +22,8 @@ export type DatabaseTimingsSummary = {
 		Record<DatabaseQueryKind, Distribution & { errors: number }>
 	>;
 	subjectLoadWait: Distribution;
-	/** Row changes the window's flushes carried, and the rows they folded into. */
 	flushRows: { changes: number; folded: number };
 	errorCodes: Record<string, number>;
-	/** Present only in a window that touched snapshots: rows written or deleted, probes answered (hits) or not (misses). */
 	subjectSnapshots?: SubjectSnapshotCounts;
 };
 
@@ -34,7 +32,6 @@ type SubjectSnapshotCounts = {
 	deleted: number;
 	hits: number;
 	misses: number;
-	/** Present only in a window where an evict rebuilt rows. */
 	refreshes?: SnapshotRefreshCounts;
 };
 

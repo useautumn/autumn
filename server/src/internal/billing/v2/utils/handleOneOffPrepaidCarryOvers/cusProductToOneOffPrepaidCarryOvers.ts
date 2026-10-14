@@ -24,11 +24,6 @@ const oneOffPrepaidCarryoverExternalId = (originatingCusEntId: string): string =
 		.digest("hex")
 		.slice(0, 10)}`;
 
-/**
- * Single source of truth for "which cusEnts on this cusProduct are paid by a
- * one-off prepaid price and are consumable" — keyed by feature_id so both the
- * "old → preserve" and "new → merge target" lookups share one classifier.
- */
 export const oneOffPrepaidCusEntsByFeatureId = (
 	cusProduct: FullCusProduct,
 ): Map<string, FullCustomerEntitlement> => {
@@ -49,8 +44,6 @@ export const oneOffPrepaidCusEntsByFeatureId = (
 		if (isBooleanCusEnt({ cusEnt })) continue;
 		if (isUnlimitedCusEnt(cusEnt)) continue;
 		if (!oneOffPrepaidEntitlementIds.has(cusEnt.entitlement.id)) continue;
-		// For now, restrict to consumable features (single-use messages, credits).
-		// Allocated features (continuous-use seats) need different semantics.
 		if (featureUtils.isAllocated(cusEnt.entitlement.feature)) continue;
 
 		const featureId = cusEnt.entitlement.feature?.id;
@@ -62,12 +55,6 @@ export const oneOffPrepaidCusEntsByFeatureId = (
 	return result;
 };
 
-/**
- * Builds a "lifetime" Entitlement + InsertCustomerEntitlement pair preserving
- * `balance` units of the originating cusEnt: `customer_product_id: null`,
- * `interval: null`, `expires_at: null`, with a deterministic carryover
- * external_id stamped on the cusEnt for audit.
- */
 const buildLifetimeCarryOver = ({
 	cusEnt,
 	balance,
@@ -102,19 +89,6 @@ const buildLifetimeCarryOver = ({
 	return { entitlement, customerEntitlement };
 };
 
-/**
- * Auto-preserve any one-off prepaid cusEnt balances on the outgoing customer
- * product as a lifetime cusEnt. Lifetime here means `interval: null`,
- * `next_reset_at: null`, `expires_at: null`, and `customer_product_id: null`
- * (loose) — the credits remain spendable regardless of which product the
- * customer is on after the transition.
- *
- * Pure transform: callers decide when the outgoing product is actually being
- * expired. Used by paths that always preserve as a separate row (attach,
- * multiAttach, createSchedule, migrations-v2, schedule-webhook). For the
- * billing.update / UpdatePlan path that can merge into the new cusProduct's
- * own slot, use `applyOneOffPrepaidCarryOvers`.
- */
 export const cusProductToOneOffPrepaidCarryOvers = ({
 	currentCustomerProduct,
 	fullCustomer,
@@ -149,12 +123,6 @@ export const cusProductToOneOffPrepaidCarryOvers = ({
 	return { entitlements, customerEntitlements };
 };
 
-/**
- * Multi-product variant: runs the single-product helper over each input and
- * concatenates the results. Use this from compute paths that may expire more
- * than one cusProduct in a single transition (e.g. createSchedule with a
- * multi-plan immediate phase).
- */
 export const cusProductsToOneOffPrepaidCarryOvers = ({
 	currentCustomerProducts,
 	fullCustomer,

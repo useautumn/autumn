@@ -8,8 +8,6 @@ export type LicensePooledBalanceMatch = {
 	isExactMatch: boolean;
 };
 
-/** Finds the live pool a license link holds for a feature. Link + feature is
- * the key; the other facets (anchor excluded) only rank candidates. */
 export const findLicensePooledBalanceId = async ({
 	db,
 	identity,

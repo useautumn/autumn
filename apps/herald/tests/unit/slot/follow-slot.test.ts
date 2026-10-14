@@ -2,7 +2,6 @@ import { expect, test } from "bun:test";
 import type { SlotGateDescription } from "@autumn/blue-green";
 import { createSlotFollower } from "../../../src/slot/followSlot.js";
 
-/** A gate whose answer the test flips by hand, notifying subscribers the way the store would. */
 const createFakeGate = ({ active }: { active: boolean }) => {
 	let description: SlotGateDescription = active
 		? { active: true, reason: "active" }
@@ -26,7 +25,6 @@ const createFakeGate = ({ active }: { active: boolean }) => {
 	};
 };
 
-/** Jobs whose start and stop the test can hold open, recording every call in order. */
 const createFakeJobs = () => {
 	const calls: string[] = [];
 	let release: (() => void) | null = null;
@@ -92,7 +90,6 @@ test("a flip during a transition waits for it, and only the last wanted state is
 	flip({ active: true });
 	await Bun.sleep(1);
 	expect(fake.calls).toEqual(["start"]);
-	// Two flips while the start is still running: back to idle, then active again.
 	flip({ active: false });
 	flip({ active: true });
 	await Bun.sleep(1);
@@ -100,7 +97,6 @@ test("a flip during a transition waits for it, and only the last wanted state is
 
 	fake.releaseHeld();
 	await Bun.sleep(5);
-	// The start finished, the wanted state is active, so nothing else runs.
 	expect(fake.calls).toEqual(["start"]);
 	expect(follower.readState()).toBe("active");
 });

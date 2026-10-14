@@ -11,17 +11,14 @@ import {
 import type Stripe from "stripe";
 import { formatAmountWithCurrencyPrecision } from "@/utils/formatUtils/formatCurrencyUtils";
 
-/** Unified type for discount options from both Autumn rewards and Stripe coupons */
 export type DiscountOption = {
 	id: string;
 	label: string;
 	sublabel?: string;
 	source: "autumn" | "stripe";
-	/** Extra strings the option can be searched by, e.g. its promo codes */
 	searchTerms: string[];
 };
 
-/** Mirrors the picker's own filter: name, id, or any of the option's codes. */
 export const discountOptionMatchesSearch = ({
 	option,
 	search,
@@ -36,7 +33,6 @@ export const discountOptionMatchesSearch = ({
 	);
 };
 
-/** Filters rewards to only show discount types (not free products) */
 export const filterDiscountRewards = (rewards: Reward[]): Reward[] => {
 	return rewards.filter(
 		(r) =>
@@ -45,7 +41,6 @@ export const filterDiscountRewards = (rewards: Reward[]): Reward[] => {
 	);
 };
 
-/** Converts an Autumn reward to a unified discount option */
 export const rewardToOption = (reward: Reward): DiscountOption => {
 	const promoCodes = (reward.promo_codes ?? [])
 		.map((promoCode) => promoCode.code)
@@ -60,7 +55,6 @@ export const rewardToOption = (reward: Reward): DiscountOption => {
 	};
 };
 
-/** Formats a Stripe coupon's discount value for display, e.g. "$1,500.00 off" */
 export const formatCouponDiscount = (coupon: Stripe.Coupon): string => {
 	if (coupon.percent_off) return `${coupon.percent_off}% off`;
 	if (!coupon.amount_off) return "";
@@ -74,7 +68,6 @@ export const formatCouponDiscount = (coupon: Stripe.Coupon): string => {
 	return `${amount} off`;
 };
 
-/** Converts a Stripe coupon to a unified discount option */
 export const stripeCouponToOption = (
 	coupon: StripeCouponWithPromoCodes,
 ): DiscountOption => ({
@@ -85,7 +78,6 @@ export const stripeCouponToOption = (
 	searchTerms: coupon.promotion_codes,
 });
 
-/** Whether a Stripe coupon can be applied when picking for `productId`. */
 export const stripeCouponAppliesToProduct = ({
 	coupon,
 	productId,
@@ -109,7 +101,6 @@ const filterStripeCouponsByProduct = ({
 		stripeCouponAppliesToProduct({ coupon, productId }),
 	);
 
-/** Builds a merged, deduplicated list of discount options from Autumn rewards and Stripe coupons */
 export const buildDiscountOptions = ({
 	rewards,
 	rewardPrograms,

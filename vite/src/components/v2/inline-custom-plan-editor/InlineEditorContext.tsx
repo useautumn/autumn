@@ -9,10 +9,6 @@ interface InlineEditorProviderProps {
 	isInvoiceEditor?: boolean;
 }
 
-/**
- * Provider for inline plan editing with local state.
- * Uses ProductProvider internally so child components can use useProduct/useSheet hooks.
- */
 export function InlineEditorProvider({
 	children,
 	initialProduct,

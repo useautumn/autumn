@@ -1,6 +1,3 @@
-// Contract: pooled grants and customer prepaid credits are free before priced overage.
-// A 100-credit absolute cap permits exactly 100 units of $0.01 overage.
-
 import { expect, test } from "bun:test";
 import {
 	type ApiCustomerV5,

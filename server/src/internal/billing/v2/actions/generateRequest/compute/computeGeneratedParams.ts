@@ -19,8 +19,6 @@ export type GenerationUsage = {
 	outputTokens: number;
 };
 
-/** The pure LLM step: prompt + context -> params validated against the tool's
- * generation schema. One repair retry; `repaired` reports whether it was needed. */
 export const computeGeneratedParams = async ({
 	tool,
 	prompt,
@@ -62,9 +60,6 @@ export const computeGeneratedParams = async ({
 				prompt,
 				repairNote,
 			}),
-			// The billing param surface far exceeds the strict output-format
-			// grammar's optional-parameter cap, so use classic tool-call JSON.
-			// Request-level cache control caches the stable system + tool prefix.
 			providerOptions: {
 				anthropic: {
 					cacheControl: { ttl: "1h", type: "ephemeral" },

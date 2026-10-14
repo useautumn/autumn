@@ -12,23 +12,6 @@ import { billingPlanToNextCyclePreview } from "./billingPlan/toNextCyclePreview/
 import { billingPlanToChanges } from "./billingPlan/toPreviewChanges/billingPlanToChanges";
 import { logBillingPreview } from "./logs/logBillingPreview";
 
-/**
- * Apply preview-layer adjustments (Stripe Tax, Stripe customer credit
- * balance) to the immediate-period total. Mirrors what Stripe will actually
- * invoice:
- *  - Tax is added on top of the discounted subtotal.
- *  - Customer credit is subtracted, capped at (subtotal + tax) so the total
- *    never goes negative. Leftover credit rolls to the next invoice in
- *    Stripe; we don't surface that here beyond the row tooltip on the FE.
- *
- * `next_cycle.total` is adjusted separately via `applyNextCycleTaxPreview`
- * (tax only — credits are consumed by the immediate invoice first).
- *
- * If `billingPlan.preview` is undefined (non-attach flows that skip the
- * enrichment step) the math is a no-op and `total` is unchanged.
- */
-// Tax-only next-cycle adjustment; skipped for non-preview flows (no
-// billingPlan.preview bag) so checkout recomputes stay unchanged.
 const applyNextCycleTaxPreview = async ({
 	ctx,
 	billingContext,
@@ -84,7 +67,6 @@ export const billingPlanToPreviewResponse = async ({
 	ctx: AutumnContext;
 	billingContext: BillingContext;
 	billingPlan: BillingPlan;
-	/** Scope next_cycle to the plans this Stripe subscription's next invoice bills. */
 	nextCycleStripeSubscriptionId?: string;
 }): Promise<BillingPreviewResponse & { credit_applied: number }> => {
 	const { fullCustomer } = billingContext;
@@ -110,7 +92,6 @@ export const billingPlanToPreviewResponse = async ({
 		billingPlan,
 	});
 
-	// Get next cycle object
 	const { nextCycle: rawNextCycle, debug: nextCycleDebug } =
 		billingPlanToNextCyclePreview({
 			ctx,
@@ -148,7 +129,6 @@ export const billingPlanToPreviewResponse = async ({
 		line_items: previewLineItems,
 		subtotal,
 		total,
-		// total is already net of credit here, so amount_due would only repeat it.
 		credit_applied: creditApplied,
 		currency,
 		resets_usage: billingContextResetsUsage(billingContext),

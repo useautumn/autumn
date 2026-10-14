@@ -67,8 +67,6 @@ test.concurrent(
 			remaining: 1,
 		});
 
-		// Grab the balance row from reconcile's mirrored state, then corrupt
-		// remaining to simulate a lost/duplicated atomic take.
 		const state = await reconcileLicenseStateForCustomer({
 			ctx,
 			idOrInternalId: customerId,
@@ -83,7 +81,6 @@ test.concurrent(
 			remaining: 2,
 		});
 
-		// Drift landed: the raw row now reads remaining 2 with one live assignment.
 		const drifted = await customerLicenseRepo.getByParentAndLicense({
 			db: ctx.db,
 			parentCustomerProductId: balance.parent_customer_product_id,
@@ -91,7 +88,6 @@ test.concurrent(
 		});
 		expect(drifted?.remaining).toBe(2);
 
-		// Next reconcile self-heals remaining back to granted - live assignments.
 		await reconcileLicenseStateForCustomer({ ctx, idOrInternalId: customerId });
 
 		const healed = await customerLicenseRepo.getByParentAndLicense({
@@ -210,7 +206,6 @@ test.concurrent(
 			entities: [{ entity_id: entities[0].id }],
 		});
 
-		// Second live parent, distinct group so A stays live (not an upgrade).
 		await autumnV2_2.billing.attach({
 			customer_id: customerId,
 			plan_id: planB.id,
@@ -235,7 +230,6 @@ test.concurrent(
 			remaining: 2,
 		});
 
-		// Determinism: a repeat reconcile lands the assignment on the same parent.
 		await reconcileLicenseStateForCustomer({ ctx, idOrInternalId: customerId });
 		const second = (await autumnV2_2.post("/licenses.list", {
 			customer_id: customerId,
@@ -268,7 +262,6 @@ test.concurrent(
 			actions: [],
 		});
 
-		// P links both X and Y; the successor Q links only X.
 		await autumnV2_2.post("/plans.update", {
 			plan_id: parentP.id,
 			licenses: [
@@ -293,7 +286,6 @@ test.concurrent(
 			});
 		}
 
-		// Upgrade P -> Q (same group) expires P and strands both assignments.
 		await autumnV2_2.billing.attach({
 			customer_id: customerId,
 			plan_id: successorQ.id,
@@ -373,7 +365,6 @@ test.concurrent(
 			});
 		}
 
-		// Drop capacity to exactly the active count; both assignments survive.
 		await autumnV2_2.billing.update({
 			customer_id: customerId,
 			plan_id: parent.id,
@@ -405,7 +396,6 @@ test.concurrent(
 		);
 		expect(openActive).toHaveLength(2);
 
-		// Raising capacity frees the difference back into availability.
 		await autumnV2_2.billing.update({
 			customer_id: customerId,
 			plan_id: parent.id,

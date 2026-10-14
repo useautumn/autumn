@@ -11,11 +11,6 @@ const priceOwnedStripePriceId = ({ price }: { price: Price }): string | null => 
 	return nullish(id) ? null : id;
 };
 
-/**
- * Stamp a requested Stripe price id onto a newly built Autumn price only when
- * it still matches that price's definition. A round-tripped id owned by a
- * drifted current row is dropped; an unowned id (sync import) is kept.
- */
 export const stripePriceIdForInitializedPrice = ({
 	requestedStripePriceId,
 	currentPrice,

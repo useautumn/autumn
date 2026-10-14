@@ -17,7 +17,6 @@ export type AtomDeletePrompt = {
 	keepLabel: string;
 };
 
-/** Cancelling a deploy and deleting a live Atom are the same delete; only what the org is told differs. */
 export const ATOM_DELETE_PROMPTS = {
 	cancel: {
 		title: "Cancel deployment?",
@@ -33,7 +32,6 @@ export const ATOM_DELETE_PROMPTS = {
 	},
 } satisfies Record<string, AtomDeletePrompt>;
 
-/** Deleting tears down the org's infra, so the stack name is typed to confirm. */
 export const AtomDeleteDialog = ({
 	prompt,
 	stackName,
@@ -41,7 +39,6 @@ export const AtomDeleteDialog = ({
 	onConfirm,
 	isDeleting,
 }: {
-	/** Null keeps the dialog closed. */
 	prompt: AtomDeletePrompt | null;
 	stackName: string;
 	onOpenChange: (open: boolean) => void;

@@ -8,21 +8,13 @@ import { useAdmin } from "@/views/admin/hooks/useAdmin";
 import { useEnvChange } from "@/views/main-sidebar/EnvDropdown";
 
 interface UseCommandBarHotkeysProps {
-	/** Whether the command bar is open */
 	isOpen: boolean;
-	/** Callback to close the command bar */
 	closeDialog: () => void;
-	/** Callback to cycle theme */
 	cycleTheme: () => void;
-	/** Callback to switch to orgs page */
 	switchToOrgsPage: () => void;
-	/** Callback to switch to impersonate page */
 	switchToImpersonatePage: () => void;
 }
 
-/**
- * Hook to manage command bar hotkeys (only active when command bar is open)
- */
 export const useCommandBarHotkeys = ({
 	isOpen,
 	closeDialog,
@@ -36,7 +28,6 @@ export const useCommandBarHotkeys = ({
 	const { data: orgs, isPending: isLoadingOrgs } = useListOrganizations();
 	const { isAdmin } = useAdmin();
 
-	// CMD+1: Go to Plans (only when command bar is open)
 	useHotkeys(
 		"meta+1",
 		() => {
@@ -46,7 +37,6 @@ export const useCommandBarHotkeys = ({
 		{ enableOnFormTags: true, preventDefault: true, enabled: isOpen },
 	);
 
-	// CMD+2: Go to Features (only when command bar is open)
 	useHotkeys(
 		"meta+2",
 		() => {
@@ -56,7 +46,6 @@ export const useCommandBarHotkeys = ({
 		{ enableOnFormTags: true, preventDefault: true, enabled: isOpen },
 	);
 
-	// CMD+3: Go to Customers (only when command bar is open)
 	useHotkeys(
 		"meta+3",
 		() => {
@@ -66,7 +55,6 @@ export const useCommandBarHotkeys = ({
 		{ enableOnFormTags: true, preventDefault: true, enabled: isOpen },
 	);
 
-	// CMD+4: Switch Environment (only when command bar is open)
 	useHotkeys(
 		"meta+4",
 		() => {
@@ -79,7 +67,6 @@ export const useCommandBarHotkeys = ({
 		{ enableOnFormTags: true, preventDefault: true, enabled: isOpen },
 	);
 
-	// CMD+5: Cycle Theme (only when command bar is open)
 	useHotkeys(
 		"meta+5",
 		() => {
@@ -88,7 +75,6 @@ export const useCommandBarHotkeys = ({
 		{ enableOnFormTags: true, preventDefault: true, enabled: isOpen },
 	);
 
-	// CMD+6: Switch Organization (only when command bar is open and user has multiple orgs)
 	useHotkeys(
 		"meta+6",
 		() => {
@@ -99,7 +85,6 @@ export const useCommandBarHotkeys = ({
 		{ enableOnFormTags: true, preventDefault: true, enabled: isOpen },
 	);
 
-	// CMD+7: Impersonate (only when command bar is open and user is admin)
 	useHotkeys(
 		"meta+7",
 		() => {
@@ -110,7 +95,6 @@ export const useCommandBarHotkeys = ({
 		{ enableOnFormTags: true, preventDefault: true, enabled: isOpen },
 	);
 
-	// CMD+I: Impersonate (alternative shortcut)
 	useHotkeys(
 		"meta+i",
 		() => {

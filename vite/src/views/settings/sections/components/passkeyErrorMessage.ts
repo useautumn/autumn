@@ -12,7 +12,6 @@ const isPasskeyPromptDismissed = ({ message }: { message: string }) => {
 	);
 };
 
-/** Returns null when the user dismissed the WebAuthn prompt, so no toast is shown. */
 export const getAddPasskeyErrorMessage = ({
 	error,
 }: {

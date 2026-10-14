@@ -1,16 +1,3 @@
-/**
- * webhooks.preview_sync is PATCH, like organization.preview_update:
- * - a stated id with no remote webhook is a `create`;
- * - a stated id whose url/events/description/disabled differ is an `update`
- *   (events compared as a set; omitted description/disabled are left alone);
- * - a remote webhook the request doesn't state is `unmanaged`, or a `delete`
- *   under skipDeletions: false;
- * - a stated webhook that already matches produces no change;
- * - a new id whose URL matches exactly one uid-less (dashboard-made) endpoint
- *   adopts it; several matches are an error, never a create; an endpoint with
- *   a uid is never adopted.
- */
-
 import { describe, expect, test } from "bun:test";
 import type { Webhook, WebhookEventType } from "@autumn/shared";
 import { computeWebhookSyncChanges } from "@/internal/webhooks/actions/sync/computeWebhookSyncChanges";

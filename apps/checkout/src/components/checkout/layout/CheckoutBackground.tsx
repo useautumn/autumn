@@ -11,10 +11,6 @@ interface CheckoutBackgroundProps {
 	contentClassName?: string;
 }
 
-/**
- * Full-screen background wrapper with subtle diagonal gradients from primary color.
- * Includes entrance animation for the content container.
- */
 export function CheckoutBackground({
 	children,
 	isSandbox,
@@ -25,7 +21,6 @@ export function CheckoutBackground({
 	const AnimatedBackground = useMemo(() => {
 		return (
 			<>
-				{/* Top-right diagonal gradient */}
 			<motion.div
 				className="fixed inset-0 pointer-events-none bg-[linear-gradient(135deg,color-mix(in_oklch,var(--primary)_8%,var(--background))_0%,transparent_50%)]"
 				aria-hidden="true"
@@ -33,7 +28,6 @@ export function CheckoutBackground({
 				animate={{ opacity: 1 }}
 				transition={{ duration: 0.6 }}
 			/>
-			{/* Bottom-left diagonal gradient (lighter) */}
 			<motion.div
 				className="fixed inset-0 pointer-events-none bg-[linear-gradient(315deg,color-mix(in_oklch,var(--primary)_6%,var(--background))_0%,transparent_45%)]"
 				aria-hidden="true"
@@ -41,7 +35,6 @@ export function CheckoutBackground({
 				animate={{ opacity: 1 }}
 				transition={{ duration: 0.6, delay: 0.1 }}
 			/>
-			{/* Animated beams */}
 			<BackgroundBeams className="fixed inset-0 pointer-events-none opacity-6" />
 			</>
 		);
@@ -51,24 +44,19 @@ export function CheckoutBackground({
 		<div className="h-screen bg-background relative overflow-hidden flex items-center justify-center p-8">
 			{AnimatedBackground}
 			
-			{/* Frosted glass content container */}
 			<motion.div
 				layout
 				className={`relative z-10 w-full max-w-xl max-h-full border border-border rounded-2xl bg-card/50 backdrop-blur-xl overflow-auto [scrollbar-width:thin] [scrollbar-color:color-mix(in_oklch,var(--foreground)_20%,transparent)_transparent] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar]:bg-transparent [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-foreground/20 [&::-webkit-scrollbar-thumb]:rounded-full ${containerClassName ?? ""}`}
 				initial={{ opacity: 0, y: 10, scale: 0.98 }}
 				animate={{ opacity: 1, y: 0, scale: 1 }}
 				transition={{
-					// Use spring for layout changes (height/width)
 					layout: SPRING_TRANSITION,
-					// Use slow transition for initial entrance
 					...SLOW_TRANSITION,
 				}}
 			>
 				
 
-				{/* Sandbox banner - outside padding, inside scrolling container */}
 				{isSandbox && <SandboxBanner />}
-				{/* Padded content wrapper */}
 				<div className={contentClassName ?? "p-6"}>
 					{children}
 				</div>

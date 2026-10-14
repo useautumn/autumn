@@ -2,10 +2,6 @@ import { stripeInvoiceIdToPaymentIntent } from "@/external/stripe/invoices/utils
 import type { StripeInvoicePaidContext } from "@/external/stripe/webhookHandlers/handleStripeInvoicePaid/setupStripeInvoicePaidContext.js";
 import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/stripeWebhookContext.js";
 
-/**
- * Sends an email receipt to the customer by setting `receipt_email` on the PaymentIntent.
- * Stripe automatically sends a receipt email when this field is populated.
- */
 export const sendEmailReceipt = async ({
 	ctx,
 	invoicePaidContext,
@@ -26,12 +22,10 @@ export const sendEmailReceipt = async ({
 
 	const stripeCustomer = await stripeCli.customers.retrieve(stripeCustomerId);
 
-	// 1. Check if customer exists and has email receipts enabled
 	if (!stripeCustomer) {
 		logger.debug("[invoice.paid] No stripeCustomer, skipping email receipt");
 		return;
 	}
-	// Check if customer is deleted
 	if (stripeCustomer.deleted) {
 		logger.debug(
 			"[invoice.paid] Stripe customer is deleted, skipping email receipt",
@@ -55,7 +49,6 @@ export const sendEmailReceipt = async ({
 		return;
 	}
 
-	// 2. Get payment intent ID from the invoice
 	const paymentIntentId = await stripeInvoiceIdToPaymentIntent({
 		stripeClient: stripeCli,
 		invoiceId: stripeInvoice.id,
@@ -69,7 +62,6 @@ export const sendEmailReceipt = async ({
 	}
 
 	try {
-		// 3. Check if receipt_email is already set
 		const paymentIntent =
 			await stripeCli.paymentIntents.retrieve(paymentIntentId);
 
@@ -80,7 +72,6 @@ export const sendEmailReceipt = async ({
 			return;
 		}
 
-		// 4. Set receipt_email to trigger Stripe's receipt email
 		await stripeCli.paymentIntents.update(paymentIntentId, {
 			receipt_email: customerEmail,
 		});

@@ -1,9 +1,3 @@
-/**
- * atmn scenarios/features — fake internalId (`fake_fake_id_123`) on a feature and a plan, push, pull → replaced by the real id
- *
- * One line of plans/atmn-v3/07_tests.md. [a, b] is a matrix looped INSIDE this file.
- */
-
 import { expect, test } from "bun:test";
 import { configBody } from "@tests/utils/atmnUtils/baseConfigs.js";
 import { initAtmnScenario } from "@tests/utils/atmnUtils/initAtmnScenario.js";

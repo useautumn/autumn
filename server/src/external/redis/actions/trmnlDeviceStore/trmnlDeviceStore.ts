@@ -2,8 +2,6 @@ import { getMiscRedis } from "@/external/redis/initRedis.js";
 import { tryRedisOp } from "@/external/redis/utils/runRedisOp.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 
-/** Pinned: Redis is the only store for the device↔org mapping.
- *  1h TTL preserved from the legacy CacheManager default. */
 const TRMNL_TTL_SECONDS = 3600;
 
 export type TrmnlDeviceConfig = { orgId: string; hideRevenue: boolean };

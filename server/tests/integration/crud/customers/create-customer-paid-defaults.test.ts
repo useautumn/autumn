@@ -16,10 +16,6 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { CusService } from "@/internal/customers/CusService";
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// DEFAULT TRIAL PRODUCT TESTS
-// ═══════════════════════════════════════════════════════════════════════════════
-
 test.concurrent(`${chalk.yellowBright("paid-defaults: trial product")}`, async () => {
 	const customerId = "paid-defaults-trial";
 
@@ -134,14 +130,12 @@ test.concurrent(`${chalk.yellowBright("paid-defaults: same group priority (trial
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
 	const messagesItemHigh = items.monthlyMessages({ includedUsage: 1000 });
 
-	// Free default in same group
 	const freeDefault = products.base({
 		id: "free",
 		items: [messagesItem],
 		isDefault: true,
 	});
 
-	// Trial default in same group - should take priority
 	const trialDefault = products.defaultTrial({
 		id: "trial-pro",
 		items: [messagesItemHigh],
@@ -159,14 +153,12 @@ test.concurrent(`${chalk.yellowBright("paid-defaults: same group priority (trial
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Trial product should be attached (higher priority than free)
 	await expectProductTrialing({
 		customer,
 		productId: trialDefault.id,
 		trialEndsAt: calculateTrialEndMs({ trialDays: 7 }),
 	});
 
-	// Balance should reflect trial product's higher allowance
 	expectCustomerFeatureCorrect({
 		customer,
 		featureId: TestFeature.Messages,

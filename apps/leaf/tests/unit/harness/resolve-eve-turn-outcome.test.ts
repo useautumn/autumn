@@ -3,8 +3,6 @@ import type { AutumnLogger } from "@autumn/logging";
 import { AppEnv, type CatalogPlanPreview } from "@autumn/shared";
 import { mockModuleWithRestore } from "../utils/mockModuleWithRestore.js";
 
-// Stubbed first and left stubbed: `env` parses leaf's whole schema at import and
-// `db` opens a Postgres pool, so neither has a real namespace to restore.
 mock.module("../../../src/lib/env.js", () => ({ env: {} }));
 mock.module("../../../src/lib/db.js", () => ({ db: {} }));
 

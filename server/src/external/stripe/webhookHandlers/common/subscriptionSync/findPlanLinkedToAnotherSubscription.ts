@@ -5,8 +5,6 @@ import {
 } from "@autumn/shared";
 import type { SubscriptionMatch } from "@/internal/billing/v2/actions/sync/detect/types.js";
 
-/** The active main plan this sync would replace, when it belongs to a
- * different Stripe subscription — a second sub must not take it over. */
 export const findPlanLinkedToAnotherSubscription = ({
 	match,
 	fullCustomer,
@@ -16,7 +14,6 @@ export const findPlanLinkedToAnotherSubscription = ({
 	fullCustomer: FullCustomer;
 	stripeSubscriptionId: string;
 }): FullCusProduct | undefined => {
-	// Future-phase plans expire the current plan at sync time too.
 	const matchedPlans = match.phaseMatches.flatMap((phase) => phase.plans);
 
 	for (const { product } of matchedPlans) {

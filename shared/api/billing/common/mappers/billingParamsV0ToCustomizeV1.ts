@@ -13,7 +13,6 @@ type BillingParamsV0Customization = {
 	upsert_licenses?: CustomizePlanLicense[];
 };
 
-/** Maps the V0 top-level customization fields (items, free_trial, billing_controls, license patch) into a CustomizePlanV1. */
 export const billingParamsV0ToCustomizeV1 = ({
 	ctx,
 	billingParams,

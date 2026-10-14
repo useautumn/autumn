@@ -57,7 +57,6 @@ export function createRuntimeDirectory(): PartitionDirectory {
 	return { admit, withdraw, findRuntime, findOwnedRuntime };
 }
 
-/** An activating runtime is admitted already: it was named owner, and a command waits at its gate. */
 function isServing({ status }: { status: PartitionRuntimeStatus }): boolean {
 	return status === "ready" || status === "activating";
 }

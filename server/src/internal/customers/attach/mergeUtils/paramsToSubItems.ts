@@ -40,17 +40,11 @@ export const getCusProductsToRemove = ({
 			? products
 			: [cusProductToProduct({ cusProduct: attachParams.cusProduct! })];
 
-	// console.log(
-	// 	"Getting customer products to remove, internal entity ID:",
-	// 	attachParams.internalEntityId,
-	// );
-
 	const isUpdate =
 		attachParams.branch === AttachBranch.NewVersion ||
 		attachParams.branch === AttachBranch.SameCustomEnts;
 
 	for (const product of prods) {
-		// Get cur main and cur same
 		const { curMainProduct, curSameProduct, curScheduledProduct } =
 			getExistingCusProducts({
 				product,
@@ -58,7 +52,6 @@ export const getCusProductsToRemove = ({
 				internalEntityId: attachParams.internalEntityId,
 			});
 
-		// 1. If curScheduledProduct and curMainProduct, want to remove scheduled, main should already be removed...
 		if (
 			includeScheduled &&
 			!product.is_add_on &&
@@ -66,15 +59,9 @@ export const getCusProductsToRemove = ({
 			curMainProduct
 		) {
 			cusProductsToRemove.push(curScheduledProduct);
-		}
-
-		// 2. If cancelling, and same product exists (add on / main), add it.
-		else if (curSameProduct && (attachParams.fromCancel || isUpdate)) {
+		} else if (curSameProduct && (attachParams.fromCancel || isUpdate)) {
 			cusProductsToRemove.push(curSameProduct);
-		}
-
-		// 3. If product is a main product, add curMain
-		else if (!product.is_add_on && curMainProduct) {
+		} else if (!product.is_add_on && curMainProduct) {
 			cusProductsToRemove.push(curMainProduct);
 		}
 	}
@@ -91,7 +78,6 @@ export const getCusProductsToRemove = ({
 		cusProductsToRemove.push(...canceledCusProducts);
 	}
 
-	// Get unique cus products, by cusProduct.id
 	const uniqueCusProductsToRemove = cusProductsToRemove.filter(
 		(cusProduct, index, array) =>
 			array.findIndex((cp) => cp.id === cusProduct.id) === index,
@@ -125,7 +111,6 @@ export const paramsToSubItems = async ({
 				config,
 			});
 
-	// 1. Remove items related to cur cus product...
 	const cusProductsToRemove = notNullish(removeCusProducts)
 		? removeCusProducts!
 		: getCusProductsToRemove({ attachParams });
@@ -141,7 +126,6 @@ export const paramsToSubItems = async ({
 
 	const allCusProducts = attachParams.customer.customer_products;
 
-	// 3. Remove items related to cus products to remove
 	const printRemoveLogs = false;
 	for (const cusProduct of cusProductsToRemove) {
 		const prices = cusProductToPrices({ cusProduct });
@@ -173,7 +157,6 @@ export const paramsToSubItems = async ({
 
 			if (!existingSubItem) continue;
 
-			// 1. If arrear price
 			if (isConsumablePrice(price)) {
 				if (
 					allCusProducts.some((cp) => {
@@ -208,7 +191,6 @@ export const paramsToSubItems = async ({
 				continue;
 			}
 
-			// Helper function to handle quantity updates and deletion
 			const updateItemQuantity = (item: any, newQuantity: number) => {
 				if (newQuantity <= 0) {
 					item.deleted = true;
@@ -218,14 +200,12 @@ export const paramsToSubItems = async ({
 				}
 			};
 
-			// 1. Get quantity to remove
 			const quantityToRemove = getQuantityToRemove({
 				cusProduct,
 				price,
 				entities: attachParams.customer.entities,
 			});
 
-			// 2. Check if item already exists in newSubItems
 			const existingItemIndex = newSubItems.findIndex(
 				(si) => si.id === existingSubItem.id,
 			);

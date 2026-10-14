@@ -4,7 +4,6 @@ import type { Feature } from "../../../models/featureModels/featureModels.js";
 import { isAnyCreditSystem } from "../classifyFeature/isAnyCreditSystem.js";
 import { creditSystemContainsFeature } from "../creditSystemUtils.js";
 
-/** Adds the metered features each selected credit system draws from. */
 export const addCreditSystemMeteredFeatureIds = ({
 	features,
 	featureIds,

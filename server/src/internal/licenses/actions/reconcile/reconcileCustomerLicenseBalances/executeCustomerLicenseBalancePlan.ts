@@ -3,8 +3,6 @@ import { updateCustomerLicenseBalances } from "../../../repos/customerLicenseRep
 import type { ReconcileContext } from "../types.js";
 import type { CustomerLicenseBalancePlan } from "./computeCustomerLicenseBalancePlan.js";
 
-/** Applies all balance updates in one batched UPDATE, then patches the
- * context rows so the returned state mirrors the database. */
 export const executeCustomerLicenseBalancePlan = async ({
 	ctx,
 	context,

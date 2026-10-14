@@ -5,7 +5,6 @@ import { ShadowAtomOrgsSection } from "./ShadowAtomOrgsSection";
 
 const SHADOW_ATOM_TABS = ["atom", "orgs"] as const;
 
-/** Staff-only: our one shadow Atom as an org's Atom page shows it, and the orgs on it. */
 export const ShadowAtomTab = () => {
 	const [tab, setTab] = useQueryState(
 		"tab",

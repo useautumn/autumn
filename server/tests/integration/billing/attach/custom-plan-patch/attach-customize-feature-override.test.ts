@@ -1,12 +1,3 @@
-/**
- * Contract: feature_override on customize items survives the attach customize
- * paths (patch add_items and PUT items) and updateSubscription — the custom
- * entitlement row carries the override, and subsequent tracks deduct at the
- * override rate instead of the catalog rate.
- *
- * Catalog rate for Action1 in Credits is 0.2 credits/unit (v2Features.ts).
- */
-
 import { expect, test } from "bun:test";
 import type {
 	ApiCustomerV3,
@@ -69,7 +60,6 @@ test.concurrent(
 			enable_plan_immediately: true,
 		});
 
-		// 40 units * 0.5 (override) = 20 credits — not 40 * 0.2 = 8 (catalog).
 		await autumnV1.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Action1,
@@ -158,7 +148,6 @@ test.concurrent(
 			actions: [s.billing.attach({ productId: pro.id })],
 		});
 
-		// 1. Update the subscription to carry an override (5 credits/unit).
 		await autumnV2_3.subscriptions.update<UpdateSubscriptionV1ParamsInput>({
 			customer_id: customerId,
 			plan_id: pro.id,
@@ -175,7 +164,6 @@ test.concurrent(
 			},
 		});
 
-		// 4 units * 5 = 20 credits — not 4 * 0.2 = 0.8 (catalog).
 		await autumnV1.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Action1,
@@ -187,7 +175,6 @@ test.concurrent(
 			usage: 20,
 		});
 
-		// 2. Update again without the override — back to the catalog rate.
 		await autumnV2_3.subscriptions.update<UpdateSubscriptionV1ParamsInput>({
 			customer_id: customerId,
 			plan_id: pro.id,
@@ -197,7 +184,6 @@ test.concurrent(
 			},
 		});
 
-		// Update carries existing usage by default, so assert the delta: 10 units * 0.2 (catalog) = 2 credits.
 		const customerBeforeTrack =
 			await autumnV1.customers.get<ApiCustomerV3>(customerId);
 		await autumnV1.track({

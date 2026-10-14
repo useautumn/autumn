@@ -4,7 +4,6 @@ import { join } from "node:path";
 const SPEAKEASY_SDK_DIRS = ["packages/sdk", "others/python-sdk"];
 const API_REFERENCE_DIR = "apps/docs/mintlify/api-reference/";
 
-// Mirrors pruneApiReferencePages in packages/openapi: how the docs generator recognises its own pages.
 const GENERATED_PAGE_MARKER =
 	/import \{ DynamicParamField \} from "\/snippets\/dynamic-param-field\.jsx";|^openapi: ["']?api\/openapi\.yml webhook |<Note>Schema documentation for this event type is coming soon\.<\/Note>/m;
 
@@ -13,7 +12,6 @@ const readCommitted = ({ root, path }: { root: string; path: string }) => {
 	return result.exitCode === 0 ? result.stdout.toString() : undefined;
 };
 
-// Working tree first, then HEAD, so deleted files keep their last known content.
 const readEither = ({ root, path }: { root: string; path: string }) => {
 	const fullPath = join(root, path);
 	if (existsSync(fullPath)) return readFileSync(fullPath, "utf8");

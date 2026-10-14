@@ -21,8 +21,6 @@ export function parseCustomerFilter({
 		);
 	if (filter.plan !== undefined)
 		children.push(parsePlanNav({ raw: filter.plan, ctx }));
-	// `item` is sugar for `plan: { item: ... }` — wraps the item nav in a
-	// plan nav so the IR stays canonical (no separate scope/registry entry).
 	if (filter.item !== undefined)
 		children.push({
 			kind: "nav",

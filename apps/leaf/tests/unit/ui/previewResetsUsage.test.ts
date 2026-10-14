@@ -1,10 +1,3 @@
-/**
- * Ayush asked for "usage will reset" on the approval card. The request params
- * cannot answer that — `recalculate_balances` is scoped to quantity updates —
- * so the card reads the preview's `resets_usage`, which the server derives from
- * the same predicate the executor uses to clear balances.
- */
-
 import { describe, expect, test } from "bun:test";
 import { buildBillingPreviewDisplay } from "@autumn/render";
 

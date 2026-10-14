@@ -3,7 +3,6 @@ import { validateCreditRate } from "../validateCreditRate.js";
 import { validateCreditMultipliers } from "./validateCreditMultipliers.js";
 import { validateDimensionsAreSeparable } from "./validateDimensionsAreSeparable.js";
 
-/** Rules that only exist once a rate-card row has dimensions or multipliers. */
 export const validateCreditDimensionRules = ({
 	schemaItem,
 	invalidCreditSystem,

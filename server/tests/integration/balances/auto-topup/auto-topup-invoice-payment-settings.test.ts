@@ -1,9 +1,3 @@
-/**
- * An invoice-mode auto top-up invoice uses the org's invoice settings:
- * `allowed_payment_methods` as its payment method types and
- * `default_invoice_net_terms_days` as its net terms.
- */
-
 import { expect, test } from "bun:test";
 import { ms, msToSeconds } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
@@ -62,7 +56,6 @@ test.concurrent(
 			{ timeout: 3000 },
 		);
 
-		// Enabling the config while already below threshold dispatches the top-up.
 		await autumnV2_1.customers.update(customerId, {
 			billing_controls: makeAutoTopupConfig({
 				threshold: 20,

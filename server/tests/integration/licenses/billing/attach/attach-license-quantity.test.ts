@@ -1,21 +1,3 @@
-/**
- * TDD test for paid license quantities on attach.
- *
- * Contract under test:
- *   New types/fields:
- *     - AttachParamsV1.license_quantities: [{ license_plan_id, quantity }]
- *     - ApiCustomerV5.licenses: [{ license_plan_id, parent_plan_id,
- *       license_plan_name, granted, usage, remaining, paid_quantity }]
- *   New behaviors:
- *     - attach pro (free) with dev-seat license (20/mo, included 2) and
- *       quantity 5 -> paid_quantity 3, granted 5 (included 2 + paid 3)
- *     - invoice charges 3 paid seats -> one invoice, total 60
- *     - stripe subscription carries the dev-seat price at quantity 3
- *       (unused prepaid buffer) — asserted via /billing.verify, whose
- *       expected state is built from the license billing price rows
- *   Side effects:
- *     - customer_licenses pool counters surface through customer.licenses
- */
 import { test } from "bun:test";
 import type {
 	ApiCustomerV3,
@@ -83,7 +65,6 @@ test.concurrent(
 
 		await autumnV2_3.billing.attach<AttachParamsV1Input>(attachParams);
 
-		// ── Customer object: licenses field ──────────────────────────────
 		const customer = await autumnV2_3.customers.get<ApiCustomerV5>(customerId);
 		expectCustomerLicenses({
 			customer,
@@ -100,7 +81,6 @@ test.concurrent(
 			],
 		});
 
-		// ── Invoice: 3 paid seats × $20/mo ────────────────────────────────
 		const customerV3 = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 		await expectCustomerInvoiceCorrect({
 			customer: customerV3,
@@ -108,7 +88,6 @@ test.concurrent(
 			latestTotal: PAID_SEATS * DEV_SEAT_PRICE,
 		});
 
-		// ── Stripe sub: production verify agrees (license-aware) ─────────
 		await expectStripeSubscriptionCorrect({ ctx, customerId });
 	},
 );
@@ -151,8 +130,6 @@ test.concurrent(
 			],
 		});
 
-		// 4 of 5 seats assigned: 2 ride free (included), 2 bill as seat
-		// snapshots, buffer shrinks to 1 — billed units stay at paid_quantity.
 		await autumnV2_3.post("/licenses.attach", {
 			customer_id: customerId,
 			plan_id: devSeat.id,
@@ -163,7 +140,6 @@ test.concurrent(
 			})),
 		});
 
-		// ── Customer object: counters after assignment ───────────────────
 		const customer = await autumnV2_3.customers.get<ApiCustomerV5>(customerId);
 		expectCustomerLicenses({
 			customer,
@@ -179,7 +155,6 @@ test.concurrent(
 			],
 		});
 
-		// ── Stripe: verify agrees (seat snapshots + buffer merge) ────────
 		await expectStripeSubscriptionCorrect({ ctx, customerId });
 	},
 );

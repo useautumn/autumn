@@ -29,7 +29,6 @@ const getRewards = async ({
 		return undefined;
 	}
 
-	// 1. Get reward by id or promo code
 	const rewards = await rewardRepo.getByIdOrCode({
 		db: ctx.db,
 		codes: rewardArray,
@@ -55,13 +54,6 @@ const getRewards = async ({
 	}
 
 	return rewards;
-
-	// const stripeCoupon = await stripeCli.coupons.retrieve(reward.id);
-
-	// return {
-	//   reward,
-	//   stripeCoupon,
-	// };
 };
 
 export const processAttachBody = async ({
@@ -71,7 +63,6 @@ export const processAttachBody = async ({
 	ctx: AutumnContext;
 	attachBody: AttachBodyV0;
 }) => {
-	// 1. Get customer and products
 	const { org, env, logger } = ctx;
 
 	const stripeCli = createStripeCli({ org, env });
@@ -120,7 +111,6 @@ export const processAttachBody = async ({
 		customPrices,
 		customEnts,
 
-		// Additional data
 		stripeVars: {
 			stripeCli,
 			stripeCus,

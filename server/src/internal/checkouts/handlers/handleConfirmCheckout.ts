@@ -10,15 +10,6 @@ import { buildBillingLockKey } from "@/internal/billing/v2/utils/billingLock/bui
 import { checkoutActions } from "../actions";
 import { augmentCheckoutParams } from "../utils/augmentCheckoutParams";
 
-/**
- * POST /checkouts/:checkout_id/confirm
- *
- * Executes the billing plan stored in the checkout.
- * - Re-runs attach with the stored params (not preview mode)
- * - Deletes checkout from cache (one-time use)
- * - Updates DB status to completed (audit)
- * - Returns success with billing result
- */
 export const handleConfirmCheckout = createRoute({
 	scopes: [Scopes.Public],
 	resource: AffectedResource.Attach,

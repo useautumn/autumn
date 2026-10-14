@@ -1,7 +1,6 @@
 import type { ApiFeatureV1 } from "@api/features/apiFeatureV1.js";
 import { features } from "./features.js";
 
-/** Build keyed feature records for org-like setups with many boolean flags. */
 export const featureList = {
 	boolean: <const FeatureId extends string>({
 		featureIds,

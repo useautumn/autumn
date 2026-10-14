@@ -10,7 +10,6 @@ import {
 	rewardToEntitlementRows,
 } from "./rewardEntitlementRows.js";
 
-/** Insert one or many rewards */
 export const insertReward = async ({
 	db,
 	data,

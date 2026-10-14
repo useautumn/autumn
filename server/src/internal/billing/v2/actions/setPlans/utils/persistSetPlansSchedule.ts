@@ -14,10 +14,6 @@ import { mergePreservedSchedulePhases } from "../subscriptionScope/mergePreserve
 import type { SchedulePhasePlan } from "../types/schedulePhasePlan";
 import { carrySavedProrationBehaviors } from "./carrySavedProrationBehaviors";
 
-/**
- * A customer holds one schedule, so a new one replaces everything queued. Scope
- * lives on the plans inside the phases, never on the schedule itself.
- */
 export const getExistingScheduleState = async ({
 	ctx,
 	internalCustomerId,
@@ -61,7 +57,6 @@ export const getExistingScheduleState = async ({
 	};
 };
 
-/** Sync still owns its scheduled rows here; set_plans deletes them in its billing plan. */
 const deleteDroppedScheduledCustomerProducts = async ({
 	ctx,
 	existingCustomerProductIds,
@@ -86,7 +81,6 @@ const deleteDroppedScheduledCustomerProducts = async ({
 		);
 };
 
-/** Replace the customer's schedule rows with these phases, keeping out-of-scope plans' phases. */
 export const persistSetPlansSchedule = async ({
 	ctx,
 	customerId,

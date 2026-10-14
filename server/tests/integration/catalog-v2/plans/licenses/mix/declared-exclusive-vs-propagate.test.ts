@@ -1,7 +1,3 @@
-/**
- * catalogV2.update — licenses[] PUT is exclusive. Listing the parent in
- * propagate.license_parents must not leak follow or resurrect a cleared link.
- */
 import { test } from "bun:test";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";

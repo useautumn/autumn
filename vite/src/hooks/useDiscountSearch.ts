@@ -21,7 +21,6 @@ const mergeLookedUpCoupon = ({
 	const existing = options.find((option) => option.id === lookedUp.id);
 	if (!existing) return [...options, lookedUp];
 
-	// Already listed, just not under this code: make the code searchable on it.
 	return options.map((option) =>
 		option.id === lookedUp.id
 			? {
@@ -34,18 +33,11 @@ const mergeLookedUpCoupon = ({
 	);
 };
 
-/**
- * Search for a discount picker. Filtering is local over the loaded options;
- * when the typed text matches nothing there, it is treated as a promotion
- * code and looked up in Stripe directly, and any coupon found is added to
- * the options so it can be picked.
- */
 export const useDiscountSearch = ({
 	options,
 	isCouponAllowed = () => true,
 }: {
 	options: DiscountOption[];
-	/** Same rule the caller used to build `options`, so a lookup can't bypass it. */
 	isCouponAllowed?: (coupon: StripeCouponWithPromoCodes) => boolean;
 }) => {
 	const [search, setSearch] = useState("");
@@ -66,8 +58,6 @@ export const useDiscountSearch = ({
 		enabled: !hasLocalMatch,
 	});
 
-	// Keep every coupon found, so a picked one stays resolvable after the
-	// search text moves on.
 	useEffect(() => {
 		if (!coupon) return;
 		setLookedUpCoupons((previous) =>
@@ -77,8 +67,6 @@ export const useDiscountSearch = ({
 		);
 	}, [coupon]);
 
-	// The allowance is applied on every render rather than when a coupon is
-	// stored, so a change in scope (e.g. the product) re-filters what's kept.
 	const mergedOptions = lookedUpCoupons
 		.filter(isCouponAllowed)
 		.reduce(

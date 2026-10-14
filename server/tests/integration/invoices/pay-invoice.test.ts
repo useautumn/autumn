@@ -1,16 +1,3 @@
-/**
- * invoices.pay: mark a Stripe invoice paid out of band (no charge attempted).
- *
- * Contract:
- *   POST /invoices.pay { invoice_id } -> { invoice: ApiListInvoiceV1 }
- *   open invoice   → Stripe status paid, amount_paid = total, our row updated inline
- *   already paid   → 200, unchanged
- *   draft invoice  → 400 (Stripe cannot pay an unfinalized invoice)
- *   non-Stripe     → 400
- *
- * Red (current):  route missing (404).
- */
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3, ApiListInvoiceV1 } from "@autumn/shared";
 import { ErrCode, ProcessorType } from "@autumn/shared";
@@ -87,7 +74,6 @@ test.concurrent(
 			invoice.stripe_id,
 		);
 		expect(stripeInvoice.status).toBe("paid");
-		// No charge was made: paid with no payments recorded
 		expect(stripeInvoice.amount_paid).toBe(stripeInvoice.total);
 		expect(stripeInvoice.payments?.data ?? []).toEqual([]);
 
@@ -98,7 +84,6 @@ test.concurrent(
 			latestStatus: "paid",
 		});
 
-		// Idempotent: paying again returns the same paid invoice
 		const again = (await autumnV2_3.post("/invoices.pay", {
 			invoice_id: invoiceId,
 		})) as PayResponse;

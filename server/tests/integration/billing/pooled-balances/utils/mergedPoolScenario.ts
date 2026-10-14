@@ -18,8 +18,6 @@ type RolloverConfig = Parameters<
 	typeof items.monthlyMessagesWithRollover
 >[0]["rolloverConfig"];
 
-/** Mirrors scripts-v2 combine-pools/select-candidate-pool: subscription-linked
- * pools win outright, then most rollovers, then largest grant, then oldest. */
 const selectSurvivingPool = <
 	T extends {
 		stripe_subscription_id: string | null;
@@ -47,14 +45,6 @@ const selectSurvivingPool = <
 	)[0];
 };
 
-/**
- * Folds every other pool into one surviving pool, exactly as the production
- * combine-pools script does: contributions and rollovers repoint, balance and
- * granted fold in, the losing pool graph is deleted.
- *
- * The point of doing it faithfully is the side effect — a contribution now sits
- * on a pool whose identity belongs to a different subscription.
- */
 export const mergePooledBalances = async ({
 	ctx,
 	customerId,
@@ -147,19 +137,8 @@ export const mergePooledBalances = async ({
 	return { survivorPoolId: survivor.id, balanceDelta, grantedDelta };
 };
 
-/**
- * Recreates the production shape behind the pooled-balance incidents:
- *   entity 1 attaches the plan, entity 2 attaches the SAME plan on its own
- *   Stripe subscription (so each gets its own pool), then the pools are merged.
- *
- * Afterwards entity 2's contribution sits on a pool identified by entity 1's
- * subscription — the "wrong identity" state. Transitioning entity 2 is what
- * exercises the removal/insert path.
- */
 export type MergedPoolVariant =
-	/** Two paid plans, each on its own Stripe subscription. */
 	| "two-subscriptions"
-	/** A free plan (lazy reset, no subscription) alongside a paid one. */
 	| "free-and-subscription";
 
 export const setupMergedPoolScenario = async ({
@@ -191,8 +170,6 @@ export const setupMergedPoolScenario = async ({
 		id: `${customerId}-paid`,
 		items: [pooledItem],
 	});
-	// Free => reset_mode lazy with no subscription id, so it mints a pool whose
-	// identity differs from the paid plan's on more than just the subscription.
 	const freePlan = products.base({
 		id: `${customerId}-free`,
 		items: [pooledItem],
@@ -214,8 +191,6 @@ export const setupMergedPoolScenario = async ({
 			s.billing.attach({
 				productId: secondPlan.id,
 				entityIndex: 1,
-				// A second paid attach needs its own subscription to mint its own
-				// pool; the free plan already has a distinct identity.
 				...(isFreeVariant ? {} : { newBillingSubscription: true }),
 			}),
 			...(usage
@@ -232,7 +207,6 @@ export const setupMergedPoolScenario = async ({
 		],
 	});
 
-	// ── Precondition: two pools, one per subscription.
 	const beforeMerge = await getPooledBalanceDbState({
 		db: scenario.ctx.db,
 		customerId,
@@ -251,8 +225,6 @@ export const setupMergedPoolScenario = async ({
 	expect(afterMerge.pools).toHaveLength(1);
 	const mergedPool = afterMerge.pools[0];
 
-	// The plan whose contribution was repointed now sits on a pool identified by
-	// the other subscription — this is the customer product to transition.
 	const pooledCustomerProducts = afterMerge.sourceCustomerProducts.filter(
 		(customerProduct) =>
 			customerProduct.product_id === paidPlan.id ||

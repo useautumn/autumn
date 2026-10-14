@@ -7,7 +7,6 @@ import {
 } from "@/internal/catalogV2/actions/updateCatalog/types/upsertProductPlan";
 import { findFullProductByInternalId } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/findFullProductByInternalId";
 
-/** The product that currently holds `active`, as an upsert that sets `active: false`. */
 export const computeDemotedProductPlan = ({
 	ctx,
 	targetProductPlan,

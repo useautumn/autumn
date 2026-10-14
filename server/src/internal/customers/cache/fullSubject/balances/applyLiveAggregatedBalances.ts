@@ -4,10 +4,6 @@ import type {
 } from "@autumn/shared";
 import type { FeatureBalanceResult } from "./getCachedFeatureBalances.js";
 
-/**
- * Replaces stale aggregated_customer_entitlements on the normalized subject
- * with live values read from the shared balance hash `_aggregated` fields.
- */
 export const applyLiveAggregatedBalances = ({
 	normalized,
 	featureBalances,

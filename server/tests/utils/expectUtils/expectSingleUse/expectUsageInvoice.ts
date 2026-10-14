@@ -1,11 +1,3 @@
-// curUnix = await advanceTestClock({
-//   stripeCli,
-//   testClockId,
-//   advanceTo: addHours(
-//     addMonths(curUnix, 1),
-//     hoursToFinalizeInvoice,
-//   ).getTime(),
-
 import type { AppEnv, Organization, ProductV2 } from "@autumn/shared";
 import { expect } from "chai";
 import type Stripe from "stripe";
@@ -14,7 +6,6 @@ import type { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { expectFeaturesCorrect } from "../expectFeaturesCorrect.js";
 import { getExpectedInvoiceTotal } from "../expectInvoiceUtils.js";
 
-// });
 export const expectInvoiceAfterUsage = async ({
 	autumn,
 	customerId,

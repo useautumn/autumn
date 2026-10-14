@@ -43,7 +43,6 @@ export const configPathFromFlag = ({
 	if (isFile) return resolved;
 	if (existsSync(resolved) && !statSync(resolved).isDirectory())
 		return resolved;
-	// A folder means whichever config it holds; a new folder gets the .ts one.
 	return configIn({ dir: resolved }) ?? join(resolved, "autumn.config.ts");
 };
 

@@ -32,7 +32,6 @@ export const checkCreditBalance = async ({
 	totalCreditsUsed: number;
 	originalAllowance: number;
 }) => {
-	// Check entitled
 	const { allowed, balanceObj }: any = await AutumnCli.entitled(
 		customerId,
 		featureId,
@@ -111,17 +110,12 @@ export const checkUsageInvoiceAmount = async ({
 		console.log(
 			`Expected to find invoice with total of ${totalPrice} and product id ${product.id}`,
 		);
-		// console.log("Instead got: ", invoices[invoiceIndex || 0].total);
 		console.log("Last 3 invoices", invoices.slice(-3));
 		console.group();
 		throw error;
 	}
 };
 
-/**
- * V2 wrapper for checkUsageInvoiceAmount that accepts ProductV2
- * Converts ProductV2 → ProductV1 internally, then calls original helper
- */
 export const checkUsageInvoiceAmountV2 = async ({
 	invoices,
 	totalUsage,
@@ -137,14 +131,12 @@ export const checkUsageInvoiceAmountV2 = async ({
 	invoiceIndex?: number;
 	includeBase?: boolean;
 }) => {
-	// Convert V2 → V1 using production utilities
 	const productV1 = convertProductV2ToV1({
 		productV2: product,
 		orgId: ctx.org.id,
 		features: ctx.features,
 	});
 
-	// Call original helper with converted product
 	return checkUsageInvoiceAmount({
 		invoices,
 		totalUsage,

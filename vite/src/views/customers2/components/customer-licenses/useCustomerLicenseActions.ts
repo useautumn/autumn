@@ -2,10 +2,6 @@ import type { ApiCustomerLicenseV0 } from "@autumn/shared";
 import { useLicenseBalancesQuery } from "@/hooks/queries/useLicenseBalancesQuery";
 import { runWithErrorToast } from "@/views/products/plan/components/plan-licenses/runWithErrorToast";
 
-/**
- * Wraps the pools query with entity-scoped assign/unassign handlers, toasting
- * backend errors.
- */
 export const useCustomerLicenseActions = ({
 	customerId,
 	entityId,
@@ -13,7 +9,6 @@ export const useCustomerLicenseActions = ({
 }: {
 	customerId?: string;
 	entityId?: string;
-	/** Defaults to fetching only when an entity is selected. */
 	enabled?: boolean;
 }) => {
 	const { pools, assignments, isLoading, assign, unassign } =

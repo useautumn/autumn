@@ -15,11 +15,6 @@ import { notNullish } from "@server/utils/genUtils";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { cusEntToInlineStripePrice } from "./cusEntToInlineStripePrice";
 
-/**
- * Converts a prepaid (usage-in-advance) price to a StripeItemSpec.
- * For entity-scoped products, uses an inline price so each entity gets unique tiers.
- * For non-entity-scoped, uses the stored stripe_prepaid_price_v2_id.
- */
 export const prepaidToStripeItemSpec = ({
 	ctx,
 	cusEntWithCusProduct,

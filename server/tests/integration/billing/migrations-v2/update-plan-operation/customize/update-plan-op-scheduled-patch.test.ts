@@ -1,15 +1,3 @@
-/**
- * TDD coverage for scheduled `update_plan` patch/customize migrations.
- *
- * Contract under test:
- *   New behaviors:
- *     - Scheduled customer products are selected by update_plan customize operations.
- *     - Customize patches mutate the scheduled row in place instead of delete+insert.
- *   Side effects:
- *     - No expired scheduled rows are created.
- *     - Coupled migrations keep Stripe subscription schedules consistent with Autumn.
- */
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3 } from "@autumn/shared";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";

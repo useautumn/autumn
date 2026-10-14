@@ -123,10 +123,9 @@ describe(`${chalk.yellowBright(`${testCase}: Testing migration for prepaid seats
 
 		await timeout(20000);
 
-		// 1. Should have 3 seats
 		const customer = await autumn.customers.get(customerId);
 		const seats = customer.features[TestFeature.Users].balance;
-		expect(seats).toBe(-3); // 3 in overage
+		expect(seats).toBe(-3);
 
 		const messages = customer.features[TestFeature.Messages].balance;
 		expect(messages).toBe(400);

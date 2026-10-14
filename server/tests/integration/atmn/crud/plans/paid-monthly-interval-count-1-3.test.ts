@@ -1,9 +1,3 @@
-/**
- * atmn crud/plans — paid [monthly] [interval_count 1, 3]
- *
- * One line of plans/atmn-v3/07_tests.md. [a, b] is a matrix looped INSIDE this file.
- */
-
 import { expect, test } from "bun:test";
 import { configBody } from "@tests/utils/atmnUtils/baseConfigs.js";
 import { expectRoundTrip } from "@tests/utils/atmnUtils/expectRoundTrip.js";
@@ -13,7 +7,6 @@ import { uniqueTestId } from "../../../catalog-v2/utils/uniqueTestId.js";
 
 const INTERVAL_COUNTS = [1, 3] as const;
 
-// client.get() returns fixture-shaped (camelCase) objects, not the wire.
 type CatalogPlanRow = {
 	id: string;
 	price?: { intervalCount?: number } | null;
@@ -57,8 +50,6 @@ for (const intervalCount of INTERVAL_COUNTS) {
 
 				const fixtureText = freshFiles.get("plans.ts") ?? "";
 
-				// 1 is the implicit default: the server omits interval_count when it's
-				// 1, so it never round-trips as an explicit value, only n > 1 does.
 				if (intervalCount === 1) {
 					expect(price?.interval_count).toBeUndefined();
 					expect(catalogPrice?.intervalCount).toBeUndefined();

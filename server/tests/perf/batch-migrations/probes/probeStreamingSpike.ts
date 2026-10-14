@@ -1,12 +1,3 @@
-/**
- * U2 spike: validates the streaming candidate-source shape against the new
- * idx_customer_products_product_customer_c index BEFORE changing the
- * compiler. Read-only. For each scenario: EXPLAIN, timed runs, and row
- * parity (same ids, same order) vs today's buildCustomerSelect.
- *
- *   bun tests/perf/batch-migrations/probes/probeStreamingSpike.ts
- */
-
 import { MigrationItemRunStatus } from "@autumn/shared";
 import { type SQL, sql } from "drizzle-orm";
 import type { CustomerCheckpointExclusion } from "@/internal/migrations/v2/filters/customers/buildCustomerSelect.js";
@@ -67,9 +58,6 @@ const main = async () => {
 		const cursorFilter = cursor
 			? sql`AND cp.internal_customer_id COLLATE "C" < ${cursor}`
 			: sql``;
-		// The checkpoint anti-join keys on the customer internal id, which cp
-		// already has — so it can live INSIDE the inner query, making the inner
-		// LIMIT legal and the ordered index walk reachable.
 		const checkpointFilter = checkpointMigrationId
 			? sql`AND NOT EXISTS (
 					SELECT 1 FROM migration_item_runs mir
@@ -81,8 +69,6 @@ const main = async () => {
 				)`
 			: sql``;
 
-		// One ordered index walk per plan product (equality pin → the walk is
-		// order-guaranteed), each limited; merging k×page rows is trivial.
 		return sql`
 			SELECT c.internal_id, c.id, c.name, c.email
 			FROM (

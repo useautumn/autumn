@@ -1,8 +1,3 @@
-/**
- * A one-off purchase produces a standalone Stripe invoice (no subscription).
- * It must still fire `invoice.finalized` so integrations can settle it.
- */
-
 import { afterAll, beforeAll, expect, test } from "bun:test";
 import type { ApiListInvoiceV1 } from "@autumn/shared";
 import { WebhookEventType } from "@autumn/shared";

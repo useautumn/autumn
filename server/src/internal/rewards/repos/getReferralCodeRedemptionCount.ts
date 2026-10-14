@@ -2,7 +2,6 @@ import { rewardRedemptions } from "@autumn/shared";
 import { and, count, eq } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 
-/** Count triggered redemptions for a referral code */
 export const getReferralCodeRedemptionCount = async ({
 	db,
 	referralCodeId,

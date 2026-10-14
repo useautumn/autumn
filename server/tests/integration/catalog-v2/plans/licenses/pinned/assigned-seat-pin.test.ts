@@ -1,7 +1,3 @@
-/**
- * catalogV2.update — assigned seat (customer_licenses.plan_license_id).
- * Pin retires the referenced catalog row; the customer stays on the old id.
- */
 import { expect, test } from "bun:test";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
@@ -92,7 +88,6 @@ test.concurrent(
 					versioning: "new_version",
 				});
 
-				// No write: catalog and customer share the same live row, still on v1.
 				const catalog = await expectLicenseLinkCorrect({
 					ctx,
 					parentPlanId: parentId,

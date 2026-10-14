@@ -8,7 +8,6 @@ import type {
 	UpsertProductPlan,
 } from "@/internal/catalogV2/actions/updateCatalog/types/upsertProductPlan";
 
-/** One intent → the target plan plus the demoted plan when this row takes `active`. */
 export const computeUpsertProductPlan = ({
 	ctx,
 	intent,

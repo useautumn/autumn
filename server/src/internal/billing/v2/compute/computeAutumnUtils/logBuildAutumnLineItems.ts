@@ -17,7 +17,6 @@ export const logBuildAutumnLineItems = ({
 	deletedLineItems: LineItem[];
 	newLineItems: LineItem[];
 }) => {
-	// Debug output (compact table format)
 	const formatLineItemCompact = (item: LineItem) =>
 		`  ${item.description}: ${chalk.yellow(item.amountAfterDiscounts.toFixed(2))}`;
 

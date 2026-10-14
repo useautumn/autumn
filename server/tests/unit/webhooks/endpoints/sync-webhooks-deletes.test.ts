@@ -1,16 +1,8 @@
-/**
- * sync's deletes reach the app each endpoint lives in: an id present in both
- * the main and the Vercel app (a concurrent-create leftover) is deleted from both,
- * and one app failing never stops the other's delete.
- */
-
 import { expect, test } from "bun:test";
 import { mockModuleWithRestore } from "../../utils/mockModuleWithRestore.js";
 
 const deleted: string[] = [];
-/** `appId/id` pairs whose delete throws. */
 const failing = new Set<string>();
-/** What each app lists; `billing` sits in both, as a concurrent create leaves it. */
 const held: Record<string, string[]> = {
 	app_main: ["billing"],
 	app_vercel: ["billing"],

@@ -7,7 +7,6 @@ import {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 
-/** Usage only carries onto a plan replacing another now, and only consumable usage carries. */
 export const handleCarryOverUsagesErrors = ({
 	ctx,
 	carryOverUsages,

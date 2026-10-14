@@ -1,14 +1,3 @@
-/**
- * catalogV2.update variant drafts stamp included on remove_items (own
- * IdentityAndIncluded diff). Same from-grant still collapses with the stamp.
- *
- * Contract:
- *   follow 100→150 on base+variant both at 100 → one $or op, included: 100
- *   follow 100 vs 200 → 150 splits; each op carries its from-grant
- *   declared variant 200→300 stamps included: 200
- *   license overlay follow 100 vs 200 → 150 stamps nested included
- */
-
 import { test } from "bun:test";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";

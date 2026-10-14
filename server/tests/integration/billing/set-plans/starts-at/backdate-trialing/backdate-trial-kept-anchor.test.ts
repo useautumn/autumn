@@ -1,13 +1,3 @@
-/**
- * A backdated trialing recreate that keeps its trial can anchor the cycle after the trial ends, as Stripe's create
- * takes trial_end + billing_cycle_anchor: $0 now, a prorated stub from the trial end to the anchor, then the full
- * period. Stripe requires that stub to be prorated and the anchor to be on or after the trial end, so proration none
- * and an earlier anchor are rejected before anything is written.
- *
- * Red (before):  400 "A trial can't be backdated to".
- * Green (after): the prorate case bills like Stripe; the none and early-anchor cases return actionable 400s.
- */
-
 import { expect, test } from "bun:test";
 import { ms, type SetPlansParamsV0Input } from "@autumn/shared";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils";

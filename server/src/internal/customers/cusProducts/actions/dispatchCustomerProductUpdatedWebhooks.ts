@@ -8,10 +8,6 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated";
 import { emitCustomerProductBillingUpdated } from "@/internal/customers/cusProducts/actions/emitCustomerProductBillingUpdated";
 
-/**
- * Fires the products_updated + billing.updated pair lifecycle actions owe on
- * every customer product change, so an action cannot send one and skip the other.
- */
 export const dispatchCustomerProductUpdatedWebhooks = async ({
 	ctx,
 	customerProduct,
@@ -23,7 +19,6 @@ export const dispatchCustomerProductUpdatedWebhooks = async ({
 	ctx: AutumnContext;
 	customerProduct: FullCusProduct;
 	fullCustomer: FullCustomer;
-	/** Snapshot taken by the action before it mutated anything. */
 	originalFullCustomer: FullCustomer;
 	scenario: AttachScenario;
 	updates: Partial<InsertCustomerProduct>;

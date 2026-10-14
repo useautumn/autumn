@@ -14,7 +14,6 @@ export const CatalogPreviewStateSchema = z.object({
 	}),
 });
 
-/** Shared kernel for a plan row in catalog preview (direct, sibling, or license parent). */
 export const CatalogCorePreviewSchema = z.object({
 	plan_id: z.string(),
 	internal_id: z.string().nullable().optional().meta({

@@ -16,18 +16,8 @@ import {
 	setCustomerUsageLimit,
 } from "../utils/usage-limit-utils/customerUsageLimitUtils.js";
 
-// Usage windows where the cap is set on the TRACKED feature's own id (no
-// credit-system indirection): the customer holds cusEnts of the capped
-// feature directly, including MULTIPLE cusEnts whose drains must aggregate
-// onto one customer-scoped counter, and interval mismatches between the
-// cusEnt's reset and the cap's window.
-
-// initScenario only exposes clients up to V2_2; build the latest-version client
-// directly (same pattern as the v2.2-vs-v2.3 parity tests).
 const autumnV2_3 = new AutumnInt({ version: ApiVersion.V2_3 });
 
-// Same feature, same interval (credits/mo cusEnt + credits 5/mo cap), tracked
-// directly: the cap binds independently of the 100-credit balance.
 test.concurrent(
 	`${chalk.yellowBright("usage-window-own-feature1: cap on the tracked feature itself clamps at the cap")}`,
 	async () => {
@@ -53,7 +43,6 @@ test.concurrent(
 			limit: 5,
 		});
 
-		// Consume exactly to the cap, tracking the capped feature directly.
 		await autumnV2_3.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Credits,
@@ -68,7 +57,6 @@ test.concurrent(
 			usage: 5,
 		});
 
-		// Over the cap: clamps to 0 with 95 credits still in the balance.
 		await autumnV2_3.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Credits,
@@ -92,7 +80,6 @@ test.concurrent(
 	},
 );
 
-// Sub-interval cap: the cusEnt resets monthly but the cap windows daily.
 test.concurrent(
 	`${chalk.yellowBright("usage-window-own-feature2: daily cap on a monthly cusEnt clamps while balance remains")}`,
 	async () => {
@@ -125,8 +112,6 @@ test.concurrent(
 			value: 2,
 		});
 
-		// The day window is exhausted; the next track clamps to 0 against the 98
-		// remaining monthly credits.
 		await autumnV2_3.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Credits,
@@ -150,8 +135,6 @@ test.concurrent(
 	},
 );
 
-// MULTIPLE cusEnts of the capped feature (monthly 1 + lifetime 10): one
-// direct track spans both, and both drains must land on the same counter.
 test.concurrent(
 	`${chalk.yellowBright("usage-window-own-feature3: direct track across two cusEnts aggregates onto one counter")}`,
 	async () => {
@@ -184,8 +167,6 @@ test.concurrent(
 			interval: ResetInterval.Day,
 		});
 
-		// Track 2 credits directly: 1 drains the monthly cusEnt, 1 spills into
-		// lifetime. The counter must see the SUM (2), not one cusEnt's drain.
 		await autumnV2_3.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Credits,
@@ -204,7 +185,6 @@ test.concurrent(
 			},
 		});
 
-		// Cap exhausted: clamps to 0 instead of draining the 9 lifetime credits.
 		await autumnV2_3.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Credits,
@@ -229,9 +209,6 @@ test.concurrent(
 	},
 );
 
-// Metered (non-credit) own-feature cap across two cusEnts: messages monthly
-// 100 + lifetime 100, cap 150/mo. The second track must clamp to the exact
-// remaining headroom after the first track spanned both cusEnts.
 test.concurrent(
 	`${chalk.yellowBright("usage-window-own-feature4: metered cap aggregates across two cusEnts and clamps to headroom")}`,
 	async () => {
@@ -261,7 +238,6 @@ test.concurrent(
 			limit: 150,
 		});
 
-		// Track 120: drains the monthly cusEnt (100) then 20 from lifetime.
 		await autumnV2_3.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
@@ -280,8 +256,6 @@ test.concurrent(
 			},
 		});
 
-		// Counter = 120 across both cusEnts, so headroom is 30: track 50 applies
-		// exactly 30 from lifetime.
 		await autumnV2_3.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,

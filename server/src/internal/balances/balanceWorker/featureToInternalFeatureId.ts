@@ -1,7 +1,6 @@
 import { FeatureNotFoundError } from "@autumn/shared";
 import type { BalanceWorkerRequestContext } from "./balanceWorkerRequestContext.js";
 
-/** The catalog internal id the worker attributes credit usage under. */
 export function featureToInternalFeatureId({
 	ctx,
 	featureId,

@@ -49,11 +49,9 @@ export function useLogin(options?: UseLoginOptions): UseLoginReturn {
 	const [authUrl, _setAuthUrl] = useState<string | null>(null);
 	const [isAlreadyAuthenticated, setIsAlreadyAuthenticated] = useState(false);
 
-	// Track if mutations have been started
 	const checkStarted = useRef(false);
 	const oauthStarted = useRef(false);
 
-	// Check if already authenticated
 	const checkAuthMutation = useMutation({
 		mutationFn: async () => {
 			const existingKey = readFromEnv({ bypass: true });
@@ -68,12 +66,10 @@ export function useLogin(options?: UseLoginOptions): UseLoginReturn {
 			}
 		},
 		onError: () => {
-			// No key found, proceed with login
 			setPhase("opening_browser");
 		},
 	});
 
-	// OAuth flow mutation
 	const oauthMutation = useMutation({
 		mutationFn: async () => {
 			setPhase("waiting_auth");
@@ -89,7 +85,6 @@ export function useLogin(options?: UseLoginOptions): UseLoginReturn {
 		},
 	});
 
-	// Create API keys mutation
 	const keysMutation = useMutation({
 		mutationFn: async (accessToken: string) => {
 			setPhase("creating_keys");
@@ -106,7 +101,6 @@ export function useLogin(options?: UseLoginOptions): UseLoginReturn {
 		},
 	});
 
-	// Save keys mutation
 	const saveMutation = useMutation({
 		mutationFn: async (data: {
 			sandboxKey: string;
@@ -118,7 +112,6 @@ export function useLogin(options?: UseLoginOptions): UseLoginReturn {
 				{ prodKey: data.prodKey, sandboxKey: data.sandboxKey },
 				{ forceOverwrite: true },
 			);
-			// Fetch org info using the new sandbox key
 			const org = await fetchOrganizationMe({ secretKey: data.sandboxKey });
 			return org;
 		},
@@ -138,13 +131,11 @@ export function useLogin(options?: UseLoginOptions): UseLoginReturn {
 		},
 	});
 
-	// Confirm re-authentication
 	const confirmReauth = useCallback(() => {
-		oauthStarted.current = false; // Reset so OAuth can start
+		oauthStarted.current = false;
 		setPhase("opening_browser");
 	}, []);
 
-	// Cancel re-authentication
 	const cancelReauth = useCallback(() => {
 		setPhase("complete");
 		if (onComplete) {
@@ -152,7 +143,6 @@ export function useLogin(options?: UseLoginOptions): UseLoginReturn {
 		}
 	}, [onComplete]);
 
-	// Auto-start checking on mount
 	useEffect(() => {
 		if (phase === "checking" && !checkStarted.current) {
 			checkStarted.current = true;
@@ -160,7 +150,6 @@ export function useLogin(options?: UseLoginOptions): UseLoginReturn {
 		}
 	}, [phase, checkAuthMutation]);
 
-	// Start OAuth when entering opening_browser phase
 	useEffect(() => {
 		if (phase === "opening_browser" && !oauthStarted.current) {
 			oauthStarted.current = true;

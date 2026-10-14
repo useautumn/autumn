@@ -9,14 +9,6 @@ import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-/**
- * Referrals7: Checkout-triggered feature grant referrals
- *
- * Flow:
- * 1. Redeemer redeems code — reward not granted yet (checkout trigger)
- * 2. Redeemer attaches a paid plan → reward triggered, referrer receives the balance
- */
-
 test(`${chalk.yellowBright("referrals7: checkout feature grant referral grants on attach")}`, async () => {
 	const mainCustomerId = "main-referral-7";
 	const redeemerId = "referral7-r1";
@@ -64,7 +56,6 @@ test(`${chalk.yellowBright("referrals7: checkout feature grant referral grants o
 		code: referralCode!.code,
 	});
 
-	// Checkout trigger — nothing granted until the redeemer buys
 	const redemptionBeforeCheckout = await autumnV1.redemptions.get(
 		redemption.id,
 	);
@@ -86,7 +77,6 @@ test(`${chalk.yellowBright("referrals7: checkout feature grant referral grants o
 	const redemptionAfterCheckout = await autumnV1.redemptions.get(redemption.id);
 	expect(redemptionAfterCheckout.triggered).toBe(true);
 
-	// Referrer only — redeemer should not receive the grant
 	const referrerCheck = await autumnV1.check({
 		customer_id: mainCustomerId,
 		feature_id: messagesFeature!.id,

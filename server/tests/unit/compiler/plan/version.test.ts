@@ -1,16 +1,3 @@
-/**
- * TDD coverage for PlanFilter.version (NumberMatcher).
- *
- * Contract under test:
- *   Filter:
- *     - PlanFilter.version accepts bare number (eq), $eq, $ne, $in, $gt,
- *       $gte, $lt, $lte.
- *   Compilation:
- *     - Customer-rooted: emits `p.version <op> ?` inside the planScope
- *       EXISTS subquery.
- *     - Plan-rooted: emits `p.version <op> ?` at the root.
- */
-
 import { describe, expect, test } from "bun:test";
 import { compileFilter } from "@autumn/shared/api/migrations/compiler/compileFilter.js";
 import { compilePlanFilter } from "@autumn/shared/api/migrations/compiler/compilePlanFilter.js";

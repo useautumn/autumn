@@ -3,7 +3,6 @@ import { stripeKeys } from "../../../db/schema/keys.ts";
 import type { TwdDb } from "../../../lib/getDb.ts";
 import type { TwdTx } from "../../accounts/repos/cleanAccountsRepo.ts";
 
-/** Key-level locks (full nuke, scoped reinit); syncKeys never overwrites a locked key. */
 const FULL_NUKE_PREFIX = "full nuke";
 const REINIT_PREFIX = "re-initialising";
 export const FULL_NUKE_IN_PROGRESS = `${FULL_NUKE_PREFIX} in progress`;
@@ -35,7 +34,6 @@ export const unusableReasonFromProbe = ({
 	return null;
 };
 
-/** usable=false makes claims and top-ups skip the key. */
 export const lockKeyForFullNuke = async ({
 	db,
 	platformAccountId,
@@ -51,7 +49,6 @@ export const lockKeyForFullNuke = async ({
 		.where(eq(stripeKeys.platformAccountId, platformAccountId));
 };
 
-/** Restores usability from the latest probe. No-op unless the key is full-nuke locked. */
 export const releaseFullNukeLock = async ({
 	db,
 	platformAccountId,

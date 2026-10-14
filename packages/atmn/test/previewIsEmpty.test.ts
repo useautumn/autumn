@@ -1,6 +1,3 @@
-/** The apply gate: a base row at `none` still has work when a nested variant,
- * license link or sibling version carries a changing action. */
-
 import { expect, test } from "bun:test";
 import { previewIsEmpty } from "../src/render/renderPreview";
 
@@ -64,7 +61,6 @@ test("a variant the config states, carrying a diff, is work", () => {
 	expect(previewIsEmpty({ preview: preview as any })).toBe(false);
 });
 
-/** `explicit` says the config named the variant, not that anything changes. */
 test("a variant the config states with no diff is not work", () => {
 	const preview = {
 		features: [],

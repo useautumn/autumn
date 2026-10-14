@@ -1,24 +1,3 @@
-/**
- * Invoice credits (price-derived, 1:1) across the paths the stamp has to
- * survive: the legacy attach builder, entity-scoped balances, a free trial,
- * a customer billed in a non-default currency, and a mid-cycle switch to a
- * plan whose price no longer qualifies.
- *
- * Contract:
- *   E1 legacy attach, $1/credit        → stamp true, renewal invoice itemized
- *   E2 entity-scoped $1/credit, 2 ents → stamp true; every entity's usage is itemized, offset by one
- *                                        combined credits line, so only the overrunning entity costs money
- *   E3 7-day trial, $1/credit          → stamp true; usage during the trial is not charged at trial end
- *   E4 eur customer, €1/credit         → stamp true, eur invoice itemized at €1 per credit
- *   E5 switch $1/credit → $0.10/credit → old balance stays stamped, new balance stamped false,
- *                                        switch invoice itemizes the old balance's usage
- *
- * E5 settles the tracks before switching: the switch bills from Postgres, and
- * track deducts in Redis first, so a switch within the lazy-sync window reads
- * the pre-usage balance and bills no overage. A Stripe meter would still bill a
- * plain consumable in that window; an itemized balance has no meter.
- */
-
 import { expect, test } from "bun:test";
 import {
 	type ApiCustomerV3,
@@ -160,7 +139,6 @@ test.concurrent(
 			items: [oneToOneCredits({ entityFeatureId: TestFeature.Users })],
 		});
 
-		// entity 0 spends 50 credits (within its 100), entity 1 spends 150 (50 over).
 		const { autumnV2_3, ctx } = await initScenario({
 			customerId,
 			setup: [
@@ -188,8 +166,6 @@ test.concurrent(
 		expect(rows.length).toBeGreaterThan(0);
 		for (const row of rows) expect(row.invoice_credit).toBe(true);
 
-		// usage_attribution has no entity dimension, so entity 0's usage is itemized too and the
-		// credits line offsets everything except entity 1's overage.
 		const entityOverage = ACTION2_CREDITS - INCLUDED;
 		const customer = await autumnV2_3.customers.get<ApiCustomerV5>(customerId);
 		await expectInvoiceLineItemsCorrect({
@@ -299,7 +275,6 @@ test.concurrent(
 			actions: [],
 		});
 
-		// The plan was created outside the fixtures, so attach and advance by hand.
 		await autumnV1.billing.attach({
 			customer_id: customerId,
 			product_id: planId,
@@ -396,7 +371,6 @@ test.concurrent(
 		const stamps = rows.map((row) => row.invoice_credit).sort();
 		expect(stamps).toEqual([false, true]);
 
-		// Same clock instant as the first attach, so the old base refunds in full.
 		const customer = await autumnV2_3.customers.get<ApiCustomerV5>(customerId);
 		const overage = ACTION1_CREDITS + ACTION2_CREDITS - INCLUDED;
 		const premiumBase = 50;

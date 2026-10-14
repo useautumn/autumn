@@ -7,7 +7,6 @@ export type ReviewScopeGroup<Row extends ScopedRow = ReviewChangeRow> = {
 	rows: Row[];
 };
 
-/** Rows grouped by plan scope, in the order each scope first appears. */
 export const groupRowsByScope = <Row extends ScopedRow>({
 	rows,
 }: {

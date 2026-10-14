@@ -9,8 +9,6 @@ import { toSvixFilterTypes } from "@/external/svix/endpoints/toSvixFilterTypes.j
 import { withSvixErrors } from "@/external/svix/endpoints/withSvixErrors.js";
 import { createSvixCli } from "@/external/svix/svixUtils.js";
 
-/** Gives a dashboard-made endpoint our id and the stated fields. The endpoint
- * and its signing secret stay the same, so nothing new is created. */
 export const adoptWebhook = async ({
 	appId,
 	endpointId,
@@ -22,7 +20,6 @@ export const adoptWebhook = async ({
 }): Promise<Webhook> => {
 	const svix = createSvixCli();
 	// Svix has no conditional update: re-read so a concurrent adoption is refused
-	// rather than overwritten. This narrows the race; it can't close it.
 	const current = await withSvixErrors({
 		webhookId: params.id,
 		run: () => svix.endpoint.get(appId, endpointId),

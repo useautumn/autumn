@@ -1,11 +1,3 @@
-/**
- * proration_behavior decides whether a backdate over a live subscription bills the time before
- * that subscription started: not at all (none), pro rata (for an annual plan, its part of the
- * year), or every cycle it reaches in full. The time the live subscription paid is never billed
- * again. Restarting the cycle on the backdated start credits the unused paid time and charges the
- * restarted cycle on the same invoice as the gap.
- */
-
 import { expect, test } from "bun:test";
 import {
 	BillingInterval,

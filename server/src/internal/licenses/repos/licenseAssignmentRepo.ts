@@ -42,13 +42,9 @@ export const activeAssignmentConditions = () => [
 	inArray(customerProducts.status, ACTIVE_STATUSES),
 ];
 
-/** SQL predicate excluding every seat row, including released seats whose
- * entity link has been cleared while awaiting reuse. */
 export const notLicenseAssignmentSql = (alias: string) =>
 	`${alias}.customer_license_link_id IS NULL`;
 
-/** A seat has no lifecycle of its own: when no live parent holds its link,
- * it ended with its latest parent (mirrors inheritParentCustomerProductProperties). */
 const seatEndedByParentSql = () => {
 	const liveStatuses = sql.join(
 		ACTIVE_STATUSES.map((status) => sql`${status}`),
@@ -89,7 +85,6 @@ const listAssignmentsWithEntityAndProductByCustomer = async ({
 			assignment: customerProducts,
 			entity_id: entities.id,
 			license_product_id: products.id,
-			// Live rows already have a live parent; only history needs the lookup.
 			parent_ended_at: activeOnly
 				? sql<string | null>`NULL`
 				: seatEndedByParentSql(),
@@ -145,7 +140,6 @@ const listAssignmentsWithEntityAndProductByCustomer = async ({
 					: []),
 				...(parentCustomerProductId
 					? [
-							// Seats anchor by link; the pool row carries the parent.
 							inArray(
 								customerProducts.customer_license_link_id,
 								db
@@ -227,8 +221,6 @@ const listActiveAssignmentsByInternalEntityId = async ({
 		),
 	});
 
-/** Ends active seats anchored to no surviving pool link (unstamped or
- * dangling) — one set-based UPDATE per reconcile. */
 const expireOrphanAssignments = async ({
 	db,
 	internalCustomerId,
@@ -262,7 +254,6 @@ const expireOrphanAssignments = async ({
 		);
 };
 
-/** Ends specific released spare seats — caller selects surplus vs remaining. */
 const expireUnusedAssignmentsByIds = async ({
 	db,
 	customerProductIds,
@@ -286,8 +277,6 @@ const expireUnusedAssignmentsByIds = async ({
 		.returning();
 };
 
-/** Seats are grouped through their customer license — the seat's own parent
- * column goes stale on reparent; the customer license's never does. */
 const maxActiveCountByCatalogLink = async ({
 	db,
 	parentInternalProductId,

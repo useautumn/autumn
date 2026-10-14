@@ -1,7 +1,6 @@
 import { useCallback, useRef } from "react";
 import { slugify } from "@/utils/formatUtils/formatTextUtils";
 
-// utility type: restricts to keys where value is string
 type StringKeys<T> = {
 	[K in keyof T]: T[K] extends string ? K : never;
 }[keyof T];
@@ -23,8 +22,6 @@ export function useAutoSlug<
 	targetKey,
 	disableAutoSlug = false,
 }: UseAutoSlugProps<T, S, U>) {
-	// Initialize ref to false, not to disableAutoSlug
-	// This tracks if user has manually changed the target field
 	const targetManuallyChangedRef = useRef(false);
 
 	const setSource = useCallback(
@@ -35,9 +32,6 @@ export function useAutoSlug<
 					[sourceKey]: newSource as T[S],
 				};
 
-				// Only auto-slug if:
-				// 1. User hasn't manually changed the target field AND
-				// 2. Auto-slug is not disabled
 				if (!targetManuallyChangedRef.current && !disableAutoSlug) {
 					updates[targetKey] = slugify(newSource) as T[U];
 				}
@@ -51,7 +45,6 @@ export function useAutoSlug<
 
 	const setTarget = useCallback(
 		(newTarget: string) => {
-			// Mark that user has manually changed the target
 			targetManuallyChangedRef.current = true;
 			const updater = (prevState: T) => ({
 				...prevState,
@@ -62,7 +55,6 @@ export function useAutoSlug<
 		[setState, targetKey],
 	);
 
-	// Reset function to allow auto-slug to work again
 	const resetAutoSlug = useCallback(() => {
 		targetManuallyChangedRef.current = false;
 	}, []);

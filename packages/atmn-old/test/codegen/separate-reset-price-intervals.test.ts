@@ -1,4 +1,3 @@
-/** Red: pull drops a priced item's reset; green: pull and push preserve both intervals. */
 import { describe, expect, test } from "bun:test";
 import type { Plan } from "../../src/compose/models/index.js";
 import { transformApiPlan } from "../../src/lib/transforms/apiToSdk/plan.js";

@@ -18,7 +18,6 @@ export const replaceFixture = ({
 	const call = findFixture({ source, builder, idField, id, where });
 	if (call === null) return null;
 	const { start, end } = call.range();
-	// Raw byte splice, not replace(): replace() treats `$` as a metavariable.
 	return call
 		.getRoot()
 		.root()

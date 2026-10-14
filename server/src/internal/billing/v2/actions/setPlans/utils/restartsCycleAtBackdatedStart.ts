@@ -4,7 +4,6 @@ import type {
 } from "@autumn/shared";
 import { isBackdateRecreate } from "./isBackdateRecreate";
 
-/** A backdate recreate whose first phase restarts the billing cycle on its backdated start. */
 export const restartsCycleAtBackdatedStart = ({
 	billingContext,
 }: {

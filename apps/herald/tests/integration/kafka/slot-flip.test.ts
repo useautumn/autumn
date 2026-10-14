@@ -1,14 +1,3 @@
-/**
- * A blue/green flip over a real broker: two herald fleets told apart by fake service ARNs, one record
- * in a memory-backed S3 both poll, a producer running throughout.
- *
- * Contract under test:
- *   - Before the flip only blue's jobs are in the group; green idles and reports joined == 0.
- *   - Writing the record to green moves membership: green joins, blue leaves, every record lands,
- *     repeats stay within one slice per partition, the group's places equal the log's ends.
- *   - Writing it back is the same in reverse.
- *   - A SIGTERM on the idle fleet touches nothing.
- */
 import { expect, test } from "bun:test";
 import {
 	computeTrack,
@@ -121,7 +110,6 @@ const waitFor = async ({
 	}
 };
 
-/** One S3 object store shared by every fleet, so a record written by the "dashboard" is what all of them poll. */
 const createMemoryS3Client = (): EdgeConfigS3Client => {
 	const objects = new Map<string, string>();
 	return {
@@ -176,7 +164,6 @@ type Ledger = { applied: Map<string, number> };
 const positionKey = ({ position }: StreamRecord) =>
 	`${position.partition}:${position.offset}`;
 
-/** One herald task of one fleet: its own record store, gate, follower, and the jobs the slot builds. */
 const createFleetTask = async ({
 	serviceArn,
 	s3Client,
@@ -310,7 +297,6 @@ test("a flip moves the jobs from blue to green and back; every record lands, rep
 	});
 	expect(green.map((task) => task.joined())).toEqual([0, 0]);
 
-	// ── The flip: the dashboard writes the record, every fleet polls it ──
 	await writeRecord({ store: dashboard, blueArn: GREEN_ARN });
 	await waitFor({
 		until: () =>
@@ -326,7 +312,6 @@ test("a flip moves the jobs from blue to green and back; every record lands, rep
 	});
 	expect(blue.map((task) => task.joined())).toEqual([0, 0]);
 
-	// ── And back ──
 	await Bun.sleep(2_000);
 	await writeRecord({ store: dashboard, blueArn: BLUE_ARN });
 	await waitFor({
@@ -346,7 +331,6 @@ test("a flip moves the jobs from blue to green and back; every record lands, rep
 	await Bun.sleep(1_000);
 
 	const repeated = [...ledger.applied.values()].filter((count) => count > 1);
-	// Two flips, each one pause per partition, at most one slice repeated per pause.
 	expect(repeated.length).toBeLessThanOrEqual(
 		PARTITIONS * 2 * RECORDS_PER_SLICE,
 	);
@@ -362,7 +346,6 @@ test("a flip moves the jobs from blue to green and back; every record lands, rep
 		),
 	).toEqual(Object.fromEntries(ends.map((p) => [p.partition, p.high])));
 
-	// A SIGTERM on the idle fleet touches nothing: no membership to give up.
 	const joinedBefore = blue.map((task) => task.joined());
 	for (const task of green) await task.stop();
 	await Bun.sleep(500);

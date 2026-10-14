@@ -1,6 +1,3 @@
-// Red: customer aggregation omitted rollover grant from entity-scoped products.
-// Green: customer granted includes active entity rollover balance and usage.
-
 import { expect, test } from "bun:test";
 import {
 	type ApiCustomerV5,
@@ -17,7 +14,6 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
 
-// The balance worker doesn't aggregate entity data onto the customer.
 test.concurrent.skipIf(isBalanceWorkerRoute())(
 	`${chalk.yellowBright("get-customer: entity product rollovers contribute to granted")}`,
 	async () => {

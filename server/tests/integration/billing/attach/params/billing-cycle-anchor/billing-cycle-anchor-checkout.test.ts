@@ -36,7 +36,6 @@ test(`${chalk.yellowBright("attach scheduled anchor checkout: schedule attaches 
 	expect(result.payment_url).toContain("checkout.stripe.com");
 	await completeStripeCheckoutFormV2({ url: result.payment_url! });
 
-	// Checkout creates the subscription on the anchor itself, not via a schedule.
 	const { subscription } = await getStripeSubscription({ customerId });
 	expect(secondsToMs(subscription.billing_cycle_anchor)).toBe(
 		Math.floor(scheduledAnchorMs / 1000) * 1000,

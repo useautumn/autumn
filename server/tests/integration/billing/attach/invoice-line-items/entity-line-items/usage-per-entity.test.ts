@@ -1,15 +1,3 @@
-/**
- * Per-entity usage overage is stored with an entities[] attribution.
- *
- * Contract:
- *   invoice_line_items.entities: { entity_id, quantity, amount }[]
- *   Each entity-level consumable overage line → exactly one entry for that entity.
- *   Entities under allowance produce no line at all.
- *
- * Red (current):  column does not exist; rows have no `entities`.
- * Green (after):  two words lines, one entry each; joe absent.
- */
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3 } from "@autumn/shared";
 import { calculateExpectedInvoiceAmount } from "@tests/integration/billing/utils/calculateExpectedInvoiceAmount";
@@ -104,8 +92,6 @@ test.concurrent(
 			{ entity_id: bob.id, quantity: bobWords - 50, amount: expectedBob },
 		]);
 
-		// Joe never went over allowance → no usage line references joe.
-		// (He still appears on the merged base-fee line, covered by merged-base-fee.test.ts)
 		const joeOnUsageLine = wordsLines.some((li) =>
 			li.entities.some((e) => e.entity_id === joe.id),
 		);

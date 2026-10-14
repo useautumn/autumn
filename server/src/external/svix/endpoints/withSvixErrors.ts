@@ -17,8 +17,6 @@ const svixDetail = ({ body }: { body: SvixErrorBody | undefined }) => {
 	return undefined;
 };
 
-/** Svix rejecting the request's content is the caller's mistake, so it
- * surfaces as ours; auth, permission and throttling failures are Autumn's. */
 export const withSvixErrors = async <T>({
 	webhookId,
 	run,

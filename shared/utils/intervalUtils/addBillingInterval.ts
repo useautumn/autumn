@@ -3,8 +3,6 @@ import { addMonths, addWeeks, addYears } from "date-fns";
 import { BillingInterval } from "../../models/productModels/intervals/billingInterval";
 import type { IntervalConfig } from "../intervalUtils";
 
-// Validate unix timestamp
-
 export const addBillingInterval = ({
 	fromUnix,
 	intervalConfig,

@@ -1,12 +1,3 @@
-/**
- * catalogV2.update — free_trial shape round-trip, update lanes, and claim-
- * style row semantics (reuse unchanged; retire+mint on change/remove).
- *
- * Spec (section 14): computeFreeTrialPlan takes FreeTrialParamsV1; comparator
- * includes on_end and normalizes defaults (duration_type month, card_required
- * true, on_end bill ≡ omitted). Retired rows stay with is_custom: true.
- */
-
 import { expect, test } from "bun:test";
 import {
 	BillingInterval,
@@ -65,7 +56,6 @@ const getFull = async ({
 		env: ctx.env,
 	});
 
-/** All free_trial rows for a product — including retired (is_custom) ones. */
 const listFreeTrialRows = async ({
 	ctx,
 	internalProductId,
@@ -139,8 +129,6 @@ const cleanupCustomerRefs = async ({
 			.where(eq(customers.internal_id, row.internal_customer_id));
 	}
 };
-
-// ─── Shape round-trip + update lanes ─────────────────────────────────────────
 
 test.concurrent(
 	`${chalk.yellowBright("catalogV2 free-trial: create full trial → exact shape")}`,
@@ -448,7 +436,6 @@ test.concurrent(
 				],
 			});
 
-			// Omit free_trial → preserve
 			await autumnV2_3.catalogV2.update({
 				plans: [{ plan_id: planId, name: "Renamed Trial Plan" }],
 			});
@@ -481,8 +468,6 @@ test.concurrent(
 	},
 );
 
-// Items updates rebuild price/ent rows — a different path than details-only
-// renames — so trial carry-over across that rebuild needs its own assertion.
 test.concurrent(
 	`${chalk.yellowBright("catalogV2 free-trial: cross-facet patch — items change keeps trial; trial change keeps items/price")}`,
 	async () => {
@@ -517,7 +502,6 @@ test.concurrent(
 				],
 			});
 
-			// Items + price update, free_trial omitted → trial preserved
 			await autumnV2_3.catalogV2.update({
 				plans: [
 					{
@@ -545,7 +529,6 @@ test.concurrent(
 				],
 			});
 
-			// Trial-only update → items + base price carried
 			await autumnV2_3.catalogV2.update({
 				plans: [
 					{
@@ -590,7 +573,6 @@ test.concurrent(
 					}),
 				],
 			});
-			// Require persistence first — otherwise action `none` is a false green.
 			await expectCatalogPlansCorrect({
 				autumn: autumnV2_3,
 				expected: [
@@ -668,8 +650,6 @@ test.concurrent(
 		}
 	},
 );
-
-// ─── Row semantics ───────────────────────────────────────────────────────────
 
 test.concurrent(
 	`${chalk.yellowBright("catalogV2 free-trial: unchanged → same free_trial row id")}`,

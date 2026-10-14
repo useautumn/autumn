@@ -6,9 +6,6 @@ export interface InvoicesSectionProps {
 	invoices: ApiInvoice[];
 }
 
-/**
- * Renders customer invoices
- */
 export function InvoicesSection({ invoices }: InvoicesSectionProps) {
 	if (invoices.length === 0) {
 		return (

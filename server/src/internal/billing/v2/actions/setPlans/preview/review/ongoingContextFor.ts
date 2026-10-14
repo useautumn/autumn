@@ -1,7 +1,6 @@
 import type { SavedTimeline } from "../../timeline/types/timeline";
 import type { OngoingContext } from "./isOngoingReviewSegment";
 
-/** The saved schedule changes after now, which is what makes an open-ended saved plan ongoing. */
 const savedHasLaterPhases = ({
 	saved,
 	now,

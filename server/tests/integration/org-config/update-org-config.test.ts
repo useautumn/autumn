@@ -4,8 +4,6 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { eq, sql } from "drizzle-orm";
 
-// Each case gets its own sub-org: they run concurrently and each rewrites org config.
-
 test.concurrent(
 	`${chalk.yellowBright("org config: sequential updates preserve previous fields")}`,
 	async () => {
@@ -16,27 +14,23 @@ test.concurrent(
 
 		const { db, org } = ctx;
 
-		// Reset config to known empty state
 		await db
 			.update(organizations)
 			.set({ config: {} as OrgConfig })
 			.where(eq(organizations.id, org.id));
 
-		// First update: set cancel_on_past_due via atomic jsonb merge
 		await db.execute(
 			sql`UPDATE organizations
 				SET config = COALESCE(config, '{}'::jsonb) || ${JSON.stringify({ cancel_on_past_due: true })}::jsonb
 				WHERE id = ${org.id}`,
 		);
 
-		// Second update: set automatic_tax via atomic jsonb merge
 		await db.execute(
 			sql`UPDATE organizations
 				SET config = COALESCE(config, '{}'::jsonb) || ${JSON.stringify({ automatic_tax: true })}::jsonb
 				WHERE id = ${org.id}`,
 		);
 
-		// Read final state
 		const [final] = await db
 			.select({ config: organizations.config })
 			.from(organizations)
@@ -47,7 +41,7 @@ test.concurrent(
 
 		expect(parsed.cancel_on_past_due).toBe(true);
 		expect(parsed.automatic_tax).toBe(true);
-		expect(parsed.include_past_due).toBe(true); // default
+		expect(parsed.include_past_due).toBe(true);
 		expect(parsed.block_overdue_entitlements).toBe(false);
 	},
 );
@@ -62,13 +56,11 @@ test.concurrent(
 
 		const { db, org } = ctx;
 
-		// Reset config
 		await db
 			.update(organizations)
 			.set({ config: {} as OrgConfig })
 			.where(eq(organizations.id, org.id));
 
-		// Fire 5 updates concurrently — each sets a different field
 		await Promise.all([
 			db.execute(
 				sql`UPDATE organizations
@@ -97,7 +89,6 @@ test.concurrent(
 			),
 		]);
 
-		// All 5 fields should be true
 		const [final] = await db
 			.select({ config: organizations.config })
 			.from(organizations)
@@ -124,14 +115,12 @@ test.concurrent(
 
 		const { db, org } = ctx;
 
-		// Set two fields on
 		await db.execute(
 			sql`UPDATE organizations
 				SET config = ${JSON.stringify({ automatic_tax: true, void_invoices_on_subscription_deletion: true })}::jsonb
 				WHERE id = ${org.id}`,
 		);
 
-		// Toggle one off
 		await db.execute(
 			sql`UPDATE organizations
 				SET config = COALESCE(config, '{}'::jsonb) || ${JSON.stringify({ automatic_tax: false })}::jsonb

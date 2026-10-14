@@ -1,9 +1,5 @@
 import { z } from "zod/v4";
 
-/** Global cache V2 ramp config — mirrors per-org `redis_config` exactly.
- *  `connectionString` is AES-256-CBC encrypted (same scheme as per-org).
- *  `url` is a plain host:port for logs.
- *  The whole config is `null` when no ramp is configured. */
 export const CacheV2RampConfigSchema = z
 	.object({
 		connectionString: z.string().min(1),

@@ -138,7 +138,6 @@ const pass2FromSurvivingLicenseParents = ({
 	});
 };
 
-/** Pass 1: customers + rewards. Pass 2: license parents that remain. */
 export const stampRemoveWillArchive = ({
 	targets,
 	catalogContext,

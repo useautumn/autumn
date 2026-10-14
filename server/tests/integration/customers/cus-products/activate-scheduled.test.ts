@@ -1,7 +1,3 @@
-/**
- * Red: early activation keeps a future starts_at. Green: starts_at becomes the activation time.
- */
-
 import { expect, test } from "bun:test";
 import {
 	BillingVersion,

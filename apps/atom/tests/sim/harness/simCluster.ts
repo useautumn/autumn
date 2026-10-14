@@ -34,17 +34,14 @@ const ATOM_TOKEN = "atom_token_sim";
 const TOKEN_HASH = hashToken({ token: ATOM_TOKEN });
 const PEER_SECRET = "sim-peer-secret-".repeat(4);
 const FEATURE = "messages";
-/** Autumn pushes a subject within this; past it the push is given up on (no retry for a subject push). */
 const PUSH_TIMEOUT_MS = 2_000;
 const CHECK_TIMEOUT_MS = 5_000;
 
 export type Version = { readAt: number; logOffset: bigint };
-/** The balance a deleted customer is recorded at: no check may be answered from it, nor from any copy older than it. */
 export const DELETED_BALANCE = -1;
 const newer = (a: Version, b: Version) =>
 	a.readAt > b.readAt || (a.readAt === b.readAt && a.logOffset > b.logOffset);
 
-/** A subject key as the store keys it: the customer's own view, or one of its entities'. */
 export const subjectKey = ({
 	customerId,
 	entityId,
@@ -59,7 +56,6 @@ export type Applied = {
 	version: Version;
 	balance: number;
 	at: number;
-	/** The replica generation that stored it. */
 	on: number;
 };
 export type CheckRecord = {
@@ -76,20 +72,13 @@ export type ClusterOptions = {
 	seed: number;
 	profile?: Partial<NetworkProfile>;
 	customers?: number;
-	/** Entities per customer; Autumn pushes an entity's view as often as the customer's own. */
 	entities?: number;
-	/** How often an entity's view announces the end of the customer's own plan. */
 	planEndRate?: number;
-	/** Each replica's held budget and disk share; unbounded unless the scenario is about eviction. */
 	heldBudgetBytes?: number;
 	diskShareBytes?: number;
 	log?: boolean;
 };
 
-/**
- * One org's Atom as its replicas, Autumn pushing to them through a load balancer that routes from the first listen,
- * and a customer app checking through the same balancer. Everything is driven by one seed and one virtual clock.
- */
 export const createSimCluster = ({
 	seed,
 	profile = {},
@@ -126,11 +115,9 @@ export const createSimCluster = ({
 	let logOffset = 0n;
 	const versions = new Map<string, number>();
 	const applied: Applied[] = [];
-	/** Generations whose volume was thrown away: what only they stored is gone for good, as it would be in the cloud. */
 	const lostVolumes = new Set<number>();
 	const generationsOn = new Map<Volume, number[]>();
 	const checks: CheckRecord[] = [];
-	/** Each catalog read a replica said it stored, and which one: a discarded volume takes its catalog with it too. */
 	const catalogsStored: Array<{ readAt: number; on: number }> = [];
 	const background = new Set<Promise<unknown>>();
 
@@ -148,8 +135,6 @@ export const createSimCluster = ({
 		task.finally(() => background.delete(task)).catch(() => {});
 	};
 
-	/** A customer's view, or an entity's: the customer's rows with the entity's own beside them. */
-	/** Customers whose customer-level plan ended: their own rows are gone until a customer view brings new ones. */
 	const planEnded = new Set<string>();
 
 	const subjectBody = ({
@@ -209,7 +194,6 @@ export const createSimCluster = ({
 		};
 	};
 
-	/** What Autumn pushes once the customer's worker no longer holds it. */
 	const deletedSubjectBody = ({
 		customerId,
 		readAt,
@@ -233,12 +217,10 @@ export const createSimCluster = ({
 		return routable.length === 0 ? null : rng.pick(routable);
 	};
 
-	/** Customers Autumn deleted: never pushed again, so every replica must end on their deletion. */
 	const deletedCustomers = new Set<string>();
 	const liveCustomerIds = () =>
 		customerIds.filter((customerId) => !deletedCustomers.has(customerId));
 
-	/** Autumn's next read of a customer: a newer version, pushed to whichever replica the balancer picks. */
 	async function push({
 		customerId = rng.pick(liveCustomerIds()),
 		entityId = entities > 0 && rng.chance(0.5)
@@ -250,15 +232,12 @@ export const createSimCluster = ({
 		customerId?: string;
 		entityId?: string | null;
 		readAt?: number;
-		/** Autumn deleted the customer: its tombstone, at the next version. */
 		deleted?: boolean;
 	} = {}) {
 		if (deleted) deletedCustomers.add(customerId);
 		const key = subjectKey({ customerId, entityId });
-		// A deletion moves no balance: an entity view still in flight records the customer's own as it last was.
 		const balance = deleted ? DELETED_BALANCE : (versions.get(key) ?? 0) + 1;
 		if (!deleted) versions.set(key, balance);
-		// Now and then an entity's view is where a customer learns its own plan ended: it carries no customer rows.
 		const endsPlan =
 			entityId !== null &&
 			!planEnded.has(customerId) &&
@@ -299,7 +278,6 @@ export const createSimCluster = ({
 					at: clock.now(),
 					on,
 				});
-				// An entity's view rewrites the customer's own rows at its version: with none when the plan ended.
 				if (entityId)
 					applied.push({
 						customerId,
@@ -322,7 +300,6 @@ export const createSimCluster = ({
 		}
 	}
 
-	/** Autumn's next read of the shared catalog; counted as stored only when a replica said so. */
 	async function pushCatalog() {
 		const readAt = clock.now();
 		const rows = createCatalogRowsFor({
@@ -355,7 +332,6 @@ export const createSimCluster = ({
 		}
 	}
 
-	/** The customer's app checking a balance through the balancer; what it was told is kept for the staleness bound. */
 	async function check({
 		customerId = rng.pick(customerIds),
 	}: {
@@ -460,7 +436,6 @@ export const createSimCluster = ({
 		return replica;
 	}
 
-	/** Boots a replica on an address; its catch-up and settle passes run as the clock does. */
 	function start(params: {
 		address: string;
 		fresh?: boolean;
@@ -487,7 +462,6 @@ export const createSimCluster = ({
 		replicas.get(address)?.kill();
 	}
 
-	/** Stops or kills, then boots again after `afterMs` on the same volume, or a fresh one. */
 	function restart({
 		address,
 		graceful,
@@ -518,7 +492,6 @@ export const createSimCluster = ({
 		);
 	}
 
-	/** Advances the clock in steps, with Autumn pushing and the app checking at the given rates, and `onStep` between. */
 	let newCustomers = 0;
 
 	async function runFor({
@@ -534,16 +507,13 @@ export const createSimCluster = ({
 		pushesPerSecond?: number;
 		checksPerSecond?: number;
 		catalogPushesPerMinute?: number;
-		/** Customers Autumn pushes for the first time, never checked again: what fills an Atom's disk. */
 		newCustomersPerSecond?: number;
-		/** Customers Autumn deletes, for good, each pushed as its deletion. */
 		deletesPerSecond?: number;
 		onStep?: (step: { at: number }) => void;
 	}) {
 		const STEP_MS = 100;
 		for (let elapsed = 0; elapsed < ms; elapsed += STEP_MS) {
 			if (rng.chance((pushesPerSecond * STEP_MS) / 1000)) track(push());
-			// Drawn only when churning, so the older scenarios replay their seeds unchanged.
 			if (
 				newCustomersPerSecond > 0 &&
 				rng.chance((newCustomersPerSecond * STEP_MS) / 1000)
@@ -563,7 +533,6 @@ export const createSimCluster = ({
 		}
 	}
 
-	/** What a replica holds for every customer, straight from its slot files. */
 	async function held(
 		replica: SimReplica,
 	): Promise<Map<string, { version: Version; balance: number }>> {
@@ -591,7 +560,6 @@ export const createSimCluster = ({
 					);
 					continue;
 				}
-				// An entity's part holds its own rows only; the customer's view holds the customer's.
 				const ownerId = entityId
 					? (subject.state.entity?.internal_id ?? null)
 					: null;
@@ -600,7 +568,6 @@ export const createSimCluster = ({
 				);
 				byCustomer.set(subjectKey({ customerId, entityId: entityId ?? null }), {
 					version,
-					// A customer whose plan ended holds no rows of its own: 0.
 					balance: own?.balance ?? (entityId ? Number.NaN : 0),
 				});
 			}
@@ -623,7 +590,6 @@ export const createSimCluster = ({
 		kill,
 		restart,
 		remove,
-		/** Every customer pushed once, so a check never has to leave for Autumn. */
 		seedCustomers: async () => {
 			for (const customerId of customerIds) track(push({ customerId }));
 			await clock.run(1_000);
@@ -645,7 +611,6 @@ export const createSimCluster = ({
 					.map(({ readAt }) => readAt),
 			),
 		newer,
-		/** Waits out whatever the replicas still have going, then releases every file. */
 		destroy: async () => {
 			await clock.run(0);
 			for (const replica of opened) replica.kill();

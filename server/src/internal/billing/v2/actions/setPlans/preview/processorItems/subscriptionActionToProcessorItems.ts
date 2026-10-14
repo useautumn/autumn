@@ -53,7 +53,6 @@ const applyUpdateToLiveItems = ({
 	return [...keptLiveItems, ...addedItems];
 };
 
-/** What the Stripe subscription holds right after the immediate phase applies. */
 export const subscriptionActionToProcessorItems = ({
 	subscriptionAction,
 	stripeSubscription,

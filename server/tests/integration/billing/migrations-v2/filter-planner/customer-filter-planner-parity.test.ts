@@ -1,16 +1,3 @@
-/**
- * TDD coverage for migration filter planning preserving customer selection.
- *
- * Red-failure mode (pre-planner guardrail):
- *  - An optimized access path could return a narrower customer set than the
- *    existing fallback compiler once wrapper filters are applied.
- *
- * Green-success criteria:
- *  - Planned and fallback SQL return the same customers, and migration
- *    wrappers (processed rows, checkpointing, search, cursoring) preserve
- *    their existing semantics.
- */
-
 import { expect, test } from "bun:test";
 import {
 	CusProductStatus,

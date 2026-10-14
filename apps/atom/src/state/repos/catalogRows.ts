@@ -6,7 +6,6 @@ import {
 
 type CatalogContext = { sqliteDb: Database };
 
-/** Rows were validated where they entered (the request that stored them), so reading only parses JSON. */
 export const readCatalogRows = ({
 	ctx,
 }: {
@@ -19,7 +18,6 @@ export const readCatalogRows = ({
 		.all()
 		.map(({ rowJson }) => JSON.parse(rowJson));
 
-/** Null until Autumn has sent a catalog. */
 export const readCatalogReadAt = ({
 	ctx,
 }: {
@@ -31,7 +29,6 @@ export const readCatalogReadAt = ({
 	return row ? Number(row.readAt) : null;
 };
 
-/** The rows with the read they came from, taken in one read transaction so a replacement committing meanwhile cannot mix them. */
 export const readCatalogFile = ({
 	ctx,
 }: {
@@ -46,11 +43,6 @@ export const readCatalogFile = ({
 		},
 	)();
 
-/**
- * The rows and their read time change together, so a reader never sees one without the other.
- * False when the file already holds a later read: the compare runs under the write lock, so two
- * processes replacing at once cannot both pass it.
- */
 export const replaceCatalog = ({
 	ctx,
 	rows,

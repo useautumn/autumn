@@ -10,9 +10,6 @@ interface JSDocLink {
 	title: string;
 }
 
-/**
- * Shorthand helper for creating parameter definitions.
- */
 export function param(
 	name: string,
 	description: string,
@@ -21,9 +18,6 @@ export function param(
 	return { name, description, optional };
 }
 
-/**
- * Shorthand helper for creating example definitions.
- */
 export function example(options: {
 	values: Record<string, unknown>;
 	description?: string;
@@ -31,9 +25,6 @@ export function example(options: {
 	return { values: options.values, description: options.description };
 }
 
-/**
- * Shorthand helper for creating documentation link definitions.
- */
 export function docLink(options: { url: string; title: string }): JSDocLink {
 	return { url: options.url, title: options.title };
 }

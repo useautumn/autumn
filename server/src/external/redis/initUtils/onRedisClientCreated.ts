@@ -5,7 +5,6 @@ import {
 } from "../otel/instrumentRedis.js";
 import { registerRedisCommands } from "./registerRedisCommands.js";
 
-/** Labels are `<region>:<redisType>`; the type is the segment after the last colon. */
 const splitLabel = ({
 	label,
 }: {
@@ -18,7 +17,6 @@ const splitLabel = ({
 	};
 };
 
-/** Tracing must patch the instance before the Lua commands are defined on it. */
 export const onRedisClientCreated: OnClientCreated = ({ redis, label }) => {
 	const { region, redisType } = splitLabel({ label });
 	instrumentRedis({ redis, region, redisType });

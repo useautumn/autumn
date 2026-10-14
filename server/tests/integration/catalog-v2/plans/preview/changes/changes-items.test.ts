@@ -1,11 +1,3 @@
-/**
- * catalogV2.preview_update — item_changes + customize.add_items/remove_items.
- *
- * Match key = feature_id|billing_method|interval|interval_count.
- * In-place mods = remove filter (OLD key) + add entry.
- * toCreatePlanItemParams omits default-valued fields.
- */
-
 import { expect, test } from "bun:test";
 import {
 	BillingInterval,
@@ -74,7 +66,6 @@ const messagesUsage = ({
 	reset: { interval },
 });
 
-/** Assert changes wired with expected customize item lanes. */
 const expectItemCustomize = ({
 	preview,
 	planId,
@@ -235,7 +226,6 @@ test.concurrent(
 	},
 );
 
-// same match key → deleted+created pair
 test.concurrent(
 	`${chalk.yellowBright("catalogV2 changes-items: included bump → remove+add same key")}`,
 	async () => {
@@ -325,7 +315,6 @@ test.concurrent(
 	},
 );
 
-// match key CHANGES: remove filter carries OLD interval
 test.concurrent(
 	`${chalk.yellowBright("catalogV2 changes-items: reset/billing interval change → old key on remove")}`,
 	async () => {
@@ -506,7 +495,6 @@ test.concurrent(
 	},
 );
 
-// unlimited / pooled toggles
 test.concurrent(
 	`${chalk.yellowBright("catalogV2 changes-items: unlimited + pooled toggles → remove+add")}`,
 	async () => {
@@ -569,7 +557,6 @@ test.concurrent(
 	},
 );
 
-// rollover / proration / billing_units / max_purchase / tiers / tier_behavior
 test.concurrent(
 	`${chalk.yellowBright("catalogV2 changes-items: rollover / proration / units / tiers / tier_behavior")}`,
 	async () => {
@@ -663,7 +650,6 @@ test.concurrent(
 	},
 );
 
-// graduated explicit ≡ default → no diff; volume flip diffs
 test.concurrent(
 	`${chalk.yellowBright("catalogV2 changes-items: tier_behavior graduated explicit → no diff; → volume diffs")}`,
 	async () => {
@@ -757,7 +743,6 @@ test.concurrent(
 	},
 );
 
-// Item FX amount change diffs; currency add/remove remints price rows without plan diff
 test.concurrent(
 	`${chalk.yellowBright("catalogV2 changes-items: item currency amount change vs add/remove")}`,
 	async () => {
@@ -848,7 +833,6 @@ test.concurrent(
 	},
 );
 
-// two items same feature different intervals; only edited key diffs
 test.concurrent(
 	`${chalk.yellowBright("catalogV2 changes-items: sibling intervals — only edited key diffs")}`,
 	async () => {
@@ -909,7 +893,6 @@ test.concurrent(
 	},
 );
 
-// Split one prepaid month line into month + one_off (different match keys)
 test.concurrent(
 	`${chalk.yellowBright("catalogV2 changes-items: 100/mo → 50/mo + 50/one_off → 1 deleted + 2 created")}`,
 	async () => {
@@ -990,7 +973,6 @@ test.concurrent(
 	},
 );
 
-// explicit defaults → empty item_changes / no customize lanes
 test.concurrent(
 	`${chalk.yellowBright("catalogV2 changes-items: explicit item defaults → empty changes")}`,
 	async () => {

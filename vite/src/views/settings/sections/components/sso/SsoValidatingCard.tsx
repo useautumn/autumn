@@ -28,11 +28,7 @@ export const SsoValidatingCard = ({
 				toast.error("Received an invalid sign-in URL. Please try again.");
 				return;
 			}
-			// Remembered so the completion route can still finish if the callback
-			// lands without a providerId query param.
 			rememberPendingSsoProviderId(connection.providerId);
-			// Full-page navigation: the provider round trip must come back to the
-			// SSO completion route, so the callback can't be swallowed by the router.
 			window.location.assign(url);
 		} catch (error) {
 			toast.error(getBackendErr(error, "Failed to start the test sign-in"));

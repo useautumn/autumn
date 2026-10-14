@@ -7,7 +7,6 @@ import type {
 	ReplayHydrationResult,
 } from "../replayHydrationContracts.js";
 
-/** The worker had no state and could not hydrate it itself; the coordinator seeds the baseline instead. */
 export function isExactInitializationMiss(cause: unknown): boolean {
 	return (
 		cause instanceof BalanceWorkerClientError &&
@@ -18,12 +17,6 @@ export function isExactInitializationMiss(cause: unknown): boolean {
 	);
 }
 
-/**
- * Only a fresh initialization proves the worker holds the baseline we sent: the
- * writer answers a duplicate with the submitted state, so later tracks may have
- * already moved actual state away from that snapshot. Duplicate and
- * already_initialized stay idempotent successes without parity evidence.
- */
 export function prewarmResultOf({
 	kind,
 }: {
@@ -32,7 +25,6 @@ export function prewarmResultOf({
 	return { kind, freshParity: kind === "initialized" };
 }
 
-/** A retry of the write is a duplicate; only the write itself proves the baseline. */
 export function initializeResponseToOutcome({
 	response,
 }: {

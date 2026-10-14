@@ -36,10 +36,6 @@ const waitForDraftUsageLines = ({
 		timeoutMs: 60_000,
 	});
 
-/**
- * Reads the upcoming invoice preview, advances one cycle, and asserts the renewal
- * invoice Stripe issued has the same total. Returns both for further checks.
- */
 export const expectNextInvoiceMatchesPreview = async ({
 	ctx,
 	autumnV1,
@@ -59,7 +55,6 @@ export const expectNextInvoiceMatchesPreview = async ({
 	advancedTo: number;
 	featureId?: string;
 	expectedFeatureAmount?: number;
-	/** Arrear usage lines are added by invoice.created; seat and prepaid lines come from Stripe items. */
 	waitForUsageLines?: boolean;
 }) => {
 	const { invoice_previews } = await autumnV2_2.customers.get<ApiCustomerV5>(
@@ -81,7 +76,6 @@ export const expectNextInvoiceMatchesPreview = async ({
 	const before = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	const invoiceCountBefore = before.invoices?.length ?? 0;
 
-	// Stop at the cycle boundary until invoice.created has added the usage lines.
 	const cycleEnd = addMonths(new Date(advancedTo), 1);
 	await advanceTestClock({
 		stripeCli: ctx.stripeCli,
@@ -102,7 +96,6 @@ export const expectNextInvoiceMatchesPreview = async ({
 		waitForSeconds: 15,
 	});
 
-	// Autumn stores the renewal from Stripe webhooks, which can lag the test clock.
 	const after = await pollUntilAsserted({
 		fetch: () => autumnV1.customers.get<ApiCustomerV3>(customerId),
 		assert: (customer) => {

@@ -32,14 +32,9 @@ import {
 	writesSnapshotRows,
 } from "./runFlush.js";
 
-/** Another writer moved this partition's bookmark: the record is fine, this worker no longer owns it. */
 const isOwnershipLost = (cause: unknown): boolean =>
 	cause instanceof FlushBookmarkConflictError;
 
-/**
- * Why this record is skipped, or null when the failure is the store's or the partition's, not the record's own.
- * Anything else Postgres refuses would refuse the same way on every replay and hold the partition forever.
- */
 const refusalOf = ({
 	record,
 	cause,
@@ -53,8 +48,6 @@ const refusalOf = ({
 	if (cause instanceof StaleSubjectRowsError)
 		return new SubjectStaleError({ identity, cause });
 
-	// A lock id is unique across the org but a writer knows only its own customers' locks, and a customer can be
-	// deleted between the decision and the write: both are the request's problem, with an answer of their own.
 	const sqlState = postgresSqlStateOf({ error: cause });
 	if (
 		command.type === "applyBillingPlan" &&
@@ -71,7 +64,6 @@ const refusalOf = ({
 	return new FlushRecordRefusedError({ mutationId: record.mutation.id, cause });
 };
 
-/** A stale subject is routine (a concurrent writer); anything else skipped is a bug that lost a write. */
 const reportRefusal = ({
 	ctx,
 	refusal,
@@ -87,7 +79,6 @@ const reportRefusal = ({
 		ctx.logger?.error(`[committer] ${refusal.message}`);
 };
 
-/** The same record with nothing to write: lands only its bookmark, so the records behind it are not held up. */
 const withoutChanges = ({
 	record,
 }: {
@@ -114,7 +105,6 @@ const defaultSleep = ({
 		signal.addEventListener("abort", finish, { once: true });
 	});
 
-/** Degraded is reported when the threshold is reached and again every threshold after, so a long outage stays visible. */
 const reportStoreWaiting = ({
 	scope,
 	attempt,
@@ -147,7 +137,6 @@ const reportStoreRecovered = ({
 	);
 };
 
-/** The same flush again while the failure is the store's, with capped backoff; a retry's conflict is checked against the stored bookmark first. */
 const runWithRetries = async ({
 	scope,
 	flush,
@@ -177,7 +166,6 @@ const runWithRetries = async ({
 				}
 			}
 			if (!isTransientPostgresError({ error: cause })) throw cause;
-			// Two transient refusals of a snapshot-carrying flush: the snapshots may be the weight, so they go before the records wait longer.
 			if (
 				attempt === 2 &&
 				attempted.calls.some((call) => writesSnapshotRows({ call }))
@@ -208,11 +196,9 @@ const recordCall = ({
 	expectedOffset,
 	records: [record],
 	rows: record.mutation.changes.length,
-	// A record landing alone no longer lands with the rest of its customer's: its snapshot is deleted, not written.
 	snapshotIntent: withSnapshotsDeleted({ intent: call.snapshotIntent }),
 });
 
-/** The same calls with every snapshot deleted instead of written; a call that wrote none is the same object. */
 const withoutSnapshotWrites = ({ flush }: { flush: Flush }): Flush => ({
 	calls: flush.calls.map((call) =>
 		writesSnapshotRows({ call })
@@ -224,7 +210,6 @@ const withoutSnapshotWrites = ({ flush }: { flush: Flush }): Flush => ({
 	),
 });
 
-/** Outcomes under the calls the caller handed in, when a retry ran stand-in calls for them. */
 const keyedByOriginalCalls = ({
 	flush,
 	attempted,
@@ -243,7 +228,6 @@ const keyedByOriginalCalls = ({
 	return keyed;
 };
 
-/** The same intent with every customer's rows deleted instead of written. */
 const withSnapshotsDeleted = ({
 	intent,
 }: {
@@ -262,7 +246,6 @@ type RefusedRecord =
 			failure: { record: DurableMutationRecord; cause: unknown };
 	  };
 
-/** A record that would not land alone: one the store refuses is skipped past with only its bookmark; a store or ownership failure stops the call here. */
 const settleRefusedRecord = async ({
 	scope,
 	call,
@@ -299,7 +282,6 @@ const settleRefusedRecord = async ({
 	}
 };
 
-/** One call, one record at a time and in order: the bookmark stops at the first record that is broken, and moves past one that is merely refused. */
 const landRecordsOneByOne = async ({
 	scope,
 	call,
@@ -343,7 +325,6 @@ const landRecordsOneByOne = async ({
 	return { nextOffset, commandNextOffset, rejections };
 };
 
-/** The flush once more with its stale records landing only their bookmarks, each rejected as landing it alone would; null when that fails too. */
 const landWithoutStaleRecords = async ({
 	scope,
 	flush,
@@ -362,7 +343,6 @@ const landWithoutStaleRecords = async ({
 						records: call.records.map((record) =>
 							isStale(record) ? withoutChanges({ record }) : record,
 						),
-						// As landing piece by piece: a call that skips a record no longer lands its customers' snapshots whole.
 						snapshotIntent: withSnapshotsDeleted({
 							intent: call.snapshotIntent,
 						}),
@@ -393,10 +373,6 @@ const landWithoutStaleRecords = async ({
 	return outcomes;
 };
 
-/**
- * Lands a flush, then shrinks around whatever refuses to land: retry while transient, once more without
- * its stale records, then each call alone, then each record alone. Every call gets an outcome; only the bad record is left behind.
- */
 export const landFlush = async ({
 	scope,
 	flush,
@@ -418,7 +394,6 @@ export const landFlush = async ({
 			(total, call) => total + call.records.length,
 			0,
 		);
-		// Landing piece by piece costs a transaction per record, so it must never happen quietly.
 		if (recordCount > 1)
 			ctx.logger?.warn(
 				`[committer] flush of ${recordCount} records failed and is landing piece by piece: ${cause instanceof Error ? cause.message : String(cause)}`,
@@ -436,10 +411,7 @@ export const landFlush = async ({
 			outcomes.set(call, await landRecordsOneByOne({ scope, call }));
 			return outcomes;
 		}
-		// A lone record already failed alone: it is not re-run, only classified,
-		// unless its snapshot could be the reason, which must never cost a record.
 		const record = call.records[0];
-		// A delete-only call has no record to classify: it alone is refused, never the calls that landed beside it.
 		if (!record) {
 			call.settle.reject(cause);
 			return outcomes;

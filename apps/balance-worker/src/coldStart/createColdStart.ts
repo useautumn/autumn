@@ -15,7 +15,6 @@ type ColdStartContext = {
 	>;
 	partitions: Pick<Partitions, "partitions" | "findOwnedRuntime">;
 	logger: Pick<AutumnLogger, "info" | "warn">;
-	/** Called once an ack is ready, so the heartbeat carries it without waiting for its next tick. */
 	onAcked(): void;
 };
 
@@ -25,7 +24,6 @@ export type ColdStart = {
 	readAck(): ColdStartAck | null;
 };
 
-/** Each new request empties its scope of every partition this worker serves, one request at a time; a worker that boots after one is already cold. */
 export function createColdStart({ ctx }: { ctx: ColdStartContext }): ColdStart {
 	let ack: ColdStartAck | null = null;
 	let seen: string | null = null;

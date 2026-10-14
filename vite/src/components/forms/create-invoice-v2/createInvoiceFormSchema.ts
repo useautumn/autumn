@@ -29,27 +29,21 @@ export type FormInvoiceLicense = z.infer<typeof FormInvoiceLicenseSchema>;
 
 const ServicePeriodSchema = z.object({ start: z.number(), end: z.number() });
 
-/** UTC midnights; end is the day the period runs up to. */
 export type ServicePeriod = z.infer<typeof ServicePeriodSchema>;
 
 const FormInvoicePlanSchema = z.object({
 	_id: z.string(),
 	planId: z.string(),
 	version: z.number().positive().optional(),
-	/** Null keeps catalog pricing. */
 	items: z.custom<ProductItem[]>().nullable(),
 	isCustom: z.boolean(),
 	featureQuantities: FeatureQuantitiesSchema,
-	/** Usage-based units for a feature also priced prepaid; its prepaid units stay in featureQuantities. */
 	overageQuantities: FeatureQuantitiesSchema,
 	featureUsage: FeatureUsageSchema,
 	licenses: z.array(FormInvoiceLicenseSchema),
 	prorate: z.boolean().optional(),
-	/** Null bills the plan at customer level. */
 	entityId: z.string().nullable(),
-	/** Overrides the invoice's service period for this plan. */
 	period: ServicePeriodSchema.nullable(),
-	/** Per-line overrides, keyed `featureId:billing_behavior`. */
 	featurePeriods: z.record(z.string(), ServicePeriodSchema),
 });
 
@@ -107,12 +101,10 @@ export const CreateInvoiceFormSchema = z.object({
 	discounts: z.custom<FormDiscount[]>(),
 	invoiceTemplateId: z.string().nullable(),
 	netTermsDays: z.number().int().positive().nullable(),
-	/** Null keeps the org's allowed payment methods. */
 	paymentMethodTypes: z.array(InvoicePaymentMethodSchema).nullable(),
 	taxRateId: z.string().nullable(),
 	periodStart: z.number().nullable(),
 	periodEnd: z.number().nullable(),
-	/** Null issues today. */
 	issueDay: z.number().nullable(),
 });
 

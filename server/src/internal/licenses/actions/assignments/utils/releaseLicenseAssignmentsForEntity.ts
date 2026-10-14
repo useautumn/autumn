@@ -6,8 +6,6 @@ import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeA
 import { CusService } from "@/internal/customers/CusService.js";
 import { licenseAssignmentRepo } from "../../../repos/licenseAssignmentRepo.js";
 
-/** Releases every active assignment held by an entity back to its pool
- * before the entity row goes — the seats stay reusable. */
 export const releaseLicenseAssignmentsForEntity = async ({
 	ctx,
 	internalEntityId,

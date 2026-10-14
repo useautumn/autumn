@@ -115,15 +115,12 @@ export const handleUpdateCoupon = createRoute({
 			rewardCat === RewardCategory.Discount ||
 			(rewardCat === RewardCategory.FreeProduct && prices.length > 0);
 
-		// Preflight before deleting the old Stripe coupon, so a plan missing
-		// in Stripe fails the update while the existing coupon is still intact.
 		if (willRecreateStripeCoupon) {
 			await initRewardStripePrices({ ctx, prices });
 			await validateCouponStripeProductScope({ ctx, prices });
 			resolveCouponStripeProductIds({ reward: updatedReward, prices });
 		}
 
-		// Delete old prices from stripe
 		try {
 			await stripeCli.coupons.del(reward.id);
 			await stripeCli.coupons.del(reward.internal_id);

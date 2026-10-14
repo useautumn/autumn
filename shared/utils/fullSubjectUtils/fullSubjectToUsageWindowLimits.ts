@@ -17,14 +17,6 @@ import {
 	resolveBillingControl,
 } from "./planBillingControlUtils.js";
 
-/**
- * Resolves the enforceable usage-window limits for the requested features.
- * ONE cap per (feature, filter identity) per subject: within each filter
- * group, inheritance mirrors spend limits (fullSubjectToSpendLimitByFeatureId)
- * -- the entity's own `usage_limits` entry wins (entity-scoped counter), else
- * the customer's, else the plan's. Filtered and unfiltered caps on the same
- * feature are independent counters, not sub-budgets of each other.
- */
 export const fullSubjectToUsageWindowLimits = <
 	CE extends CustomerEntitlementRowView,
 	CP extends PlanControlCustomerProduct & CustomerProductWithPricesView,
@@ -39,8 +31,6 @@ export const fullSubjectToUsageWindowLimits = <
 	featureIds: string[];
 	features: UsageWindowFeature[];
 	now: number;
-	// Status filter for entitlement lookups; pass the caller's orgToInStatuses so
-	// the cap's anchor resolution matches what the deduction can act on.
 	inStatuses?: CusProductStatus[];
 }): UsageWindowLimit[] => {
 	const entityUsageLimits = fullSubject.entity?.usage_limits ?? [];

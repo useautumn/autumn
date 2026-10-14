@@ -1,10 +1,3 @@
-/**
- * Deleting an entity by its id alone (`entities.delete` with no customer_id) evicts it from its balance worker.
- *
- * Red: the route resolves the customer itself but never names it on the request, so nothing evicts the worker,
- * which keeps the entity's rows resident. Green: the entity delete evicts the worker itself once it commits.
- */
-
 import { test } from "bun:test";
 import type { AttachParamsV1Input } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
@@ -27,7 +20,6 @@ test.concurrent.skipIf(!isBalanceWorkerRoute())(
 			setup: [s.customer({ testClock: false }), s.products({ list: [free] })],
 			actions: [],
 		});
-		// An id unique to the customer, so it can be deleted by its id alone.
 		const entityId = `${customerId}-ent-1`;
 		await autumnV2_4.entities.create(customerId, [
 			{ id: entityId, name: entityId, feature_id: TestFeature.Users },
@@ -37,7 +29,6 @@ test.concurrent.skipIf(!isBalanceWorkerRoute())(
 			entity_id: entityId,
 			plan_id: free.id,
 		});
-		// The track makes the entity resident on its worker.
 		await autumnV2_4.track({
 			customer_id: customerId,
 			entity_id: entityId,

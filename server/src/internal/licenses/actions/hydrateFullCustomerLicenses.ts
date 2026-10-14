@@ -2,11 +2,6 @@ import type { FullCustomer, FullCustomerLicense } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getFullCustomerLicenses } from "../repos/customerLicenseRepo/getFullCustomerLicenses.js";
 
-/**
- * Stitches the customer's licenses (hydrated with their effective plan
- * license) onto their parent customer products — a customer product carries
- * its customer_licenses the same way it carries customer_prices.
- */
 export const hydrateFullCustomerLicenses = async ({
 	ctx,
 	fullCustomer,
@@ -14,8 +9,6 @@ export const hydrateFullCustomerLicenses = async ({
 	ctx: AutumnContext;
 	fullCustomer: FullCustomer;
 }): Promise<void> => {
-	// getFullCustomerLicenses keys by public customer id; id-less customers
-	// skip hydration.
 	if (!fullCustomer.id) return;
 
 	const customerLicenses = await getFullCustomerLicenses({

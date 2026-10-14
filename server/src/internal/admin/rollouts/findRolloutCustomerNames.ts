@@ -8,7 +8,6 @@ export type RolloutCustomerName = {
 	email: string | null;
 };
 
-/** Names for the pinned customers, by org id then customer id; a live customer wins over a sandbox one. */
 export const findRolloutCustomerNames = async ({
 	db,
 	customersByOrgId,

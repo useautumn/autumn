@@ -48,7 +48,6 @@ export const cleanUpReplicas = () => {
 	for (const cleanup of cleanups.splice(0)) cleanup();
 };
 
-/** One replica of an org's Atom: its own folder, public app, peer app and replication, with a clock a test can run. */
 export const createReplica = ({
 	address,
 	peers,
@@ -132,24 +131,17 @@ export const createReplica = ({
 		dataDir,
 		stats: () => readThreadStats({ buffer: threadStats })[0],
 		setReady: (value: boolean) => Atomics.store(readyFlag, 0, value ? 1 : 0),
-		/** As the thread boots: the point it fell behind at is fixed here, before any live relay lands. */
 		sync: () =>
 			createReplicaSync({
 				ctx: syncContext,
 				folders: createDeployedFolders({ slots: auth.slots }),
 			}),
-		/** Closes the files, as a process that stops or dies does; the folder stays for a restart on the same volume. */
 		close: () => auth.close(),
 	};
 };
 
 export type Replica = ReturnType<typeof createReplica>;
 
-/**
- * The deployment network plus, when given, the Autumn API: a request to a replica's address lands on its public
- * app or its peer app by port. Honours the caller's abort signal like a real fetch.
- */
-/** What the network needs of a replica: where it is and the apps that answer on each port. */
 export type Reachable = Pick<Replica, "address" | "app" | "peerApp">;
 
 export const connect = ({
@@ -159,7 +151,6 @@ export const connect = ({
 }: {
 	replicas: Reachable[];
 	autumn?: (request: Request) => Promise<Response>;
-	/** What the caller sees of a replica's reply: a test can lose it on the way back, as a dropped connection does. */
 	replyFrom?: (replica: Reachable, reply: Response) => Promise<Response>;
 }) => {
 	const byAddress = new Map(
@@ -201,7 +192,6 @@ export const connect = ({
 
 export const disconnect = () => spyOn(globalThis, "fetch").mockRestore();
 
-/** Customer ids that all live in `slot`, so they share one slot file. */
 export const customersInSlot = ({
 	slot,
 	count,
@@ -236,7 +226,6 @@ export const bodyFor = ({
 	});
 };
 
-/** Stores a push on one replica only, as when its relay never reached the others. */
 export const storeOnly = ({
 	replica,
 	customerId,

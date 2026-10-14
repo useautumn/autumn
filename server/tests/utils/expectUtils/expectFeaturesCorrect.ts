@@ -40,8 +40,6 @@ export const expectFeaturesCorrect = ({
 
 	const otherItems = otherProducts?.flatMap((p) => p.items) || [];
 
-	// console.log(`Product:`, product);
-	// console.log("Customer features:", customer.features);
 	for (const featureId of featureIds) {
 		let includedUsage: string | number = 0;
 
@@ -76,11 +74,8 @@ export const expectFeaturesCorrect = ({
 
 		expect(feature, `Feature ${featureId} exists`).toBeDefined();
 
-		// 1. Check that included usage matches
-
 		expect(feature?.included_usage).toBe(includedUsage as number);
 
-		// 2. Check that unlimited is set correctly
 		if (item?.included_usage === Infinite) {
 			expect(feature?.unlimited).toBe(true);
 		} else {
@@ -89,7 +84,6 @@ export const expectFeaturesCorrect = ({
 			);
 		}
 
-		// 3. Check that usage is correct...
 		const featureUsage =
 			usage?.reduce((acc, curr) => {
 				if (curr.featureId === featureId) {

@@ -13,7 +13,6 @@ const ENGINE_SCHEMA_VERSION = 1 as const;
 const contentHashPattern = /^[a-f0-9]{64}$/;
 const offsetPattern = /^(0|[1-9][0-9]*)$/;
 
-/** One subject state per entry: the customer's own rows, or one entity's, keyed by subject. */
 export type PartitionCheckpointStateV1 = {
 	subjectKey: string;
 	state: SubjectState;
@@ -265,7 +264,6 @@ const normalizedContentsOf = ({
 		});
 	}
 
-	// Receipts hang off the customer's state, whose subject key is its partition key.
 	const stateByPartitionKey = new Map<string, SubjectState>();
 	const subjectKeys = new Set<string>();
 	const normalizedStates = states

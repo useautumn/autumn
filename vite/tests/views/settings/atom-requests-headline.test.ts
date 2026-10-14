@@ -12,7 +12,6 @@ const rates = (requests: number) => ({
 	pushes: 1,
 });
 
-/** One 30s period every 30s across the last 10 minutes, at the given req/s from oldest to newest. */
 const points = (requestsPerPeriod: number[]): AtomMetricsPoint[] =>
 	requestsPerPeriod.map((requests, index) => ({
 		at: NOW - 10 * MINUTE_MS + index * 30_000,

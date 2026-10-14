@@ -9,7 +9,6 @@ export const catalogVariantIdentity = {
 	components: [{ paths: ["variant_plan_id"], default: "" }],
 } as const satisfies CatalogItemIdentityRecipe;
 
-/** Base plan id for a pointer write. `null` detaches; omit leaves it unchanged. */
 export const CatalogBaseVariantIdSchema = z
 	.string()
 	.nonempty()
@@ -17,7 +16,6 @@ export const CatalogBaseVariantIdSchema = z
 	.nullable()
 	.optional();
 
-/** One `variants[]` entry: declared overlay on a variant of this base. Never follow. */
 export const CatalogVariantParamsSchema = z
 	.object({
 		variant_plan_id: z.string().nonempty().regex(idRegex).meta({

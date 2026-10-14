@@ -2,8 +2,6 @@ import type { WithheldWrite } from "../../agentRuntime/eve/parkedInput.js";
 
 export const APPROVAL_DESCRIPTION_KEY = "approval_description";
 
-/** Models routinely emit the two characters `\n` inside a JSON string field
- * rather than a real newline, which renders as literal "\n-" in the thread. */
 const withRealNewlines = (text: string) =>
 	text.replace(/\\r\\n|\\n|\\r/g, "\n");
 

@@ -8,8 +8,6 @@ const PRICING_RULES: Record<VolumeTierPricing, string> = {
 		"usage billed at the reached tier's rate plus its flat fee",
 };
 
-/** Volume picks one tier from total usage and bills past the included amount at it,
- * so the copy names the included threshold. */
 export const formatVolumeTierRule = ({
 	includedUsage,
 	pricing,

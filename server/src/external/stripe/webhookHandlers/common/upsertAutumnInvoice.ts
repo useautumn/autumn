@@ -13,7 +13,6 @@ import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/
 import { invoiceActions } from "@/internal/invoices/actions";
 import type { InvoiceUpsertResult } from "@/internal/invoices/actions/types/invoiceUpsertResult";
 
-/** Returns the saved invoice and cache patch outcome so callers can decide whether refresh is needed. */
 export const upsertAutumnInvoice = async ({
 	ctx,
 	stripeInvoice,
@@ -27,12 +26,10 @@ export const upsertAutumnInvoice = async ({
 	customerProducts?: FullCusProduct[];
 	options?: {
 		skipNonCycleInvoices?: boolean;
-		// skipSubscriptionCreateInvoice?: boolean;
 	};
 }): Promise<InvoiceUpsertResult | undefined> => {
 	const { logger, stripeCli, fullCustomer } = ctx;
 
-	// 1. Skip non-cycle invoices if requested (invoice.created uses this)
 	if (
 		options?.skipNonCycleInvoices &&
 		stripeInvoice.billing_reason !== "subscription_cycle"
@@ -50,7 +47,6 @@ export const upsertAutumnInvoice = async ({
 		return undefined;
 	}
 
-	// 4. Get nowMs (test-clock aware)
 	const nowMs = stripeSubscription
 		? await stripeSubscriptionToNowMs({
 				stripeSubscription,
@@ -58,7 +54,6 @@ export const upsertAutumnInvoice = async ({
 			})
 		: Date.now();
 
-	// 5. Merge scheduled-but-started customer products
 	const scheduleId = stripeSubscriptionToScheduleId({ stripeSubscription });
 
 	const startedScheduledCustomerProducts = (
@@ -88,7 +83,6 @@ export const upsertAutumnInvoice = async ({
 	const internalEntityId =
 		internalEntityIds.length === 1 ? internalEntityIds[0] : null;
 
-	// 8. Create new invoice
 	return invoiceActions.upsertFromStripe({
 		ctx,
 		stripeInvoice,

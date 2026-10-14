@@ -31,7 +31,6 @@ export const handleRedeemReferral = createRoute({
 		const { db, org, env } = ctx;
 		const { code, customer_id: customerId } = c.req.valid("json");
 
-		// 1. Get redeemed by customer, and referral code
 		const [customer, referralCode] = await Promise.all([
 			CusService.get({
 				db,
@@ -50,7 +49,6 @@ export const handleRedeemReferral = createRoute({
 
 		if (!customer) throw new CustomerNotFoundError({ customerId });
 
-		// 2. Check that code has not reached max redemptions
 		const redemptionCount = await referralCodeRepo.getRedemptionCount({
 			db,
 			referralCodeId: referralCode.id,
@@ -67,7 +65,6 @@ export const handleRedeemReferral = createRoute({
 			});
 		}
 
-		// 3. Check that customer has not already redeemed a code in this referral program
 		const existingRedemptions = await redemptionRepo.getByCustomer({
 			db,
 			internalCustomerId: customer.internal_id,
@@ -82,7 +79,6 @@ export const handleRedeemReferral = createRoute({
 			});
 		}
 
-		// Don't let customer redeem their own code
 		const codeCustomer = await CusService.getByInternalId({
 			db,
 			internalId: referralCode.internal_customer_id,
@@ -106,11 +102,10 @@ export const handleRedeemReferral = createRoute({
 			});
 		}
 
-		// 4. Insert redemption into db
 		let redemption: RewardRedemption = {
 			id: generateId("rr"),
 			referral_code_id: referralCode.id,
-			internal_customer_id: customer.internal_id, // redeemed by customer
+			internal_customer_id: customer.internal_id,
 			internal_reward_program_id: referralCode.internal_reward_program_id,
 			reward_internal_id: null,
 			promo_code: null,
@@ -128,7 +123,6 @@ export const handleRedeemReferral = createRoute({
 			rewardRedemption: redemption,
 		});
 
-		// 5. If reward trigger when is immediate:
 		const { reward_program } = referralCode;
 		const redeemRewardNow =
 			referralCode.reward_program.when === RewardTriggerEvent.CustomerCreation;

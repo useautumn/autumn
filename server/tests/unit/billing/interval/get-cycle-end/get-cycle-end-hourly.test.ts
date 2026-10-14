@@ -4,7 +4,6 @@ import { fromUnix, toUnix } from "@tests/utils/testIntervalUtils/testUnixUtils";
 
 describe("get-cycle-end-hourly: hourly intervals", () => {
 	describe("anchor in the past", () => {
-		// Basic
 		test("anchor: 10:00, now: 11:30 -> 12:00", () => {
 			const anchor = toUnix({
 				year: 2025,
@@ -61,7 +60,6 @@ describe("get-cycle-end-hourly: hourly intervals", () => {
 			expect(minute).toBe(0);
 		});
 
-		// intervalCount > 1
 		test("(intervalCount = 2) anchor: 10:00, now: 11:30 -> 12:00", () => {
 			const anchor = toUnix({
 				year: 2025,
@@ -146,7 +144,6 @@ describe("get-cycle-end-hourly: hourly intervals", () => {
 			expect(minute).toBe(0);
 		});
 
-		// Edge cases
 		test("anchor: 10:00:00, now: 10:59:30 -> 11:00:00 (just before cycle end)", () => {
 			const anchor = toUnix({
 				year: 2025,
@@ -265,7 +262,6 @@ describe("get-cycle-end-hourly: hourly intervals", () => {
 	});
 
 	describe("anchor in the future", () => {
-		// Basic
 		test("anchor: 15:00, now: 10:00 -> 11:00", () => {
 			const anchor = toUnix({
 				year: 2025,
@@ -322,7 +318,6 @@ describe("get-cycle-end-hourly: hourly intervals", () => {
 			expect(minute).toBe(0);
 		});
 
-		// intervalCount > 1
 		test("(intervalCount = 2) anchor: 15:00, now: 10:00 -> 11:00", () => {
 			const anchor = toUnix({
 				year: 2025,
@@ -379,7 +374,6 @@ describe("get-cycle-end-hourly: hourly intervals", () => {
 			expect(minute).toBe(0);
 		});
 
-		// Edge cases
 		test("anchor: 15:00:00, now: 14:59:30 -> 15:00:00 (just before anchor)", () => {
 			const anchor = toUnix({
 				year: 2025,

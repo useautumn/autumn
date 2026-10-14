@@ -22,7 +22,6 @@ const updatesReplacedCustomerProduct = ({
 	);
 };
 
-/** Items it deletes are gone, or prices it adds are already there: Stripe would reject the replay. */
 const conflictsWithLiveSubscriptionItems = ({
 	billingPlan,
 	stripeSubscription,
@@ -44,7 +43,6 @@ const conflictsWithLiveSubscriptionItems = ({
 	);
 };
 
-/** It targets a schedule that was replaced, or creates one when the subscription now has one. */
 const conflictsWithLiveSchedule = ({
 	billingPlan,
 	stripeSubscriptionSchedule,
@@ -65,7 +63,6 @@ const conflictsWithLiveSchedule = ({
 	);
 };
 
-/** Whether the customer or subscription changed under a deferred plan since it was computed. */
 export const isDeferredSnapshotStale = ({
 	billingPlan,
 	fullCustomer,

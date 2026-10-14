@@ -63,7 +63,6 @@ const customerState = (): SubjectState =>
 		],
 	});
 
-/** Postgres as the worker sees it: the entity's own rows for ent_42, nothing else. */
 const entityEnvelope: SubjectRowsEnvelope = {
 	customer: {
 		internal_id: "cus_internal_1",
@@ -106,11 +105,9 @@ const entityEnvelope: SubjectRowsEnvelope = {
 	},
 };
 
-/** Holds appends while `hold` is on; `release` commits everything held so far with contiguous offsets. */
 class ControlledAppender implements CommittedOutcomeAppender {
 	readonly batches: MeteringRecord[][] = [];
 	hold = false;
-	/** Set to make every append fail the way a broker that stopped answering would. */
 	failWith: Error | null = null;
 	private held: Array<() => void> = [];
 	private nextOffset = 0n;
@@ -187,7 +184,6 @@ const createFixture = () => {
 		now: () => 0,
 	});
 	const catalogCache = createTestCatalogCache({ db });
-	// Wired as the processor wires it: each decided state hands its joined catalog on.
 	let subjectHydrator: ReturnType<typeof createSubjectHydrator> | undefined;
 	const writer = createPartitionWriter({
 		ctx: {
@@ -301,7 +297,6 @@ describe("entity subjects", () => {
 		}
 	});
 
-	/** The balance left on the rows this track drew from. */
 	const drawnBalanceOf = ({ result, state }: TrackReply): number => {
 		const drawn = new Set(result.deltas.map((delta) => delta.id));
 		return state.customerEntitlements
@@ -431,7 +426,6 @@ describe("reads while commits are in flight", () => {
 			await waitForTurn();
 			expect(fixture.store.readOwnState({ identity })?.revision).toBe(1);
 
-			// Nothing releases the commit until after the check has answered.
 			const reply = await Promise.race([
 				fixture.check(),
 				new Promise<never>((_, reject) =>

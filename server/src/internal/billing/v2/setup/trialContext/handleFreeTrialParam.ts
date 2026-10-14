@@ -9,12 +9,6 @@ import type Stripe from "stripe";
 import { isStripeSubscriptionTrialing } from "@/external/stripe/subscriptions/utils/classifyStripeSubscriptionUtils";
 import { initFreeTrialFromParamsV1 } from "@/internal/products/free-trials/initFreeTrialFromParamsV1";
 
-/**
- * Handles explicit free_trial parameter passed to attach/update subscription.
- *
- * - `free_trial: null` → Removes trial if currently trialing
- * - `free_trial: { length, duration }` → Starts fresh trial (bypasses dedup)
- */
 export const handleFreeTrialParam = ({
 	freeTrialParams,
 	stripeSubscription,
@@ -30,7 +24,6 @@ export const handleFreeTrialParam = ({
 }): TrialContext | undefined => {
 	const newProductIsPaidRecurring = isProductPaidAndRecurring(fullProduct);
 
-	// free_trial: null → Remove trial if currently trialing
 	if (freeTrialParams === null) {
 		const isCurrentlyTrialing =
 			isStripeSubscriptionTrialing(stripeSubscription) ||
@@ -47,7 +40,6 @@ export const handleFreeTrialParam = ({
 		return undefined;
 	}
 
-	// free_trial: { length, duration } → Fresh trial
 	const dbFreeTrial = initFreeTrialFromParamsV1({
 		freeTrialParams,
 		internalProductId: fullProduct.internal_id,

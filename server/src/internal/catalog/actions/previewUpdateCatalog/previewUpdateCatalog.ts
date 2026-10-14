@@ -239,11 +239,6 @@ const previewMigrationForInPlaceUpdate = async ({
 	};
 };
 
-/**
- * Resolve a proposed catalog change (features + plans) WITHOUT persisting, so a
- * live preview matches what `catalog.update` would apply. Reads and the virtual
- * feature upsert are batched up front by setupPreviewCatalogContext.
- */
 export const previewUpdateCatalog = async ({
 	ctx,
 	params,
@@ -341,7 +336,6 @@ export const previewUpdateCatalog = async ({
 		),
 		Promise.all(
 			proposedFeatures.map(({ existing, dbFeature }) =>
-				// Blockers are detected against the persisted catalog, so pass `ctx`.
 				previewFeature({
 					ctx: featureChangesCtx,
 					dbFeature,

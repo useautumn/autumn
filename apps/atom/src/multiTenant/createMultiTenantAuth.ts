@@ -16,23 +16,16 @@ import {
 	writeTenantAtom,
 } from "./atomFolders.js";
 
-/** A put, rotate or delete made through another thread reaches this one by its first request this long after. */
 export const TENANTS_REVALIDATE_MS = 1000;
-/** An unknown token re-reads the folders at most this often, so a flood of bad tokens cannot rescan per request. */
 export const TENANTS_MISS_RESCAN_MS = 100;
 
-/** One Atom holding many orgs: each gets a token and a folder of its own, shared by every thread. */
 export type MultiTenantAuth = Auth & {
-	/** Putting an Atom that exists only replaces its token hash; its customers stay. */
 	putAtom(params: TenantAtom): void;
 	hasAtom(params: { id: string }): boolean;
-	/** Every tenant this Atom holds, as the folders record them. */
 	listAtoms(): TenantAtom[];
-	/** Deletes the Atom's folder. Removing one that is not held is a no-op. */
 	removeAtom(params: { id: string }): void;
 };
 
-/** Slots stay null until the token is first used, so an Atom nobody asks holds no files, statements or timers. */
 type HeldAtom = TenantAtom & {
 	slots: Slots | null;
 	catalogInode: number | null;
@@ -51,9 +44,7 @@ export const createMultiTenantAuth = ({
 	slotCount: number;
 	owners: SlotOwners;
 	heldSubjects: HeldSubjects;
-	/** Each folder pulls with its own token hash, read at each pull since a put may re-token it. */
 	subjectPulls: SubjectPulls;
-	/** This replica's clock, stamped on every write. */
 	now?: () => number;
 	clock?: () => number;
 }): MultiTenantAuth => {
@@ -78,7 +69,6 @@ export const createMultiTenantAuth = ({
 		heldByTokenHash.set(tokenHash, held);
 	}
 
-	/** A folder deleted and put again under the same id has a new catalog file: never the inode of one still open. */
 	function catalogInodeOf({ id }: { id: string }): number | null {
 		try {
 			return statSync(join(atomFolderPath({ dataDir, id }), CATALOG_FILE)).ino;
@@ -93,7 +83,6 @@ export const createMultiTenantAuth = ({
 		held.slots?.close();
 	}
 
-	/** The folders are the truth every thread shares; synchronous, so one thread never runs two at once. */
 	function rescan(): void {
 		const onDisk = new Map(
 			listTenantAtoms({ dataDir }).map((tenantAtom) => [
@@ -122,7 +111,6 @@ export const createMultiTenantAuth = ({
 		return isUnknown && sinceScan >= TENANTS_MISS_RESCAN_MS;
 	}
 
-	/** Null when another thread deleted the Atom since the last rescan: opening would recreate its folder. */
 	function slotsOf(held: HeldAtom): Slots | null {
 		if (held.slots) return held.slots;
 		if (!hasAtomFile({ dataDir, id: held.id })) {
@@ -145,7 +133,6 @@ export const createMultiTenantAuth = ({
 		return held.slots;
 	}
 
-	/** One map lookup by the token's hash, after a rescan when one is due: no other org is read or touched. */
 	function authorize({ token }: { token: string }): Slots | null {
 		const tokenHash = hashToken({ token });
 		if (isRescanDue({ tokenHash })) rescan();
@@ -153,7 +140,6 @@ export const createMultiTenantAuth = ({
 		return held ? slotsOf(held) : null;
 	}
 
-	/** A push or another thread's call names its folder; a rescan picks up an Atom registered since. */
 	function slotsFor({ atomId }: { atomId: string | null }): Slots | null {
 		if (atomId === null) return null;
 		if (!heldById.has(atomId) || clock() - scannedAt >= TENANTS_REVALIDATE_MS)
@@ -162,7 +148,6 @@ export const createMultiTenantAuth = ({
 		return held ? slotsOf(held) : null;
 	}
 
-	/** Always written: what this thread holds may be stale, and the file is what every other thread reads. */
 	function putAtom(tenantAtom: TenantAtom): void {
 		writeTenantAtom({ dataDir, tenantAtom });
 		const held = heldById.get(tenantAtom.id);

@@ -1,16 +1,3 @@
-/**
- * Regression guard for orgs that enable `automatic_tax` after customers
- * already have paid subscriptions but no Stripe tax location on file.
- *
- * Red-failure mode (current behavior):
- *  - Pro -> Premium upgrade sends `automatic_tax.enabled=true` to Stripe.
- *  - Stripe rejects with `customer_tax_location_invalid`.
- *
- * Green-success criteria (after fix):
- *  - Upgrade succeeds by falling back to no automatic tax for this mutation.
- *  - Resulting subscription and upgrade invoice have automatic tax disabled.
- */
-
 import { expect, test } from "bun:test";
 import type { AttachParamsV1Input } from "@autumn/shared";
 import { products } from "@tests/utils/fixtures/products.js";

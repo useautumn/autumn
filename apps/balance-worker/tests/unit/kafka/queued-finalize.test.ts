@@ -1,13 +1,3 @@
-/**
- * A finalize the server queues when the lock's owner is unreachable is consumed, not dropped: it
- * settles the lock through the same decide as a sync finalize and shares Kafka commits with its batch.
- *
- * Red (before): the consumer had no finalize case, so the record was skipped as "not consumable yet"
- * and the lock stayed open while the server had already answered success.
- * Green (after): confirm, release and override settle and close the lock; a closed or unknown lock is
- * refused and consumed without parking; finalizes in one batch share commits.
- */
-
 import { describe, expect, test } from "bun:test";
 import type { WorkerLock } from "@autumn/balance-engine";
 import type { CommandRecord } from "@autumn/kafka";

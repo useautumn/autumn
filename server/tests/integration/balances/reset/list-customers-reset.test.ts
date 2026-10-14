@@ -8,22 +8,12 @@ import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 
-// ─────────────────────────────────────────────────────────────────
-// POST /customers/list — batch reset: only stale customers reset
-//
-// 6 customers with shared prefix. Customers 2, 4, 6 have their
-// next_reset_at expired. After listV2 triggers the async SQS batch
-// reset, only those 3 should be reset; the other 3 keep their usage.
-// ─────────────────────────────────────────────────────────────────
-
 const PREFIX = "reset-list-cohort";
 const OTHER_IDS = Array.from({ length: 5 }, (_, i) => `${PREFIX}-${i + 2}`);
 
-// Indices 2, 4, 6 are stale (0-indexed: 1, 3, 5 in the all-customers array)
 const STALE_IDS = [`${PREFIX}-2`, `${PREFIX}-4`, `${PREFIX}-6`];
 const FRESH_IDS = [`${PREFIX}-1`, `${PREFIX}-3`, `${PREFIX}-5`];
 
-// Each customer tracks a different amount so we can verify individually
 const USAGE: Record<string, number> = {
 	[`${PREFIX}-1`]: 20,
 	[`${PREFIX}-2`]: 35,
@@ -55,7 +45,6 @@ test.concurrent(`${chalk.yellowBright("list customers reset: only stale customer
 			s.products({ list: [freePlan] }),
 		],
 		actions: [
-			// Attach free plan to all 6 customers
 			s.attach({ productId: freePlan.id }),
 			...OTHER_IDS.map((id) =>
 				s.attach({ productId: freePlan.id, customerId: id }),
@@ -63,7 +52,6 @@ test.concurrent(`${chalk.yellowBright("list customers reset: only stale customer
 		],
 	});
 
-	// 1. Track different usage on each customer
 	const allIds = [primaryId, ...OTHER_IDS];
 	await Promise.all(
 		allIds.map((id) =>
@@ -76,7 +64,6 @@ test.concurrent(`${chalk.yellowBright("list customers reset: only stale customer
 	);
 	await new Promise((resolve) => setTimeout(resolve, 2000));
 
-	// 2. Expire only the stale customers (2, 4, 6)
 	await Promise.all(
 		STALE_IDS.map((id) =>
 			expireCusEntForReset({
@@ -87,21 +74,17 @@ test.concurrent(`${chalk.yellowBright("list customers reset: only stale customer
 		),
 	);
 
-	// 3. Call listV2 with the shared prefix — triggers batch reset via SQS
 	const listRes = (await autumnV2.customers.listV2({
 		search: PREFIX,
 	})) as { list: ApiCustomer[] };
 
-	// All 6 should appear in the list
 	for (const id of allIds) {
 		const found = listRes.list.find((c) => c.id === id);
 		expect(found).toBeDefined();
 	}
 
-	// 4. Wait for the SQS batch reset worker to process
 	await new Promise((resolve) => setTimeout(resolve, 5000));
 
-	// 5. Verify stale customers (2, 4, 6) were reset to full balance
 	for (const id of STALE_IDS) {
 		const customer = await autumnV2.customers.get<ApiCustomer>(id, {
 			skip_cache: "true",
@@ -118,7 +101,6 @@ test.concurrent(`${chalk.yellowBright("list customers reset: only stale customer
 		expect(cusEnt!.next_reset_at).toBeGreaterThan(Date.now());
 	}
 
-	// 6. Verify fresh customers (1, 3, 5) kept their usage — no reset
 	for (const id of FRESH_IDS) {
 		const customer = await autumnV2.customers.get<ApiCustomer>(id, {
 			skip_cache: "true",

@@ -1,17 +1,3 @@
-/**
- * A plan edit reaches the catalog copies the balance workers hold, inside their TTL.
- *
- * Contract:
- *   - `plans.update({ disable_version, billing_controls })` edits the product row in place and publishes a
- *     catalog invalidation; every worker expires the org's cached rows.
- *   - A plan-level usage limit added after the worker cached the product gates the next `check`.
- *   - A plan-level usage alert added after the worker cached the product is decided on the next
- *     track and fires `balances.usage_alert_triggered` through herald.
- *
- * Red (no invalidation): the cache serves the product as first read for five minutes, so
- * `check` stays allowed and no alert fires.
- */
-
 import { afterAll, beforeAll, expect, test } from "bun:test";
 import { ApiVersion, ResetInterval } from "@autumn/shared";
 import {
@@ -37,12 +23,9 @@ const rpc = new AutumnRpcCli({
 	version: ApiVersion.V2_1,
 });
 
-/** Kafka publish, consume and expiry: milliseconds in practice, given generously. */
 const INVALIDATION_SETTLE_MS = 3000;
-/** Herald reads the log behind the worker; give its first record time to land in its cache. */
 const HERALD_SETTLE_MS = 3000;
 
-/** The Kafka catalog invalidation is the worker's; an in-place plan edit never reached legacy's cached customers. */
 const workerOnlyTest = test.skipIf(!isBalanceWorkerRoute());
 
 let webhook: WebhookTestSetup;
@@ -75,7 +58,6 @@ workerOnlyTest(
 			actions: [s.billing.attach({ productId: plan.id })],
 		});
 
-		// The worker caches the product as it is now: no cap.
 		const before = await autumnV2_3.check({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
@@ -83,7 +65,6 @@ workerOnlyTest(
 		});
 		expect(before.allowed).toBe(true);
 
-		// In place: a new version would leave the customer on the row the caches already hold.
 		await rpc.plans.update(plan.id, {
 			disable_version: true,
 			billing_controls: {
@@ -127,7 +108,6 @@ workerOnlyTest(
 			actions: [s.billing.attach({ productId: plan.id })],
 		});
 
-		// Herald caches the product as it is now: no alert.
 		await autumnV2_3.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
@@ -135,7 +115,6 @@ workerOnlyTest(
 		});
 		await timeout(HERALD_SETTLE_MS);
 
-		// In place: a new version would leave the customer on the row the caches already hold.
 		await rpc.plans.update(plan.id, {
 			disable_version: true,
 			billing_controls: {
@@ -151,7 +130,6 @@ workerOnlyTest(
 		});
 		await timeout(INVALIDATION_SETTLE_MS);
 
-		// 99 remaining → 39: crosses the alert herald could only know from the fresh row.
 		await autumnV2_3.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,

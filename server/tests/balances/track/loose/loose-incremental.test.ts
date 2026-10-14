@@ -18,7 +18,6 @@ describe(`${chalk.yellowBright("loose-incremental: multiple tracks accumulate")}
 			withTestClock: false,
 		});
 
-		// Create loose entitlement with 100 messages
 		await autumnV1.balances.create({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
@@ -40,7 +39,7 @@ describe(`${chalk.yellowBright("loose-incremental: multiple tracks accumulate")}
 			feature_id: TestFeature.Messages,
 		})) as unknown as CheckResponseV2;
 
-		expect(res.balance?.current_balance).toBe(80); // 100 - 20
+		expect(res.balance?.current_balance).toBe(80);
 		expect(res.balance?.usage).toBe(20);
 	});
 
@@ -58,7 +57,7 @@ describe(`${chalk.yellowBright("loose-incremental: multiple tracks accumulate")}
 			feature_id: TestFeature.Messages,
 		})) as unknown as CheckResponseV2;
 
-		expect(res.balance?.current_balance).toBe(50); // 80 - 30
-		expect(res.balance?.usage).toBe(50); // 20 + 30
+		expect(res.balance?.current_balance).toBe(50);
+		expect(res.balance?.usage).toBe(50);
 	});
 });

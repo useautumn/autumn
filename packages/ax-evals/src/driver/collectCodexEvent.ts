@@ -2,7 +2,6 @@ import { shortText, trace } from "./trace.ts";
 import type { AgentRunResult } from "./types/agentRunResult.ts";
 import type { ToolUse } from "./types/toolUse.ts";
 
-/** A Codex `codex exec --json` JSONL event (the fields we read). */
 export type CodexEvent = {
 	type: string;
 	thread_id?: string;
@@ -21,8 +20,6 @@ export type CodexEvent = {
 
 const SKILL_READ = /\.codex\/skills\/([\w-]+)\/SKILL\.md/;
 
-/** Codex has no Skill tool — it reads SKILL.md via shell. Surface that as the
- * same Skill tool-use shape the graders and renderers already understand. */
 const toToolUse = ({
 	item,
 	turn,
@@ -66,8 +63,6 @@ const toToolUse = ({
 	return undefined;
 };
 
-/** Folds one Codex JSONL event into the run result; returns what happened so
- * the driver can render it. */
 export const collectCodexEvent = ({
 	event,
 	result,
@@ -100,7 +95,6 @@ export const collectCodexEvent = ({
 	}
 
 	if (event.type === "item.completed" && item) {
-		// Accumulate: codex emits several agent_message items per turn.
 		if (item.type === "agent_message" && item.text?.trim()) {
 			result.finalText = result.finalText
 				? `${result.finalText}\n\n${item.text}`
@@ -126,7 +120,6 @@ export const collectCodexEvent = ({
 			const tool = result.toolUses.find(
 				(candidate) => candidate.id !== undefined && candidate.id === item.id,
 			);
-			// Some command items only ever emit item.completed.
 			if (!tool) {
 				const started = toToolUse({ item, turn: result.turns });
 				if (started) result.toolUses.push(started);

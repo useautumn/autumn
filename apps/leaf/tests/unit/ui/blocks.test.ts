@@ -74,7 +74,6 @@ describe("approval card", () => {
 		expect(json).not.toContain('"request"');
 	});
 
-	// A replaced base plan must be visible without joining the diff table.
 	test("attach folds the replaced plan into the headline", () => {
 		const card = approvalCard({
 			id: "approval_1",
@@ -130,8 +129,6 @@ describe("approval card", () => {
 		);
 	});
 
-	// remove_plan_ids plans are expired, never handed back after the trial —
-	// even when the request names them by an alias the preview resolved.
 	test("a revert-on-end trial still removes extra plans", () => {
 		const card = JSON.stringify(
 			approvalCard({
@@ -146,7 +143,6 @@ describe("approval card", () => {
 							duration_type: "day",
 							on_end: "revert",
 						},
-						// The replaced plan listed here is still paused, not removed.
 						remove_plan_ids: ["launch", "addon-alias"],
 					},
 				},
@@ -239,15 +235,12 @@ describe("approval card", () => {
 		const json = JSON.stringify(card);
 		expect(json).toContain("Update **charlie**'s subscription to **pro**?");
 		expect(json).toContain('"caption":"pro customizations"');
-		// No current plan in the preview, so setting a price is an add.
 		expect(json).toContain('["🟢 Add","Base price","$200.00 per month"]');
 		expect(json).not.toContain('Update","Base price');
 		expect(json).not.toContain("Custom plan");
 		expect(json).not.toContain('"customize"');
 	});
 
-	// Changing the base price is a remove of the old and an add of the new —
-	// the same diff the dashboard renders, never a hardcoded "Update".
 	test("shows a base price change as a remove and an add", () => {
 		const card = approvalCard({
 			id: "approval_1",
@@ -414,8 +407,6 @@ describe("approval card", () => {
 		expect(json).not.toContain("view_approval_payload");
 	});
 
-	// A customize-only update names no plan and has no incoming change: the
-	// caption and the diff both come from the outgoing plan.
 	test("names the outgoing plan when the update does not", () => {
 		const card = approvalCard({
 			id: "approval_1",
@@ -459,8 +450,6 @@ describe("approval card", () => {
 		expect(json).toContain('["🔴 Remove","1,000 message credits","Included"]');
 	});
 
-	// The catalog says 0 contacts; the customer's live plan says 250,000. The
-	// preview's outgoing plan carries the terms actually being removed.
 	test("diffs against the preview's outgoing plan, not the catalog", () => {
 		const card = approvalCard({
 			id: "approval_1",
@@ -611,14 +600,11 @@ describe("approval card", () => {
 		expect(json).toContain('["🔴 Remove","1,000 credits","$0.05 / unit"]');
 		expect(json).toContain('["🔴 Remove","10 audit logs","Included"]');
 		expect(json).toContain('["🔴 Remove","50 annual tokens","Included"]');
-		// A diff reads old → new: what the customer loses before what they gain.
 		expect(json.indexOf('["🔴 Remove","10 audit logs"')).toBeLessThan(
 			json.indexOf('["🟢 Add","5,000 credits"'),
 		);
 	});
 
-	// The prepaid quantity is the money decision: it belongs on the item's own
-	// row with its line total, not in a detached "Quantities" footnote.
 	test("shows a prepaid add with its quantity and line total on the row", () => {
 		const card = approvalCard({
 			id: "approval_1",
@@ -1106,7 +1092,6 @@ describe("approval status card", () => {
 		);
 		expect(json).toContain("Due now");
 		expect(json).toContain("$400.00");
-		// No misleading placeholder — the running "…" sentence carries the state.
 		expect(json).not.toContain("▸");
 		expect(json).not.toContain("Confirming with Stripe");
 		expect(json).not.toContain("⏳");
@@ -1156,7 +1141,6 @@ describe("approval status card", () => {
 			"✅ Attached **<https://app.useautumn.com/sandbox/products/enterprise|enterprise>** to **<https://app.useautumn.com/sandbox/customers/kp-customer-1000|kp-customer-1000>**",
 		);
 		expect(json).toContain("Draft invoice — $0.00");
-		// Drafts link to the dashboard — the hosted page is not payable yet.
 		expect(json).toContain("Open draft in Stripe");
 		expect(json).toContain("https://dashboard.stripe.com/test/invoices/in_123");
 		expect(json).toContain("Open checkout");
@@ -1179,7 +1163,6 @@ describe("approval status card", () => {
 		});
 
 		const json = JSON.stringify(card);
-		// Title and money facts survive the edit-in-place instead of collapsing.
 		expect(card.title).toBe("Attach plan");
 		expect(json).toContain(
 			"✅ Attached **<https://app.useautumn.com/sandbox/products/enterprise|enterprise>**",
@@ -1228,7 +1211,6 @@ describe("approval status card", () => {
 		const json = JSON.stringify(card);
 		expect(json).toContain("View invoice");
 		expect(json).toContain("https://invoice.example/open");
-		// payment_url mirrors the hosted URL for open invoices — one link only.
 		expect(json).not.toContain("Open checkout");
 	});
 
@@ -1336,7 +1318,6 @@ describe("approval status card", () => {
 		expect(json).toContain("Due now");
 		expect(json).toContain("$400.00");
 		expect(json).toContain("Dismissed by <@U2>");
-		// Settled state is a non-interactive status line, not a (fake) button row.
 		expect(card.children.at(-1)?.type).toBe("text");
 		expect(json).not.toContain('"type":"actions"');
 		expect(json).not.toContain("approve_billing_action");
@@ -1375,7 +1356,6 @@ describe("approval status card", () => {
 		expect(supersededJson).toContain(
 			"🔄 Withdrawn — superseded by a newer request in this thread",
 		);
-		// Settled state is a non-interactive status line, not a (fake) button row.
 		expect(superseded.children.at(-1)?.type).toBe("text");
 		expect(supersededJson).not.toContain('"type":"actions"');
 		expect(supersededJson).not.toContain("approve_billing_action");
@@ -1396,8 +1376,6 @@ describe("approval status card", () => {
 	});
 });
 
-// A write the model asked for but Eve withheld is invisible unless the card
-// names it, which is how half a multi-write request used to go missing.
 describe("withheld writes", () => {
 	test("names the other requested writes on the pending card", () => {
 		const card = approvalCard({
@@ -1417,7 +1395,6 @@ describe("withheld writes", () => {
 		});
 
 		const rendered = JSON.stringify(cardToBlockKit(card));
-		// The grouped write renders as a real action line, not a bolted-on table.
 		expect(rendered).toContain("Updating");
 		expect(rendered).toContain("new@x.com");
 	});
@@ -1430,7 +1407,6 @@ describe("withheld writes", () => {
 			toolArgs: { request: { customer_id: "cus_1", plan_id: "pro" } },
 		});
 
-		// One write means one action line, not a second grouped step.
 		const sections = cardToBlockKit(card).filter(
 			(block) => (block as { type: string }).type === "section",
 		);
@@ -1438,8 +1414,6 @@ describe("withheld writes", () => {
 	});
 });
 
-// A grouped card that half-applied must name which write landed; a single
-// failed write is already described by its message.
 describe("grouped step outcomes", () => {
 	test("breaks down a partly applied group", () => {
 		const card = approvalStatusCard({
@@ -1472,8 +1446,6 @@ describe("grouped step outcomes", () => {
 	});
 });
 
-// On a grouped card the primary write may be the one with no preview, so the
-// money facts must still reach the user via the included writes.
 describe("grouped card with a preview-less primary write", () => {
 	test("still names the attach that carries the billing impact", () => {
 		const card = approvalCard({
@@ -1493,15 +1465,12 @@ describe("grouped card with a preview-less primary write", () => {
 		});
 
 		const rendered = JSON.stringify(cardToBlockKit(card));
-		// Each grouped step carries the heading it would have as its own card.
 		expect(rendered).toContain("Attach plan");
 		expect(rendered).toContain("Attaching");
 		expect(rendered).toContain("Approve");
 	});
 });
 
-// Attaching one plan to many customers is one operation with many targets, so
-// it collapses into a table instead of repeating the same section per customer.
 describe("homogeneous fan-out", () => {
 	const attachStep = (customerId: string) => ({
 		input: { request: { customer_id: customerId, plan_id: "launch" } },
@@ -1539,10 +1508,8 @@ describe("homogeneous fan-out", () => {
 		const rendered = JSON.stringify(blocks);
 
 		expect(rendered).toContain("leaf-0004");
-		// One heading, not one per customer.
 		expect(rendered.split("Attach plan").length - 1).toBe(1);
 		expect(blocks.length).toBeLessThan(10);
-		// Table cells render raw text, so link markup would show as literal "**".
 		expect(rendered).not.toContain("**");
 	});
 
@@ -1571,8 +1538,6 @@ describe("homogeneous fan-out", () => {
 	});
 });
 
-// The per-step preview is the {_display, preview} envelope; the money lives on
-// the inner preview, not the wrapper.
 describe("fan-out reads money from the wrapped preview", () => {
 	const wrapped = (total: number) => ({
 		_display: { customerName: "Acme", planName: "Scale" },
@@ -1622,8 +1587,6 @@ describe("fan-out reads money from the wrapped preview", () => {
 	});
 });
 
-// A backfilled step preview arrives as the raw MCP envelope; the money is a
-// JSON string inside content[].text and must still reach the table.
 describe("fan-out reads money from a raw MCP preview envelope", () => {
 	const mcpEnvelope = (total: number) => ({
 		_display: { customerName: "Acme", planName: "Scale" },
@@ -1668,8 +1631,6 @@ describe("fan-out reads money from a raw MCP preview envelope", () => {
 	});
 });
 
-// A "Plan changes" table already says the plan is being updated, so the generic
-// intent label above it is noise; a cancel has no table and keeps its label.
 describe("update-subscription card avoids restating itself", () => {
 	const updateWithChanges = () =>
 		approvalCard({
@@ -1731,8 +1692,6 @@ describe("update-subscription card avoids restating itself", () => {
 	});
 });
 
-// "No billing changes" already explains why nothing is due; a second "No charge
-// now" line beneath it says the same thing twice.
 describe("no-billing-changes card does not also say no charge", () => {
 	test("omits the no-charge line when the badge carries the reason", () => {
 		const card = approvalCard({
@@ -1759,9 +1718,6 @@ describe("no-billing-changes card does not also say no charge", () => {
 	});
 });
 
-// The resolved card must keep showing every write the group applied — it is
-// an in-place edit of the pending card, so collapsing to one write misreports
-// what was approved.
 describe("resolved fan-out card keeps the whole group", () => {
 	const groupedFanOut = {
 		env: AppEnv.Sandbox,
@@ -1788,8 +1744,6 @@ describe("resolved fan-out card keeps the whole group", () => {
 		}),
 	};
 
-	// Every state edits the same Slack message, so each must describe the
-	// same set of writes.
 	test.each(["running", "approved", "cancelled"] as const)(
 		"keeps every customer on the %s card",
 		(status) => {
@@ -1804,8 +1758,6 @@ describe("resolved fan-out card keeps the whole group", () => {
 	);
 });
 
-// A grouped step must speak in the card's tense: "Attached" once resolved, not
-// a permanent "Attaching" that reads as still pending.
 describe("grouped writes follow the card state", () => {
 	const mixedGroup = {
 		env: AppEnv.Sandbox,
@@ -1840,9 +1792,6 @@ describe("grouped writes follow the card state", () => {
 	});
 });
 
-// A remove_items filter names a feature, not a quantity. The quantity being
-// removed is whatever the customer CURRENTLY has, which can differ from the
-// catalog plan — showing the catalog's included count (often 0) is wrong.
 describe("remove rows show the customer's current quantity", () => {
 	test("removes 250,000 contacts the customer has, not the catalog's 0", () => {
 		const card = approvalCard({
@@ -1861,9 +1810,6 @@ describe("remove rows show the customer's current quantity", () => {
 			},
 			preview: wrapMcpResult({
 				_display: {
-					// resolveApprovalDisplay already prefers the customer's live
-					// subscription items over the catalog's; the card must render
-					// that quantity rather than re-deriving from the filter.
 					basePlanItems: [{ feature_id: "contacts", included: 250_000 }],
 					customerName: "Atlas Management Group",
 					featureNames: {
@@ -1886,14 +1832,10 @@ describe("remove rows show the customer's current quantity", () => {
 
 		const rendered = JSON.stringify(cardToBlockKit(card));
 		expect(rendered).toContain("250,000 contacts");
-		// Anchor on the cell boundary: "500,000 contacts" also contains "0 contacts".
 		expect(rendered).not.toContain('"0 contacts"');
 	});
 });
 
-// Ayush's report end to end through the real pipeline: a customer whose
-// subscription holds 250,000 contacts, updated to 500,000 at a new base price.
-// Every row must be an add or a remove derived from the current plan.
 describe("update-subscription card, end to end from a real preview shape", () => {
 	test("renders the customer's current plan diff as adds and removes", () => {
 		const card = approvalCard({
@@ -1956,8 +1898,6 @@ describe("update-subscription card, end to end from a real preview shape", () =>
 	});
 });
 
-// A free-trial override is a billing term the reviewer is authorizing; it
-// must appear on the card as an add/remove like price, not vanish.
 describe("free trial on the approval card", () => {
 	test("renders a new trial as an add with its real duration", () => {
 		const card = approvalCard({

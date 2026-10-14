@@ -11,9 +11,7 @@ import type { AutumnInt } from "@/external/autumn/autumnCli.js";
 type ExpectedUsageBucket = {
 	count?: number;
 	countCapped?: boolean;
-	/** Exact sample ids, in order. */
 	sampleIds?: string[];
-	/** Assert only the number of samples when order is data-driven. */
 	sampleCount?: number;
 };
 
@@ -28,12 +26,9 @@ type ExpectedFeaturePreview = {
 	action: CatalogAction;
 	hasCustomerEntitlements?: boolean;
 	willArchive?: boolean;
-	/** null asserts "nothing changed"; an object is matched EXACTLY. */
 	previousAttributes?: Record<string, unknown> | null;
 	usage?: ExpectedFeatureUsage;
-	/** Exact ordered list of state.reasons[].message (`[]` asserts no reasons). */
 	reasonMessages?: string[];
-	/** Each must be contained in the reason messages. */
 	reasonsInclude?: string[];
 };
 
@@ -60,7 +55,6 @@ const expectUsageBucketCorrect = ({
 	}
 };
 
-/** Optional bucket fields are asserted only when passed. */
 export const expectFeatureUsageCorrect = ({
 	usage,
 	plans,
@@ -95,13 +89,10 @@ type ExpectedPlanPreview = {
 	version?: number;
 	hasCustomers?: boolean;
 	willArchive?: boolean;
-	/** Exact ordered list of state.reasons[].message (`[]` asserts no reasons). */
 	reasonMessages?: string[];
-	/** Each must be contained in the reason messages. */
 	reasonsInclude?: string[];
 };
 
-/** Optional fields are asserted only when passed. */
 export const expectCatalogPreviewCorrect = ({
 	preview,
 	features,
@@ -154,8 +145,6 @@ export const expectCatalogPreviewCorrect = ({
 		}
 	}
 
-	// Plans: containment only — extra entries and new fields must NOT break
-	// existing tests. Assert exactly the fields passed, nothing else.
 	if (plans !== undefined) {
 		for (const expected of plans) {
 			const entry = preview.plans.find(
@@ -192,10 +181,6 @@ export const expectCatalogPreviewCorrect = ({
 	}
 };
 
-/**
- * Features: exact match, in order. Plans: containment — each expected
- * {id, action} must be reported, extra entries tolerated (future expansions).
- */
 export const expectCatalogResultsCorrect = ({
 	response,
 	features,
@@ -205,11 +190,9 @@ export const expectCatalogResultsCorrect = ({
 	response: UpdateCatalogResponse;
 	features?: { id: string; action: CatalogAction }[];
 	plans?: { id: string; action: CatalogAction }[];
-	/** Direct upserted plans in `response.plans`, request order. */
 	returnedPlanIds?: string[];
 }) => {
 	if (features !== undefined) {
-		// Identity and action only: result rows also carry internal_id.
 		expect(
 			response.results.features.map(({ id, action }) => ({ id, action })),
 		).toEqual(features);
@@ -228,7 +211,6 @@ export const expectCatalogResultsCorrect = ({
 	}
 };
 
-/** The plan's items reference exactly these feature ids, in item order. */
 export const expectPlanFeatureIdsCorrect = async ({
 	autumn,
 	planId,

@@ -1,10 +1,3 @@
-/**
- * catalogV2.update — plan metadata is one value shared across every version row.
- *
- * Red (current): in-place / new_version / pinned metadata writes leave older rows stale.
- * Green (after): every version row of the plan holds the new metadata.
- */
-
 import { expect, test } from "bun:test";
 import { BillingInterval } from "@autumn/shared";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";

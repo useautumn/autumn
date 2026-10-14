@@ -9,28 +9,22 @@ import {
 import type Stripe from "stripe";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 
-/** Price with associated product name for logging. */
 type PriceWithProduct = {
 	price: Price;
 	productName: string;
 };
 
-/** Generic phase item type that works for both response and update params. */
 type PhaseItem = {
 	price?: string | Stripe.Price | Stripe.DeletedPrice;
 	quantity?: number;
 };
 
-/** Generic phase type that works for both response and update params. */
 type LoggablePhase = {
 	start_date?: number | "now";
 	end_date?: number | "now" | null;
 	items: PhaseItem[];
 };
 
-/**
- * Extracts prices with product names from customer products.
- */
 export const customerProductsToPricesWithProduct = ({
 	customerProducts,
 }: {
@@ -44,9 +38,6 @@ export const customerProductsToPricesWithProduct = ({
 	);
 };
 
-/**
- * Matches a Stripe price ID to an Autumn price with product info.
- */
 const matchStripePriceIdToAutumnPrice = ({
 	stripePriceId,
 	pricesWithProduct,
@@ -66,9 +57,6 @@ const matchStripePriceIdToAutumnPrice = ({
 	return null;
 };
 
-/**
- * Formats a phase item for logging by matching Stripe price ID to Autumn price.
- */
 const formatPhaseItemWithAutumnPrice = ({
 	item,
 	pricesWithProduct,
@@ -101,9 +89,6 @@ const formatPhaseItemWithAutumnPrice = ({
 	return `${stripePriceId} (qty: ${quantityDisplay})`;
 };
 
-/**
- * Formats customer product status for logging.
- */
 const formatCustomerProductStatus = (
 	customerProduct: FullCusProduct,
 ): string => {
@@ -121,17 +106,6 @@ const formatCustomerProductStatus = (
 	return statusLabels[status] ?? status;
 };
 
-/**
- * Logs a single Stripe subscription schedule phase.
- *
- * Works with both Stripe.SubscriptionSchedule.Phase (response) and
- * Stripe.SubscriptionScheduleUpdateParams.Phase (update params).
- *
- * Converts customer products to prices and logs:
- * - Phase timing (start -> end)
- * - Each item matched with its Autumn price
- * - Optionally: customer products with their statuses
- */
 export const logPhase = ({
 	ctx,
 	phase,
@@ -147,12 +121,10 @@ export const logPhase = ({
 	logPrefix?: string;
 	showCustomerProducts?: boolean;
 }): void => {
-	// 1. Convert customer products to prices with product names for matching
 	const pricesWithProduct = customerProductsToPricesWithProduct({
 		customerProducts,
 	});
 
-	// 2. Format phase timing
 	const formatStartDate = (): string => {
 		if (phase.start_date === undefined) return "undefined";
 		if (phase.start_date === "now") return "now";
@@ -171,7 +143,6 @@ export const logPhase = ({
 
 	ctx.logger.debug(`${logPrefix} ${phaseLabel}: ${startDate} -> ${endDate}`);
 
-	// 3. Log each item with Autumn price matching
 	for (const item of phase.items) {
 		const formattedItem = formatPhaseItemWithAutumnPrice({
 			item,
@@ -180,7 +151,6 @@ export const logPhase = ({
 		ctx.logger.debug(`${logPrefix}   - ${formattedItem}`);
 	}
 
-	// 4. Optionally log customer products with their statuses
 	if (showCustomerProducts) {
 		ctx.logger.debug(`${logPrefix}   Customer Products:`);
 		for (const customerProduct of customerProducts) {
@@ -196,15 +166,6 @@ export const logPhase = ({
 	}
 };
 
-/**
- * Logs multiple Stripe subscription schedule phases.
- *
- * Works with both Stripe.SubscriptionSchedule.Phase[] (response) and
- * Stripe.SubscriptionScheduleUpdateParams.Phase[] (update params).
- *
- * Iterates through phases and logs each one with timing and items.
- * Optionally shows customer products with their statuses.
- */
 const logPhases = ({
 	ctx,
 	phases,

@@ -7,13 +7,6 @@ import { sql } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { selectFullCustomerLicenses } from "../utils/selectFullCustomerLicenses.js";
 
-/**
- * A customer's live customer licenses (parent in a relevant status — expired
- * parents' rows are reconcile's business, fetched there with bounded reads),
- * each with its effective plan license (customer override beats catalog) and
- * that license's effective FullProduct — one round trip. A removed link
- * hydrates as license: null; reconcile owns the cleanup.
- */
 export const getFullCustomerLicenses = async ({
 	db,
 	orgId,

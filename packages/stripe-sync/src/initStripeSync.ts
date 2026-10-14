@@ -7,10 +7,6 @@ const SCHEMA = "stripe";
 let instance: StripeSync | null = null;
 let initAttempted = false;
 
-/**
- * Lazily creates a singleton StripeSync instance.
- * Returns null if STRIPE_SYNC_DATABASE_URL is not configured or init fails.
- */
 export const getStripeSyncEngine = (): StripeSync | null => {
 	if (instance) return instance;
 	if (initAttempted) return null;
@@ -44,12 +40,6 @@ export const getStripeSyncEngine = (): StripeSync | null => {
 	return instance;
 };
 
-/**
- * Upserts the Stripe event into the sync DB, then stamps the row
- * with the originating Stripe account ID and org ID for multi-tenancy.
- * Fully fail-open: an error never rejects; it is handed to `onError` so the
- * caller can log it.
- */
 export const processStripeSyncEvent = async ({
 	event,
 	stripeAccountId,
@@ -89,19 +79,15 @@ export const processStripeSyncEvent = async ({
 			[accountId, orgId, env, objectId],
 		);
 	} catch (error) {
-		// Fail-open: metadata stamp is best-effort
 		onError?.(error);
 	}
 };
 
-/** Gracefully close the sync engine's PG pool (call on server shutdown). */
 export const closeStripeSyncEngine = async (): Promise<void> => {
 	if (!instance) return;
 	try {
 		await instance.close();
-	} catch {
-		// Best-effort cleanup
-	}
+	} catch {}
 	instance = null;
 	initAttempted = false;
 };

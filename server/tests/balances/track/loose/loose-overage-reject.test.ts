@@ -18,7 +18,6 @@ describe(`${chalk.yellowBright("loose-overage: track more than balance caps at 0
 			withTestClock: false,
 		});
 
-		// Create loose entitlement with 20 messages
 		await autumnV1.balances.create({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
@@ -27,7 +26,6 @@ describe(`${chalk.yellowBright("loose-overage: track more than balance caps at 0
 	});
 
 	test("should cap at 0 when tracking more than balance (no overage charge)", async () => {
-		// Track 50 (more than 20 balance) - should cap at 0, not go negative
 		await autumnV1.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
@@ -41,8 +39,7 @@ describe(`${chalk.yellowBright("loose-overage: track more than balance caps at 0
 			feature_id: TestFeature.Messages,
 		})) as unknown as CheckResponseV2;
 
-		// Loose entitlements cap at 0 - no negative balance, no overage charge
 		expect(res.balance?.current_balance).toBe(0);
-		expect(res.balance?.usage).toBe(20); // Only deducted what was available
+		expect(res.balance?.usage).toBe(20);
 	});
 });

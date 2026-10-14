@@ -12,8 +12,6 @@ import {
 	proPlanSpec,
 } from "./proGrowthSetup.ts";
 
-/** Withheld: the prices — the one thing that can never be guessed. Passing =
- * ask for them before writing, then land the config. */
 export const missingPrice = defineCase({
 	name: "basics-pro-growth-missing-price",
 	prompt: [

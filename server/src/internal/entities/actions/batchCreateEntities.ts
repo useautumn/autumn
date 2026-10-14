@@ -16,7 +16,6 @@ export type BatchCreateEntitiesParams = {
 	enqueueRecoveryOnTransientFailure?: boolean;
 };
 
-/** The created entities rendered from a fresh read, the way `entities.get` sees them. */
 const readApiEntities = async ({
 	ctx,
 	customerId,

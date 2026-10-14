@@ -10,8 +10,6 @@ import {
 
 const STRIPE_LIST_PAGE_LIMIT = 100;
 
-/** The sweep can be an hour old by now, so the orphan is re-read live and
- * dropped if its customer was deleted or nothing on it is still billed. */
 export const readOrphanedStripeCustomer = async ({
 	ctx,
 	stripeCli,

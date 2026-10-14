@@ -46,11 +46,6 @@ export const AutoTopupPurchaseLimitSchema = z.object({
 	}),
 });
 
-/**
- * Customer create/update params only. `count` is runtime state written to
- * `auto_topup_limit_states` and must never be persisted on `customers.auto_topups`
- * / `products.auto_topups` JSONB — strip via `stripAutoTopupCountsForStorage`.
- */
 export const AutoTopupPurchaseLimitParamsSchema =
 	AutoTopupPurchaseLimitSchema.extend({
 		count: z.number().min(0).optional().meta({
@@ -89,15 +84,6 @@ export const AutoTopupParamsSchema = AutoTopupSchema.extend({
 	}),
 });
 
-/**
- * Expanded purchase_limit shape that augments the static config with runtime
- * tracking state from `auto_topup_limit_states`. Only emitted on responses
- * when expand=billing_controls.auto_topups.purchase_limit is requested.
- *
- * When no `purchase_limit` is configured for the auto_topup, the original
- * config fields (interval, interval_count, limit) are returned as null and
- * only `count` / `next_reset_at` reflect runtime state.
- */
 export const ExpandedPurchaseLimitSchema = z.object({
 	interval: PurchaseLimitIntervalEnum.nullable().meta({
 		description:
@@ -121,15 +107,7 @@ export const ExpandedPurchaseLimitSchema = z.object({
 	}),
 });
 
-/**
- * Response-only variant of AutoTopupSchema. The `purchase_limit` field can be
- * either the static config shape (default) or the expanded runtime shape (when
- * the corresponding expand path is requested). Input/params schemas remain
- * strict — see `CustomerBillingControlsParamsSchema`.
- */
 export const AutoTopupResponseSchema = AutoTopupSchema.extend({
-	// Expanded first: its required count/next_reset_at would otherwise be
-	// silently stripped by the laxer static member on re-parse.
 	purchase_limit: z
 		.union([ExpandedPurchaseLimitSchema, AutoTopupPurchaseLimitSchema])
 		.optional()
@@ -183,7 +161,6 @@ export type CustomerBillingControls = z.infer<
 >;
 export type DbBillingControls = z.infer<typeof DbBillingControlsSchema>;
 
-/** Strip runtime `count` before persisting auto_topups JSONB. */
 export const stripAutoTopupCountsForStorage = (
 	autoTopups: AutoTopupParams[] | AutoTopup[] | null | undefined,
 ): AutoTopup[] | null | undefined => {
@@ -235,7 +212,6 @@ export const billingControlsFromColumns = (
 	) as CustomerBillingControls;
 };
 
-/** Canonical form for change detection: skip_overage_billing false ≡ unset. */
 export const normalizeBillingControlsForCompare = (
 	billingControls: CustomerBillingControls | null | undefined,
 ): CustomerBillingControls | undefined => {
@@ -270,7 +246,6 @@ export const mergeBillingControls = (
 	});
 };
 
-/** Each lane is PATCH-shaped (omitted = keep), so its default rides the spec only. */
 const laneParam = <T extends z.ZodType>({
 	schema,
 	description,

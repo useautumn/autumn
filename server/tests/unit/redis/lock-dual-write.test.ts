@@ -68,8 +68,6 @@ const buildCache = () =>
 	});
 let cache = buildCache();
 
-// Capture the real module before mocking so afterAll can restore it —
-// bun's mock.module leaks across test files otherwise.
 const realGetMiscCache = {
 	...(await import("@/external/redis/miscCache/getMiscCache.js")),
 };

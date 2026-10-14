@@ -3,7 +3,6 @@ import { createFxClient } from "../../src/createFxClient";
 import { FxProviderError, getUsdRateTable } from "../../src/getUsdRateTable";
 
 const APP_ID = "secret-app-id";
-/** 2026-09-26T23:59:59Z, what the provider stamps on that day's closing rates. */
 const CLOSE_OF_2026_09_26 = 1790467199;
 
 const clientReturning = ({

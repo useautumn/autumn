@@ -47,10 +47,7 @@ export const CreateEntity = ({
 	const { features } = useFeaturesQuery();
 
 	const [isLoading, setIsLoading] = useState(false);
-	// When true, the dialog stays open after a successful create so the user can
-	// add another entity. Not persisted — resets to false each time it reopens.
 	const [createMore, setCreateMore] = useState(false);
-	// Bumped after each "create more" so the Name field remounts and refocuses.
 	const [formKey, setFormKey] = useState(0);
 	const [entity, setEntity] = useState<{
 		id: string;
@@ -64,7 +61,6 @@ export const CreateEntity = ({
 
 	const axiosInstance = useAxiosInstance();
 
-	// Reset form and mode when dialog closes
 	useEffect(() => {
 		if (!open) {
 			setEntity({
@@ -100,10 +96,6 @@ export const CreateEntity = ({
 			onCreated?.();
 
 			if (createMore) {
-				// Keep the dialog open: clear id/name and refocus for the next
-				// entity, but keep the selected feature since it's usually the same
-				// across entities. Don't navigate to / select the new entity, which
-				// would pull the user out of the create flow.
 				setEntity((prev) => ({ ...prev, id: "", name: "" }));
 				setFormKey((key) => key + 1);
 				toast.success("Entity created successfully");

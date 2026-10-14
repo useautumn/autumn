@@ -3,17 +3,11 @@ import { join } from "node:path";
 import yaml from "yaml";
 import { type JsonSchema, toCamelCase } from "../casing/schemaKeyCasing";
 
-/**
- * The INTERNAL spec, not the published one. catalogV2 is registered only on the
- * internal contract router, and this is the one output that skips
- * `removeInternalFields`, so `internal_id` and friends survive.
- */
 export const INTERNAL_SPEC_PATH = join(
 	import.meta.dir,
 	"../../../openapi/openapi-internal.yml",
 );
 
-/** The published spec: internal fields stripped, exactly what the docs and SDKs see. */
 export const PUBLIC_SPEC_PATH = join(
 	import.meta.dir,
 	"../../../openapi/openapi.yml",
@@ -41,7 +35,6 @@ export const loadSpec = ({
 }: {
 	path?: string;
 } = {}): OpenApiDocument =>
-	// Every operation reuses the x-api-version header alias, so the default cap of 100 is hit as routes grow.
 	yaml.parse(readFileSync(path, "utf8"), { maxAliasCount: -1 });
 
 const operationAt = ({
@@ -60,7 +53,6 @@ const operationAt = ({
 	return operation;
 };
 
-/** The wire envelope: every top-level catalog collection the CLI can state. */
 export const catalogUpdateSchema = ({
 	spec,
 }: {
@@ -73,7 +65,6 @@ export const catalogUpdateSchema = ({
 	return schema;
 };
 
-/** The item schema for one top-level collection, named as a fixture states it. */
 export const collectionItemSchema = ({
 	spec,
 	collection,
@@ -96,7 +87,6 @@ export const collectionItemSchema = ({
 	return item;
 };
 
-/** The JSON request body schema for an operation. */
 export const requestBodySchema = ({
 	spec,
 	path,
@@ -111,7 +101,6 @@ export const requestBodySchema = ({
 	return schema;
 };
 
-/** The 200 response body schema for an operation. */
 export const responseSchema = ({
 	spec,
 	path,
@@ -126,7 +115,6 @@ export const responseSchema = ({
 	return schema;
 };
 
-/** Where the API lives, per the spec — not a constant the CLI invents. */
 export const serverBaseUrl = ({ spec }: { spec: OpenApiDocument }): string => {
 	const url = (spec as { servers?: { url?: string }[] }).servers?.[0]?.url;
 	if (!url) throw new Error("spec declares no servers[0].url");

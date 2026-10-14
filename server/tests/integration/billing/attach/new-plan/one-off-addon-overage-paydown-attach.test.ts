@@ -1,6 +1,3 @@
-// With persist_free_overage: true, a one-off add-on purchase clears recurring overage
-// first and grants only the remainder. Without it, overage stays on the recurring balance.
-
 import { expect, test } from "bun:test";
 import type {
 	ApiCustomerV3,

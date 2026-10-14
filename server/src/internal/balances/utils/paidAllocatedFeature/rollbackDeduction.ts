@@ -25,10 +25,8 @@ export const rollbackDeduction = async ({
 		fullCustomer: oldFullCus,
 	});
 
-	// For each updated entitlement, restore to original state from oldFullCus
 	for (const cusEntId of Object.keys(updates)) {
 		try {
-			// Find the original cusEnt from oldFullCus
 			const originalCusEnt = cusEnts.find((ce) => ce.id === cusEntId);
 
 			if (!originalCusEnt) {
@@ -38,7 +36,6 @@ export const rollbackDeduction = async ({
 				continue;
 			}
 
-			// Restore the entitlement to original values
 			await CusEntService.update({
 				ctx,
 				id: cusEntId,
@@ -54,7 +51,6 @@ export const rollbackDeduction = async ({
 				`[ROLLBACK] Successfully restored cusEnt ${cusEntId} to original state`,
 			);
 		} catch (error) {
-			// Best effort - log error but continue with other rollbacks
 			logger.error(
 				`[ROLLBACK] Failed to rollback cusEnt ${cusEntId}: ${error}`,
 			);

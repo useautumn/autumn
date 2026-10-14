@@ -39,7 +39,6 @@ const statusAtPhaseStart = ({
 		? CusProductStatus.Trialing
 		: CusProductStatus.Active;
 
-/** Mirrors scheduled activation, which carries both usages and rollovers from the outgoing plan. */
 const carryExistingStatesIntoStartingProduct = ({
 	ctx,
 	previousCustomer,
@@ -108,7 +107,6 @@ export const applySchedulePhaseToFullCustomer = ({
 		}
 	}
 
-	// Mirrors activation, which re-sizes pools from the plans leaving and joining at this phase.
 	const { pooledBalancePlan } = computePooledBalanceTransitionPlan({
 		ctx,
 		fullCustomer: phaseCustomer,

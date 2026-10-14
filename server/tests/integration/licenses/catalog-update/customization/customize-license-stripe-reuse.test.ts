@@ -1,5 +1,3 @@
-/** Contract: adding a feature to a parent-specific license through plans.update preserves the unchanged base price row.
- * The effective customized license reuses the base license's stripe_price_id even though the request carries no internal IDs. */
 import { expect, test } from "bun:test";
 import { productToBasePrice } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";

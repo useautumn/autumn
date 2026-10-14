@@ -3,7 +3,6 @@ import type { MultiTenantAuth } from "../../multiTenant/createMultiTenantAuth.js
 import type { Slots } from "../../slots/types/slots.js";
 import type { ReplicaFolders } from "../types/replicaFolders.js";
 
-/** An org's own Atom: its one folder, and no tenants to learn. */
 export const createDeployedFolders = ({
 	slots,
 }: {
@@ -13,7 +12,6 @@ export const createDeployedFolders = ({
 	learn: () => {},
 });
 
-/** A multi-tenant Atom: every tenant's folder, and the tenants a peer holds that this one does not yet. */
 export const createMultiTenantFolders = ({
 	auth,
 }: {
@@ -24,7 +22,6 @@ export const createMultiTenantFolders = ({
 			const slots = auth.slotsFor({ atomId: id });
 			return slots ? [{ atomId: id, slots }] : [];
 		}),
-	// Only additions and re-tokens: a peer that lacks a tenant may be the one still catching up, so nothing is removed here.
 	learn: ({ tenants }) => {
 		const held = new Map(
 			auth.listAtoms().map((atom) => [atom.id, atom.tokenHash]),

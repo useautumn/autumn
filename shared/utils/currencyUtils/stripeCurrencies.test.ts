@@ -25,9 +25,6 @@ describe("CURRENCY_CODES", () => {
 		expect(CURRENCY_CODES.slice(0, 3)).toEqual(["usd", "eur", "gbp"]);
 	});
 
-	// Pins the list to Stripe's presentment set (docs.stripe.com/currencies):
-	// exact size, includes newer/legacy codes Stripe still presents, and excludes
-	// the three-decimal currencies Stripe does NOT present.
 	test("matches Stripe's presentment set", () => {
 		expect(CURRENCY_CODES.length).toBe(134);
 		for (const c of ["rub", "xcg", "std", "sle"]) {
@@ -38,8 +35,6 @@ describe("CURRENCY_CODES", () => {
 		}
 	});
 
-	// Every code needs a static display name (the picker no longer relies on
-	// Intl.DisplayNames, which drifts by runtime — e.g. XCG on older browsers).
 	test("every listed code has a static display name", () => {
 		const missing = CURRENCY_CODES.filter(
 			(c) => currencyDisplayName(c).toLowerCase() === c.toLowerCase(),
@@ -47,8 +42,6 @@ describe("CURRENCY_CODES", () => {
 		expect(missing).toEqual([]);
 	});
 
-	// Guards against typos in the transcribed list: every entry must be a real
-	// ISO 4217 code per the runtime's ICU tables.
 	test("every listed code is a real ISO 4217 code", () => {
 		if (!intlCurrencies) return;
 		const bogus = CURRENCY_CODES.filter(
@@ -70,7 +63,6 @@ describe("isValidCurrencyCode", () => {
 		expect(isValidCurrencyCode("euro")).toBe(false);
 		expect(isValidCurrencyCode("")).toBe(false);
 		expect(isValidCurrencyCode(null)).toBe(false);
-		// Real ISO codes Stripe does not present are still rejected.
 		expect(isValidCurrencyCode("xdr")).toBe(false);
 		expect(isValidCurrencyCode("bhd")).toBe(false);
 	});
@@ -96,8 +88,6 @@ describe("currencyInputDecimals / roundToCurrencyPrecision", () => {
 		expect(currencyInputDecimals("usd")).toBe(2);
 		expect(currencyInputDecimals("bhd")).toBe(2);
 		expect(roundToCurrencyPrecision(18.33456, "usd")).toBe(18.33);
-		// three-decimal currency: capped at two decimals so Stripe amounts stay
-		// divisible by ten.
 		expect(roundToCurrencyPrecision(1.23456, "bhd")).toBe(1.23);
 	});
 });

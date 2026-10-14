@@ -7,7 +7,6 @@ const usableStripePriceId = (slot: SQL) => sql`
 	AND ${slot} NOT LIKE ${`${PREVIEW_STRIPE_PRICE_ID_PREFIX}%`}
 `;
 
-/** This currency's amount + stripe_price_id, whether it is base or overlay. */
 export const composeAttachCurrencyFixedMatch = ({
 	targetCurrency,
 	orgDefaultCurrency,

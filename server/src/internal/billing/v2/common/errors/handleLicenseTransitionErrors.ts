@@ -1,6 +1,5 @@
 import { type AutumnBillingPlan, ErrCode, RecaseError } from "@autumn/shared";
 
-/** Guards incoming pool capacity against active assignments. */
 export const handleLicenseTransitionErrors = ({
 	autumnBillingPlan,
 }: {

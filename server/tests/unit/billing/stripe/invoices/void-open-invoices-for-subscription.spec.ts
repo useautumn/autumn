@@ -117,7 +117,6 @@ describe(chalk.yellowBright("voidOpenInvoicesForStripeSubscription"), () => {
 
 		expect(result).toEqual({ voided: 2, failed: 1 });
 		expect(voided.sort()).toEqual(["inv_a", "inv_c"]);
-		// The failed invoice never reaches the DB sync.
 		expect(updateFromStripeCalls).not.toContain("inv_b");
 		expect(updateFromStripeCalls.sort()).toEqual(["inv_a", "inv_c"]);
 	});

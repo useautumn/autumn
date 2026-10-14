@@ -103,7 +103,6 @@ const readCallback = async ({
 		return failedCallback({ message: "Invalid state — possible CSRF" });
 	}
 
-	// An impersonating dashboard session hands back tokens instead of a code.
 	const impersonation = readImpersonationTokens(callbackUrl.searchParams);
 	if (impersonation) {
 		return {
@@ -152,7 +151,6 @@ const listenForCallback = ({
 			clearTimeout(timeout);
 
 			// Settle only once the page is flushed — the browser's keep-alive socket
-			// would otherwise outlive the command and hang the CLI.
 			response.writeHead(200, { "Content-Type": "text/html" }).end(page, () => {
 				shutDown();
 				if (outcome) resolve(outcome);
@@ -216,7 +214,6 @@ export const runOAuthFlow = async ({
 				void Promise.resolve(
 					onAuthorizationUrl({ url: authorizationUrl.toString() }),
 				).catch(() => {
-					// Announcing is best-effort; the flow still works if it fails.
 				});
 			},
 		});

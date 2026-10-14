@@ -3,7 +3,6 @@ import type { AllocatedInvoiceContext } from "@/internal/balances/utils/allocate
 import { setupAllocatedInvoiceContext } from "@/internal/balances/utils/allocatedInvoice/setupAllocatedInvoiceContext.js";
 import type { CreateEntitiesContext } from "../types/createEntitiesContext.js";
 
-/** The Stripe side of using N seats of a prorated grant; null when nothing is invoiced (free, or no subscription). */
 export const setupEntityBillingContext = async ({
 	ctx,
 	context,

@@ -1,25 +1,10 @@
-/**
- * TDD contract for the sync canceling ended_at fallback.
- *
- * Contract under test:
- *   getCancelFieldsFromStripe:
- *     - not canceling -> {} (no canceledAt / endedAt)
- *     - canceling + ended_at -> endedAt = ended_at * 1000 (highest precedence)
- *     - canceling + cancel_at (no ended_at) -> endedAt = cancel_at * 1000
- *     - canceling + NEITHER (cancel_at_period_end only) -> endedAt falls back to
- *       getCycleEnd(billing_cycle_anchor, largest item interval) and is > now
- *     - canceledAt = canceled_at * 1000 when present, ~now otherwise
- *   stripeSubscriptionToLargestInterval:
- *     - picks the largest total duration across items (year > 6x month > month)
- *     - returns null when no item has a recurring price
- */
 import { describe, expect, test } from "bun:test";
 import { EntInterval, getCycleEnd } from "@autumn/shared";
 import type Stripe from "stripe";
 import { stripeSubscriptionToLargestInterval } from "@/external/stripe/subscriptions/utils/convertStripeSubscription";
 import { getCancelFieldsFromStripe } from "@/internal/billing/v2/actions/sync/utils/initSyncFromStripe";
 
-const ANCHOR_SEC = 1_750_000_000; // 2025-06-15T15:06:40Z
+const ANCHOR_SEC = 1_750_000_000;
 
 type Recurring = { interval: string; interval_count?: number };
 
@@ -95,7 +80,6 @@ describe("getCancelFieldsFromStripe", () => {
 				now: before,
 			}),
 		);
-		// canceledAt falls back to ~now when Stripe has no canceled_at.
 		expect(result.canceledAt).toBeGreaterThanOrEqual(before);
 		expect(result.canceledAt).toBeLessThanOrEqual(Date.now());
 	});

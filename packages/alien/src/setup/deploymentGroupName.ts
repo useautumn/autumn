@@ -2,7 +2,6 @@ const MAX_GROUP_NAME_LENGTH = 100;
 const NON_NAME_CHARACTERS = /[^a-z0-9]+/g;
 const EDGE_HYPHENS = /^-+|-+$/g;
 
-/** alien names are lowercase letters, digits and single hyphens, never starting `dg-`. */
 export const toDeploymentGroupName = ({ label }: { label: string }): string => {
 	const name = label
 		.toLowerCase()

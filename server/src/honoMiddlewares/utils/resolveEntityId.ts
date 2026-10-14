@@ -1,8 +1,5 @@
 import { getV1PathSegmentAfter } from "./resolvePathSegment.js";
 
-/**
- * Centralized entity ID resolution from request sources.
- */
 export const resolveEntityId = ({
 	method,
 	path,

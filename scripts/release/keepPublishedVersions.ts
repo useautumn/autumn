@@ -24,7 +24,6 @@ const setWorkspaceLockVersion = ({
 		`$1${version}$2`,
 	);
 
-// Main must match npm: undo the version bump of every package whose publish failed.
 export const keepPublishedVersions = async ({
 	root,
 	planned,
@@ -64,7 +63,6 @@ export const keepPublishedVersions = async ({
 	return planned.filter((pkg) => published.includes(pkg.tagPrefix));
 };
 
-// Env: PACKAGES (planned JSON), PUBLISHED_DIR (holds one `published-<tagPrefix>` dir per success), SOURCE_SHA.
 if (import.meta.main) {
 	const { PACKAGES, PUBLISHED_DIR, SOURCE_SHA, GITHUB_OUTPUT } = process.env;
 	if (!PACKAGES || !PUBLISHED_DIR || !SOURCE_SHA || !GITHUB_OUTPUT) {

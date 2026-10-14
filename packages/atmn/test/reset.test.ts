@@ -1,9 +1,3 @@
-/**
- * `atmn reset` — the gate and the refusals. The wipe cannot be undone, so what
- * matters is that nothing is sent unless asked for, and that a live key is
- * refused here rather than on the way back from the server.
- */
-
 import { afterEach, expect, test } from "bun:test";
 import { type ResetClient, runReset } from "../src/actions/reset/runReset";
 import { SANDBOX_ONLY_REFUSAL } from "../src/env/assertSandboxTarget";

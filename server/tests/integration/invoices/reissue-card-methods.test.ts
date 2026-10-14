@@ -1,15 +1,3 @@
-/**
- * invoices.reissue on a card invoice for an org whose invoice-mode payment
- * methods include customer_balance.
- *
- * Contract:
- *   allowed_payment_methods applies to send-invoice replacements only; a card
- *   replacement is created without payment_method_types, so Stripe does not
- *   reject customer_balance on a charge_automatically invoice.
- *   Asking for a non-card method on a card invoice makes the replacement a
- *   send-invoice one on the org's default terms instead of rejecting it.
- */
-
 import { expect, test } from "bun:test";
 import { type ApiListInvoiceV1, organizations } from "@autumn/shared";
 import { items } from "@tests/utils/fixtures/items";
@@ -40,7 +28,6 @@ const withInvoicePaymentMethods = async <T>({
 		})
 		.where(eq(organizations.id, org.id));
 	await clearOrgCache({ db, orgId: org.id });
-	// The server also holds the org in a per-process L1 that only expires.
 	await timeout(SECRET_KEY_L1_TTL_MS + 500);
 	try {
 		return await fn();

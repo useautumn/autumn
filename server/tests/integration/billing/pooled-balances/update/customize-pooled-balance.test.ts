@@ -1,6 +1,3 @@
-/** PUT and PATCH customization preserve valid pools while rejecting pay-per-use pooled pricing.
- * Unrelated edits preserve the pool; grant increases apply the delta; enabling pooling carries usage. */
-
 import { test } from "bun:test";
 import { ErrCode, type UpdateSubscriptionV1ParamsInput } from "@autumn/shared";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils.js";

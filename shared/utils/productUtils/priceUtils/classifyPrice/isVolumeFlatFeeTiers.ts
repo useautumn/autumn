@@ -5,8 +5,6 @@ type TierAmounts = {
 	flat_amount?: number | null;
 };
 
-/** Volume tiers priced only by each tier's flat fee: every per-unit amount is 0
- * and at least one tier has a fee. Mixed tiers are per-unit, not flat. */
 export const isVolumeFlatFeeTiers = ({
 	tierBehavior,
 	tiers,

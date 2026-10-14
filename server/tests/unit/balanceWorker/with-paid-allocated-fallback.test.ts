@@ -5,7 +5,6 @@ import { createCustomerFixture } from "../balances/balanceWorker/customer-fixtur
 import { mockModuleWithRestore } from "../utils/mockModuleWithRestore.js";
 
 const { ctx, fullSubject } = createCustomerFixture();
-/** The lane's steps in the order they ran. */
 const lane: string[] = [];
 
 await mockModuleWithRestore(

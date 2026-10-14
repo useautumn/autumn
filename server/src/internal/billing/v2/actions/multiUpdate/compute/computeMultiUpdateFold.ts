@@ -30,12 +30,6 @@ export type MultiUpdateFoldResult = {
 	itemResults: MultiUpdateItemResult[];
 };
 
-/**
- * Fold each update onto one AutumnBillingPlan in request order. Each update's
- * context is built against the customer state projected from all prior updates,
- * so cancel side effects (scheduled deletions, default inserts, un-cancels)
- * compose deterministically.
- */
 export const computeMultiUpdateFold = async ({
 	ctx,
 	params,

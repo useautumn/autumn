@@ -4,7 +4,6 @@ import { executePostgresDeductionV2 } from "@/internal/balances/utils/deductionV
 import type { FeatureDeduction } from "../../utils/types/featureDeduction.js";
 import { RedisDeductionError } from "../../utils/types/redisDeductionError.js";
 
-/** Handles Redis deduction errors for update balance V2. Falls back to Postgres when recoverable. */
 export const handleUpdateBalanceDeductionErrorV2 = async ({
 	ctx,
 	error,

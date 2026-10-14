@@ -24,10 +24,6 @@ export const getMiscRedisConfigStatus = () => store.getStatus();
 export const getActiveMiscRedisInstanceName = (): MiscRedisInstanceName =>
 	store.get().activeInstance;
 
-/**
- * Point the misc cache at an instance. Always clears the ramp: flipping IS the
- * cutover (toward the ramp target) or the rollback (away from it).
- */
 export const setActiveMiscRedisInstance = async ({
 	activeInstance,
 }: {
@@ -46,11 +42,6 @@ export const setActiveMiscRedisInstance = async ({
 	});
 };
 
-/**
- * Start the ramp toward the non-active instance. Configure at 0% first:
- * invalidations start fanning out to the target as soon as the ramp exists,
- * which closes the stale-read race before any traffic moves.
- */
 export const startMiscRedisRamp = async ({
 	percent = 0,
 }: {
@@ -107,19 +98,15 @@ export const updateMiscRedisRampPercent = async ({
 	});
 };
 
-/** Instant rollback: all ramped traffic returns to the active instance. */
 export const clearMiscRedisRamp = async () => {
 	const current = await store.readFromSource();
 	await store.writeToSource({ config: { ...current, ramp: null } });
 };
 
-/** True whenever any traffic can be routed at the backup. */
 const backupIsLive = (config: MiscRedisConfig) =>
 	config.activeInstance === "backup" ||
 	(config.ramp !== null && config.activeInstance === "main");
 
-/** Upsert the S3-stored (encrypted) backup instance. Refused while the backup
- *  is live so credentials can't rotate under traffic. */
 export const upsertMiscRedisBackupConnection = async ({
 	publicConnectionString,
 	privateConnectionString = null,
@@ -159,7 +146,6 @@ export const removeMiscRedisBackupConfig = async () => {
 	await store.writeToSource({ config: { ...current, backup: null } });
 };
 
-/** Test-only: override the in-memory config without writing to S3. */
 export const _setMiscRedisConfigForTesting = (
 	config: Partial<MiscRedisConfig>,
 ) => {

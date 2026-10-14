@@ -35,8 +35,6 @@ export const CopySandboxDialog = ({
 }) => {
 	const copySandbox = useCopySandbox();
 	const [sourceId, setSourceId] = useState("");
-	// Track de-selections (default = everything checked) so a freshly loaded
-	// catalog needs no effect to initialise.
 	const [deselected, setDeselected] = useState<{
 		products: Set<string>;
 		features: Set<string>;

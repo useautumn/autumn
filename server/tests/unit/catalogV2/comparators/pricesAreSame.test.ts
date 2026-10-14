@@ -428,8 +428,6 @@ describe("pricesAreSame", () => {
 			);
 		});
 
-		// Currency add/remove is compatible (existing customers keep snapshots);
-		// only an amount mismatch on a currency present on both sides differs.
 		test("added or removed currencies are compatible; keys are case-sensitive", () => {
 			expectSame(
 				usage({ currencies: {} }),
@@ -441,7 +439,6 @@ describe("pricesAreSame", () => {
 				usage({ currencies: { eur: { amount: 9 }, gbp: { amount: 7 } } }),
 				true,
 			);
-			// Case-mismatched keys never overlap, so they compare as add+remove.
 			expectSame(
 				usage({ currencies: { eur: { amount: 9 } } }),
 				usage({ currencies: { EUR: { amount: 9 } } }),

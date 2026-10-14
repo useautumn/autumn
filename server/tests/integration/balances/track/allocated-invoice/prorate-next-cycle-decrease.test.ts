@@ -1,6 +1,3 @@
-// Allocated Invoice — ProrateNextCycle / ProrateNextCycle: 1 included seat, $50/seat; increases
-// and decreases are deferred to the next cycle (no immediate invoice or refund).
-
 import { expect, test } from "bun:test";
 
 import type { ApiCustomerV3, TrackResponseV2 } from "@autumn/shared";
@@ -19,10 +16,6 @@ import {
 	PRICE_PER_SEAT,
 	userItem,
 } from "./utils/prorateNextCycle.js";
-
-// ═══════════════════════════════════════════════════════════════════
-// prorate-nc2: Track negative mid-cycle — no immediate refund
-// ═══════════════════════════════════════════════════════════════════
 
 test(`${chalk.yellowBright("prorate-nc2: mid-cycle decrease creates no immediate refund")}`, async () => {
 	const pro = products.pro({ id: "pro", items: [userItem] });
@@ -64,15 +57,12 @@ test(`${chalk.yellowBright("prorate-nc2: mid-cycle decrease creates no immediate
 		usage: 2,
 	});
 
-	// Still only 1 invoice — no immediate refund either
 	await expectCustomerInvoiceCorrect({ customerId, count: 1 });
 
 	await expectStripeSubscriptionCorrect({ ctx, customerId });
 
-	// Initial increase 1→3 happened at cycle start (ratio ≈ 1.0), so charge is full price
 	const initialIncreaseCharge = 2 * PRICE_PER_SEAT;
 
-	// Decrease 3→2 happened at advancedTo (2 weeks in), prorated for remaining period
 	const proratedCredit = await calculateProratedDiff({
 		customerId,
 		advancedTo,
@@ -80,13 +70,11 @@ test(`${chalk.yellowBright("prorate-nc2: mid-cycle decrease creates no immediate
 		newAmount: 1 * PRICE_PER_SEAT,
 	});
 
-	// Advance to next billing cycle
 	await advanceToNextInvoice({
 		stripeCli: ctx.stripeCli,
 		testClockId: testClockId!,
 	});
 
-	// Next cycle invoice: renewal (2 seats × $50) + initial increase charge + prorated credit
 	const renewalAmount = 1 * PRICE_PER_SEAT + BASE_PRICE;
 	const expectedTotal = renewalAmount + initialIncreaseCharge + proratedCredit;
 

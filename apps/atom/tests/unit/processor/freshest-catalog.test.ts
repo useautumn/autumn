@@ -22,7 +22,6 @@ const storedReadAt = ({ readAt }: { readAt: number }): StoredSubject => ({
 	customerVersion: 0n,
 });
 
-/** The customer's entitlement rows as edited since, and nothing else: allowance 777. */
 const editedEntitlements: CatalogRow[] = createCatalogRowsFor({ state })
 	.filter((row) => row.table === "entitlements")
 	.map((row) =>

@@ -3,7 +3,6 @@ import { runWorkers } from "../../../db/schema/runs.ts";
 import type { TwdContext } from "../../../lib/types/twdContext.ts";
 import { getCostRates } from "../../costs/actions/getCostRates.ts";
 
-/** One row per worker sandbox, priced at the configured worker size from when its create was requested. */
 export const insertRunWorker = async ({
 	ctx,
 	runId,
@@ -32,7 +31,6 @@ export const insertRunWorker = async ({
 	});
 };
 
-/** Stamp ended_at on the run's open rows (one worker by name, or all of them). */
 export const endRunWorkers = async ({
 	ctx,
 	runId,

@@ -5,7 +5,6 @@ import {
 	type UpdateBalanceParamsV0,
 } from "@autumn/shared";
 
-/** Names the filter that narrowed the lookup, so a typo reads as a typo. */
 const describeBalanceLookup = ({
 	params,
 }: {
@@ -30,7 +29,6 @@ const describeBalanceLookup = ({
 	return narrowedBy.length > 0 ? ` matching ${narrowedBy.join(", ")}` : "";
 };
 
-/** No row under the feature or the rows that fund it: a typo, an unassigned feature, or a drained grant. */
 export const balanceNotFoundError = ({
 	params,
 }: {

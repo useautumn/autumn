@@ -67,7 +67,6 @@ export const TrackTokensParamsSchema = z.object({
 
 export type TrackTokensParams = z.infer<typeof TrackTokensParamsSchema>;
 
-// Batch always queues, so 2.5 items have no async (V2_4_BatchTrackTokensParamsChange drops it).
 export const BatchTrackTokensParamsSchema = z
 	.array(TrackTokensParamsSchema.omit({ async: true }))
 	.min(1)

@@ -1,15 +1,3 @@
-/**
- * catalogV2.update — Stripe id carry-forward on entitlement/price rows.
- *
- * Seeds real Stripe resources via `initStripeResourcesForProducts` (the same
- * production path `updateProduct` uses), then updates via catalogV2 and
- * asserts reuse levels with shared expect helpers.
- *
- * Full carry (stripe_price_id + stripe_product_id + meter) when price AND
- * entitlement definitions match; product-only carry when same usage feature +
- * entity scope; otherwise nothing.
- */
-
 import { expect, test } from "bun:test";
 import {
 	BillingInterval,
@@ -372,8 +360,6 @@ test.concurrent(
 test.concurrent(
 	`${chalk.yellowBright("catalogV2 stripe: base price change mints new row; no stripe carry (fixed ≠ usage)")}`,
 	async () => {
-		// Product-only carry is usage-feature scoped (getPriceStripeReuseLevel);
-		// fixed base amount changes get reuse level "none".
 		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
 		const planId = uniqueTestId("cv2_str_base");
 		await deleteDbPlans({ ctx, planIds: [planId] });
@@ -403,8 +389,6 @@ test.concurrent(
 
 			const after = await getFull({ ctx, planId });
 			const baseAfter = findBasePrice({ product: after });
-			// No carry ("none"): execute init mints a FRESH Stripe Price for the
-			// replacement row, under the plan's own (unchanged) Stripe Product.
 			expectPriceStripeResourcesPresent({
 				price: baseAfter,
 				label: "new base row",

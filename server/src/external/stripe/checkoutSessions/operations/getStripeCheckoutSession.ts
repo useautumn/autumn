@@ -2,7 +2,6 @@ import type Stripe from "stripe";
 import { createStripeCli } from "@/external/connect/createStripeCli";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 
-// Map expand strings to their expanded types
 type CheckoutSessionExpandMap = {
 	line_items: { line_items: Stripe.ApiList<Stripe.LineItem> };
 	subscription: { subscription: Stripe.Subscription | null };
@@ -14,7 +13,6 @@ type CheckoutSessionExpandMap = {
 
 type CheckoutSessionExpandKey = keyof CheckoutSessionExpandMap;
 
-// Converts union to intersection: A | B → A & B
 type UnionToIntersection<U> = (
 	U extends unknown
 		? (x: U) => void
@@ -28,7 +26,6 @@ export type ExpandedStripeCheckoutSession<
 > = Stripe.Checkout.Session &
 	UnionToIntersection<CheckoutSessionExpandMap[T[number]]>;
 
-/** Dynamically typed Stripe checkout session based on expand params */
 export const getStripeCheckoutSession = async <
 	T extends CheckoutSessionExpandKey[],
 >({

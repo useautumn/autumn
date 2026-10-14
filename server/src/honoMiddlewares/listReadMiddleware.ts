@@ -5,7 +5,6 @@ import { type DrizzleCli, dbList } from "@/db/initDrizzle.js";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import { matchRoute } from "./middlewareUtils.js";
 
-/** Paged reads whose result size grows with the org's data. */
 export const LIST_ROUTE_PATTERNS = [
 	{ method: "GET", url: "/v1/customers" },
 	{ method: "POST", url: "/v1/customers/list" },
@@ -36,10 +35,6 @@ const listTimeoutError = ({ timeoutMs }: { timeoutMs: number }) =>
 		statusCode: 504,
 	});
 
-/**
- * List routes run on the list pool unless the replica lane already claimed them. The response is bounded by
- * the pool's own query clock, which starts here and so always fires before pg's does for the same read.
- */
 export const createListReadMiddleware =
 	({ listDb, timeoutMs }: { listDb: DrizzleCli; timeoutMs: number }) =>
 	async (c: Context<HonoEnv>, next: Next) => {

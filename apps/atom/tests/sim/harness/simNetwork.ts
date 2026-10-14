@@ -1,17 +1,11 @@
 import type { SeededRandom, VirtualClock } from "./virtualClock.js";
 
 export type NetworkProfile = {
-	/** One-way delay, drawn per message; different draws reorder messages. */
 	delayMs: [number, number];
-	/** A request that never arrives: the sender sees a connection error after its delay. */
 	dropRate: number;
-	/** A request delivered twice, the second copy's answer discarded. */
 	dupRate: number;
-	/** A round trip past this is an abort for the sender, even when the request was applied. */
 	timeoutMs: number;
-	/** What the service name resolves to lags the real bindings by this much. */
 	dnsLagMs: number;
-	/** The balancer sends to an address it never saw before only after this many health checks' worth of time. */
 	balancerWarmMs: number;
 };
 
@@ -55,10 +49,6 @@ export type Observed = {
 
 const never = new Promise<Response>(() => {});
 
-/**
- * The deployment network as a seeded simulation: addresses bound to replica generations, messages delayed,
- * reordered, duplicated or lost by the profile, and a dead sender's promises never settling, as a killed process's would not.
- */
 export const createSimNetwork = ({
 	clock,
 	rng,
@@ -69,12 +59,10 @@ export const createSimNetwork = ({
 	profile: NetworkProfile;
 }) => {
 	const bindings = new Map<string, Endpoint>();
-	/** When each address was first bound: a target the balancer has registered before takes traffic from its first listen. */
 	const firstBound = new Map<string, number>();
 	const history: { at: number; address: string; bound: boolean }[] = [];
 	const observed: Observed[] = [];
 	let current = profile;
-	/** Addresses cut off from the others: nothing to or from them arrives, though they stay bound. */
 	const cutOff = new Set<string>();
 
 	const bind = (endpoint: Endpoint) => {
@@ -89,7 +77,6 @@ export const createSimNetwork = ({
 		history.push({ at: clock.now(), address: endpoint.address, bound: false });
 	};
 
-	/** What the service name resolves to: the bindings as they stood `dnsLagMs` ago. */
 	const resolve = async (): Promise<string[]> => {
 		const asOf = clock.now() - current.dnsLagMs;
 		const bound = new Set<string>();
@@ -132,7 +119,6 @@ export const createSimNetwork = ({
 		return response;
 	};
 
-	/** This endpoint's `fetch`: every request it makes crosses the simulated network. */
 	const fetchFor = (from: Endpoint): typeof fetch => {
 		const send = async (
 			input: URL | RequestInfo,
@@ -206,7 +192,6 @@ export const createSimNetwork = ({
 		fetchFor,
 		observed,
 		bound: () => [...bindings.keys()].sort(),
-		/** Where the balancer may send now: every bound address it has had time to register. */
 		routable: () =>
 			[...bindings.keys()]
 				.filter(
@@ -218,7 +203,6 @@ export const createSimNetwork = ({
 		setProfile: (next: Partial<NetworkProfile>) => {
 			current = { ...current, ...next };
 		},
-		/** Cuts an address off from every other: its peers cannot reach it, nor it them. The balancer still can. */
 		partition: ({ address }: { address: string }) => cutOff.add(address),
 		heal: () => cutOff.clear(),
 	};

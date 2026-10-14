@@ -1,12 +1,3 @@
-/**
- * catalogV2.update — claim / row carry-over (definition-exact → same row ids;
- * any change mints new rows; old rows are always retired with is_custom).
- *
- * Customer refs are DB-seeded: the local Stripe Connect account is currently
- * unreachable from s.customer / attach, which would otherwise fail before the
- * catalog assert runs.
- */
-
 import { expect, test } from "bun:test";
 import {
 	BillingInterval,
@@ -32,7 +23,6 @@ import {
 	snapshotPlanRows,
 } from "../utils/expectPlanRows.js";
 
-/** Minimal customer + cus_product (+ optional cus_ent / cus_price) for protect refs. */
 const seedCustomerProductRef = async ({
 	ctx,
 	planId,
@@ -246,7 +236,6 @@ test.concurrent(
 	},
 );
 
-// Retired lane: stamp is_custom so customer refs survive.
 test.concurrent(
 	`${chalk.yellowBright("catalogV2 rows: with customer — included bump retires old ent (is_custom)")}`,
 	async () => {
@@ -288,7 +277,6 @@ test.concurrent(
 	},
 );
 
-// Retired lane: stamp is_custom so customer refs survive.
 test.concurrent(
 	`${chalk.yellowBright("catalogV2 rows: with customer — remove item retires rows; customer keeps grant")}`,
 	async () => {
@@ -334,7 +322,6 @@ test.concurrent(
 	},
 );
 
-// Retired lane: stamp is_custom so customer refs survive.
 test.concurrent(
 	`${chalk.yellowBright("catalogV2 rows: with customer — base price change retires old base")}`,
 	async () => {
@@ -385,7 +372,6 @@ test.concurrent(
 	},
 );
 
-// Cross-version row refs: v1 ents still referenced by a versionable cus_ent on v2.
 test.concurrent(
 	`${chalk.yellowBright("catalogV2 rows: bad state — cus_ent on v1, customer on v2 → v1 update retires, cus_ent survives")}`,
 	async () => {
@@ -413,7 +399,6 @@ test.concurrent(
 			const v2Before = await snapshotPlanRows({ ctx, planId, version: 2 });
 			const oldEnt = v1Before.ents[TestFeature.Messages];
 
-			// cus_product attaches to latest (v2); cus_ent references v1's ent.
 			await seedCustomerProductRef({
 				ctx,
 				planId,
@@ -445,7 +430,6 @@ test.concurrent(
 	},
 );
 
-// Cross-version row refs: v1 prices still referenced by a versionable cus_price on v2.
 test.concurrent(
 	`${chalk.yellowBright("catalogV2 rows: bad state — cus_price on v1 base, customer on v2 → v1 price change retires old base")}`,
 	async () => {
@@ -512,14 +496,6 @@ test.concurrent(
 	},
 );
 
-/**
- * Expired-only CPs are not versionable (`has_customers` stays false, no
- * migrate draft) but their cus_ents still FK catalog rows. Prod FK is
- * RESTRICT — in-place rematch must retire, not DELETE.
- *
- * Red (current):  old ent is hard-deleted (local CASCADE) / FK 500 (prod)
- * Green (after):  old ent retired is_custom; cus_ent survives
- */
 test.concurrent(
 	`${chalk.yellowBright("catalogV2 rows: expired-only customers → rematch retires old ent")}`,
 	async () => {

@@ -1,8 +1,5 @@
 import { AppEnv, type Entity } from "@autumn/shared";
 
-/**
- * Create an entity fixture
- */
 const create = ({
 	id,
 	featureId,
@@ -25,10 +22,6 @@ const create = ({
 	feature_id: featureId,
 	internal_feature_id: internalFeatureId ?? `internal_${featureId}`,
 });
-
-// ═══════════════════════════════════════════════════════════════════
-// EXPORT
-// ═══════════════════════════════════════════════════════════════════
 
 export const entities = {
 	create,

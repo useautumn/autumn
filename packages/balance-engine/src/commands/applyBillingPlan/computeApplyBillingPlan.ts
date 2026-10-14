@@ -10,7 +10,6 @@ import { assertInsertsHaveNamedOwners } from "./assertInsertsHaveNamedOwners.js"
 import { toPlanMutation } from "./toPlanMutation.js";
 import type { ApplyBillingPlanCommand } from "./types/applyBillingPlanCommand.js";
 
-/** The customer row a plan creates the subject with, if it creates one. */
 export const planInsertedCustomer = ({
 	command,
 }: {
@@ -22,14 +21,12 @@ export const planInsertedCustomer = ({
 	return customer ?? null;
 };
 
-/** A plan that inserts the customer creates the subject, so it applies only where none exists. */
 export const planInsertsCustomer = ({
 	command,
 }: {
 	command: ApplyBillingPlanCommand;
 }): boolean => planInsertedCustomer({ command }) !== null;
 
-/** The entities a plan creates: named on the command like any other, but not yet held anywhere. */
 export const planInsertedEntities = ({
 	command,
 }: {
@@ -39,7 +36,6 @@ export const planInsertedEntities = ({
 		op.op === "insert" && op.table === "entity" ? [op.row] : [],
 	);
 
-/** The plan's ops as one mutation over the customer and the entities it names: its core plan applied, then its rollovers and rebalances on the result. */
 export const computeApplyBillingPlan = ({
 	command,
 	state,
@@ -47,10 +43,8 @@ export const computeApplyBillingPlan = ({
 	catalog,
 }: {
 	command: ApplyBillingPlanCommand;
-	/** The customer's state with the named entities' rows merged in. */
 	state: SubjectState | null;
 	entities?: readonly WorkerEntity[];
-	/** The rows the plan's state and inserts join to; a rebalance or a rollover cap reads them. */
 	catalog?: Catalog;
 }): SubjectStateMutation => {
 	assertInsertsHaveNamedOwners({ command, state, entities });

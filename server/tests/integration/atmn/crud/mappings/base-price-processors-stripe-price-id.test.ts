@@ -1,11 +1,3 @@
-/**
- * atmn crud/mappings — base price processors [stripe price_id]
- *
- * `--include-mappings`
- *
- * One line of plans/atmn-v3/07_tests.md. [a, b] is a matrix looped INSIDE this file.
- */
-
 import { expect, test } from "bun:test";
 import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 import { configBody } from "@tests/utils/atmnUtils/baseConfigs.js";
@@ -21,9 +13,6 @@ type CatalogPlanRow = {
 	} | null;
 };
 
-// A stated base-price stripe_price_id is validated against real Stripe unless
-// the plan opts out of Stripe entirely — createInStripe: false threads it
-// through unresolved, so a made-up id round-trips without a real account.
 const proPlan = `
 		plan({
 			active: true,

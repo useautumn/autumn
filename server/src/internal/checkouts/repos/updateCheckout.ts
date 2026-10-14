@@ -2,10 +2,6 @@ import { type Checkout, checkouts, type InsertCheckout } from "@autumn/shared";
 import { eq } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle";
 
-/**
- * Update a checkout record in the database.
- * Typically used to update status to completed after successful confirmation.
- */
 export async function updateCheckout({
 	db,
 	id,

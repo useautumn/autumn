@@ -13,7 +13,6 @@ import { RedirectModeSchema } from "../common/redirectMode";
 import { UnixMsTimestampSchema } from "../common/unixMsTimestamp";
 import { AttachDiscountSchema } from "./attachDiscount";
 
-/** Per-plan customize without free_trial */
 const MultiAttachCustomizePlanSchema = z
 	.object({
 		price: BasePriceParamsSchema.nullable().optional().meta({
@@ -26,7 +25,6 @@ const MultiAttachCustomizePlanSchema = z
 	})
 	.optional();
 
-/** Per-plan entry in the multi-attach request */
 export const MultiAttachPlanSchema = z.object({
 	plan_id: z.string().meta({
 		description: "The ID of the plan to attach.",
@@ -122,7 +120,6 @@ export const MultiAttachParamsV0Schema = z.object({
 			"If true, the cusProducts are activated immediately even when payment is pending via Stripe checkout.",
 	}),
 
-	// Internal
 	customer_data: CustomerDataSchema.optional().meta({
 		internal: true,
 	}),

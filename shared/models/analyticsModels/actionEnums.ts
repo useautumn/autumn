@@ -5,7 +5,6 @@ export enum AuthType {
 	CustomerJwt = "customer_jwt",
 	Dashboard = "dashboard",
 
-	// Internal
 	Vercel = "vercel",
 	Revenuecat = "revenuecat",
 	Stripe = "stripe",

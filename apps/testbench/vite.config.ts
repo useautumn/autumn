@@ -12,9 +12,6 @@ export default defineConfig({
 	resolve: {
 		dedupe: ["react", "react-dom"],
 		alias: [
-			// `@` resolves into the shared @autumn/ui package src so reused components
-			// find their `@/components/ui/...` + `@/lib/utils` paths. Testbench's own
-			// files import each other via relative paths.
 			{ find: "@", replacement: path.resolve(__dirname, "../../packages/ui/src") },
 			{ find: /^react$/, replacement: require.resolve("react") },
 			{ find: /^react-dom$/, replacement: require.resolve("react-dom") },
@@ -39,7 +36,6 @@ export default defineConfig({
 		host: "0.0.0.0",
 		port: Number.parseInt(process.env.VITE_PORT || "5910", 10),
 		fs: {
-			// allow importing from the sibling vite/ app + repo root
 			allow: ["../.."],
 		},
 	},

@@ -11,16 +11,6 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { createStripeCli } from "@/external/connect/createStripeCli";
 
-/**
- * Hosted Checkout Promo Code Scenario
- *
- * Creates a Stripe coupon + promotion code and two hosted checkout URLs:
- * - /c attach checkout
- * - /u update-subscription checkout
- *
- * Run this, copy the logged checkout URL, and enter the logged promo code in the
- * hosted checkout UI.
- */
 test(`${chalk.yellowBright("checkout: hosted promo code manual scenario")}`, async () => {
 	const customerId = "checkout-promo-code";
 	const updateCustomerId = `${customerId}-update`;

@@ -1,18 +1,3 @@
-/**
- * TDD coverage for `update_plan` version migrations targeting scheduled customer products.
- *
- * Contract under test:
- *   New behaviors:
- *     - Scheduled customer products are selected by customer and operation plan filters.
- *     - Scheduled version updates delete the old scheduled row and insert a replacement.
- *     - Entity-scoped scheduled rows are selected and replaced independently.
- *     - Explicit `plan_filter.custom: true` opts custom scheduled rows into version updates.
- *     - Active and scheduled rows for the same plan can be migrated together.
- *   Side effects:
- *     - Scheduled replacements do not leave expired scheduled rows.
- *     - Coupled migrations keep Stripe subscriptions/schedules consistent with Autumn.
- */
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3 } from "@autumn/shared";
 import { CusProductStatus, ms, stripeRefToId } from "@autumn/shared";
@@ -464,8 +449,6 @@ test(`${chalk.yellowBright("migrations update_plan scheduled version: mixed acti
 		actions: [],
 	});
 
-	// An unchanged plan across phases merges into one row, so phase 2 changes
-	// the seat quantity to keep a separate scheduled row.
 	const now = Date.now();
 	await autumnV1.billing.createSchedule({
 		customer_id: customerId,

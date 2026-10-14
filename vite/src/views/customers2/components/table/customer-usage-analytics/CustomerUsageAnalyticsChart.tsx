@@ -32,8 +32,6 @@ export function CustomerUsageAnalyticsChart({
 	const isSheetOpen = useIsSheetOpen();
 
 	function formatYAxisTick(value: number): string {
-		// if (value === 0) return "";
-
 		const absValue = Math.abs(value);
 
 		if (absValue >= 1_000_000_000) {
@@ -50,16 +48,13 @@ export function CustomerUsageAnalyticsChart({
 	}
 
 	const { chartData, chartConfig, eventNames, maxValue } = useMemo(() => {
-		// Prefer timeseries data if available
 		if (timeseriesEvents?.data && timeseriesEvents.data.length > 0) {
 			const preparedData = prepareTimeseriesChartData({ timeseriesEvents });
 			if (preparedData.eventNames.length !== 0) {
 				return preparedData;
 			}
-			// If no event names, return default data
 			return prepareChartData({ events, daysToShow });
 		}
-		// Otherwise use default data
 		return prepareChartData({ events, daysToShow });
 	}, [timeseriesEvents, events, daysToShow]);
 
@@ -121,7 +116,6 @@ export function CustomerUsageAnalyticsChart({
 				)}
 			>
 				<BarChart
-					// accessibilityLayer
 					data={chartData}
 					className={cn(
 						"[&_.recharts-cartesian-grid-bg]:fill-white dark:[&_.recharts-cartesian-grid-bg]:fill-gray-900 [&_.recharts-cartesian-grid-bg]:stroke-border [&_.recharts-cartesian-grid-bg]:stroke-1 [&_.recharts-cartesian-grid-bg]:[rx:8px] pt-3 pr-2",
@@ -144,7 +138,6 @@ export function CustomerUsageAnalyticsChart({
 						tickMargin={4}
 						axisLine={false}
 						strokeWidth={1}
-						// interval={3}
 						interval="equidistantPreserveStart"
 						stroke="#f7f7f7"
 						tick={{ fontSize: 11, fill: "#666" }}
@@ -176,12 +169,6 @@ export function CustomerUsageAnalyticsChart({
 							barSize={20}
 							fill={`var(--color-${eventName})`}
 							isAnimationActive={!isSheetOpen}
-							// animationDuration={300}
-							// animationEasing="ease-out"
-							// animationBegin={1}
-							// radius={
-							// 	index === eventNames.length - 1 ? [4, 4, 0, 0] : [0, 0, 0, 0]
-							// }
 						/>
 					))}
 				</BarChart>

@@ -14,7 +14,6 @@ import type {
 	MutationResult,
 } from "../writer/types/mutation.js";
 
-/** Every balance update, sync or queued, is decided here on the rows as they stand after any due reset. No effects: legacy fires none. */
 export async function decideUpdateBalance({
 	scope,
 	command,
@@ -29,7 +28,6 @@ export async function decideUpdateBalance({
 	});
 }
 
-/** Sync: decide, then answer once Kafka holds it. */
 export async function updateBalance({
 	scope,
 	command,
@@ -48,7 +46,6 @@ export async function updateBalance({
 	return { result: committed.mutation.result };
 }
 
-/** Runs inside the writer's critical section: no await, no I/O. */
 function mutateUpdateBalance({
 	scope,
 	state,

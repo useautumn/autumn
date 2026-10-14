@@ -19,7 +19,6 @@ export const autumnStripeRequestOptions = ({
 	idempotencyKey: buildAutumnStripeIdempotencyKey({ source }),
 });
 
-/** True when the event was caused by an Autumn API call (vs external/automatic). */
 export const isAutumnOriginatedStripeEvent = ({
 	event,
 }: {

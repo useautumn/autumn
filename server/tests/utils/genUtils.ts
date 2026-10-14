@@ -5,10 +5,6 @@ export const timeout = (ms: number) => {
 	return new Promise((resolve) => setTimeout(resolve, ms));
 };
 
-/**
- * Polls `fetch` until `until(value)` holds or the deadline passes; returns the
- * last value (or rethrows the last error) so asserts surface the real mismatch.
- */
 export const pollUntil = async <T>({
 	fetch,
 	until,
@@ -33,12 +29,6 @@ export const pollUntil = async <T>({
 	}
 };
 
-/**
- * Polls `fetch` until `assert` stops throwing, then returns that value. The
- * final attempt runs unguarded so the real assertion error surfaces instead of
- * a timeout. For state that settles asynchronously (Stripe webhooks, queue
- * workers), which is far slower on contended CI than locally.
- */
 export const pollUntilAsserted = async <T>({
 	fetch,
 	assert,

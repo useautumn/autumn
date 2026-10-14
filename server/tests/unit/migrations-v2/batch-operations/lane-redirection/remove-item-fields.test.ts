@@ -1,12 +1,3 @@
-/**
- * Every PlanItemFilter field → batch vs per-customer, via computeBatchMigration.
- *
- * Contract:
- *   feature_id [+ interval] [+ interval_count] → batch remove (narrows cadence)
- *   billing_method OR missing feature_id → unsupported_remove_items
- *   matched priced / rollover / entity / pooled entitlement → per-customer
- */
-
 import { describe, expect, test } from "bun:test";
 import type { Price } from "@autumn/shared";
 import {

@@ -9,15 +9,9 @@ import {
 
 const CopySandboxSchema = z
 	.object({
-		// Source is exactly one of: another owned sandbox (fromSandboxId), or the
-		// master org's current env — default sandbox / production — via fromMaster.
 		fromSandboxId: z.string().min(1).optional(),
-		// boolean (not z.literal(true)) so clients that serialize `false` instead
-		// of omitting still parse; the refine treats falsy as "no master source".
 		fromMaster: z.boolean().optional(),
 		toSandboxId: z.string().min(1),
-		// Omit both to copy the whole catalog; pass either to copy only those items
-		// (selected products pull in the features they reference).
 		productIds: z.array(z.string()).optional(),
 		featureIds: z.array(z.string()).optional(),
 	})
@@ -25,15 +19,6 @@ const CopySandboxSchema = z
 		message: "Provide exactly one of fromSandboxId or fromMaster",
 	});
 
-/**
- * POST /sandboxes.copy
- *
- * Dashboard-only RPC that copies plans (products) + features into a named
- * sandbox. The source is another owned sandbox, or — via fromMaster — the master
- * org at the caller's current env (so you can seed a sandbox from the default
- * sandbox or from production). Ownership is enforced inside copySandboxForOrg via
- * the 404-masking getOwnedSandbox check, so a non-owned endpoint reads as a 404.
- */
 export const handleCopySandbox = createRoute({
 	scopes: [Scopes.Platform.Write],
 	body: CopySandboxSchema,

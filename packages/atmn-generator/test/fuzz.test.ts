@@ -1,9 +1,3 @@
-/**
- * What the fuzz coverage tools produce. The first block is synthetic so the
- * numbers are exact and legible; the second reads the REAL spec, since a test
- * against an invented schema can pass while the real shape differs.
- */
-
 import { expect, test } from "bun:test";
 import type { JsonSchema } from "../src/casing/schemaKeyCasing";
 import type { CoverageReport } from "../src/fuzz/coverageReport";
@@ -105,8 +99,6 @@ test("the real spec: plans exposes tierBehavior but hides versioning and priceId
 	expect(
 		[...(realSchema.get("plans.items.price.tierBehavior") ?? [])].sort(),
 	).toEqual(["graduated", "volume"]);
-	// Overlay-hidden: the server derives it from the rows, so a config can't set it.
 	expect(realSchema.has("plans.versioning")).toBe(false);
-	// x-internal: a server-owned id, never a fixture field.
 	expect(realSchema.has("plans.items.priceId")).toBe(false);
 });

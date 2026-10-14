@@ -8,7 +8,6 @@ import {
 import RecaseError from "@server/utils/errorUtils.js";
 import type Stripe from "stripe";
 
-// For API calls
 export const getStripeExpandedInvoice = async ({
 	stripeCli,
 	stripeInvoiceId,
@@ -22,7 +21,6 @@ export const getStripeExpandedInvoice = async ({
 	return invoice;
 };
 
-// For webhooks
 export const getFullStripeInvoice = async ({
 	stripeCli,
 	stripeId,

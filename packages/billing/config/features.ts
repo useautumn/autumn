@@ -2,7 +2,6 @@ import { feature } from "atmn";
 import { apiRequestsRateCard } from "./apiRequestsRateCard";
 
 const existingFeatures = [
-	// TODO: delete once Free v29 (the only plan still using them) is retired.
 	feature({
 		name: "Concurrency",
 		type: "metered",
@@ -18,7 +17,6 @@ const existingFeatures = [
 		internalId: "fe_3B7VgjS0QPkH1KLaE88AacZmvDJ",
 	}),
 
-	// To delete...
 	feature({
 		name: "PKey",
 		type: "boolean",
@@ -56,7 +54,6 @@ const existingFeatures = [
 		internalId: "fe_3H8X9i0IOmsmfxeqmazjNrZFRxZ",
 	}),
 
-	// To archive later
 	feature({
 		name: "USD Revenue",
 		type: "metered",

@@ -18,7 +18,6 @@ const previousAttributeKeys = [
 	"free_trial",
 	"config",
 	"billing_controls",
-	// A demotion changes nothing else, so without this the row reads as a no-op.
 	"active",
 	"archived",
 	"metadata",
@@ -89,7 +88,6 @@ export const diffPlanV1PreviousAttributes = ({
 }): CorePlanUpdatePreview["previous_attributes"] => {
 	const previous: Record<string, unknown> = {};
 
-	// skip_overage_billing false ≡ unset — don't report it as a change.
 	const comparable = (
 		plan: ApiPlanV1,
 		key: (typeof previousAttributeKeys)[number],
@@ -103,7 +101,6 @@ export const diffPlanV1PreviousAttributes = ({
 		const toValue = comparable(to, key);
 		if (valuesEqual(fromValue, toValue)) continue;
 
-		// Nested billing_controls: only emit keys that actually changed.
 		if (key === "billing_controls") {
 			const sparse = sparsePreviousBillingControls({
 				from: (from.billing_controls ?? {}) as Record<string, unknown>,
@@ -115,15 +112,12 @@ export const diffPlanV1PreviousAttributes = ({
 			continue;
 		}
 
-		// Use null (not undefined) for added fields so the key survives JSON
-		// serialization and clients can still tell the field changed.
 		previous[key] = from[key] === undefined ? null : from[key];
 	}
 
 	return Object.keys(previous).length > 0 ? previous : null;
 };
 
-/** A lane that was unset and is now set reads as null (added), like a scalar. */
 const sparsePreviousBillingControls = ({
 	from,
 	to,

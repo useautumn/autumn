@@ -58,7 +58,6 @@ export const mergePooledBalancePlans = ({
 	};
 };
 
-/** Two updates to the same pool sum their deltas instead of overwriting. */
 const mergePooledBalanceUpdates = ({
 	base,
 	incoming,

@@ -16,7 +16,6 @@ const ctx = {
 	logger: { warn: () => undefined },
 } as unknown as AutumnContext;
 
-/** The org's percent now, plus the rollbacks (each from 100 to 0) that landed `landedMsAgo` ago. */
 const setOrgRollout = ({
 	percent,
 	rollbacksLandedMsAgo = [],

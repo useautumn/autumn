@@ -1,5 +1,3 @@
-// Red: paid invoice-credit plans include an empty credit subscription row.
-// Green: the paid base drives renewals; source charges and credit resets remain intact.
 import { describe, expect, test } from "bun:test";
 import {
 	BillingInterval,

@@ -22,7 +22,6 @@ import { computeUpdateQuantityCustomerEntitlementChanges } from "./computeUpdate
 import { computeUpdateQuantityLineItems } from "./computeUpdateQuantityLineItems.js";
 import { computeUpdateQuantityPooledContributionUpdate } from "./computeUpdateQuantityPooledContributionUpdate.js";
 
-/** Computes quantity differences, billing lines and entitlement updates without side effects. */
 export const computeUpdateQuantityDetails = ({
 	ctx,
 	updatedOptions,
@@ -70,8 +69,6 @@ export const computeUpdateQuantityDetails = ({
 		updatedOptions,
 	});
 
-	// Tie-break: pick the prepaid price the quantity resolves to — a recurring
-	// prepaid wins over a one-off prepaid sibling of the same feature.
 	const prepaidCustomerPrices = customerProduct.customer_prices.filter(
 		(customerPriceCandidate) => isPrepaidPrice(customerPriceCandidate.price),
 	);

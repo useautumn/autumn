@@ -1,12 +1,3 @@
-/**
- * Contract: invoice-credit plan items no longer need usage-based pricing.
- * A prepaid or included-only invoice-credit balance converts check's
- * required_balance at the rate card and stops at zero instead of going into
- * overage.
- *
- * Catalog rate for Action1 in InvoiceCredits is 0.2 credits/unit (v2Features.ts).
- */
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3, CheckResponseV3 } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
@@ -50,7 +41,6 @@ test.concurrent(
 			balance: 100,
 		});
 
-		// 10 units * 0.2 = 2 credits.
 		const allowed = await autumnV2_3.check<CheckResponseV3>({
 			customer_id: customerId,
 			feature_id: TestFeature.Action1,
@@ -58,7 +48,6 @@ test.concurrent(
 		});
 		expect(allowed).toMatchObject({ allowed: true, required_balance: 2 });
 
-		// 500 units * 0.2 = 100 credits drains the prepaid balance.
 		await autumnV1.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Action1,
@@ -99,7 +88,6 @@ test.concurrent(
 			actions: [s.billing.attach({ productId: plan.id })],
 		});
 
-		// 100 units * 0.2 = 20 credits.
 		const allowed = await autumnV2_3.check<CheckResponseV3>({
 			customer_id: customerId,
 			feature_id: TestFeature.Action1,
@@ -107,7 +95,6 @@ test.concurrent(
 		});
 		expect(allowed).toMatchObject({ allowed: true, required_balance: 20 });
 
-		// 250 units * 0.2 = 50 credits drains the included balance.
 		await autumnV1.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Action1,

@@ -1,33 +1,9 @@
 #!/usr/bin/env bun
 
-/**
- * Idempotent DOWNWARD backfill script for events from Postgres to Tinybird
- *
- * Features:
- * - Backfills events BEFORE the cutoff date (when dual-write started)
- * - Fills downward: newest → oldest (today → yesterday → etc.)
- * - 100% idempotent: queries Tinybird MIN to find resume point
- * - Can be safely re-run with different chunk sizes
- * - Retries failed chunks
- *
- * Usage:
- *   bun scripts/backfill_events.ts
- *   bun scripts/backfill_events.ts --chunk-hours 12
- *   bun scripts/backfill_events.ts --dry-run
- *   bun scripts/backfill_events.ts --start-date "2025-06-15 00:00:00"
- */
-
 import { execSync } from "child_process";
 
-// ============================================================================
-// CONFIGURATION
-// ============================================================================
-
-// CUTOFF: The earliest event timestamp in Tinybird from dual-write.
-// We backfill everything BEFORE this date. Do not modify unless you know what you're doing.
 const CUTOFF_DATE = "2026-01-30 10:30:00";
 
-// TARGET: The oldest event in Postgres. Backfill stops here.
 const TARGET_DATE = "2025-01-30 00:00:00";
 
 const DEFAULT_CHUNK_HOURS = 24 * 7;
@@ -35,13 +11,9 @@ const MAX_RETRIES = 3;
 const RETRY_DELAY_MS = 5000;
 const DELAY_BETWEEN_CHUNKS_MS = 3000;
 
-// ============================================================================
-// TYPES
-// ============================================================================
-
 interface Args {
 	chunkHours: number;
-	startDate?: string; // Override: oldest date to backfill to
+	startDate?: string;
 	dryRun: boolean;
 }
 
@@ -49,10 +21,6 @@ interface Chunk {
 	start: string;
 	end: string;
 }
-
-// ============================================================================
-// ARGUMENT PARSING
-// ============================================================================
 
 function parseArgs(): Args {
 	const args: Args = {
@@ -103,10 +71,6 @@ Examples:
 	return args;
 }
 
-// ============================================================================
-// UTILITY FUNCTIONS
-// ============================================================================
-
 function exec(cmd: string, silent = false): string {
 	try {
 		const result = execSync(cmd, {
@@ -148,7 +112,6 @@ function formatDate(date: Date): string {
 }
 
 function parseDate(dateStr: string): Date {
-	// Handle format: "2026-01-21 00:00:00" or "2026-01-21 00:00:00.000000"
 	const cleaned = dateStr.split(".")[0].replace(" ", "T") + "Z";
 	return new Date(cleaned);
 }
@@ -173,7 +136,6 @@ function extractTimestamp(result: string): string | null {
 	const lines = result.split("\n");
 	for (const line of lines) {
 		const cleaned = line.trim();
-		// Match timestamp format: 2026-01-28 12:34:56 or 2026-01-28 12:34:56.000000
 		if (/^\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}/.test(cleaned)) {
 			if (
 				cleaned === "1970-01-01 00:00:00.000000" ||
@@ -186,10 +148,6 @@ function extractTimestamp(result: string): string | null {
 	}
 	return null;
 }
-
-// ============================================================================
-// TINYBIRD QUERIES
-// ============================================================================
 
 function getMinTimestampInTinybird(): string | null {
 	console.log("Querying Tinybird for backfill progress...");
@@ -233,10 +191,6 @@ function getBackfilledEventCount(): number {
 	return 0;
 }
 
-// ============================================================================
-// CHUNK GENERATION (DOWNWARD)
-// ============================================================================
-
 function generateChunksDownward(
 	resumePoint: string,
 	endPoint: string,
@@ -245,11 +199,9 @@ function generateChunksDownward(
 	const chunks: Chunk[] = [];
 	let current = resumePoint;
 
-	// Generate chunks going backwards in time
 	while (parseDate(current) > parseDate(endPoint)) {
 		let prev = addHours(current, -chunkHours);
 
-		// Don't go past the end point
 		if (parseDate(prev) < parseDate(endPoint)) {
 			prev = endPoint;
 		}
@@ -260,10 +212,6 @@ function generateChunksDownward(
 
 	return chunks;
 }
-
-// ============================================================================
-// COPY JOB EXECUTION
-// ============================================================================
 
 async function waitForCopyJobs(): Promise<void> {
 	const maxAttempts = 60;
@@ -328,10 +276,6 @@ async function runCopyJob(
 	return false;
 }
 
-// ============================================================================
-// MAIN
-// ============================================================================
-
 async function main() {
 	console.log("=== Events Backfill Script (Downward Fill) ===\n");
 	console.log(`Cutoff date (hardcoded): ${CUTOFF_DATE}`);
@@ -339,22 +283,16 @@ async function main() {
 
 	const args = parseArgs();
 
-	// 1. Get the oldest event in Postgres (our target)
 	const postgresMin = args.startDate ?? TARGET_DATE;
 	console.log(`Target date (hardcoded): ${TARGET_DATE}\n`);
 
-	// 2. Get the current backfill progress from Tinybird
 	const tinybirdMin = getMinTimestampInTinybird();
 
-	// 3. Determine resume point
-	// If no backfilled events yet, start from cutoff
-	// Otherwise, resume from where we left off (Tinybird MIN)
 	const resumePoint = tinybirdMin ? floorToHour(tinybirdMin) : CUTOFF_DATE;
 
 	console.log(`\nResume point: ${resumePoint}`);
 	console.log(`Target (oldest): ${postgresMin}`);
 
-	// 4. Check if done
 	if (parseDate(resumePoint) <= parseDate(postgresMin)) {
 		console.log("\n✓ Backfill complete! Nothing more to do.");
 		console.log(`  Total events: ${getEventCount()}`);
@@ -362,12 +300,10 @@ async function main() {
 		process.exit(0);
 	}
 
-	// 5. Generate chunks (downward)
 	const chunks = generateChunksDownward(resumePoint, postgresMin, args.chunkHours);
 	console.log(`\nGenerated ${chunks.length} chunks (${args.chunkHours}h each)`);
 	console.log(`Direction: ${resumePoint} ↓ ${postgresMin}\n`);
 
-	// 6. Dry run - show chunks and exit
 	if (args.dryRun) {
 		console.log("DRY RUN - Would process these chunks:\n");
 		chunks.forEach((chunk, i) => {
@@ -377,7 +313,6 @@ async function main() {
 		process.exit(0);
 	}
 
-	// 7. Process chunks
 	for (let i = 0; i < chunks.length; i++) {
 		const chunk = chunks[i];
 		const chunkNum = i + 1;
@@ -403,13 +338,11 @@ async function main() {
 			process.exit(1);
 		}
 
-		// Delay between chunks (unless it's the last one)
 		if (i < chunks.length - 1) {
 			await sleep(DELAY_BETWEEN_CHUNKS_MS);
 		}
 	}
 
-	// 8. Summary
 	console.log("==========================================");
 	console.log("=== Backfill Complete ===");
 	console.log(`Total events: ${getEventCount()}`);

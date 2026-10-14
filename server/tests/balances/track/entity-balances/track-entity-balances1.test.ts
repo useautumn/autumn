@@ -67,11 +67,9 @@ describe(`${chalk.yellowBright("track-entity-balances1: basic entity cache test"
 	});
 
 	test("should initialize cache for customer and entities", async () => {
-		// Call get customer once to initialize cache
 		const customer = await autumnV1.customers.get(customerId);
 		expect(customer).toBeDefined();
 
-		// Call get entity for each entity to initialize cache
 		for (const entity of entities) {
 			const fetchedEntity = await autumnV1.entities.get(customerId, entity.id);
 			expect(fetchedEntity).toBeDefined();
@@ -81,10 +79,8 @@ describe(`${chalk.yellowBright("track-entity-balances1: basic entity cache test"
 	test("customer should have dashboard access and product", async () => {
 		const customer = await autumnV1.customers.get(customerId);
 
-		// Check dashboard feature exists
 		expect(customer.features[TestFeature.Dashboard]).toBeDefined();
 
-		// Check product is attached
 		expectProductAttached({
 			customer,
 			product: freeProd,
@@ -95,34 +91,27 @@ describe(`${chalk.yellowBright("track-entity-balances1: basic entity cache test"
 		for (const entity of entities) {
 			const fetchedEntity = await autumnV1.entities.get(customerId, entity.id);
 
-			// Check dashboard feature exists
 			expect(fetchedEntity.features[TestFeature.Dashboard]).toBeDefined();
 
-			// Check product is attached
 			expectProductAttached({
 				customer: fetchedEntity,
 				product: freeProd,
-				// entityId: entity.id,
 			});
 		}
 	});
 
 	test("verify database state matches cache", async () => {
-		// Wait for database sync
 		await new Promise((resolve) => setTimeout(resolve, 2000));
 
-		// Read from database (skip cache)
 		const customerFromDb = await autumnV1.customers.get(customerId, {
 			skip_cache: "true",
 		});
 		const customerFromCache = await autumnV1.customers.get(customerId);
 
-		// Customer should match
 		expect(customerFromCache.features[TestFeature.Dashboard]).toMatchObject(
 			customerFromDb.features[TestFeature.Dashboard],
 		);
 
-		// All entities should match
 		for (const entity of entities) {
 			const entityFromDb = await autumnV1.entities.get(customerId, entity.id, {
 				skip_cache: "true",

@@ -1,11 +1,3 @@
-/**
- * TDD coverage for update_plan multi-target migrations.
- *
- * Contract under test:
- *   - plan_filter can match multiple customer products on different entities.
- *   - multiple update_plan operations run in order on the same customer.
- */
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3, ApiEntityV2 } from "@autumn/shared";
 import {

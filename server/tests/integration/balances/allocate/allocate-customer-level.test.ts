@@ -1,10 +1,3 @@
-/**
- * Customer-level check and track (no entity) may use only unallocated credits, never a share.
- *
- * Contract: A=6k, B=2k on 10k → 2k unallocated.
- *   check without entity: 2000 allowed, 2001 not. track without entity draws at most 2k.
- */
-
 import { expect, test } from "bun:test";
 import type { TrackDeduction } from "@autumn/shared";
 import chalk from "chalk";
@@ -65,7 +58,6 @@ test.concurrent(
 				0,
 			),
 		).toBe(2000);
-		// The 1000 past the unallocated pot is dropped, not billed as overage.
 		await expectMessagesBalance({
 			autumn: autumnV2_3,
 			customerId,

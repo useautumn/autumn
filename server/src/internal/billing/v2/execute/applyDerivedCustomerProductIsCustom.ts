@@ -12,29 +12,12 @@ import { applyCustomerProductItemsPatch } from "@/internal/billing/v2/utils/init
 import { deriveCustomerProductIsCustom } from "@/internal/customers/cusProducts/actions/deriveIsCustom/deriveCustomerProductIsCustom";
 import { loadBaseProduct } from "@/internal/customers/cusProducts/actions/deriveIsCustom/loadBaseProduct";
 
-/** A customer product to derive for, and where the result has to land. */
 type DerivationTarget = {
-	/** The state to compare — for a patch, the reconstructed post-patch product. */
 	customerProduct: FullCusProduct;
-	/** The row the flag belongs to, which for a patch is the pre-patch object. */
 	target: FullCusProduct;
-	/** Inserts carry the flag on the row itself; patches persist it through the
-	 * plan's update entry for the same row. */
 	via: "insert" | "update";
 };
 
-/**
- * A patch entry carries the PRE-patch customer product, with the changes in its
- * insert/delete arrays, so the post-patch item set has to be reconstructed
- * before diffing.
- *
- * Known gap: one-off prepaid carry-overs land on the patched row via the plan's
- * own `insertCustomerEntitlements`, in DB-insert shape with no hydrated
- * entitlement, so they are not reconstructed here. A patch that carries credits
- * can read non-custom now and custom on the next write. The drift is towards
- * custom — the safe direction — and it self-corrects the next time the row is
- * touched.
- */
 const collectDerivationTargets = ({
 	autumnBillingPlan,
 }: {
@@ -62,8 +45,6 @@ const collectDerivationTargets = ({
 	),
 ];
 
-/** Every distinct catalog version the plan touches, fetched in one pass so the
- * derivation itself runs with no further IO. */
 const loadBaseProducts = async ({
 	ctx,
 	targets,
@@ -94,19 +75,6 @@ const loadBaseProducts = async ({
 	return new Map(loaded);
 };
 
-/**
- * Stamps the derived `is_custom` onto every customer product this plan creates
- * or whose items it rewrites.
- *
- * Runs here rather than in each action's compute step because every v2 write
- * funnels through the billing plan: one hook covers attach, update, schedules,
- * sync, restore, imports and the lifecycle actions alike, and no caller can
- * reintroduce a hand-picked value.
- *
- * Plain update entries are left alone — they only move status, dates and
- * subscription ids, so the customer's item set (and therefore the flag) is
- * unchanged.
- */
 export const applyDerivedCustomerProductIsCustom = async ({
 	ctx,
 	autumnBillingPlan,
@@ -119,7 +87,6 @@ export const applyDerivedCustomerProductIsCustom = async ({
 
 	const baseProducts = await loadBaseProducts({ ctx, targets });
 
-	// Every load is done, so the rest is pure — no IO inside the loop.
 	const updateEntries = getUpdateCustomerProducts({ autumnBillingPlan });
 
 	for (const { customerProduct, target, via } of targets) {
@@ -141,7 +108,6 @@ export const applyDerivedCustomerProductIsCustom = async ({
 			(entry) => entry.customerProduct.id === target.id,
 		);
 
-		// Written even when it matches the in-memory row: migrations correct that flag in memory first.
 		if (updateEntry) {
 			updateEntry.updates.is_custom = isCustom;
 			continue;
@@ -149,9 +115,6 @@ export const applyDerivedCustomerProductIsCustom = async ({
 
 		if (isCustom === target.is_custom) continue;
 
-		// The patch plan always registers an update entry for the patched row, so
-		// this is a guard against a future caller that doesn't — without it the
-		// derived value would be silently dropped.
 		autumnBillingPlan.updateCustomerProducts = [
 			...(autumnBillingPlan.updateCustomerProducts ?? []),
 			{ customerProduct: target, updates: { is_custom: isCustom } },

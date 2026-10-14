@@ -1,10 +1,3 @@
-/**
- * catalogV2.update — declaring a variant under a pinned base row
- * repoints that row and recomposes customize over the declaring base.
- * Two bases cannot claim the same variant row. Existing rows must be identified
- * by `internal_id`, `version`, or `version_slug`; only creates are unpinned.
- */
-
 import { test } from "bun:test";
 import { ErrCode } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
@@ -317,7 +310,6 @@ test.concurrent(
 					],
 				});
 
-				// Historical v1 keeps its content and its anchor on base v1.
 				await expectVariantPointerCorrect({
 					ctx,
 					variantPlanId: variantId,
@@ -332,7 +324,6 @@ test.concurrent(
 					allowances: { [TestFeature.Messages]: 200 },
 					featureIds: [TestFeature.Messages],
 				});
-				// Active v2 recomposes over the declaring base and repoints to it.
 				await expectVariantPointerCorrect({
 					ctx,
 					variantPlanId: variantId,

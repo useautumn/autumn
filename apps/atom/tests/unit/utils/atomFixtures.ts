@@ -31,13 +31,11 @@ import type {
 } from "../../../src/subjectPulls/types/subjectPulls.js";
 import type { SlotOwners } from "../../../src/threads/owners/types/slotOwners.js";
 
-/** The org settings Autumn sends with every subject. */
 export const atomOrg: SharedContext["org"] = {
 	config: OrgConfigSchema.parse({}),
 	default_currency: "usd",
 };
 
-/** A check's response as the caller reads it, parsed from the JSON body Atom sends. */
 export const checkResponseOf = async ({
 	processor,
 	request,
@@ -47,7 +45,6 @@ export const checkResponseOf = async ({
 }): Promise<CheckResponseV3> =>
 	JSON.parse((await processor.check({ request })).json);
 
-/** The fixture customer `cus_1` holding `balance` messages, as Autumn sends it. */
 export const subjectBody = ({ balance }: { balance: number }) => {
 	const state = createState({ balance });
 	return {
@@ -59,7 +56,6 @@ export const subjectBody = ({ balance }: { balance: number }) => {
 	};
 };
 
-/** A stored subject as Autumn pushes it: routed by its customer, the body as JSON text. */
 export const subjectPushOf = ({
 	subject,
 }: {
@@ -78,7 +74,6 @@ export const subjectPushOf = ({
 	}),
 });
 
-/** Autumn's `subjects.delete` once the worker no longer holds `cus_1` (or its `entityId`): its identity at a version. */
 export const deletedPushOf = ({
 	entityId = null,
 	logOffset,
@@ -96,7 +91,6 @@ export const deletedPushOf = ({
 	}),
 });
 
-/** The fixture customer `cus_1` holding `balance` messages, as Atom stores it. */
 export const storedSubjectWith = ({
 	balance,
 	readAt = 1000,
@@ -115,10 +109,6 @@ export const storedSubjectWith = ({
 	};
 };
 
-/**
- * `cus_1` as Autumn sends it for its entity `ent_42`: the customer's own messages and the entity's own,
- * in one view under the entity's identity.
- */
 export const storedEntitySubjectWith = ({
 	customerBalance,
 	entityBalance,
@@ -157,7 +147,6 @@ export const storedEntitySubjectWith = ({
 export const latestApiVersion = new ApiVersionClass(LATEST_VERSION);
 export const oldestApiVersion = new ApiVersionClass(ApiVersion.V0_2);
 
-/** A check on `cus_1`'s messages as a caller on the latest API version sends it. */
 export const checkRequestFor = ({
 	params = {},
 	query = {},
@@ -174,7 +163,6 @@ export const checkRequestFor = ({
 	apiVersion,
 });
 
-/** The reason `run` left its request to the API; null when it answered itself. */
 export const forwardReasonOf = async (
 	run: () => unknown,
 ): Promise<ForwardReason | null> => {
@@ -187,7 +175,6 @@ export const forwardReasonOf = async (
 	}
 };
 
-/** One thread owning every slot: an Atom run in a single thread, as its unit tests do. */
 const noOtherThread = ({ thread }: { thread: number }): never => {
 	throw new Error(`No thread ${thread}: this Atom runs in one thread`);
 };
@@ -203,23 +190,18 @@ export const allSlotsOwnedHere: SlotOwners = {
 	fetchSubjectsOn: noOtherThread,
 };
 
-/** A thread's held subjects, roomy enough that a test never evicts by accident. */
 export const freshHeld = () =>
 	createHeldSubjects({ budgetBytes: 64 * 1024 * 1024 });
 
-/** A folder whose misses are only forwarded, for tests not about pulls. */
 export const noFolderPulls: FolderSubjectPulls = { request() {} };
 
-/** A thread whose loop is never behind, for tests not about refusing checks under load. */
 export const loopOnTime = { lagMs: () => 0 };
 
-/** A replica with no others: relays nowhere, knows no peer. */
 export const noReplication: Replication = {
 	replicate() {},
 	peers: async () => [],
 	stop: async () => {},
 };
-/** The peer port a lone replica would proxy to while starting; no peer answers there. */
 export const noPeer = { port: 0 };
 
 export const noSubjectPulls: SubjectPulls = {

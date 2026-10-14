@@ -14,7 +14,6 @@ export type EntitlementPriceTransition = {
 
 export type ComputedEntitlementPriceTransitions = {
 	transitions: EntitlementPriceTransition[];
-	/** Same-definition survivors. They still need a replace when usage resets. */
 	retained: EntitlementPriceTransition[];
 	added: EntitlementPrice[];
 	deleted: EntitlementPrice[];
@@ -34,9 +33,6 @@ export const computeEntitlementPriceTransitions = ({
 		product: toProduct,
 	});
 
-	// Precision-major matching: every source gets a shot at the strongest rung
-	// before any source falls to a weaker one, so an exact survivor claims its
-	// own candidate before a sibling's feature-only match can steal it.
 	const claimedToEntitlementIds = new Set<string>();
 	const matchedByFromIndex = new Map<number, EntitlementPrice>();
 	for (const matchPrecision of ENTITLEMENT_PRICE_MATCH_PRECISIONS) {

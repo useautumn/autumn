@@ -33,8 +33,6 @@ export const withMigrationCustomerLock = async <T>({
 	const lockKey = buildMigrationCustomerLockKey({ ctx, customerId });
 	const ownerToken = randomUUID();
 
-	// Migrations must never run concurrently for a customer — fail closed when
-	// Redis is unavailable instead of proceeding unlocked.
 	await acquireLockWithWait({
 		lockKey,
 		ttlMs: LOCK_TTL_MS,

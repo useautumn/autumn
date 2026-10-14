@@ -16,7 +16,6 @@ export const attachPaymentMethod = async ({
 		| "us_bank_account_processing";
 }) => {
 	try {
-		// Use pre-defined payment method IDs for special test cards
 		if (type === "authenticate" || type === "fail") {
 			const pmId =
 				type === "authenticate"
@@ -60,7 +59,6 @@ export const attachPaymentMethod = async ({
 			return;
 		}
 
-		// Alipay case - create and attach alipay payment method
 		if (type === "alipay") {
 			const pm = await stripeCli.paymentMethods.create({
 				type: "alipay",
@@ -72,7 +70,6 @@ export const attachPaymentMethod = async ({
 			return;
 		}
 
-		// Success case - create from token
 		const pm = await stripeCli.paymentMethods.create({
 			type: "card",
 			card: {

@@ -9,7 +9,6 @@ type InsertOp = Extract<BillingPlanOp, { op: "insert" }>;
 const idsOf = (rows: readonly { id: string }[]): Set<string> =>
 	new Set(rows.map(({ id }) => id));
 
-/** A row lands on the customer or an entity the plan names; any other row would vanish when the view is split back per owner. */
 export const assertInsertsHaveNamedOwners = ({
 	command,
 	state,
@@ -17,7 +16,6 @@ export const assertInsertsHaveNamedOwners = ({
 }: {
 	command: ApplyBillingPlanCommand;
 	state: SubjectState | null;
-	/** Every entity the plan names, the ones it creates included. */
 	entities: readonly WorkerEntity[];
 }): void => {
 	const inserts = command.ops.filter(

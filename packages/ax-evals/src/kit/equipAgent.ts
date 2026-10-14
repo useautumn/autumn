@@ -6,7 +6,6 @@ import { kitUnderTest } from "./kits.ts";
 import type { AgentEquipment } from "./types/agentEquipment.ts";
 import type { AgentKit } from "./types/agentKit.ts";
 
-/** Session id of an installed plugin skill: `autumn:<name>`. */
 const skillId = (skill: string): string => `${PLUGIN_NAME}:${skill}`;
 
 const writePluginManifest = async ({ pluginDir }: { pluginDir: string }) => {
@@ -34,12 +33,6 @@ const writeSkillFolder = async ({
 	}
 };
 
-/**
- * Gives the agent session everything in the kit, written inside the case
- * workspace (so it is deleted with it): a Claude Code plugin for the claude
- * harness, and `.codex/skills/` for the codex harness. A bare kit equips
- * nothing.
- */
 export const equipAgent = async ({
 	workspaceDir,
 	kit,

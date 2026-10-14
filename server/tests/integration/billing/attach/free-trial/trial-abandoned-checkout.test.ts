@@ -1,20 +1,3 @@
-/**
- * Abandoned Trial Checkout Tests (Attach V2)
- *
- * A trial is only "used" once its checkout completes. Before the fix, the
- * pending row a trial checkout inserts counted toward `trials_used` and trial
- * eligibility, and kept counting after the checkout expired or was replaced,
- * so the next attach of that plan billed immediately with no trial.
- *
- * Key behaviors:
- * - An open trial checkout does not consume the trial
- * - A trial checkout replaced by another plan's checkout does not consume it
- * - A trial checkout that expires in Stripe does not consume it
- * - A completed trial checkout still consumes it
- * - With unique_fingerprint, an open checkout reserves the trial for the fingerprint
- * - That reservation never crosses organizations
- */
-
 import { expect, test } from "bun:test";
 import {
 	ALL_STATUSES,
@@ -77,10 +60,6 @@ const expectCustomerProductStatus = async ({
 		timeoutMs: WEBHOOK_SETTLE_TIMEOUT_MS,
 	});
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 1: Open trial checkout
-// ═══════════════════════════════════════════════════════════════════════════════
-
 test.concurrent(
 	`${chalk.yellowBright("trial-abandoned-checkout 1: open trial checkout does not consume the trial")}`,
 	async () => {
@@ -123,10 +102,6 @@ test.concurrent(
 	},
 	WEBHOOK_TEST_TIMEOUT_MS,
 );
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 2: Trial checkout replaced by another plan's checkout
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(
 	`${chalk.yellowBright("trial-abandoned-checkout 2: replaced trial checkout does not consume the trial")}`,
@@ -179,10 +154,6 @@ test.concurrent(
 	WEBHOOK_TEST_TIMEOUT_MS,
 );
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 3: Trial checkout expires in Stripe
-// ═══════════════════════════════════════════════════════════════════════════════
-
 test.concurrent(
 	`${chalk.yellowBright("trial-abandoned-checkout 3: expired trial checkout does not consume the trial")}`,
 	async () => {
@@ -229,10 +200,6 @@ test.concurrent(
 	WEBHOOK_TEST_TIMEOUT_MS,
 );
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 4: Completed trial checkout still consumes the trial
-// ═══════════════════════════════════════════════════════════════════════════════
-
 test.concurrent(
 	`${chalk.yellowBright("trial-abandoned-checkout 4: completed trial checkout consumes the trial")}`,
 	async () => {
@@ -265,10 +232,6 @@ test.concurrent(
 	},
 	WEBHOOK_TEST_TIMEOUT_MS,
 );
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 5: Open checkout reserves a unique-fingerprint trial
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(
 	`${chalk.yellowBright("trial-abandoned-checkout 5: open checkout reserves the trial for a shared fingerprint")}`,
@@ -316,10 +279,6 @@ test.concurrent(
 	},
 	WEBHOOK_TEST_TIMEOUT_MS,
 );
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 6: Fingerprint reservation stays inside the organization
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(
 	`${chalk.yellowBright("trial-abandoned-checkout 6: another org's open checkout does not reserve the trial")}`,

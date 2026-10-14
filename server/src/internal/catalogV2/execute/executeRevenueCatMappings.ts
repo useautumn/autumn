@@ -12,10 +12,6 @@ type StatedRevenueCatMapping = {
 	processor: ApiRevenueCatPlanProcessor | null;
 };
 
-/**
- * RevenueCat mappings are plan-wide — the table has no version column — so only
- * the addressed row writes and version siblings are ignored.
- */
 const statedRevenueCatMappings = ({
 	updateCatalogPlan,
 }: {
@@ -27,12 +23,6 @@ const statedRevenueCatMappings = ({
 		return [{ planId: upsert.row.nextFullProduct.id, processor }];
 	});
 
-/**
- * Plan ids whose existing mapping row this request owns. `executeRenamePlans`
- * moves `autumn_product_id` along with the plan, but this check runs BEFORE it,
- * so a plan renaming itself still finds its row under the old id — counting
- * that as someone else's claim would 400 a plan for restating its own mapping.
- */
 const ownedPlanIds = ({
 	stated,
 	updateCatalogPlan,
@@ -47,13 +37,6 @@ const ownedPlanIds = ({
 	return owned;
 };
 
-/**
- * A purchase resolves RC id → plan by scanning every mapping, so an id claimed
- * twice would attach whichever row the query happened to return first.
- *
- * Callable on its own: execute runs it before the first catalog write, so a
- * collision cannot 400 a request that has already renamed a plan.
- */
 export const assertRevenueCatIdsUnclaimed = async ({
 	ctx,
 	updateCatalogPlan,
@@ -86,7 +69,6 @@ export const assertRevenueCatIdsUnclaimed = async ({
 	});
 
 	for (const row of existing) {
-		// A plan restating its own ids is the normal case, not a collision.
 		if (owned.has(row.autumn_product_id)) continue;
 		for (const productId of row.revenuecat_product_ids) {
 			const claimant = claimedHere.get(productId);
@@ -100,10 +82,6 @@ export const assertRevenueCatIdsUnclaimed = async ({
 	}
 };
 
-/**
- * Stated `processors.revenuecat` → the mappings table. Omitted keeps, null clears.
- * Collisions were already rejected before any write landed, so this only writes.
- */
 export const executeRevenueCatMappings = async ({
 	ctx,
 	updateCatalogPlan,

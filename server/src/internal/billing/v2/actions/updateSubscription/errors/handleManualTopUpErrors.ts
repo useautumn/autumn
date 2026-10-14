@@ -8,9 +8,6 @@ import {
 
 import { COMPLEX_UPDATE_ERROR } from "./handleOneOffErrors";
 
-/** Mutation fields incompatible with manual top-up semantics (plan restructures,
- * cancel flows, internal lifecycle overrides). Utility / response-shaping fields
- * like `proration_behavior`, `discounts`, `expand`, `customer_data` are allowed. */
 const FORBIDDEN_FIELDS: readonly (keyof UpdateSubscriptionV1Params)[] = [
 	"customize",
 	"custom_line_items",

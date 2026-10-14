@@ -4,7 +4,6 @@ import {
 } from "@autumn/balance-engine";
 import type { AutumnBillingPlan } from "@autumn/shared";
 
-/** Entities the plan creates, before the rows provisioned on them. */
 export const insertEntitiesToPlanOps = ({
 	autumnBillingPlan,
 }: {

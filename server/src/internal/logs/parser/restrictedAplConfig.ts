@@ -1,7 +1,3 @@
-/**
- * The restricted log APL surface is intentionally smaller than Axiom APL.
- * Keep tenant-safety and query-cost controls visible here before extending it.
- */
 export const RESTRICTED_APL_STAGE_KINDS = [
 	"where",
 	"orderBy",
@@ -13,20 +9,16 @@ export const RESTRICTED_APL_STAGE_KINDS = [
 export type RestrictedAplStageKind =
 	(typeof RESTRICTED_APL_STAGE_KINDS)[number];
 
-/** Search/list endpoints default to filtering, ordering, and limiting only. */
 export const DEFAULT_RESTRICTED_APL_STAGES: RestrictedAplStageKind[] = [
 	"where",
 	"orderBy",
 	"limit",
 ];
 
-/** Hard cap on user-supplied limits, independent of endpoint defaults. */
 export const RESTRICTED_APL_MAX_LIMIT = 200;
 
-/** Dot-path body access stays shallow to avoid broad arbitrary object walks. */
 export const RESTRICTED_APL_MAX_NESTED_PATH_DEPTH = 4;
 
-/** Identifier grammar for aliases and dot-path segments. No quoted keys in v1. */
 export const SAFE_APL_IDENTIFIER = /^[A-Za-z_][A-Za-z0-9_]*$/;
 
 export const RESTRICTED_APL_TOP_LEVEL_FIELDS = {
@@ -91,7 +83,6 @@ export const RESTRICTED_APL_TOP_LEVEL_FIELDS = {
 export type RestrictedAplTopLevelField =
 	keyof typeof RESTRICTED_APL_TOP_LEVEL_FIELDS;
 
-/** Nested map access is only allowed over projected request/response payloads. */
 export const RESTRICTED_APL_NESTED_ROOTS = {
 	request_body: {
 		apl: "request_body",
@@ -103,11 +94,9 @@ export const RESTRICTED_APL_NESTED_ROOTS = {
 
 export type RestrictedAplNestedRoot = keyof typeof RESTRICTED_APL_NESTED_ROOTS;
 
-/** Top-level numeric aggregates need stable numeric types; nested body paths are coerced with todouble. */
 export const RESTRICTED_APL_NUMERIC_AGGREGATE_FIELDS =
 	new Set<RestrictedAplTopLevelField>(["status_code"]);
 
-/** Raw APL escape hatches stay blocked; the compiler emits brackets itself. */
 export const RESTRICTED_APL_DANGEROUS_TEXT_PATTERNS = [
 	{
 		pattern: /[;[\]{}]/,

@@ -1,6 +1,5 @@
 import type { Organization } from "@autumn/shared";
 
-/** The org whose rollout entry routes this org: a sandbox follows its master; platform sub-orgs keep their own. */
 export const resolveRolloutOrgId = ({
 	org,
 }: {

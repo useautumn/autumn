@@ -11,13 +11,6 @@ import {
 	timePhase,
 } from "../utils/pagePhaseTimings.js";
 
-/** Post-commit side effects for one finalized page.
- *
- * Cache invalidation and item-event emission are independent, so they run
- * concurrently. Either can be handed to the caller to drain at chunk end
- * instead of blocking the page — pages touch disjoint customers, so they
- * overlap safely. A deferred invalidation must still complete, so the caller
- * drains before finishing. */
 export const finalizeBatchMigrationPage = async ({
 	ctx,
 	migrationInternalId,
@@ -38,8 +31,6 @@ export const finalizeBatchMigrationPage = async ({
 	pageResult: BatchMigrationPageResult;
 	webhooks?: MigrationWebhookControls;
 	phases?: BatchMigrationPagePhases;
-	/** Also bust skipped customers' caches — needed when a retry re-claims
-	 * customers whose earlier attempt committed writes but never invalidated. */
 	invalidateSkipped?: boolean;
 	deferEvents?: (emit: () => Promise<unknown>) => void;
 	deferCaches?: (invalidate: () => Promise<unknown>) => void;

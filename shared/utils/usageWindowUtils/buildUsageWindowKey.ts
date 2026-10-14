@@ -7,12 +7,6 @@ import type { EntInterval } from "../../models/productModels/intervals/entitleme
 const NULL_SEGMENT = "_";
 const DELIMITER = ":";
 
-/**
- * Deterministic key for one usage-window counter. Lua looks the counter up by
- * this exact string (`limit.key`), so the format must stay stable. Fail-closed if
- * an externally-influenced segment is the literal NULL_SEGMENT or contains the
- * DELIMITER, either of which would alias two distinct windows onto one counter.
- */
 export const buildUsageWindowKey = ({
 	scopeType,
 	internalEntityId,
@@ -49,9 +43,6 @@ export const buildUsageWindowKey = ({
 		interval,
 		windowStartAt,
 	];
-	// Appended only for filtered windows so pre-filter keys stay byte-identical
-	// (live unfiltered counters keep their identity). Filter values are
-	// user-controlled: URI-encode to keep the delimiter unambiguous.
 	if (filterKey) {
 		segments.push(`f=${encodeURIComponent(filterKey)}`);
 	}

@@ -13,7 +13,6 @@ export type ImpersonatableOrg = {
 	slug: string;
 };
 
-/** Search customer orgs and switch the staff session into one of them (reloads the page). */
 export const useImpersonateOrg = () => {
 	const axiosInstance = useAxiosInstance();
 	const { isCurrentlyImpersonating } = useAdmin();

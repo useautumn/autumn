@@ -3,7 +3,6 @@ import type { ProducerError } from "../types/producerError.js";
 
 const MAX_CAUSE_DEPTH = 4;
 
-/** The kafkajs error a producer threw, flattened to data the producer thread can send back. */
 export const producerErrorOf = ({
 	cause,
 	depth = 0,

@@ -16,7 +16,6 @@ const emptyEnvelope: CatalogRowsEnvelope = {
 	free_trials: [],
 };
 
-/** Returns only the rows that exist; a missing id is the caller's decision. */
 export const getCatalogRows = async ({
 	ctx,
 	ids,

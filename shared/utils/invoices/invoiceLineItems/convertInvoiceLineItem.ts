@@ -8,7 +8,6 @@ export const invoiceLineItemToDisplay = ({
 	invoiceLineItem: DbInvoiceLineItem;
 	features: Feature[];
 }): string => {
-	//  1. is base price
 	const isBase = !invoiceLineItem.feature_id;
 
 	if (isBase) {

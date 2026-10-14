@@ -1,9 +1,3 @@
-/**
- * What a future phases[0].starts_at does to the plans the customer has now:
- * - an auto-attached free default plan is undeclared, so it ends now and the paid plan starts on its date;
- * - a plan canceling at period end still ends now, credited its unused time exactly once.
- */
-
 import { expect, test } from "bun:test";
 import { CusProductStatus, type SetPlansParamsV0Input } from "@autumn/shared";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";

@@ -1,11 +1,3 @@
-/**
- * Regression test: /balances.check should not throw a Zod validation error
- * when a customer has a free trial with on_end: NULL in the database.
- *
- * Previously, FreeTrialSchema used .optional() for on_end which rejects null
- * values from the DB. Changed to .nullish() to accept both null and undefined.
- */
-
 import { expect, test } from "bun:test";
 import { type CheckResponseV3 } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";

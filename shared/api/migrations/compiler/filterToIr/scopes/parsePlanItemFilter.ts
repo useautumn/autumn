@@ -26,7 +26,6 @@ export function parsePlanItemFilter({
 	if (filter.rollover !== undefined)
 		children.push(parseRolloverExistence(filter.rollover));
 
-	// `unlimited` deferred to phase 2.
 	if (filter.unlimited !== undefined)
 		throw new Error("plan.item.unlimited is not supported in phase 1");
 

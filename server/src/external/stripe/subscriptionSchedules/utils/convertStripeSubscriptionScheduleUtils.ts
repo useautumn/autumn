@@ -1,7 +1,6 @@
 import { stripeRefToId } from "@autumn/shared";
 import type Stripe from "stripe";
 
-/** Gets the current phase index of a Stripe subscription schedule based on nowMs. */
 export const stripeSubscriptionScheduleToPhaseIndex = ({
 	stripeSubscriptionSchedule,
 	nowMs,
@@ -32,7 +31,6 @@ const stripeScheduleDiscountToUpdateParam = (
 	}),
 });
 
-/** Converts a live schedule phase item back into the shape an update accepts. */
 export const stripeSchedulePhaseItemToUpdateParam = (
 	item: Stripe.SubscriptionSchedule.Phase.Item,
 ): Stripe.SubscriptionScheduleUpdateParams.Phase.Item => ({
@@ -45,7 +43,6 @@ export const stripeSchedulePhaseItemToUpdateParam = (
 	}),
 });
 
-/** Converts a live schedule phase back into the shape an update accepts. */
 export const stripeSchedulePhaseToUpdateParam = (
 	phase: Stripe.SubscriptionSchedule.Phase,
 ): Stripe.SubscriptionScheduleUpdateParams.Phase => ({

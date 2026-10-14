@@ -1,12 +1,3 @@
-/**
- * atmn scenarios/versions — inline variant object, base versioned with both rows carrying real customers
- *
- * The variant is an object literal inside the plan's `variants: [...]`, never
- * a `variant({...})` fixture. Push backfills its identity into that object;
- * moving the v1 plan file to planVersions and writing pro@v2 beside it mints
- * proYearly@v2 under the new base, and the same config previews clean after.
- */
-
 import { expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -57,8 +48,6 @@ export default atmn({
 });
 `;
 
-/** Adds the demoted row's import and entry to a root config already on disk,
- * keeping whatever push backfilled into it: every version sits in `plans`. */
 const withHistory = (source: string): string =>
 	source
 		.replace(
@@ -67,7 +56,6 @@ const withHistory = (source: string): string =>
 		)
 		.replace("\tplans: [pro],", "\tplans: [pro, proV1],");
 
-/** The row a user demotes by hand: same file contents, `active` flipped. */
 const demoted = (source: string): string =>
 	source.replace("\tactive: true,", "\tactive: false,");
 
@@ -89,7 +77,6 @@ export const pro = plan({
 });
 `;
 
-/** Step 2: the same file with an inline variant object spliced into `variants`. */
 const withInlineVariant = ({
 	source,
 	proYearly,
@@ -204,14 +191,12 @@ test.concurrent(
 			readFileSync(join(scenario.cwd, relativePath), "utf8");
 
 		try {
-			// 1. pro@v1 alone; backfill writes internalId + versionSlug into the plan.
 			await scenario.push();
 			const proV1Source = read("plans/pro.ts");
 			const proV1 = await productAt({ ctx, planId: pro, version: 1 });
 			expect(proV1Source).toContain(`internalId: "${proV1.internal_id}"`);
 			expect(proV1Source).toContain('versionSlug: "v1"');
 
-			// 2. An inline variant object; backfill writes into that object too.
 			scenario.writeFile(
 				"plans/pro.ts",
 				withInlineVariant({ source: proV1Source, proYearly, messages }),
@@ -230,14 +215,12 @@ test.concurrent(
 				wire: await scenario.wireFromConfig(),
 			});
 
-			// 3. Real attaches: one customer on the base, one on the variant.
 			await scenario.attachCustomer({ planId: pro });
 			await scenario.attachCustomer({
 				planId: proYearly,
 				customerId: yearlyCustomerId,
 			});
 
-			// 4. v1 moves to its own file, demoted; plans/pro.ts becomes pro@v2.
 			scenario.writeFile("plans/proV1.ts", demoted(afterVariant));
 			scenario.writeFile("plans/pro.ts", proV2({ pro, proYearly, messages }));
 			scenario.writeConfig(withHistory(read("autumn.config.ts")));
@@ -245,7 +228,6 @@ test.concurrent(
 			expect(pushedV2.output).toContain(`+ ${proYearly}@v2`);
 			expect(pushedV2.migrationIds).toEqual([]);
 
-			// 5. The same config is accepted again: nothing to pull, nothing to push.
 			const before = scenario.files();
 			const pulled = await scenario.pull();
 			expect(pulled.output).toContain("Nothing to pull.");
@@ -290,7 +272,6 @@ test.concurrent(
 			expect(yearlyV1After.active).toBe(false);
 			expect(yearlyV1After.base_internal_product_id).toBe(proV1.internal_id);
 
-			// Customers stay on their v1 rows.
 			expect(
 				await activeCustomerProducts({
 					ctx,

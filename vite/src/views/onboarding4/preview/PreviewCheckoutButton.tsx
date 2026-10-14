@@ -23,8 +23,6 @@ export function PreviewCheckoutButton({
 		if (!isPreviewOrgReady) return;
 		setCheckoutState("creating_checkout");
 		try {
-			// Checkout runs server-side against the preview sandbox org, keyed off
-			// the dashboard session — no sandbox API key is exposed to the browser.
 			const response = await axiosInstance.post(
 				"/pricing-agent/preview/checkout",
 				{
@@ -45,7 +43,6 @@ export function PreviewCheckoutButton({
 		}
 	}, [axiosInstance, productId, isPreviewOrgReady]);
 
-	// When syncing finishes and we were waiting for it, create checkout
 	useEffect(() => {
 		if (checkoutState === "waiting_for_sync" && !isSyncing) {
 			createCheckout();
@@ -55,10 +52,8 @@ export function PreviewCheckoutButton({
 	const handleClick = () => {
 		if (!isPreviewOrgReady) return;
 		if (isSyncing) {
-			// Wait for sync to complete
 			setCheckoutState("waiting_for_sync");
 		} else {
-			// Sync is done, create checkout immediately
 			createCheckout();
 		}
 	};

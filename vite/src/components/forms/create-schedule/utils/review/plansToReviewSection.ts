@@ -21,7 +21,6 @@ import type {
 	ReviewChangeSection,
 } from "./types/reviewChange";
 
-/** "$13.33 credited" for the unused time a plan ending now is refunded. */
 const planCreditDetail = ({
 	plan,
 	currency,

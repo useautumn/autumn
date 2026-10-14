@@ -1,5 +1,3 @@
-/** set_plans updates collectable live subscriptions (active, past_due, pause_collection) in place and keeps the billing cycle anchor setup works out for its plans. */
-
 import { expect, test } from "bun:test";
 import {
 	anchoredToMonthStart,
@@ -101,7 +99,6 @@ const setupLivePro = async ({ customerId }: { customerId: string }) => {
 	return { ...scenario, pro, premium, live };
 };
 
-/** The same subscription carries the plans, and no second one was created beside it. */
 const expectUpdatedInPlace = async ({
 	ctx,
 	subscriptionId,

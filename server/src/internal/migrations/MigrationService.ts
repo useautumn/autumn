@@ -11,7 +11,6 @@ import { and, eq, ne, sql } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import RecaseError from "@/utils/errorUtils.js";
 
-/** Generate a stable numeric hash from a string for use with pg_advisory_lock. */
 function stringToLockId(str: string): number {
 	return Number(BigInt(Bun.hash(str)) & BigInt(0x7fffffff));
 }
@@ -30,10 +29,6 @@ export class MigrationService {
 		return result[0];
 	}
 
-	/**
-	 * Atomically check for existing migration and create a new one if none exists.
-	 * Uses PostgreSQL advisory lock to prevent race conditions between concurrent requests.
-	 */
 	static async createJobIfNoExisting({
 		db,
 		orgId,
@@ -47,15 +42,12 @@ export class MigrationService {
 		fromProduct: FullProduct;
 		data: MigrationJob;
 	}) {
-		// Create a unique lock key based on org, env, and product
 		const lockKey = `migration:${orgId}:${env}:${fromProduct.internal_id}`;
 		const lockId = stringToLockId(lockKey);
 
 		return await db.transaction(async (tx) => {
 			const txDb = tx as unknown as DrizzleCli;
 
-			// Try to acquire advisory lock - returns false immediately if lock is held
-			// This prevents connection pool exhaustion from concurrent requests
 			const lockResult = await txDb.execute<{ acquired: boolean }>(
 				sql`SELECT pg_try_advisory_xact_lock(${lockId}) as acquired`,
 			);
@@ -69,7 +61,6 @@ export class MigrationService {
 				});
 			}
 
-			// Now check for existing in-progress migrations (safe since we hold the lock)
 			const existingJobs = await txDb.query.migrationJobs.findMany({
 				where: and(
 					eq(migrationJobs.org_id, orgId),
@@ -88,7 +79,6 @@ export class MigrationService {
 				});
 			}
 
-			// Insert the new job
 			const result = await txDb.insert(migrationJobs).values(data).returning();
 
 			if (result.length === 0) {

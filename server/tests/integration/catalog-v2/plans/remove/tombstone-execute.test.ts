@@ -1,5 +1,3 @@
-/** Expired-only non-live versions tombstone, including after a sibling is promoted. */
-
 import { expect, test } from "bun:test";
 import { CusProductStatus } from "@autumn/shared";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";

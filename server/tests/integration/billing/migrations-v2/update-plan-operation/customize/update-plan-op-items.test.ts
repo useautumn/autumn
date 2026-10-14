@@ -1,13 +1,3 @@
-/**
- * TDD coverage for update_plan item patch migrations.
- *
- * Contract under test:
- *   - update_plan reuses update-subscription patch semantics for add_items,
- *     remove_items, usage carry, and rollover carry.
- *   - Migration execution does not create extra invoices.
- *   - Existing customer products are patched, not replaced or expired.
- */
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3, ApiCustomerV5 } from "@autumn/shared";
 import { CusProductStatus, customerProducts, customers } from "@autumn/shared";
@@ -118,7 +108,6 @@ test.concurrent(`${chalk.yellowBright("migrations update_plan: add boolean and m
 		count: 1,
 		latestTotal: 20,
 	});
-	// Items now diverge from the catalog, so the patched row derives is_custom.
 	expect(
 		await getActiveCustomerProductIsCustom({ ctx, customerId, productId: pro.id }),
 	).toBe(true);

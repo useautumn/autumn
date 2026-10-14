@@ -6,14 +6,6 @@ import {
 } from "../classifyCustomerProduct/classifyCustomerProduct";
 import { cp } from "../classifyCustomerProduct/cpBuilder";
 
-/**
- * Finds the scheduled main customer product in a given group for a customer.
- * Filters by product group, scheduled status, entity, and main product.
- *
- * @param fullCustomer - The full customer object
- * @param productGroup - The product group to search in
- * @param internalEntityId - Optional entity ID. Falls back to `fullCustomer.entity?.internal_id`
- */
 export const findMainScheduledCustomerProductByGroup = ({
 	fullCustomer,
 	productGroup,
@@ -45,7 +37,6 @@ export const findMainScheduledCustomerProductByGroup = ({
 	});
 };
 
-/** Finds a scheduled customer product by product ID and entity. */
 export const findScheduledCustomerProductById = ({
 	fullCustomer,
 	productId,

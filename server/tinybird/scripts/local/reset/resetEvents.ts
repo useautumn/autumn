@@ -4,7 +4,6 @@ import {
 } from "../lib/tinybirdHttp.js";
 import type { TinybirdTarget } from "../lib/tinybirdTarget.js";
 
-/** Truncates `events` and every rollup fed from it; truncating `events` alone leaves the MVs full. */
 export const resetEvents = async ({ target }: { target: TinybirdTarget }) => {
 	const names = (await listDatasourceNames({ target })).filter((name) =>
 		/^events?(_|$)/.test(name),

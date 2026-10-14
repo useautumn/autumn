@@ -17,7 +17,6 @@ const STUB_BAND_STYLE = {
 	bottom: PLOT_INSETS.bottom,
 };
 
-/** The new range's bins as 6px stubs on the real axis, each exactly where its bar will grow. */
 export const ChartSkeleton = ({
 	binStarts,
 	interval,
@@ -47,10 +46,8 @@ export const ChartSkeleton = ({
 				}
 				showYTicks={false}
 			>
-				{/* An all-zero series: recharts builds the y scale, and so the gridlines, only from a series. */}
 				<Bar dataKey="value" isAnimationActive={false} />
 			</UsageChartFrame>
-			{/* Only the stubs fade out: the axes stay opaque under the chart fading in on top, so they never dim. */}
 			<motion.div
 				className="absolute flex h-1.5 overflow-hidden"
 				style={STUB_BAND_STYLE}

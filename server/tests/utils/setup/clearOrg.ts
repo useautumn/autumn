@@ -18,10 +18,6 @@ import { OrgService } from "@/internal/orgs/OrgService.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { rewardRepo } from "@/internal/rewards/repos/index.js";
 
-/**
- * DB-only org cleanup — no HTTP calls, no connection lifecycle.
- * Safe to call from setup scripts that already hold a db handle.
- */
 export const clearOrgDbOnly = async ({
 	db,
 	orgId,
@@ -33,8 +29,6 @@ export const clearOrgDbOnly = async ({
 }) => {
 	await CusService.deleteByOrgId({ db, orgId, env });
 
-	// customer_products_internal_product_id_fkey has no ON DELETE CASCADE.
-	// Explicitly wipe any remaining rows so the subsequent product delete succeeds.
 	const orgProductIds = db
 		.select({ internal_id: products.internal_id })
 		.from(products)
@@ -44,9 +38,6 @@ export const clearOrgDbOnly = async ({
 		.delete(customerProducts)
 		.where(inArray(customerProducts.internal_product_id, orgProductIds));
 
-	// license_entitlements/license_prices RESTRICT their item rows; deleting
-	// plan_license first cascades the junctions so the product delete can
-	// cascade entitlements/prices freely.
 	await db
 		.delete(planLicenses)
 		.where(inArray(planLicenses.parent_internal_product_id, orgProductIds));
@@ -75,7 +66,6 @@ export const clearOrg = async ({
 	const { db, client } = initDrizzle();
 	const org = await OrgService.getBySlug({ db, slug: orgSlug });
 
-	// public_key:* was never written by anything — only the secret key is cached.
 	await clearSecretKeyCache({
 		hashedKey: hashApiKey(process.env.UNIT_TEST_AUTUMN_SECRET_KEY!),
 	});
@@ -84,7 +74,6 @@ export const clearOrg = async ({
 		throw new Error(`Org ${orgSlug} not found`);
 	}
 
-	// Allow unit-test-org, ci_cd, and platform test orgs (test-*|org_...)
 	const isAllowed =
 		org.slug === "unit-test-org" ||
 		org.slug === "ci_cd" ||
@@ -98,8 +87,6 @@ export const clearOrg = async ({
 	const orgId = org.id;
 
 	if (!skipStripeReset) {
-		// Reset default account using the new internal endpoint
-		// This will delete and recreate the Stripe account, which automatically removes all Stripe resources
 		console.log("   🔄 Resetting default account...");
 		try {
 			const data = await autumn.organization.resetDefaultAccount();
@@ -109,15 +96,12 @@ export const clearOrg = async ({
 			);
 		} catch (error: any) {
 			console.error("   ❌ Failed to reset default account:", error.message);
-			// Continue anyway as this is not critical
 		}
 	}
 
 	await clearOrgDbOnly({ db, orgId, env });
 	console.log("   ✅ Deleted customers, products, rewards, and features");
 
-	// migration_item_runs has no FK to migrations/org; clear by joining first.
-	// migrations cascades to migration_runs, so deleting it is enough.
 	const orgMigrations = await db
 		.select({ internalId: migrations.internal_id })
 		.from(migrations)

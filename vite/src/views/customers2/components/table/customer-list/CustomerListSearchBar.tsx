@@ -31,8 +31,6 @@ export function CustomerListSearchBar() {
 
 	const [localQuery, setLocalQuery] = useState(queryStates.q);
 
-	// When the URL value changes from something other than our own debounce
-	// (e.g. saved view applied, filter restore), sync the input to match.
 	if (queryStates.q !== lastPushedRef.current) {
 		lastPushedRef.current = queryStates.q;
 		setLocalQuery(queryStates.q);

@@ -10,7 +10,6 @@ import {
 	type NormalizedSelection,
 } from "./replaySelection.js";
 
-/** Rows name features by internal id; the catalog rows that came with them map back to public ids. */
 const featureIdsOf = ({
 	state,
 	catalogRows,

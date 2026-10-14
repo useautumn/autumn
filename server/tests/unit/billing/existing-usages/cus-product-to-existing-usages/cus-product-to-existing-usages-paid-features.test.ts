@@ -8,14 +8,8 @@ import { cusProductToExistingUsages } from "@/internal/billing/v2/utils/handleEx
 describe(
 	chalk.yellowBright("cusProductToExistingUsages - paid features"),
 	() => {
-		// ═══════════════════════════════════════════════════════════════════════════════
-		// CONSUMABLE FEATURE PRICE TESTS (pay-per-use / overage)
-		// ═══════════════════════════════════════════════════════════════════════════════
-
 		describe("consumable feature prices (overage billing)", () => {
 			test("consumable with usage into overage calculates correct usage", () => {
-				// This is the key test case:
-				// included = 100, balance = -50 -> usage should be 150 (100 used from included + 50 overage)
 				const internalFeatureId = "internal_messages";
 				const featureId = "messages";
 				const entitlementId = "ent_messages";
@@ -25,8 +19,8 @@ describe(
 					featureId,
 					entitlementId,
 					featureName: "Messages",
-					allowance: 100, // 100 included usage
-					balance: -50, // negative balance = overage
+					allowance: 100,
+					balance: -50,
 				});
 
 				const consumablePrice = prices.createConsumable({
@@ -50,8 +44,6 @@ describe(
 					carryAllConsumableFeatures: true,
 				});
 
-				// Usage should be 150: 100 from included + 50 from overage
-				// Formula: usage = includedUsage - balance = 100 - (-50) = 150
 				expect(existingUsages[internalFeatureId]).toBeDefined();
 				expect(existingUsages[internalFeatureId].usage).toBe(150);
 			});
@@ -66,8 +58,8 @@ describe(
 					featureId,
 					entitlementId,
 					featureName: "Messages",
-					allowance: 100, // 100 included usage
-					balance: 30, // 70 used, 30 remaining
+					allowance: 100,
+					balance: 30,
 				});
 
 				const consumablePrice = prices.createConsumable({
@@ -91,13 +83,11 @@ describe(
 					carryAllConsumableFeatures: true,
 				});
 
-				// Usage should be 70: allowance 100 - balance 30 = 70
 				expect(existingUsages[internalFeatureId]).toBeDefined();
 				expect(existingUsages[internalFeatureId].usage).toBe(70);
 			});
 
 			test("consumable with zero included usage and overage", () => {
-				// Pure pay-per-use: no included usage, all usage is overage
 				const internalFeatureId = "internal_api_calls";
 				const featureId = "api_calls";
 				const entitlementId = "ent_api_calls";
@@ -107,8 +97,8 @@ describe(
 					featureId,
 					entitlementId,
 					featureName: "API Calls",
-					allowance: 0, // no included usage
-					balance: -200, // 200 in overage
+					allowance: 0,
+					balance: -200,
 				});
 
 				const consumablePrice = prices.createConsumable({
@@ -132,7 +122,6 @@ describe(
 					carryAllConsumableFeatures: true,
 				});
 
-				// Usage should be 200: all from overage (0 - (-200) = 200)
 				expect(existingUsages[internalFeatureId]).toBeDefined();
 				expect(existingUsages[internalFeatureId].usage).toBe(200);
 			});
@@ -148,7 +137,7 @@ describe(
 					entitlementId,
 					featureName: "Messages",
 					allowance: 100,
-					balance: 0, // exactly used up included amount
+					balance: 0,
 				});
 
 				const consumablePrice = prices.createConsumable({
@@ -172,15 +161,10 @@ describe(
 					carryAllConsumableFeatures: true,
 				});
 
-				// Usage should be 100: exactly at the limit
 				expect(existingUsages[internalFeatureId]).toBeDefined();
 				expect(existingUsages[internalFeatureId].usage).toBe(100);
 			});
 		});
-
-		// ═══════════════════════════════════════════════════════════════════════════════
-		// ALLOCATED FEATURE PRICE TESTS (seat-based / prorated billing)
-		// ═══════════════════════════════════════════════════════════════════════════════
 
 		describe("allocated feature prices (seat-based / prorated)", () => {
 			test("allocated seats with usage within included", () => {
@@ -193,8 +177,8 @@ describe(
 					featureId,
 					entitlementId,
 					featureName: "Users",
-					allowance: 5, // 5 included seats
-					balance: 2, // 3 seats used
+					allowance: 5,
+					balance: 2,
 				});
 
 				const allocatedPrice = prices.createAllocated({
@@ -218,7 +202,6 @@ describe(
 					carryAllConsumableFeatures: true,
 				});
 
-				// Usage should be 3: 5 included - 2 remaining = 3 used
 				expect(existingUsages[internalFeatureId]).toBeDefined();
 				expect(existingUsages[internalFeatureId].usage).toBe(3);
 			});
@@ -233,8 +216,8 @@ describe(
 					featureId,
 					entitlementId,
 					featureName: "Users",
-					allowance: 3, // 3 included seats
-					balance: -2, // 5 seats used (2 over)
+					allowance: 3,
+					balance: -2,
 				});
 
 				const allocatedPrice = prices.createAllocated({
@@ -258,7 +241,6 @@ describe(
 					carryAllConsumableFeatures: true,
 				});
 
-				// Usage should be 5: 3 - (-2) = 5 total seats used
 				expect(existingUsages[internalFeatureId]).toBeDefined();
 				expect(existingUsages[internalFeatureId].usage).toBe(5);
 			});
@@ -273,8 +255,8 @@ describe(
 					featureId,
 					entitlementId,
 					featureName: "Users",
-					allowance: 0, // no included seats
-					balance: -10, // 10 seats purchased/used
+					allowance: 0,
+					balance: -10,
 				});
 
 				const allocatedPrice = prices.createAllocated({
@@ -298,15 +280,10 @@ describe(
 					carryAllConsumableFeatures: true,
 				});
 
-				// Usage should be 10: 0 - (-10) = 10
 				expect(existingUsages[internalFeatureId]).toBeDefined();
 				expect(existingUsages[internalFeatureId].usage).toBe(10);
 			});
 		});
-
-		// ═══════════════════════════════════════════════════════════════════════════════
-		// PREPAID FEATURE PRICE TESTS (purchase units in advance)
-		// ═══════════════════════════════════════════════════════════════════════════════
 
 		describe("prepaid feature prices (usage in advance)", () => {
 			test("prepaid with purchased units and partial usage", () => {
@@ -314,21 +291,20 @@ describe(
 				const featureId = "credits";
 				const entitlementId = "ent_credits";
 
-				// Prepaid: customer bought 1000 credits, used 300
 				const cusEnt = customerEntitlements.create({
 					internalFeatureId,
 					featureId,
 					entitlementId,
 					featureName: "Credits",
-					allowance: 0, // no free included
-					balance: 700, // 1000 purchased - 300 used = 700 remaining
+					allowance: 0,
+					balance: 700,
 				});
 
 				const prepaidPrice = prices.createPrepaid({
 					id: "price_credits_prepaid",
 					featureId,
 					internalFeatureId,
-					billingUnits: 100, // purchased in units of 100
+					billingUnits: 100,
 					entitlementId,
 				});
 
@@ -346,10 +322,6 @@ describe(
 					carryAllConsumableFeatures: true,
 				});
 
-				// For prepaid, usage = purchasedQuantity - balance
-				// purchasedQuantity from 10 billing units = 1000
-				// But since we don't have quantity tracking in mock, usage = 0 - balance
-				// This test verifies the formula works correctly
 				expect(existingUsages[internalFeatureId]).toBeDefined();
 			});
 
@@ -358,15 +330,13 @@ describe(
 				const featureId = "credits";
 				const entitlementId = "ent_credits";
 
-				// Prepaid with some free included: 100 free + 500 purchased = 600 total
-				// Used 400, remaining 200
 				const cusEnt = customerEntitlements.create({
 					internalFeatureId,
 					featureId,
 					entitlementId,
 					featureName: "Credits",
-					allowance: 100, // 100 free included
-					balance: 200, // 600 total - 400 used = 200 remaining
+					allowance: 100,
+					balance: 200,
 				});
 
 				const prepaidPrice = prices.createPrepaid({
@@ -399,14 +369,13 @@ describe(
 				const featureId = "credits";
 				const entitlementId = "ent_credits";
 
-				// Prepaid 500 credits, used 600, overage of 100
 				const cusEnt = customerEntitlements.create({
 					internalFeatureId,
 					featureId,
 					entitlementId,
 					featureName: "Credits",
 					allowance: 0,
-					balance: -100, // 500 purchased - 600 used = -100 overage
+					balance: -100,
 				});
 
 				const prepaidPrice = prices.createPrepaid({
@@ -432,20 +401,14 @@ describe(
 				});
 
 				expect(existingUsages[internalFeatureId]).toBeDefined();
-				// Overage should be captured
 				expect(existingUsages[internalFeatureId].usage).toBeGreaterThanOrEqual(
 					100,
 				);
 			});
 		});
 
-		// ═══════════════════════════════════════════════════════════════════════════════
-		// MIXED FEATURE TYPES IN SAME PRODUCT
-		// ═══════════════════════════════════════════════════════════════════════════════
-
 		describe("mixed feature types in same product", () => {
 			test("product with consumable, allocated, and free metered features", () => {
-				// Consumable messages: 100 included, balance -20 (120 used)
 				const messagesFeatureId = "internal_messages";
 				const messagesEnt = customerEntitlements.create({
 					internalFeatureId: messagesFeatureId,
@@ -453,7 +416,7 @@ describe(
 					entitlementId: "ent_messages",
 					featureName: "Messages",
 					allowance: 100,
-					balance: -20, // 120 used
+					balance: -20,
 				});
 
 				const messagesPrice = prices.createConsumable({
@@ -463,7 +426,6 @@ describe(
 					entitlementId: "ent_messages",
 				});
 
-				// Allocated users: 5 included, balance -2 (7 used)
 				const usersFeatureId = "internal_users";
 				const usersEnt = customerEntitlements.create({
 					internalFeatureId: usersFeatureId,
@@ -471,7 +433,7 @@ describe(
 					entitlementId: "ent_users",
 					featureName: "Users",
 					allowance: 5,
-					balance: -2, // 7 used
+					balance: -2,
 				});
 
 				const usersPrice = prices.createAllocated({
@@ -481,7 +443,6 @@ describe(
 					entitlementId: "ent_users",
 				});
 
-				// Free metered words: 500 included, balance 200 (300 used), no price
 				const wordsFeatureId = "internal_words";
 				const wordsEnt = customerEntitlements.create({
 					internalFeatureId: wordsFeatureId,
@@ -489,9 +450,8 @@ describe(
 					entitlementId: "ent_words",
 					featureName: "Words",
 					allowance: 500,
-					balance: 200, // 300 used
+					balance: 200,
 				});
-				// No price for words - it's free metered
 
 				const cusProduct = customerProducts.create({
 					customerEntitlements: [messagesEnt, usersEnt, wordsEnt],
@@ -506,21 +466,17 @@ describe(
 					carryAllConsumableFeatures: true,
 				});
 
-				// Messages: 100 - (-20) = 120 used
 				expect(existingUsages[messagesFeatureId]).toBeDefined();
 				expect(existingUsages[messagesFeatureId].usage).toBe(120);
 
-				// Users: 5 - (-2) = 7 used
 				expect(existingUsages[usersFeatureId]).toBeDefined();
 				expect(existingUsages[usersFeatureId].usage).toBe(7);
 
-				// Words: 500 - 200 = 300 used
 				expect(existingUsages[wordsFeatureId]).toBeDefined();
 				expect(existingUsages[wordsFeatureId].usage).toBe(300);
 			});
 
 			test("product with multiple consumable features at different overage levels", () => {
-				// Messages: heavily into overage
 				const messagesFeatureId = "internal_messages";
 				const messagesEnt = customerEntitlements.create({
 					internalFeatureId: messagesFeatureId,
@@ -528,7 +484,7 @@ describe(
 					entitlementId: "ent_messages",
 					featureName: "Messages",
 					allowance: 50,
-					balance: -150, // 200 total used, 150 in overage
+					balance: -150,
 				});
 
 				const messagesPrice = prices.createConsumable({
@@ -538,7 +494,6 @@ describe(
 					entitlementId: "ent_messages",
 				});
 
-				// API calls: just barely in overage
 				const apiCallsFeatureId = "internal_api_calls";
 				const apiCallsEnt = customerEntitlements.create({
 					internalFeatureId: apiCallsFeatureId,
@@ -546,7 +501,7 @@ describe(
 					entitlementId: "ent_api_calls",
 					featureName: "API Calls",
 					allowance: 1000,
-					balance: -1, // 1001 used, 1 in overage
+					balance: -1,
 				});
 
 				const apiCallsPrice = prices.createConsumable({
@@ -556,7 +511,6 @@ describe(
 					entitlementId: "ent_api_calls",
 				});
 
-				// Storage: within limit
 				const storageFeatureId = "internal_storage";
 				const storageEnt = customerEntitlements.create({
 					internalFeatureId: storageFeatureId,
@@ -564,7 +518,7 @@ describe(
 					entitlementId: "ent_storage",
 					featureName: "Storage",
 					allowance: 100,
-					balance: 40, // 60 used, 40 remaining
+					balance: 40,
 				});
 
 				const storagePrice = prices.createConsumable({
@@ -588,23 +542,16 @@ describe(
 					carryAllConsumableFeatures: true,
 				});
 
-				// Messages: 50 - (-150) = 200 used
 				expect(existingUsages[messagesFeatureId]).toBeDefined();
 				expect(existingUsages[messagesFeatureId].usage).toBe(200);
 
-				// API calls: 1000 - (-1) = 1001 used
 				expect(existingUsages[apiCallsFeatureId]).toBeDefined();
 				expect(existingUsages[apiCallsFeatureId].usage).toBe(1001);
 
-				// Storage: 100 - 40 = 60 used
 				expect(existingUsages[storageFeatureId]).toBeDefined();
 				expect(existingUsages[storageFeatureId].usage).toBe(60);
 			});
 		});
-
-		// ═══════════════════════════════════════════════════════════════════════════════
-		// EDGE CASES
-		// ═══════════════════════════════════════════════════════════════════════════════
 
 		describe("edge cases", () => {
 			test("zero usage (balance equals allowance)", () => {
@@ -618,7 +565,7 @@ describe(
 					entitlementId,
 					featureName: "Messages",
 					allowance: 100,
-					balance: 100, // no usage
+					balance: 100,
 				});
 
 				const consumablePrice = prices.createConsumable({
@@ -642,7 +589,6 @@ describe(
 					carryAllConsumableFeatures: true,
 				});
 
-				// Usage should be 0
 				expect(existingUsages[internalFeatureId]).toBeDefined();
 				expect(existingUsages[internalFeatureId].usage).toBe(0);
 			});
@@ -658,7 +604,7 @@ describe(
 					entitlementId,
 					featureName: "Messages",
 					allowance: 100,
-					balance: -10000, // massive overage
+					balance: -10000,
 				});
 
 				const consumablePrice = prices.createConsumable({
@@ -682,7 +628,6 @@ describe(
 					carryAllConsumableFeatures: true,
 				});
 
-				// Usage should be 10100: 100 - (-10000) = 10100
 				expect(existingUsages[internalFeatureId]).toBeDefined();
 				expect(existingUsages[internalFeatureId].usage).toBe(10100);
 			});
@@ -698,7 +643,7 @@ describe(
 					entitlementId,
 					featureName: "Credits",
 					allowance: 100,
-					balance: -50.5, // fractional overage
+					balance: -50.5,
 				});
 
 				const consumablePrice = prices.createConsumable({
@@ -722,7 +667,6 @@ describe(
 					carryAllConsumableFeatures: true,
 				});
 
-				// Usage should be 150.5
 				expect(existingUsages[internalFeatureId]).toBeDefined();
 				expect(existingUsages[internalFeatureId].usage).toBe(150.5);
 			});

@@ -1,12 +1,6 @@
 import { toCamelCase } from "../casing/schemaKeyCasing";
 import type { FixturePath } from "./schemaPaths";
 
-/**
- * Every path an executed config's wire document actually sets, recased to
- * fixture (camelCase) keys with array indices elided — the same convention
- * `schemaPaths` uses, so the two maps can be compared key for key. String
- * leaf values are collected per path for enum coverage.
- */
 export const documentPaths = ({
 	document,
 }: {

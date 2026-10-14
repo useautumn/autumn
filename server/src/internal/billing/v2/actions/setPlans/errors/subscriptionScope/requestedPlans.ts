@@ -5,7 +5,6 @@ export type RequestedPlan = {
 	internalEntityId?: string;
 };
 
-/** Every plan the request places, in any phase, with the entity it applies to. */
 export const requestedPlans = ({
 	billingContext,
 }: {

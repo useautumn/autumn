@@ -3,11 +3,6 @@ import { JobName } from "@/queue/JobName.js";
 import { addTaskToQueue } from "@/queue/queueUtils.js";
 import type { BatchResetCustomerEntitlementsV2Payload } from "./types.js";
 
-/**
- * Enqueues a batch reset onto its dedicated SQS queue
- * (BATCH_RESET_SQS_QUEUE_URL). Falls back to the primary queue when unset so
- * dev environments without the queue still process resets.
- */
 export const enqueueBatchResetTask = async ({
 	payload,
 	logger,

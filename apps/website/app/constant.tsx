@@ -28,7 +28,7 @@ export const CyberGlitchIcon = forwardRef<SVGSVGElement, CyberGlitchIconProps>(
 					key={i}
 					d={d}
 					fill="currentColor"
-					className="icon-pixel-path" // GSAP targets this
+					className="icon-pixel-path"
 				/>
 			))}
 		</svg>
@@ -309,7 +309,6 @@ export const IconDiscord = forwardRef<SVGSVGElement, SvgIconProps>(
 );
 IconDiscord.displayName = "IconDiscord";
 
-// 2. Blog
 export const IconBlog = forwardRef<SVGSVGElement, SvgIconProps>(
 	(props, ref) => (
 		<CyberGlitchIcon
@@ -334,7 +333,6 @@ export const IconBlog = forwardRef<SVGSVGElement, SvgIconProps>(
 );
 IconBlog.displayName = "IconBlog";
 
-// 3. Docs
 export const IconDocs = forwardRef<SVGSVGElement, SvgIconProps>(
 	(props, ref) => (
 		<CyberGlitchIcon
@@ -356,7 +354,6 @@ export const IconDocs = forwardRef<SVGSVGElement, SvgIconProps>(
 );
 IconDocs.displayName = "IconDocs";
 
-// 4. Pricing
 export const IconPricing = forwardRef<SVGSVGElement, SvgIconProps>(
 	(props, ref) => (
 		<CyberGlitchIcon
@@ -464,7 +461,6 @@ export const IconWebhooks = (props: SvgIconProps) => (
 	</svg>
 );
 
-// Usage Analytics: analytics.svg
 export const IconAnalytics = (props: SvgIconProps) => (
 	<svg
 		width="24"
@@ -486,7 +482,6 @@ export const IconAnalytics = (props: SvgIconProps) => (
 	</svg>
 );
 
-// Team Billing: billing.svg
 export const IconTeam = (props: SvgIconProps) => (
 	<svg
 		width="24"
@@ -508,7 +503,6 @@ export const IconTeam = (props: SvgIconProps) => (
 	</svg>
 );
 
-// Auto Top-ups: top-ups.svg
 export const IconTopUp = (props: SvgIconProps) => (
 	<svg
 		width="24"
@@ -534,7 +528,6 @@ export const IconTopUp = (props: SvgIconProps) => (
 	</svg>
 );
 
-// Custom Plans: custom-plans.svg
 export const IconPlans = (props: SvgIconProps) => (
 	<svg
 		width="24"
@@ -556,7 +549,6 @@ export const IconPlans = (props: SvgIconProps) => (
 	</svg>
 );
 
-// Pricing Versioning: pricing.svg
 export const IconVersioning = (props: SvgIconProps) => (
 	<svg
 		width="24"
@@ -617,7 +609,6 @@ export const IconVersioning = (props: SvgIconProps) => (
 	</svg>
 );
 
-// React Components: react-components.svg
 export const IconReact = (props: SvgIconProps) => (
 	<svg
 		width="24"
@@ -656,7 +647,6 @@ export const IconReact = (props: SvgIconProps) => (
 	</svg>
 );
 
-// Referral Programs: referral.svg
 export const IconReferral = (props: SvgIconProps) => (
 	<svg
 		width="24"
@@ -953,7 +943,6 @@ export const AnimatedPlusMinus = ({
 }: SvgIconProps & {
 	isOpen: boolean;
 }) => {
-	// Fragments that form the vertical line of the "Plus"
 	const vPixels = [
 		{ y: 3, originY: "center", xBurst: -8, delay: 0 },
 		{ y: 5, originY: "center", xBurst: -4, delay: 0.05 },
@@ -970,7 +959,6 @@ export const AnimatedPlusMinus = ({
 			xmlns="http://www.w3.org/2000/svg"
 			className={className}
 		>
-			{/* Corner decorative pixels - stay static but fade slightly */}
 			{[
 				[0, 0],
 				[14, 0],
@@ -980,14 +968,12 @@ export const AnimatedPlusMinus = ({
 				<rect key={i} x={x} y={y} width="2" height="2" fill="currentColor" />
 			))}
 
-			{/* Horizontal Bar - The "Minus" part (Static) */}
 			<rect x="3" y="7" width="2" height="2" fill="currentColor" />
 			<rect x="5" y="7" width="2" height="2" fill="currentColor" />
 			<rect x="7" y="7" width="2" height="2" fill="currentColor" />
 			<rect x="9" y="7" width="2" height="2" fill="currentColor" />
 			<rect x="11" y="7" width="2" height="2" fill="currentColor" />
 
-			{/* Vertical Bursting Pixels */}
 			{vPixels.map((pixel, i) => (
 				<motion.rect
 					key={i}
@@ -1004,7 +990,7 @@ export const AnimatedPlusMinus = ({
 					}}
 					transition={{
 						duration: 0.4,
-						ease: [0.16, 1, 0.3, 1], // Custom sleek tech ease
+						ease: [0.16, 1, 0.3, 1],
 						delay: isOpen ? pixel.delay : 0,
 					}}
 				/>
@@ -1364,7 +1350,6 @@ export type CustomerStory = {
 	author: { name: string; title: string };
 };
 
-// TODO: replace placeholder stats/quotes with real customer numbers.
 export const customerStoriesData: CustomerStory[] = [
 	{
 		slug: "mintlify",

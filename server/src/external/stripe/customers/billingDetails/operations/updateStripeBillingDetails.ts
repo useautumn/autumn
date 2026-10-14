@@ -18,7 +18,6 @@ export const updateStripeBillingDetails = async ({
 		billingDetails,
 	});
 
-	// Tax IDs first: an invalid VAT then fails before anything else is written.
 	const taxIdChanges = billingDetails.tax_ids
 		? await applyStripeTaxIdChanges({
 				stripeCli,

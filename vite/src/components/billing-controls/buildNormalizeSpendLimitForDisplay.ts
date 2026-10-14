@@ -7,7 +7,6 @@ import {
 	resolveSpendLimitOverageLimit,
 } from "@autumn/shared";
 
-/** Mirrors the normalizer in `fullCustomerToSpendLimitByFeatureId`: percentage caps become units. */
 export const buildNormalizeSpendLimitForDisplay = ({
 	fullCustomer,
 	entity,

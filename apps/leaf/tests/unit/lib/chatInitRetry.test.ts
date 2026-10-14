@@ -1,8 +1,6 @@
 import { expect, test } from "bun:test";
 import { Chat, type StateAdapter } from "chat";
 
-/** A state adapter whose first connect fails, like Postgres refusing a login
- * while the chat database is out of connection slots. */
 const flakyState = () => {
 	let connectCalls = 0;
 	const state = {

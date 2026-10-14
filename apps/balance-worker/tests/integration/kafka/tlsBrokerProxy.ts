@@ -1,7 +1,3 @@
-/**
- * MSK IAM speaks SASL over TLS. The test broker's SASL listener is plaintext, so this terminates TLS with a
- * throwaway self-signed certificate (made by openssl at test time) and pipes bytes to that listener.
- */
 import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { connect, type Socket } from "node:net";
 import { tmpdir } from "node:os";

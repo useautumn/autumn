@@ -33,7 +33,6 @@ export const getNextEntitlementReset = (
 	}
 };
 
-/** The first boundary after `now`, stepping one interval at a time from `curReset` (or from now when null). */
 export const getNextResetAt = ({
 	curReset,
 	interval,

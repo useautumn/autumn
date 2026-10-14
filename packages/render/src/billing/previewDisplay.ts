@@ -25,9 +25,7 @@ export type LineItemDisplay = {
 };
 
 export type SchedulePhaseDisplay = {
-	/** Plan ids with custom price when present, e.g. "pro ($120)". */
 	plansText: string;
-	/** "now", "after <plan>", or a formatted date. */
 	timingText: string;
 };
 
@@ -40,16 +38,11 @@ type PlanItemChangeDisplay = {
 	pricingText: string | null;
 };
 
-/** The write's plan customizations, dashboard-style: what the custom plan
- * grants/loses relative to the base plan. */
-
-/** Surface-neutral billing action facts shared by every renderer. */
 export type BillingPreviewDisplay = {
 	badges: BillingBadge[];
 	changes: {
 		incoming: BillingChangeDisplay[];
 		outgoing: BillingChangeDisplay[];
-		/** "Attaching Pro Annual and removing Pro", or null when nothing changes. */
 		summaryText: string | null;
 	};
 	currency: string;
@@ -57,7 +50,6 @@ export type BillingPreviewDisplay = {
 	dueNow: MoneyDisplay | null;
 	entityId: string | null;
 	intentLabel: string | null;
-	/** Negative total: the customer gets money back, not a charge. */
 	isCredit: boolean;
 	lineItems: LineItemDisplay[];
 	prepaid: PrepaidQuantityDisplay[];
@@ -102,8 +94,6 @@ const rawOrDisplay = (
 		? (values as BillingChangeDisplay[])
 		: displayChanges(values);
 
-/** A plan on both sides is an in-place update — only plans present in `of`
- * and absent from `notIn` count. Accepts raw API changes or display objects. */
 const planChangesOnlyIn = ({
 	of,
 	notIn,
@@ -163,8 +153,6 @@ const lineItemDisplays = ({
 }): LineItemDisplay[] =>
 	lineItems.flatMap((item) => {
 		const record = asRecord(item);
-		// The description carries the period ("Pro - Base Price (from 01 Jul…)"),
-		// matching the dashboard's line items; zero-amount rows are noise.
 		const name =
 			getString(record?.description) ?? getString(record?.display_name);
 		const amount = getNumber(record?.total);
@@ -321,8 +309,6 @@ const prepaidQuantityDisplays = ({
 			});
 		}
 	}
-	// The preview only carries plan items when expanded — quantities the write
-	// sets explicitly must still show.
 	for (const [featureId, quantity] of quantities) {
 		if (seen.has(featureId)) continue;
 		displays.push({ featureId, includedDefault: null, quantity });
@@ -339,7 +325,6 @@ const money = ({
 }): MoneyDisplay | null =>
 	amount === null ? null : { amount, text: formatMoney({ amount, currency }) };
 
-/** Accepts typed previews or loose output from `parsePreviewPayload`. */
 export const buildBillingPreviewDisplay = ({
 	params,
 	planNames: knownPlanNames,
@@ -352,8 +337,6 @@ export const buildBillingPreviewDisplay = ({
 	const payload = preview ?? {};
 	const currency = getString(payload.currency) ?? "usd";
 	const planNames = new Map(Object.entries(knownPlanNames ?? {}));
-	// Schedule previews repeat a plan once per phase; the change list is
-	// about which plans change, so each plan renders once.
 	const uniqueByPlanId = (changes: BillingChangeDisplay[]) => {
 		const seen = new Set<string>();
 		return changes.filter(({ planId }) => {
@@ -393,8 +376,6 @@ export const buildBillingPreviewDisplay = ({
 	});
 
 	return {
-		// Chat cards show only params the write actually set — an unset toggle
-		// on a cancel is noise (the dashboard's form shows all toggles instead).
 		badges: billingActionBadges(params, { explicitOnly: true }),
 		changes: {
 			incoming,

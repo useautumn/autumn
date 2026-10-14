@@ -13,11 +13,6 @@ export const addToExtraLogs = ({
 	};
 };
 
-/**
- * Append a value to an array in extraLogs.
- * If the key doesn't exist, creates a new array with the value.
- * If the key exists and is an array, appends the value.
- */
 export const appendToExtraLogs = ({
 	ctx,
 	key,

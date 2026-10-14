@@ -17,8 +17,6 @@ export function formatMs(ms: number) {
 	return `${(ms / 1000).toFixed(2)}s`;
 }
 
-// Drives an update "run": progress 0→1 over a wall-clock window (compressed for
-// large N), exposing the projected DB time and rows done. Interruptible.
 export function useUpdateRun({
 	rows,
 	perRowMs,
@@ -75,7 +73,6 @@ export function useUpdateRun({
 	return { progress, status, rowsDone, projectedMs, elapsedMs, start, reset };
 }
 
-// Single-select count pills, styled like the toggle pills.
 export function CountSelector({
 	value,
 	onSelect,
@@ -142,7 +139,6 @@ export function RunPill({
 	);
 }
 
-// Section label bar matching the relational widget.
 export function SectionLabel({
 	children,
 	className,

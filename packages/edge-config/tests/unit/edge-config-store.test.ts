@@ -282,8 +282,6 @@ describe("createEdgeConfigStore", () => {
 	});
 
 	describe("writeToSource", () => {
-		// The config object is already durable at this point; only the propagation
-		// signal failed, and the registry backstop still picks it up.
 		test("keeps the written config locally when the timestamp write fails", async () => {
 			const send = jest.fn(async (command: unknown) => {
 				const input = (command as { input?: { Key?: string; Body?: string } })

@@ -10,15 +10,10 @@ export type LiveStatus = "connecting" | "live" | "reconnecting" | "offline";
 const PING_MS = 20_000;
 const BACKOFF_BASE_MS = 500;
 const BACKOFF_MAX_MS = 30_000;
-/** Failed attempts in a row before the indicator says offline (it keeps retrying). */
 const OFFLINE_AFTER = 4;
 
 type Listener = (msg: LiveServerMessage) => void;
 
-/**
- * One WebSocket per tab. Topics are ref-counted across components; every held
- * topic is resubscribed after a reconnect, and a seq gap forces a reconnect.
- */
 class LiveSocket {
 	status: LiveStatus = "connecting";
 	private conn: LiveConnection | null = null;
@@ -31,7 +26,6 @@ class LiveSocket {
 	private readonly listeners = new Set<Listener>();
 	private readonly statusListeners = new Set<() => void>();
 
-	/** Holds a topic until the returned release runs. */
 	hold = (topic: string) => {
 		const n = this.refs.get(topic) ?? 0;
 		this.refs.set(topic, n + 1);
@@ -141,7 +135,6 @@ export const liveSocket = new LiveSocket();
 export const useLiveStatus = () =>
 	useSyncExternalStore(liveSocket.onStatus, () => liveSocket.status);
 
-/** Keeps these topics subscribed while the component is mounted. */
 export const useLiveTopics = (...topics: (string | false | null)[]) => {
 	const key = topics.filter(Boolean).join(" ");
 	useEffect(() => {
@@ -152,6 +145,5 @@ export const useLiveTopics = (...topics: (string | false | null)[]) => {
 	}, [key]);
 };
 
-/** Slow safety refetch, only while the socket is down. */
 export const whileDisconnected = () =>
 	liveSocket.status === "live" ? false : 60_000;

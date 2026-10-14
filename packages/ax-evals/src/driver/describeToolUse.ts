@@ -10,7 +10,6 @@ const fileName = (path: unknown, workspaceDir: string) => {
 		.replace(`/private${workspaceDir}`, "")
 		.replace(workspaceDir, "")
 		.replace(/^\//, "");
-	// Reading the workspace root itself strips to "" — name it honestly.
 	return stripped || "./ (workspace root)";
 };
 
@@ -19,7 +18,6 @@ const firstCommand = (command: unknown) => {
 	return shorten(head ?? "", 48);
 };
 
-/** One human-readable line per tool call, e.g. "ran `npx atmn preview`". */
 export const describeToolUse = (
 	tool: ToolUse,
 	workspaceDir: string,
@@ -44,6 +42,5 @@ export const describeToolUse = (
 	}
 };
 
-/** Skills and file writes always matter; exploration calls are collapsible. */
 export const isKeyToolUse = (tool: ToolUse) =>
 	tool.name === "Skill" || tool.name === "Write" || tool.name === "Edit";

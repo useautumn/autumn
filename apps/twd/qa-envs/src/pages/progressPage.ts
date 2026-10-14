@@ -1,6 +1,5 @@
 import { escapeHtml } from "./escapeHtml";
 
-/** Live build log for an env that is still being created; polls /__qa_progress. */
 export const progressPage = ({ name, sha }: { name: string; sha: string }) =>
 	new Response(
 		`<!doctype html><html><head><meta charset="utf-8"><title>Building ${escapeHtml(name)}…</title>

@@ -34,7 +34,6 @@ const median = (values: number[]) => {
 	return sorted[Math.floor((sorted.length - 1) / 2)] ?? 0;
 };
 
-/** A file's recent results (optionally one branch), its dev baseline, and a per-commit rollup. */
 export const getFileHistory = async ({
 	ctx,
 	file,

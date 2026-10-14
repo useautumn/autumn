@@ -1,9 +1,3 @@
-/**
- * RevenueCat customer products are never custom: a purchase arrives from an
- * app-store event with no params, so a divergence from the catalog is drift,
- * not a customisation, and must not lock the row out of version migrations.
- */
-
 import { expect, test } from "bun:test";
 import { ProcessorType } from "@autumn/shared";
 import { runUpdatePlanMigration } from "@tests/integration/billing/migrations-v2/utils/runUpdatePlanMigration";

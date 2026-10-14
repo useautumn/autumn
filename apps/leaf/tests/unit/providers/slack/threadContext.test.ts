@@ -68,7 +68,6 @@ describe("getRecentMessages", () => {
 	});
 });
 
-/** The list half of the Postgres state adapter, in memory. */
 const memoryState = () => {
 	const lists = new Map<string, unknown[]>();
 	return {
@@ -118,7 +117,6 @@ describe("skipped replies", () => {
 			omittedCount: 0,
 		});
 
-		// A turn that never ran leaves them for the next mention.
 		expect((await loadMissedMessages(thread, current, state))?.missed).toEqual(
 			loaded?.missed,
 		);

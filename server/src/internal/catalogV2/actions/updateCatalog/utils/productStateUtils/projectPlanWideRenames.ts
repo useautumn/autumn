@@ -2,7 +2,6 @@ import type { FullProduct } from "@autumn/shared";
 import type { ProductStatesContext } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext";
 import type { UpsertProductPlan } from "@/internal/catalogV2/actions/updateCatalog/types/upsertProductPlan";
 
-/** Execute renames every version of a plan; re-key the sibling rows no upsert touched. */
 export const projectPlanWideRenames = ({
 	productStatesContext,
 	upsertProducts,

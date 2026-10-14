@@ -1,17 +1,3 @@
-/**
- * Per-customer lane: skipped item runs carry a skip_reason.
- *
- * Contract:
- *   A customer the operation matched but had nothing to change for
- *   (the added item already exists)            → skipped, no_updates_needed
- *   A customer no operation could apply to
- *   (their plan is outside the op's plan_filter) → skipped, ineligible
- *   A changed customer                          → succeeded, skip_reason null
- *   The Tinybird event response carries the same skip_reason.
- *
- * `limit` keeps the run on the per-customer lane.
- */
-
 import { test } from "bun:test";
 import { MigrationItemRunStatus } from "@autumn/shared";
 import { items } from "@tests/utils/fixtures/items.js";
@@ -46,13 +32,11 @@ test.concurrent(
 			actions: [
 				s.parallel(
 					s.billing.attach({ productId: targetPlan.id }),
-					// Already has the dashboard → the op has nothing to change.
 					s.billing.attach({
 						customerId: unchangedId,
 						productId: targetPlan.id,
 						items: [items.dashboard()],
 					}),
-					// On a plan the op's plan_filter never matches.
 					s.billing.attach({
 						customerId: otherPlanId,
 						productId: otherPlan.id,

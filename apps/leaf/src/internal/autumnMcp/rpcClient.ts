@@ -16,10 +16,6 @@ export type AutumnMcpToolMetadata = {
 	name: string;
 };
 
-/** Minimal JSON-RPC over streamable HTTP against the Autumn MCP server:
- * mastra's client discards the wire schema JSON and the MCP SDK's deep
- * imports don't resolve in the agent bundle, so this path exists for code
- * that needs the exact tools/list payloads (the direct-tool resolver). */
 const openMcpRpcSession = async ({
 	appEnv,
 	baseUrl,
@@ -76,8 +72,6 @@ type PooledRpcSession = {
 	lastUsedAt: number;
 };
 
-/** Session churn was 3 HTTP round trips per tool call (initialize, call,
- * DELETE) on the agent's hot path — keep sessions alive with a sliding TTL. */
 const RPC_SESSION_TTL_MS = 60_000;
 
 const rpcSessionPool = new Map<string, PooledRpcSession>();
@@ -99,8 +93,6 @@ const dropRpcSession = (key: string) => {
 	void pooled.close();
 };
 
-/** Runs `send` on a pooled session; a transport failure evicts the session and
- * retries once on a fresh one. JSON-RPC app errors are not retried. */
 const withPooledRpcSession = async <T>(
 	{
 		appEnv,
@@ -139,8 +131,6 @@ const withPooledRpcSession = async <T>(
 
 class McpRpcToolError extends Error {}
 
-/** The server no longer knows the pooled session (restart or expiry); the
- * pool must open a fresh one rather than surface this as a tool failure. */
 class McpRpcSessionStaleError extends Error {}
 
 const STALE_SESSION_CODE = -32000;

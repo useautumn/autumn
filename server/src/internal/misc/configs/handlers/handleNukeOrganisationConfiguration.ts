@@ -51,8 +51,6 @@ export const handleNukeOrganisationConfiguration = createRoute({
 		});
 
 		await invalidateProductsCache({ orgId: org.id, env: AppEnv.Sandbox });
-		// Workers read features through the org cache; without this they keep
-		// seeing the deleted features for up to the TTL.
 		await clearOrgWithFeaturesCache({
 			ctx: getMiscCacheContext(),
 			orgId: org.id,

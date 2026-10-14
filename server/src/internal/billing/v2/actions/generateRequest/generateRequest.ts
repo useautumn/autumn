@@ -16,8 +16,6 @@ import { assertNoDuplicateAddItems } from "./compute/validateGeneratedAddItems";
 import type { GenerateBillingRequestParams } from "./generationSchemas";
 import { setupGenerationContext } from "./setup/setupGenerationContext";
 
-/** Attach requests keep an explicit `entity_id: null` — the sheet reads it as
- * "clear the entity anchor", unlike an omitted key. */
 export type GeneratedBillingRequestV0 =
 	| ResolvedBillingRequestV0
 	| GeneratedMultiAttachRequestV0

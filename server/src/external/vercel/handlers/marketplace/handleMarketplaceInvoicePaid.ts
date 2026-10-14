@@ -70,16 +70,12 @@ export const handleMarketplaceInvoicePaid = async ({
 				await stripeCli.subscriptions.retrieve(subscriptionId);
 
 			// Lazy migration: legacy onboarders left a CPM as the Stripe
-			// customer's default payment method, which makes `invoices.pay`
-			// throw. Clear it before touching the invoice.
 			await ensureVercelInvoiceModeCustomer({
 				ctx,
 				stripeCli,
 				stripeCustomerId: invoice.customer as string,
 			});
 
-			// Lazy migration: bring legacy `charge_automatically` Vercel subs
-			// onto invoice mode the first time they're touched.
 			await ensureVercelInvoiceModeSubscription({
 				ctx,
 				stripeCli,
@@ -109,7 +105,6 @@ export const handleMarketplaceInvoicePaid = async ({
 
 			const vercelResourceId = subscription.metadata?.vercel_resource_id;
 
-			// Update resource status to "ready" (covers cases where resource was provisioned async)
 			if (vercelResourceId?.startsWith("vre_")) {
 				try {
 					await VercelResourceService.update({
@@ -133,8 +128,6 @@ export const handleMarketplaceInvoicePaid = async ({
 			}
 
 			if (isFirstSubscriptionInvoice(invoice)) {
-				// First invoice for this subscription. The cus_product should already exist
-				// (created on resource creation), but provision idempotently as a safety net.
 				const stripeCustomer = await stripeCli.customers.retrieve(
 					customer.processor.id,
 					{ expand: ["subscriptions"] },
@@ -143,7 +136,6 @@ export const handleMarketplaceInvoicePaid = async ({
 					throw new Error("Stripe customer is deleted");
 				}
 
-				// Fetch resource metadata for prepaid quantity parsing, if any
 				let resourceMetadata: Record<string, any> | undefined;
 				if (vercelResourceId?.startsWith("vre_")) {
 					try {
@@ -192,7 +184,6 @@ export const handleMarketplaceInvoicePaid = async ({
 					}
 				}
 			} else if (isStripeInvoiceForNewPeriod(invoice)) {
-				// Renewal — reset balances, submit usage if needed
 				const existingCusProducts = await customerProductRepo.getByStripeSubId({
 					db,
 					stripeSubId: subscription.id,
@@ -233,10 +224,6 @@ export const handleMarketplaceInvoicePaid = async ({
 		}
 	}
 
-	// Whether or not we had a subscription, Vercel reported the invoice as
-	// paid. Mark the Stripe invoice paid out of band so Stripe stays in sync.
-	// This is idempotent — already-paid invoices short-circuit inside the
-	// helper.
 	await markVercelInvoicePaidOutOfBand({
 		ctx,
 		stripeCli,

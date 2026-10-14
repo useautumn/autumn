@@ -1,20 +1,3 @@
-/**
- * multiUpdate / update subscription params: subscription_params bag +
- * refund_last_payment refinements.
- *
- * Contract:
- *   New types/fields:
- *     multiUpdate.subscription_params?: Record<string, unknown>
- *     multiUpdate.refund_last_payment?: "prorated" | "full"
- *     update.subscription_params?: Record<string, unknown>
- *   Kept:
- *     refund_last_payment cannot pair with any update's proration_behavior
- *     refund_last_payment requires every update to be cancel_immediately
- *   Removed:
- *     cancellation_details / Autumn reason+details rename
- *     per-update subscription_params / refund_last_payment
- */
-
 import { describe, expect, test } from "bun:test";
 import {
 	ExtMultiUpdateParamsV0Schema,

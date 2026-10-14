@@ -11,9 +11,6 @@ import { requestContextToCommandBase } from "./requestContextToCommandBase.js";
 const STALE_ROWS_MESSAGE =
 	"[balance-worker] evict failed; worker rows may be stale";
 
-/** Drops the owner's copy after another writer changed the rows, whatever the rollout says; a failure is logged, never fails the write.
- *  Any failure (a partition mid-handoff, an overloaded or erroring worker) queues the evict on the command log for the owner: repeating one that applied is harmless.
- *  The snapshot rows are rebuilt only for a customer the worker keeps writing; a rollback's evict leaves none behind. */
 export async function evictBalanceWorkerCustomer({
 	ctx,
 	customerId,

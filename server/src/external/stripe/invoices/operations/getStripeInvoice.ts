@@ -1,7 +1,6 @@
 import type Stripe from "stripe";
 import { isStripeResourceMissing } from "../../common/utils/isStripeResourceMissing.js";
 
-// Helper type for InvoicePayment with expanded payment intent
 type InvoicePaymentWithExpandedPaymentIntent = Omit<
 	Stripe.InvoicePayment,
 	"payment"
@@ -12,7 +11,6 @@ type InvoicePaymentWithExpandedPaymentIntent = Omit<
 	};
 };
 
-// Map expand strings to their expanded types
 type InvoiceExpandMap = {
 	payments: { payments: Stripe.ApiList<Stripe.InvoicePayment> };
 	"payments.data.payment.payment_intent": {
@@ -35,7 +33,6 @@ type InvoiceExpandMap = {
 
 type InvoiceExpandKey = keyof InvoiceExpandMap;
 
-// Converts union to intersection: A | B → A & B
 type UnionToIntersection<U> = (
 	U extends unknown
 		? (x: U) => void
@@ -47,7 +44,6 @@ type UnionToIntersection<U> = (
 export type ExpandedStripeInvoice<T extends InvoiceExpandKey[]> =
 	Stripe.Invoice & UnionToIntersection<InvoiceExpandMap[T[number]]>;
 
-/** Dynamically typed Stripe invoice based on expand params. `onNotFound` decides a missing invoice: throw your own error, or return a fallback. */
 export const getStripeInvoice = async <
 	T extends InvoiceExpandKey[],
 	NotFound = never,

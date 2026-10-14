@@ -148,7 +148,6 @@ function SelectItem({
 	indicator = true,
 	...props
 }: SelectPrimitive.Item.Props & {
-	/** Opt out when the row already reads as selected without a checkmark. */
 	indicator?: boolean;
 }) {
 	return (

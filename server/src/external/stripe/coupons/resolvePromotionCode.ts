@@ -24,11 +24,6 @@ const assertNotMaxRedeemed = async ({
 	}
 };
 
-/**
- * Resolves a human-readable promotion code string to a StripeDiscountWithCoupon.
- * Validates that the promotion code exists, is active, and its coupon is valid.
- * Stores the promotion code ID for proper attribution in checkout sessions.
- */
 export const resolvePromotionCode = async ({
 	stripeCli,
 	code,

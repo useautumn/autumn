@@ -5,8 +5,6 @@ import {
 	type DiffedCustomizePlanV1,
 } from "../diff/diffPlanV1.js";
 
-/** The plan a license link resolves to once its customize overlay is applied.
- * A customized slot replaces the base item wholesale — never merges with it. */
 export const applyLicenseCustomizeToBasePlan = ({
 	basePlan,
 	customize,

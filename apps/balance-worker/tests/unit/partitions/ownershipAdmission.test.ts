@@ -225,7 +225,6 @@ async function factoryMethodsKeepInstanceStateWhenDetached(): Promise<void> {
 
 		const stopping = stop();
 		expect(stop()).toBe(stopping);
-		// The route stays up until a successor is ready or the wait times out.
 		await waitFor(() => findRuntime(route) === undefined);
 		await stopping;
 		expect(second.ownership.findRuntime(route)).toBe(
@@ -266,7 +265,6 @@ describe("Ownership publication and admission", () => {
 		expect(f.events.indexOf("ready:2")).toBeLessThan(
 			f.events.indexOf("claim:2"),
 		);
-		// The marker under the new epoch goes in once the claim names it, before any request is admitted.
 		expect(f.events.indexOf("claimed:2")).toBeLessThan(
 			f.events.indexOf("fence:2"),
 		);
@@ -369,11 +367,6 @@ describe("Ownership publication and admission", () => {
 			expect(
 				f.ownership.findRuntime({ partition: 2, routeEpoch: "100" }),
 			).toBeUndefined();
-			// A failed publish does not prove the record never reached the broker, so
-			// the worker withdraws anyway. It used to stay silent, which is how a
-			// claim nobody could see locally went on directing traffic here forever.
-			// The withdrawal names this worker and is ignored unless it still holds
-			// the partition, so withdrawing a claim that never landed costs nothing.
 			await waitFor(() => f.events.includes("release:2"));
 			expect(f.events.filter((event) => event === "claim:2")).toHaveLength(1);
 			await f.ownership.stop();
@@ -790,7 +783,6 @@ describe("partitionLifecycle", function partitionLifecycleTests() {
 			cleanupGate.resolve();
 			await fixture.ownership.stop();
 			expect(constructions).toBe(1);
-			// Parking retires the entry once; the group stop reuses that retirement instead of stopping the runtime again.
 			expect(cleanupCalls).toBe(1);
 		});
 
@@ -838,9 +830,6 @@ describe("partitionLifecycle", function partitionLifecycleTests() {
 });
 
 test("a terminal partition failure tells the entrypoint the worker is finished", async () => {
-	// Nothing restarts a stopped consumer, so the process has to end for the
-	// scheduler to replace the task. Staging sat at zero ready partitions for
-	// hours because this signal did not exist.
 	const f = fixture({ claimError: new Error("claim rejected") });
 	await f.ownership.start();
 	f.assign();

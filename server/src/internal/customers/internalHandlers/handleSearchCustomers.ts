@@ -72,8 +72,6 @@ export const handleSearchCustomers = createRoute({
 			customer_products: c.customer_products.map((cp: FullCusProduct) => ({
 				id: cp.id,
 				internal_product_id: cp.internal_product_id,
-				// Live plan id from the joined product (stays correct across renames),
-				// not the denormalized customer_products.product_id snapshot.
 				product_id: cp.product?.id ?? cp.product_id,
 				canceled: cp.canceled,
 				canceled_at: cp.canceled_at,

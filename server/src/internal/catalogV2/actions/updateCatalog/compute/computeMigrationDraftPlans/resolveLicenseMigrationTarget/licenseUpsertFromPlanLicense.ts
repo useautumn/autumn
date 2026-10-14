@@ -17,7 +17,6 @@ export type LicenseDraftUpserts = {
 	includeCustom: boolean;
 };
 
-/** One link's current → effective content, wrapped as an `upsert_licenses` entry. */
 export const licenseUpsertFromPlanLicense = ({
 	planLicense,
 }: {

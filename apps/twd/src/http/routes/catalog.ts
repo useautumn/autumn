@@ -24,7 +24,6 @@ export const catalogRoutes = new Hono<TwdHono>()
 	.get("/branches", async (c) =>
 		c.json(await listBranches({ ctx: c.get("ctx") })),
 	)
-	// `{.+}` so unencoded slash branches (feat/x) route too.
 	.post("/branches/:branch{.+}/warm", async (c) =>
 		c.json(
 			await warmBranch({

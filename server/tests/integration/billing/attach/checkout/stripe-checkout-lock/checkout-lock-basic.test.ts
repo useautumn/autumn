@@ -1,13 +1,3 @@
-/**
- * Checkout Session Lock — Basic Tests
- *
- * Core lock behavior: caching, blocking, and param-based replacement.
- *
- * A. Same params returns cached checkout URL (idempotent)
- * B. Different params expires old session, returns new URL
- * C. Non-checkout re-attach expires the open session and bills directly
- */
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3 } from "@autumn/shared";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
@@ -20,10 +10,6 @@ import { products } from "@tests/utils/fixtures/products";
 import { timeout } from "@tests/utils/genUtils";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST A: Same params returns cached checkout URL
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(
 	`${chalk.yellowBright("checkout-lock A: same params returns cached URL")}`,
@@ -54,10 +40,6 @@ test.concurrent(
 		expect(result2.payment_url).toBe(result1.payment_url);
 	},
 );
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST B: Different params replaces lock (expires old session)
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(
 	`${chalk.yellowBright("checkout-lock B: different params replaces lock")}`,
@@ -106,10 +88,6 @@ test.concurrent(
 	},
 );
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST C: Checkout pending + non-checkout re-attach → old session expired, direct bill
-// ═══════════════════════════════════════════════════════════════════════════════
-
 test.concurrent(
 	`${chalk.yellowBright("checkout-lock C: non-checkout re-attach expires the open session and bills directly")}`,
 	async () => {
@@ -133,7 +111,6 @@ test.concurrent(
 
 		expect(result.payment_url).toBeDefined();
 
-		// The open (unpaid) session loses to Stripe-arbitrated expiry; the attach proceeds.
 		const directResult = await autumnV1.billing.attach({
 			customer_id: customerId,
 			product_id: pro.id,

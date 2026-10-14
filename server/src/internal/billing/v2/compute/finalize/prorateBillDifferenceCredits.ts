@@ -26,7 +26,6 @@ const byDirection = (lineItems: LineItem[]) => ({
 const hasQuantities = (lineItems: LineItem[]) =>
 	lineItems.every((lineItem) => lineQuantity(lineItem) !== undefined);
 
-/** Removal is judged by quantity, since stored credits may already be discounted. */
 const priceIsRemoval = (lineItems: LineItem[]) => {
 	const { refunds, charges } = byDirection(lineItems);
 	if (refunds.length === 0) return false;
@@ -43,8 +42,6 @@ const priceIsRemoval = (lineItems: LineItem[]) => {
 const customerProductId = (lineItem: LineItem) =>
 	lineItem.context.customerProduct?.id;
 
-/** A changed quantity on a new customer product replaces the old quantity whole, so only
- * the old product's credit is prorated; an in-place change bills just the difference. */
 const priceQuantityIsReplaced = (lineItems: LineItem[]) => {
 	const { refunds, charges } = byDirection(lineItems);
 	if (refunds.length === 0 || charges.length === 0) return false;
@@ -104,8 +101,6 @@ const prorateToNow = ({
 	};
 };
 
-/** `bill_difference` lines are built over the full period. Credits for what went out are
- * scaled back to their unused time, so removals never refund time already used. */
 export const prorateBillDifferenceCredits = ({
 	lineItems,
 	billingContext,
@@ -124,7 +119,6 @@ export const prorateBillDifferenceCredits = ({
 				lineItems: lineItems.filter(
 					(lineItem) => lineItem.context.price.id === priceId,
 				),
-				// Only a set_plans re-list moves a quantity onto a new customer product.
 				replacesQuantityOnRelist: isSetPlansBillingContext(billingContext),
 			}),
 		),

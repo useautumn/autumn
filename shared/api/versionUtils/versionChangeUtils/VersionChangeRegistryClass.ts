@@ -4,10 +4,6 @@ import type {
 	VersionChangeConstructor,
 } from "./VersionChange.js";
 
-/**
- * Registry for version changes
- * Maps versions → change classes
- */
 const changes = new Map<ApiVersion, VersionChangeConstructor[]>();
 
 export const VersionChangeRegistryClass: {
@@ -35,7 +31,6 @@ export const VersionChangeRegistryClass: {
 
 	getChangesForVersion({ version }: { version: ApiVersion }): VersionChange[] {
 		const changeClasses = changes.get(version) || [];
-		// Simply instantiate each change class - no caching needed since they're stateless
 		return changeClasses.map((ChangeClass) => new ChangeClass());
 	},
 

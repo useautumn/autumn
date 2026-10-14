@@ -2,7 +2,6 @@ import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 
-/** Stack pieces a Capy machine runs only after an agent opts in; markers survive sleep and reboot. */
 const OPT_INS = {
 	frontend: { envKeys: [], devServices: ["vite"] },
 	alien: { envKeys: ["ALIEN_API_KEY"], devServices: [] },
@@ -15,7 +14,6 @@ const OPT_INS = {
 	{ envKeys: readonly string[]; devServices: readonly string[] }
 >;
 
-/** scripts/dev.ts service names every Capy stack runs: what integration tests need, no frontend. */
 const DEFAULT_DEV_SERVICES = [
 	"server",
 	"workers",
@@ -41,7 +39,6 @@ export const isOptedIn = ({
 	dir?: string;
 }) => existsSync(join(dir, name));
 
-/** `--<name>` writes the marker and `--no-<name>` removes it; true when that changed anything. */
 export function applyOptInFlags({
 	args,
 	dir = CAPY_OPT_IN_DIR,
@@ -68,7 +65,6 @@ export function applyOptInFlags({
 	return changed;
 }
 
-/** Env keys kept from the stack because their opt-in is off. */
 export function withheldEnvKeys({
 	dir = CAPY_OPT_IN_DIR,
 }: {
@@ -79,10 +75,8 @@ export function withheldEnvKeys({
 	);
 }
 
-/** Browser apps that integration tests never reach. */
 const FRONTEND_DEV_SERVICES = ["vite", "checkout", "leaf"];
 
-/** scripts/dev.ts services to launch: the defaults plus every opted-in piece, minus frontends when serverOnly. */
 export function capyDevServices({
 	dir = CAPY_OPT_IN_DIR,
 	serverOnly = false,

@@ -17,7 +17,6 @@ const lockOps = ({ currency }: { currency: string }) =>
 		}),
 	});
 
-/** The currency the engine leaves on a customer holding `currency` after the lock ops run. */
 const currencyAfterLock = ({
 	currency,
 	lockTo,

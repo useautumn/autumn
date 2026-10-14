@@ -1,12 +1,3 @@
-/**
- * One balance worker in its own process, wired exactly like createBalanceWorker
- * but with the partition runtime and the group consumer instrumented so every
- * lifecycle step lands on stdout as a JSON line with a wall-clock timestamp.
- * SIGTERM runs worker.stop() (the main.ts path); SIGKILL from the orchestrator
- * is the hard-kill scenario. With BENCH_SERVICE_ARN and BENCH_EDGE_CONFIG_DIR
- * set, the worker is one task of a blue-green fleet: it polls the slot record
- * from that directory and holds its ready announcements until the record names it.
- */
 import type { BalanceWorkerEnv } from "@autumn/env/balanceWorker";
 import { createSlotGate } from "../../../src/blueGreen/createSlotGate.js";
 import { createSlotHeartbeat } from "../../../src/blueGreen/createSlotHeartbeat.js";
@@ -62,7 +53,6 @@ function describe(value: unknown): unknown {
 
 const checkpointConfig = createWorkerCheckpointConfig({ env });
 const address = await resolveWorkerAddress({ env });
-/** The fleet's identity handed in instead of read from ECS; the group derives from it exactly as in createBalanceWorker. */
 const fleetId = env.BENCH_SERVICE_ARN
 	? fleetIdOf({ serviceArn: env.BENCH_SERVICE_ARN })
 	: null;
@@ -111,7 +101,6 @@ const runtimeFactory = createPartitionRuntimeFactory({
 	config: runtimeConfig,
 });
 
-/** Same as createBalanceWorker's createRuntime, plus timestamps around each startup step. */
 function createRuntime(params: PartitionRuntimeFactoryInput) {
 	const { partition } = params;
 	const built = runtimeFactory(params);
@@ -155,7 +144,6 @@ function createRuntime(params: PartitionRuntimeFactoryInput) {
 		}
 	}
 	async function drain(): Promise<void> {
-		// detachPartitions withdraws the route and calls drain() in the same tick: this is the withdraw moment.
 		emit("withdraw", { partition });
 		await runtime.drain();
 		emit("drained", { partition });
@@ -258,7 +246,6 @@ const app = createBalanceWorkerApp({
 	},
 });
 
-/** The production heartbeat every 2s instead of 20s, so the orchestrator can assert on it between steps. */
 const slotHeartbeat =
 	slotGate && resources.edgeConfigs && env.BENCH_SERVICE_ARN && fleetId
 		? createSlotHeartbeat({

@@ -107,7 +107,6 @@ describe("resolveSubjectReadDb steady-state share", () => {
 
 	test("share=1 still respects the prober veto", async () => {
 		makeReplicaEligible();
-		// Never-probed state reads as stale -> ineligible.
 		_resetReplicaRoutingStateForTesting();
 		setShare(1);
 

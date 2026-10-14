@@ -1,14 +1,3 @@
-/**
- * catalogV2.update — migration filter pinning vs unversioned collapse.
- *
- * Contract:
- *   pinned historical version stays pinned (never collapses to all versions)
- *   all_versions covering every customer-bearing version collapses even if
- *   a customer-free sibling exists (unversioned { plan_id } matches all
- *   versions at run time)
- *   mixed strategies in one call: independent filters, create is skipped
- */
-
 import { expect, test } from "bun:test";
 import { ResetInterval } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";

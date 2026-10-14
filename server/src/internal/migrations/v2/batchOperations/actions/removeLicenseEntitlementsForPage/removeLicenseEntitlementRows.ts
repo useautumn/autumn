@@ -18,8 +18,6 @@ import {
 import { canonicalPoolLateralSql } from "../licensePoolSql.js";
 import { pageCustomerIdsCte } from "../utils/pageCustomerIdsSql.js";
 
-/** Pool anchors are excluded because the anchor FK is RESTRICT — deleting one
- * would abort the whole page. */
 export const removeLicenseEntitlementRows = async ({
 	db,
 	internalCustomerIds,
@@ -43,8 +41,6 @@ export const removeLicenseEntitlementRows = async ({
 		return { rows: 0, internalCustomerIds: [], removedItems: [] };
 	}
 
-	// The catalog has already dropped the item, so the removal names a filter
-	// rather than an id and resolves against the rows it is deleting.
 	const intervalCondition =
 		filter.interval === undefined
 			? sql``

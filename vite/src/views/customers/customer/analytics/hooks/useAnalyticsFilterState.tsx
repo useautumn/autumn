@@ -9,8 +9,6 @@ const DEFAULT_MAX_GROUPS = 25;
 const MIN_MAX_GROUPS = 1;
 const MAX_MAX_GROUPS = 250;
 
-// The aggregate endpoint rejects anything outside 1-250, so a hand-edited or
-// bookmarked URL is clamped on the way in rather than failing the request.
 export const clampMaxGroups = (value: number) =>
 	Math.min(MAX_MAX_GROUPS, Math.max(MIN_MAX_GROUPS, value));
 

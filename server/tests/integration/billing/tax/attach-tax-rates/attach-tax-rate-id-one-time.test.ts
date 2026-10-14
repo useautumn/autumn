@@ -1,12 +1,3 @@
-/**
- * Explicit `tax_rate_id` on one-time (non-subscription) charges must be applied
- * to the standalone Stripe invoice, matching what preview_attach returns.
- *
- * Covers two branches that share `createInvoiceForBilling`:
- *   - A one-off product attach (standalone invoice, no subscription).
- *   - An upgrade with `custom_line_items` (custom invoice lines).
- */
-
 import { expect, test } from "bun:test";
 import { type ApiCustomerV3, atmnToStripeAmount } from "@autumn/shared";
 import { items } from "@tests/utils/fixtures/items";

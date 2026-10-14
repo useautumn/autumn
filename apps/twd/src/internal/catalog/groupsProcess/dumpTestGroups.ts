@@ -1,7 +1,3 @@
-/**
- * Runs in a throwaway child with an empty env: imports a commit's untrusted `_groups` and
- * prints its groups, suites and every name's resolved paths as JSON on stdout.
- */
 import { join } from "node:path";
 
 const testsDir = process.argv[2];

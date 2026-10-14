@@ -55,8 +55,6 @@ export const stripeWebhookAckMiddleware = async (
 			);
 		}
 
-		// A throwing handler resolves next() with c.error set (app onError owns
-		// the response), so failure must be detected here, not via catch.
 		if (c.error) {
 			await idempotency?.release();
 			await queueSyncFailure(c.error);
@@ -67,9 +65,6 @@ export const stripeWebhookAckMiddleware = async (
 		return;
 	}
 
-	// Start a span that survives past the early-ack response. Parented to the
-	// still-active root HTTP span; ended in finally(...) when deferred work
-	// completes so traceEnrichMiddleware + child spans land on a live span.
 	const deferredSpan = tracer.startSpan("stripe.webhook.deferred");
 	const ctxWithSpan = trace.setSpan(context.active(), deferredSpan);
 
@@ -114,8 +109,6 @@ export const stripeWebhookAckMiddleware = async (
 			waitUntil(webhookRun);
 		} catch (error) {
 			ctx.logger.error(`Stripe webhook waitUntil failed: ${error}`, { error });
-			// The chain settles the claim + span itself once started; only a
-			// failure BEFORE start needs rescheduling so the event isn't lost.
 			if (!webhookRun) setImmediate(() => void runWebhook());
 		}
 	} else {

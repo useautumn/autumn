@@ -23,7 +23,6 @@ export const NavSection = ({
 		true,
 	);
 
-	// The collapsed rail has no headers to reopen a section from, so it always lists every row.
 	const isOpen = !expanded || storedOpen;
 
 	return (

@@ -187,7 +187,6 @@ export default async function OgImage({
 				overflow: "hidden",
 			}}
 		>
-			{/* bloom neon background texture, darkened */}
 			{/** biome-ignore lint/performance/noImgElement: satori only supports <img> */}
 			<img
 				alt=""
@@ -205,7 +204,6 @@ export default async function OgImage({
 				}}
 			/>
 
-			{/* tables (right) */}
 			<div
 				style={{
 					position: "absolute",
@@ -240,7 +238,6 @@ export default async function OgImage({
 				/>
 			</div>
 
-			{/* left rail: logo, headline, footer */}
 			{/** biome-ignore lint/performance/noImgElement: satori only supports <img> */}
 			<img
 				alt="Autumn"

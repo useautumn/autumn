@@ -1,21 +1,3 @@
-/**
- * TDD test: deleting a license that a customer customized.
- *
- * Red-failure mode (pre-fix): the delete guard only sees catalog
- * (is_custom = false) links, so the customer-customized link's
- * license_entitlements rows hit the raw
- * "license_entitlements_entitlement_fkey" RESTRICT error; the customized
- * rows also survive customer deletion, so the license stays undeletable.
- * The org wipe behind sandbox reset (ProductService.safeDeleteByOrgId)
- * fails the same way.
- *
- * Green-success criteria (post-fix): license delete is blocked with the
- * clean "linked to a parent plan" error while any link exists; deleting
- * the customer cascades its customized link rows away; after the parent
- * is deleted the license deletes cleanly; and safeDeleteByOrgId wipes an
- * org holding a customized link without an FK error.
- */
-
 import { expect, test } from "bun:test";
 import {
 	AppEnv,
@@ -105,13 +87,10 @@ test.concurrent(
 		});
 		expect(junctionRows.length).toBeGreaterThan(0);
 
-		// Blocked cleanly, not with the raw FK error.
 		await expect(autumnV2_2.delete(`/products/${license.id}`)).rejects.toThrow(
 			"is linked to a parent plan",
 		);
 
-		// Deleting the customer cascades its customized link away; the
-		// catalog link (owned by the parent plan) stays.
 		await autumnV1.customers.delete(customerId);
 		const afterCustomerDelete = await linksForLicense();
 		expect(afterCustomerDelete.filter((link) => link.is_custom)).toHaveLength(
@@ -121,7 +100,6 @@ test.concurrent(
 			1,
 		);
 
-		// Parent next, then the license itself deletes without an FK error.
 		await autumnV2_2.delete(`/products/${parent.id}`);
 		const deletion = (await autumnV2_2.delete(`/products/${license.id}`)) as {
 			success: boolean;
@@ -166,7 +144,6 @@ test.concurrent(
 			],
 		});
 
-		// A plain attach points the customer's pool at the catalog link.
 		await autumnV2_2.billing.attach<AttachParamsV1Input>({
 			customer_id: customerId,
 			plan_id: parent.id,
@@ -199,8 +176,6 @@ test.concurrent(
 		});
 		expect(junctionRowsBefore.length).toBeGreaterThan(0);
 
-		// Pre-fix: the customer was the link's last referrer, so the catalog
-		// link and its customized items were deleted with the customer.
 		await autumnV1.customers.delete(customerId);
 
 		const linksAfter = await catalogLinks();
@@ -247,7 +222,6 @@ test.concurrent(
 			],
 		});
 
-		// Pre-fix: FK 500 when the license row is deleted before its parent.
 		await autumnV2_3.catalogV2.update({
 			remove_plans: [{ plan_id: license.id }, { plan_id: parent.id }],
 		});
@@ -291,8 +265,6 @@ test.concurrent(
 				name: fakeOrgId,
 				createdAt: new Date(),
 			});
-			// License first: batchSize 1 below deletes it before its parent,
-			// the order that hits the FK when the batches don't coincide.
 			await db.insert(products).values([
 				{
 					internal_id: licenseInternalId,
@@ -332,7 +304,6 @@ test.concurrent(
 				created_at: now,
 			});
 
-			// Pre-fix: throws license_entitlements_entitlement_fkey.
 			await ProductService.safeDeleteByOrgId({
 				db,
 				orgId: fakeOrgId,

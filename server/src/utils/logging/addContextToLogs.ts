@@ -117,8 +117,3 @@ export const addExtrasToLogs = ({
 }): Logger => {
 	return logger.child({ context: { extras } });
 };
-
-/**
- * Map fields:
- * req.body, req.query, extras, workflow.payload, worker.payload, data, data2, res
- */

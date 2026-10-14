@@ -7,7 +7,6 @@ import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import { addMonths } from "date-fns";
 
-// An anchor-only update must move Stripe's billing anchor along with Autumn's reset date.
 test("update-sub standalone anchor reset moves the Stripe billing cycle", async () => {
 	const customerId = "update-anchor-reset-standalone";
 	const plan = products.pro({

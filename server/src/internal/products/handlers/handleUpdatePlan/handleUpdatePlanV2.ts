@@ -83,8 +83,6 @@ export const handleUpdatePlanV2 = createRoute({
 			variantsBefore,
 		});
 
-		// Snapshot parents BEFORE the write: their effective license plans are
-		// rebased by updateProduct, and the draft needs the pre-update baseline.
 		const parentsBefore = fromPlan
 			? await prepareLicenseParentPropagation({
 					ctx,
@@ -150,8 +148,6 @@ export const handleUpdatePlanV2 = createRoute({
 			}
 		}
 
-		// No `version` pin: when a new version was created, it must win over the
-		// version that was edited.
 		const latestFullProduct =
 			responseFullProduct ??
 			(await ProductService.getFull({

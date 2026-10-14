@@ -51,8 +51,6 @@ export const fullProductToApiPlanV1 = ({
 		features: ctx.features,
 	});
 
-// Row ids on a plan response belong to the source product; strip them whenever
-// the plan seeds a different product so it mints its own entitlement/price rows.
 export const stripPlanRowIds = ({ plan }: { plan: ApiPlanV1 }): ApiPlanV1 => ({
 	...plan,
 	price: plan.price
@@ -90,8 +88,6 @@ export const getVariantSettingsPatch = ({
 	return patch;
 };
 
-// Variants own their name; base→variant propagation must never overwrite it.
-// Same-plan version propagation still uses the full patch, name included.
 export const omitVariantOwnedSettings = ({
 	name: _name,
 	...rest

@@ -1,6 +1,5 @@
 import type { StripeReuseCandidate } from "./types/stripeReuseCandidate.js";
 
-/** Catalog rows first, then newest custom — a remint becomes the next winner. */
 export const rankStripeReuseCandidates = ({
 	candidates,
 }: {

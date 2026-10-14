@@ -54,7 +54,6 @@ const duplicateFeatureQuantity = (
 	return keys.find((key, index) => keys.indexOf(key) !== index);
 };
 
-/** Adds a line's period and duplicate-feature issues to a zod check. */
 const pushLineIssues = ({
 	ctx,
 	featureQuantities,
@@ -76,7 +75,6 @@ const pushLineIssues = ({
 	}
 };
 
-/** Pricing-only subset of the catalog base price. */
 export const InvoiceBasePriceParamsSchema = BasePriceParamsSchema.pick({
 	amount: true,
 	interval: true,
@@ -90,7 +88,6 @@ export const InvoiceBasePriceParamsSchema = BasePriceParamsSchema.pick({
 	})
 	.strict();
 
-/** Pricing-only subset of a catalog plan item's price. */
 export const InvoiceItemPriceParamsSchema = PlanItemPriceParamsSchema.pick({
 	amount: true,
 	tiers: true,
@@ -131,7 +128,6 @@ export const InvoiceCustomizeItemSchema = z
 		const { feature_id, price } = ctx.value;
 		if (!price) return;
 		const issues = planItemParamsIssues({ feature_id, price });
-		// The catalog allows negative prices; an invoice credit is a negative custom line item.
 		const isNegative =
 			(price.amount ?? 0) < 0 ||
 			(price.tiers ?? []).some(
@@ -317,7 +313,6 @@ export const InvoiceCustomLineItemSchema = CustomLineItemSchema.extend({
 	}),
 }).check((ctx) => pushLineIssues({ ctx }));
 
-/** How far a new invoice advances: left editable, opened silently, or opened and sent. */
 export const InvoiceIssueMethodSchema = z.enum(["draft", "finalize", "send"]);
 
 const ISSUE_METHOD_DESCRIPTION =

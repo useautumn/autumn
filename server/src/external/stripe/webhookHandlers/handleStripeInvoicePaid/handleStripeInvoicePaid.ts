@@ -48,13 +48,10 @@ export const handleStripeInvoicePaid = async ({
 		`Received invoice.paid event for invoice ${invoicePaidContext.stripeInvoice.id}`,
 	);
 
-	// 1. Handle metadata-based payments (deferred billing, checkout, etc.)
 	await handleStripeInvoiceMetadata({ ctx, invoicePaidContext });
 
-	// 2. Handle discount/coupon rollover
 	await handleStripeInvoiceDiscounts({ ctx, invoicePaidContext });
 
-	// 3. Upsert Autumn invoice (uses invoice from context - already expanded)
 	const invoiceResult = await upsertAutumnInvoice({
 		ctx,
 		stripeInvoice: invoicePaidContext.stripeInvoice,
@@ -66,14 +63,11 @@ export const handleStripeInvoicePaid = async ({
 	if (invoicePaidContext.stripeSubscriptionId) {
 		await convertToChargeAutomatically({ ctx, invoicePaidContext });
 
-		// 3c. Trigger checkout rewards
 		await queueCheckoutRewardTasks({ ctx, invoicePaidContext });
 	}
 
-	// 4. Send email receipt
 	await sendEmailReceipt({ ctx, invoicePaidContext });
 
-	// 5. A successful payment clears any auto top-up suspension
 	if (ctx.fullCustomer) {
 		const cleared = await autoTopupLimitRepo.clearSuspensions({
 			ctx,

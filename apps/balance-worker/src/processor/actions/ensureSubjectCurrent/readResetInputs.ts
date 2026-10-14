@@ -7,7 +7,6 @@ import {
 import type { PartitionProcessorScope } from "../../types/partitionProcessor.js";
 import type { TriggeringCommand } from "./advanceResets.js";
 
-/** What a reset needs from Postgres that the subject doesn't hold: read only for the due rows that need them. */
 export type ResetInputs = Pick<
 	ResetCommand,
 	"billingCycleAnchors" | "pooledGranted"
@@ -31,7 +30,6 @@ const readBillingCycleAnchors = async ({
 	});
 };
 
-/** Each due pool's grant once its shares are promoted; the shares themselves move when the record lands. */
 const readPooledGranted = async ({
 	scope,
 	command,
@@ -48,7 +46,6 @@ const readPooledGranted = async ({
 	});
 };
 
-/** Runs before the critical section; the common case is nothing due and no query. */
 export const readResetInputs = async ({
 	scope,
 	command,

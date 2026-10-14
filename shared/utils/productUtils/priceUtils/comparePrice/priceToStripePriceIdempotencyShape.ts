@@ -10,10 +10,6 @@ import {
 	usageTiersToComparisonShape,
 } from "./pricesAreSame.js";
 
-/**
- * Stripe mint identity for one attach currency. Same normalizations as
- * `pricesAreSame` for the fields that land on `prices.create`.
- */
 export const priceToStripePriceIdempotencyShape = ({
 	price,
 	currency,

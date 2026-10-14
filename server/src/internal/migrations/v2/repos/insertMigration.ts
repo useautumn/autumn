@@ -6,11 +6,6 @@ import {
 import type { RepoContext } from "@/db/repoContext.js";
 import { generateId } from "@/utils/genUtils.js";
 
-/**
- * Insert a new migration row and return the persisted entity. `filter`
- * and `operations` default to null — users typically create a migration
- * first, then author them via PATCH.
- */
 export const insertMigration = async ({
 	ctx,
 	insert,

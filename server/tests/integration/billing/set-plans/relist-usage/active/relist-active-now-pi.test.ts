@@ -1,5 +1,3 @@
-/** set_plans re-lists Pro on a live Stripe sub, anchor now, prorate_immediately: each change vs the unchanged re-list, pinned to Stripe. */
-
 import { activeState } from "../utils/relistStates";
 import { defineRelistSuite } from "../utils/relistSuite";
 

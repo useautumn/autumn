@@ -30,7 +30,6 @@ import { ItemRateChangeRow } from "./ItemRateChangeRow";
 import { migrationItemToProductItem } from "./migrationItemUtils";
 import { formatVersionTransition } from "./versionTransition";
 
-/** Full-width row matching SubscriptionItemRow, with an amber dot for an edited value. */
 function EditedRow({
 	icon,
 	text,
@@ -54,9 +53,6 @@ function EditedRow({
 	);
 }
 
-/** A removal is a filter (feature + optional interval / included / billing
- * method), not a concrete item, so it has no quantity — show the matched
- * feature, not "0". */
 function RemovedFilterRow({ filter }: { filter: ItemFilter }) {
 	const { features } = useFeaturesQuery();
 	return (
@@ -74,8 +70,6 @@ function RemovedFilterRow({ filter }: { filter: ItemFilter }) {
 	);
 }
 
-/** SubscriptionItemRow draws its own bare row, so the card lives here to match
- * the edited and removed rows beside it. */
 function AddedItemRow({
 	item,
 }: {

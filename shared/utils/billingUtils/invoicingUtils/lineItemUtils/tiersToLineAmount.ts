@@ -5,20 +5,6 @@ import type { Price } from "../../../../models/productModels/priceModels/priceMo
 import { nullish } from "../../../utils";
 import { graduatedTiersToLineAmount } from "./graduatedTiersToLineAmount";
 
-/**
- * Translates usage into a dollar amount using the price's tier behaviour.
- *
- * - **Graduated**: `overage` should be net of allowance. Each tier band is
- *   charged at its own rate. `allowance` param is unused.
- * - **Volume**: `overage` should be total usage (purchased + allowance).
- *   `allowance` is passed through to prepend a free $0 tier and shift
- *   boundaries. If total exceeds the free tier, the ENTIRE quantity
- *   (including included) is charged at the matching tier's rate.
- *
- * Callers (e.g. `usagePriceToLineItem`) are responsible for adjusting
- * `overage` before calling — volume adds allowance to overage, graduated
- * does not.
- */
 export const tiersToLineAmount = ({
 	price,
 	overage,

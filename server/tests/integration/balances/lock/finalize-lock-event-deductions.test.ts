@@ -1,20 +1,3 @@
-/**
- * TDD test for finalize-lock events being written with `deductions: null`.
- * Lock unwinds (credit returned when actual usage < reservation) are invisible
- * in the per-balance breakdown because insertFinalizeLockEventV2 never receives
- * the mutation logs the deduction engine produced.
- *
- * Red-failure mode (pre-fix): the finalize runners discarded the deduction
- * engine's mutationLogs, so the finalize event (value = finalValue - lockValue,
- * negative on unwind) was written with `deductions: null` and
- * internal_product_id null.
- *
- * Green-success criteria (post-fix):
- *  - The finalize event carries a non-empty `deductions` array whose row has
- *    the monthly balance and a NEGATIVE value equal to the unwound amount,
- *    plus a resolved internal_product_id.
- */
-
 import { expect, test } from "bun:test";
 import { ApiVersion, events } from "@autumn/shared";
 import { AutumnInt } from "@server/external/autumn/autumnCli.js";
@@ -30,7 +13,6 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { and, desc, eq } from "drizzle-orm";
 
-/** Fetch full event rows (incl. deductions + internal_product_id) newest-first. */
 const getFullCustomerEvents = async ({
 	customerId,
 }: {
@@ -76,7 +58,6 @@ test.concurrent(
 
 		await deleteLock({ ctx, lockId: customerId });
 
-		// Reserve 10, then finalize with actual usage of 4 → unwind of 6.
 		await autumnV2_1.check({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
@@ -90,9 +71,7 @@ test.concurrent(
 			override_value: 4,
 		});
 
-		// Settle so a late extra event is caught, then poll: herald lands worker events seconds late under load.
 		await timeout(3000);
-		// eventRows[0] = finalize delta (4 - 10 = -6), eventRows[1] = check track (10)
 		const eventRows = await pollUntilAsserted({
 			fetch: () => getFullCustomerEvents({ customerId }),
 			assert: (rows) => expect(rows).toHaveLength(2),
@@ -101,7 +80,6 @@ test.concurrent(
 		const finalizeEvent = eventRows[0];
 		expect(finalizeEvent.value).toBe(-6);
 
-		// The bug: deductions is null, so the unwind is invisible per-balance.
 		expect(finalizeEvent.deductions).toBeArray();
 		expect(finalizeEvent.deductions).toHaveLength(1);
 
@@ -110,7 +88,6 @@ test.concurrent(
 		expect(deduction?.value).toBe(-6);
 		expect(deduction?.balance_id).toBeString();
 
-		// Finalize events should also resolve the product like track events do.
 		expect(finalizeEvent.internal_product_id).not.toBeNull();
 	},
 );

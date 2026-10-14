@@ -1,6 +1,5 @@
 import type { Source } from "../config/types.js";
 
-/** Concatenate an MCP resource's sources in declared order ("as normal"). */
 export const composeSources = ({
 	sources,
 	readSource,

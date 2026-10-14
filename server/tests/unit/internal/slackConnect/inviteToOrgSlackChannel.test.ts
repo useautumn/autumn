@@ -25,7 +25,6 @@ const orgPurpose = (orgId: string) =>
 const slackError = (code: string) =>
 	Object.assign(new Error(code), { data: { error: code } });
 
-/** In-memory stand-in for the Slack methods the invite flow calls. */
 const createFakeSlack = ({
 	channels = [],
 	privateNames = [],
@@ -35,7 +34,6 @@ const createFakeSlack = ({
 	channels?: FakeChannel[];
 	privateNames?: string[];
 	failSetPurpose?: boolean;
-	/** Appears just before `create` runs, as if a concurrent request made it. */
 	racedChannel?: FakeChannel;
 }) => {
 	const calls: { method: string; args: Record<string, unknown> }[] = [];

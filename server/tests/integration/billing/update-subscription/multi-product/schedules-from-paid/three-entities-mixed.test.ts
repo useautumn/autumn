@@ -13,7 +13,6 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 
-// Three entities premium - entity 1 downgrades to pro, entity 3 cancels and updates items
 test.concurrent(`${chalk.yellowBright("schedules-p2p: 3 premium entities - downgrade e1, cancel e3, update e3 items")}`, async () => {
 	const customerId = "sched-p2p-3ent-downgrade-cancel";
 
@@ -45,21 +44,18 @@ test.concurrent(`${chalk.yellowBright("schedules-p2p: 3 premium entities - downg
 		],
 	});
 
-	// Entity 1 downgrades from Premium to Pro (scheduled)
 	await autumnV1.attach({
 		customer_id: customerId,
 		product_id: pro.id,
 		entity_id: entities[0].id,
 	});
 
-	// Entity 3 cancels premium
 	await autumnV1.cancel({
 		customer_id: customerId,
 		product_id: premium.id,
 		entity_id: entities[2].id,
 	});
 
-	// Verify entity 3 is scheduled for cancellation
 	const entity3AfterCancel = await autumnV1.entities.get(
 		customerId,
 		entities[2].id,
@@ -69,8 +65,7 @@ test.concurrent(`${chalk.yellowBright("schedules-p2p: 3 premium entities - downg
 		productId: premium.id,
 	});
 
-	// Entity 3 updates premium's items while canceling
-	const newPriceItem = items.monthlyPrice({ price: 70 }); // $70/mo
+	const newPriceItem = items.monthlyPrice({ price: 70 });
 
 	await autumnV1.subscriptions.update({
 		customer_id: customerId,
@@ -79,10 +74,6 @@ test.concurrent(`${chalk.yellowBright("schedules-p2p: 3 premium entities - downg
 		items: [consumableItem, newPriceItem],
 	});
 
-	// Verify current state:
-	// Entity 1: Premium active (downgrade to pro scheduled)
-	// Entity 2: Premium active
-	// Entity 3: Premium canceling with new items
 	const entity1Data = await autumnV1.entities.get(customerId, entities[0].id);
 	const entity2Data = await autumnV1.entities.get(customerId, entities[1].id);
 	const entity3Data = await autumnV1.entities.get(customerId, entities[2].id);
@@ -108,16 +99,11 @@ test.concurrent(`${chalk.yellowBright("schedules-p2p: 3 premium entities - downg
 		subCount: 1,
 	});
 
-	// Advance to next billing cycle
 	await advanceToNextInvoice({
 		stripeCli: ctx.stripeCli,
 		testClockId: testClockId!,
 	});
 
-	// After next cycle:
-	// Entity 1: Pro active, Premium gone
-	// Entity 2: Premium active
-	// Entity 3: Premium gone (canceled)
 	const entity1AfterCycle = await autumnV1.entities.get(
 		customerId,
 		entities[0].id,

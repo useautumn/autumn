@@ -1,7 +1,6 @@
 import { jsonSchema } from "ai";
 import { z } from "zod/v4";
 
-/** Keys where JSON null is semantic (remove/clear) rather than "unset". */
 const SEMANTIC_NULL_KEYS = new Set(["entity_id", "free_trial", "price"]);
 
 const PLACEHOLDER_STRINGS = new Set(["null", "undefined", "{}", "[]"]);
@@ -64,11 +63,6 @@ const stripUnsetPlaceholders = (value: unknown): unknown => {
 	return value;
 };
 
-/** Decodes common tool-call conventions before validation: a single envelope
- * key wrapping the real object, and null / "null" placeholders for unset
- * fields (the "every key present" structured-output convention). A lone
- * non-schema key can never validate against the strict schemas, so unwrapping
- * it is always safe. */
 export const normalizeGeneratedValue = (
 	value: unknown,
 	schemaKeys?: ReadonlySet<string>,
@@ -93,11 +87,6 @@ export const normalizeGeneratedValue = (
 	return stripUnsetPlaceholders(unwrapped);
 };
 
-/** Last-resort decode: the correct payload has always been INSIDE malformed
- * outputs (wrappers, stringified JSON), so search nested values for one that
- * validates rather than enumerating wrapper conventions. Bounded and ordered
- * shallowest-first; a strict-schema false positive is impossible because
- * acceptance IS validation. */
 const salvageGeneratedValue = (
 	value: unknown,
 	parse: (candidate: unknown) => Record<string, unknown> | undefined,
@@ -127,8 +116,6 @@ const salvageGeneratedValue = (
 	return undefined;
 };
 
-/** The model-facing schema: the tool sees the real JSON schema, and validation
- * normalizes conventions before the authoritative zod parse. */
 export const toGenerationOutputSchema = (
 	schema: z.ZodType,
 	stats?: { salvaged: boolean },

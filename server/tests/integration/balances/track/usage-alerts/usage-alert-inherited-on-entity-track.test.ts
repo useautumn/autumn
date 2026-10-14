@@ -1,24 +1,3 @@
-/**
- * Customer / plan usage alert (with NO entity-level alert) still triggers when
- * usage is tracked on an entity — because the entity's usage counts toward the
- * customer-scope AGGREGATE balance.
- *
- * Subtlety under test: it fires as a customer-scope event (NO entity_id) against
- * the aggregate, NOT as an entity-scoped event. checkUsageAlerts never
- * re-evaluates a customer/plan alert against a single entity's balance with an
- * entity_id (step 2 uses only entity.usage_alerts).
- *
- * Setup: pooled messages 100 + per-entity messages 50, one entity.
- *   - customer-scope aggregate granted = 150, entity-scope combined = 150.
- *   - one alert: remaining_percentage 40 (fires at 40% left = remaining <= 60).
- *
- * Track 90 on the ENTITY -> aggregate 150 -> 60 (= 40% left), crosses 40%.
- *
- * Variant 3a: alert at the customer tier (customers.update).
- * Variant 3b: alert at the plan tier (plan-level controls on the product).
- * Both: alert fires with NO entity_id; no entity-scoped event fires.
- */
-
 import { afterAll, beforeAll, expect, test } from "bun:test";
 import type { CustomerBillingControls } from "@autumn/shared";
 import {
@@ -123,7 +102,6 @@ test(`${chalk.yellowBright("inherited-3a: customer alert fires on an entity trac
 		billing_controls: { usage_alerts: [fortyPercentAlert] },
 	});
 
-	// Track 90 on the entity -> aggregate 150 -> 60 (40% left).
 	await autumnV2_1.track({
 		customer_id: customerId,
 		entity_id: entityId,
@@ -143,7 +121,6 @@ test(`${chalk.yellowBright("inherited-3a: customer alert fires on an entity trac
 	});
 	expect(fired).not.toBeNull();
 
-	// No entity-scoped event (no entity alert exists).
 	await timeout(4000);
 	expect(
 		await firedFor({
@@ -170,7 +147,6 @@ test(`${chalk.yellowBright("inherited-3b: plan-default alert fires on an entity 
 	});
 	const entityId = entities[0].id;
 
-	// Track 90 on the entity -> aggregate 150 -> 60 (40% left).
 	await autumnV2_1.track({
 		customer_id: customerId,
 		entity_id: entityId,

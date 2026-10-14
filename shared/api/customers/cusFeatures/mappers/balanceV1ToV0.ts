@@ -30,40 +30,21 @@ export function balanceBreakdownV1ToV0({
 	};
 }
 
-/**
- * Transform ApiBalanceV1 (V2.1 format) to ApiBalance (V2.0 format)
- *
- * In V1 format:
- * - `granted` = total granted amount
- * - `remaining` = current balance
- * - `next_reset_at` = when balance resets
- *
- * In V0 format:
- * - `granted_balance` = granted amount
- * - `purchased_balance` = purchased/prepaid amount (calculated from breakdown)
- * - `current_balance` = remaining balance
- * - `reset` = reset interval object
- */
 export function balanceV1ToV0({ input }: { input: ApiBalanceV1 }): ApiBalance {
-	// Calculate purchased_balance from breakdown
 	const purchasedBalance = apiBalanceV1ToPurchasedBalance({
 		apiBalance: input,
 	});
 
 	const prepaidQuantity = apiBalanceV1ToPrepaidQuantity({ apiBalance: input });
 
-	// V0 granted_balance = V1 granted - prepaid_quantity
-	// V1 granted includes both included + prepaid, but V0 splits them
 	const grantedBalance = new Decimal(input.granted)
 		.sub(prepaidQuantity)
 		.toNumber();
 
-	// Get plan_id from breakdown
 	const breakdownPlanIds = deduplicateArray(
 		input.breakdown?.map((b) => b.plan_id) ?? [],
 	);
 
-	// Build reset object from breakdown
 	const uniqueIntervals = deduplicateArray(
 		input.breakdown?.map((b) => b.reset?.interval) ?? [],
 	);

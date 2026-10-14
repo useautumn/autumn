@@ -1,11 +1,7 @@
 import type { SubscriptionMismatch, SyncPhase } from "@autumn/shared";
 
-/** Verify's future-phase start comes from Autumn's anchored dates, which can
- * drift from Stripe's phase start by minutes. */
 const MAX_PHASE_START_DRIFT_MS = 24 * 60 * 60 * 1000;
 
-/** Verify stamps future-phase mismatches with the phase start in seconds; an
- * unstamped mismatch belongs to the live phase. */
 const isMismatchInPhase = ({
 	mismatch,
 	startsAt,
@@ -22,15 +18,12 @@ const isMismatchInPhase = ({
 	);
 };
 
-/** Schedule problems that stop verify from reliably comparing future phases. */
 const FUTURE_PHASES_UNCOMPARED_REASONS = new Set([
 	"missing_schedule",
 	"unexpected_schedule",
 	"phase_count_mismatch",
 ]);
 
-/** Verify sometimes skips a phase's items, and then "no mismatch" means
- * "not checked" rather than "matched". */
 const wasPhaseCompared = ({
 	mismatches,
 	startsAt,
@@ -67,11 +60,6 @@ const flagsStripePrice = ({
 
 export type StripeItemMark = "linked" | "links_on_sync" | "out_of_sync";
 
-/**
- * Linked: verify pairs the Stripe item today. Links on sync: only once this
- * draft syncs. Out of sync: verify would still flag it after the sync.
- * A phase today's run skipped (e.g. Autumn has no schedule yet) links nothing.
- */
 export const stripeItemMark = ({
 	todayMismatches,
 	previewMismatches,
@@ -96,7 +84,6 @@ export const stripeItemMark = ({
 	return isLinkedToday ? "linked" : "links_on_sync";
 };
 
-/** The worst item mark, or undefined while any item is unmarked. */
 export const rollUpStripeItemMarks = (
 	marks: (StripeItemMark | undefined)[],
 ): StripeItemMark | undefined => {
@@ -115,8 +102,6 @@ const isMissingPlanPrice = (mismatch: SubscriptionMismatch) => {
 	return false;
 };
 
-/** The plan's prices verify would find no Stripe item for after the sync. A
- * free plan expects no items, so it is never flagged. */
 export const findMissingPlanPrices = ({
 	previewMismatches,
 	planId,

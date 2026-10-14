@@ -11,7 +11,6 @@ import type { SharedContext } from "../../../types";
 import type { CreatePlanItemParamsV1 } from "../items/crud/createPlanItemParamsV1";
 import { attachItemCurrencies } from "./attachItemCurrencies";
 
-// Required.
 export const planV1ToProductItems = ({
 	ctx,
 	plan,
@@ -22,7 +21,6 @@ export const planV1ToProductItems = ({
 		price: ApiPlan["price"] | BasePriceParams;
 	};
 }): ProductItem[] => {
-	// Convert features to items
 	const featureItems =
 		plan.items?.map((planItem) => {
 			const planV0 = planItemV1ToV0({ ctx, item: planItem });

@@ -1,6 +1,3 @@
-// A live plan needs an active version; archiving the whole family remains valid.
-// Renames must explicitly move every version together.
-
 import { expect, test } from "bun:test";
 import { ErrCode } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
@@ -35,7 +32,6 @@ const versionRow = async ({
 		version,
 	});
 
-/** Mint `count` versions, each taking the active pointer as it lands. */
 const seedVersions = async ({
 	autumn,
 	planId,
@@ -74,8 +70,6 @@ test.concurrent(
 			run: async () => {
 				await seedVersions({ autumn: autumnV2_3, planId, count: 2 });
 
-				// F1: v2 holds the pointer. Archiving only v2 leaves the plan live —
-				// v1 is still there — pointing at a version nothing can attach to.
 				const orphanedPointer = autumnV2_3.catalogV2.update({
 					plans: [{ plan_id: planId, version: 2, archived: true }],
 				});
@@ -86,8 +80,6 @@ test.concurrent(
 					"rejected push changed nothing",
 				).toBe(false);
 
-				// F2: the same archive is fine once nothing is left behind. This is
-				// what stops F1 from being a rule about archiving at all.
 				await autumnV2_3.catalogV2.update({
 					plans: [
 						{ plan_id: planId, version: 1, archived: true },

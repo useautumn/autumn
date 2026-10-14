@@ -1,9 +1,5 @@
 import type { LineItem, PreviewLineItem } from "@autumn/shared";
 
-/**
- * Transforms an internal LineItem to a PreviewLineItem for API responses.
- * Used for both immediate charges and next cycle preview.
- */
 export const lineItemToPreviewLineItem = (line: LineItem): PreviewLineItem => {
 	const feature = line.context.feature;
 	const displayName = feature?.name || line.context.product.name || "Item";

@@ -4,10 +4,6 @@ import { computeEntitlementPricesPlan } from "@/internal/products/actions/comput
 import { getEntsWithFeature } from "@/internal/products/entitlements/entitlementUtils.js";
 import { hasCustomizeFields } from "../licensePlanUtils";
 
-/**
- * Customize → entitlement/price rows vs the child's own rows.
- * `same` keeps stock ids; `new` is the is_custom overlay.
- */
 export const computeLicenseOverlays = ({
 	ctx,
 	planLicenses,

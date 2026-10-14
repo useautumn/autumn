@@ -1,8 +1,3 @@
-/**
- * Upgrading off a pay-per-use volume plan bills its overage past included at the switch, on the net
- * tier it lands in. Each case checks billing.previewAttach against the Stripe invoice line by line.
- */
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3 } from "@autumn/shared";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
@@ -120,7 +115,6 @@ const runVolumeUpgrade = async ({
 test.concurrent(
 	`${chalk.yellowBright("immediate-switch-consumable-volume 1: 100 included, 700 used → 600 over in net band 2: 600 × $0.05 = $30 at the switch")}`,
 	async () => {
-		// Net tiers 0-500/501+ are total-usage bands 0-600/601+ once 100 are included.
 		await runVolumeUpgrade({
 			customerId: "imm-switch-cons-volume-band2",
 			proIncludedUsage: 100,
@@ -133,7 +127,6 @@ test.concurrent(
 test.concurrent(
 	`${chalk.yellowBright("immediate-switch-consumable-volume 2: mid-cycle, no included, 300 used → 300 × $0.10 = $30, not prorated")}`,
 	async () => {
-		// 300 × $0.10 = $30 in band 1; only the base difference is prorated.
 		await runVolumeUpgrade({
 			customerId: "imm-switch-cons-volume-midcycle",
 			proIncludedUsage: 0,

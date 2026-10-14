@@ -64,21 +64,15 @@ export interface PlanItemsSectionProps {
 	priceChange?: PriceChange | null;
 	versionChange?: VersionChange | null;
 	trialConfig?: TrialConfig;
-	/** add_licenses patch entries staged by the editor; null = unchanged,
-	 * undefined = the flow does not support license editing. */
 	addLicenses?: CustomizePlanLicense[] | null;
-	/** Present in flows that support buying extra license seats (attach, update). */
 	licenseQuantityEditor?: LicenseQuantityEditor;
-	/** Outgoing plan's licenses (attach review) — diffs license rows as a transition. */
 	outgoingLicenses?: (PlanLicense & { version?: number })[];
 
 	gateDeletedItemsByDiff?: boolean;
 	changesOnly?: boolean;
 	readOnly?: boolean;
 	disableBooleanCollapse?: boolean;
-	/** Off when the price renders elsewhere (e.g. a license's parent-plan row). */
 	showPriceHeader?: boolean;
-	/** Off when the caller renders the edit button itself (e.g. below license sections). */
 	showEditButton?: boolean;
 
 	adminIds?: AdminPlanIds;

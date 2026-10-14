@@ -1,8 +1,3 @@
-/**
- * The shadow Atom's admin routes on the real app: an org's own secret key, or no auth,
- * never reaches the deployment or results handlers, so nothing is started on alien or written.
- */
-
 import { afterAll, beforeAll, expect, spyOn, test } from "bun:test";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import * as alienClientModule from "@/external/alien/getAlienClient.js";

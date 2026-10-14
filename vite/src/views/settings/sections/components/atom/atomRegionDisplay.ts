@@ -25,7 +25,6 @@ const AWS_REGION_NAMES: Record<ByocCacheAwsRegion, string> = {
 const isAwsRegion = (region: string): region is ByocCacheAwsRegion =>
 	(BYOC_CACHE_AWS_REGIONS as readonly string[]).includes(region);
 
-/** The region as AWS's console names it, e.g. "AWS · Europe (London)". */
 export const awsRegionLabel = (region: string) =>
 	["AWS", isAwsRegion(region) && AWS_REGION_NAMES[region]]
 		.filter(Boolean)

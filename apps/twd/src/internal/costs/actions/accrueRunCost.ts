@@ -2,10 +2,6 @@ import { sql } from "drizzle-orm";
 import type { TwdContext } from "../../../lib/types/twdContext.ts";
 import { getCostRates } from "./getCostRates.ts";
 
-/**
- * Recompute runs.cost_usd / worker_seconds from run_workers: each sandbox's create → terminate, open rows priced up to now.
- * Idempotent; call periodically while live and once after teardown.
- */
 export const accrueRunCost = async ({
 	ctx,
 	runId,

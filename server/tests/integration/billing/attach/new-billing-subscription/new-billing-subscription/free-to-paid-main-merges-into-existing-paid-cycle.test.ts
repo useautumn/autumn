@@ -1,18 +1,3 @@
-/**
- * New Billing Subscription Tests (V2 Attach)
- *
- * Tests for the `new_billing_subscription` flag on the V2 attach endpoint,
- * which forces creation of a separate Stripe subscription instead of merging
- * into the existing one.
- *
- * Key behaviors tested:
- * - Add-on with new_billing_subscription creates separate sub
- * - Repeated add-on attachment creates additional subs
- * - Entities with new_billing_subscription get separate subs
- * - Upgrades/downgrades silently ignore the flag
- * - Customer upgrade doesn't affect entity's separate sub
- */
-
 import { test } from "bun:test";
 import type { ApiCustomerV3 } from "@autumn/shared";
 import { expectCustomerProducts } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
@@ -23,21 +8,6 @@ import ctx from "@tests/utils/testInitUtils/createTestContext";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-// =============================================================================
-// TEST 8: Free -> paid main with existing paid cycle merges when requested
-// =============================================================================
-
-/**
- * Scenario:
- * - Customer has free main product
- * - Customer has paid recurring add-on (existing paid cycle)
- * - Attach paid main product with new_billing_subscription: false (explicit merge)
- *
- * Expected:
- * - Stays on one subscription (merge into existing paid cycle)
- * - Free main is replaced
- * - Paid add-on remains active
- */
 test.concurrent(
 	`${chalk.yellowBright("new-billing-sub 8: free to paid main merges into existing paid cycle")}`,
 	async () => {

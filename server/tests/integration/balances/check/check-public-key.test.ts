@@ -17,10 +17,6 @@ import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import { generatePublishableKey } from "@/utils/encryptUtils.js";
 
-// ═══════════════════════════════════════════════════════════════════
-// Helper to set up public key test scenario
-// ═══════════════════════════════════════════════════════════════════
-
 async function setupPublicKeyScenario({ customerId }: { customerId: string }) {
 	const messagesItem = items.monthlyMessages({ includedUsage: 1000 });
 	const freeProd = products.base({
@@ -38,7 +34,6 @@ async function setupPublicKeyScenario({ customerId }: { customerId: string }) {
 		actions: [s.attach({ productId: freeProd.id })],
 	});
 
-	// Ensure test_pkey is set on the org
 	if (!ctx.org.test_pkey) {
 		const testPkey = generatePublishableKey(AppEnv.Sandbox);
 		await OrgService.update({
@@ -62,10 +57,6 @@ async function setupPublicKeyScenario({ customerId }: { customerId: string }) {
 
 	return { customerId: cusId, autumnV1, autumnPublic };
 }
-
-// ═══════════════════════════════════════════════════════════════════
-// CHECK: Public key works for /check endpoint
-// ═══════════════════════════════════════════════════════════════════
 
 test.concurrent(`${chalk.yellowBright("check-public-key: /check works with public key")}`, async () => {
 	const { customerId, autumnPublic } = await setupPublicKeyScenario({
@@ -91,10 +82,6 @@ test.concurrent(`${chalk.yellowBright("check-public-key: /check works with publi
 	});
 	expect(checkRes.next_reset_at).toBeDefined();
 });
-
-// ═══════════════════════════════════════════════════════════════════
-// CHECK: send_event blocked with public key
-// ═══════════════════════════════════════════════════════════════════
 
 test.concurrent(`${chalk.yellowBright("check-public-key-send-event-blocked: send_event with public key should error")}`, async () => {
 	const { customerId, autumnV1, autumnPublic } = await setupPublicKeyScenario({
@@ -125,16 +112,11 @@ test.concurrent(`${chalk.yellowBright("check-public-key-send-event-blocked: send
 	expect(customerAfter.features[TestFeature.Messages].usage).toBe(usageBefore);
 });
 
-// ═══════════════════════════════════════════════════════════════════
-// CHECK: send_event works with secret key
-// ═══════════════════════════════════════════════════════════════════
-
 test.concurrent(`${chalk.yellowBright("check-send-event: send_event with secret key tracks usage")}`, async () => {
 	const { customerId, autumnV1 } = await setupPublicKeyScenario({
 		customerId: "check-send-event",
 	});
 
-	// Should track usage when send_event: true with secret key
 	const checkRes = await autumnV1.check<CheckResponseV1>({
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
@@ -152,11 +134,10 @@ test.concurrent(`${chalk.yellowBright("check-send-event: send_event with secret 
 	expect(customerAfter.features[TestFeature.Messages].balance).toBe(850);
 	expect(customerAfter.features[TestFeature.Messages].usage).toBe(150);
 
-	// Should NOT track when allowed: false (insufficient balance)
 	const checkResInsufficient = await autumnV1.check<CheckResponseV1>({
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
-		required_balance: 900, // More than available (850)
+		required_balance: 900,
 		send_event: true,
 	});
 
@@ -167,7 +148,6 @@ test.concurrent(`${chalk.yellowBright("check-send-event: send_event with secret 
 	const customerAfterInsufficient =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Balance and usage should remain unchanged
 	expect(customerAfterInsufficient.features[TestFeature.Messages].balance).toBe(
 		850,
 	);

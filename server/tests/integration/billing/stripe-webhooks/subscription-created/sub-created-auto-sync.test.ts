@@ -198,8 +198,6 @@ test(`${chalk.yellowBright("customer.subscription.created auto-sync: links produ
 		mode: "subscription",
 		line_items: [{ price: stripePriceId, quantity: 1 }],
 		success_url: "https://example.com/success",
-		// Without this Stripe offers Link alongside card, and the automation's
-		// card accordion never matches — submit lands on a method we never filled.
 		payment_method_types: ["card"],
 	});
 	expect(checkoutSession.url).toContain("checkout.stripe.com");
@@ -208,8 +206,6 @@ test(`${chalk.yellowBright("customer.subscription.created auto-sync: links produ
 		url: checkoutSession.url!,
 	});
 
-	// Stripe attaches the subscription once the hosted page finishes processing,
-	// which lags well behind the browser submit on a contended runner.
 	const completedSession = await pollUntil({
 		fetch: () => ctx.stripeCli.checkout.sessions.retrieve(checkoutSession.id),
 		until: (session) => Boolean(session.subscription),

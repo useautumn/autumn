@@ -9,10 +9,6 @@ import {
 
 const databaseUrl = readWorktreeDatabaseUrl();
 
-/**
- * One org's license catalog, plus one plan license in another env and one in another org.
- * Ids sort in the order the lookup must return them.
- */
 const seedLicenseCatalog = async ({
 	postgres,
 }: {
@@ -41,7 +37,6 @@ const seedLicenseCatalog = async ({
 		baseEntitlement2: id("ent_2_base"),
 		baseEntitlement3: id("ent_3_base"),
 		customEntitlement: id("ent_4_custom"),
-		// Named so the returned order (by id) is base, customized, empty-overlay, no-items.
 		basePlanLicense: id("pl_1_base"),
 		customizedPlanLicense: id("pl_2_customized"),
 		emptyOverlayPlanLicense: id("pl_3_empty_overlay"),
@@ -119,7 +114,6 @@ const seedLicenseCatalog = async ({
 	}) =>
 		db.execute(sql`INSERT INTO entitlements (id, org_id, internal_feature_id, internal_product_id, feature_id, created_at, allowance_type, allowance, interval, is_custom)
 			VALUES (${entitlementId}, ${orgId}, ${featureInternalId}, ${ids.licenseProduct}, 'messages', 0, 'fixed', 5, 'month', ${isCustom})`);
-	// Two base entitlements share feature A: its id is named once.
 	await entitlement({
 		entitlementId: ids.baseEntitlement1,
 		featureInternalId: ids.featureA,
@@ -214,7 +208,6 @@ const seedLicenseCatalog = async ({
 		priceIds: [ids.customPrice],
 		entitlementIds: [ids.customEntitlement, ids.baseEntitlement1],
 	});
-	// Leftover overlay rows on a link that is not customized: the base items win.
 	await overlay({
 		planLicenseId: ids.basePlanLicense,
 		priceIds: [ids.customPrice],

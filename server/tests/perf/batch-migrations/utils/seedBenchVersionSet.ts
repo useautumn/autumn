@@ -1,13 +1,3 @@
-/**
- * Seeds customers onto the version-set plan's v1: one customer product, one
- * row per v1 item, and one license pool per link. Assignments (entity-scoped
- * rows under a pool) are opt-in because only the license-entitlement ops touch
- * them, and they multiply row counts by assignments × license items.
- *
- * Server-side generate_series only, chunked and resumable via ON CONFLICT DO
- * NOTHING, so a partial run can be re-driven.
- */
-
 import { CusProductStatus } from "@autumn/shared";
 import { type SQL, sql } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
@@ -19,15 +9,12 @@ export const BENCH_VERSET_CUSTOMER_PRODUCT_PREFIX = "cp_bench_verset_";
 export const BENCH_VERSET_ROW_PREFIX = "ce_bench_verset_";
 export const BENCH_VERSET_CUSTOMER_LICENSE_PREFIX = "cuslic_bench_verset_";
 export const BENCH_VERSET_LICENSE_LINK_PREFIX = "cuslink_bench_verset_";
-/** Distinct stems so counting parent rows never matches assignment rows. */
 export const BENCH_VERSET_ASSIGNMENT_PREFIX = "cpseat_bench_verset_";
 export const BENCH_VERSET_SEAT_ROW_PREFIX = "ceseat_bench_verset_";
 export const BENCH_VERSET_ENTITY_PREFIX = "ety_bench_verset_";
 
 const APPROX_MONTH_MS = 30 * 24 * 60 * 60 * 1000;
 
-/** (entitlement_id, internal_feature_id, feature_id) triples as a VALUES list,
- * cross-joined against the customer series to fan one row out per item. */
 const itemDefinitionsSql = ({
 	entitlementIdsByFeature,
 	internalFeatureIdsByFeature,
@@ -229,8 +216,6 @@ const seedChunk = async ({
 		ON CONFLICT DO NOTHING
 	`);
 
-	// Each license child carries its own item set, so a seat holds one row per
-	// license feature — this is the term that dominates row growth.
 	for (const [index, license] of catalog.licenses.entries()) {
 		const licenseItems = itemDefinitionsSql({
 			entitlementIdsByFeature: license.entitlementIdsByFeature,
@@ -322,8 +307,6 @@ export const seedBenchVersionSet = async ({
 	}
 };
 
-/** Prior claims collide with the live-item exclusion on replay, so a rerun
- * must clear them even when it reuses the seeded rows. */
 export const deleteBenchVersionSetClaims = async ({
 	db,
 }: {

@@ -9,7 +9,6 @@ import {
 } from "../utils/servicePeriod";
 import type { CreateInvoiceFormApi } from "./useCreateInvoiceForm";
 
-/** Row edits for the plans tray. New rows take the last scope picked, else the page's entity. */
 export function useCreateInvoicePlanHandlers({
 	form,
 	defaultEntityId,
@@ -20,7 +19,6 @@ export function useCreateInvoicePlanHandlers({
 	existingPlans: InvoiceExistingPlan[];
 }) {
 	const lastSelectedEntityId = useRef(defaultEntityId);
-	// The picker present at mount waits for the sheet; user-added ones open at once.
 	const hasAddedPlan = useRef(false);
 
 	const plansNow = useCallback(() => form.store.state.values.plans, [form]);

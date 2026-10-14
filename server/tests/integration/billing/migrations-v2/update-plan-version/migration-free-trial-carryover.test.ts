@@ -1,8 +1,3 @@
-/**
- * Regression: update_plan version migrations must carry active free-product trial_ends_at.
- * Pre-fix replacements became active without a trial; post-fix they keep the trial isolated from paid subscriptions.
- */
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3 } from "@autumn/shared";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";

@@ -72,8 +72,6 @@ export const SandboxSettings = ({
 			return;
 		}
 
-		// Renaming the sandbox you're in changes its URL slug; follow it instead of
-		// letting the URL sync fall back to the default sandbox.
 		const isActive = activeSandbox?.id === sandbox.id;
 		const movesActiveUrl =
 			isActive && sandboxSlug(sandbox.name) !== sandboxSlug(trimmedName);

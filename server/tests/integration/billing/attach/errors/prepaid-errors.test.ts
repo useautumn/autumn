@@ -5,32 +5,13 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { constructPrepaidItem } from "@/utils/scriptUtils/constructItem.js";
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 1: includedUsage must be a multiple of billingUnits (or 0)
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Create a prepaid product where includedUsage is NOT a multiple of billingUnits
- * - Attempt to initialize the product
- *
- * Why this fails:
- * - When creating Stripe tiered pricing, the first tier's `up_to` is calculated as:
- *   `includedUsage / billingUnits`
- * - If this results in a non-integer (e.g., 50 / 100 = 0.5), Stripe rejects it
- * - Stripe requires `up_to` to be a positive integer or "inf"
- *
- * Expected Result:
- * - Error thrown during product setup (when Stripe price creation fails)
- */
 test.concurrent(`${chalk.yellowBright("error: prepaid includedUsage must be multiple of billingUnits")}`, async () => {
 	const customerId = "prepaid-error-invalid-included-usage";
 	const billingUnits = 100;
 
-	// Invalid: 50 is NOT a multiple of 100
 	const invalidPrepaidItem = constructPrepaidItem({
 		featureId: TestFeature.Messages,
-		includedUsage: 50, // 50 / 100 = 0.5 → invalid for Stripe tiers
+		includedUsage: 50,
 		billingUnits,
 		price: 10,
 	});
@@ -40,7 +21,6 @@ test.concurrent(`${chalk.yellowBright("error: prepaid includedUsage must be mult
 		items: [invalidPrepaidItem],
 	});
 
-	// Error should be thrown during product setup (initScenario) when Stripe price creation fails
 	await expect(
 		initScenario({
 			customerId,

@@ -14,8 +14,6 @@ export type RepointLicensePoolForPageResult = LicenseOpPageResult & {
 	repointedPools: number;
 };
 
-/** Whole-page, so it commits before any candidate select reads the pool — not
- * per batch, which would mutate before the ceiling assertion. */
 export const repointLicensePoolForPage = async ({
 	db,
 	scope,

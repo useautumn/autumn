@@ -1,19 +1,5 @@
 #!/usr/bin/env bun
 
-/**
- * Offset-based idempotent backfill for rollovers from Postgres to Tinybird.
- *
- * Rollovers have no created_at so we can't chunk by date.
- * Pages through the full table with LIMIT + OFFSET ordered by id.
- * Stops when a page returns fewer rows than page_size.
- *
- * Usage:
- *   bun scripts/backfill_rollovers.ts
- *   bun scripts/backfill_rollovers.ts --page-size 1000
- *   bun scripts/backfill_rollovers.ts --offset 10000
- *   bun scripts/backfill_rollovers.ts --dry-run
- */
-
 import {
 	MAX_RETRIES,
 	RETRY_DELAY_MS,
@@ -25,17 +11,9 @@ import {
 	waitForCopyJobs,
 } from "./backfill_base.js";
 
-// ============================================================================
-// CONFIGURATION
-// ============================================================================
-
 const DATASOURCE = "rollovers";
 const COPY_PIPE = "rollovers_backfill";
 const DEFAULT_PAGE_SIZE = 5000;
-
-// ============================================================================
-// ARGUMENT PARSING
-// ============================================================================
 
 function parseArgs(): { pageSize: number; offsetOverride?: number; dryRun: boolean } {
 	const args = { pageSize: DEFAULT_PAGE_SIZE, offsetOverride: undefined as number | undefined, dryRun: false };
@@ -66,10 +44,6 @@ Options:
 
 	return args;
 }
-
-// ============================================================================
-// HELPERS
-// ============================================================================
 
 async function getRowCount(): Promise<number> {
 	const rows = await tbSql({
@@ -110,10 +84,6 @@ async function runPage({
 	return false;
 }
 
-// ============================================================================
-// MAIN
-// ============================================================================
-
 async function main() {
 	console.log("=== Rollovers Backfill (Offset-based) ===\n");
 
@@ -148,8 +118,6 @@ async function main() {
 		const rowCount = await getRowCount();
 		console.log(`✓ Page ${pageNum} done in ${duration}s. Rows in Tinybird: ${rowCount}\n`);
 
-		// A page returning fewer rows than page_size means we've hit the end
-		// We detect this by comparing expected next offset vs actual row count
 		offset += args.pageSize;
 		if (rowCount < offset) {
 			console.log("Last page was partial — backfill complete.");

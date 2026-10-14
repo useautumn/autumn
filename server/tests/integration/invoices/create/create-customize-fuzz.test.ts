@@ -1,15 +1,3 @@
-/**
- * invoices.create — seeded fuzz of plan customization (preview + a few live invoices).
- *
- * Each seed builds a catalog plan and an invoice request that overrides prices,
- * prices features the plan lacks, switches billing methods, and varies tiers,
- * billing units, quantities and proration. An independent oracle
- * (utils/fuzz/invoiceOracle.ts) predicts every line; the catalog must be
- * untouched and invalid requests must be a 400, never a 500.
- *
- * Reproduce one case: the seed is in the test name; run with -t "seed=<n> ".
- */
-
 import { expect, test } from "bun:test";
 import type { ProductV2 } from "@autumn/shared";
 import { products } from "@tests/utils/fixtures/products";
@@ -70,7 +58,6 @@ const runSetup = async () => {
 		],
 		actions: [],
 	});
-	// initScenario prefixes product ids with the customer id.
 	const planIds = new Map(
 		catalogProducts.map(([key, product]) => [key, product.id]),
 	);

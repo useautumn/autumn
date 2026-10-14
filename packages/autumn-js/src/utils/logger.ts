@@ -1,4 +1,3 @@
-// Alternative: Use pino without worker thread transport
 const getTime = () => {
 	const timeString = new Date().toISOString();
 	return `[${timeString.split("T")[1].split(".")[0]}]`;
@@ -37,31 +36,3 @@ export const logger = {
 		}
 	},
 };
-// export const logger =
-//   typeof window !== "undefined"
-//     ? console
-//     : pino(
-//         {
-//           level: process.env.LOG_LEVEL || "info",
-//           formatters: {
-//             level: (label: string) => {
-//               return { level: label };
-//             },
-//           },
-//         },
-//         pretty({
-//           customColors: {
-//             default: "white",
-//             60: "bgRed",
-//             50: "red",
-//             40: "yellow",
-//             30: "green",
-//             20: "blue",
-//             10: "gray",
-//             message: "reset",
-//             greyMessage: "gray",
-//             time: "darkGray",
-//           },
-//           ignore: "pid,hostname",
-//         })
-//       );

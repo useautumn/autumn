@@ -12,14 +12,6 @@ import {
 	workspaceSeatsConfig,
 } from "./workspaceSeatsPricing.ts";
 
-/**
- * KIND A: the whole brief in one message — allusive on purpose: the billable
- * unit is "a workspace", never "seat-based" or "per user". Grades all three
- * signatures — unit-that-grants → license plan (①), per-workspace grant on
- * the workspace plan vs shared prepaid on the base plans (②), one workspace
- * plan reused with per-tier included counts (③) — plus the annual variant
- * and credit system.
- */
 export const oneShot = defineCase({
 	name: "workspace-seats-one-shot",
 	prompt: [

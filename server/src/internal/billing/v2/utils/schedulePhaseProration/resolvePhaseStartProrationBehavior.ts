@@ -35,7 +35,6 @@ export const resolvePhaseStartProrationBehavior = ({
 	});
 	if (requestedProrationBehavior) return requestedProrationBehavior;
 
-	// Product switches at a reset start a full cycle without old-plan credits.
 	if (resetsBillingCycle && changesCustomerProducts) return "none";
 	return undefined;
 };
@@ -46,7 +45,6 @@ export const phaseStartCreditsUnusedTime = ({
 	prorationBehavior: PhaseProrationBehavior | undefined;
 }) => prorationBehavior !== "none";
 
-/** A phase start that adjusts a running cycle without proration bills nothing until the next renewal. */
 export const phaseStartRaisesInvoice = ({
 	prorationBehavior,
 	startsNewBillingCycle,

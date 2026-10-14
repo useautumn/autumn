@@ -3,10 +3,6 @@ import { and, eq } from "drizzle-orm";
 
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 
-/**
- * Fetch all auto_topup_limit_states rows for a customer (across features).
- * Used by the read-side expand path to surface runtime purchase tracking.
- */
 export const findAutoTopupLimitsByCustomer = async ({
 	ctx,
 	internalCustomerId,

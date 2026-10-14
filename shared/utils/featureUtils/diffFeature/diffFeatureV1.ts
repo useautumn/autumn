@@ -24,7 +24,6 @@ const stringArraysEqualUnordered = (
 	);
 };
 
-// Absent display and an all-empty display object are the same "no display".
 const displaysEqual = (left: FeatureDisplay, right: FeatureDisplay) =>
 	(left?.singular ?? null) === (right?.singular ?? null) &&
 	(left?.plural ?? null) === (right?.plural ?? null);
@@ -113,9 +112,6 @@ type FieldComparison = {
 	isSame: (from: ApiFeatureV1, to: ApiFeatureV1) => boolean;
 };
 
-/** Absent and default values compare equal — undefined event_names == [],
- * undefined markups == {}, nullish numbers match — so db-side rows and
- * param-side rows never phantom-diff. */
 const fieldComparisons: FieldComparison[] = [
 	{ key: "id", isSame: (from, to) => from.id === to.id },
 	{ key: "name", isSame: (from, to) => from.name === to.name },

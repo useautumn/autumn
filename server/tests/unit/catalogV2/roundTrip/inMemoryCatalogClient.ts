@@ -16,13 +16,6 @@ import {
 	createClient,
 } from "../../../../../packages/atmn/src/generated/client";
 
-/**
- * The real generated client, with `fetch` answered in-process: GET through
- * the production converters, preview through the production compute actions.
- * Every hint, rename and JSON round-trip is the CLI's own code, so what
- * `atmn pull` sees here is what it sees against a server.
- */
-
 type Action = "create" | "update" | "delete" | "none";
 type Catalog = { features: Feature[]; plans: FullProduct[] };
 type PlanParams = NonNullable<
@@ -112,7 +105,6 @@ const planAction = ({
 		: "none";
 };
 
-/** The server's JSON for each catalog route, over the in-memory catalog. */
 const routes = ({
 	catalog,
 	multiCurrency,
@@ -201,7 +193,6 @@ export const inMemoryCatalogClient = ({
 	multiCurrency?: boolean;
 }): AutumnClient => {
 	const handlers = routes({ catalog, multiCurrency });
-	// Bun's fetch type carries `preconnect`; the client only calls it.
 	const fetch = (async (input: string | URL | Request, init?: RequestInit) => {
 		const path = new URL(String(input)).pathname;
 		const handler = handlers[path];

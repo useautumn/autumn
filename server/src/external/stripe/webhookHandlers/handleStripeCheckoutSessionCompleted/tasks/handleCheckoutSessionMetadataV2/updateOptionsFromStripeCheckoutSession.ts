@@ -55,8 +55,6 @@ export const updateOptionsFromStripeCheckoutSession = async ({
 			if (!price || priceUtils.isTieredOneOff({ price, product: fullProduct }))
 				continue;
 
-			// Entity-scoped products use inline prices with pre-calculated amounts;
-			// the checkout line item quantity is not meaningful, so keep original options.
 			if (isCustomerProductEntityScoped(newCustomerProduct)) continue;
 
 			const lineItem = stripeCheckoutSessionUtils.find.lineItemByAutumnPrice({
@@ -76,11 +74,6 @@ export const updateOptionsFromStripeCheckoutSession = async ({
 				});
 
 			if (customerEntitlement) {
-				// The compute-time balance already has any existing-usage carry-over
-				// applied. Stripe may report a quantity that differs from what we
-				// initially planned (e.g. the customer edited it on the hosted
-				// checkout page) — apply only the *delta* in starting balance to the
-				// existing balance so the carry-over is preserved.
 				const oldStartingBalance = getStartingBalance({
 					entitlement: customerEntitlement.entitlement,
 					options: featureOptions,

@@ -39,7 +39,6 @@ describe("isAtmnOAuthClientRecord", () => {
 	});
 });
 
-// Previously, reward scopes were filtered out and Better Auth returned invalid_scope.
 test("self-heals only allowed reward scopes requested by atmn", async () => {
 	const db = {} as DrizzleCli;
 	const clientId = "atmn_client";
@@ -71,7 +70,6 @@ test("self-heals only allowed reward scopes requested by atmn", async () => {
 	});
 });
 
-// atmn v3 asks for platform:* so its minted keys can call /v1/sandboxes.*.
 test("self-heals the platform scopes the v3 CLI requests for sandboxes", async () => {
 	const db = {} as DrizzleCli;
 	const clientId = "atmn_client";
@@ -103,7 +101,6 @@ test("self-heals the platform scopes the v3 CLI requests for sandboxes", async (
 	});
 });
 
-// `reset` wipes the sandbox's migration drafts, so its key needs migrations:*.
 test("self-heals the migration scopes the v3 CLI requests for reset", async () => {
 	const db = {} as DrizzleCli;
 	const clientId = "atmn_client";
@@ -135,7 +132,6 @@ test("self-heals the migration scopes the v3 CLI requests for reset", async () =
 	});
 });
 
-// A config's `settings` block writes org config, so its key needs organisation:write.
 test("self-heals the organisation:write scope the v3 CLI requests for settings", async () => {
 	const db = {} as DrizzleCli;
 	const clientId = "atmn_client";
@@ -167,7 +163,6 @@ test("self-heals the organisation:write scope the v3 CLI requests for settings",
 	});
 });
 
-// atmn v3 requests modern read/write scopes instead of the legacy CRUDL forms.
 test("self-heals the modern write scopes the v3 CLI requests at login", async () => {
 	const db = {} as DrizzleCli;
 	const clientId = "atmn_client";
@@ -204,7 +199,6 @@ test("self-heals the modern write scopes the v3 CLI requests at login", async ()
 	});
 });
 
-// Keys minted by `atmn login` end up as apps' AUTUMN_SECRET_KEY.
 test("self-heals the app scopes the CLI requests for minted keys", async () => {
 	const db = {} as DrizzleCli;
 	const clientId = "atmn_client";

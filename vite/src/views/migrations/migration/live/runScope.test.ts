@@ -1,13 +1,3 @@
-/**
- * The progress bar denominator was always the migration's whole filter count,
- * so a single-customer or sample run read "0 of 40,000" and looked stalled when
- * it was really 0 of 1.
- *
- * Red (current):  runExpectedCount does not exist.
- * Green (after):  a run scoped by only_ids or target_limit reports its own
- *                 scope; an unscoped Run All still reports the filter count.
- */
-
 import { expect, test } from "bun:test";
 import { runExpectedCount } from "./runScope";
 

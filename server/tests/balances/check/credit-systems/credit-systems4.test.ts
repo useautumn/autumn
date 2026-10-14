@@ -49,17 +49,14 @@ describe(`${chalk.yellowBright("credit-systems4: test send_event with credit sys
 	});
 
 	test("should deduct credits correctly when using send_event with decimal value", async () => {
-		// Use a decimal value for required_balance
 		const requiredAction1Units = 25.75;
 
-		// Calculate how many credits this should consume
 		const expectedCreditCost = featureToCreditSystem({
 			featureId: TestFeature.Action1,
 			creditSystem: creditFeature!,
 			amount: requiredAction1Units,
 		});
 
-		// Call check with send_event: true
 		const checkRes = (await autumnV1.check({
 			customer_id: customerId,
 			feature_id: TestFeature.Action1,
@@ -72,10 +69,8 @@ describe(`${chalk.yellowBright("credit-systems4: test send_event with credit sys
 		expect(checkRes.balance).toBe(1000 - expectedCreditCost);
 		expect(checkRes.code).toBe(SuccessCode.FeatureFound);
 
-		// Wait for event to be processed
 		await timeout(2000);
 
-		// Get customer and verify credits were deducted correctly
 		const customer: any = await autumnV1.customers.get(customerId);
 		const creditsBalance = customer.features[TestFeature.Credits].balance;
 		const creditsUsage = customer.features[TestFeature.Credits].usage;
@@ -86,11 +81,9 @@ describe(`${chalk.yellowBright("credit-systems4: test send_event with credit sys
 	return;
 
 	test("should handle multiple send_event calls with different decimal values", async () => {
-		// Get current balance
 		const customerBefore: any = await autumnV1.customers.get(customerId);
 		const balanceBefore = customerBefore.features[TestFeature.Credits].balance;
 
-		// First call with Action1
 		const requiredAction1Units = 10.5;
 		const creditCost1 = featureToCreditSystem({
 			featureId: TestFeature.Action1,
@@ -105,7 +98,6 @@ describe(`${chalk.yellowBright("credit-systems4: test send_event with credit sys
 			send_event: true,
 		});
 
-		// Second call with Action2
 		const requiredAction2Units = 15.25;
 		const creditCost2 = featureToCreditSystem({
 			featureId: TestFeature.Action2,
@@ -120,10 +112,8 @@ describe(`${chalk.yellowBright("credit-systems4: test send_event with credit sys
 			send_event: true,
 		});
 
-		// Wait for events to be processed
 		await timeout(2000);
 
-		// Verify total credits deducted
 		const customerAfter: any = await autumnV1.customers.get(customerId);
 		const balanceAfter = customerAfter.features[TestFeature.Credits].balance;
 		const totalExpectedCost = creditCost1 + creditCost2;
@@ -135,12 +125,10 @@ describe(`${chalk.yellowBright("credit-systems4: test send_event with credit sys
 	});
 
 	test("should not deduct credits when check fails due to insufficient balance", async () => {
-		// Get current balance
 		const customerBefore: any = await autumnV1.customers.get(customerId);
 		const balanceBefore = customerBefore.features[TestFeature.Credits].balance;
 
-		// Try to use more credits than available
-		const requiredAction1Units = 10000; // More than remaining balance
+		const requiredAction1Units = 10000;
 		const checkRes = (await autumnV1.check({
 			customer_id: customerId,
 			feature_id: TestFeature.Action1,
@@ -150,10 +138,8 @@ describe(`${chalk.yellowBright("credit-systems4: test send_event with credit sys
 
 		expect(checkRes.allowed).toBe(false);
 
-		// Wait for potential event processing
 		await timeout(2000);
 
-		// Verify no credits were deducted
 		const customerAfter: any = await autumnV1.customers.get(customerId);
 		expect(customerAfter.features[TestFeature.Credits].balance).toBe(
 			balanceBefore,

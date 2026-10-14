@@ -1,18 +1,3 @@
-/**
- * invoices.create — customize.items prices follow the catalog's pricing rules.
- *
- * Contract:
- *   - Prices that the catalog would refuse (amount+tiers, neither, flat_amount on
- *     graduated, tiers not ascending or not ending in inf,
- *     billing_units <= 0) are a 400, as are negative amounts and duplicate items.
- *   - The same rules apply to license_quantities[].customize.items.
- *   - An override only prices lines of its own billing_method.
- *   - Omitted tier_behavior is graduated, with or without a catalog price.
- *   - Preview lines and totals are the whole cents Stripe bills.
- *   - A one-off line is never reported as prorated.
- *   - Negative custom_line_items stay allowed (credits).
- */
-
 import { expect, test } from "bun:test";
 import {
 	BillingInterval,
@@ -332,7 +317,6 @@ test.concurrent(
 			},
 		});
 		if (!outcome.ok) throw new Error(outcome.message);
-		// Graduated: 5 packs at $10 + 2 packs at $5.
 		expect(outcome.response.preview.lines.map((line) => line.amount)).toEqual([
 			60, 60,
 		]);

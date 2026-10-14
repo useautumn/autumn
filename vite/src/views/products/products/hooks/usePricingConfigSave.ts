@@ -34,7 +34,6 @@ export const usePricingConfigSave = ({
 	);
 
 	const executeSave = async ({ config }: { config: AgentPricingConfig }) => {
-		// Push new products/features (existing are skipped server-side)
 		await axiosInstance.post("/v1/configs/push", {
 			features: config.features,
 			products: config.products,
@@ -59,7 +58,7 @@ export const usePricingConfigSave = ({
 					name: agentProduct.name,
 					is_add_on: agentProduct.is_add_on,
 					is_default: agentProduct.is_default,
-					group: agentProduct.group || null, // empty string → null
+					group: agentProduct.group || null,
 					items: agentProduct.items ?? [],
 					free_trial: agentProduct.free_trial ?? null,
 				} satisfies UpdateProductV2Params,

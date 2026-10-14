@@ -12,9 +12,6 @@ import { tryRedisOp } from "@/external/redis/utils/runRedisOp.js";
 import { activeStatusListSql, monthlyBasePriceExpr } from "./basePriceSql.js";
 import { buildSearchPredicates } from "./CusSearchService.js";
 
-/** Above this, per-customer_product probing degrades and the price-driven
- * join shape (global customer_prices scan) wins. Benchmarked in
- * experiments/explainSortByPrice.ts. */
 const LARGE_ORG_CUSTOMER_THRESHOLD = 20_000;
 const ORG_SIZE_CACHE_TTL_SECONDS = 6 * 60 * 60;
 
@@ -23,8 +20,6 @@ export type BasePriceSortRow = { internalId: string; total: number };
 const orgSizeCacheKey = ({ orgId, env }: { orgId: string; env: AppEnv }) =>
 	`basePriceSort:orgSize:${orgId}:${env}`;
 
-/** Capped count: walks the index only up to the threshold, so whale orgs pay
- * the same as mid-size ones. Verdict cached in misc Redis. */
 const resolveOrgIsLarge = async ({
 	db,
 	orgId,
@@ -80,8 +75,6 @@ const orgProductsSubquery = ({
 	WHERE prod.org_id = ${orgId} AND prod.env = ${env}
 `;
 
-/** Small orgs: org products → customer_products → prices. Per-product index
- * probes; never touches the global customer_prices table. */
 const cusProductDrivenTotalsCte = ({
 	orgId,
 	env,
@@ -99,8 +92,6 @@ const cusProductDrivenTotalsCte = ({
 	GROUP BY cp.internal_customer_id
 `;
 
-/** Large orgs: prices → customer_prices → status probe on customer_products.
- * Avoids probing customer_prices once per customer_product (~6% hit rate). */
 const priceDrivenTotalsCte = ({
 	orgId,
 	env,
@@ -119,11 +110,6 @@ const priceDrivenTotalsCte = ({
 	GROUP BY cp.internal_customer_id
 `;
 
-/**
- * Keyset resolver for "sort by base price": returns one page of internal ids
- * ordered by monthly base-price total. Customers without an active priced
- * product rank at 0 so filters and search still see the full org.
- */
 export const resolveInternalIdsByBasePriceSort = async ({
 	db,
 	orgId,

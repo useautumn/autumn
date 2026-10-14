@@ -64,7 +64,6 @@ describe("mutation record effects", () => {
 	});
 });
 
-/** The record as a newer writer logs it: its command carries fields this build does not know. */
 const fromNewerWriter = () => {
 	const logged = JSON.parse(JSON.stringify(record));
 	logged.command.futureField = true;

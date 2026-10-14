@@ -1,8 +1,3 @@
-/**
- * Allocated v1 (prorated) volume seats: a seat change invoices now, billing seats over the 3 included
- * at the net tier they land in. Net tiers 0-10 / 11+ are total-seat bands 0-13 / 14+.
- */
-
 import { expect, test } from "bun:test";
 import { OnDecrease, OnIncrease } from "@autumn/shared";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
@@ -120,7 +115,6 @@ test.concurrent(
 		});
 		const { customerId } = scenario;
 
-		// 2 seats over included in net band 1, full period: 2 × $10 = $20
 		await expectCustomerInvoiceCorrect({
 			customerId,
 			count: 2,
@@ -130,7 +124,6 @@ test.concurrent(
 		const midCycle = await advanceMidCycle(scenario);
 		await trackSeats({ scenario, value: 10 });
 
-		// Refund 2 × $10, charge 12 × $8 for the rest of the period: prorate($96 − $20)
 		const expectedUpgrade = await calculateProration({
 			customerId,
 			advancedTo: midCycle,
@@ -142,7 +135,6 @@ test.concurrent(
 			latestTotal: expectedUpgrade,
 		});
 
-		// 12 seats over included land in net band 2 (11+): 12 × $8 = $96
 		await expectRenewalBillsSeats({ scenario, seatsAmount: 96 });
 	},
 );
@@ -157,7 +149,6 @@ test.concurrent(
 		});
 		const { customerId } = scenario;
 
-		// 12 seats over included in net band 2, full period: 12 × $8 = $96
 		await expectCustomerInvoiceCorrect({
 			customerId,
 			count: 2,
@@ -167,7 +158,6 @@ test.concurrent(
 		const midCycle = await advanceMidCycle(scenario);
 		await trackSeats({ scenario, value: -8 });
 
-		// Refund 12 × $8, charge 4 × $10 for the rest of the period: −prorate($96 − $40)
 		const expectedRefund = await calculateProration({
 			customerId,
 			advancedTo: midCycle,
@@ -179,7 +169,6 @@ test.concurrent(
 			latestTotal: -expectedRefund,
 		});
 
-		// 4 seats over included land in net band 1 (0-10): 4 × $10 = $40
 		await expectRenewalBillsSeats({ scenario, seatsAmount: 40 });
 	},
 );
@@ -197,7 +186,6 @@ test.concurrent(
 		});
 		const { customerId } = scenario;
 
-		// 3 seats ≤ 3 included: only the $20 base invoice
 		await expectCustomerInvoiceCorrect({
 			customerId,
 			count: 1,
@@ -206,7 +194,6 @@ test.concurrent(
 
 		await trackSeats({ scenario, value: 11 });
 
-		// 11 seats over included land in net band 2 (11+): 11 × $8 + $2 flat = $90
 		await expectCustomerInvoiceCorrect({
 			customerId,
 			count: 2,

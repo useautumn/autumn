@@ -6,7 +6,6 @@ import {
 } from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 
-/** Insert a reward redemption. Throws on failure. */
 export const insertRedemption = async ({
 	db,
 	rewardRedemption,

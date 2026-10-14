@@ -18,8 +18,6 @@ import {
 } from "./CustomerExportService.js";
 import { findPublishedExportObject } from "./findPublishedExportObject.js";
 
-// Runless inline exports are considered abandoned after the configured task
-// duration plus a one-hour margin.
 const STALE_ACTIVE_EXPORT_AFTER_MS =
 	ms.seconds(CUSTOMER_EXPORT_MAX_DURATION_SECONDS) + ms.hours(1);
 
@@ -35,7 +33,6 @@ const isStaleActiveExport = ({
 	);
 };
 
-/** Unreachable run state means "maybe alive", so reclaim is skipped. */
 const isTriggerRunDead = async ({
 	triggerRunId,
 	logger,
@@ -61,7 +58,6 @@ const isTriggerRunDead = async ({
 	}
 };
 
-/** A run id makes the run state authoritative; age only decides for runless rows. */
 const isAbandonedExport = async ({
 	activeExport,
 	logger,
@@ -95,7 +91,6 @@ const resolveAbandonedExport = async ({
 		region,
 	});
 
-	// Unknown S3 state: failing the row now could discard a finished file.
 	if (published.status === "unknown") return false;
 
 	if (published.status === "published") {

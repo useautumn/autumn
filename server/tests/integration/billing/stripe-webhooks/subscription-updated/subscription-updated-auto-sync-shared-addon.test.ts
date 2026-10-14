@@ -1,6 +1,3 @@
-/** TDD contract: subscription-updated auto-sync must scope variant/add-on changes.
- * Adding an add-on should link it without mutating existing variant usage. */
-
 import { test } from "bun:test";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
 import { TestFeature } from "@tests/setup/v2Features";

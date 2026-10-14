@@ -1,11 +1,3 @@
-/**
- * Seeds the four ways a customer can look "customized" and prints two ops to
- * compare: the default (custom:false is injected) and the opt-in (custom:true).
- *
- * The trap worth seeing with your own eyes: a custom ENTITLEMENT definition does
- * not set customer_products.is_custom, so that customer is in scope for both ops
- * — it is spared by row matching, not by the filter.
- */
 import { test } from "bun:test";
 import { TestFeature } from "@tests/setup/v2Features";
 import { itemsV2 } from "@tests/utils/fixtures/itemsV2";

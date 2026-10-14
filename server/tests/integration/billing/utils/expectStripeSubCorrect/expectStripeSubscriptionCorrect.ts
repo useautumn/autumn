@@ -6,13 +6,6 @@ import { verify } from "@/internal/billing/v2/actions/verify/verify";
 import { CusService } from "@/internal/customers/CusService";
 import type { ExpectStripeSubOptions } from "./types";
 
-/**
- * Verifies that all Stripe subscriptions for a customer match the expected state
- * derived from their customer products, via the production `/billing.verify` action.
- * Handles multiple subscriptions (new_billing_subscription), inline entity-scoped
- * prices, schedules, and cancellation, plus test-only assertions (`status`,
- * `shouldBeCanceling`, `rewards`) that aren't part of the verify contract.
- */
 export const expectStripeSubscriptionCorrect = async ({
 	ctx,
 	customerId,

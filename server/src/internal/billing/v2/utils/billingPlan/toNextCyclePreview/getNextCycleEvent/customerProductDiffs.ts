@@ -22,7 +22,6 @@ export const uniqueCustomerProductsById = (
 	});
 };
 
-/** Treats same-group future products as replacing the active product. */
 export const getImplicitOutgoingCustomerProducts = ({
 	incomingCustomerProducts,
 	previousCustomerProducts,

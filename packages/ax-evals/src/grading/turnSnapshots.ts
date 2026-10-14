@@ -4,7 +4,6 @@ import { join } from "node:path";
 import { inspectWorkspaceConfig } from "./inspectConfig.ts";
 import type { InspectedConfig } from "./types/inspectedConfig.ts";
 
-/** The config file's text right now, or null if it doesn't exist yet. */
 export const captureConfigText = (workspaceDir: string): string | null => {
 	try {
 		return readFileSync(join(workspaceDir, "autumn.config.ts"), "utf8");
@@ -13,11 +12,6 @@ export const captureConfigText = (workspaceDir: string): string | null => {
 	}
 };
 
-/**
- * Inspects the config as it looked after each user turn, by replaying the
- * captured texts through the workspace. Identical texts are inspected once;
- * the file is restored to its final state afterwards.
- */
 export const inspectConfigSnapshots = async ({
 	workspaceDir,
 	configTexts,

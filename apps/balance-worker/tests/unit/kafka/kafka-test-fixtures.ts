@@ -111,7 +111,6 @@ import type {
 	PartitionRuntimeDependencies,
 } from "../../../src/runtime/types/partitionRuntime.js";
 
-// Keep Owen's scenarios intact while adapting construction to the new component boundaries.
 export function createKafkaOwnedPartitionGroup(
 	params: Omit<
 		WorkerPartitionsContext,
@@ -197,7 +196,6 @@ export function createKafkaOwnedPartitionGroup(
 	});
 }
 
-/** No ownership tail: a wait only ends when its signal does, so the group falls back to claiming for itself. */
 function awaitSignal<Result>({
 	signal,
 }: {

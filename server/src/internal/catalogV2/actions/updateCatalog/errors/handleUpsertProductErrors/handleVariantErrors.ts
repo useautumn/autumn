@@ -98,7 +98,6 @@ const rejectInvalidPropagationTarget: (args: { planId: string }) => never = ({
 	});
 };
 
-/** Declared variants[] + propagate.variants target guards. */
 export const handleVariantErrors = ({
 	upsert,
 	productStatesContext,
@@ -247,7 +246,6 @@ export const handleVariantErrors = ({
 		if (target.plan_id === upsert.row.planId) {
 			rejectInvalidPropagationTarget({ planId: target.plan_id });
 		}
-		// The pin names a row this same push writes, so there is nothing to follow yet.
 		if (
 			mintedPins.has(
 				variantPinKey({
@@ -267,9 +265,6 @@ export const handleVariantErrors = ({
 			});
 		}
 		if (!mintSource && !propagateTargetIsPinned({ target })) {
-			// A config pins nothing: an unpinned variant follows the row anchored
-			// to the edited base when there is one, and has nothing to follow yet
-			// when the variant is being created in this same push.
 			continue;
 		}
 		const targetRow = variantRowForPropagateTarget({
@@ -288,8 +283,6 @@ export const handleVariantErrors = ({
 				statusCode: StatusCodes.BAD_REQUEST,
 			});
 		}
-		// Historical = inactive AND below the latest version: the active row stays
-		// mintable under a draft above it, and a latest-but-inactive draft still mints.
 		if (
 			mintSource &&
 			!targetRow.active &&

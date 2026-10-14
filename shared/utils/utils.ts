@@ -27,14 +27,12 @@ export const keyToTitle = (
 		.replace(/\b\w/g, (char) => char.toUpperCase());
 };
 
-/** Fast hash using Bun's native hasher */
 export const hashString = (str: string): string => {
 	const hasher = new Bun.CryptoHasher("sha256");
 	hasher.update(str);
 	return hasher.digest("base64");
 };
 
-// Types for the result object with discriminated union
 type Success<T> = {
 	data: T;
 	error: null;
@@ -47,7 +45,6 @@ type Failure<E> = {
 
 type Result<T, E = Error> = Success<T> | Failure<E>;
 
-/** Wraps a promise and returns a discriminated union result */
 export async function tryCatch<T, E = Error>(
 	promise: Promise<T>,
 ): Promise<Result<T, E>> {
@@ -59,7 +56,6 @@ export async function tryCatch<T, E = Error>(
 	}
 }
 
-/** Sleep until a specific epoch timestamp (in milliseconds) */
 export function sleepUntil(epochMs: number): Promise<void> {
 	const now = Date.now();
 	const delay = epochMs - now;

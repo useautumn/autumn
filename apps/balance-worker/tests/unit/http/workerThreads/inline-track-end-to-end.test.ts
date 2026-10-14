@@ -48,7 +48,6 @@ async function freePort(): Promise<number> {
 	return port;
 }
 
-/** The worker's HTTP path through real threads: inline routes when `inline`, otherwise only the ordinary app. */
 async function serve({
 	worker,
 	inline,
@@ -103,7 +102,6 @@ async function serve({
 			}),
 		},
 	}).listen();
-	// Only a pool with inline routes holds replies, as in the worker's wiring.
 	const disconnect = inline
 		? connectHeldReplies({
 				positions: worker.positions,
@@ -147,7 +145,6 @@ async function pendingFor<T>(promise: Promise<T>, ms: number) {
 	return Promise.race([promise, Bun.sleep(ms).then(() => "pending" as const)]);
 }
 
-/** Releases appends as they arrive until `answer` settles, refusing the `failAppend`-th (0-based). */
 async function answerReleasing<T>({
 	worker,
 	answer,
@@ -176,7 +173,6 @@ async function answerReleasing<T>({
 	}
 }
 
-/** About 390 kB of batch body, under the inline cap: logged, it passes the writer's 800 kB append budget. */
 function bigBatch(prefix: string): TrackCommand[] {
 	return Array.from({ length: 90 }, (_, index) => ({
 		...trackCommand({ commandId: `${prefix}_${index}` }),
@@ -189,7 +185,6 @@ afterEach(async () => {
 	for (const cleanup of cleanups.splice(0).reverse()) await cleanup();
 });
 
-/** The worker's own inline counters say which path answered, and why one fell back. */
 async function setUp({
 	inline,
 	nextResetAt,

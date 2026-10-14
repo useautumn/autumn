@@ -1,7 +1,6 @@
 import type { AutoTopUpSuppressionContext } from "@autumn/cache";
 import type { autoTopupJob, JobPayload, SqsJobs } from "@autumn/sqs";
 
-/** All the job needs: it re-reads the customer and re-derives the decision itself. */
 export type AutoTopupJobPayload = JobPayload<typeof autoTopupJob>;
 
 export type AutoTopupDispatchContext = AutoTopUpSuppressionContext & {

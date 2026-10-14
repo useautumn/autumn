@@ -11,10 +11,6 @@ export interface FeatureSheetProps {
 	onOpenInBrowser: () => void;
 }
 
-/**
- * Feature detail sheet (right panel).
- * Shows feature details including type, event names, and credit schema.
- */
 export function FeatureSheet({
 	feature,
 	isFocused,
@@ -33,12 +29,10 @@ export function FeatureSheet({
 			minWidth={44}
 			height="100%"
 		>
-			{/* Feature Title */}
 			<Text bold color="white">
 				{feature.name}
 			</Text>
 
-			{/* Basic Info Section */}
 			<SheetSection title="Basic Info">
 				<Text>
 					<Text color="gray">ID: </Text>
@@ -66,7 +60,6 @@ export function FeatureSheet({
 				</Text>
 			</SheetSection>
 
-			{/* Display Section */}
 			{feature.display &&
 				(feature.display.singular || feature.display.plural) && (
 					<SheetSection title="Display">
@@ -85,7 +78,6 @@ export function FeatureSheet({
 					</SheetSection>
 				)}
 
-			{/* Event Names Section (for metered features) */}
 			{feature.type === "metered" &&
 				feature.event_names &&
 				feature.event_names.length > 0 && (
@@ -99,7 +91,6 @@ export function FeatureSheet({
 					</SheetSection>
 				)}
 
-			{/* Credit Schema Section (for credit_system features) */}
 			{feature.type === "credit_system" &&
 				feature.credit_schema &&
 				feature.credit_schema.length > 0 && (
@@ -129,10 +120,8 @@ export function FeatureSheet({
 					</SheetSection>
 				)}
 
-			{/* Spacer to push actions to bottom */}
 			<Box flexGrow={1} />
 
-			{/* Actions - pinned to bottom */}
 			<Box flexDirection="column">
 				{copiedFeedback ? (
 					<Text color="green">Copied!</Text>

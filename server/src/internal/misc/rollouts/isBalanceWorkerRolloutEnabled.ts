@@ -3,7 +3,6 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { resolveRolloutOrgId } from "./resolveRolloutOrgId.js";
 import { ACTIVE_ROLLOUT_ID, isRolloutEnabled } from "./rolloutUtils.js";
 
-/** Whether one customer's balances and billing plans go through the balance worker. */
 export const resolveBalanceWorkerRouting = ({
 	orgId,
 	customerId,

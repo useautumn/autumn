@@ -1,10 +1,7 @@
 import type { AxRunOutput } from "../../types/axRunOutput.ts";
 import type { Expectation } from "../types/expectation.ts";
 
-/** Behavioral graders for integration cases: the probe (the app's own
- * endpoints) and the oracle (the run org's state) are the ground truth. */
 export const integration = {
-	/** the agent-edited fixture still boots and serves /health */
 	appBoots: (): Expectation => ({
 		name: "app boots",
 		kind: "config",
@@ -20,7 +17,6 @@ export const integration = {
 		}),
 	}),
 
-	/** the Nth probe call (1-based) came back with the given status */
 	probeStatus: (
 		label: string,
 		{ call, status }: { call: number; status: number },
@@ -45,7 +41,6 @@ export const integration = {
 		},
 	}),
 
-	/** the Nth probe call (1-based) was refused — any 4xx, not a 5xx crash */
 	probeBlocked: (label: string, { call }: { call: number }): Expectation => ({
 		name: label,
 		kind: "config",
@@ -70,7 +65,6 @@ export const integration = {
 		},
 	}),
 
-	/** the oracle customer exists with the fixture's id (and email when set) */
 	customerCreated: ({ email }: { email?: string } = {}): Expectation => ({
 		name: "customer created in the org",
 		kind: "config",
@@ -93,7 +87,6 @@ export const integration = {
 		},
 	}),
 
-	/** the customer holds the plan in the org (oracle) */
 	planAttached: ({ planId }: { planId: string }): Expectation => {
 		const name = `on the ${planId} plan`;
 		return {
@@ -114,8 +107,6 @@ export const integration = {
 		};
 	},
 
-	/** the Nth probe call's JSON body contains a value matching the pattern
-	 * (searched recursively through strings) */
 	probeBodyHas: (
 		label: string,
 		{ call, pattern }: { call: number; pattern: RegExp },
@@ -141,8 +132,6 @@ export const integration = {
 		},
 	}),
 
-	/** the agent's code must NOT contain the pattern (checked on added lines
-	 * of the fixture diff) — e.g. no billing.attach for a default plan */
 	diffAvoids: (
 		label: string,
 		{ pattern }: { pattern: RegExp },
@@ -165,8 +154,6 @@ export const integration = {
 		},
 	}),
 
-	/** the agent's code MUST contain the pattern somewhere on the added lines
-	 * of the fixture diff — e.g. a lock/finalize flow rather than plain track */
 	diffRequires: (
 		label: string,
 		{ pattern }: { pattern: RegExp },
@@ -188,7 +175,6 @@ export const integration = {
 		},
 	}),
 
-	/** exactly these entity ids hold an active license for the plan */
 	licensesAssigned: ({
 		planId,
 		entityIds,
@@ -222,8 +208,6 @@ export const integration = {
 		};
 	},
 
-	/** the customer's effective spend_limits carry an entry for the feature
-	 * whose provided fields all match (fields left undefined are not checked) */
 	spendLimitSet: ({
 		featureId,
 		enabled,
@@ -285,8 +269,6 @@ export const integration = {
 		};
 	},
 
-	/** the customer's effective usage_alerts carry an enabled entry for the
-	 * feature at the given threshold (+type) */
 	usageAlertSet: ({
 		featureId,
 		threshold,
@@ -328,8 +310,6 @@ export const integration = {
 		};
 	},
 
-	/** the customer's effective usage_limits carry an enabled entry for the
-	 * feature whose provided fields all match (undefined fields not checked) */
 	usageLimitSet: ({
 		featureId,
 		limit,
@@ -374,8 +354,6 @@ export const integration = {
 		};
 	},
 
-	/** the customer's effective overage_allowed carries an entry for the
-	 * feature in the expected enabled state */
 	overageAllowedSet: ({
 		featureId,
 		enabled,
@@ -410,7 +388,6 @@ export const integration = {
 		};
 	},
 
-	/** the feature's recorded usage in the org matches */
 	usageRecorded: ({
 		featureId,
 		usage,
@@ -441,9 +418,6 @@ export const integration = {
 		};
 	},
 
-	/** the Nth probe call's JSON body must NOT match the pattern — catches
-	 * wrong-source answers (e.g. customer-level granted where a per-plan
-	 * breakdown figure belongs) */
 	probeBodyLacks: (
 		label: string,
 		{ call, pattern }: { call: number; pattern: RegExp },
@@ -478,8 +452,6 @@ type OracleCusPlan = {
 	status?: string;
 };
 
-/** Every listed plan is canceled or scheduled-to-cancel on the oracle
- * customer (canceled_at set, or the plan gone entirely). */
 export const plansCanceled = ({
 	planIds,
 }: {
@@ -490,7 +462,6 @@ export const plansCanceled = ({
 		name,
 		kind: "config",
 		score: (output: AxRunOutput) => {
-			// Customer shape differs by API version: subscriptions (V5) or products (V3).
 			const raw = output.oracle?.raw as
 				| { subscriptions?: OracleCusPlan[]; products?: OracleCusPlan[] }
 				| undefined;

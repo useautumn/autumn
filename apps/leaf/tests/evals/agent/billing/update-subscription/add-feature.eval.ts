@@ -16,8 +16,6 @@ type EvalMetadata = {
 
 const experimentName = "update-subscription-add-feature";
 
-// Customer already on Enterprise (a base-price plan); the ask is to add a
-// boolean feature to that subscription, not re-attach the plan.
 const setup = withCustomers({
 	setup: orgSetups.knowledgePlatform(),
 	customers: ({ customers, plans }) => ({

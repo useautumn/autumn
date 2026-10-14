@@ -36,7 +36,6 @@ const saveLane = async ({
 	cwd: string;
 	write: (text: string) => void;
 }): Promise<void> => {
-	// A previewed update can still become a create, so two slugs sharing a name can both return one.
 	const clashes: string[] = [];
 	const secrets = result.secrets.filter(({ id }) => {
 		const name = envWebhookSecretName({ env: lane.env, id });
@@ -73,18 +72,14 @@ const saveLane = async ({
 			cwd,
 		});
 	} catch (error) {
-		// Nothing was saved, so another env may still save under these names.
 		for (const [name, owner] of claimed)
 			if (owner === lane.env.key) claimed.delete(name);
 		throw error;
 	}
-	// A secret means the server created the webhook after all (its dashboard
-	// twin moved since the preview): only the rest were adopted.
 	const failed = new Set([
 		...result.errors.map(({ id }) => id),
 		...result.secrets.map(({ id }) => id),
 	]);
-	// An adopted webhook keeps its signing secret, so nothing is written for it.
 	const adopted = lane.preview.changes
 		.filter((change) => change.action === "adopt" && !failed.has(change.id))
 		.map(
@@ -117,8 +112,6 @@ export const applyWebhooks = async ({
 		webhooksHaveWork({ webhooks: lane.preview }),
 	);
 	const claimed = new Map<string, string>();
-	// Each env saves as soon as its sync answers, one save at a time, so every
-	// save sees the outcome of the one before it.
 	let saving: Promise<void> = Promise.resolve();
 	const results = await Promise.allSettled(
 		withWork.map(async (lane) => {

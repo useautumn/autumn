@@ -1,7 +1,6 @@
 import { CreateQueueCommand, SQSClient } from "@aws-sdk/client-sqs";
 import { ELASTICMQ_BASE_URL } from "../constants.js";
 
-// Test infrastructure only: provision inside each TW worker, never in production.
 const QUEUE_NAME = "autumn-balance-sync.fifo";
 export const BALANCE_SYNC_SQS_QUEUE_URL = `${ELASTICMQ_BASE_URL}/${QUEUE_NAME}`;
 
@@ -13,7 +12,6 @@ export const prepareBalanceSyncQueue = async (): Promise<void> => {
 		maxAttempts: 1,
 	});
 	try {
-		// Provision at startup so older warm snapshots work without rebuilding their image.
 		await sqs.send(
 			new CreateQueueCommand({
 				QueueName: QUEUE_NAME,

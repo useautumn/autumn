@@ -1,6 +1,5 @@
 import type { PlanAliasReplacement } from "@autumn/shared";
 
-/** `claimedId` is someone else's (or this plan's own) alias — undefined if free. */
 export const resolveAliasReplacement = ({
 	claimedId,
 	aliases,

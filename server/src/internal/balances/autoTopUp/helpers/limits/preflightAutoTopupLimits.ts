@@ -48,9 +48,6 @@ export const preflightAutoTopupLimits = async ({
 		now,
 	});
 
-	// Durable circuit breaker. Checked before any window arithmetic so that an
-	// expired window can never resurrect a customer whose card keeps declining.
-	// Invoice mode never charges the saved method, so a slow-method suspension doesn't apply.
 	const bypassesDelayedSuspension =
 		invoiceMode && state.suspended_reason === DELAYED_PAYMENT_SUSPENDED_REASON;
 

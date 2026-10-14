@@ -20,7 +20,6 @@ type OrgWithRelations = Organization & {
 	product_aliases?: { alias_id: string; canonical_plan_id: string }[];
 };
 
-/** An org with its env's features, plan aliases and Atoms; kept line-for-line with the server's OrgService.getWithFeatures. */
 export const getOrgWithFeatures = async ({
 	ctx,
 	orgId,

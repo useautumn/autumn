@@ -43,10 +43,6 @@ await mockModuleWithRestore(
 	}),
 );
 
-// Cache-busting query: the plain specifier may already be evaluated (initHono
-// imports it), and its module-level startup latch would then carry whatever
-// state earlier files left behind. A fresh instance evaluates under this
-// file's mocks no matter which files ran before.
 const { handleHealthCheck } = await import(
 	// @ts-expect-error - Bun test cache-busting import query isolates module mocks.
 	"@/honoUtils/handleHealthCheck.js?startupGate"

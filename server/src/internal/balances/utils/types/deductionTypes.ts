@@ -8,19 +8,13 @@ import type {
 import type { AllocationLuaGate } from "@/internal/balances/allocate/deduction/resolveAllocationLuaGate.js";
 import type { CreditRateCard } from "@/internal/features/creditSystemUtils.js";
 
-/** Behavior options for deduction */
 export type DeductionOptions = {
-	// "overflow": deduct the entire amount — no balance floor, bypasses usage
-	// windows — but monetary spend limits still clamp (unlike "allow").
 	overageBehaviour?: "cap" | "reject" | "allow" | "overflow";
-	/** The triggering event's properties; filtered usage limits only apply when these match. */
 	eventProperties?: EventProperties;
 	alterGrantedBalance?: boolean;
-	/** Customer usage (track, check-lock, finalize) moves allocation counters; admin balance edits never do. */
 	countsAllocations?: boolean;
 	customerEntitlementFilters?: CustomerEntitlementFilters;
 
-	// only for resolved
 	paidAllocatedV1?: boolean;
 
 	triggerAutoTopUp?: boolean;
@@ -29,14 +23,8 @@ export type DeductionOptions = {
 	skipAdditionalBalance?: boolean;
 };
 
-/**
- * Overage pass order (Lua/SQL walk it stably): 0 = the row's own overage (a
- * usage price or an overage control), 1 = a free allocated grant that may run
- * over, 2 = only the caller's overage behaviour lets it go negative.
- */
 export type OveragePriority = 0 | 1 | 2;
 
-/** Input for a single entitlement in the deduction script (Lua/SQL) */
 export type CustomerEntitlementDeduction = {
 	customer_entitlement_id: string;
 	credit_cost: number;
@@ -47,33 +35,23 @@ export type CustomerEntitlementDeduction = {
 	overage_priority: OveragePriority;
 	min_balance: number | undefined;
 	max_balance: number | undefined;
-	// Unlimited entitlements act as an infinite sink: usage_allowed with no
-	// balance clamps in either direction, so balance drifts negative as a
-	// usage counter and refunds can move it back up freely.
 	unlimited?: boolean;
 };
 
-/** Rollover with credit cost for deduction */
 export type RolloverDeduction = {
 	id: string;
 	credit_cost: number;
 	rate_card?: CreditRateCard;
 };
 
-/** Prepared input for executing a feature deduction */
 export type PreparedFeatureDeduction = {
 	customerEntitlements: FullCusEntWithFullCusProduct[];
 	customerEntitlementDeductions: CustomerEntitlementDeduction[];
 	spendLimitByFeatureId?: Record<string, DbSpendLimit>;
 	usageBasedCusEntIdsByFeatureId?: Record<string, string[]>;
-	// Resolved windowed usage-limit caps, enforced inside the deduction script.
 	usageWindowLimits?: UsageWindowLimit[];
-	// Distinct capped feature ids: their balance hashes carry the
-	// `_usage_windows` counter field, so their keys must be declared in KEYS[]
-	// even when no deduction entry references them.
 	usageWindowFeatureIds?: string[];
 	allocationGates?: Record<string, AllocationLuaGate>;
-	// rolloverIds: string[];
 	rollovers: RolloverDeduction[];
 	lock?: {
 		enabled: true;

@@ -1,22 +1,3 @@
-/**
- * TDD contract: version changes on license-backed plans ride the
- * EXPIRE+INSERT path — a new customer product row replaces the old one, and
- * the replanted pool ADOPTS the outgoing link + counters (transitions), so
- * seats never strand.
- *
- * Contract under test:
- *   Behaviors:
- *     - version bump + upsert_licenses (no assignments): new parent row,
- *       pool carries paid_quantity + link, definition is_custom at the new
- *       price, invoice delta = paid x price delta, Stripe correct
- *     - version bump only (no assignments): new parent row, pool carries
- *       paid_quantity + link on the catalog definition, no billing delta
- *     - version bump only WITH assignments: seats RELINK — same link_id,
- *       assignments anchor to the new active parent's pool, usage carried
- *   Side effects:
- *     - old parent row expired; pool's parent_customer_product_id moves;
- *       pool link_id is stable across the transition
- */
 import { expect, test } from "bun:test";
 import type {
 	ApiCustomerV3,
@@ -57,7 +38,6 @@ const setupVersionedScenario = async ({
 		attachedSeats: ATTACHED_SEATS,
 	});
 
-	// Mint parent v2 (item change) without touching the customer.
 	await scenario.autumnV2_3.post("/plans.update", {
 		plan_id: scenario.parent.id,
 		items: [itemsV2.monthlyWords({ included: 100 })],
@@ -112,7 +92,6 @@ const expectPoolReplantedCorrect = async ({
 		basePrice: { amount: seatPrice, interval: BillingInterval.Month },
 	});
 
-	// ── Expire+insert: NEW parent row, SAME adopted link ────────────────
 	expect(poolsBefore).toHaveLength(1);
 	expect(pool.parent_customer_product_id).not.toBe(
 		poolsBefore[0].parent_customer_product_id,
@@ -121,10 +100,6 @@ const expectPoolReplantedCorrect = async ({
 
 	await expectStripeSubscriptionCorrect({ ctx, customerId });
 };
-
-// ═══════════════════════════════════════════════════════════════════════════
-// CASE 1: version + upsert_licenses (no assignments)
-// ═══════════════════════════════════════════════════════════════════════════
 
 test.concurrent(
 	`${chalk.yellowBright("license-update-version: version + upsert replants pool on custom def")}`,
@@ -187,10 +162,6 @@ test.concurrent(
 	},
 );
 
-// ═══════════════════════════════════════════════════════════════════════════
-// CASE 2: version only (no assignments) — paid seats carry, no billing delta
-// ═══════════════════════════════════════════════════════════════════════════
-
 test.concurrent(
 	`${chalk.yellowBright("license-update-version: version-only carries paid seats, no delta")}`,
 	async () => {
@@ -229,16 +200,11 @@ test.concurrent(
 			seatPrice: CATALOG_SEAT_PRICE,
 		});
 
-		// Same seat price both sides — proration nets to zero, no new invoice.
 		const customerV3 =
 			await scenario.autumnV1.customers.get<ApiCustomerV3>(customerId);
 		await expectCustomerInvoiceCorrect({ customer: customerV3, count: 1 });
 	},
 );
-
-// ═══════════════════════════════════════════════════════════════════════════
-// CASE 3: version only WITH assignments — seats relink via link adoption
-// ═══════════════════════════════════════════════════════════════════════════
 
 test.concurrent(
 	`${chalk.yellowBright("license-update-version: assigned seats relink onto the new parent's pool")}`,
@@ -276,7 +242,6 @@ test.concurrent(
 			usage: 1,
 		});
 
-		// ── Seats anchor to the NEW active parent through the carried link ──
 		await expectAssignmentsAnchoredToParent({
 			ctx: scenario.ctx,
 			customerId,

@@ -10,7 +10,6 @@ import { handleSetupPreviewOrg } from "./handlers/handleSetupPreviewOrg.js";
 import { handleSyncPreviewPricing } from "./handlers/handleSyncPreviewPricing.js";
 import { OrganisationConfigurationSchema } from "./pricingAgentSchemas.js";
 
-// PostHog client singleton
 let phClient: PostHog | null = null;
 const getPostHogClient = (): PostHog | null => {
 	if (!process.env.POSTHOG_API_KEY) {
@@ -24,7 +23,6 @@ const getPostHogClient = (): PostHog | null => {
 	return phClient;
 };
 
-// ============ SYSTEM PROMPT ============
 const SYSTEM_PROMPT = `You are a helpful pricing configuration assistant for Autumn, a billing and entitlements platform.
 
 Your job is to help users set up their pricing model through natural conversation. You should:
@@ -108,7 +106,6 @@ This creates: $Y/month base price that includes 1 unit, then $Y per additional u
 
 - Keep responses very concise and friendly.`;
 
-// ============ HONO ROUTER ============
 export const pricingAgentRouter = new Hono<HonoEnv>();
 
 pricingAgentRouter.post("/chat", async (c) => {
@@ -130,7 +127,6 @@ pricingAgentRouter.post("/chat", async (c) => {
 		});
 	}
 
-	// Build system prompt, optionally including initial config context
 	let systemPrompt = SYSTEM_PROMPT;
 	if (
 		initialConfig &&
@@ -149,7 +145,6 @@ ${JSON.stringify(initialConfig, null, 2)}
 When the user asks to make changes, modify this existing configuration rather than starting from scratch. Build upon what they already have unless they explicitly ask to start fresh.`;
 	}
 
-	// Create Anthropic client and optionally wrap with PostHog tracing
 	const anthropicClient = createAnthropic({
 		apiKey: process.env.ANTHROPIC_API_KEY,
 	});
@@ -192,21 +187,8 @@ When the user asks to make changes, modify this existing configuration rather th
 	return result.toUIMessageStreamResponse();
 });
 
-// ============ PREVIEW ROUTES ============
-/**
- * POST /preview/setup
- * Creates or retrieves a persistent preview sandbox org for the current user
- */
 pricingAgentRouter.post("/preview/setup", ...handleSetupPreviewOrg);
 
-/**
- * POST /preview/sync
- * Syncs pricing configuration to the preview sandbox org
- */
 pricingAgentRouter.post("/preview/sync", ...handleSyncPreviewPricing);
 
-/**
- * POST /preview/checkout
- * Creates a checkout session against the preview sandbox org
- */
 pricingAgentRouter.post("/preview/checkout", ...handlePreviewCheckout);

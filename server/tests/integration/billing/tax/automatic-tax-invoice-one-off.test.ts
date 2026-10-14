@@ -1,10 +1,3 @@
-/**
- * `automatic_tax` on one-off product invoices, both v1 (handleOneOffFunction)
- * and v2 (v2 invoice helpers). Asserts invoice.total = 1100 ($10 + 10% AU GST)
- * — checking total (not just `enabled`) catches cases where the flag is set
- * but tax didn't actually land.
- */
-
 import { expect, test } from "bun:test";
 import chalk from "chalk";
 import { products } from "@tests/utils/fixtures/products.js";
@@ -22,7 +15,6 @@ test.concurrent(
 	`${chalk.yellowBright("automatic-tax-invoice-one-off (v1 legacy /v1/attach): $10 + AU GST = $11")}`,
 	async () => {
 		const customerId = "tax-one-off-v1";
-		// `oneOff` auto-adds a $10 base price.
 		const oneOffProd = products.oneOff({ id: "oneOff", items: [] });
 
 		const { ctx, customer } = await initScenario({

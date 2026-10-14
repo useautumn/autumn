@@ -6,13 +6,6 @@ import { judge } from "../../../src/grading/expectations/judgeExpectations.ts";
 import { org } from "../../../src/grading/expectations/orgExpectations.ts";
 import { initAxEval } from "../../../src/initAxEval.ts";
 
-/**
- * The push lane: the user wants the plan live, and this simulated user says
- * yes when asked. Passing = the plan is live in the org (the outcome), it
- * went through atmn, and nothing was applied in the opening turn — approval
- * can only arrive in a later reply. The failure this catches: pushing on the
- * first turn without showing the pricing, or never pushing at all.
- */
 export const previewApproval = defineCase({
 	name: "push-preview-approval",
 	prompt:

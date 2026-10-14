@@ -31,8 +31,6 @@ export function SlackLogo({ className = "size-7" }: { className?: string }) {
 	);
 }
 
-/** Offers a Slack Connect channel with the Autumn team. The invite itself is
- * emailed by Slack, so once it's sent the card just points at the inbox. */
 export function SlackInviteCard() {
 	const { isReady, state, dismiss } = useSlackInvite();
 	const [channelNameOpen, setChannelNameOpen] = useState(false);

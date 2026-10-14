@@ -5,13 +5,6 @@ import { initIntegrationEval } from "../../../src/initIntegrationEval.ts";
 import { aiWordsCatalog } from "../catalogs/aiWordsCatalog.ts";
 import { fixtureUser, integrateScenario } from "../integrateShared.ts";
 
-/**
- * LOCK flow: cost unknown until the run finishes. The agent must reserve
- * balance with check + lock, then balances.finalize with the actual cost —
- * plain check-then-track leaves failed runs charged and concurrent runs
- * double-spending. runGeneration is frozen product logic: cost = 2× the
- * prompt's word count, so a 50-word probe must record exactly 100.
- */
 const generateHelper = `/** The product's generation engine — cost is only known once it finishes.
  * Do not modify: billing wraps AROUND this. */
 export const runGeneration = async ({

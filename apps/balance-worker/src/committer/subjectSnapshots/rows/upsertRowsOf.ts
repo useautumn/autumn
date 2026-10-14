@@ -5,7 +5,6 @@ import {
 import { BALANCE_WORKER_SUBJECT_SNAPSHOT_VERSION } from "@autumn/env/balanceWorkerConstants";
 import type { SubjectSnapshotUpsert } from "@autumn/postgres";
 
-/** One row per state the writer vouched for, serialized once here; the partition is the call's, the offset the flush's last. */
 export const upsertRowsOf = ({
 	states,
 	baselineAt,

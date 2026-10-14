@@ -180,13 +180,11 @@ const runColumns = (now: number): ColumnDef<RunSummary>[] => [
 ];
 
 const ROW_PX = 40;
-/** Table header row plus the pagination footer, which every page that overflows shows. */
 const TABLE_CHROME_PX = 40 + 44;
 const LIVE_SHARE = 0.35;
 const LIVE_MIN_ROWS = 2;
 const SECTION_TAG_PX = 28;
 
-/** Height of an element, kept current as the viewport resizes. */
 const useHeight = () => {
 	const ref = useRef<HTMLDivElement>(null);
 	const [height, setHeight] = useState(0);
@@ -203,7 +201,6 @@ const useHeight = () => {
 const rowsThatFit = (px: number) =>
 	Math.max(1, Math.floor((px - TABLE_CHROME_PX) / ROW_PX));
 
-/** One cursor-paged runs query plus its footer; page size is what fits, so tables paginate instead of scrolling. */
 const usePagedRuns = (
 	filter: Omit<RunsFilter, "cursor" | "limit">,
 	pageSize: number,
@@ -218,7 +215,6 @@ const usePagedRuns = (
 		limit: pageSize,
 	});
 	const page = query.data;
-	// A page past the end (rows finished while you were on it) steps back instead of stranding an empty table.
 	const { canPrev, popCursor } = pager;
 	const pastTheEnd =
 		!!page && page.runs.length === 0 && canPrev && !query.isPlaceholderData;
@@ -249,7 +245,6 @@ export const RunsScreen = () => {
 	const status = params.get("status");
 	const finishedFilter: FinishedFilter =
 		FINISHED_FILTERS.find((f) => f === status) ?? "all";
-	// `?status=baselines` came from the replaced layout: honour it until the effect rewrites it to the switch's param.
 	const baselinesOnly =
 		params.get("baselines") === "1" || status === "baselines";
 	useEffect(() => {

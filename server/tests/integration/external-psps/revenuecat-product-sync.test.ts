@@ -1,14 +1,3 @@
-/**
- * Tests for the on-demand RevenueCat product sync (per-product layer).
- *
- * Run in-process against the real DB (shared ctx, for the mapping row) with RC
- * fetch mocked. Covered:
- *   - creates an RC product per app + UNIONS the minted store id into the mapping
- *   - sandbox does NOT call create_in_store; live DOES (with group name + duration)
- *   - existing manual mapping is preserved (union, never clobbered)
- *   - when the RC product already exists with a different name, the name is patched
- */
-
 import { afterEach, beforeEach, expect, mock, test } from "bun:test";
 import {
 	BillingInterval,
@@ -163,13 +152,11 @@ test(`${chalk.yellowBright("rc sync: creates a product per app, unions the minte
 			type: "subscription",
 			display_name: "Pro",
 		});
-		// real store apps: subscription params are NOT sent on create (RC rejects them)
 		expect((c.body as { subscription?: unknown }).subscription).toBeUndefined();
 	}
 	expect(fetchCalls.some((c) => c.url.includes("/create_in_store"))).toBe(
 		false,
 	);
-	// real stores own their prices — never call the MCP price tool
 	expect(
 		fetchCalls.some((c) => c.url.startsWith("https://mcp.revenuecat.ai")),
 	).toBe(false);
@@ -211,12 +198,10 @@ test(`${chalk.yellowBright("rc sync: test_store app gets subscription params on 
 		type: "subscription",
 		subscription: { duration: "P1M" },
 	});
-	// simulated store is already usable — no create_in_store even on live
 	expect(fetchCalls.some((c) => c.url.includes("/create_in_store"))).toBe(
 		false,
 	);
 
-	// test-store price IS set via the RC MCP server (create-product-prices)
 	const priceCall = fetchCalls.find((c) =>
 		c.url.startsWith("https://mcp.revenuecat.ai"),
 	);
@@ -345,7 +330,7 @@ test(`${chalk.yellowBright("rc sync: test_store plan with no base price (free) s
 		apps: [testStoreApp],
 		isLive: false,
 		projectId: "proj_test",
-		product: buildProduct(planId, "Free", undefined, 0), // amount 0 → no base price
+		product: buildProduct(planId, "Free", undefined, 0),
 	});
 
 	expect(
@@ -369,7 +354,6 @@ test(`${chalk.yellowBright("rc sync: MCP price failure is best-effort — sync s
 		product: buildProduct(planId, "Pro"),
 	});
 
-	// the MCP call was attempted, but a failure doesn't fail the sync
 	expect(
 		fetchCalls.some((c) => c.url.startsWith("https://mcp.revenuecat.ai")),
 	).toBe(true);

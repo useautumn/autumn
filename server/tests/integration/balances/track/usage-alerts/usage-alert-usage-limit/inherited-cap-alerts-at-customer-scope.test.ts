@@ -24,7 +24,6 @@ afterAll(async () => {
 	await webhook?.cleanup();
 });
 
-// ── B8: customer limit inherited by an entity → aggregate counter ───────────
 test(`${chalk.yellowBright("ul-alert7: customer cap inherited by an entity alerts at customer scope on entity tracks")}`, async () => {
 	const customerId = "ul-alert-entity-inherit-1";
 	const entity = await setupCustomer({

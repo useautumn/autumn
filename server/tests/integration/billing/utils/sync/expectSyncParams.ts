@@ -26,7 +26,6 @@ export type ExpectedPlan = {
 };
 
 export type ExpectedPhase = {
-	/** Skip the assertion when undefined (useful for future-dated phases where the timestamp is dynamic). */
 	starts_at?: number | "now";
 	plans: ExpectedPlan[];
 };
@@ -51,7 +50,6 @@ const expectPlanCorrect = ({
 	}
 
 	if (expected.customize === undefined) {
-		// not asserted
 	} else if (expected.customize === null) {
 		expect(plan.customize).toBeUndefined();
 	} else {
@@ -80,13 +78,6 @@ const expectPlanCorrect = ({
 	}
 };
 
-/**
- * Verify a `SyncParamsV1` matches expected identity + phases + plans shape.
- *
- * Each `expected.phases[i]` asserts `starts_at` and per-plan fields. Fields
- * that are `undefined` on the expected object are skipped. Pass
- * `customize: null` to assert no customize was set.
- */
 export const expectSyncParamsCorrect = ({
 	params,
 	customer_id,

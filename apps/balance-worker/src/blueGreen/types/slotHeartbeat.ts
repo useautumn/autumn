@@ -1,7 +1,6 @@
 import { z } from "zod/v4";
 import { ColdStartAckSchema } from "../../coldStart/types/coldStartAck.js";
 
-/** One object per task; the dashboard lists the fleet's prefix and sums the fresh ones. */
 export const SLOT_HEARTBEAT_KEY_PREFIX =
 	"admin/blue-green-heartbeats/balance-workers";
 
@@ -22,10 +21,8 @@ export const SlotProbeResultSchema = z.object({
 });
 export type SlotProbeResult = z.infer<typeof SlotProbeResultSchema>;
 
-/** The server's readiness heartbeat plus what a swap needs to know about partitions. */
 export const SlotHeartbeatSchema = z.object({
 	serviceName: z.literal("balance-workers"),
-	/** sha256(identity.serviceArn) first 8 hex; the dashboard groups by the ARN itself. */
 	fleetId: z.string(),
 	deployment: z.string(),
 	endpoint: z.string(),
@@ -35,7 +32,6 @@ export const SlotHeartbeatSchema = z.object({
 		serviceArn: z.string().nullable(),
 		imageSha: z.string().nullable(),
 	}),
-	/** The gate's answer at write time; false means ready announcements are held. */
 	declaredActive: z.boolean(),
 	gate: z.enum(["blue-green-disabled", "no-active-record", "active", "idle"]),
 	storeHealthy: z.boolean(),
@@ -45,10 +41,8 @@ export const SlotHeartbeatSchema = z.object({
 		postgres: SlotProbeResultSchema,
 	}),
 	partitions: z.object({
-		/** Prepared and holding: the dashboard's `prepared == total` preflight. */
 		prepared: z.number(),
 		ready: z.number(),
-		/** Named owner, fencing through serving: the swap's "taken over by the target" count. */
 		admitted: z.number(),
 		total: z.number(),
 		byPartition: z.array(
@@ -59,7 +53,6 @@ export const SlotHeartbeatSchema = z.object({
 			}),
 		),
 	}),
-	/** Absent where cold starts are not honoured; null until this worker handles its first request. */
 	coldStart: ColdStartAckSchema.nullable().optional(),
 	startedAt: z.string(),
 	writtenAt: z.string(),

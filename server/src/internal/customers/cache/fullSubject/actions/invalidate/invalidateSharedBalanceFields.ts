@@ -15,20 +15,8 @@ import type { CachedFullSubject } from "../../fullSubjectCacheModel.js";
 import { roundSubjectBalance } from "../../roundCacheBalance.js";
 import { sanitizeCachedSubjectBalance } from "../../sanitize/index.js";
 
-// Kill switch: set to false to force the legacy blind-HDEL path everywhere,
-// ignoring callers' flushBalances opt-in.
 const FLUSH_BALANCES_ON_INVALIDATION = true;
 
-/**
- * Destructively reads (atomic read + HDEL) the shared balance hash fields for
- * a customer during structural invalidation, then flushes the values to
- * Postgres — an invalidation racing an un-synced deduction must not lose it.
- * No-op when the subject view is already gone — paired with HSET-on-write
- * semantics in setCachedFullSubject, stale fields are overwritten on the next
- * populate.
- *
- * Must be called BEFORE the subject view key is deleted.
- */
 export const invalidateSharedBalanceFields = async ({
 	ctx,
 	customerId,
@@ -38,9 +26,6 @@ export const invalidateSharedBalanceFields = async ({
 	ctx: AutumnContext;
 	customerId: string;
 	redisV2?: Redis;
-	/** Flush cached balances to Postgres before deleting them. Opt-in: only
-	 *  safe when the caller has NOT just written balances to Postgres directly
-	 *  (the cached balances must still be the source of truth). */
 	flushBalances?: boolean;
 }): Promise<void> => {
 	const { org, env } = ctx;
@@ -59,7 +44,6 @@ export const invalidateSharedBalanceFields = async ({
 	await deleteFieldsFromManifest({ ctx, customerId, cachedRaw, redisV2 });
 };
 
-/** The worker owns a routed customer's rows: whatever Redis still holds for them predates the flip and is only dropped. */
 const flushIsSafe = ({
 	ctx,
 	customerId,
@@ -104,10 +88,6 @@ const manifestToBalanceFieldTargets = ({
 	const { customerEntitlementIdsByFeatureId } = manifest;
 	if (!customerEntitlementIdsByFeatureId) return null;
 
-	// Capped features may have no entitlements, so their hashes only appear in
-	// usageWindowFeatureIds; union both so `_usage_windows` is covered too.
-	// Raw blob, no sanitize walker: cjson re-encodes empty arrays as {}, so
-	// array fields must be Array.isArray-guarded before spreading.
 	const usageWindowFeatureIds = Array.isArray(manifest.usageWindowFeatureIds)
 		? manifest.usageWindowFeatureIds
 		: [];
@@ -161,8 +141,6 @@ async function getDelFieldsFromManifest({
 	if (!targets) return;
 	const { balanceKeys, customerEntitlementIdsByKey } = targets;
 
-	// `_usage_windows` is read+deleted alongside the cusEnt fields (last field
-	// per key) so window counters are flushed too, not just deleted.
 	const fieldsByKey = customerEntitlementIdsByKey.map((cusEntIds) => [
 		...cusEntIds,
 		USAGE_WINDOWS_FIELD,
@@ -213,7 +191,6 @@ async function getDelFieldsFromManifest({
 	});
 }
 
-/** Legacy blind HDEL, kept as the FLUSH_BALANCES_ON_INVALIDATION=false path. */
 async function deleteFieldsFromManifest({
 	ctx,
 	customerId,
@@ -286,8 +263,6 @@ function parseGetDelResult({
 
 	for (let keyIndex = 0; keyIndex < fieldsByKey.length; keyIndex++) {
 		const rawValues = valuesByKey[keyIndex];
-		// cjson encodes empty Lua tables as {}, so each per-key entry must be
-		// Array.isArray-guarded.
 		const values = Array.isArray(rawValues) ? (rawValues as unknown[]) : [];
 		const fields = fieldsByKey[keyIndex];
 
@@ -298,8 +273,6 @@ function parseGetDelResult({
 			const isUsageWindowsField = fieldIndex === fields.length - 1;
 			try {
 				if (isUsageWindowsField) {
-					// Empty/non-array snapshots mean no Redis rows to upsert; usage-window
-					// expiry and rolling are handled outside sync-back.
 					const parsedWindows = JSON.parse(value) as UsageWindow[];
 					usageWindowUpdates.push({
 						internal_customer_id: targets.internalCustomerId,
@@ -307,8 +280,6 @@ function parseGetDelResult({
 						usage_windows: Array.isArray(parsedWindows) ? parsedWindows : [],
 					});
 				} else {
-					// Same parse path as getCachedFeatureBalances: cjson-written values
-					// need sanitizing (e.g. empty arrays re-encoded as {}).
 					const parsedBalance = JSON.parse(value) as SubjectBalance;
 					subjectBalances.push(
 						roundSubjectBalance({

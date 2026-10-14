@@ -19,12 +19,6 @@ import type { TestContext } from "@tests/utils/testInitUtils/createTestContext";
 import chalk from "chalk";
 import type Stripe from "stripe";
 
-/**
- * Revert trial × billing.update QA scenarios. Each leaves a customer on Pro (paused,
- * paying on Stripe) with an Enterprise on_end: "revert" trial riding the same subscription.
- * Expect the shared Stripe subscription to stay `active` with Pro's items after every update.
- */
-
 const logSharedSubscription = async ({
 	ctx,
 	label,

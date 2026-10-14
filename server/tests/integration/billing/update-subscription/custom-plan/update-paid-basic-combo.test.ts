@@ -9,11 +9,6 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// PAID-TO-PAID: COMBINATION PRICE + FEATURE UPDATES
-// ═══════════════════════════════════════════════════════════════════════════════
-
-// 9.1 Increase price + add feature
 test.concurrent(
 	`${chalk.yellowBright("p2p: increase price + add feature")}`,
 	async () => {
@@ -30,7 +25,6 @@ test.concurrent(
 			actions: [s.attach({ productId: "pro" })],
 		});
 
-		// Track some usage
 		const messagesUsage = 60;
 		await autumnV1.track(
 			{
@@ -41,7 +35,6 @@ test.concurrent(
 			{ timeout: 2000 },
 		);
 
-		// Increase price AND add dashboard
 		const newPriceItem = items.monthlyPrice({ price: 30 });
 		const dashboardItem = items.dashboard();
 
@@ -53,14 +46,12 @@ test.concurrent(
 
 		const preview = await autumnV1.subscriptions.previewUpdate(updateParams);
 
-		// Should charge $10 ($30 - $20), dashboard is free boolean
 		expect(preview.total).toBe(10);
 
 		await autumnV1.subscriptions.update(updateParams);
 
 		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-		// Messages usage preserved
 		await expectCustomerFeatureCorrect({
 			autumn: autumnV1,
 			customerId,
@@ -70,10 +61,8 @@ test.concurrent(
 			usage: messagesUsage,
 		});
 
-		// Dashboard added
 		expect(customer.features[TestFeature.Dashboard]).toBeDefined();
 
-		// Verify invoice matches preview
 		await expectCustomerInvoiceCorrect({
 			customer,
 			count: 2,
@@ -89,7 +78,6 @@ test.concurrent(
 	},
 );
 
-// 9.2 Decrease price + remove feature
 test.concurrent(
 	`${chalk.yellowBright("p2p: decrease price + remove feature")}`,
 	async () => {
@@ -110,7 +98,6 @@ test.concurrent(
 			actions: [s.attach({ productId: "pro" })],
 		});
 
-		// Track some usage
 		const messagesUsage = 40;
 		await autumnV1.track(
 			{
@@ -121,7 +108,6 @@ test.concurrent(
 			{ timeout: 2000 },
 		);
 
-		// Decrease price AND remove dashboard
 		const newPriceItem = items.monthlyPrice({ price: 20 });
 
 		const updateParams = {
@@ -132,14 +118,12 @@ test.concurrent(
 
 		const preview = await autumnV1.subscriptions.previewUpdate(updateParams);
 
-		// Should credit $10 ($20 - $30), dashboard is free boolean
 		expect(preview.total).toBe(-10);
 
 		await autumnV1.subscriptions.update(updateParams);
 
 		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-		// Messages usage preserved
 		await expectCustomerFeatureCorrect({
 			autumn: autumnV1,
 			customerId,
@@ -149,10 +133,8 @@ test.concurrent(
 			usage: messagesUsage,
 		});
 
-		// Dashboard removed
 		expect(customer.features[TestFeature.Dashboard]).toBeUndefined();
 
-		// Verify invoice matches preview
 		await expectCustomerInvoiceCorrect({
 			customer,
 			count: 2,

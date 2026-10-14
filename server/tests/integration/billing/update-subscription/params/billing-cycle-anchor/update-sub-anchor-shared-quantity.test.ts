@@ -10,8 +10,6 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import { addDays, addMonths } from "date-fns";
 import { CusService } from "@/internal/customers/CusService.js";
 
-// Contract: shared anchor propagation preserves target quantity writes and sibling quantities.
-// Immediate and future quantity/anchor combinations fail on the existing guard before implementation.
 for (const immediate of [true, false]) {
 	test.concurrent(
 		`anchor shared quantities: ${immediate ? "now" : "future"}`,

@@ -48,7 +48,6 @@ export const setupInvoiceFinalizedContext = async ({
 }): Promise<InvoiceFinalizedContext | null> => {
 	const { stripeCli, fullCustomer, logger } = ctx;
 
-	// 1. Get expanded invoice
 	const stripeInvoice = await getStripeInvoice({
 		stripeClient: stripeCli,
 		invoiceId: event.data.object.id!,
@@ -72,14 +71,11 @@ export const setupInvoiceFinalizedContext = async ({
 		});
 	}
 
-	// 3. Vercel invoices submit out-of-band before the cus_product gate.
 	const vercelInvoice = isVercelInvoice({ stripeInvoice, stripeSubscription });
 	if (vercelInvoice) {
 		await processVercelInvoice({ ctx, stripeInvoice, stripeSubscription });
 	}
 
-	// Standalone invoices (one-off plans, invoice-mode) have no subscription but
-	// still need line items reconciled and the org notified.
 	if (!stripeSubscriptionId || !stripeSubscription) {
 		return {
 			stripeInvoice,
@@ -91,7 +87,6 @@ export const setupInvoiceFinalizedContext = async ({
 		};
 	}
 
-	// 4. Get customer products by subscription ID
 	const currentCustomerProducts = fullCustomer.customer_products.filter((cp) =>
 		isCustomerProductOnStripeSubscription({
 			customerProduct: cp,
@@ -113,7 +108,6 @@ export const setupInvoiceFinalizedContext = async ({
 		return null;
 	}
 
-	// 7. Update fullCustomer.customer_products with fresh data
 	fullCustomer.customer_products = customerProducts;
 
 	return {

@@ -93,7 +93,6 @@ describe("subjectRowsSql: pooled balances", () => {
 			}),
 		);
 
-		// The pool is a customer-level row: only the customer's own load carries it, an entity command reads the customer's copy.
 		expect(sql).toContain("pooled_customer_entitlements AS (");
 		expect(sql).toContain("WHERE FALSE\n\t\t\tAND ce.internal_customer_id");
 		expect(
@@ -112,18 +111,15 @@ describe("subjectRowsSql: pooled balances", () => {
 		);
 		expect(sql).toContain("AND ce.pooled_balance_id IS NOT NULL");
 		expect(sql).toContain("AND ce.pooled_contribution_id IS NULL");
-		// A license pool is served while its parent is live, like a seat.
 		expect(sql).toContain(
 			"pb.customer_license_link_id IS NULL\n\t\t\t\tOR EXISTS (",
 		);
 		expect(sql).toContain("WHERE cl.link_id = pb.customer_license_link_id");
 		expect(sql).toContain("SELECT * FROM pooled_customer_entitlements");
 		expect(sql).toContain("'pooled_balances', COALESCE(");
-		// A contributing source is a product row like any other: it is held at balance 0 so a plan can zero or release it.
 		expect(sql).toContain(
 			"JOIN subject_customer_products cp ON cp.id = ce.customer_product_id\n\t\tWHERE ce.pooled_balance_id IS NULL\n\t),",
 		);
-		// Product and loose rows still leave every pooled row out.
 		expect(sql.match(/ce\.pooled_balance_id IS NULL/g)).toHaveLength(2);
 	});
 });
@@ -147,7 +143,6 @@ describe("subjectRowsSql: seats", () => {
 		);
 		expect(sql).toContain("WHERE cl.link_id = cp.customer_license_link_id");
 		expect(sql).toContain("AND parent.status = ANY(string_to_array($10, ','))");
-		// A spare seat has no holder to draw from it, live parent or not.
 		expect(sql).toContain(
 			"cp.internal_entity_id IS NOT NULL\n\t\t\t\t\tAND EXISTS (",
 		);
@@ -167,7 +162,6 @@ describe("subjectRowsSql: limits", () => {
 				asOfTimestampMs: 1_700_000_000_000,
 			}),
 		);
-		// Legacy's rank under the cap: priced before free, main before add-on, newest first.
 		expect(sql).toContain(
 			"EXISTS (SELECT 1 FROM customer_prices cpr WHERE cpr.customer_product_id = cp.id) DESC,\n\t\t\tprod.is_add_on ASC,\n\t\t\tcp.created_at DESC\n\t\tLIMIT $",
 		);

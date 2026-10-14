@@ -1,5 +1,3 @@
-/** A coupon may not cover part of a shared Stripe product. */
-
 import { expect, test } from "bun:test";
 import {
 	BillingInterval,

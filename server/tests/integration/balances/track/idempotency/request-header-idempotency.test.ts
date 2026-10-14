@@ -1,15 +1,3 @@
-/**
- * Request-header (`Idempotency-Key`) idempotency.
- *
- * Contract under test:
- *   - A 2xx response keeps the key → an identical retry gets 409
- *     duplicate_idempotency_key.
- *   - A 4xx/5xx response (except 409) releases the key → the retry re-runs
- *     and returns the original outcome.
- *   - Applies to every apiRouter route (asserted middleware-level and
- *     end-to-end through /track).
- */
-
 import { expect, test } from "bun:test";
 import { ErrCode } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
@@ -82,8 +70,6 @@ test.concurrent(
 		expect(second.status).toBe(500);
 	},
 );
-
-// ── End-to-end through /track ────────────────────────────────────────────────
 
 test.concurrent(
 	`${chalk.yellowBright("header idempotency e2e: successful /track keeps the key, retry gets 409")}`,

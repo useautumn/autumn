@@ -1,8 +1,5 @@
 import type Stripe from "stripe";
 
-/**
- * Remove all payment methods from a Stripe customer.
- */
 export const removeAllPaymentMethods = async ({
 	stripeClient,
 	stripeCustomerId,

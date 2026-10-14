@@ -15,12 +15,10 @@ import {
 	topic,
 } from "./kafka-test-fixtures.js";
 
-/** A producer for batches and a consumer-group committer for offsets, sharing one lifecycle so their order is visible. */
 function createFakes({
 	refuseGroupCommit,
 	holdFirstGroupCommit,
 }: {
-	/** Decides per attempt whether the group commit of `offset` is refused. */
 	refuseGroupCommit?(params: { offset: string; attempt: number }): boolean;
 	holdFirstGroupCommit?: Promise<void>;
 } = {}) {
@@ -64,7 +62,6 @@ function createFakes({
 	return { producer, commandOffsets, lifecycle };
 }
 
-/** A clock the tests move by hand: nothing scheduled runs until it is due. */
 function createClock() {
 	let now = 0;
 	const due: { at: number; run: () => void; cancelled: boolean }[] = [];

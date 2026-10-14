@@ -19,11 +19,6 @@ import { lineItemToPreviewLineItem } from "../../lineItems/lineItemToPreviewLine
 import { lineItemToPreviewUsageLineItem } from "../../lineItems/lineItemToPreviewUsageLineItem";
 
 export type NextCycleLineItemOptions = {
-	/**
-	 * Bill the usage line items instead of listing them as amount-less
-	 * placeholders. Attach-style previews can't know future usage; an invoice
-	 * preview projects the usage accrued so far onto the closing cycle.
-	 */
 	chargeUsageLineItems?: boolean;
 };
 
@@ -158,8 +153,6 @@ export const billingPlanToNextCycleLineItems = ({
 		lineItems: nextCycleAutumnLineItems,
 	});
 
-	// Folded in before the discount pass so an amount-off coupon spreads across
-	// usage and recurring charges together, as it will on the real invoice.
 	if (options.chargeUsageLineItems) {
 		const { billableLineItems } = partitionSkippedOverageLineItems({
 			fullCustomer: billingContext.fullCustomer,
@@ -177,7 +170,6 @@ export const billingPlanToNextCycleLineItems = ({
 	);
 
 	if (billingContext.stripeDiscounts?.length) {
-		// Mirrors buildStripeInvoiceAction's condition for creating an invoice now.
 		const hasImmediateInvoice = (autumnBillingPlan.lineItems ?? []).some(
 			(lineItem) => lineItem.chargeImmediately && lineItem.amount !== 0,
 		);

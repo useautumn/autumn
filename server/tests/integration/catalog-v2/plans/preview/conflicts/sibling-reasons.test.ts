@@ -1,13 +1,3 @@
-/**
- * catalogV2.preview_update — sibling_versions[].conflicts reasons beyond
- * included-amount drift. Detector rules, on the unselected sibling.
- *
- * Contract:
- *   - v1 yearly messages vs v2 monthly bump → different_interval
- *   - v1 $200/year vs v2 $20→$25/mo → base_price_divergence (no item_filter)
- *   - edit only words; v1 diverged on messages → no conflicts
- */
-
 import { test } from "bun:test";
 import { BillingInterval, ResetInterval } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";

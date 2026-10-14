@@ -27,8 +27,6 @@ type BalanceExpectation = {
 	previousRemaining: number;
 };
 
-/** One customer's filter-mode stamp: live from-definition on item_changes
- * and billing.updated, plus remaining after the grant delta when replacing. */
 export const expectFilterLiveDefinitionCorrect = async ({
 	ctx,
 	events,

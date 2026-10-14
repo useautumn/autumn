@@ -8,7 +8,6 @@ import { findShadowAtomRecords } from "../shadowAtomStorage.js";
 import { startShadowAtomWatch } from "../startShadowAtomWatch.js";
 import { withShadowAtomLock } from "../withShadowAtomLock.js";
 
-/** Resumes our shadow Atom's failed deploy from the step that failed, and watches it again. */
 export const retryShadowAtom = ({
 	ctx,
 }: {

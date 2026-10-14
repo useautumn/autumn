@@ -225,7 +225,6 @@ const tiersEqual = ({
 	});
 };
 
-// Tax behavior is intentionally not compared: Autumn doesn't model tax on prices.
 export const stripePriceShapesEqual = (
 	left: StripePriceShape,
 	right: StripePriceShape,

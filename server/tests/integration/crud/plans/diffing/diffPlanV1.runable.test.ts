@@ -18,7 +18,6 @@ import {
 } from "./diffPlanV1.runable.fixtures.js";
 import { normalizePlan } from "./utils/normalizePlan.js";
 
-// --- test matrix ---
 const groups = [
 	{ name: "credit_pack", base: creditPackBase, variants: creditPackVariants },
 	{ name: "plus", base: plusBase, variants: plusVariants },

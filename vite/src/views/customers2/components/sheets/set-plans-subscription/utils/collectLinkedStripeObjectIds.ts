@@ -10,8 +10,6 @@ export const isLiveCustomerProduct = (customerProduct: FullCusProduct) =>
 
 const uniqueValues = (values: string[]) => [...new Set(values)];
 
-/** Stripe subscriptions Autumn bills live plans on, plus schedules none of
- * those plans' subscriptions own (not-yet-started schedules). */
 export const collectLinkedStripeObjectIds = ({
 	customerProducts,
 }: {

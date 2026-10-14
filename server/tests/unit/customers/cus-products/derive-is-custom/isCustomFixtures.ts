@@ -55,7 +55,6 @@ export const sso = features.create({
 
 export const allFeatures = [credits, seats, workspaces, sso];
 
-/** One plan item: an entitlement and, when billed, its price. */
 export type PlanItemRows = {
 	entitlement: EntitlementWithFeature;
 	price?: Price;
@@ -158,7 +157,6 @@ const usagePriceRow = ({
 
 const flatTier = (amount: number): UsageTier[] => [{ to: Infinite, amount }];
 
-/** Free metered grant that resets on an interval. */
 export const includedItem = ({
 	feature = credits,
 	allowance = 200,
@@ -267,7 +265,6 @@ const pricedItem = ({
 	}),
 });
 
-/** Prepaid consumable: credits bought up front each cycle. */
 export const prepaidItem = (params: PricedItemParams = {}) =>
 	pricedItem({
 		billWhen: BillWhen.InAdvance,
@@ -275,7 +272,6 @@ export const prepaidItem = (params: PricedItemParams = {}) =>
 		params,
 	});
 
-/** Prepaid non-consumable: seats bought up front, kept across cycles. */
 export const prepaidSeatsItem = (params: PricedItemParams = {}) =>
 	pricedItem({
 		billWhen: BillWhen.InAdvance,
@@ -283,7 +279,6 @@ export const prepaidSeatsItem = (params: PricedItemParams = {}) =>
 		params,
 	});
 
-/** Postpaid consumable: overage billed in arrears. */
 export const payPerUseItem = (params: PricedItemParams = {}) =>
 	pricedItem({
 		billWhen: BillWhen.EndOfPeriod,
@@ -291,7 +286,6 @@ export const payPerUseItem = (params: PricedItemParams = {}) =>
 		params,
 	});
 
-/** Postpaid non-consumable: allocated seats, prorated as they change. */
 export const allocatedSeatsItem = (params: PricedItemParams = {}) =>
 	pricedItem({
 		billWhen: BillWhen.EndOfPeriod,
@@ -333,7 +327,6 @@ export const basePrice = ({
 		},
 	}) as Price;
 
-/** Same terms on a fresh row, as an import or a customize copy would mint. */
 export const asCustomRow = <T extends PlanItemRows | Price>(rows: T): T => {
 	const copyEntitlement = (entitlement: Entitlement) => ({
 		...entitlement,
@@ -420,7 +413,6 @@ export const catalogPlan = (shape: PlanShape = {}): FullProduct =>
 		licenses: shape.licenses ?? [],
 	}) as unknown as FullProduct;
 
-/** Runtime state (balances, quantities, rollovers) that must never affect the flag. */
 type CustomerRuntimeState = {
 	balance?: number;
 	options?: FeatureOptions[];

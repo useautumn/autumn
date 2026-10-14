@@ -15,20 +15,8 @@ import { billingLineItemsToDbEntities } from "./billingLineItemsToDbEntities";
 import type { StripeLineItemGroup } from "./groupStripeLineItems";
 import { stripeDiscountsToDbDiscounts } from "./stripeDiscountsToDbDiscounts";
 
-/** Map of subscription_item_id -> metadata */
 type SubscriptionItemMetadataMap = Map<string, Stripe.Metadata>;
 
-/**
- * Converts a group of Stripe line items to Autumn DB invoice line items.
- *
- * For single-item groups: matches to Autumn LineItem(s), creates one DB row.
- * For multi-item groups (tiered): matches first item to Autumn LineItem(s),
- * applies context to all items in group.
- *
- * Multi-entity support: One Stripe line item can match multiple Autumn line items
- * (e.g., when 2 entities each have a $20 base price merged into one $40 Stripe item).
- * All matched customer_product_ids and customer_entitlement_ids are collected into arrays.
- */
 export const stripeLineItemGroupToDbLineItems = ({
 	group,
 	stripeDiscounts,
@@ -47,10 +35,8 @@ export const stripeLineItemGroupToDbLineItems = ({
 	dbLineItems: InsertDbInvoiceLineItem[];
 	matchedAutumnLineItems: LineItem[];
 } => {
-	// Use first line item as representative for matching
 	const representativeLineItem = group.lineItems[0];
 
-	// Get subscription item metadata if available
 	const subItemId =
 		representativeLineItem.parent?.subscription_item_details?.subscription_item;
 	const subItemMetadata =
@@ -58,24 +44,19 @@ export const stripeLineItemGroupToDbLineItems = ({
 			? subscriptionItemMetadata?.get(subItemId)
 			: undefined;
 
-	// Find ALL matching Autumn LineItems (multi-entity support)
 	const matchedLineItems = filterBillingLineItemsByStripeLineItem({
 		stripeLineItem: representativeLineItem,
 		autumnLineItems,
 		subscriptionItemMetadata: subItemMetadata,
 	});
 
-	// Determine stripe_subscription_item_id for grouping
 	const stripeSubscriptionItemId =
 		group.groupType === "subscription_item" ? group.groupKey : null;
 
-	// Check if this is a multi-item group (tiered pricing)
 	const isMultiItemGroup = group.lineItems.length > 1;
 
-	// Convert each Stripe line item to DB row
 	const dbLineItems = group.lineItems.map((stripeLineItem) => {
 		if (matchedLineItems.length > 0) {
-			// Matched: inherit Autumn context, but use Stripe amounts/quantities
 			return mergeStripeAndBillingLineItems({
 				stripeLineItem,
 				stripeDiscounts,
@@ -86,7 +67,6 @@ export const stripeLineItemGroupToDbLineItems = ({
 				isMultiItemGroup,
 			});
 		}
-		// Fallback: create from Stripe data only
 		return createDbLineItemFromStripeOnly({
 			stripeLineItem,
 			stripeDiscounts,
@@ -100,17 +80,6 @@ export const stripeLineItemGroupToDbLineItems = ({
 	return { dbLineItems, matchedAutumnLineItems: matchedLineItems };
 };
 
-/**
- * Creates DB line item by merging Stripe line item data with Autumn billing line item context.
- * Stripe fields: stripe identifiers, amounts, quantities, discounts
- * Autumn fields: entity relationships, billing timing, direction, prorated
- *
- * For multi-item groups (tiered pricing), we use Stripe's description (includes tier info)
- * and mark description_source as "stripe".
- *
- * Multi-entity support: Accepts array of billing line items and collects all
- * customer_product_ids and customer_entitlement_ids into arrays.
- */
 const mergeStripeAndBillingLineItems = ({
 	stripeLineItem,
 	stripeDiscounts,
@@ -128,7 +97,6 @@ const mergeStripeAndBillingLineItems = ({
 	stripeSubscriptionItemId: string | null;
 	isMultiItemGroup: boolean;
 }): InsertDbInvoiceLineItem => {
-	// Use first billing line item as primary context source
 	const primaryLineItem = billingLineItems[0];
 	const { context } = primaryLineItem;
 	const priceDetails = stripeLineItem.pricing?.price_details;
@@ -136,10 +104,7 @@ const mergeStripeAndBillingLineItems = ({
 		(stripeLineItem as ExpandedStripeInvoiceLineItem & { proration?: boolean })
 			.proration ?? primaryLineItem.prorated;
 
-	// Determine discount data source based on discountable flag
-	// When discountable === false, Autumn pre-calculates discounts and sends the post-discount
 	// amount to Stripe. So stripeLineItem.amount is already discounted and discount_amounts is empty.
-	// In this case, use Autumn's original pre-discount amount and discount breakdown.
 	const autumnDiscountable = context.discountable ?? true;
 	const isBackdatedAggregate = context.backdate !== undefined;
 	const hasAutumnDiscounts =
@@ -152,8 +117,6 @@ const mergeStripeAndBillingLineItems = ({
 	let discounts: InvoiceLineItemDiscount[];
 
 	if (hasAutumnDiscounts) {
-		// Non-discountable: Autumn pre-calculated discounts
-		// Stripe amount is already post-discount, use Autumn's original values
 		amount = billingLineItems.reduce(
 			(sum, billingLineItem) => sum + billingLineItem.amount,
 			0,
@@ -168,8 +131,6 @@ const mergeStripeAndBillingLineItems = ({
 			stripe_coupon_id: d.stripeCouponId,
 		}));
 	} else {
-		// Discountable (or no Autumn discounts): Stripe handles discounts
-		// Use Stripe's discount_amounts
 		amount = stripeToAtmnAmount({
 			amount: stripeLineItem.amount,
 			currency: stripeLineItem.currency,
@@ -189,16 +150,12 @@ const mergeStripeAndBillingLineItems = ({
 		});
 	}
 
-	// Stripe quantity (for reference)
 	const stripeQuantity = stripeLineItem.quantity ?? null;
 
-	// Determine quantities based on scenario
 	let totalQuantity: number | null = null;
 	let paidQuantity: number | null = null;
 
 	if (isMultiItemGroup) {
-		// Multi-item group (tiered pricing): use Stripe quantities per tier
-		// Each tier has its own quantity from Stripe
 		if (stripeQuantity !== null) {
 			const priceConfig = context.price.config as
 				| UsagePriceConfig
@@ -208,7 +165,6 @@ const mergeStripeAndBillingLineItems = ({
 			paidQuantity = totalQuantity;
 		}
 	} else {
-		// Single item: use Autumn quantities (handles 1:1 and multi-entity)
 		const autumnTotalQuantity = billingLineItems.reduce(
 			(sum, li) => sum + (li.totalQuantity ?? 0),
 			0,
@@ -221,7 +177,6 @@ const mergeStripeAndBillingLineItems = ({
 		totalQuantity = autumnTotalQuantity || null;
 		paidQuantity = autumnPaidQuantity || null;
 
-		// Fall back to Stripe calculation if no Autumn quantities
 		if (totalQuantity === null && stripeQuantity !== null) {
 			const priceConfig = context.price.config as
 				| UsagePriceConfig
@@ -232,7 +187,6 @@ const mergeStripeAndBillingLineItems = ({
 		}
 	}
 
-	// For multi-item groups, use Stripe description (has tier info); otherwise use Autumn
 	const useStripeDescription =
 		(isMultiItemGroup || isBackdatedAggregate) &&
 		stripeLineItem.description !== null;
@@ -241,7 +195,6 @@ const mergeStripeAndBillingLineItems = ({
 		: (primaryLineItem.description ?? "");
 	const descriptionSource = useStripeDescription ? "stripe" : "autumn";
 
-	// Collect customer_product_ids, customer_price_ids, and customer_entitlement_ids from ALL matched line items
 	const customerProductIds = billingLineItems
 		.map((li) => li.context.customerProduct?.id)
 		.filter((id): id is string => id !== undefined && id !== null);
@@ -254,7 +207,6 @@ const mergeStripeAndBillingLineItems = ({
 		.map((li) => li.context.customerEntitlement?.id)
 		.filter((id): id is string => id !== undefined && id !== null);
 
-	// Tiered groups split by Stripe tier, not by entity, so there is no per-entity fact to store
 	const entities = isMultiItemGroup
 		? []
 		: billingLineItemsToDbEntities({ billingLineItems });
@@ -263,7 +215,6 @@ const mergeStripeAndBillingLineItems = ({
 		id: generateKsuid({ prefix: "invoice_li_" }),
 		invoice_id: invoiceId,
 
-		// Stripe fields from actual line item
 		stripe_id: stripeLineItem.id,
 		stripe_invoice_id: stripeInvoiceId,
 		stripe_invoice_item_id:
@@ -273,24 +224,19 @@ const mergeStripeAndBillingLineItems = ({
 		stripe_price_id: priceDetails?.price ?? null,
 		stripe_discountable: stripeLineItem.discountable,
 
-		// Amounts (from Stripe or Autumn depending on discountable flag)
 		amount,
 		amount_after_discounts: amountAfterDiscounts,
 		currency: stripeLineItem.currency,
 
-		// Quantities
 		stripe_quantity: stripeQuantity,
 		total_quantity: totalQuantity,
 		paid_quantity: paidQuantity,
 
-		// Discounts (from Stripe or Autumn depending on discountable flag)
 		discounts,
 
-		// Description
 		description,
 		description_source: descriptionSource,
 
-		// All other context from Autumn LineItem (use primary)
 		direction: context.direction,
 		billing_timing: context.billingTiming,
 		prorated: stripeProration,
@@ -310,9 +256,6 @@ const mergeStripeAndBillingLineItems = ({
 	};
 };
 
-/**
- * Creates DB line item from Stripe data only (no Autumn context).
- */
 const createDbLineItemFromStripeOnly = ({
 	stripeLineItem,
 	stripeDiscounts,
@@ -370,7 +313,7 @@ const createDbLineItemFromStripeOnly = ({
 		currency: stripeLineItem.currency,
 
 		stripe_quantity: stripeQuantity,
-		total_quantity: stripeQuantity, // No billing units without Autumn context
+		total_quantity: stripeQuantity,
 		paid_quantity: stripeQuantity,
 
 		description: stripeLineItem.description ?? "",
@@ -379,11 +322,10 @@ const createDbLineItemFromStripeOnly = ({
 		billing_timing: null,
 		prorated: stripeProration,
 
-		// Extract from metadata if available
 		price_id: metadata?.autumn_price_id ?? null,
-		customer_product_ids: [], // No Autumn context - empty array
-		customer_price_ids: [], // No Autumn context - empty array
-		customer_entitlement_ids: [], // No Autumn context - empty array
+		customer_product_ids: [],
+		customer_price_ids: [],
+		customer_entitlement_ids: [],
 		internal_product_id: null,
 		product_id: metadata?.autumn_product_id ?? null,
 		internal_feature_id: null,

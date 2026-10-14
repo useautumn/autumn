@@ -75,7 +75,6 @@ type InvoiceDetailSheetProps = {
 	taxedAmount?: number;
 };
 
-/** Resolve feature_id to its display name. */
 const resolveFeatureName = ({
 	featureId,
 	features,
@@ -184,7 +183,6 @@ export function InvoiceDetailSheet({
 	});
 
 	const productGroups = useMemo(() => {
-		// Bucket line items by product_id, then group within each bucket.
 		const byProduct = new Map<string, InvoiceLineItem[]>();
 		for (const item of lineItems) {
 			const key = item.product_id ?? "__unknown__";
@@ -287,17 +285,14 @@ export function InvoiceDetailSheet({
 		invoice.status === InvoiceStatus.Paid &&
 		!isFullyRefunded &&
 		!metadataError;
-	// Vercel invoices before the mapping existed can't be refunded from Autumn.
 	const canRefund = showVercelRefund && !!invoiceMetadata.vercel_invoice_id;
 	const canVoid =
 		invoiceIsStripe &&
 		(invoice.status === InvoiceStatus.Open ||
 			invoice.status === InvoiceStatus.Uncollectible);
-	// A reissued draft stays a draft; the API refuses to finalize or reissue it again.
 	const isReissuedDraft =
 		invoice.status === InvoiceStatus.Draft &&
 		(metadataLoading || Boolean(invoiceMetadata.autumn_reissued_to));
-	// Open is voided, paid is credited, draft is parked; each is then replaced.
 	const canReissue =
 		invoiceIsStripe &&
 		!metadataLoading &&
@@ -656,7 +651,6 @@ function LineItemGroupRow({
 		},
 	];
 
-	// Tiered groups: header + per-tier rows.
 	if (!isSingleItem) {
 		return (
 			<div className="flex flex-col py-1">

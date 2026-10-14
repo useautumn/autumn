@@ -108,7 +108,6 @@ export const ApiBillingDetailsSchema = z
 			"Billing details read live from the linked Stripe customer. Null when no Stripe customer is linked.",
 	});
 
-/** The expand field, shared by every customer response version. */
 export const ApiBillingDetailsExpandSchema =
 	ApiBillingDetailsSchema.nullish().meta({
 		description:

@@ -1,7 +1,3 @@
-/**
- * Lowering a license's `included` in a batch migration moves those seats into
- * paid_quantity, so granted and live assignments survive and remaining stays truthful.
- */
 import { expect, test } from "bun:test";
 import { runChunkedMigration } from "@tests/integration/billing/migrations-v2/utils/runChunkedMigration";
 import { setupLicenseUpdateScenario } from "@tests/integration/licenses/billing/update/setupLicenseUpdateScenario";

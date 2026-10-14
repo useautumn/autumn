@@ -5,26 +5,23 @@ import { cn } from "@autumn/ui/lib/utils";
 import { cva, type VariantProps } from "class-variance-authority";
 import * as React from "react";
 
-const iconButtonVariants = cva(
-	"", // Empty base - we'll use buttonVariants as base
-	{
-		variants: {
-			iconOrientation: {
-				left: "flex-row",
-				center: "flex-row justify-center",
-				right: "flex-row",
-			},
-		},
-		compoundVariants: [
-			{
-				className: "gap-1",
-			},
-		],
-		defaultVariants: {
-			iconOrientation: "left",
+const iconButtonVariants = cva("", {
+	variants: {
+		iconOrientation: {
+			left: "flex-row",
+			center: "flex-row justify-center",
+			right: "flex-row",
 		},
 	},
-);
+	compoundVariants: [
+		{
+			className: "gap-1",
+		},
+	],
+	defaultVariants: {
+		iconOrientation: "left",
+	},
+});
 
 export interface IconButtonProps
 	extends ButtonProps,
@@ -60,7 +57,7 @@ const IconButton = React.forwardRef<HTMLButtonElement, IconButtonProps>(
 				case "destructive":
 					return "text-error-light";
 				default:
-					return "text-tertiary-foreground"; // Default fallback
+					return "text-tertiary-foreground";
 			}
 		};
 
@@ -119,7 +116,7 @@ const IconButton = React.forwardRef<HTMLButtonElement, IconButtonProps>(
 		const iconToMainClass = () => {
 			switch (iconOrientation) {
 				case "center":
-					return "!h-6 w-6"; // by default is size small
+					return "!h-6 w-6";
 				default:
 					return "";
 			}

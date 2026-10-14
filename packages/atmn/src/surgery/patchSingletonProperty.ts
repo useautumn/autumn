@@ -85,7 +85,6 @@ const removePairEdit = ({
 	const lineEnd = newline === -1 ? source.length : newline;
 	const after = source.slice(end, lineEnd);
 	const commaIndex = after.indexOf(",");
-	// Only whitespace and comments may sit between the pair and its comma.
 	const hasTrailingComma =
 		commaIndex !== -1 && isTrivia(after.slice(0, commaIndex));
 	const rest = hasTrailingComma ? after.slice(commaIndex + 1) : after;
@@ -130,7 +129,6 @@ export const patchSingletonProperty = ({
 	const existing = pairFor({ object, key: edit.key });
 	if (edit.text === null) {
 		if (existing === null) return source;
-		// The last pair out leaves `{}`, never `{ }` or a dangling comma.
 		const onlyPair =
 			object.children().filter((child) => child.kind() === "pair").length === 1;
 		return root.commitEdits([
@@ -170,7 +168,6 @@ export const insertSingleton = ({
 	const root = parse(Lang.TypeScript, source).root();
 	const object = atmnObject(root);
 	if (object === null) return null;
-	// Already stated, quoted or not: nothing to seed.
 	if (pairFor({ object, key: singleton }) !== null) return source;
 	if (
 		object
@@ -182,13 +179,10 @@ export const insertSingleton = ({
 			)
 	)
 		return source;
-	// A root spread may already hold the key, and a pair inserted beside it
-	// would silently win or lose to it depending on order.
 	if (object.children().some((child) => child.kind() === "spread_element"))
 		return null;
 	const withArray = insertCollection({ source, collection: singleton });
 	if (withArray === null || withArray === source) return withArray;
-	// insertCollection seeds `key: []`; a singleton is an object.
 	const seededRoot = parse(Lang.TypeScript, withArray).root();
 	const seeded = atmnObject(seededRoot);
 	const pair =

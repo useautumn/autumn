@@ -41,7 +41,6 @@ type CustomerStatePhase = {
 	starts_at?: string | number;
 };
 
-/** setPlans previews flag side effects to confirm, e.g. a plan or Stripe item it removes. */
 const previewWarnings = (
 	preview: BillingPreviewResponse,
 ): SetPlansPreviewWarning[] => {
@@ -60,7 +59,6 @@ const phaseTiming = (phase: CustomerStatePhase, index: number) => {
 	return String(phase.starts_at ?? "");
 };
 
-/** createSchedule's dated phases as compact rows: timing + plans (+ custom price). */
 function SchedulePhases({ phases }: { phases: CustomerStatePhase[] }) {
 	if (phases.length === 0) return null;
 	return (
@@ -105,7 +103,6 @@ const hasPlan = (
 	change: BillingPreviewChange,
 ): change is BillingPreviewChange & { plan: ApiPlanV1 } => Boolean(change.plan);
 
-/** "Attaching X (and removing Y)" — mirrors the attach sheet's summary line. */
 function BillingChangeSummary({
 	added,
 	removed,
@@ -143,9 +140,6 @@ function BillingChangeSummary({
 	);
 }
 
-/** A billing-action preview (attach / update subscription / create schedule),
- * rendered inline in the chat approval card: what's changing, the attached
- * plan's items, and the charges. Reuses the customer billing-sheet blocks. */
 export function BillingPreviewCard({
 	params,
 	preview,
@@ -160,7 +154,6 @@ export function BillingPreviewCard({
 	);
 	const incoming = preview.incoming ?? [];
 	const outgoing = preview.outgoing ?? [];
-	// A plan on both sides is an in-place update: neither attached nor removed.
 	const added = addedPlanChanges({ incoming, outgoing });
 	const removed = removedPlanChanges({ incoming, outgoing });
 	const incomingPlans = incoming.filter(hasPlan);
@@ -275,8 +268,6 @@ export function BillingPreviewCard({
 					totals={totals}
 					withSeparator={false}
 				/>
-				{/* LineItemsPreview brings its own SheetSection padding — a second
-				    stacked section doubles the gap, so pad the totals directly. */}
 				<div className="px-4 pt-1 pb-4">
 					<PreviewTotalsBlock previewData={preview} />
 				</div>

@@ -47,8 +47,6 @@ const getOverageCusEntUpdates = ({
 	};
 	const carrierGrantAdjustment = -cusEntToStartingBalance({ cusEnt });
 
-	// The preserved row is only an overage carrier: cancel its own allowance so
-	// granted_balance stays 0 while balance stores total deleted usage.
 	if (!isEntityScopedCusEnt(cusEnt) || cusEnt.internal_entity_id) {
 		return {
 			...resetlessUpdates,

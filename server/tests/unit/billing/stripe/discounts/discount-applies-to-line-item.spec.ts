@@ -1,17 +1,8 @@
-/**
- * Unit tests for discountAppliesToLineItem function.
- *
- * Tests the logic that determines whether a discount applies to a specific line item
- * based on the coupon's applies_to.products restriction.
- */
-
 import { describe, expect, test } from "bun:test";
 import { lineItems as lineItemFixtures } from "@tests/utils/fixtures/billing/lineItems";
 import { discounts } from "@tests/utils/fixtures/db/discounts";
 import chalk from "chalk";
 import { discountAppliesToLineItem } from "@/internal/billing/v2/providers/stripe/utils/discounts/discountAppliesToLineItem";
-
-// ============ TESTS ============
 
 describe(chalk.yellowBright("discountAppliesToLineItem"), () => {
 	describe(chalk.cyan("No applies_to restriction"), () => {

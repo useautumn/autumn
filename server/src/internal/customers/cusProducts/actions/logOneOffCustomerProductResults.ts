@@ -1,7 +1,6 @@
 import type { Logger } from "@/external/logtail/logtailUtils.js";
 import type { OneOffCustomerProductResult } from "./oneOffCustomerProductResult.js";
 
-/** Logs one-off expiration operations to Axiom, grouped by organization. */
 export const logOneOffCustomerProductResults = ({
 	logger,
 	results,

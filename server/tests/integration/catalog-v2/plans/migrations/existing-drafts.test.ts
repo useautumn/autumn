@@ -1,11 +1,3 @@
-/**
- * catalogV2.update — migration drafts for in-place existing versioning.
- *
- * Contract:
- *   existing + migratable item diff + versionable customers → one version-pinned draft
- *   omitted migration / no customers / name-only → no draft
- */
-
 import { expect, test } from "bun:test";
 import { ResetInterval } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";

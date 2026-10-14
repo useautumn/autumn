@@ -2,7 +2,6 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 import { TwdError } from "../../../http/apiError.ts";
 import type { TwdContext } from "../../../lib/types/twdContext.ts";
 
-/** Checks `X-Hub-Signature-256` against GITHUB_WEBHOOK_SECRET in constant time. */
 export const verifyGithubSignature = ({
 	ctx,
 	body,

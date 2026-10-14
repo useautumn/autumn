@@ -9,7 +9,6 @@ import {
 } from "@autumn/shared";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
 
-/** The subscription's anchor, fetched only when it can move the reset; undefined when it can't or Stripe fails. */
 const fetchBillingCycleAnchor = async ({
 	customerEntitlement,
 	cusProduct,
@@ -37,7 +36,6 @@ const fetchBillingCycleAnchor = async ({
 	}
 };
 
-/** Computes next reset timestamp, adjusting for Stripe billing anchor on edge dates. */
 export const getResetAtUpdate = async ({
 	curResetAt,
 	interval,

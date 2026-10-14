@@ -51,7 +51,6 @@ async function finishRuntimeRecovery({
 	recoveryError: OwnedPartitionRecoveryRequiredError;
 	drainAcceptedWork: boolean;
 }): Promise<OwnedPartitionRecoveryRequiredError> {
-	// Record recovery and notify synchronous listeners before cleanup can re-enter the runtime.
 	await Promise.resolve();
 	try {
 		if (drainAcceptedWork) await drainWithinRecoveryTimeout({ ctx });

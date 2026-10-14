@@ -6,8 +6,6 @@ import { setupInvoiceModeContext } from "@/internal/billing/v2/setup/setupInvoic
 
 const TEMPLATE_ID = "tmpl_1";
 
-/** Stands in for the `select().from().where().limit()` chain
- *  `InvoiceTemplateService.getById` runs. */
 const makeDb = ({
 	template,
 }: {

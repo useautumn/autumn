@@ -1,4 +1,3 @@
-// Manual customer creation - not using initCustomer to control test clock properly
 import { beforeAll, describe, it } from "bun:test";
 import {
 	CusProductStatus,
@@ -17,15 +16,6 @@ import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
 import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
-
-// Case 1: ✅
-// Pro product with default trial exists alongside a free default product
-// Or a pro product with default trial exists alone
-// -> Creating a new customer should attach the pro product with default trial
-
-// Case 3:
-// Pro product with default trial exists alone
-// -> Creating a new customer should attach the pro product with default trial
 
 const defaultTrialPro = constructProduct({
 	items: [
@@ -69,7 +59,6 @@ describe(`${chalk.yellowBright(`advanced/${testCase}: ensure default trials are 
 	let stripeCli: Stripe;
 
 	beforeAll(async () => {
-		// Products must be initialized BEFORE customer creation for default products
 		await initProductsV0({
 			ctx,
 			products: [defaultTrialPro, defaultTrialFree],

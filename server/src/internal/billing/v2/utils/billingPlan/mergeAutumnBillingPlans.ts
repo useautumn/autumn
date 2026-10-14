@@ -4,7 +4,6 @@ import { mergePooledBalancePlans } from "./mergePooledBalancePlans";
 
 type AutoTopupRebalance = AutumnBillingPlan["autoTopupRebalance"];
 
-/** One side's top-up keeps its purchase; two can't be sized as one, so only their deltas merge and the plan keeps to Postgres. */
 const mergeAutoTopupRebalances = ({
 	base,
 	incoming,

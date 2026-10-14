@@ -6,7 +6,6 @@ import type {
 } from "@autumn/shared";
 import { setupCustomerLicenseQuantityContext } from "@/internal/billing/v2/setup/setupCustomerLicenseQuantityContext";
 
-/** Delegates explicit and carried license quantities to shared setup. */
 export const setupUpdateLicenseQuantities = ({
 	params,
 	fullProduct,

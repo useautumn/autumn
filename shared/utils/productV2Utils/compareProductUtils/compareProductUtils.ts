@@ -91,15 +91,6 @@ export const compareDetails = ({
 
 	const detailsSame = Object.values(checks).every((d) => d.condition);
 
-	// if (!detailsSame) {
-	// 	console.log(
-	// 		"Product details different:",
-	// 		Object.values(checks)
-	// 			.filter((d) => !d.condition)
-	// 			.map((d) => d.message),
-	// 	);
-	// }
-
 	return detailsSame;
 };
 
@@ -134,7 +125,6 @@ const sortControls = (items: Array<{ feature_id?: string }>) =>
 			right.feature_id ?? "",
 		);
 		if (byFeature !== 0) return byFeature;
-		// Stable tiebreak for entries sharing (or lacking) a feature_id.
 		return JSON.stringify(left).localeCompare(JSON.stringify(right));
 	});
 
@@ -163,7 +153,6 @@ export const compareBillingControls = ({
 	);
 };
 
-// Order-independent deep comparison of two metadata records.
 export const compareMetadata = ({
 	newMetadata,
 	curMetadata,
@@ -328,7 +317,6 @@ export const productsAreSame = ({
 		}
 	}
 
-	// Compare free trial
 	const freeTrial1 = curProductV1?.free_trial || curProductV2?.free_trial;
 	const freeTrial2 = newProductV1?.free_trial || newProductV2?.free_trial;
 
@@ -344,11 +332,6 @@ export const productsAreSame = ({
 		newProduct: newProductV2 || newProductV1!,
 	});
 
-	// console.log(`items same: `, itemsSame);
-	// console.log(`details same: `, detailsSame);
-	// console.log(`free trials same: `, freeTrialsSame);
-	// console.log(`options same: `, optionsSame);
-
 	const same =
 		itemsSame &&
 		detailsSame &&
@@ -357,7 +340,6 @@ export const productsAreSame = ({
 		metadataSame &&
 		billingControlsSame;
 
-	// Compare name
 	return {
 		itemsSame,
 		freeTrialsSame,

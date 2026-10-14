@@ -1,5 +1,4 @@
 const STRIPE_WEBHOOK_MARKER = '"stripe_event":{';
-// Every billing route is a POST.
 const BILLING_ROUTE_PREFIX = "POST /v1/";
 const BILLING_ROUTE_MARKER = `"name":"${BILLING_ROUTE_PREFIX}`;
 const BILLING_PATHS = [
@@ -19,7 +18,6 @@ export type PinoLogLine = {
 	[key: string]: unknown;
 };
 
-// Positional on purpose: it runs per marker hit on the hot path, so no argument object.
 const startsWithBillingPath = (text: string, pathStart: number) => {
 	for (const path of BILLING_PATHS) {
 		if (text.startsWith(path, pathStart)) return true;
@@ -27,7 +25,6 @@ const startsWithBillingPath = (text: string, pathStart: number) => {
 	return false;
 };
 
-/** Substring scan that never misses a Maple line; request data can forge a hit, so hits are confirmed after parsing. */
 const mightBeMapleLog = (line: string) => {
 	if (line.includes(STRIPE_WEBHOOK_MARKER)) return true;
 
@@ -40,7 +37,6 @@ const mightBeMapleLog = (line: string) => {
 	return false;
 };
 
-/** Returns the parsed line for billing requests (top-level `req.name`) and Stripe webhooks; other lines are never parsed. */
 export const parseMapleLog = (line: string): PinoLogLine | null => {
 	if (!mightBeMapleLog(line)) return null;
 

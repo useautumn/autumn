@@ -1,9 +1,6 @@
 import { Box, Text } from "ink";
 import type { KeybindHintsProps } from "../types.js";
 
-/**
- * Context-aware keyboard shortcut hints
- */
 export function KeybindHints({
 	focusTarget,
 	sheetOpen,
@@ -44,7 +41,6 @@ export function KeybindHints({
 		);
 	}
 
-	// Table focused hints
 	return (
 		<Box
 			borderStyle="round"

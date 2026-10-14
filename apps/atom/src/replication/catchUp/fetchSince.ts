@@ -26,7 +26,6 @@ export const PEER_SUBJECTS_SINCE_PATH = "/v1/_peer/subjects.since";
 export const PEER_SUBJECTS_DIGEST_PATH = "/v1/_peer/subjects.digest";
 export const PEER_SUBJECTS_FETCH_PATH = "/v1/_peer/subjects.fetch";
 export const PEER_CATALOG_SINCE_PATH = "/v1/_peer/catalog.since";
-/** The tenants a multi-tenant peer holds, so a replica learns them before it serves. */
 export const PEER_ATOMS_LIST_PATH = "/v1/_peer/atoms.list";
 const FETCH_TIMEOUT_MS = 10_000;
 
@@ -89,12 +88,10 @@ export const catalogSinceResponse = (
 	catalog: catalog && { rows: catalog.rows, read_at: catalog.readAt },
 });
 
-/** A peer that is not ready answers this: its store may still be behind, so nothing is copied from it. */
 export class PeerNotReadyError extends Error {
 	override readonly name = "PeerNotReadyError";
 }
 
-/** A peer asked about one folder: a tenant's on a multi-tenant Atom, null for the one folder of an org's own. */
 type PeerSourceContext = {
 	peer: string;
 	port: number;
@@ -134,7 +131,6 @@ const postToPeer = async <Reply>({
 	return (await response.json()) as Reply;
 };
 
-/** The tenants a multi-tenant peer holds; an org's own Atom's peer answers none. */
 export const listPeerAtoms = async ({
 	ctx,
 }: {
@@ -148,7 +144,6 @@ export const listPeerAtoms = async ({
 	return atoms.map(({ id, token_hash }) => ({ id, tokenHash: token_hash }));
 };
 
-/** One peer as a subject source for one folder: each request signed like any peer request, the answers read back into subjects. */
 export const createPeerSubjectSource = ({
 	ctx,
 }: {

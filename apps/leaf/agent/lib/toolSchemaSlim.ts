@@ -20,11 +20,6 @@ const slimValue = (value: JsonValue, depth: number): JsonValue => {
 	return slimToolSchema(value, depth);
 };
 
-// A `customize` object is a patch over a catalog plan: `add_items` /
-// `remove_items`. Its PUT-style `items` sibling replaces every plan item, which
-// on 2026-09-14 wiped a customer's Enterprise entitlements when the model
-// reached for it to "override emails". The model never needs the PUT form, so
-// it is not offered one; the MCP wire and public API keep it.
 const PATCH_STYLE_ITEM_KEYS = ["add_items", "remove_items"] as const;
 const PUT_STYLE_ITEMS_KEY = "items";
 
@@ -54,7 +49,6 @@ const slimProperties = (properties: JsonSchemaObject, depth: number) => {
 	return { dropped, properties: kept };
 };
 
-// Model-facing only; the MCP wire keeps the full schema.
 export const slimToolSchema = (
 	value: JsonSchemaObject,
 	depth = 0,
@@ -62,8 +56,6 @@ export const slimToolSchema = (
 	const slimmed: JsonSchemaObject = {};
 	let dropped = new Set<string>();
 	for (const [key, entry] of Object.entries(value)) {
-		// `default` is dropped so the model stops volunteering values it should
-		// leave out; the MCP wire keeps applying the real default.
 		if (key === "examples" || key === "title" || key === "default") continue;
 		if (key === "internal" || key === "x-internal") continue;
 		if (key === "description") {
@@ -78,7 +70,6 @@ export const slimToolSchema = (
 		}
 		slimmed[key] = slimValue(entry, depth + 1);
 	}
-	// A required entry naming a dropped property is an unsatisfiable schema.
 	if (dropped.size && Array.isArray(slimmed.required)) {
 		slimmed.required = slimmed.required.filter(
 			(name) => !dropped.has(name as string),

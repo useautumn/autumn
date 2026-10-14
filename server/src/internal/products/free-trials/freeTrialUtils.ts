@@ -76,7 +76,6 @@ export const freeTrialToStripeTimestamp = ({
 		});
 	}
 
-	// trialEnd = addMinutes(trialEnd, 5);
 	trialEnd = addMinutes(trialEnd, 10);
 
 	return Math.ceil(trialEnd.getTime() / 1000);
@@ -137,12 +136,9 @@ export const handleNewFreeTrial = async ({
 	curFreeTrial: FreeTrial | null | undefined;
 	internalProductId: string;
 	isCustom: boolean;
-	newVersion?: boolean; // True if creating a new product version
+	newVersion?: boolean;
 }) => {
-	// If new free trial is null
 	if (!newFreeTrial) {
-		// Don't delete the old free trial when creating a new version
-		// The old version needs to keep its free trial for existing customers
 		if (!isCustom && curFreeTrial && !newVersion) {
 			const isReferenced = await CusProductService.hasByFreeTrialId({
 				db,
@@ -189,7 +185,6 @@ export const handleNewFreeTrial = async ({
 		});
 	}
 
-	// Check if card_required is changing from false to true
 	if (
 		curFreeTrial?.card_required === false &&
 		newFreeTrial?.card_required === true

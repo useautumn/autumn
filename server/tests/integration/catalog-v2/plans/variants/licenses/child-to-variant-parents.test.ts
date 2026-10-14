@@ -1,9 +1,3 @@
-/**
- * catalogV2.update — child edit fans out to a base parent and its variant.
- *
- * No variant derive. Seat is offered by Team and Team-EU.
- */
-
 import { test } from "bun:test";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";

@@ -1,23 +1,3 @@
-/**
- * TDD coverage for patch-style item replacement usage carry.
- *
- * Contract under test:
- *   New behaviors:
- *     - remove_items + add_items carries usage only from the customer entitlement
- *       being replaced, not from every entitlement on the same feature.
- *     - Replacing one metered feature item does not change usage on unrelated
- *       metered feature items.
- *   Side effects:
- *     - Existing-mode patch updates do not expire or replace the customer product.
- *     - Stripe subscription state stays consistent with the patched customer product.
- *
- * Pre-impl red: patch init carries all consumable usage from the original customer
- * product into the new patch item, including same-feature entitlements that were
- * not removed.
- * Post-impl green: patch init builds existing usage/rollover state from only the
- * deleted customer entitlements that correspond to the inserted patch items.
- */
-
 import { test } from "bun:test";
 import type {
 	ApiCustomerV5,

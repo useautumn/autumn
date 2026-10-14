@@ -1,17 +1,3 @@
-/**
- * billing.import — balance filter predicates (GalaxyAI lifetime-plan repro).
- *
- * Red (pre-fix):
- *  - `filter.interval` only accepted hour|day|week|month|year, so a one-off
- *    line could not be targeted except via an explicit `interval: null`;
- *    "lifetime" was rejected by the schema.
- *  - `filter.billing_behavior` only accepted included|prepaid; "usage_based"
- *    was rejected, so an included + pay-per-use pair was un-disambiguatable.
- *  - Ambiguity errors said "dfu.flash" instead of "billing.import".
- * Green: interval inherits EntInterval (lifetime = one-off line),
- * billing_behavior accepts usage_based, and errors say "billing.import".
- */
-
 import { expect, test } from "bun:test";
 import { type ApiCustomerV5, ResetInterval } from "@autumn/shared";
 import {
@@ -178,7 +164,6 @@ test.concurrent(
 						balances: [
 							{
 								feature_id: TestFeature.Credits,
-								// Matches both the monthly and one-off included lines.
 								filter: { billing_behavior: "included" },
 								usage: 0,
 							},

@@ -10,12 +10,6 @@ import { throwFeatureUpdateBlocker } from "@/internal/features/featureActions/up
 import { FEATURE_REWRITE_ROW_LIMIT } from "@/internal/features/repos/featureReferenceRewriteScopes.js";
 import { validateFeature } from "@/internal/features/utils/validateFeature.js";
 
-/**
- * Ids a rename may not take: every id in the projected catalog and every
- * persisted id, minus the feature's own rows. Persisted ids stay taken even
- * when this batch renames them away, so execute never depends on op order —
- * swaps and chains throw instead.
- */
 const takenFeatureIdsForRename = ({
 	ctx,
 	updateCatalogPlan,
@@ -76,11 +70,6 @@ const assertNoPropagateOverflow = ({
 	}
 };
 
-/**
- * CS refs that block this feature: present before the batch AND still present
- * after. Inserted CS rows and schema members newly added by this call must not
- * block the metered update that makes those schemas valid.
- */
 const blockingCreditSystemFeatureIds = ({
 	ctx,
 	updateCatalogPlan,
@@ -104,7 +93,6 @@ const blockingCreditSystemFeatureIds = ({
 		}).map((creditSystem) => creditSystem.id),
 	);
 
-	// Schemas may still use current.id, or next.id after a same-call CS update.
 	const projectedIds = new Set(
 		[updateFeaturePlan.current.id, updateFeaturePlan.next.id].flatMap(
 			(featureId) =>
@@ -118,7 +106,6 @@ const blockingCreditSystemFeatureIds = ({
 	return [...projectedIds].filter((id) => originalIds.has(id));
 };
 
-/** Throws the first blocker with the exact error the live update path throws. */
 export const handleUpdateFeatureErrors = ({
 	ctx,
 	catalogContext,

@@ -6,7 +6,6 @@ import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 
-// Custom invoice lines must work without incidental Stripe item or anchor changes.
 for (const prorationBehavior of ["prorate_immediately", "none"] as const) {
 	test.concurrent(
 		`update custom line items: unchanged subscription ${prorationBehavior}`,

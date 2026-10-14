@@ -35,7 +35,6 @@ export class EntityService {
 			},
 		});
 	}
-	/** A customer's live entities with these ids, unbounded by the full-customer hydration cap. */
 	static async listByCustomerAndIds({
 		ctx,
 		internalCustomerId,
@@ -244,7 +243,6 @@ export class EntityService {
 		return entity;
 	}
 
-	/** Gives an id-less entity its id; a row already claimed (or gone) is left alone and refused. */
 	static async claim({
 		db,
 		internalId,

@@ -3,14 +3,6 @@ import { usageLimitFilterMatchesProperties } from "@models/cusModels/billingCont
 import type { Feature } from "@models/featureModels/featureModels";
 import { Decimal } from "decimal.js";
 
-/**
- * Remaining usage-window headroom for a check, in the EVALUATED feature's
- * units (credits when the evaluated feature is a credit system). Considers
- * both the cap on the evaluated feature itself and -- when checking a
- * credit-system member -- the metered cap on the original feature, converted
- * via its credit cost. Filtered caps only apply when the check's `properties`
- * match. Null when no armed cap applies.
- */
 export const apiSubjectToUsageLimitHeadroom = ({
 	apiSubject,
 	feature,
@@ -22,8 +14,6 @@ export const apiSubjectToUsageLimitHeadroom = ({
 	originalFeature?: Feature;
 	properties?: Record<string, unknown> | null;
 }): number | null => {
-	// Entity subjects see inherited customer entries via
-	// mergeCustomerBillingControlsForCheck; entity's own entry wins per feature.
 	const billingControls = apiSubject.billing_controls;
 	const usageLimits =
 		billingControls && "usage_limits" in billingControls

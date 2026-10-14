@@ -10,11 +10,8 @@ import {
 } from "./pagePhaseTimings.js";
 
 export type DeferredOperation = {
-	/** Names the op in stall and failure logs, e.g. "page 8". */
 	label: string;
 	run: () => Promise<unknown>;
-	/** Runs after a failure or timeout, before the op is released; gets its own
-	 * `timeoutMs` so the caller can undo a checkpoint without re-hanging. */
 	onFailure?: (error: unknown) => Promise<void> | void;
 };
 
@@ -35,18 +32,12 @@ export type DeferredPending = {
 };
 
 export type DeferredSideEffects = {
-	/** Start `run` off the critical path. Never throws. */
 	defer: (operation: DeferredOperation) => void;
-	/** Block until in-flight work is under the cap. Never throws. */
 	settle: () => Promise<void>;
-	/** Await everything started so far and report failures. Never throws. */
 	drain: () => Promise<DeferredDrainResult>;
-	/** What is still running — for stall diagnostics. */
 	pending: () => DeferredPending;
 };
 
-/** Runs a page's post-commit side effects off the critical path. Every op is
- * bounded by `timeoutMs` with its rejection captured, so settle/drain always return. */
 export const createDeferredSideEffects = ({
 	phase,
 	phases,
@@ -115,7 +106,6 @@ export const createDeferredSideEffects = ({
 		defer: (operation) => {
 			const startedAt = Date.now();
 			const original = Promise.resolve().then(operation.run);
-			// A late rejection from an abandoned op must never go unhandled.
 			original.catch(() => undefined);
 
 			let timedOut = false;

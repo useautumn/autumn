@@ -1,8 +1,3 @@
-/**
- * setPlans in invoice mode writes invoice_mode.payment_method_types onto the
- * Stripe subscription and its first invoice, like attach does.
- */
-
 import { expect, test } from "bun:test";
 import type { SetPlansParamsV0Input } from "@autumn/shared";
 import { items } from "@tests/utils/fixtures/items.js";

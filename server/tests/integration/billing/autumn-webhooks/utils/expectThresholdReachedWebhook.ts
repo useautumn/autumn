@@ -19,7 +19,6 @@ export type ThresholdReachedPayload = {
 	};
 };
 
-/** How long a test waits to be sure a webhook it expects NOT to arrive really did not. */
 export const NO_WEBHOOK_WAIT_MS = 8_000;
 
 const isCustomerThresholdReached = ({
@@ -32,7 +31,6 @@ const isCustomerThresholdReached = ({
 	payload.type === "customer.threshold_reached" &&
 	payload.data?.customer?.id === customerId;
 
-/** Polls Svix Play for this customer's `customer.threshold_reached`; null when none arrives in time. */
 export const waitForThresholdReachedWebhook = async ({
 	playToken,
 	customerId,
@@ -50,7 +48,6 @@ export const waitForThresholdReachedWebhook = async ({
 	return result?.payload.data ?? null;
 };
 
-/** Every `customer.threshold_reached` the customer received, after giving late deliveries time to land. */
 export const listThresholdReachedWebhooks = async ({
 	playToken,
 	customerId,

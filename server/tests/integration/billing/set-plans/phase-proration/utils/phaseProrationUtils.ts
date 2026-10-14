@@ -66,7 +66,6 @@ export const setupPhaseProrationScenario = async ({
 	};
 };
 
-/** Opening plans now, then the later phase's plans: an upgrade or a removal mid-cycle. */
 export const twoPhaseParams = ({
 	customerId,
 	laterPhaseStartsAt,
@@ -136,7 +135,6 @@ export const stripeSchedulePhaseStartingAt = async ({
 	return phase;
 };
 
-/** What reopening the Set Plans sheet reads: the saved schedule phase's proration. */
 export const expectSavedPhaseProration = async ({
 	ctx,
 	customerId,
@@ -165,7 +163,6 @@ export const expectSavedPhaseProration = async ({
 	expect(savedPhase?.proration_behavior ?? null).toBe(prorationBehavior);
 };
 
-/** Advances past the later phase's start and returns the Stripe invoices raised at it, lines included. */
 export const advancePastPhaseStartAndGetInvoices = async ({
 	ctx,
 	customerId,
@@ -189,7 +186,6 @@ export const advancePastPhaseStartAndGetInvoices = async ({
 		waitForSeconds: 30,
 	});
 
-	// Stripe's server-side subscription/created filters miss the test-clock invoice raised at the phase start.
 	const { data } = await ctx.stripeCli.invoices.list({
 		customer: subscription.customer as string,
 	});
@@ -204,7 +200,6 @@ export const advancePastPhaseStartAndGetInvoices = async ({
 export const invoicesTotal = (invoices: { total: number }[]) =>
 	invoices.reduce((total, invoice) => total + invoice.total, 0);
 
-/** The previewed next_cycle is the invoice Stripe will actually raise next for the customer's schedule, to the cent. */
 export const expectPreviewMatchesStripeUpcomingInvoice = async ({
 	ctx,
 	customerId,

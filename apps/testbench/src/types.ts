@@ -1,5 +1,3 @@
-/** Mirrors the `snapshot()` shape sent by scripts/tw/dashboard/server.ts. */
-
 export type Phase = "warm" | "fanout" | "run" | "teardown" | "done";
 
 export type FailedTest = {
@@ -15,7 +13,6 @@ export type FileRow = {
 	passed: number;
 	failed: number;
 	worker?: string;
-	/** Wall duration of the last completed attempt (dispatch → verdict). */
 	durationMs?: number;
 	currentTest?: string;
 	attempt: number;
@@ -28,7 +25,6 @@ export type FileRow = {
 export type WorkerRow = {
 	name: string;
 	status: "provisioning" | "booting" | "ready" | "dead" | "failed";
-	/** Why the worker is dead/failed (provision or boot error), when known. */
 	reason?: string;
 	fileCount: number;
 	files: { file: string; name: string }[];
@@ -38,16 +34,11 @@ export type Snapshot = {
 	phase: Phase;
 	target: string;
 	workerCount: number;
-	/** Latest warm-up build/log line (elided activity ticker). */
 	warmActivity: string;
 	warmBuilding: boolean;
-	/** Monotonic warm-up stage index (-1 until first marker); see Overall view. */
 	warmStage: number;
-	/** Warm cache hit kind — non-null collapses the stepper to the compact state. */
 	warmHit?: "exact" | "stale" | null;
-	/** Epoch-ms the current phase started — for the live elapsed timer. */
 	phaseStartedAt: number;
-	/** Latest non-empty log line in any phase (activity ticker). */
 	activity: string;
 	fanout: {
 		stripeDone: number;
@@ -74,12 +65,10 @@ export type Snapshot = {
 	files: FileRow[];
 	workers: WorkerRow[];
 	completions: number[];
-	/** Epoch-ms the first test file was dispatched — null until the run stage starts. */
 	runStartedAt: number | null;
 	summary: {
 		passed: number;
 		failed: number;
-		/** FILE-level failures — nonzero even when `failed` (test asserts) is 0 (exec deaths). */
 		filesFailed: number;
 		crashed: number;
 		wallMs: number;

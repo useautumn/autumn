@@ -1,14 +1,3 @@
-/**
- * Stripe Price nicknames at mint time.
- *
- * Contract:
- *   catalog fixed → "Base price"
- *   catalog prepaid → "Prepaid price (Messages)"
- *   catalog usage → "Usage-based price (Words)"
- *   attach customize mint → "Base price (custom)"
- *   migrate $20 → $40: Autumn row is_custom, Stripe nickname is not
- */
-
 import { expect, test } from "bun:test";
 import type {
 	AttachParamsV1Input,

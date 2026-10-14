@@ -44,7 +44,6 @@ export const prepareSyncedCustomBasePrice = ({
 	fullProduct: FullProduct;
 	customPrices: Price[];
 	plan: SyncPlanInstance;
-	/** Prices saved without a base currency bill in this one. */
 	defaultCurrency: string;
 }): { fullProduct: FullProduct; customPrices: Price[] } => {
 	const customBaseParams = plan.customize?.price;

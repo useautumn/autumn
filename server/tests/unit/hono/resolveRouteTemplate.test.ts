@@ -2,7 +2,6 @@ import { describe, expect, test } from "bun:test";
 import { Hono } from "hono";
 import { resolveRouteTemplate } from "@/honoMiddlewares/utils/resolveRouteTemplate.js";
 
-/** Mirrors the server: a global "*" middleware in front of a router mounted under /v1. */
 const resolveFor = async ({
 	method = "GET",
 	path,

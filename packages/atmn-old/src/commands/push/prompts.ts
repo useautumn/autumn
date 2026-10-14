@@ -3,10 +3,6 @@ import type { CatalogPreviewUpdateResponse } from "../../lib/api/endpoints/index
 import { AppEnv } from "../../lib/env/index.js";
 import type { FeatureDeleteInfo, PlanDeleteInfo } from "./types.js";
 
-/**
- * Types for push prompts
- */
-
 export type PromptType =
 	| "prod_confirmation"
 	| "config_resources_confirmation"
@@ -75,16 +71,12 @@ interface PlanMigrationPromptInfo {
 	scope?: "plan" | "variant";
 }
 
-// Counter for unique prompt IDs
 let promptCounter = 0;
 
 function generatePromptId(): string {
 	return `prompt_${++promptCounter}`;
 }
 
-/**
- * Create production confirmation prompt
- */
 export function createProdConfirmationPrompt(): PushPrompt {
 	return {
 		id: generatePromptId(),
@@ -137,9 +129,6 @@ export function createConfigResourceReviewPrompts(
 	];
 }
 
-/**
- * Create plan versioning prompt
- */
 export function createPlanVersioningPrompt(
 	info: PlanVersioningPromptInfo,
 	env?: AppEnv,
@@ -270,9 +259,6 @@ export function createPlanVariantPropagationGroupPrompt(
 	};
 }
 
-/**
- * Create plan delete prompt when plan has customers
- */
 export function createPlanDeleteHasCustomersPrompt(
 	info: PlanDeleteInfo,
 ): PushPrompt {
@@ -293,9 +279,6 @@ export function createPlanDeleteHasCustomersPrompt(
 	};
 }
 
-/**
- * Create plan delete prompt when plan has no customers
- */
 export function createPlanDeleteNoCustomersPrompt(
 	info: PlanDeleteInfo,
 ): PushPrompt {
@@ -314,9 +297,6 @@ export function createPlanDeleteNoCustomersPrompt(
 	};
 }
 
-/**
- * Create plan archived prompt
- */
 export function createPlanArchivedPrompt(plan: Plan): PushPrompt {
 	return {
 		id: generatePromptId(),
@@ -334,9 +314,6 @@ export function createPlanArchivedPrompt(plan: Plan): PushPrompt {
 	};
 }
 
-/**
- * Create feature delete prompt when feature is used by credit system
- */
 export function createFeatureDeleteCreditSystemPrompt(
 	info: FeatureDeleteInfo,
 ): PushPrompt {
@@ -361,9 +338,6 @@ export function createFeatureDeleteCreditSystemPrompt(
 	};
 }
 
-/**
- * Create feature delete prompt when feature is used by products
- */
 export function createFeatureDeleteProductsPrompt(
 	info: FeatureDeleteInfo,
 ): PushPrompt {
@@ -386,9 +360,6 @@ export function createFeatureDeleteProductsPrompt(
 	};
 }
 
-/**
- * Create feature delete prompt when feature has no dependencies
- */
 export function createFeatureDeleteNoDepsPrompt(
 	info: FeatureDeleteInfo,
 ): PushPrompt {
@@ -407,9 +378,6 @@ export function createFeatureDeleteNoDepsPrompt(
 	};
 }
 
-/**
- * Create feature archived prompt
- */
 export function createFeatureArchivedPrompt(feature: Feature): PushPrompt {
 	return {
 		id: generatePromptId(),
@@ -431,9 +399,6 @@ export function createFeatureArchivedPrompt(feature: Feature): PushPrompt {
 	};
 }
 
-/**
- * Create appropriate delete prompt based on feature delete info
- */
 export function createFeatureDeletePrompt(info: FeatureDeleteInfo): PushPrompt {
 	if (info.reason === "credit_system") {
 		return createFeatureDeleteCreditSystemPrompt(info);
@@ -444,9 +409,6 @@ export function createFeatureDeletePrompt(info: FeatureDeleteInfo): PushPrompt {
 	return createFeatureDeleteNoDepsPrompt(info);
 }
 
-/**
- * Create appropriate delete prompt based on plan delete info
- */
 export function createPlanDeletePrompt(info: PlanDeleteInfo): PushPrompt {
 	if (info.customerCount > 0) {
 		return createPlanDeleteHasCustomersPrompt(info);
@@ -454,9 +416,6 @@ export function createPlanDeletePrompt(info: PlanDeleteInfo): PushPrompt {
 	return createPlanDeleteNoCustomersPrompt(info);
 }
 
-/**
- * Reset prompt counter (useful for testing)
- */
 export function resetPromptCounter(): void {
 	promptCounter = 0;
 }

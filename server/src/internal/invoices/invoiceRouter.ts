@@ -16,9 +16,8 @@ import { handleVoidInvoice } from "./handlers/handleVoidInvoice.js";
 
 export const publicInvoiceRouter = new Hono<HonoEnv>();
 
-// Rate limiter: 10 requests per minute
 const invoiceRedirectLimiter = rateLimiter<HonoEnv>({
-	windowMs: 60 * 1000, // 1 minute
+	windowMs: 60 * 1000,
 	limit: 10,
 	standardHeaders: "draft-6",
 	keyGenerator: (c) =>
@@ -31,10 +30,6 @@ publicInvoiceRouter.get(
 	...handleRedirectToInvoice,
 );
 
-/**
- * Authenticated invoice router - requires secret key middleware
- * Mounted at /v1/invoices in apiRouter
- */
 export const invoiceRouter = new Hono<HonoEnv>();
 
 invoiceRouter.get("/:stripe_invoice_id/stripe", ...handleGetStripeInvoice);

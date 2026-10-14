@@ -1,4 +1,3 @@
-/** Send frames off the ring (or the message port), each one `producer.send` in its producer's own order. */
 import type { ProducerRecord } from "kafkajs";
 import {
 	readSendFrame,
@@ -64,7 +63,6 @@ export function dispatchSend({
 	const { producers, nextSeq, held } = scope;
 	const frame = readSendFrame({ bytes });
 	const { producerId, seq } = frame.meta;
-	// A send that reaches the thread after its producer's disconnect is answered, never held.
 	if (!producers.has(producerId)) {
 		answerDisconnected({ scope, reqId: frame.reqId, producerId });
 		return;
@@ -92,7 +90,6 @@ export function drainSends({ scope }: { scope: ProducerLoopScope }): number {
 		if (!frame) break;
 		if (frame.type !== SEND_FRAME)
 			throw new Error(`Producer thread: unexpected frame ${frame.type}`);
-		// A copy: a held frame must outlive its ring slot, which is reused once we advance.
 		const bytes = frame.bytes.slice();
 		sends.advance();
 		read++;
@@ -109,7 +106,6 @@ export async function sendLoop({
 }): Promise<void> {
 	while (!scope.state.stopping) {
 		if (drainSends({ scope }) > 0) {
-			// Let the dispatched sends run before the next batch, so a flood cannot starve their acks.
 			await new Promise<void>((resolve) => setImmediate(resolve));
 			continue;
 		}

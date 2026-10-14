@@ -1,19 +1,3 @@
-/**
- * balances.list — customer_entitlements as breakdown rows, plan-backed and loose, live or expired.
- *
- * Contract:
- *   POST /v1/balances.list { customer_id?, entity_id?, feature_id?, statuses?[], plan_id?, limit, start_cursor }
- *     -> { list: BalanceListRow[], has_more, next_cursor }
- *   - expired = its customer_product is expired, or a loose grant whose expires_at has passed
- *   - statuses omitted → active only; ["expired"] → expired only; values combine
- *   - plan_id: null → loose grants only (balances.create, top-ups, rollovers)
- *   - id = external id (balance_id) when set, else the internal id
- *   - rollovers ride on their balance row
- *
- * Red (before): the route does not exist.
- * Green (after): every assertion below holds.
- */
-
 import { expect, test } from "bun:test";
 import {
 	type ApiCustomerV5,

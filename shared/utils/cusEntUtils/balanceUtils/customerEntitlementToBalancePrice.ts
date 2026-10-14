@@ -32,14 +32,10 @@ export const customerEntitlementToBalancePrice = ({
 		? BillingMethod.Prepaid
 		: BillingMethod.UsageBased;
 
-	// Determine amount vs tiers
-	// If fixed price or usage price with single tier, use amount
-	// If usage price with multiple tiers, use tiers array
 	let amount: number | undefined;
 	let tiers: UsagePriceConfig["usage_tiers"] | undefined;
 	let tier_behavior: TierBehavior | undefined;
 
-	// Get the entitlement's allowance (included usage) to add to tier `to` values
 	const allowance = customerEntitlement.entitlement.allowance ?? 0;
 
 	if (isFixedPrice(price)) {
@@ -49,8 +45,6 @@ export const customerEntitlementToBalancePrice = ({
 		if (usageTiers.length === 1) {
 			amount = usageTiers[0].amount;
 		} else {
-			// Internal: tier `to` does NOT include included usage.
-			// User-facing: tier `to` INCLUDES included usage.
 			tiers = addIncludedToTiers({ tiers: usageTiers, included: allowance });
 			tier_behavior = price.tier_behavior ?? TierBehavior.Graduated;
 		}

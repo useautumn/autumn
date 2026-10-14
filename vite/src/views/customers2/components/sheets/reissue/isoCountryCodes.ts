@@ -1,4 +1,3 @@
-// ISO 3166-1 alpha-2, the codes Stripe accepts on a customer address.
 export const ISO_COUNTRY_CODES = [
 	"AD",
 	"AE",

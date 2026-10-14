@@ -23,12 +23,6 @@ interface SubjectBalanceUpdate {
 	deleted_replaceable_ids: string[] | null;
 }
 
-/**
- * Patches shared FullSubject balance hashes after a lazy reset.
- * Groups updates by feature_id and pipelines one updateSubjectBalances call per feature.
- * Fire-and-forget -- failures are logged but don't propagate.
- * Does not mutate cache_version in cache; version bumps are DB lifecycle concerns.
- */
 export const resetSubjectCache = async ({
 	ctx,
 	customerId,

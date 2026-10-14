@@ -4,7 +4,6 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { evictBalanceWorkerCustomer } from "@/internal/balances/balanceWorker/evictBalanceWorkerCustomer.js";
 import { addRolloutCustomers } from "./rolloutConfigStore.js";
 
-/** A pin covers the org and its sandboxes (see resolveRolloutOrgId), in both envs. */
 const findPinnedOrgIds = async ({
 	ctx,
 	orgId,
@@ -27,7 +26,6 @@ const findPinnedOrgIds = async ({
 	return rows.map(({ id }) => id);
 };
 
-/** The worker may still hold a copy from an earlier stint, missing every write made on Redis since. */
 const evictStaleWorkerCopies = async ({
 	ctx,
 	orgId,
@@ -51,7 +49,6 @@ const evictStaleWorkerCopies = async ({
 	await Promise.all(evictions);
 };
 
-/** Pins customers to the worker; nothing routes to it until the settle window ends, so the evict lands first. */
 export const addRolloutCustomersToWorker = async ({
 	ctx,
 	rolloutId,

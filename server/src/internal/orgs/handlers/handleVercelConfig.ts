@@ -41,7 +41,6 @@ export const getVercelConfigDisplay = ({
 		};
 	}
 
-	// Get env-specific values
 	const clientId =
 		env === AppEnv.Live
 			? vercelConfig.client_integration_id
@@ -60,8 +59,6 @@ export const getVercelConfigDisplay = ({
 		client_integration_id: mask(clientId, 3, 2),
 		client_secret: mask(clientSecret, 3, 2),
 		webhook_url: mask(webhookUrl, 8, 6),
-		// `custom_payment_method` intentionally omitted from the display payload —
-		// see the no-vercel-config branch above for rationale.
 		custom_payment_method: undefined,
 		marketplace_mode: vercelConfig.marketplace_mode,
 		allowed_product_ids_live: vercelConfig.allowed_product_ids_live,
@@ -91,11 +88,9 @@ export const handleUpsertVercelConfig = createRoute({
 				? normalizeAllowedProductIds(body.allowed_product_ids_sandbox)
 				: undefined;
 
-		// Merge with existing processor_configs to avoid unsetting fields
 		const existingVercelConfig =
 			org.processor_configs?.vercel || ({} as VercelProcessorConfig);
 
-		// Merge custom_payment_method object properly
 		const customPaymentMethod =
 			body.custom_payment_method || existingVercelConfig.custom_payment_method
 				? {
@@ -151,7 +146,6 @@ export const handleUpsertVercelConfig = createRoute({
 						...existingVercelConfig,
 						...allowedProductIdsUpdates,
 						...envSpecificClientConfig,
-						// Custom payment method (for both envs)
 						...(customPaymentMethod
 							? { custom_payment_method: customPaymentMethod }
 							: {}),
@@ -181,8 +175,6 @@ export const handleGetVercelSink = createRoute({
 				message: `Vercel config not found for org ${ctx.org.id}`,
 			});
 		}
-		// Only this env's app, merged into the stored config: never replaces the
-		// other env's app or one webhooks.* already created.
 		const appId = await ensureVercelSvixAppId({ ctx });
 		const { url } = await createSvixCli().authentication.appPortalAccess(
 			appId,

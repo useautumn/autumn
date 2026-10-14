@@ -12,7 +12,6 @@ import {
 	replaceStripeSubscription,
 } from "./replaceStripeSubscription";
 
-/** A plan the request leaves running on the live subscription or its schedule. */
 const staysOnLiveSubscription = ({
 	customerProduct,
 	stripeSubscriptionId,
@@ -38,7 +37,6 @@ const staysOnLiveSubscription = ({
 	);
 };
 
-/** A later start ends the live plans now; once none is left on the subscription, it is cancelled rather than kept empty. */
 export const replaceLiveSubscriptionForFutureStart = ({
 	billingContext,
 	operations,

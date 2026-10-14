@@ -18,15 +18,6 @@ const messagesItem = (included: number) => ({
 	reset: { interval: ResetInterval.Month },
 });
 
-/**
- * Contract under test:
- * - plans.preview_update returns schema-aligned core preview fields.
- * - item_changes contains full resolved plan items, not remove-item filters.
- * - customize.price and price_change are present when the incoming price changes.
- * - customize.price and price_change are omitted when the incoming price resolves
- *   to the current price, including default interval_count normalization.
- */
-
 test.concurrent(
 	`${chalk.yellowBright("plans preview_update: pro with customer previews pro v2 versioning")}`,
 	async () => {

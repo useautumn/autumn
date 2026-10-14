@@ -1,16 +1,3 @@
-/**
- * billing.update with invoice_mode as the only change switches how an existing
- * subscription is collected, from the next renewal on.
- *
- * Contract:
- *   { invoice_mode: { enabled: true, net_terms_days, payment_method_types } }
- *     → Stripe sub send_invoice with those terms + types, no invoice created,
- *       customer product collection_method send_invoice, auto top-ups untouched
- *   { invoice_mode: { enabled: false } }
- *     → Stripe sub charge_automatically, invoice-only types cleared, auto top-ups untouched
- *   switch to charge automatically with no card on file → 400
- */
-
 import { expect, test } from "bun:test";
 import {
 	ALL_STATUSES,
@@ -123,7 +110,6 @@ test.concurrent(
 			await ctx.stripeCli.invoices.list({ customer: stripeCustomerId })
 		).data.length;
 
-		// To invoicing
 		await autumnV2_3.billing.update({
 			customer_id: customerId,
 			plan_id: pro.id,
@@ -151,7 +137,6 @@ test.concurrent(
 			topupInvoiceModeBefore,
 		);
 
-		// Back to charging automatically
 		await autumnV2_3.billing.update({
 			customer_id: customerId,
 			plan_id: pro.id,

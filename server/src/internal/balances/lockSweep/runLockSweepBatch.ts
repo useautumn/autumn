@@ -11,7 +11,6 @@ const BATCH_DEADLINE_MS = ms.seconds(30);
 
 export type LockSweepBatchResult = { fetched: number; pageSize: number };
 
-/** One pass over every due lock that confirms on expiry, a page at a time, until the pages run out or the deadline does. */
 export async function runLockSweepBatch({
 	ctx,
 }: {

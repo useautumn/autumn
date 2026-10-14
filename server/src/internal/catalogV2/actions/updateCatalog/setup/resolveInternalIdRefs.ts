@@ -6,7 +6,6 @@ import {
 import { and, eq, inArray } from "drizzle-orm";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 
-/** Every `internal_id` the payload states, on plans and on nested variants. */
 export const statedInternalIds = ({
 	params,
 }: {
@@ -24,14 +23,6 @@ export const statedInternalIds = ({
 
 export type InternalIdRefs = Map<string, ProductKey>;
 
-/**
- * Resolve stated ids to `(plan_id, version)` BEFORE setup loads anything.
- *
- * Setup scopes its `listFull` by the plan ids in the payload, so a renamed row
- * — the case internal_id exists for — names a plan that does not exist yet and
- * its row would never load. This runs first so those rows are in scope, and so
- * downstream matching never has to carry an id.
- */
 export const resolveInternalIdRefs = async ({
 	ctx,
 	params,
@@ -64,7 +55,5 @@ export const resolveInternalIdRefs = async ({
 		]),
 	);
 
-	// An id nothing owns names a new resource: the entry falls back to its
-	// plan_id, the row is minted fresh, and the config takes the real id back.
 	return refs;
 };

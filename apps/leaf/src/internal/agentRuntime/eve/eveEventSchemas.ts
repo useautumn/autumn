@@ -57,13 +57,9 @@ const messageAppendedSchema = turnDataSchema.extend({
 });
 const messageCompletedSchema = turnDataSchema.extend({
 	finishReason: z.string().optional(),
-	// null: the model replied with Eve's empty-delivery marker (see
-	// emptyDelivery.ts) and chose not to say anything.
 	message: z.string().nullable().default(""),
 });
 const failureSchema = z.object({ message: z.string().default("Eve failed") });
-/** A declared subagent was delegated to; the child runs its own session,
- * reachable at /eve/v1/session/<childSessionId>/stream. */
 const subagentCalledSchema = z.object({
 	callId: z.string().optional(),
 	childSessionId: z.string().optional(),
@@ -71,8 +67,6 @@ const subagentCalledSchema = z.object({
 	toolName: z.string().optional(),
 });
 
-/** Only the event's arrival matters today — it marks resumed-turn activity;
- * the child's output is read from its own stream, not from this event. */
 const subagentCompletedSchema = z.object({
 	callId: z.string().optional(),
 	subagentName: z.string().optional(),
@@ -126,8 +120,6 @@ const eveEventSchema = eveEventEnvelopeSchema.transform((envelope) => {
 			return event({ schema: failureSchema, type: envelope.type });
 		case "turn.started":
 			return event({ schema: turnDataSchema, type: envelope.type });
-		// A steer cancels the active turn: eve then emits `session.waiting` and
-		// starts the replacement under a new turn id.
 		case "turn.cancelled":
 			return event({ schema: turnDataSchema, type: envelope.type });
 		case "turn.completed":

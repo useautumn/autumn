@@ -1,10 +1,3 @@
-/**
- * The one subjects.set body builder, shared by herald's push and the server's pull.
- *
- *  the worker's logOffset wins over a fallback; without either the server gets null (it answers 503);
- *  read_at is the clock before the worker read; a customer version rides only when given.
- */
-
 import { afterEach, beforeEach, expect, spyOn, test } from "bun:test";
 import type { ReadSubjectStateReply } from "@autumn/balance-worker-client/protocol";
 import type { Organization } from "@autumn/shared";

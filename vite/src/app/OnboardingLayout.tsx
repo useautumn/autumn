@@ -12,7 +12,6 @@ export function OnboardingLayout() {
 	const { handleApiError } = useGlobalErrorHandler();
 	const navigate = useNavigate();
 
-	// Global error handler for API errors
 	useEffect(() => {
 		const handleGlobalError = (event: ErrorEvent) => {
 			if (event.error?.response) {
@@ -24,7 +23,6 @@ export function OnboardingLayout() {
 		return () => window.removeEventListener("error", handleGlobalError);
 	}, [handleApiError]);
 
-	// 1. If not loaded, show loading screen
 	if (isPending) {
 		return (
 			<AutumnProvider
@@ -41,7 +39,6 @@ export function OnboardingLayout() {
 		);
 	}
 
-	// 2. If no user, redirect to sign in
 	if (!data) {
 		navigate("/sign-in");
 		return;

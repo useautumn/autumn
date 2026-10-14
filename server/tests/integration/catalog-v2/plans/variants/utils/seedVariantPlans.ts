@@ -11,7 +11,6 @@ export type CatalogV2Client = {
 	};
 };
 
-/** Base 100 messages + variant 200 messages, pointer set. */
 export const seedBaseWithVariant = async ({
 	autumn,
 	baseId,
@@ -46,7 +45,6 @@ export const seedBaseWithVariant = async ({
 	});
 };
 
-/** Base 100 messages + two variants at 200. */
 export const seedBaseWithTwoVariants = async ({
 	autumn,
 	baseId,
@@ -79,7 +77,6 @@ export const seedBaseWithTwoVariants = async ({
 	});
 };
 
-/** Mint base v2 (50 Messages + Words). Variants stay on v1 unless propagate. */
 export const seedDivergedVariantBase = async ({
 	autumn,
 	baseId,
@@ -99,7 +96,6 @@ export const seedDivergedVariantBase = async ({
 	});
 };
 
-/** Mint the next version of an existing variant (clone latest). */
 export const seedVariantNewVersion = async ({
 	autumn,
 	variantId,
@@ -112,7 +108,6 @@ export const seedVariantNewVersion = async ({
 	});
 };
 
-/** Seat offered by Team and Team-EU. `customize` on when drifted overlays are needed. */
 export const seedBaseVariantWithChildLicense = async ({
 	autumn,
 	baseId,

@@ -1,6 +1,3 @@
-/** A turn with no live child that is silent past MAX_QUIET_MS settles on the
- * clock, not after the resync budget — a fake clock discriminates the paths. */
-
 import {
 	afterEach,
 	beforeEach,
@@ -79,7 +76,6 @@ await mockLeafModule({
 			] ?? { events: [] };
 			parentStreamCalls += 1;
 			for (const event of pass.events) yield event;
-			// A real idle window burns wall-clock before it throws.
 			advanceClock(PASS_ADVANCE_MS);
 			if (pass.thenThrow === "idle") {
 				throw new MockEveStreamIdleTimeoutError("Eve stream idle timeout");
@@ -145,8 +141,6 @@ const consumeAndCaptureAbandon = async () => {
 	return { abandoned, outcome };
 };
 
-// Nine idle passes: far more than either exit path needs, so the pass count at
-// settle time is decided purely by which condition fired.
 const nineQuietPasses = (first: EveEvent[]): StreamPass[] => [
 	{ events: first, thenThrow: "idle" },
 	...Array.from({ length: 8 }, () => ({
@@ -186,8 +180,6 @@ describe("a parent quiet past the cap settles on the clock", () => {
 		});
 		expect(abandoned).toHaveLength(1);
 
-		// The quiet cap fires the pass after quiet time crosses 150s. Spending
-		// the 3-resync budget instead takes two more passes and >= 320s quiet.
 		expect(parentStreamCalls).toBe(2);
 
 		const [log] = abandoned;
@@ -196,9 +188,6 @@ describe("a parent quiet past the cap settles on the clock", () => {
 	});
 
 	test("a caller deadline does not settle a turn whose child is working", async () => {
-		// Prod 2026-08-27 17:30:40 wrun_01M1247EP8R8ZBDA5QXXFSZQPG: the deadline
-		// fired with quiet_ms 299 while the investigator had 46 events in flight.
-		// The child completed 2m44s later, into a turn already reported failed.
 		childKeepsStreaming = true;
 		childEvents = Array.from({ length: 3 }, () =>
 			event({
@@ -206,8 +195,6 @@ describe("a parent quiet past the cap settles on the clock", () => {
 				type: "actions.requested",
 			}),
 		);
-		// Quiet passes carry the turn past the deadline, then eve resumes and
-		// finishes -- exactly what prod's child did 2m44s after being cut off.
 		streamPasses = [
 			{
 				events: [
@@ -245,7 +232,6 @@ describe("a parent quiet past the cap settles on the clock", () => {
 		};
 		const outcome = await consumeAgentTurn({
 			auth: {} as never,
-			// Two passes of virtual clock, so the third crosses it.
 			deadlineAt: TURN_START.getTime() + 2 * PASS_ADVANCE_MS,
 			env: AppEnv.Sandbox,
 			logger: logger as never,
@@ -263,8 +249,6 @@ describe("a parent quiet past the cap settles on the clock", () => {
 	});
 
 	test("a live child suppresses the quiet cap even when the parent is silent", async () => {
-		// Same silent parent, but a child relay is still streaming: the turn is
-		// working, so neither the quiet cap nor the resync budget may settle it.
 		childKeepsStreaming = true;
 		childEvents = Array.from({ length: 3 }, () =>
 			event({
@@ -304,8 +288,6 @@ describe("a parent quiet past the cap settles on the clock", () => {
 			kind: "answered",
 			text: "Done after a long delegation.",
 		});
-		// Six quiet passes at 80s each is well past the 150s cap, proving the
-		// live child — not a short clock — is what kept the turn alive.
 		expect(parentStreamCalls).toBeGreaterThan(5);
 	});
 });

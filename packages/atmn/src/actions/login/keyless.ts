@@ -50,7 +50,6 @@ export const projectNameFor = ({ repoRoot }: { repoRoot: string }): string => {
 			).name;
 			if (typeof name === "string" && name.trim() !== "") return name.trim();
 		} catch {
-			// Fall through to the folder name.
 		}
 	}
 	return basename(repoRoot) || "autumn";

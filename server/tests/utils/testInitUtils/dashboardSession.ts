@@ -3,12 +3,6 @@ import { ApiVersion } from "@autumn/shared";
 import type { TestHelpers } from "better-auth/plugins";
 import { auth } from "@/utils/auth.js";
 
-/**
- * Mint REAL better-auth dashboard sessions in the test process, then hit the
- * running server's session-authed internal routes over HTTP. Backed by the
- * better-auth testUtils plugin (enabled when NODE_ENV !== "production").
- */
-
 type DashboardCtx = {
 	org: { id: string };
 	env: AppEnv;
@@ -26,7 +20,6 @@ const baseUrl = () =>
 
 const getTestHelpers = async (): Promise<TestHelpers> => {
 	const ctx = await auth.$context;
-	// Conditional plugin spread defeats static inference; cast at the boundary.
 	const test = (ctx as { test?: TestHelpers }).test;
 	if (!test) {
 		throw new Error(
@@ -36,10 +29,6 @@ const getTestHelpers = async (): Promise<TestHelpers> => {
 	return test;
 };
 
-/**
- * Create a session for a fresh member of ctx.org with it set active. `superuser`
- * adds the global "admin" role that customSession maps to the superuser scope.
- */
 export const createDashboardSession = async (
 	ctx: DashboardCtx,
 	{
@@ -60,7 +49,6 @@ export const createDashboardSession = async (
 
 	const { headers } = await test.login({ userId: user.id });
 
-	// betterAuthMiddleware requires session.activeOrganizationId.
 	await auth.api.setActiveOrganization({
 		headers,
 		body: { organizationId: ctx.org.id },
@@ -82,10 +70,6 @@ const buildHeaders = (ctx: DashboardCtx, session: DashboardSession) => {
 	return headers;
 };
 
-/**
- * Fetch an internal/dashboard route with a real session. Returns the raw
- * status and parsed JSON (null body tolerated).
- */
 export const dashboardFetch = async <T = unknown>(
 	ctx: DashboardCtx,
 	session: DashboardSession,

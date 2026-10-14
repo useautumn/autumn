@@ -1,37 +1,3 @@
-/**
- * TDD test for writable `purchase_limit.count` on customers.update.
- *
- * Contract under test:
- *   New types/fields:
- *     - billing_controls.auto_topups[].purchase_limit.count?: number (min 0)
- *       on customer create/update params only
- *     - next_reset_at / source remain response-only
- *
- *   New behaviors:
- *     - count: N → writes auto_topup_limit_states.purchase_count = N
- *       for (customer, feature_id)
- *     - omit count → leave runtime state unchanged
- *     - count > limit → 400
- *     - purchase_limit with only count (no interval/limit) → 400
- *     - count: 0 on active window → preserve purchase_window_ends_at
- *     - count > 0 with stale/missing window → init future window so expand
- *       does not project the written count back to 0
- *     - count is stripped before JSONB write (never on customers.auto_topups)
- *
- *   Side effects:
- *     - upserts/updates auto_topup_limit_states row
- *     - still replaces customers.auto_topups config as today
- *
- * Pre-impl red: every assertion below fails because customers.update ignores
- * count (zod strips it) and never touches auto_topup_limit_states.
- * Post-impl green: sync helper writes purchase_count (+ window when needed)
- * and strips count from JSONB storage.
- *
- * Note: this file avoids initScenario/Stripe — this cloud env has no
- * STRIPE_SANDBOX_SECRET_KEY. Customer create/update + direct limit-state
- * inserts are enough to cover the contract.
- */
-
 import { expect, test } from "bun:test";
 import {
 	type ApiCustomerV5,
@@ -62,9 +28,6 @@ type ExpandedPurchaseLimit = {
 };
 
 const createClients = async () => {
-	// Prefer TESTS_ORG when present; fall back so this file can run in the
-	// Cursor cloud VM where createTestContext fails without Stripe secrets
-	// (preload only builds the default ctx when TESTS_ORG is set).
 	const orgSlug = process.env.TESTS_ORG || "unit-test-org";
 	const orgSecretKey = process.env.UNIT_TEST_AUTUMN_SECRET_KEY;
 	if (!orgSecretKey) throw new Error("UNIT_TEST_AUTUMN_SECRET_KEY is required");
@@ -96,9 +59,7 @@ const ensureCustomer = async ({
 }) => {
 	try {
 		await autumn.customers.delete(customerId);
-	} catch {
-		// ignore missing
-	}
+	} catch {}
 
 	await autumn.customers.create({
 		id: customerId,
@@ -165,7 +126,6 @@ test.concurrent(
 			},
 		});
 
-		// ── Contract 1: count: 0 resets purchase_count and preserves window ─
 		await autumn.customers.update(customerId, {
 			billing_controls: {
 				auto_topups: [
@@ -197,7 +157,6 @@ test.concurrent(
 		});
 		expect(afterReset?.next_reset_at).toBe(activeWindowEndsAt);
 
-		// ── Contract 2: omit count → leave runtime state unchanged ─────────
 		await autumn.customers.update(customerId, {
 			billing_controls: makeAutoTopupConfig({
 				threshold: 40,
@@ -215,7 +174,6 @@ test.concurrent(
 			next_reset_at: activeWindowEndsAt,
 		});
 
-		// ── Contract 3: count is not persisted on customers.auto_topups JSONB
 		const dbCustomer = await CusService.get({
 			db: ctx.db,
 			idOrInternalId: customerId,
@@ -232,7 +190,6 @@ test.concurrent(
 		});
 		expect(storedPurchaseLimit).not.toHaveProperty("count");
 
-		// ── Contract 4: count > limit → 400 ────────────────────────────────
 		await expectAutumnError({
 			errCode: ErrCode.InvalidRequest,
 			func: async () =>
@@ -256,7 +213,6 @@ test.concurrent(
 				}),
 		});
 
-		// ── Contract 5: purchase_limit with only count → 400 (zod) ─────────
 		await expectAutumnError({
 			func: async () =>
 				await autumn.customers.update(customerId, {
@@ -324,7 +280,6 @@ test.concurrent(
 			},
 		});
 
-		// ── Contract 6: count > 0 on stale window → persist count + future window
 		await autumn.customers.update(customerId, {
 			billing_controls: {
 				auto_topups: [
@@ -367,9 +322,7 @@ test.concurrent(
 
 		try {
 			await autumn.customers.delete(customerId);
-		} catch {
-			// ignore missing
-		}
+		} catch {}
 
 		await autumn.customers.create({
 			id: customerId,

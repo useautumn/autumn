@@ -24,7 +24,6 @@ describe("var name collision handling", () => {
 			["my-feature"],
 			["my-feature"],
 		);
-		// Both sanitize to "myFeature"
 		expect(featureVarMap.get("my-feature")).toBe("myFeature");
 		expect(planVarMap.get("my-feature")).toBe("myFeaturePlan");
 	});
@@ -51,13 +50,11 @@ describe("var name collision handling", () => {
 
 		const code = buildConfigFile(features, plans);
 
-		// Count occurrences of each declaration
 		const featureDecls = (code.match(/export const free\b/g) ?? []).length;
 		const planDecls = (code.match(/export const freePlan\b/g) ?? []).length;
 
 		expect(featureDecls).toBe(1);
 		expect(planDecls).toBe(1);
-		// Crucially: no two `export const free =` declarations
 		expect(code).not.toMatch(
 			/export const free = feature[\s\S]*export const free = plan/,
 		);

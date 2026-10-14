@@ -63,7 +63,6 @@ describe("the slot a customer lives in", () => {
 		for (const customerId of customerIds)
 			perSlot[customerIdToSlot({ customerId, slotCount: 8 })]++;
 
-		// 2000 customers over 8 slots is 250 each when even.
 		expect(Math.min(...perSlot)).toBeGreaterThan(200);
 		expect(Math.max(...perSlot)).toBeLessThan(300);
 	});
@@ -143,7 +142,6 @@ describe("a data folder's slots", () => {
 });
 
 describe("a replica catching up from a peer", () => {
-	/** A peer holding `subjects`, answering digests, rows by key, whole pages and the catalog from them. */
 	const sourceOf = ({
 		subjects,
 		catalog = null,

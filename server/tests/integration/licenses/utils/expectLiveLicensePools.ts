@@ -3,8 +3,6 @@ import type { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { listLicensePools } from "../licenseTestUtils.js";
 import { assertLicensesMatch } from "./expectCustomerLicenses.js";
 
-/** Exactly these live pools via `licenses.list`. Ended parents keep their
- * DB rows (hidden at read time), so assert pools here, not on raw rows. */
 export const expectLiveLicensePools = async ({
 	autumn,
 	customerId,

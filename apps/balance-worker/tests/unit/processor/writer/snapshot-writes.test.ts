@@ -48,7 +48,6 @@ const decideTrack = ({
 	};
 };
 
-/** A writing writer whose store records applies and enqueued DELETEs in order; `applyGate` holds every apply until it resolves. */
 const createWriter = ({
 	subjectMapMaxBytes,
 }: {
@@ -163,7 +162,6 @@ describe("an evict's snapshot DELETE", () => {
 		held.resolve();
 		await before.waitForStore();
 		await evicted;
-		// One DELETE, enqueued only once t1's apply was stored: lane order lands it after t1's rows.
 		expect(events).toEqual(["apply", `enqueue ${keyOf("cus_1")}`]);
 		expect(
 			writer.readFreshestState({ identity: identityOf("cus_1") }),
@@ -227,7 +225,6 @@ describe("an evict's snapshot DELETE", () => {
 	});
 });
 
-/** A writer over the real committer store; a DELETE never returns until `deleteGate` resolves. */
 const createWriterOverStore = () => {
 	const deleteGate = Promise.withResolvers<void>();
 	let flushes = 0;
@@ -321,7 +318,6 @@ describe("evicts never touch the hot path", () => {
 		await Bun.sleep(5);
 		expect(flushes()).toBe(1);
 
-		// The evicted customer reloads (a full read, stood in by adopt) and answers; nobody waits on the lane.
 		expect(
 			writer.readFreshestState({ identity: identityOf("cus_evicted") }),
 		).toBeNull();
@@ -341,7 +337,6 @@ describe("evicts never touch the hot path", () => {
 			}
 		expect(percentile({ samples, fraction: 0.99 })).toBeLessThan(1);
 
-		// A track on another customer is answered once the log holds it; only its store waits behind the held DELETE.
 		const command = createTrackCommand({
 			identity: identityOf("cus_other_0"),
 			value: 1,

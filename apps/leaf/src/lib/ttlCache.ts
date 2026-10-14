@@ -3,10 +3,6 @@ type TtlCacheEntry<T> = {
 	value: Promise<T>;
 };
 
-/** Promise cache with per-entry TTL: concurrent callers share one in-flight
- * load, rejected loads evict themselves (guarded against evicting a fresher
- * replacement), and `canEvict`/`onEvict` let entries with teardown — like a
- * pooled connection — refuse or observe eviction. */
 export const createTtlCache = <T>({
 	onEvict,
 	sliding = false,

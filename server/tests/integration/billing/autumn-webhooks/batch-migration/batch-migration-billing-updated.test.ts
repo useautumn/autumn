@@ -1,27 +1,3 @@
-/**
- * Batch migration lane: `billing.updated` webhook payloads, end to end
- * through Svix Play.
- *
- * Contract under test:
- *   Envelope:
- *     - { object: "billing.updated", customer_id, entity_id (only when the
- *       changed customer product is entity-level), plan_changes, tags }
- *   Plan changes:
- *     - one `updated` change per customer product that gained items, carrying
- *       a real subscription snapshot (plan_id, status "active", past_due
- *       false) — never a floating change without plan identity;
- *     - one `created` item_change per added feature (multi-feature adds);
- *     - a customer holding SEVERAL migrated plans gets ONE webhook with one
- *       plan change per plan;
- *     - entity-level customer products deliver in their OWN webhook with
- *       entity_id set, separate from the customer-level webhook.
- *   Absence:
- *     - a customer skipped by the batch lane (is_custom product) receives no
- *       webhook.
- *
- * The server→trigger delivery path is covered by billing-updated-migration.
- */
-
 import { afterAll, beforeAll, expect, test } from "bun:test";
 import {
 	getTestSvixAppId,
@@ -62,7 +38,6 @@ const addItems = [
 	{ feature_id: TestFeature.Workflows, included: 10 },
 ];
 
-// ── Contract: envelope + snapshot + multi-feature item changes. ──
 test.concurrent(
 	`${chalk.yellowBright("batch migration billing.updated: multi-feature add delivers snapshot-bearing plan change per customer")}`,
 	async () => {
@@ -127,7 +102,6 @@ test.concurrent(
 	},
 );
 
-// ── Contract: several migrated plans → ONE webhook, one change per plan. ──
 test.concurrent(
 	`${chalk.yellowBright("batch migration billing.updated: customer on two migrated plans gets one webhook with two plan changes")}`,
 	async () => {
@@ -198,7 +172,6 @@ test.concurrent(
 	},
 );
 
-// ── Contract: entity-level products deliver separately with entity_id. ──
 test.concurrent(
 	`${chalk.yellowBright("batch migration billing.updated: entity-level product delivers its own webhook carrying entity_id")}`,
 	async () => {
@@ -270,7 +243,6 @@ test.concurrent(
 	},
 );
 
-// ── Contract: skipped (is_custom) customers receive no webhook. ──
 test.concurrent(
 	`${chalk.yellowBright("batch migration billing.updated: skipped custom customer receives no webhook")}`,
 	async () => {
@@ -319,7 +291,6 @@ test.concurrent(
 		});
 		expect(result?.lane).toBe("batch");
 
-		// Positive control first: the plain customer's migration webhook arrives...
 		expectBillingUpdatedCorrect({
 			data: await waitForBillingUpdatedWebhook({
 				playToken,
@@ -328,8 +299,6 @@ test.concurrent(
 			customerId: plainId,
 		});
 
-		// ...and the skipped customer never gets one (their attach's `activated`
-		// webhook is expected — only a migration `updated` change would be wrong).
 		expect(
 			await waitForBillingUpdatedWebhook({
 				playToken,

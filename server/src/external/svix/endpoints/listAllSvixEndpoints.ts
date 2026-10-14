@@ -17,7 +17,6 @@ export const listAllSvixEndpoints = async ({
 		const page = await svix.endpoint
 			.list(appId, { limit: PAGE_SIZE, iterator })
 			.catch((error) => {
-				// Not an empty list: callers would read it as every webhook deleted.
 				if (error instanceof ApiException && error.code === 404)
 					throw new RecaseError({
 						message: "This environment's webhooks no longer exist",

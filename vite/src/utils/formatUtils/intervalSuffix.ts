@@ -13,7 +13,6 @@ export const isAbbreviatedInterval = (
 ): interval is AbbreviatedInterval =>
 	Object.keys(INTERVAL_ABBREVIATIONS).includes(interval);
 
-/** "/mo", "/yr", or "/3 mo" for a price billed every few intervals. */
 export const intervalSuffix = ({
 	interval,
 	intervalCount = 1,

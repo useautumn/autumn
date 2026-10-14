@@ -1,5 +1,3 @@
-/** set_plans rejects the requests attach's guards reject, with attach's messages. */
-
 import { expect, test } from "bun:test";
 import { type ApiCustomerV5, ErrCode, ms } from "@autumn/shared";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils";
@@ -87,7 +85,6 @@ test.concurrent(
 	},
 );
 
-/** A later phase replacing an active plan may take over that plan's subscription_id. */
 test.concurrent(
 	`${chalk.yellowBright("set-plans guards: a future phase may reuse the subscription_id of the plan it replaces")}`,
 	async () => {
@@ -139,7 +136,6 @@ test.concurrent(
 	},
 );
 
-/** A retained plan left out of the opening phase survives until a later phase replaces it, taking its subscription_id. */
 test.concurrent(
 	`${chalk.yellowBright("set-plans guards: a future phase may reuse the subscription_id of a surviving plan it replaces")}`,
 	async () => {
@@ -192,7 +188,6 @@ test.concurrent(
 	},
 );
 
-/** A retained plan replaced by a later phase still holds its subscription_id until that phase starts. */
 test.concurrent(
 	`${chalk.yellowBright("set-plans guards: an immediate plan cannot take the subscription_id of a plan replaced later")}`,
 	async () => {

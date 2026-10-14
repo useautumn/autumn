@@ -1,9 +1,3 @@
-/**
- * Paid updates 1 -> 2 -> 3, then a preview to 4 while the latest invoice's
- * stored rows have not landed. Red: one seat credited, three charged. Green:
- * two credited, three charged.
- */
-
 import { expect, test } from "bun:test";
 import type {
 	ApiCustomerV3,

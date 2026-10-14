@@ -3,10 +3,6 @@ import { postToProducerThread } from "./postToProducerThread.js";
 import { drainAcks } from "./receiveAcks.js";
 import { failPendingAsUnknown } from "./reportProducerThreadFailure.js";
 
-/**
- * Waits for the thread to flush and disconnect its producers; a thread that already exited is not waited
- * for. Acks it wrote before `stopped` are read, and anything it never answered fails as unknown.
- */
 export async function stopProducerThread({
 	scope,
 }: {
@@ -17,7 +13,6 @@ export async function stopProducerThread({
 	try {
 		postToProducerThread({ scope, message: { kind: "stop" } });
 	} catch {
-		// Already gone: its `close` has settled `stopped`.
 	}
 	await scope.stopped.promise;
 	state.stopping = true;

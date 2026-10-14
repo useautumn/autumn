@@ -10,9 +10,6 @@ interface RequestWithValidation {
 	valid(target: "query"): ExpandCarrier | undefined;
 }
 
-/**
- * Reads expand metadata into ctx, using validated query data and raw body data.
- */
 export const expandMiddleware = (): MiddlewareHandler<HonoEnv> => {
 	const getRawBodyExpand = async ({
 		c,
@@ -34,7 +31,6 @@ export const expandMiddleware = (): MiddlewareHandler<HonoEnv> => {
 	return async (c, next) => {
 		const req = c.req as typeof c.req & RequestWithValidation;
 
-		// Keep query behavior as-is so any query validation/transforms still apply.
 		let validatedQuery: ExpandCarrier | undefined;
 		try {
 			validatedQuery = req.valid("query");
@@ -44,7 +40,6 @@ export const expandMiddleware = (): MiddlewareHandler<HonoEnv> => {
 
 		const rawBody = await getRawBodyExpand({ c });
 
-		// Precedence: body expand > query expand
 		const expandValue = rawBody?.expand ?? validatedQuery?.expand;
 		const skipCacheQuery = rawBody?.skip_cache ?? validatedQuery?.skip_cache;
 
@@ -52,7 +47,6 @@ export const expandMiddleware = (): MiddlewareHandler<HonoEnv> => {
 			(typeof skipCacheQuery === "boolean" && skipCacheQuery === true) ||
 			(typeof skipCacheQuery === "string" && skipCacheQuery === "true");
 
-		// Normalize to array: undefined -> [], string -> [string], array -> array
 		const expand: string[] = !expandValue
 			? []
 			: Array.isArray(expandValue)

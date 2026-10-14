@@ -10,12 +10,6 @@ export type CustomerLicenseBalancePlan = {
 	balanceUpdates: CustomerLicenseBalanceUpdate[];
 };
 
-/**
- * Pure convergence of the derived columns on each live customer license:
- * granted from its effective plan license, remaining from granted minus live
- * seats, plan_license_id re-resolved (the column is output, never input).
- * Rows already true — or with no license (link removed) — get no update.
- */
 export const computeCustomerLicenseBalancePlan = ({
 	context,
 }: {
@@ -25,7 +19,6 @@ export const computeCustomerLicenseBalancePlan = ({
 		const { planLicense } = customerLicense;
 		if (!planLicense) return [];
 
-		// granted = included + paid; paid_quantity is billing-owned input here.
 		const granted = planLicense.included + customerLicense.paid_quantity;
 		const remaining =
 			granted -

@@ -49,7 +49,6 @@ export const MiscellaneousEdgeConfigForm = ({
 		},
 	});
 
-	// Mirrors form edits into the JSON buffer; the buffer is what gets saved.
 	useEffect(() => {
 		if (syncSource !== "form") return;
 		setJsonText(buildMiscellaneousJsonText({ config }));

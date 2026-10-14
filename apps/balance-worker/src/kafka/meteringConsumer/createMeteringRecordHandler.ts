@@ -33,23 +33,18 @@ export function createMeteringRecordHandler({
 		stateStore: StateStore;
 		partitionOffsets: Pick<Admin, "fetchTopicOffsets">;
 		recentCommandsByPartition: ReadonlyMap<number, RecentCommands>;
-		/** Absent for a partition means every record is read. */
 		producedOffsetsByPartition?: ReadonlyMap<number, ProducedOffsets>;
 		replayFloorByPartition: ReadonlyMap<number, bigint>;
-		/** The replay reading each partition; a log it cannot read parks that partition through it. */
 		replayByPartition: ReadonlyMap<
 			number,
 			Pick<PartitionReplay, "markUnavailable">
 		>;
-		/** Partitions another worker still owns: their records feed the dedup window and nothing else. */
 		readOnlyPartitions?: ReadonlySet<number>;
-		/** The epoch this worker's writer holds each partition under; a fence above it means the partition is lost. */
 		ownerEpochByPartition?: ReadonlyMap<number, () => string | undefined>;
 		logger?: Pick<AutumnLogger, "warn">;
 		now?: () => number;
 	};
 }): MeteringRecordHandler {
-	// The fence as read from the log so far, ahead of the store's bookmark; the store's copy seeds it.
 	const fenceByPartition = new Map<number, OwnerFence>();
 	const staleRecords = createStaleRecordLog({
 		logger: ctx.logger,
@@ -69,7 +64,6 @@ export function createMeteringRecordHandler({
 		if (stored) fenceByPartition.set(partition, stored);
 		return stored;
 	}
-	/** Written after the fence by an epoch the fence outranks: a stale owner's, dropped whoever is reading. */
 	function isStale({
 		position,
 		ownerEpoch,
@@ -84,7 +78,6 @@ export function createMeteringRecordHandler({
 			return null;
 		return fence;
 	}
-	/** A marker raises the partition's fence; one from above this worker's own epoch ends its ownership. */
 	function applyFence({
 		position,
 		ownerEpoch,
@@ -125,7 +118,6 @@ export function createMeteringRecordHandler({
 		if (advanced instanceof Promise) return advanced.then(() => undefined);
 		return undefined;
 	}
-	/** Parks the partition behind the unreadable record; without a replay to park, the failure is thrown as before. */
 	function parkPartition({
 		topic,
 		partition,
@@ -159,13 +151,11 @@ export function createMeteringRecordHandler({
 		if (firstOffset > storedNextOffset) {
 			return readRetainedResumeOffset({ topic, partition, storedNextOffset });
 		}
-		// A starting replay reads from its floor up to the bookmark on purpose.
 		const floor = ctx.replayFloorByPartition.get(partition);
 		if (floor === undefined) return storedNextOffset;
 		return firstOffset < floor ? floor : null;
 	}
 
-	/** Null here means no seek: the parked partition's batch then finds its generation gone and applies nothing. */
 	async function readRetainedResumeOffset({
 		topic,
 		partition,
@@ -196,7 +186,6 @@ export function createMeteringRecordHandler({
 		return storedNextOffset;
 	}
 
-	/** A record this process's writer produced was projected and queued for the store when it was decided; the writer also remembered its command. Reading it back would only repeat that. */
 	function shouldApply(position: {
 		topic: string;
 		partition: number;
@@ -206,8 +195,6 @@ export function createMeteringRecordHandler({
 		return !produced?.has({ offset: position.offset });
 	}
 
-	/** Written under the epoch this process's writer holds, so the writer applies it in order; the follower applying
-	 *  one ahead of the writer's lingering batches would move the bookmark past them. Known before the ack, unlike the offset. */
 	function isOwnWrite({
 		partition,
 		ownerEpoch,
@@ -221,7 +208,6 @@ export function createMeteringRecordHandler({
 		return own !== undefined && BigInt(own) === ownerEpoch;
 	}
 
-	/** Stays synchronous for a resident store: the writer-race offset must be visible before the next record. */
 	function applyRecord({
 		position,
 		record,
@@ -243,7 +229,6 @@ export function createMeteringRecordHandler({
 				?.remember({ mutation: record });
 			return undefined;
 		}
-		// A replayed record carries no state, so the row it makes stale is deleted rather than left behind.
 		const applied = ctx.stateStore.applyDurableMutations({
 			records: [{ position, mutation: record }],
 			snapshotIntent: new Map([
@@ -265,7 +250,6 @@ export function createMeteringRecordHandler({
 		return settle(applied);
 	}
 
-	/** A record below the bookmark is already in the store: one it cannot read is skipped, never fatal. */
 	function isInsideReplayWindow({
 		position,
 	}: {
@@ -283,7 +267,6 @@ export function createMeteringRecordHandler({
 		offset,
 		cause,
 	}: MeteringRecordFailure): undefined {
-		// An offset that will not parse is itself the failure; it is outside any window.
 		const position = readPosition({ topic, partition, offset });
 		if (position && isInsideReplayWindow({ position })) {
 			ctx.logger?.warn("Replay window record skipped", {
@@ -333,7 +316,6 @@ function readPosition({
 	}
 }
 
-/** Applied now or already in the store: either way the log record is the receipt for its command id. */
 function landedOnStore(results: DurableMutationApplyResult[]): boolean {
 	const [result] = results;
 	return (
@@ -348,7 +330,6 @@ function replayedOffsetOf(
 ): { nextOffset: bigint } | undefined {
 	const [result] = results;
 	if (result?.kind === "failed") throw result.cause;
-	// A rejected record is settled: nothing of it landed and the bookmark is already past it.
 	if (result?.kind === "position_already_applied") {
 		return { nextOffset: result.nextOffset };
 	}

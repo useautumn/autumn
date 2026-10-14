@@ -1,13 +1,3 @@
-/**
- * Editing a custom pending (unpaid) plan.
- *
- * Red (before): the re-attach started from the catalog plan, so an edit that
- * didn't restate the price dropped the custom $1,200 back to the catalog $20.
- * Green (after): the edit lands on top of the pending plan's own price and items,
- * as billing.update does for an active plan, so an allowance-only edit keeps the
- * original payment.
- */
-
 import { expect, test } from "bun:test";
 import {
 	type AttachParamsV1Input,
@@ -25,7 +15,6 @@ import chalk from "chalk";
 import { eq } from "drizzle-orm";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
 
-/** Attaches a $1,200 custom plan through Stripe checkout, leaving it pending. */
 const setupCustomPendingPlan = async ({ name }: { name: string }) => {
 	const customerId = `${name}-${Date.now()}`;
 	const pro = products.pro({
@@ -75,7 +64,6 @@ test.concurrent(
 			customize: { items: [itemsV2.monthlyMessages({ included: 200 })] },
 		};
 
-		// Only the allowance changes, so nothing new is due and the $1,200 checkout stands.
 		const preview =
 			await autumnV2_2.subscriptions.previewUpdate<UpdateSubscriptionV1ParamsInput>(
 				updateParams,

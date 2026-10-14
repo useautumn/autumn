@@ -1,21 +1,3 @@
-/**
- * TDD test for customize.upsert_licenses on billing.attach.
- *
- * Contract under test:
- *   New types/fields:
- *     - AttachParamsV1.customize.upsert_licenses: [{ license_plan_id,
- *       included?, prepaid_only?, customize?: { price?, add_items?, remove_items? } }]
- *   New behaviors:
- *     - attach pro (free) with dev-seat license (catalog: 20/mo, 100 msgs/mo,
- *       included 2) customized to 40/mo + 500 msgs/mo, quantity 3
- *       -> pool granted 3 (included 2 + paid 1), paid seat bills the CUSTOM
- *          price: one invoice, total 40
- *     - licenses.attach an entity -> seat provisions the customized product:
- *       entity messages balance granted 500
- *   Side effects:
- *     - customer license pool counters + entity balances surface the
- *       customized definition through the API
- */
 import { test } from "bun:test";
 import type {
 	ApiCustomerV3,
@@ -111,7 +93,6 @@ test.concurrent(
 
 		await autumnV2_3.billing.attach<AttachParamsV1Input>(attachParams);
 
-		// ── Pool: counters inherit catalog included, custom def anchored ──
 		const customer = await autumnV2_3.customers.get<ApiCustomerV5>(customerId);
 		expectCustomerLicenses({
 			customer,
@@ -127,7 +108,6 @@ test.concurrent(
 				},
 			],
 		});
-		// ── Invoice: 1 paid seat × CUSTOM $40/mo (not catalog $20) ────────
 		const customerV3 = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 		await expectCustomerInvoiceCorrect({
 			customer: customerV3,
@@ -135,10 +115,8 @@ test.concurrent(
 			latestTotal: PAID_SEATS * CUSTOM_SEAT_PRICE,
 		});
 
-		// ── Stripe sub: verify agrees with the custom seat price ─────────
 		await expectStripeSubscriptionCorrect({ ctx, customerId });
 
-		// ── Seat provisioning: entity gets the CUSTOM 500 msgs/mo ────────
 		await autumnV2_3.licenses.attach({
 			customer_id: customerId,
 			plan_id: devSeat.id,
@@ -161,7 +139,6 @@ test.concurrent(
 			granted: CUSTOM_MESSAGES,
 		});
 
-		// ── Pool counters + Stripe stay correct after assignment ─────────
 		const customerAfter =
 			await autumnV2_3.customers.get<ApiCustomerV5>(customerId);
 		expectCustomerLicenses({

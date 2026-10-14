@@ -1,10 +1,3 @@
-/**
- * A trial is documented at the top level of a billing request and defined
- * inside `customize`. The server honours both, so an approval card built from
- * the raw request must fold the shorthand too — otherwise a trialling attach
- * renders with no trial line, which is what shipped to Slack on 2026-08-25.
- */
-
 import { describe, expect, test } from "bun:test";
 import {
 	billingActionBadges,

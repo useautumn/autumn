@@ -1,9 +1,3 @@
-/**
- * Filter-mode delete matches live messages/mo rows by feature+interval, so a
- * free custom 500/mo is removed along with the catalog 100/mo copy.
- *
- * Paid different-allowance rows stay in batch-delete-item-paid-rows.test.ts.
- */
 import { test } from "bun:test";
 import { ResetInterval } from "@autumn/shared";
 import { runChunkedMigration } from "@tests/integration/billing/migrations-v2/utils/runChunkedMigration";

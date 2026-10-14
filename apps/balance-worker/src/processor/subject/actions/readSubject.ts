@@ -13,7 +13,6 @@ import { SubjectCatalogEvictedError } from "../subjectErrors.js";
 import type { SubjectScope } from "../types/subject.js";
 import { readPlanLicenseCatalogKeys } from "./readPlanLicenseCatalogKeys.js";
 
-/** The catalog rows a state references, straight from the cache; `ensure` already filled it. */
 const joinSubjectCatalog = ({
 	scope,
 	state,
@@ -22,9 +21,6 @@ const joinSubjectCatalog = ({
 	state: SubjectState;
 }): Catalog => {
 	const keys = subjectStateToCatalogKeys({ state });
-	// `ensure` refreshed anything due moments ago, so a row that has since passed
-	// its ttl is still the row it just fetched. Failing the request over that
-	// timing gap cost roughly a sixth of all worker traffic under load.
 	const catalog = scope.ctx.catalogCache.read({
 		keys: [
 			...keys,
@@ -39,7 +35,6 @@ const joinSubjectCatalog = ({
 	return catalog;
 };
 
-/** The catalog rows a state references, joined once per state until the catalog moves. */
 export const readSubjectCatalog = ({
 	scope,
 	state,
@@ -52,7 +47,6 @@ export const readSubjectCatalog = ({
 		join: () => joinSubjectCatalog({ scope, state }),
 	});
 
-/** Synchronous, on the freshest state inside the critical section. */
 export const readSubject = ({
 	scope,
 	state,

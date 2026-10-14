@@ -146,7 +146,6 @@ const whenIdle = (run: () => void) => {
 	return () => window.cancelIdleCallback(id);
 };
 
-/** Timing & boot, opened from the ETA chip: a left sheet over the main content only. */
 export const TimingSheet = ({
 	open,
 	onOpenChange,
@@ -155,10 +154,8 @@ export const TimingSheet = ({
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
 }) => {
-	// Mounted once the page is idle and kept mounted, so opening only reveals it.
 	const [primed, setPrimed] = useState(false);
 	useEffect(() => whenIdle(() => setPrimed(true)), []);
-	// While closed the body keeps its last props, so live ticks don't re-render the charts.
 	const shown = useRef(body);
 	if (open) shown.current = body;
 	return (
@@ -167,7 +164,6 @@ export const TimingSheet = ({
 				side="left"
 				hideCloseButton
 				keepMounted={primed}
-				// Laid out but invisible while closed, so the charts keep their size instead of remounting.
 				render={(props) => <div {...props} hidden={false} />}
 				overlayClassName="absolute"
 				className="not-data-ending-style:data-closed:invisible absolute top-2 bottom-2 left-3 w-[calc(100%-1.5rem)] gap-4 overflow-y-auto rounded-2xl border border-border/40 bg-card p-4 shadow-(--overlay-dialog-shadow) sm:max-w-md"

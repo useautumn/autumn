@@ -1,4 +1,3 @@
-/** Pooled items: pull emits pooled/entityFeatureId and push sends them back. */
 import { describe, expect, test } from "bun:test";
 import type { Plan } from "../../src/compose/models/index.js";
 import { transformApiPlan } from "../../src/lib/transforms/apiToSdk/plan.js";

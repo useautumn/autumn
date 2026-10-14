@@ -8,13 +8,6 @@ import {
 import type { z } from "zod/v4";
 import { catalogPlanItemIdentity } from "./catalogPlanItemIdentity.js";
 
-/**
- * The plan item schema plus Stripe price adoption. Adoption is scoped to the
- * catalog path: `validateAdoptedStripePrices` only runs in the catalogV2 init
- * flow, so a stated price id on attach/customize/migration would be persisted
- * unchecked and only surface as a Stripe error at checkout. Keep `processors`
- * here rather than on `CreatePlanItemParamsV1Schema`.
- */
 export const CatalogPlanItemPriceParamsSchema =
 	PlanItemPriceParamsSchema.extend({
 		processors: ApiPriceProcessorsSchema.optional().meta({

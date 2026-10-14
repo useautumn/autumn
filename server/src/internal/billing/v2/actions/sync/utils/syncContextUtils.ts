@@ -28,7 +28,6 @@ const isPaidInCurrency = ({
 		);
 	});
 
-/** Free in the base currency and in the sync currency, which can price a plan differently. */
 export const isProductFreeInSyncCurrency = ({
 	fullProduct,
 	currency,
@@ -74,7 +73,6 @@ export const customerHasLivePaidProduct = ({
 			isCustomerProductPaid(customerProduct),
 	);
 
-/** `undefined` = don't write `customers.currency`. A value sets or relocks it. */
 export const syncContextToCurrencyLock = ({
 	syncContext,
 }: {
@@ -89,7 +87,6 @@ export const syncContextToCurrencyLock = ({
 
 	const currentCurrency = syncContext.fullCustomer.currency?.toLowerCase();
 	if (currentCurrency === syncContext.currency) return undefined;
-	// Live paid product already owns this lock; leftover currency is the relock case below.
 	if (
 		currentCurrency &&
 		customerHasLivePaidProduct({ fullCustomer: syncContext.fullCustomer })

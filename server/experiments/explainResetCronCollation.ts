@@ -9,9 +9,6 @@ import {
 import { and, eq, gt, isNull, lt, or, sql } from "drizzle-orm";
 import { initDrizzle } from "./experimentEnv";
 
-// Run with `bun run experiments/explainResetCronCollation.ts`
-// Tests the getActiveResetPassed query with COLLATE "C" fix on the LEFT JOIN.
-
 const RELEVANT_TABLES = ["customer_entitlements", "customer_products"];
 
 const listIndexes = async ({

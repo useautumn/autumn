@@ -13,8 +13,6 @@ export async function completeCommand({
 	const commandNextOffset = BigInt(source.commandOffset) + 1n;
 	const current = ctx.stateStore.readCommandNextOffset({ topic, partition });
 	if (current !== null && current >= commandNextOffset) return;
-	// A skipped command leaves no record; its offset lands through the group commit after a gap,
-	// and the Postgres bookmark, saved below, is what skips a restart past it.
 	if (ctx.appender.settleCommandOffset) {
 		ctx.appender.settleCommandOffset({
 			topic,

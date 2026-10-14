@@ -12,7 +12,6 @@ const MIGRATIONS = join(import.meta.dir, "../../../db/migrations");
 
 const at = (minute: number) => new Date(Date.UTC(2026, 9, 6, 12, minute));
 
-/** Every migration, applied inside a throwaway schema. */
 const withMigratedSchema = async (
 	fn: (ctx: TwdContext, client: postgres.Sql) => Promise<void>,
 ) => {

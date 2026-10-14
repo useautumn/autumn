@@ -1,48 +1,3 @@
-/**
- * TDD contract test for replica-read routing of FullSubject hydrations
- * (replica-reads design §3.1: one chokepoint in getFullSubject[Normalized],
- * gated by skipCache + prober eligibility + customer_lsns freshness ledger).
- *
- * Contract under test:
- *   New types/fields:
- *     - readFrom?: "primary" | "replica-ok" (default "primary") on
- *       getFullSubject + getFullSubjectNormalized
- *     - resolveSubjectReadDb({ ctx, readFrom, orgId, env, customerId })
- *       -> { db, source: "primary" | "replica" } in server/src/db/
- *     - ctx.subjectReadTrace (non-prod debug box) -> response header
- *       x-subject-source: primary|replica|cache when the request carries
- *       x-debug-subject-source: true and NODE_ENV !== "production"
- *   New behaviors:
- *     (a) quiet customer (ledger row aged > 60s) + skipCache read
- *         -> 200, x-subject-source: replica
- *     (b) structurally written < 60s ago (create/attach marks the ledger)
- *         + skipCache read -> x-subject-source: primary (read-your-writes)
- *     (c) get_or_create of an EXISTING customer with skipCache + quiet ledger
- *         -> 200, lookup leg served by replica
- *     (d) get_or_create of a BRAND NEW customer -> creates fine (converges via
- *         primary); immediate follow-up skipCache read -> primary (create mark)
- *     (e) normal cache path untouched: read WITHOUT skipCache -> cache
- *         (primary allowed on first miss); no debug header -> no source header
- *     (f) service-level fail-safes: prober ineligible -> primary; ledger check
- *         throw -> primary; replica execute throw -> ONE primary retry succeeds
- *     (g) replica-routed hydration brands normalized + fullSubject
- *         (isReplicaSourced === true) and setCachedFullSubject throws on them
- *   Side effects:
- *     - replica hydrations run with lazy resets disabled (no primary writes)
- *     - replica-sourced subjects can never be written to Redis
- *
- * Pre-impl red: resolveSubjectReadDb / readFrom / x-subject-source do not
- * exist. Post-impl green: routing seam + debug header land per design §3.1.
- *
- * (a)-(e) run E2E against the live dev server (real primary + 2 replicas,
- * prober started in init.ts), and only while the balance-worker rollout is
- * below 100%: worker customer reads never take the replica-routed path.
- * (f)-(g) run service-level in the test process because they need fake pools
- * and forced prober states — not expressible over HTTP. They are intentionally
- * NON-concurrent: they mutate test-process module state (prober probe, replica
- * override) that must not interleave.
- */
-
 import { expect, test } from "bun:test";
 import { ApiVersion } from "@autumn/shared";
 import { items } from "@tests/utils/fixtures/items.js";
@@ -78,8 +33,6 @@ const baseUrl = envBase
 const DEBUG_HEADERS = { "x-debug-subject-source": "true" };
 const SKIP_CACHE_DEBUG_HEADERS = { ...DEBUG_HEADERS, "x-skip-cache": "true" };
 
-/** Raw fetch (not AutumnInt) because the contract asserts response HEADERS.
- *  Pinned to V2_3 so the body is the flat ApiCustomer shape (top-level id). */
 const rpcPost = async ({
 	ctx,
 	path,
@@ -110,7 +63,6 @@ const rpcPost = async ({
 	};
 };
 
-/** DML on test-owned ledger rows only: makes the customer "quiet" (> 60s). */
 const preAgeLedger = async ({
 	ctx,
 	customerId,
@@ -127,10 +79,8 @@ const preAgeLedger = async ({
 	`);
 };
 
-/** Dev replicas run ~0 lag; this bounds the created-row catch-up window. */
 const REPLICA_CATCHUP_MS = 1_500;
 
-// (a)-(e) read x-subject-source, which only the legacy (non-worker) customer read path sets.
 const workerServesCustomerReads =
 	(await getServerBalanceWorkerRolloutPercent({ org: testCtx.org })) === 100;
 const legacyReadTest = test.concurrent.skipIf(workerServesCustomerReads);
@@ -141,7 +91,6 @@ const legacyReadTitle = (title: string) =>
 			: title,
 	);
 
-// ── Contract assertion (a): quiet customer + skipCache -> replica ──────────
 legacyReadTest(
 	legacyReadTitle(
 		"replica-reads (a): quiet customer + skipCache read is served by the replica",
@@ -170,7 +119,6 @@ legacyReadTest(
 	},
 );
 
-// ── Contract assertion (b): structural write < 60s ago -> primary ──────────
 legacyReadTest(
 	legacyReadTitle(
 		"replica-reads (b): freshly attached customer + skipCache read pins primary (read-your-writes)",
@@ -190,7 +138,6 @@ legacyReadTest(
 			actions: [s.attach({ productId: pro.id })],
 		});
 
-		// Attach just marked the customer_lsns ledger; no pre-aging here.
 		const res = await rpcPost({
 			ctx,
 			path: "/customers.get",
@@ -204,7 +151,6 @@ legacyReadTest(
 	},
 );
 
-// ── Contract assertion (c): get_or_create existing + quiet -> replica ──────
 legacyReadTest(
 	legacyReadTitle(
 		"replica-reads (c): get_or_create of an existing quiet customer serves the lookup from the replica",
@@ -233,7 +179,6 @@ legacyReadTest(
 	},
 );
 
-// ── Contract assertion (d): get_or_create brand-new -> converges, then primary
 legacyReadTest(
 	legacyReadTitle(
 		"replica-reads (d): get_or_create of a brand-new customer creates via primary; follow-up read pins primary",
@@ -244,9 +189,6 @@ legacyReadTest(
 			setup: [],
 			actions: [],
 		});
-		// Deterministic id across runs: remove any prior copy so this run truly
-		// creates. A delete is itself a structural write and marks the ledger,
-		// which only reinforces the primary-pinned expectation below.
 		await autumnV1.customers.delete(customerId).catch(() => undefined);
 
 		const created = await rpcPost({
@@ -270,7 +212,6 @@ legacyReadTest(
 	},
 );
 
-// ── Contract assertion (e): normal cache path untouched ────────────────────
 legacyReadTest(
 	legacyReadTitle(
 		"replica-reads (e): reads without skipCache stay on the cache path and emit no header without the debug opt-in",
@@ -291,11 +232,8 @@ legacyReadTest(
 		});
 		expect(first.status).toBe(200);
 		expect(first.customerId).toBe(customerId);
-		// First read may miss (primary hydration + cache fill) or hit a cache
-		// warmed by the create flow — both are today's behavior.
 		expect(["cache", "primary"]).toContain(first.subjectSource ?? "missing");
 
-		// Outlive the in-process L1 TTL so the second read exercises Redis.
 		await timeout(1_200);
 		const second = await rpcPost({
 			ctx,
@@ -307,7 +245,6 @@ legacyReadTest(
 		expect(second.customerId).toBe(customerId);
 		expect(second.subjectSource).toBe("cache");
 
-		// Without the debug opt-in the header must never appear (prod shape).
 		const noDebug = await rpcPost({
 			ctx,
 			path: "/customers.get",
@@ -319,7 +256,6 @@ legacyReadTest(
 	},
 );
 
-// ── Contract assertion (f): service-level fail-safes (NOT concurrent) ──────
 test(`${chalk.yellowBright("replica-reads (f): resolveSubjectReadDb fail-safes and one-shot primary retry on replica failure")}`, async () => {
 	const customerId = "replica-read-service-failsafe";
 	const { ctx } = await initScenario({
@@ -331,7 +267,6 @@ test(`${chalk.yellowBright("replica-reads (f): resolveSubjectReadDb fail-safes a
 	const baseArgs = { orgId: ctx.org.id, env: ctx.env, customerId };
 
 	try {
-		// (f1) prober ineligible (never probed -> stale) -> primary.
 		_resetReplicaRoutingStateForTesting();
 		const ineligible = await resolveSubjectReadDb({
 			ctx: skipCacheCtx,
@@ -341,7 +276,6 @@ test(`${chalk.yellowBright("replica-reads (f): resolveSubjectReadDb fail-safes a
 		expect(ineligible.source).toBe("primary");
 		expect(ineligible.db).toBe(ctx.db);
 
-		// Sanity for the gates below: eligible prober + quiet ledger -> replica.
 		_setReplicaRoutingProbeForTesting({ replicaCount: 2, maxReplayLagMs: 0 });
 		await preAgeLedger({ ctx, customerId });
 		const eligible = await resolveSubjectReadDb({
@@ -351,7 +285,6 @@ test(`${chalk.yellowBright("replica-reads (f): resolveSubjectReadDb fail-safes a
 		});
 		expect(eligible.source).toBe("replica");
 
-		// Default readFrom and non-skipCache contexts always pin primary.
 		const explicitPrimary = await resolveSubjectReadDb({
 			ctx: skipCacheCtx,
 			readFrom: "primary",
@@ -365,12 +298,8 @@ test(`${chalk.yellowBright("replica-reads (f): resolveSubjectReadDb fail-safes a
 		});
 		expect(cachePathCtx.source).toBe("primary");
 
-		// The sanity check cached this key's negative; clear it so the throwing
-		// ledger db below is actually reached instead of short-circuited.
 		_resetRecentlyUpdatedNegativeCacheForTesting();
 
-		// (f2) ledger check throws -> primary (fail-safe). The ledger runs on the
-		// module-level dbCritical pool, so the fake is injected via the seam.
 		const throwingLedgerDb = {
 			execute: () => Promise.reject(new Error("ledger unavailable")),
 		} as unknown as DrizzleCli;
@@ -386,7 +315,6 @@ test(`${chalk.yellowBright("replica-reads (f): resolveSubjectReadDb fail-safes a
 			_setLedgerDbOverrideForTesting(null);
 		}
 
-		// (f3) replica execute throws -> exactly one primary retry returns data.
 		const brokenReplicaDb = {
 			$client: {
 				query: () => Promise.reject(new Error("replica exploded")),
@@ -401,7 +329,6 @@ test(`${chalk.yellowBright("replica-reads (f): resolveSubjectReadDb fail-safes a
 		});
 		expect(result).toBeDefined();
 		expect(result?.fullSubject.customer.id).toBe(customerId);
-		// Primary-fallback data must NOT carry the replica brand.
 		expect(isReplicaSourced(result?.normalized as object)).toBe(false);
 		expect(isReplicaSourced(result?.fullSubject as object)).toBe(false);
 	} finally {
@@ -410,7 +337,6 @@ test(`${chalk.yellowBright("replica-reads (f): resolveSubjectReadDb fail-safes a
 	}
 });
 
-// ── Contract assertion (g): provenance brand + cache-writer lock (NOT concurrent)
 test(`${chalk.yellowBright("replica-reads (g): replica-sourced subjects are branded and rejected by setCachedFullSubject")}`, async () => {
 	const customerId = "replica-read-provenance";
 	const { ctx } = await initScenario({

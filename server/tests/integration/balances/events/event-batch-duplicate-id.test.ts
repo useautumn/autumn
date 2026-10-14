@@ -1,34 +1,3 @@
-/**
- * TDD test for duplicate event inserts destroying an entire per-customer batch.
- *
- * Prod symptom (150,034 occurrences / 7 days, all orgs):
- *   "❌ Failed to insert 2 events for customer cus_...: Event (event_name,
- *    customer_id, idempotency_key) already exists."
- *
- * Event ids are random (initEvent: generateId("evt")), so two independent
- * calls cannot collide — the whole SQS message is being delivered twice.
- * runInsertEventBatch commits before the message is acked (deletion is
- * deferred to batchDeleteMessages), so a worker recycle or failed delete
- * replays the batch against rows that are already committed. Observed shape:
- * every customer in a batch failing within ~1.8ms, 1,775 batches on 2026-08-01.
- *
- * All observed events carry idempotency_key: null and unique_event_constraint
- * is NULLS DISTINCT, so the 23505 is the PRIMARY KEY on id — not the unique
- * constraint the error message names.
- *
- * A pure replay loses nothing (the rows were written by the first delivery);
- * the damage is a batch that MIXES replayed and fresh events, which is what
- * this test pins.
- *
- * Red-failure mode (current behavior):
- *  - One statement per customer with no conflict handling, so a single
- *    duplicate id aborts the whole statement and the fresh events die with it.
- *
- * Green-success criteria (after fix):
- *  - Every event ends up inserted exactly once: the duplicate is skipped, the
- *    fresh event still lands, and the original row is not mutated.
- */
-
 import { expect, test } from "bun:test";
 import { customers, events } from "@autumn/shared";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
@@ -76,7 +45,6 @@ test.concurrent(
 		const replayedId = generateId("evt");
 		const freshId = generateId("evt");
 
-		// First delivery lands normally.
 		await EventService.insert({
 			db: ctx.db,
 			event: [
@@ -91,8 +59,6 @@ test.concurrent(
 			],
 		});
 
-		// Second delivery replays the same id alongside a brand-new event —
-		// exactly the shape runInsertEventBatch groups per customer.
 		const insertReplayBatch = () =>
 			EventService.insert({
 				db: ctx.db,
@@ -116,12 +82,8 @@ test.concurrent(
 				],
 			});
 
-		// ── Assertion 1: the replay must not throw ────────────────────────
-		// Pre-fix: throws RecaseError "Event (...) already exists."
 		await expect(insertReplayBatch()).resolves.toBeDefined();
 
-		// ── Assertion 2: the non-duplicate event must survive ─────────────
-		// Pre-fix: rolled back with the duplicate, silently lost.
 		const freshRows = await ctx.db
 			.select()
 			.from(events)
@@ -135,7 +97,6 @@ test.concurrent(
 		expect(freshRows).toHaveLength(1);
 		expect(freshRows[0]?.value).toBe(7);
 
-		// ── Assertion 3: the original row is untouched ────────────────────
 		const replayedRows = await ctx.db
 			.select()
 			.from(events)

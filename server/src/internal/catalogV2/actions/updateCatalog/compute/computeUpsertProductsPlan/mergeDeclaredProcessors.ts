@@ -10,11 +10,6 @@ import type { ProductStatesContext } from "@/internal/catalogV2/actions/updateCa
 import type { ProductUpsertIntent } from "@/internal/catalogV2/actions/updateCatalog/types/upsertProductPlan";
 import { findFullProductByInternalId } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/findFullProductByInternalId";
 
-/**
- * The id the row lives under right now. An entry addressed by `internal_id`
- * states where the plan should END UP, so a rename would index the mapping
- * under a name no intent carries yet.
- */
 const currentPlanId = ({
 	entry,
 	internalIdRefs,
@@ -26,10 +21,8 @@ const currentPlanId = ({
 		? internalIdRefs.get(entry.internal_id)?.planId
 		: undefined) ?? entry.plan_id;
 
-/** A stated Stripe mapping: an object links, `null` unlinks. Absent = not stated. */
 type StatedStripe = ApiStripePlanProcessor | null;
 
-/** Order-insensitive identity of a stated mapping, for collision detection. */
 const stripeMappingIdentity = (stated: StatedStripe): string =>
 	stated === null
 		? "null"
@@ -55,10 +48,6 @@ const revenueCatMappingIdentity = (
 				.sort()
 				.join("|");
 
-/**
- * Two entries stating different mappings for one plan is an ambiguity, not a
- * race — whichever the fold visited first would win silently.
- */
 const claimStatedMapping = <T>({
 	statedByPlanId,
 	planId,
@@ -84,17 +73,10 @@ const claimStatedMapping = <T>({
 };
 
 type StatedStripeIndex = {
-	/** Stated on a plan's own entry — the strongest claim on that plan. */
 	byPlanId: Map<string, StatedStripe>;
-	/** Stated on someone's `variants[]` — an override of that base's mapping. */
 	byVariantPlanId: Map<string, StatedStripe>;
 };
 
-/**
- * RevenueCat mappings are plan-wide, so they never fan out across a lineage —
- * but two versions of one plan stating different product sets still race in
- * the mappings table, which is the same ambiguity.
- */
 const assertRevenueCatMappingsAgree = ({
 	plans,
 	internalIdRefs,
@@ -154,11 +136,6 @@ const indexStatedStripe = ({
 	return { byPlanId, byVariantPlanId };
 };
 
-/**
- * Variant plan id → the plan it bills under. Persisted pointers first (newest
- * row wins), then this call's own pointer writes, which are the state the
- * mapping has to hold in.
- */
 const indexBasePlanIds = ({
 	plans,
 	productStatesContext,
@@ -203,7 +180,6 @@ const indexBasePlanIds = ({
 	return basePlanIdByPlanId;
 };
 
-/** Own entry, then an override aimed at it, then whatever its base states. */
 const resolveStatedStripe = ({
 	planId,
 	statedStripe,
@@ -228,18 +204,6 @@ const resolveStatedStripe = ({
 	return undefined;
 };
 
-/**
- * Every version of a plan, and every variant that follows it, bills under one
- * Stripe product. Derived `processor_sync` / `variant_propagation` intents
- * carry that across the lineage, but they are dropped for any row the payload
- * already named — first claim wins, and every direct entry is claimed before
- * the fold starts. So fill the stated mapping into those pending direct
- * intents here instead, leaving the derived fan-out to cover only the rows the
- * payload did not name.
- *
- * A row that states its own `processors.stripe` keeps it, including a `null`
- * unlink; only rows that stated nothing are filled.
- */
 export const mergeDeclaredProcessors = ({
 	intents,
 	params,

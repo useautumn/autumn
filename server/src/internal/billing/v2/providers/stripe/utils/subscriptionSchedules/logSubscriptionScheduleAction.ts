@@ -7,9 +7,6 @@ import type { AutumnContext } from "@server/honoUtils/HonoEnv";
 import type Stripe from "stripe";
 import { billingContextFormatPriceByStripePriceId } from "@/internal/billing/v2/utils/billingContextPriceLookup";
 
-/**
- * Formats a phase item for logging.
- */
 const formatPhaseItem = ({
 	item,
 	billingContext,
@@ -35,9 +32,6 @@ const formatPhaseItem = ({
 	return `    - price: ${priceDisplay}, quantity: ${quantityDisplay}`;
 };
 
-/**
- * Logs subscription schedule action details for debugging.
- */
 export const logSubscriptionScheduleAction = ({
 	ctx,
 	billingContext,

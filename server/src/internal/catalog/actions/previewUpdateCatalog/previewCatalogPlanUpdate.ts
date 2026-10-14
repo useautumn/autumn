@@ -120,8 +120,6 @@ export const previewCatalogPlanUpdate = async ({
 						(variants?.length ?? 0) > 0)),
 		),
 	};
-	// Catalog licenses are resolved together against the virtual post-update
-	// catalog after ordinary plan previews are built.
 	const previewData = {
 		...data,
 		licenses: undefined,

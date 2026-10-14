@@ -20,8 +20,6 @@ import type {
 	UsageAlertMeasurement,
 } from "../types/usageAlert.js";
 
-/** The usage_limit basis: what an alert reads off the cap's window, the cap being the one with its feature and filter. */
-
 export const usageWindowLimitToUsageAlertMeasurement = ({
 	limit,
 	usageWindows,
@@ -44,7 +42,6 @@ export const usageWindowLimitToUsageAlertMeasurement = ({
 	};
 };
 
-// Customer-scope alerts read customer counters only; an entity override cap belongs to entity-scope alerts.
 const findUsageWindowLimitForAlert = ({
 	command,
 	alert,
@@ -80,7 +77,6 @@ const findUsageWindowLimitForAlert = ({
 	);
 };
 
-// One limit at one now: a window that rolled between the subjects reads 0 on the old side.
 export const measureUsageLimitAlert = ({
 	command,
 	alert,

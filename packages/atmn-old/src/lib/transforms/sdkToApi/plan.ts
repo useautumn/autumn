@@ -16,9 +16,6 @@ export interface ApiPlanLicenseParams {
 	};
 }
 
-/**
- * API plan format expected by the server's CreatePlanParams schema
- */
 export interface ApiAdditionalCurrency {
 	currency: string;
 	amount: number;
@@ -91,7 +88,6 @@ export interface ApiPlanItemParams {
 	};
 }
 
-/** Transforms SDK plan items while preserving reset and billing cycles independently. */
 export function transformPlanItem(planItem: PlanItem): ApiPlanItemParams {
 	const result: ApiPlanItemParams = {
 		feature_id: planItem.featureId,
@@ -197,7 +193,6 @@ export function transformPlanItem(planItem: PlanItem): ApiPlanItemParams {
 	if (planItem.rollover) {
 		result.rollover = {
 			...(planItem.rollover.maxPercentage == null && {
-				// API expects number, SDK allows null (treat null as 0 or very large number)
 				max: planItem.rollover.max ?? 0,
 			}),
 			...(planItem.rollover.maxPercentage != null && {
@@ -213,9 +208,6 @@ export function transformPlanItem(planItem: PlanItem): ApiPlanItemParams {
 	return result;
 }
 
-/**
- * Transform SDK Plan to API format for has_customers endpoint
- */
 export function transformPlanToApi(plan: Plan): ApiPlanParams {
 	const result: ApiPlanParams = {
 		id: plan.id,

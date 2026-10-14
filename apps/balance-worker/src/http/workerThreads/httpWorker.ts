@@ -1,8 +1,3 @@
-/**
- * An HTTP worker thread: one `Bun.serve` on the worker's port (SO_REUSEPORT spreads connections over the
- * threads), each request's bytes handed to the decide thread over the request ring, and answered with the
- * bytes that come back on the reply ring. Nothing here knows what a route means.
- */
 import {
 	createRingReader,
 	createRingWriter,
@@ -30,7 +25,6 @@ import type {
 
 declare var self: Worker;
 
-/** The writer's own answer at capacity, so a client backs off the same way either way. */
 const REQUEST_RING_FULL = JSON.stringify({
 	error: {
 		code: "OVERLOADED",
@@ -43,7 +37,6 @@ const MAX_LARGE_REQUESTS_IN_FLIGHT = 32;
 
 type HttpWorkerThread = { receive(message: DecideThreadMessage): void };
 
-/** A request waiting for its reply; `route` is its index in `init.latency.routes`, or -1 when untimed. */
 type Pending = {
 	resolve(response: Response): void;
 	route: number;
@@ -67,7 +60,6 @@ function report(
 	self.postMessage(message, transfer);
 }
 
-/** Null when the port could not be bound; the decide thread has been told why. */
 function startThread(init: HttpWorkerInit): HttpWorkerThread | null {
 	const requests = createRingWriter({
 		ring: init.requestRing,
@@ -153,11 +145,9 @@ function startThread(init: HttpWorkerInit): HttpWorkerThread | null {
 
 	async function replyLoop(): Promise<void> {
 		for (;;) {
-			// One clock read per pass answers every reply in it.
 			answeredAt = performance.now();
 			drainReplies();
 			held?.release();
-			// The timeout is insurance against a wake lost some other way; a publish or a commit wakes the thread first.
 			await replySignal.sleep({ hasWork, timeoutMs: 50 });
 		}
 	}
@@ -224,7 +214,6 @@ function startThread(init: HttpWorkerInit): HttpWorkerThread | null {
 		return null;
 	}
 
-	/** Graceful: requests already accepted are answered before the thread says it stopped. */
 	async function stop(): Promise<void> {
 		await server.stop();
 		report({ kind: "stopped" });

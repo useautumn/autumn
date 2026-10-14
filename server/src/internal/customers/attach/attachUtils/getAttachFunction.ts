@@ -27,13 +27,6 @@ import {
 	attachParamToCusProducts,
 } from "./convertAttachParams.js";
 
-/* 
-1. If from new version, free trial should just carry over
-2. If from new version, can't update with trial...
-3. In migrateCustomer flow, if to free product, upgrade product still called... should be changed to add product...
-5. Migrate customer uses proration behaviour none
-*/
-
 export const getAttachFunction = async ({
 	branch,
 	attachParams,
@@ -45,7 +38,6 @@ export const getAttachFunction = async ({
 }) => {
 	const { onlyCheckout } = config;
 
-	// 1. Checkout function
 	const newScenario = [
 		AttachBranch.MultiAttach,
 		AttachBranch.MultiProduct,
@@ -55,8 +47,6 @@ export const getAttachFunction = async ({
 		AttachBranch.MainIsFree,
 		AttachBranch.MainIsTrial,
 	].includes(branch);
-
-	// Check for upgrade/downgrade from default trial (should also use checkout)
 
 	if (newScenario && onlyCheckout) {
 		return AttachFunction.CreateCheckout;
@@ -71,7 +61,6 @@ export const getAttachFunction = async ({
 		return AttachFunction.AddProduct;
 	}
 
-	// 2. Upgrade scenarios
 	const updateScenarios = [
 		AttachBranch.NewVersion,
 		AttachBranch.SameCustom,
@@ -87,12 +76,10 @@ export const getAttachFunction = async ({
 		}
 	}
 
-	// 3. Downgrade scenarios
 	if (branch === AttachBranch.Downgrade) {
 		return AttachFunction.ScheduleProduct;
 	}
 
-	// 4. Prepaid scenarios
 	if (branch === AttachBranch.UpdatePrepaidQuantity) {
 		const curSameProduct = attachParamsToCurCusProduct({ attachParams });
 		if (curSameProduct?.free_trial) {
@@ -178,7 +165,6 @@ export const runAttachFunction = async ({
 		});
 	}
 
-	// 2. If main is trial, cancel it...
 	if (branch === AttachBranch.MainIsTrial) {
 		await CusProductService.update({
 			ctx,
@@ -192,7 +178,6 @@ export const runAttachFunction = async ({
 
 		const subId = curMainProduct?.subscription_ids?.[0];
 		if (subId) {
-			// Set lock to prevent webhook handler from processing this cancellation
 			await setStripeSubscriptionLock({
 				ctx,
 				stripeSubscriptionId: subId,

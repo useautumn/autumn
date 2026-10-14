@@ -1,6 +1,5 @@
 const MAX_NAMED_PLANS = 2;
 
-/** "Edit Pro", "Edit Pro + Credits", "Edit Pro + 2 more". */
 export const editSubscriptionLabel = ({
 	planNames,
 }: {

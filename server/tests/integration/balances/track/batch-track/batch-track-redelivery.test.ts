@@ -1,18 +1,3 @@
-/**
- * Batch-item redelivery safety. A batch item is one SQS message processed by
- * runQueuedTrack with a per-item requestId (`${ctx.id}-${index}`) and
- * validateTrackBodyIdempotencyKey: true. SQS is at-least-once, so the SAME
- * message can be delivered twice — these tests re-run runQueuedTrack with the
- * identical payload, which IS a redelivery.
- *
- * Contract under test:
- *   - Keyed item: the redelivery is dropped by the worker's body-key claim.
- *   - Unkeyed item: the redelivery is dropped by the Lua replay keys (seeded
- *     by the per-item request id) — and is swallowed, never requeued.
- *   - Per-item seeds are isolated: two items with identical multi-feature
- *     deductions both apply, while a redelivery of ONE item applies nothing.
- */
-
 import { afterAll, expect, test } from "bun:test";
 import { ApiVersion, ApiVersionClass } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
@@ -26,7 +11,6 @@ import {
 } from "../../../db/full-subject/utils/fullSubjectScenarioBuilders.js";
 import { withInsertedScenario } from "../../../db/full-subject/utils/withInsertedScenario.js";
 
-// Every call is in-process and asserts the legacy Redis lane's replay keys.
 const previousRollout = process.env.BALANCE_WORKER_ROLLOUT_ENABLED;
 process.env.BALANCE_WORKER_ROLLOUT_ENABLED = "false";
 
@@ -39,8 +23,6 @@ afterAll(() => {
 	else process.env.BALANCE_WORKER_ROLLOUT_ENABLED = previousRollout;
 });
 
-/** Deducts 1 with a fresh request id and returns the remaining balance —
- *  proves how many prior deductions actually landed. */
 const verifyRemaining = async ({
 	customerId,
 	featureId,
@@ -85,15 +67,12 @@ test.concurrent(
 					idempotency_key: `bt-keyed-${Date.now().toString(36)}`,
 				};
 
-				// First delivery: claims the body key, deducts 87 → 77.
 				await runQueuedTrack({
 					ctx: itemCtx,
 					body,
 					validateTrackBodyIdempotencyKey: true,
 				});
 
-				// Redelivery of the SAME message → duplicate body-key claim →
-				// swallowed (acked, not requeued), nothing deducted.
 				await expect(
 					runQueuedTrack({
 						ctx: itemCtx,
@@ -140,8 +119,6 @@ test.concurrent(
 					validateTrackBodyIdempotencyKey: true,
 				});
 
-				// No body key — the per-item request id's Lua key is the only
-				// guard, and it must both drop the deduction AND be swallowed.
 				await expect(
 					runQueuedTrack({
 						ctx: itemCtx,
@@ -204,21 +181,15 @@ test.concurrent(
 					});
 				};
 
-				// Items 0 and 1: identical deductions, distinct per-item seeds —
-				// BOTH apply. messages 87→67, users 50→40.
 				await deliverItem(`${ctx.id}-bt-multi-0`);
 				await deliverItem(`${ctx.id}-bt-multi-1`);
 
-				// Redelivery of item 0: every feature is a duplicate → 409 from
-				// the deduction layer…
 				await expect(deliverItem(`${ctx.id}-bt-multi-0`)).rejects.toMatchObject(
 					{
 						statusCode: 409,
 					},
 				);
 
-				// …which the worker swallows (single-feature body derivation) —
-				// acked, not requeued.
 				await expect(
 					runQueuedTrack({
 						ctx: { ...ctx, id: `${ctx.id}-bt-multi-0` } as typeof ctx,

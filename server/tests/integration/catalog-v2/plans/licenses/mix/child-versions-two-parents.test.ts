@@ -1,19 +1,3 @@
-/**
- * catalogV2 — a child that has minted its own version, offered by two parents
- * that each have v1 + v2. Links are version-anchored: the child mint touches
- * no parent row, and a later in-place edit of the new child row reaches only
- * links pointing at THAT row — a link on another child version never follows.
- *
- * Contract:
- *   - child `new_version` → all four parent rows untouched: still anchored to
- *     child v1, uncustomized, stock 10
- *   - later in-place edit of child v2 (messages 200 + Words) with A
- *     `all_versions`, B omitted → no link is anchored to v2, so nothing is
- *     reached; all four rows stay anchored to v1 at 10 with no Words
- *   - preview of that edit → child v2 has no license_parents; both parents
- *     sit on sibling_versions[v1].license_parents as unchanged
- */
-
 import { test } from "bun:test";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
@@ -34,7 +18,6 @@ import {
 	wordsItem,
 } from "../utils/seedLicensePlans.js";
 
-/** Two parents at v1+v2 offering the child, then the child mints its own v2. */
 const seedChildVersionOverTwoParents = async ({
 	autumn,
 	childId,
@@ -145,7 +128,6 @@ test.concurrent(
 					items: [messagesItem(200), wordsItem(50)],
 				});
 
-				// Off-anchor pins would 400; omit propagate — no link points at v2.
 				await expectEveryParentRowAnchoredToV1({
 					ctx,
 					parentIds: [followId, pinId],

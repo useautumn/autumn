@@ -49,7 +49,6 @@ export function createThreadProducer({
 	const producerId = state.nextProducerId++;
 	let nextSeq = 0;
 	let closed = false;
-	/** A send that never reached the thread leaves a gap in the sequence: every later send would be held. */
 	let lostSend: KafkaJSError | null = null;
 	postToProducerThread({
 		scope,
@@ -60,7 +59,6 @@ export function createThreadProducer({
 		},
 	});
 
-	/** Frames carry the id as a u32, so it wraps before 2^32 like the HTTP workers' ids do. */
 	function takeReqId(): number {
 		const reqId = state.nextReqId;
 		state.nextReqId = reqId === 0xfffffffe ? 1 : reqId + 1;
@@ -75,7 +73,6 @@ export function createThreadProducer({
 	}
 
 	function disconnect(): Promise<void> {
-		// Closed before the thread hears of it: a send racing the disconnect is still answered, a later one throws.
 		closed = true;
 		scope.requestListeners.delete(producerId);
 		return control({

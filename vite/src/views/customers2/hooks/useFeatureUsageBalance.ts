@@ -34,9 +34,6 @@ export interface FeatureUsageBalanceResult {
 	cusEntsCount: number;
 }
 
-/**
- * Calculates feature usage balance metrics from full customer (includes extra entitlements)
- */
 export function useFeatureUsageBalance({
 	fullCustomer,
 	featureId,
@@ -53,14 +50,12 @@ export function useFeatureUsageBalance({
 				})
 			: [];
 
-	//without manual update adjustment, no rollovers
 	const initialAllowance = cusEntsToAllowance({
 		cusEnts,
 		entityId: entityId ?? undefined,
 		withRollovers: false,
 	});
 
-	//includes manual update adjustment
 	const allowance = cusEntsToGrantedBalance({
 		cusEnts,
 		entityId: entityId ?? undefined,

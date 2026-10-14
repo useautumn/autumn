@@ -9,38 +9,11 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { Decimal } from "decimal.js";
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Stress test: 1000 concurrent (check-with-lock + finalize) pairs that
-// intentionally cross the Action1 → Credits boundary.
-//
-// Credit system: Action1 → Credits (credit_cost = 0.2)
-//   i.e. 1 Action1 unit costs 0.2 Credits
-//
-// Product: Action1(1000) + Credits(2000)
-//
-// Each pair:
-//   - lock_value:     random decimal in [0.51, 2.99] (Action1 units)
-//   - override_value: random decimal in [0.10, 3.50] (mix of refunds & extra deductions)
-//
-// With 1000 pairs and average override ≈ 1.80, the expected total override is
-// ~1800 Action1 units — well above the 1000 included_usage. The excess spills
-// into Credits at 0.2 credits per action1 unit.
-//
-// Expected final state (Decimal.js precision):
-//   totalOverride     = sum(all override_values)
-//   action1Remaining  = max(0, 1000 - totalOverride)
-//   creditsConsumed   = max(0, totalOverride - 1000) × 0.2
-//   creditsRemaining  = 2000 - creditsConsumed
-//
-// Both cached and non-cached (DB-synced) balances are asserted.
-// ─────────────────────────────────────────────────────────────────────────────
-
-// Reduced from 1000 — local Redis saturates under FullSubject cache load
 const NUM_PAIRS = 500;
 
 const INITIAL_ACTION1 = 1000;
 const INITIAL_CREDITS = 2000;
-const CREDIT_COST = 0.2; // 1 action1 unit = 0.2 credits
+const CREDIT_COST = 0.2;
 
 const randomDecimal = (min: number, max: number): Decimal =>
 	new Decimal(Math.random() * (max - min) + min).toDecimalPlaces(2);
@@ -70,8 +43,6 @@ test(
 			actions: [s.attach({ productId: freeProd.id })],
 		});
 
-		// ── Generate all (lock_value, override_value, lock_id) triples up front ──
-
 		type Pair = {
 			lockKey: string;
 			lockValue: Decimal;
@@ -91,12 +62,7 @@ test(
 			};
 		});
 
-		// Clean up any stale lock receipts from previous runs
 		await Promise.all(pairs.map(({ lockKey }) => deleteLock({ ctx, lockId: lockKey })));
-
-		// ── Fire all (check + finalize) pairs concurrently ──
-		// Each pair is sequential within itself (check must complete before its own
-		// finalize), but all 1000 pairs run fully in parallel with each other.
 
 		const startTime = Date.now();
 
@@ -121,9 +87,6 @@ test(
 			`[lock-stress] ${NUM_PAIRS} (check+finalize) pairs completed in ${Date.now() - startTime}ms`,
 		);
 
-		// ── Compute expected balances ──
-
-		// Action1 is exhausted first; overflow spills into Credits at CREDIT_COST per unit.
 		const action1Overflow = Decimal.max(
 			0,
 			totalOverride.minus(INITIAL_ACTION1),
@@ -151,11 +114,8 @@ test(
 			`[lock-stress] expected action1=${expectedAction1Remaining}, credits=${expectedCreditsRemaining}`,
 		);
 
-		// ── Assert cached balances ──
-
 		const customer = await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
 
-		// Round to 2dp to absorb float accumulation across 1000 additions
 		const actualAction1Cached = new Decimal(
 			customer.balances[TestFeature.Action1]?.remaining ?? 0,
 		)
@@ -170,8 +130,6 @@ test(
 
 		expect(actualAction1Cached).toBe(expectedAction1Remaining);
 		expect(actualCreditsCached).toBe(expectedCreditsRemaining);
-
-		// ── Assert non-cached (DB-synced) balances ──
 
 		await timeout(5000);
 

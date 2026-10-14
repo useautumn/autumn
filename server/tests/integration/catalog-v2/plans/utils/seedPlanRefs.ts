@@ -1,8 +1,3 @@
-/**
- * Seeds rows that reference a plan by public id (customer products, reward
- * programs, rewards, RevenueCat mappings) for rename / gate tests.
- */
-
 import {
 	CouponDurationType,
 	CusProductStatus,
@@ -28,7 +23,6 @@ export const seedCustomerProductRef = async ({
 }: {
 	ctx: AutumnContext;
 	planId: string;
-	/** Marks the customer as a Vercel install (customers.processors.vercel). */
 	vercelInstall?: boolean;
 }) => {
 	const full = await ProductService.getFull({
@@ -76,7 +70,6 @@ export const seedCustomerProductRef = async ({
 	return { customerId, internalCustomerId, cusProductId };
 };
 
-/** One reward referencing the plan via BOTH free_product_id and discount_config. */
 export const seedRewardProgramRef = async ({
 	ctx,
 	planId,

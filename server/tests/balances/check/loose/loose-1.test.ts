@@ -40,7 +40,6 @@ describe(`${chalk.yellowBright("check-loose1: basic loose entitlement check")}`,
 			prefix: testCase,
 		});
 
-		// Create loose entitlement (no product attached)
 		await autumnV1.balances.create({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,

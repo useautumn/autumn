@@ -28,7 +28,6 @@ interface ExpirationEvent extends BaseWebhookEvent {
 	expiration_at_ms?: number;
 }
 
-/** Fixtures the server-side RC read client serves in mock mode (via testOptions). */
 export interface RevenueCatMockFixtures {
 	subscriptions?: unknown[];
 	purchases?: unknown[];
@@ -42,9 +41,6 @@ interface RevenueCatWebhookClientConfig {
 	baseUrl?: string;
 }
 
-/**
- * Mock client for sending RevenueCat webhook events in tests
- */
 export class RevenueCatWebhookClient {
 	private orgId: string;
 	private env: AppEnv;
@@ -83,7 +79,6 @@ export class RevenueCatWebhookClient {
 			Authorization: this.webhookSecret,
 		};
 
-		// Mirror the RC webhook shape: { [key]: { updated_at_ms, value } }.
 		const subscriber_attributes = subscriberAttributes
 			? Object.fromEntries(
 					Object.entries(subscriberAttributes).map(([key, value]) => [
@@ -93,7 +88,6 @@ export class RevenueCatWebhookClient {
 				)
 			: undefined;
 
-		// Server-side RC read client is served from these fixtures via testOptions.
 		if (mock) {
 			headers["x-mock-revenuecat"] = "true";
 			headers["x-mock-revenuecat-fixtures"] = JSON.stringify(mock);
@@ -115,9 +109,6 @@ export class RevenueCatWebhookClient {
 		return { response, data };
 	}
 
-	/**
-	 * Send INITIAL_PURCHASE event - when a user first subscribes
-	 */
 	async initialPurchase({
 		productId,
 		appUserId,
@@ -163,9 +154,6 @@ export class RevenueCatWebhookClient {
 		});
 	}
 
-	/**
-	 * Send RENEWAL event - when a subscription renews
-	 */
 	async renewal({
 		productId,
 		appUserId,
@@ -208,9 +196,6 @@ export class RevenueCatWebhookClient {
 		});
 	}
 
-	/**
-	 * Send CANCELLATION event - when a user cancels their subscription
-	 */
 	async cancellation({
 		productId,
 		appUserId,
@@ -237,7 +222,7 @@ export class RevenueCatWebhookClient {
 				app_user_id: appUserId,
 				original_app_user_id: originalAppUserId,
 				expiration_at_ms:
-					expirationAtMs ?? Date.now() + 1000 * 60 * 60 * 24 * 30, // Default: 30 days
+					expirationAtMs ?? Date.now() + 1000 * 60 * 60 * 24 * 30,
 				original_transaction_id:
 					originalTransactionId ??
 					`tx_${Date.now()}_${Math.random().toString(36).slice(2)}`,
@@ -248,9 +233,6 @@ export class RevenueCatWebhookClient {
 		});
 	}
 
-	/**
-	 * Send UNCANCELLATION event - when a user resubscribes after cancelling
-	 */
 	async uncancellation({
 		productId,
 		appUserId,
@@ -270,9 +252,6 @@ export class RevenueCatWebhookClient {
 		});
 	}
 
-	/**
-	 * Send EXPIRATION event - when a subscription expires
-	 */
 	async expiration({
 		productId,
 		appUserId,
@@ -300,9 +279,6 @@ export class RevenueCatWebhookClient {
 		});
 	}
 
-	/**
-	 * Send NON_RENEWING_PURCHASE event - for one-time purchases (consumables, non-consumables)
-	 */
 	async nonRenewingPurchase({
 		productId,
 		appUserId,
@@ -342,9 +318,6 @@ export class RevenueCatWebhookClient {
 		});
 	}
 
-	/**
-	 * Send BILLING_ISSUE event - when there's a billing problem
-	 */
 	async billingIssue({
 		productId,
 		appUserId,
@@ -369,10 +342,6 @@ export class RevenueCatWebhookClient {
 		});
 	}
 
-	/**
-	 * Send TRANSFER event - purchases moved from one RC user to another.
-	 * `mock` serves the destination's current RC subscriptions/purchases.
-	 */
 	async transfer({
 		transferredFrom,
 		transferredTo,
@@ -395,9 +364,6 @@ export class RevenueCatWebhookClient {
 		});
 	}
 
-	/**
-	 * Send PRODUCT_CHANGE event - when a user changes their subscription
-	 */
 	async productChange({
 		productId,
 		newProductId,
@@ -435,9 +401,6 @@ export class RevenueCatWebhookClient {
 	}
 }
 
-/**
- * Helper to assert webhook response is successful
- */
 export const expectWebhookSuccess = ({
 	response,
 	data,

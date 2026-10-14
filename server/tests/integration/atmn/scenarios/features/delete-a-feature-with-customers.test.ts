@@ -1,9 +1,3 @@
-/**
- * atmn scenarios/features — delete a feature with customers → archived, preview says will_archive
- *
- * One line of plans/atmn-v3/07_tests.md. [a, b] is a matrix looped INSIDE this file.
- */
-
 import { expect, test } from "bun:test";
 import { configBody } from "@tests/utils/atmnUtils/baseConfigs.js";
 import {
@@ -36,8 +30,6 @@ test.concurrent(
 			await scenario.push();
 			await scenario.attachCustomer({ planId });
 
-			// The feature drops out of `features`, and its item drops from the
-			// plan too — the only remaining reference is the customer's history.
 			scenario.writeConfig(
 				atmnConfigSource({
 					body: configBody({

@@ -45,7 +45,6 @@ const processRowsInBatches = async ({
 }) => {
 	for (let i = 0; i < rows.length; i += BATCH_SIZE) {
 		const batch = rows.slice(i, i + BATCH_SIZE);
-		// A customer's rows run in order so converting trials share one subscription.
 		await Promise.all(
 			groupRowsByCustomer(batch).map(async (customerRows) => {
 				for (const row of customerRows) {
@@ -120,10 +119,6 @@ export const runProductCron = async ({
 					onlyFree: true,
 				});
 
-				// Always route through `processExpiredTrialRow` so the
-				// `billing.updated` webhook (tagged "trial_ended") fires from
-				// a single emission site — regardless of whether a free default
-				// is being activated alongside the expiry.
 				await processRowsInBatches({
 					ctx,
 					rows: standardRows,

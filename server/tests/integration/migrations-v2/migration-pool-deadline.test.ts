@@ -91,7 +91,6 @@ describe.skipIf(!databaseUrl)("migration pool deadline", () => {
 			expect(socket.destroyed).toBe(true);
 			await expect(client.query("rollback")).rejects.toThrow("deadline");
 			client.release();
-			// Client identity, not backend pid: behind PgBouncer the server connection is legitimately reused.
 			const next = await pool.connect();
 			expect(next).not.toBe(client);
 			expect((await next.query("select 1 as value")).rows).toEqual([
@@ -116,7 +115,6 @@ describe.skipIf(!databaseUrl)("migration pool deadline", () => {
 		});
 		const client = await pool.connect();
 		try {
-			// SET LOCAL, not a startup parameter: PgBouncer rejects the latter with 08P01.
 			await client.query("begin");
 			await client.query("set local statement_timeout = 100");
 			const error = await client

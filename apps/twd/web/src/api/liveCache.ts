@@ -56,7 +56,6 @@ const matches = (run: RunSummary, filter: RunsFilter) =>
 const byNewest = (a: RunSummary, b: RunSummary) =>
 	Date.parse(b.createdAt) - Date.parse(a.createdAt);
 
-/** Folds a batch of events into one new RunDetail: O(events + workers + files), one render. */
 const applyRunEvents = (run: RunDetail, events: RunEvent[]): RunDetail => {
 	let { status, phase, finishedAt, milestones } = run;
 	const workers = new Map(run.workers.map((w) => [w.name, w]));
@@ -97,7 +96,6 @@ const applyRunEvents = (run: RunDetail, events: RunEvent[]): RunDetail => {
 	};
 };
 
-/** Live-patches cached run pages: in-place updates everywhere; entries and exits only on first pages. */
 const patchRunPages = (qc: QueryClient, run: RunSummary) => {
 	for (const [key, page] of qc.getQueriesData<RunsPage>({
 		queryKey: ["runs"],
@@ -166,7 +164,6 @@ const queueRunEvent = (runId: string, event: RunEvent) => {
 	flushTimer ??= setTimeout(flushRunBatches, FLUSH_MS);
 };
 
-/** Busy runs emit thousands of events a second; applying them per frame-ish batch keeps the UI current. */
 const flushRunBatches = () => {
 	flushTimer = undefined;
 	const qc = flushQc;
@@ -247,7 +244,6 @@ const applyEvent = (qc: QueryClient, event: LiveEvent) => {
 	}
 };
 
-/** Routes every socket message into the react-query cache. Call once. */
 export const connectLiveCache = (qc: QueryClient) =>
 	liveSocket.listen((msg) => {
 		flushQc = qc;

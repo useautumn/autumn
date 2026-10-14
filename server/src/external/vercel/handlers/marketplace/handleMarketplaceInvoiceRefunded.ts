@@ -89,8 +89,6 @@ export const handleMarketplaceInvoiceRefunded = async ({
 			refundTotal = parsed;
 		}
 	} catch (error) {
-		// Rethrow so the router answers non-2xx and Vercel redelivers; acking
-		// here would silently drop the only confirmation that money moved.
 		logCaughtError({
 			logger,
 			message:
@@ -129,7 +127,6 @@ export const handleMarketplaceInvoiceRefunded = async ({
 		});
 	}
 
-	// Backfill the Vercel invoice id for invoices submitted before it was stored.
 	try {
 		const stripeCli = createStripeCli({ org, env });
 		await storeVercelInvoiceId({

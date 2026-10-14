@@ -8,7 +8,6 @@ export const queryRows = (result: unknown): any[] =>
 	// biome-ignore lint/suspicious/noExplicitAny: raw SQL rows are untyped
 	Array.isArray(result) ? result : ((result as { rows?: any[] })?.rows ?? []);
 
-/** The feature's cusEnt on the customer's ACTIVE plan (excludes loose grants). */
 export const fetchActivePlanCusEnt = async ({
 	ctx,
 	customerId,
@@ -36,7 +35,6 @@ export const fetchActivePlanCusEnt = async ({
 	return rows[0];
 };
 
-/** The feature's loose (product-less) cusEnt, e.g. a top-up grant. */
 export const fetchLooseCusEnt = async ({
 	ctx,
 	customerId,
@@ -64,7 +62,6 @@ export const fetchLooseCusEnt = async ({
 	return rows[0];
 };
 
-/** All usage-window counter rows for a (customer, feature). */
 export const fetchUsageWindowRows = async ({
 	ctx,
 	customerId,
@@ -89,14 +86,6 @@ export const fetchUsageWindowRows = async ({
 		`),
 	);
 
-/**
- * Asserts the (customer, feature) usage-window counter in Postgres, polling
- * until it settles — counters are synced from the cache asynchronously, and a
- * cache-invalidating plan change re-seeds them from Postgres.
- *
- * Pass `windowEndAt` to pick one window out of several; otherwise the newest
- * row is used. `rowCount` defaults to 1, asserting no extra window was opened.
- */
 export const expectUsageWindowSynced = ({
 	ctx,
 	customerId,
@@ -112,7 +101,6 @@ export const expectUsageWindowSynced = ({
 	usage: number;
 	windowEndAt?: number;
 	anchorCustomerEntitlementId?: string;
-	/** Pass null to allow any number of windows. */
 	rowCount?: number | null;
 }) =>
 	pollUntilAsserted({

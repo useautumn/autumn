@@ -1,13 +1,3 @@
-/**
- * `proration_behavior: "none"` on a month-start attach charges nothing until the 1st.
- *
- * Contract:
- *   preview total 0 → sub anchored to the 1st → no invoice at attach → access granted now,
- *   resets on the 1st
- *   with a one-off purchase: Stripe defers it to the anchor too, so nothing is previewed
- *   or invoiced now and the first invoice on the 1st carries the month plus the purchase
- */
-
 import { expect, test } from "bun:test";
 import type { AttachParamsV1Input } from "@autumn/shared";
 import { advanceToAnchor } from "@tests/integration/billing/utils/advanceUtils/advanceToAnchor";
@@ -116,7 +106,6 @@ test.concurrent(
 		const preview =
 			await autumnV2_3.billing.previewAttach<AttachParamsV1Input>(attachParams);
 		expect(preview.total).toBe(0);
-		// Known gap: next_cycle previews the month only; Stripe also bills the deferred purchase.
 		expectPreviewNextCycleCorrect({ preview, startsAt: monthStartMs });
 
 		await autumnV2_3.billing.attach<AttachParamsV1Input>(attachParams);

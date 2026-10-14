@@ -1,6 +1,3 @@
-// HTML templates for OAuth callback pages
-
-/** Shared styles matching Autumn's theme with dark mode support */
 export const BASE_STYLES = `
 	@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
 	
@@ -179,7 +176,6 @@ export const BASE_STYLES = `
 	}
 `;
 
-/** Generate success HTML page for OAuth callback */
 export function getSuccessHtml(): string {
 	return `<!DOCTYPE html>
 <html lang="en">
@@ -210,9 +206,7 @@ export function getSuccessHtml(): string {
 </html>`;
 }
 
-/** Generate error HTML page for OAuth callback */
 export function getErrorHtml(errorMessage: string): string {
-	// Escape HTML to prevent XSS
 	const safeMessage = errorMessage
 		.replace(/&/g, "&amp;")
 		.replace(/</g, "&lt;")

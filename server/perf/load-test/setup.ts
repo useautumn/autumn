@@ -1,10 +1,3 @@
-/**
- * Load test setup — creates products and 500 customers with Stripe payment methods.
- *
- * Run: cd server && bun loadtest:setup
- *   or: ENV_FILE=.env infisical run --recursive --env=dev -- bun perf/load-test/setup.ts
- */
-
 import { loadLocalEnv } from "../../src/utils/envUtils.js";
 loadLocalEnv();
 
@@ -55,8 +48,6 @@ async function main() {
 		secretKey,
 	});
 
-	// ── 1. Create products ──────────────────────────────────────────
-
 	console.log("Creating load test products...");
 
 	const loadFree = products.base({
@@ -101,8 +92,6 @@ async function main() {
 
 	console.log("  load-free (default), load-pro ($20/mo), load-premium ($50/mo), load-messages (add-on)");
 
-	// ── 2. Create customers with Stripe payment methods ─────────────
-
 	console.log(`\nCreating ${CUSTOMER_COUNT} customers with Stripe payment methods...`);
 
 	const customerMap: Record<string, string> = {};
@@ -117,25 +106,21 @@ async function main() {
 
 			promises.push(
 				(async () => {
-					// Delete existing Autumn customer (idempotent re-runs)
 					try {
 						await autumn.customers.delete(customerId);
 					} catch {}
 
-					// Create Stripe customer
 					const stripeCus = await stripeCli.customers.create({
 						email: `${customerId}@loadtest.local`,
 						name: `Load Test ${padNumber(i)}`,
 					});
 
-					// Attach payment method (tok_visa)
 					await attachPaymentMethod({
 						stripeCli,
 						stripeCusId: stripeCus.id,
 						type: "success",
 					});
 
-					// Create Autumn customer linked to Stripe, with default group
 					await autumn.customers.create({
 						id: customerId,
 						name: `Load Test ${padNumber(i)}`,
@@ -155,8 +140,6 @@ async function main() {
 		await Promise.all(promises);
 		console.log(`  ${created}/${CUSTOMER_COUNT} customers created`);
 	}
-
-	// ── 3. Write customer mapping ───────────────────────────────────
 
 	const outputPath = join(import.meta.dir, ".customers.json");
 	writeFileSync(outputPath, JSON.stringify(customerMap, null, 2));

@@ -1,7 +1,3 @@
-/**
- * Contract: a direct parent license update wins over child propagation in one catalog batch.
- * Preview and update resolve the same effective customized license against the edited child.
- */
 import { expect, test } from "bun:test";
 import type { CatalogPreviewUpdateResponse } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";

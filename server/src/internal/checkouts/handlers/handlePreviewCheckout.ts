@@ -10,12 +10,6 @@ import { augmentCheckoutParams } from "../utils/augmentCheckoutParams";
 import { getAdjustableFeatureIds } from "../utils/getAdjustableFeatureIds";
 import { previewCheckoutAction } from "../utils/previewCheckoutAction/previewCheckoutAction";
 
-/**
- * POST /checkouts/:checkout_id/preview
- *
- * Returns updated checkout preview with new feature quantities.
- * Used for inline quantity editing in the checkout UI.
- */
 export const handlePreviewCheckout = createRoute({
 	scopes: [Scopes.Public],
 	body: ConfirmCheckoutParamsSchema,

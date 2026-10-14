@@ -12,27 +12,19 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { Decimal } from "decimal.js";
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// PAID-TO-PAID: TIER BEHAVIOR TRANSITIONS
-// ═══════════════════════════════════════════════════════════════════════════════
-
 const BILLING_UNITS = 100;
 
-// Tiers for prepaid pricing tests (same for graduated and volume)
 const PREPAID_TIERS = [
 	{ to: 500, amount: 10 },
 	{ to: "inf" as const, amount: 5 },
 ];
 
-// 4.8 Graduated prepaid to volume prepaid (mid-cycle with proration)
 test.concurrent(`${chalk.yellowBright("p2p: graduated prepaid to volume prepaid (mid-cycle proration)")}`, async () => {
 	const quantity = 800;
 	const basePrice = 20;
 
-	// Graduated calculation: 5 packs × $10 + 3 packs × $5 = $65
 	const graduatedCost = 5 * 10 + 3 * 5;
 
-	// Volume calculation: 8 packs × $5 (tier 2 rate for all) = $40
 	const volumeCost = 8 * 5;
 
 	const graduatedItem = items.tieredPrepaidMessages({
@@ -57,7 +49,6 @@ test.concurrent(`${chalk.yellowBright("p2p: graduated prepaid to volume prepaid 
 		],
 	});
 
-	// Verify initial invoice (base price + graduated prepaid)
 	const initialCustomer =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	await expectCustomerInvoiceCorrect({
@@ -66,14 +57,12 @@ test.concurrent(`${chalk.yellowBright("p2p: graduated prepaid to volume prepaid 
 		latestTotal: basePrice + graduatedCost,
 	});
 
-	// Advance 15 days (mid-cycle)
 	const advancedTo = await advanceTestClock({
 		stripeCli: ctx.stripeCli,
 		testClockId: testClockId!,
 		numberOfDays: 15,
 	});
 
-	// Change to volume prepaid with same quantity
 	const volumeItem = items.volumePrepaidMessages({
 		includedUsage: 0,
 		billingUnits: BILLING_UNITS,
@@ -88,7 +77,6 @@ test.concurrent(`${chalk.yellowBright("p2p: graduated prepaid to volume prepaid 
 
 	const preview = await autumnV1.subscriptions.previewUpdate(updateParams);
 
-	// Calculate prorated difference: credit old graduated, charge new volume
 	const proratedGraduated = await calculateProration({
 		customerId,
 		advancedTo,
@@ -100,7 +88,6 @@ test.concurrent(`${chalk.yellowBright("p2p: graduated prepaid to volume prepaid 
 		amount: volumeCost,
 	});
 
-	// Volume is cheaper, so this should be a credit (negative)
 	const expectedAmount = new Decimal(proratedVolume)
 		.minus(new Decimal(proratedGraduated))
 		.toNumber();
@@ -112,7 +99,6 @@ test.concurrent(`${chalk.yellowBright("p2p: graduated prepaid to volume prepaid 
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Balance should remain at 800 (quantity unchanged)
 	expectCustomerFeatureCorrect({
 		customer,
 		featureId: TestFeature.Messages,
@@ -134,18 +120,15 @@ test.concurrent(`${chalk.yellowBright("p2p: graduated prepaid to volume prepaid 
 	});
 });
 
-// Tiers for consumable pricing tests
 const CONSUMABLE_TIERS = [
 	{ to: 500, amount: 0.1 },
 	{ to: "inf" as const, amount: 0.05 },
 ];
 
-// 4.9 Volume prepaid to graduated tiered consumable
 test.concurrent(`${chalk.yellowBright("p2p: volume prepaid to graduated tiered consumable")}`, async () => {
 	const quantity = 800;
 	const basePrice = 20;
 
-	// Volume prepaid: 8 packs × $5 = $40
 	const volumeCost = 8 * 5;
 
 	const volumeItem = items.volumePrepaidMessages({
@@ -170,7 +153,6 @@ test.concurrent(`${chalk.yellowBright("p2p: volume prepaid to graduated tiered c
 		],
 	});
 
-	// Track some usage (600 of 800 = 200 remaining)
 	const messagesUsage = 600;
 	await autumnV1.track(
 		{
@@ -181,22 +163,18 @@ test.concurrent(`${chalk.yellowBright("p2p: volume prepaid to graduated tiered c
 		{ timeout: 2000 },
 	);
 
-	// Verify customer has usage tracked
 	const customerBefore =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	expect(customerBefore.features[TestFeature.Messages].usage).toBe(
 		messagesUsage,
 	);
 
-	// Change to tiered consumable with 100 included
-	// tier_behavior should be undefined (defaults to graduated)
 	const tieredConsumableItem = items.tieredConsumableMessages({
 		includedUsage: 100,
 		billingUnits: 1,
 		tiers: CONSUMABLE_TIERS,
 	});
 
-	// Verify the item has no tier_behavior set (defaults to graduated)
 	expect(tieredConsumableItem.tier_behavior).toBeUndefined();
 
 	const updateParams = {
@@ -207,15 +185,12 @@ test.concurrent(`${chalk.yellowBright("p2p: volume prepaid to graduated tiered c
 
 	const preview = await autumnV1.subscriptions.previewUpdate(updateParams);
 
-	// Should refund full prepaid amount ($40)
 	expect(preview.total).toBe(-volumeCost);
 
 	await autumnV1.subscriptions.update(updateParams);
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Usage should be preserved (600 tracked)
-	// New included usage is 100, so balance = 100 - 600 = -500 (in overage)
 	expectCustomerFeatureCorrect({
 		customer,
 		featureId: TestFeature.Messages,

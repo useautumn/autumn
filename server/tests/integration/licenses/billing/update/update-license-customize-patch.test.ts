@@ -1,28 +1,3 @@
-/**
- * TDD contract: customize.upsert_licenses on billing.update rides the PATCH
- * path — same customer product row, same pool row, same link; seats never
- * repoint their anchor and re-price uniformly onto the new definition.
- *
- * Contract under test (per case: upsert only / base price + upsert /
- * add+remove items + upsert):
- *   Behaviors:
- *     - pool converges in place: SAME pool row id + link_id + parent row
- *     - pool anchors an is_custom definition with the custom base price
- *     - counters untouched by definition change: granted 3, paid 2, usage 2
- *     - seats stay anchored: assignments -> pool -> ACTIVE parent
- *     - seat re-price is UNIFORM: every live assignment's fixed price row
- *       carries the new amount                    [RED: seat-half executor]
- *     - invoice delta = paid_quantity x price delta (+ any parent delta)
- *                                                  [RED: seat AFTER-projection]
- *     - Stripe sub state matches Autumn-derived expected state
- *     - entity seat balances untouched (messages granted/remaining 500)
- *   Side effects:
- *     - is_custom plan_license row + pool.plan_license_id repoint (DB)
- *
- * Pre-impl red: restating parent items plus a license grant change threw
- * "identical to the current subscription" because productsAreSame ignores
- * licenses. Green: preview succeeds.
- */
 import { expect, test } from "bun:test";
 import type {
 	ApiCustomerV3,
@@ -68,7 +43,6 @@ const upsertSeatPrice = ({ licensePlanId }: { licensePlanId: string }) => [
 
 type Scenario = Awaited<ReturnType<typeof setupLicenseUpdateScenario>>;
 
-/** The full patch-path contract, shared by every case in this file. */
 const expectPatchedLicenseStateCorrect = async ({
 	scenario,
 	customerId,
@@ -82,7 +56,6 @@ const expectPatchedLicenseStateCorrect = async ({
 }) => {
 	const { ctx, autumnV1, autumnV2_3, parent, devSeat } = scenario;
 
-	// ── Pool counters untouched; definition swapped ────────────────────
 	const customer = await autumnV2_3.customers.get<ApiCustomerV5>(customerId);
 	expectCustomerLicenses({
 		customer,
@@ -99,7 +72,6 @@ const expectPatchedLicenseStateCorrect = async ({
 		],
 	});
 
-	// ── DB: is_custom definition at the custom price ───────────────────
 	const pool = await expectLicenseDefinitionCorrect({
 		ctx,
 		customerId,
@@ -108,7 +80,6 @@ const expectPatchedLicenseStateCorrect = async ({
 		basePrice: { amount: CUSTOM_SEAT_PRICE, interval: BillingInterval.Month },
 	});
 
-	// ── DB: SAME pool row, link, and parent row (in-place patch) ───────
 	expect(poolsBefore).toHaveLength(1);
 	expect(pool.id).toBe(poolsBefore[0].id);
 	expect(pool.link_id).toBe(poolsBefore[0].link_id);
@@ -116,7 +87,6 @@ const expectPatchedLicenseStateCorrect = async ({
 		poolsBefore[0].parent_customer_product_id,
 	);
 
-	// ── DB: seats still anchor to the live parent's pool ───────────────
 	await expectAssignmentsAnchoredToParent({
 		ctx,
 		customerId,
@@ -124,7 +94,6 @@ const expectPatchedLicenseStateCorrect = async ({
 		count: ASSIGNED_SEATS,
 	});
 
-	// ── DB: uniform seat re-price [RED until seat-half executor] ───────
 	await expectAssignmentPricesCorrect({
 		ctx,
 		customerId,
@@ -132,7 +101,6 @@ const expectPatchedLicenseStateCorrect = async ({
 		count: ASSIGNED_SEATS,
 	});
 
-	// ── Invoice: paid seats re-price in full [RED until AFTER-projection]
 	const customerV3 = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	await expectCustomerInvoiceCorrect({
 		customer: customerV3,
@@ -140,10 +108,8 @@ const expectPatchedLicenseStateCorrect = async ({
 		latestTotal: PAID_SEATS * SEAT_PRICE_DELTA + extraInvoiceDelta,
 	});
 
-	// ── Stripe: sub matches Autumn-derived state ───────────────────────
 	await expectStripeSubscriptionCorrect({ ctx, customerId });
 
-	// ── Entity seat balances untouched ─────────────────────────────────
 	for (let index = 1; index <= ASSIGNED_SEATS; index++) {
 		const apiEntity = await autumnV2_3.entities.get<ApiEntityV2>(
 			customerId,
@@ -186,10 +152,6 @@ const setupAssignedScenario = async ({
 	return { scenario, poolsBefore: pools };
 };
 
-// ═══════════════════════════════════════════════════════════════════════════
-// CASE 1: upsert_licenses only
-// ═══════════════════════════════════════════════════════════════════════════
-
 test.concurrent(
 	`${chalk.yellowBright("license-update-patch: upsert only re-prices pool + seats in place")}`,
 	async () => {
@@ -231,10 +193,6 @@ test.concurrent(
 		});
 	},
 );
-
-// ═══════════════════════════════════════════════════════════════════════════
-// CASE 2: base price patch + upsert_licenses
-// ═══════════════════════════════════════════════════════════════════════════
 
 const BASE_PRICE = 50;
 const UPDATED_BASE_PRICE = 60;
@@ -287,10 +245,6 @@ test.concurrent(
 	},
 );
 
-// ═══════════════════════════════════════════════════════════════════════════
-// CASE 3: add_items / remove_items + upsert_licenses
-// ═══════════════════════════════════════════════════════════════════════════
-
 const PARENT_WORDS = 100;
 const PARENT_CREDITS = 50;
 
@@ -340,7 +294,6 @@ test.concurrent(
 			poolsBefore,
 		});
 
-		// ── Parent item swap landed alongside the license patch ─────────
 		const customer =
 			await scenario.autumnV2_3.customers.get<ApiCustomerV5>(customerId);
 		expectBalanceCorrect({
@@ -353,10 +306,6 @@ test.concurrent(
 	},
 );
 
-// ═══════════════════════════════════════════════════════════════════════════
-// CASE 4: entitlement repoint — planItem transitions via feature + interval
-// ═══════════════════════════════════════════════════════════════════════════
-
 const CUSTOM_SEAT_MESSAGES = 1000;
 
 test.concurrent(
@@ -368,7 +317,6 @@ test.concurrent(
 			idPrefix: "lic-patch-ents",
 		});
 
-		// Same price, bigger messages grant: entitlement-only transition.
 		const updateParams: UpdateSubscriptionV1ParamsInput = {
 			customer_id: customerId,
 			plan_id: scenario.parent.id,
@@ -402,7 +350,6 @@ test.concurrent(
 			updateParams,
 		);
 
-		// ── DB: definition and inherited seat entitlements converge inline ──
 		const pool = await expectLicenseDefinitionCorrect({
 			ctx: scenario.ctx,
 			customerId,

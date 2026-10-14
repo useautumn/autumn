@@ -11,7 +11,6 @@ import {
 import { createBenchProcessor } from "./createBenchProcessor.js";
 import { scenarios } from "./scenarios.js";
 
-/** Closed-loop track load against one partition processor: `concurrency` tracks in flight over `customers` customers. */
 const args = Object.fromEntries(
 	process.argv.slice(2).map((arg) => {
 		const [key, value] = arg.replace(/^--/, "").split("=");
@@ -27,7 +26,6 @@ const warmup = Number(args.warmup ?? 2_000);
 const appendMs = Number(args.appendMs ?? 0);
 const applyMs = Number(args.applyMs ?? 0);
 const serialize = args.serialize !== "false";
-/** http: callers race each other; queued: the command consumer, one record awaited at a time per partition. */
 const mode = args.mode ?? "http";
 
 const bench = await createBenchProcessor({
@@ -51,7 +49,6 @@ for (const [i, identity] of identities.entries()) {
 	});
 }
 
-/** The worker's real Hono app and logger in front of the processor; only the socket is skipped. */
 const runtime: BalanceWorkerRequestContext["runtime"] = {
 	process: (run) => run(bench.processor),
 };
@@ -90,7 +87,6 @@ const nextCommand = (): TrackCommand => {
 	});
 };
 
-/** Commands are built before timing starts, so the fixture's own zod parse is not measured. */
 const run = async ({ count }: { count: number }) => {
 	const commands = Array.from({ length: count }, nextCommand);
 	const latencies: number[] = [];

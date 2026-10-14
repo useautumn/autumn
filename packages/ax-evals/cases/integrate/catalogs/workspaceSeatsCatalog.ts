@@ -1,9 +1,3 @@
-/**
- * Workspace-seats archetype catalog (license flows): Team $600/mo comes with
- * 10 workspaces; each workspace is a $10/mo license plan granting 1,000
- * credits. Trimmed to what license integration cases need — no starter or
- * annual twins.
- */
 export const workspaceSeatsCatalog = `import { atmn, feature, license, plan } from "atmn";
 
 export default atmn({

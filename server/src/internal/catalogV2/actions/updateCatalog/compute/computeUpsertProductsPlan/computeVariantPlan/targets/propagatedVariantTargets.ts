@@ -4,10 +4,6 @@ import { variantRowForPropagateTarget } from "@/internal/catalogV2/actions/updat
 import { reachInternalIdsForBaseUpsert } from "../variantPlanUtils";
 import type { VariantEditTarget } from "./variantEditTarget";
 
-/**
- * propagate.variants → follow targets. Each target resolves to a row anchored
- * to the source upsert; off-anchor pins are rejected by guards.
- */
 export const propagatedVariantTargets = ({
 	upsert,
 	productStatesContext,

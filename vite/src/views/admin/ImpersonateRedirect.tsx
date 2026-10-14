@@ -41,7 +41,6 @@ export function ImpersonateRedirect() {
 			}
 
 			try {
-				// Step 1: Get a user ID for this org from the API
 				setStatus("Finding org member...");
 				const { data } = await axiosInstance.get(
 					`/admin/org-member?org_id=${orgId}`,
@@ -51,20 +50,13 @@ export function ImpersonateRedirect() {
 					return;
 				}
 
-				// Step 2: Stop existing impersonation only if one is active.
-				// Must be awaited — the active session is the impersonated user's
-				// (non-admin) session, so impersonateUser would otherwise fail
-				// FORBIDDEN. stopImpersonating restores the admin session.
 				if (isCurrentlyImpersonating) {
 					setStatus("Stopping existing impersonation...");
 					try {
 						await authClient.admin.stopImpersonating();
-					} catch {
-						// Server-side resets happen via the next call too
-					}
+					} catch {}
 				}
 
-				// Step 3: Impersonate the user
 				setStatus("Impersonating user...");
 				const impersonateResult = await authClient.admin.impersonateUser({
 					userId: data.userId,
@@ -75,15 +67,9 @@ export function ImpersonateRedirect() {
 					return;
 				}
 
-				// Step 4: Set the active org. The impersonation session is created
-				// with no active org (see beforeSessionCreated), so this is the sole
-				// authority; setActiveOrg also persists it for DashboardGate.
 				setStatus("Setting active organization...");
 				await setActiveOrg(orgId);
 
-				// Step 5: Resolve the landing path against the target org. If it
-				// isn't deployed to prod, land on its sandbox rather than a live
-				// route that doesn't exist for it.
 				setStatus("Redirecting...");
 				const target = isSafeLocalPath(rawRedirect)
 					? rawRedirect

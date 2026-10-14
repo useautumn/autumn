@@ -5,7 +5,6 @@ import type { WorkerFullSubject } from "../../models/subject/workerFullSubject.j
 import { assertCommandSupported } from "../common/assertCommandSupported.js";
 import type { ConfirmExpiredLockCommand } from "./types/confirmExpiredLockCommand.js";
 
-/** Deletes the lock row and, with it, the id the subject holds: one mutation, no balance touched. */
 export const computeConfirmExpiredLock = ({
 	fullSubject,
 	command,
@@ -16,7 +15,6 @@ export const computeConfirmExpiredLock = ({
 	assertCommandSupported({ fullSubject, command });
 	const { lock } = command;
 
-	// A lock finalized since the sweep read it is simply gone; nothing is written for it.
 	const isOpen = fullSubject.open_locks.some(
 		(openLock) => openLock.id === lock.id,
 	);

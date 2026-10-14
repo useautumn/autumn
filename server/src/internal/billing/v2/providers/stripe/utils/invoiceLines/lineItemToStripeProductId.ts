@@ -1,9 +1,5 @@
 import { isFixedPrice, type LineItem } from "@autumn/shared";
 
-/**
- * Resolve the Stripe product ID for a billing line item.
- * Prefers the explicit line-item mapping and falls back to context-derived IDs.
- */
 export const lineItemToStripeProductId = ({
 	lineItem,
 }: {
@@ -11,7 +7,6 @@ export const lineItemToStripeProductId = ({
 }): string | undefined => {
 	const { price, product } = lineItem.context;
 
-	// Custom line items carry an empty price and bill by raw amount.
 	if (!price?.config) return undefined;
 
 	if (isFixedPrice(price)) {

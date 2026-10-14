@@ -33,8 +33,6 @@ export const buildCheckFallbackResponse = ({
 		? findFeatureById({ features: ctx.features, featureId: body.feature_id })
 		: undefined;
 
-	// Unknown feature: stub it so old-version callers still get their own
-	// response shape instead of a raw V3 body their SDKs can't parse.
 	const featureToUse: Feature = foundFeature ?? {
 		internal_id: "",
 		org_id: ctx.org.id,

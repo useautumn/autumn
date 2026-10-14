@@ -17,13 +17,6 @@ import type {
 import { parseWorkerCustomerEntitlement } from "../../parsers.js";
 import { inheritParentCustomerProductLifecycle } from "./inheritParentCustomerProductLifecycle.js";
 
-/**
- * The state's child rows grouped by the parent they hang off, built once per
- * conversion. The joins below used to filter the whole array for every row,
- * which made a large customer's view quadratic in its row count; a track
- * builds the view twice (as found and as left), so that was where its thread
- * time went.
- */
 type SubjectRowIndex = {
 	rolloversByRow: Map<string, SubjectState["rollovers"]>;
 	replaceablesByRow: Map<string, SubjectState["replaceables"]>;
@@ -65,7 +58,6 @@ const indexSubjectRows = ({
 	),
 });
 
-/** The pool a pooled row draws from, present only when the row names one the state holds. */
 const poolOf = ({
 	row,
 	index,
@@ -110,7 +102,6 @@ const joinCustomerEntitlement = ({
 	};
 };
 
-/** A customer price without a price row is a placeholder the deduction never reads; it joins as no price. */
 const joinCustomerPrice = ({
 	row,
 	catalog,
@@ -127,7 +118,6 @@ const joinCustomerPrice = ({
 	return { ...row, price };
 };
 
-/** The one place rows meet catalog. Everything downstream speaks the FullSubject shape. */
 export const subjectStateToFullSubject = ({
 	state,
 	catalog,
@@ -165,7 +155,6 @@ export const subjectStateToFullSubject = ({
 			).map(join),
 		};
 	});
-	// A dead seat's rows stay with it: a grant whose product the state holds is never loose.
 	const heldProductIds = new Set(state.customerProducts.map((row) => row.id));
 	const isPool = (row: WorkerCustomerEntitlement) =>
 		row.is_pooled_balance === true;
@@ -194,7 +183,6 @@ export const subjectStateToFullSubject = ({
 	};
 };
 
-/** Every balance row the subject holds with the plan that granted it, selected or not: a finalize or a reset can land on a row a track would skip. */
 export const fullSubjectToHeldRows = ({
 	fullSubject,
 }: {
@@ -202,7 +190,6 @@ export const fullSubjectToHeldRows = ({
 }): WorkerFullCustomerEntitlementWithProduct[] =>
 	fullSubjectToRowsWithProduct({ fullSubject });
 
-/** Back to the stored row: joined catalog rows and the product the selection attached never travel in a mutation. */
 export const fullCustomerEntitlementToRow = ({
 	customerEntitlement,
 }: {
@@ -216,7 +203,6 @@ export const fullCustomerEntitlementToRow = ({
 		),
 	});
 
-/** The subject with some grants edited or removed (`edit` returns null): a what-if view a balance edit draws on. */
 export const fullSubjectWithCustomerEntitlements = ({
 	fullSubject,
 	edit,

@@ -6,7 +6,6 @@ import {
 } from "@/utils/billing/licenseQuantityUtils";
 import type { CustomerStatePlan } from "./customerStateSchema";
 
-/** A customer-state row as an API plan: plan id, scope, quantities, customize. */
 export const customerStatePlanToApiPlan = ({
 	plan,
 	products,

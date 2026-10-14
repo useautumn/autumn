@@ -7,10 +7,6 @@ import { useMemo } from "react";
 import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 
-/**
- * Lazily resolves Stripe product names/active status by id, batched server-side
- * (1 Stripe call per 100 ids). Keyed by the id set so results are cached.
- */
 export const useStripeProductsResolveQuery = ({
 	stripeProductIds,
 	enabled = true,
@@ -50,7 +46,6 @@ export const useStripeProductsResolveQuery = ({
 	return {
 		stripeProductsById,
 		stripeProducts: data?.stripe_products ?? [],
-		// First load with no cached data — used to show a skeleton.
 		isLoading: sortedIds.length > 0 && isLoading,
 		isResolving: sortedIds.length > 0 && (isLoading || isFetching),
 		error,

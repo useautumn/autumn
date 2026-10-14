@@ -3,7 +3,6 @@ import type { ProductStatesContext } from "@/internal/catalogV2/actions/updateCa
 import type { UpsertProductPlan } from "@/internal/catalogV2/actions/updateCatalog/types/upsertProductPlan";
 import { productKeyToState } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/productKeyToState";
 
-/** This `(plan_id, version)` can appear in a draft `plan_filter`. */
 export const rowCanReceiveMigrationDraft = ({
 	upsertProductPlan,
 	productStatesContext,

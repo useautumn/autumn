@@ -13,11 +13,6 @@ export const BENCH_ASSIGNMENT_PREFIX = "cp_bench_seat_";
 export const BENCH_SEAT_ENTITLEMENT_PREFIX = "ce_bench_seat_";
 export const BENCH_ENTITY_PREFIX = "ety_bench_";
 
-/**
- * Seeds one pool per bench customer plus `assignmentsPerCustomer` entity-scoped
- * assignments under it — the shape a license customize migration fans out to.
- * Pools start on the catalog link so a bench run measures the real repoint.
- */
 export const seedBenchLicenses = async ({
 	db,
 	count,
@@ -39,7 +34,6 @@ export const seedBenchLicenses = async ({
 	startsAt: number;
 	orgId: string;
 	env: string;
-	/** Plants a row on every assignment so a supersede has something to repoint. */
 	existingEntitlement?: {
 		entitlementId: string;
 		internalFeatureId: string;
@@ -71,7 +65,6 @@ export const seedBenchLicenses = async ({
 		ON CONFLICT DO NOTHING
 	`);
 
-	// Entities first: assignments are entity-scoped by definition.
 	await db.execute(sql`
 		INSERT INTO entities (
 			id, internal_id, internal_customer_id, name, internal_feature_id,

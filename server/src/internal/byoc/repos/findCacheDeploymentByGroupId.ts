@@ -3,7 +3,6 @@ import { and, eq } from "drizzle-orm";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { isEnvRow } from "./utils/cacheDeploymentWhere.js";
 
-/** The Atom following this deployment group, whatever its status. */
 export const findCacheDeploymentByGroupId = async ({
 	ctx,
 	deploymentGroupId,

@@ -11,10 +11,6 @@ import {
 	type VersionedPlanLicense,
 } from "@/hooks/queries/usePlanLicensesQuery";
 
-/**
- * Converts outgoing checkout changes into baseline ProductItems for diff comparison.
- * Uses outgoing plan configuration and merges duplicate feature rows across plans.
- */
 type AggregateByFeature = {
 	candidates: ProductItem[];
 	hasUnlimited: boolean;
@@ -95,10 +91,6 @@ function normalizeCandidateForIncoming({
 	const candidateHasTiers = (candidate.tiers?.length ?? 0) > 0;
 	const candidateHasPrice = hasNonNullValue(candidate.price);
 
-	// Equivalent usage-based configs can be represented as either:
-	// 1) price.amount (no tiers), or
-	// 2) a single infinite tier.
-	// Align to incoming representation to avoid false "added tier"/"price changed" edits.
 	if (
 		incomingHasTiers &&
 		!incomingHasPrice &&
@@ -165,8 +157,6 @@ function planItemToProductItem({
 	};
 }
 
-/** Flattens the outgoing plans' license links for the review transition diff,
- * keeping the first link when multiple outgoing plans share a license. */
 export function outgoingToPlanLicenses({
 	outgoing,
 }: {

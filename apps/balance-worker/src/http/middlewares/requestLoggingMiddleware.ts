@@ -9,7 +9,6 @@ import type {
 	BalanceWorkerRequestLog,
 } from "../types/balanceWorkerHttp.js";
 
-// Reply bodies are informational; production keeps a sample, everywhere else logs them all.
 const PRODUCTION_RESPONSE_SAMPLE_RATE = 0.01;
 
 export function requestLoggingMiddleware({
@@ -37,14 +36,12 @@ export function requestLoggingMiddleware({
 				}),
 			);
 		} catch (cause) {
-			// A logging failure cannot turn a committed request into an HTTP error.
 			console.error("Balance worker request logging failed", cause);
 		}
 	}
 	return logRequest;
 }
 
-/** One line per request, the same for one answered inline or through the ordinary route. */
 export function logWorkerRequest({
 	ctx,
 	requestLog,
@@ -63,9 +60,7 @@ export function logWorkerRequest({
 	startedAt: number;
 }): void {
 	const { command, response, error, errorCode, batch } = requestLog;
-	// A batch answers 200 around its commands' failures; the worst of them sets the level.
 	const severity = Math.max(statusCode, batch?.worstStatus ?? 0);
-	// Decided before the line is built: what is skipped costs nothing but this comparison.
 	if (severity < 400 && !(batch && batch.failed > 0) && !sampleSuccess({ ctx }))
 		return;
 	const identity = command?.identity ?? batch?.identity;
@@ -74,7 +69,6 @@ export function logWorkerRequest({
 		event: "balance_worker.request",
 		statusCode,
 		durationMs,
-		// Same key and field names the server logs under, so one Axiom filter covers both services.
 		context: {
 			org_id: identity?.orgId,
 			org_slug: command?.org?.slug ?? batch?.orgSlug,
@@ -88,7 +82,6 @@ export function logWorkerRequest({
 			id: command?.requestId ?? requestLog.id,
 			method,
 			path,
-			// The command is a large object the logger walks and serialises on every call; a success reports its outcome fields instead.
 			body:
 				severity >= 400 && command ? loggedCommandOf({ command }) : undefined,
 		},
@@ -121,7 +114,6 @@ function loggedBatchOf({
 	return { count, succeeded, failed, errorCodes };
 }
 
-/** A 4xx is the caller's answer, not a fault: its name and message say everything, the stack is noise. */
 function loggedErrorOf({
 	error,
 	statusCode,
@@ -133,7 +125,6 @@ function loggedErrorOf({
 	return { name: error.name, message: error.message };
 }
 
-/** Every failure is logged; a success is logged at the configured rate, or always when none is set. */
 function sampleSuccess({
 	ctx,
 }: {
@@ -149,7 +140,6 @@ function shouldLogResponse(): boolean {
 	return Math.random() < PRODUCTION_RESPONSE_SAMPLE_RATE;
 }
 
-/** Event properties are customer data and never reach the logs. */
 function loggedCommandOf({
 	command,
 }: {
@@ -161,9 +151,7 @@ function loggedCommandOf({
 
 function outcomeOf({ requestLog }: { requestLog: BalanceWorkerRequestLog }) {
 	const { response, error } = requestLog;
-	// A read decides nothing, so it has no result to report.
 	const result = response && "result" in response ? response.result : undefined;
-	// A track and a finalize both report a status and a reason.
 	const trackResult =
 		result &&
 		"type" in result &&
@@ -172,7 +160,6 @@ function outcomeOf({ requestLog }: { requestLog: BalanceWorkerRequestLog }) {
 			: undefined;
 	const initializeResult = result && "duplicate" in result ? result : undefined;
 	return {
-		// An expired lock replies with its result alone.
 		revision:
 			response && "state" in response ? response.state.revision : undefined,
 		duplicate: initializeResult?.duplicate,

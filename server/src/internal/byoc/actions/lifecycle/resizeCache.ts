@@ -12,7 +12,6 @@ import {
 } from "../../utils/byocCacheUtils.js";
 import { cacheDeploymentAtomContext } from "./cacheDeploymentAtomContext.js";
 
-/** Moves the env's running Atom to another machine; its balances stay on the volume. */
 export const resizeCache = ({
 	ctx,
 	params,

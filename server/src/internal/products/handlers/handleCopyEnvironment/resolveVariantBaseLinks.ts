@@ -3,11 +3,6 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { ProductService } from "../../ProductService.js";
 import { getActiveProducts } from "../../productUtils.js";
 
-/**
- * Maps each variant in the copy set to its base plan's public id. A variant may
- * point at an older base version that isn't in the latest-version list, so
- * unresolved internal ids are looked up directly.
- */
 export const resolveSourceBasePlanIds = async ({
 	ctx,
 	fromProducts,
@@ -39,7 +34,6 @@ export const resolveSourceBasePlanIds = async ({
 		});
 		const source = fromProductsAll[0];
 		for (const base of olderBaseVersions) {
-			// listByInternalIds is unscoped; ignore rows outside the source org/env.
 			if (base.org_id !== source?.org_id || base.env !== source?.env) continue;
 			basePlanIdByInternalId.set(base.internal_id, base.id);
 		}
@@ -62,11 +56,6 @@ export const resolveSourceBasePlanIds = async ({
 	return basePlanIdByVariantId;
 };
 
-/**
- * Resolves base plan public ids to internal ids in the target env, after bases
- * have been copied. Absent ids and target rows that are themselves variants
- * are excluded so a copy never produces a dangling or nested variant link.
- */
 export const getTargetBaseInternalIds = async ({
 	toContext,
 	basePlanIds,

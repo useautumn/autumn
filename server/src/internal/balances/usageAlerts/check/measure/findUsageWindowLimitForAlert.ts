@@ -8,7 +8,6 @@ import {
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { resolveUsageWindowLimits } from "@/internal/balances/utils/usageWindows/resolveUsageWindowLimits.js";
 
-// Customer-scope alerts read customer counters only; an entity override cap belongs to entity-scope alerts.
 export const findUsageWindowLimitForAlert = ({
 	ctx,
 	alert,

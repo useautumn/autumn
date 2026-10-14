@@ -39,7 +39,6 @@ export const customerProductToArrearLineItems = ({
 	billingContext: BillingContext;
 	filters?: {
 		onlyV4Usage?: boolean;
-		/** Optional filter to skip specific entitlements (e.g., for multi-interval billing) */
 		cusEntFilter?: (cusEnt: FullCusEntWithFullCusProduct) => boolean;
 		invoiceCreditCusEntFilter?: (
 			cusEnt: FullCusEntWithFullCusProduct,
@@ -50,7 +49,6 @@ export const customerProductToArrearLineItems = ({
 		updateNextResetAt?: boolean;
 		discountable?: boolean;
 		includeZeroAmounts?: boolean;
-		/** Scopes usage line ids to e.g. a Stripe invoice so retries regenerate the same ids. */
 		idempotencyScope?: string;
 		invoiceCredits?: {
 			idempotencyScope?: string;
@@ -64,7 +62,6 @@ export const customerProductToArrearLineItems = ({
 	updateCustomerEntitlements: UpdateCustomerEntitlement[];
 } => {
 	const lineItems: LineItem[] = [];
-	// Usage can't predate the subscription, so the charged period is clipped there.
 	const subscriptionCreatedMs = billingContext.stripeSubscription?.created
 		? secondsToMs(billingContext.stripeSubscription.created)
 		: undefined;

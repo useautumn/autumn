@@ -1,7 +1,3 @@
-/**
- * 0 assignment contributions. applyLicensePooledBalances writes that onto
- * the existing PooledBalancePlan.
- */
 import { expect, test } from "bun:test";
 import {
 	AllowanceType,

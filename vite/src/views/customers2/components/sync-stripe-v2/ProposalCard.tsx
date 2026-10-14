@@ -32,7 +32,6 @@ export function ProposalCard({
 		productNamesById,
 	});
 	const [section] = buildPhaseSections({ proposal });
-	// The list uses today's verify only; "matched after sync" needs a preview, which runs once a subscription is opened.
 	const itemMark = (stripePriceId: string) =>
 		section &&
 		stripeItemMark({

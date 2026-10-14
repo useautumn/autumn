@@ -20,8 +20,6 @@ export const getChatOAuthCredentialByInstallationEnv = async ({
 	chatInstallationId: string;
 	env: AppEnv;
 	orgId?: string;
-	// Web chat credentials are per-user; always pass userId there. Slack omits it
-	// (one installation-scoped credential per install).
 	userId?: string | null;
 }) =>
 	db.query.chatOAuthCredentials.findFirst({

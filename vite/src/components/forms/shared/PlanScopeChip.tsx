@@ -8,10 +8,6 @@ import { CaretDownIcon } from "@phosphor-icons/react";
 import type { ComponentProps } from "react";
 import { cn } from "@/lib/utils";
 
-/**
- * The plan's scope as a chip that opens the scope picker. Trigger props go to
- * TooltipTrigger, which merges them and their refs onto the chip.
- */
 export function PlanScopeChip({
 	label,
 	isEntityScoped,

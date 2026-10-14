@@ -27,7 +27,6 @@ import {
 } from "./primitives.js";
 import { validateBalanceWorkerEnv } from "./validateBalanceWorkerEnv.js";
 
-/** Every variable a balance worker reads, by what it is for. Kafka auth, the deployment and fixed settings join below. */
 const kafka = z.object({
 	KAFKA_BROKERS: brokerList,
 	BALANCE_WORKER_COMMIT_MODE: z
@@ -40,7 +39,6 @@ const kafka = z.object({
 
 const listener = z.object({
 	ECS_CONTAINER_METADATA_URI_V4: z.string().url().optional(),
-	/** Which build is running, for the blue-green heartbeat; Flightcontrol sets the first, plain ECS the second. */
 	FC_GIT_COMMIT_SHA: z.string().trim().min(1).optional(),
 	IMAGE_TAG: z.string().trim().min(1).optional(),
 	BALANCE_WORKER_HOST: loopbackHost.default("127.0.0.1"),
@@ -72,12 +70,10 @@ const state = z.object({
 	BALANCE_WORKER_CHECKPOINT_FORCE_PATH_STYLE: booleanFlag,
 });
 
-/** The same Postgres the server uses. */
 const postgres = z.object({
 	DATABASE_URL: z.string().url(),
 });
 
-/** The idempotency keys queued batch items claim; the same table and defaults the server uses. */
 const dynamo = z.object({
 	DYNAMODB_ENDPOINT: z.string().url().optional(),
 	DYNAMODB_IDEMPOTENCY_TABLE: z
@@ -89,7 +85,6 @@ const dynamo = z.object({
 	AWS_SECRET_ACCESS_KEY: z.string().optional(),
 });
 
-/** The admin bucket edge configs are polled from; the same names and defaults the server uses. */
 const adminS3 = z.object({
 	S3_BUCKET: z.string().trim().min(1).default("autumn-prod-server"),
 	S3_REGION: z.string().trim().min(1).default("us-east-2"),
@@ -108,7 +103,6 @@ export function createBalanceWorkerEnv(
 ) {
 	const env = balanceWorkerEnvSchema.parse({
 		...runtimeEnv,
-		// Deployed workers still receive the URL under its old name.
 		DATABASE_URL: resolveDatabaseUrl({
 			url: runtimeEnv.DATABASE_URL ?? runtimeEnv.BALANCE_WORKER_DATABASE_URL,
 			runtimeEnv,
@@ -122,7 +116,6 @@ export function createBalanceWorkerEnv(
 		...env,
 		...createKafkaAuthEnv({ runtimeEnv, serviceUser: "BALANCE_WORKER" }),
 		BALANCE_WORKER_DEPLOYMENT: deployment,
-		/** Staging alone honours a load test's cold-start request. */
 		BALANCE_WORKER_STAGING: isStagingEnv({ runtimeEnv }),
 		BALANCE_WORKER_METERING_TOPIC: kafkaNames.meteringTopic,
 		BALANCE_WORKER_OWNERSHIP_TOPIC: kafkaNames.ownershipTopic,

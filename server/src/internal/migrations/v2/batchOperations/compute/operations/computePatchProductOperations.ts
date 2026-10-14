@@ -9,8 +9,6 @@ import type {
 import type { LicenseLinkTransitions } from "../transitions/resolvePlanLicenseTransitions.js";
 import { toLicenseOps } from "./computeBatchMigrationOperations.js";
 
-/** Lowers a customize patch: filter-from replace/remove, leftover adds, and
- * an optional customer-product repointer. Catalog products are not diffed. */
 export const computePatchProductOperations = ({
 	patchTransition,
 	licenseLinks,

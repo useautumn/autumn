@@ -422,7 +422,6 @@ describe("runWithFullSubjectGate cluster-wide caps", () => {
 			}),
 		);
 		await Promise.all(tasks);
-		// 8 cluster-wide / 4 processes = 2 per process
 		expect(counter.peak).toBeLessThanOrEqual(2);
 		expect(counter.peak).toBeGreaterThan(1);
 		expect(counter.current).toBe(0);
@@ -453,7 +452,6 @@ describe("runWithFullSubjectGate cluster-wide caps", () => {
 			}),
 		);
 		await Promise.all(tasks);
-		// 8 cluster-wide / 4 processes = 2 per process
 		expect(counter.peak).toBeLessThanOrEqual(2);
 		expect(counter.peak).toBeGreaterThan(1);
 		expect(counter.current).toBe(0);
@@ -482,7 +480,6 @@ describe("runWithFullSubjectGate enqueue-time admission control", () => {
 			env: AppEnv.Live,
 			queryFn: hold,
 		});
-		// Let the first request occupy the single slot so the next one queues.
 		await new Promise((resolve) => setTimeout(resolve, 10));
 		const queued = runWithFullSubjectGate({
 			customerId: "cus-predicted-reject",
@@ -507,7 +504,6 @@ describe("runWithFullSubjectGate enqueue-time admission control", () => {
 		expect(rejection.statusCode).toBe(429);
 		expect(rejection.code).toBe("rate_limit_exceeded");
 		expect(rejection.data?.reason).toBe("predicted_wait_timeout");
-		// Shed at enqueue — did not sit the queue behind the slow requests.
 		expect(elapsedMs).toBeLessThan(50);
 
 		await Promise.allSettled([running, queued]);
@@ -647,7 +643,6 @@ describe("runWithFullSubjectGate enqueue-time admission control", () => {
 		const hold = () => new Promise((resolve) => setTimeout(resolve, 100));
 		const orgIds = ["org-slow-tenant", "org-fast-tenant"];
 		const inFlight: Promise<unknown>[] = [];
-		// Occupy each org's single per-customer slot, then queue one more each.
 		for (const round of [0, 1]) {
 			for (const orgId of orgIds) {
 				inFlight.push(
@@ -678,7 +673,6 @@ describe("runWithFullSubjectGate enqueue-time admission control", () => {
 		const rejection = (slowOrgResult as PromiseRejectedResult).reason;
 		expect(rejection.statusCode).toBe(429);
 		expect(rejection.data?.reason).toBe("predicted_wait_timeout");
-		// Same queue depth, but the fast org's own EWMA predicts a short wait.
 		expect(fastOrgResult?.status).toBe("fulfilled");
 
 		await Promise.allSettled(inFlight);
@@ -704,7 +698,6 @@ describe("runWithFullSubjectGate enqueue-time admission control", () => {
 				per_org_pending_max: 1000,
 			},
 		});
-		// Low EWMA admits everything at enqueue; real service time is slower.
 		_setFullSubjectGateEwmaForTesting(1);
 
 		const slow = () => new Promise((resolve) => setTimeout(resolve, 120));

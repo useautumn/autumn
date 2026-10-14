@@ -9,7 +9,6 @@ let gate: Promise<void> = Promise.resolve();
 const pushed: string[] = [];
 const pushSubjectToCachePath =
 	"../../../../src/consumers/cachePush/pushSubjectToCache/pushSubjectToCache.js";
-// bun's mock.restore() keeps module mocks, so put the real module back for the files that run after this one.
 const realPushSubjectToCache = { ...(await import(pushSubjectToCachePath)) };
 afterAll(() => {
 	mock.module(pushSubjectToCachePath, () => realPushSubjectToCache);

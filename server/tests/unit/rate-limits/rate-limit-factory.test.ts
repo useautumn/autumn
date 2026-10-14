@@ -13,7 +13,6 @@ await mockModuleWithRestore("@/external/redis/initRedis", () => ({
 	shouldUseRedis: () => mockState.shouldUseRedis,
 }));
 
-// A Redis counter stand-in: what the factory sends to Redis is observable here.
 await mockModuleWithRestore(
 	"@/internal/misc/rateLimiter/rateLimitRedisStore",
 	() => ({
@@ -29,8 +28,6 @@ await mockModuleWithRestore(
 	}),
 );
 
-// Stub the full `Logger` shape — Bun's `mock.module` is process-wide, so
-// later unit tests inherit this stub. Missing methods crash unrelated code.
 const mockLogger = {
 	debug: () => undefined,
 	info: () => undefined,

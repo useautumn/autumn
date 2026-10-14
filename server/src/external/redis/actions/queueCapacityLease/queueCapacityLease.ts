@@ -48,9 +48,7 @@ const createPermit = ({
 					redisInstance: redis,
 					operation: () => redis.releaseQueuePermit(redisKey, token),
 				});
-			} catch {
-				// The permit lease expires automatically if Redis cannot release it.
-			}
+			} catch {}
 		},
 	};
 };
@@ -136,7 +134,6 @@ export const reserveQueueCapacity = async ({
 			);
 		return createLimitedLease({ permits });
 	} catch {
-		// Fail open to normal SQS capacity so Redis cannot stop queue processing.
 		return createUnlimitedLease({ requested: requestedCount });
 	}
 };

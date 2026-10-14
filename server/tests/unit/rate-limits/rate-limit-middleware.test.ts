@@ -7,8 +7,6 @@ import {
 } from "@/internal/misc/rateLimiter/rateLimitConfigs.js";
 import { mockModuleWithRestore } from "../utils/mockModuleWithRestore.js";
 
-// Red: unscoped entity lists entered the shared `:undefined` customer bucket.
-// Green: only customer-scoped lists enter the inner customer limiter.
 const limiterCalls: RateLimitType[] = [];
 const recordingLimiter =
 	(type: RateLimitType) => async (_c: unknown, next: () => Promise<void>) => {

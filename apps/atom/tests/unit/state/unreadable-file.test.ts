@@ -27,7 +27,6 @@ const countRows = ({ path }: { path: string }) => {
 	return count;
 };
 
-/** Not a database at all, as a torn or overwritten volume leaves one. */
 const writeGarbage = ({ path }: { path: string }) => {
 	writeFileSync(path, Buffer.alloc(16_384, 7));
 	writeFileSync(`${path}-wal`, Buffer.alloc(4_096, 9));

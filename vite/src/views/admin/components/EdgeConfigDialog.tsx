@@ -66,7 +66,6 @@ export function EdgeConfigDialog({
 	const [jsonError, setJsonError] = useState<string | null>(null);
 	const [syncSource, setSyncSource] = useState<"form" | "json">("form");
 
-	// Reset when dialog closes
 	useEffect(() => {
 		if (!open) {
 			setStep("select-org");
@@ -80,7 +79,6 @@ export function EdgeConfigDialog({
 		}
 	}, [open]);
 
-	// Load data when org is selected
 	useEffect(() => {
 		if (!orgId || step !== "edit") return;
 
@@ -122,7 +120,6 @@ export function EdgeConfigDialog({
 		};
 	}, [axiosInstance, orgId, step]);
 
-	// Form → JSON sync
 	useEffect(() => {
 		if (syncSource !== "form") return;
 		setJsonText(JSON.stringify({ blockAll, blockedEndpoints: rules }, null, 2));
@@ -273,13 +270,11 @@ export function EdgeConfigDialog({
 
 				{step === "edit" && !loading && (
 					<div className="grid grid-cols-2 gap-6">
-						{/* Left: structured editor */}
 						<div className="flex flex-col gap-4">
 							<div className="text-xs font-medium text-tertiary-foreground uppercase tracking-wide">
 								Structured Editor
 							</div>
 
-							{/* Block all toggle */}
 							<div className="flex items-center justify-between rounded-lg border border-border p-3">
 								<div className="flex flex-col gap-1">
 									<div className="text-sm font-medium text-foreground">
@@ -303,7 +298,6 @@ export function EdgeConfigDialog({
 								</label>
 							</div>
 
-							{/* Rules */}
 							<div className="rounded-lg border border-border p-3">
 								<div className="mb-3 flex items-center justify-between">
 									<div>
@@ -366,7 +360,6 @@ export function EdgeConfigDialog({
 								</div>
 							</div>
 
-							{/* Config health */}
 							<div className="flex flex-col gap-3 rounded-lg border border-border p-3 text-xs text-tertiary-foreground">
 								<div className="flex flex-wrap items-center gap-2">
 									<ConfigHealthChip healthy={status?.configHealthy} />
@@ -386,7 +379,6 @@ export function EdgeConfigDialog({
 							</div>
 						</div>
 
-						{/* Right: Monaco */}
 						<div className="flex flex-col gap-2">
 							<div className="text-xs font-medium text-tertiary-foreground uppercase tracking-wide">
 								Raw JSON

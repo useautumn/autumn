@@ -1,6 +1,3 @@
-// Red: external schedules require Stripe. Green: explicit and inferred
-// database-only create/preview flows work while connected schedules use Stripe.
-
 import { expect, test } from "bun:test";
 import {
 	type CreateScheduleResponse,

@@ -42,7 +42,7 @@ export const handleMintKey = createRoute({
 		});
 
 		const pair = await mintTokenPair({
-			customerId: customer.id ?? customer.internal_id, // external `sub`
+			customerId: customer.id ?? customer.internal_id,
 			internalCustomerId: customer.internal_id,
 			env: ctx.env,
 			epoch,

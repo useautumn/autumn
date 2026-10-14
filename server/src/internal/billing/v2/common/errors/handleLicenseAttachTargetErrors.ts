@@ -5,9 +5,6 @@ import {
 	RecaseError,
 } from "@autumn/shared";
 
-/** The customer's plan offering this license, if any: matched via their
- * pools (survives version pins) or the license's catalog parent links
- * (covers links added after the parent was attached). */
 const findLicenseParentPlanId = ({
 	fullCustomer,
 	licenseProduct,
@@ -34,8 +31,6 @@ const findLicenseParentPlanId = ({
 	return null;
 };
 
-/** License linkage preconditions on the attach target: plans offering
- * licenses live on the customer, and licensed seats go through the parent. */
 export const handleLicenseAttachTargetErrors = ({
 	fullCustomer,
 	attachProduct,

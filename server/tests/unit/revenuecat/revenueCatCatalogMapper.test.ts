@@ -7,7 +7,6 @@ const { mapRevenueCatProductToAutumn } = await import(
 	"../../../src/external/revenueCat/misc/revenueCatCatalogMapper.js"
 );
 
-// rcCli stub: only listAllProducts is exercised by the mapper.
 const rcCliStub = (products: { id: string; store_identifier: string }[]) =>
 	({
 		listAllProducts: () => Promise.resolve(products),
@@ -16,7 +15,6 @@ const rcCliStub = (products: { id: string; store_identifier: string }[]) =>
 const fakeDb = {} as never;
 
 afterEach(() => {
-	// Reset the module-level catalog cache between tests via a fresh org key.
 });
 
 describe("revenueCatCatalogMapper", () => {

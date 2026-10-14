@@ -28,7 +28,6 @@ const OTHER_PAYMENT_METHOD_LABELS: Record<string, string> = {
 	wechat_pay: "WeChat Pay",
 };
 
-/** Display name for any Stripe payment method type, invoice-specific or not. */
 export const paymentMethodLabel = (type: string) =>
 	INVOICE_PAYMENT_METHOD_OPTIONS.find((option) => option.value === type)
 		?.label ??

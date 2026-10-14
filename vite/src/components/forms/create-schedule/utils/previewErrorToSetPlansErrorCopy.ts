@@ -8,7 +8,6 @@ import { getBackendErr } from "@/utils/genUtils";
 
 const ERROR_FALLBACK = "Failed to load preview";
 
-/** Structured copy when the server sent details; otherwise its message as a single line. */
 export const previewErrorToSetPlansErrorCopy = (
 	error: unknown,
 ): SetPlansErrorCopy | null => {

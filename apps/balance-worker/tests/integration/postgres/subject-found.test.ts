@@ -1,9 +1,3 @@
-/**
- * The worker answers CUSTOMER_NOT_FOUND / ENTITY_NOT_FOUND (and herald pushes a deletion) only when its rows read is
- * null (readSubjectBaseline) or an entity is absent from the batched entity read (createEntityLoads). Both are null
- * only for a customer or entity with no row: having no products, no balances, or only expired grants is still found.
- */
-
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import {
 	getEntitySubjectRows,
@@ -63,7 +57,6 @@ describe.skipIf(!databaseUrl)("a subject that exists reads as found", () => {
 			})
 		).map((envelope) => envelope.entity?.id);
 
-	/** An entity of the seeded customer with no products or balances of its own. */
 	const seedBareEntity = async ({ seeded }: { seeded: SeededCustomer }) => {
 		const entityId = `ent_bare_${crypto.randomUUID().slice(0, 8)}`;
 		await postgres.db.insert(schemas.entities).values({

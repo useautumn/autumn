@@ -1,14 +1,6 @@
 import { catalog } from "../../../src/grading/expectations/catalogExpectations.ts";
 import type { Expectation } from "../../../src/grading/types/expectation.ts";
 
-/**
- * Shared grading for the graceful-overage twins (FireCrawl pattern): no
- * priced overage anywhere; enterprise gets overage via CONTROLS —
- * overage_allowed enables it, a spend limit caps it at 10%, skip billing
- * keeps it un-invoiced. The standard-plan spec doubles as the negative
- * anchor: it must keep hard-stopping (no overage item, no controls granting
- * overage).
- */
 export const gracefulOverageExpectations = (): Expectation[] =>
 	catalog({
 		features: {

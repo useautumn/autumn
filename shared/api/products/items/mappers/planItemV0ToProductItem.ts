@@ -36,9 +36,6 @@ const planItemV0ToResetProductItemInterval = ({
 }: {
 	planItemV0: ApiPlanItemV0;
 }) => {
-	// If reset is omitted, default the entitlement reset interval to the
-	// price interval. This preserves the existing create-plan behavior while
-	// still allowing explicit reset/price split intervals for prepaid items.
 	if (hasResetInterval(planItemV0)) {
 		return resetIntvToItemIntv(planItemV0.reset.interval);
 	}
@@ -112,9 +109,6 @@ const planItemV0ToItemConfig = ({
 	return undefined;
 };
 
-/**
- * Augmented CreateBalanceParams that can be used for planFeaturesToItems function
- */
 type CreateBalanceForPlanFeatureMap = CreateBalanceParamsV0 & {
 	price?: undefined;
 } & {
@@ -135,7 +129,6 @@ export const planItemV0ToProductItem = ({
 		throw new FeatureNotFoundError({ featureId: planItem.feature_id });
 	}
 
-	// Get interval
 	const resetInterval = planItemV0ToResetProductItemInterval({
 		planItemV0: planItem,
 	});
@@ -160,9 +153,6 @@ export const planItemV0ToProductItem = ({
 
 	const resetUsageWhenEnabled = featureUtils.isConsumable(feature);
 
-	// One stated id, two slots: prepaid bills from v2, everything else from v1.
-	// Presence is the signal: an omitted `stripe` states nothing and leaves the
-	// current mapping alone, while an explicit null unlinks it.
 	const statedStripe = planItem.price?.processors?.stripe;
 	const statedStripePriceId =
 		statedStripe === undefined ? undefined : (statedStripe?.price_id ?? null);
@@ -208,7 +198,6 @@ export const planItemV0ToProductItem = ({
 
 		usage_model: planItem.price?.usage_model,
 		billing_units: planItem.price?.billing_units,
-		// 0 is a stated cap (no purchase beyond included), not an absent one.
 		usage_limit:
 			planItem.price?.max_purchase != null
 				? planItem.price.max_purchase + (planItem.granted_balance ?? 0)

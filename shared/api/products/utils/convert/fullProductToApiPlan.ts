@@ -19,20 +19,14 @@ export type FullProductToApiPlanParams = {
 	ctx: ApiPlanContext;
 	product: FullProduct;
 	currency?: string;
-	/** Read from the customer by the caller; a plan on its own has none. */
 	customerEligibility?: ApiPlanV1["customer_eligibility"];
-	/** A variant's base, already rendered or still as rows; without either the plan states nothing about its base. */
 	basePlan?: DiffablePlanV1;
 	baseFullProduct?: FullProduct;
-	/** RevenueCat mappings live in their own table, so the rows are read in, keyed by plan id: a variant owns its own row. */
 	revenuecatMappings?: ReadonlyMap<string, RevenueCatPlanMapping>;
-	/** Keep each license entry's rendered effective plan. */
 	expandLicensePlans?: boolean;
-	/** Attach variants[] edges built from the product's hydrated variants. */
 	expandVariants?: boolean;
 };
 
-/** The items-based product the plan converter renders, with a stored plan's response rules applied to its DB meta. */
 const fullProductToResponseProductV2 = ({
 	ctx,
 	product,
@@ -42,7 +36,6 @@ const fullProductToResponseProductV2 = ({
 }): ProductV2 => ({
 	...mapToProductV2({ product, features: ctx.features }),
 	created_at: product.created_at ?? 0,
-	// The context's env stands in for a product row that carries none of its own.
 	env: product.env ?? ctx.env,
 	free_trial: product.free_trial
 		? {
@@ -52,10 +45,6 @@ const fullProductToResponseProductV2 = ({
 		: product.free_trial,
 });
 
-/**
- * A stored plan as the API returns it, from rows alone: no customer and no database.
- * Expansions keep the plan's graph edges (license plans, variants) in the response.
- */
 export function fullProductToApiPlan(
 	params: FullProductToApiPlanParams & { expandLicensePlans: true },
 ): ApiPlanExpandedV1;
@@ -92,7 +81,6 @@ export function fullProductToApiPlan({
 		revenuecatMapping: revenuecatMappings?.get(product.id),
 	});
 
-	// The two fields the converter leaves out of a stored plan's response.
 	const plan = {
 		...renderedPlan,
 		free_trial: renderedPlan.free_trial
@@ -104,7 +92,6 @@ export function fullProductToApiPlan({
 		base_variant_id: product.base_variant_id ?? null,
 	} satisfies ApiPlanV1;
 
-	// License links ride along so a variant's customize can state its license overlay.
 	const licenses = product.licenses?.length
 		? product.licenses.map((license) =>
 				fullPlanLicenseToApiPlanLicense({

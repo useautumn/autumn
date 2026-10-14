@@ -8,14 +8,6 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// ONE-OFF PREPAID WITH NO QUANTITY ON CUSTOM PLAN UPDATE
-//
-// When a product has both monthly metered items and a one-off prepaid item,
-// updating the plan (e.g. increasing monthly included usage) should NOT require
-// passing feature_quantities for the one-off prepaid.
-// ═══════════════════════════════════════════════════════════════════════════════
-
 test.concurrent(`${chalk.yellowBright("custom-plan: increase monthly usage with one-off prepaid present (no quantity)")}`, async () => {
 	const monthlyMessagesItem = items.monthlyMessages({ includedUsage: 100 });
 	const oneOffMessagesItem = items.oneOffMessages({

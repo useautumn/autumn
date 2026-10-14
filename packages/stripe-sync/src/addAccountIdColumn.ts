@@ -1,10 +1,6 @@
 import pg from "pg";
 import { SYNCED_TABLES } from "./eventTypeToTable.js";
 
-/**
- * Adds `stripe_account_id` and `org_id` columns + indexes to all synced tables.
- * Idempotent -- safe to run multiple times.
- */
 export const addAutumnColumns = async ({
 	databaseUrl,
 	schema = "stripe",

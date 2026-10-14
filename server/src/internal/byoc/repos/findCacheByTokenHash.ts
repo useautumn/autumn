@@ -2,7 +2,6 @@ import { type AppEnv, atomDeployments } from "@autumn/shared";
 import { eq } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 
-/** The org and env whose Atom holds this token hash, and its token as pushes carry it; null when no Atom does. */
 export const findCacheByTokenHash = async ({
 	db,
 	tokenHash,

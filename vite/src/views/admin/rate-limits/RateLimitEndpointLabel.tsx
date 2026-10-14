@@ -3,7 +3,6 @@ import { cn } from "@autumn/ui/lib/utils";
 import { Fragment } from "react";
 import { splitEndpoint } from "./rateLimitEndpoints";
 
-/** The method as a tag, then the path; on phones it wraps after `/` and `.`, from `md` it truncates. */
 export const RateLimitEndpointLabel = ({
 	endpoint,
 	className,

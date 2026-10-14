@@ -122,7 +122,6 @@ export const getCusPaymentMethod = async ({
 	}
 };
 
-// 2. Create a payment method and attach to customer
 export const attachPmToCus = async ({
 	db,
 	customer,
@@ -138,8 +137,6 @@ export const attachPmToCus = async ({
 	willFail?: boolean;
 	testClockId?: string;
 }) => {
-	// 1. Create stripe customer if not exists
-
 	let stripeCusId = customer.processor?.id;
 	if (!stripeCusId) {
 		const stripeCustomer = await createStripeCustomer({
@@ -196,7 +193,6 @@ export const attachPmToCus = async ({
 				default_payment_method: pm.id,
 			},
 		});
-		// console.log("   - Payment method attached");
 	} catch (error) {
 		console.log("   - Error attaching payment method", error);
 	}
@@ -209,7 +205,6 @@ export const attachFailedPaymentMethod = async ({
 	stripeCli: Stripe;
 	customer: Customer;
 }) => {
-	// Delete existing payment method
 	const paymentMethods = await stripeCli.paymentMethods.list({
 		customer: customer.processor?.id,
 	});
@@ -247,7 +242,6 @@ export const attachAuthenticatePaymentMethod = async ({
 	const stripeCustomer = await stripeCli.customers.retrieve(
 		autumnCustomer!.processor?.id,
 	);
-	// Delete existing payment method
 	const paymentMethods = await stripeCli.paymentMethods.list({
 		customer: stripeCustomer.id,
 	});
@@ -296,10 +290,6 @@ const deleteAllStripeCustomers = async ({
 	}
 };
 
-/**
- * Retrieves the customer's payment method and sets it as their default for invoices.
- * Returns the payment method if found and set, or null if none available.
- */
 export const updateDefaultPaymentMethod = async ({
 	stripeCli,
 	stripeCustomerId,

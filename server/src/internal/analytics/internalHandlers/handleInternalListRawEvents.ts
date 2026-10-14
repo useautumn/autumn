@@ -25,9 +25,6 @@ const InternalListRawEventsSchema = z.object({
 	entity_id: z.string().optional(),
 });
 
-/**
- * Query raw events by customer ID
- */
 export const handleInternalListRawEvents = createRoute({
 	scopes: [Scopes.Analytics.Read],
 	body: InternalListRawEventsSchema,
@@ -47,10 +44,8 @@ export const handleInternalListRawEvents = createRoute({
 		let customer: FullCustomer | undefined;
 
 		if (!customer_id) {
-			// No customer ID provided, set aggregateAll to true
 			aggregateAll = true;
 		} else {
-			// Customer ID provided, fetch customer data
 			customer = await CusService.getFull({
 				ctx,
 				idOrInternalId: customer_id,
@@ -83,8 +78,6 @@ export const handleInternalListRawEvents = createRoute({
 				},
 			});
 		} catch (error) {
-			// Dev stacks often lack ClickHouse credentials; the PG events buffer
-			// (empty in production) keeps raw queries usable there.
 			if (process.env.NODE_ENV === "production" || !customer) throw error;
 			ctx.logger.warn(
 				`[/query/raw] ClickHouse query failed, falling back to PG events: ${error}`,

@@ -1,11 +1,3 @@
-/**
- * End-to-end exercise of the Slack eve flow against the local dev stack
- * (eve :3999, main server :8080, local postgres). Everything is real except
- * the Slack transport: a fake target captures posts and consumes streams.
- *
- * Run from apps/leaf:
- *   bun tests/e2e/eveSlack.e2e.ts
- */
 import { buildCatalogDecisionModel, parsePreviewPayload } from "@autumn/render";
 import { AppEnv, chatApprovals } from "@autumn/shared";
 import { eq } from "drizzle-orm";
@@ -76,7 +68,6 @@ const makeTarget = () => {
 	};
 };
 
-// Mirrors bot.ts's runAndReply wiring, minus the Slack transport.
 const runTurn = async ({
 	attachments,
 	clientContext,
@@ -179,7 +170,6 @@ const main = async () => {
 		orgId: installation.org_id,
 	});
 
-	// ---- fixtures ----
 	const plansPayload = await mcpJson({
 		args: {},
 		toolName: "listPlans",
@@ -203,9 +193,6 @@ const main = async () => {
 			`Need at least one plan (${plans.length}) and customer (${customers.length}) in sandbox`,
 		);
 	}
-	// Prefer e2e-owned customers with an email (invoice-mode billing requires
-	// one) and an existing subscription; server test fixtures (test clocks,
-	// trials) and half-created manual customers derail the billing scenarios.
 	const usable = (candidate: Record<string, unknown>) =>
 		Boolean(candidate.email) &&
 		((candidate.subscriptions as unknown[]) ?? []).length > 0;
@@ -250,7 +237,6 @@ const main = async () => {
 	}
 	const [planId] = attachablePlanIds;
 	if (!planId) throw new Error("Need an attachable plan");
-	// The decision flow needs a plan with customers/variants — one they're on.
 	const decisionPlanId =
 		planIds
 			.filter((id) => attachedPlanIds.has(id))
@@ -259,7 +245,6 @@ const main = async () => {
 		`Fixtures: plan=${planId} decisionPlan=${decisionPlanId} customer=${customerId} (already on: ${[...attachedPlanIds].join(",") || "none"})\n`,
 	);
 
-	// ---- S1: plain question, streamed ----
 	{
 		console.log("--- S1: plain question streams tasks + final text");
 		const threadId = `e2e-${RUN_TAG}-s1`;
@@ -270,7 +255,6 @@ const main = async () => {
 		});
 		const text = turn.output.kind === "empty" ? "" : turn.output.text;
 		check("S1 run produced text", Boolean(text.trim()), text.slice(0, 120));
-		// Tool activity lives in the assistant status line, never posted cards.
 		check(
 			"S1 progress went to the status line",
 			turn.target.statuses.length > 0,
@@ -283,7 +267,6 @@ const main = async () => {
 		);
 	}
 
-	// ---- S2: attach → approval card → approve → applied ----
 	const s2ThreadId = `e2e-${RUN_TAG}-s2`;
 	{
 		console.log("--- S2: attach flow with approval card + approve");
@@ -477,7 +460,6 @@ const main = async () => {
 		}
 	}
 
-	// ---- S3: expired approval superseded by a new message ----
 	{
 		console.log("--- S3: message after an expired approval supersedes it");
 		const threadId = `e2e-${RUN_TAG}-s3`;
@@ -493,8 +475,6 @@ const main = async () => {
 				? first.output.approval.toolName
 				: `kind: ${first.output.kind}`,
 		);
-		// The real bot flow always inserts the approval row via presentApproval
-		// before the next message can supersede it.
 		if (first.output.kind === "approval") {
 			const cardTarget = makeTarget();
 			await presentApproval({
@@ -526,9 +506,6 @@ const main = async () => {
 			text: "Actually hold off on that — don't change anything yet. Just confirm you've cancelled it.",
 			threadId,
 		});
-		// Valid outcomes: a reply, a question, or a rebuilt gated write (the
-		// supersede note tells the model to rebuild with the adjustment) — each
-		// renders on Slack (text, chips, or a fresh approval card).
 		check(
 			"S3 follow-up turn completed",
 			second.output.kind === "reply" ||
@@ -544,7 +521,6 @@ const main = async () => {
 		);
 	}
 
-	// ---- S4: dismiss (deny) unwedges the session ----
 	{
 		console.log("--- S4: dismiss denies the parked call in eve");
 		const threadId = `e2e-${RUN_TAG}-s4`;
@@ -604,7 +580,6 @@ const main = async () => {
 		}
 	}
 
-	// ---- S5: question with option buttons ----
 	{
 		console.log("--- S5: ask_question renders options; button answer resumes");
 		const threadId = `e2e-${RUN_TAG}-s5`;
@@ -647,7 +622,6 @@ const main = async () => {
 		}
 	}
 
-	// ---- S6: image attachment reaches the model ----
 	{
 		console.log("--- S6: image attachment");
 		const threadId = `e2e-${RUN_TAG}-s6`;
@@ -660,7 +634,6 @@ const main = async () => {
 			threadId,
 		});
 		// File ingestion is flag-gated off (upstream eve queue bug corrupts
-		// bytes) — the graceful path acknowledges the file instead of failing.
 		const text = turn.output.kind === "empty" ? "" : turn.output.text;
 		check(
 			"S6 attachment acknowledged gracefully (or seen, if flag on)",
@@ -670,7 +643,6 @@ const main = async () => {
 		check("S6 turn completed (no hard failure)", Boolean(text.trim()));
 	}
 
-	// ---- S7: second user in the same thread ----
 	{
 		console.log("--- S7: multi-user thread");
 		const followUp = await runTurn({
@@ -681,8 +653,6 @@ const main = async () => {
 			threadId: s2ThreadId,
 		});
 		const text = followUp.output.kind === "empty" ? "" : followUp.output.text;
-		// A no-tool turn may never open a stream; the bot then posts the text as
-		// a plain message — that's the correct fallback, not a failure.
 		check(
 			"S7 second user's turn completed on the same session",
 			Boolean(text.trim()),
@@ -690,7 +660,6 @@ const main = async () => {
 		);
 	}
 
-	// ---- S8: catalog change needing decisions → decision card (no write) ----
 	{
 		console.log("--- S8: catalog decision card path");
 		const threadId = `e2e-${RUN_TAG}-s8`;
@@ -731,9 +700,6 @@ const main = async () => {
 				},
 			});
 		}
-		// Ground truth: does a flag-forced preview say this plan needs decisions?
-		// (Earlier scenarios may have moved the customer off the fixture plan, in
-		// which case NOT redirecting is the correct outcome.)
 		let groundTruthNeedsDecision = false;
 		if (!plan && turn.output.kind === "approval") {
 			const args = turn.output.approval.toolArgs as {
@@ -783,8 +749,6 @@ const main = async () => {
 					cardJson.includes("Update current version"),
 			);
 		} else if (turn.output.kind === "approval") {
-			// No decision needed → the real flow posts an approval card; dismiss it
-			// so the parked write is denied and nothing is applied.
 			const cardTarget = makeTarget();
 			await presentApproval({
 				channelId: threadId,
@@ -810,7 +774,6 @@ const main = async () => {
 				});
 			}
 		}
-		// Nothing was applied either way. Confirm the session still answers.
 		const followUp = await runTurn({
 			installation,
 			recentMessages: [{ author: "bot", isBot: true, text: "…" }],
@@ -825,10 +788,8 @@ const main = async () => {
 		);
 	}
 
-	// ---- S9: bare prepaid amounts mean feature_quantities, never item edits ----
 	{
 		console.log("--- S9: prepaid quantity phrasing");
-		// Find a plan that prices a feature as prepaid.
 		let prepaidPlanId: string | undefined;
 		let prepaidFeatureId: string | undefined;
 		for (const candidate of planIds.slice(0, 6)) {
@@ -890,7 +851,6 @@ const main = async () => {
 							: turn.output.text.slice(0, 120),
 			);
 			if (turn.output.kind === "approval") {
-				// Card safety net: the quantity (or its absence) must be visible.
 				const target = makeTarget();
 				await presentApproval({
 					channelId: threadId,
@@ -909,7 +869,6 @@ const main = async () => {
 					cardJson.includes("prepaid"),
 					cardJson.slice(0, 260),
 				);
-				// Nothing applies: withdraw the parked write.
 				const approval = await pendingApprovalForRun({
 					channelId: threadId,
 					installation,
@@ -926,7 +885,6 @@ const main = async () => {
 		}
 	}
 
-	// ---- summary ----
 	const failed = results.filter((result) => !result.ok);
 	console.log(
 		`\n=== ${results.length - failed.length}/${results.length} checks passed ===`,

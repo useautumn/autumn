@@ -1,10 +1,3 @@
-/**
- * Contract: all three mechanisms compose. Seats are licensed, their credits are
- * pooled across those seats, and a track is priced by its event properties —
- * the licence decides who may spend, the pool decides which balance, and the
- * dimension decides how much.
- */
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV5, FeatureConfigOverride } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
@@ -72,7 +65,6 @@ test.concurrent(
 					licenseProductId: seat.id,
 					entityIndexes: [0, 1],
 				}),
-				// Each seat spends at a different dimensioned rate, from one pool.
 				s.track({
 					featureId: TestFeature.Action1,
 					value: 2,
@@ -90,7 +82,6 @@ test.concurrent(
 			],
 		});
 
-		// 2 x 16 = 32, plus 4 x 16 x 0.5 = 32 — both drawn from the shared pool.
 		const customer = await autumnV2_3.customers.get<ApiCustomerV5>(customerId, {
 			skip_cache: "true",
 		});

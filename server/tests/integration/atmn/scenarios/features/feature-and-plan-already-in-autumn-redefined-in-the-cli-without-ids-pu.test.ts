@@ -1,9 +1,3 @@
-/**
- * atmn scenarios/features — feature and plan already in Autumn, redefined in the CLI without ids, pull → ids written in
- *
- * One line of plans/atmn-v3/07_tests.md. [a, b] is a matrix looped INSIDE this file.
- */
-
 import { expect, test } from "bun:test";
 import { FeatureType } from "@autumn/shared";
 import { configBody } from "@tests/utils/atmnUtils/baseConfigs.js";
@@ -21,8 +15,6 @@ test.concurrent(
 		const featureId = uniqueTestId("atmn_already_feat");
 		const planId = uniqueTestId("atmn_already_plan");
 
-		// No `features`/`plans` key: this scenario's rows come from a direct
-		// catalogV2.update call, the way a dashboard-created row would.
 		const scenario = await initAtmnScenario({
 			setup: [
 				s.platform.create({ userEmail: `${uniqueTestId("atmn")}@autumn.test` }),
@@ -42,8 +34,6 @@ test.concurrent(
 				plans: [{ plan_id: planId, name: "Already Plan" }],
 			} as Record<string, unknown>);
 
-			// The user writes a config redefining the same public ids fresh,
-			// unaware they already exist — no internalId anywhere.
 			scenario.writeConfig(
 				atmnConfigSource({
 					body: configBody({

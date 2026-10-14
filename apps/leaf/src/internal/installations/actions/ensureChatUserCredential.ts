@@ -12,10 +12,8 @@ import {
 } from "./chatOAuthCredentialScopes.js";
 import { replaceInstallationOAuthCredentials } from "./replaceInstallationOAuthCredentials.js";
 
-/** Re-mint a refresh token this far before it dies so a turn never races expiry. */
 const REFRESH_EXPIRY_SKEW_MS = ms.hours(1);
 
-/** Both envs are minted together and the consumed env is only known later, so both must stay fresh. */
 const CHAT_CREDENTIAL_ENVS = [AppEnv.Sandbox, AppEnv.Live] as const;
 
 const isCredentialStale = ({

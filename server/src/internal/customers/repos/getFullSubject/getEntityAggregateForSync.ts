@@ -10,12 +10,6 @@ import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { RELEVANT_STATUSES } from "@/internal/customers/cusProducts/CusProductService.js";
 import { getEntityAggregateFragments } from "@/internal/customers/repos/getFullSubject/getEntityAggregateFragments.js";
 
-/**
- * Focused query that computes ONLY the entity aggregated customer entitlements
- * for a single customer. Reuses the CTE builders from getEntityAggregateFragments
- * but skips all non-aggregate CTEs (products, prices, subscriptions, invoices).
- * Used by the sync worker to refresh `_aggregated` on balance hashes after DB sync.
- */
 export const getEntityAggregateForSync = async ({
 	db,
 	orgId,

@@ -6,10 +6,6 @@ interface BackupPromptProps {
 	onChoice: (createBackup: boolean) => void;
 }
 
-/**
- * Backup prompt screen
- * User can choose to create backup or skip
- */
 export function BackupPrompt({ onChoice }: BackupPromptProps) {
 	const [selectedIndex, setSelectedIndex] = useState(0);
 

@@ -1,9 +1,5 @@
 import { type ApiBalanceV1, roundCacheBalance } from "@autumn/shared";
 
-/**
- * Round all numeric balance fields on an ApiBalanceV1 to eliminate
- * floating-point drift from Lua 5.1 double arithmetic.
- */
 export const roundApiBalance = ({
 	apiBalance,
 }: {

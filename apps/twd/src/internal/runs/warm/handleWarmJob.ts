@@ -12,14 +12,11 @@ import type { WarmChildMessage } from "../types/swarmMessages.ts";
 
 const WARM_ENTRY = resolve(import.meta.dir, "warmProcess/warmProcess.ts");
 const LOG_TAIL_LINES = 40;
-/** scripts/tw's milestone right before it creates the warm sandbox; absent on a cache hit. */
 const BUILD_START_MARKER = "warm-up: building warm parent";
 
-/** payload: { sha, branch }. Builds + publishes tw-warm:<sha12>. Exact image → ready at once. */
 export const handleWarmJob: JobHandler = async ({ ctx, job, signal }) => {
 	const { sha, branch } = job.payload as { sha: string; branch: string };
 	const imageTag = warmImageTag({ sha });
-	// Only trust an existing tag we know is young; an unknown or ageing one is rebuilt with a fresh TTL.
 	if (
 		isWarmImageFresh({ row: await getWarmImage({ ctx, sha }) }) &&
 		(await warmImageExists({ sha }))
@@ -40,7 +37,6 @@ export const handleWarmJob: JobHandler = async ({ ctx, job, signal }) => {
 	const { exitCode } = await spawnTwChild<WarmChildMessage>({
 		entry: WARM_ENTRY,
 		init: { type: "init", sha, branch },
-		// Exact-sha images only: a stale :latest hit would not publish this sha.
 		env: { TW_MODAL_NO_STALE: "1" },
 		signal,
 		logger: ctx.logger,
@@ -59,7 +55,6 @@ export const handleWarmJob: JobHandler = async ({ ctx, job, signal }) => {
 			if (tail.length > LOG_TAIL_LINES) tail.shift();
 		},
 	});
-	// Warm sandbox lifetime: create → snapshot+terminate (or delete on failure), which precedes `done`.
 	const warmCost = {
 		ctx,
 		sha,

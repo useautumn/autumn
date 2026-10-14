@@ -1,12 +1,3 @@
-/**
- * Contract: adding seats mid-phase with billing.update while a create_schedule
- * ramp is running.
- *
- *  - The update bills a prorated seat delta for the rest of the current phase.
- *  - The booked later phase keeps its own seat count: the preview's next cycle
- *    and the invoice at the phase boundary bill it, not the mid-phase count.
- *  - Autumn's view of the Stripe subscription + schedule stays consistent.
- */
 import { test } from "bun:test";
 import {
 	type ApiCustomerV5,
@@ -125,7 +116,6 @@ test.concurrent(
 			updateParams,
 		);
 
-		// Mid-phase: prorated delta for 2 seats, live pool grows, phase 2 untouched.
 		const proratedSeatDelta = await calculateProratedDiff({
 			customerId,
 			advancedTo: midPhaseAt,
@@ -165,7 +155,6 @@ test.concurrent(
 		});
 		await expectStripeSubscriptionCorrect({ ctx, customerId });
 
-		// Phase 2 takes over with its booked count, not the mid-phase one.
 		await advanceToNextPhase({ scenario });
 
 		expectCustomerLicenses({

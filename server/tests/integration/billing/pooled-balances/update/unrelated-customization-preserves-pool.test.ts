@@ -1,29 +1,3 @@
-/**
- * TDD coverage: updateSubscription customizations that do NOT touch the pooled
- * item must leave the pooled balance completely alone.
- *
- * Contract under test:
- *   New behaviors (updateSubscription customize, pooled item untouched):
- *     - add_items: [new non-pooled feature]      -> pool untouched, new feature readable
- *     - remove_items: [existing non-pooled item] -> pool untouched, feature gone
- *     - price: changed base price                -> pool untouched, price applied
- *   Side effects (invariant after each):
- *     - pooled_balances: exactly 1 row, same id, granted unchanged
- *     - pooled_balance_contributions: exactly 1 row, same id, same amounts
- *     - synthetic pooled cusEnt: same id, balance unchanged
- *     - the pool's rollover rows survive unchanged (count and balance)
- *     - readable pooled balance unchanged
- *
- * This is a regression guard, not a discovery: it pins the invariant that an
- * unrelated edit never re-contributes or re-carries onto the pool. The rollover
- * assertion is the interesting one — a pooled source that retained rollover
- * state used to re-carry it onto the pool on every subsequent update.
- *
- * Existing sibling coverage (customize-pooled-balance.test.ts) covers editing an
- * EXISTING unrelated item's included amount. These three edits change the shape
- * of the plan instead, and none of them are covered there.
- */
-
 import { expect, test } from "bun:test";
 import {
 	type ApiCustomerV5,
@@ -58,10 +32,6 @@ const ADDED_CREDITS = 250;
 
 type Scenario = Awaited<ReturnType<typeof setupPooledScenarioWithRollover>>;
 
-/**
- * Seeds a rollover directly onto the pool. Minting one for real needs a cycle
- * advance; the invariant under test is that it SURVIVES, not how it got there.
- */
 const setupPooledScenarioWithRollover = async ({
 	customerId,
 }: {
@@ -170,7 +140,6 @@ const expectPoolUntouched = async ({
 		sources: { count: 1, balance: 0, adjustment: 0 },
 	});
 
-	// Same rows, not equivalent replacements.
 	expect(state.pools[0].id).toBe(scenario.poolId);
 	expect(state.poolCustomerEntitlements[0].id).toBe(
 		scenario.pooledCustomerEntitlementId,
@@ -184,7 +153,6 @@ const expectPoolUntouched = async ({
 	expectBalanceCorrect({
 		customer,
 		featureId: TestFeature.Messages,
-		// The API folds surviving rollover into the reported grant.
 		granted: INITIAL_GRANT + SEEDED_ROLLOVER,
 		remaining: INITIAL_GRANT - USAGE + SEEDED_ROLLOVER,
 		usage: USAGE,
@@ -227,8 +195,6 @@ test(
 
 		const { customer } = await expectPoolUntouched({ scenario });
 
-		// The edit itself landed — otherwise the invariant holds vacuously.
-		// The balance worker doesn't aggregate entity data onto the customer, so it is read off the entity.
 		const editedSubject = isBalanceWorkerRoute()
 			? await scenario.autumnV2_2.entities.get<ApiEntityV2>(
 					scenario.customerId,

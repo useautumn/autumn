@@ -36,19 +36,11 @@ const buildHydration = (
 		endedAt,
 		trialEndsAt: getTrialEndsAtFromStripe({ stripeSubscription }),
 		periodEndMs: secondsToMs(getLatestPeriodEnd({ sub: stripeSubscription })),
-		// The imported plan starts when the Stripe sub started, not at import time.
 		startsAt: secondsToMs(stripeSubscription.start_date),
 		stripeSubscription,
 	};
 };
 
-/**
- * Read-only Stripe hydration: for each Stripe billable with a linked
- * subscription, retrieve it ONCE (`.retrieve` only — flash never writes to
- * Stripe) and stash fields the caller may have omitted. Payload still wins;
- * these only fill gaps in the resolvers. An unretrievable sub is skipped so
- * the flash falls back to caller-supplied values.
- */
 export const hydrateStripeBillables = async ({
 	ctx,
 	planContexts,

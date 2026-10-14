@@ -1,6 +1,5 @@
 import { z } from "zod/v4";
 
-// Bounds cap SQL clause fan-out; far above any legitimate dashboard selection.
 const MAX_FILTER_VALUES = 1000;
 const MAX_FILTER_VALUE_LENGTH = 200;
 
@@ -37,7 +36,6 @@ export const CustomerListSortBySchema = z.enum([
 	"feature_balance",
 ]);
 
-/** Which per-feature quantity a feature_balance sort ranks by. */
 export const FeatureBalanceSortBasisSchema = z.enum([
 	"granted",
 	"remaining",
@@ -54,9 +52,6 @@ export const BalanceFilterOpSchema = z.enum([">", "<"]);
 
 export type BalanceFilterOp = z.infer<typeof BalanceFilterOpSchema>;
 
-/** Threshold on a feature's balance in the chosen basis; feature HOLDERS only
- * (matches feature_balance sort semantics — customers without the feature
- * never match). Unlimited counts as infinity for any basis. */
 export const BalanceFilterSchema = z.object({
 	feature_id: z.string().max(MAX_FILTER_VALUE_LENGTH),
 	op: BalanceFilterOpSchema,

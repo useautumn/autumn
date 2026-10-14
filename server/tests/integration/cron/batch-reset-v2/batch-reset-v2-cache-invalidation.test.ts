@@ -1,18 +1,3 @@
-/**
- * TDD test for V2 batch reset cache invalidation.
- *
- * Contract under test:
- *   Side effects after a successful worker reset, per touched cusEnt:
- *     - V2 shared subject-balance hash: the cusEnt's field AND the aggregated
- *       field are deleted (batchInvalidateCustomerEntitlementBalances, via the
- *       customer's routed redis)
- *   Non-effects:
- *     - skip verdicts (e.g. not_due) do NOT clear caches
- *
- * The legacy FullCustomer cache is dead — the worker intentionally leaves it
- * alone, so nothing here asserts on it.
- */
-
 import { expect, test } from "bun:test";
 import { findCustomerEntitlement } from "@tests/balances/utils/findCustomerEntitlement.js";
 import { TestFeature } from "@tests/setup/v2Features.js";
@@ -29,8 +14,6 @@ import { runBatchResetV2 } from "./batchResetV2TestUtils.js";
 
 const INCLUDED_USAGE = 100;
 
-/** Attaches a monthly-messages plan, warms the subject balance hash via a
- * check call, and returns the routed redis + balance key for assertions. */
 const initWarmedCacheScenario = async ({
 	customerId,
 	planId,
@@ -77,7 +60,6 @@ const initWarmedCacheScenario = async ({
 	};
 };
 
-// Exercises the legacy Redis balance path, which worker-routed customers never use.
 test.concurrent.skipIf(isBalanceWorkerRoute())(
 	`${chalk.yellowBright("batch-reset-v2 cache: worker reset invalidates the subject balance hash")}`,
 	async () => {
@@ -87,7 +69,6 @@ test.concurrent.skipIf(isBalanceWorkerRoute())(
 				planId: "cache-invalidation",
 			});
 
-		// ── Precondition: the balance hash is populated before the reset ─
 		const subjectFieldBefore = await routedRedis.hget(
 			balanceKey,
 			customerEntitlement.id,
@@ -107,7 +88,6 @@ test.concurrent.skipIf(isBalanceWorkerRoute())(
 		});
 		expect(result.resetMutations.length).toBe(1);
 
-		// ── Contract: subject balance hash fields deleted ────────────────
 		const subjectFieldAfter = await routedRedis.hget(
 			balanceKey,
 			customerEntitlement.id,
@@ -121,7 +101,6 @@ test.concurrent.skipIf(isBalanceWorkerRoute())(
 	},
 );
 
-// Exercises the legacy Redis balance path, which worker-routed customers never use.
 test.concurrent.skipIf(isBalanceWorkerRoute())(
 	`${chalk.yellowBright("batch-reset-v2 cache: skip verdicts do not clear the subject balance hash")}`,
 	async () => {
@@ -135,7 +114,6 @@ test.concurrent.skipIf(isBalanceWorkerRoute())(
 			await routedRedis.hget(balanceKey, customerEntitlement.id),
 		).not.toBeNull();
 
-		// Row is NOT due — the worker must classify not_due and leave caches.
 		const result = await runBatchResetV2({
 			ctx,
 			customerEntitlementIds: [customerEntitlement.id],

@@ -29,7 +29,6 @@ export type MigrateCustomerResult = {
 	response: Record<string, unknown> | null;
 };
 
-/** Top-level per-customer migration runner. Preview evaluates without writes. */
 export const migrateCustomer = async ({
 	ctx,
 	customerId,
@@ -106,9 +105,6 @@ export const migrateCustomer = async ({
 					originalFullCustomer: context.fullCustomer,
 					autumnBillingPlan: billingPlan.autumn,
 				}),
-				// Invoice line items this migration would generate (empty for
-				// charge-free ops) — surfaced so audit tooling can show what will
-				// actually be billed, not just the feature/plan diff.
 				line_items: (billingPlan.autumn.lineItems ?? []).map((item) => ({
 					description: item.description,
 					amount: item.amountAfterDiscounts ?? item.amount,
@@ -126,7 +122,6 @@ export const migrateCustomer = async ({
 				matchedCustomerProducts,
 				unchangedCustomerProducts,
 			});
-			// A skipped customer reaches no billing write, so the flags the ops read are saved here.
 			if (!preview && skipReason) {
 				await persistIsCustomCorrections({
 					ctx: migrationCtx,

@@ -22,7 +22,6 @@ import {
 } from "./transitionCandidates";
 import type { NextCycleEvent, SmallestInterval } from "./types";
 
-/** Classifies one candidate timestamp into the invoice event it represents. */
 export const classifyNextCycleEvent = ({
 	billingContext,
 	customerProducts,
@@ -55,9 +54,6 @@ export const classifyNextCycleEvent = ({
 		startsAtMs,
 	});
 
-	// A plan change landing on the renewal boundary is still a transition. Taking
-	// the renewal branch drops the incoming plan's line items, because only that
-	// branch filters them to a billing period starting at the boundary.
 	if (timestampsMatch(startsAtMs, renewalBoundaryMs) && !isProductTransition) {
 		const activeCustomerProducts = getActiveCustomerProductsAt({
 			customerProducts,

@@ -6,7 +6,6 @@ import {
 import { isHidden, isInternalField, type Overlay } from "../overlay/overlay";
 import { resolveRef } from "../spec/resolveRef";
 
-/** Fixture-side dot path with array indices elided, `*` for a record's values. */
 export type FixturePath = string;
 
 const branchesOf = (schema: JsonSchema): JsonSchema[] =>
@@ -16,7 +15,6 @@ const branchesOf = (schema: JsonSchema): JsonSchema[] =>
 		...(schema.oneOf ?? []),
 	].filter((branch) => branch.type !== "null");
 
-/** Every enum/const value a schema node can take, across its `anyOf`/`oneOf` alternatives. */
 const enumValuesOf = (schema: JsonSchema): Set<string> => {
 	const values = new Set<string>();
 	const collect = (node: JsonSchema) => {
@@ -30,12 +28,6 @@ const enumValuesOf = (schema: JsonSchema): Set<string> => {
 	return values;
 };
 
-/**
- * Every leaf/object path under the envelope, keyed fixture-side, with the enum
- * values the spec allows there. Skips overlay-hidden and x-internal fields —
- * the same reach as the generated CLI, so "coverage" means coverage of what a
- * config could actually state.
- */
 export const schemaPaths = ({
 	schema,
 	root,
@@ -47,10 +39,6 @@ export const schemaPaths = ({
 }): Map<FixturePath, Set<string>> =>
 	schemaPathIndex({ schema, root, overlay }).enums;
 
-/**
- * The spec's `default` at every path that states one, keyed fixture-side:
- * a pulled value equal to it is left out of the fixture.
- */
 export const schemaDefaults = ({
 	schema,
 	root,
@@ -86,9 +74,7 @@ const schemaPathIndex = ({
 	}: {
 		schema: JsonSchema | undefined;
 		fixturePath: string;
-		/** Top-level wire collection ("plans", "features") once inside one, else "". */
 		collection: string;
-		/** Relative to the collection ITEM root — resets when `collection` is entered. */
 		wirePath: string;
 		seen: Set<JsonSchema>;
 	}): void => {
@@ -148,8 +134,6 @@ const schemaPathIndex = ({
 			if (resolvedProperty.default !== undefined)
 				defaults.set(childFixturePath, resolvedProperty.default);
 
-			// Entering a fresh top-level collection resets the item-relative wire
-			// path, matching the overlay's FieldPath convention.
 			visit({
 				schema: property,
 				fixturePath: childFixturePath,

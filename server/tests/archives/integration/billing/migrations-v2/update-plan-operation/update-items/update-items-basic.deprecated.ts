@@ -1,20 +1,3 @@
-/**
- * TDD coverage for update_plan.customize.update_items — basic flows.
- *
- * Contract under test:
- *   New types/fields:
- *     - customize.update_items: Array<{ filter: PlanItemFilter; included?: number }>
- *   New behaviors:
- *     - Bumping `included` for a matched item updates the entitlement's
- *       allowance and balance, while carrying existing usage forward.
- *     - Lowering `included` below current usage drops the balance accordingly
- *       (no overage created beyond the carried usage).
- *     - `next_reset_at` is preserved across update_items (no cycle shift).
- *   Side effects:
- *     - The customer product is marked is_custom = true after the migration.
- *     - No Stripe invoice is generated.
- */
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3, ApiCustomerV5 } from "@autumn/shared";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";

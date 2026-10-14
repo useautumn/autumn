@@ -1,11 +1,3 @@
-/**
- * The grouped-write regression: a question mid-flow rebuilds the approval card,
- * and the other writes in the group must survive that rebuild.
- *
- * Verifies against real customer state, not the card text.
- *
- *   bun tests/e2e/multiWriteQuestion.e2e.ts
- */
 import { AppEnv, type ChatApproval } from "@autumn/shared";
 import { answerAgentQuestion } from "../../src/internal/agentRuntime/actions/answerAgentQuestion/answerAgentQuestion.js";
 import { resolveApproval } from "../../src/internal/approvals/actions/resolveApproval.js";
@@ -39,7 +31,6 @@ const makeTarget = () => ({
 		};
 		if (postable?.kind === "stream" && postable.getPostData) {
 			for await (const _chunk of postable.getPostData().stream) {
-				// drain
 			}
 		}
 		return { id: "msg-1" };
@@ -92,7 +83,6 @@ const runTurn = async (text: string) => {
 	return output;
 };
 
-// Force the question path: the model must ask before it can build the writes.
 const turn = await runTurn(
 	`Before doing anything, use ask_question to ask me which email to use for ${CUSTOMER_ID}, offering exactly "keep current" and "use new". Then update ${CUSTOMER_ID}'s email to ${NEW_EMAIL} and attach the ${PLAN_ID} plan.`,
 );
@@ -130,8 +120,6 @@ if (turn.kind === "question") {
 		const withheld = (approval.tool_args._eveWithheldWrites ?? []) as Array<{
 			toolName: string;
 		}>;
-		// Grouped or sequential is the model's call; what must never happen is a
-		// write disappearing. Both outcomes are recorded, only loss fails.
 		console.log(
 			`   grouping: primary=${approval.tool_name} withheld=[${withheld.map((w) => w.toolName).join(", ")}]`,
 		);

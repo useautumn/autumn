@@ -1,20 +1,3 @@
-/**
- * Deleting a free item from a plain plan should batch-lower, the same as
- * adding one.
- *
- * A standalone remove_items was rejected op-level as unsupported_remove_items,
- * and the projected diff never carried deletions, so it fell to the
- * per-customer lane.
- *
- * Red-failure mode (before):
- *  - the op is rejected as unsupported_remove_items and runs per_customer
- *
- * Green-success criteria (after):
- *  - the op runs on the batch lane
- *  - the customer loses its row for the removed feature
- *  - the plan's other items survive
- *  - a customer whose only change was the delete is not reported as skipped
- */
 import { expect, test } from "bun:test";
 import { MigrationItemRunStatus, ResetInterval } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features";
@@ -81,8 +64,6 @@ test(`${chalk.yellowBright("batch plan-item delete: deleting a free plan item ba
 
 	expect(result?.lane).toBe("batch");
 
-	// The delete is the only change, so marking the customer skipped would
-	// skip its cache invalidation.
 	await expectMigrationItemRunStatus({
 		ctx,
 		migrationInternalId: migration.internal_id,
@@ -109,7 +90,6 @@ test(`${chalk.yellowBright("batch plan-item delete: deleting a free plan item ba
 		count: 0,
 	});
 
-	// ── The plan's other item survives ────────────────────────────────
 	await expectCustomerEntitlementRowCount({
 		ctx,
 		customerId,

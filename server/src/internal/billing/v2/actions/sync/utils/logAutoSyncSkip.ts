@@ -8,14 +8,11 @@ type SkipLogger = {
 	warn: (message: string, fields: object) => void;
 };
 
-/** Skips where Stripe held nothing for Autumn to apply. */
 const ROUTINE_SKIP_REASONS = new Set<AutoSyncSkipReason>([
 	"no_matched_plans",
 	"no_changed_targets",
 ]);
 
-/** Every other skip leaves a Stripe change unapplied, so it warns with a
- * filterable `skip_reason` instead of drifting silently. */
 export const logAutoSyncSkip = ({
 	logger,
 	source,

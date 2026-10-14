@@ -47,7 +47,6 @@ const lineItemRows = ({
 	return rows;
 };
 
-/** setPlans previews flag side effects to confirm, e.g. a plan or Stripe item it removes. */
 const previewWarningElements = (payload: LooseRecord): CardChild[] =>
 	(Array.isArray(payload.warnings) ? payload.warnings : []).flatMap(
 		(warning) => {
@@ -59,9 +58,6 @@ const previewWarningElements = (payload: LooseRecord): CardChild[] =>
 		},
 	);
 
-// attach / createSchedule / setPlans / updateSubscription previews all share the
-// BillingPreviewResponse shape (line_items, total, currency, next_cycle).
-// Rendered receipt-style: one table holding line items AND total rows.
 const billingPreviewElements = (payload: LooseRecord): CardChild[] => {
 	const currency =
 		typeof payload.currency === "string" ? payload.currency : "usd";
@@ -167,12 +163,9 @@ const isInvoicePreview = (payload: LooseRecord) =>
 	typeof payload.total === "number" &&
 	typeof payload.amount_due === "number";
 
-// invoices.create / invoices.reissue previews: the invoice that will be issued.
 const invoicePreviewElements = (payload: LooseRecord): CardChild[] => {
 	const currency =
 		typeof payload.currency === "string" ? payload.currency : "usd";
-	// Lines at their pre-discount amount: discounts get their own row, so the
-	// rows add up to the total.
 	const lines = (payload.lines as unknown[]).flatMap((line) => {
 		const record = asRecord(line);
 		return typeof record?.description === "string" &&
@@ -219,7 +212,6 @@ const isInvoiceRecord = (payload: LooseRecord) =>
 	typeof payload.total === "number" &&
 	!("lines" in payload);
 
-// An existing invoice (getInvoice), shown on void / pay / finalize cards.
 const invoiceRecordElements = (payload: LooseRecord): CardChild[] => {
 	const currency =
 		typeof payload.currency === "string" ? payload.currency : "usd";
@@ -256,7 +248,6 @@ const invoiceRecordElements = (payload: LooseRecord): CardChild[] => {
 	];
 };
 
-/** Structured card body for a preview payload, or null to fall back to text. */
 export const previewElements = (preview: unknown): CardChild[] | null => {
 	const payload = parsePreviewPayload(preview);
 	if (!payload) return null;

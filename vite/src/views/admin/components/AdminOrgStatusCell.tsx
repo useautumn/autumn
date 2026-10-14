@@ -46,10 +46,6 @@ const redisBadge = (
 	};
 };
 
-/**
- * Collapses request blocks + Redis routing into one column. Defaults (nothing
- * blocked, shared Redis) render as a dash so only exceptions draw the eye.
- */
 export const AdminOrgStatusCell = ({ org }: { org: AdminOrg }) => {
 	const badges = [
 		requestBlockBadge(org.requestBlockSummary),

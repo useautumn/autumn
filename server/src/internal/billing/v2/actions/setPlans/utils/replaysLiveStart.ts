@@ -29,7 +29,6 @@ const latestLivePlanStart = ({
 	return liveStarts.length > 0 ? Math.max(...liveStarts) : undefined;
 };
 
-/** A schedule's current phase can begin after its plans, when an earlier phase's plan ended. */
 const liveStart = (params: LiveStartParams) => {
 	const { stripeSubscription, stripeSubscriptionSchedule } = params;
 	const currentPhaseStart =
@@ -41,7 +40,6 @@ const liveStart = (params: LiveStartParams) => {
 		: latestLivePlanStart(params);
 };
 
-/** Re-saving a live subscription sends back the start it runs from. */
 export const replaysLiveStart = ({
 	startsAt,
 	...params

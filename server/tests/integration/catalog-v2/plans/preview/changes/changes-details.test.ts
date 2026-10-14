@@ -1,10 +1,3 @@
-/**
- * catalogV2.preview_update — previous_attributes for plan detail fields.
- *
- * Spec: previous_attributes holds old values for exactly the changed keys;
- * customize null; item_changes empty; no price_change.
- */
-
 import { expect, test } from "bun:test";
 import { PreviewUpdateCatalogResponseSchema } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
@@ -56,7 +49,6 @@ const assertDetailChange = async ({
 			priceChange: null,
 		},
 	});
-	// Preview must not persist the change — seed values still win.
 	await expectCatalogPlansCorrect({
 		autumn,
 		expected: [
@@ -135,7 +127,6 @@ test.concurrent(
 	},
 );
 
-// CASES allows is_default or auto_enable key; assert auto_enable (ApiPlanV1 field)
 test.concurrent(
 	`${chalk.yellowBright("catalogV2 changes-details: auto_enable flip → previous auto_enable")}`,
 	async () => {
@@ -161,7 +152,6 @@ test.concurrent(
 	},
 );
 
-// archived not in diffPlanV1PreviousAttributes today; CASES wants it
 test.concurrent(
 	`${chalk.yellowBright("catalogV2 changes-details: archived flip → previous value")}`,
 	async () => {
@@ -183,7 +173,6 @@ test.concurrent(
 	},
 );
 
-// metadata not in diffPlanV1PreviousAttributes today; CASES wants it
 test.concurrent(
 	`${chalk.yellowBright("catalogV2 changes-details: metadata → previous metadata object")}`,
 	async () => {
@@ -205,7 +194,6 @@ test.concurrent(
 	},
 );
 
-// billing_controls previous value exposed nested (API shape), not per column
 test.concurrent(
 	`${chalk.yellowBright("catalogV2 changes-details: billing_controls change → previous billing_controls")}`,
 	async () => {
@@ -246,7 +234,6 @@ test.concurrent(
 	},
 );
 
-// Only the control keys that changed appear under billing_controls.
 test.concurrent(
 	`${chalk.yellowBright("catalogV2 changes-details: billing_controls sparse — only auto_topups in previous")}`,
 	async () => {
@@ -327,7 +314,6 @@ test.concurrent(
 	},
 );
 
-// new_plan_id rename → previous_attributes.id holds the old id
 test.concurrent(
 	`${chalk.yellowBright("catalogV2 changes-details: new_plan_id A→B → previous_attributes.id")}`,
 	async () => {
@@ -417,7 +403,6 @@ test.concurrent(
 	},
 );
 
-// setting field to current value must not appear in previous_attributes
 test.concurrent(
 	`${chalk.yellowBright("catalogV2 changes-details: explicit same value → absent from previous_attributes")}`,
 	async () => {

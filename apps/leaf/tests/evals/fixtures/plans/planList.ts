@@ -25,7 +25,6 @@ const addOnPrice = ({
 		: basePrice.annual({ amount });
 };
 
-/** Build keyed one-feature add-on plans for org setups with many add-ons. */
 export const planList = {
 	addOns: <const AddOn extends AddOnConfig>({
 		addOns,

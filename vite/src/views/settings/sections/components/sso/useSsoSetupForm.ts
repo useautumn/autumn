@@ -30,7 +30,6 @@ export const useSsoSetupForm = ({
 		onSubmit: async ({ value, formApi }) => {
 			try {
 				await create.mutateAsync(buildSsoConnectionPayload(value));
-				// The secret is write-only: drop it as soon as the request succeeds.
 				formApi.reset();
 				toast.success("SSO connection created");
 			} catch (error) {

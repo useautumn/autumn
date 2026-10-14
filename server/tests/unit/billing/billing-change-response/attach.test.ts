@@ -151,8 +151,6 @@ describe("buildBillingChangeResponse — attach", () => {
 			response,
 		);
 
-		// Deleted (scheduled) products are intentionally ignored — they never
-		// went live and aren't a customer-facing lifecycle event.
 		expectBillingChangeResponse(response, {
 			expired: ["business"],
 			activated: ["premium"],
@@ -245,9 +243,6 @@ describe("buildBillingChangeResponse — attach", () => {
 		});
 		logChangeResponse("attach / trial revert (pause current)", response);
 
-		// Paused internally maps to "expired" in the public lifecycle —
-		// from a consumer's perspective the base plan is no longer in effect,
-		// so the action is `expired` (not `updated`).
 		expectBillingChangeResponse(response, {
 			expired: ["pro"],
 			activated: ["premium"],

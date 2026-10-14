@@ -1,7 +1,3 @@
-/** Fixtures exported by name and listed by reference: an update rewrites the
- * export where it is, a delete removes the export and the reference, a
- * server-only row is appended inline, and the result parses. */
-
 import { expect, test } from "bun:test";
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { Lang, parse } from "@ast-grep/napi";

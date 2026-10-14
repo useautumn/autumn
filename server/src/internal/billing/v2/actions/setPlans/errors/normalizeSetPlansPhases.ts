@@ -135,7 +135,6 @@ const snapResolvedPhasesToCycleBoundary = ({
 	);
 };
 
-/** Sort phases for downstream create_schedule setup and execution. */
 export const normalizeSetPlansPhases = ({
 	phases,
 	currentEpochMs,

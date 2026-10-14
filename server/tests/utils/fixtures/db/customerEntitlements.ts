@@ -7,9 +7,6 @@ import {
 } from "@autumn/shared";
 import { entitlements } from "./entitlements";
 
-/**
- * Create a customer entitlement fixture
- */
 const create = ({
 	id,
 	entitlementId,
@@ -88,10 +85,6 @@ const create = ({
 		external_id: null,
 	};
 };
-
-// ═══════════════════════════════════════════════════════════════════
-// EXPORT
-// ═══════════════════════════════════════════════════════════════════
 
 export const customerEntitlements = {
 	create,

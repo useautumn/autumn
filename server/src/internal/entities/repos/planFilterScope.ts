@@ -5,19 +5,6 @@ import type {
 } from "@autumn/shared";
 import { type SQL, sql } from "drizzle-orm";
 
-/**
- * Resolving the plan filter as a correlated EXISTS re-probes customer_products
- * for every entity in the org — 197M buffer reads / 176s to return 20 rows on
- * mintlify, because the LIMIT can't push through the per-row subquery.
- *
- * Instead resolve which (customer, entity-scope) pairs match the plan ONCE, then
- * drive the entity scan from that (much smaller) set.
- *
- * Scopes are built so each entity matches at most one row — a customer-level
- * match covers all of that customer's entities, so its entity-level rows are
- * redundant and are dropped. That keeps the join 1:1 and avoids a DISTINCT that
- * would force materialising every match before ORDER BY / LIMIT.
- */
 export const buildPlanScopeCte = ({
 	orgId,
 	env,
@@ -77,7 +64,6 @@ export const buildPlanScopeCte = ({
 	`;
 };
 
-/** Drives the entity scan from plan_scopes rather than probing per entity. */
 export const planScopeJoinSql = sql`
 	JOIN plan_scopes ps
 		ON ps.internal_customer_id = e.internal_customer_id

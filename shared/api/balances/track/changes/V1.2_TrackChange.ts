@@ -8,26 +8,6 @@ import { TrackResponseV1Schema } from "../prevVersions/trackResponseV1.js";
 import { TrackLegacyDataSchema } from "../trackLegacyData.js";
 import { TrackResponseV2Schema } from "../trackResponseV2.js";
 
-/**
- * V1_2_TrackChange: Transforms track response TO V1_2 format
- *
- * Applied when: targetVersion <= V1_2
- *
- * Breaking changes introduced in V2.0 (that we reverse here):
- *
- * 1. Response structure:
- *    - V2.0+: Has `balance` and `balances` fields
- *    - V1.2: Has `id`, `code`, and `feature_id` fields
- *
- * 2. Removed fields in V2.0:
- *    - `id`: Event ID (now optional/removed)
- *    - `code`: Response code (now optional/removed)
- *    - `feature_id`: Feature ID (now derived from balance)
- *
- * Input: TrackResponseV2 (V2.0+ format)
- * Output: TrackResponseV1 (V1.2 format)
- */
-
 export const V1_2_TrackChange = defineVersionChange({
 	name: "V1_2 Track Change",
 	newVersion: ApiVersion.V2_0,
@@ -39,7 +19,6 @@ export const V1_2_TrackChange = defineVersionChange({
 	affectsResponse: true,
 	legacyDataSchema: TrackLegacyDataSchema,
 
-	// Response: V2.0 → V1.2
 	transformResponse: ({
 		input,
 		legacyData,
@@ -49,13 +28,11 @@ export const V1_2_TrackChange = defineVersionChange({
 			feature_id?: string;
 		};
 	}): z.infer<typeof TrackResponseV1Schema> => {
-		// Extract feature_id from balance if available, otherwise from balances record, or use legacyData
 		let feature_id: string | undefined;
 
 		if (input.balance?.feature_id) {
 			feature_id = input.balance.feature_id;
 		} else if (input.balances) {
-			// Pick first non-null entry's feature_id
 			for (const balance of Object.values(input.balances)) {
 				if (balance?.feature_id) {
 					feature_id = balance.feature_id;

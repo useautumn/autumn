@@ -14,7 +14,6 @@ import {
 } from "./streamErrors.js";
 import type { EveAuthContext, EveSessionRef } from "./types.js";
 
-// Eve keeps the attribute for the session's life, so only creation sends it.
 const eveHeaders = (auth: EveAuthContext): Record<string, string> => {
 	const headers: Record<string, string> = {
 		authorization: `Bearer ${env.EVE_INTERNAL_AUTH_TOKEN}`,
@@ -47,7 +46,6 @@ const eveClient = ({ auth }: { auth: EveAuthContext }) =>
 		host: env.EVE_SERVER_URL,
 	});
 
-/** Eve no longer has this fixed session, so every later operation fails. */
 export class EveSessionGoneError extends Error {
 	constructor(message: string) {
 		super(message);
@@ -85,8 +83,6 @@ export type EveMessageContent =
 			| { data: string; filename?: string; mediaType: string; type: "file" }
 	  >;
 
-/** Leaf's context bags are plain JSON-serializable records; the SDK's stricter
- * JsonObject cannot be proven structurally from `unknown` values. */
 const asJsonObject = (value: Record<string, unknown>) =>
 	value as unknown as NonNullable<SendTurnOptions["clientContext"]>;
 
@@ -142,13 +138,9 @@ export const postEveMessage = async ({
 	return { sessionId: response.sessionId };
 };
 
-/** Written to the model, not the user: the siblings are denied for a procedural
- * reason, and without saying so the model reads six denials as six rejections. */
 export const SIBLING_WITHHELD_NOTE =
 	"(The other pending write approvals in this batch were withheld, not rejected on their merits — approvals are shown to the user one at a time. Re-issue each withheld write as its own separate step so the user can approve it individually.)";
 
-/** Answers a parked request AND its siblings (eve defers all deliveries until
- * the whole batch is answered); each sibling needs its own valid option id. */
 export const postEveInputResponse = async ({
 	approveSiblings,
 	auth,
@@ -222,8 +214,6 @@ export class EveStreamDisconnectedError extends Error {
 	}
 }
 
-/** The session answers on the wire but never emits again: reconnects exhaust
- * with zero events. Distinct from a flaky transport — it will never recover. */
 export class EveSessionDeadError extends Error {
 	constructor(sessionId: string) {
 		super(`Eve session ${sessionId} is dead: no events across every reconnect`);
@@ -281,8 +271,6 @@ export async function* streamEveEvents({
 	}
 }
 
-/** A fresh client session per open keeps leaf's own ref the sole cursor
- * authority — the SDK rewinds its copy to 0 on a completed boundary. */
 async function* openEveStream({
 	auth,
 	session,

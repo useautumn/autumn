@@ -4,7 +4,6 @@ export interface OnboardingStepDefinition {
 	id: OnboardingStepId;
 	title: string;
 	description: string;
-	/** Stands alone on the sidebar card, so it reads as a next action. */
 	shortTitle: string;
 	waitingFor?: string;
 }

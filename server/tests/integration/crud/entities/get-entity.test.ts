@@ -16,10 +16,6 @@ import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 
-// ═══════════════════════════════════════════════════════════════════
-// Multi-entity inheritance + deduction comparison tests (V2 cache baseline)
-// ═══════════════════════════════════════════════════════════════════
-
 test.concurrent(`${chalk.yellowBright("get-entity: entity inheriting customer-level product returns correct balances across versions")}`, async () => {
 	const dashboardItem = items.dashboard();
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
@@ -55,7 +51,6 @@ test.concurrent(`${chalk.yellowBright("get-entity: entity inheriting customer-le
 	const entityId0 = entities[0].id;
 	const entityId1 = entities[1].id;
 
-	// ── Entity 0: V1 (v1.2 / ApiEntityV0 -- products[] + features{}) ──
 	const ent0V1 = await autumnV1.entities.get<ApiEntityV0>(
 		customerId,
 		entityId0,
@@ -63,8 +58,6 @@ test.concurrent(`${chalk.yellowBright("get-entity: entity inheriting customer-le
 	ApiEntityV0Schema.parse(ent0V1);
 	expect(ent0V1.products).toBeDefined();
 	expect(ent0V1.products!.length).toBeGreaterThan(0);
-	// Periods come from the subscription, and an entity's own plans sort ahead of
-	// inherited ones -- so assert on the paid customer-level plan, not index 0.
 	const ent0V1Prod = ent0V1.products!.find(
 		(product) => product.id === cusLevelProd.id,
 	);
@@ -82,7 +75,6 @@ test.concurrent(`${chalk.yellowBright("get-entity: entity inheriting customer-le
 		id: TestFeature.Dashboard,
 	});
 
-	// ── Entity 0: V2.1 (ApiEntityV2) ──
 	const ent0V2_1 = await autumnV2_1.entities.get<ApiEntityV2>(
 		customerId,
 		entityId0,
@@ -107,7 +99,6 @@ test.concurrent(`${chalk.yellowBright("get-entity: entity inheriting customer-le
 		expires_at: null,
 	});
 
-	// ── Entity 0: V2.2 ──
 	const ent0V2_2 = await autumnV2_2.entities.get<ApiEntityV2>(
 		customerId,
 		entityId0,
@@ -129,7 +120,6 @@ test.concurrent(`${chalk.yellowBright("get-entity: entity inheriting customer-le
 		feature_id: TestFeature.Dashboard,
 	});
 
-	// ── Entity 1: V2.1 -- verify cross-entity deduction ──
 	const ent1V2_1 = await autumnV2_1.entities.get<ApiEntityV2>(
 		customerId,
 		entityId1,
@@ -298,7 +288,6 @@ test.concurrent(`${chalk.yellowBright("get-entity: throws when entity does not e
 
 	const missingEntityId = "entity-that-does-not-exist";
 
-	// get-entity: legacy (FullCustomer cache) + V2.1 (FullSubject cache) both throw
 	await expect(
 		autumnV1.entities.get<ApiEntityV0>(customerId, missingEntityId),
 	).rejects.toThrow();
@@ -307,9 +296,6 @@ test.concurrent(`${chalk.yellowBright("get-entity: throws when entity does not e
 		autumnV2_1.entities.get<ApiEntityV2>(customerId, missingEntityId),
 	).rejects.toThrow();
 
-	// check: legacy path previously mis-routed to createWithDefaults on missing
-	// entity; should now surface the entity-not-found error directly without
-	// running CusService.getFull or logging "Customer already exists".
 	await expect(
 		autumnV1.check({
 			customer_id: customerId,
@@ -326,7 +312,6 @@ test.concurrent(`${chalk.yellowBright("get-entity: throws when entity does not e
 		}),
 	).rejects.toThrow();
 
-	// track: same legacy/V2.1 split as check.
 	await expect(
 		autumnV1.track({
 			customer_id: customerId,

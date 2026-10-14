@@ -1,6 +1,3 @@
-// Cancel add-on immediately (`cancel: 'immediately'`): add-on removed, base product stays active.
-// Paid add-ons get a refund invoice for unused time; usage overage is NOT charged.
-
 import { test } from "bun:test";
 import type { ApiCustomerV3 } from "@autumn/shared";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
@@ -11,20 +8,6 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 3: Cancel free add-on - premium unaffected
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Attach premium ($30/mo) + free add-on (no base price)
- * - Cancel free add-on immediately
- *
- * Expected Result:
- * - Free add-on is removed
- * - Premium remains active
- * - No new invoices (add-on was free)
- */
 test.concurrent(
 	`${chalk.yellowBright("cancel addon immediately: free addon cancel")}`,
 	async () => {
@@ -55,7 +38,6 @@ test.concurrent(
 			],
 		});
 
-		// Verify both products active, 1 invoice (premium only)
 		const customerBefore =
 			await autumnV1.customers.get<ApiCustomerV3>(customerId);
 		await expectCustomerProducts({
@@ -64,21 +46,18 @@ test.concurrent(
 		});
 		expectCustomerInvoiceCorrect({
 			customer: customerBefore,
-			count: 1, // Only premium attach (free addon has no invoice)
+			count: 1,
 			latestTotal: 30,
 		});
 
-		// Cancel free add-on immediately
 		await autumnV1.subscriptions.update({
 			customer_id: customerId,
 			product_id: freeAddon.id,
 			cancel_action: "cancel_immediately",
 		});
 
-		// Wait for processing
 		await new Promise((resolve) => setTimeout(resolve, 3000));
 
-		// Verify free add-on removed, premium still active
 		const customerAfter =
 			await autumnV1.customers.get<ApiCustomerV3>(customerId);
 		await expectCustomerProducts({
@@ -87,7 +66,6 @@ test.concurrent(
 			notPresent: [freeAddon.id],
 		});
 
-		// No new invoices (free add-on has no refund)
 		expectCustomerInvoiceCorrect({
 			customer: customerAfter,
 			count: 1,
@@ -96,19 +74,6 @@ test.concurrent(
 	},
 );
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 8: One-time add-on cancel - other add-on remains
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Attach one-time add-on (oneOffMessages) + pro add-on ($20/mo)
- * - Cancel one-time add-on immediately
- *
- * Expected Result:
- * - One-time add-on removed
- * - Pro add-on still active
- */
 test.concurrent(
 	`${chalk.yellowBright("cancel addon immediately: one-time addon cancel")}`,
 	async () => {
@@ -140,7 +105,6 @@ test.concurrent(
 			],
 		});
 
-		// Verify both add-ons active
 		const customerBefore =
 			await autumnV1.customers.get<ApiCustomerV3>(customerId);
 		await expectCustomerProducts({
@@ -148,17 +112,14 @@ test.concurrent(
 			active: [oneTimeAddon.id, proAddon.id],
 		});
 
-		// Cancel one-time add-on immediately
 		await autumnV1.subscriptions.update({
 			customer_id: customerId,
 			product_id: oneTimeAddon.id,
 			cancel_action: "cancel_immediately",
 		});
 
-		// Wait for processing
 		await new Promise((resolve) => setTimeout(resolve, 3000));
 
-		// Verify one-time addon removed, pro addon still active
 		const customerAfter =
 			await autumnV1.customers.get<ApiCustomerV3>(customerId);
 		await expectCustomerProducts({

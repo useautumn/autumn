@@ -31,7 +31,6 @@ const isSameInterval = ({
 	stripePrice.recurring?.interval === interval &&
 	stripePrice.recurring?.interval_count === (intervalCount ?? 1);
 
-/** A metered item billing the same amount per billing unit. */
 const billsLikeMeteredPrice = ({
 	stripePrice,
 	config,
@@ -62,7 +61,6 @@ const billsLikeMeteredPrice = ({
 	);
 };
 
-/** A flat licensed item billing the same base amount. */
 const billsLikeBasePrice = ({
 	stripePrice,
 	config,
@@ -82,7 +80,6 @@ const billsLikeBasePrice = ({
 		currency: stripePrice.currency,
 	}) === config.amount;
 
-/** The Stripe link a price should carry, or undefined when it can't be linked. */
 const linkedConfigFor = ({
 	price,
 	stripePrice,
@@ -162,15 +159,11 @@ const linkProductContext = ({
 		if (!match || ambiguous.length > 0) continue;
 		claimedStripePriceIds.add(match.stripePrice.id);
 
-		// A previous sync may already hold this exact link — reuse it rather than
-		// minting a new custom price on every re-sync.
 		const reusable = findReusablePrice({
 			currentCustomerProduct,
 			price,
 			stripePriceId: match.stripePrice.id,
 		});
-		// A custom price this sync is creating gets the link in place; a catalog or
-		// already-saved price is copied, so the shared row is never changed.
 		const isNewCustomPrice = customPrices.includes(price);
 		const linked: Price =
 			reusable ??
@@ -199,12 +192,6 @@ const linkProductContext = ({
 	};
 };
 
-/**
- * Sync owns Stripe links: each metered or base price that no phase item bills by
- * id adopts the one active item billing the same amount — so verify pairs it and
- * later updates reuse that item. Archived prices are never adopted; Autumn can't
- * reuse them, and verify already pairs them by amount.
- */
 export const linkSyncedPricesToStripe = ({
 	productContexts,
 	stripePrices,
@@ -214,7 +201,6 @@ export const linkSyncedPricesToStripe = ({
 	stripePrices: Stripe.Price[];
 	claimedStripePriceIds: Set<string>;
 }): SyncProductContext[] => {
-	// Items some synced price already bills through are never up for adoption.
 	for (const { fullProduct } of productContexts) {
 		for (const price of fullProduct.prices) {
 			for (const stripeId of getAllPriceStripeIds({ config: price.config })) {

@@ -6,9 +6,7 @@ type Sub = { kind: "file" | "worker"; key: string } | null;
 export type SwarmSocket = {
 	connected: boolean;
 	snapshot: Snapshot | null;
-	/** The active subscription's accumulated raw output (buffer + streamed chunks). */
 	output: string;
-	/** The independent errors-feed accumulator (subscribeErrors). */
 	errorsOutput: string;
 	sub: Sub;
 	subscribeFile: (file: string) => void;
@@ -17,12 +15,6 @@ export type SwarmSocket = {
 	skipFile: (file: string) => void;
 };
 
-/**
- * Connects to the swarm dashboard WS. Holds the latest metadata snapshot and,
- * for the ONE active subscription (a file's test output or a worker's server
- * output), the accumulating raw text. Auto-reconnects with backoff and re-sends
- * the active subscription on reconnect.
- */
 export const useSwarmSocket = (wsUrl: string | null): SwarmSocket => {
 	const [connected, setConnected] = useState(false);
 	const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
@@ -90,7 +82,6 @@ export const useSwarmSocket = (wsUrl: string | null): SwarmSocket => {
 			ws.onopen = () => {
 				retryRef.current = 0;
 				setConnected(true);
-				// Re-send the active subscription after a reconnect.
 				const current = subRef.current;
 				if (current?.kind === "file") {
 					send({ type: "subscribeFile", file: current.key });

@@ -49,9 +49,6 @@ export type DisconnectStripeResponse = z.infer<
 	typeof DisconnectStripeResponseSchema
 >;
 
-/**
- * Query params for GET /platform/users endpoint
- */
 export const ListPlatformUsersQuerySchema = z.object({
 	limit: queryInteger({ min: 1, max: 100 }).default(10),
 
@@ -68,9 +65,6 @@ export type ListPlatformUsersQuery = z.infer<
 	typeof ListPlatformUsersQuerySchema
 >;
 
-/**
- * Platform organization schema
- */
 export const ApiPlatformOrgSchema = z.object({
 	slug: z.string().describe("Organization slug without the master org prefix"),
 	name: z.string().describe("Organization name"),
@@ -81,9 +75,6 @@ export const ApiPlatformOrgSchema = z.object({
 
 export type ApiPlatformOrg = z.infer<typeof ApiPlatformOrgSchema>;
 
-/**
- * Platform user schema
- */
 export const ApiPlatformUserSchema = z.object({
 	name: z.string().describe("User name"),
 	email: z.string().describe("User email"),
@@ -98,9 +89,6 @@ export const ApiPlatformUserSchema = z.object({
 
 export type ApiPlatformUser = z.infer<typeof ApiPlatformUserSchema>;
 
-/**
- * Response schema for GET /platform/users
- */
 export const ListPlatformUsersResponseSchema = z.object({
 	list: z.array(ApiPlatformUserSchema),
 	total: z.number().describe("Total number of users returned"),
@@ -112,9 +100,6 @@ export type ListPlatformUsersResponse = z.infer<
 	typeof ListPlatformUsersResponseSchema
 >;
 
-/**
- * Query params for GET /platform/orgs endpoint
- */
 export const ListPlatformOrgsQuerySchema = z.object({
 	limit: queryInteger({ min: 1, max: 100 }).default(10),
 
@@ -123,9 +108,6 @@ export const ListPlatformOrgsQuerySchema = z.object({
 
 export type ListPlatformOrgsQuery = z.infer<typeof ListPlatformOrgsQuerySchema>;
 
-/**
- * Response schema for GET /platform/orgs
- */
 export const ListPlatformOrgsResponseSchema = z.object({
 	list: z.array(ApiPlatformOrgSchema),
 	total: z.number().describe("Total number of organizations returned"),
@@ -137,9 +119,6 @@ export type ListPlatformOrgsResponse = z.infer<
 	typeof ListPlatformOrgsResponseSchema
 >;
 
-/**
- * Request body for POST /platform.link_revenuecat
- */
 export const LinkRevenueCatSchema = z.object({
 	organization_slug: z.string().min(1),
 	env: z.enum(["test", "live"]),
@@ -149,9 +128,6 @@ export const LinkRevenueCatSchema = z.object({
 
 export type LinkRevenueCat = z.infer<typeof LinkRevenueCatSchema>;
 
-/**
- * Response schema for POST /platform.link_revenuecat
- */
 export const LinkRevenueCatResponseSchema = z.object({
 	oauth_url: z.string(),
 });
@@ -160,9 +136,6 @@ export type LinkRevenueCatResponse = z.infer<
 	typeof LinkRevenueCatResponseSchema
 >;
 
-/**
- * Request body for POST /platform.sync_revenuecat
- */
 export const SyncRevenueCatSchema = z.object({
 	organization_slug: z.string().min(1),
 	env: z
@@ -176,9 +149,6 @@ export const SyncRevenueCatSchema = z.object({
 
 export type SyncRevenueCat = z.infer<typeof SyncRevenueCatSchema>;
 
-/**
- * Per-app result of a single plan's sync.
- */
 export const RevenueCatSyncAppResultSchema = z.object({
 	app_id: z.string(),
 	app_type: z.string(),
@@ -188,9 +158,6 @@ export const RevenueCatSyncAppResultSchema = z.object({
 	message: z.string().optional(),
 });
 
-/**
- * Per-plan result of POST /platform.sync_revenuecat.
- */
 export const RevenueCatSyncResultSchema = z.object({
 	plan_id: z.string(),
 	status: z.enum(["synced", "skipped", "error"]),
@@ -199,9 +166,6 @@ export const RevenueCatSyncResultSchema = z.object({
 	message: z.string().optional(),
 });
 
-/**
- * Response schema for POST /platform.sync_revenuecat
- */
 export const SyncRevenueCatResponseSchema = z.object({
 	results: z.array(RevenueCatSyncResultSchema),
 });
@@ -210,9 +174,6 @@ export type SyncRevenueCatResponse = z.infer<
 	typeof SyncRevenueCatResponseSchema
 >;
 
-/**
- * Request body for POST /platform.get_revenuecat_keys
- */
 export const GetRevenueCatKeysSchema = z.object({
 	organization_slug: z.string().min(1),
 	env: z
@@ -222,9 +183,6 @@ export const GetRevenueCatKeysSchema = z.object({
 
 export type GetRevenueCatKeys = z.infer<typeof GetRevenueCatKeysSchema>;
 
-/**
- * A RevenueCat public (SDK) API key.
- */
 export const RevenueCatPublicApiKeySchema = z
 	.object({
 		id: z.string(),
@@ -235,9 +193,6 @@ export const RevenueCatPublicApiKeySchema = z
 	})
 	.loose();
 
-/**
- * Per-app public API keys for a managed org's RevenueCat project.
- */
 export const RevenueCatAppKeysSchema = z.object({
 	app_id: z.string(),
 	app_type: z
@@ -249,9 +204,6 @@ export const RevenueCatAppKeysSchema = z.object({
 	api_keys: z.array(RevenueCatPublicApiKeySchema),
 });
 
-/**
- * Response schema for POST /platform.get_revenuecat_keys
- */
 export const GetRevenueCatKeysResponseSchema = z.object({
 	apps: z.array(RevenueCatAppKeysSchema),
 	oauth_access_token: z

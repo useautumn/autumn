@@ -7,10 +7,6 @@ import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 
-// ═══════════════════════════════════════════════════════════════════
-// TRACK-EDGE-CASE1: Floating point precision with decimal tracking
-// ═══════════════════════════════════════════════════════════════════
-
 test.concurrent(`${chalk.yellowBright("track-edge-case1: floating point precision with decimal tracking")}`, async () => {
 	const messagesItem = items.monthlyMessages({ includedUsage: 1000 });
 	const creditsItem = items.monthlyCredits({ includedUsage: 500 });

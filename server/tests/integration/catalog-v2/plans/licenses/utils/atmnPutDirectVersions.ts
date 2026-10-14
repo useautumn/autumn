@@ -12,7 +12,6 @@ import {
 	wordsItem,
 } from "./seedLicensePlans.js";
 
-/** Child v1 keeps 100 Messages; v2 is 50 Messages + Words. Team v1→v1, v2→v2. */
 export const seedDivergedChildAnchors = async ({
 	autumn,
 	childId,

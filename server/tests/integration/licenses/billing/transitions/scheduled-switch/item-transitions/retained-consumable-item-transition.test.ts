@@ -1,6 +1,3 @@
-/** Scheduled paid→free seat switches keep the same messages entitlement.
- * Activation resolves carry from the org transition rule only — the original
- * attach's carry_over_usages is not persisted — so default is a usage reset. */
 import { expect, test } from "bun:test";
 import type {
 	ApiCustomerV5,

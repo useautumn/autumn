@@ -20,7 +20,6 @@ const assertTrialsUsedCorrect = ({
 	expect(usedPlanIds).toEqual([...planIds].sort());
 };
 
-/** Asserts `trials_used` lists exactly `planIds`; pass `customerId` to poll. */
 export const expectTrialsUsedCorrect = pollableCustomerExpect({
 	fetchCustomer: async ({ customerId, autumn }: TrialsUsedExpectParams) => {
 		if (!autumn) throw new Error("expectTrialsUsedCorrect needs `autumn`");

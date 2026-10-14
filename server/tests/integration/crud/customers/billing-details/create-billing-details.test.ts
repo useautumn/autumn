@@ -1,12 +1,3 @@
-/**
- * customers.create with billing_details creates the Stripe customer if needed
- * and applies the details before the response is built.
- *
- * Contract:
- *   create (no create_in_stripe) + billing_details -> Stripe customer linked, details set,
- *                                                     returned when expanded in the same call
- */
-
 import { expect, test } from "bun:test";
 import { type ApiCustomerV5, CustomerExpand } from "@autumn/shared";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";

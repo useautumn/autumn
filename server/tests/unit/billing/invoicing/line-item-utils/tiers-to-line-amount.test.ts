@@ -38,7 +38,6 @@ describe("tiersToLineAmount", () => {
 		});
 
 		describe("multiple tiers", () => {
-			// Tiers: 0-100 @ $0.10, 100-500 @ $0.05, 500+ @ $0.02
 			const tieredPrice = createMockPrice([
 				{ to: 100, amount: 0.1 },
 				{ to: 500, amount: 0.05 },
@@ -56,26 +55,16 @@ describe("tiersToLineAmount", () => {
 			});
 
 			test("250 overage (tier 1 + partial tier 2) = $17.50", () => {
-				// 100 × $0.10 = $10
-				// 150 × $0.05 = $7.50
-				// Total = $17.50
 				const result = tiersToLineAmount({ price: tieredPrice, overage: 250 });
 				expect(result).toBe(17.5);
 			});
 
 			test("500 overage (tier 1 + full tier 2) = $30", () => {
-				// 100 × $0.10 = $10
-				// 400 × $0.05 = $20
-				// Total = $30
 				const result = tiersToLineAmount({ price: tieredPrice, overage: 500 });
 				expect(result).toBe(30);
 			});
 
 			test("1000 overage (all tiers) = $40", () => {
-				// 100 × $0.10 = $10
-				// 400 × $0.05 = $20
-				// 500 × $0.02 = $10
-				// Total = $40
 				const result = tiersToLineAmount({
 					price: tieredPrice,
 					overage: 1000,
@@ -85,11 +74,9 @@ describe("tiersToLineAmount", () => {
 		});
 
 		describe("billing units", () => {
-			const price = createMockPrice([{ to: Infinite, amount: 1 }]); // $1 per billing unit
+			const price = createMockPrice([{ to: Infinite, amount: 1 }]);
 
 			test("rounds up to nearest billing unit (billingUnits=10)", () => {
-				// 15 overage, billingUnits=10 → rounds to 20
-				// 20 × ($1/10) = $2
 				const result = tiersToLineAmount({
 					price,
 					overage: 15,
@@ -99,8 +86,6 @@ describe("tiersToLineAmount", () => {
 			});
 
 			test("exact billing unit multiple", () => {
-				// 20 overage, billingUnits=10 → stays 20
-				// 20 × ($1/10) = $2
 				const result = tiersToLineAmount({
 					price,
 					overage: 20,
@@ -110,8 +95,6 @@ describe("tiersToLineAmount", () => {
 			});
 
 			test("small overage rounds up", () => {
-				// 1 overage, billingUnits=10 → rounds to 10
-				// 10 × ($1/10) = $1
 				const result = tiersToLineAmount({
 					price,
 					overage: 1,
@@ -141,13 +124,10 @@ describe("tiersToLineAmount", () => {
 			});
 
 			test("tiered with fractional rates", () => {
-				// 0-50 @ $0.0075, 50+ @ $0.0025
 				const price = createMockPrice([
 					{ to: 50, amount: 0.0075 },
 					{ to: Infinite, amount: 0.0025 },
 				]);
-				// 75 overage: 50 × $0.0075 = $0.375, 25 × $0.0025 = $0.0625
-				// Total = $0.4375
 				const result = tiersToLineAmount({ price, overage: 75 });
 				expect(result).toBe(0.4375);
 			});
@@ -159,7 +139,6 @@ describe("tiersToLineAmount", () => {
 			});
 
 			test("floating point edge case: 0.1 + 0.2 precision", () => {
-				// 3 overage @ $0.1/unit = $0.3 (tests floating point handling)
 				const price = createMockPrice([{ to: Infinite, amount: 0.1 }]);
 				const result = tiersToLineAmount({ price, overage: 3 });
 				expect(result).toBe(0.3);
@@ -181,8 +160,6 @@ describe("tiersToLineAmount", () => {
 	});
 
 	describe("volume pricing", () => {
-		// Tiers: 0-100 @ $0.10/unit, 101-500 @ $0.05/unit, 501+ @ $0.02/unit
-		// Volume: entire quantity charged at the single tier it falls into
 		const volumePrice = createMockPrice(
 			[
 				{ to: 100, amount: 0.1 },
@@ -209,8 +186,6 @@ describe("tiersToLineAmount", () => {
 			});
 
 			test("250 units (mid tier 2) → entire 250 @ $0.05 = $12.50", () => {
-				// Graduated would be: 100×$0.10 + 150×$0.05 = $17.50
-				// Volume is: 250×$0.05 = $12.50
 				const result = tiersToLineAmount({ price: volumePrice, overage: 250 });
 				expect(result).toBe(12.5);
 			});
@@ -221,8 +196,6 @@ describe("tiersToLineAmount", () => {
 			});
 
 			test("1000 units (in tier 3) → entire 1000 @ $0.02 = $20", () => {
-				// Graduated would be: 100×$0.10 + 400×$0.05 + 500×$0.02 = $40
-				// Volume is: 1000×$0.02 = $20
 				const result = tiersToLineAmount({
 					price: volumePrice,
 					overage: 1000,
@@ -261,7 +234,6 @@ describe("tiersToLineAmount", () => {
 		});
 
 		describe("billing units", () => {
-			// $1.00 per 1000 units (e.g. API tokens)
 			const tokenPrice = createMockPrice(
 				[
 					{ to: 100000, amount: 1.0 },
@@ -289,7 +261,6 @@ describe("tiersToLineAmount", () => {
 			});
 
 			test("rounds up to nearest billing unit before pricing", () => {
-				// 1500 tokens, billingUnits=1000 → rounds to 2000 → tier 1 → 2000×($1/1000) = $2
 				const result = tiersToLineAmount({
 					price: tokenPrice,
 					overage: 1500,
@@ -301,7 +272,6 @@ describe("tiersToLineAmount", () => {
 
 		describe("negative overage (credits)", () => {
 			test("negative overage produces negative amount", () => {
-				// -250 units falls in tier 2 → -(250 × $0.05) = -$12.50
 				const result = tiersToLineAmount({
 					price: volumePrice,
 					overage: -250,
@@ -310,7 +280,6 @@ describe("tiersToLineAmount", () => {
 			});
 
 			test("negative overage in tier 1", () => {
-				// -50 units falls in tier 1 → -(50 × $0.10) = -$5
 				const result = tiersToLineAmount({
 					price: volumePrice,
 					overage: -50,

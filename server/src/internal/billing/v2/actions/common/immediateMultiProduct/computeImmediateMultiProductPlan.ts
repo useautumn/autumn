@@ -12,7 +12,6 @@ import { computePooledBalanceTransitionPlan } from "@/internal/billing/v2/pooled
 import { productContextToAttachBillingContext } from "@/internal/billing/v2/utils/billingContext/productContextToAttachBillingContext";
 import { cusProductsToOneOffPrepaidCarryOvers } from "@/internal/billing/v2/utils/handleOneOffPrepaidCarryOvers/cusProductToOneOffPrepaidCarryOvers";
 
-/** Compute the billing plan for immediate multi-product billing. */
 export const computeImmediateMultiProductPlan = ({
 	ctx,
 	billingContext,

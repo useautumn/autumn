@@ -1,9 +1,3 @@
-/**
- * Seeds one customize-only op against every plan lifecycle status. Statuses are
- * forced straight onto the rows — this is a QA fixture, not a billing story —
- * so the only question being asked is which statuses a batch run is allowed to
- * touch.
- */
 import { test } from "bun:test";
 import { CusProductStatus, ResetInterval } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features";

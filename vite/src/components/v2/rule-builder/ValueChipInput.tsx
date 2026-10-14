@@ -17,7 +17,6 @@ interface ValueChipInputProps {
 	"aria-label"?: string;
 }
 
-/** The ValuePicker trigger with an inline input instead of a list: type, then enter, comma or space, and it becomes a chip. Pasting a list adds every item. */
 export function ValueChipInput({
 	values,
 	onAdd,

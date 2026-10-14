@@ -12,12 +12,6 @@ import {
 	proMonthlySpec,
 } from "./knowledgePlatformPricing.ts";
 
-/**
- * KIND B (manufactured twin): the org-wide pooling fact is deleted, but the
- * per-deployment attach fact stays — so the skill's "who uses each metered
- * feature: one shared balance or separate ones?" fork is live and must be
- * asked. Ground truth = the deleted fact (shared org-wide pot).
- */
 export const askPooledBalances = defineCase({
 	name: "knowledge-platform-ask-pooled-balances",
 	prompt: [

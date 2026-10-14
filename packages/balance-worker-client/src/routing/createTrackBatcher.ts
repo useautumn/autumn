@@ -39,7 +39,6 @@ import {
 
 export const DEFAULT_MAX_TRACK_BATCH_SIZE = 100;
 
-/** Where a track stands: waiting for its partition, between routing attempts, on the wire, or answered. */
 type TrackItemPhase = "queued" | "routing" | "sending" | "settled";
 
 type TrackItem = {
@@ -53,22 +52,14 @@ type TrackItem = {
 	onAbort(): void;
 };
 
-/** One partition's tracks: at most one batch in flight, the rest waiting for it to return. */
 type PartitionLane = { queue: TrackItem[]; busy: boolean };
 
-/** One routing-and-send of a batch. Its signal aborts once nobody is waiting on it.
- *  `routing` is the whole batch's record, shared by every attempt of the same batch. */
 type BatchAttempt = {
 	controller: AbortController;
 	live: Set<TrackItem>;
 	routing: WorkerRequestRouting;
 };
 
-/**
- * Tracks for one partition share one request: an idle partition sends at once as a
- * batch of one, and whatever arrives while that is in flight goes out together the
- * moment it returns. No timers, so an idle customer waits for nothing.
- */
 export function createTrackBatcher({
 	ctx,
 	maxBatchSize = DEFAULT_MAX_TRACK_BATCH_SIZE,
@@ -91,7 +82,6 @@ export function createTrackBatcher({
 		return lane;
 	}
 
-	/** Always answers through the promise, never by throwing, like the single-request path. */
 	function track(params: TrackParams): Promise<TrackReply> {
 		try {
 			return enqueueTrack(params);
@@ -107,7 +97,6 @@ export function createTrackBatcher({
 			signal,
 		});
 		assertRequestDeadline({ deadline, outcome: "not_submitted" });
-		// The batch goes out later than the call, so it must not see caller mutations.
 		const snapshot = structuredClone(command);
 		const item: TrackItem = {
 			snapshot,
@@ -142,11 +131,8 @@ export function createTrackBatcher({
 
 	async function sendBatch({ items }: { items: TrackItem[] }): Promise<void> {
 		let pending = items;
-		// Per batch, never shared: lanes for different partitions send concurrently, and one
-		// batch's hinted successor must not stop another's refresh.
 		let followingHint = false;
 		let ownershipCaughtUp = false;
-		// A NOT_READY from the owner is retried apart from the route attempts: the route was right.
 		let notReadyRetries = 0;
 		let lastRefusal: unknown;
 		const routing: WorkerRequestRouting = {
@@ -250,7 +236,6 @@ export function createTrackBatcher({
 				routing,
 			});
 		} catch (cause) {
-			// Only routing throws here; nothing in `pending` is on the wire.
 			rejectAll({
 				items: pending,
 				error:
@@ -267,7 +252,6 @@ export function createTrackBatcher({
 		}
 	}
 
-	/** What one send left to do: the items to reroute, whether a NOT_OWNER named where, and whether the owner was merely not ready yet. */
 	type PostedBatch = {
 		reroute: TrackItem[];
 		followingHint: boolean;
@@ -275,7 +259,6 @@ export function createTrackBatcher({
 		refused?: unknown;
 	};
 
-	/** Sends the live items and settles what the worker answered; returns the items to reroute. */
 	async function postBatch({
 		items,
 		resolved,
@@ -297,7 +280,6 @@ export function createTrackBatcher({
 					route: resolved.route,
 					commands: items.map(snapshotOf),
 				},
-				// The batch waits only as long as its most impatient item.
 				headers: {
 					[WORKER_REQUEST_BUDGET_HEADER]: requestBudgetHeaderValue({
 						expiresAt: earliestDeadline({ items }).expiresAt,
@@ -336,7 +318,6 @@ export function createTrackBatcher({
 			});
 			return { reroute: [], followingHint: false, notReady: false };
 		}
-		// Answered: settling items from here on must not cancel anything.
 		batchAttempt.live.clear();
 		if (response.status !== 200) {
 			if (
@@ -389,7 +370,6 @@ export function createTrackBatcher({
 		return { reroute, followingHint: hint.following, notReady: hint.notReady };
 	}
 
-	/** Same reading as a single request: NOT_OWNER reroutes, a named successor is followed, any other worker error settles the items. */
 	function isNotOwner({
 		items,
 		status,
@@ -402,7 +382,6 @@ export function createTrackBatcher({
 		status: number;
 		body: unknown;
 		resolved: ResolvedCommandRoute;
-		/** This send's own record of a followed successor or a not-ready owner; nothing outside the send reads it. */
 		hint: { following: boolean; notReady: boolean };
 		routing: WorkerRequestRouting;
 	}): boolean {
@@ -411,7 +390,6 @@ export function createTrackBatcher({
 			if (!answer) return false;
 			const followed = followNotOwnerAnswer({ ctx, resolved, answer });
 			if (followed) hint.following = true;
-			// Only a named successor counts as a hint; a NOT_READY keeps the route it already had.
 			if (followed && answer.successor) routing.followedHint = true;
 			if (answer.notReady) hint.notReady = true;
 			return true;
@@ -435,7 +413,6 @@ export function createTrackBatcher({
 		item: TrackItem;
 		reply: TrackReply;
 	}): void {
-		// A reply that lands after the deadline is still uncertain to the caller, as for a single request.
 		const late = deadlineErrorOf({ item, outcome: "unknown" });
 		const routing = item.attempt?.routing;
 		settleItem({ item });
@@ -454,7 +431,6 @@ export function createTrackBatcher({
 	}: {
 		items: TrackItem[];
 		error: unknown;
-		/** The batch's routing so far; every item in it shares the same record. */
 		routing?: WorkerRequestRouting;
 	}): void {
 		if (routing) describeRequestRouting({ error, routing });
@@ -465,7 +441,6 @@ export function createTrackBatcher({
 		}
 	}
 
-	/** The caller stopped waiting: a queued or rerouting item never reached a worker, a sent one may have. */
 	function abandonItem({ item }: { item: TrackItem }): void {
 		if (!isLive(item)) return;
 		const outcome: WorkerRequestOutcome =
@@ -522,7 +497,6 @@ function isLive(item: TrackItem): boolean {
 	return item.phase !== "settled";
 }
 
-/** The soonest any item in the batch expires: a hold at the worker must end before it. */
 function earliestDeadline({ items }: { items: TrackItem[] }): RequestDeadline {
 	let earliest: RequestDeadline | undefined;
 	for (const item of items)
@@ -531,7 +505,6 @@ function earliestDeadline({ items }: { items: TrackItem[] }): RequestDeadline {
 	return earliest ?? { expiresAt: 0, signal: AbortSignal.abort() };
 }
 
-/** A route refresh waits as long as any item in the batch still does. */
 function attemptDeadline({
 	items,
 	batchAttempt,
@@ -573,7 +546,6 @@ function invalidResponse({
 	});
 }
 
-/** One well-formed result per command, or nothing: a reply that miscounts cannot be matched to callers. */
 function readResults({
 	body,
 	count,

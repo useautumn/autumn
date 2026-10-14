@@ -19,14 +19,10 @@ import {
 export const HERALD_BLUE_GREEN_SERVICE_NAME = "herald";
 const ACTIVE_SLOT_POLL_INTERVAL_MS = 2_000;
 
-/** The edge configs herald polls; one registry drives them all. */
 export type HeraldEdgeConfigs = {
 	miscRedis: EdgeConfigStore<MiscRedisConfig>;
-	/** Our shadow Atom per env and whom it holds; the server's shadow check reads the same object. */
 	shadowAtom: EdgeConfigStore<ShadowAtomConfig>;
-	/** Polled on its own 2s timer: the dashboard writes the record without the registry's timestamp. */
 	activeSlot: EdgeConfigStore<ActiveSlotEdgeConfig>;
-	/** The same bucket and client the stores read, for the heartbeat herald writes itself. */
 	adminBucket: { s3Client: EdgeConfigS3Client; location: EdgeConfigLocation };
 	start(): Promise<void>;
 	stop(): void;
@@ -72,7 +68,6 @@ export const createHeraldEdgeConfigs = ({
 		schema: activeSlotDefinition.schema,
 		defaultValue: activeSlotDefinition.defaultValue,
 		pollIntervalMs: ACTIVE_SLOT_POLL_INTERVAL_MS,
-		// The default names no service and would open the gate; a read error must keep the last record instead.
 		retainOnError: true,
 	});
 

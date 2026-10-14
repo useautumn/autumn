@@ -38,7 +38,6 @@ function UpdateFeatureSheet({
 	const { mutateAsync: updateCatalog, isPending } = useUpdateCatalogMutation();
 	useSheetBrowserBack({ enabled: open });
 
-	// Initialize feature store when selectedFeature changes
 	useEffect(() => {
 		if (open && selectedFeature) {
 			setFeature(selectedFeature);
@@ -62,7 +61,6 @@ function UpdateFeatureSheet({
 
 			toast.success("Feature updated successfully");
 
-			// Call onSuccess with old and new IDs, if it's updated from the plan editor to update the plan items.
 			if (onSuccess) {
 				onSuccess(selectedFeature.id, feature.id);
 			}

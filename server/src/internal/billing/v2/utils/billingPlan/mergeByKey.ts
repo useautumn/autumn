@@ -1,4 +1,3 @@
-/** Last-writer-wins merge; returns undefined when both sides are empty. */
 export const mergeByKey = <T>({
 	base,
 	incoming,

@@ -9,7 +9,6 @@ import {
 } from "../billingPlanFixtures.js";
 import { applyPlanToWorkerMemory, customerMemory } from "./workerMemory.js";
 
-/** Memory holds cp_a; cp_gone is a row Postgres has but the worker's copy does not. */
 const staleRefusalOf = (autumnBillingPlan: AutumnBillingPlan) =>
 	expect(
 		applyPlanToWorkerMemory({

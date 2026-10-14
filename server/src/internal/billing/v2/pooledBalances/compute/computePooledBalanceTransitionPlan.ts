@@ -26,7 +26,6 @@ export const computePooledBalanceTransitionPlan = ({
 	outgoingCustomerProducts?: FullCusProduct[];
 	incomingCustomerProducts?: FullCusProduct[];
 	stripeSubscriptionId?: string;
-	/** Lets license pools reset usage when the plan change alters their item. */
 	customerLicenseTransitions?: CustomerLicenseTransition[];
 	now: number;
 }): {
@@ -53,9 +52,6 @@ export const computePooledBalanceTransitionPlan = ({
 		});
 	}
 
-	// Every incoming product lands on the same subscription, so pools must agree
-	// on the stand-in id — otherwise they split, then collide once the real
-	// subscription id is stamped onto both.
 	const pendingSubscriptionId = incomingCustomerProducts
 		.map((customerProduct) => customerProduct.id)
 		.sort()[0];

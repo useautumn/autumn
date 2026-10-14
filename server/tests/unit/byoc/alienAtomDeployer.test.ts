@@ -20,7 +20,6 @@ import {
 
 const org = { id: "org_1", slug: "acme" } as Organization;
 
-/** An alien client that only records what a setup was started with. */
 const recordingAlienClient = () => {
 	const started: Parameters<AlienClient["startSetup"]>[0][] = [];
 	const alienClient: AlienClient = {
@@ -211,7 +210,6 @@ describe("an Atom's network on alien", () => {
 	});
 });
 
-/** An alien client whose deployments are looked up by id or by group. */
 const deploymentsAlienClient = ({
 	byId,
 	byGroup,

@@ -1,8 +1,3 @@
-/**
- * billing.import — an imported Stripe sub must persist an Autumn subscription
- * row, so the plan reports its real billing period instead of null.
- */
-
 import { expect, test } from "bun:test";
 import {
 	callFlash,
@@ -66,7 +61,6 @@ test.concurrent(
 			sub.billing_cycle_anchor,
 		);
 
-		// The period must surface on the API response, not come back null.
 		const apiSubscription = result?.customer?.subscriptions?.find(
 			(subscription) => subscription.plan_id === pro.id,
 		);

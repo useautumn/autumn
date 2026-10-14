@@ -1,10 +1,3 @@
-/**
- * invoices.create — catalog plan lines, each in isolation.
- *
- * Every test also asserts the customer gained no plan: an invoice is a bill,
- * not an attach.
- */
-
 import { expect, test } from "bun:test";
 import {
 	type ApiCustomerV5,
@@ -22,7 +15,6 @@ import {
 	expectCreatedInvoiceCorrect,
 } from "./utils/expectCreatedInvoiceCorrect";
 
-// products.pro() carries a $20/month base price.
 const PRO_BASE = 20;
 
 test.concurrent(
@@ -64,7 +56,6 @@ test.concurrent(
 	`${chalk.yellowBright("invoices.create: prepaid quantity bills units × unit price")}`,
 	async () => {
 		const customerId = "inv-create-prepaid";
-		// prepaidUsers: $10 per user, billing_units 1
 		const pro = products.pro({
 			id: "pro-create-prepaid",
 			items: [items.prepaidUsers()],
@@ -113,7 +104,6 @@ test.concurrent(
 	`${chalk.yellowBright("invoices.create: usage quantity bills through the consumable price without touching balances")}`,
 	async () => {
 		const customerId = "inv-create-usage";
-		// consumableMessages: $0.1 per message, 100 included on the plan — included usage is NOT subtracted here.
 		const pro = products.pro({
 			id: "pro-create-usage",
 			items: [items.consumableMessages({ includedUsage: 100 })],

@@ -43,7 +43,6 @@ const getHandleCoordsByPosition = (
 	node: InternalNode<Node>,
 	handlePosition: Position,
 ) => {
-	// Choose the handle type based on position - Left is for target, Right is for source
 	const handleType = handlePosition === Position.Left ? "target" : "source";
 
 	const handle = node.internals.handleBounds?.[handleType]?.find(
@@ -57,9 +56,6 @@ const getHandleCoordsByPosition = (
 	let offsetX = handle.width / 2;
 	let offsetY = handle.height / 2;
 
-	// this is a tiny detail to make the markerEnd of an edge visible.
-	// The handle position that gets calculated has the origin top-left, so depending which side we are using, we add a little offset
-	// when the handlePosition is Position.Right for example, we need to add an offset as big as the handle itself in order to get the correct position
 	switch (handlePosition) {
 		case Position.Left:
 			offsetX = 0;

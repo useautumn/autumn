@@ -17,7 +17,6 @@ const CONFIG_CANDIDATES = [
 	join(homedir(), ".config/trigger/config.json"),
 ];
 
-/** Personal access token from `trigger.dev login` (required for branch archive). */
 export function readTriggerCliAuth(): {
 	accessToken: string;
 	apiUrl: string;

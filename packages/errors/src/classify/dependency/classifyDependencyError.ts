@@ -1,7 +1,6 @@
 import type { ErrorClassification } from "../../models/errorClassification.js";
 import { isTransientDependencyError } from "./isTransientDependencyError.js";
 
-/** A dependency that was unreachable, throttling or failing on its side: one is noise, a rate is an incident. */
 export const classifyDependencyError = ({
 	error,
 }: {

@@ -42,7 +42,6 @@ const entity43: WorkerEntity = {
 	internal_id: "ent_internal_43",
 };
 
-/** What an entity initialize carries: the entity and the seats row it owns. */
 const createEntityState = ({
 	entity,
 }: {
@@ -76,7 +75,6 @@ const openFixture = () => {
 	};
 };
 
-/** Customer at revision 1, then each entity joins at the next revision. */
 const seed = ({ store }: { store: SqliteStateStore }): void => {
 	const customer = createSubjectState({
 		identity,

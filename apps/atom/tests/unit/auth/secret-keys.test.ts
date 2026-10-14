@@ -10,7 +10,6 @@ afterEach(() => {
 	for (const keys of started.splice(0)) keys.stop();
 });
 
-/** Each sync gets Autumn's next answer in turn; null is a sync that failed. */
 const autumnAnswering = (answers: (string[] | null)[]) => {
 	const keys = startSecretKeys({
 		findInvalid: async () => (answers.length ? answers.shift() : []) ?? null,

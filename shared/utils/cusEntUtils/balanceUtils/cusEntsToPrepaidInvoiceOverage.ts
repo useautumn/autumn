@@ -14,14 +14,12 @@ export const cusEntToPrepaidInvoiceOverage = ({
 	cusEnt: FullCusEntWithFullCusProduct;
 	useUpcomingQuantity?: boolean;
 }) => {
-	// 2. If cus ent is not prepaid, skip
 	const cusPrice = cusEntToCusPrice({ cusEnt });
 
 	if (!cusPrice || !isPrepaidPrice(cusPrice.price)) return 0;
 
 	if (!cusEnt.customer_product) return 0;
 
-	// 3. Get quantity
 	const prepaidQuantity = cusEntToPrepaidQuantity({
 		cusEnt,
 		useUpcomingQuantity,

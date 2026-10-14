@@ -144,7 +144,6 @@ export const getAllFullCusProducts = async ({
 	return allData;
 };
 
-/** Async generator that yields batches of customer rows using cursor-based pagination. */
 export async function* getAllCustomerRows({
 	db,
 	orgId,

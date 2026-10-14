@@ -17,25 +17,6 @@ import {
 } from "../../utils/usage-limit-utils/entityUsageLimitUtils.js";
 import { fetchUsageWindowRows } from "../../utils/usage-limit-utils/usageWindowDbTestUtils.js";
 
-/**
- * TDD tests for ENTITY-LEVEL usage windows (spend-limit mirror semantics:
- * exactly ONE cap per feature per subject — the entity's own usage_limits
- * entry wins; without one the customer's entry applies at customer scope).
- *
- * Contract under test (enforcement half):
- *  - entities.update(..., { billing_controls: { usage_limits } }) arms a cap
- *  - entity tracks against an ENTITY-SCOPED window: counts only that entity's
- *    usage, clamps over-cap tracks to what fits ("apply what fits")
- *  - overage_behavior "reject" over the cap -> InsufficientBalance
- *  - windows are isolated between entities; customer balance still aggregates
- *  - entity cap works on customer-scoped features too (no entity_feature_id):
- *    only that entity's tracks count; customer-level tracks are uncapped
- *  - side effect: usage_windows PG row per entity with internal_entity_id set
- *
- * Pre-impl red: EntityBillingControls has no usage_limits, so the update is
- * rejected/dropped and no cap is ever enforced.
- */
-
 const autumnV2_3 = new AutumnInt({ version: ApiVersion.V2_3 });
 
 test.concurrent(
@@ -70,7 +51,6 @@ test.concurrent(
 			limit: 5,
 		});
 
-		// ── Cap reached exactly: 3 then 4 applies only the remaining 2 ──
 		await autumnV2_3.track({
 			customer_id: customerId,
 			entity_id: entities[0].id,
@@ -102,7 +82,6 @@ test.concurrent(
 			limit: 5,
 		});
 
-		// ── Over the cap: a further track applies nothing ──
 		await autumnV2_3.track({
 			customer_id: customerId,
 			entity_id: entities[0].id,
@@ -119,7 +98,6 @@ test.concurrent(
 			usage: 5,
 		});
 
-		// ── Side effect: ONE window row, entity-scoped (no customer row) ──
 		const rows = await fetchUsageWindowRows({
 			ctx,
 			customerId,
@@ -235,7 +213,6 @@ test.concurrent(
 			limit: 10,
 		});
 
-		// e0: 7 -> clamps to 5. e1: 7 then 5 -> clamps to 10 total.
 		await autumnV2_3.track({
 			customer_id: customerId,
 			entity_id: entities[0].id,
@@ -272,7 +249,6 @@ test.concurrent(
 			limit: 10,
 		});
 
-		// Balances aggregate at the customer even though windows are isolated.
 		await expectCustomerFeatureBalance({
 			autumn: autumnV2_3,
 			customerId,
@@ -282,7 +258,6 @@ test.concurrent(
 			usage: 15,
 		});
 
-		// ── Side effect: one row per entity, distinct scopes ──
 		const rows = await fetchUsageWindowRows({
 			ctx,
 			customerId,
@@ -375,7 +350,7 @@ test.concurrent(
 			actions: [s.billing.attach({ productId: customerProduct.id })],
 		});
 
-		await autumnV2_3.customers.get(customerId); // initialize cache.
+		await autumnV2_3.customers.get(customerId);
 
 		await setEntityUsageLimit({
 			autumn: autumnV2_3,
@@ -385,7 +360,6 @@ test.concurrent(
 			limit: 3,
 		});
 
-		// Entity track over its cap: applies 3 of 5.
 		await autumnV2_3.track({
 			customer_id: customerId,
 			entity_id: entities[0].id,
@@ -401,7 +375,6 @@ test.concurrent(
 			limit: 3,
 		});
 
-		// Customer-level track is NOT bound by the entity's cap.
 		await autumnV2_3.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,

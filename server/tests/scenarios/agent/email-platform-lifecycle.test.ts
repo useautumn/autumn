@@ -23,8 +23,6 @@ test(`${chalk.yellowBright("agent: email platform customer on paid pro")}`, asyn
 			s.entities({ count: 1, featureId: featureIds.projects }),
 		],
 		actions: [
-			// Pro has no base price; email volume is a prepaid volume item. Pick the
-			// first tier (50k emails for $20/mo).
 			s.billing.attach({
 				productId: plans.pro.id,
 				options: [{ feature_id: featureIds.emails, quantity: 50_000 }],
@@ -36,7 +34,6 @@ test(`${chalk.yellowBright("agent: email platform customer on paid pro")}`, asyn
 	const customer = await autumnV2_2.customers.get<ApiCustomerV5>(customerId);
 	const subscription = getSubscription(customer, plans.pro.id);
 
-	// Paid Pro: active subscription, not trialing.
 	expect(subscription).toBeDefined();
 	expect(subscription?.trial_ends_at).toBeFalsy();
 });

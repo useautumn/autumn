@@ -32,10 +32,6 @@ export const formatMs = (
 	return format(new Date(unixDate), formatString);
 };
 
-/**
- * Formats a unix timestamp in SECONDS to a date and time string.
- * If unixSeconds is falsy, returns "undefined unix date".
- */
 export const formatSeconds = (
 	unixSeconds?: number | null,
 	options?: { withTimezone?: boolean },
@@ -49,7 +45,6 @@ export const formatSeconds = (
 	);
 };
 
-// Format seconds to date
 export const formatSecondsToDate = (
 	unixSeconds?: number | null,
 	options?: { withTimezone?: boolean },

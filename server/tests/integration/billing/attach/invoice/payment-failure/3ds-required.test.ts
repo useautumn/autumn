@@ -1,10 +1,3 @@
-/**
- * Attach Payment Failure Tests - 3DS Authentication Required
- *
- * Tests for attach when customer's card requires 3DS authentication.
- * Expected: required_action.code = "3ds_required"
- */
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3 } from "@autumn/shared";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
@@ -33,10 +26,6 @@ const expectStripeInvoicePaid = ({
 		timeoutMs: 60_000,
 	});
 };
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// NEW PLAN - 3DS Required
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(`${chalk.yellowBright("3ds 1: new plan")}`, async () => {
 	const customerId = "attach-fail-new-3ds";
@@ -73,7 +62,6 @@ test.concurrent(`${chalk.yellowBright("3ds 1: new plan")}`, async () => {
 	await completeInvoiceConfirmation({ url: result.payment_url! });
 	await expectStripeInvoicePaid({ ctx, invoiceId: result.invoice?.stripe_id });
 
-	// Activation runs in the invoice.paid webhook, so poll instead of reading once.
 	const customerAfter = (await expectProductActive({
 		customerId,
 		autumn: autumnV1,
@@ -97,10 +85,6 @@ test.concurrent(`${chalk.yellowBright("3ds 1: new plan")}`, async () => {
 		settleTimeoutMs: WEBHOOK_SETTLE_TIMEOUT_MS,
 	});
 });
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// UPGRADE - 3DS Required
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(`${chalk.yellowBright("3ds 2: upgrade")}`, async () => {
 	const customerId = "attach-fail-upgrade-3ds";
@@ -152,7 +136,6 @@ test.concurrent(`${chalk.yellowBright("3ds 2: upgrade")}`, async () => {
 	await completeInvoiceConfirmation({ url: result.payment_url! });
 	await expectStripeInvoicePaid({ ctx, invoiceId: result.invoice?.stripe_id });
 
-	// Activation runs in the invoice.paid webhook, so poll instead of reading once.
 	const customerAfter = (await expectProductActive({
 		customerId,
 		autumn: autumnV1,
@@ -168,10 +151,6 @@ test.concurrent(`${chalk.yellowBright("3ds 2: upgrade")}`, async () => {
 		usage: 0,
 	});
 });
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// ONE-OFF - 3DS Required
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(`${chalk.yellowBright("3ds 3: one-off")}`, async () => {
 	const customerId = "attach-fail-oneoff-3ds";
@@ -213,7 +192,6 @@ test.concurrent(`${chalk.yellowBright("3ds 3: one-off")}`, async () => {
 	await completeInvoiceConfirmation({ url: result.payment_url! });
 	await expectStripeInvoicePaid({ ctx, invoiceId: result.invoice?.stripe_id });
 
-	// Activation runs in the invoice.paid webhook, so poll instead of reading once.
 	const customerAfter = (await expectProductActive({
 		customerId,
 		autumn: autumnV1,

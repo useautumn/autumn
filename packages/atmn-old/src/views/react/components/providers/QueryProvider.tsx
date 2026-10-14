@@ -13,25 +13,15 @@ interface QueryProviderProps {
 	children: ReactNode;
 }
 
-/**
- * QueryProvider with global 401 error handling
- *
- * When a 401 error is detected from any query or mutation:
- * 1. The error is caught by the global handler
- * 2. Auth recovery UI is shown (OAuth flow)
- * 3. After successful auth, queries are refetched
- */
 export function QueryProvider({ children }: QueryProviderProps) {
 	const [authError, setAuthError] = useState<unknown>(null);
 
-	// Handle auth errors globally
 	const handleError = useCallback((error: unknown) => {
 		if (isAuthError(error)) {
 			setAuthError(error);
 		}
 	}, []);
 
-	// Create query client with error handlers
 	const queryClient = useMemo(() => {
 		return new QueryClient({
 			queryCache: new QueryCache({
@@ -49,13 +39,11 @@ export function QueryProvider({ children }: QueryProviderProps) {
 		});
 	}, [handleError]);
 
-	// Handle successful auth recovery - refetch all queries
 	const handleRetry = useCallback(() => {
 		setAuthError(null);
 		queryClient.invalidateQueries();
 	}, [queryClient]);
 
-	// If we have an auth error, show recovery boundary
 	if (authError) {
 		return (
 			<QueryClientProvider client={queryClient}>

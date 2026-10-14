@@ -1,15 +1,3 @@
-/**
- * atmn crud/plans/rename — a plan id is a family name. Renaming one version's
- * row (by internalId) while a sibling keeps the old id is not a partial
- * rename, it is a split, and both the config lint and the server say so in
- * words that name the fix: rename every version, or none.
- *
- * Red (current):  lint says "at least one version must be active" — true,
- *                 but not the cause; the server would then rename nothing.
- * Green (after):  lint names the rename case; the server rejects a split
- *                 that gets past it; renaming every version applies.
- */
-
 import { expect, test } from "bun:test";
 import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 import { expectRoundTrip } from "@tests/utils/atmnUtils/expectRoundTrip.js";
@@ -79,8 +67,6 @@ test.concurrent(
 			await scenario.push();
 			const [v1, v2] = await versionRows({ ctx: scenario.ctx, planId: "pro" });
 
-			// Only the demoted row renamed: every "proNew" row is a known server
-			// row and none is live, so the lint reads it as a half-done rename.
 			scenario.writeConfig(
 				atmnConfigSource({
 					body: twoVersions({
@@ -95,9 +81,6 @@ test.concurrent(
 				"If you are renaming a plan, change the planId on every one of its versions, not just some.",
 			);
 
-			// Only the active row renamed, history omitted: the lint cannot see a
-			// split here (a `pro` row is not in plans, but nothing says it should
-			// be), so the server's family rule speaks.
 			scenario.writeConfig(
 				atmnConfigSource({
 					body: `{
@@ -116,7 +99,6 @@ test.concurrent(
 				),
 			).toEqual([v1!.internal_id, v2!.internal_id]);
 
-			// Every version renamed: the supported operation, and it round-trips.
 			scenario.writeConfig(
 				atmnConfigSource({
 					body: twoVersions({

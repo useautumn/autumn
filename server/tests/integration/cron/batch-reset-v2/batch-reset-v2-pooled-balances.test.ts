@@ -1,6 +1,3 @@
-/** Regression: batch reset must use pooled grants and reset pools of every
- * non-lifetime mode — invoice.created is only a redundant fast path. */
-
 import { expect, test } from "bun:test";
 import {
 	customerEntitlements,

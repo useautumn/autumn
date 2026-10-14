@@ -16,10 +16,6 @@ import {
 } from "../../../turnBudget.js";
 import type { EveEventContext } from "./applyEveEvent.js";
 
-/** Relays a delegated child session's live progress — tool starts and partial
- * text — onto the parent turn's status channel, which otherwise freezes on
- * "Working on <specialist>" for the whole delegation. Read-only and best
- * effort: any failure just ends the relay, never the turn. */
 export const watchSubagentProgress = ({
 	auth,
 	childSessionId,
@@ -90,7 +86,6 @@ export const watchSubagentProgress = ({
 		return false;
 	};
 
-	/** Quiet is not the end: reopen at the cursor until the child terminates. */
 	const relay = async () => {
 		for (let attempt = 0; attempt <= MAX_CHILD_IDLE_RECONNECTS; attempt += 1) {
 			try {

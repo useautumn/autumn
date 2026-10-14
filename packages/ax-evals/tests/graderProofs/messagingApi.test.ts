@@ -1,9 +1,3 @@
-/**
- * Grader proofs for the messaging-api suite: the shared golden passes every
- * config verdict; an empty workspace fails them all. Mutation proofs pin the
- * suite's signatures: merged groups fail planGroups, standalone tier plans
- * fail the variant check, per-unit-priced-as-flat fails the spec anchors.
- */
 import { expect, test } from "bun:test";
 import { askBothLines } from "../../cases/suites/messagingApi/askBothLines.eval.ts";
 import { clearBothLines } from "../../cases/suites/messagingApi/clearBothLines.eval.ts";

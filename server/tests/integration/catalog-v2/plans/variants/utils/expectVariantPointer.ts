@@ -23,7 +23,6 @@ export const getFullPlan = ({
 		version,
 	});
 
-/** Variant row points at this base row and is never default. */
 export const expectVariantPointerCorrect = async ({
 	ctx,
 	variantPlanId,
@@ -52,7 +51,6 @@ export const expectVariantPointerCorrect = async ({
 	expect(variant.version).toBe(variantVersion ?? 1);
 };
 
-/** Every listed version row has base_internal_product_id null. */
 export const expectVariantUnlinkedCorrect = async ({
 	ctx,
 	variantPlanId,
@@ -71,7 +69,6 @@ export const expectVariantUnlinkedCorrect = async ({
 	}
 };
 
-/** Catalog GET hides variants — assert the product row directly. */
 export const expectVariantPlanCorrect = async ({
 	ctx,
 	variantPlanId,

@@ -4,7 +4,6 @@ import type { CacheSubjectRef } from "../types/cacheSubjectRef.js";
 import { mergeCacheSubjects } from "./mergeCacheSubjects.js";
 import { recordToCacheSubjects } from "./recordToCacheSubjects.js";
 
-/** Each subject the batch moved once, merged across its records. */
 export const recordsToCacheSubjects = ({
 	records,
 }: {

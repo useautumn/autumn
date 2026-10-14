@@ -1,7 +1,5 @@
 import { WITHHELD_WRITES_KEY } from "../../agentRuntime/eve/parkedInput.js";
 
-/** The Autumn MCP write tools nest their payload under `request`; a few call
- * shapes pass the fields flat, so both have to be accepted. */
 export const toolRequestFromArgs = (
 	args?: Record<string, unknown>,
 ): Record<string, unknown> | undefined =>
@@ -9,7 +7,6 @@ export const toolRequestFromArgs = (
 		? (args.request as Record<string, unknown>)
 		: args;
 
-/** A string field from the tool call's request payload (nested or flat). */
 export const requestStringField = (
 	toolArgs: Record<string, unknown> | undefined,
 	key: string,
@@ -18,8 +15,6 @@ export const requestStringField = (
 	return typeof value === "string" ? value : undefined;
 };
 
-/** Strips harness transport (option/request ids) before display; legacy rows
- * keep the grouped-writes marker their cards still render from. */
 export const publicToolArgs = (
 	args: Record<string, unknown>,
 	{ includeWithheld = true }: { includeWithheld?: boolean } = {},
@@ -43,8 +38,6 @@ const canonicalJson = (value: unknown) =>
 			: nested,
 	);
 
-/** Payload equality ignoring key order; an absent payload is unknown, never
- * equal to another absent one. */
 export const isSameToolRequest = (
 	left: Record<string, unknown>,
 	right: Record<string, unknown>,

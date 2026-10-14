@@ -4,11 +4,6 @@ import type {
 } from "@autumn/shared";
 import { computeCustomerProductToDelete } from "@/internal/billing/v2/actions/updateSubscription/compute/cancel/computeCustomerProductToDelete";
 
-/**
- * Applies uncancel updates to an existing billing plan.
- * This merges the uncancel changes (clear cancellation state, delete scheduled product)
- * with any other changes in the plan.
- */
 export const applyUncancelToPlan = ({
 	billingContext,
 	plan,
@@ -26,13 +21,10 @@ export const applyUncancelToPlan = ({
 		ended_at: null,
 	};
 
-	// Find scheduled product to delete (only for main canceling products)
 	const deleteCustomerProduct = computeCustomerProductToDelete({
 		billingContext,
 	});
 
-	// Build the updateCustomerProduct with cancel updates merged in
-	// If plan doesn't have updateCustomerProduct, create one targeting the current product
 	const existingUpdate = plan.updateCustomerProduct;
 	const updateCustomerProduct = {
 		customerProduct:
@@ -43,17 +35,9 @@ export const applyUncancelToPlan = ({
 		},
 	};
 
-	// // If there are new customer products being inserted, also add uncancel updates to them
-	// const insertCustomerProducts = plan.insertCustomerProducts.map((insert) => ({
-	// 	...insert,
-	// 	...uncancelUpdates,
-	// }));
-
 	return {
 		...plan,
-		// insertCustomerProducts,
 		updateCustomerProduct,
-		// Use the plan's deleteCustomerProduct if already set, otherwise use ours
 		deleteCustomerProduct: plan.deleteCustomerProduct ?? deleteCustomerProduct,
 	};
 };

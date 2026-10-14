@@ -7,7 +7,6 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import type { DeductionOptions } from "../types/deductionTypes.js";
 import type { FeatureDeduction } from "../types/featureDeduction.js";
 
-/** Deduction options with all defaults resolved (no optional fields) */
 type ResolvedDeductionOptions = Required<
 	Omit<DeductionOptions, "customerEntitlementFilters" | "eventProperties">
 > & {
@@ -15,10 +14,6 @@ type ResolvedDeductionOptions = Required<
 	eventProperties: DeductionOptions["eventProperties"];
 };
 
-/**
- * Prepares deduction options with defaults and paidAllocatedV1 overrides.
- * FullSubject version of prepareDeductionOptions.
- */
 export const prepareDeductionOptionsV2 = ({
 	ctx,
 	fullSubject,

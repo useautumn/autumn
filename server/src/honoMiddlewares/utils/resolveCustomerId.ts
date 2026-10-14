@@ -1,10 +1,5 @@
 import { getV1PathSegmentAfter } from "./resolvePathSegment.js";
 
-/**
- * Centralized customer ID resolution from all possible request sources.
- * Called once in baseMiddleware so ctx.customerId is available early
- * in the middleware chain (before rollout routing, analytics, rate limiting).
- */
 export const resolveCustomerId = ({
 	method,
 	path,

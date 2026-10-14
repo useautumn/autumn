@@ -1,6 +1,3 @@
-// Repro for catalog.update 500 `duplicate key ... "entitlements_id_key"`: a variant
-// customize inheriting unchanged base rows must not reuse the base plan's row ids.
-
 import { expect, test } from "bun:test";
 import { FeatureType } from "@autumn/shared";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
@@ -115,7 +112,6 @@ test.concurrent(
 		await autumnV2_2.catalog.update(catalogParams);
 		await expectVariantOwnsItsRows();
 
-		// The customer report: retrying the identical push also failed.
 		await autumnV2_2.catalog.update(catalogParams);
 		await expectVariantOwnsItsRows();
 	},

@@ -1,7 +1,3 @@
-/**
- * Sync-ack failures that would 500 Stripe enqueue the in-house replay job.
- */
-
 import { beforeEach, describe, expect, test } from "bun:test";
 import { Hono } from "hono";
 import type Stripe from "stripe";

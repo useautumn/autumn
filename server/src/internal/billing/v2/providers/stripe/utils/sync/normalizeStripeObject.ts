@@ -38,7 +38,6 @@ export const normalizeStripePhaseItem = ({
 	phaseItem: Stripe.SubscriptionSchedule.Phase.Item;
 }): NormalizedStripeSyncCandidate => {
 	// Stripe types `phaseItem.price` as `string | Stripe.Price`. Handle both:
-	// when expanded it's a Price object; when unexpanded it's a raw price ID.
 	const phaseItemPrice = phaseItem.price as string | Stripe.Price | undefined;
 	const expandedPrice =
 		typeof phaseItemPrice === "object" ? phaseItemPrice : undefined;

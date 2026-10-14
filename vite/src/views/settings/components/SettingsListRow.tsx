@@ -5,7 +5,6 @@ interface SettingsListRowProps {
 	readonly children?: React.ReactNode;
 }
 
-/** One row inside a `SETTINGS_LIST_CLASS` card: label on the left, control on the right. */
 export const SettingsListRow = ({
 	title,
 	description,

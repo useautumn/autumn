@@ -4,7 +4,6 @@ import type { TwdContext } from "../../../lib/types/twdContext.ts";
 
 export type UserRow = typeof users.$inferSelect;
 
-/** Insert or refresh a user by email; profile fields only overwrite when provided. */
 export const upsertUser = async ({
 	ctx,
 	email,

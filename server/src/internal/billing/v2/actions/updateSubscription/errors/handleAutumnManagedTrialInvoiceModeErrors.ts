@@ -5,7 +5,6 @@ import {
 } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
 
-/** Invoice mode for a no-card trial Autumn runs is chosen at attach, where the intent is stored on the trial. */
 export const handleAutumnManagedTrialInvoiceModeErrors = ({
 	billingContext,
 }: {

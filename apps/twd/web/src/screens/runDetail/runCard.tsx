@@ -1,7 +1,6 @@
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { cn } from "../../lib/format.ts";
 
-/** A run page card: muted title, optional right-hand slot, body below. */
 export const RunCard = ({
 	title,
 	right,
@@ -27,7 +26,6 @@ export const RunCard = ({
 	</section>
 );
 
-/** Fills the rest of its card and scrolls; fades the bottom edge while more is below. */
 export const ScrollFade = ({
 	children,
 	className,

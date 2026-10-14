@@ -1,8 +1,3 @@
-/**
- * Which server, and which key. Small enough to be obvious, and worth pinning
- * because getting it wrong means pushing a sandbox config at production.
- */
-
 import { expect, test } from "bun:test";
 import { CLI_CLIENT_ID } from "../src/auth/oauthConfig";
 import {
@@ -21,7 +16,6 @@ test("defaults to sandbox and the spec's server", () => {
 });
 
 test("--prod only swaps the key, never the URL", () => {
-	// The spec's server is production; --prod is about which key authenticates.
 	expect(resolveTarget({ prod: true })).toEqual({
 		secretKeyName: "AUTUMN_PROD_SECRET_KEY",
 		clientId: CLI_CLIENT_ID,
@@ -50,16 +44,12 @@ test("--local and --prod compose: local server, prod key", () => {
 });
 
 test("the most specific target wins: base-url over local over port", () => {
-	// A URL is more specific than a host, which is more specific than a port;
-	// refusing the combination made a scripted `-l` plus an ad-hoc `-b` a
-	// two-step edit instead of an override.
 	expect(
 		resolveTarget({ local: true, baseUrl: "https://example.com" }).baseUrl,
 	).toBe("https://example.com");
 	expect(
 		resolveTarget({ port: "3001", baseUrl: "https://example.com" }).baseUrl,
 	).toBe("https://example.com");
-	// --port alone is a local target: the port implies the host.
 	expect(resolveTarget({ port: "3001" }).baseUrl).toBe("http://localhost:3001");
 });
 
@@ -172,7 +162,6 @@ test("--prod and --sandbox together are refused", () => {
 });
 
 test("--prod overrides a pinned sandbox rather than addressing it", () => {
-	// Silently keeping the pin would make the flag do nothing at all.
 	withEnv({ AUTUMN_SANDBOX_ID: "org_env" }, () => {
 		expect(resolveTarget({ prod: true })).toEqual({
 			secretKeyName: "AUTUMN_PROD_SECRET_KEY",
@@ -199,7 +188,6 @@ test("a missing sandbox key points at the command that mints one", () => {
 
 test("managing sandboxes drops the pin and uses the org key", () => {
 	withEnv({ AUTUMN_SANDBOX_ID: undefined }, () => {
-		// The server refuses a sandbox's own key for sandboxes.list|create|delete.
 		expect(
 			managementTarget({
 				target: resolveTarget({ sandbox: "org_2n4b", local: true }),
@@ -209,7 +197,6 @@ test("managing sandboxes drops the pin and uses the org key", () => {
 			secretKeyName: "AUTUMN_SECRET_KEY",
 			clientId: CLI_CLIENT_ID,
 		});
-		// With no sandbox pinned there is nothing to swap, --prod included.
 		const prodTarget = resolveTarget({ prod: true });
 		expect(managementTarget({ target: prodTarget })).toBe(prodTarget);
 	});

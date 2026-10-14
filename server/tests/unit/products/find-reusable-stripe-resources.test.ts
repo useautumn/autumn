@@ -1,17 +1,3 @@
-/**
- * findReusableStripeResources (fixed only).
- *
- * Contract:
- *   $25/$25 same Pro → stamp donor stripe_price_id
- *   amount or interval mismatch → null
- *   USD-only vs USD+EUR, USD attach → copy USD slot only
- *   EUR attach, USD slot only → null
- *   other product.id / org / env → null
- *   same product.id across versions → match
- *   catalog cannot reuse custom; custom can reuse catalog
- *   usage candidate → null
- */
-
 import { describe, expect, test } from "bun:test";
 import {
 	AppEnv,

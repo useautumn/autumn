@@ -17,8 +17,6 @@ import {
 	seatLinkId,
 } from "./utils/licensePooledBalanceTestUtils.js";
 
-// Before: Free's pooled grant survives replacement alongside Pro's credits.
-// After: the removed pooled grant expires and only Pro's credits remain.
 test("license pooled: replacing Free with Pro removes the unassigned Free grant", async () => {
 	const customerId = "lic-pool-free-to-pro";
 	const free = products.base({

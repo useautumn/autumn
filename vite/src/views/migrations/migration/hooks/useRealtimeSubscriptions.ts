@@ -48,7 +48,6 @@ export function useRealtimeSubscriptions({
 		limit?: number;
 		only?: string[];
 		retryItemStatuses?: RetryableMigrationItemRunStatus[];
-		/** Omitted → the server decides from the scope size. */
 		sendWebhooks?: boolean;
 		webhookConcurrency?: number;
 	}) => {

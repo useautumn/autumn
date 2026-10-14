@@ -9,10 +9,6 @@ import chalk from "chalk";
 import { constructPriceItem } from "@/internal/products/product-items/productItemUtils.js";
 import { constructPrepaidItem } from "@/utils/scriptUtils/constructItem.js";
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// MISSING UPDATE PARAMS ERROR
-// ═══════════════════════════════════════════════════════════════════════════════
-
 test.concurrent(`${chalk.yellowBright("error: no update params provided")}`, async () => {
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
 	const base = products.base({ items: [messagesItem] });
@@ -34,11 +30,6 @@ test.concurrent(`${chalk.yellowBright("error: no update params provided")}`, asy
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// PRODUCT TYPE TRANSITION ERRORS
-// ═══════════════════════════════════════════════════════════════════════════════
-
-// 1. Cannot update from recurring product to one-off product
 test.concurrent(`${chalk.yellowBright("error: recurring to one-off transition")}`, async () => {
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
 	const recurring = products.base({ items: [messagesItem] });
@@ -49,10 +40,9 @@ test.concurrent(`${chalk.yellowBright("error: recurring to one-off transition")}
 		actions: [s.attach({ productId: "base" })],
 	});
 
-	// Try to update to one-off items (price with null interval)
 	const oneOffPriceItem = constructPriceItem({
 		price: 50,
-		interval: null, // One-off
+		interval: null,
 	});
 
 	const updateParams = {
@@ -69,9 +59,7 @@ test.concurrent(`${chalk.yellowBright("error: recurring to one-off transition")}
 	});
 });
 
-// 2. Cannot update from one-off product to recurring product
 test.concurrent(`${chalk.yellowBright("error: one-off to recurring transition")}`, async () => {
-	// Create a one-off prepaid product
 	const oneOffPrepaidItem = constructPrepaidItem({
 		featureId: TestFeature.Messages,
 		price: 50,
@@ -96,7 +84,6 @@ test.concurrent(`${chalk.yellowBright("error: one-off to recurring transition")}
 		],
 	});
 
-	// Try to update to recurring items
 	const recurringMessagesItem = items.monthlyMessages({ includedUsage: 100 });
 
 	const updateParams = {
@@ -113,7 +100,6 @@ test.concurrent(`${chalk.yellowBright("error: one-off to recurring transition")}
 	});
 });
 
-// 3. Cannot update from paid recurring (pro) to one-off
 test.concurrent(`${chalk.yellowBright("error: paid recurring (pro) to one-off transition")}`, async () => {
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
 	const pro = products.pro({ items: [messagesItem] });
@@ -127,10 +113,9 @@ test.concurrent(`${chalk.yellowBright("error: paid recurring (pro) to one-off tr
 		actions: [s.attach({ productId: "pro" })],
 	});
 
-	// Try to update to one-off items
 	const oneOffPriceItem = constructPriceItem({
 		price: 50,
-		interval: null, // One-off
+		interval: null,
 	});
 
 	const updateParams = {
@@ -147,9 +132,7 @@ test.concurrent(`${chalk.yellowBright("error: paid recurring (pro) to one-off tr
 	});
 });
 
-// 4. Cannot update from one-off to paid recurring (with monthly price)
 test.concurrent(`${chalk.yellowBright("error: one-off to paid recurring transition")}`, async () => {
-	// Create a one-off prepaid product
 	const oneOffPrepaidItem = constructPrepaidItem({
 		featureId: TestFeature.Messages,
 		price: 50,
@@ -177,7 +160,6 @@ test.concurrent(`${chalk.yellowBright("error: one-off to paid recurring transiti
 		],
 	});
 
-	// Try to update to paid recurring items (monthly price + feature)
 	const monthlyPriceItem = items.monthlyPrice({ price: 20 });
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
 
@@ -195,11 +177,6 @@ test.concurrent(`${chalk.yellowBright("error: one-off to paid recurring transiti
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// INVOICE MODE ERRORS
-// ═══════════════════════════════════════════════════════════════════════════════
-
-// 5. Cannot use invoice mode when there's no billing change
 test.concurrent(`${chalk.yellowBright("error: invoice mode with no billing change")}`, async () => {
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
 	const priceItem = items.monthlyPrice({ price: 20 });
@@ -217,7 +194,6 @@ test.concurrent(`${chalk.yellowBright("error: invoice mode with no billing chang
 		actions: [s.attach({ productId: pro.id })],
 	});
 
-	// Add boolean feature - no price change
 	const adminRightsItem = items.adminRights();
 
 	const updateParams = {

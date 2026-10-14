@@ -1,11 +1,3 @@
-/**
- * catalogV2.update — propagate.variants target guards.
- * existing/all_versions targets may pin; unpinned ones follow the anchored row.
- * Off-anchor / missing plan → InvalidPropagationTarget. Under new_version:
- * pins 400, duplicate plan_ids 400, resolved row older than the plan's latest
- * with customers 400. Latest-but-inactive with customers mints.
- */
-
 import { expect, test } from "bun:test";
 import { ErrCode } from "@autumn/shared";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils.js";
@@ -39,8 +31,6 @@ test.concurrent(
 					baseId,
 					variantId,
 				});
-				// A config pins nothing: the server resolves the variant row anchored
-				// to the edited base and propagates the in-place edit to it.
 				const preview = (await autumnV2_3.catalogV2.previewUpdate({
 					plans: [
 						{
@@ -251,7 +241,6 @@ test.concurrent(
 				});
 				await seedVariantNewVersion({ autumn: autumnV2_3, variantId });
 				await seedDivergedVariantBase({ autumn: autumnV2_3, baseId });
-				// EU v1 repoints to base v2; active EU v2 stays anchored to base v1.
 				await autumnV2_3.catalogV2.update({
 					plans: [
 						{

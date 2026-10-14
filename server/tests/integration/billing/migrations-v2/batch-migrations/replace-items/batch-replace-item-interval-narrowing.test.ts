@@ -1,7 +1,3 @@
-/**
- * A replace narrowed by interval/count must repoint only the matching
- * same-feature row and leave the sibling's definition and balance unchanged.
- */
 import { expect, test } from "bun:test";
 import {
 	customerEntitlements,

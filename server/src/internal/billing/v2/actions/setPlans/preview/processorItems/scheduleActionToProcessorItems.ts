@@ -12,7 +12,6 @@ import type { ProcessorItemContext } from "./types/processorItemContext";
 
 type SchedulePhase = Stripe.SubscriptionScheduleUpdateParams.Phase;
 
-/** A schedule that ends by canceling leaves the subscription with nothing after its last phase. */
 const scheduleCancelsAtSeconds = (
 	scheduleParams?: Stripe.SubscriptionScheduleUpdateParams,
 ) => {
@@ -33,7 +32,6 @@ const startsBy = ({
 	typeof stripePhase.start_date === "number" &&
 	stripePhase.start_date <= msToSeconds(startsAt);
 
-/** The Stripe phase in effect at `startsAt`: the last one that has already started. */
 const stripePhaseActiveAt = ({
 	stripePhases,
 	startsAt,
@@ -45,7 +43,6 @@ const stripePhaseActiveAt = ({
 		.filter((stripePhase) => startsBy({ stripePhase, startsAt }))
 		.pop();
 
-/** Items Stripe will hold at the start of each given phase, read straight off the schedule. */
 export const scheduleActionToProcessorItems = ({
 	subscriptionScheduleAction,
 	phases,
@@ -76,7 +73,6 @@ export const scheduleActionToProcessorItems = ({
 	});
 };
 
-/** Phases that leave Stripe billing nothing: a canceled subscription now, or the phase a canceling schedule ends at. */
 export const phasesEndingSubscription = ({
 	subscriptionAction,
 	subscriptionScheduleAction,

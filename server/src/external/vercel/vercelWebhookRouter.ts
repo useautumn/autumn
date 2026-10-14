@@ -40,7 +40,6 @@ import {
 
 export const vercelWebhookRouter = new Hono<HonoEnv>();
 
-// Global middlewares for all vercel webhook routes
 vercelWebhookRouter.use(
 	"/:orgId/:env/*",
 	vercelSeederMiddleware,
@@ -49,16 +48,12 @@ vercelWebhookRouter.use(
 	traceEnrichMiddleware,
 );
 
-// Product-level plans (no integrationConfigurationId in path)
 vercelWebhookRouter.get(
 	"/:orgId/:env/v1/products/:productId/plans",
 	vercelOidcAuthMiddleware,
 	...handleVercelListBillingPlans,
 );
 
-// --- Installation sub-router ---
-// Mounted at /:orgId/:env/v1/installations/:integrationConfigurationId
-// All routes get OIDC auth + customer middleware automatically
 const installationsRouter = new Hono<HonoEnv>();
 
 installationsRouter.use(
@@ -72,16 +67,13 @@ installationsRouter.use(
 	vercelCustomerMiddleware,
 );
 
-// Plans
 installationsRouter.get("/plans", ...handleVercelListBillingPlans);
 
-// Installation CRUD
 installationsRouter.get("/", ...handleGetInstallation);
 installationsRouter.put("/", ...handleUpsertInstallation);
 installationsRouter.patch("/", ...handleUpdateVercelBillingPlan);
 installationsRouter.delete("/", ...handleDeleteInstallation);
 
-// Resources
 installationsRouter.post("/resources", ...handleCreateResource);
 installationsRouter.get("/resources/:resourceId", ...handleGetResource);
 installationsRouter.get(
@@ -95,7 +87,6 @@ installationsRouter.post(
 	...handleRotateResourceSecret,
 );
 
-// Resource transfers
 installationsRouter.post(
 	"/resource-transfer-requests",
 	...handleCreateResourceTransfer,
@@ -114,7 +105,6 @@ vercelWebhookRouter.route(
 	installationsRouter,
 );
 
-// Vercel marketplace webhooks - POST with signature validation
 vercelWebhookRouter.post(
 	"/:orgId/:env/*",
 	captureRawBody,

@@ -51,16 +51,6 @@ const disableCurrentDefault = async ({
 				message: `You have another default trial product in this group (${curDefault.id}). Please remove default from that product first.`,
 			});
 		}
-		// if (curDefault) {
-		// 	logger.info(
-		// 		`Disabling trial on cur default trial product: ${curDefault.id}`,
-		// 	);
-		// 	await ProductService.updateByInternalId({
-		// 		db,
-		// 		internalId: curDefault.internal_id,
-		// 		update: { is_default: false },
-		// 	});
-		// }
 	} else if (type === "free") {
 		const curDefault = defaults?.free;
 		if (curDefault) {
@@ -68,14 +58,6 @@ const disableCurrentDefault = async ({
 				message: `You have another default product (${curDefault.id}). Please remove default from that product first.`,
 			});
 		}
-		// if (curDefault) {
-		// 	logger.info(`Disabling trial on cur default product: ${curDefault.id}`);
-		// 	await ProductService.updateByInternalId({
-		// 		db,
-		// 		internalId: curDefault.internal_id,
-		// 		update: { is_default: false },
-		// 	});
-		// }
 	}
 };
 
@@ -135,14 +117,12 @@ export const validateDefaultFlag = async ({
 				: curProduct?.is_default || false;
 		if (!isDefault) return { type: undefined };
 
-		// If default, check if there are any prices...?
 		const isFree = body.items
 			? isFreeProductV2({ items: body.items })
 			: isFreeProduct(curProduct?.prices || []);
 
 		if (isFree) return { type: "free" };
 
-		// 1. Check if it's a one off product
 		const isOneOffProduct = body.items
 			? isOneOffProductV2({ items: body.items })
 			: isOneOff(curProduct?.prices || []);
@@ -153,7 +133,6 @@ export const validateDefaultFlag = async ({
 			});
 		}
 
-		// 2. Check if it is default trial
 		const freeTrial = body.free_trial || curProduct?.free_trial;
 		const defaultTrial = body.items
 			? isDefaultTrialV2({

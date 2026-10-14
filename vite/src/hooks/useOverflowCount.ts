@@ -1,12 +1,5 @@
 import { useLayoutEffect, useRef, useState } from "react";
 
-/**
- * Measures how many fixed-order children fit on one row, reserving room for a
- * trailing overflow indicator when not everything fits.
- *
- * Render every item into `measureRef` off-screen at natural width, followed by
- * the indicator template last; the visible row renders only `visibleCount`.
- */
 export function useOverflowCount({
 	itemCount,
 	gap,
@@ -23,8 +16,6 @@ export function useOverflowCount({
 	const [visibleCount, setVisibleCount] = useState(itemCount);
 
 	useLayoutEffect(() => {
-		// Keep the last measured count when disabled — resetting it makes callers
-		// that gate UI on `visibleCount < itemCount` flicker for one render.
 		if (!enabled) return;
 
 		const container = containerRef.current;
@@ -55,20 +46,16 @@ export function useOverflowCount({
 				return fitted;
 			};
 
-			// Everything fits with no indicator — show it all.
 			if (fitCount(0) === itemEls.length) {
 				setVisibleCount(itemEls.length);
 				return;
 			}
 
-			// Always show at least one item, even if it alone overflows.
 			setVisibleCount(Math.max(fitCount(indicatorWidth + gap), 1));
 		};
 
 		recompute();
 
-		// Only width matters. Observing height too would re-measure on every frame
-		// of a container height animation, thrashing the count mid-transition.
 		let lastWidth = container.clientWidth;
 		const observer = new ResizeObserver(() => {
 			const width = container.clientWidth;

@@ -1,11 +1,3 @@
-/**
- * Reusable config SOURCE for atmn tests. Everything here is text the CLI
- * executes, so a test reads like the config it is about. Compose with
- * `configBody` and hand the result to `initAtmnScenario({ config })`.
- */
-
-/** Every feature type: two metered (one non-consumable), a credit system over
- * them, an AI credit system, and two booleans. */
 export const everyFeatureType = `
 		feature({ featureId: "seats", name: "Seats", type: "metered", consumable: false }),
 		feature({ featureId: "messages", name: "Messages", type: "metered", consumable: true }),
@@ -48,7 +40,6 @@ export const freePlan = `
 			],
 		}),`;
 
-/** A paid monthly plan; pass item source lines to shape it. */
 export const paidMonthly = ({
 	planId = "pro",
 	amount = 49,
@@ -73,9 +64,6 @@ export const paidMonthly = ({
 			],${versionSlug == null ? "" : `\n\t\t\tversionSlug: "${versionSlug}",`}${extra}
 		}),`;
 
-/** The complicated pro: trial, prepaid seats with proration, graduated overage,
- * an unlimited item, a boolean, spend limit and usage alert. Version via `versionSlug`;
- * every version sits in `plans`, so say which one is live. */
 export const versionedPro = ({
 	versionSlug = "v1",
 	amount = 49,
@@ -128,7 +116,6 @@ export const versionedPro = ({
 			},
 		}),`;
 
-/** A seat license plan and an enterprise plan that licenses it. */
 export const seatPlan = `
 		plan({
 			planId: "seat",
@@ -153,9 +140,6 @@ export const enterpriseWithSeats = ({
 			licenses: [{ licensePlanId: "seat", versionSlug: "v1", included: ${included} }],
 		}),`;
 
-/** The `atmn({...})` body from collection sources. Omit a key to leave that
- * collection alone on the server; pass "" to state it empty. Every version
- * of a plan goes in `plans`, each stating `active`. */
 export const configBody = ({
 	features,
 	plans,
@@ -167,7 +151,6 @@ export const configBody = ({
 	plans?: string;
 	rewards?: string;
 	referralPrograms?: string;
-	/** The `settings` block's members, as source: `multiCurrency: true`. */
 	settings?: string;
 }): string => {
 	const lines: string[] = [];

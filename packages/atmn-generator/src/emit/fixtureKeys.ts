@@ -13,8 +13,6 @@ const keysOf = ({
 	context: EmitContext;
 }): string[] => {
 	const keys: string[] = [];
-	// The fixture type intersects allOf branches, so top-level members come from
-	// every branch, in spec order.
 	for (const branch of schema.allOf ?? []) {
 		keys.push(...keysOf({ schema: branch, path, context }));
 	}
@@ -24,7 +22,6 @@ const keysOf = ({
 	return keys;
 };
 
-/** The fixture-side top-level keys of a collection item, in spec order. */
 export const fixtureKeys = ({
 	schema,
 	overlay,
@@ -37,7 +34,6 @@ export const fixtureKeys = ({
 	...new Set(keysOf({ schema, path: "", context: { overlay, collection } })),
 ];
 
-/** Every object node a schema can be, through refs, arrays and branches. */
 const objectNodesOf = ({
 	schema,
 	root,
@@ -62,7 +58,6 @@ const objectNodesOf = ({
 	];
 };
 
-/** The value schema of a record node, when the node is one. */
 const recordValueSchema = ({
 	schema,
 	root,
@@ -104,8 +99,6 @@ const requiredPathsOf = ({
 				seen: next,
 				out,
 			});
-			// A record's keys are the user's; its values are still ours, one
-			// level down at `.*` — the same convention the path hints use.
 			const values = recordValueSchema({ schema: member.schema, root });
 			if (values)
 				requiredPathsOf({
@@ -120,11 +113,6 @@ const requiredPathsOf = ({
 	}
 };
 
-/**
- * Fixture paths a config must state, array indices elided. A pulled row whose
- * value is null still writes them: dropping one emits source the fixture type
- * rejects, which is a pull that produces a config that will not compile.
- */
 export const requiredFixturePaths = ({
 	schema,
 	root,

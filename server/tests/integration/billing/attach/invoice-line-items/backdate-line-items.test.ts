@@ -1,14 +1,3 @@
-/**
- * Backdated attach: persisted Autumn invoice + invoice_line_items match the
- * multi-cycle amount Stripe bills via backdate_start_date.
- *
- * Contract under test:
- *   - A backdated new subscription that spans N elapsed cycles produces an Autumn
- *     invoice whose total and persisted line items sum to N x the per-cycle price.
- *   - Computed previews use the aggregate backdated period, while persisted
- *     invoice_line_items keep Stripe's per-cycle periods and descriptions.
- */
-
 import { expect, test } from "bun:test";
 import { type AttachParamsV1Input, ms } from "@autumn/shared";
 import { expectInvoiceLineItemsCorrect } from "@tests/integration/billing/utils/expectInvoiceLineItemsCorrect";
@@ -22,9 +11,9 @@ test.concurrent(
 	`${chalk.yellowBright("backdate-line-items: 35-day backdate bills 2 cycles and persists matching line items")}`,
 	async () => {
 		const customerId = "attach-backdate-line-items";
-		const basePrice = 20; // pro = $20/mo
-		const cycles = 2; // 35-day backdate on a monthly plan spans 2 cycle starts
-		const expectedTotal = basePrice * cycles; // $40
+		const basePrice = 20;
+		const cycles = 2;
+		const expectedTotal = basePrice * cycles;
 
 		const pro = products.pro({
 			id: "pro",
@@ -48,10 +37,8 @@ test.concurrent(
 		});
 
 		expect(result.invoice?.stripe_id).toBeDefined();
-		// Autumn invoice header reflects the full backdated charge
 		expect(result.invoice?.total).toBe(expectedTotal);
 
-		// Persisted invoice_line_items sum to the same multi-cycle total
 		const lineItems = await expectInvoiceLineItemsCorrect({
 			stripeInvoiceId: result.invoice!.stripe_id,
 			expectedTotal,

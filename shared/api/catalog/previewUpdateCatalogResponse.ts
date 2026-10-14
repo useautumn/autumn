@@ -4,7 +4,6 @@ import { OperationsSchema } from "@api/migrations/operations/operations.js";
 import { PlanUpdatePreviewSchema } from "@api/products/previewUpdatePlan/planUpdatePreview.js";
 import { z } from "zod/v4";
 
-/** Draft migration that would move existing customers onto the new plan shape. */
 export const MigrationDraftSchema = z.object({
 	id: z.string(),
 	filter: MigrationFilterSchema,
@@ -46,7 +45,6 @@ export const CatalogPlanPreviewSchema = PlanUpdatePreviewSchema.extend({
 });
 export type CatalogPlanPreview = z.infer<typeof CatalogPlanPreviewSchema>;
 
-/** Reason a feature update would be rejected, surfaced before the write is attempted. */
 export const FeatureUpdateBlockerSchema = z.object({
 	field: z.enum(["type", "id", "usage_type"]),
 	code: z.enum([
@@ -76,7 +74,6 @@ export type CatalogConfigResourcePreview = z.infer<
 	typeof CatalogConfigResourcePreviewSchema
 >;
 
-/** Response for `catalog.preview_update`: resolved plans + features, unpersisted. */
 export const CatalogPreviewUpdateResponseSchema = z.object({
 	plan_changes: z.array(CatalogPlanPreviewSchema),
 	feature_changes: z.array(CatalogFeaturePreviewSchema),

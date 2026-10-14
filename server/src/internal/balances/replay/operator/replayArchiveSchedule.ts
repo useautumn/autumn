@@ -110,10 +110,6 @@ const runReplayLane = async <T>({
 	}
 };
 
-/** Lanes pull the next item in manifest order, so at most `laneCount` customers
- *  are ever in flight and no customer is fanned out ahead of the bound. Every
- *  lane is awaited before the first failure is rethrown, so a rejected lane
- *  never leaves the others running unobserved. */
 export async function runReplayLanes<T>({
 	items,
 	laneCount,

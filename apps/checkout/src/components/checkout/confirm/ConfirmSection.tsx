@@ -58,9 +58,7 @@ export function ConfirmSection() {
 					skeleton={<BottomSectionSkeleton />}
 					className="flex flex-col gap-4"
 				>
-					{/* Amount summary */}
 					<div className="flex flex-col gap-1">
-						{/* Amount due today */}
 						<div className="flex items-center justify-between">
 							<span className="text-sm text-foreground">
 								Amount due today
@@ -70,7 +68,6 @@ export function ConfirmSection() {
 							</span>
 						</div>
 
-						{/* Amount next cycle / Amount due on trial end */}
 						{preview?.next_cycle && (
 							<div className="flex items-center justify-between text-sm text-muted-foreground">
 								<span>
@@ -86,7 +83,6 @@ export function ConfirmSection() {
 						)}
 					</div>
 
-					{/* Confirm button */}
 					<motion.div
 						whileTap={{ scale: 0.98 }}
 						transition={FAST_TRANSITION}
@@ -113,7 +109,6 @@ export function ConfirmSection() {
 						</Button>
 					</motion.div>
 
-					{/* Error message */}
 					<AnimatePresence>
 						{status.confirmError && (
 							<motion.p

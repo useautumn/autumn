@@ -25,10 +25,6 @@ import { billingPlanToNextCyclePreview } from "@/internal/billing/v2/utils/billi
 import { CusService } from "../../CusService.js";
 import { getFinalUsageInvoicePreview } from "./getFinalUsageInvoicePreview.js";
 
-/**
- * Previews the upcoming invoice for each of the customer's Stripe
- * subscriptions, using the same line-item engine that bills them at renewal.
- */
 export const getCusInvoicePreviews = async ({
 	ctx,
 	fullCus,
@@ -41,10 +37,6 @@ export const getCusInvoicePreviews = async ({
 	if (!expand?.includes(CustomerExpand.InvoicePreviews)) return undefined;
 	if (!fullCus.processor?.id) return undefined;
 
-	// The caller's view is subject-scoped: at customer scope it omits
-	// entity-scoped products, whose prices still bill on the customer's
-	// subscription. Reload across every scope so the invoice is whole, and so
-	// entity-level spend limits resolve against a populated `entities`.
 	const fullCustomer = await CusService.getFull({
 		ctx,
 		idOrInternalId: fullCus.internal_id,
@@ -112,8 +104,6 @@ export const getCusInvoicePreviews = async ({
 				options: { chargeUsageLineItems: true },
 			});
 
-			// Nothing recurs past the boundary (e.g. cancelling at period end), but
-			// usage accrued this cycle is still invoiced.
 			if (!nextCycle) {
 				const stripeSubscriptionScheduleId = stripeSubscriptionToScheduleId({
 					stripeSubscription,
@@ -136,8 +126,6 @@ export const getCusInvoicePreviews = async ({
 			return ApiInvoicePreviewV0Schema.parse({
 				object: "invoice_preview",
 				subscription_id: subscriptionId,
-				// A boundary downgrade bills the outgoing plan's usage alongside the
-				// incoming plan's base price, so an invoice can span two plans.
 				plan_ids: [
 					...new Set(nextCycle.line_items.map((lineItem) => lineItem.plan_id)),
 				],

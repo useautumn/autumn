@@ -9,7 +9,6 @@ import { readLogOffset } from "../actions/readLogOffset.js";
 import { withResidentSubject } from "../actions/withResidentSubject.js";
 import type { PartitionProcessorScope } from "../types/partitionProcessor.js";
 
-/** The subject as the next command would see it, and the log offset it covers, sampled in the same step; nothing is decided on it. */
 export async function readSubjectState({
 	scope,
 	command,

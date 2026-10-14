@@ -8,18 +8,6 @@ import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 
-/**
- * Remove Trial Error Tests
- *
- * Tests that verify subscription update fails correctly and customer state
- * remains unchanged when payment cannot be processed.
- *
- * Scenarios:
- * - No payment method (payment_method_required)
- * - 3DS authentication required (3ds_required)
- * - Payment failed (payment_failed)
- */
-
 test.concurrent(`${chalk.yellowBright("remove-trial-error: no payment method")}`, async () => {
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
 	const proTrial = products.proWithTrial({
@@ -36,11 +24,10 @@ test.concurrent(`${chalk.yellowBright("remove-trial-error: no payment method")}`
 		],
 		actions: [
 			s.attach({ productId: proTrial.id }),
-			s.removePaymentMethod(), // Remove payment method
+			s.removePaymentMethod(),
 		],
 	});
 
-	// Remove trial - should fail with payment_method_required error
 	const updateParams = {
 		customer_id: customerId,
 		product_id: proTrial.id,
@@ -55,11 +42,9 @@ test.concurrent(`${chalk.yellowBright("remove-trial-error: no payment method")}`
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Product should still be trialing (update deferred)
 	const product = customer.products?.find((p) => p.id === proTrial.id);
 	expect(product?.status).toBe("trialing");
 
-	// Features should not have changed
 	expectCustomerFeatureCorrect({
 		customer,
 		featureId: TestFeature.Messages,
@@ -84,11 +69,10 @@ test.concurrent(`${chalk.yellowBright("remove-trial-error: 3ds authentication re
 		actions: [
 			s.attach({ productId: proTrial.id }),
 			s.removePaymentMethod(),
-			s.attachPaymentMethod({ type: "authenticate" }), // Switch to 3DS-required card
+			s.attachPaymentMethod({ type: "authenticate" }),
 		],
 	});
 
-	// Remove trial - should fail with 3ds_required error
 	const updateParams = {
 		customer_id: customerId,
 		product_id: proTrial.id,
@@ -103,11 +87,9 @@ test.concurrent(`${chalk.yellowBright("remove-trial-error: 3ds authentication re
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Product should still be trialing (update deferred)
 	const product = customer.products?.find((p) => p.id === proTrial.id);
 	expect(product?.status).toBe("trialing");
 
-	// Features should not have changed
 	expectCustomerFeatureCorrect({
 		customer,
 		featureId: TestFeature.Messages,
@@ -133,11 +115,10 @@ test.concurrent(`${chalk.yellowBright("remove-trial-error: payment failed")}`, a
 		actions: [
 			s.attach({ productId: proTrial.id }),
 			s.removePaymentMethod(),
-			s.attachPaymentMethod({ type: "fail" }), // Switch to failing card
+			s.attachPaymentMethod({ type: "fail" }),
 		],
 	});
 
-	// Update messages - should fail with payment_failed error
 	const newMessagesItem = items.monthlyMessages({ includedUsage: 200 });
 	const updateParams = {
 		customer_id: customerId,
@@ -154,11 +135,9 @@ test.concurrent(`${chalk.yellowBright("remove-trial-error: payment failed")}`, a
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Product should still be active (update deferred)
 	const product = customer.products?.find((p) => p.id === proTrial.id);
 	expect(product?.status).toBe("trialing");
 
-	// Features should not have changed - still original values
 	expectCustomerFeatureCorrect({
 		customer,
 		featureId: TestFeature.Messages,

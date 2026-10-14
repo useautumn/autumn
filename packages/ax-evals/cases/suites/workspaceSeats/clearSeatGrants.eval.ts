@@ -12,13 +12,6 @@ import {
 	workspaceSeatsConfig,
 } from "./workspaceSeatsPricing.ts";
 
-/**
- * KIND B negative control (undeleted twin of askSeatGrants): the
- * per-workspace grant is stated up front, so asking what a workspace comes
- * with again is a failure — an agent that always asks passes the ask twin
- * and fails this. The license structure must still land from the allusive
- * phrasing alone.
- */
 export const clearSeatGrants = defineCase({
 	name: "workspace-seats-clear-seat-grants",
 	prompt: [

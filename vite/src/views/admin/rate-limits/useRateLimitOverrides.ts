@@ -8,7 +8,6 @@ import type {
 const RATE_LIMIT_OVERRIDES_PATH = "/admin/rate-limit-overrides-config";
 const RATE_LIMIT_OVERRIDES_QUERY_KEY = ["admin-rate-limit-overrides"];
 
-/** The policy table with its overrides; a write replaces the whole S3 config and stays pending until the refetch lands. */
 export const useRateLimitOverrides = () => {
 	const axiosInstance = useAxiosInstance();
 	const queryClient = useQueryClient();

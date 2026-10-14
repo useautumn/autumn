@@ -20,7 +20,6 @@ import {
 import type { SqliteStore } from "./types/sqliteStore.js";
 import { isDeletedSubject, type SubjectRow } from "./types/storedSubject.js";
 
-/** Tells this thread's stores apart in the one held-subjects budget. */
 let storesOpened = 0;
 
 const subjectKey = ({
@@ -37,10 +36,6 @@ const keyOf = ({ state }: SubjectRow): string =>
 		entityId: state.identity.entityId ?? null,
 	});
 
-/**
- * One slot's file and the subjects held from it. Only the slot's owner thread opens the file, so what it holds is
- * the file: a subject is parsed once, on its first read or as it is written, and served from memory after.
- */
 export const openSqliteStore = ({
 	databasePath,
 	held,
@@ -48,7 +43,6 @@ export const openSqliteStore = ({
 }: {
 	databasePath: string;
 	held: HeldSubjects;
-	/** This replica's clock, stamped on every write so a peer can ask for what was written since. */
 	now?: () => number;
 }): SqliteStore => {
 	const ctx = { sqliteDb: openSlotDatabase({ databasePath }) };
@@ -63,7 +57,6 @@ export const openSqliteStore = ({
 		if (found) return found.subject;
 		const read = readSubjectRow({ ctx, ...params });
 		if (read === null) return null;
-		// Frozen, because every check of the subject shares the copy.
 		const subject = deepFreeze(read.subject);
 		held.hold({ key, subject, bytes: read.bytes, sliceHash: read.sliceHash });
 		return subject;
@@ -82,7 +75,6 @@ export const openSqliteStore = ({
 		return readSubjectVersion({ ctx, ...params });
 	}
 
-	/** A slice the held copy already has is kept as it is: its row stays, and its frozen catalog and org are reused. */
 	function writeOf(subject: SubjectRow): SubjectWrite {
 		const slice = subjectToSlice({ subject });
 		const heldCopy = held.get(storePrefix + keyOf(subject));
@@ -96,7 +88,6 @@ export const openSqliteStore = ({
 		return { subject: { ...subject, catalog, org }, slice, sliceStored: true };
 	}
 
-	/** A stored subject is held as written; one ignored as older keeps the newer copy, carrying a version the push raised. */
 	function holdWritten({
 		write: { subject, slice },
 		result: { bytes, customerVersion },
@@ -132,7 +123,6 @@ export const openSqliteStore = ({
 		});
 	}
 
-	/** After the commit: only the store decides which part settles a customer's version, and rows still mean "stored". */
 	function setSubjects({ subjects }: { subjects: SubjectRow[] }): boolean[] {
 		const writes = subjects.map(writeOf);
 		const results = upsertSubjects({ ctx, writes, appliedAt: now() });

@@ -5,7 +5,6 @@ import { getEveSessionBySessionId } from "../../agentRuntime/eve/repo.js";
 import { approvalAuthContext } from "../domain/approvalRecord.js";
 import { cancelApprovalParkAndDrain } from "./cancelApprovalParkAndDrain.js";
 
-/** Best effort: cancels the Eve request behind a superseded card. */
 export const releaseSupersededPark = async ({
 	approval,
 	note,

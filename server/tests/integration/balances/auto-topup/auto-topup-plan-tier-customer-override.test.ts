@@ -1,8 +1,3 @@
-/**
- * Plan-tier auto_topups resolution and scope. auto_topups process async via SQS,
- * so each test waits then asserts the topped up balance + the extra paid invoice.
- */
-
 import { test } from "bun:test";
 import type { ApiCustomerV5 } from "@autumn/shared";
 import { makeAutoTopupConfig } from "@tests/integration/balances/auto-topup/utils/makeAutoTopupConfig";
@@ -20,7 +15,6 @@ import {
 } from "./utils/autoTopupPlanTier.js";
 
 test(`${chalk.yellowBright("auto-topup-plan2: a CUSTOMER config overrides the plan default")}`, async () => {
-	// Plan default tops up 100.
 	const prod = products.oneOffAddOn({
 		id: "topup-plan2",
 		items: [oneOffItem()],
@@ -41,7 +35,6 @@ test(`${chalk.yellowBright("auto-topup-plan2: a CUSTOMER config overrides the pl
 		],
 	});
 
-	// Customer overrides: tops up 300 instead of the plan's 100.
 	await autumnV2_1.customers.update(customerId, {
 		billing_controls: makeAutoTopupConfig({ threshold: 20, quantity: 300 }),
 	});
@@ -54,7 +47,6 @@ test(`${chalk.yellowBright("auto-topup-plan2: a CUSTOMER config overrides the pl
 	});
 	await timeout(AUTO_TOPUP_WAIT_MS);
 
-	// 100 - 85 + 300 = 315 (customer quantity, not the plan's 100 -> 115).
 	const after = await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
 	expectBalanceCorrect({
 		customer: after,

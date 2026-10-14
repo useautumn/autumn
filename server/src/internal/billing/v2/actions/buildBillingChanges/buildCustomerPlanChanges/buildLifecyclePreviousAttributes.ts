@@ -8,8 +8,6 @@ import {
 const isPastDue = (status: CusProductStatus): boolean =>
 	status === CusProductStatus.PastDue;
 
-/** Sparse diff of the public lifecycle scalars, holding their `before` values.
- * Null when nothing changed. */
 export const buildLifecyclePreviousAttributes = ({
 	before,
 	after,
@@ -19,8 +17,6 @@ export const buildLifecyclePreviousAttributes = ({
 }): CustomerPlanPreviousAttributes | null => {
 	const previous: CustomerPlanPreviousAttributes = {};
 
-	// Trialing↔Active and PastDue↔Active both map to "active" publicly, so they
-	// don't show here — they surface via past_due / trial_ends_at instead.
 	const beforePublic = customerProductToApiSubscriptionStatus({
 		status: before.status,
 	});

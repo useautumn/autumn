@@ -1,16 +1,3 @@
-/**
- * Times pooled add (insert sources + contributions + granted Δ) and
- * pooled remove (delete contributions, subtract granted, expire) on an
- * isolated DEV schema. One customer, one pre-minted empty pool, N seats.
- *
- *   NODE_ENV=development infisical run --env=dev --recursive -- \
- *     bun tests/perf/benchPooledLicenseAddRemove.ts
- *
- *   BENCHMARK_CONTRIBUTIONS=10000  (default 10_000)
- *
- * Does not use staging or prod. Drops the schema on exit.
- */
-
 import { EntInterval } from "@autumn/shared";
 import { sql } from "drizzle-orm";
 import { assertNotProductionDb } from "@/db/dbUtils.js";

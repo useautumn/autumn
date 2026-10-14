@@ -18,11 +18,6 @@ export type LicenseAssignment = {
 const EMPTY_POOLS: ApiCustomerLicenseV0[] = [];
 const EMPTY_ASSIGNMENTS: LicenseAssignment[] = [];
 
-/**
- * Loads the customer's license pools and active assignments, and exposes
- * assign/unassign mutations. Mutations invalidate pools, assignments, and the
- * customer query so provisioned entitlements refresh.
- */
 export const useLicenseBalancesQuery = ({
 	customerId,
 	entityId,
@@ -50,8 +45,6 @@ export const useLicenseBalancesQuery = ({
 		enabled: enabled && Boolean(customerId),
 	});
 
-	// All active assignments for the customer; consumers scope by entity so a
-	// single cache entry serves the section, button, and detail sheet.
 	const { data: assignmentsData, isLoading: assignmentsLoading } = useQuery<{
 		list: LicenseAssignment[];
 	}>({
@@ -74,8 +67,6 @@ export const useLicenseBalancesQuery = ({
 			queryClient.invalidateQueries({ queryKey: ["license_pools"] }),
 			queryClient.invalidateQueries({ queryKey: ["license_assignments"] }),
 			queryClient.invalidateQueries({ queryKey: ["customer"] }),
-			// Attach can create entities; refresh the entity list so a new one is
-			// immediately selectable.
 			queryClient.invalidateQueries({ queryKey: ["entities"] }),
 		]);
 

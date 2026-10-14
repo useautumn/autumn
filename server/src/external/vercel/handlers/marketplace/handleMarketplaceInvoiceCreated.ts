@@ -26,12 +26,10 @@ export const handleMarketplaceInvoiceCreated = async ({
 
 	const stripeCli = createStripeCli({ org, env });
 
-	// 1. Retrieve invoice
 	const invoice = await stripeCli.invoices.retrieve(externalInvoiceId, {
 		expand: ["subscription"],
 	});
 
-	// 2. Find subscription ID
 	const subscriptionId = getInvoiceSubscriptionId(invoice);
 	if (!subscriptionId) {
 		logger.info(
@@ -40,10 +38,8 @@ export const handleMarketplaceInvoiceCreated = async ({
 		return;
 	}
 
-	// 3. Fetch subscription
 	const subscription = await stripeCli.subscriptions.retrieve(subscriptionId);
 
-	// 4. Check if cus_product already exists for this subscription
 	const existingCusProducts = await customerProductRepo.getByStripeSubId({
 		db,
 		stripeSubId: subscriptionId,
@@ -61,7 +57,6 @@ export const handleMarketplaceInvoiceCreated = async ({
 		return;
 	}
 
-	// 5. Provision (safety net for cases where resource-creation didn't provision)
 	const vercelBillingPlanId = subscription.metadata?.vercel_billing_plan_id;
 	if (!vercelBillingPlanId) {
 		logger.error(
@@ -75,7 +70,6 @@ export const handleMarketplaceInvoiceCreated = async ({
 
 	const vercelResourceId = subscription.metadata?.vercel_resource_id;
 
-	// Fetch customer
 	const partialCustomer = await CusService.getByStripeId({
 		ctx,
 		stripeId: invoice.customer as string,
@@ -104,7 +98,6 @@ export const handleMarketplaceInvoiceCreated = async ({
 		return;
 	}
 
-	// Fetch resource metadata for prepaid parsing (if any)
 	let resourceMetadata: Record<string, any> | undefined;
 	if (vercelResourceId?.startsWith("vre_")) {
 		try {

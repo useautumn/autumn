@@ -22,7 +22,6 @@ const intervalToEntInterval = ({
 			return EntInterval.Day;
 		case "week":
 			return EntInterval.Week;
-		// case "month":
 		default:
 			return EntInterval.Month;
 	}

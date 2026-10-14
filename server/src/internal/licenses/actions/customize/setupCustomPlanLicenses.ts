@@ -16,7 +16,6 @@ import {
 } from "./computeLicenseCustomize.js";
 
 export type CustomPlanLicensesSetup = {
-	/** Full effective plan license set for the parent — overlay for fullProduct.licenses. */
 	planLicenses: FullPlanLicense[];
 	insertPlanLicenses: InsertPlanLicenseSpec[];
 };
@@ -27,7 +26,6 @@ const hasCustomizeContent = (entry: CustomizePlanLicense) =>
 		entry.customize.add_items !== undefined ||
 		entry.customize.remove_items !== undefined);
 
-/** True when the entry resolves to pure catalog inheritance — no custom row. */
 const matchesCatalogLink = ({
 	entry,
 	catalogLink,
@@ -52,15 +50,6 @@ const matchesCatalogLink = ({
 	return true;
 };
 
-/**
- * Resolves customize.upsert_licenses into the parent's effective license set
- * plus the custom definition rows to insert — the license-level sibling of
- * setupCustomFullProduct. Nothing is written; execute persists
- * insertPlanLicenses and the custom items.
- *
- * Customize always applies to the base plan license: the catalog link's
- * pinned product, else the license plan's latest version (new add).
- */
 export const setupCustomPlanLicenses = async ({
 	ctx,
 	parentProduct,
@@ -127,7 +116,6 @@ export const setupCustomPlanLicenses = async ({
 			row,
 			customPrices: computation?.customPrices ?? [],
 			customEntitlements: computation?.customEntitlements ?? [],
-			// Junction rows only when the item set diverges from the license base.
 			items: computation ? derivePlanLicenseItemRefs(effectiveProduct) : [],
 		});
 

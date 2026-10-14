@@ -52,7 +52,6 @@ const makeRedisErrorLogger = (): ((message: string) => void) => {
 	};
 };
 
-/** Configure a Redis instance with the FullSubject (V2 cache) custom commands. */
 export const registerRedisCommands = ({
 	redisInstance,
 }: {

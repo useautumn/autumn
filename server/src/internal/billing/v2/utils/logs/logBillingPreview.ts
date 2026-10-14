@@ -44,7 +44,6 @@ export const logBillingPreview = ({
 		ctx,
 		extras: {
 			billingPreview: {
-				// Immediate charge breakdown
 				total: `${total} ${currency}`,
 				allLineItems:
 					allLineItems.length > 0 ? allLineItems.map(formatLineItem) : "none",
@@ -53,7 +52,6 @@ export const logBillingPreview = ({
 						? immediateLineItems.map(formatLineItem)
 						: "none",
 
-				// Next cycle calculation
 				nextCycle: {
 					allCustomerProducts:
 						allCustomerProducts.map(formatCustomerProduct).join(", ") || "none",

@@ -32,7 +32,6 @@ export const BENCH_FANOUT_PREFIXES: BenchFanoutShapePrefixes = {
 export const FANOUT_SHAPE_FROM_INCLUDED = 100;
 export const FANOUT_SHAPE_TO_INCLUDED = 200;
 
-/** Same included, distinct consumption — a swapped write fails the balance check. */
 export const FANOUT_SHAPE_FEATURES = [
 	{ featureId: TestFeature.Messages, consumed: 10 },
 	{ featureId: TestFeature.Words, consumed: 20 },
@@ -150,8 +149,6 @@ export const ensureBenchFanoutShapeProduct = async ({
 	return { internalProductId };
 };
 
-/** Own prefixes: a replace mutates every measured row, so this dataset
- * cannot share customer_entitlements with the other plan-item benches. */
 export const seedBenchFanoutShape = async ({
 	db,
 	count,

@@ -13,8 +13,6 @@ import { customerLicenseToUnusedPrepaidRows } from "./customerLicenseToUnusedPre
 import { licenseBillingRowToLineItem } from "./licenseBillingRowToLineItem.js";
 import { resolveLicenseBillingRowsThroughDefinition } from "./resolveLicenseBillingRowsThroughDefinition.js";
 
-/** One row per price with summed quantities, so a direction bills its full
- * quantity picture as a single line (mirroring feature-quantity updates). */
 const mergeLicenseBillingRowsByPrice = (
 	licenseBillingRows: LicenseBillingPriceRow[],
 ): LicenseBillingPriceRow[] => {
@@ -31,7 +29,6 @@ const mergeLicenseBillingRowsByPrice = (
 	return [...mergedByPriceId.values()];
 };
 
-/** Builds one license pool's assigned and unused prepaid line items. */
 export const customerLicenseToLineItems = ({
 	ctx,
 	billingContext,
@@ -59,8 +56,6 @@ export const customerLicenseToLineItems = ({
 	const projectedPlanLicenseIds =
 		billingContext.customerLicenseBillingContext?.projectedPlanLicenseIds ?? [];
 
-	// Seats bill through THIS side's definition: refunds get the outgoing
-	// pool's terms, charges the incoming — mirroring the repoint executor.
 	const licenseBillingRows = [
 		...resolveLicenseBillingRowsThroughDefinition({
 			licenseBillingRows: seatRows,

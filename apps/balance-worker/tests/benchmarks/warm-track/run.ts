@@ -18,14 +18,12 @@ import {
 import { createBenchProcessor } from "../track-throughput/createBenchProcessor.js";
 import { buildScenario } from "../track-throughput/scenarios.js";
 
-/** One warm customer, tracks decided one after another: the CPU and the heap each decide costs once nothing is cold. */
 const args = Object.fromEntries(
 	process.argv.slice(2).map((arg) => {
 		const [key, value] = arg.replace(/^--/, "").split("=");
 		return [key, value ?? "true"];
 	}),
 );
-/** The collector's own count of bytes allocated per cycle (`ca=` on every GC start line) is the one exact allocation measure Bun exposes; the child is run with it logged and the parent sums the cycles inside the timed run. */
 if (!args.child) {
 	const child = Bun.spawnSync({
 		cmd: [process.execPath, ...process.argv.slice(1), "--child"],
@@ -161,7 +159,6 @@ const nextCommand = (): TrackCommand => {
 const percentile = (sorted: number[], p: number) =>
 	sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * p))] ?? 0;
 
-/** Tracks decided one after another: CPU per decide, the sync sections inside it, and what a full collection cannot reclaim afterwards. */
 const run = async ({ count }: { count: number }) => {
 	const commands = Array.from({ length: count }, nextCommand);
 	const latencies: number[] = [];

@@ -135,10 +135,8 @@ export const handleOneOffFunction = async ({
 		});
 	}
 
-	// Create invoice
 	logger.info("1. Creating invoice");
 
-	// Skip auto_tax in invoice mode: send_invoice has no
 	// address-collection UI so Stripe Tax rejects.
 	const wantsAutoTax =
 		!!org.config.automatic_tax &&
@@ -200,7 +198,6 @@ export const handleOneOffFunction = async ({
 		logger,
 	});
 
-	// Create invoice items
 	if (!invoiceOnly) {
 		stripeInvoice = await stripeCli.invoices.finalizeInvoice(stripeInvoice.id!);
 
@@ -223,7 +220,6 @@ export const handleOneOffFunction = async ({
 		}
 
 		if (!paid) {
-			// Check if invoice is still open (payment failed but invoice not voided)
 			if (stripeInvoice && stripeInvoice.status === "open") {
 				logger.info(
 					`[one off function] invoice action required: ${stripeInvoice.id}`,
@@ -276,7 +272,6 @@ export const handleOneOffFunction = async ({
 	const customerName = getCustomerDisplay({ customer });
 	const productNames = products.map((p) => p.name).join(", ");
 	return AttachFunctionResponseSchema.parse({
-		// success: true,
 		message: `Successfully purchased product(s) ${productNames} and attached to customer ${customerName}`,
 		invoice: invoiceOnly ? stripeInvoice : undefined,
 		code: SuccessCode.OneOffProductAttached,

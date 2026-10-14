@@ -1,6 +1,3 @@
-// Plan selections are encoded as value keys: "<planId>" (any version) or
-// "<planId>:<version>" (a specific version). Version is therefore always bound
-// to its plan — there is no standalone version field.
 const PLAN_KEY_SEPARATOR = ":";
 
 export type PlanSelection = { planId: string; version?: number };

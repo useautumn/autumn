@@ -3,7 +3,6 @@ const TOLERANCE_S = 300;
 const hex = (buf: ArrayBuffer) =>
 	[...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, "0")).join("");
 
-/** Verifies a `Stripe-Signature` header (v1 HMAC-SHA256 over `${t}.${body}`). */
 export async function isValidStripeSignature({
 	body,
 	header,

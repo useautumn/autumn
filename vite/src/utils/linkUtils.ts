@@ -13,7 +13,6 @@ const CUSTOM_BUTTON_VARS: Record<
 };
 
 // mailto:/tel: recipients are not URL path/query segments — per RFC 6068 the
-// `@` in an address must stay literal, so percent-encoding would break them.
 const NON_ENCODED_SCHEMES = /^(mailto|tel):/i;
 
 export const resolveCustomButtonUrl = (

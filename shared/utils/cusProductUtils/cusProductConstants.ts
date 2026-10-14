@@ -16,8 +16,6 @@ export const ATTACH_CONFLICT_STATUSES = [
 	CusProductStatus.Pending,
 ];
 
-/** Products whose Stripe subscription is live — a plan parked by a reverting
- * trial keeps billing on Stripe. */
 export const STRIPE_LINKED_STATUSES = [
 	...RELEVANT_STATUSES,
 	CusProductStatus.Paused,
@@ -30,13 +28,11 @@ export const VERSIONABLE_CUSTOMER_STATUSES = [
 	CusProductStatus.Paused,
 ];
 
-/** cus_ent / cus_price rows that still FK catalog ents/prices. */
 export const REFERENCED_ROW_CUSTOMER_STATUSES = [
 	...VERSIONABLE_CUSTOMER_STATUSES,
 	CusProductStatus.Expired,
 ];
 
-/** Customer products migrations may mutate — everything except expired. */
 export const MIGRATABLE_STATUSES = [
 	CusProductStatus.Active,
 	CusProductStatus.PastDue,

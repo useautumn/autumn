@@ -72,17 +72,12 @@ export function CustomerFeatureUsageTable() {
 			customerProducts: filteredCustomerProducts,
 		});
 
-		// Add extra entitlements (loose entitlements not tied to a product)
-		// Customer level: show ALL loose entitlements (customer can access entity-scoped balances at top level)
-		// Entity level: show ONLY that entity's loose entitlements
 		const visibleExtraEntitlements = (
 			customer?.extra_customer_entitlements ?? []
 		).filter((ent: FullCustomerEntitlement) => {
-			// If no entity selected (customer level), show ALL loose entitlements
 			if (!selectedEntity) {
 				return true;
 			}
-			// If entity selected, show ONLY that entity's loose entitlements
 			return ent.internal_entity_id === selectedEntity.internal_id;
 		});
 		const extraEnts = flattenStandaloneCustomerEntitlements({
@@ -105,7 +100,6 @@ export function CustomerFeatureUsageTable() {
 		[features],
 	);
 
-	// Same nuqs key as the Plans table filter.
 	const [productStatuses] = useQueryState(
 		"customerProductsStatuses",
 		parseAsArrayOf(
@@ -171,13 +165,11 @@ export function CustomerFeatureUsageTable() {
 		[allEnts],
 	);
 
-	// Strip CreditSystemSubRow subRows — CustomerBalanceTable uses aggregatedMap for its own sub-rows
 	const balanceEnts = useMemo(
 		() => meteredEnts.map(({ subRows, ...rest }) => rest),
 		[meteredEnts],
 	);
 
-	// The flags section has no greyed state, so an expired flag reads as ungranted.
 	const booleanEnts = useMemo(
 		() =>
 			deduplicatedCusEnts.filter(

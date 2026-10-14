@@ -9,7 +9,6 @@ const stripeClientCache = new LRUCache<string, Stripe>({
 	ttl: THIRTY_MINUTES_MS,
 });
 
-/** Returns a cached Stripe client for the given key, or creates and caches a new one. */
 export const getOrCreateStripeClient = ({
 	cacheKey,
 	create,
@@ -20,8 +19,6 @@ export const getOrCreateStripeClient = ({
 	const cached = stripeClientCache.get(cacheKey);
 	if (cached) return cached;
 
-	// No-op unless TW_WORKER_MODE=1 — every Stripe client in the server is built
-	// here, so the swarm's concurrency ceiling is enforced in one place.
 	const client = applyTwStripeConcurrencyLimit({
 		client: create(),
 	});

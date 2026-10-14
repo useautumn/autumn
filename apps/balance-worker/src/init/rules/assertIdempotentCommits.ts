@@ -1,4 +1,3 @@
-/** The producer thread speaks idempotent commits only; transactional mode would boot a worker it cannot serve. */
 export function assertIdempotentCommits({
 	mode,
 }: {

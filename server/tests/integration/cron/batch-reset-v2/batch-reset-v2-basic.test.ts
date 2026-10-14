@@ -1,27 +1,3 @@
-/**
- * TDD tests for the V2 batch reset worker (batchResetCustomerEntitlementsV2):
- * basic reset behavior.
- *
- * Contract under test:
- *   Behaviors:
- *     - overdue free monthly ent with usage -> balance restored to allowance,
- *       adjustment 0, next_reset_at advanced per getNextResetAt (parity),
- *       cache_version incremented, one reset mutation reported
- *     - next_reset_at far in the past (multi-cycle) -> one run catches up to a
- *       future next_reset_at within one interval of now
- *     - month-boundary planted reset (Jan 31) -> advances per getNextResetAt
- *       (day-drift semantics preserved; free product, no Stripe anchor call)
- *     - unknown/deleted IDs -> no throw, zero mutations, zero verdicts
- *     - IDEMPOTENCY: re-running the worker on an already-reset (not-due) row
- *       is a no-op — balance and next_reset_at unchanged. The scanner
- *       re-enqueues across sweeps and SQS is at-least-once, so this is a hard
- *       requirement, not a nice-to-have.
- *
- * Pre-impl red expected on the idempotency test: classify has no "not due"
- * check and executeResetMutations has no optimistic guard, so a redelivery
- * double-resets (balance re-topped, next_reset_at pushed one more cycle).
- */
-
 import { expect, test } from "bun:test";
 import {
 	customerEntitlements,
@@ -117,11 +93,9 @@ test.concurrent(
 			customerEntitlementIds: [customerEntitlement.id],
 		});
 
-		// ── Contract: one reset mutation reported ───────────────────────
 		expect(result.resetMutations.length).toBe(1);
 		expect(result.verdicts.length).toBe(0);
 
-		// ── Contract: balance restored, adjustment cleared ──────────────
 		const row = await fetchCustomerEntitlementRow({
 			db: ctx.db,
 			customerEntitlementId: customerEntitlement.id,
@@ -129,7 +103,6 @@ test.concurrent(
 		expect(row.balance).toBe(INCLUDED_USAGE);
 		expect(row.adjustment).toBe(0);
 
-		// ── Contract: next_reset_at parity with getNextResetAt ──────────
 		const expectedNextResetAt = getNextResetAt({
 			curReset: pastTime,
 			interval: EntInterval.Month,
@@ -139,7 +112,6 @@ test.concurrent(
 		expect(row.next_reset_at).toBe(expectedNextResetAt);
 		expect(row.next_reset_at!).toBeGreaterThan(Date.now());
 
-		// ── Contract: cache_version incremented ─────────────────────────
 		expect(row.cache_version!).toBe((rowBefore.cache_version ?? 0) + 1);
 	},
 );
@@ -152,7 +124,6 @@ test.concurrent(
 			customerId,
 		});
 
-		// ~6 months overdue — the reset must catch up several cycles at once.
 		const pastTime = Date.now() - ms.days(190);
 		await expireCusEntForReset({
 			ctx,
@@ -191,9 +162,6 @@ test.concurrent(
 			customerId,
 		});
 
-		// Jan 31 — month-end edge; catch-up walks Feb 28 etc. The anchor
-		// day-drift math itself is unit-tested; this asserts the V2 worker
-		// wires through the same helper.
 		const pastTime = Date.UTC(2026, 0, 31, 10, 0, 0);
 		await expireCusEntForReset({
 			ctx,
@@ -231,9 +199,6 @@ test.concurrent(
 			customerId,
 		});
 
-		// Real prod shape: an old bug wrote an entity under the key "null" with
-		// a null id. Hydration is unvalidated by design, so the row must flow
-		// through and reset instead of erroring at the head of the scan.
 		await ctx.db.execute(sql`
 			UPDATE ${customerEntitlements}
 			SET entities = ${JSON.stringify({
@@ -305,7 +270,6 @@ test.concurrent(
 		});
 		expect(rowAfterFirstReset.balance).toBe(INCLUDED_USAGE);
 
-		// Usage after the reset — a second (redelivered) run must NOT wipe it.
 		await ctx.db
 			.update(customerEntitlements)
 			.set({ balance: INCLUDED_USAGE - 10 })
@@ -316,15 +280,12 @@ test.concurrent(
 			customerEntitlementIds: [customerEntitlement.id],
 		});
 
-		// ── Contract: not-due row produces no mutation ───────────────────
 		expect(secondRun.resetMutations.length).toBe(0);
 
 		const rowAfterSecondRun = await fetchCustomerEntitlementRow({
 			db: ctx.db,
 			customerEntitlementId: customerEntitlement.id,
 		});
-		// Balance written between runs survives; next_reset_at not pushed
-		// another cycle forward.
 		expect(rowAfterSecondRun.balance).toBe(INCLUDED_USAGE - 10);
 		expect(rowAfterSecondRun.next_reset_at).toBe(
 			rowAfterFirstReset.next_reset_at,

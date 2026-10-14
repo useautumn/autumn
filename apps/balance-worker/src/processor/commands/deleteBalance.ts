@@ -11,7 +11,6 @@ import { PartitionProcessorStateNotFoundError } from "../common/processorErrors.
 import type { PartitionProcessorScope } from "../types/partitionProcessor.js";
 import type { MutationResult } from "../writer/types/mutation.js";
 
-/** Decided on the rows as they stand after any due reset; replied once Postgres holds it, so a caller may read it there. */
 export async function deleteBalance({
 	scope,
 	command,
@@ -36,7 +35,6 @@ export async function deleteBalance({
 	return { result: committed.mutation.result };
 }
 
-/** Runs inside the writer's critical section: no await, no I/O. */
 function mutateDeleteBalance({
 	scope,
 	state,

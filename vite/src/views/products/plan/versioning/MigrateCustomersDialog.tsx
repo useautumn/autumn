@@ -256,8 +256,6 @@ export function MigrateCustomersDialog({
 										if (val === "all") {
 											setScope("all");
 										} else {
-											// effectiveVersion is what the dropdown shows; selectedVersion
-											// may still be null before the user touches it.
 											setScope(effectiveVersion ?? "all");
 										}
 									}}

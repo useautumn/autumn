@@ -10,7 +10,6 @@ export const CatalogMigrationPlanSchema = z.object({
 	}),
 });
 
-/** Migration draft as returned by catalog preview/update — the object that would run. */
 export const CatalogMigrationUpdatePreviewSchema = z.object({
 	plans: z.array(CatalogMigrationPlanSchema).meta({
 		description: "Plans and versions whose customers this migration targets.",
@@ -24,7 +23,6 @@ export const CatalogMigrationUpdatePreviewSchema = z.object({
 	no_billing_changes: z.boolean(),
 });
 
-/** Update additionally returns the persisted migration id; preview ids are never stable. */
 export const CatalogMigrationSchema =
 	CatalogMigrationUpdatePreviewSchema.extend({
 		id: z.string(),

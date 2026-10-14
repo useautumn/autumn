@@ -10,23 +10,18 @@ import { createPeerSender } from "./transport/sendToPeer.js";
 import type { Replication } from "./types/replication.js";
 
 type ReplicationContext = {
-	/** The deployment's own peer secret: what every request between replicas is signed with. */
 	secret: string;
-	/** The port replicas listen to each other on, never the public one. */
 	port: number;
 	registry: HandlerRegistry;
 	counters: Pick<ThreadCounters, "add">;
 	logger: Pick<AutumnLogger, "warn">;
-	/** Where a replica set on one machine lists this replica's peers; null resolves the deployment's service name. */
 	peersFile?: string | null;
 	resolver?: PeerResolver;
-	/** Test seams: the clock the outbox ages by, how it waits, and how it reaches a peer. */
 	now?: () => number;
 	sleep?: (ms: number) => Promise<unknown>;
 	fetch?: typeof fetch;
 };
 
-/** One per thread: the operations this thread applies, carried to every other replica named by the deployment's service. */
 export const createReplication = ({
 	ctx,
 }: {

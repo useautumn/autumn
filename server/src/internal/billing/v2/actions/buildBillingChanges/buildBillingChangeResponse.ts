@@ -24,8 +24,6 @@ export const buildBillingChangeResponse = ({
 		originalFullCustomer,
 	});
 
-	// Prefer the request's entity scope; webhook-driven flows have none, so fall
-	// back to the changes themselves when they all share one entity.
 	const entityId =
 		originalFullCustomer.entity?.id ?? planChangesToEntityId({ planChanges });
 

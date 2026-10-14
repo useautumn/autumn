@@ -17,7 +17,6 @@ const PREWARM_RESULT_KINDS = [
 	"already_ready",
 ] as const;
 
-/** A request that reached no phase at all is still terminal in the report. */
 const MISSING_OUTCOME: ReplayRequestOutcome = Object.freeze({
 	kind: "failed",
 	reason: "not_replayed",
@@ -125,7 +124,6 @@ const buildPrewarmReport = ({
 	};
 };
 
-/** Results are collected by observation id and reported in manifest order. */
 export function buildReplayArchiveReport({
 	manifest,
 	plans,

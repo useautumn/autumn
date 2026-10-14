@@ -4,12 +4,6 @@ import { type TenantAttrs, withTenantContext } from "./tenantContext.js";
 
 const tracer = trace.getTracer("autumn.worker");
 
-/**
- * Root span wrapper for worker/cron jobs. Creates a span named after the
- * workflow, stamps workflow + tenant attrs on it AND on the OTel context so
- * every child span inherits them. Records exceptions and sets ERROR status on
- * throw. Always re-throws so SQS retry semantics are preserved.
- */
 export const withWorkerSpan = async <T>({
 	workflowName,
 	workflowId,

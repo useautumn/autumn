@@ -162,9 +162,6 @@ describe("assertSandboxAccess rejection codes + precedence (leak guard)", () => 
 		);
 	});
 
-	// A scoped caller must not be able to tell "this id doesn't exist" from
-	// "exists but isn't yours" from "exists but isn't a sandbox": every target
-	// resolution failure returns the same 404 + message.
 	test("missing, self, foreign, and non-sandbox return one identical 404 (no oracle)", () => {
 		const messages = [
 			{ candidate: null },
@@ -183,8 +180,6 @@ describe("assertSandboxAccess rejection codes + precedence (leak guard)", () => 
 		expect(messages[0]).toBe("Sandbox not found");
 	});
 
-	// Scopes are checked FIRST, so an under-scoped caller cannot use the response
-	// to learn whether a sandbox id exists or who owns it.
 	test("under-scoped + nonexistent id -> scopes error first (no existence oracle)", () => {
 		expectReject(
 			{ scopes: [], candidate: null },

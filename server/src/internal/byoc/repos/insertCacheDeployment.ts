@@ -1,7 +1,6 @@
 import { atomDeployments, type ByocCacheDeployment } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 
-/** Claims the env's Atom; false when another request already holds it. */
 export const insertCacheDeployment = async ({
 	ctx,
 	cacheDeployment,

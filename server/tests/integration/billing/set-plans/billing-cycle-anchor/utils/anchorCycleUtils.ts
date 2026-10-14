@@ -11,7 +11,6 @@ import { addHours } from "date-fns";
 import { Decimal } from "decimal.js";
 import { findStripeSubscriptionByStatus } from "../../utils/subscriptionStateUtils";
 
-/** The live Stripe subscription's cycle, to the second: its anchor (when given) and the current period's end. */
 export const expectStripeCycleCorrect = async ({
 	ctx,
 	customerId,
@@ -39,7 +38,6 @@ export const expectStripeCycleCorrect = async ({
 	});
 };
 
-/** Moves the test clock past a cycle start far enough for Stripe to finalize the invoice raised on it. */
 export const advancePastCycleStart = async ({
 	ctx,
 	testClockId,
@@ -55,7 +53,6 @@ export const advancePastCycleStart = async ({
 		advanceTo: addHours(cycleStartsAt, hoursToFinalizeInvoice).getTime(),
 	});
 
-/** The previewed next_cycle total is what Stripe's own upcoming invoice for the schedule charges. */
 export const expectNextCycleTotalMatchesStripe = async ({
 	ctx,
 	customerId,
@@ -81,7 +78,6 @@ export const expectNextCycleTotalMatchesStripe = async ({
 	);
 };
 
-/** Stripe's switch proration: the new plan's charge and the old plan's credit, each rounded to cents. */
 export const calculateStripeProratedSwitch = async ({
 	customerId,
 	advancedTo,
@@ -101,7 +97,6 @@ export const calculateStripeProratedSwitch = async ({
 	return new Decimal(charge).minus(credit).toNumber();
 };
 
-/** The live subscription item billed on this interval, on a subscription that mixes intervals. */
 const findStripeItemByInterval = async ({
 	ctx,
 	customerId,
@@ -123,7 +118,6 @@ const findStripeItemByInterval = async ({
 	return item;
 };
 
-/** One item's reset-now total: the full new amount less the old amount's unused time on that item's own period. */
 export const calculateItemResetNowTotal = async ({
 	ctx,
 	customerId,

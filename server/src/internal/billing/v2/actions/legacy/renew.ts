@@ -35,7 +35,6 @@ export const renew = async ({
 		fullProduct,
 	});
 
-	// Current customer product
 	const currentCustomerProduct = findActiveCustomerProductById({
 		fullCus: attachParams.customer,
 		productId: fullProduct.id,
@@ -76,7 +75,6 @@ export const renew = async ({
 				}
 			: undefined,
 
-		// feature_quantities: attachParams.optionsList,
 		cancel_action: "uncancel",
 		redirect_mode: "if_required",
 	};

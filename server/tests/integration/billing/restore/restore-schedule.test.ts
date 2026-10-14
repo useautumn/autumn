@@ -1,14 +1,3 @@
-/**
- * Restore Schedule Tests
- *
- * Verifies that `restore` rebuilds multi-phase Stripe schedules created via
- * /billing.create_schedule when a developer releases the schedule directly.
- *
- * Test 5: Two-phase schedule (pro+addon now, pro-only in +30d) — release the
- *         schedule via Stripe, restore should re-create the schedule with both
- *         phases intact.
- */
-
 import { expect, test } from "bun:test";
 import { type CreateScheduleParamsV0Input, ms } from "@autumn/shared";
 import { items } from "@tests/utils/fixtures/items";
@@ -81,20 +70,17 @@ test.concurrent(`${chalk.yellowBright("restore-schedule 5: two-phase schedule, r
 	expect(response.status).toBe("created");
 	expect(response.phases).toHaveLength(2);
 
-	// Locate the Stripe sub for this customer (single sub backing both phases)
 	const stripeCustomerId = await stripeCustomerIdFor({ ctx, customerId });
 	const subs = await listActiveStripeSubscriptions({ ctx, stripeCustomerId });
 	expect(subs.length).toBe(1);
 	const sub = subs[0];
 
-	// Drift: release the schedule (caller "fixed" something in Stripe by hand).
 	await corruptStripeSubscription({
 		ctx,
 		subscriptionId: sub.id,
 		mutations: { releaseSchedule: true },
 	});
 
-	// Restore should re-create the schedule and put both phases back.
 	await autumnV2_2.billing.restore({ customer_id: customerId });
 
 	await expectStripeSubscriptionCorrect({ ctx, customerId });

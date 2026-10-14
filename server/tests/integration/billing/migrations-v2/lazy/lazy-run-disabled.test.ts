@@ -1,13 +1,3 @@
-/**
- * Lazy migrations are hard-disabled (LAZY_MIGRATION_RUNS_DISABLED).
- *
- * Contract under test:
- *   - `POST /migrations.lazy_run` is rejected with 400.
- *   - `POST /migrations.run` with `lazy_run: true` is rejected with 400.
- *   - A pre-existing live lazy run (legacy state) no longer enqueues
- *     per-customer migrations on the customer-read hot path.
- */
-
 import { expect, test } from "bun:test";
 import { ErrCode, MigrationItemKind, MigrationRunStatus } from "@autumn/shared";
 import { itemsV2 } from "@tests/utils/fixtures/itemsV2";
@@ -104,7 +94,6 @@ test.concurrent(
 			}),
 		);
 
-		// Manufacture the legacy state: a live lazy run published to the org.
 		const lazyRun = await migrationRunRepo.insert({
 			ctx,
 			insert: {
@@ -119,7 +108,6 @@ test.concurrent(
 		await clearOrgCache({ db: ctx.db, orgId: ctx.org.id, env: ctx.env });
 
 		try {
-			// Customer reads must not enqueue per-customer lazy migrations.
 			await autumnV2_2.customers.get(customerId);
 			await timeout(3_000);
 

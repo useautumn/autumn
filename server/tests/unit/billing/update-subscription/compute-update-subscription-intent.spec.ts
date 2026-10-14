@@ -1,12 +1,3 @@
-/**
- * Unit tests for computeUpdateSubscriptionIntent function.
- *
- * Tests intent detection priority:
- * - Version change takes priority over all other intents
- * - Options without items triggers UpdateQuantity
- * - Default falls back to UpdatePlan
- */
-
 import { describe, expect, test } from "bun:test";
 import {
 	type FullCusProduct,

@@ -5,7 +5,6 @@ import {
 } from "@autumn/shared";
 import { computeBillingCycleAnchorEntitlementUpdates } from "@/internal/billing/v2/compute/computeAutumnUtils/computeBillingCycleAnchorEntitlementUpdates.js";
 
-/** Schedules subscription pools without changing their current grant or deferred contributions. */
 export const computeUpdateQuantityScheduledAnchorPlan = ({
 	plan,
 	billingContext,

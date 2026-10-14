@@ -4,7 +4,6 @@ import {
 	timestampSchema,
 } from "../../../models/common/primitives.js";
 
-/** One row refilled: the cycle that ended and the one that began. The balances moved are in the record's changes. */
 export const resetRowSchema = z
 	.object({
 		customerEntitlementId: nonEmptyStringSchema,

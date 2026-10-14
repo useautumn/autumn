@@ -7,7 +7,6 @@ import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 
-/** entity_data creates the entity like entities.create: it uses a seat and gets its per-entity grants. */
 test.concurrent(
 	`${chalk.yellowBright("check-entity-data: auto-created entity uses a seat and is granted its per-entity balance")}`,
 	async () => {
@@ -47,7 +46,6 @@ test.concurrent(
 	},
 );
 
-/** Auto-creation never charges a seat. */
 test.concurrent(
 	`${chalk.yellowBright("check-entity-data: a paid feature is refused")}`,
 	async () => {

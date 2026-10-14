@@ -1,7 +1,3 @@
-// Dispatches `bun scenario <alloc | ep | epv2 | mini | kp | email | email-v2 | email-mini | knowledge> [flags]` to the matching
-// agent seed. Flags (--count, --concurrency, --attach-plan, --skip-clear,
-// --keep-existing, --skip-stripe-reset) are read from process.argv by each seed and
-// pass through.
 import { runAllocatedBillingSeed } from "./allocated-billing.js";
 import { runEmailMiniSeed } from "./email-mini.js";
 import { runEmailPlatformSeed } from "./email-platform.js";

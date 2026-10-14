@@ -12,10 +12,6 @@ interface WarningScreenProps {
 	onCancel: () => void;
 }
 
-/**
- * Initial warning screen showing what will be deleted
- * User must press 'y' to continue or 'n' to cancel
- */
 export function WarningScreen({
 	orgName,
 	customers,

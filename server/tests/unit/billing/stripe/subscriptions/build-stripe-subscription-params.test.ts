@@ -1,9 +1,3 @@
-/**
- * Every Stripe subscription update/cancel key is classified as reserved or
- * pass-through. Reserved keys never come from the user bag; pass-through keys
- * survive when Autumn omits them; Autumn always wins collisions.
- */
-
 import { describe, expect, test } from "bun:test";
 import chalk from "chalk";
 import type Stripe from "stripe";

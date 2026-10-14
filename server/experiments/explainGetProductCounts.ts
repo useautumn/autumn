@@ -13,9 +13,6 @@ const { ProductService } = await import(
 	"../src/internal/products/ProductService"
 );
 
-// Run with:
-//   PRODUCT_COUNTS_ORG_ID=org_2x3YWDWucn3OSul12pIV6XrcXyo bun run experiments/explainGetProductCounts.ts
-
 const main = async () => {
 	const orgId = process.env.PRODUCT_COUNTS_ORG_ID || prodTestOrgId;
 	const env = AppEnv.Live;
@@ -26,7 +23,6 @@ const main = async () => {
 		`--- Running GET /products/product_counts for org=${orgId} env=${env} ---\n`,
 	);
 
-	// Mirror the handler exactly
 	const startTotal = performance.now();
 
 	const startListFull = performance.now();
@@ -70,7 +66,6 @@ const main = async () => {
 	console.log(`Avg per-product: ${avgPerProduct.toFixed(2)}ms`);
 	console.log(`Sum (serial equivalent): ${sumPerProduct.toFixed(2)}ms\n`);
 
-	// Capture Drizzle SQL for ONE per-product query and EXPLAIN it
 	const capturedQueries: { query: string; params: unknown[] }[] = [];
 	const pool = new pg.Pool({
 		connectionString: process.env.DATABASE_URL,
@@ -92,7 +87,6 @@ const main = async () => {
 			env,
 		});
 
-		// Two queries are emitted: products lookup + the aggregate
 		for (const [i, q] of capturedQueries.entries()) {
 			const isAggregate = q.query.includes("count(distinct");
 			console.log(`Query ${i + 1} ${isAggregate ? "(aggregate)" : "(product lookup)"}:`);
@@ -117,7 +111,6 @@ const main = async () => {
 				const { mkdirSync } = await import("node:fs");
 				mkdirSync(outDir, { recursive: true });
 			} catch {
-				// ignore
 			}
 			writeFileSync(
 				resolve(outDir, `product-counts-explain-${i + 1}.txt`),
@@ -126,9 +119,6 @@ const main = async () => {
 		}
 	}
 
-	// Batched alternative — apples-to-apples with the new code shape:
-	// status filter pushed into the JOIN predicate so it can hit the partial
-	// covering index (idx_customer_products_active_counts).
 	console.log("--- Alternative: single batched query (all products, status filter pushed down) ---\n");
 	const startBatched = performance.now();
 	const batchedResult = await db.execute(sql`
@@ -207,7 +197,6 @@ const main = async () => {
 		console.log(row);
 	}
 
-	// Verdict — did the new partial covering index get picked up?
 	console.log("\n--- Verdict ---");
 	const aggregateQuery = capturedQueries.find((q) => q.query.includes("count(distinct"));
 	if (aggregateQuery) {

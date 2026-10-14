@@ -1,15 +1,3 @@
-/**
- * Setup Payment - No Plan Tests
- *
- * Tests for standalone setup payment flow (no plan attachment).
- * Verifies that completing the setup form saves the customer's payment method.
- *
- * Key behaviors:
- * - Returns a Stripe checkout URL in setup mode
- * - After completing the form, the customer's default PM is saved
- * - Subsequent paid product attaches work without needing checkout redirect
- */
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3 } from "@autumn/shared";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
@@ -24,20 +12,6 @@ import { timeout } from "@tests/utils/genUtils";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 1: Basic setup payment saves payment method
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - New customer with NO payment method
- * - Call setupPayment without plan_id
- *
- * Expected:
- * - Returns setup checkout URL
- * - After completing form, PM is saved
- * - Subsequent paid attach works without checkout redirect
- */
 test.concurrent(`${chalk.yellowBright("setup-payment: basic setup saves payment method")}`, async () => {
 	const customerId = "setup-pay-no-plan-basic";
 
@@ -47,13 +21,12 @@ test.concurrent(`${chalk.yellowBright("setup-payment: basic setup saves payment 
 	const { autumnV1, ctx } = await initScenario({
 		customerId,
 		setup: [
-			s.customer({}), // No payment method, testClock defaults to true
+			s.customer({}),
 			s.products({ list: [pro] }),
 		],
 		actions: [],
 	});
 
-	// 1. Call setupPayment without plan_id
 	const res = await autumnV1.billing.setupPayment({
 		customer_id: customerId,
 	});
@@ -62,11 +35,9 @@ test.concurrent(`${chalk.yellowBright("setup-payment: basic setup saves payment 
 	expect(res.url).toBeDefined();
 	expect(res.url).toContain("checkout.stripe.com");
 
-	// 2. Complete the Stripe setup form
 	await completeSetupPaymentForm({ url: res.url });
 	await timeout(4000);
 
-	// 3. Attach pro product — should succeed without payment_url (PM saved)
 	const attachResult = await autumnV1.billing.attach({
 		customer_id: customerId,
 		product_id: pro.id,
@@ -74,7 +45,6 @@ test.concurrent(`${chalk.yellowBright("setup-payment: basic setup saves payment 
 
 	expect(attachResult.payment_url).toBeNull();
 
-	// 4. Verify product is now attached
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
 	await expectProductActive({ customer, productId: pro.id });

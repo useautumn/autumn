@@ -13,7 +13,6 @@ export const handleUpdateVercelBillingPlan = createRoute({
 	body: z.object({
 		billingPlanId: z.string().min(1),
 	}),
-	// assertIdempotence: "Idempotency-Key",
 	handler: async (c) => {
 		const { integrationConfigurationId } = c.req.param();
 		const ctx = c.get("ctx");
@@ -82,7 +81,6 @@ export const handleUpdateVercelBillingPlan = createRoute({
 			}
 
 			if (!existingSubscription) {
-				// New subscription flow - create installation-level subscription
 				const { product } = await provisionVercelCusProduct({
 					ctx,
 					customer,
@@ -116,9 +114,6 @@ export const handleUpdateVercelBillingPlan = createRoute({
 				});
 			}
 
-			// TODO: Handle upgrade/downgrade when existingSubscription exists
-			// Compare billingPlanId with existingSubscription.metadata.vercel_billing_plan_id
-			// If higher tier → upgrade (updateStripeSub2), if lower tier → downgrade
 			logger.info(
 				`Returning 400 for Vercel plan change request -- not supported`,
 			);

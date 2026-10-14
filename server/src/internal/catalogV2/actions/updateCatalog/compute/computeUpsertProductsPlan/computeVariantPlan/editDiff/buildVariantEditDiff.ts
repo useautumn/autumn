@@ -58,8 +58,6 @@ const removeLicensesFromPlan = ({
 	};
 };
 
-/** Apply variants[n].customize.upsert_licenses as a slot-level patch onto
- * the current license list (follow's rebase first), not a wholesale replace. */
 const mergeUpsertLicensesOntoPlan = ({
 	plan,
 	variantProduct,
@@ -116,8 +114,6 @@ const mergeUpsertLicensesOntoPlan = ({
 	return { ...plan, licenses };
 };
 
-/** The base's current→next edit, rebased for this variant. Licenses can't ride
- * the base diff: baseNext.licenses isn't computed yet, and follow must rebase. */
 const buildPropagationEdit = ({
 	variantProduct,
 	baseCurrent,
@@ -155,8 +151,6 @@ const hasContentCustomize = (
 	customize.remove_items !== undefined ||
 	customize.free_trial !== undefined;
 
-/** A declared variant states its whole row: the base's declared licenses[]
- * are its stock links, re-anchored and customized from the base's entry. */
 const applyDeclaredBaseLicenses = ({
 	plan,
 	variantProduct,
@@ -174,12 +168,6 @@ const applyDeclaredBaseLicenses = ({
 				upsertLicenses: declaredLicenses,
 			});
 
-/**
- * Follow applies the base current→next diff onto the variant; customize then
- * patches on top — its license lanes last, so an overlay that drops a base
- * link wins over the base's declared licenses[]. Declared customize alone
- * recomposes over the declaring base row's pre-edit content.
- */
 export const buildVariantEditDiff = ({
 	variantProduct,
 	baseCurrent,
@@ -259,7 +247,6 @@ export const buildVariantEditDiff = ({
 		}
 	}
 
-	// Removes are real here: a link only leaves nextPlan when the overlay drops it.
 	const editDiff = diffPlanV1({
 		from: currentPlan,
 		to: nextPlan,

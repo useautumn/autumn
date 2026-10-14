@@ -20,11 +20,6 @@ import { getBalanceAllocationControls } from "@/internal/balances/allocate/getBa
 import { invoicesToResponse } from "../../../invoices/invoiceUtils.js";
 import { getApiSubscriptions } from "./getApiSubscription/getApiSubscriptions.js";
 
-/**
- * Get base ApiCustomer without expand fields
- * This is the core customer object that can be cached
- * By default, it includes the autumn_id
- */
 export const getApiCustomerBase = async ({
 	ctx,
 	fullCus,

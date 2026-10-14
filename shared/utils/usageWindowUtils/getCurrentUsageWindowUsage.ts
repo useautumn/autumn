@@ -3,12 +3,6 @@ import type { UsageWindow } from "../../models/cusProductModels/cusEntModels/usa
 import { isSameUsageWindow } from "./classifyUsageWindow/isSameUsageWindow.js";
 import { findUsageWindowByLimit } from "./findUsageWindow/findUsageWindowByLimit.js";
 
-/**
- * Usage already consumed in the limit's current window: the scope's single
- * mutable counter row, derived as 0 when its stored window closed OR no
- * longer matches the current derivation (the lazy roll persists the zero;
- * reads never trust a dead count).
- */
 export const getCurrentUsageWindowUsage = ({
 	usageWindows,
 	limit,

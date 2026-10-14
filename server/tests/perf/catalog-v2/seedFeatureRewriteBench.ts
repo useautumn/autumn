@@ -1,15 +1,3 @@
-/**
- * Seeds the catalogV2 rewrite bench org with FEATURE_REWRITE_ROW_LIMIT
- * granting entitlements, entity_feature_id entitlements, and usage prices —
- * the worst-case volume the execute path is allowed to rewrite in one call.
- *
- * Pure server-side inserts — no API/Stripe. Reruns are resumable
- * (delete+reseed when --reset).
- *
- *   bun tests/perf/catalog-v2/seedFeatureRewriteBench.ts
- *   bun tests/perf/catalog-v2/seedFeatureRewriteBench.ts --reset
- */
-
 import {
 	AllowanceType,
 	BillWhen,

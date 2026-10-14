@@ -1,14 +1,3 @@
-/**
- * Feature ops inside one op type run concurrently (cap 3). These scenarios
- * push past the cap so some ops queue behind others, and assert nothing
- * bleeds between features:
- *   - Five in-place replaces carry each feature's own consumption across —
- *     distinct includes and consumption per feature catch any cross-feature
- *     mixup from concurrent execution.
- *   - Succeeded/skipped marks stay honest when ops complete out of order: a
- *     customized (out-of-scope) customer is skipped and untouched while plain
- *     customers converge.
- */
 import { expect, test } from "bun:test";
 import {
 	customerEntitlements,
@@ -29,8 +18,6 @@ import {
 } from "../batchTestUtils";
 import { readScopedFeatureRow } from "../paidRowTestUtils";
 
-/** Distinct include/consumption per feature so a concurrent op writing the
- * wrong feature's numbers fails an assertion instead of passing by luck. */
 const REPLACED_FEATURES = [
 	{ featureId: TestFeature.Messages, included: 100, consumed: 10 },
 	{ featureId: TestFeature.Words, included: 110, consumed: 20 },
@@ -131,7 +118,6 @@ test(`${chalk.yellowBright("batch migration: five concurrent replaces carry each
 		if (!before) throw new Error(`Expected a before-row for ${featureId}`);
 		const after = await readScopedFeatureRow({ ctx, customerId, featureId });
 
-		// In-place replace: same row, new definition, own consumption carried.
 		expect(after.id).toBe(before.id);
 		expect(after.entitlement_id).not.toBe(before.entitlement_id);
 		expect(after.balance).toBe(included + INCLUDED_BUMP - consumed);
@@ -219,8 +205,6 @@ test(`${chalk.yellowBright("batch migration: concurrent ops keep succeeded and s
 		}
 	}
 
-	// The customized customer is out of scope for every concurrent op: no op
-	// changed them, so out-of-order completions must still mark them skipped.
 	await expectMigrationItemRunStatus({
 		ctx,
 		migrationInternalId: migration.internal_id,

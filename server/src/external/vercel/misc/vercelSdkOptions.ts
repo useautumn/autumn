@@ -4,9 +4,6 @@ export type VercelSdkTestOptions = {
 	mockVercelApi?: boolean;
 };
 
-/**
- * Only tests opt into the local Vercel SDK mock; dev/manual flows hit Vercel.
- */
 export const getVercelSdkServerURL = (
 	testOptions?: VercelSdkTestOptions,
 ): string | undefined => {

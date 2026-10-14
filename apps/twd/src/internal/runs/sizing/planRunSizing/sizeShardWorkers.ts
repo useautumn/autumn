@@ -14,7 +14,6 @@ const makespanWith = ({
 		now: 0,
 	}) ?? 0;
 
-/** Fewest workers whose longest-first makespan fits targetMs, ×SLOT_SAFETY, plus spare workers for expected retries. */
 export const sizeShardWorkers = ({
 	durations,
 	failRates,

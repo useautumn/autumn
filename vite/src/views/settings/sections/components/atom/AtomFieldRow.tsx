@@ -1,7 +1,6 @@
 import { TABLE_TRAY_SURFACE_DIVIDER_CLASS } from "@/components/general/table";
 import { cn } from "@/lib/utils";
 
-/** One label and its value inside a section, with a fixed label column. */
 export const AtomFieldRow = ({
 	label,
 	isMuted = false,

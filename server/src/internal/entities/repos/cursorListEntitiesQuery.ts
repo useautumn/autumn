@@ -22,11 +22,6 @@ const getEntityListFilterSql = ({
 		filters.push(sql`AND c.id = ${trimmedCustomerId}`);
 	}
 
-	// Plans are NOT a filter here. As a correlated EXISTS this probed
-	// customer_products per candidate entity: 26.7s / 63.2M buffer reads to return
-	// 21 rows on mintlify, because only ~0.5% of entities match a rare plan so the
-	// scan walks a long way before the LIMIT fills. Joined via plan_scopes instead.
-
 	const trimmedSearch = search?.trim();
 	if (trimmedSearch) {
 		const pattern = `%${trimmedSearch}%`;

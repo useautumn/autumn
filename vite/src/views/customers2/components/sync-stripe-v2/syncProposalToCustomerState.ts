@@ -23,7 +23,6 @@ import { DISABLED_FREE_TRIAL_FORM_VALUES } from "@/components/forms/shared/utils
 import { quantityRecordFrom } from "@/components/forms/shared/utils/requestBodyOverrideHelpers";
 import { applyCustomizeToProduct } from "./applyCustomizeToProduct";
 
-/** A matched main plan replaces a free main plan in its group on the same scope. */
 const isDisplacedByMatchedPlan = ({
 	freePlan,
 	matchedPlans,
@@ -48,8 +47,6 @@ const isDisplacedByMatchedPlan = ({
 	});
 };
 
-/** A plan the matcher guessed from Stripe's prices, for a subscription Autumn
- * has never linked a plan to. */
 const matchedPlanToCustomerStatePlan = ({
 	plan,
 	entities,
@@ -90,11 +87,6 @@ const matchedPlanToCustomerStatePlan = ({
 	};
 };
 
-/**
- * The customer state a Stripe subscription implies. Rows come from the plans
- * Autumn already holds for it plus the free plans, cut into Stripe's phases;
- * with nothing linked yet (a first import), the matcher's plans stand in.
- */
 export const syncProposalToCustomerState = ({
 	proposal,
 	customerProducts,

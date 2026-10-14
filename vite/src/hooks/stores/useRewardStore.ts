@@ -15,13 +15,10 @@ const DEFAULT_REWARD: FrontendReward = {
 };
 
 interface RewardState {
-	// The reward being edited (working copy)
 	reward: FrontendReward;
 
-	// The base/original reward (for comparison)
 	baseReward: FrontendReward | null;
 
-	// Actions
 	setReward: (
 		reward: FrontendReward | ((prev: FrontendReward) => FrontendReward),
 	) => void;

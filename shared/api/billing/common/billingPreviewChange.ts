@@ -1,9 +1,6 @@
 import { ApiPlanV1Schema } from "@api/products/apiPlanV1";
 import { z } from "zod/v4";
 
-/**
- * A change in the checkout (product being added, canceled, or expiring)
- */
 export const BillingPreviewChangeSchema = z.object({
 	plan_id: z.string().meta({
 		description: "The ID of the plan affected by this preview change.",

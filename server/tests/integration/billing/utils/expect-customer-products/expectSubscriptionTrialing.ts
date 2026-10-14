@@ -7,7 +7,6 @@ type V5CustomerOrEntity = ApiCustomerV5 | ApiEntityV2;
 const TEN_MINUTES_MS = 10 * 60 * 1000;
 const ONE_HOUR_MS = 60 * 60 * 1000;
 
-/** Verify a V5 subscription is currently trialing with the expected trial end time. */
 export const expectSubscriptionTrialing = async ({
 	customer,
 	productId,
@@ -26,7 +25,6 @@ export const expectSubscriptionTrialing = async ({
 		`Subscription ${productId} not found for trialing check`,
 	).toBeDefined();
 
-	// V5 trialing: status is "active" with trial_ends_at set
 	expect(
 		sub!.status,
 		`Subscription ${productId} should have status "active" but got "${sub!.status}"`,
@@ -47,7 +45,6 @@ export const expectSubscriptionTrialing = async ({
 	return sub!.trial_ends_at;
 };
 
-/** Verify a V5 subscription is NOT trialing. */
 export const expectSubscriptionNotTrialing = async ({
 	customer,
 	productId,
@@ -68,7 +65,6 @@ export const expectSubscriptionNotTrialing = async ({
 	).toBeNull();
 };
 
-/** Verify a V5 subscription's current_period_end aligns with trial end time. */
 export const expectSubscriptionPeriodAlignedWithTrialEnd = async ({
 	customer,
 	productId,

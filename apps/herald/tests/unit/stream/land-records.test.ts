@@ -15,7 +15,6 @@ import type {
 	StreamRecord,
 } from "../../../src/stream/types/streamConsumer.js";
 
-/** Positions are all a landing decision reads; the record body never matters here. */
 const recordAt = (offset: number): StreamRecord =>
 	({
 		position: { topic: "local-events", partition: 0, offset: BigInt(offset) },
@@ -61,7 +60,6 @@ const createContext = ({ signal }: { signal?: AbortSignal } = {}) => {
 	};
 };
 
-/** A job that fails the whole batch while `failures` are left, then lands it. */
 const createStoreJob = ({
 	failures,
 	cause,
@@ -101,7 +99,6 @@ test("a store failure is retried in place with capped backoff until the store an
 	expect(batches).toHaveLength(7);
 	expect(batches.every((batch) => batch.length === 2)).toBe(true);
 	expect(delays).toEqual([200, 800, 3200, 5000, 5000, 5000]);
-	// Every wait heartbeats, so an outage longer than the session timeout keeps the partition.
 	expect(heartbeats.count).toBe(6);
 	expect(logs.map(({ level, type }) => `${level}:${type}`)).toEqual([
 		"warn:herald_store_waiting",

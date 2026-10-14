@@ -1,14 +1,3 @@
-/**
- * Free Trial Downgrade Tests (Attach V2)
- *
- * Tests for downgrade scenarios (scheduled switches).
- *
- * Key behaviors:
- * - DOWNGRADE: Inherits subscription's current trial state
- * - Product's trial config is IGNORED on downgrade
- * - Scheduled downgrade activates with NO trial (regardless of product config)
- */
-
 import { expect, test } from "bun:test";
 import { type ApiCustomerV3, ms } from "@autumn/shared";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
@@ -34,20 +23,6 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { addMonths } from "date-fns";
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 1: Downgrade from trialing premium to pro with trial (inherits trial)
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Customer has premiumWithTrial (14-day trial, currently trialing)
- * - Downgrade to proWithTrial (7-day trial config - IGNORED)
- *
- * Expected Result:
- * - Premium stays active and trialing (canceling at end of trial)
- * - Pro is scheduled
- * - Trial state is preserved (premium's trial continues)
- */
 test.concurrent(`${chalk.yellowBright("trial-downgrade 1: trialing premium to pro with trial")}`, async () => {
 	const customerId = "trial-downgrade-premium-to-pro-trial";
 
@@ -76,7 +51,6 @@ test.concurrent(`${chalk.yellowBright("trial-downgrade 1: trialing premium to pr
 		actions: [s.billing.attach({ productId: premiumTrial.id })],
 	});
 
-	// Verify initial state - premium is trialing
 	const customerBefore =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	await expectProductTrialing({
@@ -85,21 +59,18 @@ test.concurrent(`${chalk.yellowBright("trial-downgrade 1: trialing premium to pr
 		trialEndsAt: advancedTo + ms.days(14),
 	});
 
-	// 1. Preview downgrade - should show $0 (scheduled, no immediate charge)
 	const preview = await autumnV1.billing.previewAttach({
 		customer_id: customerId,
 		product_id: proTrial.id,
 	});
 	expect(preview.total).toBe(0);
 
-	// Verify next_cycle info for scheduled downgrade
 	expectPreviewNextCycleCorrect({
 		preview,
-		total: 20, // Pro's price after trial ends
-		startsAt: advancedTo + ms.days(14), // Trial end = cycle start
+		total: 20,
+		startsAt: advancedTo + ms.days(14),
 	});
 
-	// 2. Attach pro (downgrade - scheduled)
 	await autumnV1.billing.attach({
 		customer_id: customerId,
 		product_id: proTrial.id,
@@ -108,26 +79,22 @@ test.concurrent(`${chalk.yellowBright("trial-downgrade 1: trialing premium to pr
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Verify premium is canceling (still active, will be removed at trial end)
 	await expectProductCanceling({
 		customer,
 		productId: premiumTrial.id,
 	});
 
-	// Verify pro is scheduled
 	await expectProductScheduled({
 		customer,
 		productId: proTrial.id,
 	});
 
-	// Verify premium is STILL trialing (trial inherited)
 	await expectProductTrialing({
 		customer,
 		productId: premiumTrial.id,
 		trialEndsAt: advancedTo + ms.days(14),
 	});
 
-	// Verify feature balance is still premium's balance (until switch) with resetsAt aligned to trial end
 	expectCustomerFeatureCorrect({
 		customer,
 		featureId: TestFeature.Messages,
@@ -137,15 +104,12 @@ test.concurrent(`${chalk.yellowBright("trial-downgrade 1: trialing premium to pr
 		resetsAt: advancedTo + ms.days(14),
 	});
 
-	// Verify $0 invoice during trial (Stripe creates invoice for trial subscriptions)
-	// Count is 2: initial trial ($0) + scheduled downgrade ($0)
 	await expectCustomerInvoiceCorrect({
 		customer,
 		count: 1,
 		latestTotal: 0,
 	});
 
-	// Verify Stripe subscription state
 	await expectSubToBeCorrect({
 		db: ctx.db,
 		customerId,
@@ -190,20 +154,6 @@ test.concurrent(`${chalk.yellowBright("trial-downgrade 1: trialing premium to pr
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 2: Downgrade from trialing premium to pro without trial (inherits trial)
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Customer has premiumWithTrial (14-day trial, currently trialing)
- * - Downgrade to pro (NO trial config)
- *
- * Expected Result:
- * - Premium stays active and trialing
- * - Pro is scheduled
- * - Trial state is preserved (product config ignored on downgrade)
- */
 test.concurrent(`${chalk.yellowBright("trial-downgrade 2: trialing premium to pro without trial")}`, async () => {
 	const customerId = "trial-downgrade-premium-to-pro-no-trial";
 
@@ -230,7 +180,6 @@ test.concurrent(`${chalk.yellowBright("trial-downgrade 2: trialing premium to pr
 		actions: [s.billing.attach({ productId: premiumTrial.id })],
 	});
 
-	// Verify initial state - premium is trialing
 	const customerBefore =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	await expectProductTrialing({
@@ -239,7 +188,6 @@ test.concurrent(`${chalk.yellowBright("trial-downgrade 2: trialing premium to pr
 		trialEndsAt: advancedTo + ms.days(14),
 	});
 
-	// 1. Preview downgrade - should show $0 (scheduled), next_cycle = $20 at trial end
 	const preview = await autumnV1.billing.previewAttach({
 		customer_id: customerId,
 		product_id: pro.id,
@@ -247,11 +195,10 @@ test.concurrent(`${chalk.yellowBright("trial-downgrade 2: trialing premium to pr
 	expect(preview.total).toBe(0);
 	expectPreviewNextCycleCorrect({
 		preview,
-		startsAt: advancedTo + ms.days(14), // Trial end
-		total: 20, // Pro's price after trial ends
+		startsAt: advancedTo + ms.days(14),
+		total: 20,
 	});
 
-	// 2. Attach pro (downgrade - scheduled)
 	await autumnV1.billing.attach({
 		customer_id: customerId,
 		product_id: pro.id,
@@ -260,26 +207,21 @@ test.concurrent(`${chalk.yellowBright("trial-downgrade 2: trialing premium to pr
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Verify premium is canceling
 	await expectProductCanceling({
 		customer,
 		productId: premiumTrial.id,
 	});
 
-	// Verify pro is scheduled
 	await expectProductScheduled({
 		customer,
 		productId: pro.id,
 	});
 
-	// Verify premium is STILL trialing
 	await expectProductTrialing({
 		customer,
 		productId: premiumTrial.id,
 		trialEndsAt: advancedTo + ms.days(14),
 	});
-
-	// Verify $0 invoice during trial (Stripe creates invoice for trial subscriptions)
 
 	await expectCustomerInvoiceCorrect({
 		customer,
@@ -287,7 +229,6 @@ test.concurrent(`${chalk.yellowBright("trial-downgrade 2: trialing premium to pr
 		latestTotal: 0,
 	});
 
-	// Verify Stripe subscription state
 	await expectSubToBeCorrect({
 		db: ctx.db,
 		customerId,
@@ -295,10 +236,6 @@ test.concurrent(`${chalk.yellowBright("trial-downgrade 2: trialing premium to pr
 		env: ctx.env,
 		flags: { checkTrialing: true },
 	});
-
-	// ═══════════════════════════════════════════════════════════════════════════
-	// ADVANCE PAST TRIAL: Verify scheduled downgrade activates correctly
-	// ═══════════════════════════════════════════════════════════════════════════
 
 	const advancedToAfterTrial = await advanceTestClock({
 		stripeCli: ctx.stripeCli,
@@ -309,20 +246,17 @@ test.concurrent(`${chalk.yellowBright("trial-downgrade 2: trialing premium to pr
 
 	const customerAfter = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Verify pro is now active (not scheduled)
 	await expectProductActive({
 		customer: customerAfter,
 		productId: pro.id,
 	});
 
-	// Verify pro is NOT trialing (downgrades don't get trial)
 	await expectProductNotTrialing({
 		customer: customerAfter,
 		productId: pro.id,
 		nowMs: advancedToAfterTrial,
 	});
 
-	// Verify invoice: $0 trial + $20 for pro after trial ends
 	await expectCustomerInvoiceCorrect({
 		customer: customerAfter,
 		count: 2,
@@ -330,7 +264,6 @@ test.concurrent(`${chalk.yellowBright("trial-downgrade 2: trialing premium to pr
 		latestInvoiceProductId: pro.id,
 	});
 
-	// Verify Stripe subscription state
 	await expectSubToBeCorrect({
 		db: ctx.db,
 		customerId,
@@ -340,20 +273,6 @@ test.concurrent(`${chalk.yellowBright("trial-downgrade 2: trialing premium to pr
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 3: Downgrade from non-trialing premium to pro with trial (no trial)
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Customer has premium ($50/mo, NOT trialing)
- * - Downgrade to proWithTrial (7-day trial config - IGNORED)
- *
- * Expected Result:
- * - Premium stays active (canceling at end of cycle)
- * - Pro is scheduled
- * - NO trial (inherits non-trialing state)
- */
 test.concurrent(`${chalk.yellowBright("trial-downgrade 3: non-trialing premium to pro with trial (no trial)")}`, async () => {
 	const customerId = "trial-downgrade-notrial-premium-to-pro-trial";
 
@@ -380,7 +299,6 @@ test.concurrent(`${chalk.yellowBright("trial-downgrade 3: non-trialing premium t
 		actions: [s.billing.attach({ productId: premium.id })],
 	});
 
-	// Verify initial state - premium is NOT trialing
 	const customerBefore =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	await expectProductNotTrialing({
@@ -389,21 +307,18 @@ test.concurrent(`${chalk.yellowBright("trial-downgrade 3: non-trialing premium t
 		nowMs: advancedTo,
 	});
 
-	// 1. Preview downgrade - should show $0 (scheduled)
 	const preview = await autumnV1.billing.previewAttach({
 		customer_id: customerId,
 		product_id: proTrial.id,
 	});
 	expect(preview.total).toBe(0);
 
-	// Verify next_cycle shows pro's charge (NO trial on scheduled activation)
 	expectPreviewNextCycleCorrect({
 		preview,
-		total: 20, // Pro's price - no trial on downgrade activation
+		total: 20,
 		startsAt: addMonths(advancedTo, 1).getTime(),
 	});
 
-	// 2. Attach pro (downgrade - scheduled)
 	await autumnV1.billing.attach({
 		customer_id: customerId,
 		product_id: proTrial.id,
@@ -412,33 +327,28 @@ test.concurrent(`${chalk.yellowBright("trial-downgrade 3: non-trialing premium t
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Verify premium is canceling
 	await expectProductCanceling({
 		customer,
 		productId: premium.id,
 	});
 
-	// Verify pro is scheduled
 	await expectProductScheduled({
 		customer,
 		productId: proTrial.id,
 	});
 
-	// Verify premium is NOT trialing (no change)
 	await expectProductNotTrialing({
 		customer,
 		productId: premium.id,
 		nowMs: advancedTo,
 	});
 
-	// Verify invoice for premium
 	await expectCustomerInvoiceCorrect({
 		customer,
 		count: 1,
 		latestTotal: 50,
 	});
 
-	// Verify Stripe subscription state
 	await expectSubToBeCorrect({
 		db: ctx.db,
 		customerId,
@@ -481,20 +391,6 @@ test.concurrent(`${chalk.yellowBright("trial-downgrade 3: non-trialing premium t
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 4: Downgrade from premium to free (no trial on scheduled free)
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Customer has premium ($50/mo, NOT trialing)
- * - Downgrade to free product
- *
- * Expected Result:
- * - Premium stays active until end of cycle
- * - Free is scheduled
- * - No trial (free products don't need trials)
- */
 test.concurrent(`${chalk.yellowBright("trial-downgrade 4: premium to free (no trial)")}`, async () => {
 	const customerId = "trial-downgrade-premium-to-free";
 
@@ -519,14 +415,12 @@ test.concurrent(`${chalk.yellowBright("trial-downgrade 4: premium to free (no tr
 		actions: [s.billing.attach({ productId: premium.id })],
 	});
 
-	// 1. Preview downgrade - should show $0 (scheduled)
 	const preview = await autumnV1.billing.previewAttach({
 		customer_id: customerId,
 		product_id: free.id,
 	});
 	expect(preview.total).toBe(0);
 
-	// 2. Attach free (downgrade - scheduled)
 	await autumnV1.billing.attach({
 		customer_id: customerId,
 		product_id: free.id,
@@ -535,26 +429,22 @@ test.concurrent(`${chalk.yellowBright("trial-downgrade 4: premium to free (no tr
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Verify premium is canceling
 	await expectProductCanceling({
 		customer,
 		productId: premium.id,
 	});
 
-	// Verify free is scheduled
 	await expectProductScheduled({
 		customer,
 		productId: free.id,
 	});
 
-	// Verify invoice for premium
 	await expectCustomerInvoiceCorrect({
 		customer,
 		count: 1,
 		latestTotal: 50,
 	});
 
-	// Verify Stripe subscription state
 	await expectSubToBeCorrect({
 		db: ctx.db,
 		customerId,
@@ -562,10 +452,6 @@ test.concurrent(`${chalk.yellowBright("trial-downgrade 4: premium to free (no tr
 		env: ctx.env,
 		flags: { checkNotTrialing: true },
 	});
-
-	// ═══════════════════════════════════════════════════════════════════════════
-	// ADVANCE PAST CYCLE: Verify scheduled downgrade activates correctly
-	// ═══════════════════════════════════════════════════════════════════════════
 
 	await advanceToNextInvoice({
 		stripeCli: ctx.stripeCli,
@@ -575,13 +461,11 @@ test.concurrent(`${chalk.yellowBright("trial-downgrade 4: premium to free (no tr
 
 	const customerAfter = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Verify free is now active (not scheduled)
 	await expectProductActive({
 		customer: customerAfter,
 		productId: free.id,
 	});
 
-	// Verify feature balance is now free's balance
 	expectCustomerFeatureCorrect({
 		customer: customerAfter,
 		featureId: TestFeature.Messages,
@@ -590,28 +474,13 @@ test.concurrent(`${chalk.yellowBright("trial-downgrade 4: premium to free (no tr
 		usage: 0,
 	});
 
-	// Verify no additional invoice (free product has no charge)
 	await expectCustomerInvoiceCorrect({
 		customer: customerAfter,
 		count: 1,
-		latestTotal: 50, // Still the original premium invoice
+		latestTotal: 50,
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 5: Downgrade from trialing premium to free (inherits trial until switch)
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Customer has premiumWithTrial (14-day trial, currently trialing)
- * - Downgrade to free product
- *
- * Expected Result:
- * - Premium stays active and trialing until trial end
- * - Free is scheduled
- * - Trial continues until trial end, then free activates
- */
 test.concurrent(`${chalk.yellowBright("trial-downgrade 5: trialing premium to free (does NOT inherit trial)")}`, async () => {
 	const customerId = "trial-downgrade-trialing-premium-to-free";
 
@@ -638,7 +507,6 @@ test.concurrent(`${chalk.yellowBright("trial-downgrade 5: trialing premium to fr
 		actions: [s.billing.attach({ productId: premiumTrial.id })],
 	});
 
-	// Verify initial state - premium is trialing
 	const customerBefore =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	await expectProductTrialing({
@@ -647,14 +515,12 @@ test.concurrent(`${chalk.yellowBright("trial-downgrade 5: trialing premium to fr
 		trialEndsAt: advancedTo + ms.days(14),
 	});
 
-	// 1. Preview downgrade - should show $0, next_cycle = $0 at trial end
 	const preview = await autumnV1.billing.previewAttach({
 		customer_id: customerId,
 		product_id: free.id,
 	});
 	expect(preview.total).toBe(0);
 
-	// 2. Attach free (downgrade - scheduled)
 	await autumnV1.billing.attach({
 		customer_id: customerId,
 		product_id: free.id,
@@ -664,26 +530,22 @@ test.concurrent(`${chalk.yellowBright("trial-downgrade 5: trialing premium to fr
 	return;
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Verify premium is canceling
 	await expectProductCanceling({
 		customer,
 		productId: premiumTrial.id,
 	});
 
-	// Verify free is scheduled
 	await expectProductScheduled({
 		customer,
 		productId: free.id,
 	});
 
-	// Verify premium is STILL trialing
 	await expectProductTrialing({
 		customer,
 		productId: premiumTrial.id,
 		trialEndsAt: advancedTo + ms.days(14),
 	});
 
-	// Verify feature balance is still premium's balance with resetsAt aligned to trial end
 	expectCustomerFeatureCorrect({
 		customer,
 		featureId: TestFeature.Messages,
@@ -693,14 +555,12 @@ test.concurrent(`${chalk.yellowBright("trial-downgrade 5: trialing premium to fr
 		resetsAt: advancedTo + ms.days(14),
 	});
 
-	// Verify $0 invoice during trial (Stripe creates invoice for trial subscriptions)
 	await expectCustomerInvoiceCorrect({
 		customer,
 		count: 1,
 		latestTotal: 0,
 	});
 
-	// Verify Stripe subscription state
 	await expectSubToBeCorrect({
 		db: ctx.db,
 		customerId,
@@ -708,10 +568,6 @@ test.concurrent(`${chalk.yellowBright("trial-downgrade 5: trialing premium to fr
 		env: ctx.env,
 		flags: { checkTrialing: true },
 	});
-
-	// ═══════════════════════════════════════════════════════════════════════════
-	// ADVANCE PAST TRIAL: Verify scheduled downgrade activates correctly
-	// ═══════════════════════════════════════════════════════════════════════════
 
 	const advancedToAfterTrial = await advanceTestClock({
 		stripeCli: ctx.stripeCli,
@@ -722,7 +578,6 @@ test.concurrent(`${chalk.yellowBright("trial-downgrade 5: trialing premium to fr
 
 	const customerAfter = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Verify free is now active (not scheduled)
 	await expectProductActive({
 		customer: customerAfter,
 		productId: free.id,
@@ -733,7 +588,6 @@ test.concurrent(`${chalk.yellowBright("trial-downgrade 5: trialing premium to fr
 		productId: free.id,
 		nowMs: advancedToAfterTrial,
 	});
-	// Verify feature balance is now free's balance
 	expectCustomerFeatureCorrect({
 		customer: customerAfter,
 		featureId: TestFeature.Messages,
@@ -742,7 +596,6 @@ test.concurrent(`${chalk.yellowBright("trial-downgrade 5: trialing premium to fr
 		usage: 0,
 	});
 
-	// Verify no additional paid invoice (free product has no charge)
 	await expectCustomerInvoiceCorrect({
 		customer: customerAfter,
 		count: 1,

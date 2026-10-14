@@ -13,12 +13,6 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { addMonths } from "date-fns";
 
-/**
- * Billing Cycle Anchor Reset Tests
- *
- * These tests cover attach transitions with `billing_cycle_anchor: "now"`.
- */
-
 test.concurrent(`${chalk.yellowBright("billing-cycle-anchor-reset 1: pro to premium mid-cycle")}`, async () => {
 	const customerId = "attach-anchor-now";
 	const pro = products.pro({

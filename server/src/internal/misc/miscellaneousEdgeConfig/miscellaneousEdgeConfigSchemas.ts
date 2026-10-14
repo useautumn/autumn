@@ -2,31 +2,13 @@ import { z } from "zod/v4";
 
 export const MiscellaneousEdgeConfigSchema = z.object({
 	newFlatCusModel: z.array(z.string()).default([]),
-	/** Global switch: coalesce balance syncs via per-customer Redis dirty state
-	 *  (signal-only SQS messages). Dark by default. */
 	syncCoalesce: z.boolean().default(false),
-	/** Global switch: customer get_or_create and entity get read the subject
-	 *  straight from Postgres, bypassing the FullSubject cache entirely. */
 	subjectLookupDbOnly: z.boolean().default(false),
-	/** Idempotency keys are always dual-written to Redis and DynamoDB; this
-	 *  picks DynamoDB as the authority for conflicts (the other store is a
-	 *  fire-and-forget mirror). Flip only after a full Redis TTL (24h) of
-	 *  dual-writing — i.e. 24h after deploy — or in-flight keys are lost. */
 	idempotencyDynamoRead: z.boolean().default(false),
-	/** Global switch: when Redis is unavailable, subject reads fall back to
-	 *  Postgres instead of shedding a 503. Dark by default — turning this on
-	 *  converts a cache outage into full primary read load. */
 	redisFallbackToDb: z.boolean().default(false),
-	/** Global switch: concurrent same-key pure-GET subject reads share one
-	 *  in-flight fetch. */
 	subjectReadSingleflight: z.boolean().default(true),
-	/** Kill switch for the MotherDuck balance-cache refresh cron. Refresh runs
-	 *  by default wherever the RW token exists; flip this to stop it. */
 	disableMotherduckCacheRefresh: z.boolean().default(false),
-	/** Global switch for Axiom response-body compaction and size caps. */
 	axiomResponseBodyReduction: z.boolean().default(true),
-	/** Deletes loose purchase grants (metadata.source set) whose expires_at has
-	 *  passed. Dark by default — the sweep touches the largest table we have. */
 	expiredGrantCleanup: z.boolean().default(false),
 });
 

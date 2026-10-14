@@ -4,10 +4,6 @@ import {
 	type RouteDefinition,
 } from "./core";
 
-// ─────────────────────────────────────────────────────────────
-// General Handler (framework-agnostic)
-// ─────────────────────────────────────────────────────────────
-
 export type AutumnHandlerOptions = {
 	request: {
 		url: string;
@@ -52,7 +48,6 @@ export async function autumnHandler(
 		routes,
 	});
 
-	// Parse URL
 	let url: URL;
 	if (!request.url.includes("http")) {
 		url = new URL(request.url, "http://localhost:3000");
@@ -73,10 +68,6 @@ export async function autumnHandler(
 	};
 }
 
-// ─────────────────────────────────────────────────────────────
-// Core exports
-// ─────────────────────────────────────────────────────────────
-
 export {
 	type AuthResult,
 	type BackendErrorBody,
@@ -86,18 +77,14 @@ export {
 	buildRouter,
 	type CoreHandlerOptions,
 	type CustomerData,
-	// Types
 	type CustomerId,
 	type CustomHandlerArgs,
 	type CustomHandlerFn,
-	// Handler
 	createCoreHandler,
 	isBackendResult,
 	type ResolvedIdentity,
 	type RouteDefinition,
-	// Route helpers
 	routeConfigs,
-	// Utils
 	sanitizeBody,
 	secretKeyCheck,
 	type UnifiedRequest,

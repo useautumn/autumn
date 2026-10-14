@@ -14,10 +14,6 @@ const isFailedRenewal = (subscription: Stripe.Subscription) => {
 	return invoice?.status === "open" && invoice.attempt_count > 0;
 };
 
-/**
- * Waits until Stripe has failed the renewal (throws if it never does), then returns whether
- * Autumn's webhooks stored the renewal as open and synced the product to past_due.
- */
 export const waitForFailedRenewalWebhookEffects = async ({
 	ctx,
 	customerId,

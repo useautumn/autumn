@@ -1,22 +1,15 @@
-// Every customer tax ID type Stripe accepts, with the country it belongs to and
-// a human label for pickers. One row per (country, type): a country with several
 // registrations appears several times. Source: https://docs.stripe.com/billing/customer/tax-ids
-// Kept in sync by hand, like stripeCurrencies.ts. `type` is checked against the SDK
-// union, so a type the pinned SDK cannot send is left out until the SDK is bumped.
 
 import type Stripe from "stripe";
 
 export type StripeTaxIdType = Stripe.TaxId.Type;
 
 export type StripeTaxIdOption = {
-	/** Stable key for pickers; a type like eu_vat repeats across countries. */
 	id: string;
 	type: StripeTaxIdType;
-	/** ISO 3166-1 alpha-2, or "EU" for the One Stop Shop scheme. */
 	countryCode: string;
 	country: string;
 	flag: string;
-	/** What the registration is called, without the country repeated. */
 	label: string;
 	example: string;
 };
@@ -1264,7 +1257,6 @@ const optionsByType = new Map(
 	]),
 );
 
-/** Resolves a stored Stripe tax id back to its picker option, if the country is known. */
 export const findStripeTaxIdOption = ({
 	type,
 	countryCode,

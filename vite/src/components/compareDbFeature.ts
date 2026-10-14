@@ -9,8 +9,6 @@ import { creditSchemaToApi } from "@/views/products/features/credit-systems/util
 const byMeteredFeatureId = (a: CreditSchemaItem, b: CreditSchemaItem) =>
 	a.metered_feature_id.localeCompare(b.metered_feature_id);
 
-/** Compares the serialized rate card so billing units, rate type, and tiers all
- * count as changes. */
 const creditSchemasSame = ({
 	schema1,
 	schema2,

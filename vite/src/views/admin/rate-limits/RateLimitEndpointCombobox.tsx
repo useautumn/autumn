@@ -3,7 +3,6 @@ import { useState } from "react";
 import { RateLimitEndpointLabel } from "./RateLimitEndpointLabel";
 import { listEndpointMatches } from "./rateLimitEndpoints";
 
-/** The API's endpoints to pick from; a typed `METHOD /v1/path` the list lacks is offered as-is. */
 export const RateLimitEndpointCombobox = ({
 	value,
 	endpoints,

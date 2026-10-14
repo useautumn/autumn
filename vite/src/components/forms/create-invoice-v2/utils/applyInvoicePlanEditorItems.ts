@@ -5,7 +5,6 @@ import {
 	invoiceQuantityRows,
 } from "./invoiceQuantityRows";
 
-/** Usage models the invoice sheet shows a quantity field for. */
 export const INVOICE_USAGE_MODELS = [UsageModel.Prepaid, UsageModel.PayPerUse];
 
 const keepFeatures = <T>({
@@ -22,7 +21,6 @@ const keepFeatures = <T>({
 const rowsByFeatureId = (items: ProductItem[]) =>
 	new Map(invoiceQuantityRows({ items }).map((row) => [row.featureId, row]));
 
-/** Each quantity stays with the price it was entered for, so a removed price's units are never billed on another. */
 function carryQuantities({
 	plan,
 	previous,
@@ -53,10 +51,6 @@ function carryQuantities({
 	return { featureQuantities, overageQuantities };
 }
 
-/**
- * The plan editor's saved items replace the plan's own. Quantities for features
- * the edited plan no longer bills are dropped, so the invoice never charges them.
- */
 export function applyInvoicePlanEditorItems({
 	plan,
 	previousItems,

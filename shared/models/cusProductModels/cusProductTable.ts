@@ -18,10 +18,8 @@ import { products } from "../productModels/productTable.js";
 export type CustomerProductProcessor = {
 	type: "stripe" | "revenuecat";
 	id?: string | null;
-	// Store-owned billing period (ms); only set for RevenueCat plans.
 	current_period_start?: number | null;
 	current_period_end?: number | null;
-	// Store purchase this plan came from; only set for RevenueCat plans.
 	original_transaction_id?: string | null;
 };
 
@@ -37,7 +35,6 @@ export const customerProducts = pgTable(
 		updated_at: numeric({ mode: "number" }),
 		status: text(),
 		processor: jsonb().$type<CustomerProductProcessor>(),
-		// processors: jsonb().$type<ExternalCusProductProcessors>(),
 
 		canceled: boolean("canceled").default(false),
 		canceled_at: numeric({ mode: "number" }),
@@ -61,14 +58,9 @@ export const customerProducts = pgTable(
 		quantity: numeric({ mode: "number" }).default(1),
 
 		is_custom: boolean("is_custom").default(false).notNull(),
-		// Anchors the seat to its pool's stable link identity — successor pool
-		// rows copy the link, so plan transitions never touch seats.
 		customer_license_link_id: text("customer_license_link_id"),
-		// When the seat was released back to its pool (entity unlinked);
-		// unused-seat reuse picks the longest-released first.
 		released_at: numeric({ mode: "number" }),
 
-		// Optional...
 		customer_id: text("customer_id"),
 		entity_id: text("entity_id"),
 		billing_version: text("billing_version"),
@@ -78,13 +70,8 @@ export const customerProducts = pgTable(
 
 		external_id: text("external_id"),
 
-		// When the cusProduct was created via a Stripe checkout flow with
-		// enable_plan_immediately, this links the row to the pending checkout session
-		// so the webhook can patch in subscription_ids on completion (or expire on abandonment).
 		stripe_checkout_session_id: text("stripe_checkout_session_id"),
 
-		// Links a pending row to the deferred billing plan that will promote it
-		// on payment, or expire it when the invoice is voided.
 		metadata_id: text("metadata_id"),
 
 		previous_customer_product_id: text("previous_customer_product_id"),
@@ -130,8 +117,6 @@ export const customerProducts = pgTable(
 		index("idx_customer_products_on_internal_entity_id").on(
 			table.internal_entity_id,
 		),
-		// COLLATE "C" matches customers.internal_id so migration-filter pages can
-		// walk this index in customer order and stop at the page limit.
 		index("idx_customer_products_product_customer_c")
 			.on(
 				table.internal_product_id,
@@ -141,7 +126,6 @@ export const customerProducts = pgTable(
 		index("idx_customer_products_on_internal_product_id").on(
 			table.internal_product_id,
 		),
-		// GIN indexes match elements, not length, so they can't serve cardinality().
 		index("idx_customer_products_stripe_linked_customer")
 			.on(table.internal_customer_id)
 			.where(
@@ -167,25 +151,20 @@ export const customerProducts = pgTable(
 			.on(table.customer_license_link_id)
 			.where(sql`${table.customer_license_link_id} IS NOT NULL`)
 			.concurrently(),
-		// Top-N walk for "earliest `included` seats per customer license".
 		index("idx_customer_products_license_seat_order")
 			.on(table.customer_license_link_id, table.created_at, table.id)
 			.where(sql`${table.customer_license_link_id} IS NOT NULL`)
 			.concurrently(),
-		// Seat-sync cron keyset walk: all seats ordered by id.
 		index("idx_customer_products_seat_sync")
 			.on(table.id)
 			.where(sql`${table.customer_license_link_id} IS NOT NULL`)
 			.concurrently(),
-		// Released seats waiting for reuse, longest-released first.
 		index("idx_customer_products_unused_seats")
 			.on(table.customer_license_link_id, table.released_at)
 			.where(
 				sql`${table.customer_license_link_id} IS NOT NULL AND ${table.internal_entity_id} IS NULL`,
 			)
 			.concurrently(),
-		// One active seat per (pool link, entity); the link survives successor
-		// pool rows, so the guard holds across plan transitions.
 		uniqueIndex("unique_active_pool_assignment")
 			.on(table.customer_license_link_id, table.internal_entity_id)
 			.where(

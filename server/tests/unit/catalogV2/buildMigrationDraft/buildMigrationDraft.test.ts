@@ -1,15 +1,3 @@
-/**
- * buildMigrationDraft kernel: targets → buckets → filter + update_plan ops.
- *
- * Contract:
- *   - one op per unique migratable customize
- *   - filter grouped per plan (version `$in` within a plan, `$or` across)
- *   - unversioned collapse when targets cover every customer-bearing version
- *   - custom: false unless includeCustom
- *   - previous_price stamped only when uniform in a price-changing bucket
- *   - trial-only / empty customize → null
- */
-
 import { expect, test } from "bun:test";
 import { BillingInterval, type DiffedCustomizePlanV1, ResetInterval } from "@autumn/shared";
 import { buildMigrationDraft } from "@/internal/catalogV2/actions/buildMigrationDraft/buildMigrationDraft.js";

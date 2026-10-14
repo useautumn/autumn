@@ -1,17 +1,3 @@
-/**
- * Stripe Checkout — Top-level enable_plan_immediately
- *
- * Feature under test:
- * - Top-level `enable_plan_immediately` on attach params (no longer nested under `invoice_mode`).
- * - When set on a stripe_checkout flow, the customer_product is inserted as Active
- *   BEFORE the customer completes the Stripe-hosted checkout, with a new
- *   `stripe_checkout_session_id` column linking the row to the pending session.
- * - On checkout.session.completed, the webhook patches `subscription_ids` and
- *   reconciles the Stripe subscription to match cusProduct items (e.g. prepaid
- *   quantities) — so prepaid balances should land correctly post-completion.
- * - On checkout.session.expired, the row is cleaned up.
- */
-
 import { expect, test } from "bun:test";
 import {
 	type ApiCustomerV3,
@@ -32,15 +18,10 @@ import chalk from "chalk";
 import { eq } from "drizzle-orm";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
 
-// Parses the cs_xxx checkout session id out of a Stripe-hosted checkout URL.
 const parseCheckoutSessionId = (url: string): string | null => {
 	const match = url.match(/\/c\/pay\/(cs_[^/?#]+)/);
 	return match?.[1] ?? null;
 };
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 1: Happy path — pre-insert at attach time, webhook patches subscription_ids
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(`${chalk.yellowBright("stripe-checkout enable_plan_immediately: pre-inserts cusProduct, webhook links sub")}`, async () => {
 	const customerId = "stripe-checkout-eppi-happy";
@@ -59,22 +40,18 @@ test.concurrent(`${chalk.yellowBright("stripe-checkout enable_plan_immediately: 
 	const { autumnV1, ctx } = await initScenario({
 		customerId,
 		setup: [
-			s.customer({ testClock: true }), // No payment method → stripe_checkout
+			s.customer({ testClock: true }),
 			s.products({ list: [pro] }),
 		],
 		actions: [],
 	});
 
-	// Resolve internal customer id once for direct DB lookups below.
 	const dbCustomer = await ctx.db.query.customers.findFirst({
 		where: eq(customers.id, customerId),
 	});
 	expect(dbCustomer).toBeDefined();
 	const internalCustomerId = dbCustomer!.internal_id;
 
-	// 1. Attach with the new top-level enable_plan_immediately flag.
-	// V1_Beta (V0) shape; `enable_product_immediately` is mapped to the new
-	// top-level `enable_plan_immediately` by V1.2_AttachParamsChange.
 	const attachParams: AttachParamsV0Input = {
 		customer_id: customerId,
 		product_id: pro.id,
@@ -89,8 +66,6 @@ test.concurrent(`${chalk.yellowBright("stripe-checkout enable_plan_immediately: 
 	const checkoutSessionId = parseCheckoutSessionId(result.payment_url!);
 	expect(checkoutSessionId).toBeTruthy();
 
-	// 2. BEFORE completing the form, the cusProduct should already exist as Active
-	// and be linked to the checkout session via stripe_checkout_session_id.
 	const cusProductsBeforeCheckout = await CusProductService.list({
 		db: ctx.db,
 		internalCustomerId,
@@ -108,7 +83,6 @@ test.concurrent(`${chalk.yellowBright("stripe-checkout enable_plan_immediately: 
 		checkoutSessionId,
 	);
 
-	// API view should also report the product as active immediately.
 	const customerBefore =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	await expectProductActive({
@@ -116,10 +90,8 @@ test.concurrent(`${chalk.yellowBright("stripe-checkout enable_plan_immediately: 
 		productId: pro.id,
 	});
 
-	// 3. Customer completes the Stripe-hosted checkout.
 	await completeStripeCheckoutForm({ url: result.payment_url! });
 
-	// 4. After completion: same cusProduct row, now with subscription_ids patched.
 	const cusProductsAfter = await CusProductService.list({
 		db: ctx.db,
 		internalCustomerId,
@@ -129,12 +101,9 @@ test.concurrent(`${chalk.yellowBright("stripe-checkout enable_plan_immediately: 
 		(cp) => cp.product.id === pro.id,
 	);
 	expect(proCusProductAfter).toBeDefined();
-	expect(proCusProductAfter!.id).toBe(proCusProductBefore!.id); // same row
+	expect(proCusProductAfter!.id).toBe(proCusProductBefore!.id);
 	expect(proCusProductAfter!.subscription_ids ?? []).toHaveLength(1);
 
-	// 5. Prepaid quantity must have been reconciled into the Stripe subscription
-	//    AND into Autumn's entitlement balances (proves modifyStripeSubscription
-	//    + balance setup ran during webhook handling).
 	const customerAfter = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	await expectProductActive({ customer: customerAfter, productId: pro.id });
 	expectCustomerFeatureCorrect({
@@ -145,7 +114,6 @@ test.concurrent(`${chalk.yellowBright("stripe-checkout enable_plan_immediately: 
 		usage: 0,
 	});
 
-	// 6. Single invoice issued: $20 base + 2 paid packs @ $10 = $40.
 	await expectCustomerInvoiceCorrect({
 		customer: customerAfter,
 		count: 1,
@@ -153,15 +121,6 @@ test.concurrent(`${chalk.yellowBright("stripe-checkout enable_plan_immediately: 
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 2: Abandoned checkout — cusProduct cleaned up on session.expired
-// ═══════════════════════════════════════════════════════════════════════════════
-
-// Expiry is driven by expiring the session on Stripe, which emits
-// `checkout.session.expired`. The API assertion at the end is the regression
-// check for the subject cache: the handler expires the row in Postgres, and the
-// webhook refresh middleware must drop the cached subject so `customers.get`
-// stops reporting the plan as active.
 test.concurrent(`${chalk.yellowBright("stripe-checkout enable_plan_immediately: expired session cleans up cusProduct")}`, async () => {
 	const customerId = "stripe-checkout-eppi-expired";
 
@@ -187,9 +146,6 @@ test.concurrent(`${chalk.yellowBright("stripe-checkout enable_plan_immediately: 
 	});
 	const internalCustomerId = dbCustomer!.internal_id;
 
-	// 1. Attach with enable_plan_immediately, do NOT complete the form.
-	// V1_Beta (V0) shape; `enable_product_immediately` is mapped to the new
-	// top-level `enable_plan_immediately` by V1.2_AttachParamsChange.
 	const attachParams: AttachParamsV0Input = {
 		customer_id: customerId,
 		product_id: pro.id,
@@ -202,7 +158,6 @@ test.concurrent(`${chalk.yellowBright("stripe-checkout enable_plan_immediately: 
 	const checkoutSessionId = parseCheckoutSessionId(result.payment_url!);
 	expect(checkoutSessionId).toBeTruthy();
 
-	// Sanity: cusProduct exists Active before expiry.
 	const before = await CusProductService.list({
 		db: ctx.db,
 		internalCustomerId,
@@ -210,11 +165,6 @@ test.concurrent(`${chalk.yellowBright("stripe-checkout enable_plan_immediately: 
 	});
 	expect(before.some((cp) => cp.product.id === pro.id)).toBe(true);
 
-	// 2. Abandon the checkout: expire the session on Stripe, which emits
-	// `checkout.session.expired`. Wait on the cache-backed API view, not the
-	// DB row: the handler expires the row first and the refresh middleware
-	// drops the cached subject after it returns, so a DB-only predicate can
-	// resolve before `customers.get` stops reporting the plan.
 	await ctx.stripeCli.checkout.sessions.expire(checkoutSessionId!);
 
 	const isProActiveInApi = async () => {
@@ -230,7 +180,6 @@ test.concurrent(`${chalk.yellowBright("stripe-checkout enable_plan_immediately: 
 		until: async () => !(await isProActiveInApi()),
 	});
 
-	// 3. After expiry: cusProduct should no longer be Active.
 	const after = await CusProductService.list({
 		db: ctx.db,
 		internalCustomerId,
@@ -238,7 +187,6 @@ test.concurrent(`${chalk.yellowBright("stripe-checkout enable_plan_immediately: 
 	});
 	expect(after.some((cp) => cp.product.id === pro.id)).toBe(false);
 
-	// API view: pro is not active.
 	const customerAfter = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	await expect(
 		expectProductActive({ customer: customerAfter, productId: pro.id }),

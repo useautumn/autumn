@@ -1,6 +1,3 @@
-// Red: a resumed pending invoice was logged as "attached successfully" and the setup
-// metadata deleted. Green: the webhook rethrows and keeps the metadata for retry.
-
 import { expect, test } from "bun:test";
 import {
 	AppEnv,

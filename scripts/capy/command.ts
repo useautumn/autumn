@@ -201,7 +201,6 @@ export function capyUnsetCommand(keys: string[]): string {
 	return keys.length > 0 ? `unset ${keys.join(" ")}; ` : "";
 }
 
-/** True when every requested service is already in the running stack. */
 export function stackRunsServices({
 	running,
 	requested,
@@ -226,7 +225,6 @@ function ensureAppProcess({ services }: { services: string[] }): void {
 	if (runningStackSatisfies({ services })) return;
 	cmdCapyStop();
 	ensureStartup();
-	// Another `bun capy` may have launched the app while this one waited on the startup lock.
 	if (runningStackSatisfies({ services })) return;
 	const env: Record<string, string> = {
 		...process.env,
@@ -250,7 +248,6 @@ function ensureAppProcess({ services }: { services: string[] }): void {
 		[
 			"bash",
 			"-lc",
-			// The login shell re-exports Capy's project secrets, so withheld keys are unset after it.
 			`${capyUnsetCommand(withheld)}set -o pipefail; bun scripts/dev.ts --worktree 1 2>&1 | tee -a '${appLog.replace(/'/g, "'\\''")}'`,
 		],
 		REPO_ROOT,
@@ -263,7 +260,6 @@ export async function cmdCapy({
 	args?: string[];
 } = {}): Promise<void> {
 	if (applyOptInFlags({ args })) cmdCapyStop();
-	// --server-only predates the frontend opt-in; it still skips every frontend for this run.
 	const services = capyDevServices({
 		serverOnly: args.includes(SERVER_ONLY_FLAG),
 	});
@@ -292,7 +288,6 @@ export function cmdCapyLogs(): void {
 	);
 }
 
-/** Every process under the given roots, roots included; `psOutput` is `ps -eo pid=,ppid=`. */
 export function descendantPids({
 	roots,
 	psOutput,
@@ -350,7 +345,6 @@ function signalPids({
 	});
 }
 
-// nodemon and friends survive the tmux SIGHUP and keep :8080 bound, so the tree is killed explicitly.
 export function cmdCapyStop(): void {
 	if (!tmuxSessionExists(CAPY_SESSION)) return;
 	const pids = capySessionPids();

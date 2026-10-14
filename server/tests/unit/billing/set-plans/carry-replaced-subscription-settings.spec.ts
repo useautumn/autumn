@@ -1,8 +1,3 @@
-/**
- * A recreated subscription, whatever the reason, takes over the old one's payment method, collection,
- * tax settings, metadata and discounts, with a part-used repeating discount keeping only its remaining cycles.
- */
-
 import { describe, expect, test } from "bun:test";
 import {
 	type CreateScheduleBillingContext,

@@ -1,6 +1,5 @@
 import type { CreditSchemaItem } from "@autumn/shared";
 
-/** Row keys stay stable across edits: extra rows get fresh keys, removed rows drop theirs. */
 export const keysForSchema = ({
 	keys,
 	length,
@@ -26,7 +25,6 @@ export const removeSchemaItemAt = ({
 	keys: keys.filter((_, i) => i !== index),
 });
 
-/** A row opens for editing the moment its feature is picked; other edits leave the accordion alone. */
 export const expandedKeyAfterItemChange = ({
 	previous,
 	next,

@@ -1,8 +1,3 @@
-/**
- * Contract: the coverage pipe accepts an optional customer/entity scope so scoped
- * property groups reconcile against property presence inside that scope, and it
- * rejects nothing an org-wide caller already sends.
- */
 import { expect, test } from "bun:test";
 import { propertyRollupCoveragePipeParamsSchema } from "@/external/tinybird/pipes/propertyRollupCoveragePipe.js";
 

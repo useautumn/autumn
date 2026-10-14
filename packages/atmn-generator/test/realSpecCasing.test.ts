@@ -1,14 +1,3 @@
-/**
- * The unit tests run against a schema this repo wrote by hand, which is exactly
- * how a mapper passes its tests and still corrupts real data: the hand-written
- * `usage_limits` was an object, the real one is an array, and a shape that does
- * not line up means the schema lookup misses and every key underneath gets
- * recased blindly — including the user's event properties.
- *
- * So these run against `openapi-internal.yml` itself. If the spec moves, these
- * fail; that is the point.
- */
-
 import { expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import yaml from "yaml";
@@ -99,14 +88,12 @@ test("real spec: user-owned keys survive untouched", () => {
 		schema: catalogUpdateSchema(),
 	}) as any;
 
-	// Event property conditions — recasing these changes which events count.
 	expect(
 		fixture.plans[0].billingControls.usageLimits[0].filter.properties,
 	).toEqual({ api_key_id: "ak_1", ai_model_slug: "gpt-4" });
 
 	expect(fixture.plans[0].metadata).toEqual({ some_key: "keep_me" });
 
-	// A record key stays, while the object it holds is still recased.
 	expect(Object.keys(fixture.features[0].modelMarkups)).toEqual(["gpt-4"]);
 	expect(fixture.features[0].modelMarkups["gpt-4"].inputCost).toBe(3);
 });
@@ -117,14 +104,7 @@ test("real spec: round trip is the identity", () => {
 	expect(fixtureToWire({ value: fixture, schema })).toEqual(WIRE);
 });
 
-/**
- * Regressions found by sweeping the mapper against the whole spec. Each was
- * silent: the value came back changed with no error anywhere.
- */
-
 test("real spec: a free-form record value is untouched all the way down", () => {
-	// `metadata` is z.record(string, z.any()) -> `additionalProperties: {}`.
-	// Protecting only the record's own keys left everything below them exposed.
 	const schema = catalogUpdateSchema();
 	const root = specDocument();
 	const wire = {
@@ -140,9 +120,6 @@ test("real spec: a free-form record value is untouched all the way down", () => 
 });
 
 test("real spec: $ref is followed, so records behind one keep their keys", () => {
-	// customer_data is a $ref to CustomerData, whose `metadata` is a record.
-	// Unresolved, the stub has no properties and everything under it was recased
-	// blind — 12 request bodies spec-wide.
 	const root = specDocument();
 	const schema =
 		root.paths["/v1/balances.track"].post.requestBody.content[
@@ -158,7 +135,6 @@ test("real spec: $ref is followed, so records behind one keep their keys", () =>
 });
 
 test("filter operators are literal API keys, not snake_case fields", () => {
-	// $starts_with is not an operator the server has.
 	expect(toSnakeCase("$startsWith")).toBe("$startsWith");
 	expect(toCamelCase("$startsWith")).toBe("$startsWith");
 });
@@ -170,8 +146,6 @@ test.each([
 	["stripe_v2_price_id", "stripeV2PriceId"],
 	["oauth2_token", "oauth2Token"],
 ])("%s round-trips through camelCase", (wire, fixture) => {
-	// `_1` has no uppercase form, so folding it consumed the underscore and
-	// `region_1` came back as `region1`.
 	expect(toCamelCase(wire)).toBe(fixture);
 	expect(toSnakeCase(fixture)).toBe(wire);
 });

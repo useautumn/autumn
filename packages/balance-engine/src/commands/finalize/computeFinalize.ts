@@ -17,10 +17,6 @@ import { splitFinalize, unwoundLockToForwardValue } from "./splitFinalize.js";
 import type { FinalizeCommand } from "./types/finalizeCommand.js";
 import { unwindLock } from "./unwindLock/unwindLock.js";
 
-/**
- * Settles a lock: give back what the final value does not need, newest bucket first, then take whatever it
- * needs beyond the lock. Both halves are deltas, so the row changes come from the same converter a track uses.
- */
 export const computeFinalizeDecision = ({
 	fullSubject,
 	command,
@@ -31,7 +27,6 @@ export const computeFinalizeDecision = ({
 	assertCommandSupported({ fullSubject, command });
 	const { lock } = command;
 
-	// Checked before anything moves: a lock already settled, or expired, is simply gone.
 	const isOpen = fullSubject.open_locks.some(
 		(openLock) => openLock.id === lock.id,
 	);
@@ -48,7 +43,6 @@ export const computeFinalizeDecision = ({
 		finalValue,
 	});
 
-	// The lock's terms govern, whatever the finalize call would prefer.
 	const lockRequest: DeductionRequest = {
 		selection: toDeductionSelection({
 			featureId: lock.feature_id,
@@ -59,7 +53,6 @@ export const computeFinalizeDecision = ({
 			countsUsageWindows: true,
 			countsAllocations: true,
 			org: command.org,
-			// A release gives back regardless; only taking more is subject to the overdue block.
 			enforceOverdueBlock: true,
 		}),
 		terms: { overageBehavior: lock.overage_behavior, enforcesSpendLimit: true },
@@ -81,7 +74,6 @@ export const computeFinalizeDecision = ({
 		...lockRequest,
 		value: unwoundLockToForwardValue({ unwound, additionalValue, lockValue }),
 	};
-	// The forward draw starts from what the unwind moved, so it sees the balances and headroom just given back.
 	const deductionState = {
 		remaining: new Decimal(request.value),
 		terms: request.terms,
@@ -104,7 +96,6 @@ export const computeFinalizeDecision = ({
 			after: fullSubject.revision + 1,
 		},
 		command,
-		// A rejected confirm moves nothing and leaves the lock open for another attempt.
 		changes: rejected
 			? []
 			: [...outcome.changes, { table: "locks", op: "delete", id: lock.id }],

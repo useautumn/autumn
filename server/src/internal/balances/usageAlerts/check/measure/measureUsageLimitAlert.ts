@@ -8,7 +8,6 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import type { TrackedSubjects } from "../types/trackedSubjects.js";
 import { findUsageWindowLimitForAlert } from "./findUsageWindowLimitForAlert.js";
 
-// One limit at one now: a window that rolled between the subjects reads 0 on the old side.
 export const measureUsageLimitAlert = ({
 	ctx,
 	alert,

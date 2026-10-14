@@ -1,7 +1,6 @@
 import type { FullProduct } from "@autumn/shared";
 import { validateProductGroupsByScope } from "../../common/validateProductGroupsByScope";
 
-/** Reject conflicting main recurring plans within the same phase scope. */
 export const validateSetPlansPhasePlans = ({
 	plans,
 }: {

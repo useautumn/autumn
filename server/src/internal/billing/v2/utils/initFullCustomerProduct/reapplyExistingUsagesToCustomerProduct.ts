@@ -34,18 +34,11 @@ export const reapplyExistingUsagesToCustomerProduct = async ({
 
 	if (!currentCustomerProduct) return;
 
-	// const featuresToCarryUsagesFor = customerProductToFeaturesToCarryUsagesFor({
-	// 	cusProduct: customerProduct,
-	// });
-
 	const currentUsages = cusProductToExistingUsages({
 		cusProduct: currentCustomerProduct,
 		entityId: customerProduct.entity_id ?? undefined,
 	});
 
-	// Reinitialize customer entitlements with reset balance
-	// Use the NEW customerProduct (not currentCustomerProduct) to get the correct
-	// prices and allowances for balance initialization
 	const fullProduct = cusProductToProduct({
 		cusProduct: customerProduct,
 	});

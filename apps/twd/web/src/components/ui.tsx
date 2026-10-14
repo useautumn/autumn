@@ -46,8 +46,6 @@ export { Input } from "@autumn/ui/components/ui/input";
 export { Skeleton } from "@autumn/ui/components/ui/skeleton";
 export { TooltipProvider } from "@autumn/ui/components/ui/tooltip";
 
-// ---- inputs ---------------------------------------------------------------
-
 export const Field = ({
 	label,
 	hint,
@@ -70,7 +68,6 @@ export const Field = ({
 	);
 };
 
-/** Autumn's list search bar (customers/products toolbar). */
 export const SearchInput = ({
 	value,
 	onChange,
@@ -131,7 +128,6 @@ export const Checkbox = ({
 	/>
 );
 
-/** Compact single-choice filter: Autumn's grouped tab button. */
 export const Segmented = <T extends string>({
 	value,
 	onChange,
@@ -152,9 +148,6 @@ export const Segmented = <T extends string>({
 	/>
 );
 
-// ---- page chrome ----------------------------------------------------------
-
-/** Autumn page header: filled icon + title in muted text, actions right. */
 export const PageHeader = ({
 	icon,
 	title,
@@ -180,9 +173,6 @@ export const Panel = ({ className, ...props }: ComponentProps<"div">) => (
 	/>
 );
 
-// ---- table ----------------------------------------------------------------
-
-/** packages/ui Table (the customers/plans list) over a plain column list. */
 export const DataTable = <T,>({
 	data,
 	columns,
@@ -205,7 +195,6 @@ export const DataTable = <T,>({
 	getRowClassName?: (row: T) => string | undefined;
 	rowClassName?: string;
 	footer?: ReactNode;
-	/** Shrink to the parent flex column and scroll rows under the sticky header. */
 	fill?: boolean;
 }) => {
 	const table = useReactTable({
@@ -254,7 +243,6 @@ export const DataTable = <T,>({
 
 const PAGE_SIZES = [25, 50, 100, 200] as const;
 
-/** DataTable with numbered pages over rows already in memory (live-patched lists); resets on resetKey. */
 export const PagedDataTable = <T,>({
 	data,
 	resetKey,
@@ -300,8 +288,6 @@ export const PagedDataTable = <T,>({
 	);
 };
 
-// ---- tooltip --------------------------------------------------------------
-
 export const Tooltip = ({
 	content,
 	children,
@@ -326,8 +312,6 @@ export const Tooltip = ({
 		</TooltipContent>
 	</AutumnTooltip>
 );
-
-// ---- dialogs --------------------------------------------------------------
 
 export const Dialog = ({
 	open,

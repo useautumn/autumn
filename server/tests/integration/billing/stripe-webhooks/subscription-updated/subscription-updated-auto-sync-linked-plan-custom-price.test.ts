@@ -1,12 +1,3 @@
-/** TDD contract: a custom amount set in Stripe on a plan's base item must not
- * swap the customer onto a sibling plan that shares the Stripe product.
- *
- * Mirrors the Resend marketing_pro_150k incident: sibling plans ($20 / $50)
- * share one Stripe product and the customer is on $50. The base item is
- * edited to $75 (matches no catalog price). The same edit adds an add-on
- * item, which auto-sync attaches in either outcome — that is the observable
- * "webhook processed" signal the base-plan assertion waits on. */
-
 import { test } from "bun:test";
 import { ProcessorType } from "@autumn/shared";
 import {
@@ -107,7 +98,6 @@ test(`${chalk.yellowBright("customer.subscription.updated auto-sync: custom pric
 		eventTypes: ["customer.subscription.created"],
 	});
 
-	// One Stripe edit: base item -> $75 custom amount, plus a $10 add-on item.
 	const customPrice = await createStripeFixedPriceUnderProduct({
 		ctx,
 		stripeProductId: sharedStripeProduct.id,
@@ -130,8 +120,6 @@ test(`${chalk.yellowBright("customer.subscription.updated auto-sync: custom pric
 		proration_behavior: "none",
 	});
 
-	// Add-on attached => sub.updated auto-sync ran. The base plan must not
-	// have been swapped to the cheaper sibling in that same run.
 	await waitForCustomerProducts({
 		label: "after-custom-price",
 		autumnV1,

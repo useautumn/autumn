@@ -9,7 +9,6 @@ import { logger } from "../logtail/logtailUtils.js";
 
 let svixClient: SvixClient | undefined;
 
-/** The server's one client; null until SVIX_API_KEY is set. */
 export const getSvixClient = (): SvixClient | null => {
 	const apiKey = process.env.SVIX_API_KEY;
 	if (!apiKey) return null;
@@ -17,7 +16,6 @@ export const getSvixClient = (): SvixClient | null => {
 	return svixClient;
 };
 
-/** The raw SDK, for the few calls the client has no method for yet. */
 export const createSvixCli = () => {
 	return new Svix(process.env.SVIX_API_KEY as string);
 };

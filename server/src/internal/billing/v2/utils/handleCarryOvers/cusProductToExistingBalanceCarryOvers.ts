@@ -22,12 +22,6 @@ import {
 	initCarryOverEntitlement,
 } from "@/internal/billing/v2/utils/handleCarryOvers/initCarryOverEntitlements";
 
-/**
- * A carried-over balance would have expired at the old plan's next reset. If
- * the item rolls over, a positive leftover would instead have become a rollover
- * at that reset, so give it the rollover's expiry (null = forever). Negative
- * balances (debt) never roll over, so they keep the reset expiry.
- */
 const getCarryOverExpiresAt = ({
 	cusEnt,
 	balance,
@@ -45,13 +39,6 @@ const getCarryOverExpiresAt = ({
 	return calculateNextExpiry(resetAt, rolloverConfig);
 };
 
-/**
- * Pays carried debt down from the new plan's own grant for the feature, so the
- * incoming allowance is reduced instead of a separate negative row being kept
- * (which API balances clamp to 0 and which expires unpaid). Mutates the new
- * product's cusEnts in place. Returns false when the new plan has no finite,
- * customer-level grant for the feature to absorb the debt.
- */
 const payDownDebtFromNewCustomerProduct = ({
 	newCustomerProduct,
 	internalFeatureId,
@@ -75,7 +62,6 @@ const payDownDebtFromNewCustomerProduct = ({
 		allowOverage: true,
 	});
 
-	// cusProductsToCusEnts returns copies, so write the paid-down balances back.
 	for (const target of targets) {
 		const original = newCustomerProduct.customer_entitlements.find(
 			(cusEnt) => cusEnt.id === target.id,
@@ -128,9 +114,6 @@ export const cusProductToExistingBalanceCarryOvers = ({
 		if (isUnlimitedCusEnt(cusEnt)) continue;
 		if (featureUtils.isAllocated(cusEnt.entitlement.feature)) continue;
 
-		// One-off prepaid consumable cusEnts are already auto-preserved as a
-		// lifetime cusEnt by cusProductToOneOffPrepaidCarryOvers — skip here
-		// to avoid minting a second carry-over row for the same balance.
 		const cusEntWithCusProduct = addCusProductToCusEnt({
 			cusEnt,
 			cusProduct: carryOverSourceCustomerProduct,
@@ -176,8 +159,6 @@ export const cusProductToExistingBalanceCarryOvers = ({
 		const balance = cusEnt.balance ?? 0;
 		if (balance === 0) continue;
 
-		// Pay-per-use overage is invoiced in arrears on the outgoing plan, so
-		// only unbilled debt (free or prepaid) is paid down from the new grant.
 		const cusPrice = cusEntToCusPrice({ cusEnt: cusEntWithCusProduct });
 		const isUnbilledDebt =
 			balance < 0 && !(cusPrice && isConsumablePrice(cusPrice.price));

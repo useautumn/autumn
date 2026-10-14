@@ -1,23 +1,3 @@
-/**
- * TDD test for backdated starts_at on new Stripe subscriptions.
- *
- * Contract under test:
- *   New types/fields:
- *     - Internal BillingContext.subscriptionBackdateStartMs?: epoch milliseconds
- *   New endpoints:
- *     - Existing billing.attach accepts starts_at in the past for supported new-subscription creation
- *   New behaviors:
- *     - Paid recurring attach with payment method and no existing Stripe subscription creates one Stripe subscription with start_date backdated to starts_at
- *     - The first invoice is created by Stripe for the backdated subscription
- *     - Past starts_at is rejected when the customer already has a Stripe subscription
- *     - Past starts_at is rejected when Stripe Checkout would be required
- *   Side effects:
- *     - Autumn customer_product is active, stores the past starts_at, and links to the created Stripe subscription
- *
- * Pre-impl red: attach rejects all past starts_at values before Stripe subscription creation can run.
- * Post-impl green: supported new subscriptions use Stripe backdate_start_date and unsupported paths fail fast.
- */
-
 import { expect, test } from "bun:test";
 import { type AttachParamsV1Input, ErrCode, ms } from "@autumn/shared";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils";

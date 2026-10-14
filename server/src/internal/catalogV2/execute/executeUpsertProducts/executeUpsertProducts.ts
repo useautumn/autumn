@@ -42,7 +42,6 @@ const executeUpsertProduct = async ({
 	await applyFreeTrialPlan({ ctx, upsert });
 };
 
-/** Persist upsertProducts — product rows first, then plan_license writes. */
 export const executeUpsertProducts = async ({
 	ctx,
 	updateCatalogPlan,
@@ -59,7 +58,6 @@ export const executeUpsertProducts = async ({
 			upsertProducts: updateCatalogPlan.upsertProducts,
 		});
 
-		// Pass 1: write product rows (details, items, trial).
 		for (const upsert of updateCatalogPlan.upsertProducts) {
 			await executeUpsertProduct({ ctx: txCtx, upsert });
 			results.push({
@@ -68,7 +66,6 @@ export const executeUpsertProducts = async ({
 			});
 		}
 
-		// Pass 2: replay plan_license writes after every child row exists.
 		for (const upsert of updateCatalogPlan.upsertProducts) {
 			await executePlanLicensesPlan({ ctx: txCtx, upsert });
 		}

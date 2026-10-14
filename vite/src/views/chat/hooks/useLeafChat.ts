@@ -41,8 +41,6 @@ const versioningLabel: Record<LeafCatalogDecision["versioning"], string> = {
 	update_current: "Update the current version",
 };
 
-/** Human-readable summary sent as the message text alongside the structured
- * `catalogDecision` metadata, so the transcript reads naturally too. */
 const decisionSummaryText = (decision: LeafCatalogDecision): string => {
 	const parts = [
 		`Apply the change now: ${versioningLabel[decision.versioning].toLowerCase()}`,
@@ -76,12 +74,6 @@ const approvalMessage = (approval: LeafApproval): LeafUIMessage => ({
 	role: "assistant",
 });
 
-/**
- * Chat with the Leaf agent, brokered through the main server (cookie auth) to
- * Leaf's web adapter. The text stream carries assistant prose; structured plan
- * previews + approvals are fetched beside the stream (TanStack Query) and
- * spliced in as native `data-approval` message parts, resolved in place.
- */
 export function useLeafChat({
 	onFirstMessage,
 	shouldHydrate,
@@ -101,31 +93,23 @@ export function useLeafChat({
 			transport: new DefaultChatTransport({
 				api: `${BACKEND}/agent/chat`,
 				credentials: "include",
-				// Forward the dashboard's active env so leaf scopes the CMA session +
-				// vault/OAuth credential to sandbox vs live (axios sends this on the
-				// other chat calls; the stream transport must too).
 				headers: { "x-client-type": "dashboard", app_env: env },
 			}),
 		});
 
 	const isLoading = status === "streaming" || status === "submitted";
 
-	// Hydrate history once, while the live store is still empty.
 	const { messages: hydratedMessages } = useLeafThreadQuery({
 		enabled: shouldHydrate,
 		threadId,
 	});
 	useEffect(() => {
 		if (hydratedMessages && !hydrationDone) {
-			// Hydrated history (incl. historical approval cards) is authoritative on
-			// load — replace, don't merge, so the interactions poll can't pre-empt it.
 			setMessages(hydratedMessages);
 			setHydrationDone(true);
 		}
 	}, [hydratedMessages, hydrationDone, setMessages]);
 
-	// A turn that suspended on a destructive write records an approval; pick it up
-	// once the stream settles (and after hydration, so it can't block history).
 	const { approvals, refetchInteractions } = useLeafInteractionsQuery({
 		threadId,
 	});
@@ -138,9 +122,6 @@ export function useLeafChat({
 		setMessages((prev) => {
 			const present = approvalIdsIn(prev);
 			const fresh = approvals.filter((approval) => !present.has(approval.id));
-			// A pending card the server no longer lists was superseded (the user
-			// moved on and the agent auto-discarded it) — resolve it in place so
-			// stale Apply/Discard buttons never linger.
 			const swept = prev.map((message) => ({
 				...message,
 				parts: message.parts.map((part) =>
@@ -199,7 +180,6 @@ export function useLeafChat({
 					appendAssistant(`Couldn't ${verb} the changes: ${data.error}`);
 					return;
 				}
-				// Resolve in place only after the write actually succeeds.
 				setApprovalStatus(
 					approvalId,
 					action === "approve" ? "approved" : "rejected",
@@ -207,8 +187,6 @@ export function useLeafChat({
 				if (action === "approve") {
 					appendAssistant(data.text?.trim() || "Applied.");
 				} else if (data.text?.trim()) {
-					// The agent's reaction to the discard (eve denies the parked call
-					// and the turn finishes with a message).
 					appendAssistant(data.text.trim());
 				}
 				void refetchInteractions();
@@ -223,8 +201,6 @@ export function useLeafChat({
 
 	const answerQuestion = useCallback(
 		(messageId: string, answer: string, response?: LeafQuestionResponse) => {
-			// Retire the chips in place, then send the label as the visible message
-			// with the structured answer in metadata (resolved via inputResponses).
 			setMessages((prev) =>
 				prev.map((message) =>
 					message.id === messageId
@@ -272,9 +248,6 @@ export function useLeafChat({
 		[sendMessage, setMessages],
 	);
 
-	// ChatGPT/Claude-style queueing: messages typed mid-turn are queued and
-	// auto-sent when the turn completes; "Send now" interrupts the stream first.
-	// "error" is a settled state, not busy — sends must not queue behind it.
 	const [queue, setQueue] = useState<PromptInputMessage[]>([]);
 	useEffect(() => {
 		if (isLoading || queue.length === 0) return;
@@ -298,7 +271,6 @@ export function useLeafChat({
 		[messages.length, onFirstMessage, isLoading, sendMessage],
 	);
 
-	// Interrupting flushes the queue via the status effect once the stream stops.
 	const sendQueuedNow = useCallback(() => {
 		void stop();
 	}, [stop]);

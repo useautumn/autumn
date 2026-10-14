@@ -9,7 +9,6 @@ export default function LazySection({ children }: { children: ReactNode }) {
 		const el = ref.current;
 		if (!el) return;
 
-		// iOS < 12.2 has no IntersectionObserver — mount everything immediately.
 		if (!("IntersectionObserver" in window)) {
 			setMounted(true);
 			return;
@@ -18,7 +17,6 @@ export default function LazySection({ children }: { children: ReactNode }) {
 		const observer = new IntersectionObserver(
 			([entry]) => {
 				// intersectionRatio > 0 guards against a Safari bug where
-				// isIntersecting fires as false on the initial sync callback.
 				if (entry.isIntersecting || entry.intersectionRatio > 0) {
 					setMounted(true);
 					observer.disconnect();
@@ -31,7 +29,5 @@ export default function LazySection({ children }: { children: ReactNode }) {
 		return () => observer.disconnect();
 	}, []);
 
-	// min-height: 1px prevents the wrapper collapsing to zero height before
-	// content mounts, which would cause iOS to jump scroll position on mount.
 	return <div ref={ref} style={{ minHeight: "1px" }}>{mounted ? children : null}</div>;
 }

@@ -6,7 +6,6 @@ import {
 } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
 
-/** is_default guards: never *set* on a historical version or paid plan. Preserving an existing flag is fine. */
 export const handleDefaultFlagErrors = ({
 	nextFullProduct,
 	currentFullProduct,
@@ -14,7 +13,6 @@ export const handleDefaultFlagErrors = ({
 }: {
 	nextFullProduct: FullProduct;
 	currentFullProduct?: FullProduct | null;
-	/** Newest existing version for this plan_id; undefined if plan is new. */
 	latestExistingVersion: number | undefined;
 }): void => {
 	if (!nextFullProduct.is_default) return;

@@ -3,7 +3,6 @@ import { smoothFinishAt } from "../../../src/internal/runs/eta/smoothEta.ts";
 
 type Finish = { p50: number; p90: number };
 
-/** Counts down between server updates and eases toward each new estimate. */
 export const useSmoothedEta = ({
 	etaMs,
 	etaP90Ms,

@@ -26,7 +26,6 @@ const isRouted = ({ type }: { type: RateLimitType }) =>
 const isAnOrgCap = ({ type }: { type: RateLimitType }) =>
 	ALL_TYPES.some((other) => RATE_LIMIT_CONFIGS[other].orgLimit === type);
 
-/** One row per route group, then limits chosen outside the route table, then the general fallback. */
 const listRows = (): PolicyRow[] => [
 	...RATE_LIMIT_ROUTE_GROUPS.map(({ type, name, patterns, overLimit }) => ({
 		type,
@@ -80,7 +79,6 @@ const listPolicyOverrides = ({
 		return hasOverride ? [override] : [];
 	});
 
-/** RATE_LIMIT_CONFIGS and the route table as the admin page renders them, overrides joined by type. */
 export const listRateLimitPolicies = ({
 	overrides,
 }: {
@@ -105,7 +103,6 @@ export const listRateLimitPolicies = ({
 			id: ids[index],
 			type,
 			routes,
-			// The group's over-limit answer applies to the orgLimit cap only.
 			perOrg: perOrg
 				? toRateLimitLayerSummary({
 						type: perOrg,

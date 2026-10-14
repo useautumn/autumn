@@ -16,13 +16,11 @@ type JoinedCatalog = SubjectJoin & {
 	catalogJoinedAt: number;
 };
 
-/** A join is pure over (state, catalog) and states are replaced, never edited, so one join per state serves every read until its own catalog rows move. */
 export const createSubjectJoinCache = ({
 	ctx,
 }: {
 	ctx: {
 		catalogCache: Pick<CatalogCache, "isCurrent">;
-		/** How long a joined catalog is trusted before `ensure` re-reads its rows; bounds staleness across inherited states. */
 		config: { catalogRecheckMs: number };
 		now?: () => number;
 	};
@@ -30,7 +28,6 @@ export const createSubjectJoinCache = ({
 	const joins = new WeakMap<SubjectState, SubjectJoin>();
 	const now = ctx.now ?? Date.now;
 
-	/** Built against no catalog yet, or one whose rows haven't moved: another customer's rows coming and going don't count. */
 	function isJoinCurrent(join: SubjectJoin): boolean {
 		return (
 			join.basis === null || ctx.catalogCache.isCurrent({ catalog: join.basis })
@@ -57,7 +54,6 @@ export const createSubjectJoinCache = ({
 		);
 	}
 
-	/** Joined, its rows unmoved, and not yet due a recheck. */
 	function isCatalogCurrent(
 		join: SubjectJoin | undefined,
 	): join is JoinedCatalog {
@@ -79,8 +75,6 @@ export const createSubjectJoinCache = ({
 		join: () => Catalog;
 	}): Catalog {
 		const cached = joinOf({ state });
-		// A catalog past its recheck is joined again from the rows `ensure` just refreshed; keeping it
-		// would leave this state, and every state it hands the catalog on to, due forever.
 		if (cached.catalog === null || isRecheckDue(cached)) {
 			cached.catalog = join();
 			cached.catalogJoinedAt = now();
@@ -97,7 +91,6 @@ export const createSubjectJoinCache = ({
 	}: {
 		state: SubjectState;
 		entityId: string | null;
-		/** The catalog `join` reads, when the caller already holds it. */
 		catalog?: Catalog;
 		join: () => WorkerFullSubject;
 	}): WorkerFullSubject {
@@ -122,7 +115,6 @@ export const createSubjectJoinCache = ({
 		if (!from || !changesKeepCatalogKeys({ changes })) return;
 		const join = joins.get(from);
 		if (!isCatalogCurrent(join)) return;
-		// The decision already joined the next state's view against this catalog; it keeps that and gains the catalog.
 		const existing = joins.get(to);
 		if (
 			existing &&

@@ -47,10 +47,8 @@ export const getProductItemResponse = ({
 	options?: FeatureOptions[];
 	isMainPrice?: boolean;
 }) => {
-	// 1. Get item type
 	const type = getItemType(item);
 
-	// 2. Get display
 	const display = getProductItemDisplay({
 		item,
 		features,
@@ -183,17 +181,14 @@ export const getProductResponse = async ({
 	withDisplay?: boolean;
 	options?: FeatureOptions[];
 }) => {
-	// 1. Get items with display
 	const rawItems = mapToProductItems({
 		prices: product.prices ?? [],
 		entitlements: product.entitlements ?? [],
 		features: features,
 	});
 
-	// Sort raw items first
 	const sortedItems = sortProductItems(rawItems, features);
 
-	// Transform sorted items
 	const items = sortedItems.map((item, index) => {
 		return getProductItemResponse({
 			item,
@@ -205,7 +200,6 @@ export const getProductResponse = async ({
 		});
 	});
 
-	// 2. Get product properties
 	const attachScenario = getAttachScenario({
 		fullCus,
 		fullProduct: product,

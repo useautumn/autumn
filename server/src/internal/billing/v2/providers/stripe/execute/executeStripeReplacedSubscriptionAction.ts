@@ -17,7 +17,6 @@ const TRANSIENT_STRIPE_ERROR_TYPES = new Set([
 const TOO_MANY_REQUESTS_STATUS = 429;
 const SERVER_ERROR_STATUS = 500;
 
-/** The recreated subscription takes over a period this one already billed, so it ends without a credit or a final invoice. */
 const BACKDATE_CANCEL_PARAMS: Stripe.SubscriptionCancelParams = {
 	prorate: false,
 	invoice_now: false,
@@ -81,10 +80,6 @@ const cancelReplacedSubscription = async ({
 	}
 };
 
-/**
- * Autumn's idempotency key marks the deleted webhook as an echo, so its Pending plans are expired here.
- * The new subscription already exists, so a cancel still failing after retries is logged rather than blocking its plan.
- */
 export const executeStripeReplacedSubscriptionAction = async ({
 	ctx,
 	fullCustomer,

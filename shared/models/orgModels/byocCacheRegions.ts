@@ -1,4 +1,3 @@
-/** The AWS regions an Atom can be set up in; each one offers the Graviton machines in `BYOC_CACHE_MACHINES`. */
 export const BYOC_CACHE_AWS_REGIONS = [
 	"us-east-1",
 	"us-east-2",

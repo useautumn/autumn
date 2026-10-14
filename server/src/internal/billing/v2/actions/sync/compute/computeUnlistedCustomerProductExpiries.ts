@@ -6,8 +6,6 @@ import {
 } from "@autumn/shared";
 import { expireCustomerProduct } from "./computeSyncImmediatePhase";
 
-/** Ids of live plans some synced plan carries forward, whether it replaces them,
- * changes their seats or repeats them unchanged. */
 const listedCustomerProductIds = ({
 	syncContext,
 }: {
@@ -26,8 +24,6 @@ const listedCustomerProductIds = ({
 	]);
 };
 
-/** Live plans on the subscription, and free plans, that no synced plan carries
- * forward when the caller sent the full plan list — leaving one out removes it. */
 export const computeUnlistedCustomerProductExpiries = ({
 	syncContext,
 }: {

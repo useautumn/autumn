@@ -8,7 +8,6 @@ import { ProductService } from "@/internal/products/ProductService.js";
 import { generateId } from "@/utils/genUtils.js";
 import { uniqueTestId } from "../../../utils/uniqueTestId.js";
 
-/** Attach a customer to a specific plan version (no Stripe). Default Active. */
 export const seedVersionableCustomer = async ({
 	ctx,
 	planId,

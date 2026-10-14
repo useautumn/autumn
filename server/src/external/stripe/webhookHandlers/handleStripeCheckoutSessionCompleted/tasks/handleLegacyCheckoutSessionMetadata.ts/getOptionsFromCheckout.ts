@@ -28,7 +28,6 @@ export const getOptionsFromCheckoutSession = async ({
 	const { prices, entitlements: ents, optionsList } = attachParams;
 	const lineItems: Stripe.LineItem[] = checkoutSession.line_items?.data || [];
 
-	// Should still work with old method?
 	for (const price of prices) {
 		const config = price.config as UsagePriceConfig;
 
@@ -45,7 +44,6 @@ export const getOptionsFromCheckoutSession = async ({
 			const relatedEnt = getPriceEntitlement(price, ents);
 
 			if (priceIsOneOffAndTiered(price, relatedEnt)) {
-				// quantity = lineItem.quantity || 0;
 				continue;
 			} else {
 				quantity = lineItem.quantity || 0;

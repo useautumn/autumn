@@ -15,7 +15,6 @@ const previous = {
 	ENCRYPTION_PASSWORD: process.env.ENCRYPTION_PASSWORD,
 };
 
-/** Every Atom route a deployer could reach on a multi-tenant Atom; a customer's cache must never land here. */
 const multiTenantAtomCalls: string[] = [];
 const multiTenantAtom = Bun.serve({
 	port: 0,
@@ -40,7 +39,6 @@ const alienClient: AlienClient = {
 	revokeSetupLinksOnceDeleted: async () => {},
 };
 const ALIEN_CLIENT_MODULE = "@/external/alien/getAlienClient.js";
-// Kept so afterAll can hand the real module back: mock.module is process-wide.
 const realAlienClientModule: Record<string, unknown> = await import(
 	ALIEN_CLIENT_MODULE
 );

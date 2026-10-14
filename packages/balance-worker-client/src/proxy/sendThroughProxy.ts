@@ -31,7 +31,6 @@ function readProxyReply({ body }: { body: unknown }): unknown {
 	});
 }
 
-/** One signed POST to the API, which runs `method` on its own client. */
 export async function sendThroughProxy<M extends BalanceWorkerProxyMethod>({
 	ctx,
 	method,
@@ -51,7 +50,6 @@ export async function sendThroughProxy<M extends BalanceWorkerProxyMethod>({
 		const response = await ctx.http.postJson({
 			url: `${ctx.url}${BALANCE_WORKER_PROXY_PATH}`,
 			body,
-			// postJson sends JSON.stringify(body): the exact string signed here.
 			headers: {
 				[BALANCE_WORKER_PROXY_SIGNATURE_HEADER]: signProxyBody({
 					secret: ctx.secret,
@@ -71,6 +69,5 @@ export async function sendThroughProxy<M extends BalanceWorkerProxyMethod>({
 			cause,
 		});
 	}
-	// The reply is the API client's own typed reply, relayed; `sendToOwner` trusts the worker the same way.
 	return readProxyReply({ body: responseBody }) as BalanceWorkerProxyReply<M>;
 }

@@ -1,14 +1,3 @@
-/**
- * invoices.issue_credit_note: credit an open or paid Stripe invoice.
- *
- * Contract:
- *   POST /invoices.issue_credit_note { invoice_id, amount | lines, destination?, ... } -> { credit_note }
- *   paid + lines + refund  → refund issued, refunded_amount tracked on our row
- *   paid + amount          → defaults to customer_balance
- *   open + amount          → reduces what's owed; preview creates nothing
- *   both amount+lines / foreign line → 400
- */
-
 import { expect, test } from "bun:test";
 import type { ApiCreditNote, ApiListInvoiceV1 } from "@autumn/shared";
 import { ErrCode } from "@autumn/shared";
@@ -50,7 +39,6 @@ const setupPaidInvoice = async ({ customerId }: { customerId: string }) => {
 		],
 		actions: [s.billing.attach({ productId: pro.id })],
 	});
-	// Line items are stored by an async queue job after the invoice is created.
 	const created = await getOnlyInvoice({ autumnV2_3, customerId });
 	await waitForInvoiceLineItems({ stripeInvoiceId: created.stripe_id });
 	const invoice = await getOnlyInvoice({ autumnV2_3, customerId });

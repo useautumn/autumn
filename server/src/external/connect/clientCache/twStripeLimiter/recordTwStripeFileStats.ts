@@ -3,7 +3,6 @@ import { getTwStripeRedis } from "./getTwStripeRedis";
 import statsScript from "./twStripeFileStats.lua" with { type: "text" };
 import { getTwStripeFileTag } from "./twStripeRequestContext";
 
-/** Upper bounds (ms) of the permit-wait histogram; keep in sync with runTestFileWithStats.ts. */
 export const TW_PERMIT_WAIT_BUCKETS_MS = [
 	1, 10, 50, 100, 250, 500, 1000, 2500, 5000, 10000,
 ];
@@ -11,7 +10,6 @@ export const TW_PERMIT_WAIT_BUCKETS_MS = [
 const toWaitBucket = (waitMs: number) =>
 	String(TW_PERMIT_WAIT_BUCKETS_MS.find((bound) => waitMs < bound) ?? "inf");
 
-/** Stripe's header values are short kebab-case words; anything else is bucketed. */
 const toReason = (reason: unknown) =>
 	typeof reason === "string" && /^[a-z0-9_-]{1,40}$/.test(reason)
 		? reason
@@ -22,7 +20,6 @@ const twFileStatsKeys = (fileTag: string | undefined) => {
 	return [file, `${file}:inflight`, "tw:fs:machine", "tw:fs:machine:inflight"];
 };
 
-/** Counts one admitted Stripe request against its test file; never throws into the request path. */
 export const startTwStripeFileStats = async ({
 	waitMs,
 	leaseMs,

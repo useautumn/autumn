@@ -11,10 +11,6 @@ const isNotFound = (error: unknown): boolean => {
 	return /not found/i.test(message);
 };
 
-/** The trigger SDK mints run ids client-side, so `trigger()` can return a
- * handle for a task the platform never accepted. Only a definite "not found"
- * proves that; a transport or 5xx failure leaves the dispatch unknown, and
- * failing the claim then could double-run a migration that did start. */
 export const verifyTriggerRunExists = async (
 	triggerRunId: string,
 ): Promise<TriggerRunLookup> => {

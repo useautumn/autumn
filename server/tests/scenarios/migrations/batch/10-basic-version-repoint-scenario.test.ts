@@ -1,8 +1,3 @@
-/**
- * The simplest useful shape: two versions, two customers, one repoint. Start
- * here to confirm the plumbing works before reading any of the complex ones.
- * A rollback op is printed too, so you can send the same customer back to v1.
- */
 import { test } from "bun:test";
 import { TestFeature } from "@tests/setup/v2Features";
 import { itemsV2 } from "@tests/utils/fixtures/itemsV2";

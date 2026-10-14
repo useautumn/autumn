@@ -1,22 +1,8 @@
 import type { PlanSpec } from "../../../src/grading/types/planSpec.ts";
 
-/**
- * Anonymized real-customer archetype: a developer messaging API. Its
- * signature decisions — what this suite exists to test:
- *   ① two product LINES held simultaneously (API sends vs Campaigns) →
- *     plan groups, one free default per group
- *   ② volume ladder as PLAN-PER-TIER — bigger versions of Pro are sibling
- *     plans in the same group written as variants of Pro, not usage
- *     tiers, prepaid packs, or copy-pasted standalone plans
- *   ③ per-1,000 overage (billing_units trap: $0.80 per 1,000 ≠ $0.80 each)
- * Load-bearing anchors without dedicated cases: lifetime (non-resetting)
- * caps, a flat-priced add-on, free tier that hard-stops.
- */
-
 export const messagingApiGoal =
 	"Get your messaging API's two product lines set up in Autumn without touching a dashboard.";
 
-/** The full brief. B twins are manufactured by deleting exactly one line. */
 export const messagingApiFacts = [
 	"- Two products: the sending API, and Campaigns (bulk sends to contact lists). Customers can be on a plan for each at the same time — API and Campaigns plans are independent of each other.",
 	"- API line: a free plan with 3,000 messages a month, and Pro at $25 a month with 50,000 messages a month.",
@@ -28,17 +14,12 @@ export const messagingApiFacts = [
 	"- No trials.",
 ].join("\n");
 
-/** B twins delete a fact from the case's OPENING PROMPT only. The simulated
- * user always keeps the FULL brief — it must answer the surfaced question
- * with ground truth (both lines held simultaneously), not improvise. */
 export const messagingApiUserFacts = [
 	messagingApiFacts,
 	"- If asked how the API and Campaigns plans relate: they're independent — a customer can be on one plan of each at the same time; it's not one upgrade path.",
 	"- If asked about overage on Campaigns/contacts: there is none — the contact caps are hard limits.",
 ].join("\n");
 
-/** ③ the billing_units trap: "$0.80 per 1,000" must be amount 0.8 per 1,000
- * units — amount 0.8 per unit is an 800x overcharge. */
 export const apiProSpec: PlanSpec = {
 	price: { amount: 25, interval: "month" },
 	items: [
@@ -60,7 +41,6 @@ export const apiFreeSpec: PlanSpec = {
 	items: [{ included: 3000, reset: { interval: "month" } }],
 };
 
-/** Lifetime cap: contacts never reset. */
 export const campaignsFreeSpec: PlanSpec = {
 	freePlan: true,
 	auto_enable: true,
@@ -72,14 +52,11 @@ export const campaignsProSpec: PlanSpec = {
 	items: [{ included: 5000 }],
 };
 
-/** Flat monthly add-on: base price on the plan, no per-unit item price. */
 export const ssoAddOnSpec: PlanSpec = {
 	add_on: true,
 	price: { amount: 150, interval: "month" },
 };
 
-/** ② plan-per-tier siblings: Pro's shape (overage included) at bigger
- * numbers — graded on the materialized variant. */
 export const apiPro100kSpec: PlanSpec = {
 	price: { amount: 45, interval: "month" },
 	items: [
@@ -100,7 +77,6 @@ export const apiPro200kSpec: PlanSpec = {
 	],
 };
 
-/** ② second ladder, other line: Campaigns Pro contact tiers. */
 export const campaignsPro25kSpec: PlanSpec = {
 	price: { amount: 150, interval: "month" },
 	items: [{ included: 25000 }],
@@ -118,8 +94,6 @@ const messageOverage = `{
 					interval: "month",
 				}`;
 
-/** Known-correct config. withTierVariants adds the 100k/200k Pro siblings
- * (the seed case's golden); without them it's the seed workspace. */
 export const messagingApiConfig = ({
 	withTierVariants = false,
 	extraPlans = "",

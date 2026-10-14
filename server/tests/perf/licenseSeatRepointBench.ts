@@ -1,6 +1,3 @@
-/** Benchmarks a pool definition and 100k assigned-seat price repoints.
- * Run with `bun tests/perf/licenseSeatRepointBench.ts`. */
-
 import {
 	AppEnv,
 	BillingInterval,
@@ -43,7 +40,6 @@ const main = async () => {
 	const id = (kind: string, index?: number | string) =>
 		index === undefined ? `${run}_${kind}` : `${run}_${kind}_${index}`;
 
-	// ── Small fixture rows (typed inserts) ────────────────────────────────
 	await db.insert(products).values(
 		(["parent", "license"] as const).map((kind) => ({
 			internal_id: id(`prod_${kind}`),
@@ -119,7 +115,6 @@ const main = async () => {
 		updated_at: now,
 	});
 
-	// ── Bulk rows via generate_series ─────────────────────────────────────
 	await time(`seed ${SEATS} entities`, () =>
 		db.execute(sql`
 			INSERT INTO entities (internal_id, id, org_id, env, name, created_at, internal_customer_id)
@@ -150,7 +145,6 @@ const main = async () => {
 		`),
 	);
 
-	// ── The executor under test ───────────────────────────────────────────
 	console.log("\n── executor ──");
 
 	await time("pool half: repointDefinition (1 row)", () =>
@@ -172,7 +166,6 @@ const main = async () => {
 		}),
 	);
 
-	// ── Verify convergence ────────────────────────────────────────────────
 	console.log("\n── verify ──");
 	const [{ count: priceCount }] = (await db.execute(
 		sql`SELECT count(*)::int AS count FROM customer_prices WHERE price_id = ${id("price_new")}`,
@@ -185,7 +178,6 @@ const main = async () => {
 		`prices converged: ${priceCount}/${SEATS} | pool def: ${pool.plan_license_id === id("plan_license_new") ? "repointed" : "STALE"}`,
 	);
 
-	// ── Cleanup ───────────────────────────────────────────────────────────
 	console.log("\n── cleanup ──");
 	await time("delete customer_prices", () =>
 		db.execute(

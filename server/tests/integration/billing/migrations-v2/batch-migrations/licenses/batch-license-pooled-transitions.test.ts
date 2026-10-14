@@ -1,11 +1,3 @@
-/**
- * Every pooled transition shape declines the batch lane and completes on the
- * per-customer lane: pooled→pooled Δ, private→pooled, pooled→private.
- *
- * The batch lane's set-based writes never reach a pool's anchor row
- * (customer_product_id NULL), so `pooled_add_item` rejects any customize
- * whose remove/add sides touch a pooled entitlement.
- */
 import { expect, test } from "bun:test";
 import { BillingInterval } from "@autumn/shared";
 import { runChunkedMigration } from "@tests/integration/billing/migrations-v2/utils/runChunkedMigration";

@@ -1,13 +1,3 @@
-/**
- * Batch migration lane: webhook delivery controls.
- *
- * Contract under test:
- *   - `sendWebhooks: false` migrates identically but delivers NOTHING, even
- *     with a subscribed endpoint — the operator's off-switch;
- *   - `webhook_concurrency` above the max is rejected by /migrations.run
- *     (422), so a runaway value can never reach an org's endpoint.
- */
-
 import { afterAll, beforeAll, expect, test } from "bun:test";
 import type { ApiCustomerV5 } from "@autumn/shared";
 import { expectBalanceCorrect } from "@tests/integration/utils/expectBalanceCorrect.js";
@@ -47,7 +37,6 @@ afterAll(async () => {
 	await webhook?.cleanup();
 });
 
-// ── Contract: the off-switch migrates identically and delivers nothing. ──
 test.concurrent(
 	`${chalk.yellowBright("batch migration webhooks: sendWebhooks false migrates but delivers nothing")}`,
 	async () => {
@@ -82,7 +71,6 @@ test.concurrent(
 		});
 		expect(result?.lane).toBe("batch");
 
-		// Migration applied normally...
 		const customer = await autumnV2_2.customers.get<ApiCustomerV5>(customerId);
 		expectFlagCorrect({
 			customer,
@@ -97,8 +85,6 @@ test.concurrent(
 			planId: plan.id,
 		});
 
-		// ...but no migration webhook reached the subscribed endpoint (the
-		// attach's own `activated` webhook is expected and unrelated).
 		expect(
 			await waitForBillingUpdatedWebhook({
 				playToken,
@@ -109,7 +95,6 @@ test.concurrent(
 	},
 );
 
-// ── Contract: the run route clamps the blast radius at the boundary. ──
 test.concurrent(
 	`${chalk.yellowBright("batch migration webhooks: run route rejects out-of-range concurrency")}`,
 	async () => {

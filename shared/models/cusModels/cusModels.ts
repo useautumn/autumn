@@ -5,12 +5,11 @@ import { BalanceAllocationsSchema } from "./balanceAllocations/balanceAllocation
 import { DbBillingControlsSchema } from "./billingControls/customerBillingControls.js";
 
 export const CustomerSchema = z.object({
-	id: z.string().nullish(), // given by user
+	id: z.string().nullish(),
 	name: z.string().nullish(),
 	email: z.string().nullish(),
 	fingerprint: z.string().nullish(),
 
-	// Internal
 	internal_id: z.string(),
 	org_id: z.string(),
 	created_at: z.number(),

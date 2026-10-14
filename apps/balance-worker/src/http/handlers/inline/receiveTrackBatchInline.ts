@@ -10,10 +10,8 @@ import { looksLikeTrackCommand, recordBatch } from "../receiveTrackBatch.js";
 import type { InlineHandlerContext } from "./types/inlineHandlerContext.js";
 
 const decoder = new TextDecoder();
-/** One append carries the whole batch; half the writer's byte cut keeps it far under Kafka's message cap. */
 const MAX_BATCH_BODY_BYTES = 400_000;
 
-/** A batch whose every command is shaped like a track for the route's partition; anything else is the ordinary route's. */
 function trackBatchOf({
 	ctx,
 	body,
@@ -38,12 +36,10 @@ function trackBatchOf({
 	}
 }
 
-/** Exactly the ordinary batch reply: each command's reply bytes are the ones the held decide serialised. */
 function batchBodyOf({ results }: { results: string[] }): string {
 	return `{"results":[${results.join(",")}]}`;
 }
 
-/** `/v1/track-batch` decided inline as one held group, or handed to the ordinary route whole. */
 export function receiveTrackBatchInline({
 	ctx,
 	body,
@@ -109,7 +105,6 @@ export function receiveTrackBatchInline({
 			partition: route.partition,
 			heldUntilSeq: seq,
 		};
-	// Split over appends: each command is answered by its own commit, as on the ordinary route.
 	const landing = commits;
 	async function answerWhenLanded() {
 		const settled = await Promise.allSettled(
@@ -123,7 +118,6 @@ export function receiveTrackBatchInline({
 	return { later: answerWhenLanded() };
 }
 
-/** The ordinary batch reply: each success carries the bytes the held decide serialised. */
 function batchReplyOf({
 	items,
 	commitFailures,

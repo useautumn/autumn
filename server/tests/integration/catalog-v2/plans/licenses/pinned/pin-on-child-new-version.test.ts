@@ -1,11 +1,3 @@
-/**
- * catalogV2.update — child versioning:new_version leaves a non-propagated
- * parent's license link untouched: still anchored to child v1, no manufactured
- * freeze overlay, same plan_license row.
- *
- * Red (current):  the mint re-points the link to v2 and clones a frozen overlay
- * Green (after):  the link is version-anchored — no repoint, no overlay
- */
 import { expect, test } from "bun:test";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";

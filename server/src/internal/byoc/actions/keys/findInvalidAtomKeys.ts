@@ -2,7 +2,6 @@ import type { AppEnv } from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { apiKeyRepo } from "@/internal/dev/repos/index.js";
 
-/** The key hashes that are not a live secret key of the Atom's own org and env. */
 export const findInvalidAtomKeys = async ({
 	db,
 	orgId,

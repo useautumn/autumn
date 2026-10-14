@@ -65,7 +65,6 @@ test("every subscriber reads every invalidation published after it started", asy
 	const publisher = createCatalogInvalidationPublisher({
 		ctx: { producer, topic },
 	});
-	// Published before any subscriber exists: nothing to it, a fresh cache holds nothing stale.
 	await publisher.publish({ orgId: "org_before", env: "live", at: 1 });
 
 	const seen: Record<"worker" | "herald", string[]> = {
@@ -94,7 +93,6 @@ test("every subscriber reads every invalidation published after it started", asy
 	const herald = subscribe("herald");
 	try {
 		await Promise.all([worker.start(), herald.start()]);
-		// A fresh group is assigned its partition only once the coordinator has admitted it.
 		await new Promise((resolve) => setTimeout(resolve, 1_500));
 
 		await publisher.publish({ orgId: "org_1", env: "live", at: 2 });

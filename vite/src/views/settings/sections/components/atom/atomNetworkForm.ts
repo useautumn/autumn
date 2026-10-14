@@ -1,11 +1,9 @@
 import type { ByocCacheNetwork } from "@autumn/shared";
 import { z } from "zod/v4";
 
-/** Subnets are typed as one comma- or space-separated line. */
 const toSubnetIds = (subnets: string) =>
 	subnets.split(/[\s,]+/).filter(Boolean);
 
-/** The network fields any Atom setup form shares: a new VPC, or an existing one and its subnets. */
 export const AtomNetworkValuesSchema = z.object({
 	vpc: z.enum(["existing_vpc", "new_vpc"]),
 	vpcId: z.string().trim(),
@@ -14,7 +12,6 @@ export const AtomNetworkValuesSchema = z.object({
 
 export type AtomNetworkValues = z.infer<typeof AtomNetworkValuesSchema>;
 
-/** An existing VPC needs its ID and at least one subnet; a new one needs nothing. */
 export const withAtomNetworkRules = <T extends z.ZodType<AtomNetworkValues>>(
 	schema: T,
 ) =>

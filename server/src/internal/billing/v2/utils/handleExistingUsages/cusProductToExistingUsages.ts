@@ -53,7 +53,6 @@ export const cusProductToExistingUsages = ({
 
 		const isAllocated = featureUtils.isAllocated(cusEnt.entitlement.feature);
 
-		// By default, don't carry any consumable feature, unless carryAll is true, OR consumableFeatureIdsToCarry includes the feature id
 		const carryConsumableFeature =
 			carryAllConsumableFeatures ||
 			consumableFeatureIdsToCarry.includes(cusEnt.entitlement.feature.id);
@@ -104,13 +103,11 @@ export const cusProductToExistingUsages = ({
 			currentExistingUsage.usageAttribution = mergedUsageAttribution;
 		}
 
-		// 1. If it's entity scoped
 		if (isEntityScopedCusEnt(cusEnt)) {
 			const startingBalance = cusEntToStartingBalance({
 				cusEnt: cusEntWithCusProduct,
 			});
 			for (const [entityId, entityBalance] of Object.entries(cusEnt.entities)) {
-				// Usage = startingBalance + adjustment - currentBalance
 				const entityUsage = new Decimal(startingBalance)
 					.add(entityBalance.adjustment ?? 0)
 					.sub(entityBalance.balance)
@@ -124,8 +121,6 @@ export const cusProductToExistingUsages = ({
 			continue;
 		}
 
-		// Unlimited rows track usage as a raw negative balance that the granted
-		// balance helpers zero out, so read it directly. Never owed, so no overage.
 		if (isUnlimited) {
 			existingUsages[internalFeatureId].usage = new Decimal(
 				existingUsages[internalFeatureId].usage,
@@ -140,7 +135,6 @@ export const cusProductToExistingUsages = ({
 			continue;
 		}
 
-		// 2. If it's not entity scoped
 		const usage = cusEntsToUsage({
 			cusEnts: [cusEntWithCusProduct],
 			entityId,
@@ -152,8 +146,6 @@ export const cusProductToExistingUsages = ({
 			.add(usage)
 			.toNumber();
 
-		// A negative balance is usage that already exceeded its allowance, so it
-		// was billable before this transition regardless of what replaces it.
 		const rowBalance = cusEntToBalance({
 			cusEnt: cusEntWithCusProduct,
 			entityId,

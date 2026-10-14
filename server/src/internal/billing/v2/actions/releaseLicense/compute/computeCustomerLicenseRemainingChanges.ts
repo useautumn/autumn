@@ -1,7 +1,5 @@
 import type { CustomerLicenseUpdate } from "@autumn/shared";
 
-/** Give each pool back one seat per released link occurrence — releases
- * sharing a pool coalesce into a single atomic remaining increment. */
 export const computeCustomerLicenseRemainingChanges = ({
 	customerLicenseLinkIds,
 }: {

@@ -42,10 +42,8 @@ type OwnershipEvent =
 	| { type: "claimed"; partition: number; endpoint: string; routeEpoch: string }
 	| { type: "unowned"; partition: number; endpoint: string };
 
-/** The ownership topic as two workers see it: every publish reaches every waiter. */
 const createOwnershipLog = () => {
 	const records: OwnershipEvent[] = [];
-	/** Both workers' lifecycle events in one order, so cross-worker ordering can be asserted. */
 	const events: string[] = [];
 	const listeners = new Set<(event: OwnershipEvent) => void>();
 	let offset = 100;
@@ -76,7 +74,6 @@ const createOwnershipLog = () => {
 			listeners.add(listener);
 			signal.addEventListener("abort", abort, { once: true });
 		});
-	/** The latest claim or release for a partition, as the tail would have seen it. */
 	const owner = ({ partition }: { partition: number }) => {
 		for (let i = records.length - 1; i >= 0; i--) {
 			const event = records[i];
@@ -86,7 +83,6 @@ const createOwnershipLog = () => {
 		}
 		return undefined;
 	};
-	/** A preparation announced and not yet concluded by a claim, release, or that worker's ready. */
 	const activePreparation = ({ partition }: { partition: number }) => {
 		for (let i = records.length - 1; i >= 0; i--) {
 			const event = records[i];
@@ -97,7 +93,6 @@ const createOwnershipLog = () => {
 		}
 		return null;
 	};
-	/** A drain by the current owner not yet concluded by a claim. */
 	const activeDrain = ({ partition }: { partition: number }) => {
 		for (let i = records.length - 1; i >= 0; i--) {
 			const event = records[i];
@@ -127,16 +122,13 @@ type WorkerOptions = {
 	log: ReturnType<typeof createOwnershipLog>;
 	config?: Partial<PartitionsConfig>;
 	drainGate?: Promise<void>;
-	/** Holds the `draining` send; a slow topic must never hold the drain itself. */
 	announceDrainingGate?: Promise<void>;
 	prepareGate?: Promise<void>;
 	prepareFailures?: Map<number, unknown>;
 	activateGate?: Promise<void>;
 	awaitReadyAnnouncement?: PartitionsDependencies["awaitReadyAnnouncement"];
 	acquirePreparation?: PartitionsDependencies["acquirePreparation"];
-	/** Never hears a successor's `ready`: stands in for an owner that is dead or wedged. */
 	deaf?: boolean;
-	/** Says nothing before preparing: stands in for a successor on a build without the announcement. */
 	silentPreparation?: boolean;
 };
 
@@ -391,7 +383,6 @@ const createWorker = ({
 	};
 };
 
-/** Brings a worker up as the sole owner of `partitions`: no predecessor answers, so it claims for itself. */
 const ownAlone = async (
 	worker: ReturnType<typeof createWorker>,
 	partitions: number[],
@@ -536,7 +527,6 @@ describe("partition handoff", () => {
 			await waitFor(() => A.has("withdraw:2"));
 			await settle();
 
-			// A is still draining: B has been assigned for a while but must not fence.
 			expect(A.has("drained:2")).toBe(false);
 			expect(B.has("activate:2")).toBe(false);
 			expect(B.status(2)).toBe("prepared");
@@ -593,14 +583,12 @@ describe("partition handoff", () => {
 			drain.resolve();
 			await waiting;
 			expect(A.has("claim:B:2")).toBe(true);
-			// The route it claimed for the successor is what a caller meeting the withdrawn route is told to try.
 			expect(A.ownership.findSuccessor({ partition: 2 })).toEqual({
 				partition: 2,
 				endpoint: "http://B",
 				routeEpoch: expect.any(String),
 			});
 			expect(A.ownership.findSuccessor({ partition: 9 })).toBeUndefined();
-			// Nothing to wait for once the successor is named, or on a partition that is not mid-handoff.
 			await A.ownership.awaitHandoff({ partition: 2 });
 			await A.ownership.awaitHandoff({ partition: 9 });
 		} finally {
@@ -611,8 +599,6 @@ describe("partition handoff", () => {
 	});
 
 	test("a successor that announced it is preparing is waited for past the ready timeout", async () => {
-		// Run 60 on staging: a grow put the partition on an idle worker whose preparation outran the
-		// old owner's 5 s wait, the old owner released, and nobody owned the partition for 8 s.
 		const log = createOwnershipLog();
 		const prepare = deferred();
 		const A = createWorker({
@@ -627,7 +613,6 @@ describe("partition handoff", () => {
 			await B.ownership.start();
 			B.assign([2]);
 			await waitFor(() => B.has("preparing:2"));
-			// Well past the ready timeout: A heard B preparing, keeps serving, and has not released.
 			await Bun.sleep(60);
 			expect(A.has("release:2")).toBe(false);
 			expect(A.has("withdraw:2")).toBe(false);
@@ -800,7 +785,6 @@ describe("partition handoff", () => {
 			B.assign([2]);
 			await waitFor(() => A.has("draining:2"));
 			expect(A.index("withdraw:2")).toBeLessThan(A.index("draining:2"));
-			// Well past the claim timeout: B heard A draining and keeps waiting.
 			await Bun.sleep(60);
 			expect(B.has("activate:2")).toBe(false);
 			expect(B.status(2)).toBe("prepared");
@@ -832,7 +816,6 @@ describe("partition handoff", () => {
 		try {
 			await ownAlone(A, [2]);
 			A.revoke();
-			// B is chosen, then the roster moves the partition on to C before A finishes.
 			await B.ownership.start();
 			B.assign([2]);
 			await waitFor(() => A.has("draining:2"));
@@ -840,12 +823,10 @@ describe("partition handoff", () => {
 			await C.ownership.start();
 			C.assign([2]);
 			await waitFor(() => C.has("announce:2"));
-			// A's drain names B, but A still owns the partition: C must not fence it at its own timeout.
 			await Bun.sleep(60);
 			expect(C.has("activate:2")).toBe(false);
 			expect(C.has("claim:C:2")).toBe(false);
 
-			// A finishes and names B, who is gone. Silence follows, so C claims for itself.
 			drain.resolve();
 			await waitFor(() => A.has("claim:B:2"));
 			await waitFor(() => C.has("claim:C:2"));
@@ -875,12 +856,10 @@ describe("partition handoff", () => {
 			await B.ownership.start();
 			B.assign([2]);
 			await waitFor(() => B.status(2) === "ready");
-			// B owns it and never answers (deaf to C's ready, standing in for a dead owner).
 			await C.ownership.start();
 			C.assign([2]);
 			await waitFor(() => C.has("announce:2"));
 			const announcedAt = Date.now();
-			// A's drain record lands late: A is a past owner, so it says nothing about B being alive.
 			log.publish({
 				type: "draining",
 				partition: 2,
@@ -888,7 +867,6 @@ describe("partition handoff", () => {
 				successor: "http://B",
 			});
 			await waitFor(() => C.has("claim:C:2"));
-			// Silence timeout, not the drain cap.
 			expect(Date.now() - announcedAt).toBeLessThan(1_000);
 			expect(C.errors).toEqual([]);
 		} finally {
@@ -916,7 +894,6 @@ describe("partition handoff", () => {
 			A.revoke();
 			await B.ownership.start();
 			B.assign([2]);
-			// The send never completes, yet A drains and names B regardless.
 			await waitFor(() => B.status(2) === "ready");
 			expect(A.index("drained:2")).toBeLessThan(A.index("claim:B:2"));
 			expect(B.has("claim:B:2")).toBe(false);
@@ -976,7 +953,6 @@ describe("partition handoff", () => {
 			await waitFor(() => A.has("draining:2"));
 			await Bun.sleep(50);
 			expect(B.status(2)).toBe("prepared");
-			// The predecessor never finishes: past the cap the successor claims for itself, as it would in silence.
 			await waitFor(() => B.status(2) === "ready", 1_000);
 			expect(B.index("activate:2")).toBeLessThan(B.index("claim:B:2"));
 			expect(A.has("claim:B:2")).toBe(false);
@@ -1008,7 +984,6 @@ describe("partition handoff", () => {
 			expect(A.events.slice(before).filter((e) => e.endsWith(":2"))).toEqual(
 				[],
 			);
-			// The kept partition is not paused again: its follower keeps its position.
 			expect(A.pauses).toEqual(["metering:1,2", "commands:1,2"]);
 			expect(A.has("release:1")).toBe(false);
 			expect(A.status(1)).toBe("ready");
@@ -1121,7 +1096,6 @@ describe("partition handoff", () => {
 	});
 
 	test("an admitted owner hands off to a successor that announces ready, with no revoke of its own", async () => {
-		// Two fleets, two rosters: green is assigned the partition by its own group while blue keeps it in its group.
 		const log = createOwnershipLog();
 		const slotFlip = deferred();
 		const blue = createWorker({ name: "A", log });
@@ -1147,7 +1121,6 @@ describe("partition handoff", () => {
 			expect(blue.index("claim:B:2")).toBeLessThan(green.index("activate:2"));
 			expect(blue.has("release:2")).toBe(false);
 			expect(green.has("claim:B:2")).toBe(false);
-			// Blue's roster still deals it the partition, so blue itself stops fetching its commands.
 			expect(blue.pauses).toContain("commands:2");
 			await waitFor(() => blue.has("stop:2"));
 			expect(blue.ownership.findOwnedRuntime({ partition: 2 })).toBeUndefined();
@@ -1161,7 +1134,6 @@ describe("partition handoff", () => {
 	});
 
 	test("a partition handed to another fleet is prepared again and returns on a reverse flip", async () => {
-		// Each fleet's gate is a deferred the test swaps: resolved means the record names that fleet.
 		const log = createOwnershipLog();
 		const open = () => {
 			const gate = deferred();
@@ -1169,7 +1141,6 @@ describe("partition handoff", () => {
 			return gate;
 		};
 		const gates = { blue: open(), green: deferred() };
-		// Like the real hook: resolves when the gate opens, rejects with the signal's reason on a revoke.
 		const heldAt =
 			(fleet: keyof typeof gates) =>
 			({ signal }: { signal: AbortSignal }) =>
@@ -1197,7 +1168,6 @@ describe("partition handoff", () => {
 			green.assign([2]);
 			await waitFor(() => green.status(2) === "prepared");
 
-			// Flip to green: blue hands off, then prepares the partition again and holds at its (now closed) gate.
 			gates.blue = deferred();
 			gates.green.resolve();
 			await waitFor(() => green.status(2) === "ready");
@@ -1209,7 +1179,6 @@ describe("partition handoff", () => {
 			await settle();
 			expect(blue.events.filter((e) => e === "A:announce:2")).toHaveLength(1);
 			expect(blue.ownership.findOwnedRuntime({ partition: 2 })).toBeUndefined();
-			// Its own roster dealing it the partition again changes nothing: it stays prepared and silent.
 			blue.revoke();
 			blue.assign([2]);
 			await waitFor(() => blue.status(2) === "prepared");
@@ -1217,19 +1186,15 @@ describe("partition handoff", () => {
 			expect(blue.events.filter((e) => e === "A:announce:2")).toHaveLength(1);
 			expect(green.status(2)).toBe("ready");
 
-			// Flip back to blue: blue announces, green hands off and names blue, blue serves again.
 			gates.green = deferred();
 			gates.blue.resolve();
 			await waitFor(() => blue.status(2) === "ready");
 			expect(green.index("drained:2")).toBeLessThan(green.index("claim:A:2"));
 			expect(green.has("release:2")).toBe(false);
-			// Named by green, never claimed for itself a second time.
 			expect(blue.events.filter((e) => e === "A:claim:A:2")).toHaveLength(1);
 			expect(green.has("claim:A:2")).toBe(true);
 			expect(blue.ownership.findOwnedRuntime({ partition: 2 })).toBeDefined();
-			// Green in turn is prepared again for the next flip.
 			await waitFor(() => green.status(2) === "prepared");
-			// The revoke above interrupted a held startup, which is reported the way any revoke mid-startup is.
 			expect(blue.errors.map(String)).toEqual([
 				"PartitionRetiredError: Partition retired",
 			]);

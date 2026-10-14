@@ -209,7 +209,6 @@ const formatDay = (epochMs: number) =>
 		timeZone: "UTC",
 	}).format(new Date(epochMs));
 
-/** Labels resolved once: linked for sentences, plain for table cells. */
 type ActionPhrases = {
 	labels: {
 		customer: string;
@@ -223,8 +222,6 @@ type ActionPhrases = {
 	running: string;
 };
 
-/** The preview's true removals (in-place updates excluded), named via the
- * expanded plan or the display's resolved names. */
 const removedPlansFromPreview = (preview: unknown) => {
 	const body = getPreviewBody(preview);
 	const planNames = getRecord(approvalDisplayFromPreview(preview).planNames);
@@ -247,9 +244,6 @@ const removedPlansFromPreview = (preview: unknown) => {
 	});
 };
 
-/** A trial that reverts on end hands the replaced plan back afterwards, so
- * that plan is paused rather than removed. Mirrors the dashboard's attach
- * sheet: only a trial set on the request with a positive length counts. */
 const attachPausesOutgoing = (request: Record<string, unknown>) => {
 	const trial = getRecord(
 		getRecord(customizeWithFreeTrial(request)).free_trial,
@@ -259,10 +253,6 @@ const attachPausesOutgoing = (request: Record<string, unknown>) => {
 	);
 };
 
-/** The one outgoing plan a revert trial pauses: like the server's
- * findMainActiveCustomerProductByGroup, the main (non-add-on) plan in the
- * incoming plan's group. Read from the preview's resolved plans, so request
- * aliases never matter; any other outgoing plan is expired. */
 const pausedPlanIdFromPreview = (preview: unknown) => {
 	const body = getPreviewBody(preview);
 	const plansOf = (value: unknown) =>
@@ -284,8 +274,6 @@ const pausedPlanIdFromPreview = (preview: unknown) => {
 	);
 };
 
-// Tier 1 of the card hierarchy: customer and plan are the subject of the
-// action, so they render as a sentence — never as label/value fields.
 const actionPhrases = ({
 	env,
 	preview,
@@ -341,7 +329,6 @@ const actionPhrases = ({
 	const labels = {
 		customer: customerLabel,
 		plan: planLabel,
-		// Table cells render raw text, so they need the names without link markup.
 		plainCustomer: customerText ?? customer ?? "—",
 		plainPlan: planName ?? plan ?? "—",
 	};
@@ -521,12 +508,8 @@ const pendingActionPrompt = ({
 	toolName: string;
 }) => (phrases.pending === toolLabel(toolName) ? null : `${phrases.pending}?`);
 
-// The preview tool returns { preview: BillingPreviewResponse, ... } wrapped in
-// MCP content blocks; unwrap both layers before reading money facts.
 const getPreviewBody = (preview: unknown) => {
 	const body = getResultBody(preview);
-	// A stored write preview may still be the raw MCP envelope nested under the
-	// display wrapper, so the inner value gets the same unwrapping as the outer.
 	const inner = getResultBody(body.preview);
 	return Object.keys(inner).length ? inner : body;
 };
@@ -537,7 +520,6 @@ const moneyFields = ({ preview }: { preview?: unknown }) => {
 	const currency = getString(previewBody.currency) ?? undefined;
 	const total = getNumber(previewBody.total);
 	if (total !== null) {
-		// Downgrades produce a negative total — that's money back, not money due.
 		fields.push(
 			total < 0
 				? Field({
@@ -562,7 +544,6 @@ const moneyFields = ({ preview }: { preview?: unknown }) => {
 	return fields.slice(0, 4);
 };
 
-// Recurring charges are expected, not a decision point — keep them muted.
 const nextCycleNote = (preview: unknown) => {
 	const previewBody = getPreviewBody(preview);
 	const nextCycle = getRecord(previewBody.next_cycle);
@@ -576,7 +557,6 @@ const nextCycleNote = (preview: unknown) => {
 	return `then ${amount}${startsAt ? ` from ${formatDay(startsAt)}` : ""}`;
 };
 
-// Tier 5: modifiers render only when they deviate from defaults, in muted text.
 const modifierPhrases = (toolArgs?: Record<string, unknown>) => {
 	const request = toolRequestFromArgs(toolArgs);
 	if (!request) return [];
@@ -663,7 +643,6 @@ const outcomeFromResult = ({
 		env,
 		invoiceId: getString(invoice.stripe_id),
 	});
-	// Drafts have no payable hosted page — the dashboard is the actionable link.
 	const invoiceLink = invoiceDraft
 		? (dashboardUrl ?? getString(invoice.hosted_invoice_url))
 			? {
@@ -698,7 +677,6 @@ const outcomeFromResult = ({
 				id: getString(value("customer_id")),
 				resource: "customers",
 			});
-	// The server reuses the hosted invoice URL as payment_url for open invoices.
 	const checkoutLink =
 		paymentUrl && paymentUrl !== invoiceLink?.url
 			? paymentUrl
@@ -766,12 +744,8 @@ const compactValue = (value: unknown): string | null => {
 		: json;
 };
 
-// Bare CRUD writes (update customer, create entity…) have no billing preview —
-// show what's being written as label/value fields so the card is never empty.
 type RequestField = { label: string; value: string };
 
-/** Request keys whose nested value renders as several readable fields. Never capped:
- * approvers must see every change they approve. */
 const REQUEST_FIELD_EXPANDERS = new Map<
 	string,
 	(value: unknown) => RequestField[]
@@ -990,8 +964,6 @@ const BILLING_ACTION_TOOLS = new Set([
 	"updateSubscription",
 ]);
 
-/** A homogeneous group shows one heading and one row per target instead of
- * repeating the whole body. */
 const isHomogeneousGroup = ({
 	writes,
 	toolName,
@@ -1011,8 +983,6 @@ const writeTotal = (preview?: unknown) =>
 const writeCurrency = (preview?: unknown) =>
 	getString(getPreviewBody(preview).currency) ?? undefined;
 
-/** One row per target for a fan-out, using the same name resolution and money
- * formatting the per-write sections use. */
 const fanOutBlocks = ({
 	env,
 	preview,
@@ -1047,8 +1017,6 @@ const fanOutBlocks = ({
 	});
 	const total = all.reduce((sum, write) => sum + writeTotal(write.preview), 0);
 	return [
-		// The card header already names the operation, so the table only labels
-		// how many targets it covers.
 		fanOutTable({
 			caption: `${all.length} customers`,
 			headers: ["Customer", "Plan", "Due now"],
@@ -1060,8 +1028,6 @@ const fanOutBlocks = ({
 	];
 };
 
-/** Grouped writes render through the same body builder as standalone cards;
- * the tense tracks whether the card is still in progress. */
 type StepTense = "done" | "failed" | "running";
 
 const withheldWriteBlocks = ({
@@ -1081,8 +1047,6 @@ const withheldWriteBlocks = ({
 			toolName: write.toolName,
 		});
 		return [
-			// Same heading the write would carry as its own card, so each write in
-			// a group reads as a distinct operation.
 			CardText(
 				`*${approvalTitle({ preview: write.preview, toolName: write.toolName })}*`,
 			),
@@ -1096,8 +1060,6 @@ const withheldWriteBlocks = ({
 		];
 	});
 
-/** Shared by every card state (they edit the same message); a fan-out
- * collapses to one table, mixed writes keep a titled section each. */
 const approvalBodyBlocks = ({
 	env,
 	preview,
@@ -1169,7 +1131,6 @@ const approvalPreviewBlocks = ({
 			return blocks;
 		}
 		pushMoney();
-		// Nothing structured to show — fall back to the write's own fields.
 		if (blocks.length === 0) {
 			const fields = requestSummaryFields(toolArgs);
 			if (fields.length) blocks.push(Fields(fields));
@@ -1205,8 +1166,6 @@ const approvalPreviewBlocks = ({
 	if (changeSummary) {
 		blocks.push(CardText(changeSummary));
 	}
-	// Same add/remove diff the dashboard renders, so the two surfaces agree; a
-	// prepaid quantity is folded into its item row — it IS the money decision.
 	const prepaidByFeature = new Map(
 		display.prepaid.map((entry) => [entry.featureId, entry] as const),
 	);
@@ -1287,8 +1246,6 @@ const approvalPreviewBlocks = ({
 			},
 		);
 	};
-	// Future-phase customizations must carry their timing or they read as the
-	// immediate change the "Due now" money describes.
 	const schedulePlans = [
 		...(Array.isArray(request?.phases)
 			? request.phases.flatMap((value, index) => {
@@ -1316,8 +1273,6 @@ const approvalPreviewBlocks = ({
 			({ name, planId }) => [planId, name] as const,
 		),
 	]);
-	// Display data resolved before this change carries only the plan's items;
-	// newer rows carry the whole plan. Accept either so stored cards still diff.
 	const currentPlanByPlan = getRecord(approvalDisplay.currentPlanByPlan);
 	const basePlanItemsByPlan = getRecord(approvalDisplay.basePlanItemsByPlan);
 	const outgoingChanges = parsePreviewPayload(preview)?.outgoing;
@@ -1333,8 +1288,6 @@ const approvalPreviewBlocks = ({
 		const items = basePlanItemsByPlan[planId];
 		return Array.isArray(items) ? { items } : null;
 	};
-	// An update that only customizes names no plan in the request and produces no
-	// incoming change, so the plan being changed is the outgoing one.
 	const customizedPlanId =
 		getString(request?.plan_id) ??
 		display.changes.incoming[0]?.planId ??
@@ -1361,8 +1314,6 @@ const approvalPreviewBlocks = ({
 			});
 		}),
 	];
-	// The "Plan changes" table already names the operation, so the generic
-	// intent label only earns its place when there is no table beneath it.
 	const intentLabel =
 		normalizedToolName !== "attach" && changeRows.length === 0
 			? display.intentLabel
@@ -1370,8 +1321,6 @@ const approvalPreviewBlocks = ({
 	if (intentLabel) {
 		blocks.push(CardText(intentLabel));
 	}
-	// The timeline is the subject of a schedule — it reads before the
-	// customization detail and the money it produces.
 	if (display.phases.length) {
 		blocks.push(
 			Table({
@@ -1386,8 +1335,6 @@ const approvalPreviewBlocks = ({
 		);
 	}
 	if (changeRows.length) {
-		// Name the plan being customized: "Plan changes" reads as a catalog edit.
-		// Prefer the display name; the id is only a fallback when none resolved.
 		const customizedPlanName = customizedPlanId
 			? (planNames.get(customizedPlanId) ?? customizedPlanId)
 			: undefined;
@@ -1400,8 +1347,6 @@ const approvalPreviewBlocks = ({
 			}),
 		);
 	}
-	// Prepaid quantities are silent money decisions — an omitted quantity
-	// defaults to 0 server-side, so the approver must see it either way.
 	const prepaidLines = display.prepaid
 		.filter((entry) => !prepaidShownInline.has(entry.featureId))
 		.map((entry) => {
@@ -1418,14 +1363,11 @@ const approvalPreviewBlocks = ({
 	if (prepaidLines.length) {
 		blocks.push(CardText([bold("Quantities"), ...prepaidLines].join("\n")));
 	}
-	// A single line item that just restates the due-now total is noise.
 	const listableItems =
 		display.lineItems.length === 1 &&
 		display.lineItems[0].amount === display.dueNow?.amount
 			? []
 			: display.lineItems.slice(0, 8);
-	// A $0 due-now with no line items isn't a money fact — mute it. When the
-	// "No billing changes" badge already gives the reason, say nothing at all.
 	const explainedByBadge = display.badges.some(
 		({ label }) => label === "No billing changes",
 	);
@@ -1466,7 +1408,6 @@ const approvalPreviewBlocks = ({
 		!display.badges.some(({ label }) => label === "Checkout link")
 			? [{ active: true, label: "Checkout link" }]
 			: []),
-		// The preview knows whether balances clear; the request params do not.
 		...(display.resetsUsage &&
 		!display.badges.some(({ label }) => label === "Reset usage")
 			? [{ active: true, label: "Reset usage" }]
@@ -1503,8 +1444,6 @@ const approvalPreviewBlocks = ({
 	return blocks;
 };
 
-// Settled cards keep their pending body; Slack cannot disable buttons, so the
-// action row becomes a status line.
 const settledStatusCard = ({
 	dashboardUrl,
 	env,
@@ -1541,7 +1480,6 @@ const settledStatusCard = ({
 	});
 };
 
-/** Deep link into the dashboard sheet prefilled from this approval. */
 export const approvalSheetUrl = ({
 	approvalId,
 	customerId,
@@ -1742,13 +1680,10 @@ export const approvalStatusCard = ({
 }) => {
 	const phrases = actionPhrases({ env, preview, toolArgs, toolName });
 	const actor = mention(actorId);
-	// Stamps who approved so the channel keeps an audit trail of decisions.
 	const approvedBy = actor
 		? [CardText(`Approved by ${actor}`, { style: "muted" })]
 		: [];
 
-	// The "…" on the running sentence already signals in-progress; the ▸ line
-	// only appears once the action reports concrete progress.
 	if (status === "running") {
 		return Card({
 			title: approvalTitle({ preview, toolName }),
@@ -1814,8 +1749,6 @@ export const approvalStatusCard = ({
 	);
 	const outcome = outcomeFromResult({ customerLinkInSentence, env, result });
 
-	// Resolved cards keep the pending body (sentence, money facts, changes) so the
-	// edit-in-place doesn't collapse; only the buttons become the outcome row.
 	const resolvedBody = approvalBodyBlocks({
 		env,
 		preview,
@@ -1829,8 +1762,6 @@ export const approvalStatusCard = ({
 		const lines = outcome.lines.length
 			? outcome.lines
 			: [ACTION_FAILED_MESSAGE];
-		// A half-applied group needs the per-write breakdown; a lone failed write
-		// is already fully described by the message.
 		const partial = (outcomes?.length ?? 0) > 1;
 		return Card({
 			title: approvalTitle({ preview, toolName }),

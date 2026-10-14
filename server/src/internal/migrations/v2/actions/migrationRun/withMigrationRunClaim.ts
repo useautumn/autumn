@@ -40,19 +40,6 @@ const failRun = async ({
 		},
 	});
 
-/** Two-phase claim for a migration run.
- *
- *  1. Insert with `status='queued'` — the partial unique index (one live run
- *     per migration) blocks concurrent claims of the same migration.
- *  2. Run `claimed` (e.g. `prepare`, or trigger.dev dispatch).
- *  3. On success the row stays `queued` — dispatch ≠ execution, and
- *     `withMigrationRunTracking` flips it to `running` when the task starts.
- *     Lazy runs are live as soon as prepare completes, so they flip here.
- *     On failure, flip to `failed` so the constraint releases.
- *  4. `claimed` may return `{ triggerRunId }` to persist a handle. The SDK
- *     mints that id locally, so a handle alone does not prove the task was
- *     enqueued; `verifyDispatch` reads it back and a run that never reached
- *     the platform fails here instead of sitting `queued` forever. */
 export const withMigrationRunClaim = async ({
 	ctx,
 	migration,
@@ -147,8 +134,6 @@ export const withMigrationRunClaim = async ({
 		});
 	}
 
-	// Publish lazy-mode runs only after claim setup succeeds, so customer
-	// request-path tasks cannot observe a migration before prepare completes.
 	if (lazyRun) {
 		await clearOrgCache({ db: ctx.db, orgId: ctx.org.id, env: ctx.env });
 	}

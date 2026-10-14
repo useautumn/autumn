@@ -1,20 +1,3 @@
-/**
- * Deleting an item from a license plan should batch-lower, the same as adding
- * and editing one.
- *
- * A delete is a bare remove_items with no matching add. The batch guard
- * rejected it, prepare minted no artifact for it, and no remove action existed,
- * so it fell to the per-customer lane.
- *
- * Red-failure mode (current behavior):
- *  - the op is rejected as unsupported_upsert_licenses and runs per_customer
- *
- * Green-success criteria (after fix):
- *  - the op runs on the batch lane
- *  - every live assignment loses its row for the feature, balance and all
- *  - the license plan's other items survive
- *  - customers whose only change was the delete are not reported as skipped
- */
 import { expect, test } from "bun:test";
 import {
 	customerEntitlements,
@@ -42,8 +25,6 @@ test(`${chalk.yellowBright("batch-license-customize: deleting an item batch-lowe
 	const customerId = "batch-item-delete-customer";
 	const idPrefix = "batch-item-delete";
 
-	// The seat grants two features; only one is deleted, so the other proves
-	// the delete is targeted rather than wholesale.
 	const scenario = await setupLicenseUpdateScenario({
 		customerId,
 		idPrefix,
@@ -112,8 +93,6 @@ test(`${chalk.yellowBright("batch-license-customize: deleting an item batch-lowe
 
 	expect(result?.lane).toBe("batch");
 
-	// A deleted customer changed even though nothing was inserted. Marking it
-	// skipped would skip its cache invalidation.
 	const itemRuns = await ctx.db
 		.select({ status: migrationItemRuns.status })
 		.from(migrationItemRuns)
@@ -121,7 +100,6 @@ test(`${chalk.yellowBright("batch-license-customize: deleting an item batch-lowe
 	expect(itemRuns.length).toBeGreaterThan(0);
 	expect(itemRuns.every((run) => run.status !== "skipped")).toBe(true);
 
-	// ── The feature is gone from every assignment ──────────────────────
 	const converged = await pollUntil({
 		fetch: readRows,
 		until: (rows) =>
@@ -133,13 +111,10 @@ test(`${chalk.yellowBright("batch-license-customize: deleting an item batch-lowe
 		converged.filter((row) => row.featureId === TestFeature.Messages),
 	).toHaveLength(0);
 
-	// ── The seat's other feature survives ──────────────────────────────
 	expect(
 		converged.filter((row) => row.featureId === TestFeature.Dashboard),
 	).toHaveLength(ASSIGNED_SEATS);
 
-	// ── The customized link stops carrying the deleted entitlement, or a
-	// later assignment is granted it again ────────────────────────────
 	const linkedFeatureIds = await ctx.db
 		.select({ featureId: entitlements.feature_id })
 		.from(licenseEntitlements)

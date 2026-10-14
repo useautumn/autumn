@@ -9,8 +9,6 @@ import {
 import { and, count, desc, eq, ilike, or, type SQL } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle";
 
-/** One page of a pool's contributions with entity/plan labels, org/env scoped
- * through the pool row so foreign pool ids return nothing. */
 export const listPooledBalanceContributionsPage = async ({
 	db,
 	orgId,

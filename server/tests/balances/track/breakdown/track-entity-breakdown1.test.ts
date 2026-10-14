@@ -16,18 +16,11 @@ import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
 import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
 
-/**
- * Test: Per-entity messages breakdown with tracking
- * - Product gives 100 messages per entity (monthly)
- * - 3 entities created
- * - Track on entity level, verify breakdown is correct for both entity and customer
- */
-
 const perEntityMessages = constructFeatureItem({
 	featureId: TestFeature.Messages,
 	includedUsage: 100,
 	interval: ProductItemInterval.Month,
-	entityFeatureId: TestFeature.Users, // Per entity
+	entityFeatureId: TestFeature.Users,
 });
 
 const freeProd = constructProduct({
@@ -108,7 +101,6 @@ describe(`${chalk.yellowBright("track-entity-breakdown1: per-entity messages bre
 			value: 30,
 		});
 
-		// Track response should show entity balance
 		expect(trackRes.balance).toMatchObject({
 			granted_balance: 100,
 			current_balance: 70,
@@ -116,7 +108,6 @@ describe(`${chalk.yellowBright("track-entity-breakdown1: per-entity messages bre
 			purchased_balance: 0,
 		});
 
-		// Verify entity-1 breakdown
 		expect(trackRes.balance?.breakdown).toHaveLength(1);
 		expect(trackRes.balance?.breakdown?.[0]).toMatchObject({
 			granted_balance: 100,
@@ -124,7 +115,6 @@ describe(`${chalk.yellowBright("track-entity-breakdown1: per-entity messages bre
 			usage: 30,
 		});
 
-		// Verify customer balance reflects deduction
 		const customerRes = (await autumnV2.check<CheckResponseV2>({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
@@ -136,7 +126,6 @@ describe(`${chalk.yellowBright("track-entity-breakdown1: per-entity messages bre
 			usage: 30,
 		});
 
-		// Customer breakdown should also reflect the deduction
 		expect(customerRes.balance?.breakdown).toHaveLength(1);
 		expect(customerRes.balance?.breakdown?.[0]).toMatchObject({
 			granted_balance: 300,
@@ -144,7 +133,6 @@ describe(`${chalk.yellowBright("track-entity-breakdown1: per-entity messages bre
 			usage: 30,
 		});
 
-		// Other entities should be unchanged
 		for (let i = 1; i < entities.length; i++) {
 			const entityRes = (await autumnV2.check<CheckResponseV2>({
 				customer_id: customerId,
@@ -174,7 +162,6 @@ describe(`${chalk.yellowBright("track-entity-breakdown1: per-entity messages bre
 			usage: 50,
 		});
 
-		// Verify entity-2 breakdown
 		expect(trackRes.balance?.breakdown).toHaveLength(1);
 		expect(trackRes.balance?.breakdown?.[0]).toMatchObject({
 			granted_balance: 100,
@@ -182,7 +169,6 @@ describe(`${chalk.yellowBright("track-entity-breakdown1: per-entity messages bre
 			usage: 50,
 		});
 
-		// Verify customer balance
 		const customerRes = (await autumnV2.check<CheckResponseV2>({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
@@ -191,7 +177,7 @@ describe(`${chalk.yellowBright("track-entity-breakdown1: per-entity messages bre
 		expect(customerRes.balance).toMatchObject({
 			granted_balance: 300,
 			current_balance: 220,
-			usage: 80, // 30 + 50
+			usage: 80,
 		});
 
 		expect(customerRes.balance?.breakdown?.[0]).toMatchObject({
@@ -221,11 +207,9 @@ describe(`${chalk.yellowBright("track-entity-breakdown1: per-entity messages bre
 			sumEntityUsage += entityRes.balance?.usage ?? 0;
 		}
 
-		// Entity-1: 70, Entity-2: 50, Entity-3: 100 = 220
 		expect(sumEntityBalance).toBe(220);
 		expect(customerRes.balance?.current_balance).toBe(220);
 
-		// Usage: 30 + 50 + 0 = 80
 		expect(sumEntityUsage).toBe(80);
 		expect(customerRes.balance?.usage).toBe(80);
 	});
@@ -233,7 +217,6 @@ describe(`${chalk.yellowBright("track-entity-breakdown1: per-entity messages bre
 	test("verify DB sync with skip_cache=true", async () => {
 		await timeout(2000);
 
-		// Customer from DB
 		const customer = await autumnV2.customers.get<ApiCustomer>(customerId, {
 			skip_cache: "true",
 		});
@@ -252,8 +235,7 @@ describe(`${chalk.yellowBright("track-entity-breakdown1: per-entity messages bre
 			usage: 80,
 		});
 
-		// Each entity from DB
-		const entityBalances = [70, 50, 100]; // After tracking
+		const entityBalances = [70, 50, 100];
 		for (let i = 0; i < entities.length; i++) {
 			const entityRes = (await autumnV2.check<CheckResponseV2>({
 				customer_id: customerId,

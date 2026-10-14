@@ -10,10 +10,6 @@ import chalk from "chalk";
 import { Decimal } from "decimal.js";
 import { getCreditCost } from "@/internal/features/creditSystemUtils.js";
 
-// ═══════════════════════════════════════════════════════════════════
-// CREDIT-SYSTEM1: Track credits directly
-// ═══════════════════════════════════════════════════════════════════
-
 test.concurrent(`${chalk.yellowBright("track-credit-system1: track credits directly")}`, async () => {
 	const creditsItem = items.free({
 		featureId: TestFeature.Credits,
@@ -59,10 +55,6 @@ test.concurrent(`${chalk.yellowBright("track-credit-system1: track credits direc
 		usage: deductValue,
 	});
 });
-
-// ═══════════════════════════════════════════════════════════════════
-// CREDIT-SYSTEM2: Track metered features using credit system
-// ═══════════════════════════════════════════════════════════════════
 
 test.concurrent(`${chalk.yellowBright("track-credit-system2: track metered features using credit system")}`, async () => {
 	const creditsItem = items.free({
@@ -145,10 +137,6 @@ test.concurrent(`${chalk.yellowBright("track-credit-system2: track metered featu
 		usage: expectedUsageAfterBoth,
 	});
 });
-
-// ═══════════════════════════════════════════════════════════════════
-// CREDIT-SYSTEM3: Deduction order - action1 first, then credits
-// ═══════════════════════════════════════════════════════════════════
 
 test.concurrent(`${chalk.yellowBright("track-credit-system3: test deduction order - action1 first, then credits")}`, async () => {
 	const action1Item = items.free({
@@ -288,10 +276,6 @@ test.concurrent(`${chalk.yellowBright("track-credit-system3: test deduction orde
 		usage: expectedCreditsUsage,
 	});
 });
-
-// ═══════════════════════════════════════════════════════════════════
-// CREDIT-SYSTEM4: Two credit system pairs - Action1→Credits, Action3→Credits2
-// ═══════════════════════════════════════════════════════════════════
 
 test.concurrent(`${chalk.yellowBright("track-credit-system4: test deduction with two credit system pairs")}`, async () => {
 	const action1Item = items.free({
@@ -487,10 +471,6 @@ test.concurrent(`${chalk.yellowBright("track-credit-system4: test deduction with
 		expectedCredits2Balance,
 	);
 });
-
-// ═══════════════════════════════════════════════════════════════════
-// CREDIT-SYSTEM5: Same as system3 but with skipCache option
-// ═══════════════════════════════════════════════════════════════════
 
 test.concurrent(`${chalk.yellowBright("track-credit-system5: test deduction order with skipCache option")}`, async () => {
 	const action1Item = items.free({

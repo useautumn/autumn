@@ -6,7 +6,6 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-// version-only is per-customer until definition execute is restored
 import {
 	expectBatchLane,
 	expectCustomerPlanRepointedInPlace,
@@ -40,8 +39,6 @@ test.skip(
 			actions: [],
 		});
 
-		// The customer holds ONLY a future-start row on the target plan; the
-		// active row belongs to a different plan the migration never touches.
 		const now = Date.now();
 		await autumnV2_3.billing.createSchedule({
 			customer_id: customerId,

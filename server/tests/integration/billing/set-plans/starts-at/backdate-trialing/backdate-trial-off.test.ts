@@ -1,13 +1,3 @@
-/**
- * Backdating a trialing subscription with the trial turned off recreates it as an active subscription from the
- * backdated start, anchored on the requested anchor or else the old trial end, like Stripe's create with
- * backdate_start_date + billing_cycle_anchor: prorate_immediately and bill_difference bill the backdated window now
- * (a stub to the first anchored boundary, then each month in full), none bills nothing until the anchor.
- *
- * Red (before):  400 "A trial can't be backdated to".
- * Green (after): preview == execute == Stripe's invoice; the row stays Active on the new subscription.
- */
-
 import { test } from "bun:test";
 import chalk from "chalk";
 import type { BackdateProrationBehavior } from "../backdate-live/utils/backdateLiveUtils";

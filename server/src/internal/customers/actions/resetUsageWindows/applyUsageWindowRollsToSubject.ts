@@ -4,8 +4,6 @@ import type {
 	UsageWindowRoll,
 } from "@autumn/shared";
 
-/** Mirrors persisted rolls onto the in-flight subject (and its normalized
- *  twin), so this request's response already shows the rolled state. */
 export const applyUsageWindowRollsToSubject = ({
 	fullSubject,
 	normalized,

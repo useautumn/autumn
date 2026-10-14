@@ -4,7 +4,6 @@ import { DEFAULT_AWS_REGION } from "@/external/aws/awsRegionUtils.js";
 
 const getDynamoClientConfig = () => ({
 	region: process.env.AWS_REGION || DEFAULT_AWS_REGION,
-	// Set when pointed at a local emulator; unset in prod, where the SDK resolves the real endpoint.
 	endpoint: process.env.DYNAMODB_ENDPOINT || undefined,
 	credentials: {
 		accessKeyId: process.env.AWS_ACCESS_KEY_ID || "",

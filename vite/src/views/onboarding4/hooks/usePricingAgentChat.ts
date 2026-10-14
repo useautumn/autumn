@@ -30,13 +30,10 @@ export function usePricingAgentChat(options?: UsePricingAgentChatOptions) {
 	const initialSyncDoneRef = useRef(false);
 	const axiosInstance = useAxiosInstance();
 
-	// Session ID for PostHog AI tracing - groups all messages in a conversation
 	const reactId = useId();
 	const chatSessionIdRef = useRef(`pricing-chat-${reactId}-${Date.now()}`);
 
-	/** Setup the preview org (called once, memoized) */
 	const setupPreviewOrg = useCallback(async (): Promise<PreviewOrg | null> => {
-		// If already setting up, return the existing promise
 		if (previewSetupRef.current) {
 			return previewSetupRef.current;
 		}
@@ -83,16 +80,13 @@ export function usePricingAgentChat(options?: UsePricingAgentChatOptions) {
 		return setupPromise;
 	}, []);
 
-	/** Sync pricing config to the preview org */
 	const syncPreviewPricing = useCallback(
 		async (config: AgentPricingConfig) => {
-			// Prevent concurrent syncs
 			if (syncInProgressRef.current) {
 				console.log("[Preview] Sync already in progress, skipping...");
 				return;
 			}
 
-			// Ensure preview org is set up
 			let org = previewOrg;
 			if (!org) {
 				org = await setupPreviewOrg();
@@ -128,7 +122,6 @@ export function usePricingAgentChat(options?: UsePricingAgentChatOptions) {
 		[axiosInstance, previewOrg, setupPreviewOrg],
 	);
 
-	// Sync initial config on mount if provided
 	useEffect(() => {
 		if (options?.initialConfig && !initialSyncDoneRef.current) {
 			initialSyncDoneRef.current = true;
@@ -155,12 +148,9 @@ export function usePricingAgentChat(options?: UsePricingAgentChatOptions) {
 				},
 			}),
 
-			// Auto-submit when all tool results are available (for multi-step if needed)
 			sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithToolCalls,
 
-			// Handle client-side tool execution
 			onToolCall: async ({ toolCall }) => {
-				// Check for dynamic tools first
 				if (toolCall.dynamic) {
 					return;
 				}
@@ -168,13 +158,10 @@ export function usePricingAgentChat(options?: UsePricingAgentChatOptions) {
 				if (toolCall.toolName === "build_pricing") {
 					const config = toolCall.input as AgentPricingConfig;
 
-					// Update the pricing preview
 					setPricingConfig(config);
 
-					// Sync to preview org (fire and forget)
 					syncPreviewPricing(config);
 
-					// Return the tool result (no await to avoid deadlocks)
 					addToolOutput({
 						tool: "build_pricing",
 						toolCallId: toolCall.toolCallId,
@@ -217,7 +204,6 @@ export function usePricingAgentChat(options?: UsePricingAgentChatOptions) {
 	const isLoading = status === "streaming" || status === "submitted";
 
 	return {
-		// Chat state
 		messages,
 		input,
 		setInput,
@@ -226,19 +212,15 @@ export function usePricingAgentChat(options?: UsePricingAgentChatOptions) {
 		hasStartedChat,
 		setHasStartedChat,
 
-		// Pricing config
 		pricingConfig,
 		setPricingConfig,
 
-		// Preview org
 		previewOrg,
 		isPreviewSyncing,
 
-		// JSON sheet
 		jsonSheetConfig,
 		setJsonSheetConfig,
 
-		// Actions
 		handleSubmit,
 		handleStartNewChat,
 	};

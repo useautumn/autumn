@@ -173,7 +173,6 @@ export function UpdatePlanOpForm({
 		}
 	};
 
-	// A merged row is one item, so removing it drops the paired remove filter too.
 	const handleRemoveItem = (row: ItemRateRow) => {
 		const items = addItems.filter((_, i) => i !== row.addIndex);
 		const removeItems = (customize?.remove_items ?? []).filter(

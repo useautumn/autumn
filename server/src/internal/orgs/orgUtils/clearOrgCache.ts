@@ -16,7 +16,6 @@ export const clearOrgCache = async ({
 	env?: AppEnv;
 	logger?: Pick<Console, "error" | "info" | "warn">;
 }) => {
-	// 1. Get all hashed secret keys for org
 	try {
 		const org = await OrgService.getWithKeys({
 			db,
@@ -35,8 +34,6 @@ export const clearOrgCache = async ({
 		await Promise.all(
 			secretKeys.map((hashedKey) => clearSecretKeyCache({ hashedKey })),
 		);
-		// Workers read org config through a short-TTL cache; drop it here so a
-		// config change lands immediately rather than after the TTL.
 		await clearOrgWithFeaturesCache({ ctx: getMiscCacheContext(), orgId, env });
 
 		logger.info(`Cleared cache for org ${org.slug} (${orgId})`);

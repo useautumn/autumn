@@ -1,21 +1,3 @@
-/**
- * TDD test for the V2 batch reset optimistic guard.
- *
- * Contract under test:
- *   Behaviors:
- *     - a mutation computed BEFORE a concurrent reset committed (the lazy
- *       reset racing the worker, or a duplicate delivery) is SKIPPED by the
- *       guarded execute UPDATE: balance written by the winner survives,
- *       next_reset_at is not pushed another cycle, and NO duplicate rollover
- *       row is inserted
- *     - the skip is reported (staleSkippedCount) and non-applied mutations
- *       produce no rollover writes
- *
- * The race is simulated by running the worker's stages directly: hydrate +
- * classify + compute, then committing a "lazy reset" (row update + rollover
- * insert) before executeResetMutations runs with the now-stale mutations.
- */
-
 import { expect, test } from "bun:test";
 import {
 	customerEntitlements,
@@ -79,7 +61,6 @@ test.concurrent(
 			pastTimeMs: Date.now() - 1000,
 		});
 
-		// ── Worker stages 1-3: hydrate, classify, compute ────────────────
 		const batchResetContext = await setupBatchResetContext({
 			db: ctx.db,
 			logger,
@@ -92,8 +73,6 @@ test.concurrent(
 		expect(resetMutations.length).toBe(1);
 		const computedNextResetAt = resetMutations[0].updates.next_reset_at;
 
-		// ── Concurrent "lazy reset" commits first: same reset target, its
-		// own rollover row, then some fresh usage (balance 95) ───────────
 		await ctx.db.execute(sql`
 			INSERT INTO rollovers (id, cus_ent_id, balance, usage, expires_at, entities)
 			VALUES ('roll_race_lazy_winner', ${customerEntitlement!.id}, 100, 0, null, '{}'::jsonb)
@@ -103,11 +82,9 @@ test.concurrent(
 			.set({ balance: 95, next_reset_at: computedNextResetAt })
 			.where(eq(customerEntitlements.id, customerEntitlement!.id));
 
-		// ── Worker stage 4: execute with the now-stale mutations ─────────
 		const { appliedCustomerEntitlementIds, staleSkippedCount } =
 			await executeResetMutations({ db: ctx.db, resetMutations });
 
-		// ── Contract: the stale mutation is skipped, not double-applied ──
 		expect(staleSkippedCount).toBe(1);
 		expect(appliedCustomerEntitlementIds.size).toBe(0);
 
@@ -115,12 +92,9 @@ test.concurrent(
 			db: ctx.db,
 			customerEntitlementId: customerEntitlement!.id,
 		});
-		// The winner's post-reset usage survives (no balance re-top).
 		expect(row.balance).toBe(95);
-		// next_reset_at not pushed another cycle forward.
 		expect(row.next_reset_at).toBe(computedNextResetAt);
 
-		// ── Contract: exactly ONE rollover row (the winner's) ────────────
 		const rolloverRows = await fetchRollovers({
 			db: ctx.db,
 			customerEntitlementId: customerEntitlement!.id,

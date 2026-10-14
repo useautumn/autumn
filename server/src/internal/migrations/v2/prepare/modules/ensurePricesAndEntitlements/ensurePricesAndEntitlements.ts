@@ -131,9 +131,6 @@ const getMatchedProducts = async ({
 		returnAll: true,
 	});
 
-	// Row-decidable fields (custom/paid/recurring/price) are stripped: prepare
-	// must cover every product the batch lane's catalog matching can target,
-	// and row constraints never change which PRODUCTS need prepared rows.
 	const matchedProducts = products.filter((product) =>
 		planFilterMatchesProduct({
 			filter: toCatalogPlanFilter(op.plan_filter),
@@ -165,21 +162,6 @@ const getMatchedProducts = async ({
 	return [...preparedProducts.values()];
 };
 
-/**
- * Anchors Stripe resource reuse to the LATEST version of the BASE plan
- * (`product.base_variant_id ?? product.id` — so a yearly variant like
- * `pro_yearly` reuses `pro`'s price, not its own separate history) — not
- * "whichever sibling this run happens to prepare first". Looks up the base
- * plan's own catalog data directly (not the current op's `matchedProducts`,
- * which is scoped to just this op's `plan_filter` and won't include a
- * different plan_id's rows) via a dedicated, cached-per-call query, and only
- * ever reuses its NON-CUSTOM price — the one created by ordinary catalog
- * editing, never a prior migration run's own synthesized custom price — so a
- * re-run of the same migration finds the real Stripe ids that catalog price
- * already carries, before this run's own upsert would otherwise blank a
- * fresh synthesized price back out. Mutates `price.config` in place; no DB
- * writes (safe to call from `.plan()`, which also runs during dry runs).
- */
 const inheritStripeResourcesFromLatestVersion = async ({
 	ctx,
 	price,
@@ -216,11 +198,6 @@ const inheritStripeResourcesFromLatestVersion = async ({
 		candidate.version > latest.version ? candidate : latest,
 	);
 
-	// A feature can have more than one price (e.g. AI_CREDITS carries both a
-	// prepaid tiered price and a metered pay-as-you-go price) — pass every
-	// same-feature candidate and let copyStripeResourcesToMatchingPrice's own
-	// content matching (pricesAreSame) pick the right one, rather than picking
-	// just the first `find()` hit and having no fallback if it's the wrong one.
 	const candidatePrices = latestVersionProduct.prices.filter(
 		(candidate) => candidate.config.feature_id === featureId,
 	);
@@ -442,15 +419,6 @@ export const ensurePricesAndEntitlements: PrepareModule<
 				features: ctx.features,
 			});
 
-			// Every matched product version starts this call with an identical,
-			// brand-new synthesized price — none of them has a real Stripe id yet,
-			// so reusing across a single all-at-once pass finds nothing to copy.
-			// Group by `product.id` (never across different plans) and resolve each
-			// group SEQUENTIALLY: reuse against whatever's already been resolved
-			// so far, create for real only if nothing matched, then add this
-			// version to the resolved set before moving to the next. The first
-			// version in a group pays for one real Stripe price; every sibling
-			// after it reuses that instead of minting its own.
 			const groupsByPlanId = new Map<string, FullProduct[]>();
 			for (const product of productsWithPreparedRows) {
 				const group = groupsByPlanId.get(product.id) ?? [];

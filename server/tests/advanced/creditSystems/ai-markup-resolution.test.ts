@@ -8,12 +8,8 @@ import {
 } from "@autumn/shared";
 import { getModelCreditCost } from "@/internal/features/aiCreditSystemUtils.js";
 
-// Custom models carry their own input/output costs, so getModelCreditCost
-// resolves them without hitting the models.dev pricing fetch — ideal for
-// unit-testing the tiered markup resolution (model > provider > global > none).
 const CUSTOM_MODEL = "custom/foo";
 const TOKENS = { input: 1000, output: 500 };
-// base cost = (1000 * 1000 + 500 * 2000) / 1_000_000 = 2.0
 const BASE_COST = 2.0;
 const INPUT_COST = 1000;
 const OUTPUT_COST = 2000;

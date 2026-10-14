@@ -88,7 +88,6 @@ test("a shard key stored before it was reserved is retired, its secret dropped",
 		}),
 	]);
 	const { sql, params } = new PgDialect().sqlToQuery(conditions[0]);
-	// The platform match also retires a row still holding a rotated-out shard secret.
 	expect(sql).toContain('"key_hash" = $1');
 	expect(sql).toContain('"platform_account_id" = $2');
 	expect(params).toEqual([

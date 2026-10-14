@@ -1,9 +1,3 @@
-/**
- * Contract: license pools are what check/track read. Assigned, unassigned,
- * and customer-level checks all see seats × grant. Track deducts the pool
- * (source balances stay 0). Overage is denied.
- */
-
 import { test } from "bun:test";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";

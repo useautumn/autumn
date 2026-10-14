@@ -48,7 +48,6 @@ export const handleCheckoutSessionMetadataV2 = async ({
 	const fullCustomer = deferredData?.billingContext?.fullCustomer;
 
 	await withBillingLock({
-		// Route locks key on whichever identifier the API caller passed — hold both.
 		lockKeys: [fullCustomer?.id, fullCustomer?.internal_id]
 			.filter(notNullish)
 			.map((customerId) =>
@@ -80,17 +79,11 @@ const executeCheckoutSessionMetadataV2 = async ({
 }): Promise<void> => {
 	const deferredData = metadata.data as DeferredAutumnBillingPlanData;
 
-	// 1. Sync Autumn metadata onto subscription items created by checkout
 	await syncSubscriptionItemMetadataFromCheckout({
 		ctx,
 		checkoutContext,
 	});
 
-	// 1b. Fold in Stripe Checkout "optional items" the caller didn't request via
-	// plan_id but the customer selected and paid for. Skipped for create-schedule
-	// checkouts: the deferred phase bookkeeping only knows about the products it
-	// was told about ahead of time, and can't place an unplanned product into a
-	// phase after the fact.
 	let dataWithOptionalItems = deferredData;
 	if (!isSetPlansBillingContext(deferredData.billingContext)) {
 		const optionalItemMatch = await matchOptionalInvoiceItemsToProducts({
@@ -124,16 +117,12 @@ const executeCheckoutSessionMetadataV2 = async ({
 		}
 	}
 
-	// 2. Update billing plan with checkout data (upsertSubscription, upsertInvoice)
-	// Runs after 1b so the invoice's product_ids/items include any matched
-	// optional-item add-on, not just what plan_id originally requested.
 	const updatedDeferredData = await updateBillingPlanFromCheckout({
 		ctx,
 		checkoutContext,
 		deferredData: dataWithOptionalItems,
 	});
 
-	// 3. Modify Stripe subscription to include other interval prices / 0 quantity prices
 	await modifyStripeSubscriptionFromCheckout({
 		ctx,
 		checkoutContext,
@@ -181,7 +170,6 @@ const executeCheckoutSessionMetadataV2 = async ({
 		metadataId: metadata.id,
 	});
 
-	// Execute autumn billing plan (includes customer products, upsertSubscription, upsertInvoice)
 	const { allocationsAdjusted } = await executeAutumnBillingPlan({
 		emitsBillingUpdated: true,
 		ctx,
@@ -200,14 +188,12 @@ const executeCheckoutSessionMetadataV2 = async ({
 		billingPlan: updatedDeferredData.billingPlan,
 	});
 
-	// Queue customer.products.updated webhook (mirrors executeBillingPlan)
 	await billingPlanToSendProductsUpdated({
 		ctx,
 		autumnBillingPlan: updatedDeferredData.billingPlan.autumn,
 		billingContext: updatedDeferredData.billingContext,
 	});
 
-	// Fire-and-forget billing.updated webhook (mirrors executeBillingPlan)
 	void sendBillingUpdatedWebhook({
 		allocationsAdjusted,
 		ctx,
@@ -215,7 +201,6 @@ const executeCheckoutSessionMetadataV2 = async ({
 		originalFullCustomer: updatedDeferredData.billingContext.fullCustomer,
 	});
 
-	// Delete metadata after successful execution
 	await MetadataService.delete({ db: ctx.db, id: metadata.id });
 
 	const newCustomerProducts =

@@ -5,7 +5,6 @@ import type { TinybirdClient } from "../../types/tinybirdClient.js";
 import { usageEventToTinybirdRow } from "../usageEventToTinybirdRow.js";
 
 const EVENTS_DATASOURCE = "events";
-// A row is about 1 KB, so a request stays far under the Events API's 10 MB.
 const ROWS_PER_REQUEST = 2_000;
 
 export const sendUsageEvents = async ({

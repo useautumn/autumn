@@ -20,11 +20,6 @@ export type DistinctLicenseEntitlementsForPage = {
 	fromEntitlement: EntitlementWithFeature;
 };
 
-/**
- * Distinct live entitlement definitions for one feature on this page's
- * assignments, plus the catalog from-entitlement (same fetch). Scoped to the
- * page's customers and the license product — never the whole run.
- */
 export const listDistinctLicenseEntitlementsForPage = async ({
 	db,
 	features,

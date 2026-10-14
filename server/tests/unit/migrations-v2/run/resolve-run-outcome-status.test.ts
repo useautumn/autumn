@@ -1,16 +1,3 @@
-/**
- * A run that finished without throwing was always marked `succeeded`, even when
- * every item skipped. The dashboard then reported a migration as having run
- * successfully when it changed nothing, which is indistinguishable from a real
- * migration and hides a mis-targeted filter.
- *
- * Red (current):  resolveRunOutcomeStatus does not exist.
- * Green (after):  a run that completed at least one item and changed none of
- *                 them settles as `no_changes`; any success keeps `succeeded`;
- *                 a run that claimed nothing at all stays `succeeded`, since
- *                 "no customers matched" is a filter result, not a no-op run.
- */
-
 import { describe, expect, test } from "bun:test";
 import { MigrationRunStatus } from "@autumn/shared";
 import { resolveRunOutcomeStatus } from "@/internal/migrations/v2/actions/migrationRun/resolveRunOutcomeStatus.js";

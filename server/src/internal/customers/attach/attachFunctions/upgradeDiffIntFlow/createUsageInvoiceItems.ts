@@ -27,7 +27,6 @@ const getUsageInvoiceItems = async ({
 	logger,
 	attachParams,
 	cusProduct,
-	// stripeSubs,
 	sub,
 	interval,
 	intervalCount,
@@ -36,7 +35,6 @@ const getUsageInvoiceItems = async ({
 	logger: any;
 	attachParams: AttachParams;
 	cusProduct: FullCusProduct;
-	// stripeSubs: Stripe.Subscription[];
 	sub: Stripe.Subscription;
 	interval?: BillingInterval;
 	intervalCount?: number;
@@ -138,7 +136,6 @@ export const createUsageInvoiceItems = async ({
 		db,
 		attachParams,
 		cusProduct,
-		// stripeSubs,
 		sub,
 		interval,
 		intervalCount,

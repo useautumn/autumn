@@ -5,7 +5,6 @@ import type {
 	WorkerFullSubject,
 } from "@autumn/balance-engine";
 
-/** The feature a mutation drew on: a track names it, a finalize settles its lock's. Nothing else tops up. */
 const mutationToTrackedFeatureId = ({
 	mutation,
 }: {
@@ -17,7 +16,6 @@ const mutationToTrackedFeatureId = ({
 	return null;
 };
 
-/** One effect per feature whose auto top-up job should run now, read off the subject as the mutation left it. */
 export const decideAutoTopupEffects = ({
 	mutation,
 	after,

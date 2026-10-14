@@ -24,10 +24,6 @@ const ownLinePeriods = ({ params }: { params: CreateInvoiceParams }) =>
 		...(params.custom_line_items ?? []),
 	].flatMap((line: PeriodFields) => toInvoicePeriod(line) ?? []);
 
-/**
- * The period lines without their own inherit: only one the request gives, which
- * must contain every line period. Without it, such lines carry no period, as before.
- */
 export const resolveInvoiceEnvelope = ({
 	params,
 }: {

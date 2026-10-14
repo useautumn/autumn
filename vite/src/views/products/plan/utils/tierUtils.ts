@@ -45,34 +45,29 @@ export const addTier = ({
 	if (!item) return;
 
 	if (!item.tiers || item.tiers.length === 0) {
-		// First tier should be infinite for single tier pricing
 		setItem({ ...item, tiers: [{ to: Infinite, amount: 0 }] });
 	} else if (item.tiers.length === 1) {
-		// Converting from single tier to multi-tier
 		const firstTier = item.tiers[0];
 		setItem({
 			...item,
 			tiers: [
-				{ ...firstTier, to: 100 }, // First tier with default limit
+				{ ...firstTier, to: 100 },
 				{
 					to: Infinite,
 					amount: 0,
 					additional_currencies: zeroedCurrencyEntries(firstTier),
-				}, // Second tier is infinite
+				},
 			],
 		});
 	} else {
-		// Adding to existing multi-tier setup
 		const newTiers = [...item.tiers];
 		const lastTier = newTiers[newTiers.length - 1];
 
-		// Set previous last tier to a default value if it was infinite
 		if (lastTier.to === Infinite) {
 			const prevTierTo = newTiers[newTiers.length - 2]?.to;
 			lastTier.to = (typeof prevTierTo === "number" ? prevTierTo : 0) + 100;
 		}
 
-		// Add new infinite tier
 		newTiers.push({
 			to: Infinite,
 			amount: 0,
@@ -92,7 +87,6 @@ export const removeTier = ({
 	index: number;
 }) => {
 	if (!item.tiers || item.tiers.length <= 1) {
-		// If removing the last tier, switch to included usage mode
 		setItem({ ...item, tiers: null });
 		return;
 	}
@@ -100,7 +94,6 @@ export const removeTier = ({
 	const newTiers = [...item.tiers];
 	newTiers.splice(index, 1);
 
-	// Ensure last tier is always infinite
 	if (newTiers.length > 0) {
 		newTiers[newTiers.length - 1].to = Infinite;
 	}
@@ -111,8 +104,6 @@ export const removeTier = ({
 		return;
 	}
 
-	// One tier saves as a plain `price.amount` with no tier behaviour or flat fee,
-	// so drop both rather than show volume pricing that won't save.
 	const [onlyTier] = newTiers;
 	setItem({
 		...remaining,
@@ -131,7 +122,6 @@ export const removeTier = ({
 	});
 };
 
-/** Display `to` includes included usage; stored `to` does not. */
 export const applyTierToDisplayValue = ({
 	item,
 	index,
@@ -173,12 +163,10 @@ export const updateTier = ({
 
 	const newTiers = [...item.tiers];
 	if (field === "to") {
-		// Don't allow updating the last tier's "to" value - it must always be Infinite
 		if (index === newTiers.length - 1) {
 			return;
 		}
 
-		// Handle empty string, infinity, or numeric values
 		let numValue: number | typeof Infinite;
 		if (value === "" || value === "∞") {
 			numValue = value === "" ? 0 : Infinite;
@@ -188,17 +176,14 @@ export const updateTier = ({
 		}
 		newTiers[index] = { ...newTiers[index], to: numValue };
 
-		// Update next tier's "to" to match, but ensure last tier stays Infinite
 		if (newTiers[index + 1]) {
 			if (index + 1 === newTiers.length - 1) {
-				// If next tier is the last tier, keep it as Infinite
 				newTiers[index + 1].to = Infinite;
 			} else {
 				newTiers[index + 1].to = numValue;
 			}
 		}
 	} else if (field === "amount" || field === "flat_amount") {
-		// Handle empty string or numeric values
 		let numValue: number;
 		if (value === "") {
 			numValue = 0;
@@ -213,8 +198,6 @@ export const updateTier = ({
 
 export type VolumePricingMode = "flat" | "per_unit";
 
-/** The mode an item opens in: Flat only when no tier has a unit rate, so mixed tiers show
- * their rates. Switching modes later only changes which field the inputs edit. */
 export const itemToVolumePricingModeOnOpen = ({
 	item,
 }: {
@@ -231,7 +214,6 @@ export const itemToVolumePricingModeOnOpen = ({
 
 export type TierRow = { range: string; value: string };
 
-/** Tier rows in total-usage positions, matching the editor's boundaries. */
 export const itemToTierRows = ({
 	item,
 	currency,
@@ -239,7 +221,6 @@ export const itemToTierRows = ({
 	item: ProductItem;
 	currency: string;
 }): TierRow[] => {
-	// Stored tier `to` excludes the included usage, so add it back.
 	const includedUsage = itemToIncludedUsage(item);
 	const format = (amount: number) =>
 		formatAmount({
@@ -248,7 +229,6 @@ export const itemToTierRows = ({
 			amountFormatOptions: { currencyDisplay: "narrowSymbol" },
 		});
 
-	// Volume also charges the included units once usage passes them.
 	const isVolume = item.tier_behavior === TierBehavior.VolumeBased;
 	const rows: TierRow[] = [];
 	if (includedUsage > 0) {

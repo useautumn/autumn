@@ -7,7 +7,6 @@ import {
 	ByocCacheStatus,
 } from "@autumn/shared";
 
-/** Where the step after the last done one stands: it failed, waits on the org, or is under way. */
 const nextStageStatus = ({
 	status,
 }: {
@@ -21,7 +20,6 @@ const nextStageStatus = ({
 		: ByocCacheStageStatus.Waiting;
 };
 
-/** Every step before the furthest one done is done too, so the table only ever moves forward. */
 export const toCacheStages = ({
 	doneStages,
 	status,
@@ -43,7 +41,6 @@ export const toCacheStages = ({
 	) as ByocCacheStages;
 };
 
-/** Removed stages are done; the rest are under way, or the first is where a failed delete stopped. Setup-only stages read as done. */
 export const toRemovalStages = ({
 	removedStages,
 	hasFailed,

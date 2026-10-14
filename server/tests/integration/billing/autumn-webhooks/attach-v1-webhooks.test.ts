@@ -1,16 +1,3 @@
-/**
- * Integration tests for customer.products.updated webhook via ATTACH V1 endpoint.
- *
- * Verifies that webhooks are sent correctly for:
- * - Upgrade (Pro -> Premium): scenario "upgrade"
- * - Downgrade to paid (Premium -> Pro): scenario "downgrade"
- * - Cancel to free (Premium -> Free): scenario "cancel"
- * - Uncancel via re-attach (Pro -> Free -> Pro): scenario "renew"
- * - Entity-level upgrade/downgrade
- *
- * Uses Svix Play (https://www.svix.com/play/) to receive and verify webhooks.
- */
-
 import { afterAll, beforeAll, expect, test } from "bun:test";
 import type { ApiCustomerV3, ApiEntityV0, ApiProduct } from "@autumn/shared";
 import {
@@ -41,10 +28,6 @@ type CustomerProductsUpdatedPayload = {
 	};
 };
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// SVIX PLAY SETUP (shared across all tests)
-// ═══════════════════════════════════════════════════════════════════════════════
-
 let webhook: WebhookTestSetup;
 let playToken: string;
 
@@ -61,19 +44,13 @@ afterAll(async () => {
 	await webhook?.cleanup();
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// CUSTOMER-LEVEL TESTS
-// ═══════════════════════════════════════════════════════════════════════════════
-
 test.concurrent(`${chalk.yellowBright("webhook v1: upgrade Pro -> Premium - scenario: upgrade")}`, async () => {
 	const customerId = "webhook-v1-upgrade";
 
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
-	// Pro = $20/month, Premium = $50/month
 	const pro = products.pro({ id: "pro", items: [messagesItem] });
 	const premium = products.premium({ id: "premium", items: [messagesItem] });
 
-	// Setup: customer with Pro attached
 	const { autumnV1 } = await initScenario({
 		customerId,
 		setup: [
@@ -83,13 +60,11 @@ test.concurrent(`${chalk.yellowBright("webhook v1: upgrade Pro -> Premium - scen
 		actions: [s.attach({ productId: pro.id })],
 	});
 
-	// Action: attach Premium (upgrade from Pro)
 	await autumnV1.attach({
 		customer_id: customerId,
 		product_id: premium.id,
 	});
 
-	// Assert: webhook received with scenario "upgrade"
 	const result = await waitForWebhook<CustomerProductsUpdatedPayload>({
 		token: playToken,
 		predicate: (payload) =>
@@ -109,7 +84,6 @@ test.concurrent(`${chalk.yellowBright("webhook v1: upgrade Pro -> Premium - scen
 	expect(data.customer.id).toBe(customerId);
 	expect(data.entity).toBeUndefined();
 
-	// Verify customer state: Premium is active
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	await expectProductActive({ customer, productId: premium.id });
 });
@@ -118,11 +92,9 @@ test.concurrent(`${chalk.yellowBright("webhook v1: downgrade Premium -> Pro - sc
 	const customerId = "webhook-v1-downgrade";
 
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
-	// Pro = $20/month, Premium = $50/month
 	const pro = products.pro({ id: "pro", items: [messagesItem] });
 	const premium = products.premium({ id: "premium", items: [messagesItem] });
 
-	// Setup: customer with Premium attached
 	const { autumnV1 } = await initScenario({
 		customerId,
 		setup: [
@@ -132,13 +104,11 @@ test.concurrent(`${chalk.yellowBright("webhook v1: downgrade Premium -> Pro - sc
 		actions: [s.attach({ productId: premium.id })],
 	});
 
-	// Action: attach Pro (downgrade from Premium)
 	await autumnV1.attach({
 		customer_id: customerId,
 		product_id: pro.id,
 	});
 
-	// Assert: webhook received with scenario "downgrade" for Premium (being scheduled to cancel)
 	const result = await waitForWebhook<CustomerProductsUpdatedPayload>({
 		token: playToken,
 		predicate: (payload) =>
@@ -158,7 +128,6 @@ test.concurrent(`${chalk.yellowBright("webhook v1: downgrade Premium -> Pro - sc
 	expect(data.customer.id).toBe(customerId);
 	expect(data.entity).toBeUndefined();
 
-	// Verify customer state: Premium is canceling, Pro is scheduled
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	await expectProductCanceling({ customer, productId: premium.id });
 	await expectProductScheduled({ customer, productId: pro.id });
@@ -168,7 +137,6 @@ test.concurrent(`${chalk.yellowBright("webhook v1: cancel to free Premium -> Fre
 	const customerId = "webhook-v1-cancel-to-free";
 
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
-	// Premium = $50/month, Free = $0
 	const free = products.base({
 		id: "free",
 		items: [messagesItem],
@@ -176,7 +144,6 @@ test.concurrent(`${chalk.yellowBright("webhook v1: cancel to free Premium -> Fre
 	});
 	const premium = products.premium({ id: "premium", items: [messagesItem] });
 
-	// Setup: customer with Premium attached
 	const { autumnV1 } = await initScenario({
 		customerId,
 		setup: [
@@ -186,13 +153,11 @@ test.concurrent(`${chalk.yellowBright("webhook v1: cancel to free Premium -> Fre
 		actions: [s.attach({ productId: premium.id })],
 	});
 
-	// Action: attach Free (cancel to free from Premium)
 	await autumnV1.attach({
 		customer_id: customerId,
 		product_id: free.id,
 	});
 
-	// Assert: webhook received with scenario "cancel" for Premium (scheduled to free)
 	const result = await waitForWebhook<CustomerProductsUpdatedPayload>({
 		token: playToken,
 		predicate: (payload) =>
@@ -212,7 +177,6 @@ test.concurrent(`${chalk.yellowBright("webhook v1: cancel to free Premium -> Fre
 	expect(data.customer.id).toBe(customerId);
 	expect(data.entity).toBeUndefined();
 
-	// Verify customer state: Premium is canceling, Free is scheduled
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	await expectProductCanceling({ customer, productId: premium.id });
 	await expectProductScheduled({ customer, productId: free.id });
@@ -229,7 +193,6 @@ test.concurrent(`${chalk.yellowBright("webhook v1: uncancel via attach Pro -> (c
 		isDefault: true,
 	});
 
-	// Setup: customer with Pro attached, then cancel to Free
 	const { autumnV1 } = await initScenario({
 		customerId,
 		setup: [
@@ -245,17 +208,14 @@ test.concurrent(`${chalk.yellowBright("webhook v1: uncancel via attach Pro -> (c
 		],
 	});
 
-	// Verify Pro is canceling before re-attach
 	let customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	await expectProductCanceling({ customer, productId: pro.id });
 
-	// Action: re-attach Pro (uncancel via attach)
 	await autumnV1.attach({
 		customer_id: customerId,
 		product_id: pro.id,
 	});
 
-	// Assert: webhook received with scenario "renew" for Pro
 	const result = await waitForWebhook<CustomerProductsUpdatedPayload>({
 		token: playToken,
 		predicate: (payload) =>
@@ -275,14 +235,9 @@ test.concurrent(`${chalk.yellowBright("webhook v1: uncancel via attach Pro -> (c
 	expect(data.customer.id).toBe(customerId);
 	expect(data.entity).toBeUndefined();
 
-	// Verify customer state: Pro is now active (not canceling)
 	customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	await expectProductActive({ customer, productId: pro.id });
 });
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// ENTITY-LEVEL TESTS
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(`${chalk.yellowBright("webhook v1: entity upgrade Pro -> Premium - scenario: upgrade")}`, async () => {
 	const customerId = "webhook-v1-entity-upgrade";
@@ -291,7 +246,6 @@ test.concurrent(`${chalk.yellowBright("webhook v1: entity upgrade Pro -> Premium
 	const pro = products.pro({ id: "pro", items: [messagesItem] });
 	const premium = products.premium({ id: "premium", items: [messagesItem] });
 
-	// Setup: customer with entity, Pro attached to entity
 	const { autumnV1, entities } = await initScenario({
 		customerId,
 		setup: [
@@ -304,14 +258,12 @@ test.concurrent(`${chalk.yellowBright("webhook v1: entity upgrade Pro -> Premium
 
 	const entityId = entities[0].id;
 
-	// Action: attach Premium to entity (upgrade)
 	await autumnV1.attach({
 		customer_id: customerId,
 		product_id: premium.id,
 		entity_id: entityId,
 	});
 
-	// Assert: webhook received with scenario "upgrade" AND entity included
 	const result = await waitForWebhook<CustomerProductsUpdatedPayload>({
 		token: playToken,
 		predicate: (payload) =>
@@ -333,7 +285,6 @@ test.concurrent(`${chalk.yellowBright("webhook v1: entity upgrade Pro -> Premium
 	expect(data.entity).toBeDefined();
 	expect(data.entity?.id).toBe(entityId);
 
-	// Verify entity state: Premium is active
 	const entity = await autumnV1.entities.get<ApiEntityV0>(customerId, entityId);
 	await expectProductActive({ customer: entity, productId: premium.id });
 });
@@ -345,7 +296,6 @@ test.concurrent(`${chalk.yellowBright("webhook v1: entity downgrade Premium -> P
 	const pro = products.pro({ id: "pro", items: [messagesItem] });
 	const premium = products.premium({ id: "premium", items: [messagesItem] });
 
-	// Setup: customer with entity, Premium attached to entity
 	const { autumnV1, entities } = await initScenario({
 		customerId,
 		setup: [
@@ -358,14 +308,12 @@ test.concurrent(`${chalk.yellowBright("webhook v1: entity downgrade Premium -> P
 
 	const entityId = entities[0].id;
 
-	// Action: attach Pro to entity (downgrade)
 	await autumnV1.attach({
 		customer_id: customerId,
 		product_id: pro.id,
 		entity_id: entityId,
 	});
 
-	// Assert: webhook received with scenario "downgrade" AND entity included
 	const result = await waitForWebhook<CustomerProductsUpdatedPayload>({
 		token: playToken,
 		predicate: (payload) =>
@@ -387,7 +335,6 @@ test.concurrent(`${chalk.yellowBright("webhook v1: entity downgrade Premium -> P
 	expect(data.entity).toBeDefined();
 	expect(data.entity?.id).toBe(entityId);
 
-	// Verify entity state: Premium is canceling, Pro is scheduled
 	const entity = await autumnV1.entities.get<ApiEntityV0>(customerId, entityId);
 	await expectProductCanceling({ customer: entity, productId: premium.id });
 	await expectProductScheduled({ customer: entity, productId: pro.id });

@@ -1,8 +1,3 @@
-/**
- * dfu.flash — `plan`/`phases` validator: a billable must carry exactly one of
- * `plan` or `phases`. BOTH present is rejected; NEITHER present is rejected.
- */
-
 import { expect, test } from "bun:test";
 import { type ApiCustomerV5 } from "@autumn/shared";
 import {
@@ -16,7 +11,6 @@ import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 
-// ── Validator: BOTH `plan` and `phases` present is rejected (400) ──
 test.concurrent(
 	`${chalk.yellowBright("dfu.flash: billable with BOTH plan and phases is rejected")}`,
 	async () => {
@@ -55,7 +49,6 @@ test.concurrent(
 
 		const flashRes = await callFlash(autumnV2_2 as FlashClient, payload);
 
-		// Rejected as a validation error; flash never runs.
 		expect(flashRes.errorCode).toBe("invalid_inputs");
 		expect(flashRes.errorMessage ?? "").toContain("not both");
 		expect(flashRes.result).toBeNull();
@@ -65,7 +58,6 @@ test.concurrent(
 	},
 );
 
-// ── Validator: NEITHER `plan` nor `phases` present is rejected (400) ──
 test.concurrent(
 	`${chalk.yellowBright("dfu.flash: billable with NEITHER plan nor phases is rejected")}`,
 	async () => {

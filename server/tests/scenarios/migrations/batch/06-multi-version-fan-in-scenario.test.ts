@@ -1,8 +1,3 @@
-/**
- * Seeds customers stranded across three different versions and fans them all
- * into v4 in one migration. Each source version has a different diff to v4, so
- * one run has to compute three distinct transitions and get all of them right.
- */
 import { test } from "bun:test";
 import { TestFeature } from "@tests/setup/v2Features";
 import { itemsV2 } from "@tests/utils/fixtures/itemsV2";

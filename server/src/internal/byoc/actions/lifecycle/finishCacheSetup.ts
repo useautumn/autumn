@@ -6,7 +6,6 @@ import {
 	cacheNotConnected,
 } from "../../utils/byocCacheUtils.js";
 
-/** The org saw its first checks reach Atom and finished setup; its page shows the set-up Atom from then on. */
 export const finishCacheSetup = async ({
 	ctx,
 }: {

@@ -85,7 +85,6 @@ const findNonExpiringAncestor = async ({
 	});
 };
 
-/** Accepts a branch id (`br-…`) or name (`capy-…`). */
 export const resolveNeonBranchId = async ({
 	ctx,
 	branch,
@@ -219,7 +218,6 @@ export const deleteNeonBranch = async ({
 	});
 };
 
-/** Pooled by default, as `bun capy` writes it. */
 export const neonConnectionUrl = async ({
 	ctx,
 	branchId,

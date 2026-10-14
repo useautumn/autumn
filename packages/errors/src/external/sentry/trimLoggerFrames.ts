@@ -1,6 +1,5 @@
 import type { StackFrame } from "@sentry/bun";
 
-/** Frames inside the logger itself; the caller of `logger.error` is the first frame past them. */
 const PACKAGE_LOGGER_FRAME_PATHS = [
 	"/node_modules/",
 	"/packages/errors/",

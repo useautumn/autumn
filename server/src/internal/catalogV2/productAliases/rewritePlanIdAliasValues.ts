@@ -8,10 +8,6 @@ const canonicalValue = ({
 	aliases: Record<string, string>;
 }): string => aliases[value] ?? value;
 
-/**
- * Mutates `value` in place: every known plan-id key becomes its canonical id.
- * `new_plan_id` is intentionally not a rewrite key (rename target).
- */
 export const rewritePlanIdAliasValues = ({
 	value,
 	aliases,

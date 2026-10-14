@@ -25,7 +25,6 @@ const latestRowPerPlan = ({
 	);
 };
 
-/** Variants anchored to this base follow its settings — latest row per plan. */
 export const settingsFollowerTargets = ({
 	upsert,
 	productStatesContext,

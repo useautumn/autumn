@@ -108,7 +108,6 @@ export function CreditDrawdownDiagram() {
 					<EventCard endpoint="POST /v1/scrape" />
 				</div>
 
-				{/* search → search credits (solid); scrape → bypasses down the right edge (dashed) */}
 				<div className="relative h-[46px]">
 					<div className="absolute top-0 left-[calc(25%-3px)] h-[46px] w-[1.5px] bg-[#9564ff66]" />
 					<ArrowHead className="top-[40px] left-[calc(25%-7px)] border-t-[#9564ff99]" />
@@ -135,7 +134,6 @@ export function CreditDrawdownDiagram() {
 					</BalanceCard>
 				</div>
 
-				{/* both paths land on plan credits */}
 				<div className="relative h-[46px]">
 					<div className="absolute top-0 left-[calc(25%-3px)] h-[46px] w-0 border-l-[1.5px] border-dashed border-[#454545]" />
 					<ArrowHead className="top-[40px] left-[calc(25%-7px)] border-t-[#555555]" />

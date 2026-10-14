@@ -1,12 +1,3 @@
-/**
- * catalogV2.preview_update — state.has_customers + versioning block.
- *
- * options lists only strategies pickable today:
- * - existing when the pinned version has customers, or the plan has multiple versions
- * - new_version when latest has customers (mint only from latest)
- * - all_versions when the plan has more than one version
- */
-
 import { expect, test } from "bun:test";
 import {
 	CusProductStatus,
@@ -291,7 +282,6 @@ test.concurrent(
 	},
 );
 
-// Past pinned version never offers new_version (mint only on latest).
 test.concurrent(
 	`${chalk.yellowBright("catalogV2 preview-versioning: pinned non-latest + customers → no new_version")}`,
 	async () => {

@@ -20,8 +20,6 @@ export const runBatchTrack = async ({
 		getTrackFeatureDeductionsForBody({ ctx, body: item });
 	}
 
-	// One queueTrack per item — the SQS send batcher packs them into
-	// SendMessageBatch calls, and each item resolves/fails independently.
 	const results = await Promise.all(
 		entries.map(({ item, index, tokens }) => {
 			const messageDeduplicationId = `${ctx.id}-${index}`;
@@ -31,8 +29,6 @@ export const runBatchTrack = async ({
 				body: item,
 				tokens,
 				options: {
-					// Per-item request id: seeds the per-item queue replay keys, so
-					// same-customer items in one batch never collide on dedup.
 					requestId: messageDeduplicationId,
 					messageGroupId: getAsyncTrackMessageGroupId({
 						orgId: ctx.org.id,
@@ -42,9 +38,7 @@ export const runBatchTrack = async ({
 						messageDeduplicationId,
 					}),
 					messageDeduplicationId,
-					// Batch items have no accept-time claim — the worker claims.
 					validateTrackBodyIdempotencyKey: true,
-					// A 202 here is the batch contract, not a degradation signal.
 					logFallback: false,
 					markQueuedForReplay: false,
 				},

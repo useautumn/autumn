@@ -1,9 +1,3 @@
-/**
- * dfu.flash (test clock) — a trial converts to active before real now. The
- * imported plan must be Active, its trial_ends_at in the past, and its cycle
- * anchored to the now-current (post-trial) period end.
- */
-
 import { expect, test } from "bun:test";
 import { CusProductStatus } from "@autumn/shared";
 import {
@@ -37,8 +31,6 @@ test.concurrent(
 		});
 
 		const day = THIRTY_DAYS_MS / 30;
-		// Freeze 20 days back, 10-day trial → trial_end ≈ 10 days ago. Advance mid-
-		// trial first, then PAST trial_end (to real now) so it converts to active.
 		const frozenTime = Date.now() - day * 20;
 		const { customerId: stripeCustomerId, testClockId } =
 			await createRealStripeCustomerOnClock(ctx, {
@@ -63,7 +55,6 @@ test.concurrent(
 			now: new Date().toISOString(),
 		});
 
-		// Trial has passed → sub is active; the current period brackets real now.
 		expect(sub.status).toBe("active");
 		expect(trialEndMs).toBeLessThan(Date.now());
 		expect(periodEndMs).toBeGreaterThan(Date.now());
@@ -87,9 +78,7 @@ test.concurrent(
 		});
 
 		expect(cusProduct?.status).toBe(CusProductStatus.Active);
-		// The trial is over: trial_ends_at is in the past, so it grants no trialing.
 		expect(cusProduct?.trial_ends_at).toBeLessThan(Date.now());
-		// Cycle anchors to the now-current post-trial period end (future).
 		expect(cusProduct?.billing_cycle_anchor).toBe(periodEndMs);
 
 		const messagesEnt = cusProduct?.customer_entitlements.find(

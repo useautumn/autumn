@@ -78,9 +78,6 @@ export const DashboardGate = () => {
 		);
 	}
 
-	// Only resolve the env redirect once the org is settled. Redirecting on a
-	// transitional org (e.g. a stale sandbox-only org during the login switch)
-	// would strand a user with production in sandbox.
 	const orgSettled =
 		!orgLoading && !shouldSwitchToLastOrg && !switchingToLastOrg;
 	if (org && orgSettled) {

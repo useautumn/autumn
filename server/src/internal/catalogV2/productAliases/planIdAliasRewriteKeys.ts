@@ -1,4 +1,3 @@
-/** Body keys whose string (or string[]) values are public plan ids. */
 export const PLAN_ID_ALIAS_REWRITE_KEYS = new Set([
 	"product_id",
 	"product_ids",

@@ -10,7 +10,6 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { rewardProgramRepo, rewardRepo } from "../../repos/index.js";
 import { requireApiReward } from "./apiRewardUtils.js";
 
-/** The reward_programs FK cascades, so refuse rather than silently dropping programs */
 const assertRewardIsUnlinked = async ({
 	ctx,
 	reward,
@@ -54,7 +53,6 @@ const deleteRewardFromStripe = async ({
 	}
 };
 
-/** A stale active promo code blocks recreating the same code later */
 const deactivateStripePromoCodes = async ({
 	ctx,
 	reward,
@@ -100,11 +98,9 @@ export const deleteApiReward = async ({
 }): Promise<DeleteRewardResponse> => {
 	const { db, org, env } = ctx;
 
-	// 1. Load and guard
 	const reward = await requireApiReward({ ctx, rewardId: params.reward_id });
 	await assertRewardIsUnlinked({ ctx, reward });
 
-	// 2. Drop the Stripe coupon, then the row, then any stale promo codes
 	await deleteRewardFromStripe({ ctx, reward });
 
 	await rewardRepo.delete({

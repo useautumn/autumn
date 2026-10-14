@@ -6,7 +6,6 @@ import {
 } from "@autumn/shared";
 import { setPlansError } from "../setPlansError";
 
-/** The subscription's display name: its main plan, as the dashboard names it. */
 export const stripeSubscriptionPlanName = ({
 	customerProducts,
 	stripeSubscriptionId,
@@ -22,7 +21,6 @@ export const stripeSubscriptionPlanName = ({
 		),
 	}) ?? "current";
 
-/** A plan queued on a schedule bills on the subscription its schedule-mates already use. */
 const customerProductToStripeSubscriptionId = ({
 	customerProducts,
 	customerProduct,
@@ -43,7 +41,6 @@ const customerProductToStripeSubscriptionId = ({
 		?.subscription_ids?.at(0);
 };
 
-/** A targeted request would change a plan billed somewhere other than the target. */
 export const subscriptionConflictError = ({
 	customerProducts,
 	conflict,

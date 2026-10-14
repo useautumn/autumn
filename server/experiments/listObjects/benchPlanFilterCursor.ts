@@ -4,14 +4,6 @@ import { initDrizzle } from "../../src/db/initDrizzle.js";
 import { RELEVANT_STATUSES } from "../../src/internal/customers/cusProducts/CusProductService.js";
 import { getCursorPaginatedEntitySubjectsQuery } from "../../src/internal/entities/repos/cursorListEntitiesQuery.js";
 
-/**
- * The cursor (API 2.3.0) page query still filters plans with a correlated
- * EXISTS. Same shape as the offset path before the plan_scopes join, so this
- * measures whether it has the same problem.
- *
- * Run with:
- *   infisical run --env=prod --recursive -- bun run server/experiments/listObjects/benchPlanFilterCursor.ts
- */
 const requireEnv = ({ name }: { name: string }) => {
 	const value = process.env[name];
 	if (!value) {

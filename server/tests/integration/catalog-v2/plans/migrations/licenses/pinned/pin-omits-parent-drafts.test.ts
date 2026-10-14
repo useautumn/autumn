@@ -1,14 +1,3 @@
-/**
- * catalogV2.update — pin (omit from propagate.license_parents) never drafts
- * a parent op. Child new_version + migration.draft is already 400 in
- * validation/plan-errors.test.ts — do not duplicate.
- *
- * Contract:
- *   C1 Team in plans[] but not in propagate, Team has customers, child has none → no draft
- *   C2 Team absent from plans[] (derived pin) → no draft
- *   C3 Child new_version + pin, no draft flag → no draft
- */
-
 import { test } from "bun:test";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";

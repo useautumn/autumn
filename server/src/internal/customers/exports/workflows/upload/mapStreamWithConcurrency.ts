@@ -12,8 +12,6 @@ type PendingBatch<Item, Result> = {
 
 const DEFAULT_MAX_PENDING_BATCHES = 8;
 
-/** One pool spanning every batch: a slow item holds a single slot rather than
- * stalling its whole batch, and slots stay full while batches are sparse. */
 export const mapStreamWithConcurrency = async function* <Item, Result>({
 	batches,
 	concurrency,
@@ -23,8 +21,6 @@ export const mapStreamWithConcurrency = async function* <Item, Result>({
 }: {
 	batches: AsyncGenerator<Item[]>;
 	concurrency: number;
-	/** Bounds how far page production runs ahead of the oldest unsettled page;
-	 * sparse pages start nothing, so without this they are pulled unbounded. */
 	maxPendingBatches?: number;
 	run: (item: Item) => Promise<Result>;
 	onBatchSettled?: BatchSettled<Item, Result>;

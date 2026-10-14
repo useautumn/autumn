@@ -1,15 +1,3 @@
-/**
- * catalogV2.update — Stripe prices are immutable: a billing-param change must
- * never keep the old stripe_price_id, even when params round-trip it
- * (createPlanItemParamsV1.price.stripe_price_id is accepted for sync flows).
- *
- * Contract:
- *   base plan: items update round-tripping the old stripe_price_id with a new
- *   amount → old id cleared, product ids kept, fresh Stripe price minted
- *   all_versions: amount change propagated to every version mints a new
- *   stripe_price_id per version (versions often share one Stripe price)
- */
-
 import { test } from "bun:test";
 import { BillingInterval, BillingMethod, type FullProduct } from "@autumn/shared";
 import {
@@ -146,7 +134,6 @@ test.concurrent(
 				],
 			});
 			await initPlanStripeResources({ ctx, planId });
-			// v2 carries v1's stripe ids in full — the shared-id danger case.
 			await autumnV2_3.catalogV2.update({
 				plans: [
 					{

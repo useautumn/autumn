@@ -73,7 +73,6 @@ describe("handleTrack", () => {
 	beforeEach(() => {
 		originalKafkaAuthMode = process.env.KAFKA_AUTH_MODE;
 		process.env.KAFKA_AUTH_MODE = "none";
-		// These cover the legacy SQS lane; a local stack routes to the worker by default.
 		originalRollout = process.env.BALANCE_WORKER_ROLLOUT_ENABLED;
 		process.env.BALANCE_WORKER_ROLLOUT_ENABLED = "false";
 		mockState.queueCommands = [];

@@ -1,16 +1,3 @@
-/**
- * catalogV2.update — preview conflicts never block or omit a variant draft.
- *
- * Contract:
- *   follow 100→150 vs 200 lists value_divergence; from-grant splits the ops
- *   follow + declare 300 → two ops (150 vs 300); explicit swallows the list
- *   license follow 100→150 vs 200 stamps license_plan_id; from-grant splits
- *   license follow + declare 300 → two upsert_licenses ops (150 vs 300)
- *   pin lists the clash and still omits the variant op
- *   license pin lists license_plan_id and omits the variant license op
- *   both lanes: plan-body + Seat clash → two item ops + two license ops
- */
-
 import { test } from "bun:test";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";

@@ -19,7 +19,6 @@ export const insertFileRunStats = async ({
 }: {
 	ctx: TwdContext;
 	runId: string;
-	/** Contract id; a repeat run's `<file>#<k>` is split into file and repetition. */
 	file: string;
 	attempt: number;
 	worker: string | null;
@@ -39,7 +38,6 @@ export const insertFileRunStats = async ({
 	});
 };
 
-/** Oldest first, so a later row (a reschedule after worker death) wins when keyed. */
 export const listFirstAttemptStats = ({
 	ctx,
 	runId,
@@ -57,7 +55,6 @@ export const listFirstAttemptStats = ({
 		.where(and(eq(fileRunStats.runId, runId), eq(fileRunStats.attempt, 1)))
 		.orderBy(asc(fileRunStats.createdAt));
 
-/** Run-wide totals and spreads over every attempt's stats line; null before the first one. */
 export const summariseRunResources = async ({
 	ctx,
 	runId,

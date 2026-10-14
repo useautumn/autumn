@@ -16,22 +16,11 @@ export type AutoTopupRebalanceDelta = {
 	delta: number;
 };
 
-/** The entity that owns the row, or null for a customer-level one. */
 const ownerEntityOf = (customerEntitlement: FullCusEntWithFullCusProduct) =>
 	customerEntitlement.internal_entity_id ??
 	customerEntitlement.customer_product?.internal_entity_id ??
 	null;
 
-/**
- * Compute the list of balance deltas needed to rebalance an auto top-up:
- *   1. Pay down overage on non-prepaid, non-entity-scoped top-level cusEnts first
- *      (capped at 0 per cusEnt — the paydown primitive).
- *   2. Route the remainder to the prepaid one-off cusEnt.
- *
- * Deltas are applied at execute time via atomic SQL balance + delta increments, so
- * they're race-safe against concurrent deductions. Entity-scoped cusEnts are excluded
- * because there's no per-entity atomic primitive today (future work).
- */
 export const computeRebalancedAutoTopUp = ({
 	fullCustomer,
 	featureId,
@@ -43,7 +32,6 @@ export const computeRebalancedAutoTopUp = ({
 	featureId: string;
 	quantity: number;
 	prepaidCustomerEntitlementId: string;
-	/** Only a settlement of already-tracked usage may credit an invoice-credit balance. */
 	allowInvoiceCreditBalance?: boolean;
 }): { deltas: AutoTopupRebalanceDelta[] } => {
 	if (quantity <= 0) return { deltas: [] };
@@ -65,7 +53,6 @@ export const computeRebalancedAutoTopUp = ({
 		});
 	}
 
-	// Only the purchased row's own customer or entity is paid down, as the worker does.
 	const prepaidOwner = ownerEntityOf(prepaidCusEnt);
 	const candidates = sortCusEntsForPaydown({
 		customerEntitlements: cusEntsForFeature.filter(

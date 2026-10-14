@@ -1,30 +1,3 @@
-/**
- * Idempotency of the batch lane's add_items.
- *
- * Contract under test:
- *   Behaviors:
- *     - Replaying an identical add_items migration (a SECOND migration, so the
- *       item-run checkpoint cannot short-circuit it) inserts nothing: one
- *       cusEnt row per feature, granted amount unchanged, usage accrued
- *       between the runs preserved.
- *     - A customer whose add landed already is marked skipped on the replay —
- *       nothing changed for them (batch semantics: succeeded = mutated).
- *     - Adding a feature the plan already grants never duplicates the balance,
- *       whether the customer product is plain or customized. A customer who
- *       attached with messages customized 50 -> 100 keeps exactly one messages
- *       balance at 100 when the migration adds 200.
- *     - Catalog 10 msgs/mo + add_items 20 msgs/mo keeps the live 10: no second
- *       row, grant is not overwritten. Dedup is (feature, interval), not amount.
- *   Side effects:
- *     - customer_entitlements: exactly one live row per (customer, plan,
- *       feature) throughout.
- *
- * The dedup under test is `selectAddCandidateRows`' (feature, reset interval)
- * guard: the customized row is in scope, and the dedup — not an is_custom
- * scope exclusion — is what keeps it at one balance (marked skipped, since
- * nothing was inserted for it).
- */
-
 import { expect, test } from "bun:test";
 import {
 	type ApiCustomerV5,
@@ -112,7 +85,6 @@ test.concurrent(
 			}
 		};
 
-		// ── First run: the add lands ────────────────────────────────────
 		const firstRun = await runAddItems({ migrationId: "batch-add-idem-mig-a" });
 		expect(firstRun.result?.lane).toBe("batch");
 
@@ -136,8 +108,6 @@ test.concurrent(
 			await expectSingleRows({ customerId });
 		}
 
-		// Usage between the runs: a replay that re-granted instead of no-op'ing
-		// would wipe this back to 0.
 		await autumnV2_2.track(
 			{
 				customer_id: trackedId,
@@ -147,8 +117,6 @@ test.concurrent(
 			{ timeout: 3_000 },
 		);
 
-		// ── Replay: a second migration with identical operations, so the
-		// per-customer item-run checkpoint cannot be what makes this a no-op ──
 		const replayRun = await runAddItems({
 			migrationId: "batch-add-idem-mig-b",
 		});
@@ -183,10 +151,8 @@ test.concurrent(
 			breakdownCount: 1,
 		});
 
-		// ── The invariant: still exactly one row per feature ─────────────
 		for (const customerId of [trackedId, untouchedId]) {
 			await expectSingleRows({ customerId });
-			// Nothing changed on the replay → skipped.
 			await expectMigrationItemRunStatus({
 				ctx,
 				migrationInternalId: replayRun.migration.internal_id,
@@ -220,8 +186,6 @@ test.concurrent(
 			],
 			actions: [
 				s.billing.attach({ productId: pro.id }),
-				// Custom items at attach time → customer_product.is_custom = true,
-				// messages bumped 50 -> 100.
 				s.billing.attach({
 					customerId: customizedId,
 					productId: pro.id,
@@ -233,8 +197,6 @@ test.concurrent(
 			],
 		});
 
-		// Adds a messages allowance both customers already hold — at the catalog
-		// amount for one, at a customized amount for the other.
 		const { migration, migrationRunId, result } = await runChunkedMigration({
 			ctx,
 			migrationClient: autumnV2_2,
@@ -248,8 +210,6 @@ test.concurrent(
 		});
 		expect(result?.lane).toBe("batch");
 
-		// ── Neither customer gains a second messages balance, and neither
-		// allowance moves to the migration's 200 ────────────────────────
 		for (const [customerId, expectedMessages] of [
 			[plainId, catalogMessages],
 			[customizedId, customizedMessages],
@@ -272,9 +232,6 @@ test.concurrent(
 				featureId: TestFeature.Messages,
 				count: 1,
 			});
-			// Both rows are genuinely in scope, so it is the dedup — not an
-			// is_custom exclusion — that keeps each at one balance; with nothing
-			// inserted, both are skipped.
 			await expectMigrationItemRunStatus({
 				ctx,
 				migrationInternalId: migration.internal_id,

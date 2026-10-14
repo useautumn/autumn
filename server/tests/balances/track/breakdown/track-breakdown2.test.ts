@@ -16,11 +16,6 @@ import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
 import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
 
-/**
- * Test: Monthly messages + Lifetime messages deduction order
- * Expected deduction order: Monthly (shorter interval) first, then Lifetime (longer interval)
- */
-
 const monthlyMessages = constructFeatureItem({
 	featureId: TestFeature.Messages,
 	includedUsage: 500,
@@ -30,7 +25,7 @@ const monthlyMessages = constructFeatureItem({
 const lifetimeMessages = constructFeatureItem({
 	featureId: TestFeature.Messages,
 	includedUsage: 200,
-	interval: null, // lifetime
+	interval: null,
 });
 
 const monthlyProd = constructProduct({
@@ -67,7 +62,6 @@ describe(`${chalk.yellowBright("track-breakdown2: monthly + lifetime deduction o
 			prefix: testCase,
 		});
 
-		// Attach both products
 		await autumnV2.attach({
 			customer_id: customerId,
 			product_id: monthlyProd.id,
@@ -103,7 +97,6 @@ describe(`${chalk.yellowBright("track-breakdown2: monthly + lifetime deduction o
 			value: deductValue,
 		});
 
-		// Parent balance
 		expect(trackRes.balance).toMatchObject({
 			granted_balance: 700,
 			current_balance: 600,
@@ -111,14 +104,12 @@ describe(`${chalk.yellowBright("track-breakdown2: monthly + lifetime deduction o
 			purchased_balance: 0,
 		});
 
-		// Check breakdowns
 		const breakdown = trackRes.balance?.breakdown;
 		expect(breakdown).toHaveLength(2);
 
 		const monthlyBreakdown = breakdown?.find((b) => b.granted_balance === 500);
 		const lifetimeBreakdown = breakdown?.find((b) => b.granted_balance === 200);
 
-		// Monthly should have 100 deducted
 		expect(monthlyBreakdown).toMatchObject({
 			granted_balance: 500,
 			current_balance: 400,
@@ -126,7 +117,6 @@ describe(`${chalk.yellowBright("track-breakdown2: monthly + lifetime deduction o
 			plan_id: monthlyProd.id,
 		});
 
-		// Lifetime should be untouched
 		expect(lifetimeBreakdown).toMatchObject({
 			granted_balance: 200,
 			current_balance: 200,
@@ -144,17 +134,9 @@ describe(`${chalk.yellowBright("track-breakdown2: monthly + lifetime deduction o
 			value: deductValue,
 		});
 
-		// Total deducted so far: 100 + 450 = 550
-		// Monthly should be exhausted (500 - 500 = 0 current), lifetime should have 350 remaining (200 - 50 = 150)
-		// Wait, let me recalculate:
-		// After first deduct: Monthly = 400 current, Lifetime = 200 current
-		// Second deduct 450: Monthly has 400, so deduct 400 from monthly (monthly now 0), then 50 from lifetime
-		// Monthly: 500 granted, 0 current, 500 usage
-		// Lifetime: 200 granted, 150 current, 50 usage
-
 		expect(trackRes.balance).toMatchObject({
 			granted_balance: 700,
-			current_balance: 150, // 700 - 550 = 150
+			current_balance: 150,
 			usage: 550,
 			purchased_balance: 0,
 		});
@@ -165,7 +147,6 @@ describe(`${chalk.yellowBright("track-breakdown2: monthly + lifetime deduction o
 		const monthlyBreakdown = breakdown?.find((b) => b.granted_balance === 500);
 		const lifetimeBreakdown = breakdown?.find((b) => b.granted_balance === 200);
 
-		// Monthly should be exhausted
 		expect(monthlyBreakdown).toMatchObject({
 			granted_balance: 500,
 			current_balance: 0,
@@ -173,7 +154,6 @@ describe(`${chalk.yellowBright("track-breakdown2: monthly + lifetime deduction o
 			plan_id: monthlyProd.id,
 		});
 
-		// Lifetime should have 50 deducted
 		expect(lifetimeBreakdown).toMatchObject({
 			granted_balance: 200,
 			current_balance: 150,
@@ -191,7 +171,6 @@ describe(`${chalk.yellowBright("track-breakdown2: monthly + lifetime deduction o
 
 		const balance = customer.balances[TestFeature.Messages];
 
-		// Should match cached values
 		expect(balance).toMatchObject({
 			granted_balance: 700,
 			current_balance: 150,
@@ -199,7 +178,6 @@ describe(`${chalk.yellowBright("track-breakdown2: monthly + lifetime deduction o
 			purchased_balance: 0,
 		});
 
-		// Check breakdowns
 		const breakdown = balance.breakdown;
 		expect(breakdown).toHaveLength(2);
 

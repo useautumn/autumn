@@ -4,7 +4,6 @@ import type { MultiTenantContext } from "./multiTenantContext.js";
 import { atomIdBodyToId } from "./multiTenantContracts.js";
 import { ATOM_DELETE, atomKeyOf } from "./replicateAtoms.js";
 
-/** Applied here, then passed on to the other replicas unless it came from one. */
 export const receiveDeleteAtom = ({
 	ctx,
 }: {

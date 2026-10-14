@@ -6,7 +6,6 @@ import {
 	wasDeletedByPlan,
 } from "../planRowChangeContext.js";
 
-/** A pool left with no share expires with its row: both stamped `occurredAt`. License pools live by their seats and never expire here. */
 export const expiringPooledBalancesToRowChanges = ({
 	command,
 	context,

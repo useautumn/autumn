@@ -1,6 +1,5 @@
 import type { SubjectState } from "@autumn/balance-engine";
 
-/** Row counts per table and the serialised size: what a hydration log line reports so an oversized customer is named, not inferred. */
 export type SubjectStateMeasure = {
 	bytes: number;
 	rows: {

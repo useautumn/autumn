@@ -31,8 +31,6 @@ const stepContent = (
 ): Record<OnboardingStepId, StepContent> => ({
 	prompt: { action: <SetupPromptPanel /> },
 	catalog: {
-		// The card rail needs the full row; a half-width column would scroll
-		// horizontally with two cards visible.
 		wide: true,
 		panel: (
 			<CatalogPanel
@@ -69,8 +67,6 @@ function OnboardingView() {
 	const [openStep, setOpenStep] = useState<OnboardingStepId | null>(null);
 	useStableScrollbar();
 
-	// Latched to the first known step: `currentStep` moves as progress lands, and
-	// following it would reopen a different step under the user mid-read.
 	const autoOpened = useRef<OnboardingStepId | null>(null);
 	if (autoOpened.current === null && currentStep) {
 		autoOpened.current = currentStep;
@@ -79,7 +75,6 @@ function OnboardingView() {
 	const expandedStep = openStep ?? autoOpened.current;
 	const content = stepContent(evidence);
 
-	// Deploying is a live-env action; every other step describes sandbox work.
 	const steps = ONBOARDING_STEPS.filter(
 		(step) => step.id !== "deploy" || env === AppEnv.Sandbox,
 	);
@@ -101,9 +96,6 @@ function OnboardingView() {
 				/>
 			</PageHeader>
 			<SlackInviteCard />
-			{/* overflow-clip, not hidden: the rows' own background is square, so it
-				needs to be trimmed to the rounded border, and `hidden` would make this
-				a scroll container. */}
 			<div className="w-full divide-y overflow-clip rounded-lg border bg-interactive-secondary">
 				{steps.map((step, index) => (
 					<OnboardingStep

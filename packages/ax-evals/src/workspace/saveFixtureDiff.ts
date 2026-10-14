@@ -7,11 +7,6 @@ import { AX_EVALS_DIR, REPO_ROOT } from "./workspacePaths.ts";
 const run = promisify(execFile);
 const ARTIFACTS_ROOT = join(AX_EVALS_DIR, ".artifacts");
 
-/**
- * Diffs the agent-edited workspace against the pristine fixture — the clearest
- * record of what the agent actually wrote. Returned for printing and saved
- * under .artifacts/<case>/ alongside the config artifacts.
- */
 export const saveFixtureDiff = async ({
 	caseName,
 	arm,
@@ -24,8 +19,6 @@ export const saveFixtureDiff = async ({
 	workspaceDir: string;
 }): Promise<{ diff: string; path: string | null }> => {
 	const fixtureDir = join(REPO_ROOT, "packages/ax-evals/fixtures", fixture);
-	// diff exits 1 when files differ — that's the success case here.
-	// Harness plumbing lives in the workspace too; it's not the agent's work.
 	const harnessNoise = [
 		"node_modules",
 		".env",

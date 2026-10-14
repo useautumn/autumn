@@ -1,10 +1,3 @@
-/**
- * The SQS replay path takes the same Redis event claim as the HTTP path. For
- * events that must never run concurrently (cycle invoice.created), an
- * "unavailable" claim must be treated like "in flight": retry later instead
- * of running unlocked next to a Stripe redelivery.
- */
-
 import { beforeEach, expect, test } from "bun:test";
 import { AppEnv } from "@autumn/shared";
 import type Stripe from "stripe";

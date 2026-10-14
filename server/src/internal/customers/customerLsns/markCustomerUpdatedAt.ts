@@ -19,7 +19,6 @@ type DeferredMarks = {
 
 const deferredMarks = new AsyncLocalStorage<DeferredMarks>();
 
-/** Holds marks issued during `run` and writes them once it resolves; a rejection drops them. */
 export const withDeferredMarks = async <T>({
 	db,
 	run,
@@ -44,17 +43,12 @@ export const withDeferredMarks = async <T>({
 const isTransactionHandle = (db?: DrizzleCli): boolean =>
 	!(db && (db as { $client?: unknown }).$client);
 
-// Marks never trust the caller's handle: middleware may have swapped ctx.db to
-// a read-only replica, and a tx handle must not carry the ledger row lock.
 const resolveAutocommitDb = async (): Promise<DrizzleCli> => {
 	const scoped = getScopedAutocommitDb();
 	if (scoped) return scoped;
-	// Deliberately dbGeneral, not the dbCritical pool ledger reads use: marks
-	// are low-volume post-commit writes, not per-read traffic.
 	return (await import("@/db/initDrizzle.js")).dbGeneral;
 };
 
-// One retry then a loud log — a failed mark must never fail the write action.
 const runMark = async ({
 	execute,
 	logContext,
@@ -77,8 +71,6 @@ const runMark = async ({
 	}
 };
 
-/** Stamps the freshness ledger after a structural customer write. Postgres
- *  now() is the only clock — never bind a JS timestamp. Never throws. */
 export const markCustomerUpdatedAt = async ({
 	orgId,
 	env,
@@ -112,8 +104,6 @@ export const markCustomerUpdatedAt = async ({
 
 const MARK_BATCH_SIZE = 1_000;
 
-/** Bulk mark for batch invalidation chokepoints. No db handle needed — batch
- *  callers have no ctx; marks always resolve their own autocommit pool. */
 export const markCustomersUpdatedAt = async ({
 	customers,
 }: {
@@ -125,7 +115,6 @@ export const markCustomersUpdatedAt = async ({
 		deferred.customers.push(...customers);
 		return;
 	}
-	// Dedupe: duplicate conflict targets in one multi-row upsert are an error.
 	const byKey = new Map<string, CustomerMark>();
 	for (const customer of customers.filter((customer) => customer.customerId)) {
 		const key = `${customer.orgId}\u0000${customer.env}\u0000${customer.customerId}`;
@@ -165,8 +154,6 @@ export const markCustomersUpdatedAt = async ({
 	}
 };
 
-/** Mark variant for chokepoints that only know internal customer ids (entity,
- *  customer-product, entitlement services); resolves identity in-statement. */
 export const markCustomersUpdatedAtByInternalIds = async ({
 	db,
 	internalCustomerIds,
@@ -189,8 +176,6 @@ export const markCustomersUpdatedAtByInternalIds = async ({
 		sql`, `,
 	);
 
-	// A tx handle may hold uncommitted customers the autocommit mark pool can't
-	// see yet — resolve identity on the caller's handle, then stamp autocommit.
 	if (isTransactionHandle(db)) {
 		try {
 			const resolved = await db.execute<{

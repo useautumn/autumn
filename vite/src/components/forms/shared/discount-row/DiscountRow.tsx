@@ -26,7 +26,6 @@ export function DiscountRow({
 	onUpdate: ({ rewardId }: { rewardId: string }) => void;
 	onRemove: () => void;
 	defaultOpen?: boolean;
-	/** Rewards that can't be picked here, e.g. ones already on the subscription. */
 	excludedRewardIds?: string[];
 }) {
 	const { rewards, rewardPrograms } = useRewardsQuery();
@@ -34,7 +33,6 @@ export function DiscountRow({
 
 	const discount = discounts[index];
 
-	// Codes the bulk listing didn't reach are looked up in Stripe on demand.
 	const {
 		options: allOptions,
 		setSearch,

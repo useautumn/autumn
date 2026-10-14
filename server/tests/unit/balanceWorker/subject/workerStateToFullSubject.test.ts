@@ -55,7 +55,6 @@ const seatProduct = products.createFull({ id: "seat" });
 const [seatPrice] = parent.customer_prices;
 const seatEntitlement = firstGrantOf(parent).entitlement;
 
-/** The seat link as the worker's catalog holds it: made of the parent's own price and entitlement. */
 const seatPlanLicenseRows = (): CatalogRow[] => [
 	{
 		table: "planLicenses",

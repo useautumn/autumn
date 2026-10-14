@@ -1,13 +1,3 @@
-/**
- * catalogV2.update — variant drafts inherit the parent plans[] versioning.
- *
- * Contract:
- *   existing: latest only; historical customers do not get a variant op
- *   all_versions: pin when one version has customers; collapse when all do
- *   new_version + draft → 400
- *   new_version without draft → no draft (mint is the opt-out)
- */
-
 import { test } from "bun:test";
 import { ErrCode } from "@autumn/shared";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils.js";

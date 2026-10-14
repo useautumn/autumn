@@ -16,9 +16,6 @@ const GetProductQuerySchema = z.object({
 	schemaVersion: z.string().optional(),
 });
 
-/**
- * Route: GET /products/:product_id - Get a product by ID
- */
 export const handleGetPlanV1 = createRoute({
 	scopes: [Scopes.Plans.Read],
 	query: GetProductQuerySchema,

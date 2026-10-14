@@ -22,19 +22,15 @@ function InputGroup({
 			className={cn(
 				"group/input-group border-input dark:bg-input/30 relative flex w-full items-center rounded-lg border shadow-xs outline-none cursor-text",
 
-				// CUSTOM STYLES
 				`!pr-0 h-input input-base input-shadow-default input-state-focus-within`,
 
-				// Variants based on alignment.
 				"has-[>[data-align=inline-start]]:[&>input]:pl-2",
 				"has-[>[data-align=inline-end]]:[&>input]:pr-2",
 				"has-[>[data-align=block-start]]:h-auto has-[>[data-align=block-start]]:flex-col has-[>[data-align=block-start]]:[&>input]:pb-3",
 				"has-[>[data-align=block-end]]:h-auto has-[>[data-align=block-end]]:flex-col has-[>[data-align=block-end]]:[&>input]:pt-3",
 
-				// Error state.
 				"has-[[data-slot][aria-invalid=true]]:ring-destructive/20 has-[[data-slot][aria-invalid=true]]:border-destructive dark:has-[[data-slot][aria-invalid=true]]:ring-destructive/40",
 
-				// Disabled state
 				"data-[disabled=true]:opacity-50 data-[disabled=true]:cursor-not-allowed data-[disabled=true]:pointer-events-none",
 
 				className,
@@ -118,7 +114,6 @@ const inputGroupButtonVariants = cva(
 function InputGroupButton({
 	className,
 	type = "button",
-	// variant = "ghost",
 	size = "xs",
 	...props
 }: Omit<React.ComponentProps<typeof Button>, "size"> &
@@ -127,7 +122,6 @@ function InputGroupButton({
 		<Button
 			type={type}
 			data-size={size}
-			// variant={variant}
 			className={cn(inputGroupButtonVariants({ size }), className)}
 			{...props}
 		/>

@@ -4,12 +4,6 @@ import { buildSharedFullSubjectBalanceKey } from "@/internal/customers/cache/ful
 import { FULL_SUBJECT_CACHE_TTL_SECONDS } from "@/internal/customers/cache/fullSubject/config/fullSubjectCacheConfig.js";
 import { tryRedisWrite } from "@/utils/cacheUtils/cacheUtils.js";
 
-/**
- * Atomically patches rolled counters into each affected feature's
- * '_usage_windows' field (one rollUsageWindows Lua call per feature,
- * pipelined). Fire-and-forget -- reads and the deduction script both derive
- * a closed window as 0, so a missed patch only delays the persisted roll.
- */
 export const rollUsageWindowsCache = async ({
 	ctx,
 	customerId,

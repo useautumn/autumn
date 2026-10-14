@@ -1,15 +1,3 @@
-/**
- * A backdate over a paid live subscription with a billing_cycle_anchor off its paid-through date P bills the unpaid
- * backdated time as before, then settles P against the anchor A like a live anchor move, so no day is billed twice:
- * - A after P: prorate bills the stub P → A now; none leaves P → A unbilled. Both charge in full on A.
- * - A before P: prorate credits the paid A → P now, against the charge on A; none credits nothing.
- * Stripe's own create would bill S → A again over the paid month (handoffs/ATMN-812 probe), so the recreated
- * subscription is created with no proration and Autumn invoices the settlement.
- *
- * Red (before):  400 "The billing cycle anchor can't change when backdating to".
- * Green (after): preview == Autumn invoice; one full charge on A.
- */
-
 import { expect, test } from "bun:test";
 import { ms, type SetPlansParamsV0Input } from "@autumn/shared";
 import { advancePastCycleStart } from "@tests/integration/billing/set-plans/billing-cycle-anchor/utils/anchorCycleUtils";
@@ -34,7 +22,6 @@ const PRO_MONTHLY_PRICE = 20;
 const DAYS_BEFORE_LIVE_START = 10;
 const ANCHOR_SHIFT_DAYS = 10;
 
-/** What moving the anchor off the paid-through date settles now: the stub to a later anchor, or the paid time after an earlier one. */
 const expectedAnchorSettlement = ({
 	anchorMs,
 	paidThroughMs,
@@ -144,7 +131,6 @@ for (const anchorSide of ["after", "before"] as const) {
 					testClockId: testClockId!,
 					cycleStartsAt: anchorMs,
 				});
-				// Stripe's create bills nothing (any settlement is Autumn's own invoice); A bills one full cycle.
 				const { data: invoices } = await ctx.stripeCli.invoices.list({
 					subscription: recreated.id,
 				});

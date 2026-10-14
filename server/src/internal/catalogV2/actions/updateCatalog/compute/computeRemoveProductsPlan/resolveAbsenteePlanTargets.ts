@@ -8,10 +8,6 @@ import { findFullProductByInternalId } from "../../utils/productStateUtils/findF
 import { versionForSlug } from "../../utils/productStateUtils/versionForSlug";
 import type { RemovePlanTarget } from "./resolveRemoveProductTargets";
 
-/** A row addressed by internal_id is spoken for under its CURRENT id too, or
- * renaming it would propose removing the id it is leaving. A licenses[] link
- * does not speak for its child: pull writes every plan, so an omitted child
- * is a removal, and a parent still linking it is refused by name. */
 const currentIdOf = ({
 	internalId,
 	productStatesContext,
@@ -54,7 +50,6 @@ const desiredRowDeclarations = ({
 		})),
 	]);
 
-/** Every plan id the payload speaks for — stated, renamed into, or skipped. */
 const statedPlanIds = ({
 	params,
 	productStatesContext,
@@ -82,16 +77,6 @@ const statedPlanIds = ({
 		...params.skip_plan_ids,
 	]);
 
-/**
- * Under full state, a plan the catalog holds but the payload never mentions is
- * a removal the caller is asking for by omission. Archived rows are already
- * out of the catalog's live surface, so they are not re-proposed.
- *
- * `plans: []` removes everything, and is allowed — see the note on the feature
- * side. The guard that used to refuse it predates absent meaning "not mine",
- * and it fired from `preview_update`, so it blocked seeing the deletions as
- * well as doing them.
- */
 export const resolveAbsenteePlanTargets = ({
 	params,
 	catalogContext,
@@ -100,8 +85,6 @@ export const resolveAbsenteePlanTargets = ({
 	catalogContext: UpdateCatalogContext;
 }): RemovePlanTarget[] => {
 	if (params.skip_deletions !== false) return [];
-	// A payload that never mentioned plans has no opinion about them — the rule
-	// the legacy path already follows for rewards and referral programs.
 	if (params.plans === undefined) return [];
 
 	const declarations = desiredRowDeclarations({ params });
@@ -134,11 +117,6 @@ export const resolveAbsenteePlanTargets = ({
 	];
 };
 
-/**
- * Under full state at version level, a stated plan's existing versions the
- * payload does not state are removals too. A row is stated by its internal_id,
- * its explicit version, its slug, or, unpinned, the active version.
- */
 const absentVersionTargets = ({
 	catalogContext,
 	stated,

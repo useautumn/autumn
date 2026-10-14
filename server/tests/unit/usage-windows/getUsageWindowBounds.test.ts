@@ -1,7 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { EntInterval, getUsageWindowBounds } from "@autumn/shared";
 
-// 2026-06-15T12:34:56Z (a Monday; month index 5 = June)
 const NOW = Date.UTC(2026, 5, 15, 12, 34, 56);
 
 describe("getUsageWindowBounds", () => {
@@ -15,7 +14,6 @@ describe("getUsageWindowBounds", () => {
 	});
 
 	test("week window floors to Monday 00:00 UTC and spans 7 days", () => {
-		// Wednesday -> floors back to Monday June 15.
 		const wednesday = Date.UTC(2026, 5, 17, 8, 0, 0);
 		expect(
 			getUsageWindowBounds({ interval: EntInterval.Week, now: wednesday }),
@@ -87,7 +85,7 @@ describe("getUsageWindowBounds", () => {
 	});
 
 	test("aligns a day window to the anchor's time-of-day, not UTC midnight", () => {
-		const anchor = Date.UTC(2026, 0, 9, 15, 30, 0); // 15:30, not midnight
+		const anchor = Date.UTC(2026, 0, 9, 15, 30, 0);
 		const { windowStartAt, windowEndAt } = getUsageWindowBounds({
 			interval: EntInterval.Day,
 			now: NOW,
@@ -98,7 +96,6 @@ describe("getUsageWindowBounds", () => {
 			now: NOW,
 		});
 
-		// Spans one day, contains now, and rolls at the anchor's 15:30.
 		expect(windowEndAt - windowStartAt).toBe(24 * 60 * 60 * 1000);
 		expect(windowStartAt).toBeLessThanOrEqual(NOW);
 		expect(NOW).toBeLessThan(windowEndAt);
@@ -108,10 +105,10 @@ describe("getUsageWindowBounds", () => {
 	});
 
 	test("aligns a month window to the anchor's day-of-month, not the 1st", () => {
-		const anchor = Date.UTC(2026, 0, 9); // the 9th
+		const anchor = Date.UTC(2026, 0, 9);
 		const { windowStartAt } = getUsageWindowBounds({
 			interval: EntInterval.Month,
-			now: NOW, // June 15
+			now: NOW,
 			anchor,
 		});
 
@@ -129,11 +126,9 @@ describe("getUsageWindowBounds", () => {
 		).toEqual({ windowStartAt: 0, windowEndAt: Number.MAX_SAFE_INTEGER });
 	});
 
-	// Day-31 anchor on the 30th of a 30-day month must stay cycle-aligned, not drop to
-	// the UTC-calendar fallback (which would key a fresh counter mid-cycle).
 	test("day-31 anchor stays cycle-aligned on the 30th of a 30-day month (no calendar fallback)", () => {
-		const anchor = Date.UTC(2026, 0, 31, 8, 30, 0); // Jan 31 08:30 UTC
-		const now = Date.UTC(2026, 3, 30, 9, 0, 0); // Apr 30 09:00 UTC (after the anchor time)
+		const anchor = Date.UTC(2026, 0, 31, 8, 30, 0);
+		const now = Date.UTC(2026, 3, 30, 9, 0, 0);
 
 		const { windowStartAt, windowEndAt } = getUsageWindowBounds({
 			interval: EntInterval.Month,
@@ -141,10 +136,10 @@ describe("getUsageWindowBounds", () => {
 			anchor,
 		});
 
-		expect(windowStartAt).toBe(Date.UTC(2026, 3, 30, 8, 30, 0)); // Apr 30 08:30
-		expect(windowEndAt).toBe(Date.UTC(2026, 4, 31, 8, 30, 0)); // May 31 08:30
+		expect(windowStartAt).toBe(Date.UTC(2026, 3, 30, 8, 30, 0));
+		expect(windowEndAt).toBe(Date.UTC(2026, 4, 31, 8, 30, 0));
 		expect(windowStartAt).toBeLessThanOrEqual(now);
 		expect(now).toBeLessThan(windowEndAt);
-		expect(windowStartAt).not.toBe(Date.UTC(2026, 3, 1)); // not the calendar fallback
+		expect(windowStartAt).not.toBe(Date.UTC(2026, 3, 1));
 	});
 });

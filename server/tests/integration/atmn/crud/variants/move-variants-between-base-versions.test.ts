@@ -1,14 +1,3 @@
-/**
- * atmn crud/variants — moving a variant's `variants[]` entries from one base
- * version to another in the config re-anchors every stated variant row. The
- * preview lists the rows under the base that now owns them and names where
- * they came from; the push applies; the next push finds nothing; pull agrees.
- *
- * Red (current):  "No changes" — the preview anchored on the old pointer.
- * Green (after):  `~ Base plan: was "team"` / `~ Base version: was 1` under
- *                 team@v2, applied, idempotent, pull stable.
- */
-
 import { expect, test } from "bun:test";
 import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 import { expectRoundTrip } from "@tests/utils/atmnUtils/expectRoundTrip.js";
@@ -29,7 +18,6 @@ const euVariant = ({ slug, messages }: { slug: string; messages: number }) =>
 const euVariants = ({ slugs }: { slugs: string[] }) =>
 	`[${slugs.map((slug, i) => euVariant({ slug, messages: 200 * (i + 1) })).join(", ")}]`;
 
-/** team v1 + v2; `variantsOn` says which row lists the EU rows. */
 const config = ({
 	variantsOn,
 	euSlugs,

@@ -4,10 +4,6 @@ import { createStripeCli } from "@/external/connect/createStripeCli";
 import { autumnStripeRequestOptions } from "@/external/stripe/common/autumnStripeIdempotency";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 
-// ============================================
-// Create Invoice
-// ============================================
-
 type CreateInvoiceParams = {
 	stripeCli: Stripe;
 	stripeCusId: string;
@@ -16,9 +12,7 @@ type CreateInvoiceParams = {
 	discounts?: Stripe.InvoiceCreateParams["discounts"];
 	collectionMethod?: "charge_automatically" | "send_invoice";
 	daysUntilDue?: number;
-	/** Unix seconds; takes precedence over daysUntilDue for send_invoice. */
 	dueDate?: number;
-	/** Unix seconds; replaces the "Date of issue" printed on the invoice. */
 	effectiveAt?: number;
 	paymentMethodTypes?: InvoicePaymentMethod[];
 	description?: string;
@@ -78,10 +72,6 @@ export const createStripeInvoice = async ({
 	return invoice;
 };
 
-// ============================================
-// Add Invoice Lines
-// ============================================
-
 type AddInvoiceLinesParams = {
 	stripeCli: Stripe;
 	invoiceId: string;
@@ -104,10 +94,6 @@ export const addStripeInvoiceLines = async ({
 	return invoice;
 };
 
-// ============================================
-// Update Invoice Line
-// ============================================
-
 export const updateStripeInvoiceLine = async ({
 	stripeCli,
 	invoiceId,
@@ -126,10 +112,6 @@ export const updateStripeInvoiceLine = async ({
 		autumnStripeRequestOptions({ source: "invoice.updateLineItem" }),
 	);
 
-// ============================================
-// Update Pending Invoice Item
-// ============================================
-
 export const updateStripeInvoiceItem = async ({
 	stripeCli,
 	invoiceItemId,
@@ -144,10 +126,6 @@ export const updateStripeInvoiceItem = async ({
 		params,
 		autumnStripeRequestOptions({ source: "invoiceItems.update" }),
 	);
-
-// ============================================
-// Update Invoice
-// ============================================
 
 type UpdateInvoiceParams = {
 	stripeCli: Stripe;
@@ -168,10 +146,6 @@ export const updateStripeInvoice = async ({
 
 	return invoice;
 };
-
-// ============================================
-// Finalize Invoice
-// ============================================
 
 type FinalizeInvoiceParams = {
 	stripeCli: Stripe;
@@ -194,10 +168,6 @@ export const finalizeStripeInvoice = async ({
 
 	return invoice;
 };
-
-// ============================================
-// Create Invoice Items
-// ============================================
 
 type CreateStripeInvoiceItemsParams = {
 	ctx: AutumnContext;

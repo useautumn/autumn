@@ -1,30 +1,3 @@
-/**
- * catalogV2.update — a supplied Stripe price id is adopted, never re-minted.
- *
- * Only the V2 prepaid slot is mappable. V1 prices and meters keep minting as
- * they do today; the sole new behavior is that a stated price id is used
- * as-is, and a bad one fails loudly instead of Autumn minting a price and
- * handing back an id nobody asked for.
- *
- * Contract:
- *   B7  `price.processors.stripe.price_id` lands in stripe_prepaid_price_v2_id
- *       and no new V2 price is minted
- *   B8  a supplied id Stripe does not recognise is a hard error — and no
- *       replacement price is silently created
- *   B9  a zero-included prepaid item keeps the supplied id. Autumn aliases the
- *       V2 slot to the V1 price on that branch, but a filled slot means the
- *       mint never runs and the alias is never reached — this pins that.
- *   B11 re-mapping to a price under a different product re-points the
- *       product too — the stated price owns it, it is not gap-fill
- *   B10 the adopted price's own Stripe product is recorded on its config —
- *       every price creator already derives the product from the price it
- *       made, so the adopt path must do the same instead of minting one.
- *
- * Red (current): `price.processors` is stripped from write params (zod drops
- *   unknown keys), so the id never reaches the slot and Autumn mints its own.
- * Green (after): the slot holds the supplied id; a missing id 400s.
- */
-
 import { expect, test } from "bun:test";
 import {
 	BillingInterval,
@@ -101,7 +74,6 @@ test.concurrent(
 			ctx,
 			planIds: [donorId, adopterId],
 			run: async () => {
-				// A real Stripe price to point at — the shape an import starts from.
 				await autumnV2_3.catalogV2.update({
 					plans: [
 						{
@@ -130,7 +102,6 @@ test.concurrent(
 					],
 				});
 
-				// B7: the stated id is what landed — no freshly minted price.
 				const adopter = await getFull({ ctx, planId: adopterId });
 				expect(v2PriceIdOf({ product: adopter }), "adopted v2 price id").toBe(
 					donorPriceId,
@@ -149,7 +120,6 @@ test.concurrent(
 			ctx,
 			planIds: [planId],
 			run: async () => {
-				// B8: a plausible but non-existent id must fail loudly.
 				const update = autumnV2_3.catalogV2.update({
 					plans: [
 						{
@@ -194,7 +164,6 @@ test.concurrent(
 				});
 				expect(donorPriceId, "donor minted a v2 price").toMatch(/^price_/);
 
-				// included: 0 is the branch that aliases the v2 slot to the v1 price.
 				await autumnV2_3.catalogV2.update({
 					plans: [
 						{
@@ -210,7 +179,6 @@ test.concurrent(
 					],
 				});
 
-				// B9: the alias must not overwrite what the caller stated.
 				const adopter = await getFull({ ctx, planId: adopterId });
 				expect(
 					v2PriceIdOf({ product: adopter }),
@@ -226,8 +194,6 @@ test.concurrent(
 	async () => {
 		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
 		const planId = uniqueTestId("cv2_price_prod");
-		// A price Autumn did not make, under a product it would never resolve to —
-		// the shape a real import starts from.
 		const externalProduct = await ctx.stripeCli.products.create({
 			name: `External Product ${planId}`,
 		});
@@ -254,7 +220,6 @@ test.concurrent(
 					],
 				});
 
-				// B10: the product comes from the adopted price, not a fresh mint.
 				const adopter = await getFull({ ctx, planId });
 				expect(v2PriceIdOf({ product: adopter }), "adopted price id").toBe(
 					externalPrice.id,
@@ -315,7 +280,6 @@ test.concurrent(
 					],
 				});
 
-				// B11: the product follows the price, it does not stay on the old one.
 				const after = await getFull({ ctx, planId });
 				expect(v2PriceIdOf({ product: after }), "second price").toBe(
 					second.priceId,
@@ -333,7 +297,6 @@ test.concurrent(
 	async () => {
 		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
 		const planId = uniqueTestId("cv2_price_usage");
-		// A metered price Autumn did not make — its meter is what usage reports to.
 		const meter = await ctx.stripeCli.billing.meters.create({
 			display_name: `External Meter ${planId}`,
 			event_name: `external_events_${planId}`,
@@ -379,13 +342,10 @@ test.concurrent(
 					product: await getFull({ ctx, planId }),
 					featureId: TestFeature.Messages,
 				});
-				// B12: usage-based bills from the v1 slot, not the prepaid one.
 				expect(
 					stripeConfigValue({ price, field: "stripe_price_id" }),
 					"adopted usage price id",
 				).toBe(meteredPrice.id);
-				// B13: the meter and its event name come from the adopted price —
-				// otherwise usage would have nowhere to report.
 				expect(
 					stripeConfigValue({ price, field: "stripe_meter_id" }),
 					"meter derived from the price",

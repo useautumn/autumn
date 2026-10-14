@@ -13,24 +13,11 @@ import type { MultiUpdateItemResult } from "../compute/computeMultiUpdateFold";
 export type MultiUpdateStripeBillingPlan = {
 	subscriptionId: string;
 	billingContext: UpdateSubscriptionBillingContext;
-	/** This subscription's items' plans merged — NOT the full request plan. */
 	autumnBillingPlan: AutumnBillingPlan;
 	stripeBillingPlan: StripeBillingPlan;
-	/** The plans updated on this subscription (unique product ids). */
 	planIds: string[];
 };
 
-/**
- * Evaluate once per distinct Stripe subscription, each against a plan merged
- * from ONLY that subscription's items. Manual invoices are subscription-linked
- * in Stripe, so scoping the plan per sub yields one credit invoice per sub
- * carrying only its own line items. Items without a subscription (free
- * products) contribute Autumn-only changes and are skipped here.
- *
- * The evaluation context is the first item's context on each subscription with
- * fullCustomer reset to the ORIGINAL customer — the sub plan already carries
- * its items' changes, so applying it to a projected customer would double-apply.
- */
 export const evaluateMultiUpdateStripe = async ({
 	ctx,
 	fullCustomer,
@@ -74,8 +61,6 @@ export const evaluateMultiUpdateStripe = async ({
 				),
 			});
 
-		// The sub's invoice is upserted with the context's fullProducts; scope it
-		// to this group's products so invoice product_ids reflect this sub only.
 		const fullProductById = new Map(
 			groupContexts
 				.flatMap((context) => context.fullProducts)

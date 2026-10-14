@@ -1,6 +1,5 @@
 import { firstPhaseStartsLater } from "./schedulePhaseTiming";
 
-/** set_plans rejects a custom anchor on a later first phase, after ends_at, or after the next phase of a live subscription. */
 export const scheduleBillingCycleAnchorBounds = ({
 	phases,
 	endDate,

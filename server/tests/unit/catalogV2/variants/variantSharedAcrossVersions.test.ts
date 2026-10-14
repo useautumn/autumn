@@ -1,9 +1,3 @@
-/**
- * Two stated base rows pinning one variant row would let the last upsert
- * silently win, so the update is refused, in preview and in update alike. An
- * unpinned entry mints under its own base and never shares.
- */
-
 import { expect, test } from "bun:test";
 import {
 	ErrCode,
@@ -36,7 +30,6 @@ const row = ({
 	base_internal_product_id: baseInternalId,
 });
 
-/** pro@v1 with pro_yearly@v1 anchored to it — the catalog before the push. */
 const linkedCatalog = (): ProductStatesContext => {
 	const base = row({ planId: "pro", version: 1, active: true });
 	const variant = row({
@@ -52,7 +45,6 @@ const linkedCatalog = (): ProductStatesContext => {
 	} as unknown as ProductStatesContext;
 };
 
-/** The CLI states the follow beside every declared variant, pin included. */
 const statedVersion = ({
 	versionSlug,
 	active,

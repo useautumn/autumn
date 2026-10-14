@@ -9,7 +9,6 @@ import {
 } from "@autumn/shared";
 import type { MigrationTarget } from "./types";
 
-/** Whether any branch of the filter pins a specific version. */
 export const isVersionPinned = ({
 	planFilter,
 }: {
@@ -23,7 +22,6 @@ export const isVersionPinned = ({
 	return planFilter.version !== undefined;
 };
 
-/** Sorted copy: planId alphabetical, then version ascending. */
 export const sortTargetsByPlanVersion = ({
 	targets,
 }: {
@@ -43,7 +41,6 @@ const previousPriceKey = ({
 		? "null"
 		: basePriceToKey({ price: previousPrice });
 
-/** Stamp previous_price only when every target shares one base price — one op can't carry mixed previous prices. */
 export const stampPreviousPrice = ({
 	customize,
 	targets,
@@ -66,7 +63,6 @@ export const stampPreviousPrice = ({
 	};
 };
 
-/** Stamps each remove filter with its item's old override (empty when inherited) when every target agrees and it changed. */
 export const stampPreviousFeatureOverrides = ({
 	customize,
 	previousItemSets,

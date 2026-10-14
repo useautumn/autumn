@@ -1,6 +1,5 @@
 import type { ItemEdit } from "./itemEditTypes.js";
 
-/** Generates edit items for plan version changes */
 export function generateVersionChanges({
 	originalVersion,
 	updatedVersion,

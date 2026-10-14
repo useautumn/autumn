@@ -1,8 +1,3 @@
-/**
- * Pins skip_overage_billing false ≡ unset for billing-control change detection
- * (UI save-button dirty checks and backend plan-change decisioning).
- */
-
 import { describe, expect, test } from "bun:test";
 import {
 	type CustomerBillingControls,

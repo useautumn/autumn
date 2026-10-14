@@ -3,7 +3,6 @@ import type Stripe from "stripe";
 import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 
-/** The live Stripe subscription; Autumn's stored collection method can be stale. */
 export const useStripeSubscriptionQuery = ({
 	stripeSubscriptionId,
 }: {

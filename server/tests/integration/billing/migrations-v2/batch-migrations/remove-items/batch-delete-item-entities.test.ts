@@ -1,7 +1,3 @@
-/**
- * Entity-level copies of a plan are independent customer products, and a
- * matching delete must reach every copy without removing sibling items.
- */
 import { expect, test } from "bun:test";
 import {
 	customerEntitlements,

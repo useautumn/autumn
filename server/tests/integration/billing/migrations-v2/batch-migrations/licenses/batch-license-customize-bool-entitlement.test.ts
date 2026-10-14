@@ -1,26 +1,3 @@
-/**
- * TDD contract: a migration op carrying customize.upsert_licenses applies a
- * free boolean entitlement to a license link, and the link's existing live
- * assignments converge onto the new definition.
- *
- * Contract under test:
- *   New types/fields:
- *     - MigrationUpdatePlanCustomizeSchema.upsert_licenses: CustomizePlanLicense[]
- *   New behaviors:
- *     - a license-only customize is NOT skipped by the update_plan guard
- *       (matched customer products are processed, not returned undefined)
- *     - the pool repoints onto an is_custom definition carrying the bool item
- *     - live assignment customer_entitlements gain the bool entitlement via
- *       the existing batchTransition fan-out
- *   Side effects:
- *     - is_custom plan_license row + pool.plan_license_id repoint (DB)
- *     - no invoice: a free bool entitlement is not a billing change
- *
- * Pre-impl red: the op fails UpdatePlanOpSchema validation (customize requires
- * one of price/add_items/remove_items/update_items), and once it validates the
- * update_plan guard early-returns on an upsert-only customize so no customer
- * product is ever processed.
- */
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3, ApiCustomerV5 } from "@autumn/shared";
 import { customerEntitlements } from "@autumn/shared";
@@ -72,7 +49,6 @@ test.concurrent(
 		const parentPlanId = parent.id;
 		const devSeatPlanId = devSeat.id;
 
-		// ── The op: license-only customize adding a free bool entitlement ──
 		await runChunkedMigration({
 			ctx,
 			migrationClient: autumnV2_2,
@@ -97,7 +73,6 @@ test.concurrent(
 			noBillingChanges: true,
 		});
 
-		// ── DB: pool repointed onto an is_custom definition ────────────────
 		const pool = await expectLicenseDefinitionCorrect({
 			ctx,
 			customerId,
@@ -114,15 +89,12 @@ test.concurrent(
 		);
 		expect(boolEntitlement).toBeDefined();
 
-		// The customized link replaces its whole item set, so the license plan's
-		// own items must survive alongside the added one.
 		expect(
 			(pool.planLicense?.product.entitlements ?? [])
 				.map((entitlement) => entitlement.feature?.id)
 				.sort(),
 		).toEqual([TestFeature.Dashboard, TestFeature.Messages].sort());
 
-		// ── Pool counters untouched by a definition-only change ────────────
 		const customer = await autumnV2_3.customers.get<ApiCustomerV5>(customerId);
 		expectCustomerLicenses({
 			customer,
@@ -139,7 +111,6 @@ test.concurrent(
 			],
 		});
 
-		// ── DB: assignments still anchor to the live parent's pool ─────────
 		await expectAssignmentsAnchoredToParent({
 			ctx,
 			customerId,
@@ -147,7 +118,6 @@ test.concurrent(
 			count: ASSIGNED_SEATS,
 		});
 
-		// ── DB: live assignments gain the bool entitlement (batchTransition) ──
 		const readAssignmentBoolRows = async () => {
 			const rows = await ctx.db
 				.select({
@@ -177,12 +147,10 @@ test.concurrent(
 		expect(convergedRows).toHaveLength(ASSIGNED_SEATS);
 		for (const row of convergedRows) {
 			expect(row.entitlementId).toBe(boolEntitlement?.id ?? "");
-			// A boolean never resets — a cycle here would reset a flag on a clock.
 			expect(row.resetCycleAnchor).toBeNull();
 			expect(row.nextResetAt).toBeNull();
 		}
 
-		// ── No invoice: a free bool entitlement is not a billing change ────
 		const customerV3 = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 		await expectCustomerInvoiceCorrect({ customer: customerV3, count: 1 });
 	},

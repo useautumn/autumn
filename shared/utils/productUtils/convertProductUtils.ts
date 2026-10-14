@@ -14,8 +14,6 @@ import type {
 import type { EntitlementPrice } from "./entitlementPriceUtils/entitlementPriceTypes.js";
 import { isFixedPrice } from "./priceUtils/classifyPriceUtils.js";
 
-// Must stay symmetric with priceToEnt: if one direction resolves a pair across
-// products and the other does not, mapToProductItems silently drops the price.
 export const entToPrice = ({
 	ent,
 	prices,
@@ -66,8 +64,6 @@ export function priceToEnt({
 	entitlements: EntitlementWithFeature[];
 	errorOnNotFound?: boolean;
 }): EntitlementWithFeature | undefined {
-	// A customer product can carry grandfathered entitlements owned by an older
-	// product version while its regenerated custom price is stamped with its own.
 	const idMatches = entitlements.filter(
 		(ent) => ent.id === price.entitlement_id,
 	);
@@ -105,7 +101,6 @@ export const productToStripeId = ({
 	product: Product | FullProduct;
 }): string | null => product.processor?.id ?? null;
 
-/** Primary + alias Stripe product ids (legacy products mapped to this plan). */
 export const productToStripeIds = ({
 	product,
 }: {
@@ -116,7 +111,6 @@ export const productToStripeIds = ({
 	return [processor.id, ...(processor.additional_ids ?? [])];
 };
 
-/** The plan's fixed base price, or null when it has none (e.g. free plans). */
 export const productToBasePrice = ({
 	product,
 }: {

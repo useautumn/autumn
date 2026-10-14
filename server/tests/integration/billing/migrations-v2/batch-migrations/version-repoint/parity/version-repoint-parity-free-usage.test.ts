@@ -1,8 +1,3 @@
-/**
- * Parity twin of `migrations update_plan: free version update carries usage`:
- * batch repoints in place, per-customer expires + re-inserts, but the
- * projected customer state (balances, plan version, invoices) must match.
- */
 import { test } from "bun:test";
 import type { ApiCustomerV3, ApiCustomerV5 } from "@autumn/shared";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
@@ -15,7 +10,6 @@ import { pollUntil } from "@tests/utils/genUtils";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-// version-only is per-customer until definition execute is restored
 import { expectCustomerEntitlementRowCount } from "../../batchTestUtils";
 import { readScopedFeatureRow } from "../../paidRowTestUtils";
 import {

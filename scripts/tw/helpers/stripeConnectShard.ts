@@ -1,6 +1,3 @@
-// The stripe-connect shard runs on one dedicated Stripe platform account, kept apart from the key pool:
-// never pooled, farmed, nuked or reset. Its Connect webhook is created once and never deleted.
-
 import type { TestExecutor } from "../../testScripts/testExecutor";
 import {
 	type CapabilityShard,
@@ -15,7 +12,6 @@ export const STRIPE_CONNECT_SHARD_ENV_VARS = [
 	"SHARD_STRIPE_CLIENT_ID",
 ] as const;
 
-/** One shard for every file needing stripe-connect: one account means one worker, with every capability those files need. */
 export const splitStripeConnectShard = <
 	TShard extends { capabilities: readonly string[]; files: string[] },
 >(
@@ -48,7 +44,6 @@ export const splitStripeConnectShard = <
 
 export type StripeConnectShardConfig = { secretKey: string; clientId: string };
 
-/** Null unless both SHARD_STRIPE_* vars are set; there is no pool fallback. */
 export const resolveStripeConnectShard = (env: {
 	SHARD_STRIPE_SANDBOX_KEY?: string;
 	SHARD_STRIPE_CLIENT_ID?: string;
@@ -61,7 +56,6 @@ export const resolveStripeConnectShard = (env: {
 export const isStripeConnectShardKey = (key: string): boolean =>
 	key === process.env.SHARD_STRIPE_SANDBOX_KEY?.trim();
 
-/** Fails every file it is given, so an unavailable shard is reported instead of silently run elsewhere. */
 export const unavailableShardExecutor = ({
 	reason,
 }: {
@@ -74,7 +68,6 @@ export const unavailableShardExecutor = ({
 	},
 });
 
-/** The query tells twd's ingress to hand unregistered accounts' events to the shard worker. */
 export const stripeConnectWebhookUrl = ({
 	ingressUrl,
 }: {
@@ -82,7 +75,6 @@ export const stripeConnectWebhookUrl = ({
 }): string =>
 	`${ingressUrl.replace(/\/+$/, "")}/ingress/connect/sandbox?shard=${STRIPE_CONNECT_SHARD}`;
 
-/** Tags our endpoint; only twd's stripe-connect shard creates one at this URL, always with `connect: true`. */
 const SHARD_WEBHOOK_METADATA = { autumn_tw_shard: STRIPE_CONNECT_SHARD };
 
 type WebhookEndpointsApi<TEvent extends string> = {
@@ -111,7 +103,6 @@ type WebhookEndpointsApi<TEvent extends string> = {
 	};
 };
 
-/** Reuses the endpoint at `url`, repairing its events, status and tag in place, else creates it; never deletes it. */
 export const ensureStripeConnectWebhook = async <TEvent extends string>({
 	stripe,
 	url,

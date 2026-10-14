@@ -1,4 +1,3 @@
-/** Absent version_slug → `v{version}`; absent active → false. Never overwrites an explicit value (including null). */
 export const backfillProductVersionIdentity = ({
 	product,
 }: {
@@ -32,7 +31,6 @@ const isProductLike = (
 	);
 };
 
-/** Mutates every product-shaped object in a metadata / cache JSON tree. */
 export const backfillProductVersionIdentityInTree = ({
 	value,
 }: {

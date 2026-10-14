@@ -78,7 +78,6 @@ export const createHonoApp = () => {
 	app.use("*", twTestFileMiddleware);
 	app.route("", createChatProxyRouter());
 
-	// CORS configuration (must be before routes)
 	app.use(
 		"*",
 		cors({
@@ -120,20 +119,13 @@ export const createHonoApp = () => {
 		return auth.handler(c.req.raw);
 	});
 
-	// OAuth callback (needs to be before middleware)
-	// Health check endpoint for AWS/ECS load balancer
-
 	app.get("/stripe/oauth_callback", handleOAuthCallback);
 	app.get("/revenuecat/oauth_callback", handleRevenueCatOAuthCallback);
 	app.get("/ready/:token", handleReadyCheck);
 	app.get("/", handleHealthCheck);
 
-	// Slack-unfurl (/slack-unfurl/*) — own prefix so it doesn't collide with the
-	// chat proxy's /slack/* (-> leaf). Slack-facing, auths via request signature,
-	// so mounted ahead of the org/auth middleware.
 	app.route("/slack-unfurl", slackUnfurlRouter);
 
-	// Step 1: OTel HTTP span + base middleware + span enrichment
 	app.use(
 		"*",
 		httpInstrumentationMiddleware({
@@ -146,47 +138,29 @@ export const createHonoApp = () => {
 	app.use("*", replicaDbMiddleware);
 	app.use("*", listReadMiddleware);
 
-	// CLI routes (uses Bearer token auth, not session auth)
 	app.route("/cli", cliRouter);
 
-	// Signed by BALANCE_WORKER_PROXY_SECRET, not session or API-key auth.
 	app.route(BALANCE_WORKER_PROXY_PATH, balanceWorkerProxyRouter);
 
-	// An org's Atom, by its token hash, not session or API-key auth.
 	app.route("/atom", atomRouter);
 
-	// Add Render region identifier header for load balancer verification
 	app.use("*", async (c, next) => {
 		await next();
 		c.header("x-region", process.env.AWS_REGION);
 	});
 
-	// Webhook routes
 	app.route("", stripeWebhookRouter);
 	app.route("/webhooks/autumn", autumnWebhookRouter);
 	app.route("/webhooks/vercel", vercelWebhookRouter);
 	app.route("/webhooks/revenuecat", revenuecatWebhookRouter);
 
-	// Vercel SDK test mock — mounted in dev/test, used only when
-	// `ctx.testOptions.mockVercelApi` points the SDK at this route.
 	if (process.env.NODE_ENV !== "production") {
 		app.route("/__test/vercel/api", vercelTestApiRouter);
 	}
 
-	// Public routes (no auth required)
 	app.route("", publicRouter);
-	// Debug routes (no auth, dev-only guard is inside the handler)
-	// Debug routes (auth handled internally)
-	// app.route("/debug", heapSnapshotRouter);
-	// app.route("/v1/debug", debugRouter);
-
-	// API Middleware
 	app.route("/v1", apiRouter);
 
-	// OAuth/MCP discovery is public by contract, so an unmatched probe must 404
-	// here rather than fall through to internalRouter's session gate below,
-	// which answers with a misleading 401. Everything this server does serve is
-	// registered on oauthRouter and the chat proxy, both mounted well above.
 	app.all("/.well-known/*", (c) => c.json({ error: "not_found" }, 404));
 
 	app.route("", internalRouter);

@@ -24,7 +24,6 @@ export const getTrackFeatureDeductions = ({
 
 	const mainFeatureDeduction = value ?? DEFAULT_VALUE;
 
-	// 1. If feature ID
 	const features = ctx.features;
 	const mainFeature = features.find((f) => f.id === featureId);
 	if (!mainFeature) {

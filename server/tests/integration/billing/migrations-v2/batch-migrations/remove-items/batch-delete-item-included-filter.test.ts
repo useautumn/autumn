@@ -1,12 +1,3 @@
-/**
- * Filter-mode delete with included: 100 drops catalog-shaped 100/mo rows
- * and leaves a customized 1k grant.
- *
- * Contract (B3): catalog 100 gone; 1k remains. Dashboard survives.
- *
- * Wildcard (every live allowance) stays in batch-delete-item-custom-rows.test.ts.
- */
-
 import { test } from "bun:test";
 import { ResetInterval } from "@autumn/shared";
 import { runChunkedMigration } from "@tests/integration/billing/migrations-v2/utils/runChunkedMigration";

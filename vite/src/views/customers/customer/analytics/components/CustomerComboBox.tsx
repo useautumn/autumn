@@ -36,7 +36,6 @@ const ALL_CUSTOMERS_OPTION: CustomerOption = {
 	secondary: null,
 };
 
-/** The picked customer as the search list showed them, so the trigger names them before their record loads. */
 const findSearchedOption = ({
 	queryClient,
 	customerId,
@@ -59,7 +58,6 @@ const findSearchedOption = ({
 export function CustomerComboBox({
 	renderTrigger,
 }: {
-	/** Draws the button that opens the picker, given the chosen customer's name. */
 	renderTrigger: (label: string) => ReactNode;
 }) {
 	const { customer } = useAnalyticsContext();

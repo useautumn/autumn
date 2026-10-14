@@ -14,8 +14,6 @@ const sameEvents = ({ a, b }: { a: string[]; b: string[] }) => {
 	return setA.size === setB.size && [...setA].every((event) => setB.has(event));
 };
 
-/** The remote webhook as the stated params would leave it; omitted optional
- * fields keep their remote value, so a sync only owns what it states. */
 const applyStated = ({
 	webhook,
 	stated,
@@ -58,8 +56,6 @@ const createdWebhook = ({
 	updated_at: now,
 });
 
-/** Which dashboard-made endpoint each new id takes over. A URL shared by several
- * dashboard endpoints, or claimed by several new ids, is refused, never created. */
 const planAdoptions = ({
 	newIds,
 	uidless,
@@ -99,9 +95,6 @@ const planAdoptions = ({
 	return { adoptions, errors };
 };
 
-/** What webhooks.sync would do: create missing, adopt a dashboard-made webhook
- * with the same URL, update differing. A remote webhook the request doesn't
- * state is unmanaged, or a delete when `skipDeletions` is false. */
 export const computeWebhookSyncChanges = ({
 	remote,
 	uidlessIds = new Set(),
@@ -112,7 +105,6 @@ export const computeWebhookSyncChanges = ({
 }: {
 	remote: Webhook[];
 	uidlessIds?: Set<string>;
-	/** Which app each remote webhook lives in; the main app when absent. */
 	remoteKinds?: Map<string, WebhookAppKind>;
 	stated: WebhookParams[];
 	skipDeletions?: boolean;
@@ -120,8 +112,6 @@ export const computeWebhookSyncChanges = ({
 }): { changes: WebhookSyncChange[]; errors: WebhookSyncError[] } => {
 	const kindOf = (webhook: Webhook): WebhookAppKind =>
 		remoteKinds.get(webhook.id) ?? "main";
-	// A dashboard endpoint stated by its own `ep_…` id is addressed directly;
-	// only the ones the request doesn't name are up for adoption by URL.
 	const statedIds = new Set(stated.map((params) => params.id));
 	const ownedById = new Map(
 		remote
@@ -172,7 +162,6 @@ export const computeWebhookSyncChanges = ({
 	});
 
 	const adoptedIds = new Set([...adoptions.values()].map(({ id }) => id));
-	// A refused adoption leaves its dashboard candidates for the user to sort out.
 	const contestedIds = new Set(
 		stated
 			.filter((params) => failedIds.has(params.id) && !ownedById.has(params.id))

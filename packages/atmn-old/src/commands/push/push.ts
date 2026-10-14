@@ -65,20 +65,11 @@ import {
 	getVariantPropagationPreviews,
 } from "./variantPropagation.js";
 
-/**
- * Get the secret key for the current environment
- */
 function getSecretKey(): string {
 	const environment = isProd() ? AppEnv.Live : AppEnv.Sandbox;
 	return getKey(environment);
 }
 
-/**
- * Core push logic - pure functions with no UI/prompts
- * All functions throw on error for proper React error handling
- */
-
-// Fetch all features and plans from remote
 export async function fetchRemoteData({
 	allVersions = false,
 }: {
@@ -149,7 +140,6 @@ export const planChangeHasHistoricalVersions = ({
 	);
 };
 
-// Check if a feature can be deleted
 export async function checkFeatureDeleteInfo(
 	featureId: string,
 	localFeatures: Feature[],
@@ -157,7 +147,6 @@ export async function checkFeatureDeleteInfo(
 ): Promise<FeatureDeleteInfo> {
 	const secretKey = getSecretKey();
 
-	// Get the feature type from remote for sorting purposes
 	const remoteFeature = remoteFeatures.find((f) => f.id === featureId);
 	const featureType = remoteFeature?.type as
 		| "boolean"
@@ -165,7 +154,6 @@ export async function checkFeatureDeleteInfo(
 		| "credit_system"
 		| undefined;
 
-	// Check locally if this feature is referenced by any credit system in the config
 	const referencingCreditSystems = localFeatures.filter(
 		(f) =>
 			f.type === "credit_system" &&
@@ -182,7 +170,6 @@ export async function checkFeatureDeleteInfo(
 		};
 	}
 
-	// Check API for product references
 	const response = await getFeatureDeletionInfo({ secretKey, featureId });
 
 	if (response && response.totalCount > 0) {
@@ -205,7 +192,6 @@ export async function checkFeatureDeleteInfo(
 	};
 }
 
-// Check if a plan can be deleted
 async function checkPlanDeleteInfo(planId: string): Promise<PlanDeleteInfo> {
 	const secretKey = getSecretKey();
 	const response = await getPlanDeletionInfo({ secretKey, planId });
@@ -226,7 +212,6 @@ async function checkPlanDeleteInfo(planId: string): Promise<PlanDeleteInfo> {
 	};
 }
 
-// Check if updating a plan will create a new version
 async function checkPlanForVersioning(
 	plan: Plan,
 	remotePlans: Plan[],
@@ -257,16 +242,6 @@ async function checkPlanForVersioning(
 	);
 
 	if (missingLocalFeatureIds.length > 0) {
-		// if (missingUnknownFeatureIds.length > 0) {
-		// 	console.log(
-		// 		`[checkPlanForVersioning] plan=${plan.id} has mixed missing features. Local-first features: ${missingLocalFeatureIds.join(", ")}; missing unknown: ${missingUnknownFeatureIds.join(", ")}.`,
-		// 	);
-		// } else {
-		// 	console.log(
-		// 		`[checkPlanForVersioning] plan=${plan.id} has local-only feature refs (${missingLocalFeatureIds.join(", ")}). Deferring versioning check until after feature upsert.`,
-		// 	);
-		// }
-
 		return {
 			plan,
 			willVersion: false,
@@ -276,7 +251,6 @@ async function checkPlanForVersioning(
 	}
 
 	try {
-		// Transform SDK plan to API format for comparison
 		const apiPlan = transformPlanToApi(plan);
 		const response = await getPlanHasCustomers({
 			secretKey,
@@ -304,28 +278,12 @@ async function checkPlanForVersioning(
 		const missingFeature =
 			response?.feature || response?.feature_id || missingFeatureMatch?.[1];
 
-		// If the plan references a feature that hasn't been created yet,
-		// defer versioning validation until after the feature upsert step.
 		if (
 			apiError.response?.code === "feature_not_found" ||
 			/Feature\s+["']?([a-zA-Z0-9_-]+)["']?\s+not\s+found/i.test(
 				responseMessage,
 			)
 		) {
-			// if (missingUnknownFeatureIds.length > 0) {
-			// 	console.log(
-			// 		`[checkPlanForVersioning] plan=${plan.id} failed versioning check: feature "${missingFeature || "unknown"}" not found and not in local config`,
-			// 	);
-			// } else if (missingFeature) {
-			// 	console.log(
-			// 		`[checkPlanForVersioning] plan=${plan.id} deferring versioning check due feature_not_found for feature "${missingFeature}", will recheck after feature upsert`,
-			// 	);
-			// } else {
-			// 	console.log(
-			// 		`[checkPlanForVersioning] plan=${plan.id} deferring versioning check due feature_not_found`,
-			// 	);
-			// }
-
 			return {
 				plan,
 				willVersion: false,
@@ -338,12 +296,6 @@ async function checkPlanForVersioning(
 	}
 }
 
-/**
- * Re-check plan versioning after feature-level writes have run.
- * This allows the normal API-side versioning check to run when missing
- * features were only missing during analysis and are expected to be created
- * in the same push.
- */
 export async function refreshPlansForVersioning(
 	planUpdates: PlanUpdateInfo[],
 	localFeatures: Feature[],
@@ -377,9 +329,6 @@ export async function refreshPlansForVersioning(
 	);
 }
 
-/**
- * Deep equality check that treats null and undefined as equivalent.
- */
 function valuesEqual(a: unknown, b: unknown): boolean {
 	if (a === b) return true;
 	if (a == null && b == null) return true;
@@ -404,11 +353,6 @@ function valuesEqual(a: unknown, b: unknown): boolean {
 	return false;
 }
 
-/**
- * Normalize a feature to a canonical form for comparison.
- * Strips default/empty values so semantically identical features
- * produce the same representation.
- */
 function normalizeFeatureForCompare(f: Feature): Record<string, unknown> {
 	const result: Record<string, unknown> = {
 		id: f.id,
@@ -416,8 +360,6 @@ function normalizeFeatureForCompare(f: Feature): Record<string, unknown> {
 		type: f.type,
 	};
 
-	// consumable is only meaningful for metered features.
-	// For credit_system it's always true (the only valid value), so omit it.
 	if (f.type === "metered" && "consumable" in f) {
 		result.consumable = (f as { consumable: boolean }).consumable;
 	}
@@ -483,10 +425,6 @@ function normalizeFeatureForCompare(f: Feature): Record<string, unknown> {
 	return result;
 }
 
-/**
- * Normalize a plan item to a canonical form for comparison.
- * Strips default values (unlimited: false, billingUnits: 1, intervalCount: 1).
- */
 function normalizePlanFeatureForCompare(pf: PlanItem): Record<string, unknown> {
 	const f = pf as Record<string, unknown>;
 	const result: Record<string, unknown> = {
@@ -544,11 +482,6 @@ function getPlanFeatureIds(plan: Plan): string[] {
 	return (plan.items || []).map((item) => item.featureId);
 }
 
-/**
- * Normalize a plan to a canonical form for comparison.
- * Strips default/empty values so semantically identical plans
- * produce the same representation.
- */
 function normalizePlanForCompare(
 	plan: Plan,
 	licenseVersionFallbacks?: Map<string, number | undefined>,
@@ -607,10 +540,6 @@ function normalizePlanForCompare(
 	return result;
 }
 
-/**
- * Check if a local feature differs from its remote counterpart.
- * Transforms the remote API data to SDK format before comparing.
- */
 function hasFeatureChanged(local: Feature, remoteRaw: unknown): boolean {
 	return !valuesEqual(
 		normalizeFeatureForCompare(local),
@@ -618,10 +547,6 @@ function hasFeatureChanged(local: Feature, remoteRaw: unknown): boolean {
 	);
 }
 
-/**
- * Check if a local plan differs from its remote counterpart.
- * Transforms the remote API data to SDK format before comparing.
- */
 function hasPlanChanged(local: Plan, remoteRaw: unknown): boolean {
 	const remote = remoteRaw as Plan;
 	const licenseVersionFallbacks = new Map(
@@ -1173,9 +1098,6 @@ export async function pushCatalog({
 	return result;
 }
 
-/**
- * Analyze what changes need to be pushed
- */
 export async function analyzePush(
 	localFeatures: Feature[],
 	localPlans: Plan[],
@@ -1188,7 +1110,6 @@ export async function analyzePush(
 	const remotePlansById = new Map(remoteData.plans.map((p) => [p.id, p]));
 	const localPlansById = new Map(localPlans.map((p) => [p.id, p]));
 
-	// Find features to create and update (only actually changed features)
 	const featuresToCreate = localFeatures.filter(
 		(f) => !remoteFeaturesById.has(f.id),
 	);
@@ -1198,17 +1119,13 @@ export async function analyzePush(
 		return hasFeatureChanged(f, remoteFeature);
 	});
 
-	// Find archived features in local config that need unarchiving
-	// Only include if: remote is archived AND local does NOT have archived: true
 	const archivedFeatures = localFeatures.filter((f) => {
 		const remote = remoteFeaturesById.get(f.id);
 		const localArchived = f.archived;
 		const remoteArchived = remote?.archived;
-		// Prompt to unarchive only if remote is archived but local doesn't explicitly want it archived
 		return remoteArchived && !localArchived;
 	});
 
-	// Find plans to create and update (only actually changed plans)
 	const plansToCreate = localPlans.filter((p) => !remotePlansById.has(p.id));
 	const plansToUpdateLocal = localPlans.filter((p) => {
 		const remotePlan = remotePlansById.get(p.id);
@@ -1216,7 +1133,6 @@ export async function analyzePush(
 		return hasPlanChanged(p, remotePlan);
 	});
 
-	// Check versioning info for each plan to update
 	const remoteFeatureIds = new Set(remoteData.features.map((f) => f.id));
 	const planUpdatePromises = plansToUpdateLocal.map((plan) =>
 		checkPlanForVersioning(
@@ -1228,28 +1144,22 @@ export async function analyzePush(
 	);
 	const plansToUpdate = await Promise.all(planUpdatePromises);
 
-	// Find plans that exist remotely but not locally (potential deletes)
 	const planIdsToDelete = [...remotePlansById.values()]
 		.filter((p) => !localPlanIds.has(p.id) && !p.archived)
 		.map((p) => p.id);
 
-	// Check deletion info for each plan
 	const planDeletePromises = planIdsToDelete.map((id) =>
 		checkPlanDeleteInfo(id),
 	);
 	const plansToDelete = await Promise.all(planDeletePromises);
 
-	// Find archived plans in local config that need unarchiving
-	// Only include if: remote is archived AND local does NOT have archived: true
 	const archivedPlans = localPlans.filter((p) => {
 		const remote = remotePlansById.get(p.id);
 		const localArchived = p.archived;
 		const remoteArchived = remote?.archived;
-		// Prompt to unarchive only if remote is archived but local doesn't explicitly want it archived
 		return remoteArchived && !localArchived;
 	});
 
-	// Build a quick feature->plans reference index from remote plans
 	const remoteFeaturePlanRefs = new Map<string, Set<string>>();
 	for (const plan of remoteData.plans) {
 		for (const featureId of getPlanFeatureIds(plan)) {
@@ -1287,21 +1197,15 @@ export async function analyzePush(
 		}
 	}
 
-	// Find features that exist remotely but not locally (potential deletes)
-	// Exclude already archived features
 	const featureIdsToDelete = [...remoteFeaturesById.values()]
 		.filter((f) => !localFeatureIds.has(f.id) && !f.archived)
 		.map((f) => f.id);
 
-	// Check deletion info for each feature
 	const featureDeletePromises = featureIdsToDelete.map((id) =>
 		checkFeatureDeleteInfo(id, localFeatures, remoteData.features),
 	);
 	const rawFeatureDeleteInfos = await Promise.all(featureDeletePromises);
 
-	// Re-evaluate delete blockers for features that are only referenced
-	// by plans being changed in this push. If all blockers are removed by
-	// current operations and none require versioning, allow deletion.
 	const featuresToDeleteUnsorted = rawFeatureDeleteInfos.map((info) => {
 		if (info.reason !== "products") {
 			return info;
@@ -1352,7 +1256,6 @@ export async function analyzePush(
 		return info;
 	});
 
-	// Sort features to delete: credit systems first to prevent dependency issues
 	const featuresToDelete = featuresToDeleteUnsorted.sort((a, b) => {
 		if (
 			a.featureType === "credit_system" &&
@@ -1382,9 +1285,6 @@ export async function analyzePush(
 	};
 }
 
-/**
- * Push a single feature (create or update)
- */
 export async function pushFeature(
 	feature: Feature,
 ): Promise<{ action: "created" | "updated" }> {
@@ -1417,9 +1317,6 @@ export async function pushFeature(
 	}
 }
 
-/**
- * Push a single plan (create or update)
- */
 export async function pushPlan(
 	plan: Plan,
 	remotePlans: Plan[],
@@ -1433,10 +1330,8 @@ export async function pushPlan(
 		return { action: "created" };
 	}
 
-	// Prepare update payload with swapNullish/swapFalse logic
 	const updatePayload = { ...apiPlan };
 
-	// Handle swapNullish for group field
 	if (
 		plan.group === undefined &&
 		remotePlan.group !== undefined &&
@@ -1451,65 +1346,44 @@ export async function pushPlan(
 		updatePayload.group = null;
 	}
 
-	// Handle swapFalse for add_on field
 	if (plan.addOn === undefined && remotePlan.addOn === true) {
 		updatePayload.add_on = false;
 	}
 
-	// Handle swapFalse for auto_enable field
 	if (plan.autoEnable === undefined && remotePlan.autoEnable === true) {
 		updatePayload.auto_enable = false;
 	}
 
 	await updatePlan({ secretKey, planId: plan.id, plan: updatePayload });
 
-	// We don't know if it actually versioned here, caller should track based on analysis
 	return { action: "updated" };
 }
 
-/**
- * Delete a feature
- */
 export async function deleteFeature(featureId: string): Promise<void> {
 	const secretKey = getSecretKey();
 	await deleteFeatureApi({ secretKey, featureId });
 }
 
-/**
- * Archive a feature
- */
 export async function archiveFeature(featureId: string): Promise<void> {
 	const secretKey = getSecretKey();
 	await archiveFeatureApi({ secretKey, featureId });
 }
 
-/**
- * Un-archive a feature
- */
 export async function unarchiveFeature(featureId: string): Promise<void> {
 	const secretKey = getSecretKey();
 	await unarchiveFeatureApi({ secretKey, featureId });
 }
 
-/**
- * Delete a plan
- */
 export async function deletePlan(planId: string): Promise<void> {
 	const secretKey = getSecretKey();
 	await deletePlanApi({ secretKey, planId, allVersions: true });
 }
 
-/**
- * Archive a plan
- */
 export async function archivePlan(planId: string): Promise<void> {
 	const secretKey = getSecretKey();
 	await archivePlanApi({ secretKey, planId });
 }
 
-/**
- * Un-archive a plan
- */
 export async function unarchivePlan(planId: string): Promise<void> {
 	const secretKey = getSecretKey();
 	await unarchivePlanApi({ secretKey, planId });

@@ -18,7 +18,6 @@ export const respondWithoutIssParameterSupport = async ({
 	const metadata = (await response.json()) as Record<string, unknown>;
 
 	// The patched body is a different byte length from the one upstream framed,
-	// so a copied Content-Length would truncate the response mid-document.
 	const headers = new Headers(response.headers);
 	headers.delete("Content-Length");
 

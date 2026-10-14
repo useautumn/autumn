@@ -1,4 +1,3 @@
-/** Hop-by-hop or connection-bound headers a request rebuilt on the decide thread must not carry. */
 const DROPPED_HEADERS = new Set([
 	"host",
 	"content-length",

@@ -34,7 +34,6 @@ export const requireApiReward = async ({
 		});
 	}
 
-	// Free product rewards are deprecated and never exposed on the API
 	if (reward.type === RewardType.FreeProduct) {
 		throw new RecaseError({
 			message: `Reward ${rewardId} is a free product reward, which is not available on the API`,
@@ -46,7 +45,6 @@ export const requireApiReward = async ({
 	return reward;
 };
 
-/** Feature grants map straight from the row; coupons need their plan ids resolved */
 export const toApiRewardResponse = async ({
 	ctx,
 	reward,

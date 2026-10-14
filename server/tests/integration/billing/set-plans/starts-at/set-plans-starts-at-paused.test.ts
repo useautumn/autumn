@@ -1,10 +1,3 @@
-/**
- * phases[0].starts_at over a paused subscription, which set_plans replaces rather than updates:
- * - a backdate cancels the paused subscription and starts the plan on one new subscription from the
- *   backdated date, invoicing what the preview showed;
- * - a future start cancels the paused subscription now, charges nothing, and waits for the start.
- */
-
 import { expect, test } from "bun:test";
 import {
 	type ApiCustomerV3,

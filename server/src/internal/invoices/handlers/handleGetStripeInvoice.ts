@@ -2,10 +2,6 @@ import { Scopes } from "@autumn/shared";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 
-/**
- * Get Stripe invoice by Stripe invoice ID
- * Requires authentication via secret key middleware
- */
 export const handleGetStripeInvoice = createRoute({
 	scopes: [Scopes.Billing.Read],
 	handler: async (c) => {
@@ -17,9 +13,6 @@ export const handleGetStripeInvoice = createRoute({
 			env,
 		});
 
-		// The customer is expanded so callers can edit the live record, not the
-		// snapshot the invoice took at finalization. Payment intents carry the
-		// last_payment_error that explains why an open invoice is unpaid.
 		const stripeInvoice = await stripeCli.invoices.retrieve(stripe_invoice_id, {
 			expand: ["customer.tax_ids", "payments.data.payment.payment_intent"],
 		});

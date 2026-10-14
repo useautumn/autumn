@@ -42,8 +42,6 @@ const UPDATE_FIELD_READERS: FieldReaders<UpdateSubscriptionForm> = {
 			: undefined,
 };
 
-/** Inverse of the update-subscription request builder. Stage-scoped keys
- * (invoice*) are skipped — the review stage re-collects them. */
 export const updateSubscriptionFormOverridesFromRequestBody = (
 	request: Record<string, unknown>,
 ): Partial<UpdateSubscriptionForm> => ({

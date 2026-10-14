@@ -13,20 +13,14 @@ export const attachLicense = async ({
 	ctx: AutumnContext;
 	params: AttachLicenseParamsV0;
 }) => {
-	// 1. Setup
 	const context = await setupAttachLicenseContext({ ctx, params });
 
-	// 2. Errors
 	handleAttachLicenseErrors({ context });
 
-	// 3. Compute
 	const plan = computeAttachLicensePlan({ ctx, context });
 	logLicenseAssignmentPlan({ ctx, context, plan });
 
-	// 4. Execute: entity upserts + capacity take + provision inserts +
-	// license lifecycle (converge + cache) all run inside the shared executor
 	await executeAutumnBillingPlan({ ctx, autumnBillingPlan: plan.billingPlan });
 
-	// Response shape is undecided; callers only get an acknowledgement.
 	return { success: true as const };
 };

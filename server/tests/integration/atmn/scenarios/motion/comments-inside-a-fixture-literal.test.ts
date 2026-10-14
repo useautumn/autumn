@@ -1,11 +1,3 @@
-/**
- * atmn scenarios/motion — comments inside a fixture literal → survive an in-place rewrite of that fixture (or: are lost, assert which and make it deliberate)
- *
- * code in motion: the config's shape is the user's; pull edits the AST, never rewrites a file
- *
- * One line of plans/atmn-v3/07_tests.md. [a, b] is a matrix looped INSIDE this file.
- */
-
 import { expect, test } from "bun:test";
 import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 import {
@@ -62,9 +54,6 @@ export const pro = plan({
 			const after = scenario.files().get("plans.ts") ?? "";
 
 			expect(after).toContain("amount: 59");
-			// Decision pending: an in-place rewrite replaces the whole fixture
-			// node, so a comment attached inside it is dropped rather than
-			// re-attached to the new text.
 			expect(after).not.toContain(comment);
 		} finally {
 			scenario.cleanup();

@@ -22,13 +22,11 @@ export const handleCreateFeatureV1 = createRoute({
 		const body = c.req.valid("json");
 		const ctx = c.get("ctx");
 
-		// Get backend feature
 		const feature = featureV1ToDbFeature({
 			apiFeature: body,
 			originalFeature: undefined,
 		});
 
-		// Body is now always in the latest V1 format, regardless of API version
 		const dbFeature = await createFeature({
 			ctx,
 			data: feature,

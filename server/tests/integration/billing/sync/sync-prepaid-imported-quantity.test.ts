@@ -1,17 +1,3 @@
-/**
- * Regression: syncing a prepaid feature whose Stripe sub item is on an
- * IMPORTED / Stripe-native price id (matched to the Autumn product by
- * stripe_product_id, but NOT the Autumn price's V1 or V2 id) must not fold
- * Stripe's default `quantity: 1` into a phantom +1 credit on top of the
- * allowance.
- *
- * Before the fix `buildFeatureQuantities` treated any non-V2 price id as
- * "extras" and did `quantity + allowance` → granted 5001. The imported price
- * is allowance-inclusive (total), so the quantity passes through → granted 5000.
- *
- * The sub is manufactured directly via stripeCli (imported price + qty 1).
- */
-
 import { expect, test } from "bun:test";
 import {
 	isFixedPrice,
@@ -62,7 +48,6 @@ test(
 			],
 		});
 
-		// Resolve the prepaid price's Stripe product + the base price id.
 		const fullProduct = await ProductService.getFull({
 			db: ctx.db,
 			idOrInternalId: pro.id,
@@ -84,8 +69,6 @@ test(
 		const stripeCustomerId = fullCustomer.processor?.id;
 		if (!stripeCustomerId) throw new Error("no stripe customer");
 
-		// Imported prepaid price on the SAME Stripe product (a different price id
-		// than the Autumn V1/V2 ids) → detection matches by stripe_product_id.
 		const importedPrice = await ctx.stripeCli.prices.create({
 			product: stripeProductId,
 			currency: "usd",
@@ -93,7 +76,6 @@ test(
 			recurring: { interval: "month" },
 		});
 
-		// Manufacture the sub directly: base + the imported prepaid item at qty 1.
 		const stripeSubscription = await ctx.stripeCli.subscriptions.create({
 			customer: stripeCustomerId,
 			items: [
@@ -102,7 +84,6 @@ test(
 			],
 		});
 
-		// Sync the dashboard way: detection proposal → submit with expire on.
 		const proposalsResponse = await autumnV1.post(
 			"/billing.sync_proposals_v2",
 			{ customer_id: customerId },
@@ -125,8 +106,6 @@ test(
 			phases,
 		} satisfies SyncParamsV1);
 
-		// Granted is the 5000 allowance — the imported qty-1 item is allowance-
-		// inclusive, so it must NOT add a 5001st credit.
 		const after = await CusService.getFull({ ctx, idOrInternalId: customerId });
 		const proCusProduct = after.customer_products.find(
 			(cp) => cp.product_id === pro.id && cp.status === "active",

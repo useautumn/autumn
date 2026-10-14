@@ -32,7 +32,6 @@ const pro = products.pro({
 	items: [items.consumableWords()],
 });
 
-// Reward: InvoiceCredits, $1000, Forever duration, rollover=true, apply_to_all=true
 const rewardId = `${testCase}rolloverAll`;
 const promoCode = `${testCase}rolloverAllCode`;
 const reward: CreateReward = {
@@ -67,8 +66,6 @@ const simulateOneCycle = async ({
 	curUnix: number;
 	ctx: { db: DrizzleCli; org: Organization; env: AppEnv };
 }) => {
-	// Cap usage so invoice stays within coupon amount across 2 cycles
-	// At $0.05/word + $20 base, keep usage under 5000 words (~$250 usage + $20 base = ~$270/cycle)
 	const usage = Math.random() * 4000 + 1000;
 	await autumn.track({
 		customer_id: customerId,
@@ -76,7 +73,6 @@ const simulateOneCycle = async ({
 		value: usage,
 	});
 
-	// Expected invoice total
 	const expectedTotal = await getExpectedInvoiceTotal({
 		usage: [{ featureId: TestFeature.Words, value: usage }],
 		customerId,
@@ -126,15 +122,12 @@ test(
 	async () => {
 		const customerId = "coupon1";
 
-		// Init scenario: products + customer (no PM, uses checkout)
 		const { testClockId, ctx: testCtx } = await initScenario({
 			customerId,
 			setup: [s.customer({ testClock: true }), s.products({ list: [pro] })],
 			actions: [],
 		});
 
-		// Create reward manually (s.reward doesn't use onlyUsage, but this test needs apply_to_all)
-		// LegacyVersion.v1_4 is needed for this test's autumn client
 		const autumn = new AutumnInt({
 			version: LegacyVersion.v1_4,
 			secretKey: testCtx.orgSecretKey,
@@ -152,7 +145,6 @@ test(
 		let couponAmount = reward.discount_config!.discount_value;
 		let curUnix = Date.now();
 
-		// CYCLE 0: Attach pro with promo code via checkout
 		const res = await autumn.attach({
 			customer_id: customerId,
 			product_id: pro.id,
@@ -179,7 +171,6 @@ test(
 			rewardId,
 		);
 
-		// CYCLE 1: Run one cycle and verify correct invoice + coupon amount
 		const res1 = await simulateOneCycle({
 			customerId,
 			stripeCli: testCtx.stripeCli,
@@ -193,7 +184,6 @@ test(
 		couponAmount = res1.couponAmount;
 		curUnix = res1.curUnix;
 
-		// CYCLE 2: Run another cycle and verify correct invoice + coupon amount
 		await simulateOneCycle({
 			customerId,
 			stripeCli: testCtx.stripeCli,

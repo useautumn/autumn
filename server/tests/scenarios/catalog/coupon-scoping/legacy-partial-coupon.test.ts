@@ -40,8 +40,6 @@ test(`${chalk.yellowBright("coupon-qa: coupon saved before grouping existed")}`,
 		],
 	});
 
-	// The API now refuses to create this state, so write it straight to the DB:
-	// a coupon covering only the base while the variant shares its Stripe product.
 	const base = await ProductService.getFull({
 		db: ctx.db,
 		idOrInternalId: baseId,

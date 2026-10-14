@@ -1,8 +1,3 @@
-/**
- * invoices.create — pricing modifiers: discounts, proration, tax, template,
- * licenses, credit usage, multiple plans.
- */
-
 import { expect, test } from "bun:test";
 import {
 	type ApiCustomerV5,
@@ -75,7 +70,6 @@ test.concurrent(
 			},
 		});
 
-		// plan lines: (20 + 40) × 50% = 30; custom 100 untouched by the plan coupon; $10 off the invoice.
 		const { stripeInvoice } = await expectCreatedInvoiceCorrect({
 			ctx,
 			response,
@@ -88,7 +82,6 @@ test.concurrent(
 			stripeDiscountTotal: 30 + 10,
 		});
 		expect(response.preview.discount_total).toBe(40);
-		// Everything a line was discounted beyond the invoice-wide coupon.
 		const idOf = (discount: string | { id: string }) => stripeRefToId(discount);
 		const invoiceDiscountIds = stripeInvoice.discounts.map(idOf);
 		const planCouponAmounts = stripeInvoice.lines.data.map((line) =>
@@ -165,7 +158,6 @@ test.concurrent(
 			actions: [],
 		});
 
-		// Sep 1 → Sep 16 UTC is 15 of 30 days of the monthly cycle starting Sep 1.
 		const periodStart = Date.UTC(2026, 8, 1);
 		const periodEnd = Date.UTC(2026, 8, 16);
 		const response = await createInvoice({
@@ -229,7 +221,6 @@ test.concurrent(
 			actions: [],
 		});
 
-		// Sep 1 → Nov 15: Sep + Oct whole, then 14 of 30 November days.
 		const response = await createInvoice({
 			autumnV2_3,
 			params: {
@@ -382,7 +373,6 @@ test.concurrent(
 	async () => {
 		const customerId = "inv-create-license";
 		const parent = products.pro({ id: "pro-create-lic-parent", items: [] });
-		// products.base has no base price; give the seat plan a $15/month price.
 		const seat = products.base({
 			id: "pro-create-lic-seat",
 			items: [
@@ -498,7 +488,6 @@ test.concurrent(
 	`${chalk.yellowBright("invoices.create: usage entries convert through the credit rate card then the credit price")}`,
 	async () => {
 		const customerId = "inv-create-credit-usage";
-		// consumable credits at $0.5 per credit; Action1 costs 0.2 credits, Action2 costs 0.6.
 		const pro = products.pro({
 			id: "pro-create-credit-usage",
 			items: [items.consumable({ featureId: TestFeature.Credits, price: 0.5 })],
@@ -535,7 +524,6 @@ test.concurrent(
 			},
 		});
 
-		// 100 × 0.2 + 50 × 0.6 = 50 credits × $0.5 = $25
 		await expectCreatedInvoiceCorrect({
 			ctx,
 			response,
@@ -549,7 +537,6 @@ test.concurrent(
 	`${chalk.yellowBright("invoices.create: dimension credits pick the rate card dimension and multiplier")}`,
 	async () => {
 		const customerId = "inv-create-dimension-credits";
-		// DimensionCredits is an invoice-credit system: credits are already dollars.
 		const pro = products.pro({
 			id: "pro-create-dim-credits",
 			items: [
@@ -601,7 +588,6 @@ test.concurrent(
 			},
 		});
 
-		// 2 × 16 + 1 × 20 × 0.3 + 3 × 1 = 41 credits = $41 (invoice credit, not priced again)
 		await expectCreatedInvoiceCorrect({
 			ctx,
 			response,
@@ -688,7 +674,6 @@ test.concurrent(
 			actions: [],
 		});
 
-		// $9 per pack of 2 users in Stripe; the request's inline $7 is ignored.
 		const stripeProduct = await ctx.stripeCli.products.create({
 			name: "Seat pack",
 		});
@@ -732,7 +717,6 @@ test.concurrent(
 			},
 		});
 
-		// 5 users over packs of 2 → 3 packs × $9, the Stripe price's amount.
 		const { stripeInvoice } = await expectCreatedInvoiceCorrect({
 			ctx,
 			response,

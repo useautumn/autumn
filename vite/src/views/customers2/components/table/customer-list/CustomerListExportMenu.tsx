@@ -14,7 +14,6 @@ import { CUSTOMER_EXPORT_SHEET_COPY } from "../../export/customerExportSheetCopy
 const EXPORT_KINDS = Object.values(CustomerExportKind);
 
 export function CustomerListExportMenu() {
-	// The kind outlives `open` so the sheet keeps its copy while animating out.
 	const [sheet, setSheet] = useState<{
 		kind: CustomerExportKind;
 		open: boolean;

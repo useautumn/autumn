@@ -104,8 +104,6 @@ export const runLogin = async ({
 }: LoginOptions = {}): Promise<LoginResult> => {
 	const dirs = resolveProject({ cwd, configFlag: configPath }).envDirs;
 	loadEnvFiles({ dirs });
-	// The same target every other command resolves: a local server or a
-	// staging URL authenticates against itself, never against production.
 	const resolved = target ?? resolveTarget({});
 	const authorizeStep = authorize ?? authorizeWith({ target: resolved });
 	const createApiKeysStep =
@@ -116,7 +114,6 @@ export const runLogin = async ({
 			announceAuthorizationUrl({ url, write, openBrowser }),
 	});
 
-	// Impersonating a customer: one-hour tokens, no api keys minted on their org.
 	if (outcome.kind === "impersonation") {
 		const values = impersonationToEnvValues({ tokens: outcome.tokens });
 		const envPath = writeEnvValues({ dirs, values });

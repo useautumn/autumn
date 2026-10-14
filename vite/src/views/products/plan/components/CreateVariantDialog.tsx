@@ -63,7 +63,6 @@ export function CreateVariantDialog({
 		targetKey: "id",
 	});
 
-	// The hook lives outside DialogContent, so re-enable auto-slug on each open.
 	useEffect(() => {
 		if (open) resetAutoSlug();
 	}, [open, resetAutoSlug]);

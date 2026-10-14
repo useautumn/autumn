@@ -33,7 +33,6 @@ export const shouldCreateManualStripeInvoice = ({
 	stripeSubscriptionAction?: StripeSubscriptionAction;
 }): boolean => {
 	const isCreateAction = stripeSubscriptionAction?.type === "create";
-	// A backdate recreate bills nothing until the old period end, so its plan changes are invoiced on their own.
 	if (isCreateAction && isBackdateRecreate({ billingContext })) {
 		return lineItemsCharge({ autumnBillingPlan });
 	}
@@ -49,7 +48,6 @@ export const shouldCreateManualStripeInvoice = ({
 		return willCreateInvoiceEndOfCycle;
 	}
 
-	// Custom line items always need a manual invoice
 	const customLineItems = autumnBillingPlan.customLineItems;
 	if (customLineItems?.length) {
 		const customTotal = sumValues(customLineItems.map((item) => item.amount));

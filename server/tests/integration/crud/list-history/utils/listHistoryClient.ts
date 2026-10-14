@@ -43,7 +43,6 @@ export const listBalances = ({
 }): Promise<ListBalancesResponse> =>
 	autumn.post("/balances.list", params, capHeaders(options));
 
-/** Follows next_cursor until has_more is false, returning every page. */
 export const walkAllPages = async <
 	TRow,
 	TResponse extends {

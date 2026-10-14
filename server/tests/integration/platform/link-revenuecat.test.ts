@@ -1,14 +1,3 @@
-/**
- * Integration coverage for the platform RevenueCat link flow against the live
- * server (atmn-srv on :8080).
- *
- * `POST /v1/platform.link_revenuecat` makes NO RevenueCat HTTP call — it only
- * builds the authorize URL and writes OAuth state to Redis — so the request
- * half is fully testable here. The callback's happy path (real token exchange +
- * project creation) needs a real OAuth code and stays unit-tested; only its
- * deterministic guard branches (which return before any RC call) are exercised.
- */
-
 import { beforeAll, describe, expect, test } from "bun:test";
 import { AppEnv } from "@autumn/shared";
 import defaultCtx, {
@@ -39,7 +28,6 @@ beforeAll(async () => {
 		actions: [],
 	});
 	subCtx = ctx;
-	// Must pass the bare slug: validatePlatformOrg re-appends `|<masterOrgId>`.
 	bareSlug = ctx.org.slug.split("|")[0];
 	masterAutumn = new AutumnInt({ secretKey: defaultCtx.orgSecretKey });
 }, 120_000);
@@ -69,7 +57,6 @@ describe("POST /v1/platform.link_revenuecat", () => {
 		const stateKey = url.searchParams.get("state");
 		expect(stateKey).toBeTruthy();
 
-		// State was written by the server into the shared Redis; read it back.
 		const state = await consumeOAuthState({ stateKey: stateKey as string });
 		expect(state).not.toBeNull();
 		expect(state?.env).toBe(AppEnv.Sandbox);
@@ -81,7 +68,6 @@ describe("POST /v1/platform.link_revenuecat", () => {
 	});
 
 	test("rejects when RevenueCat is already linked for the env", async () => {
-		// Mark the LIVE env linked, keeping sandbox free so this is order-independent.
 		await OrgService.update({
 			db: subCtx.db,
 			orgId: subCtx.org.id,
@@ -134,8 +120,6 @@ describe("GET /revenuecat/oauth_callback (guard branches)", () => {
 	});
 
 	test("platform flow: redirects org_permission_denied when master_org_id mismatches", async () => {
-		// Real state, but a master_org_id that does not own subCtx's org → the
-		// callback returns at the permission check, before any RevenueCat call.
 		const stateKey = await generateOAuthState({
 			organizationSlug: subCtx.org.slug,
 			env: AppEnv.Sandbox,

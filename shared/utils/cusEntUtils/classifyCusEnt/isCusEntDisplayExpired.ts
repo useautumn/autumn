@@ -2,7 +2,6 @@ import type { FullCusEntWithFullCusProduct } from "../../../models/cusProductMod
 import { CusProductStatus } from "../../../models/cusProductModels/cusProductEnums.js";
 import { isCusEntExpired } from "./isCusEntExpired.js";
 
-/** Expired by its own clock, or orphaned by a churned (expired) plan. */
 export const isCusEntDisplayExpired = ({
 	cusEnt,
 	now,

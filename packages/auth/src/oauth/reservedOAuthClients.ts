@@ -3,7 +3,6 @@ export const SUMMER_OAUTH_CLIENT_ID = "autumn_summer";
 export const SLACK_MCP_OAUTH_CLIENT_ID = "autumn_mcp_slack";
 export const WEB_MCP_OAUTH_CLIENT_ID = "autumn_mcp_web";
 
-/** Display names owned by first-party clients; dynamic registration may not claim them. */
 export const RESERVED_OAUTH_CLIENT_NAMES: ReadonlySet<string> = new Set([
 	"atmn",
 	"autumn cli",
@@ -11,8 +10,6 @@ export const RESERVED_OAUTH_CLIENT_NAMES: ReadonlySet<string> = new Set([
 	"summer",
 ]);
 
-// Keyed by the raw value, not the variable name, so a changed env still parses
-// while a stable one is split and allocated once instead of per auth call.
 const clientIdsByRawValue = new Map<string, readonly string[]>();
 
 export const clientIdsFromEnv = (variable: string): readonly string[] => {
@@ -28,7 +25,6 @@ export const clientIdsFromEnv = (variable: string): readonly string[] => {
 	return clientIds;
 };
 
-/** The singular variable name is still read so a deployment can be renamed without downtime. */
 export const internalMcpOAuthClientIds = (): readonly string[] => {
 	const clientIds = clientIdsFromEnv("INTERNAL_MCP_OAUTH_CLIENT_IDS");
 	return clientIds.length > 0

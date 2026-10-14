@@ -7,7 +7,6 @@ import {
 	readScopedFeatureRow,
 } from "../batch-migrations/paidRowTestUtils";
 
-/** Spare: same cusEnt row and definition. Match: new definition, new grant. */
 export const expectIncludedFilterOutcomeCorrect = async ({
 	ctx,
 	autumn,

@@ -1,6 +1,5 @@
 import { apiRouter } from "./apiRouter.js";
 
-/** Every `METHOD /v1/path` the public API serves, sorted by path. */
 export const listApiEndpoints = (): string[] => {
 	const endpoints = apiRouter.routes
 		.filter(({ method }) => method !== "ALL")

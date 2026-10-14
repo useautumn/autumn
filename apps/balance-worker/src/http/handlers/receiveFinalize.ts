@@ -6,7 +6,6 @@ import type { BalanceWorkerHttpEnv } from "../types/balanceWorkerHttp.js";
 
 export async function receiveFinalize(context: Context<BalanceWorkerHttpEnv>) {
 	const { runtime } = context.get("ctx");
-	// Cast, not parsed: our server validated it, and a field from a newer server must not fail it.
 	const command = context.get("request").command as FinalizeCommand;
 	const requestLog = context.get("requestLog");
 	requestLog.command = command;

@@ -12,7 +12,6 @@ import {
 } from "./diffPlanV1.revisiondojo.fixtures.js";
 import { normalizePlan } from "./utils/normalizePlan.js";
 
-// --- test matrix ---
 const groups = [
 	{ name: "pro", base: proBase, variants: proVariants },
 	{ name: "plus", base: plusBase, variants: plusVariants },

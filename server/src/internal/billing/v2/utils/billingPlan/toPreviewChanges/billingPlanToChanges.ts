@@ -90,8 +90,6 @@ const getIsOutgoing = ({
 		status?: CusProductStatus | null;
 	};
 }) => {
-	// A quantity or plan update changes the subscription in place: nothing ends,
-	// but the pre-update plan is still what the change is measured against.
 	if (
 		"intent" in billingContext &&
 		(billingContext.intent === UpdateSubscriptionIntent.UpdateQuantity ||
@@ -122,8 +120,6 @@ const getShouldIncludeIncoming = ({
 	incoming: BillingPreviewChange[];
 }) => {
 	if ("intent" in billingContext) {
-		// A restructuring plan update already inserted its successor; only an
-		// in-place one has to report the updated product as incoming.
 		if (billingContext.intent === UpdateSubscriptionIntent.UpdatePlan) {
 			return incoming.length === 0;
 		}
@@ -195,9 +191,6 @@ export const billingPlanToChanges = async ({
 		prefix: "outgoing",
 	});
 
-	// A patch-style customize keeps the existing row and carries its new
-	// prices/entitlements as a patch; the incoming plan must render the
-	// patched row, as the Stripe layer does, or the preview shows the old terms.
 	const patchByCustomerProductId = new Map(
 		getPatchCustomerProducts({ autumnBillingPlan: autumn }).map((patch) => [
 			patch.customerProduct.id,

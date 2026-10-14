@@ -1,9 +1,6 @@
 import { ACTIVE_STATUSES } from "@autumn/shared";
 import { type SQL, sql } from "drizzle-orm";
 
-/** Fixed recurring prices only: usage/tiered configs carry no flat amount and
- * one_off falls to the CASE's 0. Normalized to a monthly figure.
- * Expects the prices table to be aliased `p` in the surrounding query. */
 export const monthlyBasePriceExpr = (): SQL => sql`
 	(p.config->>'amount')::numeric
 	* CASE p.config->>'interval'

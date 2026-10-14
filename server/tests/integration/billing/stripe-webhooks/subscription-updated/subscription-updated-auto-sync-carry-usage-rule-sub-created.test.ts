@@ -1,6 +1,3 @@
-// Contract: back-synced plan changes (sub.updated / sub.created auto-sync) carry consumed usage onto
-// the replacement plan with the same carry semantics as attach.
-
 import { test } from "bun:test";
 import {
 	createCustomBasePriceForProduct,
@@ -25,9 +22,6 @@ import {
 	setupConsumableFamilyOnBase,
 } from "./utils/autoSyncCarryUsage";
 
-// ═══════════════════════════════════════════════════════════════════════════
-// 6. Org transition rule { enabled: false }: consumables NOT carried on sync
-// ═══════════════════════════════════════════════════════════════════════════
 test(`${chalk.yellowBright("sub.updated auto-sync carry 6: org rule enabled=false skips consumable carry")}`, async () => {
 	const customerId = "sync-carry-rule-off";
 	const baseId = "sync-carry-rule-base";
@@ -90,9 +84,6 @@ test(`${chalk.yellowBright("sub.updated auto-sync carry 6: org rule enabled=fals
 	}
 });
 
-// ═══════════════════════════════════════════════════════════════════════════
-// 7. Free (default) -> paid via sub.created auto-sync carries free-plan usage
-// ═══════════════════════════════════════════════════════════════════════════
 test(`${chalk.yellowBright("sub.created auto-sync carry 7: default free usage carries onto synced paid plan")}`, async () => {
 	const customerId = "sync-carry-free-to-paid";
 	const group = "grp-sync-carry-free";

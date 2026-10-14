@@ -11,7 +11,6 @@ import { setupAttachProductContext } from "../../attach/setup/setupAttachProduct
 import { validateSetPlansPhasePlans } from "../errors/validateSetPlansPhasePlans";
 import { computeScopeForScheduledProduct } from "../utils/computeScopeForScheduledProduct";
 
-/** Resolve product + feature quantity context for each plan in each scheduled phase. */
 export const setupScheduledProductsContext = async ({
 	ctx,
 	phases,
@@ -59,7 +58,6 @@ export const setupScheduledProductsContext = async ({
 						customPrices,
 						customEntitlements,
 						featureQuantities,
-						// Omitted grants only the included seats later, so it must stay distinct from [].
 						customerLicenseQuantities:
 							plan.license_quantities === undefined
 								? undefined

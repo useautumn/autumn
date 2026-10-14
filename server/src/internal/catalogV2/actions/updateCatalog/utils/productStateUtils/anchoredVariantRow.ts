@@ -4,7 +4,6 @@ import { activeFullProductForPlan } from "./activeFullProductForPlan";
 import { findFullProductByInternalId } from "./findFullProductByInternalId";
 import { fullProductForPlanParams } from "./fullProductForPlanParams";
 
-/** Row of `planId` pointing at one of these base rows: active first, else latest. */
 export const anchoredVariantRow = ({
 	planId,
 	anchorInternalIds,
@@ -34,7 +33,6 @@ export const anchoredVariantRow = ({
 	);
 };
 
-/** A plan with rows and no base at all: a first link claims it as a whole. */
 const planIsStandalone = ({
 	planId,
 	productStatesContext,
@@ -48,12 +46,6 @@ const planIsStandalone = ({
 	);
 };
 
-/**
- * A stated stable id → that exact row. Pinned → that row. Unpinned → the row
- * anchored to the declaring base (archived included, so a restore or a refused
- * customize still finds it), or a standalone plan's active row (first link);
- * null means the entry mints.
- */
 export const variantRowForDeclaredEntry = ({
 	variant,
 	anchorInternalIds,
@@ -67,8 +59,6 @@ export const variantRowForDeclaredEntry = ({
 	productStatesContext: ProductStatesContext;
 }): FullProduct | null => {
 	const planId = variant.variant_plan_id;
-	// An id nothing owns is a guess the config made; the entry then falls back
-	// to its plan id like any other.
 	if (variant.internal_id !== undefined) {
 		const identified = findFullProductByInternalId({
 			internalId: variant.internal_id,

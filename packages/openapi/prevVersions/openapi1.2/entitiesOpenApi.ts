@@ -8,8 +8,6 @@ import {
 import { EntityExpandV0 } from "@models/cusModels/entityModels/entityExpand.js";
 import { z } from "zod/v4";
 
-// Note: The meta with id is added in openapi.ts to avoid duplicate registration
-// This schema is exported through the main index and should not have an id here
 export const ApiEntityWithMeta = ApiEntityV0Schema.meta({
 	id: "Entity",
 	example: API_ENTITY_V0_EXAMPLE,

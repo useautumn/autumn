@@ -2,7 +2,6 @@ import { z } from "zod/v4";
 import { isUsageLimitBasisAlert } from "../cusModels/billingControls/classify/isUsageLimitBasisAlert.js";
 import { DbUsageAlertSchema } from "../cusModels/billingControls/usageAlert.js";
 
-// Org alerts apply to every customer, so there is no single usage limit to measure against.
 const OrgUsageAlertsSchema = z
 	.array(DbUsageAlertSchema)
 	.optional()
@@ -18,8 +17,6 @@ const OrgUsageAlertsSchema = z
 		});
 	});
 
-/** Invoice-capable subset of Stripe's subscription
- *  `payment_settings.payment_method_types`. */
 export const InvoicePaymentMethodSchema = z.enum([
 	"card",
 	"customer_balance",
@@ -34,8 +31,6 @@ export type InvoicePaymentMethod = z.infer<typeof InvoicePaymentMethodSchema>;
 
 export const OrgConfigSchema = z.object({
 	usage_alerts: OrgUsageAlertsSchema,
-	/** Sandbox-env-only usage alerts. `checkUsageAlerts` reads this list when
-	 *  `ctx.env === AppEnv.Sandbox` and `usage_alerts` when env is live. */
 	sandbox_usage_alerts: OrgUsageAlertsSchema,
 
 	bill_upgrade_immediately: z.boolean().default(true),
@@ -46,7 +41,7 @@ export const OrgConfigSchema = z.object({
 
 	prorate_unused: z.boolean().default(true),
 
-	checkout_on_failed_payment: z.boolean().default(true), // false for pipeline?
+	checkout_on_failed_payment: z.boolean().default(true),
 	reverse_deduction_order: z.boolean().default(false),
 
 	/** @deprecated Use block_overdue_entitlements; remove after the rollout. */
@@ -62,12 +57,10 @@ export const OrgConfigSchema = z.object({
 	entity_product: z.boolean().default(false),
 	void_invoices_on_subscription_deletion: z.boolean().default(false),
 
-	// default
 	default_applies_to_entities: z.boolean().default(false),
 
 	disable_overage_billing: z.boolean().default(false),
 
-	// disable stripe writes
 	disable_stripe_writes: z.boolean().default(false),
 
 	disabled_auto_topup: z.boolean().default(false),
@@ -76,16 +69,12 @@ export const OrgConfigSchema = z.object({
 
 	forward_customer_metadata: z.boolean().default(false),
 
-	// When true, Stripe writes pass `automatic_tax: { enabled: true }`.
-	// Customer must have a tax-resolvable address.
 	automatic_tax: z.boolean().default(false),
 
 	multi_currency: z.boolean().default(false),
 
-	// Unset/null = Stripe's own invoice settings apply; never add a default.
 	allowed_payment_methods: z.array(InvoicePaymentMethodSchema).min(1).nullish(),
 
-	// Unset/null = downstream 30-day fallback applies; never add a default.
 	default_invoice_net_terms_days: z.number().int().positive().nullish(),
 });
 

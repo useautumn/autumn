@@ -10,10 +10,6 @@ type HealthLogger = {
 	warn(fields: object, message: string): void;
 };
 
-/**
- * Logs what /health reports, and what changed since the line before, from the main thread, every `everyMs`.
- * Nothing here may take the Atom down: a tick that fails is a warning, and a warning that fails is dropped.
- */
 export const startHealthLog = ({
 	source,
 	everyMs,
@@ -42,7 +38,6 @@ export const startHealthLog = ({
 					"Could not log the Atom's health",
 				);
 			} catch {
-				// Nowhere left to report it; the next tick tries again.
 			}
 		}
 	}

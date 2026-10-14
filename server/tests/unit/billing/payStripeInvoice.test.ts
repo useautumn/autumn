@@ -1,5 +1,3 @@
-// Red: open invoice.pay result returned payment_failed.
-// Green: it returns payment_processing because ACH is still settling.
 import { describe, expect, test } from "bun:test";
 import { payStripeInvoice } from "@/internal/billing/v2/providers/stripe/utils/invoices/payStripeInvoice";
 

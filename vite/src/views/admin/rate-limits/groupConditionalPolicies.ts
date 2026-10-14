@@ -17,7 +17,6 @@ const coversRoutes = ({
 	child.routes.length > 0 &&
 	child.routes.every((route) => parent.routes.includes(route));
 
-/** First match wins, so a row whose routes a later row covers only applies to some requests: it nests there. */
 export const groupConditionalPolicies = ({
 	policies,
 }: {

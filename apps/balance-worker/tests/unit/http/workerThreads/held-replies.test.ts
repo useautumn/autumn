@@ -22,7 +22,6 @@ async function freePort(): Promise<number> {
 	return port;
 }
 
-/** The request body names the reply: `{ partition, seq, pad?, fallback? }`. */
 function handler({
 	body,
 }: {
@@ -46,7 +45,6 @@ function handler({
 
 type Answer = { status: number; seq?: number; code?: string; via?: string };
 
-/** Settles with the answer, or "pending" if none arrives within `ms`. */
 async function within(
 	answer: Promise<Answer>,
 	ms: number,
@@ -191,7 +189,6 @@ describe("HTTP worker pool: replies held by commit position", () => {
 	test("a position that has passed a reply does not release it while a published failure is still on its way", async () => {
 		const held = post({ partition: 3, seq: 4 });
 		await Bun.sleep(50);
-		// The writer counts the failure before its frame is queued; the cell can move in between.
 		Atomics.add(failures, 3, 1);
 		Atomics.store(positions, 3, 4n);
 		listener.commitPositionMoved({ partition: 3, seq: 4 });

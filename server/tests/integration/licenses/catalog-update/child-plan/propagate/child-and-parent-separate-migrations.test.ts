@@ -1,13 +1,3 @@
-/**
- * Contract: the child plan and its parents get SEPARATE migrations.
- *
- * They move different customer populations by different operations — the child
- * by its own item diff, parents by a license customize — so each is drafted,
- * run and cancelled on its own rather than sharing one row.
- *
- * The response carries `migrations` for every draft, and keeps `migration`
- * pointing at the first so single-draft consumers are unaffected.
- */
 import { expect, test } from "bun:test";
 import { items } from "@tests/utils/fixtures/items.js";
 import { itemsV2 } from "@tests/utils/fixtures/itemsV2.js";
@@ -51,7 +41,6 @@ test(`${chalk.yellowBright("plans.update: child and parent are drafted as separa
 				productId: pro.id,
 				licenseQuantities: [{ licenseProductId: devSeat.id, quantity: 2 }],
 			}),
-			// A customer on the child plan directly, so BOTH populations exist.
 			s.billing.attach({
 				customerId: directCustomerId,
 				productId: devSeat.id,
@@ -67,7 +56,6 @@ test(`${chalk.yellowBright("plans.update: child and parent are drafted as separa
 		migration: { draft: true },
 	});
 
-	// ── Two drafts, and `migration` still points at the first ──────────
 	expect(response.migrations).toHaveLength(2);
 	expect(response.migration?.id).toBe(response.migrations[0].id);
 
@@ -80,7 +68,6 @@ test(`${chalk.yellowBright("plans.update: child and parent are drafted as separa
 		opsById.set(id, row?.operations?.customer ?? []);
 	}
 
-	// ── Each migration carries exactly one op, for one population ──────
 	const childOps = [...opsById.values()].find((ops) =>
 		ops.some((op) =>
 			planIdsOf((op as { plan_filter: unknown }).plan_filter).includes(
@@ -96,7 +83,6 @@ test(`${chalk.yellowBright("plans.update: child and parent are drafted as separa
 	expect(childOps).toHaveLength(1);
 	expect(parentOps).toHaveLength(1);
 
-	// The child migration never touches the parent, and vice versa.
 	const childOp = childOps?.[0] as { customize?: Record<string, unknown> };
 	const parentOp = parentOps?.[0] as { customize?: Record<string, unknown> };
 	expect(childOp.customize?.upsert_licenses).toBeUndefined();

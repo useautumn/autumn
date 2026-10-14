@@ -1,17 +1,3 @@
-/**
- * Idempotently creates/updates Axiom virtual fields on the `otel` dataset so
- * APL queries can use the same column names as the `express` dataset
- * (`req.url`, `context.org_slug`, `statusCode`, etc.).
- *
- * Usage:
- *   AXIOM_ADMIN_TOKEN=<personal-token> bun scripts/axiom/setOtelVirtualFields.ts
- *
- * Notes:
- * - AXIOM_ADMIN_TOKEN must be a personal API token with dataset-write scope,
- *   NOT the `xaat-` ingest token used by the server.
- * - Safe to re-run; existing fields with matching names are updated in place.
- */
-
 import "dotenv/config";
 
 const AXIOM_BASE = "https://api.axiom.co/v2";
@@ -23,7 +9,6 @@ type VirtualField = {
 	description: string;
 };
 
-// Constructors: keep the mapping terse. One per OTel source location.
 const custom = ({
 	name,
 	attr,
@@ -52,11 +37,7 @@ const semconv = ({
 	description,
 });
 
-// Mirrors the camelCase virtual fields on the `express` dataset so queries
-// share vocabulary across both datasets. Existing express virtual fields:
-// reqId, orgId, orgSlug, cusId, method, url, statusCode (native).
 const TARGET_FIELDS: VirtualField[] = [
-	// Match existing express virtual fields 1:1
 	custom({
 		name: "reqId",
 		attr: "req_id",
@@ -93,7 +74,6 @@ const TARGET_FIELDS: VirtualField[] = [
 		description: "HTTP status code (mirrors express statusCode)",
 	}),
 
-	// Additional OTel-only dimensions (no existing express virtual field)
 	custom({
 		name: "entityId",
 		attr: "entity_id",

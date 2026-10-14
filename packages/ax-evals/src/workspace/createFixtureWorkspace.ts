@@ -7,11 +7,6 @@ import { REPO_ROOT, WORKSPACE_ROOT } from "./workspacePaths.ts";
 const AUTUMN_JS_DIR = join(REPO_ROOT, "packages/autumn-js");
 const FIXTURES_DIR = join(REPO_ROOT, "packages/ax-evals/fixtures");
 
-/**
- * A throwaway copy of a fixture app for integration cases. The agent edits
- * the copy; `autumn-js` (and its deps) resolve via symlinks like a real npm
- * install — zero bytes copied, no network.
- */
 export const createFixtureWorkspace = async ({
 	label,
 	fixture,

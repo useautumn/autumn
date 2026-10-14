@@ -120,15 +120,11 @@ describe("atom env", () => {
 				{ availableCpus: cpus, memoryLimitBytes: memory },
 			).ATOM_THREADS;
 
-		// Half a CPU and 512 MB, as the stack is provisioned today.
 		expect(threads({ cpus: 1, memory: 0.5 * GB })).toBe(1);
 		expect(threads({ cpus: 4, memory: 2 * GB })).toBe(4);
-		// Eight threads would not fit in 1 GB: memory decides, 288 MiB for the main thread then 384 MiB a thread with its held copies.
 		expect(threads({ cpus: 8, memory: 1 * GB })).toBe(1);
 		expect(threads({ cpus: 8, memory: 2 * GB })).toBe(4);
-		// XXS: a 640 MiB container runs one thread.
 		expect(threads({ cpus: 1, memory: 640 * 1024 ** 2 })).toBe(1);
-		// Atom's sizes: Medium 3 / 6Gi uses every CPU; Large 7 / 12Gi and XL 15 / 24Gi stop at the cap.
 		expect(threads({ cpus: 3, memory: 6 * GB })).toBe(3);
 		expect(threads({ cpus: 7, memory: 12 * GB })).toBe(5);
 		expect(threads({ cpus: 15, memory: 24 * GB })).toBe(5);
@@ -189,7 +185,6 @@ describe("atom env", () => {
 				ALIEN_PUSHES_BINDING: PUSHES_BINDING,
 			}).ATOM_PUSH_RECEIVERS;
 
-		// A lone thread serves and receives.
 		expect(receivers({ threads: "1" })).toBe(1);
 		expect(receivers({ threads: "2" })).toBe(1);
 		expect(receivers({ threads: "4" })).toBe(1);
@@ -293,14 +288,11 @@ describe("atom env", () => {
 				},
 			).ATOM_HELD_BYTES_PER_THREAD;
 
-		// Large, 12 GiB on 5 threads: (12 GiB − 288 MiB − 5 × 192 MiB) × 0.5 / 5 / 5 ≈ 220 MiB, about 12k subjects of 18.6 KB.
 		expect(heldBytes({ cpus: 7, memory: 12 * GiB })).toBe(
 			Math.floor(((12 * GiB - 288 * MiB - 5 * 192 * MiB) * 0.5) / 5 / 5),
 		);
 		expect(heldBytes({ cpus: 7, memory: 12 * GiB })).toBeGreaterThan(220 * MiB);
-		// XXS, a 640 MiB container on one thread: (640 − 288 − 192) × 0.5 / 5 = 16 MiB, about 900 subjects.
 		expect(heldBytes({ cpus: 1, memory: 640 * MiB })).toBe(16 * MiB);
-		// Too small for the threads themselves: nothing is held, and every check reads its row.
 		expect(heldBytes({ cpus: 1, memory: 400 * MiB })).toBe(0);
 	});
 

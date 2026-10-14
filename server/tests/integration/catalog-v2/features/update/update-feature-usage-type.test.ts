@@ -1,13 +1,3 @@
-/**
- * catalogV2.update / preview_update — flipping consumable (usage type).
- *
- * Contract: the flip is allowed when only products reference the feature and
- * RESHAPES the referencing rows — entitlements get a lifetime interval when
- * going continuous, usage prices flip should_prorate and drop their Stripe
- * price. It throws when the feature is in a credit system's schema, scopes an
- * entity item, or has customer history.
- */
-
 import { test } from "bun:test";
 import {
 	type AttachParamsV1Input,
@@ -102,7 +92,6 @@ test.concurrent(
 				expected: { shouldProrate: true, stripePriceId: null },
 			});
 
-			// Flip back: prices return to non-prorating consumable shape
 			expectCatalogPreviewCorrect({
 				preview: await autumnV2_3.catalogV2.previewUpdate({
 					features: [meteredFeature(featureId, true)],
@@ -226,7 +215,6 @@ test.concurrent(
 					}),
 			});
 
-			// Nothing changed
 			await expectDbFeaturesCorrect({
 				ctx,
 				expected: [

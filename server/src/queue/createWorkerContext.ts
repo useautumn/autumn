@@ -29,11 +29,6 @@ export const createWorkerContext = async ({
 	const { orgId, env, customerId, requestId } = payload;
 	if (!orgId || !env) return;
 
-	// Fetch org with features once for all items. A missing org means it was
-	// deleted after the job was queued (common in tests) — skip, don't fail.
-	// Deliberately not gated on `skipCache` — that flag governs the customer
-	// cache (workers want fresh balances), whereas this is org config that
-	// changes rarely and is invalidated by clearOrgCache.
 	let orgData: Awaited<ReturnType<typeof getOrgWithFeaturesCached>>;
 	try {
 		orgData = await getOrgWithFeaturesCached({ db, orgId, env, requestId });

@@ -1,10 +1,3 @@
-/**
- * Catalog leftover rows are retired (is_custom), never hard-deleted.
- *
- * Red (current):  plan.prices.deleted / entitlements.deleted call deleteInIds
- * Green (after):  both buckets go to retireInIds; deleteInIds is not called
- */
-
 import { afterEach, expect, mock, spyOn, test } from "bun:test";
 import type { Entitlement, Price } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";

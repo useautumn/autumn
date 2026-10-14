@@ -1,6 +1,3 @@
-// Mirrors the free-tier setup: the plan carries a 200/day cap and plan-level usage_limit
-// alerts at 80, 100 and 200 that every customer on the plan inherits.
-
 import { afterAll, beforeAll, expect, test } from "bun:test";
 import { ResetInterval } from "@autumn/shared";
 import {

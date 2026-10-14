@@ -14,7 +14,6 @@ import { withExpiringPooledBalances } from "./ensure/withExpiringPooledBalances.
 import { replyOnceStored } from "./replyOnceStored.js";
 import { requirePostgresStore } from "./requirePostgresStore.js";
 
-/** A billing plan's changes to a customer and the entities it names as one mutation, answered once Postgres holds them. */
 export async function applyBillingPlan({
 	scope,
 	request,
@@ -32,7 +31,6 @@ export async function applyBillingPlan({
 		command,
 		run: async () => {
 			const planned = await withExpiringPooledBalances({ scope, command });
-			// An evict can land in any await before the decision, as for a track: hydrate again and retry once.
 			const decided = await withResidentSubject({
 				customerKey: meteringIdentityToPartitionKey({
 					identity: command.identity,

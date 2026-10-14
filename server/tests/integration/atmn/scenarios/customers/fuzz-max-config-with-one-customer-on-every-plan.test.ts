@@ -1,11 +1,3 @@
-/**
- * atmn scenarios/customers — fuzz-max config with one customer on every plan → push succeeds, migrations drafted only for in-place edits
- *
- * real `billing.attach` first; the point is to hit the dependency errors
- *
- * One line of plans/atmn-v3/07_tests.md. [a, b] is a matrix looped INSIDE this file.
- */
-
 import { expect, test } from "bun:test";
 import { seedVersionableCustomer } from "@tests/integration/catalog-v2/plans/migrations/utils/seedVersionableCustomer.js";
 import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
@@ -27,8 +19,6 @@ import chalk from "chalk";
 const proItems = `
 					{ featureId: "messages", included: 100, reset: { interval: "month" } },`;
 
-/** free, paid pro, a seat license, and an enterprise plan that licenses it —
- * one customer lands on each; only `pro`'s price changes between pushes. */
 const plansBlock = ({ proAmount }: { proAmount: number }): string =>
 	`${freePlan}${paidMonthly({ amount: proAmount, items: proItems })}${seatPlan}${enterpriseWithSeats({ included: 25 })}`;
 
@@ -49,8 +39,6 @@ test.concurrent(
 		try {
 			await scenario.push();
 
-			// One real attach through billing (the paid plan customers use), one
-			// seeded customer per remaining plan (cheap, no Stripe needed).
 			await scenario.attachCustomer({ planId: "pro" });
 			await seedVersionableCustomer({
 				ctx: scenario.ctx,
@@ -76,8 +64,6 @@ export default atmn(${configBody({ features: everyFeatureType, plans: plansBlock
 
 			const result = await scenario.push();
 
-			// Push succeeded (no thrown 4xx) and only the customered, in-place-edited
-			// plan — `pro` — drafted a migration; free/seat/enterprise are unchanged.
 			expect(result.migrationIds, result.output).toHaveLength(1);
 		} finally {
 			scenario.cleanup();

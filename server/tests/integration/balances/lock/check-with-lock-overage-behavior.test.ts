@@ -1,26 +1,3 @@
-/**
- * TDD test for `overage_behavior` on `check.lock`.
- *
- * Contract under test:
- *   New types/fields:
- *     - check.lock.overage_behavior?: "reject" | "cap" | "overflow" (default "reject")
- *     - lock receipt persists `overage_behavior`
- *   New behaviors:
- *     - omitted / "reject": short balance -> allowed: false, nothing deducted (unchanged)
- *     - "cap": short balance -> deducts what fits, allowed: true
- *     - "overflow": short balance -> deducts full value, balance negative, allowed: true
- *     - finalize confirm with override_value above the lock re-uses the receipt's mode
- *       for the additional deduction (cap clamps at 0, overflow goes negative)
- *     - finalize release under overflow refunds the full negative lock
- *     - "overflow" still honours the customer spend limit
- *   Side effects:
- *     - events carry the requested value (same as track), balances carry the clamped one
- *
- * Pre-impl red: `overage_behavior` is rejected by LockParamsSchema / ignored, so
- * cap + overflow cases return allowed: false with no deduction.
- * Post-impl green: lock mode flows check -> receipt -> finalize.
- */
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV5, CheckResponseV3 } from "@autumn/shared";
 import { expectCustomerEventsCorrect } from "@tests/integration/balances/utils/events/expectCustomerEventsCorrect.js";
@@ -40,7 +17,6 @@ const makeFreeProd = () =>
 		items: [items.monthlyMessages({ includedUsage: 20 })],
 	});
 
-// Usage-based overage: spend limits only apply to paid usage.
 const makeUsageProd = () =>
 	products.base({
 		id: "usage",
@@ -57,10 +33,6 @@ const initLockCustomer = async ({ customerId }: { customerId: string }) => {
 	await deleteLock({ ctx: scenario.ctx, lockId: customerId });
 	return scenario;
 };
-
-// ─────────────────────────────────────────────────────────────────────────────
-// OB-1: omitted → reject (unchanged default). balance 20, lock 100 → allowed: false
-// ─────────────────────────────────────────────────────────────────────────────
 
 test.concurrent(
 	`${chalk.yellowBright("lock-overage OB-1: omitted defaults to reject — allowed false, nothing deducted")}`,
@@ -85,10 +57,6 @@ test.concurrent(
 	},
 );
 
-// ─────────────────────────────────────────────────────────────────────────────
-// OB-2: explicit reject behaves like OB-1
-// ─────────────────────────────────────────────────────────────────────────────
-
 test.concurrent(
 	`${chalk.yellowBright("lock-overage OB-2: explicit reject — allowed false, nothing deducted")}`,
 	async () => {
@@ -111,11 +79,6 @@ test.concurrent(
 		});
 	},
 );
-
-// ─────────────────────────────────────────────────────────────────────────────
-// OB-3: cap. balance 20, lock 100 → allowed: true, remaining 0.
-// confirm (no override) → lockValue is 20 (what was actually deducted), nothing more happens.
-// ─────────────────────────────────────────────────────────────────────────────
 
 test.concurrent(
 	`${chalk.yellowBright("lock-overage OB-3: cap — partial reservation, allowed true, confirm keeps 20")}`,
@@ -153,7 +116,6 @@ test.concurrent(
 			usage: 20,
 		});
 
-		// Event value is the requested amount, as with track under cap.
 		await expectCustomerEventsCorrect({
 			customerId,
 			events: [{ value: 100 }],
@@ -161,11 +123,6 @@ test.concurrent(
 		await expectLockReceiptDeleted({ ctx, lockId: customerId });
 	},
 );
-
-// ─────────────────────────────────────────────────────────────────────────────
-// OB-4: cap + finalize override above lock. balance 20, lock 5, confirm 50.
-// additional 45 runs under cap → clamps at 0 → remaining 0, usage 20.
-// ─────────────────────────────────────────────────────────────────────────────
 
 test.concurrent(
 	`${chalk.yellowBright("lock-overage OB-4: cap — finalize override above balance clamps at 0")}`,
@@ -195,7 +152,6 @@ test.concurrent(
 			usage: 20,
 		});
 
-		// lock 5, then additional 45 requested (only 15 fit; event keeps the request)
 		await expectCustomerEventsCorrect({
 			customerId,
 			events: [{ value: 45 }, { value: 5 }],
@@ -203,11 +159,6 @@ test.concurrent(
 		await expectLockReceiptDeleted({ ctx, lockId: customerId });
 	},
 );
-
-// ─────────────────────────────────────────────────────────────────────────────
-// OB-5: overflow. balance 20, lock 100 → allowed: true, balance -80 (usage 100).
-// confirm (no override) → unchanged.
-// ─────────────────────────────────────────────────────────────────────────────
 
 test.concurrent(
 	`${chalk.yellowBright("lock-overage OB-5: overflow — full reservation goes negative, allowed true")}`,
@@ -257,11 +208,6 @@ test.concurrent(
 	},
 );
 
-// ─────────────────────────────────────────────────────────────────────────────
-// OB-6: overflow + finalize override above lock. balance 20, lock 30, confirm 80.
-// additional 50 must also overflow (mode read from receipt, not from finalize).
-// ─────────────────────────────────────────────────────────────────────────────
-
 test.concurrent(
 	`${chalk.yellowBright("lock-overage OB-6: overflow — finalize override above lock keeps overflowing")}`,
 	async () => {
@@ -302,10 +248,6 @@ test.concurrent(
 	},
 );
 
-// ─────────────────────────────────────────────────────────────────────────────
-// OB-7: overflow + release. balance 20, lock 100 → -80. release → back to 20.
-// ─────────────────────────────────────────────────────────────────────────────
-
 test.concurrent(
 	`${chalk.yellowBright("lock-overage OB-7: overflow — release refunds the full negative lock")}`,
 	async () => {
@@ -338,11 +280,6 @@ test.concurrent(
 		await expectLockReceiptDeleted({ ctx, lockId: customerId });
 	},
 );
-
-// ─────────────────────────────────────────────────────────────────────────────
-// OB-8: overflow + confirm with smaller override. lock 100 (→ -80), confirm 50.
-// Unwind 50 → usage 50, remaining 0.
-// ─────────────────────────────────────────────────────────────────────────────
 
 test.concurrent(
 	`${chalk.yellowBright("lock-overage OB-8: overflow — confirm below lock unwinds the difference")}`,
@@ -382,12 +319,6 @@ test.concurrent(
 		await expectLockReceiptDeleted({ ctx, lockId: customerId });
 	},
 );
-
-// ─────────────────────────────────────────────────────────────────────────────
-// OB-9: overflow still honours the spend limit.
-// usage-based: 20 included @ $1/unit, spend limit $30 → max 50 units.
-// lock 100 → clamped to 50 (allowed true, partial), then confirm.
-// ─────────────────────────────────────────────────────────────────────────────
 
 test.concurrent(
 	`${chalk.yellowBright("lock-overage OB-9: overflow — spend limit still clamps the reservation")}`,
@@ -438,12 +369,6 @@ test.concurrent(
 		await expectLockReceiptDeleted({ ctx, lockId: customerId });
 	},
 );
-
-// ─────────────────────────────────────────────────────────────────────────────
-// OB-10: Postgres path (skip_cache). The receipt is written by saveLockReceiptV2
-// instead of Lua, so the mode must survive that writer too.
-// balance 20, lock 30 overflow → -10, confirm 80 → additional 50 → usage 80.
-// ─────────────────────────────────────────────────────────────────────────────
 
 test.concurrent(
 	`${chalk.yellowBright("lock-overage OB-10: overflow — Postgres path persists the mode on the receipt")}`,

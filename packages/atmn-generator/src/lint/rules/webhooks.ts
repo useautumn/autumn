@@ -1,7 +1,6 @@
 import type { LintRule } from "../runtime/lintDocument";
 import { notMap, rejects, uniformPrefix, unique } from "./define";
 
-/** The name `lintDocument` receives the shared URL guard under. */
 export const LOCAL_URL_CHECK = "isLocalWebhookUrl";
 
 export const webhookRules: LintRule[] = [

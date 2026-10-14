@@ -1,8 +1,3 @@
-/**
- * Every plan row and every `variants[]` entry states versionSlug. A missing
- * slug is `versionSlug is required`, not an implicit v1.
- */
-
 import { expect, test } from "bun:test";
 import { LINT_REGISTRY } from "../src/lint/rules/registry";
 import {
@@ -20,7 +15,6 @@ const rules: LintRules = {
 
 type PlanFixture = Record<string, unknown>;
 
-/** One `plans` array: the live rows carry `active: true`, the rest `active: false`. */
 const stated = ({
 	live,
 	history = [],

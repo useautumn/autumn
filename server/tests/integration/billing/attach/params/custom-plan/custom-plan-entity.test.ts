@@ -1,15 +1,3 @@
-/**
- * Custom Plan Entity Tests (Attach V2)
- *
- * Tests for the `items` parameter in billing.attach when attaching products
- * at the entity level with custom configuration.
- *
- * Key behaviors:
- * - Entity with custom price
- * - Entity upgrade/downgrade inversion via custom price
- * - Entity add-on with custom config
- */
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3, ApiEntityV0 } from "@autumn/shared";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
@@ -30,21 +18,6 @@ import chalk from "chalk";
 import { addMonths } from "date-fns";
 import { timeout } from "@/utils/genUtils";
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// ENTITY-LEVEL CUSTOM PLAN
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Test 1: Entity with custom price
- *
- * Scenario:
- * - Entity attaches Pro product ($20 base)
- * - Attach with custom price $25
- *
- * Expected:
- * - Entity charged $25
- * - Customer unaffected
- */
 test.concurrent(`${chalk.yellowBright("custom-plan-entity 1: entity with custom price")}`, async () => {
 	const customerId = "custom-plan-entity-custom-price";
 
@@ -64,7 +37,6 @@ test.concurrent(`${chalk.yellowBright("custom-plan-entity 1: entity with custom 
 
 	const entityId = entities[0].id;
 
-	// Attach with custom price $25
 	const customPrice = items.monthlyPrice({ price: 25 });
 
 	const preview = await autumnV1.billing.previewAttach({
@@ -111,17 +83,6 @@ test.concurrent(`${chalk.yellowBright("custom-plan-entity 1: entity with custom 
 	});
 });
 
-/**
- * Test 2: Entity upgrade becomes downgrade via custom price
- *
- * Scenario:
- * - Entity on Pro ($20/mo)
- * - Attach Premium ($50/mo base) with custom price $15/mo
- *
- * Expected:
- * - Treated as downgrade (scheduled)
- * - Pro canceling, Premium scheduled
- */
 test.concurrent(`${chalk.yellowBright("custom-plan-entity 2: entity upgrade becomes downgrade via custom price")}`, async () => {
 	const customerId = "custom-plan-entity-upgrade-to-downgrade";
 
@@ -147,14 +108,12 @@ test.concurrent(`${chalk.yellowBright("custom-plan-entity 2: entity upgrade beco
 
 	const entityId = entities[0].id;
 
-	// Verify entity is on Pro
 	const entityBefore = await autumnV1.entities.get<ApiEntityV0>(
 		customerId,
 		entityId,
 	);
 	await expectProductActive({ customer: entityBefore, productId: pro.id });
 
-	// Attach Premium with custom price $15 (lower than Pro's $20)
 	const lowerPrice = items.monthlyPrice({ price: 15 });
 
 	const preview = await autumnV1.billing.previewAttach({
@@ -164,7 +123,6 @@ test.concurrent(`${chalk.yellowBright("custom-plan-entity 2: entity upgrade beco
 		items: [messagesItem, lowerPrice],
 	});
 
-	// Should be scheduled (downgrade), no immediate charge
 	expect(preview.total).toBe(0);
 	expectPreviewNextCycleCorrect({
 		preview,
@@ -182,7 +140,6 @@ test.concurrent(`${chalk.yellowBright("custom-plan-entity 2: entity upgrade beco
 
 	const entity = await autumnV1.entities.get<ApiEntityV0>(customerId, entityId);
 
-	// Pro should be canceling, Premium should be scheduled
 	await expectProductCanceling({ customer: entity, productId: pro.id });
 	await expectProductScheduled({
 		customer: entity,
@@ -190,7 +147,6 @@ test.concurrent(`${chalk.yellowBright("custom-plan-entity 2: entity upgrade beco
 		startsAt: addMonths(advancedTo, 1).getTime(),
 	});
 
-	// Only initial Pro invoice
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	await expectCustomerInvoiceCorrect({
 		customer,
@@ -206,24 +162,12 @@ test.concurrent(`${chalk.yellowBright("custom-plan-entity 2: entity upgrade beco
 	});
 });
 
-/**
- * Test 3: Entity add-on with custom config
- *
- * Scenario:
- * - Entity on Pro ($20/mo)
- * - Attach free add-on with custom price $5/mo
- *
- * Expected:
- * - Entity charged $5 for add-on
- * - Both Pro and add-on active on entity
- */
 test.concurrent(`${chalk.yellowBright("custom-plan-entity 3: entity addon with custom config")}`, async () => {
 	const customerId = "custom-plan-entity-addon";
 
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
 	const pro = products.pro({ id: "pro", items: [messagesItem] });
 
-	// Free add-on
 	const wordsItem = items.monthlyWords({ includedUsage: 200 });
 	const addon = products.base({
 		id: "addon",
@@ -243,14 +187,12 @@ test.concurrent(`${chalk.yellowBright("custom-plan-entity 3: entity addon with c
 
 	const entityId = entities[0].id;
 
-	// Verify entity is on Pro
 	const entityBefore = await autumnV1.entities.get<ApiEntityV0>(
 		customerId,
 		entityId,
 	);
 	await expectProductActive({ customer: entityBefore, productId: pro.id });
 
-	// Attach free add-on with custom price $5/mo
 	const addonPrice = items.monthlyPrice({ price: 5 });
 
 	const preview = await autumnV1.billing.previewAttach({
@@ -274,13 +216,11 @@ test.concurrent(`${chalk.yellowBright("custom-plan-entity 3: entity addon with c
 
 	const entity = await autumnV1.entities.get<ApiEntityV0>(customerId, entityId);
 
-	// Both Pro and add-on active on entity
 	await expectCustomerProducts({
 		customer: entity,
 		active: [pro.id, addon.id],
 	});
 
-	// Messages from Pro
 	expectCustomerFeatureCorrect({
 		customer: entity,
 		featureId: TestFeature.Messages,
@@ -289,7 +229,6 @@ test.concurrent(`${chalk.yellowBright("custom-plan-entity 3: entity addon with c
 		usage: 0,
 	});
 
-	// Words from add-on
 	expectCustomerFeatureCorrect({
 		customer: entity,
 		featureId: TestFeature.Words,
@@ -298,7 +237,6 @@ test.concurrent(`${chalk.yellowBright("custom-plan-entity 3: entity addon with c
 		usage: 0,
 	});
 
-	// 2 invoices: Pro ($20) + add-on ($5)
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	await expectCustomerInvoiceCorrect({
 		customer,

@@ -8,14 +8,9 @@ export const SHARED_DIR = join(PROJECT_ROOT, "shared");
 
 export const REGISTRY_PATH = join(homedir(), ".autumn-worktrees.json");
 export const MAX_WORKTREE = 50;
-// Allowlist for branches the helpers in this directory are willing to
-// create/delete. dw worktree branches use `dw-wt-<N>-<hash>`; capy sandbox
-// branches use `capy-<hash>` (scripts/capy/provision.ts). Anything else is
-// rejected to avoid clobbering production / staff branches.
 export const BRANCH_NAME_RE = /^(?:dw-wt-\d+|capy)-[a-f0-9]+$/;
 export const INACTIVITY_MS = 7 * 24 * 60 * 60 * 1000;
 
-/** Cloud / agent-services local Postgres. Never inherit Infisical DATABASE_URL. */
 export const LOCAL_DATABASE_URL =
 	"postgresql://postgres:postgres@localhost:5432/autumn";
 

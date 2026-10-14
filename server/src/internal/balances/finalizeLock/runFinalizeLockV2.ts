@@ -29,12 +29,6 @@ const isBalanceRejection = (error: unknown): boolean => {
 	);
 };
 
-/**
- * V2 finalize. Receives the receipt + claim outcome from the dispatcher
- * (`fetchAndClaimLockReceiptV2` runs pipelined GET + SET NX alongside the
- * V1 JSON.GET). Claim is encoded by ownership of the `<receiptKey>:claim`
- * marker key; `claimed === false` means another finalizer holds it.
- */
 export const runFinalizeLockV2 = async ({
 	ctx,
 	params,
@@ -76,7 +70,6 @@ export const runFinalizeLockV2 = async ({
 	} catch (error) {
 		if (!isBalanceRejection(error)) throw error;
 		await releaseLockClaimMarker({ ctx, lockId: params.lock_id });
-		// The caller's refusal, not a 500: the lock stays open for a finalize that fits.
 		if (error instanceof InsufficientBalanceError) throw error;
 		throw new InsufficientBalanceError({
 			value: new Decimal(finalValue).toNumber(),

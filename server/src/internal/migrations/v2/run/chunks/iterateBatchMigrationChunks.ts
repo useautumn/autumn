@@ -7,13 +7,10 @@ export type BatchMigrationChunkRunner = (args: {
 
 export type BatchMigrationChunksResult = {
 	processed: number;
-	/** Pages executed across every chunk. */
 	pages: number;
 	canceled: boolean;
 };
 
-/** Drives budgeted batch chunks (each runs up to maxPages then yields with
- * slice_complete + cursor) until the filter is exhausted or canceled. */
 export const iterateBatchMigrationChunks = async ({
 	runChunk,
 }: {

@@ -20,7 +20,6 @@ import { checkEntitledOnProduct } from "./trackLegacyUtils.js";
 
 const testCase = "trackLegacy3";
 
-// Pro product - matches global products.pro
 const pro = constructProduct({
 	type: "pro",
 	items: [
@@ -40,7 +39,6 @@ const pro = constructProduct({
 	],
 });
 
-// One-time add-on product - matches global products.oneTimeAddOnMetered1
 const oneTimeAddOnMetered1 = constructRawProduct({
 	id: "one-time-add-on-metered-1",
 	isAddOn: true,
@@ -60,7 +58,7 @@ describe(`${chalk.yellowBright(
 	const customerId = testCase;
 
 	let curAllowance = 0;
-	const oneTimeBillingUnits = 100; // From oneTimeAddOnMetered1 prepaid item
+	const oneTimeBillingUnits = 100;
 	const oneTimeQuantity = 2 * oneTimeBillingUnits;
 	const autumn: AutumnInt = new AutumnInt({ version: ApiVersion.V1_2 });
 
@@ -87,7 +85,7 @@ describe(`${chalk.yellowBright(
 			productId: pro.id,
 		});
 
-		await autumn.customers.get(customerId); // set cache
+		await autumn.customers.get(customerId);
 	});
 
 	test("should have correct entitlements (pro)", async () => {
@@ -120,12 +118,10 @@ describe(`${chalk.yellowBright(
 			],
 		});
 
-		await autumn.customers.get(customerId); // set cache
+		await autumn.customers.get(customerId);
 	});
 
 	test("should have correct entitlements (one time top up)", async () => {
-		// const oneTimeAmt = oneTimeBillingUnits * oneTimeQuantity;
-
 		await checkEntitledOnProduct({
 			customerId: customerId,
 			product: oneTimeAddOnMetered1,

@@ -20,7 +20,6 @@ export const deleteLeftoverCarryPlans = async (planIds: string[]) => {
 	await deleteVariantTestPlans({ rpc, planIds });
 };
 
-/** Base(consumable messages) + one variant, external sub on the base. */
 export const setupConsumableFamilyOnBase = async ({
 	customerId,
 	baseId,

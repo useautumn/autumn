@@ -1,5 +1,3 @@
-/** Resync rejects a past anchor, a backdated trial start, and a live-subscription anchor after the next phase. */
-
 import { test } from "bun:test";
 import {
 	FreeTrialDuration,

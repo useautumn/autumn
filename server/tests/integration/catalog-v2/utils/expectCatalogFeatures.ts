@@ -20,7 +20,6 @@ type ExpectedDbFeature = {
 const listDbFeatures = ({ ctx }: { ctx: AutumnContext }) =>
 	FeatureService.list({ db: ctx.db, orgId: ctx.org.id, env: ctx.env });
 
-/** Optional fields are asserted only when passed. */
 export const expectDbFeaturesCorrect = async ({
 	ctx,
 	expected,
@@ -70,7 +69,6 @@ export const expectDbFeaturesAbsent = async ({
 	}
 };
 
-/** Idempotent — skips ids that don't exist, so it doubles as leftover-state cleanup. */
 export const deleteDbFeatures = async ({
 	ctx,
 	featureIds,
@@ -90,8 +88,6 @@ export const deleteDbFeatures = async ({
 		});
 		deleted = true;
 	}
-	// Direct DB writes bypass the org features cache — clear it so the next
-	// request's ctx.features doesn't resurrect the deleted rows.
 	if (deleted) {
 		await clearOrgCache({ db: ctx.db, orgId: ctx.org.id, env: ctx.env });
 	}

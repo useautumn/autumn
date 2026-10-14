@@ -1,4 +1,3 @@
-/** A request's stable slot in [0, 100): what a percentage ramp is measured against. */
 export const getRequestBucket = ({
 	requestId,
 }: {

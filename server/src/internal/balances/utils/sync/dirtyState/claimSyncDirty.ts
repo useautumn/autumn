@@ -6,8 +6,6 @@ import type { UsageWindowUpdate } from "../../types/usageWindowUpdate.js";
 import { DIRTY_FIELD_PREFIXES } from "./markSyncDirty.js";
 import { buildSyncDirtyKeys, type SyncDirtyScope } from "./syncDirtyKeys.js";
 
-/** Claim survives this long if its worker dies mid-flush; the next claim
- *  (message redelivery) merges it back in. */
 const CLAIM_TTL_SECONDS = 24 * 60 * 60;
 
 export interface ClaimedSyncState {
@@ -18,9 +16,6 @@ export interface ClaimedSyncState {
 	entityId?: string;
 	generation: string;
 }
-
-// A leftover claim merges markers and keeps the newest uw:* timestamp. The new
-// generation takes ownership, and clearing the signal lets later writes re-signal.
 
 const decodeClaimFields = (flat: string[]): ClaimedSyncState => {
 	const state: ClaimedSyncState = {
@@ -74,12 +69,6 @@ const decodeClaimFields = (flat: string[]): ClaimedSyncState => {
 	return state;
 };
 
-/**
- * Atomically claims the customer's dirty state for a drain. Returns null when
- * there is nothing to sync (already drained, or Redis lost the state — either
- * way the signal is a safe no-op). The claim key persists until clearSyncClaim
- * so a worker crash before the Postgres flush is recoverable on redelivery.
- */
 export const claimSyncDirty = async ({
 	redis,
 	scope,
@@ -103,7 +92,6 @@ export const claimSyncDirty = async ({
 	return decodeClaimFields(result);
 };
 
-/** Deletes the owned claim after a successful Postgres flush. */
 export const clearSyncClaim = async ({
 	redis,
 	scope,

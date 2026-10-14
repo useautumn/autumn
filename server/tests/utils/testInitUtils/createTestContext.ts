@@ -26,9 +26,6 @@ import { generateId } from "../../../src/utils/genUtils.js";
 
 const DEFAULT_ENV = AppEnv.Sandbox;
 
-// Retry transient DB/network failures during worker preload. Many workers
-// open pools simultaneously, occasionally tripping connection limits or
-// cold-start blips against PlanetScale.
 const withRetry = async <T>(
 	fn: () => Promise<T>,
 	{ label }: { label: string },
@@ -68,7 +65,6 @@ export interface TestContext extends AutumnContext {
 export const createTestContext = async () => {
 	const { db } = initDrizzle();
 
-	// TESTS_ORG is set by the test runner (per parallel group).
 	const orgSlug = process.env.TESTS_ORG;
 	if (!orgSlug) {
 		throw new Error(
@@ -94,7 +90,6 @@ export const createTestContext = async () => {
 		{ label: "FeatureService.list" },
 	);
 
-	// Org secret key, set by test runner.
 	const orgSecretKey = process.env.UNIT_TEST_AUTUMN_SECRET_KEY || "";
 	if (!orgSecretKey) {
 		throw new Error(
@@ -127,15 +122,6 @@ export const createTestContext = async () => {
 	} satisfies TestContext;
 };
 
-/**
- * Lazy default export. The real TestContext is built once by the preload
- * (`setup-integration-tests.ts`) and stashed on `globalThis`. The Proxy
- * defers the lookup until first property access, sidestepping the
- * import-order race (preload imports this module before populating the
- * stash) and the top-level-await TDZ from a prior implementation.
- *
- * Unit tests that hit this throw a clear "preload did not run" error.
- */
 const lazyDefaultCtx = new Proxy({} as TestContext, {
 	get(_target, prop, _receiver) {
 		const ctx = (globalThis as { __autumnTestContext?: TestContext | null })

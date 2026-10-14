@@ -1,6 +1,3 @@
-// A phase reset must survive classification when it only starts a product.
-// The preview uses this metadata to charge the incoming product from phase start.
-
 import { expect, test } from "bun:test";
 import {
 	type BillingContext,
@@ -55,9 +52,6 @@ test("scheduled start carries its second-normalized phase anchor reset", () => {
 	});
 });
 
-// A scheduled switch landing exactly on the renewal boundary is still a product
-// transition. Classifying it as a renewal drops the incoming plan's line items,
-// because only the renewal path filters them to the boundary's billing period.
 test("scheduled switch on the renewal boundary classifies as a scheduled change", () => {
 	const boundaryMs = Date.UTC(2026, 9, 21, 22, 40, 2);
 	const outgoingMonthly = customerProduct({

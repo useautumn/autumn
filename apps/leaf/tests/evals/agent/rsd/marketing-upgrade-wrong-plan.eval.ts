@@ -10,10 +10,6 @@ type EvalMetadata = {
 
 const experimentName = "rsd-marketing-upgrade-wrong-plan";
 
-// Replays a live incident: "upgrade their marketing product to 700K contacts
-// for $1900/mo" for a customer on custom Enterprise + transactional. The
-// failure was an updateSubscription on Enterprise (wrong product, prorations
-// dropped) instead of a customized Marketing attach.
 const setup = incidentSetup();
 
 const customer = setup.refs.customers.sender;

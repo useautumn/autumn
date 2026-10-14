@@ -45,8 +45,6 @@ export const BENCH_PLANDEL_ENTITLEMENT_PREFIX =
 
 const APPROX_MONTH_MS = 30 * 24 * 60 * 60 * 1000;
 
-/** Isolated catalog plan so a delete/replace never consumes the shared
- * seedBatchBench rows the other benches treat as baseline. */
 export const ensureBenchPlanItemProduct = async ({
 	db,
 	orgId,
@@ -145,8 +143,6 @@ export const ensureBenchPlanDeleteProduct = ({
 		name: "Bench Plan Delete",
 	});
 
-/** Own prefixes rather than the shared seedBatchBench dataset: a delete or
- * replace bench mutates the rows it measures, so it must re-seed freely. */
 export const seedBenchPlanItems = async ({
 	db,
 	count,

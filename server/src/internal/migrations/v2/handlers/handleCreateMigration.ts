@@ -12,7 +12,6 @@ const CreateMigrationBody = z.object({
 	no_billing_changes: z.boolean().optional(),
 });
 
-/** POST /migrations.create — create a draft migration. */
 export const handleCreateMigration = createRoute({
 	scopes: [Scopes.Migrations.Write],
 	body: CreateMigrationBody,

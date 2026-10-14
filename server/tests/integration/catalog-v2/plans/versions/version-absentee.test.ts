@@ -1,14 +1,3 @@
-/**
- * catalogV2.update — skip_version_deletions: false removes a stated plan's
- * versions the payload does not state.
- *
- * Contract:
- *   V1  v1 + v2 exist, v2 active; payload states v2 only with
- *       skip_version_deletions: false → v1 is no longer a live version
- *   V2  the same with a customer on v1 → reject; versions cannot archive alone
- *   V3  the same payload without the flag → v1 untouched
- */
-
 import { expect, test } from "bun:test";
 import { ErrCode } from "@autumn/shared";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils.js";

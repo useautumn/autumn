@@ -26,11 +26,6 @@ export const canonicalizeOAuthResource = (
 	return `${url.protocol}//${url.host}${trimTrailingSlash(url.pathname)}${url.search}`;
 };
 
-/**
- * A null audience means the token request named no resource, which older
- * MCP-spec clients never do; those grants stay usable everywhere. A stamped
- * grant is only usable at the exact resource it names.
- */
 export const oauthAudienceAllowsResource = ({
 	grantResource,
 	resourceUrl,
@@ -56,7 +51,6 @@ export const getProtectedResourceMetadataUrl = ({
 	return new URL(`/.well-known/oauth-protected-resource${path}`, url).href;
 };
 
-/** RFC 6750 §3 challenge; `scopes` become the space-delimited `scope` param. */
 export const getWwwAuthenticateHeader = ({
 	error,
 	resourceMetadataUrl,

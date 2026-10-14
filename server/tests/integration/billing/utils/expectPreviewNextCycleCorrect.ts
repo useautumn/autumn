@@ -3,13 +3,6 @@ import { type BillingPreviewResponse, formatMs } from "@autumn/shared";
 
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 
-/**
- * Verify a billing preview's next_cycle field has the expected values.
- * Used to check when trial ends and what charge will be.
- *
- * @param startsAt - Expected starts_at as absolute Unix timestamp (ms).
- *                   Use `advancedTo + ms.days(X)` for test clock scenarios.
- */
 export const expectPreviewNextCycleCorrect = ({
 	preview,
 	expectDefined = true,
@@ -18,13 +11,9 @@ export const expectPreviewNextCycleCorrect = ({
 	toleranceMs = ONE_DAY_MS,
 }: {
 	preview: Pick<BillingPreviewResponse, "next_cycle">;
-	/** Whether next_cycle should be defined (default: true) */
 	expectDefined?: boolean;
-	/** Expected starts_at as absolute Unix timestamp (ms) */
 	startsAt?: number;
-	/** Expected total amount (in dollars) */
 	total?: number;
-	/** Tolerance in ms (default: 1 day) */
 	toleranceMs?: number;
 }) => {
 	if (!expectDefined) {

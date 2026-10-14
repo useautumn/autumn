@@ -4,7 +4,6 @@ import type { AtomContext } from "../../atomRecords/types/atomContext.js";
 import { getAtomDeployer } from "../../deployers/getAtomDeployer.js";
 import { cacheDeploymentRepo } from "../../repos/cacheDeploymentRepo.js";
 
-/** An org's Atom for the shared lifecycle: the server's deployer, and the `atom_deployments` row following its group. */
 export const cacheDeploymentAtomContext = ({
 	ctx,
 	deploymentGroupId,

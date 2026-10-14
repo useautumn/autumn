@@ -25,11 +25,9 @@ type Row = WorkerFullCustomerEntitlementWithProduct;
 
 export type RecalculateBalanceDecision = {
 	result: RecalculateBalanceResult;
-	/** Null when nothing moves: no scope had both an overdrawn grant and one to absorb it. */
 	mutation: SubjectStateMutation | null;
 };
 
-/** A row as the changes leave it: a reset replaces its balances, the redraw adds onto them. */
 const rowAfter = ({
 	row,
 	changes,
@@ -48,7 +46,6 @@ const rowAfter = ({
 	return current;
 };
 
-/** Legacy `recalculateBalance`: every recalculable owner's grants reset and their usage redrawn, in one mutation. */
 export const computeRecalculateBalance = ({
 	fullSubject,
 	command,

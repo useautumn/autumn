@@ -11,14 +11,12 @@ import type { CustomerExportRowStreamFactory } from "./customerExportProducers.j
 import { mapStreamWithConcurrency } from "./mapStreamWithConcurrency.js";
 import { walkCustomerExportPages } from "./walkCustomerExportPages.js";
 
-/** Each customer is one full-customer read; the replica pool, not CPU, bounds throughput. */
 const CUSTOM_PLANS_EXPORT_CONCURRENCY = 16;
 
 export const createCustomPlansExportRowStream: CustomerExportRowStreamFactory<
 	CustomPlansExportSpec
 > = ({ ctx, snapshot, population, onPageProcessed }) => {
 	const baseProducts: BaseProductCache = new Map();
-	// Apply runs stay on the primary so compare-and-set judges current rows.
 	const rowsCtx = snapshot.apply ? ctx : { ...ctx, db: dbReplica ?? ctx.db };
 
 	const exportRows = async function* (): AsyncGenerator<CustomPlansExportRow> {

@@ -1,9 +1,3 @@
-/**
- * atmn crud/licenses — customize on the link — EXPECTED FAIL: server diff drops it, `enterprise@v1` churns on every pull (server bug)
- *
- * One line of plans/atmn-v3/07_tests.md. [a, b] is a matrix looped INSIDE this file.
- */
-
 import { expect, test } from "bun:test";
 import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 import {
@@ -43,9 +37,6 @@ test.concurrent("customize on a license link round-trips", async () => {
 	});
 
 	try {
-		// Decision pending: the server's diff currently drops `customize` on a
-		// license link, so `enterprise` never previews clean after a pull — this
-		// asserts the intended behavior (a clean round trip) on purpose.
 		const { freshWire } = await expectRoundTrip({ scenario });
 
 		const plans = freshWire.plans as Array<Record<string, unknown>>;

@@ -2,7 +2,6 @@ import { rewardRedemptions } from "@autumn/shared";
 import { and, count, eq, isNull } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 
-/** Count redemptions for a specific promo code on a reward */
 export const getPromoCodeRedemptionCount = async ({
 	db,
 	rewardInternalId,

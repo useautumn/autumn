@@ -47,7 +47,6 @@ function SkeletonPricingRow({ index }: { index: number }) {
 	);
 }
 
-/** Pricing tables shaped like the form's phases, one row per chosen plan, held while a preview loads. */
 export function ReviewPricingTableSkeleton({
 	phases,
 }: {

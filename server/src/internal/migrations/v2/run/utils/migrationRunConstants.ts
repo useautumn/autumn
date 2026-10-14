@@ -1,13 +1,10 @@
 import type { MigrationRunScheduler } from "../types/migrationRunScheduler.js";
 
-/** Hard kill-switch for the lazy migration path (API, request-path enqueue,
- * and the per-customer lazy task). Flip to re-enable. */
 export const LAZY_MIGRATION_RUNS_DISABLED = true;
 
 /** The migration pool in @autumn/postgres sizes itself from the same variable: two connections per customer. */
 export const MIGRATION_RUN_CUSTOMER_CONCURRENCY =
 	Number(process.env.MIGRATION_RUN_CUSTOMER_CONCURRENCY) || 50;
-/** Client-side per-statement deadline. Never a pool statement_timeout: PgBouncer rejects that startup parameter (08P01). */
 export const MIGRATION_DB_QUERY_DEADLINE_MS = 75_000;
 export const MIGRATION_CHUNK_FETCH_SIZE = 100;
 export const MIGRATION_SLICE_DURATION_MS = 10_000;

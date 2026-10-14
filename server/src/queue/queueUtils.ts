@@ -68,8 +68,6 @@ export interface Payloads {
 		apiVersion: ApiVersion;
 		body: TrackParams;
 		tokens?: TokenDeduction;
-		/** False when the sync request path already claimed the body
-		 *  idempotency key at accept time — the worker must not re-claim. */
 		validateTrackBodyIdempotencyKey?: boolean;
 	};
 	[JobName.UpdateBalance]: {
@@ -136,15 +134,11 @@ const globalPrimarySqsSendBatcher =
 		sendBatch: sendSqsMessagesBatch,
 	});
 
-// Separate accumulator for the async-track firehose so its bursts can't
-// head-of-line-block primary-queue jobs (and vice versa).
 const globalAsyncTrackSqsSendBatcher =
 	new SqsBatchAccumulator<PrimarySqsQueueEntry>({
 		sendBatch: sendSqsMessagesBatch,
 	});
 
-/** Batched queues: the primary job queue and the async-track queue. Other
- *  queue URLs send one message per call. */
 const resolveSqsSendBatcher = (queueUrl: string) => {
 	if (queueUrl === process.env.SQS_QUEUE_URL_V2) {
 		return globalPrimarySqsSendBatcher;
@@ -167,9 +161,6 @@ export const shutdownSqsSendBatchers = (): Promise<void> =>
 		globalAsyncTrackSqsSendBatcher.shutdown(),
 	]).then(() => undefined);
 
-/**
- * Add a task to the queue (auto-detects SQS or BullMQ)
- */
 export const addTaskToQueue = async <T extends keyof Payloads>({
 	jobName,
 	payload,
@@ -187,7 +178,6 @@ export const addTaskToQueue = async <T extends keyof Payloads>({
 	delayMs?: number;
 	queueUrl?: string;
 }) => {
-	// TW-only queue isolation; leave BALANCE_SYNC_SQS_QUEUE_URL unset outside test workers.
 	const isBalanceSync =
 		jobName === JobName.SyncBalanceBatchV4 ||
 		jobName === JobName.SyncCustomerDirty;
@@ -199,7 +189,6 @@ export const addTaskToQueue = async <T extends keyof Payloads>({
 	if (resolvedQueueUrl) {
 		const sqsClient = getSqsClient({ queueUrl: resolvedQueueUrl });
 
-		// SQS implementation
 		const isFifoQueue = resolvedQueueUrl.endsWith(".fifo");
 		const messageId =
 			generateDeduplicationId === false ? undefined : generateId("job");
@@ -222,7 +211,6 @@ export const addTaskToQueue = async <T extends keyof Payloads>({
 			QueueUrl: resolvedQueueUrl,
 			MessageBody: JSON.stringify(message),
 			...(delaySeconds && { DelaySeconds: delaySeconds }),
-			// FIFO queues require MessageGroupId. Content-based deduplication uses the body.
 			...(isFifoQueue && {
 				MessageGroupId: messageGroupId || generateId("msg"),
 				MessageDeduplicationId: resolvedMessageDeduplicationId,

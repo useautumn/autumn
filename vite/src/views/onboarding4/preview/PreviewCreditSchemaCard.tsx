@@ -9,9 +9,6 @@ interface PreviewCreditSchemaCardProps {
 	isChanged?: boolean;
 }
 
-/**
- * Displays a card showing how a credit system maps to underlying metered features
- */
 export function PreviewCreditSchemaCard({
 	creditFeature,
 	allFeatures,

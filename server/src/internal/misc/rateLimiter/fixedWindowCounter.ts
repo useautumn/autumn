@@ -15,7 +15,6 @@ const redisCounter = (): FixedWindowCounter => ({
 	},
 });
 
-/** Counts one hit on `hrl:{key}:{windowStart}` and returns the window's hits so far. */
 export const incrementFixedWindow = ({
 	key,
 	windowMs,

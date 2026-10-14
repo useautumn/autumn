@@ -18,7 +18,6 @@ export const getTwStripeRequestDeadline = () =>
 
 export const TW_TEST_FILE_HEADER = "x-tw-test-file";
 
-/** Test processes are tagged by env; server requests inherit the tag of the test call that caused them. */
 export const getTwStripeFileTag = (): string | undefined =>
 	requestContext?.getStore()?.fileTag ?? process.env.TW_TEST_FILE;
 

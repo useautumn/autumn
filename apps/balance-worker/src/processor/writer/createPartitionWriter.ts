@@ -78,7 +78,6 @@ export function createPartitionWriter({
 
 	function dispose(): void {
 		budgetShare?.leave();
-		// Terminal: an ack landing after this settles no caller as committed, so callers and the sink agree.
 		const error = new PartitionWriterDisposedError();
 		scope.state.recoveryError ??= error;
 		rejectAllPending({
@@ -192,9 +191,7 @@ export function createPartitionWriter({
 		return snapshotAllStored({ state: scope.state });
 	}
 
-	/** The append in flight and every batch handed to the store so far, applied or failed; never rejects. */
 	async function waitForApplies(): Promise<void> {
-		// A waiter on everything handed out keeps the apply from lingering while the partition drains.
 		awaitStored({ state: scope.state, seq: scope.state.lastSeq }).catch(
 			() => undefined,
 		);
@@ -239,7 +236,6 @@ function validateWriterConfig(config: PartitionWriterConfig): void {
 	}
 }
 
-/** The map's evict hook: a synchronous enqueue onto the partition's lane, never awaited by a request. */
 function evictDeleteOf({
 	ctx,
 	config,

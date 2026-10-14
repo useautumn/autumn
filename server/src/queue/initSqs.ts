@@ -4,9 +4,6 @@ import {
 	extractRegionFromQueueUrl,
 } from "@/external/aws/awsRegionUtils.js";
 
-// ============ FIFO Queue (primary) ============
-
-/** Returns a base endpoint URL if the queue URL points to a non-AWS host (e.g. the local fakecloud emulator). */
 export const extractLocalEndpoint = ({
 	queueUrl,
 }: {
@@ -56,7 +53,6 @@ sqsClientsByCacheKey.set(getSqsClientCacheKey(), sqsClient);
 
 export const sqs = sqsClient;
 
-/** Recreates the SQS client with fresh connections */
 export const recreateSqsClient = ({
 	queueUrl,
 }: {
@@ -77,7 +73,6 @@ export const recreateSqsClient = ({
 	return nextClient;
 };
 
-/** Get the current SQS client (use this instead of direct sqs export for refreshable access) */
 export const getSqsClient = ({
 	queueUrl,
 }: {

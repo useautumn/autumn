@@ -182,8 +182,6 @@ test.concurrent(
 
 		const byId = (a: ApiEntityV2, b: ApiEntityV2): number =>
 			(a.id ?? "").localeCompare(b.id ?? "");
-		// entities.list omits `invoices` (handleListEntitiesV2.ts); entities.get
-		// returns `invoices: []`. Strip from both sides before deep-equal.
 		const stripInvoices = ({ invoices: _, ...rest }: ApiEntityV2) => rest;
 		const sortedList = [...listResponse.list].sort(byId).map(stripInvoices);
 		const sortedGets = [...perEntityResponses].sort(byId).map(stripInvoices);

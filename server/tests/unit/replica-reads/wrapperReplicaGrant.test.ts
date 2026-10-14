@@ -4,8 +4,6 @@ import type { SubjectReadFrom } from "@/db/resolveSubjectReadDb.js";
 
 import { mockModuleWithRestore } from "../utils/mockModuleWithRestore.js";
 
-// Captures what readFrom each wrapper hands the cache action — the whole
-// replica-grant contract lives in that one argument.
 const captured: { readFrom?: SubjectReadFrom }[] = [];
 const fakeSubject = { customer: { id: "cus_grant" } } as unknown as FullSubject;
 
@@ -19,7 +17,6 @@ await mockModuleWithRestore(
 	}),
 );
 
-// These cover the Postgres read; the balance worker path has its own tests.
 await mockModuleWithRestore(
 	"@/internal/misc/rollouts/isBalanceWorkerRolloutEnabled.js",
 	() => ({ isBalanceWorkerRolloutEnabled: () => false }),

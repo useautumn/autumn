@@ -1,5 +1,3 @@
-/** Customers in each state set_plans' phases[0].starts_at handles, for hand QA of future starts, early access and backdates. */
-
 import { test } from "bun:test";
 import { ms } from "@autumn/shared";
 import { initLiveProScenario } from "@tests/integration/billing/set-plans/starts-at/backdate-live/utils/backdateLiveUtils";

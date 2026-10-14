@@ -2,7 +2,6 @@ import type { ProcessorItemPrice } from "@autumn/shared";
 import { Decimal } from "decimal.js";
 import { tieredProcessorItemAmount } from "./tieredProcessorItemAmount";
 
-/** Recurring charge for a licensed item; null when it depends on usage. */
 export const processorItemAmount = ({
 	price,
 	quantity,

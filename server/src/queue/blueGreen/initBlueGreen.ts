@@ -13,18 +13,6 @@ import {
 	stopBlueGreenSlotStorePolling,
 } from "./blueGreenSlotStore.js";
 
-/**
- * Wire blue-green into the worker process:
- *   1. Resolve AWS task identity (idempotent — `awsTaskIdentity` also fires
- *      a fire-and-forget at module load, so identity is usually ready by the
- *      time this runs).
- *   2. Start polling the S3 active-slot pointer.
- *   3. Start the per-instance heartbeat writer.
- *
- * Polling is started here (not via the global edge-config registry) because
- * `initBlueGreen` runs after `startAllEdgeConfigPolling` in the worker boot path.
- * No-op when identity can't be resolved (local dev / non-ECS).
- */
 export const initBlueGreen = async ({
 	db,
 	logger,

@@ -12,7 +12,6 @@ import type {
 
 type Runtime = BalanceWorkerRequestContext["runtime"];
 
-/** How long the caller will still wait for this request, when it said. */
 export function readRequestBudget(
 	context: Context<BalanceWorkerHttpEnv>,
 ): number | undefined {
@@ -21,7 +20,6 @@ export function readRequestBudget(
 	});
 }
 
-/** The same runtime, with the caller's budget carried into every command it runs for this request. */
 export function withRequestBudget({
 	runtime,
 	budgetMs,

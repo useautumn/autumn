@@ -31,7 +31,6 @@ import {
 const ENTITY_FEATURE_ID = "seats";
 const OTHER_ENTITY_ID = "ent_07";
 
-/** A customer-level row whose balance lives per entity, as `createEntityForCusProduct` seeds it. */
 const createEntityMapRow = ({
 	id = "messages_per_entity",
 	balances = { [OTHER_ENTITY_ID]: 10, [entity.id]: 10 },
@@ -51,7 +50,6 @@ const createEntityMapRow = ({
 	),
 });
 
-/** The catalog with the map rows' entitlements marked per entity, as the Lua `has_entity_scope` reads it. */
 const createEntityCatalogFor = ({
 	state,
 	entitlementIds,
@@ -197,7 +195,6 @@ describe("per-entity balances", () => {
 				value: -20,
 			});
 
-			// grant 1000 + entity adjustment 2 = 1002 ceiling
 			expect(outcome).toMatchObject({ appliedValue: -7, remaining: -13 });
 			expect(changesAfter(outcome)).toEqual([
 				[
@@ -379,7 +376,6 @@ describe("per-entity balances", () => {
 				},
 			];
 
-			// The other entity's overdraft does not count against this entity's view.
 			const entityView = deductFrom({
 				customer,
 				customerEntitlements: rows,
@@ -388,7 +384,6 @@ describe("per-entity balances", () => {
 			});
 			expect(entityView).toMatchObject({ appliedValue: 5, remaining: 5 });
 
-			// At customer level every key's overdraft counts, and the budget is spent.
 			const customerLevel = deductFrom({
 				customer,
 				customerEntitlements: rows,

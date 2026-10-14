@@ -28,15 +28,10 @@ type CustomerOrEntity =
 	| ApiEntityV2;
 type V5CustomerOrEntity = ApiCustomerV5 | ApiEntityV2;
 
-/** Type guard for V5/V2 customer/entity. */
 const isV5Customer = (
 	customer: CustomerOrEntity,
 ): customer is V5CustomerOrEntity => "subscriptions" in customer;
 
-/**
- * Verify a customer product is currently trialing with the expected trial end time.
- * Uses `status === "trialing"` and `current_period_end` for V3, `trial_ends_at` for V5.
- */
 export const expectProductTrialing = async ({
 	customerId,
 	customer: providedCustomer,
@@ -54,7 +49,6 @@ export const expectProductTrialing = async ({
 		? providedCustomer
 		: await defaultAutumn.customers.get(customerId!);
 
-	// Route to V5
 	if (isV5Customer(customer)) {
 		return expectSubscriptionTrialing({
 			customer,
@@ -72,20 +66,17 @@ export const expectProductTrialing = async ({
 		`Product ${productId} not found for trialing check`,
 	).toBeDefined();
 
-	// Check status is "trialing"
 	expect(
 		product!.status,
 		`Product ${productId} should have status "trialing" but got "${product!.status}"`,
 	).toBe("trialing");
 
-	// current_period_end represents when the trial ends
 	const trialEndsAt = product!.current_period_end;
 	expect(
 		trialEndsAt,
 		`Product ${productId} should have current_period_end defined when trialing`,
 	).toBeDefined();
 
-	// Verify trial_ends_at matches expected timestamp (with tolerance)
 	if (expectedTrialEndsAt !== undefined) {
 		expect(
 			Math.abs(trialEndsAt! - expectedTrialEndsAt) < toleranceMs,
@@ -96,10 +87,6 @@ export const expectProductTrialing = async ({
 	return trialEndsAt;
 };
 
-/**
- * Verify a customer product is NOT trialing.
- * If nowMs is provided, checks if product is actually trialing based on test clock time.
- */
 export const expectProductNotTrialing = async ({
 	customerId,
 	customer: providedCustomer,
@@ -115,7 +102,6 @@ export const expectProductNotTrialing = async ({
 		? providedCustomer
 		: await defaultAutumn.customers.get(customerId!);
 
-	// Route to V5
 	if (isV5Customer(customer)) {
 		return expectSubscriptionNotTrialing({ customer, productId });
 	}
@@ -128,7 +114,6 @@ export const expectProductNotTrialing = async ({
 		`Product ${productId} not found for not-trialing check`,
 	).toBeDefined();
 
-	// If nowMs is provided, check if product is actually trialing based on test clock time
 	if (nowMs !== undefined && product!.status === "trialing") {
 		const currentPeriodStart = product!.current_period_start;
 		const currentPeriodEnd = product!.current_period_end;
@@ -137,8 +122,6 @@ export const expectProductNotTrialing = async ({
 				`Product ${productId} has no current_period_start or current_period_end`,
 			);
 		}
-		// If status is "trialing" but nowMs >= current_period_end, trial has ended
-		// Only fail if nowMs < current_period_end (trial is actually still active)
 		expect(
 			nowMs >= currentPeriodStart || nowMs >= currentPeriodEnd,
 			`Product ${productId} is still trialing (status: "trialing", current_period_end: ${formatMs(currentPeriodEnd)}, nowMs: ${formatMs(nowMs)}). Trial has not ended yet.`,
@@ -146,14 +129,12 @@ export const expectProductNotTrialing = async ({
 		return;
 	}
 
-	// Without nowMs, simply check status is not "trialing"
 	expect(
 		product!.status,
 		`Product ${productId} should not have status "trialing" but got "${product!.status}"`,
 	).not.toBe("trialing");
 };
 
-/** Verify a feature's next_reset_at aligns with trial end time. */
 export const expectFeatureResetAlignedWithTrialEnd = async ({
 	customerId,
 	customer: providedCustomer,
@@ -185,16 +166,12 @@ export const expectFeatureResetAlignedWithTrialEnd = async ({
 		`Feature ${featureId} should have next_reset_at defined`,
 	).toBeDefined();
 
-	// Allow up to 1 hour difference for timing variations
 	expect(
 		Math.abs(feature!.next_reset_at! - trialEndsAt) < ONE_HOUR_MS,
 		`Feature ${featureId} next_reset_at (${feature!.next_reset_at}) should align with trial_ends_at (${trialEndsAt})`,
 	).toBe(true);
 };
 
-/**
- * Verify a customer product's current_period_end aligns with trial end time.
- */
 export const expectPeriodEndsAlignedWithTrialEnd = async ({
 	customerId,
 	customer: providedCustomer,
@@ -210,7 +187,6 @@ export const expectPeriodEndsAlignedWithTrialEnd = async ({
 		? providedCustomer
 		: await defaultAutumn.customers.get(customerId!);
 
-	// Route to V5
 	if (isV5Customer(customer)) {
 		return expectSubscriptionPeriodAlignedWithTrialEnd({
 			customer,
@@ -232,14 +208,12 @@ export const expectPeriodEndsAlignedWithTrialEnd = async ({
 		`Product ${productId} should have current_period_end defined`,
 	).toBeDefined();
 
-	// Allow up to 1 hour difference for timing variations
 	expect(
 		Math.abs(product!.current_period_end! - trialEndsAt) < ONE_HOUR_MS,
 		`Product ${productId} current_period_end (${product!.current_period_end}) should align with trial_ends_at (${trialEndsAt})`,
 	).toBe(true);
 };
 
-/** Helper to calculate expected trial end time in milliseconds. */
 export const calculateTrialEndMs = ({
 	trialDays,
 }: {
@@ -248,7 +222,6 @@ export const calculateTrialEndMs = ({
 	return Date.now() + trialDays * ONE_DAY_MS;
 };
 
-/** Get the trial end time from a trialing product. */
 export const getTrialEndsAt = async ({
 	customerId,
 	customer: providedCustomer,
@@ -262,7 +235,6 @@ export const getTrialEndsAt = async ({
 		? providedCustomer
 		: await defaultAutumn.customers.get(customerId!);
 
-	// Route to V5
 	if (isV5Customer(customer)) {
 		const sub = customer.subscriptions.find((s) => s.plan_id === productId);
 		return sub?.trial_ends_at ?? null;

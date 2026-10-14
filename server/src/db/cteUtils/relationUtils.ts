@@ -13,13 +13,6 @@ export interface JunctionConfig {
 	toField: string;
 }
 
-/**
- * Find the relationship path between two tables using Drizzle relations
- * Supports:
- * - Direct one() relationships → row
- * - Direct many() relationships → array
- * - Many-to-many through junction table → array
- */
 export function findRelationPath({
 	from,
 	to,
@@ -32,12 +25,10 @@ export function findRelationPath({
 	const fromTableName = (from as any)[Symbol.for("drizzle:Name")] || from;
 	const toTableName = (to as any)[Symbol.for("drizzle:Name")] || to;
 
-	// 1. Check for direct relationship
 	const fromRelations = relations[fromTableName];
 	if (fromRelations) {
 		const directRel = Object.entries(fromRelations).find(([_, rel]) => {
 			let relTable = (rel as any).referencedTable || (rel as any).table;
-			// If it's a function, call it to get the actual table
 			if (typeof relTable === "function") {
 				relTable = relTable();
 			}
@@ -47,7 +38,6 @@ export function findRelationPath({
 
 		if (directRel) {
 			const [_, rel] = directRel;
-			// Check if it's a one() or many() relationship
 			const isOne = (rel as any).isOne !== undefined;
 			const isMany = (rel as any).isMany !== undefined;
 
@@ -60,7 +50,6 @@ export function findRelationPath({
 		}
 	}
 
-	// 2. Check for many-to-many (through junction table)
 	const junctionPaths = findJunctionPaths({ from, to, relations });
 
 	if (junctionPaths.length === 1) {
@@ -81,15 +70,11 @@ export function findRelationPath({
 		);
 	}
 
-	// 3. No path found
 	throw new Error(
 		`No relationship found between ${getTableName(from)} and ${getTableName(to)}. Please define the relationship in Drizzle relations or specify 'through' explicitly.`,
 	);
 }
 
-/**
- * Find many-to-many paths: from -> junction (many from 'from', one from junction) -> to (one from junction)
- */
 function findJunctionPaths({
 	from,
 	to,
@@ -106,7 +91,6 @@ function findJunctionPaths({
 	const fromTableName = getTableName(from);
 	const toTableName = getTableName(to);
 
-	// Get all many() relationships from 'from' table
 	const fromRelations = relations[fromTableName];
 	if (!fromRelations) return paths;
 
@@ -117,11 +101,9 @@ function findJunctionPaths({
 		const junctionTable = (rel as any).referencedTable || (rel as any).table;
 		const junctionTableName = getTableName(junctionTable);
 
-		// Check if junction table has a one() relationship to 'to' table
 		const junctionRelations = relations[junctionTableName];
 		if (!junctionRelations) continue;
 
-		// Look for a one() relationship from junction to 'to'
 		const toRel = Object.entries(junctionRelations).find(([_, jRel]) => {
 			const isOne = (jRel as any).isOne !== undefined;
 			if (!isOne) return false;
@@ -132,7 +114,6 @@ function findJunctionPaths({
 		});
 
 		if (toRel) {
-			// Also verify there's a one() relationship from junction back to 'from'
 			const reverseRel = Object.entries(junctionRelations).find(([_, jRel]) => {
 				const isOne = (jRel as any).isOne !== undefined;
 				if (!isOne) return false;
@@ -155,16 +136,10 @@ function findJunctionPaths({
 	return paths;
 }
 
-/**
- * Extract table name from Drizzle table object
- */
 function getTableName(table: PgTable): string {
 	return (table as any)[Symbol.for("drizzle:Name")] || String(table);
 }
 
-/**
- * Extract join field information from a junction table relationship
- */
 export function getJunctionFields({
 	junction,
 	from,

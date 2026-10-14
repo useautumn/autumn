@@ -9,9 +9,6 @@ export type BillingPlanChargeResult =
 	| { willCharge: true; reason: ChargeReason }
 	| { willCharge: false; reason: null };
 
-/**
- * Determines if a billing plan will result in an immediate charge based on Stripe actions.
- */
 export const billingPlanWillCharge = ({
 	billingPlan,
 }: {
@@ -19,17 +16,14 @@ export const billingPlanWillCharge = ({
 }): BillingPlanChargeResult => {
 	const { subscriptionAction, invoiceAction } = billingPlan.stripe;
 
-	// Creating a new subscription will charge
 	if (subscriptionAction?.type === "create") {
 		return { willCharge: true, reason: "subscription_create" };
 	}
 
-	// Invoice action with lines means a charge will occur
 	if (invoiceAction && invoiceAction.addLineParams?.lines.length > 0) {
 		return { willCharge: true, reason: "invoice_created" };
 	}
 
-	// Updating subscription with trial_end === "now" will charge
 	if (subscriptionAction?.type === "update") {
 		if (subscriptionAction.params.trial_end === "now") {
 			return { willCharge: true, reason: "trial_ending" };
@@ -39,7 +33,6 @@ export const billingPlanWillCharge = ({
 	return { willCharge: false, reason: null };
 };
 
-/** Maps charge reasons to human-readable messages */
 export const getChargeReasonMessage = (reason: ChargeReason): string => {
 	switch (reason) {
 		case "subscription_create":

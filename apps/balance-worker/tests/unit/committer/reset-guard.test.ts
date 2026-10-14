@@ -28,15 +28,10 @@ const topic = "autumn-metering";
 const partition = 3;
 const rowId = "messages_monthly";
 const cycleEnded = testOccurredAt - 1;
-/** Where a renewal webhook moved the row's cycle, straight in Postgres. */
 const renewedCycleEnd = testOccurredAt + 7 * 24 * 60 * 60 * 1000;
 
 type Row = Record<string, unknown>;
 
-/**
- * Postgres as the flush sees it: rows folded per flush, each update landing only where its guard holds,
- * and nothing of the flush (bookmark included) committed unless every row and the bookmark moved.
- */
 function createRowStore({ nextOffset }: { nextOffset: bigint }) {
 	const rows = new Map<string, Row>();
 	let bookmark = nextOffset;
@@ -100,7 +95,6 @@ function createRowStore({ nextOffset }: { nextOffset: bigint }) {
 		flushes,
 		bookmark: () => bookmark,
 		row: () => rows.get(`customerEntitlements:${rowId}`),
-		/** A billing path writing the customer entitlement directly, outside the worker. */
 		writeOutsideWorker: (fields: Row) => {
 			const key = `customerEntitlements:${rowId}`;
 			rows.set(key, { ...rows.get(key), ...fields });
@@ -112,7 +106,6 @@ function createRowStore({ nextOffset }: { nextOffset: bigint }) {
 	};
 }
 
-/** The worker's view at t0: the row's cycle ended, so the next command refills it first. */
 const dueState = (): SubjectState =>
 	createState({
 		customerEntitlements: [
@@ -123,7 +116,6 @@ const dueState = (): SubjectState =>
 		],
 	});
 
-/** The reset the engine decides for that row, exactly as it reaches the log. */
 const decideReset = ({ state }: { state: SubjectState }) => {
 	const command = parseResetCommand({
 		input: {
@@ -151,7 +143,6 @@ const decideReset = ({ state }: { state: SubjectState }) => {
 	};
 };
 
-/** The worker's sequence: a track, then the next command's reset and its own track, each decided on the last. */
 const decideSequence = () => {
 	const initial = dueState();
 	const before = createTrackMutation({
@@ -215,9 +206,7 @@ describe("a reset never overwrites a billing write", () => {
 		rows.seed(initial);
 		const store = await createStore(rows);
 
-		// t1: the renewal lands in Postgres while the worker's batch is committed but unapplied.
 		rows.writeOutsideWorker({ balance: 500, next_reset_at: renewedCycleEnd });
-		// t2: the batch applies, the reset folded between the two tracks on the same row.
 		const results = await store.applyDurableMutations({
 			records: [at(0n, before), at(1n, reset), at(2n, after)],
 		});
@@ -333,13 +322,10 @@ describe("a reset never overwrites a billing write", () => {
 		const { initial, before, reset } = decideSequence();
 		rows.seed(initial);
 		const store = await createStore(rows);
-		// The track before the reset has landed, so Postgres holds what the reset was decided on.
 		await store.applyDurableMutations({ records: [at(0n, before)] });
 
-		// t1: a quantity change adds 100 to the row in Postgres; its cycle stays where it was.
 		const paidFor = Number(rows.row()?.balance) + 100;
 		rows.writeOutsideWorker({ balance: paidFor });
-		// t2: the reset decided before it lands.
 		const [result] = await store.applyDurableMutations({
 			records: [at(1n, reset)],
 		});
@@ -351,7 +337,6 @@ describe("a reset never overwrites a billing write", () => {
 		});
 		expect(rows.bookmark()).toBe(2n);
 
-		// t3: the evicted customer reloads from Postgres; the row is still due, so the reset is decided on what it holds now.
 		const reloaded = createState({
 			customerEntitlements: [
 				{
@@ -377,7 +362,6 @@ describe("a reset never overwrites a billing write", () => {
 		rows.seed(initial);
 		const store = await createStore(rows);
 
-		// t1: billing rewrites the balance in place while the track, the reset and its track are unapplied.
 		rows.writeOutsideWorker({ balance: 500 });
 		const results = await store.applyDurableMutations({
 			records: [at(0n, before), at(1n, reset), at(2n, after)],
@@ -399,10 +383,7 @@ describe("a reset never overwrites a billing write", () => {
 		const rows = createRowStore({ nextOffset: 1n });
 		const { initial, before, reset, after } = decideSequence();
 		rows.seed(applyMutation({ state: initial, mutation: before }));
-		// t0: the reset and its track are on the log, the owner crashes before applying them.
-		// t1: the renewal lands in Postgres.
 		rows.writeOutsideWorker({ balance: 500, next_reset_at: renewedCycleEnd });
-		// t2: the successor replays from the bookmark through the metering record handler.
 		const store = await createStore(rows);
 		const handler = createMeteringRecordHandler({
 			ctx: {

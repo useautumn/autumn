@@ -100,7 +100,6 @@ test.concurrent(
 				(customerProduct) => customerProduct.status === CusProductStatus.Active,
 			),
 		).toBe(true);
-		// Pro runs unchanged across both phases, so the later phase lists the same live row.
 		expect(phase1CustomerProducts).toHaveLength(1);
 		const immediatePro = immediatePhaseCustomerProducts.find(
 			(customerProduct) => customerProduct.product_id === pro.id,

@@ -5,7 +5,6 @@ import { queryAtomLogs } from "./queryAtomLogs.js";
 const LOOKBACK = "now-5m";
 const LIMIT = 5;
 
-/** The Atom's latest checks whose key got through; a thread logs its first ten in full, so an org's first checks are always here. */
 export const queryRecentAtomChecks = async ({
 	deploymentId,
 }: {

@@ -20,7 +20,6 @@ export {
 	PlanPriceChangeV0Schema,
 } from "./planChangeCoreV0.js";
 
-/** Core customize plus the license call. Zod content schema stays license-free. */
 export const PlanChangeCustomizeV0Schema = DiffedCustomizePlanV1Schema.extend({
 	upsert_licenses: z.array(CustomizePlanLicenseSchema).optional().meta({
 		description:
@@ -31,10 +30,6 @@ export const PlanChangeCustomizeV0Schema = DiffedCustomizePlanV1Schema.extend({
 	}),
 });
 
-/**
- * Change to a plan definition (core content + one-layer licenses).
- * Shared kernel for catalog preview and (nested under) customer plan changes.
- */
 export const PlanChangeV0Schema = PlanChangeCoreV0Schema.extend({
 	license_changes: z.array(PlanLicenseChangeV0Schema).optional().meta({
 		description:

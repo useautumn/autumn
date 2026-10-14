@@ -55,12 +55,7 @@ const redactSensitiveRequestBody = ({ body }: { body: unknown }): unknown => {
 	);
 };
 
-/**
- * Base middleware that sets up the request context
- * Sets up: db, logger, id, timestamp
- */
 export const baseMiddleware = async (c: Context<HonoEnv>, next: Next) => {
-	// const env = (c.req.header("app_env") as AppEnv) || AppEnv.Sandbox;
 	const id =
 		c.req.header("rndr-id") ||
 		c.req.header("X-Amzn-Trace-Id") ||
@@ -116,22 +111,18 @@ export const baseMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 		requestContext: requestLogContexts.internal,
 	});
 
-	// Set up the request context
 	c.set("ctx", {
-		// Core objects
 		db,
 		dbGeneral,
 		logger: childLogger,
 		redisV2: resolveRedisV2({ customerId }),
 
-		// Request info
 		id,
 		timestamp,
 		isPublic: false,
 		useReplicaDb: false,
 		apiVersion: new ApiVersionClass(LATEST_VERSION),
 
-		// Auth (will be populated by auth middleware)
 		org: undefined as unknown as Organization,
 		features: [],
 		userId: undefined,
@@ -140,10 +131,9 @@ export const baseMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 		requestBody: body,
 		requestLogContext: requestLogContexts.terminal,
 		authType: AuthType.Unknown,
-		env: AppEnv.Sandbox, // maybe use app_env headers
+		env: AppEnv.Sandbox,
 		scopes: [],
 
-		// Query params
 		expand: [],
 		skipCache:
 			c.req.header("x-skip-cache") === "true" ||
@@ -151,7 +141,6 @@ export const baseMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 
 		subjectReadTrace,
 
-		// Test params:
 		extraLogs: {},
 		state: {},
 
@@ -198,8 +187,6 @@ export const baseMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 					: {},
 		},
 	});
-
-	// childLogger.info(`${method} ${path}`);
 
 	await next();
 

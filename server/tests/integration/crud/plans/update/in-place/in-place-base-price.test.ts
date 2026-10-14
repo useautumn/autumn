@@ -1,13 +1,3 @@
-/**
- * In-place plan update (disable_version) — changing the BASE PRICE must NOT
- * mutate the shared price row existing customers are billed on. The old base
- * price is retired (is_custom:true, Stripe price frozen); a new is_custom:false
- * base price (new Stripe price) is created for future customers.
- *
- * Guards a regression where the base price was excluded from the retire pass and
- * got upserted in place, changing existing customers' billing.
- */
-
 import { expect, test } from "bun:test";
 import {
 	type ApiCustomerV5,
@@ -73,7 +63,6 @@ test(`${chalk.yellowBright("plans.update disable_version: base price change reti
 	expect((oldPrice?.config as { amount?: number })?.amount).toBe(20);
 	const before = await snapshotCustomerState({ ctx, customerId });
 
-	// Change the base price 20 -> 30 in place.
 	await autumnRpc.plans.update<ApiPlanV1, RpcInput>(pro.id, {
 		disable_version: true,
 		price: { amount: 30, interval: BillingInterval.Month },
@@ -86,18 +75,14 @@ test(`${chalk.yellowBright("plans.update disable_version: base price change reti
 		],
 	});
 
-	// Catalog: a single is_custom:false base price with the NEW amount + a fresh id.
 	const newPrice = await basePrice({ ctx, planId: pro.id });
 	expect((newPrice?.config as { amount?: number })?.amount).toBe(30);
 	expect(newPrice?.is_custom).toBe(false);
 	expect(newPrice?.id).not.toBe(oldPrice?.id);
 
-	// Existing customer: byte-identical (still references the retired price), and
-	// their Stripe subscription is unchanged.
 	expect(await snapshotCustomerState({ ctx, customerId })).toBe(before);
 	await expectStripeSubscriptionCorrect({ ctx, customerId });
 
-	// New customer attaches against the new catalog (and gets the feature).
 	await autumnV2_2.billing.attach({
 		customer_id: newCustomerId,
 		plan_id: pro.id,

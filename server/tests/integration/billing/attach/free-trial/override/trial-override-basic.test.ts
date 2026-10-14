@@ -1,14 +1,3 @@
-/**
- * Free Trial Override Basic Tests (Attach V2)
- *
- * Tests for basic free_trial parameter override behaviors.
- *
- * Key behaviors:
- * - free_trial param overrides product's trial config
- * - free_trial param bypasses deduplication logic
- * - Trial always starts from now + trial_days
- */
-
 import { expect, test } from "bun:test";
 import { type ApiCustomerV3, FreeTrialDuration, ms } from "@autumn/shared";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
@@ -24,20 +13,6 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { addMonths } from "date-fns";
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 1: Fresh attach with free_trial override (product has no trial config)
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Product has no trial configuration
- * - Attach with free_trial: { length: 7, duration: "day" }
- *
- * Expected Result:
- * - Trial starts, ends at now + 7 days
- * - No immediate charge
- * - Preview next_cycle shows correct trial end and charge
- */
 test.concurrent(`${chalk.yellowBright("trial-override-basic 1: fresh attach with free_trial override")}`, async () => {
 	const customerId = "trial-override-basic-fresh";
 
@@ -46,7 +21,6 @@ test.concurrent(`${chalk.yellowBright("trial-override-basic 1: fresh attach with
 	const pro = products.base({
 		id: "pro",
 		items: [messagesItem, priceItem],
-		// No trial config
 	});
 
 	const { autumnV1, ctx, advancedTo } = await initScenario({
@@ -58,7 +32,6 @@ test.concurrent(`${chalk.yellowBright("trial-override-basic 1: fresh attach with
 		actions: [],
 	});
 
-	// 1. Preview attach with free_trial override
 	const preview = await autumnV1.billing.previewAttach({
 		customer_id: customerId,
 		product_id: pro.id,
@@ -74,7 +47,6 @@ test.concurrent(`${chalk.yellowBright("trial-override-basic 1: fresh attach with
 		total: 20,
 	});
 
-	// 2. Attach with free_trial override
 	await autumnV1.billing.attach({
 		customer_id: customerId,
 		product_id: pro.id,
@@ -87,7 +59,6 @@ test.concurrent(`${chalk.yellowBright("trial-override-basic 1: fresh attach with
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Verify product is active and trialing
 	await expectProductActive({
 		customer,
 		productId: pro.id,
@@ -99,24 +70,21 @@ test.concurrent(`${chalk.yellowBright("trial-override-basic 1: fresh attach with
 		trialEndsAt: advancedTo + ms.days(7),
 	});
 
-	// Verify features available with resetsAt aligned to trial end
 	expectCustomerFeatureCorrect({
 		customer,
 		featureId: TestFeature.Messages,
 		includedUsage: 500,
 		balance: 500,
 		usage: 0,
-		resetsAt: advancedTo + ms.days(7), // Reset aligns with trial end
+		resetsAt: advancedTo + ms.days(7),
 	});
 
-	// Verify $0 invoice during trial (Stripe creates invoice for trial subscriptions)
 	expectCustomerInvoiceCorrect({
 		customer,
 		count: 1,
 		latestTotal: 0,
 	});
 
-	// Verify Stripe subscription state
 	await expectSubToBeCorrect({
 		db: ctx.db,
 		customerId,
@@ -126,18 +94,6 @@ test.concurrent(`${chalk.yellowBright("trial-override-basic 1: fresh attach with
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 2: Override product's trial config
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Product has 14-day trial configuration
- * - Attach with free_trial: { length: 30, duration: "day" }
- *
- * Expected Result:
- * - Trial uses override (30 days), NOT product config (14 days)
- */
 test.concurrent(`${chalk.yellowBright("trial-override-basic 2: override product's trial config")}`, async () => {
 	const customerId = "trial-override-basic-override-config";
 
@@ -145,7 +101,7 @@ test.concurrent(`${chalk.yellowBright("trial-override-basic 2: override product'
 	const proTrial = products.proWithTrial({
 		id: "pro-trial",
 		items: [messagesItem],
-		trialDays: 14, // Product config: 14 days
+		trialDays: 14,
 		cardRequired: true,
 	});
 
@@ -158,7 +114,6 @@ test.concurrent(`${chalk.yellowBright("trial-override-basic 2: override product'
 		actions: [],
 	});
 
-	// 1. Preview attach with override (30 days instead of 14)
 	const preview = await autumnV1.billing.previewAttach({
 		customer_id: customerId,
 		product_id: proTrial.id,
@@ -170,11 +125,10 @@ test.concurrent(`${chalk.yellowBright("trial-override-basic 2: override product'
 	expect(preview.total).toBe(0);
 	expectPreviewNextCycleCorrect({
 		preview,
-		startsAt: addMonths(advancedTo, 1).getTime(), // Override, not product config
+		startsAt: addMonths(advancedTo, 1).getTime(),
 		total: 20,
 	});
 
-	// 2. Attach with override
 	await autumnV1.billing.attach({
 		customer_id: customerId,
 		product_id: proTrial.id,
@@ -187,7 +141,6 @@ test.concurrent(`${chalk.yellowBright("trial-override-basic 2: override product'
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Verify trial uses override (30 days), NOT product config (14 days)
 	await expectProductTrialing({
 		customer,
 		productId: proTrial.id,
@@ -195,25 +148,22 @@ test.concurrent(`${chalk.yellowBright("trial-override-basic 2: override product'
 		toleranceMs: ms.hours(2),
 	});
 
-	// Verify feature reset aligns with overridden trial (30 days, not 14)
 	expectCustomerFeatureCorrect({
 		customer,
 		featureId: TestFeature.Messages,
 		includedUsage: 500,
 		balance: 500,
 		usage: 0,
-		resetsAt: addMonths(advancedTo, 1).getTime(), // Reset aligns with override, not product config
+		resetsAt: addMonths(advancedTo, 1).getTime(),
 		toleranceMs: ms.hours(2),
 	});
 
-	// Verify $0 invoice during trial (Stripe creates invoice for trial subscriptions)
 	expectCustomerInvoiceCorrect({
 		customer,
 		count: 1,
 		latestTotal: 0,
 	});
 
-	// Verify Stripe subscription state
 	await expectSubToBeCorrect({
 		db: ctx.db,
 		customerId,
@@ -223,18 +173,6 @@ test.concurrent(`${chalk.yellowBright("trial-override-basic 2: override product'
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 3: Override bypasses deduplication (reattach after cancel)
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Customer previously had trial, used it, then cancelled
- * - Reattach with free_trial override
- *
- * Expected Result:
- * - Gets fresh trial (deduplication bypassed)
- */
 test.concurrent(`${chalk.yellowBright("trial-override-basic 3: override bypasses deduplication")}`, async () => {
 	const customerId = "trial-override-basic-bypass-dedup";
 
@@ -254,7 +192,7 @@ test.concurrent(`${chalk.yellowBright("trial-override-basic 3: override bypasses
 		],
 		actions: [
 			s.billing.attach({ productId: proTrial.id }),
-			s.advanceTestClock({ days: 3 }), // Mid-trial
+			s.advanceTestClock({ days: 3 }),
 			s.updateSubscription({
 				productId: proTrial.id,
 				cancelAction: "cancel_immediately" as const,
@@ -262,7 +200,6 @@ test.concurrent(`${chalk.yellowBright("trial-override-basic 3: override bypasses
 		],
 	});
 
-	// Verify product is cancelled
 	const customerBefore =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	const hasProduct = customerBefore.products.some(
@@ -270,7 +207,6 @@ test.concurrent(`${chalk.yellowBright("trial-override-basic 3: override bypasses
 	);
 	expect(hasProduct).toBe(false);
 
-	// 1. Preview reattach with free_trial override (bypasses dedup)
 	const preview = await autumnV1.billing.previewAttach({
 		customer_id: customerId,
 		product_id: proTrial.id,
@@ -286,7 +222,6 @@ test.concurrent(`${chalk.yellowBright("trial-override-basic 3: override bypasses
 		total: 20,
 	});
 
-	// 2. Reattach with free_trial override
 	await autumnV1.billing.attach({
 		customer_id: customerId,
 		product_id: proTrial.id,
@@ -299,7 +234,6 @@ test.concurrent(`${chalk.yellowBright("trial-override-basic 3: override bypasses
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Verify gets fresh 14-day trial (deduplication bypassed)
 	await expectProductActive({
 		customer,
 		productId: proTrial.id,
@@ -312,25 +246,22 @@ test.concurrent(`${chalk.yellowBright("trial-override-basic 3: override bypasses
 		toleranceMs: ms.hours(2),
 	});
 
-	// Verify feature reset aligns with fresh trial (14 days from now)
 	expectCustomerFeatureCorrect({
 		customer,
 		featureId: TestFeature.Messages,
 		includedUsage: 500,
 		balance: 500,
 		usage: 0,
-		resetsAt: advancedTo + ms.days(14), // Fresh trial, reset at trial end
+		resetsAt: advancedTo + ms.days(14),
 		toleranceMs: ms.hours(2),
 	});
 
-	// Verify $0 invoice during trial (Stripe creates invoice for trial subscriptions)
 	expectCustomerInvoiceCorrect({
 		customer,
 		count: 2,
 		latestTotal: 0,
 	});
 
-	// Verify Stripe subscription state
 	await expectSubToBeCorrect({
 		db: ctx.db,
 		customerId,

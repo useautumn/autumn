@@ -18,7 +18,6 @@ export type GetWebApprovalResult =
 	| { approval: ApprovalDetail }
 	| { error: ApprovalDetailError };
 
-/** Legacy rows (pre write-table) synthesize writes from the parent + markers. */
 const legacyWrites = (approval: ChatApproval): ApprovalDetailWrite[] =>
 	allWritesOf({ approval }).map((write) => ({
 		params: publicToolArgs(write.input ?? {}, { includeWithheld: false }),
@@ -34,7 +33,6 @@ export const getWebApproval = async ({
 	const approval = await chatApprovalRepo.get({ approvalId, db });
 	if (!approval) return { error: { code: "not_found" } };
 	if (approval.org_id !== orgId) {
-		// A bare code: an approval id must never become a cross-tenant oracle.
 		return { error: { code: "org_mismatch" } };
 	}
 

@@ -32,7 +32,6 @@ export const ApiKeysPage = () => {
 
 	const hasRows = apiKeyTable.getRowModel().rows.length > 0;
 
-	// Add keyboard shortcut: N to open create API key dialog
 	useEffect(() => {
 		const handleKeyDown = (e: KeyboardEvent) => {
 			if (

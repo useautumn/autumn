@@ -28,7 +28,6 @@ export interface StartOAuthOptions {
 
 type CallbackResult = { html: string; result?: OAuthResult; error?: Error };
 
-/** Start a one-shot HTTP server, returns null if port in use */
 async function startCallbackServer(
 	port: number,
 	onCallback: (url: URL) => Promise<CallbackResult>,
@@ -89,14 +88,12 @@ const CLI_SCOPE_REQUESTS = [
 	{ resource: "organisation", actions: ["read"] },
 ] as const;
 
-/** Scopes the CLI requests at login, covering every resource `atmn pull` reads. */
 export function buildCliOAuthScopes(): string[] {
 	return CLI_SCOPE_REQUESTS.flatMap(({ resource, actions }) =>
 		actions.map((action) => `${resource}:${action}`),
 	);
 }
 
-/** Start OAuth flow and wait for callback */
 export async function startOAuthFlow(
 	clientId: string,
 	options?: StartOAuthOptions,
@@ -180,11 +177,10 @@ export async function startOAuthFlow(
 				} else {
 					open(authUrl.toString());
 				}
-			}, // Open browser once server is listening
+			},
 		);
 
 		if (result) return result;
-		// Port was in use, try next
 	}
 
 	throw new Error(
@@ -192,7 +188,6 @@ export async function startOAuthFlow(
 	);
 }
 
-/** Get or create API keys using the OAuth access token */
 export async function getApiKeysWithToken(
 	accessToken: string,
 ): Promise<{ sandboxKey: string; prodKey: string; orgId: string }> {

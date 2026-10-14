@@ -3,11 +3,9 @@ import type { AccountState } from "../../../db/schema/accounts.ts";
 export type RetryCandidate = {
 	id: string;
 	state: AccountState;
-	/** The key is stored and no full nuke or scoped re-init holds it. */
 	keyAvailable: boolean;
 };
 
-/** Broken accounts to re-nuke; broken ones already queued or on a held key are skipped. */
 export const selectBrokenToRetry = ({
 	accounts,
 	liveNukeAccountIds,

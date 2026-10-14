@@ -1,9 +1,3 @@
-/**
- * atmn scenarios/versions — draft activated from the config (row moved to plans, `active: false` dropped, old row moved to planVersions) → push switches active
- *
- * One line of plans/atmn-v3/07_tests.md. [a, b] is a matrix looped INSIDE this file.
- */
-
 import { expect, test } from "bun:test";
 import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 import { paidMonthly } from "@tests/utils/atmnUtils/baseConfigs.js";
@@ -52,7 +46,6 @@ test.concurrent(
 		try {
 			await scenario.push();
 
-			// v2 mints as an explicit draft alongside the still-active v1.
 			const v2Draft = paidMonthly({
 				planId: "pro",
 				amount: 30,
@@ -74,7 +67,6 @@ test.concurrent(
 				]),
 			);
 
-			// Activating from the config: the `active` flag moves from v1 to v2.
 			const v2Active = paidMonthly({
 				planId: "pro",
 				amount: 30,

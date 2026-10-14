@@ -1,14 +1,3 @@
-/**
- * A month filter must not touch a lifetime sibling of the same feature.
- *
- * Contract:
- *   remove month → monthly row gone, lifetime row unchanged
- *   replace month → monthly rewritten, lifetime row unchanged
- *   C5 add month beside lifetime → sibling monthly row, lifetime kept
- *
- * Month-vs-quarter lives in the *-interval-narrowing tests; do not duplicate it.
- */
-
 import { expect, test } from "bun:test";
 import {
 	customerEntitlements,

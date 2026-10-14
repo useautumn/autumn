@@ -11,7 +11,6 @@ export type OwnedPartitionHealth = {
 	lag: bigint | null;
 	failureReason: string | null;
 	checkpoint?: PartitionCheckpointHealth;
-	/** The partition's queued commands: how far the decided bookmark trails the topic. */
 	commands?: {
 		consumedNextOffset: bigint | null;
 		highWatermark: bigint | null;

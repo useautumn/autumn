@@ -15,7 +15,6 @@ export const getTwStripeRequestHeaders = ({
 	);
 	if (!keyHeader || !headers[keyHeader]) return headers;
 
-	// Resumed snapshot processes retain their old env; boot supplies their namespace on disk.
 	const namespace =
 		process.env.TW_STRIPE_IDEMPOTENCY_NAMESPACE ??
 		(existsSync(TW_STRIPE_IDEMPOTENCY_NAMESPACE_FILE)

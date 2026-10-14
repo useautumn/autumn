@@ -1,23 +1,3 @@
-/**
- * TDD tests for multiUpdate with entity-scoped plans.
- *
- * Contract under test:
- *   New types/fields:
- *     - Per-update entity_id overrides the top-level entity_id
- *     - Top-level entity_id acts as the default scope for all updates
- *   New behaviors:
- *     - Same plan_id attached to multiple entities: each update resolves its own
- *       entity's cusProduct via its entity_id
- *     - Cancel all entities' plans in one call -> shared sub fully canceled
- *     - Mixed timing across entities on one sub -> one entity removed now, the
- *       other canceling, sub survives until cycle end
- *     - customer_product_id resolves an entity-scoped cusProduct even without
- *       entity context (parity with single update-subscription behavior)
- *
- * Pre-impl red: fails at endpoint resolution (/billing.multi_update 404).
- * Post-impl green: per-item entity resolution narrows fullCustomer per update.
- */
-
 import { expect, test } from "bun:test";
 import {
 	type ApiCustomerV5,
@@ -40,18 +20,6 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { CusService } from "@/internal/customers/CusService";
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 1: Cancel the same plan on two entities immediately in one call
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Pro ($20/mo) attached to entity 1 and entity 2 (shared subscription)
- * - ONE multiUpdate with per-update entity_id: cancel both immediately
- *
- * Expected Result:
- * - Both entity products removed, shared subscription canceled entirely
- */
 test.concurrent(
 	`${chalk.yellowBright("multi update entities: cancel same plan on two entities immediately")}`,
 	async () => {
@@ -75,7 +43,6 @@ test.concurrent(
 			],
 		});
 
-		// ── Contract: per-update entity_id resolves each entity's cusProduct ─────
 		await autumnV2_3.billing.multiUpdate<MultiUpdateParamsV0Input>({
 			customer_id: customerId,
 			updates: [
@@ -103,7 +70,6 @@ test.concurrent(
 			});
 		}
 
-		// ── Contract: shared sub fully canceled when every entity plan is gone ───
 		await expectNoStripeSubscription({
 			db: ctx.db,
 			customerId,
@@ -113,19 +79,6 @@ test.concurrent(
 	},
 );
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 2: Mixed timing across entities on one sub
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Pro attached to entity 1 and entity 2 (shared subscription)
- * - ONE multiUpdate: cancel entity 1 immediately + entity 2 end of cycle
- *
- * Expected Result:
- * - Entity 1's plan removed now, entity 2's plan canceling
- * - Subscription survives (entity 2 active until cycle end) and is canceling
- */
 test.concurrent(
 	`${chalk.yellowBright("multi update entities: entity 1 immediately, entity 2 EOC")}`,
 	async () => {
@@ -183,7 +136,6 @@ test.concurrent(
 			productId: pro.id,
 		});
 
-		// ── Contract: sub survives with entity 2's items, set to cancel ──────────
 		await expectStripeSubscriptionCorrect({
 			ctx,
 			customerId,
@@ -192,19 +144,6 @@ test.concurrent(
 	},
 );
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 3: Top-level entity_id as default scope, per-update override
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Pro attached to entity 1 and entity 2
- * - multiUpdate with top-level entity_id = entity 1; first update has NO
- *   entity_id (inherits entity 1), second update overrides with entity 2
- *
- * Expected Result:
- * - Both entity plans canceling (each update resolved against its own entity)
- */
 test.concurrent(
 	`${chalk.yellowBright("multi update entities: top-level entity_id default with per-update override")}`,
 	async () => {
@@ -232,9 +171,7 @@ test.concurrent(
 			customer_id: customerId,
 			entity_id: entities[0].id,
 			updates: [
-				// Inherits top-level entity_id (entity 1)
 				{ plan_id: pro.id, cancel_action: "cancel_end_of_cycle" },
-				// Overrides with entity 2
 				{
 					plan_id: pro.id,
 					entity_id: entities[1].id,
@@ -262,19 +199,6 @@ test.concurrent(
 	},
 );
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 4: customer_product_id resolves entity-scoped product without entity context
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Pro attached to entity 1 and entity 2; customer-level Pro B also active
- * - multiUpdate by customer_product_id (no entity_id anywhere) cancels entity 1's
- *   product + customer-level Pro B
- *
- * Expected Result:
- * - Entity 1's product and Pro B removed; entity 2's product untouched
- */
 test.concurrent(
 	`${chalk.yellowBright("multi update entities: customer_product_id without entity context")}`,
 	async () => {
@@ -320,7 +244,6 @@ test.concurrent(
 		);
 		expect(entity1Pro).toBeDefined();
 
-		// ── Contract: customer_product_id works without entity context ───────────
 		await autumnV2_3.billing.multiUpdate<MultiUpdateParamsV0Input>({
 			customer_id: customerId,
 			updates: [
@@ -357,7 +280,6 @@ test.concurrent(
 			notPresent: [proB.id],
 		});
 
-		// Entity 2's product keeps the subscription alive and consistent
 		await expectStripeSubscriptionCorrect({
 			ctx,
 			customerId,

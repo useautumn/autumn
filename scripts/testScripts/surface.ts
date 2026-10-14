@@ -1,15 +1,5 @@
 #!/usr/bin/env bun
 
-/**
- * Prints test-fixture and scenario-action signatures, read live from source.
- *
- * Only covers the two catalogs whose definitions are scattered across large
- * files (items.ts ~900 lines, initScenario.ts ~1900) and so can't be recovered
- * with one grep. Everything else has a one-command lookup — see the `tdd` skill.
- *
- *   bun scripts/testScripts/surface.ts [fixtures|actions]
- */
-
 import { resolve } from "node:path";
 
 const TESTS_DIR = resolve(import.meta.dirname, "../../server/tests");
@@ -23,9 +13,6 @@ const SOURCES = {
 const read = ({ path }: { path: string }) =>
 	Bun.file(resolve(TESTS_DIR, path)).text();
 
-// ── parsing ─────────────────────────────────────────────────────────────────
-
-/** Collapse a multi-line source slice into one comment-free line. */
 const oneLine = ({ text }: { text: string }): string =>
 	text
 		.split("\n")
@@ -34,7 +21,6 @@ const oneLine = ({ text }: { text: string }): string =>
 		.join(" ")
 		.replace(/,\s*$/, "");
 
-/** Index of the delimiter closing the one opened at `from`. */
 const matchDelimiter = ({
 	source,
 	from,
@@ -57,11 +43,6 @@ const matchDelimiter = ({
 	return -1;
 };
 
-/**
- * Parameter list of `const <name> = (…)`, following `const a = b` aliases and
- * tolerating curried definitions. Destructured params print their keys and
- * defaults; positional params print verbatim.
- */
 const readParams = ({
 	source,
 	name,
@@ -78,7 +59,6 @@ const readParams = ({
 	if (!declaration) return "(?)";
 	const after = declaration.index + declaration[0].length;
 
-	// `const multiAttach = billingMultiAttach;` — resolve through the alias.
 	const alias = /^(\w+);/.exec(source.slice(after));
 	if (alias) return readParams({ source, name: alias[1] as string, seen });
 
@@ -109,13 +89,10 @@ const readParams = ({
 };
 
 type Entry = {
-	/** Dotted path as written at the call site, e.g. `billing.attach`. */
 	path: string;
-	/** Identifier the key points at, e.g. `billingAttach`. */
 	target: string;
 };
 
-/** Flatten an `export const <name> = { … }` literal into dotted paths. */
 const readExportedObject = ({
 	source,
 	name,
@@ -147,7 +124,6 @@ const readExportedObject = ({
 
 		if (char === "{") {
 			depth++;
-			// A key preceding a nested literal is a namespace, not an entry.
 			if (depth > 1) stack.push(token.split(":")[0]?.trim() ?? "");
 			token = "";
 			continue;
@@ -170,8 +146,6 @@ const readExportedObject = ({
 
 	return entries;
 };
-
-// ── sections ────────────────────────────────────────────────────────────────
 
 const printCatalog = async ({
 	file,
@@ -202,8 +176,6 @@ const printFixtures = async () => {
 
 const printActions = () =>
 	printCatalog({ file: SOURCES.scenario, object: "s", prefix: "s" });
-
-// ── main ────────────────────────────────────────────────────────────────────
 
 const SECTIONS = { fixtures: printFixtures, actions: printActions } as const;
 type Section = keyof typeof SECTIONS;

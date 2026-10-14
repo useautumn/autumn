@@ -1,6 +1,5 @@
 import { stripeToAtmnAmount } from "@autumn/shared";
 
-/** Stripe's per-unit amount, preferring the exact decimal Autumn sets on prepaid prices. */
 export const stripeUnitAmountToMajorUnits = ({
 	unitAmounts,
 	currency,

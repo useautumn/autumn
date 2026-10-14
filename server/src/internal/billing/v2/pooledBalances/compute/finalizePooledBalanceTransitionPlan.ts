@@ -34,8 +34,6 @@ const toContributionUpdate = ({
 	updated_at: incoming.updated_at ?? current.updated_at,
 });
 
-/** Flags pools that lost a contribution. Whether they are actually empty is
- * decided at execution — the remaining count is unbounded, so only the DB knows. */
 const collectExpiryCandidates = ({
 	computeContext,
 	finalizedPlan,

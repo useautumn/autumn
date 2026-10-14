@@ -31,13 +31,10 @@ export type ProcessResetResult = {
 		rows: Rollover[];
 		fullCusEnt: FullCusEntWithProduct;
 	};
-	/** Authoritative pool granted after contribution promotion/drift-healing;
-	 * callers must propagate it to their caches after their own cache writes. */
 	pooledGranted?: number;
 	pooledContributionsPromoted?: boolean;
 };
 
-/** Processes a single cusEnt reset. Returns updates + optional rollover insert, or null if skipped. */
 export const processReset = async ({
 	cusEnt,
 	ctx,
@@ -48,14 +45,10 @@ export const processReset = async ({
 	const ent = cusEnt.entitlement;
 	const cusProduct = cusEnt.customer_product;
 
-	// Lifetime cusEnts should never reach here
-	// (getCusEntsNeedingReset filters them out), but guard defensively
 	if (isLifetimeEntitlement({ entitlement: ent })) {
 		return null;
 	}
 
-	// Due next-cycle contributions change the pool's granted, so promote
-	// before deriving the refill amount.
 	let pooledGranted: number | undefined;
 	let pooledContributionsPromoted: boolean | undefined;
 	if (cusEnt.pooled_balance) {
@@ -87,7 +80,6 @@ export const processReset = async ({
 		return null;
 	}
 
-	// Compute next reset time (with Stripe anchor adjustment on edge dates)
 	const nextResetAt = await getResetAtUpdate({
 		curResetAt: cusEnt.next_reset_at,
 		interval: ent.interval,
@@ -97,14 +89,11 @@ export const processReset = async ({
 		env,
 	});
 
-	// Compute rollover before resetting balance
 	const rolloverUpdate = getRolloverUpdates({
 		cusEnt,
 		nextResetAt: cusEnt.next_reset_at,
 	});
 
-	// Compute reset balance update
-	// An unlimited row's negative balance is a usage counter, not owed overage.
 	const persistFreeOverage =
 		orgPersistFreeOverage({ org: ctx.org }) &&
 		!isUnlimitedEntitlement({ entitlement: ent });

@@ -57,7 +57,6 @@ export function CustomerActions() {
 
 	const stripeCustomerId = customer?.processor?.id;
 
-	// Open dropdown with "a" key
 	useDropdownShortcut({
 		shortcut: "a",
 		isOpen: actionsOpen,

@@ -16,12 +16,6 @@ import { findCustomerEntitlement } from "@tests/balances/utils/findCustomerEntit
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { timeout } from "@/utils/genUtils";
 
-// custom/internal-model: input_cost=5 $/M, output_cost=15 $/M, markup=0%
-
-// ═══════════════════════════════════════════════════════════════════
-// TRACK-TOKENS-RES-1: entity_id deducts entity balance via auto-resolution
-// ═══════════════════════════════════════════════════════════════════
-
 test.concurrent(
 	`${chalk.yellowBright("track-tokens-res-1: entity_id deducts entity balance via auto-resolution")}`,
 	async () => {
@@ -42,7 +36,6 @@ test.concurrent(
 			actions: [s.attach({ productId: freeProd.id })],
 		});
 
-		// No feature_id — exercises AI credit auto-resolution with entity scoping
 		const trackRes: TrackResponseV3 = await autumnV2_2.post("/track_tokens", {
 			customer_id: customerId,
 			entity_id: entities[0].id,
@@ -78,16 +71,11 @@ test.concurrent(
 	},
 );
 
-// ═══════════════════════════════════════════════════════════════════
-// TRACK-TOKENS-RES-2: updated model markup applies to subsequent tracks
-// ═══════════════════════════════════════════════════════════════════
-
 test.concurrent(
 	`${chalk.yellowBright("track-tokens-res-2: updated model markup applies to subsequent tracks")}`,
 	async () => {
 		const autumn = new AutumnInt({ version: ApiVersion.V2_2 });
 
-		// Throwaway feature — never mutate the shared AiCredits fixtures
 		const featureId = `ai_credits_mut_${Date.now()}_${Math.random()
 			.toString(36)
 			.slice(2, 8)}`;
@@ -120,15 +108,12 @@ test.concurrent(
 			output_tokens: 5000,
 		};
 
-		// Markup 0 → base cost (10*10000 + 20*5000)/1e6 = 0.2
 		const trackRes1: TrackResponseV3 = await autumnV2_2.post(
 			"/track_tokens",
 			trackBody,
 		);
 		expect(trackRes1.value).toBeCloseTo(0.2, 10);
 
-		// The markup update queues a customer-cache wipe; wait until track #1's
-		// deduction is durable in the DB, or the rebuild-from-DB loses it.
 		const syncDeadline = Date.now() + 30_000;
 		let dbBalance: number | null | undefined;
 		while (Date.now() < syncDeadline) {
@@ -139,7 +124,6 @@ test.concurrent(
 		}
 		expect(dbBalance).toBe(999.8);
 
-		// Bump the model markup to 100%
 		await autumn.post("/features.update", {
 			feature_id: featureId,
 			model_markups: {
@@ -148,7 +132,6 @@ test.concurrent(
 		});
 
 		await timeout(4000);
-		// Explicit feature_id resolves from freshly loaded org features → 0.4
 		const trackRes2: TrackResponseV3 = await autumnV2_2.post(
 			"/track_tokens",
 			trackBody,

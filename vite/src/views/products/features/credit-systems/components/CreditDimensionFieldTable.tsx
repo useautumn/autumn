@@ -97,7 +97,6 @@ const COLUMNS: ColumnDef<FieldTableRow, unknown>[] = [
 	},
 ];
 
-/** One row per dimension; the name is editable and its values are chips that wrap within the cell. */
 export function CreditDimensionFieldTable({
 	action,
 }: {
@@ -123,8 +122,6 @@ export function CreditDimensionFieldTable({
 			})),
 			...unnamedKeys.map((key) => ({
 				id: `unnamed:${key}`,
-				// The row's key stands in for its name until it has one, so rename
-				// and remove can address it.
 				field: key,
 				unnamed: true,
 				values: [],

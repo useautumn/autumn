@@ -11,7 +11,6 @@ import {
 	withRateRules,
 } from "./creditDimensionUtils";
 
-/** Two rules with one match key each: neither is more specific, so they clash. */
 const clashing: CreditSchemaItem = {
 	metered_feature_id: "cpu_minutes",
 	credit_amount: 1,

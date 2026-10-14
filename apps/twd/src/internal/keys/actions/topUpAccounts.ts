@@ -15,9 +15,6 @@ import { twdPoolMetadata } from "./setTwdPoolState.ts";
 const POOL_ORG_NAME = "Unit Test Org (twd pool)";
 const POOL_ORG_ID = "twd_pool";
 
-/** Same v2 create body as scripts/tw createSandboxSubAccount (that one pulls the server graph).
- * Tops every usable key (or just `platformAccountId`, locked or not) up to `targetPerKey` non-broken
- * accounts, never past ACCOUNTS_PER_KEY_CAP. */
 export const topUpAccounts = async ({
 	ctx,
 	targetPerKey,

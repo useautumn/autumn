@@ -14,7 +14,6 @@ import { AutumnRpcCli } from "@/external/autumn/autumnRpcCli.js";
 const autumnRpc = new AutumnRpcCli({ version: ApiVersion.V2_1 });
 const getSuffix = () => Math.random().toString(36).slice(2, 9);
 
-// Cancelling an eur subscription must keep the customer and subscription in eur.
 test.concurrent(
 	`${chalk.yellowBright("multi-currency e2e: eur subscription cancel stays in eur")}`,
 	async () => {

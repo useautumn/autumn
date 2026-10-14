@@ -50,7 +50,6 @@ const findOverrideValue = ({ draft }: { draft: RateLimitOverrideDraft }) =>
 		draft.scope
 	];
 
-/** One number for one org on one layer; the window and over-limit behaviour stay as defined in code. */
 export const RateLimitOverrideSheet = ({
 	open,
 	onOpenChange,
@@ -71,7 +70,6 @@ export const RateLimitOverrideSheet = ({
 	const [draft, setDraft] = useState(initialDraft);
 	const [valueText, setValueText] = useState("");
 
-	// The value always shows what is stored for the selected org, limit and scope.
 	const selectDraft = (next: RateLimitOverrideDraft) => {
 		setDraft(next);
 		setValueText(String(findOverrideValue({ draft: next }) ?? ""));

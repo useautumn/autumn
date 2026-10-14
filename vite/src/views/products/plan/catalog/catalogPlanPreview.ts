@@ -97,7 +97,6 @@ export const catalogPreviewPlanIdChange = ({
 	return { from, to: nextPlanId };
 };
 
-/** The server reports a slug rename on the row identity, not in previous_attributes. */
 export const catalogPreviewVersionSlugChange = ({
 	preview,
 }: {
@@ -123,8 +122,6 @@ const parentVersionsOf = ({
 	return [row, ...(parent.sibling_versions ?? [])];
 };
 
-/** Fold parent versions into one lane per plan. Sibling-linked rows are
- * parents anchored to another child version — omit them on `existing`. */
 export const catalogPlanLicenseParents = ({
 	preview,
 	includeSiblingLinked = true,
@@ -181,8 +178,6 @@ const variantVersionsOf = ({
 	return [row, ...(variant.sibling_versions ?? [])];
 };
 
-/** Variant lanes offered for an edit: the edited row's own, plus each
- * sibling base row's when the edit spans all versions. One lane per plan. */
 export const catalogPlanVariantLanes = ({
 	preview,
 	includeSiblingRows = true,
@@ -320,13 +315,11 @@ export const buildCatalogPropagate = ({
 	};
 };
 
-/** A variant or license-parent lane entry, as far as mint detection cares. */
 type FollowerVersioningPreview = {
 	versioning?: { resolved: CatalogPlanVersioningStrategy };
 	state: { has_customers: boolean };
 };
 
-/** This follower gets a new row: the server resolved one, or the base mint cascades. */
 export const followerMintsNewVersion = ({
 	follower,
 	baseMintsNewVersion,
@@ -342,12 +335,6 @@ export const followerMintsNewVersion = ({
 	);
 };
 
-/**
- * Would following this base mint give the variant its own new row? The variant lane
- * always reports `versioning`, and the discover preview sends no propagate, so its
- * `resolved` reads `existing` even when the save would mint. Mirrors the server's
- * gate: the base mints and this variant's active row has versionable customers.
- */
 export const variantFollowMintsNewVersion = ({
 	variant,
 	baseMintsNewVersion,
@@ -365,7 +352,6 @@ export const getLicenseParentVersionKey = ({
 }: Pick<CatalogLicenseParentPreview, "plan_id" | "version">) =>
 	makePlanKey({ planId: plan_id, version });
 
-/** Every linked version of a parent plan, newest first. */
 export const licenseParentVersions = ({
 	parent,
 }: {
@@ -375,7 +361,6 @@ export const licenseParentVersions = ({
 		(left, right) => right.version - left.version,
 	);
 
-/** Every previewed version of a variant plan, newest first. */
 export const variantVersions = ({
 	variant,
 }: {
@@ -429,7 +414,6 @@ const dedupeBy = <T>(entries: T[], keyOf: (entry: T) => string): T[] => {
 	return [...seen.values()];
 };
 
-/** Union of what a multi-version scope will change, deduped across versions. */
 export const mergeCatalogPlanChangeDiffs = (
 	diffs: CatalogPlanChangeDiff[],
 ): CatalogPlanChangeDiff => ({
@@ -448,7 +432,6 @@ export const mergeCatalogPlanChangeDiffs = (
 	),
 });
 
-/** Same preference as propagation targets, applied per parent version. */
 export const applyLicenseParentScopedDiffs = ({
 	targets,
 	fallbackDiff,
@@ -509,21 +492,18 @@ export const toVariantPropagationTargets = ({
 		};
 	});
 
-/** One parent plan and every version of it that offers the edited child. */
 export type LicenseParentTarget = {
 	planId: string;
 	name: string;
 	versions: LicenseParentVersion[];
 };
 
-/** One variant plan and the versions of it this base edit can pin. */
 export type VariantTarget = LicenseParentTarget & {
 	mintsNewVersion: boolean;
 	mintVersion: number;
 	takenSlugs: string[];
 };
 
-/** Newest row in the lane is the one a base mint would clone. */
 export const variantTargetMintsInSelection = ({
 	target,
 	selectedKeys,
@@ -568,7 +548,6 @@ export const toLicenseParentTargets = ({
 		})),
 	}));
 
-/** Versions a selection actually applies to — every version when whole-plan. */
 export const licenseParentVersionsInScope = ({
 	target,
 	selectedKeys,
@@ -588,8 +567,6 @@ export const licenseParentVersionsInScope = ({
 	);
 };
 
-/** Plan-selection keys → pinned targets. A whole-plan key expands client-side
- * into one pinned target per linked version — the API only accepts pins. */
 export const buildSelectedLicenseParentPropagate = ({
 	selectedKeys,
 	targets = [],
@@ -606,8 +583,6 @@ export const buildSelectedLicenseParentPropagate = ({
 		}));
 	});
 
-/** Selected variant keys → targets. Pins per version, except under a base
- * mint, where targets are plan-level and the server resolves the row. */
 export const buildSelectedVariantPropagate = ({
 	selectedKeys,
 	targets = [],
@@ -674,10 +649,6 @@ const licenseParentVersionIsSelected = ({
 	planScopeIsWholePlan({ selectedKeys, planId }) ||
 	planScopeIncludesVersion({ selectedKeys, planId, version });
 
-/**
- * One card per parent plan, newest version first. A mint happens once for the
- * plan, so it collapses the card to the single new version it creates.
- */
 const buildLicenseParentMigrateTargets = ({
 	preview,
 	selectedLicenseParentKeys,
@@ -817,7 +788,6 @@ export const buildCatalogMigrateTargets = ({
 		);
 		const rowsToShow =
 			affectedVersions.length > 0 ? affectedVersions : selectedByScope;
-		// A mint happens once for the plan — collapse the card to the new row.
 		const rows = createsNewVersion
 			? [
 					migrateRowFromPlanChange({

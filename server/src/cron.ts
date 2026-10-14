@@ -6,8 +6,6 @@ getAutumnEnv();
 const { warmupRegionalRedis } = await import("./external/redis/initRedis.js");
 await warmupRegionalRedis();
 
-// Edge config modules self-register on import (cron reads redis-v2-cache
-// so resolveRedisV2 picks the right instance on each ctx build).
 await import("./internal/misc/redisV2Cache/redisV2CacheStore.js");
 await import("./internal/misc/miscRedisConfig/miscRedisConfigStore.js");
 await import("./internal/misc/cacheV2Ramp/cacheV2RampStore.js");
@@ -21,8 +19,6 @@ const { startAllEdgeConfigPolling } = await import(
 );
 await startAllEdgeConfigPolling({ logger });
 
-// Resolve AWS task identity + start polling the cron blue-green slot store
-// so `isActiveSlot({ serviceName: "cron" })` in cronInit reads fresh data.
 const { resolveAwsTaskIdentity } = await import(
 	"./external/aws/ecs/awsTaskIdentity.js"
 );
@@ -32,7 +28,6 @@ const { startBlueGreenSlotStorePolling } = await import(
 );
 await startBlueGreenSlotStorePolling({ serviceName: "cron", logger });
 
-// The lock sweep evicts customers from the balance worker, so it needs to know who owns each partition.
 const { startBalanceWorkerClient } = await import(
 	"./external/balanceWorker/getBalanceWorkerClient.js"
 );

@@ -18,7 +18,6 @@ stripeWebhookRouter.use("/webhooks/*", (_c, next) =>
 	withTwStripeWebhookPriority(next),
 );
 
-// Legacy webhook - for orgs that pasted their Stripe secret keys
 stripeWebhookRouter.post(
 	"/webhooks/stripe/:orgId/:env",
 	stripeLegacySeederMiddleware,
@@ -32,7 +31,6 @@ stripeWebhookRouter.post(
 	handleStripeWebhookEvent,
 );
 
-// Connect webhook - for orgs using Stripe Connect (our managed account)
 stripeWebhookRouter.post(
 	"/webhooks/connect/:env",
 	stripeConnectSeederMiddleware,

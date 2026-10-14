@@ -1,6 +1,3 @@
-// Immediate switch reset behavior (attach V2): consumable/prepaid usage resets, allocated
-// usage carries over, and the reset_at anchor is preserved across upgrades.
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3 } from "@autumn/shared";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
@@ -11,24 +8,6 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// PREPAID TESTS
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Prepaid - usage RESETS on upgrade, reset_at preserved
- *
- * Scenario:
- * - Pro with prepaid (200 purchased)
- * - Advance 15 days mid-cycle
- * - Track 50 usage (balance = 150)
- * - Upgrade to premium with prepaid (300 purchased)
- *
- * Expected:
- * - Usage RESETS to 0 on upgrade (prepaid behavior)
- * - Balance = 300 (new purchased quantity)
- * - next_reset_at stays same
- */
 test.concurrent(
 	`${chalk.yellowBright("immediate-switch-reset 2: prepaid usage resets, reset_at preserved")}`,
 	async () => {
@@ -69,10 +48,8 @@ test.concurrent(
 			],
 		});
 
-		// Wait for webhooks to process and cache to reset
 		await new Promise((r) => setTimeout(r, 4000));
 
-		// Track 50 usage
 		await autumnV1.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
@@ -81,14 +58,12 @@ test.concurrent(
 
 		await new Promise((r) => setTimeout(r, 2000));
 
-		// Get original reset_at before upgrade
 		const customerBefore =
 			await autumnV1.customers.get<ApiCustomerV3>(customerId);
 		const originalResetAt =
 			customerBefore.features[TestFeature.Messages]?.next_reset_at;
 		expect(originalResetAt).toBeDefined();
 
-		// Verify state before upgrade: balance = 150
 		expectCustomerFeatureCorrect({
 			customer: customerBefore,
 			featureId: TestFeature.Messages,
@@ -96,7 +71,6 @@ test.concurrent(
 			usage: 50,
 		});
 
-		// Attach premium
 		await autumnV1.billing.attach({
 			customer_id: customerId,
 			product_id: premium.id,
@@ -112,7 +86,6 @@ test.concurrent(
 			notPresent: [pro.id],
 		});
 
-		// KEY: Usage RESETS on prepaid upgrade, reset_at preserved
 		expectCustomerFeatureCorrect({
 			customer,
 			featureId: TestFeature.Messages,
@@ -123,19 +96,6 @@ test.concurrent(
 	},
 );
 
-/**
- * Prepaid vs Allocated comparison - different behaviors
- *
- * Scenario:
- * - Pro with BOTH prepaid messages and allocated users
- * - Advance 15 days mid-cycle
- * - Track 50 messages and 3 users
- * - Upgrade to premium with both
- *
- * Expected:
- * - Messages (prepaid): usage RESETS
- * - Users (allocated): usage CARRIES OVER
- */
 test.concurrent(
 	`${chalk.yellowBright("immediate-switch-reset 3: prepaid resets, allocated carries over")}`,
 	async () => {
@@ -177,10 +137,8 @@ test.concurrent(
 			],
 		});
 
-		// Wait for webhooks to process and cache to reset
 		await new Promise((r) => setTimeout(r, 2000));
 
-		// Track both features
 		await autumnV1.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
@@ -194,24 +152,22 @@ test.concurrent(
 
 		await new Promise((r) => setTimeout(r, 2000));
 
-		// Verify state before upgrade
 		const customerBefore =
 			await autumnV1.customers.get<ApiCustomerV3>(customerId);
 		expectCustomerFeatureCorrect({
 			customer: customerBefore,
 			featureId: TestFeature.Messages,
-			balance: 150, // 200 - 50
+			balance: 150,
 			usage: 50,
 		});
 		expectCustomerFeatureCorrect({
 			customer: customerBefore,
 			featureId: TestFeature.Users,
 			includedUsage: 5,
-			balance: 2, // 5 - 3
+			balance: 2,
 			usage: 3,
 		});
 
-		// Attach premium
 		await autumnV1.billing.attach({
 			customer_id: customerId,
 			product_id: premium.id,
@@ -227,8 +183,6 @@ test.concurrent(
 			notPresent: [pro.id],
 		});
 
-		// KEY DIFFERENCE:
-		// Messages (prepaid): RESETS - balance = 200, usage = 0
 		expectCustomerFeatureCorrect({
 			customer,
 			featureId: TestFeature.Messages,
@@ -236,7 +190,6 @@ test.concurrent(
 			usage: 0,
 		});
 
-		// Users (allocated): CARRIES OVER - balance = 10 - 3 = 7, usage = 3
 		expectCustomerFeatureCorrect({
 			customer,
 			featureId: TestFeature.Users,

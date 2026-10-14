@@ -1,17 +1,3 @@
-/**
- * Step 3: Replace March 2026 events in Tinybird hour by hour, 10-min chunk by chunk.
- *
- * For each hourly file in ./march-deduped-hours/:
- *   - Splits into 10-minute chunk files (~60MB each, under Tinybird's 100MB limit)
- *   - Runs `tb --cloud datasource replace events` for each chunk
- *   - Writes a checkpoint so it's resumable
- *
- * Usage: bun run scripts/firecrawl-march-replace.ts [YYYY-MM-DD] [HH]
- *   e.g: bun run scripts/firecrawl-march-replace.ts 2026-03-01
- *        bun run scripts/firecrawl-march-replace.ts 2026-03-01 01
- * Run from: sirtenzin-autumn/server/tinybird/
- */
-
 import { createReadStream, createWriteStream, existsSync, statSync } from "node:fs";
 import { mkdir, writeFile, readFile, rm } from "node:fs/promises";
 import { createInterface } from "node:readline";
@@ -34,13 +20,11 @@ if (!dayFilter) {
 
 await mkdir(CHUNKS_DIR, { recursive: true });
 
-// ── Checkpoint ────────────────────────────────────────────────────────────────
 type Checkpoint = Record<string, "done" | "partial">;
 let checkpoint: Checkpoint = {};
 try { checkpoint = JSON.parse(await readFile(CHECKPOINT_FILE, "utf-8")); } catch { }
 const saveCheckpoint = async () => writeFile(CHECKPOINT_FILE, JSON.stringify(checkpoint, null, 2), "utf-8");
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
 const CHUNK_MINUTES = [0, 10, 20, 30, 40, 50];
 
 const chunkKey = (day: string, hh: string, startMin: number) => `${day}-${hh}-${startMin}`;
@@ -114,7 +98,6 @@ const runReplace = ({ day, hh, startMin, filePath }: { day: string; hh: string; 
   return true;
 };
 
-// ── Main ──────────────────────────────────────────────────────────────────────
 const hours = hourFilter ? [hourFilter] : Array.from({ length: 24 }, (_, i) => String(i).padStart(2, "0"));
 const scriptStart = Date.now();
 let totalChunksDone = 0;
@@ -133,7 +116,6 @@ for (const hh of hours) {
     continue;
   }
 
-  // Check if all chunks for this hour are already done
   const allDone = CHUNK_MINUTES.every((m) => checkpoint[chunkKey(dayFilter, hh, m)] === "done");
   if (allDone) {
     console.log(`[${dayFilter} ${hh}:xx] All chunks already done, skipping`);
@@ -173,7 +155,6 @@ for (const hh of hours) {
       totalFailed++;
     }
 
-    // ETA
     const elapsed = (Date.now() - scriptStart) / 1000;
     const done = totalChunksDone + totalChunksSkipped;
     const avg = elapsed / Math.max(1, totalChunksDone);

@@ -11,7 +11,6 @@ const state = {
 	checks: [] as Record<string, unknown>[],
 };
 
-// Billing pins its own autumn-js, so mock the copy it imports, not server's.
 const billingAutumnJs = Bun.resolveSync(
 	"autumn-js",
 	dirname(Bun.resolveSync("@autumn/billing", import.meta.dir)),
@@ -46,7 +45,6 @@ const testCtx = ({ atoms }: { atoms?: boolean } = {}) =>
 		},
 	}) as unknown as AutumnContext;
 
-/** The rpc router's shape: byoc mounted at "", another rpc route after it. */
 const rpcApp = ({ ctx }: { ctx: AutumnContext }) => {
 	const app = new Hono<HonoEnv>();
 	app.use("*", async (c, next) => {

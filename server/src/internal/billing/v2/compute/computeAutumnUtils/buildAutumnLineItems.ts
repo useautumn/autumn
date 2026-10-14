@@ -29,7 +29,6 @@ export const buildAutumnLineItems = ({
 	billingContext: BillingContext;
 	includeArrearLineItems?: boolean;
 	carriesUsage?: (cusEnt: FullCusEntWithFullCusProduct) => boolean;
-	/** A plan nothing was charged for has no unused time to credit. */
 	creditsUnusedTime?: (customerProduct: FullCusProduct) => boolean;
 }) => {
 	const { logger } = ctx;
@@ -38,7 +37,6 @@ export const buildAutumnLineItems = ({
 		...(deletedCustomerProducts ?? []),
 	];
 
-	// For now, update subscription doesn't charge for existing usage.
 	let arrearLineItems: LineItem[] = [];
 	const updateCustomerEntitlements: UpdateCustomerEntitlement[] = [];
 	if (includeArrearLineItems) {
@@ -48,10 +46,6 @@ export const buildAutumnLineItems = ({
 				customerProduct,
 				billingContext,
 				filters: {
-					// Allocated v2 holdings are not billed at plan transitions — the
-					// carried-over balance is billed at the next cycle end on the new
-					// plan instead (billing it here would charge a full cycle of rent
-					// mid-cycle and double-bill the carried balance).
 					cusEntFilter: (cusEnt) =>
 						!isAllocatedV2CustomerEntitlement(cusEnt) &&
 						!carriesUsage?.(cusEnt),
@@ -74,7 +68,6 @@ export const buildAutumnLineItems = ({
 
 	arrearLineItems = arrearLineItems.filter((lineItem) => lineItem.amount !== 0);
 
-	// Get line items for ongoing cus product
 	const deletedLineItems = customerProductsToDelete
 		.filter(creditsUnusedTime)
 		.flatMap((customerProduct) =>

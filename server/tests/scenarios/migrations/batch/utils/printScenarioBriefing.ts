@@ -100,10 +100,6 @@ const printCustomerState = ({
 	}
 };
 
-/**
- * Prints the seeded cast, its current state, the migrations now sitting ready in
- * the dashboard and what to expect once you run them.
- */
 export const printScenarioBriefing = ({
 	title,
 	cast,
@@ -116,7 +112,6 @@ export const printScenarioBriefing = ({
 	title: string;
 	cast: SeededCast;
 	state: CustomerStateSnapshot[];
-	/** Several ops when the point of the scenario is comparing them. */
 	migrations: ScenarioMigration[];
 	draftsCreated: boolean;
 	expectation: ScenarioExpectation;

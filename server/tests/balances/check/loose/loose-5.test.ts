@@ -21,7 +21,6 @@ describe(`${chalk.yellowBright(`${testCase}: loose entitlement on entity`)}`, ()
 			withTestClock: false,
 		});
 
-		// Create entity on the Users feature
 		await autumnV1.entities.create(customerId, [
 			{
 				id: entityId,
@@ -30,7 +29,6 @@ describe(`${chalk.yellowBright(`${testCase}: loose entitlement on entity`)}`, ()
 			},
 		]);
 
-		// Give the entity 10 messages (loose entitlement)
 		await autumnV1.balances.create({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,

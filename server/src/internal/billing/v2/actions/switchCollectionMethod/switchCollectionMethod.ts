@@ -8,7 +8,6 @@ import { persistCollectionMethod } from "./execute/persistCollectionMethod";
 import { updateStripeCollectionMethod } from "./execute/updateStripeCollectionMethod";
 import { setupSwitchCollectionMethodContext } from "./setup/setupSwitchCollectionMethodContext";
 
-/** Switches a subscription between invoicing and charging automatically, from the next renewal on. */
 export const switchCollectionMethod = async ({
 	ctx,
 	params,

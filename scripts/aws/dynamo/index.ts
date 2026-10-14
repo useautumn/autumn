@@ -1,21 +1,3 @@
-/**
- * Sets up Autumn's DynamoDB tables (idempotent — safe to re-run).
- *
- * Local emulators auto-create tables on first use (ensureLocalDynamoTable.ts),
- * so this script is mainly for REAL AWS, where the server deliberately never
- * creates tables (no dynamodb:CreateTable IAM for the app).
- *
- * Usage:
- *   bun dynamo setup     # create tables + enable TTL, wait for ACTIVE
- *   bun dynamo status    # describe tables
- *
- * Env:
- *   AWS_REGION                  target region (default us-east-2, the server's)
- *   AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY   credentials
- *   DYNAMODB_ENDPOINT           optional emulator endpoint (local only)
- *   DYNAMODB_IDEMPOTENCY_TABLE  idempotency table name override
- */
-
 import {
 	CreateTableCommand,
 	DescribeTableCommand,
@@ -37,7 +19,6 @@ type TableDefinition = {
 	ttlAttribute?: string;
 };
 
-/** Every Autumn DynamoDB table — add new tables here. */
 const tableDefinitions: TableDefinition[] = [
 	{
 		tableName: getIdempotencyTableName(),
@@ -107,7 +88,6 @@ const ensureTable = async (definition: TableDefinition) => {
 		return;
 	}
 	// Real AWS allows one UpdateTimeToLive per table per hour and can take up
-	// to an hour to enable — hence the check above before calling it.
 	await client.send(
 		new UpdateTimeToLiveCommand({
 			TableName: tableName,

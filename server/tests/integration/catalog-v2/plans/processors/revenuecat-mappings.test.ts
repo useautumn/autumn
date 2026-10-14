@@ -1,19 +1,3 @@
-/**
- * catalogV2.update — RevenueCat mappings ride the `processors` envelope.
- *
- * RC sells quantity as separate store products, so many RC ids map to one
- * Autumn plan and each carries the grant it represents. The mapping is a
- * read-time lookup for inbound webhooks — Autumn never bills through RC — so
- * there is no version dimension and nothing to create on the RC side.
- *
- * Contract:
- *   R1  a plan states its RC products; GET echoes them with their quantities
- *   R2  restating replaces the set, and an empty list clears the mapping
- *   R3  an RC id already claimed by another plan is a hard error — a purchase
- *       resolves by scanning every mapping, so a duplicate would attach to
- *       whichever row came back first
- */
-
 import { expect, test } from "bun:test";
 import type { ApiPlanExpandedV1 } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
@@ -76,7 +60,6 @@ test.concurrent(
 					],
 				});
 
-				// R1: both ids echo back, each keeping the quantity it represents.
 				const plan = await getPlan({ autumn: autumnV2_3, planId });
 				const products = plan.processors?.revenuecat?.products ?? [];
 				expect(
@@ -89,7 +72,6 @@ test.concurrent(
 					"grant for the large pack",
 				).toEqual([{ feature_id: TestFeature.Messages, quantity: 500 }]);
 
-				// R2: the stated set replaces, it does not merge.
 				await autumnV2_3.catalogV2.update({
 					plans: [
 						{
@@ -107,7 +89,6 @@ test.concurrent(
 					"restated set replaces",
 				).toEqual([small]);
 
-				// R2: an empty list clears the mapping entirely.
 				await autumnV2_3.catalogV2.update({
 					plans: [
 						{ plan_id: planId, processors: { revenuecat: { products: [] } } },
@@ -153,7 +134,6 @@ test.concurrent(
 					],
 				});
 
-				// R3: a second plan cannot claim an id the first already owns.
 				const update = autumnV2_3.catalogV2.update({
 					plans: [
 						{
@@ -166,7 +146,6 @@ test.concurrent(
 				});
 				await expect(update).rejects.toThrow();
 
-				// R3: two plans claiming it in the same request is rejected too.
 				const sameRequest = autumnV2_3.catalogV2.update({
 					plans: [
 						{

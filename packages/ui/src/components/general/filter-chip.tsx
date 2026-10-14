@@ -1,6 +1,5 @@
 import { XIcon } from "@phosphor-icons/react";
 
-/** An active filter shown as `label value ×`, e.g. inside a search bar or toolbar. */
 export function FilterChip({
 	label,
 	value,

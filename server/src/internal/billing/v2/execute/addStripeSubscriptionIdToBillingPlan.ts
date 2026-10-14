@@ -4,11 +4,6 @@ import type Stripe from "stripe";
 import { getPatchedCustomerProductUpdates } from "@/internal/billing/v2/utils/billingPlan/customerProductPlanMutations.js";
 import { customerProductHasPaidLicenses } from "@/internal/billing/v2/utils/customerProductHasPaidLicenses.js";
 
-/**
- * Adds a Stripe subscription ID to a billing plan.
- * @param billingPlan - The billing plan to add the Stripe subscription ID to.
- * @param stripeSubscriptionId - The Stripe subscription ID to add.
- */
 export const addStripeSubscriptionIdToBillingPlan = ({
 	autumnBillingPlan,
 	stripeSubscriptionId,
@@ -34,9 +29,6 @@ export const addStripeSubscriptionIdToBillingPlan = ({
 		update.updates.subscription_ids = [stripeSubscriptionId];
 	}
 
-	// Inserts only: a pool matched by identity already carries the subscription
-	// it belongs to, and restamping an outgoing pool moves it onto an identity
-	// another live pool holds.
 	for (const pooledCustomerEntitlement of autumnBillingPlan.pooledBalancePlan
 		?.insertPoolBalances ?? []) {
 		const pooledBalance = pooledCustomerEntitlement.pooled_balance;

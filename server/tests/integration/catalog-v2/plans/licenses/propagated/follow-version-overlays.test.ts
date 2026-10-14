@@ -1,6 +1,3 @@
-/**
- * catalogV2.update — follow across parent versions when overlays differ.
- */
 import { test } from "bun:test";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";

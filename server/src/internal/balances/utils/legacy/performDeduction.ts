@@ -16,7 +16,6 @@ export const performDeduction = ({
 	blockUsageLimit?: boolean;
 	allowNegativeBalance?: boolean;
 }) => {
-	// Either deduct from balance or entity balance
 	if (allowNegativeBalance) {
 		const usageLimit = ent.usage_limit;
 		const minBalance = usageLimit
@@ -45,20 +44,16 @@ export const performDeduction = ({
 		return { newBalance: cusEntBalance.toNumber(), deducted: 0, toDeduct };
 	}
 
-	// If toDeduct is negative, add to balance and set toDeduct to 0
 	let newBalance: number;
 	let deducted: number;
 	if (toDeduct < 0) {
 		newBalance = cusEntBalance.minus(toDeduct).toNumber();
 		deducted = toDeduct;
 		toDeduct = 0;
-	}
-
-	// If cusEnt has less balance to deduct than 0, deduct the balance and set balance to 0
-	else if (cusEntBalance.minus(toDeduct).lt(0)) {
-		toDeduct = new Decimal(toDeduct).minus(cusEntBalance).toNumber(); // toDeduct = toDeduct - cusEntBalance
-		deducted = cusEntBalance.toNumber(); // deducted = cusEntBalance
-		newBalance = 0; // newBalance = 0
+	} else if (cusEntBalance.minus(toDeduct).lt(0)) {
+		toDeduct = new Decimal(toDeduct).minus(cusEntBalance).toNumber();
+		deducted = cusEntBalance.toNumber();
+		newBalance = 0;
 	} else {
 		newBalance = cusEntBalance.minus(toDeduct).toNumber();
 		deducted = toDeduct;

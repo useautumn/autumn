@@ -2,10 +2,6 @@ import type { StripeDiscountWithCoupon } from "@autumn/shared";
 import { RecaseError } from "@autumn/shared";
 import type Stripe from "stripe";
 
-/**
- * Retrieves and validates a Stripe coupon by its ID.
- * Returns a StripeDiscountWithCoupon if valid, throws RecaseError if invalid or not found.
- */
 export const resolveCoupon = async ({
 	stripeCli,
 	couponId,

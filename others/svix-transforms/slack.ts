@@ -14,7 +14,6 @@ function handler(webhook) {
   var payload = webhook.payload || {};
   var data = payload.data || payload;
 
-  // ============ customer.products.updated ============
   if (webhook.eventType === "customer.products.updated") {
     var scenario = data.scenario || "updated";
     var customer = data.customer || {};
@@ -121,7 +120,6 @@ function handler(webhook) {
     return webhook;
   }
 
-  // ============ balances.limit_reached ============
   if (webhook.eventType === "balances.limit_reached") {
     var lrCustomerId = data.customer_id || "";
     var lrFeatureId = data.feature_id || "feature";
@@ -197,7 +195,6 @@ function handler(webhook) {
     return webhook;
   }
 
-  // ============ balances.usage_alert_triggered ============
   if (webhook.eventType === "balances.usage_alert_triggered") {
     var uaCustomerId = data.customer_id || "";
     var uaFeatureId = data.feature_id || "feature";
@@ -286,7 +283,6 @@ function handler(webhook) {
     return webhook;
   }
 
-  // Cancel any other event types — they don't match Slack's expected schema and would error.
   webhook.cancel = true;
   return webhook;
 }

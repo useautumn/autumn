@@ -6,9 +6,6 @@ loadLocalEnv();
 
 const { initDrizzle } = await import("../src/db/initDrizzle");
 
-// Diagnoses why the reset scan stopped using idx_customer_entitlements_reset_scan.
-//   PW_MODE=1 infisical run --env=prod --recursive -- bun run experiments/checkResetIndex.ts
-
 const main = async () => {
 	const { db } = initDrizzle();
 	console.log(`DB target: ${new URL(process.env.DATABASE_URL ?? "").host}\n`);

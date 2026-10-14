@@ -21,7 +21,6 @@ import { defaultDiscountConfig } from "../../utils/defaultRewardModels";
 interface SelectRewardTypeProps {
 	reward: FrontendReward;
 	setReward: (reward: FrontendReward) => void;
-	/** Set when editing a reward that is already a free product, so it stays reselectable */
 	showFreeProduct?: boolean;
 }
 

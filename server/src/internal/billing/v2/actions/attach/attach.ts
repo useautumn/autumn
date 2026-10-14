@@ -54,7 +54,6 @@ export async function attach({
 	params: AttachParamsV1;
 	preview?: boolean;
 	skipAutumnCheckout?: boolean;
-	/** The link this attach opens a Stripe session for, so the session lives as long as the link. */
 	longLivedCheckout?: BillingContext["longLivedCheckout"];
 
 	contextOverride?: BillingContextOverride;
@@ -79,7 +78,6 @@ export async function attach({
 		}),
 	};
 
-	// 1. Setup
 	const billingContext = await setupAttachBillingContext({
 		ctx,
 		params,
@@ -89,7 +87,6 @@ export async function attach({
 
 	logAttachContext({ ctx, billingContext });
 
-	// 2. Compute
 	const autumnBillingPlan = computeAttachPlan({
 		ctx,
 		attachBillingContext: billingContext,
@@ -105,7 +102,6 @@ export async function attach({
 		params,
 	});
 
-	// 3. Evaluate Stripe billing plan (handles checkout mode internally)
 	const stripeBillingPlan = await evaluateStripeBillingPlan({
 		ctx,
 		billingContext,
@@ -120,7 +116,6 @@ export async function attach({
 		stripe: stripeBillingPlan,
 	};
 
-	// 4. Errors (requires full billing plan)
 	await handleAttachV2Errors({
 		ctx,
 		billingContext,
@@ -160,7 +155,6 @@ export async function attach({
 			existingLock: checkoutReservation,
 		});
 
-	// 5. Checkout session lock (skip for confirm flows)
 	if (!skipAutumnCheckout && !shouldCreateLongLivedCheckout) {
 		const cachedResult = await arbitrateCheckoutLock();
 		if (cachedResult) {
@@ -173,7 +167,6 @@ export async function attach({
 		ctx,
 		fullCustomer: billingContext.fullCustomer,
 	});
-	// System and confirm flows (incl. the long-lived link's own start) never replace a pending plan.
 	const remainingPendingCustomerProducts = skipAutumnCheckout
 		? pendingCustomerProducts
 		: await discardReplacedPendingPlans({
@@ -191,7 +184,6 @@ export async function attach({
 	});
 	if (pendingInvoiceResult) {
 		preserveSubjectCache({ ctx });
-		// Long-lived skipped the lock above; a completed session must still win.
 		const cachedResult = shouldCreateLongLivedCheckout
 			? await arbitrateCheckoutLock()
 			: null;
@@ -218,7 +210,6 @@ export async function attach({
 		});
 	}
 
-	// The link wraps a real attach: the plan is granted (enable_plan_immediately) or left pending now.
 	const longLivedCheckout = shouldCreateLongLivedCheckout
 		? (
 				await billingPlanToAutumnCheckout({
@@ -235,13 +226,11 @@ export async function attach({
 		? { id: longLivedCheckout.id, expiresAt: longLivedCheckout.expires_at }
 		: existingLongLivedCheckout;
 
-	// 6. Save request billing details first so tax resolves against the new location
 	billingContext.stripeCustomer = await applyBillingDetailsForBilling({
 		ctx,
 		billingContext,
 	});
 
-	// 7. Execute billing plan
 	const billingResult = await executeBillingPlan({
 		ctx,
 		billingContext,
@@ -254,7 +243,6 @@ export async function attach({
 		preserveSubjectCache({ ctx });
 	}
 
-	// 8. Publish the compute-time balance transition
 	await publishBillingTransition({
 		ctx,
 		billingContext,

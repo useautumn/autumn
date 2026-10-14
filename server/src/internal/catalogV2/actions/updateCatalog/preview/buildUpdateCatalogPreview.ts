@@ -5,7 +5,6 @@ import { buildRewardsPreview } from "@/internal/catalogV2/actions/updateCatalog/
 import type { UpdateCatalogContext } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext";
 import type { UpdateCatalogPlan } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogPlan";
 
-/** Pure map: update catalog plan → preview response body. */
 export const buildUpdateCatalogPreview = ({
 	catalogContext,
 	updateCatalogPlan,

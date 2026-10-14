@@ -1,8 +1,3 @@
-/**
- * Multi-attach accepts one shared past starts_at for new paid subscriptions.
- * It backdates every customer product, the Stripe subscription, and its invoice.
- */
-
 import { expect, test } from "bun:test";
 import {
 	type ApiCustomerV3,

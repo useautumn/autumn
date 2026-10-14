@@ -1,13 +1,3 @@
-/**
- * catalogV2.update — pinned variant rows receive THEIR OWN anchor's diff.
- * Off-anchor pins 400; omitted rows stay frozen. Historical rows never
- * relink just because the latest base was edited.
- *
- * Same-plan versions across base rows (EU v1+v2 on Team v1, EU v3 on
- * Team v2) are independently pinnable under all_versions. Discover
- * lists them on sibling_versions[].variants so the dashboard can pick.
- */
-
 import { test } from "bun:test";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";

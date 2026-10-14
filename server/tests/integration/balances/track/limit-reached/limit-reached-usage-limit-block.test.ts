@@ -1,16 +1,3 @@
-/**
- * TDD test for the `usage_limit` block on `balances.limit_reached`.
- *
- * Contract under test:
- *   New types/fields:
- *     - limit_reached.filter (schema catch-up; already emitted for filtered caps)
- *     - limit_reached.usage_limit { limit, interval, anchor, usage, remaining, window_start_at, window_end_at }
- *       present iff limit_type is usage_limit; absent for included / spend_limit / max_purchase
- *
- * Pre-impl red: payload has no usage_limit block.
- * Post-impl green: checkLimitReached reads the resolved window limit off the FullSubject.
- */
-
 import { afterAll, beforeAll, expect, test } from "bun:test";
 import { ApiVersion, ms, ResetInterval } from "@autumn/shared";
 import {

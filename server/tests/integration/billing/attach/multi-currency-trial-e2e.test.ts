@@ -16,7 +16,6 @@ import { AutumnRpcCli } from "@/external/autumn/autumnRpcCli.js";
 const autumnRpc = new AutumnRpcCli({ version: ApiVersion.V2_1 });
 const getSuffix = () => Math.random().toString(36).slice(2, 9);
 
-// After a free trial converts, the first real charge must be the eur amount.
 test.concurrent(
 	`${chalk.yellowBright("multi-currency e2e: eur trial converts and first charge is eur")}`,
 	async () => {
@@ -50,15 +49,12 @@ test.concurrent(
 				actions: [],
 			});
 
-		// Plan created via RPC (unprefixed id) → attach in the body, not via
-		// s.billing.attach (which prefixes the product id with the customer id).
 		await autumnV1.billing.attach({
 			customer_id: customerId,
 			product_id: planId,
 			redirect_mode: "if_required",
 		});
 
-		// Advance past the 7-day trial to trigger the first real invoice.
 		await advanceTestClock({
 			stripeCli: ctx.stripeCli,
 			testClockId: testClockId as string,
@@ -70,7 +66,6 @@ test.concurrent(
 		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 		await expectProductActive({ customer, productId: planId });
 
-		// The post-trial conversion charge is the eur amount (18), not usd (20).
 		const stripeInvoices = await ctx.stripeCli.invoices.list({
 			customer: customer.stripe_id as string,
 		});

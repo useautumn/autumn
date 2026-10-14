@@ -1,18 +1,3 @@
-/**
- * `atmn sandbox use`: pick a sandbox by name or id, mint a key when the
- * machine has none, and pin it in .env. The API is faked; the .env is real.
- *
- * Contract:
- *   - use <name>       resolves the name (unique per org) to the id
- *   - use <id>         resolves the id as is
- *   - no key on disk   → sandboxes.create_key is called, the key is written
- *   - key on disk      → nothing minted, the pin still moves
- *   - --clear          drops the pin only; keys stay
- *   - headless, no arg → the table and the hint, nothing written
- *   - --json           org, sandbox, keyName, keyMinted, envPath, notes[]
- *   - unknown query    → error naming `atmn sandbox list`
- */
-
 import { afterEach, beforeEach, expect, test } from "bun:test";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -150,7 +135,6 @@ test("--clear drops the pin and keeps every key", async () => {
 	const { client } = fakeClient();
 	const { lines, write } = capture();
 
-	// No client, no org: clearing must work logged out and offline.
 	await runSandboxUse({
 		clear: true,
 		envDirs: [dir],

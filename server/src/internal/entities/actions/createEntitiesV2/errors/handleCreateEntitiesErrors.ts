@@ -80,7 +80,6 @@ const refuseEntitiesForFeature = ({
 		}
 
 		const usageLimit = customerEntitlement.entitlement.usage_limit;
-		// New seats reuse paid-for replaceables first; each gives its seat back.
 		const reusedSeats = customerEntitlement.replaceables.slice(
 			0,
 			inserted.length,

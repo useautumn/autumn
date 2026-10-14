@@ -73,9 +73,7 @@ type Harness = {
 
 type RunningWorker = {
 	endpoint: string;
-	/** Every warning the worker logged so far, as the logger's argument lists. */
 	warnings(): unknown[][];
-	/** The database line's counts a spawned worker drained since `since`, once a second; empty in process. */
 	databaseLines(params: { since: number }): DatabaseLine[];
 	stop(): Promise<void>;
 };
@@ -133,7 +131,6 @@ async function createHarness(): Promise<Harness> {
 		metering: deployment,
 		ownership: `${deployment}-owners`,
 		commands: `${deployment}-commands`,
-		// The worker derives this name from its deployment and refuses to start without it.
 		catalogInvalidations: `${deployment}-catalog-invalidations`,
 	};
 	const kafka = new Kafka({
@@ -205,8 +202,6 @@ async function createHarness(): Promise<Harness> {
 	return { deployment, topics, routing, client, stop, admin };
 }
 
-/** A whole worker on the postgres backend: Kafka log, Postgres rows and bookmark, no SQLite. */
-/** The edge configs a spawned worker serves from memory: the snapshot settings under their S3 key. */
 function edgeConfigOverrideOf({
 	subjectSnapshots,
 	snapshotSettings,
@@ -224,7 +219,6 @@ function edgeConfigOverrideOf({
 	return Buffer.from(JSON.stringify(configs)).toString("base64");
 }
 
-/** A whole worker on the postgres backend: Kafka log, Postgres rows and bookmark, no SQLite. */
 async function startWorker({
 	harness,
 	subprocess = false,
@@ -258,7 +252,6 @@ async function startWorker({
 	const warnings: unknown[][] = [];
 	const warnFile = join(directory, "warnings.jsonl");
 	const databaseFile = join(directory, "database.jsonl");
-	// The snapshot settings come from the edge-config override, decoded once per process: a writing worker is its own process.
 	const child =
 		subprocess || subjectSnapshots !== "off"
 			? Bun.spawn(
@@ -287,7 +280,6 @@ async function startWorker({
 		? {
 				start: async () => {},
 				stop: async () => {
-					// `subprocess` callers want a crash; a worker spawned only for its settings stops like an in-process one.
 					child.kill(subprocess ? "SIGKILL" : "SIGTERM");
 					await child.exited;
 				},
@@ -312,7 +304,6 @@ async function startWorker({
 			});
 	await worker.start();
 	let owned = false;
-	// A spawned worker boots for seconds and may wait out a killed predecessor's session before it can join.
 	const pollAttempts = child
 		? OWNERSHIP_POLL_ATTEMPTS * 6
 		: OWNERSHIP_POLL_ATTEMPTS;
@@ -481,7 +472,6 @@ function resetCommand({
 	});
 }
 
-/** Worker-side warnings, errors and runtime failures, surfaced when a request fails. */
 const workerLogs: unknown[][] = [];
 const runtimeErrors: unknown[] = [];
 
@@ -708,7 +698,6 @@ describe.skipIf(brokers.length === 0 || !databaseUrl)(
 			);
 			expect(reply.result.status).toBe("applied");
 			expect(balanceOf(reply, customer.customerEntitlementId)).toBe(95);
-			// The reply comes when Kafka has the record; Postgres follows a moment later.
 			expect(await waitForBalance({ customer, balance: 95 })).toBe(95);
 			expect(
 				await customer.readNextOffset({
@@ -728,7 +717,6 @@ describe.skipIf(brokers.length === 0 || !databaseUrl)(
 			);
 			expect(balanceOf(next, customer.customerEntitlementId)).toBe(90);
 			expect(await waitForBalance({ customer, balance: 90 })).toBe(90);
-			// Offset 1 was the first transaction's commit marker; the second record sits at 2.
 			expect(
 				await customer.readNextOffset({
 					topic: harness.topics.metering,
@@ -736,7 +724,6 @@ describe.skipIf(brokers.length === 0 || !databaseUrl)(
 				}),
 			).toBe(3n);
 
-			// The first worker's memory died with it; the log refilled the second's on boot.
 			await expect(
 				harness.client.track({
 					command: trackCommand({ customer, commandId: "cmd_1", value: 5 }),
@@ -744,12 +731,10 @@ describe.skipIf(brokers.length === 0 || !databaseUrl)(
 			).rejects.toMatchObject({ workerCode: "DUPLICATE_COMMAND" });
 			expect(await customer.readBalance()).toBe(90);
 
-			// Queued, not sent: the owner consumes it from the command topic and the row still moves.
 			await harness.client.queue.track({
 				commands: [trackCommand({ customer, commandId: "cmd_3", value: 5 })],
 			});
 			expect(await waitForBalance({ customer, balance: 85 })).toBe(85);
-			// Queued again under the same id: consumed as a duplicate, nothing moves.
 			await harness.client.queue.track({
 				commands: [trackCommand({ customer, commandId: "cmd_3", value: 5 })],
 			});
@@ -804,7 +789,6 @@ describe.skipIf(brokers.length === 0 || !databaseUrl)(
 					}),
 				).toBe(1n);
 
-				// A duplicate at a different offset and an unreadable record both finish without another deduction.
 				await isolated.client.queue.track({ commands: [command] });
 				await waitForCommandBookmark({
 					customer: crashCustomer,
@@ -834,7 +818,6 @@ describe.skipIf(brokers.length === 0 || !databaseUrl)(
 				await running.stop();
 				running = undefined;
 
-				// The group is behind Postgres: takeover still seeks past the three completed commands.
 				await isolated.admin.setOffsets({
 					groupId: isolated.deployment,
 					topic: isolated.topics.commands,
@@ -904,7 +887,6 @@ describe.skipIf(brokers.length === 0 || !databaseUrl)(
 					cycleEndedAt + 32 * DAY_MS,
 				);
 
-				// A retry of the track is a duplicate; the reset it triggered is not refilled twice.
 				await expect(
 					harness.client.track({
 						command: trackCommand({
@@ -916,7 +898,6 @@ describe.skipIf(brokers.length === 0 || !databaseUrl)(
 				).rejects.toMatchObject({ workerCode: "DUPLICATE_COMMAND" });
 				expect(await tracked.readBalance()).toBe(95);
 
-				// 60 on the old cycle would refuse 70; the check refills first and allows it.
 				const check = await harness.client.check({
 					command: checkCommand({
 						customer: checked,
@@ -1193,14 +1174,12 @@ describe.skipIf(brokers.length === 0 || !databaseUrl)(
 					partition: PARTITION,
 				});
 
-				// The worker still holds the product, so it decides the update; Postgres has nothing to update.
 				await planned.deleteCustomerProductBehindWorker();
 				await expect(
 					harness.client.applyBillingPlan({
 						request: planned.linkBackRequest({ commandId: "poison_link" }),
 					}),
 				).rejects.toMatchObject({ workerCode: "STALE_SUBJECT" });
-				// One record, one verdict: its customer update did not land either.
 				expect(await planned.readProcessor()).toBeNull();
 				const bookmarkAfter = await waitForBookmarkPast({
 					customer: seeded,
@@ -1208,14 +1187,12 @@ describe.skipIf(brokers.length === 0 || !databaseUrl)(
 					bookmark: bookmarkBefore,
 				});
 				expect(bookmarkAfter).toBeGreaterThan(bookmarkBefore as bigint);
-				// The refused record is in the log, so its id is spent even though nothing landed.
 				await expect(
 					harness.client.applyBillingPlan({
 						request: planned.linkBackRequest({ commandId: "poison_link" }),
 					}),
 				).rejects.toMatchObject({ workerCode: "DUPLICATE_COMMAND" });
 
-				// The partition keeps deciding and landing plans for this customer.
 				const renamed = await harness.client.applyBillingPlan({
 					request: planned.renameRequest({
 						commandId: "poison_rename",
@@ -1225,7 +1202,6 @@ describe.skipIf(brokers.length === 0 || !databaseUrl)(
 				expect(renamed.result.status).toBe("applied");
 				expect(await planned.readName()).toBe("Grace");
 
-				// A restart replays the log past the refused record without tripping on it.
 				await worker.stop();
 				workers.splice(workers.indexOf(worker), 1);
 				const replacement = await startWorker({ harness });
@@ -1250,7 +1226,6 @@ describe.skipIf(brokers.length === 0 || !databaseUrl)(
 			const seeded = await seedCustomer({ postgres, balance: 100 });
 			const planned = await planNewCustomer({ postgres, seeded });
 			try {
-				// Not awaited in between: the rename reaches the worker while the create is still in flight.
 				const created = harness.client.applyBillingPlan({
 					request: planned.request({ commandId: "queued_create" }),
 				});
@@ -1293,7 +1268,6 @@ describe.skipIf(brokers.length === 0 || !databaseUrl)(
 						expect.objectContaining({ id: pool.poolId, granted: 200 }),
 					]);
 					expect(balanceOf(reply, pool.poolCustomerEntitlementId)).toBe(200);
-					// Sources live on their entities: zeroed, pointing at their share.
 					const [entityA] = pool.entities;
 					if (!entityA) throw new Error("the pool has two entities");
 					const entityRead = await harness.client.readSubjectState({
@@ -1311,7 +1285,6 @@ describe.skipIf(brokers.length === 0 || !databaseUrl)(
 						pooled_contribution_id: expect.any(String),
 					});
 
-					// Postgres holds the same picture.
 					expect(await pool.readGranted()).toBe(200);
 					expect(await pool.readPoolBalance()).toBe(200);
 					expect(await pool.readSourceBalances()).toEqual([0, 0]);
@@ -1319,7 +1292,6 @@ describe.skipIf(brokers.length === 0 || !databaseUrl)(
 						(await pool.readContributions()).map(({ current }) => current),
 					).toEqual([100, 100]);
 
-					// A track through an entity draws from the pool.
 					const tracked = await trackOrExplain(
 						harness,
 						trackCommand({
@@ -1925,7 +1897,6 @@ describe.skipIf(brokers.length === 0 || !databaseUrl)(
 						const inserted = replies.some(
 							(reply) => reply.result.status === "applied",
 						);
-						// Whichever create ran first decided: the insert, or the claim.
 						expect(await planned.readInternalIdHoldingCustomerId()).toBe(
 							inserted ? planned.internalCustomerId : emailOnlyInternalId,
 						);
@@ -1941,7 +1912,6 @@ describe.skipIf(brokers.length === 0 || !databaseUrl)(
 			}
 		}, 120_000);
 
-		/** Reads a fresh customer holding one license pool, through the worker. */
 		const readLicensePool = async ({ customized }: { customized: boolean }) => {
 			const worker = workers.at(-1) ?? (await startWorker({ harness }));
 			if (!workers.includes(worker)) workers.push(worker);
@@ -2037,7 +2007,6 @@ describe.skipIf(brokers.length === 0 || !databaseUrl)(
 			if (!workers.includes(worker)) workers.push(worker);
 			const utc = (year: number, month: number, day: number) =>
 				Date.UTC(year, month - 1, day);
-			// A month-end subscription drifted to the 30th: stepping alone would give 30 May; the anchor bills 31 May.
 			const anchored = await seedCustomer({
 				postgres,
 				balance: 60,
@@ -2097,7 +2066,6 @@ describe.skipIf(brokers.length === 0 || !databaseUrl)(
 					partition: PARTITION,
 				});
 
-				// Already on the new cycle: a later reset finds nothing due and appends no record.
 				const idle = await harness.client.reset({
 					command: resetCommand({ customer: sent, commandId: "reset_2" }),
 				});
@@ -2109,7 +2077,6 @@ describe.skipIf(brokers.length === 0 || !databaseUrl)(
 					}),
 				).toBe(bookmark);
 
-				// The cron's path: queued on the command topic, consumed by the owner, landed the same way.
 				await harness.client.queue.reset({
 					commands: [
 						resetCommand({ customer: queued, commandId: "reset_queued" }),
@@ -2147,7 +2114,6 @@ describe.skipIf(brokers.length === 0 || !databaseUrl)(
 				expect(await waitForBalance({ customer: carried, balance: 100 })).toBe(
 					100,
 				);
-				// 60 unused, capped at 50, expiring a month after the cycle that ended.
 				expect(await carried.readRollovers()).toEqual([
 					{ balance: 50, expires_at: expect.any(Number) },
 				]);
@@ -2161,7 +2127,6 @@ describe.skipIf(brokers.length === 0 || !databaseUrl)(
 					}),
 				);
 				expect(reply.result.status).toBe("applied");
-				// One of the two paid the 5; which one is the deduction order's call, not this test's.
 				let held = 0;
 				for (let attempt = 0; attempt < 200 && held !== 145; attempt++) {
 					const [rollover] = await carried.readRollovers();
@@ -2180,7 +2145,6 @@ describe.skipIf(brokers.length === 0 || !databaseUrl)(
 			const DAY_MS = 24 * 60 * 60 * 1000;
 			const cycleEndedAt = Date.now() - DAY_MS;
 			const owner = await seedCustomer({ postgres, balance: 100 });
-			// A: unchanged. B: a downgrade due at the cycle end. C: added mid-cycle, contributing from the next one.
 			const pool = await seedPool({
 				postgres,
 				customer: owner,
@@ -2199,7 +2163,6 @@ describe.skipIf(brokers.length === 0 || !databaseUrl)(
 					trackCommand({ customer: owner, commandId: "pool_track", value: 5 }),
 				);
 				expect(reply.result.status).toBe("applied");
-				// The pool paid: 100 + 40 + 30 = 170, less the 5.
 				expect(balanceOf(reply, pool.poolCustomerEntitlementId)).toBe(165);
 
 				let landed = false;
@@ -2233,7 +2196,6 @@ describe.skipIf(brokers.length === 0 || !databaseUrl)(
 			const cycleEndedAt = Date.now() - DAY_MS;
 			const owner = await seedCustomer({ postgres, balance: 100 });
 			const license = await seedLicensePool({ postgres, seeded: owner });
-			// Bought seats × the grant is 150; a share's next value must not move it.
 			const pool = await seedPool({
 				postgres,
 				customer: owner,
@@ -2289,7 +2251,6 @@ describe.skipIf(brokers.length === 0 || !databaseUrl)(
 				balance: 500,
 			});
 			try {
-				// Only the seat funds the entity: the customer's own grant is gone.
 				await owner.deleteGrant();
 				const reply = await trackOrExplain(
 					harness,
@@ -2351,9 +2312,7 @@ describe.skipIf(brokers.length === 0 || !databaseUrl)(
 				]);
 				expect(first.result.status).toBe("applied");
 				expect(second.result.status).toBe("applied");
-				// 60 on the old cycle would have refused 70: every arrival saw the refilled cycle.
 				expect(check.result.allowed).toBe(true);
-				// One refill to 100, then 5 and 5: a second refill would leave 95 or 100.
 				expect(await waitForBalance({ customer: crowded, balance: 90 })).toBe(
 					90,
 				);
@@ -2373,23 +2332,19 @@ describe.skipIf(brokers.length === 0 || !databaseUrl)(
 					trackCommand({ customer: moved, commandId: "moved_1", value: 5 }),
 				);
 				expect(balanceOf(first, moved.customerEntitlementId)).toBe(95);
-				// Landed, so the bookmark read next is the one moved_2's skip has to pass.
 				expect(await waitForBalance({ customer: moved, balance: 95 })).toBe(95);
 				const bookmarkBefore = await moved.readNextOffset({
 					topic: harness.topics.metering,
 					partition: PARTITION,
 				});
 
-				// The legacy path removes the row without telling the worker, as a customer delete does.
 				await moved.deleteGrant();
 
-				// A log-durable caller is answered from memory once Kafka has the record; the store's refusal is an accepted loss.
 				const refused = await trackOrExplain(
 					harness,
 					trackCommand({ customer: moved, commandId: "moved_2", value: 5 }),
 				);
 				expect(balanceOf(refused, moved.customerEntitlementId)).toBe(90);
-				// The refused record still moved the bookmark: a replay never meets it again.
 				const bookmarkAfter = await waitForBookmarkPast({
 					customer: moved,
 					harness,
@@ -2397,7 +2352,6 @@ describe.skipIf(brokers.length === 0 || !databaseUrl)(
 				});
 				expect(bookmarkAfter).toBeGreaterThan(bookmarkBefore as bigint);
 
-				// The worker still owns the partition and decides the next track on fresh rows.
 				await moved.restoreGrant({ balance: 50 });
 				const third = await trackOrExplain(
 					harness,
@@ -2406,7 +2360,6 @@ describe.skipIf(brokers.length === 0 || !databaseUrl)(
 				expect(balanceOf(third, moved.customerEntitlementId)).toBe(45);
 				expect(await waitForBalance({ customer: moved, balance: 45 })).toBe(45);
 
-				// A restart replays the log from below the bookmark without tripping on the refused record.
 				await worker.stop();
 				workers.splice(workers.indexOf(worker), 1);
 				const replacement = await startWorker({ harness });
@@ -2457,7 +2410,6 @@ describe.skipIf(brokers.length === 0 || !databaseUrl)(
 				await running.stop();
 				running = undefined;
 
-				// The next record reaches Kafka, but its flush is held until the worker is killed.
 				running = await startWorker({
 					harness: isolated,
 					subprocess: true,
@@ -2488,7 +2440,6 @@ describe.skipIf(brokers.length === 0 || !databaseUrl)(
 					),
 				).toBe(95);
 
-				// The replayed record carries no state, so it deletes the row it makes stale.
 				running = await startWorker({
 					harness: isolated,
 					subjectSnapshots: "write",
@@ -2543,7 +2494,6 @@ describe.skipIf(brokers.length === 0 || !databaseUrl)(
 					await readSnapshots({ postgres, customer: served }),
 				).toHaveLength(1);
 
-				// The legacy path rewrites the grant underneath: the snapshot still says 95.
 				await served.deleteGrant();
 				await served.restoreGrant({ balance: 50 });
 				running = await startWorker({
@@ -2558,12 +2508,10 @@ describe.skipIf(brokers.length === 0 || !databaseUrl)(
 					trackCommand({ customer: served, commandId: "serve_2", value: 5 }),
 				);
 				expect(balanceOf(stale, served.customerEntitlementId)).toBe(90);
-				// The stale decision still landed its deduction on the real row (50 → 45): row changes are deltas.
 				expect(await waitForBalance({ customer: served, balance: 45 })).toBe(
 					45,
 				);
 
-				// An evict drops the row with the memory; the next track reads whole and sees the bypass write.
 				await isolated.client.evict({
 					command: evictCommand({
 						customerId: served.identity.customerId,
@@ -2607,7 +2555,6 @@ describe.skipIf(brokers.length === 0 || !databaseUrl)(
 				expect(snapshotBalanceOf(written[0], checked)).toBe(95);
 				await running.stop();
 
-				// A restart over an untouched row: the row and the rows agree, nothing is logged.
 				running = await startWorker({
 					harness: isolated,
 					subjectSnapshots: "verify",
@@ -2626,7 +2573,6 @@ describe.skipIf(brokers.length === 0 || !databaseUrl)(
 				expect(running.warnings()).toEqual([]);
 				await running.stop();
 
-				// The legacy path rewrites the grant underneath: the row still says 90, the rows say 50.
 				await checked.deleteGrant();
 				await checked.restoreGrant({ balance: 50 });
 				running = await startWorker({
@@ -2657,7 +2603,6 @@ describe.skipIf(brokers.length === 0 || !databaseUrl)(
 			}
 		}, 120_000);
 
-		/** The counts drain once a second: every line since `since`, once a drain after the moment of asking has landed. */
 		const waitForDatabaseLines = async ({
 			running,
 			since,
@@ -2786,7 +2731,6 @@ describe.skipIf(brokers.length === 0 || !databaseUrl)(
 					sumOf(served, (line) => line.data.queries.subject_rows?.count),
 				).toBe(0);
 
-				// A rollback's evict: the row goes and nothing rebuilds it, so legacy writes cannot be served stale later.
 				const rolledBackAt = Date.now();
 				await Bun.sleep(5);
 				await isolated.client.evict({
@@ -3181,7 +3125,6 @@ describe.skipIf(brokers.length === 0 || !databaseUrl)(
 				let running: RunningWorker | undefined;
 				try {
 					running = await startWorker({ harness: isolated, subjectSnapshots });
-					// A track per customer: with snapshots kept, every row exists before the restart.
 					for (let start = 0; start < herd.length; start += 100)
 						await Promise.all(
 							herd

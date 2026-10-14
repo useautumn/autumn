@@ -1,6 +1,3 @@
-/** Contract: omitted quantities carry paid seats across a license transition.
- * Assignment customer-product IDs stay stable and repoint to the incoming plan. */
-
 import { expect, test } from "bun:test";
 import { getLicenseDbState } from "@tests/integration/licenses/licenseTestUtils";
 import chalk from "chalk";

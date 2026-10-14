@@ -1,19 +1,3 @@
-/**
- * In-place catalog edit (disable_version) then batch-migrate attached customers.
- *
- * Dashboard flow: rewrite the live version, keep existing rows on the retired
- * entitlement, then run the auto-draft so customers catch up.
- *
- * Contract:
- *   mixed/replace: 100/mo → 200/mo, used 3 → remaining 197, one messages row,
- *     no leftover 100 row, dashboard survives
- *   delete: drop messages/mo → zero messages rows, dashboard survives
- *   add: keep 100/mo, add words once → original messages row + one words row
- *
- * C14 (catalog already 30, live 10 → remaining 27) lives in
- * batch-replace-item-in-place.test.ts — not duplicated here.
- */
-
 import { expect, test } from "bun:test";
 import {
 	type ApiCustomerV5,

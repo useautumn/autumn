@@ -14,7 +14,6 @@ import { createBalanceWebhooksConsumer } from "./balanceWebhooks/balanceWebhooks
 import { createCachePushConsumer } from "./cachePush/cachePushConsumer.js";
 import { createUsageEventsConsumer } from "./usageEvents/usageEventsConsumer.js";
 
-/** Every job herald runs. A new job is a folder beside these and one line here. */
 export function createHeraldConsumers({
 	ctx,
 }: {

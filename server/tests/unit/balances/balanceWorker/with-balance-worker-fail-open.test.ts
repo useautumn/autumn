@@ -101,7 +101,6 @@ describe("withBalanceWorkerFailOpen", () => {
 	});
 
 	test("the fail-open line says which step of the request gave up, and which command", async () => {
-		// The client got a successor hint, followed it, and the successor stayed NOT_READY through every retry.
 		const stillNotReady = new BalanceWorkerClientError({
 			code: "WORKER_ERROR",
 			outcome: "not_submitted",

@@ -2,7 +2,6 @@ import { StatusChipIcon } from "@autumn/ui";
 import { Fragment } from "react";
 import { cn } from "@/lib/utils";
 
-/** Upcoming waits on earlier steps; done can be edited; locked is done for good. */
 export type AtomSectionState =
 	| "upcoming"
 	| "active"
@@ -20,7 +19,6 @@ export type AtomStep = {
 const isPast = (state: AtomSectionState) =>
 	state === "done" || state === "locked";
 
-/** A step's number until it is reached; done and failed steps show their status instead. */
 export const AtomStepMarker = ({
 	index,
 	state,
@@ -42,7 +40,6 @@ export const AtomStepMarker = ({
 	);
 };
 
-/** The setup's steps in one row; a done step can be clicked to edit it. */
 export const AtomStepper = ({ steps }: { steps: AtomStep[] }) => (
 	<ol className="flex h-10 items-center gap-3 px-3">
 		{steps.map((step, index) => {

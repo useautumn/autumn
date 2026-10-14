@@ -1,12 +1,3 @@
-/**
- * catalogV2.update — variant declare / follow+declare.
- *
- * Contract:
- *   variants[].customize only → overlay on current, no new base items
- *   follow + customize, same slot → customize wins that slot; rest of base diff applies
- *   follow + customize, different slots → both apply
- */
-
 import { test } from "bun:test";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";

@@ -3,10 +3,6 @@ import { CatalogLicenseParentPreviewSchema } from "./catalogLicenseParentPreview
 import { CatalogSiblingVersionPreviewSchema } from "./catalogSiblingVersionPreview.js";
 import { CatalogVariantPreviewSchema } from "./catalogVariantPreview.js";
 
-/**
- * Another version of a plan `plans[]` row. `license_parents` / `variants`
- * are who currently points at THIS version — not the edited row.
- */
 export const CatalogPlanSiblingVersionPreviewSchema =
 	CatalogSiblingVersionPreviewSchema.extend({
 		license_parents: z

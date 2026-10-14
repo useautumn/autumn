@@ -1,6 +1,3 @@
-/** A past_due subscription is already in dunning, so a set_plans change applies at once like Stripe:
- * usage resets at the change and is billed on its invoice exactly once, never again at the next renewal. */
-
 import { expect, test } from "bun:test";
 import {
 	type ApiCustomerV3,
@@ -92,7 +89,6 @@ test.concurrent(
 		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 		expect(customer.features[TestFeature.Messages]?.usage).toBe(0);
 
-		// The customer fixes their card, so the next renewal is billed normally rather than left to dunning.
 		const workingCard = await stripeCli.paymentMethods.attach("pm_card_visa", {
 			customer: stripeCustomerId,
 		});

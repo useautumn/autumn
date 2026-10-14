@@ -25,10 +25,8 @@ const JOB_NAME = "reset-cus-ents-v2";
 const IDLE_DELAY_MS = ms.seconds(5);
 const BACKLOG_GAUGE_INTERVAL_MS = ms.minutes(5);
 
-/** Where a sweep's due rows are refilled: by the balance worker, or by the SQL batch lane. Fixed for the whole sweep. */
 type ResetLane = "worker" | "sql";
 
-/** Progress of the sweep currently in flight. */
 type SweepState = {
 	cursor: ResetScanCursor | null;
 	dueBefore: number | null;
@@ -49,14 +47,9 @@ const newSweepState = (): SweepState => ({
 	messages: 0,
 });
 
-/**
- * SQL until every customer is on the worker: its invalidation drops the Redis fields and queues a worker
- * evict, so both populations rehydrate from Postgres. A worker reset would leave a legacy customer's Redis view stale.
- */
 const chooseLane = (): ResetLane =>
 	getBalanceWorkerRolloutOverride() === true ? "worker" : "sql";
 
-/** Chunks one scanned page into compact ID-only SQS payloads. */
 export const pageToBatchResetPayloads = ({
 	page,
 	workerBatchSize,
@@ -81,7 +74,6 @@ const shouldRunPage = () =>
 	isResetJobV2Enabled() &&
 	isActiveSlot({ serviceName: "cron" });
 
-/** Enqueues one scanned page and folds it into the sweep counters. */
 const enqueuePage = async ({
 	ctx,
 	page,
@@ -130,8 +122,6 @@ const enqueuePage = async ({
 	});
 };
 
-/** Gate B + completion event: wait for the workers to drain this sweep's
- * messages, then report it (idle sweeps that scanned nothing stay silent). */
 const completeSweep = async ({
 	ctx,
 	signal,
@@ -160,15 +150,6 @@ const completeSweep = async ({
 	});
 };
 
-/**
- * V2 reset cron: a continuous keyset sweep over overdue customer entitlements,
- * fanned out to the batch reset queue.
- *
- * Flow per iteration: backlog gauge (rate-limited) -> Gate A (queue
- * backpressure) -> scan one page -> enqueue. When a sweep drains, Gate B
- * waits for the workers to finish before the cursor rewinds, so a new sweep
- * can never re-enqueue rows that are still queued or in flight.
- */
 export const runResetLoopV2 = async ({
 	ctx,
 	signal,
@@ -196,7 +177,6 @@ export const runResetLoopV2 = async ({
 					});
 				}
 
-				// Gate A: don't scan further ahead than the workers can chew.
 				await waitForQueueBelowHighWater({ logger: ctx.logger, signal });
 				if (signal.aborted) break;
 

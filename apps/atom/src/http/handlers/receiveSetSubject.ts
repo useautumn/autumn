@@ -4,7 +4,6 @@ import { InvalidPushError } from "../../lib/contracts/invalidPushError.js";
 import { applySubjectPush } from "../../pushes/applyPushes.js";
 import type { AtomHttpContext, AtomHttpEnv } from "../types/atomHttp.js";
 
-/** The body is handed on as the text it arrived as: the customer's owner thread parses it, once. */
 export const receiveSetSubject = ({
 	ctx,
 }: {

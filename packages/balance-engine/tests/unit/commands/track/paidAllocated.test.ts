@@ -23,7 +23,6 @@ import {
 	testProductInternalId,
 } from "../../engineFixtures.js";
 
-/** A continuous ("allocated") grant, priced or free; a priced one bills in arrears, prorated (v1) or not (v2). */
 const allocatedSubject = ({
 	priced,
 	prorated = true,

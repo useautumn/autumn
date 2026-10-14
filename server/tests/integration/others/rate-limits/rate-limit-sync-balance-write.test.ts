@@ -1,8 +1,3 @@
-/**
- * Tracks the handler applies synchronously and lock checks from one customer
- * drain one shared counter; queued tracks never touch it.
- */
-
 import { afterEach, expect, test } from "bun:test";
 import { ApiVersion } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
@@ -13,7 +8,6 @@ import AutumnError, { AutumnInt } from "@/external/autumn/autumnCli.js";
 
 const testCase = "rate-limit-sync-balance-write";
 
-// Each request type alone stays within the limit; together they exceed it.
 const SYNC_WRITE_LIMIT = 3;
 
 const countRateLimited = (results: PromiseSettledResult<unknown>[]): number =>

@@ -24,8 +24,6 @@ const waitForNaturalExit = async ({
 	});
 };
 
-// Queue workers previously had no process-level proof that their 50k threshold
-// ACKs the triggering batch before exiting for a cluster replacement.
 describe("SQS queue worker recycling", () => {
 	test("acknowledges the threshold batch before the worker exits", async () => {
 		const child = spawn("bun", [FIXTURE_PATH], {
@@ -41,8 +39,6 @@ describe("SQS queue worker recycling", () => {
 			stderr += chunk.toString();
 		});
 
-		// Generous: a cold-cache CI bun boot alone can take seconds; the wait
-		// resolves on exit, so healthy runs never pay the full bound.
 		const exitedNaturally = await waitForNaturalExit({
 			child,
 			timeoutMs: 15_000,

@@ -9,11 +9,6 @@ import { logger } from "@/external/logtail/logtailUtils.js";
 import { deletePlatformSubOrg } from "@/internal/orgs/deleteOrg/deletePlatformSubOrg.js";
 import { createSandboxForOrg } from "@/internal/sandboxes/createSandbox.js";
 
-// X1: drives the real public API over HTTP with AutumnInt — the same
-// Authorization: Bearer <secretKey> contract the published @useautumn/sdk and
-// the atmn CLI use. There is no env/sandbox field on the wire, so a per-sandbox
-// secret key is the sole client-side disambiguator. Requires `bun dw`.
-
 const { db } = initDrizzle();
 const masterKey = defaultCtx.orgSecretKey;
 

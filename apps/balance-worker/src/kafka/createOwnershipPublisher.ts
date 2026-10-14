@@ -15,7 +15,6 @@ export function createOwnershipPublisher({
 	ctx: {
 		session: KafkaProducerSession;
 		partitionOffsets: Pick<Admin, "fetchTopicOffsets">;
-		/** Without these nothing is announced and no wait settles: handoffs time out into release-then-claim. */
 		handoff?: {
 			tail: Pick<OwnershipTail, "tailPartition" | "readView">;
 			sender: KafkaSender;
@@ -99,7 +98,6 @@ export function createOwnershipPublisher({
 		});
 	}
 
-	/** Resolves on the first tail record `match` accepts; rejects with the signal's reason. */
 	function awaitRecord<Result>({
 		signal,
 		match,
@@ -144,7 +142,6 @@ export function createOwnershipPublisher({
 		return awaitRecord({ signal, match: matchReady });
 	}
 
-	/** A drain the current owner started and has not yet concluded: whoever it names, fencing it now would cut it short. */
 	function readActiveDrain(): { endpoint: string } | null {
 		const view = ctx.handoff?.tail.readView({ partition: config.partition });
 		const drain = view?.activeDrain;
@@ -152,7 +149,6 @@ export function createOwnershipPublisher({
 		return { endpoint: drain.endpoint };
 	}
 
-	/** A preparation another worker announced and has not concluded: a successor is on its way. */
 	function readActivePreparation(): { endpoint: string } | null {
 		const view = ctx.handoff?.tail.readView({ partition: config.partition });
 		const preparation = view?.activePreparation;
@@ -178,9 +174,6 @@ export function createOwnershipPublisher({
 	}: {
 		signal: AbortSignal;
 	}): Promise<{ endpoint: string }> {
-		// A drain handing to this worker is always ours to wait on. One naming another
-		// successor still means the owner is alive mid-drain, unless its author no longer
-		// owns the partition, in which case it is a late record and nothing to hold for.
 		function matchDraining({ record }: OwnershipTailRecord) {
 			if (record.type !== "draining" || record.endpoint === config.endpoint)
 				return undefined;
@@ -195,7 +188,6 @@ export function createOwnershipPublisher({
 		return awaitRecord({ signal, match: matchDraining });
 	}
 
-	/** A `claimed` naming some other worker: the owner concluded a handoff that was not to this worker. */
 	function awaitForeignClaim({
 		signal,
 	}: {

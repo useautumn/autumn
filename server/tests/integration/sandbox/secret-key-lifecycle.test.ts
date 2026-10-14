@@ -4,9 +4,6 @@ import defaultCtx from "@tests/utils/testInitUtils/createTestContext.js";
 import { eq } from "drizzle-orm";
 import { initDrizzle } from "@/db/initDrizzle.js";
 
-// End-to-end over HTTP: a MAIN-org secret key drives the whole public sandbox
-// lifecycle, and the key it mints works on the sandbox. Requires `bun dw`.
-
 const { db } = initDrizzle();
 const apiBase = `${(process.env.AUTUMN_TEST_BASE_URL ?? "http://localhost:8080").replace(/\/$/, "")}/v1`;
 const masterKey = defaultCtx.orgSecretKey;

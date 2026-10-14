@@ -107,10 +107,6 @@ const smallestBillableUnit = (currency: string): Decimal =>
 const roundingResidual = (line: CreditSourceLine): Decimal =>
 	new Decimal(line.amount).sub(line.credits);
 
-/**
- * Rounding each source line to the cent can drift their sum away from the rounded
- * target. The lines rounded furthest give back one unit each, so none goes negative.
- */
 const absorbRoundingDrift = ({
 	lines,
 	targetTotal,

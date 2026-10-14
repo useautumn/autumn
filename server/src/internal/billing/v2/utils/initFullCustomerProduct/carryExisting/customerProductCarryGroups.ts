@@ -13,7 +13,6 @@ export type CustomerProductCarryGroup = {
 	toCustomerProduct: FullCusProduct;
 };
 
-/** Resolved replacement pair used when an updated item no longer identity-matches its source. */
 export type CustomerProductCarryLink = {
 	fromCustomerEntitlement: FullCustomerEntitlement;
 	toCustomerEntitlement: FullCustomerEntitlement;

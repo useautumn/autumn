@@ -1,7 +1,6 @@
 import type { StripeDiscountWithCoupon } from "@autumn/shared";
 import { stripeCouponToRewardId } from "./stripeCouponToRewardId";
 
-/** Rewards that are no longer applied are ignored, so removal is idempotent. */
 export const removeDiscountsByRewardIds = ({
 	discounts,
 	rewardIds,

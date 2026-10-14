@@ -18,7 +18,6 @@ import { ReviewStatusChip } from "./ReviewStatusChip";
 import { useReviewValueColumnWidth } from "./ReviewValueColumnContext";
 import { REVIEW_RICH_TOOLTIP_CLASS } from "./reviewRichTooltip";
 
-/** Status sits in a fixed column and value in a minimum-width one, so chips line up and amounts never clip. */
 export function ReviewChangeRowItem({
 	row,
 	showsStatus,
@@ -111,7 +110,6 @@ function OngoingChip() {
 	);
 }
 
-/** Trial, status and value columns, shared by plain and grouped rows so they align. */
 export function ReviewChangeRowTrailing({
 	row,
 	showsStatus,

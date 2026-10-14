@@ -10,14 +10,6 @@ import {
 	proV1Config,
 } from "./proSetup.ts";
 
-/**
- * Existing catalog, new version: Pro is live with a paying subscriber, and the price
- * goes up for new customers only. Passing = the config holds two rows of pro
- * (a new active version at $25 and v1 kept at $20), the org holds both after
- * the push, and the change went out through atmn. The failures this catches:
- * editing v1 in place (repricing the existing customer), or rewriting the
- * plan from scratch so the org gets a delete + create instead of a version.
- */
 export const mintVersion = defineCase({
 	name: "existing-catalog-new-version",
 	prompt: [

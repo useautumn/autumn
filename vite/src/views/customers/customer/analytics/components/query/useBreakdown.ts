@@ -7,17 +7,13 @@ export const DEDUCTIONS_MODE = "deductions";
 export const SUM_MODE = "sum";
 export const COUNT_MODE = "count";
 
-/** Group-by and measure (sum/count/deductions) state, shared by every breakdown control. */
 export const useBreakdown = () => {
 	const { filterStates, setFilterStates } = useAnalyticsFilterState();
 	const { queryStates, setQueryStates } = useAnalyticsQueryState();
 
 	const groupBy = filterStates.group_by ?? null;
 	const customerId = filterStates.customer_id;
-	// Without a customer the data hook never sends aggregate_on, so the
-	// toggle reflects that rather than the raw URL.
 	const isDeducted = queryStates.aggregate_on === "deducted" && !!customerId;
-	// Deductions fall back to their source feature when nothing else is picked.
 	const effectiveGroupBy =
 		groupBy ?? (isDeducted ? SOURCE_FEATURE_GROUP : null);
 
@@ -28,8 +24,6 @@ export const useBreakdown = () => {
 				: { group_by: null, max_groups: null },
 		);
 
-	// Deductions can't be grouped by plan; the combination can still arrive via
-	// a pasted URL or back-navigation.
 	useEffect(() => {
 		if (isDeducted && groupBy === "plan_id") updateGroupBy(null);
 	});

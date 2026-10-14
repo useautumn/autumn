@@ -19,8 +19,6 @@ import chalk from "chalk";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { AutumnRpcCli } from "@/external/autumn/autumnRpcCli.js";
 
-// Threshold billing prices each charge from zero, so any multi-tier price is mis-priced across charges.
-
 const autumnV1_2 = new AutumnInt({ version: ApiVersion.V1_2 });
 const autumnV2 = new AutumnInt({ version: ApiVersion.V2_0 });
 const autumnRpc = new AutumnRpcCli({ version: ApiVersion.V2_1 });
@@ -66,10 +64,6 @@ const v1ThresholdTieredItem = ({
 	},
 	threshold_billing: { threshold: 50 },
 });
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// V0 product items (/products at v1.2)
-// ═══════════════════════════════════════════════════════════════════════════════
 
 for (const tierBehavior of [TierBehavior.Graduated, TierBehavior.VolumeBased]) {
 	test.concurrent(
@@ -121,7 +115,6 @@ test.concurrent(
 
 		await autumnV1_2.products.create({ id, name: `Test ${id}`, items: [item] });
 
-		// v1.2 responses drop item config, so read threshold_billing back at v2.0.
 		const plan = await autumnV2.products.get<ApiPlan>(id);
 		const created = plan.features.find(
 			(feature) => feature.feature_id === TestFeature.Messages,
@@ -149,10 +142,6 @@ test.concurrent(
 		expect(created?.threshold_billing ?? null).toBeNull();
 	},
 );
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// V1 plan items (REST v2.0 and RPC v2.1)
-// ═══════════════════════════════════════════════════════════════════════════════
 
 for (const tierBehavior of [TierBehavior.Graduated, TierBehavior.VolumeBased]) {
 	test.concurrent(

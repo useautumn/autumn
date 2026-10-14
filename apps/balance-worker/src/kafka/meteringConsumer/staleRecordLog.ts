@@ -4,7 +4,6 @@ import type { OwnerFence } from "../../state/types/stateStore.js";
 const DEFAULT_INTERVAL_MS = 1000;
 
 export type StaleRecordLog = {
-	/** Counts a record dropped for carrying a lower epoch than the partition's fence, and logs at most once an interval per partition. */
 	record(params: {
 		topic: string;
 		partition: number;
@@ -14,11 +13,6 @@ export type StaleRecordLog = {
 	}): void;
 };
 
-/**
- * A stale owner writes in bursts, so the log line carries a count instead of
- * repeating once per record: `count` is how many were dropped since the line
- * before it. Summing `count` over `Stale owner record skipped` is the metric.
- */
 export function createStaleRecordLog({
 	logger,
 	now = Date.now,

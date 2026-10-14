@@ -9,7 +9,6 @@ import {
 
 const BEARER = /^Bearer (.+)$/;
 
-/** An org's own Atom opens a check to the org's secret key; a multi-tenant one, or a call sending the Atom token, goes by the token. */
 export function clientAuthMiddleware({
 	ctx,
 }: {
@@ -20,7 +19,6 @@ export function clientAuthMiddleware({
 	const slots = ctx.auth.slotsFor({ atomId: null });
 	if (!secretKeys || !slots) return byAtomToken;
 
-	/** A key not held yet is the API's to answer; one the API did not refuse is held until Autumn rules on it. */
 	return async function authorizeSecretKey(
 		context: Context<AtomHttpEnv>,
 		next: Next,

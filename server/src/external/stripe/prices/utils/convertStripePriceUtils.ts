@@ -6,7 +6,6 @@ const tierAmount = (
 	amountDecimal?: string | null,
 ): Decimal => new Decimal(amountDecimal ?? amount ?? 0);
 
-/** Volume: the whole quantity bills at the single tier it falls into. */
 const volumeTiersToAmount = ({
 	tiers,
 	quantity,
@@ -23,7 +22,6 @@ const volumeTiersToAmount = ({
 	);
 };
 
-/** Graduated: each tier bills the units falling inside its own band. */
 const graduatedTiersToAmount = ({
 	tiers,
 	quantity,
@@ -45,11 +43,6 @@ const graduatedTiersToAmount = ({
 	return total;
 };
 
-/**
- * What a Stripe price bills for `quantity`, in the currency's smallest unit.
- * Null when the price is tiered but its `tiers` were not expanded — the
- * amount is unknowable rather than zero.
- */
 export const stripePriceToAmount = ({
 	stripePrice,
 	quantity,

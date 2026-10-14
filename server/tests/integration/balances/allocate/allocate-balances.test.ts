@@ -62,7 +62,6 @@ const setupSharedPool = async ({ customerId }: { customerId: string }) => {
 	return { a: entities[0].id, b: entities[1].id, c: entities[2].id };
 };
 
-// Warms the customer and entity caches so an entity track isn't lost to a cold customer refill.
 const warmCaches = async ({ customerId }: { customerId: string }) => {
 	await autumnV2_3.customers.get(customerId);
 	for (const entityId of ["ent-1", "ent-2", "ent-3"])
@@ -277,7 +276,6 @@ test.concurrent(
 			remaining: 5000,
 		});
 
-		// C has no share and nothing is unallocated.
 		await trackAs({ customerId, entityId: c, value: 100 });
 		await expectSharedRemaining({
 			customerId,
@@ -324,7 +322,6 @@ test.concurrent(
 			unallocated: 0,
 		});
 
-		// Later calls count real usage: releasing and re-adding B gives no fresh 5k.
 		await allocate({
 			customerId,
 			allocations: [{ entity_id: a, amount: 5000 }],

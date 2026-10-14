@@ -1,10 +1,3 @@
-/**
- * catalogV2.preview_update — child's versioning.options is the union of the
- * child and every reverse-link parent. atmn has not picked targets yet, so
- * options must not shrink when propagate is later filled in.
- *
- * Child v1, no customers. Team v1+v2, customers on latest.
- */
 import { test } from "bun:test";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";

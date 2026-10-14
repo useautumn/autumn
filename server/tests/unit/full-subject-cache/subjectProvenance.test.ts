@@ -32,8 +32,6 @@ describe("subjectProvenance", () => {
 	});
 
 	test("structuredClone of a marked object escapes the mark (intentional)", () => {
-		// Accepted hole: WeakSet identity doesn't survive clone. Clones only
-		// occur downstream of the writers; the type brand covers compile time.
 		const marked = markReplicaSourced({ customerId: "cus_clone" });
 		const clone = structuredClone(marked);
 

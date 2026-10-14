@@ -17,15 +17,12 @@ import {
 	createCustomerLicensePoolColumns,
 } from "./customerLicensePoolColumns";
 
-/** Customer-level license pools (used/granted seats per license), read
- * straight off the full customer's hydrated customer_licenses. */
 export function CustomerLicensePoolsSection() {
 	const { customer, entityId } = useCustomerContext();
 	const selectedItemId = useSheetStore((s) => s.itemId);
 	const setSheet = useSheetStore((s) => s.setSheet);
 
 	const customerId = customer.id ?? customer.internal_id;
-	// Customer-level pools (no entity scope) power the assign dropdown.
 	const { pools, assign } = useLicenseBalancesQuery({
 		customerId,
 		enabled: !entityId,
@@ -66,7 +63,6 @@ export function CustomerLicensePoolsSection() {
 
 	const table = useCustomerTable({ data: rows, columns });
 
-	// Entity view shows per-entity assignments via CustomerLicensesSection.
 	if (entityId || rows.length === 0) return null;
 
 	return (

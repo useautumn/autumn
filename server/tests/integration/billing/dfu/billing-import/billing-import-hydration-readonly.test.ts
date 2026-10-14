@@ -1,8 +1,3 @@
-/**
- * dfu.flash hydration — flashing is read-only: the Stripe subscription is never
- * mutated (status / canceled_at / cancel_at_period_end / period end unchanged).
- */
-
 import { expect, test } from "bun:test";
 import { createStripeSubscriptionFromProduct } from "@tests/integration/billing/sync/utils/syncTestUtils.js";
 import {

@@ -12,7 +12,6 @@ import { getCurrentBillingCycleAnchorMs } from "@/internal/billing/v2/utils/bill
 import { customerProductToLineItems } from "@/internal/billing/v2/utils/lineItems/customerProductToLineItems.js";
 import { getRefundLineItems } from "@/internal/billing/v2/utils/lineItems/getRefundLineItems.js";
 
-/** Starts a recurring period at the final quantities while retaining product identity. */
 export const computeUpdateQuantityAnchorResetPlan = ({
 	ctx,
 	billingContext,
@@ -48,7 +47,6 @@ export const computeUpdateQuantityAnchorResetPlan = ({
 		]),
 	);
 	for (const update of retainedUpdates ?? []) {
-		// The pooled finalizer resets shared usage; contributing source balances stay zero.
 		if (
 			isPooledBalanceSourceCustomerEntitlement({
 				customerEntitlement: update.customerEntitlement,

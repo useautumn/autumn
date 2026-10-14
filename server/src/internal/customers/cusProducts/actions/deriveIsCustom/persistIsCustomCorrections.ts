@@ -3,7 +3,6 @@ import { invalidateCachedFullSubject } from "@/internal/customers/cache/fullSubj
 import { customerProductRepo } from "@/internal/customers/cusProducts/repos/index.js";
 import type { IsCustomCorrection } from "./fullCustomerWithDerivedIsCustom.js";
 
-/** Compare-and-set per row, so one written since it was read is left alone. */
 export const persistIsCustomCorrections = async ({
 	ctx,
 	customerId,

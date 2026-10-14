@@ -88,8 +88,6 @@ export const initPooledBalanceGraph = ({
 		next_reset_at: nextResetAt,
 		cache_version: 0,
 		external_id: null,
-		// Pools reset through the lazy/cron paths regardless of mode; the batch
-		// scan must keep seeing them, so never stamp reset_by_invoice.
 		reset_by_invoice: false,
 		is_pooled_balance: true,
 		invoice_credit: false,

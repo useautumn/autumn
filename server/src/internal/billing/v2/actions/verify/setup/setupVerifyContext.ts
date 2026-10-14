@@ -21,24 +21,16 @@ export type VerifySubscriptionTarget = {
 
 export type VerifyPrefetched = {
 	fullCustomer?: FullCustomer;
-	/** When provided, this IS the customer's active subscription set — no
-	 * Stripe reads happen and coverage is judged against exactly these. */
 	subscriptions?: Stripe.Subscription[];
 };
 
 export type VerifyContext = {
 	fullCustomer: FullCustomer;
-	/** Subscriptions Autumn knows about (linked from customer_products). */
 	targets: VerifySubscriptionTarget[];
-	/** Active Stripe subscriptions with no linked customer products. */
 	unlinkedSubscriptions: Stripe.Subscription[];
-	/** Ids of the customer's active Stripe subscriptions; null when unknown
-	 * (no prefetch and no Stripe customer to list against). */
 	activeSubscriptionIds: Set<string> | null;
 };
 
-/** Matches on subscription OR schedule: a scheduled customer product carries no
- * subscription_ids, so the subscription alone loses every future phase. */
 const isRelevantForSubscription = ({
 	customerProduct,
 	stripeSubscriptionId,
@@ -58,8 +50,6 @@ const isRelevantForSubscription = ({
 		.recurring()
 		.onStripeSchedule({ stripeSubscriptionScheduleId }).valid;
 
-/** Sub items never include price `tiers` — fetch them once per tiered price
- * so evaluation can reason about what a tiered item actually bills. */
 const hydrateTieredPriceTiers = async ({
 	stripeCli,
 	targets,
@@ -119,8 +109,6 @@ export const setupVerifyContext = async ({
 	customerId: string;
 	subscriptionIdsFilter?: string[];
 	prefetched?: VerifyPrefetched;
-	/** Serves Stripe reads from somewhere other than the live API — bulk audits
-	 * pass a mirror-backed reader so per-customer verification costs no calls. */
 	stripeCli?: Stripe;
 }): Promise<VerifyContext> => {
 	const fullCustomer =
@@ -142,8 +130,6 @@ export const setupVerifyContext = async ({
 	const stripeCli =
 		stripeCliOverride ?? createStripeCli({ org: ctx.org, env: ctx.env });
 
-	// The customer's active Stripe subs — the coverage baseline. Without it a
-	// customer with zero cusProducts would derive zero targets and pass vacuously.
 	const stripeCustomerId = fullCustomer.processor?.id;
 	const activeSubscriptions =
 		prefetched?.subscriptions ??

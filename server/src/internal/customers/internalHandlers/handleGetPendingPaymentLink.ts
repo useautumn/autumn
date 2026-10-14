@@ -39,7 +39,6 @@ export const handleGetPendingPaymentLink = createRoute({
 
 		if (!metadata) return c.json({ url: null });
 
-		// A long-lived link outlives each Stripe session it opens, so share it while it is open.
 		const longLivedCheckout = await getPendingPlanLongLivedCheckout({
 			ctx,
 			deferredData: metadata.data as DeferredAutumnBillingPlanData,

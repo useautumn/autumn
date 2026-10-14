@@ -1,15 +1,3 @@
-/**
- * Billing Verify: Schedule Mismatches
- *
- * Contract under test (billingActions.verify):
- *   New behaviors:
- *     - Autumn expects a multi-phase Stripe subscription schedule but Stripe has
- *       none (released externally) -> mismatch { type: "schedule_mismatch",
- *       reason: "missing_schedule" }.
- *     - A scheduled future phase's item quantity drifted from Autumn's record ->
- *       mismatch on that phase carrying `phase_starts_at`.
- */
-
 import { expect, spyOn, test as testSequentially } from "bun:test";
 import {
 	type CreateScheduleParamsV0Input,
@@ -126,8 +114,6 @@ testSequentially(
 	},
 );
 
-// Delayed verification previously reported phase_start_mismatch for an unchanged current phase.
-// Phase zero must stay valid while genuine future-phase drift remains detectable.
 testSequentially(
 	`${chalk.yellowBright("billing-verify schedule-mismatches 2: delayed verification accepts current phase and detects future drift")}`,
 	async () => {
@@ -248,8 +234,6 @@ testSequentially(
 			stripeCustomerId,
 		});
 
-		// A Stripe-side schedule Autumn knows nothing about: the current phase
-		// plus a future custom-renewal phase.
 		const schedule = await ctx.stripeCli.subscriptionSchedules.create({
 			from_subscription: sub.id,
 		});
@@ -282,7 +266,6 @@ testSequentially(
 
 		const result = await verify({ ctx, params: { customer_id: customerId } });
 
-		// ── Contract: schedule finding with phase dates, not a cancel misread ─
 		expect(result.subscriptions[0].status).toBe("mismatched");
 		const scheduleMismatch = result.subscriptions[0].mismatches.find(
 			(mismatch) => mismatch.type === "schedule_mismatch",
@@ -300,9 +283,6 @@ testSequentially(
 	},
 );
 
-// Phase matching tolerates a day of drift, so an extra Stripe phase landing
-// within that window could be claimed by an expected phase that already
-// matched, hiding it. Each expected phase may claim only one actual phase.
 testSequentially(
 	`${chalk.yellowBright("billing-verify schedule-mismatches 4: an extra phase inside the day tolerance is still reported")}`,
 	async () => {
@@ -345,8 +325,6 @@ testSequentially(
 		);
 		const [firstPhase, secondPhase] = schedule.phases;
 
-		// Split the final phase in two: the second half starts 12h later, well
-		// inside similarUnix's day tolerance.
 		const splitAt = secondPhase.start_date + 12 * 3600;
 		const phaseItems = (phase: (typeof schedule.phases)[number]) =>
 			phase.items.map((item) => ({
@@ -377,8 +355,6 @@ testSequentially(
 			],
 		});
 
-		// ── Contract: the extra phase is reported, not absorbed by the
-		// tolerance window of the phase Autumn does expect ─────────────────
 		const result = await verify({ ctx, params: { customer_id: customerId } });
 		expect(result.subscriptions[0].status).toBe("mismatched");
 		expect(
@@ -391,10 +367,6 @@ testSequentially(
 	},
 );
 
-// Mintlify's report: a scheduled cusProduct carries no subscription_ids and is
-// reachable only through the schedule. Selecting related products by
-// subscription alone drops it, so Autumn's expected phases collapse to one and
-// the real Stripe schedule reads as unexpected.
 testSequentially(
 	`${chalk.yellowBright("billing-verify schedule-mismatches 5: schedule-only-linked cusProduct is not reported as unexpected")}`,
 	async () => {
@@ -422,7 +394,6 @@ testSequentially(
 			actions: [],
 		});
 
-		// Phase 2 must change the plan: an unchanged plan keeps one row across phases, so no Scheduled row exists.
 		const now = Date.now();
 		const response = await autumnV1.billing.createSchedule({
 			customer_id: customerId,
@@ -433,7 +404,6 @@ testSequentially(
 		});
 		expect(response.status).toBe("created");
 
-		// Reproduce the prod shape: the scheduled rows keep only scheduled_ids.
 		const fullCustomer = await CusService.getFull({
 			ctx,
 			idOrInternalId: customerId,
@@ -451,8 +421,6 @@ testSequentially(
 				.where(eq(customerProducts.id, scheduled.id));
 		}
 
-		// ── Contract: the future phase is still part of the expected state, so
-		// the schedule Autumn created is not reported as unexpected ─────────
 		const result = await verify({ ctx, params: { customer_id: customerId } });
 		expect(
 			result.subscriptions[0].mismatches.filter(

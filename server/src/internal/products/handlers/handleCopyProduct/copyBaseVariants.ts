@@ -8,12 +8,6 @@ import {
 import { initVariantsInStripe } from "@/internal/products/stripeResourceUtils/initVariantsInStripe.js";
 import { listExistingTargetPlanIds } from "./listExistingTargetPlanIds.js";
 
-/**
- * Copies a base plan's variants into the target (org, env), relinking each to
- * the freshly copied base, and returns the copied variants' plan ids. A variant
- * whose id is already taken in the target is skipped so one stale plan can't
- * block promoting the base.
- */
 export const copyBaseVariants = async ({
 	source,
 	toContext,

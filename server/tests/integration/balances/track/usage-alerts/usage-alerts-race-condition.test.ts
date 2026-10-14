@@ -1,10 +1,3 @@
-/**
- * Replication test for duplicate balances.usage_alert_triggered webhooks
- * fired by concurrent /v1/track requests crossing the same threshold.
- *
- * Expectation: within 2 minutes, exactly 2 matching webhook events arrive.
- */
-
 import { afterAll, beforeAll, expect, test } from "bun:test";
 import type { LimitedItem } from "@autumn/shared";
 import { setCustomerUsageAlerts } from "@tests/integration/balances/utils/usage-alert-utils/customerUsageAlertUtils.js";
@@ -87,20 +80,12 @@ test(`${chalk.yellowBright("usage-alert race: concurrent tracks fire two webhook
 		],
 	});
 
-	// Stage balance just above the threshold so two concurrent small deductions
-	// can both observe the pre-crossing snapshot and both fire the alert.
-	// action1 credit_cost = 0.2 → 395 units = 79 credits used → remaining = 21.
 	await autumnV2_1.track({
 		customer_id: customerId,
 		feature_id: TestFeature.Action1,
 		value: 395,
 	});
 
-	// Worst-case stress: many concurrent tracks crossing the SAME threshold.
-	// Each value is tiny (0.5–1.0 credits) so every track on its own would cross
-	// remaining=21 → below 20, meaning every handler would naively fire the alert.
-	// Going negative on remaining is fine for this test — only the FIRST crossing
-	// of the threshold should fire; subsequent reads see oldRemaining<20 already.
 	const BURST_SIZE = 500;
 	await Promise.all(
 		Array.from({ length: BURST_SIZE }, (_, i) =>
@@ -112,7 +97,6 @@ test(`${chalk.yellowBright("usage-alert race: concurrent tracks fire two webhook
 		),
 	);
 
-	// Wait long enough for any duplicate webhooks to surface, then assert exactly one.
 	const SETTLE_MS = 30_000;
 	await new Promise((resolve) => setTimeout(resolve, SETTLE_MS));
 

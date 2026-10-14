@@ -20,7 +20,6 @@ export const formatLimit = ({
 	windowMs: number;
 }) => `${formatCount(limit)}/${formatWindow(windowMs)}`;
 
-/** An org's override values on a row: per customer first, then per org. */
 export const formatOverrideValues = ({
 	policy,
 	override,
@@ -35,7 +34,6 @@ export const formatOverrideValues = ({
 		return [formatLimit({ limit: value, windowMs: layer.windowMs })];
 	});
 
-/** A 0 endpoint cap answers every request with a 429. */
 export const formatEndpointLimit = ({
 	limit,
 	windowMs,
@@ -52,7 +50,6 @@ export const formatPolicyLabel = (id: string) => {
 	return words.charAt(0).toUpperCase() + words.slice(1);
 };
 
-/** Version limits that differ from the layer's default, e.g. "2.3 · 50/s". */
 export const formatVersionLimits = ({
 	layer,
 }: {

@@ -1,6 +1,3 @@
-/** customer.subscription.updated webhook - past_due: failed payments flip the customer
- * product to past_due while its features stay available. */
-
 import { expect, test } from "bun:test";
 import {
 	type ApiCustomerV3,
@@ -92,8 +89,6 @@ test.concurrent(
 			productId: pro.id,
 		});
 
-		// Mirror the production drift: Stripe is past_due, but Autumn still sees the
-		// existing product as attachable/active before the invoice-mode upgrade.
 		const fullCustomer = await CusService.getFull({
 			ctx,
 			idOrInternalId: customerId,

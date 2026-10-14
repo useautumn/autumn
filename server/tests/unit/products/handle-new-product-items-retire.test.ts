@@ -1,10 +1,3 @@
-/**
- * Leftover catalog prices and entitlements are retired together, never deleted.
- *
- * Red (current): leftover rows call deleteInIds (breaks deferred checkout FKs)
- * Green (after): both leftover prices and ents go to retireInIds
- */
-
 import { afterEach, expect, mock, spyOn, test } from "bun:test";
 import type { Entitlement, Price, Product } from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle.js";

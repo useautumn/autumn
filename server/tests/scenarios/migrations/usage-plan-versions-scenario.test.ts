@@ -5,14 +5,6 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-/**
- * Migration setup: paid plan with consumable (pay-per-use) messages across
- * versions, with tracked usage so you can verify usage carry-over on migrate.
- *
- *   v1  $100/mo · 500 incl, $0.10 overage   → cus migusage-v1 (used 600)
- *   v2  $100/mo · 1000 incl, $0.08 overage  → cus migusage-v2 (used 1200)
- *   v3  $100/mo · 2000 incl, $0.05 overage + admin  (latest, no customer)
- */
 test(`${chalk.yellowBright("migration-setup: usage plan multi-version")}`, async () => {
 	const growth = products.base({
 		id: "growth",

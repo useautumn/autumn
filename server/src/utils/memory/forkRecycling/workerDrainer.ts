@@ -1,7 +1,5 @@
 type DrainableServer = {
 	close: (callback: () => void) => void;
-	/** Keep-alive sockets with no active request block `close` forever; the
-	 *  periodic sweep evicts them so drain completes between requests. */
 	closeIdleConnections?: () => void;
 };
 
@@ -26,15 +24,9 @@ export const createWorkerDrainer = ({
 	exit: (code: number) => void;
 	drainTimeoutMs: number;
 	graceMs: number;
-	/** Hard bound for a fork that never goes idle (a truly hung request). */
 	maxDrainMs?: number;
 	idleSweepIntervalMs?: number;
-	/** While this reports active requests (long streams, big imports), the
-	 *  drain deadline extends instead of cutting them mid-response. */
 	getActiveRequestCount?: () => number;
-	/** Runs before the server closes — lets the request path start sending
-	 *  `Connection: close` so pooled clients retire sockets instead of racing
-	 *  the idle-connection eviction. */
 	onDrainStart?: () => void;
 	log: (message: string) => void;
 }): WorkerDrainer => {
@@ -73,8 +65,6 @@ export const createWorkerDrainer = ({
 			};
 
 			const armDeadline = () => {
-				// Cap each arm at the remaining max-drain budget so the hard bound
-				// cannot be overshot by an oversized interval.
 				const remainingMs = maxDrainMs - (Date.now() - drainStartedAt);
 				const intervalMs = Math.max(
 					1,

@@ -21,8 +21,6 @@ export type ReplaySubjectLoader = (params: {
 	asOfTimestampMs: number;
 }) => Promise<{ fullSubject: FullSubject } | undefined>;
 
-/** Imported lazily so the org repo module graph, which builds global Redis
- *  clients at import time, loads only when this default loader runs. */
 export const loadReplayOrganization: ReplayOrganizationLoader = async ({
 	db,
 	orgId,
@@ -32,8 +30,6 @@ export const loadReplayOrganization: ReplayOrganizationLoader = async ({
 	return OrgService.getWithFeatures({ db, orgId, env, allowNotFound: true });
 };
 
-/** Lazy for the same reason, and reuses the existing normalized subject query
- *  instead of copying its SQL. */
 export const loadReplayFullSubject: ReplaySubjectLoader = async (params) => {
 	const { getFullSubjectNormalized } = await import(
 		"@/internal/customers/repos/getFullSubject/getFullSubject.js"

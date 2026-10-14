@@ -24,8 +24,6 @@ export type FindSubscriptionConflict = (params: {
 
 const groupOf = (group: string | null | undefined) => group ?? "";
 
-/** Mirrors the server's guards: a recurring plan can't be added under one
- * subscription when it, or the main plan its group would replace, is billed on another. */
 export const findSubscriptionConflict = ({
 	customerProducts,
 	entities,

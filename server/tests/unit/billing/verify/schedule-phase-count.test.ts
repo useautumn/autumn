@@ -1,13 +1,3 @@
-/**
- * Autumn keeps a customer_product row for the phase running now and the phases
- * still to come. Stripe keeps elapsed phases on the schedule for the whole
- * term, so counting every Stripe phase reported a phase_count_mismatch on
- * subscriptions whose live phases matched Autumn exactly.
- *
- * Red (before):  an elapsed phase plus two live ones reads as 3 vs 2.
- * Green (after): only phases that have not ended are counted.
- */
-
 import { describe, expect, it } from "bun:test";
 import { getUnixTime } from "date-fns";
 import type Stripe from "stripe";

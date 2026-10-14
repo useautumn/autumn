@@ -1,9 +1,3 @@
-/**
- * dfu.flash — entity scope isolation: a customer-level import reconciles only
- * the customer-level scope. An entity-scoped product stays untouched because
- * its entity is not addressed by the payload.
- */
-
 import { expect, test } from "bun:test";
 import { CusProductStatus } from "@autumn/shared";
 import {
@@ -57,7 +51,6 @@ test.concurrent(
 			email: `${customerId}-z@example.com`,
 		});
 
-		// Seed: customer-level X + entity-A Y.
 		await callFlash(autumnV2_2 as FlashClient, {
 			customer_id: customerId,
 			processors: [{ type: "stripe", id: subX.customerId }],
@@ -93,7 +86,6 @@ test.concurrent(
 			],
 		});
 
-		// Seeding path must actually create Y as entity-scoped.
 		const seeded = await CusService.getFull({
 			ctx,
 			idOrInternalId: customerId,
@@ -107,7 +99,6 @@ test.concurrent(
 		);
 		expect(seededY?.internal_entity_id).toBe(entityAInternalId);
 
-		// Import only a customer-level plan Z. Entity A is not addressed.
 		const secondFlash = await callFlash(autumnV2_2 as FlashClient, {
 			customer_id: customerId,
 			processors: [{ type: "stripe", id: subZ.customerId }],
@@ -125,7 +116,6 @@ test.concurrent(
 			],
 		});
 
-		// X (customer-level) expired; Y (entity A) untouched; Z active.
 		const expiredX = secondFlash.result?.flashed?.find(
 			(f) => f.plan_id === planX.id,
 		);

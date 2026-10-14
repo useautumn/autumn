@@ -1,21 +1,3 @@
-/**
- * Scheduled Switch Basic Tests (Attach V2)
- *
- * Tests for basic downgrade scenarios where a lower-tier product takes effect at end of billing cycle.
- *
- * Key behaviors:
- * - Downgrade schedules new product for end of cycle
- * - Current product enters "canceling" state (active with canceled_at set)
- * - New product has "scheduled" status
- * - At cycle end: current product removed, scheduled product becomes active
- * - Scheduled downgrades can be replaced by other downgrades
- *
- * Each scenario is split into an "a" (mid-cycle) and "b" (after cycle) test with
- * separate customers so each test owns its own Stripe test clock.
- *
- * NOTE: Tests for "upgrade cancels scheduled downgrade" are in immediate-switch-basic.test.ts
- */
-
 import { test } from "bun:test";
 import type { ApiCustomerV3 } from "@autumn/shared";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
@@ -59,7 +41,7 @@ test.concurrent(
 			actions: [
 				s.billing.attach({ productId: premium.id }),
 				s.track({ featureId: TestFeature.Messages, value: 300, timeout: 2000 }),
-				s.billing.attach({ productId: pro.id }), // Schedule downgrade
+				s.billing.attach({ productId: pro.id }),
 				s.advanceToNextInvoice({ withPause: true }),
 			],
 		});
@@ -67,23 +49,20 @@ test.concurrent(
 		const customerAfterCycle =
 			await autumnV1After.customers.get<ApiCustomerV3>(customerId);
 
-		// Verify products after cycle
 		await expectCustomerProducts({
 			customer: customerAfterCycle,
 			active: [pro.id],
 			notPresent: [premium.id],
 		});
 
-		// Verify usage RESET (scheduled switches always reset, regardless of reset_usage_when_enabled)
 		expectCustomerFeatureCorrect({
 			customer: customerAfterCycle,
 			featureId: TestFeature.Messages,
 			includedUsage: 500,
-			balance: 500, // RESET - not 500 - 300 = 200
-			usage: 0, // RESET
+			balance: 500,
+			usage: 0,
 		});
 
-		// Verify Stripe subscription
 		await expectSubToBeCorrect({
 			db: ctxAfter.db,
 			customerId,

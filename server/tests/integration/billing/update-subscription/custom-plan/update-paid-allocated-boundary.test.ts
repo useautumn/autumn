@@ -9,13 +9,6 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-// Paid-to-paid: allocated/seat-based updates.
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// BOUNDARY CROSSING: USAGE GOES FROM > INCLUDED TO < INCLUDED
-// ═══════════════════════════════════════════════════════════════════════════════
-
-// Increase allowance so usage goes from overage to within included
 test.concurrent(
 	`${chalk.yellowBright("allocated: increase allowance, usage crosses from overage to within included")}`,
 	async () => {
@@ -35,9 +28,6 @@ test.concurrent(
 			actions: [s.attach({ productId: "pro" })],
 		});
 
-		// Use 5 seats (2 over the 3 included)
-		// NOTE: For allocated features, tracking usage past the included boundary
-		// immediately creates a prorated invoice (see adjustAllowance.ts)
 		const seatsUsed = 5;
 		await autumnV1.track(
 			{
@@ -48,12 +38,10 @@ test.concurrent(
 			{ timeout: 2000 },
 		);
 
-		// Verify we're in overage initially
 		const customerBefore =
 			await autumnV1.customers.get<ApiCustomerV3>(customerId);
 		expect(customerBefore.features[TestFeature.Users].balance).toBe(-2);
 
-		// Increase to 10 included seats - now usage (5) is within included (10)
 		const newAllocatedUsersItem = items.allocatedUsers({ includedUsage: 10 });
 
 		const updateParams = {
@@ -64,28 +52,22 @@ test.concurrent(
 
 		const preview = await autumnV1.subscriptions.previewUpdate(updateParams);
 
-		// Was paying for 2 extra seats @ $10 = $20
-		// Now paying for 0 extra seats
-		// Should get credit of -$20
 		expect(preview.total).toBe(-20);
 
 		await autumnV1.subscriptions.update(updateParams);
 
 		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-		// Now balance should be positive (10 - 5 = 5)
 		expectCustomerFeatureCorrect({
 			customer,
 			featureId: TestFeature.Users,
 			includedUsage: newAllocatedUsersItem.included_usage,
-			balance: newAllocatedUsersItem.included_usage - seatsUsed, // 10 - 5 = 5
+			balance: newAllocatedUsersItem.included_usage - seatsUsed,
 			usage: seatsUsed,
 		});
 
-		// Balance should now be positive
 		expect(customer.features[TestFeature.Users].balance).toBeGreaterThan(0);
 
-		// Invoice count: 1 (initial attach) + 1 (track overage) + 1 (update credit) = 3
 		await expectCustomerInvoiceCorrect({
 			customer,
 			count: 3,
@@ -101,7 +83,6 @@ test.concurrent(
 	},
 );
 
-// Increase allowance to exactly match usage (boundary case)
 test.concurrent(
 	`${chalk.yellowBright("allocated: increase allowance to exactly match usage")}`,
 	async () => {
@@ -121,9 +102,6 @@ test.concurrent(
 			actions: [s.attach({ productId: "pro" })],
 		});
 
-		// Use 5 seats (2 over the 3 included)
-		// NOTE: For allocated features, tracking usage past the included boundary
-		// immediately creates a prorated invoice (see adjustAllowance.ts)
 		const seatsUsed = 5;
 		await autumnV1.track(
 			{
@@ -134,7 +112,6 @@ test.concurrent(
 			{ timeout: 2000 },
 		);
 
-		// Increase to exactly 5 included seats - matches usage exactly
 		const newAllocatedUsersItem = items.allocatedUsers({ includedUsage: 5 });
 
 		const updateParams = {
@@ -145,25 +122,20 @@ test.concurrent(
 
 		const preview = await autumnV1.subscriptions.previewUpdate(updateParams);
 
-		// Was paying for 2 extra seats @ $10 = $20
-		// Now paying for 0 extra seats
-		// Should get credit of -$20
 		expect(preview.total).toBe(-20);
 
 		await autumnV1.subscriptions.update(updateParams);
 
 		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-		// Balance should be exactly 0 (5 - 5 = 0)
 		expectCustomerFeatureCorrect({
 			customer,
 			featureId: TestFeature.Users,
 			includedUsage: newAllocatedUsersItem.included_usage,
-			balance: 0, // 5 - 5 = 0
+			balance: 0,
 			usage: seatsUsed,
 		});
 
-		// Invoice count: 1 (initial attach) + 1 (track overage) + 1 (update credit) = 3
 		await expectCustomerInvoiceCorrect({
 			customer,
 			count: 3,

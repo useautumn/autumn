@@ -74,10 +74,8 @@ export default function UseAutumnScenarioPage() {
   const [isRunning, setIsRunning] = useState(false);
   const [lastAction, setLastAction] = useState<LastActionState>(null);
 
-  // Tab state
   const [activeTab, setActiveTab] = useState<ActionTab>("attach");
 
-  // Input state
   const [planId, setPlanId] = useState("");
   const [featureId, setFeatureId] = useState("");
   const [requiredBalance, setRequiredBalance] = useState("");
@@ -90,7 +88,6 @@ export default function UseAutumnScenarioPage() {
     '{\n  "billing_address_collection": "required"\n}',
   );
 
-  // Form element IDs
   const planIdInputId = useId();
   const featureIdInputId = useId();
   const requiredBalanceInputId = useId();
@@ -267,7 +264,6 @@ export default function UseAutumnScenarioPage() {
       </DebugCard>
 
       <DebugCard title="Actions">
-        {/* Tabs */}
         <div className="mb-4 flex gap-1 border-b border-zinc-200">
           <button
             type="button"
@@ -326,7 +322,6 @@ export default function UseAutumnScenarioPage() {
           </button>
         </div>
 
-        {/* Tab content */}
         {activeTab === "attach" && (
           <div className="space-y-3">
             <div className="space-y-1.5">

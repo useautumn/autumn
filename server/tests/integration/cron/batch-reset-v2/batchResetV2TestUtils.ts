@@ -5,8 +5,6 @@ import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { logger } from "@/external/logtail/logtailUtils.js";
 import { batchResetCustomerEntitlementsV2 } from "@/internal/balances/batchReset/batchResetCustomerEntitlementsV2.js";
 
-/** Reads a cusEnt row directly from Postgres — never triggers a lazy reset
- * (CusService.getFull would reset overdue rows as a side effect). */
 export const fetchCustomerEntitlementRow = async ({
 	db,
 	customerEntitlementId,
@@ -36,7 +34,6 @@ export const fetchRollovers = async ({
 		.from(rollovers)
 		.where(eq(rollovers.cus_ent_id, customerEntitlementId));
 
-/** Runs the V2 batch reset worker exactly like the SQS consumer does. */
 export const runBatchResetV2 = async ({
 	ctx,
 	customerEntitlementIds,
@@ -50,10 +47,6 @@ export const runBatchResetV2 = async ({
 		payload: { customerEntitlementIds },
 	});
 
-/**
- * Waits for a tracked deduction to land in Postgres. Redis-path track flushes
- * to PG lazily (SyncV4), so asserting/expiring before the flush would race.
- */
 export const waitForPostgresBalance = async ({
 	db,
 	customerEntitlementId,

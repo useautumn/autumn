@@ -1,7 +1,3 @@
-/**
- * Tests for default_applies_to_entities org config behavior.
- */
-
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import {
 	type ApiCustomerV3,
@@ -23,10 +19,6 @@ import { logger } from "@/external/logtail/logtailUtils";
 import { CusService } from "@/internal/customers/CusService";
 import { OrgService } from "@/internal/orgs/OrgService";
 import { timeout } from "@/utils/genUtils";
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 1: Default applies to entities
-// ═══════════════════════════════════════════════════════════════════════════════
 
 describe("default applies to entities", () => {
 	beforeAll(async () => {

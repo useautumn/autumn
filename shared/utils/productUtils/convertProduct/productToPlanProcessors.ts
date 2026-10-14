@@ -4,7 +4,6 @@ import type {
 } from "@api/products/components/processors";
 import type { Product } from "@models/productModels/productModels";
 
-/** The `revenuecat_mappings` row for this plan — a separate table, so it is read in. */
 export type RevenueCatPlanMapping = {
 	revenuecat_product_ids: string[];
 	feature_quantities?: Record<

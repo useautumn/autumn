@@ -1,13 +1,3 @@
-/**
- * Setup Payment - With Customize Tests
- *
- * Tests that all attach params survive the setup payment metadata roundtrip
- * (stored in metadata → Stripe checkout → webhook → billingActions.attach).
- *
- * Covers: customize.price, customize.items, customize.free_trial,
- * feature_quantities, version, discounts.
- */
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3 } from "@autumn/shared";
 import { FreeTrialDuration } from "@autumn/shared";
@@ -33,20 +23,6 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { createStripeCli } from "@/external/connect/createStripeCli";
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 1: Setup + plan with custom price
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - New customer with NO payment method
- * - Base product has no price, only messages feature
- * - Call setupPayment with plan_id + customize.price = $30/mo
- *
- * Expected:
- * - After completing form: product attached with custom price
- * - Invoice = $30 (custom price, not the original $0)
- */
 test.concurrent(`${chalk.yellowBright("setup-payment: attach plan with custom price")}`, async () => {
 	const customerId = "setup-pay-customize-price";
 
@@ -56,13 +32,12 @@ test.concurrent(`${chalk.yellowBright("setup-payment: attach plan with custom pr
 	const { autumnV1, ctx } = await initScenario({
 		customerId,
 		setup: [
-			s.customer({}), // No payment method
+			s.customer({}),
 			s.products({ list: [base] }),
 		],
 		actions: [],
 	});
 
-	// 1. Call setupPayment with customize.price
 	const res = await autumnV1.billing.setupPayment({
 		customer_id: customerId,
 		plan_id: base.id,
@@ -73,10 +48,8 @@ test.concurrent(`${chalk.yellowBright("setup-payment: attach plan with custom pr
 
 	expect(res.url).toBeDefined();
 
-	// 2. Complete the setup form
 	await completeSetupPaymentForm({ url: res.url });
 
-	// 3. Verify plan attached with custom price
 	await expectCustomerProducts({
 		autumn: autumnV1,
 		customerId,
@@ -93,7 +66,6 @@ test.concurrent(`${chalk.yellowBright("setup-payment: attach plan with custom pr
 		usage: 0,
 	});
 
-	// Invoice should reflect the custom price ($30), not the original ($0)
 	await expectCustomerInvoiceCorrect({
 		customer,
 		count: 1,
@@ -108,14 +80,9 @@ test.concurrent(`${chalk.yellowBright("setup-payment: attach plan with custom pr
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 2: Setup + plan with custom items (override plan features)
-// ═══════════════════════════════════════════════════════════════════════════════
-
 test.concurrent(`${chalk.yellowBright("setup-payment: custom items override")}`, async () => {
 	const customerId = "setup-pay-customize-items";
 
-	// products.pro() includes $20/month price already
 	const pro = products.pro({
 		id: "pro",
 		items: [items.monthlyMessages({ includedUsage: 100 })],
@@ -146,7 +113,6 @@ test.concurrent(`${chalk.yellowBright("setup-payment: custom items override")}`,
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Items overridden: Messages should be 250 (not 100)
 	expectCustomerFeatureCorrect({
 		customer,
 		featureId: TestFeature.Messages,
@@ -155,13 +121,11 @@ test.concurrent(`${chalk.yellowBright("setup-payment: custom items override")}`,
 		usage: 0,
 	});
 
-	// Dashboard boolean feature should exist
 	await expectCustomerFeatureExists({
 		customer,
 		featureId: TestFeature.Dashboard,
 	});
 
-	// Original price ($20) preserved since only items were customized
 	await expectCustomerInvoiceCorrect({ customer, count: 1, latestTotal: 20 });
 
 	await expectSubToBeCorrect({
@@ -171,10 +135,6 @@ test.concurrent(`${chalk.yellowBright("setup-payment: custom items override")}`,
 		env: ctx.env,
 	});
 });
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 3: Setup + plan with custom items + price + feature_quantities
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(`${chalk.yellowBright("setup-payment: custom items + price + feature_quantities")}`, async () => {
 	const customerId = "setup-pay-customize-items-qty";
@@ -190,8 +150,6 @@ test.concurrent(`${chalk.yellowBright("setup-payment: custom items + price + fea
 		actions: [],
 	});
 
-	// $30 base price + prepaid messages at $10/100 units, purchasing 200 = $20
-	// Total expected: $50
 	const res = await autumnV1.billing.setupPayment({
 		customer_id: customerId,
 		plan_id: base.id,
@@ -220,7 +178,6 @@ test.concurrent(`${chalk.yellowBright("setup-payment: custom items + price + fea
 		usage: 0,
 	});
 
-	// $30 base + $20 prepaid (200 units at $10/100) = $50
 	await expectCustomerInvoiceCorrect({ customer, count: 1, latestTotal: 50 });
 
 	await expectSubToBeCorrect({
@@ -231,14 +188,9 @@ test.concurrent(`${chalk.yellowBright("setup-payment: custom items + price + fea
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 4: Setup + plan with custom free trial
-// ═══════════════════════════════════════════════════════════════════════════════
-
 test.concurrent(`${chalk.yellowBright("setup-payment: custom free trial")}`, async () => {
 	const customerId = "setup-pay-customize-trial";
 
-	// products.pro() includes $20/month price already
 	const pro = products.pro({
 		id: "pro",
 		items: [items.monthlyMessages({ includedUsage: 100 })],
@@ -265,7 +217,6 @@ test.concurrent(`${chalk.yellowBright("setup-payment: custom free trial")}`, asy
 	expect(res.url).toBeDefined();
 	await completeSetupPaymentForm({ url: res.url });
 
-	// A trialing product reads as active, so this also waits for the webhook
 	await expectCustomerProducts({
 		autumn: autumnV1,
 		customerId,
@@ -274,7 +225,6 @@ test.concurrent(`${chalk.yellowBright("setup-payment: custom free trial")}`, asy
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Product should be trialing, not active
 	await expectProductTrialing({
 		customer,
 		productId: pro.id,
@@ -289,10 +239,8 @@ test.concurrent(`${chalk.yellowBright("setup-payment: custom free trial")}`, asy
 		usage: 0,
 	});
 
-	// Trial period: invoice total should be $0
 	await expectCustomerInvoiceCorrect({ customer, count: 1, latestTotal: 0 });
 
-	// Verify Stripe subscription is also in trialing state
 	await expectSubToBeCorrect({
 		db: ctx.db,
 		customerId,
@@ -302,19 +250,6 @@ test.concurrent(`${chalk.yellowBright("setup-payment: custom free trial")}`, asy
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 5: Setup + plan with specific version
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Anchor customer (with PM) attaches v1, locking it
- * - Product updated to create v2 (200 messages, $40)
- * - Test customer (no PM, separate initScenario) does setupPayment with version: 1
- *
- * Expected:
- * - Test customer gets v1 (100 messages, $20), NOT v2
- */
 test.concurrent(`${chalk.yellowBright("setup-payment: specific version")}`, async () => {
 	const anchorId = "setup-pay-version-anchor";
 	const testId = "setup-pay-version";
@@ -323,7 +258,6 @@ test.concurrent(`${chalk.yellowBright("setup-payment: specific version")}`, asyn
 	const priceV1 = items.monthlyPrice({ price: 20 });
 	const pro = products.base({ id: "pro", items: [messagesV1, priceV1] });
 
-	// Anchor customer attaches v1, locking it. Clean up both customers upfront.
 	const { autumnV1, ctx } = await initScenario({
 		customerId: anchorId,
 		setup: [
@@ -333,7 +267,6 @@ test.concurrent(`${chalk.yellowBright("setup-payment: specific version")}`, asyn
 		actions: [s.attach({ productId: "pro" })],
 	});
 
-	// Update product → creates v2 (v1 locked by anchor customer)
 	await autumnV1.products.update(pro.id, {
 		items: [
 			items.monthlyMessages({ includedUsage: 200 }),
@@ -341,14 +274,12 @@ test.concurrent(`${chalk.yellowBright("setup-payment: specific version")}`, asyn
 		],
 	});
 
-	// Create test customer (no PM) via second initScenario — no product re-init
 	await initScenario({
 		customerId: testId,
 		setup: [s.customer({}), s.products({ list: [] })],
 		actions: [],
 	});
 
-	// Setup payment for test customer requesting v1
 	const res = await autumnV1.billing.setupPayment({
 		customer_id: testId,
 		plan_id: pro.id,
@@ -366,7 +297,6 @@ test.concurrent(`${chalk.yellowBright("setup-payment: specific version")}`, asyn
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(testId);
 
-	// Should have v1 values (100 messages, $20), not v2 (200 messages, $40)
 	expectCustomerFeatureCorrect({
 		customer,
 		featureId: TestFeature.Messages,
@@ -388,14 +318,9 @@ test.concurrent(`${chalk.yellowBright("setup-payment: specific version")}`, asyn
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 6: Setup + plan with discount
-// ═══════════════════════════════════════════════════════════════════════════════
-
 test.concurrent(`${chalk.yellowBright("setup-payment: discount")}`, async () => {
 	const customerId = "setup-pay-discount";
 
-	// products.pro() includes $20/month price already
 	const pro = products.pro({
 		id: "pro",
 		items: [items.monthlyMessages({ includedUsage: 100 })],
@@ -407,7 +332,6 @@ test.concurrent(`${chalk.yellowBright("setup-payment: discount")}`, async () => 
 		actions: [],
 	});
 
-	// Create a 50% off coupon via Stripe
 	const stripeCli = createStripeCli({ org: testCtx.org, env: testCtx.env });
 	const coupon = await createPercentCoupon({ stripeCli, percentOff: 50 });
 
@@ -435,6 +359,5 @@ test.concurrent(`${chalk.yellowBright("setup-payment: discount")}`, async () => 
 		usage: 0,
 	});
 
-	// 50% off $20 = $10
 	await expectCustomerInvoiceCorrect({ customer, count: 1, latestTotal: 10 });
 });

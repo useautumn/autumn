@@ -1,9 +1,3 @@
-/**
- * version + customize is a pure repoint with customize matching the
- * customer's CURRENT (from) items: a remove targeting an item the target
- * catalog no longer carries still matches the FROM item and removes cleanly —
- * no remove_item_unmatched rejection.
- */
 import { expect, test } from "bun:test";
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
@@ -38,7 +32,6 @@ test.concurrent(
 			setup: [s.customer({ testClock: false }), s.products({ list: [plan] })],
 			actions: [s.billing.attach({ productId: plan.id })],
 		});
-		// The target version no longer carries Words.
 		await mintPlanVersion({
 			client: autumnV2_3,
 			planId: plan.id,
@@ -74,7 +67,6 @@ test.concurrent(
 			},
 		});
 
-		// Batch lane accepted (no remove_item_unmatched) and the row repointed.
 		await expectVersionRepointedOnce({
 			ctx,
 			customerId,
@@ -84,7 +76,6 @@ test.concurrent(
 			result,
 		});
 
-		// Words matched the FROM item and is removed from the customer.
 		await expect(
 			readScopedFeatureRow({
 				ctx,
@@ -93,7 +84,6 @@ test.concurrent(
 			}),
 		).rejects.toThrow();
 
-		// Untouched Messages keeps its from-version claim (pure repoint).
 		const messagesAfter = await readScopedFeatureRow({
 			ctx,
 			customerId,

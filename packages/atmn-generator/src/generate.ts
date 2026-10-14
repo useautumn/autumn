@@ -61,10 +61,6 @@ const FIXTURE_RUNTIME_SOURCE = join(
 	"emit/runtime/emitFixture.ts",
 );
 
-/**
- * Shared rules the CLI must apply exactly as the server does. Each file imports
- * nothing, so it is copied verbatim rather than re-stated.
- */
 const SHARED_RUNTIMES = [
 	{ from: "shared/models/orgModels/sandboxName.ts", to: "sandboxName.ts" },
 	{
@@ -73,11 +69,6 @@ const SHARED_RUNTIMES = [
 	},
 ] as const;
 
-/**
- * Emitted source is not formatted by hand — it goes through the repo-pinned
- * Biome, which owns indentation, quotes and trailing commas. Emitting ugly is
- * fine; emitting inconsistently is what would make the regen-clean check noisy.
- */
 const formatWithBiome = async ({
 	paths,
 }: {
@@ -267,10 +258,7 @@ export const generate = async (): Promise<string[]> => {
 		}),
 	});
 
-	// A typo in a rule's path or field would otherwise ship as a rule that
-	// never fires.
 	const listsEnvelope = syncedListsEnvelope({ spec, lists: SYNCED_LISTS });
-	// An open enum's known names come from the spec, so they can't go stale.
 	const registry = withOpenEnumRules({ spec, registry: LINT_REGISTRY });
 	validateRegistry({
 		registry,
@@ -278,8 +266,6 @@ export const generate = async (): Promise<string[]> => {
 		root,
 		overlay: OVERLAY,
 	});
-	// Singletons are linted under their config key, so the spec's constraints
-	// on them reach the document walk like any collection's.
 	const singletonEnvelope = {
 		type: "object",
 		properties: Object.fromEntries(
@@ -335,8 +321,6 @@ export const generate = async (): Promise<string[]> => {
 		}),
 	});
 
-	// `requestTypeName` marks an operation whose body is its own typed object;
-	// the catalog operations send the wire document `atmn()` already built.
 	const operations: ClientOperation[] = (
 		[
 			{
@@ -359,7 +343,6 @@ export const generate = async (): Promise<string[]> => {
 				path: "/v1/catalogV2.get",
 				responseTypeName: "GetCatalogResponse",
 			},
-			// Singleton operations take the body `splitWire` cut from the document.
 			{
 				name: "previewUpdateOrganization",
 				path: "/v1/organization.preview_update",
@@ -400,7 +383,6 @@ export const generate = async (): Promise<string[]> => {
 				responseTypeName: "ResetSandboxResponse",
 				requestTypeName: "ResetSandboxParams",
 			},
-			// Synced-list operations take the entries push resolved for the target env.
 			{
 				name: "listWebhooks",
 				path: "/v1/webhooks.list",
@@ -432,8 +414,6 @@ export const generate = async (): Promise<string[]> => {
 			name,
 			path,
 			responseTypeName,
-			// Renames are a fixture-side concept: a response is typed as the spec
-			// names it, so it is recased and nothing more.
 			responseSchema: schema,
 			responseHints: wirePathHints({ schema, root }),
 			...(request === undefined || requestTypeName === undefined
@@ -459,8 +439,6 @@ export const generate = async (): Promise<string[]> => {
 
 	write({ name: "skills.ts", source: await emitSkillsModule() });
 
-	// `atmn api` mirrors the published surface: the public spec, never the
-	// internal one, so a field the docs hide cannot leak through a flag.
 	write({
 		name: "apiRoutes.ts",
 		source: emitApiRoutesModule({ spec: loadSpec({ path: PUBLIC_SPEC_PATH }) }),

@@ -1,6 +1,5 @@
 import { ErrCode, RecaseError, type UpdateCatalogParams } from "@autumn/shared";
 
-/** Promote is take-the-pointer only. `active: false` needs a same-call successor. */
 export const handleUpsertProductActiveErrors = ({
 	params,
 }: {

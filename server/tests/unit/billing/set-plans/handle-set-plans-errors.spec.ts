@@ -247,10 +247,6 @@ describe(chalk.yellowBright("handleSetPlansErrors"), () => {
 	);
 
 	test("skips the immediate-start guard on updates (existing schedule)", async () => {
-		// Regression: when editing an existing schedule, the frontend preserves
-		// the persisted starts_at for phase 0. Downstream Stripe execution anchors
-		// the first phase to the schedule's current_phase.start_date anyway, so
-		// the tolerance check should not reject a historical starts_at here.
 		const now = Date.now();
 
 		await expect(

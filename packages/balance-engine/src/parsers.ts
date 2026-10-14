@@ -158,7 +158,6 @@ export const parseInitializeRequest = ({
 	input: unknown;
 }): InitializeRequest => initializeRequestSchema.parse(input);
 
-/** A lock row read back from Postgres, before it rides on a finalize command. */
 export const parseWorkerLock = ({ input }: { input: unknown }): WorkerLock =>
 	workerLockSchema.parse(input);
 

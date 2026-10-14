@@ -7,7 +7,6 @@ import {
 	subjectStateToPlanLicenseCatalogKeys,
 } from "./convertCatalogUtils.js";
 
-/** The keys this catalog cannot answer for; empty means compute can run. */
 export const filterCatalogKeysMissingFrom = ({
 	keys,
 	catalog,
@@ -16,7 +15,6 @@ export const filterCatalogKeysMissingFrom = ({
 	catalog: Catalog;
 }): CatalogKey[] => keys.filter((key) => !(key.id in catalog[key.table]));
 
-/** The catalog rows `state` references, picked out of `catalog`; a row the catalog lacks is simply absent. */
 export const filterCatalogForState = ({
 	state,
 	catalog,

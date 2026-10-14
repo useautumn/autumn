@@ -1,9 +1,3 @@
-/**
- * atmn crud/plans — [group, description, metadata, config.ignorePastDue, each billingControls key]
- *
- * One line of plans/atmn-v3/07_tests.md. [a, b] is a matrix looped INSIDE this file.
- */
-
 import { expect, test } from "bun:test";
 import {
 	configBody,

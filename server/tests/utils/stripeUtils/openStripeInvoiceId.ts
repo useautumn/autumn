@@ -1,7 +1,6 @@
 import { stripeCustomerId } from "@tests/utils/stripeUtils/stripeCustomerId";
 import type { TestContext } from "@tests/utils/testInitUtils/createTestContext";
 
-/** The customer's open Stripe invoice: the one a hosted invoice checkout is about to pay. */
 export const openStripeInvoiceId = async ({
 	ctx,
 	customerId,

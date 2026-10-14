@@ -46,7 +46,6 @@ export async function startPartitionService({
 		try {
 			await disconnectPartitionResources({ ctx, state });
 		} catch {
-			// Keep the original startup failure.
 		}
 		throw cause;
 	}
@@ -70,7 +69,6 @@ export function stopPartitionService({
 	state.unsubscribePartitionChanges?.();
 	state.unsubscribePartitionChanges = null;
 
-	// Serving partitions keep serving until a successor is ready; the rest stop as before.
 	const handingOff = [
 		...state.handingOff.values(),
 		...beginPartitionHandoffs({ ctx, state }),
@@ -127,7 +125,6 @@ export function requestPartitionServiceStop({
 	queueMicrotask(stopCurrentAllocation);
 }
 
-/** The worker owns nothing after this and never will again: the entrypoint is told why, so the process can end. */
 export async function stopServiceThenNotify({
 	ctx,
 	state,
@@ -141,7 +138,6 @@ export async function stopServiceThenNotify({
 	}
 }
 
-/** No later assignment may reuse a half-retired runtime, so this worker is finished. */
 export function failPartitionRetirement({
 	ctx,
 	state,
@@ -182,7 +178,6 @@ async function finishPartitionServiceStop({
 	entriesToStop: PartitionEntry[];
 }): Promise<void> {
 	const errors: unknown[] = [];
-	// Leave the group first: successors are assigned and prepare while this worker still serves.
 	try {
 		await ctx.consumer.stop();
 	} catch (cause) {

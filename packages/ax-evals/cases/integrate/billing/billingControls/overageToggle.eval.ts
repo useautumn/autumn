@@ -7,17 +7,6 @@ import type { AxRunOutput } from "../../../../src/types/axRunOutput.ts";
 import { emailCreditsCatalog } from "../../catalogs/emailCreditsCatalog.ts";
 import { fixtureUser, integrateScenario } from "../../integrateShared.ts";
 
-/**
- * BILLING CONTROLS flow: the end-user overage toggle. Growth includes 500
- * emails with $0.02/email overage; the settings page gets an "overage
- * billing on/off" switch. Off must NOT mean "delete the overage price" or a
- * bare usage cap — it's a customer-level spend_limits entry with
- * skip_overage_billing: true (overage never invoiced) plus an overage_limit
- * buffer (~20% of the allowance) so the user is blocked past the headroom
- * instead of accruing unbilled usage forever. The graded trap: agents that
- * don't know skip_overage_billing exists reach for overage_allowed:false
- * (no headroom) or config.disable_overage_billing (no cap), or invent a cron.
- */
 const overageSettingsRouteStub = `		// Settings page: overage billing on/off. TODO: wire to billing provider.
 		"/api/billing/overage-settings": {
 			POST: async (req) => {
@@ -28,8 +17,6 @@ const overageSettingsRouteStub = `		// Settings page: overage billing on/off. TO
 		},
 `;
 
-/** 20% headroom over the 500-email grant, in either legitimate encoding:
- * usage_percentage 20, or absolute 100 units. */
 const overageBufferConfigured = (): Expectation => {
 	const name = "20% overage headroom configured";
 	return {

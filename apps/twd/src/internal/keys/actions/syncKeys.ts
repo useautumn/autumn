@@ -24,8 +24,6 @@ import { stripeForKey } from "../stripeForKey.ts";
 const PROBE_CONCURRENCY = 8;
 export const UNRESOLVED_KEY_PREFIX = "unresolved:";
 
-/** GET /v1/account (who owns the key) + GET /v2/core/accounts (can it mint sub-accounts).
- * rawRequest, not v2 list(): list() leaves a dangling auto-pager rejection that would crash the daemon. */
 const probeKey = async ({ secret }: { secret: string }) => {
 	const stripe = stripeForKey({ secret });
 	let platformAccountId: string | null = null;
@@ -70,7 +68,6 @@ const probeKey = async ({ secret }: { secret: string }) => {
 
 let inFlight: Promise<void> | undefined;
 
-/** Stored keys (decrypted) plus any TW_V3_KEYS bootstrap keys, deduped. */
 export const loadKnownSecrets = async ({ ctx }: { ctx: TwdContext }) => {
 	const rows = await ctx.db
 		.select({ sealed: stripeKeys.secretCiphertext })
@@ -105,7 +102,6 @@ const shardPlatformAccountId = async (secret: string) =>
 		)
 	).id;
 
-/** Retires any stored row for the shard's platform (current or rotated-out secret) and drops its secret; throws if Stripe can't name the platform. */
 export const retireShardKey = async ({
 	ctx,
 	resolvePlatformAccountId = shardPlatformAccountId,
@@ -115,7 +111,6 @@ export const retireShardKey = async ({
 }) => {
 	const secret = ctx.env.SHARD_STRIPE_SANDBOX_KEY.trim();
 	if (!secret) return;
-	// Fail closed: without the platform id a row holding a rotated-out shard secret would stay usable.
 	const platformAccountId = await resolvePlatformAccountId(secret).catch(
 		(error: unknown) => {
 			throw new Error(
@@ -143,7 +138,6 @@ export const retireShardKey = async ({
 		forgetKeySecret({ platformAccountId: row.platformAccountId });
 };
 
-/** Any separator (commas, whitespace, newlines); only `sk_`/`rk_` tokens, deduped. */
 export const parseKeyList = ({ text }: { text: string }) => [
 	...new Set(
 		text
@@ -152,7 +146,6 @@ export const parseKeyList = ({ text }: { text: string }) => [
 	),
 ];
 
-/** Probe + upsert every known key (DB + TW_V3_KEYS) and refresh the in-memory secret map. */
 export const syncKeys = ({ ctx }: { ctx: TwdContext }): Promise<void> => {
 	inFlight ??= loadKnownSecrets({ ctx })
 		.then(async (secrets) => {
@@ -175,7 +168,6 @@ const sealIfConfigured = ({
 }) =>
 	ctx.env.TWD_KEY_ENCRYPTION_SECRET ? sealSecret({ plaintext: secret }) : null;
 
-/** Probe the given secrets and upsert their rows (secret stored encrypted). */
 export const probeAndStoreKeys = async ({
 	ctx,
 	secrets,
@@ -183,7 +175,6 @@ export const probeAndStoreKeys = async ({
 }: {
 	ctx: TwdContext;
 	secrets: string[];
-	/** false: keys Stripe won't authenticate are reported, not stored. */
 	storeUnresolved?: boolean;
 }) => {
 	const limit = pLimit(PROBE_CONCURRENCY);
@@ -232,7 +223,6 @@ export const probeAndStoreKeys = async ({
 				.values({ platformAccountId, ...fields })
 				.onConflictDoUpdate({
 					target: stripeKeys.platformAccountId,
-					// A running full nuke keeps its key locked until it releases it.
 					set: {
 						...fields,
 						usable: sql`case when ${fullNukeLocked} then false else ${fields.usable} end`,

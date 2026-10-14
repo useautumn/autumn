@@ -1,7 +1,6 @@
 import * as Sentry from "@sentry/bun";
 import { makeMultiplexedTransport } from "@sentry/core";
 
-/** Sazabi ingests Sentry envelopes, so its DSN is primary; a set SENTRY_DSN also gets a copy of every event. */
 export const errorReportingOptionsOf = ({
 	env = process.env,
 }: {

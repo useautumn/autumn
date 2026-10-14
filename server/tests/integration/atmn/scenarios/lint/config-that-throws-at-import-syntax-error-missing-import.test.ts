@@ -1,9 +1,3 @@
-/**
- * atmn scenarios/lint — config that throws at import [syntax error, missing import] → readable error, no request
- *
- * One line of plans/atmn-v3/07_tests.md. [a, b] is a matrix looped INSIDE this file.
- */
-
 import { expect, test } from "bun:test";
 import { join } from "node:path";
 import { initAtmnScenario } from "@tests/utils/atmnUtils/initAtmnScenario.js";
@@ -15,10 +9,6 @@ const CLI_PACKAGE_DIR = join(
 	"../../../../../../packages/atmn",
 );
 
-/**
- * A raw autumn.config.ts that fails before `atmn(...)` ever runs — either a
- * parse error, or a reference to a builder nothing imported.
- */
 const brokenConfigSource = ({
 	kind,
 }: {
@@ -33,7 +23,6 @@ export default atmn({
 		feature({ featureId: "x", name: "X", type: "boolean"
 `;
 	}
-	// atmn is never imported, so calling it throws a ReferenceError at module eval.
 	return `import { feature } from "${CLI_PACKAGE_DIR}/src/generated/features";
 
 export default atmn({
@@ -56,7 +45,6 @@ for (const kind of ["syntax error", "missing import"] as const) {
 		try {
 			await expect(scenario.push()).rejects.toThrow();
 
-			// Nothing was ever sent: the org's catalog stays empty.
 			const catalog = (await scenario.client.get({})) as unknown as {
 				features: Array<{ id: string }>;
 				plans: Array<{ id: string }>;

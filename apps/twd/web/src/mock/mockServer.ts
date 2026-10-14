@@ -41,8 +41,6 @@ import {
 import type { Method } from "../api/client.ts";
 import fixture from "./catalogFixture.json";
 
-// ---- deterministic randomness --------------------------------------------
-
 const rng = (seed: number) => () => {
 	seed = (seed + 0x6d2b79f5) | 0;
 	let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
@@ -65,8 +63,6 @@ const MIN = 60_000;
 const HOUR = 60 * MIN;
 const START = Date.now();
 
-// ---- people ---------------------------------------------------------------
-
 const ME: Me = {
 	userId: "usr_tanvir",
 	email: "tanvir@useautumn.com",
@@ -87,8 +83,6 @@ const SYSTEM = {
 	email: "system@useautumn.com",
 	via: "system",
 };
-
-// ---- catalog --------------------------------------------------------------
 
 const catalog: Catalog = (() => {
 	const groupsByFile = new Map<string, string[]>();
@@ -166,8 +160,6 @@ for (const s of fixture.suites)
 		...new Set(s.groups.flatMap((g) => groupFiles.get(g) ?? [])),
 	]);
 
-// ---- branches -------------------------------------------------------------
-
 const branches: Branch[] = [
 	{ name: "dev", sha: hex(40), prNumber: null, warm: "ready" },
 	{ name: "main", sha: hex(40), prNumber: null, warm: "ready" },
@@ -211,8 +203,6 @@ const branches: Branch[] = [
 		warm: "ready",
 	},
 ];
-
-// ---- keys + accounts ------------------------------------------------------
 
 const UNUSABLE: Partial<Record<number, string>> = {
 	17: "Invalid API key provided (rk_…) — key was rolled",
@@ -340,8 +330,6 @@ const keysOverview = (): KeysOverview => {
 	};
 };
 
-// ---- jobs -----------------------------------------------------------------
-
 const jobs: Job[] = [];
 const enqueue = (kind: Job["kind"], singletonKey: string): EnqueueResponse => {
 	const live = jobs.find(
@@ -369,7 +357,6 @@ const enqueue = (kind: Job["kind"], singletonKey: string): EnqueueResponse => {
 const FULL_NUKE_REASON = "full nuke in progress";
 const FULL_NUKE_MS = 20_000;
 
-/** Simulated full nuke: ~20s to delete, re-register the webhook, then top up. */
 const fullNukeKey = ({
 	key,
 	targetPerKey,
@@ -419,18 +406,14 @@ const fullNukeKey = ({
 	return res;
 };
 
-// ---- runs -----------------------------------------------------------------
-
 type Sim = {
 	queue: string[];
 	logSeq: number;
 	ticks: number;
-	/** When the run left the account queue; phases time from here. */
 	readyAt: number;
 	workerSeconds: number;
 	peakWorkers: number;
 	warmForMs: number;
-	/** When each running file landed on its worker. */
 	fileStartedAt: Map<string, number>;
 };
 const runs: RunDetail[] = [];
@@ -561,9 +544,6 @@ const summary = (run: RunDetail): RunSummary => {
 	};
 };
 
-// ---- costs ----------------------------------------------------------------
-
-/** Same defaults as internal/costs/actions/getCostRates.ts. */
 const RATES: Costs["rates"] = {
 	usdPerCoreSecond: 0.00003942,
 	usdPerGibSecond: 0.00000667,
@@ -582,12 +562,9 @@ const costOf = (workerSeconds: number, final: boolean) => ({
 	final,
 });
 
-// ---- history (60 days of finished runs) -----------------------------------
-
 const HISTORY_DAYS = 60;
 const DAY = 24 * HOUR;
 const RUN_USERS = [ACTORS[0], ACTORS[1], ACTORS[2], ACTORS[5], ACTORS[3]];
-/** Relative run volume per actor above; the api-key actor is Tanvir's agent. */
 const USER_WEIGHT = [0.3, 0.22, 0.14, 0.12, 0.22];
 
 const SELECTIONS = [
@@ -599,7 +576,6 @@ const SELECTIONS = [
 	{ groups: ["webhooks"], grep: "webhook" },
 ];
 
-/** Busy weekdays, quiet weekends, a slow ramp up towards today. */
 const historyTimes = (() => {
 	const r = rng(99);
 	const times: { at: number; baseline: boolean }[] = [];
@@ -712,7 +688,6 @@ const makeFinishedRun = (i: number): RunDetail => {
 	return run;
 };
 
-/** Finished runs keep only their summary; details regenerate from the seed. */
 const history = historyTimes.map((_, i) => summary(makeFinishedRun(i)));
 const historyIndex = new Map(history.map((h, i) => [h.id, i]));
 const details = new Map<string, RunDetail>();
@@ -805,8 +780,6 @@ const costsReport = ({
 	};
 };
 
-// ---- live runs ------------------------------------------------------------
-
 const startLiveRun = ({
 	branch,
 	sha,
@@ -828,13 +801,10 @@ const startLiveRun = ({
 	createdBy: RunSummary["createdBy"];
 	progress?: number;
 	workerCap?: number;
-	/** Workers attached at start; the rest arrive as accounts free up. */
 	startWorkers?: number;
-	/** Wait in the FIFO account queue before anything starts. */
 	queuedForMs?: number;
 	purpose?: RunSummary["purpose"];
 	repeat?: number;
-	/** How long the run sits in "warming" before workers boot. */
 	warmForMs?: number;
 }) => {
 	const list = planWorkItems({ files: filesForSelection(selection), repeat });
@@ -850,7 +820,6 @@ const startLiveRun = ({
 	const finished = list
 		.slice(0, done)
 		.map((f, j) => finishedFile(f, rand, workerName(j % attached), 0.012));
-	// Lay finished files end to end per worker, squeezed to end before now.
 	const cursor = [...readyAt];
 	const ends = finished.map((f, j) => {
 		cursor[j % attached] += f.durationMs ?? 0;
@@ -987,7 +956,6 @@ const setStatus = (
 	emit(run.id, { type: "status", status, phase });
 };
 
-/** Elastic growth: a few more workers every other tick while accounts are free. */
 const growWorkers = (run: RunDetail, sim: Sim) => {
 	const missing = (run.workersWanted ?? 0) - run.workers.length;
 	if (missing <= 0 || sim.ticks % 2) return;
@@ -1037,7 +1005,6 @@ const bootWorkers = (run: RunDetail) => {
 		setWorker(run, { ...w, status: "booting" });
 };
 
-/** The same estimator twd runs server-side, fed the mock catalog's baselines. */
 const updateEta = (run: RunDetail, sim: Sim) => {
 	const eta = estimateRunEta({
 		now: Date.now(),
@@ -1199,7 +1166,6 @@ startLiveRun({
 	workerCap: 24,
 	pinnedSha: true,
 });
-// A long branch stuck building its image: sized at warm start, but no accounts asked for until the build lands.
 startLiveRun({
 	branch: "capy/revenuecat-customer-products-are-not-synced-after-transfer",
 	sha: hex(40),
@@ -1229,8 +1195,6 @@ setInterval(() => {
 			workerCap: 32,
 		});
 }, 1_000);
-
-// ---- logs -----------------------------------------------------------------
 
 const fileLog = (run: RunDetail, file: string) => {
 	const f = run.files.find((x) => x.file === file);
@@ -1277,8 +1241,6 @@ const fileLog = (run: RunDetail, file: string) => {
 	return lines.join("\n");
 };
 
-// ---- api keys -------------------------------------------------------------
-
 const apiKeys: ApiKey[] = [
 	{
 		id: "ak_capy01",
@@ -1308,8 +1270,6 @@ const apiKeys: ApiKey[] = [
 		createdAt: iso(START - 60 * 24 * HOUR),
 	},
 ];
-
-// ---- qa envs --------------------------------------------------------------
 
 const QA_BUILD_MS = 4 * MIN;
 const QA_PHASES = [
@@ -1374,7 +1334,6 @@ const qaEnvs: QaEnv[] = [
 		error:
 			"image build failed: bun install exited 1 (lockfile out of date: @autumn/shared@workspace:* not found)",
 	}),
-	// Enough rows to show the table scrolling inside the page.
 	...Array.from({ length: 30 }, (_, i) =>
 		qaEnv({
 			name: `capy-branch-${i + 1}`,
@@ -1388,7 +1347,6 @@ const qaEnvs: QaEnv[] = [
 	),
 ];
 
-/** Building envs advance through the phases, then land ready and awake. */
 const tickQaEnvs = () => {
 	for (const env of qaEnvs) {
 		if (env.state !== "building") continue;
@@ -1412,8 +1370,6 @@ const tickQaEnvs = () => {
 	}
 	return qaEnvs;
 };
-
-// ---- routing --------------------------------------------------------------
 
 const err = (
 	status: number,
@@ -2014,8 +1970,6 @@ export const handle = ({
 	);
 };
 
-// ---- live (WebSocket /ws) -------------------------------------------------
-
 type LiveConn = {
 	topics: Set<string>;
 	emit: (topic: string, e: LiveEvent) => void;
@@ -2034,7 +1988,6 @@ const snapshotOf = (topic: string) => {
 	return null;
 };
 
-/** Diffs server state once a tick and publishes what moved, like the real hub. */
 const seen = new Map<string, string>();
 let primed = false;
 const changed = (key: string, value: unknown) => {
@@ -2070,7 +2023,6 @@ flush();
 primed = true;
 setInterval(flush, 1_000);
 
-/** One fake socket: same LiveClientMessage in, same LiveServerMessage out. */
 export const connectLive = (send: (msg: LiveServerMessage) => void) => {
 	let seq = 0;
 	const conn: LiveConn = {

@@ -1,9 +1,3 @@
-/**
- * The invoice_credit flag no longer gates anything: itemization is stamped
- * per customer entitlement from the plan item's price, so flipping the flag
- * is not a blockable feature change and never trips a customer blocker.
- */
-
 import { describe, expect, test } from "bun:test";
 import { type Feature, FeatureType } from "@autumn/shared";
 import { features } from "@tests/utils/fixtures/db/features.js";

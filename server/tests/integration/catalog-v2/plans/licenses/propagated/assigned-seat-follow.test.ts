@@ -1,7 +1,3 @@
-/**
- * catalogV2.update — assigned seat on an uncustomized follow.
- * No plan_license write; the customer shares stock and sees 200.
- */
 import { test } from "bun:test";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";

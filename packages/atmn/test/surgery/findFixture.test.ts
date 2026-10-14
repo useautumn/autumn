@@ -258,7 +258,6 @@ test("a single-quoted id with escapes is matched by its runtime value", () => {
 			id: "it's\ta\\bA",
 		}),
 	).not.toBeNull();
-	// The source spelling is not the value: matching it would be the bug.
 	expect(
 		findFixture({
 			source,
@@ -316,7 +315,6 @@ test("a nested element is found whether bare or wrapped in its builder", () => {
 	});
 	expect(bare?.kind()).toBe("object");
 
-	// What pull writes: `variant({...})`. Missing it re-appends the row.
 	const wrapped = findFixture({
 		source: nestedVariantsSource,
 		builder: shape,

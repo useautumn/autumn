@@ -3,8 +3,6 @@ import type { Feature, Plan } from "../../compose/models/index.js";
 import { loadConfig } from "../../lib/config/loadConfig.js";
 import { fetchRemoteData } from "../push/push.js";
 
-// ── Inlined normalize helpers (mirrors push.ts exactly) ──────────────────────
-
 type Rec = Record<string, unknown>;
 
 function valuesEqual(a: unknown, b: unknown): boolean {
@@ -128,8 +126,6 @@ function normalizePlanForCompare(plan: Plan): Rec {
 	return result;
 }
 
-// ── Deep diff: returns object describing first-level key mismatches ───────────
-
 function diffObjects(a: Rec, b: Rec, path = ""): string[] {
 	const diffs: string[] = [];
 	const allKeys = new Set([...Object.keys(a), ...Object.keys(b)]);
@@ -147,8 +143,6 @@ function diffObjects(a: Rec, b: Rec, path = ""): string[] {
 	}
 	return diffs;
 }
-
-// ── Main ─────────────────────────────────────────────────────────────────────
 
 export async function testDiffCommand(): Promise<void> {
 	console.log(chalk.cyan("Loading local config..."));

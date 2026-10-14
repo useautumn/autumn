@@ -1,11 +1,3 @@
-/**
- * atmn scenarios/customers — rename a planId with internalId while customers are on it → customers follow the row
- *
- * real `billing.attach` first; the point is to hit the dependency errors
- *
- * One line of plans/atmn-v3/07_tests.md. [a, b] is a matrix looped INSIDE this file.
- */
-
 import { expect, test } from "bun:test";
 import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 import { initAtmnScenario } from "@tests/utils/atmnUtils/initAtmnScenario.js";
@@ -44,8 +36,6 @@ test.concurrent(
 			await scenario.push();
 			await scenario.attachCustomer({ planId: oldPlanId });
 
-			// Backfills internalId onto the fixture, without which changing
-			// planId would read as a create + archive rather than a rename.
 			await scenario.pull();
 
 			const configBefore = scenario.files().get("autumn.config.ts") as string;

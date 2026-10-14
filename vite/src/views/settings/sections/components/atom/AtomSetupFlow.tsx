@@ -31,7 +31,6 @@ const NETWORK_BADGES: Record<AtomSetupValues["vpc"], string[]> = {
 	new_vpc: ["New VPC", "Public"],
 };
 
-/** A finished step's choices as badges on the tray. */
 const AtomStepChoices = ({
 	step,
 	badges,
@@ -49,7 +48,6 @@ const AtomStepChoices = ({
 	</div>
 );
 
-/** Cloud & size, account setup, deploy and verify as one stepper; only the open step shows. */
 export const AtomSetupFlow = ({
 	cache,
 	stackName,
@@ -57,7 +55,6 @@ export const AtomSetupFlow = ({
 }: {
 	cache: ApiByocCache | null;
 	stackName: string;
-	/** Autumn adds it after `-`, so only the part before it is editable. */
 	stackNameSuffix: string;
 }) => {
 	const actions = useAtomActions();
@@ -73,7 +70,6 @@ export const AtomSetupFlow = ({
 	const showError = (fallback: string) => (error: unknown) =>
 		toast.error(getBackendErr(error, fallback));
 
-	/** Before the stack exists there is nothing in AWS, so cancelling just starts over. */
 	const resetSetup = async () => {
 		if (cache)
 			await actions.remove.mutateAsync({}).catch(showError("Failed to cancel"));

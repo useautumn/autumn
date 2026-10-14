@@ -1,7 +1,6 @@
 import type { ApiSubscriptionV1 } from "@api/customers/cusPlans/apiSubscriptionV1.js";
 import { baseCustomer } from "../base/baseCustomer.js";
 
-/** Generate deterministic customers for broad list/search evals. */
 export const customerList = ({
 	count,
 	emailDomain = "example.test",

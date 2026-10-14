@@ -25,7 +25,6 @@ function loadFromStorage(storageKey: string): VisibilityState | null {
 	}
 }
 
-/** Get all visible usage columns with their names from storage */
 export function getVisibleUsageColumnsFromStorage({
 	storageKey,
 }: {
@@ -68,7 +67,6 @@ function saveToStorage(
 	} catch {}
 }
 
-/** Defines a group of columns to be rendered together in a submenu */
 export interface ColumnGroup {
 	key: string;
 	label: string;
@@ -97,9 +95,6 @@ export function useColumnVisibility<T>({
 
 	const [isDirty, setIsDirty] = useState(false);
 
-	// Derive effective visibility synchronously — fills in defaults for any
-	// column not yet in savedVisibility, so there's never a render frame where
-	// new columns flash visible before being hidden by an async useEffect.
 	const columnVisibility = useMemo(() => {
 		const result: VisibilityState = {};
 		for (const col of columns) {
@@ -116,8 +111,6 @@ export function useColumnVisibility<T>({
 	const columnVisibilityRef = useRef(columnVisibility);
 	columnVisibilityRef.current = columnVisibility;
 
-	// Only user-initiated changes (column toggles) flow through this setter,
-	// so the dirty flag accurately reflects unsaved user intent.
 	const setColumnVisibility = useCallback(
 		(updaterOrValue: Updater<VisibilityState>) => {
 			const newState =

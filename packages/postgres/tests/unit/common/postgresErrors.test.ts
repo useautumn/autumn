@@ -6,7 +6,6 @@ import {
 } from "../../../src/common/postgresErrors.js";
 import { databaseError } from "../../fixtures/databaseError.js";
 
-/** The driver's own failures: a socket code, or only pg's message. */
 const socketError = ({ code }: { code: string }): Error =>
 	Object.assign(new Error(code), { code });
 

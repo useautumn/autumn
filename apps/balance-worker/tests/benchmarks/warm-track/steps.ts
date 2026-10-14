@@ -20,7 +20,6 @@ import {
 } from "../../fixtures/mutations.js";
 import { buildScenario } from "../track-throughput/scenarios.js";
 
-/** Each step of a warm track decide run alone, many times, between GC-log markers: what each one allocates and costs. */
 const args = Object.fromEntries(
 	process.argv.slice(2).map((arg) => {
 		const [key, value] = arg.replace(/^--/, "").split("=");

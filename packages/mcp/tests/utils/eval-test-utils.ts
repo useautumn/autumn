@@ -146,7 +146,6 @@ const createMcpConsumerAgent = async (auth: AutumnMcpAuth) => {
 		description: "A generic agent using MCP tools.",
 		instructions: "You are a helpful assistant.",
 		model: leafChatAgentDefaults.model,
-		// Inferring the MCP toolset through Agent's generics exceeds tsc's depth limit.
 		tools: tools as ToolsInput,
 	});
 	const mastra = new Mastra({

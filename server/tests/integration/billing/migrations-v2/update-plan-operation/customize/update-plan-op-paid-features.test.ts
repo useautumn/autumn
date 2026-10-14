@@ -1,13 +1,3 @@
-/**
- * TDD coverage for update_plan item patch migrations.
- *
- * Contract under test:
- *   - update_plan reuses update-subscription patch semantics for add_items,
- *     remove_items, usage carry, and rollover carry.
- *   - Migration execution does not create extra invoices.
- *   - Existing customer products are patched, not replaced or expired.
- */
-
 import { expect, test } from "bun:test";
 import type {
 	ApiCustomerV3,
@@ -138,8 +128,6 @@ test.concurrent(
 	},
 );
 
-// Red: migration update_plan creates the new prepaid users item with zero paid packs.
-// Green: same-feature usage below the old allowance still synthesizes paid packs.
 test.concurrent(
 	`${chalk.yellowBright("migrations update_plan: prepaid users replacement keeps carried usage quantity")}`,
 	async () => {

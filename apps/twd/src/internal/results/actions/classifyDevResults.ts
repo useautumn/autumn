@@ -17,10 +17,6 @@ const noDataReason = ({
 	return "No dev results: this file is not in any dev baseline or dev run yet (new, renamed, or outside the 'all' group). Run it on dev with start_run to find out.";
 };
 
-/**
- * passed = every recent dev result passed first try; failing = the latest two failed (or the only one);
- * anything mixed, or passing only on retry, is flaky.
- */
 export const classifyDevResults = ({
 	file,
 	recent,

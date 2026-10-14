@@ -14,7 +14,6 @@ const MIN_INPUT_WIDTH = "4rem";
 const MIN_COMPACT_INPUT_WIDTH = "2.5rem";
 const INPUT_HORIZONTAL_PADDING = "1rem";
 
-/** Grows the input with the number so large quantities are never clipped. */
 const fitToDigitsWidth = ({
 	text,
 	compact,
@@ -24,7 +23,6 @@ const fitToDigitsWidth = ({
 }) =>
 	`max(${compact ? MIN_COMPACT_INPUT_WIDTH : MIN_INPUT_WIDTH}, calc(${text.length}ch + ${INPUT_HORIZONTAL_PADDING}))`;
 
-/** Controlled minus/input/plus stepper. `QuantityField` wraps this for forms. */
 export function QuantityStepper({
 	value,
 	onChange,
@@ -43,13 +41,10 @@ export function QuantityStepper({
 	min?: number;
 	max?: number;
 	step?: number;
-	/** Ascending quantities the buttons snap to instead of stepping by `step`,
-	 * e.g. volume-tier bounds. Beyond the last stop the buttons are disabled. */
 	stops?: number[];
 	placeholder?: string;
 	className?: string;
 	compact?: boolean;
-	/** Stretches the stepper to its container instead of sizing to its content. */
 	fullWidth?: boolean;
 	isValidating?: boolean;
 }) {
@@ -137,7 +132,6 @@ export function QuantityStepper({
 	const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
 		const inputValue = e.target.value;
 		if (inputValue === "") {
-			// Allow the field to sit empty while the user retypes a quantity.
 			onChange(undefined);
 			return;
 		}

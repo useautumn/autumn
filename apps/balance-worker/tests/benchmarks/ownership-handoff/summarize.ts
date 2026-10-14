@@ -1,4 +1,3 @@
-/** Prints the markdown tables for run.ts output files: bun summarize.ts <json> [<json> ...]; several files merge their samples. */
 export {};
 type Output = {
 	samples: {

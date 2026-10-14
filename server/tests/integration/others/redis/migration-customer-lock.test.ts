@@ -1,5 +1,3 @@
-/** Migration customer locks serialize only the same customer and release after failure. */
-
 import { describe, expect, test } from "bun:test";
 import { randomUUID } from "node:crypto";
 import { ErrCode, RecaseError } from "@autumn/shared";

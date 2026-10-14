@@ -1,7 +1,3 @@
-/**
- * Replace repoints the existing customer-entitlement row, so accrued rollover
- * rows must stay attached and retain their balances.
- */
 import { expect, test } from "bun:test";
 import { rollovers } from "@autumn/shared";
 import { runChunkedMigration } from "@tests/integration/billing/migrations-v2/utils/runChunkedMigration";

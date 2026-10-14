@@ -11,7 +11,6 @@ interface CheckoutSessionLockData {
 	checkoutSessionUrl: string;
 	checkoutSessionId: string;
 	expiresAt?: number;
-	/** Mirror of checkoutSessionId — lets the shared owner-checked clearLock release this reservation. */
 	token?: string;
 }
 
@@ -76,8 +75,6 @@ const clearIfOwned = async ({
 	});
 };
 
-/** Expires the session at Stripe then clears its reservation. False = the session
- * won the race (paid/completing) — the caller must not proceed to bill. */
 const expireAndClearIfOwned = async ({
 	ctx,
 	customerId,

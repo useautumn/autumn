@@ -13,13 +13,6 @@ import {
 	proMonthlySpec,
 } from "./knowledgePlatformPricing.ts";
 
-/**
- * KIND A: the whole brief in one message, told to proceed. Grades all three
- * signature decisions at once — credit system + overage, packs as a separate
- * add-on (with the base-plan negative), monthly reset on annual plans, and
- * the config-invisible half of ①: deployment attach + org-wide pooling as
- * stated conclusions.
- */
 export const oneShot = defineCase({
 	name: "knowledge-platform-one-shot",
 	prompt: [

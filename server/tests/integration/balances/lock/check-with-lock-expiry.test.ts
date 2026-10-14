@@ -128,7 +128,6 @@ test.concurrent(
 			},
 		});
 
-		// A real job's ctx is stamped when the job starts; the shared test ctx predates the lock.
 		await expireLock({
 			ctx: { ...ctx, timestamp: Date.now() },
 			payload: buildExpireLockPayload({ ctx, customerId }),
@@ -148,10 +147,6 @@ test.concurrent(
 		});
 	},
 );
-
-// ─────────────────────────────────────────────────────────────────────────────
-// check-lock-expiry-3: expires_at > 1 day from now → HTTP 400
-// ─────────────────────────────────────────────────────────────────────────────
 
 test.concurrent(
 	`${chalk.yellowBright("check-lock-expiry-3: expires_at > 1 day from now is rejected")}`,
@@ -187,10 +182,6 @@ test.concurrent(
 	},
 );
 
-// ─────────────────────────────────────────────────────────────────────────────
-// check-lock-expiry-4: no expires_at → TTL is ~1 day from now
-// ─────────────────────────────────────────────────────────────────────────────
-
 test.concurrent(
 	`${chalk.yellowBright("check-lock-expiry-4: no expires_at expires ~1 day from now")}`,
 	async () => {
@@ -220,11 +211,6 @@ test.concurrent(
 		await expectLockExpiryCorrect({ ctx, lockId: customerId, checkedAt });
 	},
 );
-
-// ─────────────────────────────────────────────────────────────────────────────
-// check-lock-expiry-5: expires_at set → TTL is expires_at + 1 hour
-// Uses a unique ID per run to avoid duplicate EventBridge schedule errors
-// ─────────────────────────────────────────────────────────────────────────────
 
 test.concurrent(
 	`${chalk.yellowBright("check-lock-expiry-5: expires_at set, the lock expires then")}`,

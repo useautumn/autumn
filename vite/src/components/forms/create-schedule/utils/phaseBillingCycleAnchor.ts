@@ -2,7 +2,6 @@ import type { CustomerStatePhase } from "@/components/forms/customer-state/custo
 
 const PHASE_START = "phase_start";
 
-/** The first phase resets its cycle when asked to, on a custom date if given; a later phase does unless it keeps the cycle anchor. */
 export const phaseToBillingCycleAnchor = ({
 	phase,
 	isFirstPhase,

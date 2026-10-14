@@ -10,10 +10,6 @@ export interface ProductSheetProps {
 	onOpenInBrowser: () => void;
 }
 
-/**
- * Product detail sheet (right panel).
- * Shows plan details including price, free trial, and features.
- */
 export function ProductSheet({
 	plan,
 	isFocused,
@@ -23,7 +19,6 @@ export function ProductSheet({
 }: ProductSheetProps) {
 	const borderColor = isFocused ? "magenta" : "gray";
 
-	// Determine plan type
 	const planType = plan.add_on ? "Add-on" : plan.auto_enable ? "Default" : "Plan";
 
 	return (
@@ -35,12 +30,10 @@ export function ProductSheet({
 			minWidth={44}
 			height="100%"
 		>
-			{/* Plan Title */}
 			<Text bold color="white">
 				{plan.name}
 			</Text>
 
-			{/* Basic Info Section */}
 			<SheetSection title="Basic Info">
 				<Text>
 					<Text color="gray">ID: </Text>
@@ -88,7 +81,6 @@ export function ProductSheet({
 				</Text>
 			</SheetSection>
 
-			{/* Price Section */}
 			{plan.price && (
 				<SheetSection title="Price">
 					<Text>
@@ -107,14 +99,12 @@ export function ProductSheet({
 				</SheetSection>
 			)}
 
-			{/* Free Price indicator */}
 			{!plan.price && (
 				<SheetSection title="Price">
 					<Text color="cyan">Free</Text>
 				</SheetSection>
 			)}
 
-			{/* Free Trial Section */}
 			{plan.free_trial && (
 				<SheetSection title="Free Trial">
 					<Text>
@@ -134,7 +124,6 @@ export function ProductSheet({
 				</SheetSection>
 			)}
 
-			{/* Features Section */}
 			<SheetSection
 				title={`Items (${plan.items.length})`}
 				isEmpty={plan.items.length === 0}
@@ -186,10 +175,8 @@ export function ProductSheet({
 				)}
 			</SheetSection>
 
-			{/* Spacer to push actions to bottom */}
 			<Box flexGrow={1} />
 
-			{/* Actions - pinned to bottom */}
 			<Box flexDirection="column">
 				{copiedFeedback ? (
 					<Text color="green">Copied!</Text>

@@ -61,7 +61,6 @@ const newReplica = ({
 	};
 };
 
-/** Listed for its peers from the moment it starts, as the service name lists a starting container. */
 const startReplica = async ({
 	ctx,
 	index,
@@ -77,7 +76,6 @@ const startReplica = async ({
 	await waitUntilReplicaReady({ replica });
 };
 
-/** Gone from its peers' view as its process is signalled, as the service name drops a stopping container. */
 const stopReplica = async ({
 	ctx,
 	index,
@@ -88,7 +86,6 @@ const stopReplica = async ({
 	signal: "SIGTERM" | "SIGKILL";
 }): Promise<void> => {
 	const replica = replicaAt({ ctx, index });
-	// Marks the replica stopping before its first await, so the views written next already leave it out.
 	const stopping = signalReplica({ replica, signal });
 	writePeerViews({ ctx });
 	await stopping;
@@ -148,7 +145,6 @@ const scaleTo = async ({
 	await Promise.all(added.map((index) => startReplica({ ctx, index })));
 };
 
-/** Resolves once both replicas have re-read their peers, so neither relays to nor asks the other any more. */
 const cutPeer = async ({
 	ctx,
 	left,
@@ -170,7 +166,6 @@ const healPeers = async ({ ctx }: { ctx: ReplicaSetContext }) => {
 	await timeout(PEER_VIEW_REREAD_MS);
 };
 
-/** Back to `size` running replicas, every link healed and the balancer spreading requests. */
 const restore = async ({
 	ctx,
 	balancer,
@@ -205,10 +200,6 @@ const close = async ({
 	await balancer.stop();
 };
 
-/**
- * Starts `size` replicas of the org's own Atom on this machine and registers them, behind one balancer, as the org's Atom.
- * Each replica listens on its own loopback address with its own volume; the set's files are kept under `dir` for reading after a run.
- */
 export const createReplicaSet = async ({
 	autumn,
 	size,

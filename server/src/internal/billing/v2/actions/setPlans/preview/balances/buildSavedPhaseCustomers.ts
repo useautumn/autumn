@@ -5,7 +5,6 @@ import { buildSetPlansPhaseCustomers } from "../buildSetPlansPhaseCustomers";
 import { savedSchedulePhases } from "./savedSchedulePhases";
 import { withOneOffPrepaidCarryOvers } from "./withOneOffPrepaidCarryOvers";
 
-/** The customer at each saved phase date (all after now) had the request never been sent. */
 export const buildSavedPhaseCustomers = ({
 	ctx,
 	fullCustomer,

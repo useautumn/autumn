@@ -1,10 +1,3 @@
-/**
- * Stamps `x-speakeasy-pagination` on operations whose request body has
- * a `cursor` string field plus a `limit` integer field. Detection is
- * shape-based so new paginated routes get SDK pagination automatically.
- *
- * Locked field names: `cursor` in, `next_cursor` out.
- */
 export function applyPaginationExtensions({
 	openApiDocument,
 }: {

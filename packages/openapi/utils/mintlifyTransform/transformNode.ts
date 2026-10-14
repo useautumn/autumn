@@ -4,14 +4,10 @@ import {
 	transformTypeScriptCodeSample,
 } from "./transformCodeSamples.js";
 
-/**
- * Resolves an example from a schema, following $ref if needed.
- */
 export function resolveSchemaExample(
 	schema: Record<string, unknown>,
 	schemas: Record<string, unknown>,
 ): unknown {
-	// Check for examples array
 	if (
 		schema.examples &&
 		Array.isArray(schema.examples) &&
@@ -20,12 +16,10 @@ export function resolveSchemaExample(
 		return schema.examples[0];
 	}
 
-	// Check for single example
 	if (schema.example !== undefined) {
 		return schema.example;
 	}
 
-	// Follow $ref
 	if (schema.$ref && typeof schema.$ref === "string") {
 		const refName = schema.$ref.replace("#/components/schemas/", "");
 		const refSchema = schemas[refName] as Record<string, unknown> | undefined;
@@ -37,9 +31,6 @@ export function resolveSchemaExample(
 	return undefined;
 }
 
-/**
- * Recursively walks the OpenAPI document and applies transformations.
- */
 export function transformNode(
 	node: unknown,
 	schemas?: Record<string, unknown>,
@@ -57,12 +48,10 @@ export function transformNode(
 
 	const record = node as Record<string, unknown>;
 
-	// Transform descriptions to strip JSDoc tags
 	if (typeof record.description === "string") {
 		record.description = stripJsDocTags(record.description);
 	}
 
-	// Transform code samples
 	if (Array.isArray(record["x-codeSamples"])) {
 		for (const sample of record["x-codeSamples"]) {
 			if (
@@ -83,7 +72,6 @@ export function transformNode(
 		}
 	}
 
-	// Copy schema examples to response content level for Mintlify
 	if (schemas && record.content) {
 		const content = record.content as Record<string, unknown>;
 		const jsonContent = content["application/json"] as
@@ -98,7 +86,6 @@ export function transformNode(
 		}
 	}
 
-	// Recurse into nested objects
 	for (const value of Object.values(record)) {
 		transformNode(value, schemas);
 	}

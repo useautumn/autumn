@@ -2,13 +2,6 @@ import { type SQL, sql } from "drizzle-orm";
 import type { PostgresContext } from "../../../types/postgresClient.js";
 import { SUBJECT_ROW_LIMITS } from "./subjectRowLimits.js";
 
-/**
- * Single-subject port of getFullSubjectRowsQuery, keeping only what the balance worker
- * holds for one subject: its products in the given statuses, their prices and entitlements,
- * live loose entitlements, unexpired rollovers, replaceables, its usage-window counters, and the ids of its open locks. Customer-level rows
- * when no entity is named, else the entity's own rows. Catalog rows come from getCatalogRows.
- * Expiry is evaluated at `asOfTimestampMs` so a replay sees the same rows as the original.
- */
 export const subjectRowsSql = ({
 	ctx,
 	customerId,
@@ -27,11 +20,8 @@ export const subjectRowsSql = ({
 			? sql`${alias}.internal_entity_id IS NULL`
 			: sql`${alias}.internal_entity_id IN (SELECT internal_id FROM entity_record)`;
 
-	// A lock id is unique across the customer, so only the customer's own load carries open locks;
-	// a pool is customer-level too, and an entity command reads it off the customer's state.
 	const customerOwnedOnly = entityId === null ? sql`TRUE` : sql`FALSE`;
 	const statusList = sql`string_to_array(${statuses.join(",")}, ',')`;
-	// A seat or a license pool has no lifecycle of its own: the parent product behind its license link decides.
 	const licenseParentIsLive = ({ alias }: { alias: SQL }) => sql`EXISTS (
 					SELECT 1
 					FROM customer_licenses cl

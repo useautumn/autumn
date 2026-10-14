@@ -13,24 +13,17 @@ import { customerProducts } from "../cusProductModels/cusProductTable.js";
 import { products } from "../productModels/productTable.js";
 import { planLicenses } from "./planLicenseTable.js";
 
-/** Assignment balance for one parent customer product and license. */
 export const customerLicenses = pgTable(
 	"customer_licenses",
 	{
 		id: text().primaryKey().notNull(),
-		// Stable logical identity: minted at first creation, copied to every
-		// successor row so seats never repoint across plan transitions.
 		link_id: text("link_id").notNull(),
 		internal_customer_id: text("internal_customer_id").notNull(),
 		parent_customer_product_id: text("parent_customer_product_id").notNull(),
 		license_internal_product_id: text("license_internal_product_id").notNull(),
-		// The link this pool instantiates — its FullProduct definition source.
-		// NULL means the link was removed; reconcile owns cleanup/repointing.
 		plan_license_id: text("plan_license_id"),
 		granted: numeric("granted", { mode: "number" }).notNull().default(0),
 		remaining: numeric("remaining", { mode: "number" }).notNull().default(0),
-		// Prepaid seats purchased on top of — NOT including — the link's
-		// included amount. granted = included + paid_quantity, always derived.
 		paid_quantity: numeric("paid_quantity", { mode: "number" })
 			.notNull()
 			.default(0),
@@ -67,8 +60,6 @@ export const customerLicenses = pgTable(
 		index("idx_customer_licenses_customer")
 			.on(table.internal_customer_id)
 			.concurrently(),
-		// customers.internal_id is COLLATE "C", so joins on it can't use the
-		// default-collation index above and seq-scanned this table per getFull.
 		index("idx_customer_licenses_internal_customer_id_c")
 			.on(sql`${table.internal_customer_id} COLLATE "C"`)
 			.concurrently(),

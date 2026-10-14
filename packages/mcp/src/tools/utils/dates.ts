@@ -2,7 +2,6 @@ import { createTool } from "@mastra/core/tools";
 import { isValid, parseISO } from "date-fns";
 import * as z from "zod/v4";
 
-/** Parses ISO-like values to UTC epoch milliseconds. */
 const parseToEpochMilliseconds = (value: string): number | null => {
 	const parenthesizedEpoch = value.match(/\((\d{12,})\)/)?.[1];
 	if (parenthesizedEpoch) return Number(parenthesizedEpoch);
@@ -15,7 +14,6 @@ const parseToEpochMilliseconds = (value: string): number | null => {
 	return isValid(parsed) ? parsed.getTime() : null;
 };
 
-/** Accepts epoch milliseconds or an ISO date/timestamp string. */
 export const epochMillisecondsSchema = z
 	.union([z.number(), z.string()])
 	.transform((value, context) => {

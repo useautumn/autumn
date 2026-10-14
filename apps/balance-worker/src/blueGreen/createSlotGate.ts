@@ -7,7 +7,6 @@ import type { TaskIdentity } from "./types/taskIdentity.js";
 export type SlotGate = {
 	describe(): SlotGateDescription;
 	isActive(): boolean;
-	/** Resolves once this fleet is the active slot, at once when it already is; rejects with the signal's reason. */
 	awaitActive(params: { signal: AbortSignal }): Promise<void>;
 	subscribe(listener: () => void): () => void;
 };

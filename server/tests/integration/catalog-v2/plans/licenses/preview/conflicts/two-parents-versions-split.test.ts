@@ -1,18 +1,3 @@
-/**
- * catalogV2.preview_update — license_parents when two parents each have v1 + v2
- * and only one is in the child's propagate. One lane entry per parent plan;
- * the older version nests under sibling_versions with its own license_action
- * and conflicts.
- *
- * Contract:
- *   - A `all_versions`, B omitted
- *     → A v2 + sibling v1 propagated; B v2 + sibling v1 unchanged; no conflicts
- *   - same + A v1 and B v1 each customized 500
- *     → conflict on A sibling v1 and B sibling v1 only; neither v2 lists one
- *   - A `{ version: 1 }`, B omitted
- *     → A latest unchanged while its sibling v1 is the propagated one
- */
-
 import { test } from "bun:test";
 import type { CatalogPropagateTargetParams } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";

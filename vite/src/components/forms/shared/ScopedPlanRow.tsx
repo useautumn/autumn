@@ -2,7 +2,6 @@ import type { ReactNode } from "react";
 import { CustomizePlanButton } from "./CustomizePlanButton";
 import { type PlanRowAction, PlanRowActionsMenu } from "./PlanRowActionsMenu";
 
-/** The scope picker, already wired to its own popover trigger. */
 export type PlanRowScope = {
 	picker: ReactNode;
 };

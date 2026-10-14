@@ -23,7 +23,6 @@ const pool = {
 	updated_at: 2,
 };
 
-/** As Postgres returns it through a join: extra columns the worker must drop. */
 const hydratedPoolRow = { ...pool, joined_column: "dropped" };
 
 const customerWithPool = () =>

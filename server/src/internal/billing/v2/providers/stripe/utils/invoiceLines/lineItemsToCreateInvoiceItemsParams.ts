@@ -3,9 +3,6 @@ import type Stripe from "stripe";
 import { lineItemToMetadata } from "./lineItemToMetadata.js";
 import { lineItemToStripeProductId } from "./lineItemToStripeProductId.js";
 
-/**
- * Converts a single LineItem to Stripe.InvoiceItemCreateParams
- */
 const toStripeCreateInvoiceItemParams = ({
 	stripeCustomerId,
 	stripeSubscriptionId,
@@ -20,7 +17,6 @@ const toStripeCreateInvoiceItemParams = ({
 	const { amount, amountAfterDiscounts, description, context } = lineItem;
 	const { effectivePeriod, currency, discountable } = context;
 
-	// If discountable, use amount (let Stripe apply discounts), otherwise use amountAfterDiscounts
 	const lineAmount = discountable ? amount : amountAfterDiscounts;
 	const isNegative = lineAmount < 0;
 
@@ -57,9 +53,6 @@ const toStripeCreateInvoiceItemParams = ({
 	};
 };
 
-/**
- * Converts an array of LineItems to Stripe.InvoiceItemCreateParams[]
- */
 export const lineItemsToCreateInvoiceItemsParams = ({
 	stripeCustomerId,
 	stripeSubscriptionId,

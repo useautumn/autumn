@@ -44,9 +44,6 @@ import { afterSessionDeleted } from "./authUtils/afterSessionDeleted.js";
 import { beforeSessionCreated } from "./authUtils/beforeSessionCreated.js";
 import { ADMIN_USER_IDs } from "./constants.js";
 
-// emulate.dev Google: rewrite outbound Google OAuth host so agent worktrees
-// can use any redirect URI without registering it in the real Google console.
-// Real Google's oauth2.googleapis.com/token maps to emulate's /oauth2/token path.
 if (process.env.EMULATE_GOOGLE_URL && process.env.NODE_ENV !== "production") {
 	const emulate = (
 		process.env.EMULATE_GOOGLE_FETCH_URL || process.env.EMULATE_GOOGLE_URL
@@ -81,9 +78,7 @@ const emulateGoogleUrl =
 		? process.env.EMULATE_GOOGLE_URL?.replace(/\/$/, "")
 		: undefined;
 
-// HTTPS agent worktrees go through portless (e.g. wtN-api.localhost). The
 // OAuth flow leaves and returns via a third-party host (emulate.dev), so the
-// state cookie must be SameSite=None+Secure to survive the round trip.
 const isProductionAuth = process.env.NODE_ENV === "production";
 export const authBaseUrl = getAutumnEnv().AUTUMN_API_URL;
 const publicAuthBaseUrl = getAutumnEnv().AUTUMN_PUBLIC_API_URL;
@@ -141,9 +136,7 @@ if (
 		if (viteOrigin.hostname === passkeyRpID) {
 			passkeyOrigins.push(process.env.VITE_FRONTEND_URL);
 		}
-	} catch {
-		// Invalid URL, ignore
-	}
+	} catch {}
 }
 
 const options = {
@@ -170,8 +163,6 @@ const options = {
 	}),
 
 	user: {
-		// Account deletion goes through DELETE /account, which also tears down
-		// the user's orgs. The built-in endpoint would skip that cleanup.
 		deleteUser: {
 			enabled: false,
 		},
@@ -188,8 +179,6 @@ const options = {
 				},
 			},
 			delete: {
-				// Runs for every user deletion path (DELETE /account, admin removeUser)
-				// so deleted users never receive marketing emails.
 				after: async (user) => {
 					await deleteMarketingContacts({ email: user.email });
 				},
@@ -216,8 +205,6 @@ const options = {
 		origins.push(...getTrustedSsoOrigins());
 		if (process.env.NODE_ENV === "production") return origins;
 
-		// Worktree ports follow worktreeOffset = (N-1)*100; accept any localhost
-		// port the running stack might use as origin.
 		const origin = request?.headers.get("origin") ?? null;
 		if (
 			origin &&
@@ -243,7 +230,7 @@ const options = {
 		minPasswordLength: 8,
 		maxPasswordLength: 128,
 		autoSignIn: true,
-		resetPasswordTokenExpiresIn: 3600, // 1 hour
+		resetPasswordTokenExpiresIn: 3600,
 	},
 
 	socialProviders: {
@@ -256,7 +243,6 @@ const options = {
 					: undefined,
 			...(emulateGoogleUrl
 				? {
-						// HS256-signed id_tokens from emulate fail real Google's RS256 JWKS check.
 						authorizationEndpoint: `${emulateGoogleUrl}/o/oauth2/v2/auth`,
 						verifyIdToken: async () => true,
 					}
@@ -267,8 +253,6 @@ const options = {
 		emailOTP({
 			// biome-ignore lint/correctness/noUnusedFunctionParameters: preserve the upstream callback signature.
 			async sendVerificationOTP({ email, otp, type }) {
-				// Implement the sendVerificationOTP method to send the OTP to the user's email address
-
 				await sendOTPEmail({
 					email,
 					otp,
@@ -277,7 +261,7 @@ const options = {
 		}),
 		admin({
 			adminUserIds: ADMIN_USER_IDs,
-			impersonationSessionDuration: 1000 * 60 * 60 * 24, // 1 days
+			impersonationSessionDuration: 1000 * 60 * 60 * 24,
 		}),
 
 		jwt(),
@@ -288,17 +272,11 @@ const options = {
 			silenceWarnings: {
 				oauthAuthServerConfig: true,
 			},
-			// Resource-based scopes with R/W actions (plus legacy CRUDL +
-			// meta scopes — see shared/utils/scopeDefinitions.ts).
 			scopes: [...ALL_SCOPES],
-			// Internal roles and legacy aliases remain accepted for existing
-			// clients, but must not be advertised to clients that request every
-			// scope from discovery (notably Devin).
 			advertisedMetadata: {
 				scopes_supported: [...OPENID_SCOPES, ...MODERN_SCOPES],
 			},
 			// Inert: normalizeOAuthTokenRequest strips `resource` before better-auth's
-			// checkResource reads it. resolveOAuthTokenResource enforces the audience.
 			validAudiences: getOAuthValidAudiences(),
 			allowDynamicClientRegistration: true,
 			allowUnauthenticatedClientRegistration: true,
@@ -310,14 +288,9 @@ const options = {
 					(session?.activeOrganizationId as string | undefined) ?? undefined
 				);
 			},
-			// Use the active organization as the consent reference
-			// This makes consent org-scoped, not just user-scoped
 			postLogin: {
-				// Required: page to redirect to if shouldRedirect returns true
 				page: `${process.env.CLIENT_URL}/consent`,
-				// Required: whether to show post-login page (we don't need this, so always false)
 				shouldRedirect: async () => false,
-				// Optional: reference ID for consent (org ID makes consent org-scoped)
 				consentReferenceId: ({ session }) => {
 					return (
 						(session?.activeOrganizationId as string | undefined) ?? undefined
@@ -349,7 +322,6 @@ const options = {
 				});
 
 				try {
-					// Update invite to expire in 7 days
 					await db
 						.update(invitation)
 						.set({
@@ -385,8 +357,6 @@ const options = {
 				enabled: true,
 				tokenPrefix: SSO_VERIFICATION_PREFIX,
 			},
-			// Otherwise SSO users are stored emailVerified:false and the
-			// account-linking guard locks them out of their own provider.
 			trustEmailVerified: true,
 			organizationProvisioning: {
 				disabled: true,
@@ -400,7 +370,6 @@ export const auth = betterAuth({
 	...options,
 	plugins: [
 		...options.plugins,
-		// Test-only: exposes privileged ctx.test helpers (no HTTP routes). Off in prod.
 		...(process.env.NODE_ENV !== "production" ? [testUtils()] : []),
 		/**
 		 * Attach `role` and `scopes` to every session response.
@@ -427,12 +396,6 @@ export const auth = betterAuth({
 				scopes = [...resolved.scopes];
 			}
 
-			/**
-			 * Inject `superuser` for Autumn staff. Triggered when the
-			 * better-auth GLOBAL user role is "admin" (NOT the org role),
-			 * or when the session is an impersonation. Mirrors the
-			 * client-side check in `useAdmin` and `adminAuthMiddleware`.
-			 */
 			const globalUserRole = (user as { role?: string } | null | undefined)
 				?.role;
 			const impersonatedBy = (

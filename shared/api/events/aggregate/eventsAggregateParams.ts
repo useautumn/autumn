@@ -69,14 +69,11 @@ export const ExtEventsAggregateParamsSchema = z.object({
 		description:
 			"Maximum number of distinct group values to return per time bin when using group_by. Remaining values are bundled into an 'Other' bucket. Defaults to 9",
 	}),
-	// Dashboard-only: "window" ranks the top max_groups once over the whole range.
 	group_ranking: z.enum(["bin", "window"]).optional().meta({ internal: true }),
 	measure: z.enum(["sum", "count"]).optional().meta({
 		description:
 			'What `list` reports per bin: "sum" (default) adds up event values; "count" counts events, i.e. how many track requests came in regardless of value. `total` is unchanged.',
 	}),
-	// z.enum, not z.literal: a literal renders as OpenAPI `const`, which
-	// Speakeasy turns into an always-sent default in generated SDKs.
 	aggregate_on: z.enum(["deducted"]).optional().meta({
 		description:
 			'Set to "deducted" to additionally return a per-balance breakdown of what each event consumed, under `deductions`. Purely additive: `list` and `total` are unchanged. Requires customer_id.',
@@ -121,7 +118,6 @@ export const EventsAggregateParamsSchema =
 		})
 		.transform((data) => {
 			if (!data.bin_size) {
-				// If range is 24h, set bin_size to hour, otherwise set bin_size to day
 				if (data.range === "24h") {
 					return { ...data, bin_size: "hour" as const };
 				}

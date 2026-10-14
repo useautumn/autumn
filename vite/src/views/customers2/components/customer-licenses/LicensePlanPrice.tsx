@@ -22,8 +22,6 @@ interface PriceTooltipRow {
 
 const seatsWord = (quantity: number) => (quantity === 1 ? "seat" : "seats");
 
-/** Price cell for a license pool row. A mixed included/paid pool has no
- * single price, so it reads "Varies" with the breakdown in a tooltip. */
 export function LicensePlanPrice({
 	product,
 	includedQuantity,

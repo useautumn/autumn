@@ -4,7 +4,6 @@ import {
 } from "@autumn/shared";
 import { isLiveCustomerProduct } from "./collectLinkedStripeObjectIds";
 
-/** Free plans billed on no subscription, which every subscription's sheet includes. */
 export const findUnlinkedFreePlanNames = ({
 	customerProducts,
 }: {

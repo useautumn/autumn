@@ -33,8 +33,6 @@ import {
 import { log } from "./shell.ts";
 import { forceSslVerifyFull } from "./url.ts";
 
-// Simple KEY=VALUE parse (no quoting/multiline). Sufficient for .env.local
-// files we own end-to-end; preserves blank lines and comments untouched.
 export function parseEnvFile(contents: string): {
 	keys: string[];
 	values: Record<string, string>;
@@ -78,15 +76,12 @@ export function mergeEnvFile(
 	for (const [k, v] of Object.entries(managed)) {
 		if (!seen.has(k)) outLines.push(`${k}=${v}`);
 	}
-	// Strip trailing empty lines, then re-add a single newline.
 	while (outLines.length > 0 && outLines[outLines.length - 1] === "") {
 		outLines.pop();
 	}
 	return `${outLines.join("\n")}\n`;
 }
 
-/** Redis/queue endpoints for a worktree's own containers; must also be applied
- *  to the dev spawn env, where Infisical's shared AWS values otherwise win. */
 export function provisionedInfraEnv(
 	worktreeNum: number,
 ): Record<string, string> {

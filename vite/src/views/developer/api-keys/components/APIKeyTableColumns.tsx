@@ -13,7 +13,6 @@ import type { ApiKeysLastUsed } from "@/hooks/queries/useApiKeysLastUsedQuery";
 import { formatUnixToDateTime } from "@/utils/formatUtils/formatDateUtils";
 import { APIKeyToolbar } from "./APIKeyToolbar";
 
-// Parse meta to get source info
 function getSourceInfo(meta: ApiKey["meta"]): {
 	type: "cli" | "dashboard" | "autumn_support" | null;
 	author?: string;

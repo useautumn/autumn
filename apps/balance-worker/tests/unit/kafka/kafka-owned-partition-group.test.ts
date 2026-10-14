@@ -79,7 +79,6 @@ test("failed retirement stops the group without starting a replacement", async (
 		expect(started).toEqual([0]);
 		expect(errors).toHaveLength(1);
 		expect((errors[0] as AggregateError).errors).toEqual([failure]);
-		// A worker that can never take an assignment again tells the entrypoint, so it is replaced instead of idling.
 		await waitFor(() => events.includes("service-stopped"));
 		expect(events).toEqual(["service-stopped"]);
 	} finally {
@@ -504,13 +503,11 @@ describe("Kafka owned partition group", () => {
 			expect(started).toEqual([0]);
 			expect(stopped).toEqual([]);
 			expect(unavailable).toEqual([]);
-			// Kept through the rebalance: still reported as this worker's own, never released.
 			expect(claimed).toEqual([0]);
 			expect(released).toEqual([]);
 			expect(
 				group.findRuntime({ partition: 0, routeEpoch: "0" }),
 			).toBeDefined();
-			// Only the partitions this worker did not keep are paused for a fresh start.
 			expect(consumer.pauses.filter((pause) => pause.topic === topic)).toEqual([
 				{ topic, partitions: [0] },
 			]);
@@ -659,7 +656,6 @@ describe("Kafka owned partition group", () => {
 
 			expect(unavailable).toEqual([crash]);
 			expect(errors).toEqual([crash]);
-			// kafkajs restarts this consumer: the rejoin brings the partitions back, so the worker stays up.
 			await Bun.sleep(20);
 			expect(consumer.lifecycle).not.toContain("consumer-stop");
 			consumer.emitGroupJoin([0]);
@@ -762,7 +758,6 @@ describe("Kafka owned partition group", () => {
 			expect(group.consumer()).toEqual({ status: "joined", rejoinAttempts: 0 });
 
 			consumer.emitCrash(refusal, { restart: false });
-			// The partition it owned is retired, then the group is joined again after the backoff.
 			await waitFor(
 				() =>
 					consumer.lifecycle.filter((step) => step === "consumer-run")
@@ -778,7 +773,6 @@ describe("Kafka owned partition group", () => {
 				/^warn:Balance worker refused by the broker; rejoining in 1ms \(attempt 1\)/,
 			);
 
-			// Refused again on the rejoin: the backoff grows and nothing exits.
 			consumer.emitCrash(refusal, { restart: false });
 			await waitFor(
 				() =>
@@ -788,7 +782,6 @@ describe("Kafka owned partition group", () => {
 			expect(group.consumer().rejoinAttempts).toBe(2);
 			expect(warnings[1]).toMatch(/rejoining in 2ms \(attempt 2\)/);
 
-			// The verdict clears: the group deals the partition back and the worker serves it as before.
 			consumer.emitGroupJoin([0]);
 			await waitFor(() => started.length === 2);
 			expect(group.consumer()).toEqual({ status: "joined", rejoinAttempts: 0 });
@@ -847,7 +840,6 @@ describe("Kafka owned partition group", () => {
 			consumer.emitGroupJoin([0]);
 			await waitFor(() => started.length === 1);
 
-			// The refusal is waited out, but the rejoin itself then fails for an unrelated reason.
 			consumer.failNextRun(subscriptionFailure);
 			consumer.emitCrash(refusal, { restart: false });
 			await waitFor(() => events.includes("service-stopped"));
@@ -1101,7 +1093,6 @@ describe("Kafka owned partition group", () => {
 			await waitFor(() => unhealthy.length === 1);
 			await waitFor(() => startAttempts.get(1) === 2);
 
-			// The bad partition is retried alone; the group never stops and partition 0 never restarts.
 			expect(unhealthy).toEqual([
 				{ topic, partition: 1, cause: startupFailure },
 			]);
@@ -1192,7 +1183,6 @@ describe("Kafka owned partition group", () => {
 					group.findRuntime({ partition: 1, routeEpoch: "0" }) !== undefined,
 			);
 
-			// The live owner's follower hits a record it cannot read.
 			failedAttempt.set(1, startAttempts.get(1) ?? 0);
 			unavailableListeners.get(1)?.({
 				cause: new OwnedPartitionRecoveryRequiredError({

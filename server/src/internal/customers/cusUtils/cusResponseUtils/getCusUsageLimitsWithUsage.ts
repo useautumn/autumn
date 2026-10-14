@@ -17,16 +17,6 @@ export type UsageLimitsWithUsage = {
 
 const SOURCE = "dashboard_usage_limits";
 
-/**
- * Decorate usage limits with `usage` (consumed in the active window) the same
- * way getApiCustomerBaseV2 does. The live counter lives in the Redis balance
- * hash, so we read each scope via getOrSetCachedFullSubject (which rehydrates
- * it) — a DB-only read returns a stale/zero counter.
- *
- * Done for the customer, its plan-inherited caps AND every entity with caps,
- * because the dashboard payload carries every scope and the client may render
- * any of them. Returns undefined when no caps exist.
- */
 export const getCusUsageLimitsWithUsage = async ({
 	ctx,
 	fullCus,

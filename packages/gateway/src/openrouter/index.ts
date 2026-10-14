@@ -88,7 +88,6 @@ const findCarrier = (value: unknown): UsageCarrier | undefined => {
 	if (record.usage && record.model) {
 		return record;
 	}
-	// Responses stream events nest the result under `response`.
 	return findCarrier(record.response);
 };
 
@@ -101,7 +100,6 @@ const lastCarrierFromSse = (body: string): UsageCarrier | undefined => {
 		try {
 			carrier = findCarrier(JSON.parse(line.slice(5).trim())) ?? carrier;
 		} catch {
-			// Ignore non-JSON SSE payloads like "[DONE]".
 		}
 	}
 	return carrier;
@@ -165,11 +163,6 @@ export const withAutumn = <T extends OpenRouterLike>(
 
 	const trackCarrier = (carrier: UsageCarrier, requestModel?: string) =>
 		track(() => {
-			// Pricing is configured against the slug the caller requested;
-			// providers may resolve it to a dated snapshot (e.g.
-			// anthropic/claude-5-fable-20260609) that models.dev doesn't
-			// list. Router pseudo-models (openrouter/auto) only resolve
-			// server-side, so those fall back to the response slug.
 			const requested = requestModel?.endsWith("/auto")
 				? undefined
 				: requestModel;
@@ -194,7 +187,6 @@ export const withAutumn = <T extends OpenRouterLike>(
 	): S => {
 		let tracked = false;
 
-		// The SDK's stream is re-consumable; the guard keeps repeat iteration from double-tracking.
 		async function* iterate(): AsyncGenerator<unknown> {
 			let finalCarrier: UsageCarrier | undefined;
 			try {
@@ -227,9 +219,6 @@ export const withAutumn = <T extends OpenRouterLike>(
 		request: ChatSendRequest,
 		...rest: unknown[]
 	): Promise<unknown> => {
-		// Usage accounting must be on for OpenRouter to return token counts
-		// and cost. The body lives under `chatRequest` on @openrouter/sdk
-		// >= 0.12 and at the top level on older shapes.
 		const body = request.chatRequest ?? request;
 		const bodyWithUsage: ChatBody = {
 			...body,
@@ -247,8 +236,6 @@ export const withAutumn = <T extends OpenRouterLike>(
 		return result;
 	};
 
-	// Capture usage from API paths the method proxy can't see (the responses
-	// API used by @openrouter/agent's callModel — each turn fires the hook).
 	const captureHookedResponse = async (
 		response: ResponseLike,
 		contentType: string,
@@ -274,7 +261,6 @@ export const withAutumn = <T extends OpenRouterLike>(
 					return response;
 				}
 				const contentType = response.headers.get("content-type") ?? "";
-				// The clone keeps the SDK's own body read untouched.
 				const capture = captureHookedResponse(
 					response.clone(),
 					contentType,
@@ -283,9 +269,6 @@ export const withAutumn = <T extends OpenRouterLike>(
 				});
 				pending.add(capture);
 				capture.finally(() => pending.delete(capture));
-				// Await JSON captures so balances are settled when the call
-				// returns; streams can't be awaited without buffering them —
-				// callers needing settled balances use trackingSettled().
 				return contentType.includes("text/event-stream")
 					? response
 					: capture.then(() => response);
@@ -312,7 +295,6 @@ export const withAutumn = <T extends OpenRouterLike>(
 			return typeof value === "function" ? value.bind(target) : value;
 		},
 	});
-	// trackingSettled accepts either the wrapped or the underlying client.
 	pendingTracking.set(wrapped, pending);
 	return wrapped;
 };

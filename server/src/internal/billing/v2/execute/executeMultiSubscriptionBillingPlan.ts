@@ -15,18 +15,9 @@ import { billingPlanToSendProductsUpdated } from "@/internal/billing/v2/workflow
 export type SubscriptionScopedStripePlan = {
 	billingContext: BillingContext;
 	stripeBillingPlan: StripeBillingPlan;
-	/** The plan this sub's stripe plan was evaluated from — pairs them for Stripe
-	 * execution only. Never executed against the DB; the top-level plan runs once. */
 	autumnBillingPlan?: AutumnBillingPlan;
 };
 
-/**
- * Execute one merged AutumnBillingPlan whose Stripe changes span multiple
- * subscriptions: one Stripe execution per subscription, then a single Autumn
- * execution and the standard webhook tail. Stripe writes are sequential and
- * NOT transactional across subscriptions — the Autumn plan only executes after
- * every Stripe write succeeds (same failure semantics as migrations).
- */
 export const executeMultiSubscriptionBillingPlan = async ({
 	ctx,
 	autumnBillingPlan,

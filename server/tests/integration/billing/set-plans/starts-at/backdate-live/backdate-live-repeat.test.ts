@@ -1,10 +1,3 @@
-/**
- * Backdating a live subscription a second time, then re-saving it unchanged:
- * - the second backdate bills only the time it adds before the first backdated start, never the
- *   gap the first backdate already billed or the period the original subscription paid;
- * - re-saving the same request is a no-op: the same subscription and row, and no new invoice.
- */
-
 import { expect, test } from "bun:test";
 import { ms, type SetPlansParamsV0Input } from "@autumn/shared";
 import { findStripeSubscriptionByStatus } from "@tests/integration/billing/set-plans/utils/subscriptionStateUtils";

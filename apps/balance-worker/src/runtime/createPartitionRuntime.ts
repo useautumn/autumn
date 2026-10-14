@@ -67,7 +67,6 @@ export function createPartitionRuntime({
 		}),
 	};
 
-	// The follower leaves this writer's records to it, so its failure must hand the partition on without waiting for a command.
 	function onRecoveryRequired({ cause }: { cause: unknown }): void {
 		if (state.status === "draining" || state.status === "stopped") return;
 		void enterRuntimeRecovery({ ctx, state, cause });

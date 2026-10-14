@@ -1,9 +1,6 @@
 import chalk from "chalk";
 import inquirer from "inquirer";
 
-/**
- * Prompts user for Stripe test API key
- */
 export async function setupStripeTestKey(): Promise<string> {
 	console.log(
 		chalk.magentaBright(
@@ -41,9 +38,6 @@ export async function setupStripeTestKey(): Promise<string> {
 	return stripeTestKey;
 }
 
-/**
- * Prompts user for Upstash configuration
- */
 export async function setupUpstash(): Promise<{
 	upstashUrl: string;
 	upstashToken: string;
@@ -96,9 +90,6 @@ export async function setupUpstash(): Promise<{
 	return { upstashUrl, upstashToken };
 }
 
-/**
- * Prompts user for tunnel URL
- */
 export async function setupTunnelUrl(): Promise<string> {
 	console.log(
 		chalk.magentaBright(

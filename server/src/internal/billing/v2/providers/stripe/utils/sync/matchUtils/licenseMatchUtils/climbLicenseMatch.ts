@@ -8,7 +8,6 @@ import {
 } from "../classifyItemMatch";
 import { findShapeMatchedLicenseLinks } from "./findLicenseMatchForStripeItem";
 
-/** Multiple parents require exactly one effective base-price shape match. */
 const findShapeMatchedLink = ({
 	links,
 	licenseProduct,

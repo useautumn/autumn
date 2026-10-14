@@ -9,7 +9,6 @@ import { createKafkaAuthEnv } from "./kafkaAuth.js";
 const LOCAL_KAFKA_BROKERS = "127.0.0.1:19092";
 const MIN_PROXY_SECRET_LENGTH = 32;
 
-/** Direct wherever this process can reach Kafka: inside ECS, or a local plaintext cluster; MSK from anywhere else goes through the API. */
 function readBalanceWorkerTransport({
 	runtimeEnv,
 }: {
@@ -43,7 +42,6 @@ export {
 	getBalanceWorkerPartitionCount,
 };
 
-/** What a server reads to reach its workers: the Kafka cluster, the deployment's ownership topic, and the topic it queues commands on. */
 export function createBalanceWorkerClientEnv(
 	runtimeEnv: Record<string, string | undefined>,
 ) {
@@ -79,13 +77,11 @@ export function getBalanceWorkerClientEnv(): BalanceWorkerClientEnv {
 	return balanceWorkerClientEnv;
 }
 
-/** How this process reaches its workers, read without the Kafka settings only direct mode needs. */
 export function createBalanceWorkerTransportEnv(
 	runtimeEnv: Record<string, string | undefined>,
 ) {
 	return {
 		BALANCE_WORKER_TRANSPORT: readBalanceWorkerTransport({ runtimeEnv }),
-		/** Signs proxied calls outside the VPC and verifies them on the API; null leaves the proxy off. */
 		BALANCE_WORKER_PROXY_SECRET: readProxySecret({ runtimeEnv }),
 	};
 }

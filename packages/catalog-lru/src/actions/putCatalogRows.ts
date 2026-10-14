@@ -6,7 +6,6 @@ import {
 import type { CatalogCacheScope } from "../types/catalogCacheContext.js";
 import { catalogVersionOf } from "./catalogVersions.js";
 
-/** Entitlements are retired and re-minted on edit, so a referenced row is never wrong; only LRU evicts them. */
 const ttlOf = ({
 	row,
 	scope,
@@ -23,7 +22,6 @@ export const putCatalogRows = ({
 }: {
 	scope: CatalogCacheScope;
 	rows: CatalogRow[];
-	/** The version each row was read under; rows read elsewhere are taken as current. */
 	versionOf?: (params: { row: CatalogRow }) => number;
 }): void => {
 	for (const row of rows) {

@@ -67,10 +67,6 @@ const toInsertedItem = ({
 	trialEndsAt: row.trialEndsAt,
 });
 
-/**
- * Replaces live rows matching a compiled filter with the minted to-definition,
- * carrying consumed balance across. Bounded per customer-product page.
- */
 export const replaceCustomerEntitlementsForPage = async ({
 	db,
 	features,

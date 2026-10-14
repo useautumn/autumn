@@ -1,4 +1,3 @@
-/** Route the OIDC test sign-in is expected to land on after the callback. */
 export const SSO_CALLBACK_PATH = "/sso/callback";
 
 const PENDING_PROVIDER_KEY = "autumn_sso_pending_provider_id";
@@ -6,10 +5,6 @@ const PENDING_PROVIDER_KEY = "autumn_sso_pending_provider_id";
 export const buildSsoCallbackUrl = (origin: string) =>
 	`${origin}${SSO_CALLBACK_PATH}`;
 
-/**
- * Provider-hosted authorize URLs are opened with a top-level navigation, so
- * guard against anything that isn't a plain http(s) URL.
- */
 export const isSafeSsoRedirectUrl = (url: string | null | undefined) => {
 	if (!url) return false;
 	try {
@@ -69,10 +64,6 @@ export const describeSsoCallbackError = ({
 	description ??
 	`Your identity provider rejected the sign-in (${error}).`;
 
-/**
- * The completion route reads `providerId` from the callback query. The
- * remembered value is only a fallback for callbacks that land without it.
- */
 export const resolveCallbackProviderId = ({
 	queryProviderId,
 	rememberedProviderId,

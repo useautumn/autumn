@@ -16,8 +16,6 @@ describe("ce_balance_totals build", () => {
 		expect(normalized).toContain(`WITH b AS ( SELECT`);
 		expect(normalized).toContain(`FROM iceberg_scan('${META}') )`);
 		expect(normalized).toContain("FROM b LEFT JOIN main.ent_allowances");
-		// The intermediate was 114M rows rewritten per run and read by nothing
-		// else; reintroducing it silently restores ~450GB/day of billed writes.
 		expect(normalized).not.toContain("main.ce_balances");
 	});
 

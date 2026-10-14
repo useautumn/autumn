@@ -67,7 +67,6 @@ export const buildStripeSubscriptionAction = ({
 		...(item.metadata && { metadata: item.metadata }),
 	}));
 
-	// Case 1: No subscription and sub items update is empty -> no action
 	if (!stripeSubscription && subItemsUpdate.length === 0) {
 		return undefined;
 	}
@@ -79,12 +78,10 @@ export const buildStripeSubscriptionAction = ({
 			subscriptionStartsAt,
 		});
 
-	// Case 2: No subscription and future schedule exists -> schedule creates subscription later
 	if (shouldCreateScheduleOnly) {
 		return undefined;
 	}
 
-	// Case 3: No subscription and sub items update not empty -> create subscription
 	if (!stripeSubscription && subItemsUpdate.length > 0) {
 		return buildStripeSubscriptionCreateAction({
 			ctx,
@@ -96,7 +93,6 @@ export const buildStripeSubscriptionAction = ({
 		});
 	}
 
-	// Case 4: Cancel subscription
 	const deletesAllSubscriptionItems =
 		stripeSubscription &&
 		subItemsUpdate.length === stripeSubscription.items.data.length &&
@@ -134,7 +130,6 @@ export const buildStripeSubscriptionAction = ({
 		};
 	}
 
-	// Case 5: Update subscription
 	if (stripeSubscription) {
 		return buildStripeSubscriptionUpdateAction({
 			ctx,

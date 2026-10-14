@@ -50,7 +50,6 @@ export async function setupAgentWorktree(
 		log(`neon branch ${branchName} missing — re-provisioning`);
 	}
 
-	// First-run (or recreate after teardown).
 	log(`first run for ${branchName} — provisioning neon branch`);
 	ensureTemplateBranch();
 	const branch = createBranch(branchName, NEON_TEMPLATE_BRANCH);
@@ -69,7 +68,6 @@ export async function setupAgentWorktree(
 	return { entry: next, created: true };
 }
 
-/** Cloud-agent local Postgres — Infisical's DATABASE_URL must not leak in. */
 export function localTestOrgEnv(): Record<string, string> {
 	return {
 		...(process.env as Record<string, string>),
@@ -87,11 +85,6 @@ export function cloudSeedMissingStripeKey({
 	return !stripeSandboxSecretKey?.trim();
 }
 
-/**
- * Idempotent Cloud seed: create unit-test-org if missing, otherwise only
- * ensure the Infisical API key hash and Stripe Connect account.
- * Does not clear an existing org.
- */
 export async function autoEnsureLocalTestOrg(): Promise<void> {
 	if (cloudSeedMissingStripeKey()) {
 		fatal(
@@ -120,7 +113,6 @@ function worktreeDbEnv(entry: RegistryEntry): Record<string, string> {
 	};
 }
 
-// Full seed: org + features/products + API key. First Neon branch create only.
 export async function autoSetupTestOrg(entry: RegistryEntry): Promise<void> {
 	if (!entry.databaseUrl) {
 		fatal("autoSetupTestOrg: no databaseUrl on entry");
@@ -135,9 +127,6 @@ export async function autoSetupTestOrg(entry: RegistryEntry): Promise<void> {
 	}
 }
 
-// Cheap idempotent ensure: Infisical/env secret hash ∈ this worktree's api_keys,
-// and refresh SECRET+PUBLIC in server/.env.local if that file already exists
-// (writeEnvLocalFiles runs first). Never creates .env.local for bun d.
 export async function autoEnsureTestOrgSecretKey(
 	entry: RegistryEntry,
 ): Promise<void> {
@@ -160,12 +149,6 @@ export async function autoEnsureTestOrgSecretKey(
 	}
 }
 
-// Seed the Slack `chat_installations` row (+ OAuth creds) for the worktree's test
-// org so the dev Slack app works without a manual OAuth install per worktree.
-// Needs SLACK_BOT_TOKEN (the app's Bot User OAuth Token). SLACK_CLIENT_ID /
-// SLACK_CLIENT_SECRET configure OAuth, but cannot mint a bot token without an
-// install callback code; skips otherwise.
-// Non-fatal (Slack token may be absent in some environments).
 export async function autoSeedSlackInstall(
 	entry: RegistryEntry,
 ): Promise<void> {

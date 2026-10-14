@@ -27,7 +27,6 @@ export const forEachTarget = async <T>({
 		}),
 	);
 
-/** A flip mid-handoff can leave the value on either side, so every live target is asked in turn. */
 export const getFromTargets = async ({
 	scope,
 	key,
@@ -89,7 +88,6 @@ export const setOnTargets = async ({
 	);
 };
 
-/** Never throws: a missed mirror is bounded by the lock's TTL. */
 export const mirrorSetOnRampTarget = async ({
 	scope,
 	key,
@@ -108,6 +106,5 @@ export const mirrorSetOnRampTarget = async ({
 				.map(({ redis }) => setOnTarget({ redis, key, value, ttlMs, source })),
 		);
 	} catch {
-		// Fail open.
 	}
 };

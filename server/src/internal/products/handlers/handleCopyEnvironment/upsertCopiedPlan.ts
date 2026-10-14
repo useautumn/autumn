@@ -37,8 +37,6 @@ const conformProductToSchema = (
 	};
 };
 
-/** Maps plans to V2 with processor-bound ids stripped, so the target env
- * re-creates its own prices and entitlements. */
 export const toCopyReadyProductsV2 = ({
 	products,
 	features,
@@ -64,8 +62,6 @@ export const toCopyReadyProductsV2 = ({
 		};
 	});
 
-/** Creates the plan in the target env, or updates it in place when the id
- * already exists there; a resolved target base links it as a variant. */
 export const upsertCopiedPlan = ({
 	toContext,
 	fromProductV2,

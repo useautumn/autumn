@@ -3,7 +3,6 @@ import type { CommandOrg } from "../models/command/commandOrg.js";
 import { toDeductionSelection } from "./toDeductionSelection.js";
 import type { DeductionRequest } from "./types/deductionRequest.js";
 
-/** An admin edit to a balance, not a customer's consumption: no floors, no spend limit, no overdue block, no event properties. */
 export const toBalanceEditRequest = ({
 	featureId,
 	internalFeatureId,

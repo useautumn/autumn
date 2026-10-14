@@ -1,8 +1,3 @@
-/**
- * A plan fixture gets its internalId written on its first push, once, so a
- * nuke-and-repush keeps its identity.
- */
-
 import { expect, test } from "bun:test";
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { backfillSummary, runPush } from "../src/actions/push";
@@ -35,7 +30,6 @@ const client = {
 			},
 		],
 	}),
-	// Plan rows ride the top level of the apply response, results carry actions.
 	update: async () => ({
 		results: { features: [], plans: [{ id: "pro", action: "create" }] },
 		plans: [{ id: "pro", internalId: "prod_1", version: 1, versionSlug: "v1" }],
@@ -67,8 +61,6 @@ test("a first push writes internalId into the fixture, once", async () => {
 	expect(readFileSync(`${dir}/autumn.config.ts`, "utf8")).toBe(after);
 });
 
-/** The two sets overlap only sometimes: one fixture may take just the slug and
- * another just the id, and the summary must not imply both got both. */
 test("the summary counts each field separately", () => {
 	expect(backfillSummary({ backfilled: ["pro"], slugged: ["free"] })).toBe(
 		"Wrote internalId into 1 fixture and versionSlug into 1 fixture.\n",

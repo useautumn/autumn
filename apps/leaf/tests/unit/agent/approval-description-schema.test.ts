@@ -17,8 +17,6 @@ test("requires an agent-authored description on Leaf gated writes", () => {
 	});
 });
 
-// The field's guidance rides on the tool schema, not the prompt, so it reaches
-// the agent on every gated write without any instructions file carrying it.
 test("the schema itself tells the agent what to write", () => {
 	const { approval_description: field } = withApprovalDescriptionSchema({
 		type: "object",

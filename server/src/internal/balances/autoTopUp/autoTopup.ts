@@ -29,11 +29,8 @@ import {
 } from "./webhooks/sendAutoTopupFailedWebhook.js";
 import { sendAutoTopupSucceededWebhook } from "./webhooks/sendAutoTopupSucceededWebhook.js";
 
-// Must outlive the queue's full retry chain (maxReceiveCount 10 × 30s visibility = 5m),
-// else the gate reopens while copies still cycle and track traffic reseeds the storm.
 const AUTO_TOPUP_RETRY_SUPPRESSION_MS = ms.minutes(10);
 
-/** Workflow handler for auto top-ups. */
 export const autoTopup = async ({
 	ctx,
 	payload,
@@ -77,7 +74,6 @@ export const autoTopup = async ({
 			return;
 		}
 
-		// 1. Setup — fetch full customer, auto-topup config, cusEnt, Stripe context
 		const setupResult = await setupAutoTopupContext({ ctx, payload });
 
 		if (!setupResult.ok) {
@@ -98,7 +94,6 @@ export const autoTopup = async ({
 
 		logAutoTopupContext({ ctx, autoTopupContext });
 
-		// 3. Compute — build line items + autumn billing plan + stripe invoice action
 		const { autumnBillingPlan, stripeBillingPlan } = computeAutoTopupPlan({
 			ctx,
 			autoTopupContext,
@@ -129,9 +124,6 @@ export const autoTopup = async ({
 				billingPlan: { autumn: autumnBillingPlan, stripe: stripeBillingPlan },
 			});
 		} catch (error) {
-			// A throw here means the attempt still reached Stripe (and may have
-			// left an invoice behind), so it has to count against the limits —
-			// otherwise queue retries loop with no accounting at all.
 			await recordAutoTopupAttempt({
 				ctx,
 				autoTopupContext,
@@ -148,7 +140,6 @@ export const autoTopup = async ({
 			billingResult,
 		});
 
-		// Credits still land on invoice.paid; the suspension stops this method charging again.
 		if (billingResult.stripe?.requiredAction?.code === "payment_processing") {
 			const now = Date.now();
 			await autoTopupLimitRepo.updateById({
@@ -199,8 +190,6 @@ export const autoTopup = async ({
 			return;
 		}
 
-		// A loose grant is a new row, not a patch: nothing else refreshes the
-		// cached subject, so drop it or the credits stay invisible.
 		if (autumnBillingPlan.insertCustomerEntitlements?.length) {
 			await invalidateCachedFullSubject({
 				ctx,
@@ -209,7 +198,6 @@ export const autoTopup = async ({
 			});
 		}
 
-		// Through the worker the options land in its memory; the Redis cache only matters off it.
 		const customerProductUpdate = autumnBillingPlan.updateCustomerProduct;
 		if (
 			customerProductUpdate?.updates.options &&
@@ -237,7 +225,6 @@ export const autoTopup = async ({
 	};
 
 	try {
-		// 2. Execute under lock (shares attach lock to prevent concurrent attach + auto-topup)
 		await withLock({
 			lockKey: buildAutoTopUpLockKey({
 				orgId: org.id,

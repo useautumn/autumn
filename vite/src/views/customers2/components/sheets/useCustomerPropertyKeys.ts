@@ -56,9 +56,6 @@ const extractSuggestions = (
 	};
 };
 
-/** Property keys and observed values from the customer's recent events, for
- *  condition suggestions and typo warnings. Customer-scoped until an org-wide
- *  property source exists. */
 export function useCustomerPropertyKeys({
 	customerId,
 }: {

@@ -1,14 +1,3 @@
-/**
- * catalogV2 preview/update — claiming a reserved plan-id alias.
- *
- * After pro → proNew, pro aliases proNew. Catalog preview surfaces
- * alias_replacement and execute deletes that alias so pro is a real id
- * again. REST create stays 400. Own-reclaim includes the field (alias dies).
- *
- * Create-claim calls the catalog action directly: public ingress rewrites
- * plan_id to the owner; dashboard skips rewrite (secret-key tests cannot).
- */
-
 import { expect, test } from "bun:test";
 import {
 	type ApiPlanV1,
@@ -68,7 +57,6 @@ const seedReservedAlias = async ({
 	await renamePlan({ autumn, fromId: aliasId, toId: ownerId });
 };
 
-/** Dashboard skips ingress rewrite; secret-key tests cannot send that header. */
 const syncPlanAliasesOnCtx = async ({
 	ctx,
 	planIds,
@@ -194,7 +182,6 @@ test.concurrent(
 				],
 			});
 
-			// Create-claim bypasses HTTP ingress (dashboard does the same).
 			const createPreview = await previewCreateClaim({
 				ctx,
 				planId: aliasId,

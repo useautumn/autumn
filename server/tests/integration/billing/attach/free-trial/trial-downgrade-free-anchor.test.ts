@@ -1,24 +1,3 @@
-/**
- * Regression: downgrading to Free while the paid product is still trialing must
- * schedule the Free switch at the TRIAL END, not now + 1 billing cycle.
- *
- * Reproduced from a production incident (org flexling, customer
- * k97c0p8y0wfg3066cjznhzhnc186jmr9): a Pro product on a 21-day trial was
- * downgraded to Free mid-trial via /v1/attach. The resulting subscription got
- * cancel_at = now + 1 month (trial end ignored), so the trial converted, Stripe
- * billed the paid plan, and Free only took over a month later.
- *
- * Root cause: setupBillingCycleAnchor returned "now" for the trialing -> Free
- * transition (trialContext.trialEndsAt is undefined for Free) instead of falling
- * back to the existing subscription's trial end. Both attach front-ends route
- * through that shared builder:
- *  - legacy /v1/attach  -> handleScheduleFunction2 -> legacyAttach -> billingActions.attach
- *  - native billing.attach (V2)
- *
- * Pre-fix: scheduled Free starts ~1 month out (now + 1 cycle).
- * Post-fix: scheduled Free starts at the trial end.
- */
-
 import { expect, test } from "bun:test";
 import { type ApiCustomerV3, ms } from "@autumn/shared";
 import { expectProductScheduled } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
@@ -54,9 +33,6 @@ const expectScheduledFreeAtTrialEnd = ({
 	).toBe(true);
 };
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// Legacy /v1/attach (the exact production path for sub-1.2 orgs like flexling)
-// ═══════════════════════════════════════════════════════════════════════════════
 test.concurrent(
 	`${chalk.yellowBright("trial-downgrade-free-anchor 1: legacy /v1/attach to Free mid-trial schedules at trial end")}`,
 	async () => {
@@ -98,7 +74,6 @@ test.concurrent(
 			waitForSeconds: 15,
 		});
 
-		// Downgrade to Free via legacy REST /v1/attach (what production did).
 		await autumnV1.attach({ customer_id: customerId, product_id: free.id });
 
 		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
@@ -107,9 +82,6 @@ test.concurrent(
 	},
 );
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// Native billing.attach (V2) — same bug, shared anchor builder
-// ═══════════════════════════════════════════════════════════════════════════════
 test.concurrent(
 	`${chalk.yellowBright("trial-downgrade-free-anchor 2: native billing.attach to Free mid-trial schedules at trial end")}`,
 	async () => {
@@ -152,7 +124,6 @@ test.concurrent(
 			waitForSeconds: 15,
 		});
 
-		// Downgrade to Free via native V2 billing.attach.
 		await autumnV2_2.billing.attach({ customer_id: customerId, plan_id: free.id });
 
 		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);

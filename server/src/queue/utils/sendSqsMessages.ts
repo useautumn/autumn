@@ -90,7 +90,6 @@ export const sendSqsMessagesBatch = async ({
 	entries: SqsBatchMessage[];
 }): Promise<SqsSendResult> => {
 	// goaws (the local SQS emulator) returns batch results under a key the AWS JSON
-	// protocol drops, so every entry would look unsent. Only prod really batches.
 	if (extractLocalEndpoint({ queueUrl })) {
 		return await sendSqsMessagesIndividually({ queueUrl, entries });
 	}
@@ -141,7 +140,6 @@ export const sendSqsMessagesBatch = async ({
 				}),
 			)) as SendMessageBatchCommandOutput;
 		} catch (error) {
-			// SDK errors carry the code in error.name (e.g. ThrottlingException).
 			const reason =
 				error instanceof Error
 					? `${error.name}: ${error.message}`

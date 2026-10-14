@@ -1,13 +1,3 @@
-/**
- * Spend_limit waterfall: an entity's own spend_limit overrides the plan default;
- * a sibling entity without its own inherits the plan default.
- *
- * Plan-default overage_limit 50; entity[0] sets its own 10; entity[1] has none.
- * Per-entity scoping (target_entity_id) means each entity's cap is independent:
- *   - entity[0] capped at 10 (its own, overriding the plan).
- *   - entity[1] capped at 50 (the inherited plan default).
- */
-
 import { test } from "bun:test";
 import { ErrCode } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
@@ -60,7 +50,6 @@ test.concurrent(
 			],
 		});
 
-		// entity[0] overrides the plan with a tight cap of 10.
 		await setEntitySpendLimit({
 			autumn: autumnV2_1,
 			customerId,
@@ -69,8 +58,6 @@ test.concurrent(
 			overageLimit: 10,
 		});
 
-		// entity[0]: exhaust 1100, then 30 overage units = 15 spend > its cap of 10
-		// (but < the plan's 50) -> rejects on its OWN cap.
 		await autumnV2_1.track({
 			customer_id: customerId,
 			entity_id: entities[0].id,
@@ -89,8 +76,6 @@ test.concurrent(
 				}),
 		});
 
-		// entity[1] inherits the plan default 50: the same 30 overage units (15
-		// spend) is well within 50 -> goes through.
 		await autumnV2_1.track({
 			customer_id: customerId,
 			entity_id: entities[1].id,

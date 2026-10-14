@@ -17,7 +17,6 @@ export const getOrInitFullSubjectViewEpoch = async ({
 		customerId,
 	});
 
-	// GETEX reads the epoch and refreshes its TTL in one round trip.
 	const currentEpoch = await runRedisOp({
 		operation: () =>
 			redisV2.getex(epochKey, "EX", FULL_SUBJECT_EPOCH_TTL_SECONDS),

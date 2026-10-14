@@ -19,13 +19,9 @@ import {
 } from "./applyPushes.js";
 import type { PushReceiver } from "./types/pushReceiver.js";
 
-/** Long polls in flight per receiver, so applying one batch never waits on the next receive. */
 const RECEIVE_LOOPS = 4;
-/** After a failed receive, so an unreachable queue is not polled in a tight loop. */
 const RECEIVE_RETRY_MS = 1_000;
-/** Pushes received and not yet acked; past this, receiving waits for one to finish. */
 const MAX_PUSHES_IN_FLIGHT = 400;
-/** SQS delivers a push until it is acked; past this many tries it is dropped, so one that never applies, or kills its thread, cannot loop. */
 export const MAX_PUSH_ATTEMPTS = 10;
 
 type PushReceiverContext = {
@@ -33,16 +29,13 @@ type PushReceiverContext = {
 	auth: Pick<Auth, "slotsFor">;
 	logger: Pick<AutumnLogger, "warn">;
 	counters?: Pick<ThreadCounters, "add">;
-	/** A push one replica reads from the queue reaches the others through it. */
 	replication: Replication;
 	sleep?: (ms: number) => Promise<unknown>;
 };
 
-/** What a reader that honours the signal throws for a receive aborted on stop. */
 const isAbort = (error: unknown): boolean =>
 	error instanceof Error && error.name === "AbortError";
 
-/** A payload that does not decode never will, however often it is delivered. */
 const readPush = ({ message }: { message: PulledPush }): QueuedAtomPush => {
 	try {
 		return payloadToQueuedAtomPush(message);
@@ -53,7 +46,6 @@ const readPush = ({ message }: { message: PulledPush }): QueuedAtomPush => {
 	}
 };
 
-/** The same apply the HTTP routes run; it throws only on a failure that may pass, so SQS delivers the push again. */
 const applyPush = async ({
 	ctx,
 	push,
@@ -91,7 +83,6 @@ const applyPush = async ({
 	});
 };
 
-/** Whether the message is done with: applied on the thread that owns its customer, or one that can never apply. */
 const receivePush = async ({
 	ctx,
 	message,
@@ -127,7 +118,6 @@ const receivePush = async ({
 	}
 };
 
-/** Applied, then acked; a push that may still apply later is left for SQS to deliver again. */
 const settlePush = async ({
 	ctx,
 	message,
@@ -146,10 +136,6 @@ const settlePush = async ({
 		);
 };
 
-/**
- * Autumn's pushes read from the org's own queue, so nothing has to reach Atom from outside. Each loop only receives:
- * every push is settled as its own task, so one slow apply or ack never holds up the pushes behind it.
- */
 export const createPushReceiver = ({
 	ctx,
 	maxPushesInFlight = MAX_PUSHES_IN_FLIGHT,
@@ -159,7 +145,6 @@ export const createPushReceiver = ({
 }): PushReceiver => {
 	const sleep = ctx.sleep ?? Bun.sleep;
 	const inFlight = new Set<Promise<void>>();
-	// Aborted on stop, so a reader that can abort never waits out a long poll with nothing in it.
 	const stopped = new AbortController();
 
 	function settle(message: PulledPush): void {
@@ -191,7 +176,6 @@ export const createPushReceiver = ({
 	}
 
 	return {
-		/** Resolves once every loop has stopped and every push it received is settled. */
 		run: async () => {
 			await Promise.all(
 				Array.from({ length: RECEIVE_LOOPS }, receiveUntilStopped),

@@ -2,7 +2,6 @@ import { AppEnv, type Feature, type SharedContext } from "../../index.js";
 import { CusProductStatus } from "../../models/cusProductModels/cusProductEnums.js";
 import type { Organization } from "../../models/orgModels/orgTable.js";
 
-/** Generic over the org shape so the balance engine's org pick qualifies. */
 export const orgToInStatuses = ({
 	org,
 }: {

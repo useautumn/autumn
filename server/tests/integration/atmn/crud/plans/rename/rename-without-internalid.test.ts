@@ -1,11 +1,3 @@
-/**
- * atmn crud/plans/rename — rename without internalId → not a rename: a new plan is created and the old one archived, no alias
- *
- * a rename is a changed planId on a row that carries internalId; aliases per catalog-v2/plans/aliases
- *
- * One line of plans/atmn-v3/07_tests.md. [a, b] is a matrix looped INSIDE this file.
- */
-
 import { expect, test } from "bun:test";
 import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 import {
@@ -42,12 +34,6 @@ test.concurrent(
 				idOrInternalId: "pro",
 			});
 
-			// The fixture's planId is edited to "proNew" without carrying the
-			// backfilled internalId forward — this is a create, not a rename. A
-			// push restates the whole catalog (skip_deletions: false) and "pro"
-			// is no longer in it, so with no customers or rewards keeping it
-			// around, the server removes it outright — the old id is not
-			// reserved as an alias either.
 			scenario.writeConfig(
 				atmnConfigSource({
 					body: `{

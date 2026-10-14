@@ -12,7 +12,6 @@ import type {
 } from "../syncProposals";
 import { matchSubscriptionItemToAutumn } from "./matchSubscriptionItemToAutumn";
 
-/** Collects all Stripe price IDs from all subscription items. */
 const collectStripePriceIds = ({
 	stripeSubscriptions,
 }: {
@@ -27,7 +26,6 @@ const collectStripePriceIds = ({
 	return Array.from(priceIds);
 };
 
-/** Collects all Stripe product IDs from all subscription items. */
 const collectStripeProductIds = ({
 	stripeSubscriptions,
 }: {
@@ -46,7 +44,6 @@ const collectStripeProductIds = ({
 	return Array.from(productIds);
 };
 
-/** Extracts the Stripe product ID string from a subscription item. */
 const getStripeProductId = ({
 	stripeItem,
 }: {
@@ -57,10 +54,6 @@ const getStripeProductId = ({
 	return stripeRefToId(product) ?? null;
 };
 
-/**
- * Batch-fetches Stripe product names for a list of product IDs.
- * Returns a map of productId -> name.
- */
 const fetchStripeProductNames = async ({
 	stripeCli,
 	stripeProductIds,
@@ -81,7 +74,6 @@ const fetchStripeProductNames = async ({
 	return nameMap;
 };
 
-/** Collects Stripe price IDs that use tiered billing (need a separate fetch for tiers). */
 const collectTieredPriceIds = ({
 	stripeSubscriptions,
 }: {
@@ -97,7 +89,6 @@ const collectTieredPriceIds = ({
 	return Array.from(ids);
 };
 
-/** Fetches full price objects (with tiers expanded) for tiered prices. */
 const fetchTieredPriceTiers = async ({
 	stripeCli,
 	tieredPriceIds,
@@ -124,7 +115,6 @@ const fetchTieredPriceTiers = async ({
 	return tiersMap;
 };
 
-/** Extracts price metadata (amount, currency, billing scheme, tiers) from a Stripe subscription item. */
 const extractPriceMetadata = ({
 	stripeItem,
 	tieredPriceTiers,
@@ -170,7 +160,6 @@ const extractPriceMetadata = ({
 	};
 };
 
-/** Finds if this Stripe subscription is already linked to an Autumn customer product. */
 const findLinkedProductId = ({
 	stripeSubscriptionId,
 	customerProducts,
@@ -184,10 +173,6 @@ const findLinkedProductId = ({
 	return linked?.product?.id ?? null;
 };
 
-/**
- * Matches Stripe subscriptions to Autumn products using a multi-tier
- * fallback: stripe_price_id -> price config stripe_product_id -> product.processor.id
- */
 export const matchStripeSubscriptionsToProducts = async ({
 	db,
 	orgId,
@@ -207,7 +192,6 @@ export const matchStripeSubscriptionsToProducts = async ({
 	const allStripeProductIds = collectStripeProductIds({ stripeSubscriptions });
 	const tieredPriceIds = collectTieredPriceIds({ stripeSubscriptions });
 
-	// Batch all lookups in parallel (DB + Stripe product names + tiered price tiers)
 	const [
 		priceByStripePriceId,
 		priceByStripeProductId,

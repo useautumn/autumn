@@ -1,13 +1,3 @@
-/**
- * Measures retained heap at Mobbin's dimensions (~150k Stripe subscriptions
- * walked in 2,000-customer pages) to confirm releasing each verified page keeps
- * peak memory off the org size.
- *
- * Skipped unless MEASURE_EXPORT_MEMORY=1, since it allocates ~300MB. Reads
- * bun:jsc heapStats rather than process.memoryUsage(), whose heapUsed does not
- * fall when JSC frees an object graph.
- */
-
 import { heapStats } from "bun:jsc";
 import { describe, expect, it } from "bun:test";
 import type Stripe from "stripe";
@@ -19,8 +9,6 @@ const SUBSCRIPTION_COUNT = 150_000;
 const PAGE_SIZE = 2_000;
 const MACHINE_HEAP_BUDGET_MB = 2048;
 
-/** Close to a real Stripe subscription's ~3KB of JSON, so the measurement
- * reflects what the sweep actually holds. */
 const subscriptionFor = (index: number) =>
 	({
 		id: `sub_${index}`,

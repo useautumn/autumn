@@ -8,10 +8,6 @@ import { customerProductToLineItems } from "@/internal/billing/v2/utils/lineItem
 import { billsProratedTime } from "../utils/backdateGap";
 import { paidBackdateAnchorMove } from "../utils/paidBackdateAnchorMove";
 
-/**
- * A paid backdate recreate moved off its paid-through date settles the difference like a live anchor move: a later anchor
- * charges the stub from the paid-through date to it, an earlier one credits the paid time after it. None settles nothing.
- */
 export const paidBackdateAnchorMoveLineItems = ({
 	ctx,
 	billingContext,

@@ -1,15 +1,3 @@
-/**
- * atmn scenarios/ids — internalId from another env → unknown here, so it names a new resource and is rewritten
- *
- * One line of plans/atmn-v3/07_tests.md. [a, b] is a matrix looped INSIDE this file.
- *
- * Decision pending: `resolveCurrentFeature` (server) scopes its internal_id
- * lookup by org AND env, so an id from a different tenant is exactly as
- * "unknown" as one from a different env of the same tenant — initAtmnScenario
- * has no seam for a second env's key on the same org, so this proves the same
- * guard using a second org instead.
- */
-
 import { expect, test } from "bun:test";
 import { configBody } from "@tests/utils/atmnUtils/baseConfigs.js";
 import {

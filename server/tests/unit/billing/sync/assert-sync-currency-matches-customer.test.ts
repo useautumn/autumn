@@ -1,18 +1,3 @@
-/**
- * TDD test for Stripe sync rejecting a new-currency subscription after the
- * previous paid plan expired and left customers.currency set.
- *
- * Red-failure mode (current behavior):
- *  - leftover USD + expired/free Autumn products + incoming GBP paid sync throws
- *    CurrencyMismatch
- *  - syncContextToCurrencyLock returns undefined when currency is already set
- *
- * Green-success criteria (after fix):
- *  - leftover currency with no live paid product does not throw
- *  - live paid product in a different currency still throws
- *  - leftover currency with an incoming paid Stripe sub produces a relock
- */
-
 import { describe, expect, test } from "bun:test";
 import {
 	BillingInterval,

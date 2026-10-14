@@ -10,7 +10,6 @@ import type { UsageWindowUpdate } from "../types/usageWindowUpdate.js";
 import { markSyncDirty } from "./dirtyState/markSyncDirty.js";
 import { buildSyncDirtyKeys } from "./dirtyState/syncDirtyKeys.js";
 
-/** Signal marker TTL: an enqueue that silently fails re-signals after this. */
 const SIGNAL_TTL_SECONDS = 60;
 
 interface CustomerBatchContext {
@@ -22,14 +21,10 @@ interface CustomerBatchContext {
 	rolloverIds: Set<string>;
 	entityId?: string;
 	modifiedCusEntIdsByFeatureId: Record<string, string[]>;
-	// Counter SNAPSHOTS keyed by capped feature: each deduction returns the
-	// complete post-deduction array, so merging across batched items is
-	// last-write-wins (unlike cusEnt/rollover ids, which accumulate).
 	usageWindowUpdatesByFeatureId: Record<
 		string,
 		{ ts: number; update: UsageWindowUpdate }
 	>;
-	/** Coalescing flushes into Redis dirty state instead of enqueueing a full payload. */
 	coalesce: boolean;
 	coalesceRedis?: Redis;
 	redisInstance?: string;
@@ -58,10 +53,6 @@ export type QueueSyncV4Payload = {
 	messageDeduplicationId: string;
 };
 
-/**
- * Batches v4 sync jobs per customer using a fixed tumbling window.
- * Always requires modifiedCusEntIdsByFeatureId — never mixes with v3 sync items.
- */
 export class SyncBatchingManagerV3 {
 	private customerBatches: Map<string, CustomerBatch> = new Map();
 
@@ -111,9 +102,7 @@ export class SyncBatchingManagerV3 {
 		entityId?: string;
 		modifiedCusEntIdsByFeatureId: Record<string, string[]>;
 		usageWindowUpdates?: UsageWindowUpdate[];
-		/** Route this batch through the globally gated dirty state. */
 		coalesce?: boolean;
-		/** The Redis instance the deduction ran on (dirty state must co-locate) */
 		coalesceRedis?: Redis;
 	}): void {
 		const batchKey = this.buildBatchKey({ orgId, env, customerId });
@@ -188,9 +177,6 @@ export class SyncBatchingManagerV3 {
 
 	async flush(): Promise<void> {
 		const batchKeys = Array.from(this.customerBatches.keys());
-		// Settle pending and mid-flight executions together: batches delete
-		// their map entry before awaiting Redis/queue work, and a fail-fast
-		// await would abandon the rest on the first rejection.
 		const results = await Promise.allSettled([
 			...batchKeys.map((batchKey) => this.runCustomerBatch({ batchKey })),
 			...Array.from(this.inFlightExecutions),
@@ -336,9 +322,6 @@ export class SyncBatchingManagerV3 {
 			customerId: context.customerId,
 			cusEntIds,
 			rolloverIds,
-			// Snapshots ride the payload (cusEnt balances are re-read at consume
-			// time, counters are not), so a newer snapshot must never be dropped
-			// as a duplicate of an older one within the bucket.
 			usageWindowUpdates,
 			dedupBucket,
 		});
@@ -346,8 +329,6 @@ export class SyncBatchingManagerV3 {
 		return Bun.hash(dedupKey).toString();
 	}
 
-	/** Merge into Redis dirty state and signal on the empty->dirty transition.
-	 *  An enqueue failure clears the marker before the legacy fallback. */
 	private async queueCoalescedSync({
 		context,
 	}: {
@@ -372,9 +353,6 @@ export class SyncBatchingManagerV3 {
 
 		if (!shouldSignal) return;
 
-		// No DelaySeconds: FIFO queues reject per-message delay. The coalescing
-		// window is enforced by the drain handler, which waits out the window
-		// from `timestamp` before claiming.
 		try {
 			await addTaskToQueue({
 				jobName: JobName.SyncCustomerDirty,
@@ -386,8 +364,6 @@ export class SyncBatchingManagerV3 {
 					redisInstance: context.redisInstance!,
 					timestamp: Date.now(),
 				},
-				// Serializes drains per customer: two workers can never race on the
-				// same claim.
 				messageGroupId: `sync-dirty:${Bun.hash(
 					`${context.orgId}:${context.env}:${context.customerId}`,
 				)}`,
@@ -409,7 +385,6 @@ export class SyncBatchingManagerV3 {
 				await this.queueCoalescedSync({ context });
 				return;
 			} catch (error) {
-				// The dirty state stays in Redis; the customer's next change re-signals it.
 				if (error instanceof SqsBatchShuttingDownError) {
 					logger.warn(
 						`[SyncDirty] Signal for ${context.customerId} dropped at shutdown; next change re-signals`,
@@ -457,7 +432,6 @@ export class SyncBatchingManagerV3 {
 					modifiedCusEntIdsByFeatureId: context.modifiedCusEntIdsByFeatureId,
 					usageWindowUpdates,
 				},
-				// messageGroupId: `sync-v4:${context.orgId}:${context.env}:${context.customerId}`,
 				messageDeduplicationId,
 			});
 

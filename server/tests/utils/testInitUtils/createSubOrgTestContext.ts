@@ -42,7 +42,6 @@ export const createSubOrgTestContext = async ({
 }): Promise<TestContext> => {
 	const { db } = initDrizzle();
 
-	// 1. Resolve sub-org.
 	let subOrg = await OrgService.getBySlug({ db, slug: subOrgSlug });
 	if (!subOrg) {
 		throw new Error(
@@ -51,8 +50,6 @@ export const createSubOrgTestContext = async ({
 		);
 	}
 
-	// 2. Apply config overrides. OrgService.update replaces the whole
-	// `config` jsonb, so we merge in JS first.
 	if (configOverrides && Object.keys(configOverrides).length > 0) {
 		const existingConfig = (subOrg.config ?? {}) as OrgConfig;
 		const mergedConfig: OrgConfig = {
@@ -66,7 +63,6 @@ export const createSubOrgTestContext = async ({
 			updates: { config: mergedConfig },
 		});
 
-		// Re-fetch with merged config.
 		const refetched = await OrgService.getBySlug({ db, slug: subOrgSlug });
 		if (!refetched) {
 			throw new Error(
@@ -76,14 +72,11 @@ export const createSubOrgTestContext = async ({
 		subOrg = refetched;
 	}
 
-	// 3. Stripe client scoped to the sub-org's connect account.
 	const stripeAccountId = orgToAccountId({ org: subOrg, env: AppEnv.Sandbox });
 	if (stripeAccountId)
 		await registerTwStripeAccount({ accountId: stripeAccountId });
 	const subStripeCli = createStripeCli({ org: subOrg, env: AppEnv.Sandbox });
 
-	// 4. Stripe Tax jurisdictions. Stripe requires a head office address
-	// on Tax Settings before any tax.registrations.create.
 	if (taxRegistrations && taxRegistrations.length > 0) {
 		try {
 			await subStripeCli.tax.settings.update({
@@ -130,8 +123,6 @@ export const createSubOrgTestContext = async ({
 						active_from: "now",
 					});
 				} else if (country === "US") {
-					// CA state sales tax. SaaS often isn't taxable in CA, so $0
-					// tax on the resulting invoice is expected.
 					await subStripeCli.tax.registrations.create({
 						country: "US",
 						country_options: {
@@ -181,8 +172,6 @@ export const createSubOrgTestContext = async ({
 					});
 				}
 			} catch (err) {
-				// Tolerate already-registered (Stripe throws); retried setups
-				// shouldn't fail.
 				const stripeErr = err as {
 					message?: string;
 					code?: string;
@@ -206,14 +195,12 @@ export const createSubOrgTestContext = async ({
 		});
 	}
 
-	// 5. Sub-org features.
 	const features = await FeatureService.list({
 		db,
 		orgId: subOrg.id,
 		env: AppEnv.Sandbox,
 	});
 
-	// 6. TestContext with sub-org rebinding (matches createTestContext shape).
 	return {
 		org: subOrg,
 		env: AppEnv.Sandbox,

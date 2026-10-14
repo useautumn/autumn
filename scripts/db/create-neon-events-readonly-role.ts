@@ -1,5 +1,3 @@
-// Creates/refreshes the read-only role on the Neon events DB (CI schema validation).
-// Usage: bun scripts/db/create-neon-events-readonly-role.ts --env dev|prod [--role name] [--password pw]
 import { randomBytes } from "node:crypto";
 import { Pool } from "pg";
 import {
@@ -58,12 +56,9 @@ const main = async () => {
 		await client.query(
 			`GRANT SELECT ON ALL TABLES IN SCHEMA public TO ${quoteIdent(role)}`,
 		);
-		// Future tables (e.g. events created later via db:events:push) stay readable.
 		await client.query(
 			`ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO ${quoteIdent(role)}`,
 		);
-		// Real protection is the ABSENCE of write grants; this default is a soft belt only
-		// (session-overridable), which is why verification below flips it off first.
 		await client.query(
 			`ALTER ROLE ${quoteIdent(role)} SET default_transaction_read_only = on`,
 		);
@@ -81,14 +76,11 @@ const main = async () => {
 		});
 
 		try {
-			// One held connection: the SET below is session-scoped and must apply to the probes.
 			const conn = await verifyPool.connect();
 			try {
 				await conn.query("SELECT 1");
 				console.log("Verified: role can connect and read.");
 
-				// Bypass the role default the way a compromised credential would — probes must
-				// fail on missing PRIVILEGES, not on the soft read-only default.
 				await conn.query("SET default_transaction_read_only = off");
 
 				const canCreate = await conn
@@ -129,8 +121,6 @@ const main = async () => {
 			await verifyPool.end();
 		}
 
-		// Intentional local-only output: this is an operator tool (never CI); printing the
-		// URL IS the delivery mechanism for pasting into Infisical / GH secrets.
 		console.log(
 			`\nRead-only URL for env "${env}" (store as NEON_EVENTS_READ_ONLY_URL in Infisical + GH secret):`,
 		);

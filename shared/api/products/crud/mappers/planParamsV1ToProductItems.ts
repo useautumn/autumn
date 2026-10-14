@@ -13,7 +13,6 @@ export function planParamsV1ToProductItems({
 	currentFullProduct,
 }: {
 	ctx: SharedContext;
-	// params: CreatePlanParams | UpdatePlanParams;
 	params: {
 		price?: BasePriceParams | null;
 		items?: CreatePlanItemParamsV1[];
@@ -31,7 +30,6 @@ export function planParamsV1ToProductItems({
 	}
 
 	if (params.price !== undefined && params.items !== undefined) {
-		// 1. If price AND items provided, return full items array
 		return planV1ToProductItems({
 			ctx,
 			plan: { price: params.price, items: params.items },
@@ -39,7 +37,6 @@ export function planParamsV1ToProductItems({
 	}
 
 	if (params.price !== undefined && params.items === undefined) {
-		// 2. If price provided, but no items, then customize base price and carry over feature items
 		const featureItems = currentProductItems.filter(
 			(item) => !isPriceItem(item),
 		);
@@ -54,7 +51,6 @@ export function planParamsV1ToProductItems({
 		return basePriceItem ? [basePriceItem, ...featureItems] : featureItems;
 	}
 
-	// 3. If no price provided, then carry over base price
 	const basePriceItem = currentProductItems.filter((item) => isPriceItem(item));
 	const featureItems = planV1ToProductItems({
 		ctx,

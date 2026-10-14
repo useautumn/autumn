@@ -14,7 +14,6 @@ import {
 	rewardRepo,
 } from "@/internal/rewards/repos/index.js";
 
-/** The catalog states discount coupons and feature grants; nothing else. */
 const STATABLE_TYPES = new Set<RewardType>([
 	RewardType.PercentageDiscount,
 	RewardType.FixedDiscount,
@@ -25,7 +24,6 @@ export type LoadedRewards = {
 	rewards: CatalogRewardState[];
 	unstatableIds: Set<string>;
 	unstatableInternalIds: Set<string>;
-	/** Stable ids of the rewards a config can state — the programs that may be stated too. */
 	statableInternalIds: Set<string>;
 	idByInternalId: Map<string, string>;
 };
@@ -64,7 +62,6 @@ export const loadRewardStates = async ({
 					internalId: reward.internal_id,
 					id: reward.id,
 					kind: "coupon",
-					// Narrowed by STATABLE_TYPES above: invoice credits never reach here.
 					coupon: getApiCoupon({
 						reward,
 						planIdByInternalProductId,
@@ -83,11 +80,6 @@ export const loadRewardStates = async ({
 	};
 };
 
-/**
- * Only the programs a config could state come back. A program backed by a
- * free-product or invoice-credit reward names an id the catalog never returns,
- * so pulling it would write a config its own lint rejects.
- */
 export const loadReferralProgramStates = async ({
 	ctx,
 	idByInternalId,
@@ -98,8 +90,6 @@ export const loadReferralProgramStates = async ({
 	statableInternalIds: Set<string>;
 }): Promise<{
 	programs: ReferralProgramState[];
-	/** Public ids of the programs hidden here: absent from the catalog, but
-	 * still taken, so a config claiming one is refused rather than colliding. */
 	hiddenProgramIds: Set<string>;
 	hiddenProgramInternalIds: Set<string>;
 }> => {

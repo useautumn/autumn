@@ -1,14 +1,3 @@
-/**
- * Invoice Created Webhook Tests - Discounts
- *
- * Tests for verifying that discounts are correctly stored in the Autumn DB
- * when the `invoice.created` Stripe webhook is processed.
- *
- * These tests verify that:
- * 1. Subscription-level discounts are correctly persisted to the invoice.discounts field
- * 2. Discount amounts and coupon names are correctly extracted
- */
-
 import { expect, test } from "bun:test";
 import { InvoiceStatus } from "@autumn/shared";
 import { items } from "@tests/utils/fixtures/items.js";
@@ -49,21 +38,6 @@ const getStripeInfo = async ({ customerId }: { customerId: string }) => {
 	};
 };
 
-// =============================================================================
-// TEST: Subscription discount persisted to Autumn invoice on invoice.created
-// =============================================================================
-
-/**
- * Scenario:
- * - Customer has Pro with $20/month base price
- * - Apply a 20% discount to the subscription
- * - Advance to next billing cycle (triggers invoice.created)
- *
- * Expected Result:
- * - The Autumn invoice should have the discount in the discounts array
- * - discount.coupon_name should match the coupon name
- * - discount.amount_used should be ~$4 (20% of $20)
- */
 test.concurrent(`${chalk.yellowBright("invoice.created discounts: subscription 20% discount persisted to Autumn invoice")}`, async () => {
 	const customerId = "inv-created-disc-sub-20pct";
 
@@ -85,7 +59,6 @@ test.concurrent(`${chalk.yellowBright("invoice.created discounts: subscription 2
 		customerId,
 	});
 
-	// Create a 20% off coupon with a name
 	const couponName = "Test 20% Off Coupon";
 	const coupon = await stripeCli.coupons.create({
 		percent_off: 20,
@@ -93,34 +66,27 @@ test.concurrent(`${chalk.yellowBright("invoice.created discounts: subscription 2
 		name: couponName,
 	});
 
-	// Apply coupon to the subscription
 	await stripeCli.subscriptions.update(subscription.id, {
 		discounts: [{ coupon: coupon.id }],
 	});
 
-	// Advance to next billing cycle - this triggers invoice.created webhook
 	await advanceTestClock({
 		stripeCli,
 		testClockId: testClockId!,
 		numberOfMonths: 1,
 	});
 
-	// Wait for webhook processing
 	await new Promise((resolve) => setTimeout(resolve, 5000));
 
-	// Query the Autumn invoice from DB
 	const invoices = await InvoiceService.list({
 		db: ctx.db,
 		internalCustomerId: fullCustomer.internal_id,
 	});
 
-	// Should have 2 invoices: initial + renewal
 	expect(invoices.length).toBeGreaterThanOrEqual(2);
 
-	// Get the latest invoice (renewal invoice with discount)
 	const latestInvoice = invoices[0];
 
-	// Verify the discount is present
 	expect(latestInvoice.status).toBe(InvoiceStatus.Draft);
 	expect(latestInvoice.discounts).toBeDefined();
 	expect(latestInvoice.discounts.length).toBe(1);
@@ -129,6 +95,5 @@ test.concurrent(`${chalk.yellowBright("invoice.created discounts: subscription 2
 	expect(discount.coupon_name).toBe(couponName);
 	expect(discount.stripe_coupon_id).toBe(coupon.id);
 
-	// 20% of $20 = $4
 	expect(discount.amount_used).toBe(4);
 });

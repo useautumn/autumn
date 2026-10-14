@@ -50,14 +50,12 @@ export async function migrate({
 		});
 	}
 
-	// 1. Build update subscription params
 	const entity = fullCustomer.entities.find(
 		(e) => e.internal_id === currentCustomerProduct.internal_entity_id,
 	);
 
 	const features = newProduct.entitlements.map((e) => e.feature);
 
-	// Reset all features after trial ends
 	const transitionRules: TransitionRules = {
 		reset_after_trial_end: features
 			.filter((f) => !featureUtils.isAllocated(f))
@@ -70,7 +68,7 @@ export async function migrate({
 		entity_id: entity?.id ?? undefined,
 
 		proration_behavior: "none",
-		version: newProduct.version, // to trigger update custom plan intent
+		version: newProduct.version,
 
 		transition_rules: transitionRules,
 		redirect_mode: "if_required",

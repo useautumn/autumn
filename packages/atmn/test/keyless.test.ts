@@ -1,8 +1,3 @@
-/**
- * Keyless onboarding: `login --keyless` provisions an org and writes its key;
- * `login --claim` returns and emails one secure browser link.
- */
-
 import { expect, test } from "bun:test";
 import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -54,7 +49,6 @@ const deps = () => {
 test("slugFor lowercases, strips the scope, joins with dashes and stays under the cap", () => {
 	expect(slugFor("@acme/Billing App")).toBe("billing-app");
 	expect(slugFor("  ")).toBe("autumn");
-	// The server refuses more than 100 characters, and a trailing dash.
 	const long = slugFor(`${"a".repeat(99)} tail`);
 	expect(long).toHaveLength(99);
 	expect(long.endsWith("-")).toBe(false);

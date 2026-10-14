@@ -1,13 +1,3 @@
-/**
- * Changing a rollover item's interval must not run on the batch lane.
- *
- * The remove and the add carry different match keys, so the removal is a
- * standalone deletion rather than a modify-in-place. rollovers.cus_ent_id
- * cascades on delete, so the batch lane would silently drop accrued balances.
- *
- * Red: the op runs on the batch lane.
- * Green: the op is rejected to the per-customer lane.
- */
 import { expect, test } from "bun:test";
 import { ResetInterval, RolloverExpiryDurationType } from "@autumn/shared";
 import { runChunkedMigration } from "@tests/integration/billing/migrations-v2/utils/runChunkedMigration";

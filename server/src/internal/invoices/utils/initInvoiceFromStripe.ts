@@ -14,9 +14,6 @@ import { getInvoiceItems } from "@/internal/invoices/invoiceUtils";
 import { generateId } from "@/utils/genUtils";
 import { stripeInvoiceToPaidAt } from "./stripeInvoiceToPaidAt";
 
-/**
- * Creates an Invoice object from a Stripe invoice.
- */
 export const initInvoiceFromStripe = async ({
 	ctx,
 	stripeInvoice,

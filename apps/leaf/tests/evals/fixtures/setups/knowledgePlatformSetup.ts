@@ -53,7 +53,6 @@ const contractFeatureIds = [
 	featureIds.unlimited_seats,
 ] as const;
 
-/** Anonymized org setup with credits, many feature flags, core plans, and add-ons. */
 export const knowledgePlatformSetup = () =>
 	createSetup({
 		tag: "knowledge-platform",
@@ -91,7 +90,6 @@ export const knowledgePlatformSetup = () =>
 			}),
 		}),
 		plans: ({ basePrice, features, itemList, items, plan, planList }) => {
-			// Mirror server/tests/scenarios/agent/knowledge-platform.ts credit economics.
 			const creditItems = [
 				items.prepaidCredits({
 					feature: features.credits,

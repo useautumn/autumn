@@ -15,7 +15,6 @@ import { restoreStripeWebhookAfterRevocation } from "./restoreStripeWebhookAfter
 
 type Ctx = Pick<AutumnContext, "org" | "env" | "db" | "logger">;
 
-/** Matches the connection the caller saw, or a revocation whose cleanup has not finished. */
 const isRevocableConnection = ({
 	ctx,
 	accountId,
@@ -84,7 +83,6 @@ const markConnectionRevoked = async ({
 	});
 };
 
-/** Returns false when the connection changed since the caller read it. */
 export const clearRevokedStripeConnection = async ({
 	ctx,
 	accountId,

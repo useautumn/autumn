@@ -1,4 +1,3 @@
-/** Splits the run's workers across the normal pool and each capability shard, in `capabilityFileCounts` order. */
 export const planShardWorkers = ({
 	workers,
 	normalFileCount,
@@ -8,7 +7,6 @@ export const planShardWorkers = ({
 	workers: number;
 	normalFileCount: number;
 	capabilityFileCounts: number[];
-	/** Per-shard cap, aligned with `capabilityFileCounts`; undefined is uncapped. */
 	capabilityMaxWorkers?: (number | undefined)[];
 }) => {
 	const totalFiles =
@@ -30,13 +28,11 @@ export const planShardWorkers = ({
 		throw new Error(`Selected test shards require --max>=${shardCount}`);
 	}
 
-	// Every later non-empty shard, the normal pool included, keeps one worker in reserve.
 	let unplannedShards = shardCount;
 	let remainingWorkers = totalWorkers;
 	const capabilityWorkers = capabilityFileCounts.map((fileCount, index) => {
 		if (fileCount === 0) return 0;
 		unplannedShards--;
-		// Only without normal files can a capability shard be last and take the leftovers.
 		const takesLeftovers = normalFileCount === 0 && unplannedShards === 0;
 		const share = takesLeftovers
 			? Math.min(capOf(index), remainingWorkers)

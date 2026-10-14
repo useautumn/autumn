@@ -1,10 +1,3 @@
-/**
- * Adding a passkey on a session older than better-auth's freshAge fails with SESSION_NOT_FRESH.
- *
- * Red (before):  the raw "Session is not fresh" text is toasted.
- * Green (after): the user is told to log out and back in.
- */
-
 import { describe, expect, test } from "bun:test";
 import { getAddPasskeyErrorMessage } from "@/views/settings/sections/components/passkeyErrorMessage";
 

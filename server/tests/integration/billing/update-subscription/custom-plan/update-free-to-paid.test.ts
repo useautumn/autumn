@@ -11,11 +11,6 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { addMonths } from "date-fns";
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// FREE-TO-PAID TESTS
-// ═══════════════════════════════════════════════════════════════════════════════
-
-// 1. Adding a monthly base price to free product
 test.concurrent(`${chalk.yellowBright("free-to-paid: add monthly base price")}`, async () => {
 	const messagesItem = items.monthlyMessages({ includedUsage: 300 });
 	const free = products.base({ items: [messagesItem] });
@@ -48,7 +43,6 @@ test.concurrent(`${chalk.yellowBright("free-to-paid: add monthly base price")}`,
 
 	const preview = await autumnV1.subscriptions.previewUpdate(updateParams);
 
-	// Should charge $20 for monthly base price
 	expect(preview.total).toEqual(20);
 
 	await autumnV1.subscriptions.update(updateParams);
@@ -77,7 +71,6 @@ test.concurrent(`${chalk.yellowBright("free-to-paid: add monthly base price")}`,
 	});
 });
 
-// 2. Adding monthly base price + consumable to free product
 test.concurrent(`${chalk.yellowBright("free-to-paid: add monthly base + consumable")}`, async () => {
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
 	const monthlyBasePrice = 20;
@@ -101,7 +94,6 @@ test.concurrent(`${chalk.yellowBright("free-to-paid: add monthly base + consumab
 		customerBefore.features[TestFeature.Messages].next_reset_at;
 	expect(originalResetAt).toBeDefined();
 
-	// Track some usage before update
 	const messagesUsage = 30;
 	await autumnV1.track(
 		{
@@ -131,7 +123,6 @@ test.concurrent(`${chalk.yellowBright("free-to-paid: add monthly base + consumab
 		amount: monthlyBasePrice,
 	});
 
-	// Free -> paid starts a fresh paid cycle, so the full monthly base price is charged.
 	expect(preview.total).toEqual(expectedPreviewTotal);
 
 	await autumnV1.subscriptions.update(updateParams);
@@ -164,7 +155,6 @@ test.concurrent(`${chalk.yellowBright("free-to-paid: add monthly base + consumab
 	});
 });
 
-// 3. Adding annual base price + monthly consumable to free product
 test.concurrent(`${chalk.yellowBright("free-to-paid: add annual base + monthly consumable")}`, async () => {
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
 	const free = products.base({ items: [messagesItem] });
@@ -189,7 +179,6 @@ test.concurrent(`${chalk.yellowBright("free-to-paid: add annual base + monthly c
 
 	const preview = await autumnV1.subscriptions.previewUpdate(updateParams);
 
-	// Should charge $200 for annual base price
 	expect(preview.total).toEqual(200);
 
 	await autumnV1.subscriptions.update(updateParams, { timeout: 2000 });
@@ -218,7 +207,6 @@ test.concurrent(`${chalk.yellowBright("free-to-paid: add annual base + monthly c
 	});
 });
 
-// 4. Updating free feature item to consumable
 test.concurrent(`${chalk.yellowBright("free-to-paid: update free item to consumable")}`, async () => {
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
 	const free = products.base({ items: [messagesItem] });
@@ -232,7 +220,6 @@ test.concurrent(`${chalk.yellowBright("free-to-paid: update free item to consuma
 		actions: [s.attach({ productId: "base" })],
 	});
 
-	// Track some usage first
 	const messagesUsage = 50;
 	await autumnV1.track(
 		{
@@ -243,7 +230,6 @@ test.concurrent(`${chalk.yellowBright("free-to-paid: update free item to consuma
 		{ timeout: 2000 },
 	);
 
-	// Update to consumable (pay-per-use after included usage)
 	const consumableItem = items.consumableMessages({ includedUsage: 100 });
 
 	const updateParams = {
@@ -254,7 +240,6 @@ test.concurrent(`${chalk.yellowBright("free-to-paid: update free item to consuma
 
 	const preview = await autumnV1.subscriptions.previewUpdate(updateParams);
 
-	// No immediate charge - consumable bills in arrears
 	expect(preview.total).toEqual(0);
 
 	await autumnV1.subscriptions.update(updateParams);
@@ -269,7 +254,6 @@ test.concurrent(`${chalk.yellowBright("free-to-paid: update free item to consuma
 		usage: messagesUsage,
 	});
 
-	// No invoice - consumable bills in arrears, no immediate charge
 	expectCustomerInvoiceCorrect({
 		customer,
 		count: 0,
@@ -283,7 +267,6 @@ test.concurrent(`${chalk.yellowBright("free-to-paid: update free item to consuma
 	});
 });
 
-// 5. Updating free feature item to prepaid
 test.concurrent(`${chalk.yellowBright("free-to-paid: update free item to prepaid")}`, async () => {
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
 	const free = products.base({ items: [messagesItem] });
@@ -297,7 +280,6 @@ test.concurrent(`${chalk.yellowBright("free-to-paid: update free item to prepaid
 		actions: [s.attach({ productId: "base" })],
 	});
 
-	// Track some usage first
 	const messagesUsage = 30;
 	await autumnV1.track(
 		{
@@ -308,7 +290,6 @@ test.concurrent(`${chalk.yellowBright("free-to-paid: update free item to prepaid
 		{ timeout: 2000 },
 	);
 
-	// Update to prepaid (purchase units upfront)
 	const prepaidItem = items.prepaidMessages();
 
 	const updateParams = {
@@ -320,7 +301,6 @@ test.concurrent(`${chalk.yellowBright("free-to-paid: update free item to prepaid
 
 	const preview = await autumnV1.subscriptions.previewUpdate(updateParams);
 
-	// Prepaid charges upfront - $10 for 100 units
 	expect(preview.total).toEqual(10);
 
 	await autumnV1.subscriptions.update(updateParams);
@@ -335,7 +315,6 @@ test.concurrent(`${chalk.yellowBright("free-to-paid: update free item to prepaid
 		usage: messagesUsage,
 	});
 
-	// Verify invoice matches preview
 	expectCustomerInvoiceCorrect({
 		customer,
 		count: 1,
@@ -350,7 +329,6 @@ test.concurrent(`${chalk.yellowBright("free-to-paid: update free item to prepaid
 	});
 });
 
-// 6. Updating free users to allocated users
 test.concurrent(`${chalk.yellowBright("free-to-paid: update free users to allocated")}`, async () => {
 	const usersItem = items.monthlyUsers({ includedUsage: 5 });
 	const free = products.base({ items: [usersItem] });
@@ -364,7 +342,6 @@ test.concurrent(`${chalk.yellowBright("free-to-paid: update free users to alloca
 		actions: [s.attach({ productId: "base" })],
 	});
 
-	// Use some users (continuous use feature)
 	const usersUsed = 3;
 	await autumnV1.track(
 		{
@@ -375,14 +352,12 @@ test.concurrent(`${chalk.yellowBright("free-to-paid: update free users to alloca
 		{ timeout: 2000 },
 	);
 
-	// Verify initial state
 	const initialCustomer =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	expect(initialCustomer.features[TestFeature.Users].balance).toEqual(
 		usersItem.included_usage - usersUsed,
 	);
 
-	// Update to allocated users ($10/seat prorated billing)
 	const allocatedUsersItem = items.allocatedUsers({ includedUsage: 2 });
 
 	const updateParams = {
@@ -393,7 +368,6 @@ test.concurrent(`${chalk.yellowBright("free-to-paid: update free users to alloca
 
 	const preview = await autumnV1.subscriptions.previewUpdate(updateParams);
 
-	// Should charge for (usersUsed - includedUsage) extra seats = (3 - 2) = 1 seat @ $10
 	expect(preview.total).toEqual(10);
 
 	await autumnV1.subscriptions.update(updateParams);
@@ -408,7 +382,6 @@ test.concurrent(`${chalk.yellowBright("free-to-paid: update free users to alloca
 		usage: usersUsed,
 	});
 
-	// Invoice for the extra seat
 	expectCustomerInvoiceCorrect({
 		customer,
 		count: 1,
@@ -423,7 +396,6 @@ test.concurrent(`${chalk.yellowBright("free-to-paid: update free users to alloca
 	});
 });
 
-// 7. Converting free messages to unlimited with monthly price
 test.concurrent(`${chalk.yellowBright("free-to-paid: convert to unlimited with monthly price")}`, async () => {
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
 	const free = products.base({ items: [messagesItem] });
@@ -437,7 +409,6 @@ test.concurrent(`${chalk.yellowBright("free-to-paid: convert to unlimited with m
 		actions: [s.attach({ productId: "base" })],
 	});
 
-	// Track some usage before update
 	const messagesUsage = 50;
 	await autumnV1.track(
 		{
@@ -448,7 +419,6 @@ test.concurrent(`${chalk.yellowBright("free-to-paid: convert to unlimited with m
 		{ timeout: 2000 },
 	);
 
-	// Step 2: Add monthly price item (converting to paid)
 	const priceItem = items.monthlyPrice();
 
 	const updateParams1 = {
@@ -459,12 +429,10 @@ test.concurrent(`${chalk.yellowBright("free-to-paid: convert to unlimited with m
 
 	const preview1 = await autumnV1.subscriptions.previewUpdate(updateParams1);
 
-	// Should charge $20 for monthly base price
 	expect(preview1.total).toEqual(20);
 
 	await autumnV1.subscriptions.update(updateParams1);
 
-	// Verify first update
 	const customer1 = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
 	expectCustomerFeatureCorrect({
@@ -481,7 +449,6 @@ test.concurrent(`${chalk.yellowBright("free-to-paid: convert to unlimited with m
 		latestTotal: 20,
 	});
 
-	// Step 3: Convert messages to unlimited
 	const unlimitedMessagesItem = items.unlimitedMessages();
 
 	const updateParams2 = {
@@ -492,22 +459,18 @@ test.concurrent(`${chalk.yellowBright("free-to-paid: convert to unlimited with m
 
 	const preview2 = await autumnV1.subscriptions.previewUpdate(updateParams2);
 
-	// No additional charge for unlimited upgrade
 	expect(preview2.total).toEqual(0);
 
 	await autumnV1.subscriptions.update(updateParams2);
 
-	// Verify final state
 	const customer2 = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Messages should now be unlimited
 	expect(customer2.features[TestFeature.Messages].unlimited).toBe(true);
 
-	// Still only 1 invoice (no additional charge for unlimited)
 	expectCustomerInvoiceCorrect({
 		customer: customer2,
 		count: 2,
-		latestTotal: 0, // unlimited
+		latestTotal: 0,
 	});
 
 	await expectSubToBeCorrect({
@@ -517,5 +480,3 @@ test.concurrent(`${chalk.yellowBright("free-to-paid: convert to unlimited with m
 		env: ctx.env,
 	});
 });
-
-// 1. Update free -> paid -> add feature

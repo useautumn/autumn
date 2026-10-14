@@ -17,8 +17,4 @@ export const handleCheckoutErrors = ({
 	handleExternalPSPErrors({
 		attachParams,
 	});
-
-	// if (attachParams.setupPayment) {
-	// 	// Make sure only usage prices are added?
-	// }
 };

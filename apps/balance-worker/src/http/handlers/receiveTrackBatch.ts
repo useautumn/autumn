@@ -27,18 +27,12 @@ import type {
 } from "../types/balanceWorkerHttp.js";
 import { workerErrorOf } from "./errorHandler/workerErrorOf.js";
 
-/**
- * Many tracks for one partition in one request, so parsing, routing and logging are
- * paid once per batch. Ownership is checked once; each command is validated and run on
- * its own, concurrently, so the writer coalesces them and one failure fails alone.
- */
 export function receiveTrackBatch({ ctx }: { ctx: BalanceWorkerHttpContext }) {
 	async function respond(context: Context<BalanceWorkerHttpEnv>) {
 		const input = await readJsonRequestBody(context);
 		const { route, commands } = parseTrackBatchRequest({ input });
 		const owner = ctx.ownership.findRuntime(route);
 		if (!owner) {
-			// Mid-handoff the successor is not named yet: answering now would send the caller back here.
 			await ctx.ownership.awaitHandoff?.({ partition: route.partition });
 			throw new PartitionRouteNotOwnedError({
 				successor: ctx.ownership.findSuccessor?.({
@@ -81,7 +75,6 @@ export function receiveTrackBatch({ ctx }: { ctx: BalanceWorkerHttpContext }) {
 
 type Runtime = BalanceWorkerRequestContext["runtime"];
 
-/** Exactly what `/v1/track` checks for one command, minus the ownership lookup the batch did once. */
 async function runTrack({
 	ctx,
 	runtime,
@@ -93,8 +86,6 @@ async function runTrack({
 	input: unknown;
 	route: { partition: number };
 }): Promise<TrackReply> {
-	// Our server builds and validates each command; re-parsing them here is pure cost, the same as on /v1/track.
-	// A command that is not even shaped like a track fails alone, as its schema failure did.
 	if (!looksLikeTrackCommand(input)) throw new HTTPException(400);
 	const command = input;
 	const partition = ctx.partitionResolver.partitionForIdentity({
@@ -125,7 +116,6 @@ export function looksLikeTrackCommand(input: unknown): input is TrackCommand {
 	);
 }
 
-/** Failures are counted by code; only one unexpected cause is kept, so a bad batch costs one stack. */
 export function recordBatch({
 	requestLog,
 	route,
@@ -136,7 +126,6 @@ export function recordBatch({
 	requestLog: BalanceWorkerRequestLog;
 	route: PartitionRoute;
 	commands: unknown[];
-	/** Only success and the failure's status and code are counted. */
 	results: (Extract<TrackBatchItemResult, { ok: false }> | { ok: true })[];
 	causes: unknown[];
 }): void {
@@ -168,7 +157,6 @@ export function recordBatch({
 	}
 }
 
-/** Commands share a partition, not necessarily a customer, so only shared fields are logged. */
 function identityOf({
 	commands,
 }: {

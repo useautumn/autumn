@@ -34,7 +34,6 @@ export const handleDeleteFeatureV2 = createRoute({
 			});
 		}
 
-		// Get prices that use this feature
 		const ent = await EntitlementService.getByFeature({
 			db,
 			internalFeatureId: feature.internal_id!,

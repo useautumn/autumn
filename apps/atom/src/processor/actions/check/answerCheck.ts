@@ -18,7 +18,6 @@ import type { SlotProcessorContext } from "../../types/slotProcessor.js";
 
 const appEnvSchema = z.enum(AppEnv);
 
-/** The engine's check command. A feature Atom has never been sent may still exist, so the API answers for it. */
 const checkToCommand = ({
 	check,
 	subject,
@@ -45,7 +44,6 @@ const checkToCommand = ({
 	};
 };
 
-/** What the API's renderer reads, built from the subject: Atom has no request context of the API's kind. */
 const toRenderContext = ({
 	ctx,
 	check,
@@ -62,7 +60,6 @@ const toRenderContext = ({
 		logger: ctx.logger,
 		expand: [],
 	};
-	// An older caller's query is brought up to the latest form first, as the API does.
 	const query = applyRequestVersionChanges({
 		input: check.query,
 		fromVersion: check.apiVersion,
@@ -73,7 +70,6 @@ const toRenderContext = ({
 	return { ...renderContext, expand: query.expand ?? [] };
 };
 
-/** The engine's own check on the subject, as the API's check response: the same decision, renderer and version changes the API uses. */
 export const answerCheck = ({
 	ctx,
 	check,

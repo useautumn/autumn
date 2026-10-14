@@ -45,7 +45,6 @@ type Echo = {
 	}[];
 };
 
-/** `expect().rejects` stalls Bun's event loop while the ack loop waits on Atomics.waitAsync, so rejections are caught by hand. */
 async function rejectionOf(promise: Promise<unknown>): Promise<unknown> {
 	try {
 		await promise;
@@ -55,7 +54,6 @@ async function rejectionOf(promise: Promise<unknown>): Promise<unknown> {
 	throw new Error("expected a rejection");
 }
 
-/** Every threaded producer offers a plain send; the type keeps it optional for transactional clients. */
 function senderOf(producer: {
 	send?: KafkaProducerClient["send"];
 }): NonNullable<KafkaProducerClient["send"]> {
@@ -440,7 +438,6 @@ describe("threaded producers", () => {
 					topic: "t",
 					messages: [{ key: "k", value: Buffer.alloc(900, 1), partition: 0 }],
 				};
-				// Enough sends to leave some waiting on the message port when the disconnect lands.
 				const racing = Array.from({ length: 12 }, () =>
 					senderOf(producer)(record).then(
 						() => "ok",

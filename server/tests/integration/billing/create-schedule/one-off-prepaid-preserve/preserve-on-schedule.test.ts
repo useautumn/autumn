@@ -1,5 +1,3 @@
-/** set_plans preserves one-off prepaid balances when a scheduled plan replaces the product holding them. */
-
 import { test } from "bun:test";
 import {
 	type ApiCustomerV3,
@@ -14,11 +12,6 @@ import { products } from "@tests/utils/fixtures/products";
 import { advanceTestClock } from "@tests/utils/stripeUtils";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
-
-// ─────────────────────────────────────────────────────────────────────────────
-// 1. createSchedule with an immediate phase that replaces the current plan
-//    preserves one-off prepaid balance.
-// ─────────────────────────────────────────────────────────────────────────────
 
 test.concurrent(
 	`${chalk.yellowBright("one-off-preserve createSchedule 1: immediate-phase replacement preserves remaining one-off balance")}`,
@@ -73,7 +66,6 @@ test.concurrent(
 
 		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-		// premium grants 500; preserved 150 lifetime carryover → 650.
 		expectCustomerFeatureCorrect({
 			customer,
 			featureId: TestFeature.Messages,
@@ -82,19 +74,6 @@ test.concurrent(
 		});
 	},
 );
-
-// ─────────────────────────────────────────────────────────────────────────────
-// 2. Webhook-driven phase advance preserves the one-off prepaid balance.
-//
-//    Unlike test 1 (immediate-phase replacement, handled at compute time by
-//    computeSetPlansPlan), this test exercises the webhook path:
-//      handleStripeSubscriptionUpdated → handleSchedulePhaseChanges →
-//      expireEndedCustomerProducts.
-//    The customer rolls from pro+one-off-prepaid into premium at the phase
-//    boundary; Stripe fires the schedule webhook which expires pro AND must
-//    persist the one-off remainder as a lifetime cusEnt before the cusProduct
-//    is gone.
-// ─────────────────────────────────────────────────────────────────────────────
 
 test.concurrent(
 	`${chalk.yellowBright("one-off-preserve createSchedule 2: webhook-driven phase advance preserves one-off prepaid balance as lifetime cusEnt")}`,
@@ -149,7 +128,6 @@ test.concurrent(
 			],
 		});
 
-		// Consume 50 of pro's one-off pack → balance 150.
 		await autumnV2_1.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
@@ -157,9 +135,6 @@ test.concurrent(
 		});
 		await new Promise((resolve) => setTimeout(resolve, 2000));
 
-		// Advance past the phase boundary — Stripe fires
-		// customer.subscription.updated, the webhook expires pro and the helper
-		// inside expireEndedCustomerProducts persists the lifetime carryover.
 		await advanceTestClock({
 			stripeCli: ctx.stripeCli,
 			testClockId: testClockId!,
@@ -175,7 +150,6 @@ test.concurrent(
 			notPresent: [pro.id],
 		});
 
-		// premium grants 500; preserved 150 lifetime carryover → 650.
 		expectCustomerFeatureCorrect({
 			customer,
 			featureId: TestFeature.Messages,

@@ -1,21 +1,3 @@
-/**
- * TDD test for create_schedule per-plan subscription_id support.
- *
- * Contract under test:
- *   New types/fields:
- *     - CreateScheduleParamsV0.phases[].plans[].subscription_id?: string
- *   New endpoints:
- *     - POST /billing.create_schedule accepts subscription_id for immediate and future phase plans
- *   New behaviors:
- *     - The provided value becomes the Autumn subscription API id in customer.subscriptions[].id
- *   Side effects:
- *     - Persist subscription_id in customer_products.external_id
- *     - Do not persist the provided subscription_id in customer_products.subscription_ids
- *
- * Pre-impl red: create_schedule schema rejects subscription_id and future phases cannot carry it into customer_products.external_id.
- * Post-impl green: immediate and scheduled customer products expose the requested API ids.
- */
-
 import { expect, test } from "bun:test";
 import {
 	type ApiCustomerV5,

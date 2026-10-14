@@ -1,13 +1,3 @@
-/**
- * Check Prepaid Balance Tests
- *
- * Verifies that the /check endpoint returns correct balance structures
- * for prepaid features:
- * - Basic prepaid: V1 and V2 response shapes, allowed/disallowed by required_balance
- * - Tiered prepaid: user-facing tiers INCLUDE included usage in boundaries
- * - Balance totals (granted, usage, remaining) are correct after attach
- */
-
 import { expect, test } from "bun:test";
 import {
 	BillingMethod,
@@ -21,11 +11,6 @@ import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
-
-// ═══════════════════════════════════════════════════════════════════
-// Tiered prepaid: included=100, graduated tiers (internal: 0-500 @ $10, 501+ @ $5)
-// User-facing tiers should INCLUDE included (100): 0-600 @ $10, 601+ @ $5
-// ═══════════════════════════════════════════════════════════════════
 
 const INCLUDED_USAGE = 100;
 const BILLING_UNITS = 100;
@@ -83,8 +68,6 @@ test.concurrent(`${chalk.yellowBright("check-prepaid: tiered balance.price tiers
 		tier_behavior: TierBehavior.Graduated,
 	});
 
-	// Internal tiers: [{to:500, amount:10}, {to:"inf", amount:5}]
-	// User-facing tiers add included (100): [{to:600, amount:10}, {to:"inf", amount:5}]
 	expect(breakdown?.price?.tiers).toEqual([
 		{ to: 600, amount: 10 },
 		{ to: "inf", amount: 5 },
@@ -134,14 +117,8 @@ test.concurrent(`${chalk.yellowBright("check-prepaid: tiered balance totals corr
 		usage: 0,
 	});
 
-	// Remaining = purchased
 	expect(res.balance?.remaining).toBe(PREPAID_QUANTITY);
 });
-
-// ═══════════════════════════════════════════════════════════════════
-// Basic prepaid: single price ($8.50/pack), included=100, quantity=500
-// Verifies V1 and V2 response shapes, and allowed/disallowed thresholds
-// ═══════════════════════════════════════════════════════════════════
 
 const BASIC_INCLUDED = 100;
 const BASIC_QUANTITY = 500;
@@ -177,7 +154,6 @@ test.concurrent(`${chalk.yellowBright("check-prepaid: basic V1/V2 response shape
 		],
 	});
 
-	// ── V2 response shape ──────────────────────────────────────────
 	const v2Res = (await autumnV2.check({
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
@@ -201,7 +177,6 @@ test.concurrent(`${chalk.yellowBright("check-prepaid: basic V1/V2 response shape
 	});
 	expect(v2Res.balance?.reset?.resets_at).toBeDefined();
 
-	// ── Allowed threshold ──────────────────────────────────────────
 	const allowedRes = (await autumnV2.check({
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
@@ -209,7 +184,6 @@ test.concurrent(`${chalk.yellowBright("check-prepaid: basic V1/V2 response shape
 	})) as unknown as CheckResponseV2;
 	expect(allowedRes.allowed).toBe(true);
 
-	// ── Disallowed threshold ───────────────────────────────────────
 	const disallowedRes = (await autumnV2.check({
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
@@ -217,7 +191,6 @@ test.concurrent(`${chalk.yellowBright("check-prepaid: basic V1/V2 response shape
 	})) as unknown as CheckResponseV2;
 	expect(disallowedRes.allowed).toBe(false);
 
-	// ── V1 response shape ──────────────────────────────────────────
 	const v1Res = (await autumnV1.check({
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,

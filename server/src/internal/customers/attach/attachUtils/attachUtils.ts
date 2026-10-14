@@ -71,9 +71,7 @@ export const isMainTrialBranch = ({
 
 	const subId = curCusProduct?.subscription_ids?.[0];
 
-	if (!subId) return true; // probably free product with trial, can just cancel and replace?
-
-	// 2. Check if sub ID is shared by any other cus products
+	if (!subId) return true;
 	const allCusProducts = attachParams.customer.customer_products;
 	const otherCusProductsOnSub = allCusProducts.filter(
 		(cp) =>

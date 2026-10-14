@@ -9,7 +9,6 @@ import {
 	inlineTrackRefusalOf,
 } from "./trackInline.js";
 
-/** One command's answer, in the batch's order: its reply, or the error `track` would have raised. */
 export type InlineTrackBatchItem =
 	| ({ ok: true } & Omit<InlineTrackOutcome, "seq">)
 	| { ok: false; cause: unknown };
@@ -22,17 +21,11 @@ export type InlineTrackBatchOutcome =
 	| {
 			kind: "decided";
 			items: InlineTrackBatchItem[];
-			/** The batch's reply is held until the commit position reaches its last write; 0 when it wrote nothing. */
 			seq: number;
-			/** Set when the writes split over appends: each written item's commit, so each command is answered by its own. */
 			commits: (Promise<void> | null)[] | null;
 	  }
 	| { kind: "refused"; reason: InlineTrackRefusal | HeldBlocker };
 
-/**
- * A track batch decided inline, whole or not at all: every command is cleared before any is decided. Its writes
- * share one held group: one append per byte budget, and when they split each command is answered by its own.
- */
 export function trackBatchInline({
 	scope,
 	commands,
@@ -68,7 +61,6 @@ function withoutSeq(item: DecidedItem): InlineTrackBatchItem {
 	return { ok: true, body: item.body, reply: item.reply };
 }
 
-/** Each written command's commit; null for a command that already failed alone. */
 function commitsOf({
 	scope,
 	commands,
@@ -103,7 +95,6 @@ function decideEach({
 				throw new Error("A cleared inline track was refused by the writer");
 			items.push({ ok: true, ...outcome });
 		} catch (cause) {
-			// A writer in recovery refuses every command; the runtime takes the partition down, as for `process`.
 			if (cause instanceof PartitionWriterRecoveryRequiredError) throw cause;
 			items.push({ ok: false, cause });
 		}

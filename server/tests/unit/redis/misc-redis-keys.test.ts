@@ -41,13 +41,6 @@ import {
 } from "@/external/redis/actions/trmnlDeviceStore/trmnlDeviceStore.js";
 import { buildStripeWebhookEventKey } from "@/external/stripe/webhookMiddlewares/stripeIdempotencyMiddleware.js";
 
-/**
- * Pins the EXACT key format (and TTL, where exported) of every misc-cache key
- * family. An accidental key change during the actions/ consolidation is an
- * invisible full cache wipe for that family — this test turns it into a red
- * build instead. Extend as inline key builders get extracted per family; keys
- * here may only change deliberately, with a migration story.
- */
 describe("misc redis key formats", () => {
 	test("secret key verification", () => {
 		expect(buildSecretKeyCacheKey("abc123hash")).toBe("secret_key:abc123hash");
@@ -148,8 +141,6 @@ describe("misc redis key formats", () => {
 		expect(CUSTOMER_INVOICES_CACHE_TTL_SECONDS).toBe(3600);
 	});
 
-	// Inline key builders — pinned here as literals until their family unit
-	// extracts an exported builder into external/redis/actions/:
 	test("families still built inline (formats documented, not yet importable)", () => {
 		const inlineFormats = {
 			autoTopupPending:

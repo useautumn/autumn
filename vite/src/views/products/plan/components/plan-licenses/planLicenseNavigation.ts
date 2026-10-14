@@ -1,4 +1,3 @@
-/** Opens the license editor on the anchored child row, with a return path to the parent version. */
 export const licenseEditorQueryParams = ({
 	parentPlanId,
 	parentVersion,

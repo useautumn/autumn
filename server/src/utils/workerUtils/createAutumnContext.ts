@@ -26,7 +26,6 @@ export const createWorkerAutumnContext = async ({
 	logger: Logger;
 	workerId: string;
 }): Promise<AutumnContext> => {
-	// 1. Get org with features
 	const data = await getOrgWithFeaturesCached({
 		db,
 		orgId,

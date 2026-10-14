@@ -36,18 +36,15 @@ await autumn
 	.then(() => console.log("granted 5000 messages/month"))
 	.catch((error: Error) => console.log(`balance grant: ${error.message}`));
 
-// Within both caps.
 await track("sk_live_1057", 25);
-await track("sk_live_1057", 15); // 1057 counter: 40/100
-await track("sk_live_1050", 250); // 1050 counter: 250/1000
-await track("sk_live_0001", 60); // uncapped key: no counter moves
+await track("sk_live_1057", 15);
+await track("sk_live_1050", 250);
+await track("sk_live_0001", 60);
+await track("sk_live_1057", 80);
 
-// Blow through 1057's cap: headroom is 60, so this clamps to 60.
-await track("sk_live_1057", 80); // 1057 counter: 100/100 (not 120)
-
-await check("sk_live_1057"); // expect allowed=false (cap exhausted)
-await check("sk_live_1050"); // expect allowed=true
-await check(); // expect allowed=true (filtered caps do not apply)
+await check("sk_live_1057");
+await check("sk_live_1050");
+await check();
 
 const customer = (await autumn.customers.get(customerId)) as {
 	billing_controls?: {

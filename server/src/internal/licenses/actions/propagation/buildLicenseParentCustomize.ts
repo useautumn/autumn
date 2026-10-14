@@ -6,8 +6,6 @@ import {
 } from "@autumn/shared";
 import { getApiPlanDiff } from "@/internal/product/actions/common/planTransformUtils.js";
 
-/** A customized link keeps its own overrides rebased onto the edited child; an
- * uncustomized one simply follows the child. */
 export const buildLicenseParentTargetCustomize = ({
 	currentChildPlan,
 	editedChildPlan,
@@ -39,9 +37,6 @@ export const buildLicenseParentTargetCustomize = ({
 			basePlan: editedChildPlan,
 			effectivePlan: targetEffectivePlan,
 		}),
-		// A migration moves customers holding the OLD definition, so its delta is
-		// measured from what they have now — not from the edited catalog plan,
-		// against which an uncustomized link diffs to nothing.
 		migrationCustomize: diffLicensePlanCustomize({
 			basePlan: currentEffectivePlan,
 			effectivePlan: targetEffectivePlan,

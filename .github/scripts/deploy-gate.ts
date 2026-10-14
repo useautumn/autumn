@@ -7,7 +7,6 @@ const IMAGE_APPS = [
 	"apps/herald",
 	"apps/balance-worker",
 ];
-// Files outside any workspace that still change the image or its install.
 const IMAGE_ROOT_FILES = [
 	/^package\.json$/,
 	/^bun\.lock$/,
@@ -17,7 +16,6 @@ const IMAGE_ROOT_FILES = [
 	/^\.dockerignore$/,
 	/^scripts\/preload-env\.ts$/,
 ];
-// Folders outside any workspace that never reach the running image.
 const NON_RUNTIME_PATHS = [
 	/^\.github\//,
 	/^\.(agents|claude|codex|conductor|context|cursor|husky|opencode|plans|superset|vscode|zed)\//,
@@ -40,7 +38,6 @@ export type BuildRun = {
 	createdAt: string;
 };
 
-// The API's branch/event/status filters return stale runs, so filter and order client-side.
 export const selectBaseSha = ({ runs }: { runs: BuildRun[] }) =>
 	runs
 		.filter(
@@ -54,7 +51,6 @@ export const selectBaseSha = ({ runs }: { runs: BuildRun[] }) =>
 
 export type CommitSummary = { sha: string; author: string; subject: string };
 
-// First-parent commits after `baseSha`, oldest first.
 export const listCommitsAfter = ({
 	root,
 	baseSha,
@@ -89,7 +85,6 @@ export const listCommitsAfter = ({
 const isPublishCommit = ({ author, subject }: CommitSummary) =>
 	author === PUBLISH_BOT_AUTHOR && PUBLISH_SUBJECT.test(subject);
 
-// Publish-bot commits are [skip ci] and never build, so their files would land in the next merge's diff.
 export const advanceBasePastPublishCommits = ({
 	commits,
 	baseSha,
@@ -112,7 +107,6 @@ const loadWorkspaceDirs = async ({
 }): Promise<string[]> =>
 	(await Bun.file(join(root, "package.json")).json()).workspaces.packages;
 
-/** Image apps plus workspaces their tsconfig `paths` alias, which Bun runs from source. */
 const loadImageWorkspaceDirs = async ({
 	root,
 	workspaceDirs,
@@ -155,7 +149,6 @@ const loadAffectedWorkspaceDirs = async ({
 			.text();
 	const items: AffectedPackage[] = JSON.parse(output.slice(output.indexOf("{")))
 		.data.affectedPackages.items;
-	// The root package.json only links the atmn CLI; it is not part of the image.
 	return items
 		.filter((item) => item.reason.__typename !== "RootInternalDepChanged")
 		.map((item) => item.path)

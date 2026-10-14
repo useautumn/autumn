@@ -1,12 +1,3 @@
-/**
- * Removing a free item from a parent plan must not touch its seat
- * assignments, even when the license plan grants the same feature.
- *
- * Seats hold rows minted from the license product, so a parent removal is
- * not theirs to lose. Three separate mechanisms keep them out of scope
- * (internal_product_id, distinct entitlement ids, customer_license_link_id
- * IS NULL); this pins the observable outcome.
- */
 import { expect, test } from "bun:test";
 import { customerEntitlements } from "@autumn/shared";
 import { runChunkedMigration } from "@tests/integration/billing/migrations-v2/utils/runChunkedMigration";
@@ -27,8 +18,6 @@ test(`${chalk.yellowBright("batch migration: a parent item delete spares the lic
 	const customerId = "batch-delete-license-isolation";
 	const idPrefix = "batch-delete-lic-iso";
 
-	// Both the parent and the seat grant messages, so an over-broad delete
-	// would take the seats' rows with the parent's.
 	const scenario = await setupLicenseUpdateScenario({
 		customerId,
 		idPrefix,
@@ -103,7 +92,6 @@ test(`${chalk.yellowBright("batch migration: a parent item delete spares the lic
 	});
 	expect(firstRun.result?.lane).toBe("batch");
 
-	// ── The parent's own row goes ──────────────────────────────────────
 	const parentRows = await pollUntil({
 		fetch: async () => {
 			const { products: customerProducts } = await getLicenseDbState({
@@ -128,7 +116,6 @@ test(`${chalk.yellowBright("batch migration: a parent item delete spares the lic
 		parentRows.filter((row) => row.featureId === TestFeature.Messages),
 	).toHaveLength(0);
 
-	// ── The seats keep theirs, and the pool is untouched ───────────────
 	const seatRowsAfterFirstRun = await readSeatMessageRows();
 	expect(seatDefinitions(seatRowsAfterFirstRun)).toEqual(seatDefinitionsBefore);
 

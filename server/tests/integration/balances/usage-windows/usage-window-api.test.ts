@@ -15,15 +15,8 @@ import chalk from "chalk";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { setCustomerUsageLimit } from "../utils/usage-limit-utils/customerUsageLimitUtils.js";
 
-// Usage-window API surface: what the HTTP contract exposes and guards around
-// windowed caps (not deduction outcomes).
-
-// initScenario only exposes clients up to V2_2; build the latest-version client
-// directly (same pattern as the v2.2-vs-v2.3 parity tests).
 const autumnV2_3 = new AutumnInt({ version: ApiVersion.V2_3 });
 
-// The usage_limits entry in the customer response exposes the current window
-// usage.
 test.concurrent(
 	`${chalk.yellowBright("usage-window-api1: usage_limits exposes the current window usage")}`,
 	async () => {
@@ -66,9 +59,6 @@ test.concurrent(
 	},
 );
 
-// usage_limits entries are strictly validated on write: limit, interval, and
-// feature_id are all required, and one_off (never-resetting) windows are not
-// supported.
 test.concurrent(
 	`${chalk.yellowBright("usage-window-api3: usage_limits entries are validated (interval required, no one_off)")}`,
 	async () => {
@@ -87,7 +77,6 @@ test.concurrent(
 			actions: [s.billing.attach({ productId: customerProduct.id })],
 		});
 
-		// Missing interval.
 		await expectAutumnError({
 			func: async () =>
 				await autumnV2_3.customers.update(customerId, {
@@ -97,7 +86,6 @@ test.concurrent(
 				}),
 		});
 
-		// one_off window.
 		await expectAutumnError({
 			func: async () =>
 				await autumnV2_3.customers.update(customerId, {
@@ -113,7 +101,6 @@ test.concurrent(
 				}),
 		});
 
-		// Missing limit.
 		await expectAutumnError({
 			func: async () =>
 				await autumnV2_3.customers.update(customerId, {
@@ -125,7 +112,6 @@ test.concurrent(
 				}),
 		});
 
-		// Duplicate feature_id entries.
 		await expectAutumnError({
 			func: async () =>
 				await autumnV2_3.customers.update(customerId, {

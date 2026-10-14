@@ -84,8 +84,6 @@ export const addToDeletePoolContributions = ({
 	pooledBalancePlan.deletePoolContributions.push(contribution);
 };
 
-/** Rollovers ride the same path as the source's balance: the pool absorbs them,
- * and the source's own rows are left behind to expire with its cusProduct. */
 export const carrySourceRolloversToPool = ({
 	pooledBalancePlan,
 	contributionCustomerEntitlement,

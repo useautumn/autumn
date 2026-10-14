@@ -1,6 +1,3 @@
-// tw:solo: withVoidFlag mutates the shared org.config, so this file can't share a worker.
-// Gating: an omitted cancel_action must not resolve to immediate or void.
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3 } from "@autumn/shared";
 import { driveProductPastDue } from "@tests/integration/billing/utils/driveProductPastDue";
@@ -31,15 +28,12 @@ test(`${chalk.yellowBright("edge: omitted cancel_action on past_due does not res
 				productId: pro.id,
 				pollWebhookEffects: true,
 			});
-			// No cancel_action: nothing to cancel, no resolution, no void. recalculate_balances
-			// is a no-op billing-relevant field so the request has something to act on.
 			await autumnV1.subscriptions.update({
 				customer_id: customerId,
 				product_id: pro.id,
 				recalculate_balances: { enabled: true },
 			});
 
-			// pro still present (not removed), open invoice still open, nothing voided.
 			const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 			expect(customer.products.some((p) => p.id === pro.id)).toBe(true);
 			const invoices = await ctx.stripeCli.invoices.list({

@@ -1,7 +1,3 @@
-// TODO: import these once implemented
-// import { prepaidPriceToLineItem } from "./lineItemBuilders/prepaidPriceToLineItem";
-// import { allocatedPriceToLineItem } from "./lineItemBuilders/allocatedPriceToLineItem";
-
 import type { BillingContext } from "@autumn/shared";
 import {
 	addCusProductToCusEnt,
@@ -26,14 +22,6 @@ import { customerLicenseToLineItems } from "./customerLicenseToLineItems";
 import { getBackdatedLineItemContext } from "./getBackdatedLineItemContext";
 import { getLineItemBillingPeriod } from "./getLineItemBillingPeriod";
 
-/**
- * Generates line items for a customer product.
- * - "charge" direction: positive amounts (for NEW product)
- * - "credit" direction: negative amounts with "Unused" prefix (for OLD product)
- *
- * NOTE: Consumable (UsageInArrear) prices are NOT included - they're always
- * positive charges for past usage and handled separately.
- */
 export const customerProductToLineItems = ({
 	ctx,
 	customerProduct,
@@ -78,8 +66,6 @@ export const customerProductToLineItems = ({
 	for (const cusPrice of filteredCustomerPrices) {
 		const price = cusPrice.price;
 
-		// Calculate billing period
-
 		const billingContextForPeriod = {
 			...billingContext,
 			billingCycleAnchorMs: anchorMs,
@@ -117,7 +103,6 @@ export const customerProductToLineItems = ({
 		});
 		if (backdatedLineItemContext) effectiveNow = backdatedLineItemContext.now;
 
-		// Build line item context
 		const context: LineItemContext = {
 			price,
 			product: customerProduct.product,

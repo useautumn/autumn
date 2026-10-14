@@ -6,8 +6,6 @@ export type LeafPanelMode = "docked" | "expanded";
 interface LeafPanelState {
 	open: boolean;
 	mode: LeafPanelMode;
-	// Draft UUID until the first message; persisted so a reload can rehydrate
-	// the last thread from the server (threadStarted gates hydration).
 	threadId: string;
 	threadStarted: boolean;
 
@@ -17,7 +15,6 @@ interface LeafPanelState {
 	setMode: (mode: LeafPanelMode) => void;
 	markThreadStarted: () => void;
 	newThread: () => void;
-	// Resume an existing server-side thread (started ⇒ hydrate on mount).
 	openThread: (threadId: string) => void;
 }
 

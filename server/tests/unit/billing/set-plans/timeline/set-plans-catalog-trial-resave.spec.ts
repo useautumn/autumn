@@ -1,5 +1,3 @@
-/** A catalog trial is not part of a plan instance's identity: re-saving rows that were never granted it changes nothing. */
-
 import { describe, expect, test } from "bun:test";
 import {
 	CusProductStatus,

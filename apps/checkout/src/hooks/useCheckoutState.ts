@@ -71,7 +71,6 @@ export function useCheckoutState({
 	checkoutId: string;
 	routeMode: CheckoutRouteMode;
 }) {
-	// === Raw state ===
 	const [confirmResult, setConfirmResult] =
 		useState<ConfirmCheckoutResponse | null>(null);
 	const [actionRequiredResponse, setActionRequiredResponse] =
@@ -81,7 +80,6 @@ export function useCheckoutState({
 		null,
 	);
 
-	// === API hooks ===
 	const { data: checkoutData, isLoading, error } = useCheckout({ checkoutId });
 	const previewMutation = usePreviewCheckout({ checkoutId });
 	const confirmMutation = useConfirmCheckout({ checkoutId });
@@ -132,7 +130,6 @@ export function useCheckoutState({
 		[appliedPromotionCode, checkoutData, quantities],
 	);
 
-	// === Debounced preview ===
 	const debouncedPreview = useDebouncedCallback(
 		(body: ConfirmCheckoutParams) => {
 			previewMutation.mutate(body);
@@ -140,7 +137,6 @@ export function useCheckoutState({
 		600,
 	);
 
-	// === Derived values ===
 	const derivedState = useMemo(() => {
 		const { action, env, preview, org, entity, status: checkoutStatus } =
 			checkoutData ?? {};
@@ -199,7 +195,6 @@ export function useCheckoutState({
 		};
 	}, [checkoutData, routeMode]);
 
-	// === Callbacks ===
 	const handleQuantityChange = useCallback(
 		(featureId: string, quantity: number, _billingUnits: number) => {
 			setQuantities((prev) => ({ ...prev, [featureId]: quantity }));
@@ -246,7 +241,6 @@ export function useCheckoutState({
 		actionRequiredResponse?.payment_url && actionRequiredResponse.required_action
 	);
 
-	// === Status flags ===
 	const status = useMemo(
 		() => ({
 			isLoading,

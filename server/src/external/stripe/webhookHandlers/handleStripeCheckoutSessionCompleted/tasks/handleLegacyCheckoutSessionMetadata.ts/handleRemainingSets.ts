@@ -41,7 +41,6 @@ export const handleRemainingSets = async ({
 		? [checkoutSession.invoice as string]
 		: [];
 
-	// Replace items with empty price if needed...
 	for (const price of attachParams.prices) {
 		if (!isUsagePrice({ price })) continue;
 

@@ -4,21 +4,12 @@ import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import type { OnboardingStepDefinition } from "./onboardingSteps";
 
-/**
- * One spring drives height and opacity together, so the panel reads as a single
- * object arriving rather than a box that opens and content that fades in after.
- * `bounce: 0` keeps it crisp — springs also retarget from their current
- * velocity, so clicking between steps quickly stays continuous instead of
- * restarting.
- */
 const PANEL_TRANSITION = {
 	type: "spring" as const,
 	bounce: 0,
 	duration: 0.4,
 };
 
-/** Opacity finishes early: content is legible for most of the travel, and on
- * the way out it clears before the box has finished closing. */
 const FADE_TRANSITION = {
 	type: "spring" as const,
 	bounce: 0,
@@ -57,7 +48,6 @@ function WaitingIndicator({ label }: { label: string }) {
 	);
 }
 
-/** One row of the steps table: a table-height header row that expands in place. */
 export function OnboardingStep({
 	step,
 	index,
@@ -73,15 +63,10 @@ export function OnboardingStep({
 	isComplete: boolean;
 	isExpanded: boolean;
 	onToggle: () => void;
-	/** Left column: what the user does here. */
 	action?: ReactNode;
-	/** Right column: what has actually landed so far. */
 	panel?: ReactNode;
-	/** Single full-width column, for steps whose action is the whole body. */
 	wide?: boolean;
 }) {
-	// Reduced motion keeps the fade — it explains what changed — but drops the
-	// height travel, which is the part that moves the page.
 	const reduceMotion = useReducedMotion();
 	const panelTransition = reduceMotion
 		? { ...FADE_TRANSITION, height: { duration: 0 } }
@@ -126,11 +111,8 @@ export function OnboardingStep({
 							transition: panelTransition,
 						}}
 						exit={{ height: 0, opacity: 0, transition: panelTransition }}
-						// clip, not hidden: hidden makes a scroll container, which steals
-						// focus rings mid-animation.
 						className="[overflow:clip]"
 					>
-						{/* Body sits flush with the title, so both gutters read the same. */}
 						<div className="px-4 pb-4">
 							<p className="mb-3 text-xs text-muted-foreground">
 								{step.description}

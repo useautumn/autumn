@@ -13,13 +13,10 @@ const subagentDirs = () => {
 };
 
 describe("agent instruction module coverage", () => {
-	// Without this module the agent runs with none of the org's standing rules.
 	test("the agent renders org instructions", () => {
 		expect(existsSync(join(agentRoot, "instructions/org.ts"))).toBe(true);
 	});
 
-	// The billing playbook reaches the agent only by being inlined here; losing
-	// this module drops it silently rather than failing loudly.
 	test("the agent inlines the billing skill", () => {
 		expect(existsSync(join(agentRoot, "instructions/billingSkill.ts"))).toBe(
 			true,

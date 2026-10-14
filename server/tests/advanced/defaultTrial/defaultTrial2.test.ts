@@ -1,4 +1,3 @@
-// Manual customer creation - not using initCustomer to control test clock properly
 import { beforeAll, describe, expect, it } from "bun:test";
 import {
 	FreeTrialDuration,
@@ -19,10 +18,6 @@ import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
 import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
-
-// 2.2:
-// -> Creating a new customer with a payment method should attach the pro product with default trial
-// --> Advancing the test clock should cancel the trial and attach the pro product
 
 const defaultTrialPro = constructProduct({
 	items: [
@@ -54,7 +49,6 @@ describe(`${chalk.yellowBright(`advanced/${testCase}: ensure trial transitions i
 	let stripeCustomerId: string;
 
 	beforeAll(async () => {
-		// Products must be initialized BEFORE customer creation for default products
 		await initProductsV0({
 			ctx,
 			products: [defaultTrialPro],
@@ -104,7 +98,6 @@ describe(`${chalk.yellowBright(`advanced/${testCase}: ensure trial transitions i
 			product: defaultTrialPro,
 		});
 
-		// Legacy status reads "trialing" until wall-clock passes trial_ends_at, so assert on Stripe instead.
 		const { data: subscriptions } = await stripeCli.subscriptions.list({
 			customer: stripeCustomerId,
 		});

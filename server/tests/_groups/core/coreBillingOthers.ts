@@ -14,13 +14,10 @@ export const coreBillingOthers: TestGroup = {
 		"billing/create-schedule/phases/create-schedule-phases-boundaries.test.ts",
 		"billing/create-schedule/phases/create-schedule-phases-transition-invoice.test.ts",
 
-		// Setup payment
 		"billing/setup-payment",
 
-		// Customers
 		"crud/customers",
 
-		// Autumn webhooks
 		"autumn-webhooks",
 	],
 };

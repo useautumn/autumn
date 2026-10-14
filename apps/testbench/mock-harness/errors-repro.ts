@@ -1,9 +1,3 @@
-/**
- * Repro loop for the Errors tab persistence bug. Drives the mock server
- * (ERRORS=1) through the user scenario: errors stream while on Overall,
- * then the Errors tab is opened — full history must be visible.
- * Usage: bun run mock-harness/errors-repro.ts <outDir> (server must be up).
- */
 import { existsSync, mkdirSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { chromium } from "playwright-core";
@@ -15,7 +9,6 @@ const resolveChromium = (): string => {
 			return path;
 		}
 	} catch {
-		// fall through to cache scan
 	}
 	const cache = join(process.env.HOME || "", "Library/Caches/ms-playwright");
 	const builds = readdirSync(cache)
@@ -67,19 +60,16 @@ const visibleFailures = () =>
 await page.goto(url, { waitUntil: "domcontentloaded" });
 await page.getByRole("tab", { name: "Overall" }).click({ timeout: 15_000 });
 
-// Phase 1: sit on Overall while ~4 errors accumulate server-side.
 await page.waitForTimeout(6500);
 await page.screenshot({
 	path: join(outDir, "1-overall-while-errors-stream.png"),
 });
 
-// Phase 2: open Errors — the full history so far must be visible.
 await page.getByRole("tab", { name: "Errors" }).click();
 await page.waitForTimeout(1500);
 const afterFirstOpen = await visibleFailures();
 await page.screenshot({ path: join(outDir, "2-errors-first-open.png") });
 
-// Phase 3: switch away, let more errors arrive, switch back — history intact.
 await page.getByRole("tab", { name: "Overall" }).click();
 await page.waitForTimeout(4000);
 await page.getByRole("tab", { name: "Errors" }).click();

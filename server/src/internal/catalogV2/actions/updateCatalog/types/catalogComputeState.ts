@@ -7,13 +7,11 @@ import type {
 import type { UpdateFeaturePlan } from "@/internal/catalogV2/actions/updateCatalog/types/updateFeaturePlan";
 import type { UpsertProductPlan } from "@/internal/catalogV2/actions/updateCatalog/types/upsertProductPlan";
 
-/** Catalog as it exists after the plan-so-far — pure, no DB. */
 export type ProjectedCatalog = {
 	features: Feature[];
 	products: FullProduct[];
 };
 
-/** Accumulated write intent while folding compute steps (no projected yet). */
 export type CatalogPlanDraft = {
 	insertFeatures: Feature[];
 	updateFeatures: UpdateFeaturePlan[];
@@ -22,13 +20,8 @@ export type CatalogPlanDraft = {
 	removePlans: RemovePlanPlan[];
 };
 
-/** One compute step's deltas — merged into the draft by createCatalogComputeState. */
 export type CatalogComputeStep = Partial<CatalogPlanDraft>;
 
-/**
- * Fold state for progressive compute. Originals are frozen setup input;
- * `plan` / `projected` advance after each step.
- */
 export type CatalogComputeState = {
 	originalFeatures: Feature[];
 	originalProducts: FullProduct[];

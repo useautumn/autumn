@@ -48,13 +48,10 @@ export const validateCouponStripeProductScope = async ({
 	const selectedInternalIds = new Set(
 		prices.map((price) => price.internal_product_id).filter(Boolean),
 	);
-	// Versions of one plan share a Stripe product, so a coupon on any version
-	// already covers the others.
 	const selectedPlanIds = new Set(
 		prices.map((price) => price.product?.id).filter(Boolean),
 	);
 
-	// A plan split moments earlier must not read back stale.
 	const plans = await ProductService.listFull({
 		db: ctx.db,
 		orgId: ctx.org.id,

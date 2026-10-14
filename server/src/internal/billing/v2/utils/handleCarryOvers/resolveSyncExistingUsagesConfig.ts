@@ -6,10 +6,6 @@ import type {
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { carryOverUsagesToExistingUsagesConfig } from "./carryOverUtils";
 
-/**
- * Carry config for a sync-replaced plan. Unlike attach, sync DEFAULTS to
- * carrying all consumable usage; a disabled rule still carries non-consumables.
- */
 export const resolveSyncExistingUsagesConfig = ({
 	ctx,
 	carryOverUsages,

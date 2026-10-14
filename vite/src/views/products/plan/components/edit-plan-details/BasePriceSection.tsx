@@ -258,7 +258,6 @@ export const BasePriceSection = ({
 							Add a base price
 						</Button>
 					))}
-				{/* The backend nulls free_trial on license products. */}
 				{!isLicenseEditor && <FreeTrialOption />}
 			</div>
 		</SheetSection>

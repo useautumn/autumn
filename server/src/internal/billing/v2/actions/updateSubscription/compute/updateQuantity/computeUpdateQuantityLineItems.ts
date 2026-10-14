@@ -50,7 +50,6 @@ export const computeUpdateQuantityLineItems = ({
 		});
 	}
 
-	// Get proration config based on price and direction (upgrade/downgrade)
 	const isUpgrade = quantityDifferenceForEntitlements > 0;
 	const { shouldApplyProration, chargeImmediately, skipLineItems } =
 		billingContextToQuantityProrationConfig({
@@ -63,7 +62,6 @@ export const computeUpdateQuantityLineItems = ({
 		return [];
 	}
 
-	// Clone entitlement with updated quantity for the charge line item
 	const newCustomerEntitlement = cloneEntitlementWithUpdatedQuantity({
 		customerEntitlement: prepaidCustomerEntitlement,
 		feature,
@@ -98,7 +96,6 @@ export const computeUpdateQuantityLineItems = ({
 		},
 	});
 
-	// A deferred quantity change defers its credit too, even off an invoiced stored charge.
 	const refundLineItems = getRefundLineItemsForPrice({
 		ctx,
 		customerProduct,

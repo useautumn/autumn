@@ -1,10 +1,3 @@
-/**
- * Seeds a standalone deletion against every reason a row should be spared, all
- * at once: a different custom definition, a paid price, accrued rollover, and
- * an identically-named feature living on a linked seat plan.
- *
- * One op, one feature removed, six different correct outcomes.
- */
 import { test } from "bun:test";
 import { ResetInterval } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features";
@@ -27,8 +20,6 @@ test(`${chalk.yellowBright("SEED: delete one item, every spare rule at once")}`,
 			],
 		],
 		licensePlan: {
-			// Deliberately the same feature as the parent: the delete must not
-			// reach across into seat rows.
 			versions: [[itemsV2.monthlyMessages({ included: 500 })]],
 			includedSeats: 2,
 		},

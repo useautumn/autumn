@@ -10,13 +10,6 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-/**
- * Update Subscription Checkout - Custom plan increase scenario
- *
- * Starts from a paid base plan, then previews an update-subscription checkout
- * that raises the base price and adds a second included feature.
- */
-
 test(`${chalk.yellowBright("update-subscription-checkout: custom plan increase base price + add feature")}`, async () => {
 	const customerId = "update-sub-checkout-custom-inc";
 

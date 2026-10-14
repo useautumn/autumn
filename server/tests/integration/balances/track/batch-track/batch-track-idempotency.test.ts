@@ -1,17 +1,3 @@
-/**
- * Batch track deduction correctness + body idempotency keys (e2e through the
- * worker).
- *
- * Contract under test:
- *   - Every item in a batch is deducted — including items sharing the same
- *     customer_id + feature_id, and even items with IDENTICAL params (per-item
- *     requestId seeds distinct queue replay keys; nothing falsely dedupes).
- *   - body.idempotency_key dedupes: two items with the same key in one batch
- *     deduct once (worker claims per item — Redis+Dynamo).
- *   - Partial match across batches: a key already used in an earlier batch is
- *     dropped; the batch's OTHER items still deduct.
- */
-
 import { test } from "bun:test";
 import type { ApiCustomerV5, TrackParams } from "@autumn/shared";
 import { expectBalanceCorrect } from "@tests/integration/utils/expectBalanceCorrect";
@@ -48,8 +34,6 @@ const batchTrack = ({
 	body: TrackParams[];
 }) => autumn.post("/balances.batch_track", body);
 
-/** Polls until the worker has drained the batch to `remaining`, then holds a
- *  grace window to catch stray extra deductions before the final assert. */
 const expectSettledBalance = async ({
 	autumn,
 	customerId,
@@ -153,7 +137,6 @@ test.concurrent(
 			],
 		});
 
-		// k deducts once (3), l deducts (2): 20 - 5 = 15.
 		await expectSettledBalance({ autumn, customerId, remaining: 15 });
 	},
 );
@@ -180,7 +163,6 @@ test.concurrent(
 		});
 		await expectSettledBalance({ autumn, customerId, remaining: 16 });
 
-		// Partial match: the replayed key is dropped, the fresh item deducts.
 		await batchTrack({
 			autumn,
 			body: [

@@ -4,11 +4,9 @@ import type { AtomContext } from "../../types/atomContext.js";
 import type { AtomRecord } from "../../types/atomRecord.js";
 import type { AtomRecordPoll } from "../types/watchAtomRecordTypes.js";
 
-/** alien or the stack's Atom did not answer; the watch waits it out rather than failing. */
 const isAtomUnavailableError = (error: unknown): boolean =>
 	error instanceof RecaseError && error.code === ErrCode.ByocUnavailable;
 
-/** Writes the deployer's latest into the record; an outage is a result to back off from, anything else throws. */
 export const pollAtomRecord = async <T extends AtomRecord>({
 	ctx,
 	record,

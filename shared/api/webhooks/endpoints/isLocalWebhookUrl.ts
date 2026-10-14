@@ -1,10 +1,10 @@
 const PRIVATE_IPV4_RANGES: [base: number, prefixBits: number][] = [
-	[0x00000000, 32], // 0.0.0.0
-	[0x7f000000, 8], // 127.0.0.0/8
-	[0x0a000000, 8], // 10.0.0.0/8
-	[0xac100000, 12], // 172.16.0.0/12
-	[0xc0a80000, 16], // 192.168.0.0/16
-	[0xa9fe0000, 16], // 169.254.0.0/16
+	[0x00000000, 32],
+	[0x7f000000, 8],
+	[0x0a000000, 8],
+	[0xac100000, 12],
+	[0xc0a80000, 16],
+	[0xa9fe0000, 16],
 ];
 
 const parseIpv4 = (host: string): number | null => {
@@ -25,9 +25,7 @@ const isPrivateIpv4 = (address: number) =>
 const isLocalIpv6 = (host: string) => {
 	if (host === "::1" || host === "::") return true;
 	if (/^fe[89ab][0-9a-f]:/.test(host)) return true;
-	// Unique-local fc00::/7, IPv6's private ranges
 	if (/^f[cd][0-9a-f]{0,2}:/.test(host)) return true;
-	// WHATWG URL rewrites ::ffff:127.0.0.1 to ::ffff:7f00:1
 	const [, high, low] =
 		host.match(/^::ffff:([0-9a-f]{1,4}):([0-9a-f]{1,4})$/) ?? [];
 	if (!high || !low) return false;

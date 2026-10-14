@@ -5,15 +5,6 @@ import { REPO_ROOT } from "./paths.ts";
 
 export type Env = "dev" | "staging" | "prod";
 
-/**
- * If `bun dw` has enabled this worktree, `server/.env.local` exists and
- * contains the worktree-specific DATABASE_URL pointing at its isolated DB.
- * Detect that file and load DATABASE_URL from it so `bun db` operations
- * affect the worktree's DB instead of the shared dev DB.
- *
- * Returns true if we loaded a worktree DATABASE_URL (caller should skip
- * the infisical wrap), false otherwise.
- */
 export function loadWorktreeEnvLocal(): boolean {
 	const envLocalPath = resolve(REPO_ROOT, "server/.env.local");
 	if (!existsSync(envLocalPath)) return false;
@@ -54,12 +45,6 @@ const ENV_FILE: Record<Env, string> = {
 	prod: ".env.prod",
 };
 
-/**
- * If not already inside an infisical-wrapped context, re-exec this process
- * wrapped in `infisical run --env=<env> --recursive --` so DATABASE_URL is
- * injected from the right secret environment. Returns true if we re-exec'd
- * (caller should exit); false if already wrapped (caller should proceed).
- */
 export async function wrapInInfisical(env: Env): Promise<boolean> {
 	if (process.env.AUTUMN_DB_WRAPPED === "1") return false;
 
@@ -73,9 +58,6 @@ export async function wrapInInfisical(env: Env): Promise<boolean> {
 		return false;
 	}
 
-	// If a worktree is active (bun dw enable wrote server/.env.local), prefer
-	// its DATABASE_URL over the infisical-injected one so `bun db` affects
-	// the worktree's isolated DB.
 	if (loadWorktreeEnvLocal()) return false;
 
 	const args = [

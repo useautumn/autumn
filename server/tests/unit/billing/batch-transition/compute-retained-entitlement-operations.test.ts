@@ -1,9 +1,3 @@
-/**
- * Contract: same-definition survivors (`retained`) only emit a replace when
- * usage is NOT carried. Carry-enabled / allocated / carry_from_previous leave
- * those rows untouched. Default reset writes `set toGranted` on the existing id.
- */
-
 import { describe, expect, test } from "bun:test";
 import {
 	AllowanceType,

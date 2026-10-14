@@ -14,7 +14,6 @@ import { publicServiceUrlsFromDashboard } from "../dw/devProxy/cloudflareConfig.
 import chalk from "chalk";
 import inquirer from "inquirer";
 
-// Repo root resolved from this file, so worktree lookups work regardless of cwd.
 const repoRoot = resolve(import.meta.dir, "../..");
 
 const readEnvVarFromFile = ({
@@ -34,10 +33,6 @@ const readEnvVarFromFile = ({
 	return undefined;
 };
 
-// `bun dw setup` writes each worktree's public API URL to server/.env.local and
-// the dw registry. Prefer those over the shared Infisical dev URL, which
-// injects as a single shared dev tunnel — otherwise every worktree's Slack app
-// would be pointed at the same URL instead of its own.
 const resolveWorktreePublicApiUrl = ({
 	includeEnvFallback = true,
 }: {
@@ -61,9 +56,7 @@ const resolveWorktreePublicApiUrl = ({
 				return publicServiceUrlsFromDashboard({ dashboard: origin }).api;
 			}
 		}
-	} catch {
-		// Malformed/absent registry — fall through to the shared env value.
-	}
+	} catch {}
 
 	return includeEnvFallback ? process.env.AUTUMN_PUBLIC_API_URL : undefined;
 };
@@ -232,8 +225,6 @@ const readOption = ({
 };
 
 const parseArgs = ({ argv }: { argv: string[] }): Args => {
-	// No positional command (or flags only) => show help. The interactive setup
-	// now lives behind the explicit `setup-bot` command.
 	const action = argv[0] && !argv[0].startsWith("--") ? argv[0] : undefined;
 	const scopes = readOption({ args: argv, name: "--scopes" });
 	const providerArg = readOption({ args: argv, name: "--provider" });
@@ -517,10 +508,7 @@ const parseSlackJson = <T>({
 	}
 };
 
-// App Manifest APIs (apps.manifest.create/update) require an *app configuration
-// token*, NOT the Slack CLI service token — the latter yields `missing_scope`.
 // Config tokens come from https://api.slack.com/apps → "Your App Configuration
-// Tokens". Generate once, set SLACK_CONFIG_REFRESH_TOKEN, and we self-rotate.
 const configTokenStorePath = join(homedir(), ".autumn-slack-config.json");
 const localSlackAppsStorePath = join(homedir(), ".autumn-slack-apps.json");
 
@@ -552,9 +540,7 @@ const writeStoredLocalSlackApps = ({
 	writeFileSync(localSlackAppsStorePath, JSON.stringify({ apps }, null, 2));
 	try {
 		chmodSync(localSlackAppsStorePath, 0o600);
-	} catch {
-		// Best-effort file permissions; not fatal where chmod is unavailable.
-	}
+	} catch {}
 };
 
 const rememberLocalSlackApp = ({
@@ -620,14 +606,9 @@ const writeStoredRefreshToken = ({
 	);
 	try {
 		chmodSync(configTokenStorePath, 0o600);
-	} catch {
-		// Best-effort file permissions; not fatal where chmod is unavailable.
-	}
+	} catch {}
 };
 
-// Exchange a (rotating) refresh token for a fresh 12h access token, persisting the
-// new refresh token so the next run keeps working. No Authorization header — the
-// refresh token itself is the credential.
 const rotateConfigToken = async ({
 	refreshToken,
 }: {
@@ -654,15 +635,10 @@ const rotateConfigToken = async ({
 };
 
 const resolveSlackConfigToken = async (): Promise<string> => {
-	// An explicit access token wins — a deliberate one-off override.
 	if (process.env.SLACK_CONFIG_ACCESS_TOKEN) {
 		return process.env.SLACK_CONFIG_ACCESS_TOKEN;
 	}
 
-	// Reliable path: rotate a refresh token into a fresh 12h access token. Static
-	// access tokens (e.g. SLACK_ACCESS_TOKEN in Infisical) expire after 12h, so
-	// rotation is preferred. Prefer the locally-persisted (already-rotated) token
-	// over the env one, which goes stale after the first rotation.
 	const refreshToken =
 		readStoredRefreshToken() ??
 		process.env.SLACK_REFRESH_TOKEN ??
@@ -671,8 +647,6 @@ const resolveSlackConfigToken = async (): Promise<string> => {
 		try {
 			return await rotateConfigToken({ refreshToken });
 		} catch (error) {
-			// Refresh token already rotated/expired elsewhere — fall back to a
-			// static access token if one is set, else surface the rotation error.
 			const fallback =
 				process.env.SLACK_ACCESS_TOKEN ?? process.env.SLACK_CONFIG_TOKEN;
 			if (fallback) return fallback;
@@ -969,9 +943,7 @@ const syncInfisicalLocalSlackSecrets = async ({
 		writeFileSync(tempFile, `${formatEnvFile({ vars })}\n`);
 		try {
 			chmodSync(tempFile, 0o600);
-		} catch {
-			// Best-effort file permissions; the temp dir is still removed below.
-		}
+		} catch {}
 
 		const result = Bun.spawnSync(
 			[
@@ -1390,12 +1362,10 @@ const isAction = (action: string | undefined): action is Action =>
 
 const main = async () => {
 	const args = parseArgs({ argv: process.argv.slice(2) });
-	// `bun slack` (no command) or `--help` => show the help page and exit cleanly.
 	if (args.help || !args.action) {
 		console.log(usage());
 		process.exit(0);
 	}
-	// A command was given but isn't one we know about => help + non-zero exit.
 	if (!isAction(args.action)) {
 		console.error(chalk.red(`Unknown command: ${args.action}\n`));
 		console.log(usage());

@@ -32,12 +32,10 @@ import {
 import { validateInvoiceCustomizeItems } from "./validateInvoiceCustomizeItems";
 
 export type InvoicePlanContext = {
-	/** Distinguishes two entries for the same plan id. */
 	planKey: string;
 	params: NonNullable<CreateInvoiceParams["plans"]>[number];
 	fullProduct: FullProduct;
 	discounts: StripeDiscountWithCoupon[];
-	/** Undefined for customer-level plans. */
 	entity?: Entity;
 };
 
@@ -121,7 +119,6 @@ export const setupCreateInvoiceContext = async ({
 	rejectInvalidInvoiceDates({ params, nowMs: Date.now() });
 	validateInvoiceCustomizeItems({ ctx, params });
 
-	// A preview must not write: no customer is created or updated for one.
 	const fullCustomer = await getOrCreateCustomer({
 		ctx,
 		customerId: params.customer_id,
@@ -134,8 +131,6 @@ export const setupCreateInvoiceContext = async ({
 		params,
 	});
 
-	// A preview reads the existing Stripe customer (for its credit balance) but
-	// never creates one.
 	const stripeCustomer = preview
 		? await getExpandedStripeCustomer({
 				ctx,

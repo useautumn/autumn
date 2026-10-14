@@ -7,7 +7,6 @@ import type { StringMatcher } from "../../../migrations/filters/matcher.js";
 import type { PlanFilter } from "../../../migrations/filters/planFilter.js";
 import type { PlanItemFilter } from "../../../migrations/filters/planItemFilter.js";
 
-/** Unset vs `false` is a real difference — unset does not constrain. */
 const booleansAreSame = (left?: boolean, right?: boolean): boolean =>
 	left === right;
 
@@ -100,7 +99,6 @@ const planItemFiltersAreSame = (
 	);
 };
 
-/** Empty `$or` matches nothing; omitted `$or` means no OR. Not the same. */
 const orBranchesAreSame = (
 	left?: PlanFilter[],
 	right?: PlanFilter[],
@@ -144,7 +142,6 @@ export const planFiltersAreSame = ({
 	return !Object.values(diffs).some(Boolean);
 };
 
-/** Equality / `$in` plan_ids only — `$ne` / `$nin` are exclusions, not targets. */
 export const collectPlanFilterPlanIds = ({
 	planFilter,
 }: {

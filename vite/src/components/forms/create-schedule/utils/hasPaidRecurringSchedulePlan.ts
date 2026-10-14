@@ -5,7 +5,6 @@ import {
 } from "@autumn/shared";
 import type { CustomerStatePhase } from "@/components/forms/customer-state/customerStateSchema";
 
-/** Whether any phase bills a recurring price, the only case an end date applies to. */
 export const hasPaidRecurringSchedulePlan = ({
 	phases,
 	products,

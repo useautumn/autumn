@@ -10,7 +10,6 @@ import { groupTargetsByCustomize } from "./groupTargetsByCustomize";
 import { targetsToPlans } from "./targetsToPlans";
 import type { MigrationTarget } from "./types";
 
-/** Pure: MigrationTarget[] → one catalog migration draft, or null. */
 export const buildMigrationDraft = ({
 	targets,
 	versionsWithCustomersByPlanId,
@@ -18,8 +17,6 @@ export const buildMigrationDraft = ({
 	targets: MigrationTarget[];
 	versionsWithCustomersByPlanId: Record<string, number[]>;
 }): CatalogMigration | null => {
-	// Upsert rows arrive latest-version-first; buckets inherit the order of
-	// their first target, so sorting up front yields (planId, version) op order.
 	const orderedTargets = sortTargetsByPlanVersion({ targets });
 	const buckets = groupTargetsByCustomize({ targets: orderedTargets });
 	if (buckets.length === 0) return null;
@@ -41,8 +38,6 @@ export const buildMigrationDraft = ({
 		}),
 	);
 
-	// Omit outer custom:false when any target includes custom — mixed guards
-	// live on the ops; custom cannot sit inside a $or branch.
 	const planFilter = buildMigrationPlanFilter({
 		targets,
 		includeCustom: targets.some((target) => target.includeCustom),

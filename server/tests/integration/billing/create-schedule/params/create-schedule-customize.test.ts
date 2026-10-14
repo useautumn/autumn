@@ -23,9 +23,6 @@ import {
 	getRequiredScheduleId,
 } from "../utils/createScheduleTestHelpers";
 
-// Contract: V2.2 schedule customize accepts PATCH-style add_items/remove_items.
-// Contract: patched items/prices apply to immediate and future cusProducts, including Stripe.
-
 test.concurrent(
 	`${chalk.yellowBright("create-schedule: preserves feature quantity options on created customer products")}`,
 	async () => {
@@ -256,15 +253,6 @@ test.concurrent(
 	},
 );
 
-/**
- * TDD regression for paid -> customized-free -> paid createSchedule phases.
- *
- * Red-failure mode: Stripe rejects the middle free phase with
- * `Missing required param: phases[1][items]`.
- *
- * Green-success criteria: createSchedule succeeds, persists the free custom
- * customer product, and the Stripe subscription schedule remains valid.
- */
 test.concurrent(
 	`${chalk.yellowBright("create-schedule: supports a customized free phase between paid phases")}`,
 	async () => {

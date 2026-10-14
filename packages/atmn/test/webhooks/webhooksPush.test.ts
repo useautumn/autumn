@@ -1,9 +1,3 @@
-/**
- * Push's waterfall: settings, catalog and webhooks preview together and render
- * as one; with --yes, settings → catalog runs as a chain while webhooks sync
- * and save their secrets alongside it. Every failing lane is reported at once.
- */
-
 import { expect, spyOn, test } from "bun:test";
 import { existsSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -18,7 +12,6 @@ import { AutumnApiError } from "../../src/generated/client";
 
 const SRC = join(import.meta.dir, "../../src/generated");
 
-/** Outside the repo, so a saved secret can never land in a real env file. */
 const projectWith = ({ body }: { body: string }): string => {
 	const dir = mkdtempSync(join(tmpdir(), "atmn-webhooks-push-"));
 	writeFileSync(
@@ -67,7 +60,6 @@ const orgInfo = ({
 		: { is_sandbox: true, created_by: "org_ab12cd34" }),
 });
 
-/** Each env key reaches its own fake client; an org mapped to an Error throws it. */
 const envsWith = ({
 	env,
 	clients,
@@ -95,7 +87,6 @@ const envsWith = ({
 		clients[secretKey] as WebhookClient,
 });
 
-/** The default sandbox's key only: the one env a plain push syncs. */
 const sandboxOnly = (client: unknown) =>
 	envsWith({
 		env: { AUTUMN_SECRET_KEY: "sk_sandbox" },
@@ -113,7 +104,6 @@ const state = (url: string) => ({
 	updatedAt: 1,
 });
 
-/** Resolves once every name in `names` has been started; rejects if one never is. */
 const barrier = ({ names }: { names: string[] }) => {
 	const started = new Set<string>();
 	let release: () => void = () => {};
@@ -221,7 +211,6 @@ test("the three previews run together and render as one preview", async () => {
 	expect(output).toContain(
 		"billing url: https://old.example.com/autumn → https://staging.example.com/autumn",
 	);
-	// A webhook with no url for this env is simply not sent, and never mentioned.
 	expect(output).not.toContain("audit");
 	expect(output).not.toContain("skipped");
 });
@@ -231,8 +220,6 @@ test("--yes: settings apply before the catalog, and webhooks sync alongside, sav
 		body: `\tfeatures: [],\n\tsettings: { multiCurrency: true },\n${WEBHOOKS}`,
 	});
 	const order: string[] = [];
-	// The catalog write waits for the webhook sync to have started: were
-	// webhooks queued behind the catalog chain, this would never release.
 	const alongside = barrier({ names: ["update", "syncWebhooks"] });
 	const client = {
 		previewUpdateOrganization: async () => ({
@@ -340,7 +327,6 @@ test("every failing preview lane is reported in one error", async () => {
 	);
 });
 
-/** A EUR price is refused until multi_currency is on, as the server does. */
 const multiCurrencyClient = ({ stillFails = false } = {}) => {
 	const order: string[] = [];
 	let multiCurrency = false;
@@ -418,7 +404,6 @@ test("multiCurrency + a EUR price: the catalog preview waits for settings instea
 	expect(
 		applied.order.filter((call) => call !== "previewUpdateOrganization"),
 	).toEqual(["previewUpdate", "updateOrganization", "previewUpdate", "update"]);
-	// The catalog was never shown before: its re-preview is printed before it applies.
 	expect(output.indexOf("Features (1)")).toBeGreaterThan(
 		output.indexOf("Applied settings."),
 	);
@@ -475,7 +460,6 @@ test("a deferred catalog that still fails after settings stops the push before w
 	expect(calls).toContain("updateOrganization");
 	expect(calls).not.toContain("syncWebhooks");
 	expect(calls).not.toContain("update");
-	// A rejected runPush is what makes the CLI exit non-zero.
 	expect(failure).toBeInstanceOf(Error);
 	expect(String((failure as Error).message)).toBe(
 		[
@@ -586,7 +570,6 @@ test("a previewed adopt that the server created instead reports the saved secret
 				},
 			],
 		}),
-		// The dashboard endpoint moved after the preview, so sync created one.
 		syncWebhooks: async () => ({
 			webhooks: [state(url)],
 			secrets: [{ id: "billing", secret: "whsec_new" }],
@@ -619,7 +602,6 @@ const catalogClean = {
 	previewUpdate: async () => ({ features: [], plans: [] }),
 };
 
-/** One env's webhooks client: `changes` is its preview, and every call is logged. */
 const envClient = ({
 	name,
 	calls,
@@ -631,7 +613,6 @@ const envClient = ({
 	calls: string[];
 	changes?: unknown[];
 	secrets?: { id: string; secret: string }[];
-	/** Runs before the sync answers: a stall or a mid-push change. */
 	beforeSync?: () => Promise<void>;
 }) => ({
 	previewSyncWebhooks: async (body: unknown) => {
@@ -929,16 +910,13 @@ test("a failed live check never reads as No changes, and survives a failing sand
 	);
 });
 
-/** qa-team already has `orders`; a push creates `orders` in qa_team. */
 const pushOrdersIntoQaTeam = ({
 	savedEnv,
 	qaTeam = {},
 	qaTeamTwo = {},
 }: {
 	savedEnv: string;
-	/** qa-team's own preview and sync; by default it has nothing to change. */
 	qaTeam?: { changes?: unknown[]; secrets?: { id: string; secret: string }[] };
-	/** qa_team's preview (a create of `orders` by default) and sync hook. */
 	qaTeamTwo?: { changes?: unknown[]; beforeSync?: () => Promise<void> };
 }) => {
 	const dir = projectWith({
@@ -1016,7 +994,6 @@ test("a secret saved under its legacy org-id name never blocks the create", asyn
 test("a sandbox whose previewed update the server created instead never overwrites another sandbox's new secret", async () => {
 	const { push, dir } = pushOrdersIntoQaTeam({
 		savedEnv: "",
-		// qa-team's `orders` was deleted after the preview, so sync creates it too.
 		qaTeam: {
 			changes: [
 				{
@@ -1084,7 +1061,6 @@ test("a secret that failed to save never blocks another sandbox saving under tha
 		},
 	);
 	try {
-		// Both syncs answer in the same turn, so the second save starts before the first fails.
 		const { push, dir } = pushOrdersIntoQaTeam({
 			savedEnv: "",
 			qaTeam: {
@@ -1106,7 +1082,6 @@ test("a previewed update the server created instead never overwrites a secret an
 	try {
 		const { push, dir } = pushOrdersIntoQaTeam({
 			savedEnv: "AUTUMN_WEBHOOK_ORDERS_QA_TEAM_SECRET=whsec_saved\n",
-			// qa-team has nothing to change; qa_team's `orders` vanished after the preview.
 			qaTeamTwo: { changes: UPDATE_ORDERS },
 		});
 		await expect(push).rejects.toThrow(
@@ -1284,7 +1259,6 @@ test("a deleted sandbox (404) is skipped with a warning, the way pull skips it",
 	expect(calls).toContain("sandbox:sync");
 });
 
-/** A fake env whose preview diffs the sent body against what it holds, as the server does. */
 const serverEnv = ({ held }: { held: ReturnType<typeof state>[] }) => {
 	const sent: unknown[] = [];
 	return {
@@ -1427,7 +1401,6 @@ test("editing a staging url pushes an update of that endpoint, never a second on
 	expect(output).not.toContain("+ ep_");
 });
 
-/** A fake env holding `held`; under skipDeletions: false every unstated one previews as a delete. */
 const deletingEnv = ({
 	name,
 	held,

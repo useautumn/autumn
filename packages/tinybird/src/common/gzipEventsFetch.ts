@@ -7,7 +7,6 @@ const urlOf = (input: URL | RequestInfo): string => {
 	return input instanceof URL ? input.href : input.url;
 };
 
-/** The SDK posts NDJSON uncompressed; this gzips Events API bodies and passes everything else through. */
 export const createGzipEventsFetch = ({
 	fetch: innerFetch,
 }: {

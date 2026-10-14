@@ -2,7 +2,6 @@ import { type AppEnv, rewards } from "@autumn/shared";
 import { and, eq } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 
-/** Delete a reward by internal_id */
 export const deleteReward = async ({
 	db,
 	internalId,

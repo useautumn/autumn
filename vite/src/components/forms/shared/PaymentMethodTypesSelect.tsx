@@ -52,7 +52,6 @@ export function PaymentMethodTypesSelect({
 				.join(", ")
 		: "Default methods";
 
-	// The prefilled value, captured once it loads (or at the first edit when nothing was prefilled).
 	const original = useRef<{ value: InvoicePaymentMethod[] | null } | null>(
 		null,
 	);
@@ -114,7 +113,6 @@ export function PaymentMethodTypesSelect({
 	);
 }
 
-/** Shows which methods Stripe offers when none are set, with a link to change them in Stripe. */
 export function DefaultMethodsCount({
 	configuration,
 }: {

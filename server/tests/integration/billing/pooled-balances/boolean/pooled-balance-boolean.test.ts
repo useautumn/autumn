@@ -1,5 +1,3 @@
-// Pooled Boolean grants form one customer flag backed by zero-valued source contributions.
-
 import { expect, test } from "bun:test";
 import {
 	type ApiCustomerV5,

@@ -4,7 +4,6 @@ import {
 	formatCreditMatch,
 } from "@autumn/shared";
 
-/** Two dimensions that could match one event with nothing to break the tie are rejected at save. */
 export const validateDimensionsAreSeparable = ({
 	dimensions,
 	invalidCreditSystem,

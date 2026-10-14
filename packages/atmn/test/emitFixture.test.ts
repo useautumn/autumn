@@ -4,11 +4,6 @@ import { join } from "node:path";
 import { COLLECTIONS } from "../src/generated/emit";
 import { emitFixture } from "../src/generated/emitRuntime";
 
-/**
- * Runs the GENERATED modules, not a copy of their logic — a test that reasoned
- * about the emitter would pass while the emitted code was wrong.
- */
-
 const SPEC = COLLECTIONS.features;
 
 const FEATURES = SPEC.keys;
@@ -24,13 +19,9 @@ test("a metered feature is emitted exactly as the surgery expects", () => {
 			archived: false,
 		},
 		includeMappings: false,
-		// `indent` is the fixture line's own indent; a fixture at column 0 puts
-		// its properties at one tab.
 		indent: "",
 	});
 
-	// `id` under `featureId`, spec key order (name first), server-only fields
-	// gone, trailing commas inside, none after the closing paren.
 	expect(text).toBe(`feature({
 	name: "Messages",
 	type: "metered",
@@ -85,7 +76,6 @@ const CASES: Case[] = [
 						{ to: "inf", creditCost: 3 },
 					],
 				},
-				// A blank id is a server artifact, not a fixture line.
 				{ meteredFeatureId: "", creditCost: 9 },
 			],
 		},
@@ -197,8 +187,6 @@ const writeConfig = ({
 	const dir = join(import.meta.dir, ".tmp", name);
 	mkdirSync(dir, { recursive: true });
 	const path = join(dir, "autumn.config.ts");
-	// The emitter's first line carries no indent; the config places it, the way
-	// appendToCollection places it against a sibling.
 	const placed = text
 		.split("\n")
 		.map((line, index) => (index === 0 ? `\t\t${line}` : line))
@@ -230,8 +218,6 @@ test("emitted fixtures round trip to the expected wire rows", async () => {
 			indent: "\t\t",
 		});
 		const path = writeConfig({ name, text });
-		// Cache-bust on the PLAIN path: a query on a file:// href is normalised
-		// away and the first config read would be served forever.
 		const module = await import(`${path}?v=${name}`);
 		const wire = module.default as {
 			features: Record<string, unknown>[];
@@ -242,8 +228,6 @@ test("emitted fixtures round trip to the expected wire rows", async () => {
 });
 
 test("the emitted spec carries every fixture key the type declares", () => {
-	// A key missing here is silently dropped from every pull; one extra here is
-	// a key the fixture type does not have.
 	expect(SPEC.keys).toContain("featureId");
 	expect(SPEC.keys).toContain("name");
 	expect(FEATURES.length).toBeGreaterThan(10);
@@ -289,7 +273,6 @@ test("plans: nested server extras do not leak into the fixture", () => {
 	expect(text).not.toContain("priceId");
 	expect(text).not.toContain("version:");
 	expect(text).not.toContain("plan:");
-	// Every row states its flag: it is the only thing telling versions apart.
 	expect(text).toContain("active: true");
 });
 

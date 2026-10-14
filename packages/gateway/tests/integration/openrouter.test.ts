@@ -1,18 +1,3 @@
-/**
- * Live integration tests: real OpenRouter calls through the withAutumn
- * wrapper, asserting provider usage semantics that the unit suite can only
- * assume:
- *
- * - both OpenAI and Anthropic models report OpenAI-style INCLUSIVE totals
- *   (prompt_tokens contains cached + cache-write tokens)
- * - our exclusive pools re-price to OpenRouter's own reported cost using
- *   upstream per-token rates — proving the pool split is billing-correct
- * - Anthropic prompt caching (cache_control) lands in cache_write_tokens /
- *   cached_tokens and our subtraction yields the right text-input count
- *
- * Requires OPENROUTER_API_KEY (skipped otherwise) and spends ~$0.05/run.
- *   bun run test:integration
- */
 import { describe, expect, test } from "bun:test";
 import { OpenRouter } from "@openrouter/sdk";
 import { withAutumn } from "../../src/openrouter/index.js";
@@ -20,8 +5,6 @@ import type { TrackTokensParams } from "../../src/shared/track.js";
 
 const API_KEY = process.env.OPENROUTER_API_KEY;
 
-// $ per million tokens, upstream (no markup) — used to re-derive
-// OpenRouter's reported cost from our exclusive pools.
 const RATES: Record<
 	string,
 	{ input: number; output: number; cacheRead?: number; cacheWrite?: number }
@@ -97,7 +80,6 @@ describe.skipIf(!API_KEY)("live OpenRouter usage semantics", () => {
 			const pools = capture.calls[0] as TrackTokensParams;
 			const usage = result.usage;
 
-			// Conservation: exclusive pools re-sum to the inclusive totals
 			expect(
 				pools.inputTokens +
 					pools.cacheReadTokens +
@@ -108,7 +90,6 @@ describe.skipIf(!API_KEY)("live OpenRouter usage semantics", () => {
 				usage?.completionTokens ?? -1,
 			);
 
-			// Pricing: pools × upstream rates ≈ OpenRouter's own upstream cost
 			const upstream = usage?.costDetails?.upstreamInferenceCost;
 			if (upstream) {
 				const derived = priceOf(pools, model);
@@ -119,9 +100,6 @@ describe.skipIf(!API_KEY)("live OpenRouter usage semantics", () => {
 
 	test("anthropic cache_control: write then read, totals stay inclusive", async () => {
 		const model = "anthropic/claude-3.5-haiku";
-		// ~13k-token prefix, above the model's minimum cacheable size. The
-		// nonce makes it unique per run so the first call always writes cache
-		// instead of hitting a still-warm entry from a previous run.
 		const prefix = `Run ${crypto.randomUUID()}. ${Array.from(
 			{ length: 400 },
 			(_, i) =>
@@ -160,14 +138,9 @@ describe.skipIf(!API_KEY)("live OpenRouter usage semantics", () => {
 		expect(wrote).toBeGreaterThan(1_000);
 		expect(read).toBeGreaterThan(1_000);
 
-		// Inclusive totals: after subtracting the cache pools, the remaining
-		// text input is tiny (just the user turn + wrappers), NOT the prefix
-		// again. If OpenRouter ever switched Anthropic to exclusive totals,
-		// inputTokens here would jump by the full prefix size.
 		expect(first.pools.inputTokens).toBeLessThan(100);
 		expect(second.pools.inputTokens).toBeLessThan(100);
 
-		// And the split re-prices to OpenRouter's reported upstream cost
 		for (const { pools, result } of [first, second]) {
 			const upstream = result.usage?.costDetails?.upstreamInferenceCost;
 			if (upstream) {

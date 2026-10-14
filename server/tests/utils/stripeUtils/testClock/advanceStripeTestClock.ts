@@ -70,7 +70,6 @@ export const advanceStripeTestClock = async ({
 			if (remainingMinimumMs > 0) await wait.sleep(remainingMinimumMs);
 			if (settleMs > 0) await wait.sleep(settleMs);
 		} catch (cause) {
-			// An interrupted write may still finish at Stripe; don't advance this clock again.
 			queue.failedAdvance = { cause };
 			throw cause;
 		}

@@ -23,7 +23,6 @@ import { invalidateProductsCache } from "@/external/redis/actions/productsCache/
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 
-/** Containment matcher for a catalog plan item — assert only fields passed. */
 export type ExpectedPlanItem = {
 	feature_id: string;
 	included?: number;
@@ -59,7 +58,6 @@ export type ExpectedPlanItem = {
 		expiry_duration_type?: RolloverExpiryDurationType;
 		expiry_duration_length?: number;
 	};
-	/** Deep equality; pass null to assert absent. */
 	feature_override?: ApiFeatureOverride | null;
 	entity_feature_id?: string;
 };
@@ -73,23 +71,15 @@ type ExpectedPlan = {
 	isAddOn?: boolean;
 	isDefault?: boolean;
 	archived?: boolean;
-	/** Feature ids present on entitlements (order-insensitive). */
 	featureIds?: string[];
-	/** Included allowance per feature_id. */
 	allowances?: Record<string, number>;
-	/** Granular item shape matchers (containment, keyed by feature_id). */
 	items?: ExpectedPlanItem[];
-	/** Base (fixed) price amount + interval. */
 	basePrice?: {
 		amount: number;
 		interval: BillingInterval;
 		interval_count?: number;
 		additional_currencies?: Array<{ currency: string; amount: number }>;
 	} | null;
-	/**
-	 * Exact free-trial shape. Non-null: assert duration_length / duration_type /
-	 * card_required / on_end (both sides `?? null`). Null: assert absent.
-	 */
 	freeTrial?: {
 		duration_length: number;
 		duration_type: FreeTrialDuration;
@@ -99,7 +89,6 @@ type ExpectedPlan = {
 	metadata?: Record<string, unknown>;
 	config?: { ignore_past_due?: boolean };
 	billingControls?: CustomerBillingControls;
-	/** Deep equality — asserts absent columns too (cross-contamination checks). */
 	billingControlsExact?: CustomerBillingControls;
 };
 
@@ -359,10 +348,6 @@ const expectCatalogPlanMatches = ({
 	}
 };
 
-/**
- * API-first plan shape asserts via catalogV2.get (latest versions only).
- * Optional fields are asserted only when passed.
- */
 export const expectCatalogPlansCorrect = async ({
 	autumn,
 	expected,
@@ -382,7 +367,6 @@ export const expectCatalogPlansCorrect = async ({
 	}
 };
 
-/** DB-level asserts — for what the API can't see (historical rows, internals). */
 export const expectDbPlansCorrect = async ({
 	ctx,
 	expected,
@@ -468,7 +452,6 @@ export const expectDbPlansCorrect = async ({
 	}
 };
 
-/** Assert the exact set of version numbers that exist for a plan id. */
 export const expectPlanVersionsCorrect = async ({
 	ctx,
 	planId,
@@ -507,7 +490,6 @@ export const expectDbPlansAbsent = async ({
 	}
 };
 
-/** Idempotent — no-ops when the plan is already gone. */
 export const deleteDbPlans = async ({
 	ctx,
 	planIds,

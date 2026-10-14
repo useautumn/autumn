@@ -18,7 +18,6 @@ export function TableContentVirtualized({
 }: {
 	children: React.ReactNode;
 	className?: string;
-	/** Sits on the tray below the scroll area, so it never scrolls away. */
 	footer?: React.ReactNode;
 }) {
 	const context = useTableContext();
@@ -35,7 +34,6 @@ export function TableContentVirtualized({
 	const showsSkeleton = (isLoading || isTransitioning) && !rows.length;
 	const showMobileCards = useShowMobileCards();
 
-	// State, not a ref, so the virtualizer re-renders once the container mounts.
 	const [scrollContainer, setScrollContainer] = useState<HTMLDivElement | null>(
 		null,
 	);
@@ -43,7 +41,6 @@ export function TableContentVirtualized({
 	const rowHeight = virtualization?.rowHeight ?? 40;
 	const contentHeight = rows.length * rowHeight;
 
-	// Small tables stay as short as their content; taller ones get a usable floor.
 	const MIN_TABLE_HEIGHT = 400;
 	const containerHeight = virtualization?.containerHeight;
 	const containerHeightPx =
@@ -59,13 +56,11 @@ export function TableContentVirtualized({
 				? MIN_TABLE_HEIGHT
 				: undefined;
 
-	// Declared column widths are the floor before horizontal scrolling kicks in.
 	const visibleColumns = table.getVisibleLeafColumns();
 	const totalWidth = useMemo(() => {
 		return visibleColumns.reduce((sum, col) => sum + col.getSize(), 0);
 	}, [visibleColumns]);
 
-	// Remounts the body whenever the visible column set changes.
 	const visibleColumnKey = visibleColumns.map((col) => col.id).join(",");
 
 	const contextWithRef = {
@@ -125,13 +120,10 @@ export function TableContentVirtualized({
 						willChange: "scroll-position",
 					}}
 				>
-					{/* One table with a sticky thead: separate header/body tables size their
-					    columns independently. Fixed layout pins them to the header row. */}
 					<Table
 						className="p-0 w-full h-auto"
 						style={{ minWidth: `${totalWidth}px` }}
 					>
-						{/* Mirrors the bottom edge below: rows only round off at the true first row. */}
 						<TableHeader
 							className={cn(
 								rows.length > 0 &&
@@ -145,8 +137,6 @@ export function TableContentVirtualized({
 						)}
 					</Table>
 					{rows.length > 0 && (
-						// Rows only round off at the true last row, so this pins that edge to the viewport.
-						// Its sticky range ends where the table wrapper does, hence the wrapper's h-auto.
 						<div
 							aria-hidden
 							className="pointer-events-none sticky bottom-0 z-10 -mt-2 h-2 overflow-hidden"

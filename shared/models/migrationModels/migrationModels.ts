@@ -2,10 +2,8 @@ import { z } from "zod/v4";
 import { AppEnv } from "../genModels/genEnums.js";
 
 export enum MigrationJobStep {
-	// Pending = "pending",
 	Queued = "queued",
 	Received = "received",
-	// InsertCustomers = "insert_customers",
 	GetCustomers = "get_customers",
 	MigrateCustomers = "migrate_customers",
 	Finished = "finished",
@@ -21,17 +19,14 @@ export const MigrationJobSchema = z.object({
 	from_internal_product_id: z.string(),
 	to_internal_product_id: z.string(),
 
-	// from_csv_id: z.string().nullish(),
 	step_details: z.record(z.string(), z.any()),
 
-	// Other details
 	org_id: z.string(),
 	env: z.nativeEnum(AppEnv),
 });
 
 export type MigrationJob = z.infer<typeof MigrationJobSchema>;
 
-// MIGRATION CUSTOMER
 export enum MigrationCustomerStatus {
 	Pending = "pending",
 	Finished = "finished",

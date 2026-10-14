@@ -11,7 +11,6 @@ export type LiveSubscriptionFields = Partial<
 	>
 >;
 
-/** Moves the live subscription aside to be cancelled and recreated; only its own schedule goes with it. */
 export const replaceStripeSubscription = ({
 	stripeSubscription,
 	stripeSubscriptionSchedule,

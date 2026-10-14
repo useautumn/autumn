@@ -1,8 +1,3 @@
-/**
- * Allocated volume seats bill only seats over the 3 included, at the net tier they land in (0-5 @ $10,
- * 6+ @ $6 + $2 flat). Stripe prices the subscription item: quantity is seats over included, on net tiers.
- */
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3, UsagePriceConfig } from "@autumn/shared";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
@@ -108,10 +103,6 @@ const createSeats = async ({
 	);
 };
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 1: 0 seats, then up to the included amount → seats cost $0
-// ═══════════════════════════════════════════════════════════════════════════════
-
 test.concurrent(
 	`${chalk.yellowBright("allocated-volume 1: 0 seats and at included cost $0, Stripe price is volume on net tiers with no free tier")}`,
 	async () => {
@@ -161,10 +152,6 @@ test.concurrent(
 	},
 );
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 2: included + 1, then crossing into the next band
-// ═══════════════════════════════════════════════════════════════════════════════
-
 test.concurrent(
 	`${chalk.yellowBright("allocated-volume 2: included + 1 charges only the seat over, crossing a net band re-prices the overage plus its fee; preview = invoice")}`,
 	async () => {
@@ -174,7 +161,6 @@ test.concurrent(
 		const { autumnV1, ctx, pro, testClockId, advancedTo } =
 			await setupVolumeSeats({ customerId, seats: startSeats });
 
-		// 1 seat over included lands in net band 1: 1 × $10 = $10
 		const preview = await autumnV1.billing.previewAttach({
 			customer_id: customerId,
 			product_id: pro.id,
@@ -194,7 +180,6 @@ test.concurrent(
 		});
 		await expectStripeSubscriptionCorrect({ ctx, customerId });
 
-		// 6 seats over included land in net band 2: 6 × $6 + $2 = $38, so the increase bills $38 − $10
 		await createSeats({
 			autumn: autumnV1,
 			customerId,

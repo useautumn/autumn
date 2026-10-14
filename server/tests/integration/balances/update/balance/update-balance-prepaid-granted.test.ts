@@ -6,23 +6,10 @@ import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 
-// ═══════════════════════════════════════════════════════════════════
-// Regression: BalanceEditSheet granted_balance computation with prepaid
-//
-// When a customer has a prepaid component AND usage > 0, the frontend
-// "set" mode must compute granted_balance correctly by subtracting the
-// actual prepaid allowance — not a value derived from form defaults.
-//
-// The buggy formula: prepaid = defaultGPB - defaultBalance (= usage)
-// The correct value: prepaid = purchased_balance (actual prepaid qty)
-// ═══════════════════════════════════════════════════════════════════
-
 test.concurrent(`${chalk.yellowBright("update-prepaid-granted1: granted_balance correct with prepaid + usage")}`, async () => {
-	// Free product: 100 included messages (granted_balance = 100)
 	const freeMessages = items.monthlyMessages({ includedUsage: 100 });
 	const freeProd = products.base({ id: "free", items: [freeMessages] });
 
-	// Prepaid add-on: billingUnits=1, quantity=200 → 200 purchased
 	const prepaidMessages = items.prepaidMessages({
 		includedUsage: 0,
 		price: 1,
@@ -54,10 +41,8 @@ test.concurrent(`${chalk.yellowBright("update-prepaid-granted1: granted_balance 
 		],
 	});
 
-	// Wait for Stripe webhooks to process
 	await new Promise((resolve) => setTimeout(resolve, 3000));
 
-	// Verify initial: granted=100, purchased=200, current=300, usage=0
 	const initial = await autumnV2.customers.get<ApiCustomer>(customerId);
 	expect(initial.balances[TestFeature.Messages]).toMatchObject({
 		granted_balance: 100,
@@ -66,7 +51,6 @@ test.concurrent(`${chalk.yellowBright("update-prepaid-granted1: granted_balance 
 		usage: 0,
 	});
 
-	// Track 30 usage → current drops to 270
 	await autumnV2.track({
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
@@ -82,9 +66,7 @@ test.concurrent(`${chalk.yellowBright("update-prepaid-granted1: granted_balance 
 		usage: 30,
 	});
 
-	// ── Simulate BalanceEditSheet "set" mode submission ──
-	// User increases GPB from 300 → 320 (wants +20 on granted)
-	const prepaidAllowance = bal.purchased_balance; // 200
+	const prepaidAllowance = bal.purchased_balance;
 	const newGPB = 320;
 
 	const grantedBalanceInput = computeGrantedBalanceInput({
@@ -92,7 +74,6 @@ test.concurrent(`${chalk.yellowBright("update-prepaid-granted1: granted_balance 
 		prepaidAllowance,
 	});
 
-	// Call the balance update API as the frontend would
 	await autumnV2.balances.update({
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
@@ -100,13 +81,9 @@ test.concurrent(`${chalk.yellowBright("update-prepaid-granted1: granted_balance 
 		included_grant: grantedBalanceInput,
 	});
 
-	// Expected: granted_balance = 120 (100 original + 20 increase)
-	// Buggy:  grantedBalanceInput = 320 - (300 - 270) = 290 → FAILS
-	// Fixed:  grantedBalanceInput = 320 - 200 = 120         → PASSES
 	const afterUpdate = await autumnV2.customers.get<ApiCustomer>(customerId);
 	expect(afterUpdate.balances[TestFeature.Messages].granted_balance).toBe(120);
 
-	// Verify DB sync
 	const afterUpdateDb = await autumnV2.customers.get<ApiCustomer>(customerId, {
 		skip_cache: "true",
 	});

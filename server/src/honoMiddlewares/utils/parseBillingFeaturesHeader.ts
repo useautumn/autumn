@@ -1,4 +1,3 @@
-/** `x-billing-features: atoms=true,foo=false` → `{ atoms: true, foo: false }`; absent → undefined. */
 export const parseBillingFeaturesHeader = (
 	header: string | undefined,
 ): Partial<Record<string, boolean>> | undefined => {

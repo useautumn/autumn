@@ -1,6 +1,5 @@
 import type { FullProduct } from "@autumn/shared";
 
-/** Plan-license clones spread the child at compute time; child init replaces processor on the live row only. */
 export const hydratePlanLicenseProcessor = ({
 	product,
 	catalogByInternalId,

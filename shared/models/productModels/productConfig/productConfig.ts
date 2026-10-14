@@ -7,7 +7,6 @@ const IGNORE_PAST_DUE_DESCRIPTION =
 const ANCHOR_TO_MONTH_START_DESCRIPTION =
 	"Anchor billing and reset cycles to the 1st of the month (UTC).";
 
-/** Patch inputs omit defaults so changing one flag preserves the others. */
 export const ProductConfigParamsSchema = z.object({
 	ignore_past_due: withSpecDefault({
 		schema: z.boolean().optional(),

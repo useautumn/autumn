@@ -1,11 +1,3 @@
-/**
- * A backdate over a live subscription moves everything on it, unchanged:
- * - an add-on, a prepaid quantity and metered usage carry over; the prepaid quantity isn't
- *   charged again (the new subscription's first invoice is $0) and the usage is billed once,
- *   at the old renewal date;
- * - entity plans sharing the subscription all move onto the recreated one, none billed twice.
- */
-
 import { expect, test } from "bun:test";
 import { ms, type SetPlansParamsV0Input } from "@autumn/shared";
 import { advanceToAnchor } from "@tests/integration/billing/utils/advanceUtils/advanceToAnchor";

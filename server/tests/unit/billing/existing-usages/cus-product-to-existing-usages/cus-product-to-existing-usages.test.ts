@@ -11,7 +11,6 @@ describe(chalk.yellowBright("cusProductToExistingUsages"), () => {
 		test("aggregates usage across lifetime and monthly cusEnts", () => {
 			const internalFeatureId = "internal_feature_a";
 
-			// Lifetime cusEnt: allowance 100, balance 80 -> usage = 20
 			const lifetimeCusEnt = customerEntitlements.create({
 				internalFeatureId,
 				featureId: "feature_a",
@@ -21,7 +20,6 @@ describe(chalk.yellowBright("cusProductToExistingUsages"), () => {
 				interval: EntInterval.Lifetime,
 			});
 
-			// Monthly cusEnt: allowance 50, balance 30 -> usage = 20
 			const monthlyCusEnt = customerEntitlements.create({
 				internalFeatureId,
 				featureId: "feature_a",
@@ -36,13 +34,11 @@ describe(chalk.yellowBright("cusProductToExistingUsages"), () => {
 				customerEntitlements: [lifetimeCusEnt, monthlyCusEnt],
 			});
 
-			// Act
 			const existingUsages = cusProductToExistingUsages({
 				cusProduct,
 				carryAllConsumableFeatures: true,
 			});
 
-			// Assert: Total usage should be 40 (20 + 20)
 			expect(existingUsages[internalFeatureId]).toBeDefined();
 			expect(existingUsages[internalFeatureId].usage).toBe(40);
 			expect(existingUsages[internalFeatureId].entityUsages).toEqual({});
@@ -53,7 +49,6 @@ describe(chalk.yellowBright("cusProductToExistingUsages"), () => {
 		test("reflects both top-level usage and entity usages", () => {
 			const internalFeatureId = "internal_feature_a";
 
-			// Top-level cusEnt: allowance 100, balance 70 -> usage = 30
 			const topLevelCusEnt = customerEntitlements.create({
 				internalFeatureId,
 				featureId: "feature_a",
@@ -62,13 +57,12 @@ describe(chalk.yellowBright("cusProductToExistingUsages"), () => {
 				balance: 70,
 			});
 
-			// Entity-scoped cusEnt with entities
 			const entityScopedCusEnt = customerEntitlements.create({
 				internalFeatureId,
 				featureId: "feature_a",
 				featureName: "Feature A",
 				allowance: 50,
-				balance: 0, // Top-level balance not used for entity-scoped
+				balance: 0,
 				entityFeatureId: "entity_feature_id",
 				entities: {
 					entity1: { id: "entity1", balance: 40, adjustment: 0 },
@@ -80,17 +74,13 @@ describe(chalk.yellowBright("cusProductToExistingUsages"), () => {
 				customerEntitlements: [topLevelCusEnt, entityScopedCusEnt],
 			});
 
-			// Act
 			const existingUsages = cusProductToExistingUsages({
 				cusProduct,
 				carryAllConsumableFeatures: true,
 			});
 
-			// Assert
 			expect(existingUsages[internalFeatureId]).toBeDefined();
-			// Top-level usage: 30
 			expect(existingUsages[internalFeatureId].usage).toBe(30);
-			// Entity usages reflect current balances (not usage)
 			expect(existingUsages[internalFeatureId].entityUsages).toEqual({
 				entity1: 10,
 				entity2: 25,
@@ -102,32 +92,19 @@ describe(chalk.yellowBright("cusProductToExistingUsages"), () => {
 		test("usage calculation excludes rollover balance", () => {
 			const internalFeatureId = "internal_feature_a";
 
-			// CusEnt: allowance 100, balance 120 (includes 50 from rollover)
-			// Expected usage = allowance - (balance - rollover) = 100 - (120 - 50) = 100 - 70 = 30
-			// But since we calculate: usage = grantedBalance - currentBalance
-			// And grantedBalance doesn't include rollovers by default
-			// usage = 100 - 120 = -20 (which would be wrong if we just did it this way)
-			//
-			// Actually, the current balance is 120 (which includes rollover usage),
-			// so if allowance is 100 and balance is 120, it means user got +20 from somewhere
-			// In this test, we're checking that the rollover doesn't inflate the "starting" balance
-			//
-			// Let's set up: allowance 100, current balance 80, rollover balance 30 (unused)
-			// The usage should be: 100 - 80 = 20 (rollover's 30 is NOT counted in starting balance)
 			const cusEntWithRollover = customerEntitlements.create({
 				internalFeatureId,
 				featureId: "feature_a",
 				featureName: "Feature A",
 				allowance: 100,
-				balance: 80, // Current balance
+				balance: 80,
 			});
 
-			// Add rollover to the cusEnt
 			cusEntWithRollover.rollovers = [
 				rollovers.create({
 					cusEntId: cusEntWithRollover.id,
-					balance: 30, // Rollover balance (should not be counted in usage calculation)
-					expiresAt: Date.now() + 60 * 24 * 60 * 60 * 1000, // 60 days
+					balance: 30,
+					expiresAt: Date.now() + 60 * 24 * 60 * 60 * 1000,
 				}),
 			];
 
@@ -135,14 +112,11 @@ describe(chalk.yellowBright("cusProductToExistingUsages"), () => {
 				customerEntitlements: [cusEntWithRollover],
 			});
 
-			// Act
 			const existingUsages = cusProductToExistingUsages({
 				cusProduct,
 				carryAllConsumableFeatures: true,
 			});
 
-			// Assert: Usage should be 20 (allowance 100 - balance 80)
-			// NOT 50 (allowance 100 + rollover 30 - balance 80)
 			expect(existingUsages[internalFeatureId]).toBeDefined();
 			expect(existingUsages[internalFeatureId].usage).toBe(20);
 		});

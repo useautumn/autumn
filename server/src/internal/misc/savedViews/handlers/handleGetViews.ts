@@ -5,9 +5,6 @@ import {
 } from "@/external/redis/actions/savedViewsStore/savedViewsStore.js";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 
-/**
- * Get all saved views for the organization
- */
 export const handleGetViews = createRoute({
 	scopes: [Scopes.Public],
 	handler: async (c) => {
@@ -29,7 +26,6 @@ export const handleGetViews = createRoute({
 			}
 		}
 
-		// Sort by creation date (newest first)
 		views.sort(
 			(a, b) =>
 				new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),

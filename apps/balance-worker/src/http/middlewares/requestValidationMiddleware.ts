@@ -3,7 +3,6 @@ import type { Context, Next } from "hono";
 import { HTTPException } from "hono/http-exception";
 import type { BalanceWorkerHttpEnv } from "../types/balanceWorkerHttp.js";
 
-/** The request body as JSON; anything else is a 400 before routing. */
 export async function readJsonRequestBody(
 	context: Context<BalanceWorkerHttpEnv>,
 ): Promise<unknown> {

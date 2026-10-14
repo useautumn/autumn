@@ -1,6 +1,5 @@
 import type { Env } from "../types";
 
-/** Deletes the env's Neon branch; a branch Neon already expired counts as deleted. */
 export async function deleteNeonBranch({
 	env,
 	branchId,

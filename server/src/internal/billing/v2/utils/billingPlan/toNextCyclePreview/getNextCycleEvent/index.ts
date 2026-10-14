@@ -15,7 +15,6 @@ import type { NextCycleEvent } from "./types";
 export { getActiveCustomerProductsAt } from "./activeCustomerProducts";
 export type { NextCycleEvent, SmallestInterval } from "./types";
 
-/** Finds the next chronological event that should generate an invoice preview. */
 export const getNextCycleEvent = ({
 	billingContext,
 	customerProducts,
@@ -39,9 +38,6 @@ export const getNextCycleEvent = ({
 		return { kind: "none" };
 	}
 
-	// Floor on the trial end only. Flooring on the anchor breaks live
-	// subscriptions whose anchor sits in the future (a monthly metered item on an
-	// annual plan), pushing the boundary out to the annual renewal.
 	const renewalBoundaryMs = getCycleEnd({
 		anchor: anchorMs,
 		interval: smallestInterval.interval,

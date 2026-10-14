@@ -55,7 +55,6 @@ export const triggerFreeProduct = async ({
 		env,
 	});
 
-	// BUG FIX: moved null check before first use (was unreachable at line 74 in original)
 	if (!fullProduct) {
 		throw new ProductNotFoundError({ productId });
 	}

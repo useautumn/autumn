@@ -59,7 +59,6 @@ const emptyEnvelope: SubjectRowsEnvelope = {
 	entity: null,
 };
 
-/** Applies `mutate` against the held state and commits synchronously, the way the real writer does minus Kafka. */
 const createFakeWriter = ({ initial }: { initial: SubjectState | null }) => {
 	let state = initial;
 	let eviction: Promise<void> | null = null;
@@ -98,7 +97,6 @@ const createFakeWriter = ({ initial }: { initial: SubjectState | null }) => {
 		readFreshestState: () => state,
 		adopt: ({ state: adopted }: { state: SubjectState }) => adopted,
 		waitForEvicted: () => eviction,
-		/** An evict whose dropped writes the store does not hold yet, until the returned release runs. */
 		evictUnstored: () => {
 			const stored = Promise.withResolvers<void>();
 			eviction = stored.promise;
@@ -110,13 +108,11 @@ const createFakeWriter = ({ initial }: { initial: SubjectState | null }) => {
 	};
 };
 
-/** Each read of the source waits for its own release, so a test can land an evict inside a chosen read. */
 const createScope = ({
 	initial,
 	rows,
 }: {
 	initial: SubjectState | null;
-	/** One envelope for every read, or one per read in order. */
 	rows: SubjectRowsEnvelope | null | (SubjectRowsEnvelope | null)[];
 }) => {
 	const writer = createFakeWriter({ initial });
@@ -178,7 +174,6 @@ const freshEnvelope: SubjectRowsEnvelope = {
 	customer: {
 		...emptyEnvelope.customer,
 		usage_limits: [],
-		// Alerts ride on the customer row: a load that dropped them would fire none downstream.
 		usage_alerts: [
 			{
 				feature_id: "messages",
@@ -190,7 +185,6 @@ const freshEnvelope: SubjectRowsEnvelope = {
 		],
 	},
 };
-/** Lets the load run up to its next await on the source. */
 const settle = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
 
 describe("ensure subject state", () => {
@@ -234,7 +228,6 @@ describe("ensure subject state", () => {
 		});
 
 		const loading = ensureSubjectState({ scope, identity });
-		// The write behind this evict landed after the first read began, so what that read holds cannot be trusted.
 		scope.state.inFlightLoads.overtakeCustomer({ customerKey });
 		releaseRead(0);
 		await settle();
@@ -305,7 +298,6 @@ describe("ensure subject state", () => {
 			rows: emptyEnvelope,
 		});
 		const loading = ensureSubjectState({ scope, identity });
-		// A customer id that extends this one must not match it.
 		scope.state.inFlightLoads.overtakeCustomer({
 			customerKey: `${customerKey}:x`,
 		});

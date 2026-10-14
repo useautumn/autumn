@@ -1,9 +1,5 @@
 import { InsufficientBalanceError, type TrackParams } from "@autumn/shared";
 
-/**
- * Handles errors from Postgres deduction.
- * Converts PostgreSQL INSUFFICIENT_BALANCE exception to InsufficientBalanceError.
- */
 export const handlePostgresTrackError = ({
 	error,
 	body,
@@ -11,8 +7,6 @@ export const handlePostgresTrackError = ({
 	error: Error;
 	body: TrackParams;
 }): never => {
-	// Check if it's an insufficient balance error from PostgreSQL
-	// Format: INSUFFICIENT_BALANCE|featureId:{id}|value:{amount}|remaining:{remaining}
 	if (error.message?.includes("INSUFFICIENT_BALANCE")) {
 		const parts = error.message.split("|");
 		const featureIdMatch = parts[1]?.match(/featureId:(.*)/);
@@ -30,6 +24,5 @@ export const handlePostgresTrackError = ({
 		});
 	}
 
-	// Rethrow all other errors
 	throw error;
 };

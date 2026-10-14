@@ -1,5 +1,3 @@
-/** Repro: dashboard count for plan+custom:false+recurring:true+price exists.
- *   bun tests/perf/batch-migrations/probes/probeScopedFilterCount.ts */
 import type { CustomerFilter } from "@autumn/shared";
 import { sql } from "drizzle-orm";
 import { buildCustomerCount } from "@/internal/migrations/v2/filters/customers/buildCustomerSelect.js";

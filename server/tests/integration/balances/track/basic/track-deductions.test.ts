@@ -22,11 +22,6 @@ const findDeductionByFeature = (
 ): TrackDeduction | undefined =>
 	deductions?.find((deduction) => deduction.feature_id === featureId);
 
-// ═══════════════════════════════════════════════════════════════════
-// A: Track within a feature's own allowance — only the main balance
-//    is touched. Linked credit systems serve as overflow only and
-//    stay untouched while allowance remains.
-// ═══════════════════════════════════════════════════════════════════
 test.concurrent(
 	`${chalk.yellowBright("track-deductions-A: within-allowance track surfaces a single deduction against the main balance")}`,
 	async () => {
@@ -74,10 +69,6 @@ test.concurrent(
 	},
 );
 
-// ═══════════════════════════════════════════════════════════════════
-// B: event_name fans out to two features; each within its own
-//    allowance → two deductions, no credit-system deductions.
-// ═══════════════════════════════════════════════════════════════════
 test.concurrent(
 	`${chalk.yellowBright("track-deductions-B: event_name across two features surfaces a deduction per touched balance")}`,
 	async () => {
@@ -135,9 +126,6 @@ test.concurrent(
 	},
 );
 
-// ═══════════════════════════════════════════════════════════════════
-// C: Single-feature track, no credit system.
-// ═══════════════════════════════════════════════════════════════════
 test.concurrent(
 	`${chalk.yellowBright("track-deductions-C: feature with no credit systems surfaces a single deduction")}`,
 	async () => {
@@ -172,10 +160,6 @@ test.concurrent(
 	},
 );
 
-// ═══════════════════════════════════════════════════════════════════
-// D: A negative-value track emits a deduction with a negative value
-//    (refund / restore).
-// ═══════════════════════════════════════════════════════════════════
 test.concurrent(
 	`${chalk.yellowBright("track-deductions-D: negative track value yields a negative-value deduction")}`,
 	async () => {
@@ -213,10 +197,6 @@ test.concurrent(
 	},
 );
 
-// ═══════════════════════════════════════════════════════════════════
-// E: A linked credit-system feature exists in the org but the customer
-//    has no entitlement to it — no deduction emitted for that feature.
-// ═══════════════════════════════════════════════════════════════════
 test.concurrent(
 	`${chalk.yellowBright("track-deductions-E: missing entitlement on credit system is omitted from deductions")}`,
 	async () => {
@@ -254,12 +234,6 @@ test.concurrent(
 	},
 );
 
-// ═══════════════════════════════════════════════════════════════════
-// F: Overflow into a linked credit system. This is the load-bearing
-//    scenario for the feature — a single track event depletes BOTH
-//    the main balance AND the credit-system balance, and the response
-//    surfaces both via `deductions`.
-// ═══════════════════════════════════════════════════════════════════
 test.concurrent(
 	`${chalk.yellowBright("track-deductions-F: track that overflows the main balance surfaces credit-system deductions too")}`,
 	async () => {
@@ -297,8 +271,6 @@ test.concurrent(
 		expect(customerBefore.features[TestFeature.Action1].balance).toBe(100);
 		expect(customerBefore.features[TestFeature.Credits].balance).toBe(200);
 
-		// Drain Action1 down to 0 with a first track so the next event
-		// has to spill into Credits.
 		await autumnV2_2.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Action1,
@@ -321,9 +293,6 @@ test.concurrent(
 		expect(trackRes.deductions).toBeDefined();
 		expect(trackRes.deductions).toHaveLength(1);
 
-		// Action1 is empty before the overflow event, so the whole 50
-		// flows through the credit system and `deductions` has exactly
-		// the Credits row.
 		const creditsDeduction = findDeductionByFeature(
 			trackRes.deductions,
 			TestFeature.Credits,
@@ -338,11 +307,6 @@ test.concurrent(
 	},
 );
 
-// ═══════════════════════════════════════════════════════════════════
-// G: End-to-end Tinybird round-trip. Track an event, wait for the
-//    batch flush + Tinybird ingest, then read it back via events.list
-//    and confirm the `deductions` field round-trips through the column.
-// ═══════════════════════════════════════════════════════════════════
 test.concurrent(
 	`${chalk.yellowBright("track-deductions-G: deductions round-trip via events.list (writes Tinybird, reads it back)")}`,
 	async () => {
@@ -355,8 +319,6 @@ test.concurrent(
 			items: [messagesItem],
 		});
 
-		// Run-unique id: the shared Tinybird workspace retains events from
-		// prior runs, so a fixed id could match stale rows in events.list.
 		const { customerId, autumnV1, autumnV2_2 } = await initScenario({
 			customerId: `track-deductions-g-${crypto.randomUUID().slice(0, 8)}`,
 			setup: [
@@ -398,12 +360,7 @@ test.concurrent(
 		const deduction = trackedEvent?.deductions?.[0];
 		expect(deduction?.feature_id).toBe(TestFeature.Messages);
 		expect(deduction?.value).toBe(12);
-		// plan_id traces back to the customer entitlement's product. The test
-		// framework namespaces product IDs per-customer (e.g. `free_<customerId>`),
-		// so we assert the prefix rather than a bare "free" string.
 		expect(deduction?.plan_id).toBe(`free_${customerId}`);
-		// `reset` carries the entitlement interval. items.free() ships month-based
-		// entitlements, so the round-tripped reset should reflect that.
 		expect(deduction?.reset).not.toBeNull();
 		expect(deduction?.reset?.interval).toBe(ResetInterval.Month);
 	},

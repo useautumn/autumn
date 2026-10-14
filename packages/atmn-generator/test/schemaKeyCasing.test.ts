@@ -1,14 +1,3 @@
-/**
- * Fixtures are camelCase because they are TypeScript; the wire is snake_case
- * because it is the API. The whole risk in that mapping is telling OUR keys
- * apart from the USER'S — recase `filter.properties.api_key_id` and you have
- * silently changed which events a usage limit counts.
- *
- * The rule is read off the JSON Schema, never a maintained list: `properties`
- * means the schema named the keys; `additionalProperties` alone means any key
- * is allowed, so the keys are data.
- */
-
 import { describe, expect, test } from "bun:test";
 import {
 	fixtureToWire,
@@ -19,7 +8,6 @@ import {
 	wireToFixture,
 } from "../src/casing/schemaKeyCasing";
 
-/** Shaped like the real spec: fixed keys, a record, and a record of objects. */
 const PLAN_SCHEMA: JsonSchema = {
 	type: "object",
 	properties: {
@@ -33,7 +21,6 @@ const PLAN_SCHEMA: JsonSchema = {
 				filter: {
 					type: "object",
 					properties: {
-						// z.record(string, string) — the user's event properties
 						properties: {
 							type: "object",
 							additionalProperties: { type: "string" },
@@ -45,7 +32,6 @@ const PLAN_SCHEMA: JsonSchema = {
 		metadata: { type: "object", additionalProperties: { type: "string" } },
 		model_markups: {
 			type: "object",
-			// a record whose VALUES are our objects
 			additionalProperties: {
 				type: "object",
 				properties: {
@@ -133,8 +119,6 @@ describe("wire -> fixture", () => {
 	});
 
 	test("the user's event properties are untouched", () => {
-		// The bug this whole file exists for: recasing these changes which
-		// events the limit counts.
 		expect(fixture.usageLimits.filter.properties).toEqual({
 			api_key_id: "ak_1",
 			ai_model_slug: "gpt-4",
@@ -176,8 +160,6 @@ describe("round trip", () => {
 	});
 
 	test("a camelCase-looking user key is not mangled on the way back", () => {
-		// toSnakeCase would turn `camelLooking_key` into `camel_looking_key`.
-		// It survives only because the schema says metadata's keys are data.
 		const fixture = { metadata: { camelLooking_key: "x" } };
 		expect(fixtureToWire({ value: fixture, schema: PLAN_SCHEMA })).toEqual({
 			metadata: { camelLooking_key: "x" },
@@ -187,8 +169,6 @@ describe("round trip", () => {
 
 describe("unknown shapes", () => {
 	test("a key the schema does not describe is still recased", () => {
-		// Better to recase consistently than to leak a snake_case key into a
-		// camelCase fixture because the spec lagged.
 		expect(
 			wireToFixture({ value: { brand_new_field: 1 }, schema: PLAN_SCHEMA }),
 		).toEqual({ brandNewField: 1 });

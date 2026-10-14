@@ -31,7 +31,6 @@ const declaredParentIsClaimed = ({
 	);
 };
 
-/** Final composed link deltas when this parent declared `licenses[]`. */
 export const declaredLicenseDraftUpserts = ({
 	parent,
 	upsertProductPlans,

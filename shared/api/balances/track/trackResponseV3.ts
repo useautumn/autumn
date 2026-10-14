@@ -26,10 +26,6 @@ export const TrackDeductionSchema = z.object({
 
 export type TrackDeduction = z.infer<typeof TrackDeductionSchema>;
 
-/**
- * Track response V3 - uses ApiBalanceV1 (V2.1 format)
- * This is the server's internal response format
- */
 export const TrackResponseV3Schema = z.object({
 	customer_id: z.string().meta({
 		description: "The ID of the customer whose usage was tracked.",

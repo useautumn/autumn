@@ -23,7 +23,6 @@ const isEmptyEdit = (diff: DiffedCustomizePlanV1) =>
 	diff.upsert_licenses === undefined &&
 	diff.remove_licenses === undefined;
 
-/** Latest current→next content only. License overlays rebase per sibling. */
 const contentEditFromLatest = ({
 	upsert,
 }: {
@@ -41,7 +40,6 @@ const contentEditFromLatest = ({
 	return contentEdit;
 };
 
-/** Replay the latest license write onto this sibling's own overlays. */
 const licenseEditForSibling = ({
 	upsert,
 	sibling,
@@ -84,10 +82,6 @@ const mergeEdits = ({
 	return editDiff;
 };
 
-/**
- * Drop absolute content so siblings apply editDiff onto their own row.
- * Slug and default flag are row identity — a sibling keeps what it already has.
- */
 const siblingPlanParams = ({
 	planParams,
 	version,
@@ -109,10 +103,6 @@ const siblingPlanParams = ({
 	return { ...rest, version };
 };
 
-/**
- * Version edge: a folded direct intent extends to every other existing version
- * of the same plan — `all_versions` content, and/or `unlink` on the pointer.
- */
 export const deriveVersionSiblingIntents = ({
 	intent,
 	upsert,
@@ -122,10 +112,7 @@ export const deriveVersionSiblingIntents = ({
 	upsert: UpsertProductPlan;
 	projectedProductStatesContext: ProductStatesContext;
 }): ProductUpsertIntent[] => {
-	// A sync already carries the mapping to one row; re-deriving would loop.
 	if (intent.source === "processor_sync") return [];
-	// Mapping fan-out rides any lane: a variant reached by propagation still
-	// owes the id to its own versions. Every other edge stays direct-only.
 	const declaredProcessors = intent.planParams.processors;
 	if (intent.source !== "direct" && declaredProcessors === undefined) return [];
 	const inheritAllVersions = intent.planParams.versioning === "all_versions";
@@ -137,7 +124,6 @@ export const deriveVersionSiblingIntents = ({
 		upsert.row.currentFullProduct?.base_internal_product_id;
 	const nextPointer = upsert.row.nextFullProduct.base_internal_product_id;
 
-	// First link of a standalone plan claims every version (mirror of unlink).
 	const firstLink =
 		nextPointer != null &&
 		currentPointer == null &&
@@ -146,9 +132,6 @@ export const deriveVersionSiblingIntents = ({
 				product.version === intent.productKey.version ||
 				product.base_internal_product_id == null,
 		);
-	// Every version of a plan bills under one Stripe product, so a stated mapping
-	// replaces whatever each sibling held — declared, not diffed, since siblings
-	// can lag the addressed row.
 	if (
 		!inheritAllVersions &&
 		!upsert.unlink &&

@@ -1,9 +1,3 @@
-/**
- * Runtime contract for credit dimensions: the most specific matching dimension
- * sets the rate (else the row's), every matching multiplier scales it, and the
- * result is an ordinary flat or graduated item the existing cost math consumes.
- */
-
 import { describe, expect, test } from "bun:test";
 import {
 	type CreditSchemaItem,

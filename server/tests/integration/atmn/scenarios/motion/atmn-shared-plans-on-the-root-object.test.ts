@@ -1,11 +1,3 @@
-/**
- * atmn scenarios/motion — `atmn({ ...shared, plans })` on the root object → resolver either follows it or errors naming it; never silently appends nowhere
- *
- * code in motion: the config's shape is the user's; pull edits the AST, never rewrites a file
- *
- * One line of plans/atmn-v3/07_tests.md. [a, b] is a matrix looped INSIDE this file.
- */
-
 import { expect, test } from "bun:test";
 import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 import {
@@ -66,10 +58,6 @@ export const shared = {
 				],
 			});
 
-			// Decision pending: either the resolver follows `...shared` into
-			// shared.ts and appends there, or it refuses and names `shared` in
-			// the error. Both are acceptable; silently pulling with no file
-			// change and no error is the one outcome to guard against.
 			let thrown: unknown;
 			try {
 				await scenario.pull();

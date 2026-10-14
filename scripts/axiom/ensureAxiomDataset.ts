@@ -8,9 +8,7 @@ const AXIOM_BASE = "https://api.axiom.co/v2";
 type AxiomDatasetSpec = {
 	name: string;
 	description: string;
-	/** Open-ended nested objects kept in one column each, so their keys never count toward the field limit. */
 	mapFields: string[];
-	/** Query-time columns: names to query by, computed from where the data actually lands. */
 	virtualFields?: AxiomVirtualField[];
 };
 
@@ -121,7 +119,6 @@ const getVirtualFields = async ({
 	const text = await res.text();
 	if (!res.ok)
 		throw new Error(`Failed to list virtual fields: ${res.status} ${text}`);
-	// Virtual fields are listed org-wide by id: keep only this dataset's, so another dataset's is never updated.
 	const existing = (JSON.parse(text) as ExistingVirtualField[]).filter(
 		(field) => field.dataset === spec.name,
 	);

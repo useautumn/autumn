@@ -1,12 +1,3 @@
-/**
- * Changes to a subscription that is already anchored to the 1st.
- *
- * Contract:
- *   quantity update         → Stripe anchor stays on the 1st; resets stay on the 1st
- *   premium → pro downgrade → scheduled to start on the 1st
- *   pro → premium upgrade   → premium prorated over the full month, pro stub credited
- */
-
 import { expect, test } from "bun:test";
 import type {
 	ApiCustomerV5,

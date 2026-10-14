@@ -13,7 +13,6 @@ import { findFullProductByInternalId } from "@/internal/catalogV2/actions/update
 import { fullProductForSlug } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/fullProductForSlug";
 import { projectedLicensePlanId } from "../licensePlanUtils";
 
-/** The link's actual current overlay vs. its base version — undefined when stock. */
 const currentLinkCustomize = (currentPlanLicense: FullPlanLicense) =>
 	currentPlanLicense.customized && currentPlanLicense.base_product
 		? fullProductsToLicenseCustomize({
@@ -59,7 +58,6 @@ const declaredLinkChanged = ({
 	return false;
 };
 
-/** Stated slug = that row. Omitted keeps the existing child id; new links use active. */
 const anchorFullProductForDeclared = ({
 	params,
 	currentPlanLicense,
@@ -92,7 +90,6 @@ const anchorFullProductForDeclared = ({
 	});
 };
 
-/** Declared licenses[] vs current links → per-link write ops. */
 export const resolveDeclaredPlanLicenses = ({
 	declared,
 	currentLicenses,
@@ -129,7 +126,6 @@ export const resolveDeclaredPlanLicenses = ({
 				? "update"
 				: "none";
 
-		// Preserve keeps the current customized content; overlay compute overrides.
 		const effectiveLicenseProduct =
 			params.customize === undefined && currentPlanLicense?.customized
 				? currentPlanLicense.product

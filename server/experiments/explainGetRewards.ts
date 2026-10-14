@@ -10,9 +10,6 @@ const { rewardRepo, rewardProgramRepo } = await import(
 	"../src/internal/rewards/repos/index"
 );
 
-// Run with:
-//   REWARDS_ORG_ID=org_2x3YWDWucn3OSul12pIV6XrcXyo bun run experiments/explainGetRewards.ts
-
 const main = async () => {
 	const orgId = process.env.REWARDS_ORG_ID || prodTestOrgId;
 	const env = AppEnv.Live;
@@ -42,9 +39,6 @@ const main = async () => {
 	const elapsedPrograms = performance.now() - startPrograms;
 	console.log(`rewardProgramRepo.list alone: ${elapsedPrograms.toFixed(2)}ms (${programsAlone.length} rows)\n`);
 
-	// Capture the actual SQL Drizzle generates for rewardRepo.list by wiring up
-	// a separate drizzle client with a logger. This lets us EXPLAIN ANALYZE the
-	// real query — not a hand-rolled approximation.
 	const capturedQueries: { query: string; params: unknown[] }[] = [];
 	const pool = new pg.Pool({
 		connectionString: process.env.DATABASE_URL,
@@ -69,7 +63,6 @@ const main = async () => {
 		const explainQuery = sql.raw(
 			`EXPLAIN (ANALYZE, BUFFERS, FORMAT TEXT) ${rewardSql.query}`,
 		);
-		// Bind the same params Drizzle bound.
 		const plan = await pool.query(
 			`EXPLAIN (ANALYZE, BUFFERS, FORMAT TEXT) ${rewardSql.query}`,
 			rewardSql.params as unknown[],
@@ -86,7 +79,6 @@ const main = async () => {
 			const { mkdirSync } = await import("node:fs");
 			mkdirSync(outDir, { recursive: true });
 		} catch {
-			// ignore
 		}
 		const planPath = resolve(outDir, "rewards-explain.txt");
 		writeFileSync(planPath, planLines.join("\n"));

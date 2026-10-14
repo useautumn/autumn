@@ -1,7 +1,6 @@
 import type { MeteringIdentity } from "@autumn/balance-engine";
 import type { SubjectScope } from "../../types/subject.js";
 
-/** A row the statement answered that will not parse is nobody's to use; the customer's next flush rewrites it. */
 export const warnSnapshotUnreadable = ({
 	scope,
 	identity,

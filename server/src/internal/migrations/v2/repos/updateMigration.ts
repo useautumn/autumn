@@ -6,12 +6,6 @@ import {
 import { and, eq } from "drizzle-orm";
 import type { RepoContext } from "@/db/repoContext.js";
 
-/**
- * Patch a migration. Drizzle's `set()` only updates keys present in the
- * passed object, so callers pass only the fields they want changed.
- * Scoped to the current org + env. Returns the persisted row, or null
- * if not found.
- */
 export const updateMigration = async ({
 	ctx,
 	id,
@@ -38,7 +32,6 @@ export const updateMigration = async ({
 		eq(migrations.env, ctx.env),
 	];
 
-	// Only restrict to non-archived rows when we're NOT toggling the archive flag
 	if (updates.archived === undefined) {
 		where.push(eq(migrations.archived, false));
 	}

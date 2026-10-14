@@ -46,8 +46,6 @@ export const getOrCreateCachedFullSubject = async ({
 	let fetchedSubjectViewEpoch = 0;
 
 	if (customerId && useRedis) {
-		// Pipeline inside getCachedFullSubject already fetches the epoch,
-		// so we reuse it on miss instead of a second round trip.
 		const cachedResult = await getCachedFullSubject({
 			ctx,
 			customerId,
@@ -65,12 +63,6 @@ export const getOrCreateCachedFullSubject = async ({
 	}
 
 	if (!fullSubject && customerId) {
-		// Probe customer with entity fallback: if the customer exists but the
-		// requested entity doesn't, return a customer-scoped subject so the
-		// downstream autoCreateEntity branch handles the missing entity
-		// (either creating it when entity_data.feature_id is set, or throwing
-		// the descriptive error). This prevents falling through to
-		// createWithDefaults on an already-existing customer.
 		normalizedResult = await getFullSubjectNormalized({
 			ctx,
 			customerId,
@@ -127,7 +119,6 @@ export const getOrCreateCachedFullSubject = async ({
 			fullSubject.internalEntityId = newEntity.internal_id;
 			fullSubject.subjectType = SubjectType.Entity;
 			setCache = true;
-			// The first read predates the seat and per-entity grants autoCreateEntity just wrote.
 			normalizedResult = await getFullSubjectNormalized({
 				ctx,
 				customerId: fullSubject.customer.id || fullSubject.customer.internal_id,
@@ -154,7 +145,6 @@ export const getOrCreateCachedFullSubject = async ({
 		}
 
 		if (normalizedResult) {
-			// Replica-sourced hydrations must never fill Redis — serve them as-is.
 			if (!isReplicaSourced(normalizedResult.normalized)) {
 				await setCachedFullSubject({
 					ctx,

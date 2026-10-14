@@ -1,11 +1,5 @@
 import { LATEST_VERSION } from "@autumn/shared";
 
-/**
- * Applies Speakeasy-specific settings to the OpenAPI document.
- * - Adds bearer token security scheme (`secretKey`)
- * - Sets global security requirement
- * - Configures global `x-api-version` header parameter (hidden in generated SDK)
- */
 export function applySpeakeasySettings({
 	openApiDocument,
 	version = LATEST_VERSION,
@@ -13,7 +7,6 @@ export function applySpeakeasySettings({
 	openApiDocument: Record<string, unknown>;
 	version?: string;
 }): void {
-	// Ensure components object exists
 	if (
 		!openApiDocument.components ||
 		typeof openApiDocument.components !== "object"
@@ -23,7 +16,6 @@ export function applySpeakeasySettings({
 
 	const components = openApiDocument.components as Record<string, unknown>;
 
-	// Ensure securitySchemes object exists
 	if (
 		!components.securitySchemes ||
 		typeof components.securitySchemes !== "object"
@@ -31,17 +23,14 @@ export function applySpeakeasySettings({
 		components.securitySchemes = {};
 	}
 
-	// Add bearer token security scheme
 	(components.securitySchemes as Record<string, unknown>).secretKey = {
 		type: "http",
 		scheme: "bearer",
 		bearerFormat: "JWT",
 	};
 
-	// Set global security requirement
 	openApiDocument.security = [{ secretKey: [] }];
 
-	// Configure Speakeasy global parameters
 	openApiDocument["x-speakeasy-globals"] = {
 		parameters: [
 			{

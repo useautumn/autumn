@@ -1,26 +1,3 @@
-/**
- * TDD test: when a customer has both an unlimited and a limited cusEnt for the
- * same feature, a track event currently short-circuits in
- * executePostgresDeductionV2 / executeRedisDeductionV2 (`unlimitedFeatureIds.length > 0`)
- * with zero mutation logs. resolveInternalProductIdForEvent then returns null,
- * so the persisted event has `internal_product_id = null` and an empty
- * `deductions` array — exactly the "No plan" bucket we see in Mintlify's
- * analytics for Anthropic.
- *
- * Red-failure mode (current behavior):
- *  - event.internal_product_id IS NULL
- *  - event.deductions IS NULL (or empty)
- *  - track response `deductions` is empty/undefined
- *
- * Green-success criteria (after fix):
- *  - event.internal_product_id === unlimited plan's internal_id
- *  - event.deductions contains a synthetic entry pointing at the unlimited
- *    cusEnt with the track call's value (echoed entity_id when present)
- *  - track response `deductions` contains the same synthetic entry
- *  - the limited cusEnt's balance is NOT mutated (we only attribute, never
- *    actually deduct on the unlimited path)
- */
-
 import { expect, test } from "bun:test";
 import {
 	type ApiCustomerV5,
@@ -51,14 +28,11 @@ test(
 	async () => {
 		const customerId = `unlimited-cusent-attribution-${Date.now()}`;
 
-		// Base plan: limited messages (100/month).
 		const baseProd = products.base({
 			id: "base-limited",
 			items: [items.monthlyMessages({ includedUsage: 100 })],
 		});
 
-		// Add-on plan: unlimited messages. Anthropic's analogue is enterprise v1
-		// with allowance_type=unlimited stacked alongside enterprise v2.
 		const unlimitedAddon = products.base({
 			id: "unlimited-addon",
 			items: [items.unlimitedMessages()],
@@ -80,12 +54,8 @@ test(
 		const orgId = ctx.org.id;
 
 		try {
-			// Force V3 path (executeRedisDeductionV2 → resolveInternalProductIdForEvent).
 			await setOrgRolloutPercent({ orgId, percent: 100 });
 
-			// initProductsV0 mutates each product's `id` in-place to suffix it
-			// with productPrefix (defaults to customerId), so `unlimitedAddon.id`
-			// is already the final stored id.
 			const unlimitedPlanId = unlimitedAddon.id;
 			const unlimitedProductRow = await db
 				.select({ internal_id: productsTable.internal_id })
@@ -102,8 +72,6 @@ test(
 				unlimitedProductRow[0]?.internal_id ?? null;
 			expect(expectedUnlimitedInternalId).not.toBeNull();
 
-			// Track usage. Anthropic's calls are AI_CREDITS with value 1..N; we
-			// use value=7 here so the synthetic deduction is unambiguous.
 			const TRACK_VALUE = 7;
 			const trackResponse = (await autumnV2_2.track({
 				customer_id: customerId,
@@ -111,9 +79,6 @@ test(
 				value: TRACK_VALUE,
 			})) as TrackResponseV3;
 
-			// ---- Synchronous track response assertions ----------------------
-			// After the fix, the synthetic mutation log flows through
-			// projectMutationLogsToTrackDeductionsV2 → response.deductions.
 			expect(trackResponse.deductions).toBeDefined();
 			expect(trackResponse.deductions ?? []).toHaveLength(1);
 			const responseDeduction = (trackResponse.deductions ?? [])[0];
@@ -121,8 +86,6 @@ test(
 			expect(responseDeduction?.plan_id).toBe(unlimitedPlanId);
 			expect(responseDeduction?.value).toBe(TRACK_VALUE);
 
-			// ---- Persisted event assertions ---------------------------------
-			// Wait for the event batch flush (globalEventBatchingManager).
 			await timeout(TINYBIRD_INGEST_WAIT_MS);
 
 			const customer = (await autumnV2_2.customers.get(customerId, {
@@ -154,14 +117,10 @@ test(
 			expect(eventRows.length).toBeGreaterThan(0);
 			const latestEvent = eventRows[0];
 
-			// The fix: the event is attributed to the unlimited plan.
 			expect(latestEvent.internal_product_id).toBe(
 				expectedUnlimitedInternalId,
 			);
 
-			// The deductions array on the persisted event mirrors the synthetic
-			// mutation log: one entry with the unlimited plan's id and the
-			// tracked value.
 			expect(latestEvent.deductions).not.toBeNull();
 			expect(latestEvent.deductions ?? []).toHaveLength(1);
 			const persistedDeduction = (latestEvent.deductions ?? [])[0];
@@ -169,16 +128,8 @@ test(
 			expect(persistedDeduction?.plan_id).toBe(unlimitedPlanId);
 			expect(persistedDeduction?.value).toBe(TRACK_VALUE);
 
-			// The track call had no entity_id, so the synthetic mutation log
-			// should echo null and the persisted event row should have entity_id
-			// = null. (See "Echo the track calls entity ID" requirement.)
 			expect(latestEvent.entity_id).toBeNull();
 
-			// ---- Non-mutation invariant -------------------------------------
-			// The synthetic mutation log is in-memory only; no cusEnt row should
-			// be touched. Query both cusEnt balances directly: the limited
-			// one stays at 100 (its starting allowance), and the unlimited one
-			// stays at whatever it started at.
 			const cusEntRows = await db
 				.select({
 					id: customerEntitlements.id,

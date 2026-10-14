@@ -5,7 +5,6 @@ import {
 	type Reward,
 } from "@autumn/shared";
 
-/** Maps a discount-category reward row to the V0 coupon shape (plan-id maps supplied by caller). */
 export const getApiCoupon = ({
 	reward,
 	planIdByInternalProductId,
@@ -47,7 +46,6 @@ export const getApiCoupon = ({
 	return {
 		id: reward.id,
 		name: reward.name,
-		// caller (listApiRewards) only passes discount-category rewards
 		type: reward.type as ApiCouponV0["type"],
 		value: discountConfig?.discount_value ?? 0,
 		duration: {

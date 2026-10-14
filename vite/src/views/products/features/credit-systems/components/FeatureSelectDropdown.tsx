@@ -23,7 +23,6 @@ export function FeatureSelectDropdown({
 	onValueChange: (featureId: string) => void;
 	availableFeatures: Feature[];
 	allFeatures: Feature[];
-	/** Opens on mount so a row added by the user is ready to pick from. */
 	defaultOpen?: boolean;
 }) {
 	const [open, setOpen] = useState(defaultOpen);
@@ -48,7 +47,6 @@ export function FeatureSelectDropdown({
 			onOpenChange={(isOpen) => {
 				setOpen(isOpen);
 				if (!isOpen) {
-					// Delay reset so the dropdown closes first without flashing the feature list
 					setTimeout(() => setShowCreateForm(false), 150);
 				}
 			}}

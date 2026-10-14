@@ -45,7 +45,6 @@ import {
 } from "./usageLimitFilterConditions";
 import { useCustomerPropertyKeys } from "./useCustomerPropertyKeys";
 
-// Interval is required (no inherit) and one_off intervals are not supported.
 const INTERVAL_OPTIONS: Record<string, string> = {
 	[ResetInterval.Day]: "Day",
 	[ResetInterval.Week]: "Week",
@@ -53,7 +52,6 @@ const INTERVAL_OPTIONS: Record<string, string> = {
 	[ResetInterval.Year]: "Year",
 };
 
-/** Build the usage_limits entry for an interval-based hard cap. */
 export const buildUsageLimitItem = ({
 	featureId,
 	enabled,

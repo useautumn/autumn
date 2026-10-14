@@ -1,5 +1,3 @@
-/** set_plans treats a terminal Stripe subscription as gone and bills afresh, never reusing a canceled one whether or not its webhook was processed. */
-
 import { expect, test } from "bun:test";
 import { findActiveCustomerProductById, ms } from "@autumn/shared";
 import { expectPreviewWarning } from "@tests/integration/billing/set-plans/utils/subscriptionStateUtils";
@@ -38,7 +36,6 @@ const getActiveProduct = async ({
 	return { customerProduct, stripeCustomerId: fullCustomer.processor?.id };
 };
 
-/** Autumn's row points at the expired subscription, as when its bookkeeping never ran. */
 const linkProductToExpiredSubscription = async ({
 	ctx,
 	customerId,
@@ -119,7 +116,6 @@ test.concurrent(
 	},
 );
 
-/** Cancels the subscription while Autumn's rows are unlinked, so they keep stale ids. */
 const cancelSubscriptionMissingWebhook = async ({
 	ctx,
 	customerId,

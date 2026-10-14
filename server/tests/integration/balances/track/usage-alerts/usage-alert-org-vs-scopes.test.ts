@@ -1,24 +1,3 @@
-/**
- * Org scope vs plan / customer / entity.
- *
- * Org alerts are a fourth, fully-independent pass in checkUsageAlerts:
- *   - Purely additive — never overrides another tier, never shadowed.
- *   - Follows the tracked subject: passes entityId through, so on an entity
- *     track it measures the entity's combined balance and fires WITH entity_id.
- *     (The customer/plan pass is always aggregate / no entity_id.)
- *   - Env-scoped: sandbox reads config.sandbox_usage_alerts.
- *
- * Setup: pooled messages 100 + per-entity messages 50, one entity.
- *   - aggregate = 150, entity combined = 150.
- *   - customer alert remaining 70, entity alert remaining 60, org alert remaining 50.
- *
- * Track 100 on the ENTITY -> aggregate 150 -> 50, entity combined 150 -> 50.
- * All three fire:
- *   - customer (70): customer pass, NO entity_id.
- *   - entity   (60): entity pass, WITH entity_id.
- *   - org      (50): org pass, WITH entity_id (follows the tracked entity).
- */
-
 import { afterAll, afterEach, beforeAll, expect, test } from "bun:test";
 import { type DbUsageAlert, type EntityBillingControls } from "@autumn/shared";
 import {
@@ -142,7 +121,6 @@ test(`${chalk.yellowBright("org-vs-scopes: org fires additively alongside custom
 		} as EntityBillingControls,
 	});
 
-	// Track 100 on the entity -> aggregate 150 -> 50, entity combined 150 -> 50.
 	await autumnV2_1.track({
 		customer_id: customerId,
 		entity_id: entityId,
@@ -150,7 +128,6 @@ test(`${chalk.yellowBright("org-vs-scopes: org fires additively alongside custom
 		value: 100,
 	});
 
-	// Customer (70): customer pass, no entity_id.
 	const customerFired =
 		await waitForWebhook<BalancesUsageAlertTriggeredPayload>({
 			token: playToken,
@@ -163,7 +140,6 @@ test(`${chalk.yellowBright("org-vs-scopes: org fires additively alongside custom
 		});
 	expect(customerFired).not.toBeNull();
 
-	// Entity (60): entity pass, with entity_id.
 	const entityFired = await waitForWebhook<BalancesUsageAlertTriggeredPayload>({
 		token: playToken,
 		predicate: (payload) =>
@@ -175,7 +151,6 @@ test(`${chalk.yellowBright("org-vs-scopes: org fires additively alongside custom
 	});
 	expect(entityFired).not.toBeNull();
 
-	// Org (50): org pass, follows the tracked entity -> with entity_id.
 	const orgFired = await waitForWebhook<BalancesUsageAlertTriggeredPayload>({
 		token: playToken,
 		predicate: (payload) =>

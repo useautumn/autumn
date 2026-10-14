@@ -2,7 +2,6 @@ import type { CreditSchemaItem } from "@autumn/shared";
 import { Button } from "@autumn/ui";
 import { CreditDimensionPriceList } from "./CreditDimensionPriceList";
 
-/** One row's dimension tables, with a single action that strips only this row's rules. */
 export function CreditRowDimensions({
 	item,
 	onChange,

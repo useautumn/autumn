@@ -21,7 +21,6 @@ const mockFetch = mock(() =>
 	),
 );
 
-// Injected transport — the unit never touches global fetch.
 const fetchImpl = mockFetch as unknown as typeof fetch;
 
 describe("initRevenuecatCli.createProject", () => {

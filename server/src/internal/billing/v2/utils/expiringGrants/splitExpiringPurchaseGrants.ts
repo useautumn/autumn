@@ -6,14 +6,6 @@ import type {
 import { buildExpiringGrant } from "./buildExpiringGrant";
 import { entitlementToExpiry } from "./entitlementExpiry";
 
-/**
- * Moves the purchased portion of an expiring item off the product row and
- * into a loose grant with its own expiry, leaving the item's own row as a
- * never-expiring price anchor. Included allowance stays put — only what was
- * bought carries an expiry.
- *
- * MUTATES the product rows' balances; returns the loose rows to insert.
- */
 export const splitExpiringPurchaseGrants = ({
 	customerProduct,
 	orgId,

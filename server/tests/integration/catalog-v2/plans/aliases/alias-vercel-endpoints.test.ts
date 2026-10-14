@@ -1,7 +1,3 @@
-/**
- * Ingress plan-id aliases on Vercel marketplace `billingPlanId`.
- */
-
 import { expect, test } from "bun:test";
 import { ApiVersion, CusProductStatus } from "@autumn/shared";
 import {

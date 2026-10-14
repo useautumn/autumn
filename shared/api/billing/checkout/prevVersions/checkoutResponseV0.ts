@@ -3,7 +3,6 @@ import { ApiProductSchema } from "@api/products/previousVersions/apiProduct.js";
 import { FeatureOptionsSchema } from "@models/cusProductModels/cusProductModels.js";
 import { z } from "zod/v4";
 
-// RESULT
 export const CheckoutLineV0Schema = z.object({
 	description: z.string(),
 	amount: z.number(),

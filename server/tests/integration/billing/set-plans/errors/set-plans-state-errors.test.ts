@@ -1,5 +1,3 @@
-/** set_plans rejects, before any write, requests the customer's billing state can't support. */
-
 import { expect, test } from "bun:test";
 import { ErrCode, ms } from "@autumn/shared";
 import { getProductStripeId } from "@tests/integration/billing/create-schedule/utils/createScheduleTestHelpers";
@@ -201,7 +199,6 @@ test.concurrent(
 			errMessage,
 			func: () => autumnV2_4.billing.previewSetPlans(params),
 		});
-		// The test client drops the HTTP status, so the 400 is read from the raw response.
 		const response = await fetch(`${autumnV2_4.baseUrl}/billing.set_plans`, {
 			method: "POST",
 			headers: autumnV2_4.headers,

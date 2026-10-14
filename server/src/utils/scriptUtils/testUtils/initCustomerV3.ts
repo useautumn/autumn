@@ -5,7 +5,6 @@ import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { attachPaymentMethod } from "../initCustomer.js";
 
-// Creates the Stripe customer first, then the Autumn customer linked to it.
 export const initCustomerV3 = async ({
 	ctx,
 	customerId,
@@ -41,7 +40,6 @@ export const initCustomerV3 = async ({
 	emailOverride?: string | null;
 	stripeCustomerOverrides?: Partial<Stripe.CustomerCreateParams>;
 }) => {
-	// Use override if provided (including null), otherwise default from customerId.
 	const name =
 		nameOverride !== undefined ? (nameOverride ?? undefined) : customerId;
 	const email =
@@ -63,7 +61,6 @@ export const initCustomerV3 = async ({
 		testClockId = testClock.id;
 	}
 
-	// 1. Stripe customer.
 	const stripeCus = await stripeCli.customers.create({
 		email,
 		name,
@@ -71,7 +68,6 @@ export const initCustomerV3 = async ({
 		...(stripeCustomerOverrides ?? {}),
 	});
 
-	// 2. Autumn customer.
 	try {
 		await autumn.customers.delete(customerId);
 	} catch (_error) {}
@@ -92,7 +88,6 @@ export const initCustomerV3 = async ({
 		skipWebhooks,
 	});
 
-	// 3. Payment method.
 	if (attachPm) {
 		await attachPaymentMethod({
 			stripeCli,

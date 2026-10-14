@@ -15,10 +15,6 @@ import {
 import { ConflictingMutationReceiptError } from "../state/stateStoreErrors.js";
 import type { ConsumeContext } from "./types/consume.js";
 
-/**
- * What a failed queued command comes to: "applied" already landed, "refused" never will,
- * "transient" is retried by redelivery. Every queued command fails through the same writer and store.
- */
 export type QueuedCommandSettlement = "applied" | "refused" | "transient";
 
 const isAlreadyApplied = (cause: unknown): boolean =>
@@ -45,11 +41,6 @@ export const classifyQueuedFailure = ({
 	return "transient";
 };
 
-/**
- * The command stream's error boundary, the way the HTTP error handler is the request's: nobody waits for a
- * queued command, so an applied or refused failure is logged and the record is consumed, and only a
- * transient one is rethrown so Kafka redelivers it.
- */
 export const settleQueuedFailure = ({
 	ctx,
 	command,

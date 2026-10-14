@@ -5,7 +5,6 @@ import type { AutumnInt } from "@/external/autumn/autumnCli.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 
-/** Pin-remove tombstone: hidden from live reads, slug freed, occupancy + CPs remain. */
 export const expectTombstoneCorrect = async ({
 	ctx,
 	autumn,

@@ -8,15 +8,8 @@ import {
 import { AppEnv } from "../env/detect.js";
 import { getKey } from "../env/keys.js";
 
-/**
- * Map UI time range presets to API range values
- */
 export type UITimeRange = "24h" | "7d" | "30d" | "90d" | "all";
 
-/**
- * Convert UI time range to API range
- * "all" maps to "90d" as a reasonable default
- */
 function mapTimeRangeToApiRange(timeRange: UITimeRange): AggregateRange {
 	if (timeRange === "all") {
 		return "90d";
@@ -24,9 +17,6 @@ function mapTimeRangeToApiRange(timeRange: UITimeRange): AggregateRange {
 	return timeRange;
 }
 
-/**
- * Get default bin size based on time range
- */
 function getDefaultBinSize(timeRange: UITimeRange): AggregateBinSize {
 	if (timeRange === "24h") {
 		return "hour";
@@ -34,31 +24,19 @@ function getDefaultBinSize(timeRange: UITimeRange): AggregateBinSize {
 	return "day";
 }
 
-/**
- * Formatted time bucket for display in charts
- */
 export interface FormattedTimeBucket {
 	period: number;
 	label: string;
-	/** Feature values (when not grouped) or summed values (when grouped) */
 	values: Record<string, number>;
-	/** Group breakdown per feature (when groupBy is used) */
 	groupedValues: Record<string, Record<string, number>>;
-	/** All unique group keys found in this bucket */
 	groupKeys: string[];
 	totalValue: number;
 }
 
-/**
- * Parse and format the aggregate response for display
- * New API shape: { list: [...], total: {...} }
- * Preserves grouped data structure for stacked chart rendering
- */
 function formatAggregateResponse(
 	response: ApiEventsAggregateResponse,
 	binSize: AggregateBinSize,
 ): FormattedTimeBucket[] {
-	// Defensive check - ensure list array exists
 	if (!response?.list || !Array.isArray(response.list)) {
 		return [];
 	}
@@ -72,7 +50,6 @@ function formatAggregateResponse(
 			const groupKeysSet = new Set<string>();
 			let totalValue = 0;
 
-			// Defensive check for bucket entries
 			if (bucket && typeof bucket === "object") {
 				for (const [key, value] of Object.entries(bucket)) {
 					if (key === "period") continue;
@@ -81,7 +58,6 @@ function formatAggregateResponse(
 						values[key] = value;
 						totalValue += value;
 					} else if (typeof value === "object" && value !== null) {
-						// Grouped values - preserve the breakdown
 						const groupData = value as Record<string, number>;
 						groupedValues[key] = groupData;
 						
@@ -109,9 +85,6 @@ function formatAggregateResponse(
 		});
 }
 
-/**
- * Format period timestamp to human-readable label
- */
 function formatPeriodLabel(timestamp: number, binSize: AggregateBinSize): string {
 	const date = new Date(timestamp);
 
@@ -127,17 +100,11 @@ function formatPeriodLabel(timestamp: number, binSize: AggregateBinSize): string
 
 export interface UseEventsAggregateApiOptions {
 	environment?: AppEnv;
-	/** Customer ID (required for API - query disabled if not provided) */
 	customerId?: string;
-	/** Feature ID(s) to aggregate (required for API - query disabled if not provided) */
 	featureId?: string | string[];
-	/** Time range preset */
 	timeRange?: UITimeRange;
-	/** Bin size for time buckets */
 	binSize?: AggregateBinSize;
-	/** Property to group by (must start with "properties.") */
 	groupBy?: string;
-	/** Whether the query is enabled (in addition to customerId/featureId checks) */
 	enabled?: boolean;
 }
 
@@ -152,11 +119,6 @@ export interface UseEventsAggregateApiResult {
 	isFetching: boolean;
 }
 
-/**
- * Hook to fetch aggregated events from the external API
- * Uses /v1/events/aggregate endpoint
- * REQUIRES customer_id and feature_id - query is disabled if either is missing
- */
 export function useEventsAggregateApi({
 	environment = AppEnv.Sandbox,
 	customerId,
@@ -169,12 +131,10 @@ export function useEventsAggregateApi({
 	const effectiveBinSize = binSize ?? getDefaultBinSize(timeRange);
 	const range = mapTimeRangeToApiRange(timeRange);
 
-	// Normalize featureId to array for consistent handling
 	const featureIds = featureId
 		? (Array.isArray(featureId) ? featureId : [featureId])
 		: [];
 
-	// API requires both customerId and featureId
 	const hasRequiredParams = !!customerId && customerId !== "" && featureIds.length > 0;
 
 	const query = useQuery({
@@ -193,7 +153,6 @@ export function useEventsAggregateApi({
 			try {
 				const secretKey = getKey(environment);
 
-				// Ensure groupBy has "properties." prefix if provided
 				let effectiveGroupBy = groupBy;
 				if (groupBy && groupBy !== "" && !groupBy.startsWith("properties.")) {
 					effectiveGroupBy = `properties.${groupBy}`;
@@ -201,7 +160,7 @@ export function useEventsAggregateApi({
 
 				const response = await fetchEventsAggregate({
 					secretKey,
-					customerId: customerId!, // Safe - checked in enabled
+					customerId: customerId!,
 					featureId: featureIds,
 					range,
 					binSize: effectiveBinSize,
@@ -231,7 +190,6 @@ export function useEventsAggregateApi({
 		formattedData = undefined;
 	}
 
-	// Use totals directly from API response (new API shape)
 	try {
 		totals = query.data?.total;
 	} catch (err) {

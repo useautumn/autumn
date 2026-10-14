@@ -1,15 +1,3 @@
-/**
- * newlyAdoptedPrices / meterDecision / priceRequiresMeter — the pure decisions
- * behind adopted-price validation.
- *
- * Contract:
- *   every newly-stated SLOT is validated, not just the first one found
- *   "carried forward" is per price row + slot, so an id moved between rows is new
- *   a mint's cloned ids stay exempt (Autumn wrote them, they were real)
- *   adopting a metered price records the meter; adopting a meterless one CLEARS it
- *   a usage-based price may not adopt a meterless Stripe price at all
- */
-
 import { describe, expect, test } from "bun:test";
 import { BillWhen, PriceType } from "@autumn/shared";
 import {

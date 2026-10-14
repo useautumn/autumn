@@ -42,12 +42,10 @@ export type ReissuePrefill = {
 	address?: Partial<ReissueAddress> | null;
 	taxIdOptionId?: string | null;
 	taxIdValue?: string | null;
-	/** Registrations beyond the one the form edits; sent back untouched. */
 	otherTaxIds?: ReissueTaxId[];
 	/** Stripe returned one page of registrations, so a replacement would drop the rest. */
 	taxIdsIncomplete?: boolean;
 	sendsInvoice?: boolean;
-	/** The org's allowed types, which a send-invoice replacement uses unless changed. */
 	paymentMethodTypes?: InvoicePaymentMethod[] | null;
 };
 
@@ -65,7 +63,6 @@ const rowId = (prefix: string) => `${prefix}_${Date.now()}_${rowCounter++}`;
 
 const trimmed = (value: string) => value.trim();
 
-/** A non-card method can only be offered on a sent invoice, so choosing one sends the replacement. */
 export const sendsReplacementInvoice = ({
 	form,
 	prefill,
@@ -94,7 +91,6 @@ const paymentMethodTypesChanged = ({
 	);
 };
 
-/** Only fields the user actually changed are sent, so an untouched sheet is a plain reissue. */
 export const buildReissuePayload = ({
 	invoiceId,
 	form,
@@ -183,7 +179,6 @@ export const buildReissuePayload = ({
 					),
 				}
 			: {}),
-		// tax_ids replaces the whole set, so the untouched ones ride along.
 		...(taxIdChanged && (editedTaxId || hadTaxId)
 			? {
 					tax_ids: [

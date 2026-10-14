@@ -1,5 +1,3 @@
-/** Splitting a variant onto its own Stripe product so a coupon can target it alone. */
-
 import { expect, test } from "bun:test";
 import {
 	BillingInterval,

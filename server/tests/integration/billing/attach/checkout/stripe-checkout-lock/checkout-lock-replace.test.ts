@@ -1,14 +1,3 @@
-/**
- * Checkout Session Lock — Replacement & Completion Tests
- *
- * Tests for entity/product replacement flows and lock clearing on completion.
- *
- * D. Entity checkout replacement (entity 1 → entity 2)
- * E. Product checkout replacement (pro → premium)
- * F. Different-entity non-checkout attach expires the session and proceeds
- * G. Lock clears after checkout completion — upgrade succeeds
- */
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3, ApiEntityV0 } from "@autumn/shared";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
@@ -24,10 +13,6 @@ import { products } from "@tests/utils/fixtures/products";
 import { timeout } from "@tests/utils/genUtils";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST D: Entity checkout replacement
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(
 	`${chalk.yellowBright("checkout-lock D: entity checkout replacement")}`,
@@ -92,10 +77,6 @@ test.concurrent(
 	},
 );
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST E: Product checkout replacement (pro → premium)
-// ═══════════════════════════════════════════════════════════════════════════════
-
 test.concurrent(
 	`${chalk.yellowBright("checkout-lock E: product checkout replacement")}`,
 	async () => {
@@ -143,10 +124,6 @@ test.concurrent(
 	},
 );
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST F: Different-entity non-checkout attach expires the session and proceeds
-// ═══════════════════════════════════════════════════════════════════════════════
-
 test.concurrent(
 	`${chalk.yellowBright("checkout-lock F: different-entity attach expires the session and bills directly")}`,
 	async () => {
@@ -178,7 +155,6 @@ test.concurrent(
 
 		expect(result1.payment_url).toBeDefined();
 
-		// Entity 1's open session loses to Stripe-arbitrated expiry; entity 2 bills directly.
 		const directResult = await autumnV1.billing.attach({
 			customer_id: customerId,
 			product_id: pro.id,
@@ -201,10 +177,6 @@ test.concurrent(
 		expect(entity1.products?.length ?? 0).toBe(0);
 	},
 );
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST G: Lock clears after checkout completion — upgrade succeeds
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(
 	`${chalk.yellowBright("checkout-lock G: lock clears after checkout completion")}`,

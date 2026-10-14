@@ -11,7 +11,6 @@ export type BalanceWorkerProducer = KafkaSender & {
 	disconnect(): Promise<void>;
 };
 
-/** The two things a process needs from Kafka to reach its workers: who owns what, and a queue. */
 export type BalanceWorkerKafka = OwnershipKafka & {
 	producer(config: ProducerConfig): BalanceWorkerProducer;
 };
@@ -31,7 +30,6 @@ export type ClientLogger = {
 	error: LogMethod;
 };
 
-/** Owners that answer nothing until the ownership log has been read through once. */
 export type OwnersFromKafka = PartitionOwners & {
 	start(): Promise<void>;
 	stop(): Promise<void>;
@@ -41,7 +39,6 @@ export type OwnersFromKafkaConfig = {
 	topic: string;
 	groupIdPrefix: string;
 	catchUpTimeoutMs?: number;
-	/** How long each failed start waits before the next; the last entry repeats. */
 	startRetryDelaysMs?: readonly number[];
 };
 
@@ -59,6 +56,5 @@ export type KafkaBalanceWorkerClientConfig = {
 	maxTrackBatchSize?: number;
 	catchUpTimeoutMs?: number;
 	startRetryDelaysMs?: readonly number[];
-	/** A process that queues or publishes connects its producers at start, so no first call pays the connect. Off for one that never appends. */
 	connectProducersOnStart?: boolean;
 };

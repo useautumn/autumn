@@ -28,7 +28,6 @@ export const buildInvoiceModeSubscriptionParams = ({
 			: undefined;
 
 	if (invoiceMode.paymentMethodTypes?.length) {
-		// Spread first so the custom-PM save_default_payment_method survives.
 		params.payment_settings = {
 			...actionPaymentSettings,
 			payment_method_types: invoiceMode.paymentMethodTypes,

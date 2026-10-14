@@ -23,11 +23,6 @@ const isEmptyObject = (value: unknown): boolean =>
 const isEmptyArray = (value: unknown): boolean =>
 	Array.isArray(value) && value.length === 0;
 
-/**
- * True if the schema's wrapper chain contains `ZodNullable`. Walks through
- * `ZodOptional` / `ZodDefault` / `ZodPipe` so `.nullish()` (optional→nullable)
- * and `.nullable().default(x)` both report as nullable.
- */
 const isNullable = (schema: ZodSchema): boolean => {
 	if (schema instanceof z.ZodNullable) return true;
 	if (schema instanceof z.ZodOptional) return isNullable(schema._def.innerType);
@@ -37,10 +32,6 @@ const isNullable = (schema: ZodSchema): boolean => {
 	return false;
 };
 
-/**
- * Strip wrapper layers to reveal the payload-shaping schema
- * (`ZodObject` / `ZodArray` / `ZodRecord` / leaf).
- */
 const unwrapSchema = (schema: ZodSchema): ZodSchema => {
 	if (schema instanceof z.ZodNullable)
 		return unwrapSchema(schema._def.innerType);
@@ -52,10 +43,6 @@ const unwrapSchema = (schema: ZodSchema): ZodSchema => {
 	return schema;
 };
 
-/**
- * If `undefined` hits a `ZodDefault` anywhere in the wrapper chain, return
- * its default value. v4 exposes `defaultValue` as a direct value, not a thunk.
- */
 const applyDefaultIfUndefined = (
 	schema: ZodSchema,
 	value: unknown,
@@ -88,7 +75,6 @@ const normalize = (schema: ZodSchema, data: unknown): unknown => {
 
 	if (unwrapped instanceof z.ZodObject) {
 		// Upstash Lua cjson collapses empty `{}` to `[]`; treat as empty object
-		// so nested defaults (e.g. ProductConfigSchema) still get applied.
 		const objectData = isEmptyArray(data) ? {} : data;
 		if (!isPlainObject(objectData)) return data;
 

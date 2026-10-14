@@ -6,12 +6,10 @@ import {
 	setCachedModelPricing,
 } from "@/external/redis/actions/modelPricingCache/modelPricingCache.js";
 
-// Runs inside the track request path — a hanging models.dev must not hang tracks.
 const FETCH_TIMEOUT_MS = 5000;
 const MODELS_DEV_PRICING_URL = "https://models.dev/api.json?type=all";
 
 const fetchFromSource = async (): Promise<ModelPricingData> => {
-	// type=all: the default feed omits specialized model types (e.g. decision models).
 	const response = await fetch(MODELS_DEV_PRICING_URL, {
 		signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
 	});
@@ -30,7 +28,6 @@ export const getModelsDevPricing = async (): Promise<ModelPricingData> => {
 
 	try {
 		const data = await fetchFromSource();
-		// Fire-and-forget: never-throwing (tryRedisOp), and tracks shouldn't wait on it.
 		void setCachedModelPricing({ data });
 		return data;
 	} catch {

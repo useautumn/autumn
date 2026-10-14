@@ -43,13 +43,6 @@ export const updateStripeSub2 = async ({
 	const { stripeCli, paymentMethod } = attachParams;
 	const { invoiceOnly, proration } = config;
 
-	// if (config.requirePaymentMethod !== false && nullish(paymentMethod)) {
-	// 	throw new RecaseError({
-	// 		message: "Payment method is required",
-	// 		code: "payment_method_required",
-	// 	});
-	// }
-
 	if (curSub.billing_mode.type !== "flexible") {
 		curSub = await stripeCli.subscriptions.migrate(curSub.id, {
 			billing_mode: { type: "flexible" },
@@ -66,7 +59,6 @@ export const updateStripeSub2 = async ({
 					})
 				: undefined;
 
-	// 1. Update subscription
 	const updatedSub = await stripeCli.subscriptions.update(
 		curSub.id,
 		{
@@ -74,8 +66,7 @@ export const updateStripeSub2 = async ({
 		proration_behavior:
 			proration === ProrationBehavior.None
 				? "none"
-				: // : fromCreate
-					// 	? "always_invoice"
+				:
 					"create_prorations",
 
 		trial_end: trialEnd,
@@ -96,8 +87,6 @@ export const updateStripeSub2 = async ({
 
 		expand: ["latest_invoice"],
 
-		// cancel_at_period_end: false,
-		// TODO: will error if sub managed by a schedule
 		cancel_at_period_end:
 			isStripeSubscriptionCanceling(curSub) &&
 			!(
@@ -164,7 +153,6 @@ export const updateStripeSub2 = async ({
 		url = res.url;
 	}
 
-	// If url is returned, it means invoice action is required, so don't reset balances.
 	if (curCusProduct) {
 		if (!url) {
 			await resetUsageBalances({

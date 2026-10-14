@@ -1,16 +1,3 @@
-/**
- * A real worker outage during get_or_create on the worker path is captured for recovery.
- *
- * The read fails open: `readBalanceWorkerSubject` answers from Postgres when the worker is
- * unreachable, and a missing customer there is what starts the create. The create's own worker
- * write cannot fail open, and that is the error `shed503OnTransientError` captures.
- *
- * Contract under test:
- * - Worker read unreachable + customer absent in Postgres → create runs → its worker write's
- *   fail-open 503 is captured at the stage the create reached and surfaces unchanged.
- * - Worker read unreachable + customer present in Postgres → served from Postgres, nothing captured.
- */
-
 import { afterAll, beforeEach, describe, expect, mock, test } from "bun:test";
 import { BalanceWorkerClientError } from "@autumn/balance-worker-client";
 import {
@@ -57,7 +44,6 @@ mock.module(
 	() => ({ isBalanceWorkerRolloutEnabled: () => true }),
 );
 
-// The real read path, over a client whose every send finds no owner.
 mock.module("@/external/balanceWorker/getBalanceWorkerClient.js", () => ({
 	getBalanceWorkerClient: () => ({
 		readSubjectState: async () => {
@@ -80,7 +66,6 @@ mock.module(
 	}),
 );
 
-// The create's worker write: `applyBillingPlanOnWorker` rethrows the client error as the fail-open 503.
 mock.module(
 	"@/internal/customers/actions/createWithDefaults/createCustomerWithDefaults.js",
 	() => ({

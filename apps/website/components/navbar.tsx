@@ -186,7 +186,6 @@ export default function Navbar({
 		};
 	}, []);
 
-	// Lock body scroll while mobile menu is open
 	useEffect(() => {
 		document.documentElement.style.overflow = menuOpen ? "hidden" : "";
 		document.body.style.overflow = menuOpen ? "hidden" : "";
@@ -309,7 +308,6 @@ export default function Navbar({
 						"opacity 0.2s ease, clip-path 0.2s cubic-bezier(0.87, 0, 0.13, 1)",
 				}}
 			>
-				{/* Nav items */}
 				<div className="flex flex-col">
 					{NAV_LINKS.map((item) => {
 						const isAnchor =

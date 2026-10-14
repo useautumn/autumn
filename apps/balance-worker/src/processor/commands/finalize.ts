@@ -20,12 +20,10 @@ import type {
 
 type DecidedAgainst = { catalog?: Catalog };
 
-/** The settlement, enqueued in order; the catalog it was decided against shapes the sync reply. */
 type DecidedFinalize = DecidedMutation<never> & {
 	decidedAgainst: DecidedAgainst;
 };
 
-/** Every finalize, sync or queued, settles its lock here: serialized by the partition writer, the same path a track takes. */
 export async function decideFinalize({
 	scope,
 	command,
@@ -37,7 +35,6 @@ export async function decideFinalize({
 	const customerKey = meteringIdentityToPartitionKey({
 		identity: command.identity,
 	});
-	// Filled by the decision, which is the only place that knows which rows it was made against.
 	const decidedAgainst: DecidedAgainst = {};
 	const decided = await withResidentSubject({
 		customerKey,
@@ -60,7 +57,6 @@ export async function decideFinalize({
 	return { ...decided, decidedAgainst };
 }
 
-/** Sync: decide, then answer once the settlement is committed. */
 export async function finalize({
 	scope,
 	command,
@@ -77,14 +73,12 @@ export async function finalize({
 		result: mutation.result,
 		changes: mutation.changes,
 		state,
-		// A duplicate or joined command never ran the decision, so it reads the committed state's catalog.
 		catalog:
 			decided.decidedAgainst.catalog ??
 			scope.ctx.subjectHydrator.readCatalog({ state }),
 	};
 }
 
-/** Runs inside the writer's critical section: the open-lock check and the settlement are one step. */
 function mutateFinalize({
 	scope,
 	state,
@@ -99,7 +93,6 @@ function mutateFinalize({
 	command: FinalizeCommand;
 }): MutationResult<never> {
 	if (!state) throw new PartitionProcessorStateNotFoundError({ customerKey });
-	// One catalog read serves both views: the rows a mutation adds reference catalog the state already held.
 	const catalog = scope.ctx.subjectHydrator.readCatalog({ state });
 	decidedAgainst.catalog = catalog;
 

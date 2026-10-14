@@ -94,7 +94,6 @@ export const handleGetRevenueCatConfig = createRoute({
 
 		const revenueCatConfig = org.processor_configs?.revenuecat;
 
-		// Generate webhook secrets if they don't exist
 		const needsWebhookSecrets =
 			!revenueCatConfig?.webhook_secret ||
 			!revenueCatConfig?.sandbox_webhook_secret;
@@ -120,7 +119,6 @@ export const handleGetRevenueCatConfig = createRoute({
 				},
 			});
 
-			// Return fresh config after update
 			return c.json({
 				connected: false,
 				connection: "none" as const,
@@ -148,7 +146,6 @@ export const handleUpsertRevenueCatConfig = createRoute({
 
 		const body = c.req.valid("json");
 
-		// Merge with existing processor_configs to avoid unsetting fields
 		const existingRevenueCatConfig =
 			org.processor_configs?.revenuecat || ({} as RevenueCatProcessorConfig);
 
@@ -160,7 +157,6 @@ export const handleUpsertRevenueCatConfig = createRoute({
 					...org.processor_configs,
 					revenuecat: {
 						...existingRevenueCatConfig,
-						// Live fields
 						...(body.api_key ? { api_key: encryptData(body.api_key) } : {}),
 						...(body.sandbox_api_key
 							? { sandbox_api_key: encryptData(body.sandbox_api_key) }
@@ -174,8 +170,6 @@ export const handleUpsertRevenueCatConfig = createRoute({
 			},
 		});
 
-		// Best-effort: register the inbound RC webhook for any env whose project was just set
-		// (covers an org that connected OAuth, then selected its project here). Idempotent.
 		const targets: Array<{ env: AppEnv; projectId: string }> = [];
 		if (body.project_id) {
 			targets.push({ env: AppEnv.Live, projectId: body.project_id });

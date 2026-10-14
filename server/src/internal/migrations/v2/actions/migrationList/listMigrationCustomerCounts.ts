@@ -37,7 +37,6 @@ const countMatchedCustomers = async ({
 	}
 };
 
-/** Filter ∪ processed customer count per migration, keyed by internal id. */
 export const listMigrationCustomerCounts = async ({
 	ctx,
 	migrations,

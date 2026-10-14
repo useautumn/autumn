@@ -1,10 +1,3 @@
-/**
- * atmn crud/plans — paid [monthly] [tiers: graduated usage, graduated prepaid, volume prepaid]; volume usage is a lint error, asserted at lint
- *
- * One line of plans/atmn-v3/07_tests.md. [a, b] is a matrix looped INSIDE this file.
- * volume × usage_based is rejected by lint, not push — covered under scenarios/lint, not here.
- */
-
 import { expect, test } from "bun:test";
 import {
 	configBody,

@@ -1,9 +1,3 @@
-/**
- * atmn crud/plans — paid [monthly] [prepaid metered recurring consumable item, prepaid metered recurring non consumable item]
- *
- * One line of plans/atmn-v3/07_tests.md. [a, b] is a matrix looped INSIDE this file.
- */
-
 import { expect, test } from "bun:test";
 import {
 	configBody,

@@ -2,8 +2,6 @@ import { ErrCode, RecaseError } from "@autumn/shared";
 import type { RepoContext } from "@/db/repoContext.js";
 import { migrationRepo } from "@/internal/migrations/v2/repos/index.js";
 
-/** `deleteMigration` refuses a draft that already ran against customers; that
- *  one is archived instead, so the reset never leaves a live draft behind. */
 const isRunHistoryRefusal = ({ error }: { error: unknown }): boolean =>
 	error instanceof RecaseError &&
 	error.code === ErrCode.InvalidRequest &&
@@ -14,8 +12,6 @@ export type ClearedMigrationDrafts = {
 	archived: string[];
 };
 
-/** Clears every non-archived migration of the org + env `ctx` names: deleted
- *  where the row allows it, archived where run history blocks the delete. */
 export const deleteMigrationDrafts = async ({
 	ctx,
 }: {

@@ -24,10 +24,6 @@ import {
 } from "./productV2Utils/productItemUtils/itemIntervalUtils.js";
 import { notNullish, nullish } from "./utils.js";
 
-// ============================================================================
-// Types
-// ============================================================================
-
 interface DisplayResult {
 	primary_text: string;
 	secondary_text?: string;
@@ -39,10 +35,6 @@ interface FormatTiersParams {
 	amountFormatOptions?: Intl.NumberFormatOptions;
 	useFlatAmount?: boolean;
 }
-
-// ============================================================================
-// Helpers
-// ============================================================================
 
 const getResetIntervalDisplay = (item: ProductItem): string | undefined => {
 	if (!item.interval) return undefined;
@@ -86,8 +78,6 @@ const isSingleUseFeature = (feature: Feature): boolean => {
 const isVolumeFlatAmountItem = (item: ProductItem): boolean =>
 	isVolumeFlatFeeTiers({ tierBehavior: item.tier_behavior, tiers: item.tiers });
 
-/** Appends the volume rate rule, since a volume price range reads the same as a
- * graduated one but bills every unit at a single tier. */
 const withVolumeTierRule = ({
 	item,
 	text,
@@ -99,7 +89,6 @@ const withVolumeTierRule = ({
 		typeof item.included_usage === "number" ? item.included_usage : 0;
 	const isVolume = item.tier_behavior === TierBehavior.VolumeBased;
 	const hasMultipleTiers = (item.tiers?.length ?? 0) > 1;
-	// A single tier still charges the included units once usage passes them.
 	const showsRule = isVolume && (hasMultipleTiers || includedUsage > 0);
 	if (!showsRule || !item.tiers?.length) return text;
 
@@ -109,10 +98,6 @@ const withVolumeTierRule = ({
 	});
 	return `${text} (${rule})`;
 };
-
-// ============================================================================
-// Tier Formatting
-// ============================================================================
 
 export const formatTiers = ({
 	item,
@@ -139,10 +124,6 @@ export const formatTiers = ({
 	return `${format(firstPrice)} - ${format(lastPrice)}`;
 };
 
-// ============================================================================
-// Feature Item Display (no pricing, just entitlement)
-// ============================================================================
-
 export const getFeatureItemDisplay = ({
 	item,
 	feature,
@@ -155,19 +136,15 @@ export const getFeatureItemDisplay = ({
 	fullDisplay?: boolean;
 }): DisplayResult => {
 	if (!feature) {
-		// Return fallback display when feature is not found (e.g., during feature ID rename)
 		return { primary_text: item.feature_id || "Loading..." };
 	}
 
-	// Boolean features just show the name
 	if (feature.type === FeatureType.Boolean) {
 		return { primary_text: feature.name };
 	}
 
 	const primaryText = getIncludedUsageText(item, feature);
 
-	// Determine secondary text: per-entity scope + interval.
-	// e.g. "per user per month" when entity_feature_id is set, otherwise "per month".
 	let secondaryText: string | undefined;
 	if (fullDisplay) {
 		const parts: string[] = [];
@@ -203,10 +180,6 @@ export const getFeatureItemDisplay = ({
 	};
 };
 
-// ============================================================================
-// Price Item Display (flat price, no feature)
-// ============================================================================
-
 export const getPriceItemDisplay = ({
 	item,
 	currency,
@@ -227,10 +200,6 @@ export const getPriceItemDisplay = ({
 	};
 };
 
-// ============================================================================
-// Feature + Price Item Display (usage-based pricing)
-// ============================================================================
-
 export const getFeaturePriceItemDisplay = ({
 	feature,
 	item,
@@ -250,7 +219,6 @@ export const getFeaturePriceItemDisplay = ({
 		throw new Error(`Feature ${item.feature_id} not found`);
 	}
 
-	// Build included usage string (e.g., "100 credits")
 	const includedUsage = item.included_usage as number | null;
 	const hasIncludedUsage = notNullish(includedUsage) && includedUsage > 0;
 
@@ -265,8 +233,6 @@ export const getFeaturePriceItemDisplay = ({
 
 	const volumeFlatAmount = isVolumeFlatAmountItem(item);
 
-	// For volume flat-amount items, tier.amount is always 0 — the real price
-	// lives in tier.flat_amount, so we must pass useFlatAmount: true.
 	let priceStr: string;
 	if (volumeFlatAmount) {
 		priceStr =
@@ -284,7 +250,6 @@ export const getFeaturePriceItemDisplay = ({
 			: "";
 	}
 
-	// Build billing unit string (e.g., "credit" or "100 credits")
 	const billingUnits = item.billing_units ?? 1;
 	const billingFeatureName = getFeatureName({
 		feature,
@@ -295,7 +260,6 @@ export const getFeaturePriceItemDisplay = ({
 			? `${numberWithCommas(billingUnits)} ${billingFeatureName}`
 			: billingFeatureName;
 
-	// Build interval string
 	const showInterval = isMainPrice || fullDisplay;
 	let intervalStr = "";
 	if (showInterval) {
@@ -307,7 +271,6 @@ export const getFeaturePriceItemDisplay = ({
 		}
 	}
 
-	// Format output based on what we have
 	if (hasIncludedUsage) {
 		if (volumeFlatAmount) {
 			const featureName = getFeatureName({ feature, units: 2 });
@@ -366,10 +329,6 @@ export const getFeaturePriceItemDisplay = ({
 		secondary_text: undefined,
 	};
 };
-
-// ============================================================================
-// Main Entry Point
-// ============================================================================
 
 export const getProductItemDisplay = ({
 	item,

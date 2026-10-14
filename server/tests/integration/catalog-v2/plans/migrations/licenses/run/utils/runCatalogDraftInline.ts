@@ -4,7 +4,6 @@ import { preProcessMigration } from "@/internal/migrations/v2/run/preProcess/pre
 import { migrateCustomer } from "@/internal/migrations/v2/run/migrateCustomer/migrateCustomer.js";
 import { migrationRepo } from "@/internal/migrations/v2/repos/index.js";
 
-/** Prepare + apply a persisted catalog draft in-process (no Trigger). */
 export const runCatalogDraftInline = async ({
 	ctx,
 	migrationId,

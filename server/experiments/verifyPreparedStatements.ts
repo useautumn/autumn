@@ -1,8 +1,3 @@
-// Proves executePrepared() creates a real server-side named prepared statement,
-// by pinning the pool to one connection and reading pg_prepared_statements.
-//
-//   ENV_FILE=.env infisical run --env=dev --recursive -- \
-//     bun experiments/verifyPreparedStatements.ts
 import { AppEnv } from "@autumn/shared";
 import { drizzle } from "drizzle-orm/node-postgres";
 import pg from "pg";
@@ -15,7 +10,6 @@ import { getFullSubjectQuery } from "../src/internal/customers/repos/getFullSubj
 const url = process.env.DATABASE_URL;
 if (!url) throw new Error("DATABASE_URL not set");
 
-// max:1 so every statement lands on the same backend we then inspect.
 const pool = new pg.Pool({ connectionString: url, max: 1 });
 const db = drizzle({ client: pool }) as never;
 
@@ -38,9 +32,6 @@ const run = async (subject: { id: string; org_id: string }) => {
 	return { ms: performance.now() - started, rows: rows.length };
 };
 
-// Postgres only considers a generic plan after 5 executions of a prepared
-// statement — until then it re-plans per call and we save parsing only. Run
-// well past that threshold so we can see whether it actually switches.
 console.log("Executing getFullSubject through executePrepared()...\n");
 for (let call = 1; call <= 12; call++) {
 	const subject = subjects[call % subjects.length];

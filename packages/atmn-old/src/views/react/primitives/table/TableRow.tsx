@@ -2,26 +2,14 @@ import { Box, Text } from "ink";
 import { truncate } from "../utils/truncate.js";
 import type { Column } from "./index.js";
 
-/**
- * Props for the TableRow component
- */
 export interface TableRowProps<T> {
-	/** The data item to render */
 	item: T;
-	/** Column definitions */
 	columns: Column<T>[];
-	/** Whether this row is selected */
 	isSelected: boolean;
-	/** Whether the table has focus */
 	isFocused: boolean;
-	/** Calculated widths for each column */
 	columnWidths: number[];
 }
 
-/**
- * Generic table row component.
- * Renders a single row with selection marker and column content.
- */
 export function TableRow<T>({
 	item,
 	columns,
@@ -39,7 +27,6 @@ export function TableRow<T>({
 				const width = columnWidths[index] ?? 10;
 				const content = column.render(item, isSelected);
 
-				// If content is a string, truncate and style it
 				if (typeof content === "string") {
 					const truncated = truncate(content, width);
 					return (
@@ -56,7 +43,6 @@ export function TableRow<T>({
 					);
 				}
 
-				// If content is a React node, render it directly (no wrapping)
 				return (
 					<Box
 						key={column.key}
@@ -72,20 +58,11 @@ export function TableRow<T>({
 	);
 }
 
-/**
- * Props for the TableHeader component
- */
 export interface TableHeaderProps<T> {
-	/** Column definitions */
 	columns: Column<T>[];
-	/** Calculated widths for each column */
 	columnWidths: number[];
 }
 
-/**
- * Generic table header component.
- * Renders column headers with proper widths.
- */
 export function TableHeader<T>({
 	columns,
 	columnWidths,

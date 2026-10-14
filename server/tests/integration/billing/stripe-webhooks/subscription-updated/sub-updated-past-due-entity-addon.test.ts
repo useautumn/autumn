@@ -1,10 +1,3 @@
-/**
- * sub.updated auto-sync on a past_due subscription must keep an entity-scoped
- * add-on on its entity. Past-due plans are still live, so a Stripe-side
- * quantity bump has to add instances on the same entity, never duplicate the
- * add-on at the customer level.
- */
-
 import { expect, test } from "bun:test";
 import { ACTIVE_STATUSES, type FullCusProduct } from "@autumn/shared";
 import { driveProductPastDue } from "@tests/integration/billing/utils/driveProductPastDue";
@@ -17,7 +10,6 @@ import { AUTUMN_STRIPE_METADATA_KEYS } from "@/internal/billing/v2/providers/str
 import { CusService } from "@/internal/customers/CusService";
 import { timeout } from "@/utils/genUtils";
 
-/** Past Autumn's recent-action window, so auto-sync treats the change as external. */
 const STALE_AUTUMN_ACTION_MS = 11 * 60 * 1000;
 const WEBHOOK_WAIT_MS = 60_000;
 const POLL_INTERVAL_MS = 2_000;
@@ -83,7 +75,6 @@ test(`${chalk.yellowBright("sub.updated auto-sync: past_due entity add-on quanti
 	expect(subscription.status).toBe("past_due");
 	const [addOnItem] = subscription.items.data;
 
-	// Someone adds a second pack in the Stripe dashboard while payment is overdue.
 	await ctx.stripeCli.subscriptions.update(subscriptionId, {
 		items: [{ id: addOnItem!.id, quantity: 2 }],
 		proration_behavior: "none",

@@ -24,7 +24,6 @@ afterAll(async () => {
 	await webhook?.cleanup();
 });
 
-// ── B8c: an entity alert may point at the cap it inherits from the customer ─
 test(`${chalk.yellowBright("ul-alert15: an entity alert on an inherited customer cap fires with the entity id")}`, async () => {
 	const customerId = "ul-alert-entity-inherited-alert-1";
 	const entity = await setupCustomer({

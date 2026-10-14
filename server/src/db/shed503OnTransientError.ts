@@ -15,8 +15,6 @@ export const shed503OnTransientError = async <T>({
 	source: string;
 	run: () => T | Promise<T>;
 	onTransientError?: (error: unknown) => Promise<void>;
-	/** Opt-in Postgres path for cache-only failures. Callers that omit it keep
-	 *  the shed-everything behaviour. */
 	fallbackOnRedisUnavailable?: (error: unknown) => T | Promise<T>;
 }): Promise<T> => {
 	try {
@@ -24,15 +22,12 @@ export const shed503OnTransientError = async <T>({
 	} catch (error) {
 		const isDbTransient = isTransientDbError({ error });
 		const isRedisTransient = isTransientRedisError({ error });
-		// The worker gave no verdict; its error is already a 503 that names why.
 		const isWorkerTransient = balanceWorkerFailOpenReasonOf(error) !== null;
 
 		if (!(isDbTransient || isRedisTransient || isWorkerTransient)) {
 			throw error;
 		}
 
-		// Only when Postgres is uninvolved — it is what the fallback reads from,
-		// so a struggling DB must shed rather than take more load.
 		if (isRedisTransient && !isDbTransient && fallbackOnRedisUnavailable) {
 			try {
 				ctx.logger.warn(`[${source}] redis unavailable, reading postgres`, {
@@ -44,7 +39,6 @@ export const shed503OnTransientError = async <T>({
 				const fallbackFailedTransiently =
 					isTransientDbError({ error: fallbackError }) ||
 					isTransientRedisError({ error: fallbackError });
-				// A non-transient fallback failure (e.g. a 404) is the real answer, not an outage.
 				if (!fallbackFailedTransiently) throw fallbackError;
 				ctx.logger.error(`[${source}] postgres fallback failed, shedding`, {
 					type: `${source}_redis_fallback_failed`,

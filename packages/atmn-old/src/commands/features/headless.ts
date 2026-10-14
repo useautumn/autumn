@@ -1,8 +1,3 @@
-/**
- * Headless mode for the features command.
- * Provides structured output (text/json/csv) for AI/programmatic interaction.
- */
-
 import { isGraduatedCreditSchemaItem } from "@autumn/shared";
 import { AppEnv } from "../../lib/env/detect.js";
 import { getKey } from "../../lib/env/keys.js";
@@ -11,25 +6,15 @@ import type { ApiFeature } from "../../lib/api/types/index.js";
 import { formatError } from "../../lib/api/client.js";
 
 export interface HeadlessFeaturesOptions {
-	/** Environment (sandbox/live) */
 	prod?: boolean;
-	/** Page number */
 	page?: number;
-	/** Search query */
 	search?: string;
-	/** Get specific feature by ID */
 	id?: string;
-	/** Items per page */
 	limit?: number;
-	/** Output format */
 	format?: "text" | "json" | "csv";
-	/** Include archived features */
 	includeArchived?: boolean;
 }
 
-/**
- * Execute a headless features command
- */
 export async function headlessFeaturesCommand(
 	options: HeadlessFeaturesOptions,
 ): Promise<void> {
@@ -42,13 +27,11 @@ export async function headlessFeaturesCommand(
 	try {
 		const secretKey = getKey(environment);
 
-		// Fetch all features
 		const allFeatures = await fetchFeatures({
 			secretKey,
 			includeArchived,
 		});
 
-		// Apply search filter if provided
 		let filteredFeatures = allFeatures;
 		if (options.search) {
 			const searchLower = options.search.toLowerCase();
@@ -60,7 +43,6 @@ export async function headlessFeaturesCommand(
 			);
 		}
 
-		// If --id is specified, fetch and output that specific feature
 		if (options.id) {
 			const feature = filteredFeatures.find((f) => f.id === options.id);
 			if (!feature) {
@@ -70,13 +52,11 @@ export async function headlessFeaturesCommand(
 			return;
 		}
 
-		// Apply pagination
 		const startIndex = (page - 1) * limit;
 		const endIndex = startIndex + limit;
 		const paginatedFeatures = filteredFeatures.slice(startIndex, endIndex);
 		const hasMore = endIndex < filteredFeatures.length;
 
-		// Output the list
 		outputFeatureList(
 			paginatedFeatures,
 			{
@@ -112,9 +92,6 @@ export async function headlessFeaturesCommand(
 	}
 }
 
-/**
- * Output a list of features
- */
 function outputFeatureList(
 	features: ApiFeature[],
 	pagination: { page: number; pageSize: number; total: number; hasMore: boolean },
@@ -142,9 +119,7 @@ function outputFeatureList(
 	}
 
 	if (format === "csv") {
-		// CSV header
 		console.log("id,name,type,consumable,archived");
-		// CSV rows
 		for (const f of features) {
 			const name = escapeCsv(f.name);
 			const type = f.type;
@@ -155,7 +130,6 @@ function outputFeatureList(
 		return;
 	}
 
-	// Text format
 	const startItem = (pagination.page - 1) * pagination.pageSize + 1;
 	const endItem = Math.min(startItem + features.length - 1, pagination.total);
 	console.log(`Features (Page ${pagination.page}, showing ${startItem}-${endItem} of ${pagination.total})`);
@@ -174,18 +148,15 @@ function outputFeatureList(
 		return;
 	}
 
-	// Calculate column widths
 	const idWidth = Math.max(2, ...features.map((f) => f.id.length));
 	const nameWidth = Math.max(4, ...features.map((f) => f.name.length));
 	const typeWidth = Math.max(4, ...features.map((f) => f.type.length));
 
-	// Header
 	console.log(
 		`${"ID".padEnd(idWidth)}  ${"Name".padEnd(nameWidth)}  ${"Type".padEnd(typeWidth)}  ${"Consumable".padEnd(10)}  Status`,
 	);
 	console.log("-".repeat(idWidth + nameWidth + typeWidth + 30));
 
-	// Rows
 	for (const f of features) {
 		const name = f.name.padEnd(nameWidth);
 		const type = f.type.padEnd(typeWidth);
@@ -204,9 +175,6 @@ function outputFeatureList(
 	console.log(`Actions: ${actions.join(", ")}`);
 }
 
-/**
- * Output a single feature with detailed information
- */
 function outputSingleFeature(
 	feature: ApiFeature,
 	format: "text" | "json" | "csv",
@@ -217,7 +185,6 @@ function outputSingleFeature(
 	}
 
 	if (format === "csv") {
-		// For single feature, just output basic fields as CSV
 		console.log("id,name,type,consumable,archived");
 		const name = escapeCsv(feature.name);
 		const type = feature.type;
@@ -227,7 +194,6 @@ function outputSingleFeature(
 		return;
 	}
 
-	// Text format - detailed view
 	console.log(`Feature: ${feature.id}`);
 	console.log("=".repeat(50));
 	console.log("");
@@ -238,7 +204,6 @@ function outputSingleFeature(
 	console.log(`  Consumable:  ${feature.consumable ? "Yes" : "No"}`);
 	console.log(`  Archived:    ${feature.archived ? "Yes" : "No"}`);
 
-	// Display names
 	if (feature.display) {
 		console.log("");
 		console.log("Display:");
@@ -246,7 +211,6 @@ function outputSingleFeature(
 		console.log(`  Plural:      ${feature.display.plural ?? "-"}`);
 	}
 
-	// Event names (for metered features)
 	if (feature.event_names && feature.event_names.length > 0) {
 		console.log("");
 		console.log(`Event Names (${feature.event_names.length}):`);
@@ -255,7 +219,6 @@ function outputSingleFeature(
 		}
 	}
 
-	// Credit schema (for credit_system features)
 	if (feature.credit_schema && feature.credit_schema.length > 0) {
 		console.log("");
 		console.log(`Credit Schema (${feature.credit_schema.length}):`);
@@ -268,9 +231,6 @@ function outputSingleFeature(
 	}
 }
 
-/**
- * Escape a value for CSV output
- */
 function escapeCsv(value: string): string {
 	if (value.includes(",") || value.includes('"') || value.includes("\n")) {
 		return `"${value.replace(/"/g, '""')}"`;

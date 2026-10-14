@@ -2,7 +2,6 @@ import { MagnifyingGlassIcon } from "@phosphor-icons/react";
 import type { ComponentProps, ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
-/** Search row for hand-built popovers, matching the Command search row. */
 export const OverlaySearchInput = ({
 	icon = <MagnifyingGlassIcon className="size-3.5 shrink-0" />,
 	className,

@@ -1,11 +1,3 @@
-/**
- * atmn crud/migrations — create a new version [v2 row in plans, v1 moved to planVersions] with customers on v1 → no migration, customers stay on v1, v2 active
- *
- * the `versionedPro` base config: base price, prepaid seat item, usage item, trial, seat license; every line has customers attached
- *
- * One line of plans/atmn-v3/07_tests.md. [a, b] is a matrix looped INSIDE this file.
- */
-
 import { expect, test } from "bun:test";
 import { CusProductStatus, customerProducts } from "@autumn/shared";
 import { seedVersionableCustomer } from "@tests/integration/catalog-v2/plans/migrations/utils/seedVersionableCustomer.js";
@@ -27,7 +19,6 @@ import { ProductService } from "@/internal/products/ProductService.js";
 import { runPush } from "../../../../../../packages/atmn/src/actions/push";
 import { createClient } from "../../../../../../packages/atmn/src/generated/client";
 
-/** Every live `pro` version row, oldest first, with its internal id. */
 const liveProVersions = async ({
 	ctx,
 }: {
@@ -51,7 +42,6 @@ const liveProVersions = async ({
 		.sort((a, b) => a.version - b.version);
 };
 
-/** Active customer_products rows currently on a plan version's internal id. */
 const activeCustomerCount = async ({
 	ctx,
 	internalProductId,
@@ -107,7 +97,6 @@ test.concurrent(
 			);
 			const result = await runPush({ client, cwd: scenario.cwd });
 
-			// Minting a version is not an in-place edit, so nothing warrants a draft.
 			expect(result.preview.migrations ?? []).toEqual([]);
 			expect(result.migrationIds).toEqual([]);
 

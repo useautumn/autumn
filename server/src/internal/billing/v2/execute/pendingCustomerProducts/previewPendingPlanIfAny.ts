@@ -8,7 +8,6 @@ import { getDeferredBillingPlanData } from "@/internal/billing/v2/execute/pendin
 import { previewPendingReattach } from "@/internal/billing/v2/execute/pendingCustomerProducts/previewPendingReattach";
 import { billingPlanToUpdateSubscriptionPreview } from "@/internal/billing/v2/utils/billingPlan/toUpdateSubscriptionPreview/billingPlanToUpdateSubscriptionPreview";
 
-/** Previews an edit that re-attaches a pending plan, mirroring updatePendingPlanIfAny. */
 export const previewPendingPlanIfAny = async ({
 	ctx,
 	params,
@@ -43,7 +42,6 @@ export const previewPendingPlanIfAny = async ({
 	const { billingContext, billingPlan } = replacementPreview;
 	if (!rebills || !billingPlan) return;
 
-	// The edit re-attaches the plan, so it previews as a plan update at the full new price.
 	return billingPlanToUpdateSubscriptionPreview({
 		ctx,
 		billingContext,

@@ -405,7 +405,6 @@ test.concurrent("inverts pooled balance inserts and delta updates", () => {
 
 	expect(computeRollbackPlan({ autumnBillingPlan }).pooledBalancePlan).toEqual({
 		insertPoolBalances: [],
-		// The update targeting the same-plan-inserted pool is dominated by its delete.
 		updatePoolBalances: [
 			{
 				pooledCustomerEntitlement: existingPool,

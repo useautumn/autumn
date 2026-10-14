@@ -1,8 +1,3 @@
-/**
- * invoices.create — customize.items supplying a feature price the catalog plan
- * does not have, for this invoice only.
- */
-
 import { expect, test } from "bun:test";
 import {
 	BillingInterval,
@@ -287,7 +282,6 @@ test.concurrent(
 			},
 		});
 
-		// 2 users × $10; the zero-priced messages add no line.
 		await expectCreatedInvoiceCorrect({
 			ctx,
 			response,
@@ -357,7 +351,6 @@ test.concurrent(
 			},
 		});
 
-		// The named Stripe price bills 3 × $9; the inline $0 is ignored, as with any named price.
 		const { stripeInvoice } = await expectCreatedInvoiceCorrect({
 			ctx,
 			response,

@@ -155,8 +155,6 @@ describe("setSharedFullSubjectBalances", () => {
 			_usage_windows: "[]",
 		});
 
-		// action1 has no entitlements: the write exists purely to seed the
-		// fail-closed `_usage_windows` field.
 		const actionWrite = writes.find((write) =>
 			write.balanceKey.endsWith(":action1"),
 		);

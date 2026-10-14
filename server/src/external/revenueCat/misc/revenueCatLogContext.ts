@@ -18,7 +18,6 @@ export const buildRevenueCatEventContext = (
 	transferred_to: event?.transferred_to as string[] | undefined,
 });
 
-/** Rebuilds the RC webhook logger from its base so app and event context each appear once. */
 export const setRevenueCatLogContext = ({
 	ctx,
 	customerId,

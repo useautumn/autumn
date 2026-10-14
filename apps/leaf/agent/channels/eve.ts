@@ -2,8 +2,6 @@ import { type AuthFn, localDev, vercelOidc } from "eve/channels/auth";
 import { eveChannel } from "eve/channels/eve";
 
 const leafInternalAuth = (): AuthFn<Request> => async (request) => {
-	// Must mirror env.ts's EVE_INTERNAL_AUTH_TOKEN fallback chain exactly, or
-	// leaf and eve derive different tokens and every request 401s.
 	const expectedToken =
 		process.env.EVE_INTERNAL_AUTH_TOKEN ??
 		process.env.CHAT_STATE_SECRET ??
@@ -48,8 +46,6 @@ const leafInternalAuth = (): AuthFn<Request> => async (request) => {
 	};
 };
 
-/** Evals and local tooling reach eve without leaf's headers; outside
- * production an env-configured org/user stands in so connections authorize. */
 const localEvalAuth = (): AuthFn<Request> => async () => {
 	if (process.env.NODE_ENV === "production") return null;
 	const orgId = process.env.LEAF_EVAL_ORG_ID;

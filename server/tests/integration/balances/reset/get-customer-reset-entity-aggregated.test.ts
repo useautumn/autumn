@@ -9,10 +9,6 @@ import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 
-// ─────────────────────────────────────────────────────────────────
-// Entity-level lazy reset: aggregated balance should reflect reset
-// ─────────────────────────────────────────────────────────────────
-
 test.concurrent(
 	`${chalk.yellowBright("lazy reset (entity): aggregated balance correct after entity-level reset")}`,
 	async () => {
@@ -35,7 +31,6 @@ test.concurrent(
 				],
 			});
 
-		// Track 30 messages on entity 1, 20 on entity 2
 		await autumnV1.track({
 			customer_id: customerId,
 			entity_id: entities[0].id,
@@ -51,7 +46,6 @@ test.concurrent(
 
 		await new Promise((resolve) => setTimeout(resolve, 2000));
 
-		// The balance worker doesn't aggregate entity data onto the customer, so tracks are read off the entities.
 		if (isBalanceWorkerRoute()) {
 			for (const [index, trackedUsage] of [30, 20].entries()) {
 				const entityBefore = await autumnV2_2.entities.get<ApiEntityV2>(
@@ -66,7 +60,6 @@ test.concurrent(
 				});
 			}
 		} else {
-			// Verify pre-reset state: customer aggregated = 200 - 50 = 150
 			const before = await autumnV2_2.customers.get<ApiCustomerV5>(customerId);
 			expectBalanceCorrect({
 				customer: before,
@@ -74,7 +67,6 @@ test.concurrent(
 				remaining: 150,
 				usage: 50,
 			});
-			// Verify pre-reset state: customer aggregated = 200 - 50 = 150
 			const beforeDb = await autumnV2_2.customers.get<ApiCustomerV5>(
 				customerId,
 				{
@@ -89,19 +81,16 @@ test.concurrent(
 			});
 		}
 
-		// Expire all cusEnts for this feature so next read triggers lazy reset
 		await expireAllCusEntsForReset({
 			ctx,
 			customerId,
 			featureId: TestFeature.Messages,
 		});
 
-		// After reset: each entity goes back to 100, aggregated = 200
 		await autumnV2_2.customers.get<ApiCustomerV5>(customerId);
 		await autumnV2_2.entities.get(customerId, entities[0].id);
 		await autumnV2_2.entities.get(customerId, entities[1].id);
 
-		// The balance worker doesn't aggregate entity data onto the customer.
 		if (!isBalanceWorkerRoute()) {
 			const after2 = await autumnV2_2.customers.get<ApiCustomerV5>(customerId);
 			expectBalanceCorrect({
@@ -112,7 +101,6 @@ test.concurrent(
 			});
 		}
 
-		// Verify each entity was reset
 		for (const entity of entities) {
 			const entityData = await autumnV1.entities.get(customerId, entity.id);
 			expect(entityData.features[TestFeature.Messages].balance).toBe(100);

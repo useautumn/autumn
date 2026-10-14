@@ -9,12 +9,10 @@ import { isOnStripeSchedule } from "@/internal/billing/v2/execute/addStripeSubsc
 import { firstPhaseStartsInFuture } from "../setup/classifyFirstPhaseStart";
 import { setPlansError } from "./setPlansError";
 
-/** Early access grants the plan now, but a paid one still needs Stripe to bill it from the start. */
 const needsStripeToStart = (customerProduct: FullCusProduct) =>
 	customerProduct.status === CusProductStatus.Scheduled ||
 	cp(customerProduct).paid().valid;
 
-/** A later first phase only starts when its Stripe schedule does, so each of its plans must ride that schedule. */
 export const handleFutureStartActivationErrors = ({
 	billingContext,
 	autumnBillingPlan,

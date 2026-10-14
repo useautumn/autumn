@@ -1,19 +1,3 @@
-/**
- * atmn sandbox — one isolated catalog, from mint to delete.
- *
- * Everything runs through the real CLI, because the whole point of the command
- * is the `.env` it leaves behind: the key it writes is shown once, and the pin
- * it writes is what silently redirects every later push. A test that called the
- * API directly would prove none of that.
- *
- * Contract:
- *   B1  create --use mints a sandbox and writes its key and the pin to .env
- *   B2  list shows it, marked as the sandbox commands target
- *   B3  the pin sends push at the sandbox: the config lands there, not on the
- *       org, and pulling it back leaves the file alone
- *   B4  delete --yes removes it from list and scrubs both lines from .env
- */
-
 import { expect, test } from "bun:test";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -85,15 +69,12 @@ test(`${chalk.yellowBright("atmn sandbox: mint, target, delete")}`, async () => 
 			] }`,
 	});
 	const { cwd, secretKey, baseUrl } = scenario;
-	// The CLI writes to the first .env on its search path; without one here
-	// that could be a file outside the scenario.
 	scenario.writeFile(".env", "");
 
 	const atmn = (args: string[]): Promise<string> =>
 		runCli({ cwd, args, secretKey, baseUrl });
 
 	try {
-		// B1 — the key is shown once, so it has to land on disk.
 		const created = await atmn(["sandbox", "create", sandboxName, "--use"]);
 		const sandboxId = createdSandboxId({ output: created });
 		const keyName = sandboxKeyName({ sandboxId });
@@ -106,13 +87,11 @@ test(`${chalk.yellowBright("atmn sandbox: mint, target, delete")}`, async () => 
 			throw new Error(`create wrote no ${keyName}:\n${created}`);
 		expect(envValue({ cwd, key: "AUTUMN_SANDBOX_ID" })).toBe(sandboxId);
 
-		// B2 — the pin is what "current" means.
 		const listed = await atmn(["sandbox", "list"]);
 		expect(listed).toContain(sandboxId);
 		expect(listed).toContain(sandboxName);
 		expect(listed).toContain("current");
 
-		// B3 — the pin redirects push; the org's own catalog stays empty.
 		await scenario.push();
 
 		const sandboxClient = createClient({ secretKey: sandboxKey, baseUrl });
@@ -124,13 +103,11 @@ test(`${chalk.yellowBright("atmn sandbox: mint, target, delete")}`, async () => 
 		expect(pulled.replaced).toEqual([]);
 		expect(pulled.deleted).toEqual([]);
 
-		// B4 — deleting takes the sandbox and both of its .env lines.
 		const deleted = await atmn(["sandbox", "delete", sandboxId, "--yes"]);
 		expect(deleted).toContain(`Deleted sandbox ${sandboxName} (${sandboxId}).`);
 
 		expect(envText({ cwd })).not.toContain(keyName);
 		expect(envValue({ cwd, key: "AUTUMN_SANDBOX_ID" })).toBeUndefined();
-		// The org key survives: only the sandbox's own lines go.
 		expect(await atmn(["sandbox", "list"])).not.toContain(sandboxId);
 	} finally {
 		scenario.cleanup();
@@ -159,14 +136,12 @@ test(`${chalk.yellowBright("atmn sandbox: delete needs --yes, and an unknown id 
 			output: await atmn(["sandbox", "create", sandboxName]),
 		});
 
-		// Nothing is sent without --yes: the sandbox is still listed after.
 		const gated = await atmn(["sandbox", "delete", sandboxId]);
 		expect(gated).toContain(
 			`This deletes sandbox ${sandboxName} (${sandboxId}) and everything in it. Re-run with --yes to delete.`,
 		);
 		expect(await atmn(["sandbox", "list"])).toContain(sandboxId);
 
-		// A typo is the CLI's error, not a request the server has to refuse.
 		await expect(
 			atmn(["sandbox", "delete", "org_not_a_sandbox", "--yes"]),
 		).rejects.toThrow(

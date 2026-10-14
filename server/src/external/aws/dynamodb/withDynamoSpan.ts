@@ -2,9 +2,6 @@ import { SpanKind, SpanStatusCode, trace } from "@opentelemetry/api";
 
 const tracer = trace.getTracer("autumn.dynamodb");
 
-/** Client span around a DynamoDB operation — surfaces per-call latency and
- *  outcome in traces. The callback gets a setter for outcome attributes
- *  resolved during the call (e.g. claimed vs duplicate vs unavailable). */
 export const withDynamoSpan = async <T>({
 	name,
 	attributes,

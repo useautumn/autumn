@@ -1,5 +1,3 @@
-/** Contract: parent-specific monthly/annual Dev Seat prices share its Stripe product and each selects only its owning parent on sub.created.
- * A later Stripe quantity update converges that parent's existing license pool without replacing its catalog definition. */
 import { expect, test } from "bun:test";
 import {
 	type ApiCustomerV3,

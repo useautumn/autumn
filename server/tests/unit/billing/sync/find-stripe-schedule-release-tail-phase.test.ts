@@ -1,9 +1,3 @@
-/**
- * Stripe has no open-ended future phase, so a schedule that ends one plan while
- * an ongoing plan keeps billing adds a last phase holding only the ongoing plan's
- * prices, then releases. A last phase that renews a scheduled plan is real.
- */
-
 import { describe, expect, it } from "bun:test";
 import type Stripe from "stripe";
 import { findStripeScheduleReleaseTailPhase } from "@/external/stripe/subscriptionSchedules";

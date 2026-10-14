@@ -41,8 +41,6 @@ export function frontendProductToApiPlanV1(
 		features,
 	});
 
-	// Mirrors what productItemsToPlanItemsV1 does for feature prices, so a base
-	// price mapping survives the save rather than being dropped here.
 	const baseProcessors = basePriceItem
 		? priceConfigToPriceProcessors({ config: basePriceItem.price_config })
 		: undefined;
@@ -62,8 +60,6 @@ export function frontendProductToApiPlanV1(
 			}
 		: null;
 
-	// planType is derived from items; the stored planType field can be stale
-	// after item edits.
 	const { planType } = productV2ToFrontendProduct({ product });
 
 	const freeTrial: ApiPlanV1["free_trial"] = product.free_trial
@@ -106,8 +102,6 @@ function diffHasBillingChanges(diff: DiffedCustomizePlanV1): boolean {
 	return false;
 }
 
-// Unlike `diffHasBillingChanges`, also flags pure removals of priced items so
-// the migration UI can warn about any change to what customers are billed.
 export function planHasPricingChange({
 	baseProduct,
 	product,
@@ -122,8 +116,6 @@ export function planHasPricingChange({
 	const diff = diffPlanV1({ from, to });
 	if (diff.price !== undefined) return true;
 	if (diff.add_items?.some((item) => item.price != null)) return true;
-	// Remove filters can omit billing_method even when priced, so check the
-	// source items by feature_id rather than the lossy filter.
 	const removedFeatureIds = new Set(
 		diff.remove_items?.map((item) => item.feature_id) ?? [],
 	);
@@ -172,8 +164,6 @@ function versionCustomize({
 	return Object.keys(diff).length > 0 ? diff : undefined;
 }
 
-/** Pairs `version` with the from→to item diff; `version` alone would replace
- * every customer item with the target catalog. */
 export function buildVersionMigrationDraft({
 	productId,
 	latestVersion,
@@ -302,7 +292,6 @@ export interface AllVersionsUpdateMigrationTarget {
 	customize: DiffedCustomizePlanV1 | null;
 }
 
-// Version resets re-materialize customer entitlements from the updated catalog.
 export function buildCombinedVariantMigrationDraft({
 	variants,
 	hasPricingChange,

@@ -1,6 +1,3 @@
-/** Re-listing a paid plan no Stripe subscription bills starts billing it: the accrued overage is
- * invoiced now at the price it was used at, a subscription starts and usage resets, the same as a price change. */
-
 import { expect, test } from "bun:test";
 import {
 	type ApiCustomerV3,
@@ -44,7 +41,6 @@ const basePriceChange: PlanCustomize = {
 	price: { amount: CHANGED_BASE_PRICE, interval: BillingInterval.Month },
 };
 
-/** Pro ($20/mo, 100 messages, $0.10 over) attached without billing, then 150 messages tracked. */
 const setupUnbilledProInOverage = async ({
 	customerId,
 }: {
@@ -87,7 +83,6 @@ const previewAmounts = (preview: SetPlansPreviewResponse) => ({
 		.map((lineItem) => lineItem.total),
 });
 
-/** Every Stripe invoice line the customer has, split into messages and other lines, in dollars. */
 const invoicedAmounts = async ({
 	scenario,
 }: {
@@ -140,7 +135,6 @@ const messagesUsage = async ({
 	return customer.features[TestFeature.Messages]?.usage;
 };
 
-/** Re-lists pro, as it is or customized, and reports what Autumn and Stripe billed. */
 const relistPro = async ({
 	customerId,
 	customize,
@@ -179,7 +173,6 @@ const relistPro = async ({
 	};
 };
 
-/** Billing starts now: the overage at the price it was used at, a full period of the base price. */
 const startsBilling = ({ basePrice }: { basePrice: number }) => ({
 	preview: { total: basePrice + OVERAGE_TOTAL, messages: [OVERAGE_TOTAL] },
 	invoiced: { messages: [OVERAGE_TOTAL], other: [basePrice] },

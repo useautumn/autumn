@@ -9,12 +9,8 @@ import AutumnError from "@/external/autumn/autumnCli.js";
 const testCase = "rate-limit-events-list";
 const customerId = `test-${testCase}`;
 
-// Events rate limit is 5 per second per customer
 const EVENTS_RATE_LIMIT = 5;
 
-/**
- * Test: Rate limit on events/list endpoint
- */
 test(`${chalk.yellowBright(testCase)}`, async () => {
 	const messagesItem = items.monthlyMessages({ includedUsage: 1000 });
 	const baseProduct = products.base({ id: "base", items: [messagesItem] });

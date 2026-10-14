@@ -70,7 +70,6 @@ function createTestRuntime({
 		ctx: { session },
 		config: { topic, partition },
 	});
-	// Replay is covered separately; this test isolates real producer epochs and runtime disposal.
 	async function startAndCatchUp(): Promise<void> {}
 	async function stop(): Promise<void> {}
 	async function readLogRange() {

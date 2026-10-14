@@ -31,7 +31,6 @@ function Command({
 	);
 }
 
-// Palette-only sizing, applied through data-slots so inline pickers keep their compact rows.
 const COMMAND_DIALOG_SLOT_STYLES = {
 	default: [
 		"[&_[data-slot=command-input-wrapper]]:h-13 [&_[data-slot=command-input-wrapper]]:shrink-0 [&_[data-slot=command-input-wrapper]]:gap-3 [&_[data-slot=command-input-wrapper]]:px-4",

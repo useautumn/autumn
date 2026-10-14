@@ -11,10 +11,6 @@ import {
 } from "./balanceWorker/runBalanceWorkerRecalculateBalance.js";
 import { computeRecalculateBalance } from "./computeRecalculateBalance";
 
-/**
- * Computes a preview of a balance recalculation without persisting anything,
- * returning the remaining balance per entitlement before and after.
- */
 export const recalculateBalancePreview = async ({
 	ctx,
 	params,

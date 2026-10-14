@@ -36,7 +36,6 @@ export const applyTwStripeConcurrencyLimit = ({
 		const deadline =
 			getTwStripeRequestDeadline() ??
 			createTwStripeRequestDeadline({ timeoutMs: args[7] });
-		// Redis is never initialized or imported by the production request path.
 		const [{ acquireTwStripePermit }, { startTwStripeFileStats }] =
 			await Promise.all([
 				import("./twStripeLimiter/acquireTwStripePermit"),
@@ -99,7 +98,6 @@ export const applyTwStripeConcurrencyLimit = ({
 								timeoutMs: deadline.remainingMs(),
 							})
 						: null;
-				// Only allow known resource names; paths and queries can contain customer data.
 				const endpoint =
 					args[2].match(
 						/^\/(v1\/(?:accounts|balance|billing|billing_portal|charges|checkout|coupons|customers|events|invoiceitems|invoices|payment_intents|payment_methods|prices|products|promotion_codes|setup_intents|subscription_items|subscription_schedules|subscriptions|tax|test_helpers|webhook_endpoints)|v2\/core\/accounts)(?:[/?]|$)/,

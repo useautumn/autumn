@@ -86,10 +86,6 @@ describe("Eve turn reducer", () => {
 	});
 
 	test("a steered turn is a boundary to read past, not a reply", () => {
-		// Tony's second message steered the turn mid-sentence: eve cancels it,
-		// parks, then restarts with both messages in context. The "Appl" the
-		// cancelled turn streamed was posted as the reply in the 2026-09-16
-		// incident; the reader must drop it and wait for the replacement.
 		const started = reduceEveTurnEvent({
 			event: { turnId: "turn_1", type: "turn.started" },
 			progress: {
@@ -119,8 +115,6 @@ describe("Eve turn reducer", () => {
 			pendingText: "",
 			turnStarted: false,
 		});
-		// A write the cancelled turn completed is not rolled back by eve, so its
-		// approval still has to be assembled when the replacement turn ends.
 		expect(cancelled.progress.recordedWrites).toHaveLength(1);
 
 		const waiting = reduceEveTurnEvent({
@@ -294,8 +288,6 @@ describe("Eve turn reducer", () => {
 			},
 			progress: requested.progress,
 		});
-		// The park is persisted with the option that releases each request, so a
-		// later message can never be posted over it unanswered.
 		expect(suspended.effects).toHaveLength(1);
 		expect(suspended.effects[0]).toMatchObject({ kind: "save_session" });
 		expect(
@@ -344,8 +336,6 @@ describe("Eve turn reducer", () => {
 	});
 });
 
-// The prompt requires a preview first, so the writes park on a LATER turn than
-// the preview call — the batch must still group into one approval.
 describe("a batch parked after a preview turn", () => {
 	test("groups both writes from a post-preview park", () => {
 		const started = reduceEveTurnEvent({

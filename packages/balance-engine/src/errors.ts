@@ -20,7 +20,6 @@ export class OutOfOrderMutationError extends Error {
 	}
 }
 
-/** A non-initialize mutation arrived for a subject the worker holds no state for. */
 export class SubjectStateMissingError extends Error {
 	constructor() {
 		super("Only an initialize can create subject state");
@@ -35,7 +34,6 @@ export class MutationSubjectMismatchError extends Error {
 	}
 }
 
-/** State references a catalog row the catalog does not hold; the caller filled the catalog incompletely. */
 export class CatalogRowMissingError extends Error {
 	constructor({ table, id }: { table: string; id: string }) {
 		super(`Catalog row missing: ${table}:${id}`);
@@ -62,7 +60,6 @@ export type UnsupportedCommandReason =
 	| "rate_card_with_additional_balance"
 	| "subject_mismatch";
 
-/** The engine cannot decide this command for this subject; the caller maps the reason to a status. */
 export class UnsupportedCommandError extends Error {
 	readonly reason: UnsupportedCommandReason;
 
@@ -73,7 +70,6 @@ export class UnsupportedCommandError extends Error {
 	}
 }
 
-/** The customer already holds an open lock under this id; nothing was deducted. */
 export class LockAlreadyExistsError extends Error {
 	readonly lockId: string;
 
@@ -84,7 +80,6 @@ export class LockAlreadyExistsError extends Error {
 	}
 }
 
-/** No open lock under this id for the customer: never taken, already settled, or expired. */
 export class LockNotFoundError extends Error {
 	readonly lockId: string;
 

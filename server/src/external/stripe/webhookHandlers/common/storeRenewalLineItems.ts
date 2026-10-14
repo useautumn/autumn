@@ -7,15 +7,6 @@ import {
 	buildBillingContextForInAdvanceInvoice,
 } from "./buildBillingContextFromWebhook";
 
-/**
- * Generates billing line items and triggers the async workflow to store them.
- *
- * For invoice.created: Pass eventContext and periodEndMs to generate both
- * in-advance and arrear line items with full Autumn metadata.
- *
- * For invoice.finalized: Pass reconcileOnly: true to only update Stripe-authoritative
- * fields (amounts, quantities), preserving Autumn metadata set during invoice.created.
- */
 export async function storeRenewalLineItems({
 	ctx,
 	autumnInvoice,
@@ -39,7 +30,6 @@ export async function storeRenewalLineItems({
 
 	const billingLineItems: LineItem[] = [];
 
-	// Generate in-advance line items if we have full context
 	if (eventContext && periodEndMs) {
 		const billingContext = buildBillingContextForInAdvanceInvoice({
 			eventContext,
@@ -57,7 +47,6 @@ export async function storeRenewalLineItems({
 		}
 	}
 
-	// Append arrear line items (already generated before balance reset)
 	billingLineItems.push(...arrearLineItems);
 
 	await workflows.triggerStoreInvoiceLineItems({

@@ -1,7 +1,3 @@
-/**
- * catalogV2.update — direct plans[] on a variant beats derived follow.
- */
-
 import { test } from "bun:test";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";

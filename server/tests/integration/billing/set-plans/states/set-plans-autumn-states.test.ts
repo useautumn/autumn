@@ -1,5 +1,3 @@
-/** set_plans declares every plan in its scope: unlisted recurring plans end, one-off purchases are never ended. */
-
 import { test } from "bun:test";
 import { ms } from "@autumn/shared";
 import { expectCustomerProducts } from "@tests/integration/billing/utils/expectCustomerProductCorrect";

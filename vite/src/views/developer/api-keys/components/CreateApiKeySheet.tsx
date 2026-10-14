@@ -32,8 +32,6 @@ export const CreateApiKeySheet = ({
 	const axiosInstance = useAxiosInstance();
 	const { data: session } = useSession();
 	// better-auth's TS inference doesn't auto-propagate customSession
-	// additions in all setups, so we cast — this mirrors the server-side
-	// `betterAuthMiddleware` pattern.
 	const callerScopes = ((session as any)?.scopes ?? []) as string[];
 
 	const [loading, setLoading] = useState(false);
@@ -104,12 +102,6 @@ export const CreateApiKeySheet = ({
 
 	return (
 		<Sheet open={open} onOpenChange={onOpenChange}>
-			{/*
-			  Width matches the canonical app-wide sheet width: 28rem
-			  (see `CustomerSheets.tsx` — all inline sheets animate to
-			  28rem on desktop). The Radix Sheet default is narrower; we
-			  set min+max so the content matches the other sheets visually.
-			*/}
 			<SheetContent
 				side="right"
 				className="!w-[28rem] !max-w-[28rem] sm:!w-[28rem] sm:!max-w-[28rem]"

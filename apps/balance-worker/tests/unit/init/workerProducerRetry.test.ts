@@ -23,10 +23,8 @@ function workerRuntimeConfig() {
 test("partition producers retry within milliseconds and keep retrying through a leader election", () => {
 	const { producerLimits } = workerRuntimeConfig();
 
-	// CONCURRENT_TRANSACTIONS clears in a few ms; a 100ms first backoff was the tail.
 	expect(producerLimits.initialRetryTimeMs).toBeLessThanOrEqual(10);
 
-	// kafkajs doubles each wait up to maxRetryTimeMs: 10 + 20 + … + 1280 + 2500 + 2500 ms.
 	let totalBackoffMs = 0;
 	for (let attempt = 0; attempt < producerLimits.retryCount; attempt++) {
 		totalBackoffMs += Math.min(
@@ -42,7 +40,6 @@ test("a recovery drain outlasts the producer's worst-case retries, so no append 
 	expect(() =>
 		assertRecoveryDrainOutlastsProducerRetries({ producerLimits, timings }),
 	).not.toThrow();
-	// 10 + 20 + … + 1280 + 2500 + 2500 ms, each jittered up by as much as 20%.
 	expect(() =>
 		assertRecoveryDrainOutlastsProducerRetries({
 			producerLimits,

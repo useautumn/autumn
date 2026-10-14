@@ -10,7 +10,6 @@ import { readSubjectBaseline } from "./readSubjectBaseline.js";
 
 const DEFAULT_LARGE_STATE_BYTES = 1_048_576;
 
-/** A customer whose rows are this large is a cost on every command that touches it; name it once, when it is read. */
 const reportLargeState = ({
 	scope,
 	identity,
@@ -33,10 +32,6 @@ const reportLargeState = ({
 	);
 };
 
-/**
- * One read of the subject for now: through the snapshot probe, or the rows alone when the caller cannot trust a row
- * (a read an evict overtook, a refresh of the row itself). Nothing becomes resident here.
- */
 export const readSubjectRows = async ({
 	scope,
 	identity,

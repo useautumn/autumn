@@ -63,8 +63,6 @@ describe("parseOAuthRequestFields", () => {
 	});
 });
 
-// The refresh replay key hashes the rebuilt body, so the encoding has to be
-// canonical: same fields in, same bytes out, whatever order they arrived in.
 describe("rebuildOAuthRequest", () => {
 	test("re-encodes json fields in key order, keeping nested values", async () => {
 		const request = postRequest({

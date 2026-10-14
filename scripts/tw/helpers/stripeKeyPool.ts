@@ -25,20 +25,10 @@
  * the `stripe` dependency — `scripts/` deliberately does not), re-exported below.
  */
 
-// Per-key Stripe client factory (cached). Lives server-side; `scripts/` has no
-// `stripe` dep, so we re-export it rather than `import Stripe from "stripe"` here.
 export { stripeClientForKey } from "@server/external/connect/stripeFromKey.js";
 
 import { isStripeConnectShardKey } from "./stripeConnectShard.ts";
 
-/**
- * Env vars the pool is assembled from, in order. `_OLD` holds an earlier
- * generation of platform keys that was retired when the swarm kept hitting
- * mysterious `rate_limit` errors. That turned out to be Stripe's
- * `endpoint-concurrency` shedding rather than anything wrong with the keys (see
- * server/src/external/connect/clientCache/twStripeConcurrencyLimit.ts), so they
- * are healthy and folded back in — every extra key is another bucket.
- */
 export const STRIPE_POOL_ENV_VARS = [
 	"STRIPE_TEST_KEY_POOL",
 	"STRIPE_TEST_KEY_POOL_OLD",
@@ -50,15 +40,6 @@ const splitKeys = (raw: string | undefined): string[] =>
 		.map((key) => key.trim())
 		.filter(Boolean) ?? [];
 
-/**
- * The single source of truth for which Stripe platform keys exist. Both the
- * swarm (`bun tw`) and the key probe (`bun tw:pk`) read the pool through here,
- * so they can never disagree about pool size or ordering.
- *
- * Keys are de-duplicated while preserving first-seen order, so a key present in
- * both env vars occupies one slot rather than two — round-robin assignment
- * assumes distinct rate-limit buckets.
- */
 export const collectPoolKeys = (): string[] => {
 	const seen = new Set<string>();
 	const keys: string[] = [];
@@ -99,24 +80,16 @@ const pool = (): string[] => {
 	return poolCache;
 };
 
-/** Number of distinct platform keys (= the rate-limit multiplier). */
 export const stripeKeyPoolSize = (): number => pool().length;
 
-/** Every configured pool key (used by the preflight validator). */
 export const allPoolKeys = (): string[] => [...pool()];
 
-/**
- * Restrict the pool to the given keys (the preflight drops keys that can't create
- * Connect accounts). Ignores an empty set so a fully-failed probe doesn't wipe the
- * pool (the caller aborts on zero usable keys instead).
- */
 export const restrictPoolTo = (keys: string[]): void => {
 	if (keys.length > 0) {
 		poolCache = keys;
 	}
 };
 
-/** Round-robin a worker index onto a pool key + the key's index (for teardown). */
 export const stripeKeyForWorker = (
 	idx: number,
 ): { key: string; keyIndex: number } => {
@@ -125,7 +98,6 @@ export const stripeKeyForWorker = (
 	return { key: keys[keyIndex], keyIndex };
 };
 
-/** Resolve a pool key by index (clamps to key 0 for out-of-range/legacy). */
 export const stripeKeyByIndex = (keyIndex: number): string => {
 	const keys = pool();
 	return keys[keyIndex] ?? keys[0];
@@ -133,11 +105,9 @@ export const stripeKeyByIndex = (keyIndex: number): string => {
 
 const SUB_ACCOUNT_SEP = "::";
 
-/** Persist a sub-account id WITH its pool-key index (so teardown finds the key). */
 export const encodeSubAccount = (accountId: string, keyIndex: number): string =>
 	`${accountId}${SUB_ACCOUNT_SEP}${keyIndex}`;
 
-/** Inverse of {@link encodeSubAccount}; legacy ids (no separator) → key 0. */
 export const decodeSubAccount = (
 	encoded: string,
 ): { accountId: string; keyIndex: number } => {
@@ -152,11 +122,9 @@ export const decodeSubAccount = (
 	};
 };
 
-/** Tag stored on a per-key Connect webhook so teardown deletes it via its key. */
 export const webhookKeyTag = (keyIndex: number): string =>
 	`platform${SUB_ACCOUNT_SEP}${keyIndex}`;
 
-/** Inverse of {@link webhookKeyTag}; legacy "platform" → key 0. */
 export const keyIndexFromWebhookTag = (tag: string): number => {
 	const at = tag.lastIndexOf(SUB_ACCOUNT_SEP);
 	if (at === -1) {

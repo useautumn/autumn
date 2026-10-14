@@ -29,8 +29,6 @@ export const createLeafApp = () => {
 		return c.req.method === "OPTIONS" ? c.body(null, 204) : next();
 	});
 
-	// Stays 200 during eve's boot: the ALB has no grace period and would kill
-	// the task. The eve field is for deploy verification and alerting.
 	app.get("/health", (c) => c.json({ eve: embeddedEveStatus(), ok: true }));
 	app.route(
 		"",

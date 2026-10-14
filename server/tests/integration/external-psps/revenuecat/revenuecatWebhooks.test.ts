@@ -27,12 +27,10 @@ import {
 const testCase = "rc1";
 const RC_WEBHOOK_SECRET = "test_rc_webhook_secret_12345";
 
-// RevenueCat product IDs (what RC sends in webhooks)
 const RC_PRO_MONTHLY_ID = "com.app.pro_monthly";
 const RC_PRO_YEARLY_ID = "com.app.pro_yearly";
 const RC_ADD_ON_ID = "com.app.add_on_pack";
 
-// Autumn product definitions
 const messagesFeature = constructFeatureItem({
 	featureId: TestFeature.Messages,
 	includedUsage: 1000,
@@ -106,7 +104,6 @@ describe(chalk.yellowBright("rc1: RevenueCat webhook integration"), () => {
 			"Expected at least one active cus_product for customer",
 		).toBe(true);
 
-		// Return the latest active cus_product id for the customer
 		return activeSorted[activeSorted.length - 1]!.id;
 	};
 
@@ -146,7 +143,6 @@ describe(chalk.yellowBright("rc1: RevenueCat webhook integration"), () => {
 	};
 
 	beforeAll(async () => {
-		// 1. Configure org with RevenueCat processor config
 		if (
 			ctx.org.processor_configs?.revenuecat?.sandbox_webhook_secret !==
 			RC_WEBHOOK_SECRET
@@ -170,25 +166,12 @@ describe(chalk.yellowBright("rc1: RevenueCat webhook integration"), () => {
 			});
 		}
 
-		// Initialize RevenueCat webhook client
 		rcClient = new RevenueCatWebhookClient({
 			orgId: ctx.org.id,
 			env: ctx.env,
 			webhookSecret: RC_WEBHOOK_SECRET,
 		});
 
-		// IMPORTANT: clean up stale RC mappings before re-upserting.
-		//
-		// `addPrefixToProducts` was changed in Jan from prefix-style
-		// (`${prefix}_${id}`) to suffix-style (`${id}_${prefix}`). Old runs left
-		// rows in `revenuecat_mappings` keyed by the prefix-style autumn_product_id
-		// (e.g. `rc1_rc1-pro-monthly`). The mapping table PK includes
-		// `autumn_product_id`, so a fresh upsert under the new ID does NOT
-		// overwrite the stale row. The resolver's `arrayContains` lookup can then
-		// return the stale row, causing `ProductNotFoundError`.
-		//
-		// Clear by `revenuecat_product_ids` overlap so the cleanup is independent
-		// of whatever stale autumn_product_id format was used previously.
 		await ctx.db
 			.delete(revenuecatMappings)
 			.where(
@@ -203,8 +186,6 @@ describe(chalk.yellowBright("rc1: RevenueCat webhook integration"), () => {
 				),
 			);
 
-		// Create products + customer concurrently. Products must finish before
-		// we read their (post-prefix) IDs for the mappings below.
 		await Promise.all([
 			initProductsV0({
 				ctx,
@@ -218,8 +199,6 @@ describe(chalk.yellowBright("rc1: RevenueCat webhook integration"), () => {
 			}),
 		]);
 
-		// Now that initProductsV0 has mutated the product IDs (suffix-style),
-		// upsert mappings with the final, correct autumn_product_id values.
 		await Promise.all([
 			RCMappingService.upsert({
 				db: ctx.db,
@@ -383,8 +362,6 @@ describe(chalk.yellowBright("rc1: RevenueCat webhook integration"), () => {
 		expect(customer.products).toHaveLength(0);
 
 		const latestCusProductId = await fetchLatestCusProductIdAnyStatus();
-		// After expiration, there may no longer be a cus_product row at all. In that
-		// case, we just assert there are no cus_products for this customer anymore.
 		if (latestCusProductId === null) {
 			const allCusProducts = await CusProductService.list({
 				db: ctx.db,

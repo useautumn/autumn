@@ -1,8 +1,3 @@
-// Single server-side entry point for every Context.dev call. Keep all
-// Context.dev requests routed through here (auth, retries, error mapping) —
-// never call api.context.dev directly from handlers, and never expose
-// CONTEXT_DEV_API_KEY to the browser bundle.
-// Docs: https://docs.context.dev
 import { InternalError } from "@autumn/shared";
 
 const CONTEXT_DEV_BASE_URL = "https://api.context.dev/v1";
@@ -63,7 +58,6 @@ const getRetryDelayMs = ({
 	const retryAfter = response?.headers.get("retry-after")?.trim();
 	if (!retryAfter) return backoffMs;
 
-	// Retry-After is either delay-seconds or an HTTP-date.
 	const retryAfterSeconds = Number(retryAfter);
 	const retryAfterMs = Number.isFinite(retryAfterSeconds)
 		? retryAfterSeconds * 1000
@@ -99,7 +93,6 @@ const contextDevRequest = async <T>({
 				signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
 			});
 		} catch (error) {
-			// Network error / timeout — treat like a 5xx.
 			if (isLastAttempt) {
 				throw new ContextDevError({
 					message: `Context.dev request failed: ${(error as Error).message}`,
@@ -134,7 +127,6 @@ const contextDevRequest = async <T>({
 	});
 };
 
-/** POST /brand/retrieve — https://docs.context.dev/api-reference/brand-intelligence/brand */
 export const retrieveBrandByDomain = async ({
 	domain,
 }: {

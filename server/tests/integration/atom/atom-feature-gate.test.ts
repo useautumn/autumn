@@ -1,11 +1,3 @@
-/**
- * Atom management is gated on the org's `atoms` feature in Autumn's own billing.
- *
- * Contract:
- *  1. without `atoms`, a byoc call is refused with feature_limit_reached;
- *  2. with `atoms`, the same call goes through.
- */
-
 import { expect, test } from "bun:test";
 import { ErrCode } from "@autumn/shared";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils.js";

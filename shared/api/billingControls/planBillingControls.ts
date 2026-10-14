@@ -1,7 +1,6 @@
 import { CustomerBillingControlsParamsSchema } from "../../models/cusModels/billingControls/customerBillingControls.js";
 import { filterUnresolvableUsageLimitAlerts } from "../../utils/billingControlUtils/filterUnresolvableUsageLimitAlerts.js";
 
-// Create only; updates validate against the merged row server-side.
 export const PlanBillingControlsParamsSchema =
 	CustomerBillingControlsParamsSchema.check((ctx) => {
 		const unresolvable = filterUnresolvableUsageLimitAlerts({

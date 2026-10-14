@@ -51,12 +51,6 @@ function registerShutdownSignals({ worker }: { worker: BalanceWorker }): void {
 	process.once("SIGTERM", shutdown);
 }
 
-/** A partition failing terminally shuts the whole partition service down, and
- *  nothing restarts a stopped consumer. Without ending the process the task
- *  stays up owning nothing, its health endpoint still answers, and the scheduler
- *  never replaces it: staging watched a fleet sit at zero ready partitions until
- *  someone redeployed it by hand. Exiting non-zero hands that decision back to
- *  the scheduler, which is what the shutdown was assuming all along. */
 function exitAfterServiceStopped({
 	cause,
 	scope,

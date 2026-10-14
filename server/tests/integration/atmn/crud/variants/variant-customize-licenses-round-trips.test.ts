@@ -1,11 +1,3 @@
-/**
- * atmn crud/variants — a variant that swaps its base's license link via
- * customize.removeLicenses / upsertLicenses round-trips: the get exposes the
- * overlay, every push of the config (unchanged, or with an unrelated edit
- * while customers are attached) leaves exactly one link on the variant, and
- * a phantom link already in the DB is repaired by the next push.
- */
-
 import { expect, test } from "bun:test";
 import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 import {
@@ -111,7 +103,6 @@ const licenseLinksOf = async ({
 	}));
 };
 
-/** starter→seat, pro→seat, proAnnual→seatAnnual — and nothing else. */
 const expectLinksUnchanged = async ({
 	scenario,
 }: {
@@ -161,7 +152,6 @@ test.concurrent(
 			});
 			expect(plans.some((row) => row.plan_id === "proAnnual")).toBe(false);
 
-			// A second --yes push of the unchanged config must leave every link alone.
 			await scenario.push();
 			await expectLinksUnchanged({ scenario });
 		} finally {

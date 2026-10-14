@@ -11,25 +11,6 @@ import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 
-/**
- * Invoice Action Required Tests - Scenarios
- *
- * These tests mirror the deferred activation scenarios but with 3DS authentication required.
- * Unlike invoice mode (invoice: true), these use the default payment flow that triggers
- * action_required when 3DS is needed.
- *
- * Cases:
- * - Case 1: Increase price (action required)
- * - Case 2: Decrease price - auto-paid (no action required, negative invoice)
- * - Case 3: Free → paid (action required)
- * - Case 4: Trial removal (action required)
- * - Case 5: Increase quantity (action required)
- */
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// CASE 1: INCREASE PRICE - ACTION REQUIRED
-// ═══════════════════════════════════════════════════════════════════════════════
-
 test.concurrent(`${chalk.yellowBright("action-required-scenario: increase price")}`, async () => {
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
 	const priceItem = items.monthlyPrice({ price: 20 });
@@ -46,11 +27,10 @@ test.concurrent(`${chalk.yellowBright("action-required-scenario: increase price"
 		],
 		actions: [
 			s.attach({ productId: pro.id }),
-			s.attachPaymentMethod({ type: "authenticate" }), // Switch to 3DS card
+			s.attachPaymentMethod({ type: "authenticate" }),
 		],
 	});
 
-	// Increase price from $20 to $30 AND increase messages from 100 to 200
 	const newMessagesItem = items.monthlyMessages({ includedUsage: 200 });
 	const newPriceItem = items.monthlyPrice({ price: 30 });
 
@@ -62,7 +42,6 @@ test.concurrent(`${chalk.yellowBright("action-required-scenario: increase price"
 
 	const preview = await autumnV1.subscriptions.previewUpdate(updateParams);
 
-	// Should charge $10 difference ($30 - $20)
 	expect(preview.total).toBe(10);
 
 	const result = await autumnV1.subscriptions.update(updateParams);
@@ -78,7 +57,6 @@ test.concurrent(`${chalk.yellowBright("action-required-scenario: increase price"
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Before authentication - balance should still be 100 (original)
 	expectCustomerFeatureCorrect({
 		customer,
 		featureId: TestFeature.Messages,
@@ -97,7 +75,6 @@ test.concurrent(`${chalk.yellowBright("action-required-scenario: increase price"
 		productId: pro.id,
 	});
 
-	// After authentication - balance should be 200 (new plan)
 	expectCustomerFeatureCorrect({
 		customer: customerAfterAuth,
 		featureId: TestFeature.Messages,
@@ -106,16 +83,11 @@ test.concurrent(`${chalk.yellowBright("action-required-scenario: increase price"
 
 	await expectCustomerInvoiceCorrect({
 		customer: customerAfterAuth,
-		count: 2, // Initial attach + update
+		count: 2,
 		latestTotal: preview.total,
 		latestStatus: "paid",
 	});
 });
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// CASE 2: DECREASE PRICE - AUTO-PAID (NO ACTION REQUIRED)
-// Note: Invoice is auto-paid by Stripe because the total is negative (credit)
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(`${chalk.yellowBright("action-required-scenario: decrease price (auto-paid)")}`, async () => {
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
@@ -133,11 +105,10 @@ test.concurrent(`${chalk.yellowBright("action-required-scenario: decrease price 
 		],
 		actions: [
 			s.attach({ productId: pro.id }),
-			s.attachPaymentMethod({ type: "authenticate" }), // Switch to 3DS card (but won't matter)
+			s.attachPaymentMethod({ type: "authenticate" }),
 		],
 	});
 
-	// Decrease price from $30 to $20 AND increase messages from 100 to 200
 	const newMessagesItem = items.monthlyMessages({ includedUsage: 200 });
 	const newPriceItem = items.monthlyPrice({ price: 20 });
 
@@ -149,18 +120,15 @@ test.concurrent(`${chalk.yellowBright("action-required-scenario: decrease price 
 
 	const preview = await autumnV1.subscriptions.previewUpdate(updateParams);
 
-	// Should be -$10 credit (price decrease)
 	expect(preview.total).toEqual(-10);
 
 	const result = await autumnV1.subscriptions.update(updateParams);
 
-	// Should NOT require action - negative invoice auto-pays
 	expect(result.required_action).toBeUndefined();
 	expect(result.payment_url).toBeNull();
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// After auto-paid invoice - balance should be 200 (new plan)
 	expectCustomerFeatureCorrect({
 		customer,
 		featureId: TestFeature.Messages,
@@ -169,15 +137,11 @@ test.concurrent(`${chalk.yellowBright("action-required-scenario: decrease price 
 
 	await expectCustomerInvoiceCorrect({
 		customer,
-		count: 2, // Initial attach + update
+		count: 2,
 		latestTotal: preview.total,
 		latestStatus: "paid",
 	});
 });
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// CASE 3: FREE → PAID - ACTION REQUIRED
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(`${chalk.yellowBright("action-required-scenario: free → paid")}`, async () => {
 	const dashboardItem = items.dashboard();
@@ -189,13 +153,12 @@ test.concurrent(`${chalk.yellowBright("action-required-scenario: free → paid")
 	const { customerId, autumnV1 } = await initScenario({
 		customerId: "action-scn-free-paid",
 		setup: [
-			s.customer({ testClock: true, paymentMethod: "authenticate" }), // Start with 3DS card
+			s.customer({ testClock: true, paymentMethod: "authenticate" }),
 			s.products({ list: [freeProduct] }),
 		],
 		actions: [s.attach({ productId: freeProduct.id })],
 	});
 
-	// Update from free to paid with monthly price
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
 	const priceItem = items.monthlyPrice({ price: 20 });
 
@@ -207,7 +170,6 @@ test.concurrent(`${chalk.yellowBright("action-required-scenario: free → paid")
 
 	const preview = await autumnV1.subscriptions.previewUpdate(updateParams);
 
-	// Should charge $20 (full price for new paid plan)
 	expect(preview.total).toBe(20);
 
 	const result = await autumnV1.subscriptions.update(updateParams);
@@ -218,7 +180,6 @@ test.concurrent(`${chalk.yellowBright("action-required-scenario: free → paid")
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Before authentication - messages feature should not exist (free product)
 	expect(customer.features?.[TestFeature.Messages]).toBeUndefined();
 
 	await completeInvoiceConfirmation({
@@ -233,7 +194,6 @@ test.concurrent(`${chalk.yellowBright("action-required-scenario: free → paid")
 		productId: freeProduct.id,
 	});
 
-	// After authentication - balance should be 100 (new paid plan)
 	expectCustomerFeatureCorrect({
 		customer: customerAfterAuth,
 		featureId: TestFeature.Messages,
@@ -242,15 +202,11 @@ test.concurrent(`${chalk.yellowBright("action-required-scenario: free → paid")
 
 	await expectCustomerInvoiceCorrect({
 		customer: customerAfterAuth,
-		count: 1, // Only the update invoice (free attach has no invoice)
+		count: 1,
 		latestTotal: preview.total,
 		latestStatus: "paid",
 	});
 });
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// CASE 5: INCREASE QUANTITY - ACTION REQUIRED
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(`${chalk.yellowBright("action-required-scenario: increase quantity")}`, async () => {
 	const billingUnits = 12;
@@ -280,7 +236,7 @@ test.concurrent(`${chalk.yellowBright("action-required-scenario: increase quanti
 					{ feature_id: TestFeature.Messages, quantity: 10 * billingUnits },
 				],
 			}),
-			s.attachPaymentMethod({ type: "authenticate" }), // Switch to 3DS card
+			s.attachPaymentMethod({ type: "authenticate" }),
 		],
 	});
 
@@ -292,10 +248,8 @@ test.concurrent(`${chalk.yellowBright("action-required-scenario: increase quanti
 		],
 	};
 
-	// Preview the upgrade
 	const preview = await autumnV1.subscriptions.previewUpdate(updateParams);
 
-	// Should charge for +10 units (10 * $8 = $80)
 	expect(preview.total).toBe(10 * pricePerUnit);
 
 	const result = await autumnV1.subscriptions.update(updateParams);
@@ -306,7 +260,6 @@ test.concurrent(`${chalk.yellowBright("action-required-scenario: increase quanti
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Before authentication - balance should still be 10 * billingUnits (original quantity)
 	expectCustomerFeatureCorrect({
 		customer,
 		featureId: TestFeature.Messages,
@@ -325,7 +278,6 @@ test.concurrent(`${chalk.yellowBright("action-required-scenario: increase quanti
 		productId: product.id,
 	});
 
-	// After authentication - balance should be 20 * billingUnits (new quantity)
 	expectCustomerFeatureCorrect({
 		customer: customerAfterAuth,
 		featureId: TestFeature.Messages,
@@ -334,7 +286,7 @@ test.concurrent(`${chalk.yellowBright("action-required-scenario: increase quanti
 
 	await expectCustomerInvoiceCorrect({
 		customer: customerAfterAuth,
-		count: 2, // Initial attach + update
+		count: 2,
 		latestTotal: preview.total,
 		latestStatus: "paid",
 	});

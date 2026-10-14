@@ -24,7 +24,6 @@ const balanceAssignment = ({ patch }: { patch: CustomerEntitlementPatch }) => {
 export type LicenseReplaceRow = LicenseReplaceCandidateRow &
 	Pick<EnrichedCycleCandidate, "resetCycleAnchor" | "nextResetAt">;
 
-/** Writes the minted definition and resolved cycle onto already-selected rows. */
 export const applyLicenseReplacePatches = async ({
 	db,
 	rows,

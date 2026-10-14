@@ -12,7 +12,6 @@ import {
 import { cacheDeploymentAtomContext } from "./cacheDeploymentAtomContext.js";
 import { startCacheDeploymentWatch } from "./startCacheDeploymentWatch.js";
 
-/** Resumes a failed deploy from the step that failed, and watches it again. */
 export const retryCache = ({
 	ctx,
 }: {

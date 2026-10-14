@@ -1,9 +1,3 @@
-/**
- * atmn crud/rewards — coupon [type: each COUPON_TYPES] [plan_ids: null (all), subset]
- *
- * BLOCKED: no server piece in catalogV2.update yet. Leave as todo.
- */
-
 import { expect, test } from "bun:test";
 import {
 	configBody,

@@ -2,10 +2,6 @@ import type { InsertCustomerProduct } from "@autumn/shared";
 import type { RepoContext } from "@/db/repoContext.js";
 import { CusProductService } from "../CusProductService";
 
-/**
- * Batch update customer products by their IDs.
- * Each update is executed in parallel using Promise.all.
- */
 export const batchUpdateCustomerProducts = async ({
 	ctx,
 

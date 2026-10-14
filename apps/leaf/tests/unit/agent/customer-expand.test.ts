@@ -8,9 +8,6 @@ const { withCustomerExpand } = await import(
 	"../../../agent/lib/autumnDirectTools.js"
 );
 
-/** The MCP tool validates `{ request }` strictly, so an expand added as a
- * sibling of `request` is rejected outright — that trapped the agent in a
- * retry loop, since it could not drop a field leaf kept re-adding. */
 const toolInput = z.object({ request: GetCustomerParamsV1Schema }).strict();
 
 test("the expanded call passes the tool's strict schema", () => {

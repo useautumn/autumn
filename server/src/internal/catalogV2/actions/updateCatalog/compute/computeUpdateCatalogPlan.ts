@@ -22,16 +22,6 @@ import type { UpdateCatalogContext } from "@/internal/catalogV2/actions/updateCa
 import type { UpdateCatalogPlan } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogPlan";
 import { createCatalogComputeState } from "@/internal/catalogV2/actions/updateCatalog/utils/catalogComputeStateUtils/catalogComputeStateUtils";
 
-/**
- * Fold ordered compute steps onto one UpdateCatalogPlan.
- *
- * Feature order: update → insert → remove. Updates land in the projection
- * before CS inserts validate schema refs; removes stamp willArchive against
- * the post-upsert projection (minus co-removed rows).
- *
- * Products follow features so plan items can reference same-call features.
- * Plan removes run after upserts so willArchive sees the post-upsert catalog.
- */
 export const computeUpdateCatalogPlan = ({
 	ctx,
 	catalogContext,
@@ -73,10 +63,6 @@ export const computeUpdateCatalogPlan = ({
 	});
 	compute.advance({ step: removeFeaturesStep });
 
-	// Plan items resolve against post-feature-ops features (same-call creates/renames).
-	// A feature this call removes stays projected when it archives, so existing
-	// rows still render; a stated item may not name that row. One the call also
-	// updates stays resolvable, so the errors phase reports that contradiction.
 	const updatedInternalFeatureIds = new Set(
 		(updateFeaturesStep.updateFeatures ?? []).map(
 			(plan) => plan.current.internal_id,

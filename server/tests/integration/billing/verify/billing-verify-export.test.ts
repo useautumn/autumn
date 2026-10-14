@@ -1,27 +1,3 @@
-/**
- * Billing Verify: Export rows
- *
- * Contract under test (verifyCustomerToExportRows, billing_verify producer):
- *   - A verified customer yields no rows.
- *   - A drifted customer yields one row listing every mismatch.
- *   - Two distinct mismatches on one subscription land in that one row,
- *     comma-separated.
- *   - A sweep gone stale never reaches the file: flagged customers are
- *     re-verified live before any row is written.
- *   - The producer walks the filtered population and emits a CSV holding
- *     only the drifted customer.
- *   - A real org-wide sweep screens customers to the same rows as live reads.
- *   - A customer with nothing on Stripe is never loaded;
- *     one with a Stripe-linked plan always is.
- *   - A customer with a scheduled plan change verifies clean through the
- *     memoized reader, which serves both of verify's schedule reads.
- *   - A billing_verify job runs to completion: published to S3, downloadable
- *     under its own file name, holding only the drifted customer.
- *   - A billed Stripe subscription on a Stripe customer no Autumn customer is
- *     linked to yields one orphan row naming the same-email Autumn customer;
- *     a linked Stripe customer left in the sweep yields none.
- */
-
 import { expect, test } from "bun:test";
 import {
 	CustomerExportKind,
@@ -430,8 +406,6 @@ test.concurrent(
 				removeItemPriceIds: [await basePriceIdFor({ ctx, productId: pro.id })],
 			},
 		});
-		// Drift the cancel on Autumn's side: a Stripe-side cancel is imported by
-		// the subscription.updated webhook and heals before verify runs.
 		await ctx.db
 			.update(customerProducts)
 			.set({

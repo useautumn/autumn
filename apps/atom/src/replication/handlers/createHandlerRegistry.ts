@@ -6,7 +6,6 @@ export type HandlerRegistry = {
 	handlers(): ReplicationHandler[];
 };
 
-/** The kinds this Atom replicates, each with the route a peer posts it to. A kind nobody registered is a programming error. */
 export const createHandlerRegistry = (): HandlerRegistry => {
 	const byKind = new Map<string, ReplicationHandler>();
 	return {

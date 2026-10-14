@@ -16,7 +16,6 @@ const PatchMigrationBody = z.object({
 	}),
 });
 
-/** POST /migrations.update — patch a migration's fields. */
 export const handlePatchMigration = createRoute({
 	scopes: [Scopes.Migrations.Write],
 	body: PatchMigrationBody,

@@ -1,6 +1,5 @@
 import type { FullCusProduct } from "@autumn/shared";
 
-/** Unlink each seat from its entity, stamping when it returned to the pool. */
 export const computeEntityCustomerProductUpdates = ({
 	assignments,
 	releasedAt,

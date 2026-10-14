@@ -1,26 +1,3 @@
-/**
- * TDD test for the mintlify webhook miss: billing.create_schedule INSERTS an
- * active immediate-phase customer product and queues sendProductsUpdated for
- * it. The worker must then deliver a customer.products.updated webhook for
- * that newly-inserted active cusProduct.
- *
- * Real-world repro: req.id Root=1-6a0ba974-03e2b83621e4e34101d66c61 (mintlify
- * org GG6tnmO7cHb40PNhwYBTZtxQdeL74NHF, 2026-05-19T00:06:14Z):
- *   00:06:18.102 INFO  [billingPlanToSendProductsUpdated] Queued webhook for
- *                       Enterprise, scenario: upgrade
- *   00:06:18.125 WARN  [sendProductsUpdated] Customer product
- *                       cus_prod_3Dv4NvFlTFWBQXeIgELByDbl3lw not found
- * The inserted active cusProduct was lost between enqueue and worker pickup.
- *
- * Red-failure mode (current behavior):
- *  - waitForWebhook returns null after 20s; no customer.products.updated event
- *    is delivered for the immediate-phase plan inserted by createSchedule.
- *
- * Green-success criteria (after fix):
- *  - The customer.products.updated webhook is delivered with the immediate
- *    phase plan_id in updated_product.id.
- */
-
 import { afterAll, beforeAll, expect, test } from "bun:test";
 import {
 	type ApiCustomerV3,
@@ -90,10 +67,6 @@ test(
 
 		const now = Date.now();
 
-		// Mirror mintlify's actual call pattern: multi-phase schedule —
-		// immediate active plan (pro) + future scheduled plan (premium).
-		// This produces a cusProduct with scheduled_ids populated, exactly
-		// like cus_prod_3Dv4NvFlTFWBQXeIgELByDbl3lw in prod.
 		const response = await autumnV1.billing.createSchedule({
 			customer_id: customerId,
 			phases: [
@@ -103,8 +76,6 @@ test(
 		} satisfies CreateScheduleParamsV0Input);
 		expect(response.status).toBe("created");
 
-		// The immediate-phase pro cusProduct must deliver its
-		// customer.products.updated webhook.
 		const proWebhook = await waitForWebhook<CustomerProductsUpdatedPayload>({
 			token: playToken,
 			predicate: (payload) =>

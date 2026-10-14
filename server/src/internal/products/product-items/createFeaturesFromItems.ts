@@ -39,7 +39,6 @@ export const createFeaturesFromItems = ({
 			if (nullish(item.feature_type)) {
 				continue;
 			}
-			// 1. Check that feature_type matches
 			if (item.feature_type === ProductItemFeatureType.Static) {
 				const booleanFail =
 					item.feature_type === ProductItemFeatureType.Static &&

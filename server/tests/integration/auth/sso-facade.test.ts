@@ -1,19 +1,3 @@
-/**
- * TDD contract for the organization-scoped OIDC SSO facade.
- *
- * Contract under test:
- * - only organization owners/admins can create, read, verify, test, or delete SSO
- * - one OIDC provider is bound to the active organization
- * - registration returns pending TXT instructions without exposing the client secret
- * - successful TXT verification transitions pending -> validating
- * - validating connections do not route ordinary email sign-in
- * - an explicit successful owner test activates the connection
- * - active matching-domain sign-in resolves to SSO; unknown domains resolve to OTP
- * - completion returns a browser hint only for a successfully linked provider account
- * - new SSO users require an unexpired invitation and inherit its exact role
- * - provider deletion removes both facade and Better Auth provider state
- */
-
 import { expect, test } from "bun:test";
 import { AppEnv, account, organizations, ssoProvider } from "@autumn/shared";
 import {

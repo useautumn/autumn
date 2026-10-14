@@ -9,8 +9,6 @@ import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 
-// Product: hourlyMessages(5) + monthlyMessages(10) = 15 total
-
 const makeFreeProd = () => {
 	const hourlyMessages = items.hourlyMessages({ includedUsage: 5 });
 	const monthlyMessages = items.monthlyMessages({ includedUsage: 10 });
@@ -21,12 +19,6 @@ const makeFreeProd = () => {
 };
 
 const lockProperties = { requestId: "req_123", model: "gpt-5" };
-
-// ─────────────────────────────────────────────────────────────────────────────
-// PR-1: lock=8 with properties, confirm=5 without properties
-// The finalize delta event inherits the properties saved on the lock receipt
-// Events: finalize delta = 5-8 = -3, track = 8
-// ─────────────────────────────────────────────────────────────────────────────
 
 test.concurrent(
 	`${chalk.yellowBright("properties PR-1: finalize without properties inherits the lock's")}`,
@@ -75,11 +67,6 @@ test.concurrent(
 		});
 	},
 );
-
-// ─────────────────────────────────────────────────────────────────────────────
-// PR-2: lock=8 with properties, confirm=5 with its own properties
-// An explicit finalize payload wins over the lock's saved properties
-// ─────────────────────────────────────────────────────────────────────────────
 
 test.concurrent(
 	`${chalk.yellowBright("properties PR-2: finalize properties override the lock's")}`,

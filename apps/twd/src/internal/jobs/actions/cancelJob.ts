@@ -5,7 +5,6 @@ import { TwdError } from "../../../http/apiError.ts";
 import type { TwdContext } from "../../../lib/types/twdContext.ts";
 import { getJob } from "./getJob.ts";
 
-/** Queued jobs cancel immediately; running jobs get cancel_requested_at and the runner aborts them. */
 export const cancelJob = async ({
 	ctx,
 	jobId,

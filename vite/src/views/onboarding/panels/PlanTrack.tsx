@@ -6,7 +6,6 @@ import { PlanCard } from "./PlanCard";
 import { usePlanTrack, VISIBLE_PLANS } from "./usePlanTrack";
 
 const GAP_PX = 6;
-/** Sliver of the next card left visible, and the width of the edge fade. */
 const PEEK_PX = 28;
 
 function TrackButton({
@@ -39,10 +38,6 @@ function TrackButton({
 	);
 }
 
-/**
- * A paged row of plan cards. Only the track's transform animates — card widths
- * are fixed, so nothing reflows and the text never re-wraps mid-slide.
- */
 export function PlanTrack({
 	group,
 	currency,
@@ -53,14 +48,10 @@ export function PlanTrack({
 	const track = usePlanTrack({ count: group.cards.length });
 	const isPaged = group.cards.length > VISIBLE_PLANS;
 
-	// Paged tracks leave a sliver of the neighbouring card showing: a cut-off
-	// card says "there's more" far louder than an arrow button does.
 	const reserved = (VISIBLE_PLANS - 1) * GAP_PX + (isPaged ? PEEK_PX : 0);
 	const cardWidth = `calc((100% - ${reserved}px) / ${VISIBLE_PLANS})`;
 	const step = `calc(${cardWidth} + ${GAP_PX}px)`;
 
-	// Fade whichever edge has cards behind it, so the peek reads as continuation
-	// rather than a clipped bug.
 	const fadeMask = [
 		track.canGoPrev
 			? `linear-gradient(to right, transparent, black ${PEEK_PX}px)`
@@ -106,8 +97,6 @@ export function PlanTrack({
 						: undefined
 				}
 			>
-				{/* Matches the step panel's spring feel, so paging and expanding read
-				    as the same interface. */}
 				<div
 					className="flex items-stretch transition-transform duration-[400ms] ease-[cubic-bezier(0.32,0.72,0,1)] motion-reduce:transition-none"
 					style={{

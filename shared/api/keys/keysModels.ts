@@ -1,10 +1,5 @@
 import { z } from "zod/v4";
 
-/**
- * Per-customer JWT ("customer key") request/response models. Shared between the
- * server handlers (request validation) and the OpenAPI contract (SDK + docs).
- */
-
 export const MintKeyParamsSchema = z.object({
 	customer_id: z.string().describe("The customer to mint a token for."),
 	indefinite: z

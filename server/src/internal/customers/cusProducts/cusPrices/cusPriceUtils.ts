@@ -12,7 +12,6 @@ import RecaseError from "@server/utils/errorUtils";
 import { Decimal } from "decimal.js";
 import { getTotalNegativeBalance } from "../cusEnts/cusEntUtils";
 
-// Get overage for a cusPrice
 export const getCusPriceUsage = ({
 	cusPrice,
 	price,
@@ -38,7 +37,6 @@ export const getCusPriceUsage = ({
 		}
 	}
 
-	// 1. Get related cusEnt
 	const cusEnt = customerPriceToCustomerEntitlement({
 		customerPrice: cusPrice,
 		customerEntitlements: cusProduct.customer_entitlements,
@@ -56,7 +54,6 @@ export const getCusPriceUsage = ({
 		};
 	}
 
-	// 2. Get overage
 	const totalNegativeBalance = getTotalNegativeBalance({
 		cusEnt: cusEnt as any,
 		balance: cusEnt.balance!,
@@ -87,9 +84,9 @@ export const getCusPriceUsage = ({
 	}
 
 	return {
-		usage, // total usage
-		overage: -totalNegativeBalance, // usage that's past the allowance
-		roundedUsage: roundedQuantity, // usage rounded to the nearest billing unit
+		usage,
+		overage: -totalNegativeBalance,
+		roundedUsage: roundedQuantity,
 		amount,
 		description,
 	};

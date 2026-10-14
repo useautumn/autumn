@@ -4,7 +4,6 @@ import type { SubjectRow } from "../types/storedSubject.js";
 
 type SlotContext = { sqliteDb: Database };
 
-/** The customer's own rows are stored under no entity. */
 const CUSTOMER_ENTITY_ID = "";
 
 type SubjectStateRow = {
@@ -17,14 +16,12 @@ type SubjectStateRow = {
 	customerVersion: bigint;
 };
 
-/** A subject's catalog slice and org as stored beside its state, and the hash that tells a push whether they changed. */
 export type SubjectSlice = {
 	hash: string;
 	catalogJson: string;
 	orgJson: string;
 };
 
-/** One subject to write; `sliceStored` when its slice row already holds this slice, so only the state row is written. */
 export type SubjectWrite = {
 	subject: SubjectRow;
 	slice: SubjectSlice;
@@ -48,7 +45,6 @@ export const subjectToSlice = ({
 	};
 };
 
-/** Rows were validated where they entered (the request that stored them), so reading only parses JSON. */
 const storedSubjectFromRow = ({
 	row,
 }: {
@@ -66,7 +62,6 @@ const storedSubjectFromRow = ({
 	sliceHash: row.sliceHash,
 });
 
-/** The version a row holds, read without parsing it; null when the file has no such row. */
 export const readSubjectVersion = ({
 	ctx,
 	customerId,
@@ -87,7 +82,6 @@ export const readSubjectVersion = ({
 	return row ? { readAt: Number(row.readAt), logOffset: row.logOffset } : null;
 };
 
-/** The entities of a customer the file holds a row for, its own row aside. */
 export const listEntityIds = ({
 	ctx,
 	customerId,
@@ -102,7 +96,6 @@ export const listEntityIds = ({
 		.all({ customerId })
 		.map(({ entityId }) => entityId);
 
-/** How many subjects the file holds: what a restart finds, or does not. */
 export const countSubjects = ({ ctx }: { ctx: SlotContext }): number => {
 	const row = ctx.sqliteDb
 		.query<{ count: bigint }, []>(
@@ -139,20 +132,14 @@ export const readSubject = ({
 	return row ? storedSubjectFromRow({ row }) : null;
 };
 
-/** Where a page of applied subjects ends, so the next page starts right after it whatever ties on `applied_at`. */
 export type SubjectCursor = {
 	appliedAt: number;
 	customerId: string;
 	entityId: string;
 };
 
-/** A stored subject with when this file wrote it, by this replica's clock: what a copy to a peer is ordered by. */
 export type AppliedSubject = { subject: SubjectRow; appliedAt: number };
 
-/**
- * Subjects this file wrote at or after `after` (null: all of them), oldest write first, ties broken by key, after
- * `cursor`; so a replica that fell behind copies what it missed, page by page, missing nothing that ties on a page's edge.
- */
 export const listSubjectsAppliedAfter = ({
 	ctx,
 	after,
@@ -205,13 +192,11 @@ export const listSubjectsAppliedAfter = ({
 			appliedAt: Number(row.appliedAt),
 		}));
 
-/** A row's identity and version alone: what a replica compares before asking for the row itself. */
 export type SubjectDigest = SubjectCursor & {
 	readAt: number;
 	logOffset: bigint;
 };
 
-/** The digests of the subjects written at or after `after`, in the same order and pages as `listSubjectsAppliedAfter`. */
 export const listDigestsAppliedAfter = ({
 	ctx,
 	after,
@@ -263,7 +248,6 @@ export const listDigestsAppliedAfter = ({
 			appliedAt: Number(row.appliedAt),
 		}));
 
-/** The rows named, with when they were written; a key the file does not hold is left out. */
 export const readSubjectsByKey = ({
 	ctx,
 	keys,
@@ -301,7 +285,6 @@ export const readSubjectsByKey = ({
 	});
 };
 
-/** The newest write the file holds by this replica's clock, or 0 when it is empty: how far back a copy from a peer reaches. */
 export const maxAppliedAt = ({ ctx }: { ctx: SlotContext }): number => {
 	const row = ctx.sqliteDb
 		.query<{ appliedAt: bigint | null }, []>(
@@ -311,14 +294,11 @@ export const maxAppliedAt = ({ ctx }: { ctx: SlotContext }): number => {
 	return Number(row?.appliedAt ?? 0);
 };
 
-/** What one write left: the bytes of row text it stored (null when its rows were older), and the customer's version
- * when the write moved it (null when it stayed). */
 export type SubjectWriteResult = {
 	bytes: number | null;
 	customerVersion: bigint | null;
 };
 
-/** Subjects that came from one read are written together. */
 export const upsertSubjects = ({
 	ctx,
 	writes,
@@ -332,14 +312,9 @@ export const upsertSubjects = ({
 		writes.map((write) => upsertSubject({ ctx, write, appliedAt })),
 	)();
 
-/** The push is read later than the row held, or at the same instant for a later change. */
 const IS_NEWER = `(excluded.read_at > subject_states.read_at
 	OR (excluded.read_at = subject_states.read_at AND excluded.log_offset >= subject_states.log_offset))`;
 
-/**
- * One statement per subject. Its rows replace the held ones only when newer, so a late push never undoes a newer one;
- * its customer version is kept as the higher of the two either way, since evicts arrive out of order too.
- */
 const upsertSubject = ({
 	ctx,
 	write: { subject, slice, sliceStored },
@@ -409,7 +384,6 @@ const upsertSubject = ({
 	};
 };
 
-/** The pages the file holds, dropped pages already given back: its size once its log is checkpointed. */
 export const dataBytes = ({ ctx }: { ctx: SlotContext }): number => {
 	const pages = ctx.sqliteDb
 		.query<{ page_count: bigint }, []>("PRAGMA page_count")
@@ -420,14 +394,8 @@ export const dataBytes = ({ ctx }: { ctx: SlotContext }): number => {
 	return Number(pages?.page_count ?? 0n) * Number(size?.page_size ?? 0n);
 };
 
-/** The keys of the rows one drop removed, so the copies held of them go too. */
 export type DroppedRows = { customerId: string; entityId: string }[];
 
-/**
- * Deletes every row of up to `limit` customers whose own row, rewritten by every push of the customer or an entity, was
- * written before `before`, oldest first. A customer goes whole, its entities with it, so no entity outlives the rows it is
- * read beside; one with any row copied since (a peer's catch-up writes a part alone) stays.
- */
 export const deleteCustomersWrittenBefore = ({
 	ctx,
 	before,
@@ -458,7 +426,6 @@ export const deleteCustomersWrittenBefore = ({
 		ctx.sqliteDb
 			.query(`DELETE FROM subject_slices WHERE ${inCustomers}`)
 			.run({ ids });
-		// Freed pages go back to the volume once the main thread checkpoints the file.
 		ctx.sqliteDb.run("PRAGMA incremental_vacuum");
 		return dropped;
 	})();

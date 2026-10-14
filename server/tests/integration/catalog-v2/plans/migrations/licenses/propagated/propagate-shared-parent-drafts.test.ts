@@ -1,15 +1,3 @@
-/**
- * catalogV2.update — propagate parents that share one license delta collapse
- * into one upsert_licenses op. Empty / price-overridden parents are omitted.
- *
- * Contract:
- *   A1 Team+Scale same 10→200, both have customers, child has none
- *      → 1 draft, 1 op, $or of both parents, upsert_licenses only
- *   A2 Scale has no customers → Team only
- *   A3 Seat price 10→20; Team follows, Ent already $15 → Team only,
- *      nested price 20, no_billing_changes false
- */
-
 import { test } from "bun:test";
 import { BillingInterval } from "@autumn/shared";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";

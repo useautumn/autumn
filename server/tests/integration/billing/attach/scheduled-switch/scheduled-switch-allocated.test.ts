@@ -1,14 +1,3 @@
-/**
- * Scheduled Switch Allocated Tests (Attach V2)
- *
- * Tests for downgrades involving allocated (seat-based) features.
- *
- * Key behaviors:
- * - Allocated features: usage CARRIES OVER on product switch
- * - Overage is billed at cycle end when downgrade completes
- * - Scheduled downgrades complete at cycle end
- */
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3 } from "@autumn/shared";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
@@ -25,10 +14,6 @@ import { products } from "@tests/utils/fixtures/products";
 import { advanceToNextInvoice } from "@tests/utils/testAttachUtils/testAttachUtils";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 1: Premium to Pro downgrade with overage - full cycle test
-// ═══════════════════════════════════════════════════════════════════════════════
 
 /**
  * Key test: Downgrade with overage, usage carries over to new product
@@ -73,16 +58,13 @@ test.skip(`${chalk.yellowBright("scheduled-switch-allocated 1: premium to pro wi
 		],
 	});
 
-	// Preview the downgrade
 	const preview = await autumnV1.billing.previewAttach({
 		customer_id: customerId,
 		product_id: pro.id,
 	});
 
-	// Downgrade = no charge
 	expect(preview.total).toBe(0);
 
-	// Schedule the downgrade
 	await autumnV1.billing.attach(
 		{
 			customer_id: customerId,
@@ -94,7 +76,6 @@ test.skip(`${chalk.yellowBright("scheduled-switch-allocated 1: premium to pro wi
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Verify scheduled states
 	await expectProductCanceling({
 		customer,
 		productId: premium.id,
@@ -104,7 +85,6 @@ test.skip(`${chalk.yellowBright("scheduled-switch-allocated 1: premium to pro wi
 		productId: pro.id,
 	});
 
-	// Verify Stripe subscription before cycle advance
 	await expectSubToBeCorrect({
 		db: ctx.db,
 		customerId,
@@ -112,7 +92,6 @@ test.skip(`${chalk.yellowBright("scheduled-switch-allocated 1: premium to pro wi
 		env: ctx.env,
 	});
 
-	// Advance to next cycle
 	await advanceToNextInvoice({
 		stripeCli: ctx.stripeCli,
 		testClockId: testClockId!,
@@ -121,17 +100,12 @@ test.skip(`${chalk.yellowBright("scheduled-switch-allocated 1: premium to pro wi
 	const customerAfterCycle =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Verify products after cycle
 	await expectCustomerProducts({
 		customer: customerAfterCycle,
 		active: [pro.id],
 		notPresent: [premium.id],
 	});
 
-	// Verify feature state after cycle
-	// Usage carries over: 10 users
-	// Pro included: 5 users
-	// Balance: 5 - 10 = -5 (overage)
 	expectCustomerFeatureCorrect({
 		customer: customerAfterCycle,
 		featureId: TestFeature.Users,
@@ -140,15 +114,13 @@ test.skip(`${chalk.yellowBright("scheduled-switch-allocated 1: premium to pro wi
 		usage: 10,
 	});
 
-	// Invoices: 1) Premium attach, 2) Premium overage from track, 3) Pro overage after cycle
 	await expectCustomerInvoiceCorrect({
 		customer: customerAfterCycle,
 		count: 3,
-		latestTotal: 5 * (proAllocated.price ?? 0) + 20, // Pro with 5 overage seats + base price
+		latestTotal: 5 * (proAllocated.price ?? 0) + 20,
 		latestInvoiceProductIds: [pro.id],
 	});
 
-	// Verify Stripe subscription after cycle
 	await expectSubToBeCorrect({
 		db: ctx.db,
 		customerId,
@@ -156,10 +128,6 @@ test.skip(`${chalk.yellowBright("scheduled-switch-allocated 1: premium to pro wi
 		env: ctx.env,
 	});
 });
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 2: Downgrade first, then track - usage carries over
-// ═══════════════════════════════════════════════════════════════════════════════
 
 /**
  * Key test: Schedule downgrade FIRST, then track usage - verifies usage
@@ -200,7 +168,6 @@ test.skip(`${chalk.yellowBright("scheduled-switch-allocated 2: downgrade first, 
 		actions: [s.billing.attach({ productId: premium.id, timeout: 2000 })],
 	});
 
-	// Schedule downgrade FIRST (before tracking)
 	await autumnV1.billing.attach({
 		customer_id: customerId,
 		product_id: pro.id,
@@ -210,7 +177,6 @@ test.skip(`${chalk.yellowBright("scheduled-switch-allocated 2: downgrade first, 
 	const customerAfterSchedule =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Verify scheduled states
 	await expectProductCanceling({
 		customer: customerAfterSchedule,
 		productId: premium.id,
@@ -220,7 +186,6 @@ test.skip(`${chalk.yellowBright("scheduled-switch-allocated 2: downgrade first, 
 		productId: pro.id,
 	});
 
-	// Now track usage AFTER downgrade is scheduled
 	await autumnV1.track({
 		customer_id: customerId,
 		feature_id: TestFeature.Users,
@@ -229,18 +194,16 @@ test.skip(`${chalk.yellowBright("scheduled-switch-allocated 2: downgrade first, 
 
 	await new Promise((resolve) => setTimeout(resolve, 2000));
 
-	// Verify usage is tracked against the canceling product
 	const customerAfterTrack =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	expectCustomerFeatureCorrect({
 		customer: customerAfterTrack,
 		featureId: TestFeature.Users,
 		includedUsage: 3,
-		balance: -7, // 3 included - 10 used = -7 (overage on Premium)
+		balance: -7,
 		usage: 10,
 	});
 
-	// Advance to next cycle
 	await advanceToNextInvoice({
 		stripeCli: ctx.stripeCli,
 		testClockId: testClockId!,
@@ -250,31 +213,27 @@ test.skip(`${chalk.yellowBright("scheduled-switch-allocated 2: downgrade first, 
 	const customerAfterCycle =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Verify products after cycle
 	await expectCustomerProducts({
 		customer: customerAfterCycle,
 		active: [pro.id],
 		notPresent: [premium.id],
 	});
 
-	// Verify feature state - usage carries over
 	expectCustomerFeatureCorrect({
 		customer: customerAfterCycle,
 		featureId: TestFeature.Users,
 		includedUsage: 5,
-		balance: -5, // 5 included - 10 usage = -5 (overage on Pro)
+		balance: -5,
 		usage: 10,
 	});
 
-	// Invoices: 1) Premium attach, 2) Premium overage from track, 3) Pro renewal after cycle
 	await expectCustomerInvoiceCorrect({
 		customer: customerAfterCycle,
 		count: 3,
-		latestTotal: 20 + 5 * (proAllocated.price ?? 0), // Pro base ($20) + 5 overage seats
+		latestTotal: 20 + 5 * (proAllocated.price ?? 0),
 		latestInvoiceProductIds: [pro.id],
 	});
 
-	// Verify Stripe subscription
 	await expectSubToBeCorrect({
 		db: ctx.db,
 		customerId,
@@ -282,10 +241,6 @@ test.skip(`${chalk.yellowBright("scheduled-switch-allocated 2: downgrade first, 
 		env: ctx.env,
 	});
 });
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 3: Pro to Free downgrade - no overage pricing on free
-// ═══════════════════════════════════════════════════════════════════════════════
 
 /**
  * Key test: Downgrade to free product (no overage pricing)
@@ -329,7 +284,6 @@ test.skip(`${chalk.yellowBright("scheduled-switch-allocated 3: pro to free, over
 		],
 	});
 
-	// Schedule downgrade to free
 	await autumnV1.billing.attach({
 		customer_id: customerId,
 		product_id: free.id,
@@ -339,7 +293,6 @@ test.skip(`${chalk.yellowBright("scheduled-switch-allocated 3: pro to free, over
 	const customerScheduled =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Verify scheduled states
 	await expectProductCanceling({
 		customer: customerScheduled,
 		productId: pro.id,
@@ -349,7 +302,6 @@ test.skip(`${chalk.yellowBright("scheduled-switch-allocated 3: pro to free, over
 		productId: free.id,
 	});
 
-	// Advance to next cycle
 	await advanceToNextInvoice({
 		stripeCli: ctx.stripeCli,
 		testClockId: testClockId!,
@@ -358,34 +310,27 @@ test.skip(`${chalk.yellowBright("scheduled-switch-allocated 3: pro to free, over
 	const customerAfterCycle =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Verify products after cycle
 	await expectCustomerProducts({
 		customer: customerAfterCycle,
 		active: [free.id],
 		notPresent: [pro.id],
 	});
 
-	// Verify feature state - usage carries over
 	expectCustomerFeatureCorrect({
 		customer: customerAfterCycle,
 		featureId: TestFeature.Users,
 		includedUsage: 2,
-		balance: -5, // 2 included - 7 usage = -5 (overage)
+		balance: -5,
 		usage: 7,
 	});
 
-	// Invoices: 1) Pro attach, 2) Pro overage from track, 3) cycle end (no charge on free)
 	await expectCustomerInvoiceCorrect({
 		customer: customerAfterCycle,
 		count: 3,
-		latestTotal: 0, // Free has no renewal charge
+		latestTotal: 0,
 		latestInvoiceProductIds: [],
 	});
 });
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 4: Pro to Free - downgrade first, then track with overage
-// ═══════════════════════════════════════════════════════════════════════════════
 
 /**
  * Key test: Schedule downgrade to free FIRST, then track usage
@@ -426,7 +371,6 @@ test.skip(`${chalk.yellowBright("scheduled-switch-allocated 4: pro to free, down
 		actions: [s.billing.attach({ productId: pro.id, timeout: 2000 })],
 	});
 
-	// Schedule downgrade FIRST (before tracking)
 	await autumnV1.billing.attach({
 		customer_id: customerId,
 		product_id: free.id,
@@ -436,7 +380,6 @@ test.skip(`${chalk.yellowBright("scheduled-switch-allocated 4: pro to free, down
 	const customerAfterSchedule =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Verify scheduled states
 	await expectProductCanceling({
 		customer: customerAfterSchedule,
 		productId: pro.id,
@@ -446,7 +389,6 @@ test.skip(`${chalk.yellowBright("scheduled-switch-allocated 4: pro to free, down
 		productId: free.id,
 	});
 
-	// Now track usage AFTER downgrade is scheduled
 	await autumnV1.track({
 		customer_id: customerId,
 		feature_id: TestFeature.Users,
@@ -455,18 +397,16 @@ test.skip(`${chalk.yellowBright("scheduled-switch-allocated 4: pro to free, down
 
 	await new Promise((resolve) => setTimeout(resolve, 2000));
 
-	// Verify usage is tracked against the canceling product
 	const customerAfterTrack =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	expectCustomerFeatureCorrect({
 		customer: customerAfterTrack,
 		featureId: TestFeature.Users,
 		includedUsage: 5,
-		balance: -2, // 5 included - 7 used = -2 (overage on Pro)
+		balance: -2,
 		usage: 7,
 	});
 
-	// Advance to next cycle
 	await advanceToNextInvoice({
 		stripeCli: ctx.stripeCli,
 		testClockId: testClockId!,
@@ -475,34 +415,27 @@ test.skip(`${chalk.yellowBright("scheduled-switch-allocated 4: pro to free, down
 	const customerAfterCycle =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Verify products after cycle
 	await expectCustomerProducts({
 		customer: customerAfterCycle,
 		active: [free.id],
 		notPresent: [pro.id],
 	});
 
-	// Verify feature state - usage carries over
 	expectCustomerFeatureCorrect({
 		customer: customerAfterCycle,
 		featureId: TestFeature.Users,
 		includedUsage: 2,
-		balance: -5, // 2 included - 7 usage = -5 (overage on Free)
+		balance: -5,
 		usage: 7,
 	});
 
-	// Invoices: 1) Pro attach, 2) Pro overage from track, 3) cycle end (no charge on free)
 	await expectCustomerInvoiceCorrect({
 		customer: customerAfterCycle,
 		count: 3,
-		latestTotal: 0, // Free has no renewal charge
+		latestTotal: 0,
 		latestInvoiceProductIds: [],
 	});
 });
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 5: Premium to Pro with FREE allocated users (usage carries over)
-// ═══════════════════════════════════════════════════════════════════════════════
 
 /**
  * Key test: Downgrade with FREE allocated users - usage carries over
@@ -546,25 +479,21 @@ test.skip(`${chalk.yellowBright("scheduled-switch-allocated 5: premium to pro wi
 		],
 	});
 
-	// Verify usage tracked on premium
 	const customerBefore =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	expectCustomerFeatureCorrect({
 		customer: customerBefore,
 		featureId: TestFeature.Users,
 		includedUsage: 10,
-		balance: 2, // 10 - 8
+		balance: 2,
 		usage: 8,
 	});
 
-	// Preview the downgrade
 	const preview = await autumnV1.billing.previewAttach({
 		customer_id: customerId,
 		product_id: pro.id,
 	});
-	expect(preview.total).toBe(0); // Downgrade = no charge
-
-	// Schedule the downgrade
+	expect(preview.total).toBe(0);
 	await autumnV1.billing.attach({
 		customer_id: customerId,
 		product_id: pro.id,
@@ -574,7 +503,6 @@ test.skip(`${chalk.yellowBright("scheduled-switch-allocated 5: premium to pro wi
 	const customerScheduled =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Verify scheduled states
 	await expectProductCanceling({
 		customer: customerScheduled,
 		productId: premium.id,
@@ -584,7 +512,6 @@ test.skip(`${chalk.yellowBright("scheduled-switch-allocated 5: premium to pro wi
 		productId: pro.id,
 	});
 
-	// Advance to next cycle
 	await advanceToNextInvoice({
 		stripeCli: ctx.stripeCli,
 		testClockId: testClockId!,
@@ -593,31 +520,27 @@ test.skip(`${chalk.yellowBright("scheduled-switch-allocated 5: premium to pro wi
 	const customerAfterCycle =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Verify products after cycle
 	await expectCustomerProducts({
 		customer: customerAfterCycle,
 		active: [pro.id],
 		notPresent: [premium.id],
 	});
 
-	// Verify feature state - usage carries over (FREE allocated)
 	expectCustomerFeatureCorrect({
 		customer: customerAfterCycle,
 		featureId: TestFeature.Users,
 		includedUsage: 5,
-		balance: -3, // 5 included - 8 usage = -3 (overage)
-		usage: 8, // Usage CARRIES OVER
+		balance: -3,
+		usage: 8,
 	});
 
-	// Invoices: 1) Premium attach, 2) Pro renewal after cycle (no overage since free allocated)
 	await expectCustomerInvoiceCorrect({
 		customer: customerAfterCycle,
 		count: 2,
-		latestTotal: 20, // Pro base price only, no overage on free allocated
+		latestTotal: 20,
 		latestInvoiceProductIds: [pro.id],
 	});
 
-	// Verify Stripe subscription
 	await expectSubToBeCorrect({
 		db: ctx.db,
 		customerId,
@@ -625,10 +548,6 @@ test.skip(`${chalk.yellowBright("scheduled-switch-allocated 5: premium to pro wi
 		env: ctx.env,
 	});
 });
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 6: Pro to Free with FREE allocated users (usage carries over)
-// ═══════════════════════════════════════════════════════════════════════════════
 
 /**
  * Key test: Downgrade to free product with FREE allocated users
@@ -671,18 +590,16 @@ test.skip(`${chalk.yellowBright("scheduled-switch-allocated 6: pro to free with 
 		],
 	});
 
-	// Verify usage tracked on pro
 	const customerBefore =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	expectCustomerFeatureCorrect({
 		customer: customerBefore,
 		featureId: TestFeature.Users,
 		includedUsage: 5,
-		balance: 1, // 5 - 4
+		balance: 1,
 		usage: 4,
 	});
 
-	// Schedule downgrade to free
 	await autumnV1.billing.attach(
 		{
 			customer_id: customerId,
@@ -697,7 +614,6 @@ test.skip(`${chalk.yellowBright("scheduled-switch-allocated 6: pro to free with 
 	const customerScheduled =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Verify scheduled states
 	await expectProductCanceling({
 		customer: customerScheduled,
 		productId: pro.id,
@@ -707,7 +623,6 @@ test.skip(`${chalk.yellowBright("scheduled-switch-allocated 6: pro to free with 
 		productId: free.id,
 	});
 
-	// Advance to next cycle
 	await advanceToNextInvoice({
 		stripeCli: ctx.stripeCli,
 		testClockId: testClockId!,
@@ -716,27 +631,24 @@ test.skip(`${chalk.yellowBright("scheduled-switch-allocated 6: pro to free with 
 	const customerAfterCycle =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Verify products after cycle
 	await expectCustomerProducts({
 		customer: customerAfterCycle,
 		active: [free.id],
 		notPresent: [pro.id],
 	});
 
-	// Verify feature state - usage carries over (FREE allocated)
 	expectCustomerFeatureCorrect({
 		customer: customerAfterCycle,
 		featureId: TestFeature.Users,
 		includedUsage: 2,
-		balance: -2, // 2 included - 4 usage = -2 (overage)
-		usage: 4, // Usage CARRIES OVER
+		balance: -2,
+		usage: 4,
 	});
 
-	// Invoices: 1) Pro attach, 2) cycle end (no charge on free, no overage on free allocated)
 	await expectCustomerInvoiceCorrect({
 		customer: customerAfterCycle,
 		count: 2,
-		latestTotal: 0, // Free has no renewal charge
+		latestTotal: 0,
 		latestInvoiceProductIds: [],
 	});
 });

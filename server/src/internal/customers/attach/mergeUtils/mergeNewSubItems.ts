@@ -9,7 +9,6 @@ export const mergeNewSubItems = ({
 	itemSet: ItemSet;
 	curSubItems: Stripe.SubscriptionItem[];
 }) => {
-	// 1. Don't need to add arrear prices if they already exist...
 	let newSubItems = structuredClone(itemSet.subItems);
 	const newArrearSubItems: any[] = [];
 
@@ -26,7 +25,6 @@ export const mergeNewSubItems = ({
 		return true;
 	});
 
-	// 2. Add new subItems
 	for (let i = 0; i < newSubItems.length; i++) {
 		const newItem = newSubItems[i];
 		const existingItem = curSubItems.find(
@@ -38,8 +36,6 @@ export const mergeNewSubItems = ({
 		newSubItems[i] = {
 			id: existingItem.id,
 			quantity: (existingItem.quantity || 0) + (newItem.quantity || 0),
-			// price: newItem.price,
-			// autumnPrice: newItem.autumnPrice,
 		};
 	}
 
@@ -81,8 +77,5 @@ export const mergeNewScheduleItems = ({
 	return newScheduleItems.map((si) => ({
 		price: si.price,
 		quantity: si.quantity,
-		// scheduleItem: originalScheduleItems.find(
-		//   (osi) => (osi.price as Stripe.Price)?.id === si.price
-		// ),
 	}));
 };

@@ -87,12 +87,6 @@ const assertCanUseAxiom = (auth: AutumnMcpAuth) => {
 	}
 };
 
-/**
- * Resolves the Autumn org (id + slug) for an authenticated request. Cached
- * (~5min) per credential. Unlike `resolveAutumnOrgId`, this always hits
- * `/v1/organization` when uncached so the slug is available — the id alone may
- * already be on `auth`, but the slug never is.
- */
 export const resolveAutumnOrg = async (
 	auth: AutumnMcpAuth,
 ): Promise<AutumnOrg> => {

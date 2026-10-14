@@ -2,7 +2,6 @@ import type { AutumnLogger } from "@autumn/logging";
 import type { CommitWaits } from "../processor/writer/types/partitionWriter.js";
 import type { ApplyWaits } from "../state/types/stateStore.js";
 
-/** Each partition's commits and store applies this window, summed: a few additions per batch, never per request. */
 export type CommitSummaries = {
 	committed(params: {
 		partition: number;
@@ -17,7 +16,6 @@ export type CommitSummaries = {
 		waits?: ApplyWaits;
 		failed: boolean;
 	}): void;
-	/** The window's summaries, one row per partition so the line's field set stays fixed; starts the next window. */
 	drain(): CommitSummaryRow[];
 };
 
@@ -33,12 +31,10 @@ type CommitSummary = {
 	commitMs: Timing;
 	lingerMs: Timing;
 	storeWaitMs: Timing;
-	/** The longest any batch's oldest awaited write waited to be taken. */
 	queuedMsMax: number;
 	applies: number;
 	applyFailed: number;
 	applyMs: Timing;
-	/** How long each apply's oldest batch sat committed before the apply took it: how far Postgres trailed the log. */
 	unappliedMs: Timing;
 };
 
@@ -138,10 +134,8 @@ function rounded(summary: CommitSummary): CommitSummary {
 	};
 }
 
-/** One per worker: every partition's commit logging adds to it, and the event-loop summary drains it. */
 export const commitSummaries = createCommitSummaries();
 
-/** One `balance_worker.commit_window` line per partition active this window, every line with the same keys. */
 export function logCommitWindows({
 	ctx,
 	config,

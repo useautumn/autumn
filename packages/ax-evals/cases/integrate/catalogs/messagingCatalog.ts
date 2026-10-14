@@ -1,11 +1,3 @@
-/**
- * Messaging-platform archetype catalog (Sendly-like, anonymized from a real
- * customer's billing page) for DISPLAY cases: two product groups held
- * simultaneously (transactional email plans, marketing/contacts plans), an
- * add-on that grants MORE of a feature a base plan already grants (forces
- * per-plan quota to come from the balance BREAKDOWN, not customer-level
- * granted), and a usage-priced automations add-on with graduated tiers.
- */
 export const messagingCatalog = `import { atmn, feature, plan } from "atmn";
 
 export default atmn({

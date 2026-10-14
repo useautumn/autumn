@@ -8,15 +8,6 @@ export type PromoteDuePooledContributionsResult = {
 	promotedCount: number;
 };
 
-/**
- * Promotes due next-cycle contributions (effective_at passed). Subscription-
- * keyed pools recompute granted from ALL contributions. License-keyed granted
- * is purchased × G — this statement only promotes due rows, it does not
- * rewrite granted from Σ. Contribution-less subscription pools are left
- * untouched.
- * DB + memory only — cache propagation is the caller's job, AFTER its own
- * cache writes (the lazy path patches the subject cache post-reset).
- */
 export const promoteDuePooledContributions = async ({
 	ctx,
 	customerEntitlement,
@@ -31,12 +22,6 @@ export const promoteDuePooledContributions = async ({
 
 	const isLicenseKeyed = pooledBalance.customer_license_link_id != null;
 
-	// totals reads the pre-update snapshot: due rows count at their promoted
-	// value, so the recomputed granted matches the post-promotion state.
-	// The pool UPDATE guards on updated_at (latest row version vs statement
-	// snapshot): a transition committing mid-statement makes it 0 rows, and
-	// the contribution promotion is gated on it, so the whole statement no-ops.
-	// License-keyed granted is purchased × G, not Σ contributions.
 	const rows = await ctx.db.execute<{
 		granted: number | string;
 		due_count: number | string;
@@ -92,9 +77,6 @@ export const promoteDuePooledContributions = async ({
 
 	const row = rows[0];
 	if (row === undefined) {
-		// Guard trip (or contribution-less pool): a concurrent writer owns the
-		// latest granted — refresh it so the caller can't refill from a stale
-		// in-memory value if it goes on to win the reset CAS.
 		const [freshPool] = await ctx.db
 			.select({ granted: pooledBalances.granted })
 			.from(pooledBalances)

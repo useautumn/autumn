@@ -55,7 +55,6 @@ const isEmptyObject = (value: unknown): boolean => {
 	);
 };
 
-/** Normalize cjson empty table to array. */
 export const normalizeToArray = (value: unknown): unknown[] => {
 	if (Array.isArray(value)) return value;
 	if (value && typeof value === "object" && Object.keys(value).length === 0)
@@ -63,7 +62,6 @@ export const normalizeToArray = (value: unknown): unknown[] => {
 	return [];
 };
 
-/** Dynamically normalize data based on Zod schema structure. */
 export const normalizeFromSchema = <T>({
 	schema,
 	data,
@@ -113,7 +111,6 @@ export const normalizeFromSchema = <T>({
 
 	if (type === "object") {
 		// Upstash Lua cjson collapses empty `{}` to `[]`; treat as empty object
-		// so nested defaults still get applied on round-trip.
 		const objectData = Array.isArray(data) && data.length === 0 ? {} : data;
 		if (
 			!objectData ||

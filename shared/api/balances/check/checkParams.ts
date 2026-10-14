@@ -16,7 +16,6 @@ export const CheckQuerySchema = z.object({
 	).optional(),
 });
 
-// Check Feature Schemas
 export const ExtCheckParamsSchema = BalanceParamsBaseSchema.extend({
 	required_balance: z.number().optional().meta({
 		description:
@@ -53,11 +52,9 @@ export const ExtCheckParamsSchema = BalanceParamsBaseSchema.extend({
 });
 
 export const CheckParamsSchema = ExtCheckParamsSchema.extend({
-	// Legacy 1: Used to allow check product_id and feature_id
 	feature_id: z.string().optional(),
 	product_id: z.string().optional(),
 
-	// Legacy 2: required_balance used to be called required_quantity
 	required_quantity: z.number().optional(),
 
 	skip_event: z.boolean().optional().meta({

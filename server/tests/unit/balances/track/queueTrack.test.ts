@@ -46,8 +46,6 @@ describe("queueTrack", () => {
 
 	beforeEach(() => {
 		mockState.queueCommands = [];
-		// The async URL is the canonical shared track queue; the deprecated
-		// TRACK_SQS_QUEUE_URL is unset so resolution is deterministic.
 		restoreQueueEnv = pinTrackProducerQueueToFifo({
 			fifoQueueUrl: trackQueueUrl,
 		}).restore;
@@ -89,8 +87,6 @@ describe("queueTrack", () => {
 		expect(mockState.queueCommands[0]).toMatchObject({
 			QueueUrl: trackQueueUrl,
 		});
-		// Default resolution hits the shared async-track queue, which sends
-		// through the batcher (SendMessageBatch envelope).
 		const entries = mockState.queueCommands[0]?.Entries as Array<
 			Record<string, unknown>
 		>;

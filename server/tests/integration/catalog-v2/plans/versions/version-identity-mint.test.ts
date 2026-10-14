@@ -1,14 +1,3 @@
-/**
- * catalogV2 version identity — mint (units 1–2).
- *
- * Contract:
- *   new_version omit active → draft (v2 inactive, v1 keeps pointer + is_default)
- *   new_version active:true → lockstep (v2 takes pointer + is_default)
- *   new_version_slug stamps the minted row; omit → v{n}
- *   first create new_version_slug stamps v1
- *   preview: version_slug / active always; new_* only when that field changes
- */
-
 import { test } from "bun:test";
 import { ResetInterval } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";

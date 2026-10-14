@@ -36,13 +36,10 @@ type CustomerWithProducts = z.infer<typeof CustomerSchema> & {
 		[key: string]: unknown;
 	}>;
 	products_total_count?: number;
-	/** Full customer data with entitlements - merged from full_customers query */
 	fullCustomer?: FullCustomer;
-	/** Whether the full customer data is still loading */
 	isFullDataLoading?: boolean;
 };
 
-/** Default column IDs that are visible by default */
 export const BASE_COLUMN_IDS = [
 	"name",
 	"customer_id",
@@ -61,14 +58,12 @@ const getCusProductsInfo = ({
 		return <span className="text-tertiary-foreground"></span>;
 	}
 
-	// Filter out expired and scheduled products first
 	const activeProducts = customer.customer_products.filter(
 		(cusProduct: (typeof customer.customer_products)[number]) =>
 			(cusProduct as FullCusProduct).status !== CusProductStatus.Expired &&
 			(cusProduct as FullCusProduct).status !== CusProductStatus.Scheduled,
 	);
 
-	//put add ons last THIS DOESNT WORK ATM BECAUSE NO ADD ON PARAM EXISTS
 	activeProducts.sort((a, b) => {
 		const aIsAddOn = (a as FullCusProduct).product.is_add_on;
 		const bIsAddOn = (b as FullCusProduct).product.is_add_on;
@@ -78,9 +73,6 @@ const getCusProductsInfo = ({
 		}
 		return 0;
 	});
-
-	// customer.id === "e526e698-6d5d-4f0e-89e7-632f375663fb" &&
-	// 	console.log("activeProducts", activeProducts, "customer", customer);
 
 	if (activeProducts.length === 0) {
 		return <span className="text-tertiary-foreground"></span>;
@@ -230,10 +222,6 @@ export const createCustomerListColumns = (): ColumnDef<
 	},
 ];
 
-/**
- * Creates the product version column. Shows the active (non-expired,
- * non-scheduled) product's version, prefixed with "v", in light grey.
- */
 export const createProductVersionColumn = (): ColumnDef<
 	CustomerWithProducts,
 	unknown
@@ -265,8 +253,6 @@ const MONTHLY_INTERVAL_FACTORS: Partial<Record<BillingInterval, number>> = {
 	[BillingInterval.Year]: 1 / 12,
 };
 
-/** Mirrors resolveByBasePriceSort: active/past_due products, fixed recurring
- * prices only, normalized to a monthly figure. */
 const computeMonthlyBasePrice = (fullCustomer: FullCustomer): number => {
 	let total = 0;
 	for (const cusProduct of fullCustomer.customer_products ?? []) {
@@ -302,8 +288,6 @@ function BasePriceCell({
 		return <div className="h-2 w-12 bg-secondary animate-pulse rounded my-1" />;
 	}
 
-	// Server total covers ALL products; client compute only sees the
-	// cusProductLimit-capped preview, so it can undercount.
 	const total =
 		fullCustomer.base_price_total ?? computeMonthlyBasePrice(fullCustomer);
 	const formatted = new Intl.NumberFormat("en-US", {
@@ -321,10 +305,6 @@ function BasePriceCell({
 	);
 }
 
-/**
- * Base price column (hidden by default): the same monthly-normalized total
- * the base_price sort orders by, for eyeballing sort correctness.
- */
 export const createBasePriceColumn = (): ColumnDef<
 	CustomerWithProducts,
 	unknown
@@ -341,9 +321,6 @@ export const createBasePriceColumn = (): ColumnDef<
 	),
 });
 
-/**
- * Creates a usage column for a specific metered feature
- */
 export const createUsageColumn = ({
 	featureId,
 	featureName,

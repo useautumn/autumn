@@ -56,7 +56,6 @@ const sendEntriesOneByOne = async ({
 	return failures;
 };
 
-/** Every entry in as few SendMessageBatch calls as SQS allows; a transport error rejects, a refused entry is a failure. */
 export const sendEntries = async ({
 	client,
 	queueUrl,
@@ -66,7 +65,6 @@ export const sendEntries = async ({
 	queueUrl: string;
 	entries: QueueEntry[];
 }): Promise<EntryFailure[]> => {
-	// The emulator reports batch results under a key the SDK drops, so every entry would look unsent.
 	if (client.isLocalEndpoint) {
 		return sendEntriesOneByOne({ client, queueUrl, entries });
 	}

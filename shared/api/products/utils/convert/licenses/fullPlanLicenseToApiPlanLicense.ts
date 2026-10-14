@@ -5,10 +5,6 @@ import { fullProductToApiPlan } from "../fullProductToApiPlan";
 import type { ApiPlanContext } from "../types/apiPlanContext";
 import { fullPlanLicensesToApiPlanLicenses } from "./fullPlanLicensesToApiPlanLicenses";
 
-/**
- * One license link edge: the thin entry plus its customize diff, with the link's
- * effective plan attached when expandPlan is set. Each plan renders exactly once.
- */
 export const fullPlanLicenseToApiPlanLicense = ({
 	ctx,
 	license,

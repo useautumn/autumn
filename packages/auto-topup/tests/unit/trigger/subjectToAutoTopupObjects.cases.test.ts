@@ -18,7 +18,6 @@ import {
 } from "./fixtures/subjectFixtures.js";
 import { fullCustomerToAutoTopupObjects } from "./legacy/fullCustomerToAutoTopupObjects.js";
 
-/** The new function and the verbatim server copy must agree on every case; returns the new result. */
 const objectsOf = (fullSubject: AutoTopupSubject, featureId = FEATURE) => {
 	const next = subjectToAutoTopupObjects({ fullSubject, featureId, now: NOW });
 	const legacy = fullCustomerToAutoTopupObjects({
@@ -88,7 +87,6 @@ describe("config resolution", () => {
 				oneOffPrepaidPlan({ id: "cus_prod_3Jn37newer" }),
 			],
 		});
-		// The legacy copy has no tie-break (input order), so this case checks the new function alone.
 		const result = subjectToAutoTopupObjects({
 			fullSubject: s,
 			featureId: FEATURE,
@@ -277,7 +275,6 @@ describe("charge source", () => {
 				entityPlan,
 			],
 		});
-		// 100 on the entity's row lifts the customer total over the threshold.
 		expect(objectsOf(s)?.balanceBelowThreshold).toBe(false);
 	});
 

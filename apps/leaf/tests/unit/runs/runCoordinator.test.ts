@@ -40,8 +40,6 @@ describe("dispatchThreadMessage", () => {
 			text: "also, what's the MRR?",
 		});
 
-		// No separate interrupt: eve's steer policy cancels the active turn as
-		// part of the same durable delivery, so the cancel can't outrun the text.
 		expect(sent).toEqual(["message:also, what's the MRR?:Tony"]);
 		expect(run.pendingTurns).toBe(1);
 		expect(acked).toBe(1);
@@ -62,9 +60,6 @@ describe("dispatchThreadMessage", () => {
 		run.resolveSessionId("sesn_1");
 		let newRuns = 0;
 
-		// Marco approved the card while Tony's message was still running: the
-		// applied-outcome notice belongs to the thread, so it rides Tony's turn
-		// instead of opening a second reader on the same session.
 		await dispatchThreadMessage({
 			hasAttachments: false,
 			origin: "system",
@@ -92,8 +87,6 @@ describe("dispatchThreadMessage", () => {
 			},
 		});
 		run.resolveSessionId("sesn_1");
-		// The turn parked for an approval card: the reader returned and the card
-		// is being rendered, but the run stays registered until it is posted.
 		run.settle();
 		let newRuns = 0;
 
@@ -218,8 +211,6 @@ describe("dispatchThreadMessage", () => {
 		run.resolveSessionId("sesn_1");
 		let newRuns = 0;
 
-		// A second Slack user posts into the same thread mid-run. It must not be
-		// injected into U1's authenticated session — it starts its own run.
 		await dispatchThreadMessage({
 			hasAttachments: false,
 			providerUserId: "U2",

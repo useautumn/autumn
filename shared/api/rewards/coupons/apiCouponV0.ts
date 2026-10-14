@@ -6,7 +6,6 @@ import {
 import { z } from "zod/v4";
 import { ApiCouponPromoCodeV0Schema } from "../components/apiCouponPromoCodeV0.js";
 
-/** Discount-category reward types surfaced as coupons (excludes feature_grant / free_product). */
 const COUPON_TYPES = [
 	RewardType.PercentageDiscount,
 	RewardType.FixedDiscount,

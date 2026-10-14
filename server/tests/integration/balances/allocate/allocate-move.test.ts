@@ -1,12 +1,5 @@
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { expectAllocatedMessages } from "./utils/allocateTestUtils.js";
-/**
- * One allocate call is checked as a whole: moving credits between shares passes even when
- * applying its entries one by one would over-allocate on the way.
- *
- * Contract: A=5k, B=5k on 10k. [B→8k, A→2k] passes; B may then draw 8k, A only 2k.
- *   A batch that adds credits overall is rejected and changes nothing.
- */
 
 import { expect, test } from "bun:test";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils.js";
@@ -40,7 +33,6 @@ test.concurrent(
 		const customerId = "allocate-move-1";
 		const { a, b } = await setupEvenSplit({ customerId });
 
-		// B first: applied alone it would hold 13k of 10k.
 		const moved = await allocateMessages({
 			customerId,
 			allocations: [
@@ -86,7 +78,6 @@ test.concurrent(
 			expected: { remaining: 2000 },
 		});
 
-		// A is held to its new 2k share.
 		await trackMessages({ customerId, entityId: a, value: 3000 });
 		await expectMessagesBalance({
 			autumn: autumnV2_3,

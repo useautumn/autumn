@@ -14,7 +14,6 @@ export const cusEntToInvoiceUsage = ({
 	const startingBalance = cusEntToStartingBalance({ cusEnt });
 	const invoiceOverage = cusEntToInvoiceOverage({ cusEnt });
 
-	// 1. If invoice overage > 0:
 	if (invoiceOverage > 0) {
 		const usage = new Decimal(startingBalance).add(invoiceOverage);
 
@@ -29,7 +28,6 @@ export const cusEntToInvoiceUsage = ({
 		return usage.toNumber();
 	}
 
-	// 1. If entity scoped
 	if (isEntityScopedCusEnt(cusEnt)) {
 		let maxUsage = new Decimal(0);
 		for (const [_, entity] of Object.entries(cusEnt.entities || {})) {
@@ -41,7 +39,6 @@ export const cusEntToInvoiceUsage = ({
 		return maxUsage.toNumber();
 	}
 
-	// 2. If not entity scoped
 	const usage = new Decimal(startingBalance).sub(cusEnt.balance || 0);
 
 	return usage.toNumber();

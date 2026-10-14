@@ -31,7 +31,6 @@ export class FxProviderError extends Error {
 const utcDateOf = (timestampSeconds: number): string =>
 	new Date(timestampSeconds * MS_PER_SECOND).toISOString().slice(0, 10);
 
-// Error text is built from the body only: the request URL carries the app id.
 const providerErrorDetail = (body: unknown): string => {
 	const parsed = providerErrorSchema.safeParse(body);
 	return parsed.success
@@ -77,7 +76,6 @@ const fetchUsdRateTable = async ({
 	return { date, source: FX_SOURCE, rates: parsed.data.rates };
 };
 
-/** USD-base rates for one UTC day, fetched once per client. Throws unless the provider confirms that exact day. */
 export const getUsdRateTable = async ({
 	ctx,
 	date,

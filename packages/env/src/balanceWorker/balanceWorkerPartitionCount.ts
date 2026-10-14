@@ -1,15 +1,10 @@
 import { z } from "zod";
 
-// Local dev keeps just enough partitions to exercise routing without hundreds of Kafka producers.
 const LOCAL_PARTITION_COUNT = 4;
 const MAX_PARTITION_COUNT = 512;
 
 const partitionCount = z.coerce.number().int().min(1).max(MAX_PARTITION_COUNT);
 
-/**
- * How many partitions the deployment's topics have; server and workers must read the same value.
- * Part of customer placement: a new count needs a new deployment and fresh topics.
- */
 export function getBalanceWorkerPartitionCount({
 	runtimeEnv,
 }: {

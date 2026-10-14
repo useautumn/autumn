@@ -1,6 +1,3 @@
-/** One aggregate entry is kept per stable source ID; direct pool tracks are
- * attributed 1:1, and refunds change only their source entry. */
-
 import { expect, test } from "bun:test";
 import { customerEntitlements } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";

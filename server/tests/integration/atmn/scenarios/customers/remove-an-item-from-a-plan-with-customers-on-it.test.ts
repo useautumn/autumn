@@ -1,11 +1,3 @@
-/**
- * atmn scenarios/customers — remove an item from a plan with customers on it → in place, migration drafted, entitlements untouched until migrated
- *
- * real `billing.attach` first; the point is to hit the dependency errors
- *
- * One line of plans/atmn-v3/07_tests.md. [a, b] is a matrix looped INSIDE this file.
- */
-
 import { expect, test } from "bun:test";
 import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 import {
@@ -18,8 +10,6 @@ import { migrationRepo } from "@/internal/migrations/v2/repos/index.js";
 import { runPush } from "../../../../../../packages/atmn/src/actions/push";
 import { createClient } from "../../../../../../packages/atmn/src/generated/client";
 
-/** A plan with two items over two metered features; `dropSecondItem` removes
- * the second one in place, keeping the plan's own row. */
 const catalogConfig = ({
 	firstFeatureId,
 	secondFeatureId,
@@ -91,8 +81,6 @@ export default atmn(${catalogConfig({ firstFeatureId, secondFeatureId, planId, d
 			});
 			const result = await runPush({ client, cwd: scenario.cwd });
 
-			// The generated client hands back preview rows camelCased, like every
-			// fixture-facing response — not the snake_case wire.
 			const planRow = (result.preview.plans ?? []).find(
 				(row) => (row as { planId?: string }).planId === planId,
 			);
@@ -107,8 +95,6 @@ export default atmn(${catalogConfig({ firstFeatureId, secondFeatureId, planId, d
 			expect(migration).toBeDefined();
 			expect(migration.archived).toBe(false);
 
-			// A draft doesn't run anything: the customer's entitlement for the
-			// removed feature is still there until the migration is executed.
 			const customer = await scenario.autumnV2_3.customers.get(
 				scenario.customerId as unknown as string,
 			);

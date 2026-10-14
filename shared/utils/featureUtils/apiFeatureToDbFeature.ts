@@ -96,7 +96,6 @@ type DbCreditRate =
 	| { tier_behavior: "graduated"; tiers: CreditTier[] }
 	| { credit_amount: number };
 
-/** The flat-or-graduated part of a rate, API → DB naming. Rows and dimensions share it. */
 const apiCreditRateToDb = (rate: ApiCreditRate): DbCreditRate =>
 	"tier_behavior" in rate
 		? {
@@ -210,7 +209,6 @@ export const apiFeatureToDbFeature = ({
 	apiFeature: ApiFeatureV0 | UpdateFeatureParams;
 	originalFeature?: Feature;
 }) => {
-	// Replace body...
 	let featureType = apiFeature.type as unknown as FeatureType;
 	let usageType: FeatureUsageType | undefined;
 	if (
@@ -221,8 +219,6 @@ export const apiFeatureToDbFeature = ({
 		usageType = apiFeature.type as unknown as FeatureUsageType;
 	}
 
-	// Cloned — mutating the original's config in place would make the produced
-	// row and originalFeature indistinguishable to diffing.
 	const newConfig =
 		featureType === FeatureType.Boolean
 			? undefined
@@ -324,11 +320,8 @@ export const featureV1ToDbFeature = ({
 	};
 	originalFeature?: Feature;
 }) => {
-	// Replace body...
 	const featureType = apiFeature.type;
 
-	// Cloned — mutating the original's config in place would make the produced
-	// row and originalFeature indistinguishable to diffing.
 	const newConfig =
 		featureType === FeatureType.Boolean
 			? undefined
@@ -376,10 +369,8 @@ export const featureV1ToDbFeature = ({
 			"archived" in apiFeature
 				? apiFeature.archived
 				: (originalFeature?.archived ?? false),
-		// Omitted event_names keeps the current ones: the CLI no longer states them.
 		event_names: apiFeature.event_names ?? originalFeature?.event_names ?? [],
 		model_markups: modelMarkups,
-		// Omitted display keeps the current (often LLM-generated) one.
 		display:
 			apiFeature.display?.singular != null && apiFeature.display?.plural != null
 				? {
@@ -392,15 +383,6 @@ export const featureV1ToDbFeature = ({
 	} satisfies Feature;
 };
 
-/**
- * Converts a database feature to the V1 API format (latest format).
- *
- * Version handling:
- * - This function always returns ApiFeatureV1 (V2.0+ format)
- * - Automatic version transformation to older formats (V0) happens via V1.2_FeatureChange
- * - The transformation is applied by the middleware when handlers use resource: AffectedResource.Feature
- * - For API version V1_Beta and older, responses are automatically converted to ApiFeatureV0 format
- */
 export const dbToApiFeatureV1 = ({
 	ctx,
 	dbFeature,
@@ -415,8 +397,6 @@ export const dbToApiFeatureV1 = ({
 		internal_id: dbFeature.internal_id,
 		name: dbFeature.name,
 		type: dbFeature.type,
-		// Boolean rows may carry a stale usage_type from a past type change; the
-		// predicate ignores it, so a re-pull never phantom-diffs on consumable.
 		consumable:
 			isAnyCreditSystem(dbFeature.type) || isConsumableFeature(dbFeature),
 
@@ -447,52 +427,3 @@ export const dbToApiFeatureV1 = ({
 		ctx,
 	});
 };
-
-// export const fromApiFeature = ({
-// 	apiFeature,
-// 	orgId,
-// 	env,
-// }: {
-// 	apiFeature: ApiFeatureV0;
-// 	orgId: string;
-// 	env: AppEnv;
-// }) => {
-// 	const isMetered =
-// 		apiFeature.type === ApiFeatureType.SingleUsage ||
-// 		apiFeature.type === ApiFeatureType.ContinuousUse;
-
-// 	const featureType: FeatureType = isMetered
-// 		? FeatureType.Metered
-// 		: (apiFeature.type as unknown as FeatureType);
-
-// 	if (isMetered) {
-// 		return constructMeteredFeature({
-// 			featureId: apiFeature.id,
-// 			name: apiFeature.name || "",
-// 			usageType: apiFeature.type as unknown as FeatureUsageType,
-// 			orgId,
-// 			env,
-// 		});
-// 	}
-
-// 	if (featureType === FeatureType.CreditSystem) {
-// 		if (!apiFeature.credit_schema || apiFeature.credit_schema.length === 0) {
-// 			throw new Error("Credit system schema is required");
-// 		}
-
-// 		return constructCreditSystem({
-// 			featureId: apiFeature.id,
-// 			name: apiFeature.name || "",
-// 			orgId,
-// 			env,
-// 			schema: apiFeature.credit_schema!,
-// 		});
-// 	}
-
-// 	return constructBooleanFeature({
-// 		featureId: apiFeature.id,
-// 		name: apiFeature.name || "",
-// 		orgId,
-// 		env,
-// 	});
-// };

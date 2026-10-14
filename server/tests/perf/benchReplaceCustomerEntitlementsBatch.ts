@@ -1,10 +1,3 @@
-/**
- * EXPLAIN ANALYZE the exact batch-transition replacement query in an isolated
- * DEV schema. Every measured mutation runs in a rolled-back transaction.
- *
- *   NODE_ENV=development infisical run --env=dev --recursive -- \
- *     bun tests/perf/benchReplaceCustomerEntitlementsBatch.ts
- */
 import { type SQL, sql } from "drizzle-orm";
 import { assertNotProductionDb } from "@/db/dbUtils.js";
 import { buildAddCustomerEntitlementsBatchQuery } from "@/internal/billing/v2/actions/batchTransition/execute/sql/addCustomerEntitlementsBatch.js";
@@ -195,7 +188,6 @@ const createTables = async () => {
 			sql`CREATE TABLE ${sql.identifier(table)} (LIKE public.${sql.identifier(table)} INCLUDING ALL)`,
 		);
 	}
-	// LIKE copies indexes, but not foreign keys; reproduce the production cascade.
 	await db.execute(sql`
 		ALTER TABLE pooled_balance_contributions
 		ADD CONSTRAINT pooled_contribution_source_ce_bench_fkey

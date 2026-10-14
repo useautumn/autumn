@@ -57,7 +57,6 @@ export const num = (n: number) => new Intl.NumberFormat("en").format(n);
 
 export const handle = (email: string) => email.split("@")[0];
 
-/** `api_key:<id>` → API key actor (agent/CI); `session` → human. */
 export const isAgentVia = (via: string) => via.startsWith("api_key");
 
 export const usd = (n: number) => {

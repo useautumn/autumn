@@ -130,9 +130,6 @@ export const expectCustomerFeatureBalance = async ({
 		granted,
 		remaining,
 		usage,
-		// Customer aggregate views for entity-scoped balances can return an
-		// empty breakdown with null max_purchase, so only assert max_purchase
-		// when the response includes concrete breakdown rows.
 		...(maxPurchase === undefined || !hasCustomerBreakdownRows
 			? {}
 			: {

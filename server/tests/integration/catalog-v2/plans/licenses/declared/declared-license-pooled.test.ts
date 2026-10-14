@@ -1,11 +1,3 @@
-/**
- * catalogV2.update — declared licenses[] accept pooled items.
- *
- * Contract:
- *   pooled item on the child → link persists
- *   pooled item in customize add_items → customized link persists
- */
-
 import { test } from "bun:test";
 import { ResetInterval } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";

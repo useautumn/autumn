@@ -424,7 +424,6 @@ describe("computeRebalancedAutoTopUp", () => {
 			prepaidCustomerEntitlementId: prepaid.id,
 		});
 
-		// Only enough to zero one cusEnt. Older (createdAt=1) paid down first.
 		expect(deltas).toEqual([
 			{ cusEntId: olderCe.id, featureId: "messages", delta: 100 },
 		]);
@@ -461,8 +460,6 @@ describe("computeRebalancedAutoTopUp", () => {
 	});
 
 	test("10. prepaid cusEnt filtered from paydown pool even when it has overage", () => {
-		// If the prepaid somehow has a negative balance, the paydown pool must NOT
-		// include it — that's what the remainder delta is for.
 		const prepaid = createCustomerEntitlement({
 			id: "prepaid",
 			balance: -50,

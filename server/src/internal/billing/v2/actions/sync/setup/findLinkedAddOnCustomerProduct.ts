@@ -7,8 +7,6 @@ import {
 	type SyncProductContext,
 } from "@autumn/shared";
 
-/** The add-on instance a re-sync replaces: the one on this subscription, else a
- * customer-wide free one. */
 export const findLinkedAddOnCustomerProduct = ({
 	fullCustomer,
 	fullProduct,

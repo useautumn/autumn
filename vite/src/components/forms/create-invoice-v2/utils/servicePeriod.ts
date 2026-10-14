@@ -10,7 +10,6 @@ import type {
 	ServicePeriod,
 } from "../createInvoiceFormSchema";
 
-/** Periods are stored as UTC midnights so a picked day bills the same day everywhere, Stripe included. */
 export const calendarDayToUtcDay = (day: Date): number =>
 	Date.UTC(getYear(day), getMonth(day), getDate(day));
 
@@ -69,7 +68,6 @@ export const featurePeriodKey = ({
 	behavior: BillingMethod;
 }) => `${featureId}:${behavior}`;
 
-/** All prices, the base price, then each priced feature with the behaviours it bills. */
 export function listServicePeriodTargets({
 	items,
 }: {
@@ -93,10 +91,6 @@ export function listServicePeriodTargets({
 	];
 }
 
-/**
- * All prices replaces every item override; the base price is the plan's period that
- * items inherit; a feature sets that line alone. Null clears; an empty range is ignored.
- */
 export function applyServicePeriod({
 	plan,
 	target,
@@ -133,7 +127,6 @@ export function servicePeriodForTarget({
 
 const OUTSIDE_PERIOD_ERROR = /\((\d+) to (\d+), unix ms\) falls outside/;
 
-/** The rows whose override the server rejected for falling outside the invoice's service period. */
 export function findPlansOutsideInvoicePeriod({
 	errorMessage,
 	plans,

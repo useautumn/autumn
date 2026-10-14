@@ -6,10 +6,6 @@ import {
 	isProductAnchoredToMonthStart,
 } from "@autumn/shared";
 
-/**
- * The 1st a month-start plan anchors to when it starts at `startsAt`.
- * None if it isn't flagged, already starts on a 1st, or a trial end anchors it instead.
- */
 export const getMonthStartAnchorMs = ({
 	fullProducts,
 	startsAt,

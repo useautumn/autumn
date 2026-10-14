@@ -8,11 +8,6 @@ export type OrgSettingChangeAction = z.infer<
 	typeof OrgSettingChangeActionSchema
 >;
 
-/**
- * One flag the request moves, or one it leaves behind: `unmanaged` is a flag
- * the request does not state whose value is not the default. It stays as it
- * is — atmn only writes what a config states — and the preview says so.
- */
 export const OrgSettingChangeSchema = z.object({
 	key: z.enum(ORG_SETTING_KEYS),
 	action: OrgSettingChangeActionSchema,

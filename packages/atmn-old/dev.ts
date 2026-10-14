@@ -1,5 +1,3 @@
-// Development watcher - rebuilds on file changes
-
 import { watch } from "node:fs";
 
 let building = false;
@@ -22,10 +20,8 @@ async function rebuild() {
 	}
 }
 
-// Initial build
 await rebuild();
 
-// Watch src and source directories
 const watcher1 = watch("./src", { recursive: true }, (_event, filename) => {
 	if (filename?.match(/\.(ts|tsx)$/)) {
 		console.log(`📝 Changed: src/${filename}`);
@@ -43,7 +39,6 @@ const watcher2 = watch("./source", { recursive: true }, (_event, filename) => {
 console.log("👀 Watching for changes in src/ and source/...");
 console.log("Press Ctrl+C to stop\n");
 
-// Keep process alive
 process.on("SIGINT", () => {
 	console.log("\n👋 Stopping watcher...");
 	watcher1.close();

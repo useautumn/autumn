@@ -15,7 +15,6 @@ import {
 	usageTiersToComparisonShape,
 } from "@autumn/shared/utils/productUtils/priceUtils/comparePrice/pricesAreSame";
 
-/** One field the comparator saw differently on the stored and desired rows. */
 export type RowDifference = { path: string; stored: unknown; desired: unknown };
 
 const collect = <Row>({
@@ -35,11 +34,6 @@ const collect = <Row>({
 			: [{ path, stored: a, desired: b }];
 	});
 
-/**
- * The same fields `entsAreSame` compares, reported by name. Kept beside the
- * comparator rather than inside it so a test failure names the field without
- * the production path paying for the strings.
- */
 export const describeEntitlementDifferences = ({
 	stored,
 	desired,
@@ -71,7 +65,6 @@ export const describeEntitlementDifferences = ({
 		],
 	});
 
-/** The comparator's view of a currency block: amount and tier shape only. */
 const currenciesShape = (price: Price) =>
 	Object.fromEntries(
 		Object.entries(price.config.currencies ?? {}).map(([code, block]) => [
@@ -153,7 +146,6 @@ const usageProbes: { path: string; read: (p: Price) => unknown }[] = [
 	},
 ];
 
-/** The same fields `pricesAreSame` compares, reported by name. */
 export const describePriceDifferences = ({
 	stored,
 	desired,

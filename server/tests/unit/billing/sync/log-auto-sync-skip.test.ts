@@ -1,13 +1,3 @@
-/**
- * An auto-sync skip means a real Stripe change was NOT applied to Autumn, so
- * it must be a warning with a filterable reason. Only skips where there was
- * nothing for Autumn to apply stay at info.
- *
- * Red (before): every skip was a free-text info line, so seat changes skipped
- *               for `base_quantity_gt_one` or `ambiguous_linked_targets` drifted
- *               unnoticed.
- * Green (after): warn + structured `skip_reason`, info only for routine reasons.
- */
 import { describe, expect, mock, test } from "bun:test";
 import { logAutoSyncSkip } from "@/internal/billing/v2/actions/sync/utils/logAutoSyncSkip";
 

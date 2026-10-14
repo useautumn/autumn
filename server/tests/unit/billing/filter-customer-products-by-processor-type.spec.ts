@@ -1,11 +1,3 @@
-/**
- * Unit tests for filterCustomerProductsByProcessorType.
- *
- * Critical invariant: an unset `processor` field on a cus product MUST be
- * treated as Stripe. Legacy Stripe-managed cus products do not tag the
- * processor field; only RevenueCat-managed products explicitly set it.
- */
-
 import { describe, expect, test } from "bun:test";
 import {
 	type FullCusProduct,
@@ -23,7 +15,6 @@ const baseCusProduct = (id: string): FullCusProduct =>
 describe(chalk.yellowBright("filterCustomerProductsByProcessorType"), () => {
 	test("includes cus product with unset processor when filtering for Stripe", () => {
 		const cp = baseCusProduct("legacy_stripe");
-		// processor is undefined — legacy data shape
 		const result = filterCustomerProductsByProcessorType({
 			customerProducts: [cp],
 			processorType: ProcessorType.Stripe,

@@ -8,7 +8,6 @@ import { RateLimitType } from "@/internal/misc/rateLimiter/rateLimitConfigs.js";
 
 const testCase = "rate-limit-list-products";
 
-// GET /products falls back to the General bucket; lowered for a throwaway sub-org only.
 const GENERAL_OVERRIDE_LIMIT = 10;
 const REQUEST_COUNT = GENERAL_OVERRIDE_LIMIT * 3;
 

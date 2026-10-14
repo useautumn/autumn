@@ -9,14 +9,6 @@ const CONSECUTIVE_EMPTY_READS_REQUIRED = 2;
 const BARRIER_STUCK_WARN_MS = ms.minutes(30);
 const BARRIER_GIVE_UP_MS = ms.minutes(45);
 
-/**
- * Gate A — in-sweep backpressure. Blocks while the batch reset queue holds
- * more than queueHighWaterMessages, so the scanner never runs further ahead
- * of the workers than one high-water mark of messages.
- *
- * Fails open (with a warning) on SQS errors or when no dedicated queue is
- * configured — a metrics hiccup should not stop resets.
- */
 export const waitForQueueBelowHighWater = async ({
 	logger,
 	signal,
@@ -50,17 +42,6 @@ export const waitForQueueBelowHighWater = async ({
 	}
 };
 
-/**
- * Gate B — sweep-restart barrier. Blocks until the batch reset queue is
- * fully drained (zero visible AND zero in-flight, on consecutive reads), so
- * a new sweep can never re-enqueue rows the workers are still processing.
- *
- * Warns at BARRIER_STUCK_WARN_MS, then gives up at BARRIER_GIVE_UP_MS rather
- * than stalling resets indefinitely behind one wedged message: re-enqueueing a
- * still-queued row is a no-op, since classifyNoAction rejects rows that are no
- * longer due. Fails open on SQS errors or when no dedicated queue is
- * configured.
- */
 export const waitForQueueDrained = async ({
 	logger,
 	signal,

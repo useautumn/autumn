@@ -4,8 +4,6 @@ import type { User } from "better-auth";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { resolveSandboxActor } from "@/internal/sandboxes/resolveSandboxActor.js";
 
-// The owner lookup is one select().from().innerJoin().where().orderBy().limit()
-// chain, so a chainable stub covers every auth-type branch without a DB.
 const stubDb = (rows: unknown[]): DrizzleCli => {
 	const chain = {
 		select: () => chain,

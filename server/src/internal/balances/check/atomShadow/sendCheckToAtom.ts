@@ -4,25 +4,19 @@ import type {
 	AtomShadowTarget,
 } from "./types/atomShadowOutcome.js";
 
-/** Fail fast: an Atom slower than this is the finding, not something to wait out. */
 const ATOM_SHADOW_TIMEOUT_MS = 300;
-/** A late reply still finishes so its keep-alive socket returns to the pool; this only bounds a stuck one. */
 const ATOM_SHADOW_ABANDON_MS = 5_000;
-/** Past this many open requests a check is shed as a timeout rather than dialled: bounds the Atom's queue below the timeout. */
 const ATOM_SHADOW_MAX_IN_FLIGHT = 16;
 
-/** Set when Atom had the API answer instead, so the body is not Atom's own. */
 const FORWARDED_HEADER = "x-atom-forwarded";
 
 let requestsInFlight = 0;
 
-/** This process's Atom requests still open, late ones past their timeout included. */
 export const atomRequestsInFlight = () => requestsInFlight;
 
 const errorToReason = (error: unknown): string =>
 	error instanceof Error ? error.name : "unknown_failure";
 
-/** Resolves to a timeout after ATOM_SHADOW_TIMEOUT_MS, without aborting the request: an abort drops its socket. */
 const replyWithinTimeout = (reply: Promise<AtomCheckReply>) => {
 	let timer: ReturnType<typeof setTimeout> | undefined;
 	const timeout = new Promise<AtomCheckReply>((resolve) => {
@@ -34,7 +28,6 @@ const replyWithinTimeout = (reply: Promise<AtomCheckReply>) => {
 	return Promise.race([reply, timeout]).finally(() => clearTimeout(timer));
 };
 
-/** The caller's check as the caller sent it, minus its secret key: Atom forwards nothing without one. */
 export const sendCheckToAtom = ({
 	target,
 	params,

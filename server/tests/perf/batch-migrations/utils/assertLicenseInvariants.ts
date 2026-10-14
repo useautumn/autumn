@@ -7,11 +7,6 @@ export type InvariantViolation = {
 	sample?: string;
 };
 
-/**
- * State that must hold after ANY license migration, whichever lane ran. Each
- * check corresponds to a defect found by hand; encoding them here runs them
- * against every scenario rather than the one they were found in.
- */
 export const assertLicenseInvariants = async ({
 	db,
 	licenseInternalProductId,

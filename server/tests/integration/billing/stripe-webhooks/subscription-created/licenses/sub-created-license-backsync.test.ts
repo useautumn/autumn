@@ -1,30 +1,3 @@
-/**
- * TDD contract: customer.subscription.created auto-sync (back-sync) for
- * license plans.
- *
- * Contract under test:
- *   New behaviors:
- *     - CASE 1 (stock): an external Stripe sub carrying 3 × the LICENSE
- *       plan's catalog base price back-syncs as the PARENT plan attached
- *       (the plan whose catalog links offer this license), NOT as the
- *       license plan itself.
- *     - CASE 2 (custom): an external Stripe sub carrying 2 × an ad-hoc
- *       $120/yr price on the LICENSE plan's Stripe product back-syncs as
- *       the parent attached with a CUSTOMIZED license (is_custom plan
- *       license whose base price is $120/yr).
- *   Side effects:
- *     - customer_licenses pool created under the parent customer product:
- *       paid_quantity = Stripe item quantity, granted = included + paid,
- *       remaining = granted (no assignments yet).
- *     - Parent customer product linked to the Stripe subscription.
- *
- * Pre-impl red: auto-sync matches the license product directly and either
- * attaches it as a standalone plan or skips — no parent attach, no pool.
- * The imported custom price also lost its source config.stripe_price_id.
- * Post-impl green: sync detection resolves license prices to the owning
- * parent link, provisions the pool, and persists the source Stripe price ID
- * on prices flowing through customize.upsert_licenses.
- */
 import { expect, test } from "bun:test";
 import { type ApiCustomerV5, BillingInterval } from "@autumn/shared";
 import { createExternalStripeSubscription } from "@tests/integration/billing/stripe-webhooks/utils/sharedStripeProductAutoSyncUtils";
@@ -96,7 +69,6 @@ test(`${chalk.yellowBright("sub.created license back-sync: 3x license price atta
 	});
 	expect(stripeSubscription.status).toBe("active");
 
-	// ── Contract: PARENT attached (not the license plan itself) ──────────
 	await expectProductActive({
 		customerId,
 		autumn: autumnV2_3,
@@ -104,7 +76,6 @@ test(`${chalk.yellowBright("sub.created license back-sync: 3x license price atta
 		settleTimeoutMs: 30_000,
 	});
 
-	// ── Contract: pool paid_quantity 3, granted = included + 3 ───────────
 	const customer = await autumnV2_3.customers.get<ApiCustomerV5>(customerId);
 	expectCustomerLicenses({
 		customer,
@@ -121,7 +92,6 @@ test(`${chalk.yellowBright("sub.created license back-sync: 3x license price atta
 		],
 	});
 
-	// ── Side effects: sub linked + pool anchored to the CATALOG license ──
 	await expectLicenseDefinitionCorrect({
 		ctx,
 		customerId,
@@ -131,10 +101,6 @@ test(`${chalk.yellowBright("sub.created license back-sync: 3x license price atta
 		basePrice: { amount: 20, interval: BillingInterval.Month },
 	});
 });
-
-// ═══════════════════════════════════════════════════════════════════════════
-// CASE 2: custom $120/yr price on the license product → customized license
-// ═══════════════════════════════════════════════════════════════════════════
 
 const CUSTOM_SEAT_PRICE = 120;
 const CUSTOM_PAID_SEATS = 2;
@@ -182,7 +148,6 @@ test(`${chalk.yellowBright("sub.created license back-sync: custom $120/yr licens
 		throw new Error("Seat product has no Stripe product id");
 	}
 
-	// An ad-hoc price on the seat's Stripe product Autumn knows nothing about.
 	const customStripePrice = await createStripeFixedPriceUnderProduct({
 		ctx,
 		stripeProductId: seatStripeProductId,
@@ -197,7 +162,6 @@ test(`${chalk.yellowBright("sub.created license back-sync: custom $120/yr licens
 	});
 	expect(stripeSubscription.status).toBe("active");
 
-	// ── Contract: PARENT attached (not the license plan itself) ──────────
 	await expectProductActive({
 		customerId,
 		autumn: autumnV2_3,
@@ -205,7 +169,6 @@ test(`${chalk.yellowBright("sub.created license back-sync: custom $120/yr licens
 		settleTimeoutMs: 30_000,
 	});
 
-	// ── Contract: pool paid_quantity 2, granted = included + 2 ───────────
 	const customer = await autumnV2_3.customers.get<ApiCustomerV5>(customerId);
 	expectCustomerLicenses({
 		customer,
@@ -222,8 +185,6 @@ test(`${chalk.yellowBright("sub.created license back-sync: custom $120/yr licens
 		],
 	});
 
-	// ── Side effects: sub linked + pool anchored to an is_custom license
-	//    definition carrying the $120/yr base price ───────────────────────
 	await expectLicenseDefinitionCorrect({
 		ctx,
 		customerId,

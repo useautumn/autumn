@@ -45,8 +45,6 @@ const turnSourceFor = (axCase: AxCase) => {
 	return scriptedTurns([axCase.prompt, ...(axCase.followUpMessages ?? [])]);
 };
 
-/** Braintrust renders chat-shaped input/output in the thread view, and each
- * tool call becomes its own child span so the agent's actions are visible. */
 const logTurnToBraintrust = (turn: CompletedTurn) => {
 	currentSpan().traced(
 		(turnSpan) => {
@@ -75,12 +73,6 @@ const logTurnToBraintrust = (turn: CompletedTurn) => {
 	);
 };
 
-/**
- * One case = one eval file, run once per arm. Each arm is a named kit —
- * default "with" (the pack) vs "without" (bare) — and the delta between arms
- * is the metric. Braintrust logging is optional: without BRAINTRUST_API_KEY
- * the eval still runs and prints locally.
- */
 export const initAxEval = ({
 	axCase,
 	kit = defaultKit(),
@@ -90,15 +82,12 @@ export const initAxEval = ({
 	timeoutMs,
 }: {
 	axCase: AxCase;
-	/** Swap what the equipped arm gets; pass `arms` instead for full control. */
 	kit?: AgentKit;
 	arms?: Record<Arm, AgentKit>;
 	trialCount?: number;
 	maxTurns?: number;
 	timeoutMs?: number;
 }) => {
-	// Grader-proof tests import eval files for their case definitions; never
-	// spawn agents from inside bun test.
 	if (process.env.NODE_ENV === "test") return;
 
 	const selectedArms = Object.fromEntries(
@@ -112,10 +101,6 @@ export const initAxEval = ({
 		);
 	}
 
-	// A single arm streams the conversation live; concurrent arms render
-	// atomic per-turn blocks. AX_EVALS_COMPACT=1 (set by the dispatcher for
-	// multi-file runs) collapses to one tagged line per turn — a case can't
-	// know it shares the terminal with parallel sibling eval files.
 	const compact = process.env.AX_EVALS_COMPACT === "1";
 	const renderMode = compact
 		? ("compact" as const)
@@ -130,8 +115,6 @@ export const initAxEval = ({
 		if (!armKit) throw new Error(`Unknown arm "${arm}"`);
 		await assertBackendReachable(backendUrl);
 		await sweepStaleWorkspaces();
-		// A real throwaway org per arm: pushes land somewhere disposable and
-		// concurrent arms never share state.
 		const orgRunId = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
 		const scenario = axCase.scenario;
 		const org = await createEvalOrg({
@@ -143,8 +126,6 @@ export const initAxEval = ({
 			backendUrl,
 		});
 		try {
-			// A real post-init project has an autumn.config.ts with the import
-			// line already there; seeding it kills invented-import failures.
 			if (scenario?.seedCatalog) {
 				await seedCatalog({
 					workspaceDir: workspace.dir,
@@ -240,8 +221,6 @@ export default atmn({
 		caseName: axCase.name,
 	});
 
-	// Named wrappers so Braintrust shows "config valid", not "scorer_0" — and
-	// so the terminal scorecard can print per-arm results as they land.
 	const scorers = axCase.expect.map((expectation) => {
 		const scorer = async ({
 			output,

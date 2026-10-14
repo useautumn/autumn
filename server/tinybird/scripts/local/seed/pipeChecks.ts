@@ -19,7 +19,6 @@ type PipeRow = {
 const sum = (rows: PipeRow[], field: "total_value" | "event_count") =>
 	rows.reduce((total, row) => total + Number(row[field] ?? 0), 0);
 
-/** Calls the aggregate pipes over the whole seeded window; their totals must equal raw events. */
 export const collectPipeChecks = async ({
 	target,
 	orgId,
@@ -118,7 +117,6 @@ export const collectPipeChecks = async ({
 	}
 
 	for (const [key, count] of [...present.entries()].sort()) {
-		// Gated keys aren't in the property rollup, so the server reads them raw; mirror that here.
 		const rollup = (gated.get(key) ?? 0) === count;
 		const rows = await groupable({
 			group_column: "property",
@@ -137,7 +135,6 @@ export const collectPipeChecks = async ({
 	return { checks, notes };
 };
 
-/** Informational: hourly rollups can't split +5:30 day edges, so per-day bins may differ from raw. */
 const compareKolkataDayBins = async ({
 	target,
 	where,

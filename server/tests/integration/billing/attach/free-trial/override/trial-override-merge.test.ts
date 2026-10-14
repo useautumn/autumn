@@ -1,14 +1,3 @@
-/**
- * Free Trial Override Merge Tests (Attach V2)
- *
- * Tests for free_trial parameter override with add-ons and merges.
- *
- * Key behaviors:
- * - Add-on with free_trial override moves entire subscription to trial
- * - Add-on with free_trial: null ends subscription trial
- * - Add-on with free_trial override replaces existing trial
- */
-
 import { expect, test } from "bun:test";
 import { type ApiCustomerV3, FreeTrialDuration, ms } from "@autumn/shared";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
@@ -24,19 +13,6 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 1: Add-on with free_trial override to active subscription
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Customer has Pro (active, not trialing)
- * - Attaches add-on with free_trial: { length: 7 }
- *
- * Expected Result:
- * - Subscription moves to trial, both products trial
- * - Pro is refunded, no charge for add-on
- */
 test.concurrent(`${chalk.yellowBright("trial-override-merge 1: add-on with free_trial override to active sub")}`, async () => {
 	const customerId = "trial-override-merge-addon-active";
 
@@ -61,7 +37,6 @@ test.concurrent(`${chalk.yellowBright("trial-override-merge 1: add-on with free_
 		actions: [s.billing.attach({ productId: pro.id })],
 	});
 
-	// Verify initial state - pro is active, not trialing
 	const customerBefore =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	await expectProductNotTrialing({
@@ -70,7 +45,6 @@ test.concurrent(`${chalk.yellowBright("trial-override-merge 1: add-on with free_
 		nowMs: advancedTo,
 	});
 
-	// 1. Preview add-on with free_trial override
 	const preview = await autumnV1.billing.previewAttach({
 		customer_id: customerId,
 		product_id: addon.id,
@@ -79,15 +53,13 @@ test.concurrent(`${chalk.yellowBright("trial-override-merge 1: add-on with free_
 			duration: FreeTrialDuration.Day,
 		},
 	});
-	// Pro refunded (-$20), add-on free during trial = -$20
 	expect(preview.total).toBe(-20);
 	expectPreviewNextCycleCorrect({
 		preview,
 		startsAt: advancedTo + ms.days(7),
-		total: 40, // Pro ($20) + Add-on ($20) after trial
+		total: 40,
 	});
 
-	// 2. Attach add-on with free_trial override
 	await autumnV1.billing.attach({
 		customer_id: customerId,
 		product_id: addon.id,
@@ -100,13 +72,11 @@ test.concurrent(`${chalk.yellowBright("trial-override-merge 1: add-on with free_
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Verify both products are active
 	await expectCustomerProducts({
 		customer,
 		active: [pro.id, addon.id],
 	});
 
-	// Verify both products are trialing with same trial end
 	await expectProductTrialing({
 		customer,
 		productId: pro.id,
@@ -119,7 +89,6 @@ test.concurrent(`${chalk.yellowBright("trial-override-merge 1: add-on with free_
 		trialEndsAt: advancedTo + ms.days(7),
 	});
 
-	// Verify invoices: pro ($20) + refund (-$20)
 	await expectCustomerInvoiceCorrect({
 		customer,
 		count: 3,
@@ -128,7 +97,6 @@ test.concurrent(`${chalk.yellowBright("trial-override-merge 1: add-on with free_
 
 	expect(customer.invoices?.[1]?.total).toBe(-20);
 
-	// Verify Stripe subscription state
 	await expectSubToBeCorrect({
 		db: ctx.db,
 		customerId,
@@ -138,18 +106,6 @@ test.concurrent(`${chalk.yellowBright("trial-override-merge 1: add-on with free_
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 2: Add-on with free_trial: null to trialing subscription
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Customer has Pro (trialing)
- * - Attaches add-on with free_trial: null
- *
- * Expected Result:
- * - Trial ends, both products charged immediately
- */
 test.concurrent(`${chalk.yellowBright("trial-override-merge 2: add-on with free_trial: null to trialing sub")}`, async () => {
 	const customerId = "trial-override-merge-addon-null";
 
@@ -176,7 +132,6 @@ test.concurrent(`${chalk.yellowBright("trial-override-merge 2: add-on with free_
 		actions: [s.billing.attach({ productId: proTrial.id })],
 	});
 
-	// Verify initial state - pro is trialing
 	const customerBefore =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	await expectProductTrialing({
@@ -185,16 +140,13 @@ test.concurrent(`${chalk.yellowBright("trial-override-merge 2: add-on with free_
 		trialEndsAt: advancedTo + ms.days(14),
 	});
 
-	// 1. Preview add-on with free_trial: null
 	const preview = await autumnV1.billing.previewAttach({
 		customer_id: customerId,
 		product_id: addon.id,
 		free_trial: null,
 	});
-	//
 	expect(preview.total).toBe(40);
 
-	// 2. Attach add-on with free_trial: null
 	await autumnV1.billing.attach({
 		customer_id: customerId,
 		product_id: addon.id,
@@ -204,13 +156,11 @@ test.concurrent(`${chalk.yellowBright("trial-override-merge 2: add-on with free_
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Verify both products are active
 	await expectCustomerProducts({
 		customer,
 		active: [proTrial.id, addon.id],
 	});
 
-	// Verify both products are NOT trialing
 	await expectProductNotTrialing({
 		customer,
 		productId: proTrial.id,
@@ -223,14 +173,12 @@ test.concurrent(`${chalk.yellowBright("trial-override-merge 2: add-on with free_
 		nowMs: advancedTo,
 	});
 
-	// Verify invoices: $40 charge
 	await expectCustomerInvoiceCorrect({
 		customer,
 		count: 2,
 		latestTotal: 40,
 	});
 
-	// Verify Stripe subscription state
 	await expectSubToBeCorrect({
 		db: ctx.db,
 		customerId,
@@ -240,18 +188,6 @@ test.concurrent(`${chalk.yellowBright("trial-override-merge 2: add-on with free_
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 3: Add-on with free_trial override to trialing subscription (replaces trial)
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Customer has Pro (trialing, 5 days left)
- * - Attaches add-on with free_trial: { length: 14 }
- *
- * Expected Result:
- * - Fresh 14-day trial for both (replaces existing trial)
- */
 test.concurrent(`${chalk.yellowBright("trial-override-merge 3: add-on with free_trial override replaces existing trial")}`, async () => {
 	const customerId = "trial-override-merge-addon-replace";
 
@@ -277,20 +213,18 @@ test.concurrent(`${chalk.yellowBright("trial-override-merge 3: add-on with free_
 		],
 		actions: [
 			s.billing.attach({ productId: proTrial.id }),
-			s.advanceTestClock({ days: 2 }), // 5 days remaining on trial
+			s.advanceTestClock({ days: 2 }),
 		],
 	});
 
-	// Verify initial state - pro is trialing with ~5 days remaining
 	const customerBefore =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	await expectProductTrialing({
 		customer: customerBefore,
 		productId: proTrial.id,
-		trialEndsAt: advancedTo + ms.days(5), // 7 - 2 = 5 days remaining
+		trialEndsAt: advancedTo + ms.days(5),
 	});
 
-	// 1. Preview add-on with free_trial override (14 days)
 	const preview = await autumnV1.billing.previewAttach({
 		customer_id: customerId,
 		product_id: addon.id,
@@ -299,13 +233,12 @@ test.concurrent(`${chalk.yellowBright("trial-override-merge 3: add-on with free_
 			duration: FreeTrialDuration.Day,
 		},
 	});
-	expect(preview.total).toBe(0); // No charge during trial
+	expect(preview.total).toBe(0);
 	expectPreviewNextCycleCorrect({
 		preview,
 		total: 0,
 	});
 
-	// 2. Attach add-on with free_trial override
 	await autumnV1.billing.attach({
 		customer_id: customerId,
 		product_id: addon.id,
@@ -318,13 +251,11 @@ test.concurrent(`${chalk.yellowBright("trial-override-merge 3: add-on with free_
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Verify both products are active
 	await expectCustomerProducts({
 		customer,
 		active: [proTrial.id, addon.id],
 	});
 
-	// Verify both products have fresh 14-day trial (NOT the remaining 5 days)
 	await expectProductTrialing({
 		customer,
 		productId: proTrial.id,
@@ -339,15 +270,12 @@ test.concurrent(`${chalk.yellowBright("trial-override-merge 3: add-on with free_
 		toleranceMs: ms.hours(1) + ms.minutes(10),
 	});
 
-	// Verify $0 invoice during trial (Stripe creates invoice for trial subscriptions)
-	// Count is 2: initial trial invoice ($0) + subscription update invoice ($0)
 	await expectCustomerInvoiceCorrect({
 		customer,
 		count: 2,
 		latestTotal: 0,
 	});
 
-	// Verify Stripe subscription state
 	await expectSubToBeCorrect({
 		db: ctx.db,
 		customerId,

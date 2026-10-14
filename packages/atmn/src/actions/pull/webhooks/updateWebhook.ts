@@ -25,7 +25,6 @@ const fieldAssignments = ({
 	stated: StatedWebhook;
 }): Assignment[] => {
 	const assignments: Assignment[] = [];
-	// No list is every event, which a config states by leaving `events` out.
 	if (webhook.events.length === 0) {
 		if (stated.events !== undefined)
 			assignments.push({ path: ["events"], text: null });

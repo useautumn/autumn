@@ -14,7 +14,6 @@ const isEditableTarget = (target: EventTarget | null) =>
 		target instanceof HTMLTextAreaElement ||
 		target.isContentEditable);
 
-/** Pastes a copied plan item into the current plan on cmd+V. */
 export const usePastePlanItem = () => {
 	const { product, setProduct } = useProduct();
 	const { sheetType } = useSheet();

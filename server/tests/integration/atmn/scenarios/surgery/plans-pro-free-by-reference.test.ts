@@ -1,9 +1,3 @@
-/**
- * atmn scenarios/surgery — `plans: [pro, free]` by reference → delete removes the export and the reference
- *
- * One line of plans/atmn-v3/07_tests.md. [a, b] is a matrix looped INSIDE this file.
- */
-
 import { expect, test } from "bun:test";
 import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 import {
@@ -49,9 +43,6 @@ export default atmn({
 		try {
 			await scenario.push();
 
-			// The dashboard removes `pro`: an explicit "the catalog is just
-			// `free` now" statement, not a local config edit — pro is deleted
-			// server-side, so the next preview reports it for removal.
 			await scenario.client.update({
 				plans: [{ plan_id: freeId, name: "Free" }],
 				skip_deletions: false,

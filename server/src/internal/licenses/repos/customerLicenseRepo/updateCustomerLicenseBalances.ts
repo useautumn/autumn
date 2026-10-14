@@ -8,8 +8,6 @@ export type CustomerLicenseBalanceRow = {
 	plan_license_id: string | null;
 };
 
-/** Batch balance write: every drifted row for a customer in one UPDATE via a
- * VALUES join, instead of a round trip per row. */
 export const updateCustomerLicenseBalances = async ({
 	db,
 	rows,

@@ -1,6 +1,3 @@
-// updateSubscription must carry rollovers bucket-for-bucket (prepaid -> prepaid, overage -> overage)
-// when one feature has both a prepaid (volume) and an overage item with per-entity balances.
-
 import { expect, test } from "bun:test";
 import type { ApiCustomerV5, ApiEntityV0 } from "@autumn/shared";
 import { runUpdatePlanMigration } from "@tests/integration/billing/migrations-v2/utils/runUpdatePlanMigration";
@@ -35,7 +32,6 @@ test.concurrent(
 		const remainingBefore =
 			customerBefore.balances[TestFeature.Messages].remaining;
 
-		// v2 keeps BOTH feature items identical; only the base price changes.
 		await autumnV1.products.update(pro.id, {
 			items: [
 				prepaidVolumeMessages,
@@ -88,7 +84,6 @@ test.concurrent(
 			],
 		});
 
-		// migrate() drives updateSubscription with a productContext override.
 		await runUpdatePlanMigration({
 			ctx,
 			migrationClient: autumnV2_2,

@@ -42,7 +42,6 @@ export const api = {
 		call,
 		type: "api.calledAfterApproval",
 	}),
-	/** Calls matching `call` must occur exactly `count` times; 0 forbids a tool. */
 	calledTimes: ({
 		call,
 		count,

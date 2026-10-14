@@ -4,8 +4,6 @@ import {
 	type EntitlementExpiry,
 } from "@autumn/shared";
 
-/** The expiry promise stamped on an entitlement definition, or null when the
- * item's purchases never expire. */
 export const entitlementToExpiry = ({
 	entitlement,
 }: {
@@ -16,7 +14,6 @@ export const entitlementToExpiry = ({
 	return { duration, length };
 };
 
-/** Evaluated per purchase, so editing the plan item only moves future grants. */
 export const initExpiresAt = ({
 	expiry,
 	now,

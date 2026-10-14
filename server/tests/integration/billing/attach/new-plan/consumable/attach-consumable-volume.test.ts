@@ -1,8 +1,3 @@
-/**
- * Pay-per-use volume bills only the overage past included, at the net tier it lands in; at or below
- * included it bills $0. Each case checks the upcoming-invoice preview equals the renewal invoice.
- */
-
 import { test } from "bun:test";
 import { expectNextInvoiceMatchesPreview } from "@tests/integration/billing/utils/expectNextInvoiceMatchesPreview";
 import { TestFeature } from "@tests/setup/v2Features";
@@ -11,7 +6,6 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-// Default tiers: 0-500 @ $0.10, 501+ @ $0.05.
 const runVolumeRenewal = async ({
 	customerId,
 	includedUsage = 0,
@@ -115,7 +109,6 @@ test.concurrent(
 test.concurrent(
 	`${chalk.yellowBright("consumable-volume 5: 100 included, used 700 → 600 over in net band 2: 600 × $0.05 = $30")}`,
 	async () => {
-		// Net tiers 0-500/501+ are total-usage bands 0-600/601+ once 100 are included.
 		await runVolumeRenewal({
 			customerId: "cons-volume-included-band2",
 			includedUsage: 100,

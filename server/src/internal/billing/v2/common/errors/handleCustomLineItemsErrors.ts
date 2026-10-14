@@ -6,11 +6,6 @@ import type {
 import { ErrCode, RecaseError } from "@autumn/shared";
 import { willStripeSubscriptionUpdateCreateInvoice } from "@/internal/billing/v2/providers/stripe/utils/subscriptions/willStripeSubscriptionUpdateCreateInvoice";
 
-/**
- * Validates that custom_line_items is only used in valid scenarios:
- * 1. The stripe subscription action must be "update" (not "create")
- * 2. The update must not create a Stripe-managed invoice (e.g. trial removal)
- */
 export const handleCustomLineItemsErrors = ({
 	params,
 	billingContext,
@@ -22,7 +17,6 @@ export const handleCustomLineItemsErrors = ({
 }) => {
 	if (!params.custom_line_items?.length) return;
 
-	// Scheduled switches still yield an "update" action, but have no immediate invoice to override.
 	if (
 		"planTiming" in billingContext &&
 		billingContext.planTiming === "end_of_cycle"
@@ -37,7 +31,6 @@ export const handleCustomLineItemsErrors = ({
 
 	const subAction = billingPlan.stripe?.subscriptionAction;
 
-	// 1. Only allowed for subscription updates (not creates, cancels, etc.)
 	if (!subAction || subAction.type !== "update") {
 		throw new RecaseError({
 			message:
@@ -47,7 +40,6 @@ export const handleCustomLineItemsErrors = ({
 		});
 	}
 
-	// 2. Not allowed when the update creates a Stripe-managed invoice (trial removal)
 	if (
 		willStripeSubscriptionUpdateCreateInvoice({
 			billingContext,

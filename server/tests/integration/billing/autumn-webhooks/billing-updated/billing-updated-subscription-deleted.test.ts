@@ -1,12 +1,3 @@
-/**
- * Integration test: `billing.updated` webhook fires when a Stripe
- * subscription is canceled (subscription.deleted webhook).
- *
- * Setup: attach a paid plan, cancel the Stripe subscription directly. Our
- * `handleStripeSubscriptionDeleted` handler expires the customer product and
- * `emitBillingChangeWebhook` fires the webhook with an `expired` change.
- */
-
 import { afterAll, beforeAll, expect, test } from "bun:test";
 import type {
 	BillingChangeResponse,
@@ -99,11 +90,6 @@ test(`${chalk.yellowBright("billing.updated: stripe subscription.deleted → exp
 	expect(expired).toBeDefined();
 });
 
-// When a customer "cancels to free" (downgrades a paid plan to a free
-// default), Autumn schedules pro for expiry at period_end and free to start
-// at the same moment. At period_end, Stripe cancels pro's subscription →
-// `handleStripeSubscriptionDeleted` activates free and emits the webhook
-// with pro expired + free activated.
 test(`${chalk.yellowBright("billing.updated: pro → free at period end → expired pro + activated free (via subscription.deleted)")}`, async () => {
 	const customerId = "billing-updated-cancel-to-free";
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
@@ -122,7 +108,7 @@ test(`${chalk.yellowBright("billing.updated: pro → free at period end → expi
 		],
 		actions: [
 			s.attach({ productId: pro.id }),
-			s.attach({ productId: free.id }), // schedules cancel to free
+			s.attach({ productId: free.id }),
 			s.advanceTestClock({ toNextInvoice: true }),
 		],
 	});

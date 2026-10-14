@@ -14,12 +14,6 @@ import type {
 } from "@/internal/catalogV2/actions/updateCatalog/types/upsertProductPlan";
 import { fullProductForPlanParams } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/fullProductForPlanParams";
 
-/**
- * Pull absent parent versions into the batch. In-place edits pull every
- * reverse-linked parent (pin candidates); mints/promotes pull only rows
- * pinned in propagate — anchored links stay untouched. Skip all_versions
- * plans — siblings cover them.
- */
 export const deriveLicenseParentIntents = ({
 	intent,
 	upsert,

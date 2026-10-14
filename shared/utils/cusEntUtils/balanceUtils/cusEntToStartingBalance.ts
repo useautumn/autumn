@@ -6,7 +6,6 @@ import type { Entitlement } from "../../../models/productModels/entModels/entMod
 import { entToOptions } from "../../productUtils/convertProductUtils";
 import { getStartingBalance } from "../getStartingBalance";
 
-/** What the starting balance reads: the grant, the product's options and quantity, and the prices that size a prepaid grant. */
 export type StartingBalanceCustomerEntitlement = {
 	pooled_balance?: PooledBalanceGrantView | null;
 	id: string;

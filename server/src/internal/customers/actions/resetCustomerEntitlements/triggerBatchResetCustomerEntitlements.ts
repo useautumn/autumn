@@ -3,10 +3,6 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { type BatchResetCusEntsPayload, workflows } from "@/queue/workflows.js";
 import { getCusEntsNeedingReset } from "./getCusEntsNeedingReset";
 
-/**
- * Checks a list of FullCustomers for entitlements needing reset,
- * and queues an SQS job with the cusEnt IDs if any are found.
- */
 export const triggerBatchResetCustomerEntitlements = async ({
 	ctx,
 	fullCustomers,

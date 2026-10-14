@@ -24,7 +24,6 @@ export const ProductSchema = z.object({
 	is_add_on: z.boolean(),
 	is_default: z.boolean(),
 	version: z.number(),
-	// Missing keys parse as null/false; hydrate still fills slug to v{version}.
 	version_slug: z.string().nullable().default(null),
 	active: z.boolean().default(false),
 	deleted_at: z.number().nullable().default(null),
@@ -75,7 +74,6 @@ export const UpdateProductSchema = z.object({
 	billing_controls: CustomerBillingControlsSchema.optional(),
 });
 
-/** Full product data without nested license links, enforcing one-level license hydration. */
 export const FullProductWithoutLicensesSchema = ProductSchema.extend({
 	description: z.string().nullable().optional().default(null),
 	prices: z.array(PriceSchema),
@@ -89,23 +87,18 @@ export type FullProductWithoutLicenses = z.infer<
 	typeof FullProductWithoutLicensesSchema
 >;
 
-/** Items + this plan's `licenses[]`. No reverse `parent_plan_licenses` — that nest hits the alias limit. */
 export type FullProductWithoutParentLicenses = FullProductWithoutLicenses & {
 	licenses?: FullPlanLicense[];
 };
 
 export type FullProduct = FullProductWithoutParentLicenses & {
-	/** Reverse links (this product is the license). Every parent version, not latest-only — `deriveLicenseParentIntents` pins from this. */
 	parent_plan_licenses?: ParentPlanLicense[];
-	/** Parent base plan via `base_internal_product_id`; null if not a variant. */
 	base_product?: FullProduct | null;
-	/** Child variants pointing at this row's `internal_id` (empty when not a base). */
 	variants?: FullProduct[];
 };
 
 export const FullProductSchema: z.ZodType<FullProduct> =
 	FullProductWithoutLicensesSchema.extend({
-		// Lazy: breaks the init cycle with fullPlanLicenseModel (TDZ-safe).
 		licenses: z.array(z.lazy(() => FullPlanLicenseSchema)).optional(),
 		parent_plan_licenses: z
 			.array(z.lazy(() => ParentPlanLicenseSchema))

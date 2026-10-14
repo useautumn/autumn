@@ -25,7 +25,6 @@ export function IncludedUsage() {
 	const isFeaturePrice = isFeaturePriceItem(item);
 	const feature = features.find((f) => f.id === item.feature_id);
 
-	// Helper function to get the display value for the input
 	const getInputValue = () => {
 		if (includedUsage === Infinite) {
 			return "";
@@ -76,14 +75,12 @@ export function IncludedUsage() {
 							checked={includedUsage === Infinite}
 							onCheckedChange={(checked) => {
 								if (checked) {
-									// Unlimited defaults to one-off; the reset can still be set
 									setItem({
 										...item,
 										included_usage: Infinite,
 										interval: null,
 									});
 								} else {
-									// Uncheck unlimited - set to default monthly interval
 									const defaultInterval = isFeaturePrice
 										? billingToItemInterval({
 												billingInterval: BillingInterval.Month,
@@ -107,7 +104,6 @@ export function IncludedUsage() {
 				</div>
 			</div>
 
-			{/* Only show Usage Reset dropdown for included billing type */}
 			{!isFeaturePrice && !isContUseItem({ item, features }) && <UsageReset />}
 		</div>
 	);

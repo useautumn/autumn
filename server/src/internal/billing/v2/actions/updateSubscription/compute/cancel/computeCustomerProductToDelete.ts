@@ -5,10 +5,6 @@ import {
 	findMainScheduledCustomerProductByGroup,
 } from "@autumn/shared";
 
-/**
- * Finds an existing scheduled customer product in the same group to delete.
- * This handles the case where there's already a downgrade scheduled.
- */
 export const computeCustomerProductToDelete = ({
 	billingContext,
 }: {

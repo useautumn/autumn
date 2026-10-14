@@ -27,7 +27,6 @@ import { isBalanceWorkerRolloutEnabled } from "@/internal/misc/rollouts/isBalanc
 
 const localEnv = { KAFKA_AUTH_MODE: "none" };
 
-// Routing is fixed on in source, so each case states the rollout it exercises.
 let rolloutEnabled = false;
 
 function createClientEnv({
@@ -47,7 +46,6 @@ function readBalanceWorkerClientEnv() {
 	return balanceWorkerEnv;
 }
 
-// The same local env picks the transport, so a CI host off ECS doesn't fall to the proxy.
 function readBalanceWorkerTransportEnv() {
 	return balanceWorkerConfig.createBalanceWorkerTransportEnv(localEnv);
 }
@@ -72,7 +70,6 @@ function restoreMocks(): void {
 function ignoreLog(): void {}
 
 function refuseUnconfiguredKafka() {
-	// This used to break disabled startup and legacy routes before reaching Redis.
 	return spyOn(
 		balanceWorkerConfig,
 		"getBalanceWorkerClientEnv",
@@ -161,7 +158,6 @@ async function startsAndMemoizesWhateverTheRolloutSays(): Promise<void> {
 		workerClient,
 		"createKafkaBalanceWorkerClient",
 	).mockReturnValue(client);
-	// Query-isolated accessors keep private memoized fakes out of later tests.
 	const access: typeof import("@/external/balanceWorker/getBalanceWorkerClient.js") =
 		await import(
 			new URL(
@@ -176,10 +172,8 @@ async function startsAndMemoizesWhateverTheRolloutSays(): Promise<void> {
 			KAFKA_BROKERS: "broker:9092",
 			BALANCE_WORKER_DEPLOYMENT: "serving",
 		},
-		// Off: evicts and catalog invalidations still need the client, so a flip finds nothing stale.
 		rolloutEnabled: false,
 	});
-	// The preload may have memoized a real client on this module; start from nothing.
 	await access.stopBalanceWorkerClient();
 	stops = 0;
 	await access.startBalanceWorkerClient();
@@ -309,7 +303,6 @@ async function selectsBalanceWorkerWithoutLegacyFallback(): Promise<void> {
 
 	balanceWorkerEnv = createClientEnv({ rolloutEnabled: true });
 	asyncEnabled = true;
-	// Async (by body or org config) queues on the worker and answers 202, as legacy does.
 	for (const async of [true, false]) {
 		const response = await postTrack({ async });
 		await expectSelectedPath({

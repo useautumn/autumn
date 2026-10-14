@@ -3,8 +3,6 @@ import { withCustomers } from "../../fixtures/createSetup.js";
 import { orgSetups } from "../../fixtures/orgSetups.js";
 import { plan } from "../../fixtures/plans/index.js";
 
-/** The incident customer: custom-priced Enterprise plus a transactional
- * add-on, in an org whose Marketing ladder has no 700K size. */
 export const incidentSetup = () =>
 	withCustomers({
 		setup: orgSetups.emailPlatform(),

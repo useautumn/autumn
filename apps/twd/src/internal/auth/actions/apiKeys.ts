@@ -67,7 +67,6 @@ export const listApiKeys = async ({
 	return rows.map(toApiKey);
 };
 
-/** Owners can only revoke their own keys. */
 export const revokeApiKey = async ({
 	ctx,
 	id,

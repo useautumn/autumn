@@ -7,17 +7,12 @@ const BASELINE_WINDOW_RUNS = 10;
 
 const CI_WINDOW_DAYS = 30;
 
-/**
- * Recompute file_baselines from the final attempt of each file in the last 10 finished baseline runs.
- * Files no baseline run covers fall back to their last 10 dev CI shas (source=ci); CI rows that lose them are dropped.
- */
 export const refreshBaselines = async ({
 	ctx,
 }: {
 	ctx: TwdContext;
 }): Promise<{ files: number }> => {
 	const upserted = await ctx.db.transaction(async (tx) => {
-		// Serialize refreshes so one never prunes a CI baseline another just rebuilt.
 		await tx.execute(
 			sql`select pg_advisory_xact_lock(hashtext('refresh_baselines'))`,
 		);
@@ -86,7 +81,6 @@ export const refreshBaselines = async ({
 	return { files: upserted.length };
 };
 
-/** Files failing in a finished run that were not failing in the baseline that finished before it; null without one. */
 export const recordNewFailures = async ({
 	ctx,
 	runId,
@@ -122,7 +116,6 @@ export const recordNewFailures = async ({
 	`);
 };
 
-/** A baseline candidate keeps the flag only if it completed (passed or failed) with a result for every planned file. */
 export const settleBaselineFlag = async ({
 	ctx,
 	runId,
@@ -140,7 +133,6 @@ export const settleBaselineFlag = async ({
 	`);
 };
 
-/** Hook for the runs task: call once a run reaches a terminal status. */
 export const onRunFinished = async ({
 	ctx,
 	runId,

@@ -1,11 +1,3 @@
-/**
- * Immediate Switch Entity Edge Cases (Attach V2)
- *
- * Regression tests for edge cases observed in production (Mintlify customer)
- * where attaching products with different billing intervals to different
- * entities after a time advance produced duplicate charges.
- */
-
 import { expect, test } from "bun:test";
 import {
 	type ApiCustomerV3,
@@ -31,21 +23,6 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { addYears, subMinutes } from "date-fns";
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 1: Entity 1 pro annual, advance 3 weeks, attach pro monthly to entity 2
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Entity 1 attaches pro annual ($200/yr)
- * - Advance test clock by 3 weeks
- * - Entity 2 attaches pro monthly ($20/mo)
- *
- * Expected Result:
- * - Entity 1 still has pro annual, entity 2 has pro monthly
- * - Second attach invoice is exactly $20 for the monthly item only
- * - No duplicate charge for the annual item that was already billed on entity 1
- */
 test.concurrent(`${chalk.yellowBright("immediate-switch-entities-edge-cases 1: entity 1 annual, advance 3 weeks, attach monthly to entity 2")}`, async () => {
 	const customerId = "imm-switch-ent-edge-annual-then-monthly";
 
@@ -72,10 +49,6 @@ test.concurrent(`${chalk.yellowBright("immediate-switch-entities-edge-cases 1: e
 			actions: [],
 		});
 
-	// Manually create the annual Stripe subscription. With interval: "year" and
-	// no explicit billing_cycle_anchor, Stripe naturally anchors renewal one
-	// year out — mirrors the Mintlify production scenario where the customer
-	// already had a long-cycle annual sub before adding a second product.
 	const annualStripeSub = await createCustomStripeSubscription({
 		ctx,
 		customerId,
@@ -85,7 +58,6 @@ test.concurrent(`${chalk.yellowBright("immediate-switch-entities-edge-cases 1: e
 		billingCycleAnchorMs: subMinutes(addYears(new Date(), 1), 100).getTime(),
 	});
 
-	// Link the manually-created sub to entity 1 via processor_subscription_id
 	await autumnV1.billing.attach<AttachParamsV0Input>({
 		customer_id: customerId,
 		product_id: proAnnual.id,
@@ -93,7 +65,6 @@ test.concurrent(`${chalk.yellowBright("immediate-switch-entities-edge-cases 1: e
 		processor_subscription_id: annualStripeSub.id,
 	});
 
-	// Now advance the clock 3 weeks into the annual cycle
 	await advanceTestClock({
 		stripeCli: ctx.stripeCli,
 		testClockId: testClockId!,
@@ -101,7 +72,6 @@ test.concurrent(`${chalk.yellowBright("immediate-switch-entities-edge-cases 1: e
 	});
 	const advancedToAfter = advancedTo + 3 * 7 * 24 * 60 * 60 * 1000;
 
-	// 1. Preview attach pro monthly to entity 2
 	const params = {
 		customer_id: customerId,
 		plan_id: proMonthly.id,
@@ -110,7 +80,6 @@ test.concurrent(`${chalk.yellowBright("immediate-switch-entities-edge-cases 1: e
 
 	const preview = await autumnV2_1.billing.previewAttach(params);
 
-	// 2. Attach pro monthly to entity 2
 	await autumnV1.billing.attach({
 		customer_id: customerId,
 		product_id: proMonthly.id,
@@ -118,8 +87,6 @@ test.concurrent(`${chalk.yellowBright("immediate-switch-entities-edge-cases 1: e
 		redirect_mode: "if_required",
 	});
 
-	// 3. Compute the EXACT expected proration of $20 against the monthly sub's
-	//    period via getStripeSubscription + calculateProrationFromPeriod
 	const { billingPeriod } = await getStripeSubscription({
 		customerId,
 		interval: BillingInterval.Month,
@@ -130,11 +97,8 @@ test.concurrent(`${chalk.yellowBright("immediate-switch-entities-edge-cases 1: e
 		amount: 20,
 	});
 
-	// Preview must match the exact prorated amount — proves no duplicate annual
 	expect(preview.total).toBe(expectedMonthlyCharge);
 
-	// 4. Invoice count: annual attach + monthly attach = 2 invoices; most recent
-	//    invoice total must exactly equal the computed prorated amount
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	expectCustomerInvoiceCorrect({
 		customer,
@@ -143,7 +107,6 @@ test.concurrent(`${chalk.yellowBright("immediate-switch-entities-edge-cases 1: e
 		latestStatus: "paid",
 	});
 
-	// 4. Entity 1 still has pro annual, entity 2 has pro monthly
 	const entity1 = await autumnV1.entities.get<ApiEntityV0>(
 		customerId,
 		entities[0].id,
@@ -160,6 +123,5 @@ test.concurrent(`${chalk.yellowBright("immediate-switch-entities-edge-cases 1: e
 		notPresent: [proAnnual.id],
 	});
 
-	// 5. Stripe subscriptions reflect the two independent entity subs
 	await expectStripeSubscriptionCorrect({ ctx, customerId });
 });

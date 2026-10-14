@@ -63,7 +63,6 @@ const removeCusProductFromScheduleItems = async ({
 
 		if (!existingScheduleItem) continue;
 
-		// 1. If arrear price
 		if (isConsumablePrice(price)) {
 			if (
 				allCusProducts.some((customerProduct) => {
@@ -109,21 +108,17 @@ const removeCusProductFromScheduleItems = async ({
 			continue;
 		}
 
-		// 1. Get quantity to remove
-		// Get quantity from cus product...
 		const quantityToRemove = getQuantityToRemove({
 			cusProduct,
 			price,
 			entities: attachParams.customer.entities,
 		});
 
-		// 2. Check if item already exists in newSubItems
 		const existingItemIndex = newScheduleItems.findIndex(
 			(si) => si.price === (existingScheduleItem.price as Stripe.Price)?.id,
 		);
 
 		if (existingItemIndex !== -1) {
-			// Update existing item in newSubItems
 			const currentQuantity = newScheduleItems[existingItemIndex].quantity || 0;
 			const newQuantity = currentQuantity - quantityToRemove;
 
@@ -179,7 +174,6 @@ const logScheduleItems = ({
 	console.log("--------------------------------");
 };
 
-// Helper: merge new items and then remove items from selected customer products
 const computeUpdatedScheduleItems = async ({
 	itemSet,
 	baseCurScheduleItems,
@@ -331,7 +325,6 @@ export const paramsToScheduleItems = async ({
 			billingPeriodEnd: billingPeriodEnd!,
 		});
 
-		// Propagate new items from the target phase to the right
 		for (let i = insertIndex; i < newPhases.length; i++) {
 			const baseCurScheduleItems = schedule!.phases[originalIndexFor(i)]
 				.items as Stripe.SubscriptionSchedule.Phase.Item[];

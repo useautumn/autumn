@@ -38,7 +38,6 @@ const findProductContext = ({
 	throw new Error(`set_plans cannot find the requested plan for ${segment.id}`);
 };
 
-/** A plan starting later waits like a scheduled one unless early access opens it; an ongoing one under a later first phase runs from now. */
 const firstPhaseTiming = ({
 	billingContext,
 	startsLater,
@@ -60,7 +59,6 @@ const firstPhaseTiming = ({
 	};
 };
 
-/** A first-phase plan is attached like any immediate plan, carrying over the row it replaces. */
 const insertImmediateCustomerProduct = ({
 	ctx,
 	billingContext,
@@ -121,7 +119,6 @@ const insertImmediateCustomerProduct = ({
 	return customerProduct;
 };
 
-/** The row the request inserts for a segment it doesn't find running. */
 export const insertSegmentCustomerProduct = ({
 	ctx,
 	billingContext,
@@ -145,8 +142,6 @@ export const insertSegmentCustomerProduct = ({
 	}
 
 	const { phaseContext, productContext } = found;
-	// Scope comes from the inherited entity, never the request entity, so a
-	// customer-level plan stays customer-level in later phases.
 	return initScheduledCustomerProduct({
 		ctx,
 		fullCustomer: {

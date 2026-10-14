@@ -39,7 +39,6 @@ describe(`${chalk.yellowBright(`concurrentTrack1: Testing track with concurrent 
 			prefix: testCase,
 		});
 
-		// Attach product to customer
 		await autumnV1.attach({
 			customer_id: customerId,
 			product_id: free.id,
@@ -54,8 +53,6 @@ describe(`${chalk.yellowBright(`concurrentTrack1: Testing track with concurrent 
 	});
 
 	test("should allow concurrent requests and cap balance at 0", async () => {
-		// Send 5 concurrent requests, each trying to deduct 10
-		// Only 5 should be deducted (initial balance), capping at 0
 		const promises = [
 			autumnV1.track({
 				customer_id: customerId,
@@ -86,16 +83,14 @@ describe(`${chalk.yellowBright(`concurrentTrack1: Testing track with concurrent 
 
 		const results = await Promise.allSettled(promises);
 
-		// With cap behavior, all requests pass (cap at 0 instead of rejecting)
 		const allFulfilled = results.every((r) => r.status === "fulfilled");
 		expect(allFulfilled).toBe(true);
 
-		// Check final balance
 		const customer = await autumnV1.customers.get(customerId);
 		const finalBalance = customer.features[TestFeature.Messages].balance;
 		const finalUsage = customer.features[TestFeature.Messages].usage;
 
 		expect(finalBalance).toBe(0);
-		expect(finalUsage).toBe(5); // Only 5 was actually deducted (initial balance)
+		expect(finalUsage).toBe(5);
 	});
 });

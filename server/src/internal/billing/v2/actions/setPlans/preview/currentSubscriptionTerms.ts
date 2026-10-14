@@ -12,7 +12,6 @@ type CurrentSubscriptionTerms = Pick<
 	"discounts" | "invoice_mode"
 >;
 
-/** The current subscription's discounts and collection, read the way billing setup reads them, so the sheet prefills from what the server keeps. */
 export const currentSubscriptionTerms = async ({
 	ctx,
 	billingContext,
@@ -29,7 +28,6 @@ export const currentSubscriptionTerms = async ({
 	const currentSubscription =
 		billingContext.stripeSubscription ??
 		billingContext.replacedStripeSubscription;
-	// Billing setup fetched both with their discounts expanded.
 	const stripeCustomer = billingContext.stripeCustomer as
 		| StripeCustomerWithDiscount
 		| undefined;

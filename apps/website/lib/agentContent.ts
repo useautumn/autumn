@@ -38,7 +38,6 @@ const stripHtml = (value: string) => value.replace(/<[^>]*>/g, "").trim();
 const htmlUrl = (doc: AgentDoc) => `${SITE_URL}/${doc.kind}/${doc.slug}`;
 const mdUrl = (doc: AgentDoc) => `${SITE_URL}/${doc.kind}/${doc.slug}.md`;
 
-// Normalize both content sources to one shape so every markdown/llms helper is DRY.
 export function listAgentDocs(kind: AgentKind): AgentDoc[] {
 	if (kind === "alog") {
 		return getAllAlogDocs().map((doc) => ({
@@ -97,7 +96,6 @@ export function getAgentDoc({
 	};
 }
 
-// Ensure markdown leads with a title heading; blog sources have none, alog already do.
 function docBody(doc: AgentDoc): string {
 	const source = doc.source?.trim();
 	if (!source) return `# ${doc.title}\n\n${doc.summary}`;

@@ -1,7 +1,5 @@
 import { hashJson } from "@/utils/hash/hashJson.js";
 
-/** Content-addressed so a re-run recomputes the same id and converges on
- * ON CONFLICT (id) — plan_license has no natural key for custom rows. */
 const preparedRowId = ({
 	prefix,
 	value,

@@ -57,7 +57,6 @@ describe("convertToUsd", () => {
 	});
 
 	test("rounds once, half-up, to cents", () => {
-		// 1.005 EUR / 1 = 1.005 → 1.01 (half-up), where float math would give 1.00
 		const unity = { ...table, rates: { EUR: 1 } };
 		expect(
 			convertToUsd({ amount: 1.005, currency: "eur", rateTable: unity })

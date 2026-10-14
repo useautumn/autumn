@@ -1,13 +1,3 @@
-/**
- * Hot-path collision probe: hammers real getFullSubject reads (full query +
- * normalization + lazy paths) and syncItemV4-style balance UPDATEs on the
- * SAME customers a live batch migration is inserting rows for — measuring
- * hot-path latency idle vs during migration. Revert with
- * revertBenchMigrations.ts.
- *
- *   bun tests/perf/batch-migrations/probes/probeHotPathConcurrency.ts
- */
-
 import { sql } from "drizzle-orm";
 import { getFullSubject } from "@/internal/customers/repos/getFullSubject/getFullSubject.js";
 import { batchMigrationPlanToExecutionPlan } from "@/internal/migrations/v2/batchOperations/compute/index.js";
@@ -21,8 +11,6 @@ import {
 } from "../utils/benchContext.js";
 
 const MIGRATION_ID = "bench-mig-bench-free-words";
-// bench-free claim order starts at the top of text-DESC: ids 9xxxxx first.
-// The hammer pool overlaps the first ~10 pages' customers.
 const POOL_MIN = 950_000;
 const POOL_MAX = 999_999;
 const READERS = 3;
@@ -48,7 +36,6 @@ const main = async () => {
 	const { ctx, org } = bench;
 	const { db } = ctx;
 
-	// Fresh slate for the migration's feature.
 	await db.execute(sql`
 		DELETE FROM customer_entitlements
 		WHERE internal_customer_id LIKE ${`${BENCH_INTERNAL_CUSTOMER_PREFIX}%`}
@@ -116,8 +103,6 @@ const main = async () => {
 		const writers = Array.from({ length: SYNC_WRITERS }, async () => {
 			while (!shouldStop()) {
 				const started = Date.now();
-				// syncItemV4's DB effect: a balance flush on an existing cusEnt
-				// (no cache_version bump — runtime patch semantics).
 				await db.execute(sql`
 					UPDATE customer_entitlements
 					SET balance = balance - 1

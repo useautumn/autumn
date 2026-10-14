@@ -1,7 +1,6 @@
 import type { ApplyBillingPlanCommand } from "@autumn/balance-engine";
 import type { PartitionProcessorScope } from "../../../types/partitionProcessor.js";
 
-/** Which pools the plan strips of their last share. Postgres answers, and exactly: plans of a customer run one at a time, each stored before the next. */
 export const withExpiringPooledBalances = async ({
 	scope,
 	command,

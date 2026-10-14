@@ -1,8 +1,3 @@
-/**
- * Every request the CLI makes carries `atmn/<version> (...)` as its user
- * agent, so server logs can tell CLI traffic (and which build) apart.
- */
-
 import { expect, test } from "bun:test";
 import { createClient } from "../src/generated/client";
 import { USER_AGENT, withUserAgent } from "../src/http/autumnFetch";

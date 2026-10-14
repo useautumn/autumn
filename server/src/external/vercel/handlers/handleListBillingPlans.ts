@@ -26,9 +26,6 @@ import {
 } from "../../../internal/products/productUtils.js";
 import type { VercelBillingPlan } from "../misc/vercelTypes.js";
 
-/**
- * Calculate total cost of prepaid quantities from metadata
- */
 function calculatePrepaidCosts({
 	metadata,
 	product,
@@ -42,14 +39,12 @@ function calculatePrepaidCosts({
 
 	let totalPrepaidCost = 0;
 
-	// Parse prepaid quantities using existing validation logic
 	const optionsList = parseVercelPrepaidQuantities({
 		metadata,
 		product,
 		prices: product.prices,
 	});
 
-	// Calculate cost for each prepaid feature
 	for (const options of optionsList) {
 		const prepaidPrice = findPrepaidPrice({
 			prices: product.prices,
@@ -60,15 +55,12 @@ function calculatePrepaidCosts({
 			const config = prepaidPrice.config as UsagePriceConfig;
 			const billingUnits = config.billing_units || 1;
 
-			// Calculate quantity in subscription items (metadata quantity / billing_units, rounded up)
 			const subscriptionItemQuantity = Math.ceil(
 				options.quantity / billingUnits,
 			);
 
-			// Get unit price from first usage tier
 			const unitAmount = config.usage_tiers[0]?.amount || 0;
 
-			// Calculate total cost for this feature
 			const featureCost = subscriptionItemQuantity * unitAmount;
 			totalPrepaidCost += featureCost;
 		}
@@ -86,17 +78,14 @@ export function productToBillingPlan({
 	orgCurrency: string;
 	metadata?: Record<string, any>;
 }): VercelBillingPlan {
-	// const paymentMethodRequired = false;
 	const productV2 = mapToProductV2({ product });
 	const basePrice = productV2ToBasePrice({ product: productV2 });
 
-	// Calculate prepaid costs from metadata
 	let prepaidCosts = 0;
 	if (metadata && Object.keys(metadata).length > 0) {
 		prepaidCosts = calculatePrepaidCosts({ metadata, product });
 	}
 
-	// Total cost = base recurring + prepaid quantities
 	const totalAmount = (basePrice?.price || 0) + prepaidCosts;
 
 	const highlightedDetails = productV2.items
@@ -105,7 +94,6 @@ export function productToBillingPlan({
 			const d = getProductItemDisplay({
 				item: x,
 				features: product.entitlements.map((e) => e.feature),
-				// fullDisplay: true,
 			});
 
 			return {
@@ -188,9 +176,6 @@ const listVercelPlansForOrg = async ({
 		"Products before filtering",
 		products.map((p) => p.name),
 	);
-	// 1. Get rid of products that have usage prices
-	// 2. Get rid of products that are archived
-	// 3. Get rid of products that are one off, only if they are not free
 	const filteredProducts = products.filter(
 		(product) => !getVercelPlanFilterReason({ product }),
 	);
@@ -217,20 +202,6 @@ const listVercelPlansForOrg = async ({
 				metadata,
 			}),
 		),
-		// ...((canCancel
-		// 	? [
-		// 			{
-		// 				id: "cancel_plan",
-		// 				type: "subscription",
-		// 				name: "Cancel plan",
-		// 				description:
-		// 					"Select this to immediately cancel your subscription and lose access.",
-		// 				cost: undefined,
-		// 				highlightedDetails: [],
-		// 				disabled: false,
-		// 			},
-		// 		]
-		// 	: []) as VercelBillingPlan[]),
 	] satisfies VercelBillingPlan[];
 };
 
@@ -259,7 +230,6 @@ export const handleVercelListBillingPlans = createRoute({
 
 		const { fullCustomer: customer } = ctx;
 
-		// Parse metadata from query params
 		let metadata: Record<string, any> = {};
 		const metadataParam = c.req.query("metadata");
 		if (metadataParam) {

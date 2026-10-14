@@ -5,14 +5,6 @@ import { initIntegrationEval } from "../../../../src/initIntegrationEval.ts";
 import { supportAddOnCatalog } from "../../catalogs/supportAddOnCatalog.ts";
 import { fixtureUser, integrateScenario } from "../../integrateShared.ts";
 
-/**
- * MULTI-ATTACH flow: the pricing page sells the plan and the support add-on
- * as ONE purchase. The customer has no card, so payment must go through a
- * single checkout covering both. The graded trap: two sequential
- * billing.attach calls produce two checkout sessions (two payment moments) —
- * the endpoint must use billing.multiAttach and hand back its one
- * checkout_url.
- */
 const checkoutRouteStub = `		// Pricing page calls this when the user confirms their selection.
 		// TODO: hook up to our billing provider.
 		"/api/billing/checkout": {

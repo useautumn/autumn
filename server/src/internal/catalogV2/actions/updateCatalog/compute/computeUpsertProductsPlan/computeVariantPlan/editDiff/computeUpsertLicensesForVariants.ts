@@ -49,8 +49,6 @@ const declaredToSnapshot = ({
 	...(declared.customize != null ? { customize: declared.customize } : {}),
 });
 
-/** Rebase one link: replay the base link's before→after change onto the
- * variant's link, then re-express the result off the variant's own stock. */
 const rebaseExistingLicense = ({
 	variantLink,
 	baseFromLink,
@@ -81,9 +79,6 @@ const rebaseExistingLicense = ({
 	};
 };
 
-/** The variant's next license list under the base's declared licenses[].
- * Per declared entry: copy (link new to the variant) or rebase (link exists
- * on both sides). Links the base never declared stay untouched — never unlinks. */
 const nextVariantLicenses = ({
 	variantLicenses,
 	baseFromLicenses,
@@ -140,10 +135,6 @@ const nextVariantLicenses = ({
 	return [...nextById.values()];
 };
 
-/**
- * License lane of a variant's propagation edit: the base's declared licenses[]
- * rebased onto this variant's links, expressed as an upsert/remove patch.
- */
 export const computeUpsertLicensesForVariants = ({
 	variantProduct,
 	baseCurrent,
@@ -155,14 +146,12 @@ export const computeUpsertLicensesForVariants = ({
 }): Pick<DiffedCustomizePlanV1, "upsert_licenses" | "remove_licenses"> => {
 	const variantLicenses = productLicenses({ product: variantProduct });
 
-	// 1. Next links: per declared entry, copy or rebase onto the variant.
 	const nextLicenses = nextVariantLicenses({
 		variantLicenses,
 		baseFromLicenses: productLicenses({ product: baseCurrent }),
 		declaredLicenses,
 	});
 
-	// 2. Package current → next as an upsert/remove patch.
 	return diffPlanLicenses({
 		from: variantLicenses.map((link) =>
 			toApiPlanLicenseSnapshot({ license: link }),

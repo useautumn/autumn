@@ -14,25 +14,11 @@ import { type ScopePreset, ScopePresetBar } from "./ScopePresetBar";
 export type ScopeSelectorProps = {
 	value: ScopeString[];
 	onChange: (scopes: ScopeString[]) => void;
-	/**
-	 * Optional: the caller's own scopes. If provided, any scope NOT in this
-	 * set is disabled with a tooltip explaining the caller can't grant it.
-	 */
 	availableScopes?: readonly string[];
-	/**
-	 * Optional: the exact scopes an OAuth app requested. Any other scope is
-	 * disabled, since the grant must be a subset of the original request.
-	 */
 	requestedScopes?: readonly string[];
-	/** Optional: limit the picker to these resources (defaults to all). */
 	resources?: readonly ResourceType[];
 	allowUnrestricted?: boolean;
 	disabled?: boolean;
-	/**
-	 * Optional: render quick-apply presets above the grid. When `defaultScopes`
-	 * is supplied it becomes the "Default" preset; "Read only" is always derived
-	 * from the grantable resources.
-	 */
 	showPresets?: boolean;
 	defaultScopes?: ScopeString[];
 };
@@ -76,15 +62,6 @@ function applyTriState(
 	return filtered;
 }
 
-/**
- * Tri-state action picker that mirrors the visual language of
- * `GroupedTabButton` but supports per-option disabling (with tooltip).
- *
- * `GroupedTabButton` only supports group-level `disabled`, which is not
- * sufficient for the "W unavailable but R allowed" case required by
- * `availableScopes`. Class names are intentionally kept in sync with
- * `GroupedTabButton` so this renders identically.
- */
 function TriStatePicker({
 	options,
 	value,
@@ -96,14 +73,11 @@ function TriStatePicker({
 	options: TriOption[];
 	value: TriState;
 	onChange: (next: TriState) => void;
-	/** Tooltip for a disabled option; null means the option is selectable. */
 	readUnavailableReason: string | null;
 	writeUnavailableReason: string | null;
 	disabled: boolean;
 }) {
 	return (
-		// Fixed width so every row's picker column is the same size. 3
-		// segments × 72px ≈ 216px keeps "Read"/"Write" labels readable.
 		<div className="flex items-stretch shrink-0 w-[216px]">
 			{options.map((option, index) => {
 				const isActive = value === option.value;
@@ -166,11 +140,6 @@ export function ScopeSelector({
 	showPresets = false,
 	defaultScopes,
 }: ScopeSelectorProps) {
-	// Restricted mode is a local UI concern. We seed it from the initial
-	// `value` length so a key that already has scopes opens in restricted
-	// mode, but we intentionally do NOT re-sync with `value` on every
-	// render — otherwise the user toggling all scopes to "None" would
-	// flip the checkbox off and lose the grid.
 	const [restricted, setRestricted] = useState(value.length > 0);
 	const showScopeGrid = allowUnrestricted ? restricted : true;
 
@@ -181,10 +150,6 @@ export function ScopeSelector({
 
 	const isScopeOnSession = (scope: ScopeString): boolean => {
 		if (!expandedAvailable) return true;
-		// The `admin` meta-scope is a product-level bypass that grants
-		// every modern R/W scope. Without this short-circuit, a caller
-		// whose session only carries `admin` would see every row as
-		// unavailable, which is the opposite of the truth.
 		if (expandedAvailable.has("admin")) return true;
 		return expandedAvailable.has(scope);
 	};
@@ -220,7 +185,6 @@ export function ScopeSelector({
 		}
 		list.push({ id: "read", label: "Read only", scopes: readOnlyScopes });
 		return list;
-		// isScopeAvailable is derived from expandedAvailable and requestedScopes.
 		// biome-ignore lint/correctness/useExhaustiveDependencies: stable derived fn
 	}, [resources, defaultScopes, expandedAvailable, requestedScopes]);
 
@@ -262,8 +226,6 @@ export function ScopeSelector({
 						const readReason = getUnavailableReason(
 							`${resource}:read` as ScopeString,
 						);
-						// Always render 3 segments so every row has the same
-						// width. For analytics, `Write` is permanently disabled.
 						const writeReason = isAnalytics
 							? READ_ONLY_RESOURCE_TOOLTIP
 							: getUnavailableReason(`${resource}:write` as ScopeString);

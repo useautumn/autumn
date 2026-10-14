@@ -52,12 +52,8 @@ type DispatchSlackAgentMessageInput = {
 	author?: { email?: string; name: string };
 	clientContext?: Readonly<Record<string, unknown>>;
 	channelId: string;
-	/** Loaded only when a new run starts; an injected follow-up leaves them for
-	 * the next run. */
 	missedMessages?: () => Promise<AgentMissedMessages | undefined>;
-	/** Called with the Slack file ids a turn read, once it has run. */
 	onAttachmentsDelivered?: (fileIds: ReadonlyArray<string>) => Promise<void>;
-	/** Called once a turn has run with the missed messages in its prompt. */
 	onMissedMessagesDelivered?: () => Promise<void>;
 	providerUserId: string;
 	raw: unknown;
@@ -68,17 +64,11 @@ type DispatchSlackAgentMessageInput = {
 	showRunPlan?: boolean;
 	target: ReplyTarget;
 	text: string;
-	/** Files shared earlier in the thread that the agent has not seen; loaded
-	 * only when a new run starts, like missed messages. */
 	threadAttachments?: () => Promise<ReadonlyArray<ThreadAttachment>>;
 	threadId: string;
-	/** Set when a trusted bot wrote the message; its turn runs as the member
-	 * the bot is configured to act as. */
 	trustedBot?: ChatTrustedBot;
 };
 
-/** A trusted bot is named as one, so the model and the thread know a bot
- * made the request. */
 const speakerAuthor = ({
 	author,
 	trustedBot,
@@ -90,8 +80,6 @@ const speakerAuthor = ({
 		? { ...author, name: `${trustedBot.name} (trusted bot)` }
 		: author;
 
-/** A subscribed thread delivers every reply; the model is told who spoke and
- * whom they addressed, and declines replies meant for someone else. */
 const slackSpeakerFor = ({
 	author,
 	installation,
@@ -104,8 +92,6 @@ const slackSpeakerFor = ({
 	if (!author) return undefined;
 	const mentionedUserIds = slackMentionedUserIds({ raw });
 	const botUserId = installation.bot_user_id ?? undefined;
-	// An installation without a stored bot id can't prove it was addressed;
-	// unknown reads as not mentioned, so delivery stays conditional.
 	const mentionsAgent = Boolean(
 		botUserId && mentionedUserIds.includes(botUserId),
 	);
@@ -113,8 +99,6 @@ const slackSpeakerFor = ({
 	return { ...author, mentionsAgent, mentionsOthers };
 };
 
-/** Only an injected follow-up needs the speaker before the run's own setup
- * loads the installation; a run that is not live skips the lookup. */
 const injectionSpeakerFor = async ({
 	author,
 	raw,
@@ -163,7 +147,6 @@ const runAndReply = async ({
 	const evePresenter = createEveSlackPresenter({ setStatus: progress.status });
 	const reactSafely = (input: { action: "add" | "remove"; emoji: string }) =>
 		react?.(input).catch(() => undefined);
-	// Invisible to Braintrust and to the turn's own prepare_ms.
 	const ingressStartedAt = Date.now();
 	let historyMs = 0;
 	try {
@@ -286,8 +269,6 @@ const runAndReply = async ({
 				return attachment;
 			}
 		};
-		// Only files the turn can take are looked up, so a long thread of
-		// stubs does not fan out into dozens of Slack calls.
 		const [hydratedAttachments, hydratedThreadAttachments] = await Promise.all([
 			Promise.all(
 				(attachments ?? []).map((attachment, fileIndex) =>
@@ -333,9 +314,6 @@ const runAndReply = async ({
 				});
 			},
 			onReasoning: evePresenter.onReasoning,
-			// A turn that settled while a follow-up was still to be read: post it
-			// now and leave the ticker running, because the reader is still on
-			// the stream waiting for the replacement turn.
 			onSettledTurn: async (settled) => {
 				if (settled.kind === "blocked" || settled.kind === "stopped") return;
 				await presentSlackAgentTurn({
@@ -362,8 +340,6 @@ const runAndReply = async ({
 			trustedBot,
 		});
 
-		// A blocked turn never reached the agent; anything else put the missed
-		// messages into the session, so they need not be replayed again.
 		if (output.kind !== "blocked") {
 			await onMissedMessagesDelivered?.().catch((error: unknown) => {
 				logger.warn("Could not mark missed Slack messages delivered", {
@@ -445,8 +421,6 @@ export const dispatchSlackAgentMessage = async (
 		threadId: input.threadId,
 		workspaceId: getSlackWorkspaceId(input.raw),
 	});
-	// Control commands must never start a run, however the bot was addressed:
-	// "stop" halts the active run; "stop replying" also mutes the thread.
 	const control = controlMessageFrom(input.text);
 	if (control) {
 		await stopActiveThreadRun({
@@ -457,7 +431,6 @@ export const dispatchSlackAgentMessage = async (
 			await input.react?.({ action: "remove", emoji: "eyes" });
 			await input.react?.({ action: "add", emoji: "white_check_mark" });
 		} catch {
-			// Reactions are best-effort; the control must still take effect.
 		}
 		return control === "opt_out" ? "close" : "keep";
 	}

@@ -21,14 +21,6 @@ const expectTotalEqual = ({
 	expect(Math.abs(actual - expected)).toBeLessThanOrEqual(tolerance);
 };
 
-/**
- * Anchor Reset Refund -- With Carry Over Balances
- *
- * When `billing_cycle_anchor: "now"` + `proration_behavior: "none"` WITH carry_over_balances:
- * Refund only complete entitlement-reset periods of the outgoing plan.
- * The rounding granularity is the longest entitlement reset interval among carried features.
- */
-
 test.concurrent(
 	`${chalk.yellowBright("anchor-reset-carry-over 1: annual -> monthly (full period refund)")}`,
 	async () => {

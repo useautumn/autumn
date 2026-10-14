@@ -2,8 +2,6 @@ import type { PlanItemFilter, ResetInterval } from "@autumn/shared";
 import { resetIntvToEntIntv } from "@autumn/shared/utils/productV2Utils/productItemUtils/convertProductItem/planItemIntervals.js";
 import type { EntitlementPriceFilter } from "../../types/entitlementPriceFilter.js";
 
-/** Compiles a PlanItemFilter into SQL-ready entitlement columns. The only
- * ResetInterval → EntInterval conversion on the product patch path. */
 export const planItemFilterToEntitlementPriceFilter = ({
 	filter,
 }: {

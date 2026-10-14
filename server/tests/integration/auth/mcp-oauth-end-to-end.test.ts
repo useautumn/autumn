@@ -46,7 +46,6 @@ const initializeBody = {
 	},
 };
 
-/** Streamable HTTP replies as SSE when the client accepts it, so unwrap `data:`. */
 const parseMcpPayload = (text: string) => {
 	const dataLine = text.split("\n").find((line) => line.startsWith("data:"));
 	try {
@@ -86,7 +85,6 @@ const postMcp = async ({
 	return { payload: parseMcpPayload(text), response, text };
 };
 
-/** Discovery is the first hop to the resource host, whose fresh edge connection can transiently fail. */
 const fetchDiscovery = async (url: string, attempts = 3) =>
 	retryAsync({
 		attempts,
@@ -107,7 +105,6 @@ const registerClient = async ({ clientName }: { clientName: string }) => {
 		body: JSON.stringify({
 			client_name: clientName,
 			redirect_uris: [REDIRECT_URI],
-			// Real MCP clients register with the scopes discovery advertised.
 			scope: DEFAULT_OAUTH_RESOURCE_SCOPES.join(" "),
 		}),
 	});
@@ -129,7 +126,6 @@ const sessionHeaders = ({
 	return headers;
 };
 
-/** Walks /authorize -> consent page redirect -> /consent, returning the callback redirect. */
 const authorizeWithConsent = async ({
 	clientId,
 	resource,
@@ -171,8 +167,6 @@ const authorizeWithConsent = async ({
 	}
 	const oauthQuery = new URL(consentLocation).search.replace(/^\?/, "");
 
-	// better-auth CSRF-checks cookie-authed POSTs, so consent must look like it
-	// came from the consent page it just redirected to.
 	const consentResponse = await fetch(`${baseUrl}/api/auth/oauth2/consent`, {
 		method: "POST",
 		headers: sessionHeaders({
@@ -307,7 +301,6 @@ test("MCP OAuth end to end: challenge, discovery, DCR, consent, token, tool call
 	let sandboxId: string | null = null;
 
 	try {
-		// 1. Unauthenticated challenge
 		const challenge = await postMcp({
 			body: initializeBody,
 			url: `${baseUrl}/mcp`,
@@ -341,7 +334,6 @@ test("MCP OAuth end to end: challenge, discovery, DCR, consent, token, tool call
 		).split(" ");
 		expect(challengeScopes.length).toBeGreaterThan(0);
 
-		// 2. Authorization server discovery
 		const asMetadataResponse = await fetchDiscovery(
 			`${baseUrl}/.well-known/oauth-authorization-server/api/auth`,
 		);
@@ -353,7 +345,6 @@ test("MCP OAuth end to end: challenge, discovery, DCR, consent, token, tool call
 		expect(asMetadata.code_challenge_methods_supported).toContain("S256");
 		expect(typeof asMetadata.registration_endpoint).toBe("string");
 
-		// 3. Dynamic client registration
 		const registration = await registerClient({
 			clientName: `Autumn E2E ${randomBytes(6).toString("hex")}`,
 		});
@@ -378,9 +369,6 @@ test("MCP OAuth end to end: challenge, discovery, DCR, consent, token, tool call
 		expect(sandbox.status).toBe(200);
 		sandboxId = sandbox.data.id;
 
-		// 4-5. Authorize, consent, token exchange bound to the MCP resource.
-		// The client asks for exactly what discovery advertised — the server adds
-		// offline_access for MCP clients, so the grant is still renewable.
 		const requestedScopes = [...challengeScopes];
 		const sandboxList = await dashboardFetch<{ list: { id: string }[] }>(
 			defaultCtx,
@@ -437,7 +425,6 @@ test("MCP OAuth end to end: challenge, discovery, DCR, consent, token, tool call
 			: null;
 		expect(consent?.metadata).toMatchObject({ sandboxOrgId: sandboxId });
 
-		// 6. Real MCP traffic
 		const initialize = await postMcp({
 			body: initializeBody,
 			token: accessToken,
@@ -489,9 +476,6 @@ test("MCP OAuth end to end: challenge, discovery, DCR, consent, token, tool call
 		expect(currentOrganization.id).toBe(sandboxId);
 		expect(currentOrganization.id).not.toBe(defaultCtx.org.id);
 
-		// 7. Audience negative: an MCP client asking for the API root is refused at
-		// the token endpoint, so no grant can be stamped for an audience /mcp
-		// rejects — the state a client could never recover from on its own.
 		const apiRoot = new URL(metadata.authorization_servers[0] as string).origin;
 		const foreign = await grantTokenForResource({
 			clientId,

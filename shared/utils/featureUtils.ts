@@ -4,15 +4,8 @@ import { FeatureType } from "../models/featureModels/featureEnums.js";
 import type { Feature } from "../models/featureModels/featureModels.js";
 import { hasCreditDimensionRules } from "./featureUtils/classifyFeature/hasCreditDimensionRules.js";
 import { creditSystemContainsFeature } from "./featureUtils/creditSystemUtils.js";
-// import {
-// 	constructBooleanFeature,
-// 	constructCreditSystem,
-// 	constructMeteredFeature,
-// } from "./featureUtils/constructFeatureUtils.js";
 
 export const toApiFeature = ({ feature }: { feature: Feature }) => {
-	// return FeatureResponseSchema.parse(feature);
-	// 1. Get feature type
 	let featureType = feature.type;
 	if (feature.type === FeatureType.Metered) {
 		featureType = feature.config.usage_type;

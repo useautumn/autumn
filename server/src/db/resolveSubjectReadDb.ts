@@ -8,7 +8,6 @@ import { getReplicaRoutingState } from "./replicaRoutingState.js";
 export type SubjectReadFrom = "primary" | "replica-ok";
 export type SubjectReadSource = "primary" | "replica";
 
-// Ledger failures repeat in bursts; one log per window, never per request.
 const LEDGER_ERROR_LOG_INTERVAL_MS = 30_000;
 let lastLedgerErrorLoggedAt = 0;
 
@@ -24,8 +23,6 @@ export const _setLedgerDbOverrideForTesting = (db: DrizzleCli | null): void => {
 	ledgerDbOverride = db;
 };
 
-/** Picks the pool for a subject hydration. Replica requires EVERY gate to
- *  pass; any doubt (ledger error, ineligible prober, no id) pins primary. */
 export const resolveSubjectReadDb = async ({
 	ctx,
 	readFrom,
@@ -45,8 +42,6 @@ export const resolveSubjectReadDb = async ({
 	if (readFrom !== "replica-ok" || !replica || !customerId) {
 		return primary;
 	}
-	// Outage/worker reads (skipCache) stay 100% replica-eligible; steady-state
-	// misses opt in via the configured share (0 = dark, exact status quo).
 	if (!ctx.skipCache) {
 		const { replica_share } = getRuntimeFullSubjectGateConfig().read_split;
 		if (Math.random() >= replica_share) return primary;
@@ -54,8 +49,6 @@ export const resolveSubjectReadDb = async ({
 	if (!getReplicaRoutingState().eligible) return primary;
 
 	try {
-		// Critical pool: warm and sized for the per-read ledger volume on hot
-		// routes; the cold general pool starves under it and trips the fail-safe.
 		const recentlyUpdated = await isCustomerRecentlyUpdated({
 			db: ledgerDbOverride ?? dbCritical,
 			orgId,

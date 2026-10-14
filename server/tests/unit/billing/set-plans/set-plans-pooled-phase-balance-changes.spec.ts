@@ -77,7 +77,6 @@ const aiCredits = ({
 	};
 };
 
-/** Pro's credits: a pooled monthly allowance next to a usage-based zero allowance. */
 const proCredits = ({
 	customerProductId,
 	pooledAllowance,
@@ -136,7 +135,6 @@ const planRow = ({
 	});
 };
 
-/** The customer as attach leaves it: plan rows plus the pools their pooled entitlements feed. */
 const savedCustomerWithPools = (current: FullCusProduct[]): FullCustomer => {
 	const fullCustomer = customers.create({ customerProducts: current });
 	const { pooledBalancePlan } = computePooledBalanceTransitionPlan({

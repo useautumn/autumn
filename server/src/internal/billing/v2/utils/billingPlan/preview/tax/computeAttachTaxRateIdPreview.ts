@@ -95,7 +95,6 @@ export const computeAttachTaxRateIdPreview = async ({
 	});
 };
 
-/** Core tax-rate-id math over pre-computed taxable amounts (minor units). */
 export const computeTaxRateIdPreviewFromTaxableMinorUnits = ({
 	ctx,
 	billingContext,

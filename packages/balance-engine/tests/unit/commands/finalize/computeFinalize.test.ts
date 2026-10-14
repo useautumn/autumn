@@ -29,7 +29,6 @@ const balanceOf = ({
 	id?: string;
 }) => state.customerEntitlements.find((row) => row.id === id)?.balance;
 
-/** Takes a lock the way the worker does, returning the state after it and the row finalize is handed. */
 const takeLock = ({
 	state,
 	value,
@@ -122,7 +121,6 @@ describe("computeFinalize", () => {
 		expect(balanceOf({ state: locked.state })).toBe(2);
 		const { state, mutation } = finalize({ ...locked, finalValue: 5 });
 		expect(balanceOf({ state })).toBe(5);
-		// The usage event a finalize produces is the difference, signed the way it moved.
 		expect(mutation.result).toMatchObject({
 			deductions: [{ balance_id: "messages_monthly", value: -3 }],
 			internalProductId: "prod_internal_pro",
@@ -210,7 +208,6 @@ describe("computeFinalize", () => {
 			throw new Error("Expected the lock to span two buckets");
 
 		const { state } = finalize({ ...locked, finalValue: 5 });
-		// Three units come back, and they land on the bucket drawn last.
 		const lastBefore = balanceOf({ state: locked.state, id: last.id }) ?? 0;
 		expect(balanceOf({ state, id: last.id })).toBe(lastBefore + 3);
 		expect(balanceOf({ state, id: first.id })).toBe(
@@ -218,7 +215,6 @@ describe("computeFinalize", () => {
 		);
 	});
 
-	/** The plan went past due after the lock was taken, and the org blocks overdue usage. */
 	const pastDue = ({ state }: { state: SubjectState }): SubjectState => ({
 		...state,
 		customerProducts: state.customerProducts.map((customerProduct) => ({
@@ -259,7 +255,6 @@ describe("computeFinalize", () => {
 		},
 	);
 
-	/** A customer capped at `limit` tracked units a day. */
 	const cappedState = ({ limit }: { limit: number }): SubjectState => {
 		const state = createState({ balance: 100 });
 		return {
@@ -308,7 +303,6 @@ describe("computeFinalize", () => {
 		"what sat on a vanished row is returned to the rows held now",
 		() => {
 			const locked = takeLock({ state: createState(), value: 8 });
-			// The plan changed mid-lock: the locked entitlement is gone, a fresh one took its place.
 			const upgraded: SubjectState = {
 				...locked.state,
 				customerEntitlements: [

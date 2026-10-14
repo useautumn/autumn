@@ -7,7 +7,6 @@ import { getCycleEnd } from "../../billingUtils/cycleUtils/getCycleEnd.js";
 import { clampNextResetAtToPendingBillingCycleAnchor } from "./clampNextResetAtToPendingBillingCycleAnchor.js";
 import { getNextResetAt } from "./getNextResetAt.js";
 
-/** What deciding the next reset reads: the cycle that ended, its interval, and the plan's pending anchor reset. */
 export type NextResetAtCustomerEntitlement = {
 	next_reset_at: number;
 	entitlement: Pick<Entitlement, "interval_count"> & {
@@ -22,7 +21,6 @@ const SHORT_INTERVALS: readonly EntInterval[] = [
 	EntInterval.Day,
 ];
 
-/** The 30th, or 28 Feb: the dates where stepping by months drifts from the subscription's anchor day. */
 const isAnchorEdgeDate = ({ resetAt }: { resetAt: number }): boolean => {
 	const date = new UTCDate(resetAt);
 	return getDate(date) === 30 || (getDate(date) === 28 && getMonth(date) === 1);
@@ -42,7 +40,6 @@ const steppedNextResetAt = ({
 		now,
 	});
 
-/** Whether the subscription's billing anchor can move this reset: a plan's row on a long interval landing on an edge date. */
 export const resetNeedsBillingCycleAnchor = ({
 	customerEntitlement,
 	now,
@@ -58,17 +55,12 @@ export const resetNeedsBillingCycleAnchor = ({
 	});
 };
 
-/**
- * The reset after the one that ended: stepped by interval past `now`, aligned to the subscription's
- * anchor when one is given and it matters, then capped by a pending anchor reset on the plan.
- */
 export const customerEntitlementToNextResetAt = ({
 	customerEntitlement,
 	billingCycleAnchor,
 	now,
 }: {
 	customerEntitlement: NextResetAtCustomerEntitlement;
-	/** The subscription's billing cycle anchor in ms; pass it only when `resetNeedsBillingCycleAnchor`. */
 	billingCycleAnchor?: number;
 	now: number;
 }): number => {

@@ -134,7 +134,6 @@ function MigrationOperationSheetContent({
 
 	const handleSetSheet = useCallback(
 		({ type, itemId: id }: { type: string | null; itemId?: string | null }) => {
-			// There is no plan view in this sheet, so "back to plan" returns to the feature picker.
 			if (type) setSheetType(type === "edit-plan" ? "select-feature" : type);
 			setItemId(id ?? null);
 

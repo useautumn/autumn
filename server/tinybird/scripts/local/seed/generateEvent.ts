@@ -40,7 +40,6 @@ const MIXED_VALUES = [
 	1_000_000,
 	null,
 ] as const;
-/** UTC instants that land exactly on local-midnight/hour edges in +5:30, +5:45 and -3:30/-2:30 zones. */
 const HALF_HOUR_EDGES_US = [
 	"18:29:59.999999",
 	"18:30:00",
@@ -63,7 +62,6 @@ const fmix32 = (input: number) => {
 	return h >>> 0;
 };
 
-/** Stateless hash RNG: event i's fields depend only on (seed, i), never on batching or order. */
 const makeRandom = ({ seed, index }: { seed: number; index: number }) => {
 	const base = fmix32(fmix32(seed ^ 0x9e3779b9) ^ index);
 	return (stream: number) =>
@@ -96,7 +94,6 @@ export const formatTimestampUs = (us: number) => {
 };
 
 const pickWeighted = <T>(items: readonly T[], u: number) => {
-	// Feature i gets weight 1/(i+1): the first feature dominates without starving the rest.
 	const weights = items.map((_, i) => 1 / (i + 1));
 	let target = u * weights.reduce((a, b) => a + b, 0);
 	for (let i = 0; i < items.length; i++) {

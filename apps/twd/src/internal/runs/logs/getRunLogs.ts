@@ -28,7 +28,6 @@ const readChunks = async ({
 		.map((row) => row.chunk)
 		.join("");
 
-/** Whole run, or one file (one repetition of it in a repeat run) / one worker / orchestrator-only. */
 export const getRunLogs = async ({
 	ctx,
 	runId,
@@ -84,14 +83,12 @@ export const getRunLogs = async ({
 		filters.push(isNull(runLogs.file), isNull(runLogs.worker));
 	const stored = await readChunks({ ctx, where: and(...filters) });
 	if (stored || !file) return stored;
-	// Runs from before run_logs existed: fall back to the in-memory ring / persisted tail.
 	const live = getLiveRun({ runId })?.fileLogs.get(file);
 	if (live !== undefined) return live;
 	const { run } = await getRunWithEmail({ ctx, runId });
 	return readRunProgress({ progress: run.progress }).fileLogTails?.[file] ?? "";
 };
 
-/** Every failed file's output, each under a header, ready to paste into an issue or agent. */
 export const getFailedLogs = async ({
 	ctx,
 	runId,

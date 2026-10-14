@@ -6,25 +6,9 @@ import {
 } from "../casing/schemaKeyCasing";
 import type { Overlay } from "../overlay/overlay";
 
-/**
- * Where the runtime must stop recasing. Emitting these instead of the whole 4MB
- * spec is what lets the CLI convert fixtures to wire without carrying a schema:
- * it needs to know where to stop, and nothing else.
- *
- * Two kinds, and conflating them is a bug in both directions:
- *
- * - `recordPaths` — the KEYS are the user's, the values are still ours.
- *   `modelMarkups["gpt-4"].inputCost`: slug preserved, field recased.
- * - `frozenPaths` — the whole subtree is the user's, keys and values.
- *   `metadata` is `z.record(string, z.any())`, so nothing below it is ours.
- *
- * Paths are fixture-side (camelCase), array indices elided, `*` for a record's
- * value position.
- */
 export type WirePathHints = {
 	recordPaths: string[];
 	frozenPaths: string[];
-	/** Fixture path → wire key where the overlay renamed a field. */
 	renamedPaths: Record<string, string>;
 };
 
@@ -103,13 +87,6 @@ export const wirePathHints = ({
 	};
 };
 
-/**
- * The overlay's renames as the runtime needs them: the fixture path of the
- * renamed field (root key, then recased segments, then the new name) mapped to
- * the wire key it stands for. `roots` says what each overlay collection is
- * called at the top of the document, since a singleton's config key and wire
- * key differ.
- */
 export const renamedPaths = ({
 	overlay,
 	roots,

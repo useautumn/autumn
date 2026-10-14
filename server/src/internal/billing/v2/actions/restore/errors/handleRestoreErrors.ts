@@ -18,17 +18,6 @@ const ALLOWED_SCHEDULE_ACTION_TYPES = new Set<
 	StripeSubscriptionScheduleAction["type"]
 >(["update", "create"]);
 
-/**
- * Restore must never create new subs, cancel subs, charge invoices, or release
- * schedules. A "release" specifically signals the schedule was never imported
- * into Autumn — silently releasing it would compound the drift restore is meant
- * to fix. Anything other than no-op / update for the subscription, or no-op /
- * update / create for the schedule, throws.
- */
-/**
- * An open-ended plan with a scheduled successor (same entity and group) would reshape
- * Stripe as if it never transitions; other entities' plans on a shared sub may stay open.
- */
 const assertActivePlansEndBeforeSuccessors = ({
 	fullCustomer,
 	stripeSubscriptionId,

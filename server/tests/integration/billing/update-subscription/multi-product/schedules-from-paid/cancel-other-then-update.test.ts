@@ -12,7 +12,6 @@ import { advanceToNextInvoice } from "@tests/utils/testAttachUtils/testAttachUti
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 
-// Entity 1 Pro cancels, Entity 2 updates Pro's items
 test.concurrent(`${chalk.yellowBright("schedules-p2p: cancel entity 1, update entity 2 items")}`, async () => {
 	const customerId = "sched-p2p-cancel-update";
 
@@ -33,11 +32,10 @@ test.concurrent(`${chalk.yellowBright("schedules-p2p: cancel entity 1, update en
 		actions: [
 			s.attach({ productId: pro.id, entityIndex: 0 }),
 			s.attach({ productId: pro.id, entityIndex: 1 }),
-			s.cancel({ productId: pro.id, entityIndex: 0 }), // Cancel entity 1's pro
+			s.cancel({ productId: pro.id, entityIndex: 0 }),
 		],
 	});
 
-	// Verify entity 1 is scheduled for cancellation
 	const entity1AfterCancel = await autumnV1.entities.get(
 		customerId,
 		entities[0].id,
@@ -47,8 +45,7 @@ test.concurrent(`${chalk.yellowBright("schedules-p2p: cancel entity 1, update en
 		productId: pro.id,
 	});
 
-	// Entity 2 updates pro's items (change price)
-	const newPriceItem = items.monthlyPrice({ price: 30 }); // $30/mo instead of $20
+	const newPriceItem = items.monthlyPrice({ price: 30 });
 
 	await autumnV1.subscriptions.update({
 		customer_id: customerId,
@@ -57,7 +54,6 @@ test.concurrent(`${chalk.yellowBright("schedules-p2p: cancel entity 1, update en
 		items: [messagesItem, newPriceItem],
 	});
 
-	// Verify entity 2 has updated items
 	const entity2Data = await autumnV1.entities.get(customerId, entities[1].id);
 	await expectProductActive({
 		customer: entity2Data,
@@ -72,13 +68,11 @@ test.concurrent(`${chalk.yellowBright("schedules-p2p: cancel entity 1, update en
 		subCount: 1,
 	});
 
-	// Advance to next billing cycle
 	await advanceToNextInvoice({
 		stripeCli: ctx.stripeCli,
 		testClockId: testClockId!,
 	});
 
-	// Entity 1 should be fully canceled, entity 2 should still have pro
 	const entity1AfterCycle = await autumnV1.entities.get(
 		customerId,
 		entities[0].id,

@@ -6,7 +6,6 @@ import type {
 import { Decimal } from "decimal.js";
 import { buildBillingLockKey } from "@/internal/billing/v2/utils/billingLock/buildBillingLockKey";
 
-/** Build the Redis lock key for auto top-up. Shares the attach lock so auto-topup and attach can't run concurrently. */
 export const buildAutoTopUpLockKey = ({
 	orgId,
 	env,
@@ -33,7 +32,6 @@ const featureMatchesOption = ({
 	option.internal_feature_id === feature.internal_id ||
 	option.feature_id === feature.id;
 
-/** Compute updated options array with the top-up packs added. */
 export const buildUpdatedOptions = ({
 	cusProduct,
 	feature,

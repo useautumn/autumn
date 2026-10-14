@@ -141,7 +141,6 @@ export function SendInvoiceStage({
 	billingAddressSection?: ReactNode;
 	submitBlocked?: boolean;
 	onEmailSaved?: () => void;
-	/** The current subscription's net terms, which win over the org default. */
 	defaultNetTermsDays?: number;
 }) {
 	const { customer, refetch } = useCusQuery();

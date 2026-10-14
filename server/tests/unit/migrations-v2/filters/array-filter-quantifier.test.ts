@@ -1,9 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import { CustomerFilterSchema } from "@autumn/shared/api/migrations/filters/customerFilter.js";
 
-// Regression: the quantifier wrapper must win over the permissive element in
-// arrayFilter's union, otherwise PlanFilterSchema strips `$none`/`$some`/
-// `$every` down to `{}` and the filter silently degrades to "has any plan".
 describe("arrayFilter quantifier preservation", () => {
 	it("preserves $none with an empty inner filter", () => {
 		const parsed = CustomerFilterSchema.parse({ plan: { $none: {} } });

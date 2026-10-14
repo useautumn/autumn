@@ -1,8 +1,6 @@
 import { BillingInterval, EntInterval } from "@autumn/shared";
 import { type SQL, sql } from "drizzle-orm";
 
-/** The four rungs `enrichCustomerEntitlementCycles` reads off a candidate
- * row, plus the joins that produce them. Callers still own FROM / WHERE. */
 export type CycleAnchorSourcesSql = {
 	paidRecurringColumn: SQL;
 	siblingAnchorColumn: SQL;
@@ -11,11 +9,6 @@ export type CycleAnchorSourcesSql = {
 	subscriptionJoin: SQL;
 };
 
-/**
- * Sibling cusEnt → cp.billing_cycle_anchor → Stripe sub anchor → paid-now
- * fallback. `keepLiveRowAnchor` is the replace rung: an unchanged cadence
- * keeps the row's own cycle instead of re-anchoring mid-period.
- */
 export const cycleAnchorSourcesSql = ({
 	include,
 	customerProductId,
@@ -72,8 +65,6 @@ export const cycleAnchorSourcesSql = ({
 			ORDER BY sibling_entitlement.created_at, sibling_entitlement.id
 			LIMIT 1
 		) AS sibling ON true`,
-		// subscription_ids hold Stripe ids; anchors are synced in SECONDS, so
-		// convert to ms here — every other anchor in the ladder is ms.
 		subscriptionJoin: sql`LEFT JOIN LATERAL (
 			SELECT subscription.billing_cycle_anchor_seconds * 1000 AS billing_cycle_anchor_ms
 			FROM UNNEST(COALESCE(${subscriptionIds}, ARRAY[]::text[])) AS cp_subscription(stripe_id)

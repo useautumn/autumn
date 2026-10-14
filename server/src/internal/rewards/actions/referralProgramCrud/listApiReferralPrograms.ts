@@ -11,10 +11,8 @@ export const listApiReferralPrograms = async ({
 }): Promise<ReferralProgramsListResponse> => {
 	const { db, org, env } = ctx;
 
-	// 1. Fetch
 	const programs = await rewardProgramRepo.list({ db, orgId: org.id, env });
 
-	// 2. Map internal reward ids back to public ids
 	const rewardIds = await rewardIdByInternalId({ ctx, programs });
 
 	return {

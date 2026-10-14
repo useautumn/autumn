@@ -21,7 +21,6 @@ const seatsFeature = features.create({
 const ent = (overrides: Record<string, unknown> = {}) =>
 	entitlements.build(overrides as Partial<Entitlement>);
 
-/** Asserts symmetrically — comparators must not be order-sensitive. */
 const expectSame = (
 	a: Record<string, unknown>,
 	b: Record<string, unknown>,
@@ -280,7 +279,6 @@ describe("entsAreSame", () => {
 				{ ...booleanRow, carry_from_previous: false },
 				true,
 			);
-			// Only one side boolean-shaped: still compared, and symmetric.
 			expectSame(
 				{ ...booleanRow, carry_from_previous: true },
 				{
@@ -563,8 +561,6 @@ describe("entsAreSame", () => {
 		});
 	});
 
-	// Purchase expiry is a plan-item field now, so a change to it has to make
-	// the entitlement count as changed — otherwise catalog edits never persist.
 	describe("expiry", () => {
 		test("duration differs", () => {
 			expectSame(

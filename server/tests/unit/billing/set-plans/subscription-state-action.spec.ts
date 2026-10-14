@@ -1,5 +1,3 @@
-/** set_plans updates, replaces, or cancels and replaces the customer's Stripe subscription from its state alone. */
-
 import { describe, expect, test } from "bun:test";
 import {
 	type SubscriptionState,

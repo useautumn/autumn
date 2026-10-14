@@ -2,11 +2,6 @@ import { expect, test } from "bun:test";
 import { Hono } from "hono";
 import { forceJsonBodyField, replaceJsonBody } from "@/honoUtils/forceJsonBody.js";
 
-/**
- * Guards the one Hono-internal coupling in forceJsonBodyField. If a Hono upgrade
- * changes how the request body is cached, this fails loudly — instead of the
- * customer-JWT middleware silently failing to scope requests.
- */
 test("forceJsonBodyField overrides a field seen by downstream c.req.json()", async () => {
 	const app = new Hono();
 	app.use("*", async (c, next) => {

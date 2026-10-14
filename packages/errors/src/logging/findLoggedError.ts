@@ -1,4 +1,3 @@
-/** The error a log call carries: passed bare, or under `error` / `err` in its fields object. */
 export type LoggedError = {
 	error: Error;
 	argIndex: number;

@@ -11,8 +11,6 @@ import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 
-// Custom lines cannot override cancellation/refund policy, one-off updates, manual top-ups, or trial removal.
-// Both preview and execution must reject before changing the customer's state or invoices.
 const errorCases: {
 	name: string;
 	changes: Partial<UpdateSubscriptionV1ParamsInput>;
